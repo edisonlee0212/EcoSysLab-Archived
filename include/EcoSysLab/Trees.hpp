@@ -1,12 +1,16 @@
 #pragma once
-
-#include "ecosyslab_export.h"
-#include "PlantGrowth.hpp"
+#include "Tree.hpp"
 using namespace UniEngine;
-namespace Orchards {
+namespace EcoSysLab {
+    struct TreeInstance{
+        AssetRef m_treeDescriptor;
+        Transform m_transform;
+        TreeModel m_treeModel;
+    };
+
     class Trees : public IPrivateComponent{
     public:
-        std::vector<std::pair<Transform, TreeGrowthModel>> m_trees;
+        std::vector<TreeInstance> m_trees;
 
         void OnInspect() override;
 

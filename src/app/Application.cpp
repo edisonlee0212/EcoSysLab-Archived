@@ -14,13 +14,13 @@
 #include "PhysicsLayer.hpp"
 #include "PostProcessing.hpp"
 #include "ClassRegistry.hpp"
-#include "PlantGrowth.hpp"
+#include "TreeModel.hpp"
 #include "Tree.hpp"
 #include "Trees.hpp"
 #ifdef RAYTRACERFACILITY
 using namespace RayTracerFacility;
 #endif
-using namespace Orchards;
+using namespace EcoSysLab;
 
 void EngineSetup();
 
@@ -28,6 +28,7 @@ void EngineSetup();
 int main() {
     ClassRegistry::RegisterPrivateComponent<Tree>("Tree");
     ClassRegistry::RegisterPrivateComponent<Trees>("Trees");
+    ClassRegistry::RegisterAsset<TreeDescriptor>("TreeDescriptor", {".td"});
     EngineSetup();
 
     ApplicationConfigs applicationConfigs;

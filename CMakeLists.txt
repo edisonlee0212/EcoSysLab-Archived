@@ -87,6 +87,7 @@ if (BUILD_RAY_TRACER_FACILITY)
             ${RAY_TRACER_FACILITY_INCLUDES}
             ${CMAKE_CURRENT_BINARY_DIR}
             ${CMAKE_CURRENT_SOURCE_DIR}/include/EcoSysLab
+            ${CMAKE_CURRENT_SOURCE_DIR}/include/EcoSysLab/TreeModel
             )
     target_link_libraries(EcoSysLab
             RayTracerFacility
@@ -101,6 +102,7 @@ else ()
             ${UNIENGINE_INCLUDES}
             ${CMAKE_CURRENT_BINARY_DIR}
             ${CMAKE_CURRENT_SOURCE_DIR}/include/EcoSysLab
+            ${CMAKE_CURRENT_SOURCE_DIR}/include/EcoSysLab/TreeModel
             )
     target_link_libraries(EcoSysLab
             uniengine

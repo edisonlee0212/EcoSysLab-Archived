@@ -1,12 +1,29 @@
 #pragma once
 
 #include "ecosyslab_export.h"
-#include "PlantGrowth.hpp"
+#include "TreeModel.hpp"
 using namespace UniEngine;
-namespace Orchards {
+namespace EcoSysLab {
+    class TreeDescriptor : public IAsset{
+    public:
+        TreeStructuralGrowthParameters m_treeStructuralGrowthParameters;
+
+        void OnCreate() override;
+
+        void OnInspect() override;
+
+        void CollectAssetRef(std::vector<AssetRef> &list) override;
+
+        void Serialize(YAML::Emitter &out) override;
+
+        void Deserialize(const YAML::Node &in) override;
+    };
+
     class Tree : public IPrivateComponent{
     public:
-        TreeGrowthModel m_model;
+        AssetRef m_treeDescriptor;
+
+        TreeModel m_treeModel;
 
         void OnInspect() override;
 

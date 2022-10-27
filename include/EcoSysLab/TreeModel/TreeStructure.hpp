@@ -5,7 +5,7 @@
 #define InternodeHandle int
 #define BranchHandle int
 using namespace UniEngine;
-namespace Orchards {
+namespace EcoSysLab {
     template<typename InternodeData>
     class Internode {
     public:
@@ -54,7 +54,7 @@ namespace Orchards {
 
 
     template<typename BranchData, typename InternodeData>
-    class Plant {
+    class TreeSkeleton {
         std::vector<Branch<BranchData>> m_branches;
         std::vector<Internode<InternodeData>> m_internodes;
         std::queue<InternodeHandle> m_internodePool;
@@ -94,7 +94,7 @@ namespace Orchards {
 
         void SortLists();
 
-        Plant();
+        TreeSkeleton();
 
         [[nodiscard]] int GetVersion() const;
 
@@ -108,19 +108,19 @@ namespace Orchards {
 #pragma region Helper
 
     template<typename BranchData, typename InternodeData>
-    Branch<BranchData> &Plant<BranchData, InternodeData>::RefBranch(int handle) {
+    Branch<BranchData> &TreeSkeleton<BranchData, InternodeData>::RefBranch(int handle) {
         assert(handle >= 0 && handle < m_branches.size());
         return m_branches[handle];
     }
 
     template<typename BranchData, typename InternodeData>
-    Internode<InternodeData> &Plant<BranchData, InternodeData>::RefInternode(int handle) {
+    Internode<InternodeData> &TreeSkeleton<BranchData, InternodeData>::RefInternode(int handle) {
         assert(handle >= 0 && handle < m_internodes.size());
         return m_internodes[handle];
     }
 
     template<typename BranchData, typename InternodeData>
-    void Plant<BranchData, InternodeData>::SortLists() {
+    void TreeSkeleton<BranchData, InternodeData>::SortLists() {
         if (m_version == m_newVersion) return;
         m_version = m_newVersion;
         m_sortedBranchList.clear();
@@ -147,19 +147,19 @@ namespace Orchards {
     }
 
     template<typename BranchData, typename InternodeData>
-    const std::vector<BranchHandle> &Plant<BranchData, InternodeData>::GetSortedBranchList() {
+    const std::vector<BranchHandle> &TreeSkeleton<BranchData, InternodeData>::GetSortedBranchList() {
         SortLists();
         return m_sortedBranchList;
     }
 
     template<typename BranchData, typename InternodeData>
-    const std::vector<InternodeHandle> &Plant<BranchData, InternodeData>::GetSortedInternodeList() {
+    const std::vector<InternodeHandle> &TreeSkeleton<BranchData, InternodeData>::GetSortedInternodeList() {
         SortLists();
         return m_sortedInternodeList;
     }
 
     template<typename BranchData, typename InternodeData>
-    InternodeHandle Plant<BranchData, InternodeData>::Extend(int targetHandle, bool createNewBranch) {
+    InternodeHandle TreeSkeleton<BranchData, InternodeData>::Extend(int targetHandle, bool createNewBranch) {
         assert(targetHandle < m_internodes.size());
         auto &targetInternode = m_internodes[targetHandle];
         assert(!targetInternode.m_recycled);
@@ -189,7 +189,7 @@ namespace Orchards {
     }
 
     template<typename BranchData, typename InternodeData>
-    void Plant<BranchData, InternodeData>::PruneBranch(int handle) {
+    void TreeSkeleton<BranchData, InternodeData>::PruneBranch(int handle) {
         assert(handle != 0);
         assert(!m_branches[handle].m_recycled);
         auto &branch = m_branches[handle];
@@ -213,7 +213,7 @@ namespace Orchards {
     }
 
     template<typename BranchData, typename InternodeData>
-    void Plant<BranchData, InternodeData>::PruneInternode(int handle) {
+    void TreeSkeleton<BranchData, InternodeData>::PruneInternode(int handle) {
         assert(handle != 0);
         assert(!m_internodes[handle].m_recycled);
         auto &internode = m_internodes[handle];
@@ -273,7 +273,7 @@ namespace Orchards {
     }
 
     template<typename BranchData, typename InternodeData>
-    Plant<BranchData, InternodeData>::Plant() {
+    TreeSkeleton<BranchData, InternodeData>::TreeSkeleton() {
         AllocateBranch();
         AllocateInternode();
         auto &rootBranch = m_branches[0];
@@ -283,7 +283,7 @@ namespace Orchards {
     }
 
     template<typename BranchData, typename InternodeData>
-    void Plant<BranchData, InternodeData>::DetachChildInternode(int targetHandle, int childHandle) {
+    void TreeSkeleton<BranchData, InternodeData>::DetachChildInternode(int targetHandle, int childHandle) {
         assert(targetHandle >= 0 && childHandle >= 0 && targetHandle < m_internodes.size() &&
                childHandle < m_internodes.size());
         auto &targetInternode = m_internodes[targetHandle];
@@ -302,7 +302,7 @@ namespace Orchards {
     }
 
     template<typename BranchData, typename InternodeData>
-    void Plant<BranchData, InternodeData>::SetParentInternode(int targetHandle, int parentHandle) {
+    void TreeSkeleton<BranchData, InternodeData>::SetParentInternode(int targetHandle, int parentHandle) {
         assert(targetHandle >= 0 && parentHandle >= 0 && targetHandle < m_internodes.size() &&
                parentHandle < m_internodes.size());
         auto &targetInternode = m_internodes[targetHandle];
@@ -314,7 +314,7 @@ namespace Orchards {
     }
 
     template<typename BranchData, typename InternodeData>
-    void Plant<BranchData, InternodeData>::DetachChildBranch(int targetHandle, int childHandle) {
+    void TreeSkeleton<BranchData, InternodeData>::DetachChildBranch(int targetHandle, int childHandle) {
         assert(targetHandle >= 0 && childHandle >= 0 && targetHandle < m_branches.size() &&
                childHandle < m_branches.size());
         auto &targetBranch = m_branches[targetHandle];
@@ -341,7 +341,7 @@ namespace Orchards {
     }
 
     template<typename BranchData, typename InternodeData>
-    void Plant<BranchData, InternodeData>::SetParentBranch(int targetHandle, int parentHandle) {
+    void TreeSkeleton<BranchData, InternodeData>::SetParentBranch(int targetHandle, int parentHandle) {
         assert(targetHandle >= 0 && parentHandle >= 0 && targetHandle < m_branches.size() &&
                parentHandle < m_branches.size());
         auto &targetBranch = m_branches[targetHandle];
@@ -353,7 +353,7 @@ namespace Orchards {
     }
 
     template<typename BranchData, typename InternodeData>
-    BranchHandle Plant<BranchData, InternodeData>::AllocateBranch() {
+    BranchHandle TreeSkeleton<BranchData, InternodeData>::AllocateBranch() {
         if (m_branchPool.empty()) {
             auto newBranch = m_branches.emplace_back(m_branches.size());
             return newBranch.m_handle;
@@ -366,7 +366,7 @@ namespace Orchards {
     }
 
     template<typename BranchData, typename InternodeData>
-    void Plant<BranchData, InternodeData>::RecycleBranchSingle(int handle) {
+    void TreeSkeleton<BranchData, InternodeData>::RecycleBranchSingle(int handle) {
         assert(!m_branches[handle].m_recycled);
         auto &branch = m_branches[handle];
         branch.m_parent = -1;
@@ -378,7 +378,7 @@ namespace Orchards {
     }
 
     template<typename BranchData, typename InternodeData>
-    void Plant<BranchData, InternodeData>::RecycleInternodeSingle(int handle) {
+    void TreeSkeleton<BranchData, InternodeData>::RecycleInternodeSingle(int handle) {
         assert(!m_internodes[handle].m_recycled);
         auto &internode = m_internodes[handle];
         internode.m_parent = -1;
@@ -391,7 +391,7 @@ namespace Orchards {
     }
 
     template<typename BranchData, typename InternodeData>
-    InternodeHandle Plant<BranchData, InternodeData>::AllocateInternode() {
+    InternodeHandle TreeSkeleton<BranchData, InternodeData>::AllocateInternode() {
         if (m_internodePool.empty()) {
             auto newInternode = m_internodes.emplace_back(m_internodes.size());
             return newInternode.m_handle;
@@ -404,12 +404,12 @@ namespace Orchards {
     }
 
     template<typename BranchData, typename InternodeData>
-    int Plant<BranchData, InternodeData>::GetVersion() const {
+    int TreeSkeleton<BranchData, InternodeData>::GetVersion() const {
         return m_version;
     }
 
     template<typename BranchData, typename InternodeData>
-    void Plant<BranchData, InternodeData>::CalculateBranches() {
+    void TreeSkeleton<BranchData, InternodeData>::CalculateBranches() {
         const auto &sortedBranchList = GetSortedBranchList();
         for (const auto &branchHandle: sortedBranchList) {
             auto &branch = m_branches[branchHandle];
