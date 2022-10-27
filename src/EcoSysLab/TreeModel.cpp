@@ -353,7 +353,7 @@ TreeStructuralGrowthParameters::TreeStructuralGrowthParameters() {
     m_lateralBudCount = 2;
     m_branchingAngleMeanVariance = glm::vec2(30, 3);
     m_rollAngleMeanVariance = glm::vec2(120, 2);
-    m_apicalAngleMeanVariance = glm::vec2(20, 2);
+    m_apicalAngleMeanVariance = glm::vec2(0, 4);
     m_gravitropism = -0.1f;
     m_phototropism = 0.05f;
     m_internodeLength = 1.0f;
@@ -366,7 +366,7 @@ TreeStructuralGrowthParameters::TreeStructuralGrowthParameters() {
     m_budKillProbabilityApicalLateral = glm::vec2(0.0, 0.03);
     m_randomPruningOrderProtection = 1;
     m_randomPruningBaseAgeMax = glm::vec3(-0.1, 0.007, 0.5);
-    m_lowBranchPruning = 0.5f;
+    m_lowBranchPruning = 0.2f;
     m_saggingFactorThicknessReductionMax = glm::vec3(6, 3, 0.5);
 }
 
