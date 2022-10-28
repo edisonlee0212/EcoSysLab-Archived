@@ -209,7 +209,7 @@ void TreeModel::CalculateSagging(InternodeHandle internodeHandle, const TreeStru
                                 internode.m_thickness /
                                 parameters.m_endNodeThicknessAndControl.x,
                                 parameters.m_saggingFactorThicknessReductionMax.y));
-        internode.m_thickness = glm::pow(childThicknessCollection, parameters.m_endNodeThicknessAndControl.y);
+        internode.m_thickness = glm::max(internode.m_thickness, glm::pow(childThicknessCollection, parameters.m_endNodeThicknessAndControl.y));
     }
 }
 
@@ -326,6 +326,7 @@ void TreeModel::Grow(const GrowthNutrients &growthNutrients, const TreeStructura
 void TreeModel::Initialize(const TreeStructuralGrowthParameters& parameters) {
     m_tree = std::make_shared<TreeSkeleton<BranchData, InternodeData>>();
     auto &firstInternode = m_tree->RefInternode(0);
+    firstInternode.m_thickness = parameters.m_endNodeThicknessAndControl.x;
     firstInternode.m_data.m_buds.emplace_back();
     auto &apicalBud = firstInternode.m_data.m_buds.back();
     apicalBud.m_type = BudType::Apical;

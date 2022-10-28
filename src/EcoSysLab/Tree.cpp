@@ -6,7 +6,7 @@
 #include "Graphics.hpp"
 #include "EditorLayer.hpp"
 #include "Application.hpp"
-
+#include "BranchMeshGenerator.hpp"
 using namespace EcoSysLab;
 
 void Tree::OnInspect() {
@@ -27,6 +27,20 @@ void Tree::OnInspect() {
         if (ImGui::Button("Grow")) {
             m_treeModel.Grow({999}, parameters);
         }
+        MeshGeneratorSettings meshGeneratorSettings;
+        if(ImGui::Button("Generate Mesh")){
+            std::vector<Vertex> vertices;
+            std::vector<unsigned int> indices;
+            BranchMeshGenerator::Generate(*m_treeModel.m_tree.get(), vertices, indices, meshGeneratorSettings);
+            auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
+            auto material = ProjectManager::CreateTemporaryAsset<Material>();
+            material->SetProgram(DefaultResources::GLPrograms::StandardProgram);
+            mesh->SetVertices(17, vertices, indices);
+            auto meshRenderer = GetScene()->GetOrSetPrivateComponent<MeshRenderer>(GetOwner()).lock();
+            meshRenderer->m_mesh = mesh;
+            meshRenderer->m_material = material;
+        }
+
         ImGui::Checkbox("Visualization", &debugVisualization);
         if (debugVisualization) {
 
