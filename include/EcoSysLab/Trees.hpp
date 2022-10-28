@@ -3,13 +3,13 @@
 using namespace UniEngine;
 namespace EcoSysLab {
     struct TreeInstance{
-        AssetRef m_treeDescriptor;
         Transform m_transform;
         TreeModel m_treeModel;
     };
 
     class Trees : public IPrivateComponent{
     public:
+        AssetRef m_treeDescriptor;
         std::vector<TreeInstance> m_trees;
 
         void OnInspect() override;

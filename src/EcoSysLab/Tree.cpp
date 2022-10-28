@@ -11,10 +11,17 @@ using namespace EcoSysLab;
 
 void Tree::OnInspect() {
     static bool debugVisualization = true;
-    if(Editor::DragAndDropButton<TreeDescriptor>(m_treeDescriptor, "TreeDescriptor", true)){
+    static int version = -1;
+    static std::vector<InternodeHandle> sortedInternodeList;
+    static std::vector<BranchHandle> sortedBranchList;
+    if (Editor::DragAndDropButton<TreeDescriptor>(m_treeDescriptor, "TreeDescriptor", true)) {
         m_treeModel.Clear();
+        sortedInternodeList.clear();
+        sortedBranchList.clear();
+        version = -1;
     }
-    if(m_treeDescriptor.Get<TreeDescriptor>()) {
+
+    if (m_treeDescriptor.Get<TreeDescriptor>()) {
         auto &parameters = m_treeDescriptor.Get<TreeDescriptor>()->m_treeStructuralGrowthParameters;
         if (!m_treeModel.IsInitialized()) m_treeModel.Initialize(parameters);
         if (ImGui::Button("Grow")) {
@@ -22,9 +29,7 @@ void Tree::OnInspect() {
         }
         ImGui::Checkbox("Visualization", &debugVisualization);
         if (debugVisualization) {
-            static int version = -1;
-            static std::vector<InternodeHandle> sortedInternodeList;
-            static std::vector<BranchHandle> sortedBranchList;
+
             static std::vector<glm::vec4> randomColors;
             if (randomColors.empty()) {
                 for (int i = 0; i < 100; i++) {
@@ -84,6 +89,13 @@ void Tree::OnInspect() {
             }
         }
     }
+
+    if (ImGui::Button("Clear")) {
+        m_treeModel.Clear();
+        sortedInternodeList.clear();
+        sortedBranchList.clear();
+        version = -1;
+    }
 }
 
 void Tree::OnCreate() {
@@ -100,36 +112,51 @@ void TreeDescriptor::OnCreate() {
 void TreeDescriptor::OnInspect() {
     if (ImGui::TreeNodeEx("Structure", ImGuiTreeNodeFlags_DefaultOpen)) {
         ImGui::DragInt("Lateral bud per node", &m_treeStructuralGrowthParameters.m_lateralBudCount);
-        ImGui::DragFloat2("Branching Angle mean/var", &m_treeStructuralGrowthParameters.m_branchingAngleMeanVariance.x, 0.01f);
+        ImGui::DragFloat2("Branching Angle mean/var", &m_treeStructuralGrowthParameters.m_branchingAngleMeanVariance.x,
+                          0.01f);
         ImGui::DragFloat2("Roll Angle mean/var", &m_treeStructuralGrowthParameters.m_rollAngleMeanVariance.x, 0.01f);
-        ImGui::DragFloat2("Apical Angle mean/var", &m_treeStructuralGrowthParameters.m_apicalAngleMeanVariance.x, 0.01f);
+        ImGui::DragFloat2("Apical Angle mean/var", &m_treeStructuralGrowthParameters.m_apicalAngleMeanVariance.x,
+                          0.01f);
         ImGui::DragFloat("Gravitropism", &m_treeStructuralGrowthParameters.m_gravitropism, 0.01f);
         ImGui::DragFloat("Phototropism", &m_treeStructuralGrowthParameters.m_phototropism, 0.01f);
         ImGui::DragFloat("Internode length", &m_treeStructuralGrowthParameters.m_internodeLength, 0.01f);
         ImGui::DragFloat("Growth rate", &m_treeStructuralGrowthParameters.m_growthRate, 0.01f);
-        ImGui::DragFloat2("Thickness min/factor", &m_treeStructuralGrowthParameters.m_endNodeThicknessAndControl.x, 0.01f);
+        ImGui::DragFloat2("Thickness min/factor", &m_treeStructuralGrowthParameters.m_endNodeThicknessAndControl.x,
+                          0.01f);
         ImGui::TreePop();
     }
     if (ImGui::TreeNodeEx("Bud", ImGuiTreeNodeFlags_DefaultOpen)) {
-        ImGui::DragFloat("Lateral bud flushing probability", &m_treeStructuralGrowthParameters.m_lateralBudFlushingProbability, 0.01f);
-        ImGui::DragFloat2("Apical control base/dist", &m_treeStructuralGrowthParameters.m_apicalControlBaseDistFactor.x, 0.01f);
-        ImGui::DragFloat3("Apical dominance base/age/dist", &m_treeStructuralGrowthParameters.m_apicalDominanceBaseAgeDist.x, 0.01f);
-        int maxAgeBeforeInhibitorEnds = m_treeStructuralGrowthParameters.m_apicalDominanceBaseAgeDist.x / m_treeStructuralGrowthParameters.m_apicalDominanceBaseAgeDist.y;
-        float maxDistance = m_treeStructuralGrowthParameters.m_apicalDominanceBaseAgeDist.x /m_treeStructuralGrowthParameters. m_apicalDominanceBaseAgeDist.z;
+        ImGui::DragFloat("Lateral bud flushing probability",
+                         &m_treeStructuralGrowthParameters.m_lateralBudFlushingProbability, 0.01f);
+        ImGui::DragFloat2("Apical control base/dist", &m_treeStructuralGrowthParameters.m_apicalControlBaseDistFactor.x,
+                          0.01f);
+        ImGui::DragFloat3("Apical dominance base/age/dist",
+                          &m_treeStructuralGrowthParameters.m_apicalDominanceBaseAgeDist.x, 0.01f);
+        int maxAgeBeforeInhibitorEnds = m_treeStructuralGrowthParameters.m_apicalDominanceBaseAgeDist.x /
+                                        m_treeStructuralGrowthParameters.m_apicalDominanceBaseAgeDist.y;
+        float maxDistance = m_treeStructuralGrowthParameters.m_apicalDominanceBaseAgeDist.x /
+                            m_treeStructuralGrowthParameters.m_apicalDominanceBaseAgeDist.z;
         ImGui::Text("Max age / distance: [%i, %.3f]", maxAgeBeforeInhibitorEnds, maxDistance);
 
-        ImGui::DragFloat("Lateral bud lighting factor", &m_treeStructuralGrowthParameters.m_lateralBudFlushingLightingFactor, 0.01f);
-        ImGui::DragFloat2("Kill probability apical/lateral", &m_treeStructuralGrowthParameters.m_budKillProbabilityApicalLateral.x, 0.01f);
+        ImGui::DragFloat("Lateral bud lighting factor",
+                         &m_treeStructuralGrowthParameters.m_lateralBudFlushingLightingFactor, 0.01f);
+        ImGui::DragFloat2("Kill probability apical/lateral",
+                          &m_treeStructuralGrowthParameters.m_budKillProbabilityApicalLateral.x, 0.01f);
         ImGui::TreePop();
     }
     if (ImGui::TreeNodeEx("Internode")) {
-        ImGui::DragInt("Random pruning Order Protection", &m_treeStructuralGrowthParameters.m_randomPruningOrderProtection);
-        ImGui::DragFloat3("Random pruning base/age/max", &m_treeStructuralGrowthParameters.m_randomPruningBaseAgeMax.x, 0.0001f, -1.0f, 1.0f, "%.5f");
+        ImGui::DragInt("Random pruning Order Protection",
+                       &m_treeStructuralGrowthParameters.m_randomPruningOrderProtection);
+        ImGui::DragFloat3("Random pruning base/age/max", &m_treeStructuralGrowthParameters.m_randomPruningBaseAgeMax.x,
+                          0.0001f, -1.0f, 1.0f, "%.5f");
         const float maxAgeBeforeMaxCutOff =
-                (m_treeStructuralGrowthParameters.m_randomPruningBaseAgeMax.z - m_treeStructuralGrowthParameters.m_randomPruningBaseAgeMax.x) / m_treeStructuralGrowthParameters.m_randomPruningBaseAgeMax.y;
+                (m_treeStructuralGrowthParameters.m_randomPruningBaseAgeMax.z -
+                 m_treeStructuralGrowthParameters.m_randomPruningBaseAgeMax.x) /
+                m_treeStructuralGrowthParameters.m_randomPruningBaseAgeMax.y;
         ImGui::Text("Max age before reaching max: %.3f", maxAgeBeforeMaxCutOff);
         ImGui::DragFloat("Low Branch Pruning", &m_treeStructuralGrowthParameters.m_lowBranchPruning, 0.01f);
-        ImGui::DragFloat3("Sagging thickness/reduction/max", &m_treeStructuralGrowthParameters.m_saggingFactorThicknessReductionMax.x, 0.01f);
+        ImGui::DragFloat3("Sagging thickness/reduction/max",
+                          &m_treeStructuralGrowthParameters.m_saggingFactorThicknessReductionMax.x, 0.01f);
         ImGui::TreePop();
     }
 }
@@ -140,23 +167,35 @@ void TreeDescriptor::CollectAssetRef(std::vector<AssetRef> &list) {
 
 void TreeDescriptor::Serialize(YAML::Emitter &out) {
     out << YAML::Key << "m_lateralBudCount" << YAML::Value << m_treeStructuralGrowthParameters.m_lateralBudCount;
-    out << YAML::Key << "m_branchingAngleMeanVariance" << YAML::Value << m_treeStructuralGrowthParameters.m_branchingAngleMeanVariance;
-    out << YAML::Key << "m_rollAngleMeanVariance" << YAML::Value << m_treeStructuralGrowthParameters.m_rollAngleMeanVariance;
-    out << YAML::Key << "m_apicalAngleMeanVariance" << YAML::Value << m_treeStructuralGrowthParameters.m_apicalAngleMeanVariance;
+    out << YAML::Key << "m_branchingAngleMeanVariance" << YAML::Value
+        << m_treeStructuralGrowthParameters.m_branchingAngleMeanVariance;
+    out << YAML::Key << "m_rollAngleMeanVariance" << YAML::Value
+        << m_treeStructuralGrowthParameters.m_rollAngleMeanVariance;
+    out << YAML::Key << "m_apicalAngleMeanVariance" << YAML::Value
+        << m_treeStructuralGrowthParameters.m_apicalAngleMeanVariance;
     out << YAML::Key << "m_gravitropism" << YAML::Value << m_treeStructuralGrowthParameters.m_gravitropism;
     out << YAML::Key << "m_phototropism" << YAML::Value << m_treeStructuralGrowthParameters.m_phototropism;
     out << YAML::Key << "m_internodeLength" << YAML::Value << m_treeStructuralGrowthParameters.m_internodeLength;
     out << YAML::Key << "m_growthRate" << YAML::Value << m_treeStructuralGrowthParameters.m_growthRate;
-    out << YAML::Key << "m_endNodeThicknessAndControl" << YAML::Value << m_treeStructuralGrowthParameters.m_endNodeThicknessAndControl;
-    out << YAML::Key << "m_lateralBudFlushingProbability" << YAML::Value << m_treeStructuralGrowthParameters.m_lateralBudFlushingProbability;
-    out << YAML::Key << "m_apicalControlBaseDistFactor" << YAML::Value << m_treeStructuralGrowthParameters.m_apicalControlBaseDistFactor;
-    out << YAML::Key << "m_apicalDominanceBaseAgeDist" << YAML::Value << m_treeStructuralGrowthParameters.m_apicalDominanceBaseAgeDist;
-    out << YAML::Key << "m_lateralBudFlushingLightingFactor" << YAML::Value << m_treeStructuralGrowthParameters.m_lateralBudFlushingLightingFactor;
-    out << YAML::Key << "m_budKillProbabilityApicalLateral" << YAML::Value << m_treeStructuralGrowthParameters.m_budKillProbabilityApicalLateral;
-    out << YAML::Key << "m_randomPruningOrderProtection" << YAML::Value << m_treeStructuralGrowthParameters.m_randomPruningOrderProtection;
-    out << YAML::Key << "m_randomPruningBaseAgeMax" << YAML::Value << m_treeStructuralGrowthParameters.m_randomPruningBaseAgeMax;
-    out << YAML::Key << "m_lowBranchPruning" << YAML::Value <<m_treeStructuralGrowthParameters. m_lowBranchPruning;
-    out << YAML::Key << "m_saggingFactorThicknessReductionMax" << YAML::Value << m_treeStructuralGrowthParameters.m_saggingFactorThicknessReductionMax;
+    out << YAML::Key << "m_endNodeThicknessAndControl" << YAML::Value
+        << m_treeStructuralGrowthParameters.m_endNodeThicknessAndControl;
+    out << YAML::Key << "m_lateralBudFlushingProbability" << YAML::Value
+        << m_treeStructuralGrowthParameters.m_lateralBudFlushingProbability;
+    out << YAML::Key << "m_apicalControlBaseDistFactor" << YAML::Value
+        << m_treeStructuralGrowthParameters.m_apicalControlBaseDistFactor;
+    out << YAML::Key << "m_apicalDominanceBaseAgeDist" << YAML::Value
+        << m_treeStructuralGrowthParameters.m_apicalDominanceBaseAgeDist;
+    out << YAML::Key << "m_lateralBudFlushingLightingFactor" << YAML::Value
+        << m_treeStructuralGrowthParameters.m_lateralBudFlushingLightingFactor;
+    out << YAML::Key << "m_budKillProbabilityApicalLateral" << YAML::Value
+        << m_treeStructuralGrowthParameters.m_budKillProbabilityApicalLateral;
+    out << YAML::Key << "m_randomPruningOrderProtection" << YAML::Value
+        << m_treeStructuralGrowthParameters.m_randomPruningOrderProtection;
+    out << YAML::Key << "m_randomPruningBaseAgeMax" << YAML::Value
+        << m_treeStructuralGrowthParameters.m_randomPruningBaseAgeMax;
+    out << YAML::Key << "m_lowBranchPruning" << YAML::Value << m_treeStructuralGrowthParameters.m_lowBranchPruning;
+    out << YAML::Key << "m_saggingFactorThicknessReductionMax" << YAML::Value
+        << m_treeStructuralGrowthParameters.m_saggingFactorThicknessReductionMax;
 }
 
 void TreeDescriptor::Deserialize(const YAML::Node &in) {
