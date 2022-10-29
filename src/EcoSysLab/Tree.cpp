@@ -269,7 +269,7 @@ bool TreeVisualizer::OnInspect(TreeModel &treeModel, const GlobalTransform &glob
                     m_colors[i] = glm::vec4(1, 0, 0, 1);
                 } else {
                     m_colors[i] = randomColors[treeModel.m_tree->RefBranch(internode.m_branchHandle).m_data.m_order];
-                    if(m_selectedInternodeHandle != -1) m_colors[i].w = 0.5f;
+                    if (m_selectedInternodeHandle != -1) m_colors[i].w = 0.5f;
                 }
             }, results);
             for (auto &i: results) i.wait();
@@ -292,7 +292,68 @@ bool TreeVisualizer::OnInspect(TreeModel &treeModel, const GlobalTransform &glob
 }
 
 void TreeVisualizer::InspectInternode(TreeModel &treeModel, InternodeHandle internodeHandle) {
-    if(internodeHandle < 0) return;
+    if (ImGui::Begin("Internode Inspector")) {
+        if (internodeHandle != -1) {
+            auto &internode = treeModel.m_tree->RefInternode(internodeHandle);
+            ImGui::Text("Thickness: %.3f", internode.m_thickness);
+            ImGui::Text("Length: %.3f", internode.m_length);
+            ImGui::InputFloat3("Position", &internode.m_globalPosition.x, "%.3f", ImGuiInputTextFlags_ReadOnly);
+            auto globalRotationAngle = glm::eulerAngles(internode.m_globalRotation);
+            ImGui::InputFloat3("Global rotation", &globalRotationAngle.x, "%.3f", ImGuiInputTextFlags_ReadOnly);
+            auto localRotationAngle = glm::eulerAngles(internode.m_localRotation);
+            ImGui::InputFloat3("Local rotation", &localRotationAngle.x, "%.3f", ImGuiInputTextFlags_ReadOnly);
+            auto &internodeData = internode.m_data;
+            ImGui::InputInt("Age", &internodeData.m_age, 1, 100, ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputFloat("Inhibitor", &internodeData.m_inhibitor, 1, 100, "%.3f", ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputFloat("Sagging", &internodeData.m_sagging, 1, 100, "%.3f", ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputFloat("Distance to end", &internodeData.m_maxDistanceToAnyBranchEnd, 1, 100, "%.3f",
+                              ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputFloat("Level", &internodeData.m_level, 1, 100, "%.3f", ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputFloat("Child biomass", &internodeData.m_childTotalBiomass, 1, 100, "%.3f",
+                              ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputFloat("Root distance", &internodeData.m_rootDistance, 1, 100, "%.3f",
+                              ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputFloat("Apical control", &internodeData.m_apicalControl, 1, 100, "%.3f",
+                              ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputInt("Descendants count", &internodeData.m_decedentsAmount, 1, 100,
+                            ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputFloat3("Light dir", &internodeData.m_lightDirection.x, "%.3f", ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputFloat("Light intensity", &internodeData.m_lightIntensity, 1, 100, "%.3f",
+                              ImGuiInputTextFlags_ReadOnly);
+
+            if (ImGui::TreeNodeEx("Buds")) {
+                for (const auto &bud: internodeData.m_buds) {
+                    switch (bud.m_type) {
+                        case BudType::Apical:
+                            ImGui::Text("Apical");
+                            break;
+                        case BudType::LateralVegetative:
+                            ImGui::Text("LateralVegetative");
+                            break;
+                        case BudType::LateralReproductive:
+                            ImGui::Text("LateralReproductive");
+                            break;
+                    }
+                    switch (bud.m_status) {
+                        case BudStatus::Dormant:
+                            ImGui::Text("Dormant");
+                            break;
+                        case BudStatus::Flushed:
+                            ImGui::Text("Flushed");
+                            break;
+                        case BudStatus::Died:
+                            ImGui::Text("Died");
+                            break;
+                    }
+
+                    auto budRotationAngle = glm::eulerAngles(bud.m_localRotation);
+                    ImGui::InputFloat3("Rotation", &budRotationAngle.x, "%.3f", ImGuiInputTextFlags_ReadOnly);
+                }
+                ImGui::TreePop();
+            }
+        }
+    }
+    ImGui::End();
 }
 
 void TreeVisualizer::Reset() {
