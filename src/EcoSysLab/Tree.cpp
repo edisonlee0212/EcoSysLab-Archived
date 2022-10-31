@@ -201,7 +201,7 @@ TreeVisualizer::DrawInternodeInspectionGui(TreeModel &treeModel, InternodeHandle
             bool childDeleted = false;
             DrawInternodeInspectionGui(treeModel, child, childDeleted, hierarchyLevel + 1);
             if (childDeleted) {
-                treeModel.m_tree->PruneInternode(child);
+                treeModel.m_tree->RecycleInternode(child);
                 modified = true;
                 break;
             }
@@ -254,12 +254,12 @@ void TreeVisualizer::InspectInternode(TreeModel &treeModel, InternodeHandle inte
     if (ImGui::Begin("Internode Inspector")) {
         if (internodeHandle != -1) {
             auto &internode = treeModel.m_tree->RefInternode(internodeHandle);
-            ImGui::Text("Thickness: %.3f", internode.m_thickness);
-            ImGui::Text("Length: %.3f", internode.m_length);
-            ImGui::InputFloat3("Position", &internode.m_globalPosition.x, "%.3f", ImGuiInputTextFlags_ReadOnly);
-            auto globalRotationAngle = glm::eulerAngles(internode.m_globalRotation);
+            ImGui::Text("Thickness: %.3f", internode.m_info.m_thickness);
+            ImGui::Text("Length: %.3f", internode.m_info.m_length);
+            ImGui::InputFloat3("Position", &internode.m_info.m_globalPosition.x, "%.3f", ImGuiInputTextFlags_ReadOnly);
+            auto globalRotationAngle = glm::eulerAngles(internode.m_info.m_globalRotation);
             ImGui::InputFloat3("Global rotation", &globalRotationAngle.x, "%.3f", ImGuiInputTextFlags_ReadOnly);
-            auto localRotationAngle = glm::eulerAngles(internode.m_localRotation);
+            auto localRotationAngle = glm::eulerAngles(internode.m_info.m_localRotation);
             ImGui::InputFloat3("Local rotation", &localRotationAngle.x, "%.3f", ImGuiInputTextFlags_ReadOnly);
             auto &internodeData = internode.m_data;
             ImGui::InputInt("Age", &internodeData.m_age, 1, 100, ImGuiInputTextFlags_ReadOnly);
@@ -383,17 +383,17 @@ bool TreeVisualizer::RayCastSelection(TreeModel &treeModel, const GlobalTransfor
                 std::vector<std::shared_future<void>> results;
                 Jobs::ParallelFor(m_sortedInternodeList.size(), [&](unsigned i) {
                     auto &internode = treeModel.m_tree->RefInternode(m_sortedInternodeList[i]);
-                    auto rotation = globalTransform.GetRotation() * internode.m_globalRotation;
+                    auto rotation = globalTransform.GetRotation() * internode.m_info.m_globalRotation;
                     glm::vec3 position = (globalTransform.m_value *
-                                          glm::translate(internode.m_globalPosition))[3];
+                                          glm::translate(internode.m_info.m_globalPosition))[3];
                     const auto direction = glm::normalize(rotation * glm::vec3(0, 0, -1));
                     const glm::vec3 position2 =
-                            position + internode.m_length * direction;
+                            position + internode.m_info.m_length * direction;
                     const auto center =
                             (position + position2) / 2.0f;
                     auto dir = cameraRay.m_direction;
                     auto pos = cameraRay.m_start;
-                    const auto radius = internode.m_thickness;
+                    const auto radius = internode.m_info.m_thickness;
                     const auto height = glm::distance(position2,
                                                       position);
                     if (!cameraRay.Intersect(center,
@@ -481,11 +481,11 @@ void TreeVisualizer::SyncMatrices(TreeModel &treeModel, const GlobalTransform &g
     Jobs::ParallelFor(m_sortedInternodeList.size(), [&](unsigned i) {
         auto internodeHandle = m_sortedInternodeList[i];
         auto &internode = treeModel.m_tree->RefInternode(internodeHandle);
-        auto rotation = globalTransform.GetRotation() * internode.m_globalRotation;
-        glm::vec3 translation = (globalTransform.m_value * glm::translate(internode.m_globalPosition))[3];
+        auto rotation = globalTransform.GetRotation() * internode.m_info.m_globalRotation;
+        glm::vec3 translation = (globalTransform.m_value * glm::translate(internode.m_info.m_globalPosition))[3];
         const auto direction = glm::normalize(rotation * glm::vec3(0, 0, -1));
         const glm::vec3 position2 =
-                translation + internode.m_length * direction;
+                translation + internode.m_info.m_length * direction;
         rotation = glm::quatLookAt(
                 direction, glm::vec3(direction.y, direction.z, direction.x));
         rotation *= glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));
@@ -494,9 +494,9 @@ void TreeVisualizer::SyncMatrices(TreeModel &treeModel, const GlobalTransform &g
                 glm::translate((translation + position2) / 2.0f) *
                 rotationTransform *
                 glm::scale(glm::vec3(
-                        internode.m_thickness,
+                        internode.m_info.m_thickness,
                         glm::distance(translation, position2) / 2.0f,
-                        internode.m_thickness));
+                        internode.m_info.m_thickness));
         if (internodeHandle == m_selectedInternodeHandle) {
             m_colors[i] = glm::vec4(1, 0, 0, 1);
         } else {

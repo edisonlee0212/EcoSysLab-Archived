@@ -127,11 +127,11 @@ void Trees::OnInspect() {
                                 entityGlobalTransform.m_value * m_trees[listIndex].m_transform.m_value;
                         Jobs::ParallelFor(list.size(), [&](unsigned i) {
                             auto &internode = m_trees[listIndex].m_treeModel.m_tree->RefInternode(list[i]);
-                            auto rotation = globalTransform.GetRotation() * internode.m_globalRotation;
+                            auto rotation = globalTransform.GetRotation() * internode.m_info.m_globalRotation;
                             glm::vec3 translation = (globalTransform.m_value *
-                                                     glm::translate(internode.m_globalPosition))[3];
+                                                     glm::translate(internode.m_info.m_globalPosition))[3];
                             const auto direction = glm::normalize(rotation * glm::vec3(0, 0, -1));
-                            auto localEndPosition = internode.m_globalPosition + internode.m_length * direction;
+                            auto localEndPosition = internode.m_info.m_globalPosition + internode.m_info.m_length * direction;
                             const glm::vec3 position2 = (globalTransform.m_value * glm::translate(localEndPosition))[3];
                             rotation = glm::quatLookAt(
                                     direction, glm::vec3(direction.y, direction.z, direction.x));
@@ -141,9 +141,9 @@ void Trees::OnInspect() {
                                     glm::translate((translation + position2) / 2.0f) *
                                     rotationTransform *
                                     glm::scale(glm::vec3(
-                                            internode.m_thickness,
+                                            internode.m_info.m_thickness,
                                             glm::distance(translation, position2) / 2.0f,
-                                            internode.m_thickness));
+                                            internode.m_info.m_thickness));
                             colors[i + startIndex] = randomColors[m_trees[listIndex].m_treeModel.m_tree->RefBranch(
                                     internode.m_branchHandle).m_data.m_order];
                         }, results);
@@ -161,13 +161,13 @@ void Trees::OnInspect() {
                         Jobs::ParallelFor(list.size(), [&](unsigned i) {
                             auto &branch = m_trees[listIndex].m_treeModel.m_tree->RefBranch(list[i]);
                             glm::vec3 translation = (globalTransform.m_value *
-                                                     glm::translate(branch.m_globalStartPosition))[3];
+                                                     glm::translate(branch.m_info.m_globalStartPosition))[3];
                             const auto direction = glm::normalize(
-                                    branch.m_globalEndPosition - branch.m_globalStartPosition);
-                            auto length = glm::distance(branch.m_globalStartPosition, branch.m_globalEndPosition);
-                            auto thickness = (branch.m_startThickness + branch.m_endThickness) * 0.5;
+                                    branch.m_info.m_globalEndPosition - branch.m_info.m_globalStartPosition);
+                            auto length = glm::distance(branch.m_info.m_globalStartPosition, branch.m_info.m_globalEndPosition);
+                            auto thickness = (branch.m_info.m_startThickness + branch.m_info.m_endThickness) * 0.5;
                             const glm::vec3 position2 = (globalTransform.m_value *
-                                                         glm::translate(branch.m_globalEndPosition))[3];
+                                                         glm::translate(branch.m_info.m_globalEndPosition))[3];
                             auto rotation = glm::quatLookAt(
                                     direction, glm::vec3(direction.y, direction.z, direction.x));
                             rotation *= glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));

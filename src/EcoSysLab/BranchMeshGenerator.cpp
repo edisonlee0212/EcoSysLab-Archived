@@ -148,24 +148,25 @@ BranchMeshGenerator::Generate(TreeSkeleton<BranchData, InternodeData> &treeSkele
     Jobs::ParallelFor(sortedInternodeList.size(), [&](unsigned i) {
         auto internodeHandle = sortedInternodeList[i];
         auto &internode = treeSkeleton.RefInternode(internodeHandle);
+        auto &internodeInfo = internode.m_info;
         auto &rings = ringsList[i];
         rings.clear();
 
         glm::vec3 directionStart =
-                internode.m_globalRotation * glm::vec3(0, 0, -1);
+                internodeInfo.m_globalRotation * glm::vec3(0, 0, -1);
         glm::vec3 directionEnd = directionStart;
-        glm::vec3 positionStart = internode.m_globalPosition;
+        glm::vec3 positionStart = internodeInfo.m_globalPosition;
         glm::vec3 positionEnd =
-                positionStart + internode.m_length * settings.m_internodeLengthFactor * directionStart;
-        float thicknessStart = internode.m_thickness;
-        float thicknessEnd = internode.m_thickness;
+                positionStart + internodeInfo.m_length * settings.m_internodeLengthFactor * directionStart;
+        float thicknessStart = internodeInfo.m_thickness;
+        float thicknessEnd = internodeInfo.m_thickness;
 
         if (internode.m_parent != -1) {
             auto &parentInternode = treeSkeleton.RefInternode(internode.m_parent);
-            thicknessStart = parentInternode.m_thickness;
+            thicknessStart = parentInternode.m_info.m_thickness;
             GlobalTransform parentRelativeGlobalTransform;
             directionStart =
-                    parentInternode.m_globalRotation *
+                    parentInternode.m_info.m_globalRotation *
                     glm::vec3(0, 0, -1);
         }
 
@@ -181,15 +182,15 @@ BranchMeshGenerator::Generate(TreeSkeleton<BranchData, InternodeData> &treeSkele
             step++;
         steps[i] = step;
         int amount = static_cast<int>(0.5f +
-                                      internode.m_length * settings.m_subdivision);
+                internodeInfo.m_length * settings.m_subdivision);
         if (amount % 2 != 0)
             amount++;
         BezierCurve curve = BezierCurve(
                 positionStart,
                 positionStart +
-                (settings.m_smoothness ? internode.m_length / 3.0f : 0.0f) * directionStart,
+                (settings.m_smoothness ? internodeInfo.m_length / 3.0f : 0.0f) * directionStart,
                 positionEnd -
-                (settings.m_smoothness ? internode.m_length / 3.0f : 0.0f) * directionEnd,
+                (settings.m_smoothness ? internodeInfo.m_length / 3.0f : 0.0f) * directionEnd,
                 positionEnd);
         float posStep = 1.0f / static_cast<float>(amount);
         glm::vec3 dirStep = (directionEnd - directionStart) / static_cast<float>(amount);
@@ -231,17 +232,18 @@ BranchMeshGenerator::Generate(TreeSkeleton<BranchData, InternodeData> &treeSkele
     for (int i = 0; i < sortedInternodeList.size(); i++) {
         auto internodeHandle = sortedInternodeList[i];
         auto &internode = treeSkeleton.RefInternode(internodeHandle);
+        auto &internodeInfo = internode.m_info;
         auto parentInternodeHandle = internode.m_parent;
         glm::vec3 newNormalDir;
         if (parentInternodeHandle != -1) {
             newNormalDir = normals.at(parentInternodeHandle);
         } else {
-            newNormalDir = internode.m_globalRotation * glm::vec3(1, 0, 0);
+            newNormalDir = internodeInfo.m_globalRotation * glm::vec3(1, 0, 0);
         }
-        const glm::vec3 front = internode.m_globalRotation * glm::vec3(0.0f, 0.0f, -1.0f);
+        const glm::vec3 front = internodeInfo.m_globalRotation * glm::vec3(0.0f, 0.0f, -1.0f);
         newNormalDir = glm::cross(glm::cross(front, newNormalDir), front);
         normals[internodeHandle] = newNormalDir;
-        auto& rings = ringsList[i];
+        auto &rings = ringsList[i];
         if (rings.empty()) {
             continue;
         }

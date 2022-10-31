@@ -6,10 +6,22 @@
 #define BranchHandle int
 using namespace UniEngine;
 namespace EcoSysLab {
+    struct InternodeInfo {
+        glm::vec3 m_globalPosition = glm::vec3(0.0f);
+        glm::quat m_globalRotation = glm::vec3(0.0f);
+
+        float m_length = 0.0f;
+        float m_thickness = 0.1f;
+        glm::quat m_localRotation = glm::vec3(0.0f);
+    };
+
     template<typename InternodeData>
     class Internode {
     public:
         InternodeData m_data;
+        std::vector<InternodeData> m_dataHistory;
+        InternodeInfo m_info;
+        std::vector<InternodeInfo> m_infoHistory;
         bool m_endNode = true;
         bool m_recycled = false;
         InternodeHandle m_handle = -1;
@@ -18,29 +30,13 @@ namespace EcoSysLab {
         InternodeHandle m_parent = -1;
         std::vector<InternodeHandle> m_children;
 
-
-        glm::vec3 m_globalPosition = glm::vec3(0.0f);
-        glm::quat m_globalRotation = glm::vec3(0.0f);
+        std::vector<std::pair<int, InternodeHandle>> m_prunedChildren;
 
         explicit Internode(InternodeHandle handle);
 
-        float m_length = 0.0f;
-        float m_thickness = 0.1f;
-        glm::quat m_localRotation = glm::vec3(0.0f);
     };
 
-
-    template<typename BranchData>
-    class Branch {
-    public:
-        BranchData m_data;
-        bool m_recycled = false;
-        BranchHandle m_handle = -1;
-        std::vector<InternodeHandle> m_internodes;
-
-        BranchHandle m_parent = -1;
-        std::vector<BranchHandle> m_children;
-
+    struct BranchInfo {
         glm::vec3 m_globalStartPosition = glm::vec3(0.0f);
         glm::quat m_globalStartRotation = glm::vec3(0.0f);
         float m_startThickness = 0.0f;
@@ -48,6 +44,26 @@ namespace EcoSysLab {
         glm::vec3 m_globalEndPosition = glm::vec3(0.0f);
         glm::quat m_globalEndRotation = glm::vec3(0.0f);
         float m_endThickness = 0.0f;
+    };
+
+    template<typename BranchData>
+    class Branch {
+    public:
+        BranchData m_data;
+        std::vector<BranchData> m_dataHistory;
+        BranchInfo m_info;
+        std::vector<BranchInfo> m_infoHistory;
+
+        bool m_recycled = false;
+        BranchHandle m_handle = -1;
+
+        std::vector<InternodeHandle> m_internodes;
+        std::vector<std::pair<int, InternodeHandle>> m_prunedInternodes;
+
+        BranchHandle m_parent = -1;
+
+        std::vector<BranchHandle> m_children;
+        std::vector<std::pair<int, BranchHandle>> m_prunedChildren;
 
         explicit Branch(BranchHandle handle);
     };
@@ -82,6 +98,10 @@ namespace EcoSysLab {
         void DetachChildInternode(InternodeHandle targetHandle, InternodeHandle childHandle);
 
     public:
+        void RecycleInternode(InternodeHandle handle);
+
+        void RecycleBranch(BranchHandle handle);
+
         void PruneInternode(InternodeHandle handle);
 
         void PruneBranch(BranchHandle handle);
@@ -189,14 +209,14 @@ namespace EcoSysLab {
     }
 
     template<typename BranchData, typename InternodeData>
-    void TreeSkeleton<BranchData, InternodeData>::PruneBranch(int handle) {
+    void TreeSkeleton<BranchData, InternodeData>::RecycleBranch(int handle) {
         assert(handle != 0);
         assert(!m_branches[handle].m_recycled);
         auto &branch = m_branches[handle];
         //Remove children
         auto children = branch.m_children;
         for (const auto &child: children) {
-            PruneBranch(child);
+            RecycleBranch(child);
         }
         //Detach from parent
         if (branch.m_parent != -1) DetachChildBranch(branch.m_parent, handle);
@@ -213,14 +233,14 @@ namespace EcoSysLab {
     }
 
     template<typename BranchData, typename InternodeData>
-    void TreeSkeleton<BranchData, InternodeData>::PruneInternode(int handle) {
+    void TreeSkeleton<BranchData, InternodeData>::RecycleInternode(int handle) {
         assert(handle != 0);
         assert(!m_internodes[handle].m_recycled);
         auto &internode = m_internodes[handle];
         auto branchHandle = internode.m_branchHandle;
         auto &branch = m_branches[branchHandle];
         if (handle == branch.m_internodes[0]) {
-            PruneBranch(internode.m_branchHandle);
+            RecycleBranch(internode.m_branchHandle);
             return;
         }
         //Collect list of subsequent internodes
@@ -244,7 +264,7 @@ namespace EcoSysLab {
                 assert(!child.m_recycled);
                 auto childBranchHandle = child.m_branchHandle;
                 if (childBranchHandle != branchHandle) {
-                    PruneBranch(childBranchHandle);
+                    RecycleBranch(childBranchHandle);
                 }
             }
             prev = i;
@@ -263,6 +283,7 @@ namespace EcoSysLab {
         m_recycled = false;
         m_endNode = true;
         m_data = {};
+        m_info = {};
     }
 
     template<typename BranchData>
@@ -270,6 +291,7 @@ namespace EcoSysLab {
         m_handle = handle;
         m_recycled = false;
         m_data = {};
+        m_info = {};
     }
 
     template<typename BranchData, typename InternodeData>
@@ -373,6 +395,13 @@ namespace EcoSysLab {
         branch.m_children.clear();
         branch.m_internodes.clear();
 
+        branch.m_data = {};
+        branch.m_info = {};
+        branch.m_dataHistory.clear();
+        branch.m_infoHistory.clear();
+        branch.m_prunedInternodes.clear();
+        branch.m_prunedChildren.clear();
+
         branch.m_recycled = true;
         m_branchPool.emplace(handle);
     }
@@ -385,6 +414,12 @@ namespace EcoSysLab {
         internode.m_branchHandle = -1;
         internode.m_endNode = true;
         internode.m_children.clear();
+
+        internode.m_data = {};
+        internode.m_info = {};
+        internode.m_dataHistory.clear();
+        internode.m_infoHistory.clear();
+        internode.m_prunedChildren.clear();
 
         internode.m_recycled = true;
         m_internodePool.emplace(handle);
@@ -415,15 +450,26 @@ namespace EcoSysLab {
             auto &branch = m_branches[branchHandle];
             auto &firstInternode = m_internodes[branch.m_internodes.front()];
             auto &lastInternode = m_internodes[branch.m_internodes.back()];
-            branch.m_startThickness = firstInternode.m_thickness;
-            branch.m_globalStartPosition = firstInternode.m_globalPosition;
-            branch.m_globalStartRotation = firstInternode.m_localRotation;
+            branch.m_info.m_startThickness = firstInternode.m_info.m_thickness;
+            branch.m_info.m_globalStartPosition = firstInternode.m_info.m_globalPosition;
+            branch.m_info.m_globalStartRotation = firstInternode.m_info.m_localRotation;
 
-            branch.m_endThickness = lastInternode.m_thickness;
-            branch.m_globalEndPosition = lastInternode.m_globalPosition +
-                                         lastInternode.m_length * (lastInternode.m_globalRotation * glm::vec3(0, 0, -1));
-            branch.m_globalEndRotation = lastInternode.m_globalRotation;
+            branch.m_info.m_endThickness = lastInternode.m_info.m_thickness;
+            branch.m_info.m_globalEndPosition = lastInternode.m_info.m_globalPosition +
+                                         lastInternode.m_info.m_length *
+                                         (lastInternode.m_info.m_globalRotation * glm::vec3(0, 0, -1));
+            branch.m_info.m_globalEndRotation = lastInternode.m_info.m_globalRotation;
         }
+    }
+
+    template<typename BranchData, typename InternodeData>
+    void TreeSkeleton<BranchData, InternodeData>::PruneInternode(int handle) {
+
+    }
+
+    template<typename BranchData, typename InternodeData>
+    void TreeSkeleton<BranchData, InternodeData>::PruneBranch(int handle) {
+        
     }
 
 
