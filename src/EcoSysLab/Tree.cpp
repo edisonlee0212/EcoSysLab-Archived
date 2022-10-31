@@ -228,53 +228,14 @@ bool TreeVisualizer::OnInspect(TreeModel &treeModel, const GlobalTransform &glob
         }
     }
     if (m_visualization) {
-        static std::vector<glm::vec4> randomColors;
-        if (randomColors.empty()) {
-            for (int i = 0; i < 100; i++) {
-                randomColors.emplace_back(glm::ballRand(1.0f), 1.0f);
-            }
-        }
         ImGui::Text("Internode count: %d", m_sortedInternodeList.size());
         ImGui::Text("Branch count: %d", m_sortedBranchList.size());
         if (ImGui::Button("Update")) needUpdate = true;
         if (treeModel.m_tree->GetVersion() != m_version) needUpdate = true;
         if (RayCastSelection(treeModel, globalTransform)) needUpdate = true;
         if (needUpdate) {
-            m_version = treeModel.m_tree->GetVersion();
-            m_sortedBranchList = treeModel.m_tree->GetSortedBranchList();
-            m_sortedInternodeList = treeModel.m_tree->GetSortedInternodeList();
-            m_matrices.resize(m_sortedInternodeList.size());
-            m_colors.resize(m_sortedInternodeList.size());
-            std::vector<std::shared_future<void>> results;
-            Jobs::ParallelFor(m_sortedInternodeList.size(), [&](unsigned i) {
-                auto internodeHandle = m_sortedInternodeList[i];
-                auto &internode = treeModel.m_tree->RefInternode(internodeHandle);
-                auto rotation = globalTransform.GetRotation() * internode.m_globalRotation;
-                glm::vec3 translation = (globalTransform.m_value * glm::translate(internode.m_globalPosition))[3];
-                const auto direction = glm::normalize(rotation * glm::vec3(0, 0, -1));
-                const glm::vec3 position2 =
-                        translation + internode.m_length * direction;
-                rotation = glm::quatLookAt(
-                        direction, glm::vec3(direction.y, direction.z, direction.x));
-                rotation *= glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));
-                const glm::mat4 rotationTransform = glm::mat4_cast(rotation);
-                m_matrices[i] =
-                        glm::translate((translation + position2) / 2.0f) *
-                        rotationTransform *
-                        glm::scale(glm::vec3(
-                                internode.m_thickness,
-                                glm::distance(translation, position2) / 2.0f,
-                                internode.m_thickness));
-                if (internodeHandle == m_selectedInternodeHandle) {
-                    m_colors[i] = glm::vec4(1, 0, 0, 1);
-                } else {
-                    m_colors[i] = randomColors[treeModel.m_tree->RefBranch(internode.m_branchHandle).m_data.m_order];
-                    if (m_selectedInternodeHandle != -1) m_colors[i].w = 0.5f;
-                }
-            }, results);
-            for (auto &i: results) i.wait();
+            SyncMatrices(treeModel, globalTransform);
         }
-
         if (!m_matrices.empty()) {
             auto editorLayer = Application::GetLayer<EditorLayer>();
             Gizmos::DrawGizmoMeshInstancedColored(
@@ -284,10 +245,8 @@ bool TreeVisualizer::OnInspect(TreeModel &treeModel, const GlobalTransform &glob
                     *reinterpret_cast<std::vector<glm::vec4> *>(&m_colors),
                     *reinterpret_cast<std::vector<glm::mat4> *>(&m_matrices),
                     glm::mat4(1.0f), 1.0f);
-
         }
     }
-
     return needUpdate;
 }
 
@@ -503,6 +462,49 @@ bool TreeVisualizer::RayCastSelection(TreeModel &treeModel, const GlobalTransfor
     ImGui::PopStyleVar();
 
     return changed;
+}
+
+void TreeVisualizer::SyncMatrices(TreeModel &treeModel, const GlobalTransform &globalTransform) {
+    static std::vector<glm::vec4> randomColors;
+    if (randomColors.empty()) {
+        for (int i = 0; i < 100; i++) {
+            randomColors.emplace_back(glm::ballRand(1.0f), 1.0f);
+        }
+    }
+
+    m_version = treeModel.m_tree->GetVersion();
+    m_sortedBranchList = treeModel.m_tree->GetSortedBranchList();
+    m_sortedInternodeList = treeModel.m_tree->GetSortedInternodeList();
+    m_matrices.resize(m_sortedInternodeList.size());
+    m_colors.resize(m_sortedInternodeList.size());
+    std::vector<std::shared_future<void>> results;
+    Jobs::ParallelFor(m_sortedInternodeList.size(), [&](unsigned i) {
+        auto internodeHandle = m_sortedInternodeList[i];
+        auto &internode = treeModel.m_tree->RefInternode(internodeHandle);
+        auto rotation = globalTransform.GetRotation() * internode.m_globalRotation;
+        glm::vec3 translation = (globalTransform.m_value * glm::translate(internode.m_globalPosition))[3];
+        const auto direction = glm::normalize(rotation * glm::vec3(0, 0, -1));
+        const glm::vec3 position2 =
+                translation + internode.m_length * direction;
+        rotation = glm::quatLookAt(
+                direction, glm::vec3(direction.y, direction.z, direction.x));
+        rotation *= glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));
+        const glm::mat4 rotationTransform = glm::mat4_cast(rotation);
+        m_matrices[i] =
+                glm::translate((translation + position2) / 2.0f) *
+                rotationTransform *
+                glm::scale(glm::vec3(
+                        internode.m_thickness,
+                        glm::distance(translation, position2) / 2.0f,
+                        internode.m_thickness));
+        if (internodeHandle == m_selectedInternodeHandle) {
+            m_colors[i] = glm::vec4(1, 0, 0, 1);
+        } else {
+            m_colors[i] = randomColors[treeModel.m_tree->RefBranch(internode.m_branchHandle).m_data.m_order];
+            if (m_selectedInternodeHandle != -1) m_colors[i].w = 0.5f;
+        }
+    }, results);
+    for (auto &i: results) i.wait();
 }
 
 

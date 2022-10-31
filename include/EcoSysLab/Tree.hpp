@@ -2,9 +2,10 @@
 
 #include "ecosyslab_export.h"
 #include "TreeModel.hpp"
+
 using namespace UniEngine;
 namespace EcoSysLab {
-    class TreeDescriptor : public IAsset{
+    class TreeDescriptor : public IAsset {
     public:
         TreeStructuralGrowthParameters m_treeStructuralGrowthParameters;
 
@@ -19,7 +20,7 @@ namespace EcoSysLab {
         void Deserialize(const YAML::Node &in) override;
     };
 
-    class TreeVisualizer{
+    class TreeVisualizer {
         std::vector<InternodeHandle> m_sortedInternodeList;
         std::vector<BranchHandle> m_sortedBranchList;
         std::vector<glm::mat4> m_matrices;
@@ -29,17 +30,27 @@ namespace EcoSysLab {
         InternodeHandle m_selectedInternodeHandle = -1;
         std::vector<InternodeHandle> m_selectedInternodeHierarchyList;
         int m_version = -1;
-        bool RayCastSelection(TreeModel& treeModel, const GlobalTransform& globalTransform);
-        bool DrawInternodeMenu(TreeModel& treeModel, InternodeHandle internodeHandle);
-        void SetSelectedInternode(TreeModel& treeModel, InternodeHandle internodeHandle);
-        bool DrawInternodeInspectionGui(TreeModel& treeModel, InternodeHandle internodeHandle, bool& deleted, const unsigned &hierarchyLevel);
-        void InspectInternode(TreeModel& treeModel, InternodeHandle internodeHandle);
+
+        void SyncMatrices(TreeModel &treeModel, const GlobalTransform &globalTransform);
+
+        bool RayCastSelection(TreeModel &treeModel, const GlobalTransform &globalTransform);
+
+        bool DrawInternodeMenu(TreeModel &treeModel, InternodeHandle internodeHandle);
+
+        void SetSelectedInternode(TreeModel &treeModel, InternodeHandle internodeHandle);
+
+        bool DrawInternodeInspectionGui(TreeModel &treeModel, InternodeHandle internodeHandle, bool &deleted,
+                                        const unsigned &hierarchyLevel);
+
+        void InspectInternode(TreeModel &treeModel, InternodeHandle internodeHandle);
+
     public:
-        bool OnInspect(TreeModel& treeModel, const GlobalTransform& globalTransform);
+        bool OnInspect(TreeModel &treeModel, const GlobalTransform &globalTransform);
+
         void Reset();
     };
 
-    class Tree : public IPrivateComponent{
+    class Tree : public IPrivateComponent {
     public:
         AssetRef m_treeDescriptor;
 
