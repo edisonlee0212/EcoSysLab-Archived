@@ -19,9 +19,7 @@ namespace EcoSysLab {
     class Internode {
     public:
         InternodeData m_data;
-        std::vector<InternodeData> m_dataHistory;
         InternodeInfo m_info;
-        std::vector<InternodeInfo> m_infoHistory;
         bool m_endNode = true;
         bool m_recycled = false;
         InternodeHandle m_handle = -1;
@@ -50,20 +48,16 @@ namespace EcoSysLab {
     class Branch {
     public:
         BranchData m_data;
-        std::vector<BranchData> m_dataHistory;
         BranchInfo m_info;
-        std::vector<BranchInfo> m_infoHistory;
 
         bool m_recycled = false;
         BranchHandle m_handle = -1;
 
         std::vector<InternodeHandle> m_internodes;
-        std::vector<std::pair<int, InternodeHandle>> m_prunedInternodes;
 
         BranchHandle m_parent = -1;
 
         std::vector<BranchHandle> m_children;
-        std::vector<std::pair<int, BranchHandle>> m_prunedChildren;
 
         explicit Branch(BranchHandle handle);
     };
@@ -102,15 +96,11 @@ namespace EcoSysLab {
 
         void RecycleBranch(BranchHandle handle);
 
-        void PruneInternode(InternodeHandle handle);
-
-        void PruneBranch(BranchHandle handle);
-
         InternodeHandle Extend(InternodeHandle targetHandle, bool createNewBranch);
 
-        const std::vector<InternodeHandle> &GetSortedInternodeList();
+        std::vector<InternodeHandle> &GetSortedInternodeList();
 
-        const std::vector<BranchHandle> &GetSortedBranchList();
+        std::vector<BranchHandle> &GetSortedBranchList();
 
         void SortLists();
 
@@ -123,18 +113,81 @@ namespace EcoSysLab {
         Internode<InternodeData> &RefInternode(InternodeHandle handle);
 
         Branch<BranchData> &RefBranch(BranchHandle handle);
+
+        const Internode<InternodeData> &PeekInternode(InternodeHandle handle) const;
+
+        const Branch<BranchData> &PeekBranch(BranchHandle handle) const;
     };
 
+    template<typename BranchData, typename InternodeData>
+    class TreeStructure {
+        TreeSkeleton<BranchData, InternodeData> m_skeleton;
+        std::vector<TreeSkeleton<BranchData, InternodeData>> m_history;
+    public:
+        [[nodiscard]] TreeSkeleton<BranchData, InternodeData> &Skeleton();
+
+        [[nodiscard]] const TreeSkeleton<BranchData, InternodeData> &Peek(int iteration) const;
+
+        [[nodiscard]] int Step();
+
+        [[nodiscard]] int CurrentIteration() const;
+
+        void Reverse(int iteration);
+    };
+
+    template<typename BranchData, typename InternodeData>
+    int TreeStructure<BranchData, InternodeData>::Step() {
+        m_history.push_back(m_skeleton);
+        return m_history.size();
+    }
+
+    template<typename BranchData, typename InternodeData>
+    void TreeStructure<BranchData, InternodeData>::Reverse(int iteration) {
+        assert(iteration >= 0 && iteration < m_history.size());
+        m_skeleton = m_history[iteration];
+        m_history.erase((m_history.begin() + iteration), m_history.end());
+    }
+
+    template<typename BranchData, typename InternodeData>
+    TreeSkeleton<BranchData, InternodeData> &TreeStructure<BranchData, InternodeData>::Skeleton() {
+        return m_skeleton;
+    }
+
+    template<typename BranchData, typename InternodeData>
+    const TreeSkeleton<BranchData, InternodeData> &TreeStructure<BranchData, InternodeData>::Peek(int iteration) const {
+        assert(iteration >= 0 && iteration < m_history.size());
+        return m_history[iteration];
+    }
+
+    template<typename BranchData, typename InternodeData>
+    int TreeStructure<BranchData, InternodeData>::CurrentIteration() const {
+        return m_history.size();
+    }
+
+#pragma region TreeSkeleton
 #pragma region Helper
 
     template<typename BranchData, typename InternodeData>
-    Branch<BranchData> &TreeSkeleton<BranchData, InternodeData>::RefBranch(int handle) {
+    Branch<BranchData> &TreeSkeleton<BranchData, InternodeData>::RefBranch(BranchHandle handle) {
         assert(handle >= 0 && handle < m_branches.size());
         return m_branches[handle];
     }
 
     template<typename BranchData, typename InternodeData>
-    Internode<InternodeData> &TreeSkeleton<BranchData, InternodeData>::RefInternode(int handle) {
+    const Branch<BranchData> &TreeSkeleton<BranchData, InternodeData>::PeekBranch(BranchHandle handle) const {
+        assert(handle >= 0 && handle < m_branches.size());
+        return m_branches[handle];
+    }
+
+    template<typename BranchData, typename InternodeData>
+    Internode<InternodeData> &TreeSkeleton<BranchData, InternodeData>::RefInternode(InternodeHandle handle) {
+        assert(handle >= 0 && handle < m_internodes.size());
+        return m_internodes[handle];
+    }
+
+    template<typename BranchData, typename InternodeData>
+    const Internode<InternodeData> &
+    TreeSkeleton<BranchData, InternodeData>::PeekInternode(InternodeHandle handle) const {
         assert(handle >= 0 && handle < m_internodes.size());
         return m_internodes[handle];
     }
@@ -167,19 +220,20 @@ namespace EcoSysLab {
     }
 
     template<typename BranchData, typename InternodeData>
-    const std::vector<BranchHandle> &TreeSkeleton<BranchData, InternodeData>::GetSortedBranchList() {
+    std::vector<BranchHandle> &TreeSkeleton<BranchData, InternodeData>::GetSortedBranchList() {
         SortLists();
         return m_sortedBranchList;
     }
 
     template<typename BranchData, typename InternodeData>
-    const std::vector<InternodeHandle> &TreeSkeleton<BranchData, InternodeData>::GetSortedInternodeList() {
+    std::vector<InternodeHandle> &TreeSkeleton<BranchData, InternodeData>::GetSortedInternodeList() {
         SortLists();
         return m_sortedInternodeList;
     }
 
     template<typename BranchData, typename InternodeData>
-    InternodeHandle TreeSkeleton<BranchData, InternodeData>::Extend(int targetHandle, bool createNewBranch) {
+    InternodeHandle
+    TreeSkeleton<BranchData, InternodeData>::Extend(InternodeHandle targetHandle, bool createNewBranch) {
         assert(targetHandle < m_internodes.size());
         auto &targetInternode = m_internodes[targetHandle];
         assert(!targetInternode.m_recycled);
@@ -209,7 +263,7 @@ namespace EcoSysLab {
     }
 
     template<typename BranchData, typename InternodeData>
-    void TreeSkeleton<BranchData, InternodeData>::RecycleBranch(int handle) {
+    void TreeSkeleton<BranchData, InternodeData>::RecycleBranch(BranchHandle handle) {
         assert(handle != 0);
         assert(!m_branches[handle].m_recycled);
         auto &branch = m_branches[handle];
@@ -233,7 +287,7 @@ namespace EcoSysLab {
     }
 
     template<typename BranchData, typename InternodeData>
-    void TreeSkeleton<BranchData, InternodeData>::RecycleInternode(int handle) {
+    void TreeSkeleton<BranchData, InternodeData>::RecycleInternode(InternodeHandle handle) {
         assert(handle != 0);
         assert(!m_internodes[handle].m_recycled);
         auto &internode = m_internodes[handle];
@@ -305,7 +359,8 @@ namespace EcoSysLab {
     }
 
     template<typename BranchData, typename InternodeData>
-    void TreeSkeleton<BranchData, InternodeData>::DetachChildInternode(int targetHandle, int childHandle) {
+    void TreeSkeleton<BranchData, InternodeData>::DetachChildInternode(InternodeHandle targetHandle,
+                                                                       InternodeHandle childHandle) {
         assert(targetHandle >= 0 && childHandle >= 0 && targetHandle < m_internodes.size() &&
                childHandle < m_internodes.size());
         auto &targetInternode = m_internodes[targetHandle];
@@ -324,7 +379,8 @@ namespace EcoSysLab {
     }
 
     template<typename BranchData, typename InternodeData>
-    void TreeSkeleton<BranchData, InternodeData>::SetParentInternode(int targetHandle, int parentHandle) {
+    void TreeSkeleton<BranchData, InternodeData>::SetParentInternode(InternodeHandle targetHandle,
+                                                                     InternodeHandle parentHandle) {
         assert(targetHandle >= 0 && parentHandle >= 0 && targetHandle < m_internodes.size() &&
                parentHandle < m_internodes.size());
         auto &targetInternode = m_internodes[targetHandle];
@@ -336,7 +392,8 @@ namespace EcoSysLab {
     }
 
     template<typename BranchData, typename InternodeData>
-    void TreeSkeleton<BranchData, InternodeData>::DetachChildBranch(int targetHandle, int childHandle) {
+    void
+    TreeSkeleton<BranchData, InternodeData>::DetachChildBranch(BranchHandle targetHandle, BranchHandle childHandle) {
         assert(targetHandle >= 0 && childHandle >= 0 && targetHandle < m_branches.size() &&
                childHandle < m_branches.size());
         auto &targetBranch = m_branches[targetHandle];
@@ -363,7 +420,8 @@ namespace EcoSysLab {
     }
 
     template<typename BranchData, typename InternodeData>
-    void TreeSkeleton<BranchData, InternodeData>::SetParentBranch(int targetHandle, int parentHandle) {
+    void
+    TreeSkeleton<BranchData, InternodeData>::SetParentBranch(BranchHandle targetHandle, BranchHandle parentHandle) {
         assert(targetHandle >= 0 && parentHandle >= 0 && targetHandle < m_branches.size() &&
                parentHandle < m_branches.size());
         auto &targetBranch = m_branches[targetHandle];
@@ -388,7 +446,7 @@ namespace EcoSysLab {
     }
 
     template<typename BranchData, typename InternodeData>
-    void TreeSkeleton<BranchData, InternodeData>::RecycleBranchSingle(int handle) {
+    void TreeSkeleton<BranchData, InternodeData>::RecycleBranchSingle(BranchHandle handle) {
         assert(!m_branches[handle].m_recycled);
         auto &branch = m_branches[handle];
         branch.m_parent = -1;
@@ -397,17 +455,13 @@ namespace EcoSysLab {
 
         branch.m_data = {};
         branch.m_info = {};
-        branch.m_dataHistory.clear();
-        branch.m_infoHistory.clear();
-        branch.m_prunedInternodes.clear();
-        branch.m_prunedChildren.clear();
 
         branch.m_recycled = true;
         m_branchPool.emplace(handle);
     }
 
     template<typename BranchData, typename InternodeData>
-    void TreeSkeleton<BranchData, InternodeData>::RecycleInternodeSingle(int handle) {
+    void TreeSkeleton<BranchData, InternodeData>::RecycleInternodeSingle(InternodeHandle handle) {
         assert(!m_internodes[handle].m_recycled);
         auto &internode = m_internodes[handle];
         internode.m_parent = -1;
@@ -417,9 +471,6 @@ namespace EcoSysLab {
 
         internode.m_data = {};
         internode.m_info = {};
-        internode.m_dataHistory.clear();
-        internode.m_infoHistory.clear();
-        internode.m_prunedChildren.clear();
 
         internode.m_recycled = true;
         m_internodePool.emplace(handle);
@@ -456,22 +507,13 @@ namespace EcoSysLab {
 
             branch.m_info.m_endThickness = lastInternode.m_info.m_thickness;
             branch.m_info.m_globalEndPosition = lastInternode.m_info.m_globalPosition +
-                                         lastInternode.m_info.m_length *
-                                         (lastInternode.m_info.m_globalRotation * glm::vec3(0, 0, -1));
+                                                lastInternode.m_info.m_length *
+                                                (lastInternode.m_info.m_globalRotation * glm::vec3(0, 0, -1));
             branch.m_info.m_globalEndRotation = lastInternode.m_info.m_globalRotation;
         }
     }
 
-    template<typename BranchData, typename InternodeData>
-    void TreeSkeleton<BranchData, InternodeData>::PruneInternode(int handle) {
 
-    }
-
-    template<typename BranchData, typename InternodeData>
-    void TreeSkeleton<BranchData, InternodeData>::PruneBranch(int handle) {
-        
-    }
-
-
+#pragma endregion
 #pragma endregion
 }

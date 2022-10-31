@@ -99,11 +99,11 @@ void Trees::OnInspect() {
                 int totalBranchSize = 0;
                 for (int i = 0; i < m_trees.size(); i++) {
                     auto &tree = m_trees[i];
-                    if (versions[i] != tree.m_treeModel.m_tree->GetVersion()) {
-                        versions[i] = tree.m_treeModel.m_tree->GetVersion();
+                    if (versions[i] != tree.m_treeModel.m_tree->Skeleton().GetVersion()) {
+                        versions[i] = tree.m_treeModel.m_tree->Skeleton().GetVersion();
                         needUpdate = true;
-                        sortedInternodeLists[i] = tree.m_treeModel.m_tree->GetSortedInternodeList();
-                        sortedBranchLists[i] = tree.m_treeModel.m_tree->GetSortedBranchList();
+                        sortedInternodeLists[i] = tree.m_treeModel.m_tree->Skeleton().GetSortedInternodeList();
+                        sortedBranchLists[i] = tree.m_treeModel.m_tree->Skeleton().GetSortedBranchList();
                     }
                     totalInternodeSize += sortedInternodeLists[i].size();
                     totalBranchSize += sortedBranchLists[i].size();
@@ -126,7 +126,7 @@ void Trees::OnInspect() {
                         globalTransform.m_value =
                                 entityGlobalTransform.m_value * m_trees[listIndex].m_transform.m_value;
                         Jobs::ParallelFor(list.size(), [&](unsigned i) {
-                            auto &internode = m_trees[listIndex].m_treeModel.m_tree->RefInternode(list[i]);
+                            auto &internode = m_trees[listIndex].m_treeModel.m_tree->Skeleton().RefInternode(list[i]);
                             auto rotation = globalTransform.GetRotation() * internode.m_info.m_globalRotation;
                             glm::vec3 translation = (globalTransform.m_value *
                                                      glm::translate(internode.m_info.m_globalPosition))[3];
@@ -144,7 +144,7 @@ void Trees::OnInspect() {
                                             internode.m_info.m_thickness,
                                             glm::distance(translation, position2) / 2.0f,
                                             internode.m_info.m_thickness));
-                            colors[i + startIndex] = randomColors[m_trees[listIndex].m_treeModel.m_tree->RefBranch(
+                            colors[i + startIndex] = randomColors[m_trees[listIndex].m_treeModel.m_tree->Skeleton().RefBranch(
                                     internode.m_branchHandle).m_data.m_order];
                         }, results);
                         for (auto &i: results) i.wait();
@@ -159,7 +159,7 @@ void Trees::OnInspect() {
                         globalTransform.m_value =
                                 entityGlobalTransform.m_value * m_trees[listIndex].m_transform.m_value;
                         Jobs::ParallelFor(list.size(), [&](unsigned i) {
-                            auto &branch = m_trees[listIndex].m_treeModel.m_tree->RefBranch(list[i]);
+                            auto &branch = m_trees[listIndex].m_treeModel.m_tree->Skeleton().RefBranch(list[i]);
                             glm::vec3 translation = (globalTransform.m_value *
                                                      glm::translate(branch.m_info.m_globalStartPosition))[3];
                             const auto direction = glm::normalize(

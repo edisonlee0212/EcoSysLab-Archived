@@ -27,7 +27,8 @@ void ApplyTropism(const glm::vec3 &targetDir, float tropism, glm::quat &rotation
 }
 
 void TreeModel::CollectInhibitor(InternodeHandle internodeHandle, const TreeStructuralGrowthParameters& parameters) {
-    auto &internode = m_tree->RefInternode(internodeHandle);
+    auto& skeleton = m_tree->Skeleton();
+    auto &internode = skeleton.RefInternode(internodeHandle);
     auto &internodeData = internode.m_data;
     if (internode.m_endNode) {
         //If current node is end node
@@ -35,7 +36,7 @@ void TreeModel::CollectInhibitor(InternodeHandle internodeHandle, const TreeStru
     } else {
         //If current node is not end node
         for (const auto &i: internode.m_children) {
-            auto &childInternode = m_tree->RefInternode(i);
+            auto &childInternode = skeleton.RefInternode(i);
             if (childInternode.m_endNode) {
                 internodeData.m_inhibitor += parameters.m_apicalDominanceBaseAgeDist.x *
                                              glm::pow(
@@ -50,9 +51,10 @@ void TreeModel::CollectInhibitor(InternodeHandle internodeHandle, const TreeStru
 }
 
 void TreeModel::GrowInternode(InternodeHandle internodeHandle, const TreeStructuralGrowthParameters& parameters, const GrowthNutrients &growthNutrients) {
-    auto &buds = m_tree->RefInternode(internodeHandle).m_data.m_buds;
+    auto& skeleton = m_tree->Skeleton();
+    auto &buds = skeleton.RefInternode(internodeHandle).m_data.m_buds;
     for (auto &bud: buds) {
-        auto &internode = m_tree->RefInternode(internodeHandle);
+        auto &internode = skeleton.RefInternode(internodeHandle);
         auto &internodeData = internode.m_data;
         auto& internodeInfo = internode.m_info;
         switch (bud.m_type) {
@@ -93,9 +95,9 @@ void TreeModel::GrowInternode(InternodeHandle internodeHandle, const TreeStructu
                             }
 
                             //Create new internode
-                            auto newInternodeHandle = m_tree->Extend(internodeHandle, false);
-                            auto &oldInternode = m_tree->RefInternode(internodeHandle);
-                            auto &newInternode = m_tree->RefInternode(newInternodeHandle);
+                            auto newInternodeHandle = skeleton.Extend(internodeHandle, false);
+                            auto &oldInternode = skeleton.RefInternode(internodeHandle);
+                            auto &newInternode = skeleton.RefInternode(newInternodeHandle);
                             newInternode.m_data.Clear();
                             newInternode.m_info.m_length = extraLength;
                             newInternode.m_info.m_thickness = parameters.m_endNodeThicknessAndControl.x;
@@ -145,9 +147,9 @@ void TreeModel::GrowInternode(InternodeHandle internodeHandle, const TreeStructu
                             ApplyTropism(internodeData.m_lightDirection, parameters.m_phototropism,
                                          desiredGlobalFront, desiredGlobalUp);
                             //Create new internode
-                            auto newInternodeHandle = m_tree->Extend(internodeHandle, true);
-                            auto &oldInternode = m_tree->RefInternode(internodeHandle);
-                            auto &newInternode = m_tree->RefInternode(newInternodeHandle);
+                            auto newInternodeHandle = skeleton.Extend(internodeHandle, true);
+                            auto &oldInternode = skeleton.RefInternode(internodeHandle);
+                            auto &newInternode = skeleton.RefInternode(newInternodeHandle);
                             newInternode.m_data.Clear();
                             newInternode.m_info.m_length = 0.0f;
                             newInternode.m_info.m_thickness = parameters.m_endNodeThicknessAndControl.x;
@@ -181,7 +183,8 @@ void TreeModel::GrowInternode(InternodeHandle internodeHandle, const TreeStructu
 }
 
 void TreeModel::CalculateSagging(InternodeHandle internodeHandle, const TreeStructuralGrowthParameters& parameters) {
-    auto &internode = m_tree->RefInternode(internodeHandle);
+    auto& skeleton = m_tree->Skeleton();
+    auto &internode = skeleton.RefInternode(internodeHandle);
     auto &internodeData = internode.m_data;
     auto &internodeInfo = internode.m_info;
     internodeData.m_childTotalBiomass = 0;
@@ -191,7 +194,7 @@ void TreeModel::CalculateSagging(InternodeHandle internodeHandle, const TreeStru
         float maxDistanceToAnyBranchEnd = 0;
         float childThicknessCollection = 0.0f;
         for (const auto &i: internode.m_children) {
-            auto &childInternode = m_tree->RefInternode(i);
+            auto &childInternode = skeleton.RefInternode(i);
             internodeData.m_childTotalBiomass +=
                     childInternode.m_data.m_childTotalBiomass + childInternode.m_info.m_thickness * childInternode.m_info.m_length;
             internodeData.m_decedentsAmount += childInternode.m_data.m_decedentsAmount + 1;
@@ -223,27 +226,28 @@ void TreeModel::Grow(const GrowthNutrients &growthNutrients, const TreeStructura
     if (!m_tree) {
         return;
     }
+    auto& skeleton = m_tree->Skeleton();
 #pragma region Preprocess
-    m_tree->SortLists();
+    skeleton.SortLists();
     {
-        const auto &sortedInternodeList = m_tree->GetSortedInternodeList();
-        const auto maxDistance = m_tree->RefInternode(sortedInternodeList.front()).m_data.m_maxDistanceToAnyBranchEnd;
+        const auto &sortedInternodeList = skeleton.GetSortedInternodeList();
+        const auto maxDistance = skeleton.RefInternode(sortedInternodeList.front()).m_data.m_maxDistanceToAnyBranchEnd;
         for (const auto &internodeHandle: sortedInternodeList) {
-            auto &internode = m_tree->RefInternode(internodeHandle);
+            auto &internode = skeleton.RefInternode(internodeHandle);
             //Pruning here.
             if (internode.m_recycled) continue;
-            auto &branch = m_tree->RefBranch(internode.m_branchHandle);
+            auto &branch = skeleton.RefBranch(internode.m_branchHandle);
             if(maxDistance > 5 && branch.m_data.m_order != 0 && (maxDistance - internode.m_data.m_maxDistanceToAnyBranchEnd) / maxDistance < parameters.m_lowBranchPruning){
-                m_tree->RecycleInternode(internodeHandle);
+                skeleton.RecycleInternode(internodeHandle);
                 continue;
             }
         }
     }
 #pragma endregion
 #pragma region Grow
-    m_tree->SortLists();
+    skeleton.SortLists();
     {
-        const auto &sortedInternodeList = m_tree->GetSortedInternodeList();
+        const auto &sortedInternodeList = skeleton.GetSortedInternodeList();
         for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); it++) {
             auto internodeHandle = *it;
             CollectInhibitor(internodeHandle, parameters);
@@ -254,12 +258,12 @@ void TreeModel::Grow(const GrowthNutrients &growthNutrients, const TreeStructura
     }
 #pragma endregion
 #pragma region Postprocess
-    m_tree->SortLists();
+    skeleton.SortLists();
     {
-        const auto &sortedInternodeList = m_tree->GetSortedInternodeList();
+        const auto &sortedInternodeList = skeleton.GetSortedInternodeList();
 
         for (const auto &internodeHandle: sortedInternodeList) {
-            auto &internode = m_tree->RefInternode(internodeHandle);
+            auto &internode = skeleton.RefInternode(internodeHandle);
             auto &internodeData = internode.m_data;
             auto &internodeInfo = internode.m_info;
             if (internode.m_parent == -1) {
@@ -270,7 +274,7 @@ void TreeModel::Grow(const GrowthNutrients &growthNutrients, const TreeStructura
                 internodeData.m_rootDistance = internodeInfo.m_length;
                 internodeData.m_apicalControl = 1.0f;
             } else {
-                auto &parentInternode = m_tree->RefInternode(internode.m_parent);
+                auto &parentInternode = skeleton.RefInternode(internode.m_parent);
                 internodeData.m_rootDistance = parentInternode.m_data.m_rootDistance + internodeInfo.m_length;
 
                 internodeInfo.m_globalRotation = parentInternode.m_info.m_globalRotation * internodeInfo.m_localRotation;
@@ -278,7 +282,7 @@ void TreeModel::Grow(const GrowthNutrients &growthNutrients, const TreeStructura
                                                                                 (parentInternode.m_info.m_globalRotation *
                                                                                  glm::vec3(0, 0, -1));
 #pragma region Apply Sagging
-                auto parentGlobalRotation = m_tree->RefInternode(internode.m_parent).m_info.m_globalRotation;
+                auto parentGlobalRotation = skeleton.RefInternode(internode.m_parent).m_info.m_globalRotation;
                 internodeInfo.m_globalRotation = parentGlobalRotation * internodeData.m_desiredLocalRotation;
                 auto front = internodeInfo.m_globalRotation * glm::vec3(0, 0, -1);
                 auto up = internodeInfo.m_globalRotation * glm::vec3(0, 1, 0);
@@ -294,14 +298,14 @@ void TreeModel::Grow(const GrowthNutrients &growthNutrients, const TreeStructura
                                                                                                         parameters.m_apicalControlBaseDistFactor.y));
             float totalApicalControl = 0.0f;
             for (const auto &i: internode.m_children) {
-                auto &childInternode = m_tree->RefInternode(i);
+                auto &childInternode = skeleton.RefInternode(i);
                 auto &childInternodeData = childInternode.m_data;
                 childInternodeData.m_apicalControl = glm::pow(childInternodeData.m_decedentsAmount + 1,
                                                               apicalControl);
                 totalApicalControl += childInternodeData.m_apicalControl;
             }
             for (const auto &i: internode.m_children) {
-                auto &childInternode = m_tree->RefInternode(i);
+                auto &childInternode = skeleton.RefInternode(i);
                 auto &childInternodeData = childInternode.m_data;
                 childInternodeData.m_apicalControl =
                         internodeData.m_apicalControl * childInternodeData.m_apicalControl / totalApicalControl;
@@ -310,25 +314,26 @@ void TreeModel::Grow(const GrowthNutrients &growthNutrients, const TreeStructura
     }
 
     {
-        const auto &sortedBranchList = m_tree->GetSortedBranchList();
+        const auto &sortedBranchList = skeleton.GetSortedBranchList();
         for (const auto &branchHandle: sortedBranchList) {
-            auto &branch = m_tree->RefBranch(branchHandle);
+            auto &branch = skeleton.RefBranch(branchHandle);
             auto &branchData = branch.m_data;
             if (branch.m_parent == -1) {
                 branchData.m_order = 0;
             } else {
-                auto &parentBranch = m_tree->RefBranch(branch.m_parent);
+                auto &parentBranch = skeleton.RefBranch(branch.m_parent);
                 branchData.m_order = parentBranch.m_data.m_order + 1;
             }
         }
-        m_tree->CalculateBranches();
+        skeleton.CalculateBranches();
     }
 #pragma endregion
 }
 
 void TreeModel::Initialize(const TreeStructuralGrowthParameters& parameters) {
-    m_tree = std::make_shared<TreeSkeleton<BranchData, InternodeData>>();
-    auto &firstInternode = m_tree->RefInternode(0);
+    m_tree = std::make_shared<TreeStructure<BranchData, InternodeData>>();
+    auto& skeleton = m_tree->Skeleton();
+    auto &firstInternode = skeleton.RefInternode(0);
     firstInternode.m_info.m_thickness = parameters.m_endNodeThicknessAndControl.x;
     firstInternode.m_data.m_buds.emplace_back();
     auto &apicalBud = firstInternode.m_data.m_buds.back();
