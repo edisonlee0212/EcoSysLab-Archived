@@ -135,10 +135,10 @@ void MeshGeneratorSettings::OnInspect() {
 }
 
 void
-BranchMeshGenerator::Generate(TreeSkeleton<BranchData, InternodeData> &treeSkeleton, std::vector<Vertex> &vertices,
+BranchMeshGenerator::Generate(TreeSkeleton<BranchGrowthData, InternodeGrowthData> &treeSkeleton, std::vector<Vertex> &vertices,
                               std::vector<unsigned int> &indices, const MeshGeneratorSettings &settings) {
     int parentStep = -1;
-    const auto &sortedInternodeList = treeSkeleton.GetSortedInternodeList();
+    const auto &sortedInternodeList = treeSkeleton.RefSortedInternodeList();
     std::vector<std::vector<RingSegment>> ringsList;
     std::vector<int> steps;
     ringsList.resize(sortedInternodeList.size());

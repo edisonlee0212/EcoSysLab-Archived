@@ -98,9 +98,9 @@ namespace EcoSysLab {
 
         InternodeHandle Extend(InternodeHandle targetHandle, bool createNewBranch);
 
-        std::vector<InternodeHandle> &GetSortedInternodeList();
+        [[nodiscard]] const std::vector<InternodeHandle> &RefSortedInternodeList() const;
 
-        std::vector<BranchHandle> &GetSortedBranchList();
+        [[nodiscard]] const std::vector<BranchHandle> &RefSortedBranchList() const;
 
         void SortLists();
 
@@ -155,7 +155,8 @@ namespace EcoSysLab {
 
     template<typename BranchData, typename InternodeData>
     const TreeSkeleton<BranchData, InternodeData> &TreeStructure<BranchData, InternodeData>::Peek(int iteration) const {
-        assert(iteration >= 0 && iteration < m_history.size());
+        assert(iteration >= 0 && iteration <= m_history.size());
+        if(iteration == m_history.size()) return m_skeleton;
         return m_history[iteration];
     }
 
@@ -220,14 +221,12 @@ namespace EcoSysLab {
     }
 
     template<typename BranchData, typename InternodeData>
-    std::vector<BranchHandle> &TreeSkeleton<BranchData, InternodeData>::GetSortedBranchList() {
-        SortLists();
+    const std::vector<BranchHandle> &TreeSkeleton<BranchData, InternodeData>::RefSortedBranchList() const {
         return m_sortedBranchList;
     }
 
     template<typename BranchData, typename InternodeData>
-    std::vector<InternodeHandle> &TreeSkeleton<BranchData, InternodeData>::GetSortedInternodeList() {
-        SortLists();
+    const std::vector<InternodeHandle> &TreeSkeleton<BranchData, InternodeData>::RefSortedInternodeList() const {
         return m_sortedInternodeList;
     }
 
@@ -496,7 +495,7 @@ namespace EcoSysLab {
 
     template<typename BranchData, typename InternodeData>
     void TreeSkeleton<BranchData, InternodeData>::CalculateBranches() {
-        const auto &sortedBranchList = GetSortedBranchList();
+        const auto &sortedBranchList = RefSortedBranchList();
         for (const auto &branchHandle: sortedBranchList) {
             auto &branch = m_branches[branchHandle];
             auto &firstInternode = m_internodes[branch.m_internodes.front()];

@@ -10,8 +10,6 @@ using namespace UniEngine;
 namespace EcoSysLab {
     template<typename BranchData, typename InternodeData>
     class TreeVisualizer {
-        std::vector<InternodeHandle> m_sortedInternodeList;
-        std::vector<BranchHandle> m_sortedBranchList;
         std::vector<glm::mat4> m_matrices;
         std::vector<glm::vec4> m_colors;
         bool m_visualization = true;
@@ -21,15 +19,11 @@ namespace EcoSysLab {
         int m_version = -1;
 
         void
-        SyncMatrices(TreeSkeleton <BranchData, InternodeData> &treeSkeleton,
+        SyncMatrices(const TreeSkeleton <BranchData, InternodeData> &treeSkeleton,
                      const GlobalTransform &globalTransform);
 
         bool RayCastSelection(const TreeSkeleton <BranchData, InternodeData> &treeSkeleton,
                               const GlobalTransform &globalTransform);
-
-        bool
-        DrawInternodeMenu(const TreeSkeleton <BranchData, InternodeData> &treeSkeleton,
-                          InternodeHandle internodeHandle);
 
         void SetSelectedInternode(const TreeSkeleton <BranchData, InternodeData> &treeSkeleton,
                                   InternodeHandle internodeHandle);
@@ -38,10 +32,16 @@ namespace EcoSysLab {
                                         InternodeHandle internodeHandle, bool &deleted,
                                         const unsigned &hierarchyLevel);
 
+        void PeekInternodeInspectionGui(const TreeSkeleton <BranchData, InternodeData> &treeSkeleton,
+                                        InternodeHandle internodeHandle,
+                                        const unsigned &hierarchyLevel);
+
         void
-        InspectInternode(TreeSkeleton <BranchData, InternodeData> &treeSkeleton, InternodeHandle internodeHandle);
+        InspectInternode(const Internode <InternodeData> &internode);
 
     public:
+        int m_iteration = 0;
+
         bool
         OnInspect(TreeStructure <BranchData, InternodeData> &treeStructure, const GlobalTransform &globalTransform);
 
@@ -70,7 +70,14 @@ namespace EcoSysLab {
             SetSelectedInternode(treeSkeleton, internodeHandle);
         }
 
-        bool modified = deleted = DrawInternodeMenu(treeSkeleton, internodeHandle);
+        if (ImGui::BeginPopupContextItem(std::to_string(internodeHandle).c_str())) {
+            ImGui::Text(("Handle: " + std::to_string(internodeHandle)).c_str());
+            if (ImGui::Button("Delete")) {
+                deleted = true;
+            }
+            ImGui::EndPopup();
+        }
+        bool modified = deleted;
         if (opened && !deleted) {
             ImGui::TreePush();
             auto &internodeChildren = treeSkeleton.RefInternode(internodeHandle).m_children;
@@ -89,29 +96,74 @@ namespace EcoSysLab {
     }
 
     template<typename BranchData, typename InternodeData>
+    void
+    TreeVisualizer<BranchData, InternodeData>::PeekInternodeInspectionGui(
+            const TreeSkeleton <BranchData, InternodeData> &treeSkeleton,
+            InternodeHandle internodeHandle,
+            const unsigned int &hierarchyLevel) {
+        const int index = m_selectedInternodeHierarchyList.size() - hierarchyLevel - 1;
+        if (!m_selectedInternodeHierarchyList.empty() && index >= 0 &&
+            index < m_selectedInternodeHierarchyList.size() &&
+            m_selectedInternodeHierarchyList[index] == internodeHandle) {
+            ImGui::SetNextItemOpen(true);
+        }
+        const bool opened = ImGui::TreeNodeEx(("Handle: " + std::to_string(internodeHandle)).c_str(),
+                                              ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_OpenOnArrow |
+                                              ImGuiTreeNodeFlags_NoAutoOpenOnLog |
+                                              (m_selectedInternodeHandle == internodeHandle ? ImGuiTreeNodeFlags_Framed
+                                                                                            : ImGuiTreeNodeFlags_FramePadding));
+        if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0)) {
+            SetSelectedInternode(treeSkeleton, internodeHandle);
+        }
+        if (opened) {
+            ImGui::TreePush();
+            const auto &internode = treeSkeleton.PeekInternode(internodeHandle);
+            const auto &internodeChildren = internode.m_children;
+            for (const auto &child: internodeChildren) {
+                PeekInternodeInspectionGui(treeSkeleton, child, hierarchyLevel + 1);
+            }
+            ImGui::TreePop();
+        }
+    }
+
+    template<typename BranchData, typename InternodeData>
     bool
     TreeVisualizer<BranchData, InternodeData>::OnInspect(TreeStructure <BranchData, InternodeData> &treeStructure,
                                                          const GlobalTransform &globalTransform) {
         bool needUpdate = false;
 
-        auto& treeSkeleton = treeStructure.Skeleton();
+        if (ImGui::SliderInt("Iteration", &m_iteration, 0, treeStructure.CurrentIteration())) {
+            m_iteration = glm::clamp(m_iteration, 0, treeStructure.CurrentIteration());
+            m_selectedInternodeHandle = -1;
+            m_selectedInternodeHierarchyList.clear();
+        }
 
         ImGui::Checkbox("Visualization", &m_visualization);
         ImGui::Checkbox("Tree Hierarchy", &m_treeHierarchyGui);
         if (m_treeHierarchyGui) {
             if (ImGui::Begin("Tree Hierarchy")) {
                 bool deleted = false;
-                needUpdate = DrawInternodeInspectionGui(treeSkeleton, 0, deleted, 0);
+                if (m_iteration == treeStructure.CurrentIteration())
+                    needUpdate = DrawInternodeInspectionGui(treeStructure.Skeleton(), 0, deleted, 0);
+                else PeekInternodeInspectionGui(treeStructure.Peek(m_iteration), 0, 0);
                 m_selectedInternodeHierarchyList.clear();
             }
             ImGui::End();
+
+        }
+
+        const auto &treeSkeleton = treeStructure.Peek(m_iteration);
+        if (m_treeHierarchyGui) {
             if (m_selectedInternodeHandle >= 0) {
-                InspectInternode(treeSkeleton, m_selectedInternodeHandle);
+                const auto &internode = treeSkeleton.PeekInternode(m_selectedInternodeHandle);
+                InspectInternode(internode);
             }
         }
         if (m_visualization) {
-            ImGui::Text("Internode count: %d", m_sortedInternodeList.size());
-            ImGui::Text("Branch count: %d", m_sortedBranchList.size());
+            const auto &sortedBranchList = treeSkeleton.RefSortedBranchList();
+            const auto &sortedInternodeList = treeSkeleton.RefSortedInternodeList();
+            ImGui::Text("Internode count: %d", sortedInternodeList.size());
+            ImGui::Text("Branch count: %d", sortedBranchList.size());
             if (ImGui::Button("Update")) needUpdate = true;
             if (treeSkeleton.GetVersion() != m_version) needUpdate = true;
             if (RayCastSelection(treeSkeleton, globalTransform)) needUpdate = true;
@@ -134,70 +186,72 @@ namespace EcoSysLab {
 
     template<typename BranchData, typename InternodeData>
     void
-    TreeVisualizer<BranchData, InternodeData>::InspectInternode(
-            TreeSkeleton <BranchData, InternodeData> &treeSkeleton, InternodeHandle internodeHandle) {
+    TreeVisualizer<BranchData, InternodeData>::InspectInternode(const
+                                                                Internode <InternodeData> &internode) {
         if (ImGui::Begin("Internode Inspector")) {
-            if (internodeHandle != -1) {
-                const auto &internode = treeSkeleton.PeekInternode(internodeHandle);
-                ImGui::Text("Thickness: %.3f", internode.m_info.m_thickness);
-                ImGui::Text("Length: %.3f", internode.m_info.m_length);
-                ImGui::InputFloat3("Position", (float*)&internode.m_info.m_globalPosition.x, "%.3f",
-                                   ImGuiInputTextFlags_ReadOnly);
-                auto globalRotationAngle = glm::eulerAngles(internode.m_info.m_globalRotation);
-                ImGui::InputFloat3("Global rotation", (float*)&globalRotationAngle.x, "%.3f", ImGuiInputTextFlags_ReadOnly);
-                auto localRotationAngle = glm::eulerAngles(internode.m_info.m_localRotation);
-                ImGui::InputFloat3("Local rotation", (float*)&localRotationAngle.x, "%.3f", ImGuiInputTextFlags_ReadOnly);
-                auto &internodeData = internode.m_data;
-                ImGui::InputInt("Age", (int*)&internodeData.m_age, 1, 100, ImGuiInputTextFlags_ReadOnly);
-                ImGui::InputFloat("Inhibitor", (float*)&internodeData.m_inhibitor, 1, 100, "%.3f",
-                                  ImGuiInputTextFlags_ReadOnly);
-                ImGui::InputFloat("Sagging", (float*)&internodeData.m_sagging, 1, 100, "%.3f", ImGuiInputTextFlags_ReadOnly);
-                ImGui::InputFloat("Distance to end", (float*)&internodeData.m_maxDistanceToAnyBranchEnd, 1, 100, "%.3f",
-                                  ImGuiInputTextFlags_ReadOnly);
-                ImGui::InputFloat("Level", (float*)&internodeData.m_level, 1, 100, "%.3f", ImGuiInputTextFlags_ReadOnly);
-                ImGui::InputFloat("Child biomass", (float*)&internodeData.m_childTotalBiomass, 1, 100, "%.3f",
-                                  ImGuiInputTextFlags_ReadOnly);
-                ImGui::InputFloat("Root distance", (float*)&internodeData.m_rootDistance, 1, 100, "%.3f",
-                                  ImGuiInputTextFlags_ReadOnly);
-                ImGui::InputFloat("Apical control", (float*)&internodeData.m_apicalControl, 1, 100, "%.3f",
-                                  ImGuiInputTextFlags_ReadOnly);
-                ImGui::InputInt("Descendants count", (int*)&internodeData.m_decedentsAmount, 1, 100,
-                                ImGuiInputTextFlags_ReadOnly);
-                ImGui::InputFloat3("Light dir", (float*)&internodeData.m_lightDirection.x, "%.3f",
-                                   ImGuiInputTextFlags_ReadOnly);
-                ImGui::InputFloat("Light intensity", (float*)&internodeData.m_lightIntensity, 1, 100, "%.3f",
-                                  ImGuiInputTextFlags_ReadOnly);
+            ImGui::Text("Thickness: %.3f", internode.m_info.m_thickness);
+            ImGui::Text("Length: %.3f", internode.m_info.m_length);
+            ImGui::InputFloat3("Position", (float *) &internode.m_info.m_globalPosition.x, "%.3f",
+                               ImGuiInputTextFlags_ReadOnly);
+            auto globalRotationAngle = glm::eulerAngles(internode.m_info.m_globalRotation);
+            ImGui::InputFloat3("Global rotation", (float *) &globalRotationAngle.x, "%.3f",
+                               ImGuiInputTextFlags_ReadOnly);
+            auto localRotationAngle = glm::eulerAngles(internode.m_info.m_localRotation);
+            ImGui::InputFloat3("Local rotation", (float *) &localRotationAngle.x, "%.3f",
+                               ImGuiInputTextFlags_ReadOnly);
+            auto &internodeData = internode.m_data;
+            ImGui::InputInt("Age", (int *) &internodeData.m_age, 1, 100, ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputFloat("Inhibitor", (float *) &internodeData.m_inhibitor, 1, 100, "%.3f",
+                              ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputFloat("Sagging", (float *) &internodeData.m_sagging, 1, 100, "%.3f",
+                              ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputFloat("Distance to end", (float *) &internodeData.m_maxDistanceToAnyBranchEnd, 1, 100,
+                              "%.3f",
+                              ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputFloat("Level", (float *) &internodeData.m_level, 1, 100, "%.3f",
+                              ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputFloat("Child biomass", (float *) &internodeData.m_childTotalBiomass, 1, 100, "%.3f",
+                              ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputFloat("Root distance", (float *) &internodeData.m_rootDistance, 1, 100, "%.3f",
+                              ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputFloat("Apical control", (float *) &internodeData.m_apicalControl, 1, 100, "%.3f",
+                              ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputInt("Descendants count", (int *) &internodeData.m_decedentsAmount, 1, 100,
+                            ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputFloat3("Light dir", (float *) &internodeData.m_lightDirection.x, "%.3f",
+                               ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputFloat("Light intensity", (float *) &internodeData.m_lightIntensity, 1, 100, "%.3f",
+                              ImGuiInputTextFlags_ReadOnly);
 
-                if (ImGui::TreeNodeEx("Buds")) {
-                    for (const auto &bud: internodeData.m_buds) {
-                        switch (bud.m_type) {
-                            case BudType::Apical:
-                                ImGui::Text("Apical");
-                                break;
-                            case BudType::LateralVegetative:
-                                ImGui::Text("LateralVegetative");
-                                break;
-                            case BudType::LateralReproductive:
-                                ImGui::Text("LateralReproductive");
-                                break;
-                        }
-                        switch (bud.m_status) {
-                            case BudStatus::Dormant:
-                                ImGui::Text("Dormant");
-                                break;
-                            case BudStatus::Flushed:
-                                ImGui::Text("Flushed");
-                                break;
-                            case BudStatus::Died:
-                                ImGui::Text("Died");
-                                break;
-                        }
-
-                        auto budRotationAngle = glm::eulerAngles(bud.m_localRotation);
-                        ImGui::InputFloat3("Rotation", &budRotationAngle.x, "%.3f", ImGuiInputTextFlags_ReadOnly);
+            if (ImGui::TreeNodeEx("Buds")) {
+                for (const auto &bud: internodeData.m_buds) {
+                    switch (bud.m_type) {
+                        case BudType::Apical:
+                            ImGui::Text("Apical");
+                            break;
+                        case BudType::LateralVegetative:
+                            ImGui::Text("LateralVegetative");
+                            break;
+                        case BudType::LateralReproductive:
+                            ImGui::Text("LateralReproductive");
+                            break;
                     }
-                    ImGui::TreePop();
+                    switch (bud.m_status) {
+                        case BudStatus::Dormant:
+                            ImGui::Text("Dormant");
+                            break;
+                        case BudStatus::Flushed:
+                            ImGui::Text("Flushed");
+                            break;
+                        case BudStatus::Died:
+                            ImGui::Text("Died");
+                            break;
+                    }
+
+                    auto budRotationAngle = glm::eulerAngles(bud.m_localRotation);
+                    ImGui::InputFloat3("Rotation", &budRotationAngle.x, "%.3f", ImGuiInputTextFlags_ReadOnly);
                 }
+                ImGui::TreePop();
             }
         }
         ImGui::End();
@@ -208,24 +262,8 @@ namespace EcoSysLab {
         m_version = -1;
         m_selectedInternodeHandle = -1;
         m_selectedInternodeHierarchyList.clear();
-        m_sortedInternodeList.clear();
-        m_sortedBranchList.clear();
+        m_iteration = 0;
         m_matrices.clear();
-    }
-
-    template<typename BranchData, typename InternodeData>
-    bool TreeVisualizer<BranchData, InternodeData>::DrawInternodeMenu(
-            const TreeSkeleton <BranchData, InternodeData> &treeSkeleton,
-            InternodeHandle internodeHandle) {
-        bool deleted = false;
-        if (ImGui::BeginPopupContextItem(std::to_string(internodeHandle).c_str())) {
-            ImGui::Text(("Handle: " + std::to_string(internodeHandle)).c_str());
-            if (ImGui::Button("Delete")) {
-                deleted = true;
-            }
-            ImGui::EndPopup();
-        }
-        return deleted;
     }
 
     template<typename BranchData, typename InternodeData>
@@ -277,10 +315,11 @@ namespace EcoSysLab {
                     mousePosition = glm::vec2(mp.x - wp.x, mp.y - wp.y - 20);
                     const Ray cameraRay = editorLayer->m_sceneCamera->ScreenPointToRay(
                             cameraLtw, mousePosition);
-
+                    const auto &sortedBranchList = treeSkeleton.RefSortedBranchList();
+                    const auto &sortedInternodeList = treeSkeleton.RefSortedInternodeList();
                     std::vector<std::shared_future<void>> results;
-                    Jobs::ParallelFor(m_sortedInternodeList.size(), [&](unsigned i) {
-                        const auto &internode = treeSkeleton.PeekInternode(m_sortedInternodeList[i]);
+                    Jobs::ParallelFor(sortedInternodeList.size(), [&](unsigned i) {
+                        const auto &internode = treeSkeleton.PeekInternode(sortedInternodeList[i]);
                         auto rotation = globalTransform.GetRotation() * internode.m_info.m_globalRotation;
                         glm::vec3 position = (globalTransform.m_value *
                                               glm::translate(internode.m_info.m_globalPosition))[3];
@@ -339,7 +378,7 @@ namespace EcoSysLab {
                         std::lock_guard<std::mutex> lock(writeMutex);
                         if (distance < minDistance) {
                             minDistance = distance;
-                            currentFocusingInternodeHandle = m_sortedInternodeList[i];
+                            currentFocusingInternodeHandle = sortedInternodeList[i];
                         }
                     }, results);
                     for (auto &i: results) i.wait();
@@ -365,7 +404,7 @@ namespace EcoSysLab {
     template<typename BranchData, typename InternodeData>
     void
     TreeVisualizer<BranchData, InternodeData>::SyncMatrices(
-            TreeSkeleton <BranchData, InternodeData> &treeSkeleton,
+            const TreeSkeleton <BranchData, InternodeData> &treeSkeleton,
             const GlobalTransform &globalTransform) {
         static std::vector<glm::vec4> randomColors;
         if (randomColors.empty()) {
@@ -375,13 +414,13 @@ namespace EcoSysLab {
         }
 
         m_version = treeSkeleton.GetVersion();
-        m_sortedBranchList = treeSkeleton.GetSortedBranchList();
-        m_sortedInternodeList = treeSkeleton.GetSortedInternodeList();
-        m_matrices.resize(m_sortedInternodeList.size());
-        m_colors.resize(m_sortedInternodeList.size());
+        const auto &sortedBranchList = treeSkeleton.RefSortedBranchList();
+        const auto &sortedInternodeList = treeSkeleton.RefSortedInternodeList();
+        m_matrices.resize(sortedInternodeList.size());
+        m_colors.resize(sortedInternodeList.size());
         std::vector<std::shared_future<void>> results;
-        Jobs::ParallelFor(m_sortedInternodeList.size(), [&](unsigned i) {
-            auto internodeHandle = m_sortedInternodeList[i];
+        Jobs::ParallelFor(sortedInternodeList.size(), [&](unsigned i) {
+            auto internodeHandle = sortedInternodeList[i];
             const auto &internode = treeSkeleton.PeekInternode(internodeHandle);
             auto rotation = globalTransform.GetRotation() * internode.m_info.m_globalRotation;
             glm::vec3 translation = (globalTransform.m_value * glm::translate(internode.m_info.m_globalPosition))[3];

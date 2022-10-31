@@ -12,7 +12,7 @@ using namespace EcoSysLab;
 
 void Tree::OnInspect() {
     static Handle handle;
-    static TreeVisualizer<BranchData, InternodeData> internodeSelectionData;
+    static TreeVisualizer<BranchGrowthData, InternodeGrowthData> internodeSelectionData;
     static MeshGeneratorSettings meshGeneratorSettings;
     static GlobalTransform globalTransform;
     if (Editor::DragAndDropButton<TreeDescriptor>(m_treeDescriptor, "TreeDescriptor", true)) {
@@ -33,6 +33,8 @@ void Tree::OnInspect() {
         if (!m_treeModel.IsInitialized()) m_treeModel.Initialize(parameters);
         if (ImGui::Button("Grow")) {
             m_treeModel.Grow({999}, parameters);
+            internodeSelectionData.Reset();
+            internodeSelectionData.m_iteration = m_treeModel.m_tree->CurrentIteration();
         }
         if (ImGui::Button("Generate Mesh")) {
             std::vector<Vertex> vertices;

@@ -22,7 +22,7 @@ namespace EcoSysLab {
         BudStatus m_status = BudStatus::Dormant;
         glm::quat m_localRotation = glm::vec3(0.0f);
     };
-    struct InternodeData {
+    struct InternodeGrowthData {
         int m_age = 0;
         float m_inhibitor = 0;
         glm::quat m_desiredLocalRotation = glm::vec3(0.0f);
@@ -46,7 +46,7 @@ namespace EcoSysLab {
         void Clear();
     };
 
-    struct BranchData {
+    struct BranchGrowthData {
         int m_order = 0;
     };
 
@@ -119,7 +119,7 @@ namespace EcoSysLab {
         void GrowInternode(InternodeHandle internodeHandle, const TreeStructuralGrowthParameters& parameters, const GrowthNutrients& growthNutrients);
     public:
         glm::vec3 m_gravityDirection = glm::vec3(0, -1, 0);
-        std::shared_ptr<TreeStructure<BranchData, InternodeData>> m_tree;
+        std::shared_ptr<TreeStructure<BranchGrowthData, InternodeGrowthData>> m_tree;
         [[nodiscard]] bool IsInitialized() const;
         void Initialize(const TreeStructuralGrowthParameters& parameters);
         void Clear();

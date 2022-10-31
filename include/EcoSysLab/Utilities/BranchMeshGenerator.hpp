@@ -49,7 +49,7 @@ namespace EcoSysLab {
 
     class BranchMeshGenerator {
     public:
-        static void Generate(TreeSkeleton<BranchData, InternodeData> &treeSkeleton, std::vector<Vertex> &vertices,
+        static void Generate(TreeSkeleton<BranchGrowthData, InternodeGrowthData> &treeSkeleton, std::vector<Vertex> &vertices,
                              std::vector<unsigned int> &indices,
                              const MeshGeneratorSettings &settings);
     };

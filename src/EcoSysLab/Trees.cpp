@@ -12,8 +12,6 @@ using namespace EcoSysLab;
 void Trees::OnInspect() {
     static bool debugVisualization = true;
     static std::vector<int> versions;
-    static std::vector<std::vector<InternodeHandle>> sortedInternodeLists;
-    static std::vector<std::vector<BranchHandle>> sortedBranchLists;
     static std::vector<glm::vec4> randomColors;
     if (randomColors.empty()) {
         for (int i = 0; i < 100; i++) {
@@ -33,8 +31,6 @@ void Trees::OnInspect() {
         m_trees.clear();
         totalTime = 0.0f;
         versions.clear();
-        sortedInternodeLists.clear();
-        sortedBranchLists.clear();
     }
     if (m_treeDescriptor.Get<TreeDescriptor>()) {
         auto &parameters = m_treeDescriptor.Get<TreeDescriptor>()->m_treeStructuralGrowthParameters;
@@ -48,14 +44,10 @@ void Trees::OnInspect() {
                 m_trees.clear();
                 totalTime = 0.0f;
                 versions.clear();
-                sortedInternodeLists.clear();
-                sortedBranchLists.clear();
                 for (int i = 0; i < gridSize.x; i++) {
                     for (int j = 0; j < gridSize.y; j++) {
                         m_trees.emplace_back();
                         versions.emplace_back(-1);
-                        sortedInternodeLists.emplace_back();
-                        sortedBranchLists.emplace_back();
                         auto &tree = m_trees.back();
                         tree.m_treeModel.Initialize(parameters);
                         tree.m_transform = Transform();
@@ -102,11 +94,9 @@ void Trees::OnInspect() {
                     if (versions[i] != tree.m_treeModel.m_tree->Skeleton().GetVersion()) {
                         versions[i] = tree.m_treeModel.m_tree->Skeleton().GetVersion();
                         needUpdate = true;
-                        sortedInternodeLists[i] = tree.m_treeModel.m_tree->Skeleton().GetSortedInternodeList();
-                        sortedBranchLists[i] = tree.m_treeModel.m_tree->Skeleton().GetSortedBranchList();
                     }
-                    totalInternodeSize += sortedInternodeLists[i].size();
-                    totalBranchSize += sortedBranchLists[i].size();
+                    totalInternodeSize += tree.m_treeModel.m_tree->Skeleton().RefSortedInternodeList().size();
+                    totalBranchSize += tree.m_treeModel.m_tree->Skeleton().RefSortedBranchList().size();
                 }
                 internodeSize = totalInternodeSize;
                 branchSize = totalBranchSize;
@@ -119,8 +109,9 @@ void Trees::OnInspect() {
                     int startIndex = 0;
                     auto entityGlobalTransform = GetScene()->GetDataComponent<GlobalTransform>(GetOwner());
 
-                    for (int listIndex = 0; listIndex < sortedInternodeLists.size(); listIndex++) {
-                        auto &list = sortedInternodeLists[listIndex];
+                    for (int listIndex = 0; listIndex < m_trees.size(); listIndex++) {
+                        auto &tree = m_trees[listIndex];
+                        const auto &list = tree.m_treeModel.m_tree->Skeleton().RefSortedInternodeList();
                         std::vector<std::shared_future<void>> results;
                         GlobalTransform globalTransform;
                         globalTransform.m_value =
@@ -152,8 +143,9 @@ void Trees::OnInspect() {
                     }
 
                     startIndex = 0;
-                    for (int listIndex = 0; listIndex < sortedBranchLists.size(); listIndex++) {
-                        auto &list = sortedBranchLists[listIndex];
+                    for (int listIndex = 0; listIndex < m_trees.size(); listIndex++) {
+                        auto &tree = m_trees[listIndex];
+                        const auto &list = tree.m_treeModel.m_tree->Skeleton().RefSortedBranchList();
                         std::vector<std::shared_future<void>> results;
                         GlobalTransform globalTransform;
                         globalTransform.m_value =
@@ -216,8 +208,6 @@ void Trees::OnInspect() {
         m_trees.clear();
         totalTime = 0.0f;
         versions.clear();
-        sortedInternodeLists.clear();
-        sortedBranchLists.clear();
     }
 }
 
