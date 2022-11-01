@@ -10,11 +10,18 @@
 using namespace EcoSysLab;
 
 void Trees::OnInspect() {
-    static bool debugVisualization = true;
+    static bool displayInternodes = true;
+    static bool displayBoundingBox = true;
+    static bool visualization = true;
     static std::vector<int> versions;
     static std::vector<glm::vec4> randomColors;
+    static std::vector<glm::mat4> matrices;
+    static std::vector<glm::vec4> colors;
+    static std::vector<glm::mat4> boundingBoxMatrices;
+    static std::vector<glm::vec4> boundingBoxColors;
+
     if (randomColors.empty()) {
-        for (int i = 0; i < 100; i++) {
+        for (int i = 0; i < 10000; i++) {
             randomColors.emplace_back(glm::ballRand(1.0f), 1.0f);
         }
     }
@@ -38,6 +45,11 @@ void Trees::OnInspect() {
             ImGui::DragInt2("Grid size", &gridSize.x, 1, 0, 100);
             ImGui::DragFloat2("Grid distance", &gridDistance.x, 0.1f, 0.0f, 100.0f);
             if (ImGui::Button("Create trees")) {
+                matrices.clear();
+                colors.clear();
+                boundingBoxColors.clear();
+                boundingBoxMatrices.clear();
+                
                 internodeSize = 0;
                 branchSize = 0;
                 iteration = 0;
@@ -72,19 +84,17 @@ void Trees::OnInspect() {
             ImGui::Text("Growth time: %.4f", lastUsedTime);
             ImGui::Text("Total time: %.4f", totalTime);
             ImGui::Text("Iteration: %d", iteration);
-            ImGui::Checkbox("Visualization", &debugVisualization);
-
-
+            ImGui::Checkbox("Visualization", &visualization);
+            if(visualization) {
+                ImGui::Checkbox("Display Internodes", &displayInternodes);
+                ImGui::Checkbox("Display Bounding Box", &displayBoundingBox);
+            }
             ImGui::Text("Internode count: %d", internodeSize);
             ImGui::Text("Branch count: %d", branchSize);
             ImGui::Text("Tree count: %d", m_treeModelGroup.m_treeModels.size());
-            if (debugVisualization && !m_treeModelGroup.m_treeModels.empty()) {
-                static bool branchOnly = false;
-                ImGui::Checkbox("Branch only", &branchOnly);
-                static std::vector<glm::mat4> matrices;
-                static std::vector<glm::vec4> colors;
-                static std::vector<glm::mat4> branchMatrices;
-                static std::vector<glm::vec4> branchColors;
+            if (visualization && !m_treeModelGroup.m_treeModels.empty()) {
+
+
                 static Handle handle;
                 bool needUpdate = handle == GetHandle();
                 if (ImGui::Button("Update")) needUpdate = true;
@@ -104,8 +114,9 @@ void Trees::OnInspect() {
                 if (needUpdate) {
                     matrices.resize(totalInternodeSize);
                     colors.resize(totalInternodeSize);
-                    branchMatrices.resize(totalBranchSize);
-                    branchColors.resize(totalBranchSize);
+
+                    boundingBoxMatrices.resize(m_treeModelGroup.m_treeModels.size());
+                    boundingBoxColors.resize(m_treeModelGroup.m_treeModels.size());
 
                     int startIndex = 0;
                     auto entityGlobalTransform = GetScene()->GetDataComponent<GlobalTransform>(GetOwner());
@@ -118,13 +129,14 @@ void Trees::OnInspect() {
                         globalTransform.m_value =
                                 entityGlobalTransform.m_value * treeModel.m_globalTransform;
                         Jobs::ParallelFor(list.size(), [&](unsigned i) {
-                            auto& treeModel = m_treeModelGroup.m_treeModels[listIndex];
+                            auto &treeModel = m_treeModelGroup.m_treeModels[listIndex];
                             auto &internode = treeModel.m_treeStructure.Skeleton().RefInternode(list[i]);
                             auto rotation = globalTransform.GetRotation() * internode.m_info.m_globalRotation;
                             glm::vec3 translation = (globalTransform.m_value *
                                                      glm::translate(internode.m_info.m_globalPosition))[3];
                             const auto direction = glm::normalize(rotation * glm::vec3(0, 0, -1));
-                            auto localEndPosition = internode.m_info.m_globalPosition + internode.m_info.m_length * direction;
+                            auto localEndPosition =
+                                    internode.m_info.m_globalPosition + internode.m_info.m_length * direction;
                             const glm::vec3 position2 = (globalTransform.m_value * glm::translate(localEndPosition))[3];
                             rotation = glm::quatLookAt(
                                     direction, glm::vec3(direction.y, direction.z, direction.x));
@@ -142,64 +154,39 @@ void Trees::OnInspect() {
                         }, results);
                         for (auto &i: results) i.wait();
                         startIndex += list.size();
-                    }
 
-                    startIndex = 0;
-                    for (int listIndex = 0; listIndex < m_treeModelGroup.m_treeModels.size(); listIndex++) {
-                        auto &treeModel = m_treeModelGroup.m_treeModels[listIndex];
-                        const auto &list = treeModel.m_treeStructure.Skeleton().RefSortedBranchList();
-                        std::vector<std::shared_future<void>> results;
-                        GlobalTransform globalTransform;
-                        globalTransform.m_value =
-                                entityGlobalTransform.m_value * treeModel.m_globalTransform;
-                        Jobs::ParallelFor(list.size(), [&](unsigned i) {
-                            auto &treeModel = m_treeModelGroup.m_treeModels[listIndex];
-                            auto &branch = treeModel.m_treeStructure.Skeleton().RefBranch(list[i]);
-                            glm::vec3 translation = (globalTransform.m_value *
-                                                     glm::translate(branch.m_info.m_globalStartPosition))[3];
-                            const auto direction = glm::normalize(
-                                    branch.m_info.m_globalEndPosition - branch.m_info.m_globalStartPosition);
-                            auto length = glm::distance(branch.m_info.m_globalStartPosition, branch.m_info.m_globalEndPosition);
-                            auto thickness = (branch.m_info.m_startThickness + branch.m_info.m_endThickness) * 0.5;
-                            const glm::vec3 position2 = (globalTransform.m_value *
-                                                         glm::translate(branch.m_info.m_globalEndPosition))[3];
-                            auto rotation = glm::quatLookAt(
-                                    direction, glm::vec3(direction.y, direction.z, direction.x));
-                            rotation *= glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));
-                            const glm::mat4 rotationTransform = glm::mat4_cast(rotation);
-                            branchMatrices[i + startIndex] =
-                                    glm::translate((translation + position2) / 2.0f) *
-                                    rotationTransform *
-                                    glm::scale(glm::vec3(
-                                            thickness,
-                                            glm::distance(translation, position2) / 2.0f,
-                                            thickness));
-                            branchColors[i + startIndex] = randomColors[branch.m_data.m_order];
-                        }, results);
-                        for (auto &i: results) i.wait();
-                        startIndex += list.size();
+                        boundingBoxMatrices[listIndex] = entityGlobalTransform.m_value * treeModel.m_globalTransform *
+                                                         (glm::translate(
+                                                                 (treeModel.GetMax() + treeModel.GetMin()) / 2.0f) *
+                                                          glm::scale((treeModel.GetMax() - treeModel.GetMin()) / 2.0f));
+                        boundingBoxColors[listIndex] = randomColors[listIndex];
+                        boundingBoxColors[listIndex].a = 0.1f;
                     }
 
                 }
                 if (!matrices.empty()) {
                     auto editorLayer = Application::GetLayer<EditorLayer>();
-                    if (branchOnly) {
-                        Gizmos::DrawGizmoMeshInstancedColored(
-                                DefaultResources::Primitives::Cube, editorLayer->m_sceneCamera,
-                                editorLayer->m_sceneCameraPosition,
-                                editorLayer->m_sceneCameraRotation,
-                                *reinterpret_cast<std::vector<glm::vec4> *>(&branchColors),
-                                *reinterpret_cast<std::vector<glm::mat4> *>(&branchMatrices),
-                                glm::mat4(1.0f), 1.0f);
-                    } else {
+                    GizmoSettings m_gizmoSettings;
+                    m_gizmoSettings.m_drawSettings.m_blending = true;
+                    if (displayInternodes) {
                         Gizmos::DrawGizmoMeshInstancedColored(
                                 DefaultResources::Primitives::Cube, editorLayer->m_sceneCamera,
                                 editorLayer->m_sceneCameraPosition,
                                 editorLayer->m_sceneCameraRotation,
                                 *reinterpret_cast<std::vector<glm::vec4> *>(&colors),
                                 *reinterpret_cast<std::vector<glm::mat4> *>(&matrices),
-                                glm::mat4(1.0f), 1.0f);
+                                glm::mat4(1.0f), 1.0f, m_gizmoSettings);
                     }
+                    if (displayBoundingBox) {
+                        Gizmos::DrawGizmoMeshInstancedColored(
+                                DefaultResources::Primitives::Cube, editorLayer->m_sceneCamera,
+                                editorLayer->m_sceneCameraPosition,
+                                editorLayer->m_sceneCameraRotation,
+                                *reinterpret_cast<std::vector<glm::vec4> *>(&boundingBoxColors),
+                                *reinterpret_cast<std::vector<glm::mat4> *>(&boundingBoxMatrices),
+                                glm::mat4(1.0f), 1.0f, m_gizmoSettings);
+                    }
+
                 }
             }
         }
