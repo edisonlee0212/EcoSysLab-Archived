@@ -57,7 +57,7 @@ void Trees::OnInspect() {
             }
         } else {
             static float lastUsedTime = 0.0f;
-            if (ImGui::Button("Grow")) {
+            if (ImGui::Button("Grow all")) {
                 iteration++;
                 float time = Application::Time().CurrentTime();
                 std::vector<std::shared_future<void>> results;

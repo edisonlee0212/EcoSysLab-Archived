@@ -238,10 +238,11 @@ void TreeModel::Grow(const GrowthNutrients &growthNutrients, const TreeStructura
             //Pruning here.
             if (internode.m_recycled) continue;
             auto &branch = skeleton.RefBranch(internode.m_branchHandle);
-            if(maxDistance > 5 && branch.m_data.m_order != 0 && (maxDistance - internode.m_data.m_maxDistanceToAnyBranchEnd) / maxDistance < parameters.m_lowBranchPruning){
+            if(maxDistance > 5 && branch.m_data.m_order != 0 && internode.m_data.m_rootDistance / maxDistance < parameters.m_lowBranchPruning){
                 skeleton.RecycleInternode(internodeHandle);
                 continue;
             }
+
         }
     }
 #pragma endregion
@@ -374,8 +375,6 @@ TreeStructuralGrowthParameters::TreeStructuralGrowthParameters() {
     m_apicalDominanceBaseAgeDist = glm::vec3(0.12, 1, 0.3);
     m_lateralBudFlushingLightingFactor = 0.0f;
     m_budKillProbabilityApicalLateral = glm::vec2(0.0, 0.03);
-    m_randomPruningOrderProtection = 1;
-    m_randomPruningBaseAgeMax = glm::vec3(-0.1, 0.007, 0.5);
     m_lowBranchPruning = 0.2f;
     m_saggingFactorThicknessReductionMax = glm::vec3(6, 3, 0.5);
 }

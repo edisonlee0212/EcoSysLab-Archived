@@ -85,16 +85,6 @@ namespace EcoSysLab {
         float m_lateralBudFlushingLightingFactor;
 
         glm::vec2 m_budKillProbabilityApicalLateral{};
-
-        /**
-        * The minimum order of the internode that will have random pruning.
-        */
-        int m_randomPruningOrderProtection;
-        /**
-        * The base probability of an end internode being cut off due to
-        * unknown environmental factors.
-        */
-        glm::vec3 m_randomPruningBaseAgeMax{};
         /**
         * The limit of lateral branches being cut off when too close to the
         * root.
@@ -117,6 +107,7 @@ namespace EcoSysLab {
         void CalculateSagging(InternodeHandle internodeHandle, const TreeStructuralGrowthParameters& parameters);
         void CollectInhibitor(InternodeHandle internodeHandle, const TreeStructuralGrowthParameters& parameters);
         void GrowInternode(InternodeHandle internodeHandle, const TreeStructuralGrowthParameters& parameters, const GrowthNutrients& growthNutrients);
+
     public:
         glm::vec3 m_gravityDirection = glm::vec3(0, -1, 0);
         std::shared_ptr<TreeStructure<BranchGrowthData, InternodeGrowthData>> m_treeStructure;

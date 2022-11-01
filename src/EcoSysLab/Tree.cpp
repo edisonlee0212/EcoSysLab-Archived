@@ -105,15 +105,6 @@ void TreeDescriptor::OnInspect() {
         ImGui::TreePop();
     }
     if (ImGui::TreeNodeEx("Internode")) {
-        ImGui::DragInt("Random pruning Order Protection",
-                       &m_treeStructuralGrowthParameters.m_randomPruningOrderProtection);
-        ImGui::DragFloat3("Random pruning base/age/max", &m_treeStructuralGrowthParameters.m_randomPruningBaseAgeMax.x,
-                          0.0001f, -1.0f, 1.0f, "%.5f");
-        const float maxAgeBeforeMaxCutOff =
-                (m_treeStructuralGrowthParameters.m_randomPruningBaseAgeMax.z -
-                 m_treeStructuralGrowthParameters.m_randomPruningBaseAgeMax.x) /
-                m_treeStructuralGrowthParameters.m_randomPruningBaseAgeMax.y;
-        ImGui::Text("Max age before reaching max: %.3f", maxAgeBeforeMaxCutOff);
         ImGui::DragFloat("Low Branch Pruning", &m_treeStructuralGrowthParameters.m_lowBranchPruning, 0.01f);
         ImGui::DragFloat3("Sagging thickness/reduction/max",
                           &m_treeStructuralGrowthParameters.m_saggingFactorThicknessReductionMax.x, 0.01f);
@@ -149,10 +140,6 @@ void TreeDescriptor::Serialize(YAML::Emitter &out) {
         << m_treeStructuralGrowthParameters.m_lateralBudFlushingLightingFactor;
     out << YAML::Key << "m_budKillProbabilityApicalLateral" << YAML::Value
         << m_treeStructuralGrowthParameters.m_budKillProbabilityApicalLateral;
-    out << YAML::Key << "m_randomPruningOrderProtection" << YAML::Value
-        << m_treeStructuralGrowthParameters.m_randomPruningOrderProtection;
-    out << YAML::Key << "m_randomPruningBaseAgeMax" << YAML::Value
-        << m_treeStructuralGrowthParameters.m_randomPruningBaseAgeMax;
     out << YAML::Key << "m_lowBranchPruning" << YAML::Value << m_treeStructuralGrowthParameters.m_lowBranchPruning;
     out << YAML::Key << "m_saggingFactorThicknessReductionMax" << YAML::Value
         << m_treeStructuralGrowthParameters.m_saggingFactorThicknessReductionMax;
@@ -173,8 +160,6 @@ void TreeDescriptor::Deserialize(const YAML::Node &in) {
     if (in["m_apicalDominanceBaseAgeDist"]) m_treeStructuralGrowthParameters.m_apicalDominanceBaseAgeDist = in["m_apicalDominanceBaseAgeDist"].as<glm::vec3>();
     if (in["m_lateralBudFlushingLightingFactor"]) m_treeStructuralGrowthParameters.m_lateralBudFlushingLightingFactor = in["m_lateralBudFlushingLightingFactor"].as<float>();
     if (in["m_budKillProbabilityApicalLateral"]) m_treeStructuralGrowthParameters.m_budKillProbabilityApicalLateral = in["m_budKillProbabilityApicalLateral"].as<glm::vec2>();
-    if (in["m_randomPruningOrderProtection"]) m_treeStructuralGrowthParameters.m_randomPruningOrderProtection = in["m_randomPruningOrderProtection"].as<int>();
-    if (in["m_randomPruningBaseAgeMax"]) m_treeStructuralGrowthParameters.m_randomPruningBaseAgeMax = in["m_randomPruningBaseAgeMax"].as<glm::vec3>();
     if (in["m_lowBranchPruning"]) m_treeStructuralGrowthParameters.m_lowBranchPruning = in["m_lowBranchPruning"].as<float>();
     if (in["m_saggingFactorThicknessReductionMax"]) m_treeStructuralGrowthParameters.m_saggingFactorThicknessReductionMax = in["m_saggingFactorThicknessReductionMax"].as<glm::vec3>();
 }
