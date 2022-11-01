@@ -2,15 +2,11 @@
 #include "Tree.hpp"
 using namespace UniEngine;
 namespace EcoSysLab {
-    struct TreeInstance{
-        Transform m_transform;
-        TreeModel m_treeModel;
-    };
 
     class Trees : public IPrivateComponent{
     public:
         AssetRef m_treeDescriptor;
-        std::vector<TreeInstance> m_trees;
+        TreeModelGroup m_treeModelGroup;
 
         void OnInspect() override;
 

@@ -104,16 +104,23 @@ namespace EcoSysLab {
 
     class TreeModel {
         bool m_initialized = false;
-        void CalculateSagging(InternodeHandle internodeHandle, const TreeStructuralGrowthParameters& parameters);
-        void CollectInhibitor(InternodeHandle internodeHandle, const TreeStructuralGrowthParameters& parameters);
-        void GrowInternode(InternodeHandle internodeHandle, const TreeStructuralGrowthParameters& parameters, const GrowthNutrients& growthNutrients);
-
+        inline void CalculateSagging(InternodeHandle internodeHandle, const TreeStructuralGrowthParameters& parameters);
+        inline void CollectInhibitor(InternodeHandle internodeHandle, const TreeStructuralGrowthParameters& parameters);
+        inline void GrowInternode(InternodeHandle internodeHandle, const TreeStructuralGrowthParameters& parameters, const GrowthNutrients& growthNutrients);
+        glm::vec3 m_min;
+        glm::vec3 m_max;
     public:
+        glm::mat4 m_globalTransform = glm::translate(glm::vec3(0.0f)) * glm::mat4_cast(glm::quat(glm::vec3(0.0f))) * glm::scale(glm::vec3(1.0f));
         glm::vec3 m_gravityDirection = glm::vec3(0, -1, 0);
-        std::shared_ptr<TreeStructure<BranchGrowthData, InternodeGrowthData>> m_treeStructure;
+        TreeStructure<BranchGrowthData, InternodeGrowthData> m_treeStructure;
         [[nodiscard]] bool IsInitialized() const;
         void Initialize(const TreeStructuralGrowthParameters& parameters);
         void Clear();
         void Grow(const GrowthNutrients& growthNutrients, const TreeStructuralGrowthParameters& parameters);
+    };
+
+    class TreeModelGroup{
+    public:
+        std::vector<TreeModel> m_treeModels;
     };
 }

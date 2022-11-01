@@ -26,23 +26,23 @@ void Tree::OnInspect() {
     auto tempGlobalTransform = GetScene()->GetDataComponent<GlobalTransform>(GetOwner());
     if (tempGlobalTransform.m_value != globalTransform.m_value) {
         globalTransform = tempGlobalTransform;
-        treeVisualizer.SyncMatrices(m_treeModel.m_treeStructure->Peek(treeVisualizer.m_iteration), globalTransform);
+        treeVisualizer.SyncMatrices(m_treeModel.m_treeStructure.Peek(treeVisualizer.m_iteration), globalTransform);
     }
     if (m_treeDescriptor.Get<TreeDescriptor>()) {
         auto &parameters = m_treeDescriptor.Get<TreeDescriptor>()->m_treeStructuralGrowthParameters;
         if (!m_treeModel.IsInitialized()) m_treeModel.Initialize(parameters);
         ImGui::Checkbox("Enable History", &m_enableHistory);
         if (ImGui::Button("Grow")) {
-            if (m_enableHistory) m_treeModel.m_treeStructure->Step();
+            if (m_enableHistory) m_treeModel.m_treeStructure.Step();
             m_treeModel.Grow({999}, parameters);
             treeVisualizer.Reset();
-            treeVisualizer.m_iteration = m_treeModel.m_treeStructure->CurrentIteration();
+            treeVisualizer.m_iteration = m_treeModel.m_treeStructure.CurrentIteration();
         }
-        treeVisualizer.OnInspect(*m_treeModel.m_treeStructure, globalTransform);
+        treeVisualizer.OnInspect(m_treeModel.m_treeStructure, globalTransform);
         if (ImGui::Button("Generate Mesh")) {
             std::vector<Vertex> vertices;
             std::vector<unsigned int> indices;
-            BranchMeshGenerator::Generate(m_treeModel.m_treeStructure->Skeleton(), vertices, indices, meshGeneratorSettings);
+            BranchMeshGenerator::Generate(m_treeModel.m_treeStructure.Skeleton(), vertices, indices, meshGeneratorSettings);
             auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
             auto material = ProjectManager::CreateTemporaryAsset<Material>();
             material->SetProgram(DefaultResources::GLPrograms::StandardProgram);

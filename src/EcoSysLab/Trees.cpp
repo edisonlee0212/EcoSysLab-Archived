@@ -28,30 +28,31 @@ void Trees::OnInspect() {
         internodeSize = 0;
         branchSize = 0;
         iteration = 0;
-        m_trees.clear();
+        m_treeModelGroup.m_treeModels.clear();
         totalTime = 0.0f;
         versions.clear();
     }
     if (m_treeDescriptor.Get<TreeDescriptor>()) {
         auto &parameters = m_treeDescriptor.Get<TreeDescriptor>()->m_treeStructuralGrowthParameters;
-        if (m_trees.empty()) {
+        if (m_treeModelGroup.m_treeModels.empty()) {
             ImGui::DragInt2("Grid size", &gridSize.x, 1, 0, 100);
             ImGui::DragFloat2("Grid distance", &gridDistance.x, 0.1f, 0.0f, 100.0f);
             if (ImGui::Button("Create trees")) {
                 internodeSize = 0;
                 branchSize = 0;
                 iteration = 0;
-                m_trees.clear();
+                m_treeModelGroup.m_treeModels.clear();
                 totalTime = 0.0f;
                 versions.clear();
                 for (int i = 0; i < gridSize.x; i++) {
                     for (int j = 0; j < gridSize.y; j++) {
-                        m_trees.emplace_back();
+                        m_treeModelGroup.m_treeModels.emplace_back();
                         versions.emplace_back(-1);
-                        auto &tree = m_trees.back();
-                        tree.m_treeModel.Initialize(parameters);
-                        tree.m_transform = Transform();
-                        tree.m_transform.SetPosition(glm::vec3(i * gridDistance.x, 0.0f, j * gridDistance.y));
+                        auto &tree = m_treeModelGroup.m_treeModels.back();
+                        tree.Initialize(parameters);
+                        Transform transform;
+                        transform.SetPosition(glm::vec3(i * gridDistance.x, 0.0f, j * gridDistance.y));
+                        tree.m_globalTransform = transform.m_value;
                     }
                 }
             }
@@ -61,8 +62,8 @@ void Trees::OnInspect() {
                 iteration++;
                 float time = Application::Time().CurrentTime();
                 std::vector<std::shared_future<void>> results;
-                Jobs::ParallelFor(m_trees.size(), [&](unsigned i) {
-                    m_trees[i].m_treeModel.Grow({999}, parameters);
+                Jobs::ParallelFor(m_treeModelGroup.m_treeModels.size(), [&](unsigned i) {
+                    m_treeModelGroup.m_treeModels[i].Grow({999}, parameters);
                 }, results);
                 for (auto &i: results) i.wait();
                 lastUsedTime = Application::Time().CurrentTime() - time;
@@ -76,8 +77,8 @@ void Trees::OnInspect() {
 
             ImGui::Text("Internode count: %d", internodeSize);
             ImGui::Text("Branch count: %d", branchSize);
-            ImGui::Text("Tree count: %d", m_trees.size());
-            if (debugVisualization && !m_trees.empty()) {
+            ImGui::Text("Tree count: %d", m_treeModelGroup.m_treeModels.size());
+            if (debugVisualization && !m_treeModelGroup.m_treeModels.empty()) {
                 static bool branchOnly = false;
                 ImGui::Checkbox("Branch only", &branchOnly);
                 static std::vector<glm::mat4> matrices;
@@ -89,14 +90,14 @@ void Trees::OnInspect() {
                 if (ImGui::Button("Update")) needUpdate = true;
                 int totalInternodeSize = 0;
                 int totalBranchSize = 0;
-                for (int i = 0; i < m_trees.size(); i++) {
-                    auto &tree = m_trees[i];
-                    if (versions[i] != tree.m_treeModel.m_treeStructure->Skeleton().GetVersion()) {
-                        versions[i] = tree.m_treeModel.m_treeStructure->Skeleton().GetVersion();
+                for (int i = 0; i < m_treeModelGroup.m_treeModels.size(); i++) {
+                    auto &treeModel = m_treeModelGroup.m_treeModels[i];
+                    if (versions[i] != treeModel.m_treeStructure.Skeleton().GetVersion()) {
+                        versions[i] = treeModel.m_treeStructure.Skeleton().GetVersion();
                         needUpdate = true;
                     }
-                    totalInternodeSize += tree.m_treeModel.m_treeStructure->Skeleton().RefSortedInternodeList().size();
-                    totalBranchSize += tree.m_treeModel.m_treeStructure->Skeleton().RefSortedBranchList().size();
+                    totalInternodeSize += treeModel.m_treeStructure.Skeleton().RefSortedInternodeList().size();
+                    totalBranchSize += treeModel.m_treeStructure.Skeleton().RefSortedBranchList().size();
                 }
                 internodeSize = totalInternodeSize;
                 branchSize = totalBranchSize;
@@ -109,15 +110,16 @@ void Trees::OnInspect() {
                     int startIndex = 0;
                     auto entityGlobalTransform = GetScene()->GetDataComponent<GlobalTransform>(GetOwner());
 
-                    for (int listIndex = 0; listIndex < m_trees.size(); listIndex++) {
-                        auto &tree = m_trees[listIndex];
-                        const auto &list = tree.m_treeModel.m_treeStructure->Skeleton().RefSortedInternodeList();
+                    for (int listIndex = 0; listIndex < m_treeModelGroup.m_treeModels.size(); listIndex++) {
+                        auto &treeModel = m_treeModelGroup.m_treeModels[listIndex];
+                        const auto &list = treeModel.m_treeStructure.Skeleton().RefSortedInternodeList();
                         std::vector<std::shared_future<void>> results;
                         GlobalTransform globalTransform;
                         globalTransform.m_value =
-                                entityGlobalTransform.m_value * m_trees[listIndex].m_transform.m_value;
+                                entityGlobalTransform.m_value * treeModel.m_globalTransform;
                         Jobs::ParallelFor(list.size(), [&](unsigned i) {
-                            auto &internode = m_trees[listIndex].m_treeModel.m_treeStructure->Skeleton().RefInternode(list[i]);
+                            auto& treeModel = m_treeModelGroup.m_treeModels[listIndex];
+                            auto &internode = treeModel.m_treeStructure.Skeleton().RefInternode(list[i]);
                             auto rotation = globalTransform.GetRotation() * internode.m_info.m_globalRotation;
                             glm::vec3 translation = (globalTransform.m_value *
                                                      glm::translate(internode.m_info.m_globalPosition))[3];
@@ -135,7 +137,7 @@ void Trees::OnInspect() {
                                             internode.m_info.m_thickness,
                                             glm::distance(translation, position2) / 2.0f,
                                             internode.m_info.m_thickness));
-                            colors[i + startIndex] = randomColors[m_trees[listIndex].m_treeModel.m_treeStructure->Skeleton().RefBranch(
+                            colors[i + startIndex] = randomColors[treeModel.m_treeStructure.Skeleton().RefBranch(
                                     internode.m_branchHandle).m_data.m_order];
                         }, results);
                         for (auto &i: results) i.wait();
@@ -143,15 +145,16 @@ void Trees::OnInspect() {
                     }
 
                     startIndex = 0;
-                    for (int listIndex = 0; listIndex < m_trees.size(); listIndex++) {
-                        auto &tree = m_trees[listIndex];
-                        const auto &list = tree.m_treeModel.m_treeStructure->Skeleton().RefSortedBranchList();
+                    for (int listIndex = 0; listIndex < m_treeModelGroup.m_treeModels.size(); listIndex++) {
+                        auto &treeModel = m_treeModelGroup.m_treeModels[listIndex];
+                        const auto &list = treeModel.m_treeStructure.Skeleton().RefSortedBranchList();
                         std::vector<std::shared_future<void>> results;
                         GlobalTransform globalTransform;
                         globalTransform.m_value =
-                                entityGlobalTransform.m_value * m_trees[listIndex].m_transform.m_value;
+                                entityGlobalTransform.m_value * treeModel.m_globalTransform;
                         Jobs::ParallelFor(list.size(), [&](unsigned i) {
-                            auto &branch = m_trees[listIndex].m_treeModel.m_treeStructure->Skeleton().RefBranch(list[i]);
+                            auto &treeModel = m_treeModelGroup.m_treeModels[listIndex];
+                            auto &branch = treeModel.m_treeStructure.Skeleton().RefBranch(list[i]);
                             glm::vec3 translation = (globalTransform.m_value *
                                                      glm::translate(branch.m_info.m_globalStartPosition))[3];
                             const auto direction = glm::normalize(
@@ -205,7 +208,7 @@ void Trees::OnInspect() {
         internodeSize = 0;
         branchSize = 0;
         iteration = 0;
-        m_trees.clear();
+        m_treeModelGroup.m_treeModels.clear();
         totalTime = 0.0f;
         versions.clear();
     }
