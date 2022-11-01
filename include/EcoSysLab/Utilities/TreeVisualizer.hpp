@@ -24,7 +24,7 @@ namespace EcoSysLab {
         void SetSelectedInternode(const TreeSkeleton <BranchData, InternodeData> &treeSkeleton,
                                   InternodeHandle internodeHandle);
 
-        bool DrawInternodeInspectionGui(TreeSkeleton <BranchData, InternodeData> &treeSkeleton,
+        bool DrawInternodeInspectionGui(TreeStructure <BranchData, InternodeData> &treeStructure,
                                         InternodeHandle internodeHandle, bool &deleted,
                                         const unsigned &hierarchyLevel);
 
@@ -51,10 +51,11 @@ namespace EcoSysLab {
     template<typename BranchData, typename InternodeData>
     bool
     TreeVisualizer<BranchData, InternodeData>::DrawInternodeInspectionGui(
-            TreeSkeleton <BranchData, InternodeData> &treeSkeleton,
+            TreeStructure <BranchData, InternodeData> &treeStructure,
             InternodeHandle internodeHandle,
             bool &deleted,
             const unsigned int &hierarchyLevel) {
+        auto& treeSkeleton = treeStructure.Skeleton();
         const int index = m_selectedInternodeHierarchyList.size() - hierarchyLevel - 1;
         if (!m_selectedInternodeHierarchyList.empty() && index >= 0 &&
             index < m_selectedInternodeHierarchyList.size() &&
@@ -83,9 +84,12 @@ namespace EcoSysLab {
             auto &internodeChildren = treeSkeleton.RefInternode(internodeHandle).m_children;
             for (int &child: internodeChildren) {
                 bool childDeleted = false;
-                DrawInternodeInspectionGui(treeSkeleton, child, childDeleted, hierarchyLevel + 1);
+                DrawInternodeInspectionGui(treeStructure, child, childDeleted, hierarchyLevel + 1);
                 if (childDeleted) {
+                    treeStructure.Step();
                     treeSkeleton.RecycleInternode(child);
+                    treeSkeleton.SortLists();
+                    m_iteration = treeStructure.CurrentIteration();
                     modified = true;
                     break;
                 }
@@ -156,7 +160,7 @@ namespace EcoSysLab {
             if (ImGui::Begin("Tree Hierarchy")) {
                 bool deleted = false;
                 if (m_iteration == treeStructure.CurrentIteration())
-                    needUpdate = DrawInternodeInspectionGui(treeStructure.Skeleton(), 0, deleted, 0);
+                    needUpdate = DrawInternodeInspectionGui(treeStructure, 0, deleted, 0);
                 else PeekInternodeInspectionGui(treeStructure.Peek(m_iteration), 0, 0);
                 m_selectedInternodeHierarchyList.clear();
             }
