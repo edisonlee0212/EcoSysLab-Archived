@@ -27,7 +27,7 @@ void ApplyTropism(const glm::vec3 &targetDir, float tropism, glm::quat &rotation
 }
 
 void TreeModel::CollectInhibitor(InternodeHandle internodeHandle, const TreeStructuralGrowthParameters& parameters) {
-    auto& skeleton = m_tree->Skeleton();
+    auto& skeleton = m_treeStructure->Skeleton();
     auto &internode = skeleton.RefInternode(internodeHandle);
     auto &internodeData = internode.m_data;
     if (internode.m_endNode) {
@@ -51,7 +51,7 @@ void TreeModel::CollectInhibitor(InternodeHandle internodeHandle, const TreeStru
 }
 
 void TreeModel::GrowInternode(InternodeHandle internodeHandle, const TreeStructuralGrowthParameters& parameters, const GrowthNutrients &growthNutrients) {
-    auto& skeleton = m_tree->Skeleton();
+    auto& skeleton = m_treeStructure->Skeleton();
     auto &buds = skeleton.RefInternode(internodeHandle).m_data.m_buds;
     for (auto &bud: buds) {
         auto &internode = skeleton.RefInternode(internodeHandle);
@@ -183,7 +183,7 @@ void TreeModel::GrowInternode(InternodeHandle internodeHandle, const TreeStructu
 }
 
 void TreeModel::CalculateSagging(InternodeHandle internodeHandle, const TreeStructuralGrowthParameters& parameters) {
-    auto& skeleton = m_tree->Skeleton();
+    auto& skeleton = m_treeStructure->Skeleton();
     auto &internode = skeleton.RefInternode(internodeHandle);
     auto &internodeData = internode.m_data;
     auto &internodeInfo = internode.m_info;
@@ -223,13 +223,11 @@ void TreeModel::Grow(const GrowthNutrients &growthNutrients, const TreeStructura
         return;
     }
 
-    if (!m_tree) {
+    if (!m_treeStructure) {
         return;
     }
 
-    auto iteration = m_tree->Step();
-
-    auto& skeleton = m_tree->Skeleton();
+    auto& skeleton = m_treeStructure->Skeleton();
 #pragma region Preprocess
     skeleton.SortLists();
     {
@@ -334,8 +332,8 @@ void TreeModel::Grow(const GrowthNutrients &growthNutrients, const TreeStructura
 }
 
 void TreeModel::Initialize(const TreeStructuralGrowthParameters& parameters) {
-    m_tree = std::make_shared<TreeStructure<BranchGrowthData, InternodeGrowthData>>();
-    auto& skeleton = m_tree->Skeleton();
+    m_treeStructure = std::make_shared<TreeStructure<BranchGrowthData, InternodeGrowthData>>();
+    auto& skeleton = m_treeStructure->Skeleton();
     auto &firstInternode = skeleton.RefInternode(0);
     firstInternode.m_info.m_thickness = parameters.m_endNodeThicknessAndControl.x;
     firstInternode.m_data.m_buds.emplace_back();
@@ -353,7 +351,7 @@ void TreeModel::Initialize(const TreeStructuralGrowthParameters& parameters) {
 }
 
 void TreeModel::Clear() {
-    m_tree.reset();
+    m_treeStructure.reset();
     m_initialized = false;
 }
 

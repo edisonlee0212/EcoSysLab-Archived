@@ -119,7 +119,7 @@ namespace EcoSysLab {
         void GrowInternode(InternodeHandle internodeHandle, const TreeStructuralGrowthParameters& parameters, const GrowthNutrients& growthNutrients);
     public:
         glm::vec3 m_gravityDirection = glm::vec3(0, -1, 0);
-        std::shared_ptr<TreeStructure<BranchGrowthData, InternodeGrowthData>> m_tree;
+        std::shared_ptr<TreeStructure<BranchGrowthData, InternodeGrowthData>> m_treeStructure;
         [[nodiscard]] bool IsInitialized() const;
         void Initialize(const TreeStructuralGrowthParameters& parameters);
         void Clear();

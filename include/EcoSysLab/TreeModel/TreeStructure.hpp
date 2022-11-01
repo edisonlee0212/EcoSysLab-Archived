@@ -128,7 +128,7 @@ namespace EcoSysLab {
 
         [[nodiscard]] const TreeSkeleton<BranchData, InternodeData> &Peek(int iteration) const;
 
-        [[nodiscard]] int Step();
+        void Step();
 
         [[nodiscard]] int CurrentIteration() const;
 
@@ -136,9 +136,8 @@ namespace EcoSysLab {
     };
 
     template<typename BranchData, typename InternodeData>
-    int TreeStructure<BranchData, InternodeData>::Step() {
+    void TreeStructure<BranchData, InternodeData>::Step() {
         m_history.push_back(m_skeleton);
-        return m_history.size();
     }
 
     template<typename BranchData, typename InternodeData>

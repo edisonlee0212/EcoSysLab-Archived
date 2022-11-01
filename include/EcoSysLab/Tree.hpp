@@ -23,7 +23,7 @@ namespace EcoSysLab {
     class Tree : public IPrivateComponent {
     public:
         AssetRef m_treeDescriptor;
-
+        bool m_enableHistory = true;
         TreeModel m_treeModel;
 
         void OnInspect() override;

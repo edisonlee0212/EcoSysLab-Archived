@@ -18,10 +18,6 @@ namespace EcoSysLab {
         std::vector<InternodeHandle> m_selectedInternodeHierarchyList;
         int m_version = -1;
 
-        void
-        SyncMatrices(const TreeSkeleton <BranchData, InternodeData> &treeSkeleton,
-                     const GlobalTransform &globalTransform);
-
         bool RayCastSelection(const TreeSkeleton <BranchData, InternodeData> &treeSkeleton,
                               const GlobalTransform &globalTransform);
 
@@ -40,6 +36,10 @@ namespace EcoSysLab {
         InspectInternode(const Internode <InternodeData> &internode);
 
     public:
+        void
+        SyncMatrices(const TreeSkeleton <BranchData, InternodeData> &treeSkeleton,
+                     const GlobalTransform &globalTransform);
+
         int m_iteration = 0;
 
         bool
@@ -131,15 +131,27 @@ namespace EcoSysLab {
     TreeVisualizer<BranchData, InternodeData>::OnInspect(TreeStructure <BranchData, InternodeData> &treeStructure,
                                                          const GlobalTransform &globalTransform) {
         bool needUpdate = false;
-
-        if (ImGui::SliderInt("Iteration", &m_iteration, 0, treeStructure.CurrentIteration())) {
-            m_iteration = glm::clamp(m_iteration, 0, treeStructure.CurrentIteration());
-            m_selectedInternodeHandle = -1;
-            m_selectedInternodeHierarchyList.clear();
+        if (ImGui::Button("Update")) needUpdate = true;
+        if (treeStructure.CurrentIteration() > 0) {
+            if (ImGui::TreeNodeEx("History", ImGuiTreeNodeFlags_DefaultOpen)) {
+                if (ImGui::SliderInt("Iteration", &m_iteration, 0, treeStructure.CurrentIteration())) {
+                    m_iteration = glm::clamp(m_iteration, 0, treeStructure.CurrentIteration());
+                    m_selectedInternodeHandle = -1;
+                    m_selectedInternodeHierarchyList.clear();
+                }
+                if (ImGui::Button("Reverse")) {
+                    treeStructure.Reverse(m_iteration);
+                }
+                ImGui::TreePop();
+            }
         }
 
-        ImGui::Checkbox("Visualization", &m_visualization);
-        ImGui::Checkbox("Tree Hierarchy", &m_treeHierarchyGui);
+        if (ImGui::TreeNodeEx("Settings", ImGuiTreeNodeFlags_DefaultOpen)) {
+            ImGui::Checkbox("Visualization", &m_visualization);
+            ImGui::Checkbox("Tree Hierarchy", &m_treeHierarchyGui);
+            ImGui::TreePop();
+        }
+
         if (m_treeHierarchyGui) {
             if (ImGui::Begin("Tree Hierarchy")) {
                 bool deleted = false;
@@ -164,7 +176,7 @@ namespace EcoSysLab {
             const auto &sortedInternodeList = treeSkeleton.RefSortedInternodeList();
             ImGui::Text("Internode count: %d", sortedInternodeList.size());
             ImGui::Text("Branch count: %d", sortedBranchList.size());
-            if (ImGui::Button("Update")) needUpdate = true;
+
             if (treeSkeleton.GetVersion() != m_version) needUpdate = true;
             if (RayCastSelection(treeSkeleton, globalTransform)) needUpdate = true;
             if (needUpdate) {
@@ -172,13 +184,15 @@ namespace EcoSysLab {
             }
             if (!m_matrices.empty()) {
                 auto editorLayer = Application::GetLayer<EditorLayer>();
+                GizmoSettings m_gizmoSettings;
+                m_gizmoSettings.m_drawSettings.m_blending = true;
                 Gizmos::DrawGizmoMeshInstancedColored(
                         DefaultResources::Primitives::Cylinder, editorLayer->m_sceneCamera,
                         editorLayer->m_sceneCameraPosition,
                         editorLayer->m_sceneCameraRotation,
                         *reinterpret_cast<std::vector<glm::vec4> *>(&m_colors),
                         *reinterpret_cast<std::vector<glm::mat4> *>(&m_matrices),
-                        glm::mat4(1.0f), 1.0f);
+                        glm::mat4(1.0f), 1.0f, m_gizmoSettings);
             }
         }
         return needUpdate;
@@ -442,7 +456,7 @@ namespace EcoSysLab {
                 m_colors[i] = glm::vec4(1, 0, 0, 1);
             } else {
                 m_colors[i] = randomColors[treeSkeleton.PeekBranch(internode.m_branchHandle).m_data.m_order];
-                if (m_selectedInternodeHandle != -1) m_colors[i].w = 0.5f;
+                if (m_selectedInternodeHandle != -1) m_colors[i].a = 0.05f;
             }
         }, results);
         for (auto &i: results) i.wait();

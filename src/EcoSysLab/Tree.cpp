@@ -12,34 +12,37 @@ using namespace EcoSysLab;
 
 void Tree::OnInspect() {
     static Handle handle;
-    static TreeVisualizer<BranchGrowthData, InternodeGrowthData> internodeSelectionData;
+    static TreeVisualizer<BranchGrowthData, InternodeGrowthData> treeVisualizer;
     static MeshGeneratorSettings meshGeneratorSettings;
     static GlobalTransform globalTransform;
     if (Editor::DragAndDropButton<TreeDescriptor>(m_treeDescriptor, "TreeDescriptor", true)) {
         m_treeModel.Clear();
-        internodeSelectionData.Reset();
+        treeVisualizer.Reset();
     }
     if (GetHandle() != handle) {
-        internodeSelectionData.Reset();
+        treeVisualizer.Reset();
         handle = GetHandle();
     }
     auto tempGlobalTransform = GetScene()->GetDataComponent<GlobalTransform>(GetOwner());
     if (tempGlobalTransform.m_value != globalTransform.m_value) {
         globalTransform = tempGlobalTransform;
-        internodeSelectionData.Reset();
+        treeVisualizer.SyncMatrices(m_treeModel.m_treeStructure->Peek(treeVisualizer.m_iteration), globalTransform);
     }
     if (m_treeDescriptor.Get<TreeDescriptor>()) {
         auto &parameters = m_treeDescriptor.Get<TreeDescriptor>()->m_treeStructuralGrowthParameters;
         if (!m_treeModel.IsInitialized()) m_treeModel.Initialize(parameters);
+        ImGui::Checkbox("Enable History", &m_enableHistory);
         if (ImGui::Button("Grow")) {
+            if (m_enableHistory) m_treeModel.m_treeStructure->Step();
             m_treeModel.Grow({999}, parameters);
-            internodeSelectionData.Reset();
-            internodeSelectionData.m_iteration = m_treeModel.m_tree->CurrentIteration();
+            treeVisualizer.Reset();
+            treeVisualizer.m_iteration = m_treeModel.m_treeStructure->CurrentIteration();
         }
+        treeVisualizer.OnInspect(*m_treeModel.m_treeStructure, globalTransform);
         if (ImGui::Button("Generate Mesh")) {
             std::vector<Vertex> vertices;
             std::vector<unsigned int> indices;
-            BranchMeshGenerator::Generate(m_treeModel.m_tree->Skeleton(), vertices, indices, meshGeneratorSettings);
+            BranchMeshGenerator::Generate(m_treeModel.m_treeStructure->Skeleton(), vertices, indices, meshGeneratorSettings);
             auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
             auto material = ProjectManager::CreateTemporaryAsset<Material>();
             material->SetProgram(DefaultResources::GLPrograms::StandardProgram);
@@ -48,12 +51,10 @@ void Tree::OnInspect() {
             meshRenderer->m_mesh = mesh;
             meshRenderer->m_material = material;
         }
-        internodeSelectionData.OnInspect(*m_treeModel.m_tree, globalTransform);
-    }
-
-    if (ImGui::Button("Clear")) {
-        m_treeModel.Clear();
-        internodeSelectionData.Reset();
+        if (ImGui::Button("Clear")) {
+            m_treeModel.Clear();
+            treeVisualizer.Reset();
+        }
     }
 }
 
