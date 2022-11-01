@@ -158,7 +158,8 @@ namespace EcoSysLab {
 
     template<typename BranchData, typename InternodeData>
     const TreeSkeleton<BranchData, InternodeData> &TreeStructure<BranchData, InternodeData>::Peek(int iteration) const {
-        assert(iteration >= 0 && iteration <= m_history.size());
+        assert(iteration <= m_history.size());
+        if (iteration < 0) iteration = 0;
         if (iteration == m_history.size()) return m_skeleton;
         return m_history[iteration];
     }

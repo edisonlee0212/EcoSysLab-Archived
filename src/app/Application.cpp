@@ -17,6 +17,7 @@
 #include "TreeModel.hpp"
 #include "Tree.hpp"
 #include "Trees.hpp"
+#include "TreeVisualizationLayer.hpp"
 #ifdef RAYTRACERFACILITY
 using namespace RayTracerFacility;
 #endif
@@ -29,11 +30,14 @@ int main() {
     ClassRegistry::RegisterPrivateComponent<Tree>("Tree");
     ClassRegistry::RegisterPrivateComponent<Trees>("Trees");
     ClassRegistry::RegisterAsset<TreeDescriptor>("TreeDescriptor", {".td"});
+
     EngineSetup();
 
     ApplicationConfigs applicationConfigs;
     applicationConfigs.m_applicationName = "EcoSysLab";
     Application::Create(applicationConfigs);
+
+    //Application::PushLayer<TreeVisualizationLayer>();
 #ifdef RAYTRACERFACILITY
     Application::PushLayer<RayTracerLayer>();
 #endif
