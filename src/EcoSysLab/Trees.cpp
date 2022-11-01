@@ -83,6 +83,20 @@ void Trees::OnInspect() {
 
                 m_iteration = m_treeModelGroup.m_treeModels[0].m_treeStructure.CurrentIteration();
             }
+            if (ImGui::Button("Grow all 5 iterations")) {
+                float time = Application::Time().CurrentTime();
+                for(int j = 0; j < 5; j++) {
+                    std::vector<std::shared_future<void>> results;
+                    Jobs::ParallelFor(m_treeModelGroup.m_treeModels.size(), [&](unsigned i) {
+                        if (m_enableHistory) m_treeModelGroup.m_treeModels[i].m_treeStructure.Step();
+                        m_treeModelGroup.m_treeModels[i].Grow({999}, parameters);
+                    }, results);
+                    for (auto &i: results) i.wait();
+                }
+                lastUsedTime = Application::Time().CurrentTime() - time;
+                totalTime += lastUsedTime;
+                m_iteration = m_treeModelGroup.m_treeModels[0].m_treeStructure.CurrentIteration();
+            }
             ImGui::Checkbox("Enable History", &m_enableHistory);
             if (m_enableHistory && !m_treeModelGroup.m_treeModels.empty()) {
                 auto &treeStructure = m_treeModelGroup.m_treeModels[0].m_treeStructure;

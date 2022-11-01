@@ -38,6 +38,20 @@ void Tree::OnInspect() {
             treeVisualizer.Reset();
             treeVisualizer.m_iteration = m_treeModel.m_treeStructure.CurrentIteration();
         }
+        if (ImGui::Button("Grow 5 iterations")) {
+            if (m_enableHistory) m_treeModel.m_treeStructure.Step();
+            m_treeModel.Grow({999}, parameters);
+            if (m_enableHistory) m_treeModel.m_treeStructure.Step();
+            m_treeModel.Grow({999}, parameters);
+            if (m_enableHistory) m_treeModel.m_treeStructure.Step();
+            m_treeModel.Grow({999}, parameters);
+            if (m_enableHistory) m_treeModel.m_treeStructure.Step();
+            m_treeModel.Grow({999}, parameters);
+            if (m_enableHistory) m_treeModel.m_treeStructure.Step();
+            m_treeModel.Grow({999}, parameters);
+            treeVisualizer.Reset();
+            treeVisualizer.m_iteration = m_treeModel.m_treeStructure.CurrentIteration();
+        }
         treeVisualizer.OnInspect(m_treeModel.m_treeStructure, globalTransform);
         if (ImGui::Button("Generate Mesh")) {
             std::vector<Vertex> vertices;
