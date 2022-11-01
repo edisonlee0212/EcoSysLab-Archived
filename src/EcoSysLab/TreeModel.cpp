@@ -263,8 +263,8 @@ void TreeModel::Grow(const GrowthNutrients &growthNutrients, const TreeStructura
 #pragma region Postprocess
     skeleton.SortLists();
     {
-        m_min = glm::vec3(FLT_MAX);
-        m_max = glm::vec3(FLT_MIN);
+        skeleton.m_min = glm::vec3(FLT_MAX);
+        skeleton.m_max = glm::vec3(FLT_MIN);
 
         const auto &sortedInternodeList = skeleton.RefSortedInternodeList();
 
@@ -301,13 +301,13 @@ void TreeModel::Grow(const GrowthNutrients &growthNutrients, const TreeStructura
                                                                    glm::vec3(0, 0, -1));
 
             }
-            m_min = glm::min(m_min, internodeInfo.m_globalPosition);
-            m_max = glm::max(m_max, internodeInfo.m_globalPosition);
+            skeleton.m_min = glm::min(skeleton.m_min, internodeInfo.m_globalPosition);
+            skeleton.m_max = glm::max(skeleton.m_max, internodeInfo.m_globalPosition);
             const auto endPosition = internodeInfo.m_globalPosition + internodeInfo.m_length *
                                                                       (internodeInfo.m_globalRotation *
                                                                        glm::vec3(0, 0, -1));
-            m_min = glm::min(m_min, endPosition);
-            m_max = glm::max(m_max, endPosition);
+            skeleton.m_min = glm::min(skeleton.m_min, endPosition);
+            skeleton.m_max = glm::max(skeleton.m_max, endPosition);
 
             float apicalControl = glm::pow(parameters.m_apicalControlBaseDistFactor.x, glm::max(1.0f, 1.0f /
                                                                                                       internodeData.m_rootDistance *
@@ -374,14 +374,6 @@ void TreeModel::Clear() {
 
 bool TreeModel::IsInitialized() const {
     return m_initialized;
-}
-
-glm::vec3 TreeModel::GetMin() {
-    return m_min;
-}
-
-glm::vec3 TreeModel::GetMax() {
-    return m_max;
 }
 
 TreeStructuralGrowthParameters::TreeStructuralGrowthParameters() {

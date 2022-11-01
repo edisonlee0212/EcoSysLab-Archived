@@ -91,6 +91,7 @@ namespace EcoSysLab {
 
         void DetachChildInternode(InternodeHandle targetHandle, InternodeHandle childHandle);
 
+
     public:
         void RecycleInternode(InternodeHandle handle);
 
@@ -117,6 +118,9 @@ namespace EcoSysLab {
         const Internode<InternodeData> &PeekInternode(InternodeHandle handle) const;
 
         const Branch<BranchData> &PeekBranch(BranchHandle handle) const;
+
+        glm::vec3 m_min = glm::vec3(0.0f);
+        glm::vec3 m_max = glm::vec3(0.0f);
     };
 
     template<typename BranchData, typename InternodeData>
@@ -155,7 +159,7 @@ namespace EcoSysLab {
     template<typename BranchData, typename InternodeData>
     const TreeSkeleton<BranchData, InternodeData> &TreeStructure<BranchData, InternodeData>::Peek(int iteration) const {
         assert(iteration >= 0 && iteration <= m_history.size());
-        if(iteration == m_history.size()) return m_skeleton;
+        if (iteration == m_history.size()) return m_skeleton;
         return m_history[iteration];
     }
 
