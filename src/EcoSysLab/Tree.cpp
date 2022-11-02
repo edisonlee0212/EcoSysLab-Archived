@@ -112,8 +112,6 @@ void TreeDescriptor::OnInspect() {
                             m_treeStructuralGrowthParameters.m_apicalDominanceBaseAgeDist.z;
         ImGui::Text("Max age / distance: [%i, %.3f]", maxAgeBeforeInhibitorEnds, maxDistance);
 
-        ImGui::DragFloat("Lateral bud lighting factor",
-                         &m_treeStructuralGrowthParameters.m_lateralBudFlushingLightingFactor, 0.01f);
         ImGui::DragFloat2("Kill probability apical/lateral",
                           &m_treeStructuralGrowthParameters.m_budKillProbabilityApicalLateral.x, 0.01f);
         ImGui::TreePop();
@@ -150,8 +148,6 @@ void TreeDescriptor::Serialize(YAML::Emitter &out) {
         << m_treeStructuralGrowthParameters.m_apicalControlBaseDistFactor;
     out << YAML::Key << "m_apicalDominanceBaseAgeDist" << YAML::Value
         << m_treeStructuralGrowthParameters.m_apicalDominanceBaseAgeDist;
-    out << YAML::Key << "m_lateralBudFlushingLightingFactor" << YAML::Value
-        << m_treeStructuralGrowthParameters.m_lateralBudFlushingLightingFactor;
     out << YAML::Key << "m_budKillProbabilityApicalLateral" << YAML::Value
         << m_treeStructuralGrowthParameters.m_budKillProbabilityApicalLateral;
     out << YAML::Key << "m_lowBranchPruning" << YAML::Value << m_treeStructuralGrowthParameters.m_lowBranchPruning;
@@ -172,7 +168,6 @@ void TreeDescriptor::Deserialize(const YAML::Node &in) {
     if (in["m_lateralBudFlushingProbability"]) m_treeStructuralGrowthParameters.m_lateralBudFlushingProbability = in["m_lateralBudFlushingProbability"].as<float>();
     if (in["m_apicalControlBaseDistFactor"]) m_treeStructuralGrowthParameters.m_apicalControlBaseDistFactor = in["m_apicalControlBaseDistFactor"].as<glm::vec2>();
     if (in["m_apicalDominanceBaseAgeDist"]) m_treeStructuralGrowthParameters.m_apicalDominanceBaseAgeDist = in["m_apicalDominanceBaseAgeDist"].as<glm::vec3>();
-    if (in["m_lateralBudFlushingLightingFactor"]) m_treeStructuralGrowthParameters.m_lateralBudFlushingLightingFactor = in["m_lateralBudFlushingLightingFactor"].as<float>();
     if (in["m_budKillProbabilityApicalLateral"]) m_treeStructuralGrowthParameters.m_budKillProbabilityApicalLateral = in["m_budKillProbabilityApicalLateral"].as<glm::vec2>();
     if (in["m_lowBranchPruning"]) m_treeStructuralGrowthParameters.m_lowBranchPruning = in["m_lowBranchPruning"].as<float>();
     if (in["m_saggingFactorThicknessReductionMax"]) m_treeStructuralGrowthParameters.m_saggingFactorThicknessReductionMax = in["m_saggingFactorThicknessReductionMax"].as<glm::vec3>();

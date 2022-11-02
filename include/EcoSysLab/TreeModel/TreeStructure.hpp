@@ -139,6 +139,31 @@ namespace EcoSysLab {
         void Reverse(int iteration);
     };
 
+    template<typename InternodeData>
+    class ITreeGrowthParameters{
+    public:
+        virtual int GetLateralBudCount(const Internode<InternodeData>& internode) const = 0;
+        virtual float GetDesiredBranchingAngle(const Internode<InternodeData>& internode) const = 0;
+        virtual float GetDesiredRollAngle(const Internode<InternodeData>& internode) const = 0;
+        virtual float GetDesiredApicalAngle(const Internode<InternodeData>& internode) const = 0;
+        virtual float GetGravitropism(const Internode<InternodeData>& internode) const = 0;
+        virtual float GetPhototropism(const Internode<InternodeData>& internode) const = 0;
+        virtual float GetInternodeLength(const Internode<InternodeData>& internode) const = 0;
+        virtual float GetGrowthRate(const Internode<InternodeData>& internode) const = 0;
+        virtual float GetEndNodeThickness(const Internode<InternodeData>& internode) const = 0;
+        virtual float GetThicknessControlFactor(const Internode<InternodeData>& internode) const = 0;
+        virtual float GetLateralBudFlushingProbability(const Internode<InternodeData>& internode) const = 0;
+        virtual float GetApicalControlBase(const Internode<InternodeData>& internode) const = 0;
+        virtual float GetApicalDominanceBase(const Internode<InternodeData>& internode) const = 0;
+        virtual float GetApicalDominanceDecrease(const Internode<InternodeData>& internode) const = 0;
+        virtual float GetApicalBudKillProbability(const Internode<InternodeData>& internode) const = 0;
+        virtual float GetLateralBudKillProbability(const Internode<InternodeData>& internode) const = 0;
+        virtual bool GetPruning(const Internode<InternodeData>& internode) const = 0;
+        virtual float GetLowBranchPruning(const Internode<InternodeData>& internode) const = 0;
+        virtual float GetSagging(const Internode<InternodeData>& internode) const = 0;
+    };
+
+#pragma region
     template<typename BranchData, typename InternodeData>
     void TreeStructure<BranchData, InternodeData>::Step() {
         m_history.push_back(m_skeleton);

@@ -38,13 +38,10 @@ void TreeModel::CollectInhibitor(InternodeHandle internodeHandle, const TreeStru
         for (const auto &i: internode.m_children) {
             auto &childInternode = skeleton.RefInternode(i);
             if (childInternode.m_endNode) {
-                internodeData.m_inhibitor += parameters.m_apicalDominanceBaseAgeDist.x *
-                                             glm::pow(
-                                                     parameters.m_apicalDominanceBaseAgeDist.y,
-                                                     childInternode.m_data.m_age);
+                internodeData.m_inhibitor += parameters.GetApicalDominanceBase(internode);
             } else {
                 internodeData.m_inhibitor +=
-                        childInternode.m_data.m_inhibitor * parameters.m_apicalDominanceBaseAgeDist.z;
+                        childInternode.m_data.m_inhibitor * parameters.GetApicalDominanceDecrease(internode);
             };
         }
     }
@@ -61,37 +58,37 @@ void TreeModel::GrowInternode(InternodeHandle internodeHandle, const TreeStructu
         switch (bud.m_type) {
             case BudType::Apical: {
                 if (bud.m_status == BudStatus::Dormant) {
-                    if (parameters.m_budKillProbabilityApicalLateral.x > glm::linearRand(0.0f, 1.0f)) {
+                    if (parameters.GetApicalBudKillProbability(internode) > glm::linearRand(0.0f, 1.0f)) {
                         bud.m_status = BudStatus::Died;
                     } else {
                         float waterReceived = growthNutrients.m_water * internodeData.m_apicalControl;
-                        internodeInfo.m_length += waterReceived * parameters.m_growthRate;
-                        if (internodeInfo.m_length > parameters.m_internodeLength) {
+                        auto growthRate = parameters.GetGrowthRate(internode);
+                        auto internodeLength = parameters.GetInternodeLength(internode);
+                        internodeInfo.m_length += waterReceived * growthRate;
+                        if (internodeInfo.m_length > growthRate) {
                             bud.m_status = BudStatus::Flushed;
                             //Prepare information for new internode.
                             float extraLength =
-                                    (internodeInfo.m_length - parameters.m_internodeLength) / parameters.m_growthRate;
-                            if (extraLength > parameters.m_internodeLength)
-                                extraLength = parameters.m_internodeLength;
-                            internodeInfo.m_length = parameters.m_internodeLength;
+                                    (internodeInfo.m_length - internodeLength) / growthRate;
+                            if (extraLength > internodeLength)
+                                extraLength = internodeLength;
+                            internodeInfo.m_length = internodeLength;
                             auto desiredGlobalRotation = internodeInfo.m_globalRotation * bud.m_localRotation;
                             auto desiredGlobalFront = desiredGlobalRotation * glm::vec3(0, 0, -1);
                             auto desiredGlobalUp = desiredGlobalRotation * glm::vec3(0, 1, 0);
-                            ApplyTropism(m_gravityDirection, parameters.m_gravitropism, desiredGlobalFront,
+                            ApplyTropism(m_gravityDirection, parameters.GetGravitropism(internode), desiredGlobalFront,
                                          desiredGlobalUp);
-                            ApplyTropism(internodeData.m_lightDirection, parameters.m_phototropism,
+                            ApplyTropism(internodeData.m_lightDirection, parameters.GetPhototropism(internode),
                                          desiredGlobalFront, desiredGlobalUp);
-
+                            auto lateralBudCount = parameters.GetLateralBudCount(internode);
                             //Allocate Lateral bud for current internode
-                            float turnAngle = glm::radians(360.0f / parameters.m_lateralBudCount);
-                            for (int i = 0; i < parameters.m_lateralBudCount; i++) {
+                            float turnAngle = glm::radians(360.0f / lateralBudCount);
+                            for (int i = 0; i < lateralBudCount; i++) {
                                 internodeData.m_buds.emplace_back();
                                 auto &lateralBud = internodeData.m_buds.back();
                                 lateralBud.m_type = BudType::LateralVegetative;
                                 lateralBud.m_status = BudStatus::Dormant;
-                                auto branchingAngle = glm::gaussRand(parameters.m_branchingAngleMeanVariance.x,
-                                                                     parameters.m_branchingAngleMeanVariance.y);
-                                lateralBud.m_localRotation = glm::vec3(glm::radians(branchingAngle), 0.0f,
+                                lateralBud.m_localRotation = glm::vec3(glm::radians(parameters.GetDesiredBranchingAngle(internode)), 0.0f,
                                                                        i * turnAngle);
                             }
 
@@ -101,7 +98,7 @@ void TreeModel::GrowInternode(InternodeHandle internodeHandle, const TreeStructu
                             auto &newInternode = skeleton.RefInternode(newInternodeHandle);
                             newInternode.m_data.Clear();
                             newInternode.m_info.m_length = extraLength;
-                            newInternode.m_info.m_thickness = parameters.m_endNodeThicknessAndControl.x;
+                            newInternode.m_info.m_thickness = parameters.GetEndNodeThickness(internode);
                             newInternode.m_info.m_localRotation = newInternode.m_data.m_desiredLocalRotation =
                                     glm::inverse(oldInternode.m_info.m_globalRotation) *
                                     glm::quatLookAt(desiredGlobalFront, desiredGlobalUp);
@@ -111,13 +108,7 @@ void TreeModel::GrowInternode(InternodeHandle internodeHandle, const TreeStructu
                             auto &apicalBud = newInternode.m_data.m_buds.back();
                             apicalBud.m_type = BudType::Apical;
                             apicalBud.m_status = BudStatus::Dormant;
-                            const auto rollAngle = glm::gaussRand(
-                                    parameters.m_rollAngleMeanVariance.x,
-                                    parameters.m_rollAngleMeanVariance.y);
-                            const auto apicalAngle = glm::gaussRand(
-                                    parameters.m_apicalAngleMeanVariance.x,
-                                    parameters.m_apicalAngleMeanVariance.y);
-                            apicalBud.m_localRotation = glm::vec3(glm::radians(apicalAngle), 0.0f, rollAngle);
+                            apicalBud.m_localRotation = glm::vec3(glm::radians(parameters.GetDesiredApicalAngle(internode)), 0.0f, parameters.GetDesiredRollAngle(internode));
 
                         }
                     }
@@ -128,11 +119,11 @@ void TreeModel::GrowInternode(InternodeHandle internodeHandle, const TreeStructu
                 break;
             case BudType::LateralVegetative: {
                 if (bud.m_status == BudStatus::Dormant) {
-                    if (parameters.m_budKillProbabilityApicalLateral.y > glm::linearRand(0.0f, 1.0f)) {
+                    if (parameters.GetLateralBudKillProbability(internode) > glm::linearRand(0.0f, 1.0f)) {
                         bud.m_status = BudStatus::Died;
                     } else {
                         bool flush = false;
-                        float flushProbability = parameters.m_lateralBudFlushingProbability;
+                        float flushProbability = parameters.GetLateralBudFlushingProbability(internode);
                         flushProbability /= (1.0f + internodeData.m_inhibitor);
                         if (flushProbability >= glm::linearRand(0.0f, 1.0f)) {
                             flush = true;
@@ -143,9 +134,9 @@ void TreeModel::GrowInternode(InternodeHandle internodeHandle, const TreeStructu
                             auto desiredGlobalRotation = internodeInfo.m_globalRotation * bud.m_localRotation;
                             auto desiredGlobalFront = desiredGlobalRotation * glm::vec3(0, 0, -1);
                             auto desiredGlobalUp = desiredGlobalRotation * glm::vec3(0, 1, 0);
-                            ApplyTropism(m_gravityDirection, parameters.m_gravitropism, desiredGlobalFront,
+                            ApplyTropism(m_gravityDirection, parameters.GetGravitropism(internode), desiredGlobalFront,
                                          desiredGlobalUp);
-                            ApplyTropism(internodeData.m_lightDirection, parameters.m_phototropism,
+                            ApplyTropism(internodeData.m_lightDirection, parameters.GetPhototropism(internode),
                                          desiredGlobalFront, desiredGlobalUp);
                             //Create new internode
                             auto newInternodeHandle = skeleton.Extend(internodeHandle, true);
@@ -153,7 +144,7 @@ void TreeModel::GrowInternode(InternodeHandle internodeHandle, const TreeStructu
                             auto &newInternode = skeleton.RefInternode(newInternodeHandle);
                             newInternode.m_data.Clear();
                             newInternode.m_info.m_length = 0.0f;
-                            newInternode.m_info.m_thickness = parameters.m_endNodeThicknessAndControl.x;
+                            newInternode.m_info.m_thickness = parameters.GetEndNodeThickness(internode);
                             newInternode.m_info.m_localRotation = newInternode.m_data.m_desiredLocalRotation =
                                     glm::inverse(oldInternode.m_info.m_globalRotation) *
                                     glm::quatLookAt(desiredGlobalFront, desiredGlobalUp);
@@ -162,13 +153,7 @@ void TreeModel::GrowInternode(InternodeHandle internodeHandle, const TreeStructu
                             auto &apicalBud = newInternode.m_data.m_buds.back();
                             apicalBud.m_type = BudType::Apical;
                             apicalBud.m_status = BudStatus::Dormant;
-                            const auto rollAngle = glm::gaussRand(
-                                    parameters.m_rollAngleMeanVariance.x,
-                                    parameters.m_rollAngleMeanVariance.y);
-                            const auto apicalAngle = glm::gaussRand(
-                                    parameters.m_apicalAngleMeanVariance.x,
-                                    parameters.m_apicalAngleMeanVariance.y);
-                            apicalBud.m_localRotation = glm::vec3(glm::radians(apicalAngle), 0.0f, rollAngle);
+                            apicalBud.m_localRotation = glm::vec3(glm::radians(parameters.GetDesiredApicalAngle(internode)), 0.0f, parameters.GetDesiredRollAngle(internode));
 
                         }
                     }
@@ -205,20 +190,12 @@ void TreeModel::CalculateSagging(InternodeHandle internodeHandle, const TreeStru
             maxDistanceToAnyBranchEnd = glm::max(maxDistanceToAnyBranchEnd, childMaxDistanceToAnyBranchEnd);
 
             childThicknessCollection += glm::pow(childInternode.m_info.m_thickness,
-                                                 1.0f / parameters.m_endNodeThicknessAndControl.y);
+                                                 1.0f / parameters.GetThicknessControlFactor(internode));
         }
         internodeData.m_maxDistanceToAnyBranchEnd = maxDistanceToAnyBranchEnd;
-        internodeData.m_sagging =
-                glm::min(
-                        parameters.m_saggingFactorThicknessReductionMax.z,
-                        parameters.m_saggingFactorThicknessReductionMax.x *
-                        internodeData.m_childTotalBiomass /
-                        glm::pow(
-                                internodeInfo.m_thickness /
-                                parameters.m_endNodeThicknessAndControl.x,
-                                parameters.m_saggingFactorThicknessReductionMax.y));
+        internodeData.m_sagging = parameters.GetSagging(internode);
         internodeInfo.m_thickness = glm::max(internodeInfo.m_thickness, glm::pow(childThicknessCollection,
-                                                                                 parameters.m_endNodeThicknessAndControl.y));
+                                                                                 parameters.GetThicknessControlFactor(internode)));
     }
 }
 
@@ -237,13 +214,11 @@ void TreeModel::Grow(const GrowthNutrients &growthNutrients, const TreeStructura
             auto &internode = skeleton.RefInternode(internodeHandle);
             //Pruning here.
             if (internode.m_recycled) continue;
-            auto &branch = skeleton.RefBranch(internode.m_branchHandle);
-            if (maxDistance > 5 && branch.m_data.m_order != 0 &&
-                internode.m_data.m_rootDistance / maxDistance < parameters.m_lowBranchPruning) {
+            if(maxDistance > 5 && internode.m_data.m_order != 0 &&
+                                  internode.m_data.m_rootDistance / maxDistance < parameters.GetLowBranchPruning(internode)){
                 skeleton.RecycleInternode(internodeHandle);
                 continue;
             }
-
         }
     }
 #pragma endregion
@@ -309,9 +284,7 @@ void TreeModel::Grow(const GrowthNutrients &growthNutrients, const TreeStructura
             skeleton.m_min = glm::min(skeleton.m_min, endPosition);
             skeleton.m_max = glm::max(skeleton.m_max, endPosition);
 
-            float apicalControl = glm::pow(parameters.m_apicalControlBaseDistFactor.x, glm::max(1.0f, 1.0f /
-                                                                                                      internodeData.m_rootDistance *
-                                                                                                      parameters.m_apicalControlBaseDistFactor.y));
+            float apicalControl = parameters.GetApicalControlBase(internode);
             float totalApicalControl = 0.0f;
             for (const auto &i: internode.m_children) {
                 auto &childInternode = skeleton.RefInternode(i);
@@ -340,6 +313,9 @@ void TreeModel::Grow(const GrowthNutrients &growthNutrients, const TreeStructura
                 auto &parentBranch = skeleton.RefBranch(branch.m_parent);
                 branchData.m_order = parentBranch.m_data.m_order + 1;
             }
+            for(const auto& internodeHandle : branch.m_internodes){
+                skeleton.RefInternode(internodeHandle).m_data.m_order = branchData.m_order;
+            }
         }
         skeleton.CalculateBranches();
     }
@@ -350,18 +326,12 @@ void TreeModel::Initialize(const TreeStructuralGrowthParameters &parameters) {
     m_treeStructure = {};
     auto &skeleton = m_treeStructure.Skeleton();
     auto &firstInternode = skeleton.RefInternode(0);
-    firstInternode.m_info.m_thickness = parameters.m_endNodeThicknessAndControl.x;
+    firstInternode.m_info.m_thickness = parameters.GetEndNodeThickness(firstInternode);
     firstInternode.m_data.m_buds.emplace_back();
     auto &apicalBud = firstInternode.m_data.m_buds.back();
     apicalBud.m_type = BudType::Apical;
     apicalBud.m_status = BudStatus::Dormant;
-    const auto rollAngle = glm::gaussRand(
-            parameters.m_rollAngleMeanVariance.x,
-            parameters.m_rollAngleMeanVariance.y);
-    const auto apicalAngle = glm::gaussRand(
-            parameters.m_apicalAngleMeanVariance.x,
-            parameters.m_apicalAngleMeanVariance.y);
-    apicalBud.m_localRotation = glm::vec3(glm::radians(apicalAngle), 0.0f, rollAngle);
+    apicalBud.m_localRotation = glm::vec3(glm::radians(parameters.GetDesiredApicalAngle(firstInternode)), 0.0f, parameters.GetDesiredRollAngle(firstInternode));
     m_initialized = true;
 }
 
@@ -389,10 +359,102 @@ TreeStructuralGrowthParameters::TreeStructuralGrowthParameters() {
     m_lateralBudFlushingProbability = 0.3f;
     m_apicalControlBaseDistFactor = {2.0f, 0.95f};
     m_apicalDominanceBaseAgeDist = glm::vec3(0.12, 1, 0.3);
-    m_lateralBudFlushingLightingFactor = 0.0f;
     m_budKillProbabilityApicalLateral = glm::vec2(0.0, 0.03);
     m_lowBranchPruning = 0.2f;
     m_saggingFactorThicknessReductionMax = glm::vec3(6, 3, 0.5);
+}
+
+int TreeStructuralGrowthParameters::GetLateralBudCount(const Internode<InternodeGrowthData> &internode) const {
+    return m_lateralBudCount;
+}
+
+float TreeStructuralGrowthParameters::GetDesiredBranchingAngle(const Internode<InternodeGrowthData> &internode) const {
+    return glm::gaussRand(
+            m_branchingAngleMeanVariance.x,
+            m_branchingAngleMeanVariance.y);
+}
+
+float TreeStructuralGrowthParameters::GetDesiredRollAngle(const Internode<InternodeGrowthData> &internode) const {
+    return glm::gaussRand(
+            m_rollAngleMeanVariance.x,
+            m_rollAngleMeanVariance.y);
+}
+
+float TreeStructuralGrowthParameters::GetDesiredApicalAngle(const Internode<InternodeGrowthData> &internode) const {
+    return glm::gaussRand(
+            m_apicalAngleMeanVariance.x,
+            m_apicalAngleMeanVariance.y);
+}
+
+float TreeStructuralGrowthParameters::GetGravitropism(const Internode<InternodeGrowthData> &internode) const {
+    return m_gravitropism;
+}
+
+float TreeStructuralGrowthParameters::GetPhototropism(const Internode<InternodeGrowthData> &internode) const {
+    return m_phototropism;
+}
+
+float TreeStructuralGrowthParameters::GetInternodeLength(const Internode<InternodeGrowthData> &internode) const {
+    return m_internodeLength;
+}
+
+float TreeStructuralGrowthParameters::GetGrowthRate(const Internode<InternodeGrowthData> &internode) const {
+    return m_growthRate;
+}
+
+float TreeStructuralGrowthParameters::GetEndNodeThickness(const Internode<InternodeGrowthData> &internode) const {
+    return m_endNodeThicknessAndControl.x;
+}
+
+float TreeStructuralGrowthParameters::GetThicknessControlFactor(const Internode<InternodeGrowthData> &internode) const {
+    return m_endNodeThicknessAndControl.y;
+}
+
+float TreeStructuralGrowthParameters::GetLateralBudFlushingProbability(const Internode<InternodeGrowthData> &internode) const {
+    return m_lateralBudFlushingProbability;
+}
+
+float TreeStructuralGrowthParameters::GetApicalControlBase(const Internode<InternodeGrowthData> &internode) const {
+    return glm::pow(m_apicalControlBaseDistFactor.x, glm::max(1.0f, 1.0f /
+                                                                               internode.m_data.m_rootDistance *
+                                                                               m_apicalControlBaseDistFactor.y));
+}
+
+float TreeStructuralGrowthParameters::GetApicalDominanceBase(const Internode<InternodeGrowthData> &internode) const {
+    return m_apicalDominanceBaseAgeDist.x *
+           glm::pow(
+                   m_apicalDominanceBaseAgeDist.y,
+                   internode.m_data.m_age);
+}
+float TreeStructuralGrowthParameters::GetApicalDominanceDecrease(
+        const Internode<InternodeGrowthData> &internode) const {
+    return m_apicalDominanceBaseAgeDist.z;
+}
+float TreeStructuralGrowthParameters::GetApicalBudKillProbability(const Internode<InternodeGrowthData> &internode) const {
+    return m_budKillProbabilityApicalLateral.x;
+}
+
+float TreeStructuralGrowthParameters::GetLateralBudKillProbability(const Internode<InternodeGrowthData> &internode) const {
+    return m_budKillProbabilityApicalLateral.y;
+}
+
+float TreeStructuralGrowthParameters::GetLowBranchPruning(const Internode<InternodeGrowthData> &internode) const {
+    return m_lowBranchPruning;
+}
+
+bool TreeStructuralGrowthParameters::GetPruning(const Internode<InternodeGrowthData> &internode) const {
+    return false;
+}
+
+float TreeStructuralGrowthParameters::GetSagging(const Internode<InternodeGrowthData> &internode) const {
+    return glm::min(
+            m_saggingFactorThicknessReductionMax.z,
+            m_saggingFactorThicknessReductionMax.x *
+            internode.m_data.m_childTotalBiomass /
+            glm::pow(
+                    internode.m_info.m_thickness /
+                    m_endNodeThicknessAndControl.x,
+                    m_saggingFactorThicknessReductionMax.y));
 }
 
 void InternodeGrowthData::Clear() {

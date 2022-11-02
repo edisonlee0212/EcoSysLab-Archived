@@ -30,6 +30,7 @@ namespace EcoSysLab {
 
         float m_maxDistanceToAnyBranchEnd = 0;
         float m_level = 0;
+        int m_order = 0;
         float m_childTotalBiomass = 0;
 
         float m_rootDistance = 0;
@@ -50,7 +51,7 @@ namespace EcoSysLab {
         int m_order = 0;
     };
 
-    class TreeStructuralGrowthParameters {
+    class TreeStructuralGrowthParameters : public ITreeGrowthParameters<InternodeGrowthData>{
     public:
         int m_lateralBudCount;
         /**
@@ -82,8 +83,6 @@ namespace EcoSysLab {
         */
         glm::vec3 m_apicalDominanceBaseAgeDist{};
 
-        float m_lateralBudFlushingLightingFactor;
-
         glm::vec2 m_budKillProbabilityApicalLateral{};
         /**
         * The limit of lateral branches being cut off when too close to the
@@ -94,6 +93,42 @@ namespace EcoSysLab {
          * The strength of gravity bending.
          */
         glm::vec3 m_saggingFactorThicknessReductionMax = glm::vec3(0.8f, 1.75f, 1.0f);
+
+
+        [[nodiscard]] int GetLateralBudCount(const Internode<InternodeGrowthData> &internode) const override;
+
+        [[nodiscard]] float GetDesiredBranchingAngle(const Internode<InternodeGrowthData> &internode) const override;
+
+        [[nodiscard]] float GetDesiredRollAngle(const Internode<InternodeGrowthData> &internode) const override;
+
+        [[nodiscard]] float GetDesiredApicalAngle(const Internode<InternodeGrowthData> &internode) const override;
+
+        [[nodiscard]] float GetGravitropism(const Internode<InternodeGrowthData> &internode) const override;
+
+        [[nodiscard]] float GetPhototropism(const Internode<InternodeGrowthData> &internode) const override;
+
+        [[nodiscard]] float GetInternodeLength(const Internode<InternodeGrowthData> &internode) const override;
+
+        [[nodiscard]] float GetGrowthRate(const Internode<InternodeGrowthData> &internode) const override;
+
+        [[nodiscard]] float GetEndNodeThickness(const Internode<InternodeGrowthData> &internode) const override;
+
+        [[nodiscard]] float GetThicknessControlFactor(const Internode<InternodeGrowthData> &internode) const override;
+
+        [[nodiscard]] float GetLateralBudFlushingProbability(const Internode<InternodeGrowthData> &internode) const override;
+
+        [[nodiscard]] float GetApicalControlBase(const Internode<InternodeGrowthData> &internode) const override;
+
+        [[nodiscard]] float GetApicalDominanceBase(const Internode<InternodeGrowthData> &internode) const override;
+        [[nodiscard]] float GetApicalDominanceDecrease(const Internode<InternodeGrowthData> &internode) const override;
+
+        [[nodiscard]] float GetApicalBudKillProbability(const Internode<InternodeGrowthData> &internode) const override;
+
+        [[nodiscard]] float GetLateralBudKillProbability(const Internode<InternodeGrowthData> &internode) const override;
+
+        [[nodiscard]] bool GetPruning(const Internode<InternodeGrowthData> &internode) const override;
+        [[nodiscard]] float GetLowBranchPruning(const Internode<InternodeGrowthData> &internode) const override;
+        [[nodiscard]] float GetSagging(const Internode<InternodeGrowthData> &internode) const override;
 
         TreeStructuralGrowthParameters();
     };
