@@ -143,7 +143,7 @@ namespace EcoSysLab {
                     m_selectedInternodeHandle = -1;
                     m_selectedInternodeHierarchyList.clear();
                 }
-                if (ImGui::Button("Reverse")) {
+                if (m_iteration != treeStructure.CurrentIteration() && ImGui::Button("Reverse")) {
                     treeStructure.Reverse(m_iteration);
                 }
                 ImGui::TreePop();
