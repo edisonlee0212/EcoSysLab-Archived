@@ -17,21 +17,40 @@ namespace EcoSysLab {
 
     template<typename InternodeData>
     class Internode {
-    public:
-        InternodeData m_data;
-        InternodeInfo m_info;
+#pragma region Private
+
+        template<typename FD>
+        friend
+        class Flow;
+
+        template<typename FD, typename ID>
+        friend
+        class TreeSkeleton;
+
         bool m_endNode = true;
         bool m_recycled = false;
         InternodeHandle m_handle = -1;
-        FlowHandle m_branchHandle = -1;
+        FlowHandle m_flowHandle = -1;
+        InternodeHandle m_parentHandle = -1;
+        std::vector<InternodeHandle> m_childHandles;
+#pragma endregion
+    public:
+        InternodeData m_data;
+        InternodeInfo m_info;
 
-        InternodeHandle m_parent = -1;
-        std::vector<InternodeHandle> m_children;
+        [[nodiscard]] bool IsEndNode() const;
 
-        std::vector<std::pair<int, InternodeHandle>> m_prunedChildren;
+        [[nodiscard]] bool IsRecycled() const;
+
+        [[nodiscard]] InternodeHandle GetHandle() const;
+
+        [[nodiscard]] InternodeHandle GetParentHandle() const;
+
+        [[nodiscard]] FlowHandle GetFlowHandle() const;
+
+        [[nodiscard]] const std::vector<InternodeHandle> &RefChildHandles() const;
 
         explicit Internode(InternodeHandle handle);
-
     };
 
     struct FlowInfo {
@@ -46,18 +65,31 @@ namespace EcoSysLab {
 
     template<typename FlowData>
     class Flow {
+#pragma region Private
+
+        template<typename FD, typename ID>
+        friend
+        class TreeSkeleton;
+
+        bool m_recycled = false;
+        FlowHandle m_handle = -1;
+        std::vector<InternodeHandle> m_internodes;
+        FlowHandle m_parent = -1;
+        std::vector<FlowHandle> m_children;
+#pragma endregion
     public:
         FlowData m_data;
         FlowInfo m_info;
 
-        bool m_recycled = false;
-        FlowHandle m_handle = -1;
+        [[nodiscard]] bool IsRecycled() const;
 
-        std::vector<InternodeHandle> m_internodes;
+        [[nodiscard]] FlowHandle GetHandle() const;
 
-        FlowHandle m_parent = -1;
+        [[nodiscard]] FlowHandle GetParentHandle() const;
 
-        std::vector<FlowHandle> m_children;
+        [[nodiscard]] const std::vector<FlowHandle> &RefChildHandles() const;
+
+        [[nodiscard]] const std::vector<InternodeHandle> &RefInternodes() const;
 
         explicit Flow(FlowHandle handle);
     };
@@ -65,6 +97,7 @@ namespace EcoSysLab {
 
     template<typename FlowData, typename InternodeData>
     class TreeSkeleton {
+#pragma region Private
         std::vector<Flow<FlowData>> m_flows;
         std::vector<Internode<InternodeData>> m_internodes;
         std::queue<InternodeHandle> m_internodePool;
@@ -91,7 +124,7 @@ namespace EcoSysLab {
 
         void DetachChildInternode(InternodeHandle targetHandle, InternodeHandle childHandle);
 
-
+#pragma endregion
     public:
         void RecycleInternode(InternodeHandle handle);
 
@@ -140,30 +173,49 @@ namespace EcoSysLab {
     };
 
     template<typename InternodeData>
-    class ITreeGrowthParameters{
+    class ITreeGrowthParameters {
     public:
-        virtual int GetLateralBudCount(const Internode<InternodeData>& internode) const = 0;
-        virtual float GetDesiredBranchingAngle(const Internode<InternodeData>& internode) const = 0;
-        virtual float GetDesiredRollAngle(const Internode<InternodeData>& internode) const = 0;
-        virtual float GetDesiredApicalAngle(const Internode<InternodeData>& internode) const = 0;
-        virtual float GetGravitropism(const Internode<InternodeData>& internode) const = 0;
-        virtual float GetPhototropism(const Internode<InternodeData>& internode) const = 0;
-        virtual float GetInternodeLength(const Internode<InternodeData>& internode) const = 0;
-        virtual float GetGrowthRate(const Internode<InternodeData>& internode) const = 0;
-        virtual float GetEndNodeThickness(const Internode<InternodeData>& internode) const = 0;
-        virtual float GetThicknessControlFactor(const Internode<InternodeData>& internode) const = 0;
-        virtual float GetLateralBudFlushingProbability(const Internode<InternodeData>& internode) const = 0;
-        virtual float GetApicalControlBase(const Internode<InternodeData>& internode) const = 0;
-        virtual float GetApicalDominanceBase(const Internode<InternodeData>& internode) const = 0;
-        virtual float GetApicalDominanceDecrease(const Internode<InternodeData>& internode) const = 0;
-        virtual float GetApicalBudKillProbability(const Internode<InternodeData>& internode) const = 0;
-        virtual float GetLateralBudKillProbability(const Internode<InternodeData>& internode) const = 0;
-        virtual bool GetPruning(const Internode<InternodeData>& internode) const = 0;
-        virtual float GetLowBranchPruning(const Internode<InternodeData>& internode) const = 0;
-        virtual float GetSagging(const Internode<InternodeData>& internode) const = 0;
+        virtual int GetLateralBudCount(const Internode<InternodeData> &internode) const = 0;
+
+        virtual float GetDesiredBranchingAngle(const Internode<InternodeData> &internode) const = 0;
+
+        virtual float GetDesiredRollAngle(const Internode<InternodeData> &internode) const = 0;
+
+        virtual float GetDesiredApicalAngle(const Internode<InternodeData> &internode) const = 0;
+
+        virtual float GetGravitropism(const Internode<InternodeData> &internode) const = 0;
+
+        virtual float GetPhototropism(const Internode<InternodeData> &internode) const = 0;
+
+        virtual float GetInternodeLength(const Internode<InternodeData> &internode) const = 0;
+
+        virtual float GetGrowthRate(const Internode<InternodeData> &internode) const = 0;
+
+        virtual float GetEndNodeThickness(const Internode<InternodeData> &internode) const = 0;
+
+        virtual float GetThicknessControlFactor(const Internode<InternodeData> &internode) const = 0;
+
+        virtual float GetLateralBudFlushingProbability(const Internode<InternodeData> &internode) const = 0;
+
+        virtual float GetApicalControlBase(const Internode<InternodeData> &internode) const = 0;
+
+        virtual float GetApicalDominanceBase(const Internode<InternodeData> &internode) const = 0;
+
+        virtual float GetApicalDominanceDecrease(const Internode<InternodeData> &internode) const = 0;
+
+        virtual float GetApicalBudKillProbability(const Internode<InternodeData> &internode) const = 0;
+
+        virtual float GetLateralBudKillProbability(const Internode<InternodeData> &internode) const = 0;
+
+        virtual bool GetPruning(const Internode<InternodeData> &internode) const = 0;
+
+        virtual float GetLowBranchPruning(const Internode<InternodeData> &internode) const = 0;
+
+        virtual float GetSagging(const Internode<InternodeData> &internode) const = 0;
     };
 
 #pragma region
+
     template<typename FlowData, typename InternodeData>
     void TreeStructure<FlowData, InternodeData>::Step() {
         m_history.push_back(m_skeleton);
@@ -227,13 +279,13 @@ namespace EcoSysLab {
         if (m_version == m_newVersion) return;
         m_version = m_newVersion;
         m_sortedFlowList.clear();
-        std::queue<FlowHandle> branchWaitList;
-        branchWaitList.push(0);
-        while (!branchWaitList.empty()) {
-            m_sortedFlowList.emplace_back(branchWaitList.front());
-            branchWaitList.pop();
-            for (const auto &i: m_flows[m_sortedFlowList.back()].m_children) {
-                branchWaitList.push(i);
+        std::queue<FlowHandle> flowWaitList;
+        flowWaitList.push(0);
+        while (!flowWaitList.empty()) {
+            m_sortedFlowList.emplace_back(flowWaitList.front());
+            flowWaitList.pop();
+            for (const auto &i: m_flows[m_sortedFlowList.back()].m_childHandles) {
+                flowWaitList.push(i);
             }
         }
 
@@ -243,7 +295,7 @@ namespace EcoSysLab {
         while (!internodeWaitList.empty()) {
             m_sortedInternodeList.emplace_back(internodeWaitList.front());
             internodeWaitList.pop();
-            for (const auto &i: m_internodes[m_sortedInternodeList.back()].m_children) {
+            for (const auto &i: m_internodes[m_sortedInternodeList.back()].m_childHandles) {
                 internodeWaitList.push(i);
             }
         }
@@ -265,9 +317,9 @@ namespace EcoSysLab {
         assert(targetHandle < m_internodes.size());
         auto &targetInternode = m_internodes[targetHandle];
         assert(!targetInternode.m_recycled);
-        assert(targetInternode.m_branchHandle < m_flows.size());
-        auto &branch = m_flows[targetInternode.m_branchHandle];
-        assert(!branch.m_recycled);
+        assert(targetInternode.m_flowHandle < m_flows.size());
+        auto &flow = m_flows[targetInternode.m_flowHandle];
+        assert(!flow.m_recycled);
         auto newInternodeHandle = AllocateInternode();
         SetParentInternode(newInternodeHandle, targetHandle);
         auto &originalInternode = m_internodes[targetHandle];
@@ -276,13 +328,13 @@ namespace EcoSysLab {
         if (createNewBranch) {
             auto newBranchHandle = AllocateFlow();
             auto &newBranch = m_flows[newBranchHandle];
-            SetParentFlow(newBranchHandle, originalInternode.m_branchHandle);
-            newInternode.m_branchHandle = newBranchHandle;
+            SetParentFlow(newBranchHandle, originalInternode.m_flowHandle);
+            newInternode.m_flowHandle = newBranchHandle;
             newBranch.m_internodes.emplace_back(newInternodeHandle);
         } else {
             originalInternode.m_endNode = false;
-            branch.m_internodes.emplace_back(newInternodeHandle);
-            newInternode.m_branchHandle = originalInternode.m_branchHandle;
+            flow.m_internodes.emplace_back(newInternodeHandle);
+            newInternode.m_flowHandle = originalInternode.m_flowHandle;
 
 
         }
@@ -294,18 +346,18 @@ namespace EcoSysLab {
     void TreeSkeleton<FlowData, InternodeData>::RecycleFlow(FlowHandle handle) {
         assert(handle != 0);
         assert(!m_flows[handle].m_recycled);
-        auto &branch = m_flows[handle];
+        auto &flow = m_flows[handle];
         //Remove children
-        auto children = branch.m_children;
+        auto children = flow.m_childHandles;
         for (const auto &child: children) {
             RecycleFlow(child);
         }
         //Detach from parent
-        if (branch.m_parent != -1) DetachChildFlow(branch.m_parent, handle);
+        if (flow.m_parentHandle != -1) DetachChildFlow(flow.m_parentHandle, handle);
         //Remove internodes
-        if (!branch.m_internodes.empty()) {
+        if (!flow.m_internodes.empty()) {
             //Detach first internode from parent.
-            auto internodes = branch.m_internodes;
+            auto internodes = flow.m_internodes;
             for (const auto &i: internodes) {
                 RecycleInternodeSingle(i);
             }
@@ -319,33 +371,33 @@ namespace EcoSysLab {
         assert(handle != 0);
         assert(!m_internodes[handle].m_recycled);
         auto &internode = m_internodes[handle];
-        auto branchHandle = internode.m_branchHandle;
-        auto &branch = m_flows[branchHandle];
-        if (handle == branch.m_internodes[0]) {
-            RecycleFlow(internode.m_branchHandle);
+        auto flowHandle = internode.m_flowHandle;
+        auto &flow = m_flows[flowHandle];
+        if (handle == flow.m_internodes[0]) {
+            RecycleFlow(internode.m_flowHandle);
             return;
         }
         //Collect list of subsequent internodes
         std::vector<InternodeHandle> subsequentInternodes;
-        while (branch.m_internodes.back() != handle) {
-            subsequentInternodes.emplace_back(branch.m_internodes.back());
-            branch.m_internodes.pop_back();
+        while (flow.m_internodes.back() != handle) {
+            subsequentInternodes.emplace_back(flow.m_internodes.back());
+            flow.m_internodes.pop_back();
         }
-        subsequentInternodes.emplace_back(branch.m_internodes.back());
-        branch.m_internodes.pop_back();
-        assert(!branch.m_internodes.empty());
+        subsequentInternodes.emplace_back(flow.m_internodes.back());
+        flow.m_internodes.pop_back();
+        assert(!flow.m_internodes.empty());
         //Detach from parent
-        if (internode.m_parent != -1) DetachChildInternode(internode.m_parent, handle);
+        if (internode.m_parentHandle != -1) DetachChildInternode(internode.m_parentHandle, handle);
         //From end node remove one by one.
         InternodeHandle prev = -1;
         for (const auto &i: subsequentInternodes) {
-            auto children = m_internodes[i].m_children;
+            auto children = m_internodes[i].m_childHandles;
             for (const auto &childInternodeHandle: children) {
                 if (childInternodeHandle == prev) continue;
                 auto &child = m_internodes[childInternodeHandle];
                 assert(!child.m_recycled);
-                auto childBranchHandle = child.m_branchHandle;
-                if (childBranchHandle != branchHandle) {
+                auto childBranchHandle = child.m_flowHandle;
+                if (childBranchHandle != flowHandle) {
                     RecycleFlow(childBranchHandle);
                 }
             }
@@ -368,6 +420,36 @@ namespace EcoSysLab {
         m_info = {};
     }
 
+    template<typename InternodeData>
+    bool Internode<InternodeData>::IsEndNode() const {
+        return m_endNode;
+    }
+
+    template<typename InternodeData>
+    bool Internode<InternodeData>::IsRecycled() const {
+        return m_recycled;
+    }
+
+    template<typename InternodeData>
+    InternodeHandle Internode<InternodeData>::GetHandle() const {
+        return m_handle;
+    }
+
+    template<typename InternodeData>
+    InternodeHandle Internode<InternodeData>::GetParentHandle() const {
+        return m_parentHandle;
+    }
+
+    template<typename InternodeData>
+    FlowHandle Internode<InternodeData>::GetFlowHandle() const {
+        return m_flowHandle;
+    }
+
+    template<typename InternodeData>
+    const std::vector<InternodeHandle> &Internode<InternodeData>::RefChildHandles() const {
+        return m_childHandles;
+    }
+
     template<typename FlowData>
     Flow<FlowData>::Flow(int handle) {
         m_handle = handle;
@@ -376,31 +458,54 @@ namespace EcoSysLab {
         m_info = {};
     }
 
+    template<typename FlowData>
+    const std::vector<InternodeHandle> &Flow<FlowData>::RefInternodes() const {
+        return m_internodes;
+    }
+
+    template<typename FlowData>
+    FlowHandle Flow<FlowData>::GetParentHandle() const {
+        return m_parent;
+    }
+
+    template<typename FlowData>
+    const std::vector<FlowHandle> &Flow<FlowData>::RefChildHandles() const {
+        return m_children;
+    }
+
+    template<typename FlowData>
+    bool Flow<FlowData>::IsRecycled() const {
+        return m_recycled;
+    }
+
+    template<typename FlowData>
+    FlowHandle Flow<FlowData>::GetHandle() const { return m_handle; }
+
     template<typename FlowData, typename InternodeData>
     TreeSkeleton<FlowData, InternodeData>::TreeSkeleton() {
         AllocateFlow();
         AllocateInternode();
         auto &rootBranch = m_flows[0];
         auto &rootInternode = m_internodes[0];
-        rootInternode.m_branchHandle = 0;
+        rootInternode.m_flowHandle = 0;
         rootBranch.m_internodes.emplace_back(0);
     }
 
     template<typename FlowData, typename InternodeData>
     void TreeSkeleton<FlowData, InternodeData>::DetachChildInternode(InternodeHandle targetHandle,
-                                                                       InternodeHandle childHandle) {
+                                                                     InternodeHandle childHandle) {
         assert(targetHandle >= 0 && childHandle >= 0 && targetHandle < m_internodes.size() &&
                childHandle < m_internodes.size());
         auto &targetInternode = m_internodes[targetHandle];
         auto &childInternode = m_internodes[childHandle];
         assert(!targetInternode.m_recycled);
         assert(!childInternode.m_recycled);
-        auto &children = targetInternode.m_children;
+        auto &children = targetInternode.m_childHandles;
         for (int i = 0; i < children.size(); i++) {
             if (children[i] == childHandle) {
                 children[i] = children.back();
                 children.pop_back();
-                childInternode.m_parent = -1;
+                childInternode.m_parentHandle = -1;
                 return;
             }
         }
@@ -408,15 +513,15 @@ namespace EcoSysLab {
 
     template<typename FlowData, typename InternodeData>
     void TreeSkeleton<FlowData, InternodeData>::SetParentInternode(InternodeHandle targetHandle,
-                                                                     InternodeHandle parentHandle) {
+                                                                   InternodeHandle parentHandle) {
         assert(targetHandle >= 0 && parentHandle >= 0 && targetHandle < m_internodes.size() &&
                parentHandle < m_internodes.size());
         auto &targetInternode = m_internodes[targetHandle];
         auto &parentInternode = m_internodes[parentHandle];
         assert(!targetInternode.m_recycled);
         assert(!parentInternode.m_recycled);
-        targetInternode.m_parent = parentHandle;
-        parentInternode.m_children.emplace_back(targetHandle);
+        targetInternode.m_parentHandle = parentHandle;
+        parentInternode.m_childHandles.emplace_back(targetHandle);
     }
 
     template<typename FlowData, typename InternodeData>
@@ -432,16 +537,16 @@ namespace EcoSysLab {
         if (!childBranch.m_internodes.empty()) {
             auto firstInternodeHandle = childBranch.m_internodes[0];
             auto &firstInternode = m_internodes[firstInternodeHandle];
-            if (firstInternode.m_parent != -1)
-                DetachChildInternode(firstInternode.m_parent, firstInternodeHandle);
+            if (firstInternode.m_parentHandle != -1)
+                DetachChildInternode(firstInternode.m_parentHandle, firstInternodeHandle);
         }
 
-        auto &children = targetBranch.m_children;
+        auto &children = targetBranch.m_childHandles;
         for (int i = 0; i < children.size(); i++) {
             if (children[i] == childHandle) {
                 children[i] = children.back();
                 children.pop_back();
-                childBranch.m_parent = -1;
+                childBranch.m_parentHandle = -1;
                 return;
             }
         }
@@ -456,8 +561,8 @@ namespace EcoSysLab {
         auto &parentBranch = m_flows[parentHandle];
         assert(!targetBranch.m_recycled);
         assert(!parentBranch.m_recycled);
-        targetBranch.m_parent = parentHandle;
-        parentBranch.m_children.emplace_back(targetHandle);
+        targetBranch.m_parentHandle = parentHandle;
+        parentBranch.m_childHandles.emplace_back(targetHandle);
     }
 
     template<typename FlowData, typename InternodeData>
@@ -468,23 +573,23 @@ namespace EcoSysLab {
         }
         auto handle = m_flowPool.front();
         m_flowPool.pop();
-        auto &branch = m_flows[handle];
-        branch.m_recycled = false;
+        auto &flow = m_flows[handle];
+        flow.m_recycled = false;
         return handle;
     }
 
     template<typename FlowData, typename InternodeData>
     void TreeSkeleton<FlowData, InternodeData>::RecycleFlowSingle(FlowHandle handle) {
         assert(!m_flows[handle].m_recycled);
-        auto &branch = m_flows[handle];
-        branch.m_parent = -1;
-        branch.m_children.clear();
-        branch.m_internodes.clear();
+        auto &flow = m_flows[handle];
+        flow.m_parentHandle = -1;
+        flow.m_childHandles.clear();
+        flow.m_internodes.clear();
 
-        branch.m_data = {};
-        branch.m_info = {};
+        flow.m_data = {};
+        flow.m_info = {};
 
-        branch.m_recycled = true;
+        flow.m_recycled = true;
         m_flowPool.emplace(handle);
     }
 
@@ -492,10 +597,10 @@ namespace EcoSysLab {
     void TreeSkeleton<FlowData, InternodeData>::RecycleInternodeSingle(InternodeHandle handle) {
         assert(!m_internodes[handle].m_recycled);
         auto &internode = m_internodes[handle];
-        internode.m_parent = -1;
-        internode.m_branchHandle = -1;
+        internode.m_parentHandle = -1;
+        internode.m_flowHandle = -1;
         internode.m_endNode = true;
-        internode.m_children.clear();
+        internode.m_childHandles.clear();
 
         internode.m_data = {};
         internode.m_info = {};
@@ -525,23 +630,22 @@ namespace EcoSysLab {
     template<typename FlowData, typename InternodeData>
     void TreeSkeleton<FlowData, InternodeData>::CalculateBranches() {
         const auto &sortedBranchList = RefSortedFlowList();
-        for (const auto &branchHandle: sortedBranchList) {
-            auto &branch = m_flows[branchHandle];
-            auto &firstInternode = m_internodes[branch.m_internodes.front()];
-            auto &lastInternode = m_internodes[branch.m_internodes.back()];
-            branch.m_info.m_startThickness = firstInternode.m_info.m_thickness;
-            branch.m_info.m_globalStartPosition = firstInternode.m_info.m_globalPosition;
-            branch.m_info.m_globalStartRotation = firstInternode.m_info.m_localRotation;
+        for (const auto &flowHandle: sortedBranchList) {
+            auto &flow = m_flows[flowHandle];
+            auto &firstInternode = m_internodes[flow.m_internodes.front()];
+            auto &lastInternode = m_internodes[flow.m_internodes.back()];
+            flow.m_info.m_startThickness = firstInternode.m_info.m_thickness;
+            flow.m_info.m_globalStartPosition = firstInternode.m_info.m_globalPosition;
+            flow.m_info.m_globalStartRotation = firstInternode.m_info.m_localRotation;
 
-            branch.m_info.m_endThickness = lastInternode.m_info.m_thickness;
-            branch.m_info.m_globalEndPosition = lastInternode.m_info.m_globalPosition +
-                                                lastInternode.m_info.m_length *
-                                                (lastInternode.m_info.m_globalRotation * glm::vec3(0, 0, -1));
-            branch.m_info.m_globalEndRotation = lastInternode.m_info.m_globalRotation;
+            flow.m_info.m_endThickness = lastInternode.m_info.m_thickness;
+            flow.m_info.m_globalEndPosition = lastInternode.m_info.m_globalPosition +
+                                              lastInternode.m_info.m_length *
+                                              (lastInternode.m_info.m_globalRotation * glm::vec3(0, 0, -1));
+            flow.m_info.m_globalEndRotation = lastInternode.m_info.m_globalRotation;
         }
     }
-
-
+    
 #pragma endregion
 #pragma endregion
 }

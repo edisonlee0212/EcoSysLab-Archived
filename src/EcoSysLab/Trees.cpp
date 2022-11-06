@@ -198,7 +198,7 @@ void Trees::OnInspect() {
                                             glm::distance(translation, position2) / 2.0f,
                                             internode.m_info.m_thickness));
                             colors[i + startIndex] = randomColors[skeleton.PeekFlow(
-                                    internode.m_branchHandle).m_data.m_order];
+                                    internode.GetFlowHandle()).m_data.m_order];
                         }, results);
                         for (auto &i: results) i.wait();
                         startIndex += list.size();

@@ -161,8 +161,8 @@ BranchMeshGenerator::Generate(TreeSkeleton<BranchGrowthData, InternodeGrowthData
         float thicknessStart = internodeInfo.m_thickness;
         float thicknessEnd = internodeInfo.m_thickness;
 
-        if (internode.m_parent != -1) {
-            auto &parentInternode = treeSkeleton.RefInternode(internode.m_parent);
+        if (internode.GetParentHandle() != -1) {
+            auto &parentInternode = treeSkeleton.RefInternode(internode.GetParentHandle());
             thicknessStart = parentInternode.m_info.m_thickness;
             GlobalTransform parentRelativeGlobalTransform;
             directionStart =
@@ -233,7 +233,7 @@ BranchMeshGenerator::Generate(TreeSkeleton<BranchGrowthData, InternodeGrowthData
         auto internodeHandle = sortedInternodeList[i];
         auto &internode = treeSkeleton.RefInternode(internodeHandle);
         auto &internodeInfo = internode.m_info;
-        auto parentInternodeHandle = internode.m_parent;
+        auto parentInternodeHandle = internode.GetParentHandle();
         glm::vec3 newNormalDir;
         if (parentInternodeHandle != -1) {
             newNormalDir = normals.at(parentInternodeHandle);

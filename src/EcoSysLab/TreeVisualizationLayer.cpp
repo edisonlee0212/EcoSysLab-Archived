@@ -111,7 +111,7 @@ void TreeVisualizationLayer::LateUpdate() {
                                     glm::distance(translation, position2) / 2.0f,
                                     internode.m_info.m_thickness));
                     m_colors[i + startIndex] = m_randomColors[skeleton.PeekFlow(
-                            internode.m_branchHandle).m_data.m_order];
+                            internode.GetFlowHandle()).m_data.m_order];
                 }, results);
                 for (auto &i: results) i.wait();
                 startIndex += list.size();

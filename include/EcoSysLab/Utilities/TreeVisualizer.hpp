@@ -81,8 +81,8 @@ namespace EcoSysLab {
         bool modified = deleted;
         if (opened && !deleted) {
             ImGui::TreePush();
-            auto &internodeChildren = treeSkeleton.RefInternode(internodeHandle).m_children;
-            for (int &child: internodeChildren) {
+            const auto &internodeChildren = treeSkeleton.RefInternode(internodeHandle).RefChildHandles();
+            for (const auto &child: internodeChildren) {
                 bool childDeleted = false;
                 DrawInternodeInspectionGui(treeStructure, child, childDeleted, hierarchyLevel + 1);
                 if (childDeleted) {
@@ -122,7 +122,7 @@ namespace EcoSysLab {
         if (opened) {
             ImGui::TreePush();
             const auto &internode = treeSkeleton.PeekInternode(internodeHandle);
-            const auto &internodeChildren = internode.m_children;
+            const auto &internodeChildren = internode.RefChildHandles();
             for (const auto &child: internodeChildren) {
                 PeekInternodeInspectionGui(treeSkeleton, child, hierarchyLevel + 1);
             }
@@ -301,7 +301,7 @@ namespace EcoSysLab {
         while (walker != -1) {
             m_selectedInternodeHierarchyList.push_back(walker);
             const auto &internode = treeSkeleton.PeekInternode(walker);
-            walker = internode.m_parent;
+            walker = internode.GetParentHandle();
         }
     }
 
@@ -459,7 +459,7 @@ namespace EcoSysLab {
             if (internodeHandle == m_selectedInternodeHandle) {
                 m_colors[i] = glm::vec4(1, 0, 0, 1);
             } else {
-                m_colors[i] = randomColors[treeSkeleton.PeekFlow(internode.m_branchHandle).m_data.m_order];
+                m_colors[i] = randomColors[treeSkeleton.PeekFlow(internode.GetFlowHandle()).m_data.m_order];
                 if (m_selectedInternodeHandle != -1) m_colors[i].a = 0.05f;
             }
         }, results);
