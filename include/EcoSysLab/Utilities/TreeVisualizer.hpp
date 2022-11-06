@@ -176,7 +176,7 @@ namespace EcoSysLab {
             }
         }
         if (m_visualization) {
-            const auto &sortedBranchList = treeSkeleton.RefSortedBranchList();
+            const auto &sortedBranchList = treeSkeleton.RefSortedFlowList();
             const auto &sortedInternodeList = treeSkeleton.RefSortedInternodeList();
             ImGui::Text("Internode count: %d", sortedInternodeList.size());
             ImGui::Text("Branch count: %d", sortedBranchList.size());
@@ -333,7 +333,7 @@ namespace EcoSysLab {
                     mousePosition = glm::vec2(mp.x - wp.x, mp.y - wp.y - 20);
                     const Ray cameraRay = editorLayer->m_sceneCamera->ScreenPointToRay(
                             cameraLtw, mousePosition);
-                    const auto &sortedBranchList = treeSkeleton.RefSortedBranchList();
+                    const auto &sortedBranchList = treeSkeleton.RefSortedFlowList();
                     const auto &sortedInternodeList = treeSkeleton.RefSortedInternodeList();
                     std::vector<std::shared_future<void>> results;
                     Jobs::ParallelFor(sortedInternodeList.size(), [&](unsigned i) {
@@ -432,7 +432,7 @@ namespace EcoSysLab {
         }
 
         m_version = treeSkeleton.GetVersion();
-        const auto &sortedBranchList = treeSkeleton.RefSortedBranchList();
+        const auto &sortedBranchList = treeSkeleton.RefSortedFlowList();
         const auto &sortedInternodeList = treeSkeleton.RefSortedInternodeList();
         m_matrices.resize(sortedInternodeList.size());
         m_colors.resize(sortedInternodeList.size());
@@ -459,7 +459,7 @@ namespace EcoSysLab {
             if (internodeHandle == m_selectedInternodeHandle) {
                 m_colors[i] = glm::vec4(1, 0, 0, 1);
             } else {
-                m_colors[i] = randomColors[treeSkeleton.PeekBranch(internode.m_branchHandle).m_data.m_order];
+                m_colors[i] = randomColors[treeSkeleton.PeekFlow(internode.m_branchHandle).m_data.m_order];
                 if (m_selectedInternodeHandle != -1) m_colors[i].a = 0.05f;
             }
         }, results);

@@ -139,6 +139,7 @@ namespace EcoSysLab {
 
     class TreeModel {
         bool m_initialized = false;
+        inline void LowBranchPruning(float maxDistance, InternodeHandle internodeHandle, const TreeStructuralGrowthParameters& parameters);
         inline void CalculateSagging(InternodeHandle internodeHandle, const TreeStructuralGrowthParameters& parameters);
         inline void CollectInhibitor(InternodeHandle internodeHandle, const TreeStructuralGrowthParameters& parameters);
         inline void GrowInternode(InternodeHandle internodeHandle, const TreeStructuralGrowthParameters& parameters, const GrowthNutrients& growthNutrients);

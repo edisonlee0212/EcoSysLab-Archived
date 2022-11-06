@@ -65,13 +65,11 @@ void TreeModel::GrowInternode(InternodeHandle internodeHandle, const TreeStructu
                         auto growthRate = parameters.GetGrowthRate(internode);
                         auto internodeLength = parameters.GetInternodeLength(internode);
                         internodeInfo.m_length += waterReceived * growthRate;
-                        if (internodeInfo.m_length > growthRate) {
+                        if (internodeInfo.m_length > internodeLength) {
                             bud.m_status = BudStatus::Flushed;
                             //Prepare information for new internode.
                             float extraLength =
-                                    (internodeInfo.m_length - internodeLength) / growthRate;
-                            if (extraLength > internodeLength)
-                                extraLength = internodeLength;
+                                    glm::clamp(internodeInfo.m_length - internodeLength, 0.0f, internodeLength);
                             internodeInfo.m_length = internodeLength;
                             auto desiredGlobalRotation = internodeInfo.m_globalRotation * bud.m_localRotation;
                             auto desiredGlobalFront = desiredGlobalRotation * glm::vec3(0, 0, -1);
@@ -205,23 +203,6 @@ void TreeModel::Grow(const GrowthNutrients &growthNutrients, const TreeStructura
     }
 
     auto &skeleton = m_treeStructure.Skeleton();
-#pragma region Preprocess
-    skeleton.SortLists();
-    {
-        const auto &sortedInternodeList = skeleton.RefSortedInternodeList();
-        const auto maxDistance = skeleton.RefInternode(sortedInternodeList.front()).m_data.m_maxDistanceToAnyBranchEnd;
-        for (const auto &internodeHandle: sortedInternodeList) {
-            auto &internode = skeleton.RefInternode(internodeHandle);
-            //Pruning here.
-            if (internode.m_recycled) continue;
-            if(maxDistance > 5 && internode.m_data.m_order != 0 &&
-                                  internode.m_data.m_rootDistance / maxDistance < parameters.GetLowBranchPruning(internode)){
-                skeleton.RecycleInternode(internodeHandle);
-                continue;
-            }
-        }
-    }
-#pragma endregion
 #pragma region Grow
     skeleton.SortLists();
     {
@@ -230,7 +211,19 @@ void TreeModel::Grow(const GrowthNutrients &growthNutrients, const TreeStructura
             auto internodeHandle = *it;
             CollectInhibitor(internodeHandle, parameters);
             GrowInternode(internodeHandle, parameters, growthNutrients);
-            CalculateSagging(internodeHandle, parameters);
+        }
+    }
+#pragma endregion
+#pragma region Low Branch Pruning
+    skeleton.SortLists();
+    {
+        const auto &sortedInternodeList = skeleton.RefSortedInternodeList();
+        const auto maxDistance = skeleton.RefInternode(sortedInternodeList.front()).m_data.m_maxDistanceToAnyBranchEnd;
+        for (const auto &internodeHandle: sortedInternodeList) {
+            auto &internode = skeleton.RefInternode(internodeHandle);
+            //Pruning here.
+            if (internode.m_recycled) continue;
+            LowBranchPruning(maxDistance, internodeHandle, parameters);
         }
 
     }
@@ -242,7 +235,10 @@ void TreeModel::Grow(const GrowthNutrients &growthNutrients, const TreeStructura
         skeleton.m_max = glm::vec3(FLT_MIN);
 
         const auto &sortedInternodeList = skeleton.RefSortedInternodeList();
-
+        for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); it++) {
+            auto internodeHandle = *it;
+            CalculateSagging(internodeHandle, parameters);
+        }
         for (const auto &internodeHandle: sortedInternodeList) {
             auto &internode = skeleton.RefInternode(internodeHandle);
             auto &internodeData = internode.m_data;
@@ -253,6 +249,7 @@ void TreeModel::Grow(const GrowthNutrients &growthNutrients, const TreeStructura
                 internodeInfo.m_globalRotation = glm::vec3(glm::radians(90.0f), 0.0f, 0.0f);
 
                 internodeData.m_rootDistance = internodeInfo.m_length;
+
                 internodeData.m_apicalControl = 1.0f;
             } else {
                 auto &parentInternode = skeleton.RefInternode(internode.m_parent);
@@ -303,18 +300,18 @@ void TreeModel::Grow(const GrowthNutrients &growthNutrients, const TreeStructura
     }
 
     {
-        const auto &sortedBranchList = skeleton.RefSortedBranchList();
-        for (const auto &branchHandle: sortedBranchList) {
-            auto &branch = skeleton.RefBranch(branchHandle);
-            auto &branchData = branch.m_data;
-            if (branch.m_parent == -1) {
-                branchData.m_order = 0;
+        const auto &sortedFlowList = skeleton.RefSortedFlowList();
+        for (const auto &flowHandle: sortedFlowList) {
+            auto &flow = skeleton.RefFlow(flowHandle);
+            auto &flowData = flow.m_data;
+            if (flow.m_parent == -1) {
+                flowData.m_order = 0;
             } else {
-                auto &parentBranch = skeleton.RefBranch(branch.m_parent);
-                branchData.m_order = parentBranch.m_data.m_order + 1;
+                auto &parentFlow = skeleton.RefFlow(flow.m_parent);
+                flowData.m_order = parentFlow.m_data.m_order + 1;
             }
-            for(const auto& internodeHandle : branch.m_internodes){
-                skeleton.RefInternode(internodeHandle).m_data.m_order = branchData.m_order;
+            for(const auto& internodeHandle : flow.m_internodes){
+                skeleton.RefInternode(internodeHandle).m_data.m_order = flowData.m_order;
             }
         }
         skeleton.CalculateBranches();
@@ -344,6 +341,16 @@ void TreeModel::Clear() {
 
 bool TreeModel::IsInitialized() const {
     return m_initialized;
+}
+
+void TreeModel::LowBranchPruning(float maxDistance, InternodeHandle internodeHandle, const TreeStructuralGrowthParameters &parameters) {
+    auto &skeleton = m_treeStructure.Skeleton();
+    auto &internode = skeleton.RefInternode(internodeHandle);
+    //Pruning here.
+    if (maxDistance > 5 && internode.m_data.m_order != 0 &&
+        internode.m_data.m_rootDistance / maxDistance < parameters.GetLowBranchPruning(internode)) {
+        skeleton.RecycleInternode(internodeHandle);
+    }
 }
 
 TreeStructuralGrowthParameters::TreeStructuralGrowthParameters() {

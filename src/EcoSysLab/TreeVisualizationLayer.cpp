@@ -51,7 +51,7 @@ void TreeVisualizationLayer::LateUpdate() {
                 m_needUpdate = true;
             }
             totalInternodeSize += treeModel.m_treeStructure.Peek(m_iteration).RefSortedInternodeList().size();
-            totalBranchSize += treeModel.m_treeStructure.Peek(m_iteration).RefSortedBranchList().size();
+            totalBranchSize += treeModel.m_treeStructure.Peek(m_iteration).RefSortedFlowList().size();
         }
         m_internodeSize = totalInternodeSize;
         if (m_needUpdate) {
@@ -110,7 +110,7 @@ void TreeVisualizationLayer::LateUpdate() {
                                     internode.m_info.m_thickness,
                                     glm::distance(translation, position2) / 2.0f,
                                     internode.m_info.m_thickness));
-                    m_colors[i + startIndex] = m_randomColors[skeleton.PeekBranch(
+                    m_colors[i + startIndex] = m_randomColors[skeleton.PeekFlow(
                             internode.m_branchHandle).m_data.m_order];
                 }, results);
                 for (auto &i: results) i.wait();

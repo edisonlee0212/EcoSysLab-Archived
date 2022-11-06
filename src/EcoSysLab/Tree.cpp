@@ -32,23 +32,26 @@ void Tree::OnInspect() {
         auto &parameters = m_treeDescriptor.Get<TreeDescriptor>()->m_treeStructuralGrowthParameters;
         if (!m_treeModel.IsInitialized()) m_treeModel.Initialize(parameters);
         ImGui::Checkbox("Enable History", &m_enableHistory);
+        static GrowthNutrients growthNutrients = {999.0f};
+        ImGui::DragFloat("Water", &growthNutrients.m_water, 1.0f, 0.0f, 99999.0f);
+
         if (ImGui::Button("Grow")) {
             if (m_enableHistory) m_treeModel.m_treeStructure.Step();
-            m_treeModel.Grow({999}, parameters);
+            m_treeModel.Grow(growthNutrients, parameters);
             treeVisualizer.Reset();
             treeVisualizer.m_iteration = m_treeModel.m_treeStructure.CurrentIteration();
         }
         if (ImGui::Button("Grow 5 iterations")) {
             if (m_enableHistory) m_treeModel.m_treeStructure.Step();
-            m_treeModel.Grow({999}, parameters);
+            m_treeModel.Grow(growthNutrients, parameters);
             if (m_enableHistory) m_treeModel.m_treeStructure.Step();
-            m_treeModel.Grow({999}, parameters);
+            m_treeModel.Grow(growthNutrients, parameters);
             if (m_enableHistory) m_treeModel.m_treeStructure.Step();
-            m_treeModel.Grow({999}, parameters);
+            m_treeModel.Grow(growthNutrients, parameters);
             if (m_enableHistory) m_treeModel.m_treeStructure.Step();
-            m_treeModel.Grow({999}, parameters);
+            m_treeModel.Grow(growthNutrients, parameters);
             if (m_enableHistory) m_treeModel.m_treeStructure.Step();
-            m_treeModel.Grow({999}, parameters);
+            m_treeModel.Grow(growthNutrients, parameters);
             treeVisualizer.Reset();
             treeVisualizer.m_iteration = m_treeModel.m_treeStructure.CurrentIteration();
         }
