@@ -4,9 +4,9 @@
 
 #define InternodeHandle int
 #define FlowHandle int
-#define BranchHandle int
 using namespace UniEngine;
 namespace EcoSysLab {
+#pragma region Structural Info
     struct InternodeInfo {
         glm::vec3 m_globalPosition = glm::vec3(0.0f);
         glm::quat m_globalRotation = glm::vec3(0.0f);
@@ -17,6 +17,17 @@ namespace EcoSysLab {
 
         std::vector<glm::mat4> m_leaves;
     };
+
+    struct FlowInfo {
+        glm::vec3 m_globalStartPosition = glm::vec3(0.0f);
+        glm::quat m_globalStartRotation = glm::vec3(0.0f);
+        float m_startThickness = 0.0f;
+
+        glm::vec3 m_globalEndPosition = glm::vec3(0.0f);
+        glm::quat m_globalEndRotation = glm::vec3(0.0f);
+        float m_endThickness = 0.0f;
+    };
+#pragma endregion
 
     template<typename InternodeData>
     class Internode {
@@ -39,31 +50,48 @@ namespace EcoSysLab {
 #pragma endregion
     public:
         InternodeData m_data;
+        /**
+         * The structural information of current internode.
+         */
         InternodeInfo m_info;
 
+        /**
+         * Whether this internode is the end node.
+         * @return True if this is end node, false else wise.
+         */
         [[nodiscard]] bool IsEndNode() const;
 
+        /**
+         * Whether this internode is recycled (removed).
+         * @return True if this internode is recycled (removed), false else wise.
+         */
         [[nodiscard]] bool IsRecycled() const;
 
+        /**
+         * Get the handle of self.
+         * @return InternodeHandle of current internode.
+         */
         [[nodiscard]] InternodeHandle GetHandle() const;
 
+        /**
+         * Get the handle of parent.
+         * @return InternodeHandle of parent internode.
+         */
         [[nodiscard]] InternodeHandle GetParentHandle() const;
 
+        /**
+         * Get the handle to belonged flow.
+         * @return FlowHandle of belonged flow.
+         */
         [[nodiscard]] FlowHandle GetFlowHandle() const;
 
+        /**
+         * Access the children by their handles.
+         * @return The list of handles.
+         */
         [[nodiscard]] const std::vector<InternodeHandle> &RefChildHandles() const;
 
         explicit Internode(InternodeHandle handle);
-    };
-
-    struct FlowInfo {
-        glm::vec3 m_globalStartPosition = glm::vec3(0.0f);
-        glm::quat m_globalStartRotation = glm::vec3(0.0f);
-        float m_startThickness = 0.0f;
-
-        glm::vec3 m_globalEndPosition = glm::vec3(0.0f);
-        glm::quat m_globalEndRotation = glm::vec3(0.0f);
-        float m_endThickness = 0.0f;
     };
 
     template<typename FlowData>
@@ -85,16 +113,40 @@ namespace EcoSysLab {
         FlowData m_data;
         FlowInfo m_info;
 
+        /**
+         * Whether this flow is recycled (removed).
+         * @return True if this flow is recycled (removed), false else wise.
+         */
         [[nodiscard]] bool IsRecycled() const;
 
+        /**
+         * Whether this flow is extended from an apical bud. The apical flow will have the same order as parent flow.
+         * @return True if this flow is from apical bud.
+         */
         [[nodiscard]] bool IsApical() const;
 
+        /**
+         * Get the handle of self.
+         * @return FlowHandle of current flow.
+         */
         [[nodiscard]] FlowHandle GetHandle() const;
 
+        /**
+         * Get the handle of parent.
+         * @return FlowHandle of parent flow.
+         */
         [[nodiscard]] FlowHandle GetParentHandle() const;
 
+        /**
+         * Access the children by their handles.
+         * @return The list of handles.
+         */
         [[nodiscard]] const std::vector<FlowHandle> &RefChildHandles() const;
 
+        /**
+         * Access the internodes that belongs to this flow.
+         * @return The list of handles.
+         */
         [[nodiscard]] const std::vector<InternodeHandle> &RefInternodes() const;
 
         explicit Flow(FlowHandle handle);
@@ -131,30 +183,81 @@ namespace EcoSysLab {
 
 #pragma endregion
     public:
+        /**
+         * Recycle (Remove) an internode, the descendents of this internode will also be recycled. The relevant flow will also be removed/restructured.
+         * @param handle The handle of the internode to be removed. Must be valid (non-zero and the internode should not be recycled prior to this operation).
+         */
         void RecycleInternode(InternodeHandle handle);
-
+        /**
+         * Recycle (Remove) an flow, the descendents of this flow will also be recycled. The relevant internode will also be removed/restructured.
+         * @param handle The handle of the flow to be removed. Must be valid (non-zero and the flow should not be recycled prior to this operation).
+         */
         void RecycleFlow(FlowHandle handle);
 
+        /**
+         * Branch/prolong internode during growth process. The flow structure will also be updated.
+         * @param targetHandle The handle of the internode to branch/prolong
+         * @param branching True if branching, false if prolong. During branching, 2 new flows will be generated.
+         * @return The handle of new internode.
+         */
         InternodeHandle Extend(InternodeHandle targetHandle, bool branching);
 
+        /**
+         *
+         * @return
+         */
         [[nodiscard]] const std::vector<InternodeHandle> &RefSortedInternodeList() const;
 
+        /**
+         *
+         * @return
+         */
         [[nodiscard]] const std::vector<FlowHandle> &RefSortedFlowList() const;
 
+        /**
+         *
+         */
         void SortLists();
 
         TreeSkeleton();
 
+        /**
+         *
+         * @return
+         */
         [[nodiscard]] int GetVersion() const;
 
+        /**
+         *
+         */
         void CalculateBranches();
 
+        /**
+         *
+         * @param handle
+         * @return
+         */
         Internode<InternodeData> &RefInternode(InternodeHandle handle);
 
+        /**
+         *
+         * @param handle
+         * @return
+         */
         Flow<FlowData> &RefFlow(FlowHandle handle);
 
+        /**
+         *
+         * @param handle
+         * @return
+         */
         const Internode<InternodeData> &PeekInternode(InternodeHandle handle) const;
 
+        /**
+         *
+         * @param handle
+         * @return
+         */
         const Flow<FlowData> &PeekFlow(FlowHandle handle) const;
 
         glm::vec3 m_min = glm::vec3(0.0f);
@@ -219,7 +322,7 @@ namespace EcoSysLab {
         virtual float GetSagging(const Internode<InternodeData> &internode) const = 0;
     };
 
-#pragma region
+#pragma region TreeStructure
 
     template<typename FlowData, typename InternodeData>
     void TreeStructure<FlowData, InternodeData>::Step() {
@@ -251,6 +354,7 @@ namespace EcoSysLab {
         return m_history.size();
     }
 
+#pragma endregion
 #pragma region TreeSkeleton
 #pragma region Helper
 
