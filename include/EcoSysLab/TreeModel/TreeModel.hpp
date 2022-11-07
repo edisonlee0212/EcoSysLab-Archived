@@ -149,8 +149,23 @@ namespace EcoSysLab {
         glm::vec3 m_gravityDirection = glm::vec3(0, -1, 0);
         TreeStructure<BranchGrowthData, InternodeGrowthData> m_treeStructure = {};
         [[nodiscard]] bool IsInitialized() const;
+
+        /**
+         * To get the model ready for growth. \n!!You MUST call this before calling grow function.
+         * @param parameters The procedural parameters that guides the growth.
+         */
         void Initialize(const TreeStructuralGrowthParameters& parameters);
+
+        /**
+         * Erase the entire tree.
+         */
         void Clear();
+
+        /**
+         * Grow one iteration of the tree, given the nutrients and the procedural parameters.
+         * @param growthNutrients The nutrients from the root (water, etc.)
+         * @param parameters The procedural parameters that guides the growth.
+         */
         void Grow(const GrowthNutrients& growthNutrients, const TreeStructuralGrowthParameters& parameters);
     };
 

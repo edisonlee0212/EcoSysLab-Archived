@@ -321,7 +321,7 @@ void TreeModel::Grow(const GrowthNutrients &growthNutrients, const TreeStructura
                 skeleton.RefInternode(internodeHandle).m_data.m_order = flowData.m_order;
             }
         }
-        skeleton.CalculateBranches();
+        skeleton.CalculateFlows();
     }
 #pragma endregion
 }
@@ -373,7 +373,7 @@ TreeStructuralGrowthParameters::TreeStructuralGrowthParameters() {
     m_growthRate = 1.0f;
     m_endNodeThicknessAndControl = glm::vec2(0.01, 0.5);
     m_lateralBudFlushingProbability = 0.3f;
-    m_apicalControlBaseDistFactor = {2.0f, 0.95f};
+    m_apicalControlBaseDistFactor = {1.1f, 0.95f};
     m_apicalDominanceBaseAgeDist = glm::vec3(0.12, 1, 0.3);
     m_budKillProbabilityApicalLateral = glm::vec2(0.0, 0.03);
     m_lowBranchPruning = 0.2f;

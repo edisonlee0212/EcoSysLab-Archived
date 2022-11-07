@@ -203,64 +203,72 @@ namespace EcoSysLab {
         InternodeHandle Extend(InternodeHandle targetHandle, bool branching);
 
         /**
-         *
-         * @return
+         * To retrieve a list of handles of all internodes contained within the tree.
+         * @return The list of handles of internodes sorted from root to ends.
          */
         [[nodiscard]] const std::vector<InternodeHandle> &RefSortedInternodeList() const;
 
         /**
-         *
-         * @return
+         * To retrieve a list of handles of all flows contained within the tree.
+         * @return The list of handles of flows sorted from root to ends.
          */
         [[nodiscard]] const std::vector<FlowHandle> &RefSortedFlowList() const;
 
         /**
-         *
+         *  Force the structure to sort the internode and flow list.
+         *  \n!!You MUST call this after you prune the tree or altered the tree structure manually!!
          */
         void SortLists();
 
         TreeSkeleton();
 
         /**
-         *
+         * Get the structural version of the tree. The version will change when the tree structure changes.
          * @return
          */
         [[nodiscard]] int GetVersion() const;
 
         /**
-         *
+         * Calculate the structural information of the flows.
          */
-        void CalculateBranches();
+        void CalculateFlows();
 
         /**
-         *
-         * @param handle
-         * @return
+         * Retrieve a modifiable reference to the internode with the handle.
+         * @param handle The handle to the target internode.
+         * @return The modifiable reference to the internode.
          */
         Internode<InternodeData> &RefInternode(InternodeHandle handle);
 
         /**
-         *
-         * @param handle
-         * @return
+         * Retrieve a modifiable reference to the flow with the handle.
+         * @param handle The handle to the target flow.
+         * @return The modifiable reference to the flow.
          */
         Flow<FlowData> &RefFlow(FlowHandle handle);
 
         /**
-         *
-         * @param handle
-         * @return
+         * Retrieve a non-modifiable reference to the internode with the handle.
+         * @param handle The handle to the target internode.
+         * @return The non-modifiable reference to the internode.
          */
         const Internode<InternodeData> &PeekInternode(InternodeHandle handle) const;
 
         /**
-         *
-         * @param handle
-         * @return
+         * Retrieve a non-modifiable reference to the flow with the handle.
+         * @param handle The handle to the target flow.
+         * @return The non-modifiable reference to the flow.
          */
         const Flow<FlowData> &PeekFlow(FlowHandle handle) const;
 
+        /**
+         * The min value of the bounding box of current tree structure.
+         */
         glm::vec3 m_min = glm::vec3(0.0f);
+
+        /**
+         * The max value of the bounding box of current tree structure.
+         */
         glm::vec3 m_max = glm::vec3(0.0f);
     };
 
@@ -763,7 +771,7 @@ namespace EcoSysLab {
     }
 
     template<typename FlowData, typename InternodeData>
-    void TreeSkeleton<FlowData, InternodeData>::CalculateBranches() {
+    void TreeSkeleton<FlowData, InternodeData>::CalculateFlows() {
         const auto &sortedBranchList = RefSortedFlowList();
         for (const auto &flowHandle: sortedBranchList) {
             auto &flow = m_flows[flowHandle];
