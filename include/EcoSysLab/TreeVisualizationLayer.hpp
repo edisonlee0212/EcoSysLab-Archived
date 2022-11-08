@@ -6,7 +6,7 @@
 using namespace UniEngine;
 namespace EcoSysLab {
     class TreeVisualizationLayer : public ILayer{
-        bool m_displayInternodes = true;
+        bool m_displayFlows = true;
         bool m_displayBoundingBox = true;
         bool m_visualization = false;
         std::vector<int> m_versions;
@@ -21,7 +21,7 @@ namespace EcoSysLab {
         float m_lastUsedTime = 0.0f;
         float m_totalTime = 0.0f;
         int m_internodeSize = 0;
-        int m_iteration = 0;
+        int m_flowSize = 0;
         bool m_needUpdate = false;
         bool m_enableHistory = true;
     public:

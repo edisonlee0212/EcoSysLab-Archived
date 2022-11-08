@@ -37,7 +37,7 @@ int main() {
     applicationConfigs.m_applicationName = "EcoSysLab";
     Application::Create(applicationConfigs);
 
-    //Application::PushLayer<TreeVisualizationLayer>();
+    Application::PushLayer<TreeVisualizationLayer>();
 #ifdef RAYTRACERFACILITY
     Application::PushLayer<RayTracerLayer>();
 #endif

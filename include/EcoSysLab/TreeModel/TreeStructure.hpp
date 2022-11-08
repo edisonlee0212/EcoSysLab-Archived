@@ -486,9 +486,11 @@ namespace EcoSysLab {
         //Remove children
         auto children = flow.m_childHandles;
         for (const auto &child: children) {
+            if(m_flows[child].m_recycled) continue;
             RecycleFlow(child);
         }
         //Detach from parent
+        auto parentHandle = flow.m_parentHandle;
         if (flow.m_parentHandle != -1) DetachChildFlow(flow.m_parentHandle, handle);
         //Remove internodes
         if (!flow.m_internodes.empty()) {
@@ -499,6 +501,22 @@ namespace EcoSysLab {
             }
         }
         RecycleFlowSingle(handle);
+
+        auto& parentFlow = m_flows[parentHandle];
+        if(parentFlow.m_childHandles.size() == 1){
+            auto childHandle = parentFlow.m_childHandles[0];
+            auto& childFlow = m_flows[childHandle];
+            for(const auto& internodeHandle : childFlow.m_internodes){
+                m_internodes[internodeHandle].m_flowHandle = parentHandle;
+            }
+            for(const auto& flowHandle : childFlow.m_childHandles){
+                m_flows[flowHandle].m_parentHandle = parentHandle;
+            }
+            parentFlow.m_internodes.insert(parentFlow.m_internodes.end(), childFlow.m_internodes.begin(), childFlow.m_internodes.end());
+            parentFlow.m_childHandles.clear();
+            parentFlow.m_childHandles.insert(parentFlow.m_childHandles.end(), childFlow.m_childHandles.begin(), childFlow.m_childHandles.end());
+            RecycleFlowSingle(childHandle);
+        }
         m_newVersion++;
     }
 
@@ -511,6 +529,7 @@ namespace EcoSysLab {
         auto &flow = m_flows[flowHandle];
         if (handle == flow.m_internodes[0]) {
             RecycleFlow(internode.m_flowHandle);
+
             return;
         }
         //Collect list of subsequent internodes

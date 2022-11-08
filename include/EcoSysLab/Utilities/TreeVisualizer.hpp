@@ -12,7 +12,7 @@ namespace EcoSysLab {
     class TreeVisualizer {
         std::vector<glm::mat4> m_matrices;
         std::vector<glm::vec4> m_colors;
-        bool m_visualization = true;
+        bool m_visualization = false;
         bool m_treeHierarchyGui = true;
         InternodeHandle m_selectedInternodeHandle = -1;
         std::vector<InternodeHandle> m_selectedInternodeHierarchyList;
