@@ -188,6 +188,7 @@ namespace EcoSysLab {
          * @param handle The handle of the internode to be removed. Must be valid (non-zero and the internode should not be recycled prior to this operation).
          */
         void RecycleInternode(InternodeHandle handle);
+
         /**
          * Recycle (Remove) an flow, the descendents of this flow will also be recycled. The relevant internode will also be removed/restructured.
          * @param handle The handle of the flow to be removed. Must be valid (non-zero and the flow should not be recycled prior to this operation).
@@ -313,7 +314,7 @@ namespace EcoSysLab {
 
         virtual float GetLateralBudFlushingProbability(const Internode<InternodeData> &internode) const = 0;
 
-        virtual float GetApicalControlBase(const Internode<InternodeData> &internode) const = 0;
+        virtual float GetApicalControl(const Internode<InternodeData> &internode) const = 0;
 
         virtual float GetApicalDominanceBase(const Internode<InternodeData> &internode) const = 0;
 
@@ -328,6 +329,20 @@ namespace EcoSysLab {
         virtual float GetLowBranchPruning(const Internode<InternodeData> &internode) const = 0;
 
         virtual float GetSagging(const Internode<InternodeData> &internode) const = 0;
+
+        virtual float GetShootBaseResourceRequirementFactor(const Internode<InternodeData> &internode) const = 0;
+
+        virtual float GetLeafBaseResourceRequirementFactor(const Internode<InternodeData> &internode) const = 0;
+
+        virtual float GetFruitBaseResourceRequirementFactor(const Internode<InternodeData> &internode) const = 0;
+
+        virtual float
+        GetShootProductiveResourceRequirementFactor(const Internode<InternodeData> &internode) const = 0;
+
+        virtual float
+        GetLeafProductiveResourceRequirementFactor(const Internode<InternodeData> &internode) const = 0;
+
+        virtual float GetFruitProductiveResourceRequirementFactor(const Internode<InternodeData> &internode) const = 0;
     };
 
 #pragma region TreeStructure
@@ -486,7 +501,7 @@ namespace EcoSysLab {
         //Remove children
         auto children = flow.m_childHandles;
         for (const auto &child: children) {
-            if(m_flows[child].m_recycled) continue;
+            if (m_flows[child].m_recycled) continue;
             RecycleFlow(child);
         }
         //Detach from parent
@@ -502,19 +517,21 @@ namespace EcoSysLab {
         }
         RecycleFlowSingle(handle);
 
-        auto& parentFlow = m_flows[parentHandle];
-        if(parentFlow.m_childHandles.size() == 1){
+        auto &parentFlow = m_flows[parentHandle];
+        if (parentFlow.m_childHandles.size() == 1) {
             auto childHandle = parentFlow.m_childHandles[0];
-            auto& childFlow = m_flows[childHandle];
-            for(const auto& internodeHandle : childFlow.m_internodes){
+            auto &childFlow = m_flows[childHandle];
+            for (const auto &internodeHandle: childFlow.m_internodes) {
                 m_internodes[internodeHandle].m_flowHandle = parentHandle;
             }
-            for(const auto& flowHandle : childFlow.m_childHandles){
+            for (const auto &flowHandle: childFlow.m_childHandles) {
                 m_flows[flowHandle].m_parentHandle = parentHandle;
             }
-            parentFlow.m_internodes.insert(parentFlow.m_internodes.end(), childFlow.m_internodes.begin(), childFlow.m_internodes.end());
+            parentFlow.m_internodes.insert(parentFlow.m_internodes.end(), childFlow.m_internodes.begin(),
+                                           childFlow.m_internodes.end());
             parentFlow.m_childHandles.clear();
-            parentFlow.m_childHandles.insert(parentFlow.m_childHandles.end(), childFlow.m_childHandles.begin(), childFlow.m_childHandles.end());
+            parentFlow.m_childHandles.insert(parentFlow.m_childHandles.end(), childFlow.m_childHandles.begin(),
+                                             childFlow.m_childHandles.end());
             RecycleFlowSingle(childHandle);
         }
         m_newVersion++;

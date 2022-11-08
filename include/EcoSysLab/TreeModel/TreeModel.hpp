@@ -6,8 +6,9 @@ using namespace UniEngine;
 namespace EcoSysLab {
     enum class BudType {
         Apical,
-        LateralVegetative,
-        LateralReproductive
+        Lateral,
+        Leaf,
+        Fruit
     };
 
     enum class BudStatus {
@@ -20,8 +21,21 @@ namespace EcoSysLab {
     public:
         BudType m_type = BudType::Apical;
         BudStatus m_status = BudStatus::Dormant;
+
+        /*
+         * The desired water gain for maintaining current plant structure.
+         * Depending on the size of fruit/leaf.
+         */
+        float m_baseResourceRequirement = 0.0f;
+        /*
+         * The desired water gain for reproduction (forming shoot/leaf/fruit) of this bud.
+         * Depending on apical control.
+         */
+        float m_productiveResourceRequirement = 0.0f;
+
         glm::quat m_localRotation = glm::vec3(0.0f);
     };
+
     struct InternodeGrowthData {
         int m_age = 0;
         float m_inhibitor = 0;
@@ -35,7 +49,7 @@ namespace EcoSysLab {
 
         float m_rootDistance = 0;
 
-        float m_apicalControl = 0.0f;
+
         int m_decedentsAmount = 0;
         glm::vec3 m_lightDirection = glm::vec3(0, 1, 0);
         float m_lightIntensity = 1.0f;
@@ -44,6 +58,10 @@ namespace EcoSysLab {
          * List of buds, first one will always be the apical bud which points forward.
          */
         std::vector<Bud> m_buds;
+
+        float m_productiveResourceRequirement = 0.0f;
+        float m_descendentProductiveResourceRequirement = 0.0f;
+        float m_adjustedTotalProductiveWaterRequirement = 0.0f;
         void Clear();
     };
 
@@ -51,7 +69,7 @@ namespace EcoSysLab {
         int m_order = 0;
     };
 
-    class TreeStructuralGrowthParameters : public ITreeGrowthParameters<InternodeGrowthData>{
+    class TreeStructuralGrowthParameters : public ITreeGrowthParameters<InternodeGrowthData> {
     public:
         int m_lateralBudCount;
         /**
@@ -94,6 +112,8 @@ namespace EcoSysLab {
          */
         glm::vec3 m_saggingFactorThicknessReductionMax = glm::vec3(0.8f, 1.75f, 1.0f);
 
+        glm::vec3 m_baseResourceRequirementFactor;
+        glm::vec3 m_productiveResourceRequirementFactor;
 
         [[nodiscard]] int GetLateralBudCount(const Internode<InternodeGrowthData> &internode) const override;
 
@@ -115,46 +135,80 @@ namespace EcoSysLab {
 
         [[nodiscard]] float GetThicknessControlFactor(const Internode<InternodeGrowthData> &internode) const override;
 
-        [[nodiscard]] float GetLateralBudFlushingProbability(const Internode<InternodeGrowthData> &internode) const override;
+        [[nodiscard]] float
+        GetLateralBudFlushingProbability(const Internode<InternodeGrowthData> &internode) const override;
 
-        [[nodiscard]] float GetApicalControlBase(const Internode<InternodeGrowthData> &internode) const override;
+        [[nodiscard]] float GetApicalControl(const Internode<InternodeGrowthData> &internode) const override;
 
         [[nodiscard]] float GetApicalDominanceBase(const Internode<InternodeGrowthData> &internode) const override;
+
         [[nodiscard]] float GetApicalDominanceDecrease(const Internode<InternodeGrowthData> &internode) const override;
 
         [[nodiscard]] float GetApicalBudKillProbability(const Internode<InternodeGrowthData> &internode) const override;
 
-        [[nodiscard]] float GetLateralBudKillProbability(const Internode<InternodeGrowthData> &internode) const override;
+        [[nodiscard]] float
+        GetLateralBudKillProbability(const Internode<InternodeGrowthData> &internode) const override;
 
         [[nodiscard]] bool GetPruning(const Internode<InternodeGrowthData> &internode) const override;
+
         [[nodiscard]] float GetLowBranchPruning(const Internode<InternodeGrowthData> &internode) const override;
+
         [[nodiscard]] float GetSagging(const Internode<InternodeGrowthData> &internode) const override;
+
+
+        [[nodiscard]] float
+        GetShootBaseResourceRequirementFactor(const Internode<InternodeGrowthData> &internode) const override;
+
+        [[nodiscard]] float
+        GetLeafBaseResourceRequirementFactor(const Internode<InternodeGrowthData> &internode) const override;
+
+        [[nodiscard]] float
+        GetFruitBaseResourceRequirementFactor(const Internode<InternodeGrowthData> &internode) const override;
+
+        [[nodiscard]] float
+        GetShootProductiveResourceRequirementFactor(const Internode<InternodeGrowthData> &internode) const override;
+
+        [[nodiscard]] float
+        GetLeafProductiveResourceRequirementFactor(const Internode<InternodeGrowthData> &internode) const override;
+
+        [[nodiscard]] float
+        GetFruitProductiveResourceRequirementFactor(const Internode<InternodeGrowthData> &internode) const override;
 
         TreeStructuralGrowthParameters();
     };
 
-    struct GrowthNutrients{
+    struct GrowthNutrients {
         float m_water = 0.0f;
     };
 
     class TreeModel {
         bool m_initialized = false;
-        inline void LowBranchPruning(float maxDistance, InternodeHandle internodeHandle, const TreeStructuralGrowthParameters& parameters);
-        inline void CalculateSagging(InternodeHandle internodeHandle, const TreeStructuralGrowthParameters& parameters);
-        inline void CollectInhibitor(InternodeHandle internodeHandle, const TreeStructuralGrowthParameters& parameters);
-        inline void GrowInternode(InternodeHandle internodeHandle, const TreeStructuralGrowthParameters& parameters, const GrowthNutrients& growthNutrients);
+
+        inline void LowBranchPruning(float maxDistance, InternodeHandle internodeHandle,
+                                     const TreeStructuralGrowthParameters &parameters);
+
+        inline void CalculateSagging(InternodeHandle internodeHandle,
+                                                           const TreeStructuralGrowthParameters &parameters);
+        inline void CalculateResourceRequirement(InternodeHandle internodeHandle,
+                                     const TreeStructuralGrowthParameters &parameters);
+        inline void CollectInhibitor(InternodeHandle internodeHandle, const TreeStructuralGrowthParameters &parameters);
+
+        inline void GrowInternode(InternodeHandle internodeHandle, const TreeStructuralGrowthParameters &parameters,
+                                  const GrowthNutrients &growthNutrients);
 
     public:
-        glm::mat4 m_globalTransform = glm::translate(glm::vec3(0.0f)) * glm::mat4_cast(glm::quat(glm::vec3(0.0f))) * glm::scale(glm::vec3(1.0f));
+        glm::mat4 m_globalTransform = glm::translate(glm::vec3(0.0f)) * glm::mat4_cast(glm::quat(glm::vec3(0.0f))) *
+                                      glm::scale(glm::vec3(1.0f));
         glm::vec3 m_gravityDirection = glm::vec3(0, -1, 0);
         TreeStructure<BranchGrowthData, InternodeGrowthData> m_treeStructure = {};
+
         [[nodiscard]] bool IsInitialized() const;
 
         /**
          * To get the model ready for growth. \n!!You MUST call this before calling grow function.
          * @param parameters The procedural parameters that guides the growth.
          */
-        void Initialize(const TreeStructuralGrowthParameters& parameters);
+        void Initialize(const TreeStructuralGrowthParameters &parameters);
 
         /**
          * Erase the entire tree.
@@ -166,10 +220,10 @@ namespace EcoSysLab {
          * @param growthNutrients The nutrients from the root (water, etc.)
          * @param parameters The procedural parameters that guides the growth.
          */
-        void Grow(const GrowthNutrients& growthNutrients, const TreeStructuralGrowthParameters& parameters);
+        void Grow(const GrowthNutrients &growthNutrients, const TreeStructuralGrowthParameters &parameters);
     };
 
-    class TreeModelGroup{
+    class TreeModelGroup {
     public:
         std::vector<TreeModel> m_treeModels;
     };

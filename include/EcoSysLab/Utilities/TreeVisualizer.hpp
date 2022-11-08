@@ -232,8 +232,6 @@ namespace EcoSysLab {
                               ImGuiInputTextFlags_ReadOnly);
             ImGui::InputFloat("Root distance", (float *) &internodeData.m_rootDistance, 1, 100, "%.3f",
                               ImGuiInputTextFlags_ReadOnly);
-            ImGui::InputFloat("Apical control", (float *) &internodeData.m_apicalControl, 1, 100, "%.3f",
-                              ImGuiInputTextFlags_ReadOnly);
             ImGui::InputInt("Descendants count", (int *) &internodeData.m_decedentsAmount, 1, 100,
                             ImGuiInputTextFlags_ReadOnly);
             ImGui::InputFloat3("Light dir", (float *) &internodeData.m_lightDirection.x, "%.3f",
@@ -242,16 +240,19 @@ namespace EcoSysLab {
                               ImGuiInputTextFlags_ReadOnly);
 
             if (ImGui::TreeNodeEx("Buds")) {
-                for (const auto &bud: internodeData.m_buds) {
+                for (auto &bud: internodeData.m_buds) {
                     switch (bud.m_type) {
                         case BudType::Apical:
                             ImGui::Text("Apical");
                             break;
-                        case BudType::LateralVegetative:
-                            ImGui::Text("LateralVegetative");
+                        case BudType::Lateral:
+                            ImGui::Text("Lateral");
                             break;
-                        case BudType::LateralReproductive:
-                            ImGui::Text("LateralReproductive");
+                        case BudType::Leaf:
+                            ImGui::Text("Leaf");
+                            break;
+                        case BudType::Fruit:
+                            ImGui::Text("Fruit");
                             break;
                     }
                     switch (bud.m_status) {
@@ -268,6 +269,8 @@ namespace EcoSysLab {
 
                     auto budRotationAngle = glm::eulerAngles(bud.m_localRotation);
                     ImGui::InputFloat3("Rotation", &budRotationAngle.x, "%.3f", ImGuiInputTextFlags_ReadOnly);
+                    ImGui::InputFloat("Base resource requirement", (float *) &bud.m_baseResourceRequirement, 1, 100, "%.3f", ImGuiInputTextFlags_ReadOnly);
+                    ImGui::InputFloat("Productive resource requirement", (float *) &bud.m_productiveResourceRequirement, 1, 100, "%.3f", ImGuiInputTextFlags_ReadOnly);
                 }
                 ImGui::TreePop();
             }
