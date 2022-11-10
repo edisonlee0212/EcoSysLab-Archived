@@ -132,7 +132,7 @@ void TreeModel::GrowInternode(InternodeHandle internodeHandle, const TreeStructu
                 if (parameters.GetLateralBudKillProbability(internode) > glm::linearRand(0.0f, 1.0f)) {
                     bud.m_status = BudStatus::Died;
                 } else {
-                    float flushProbability = parameters.GetLateralBudFlushingProbability(internode);
+                    float flushProbability = parameters.GetLateralBudFlushingProbability(internode) * parameters.GetGrowthRate(internode) / parameters.GetInternodeLength(internode);
                     flushProbability /= (1.0f + internodeData.m_inhibitor);
                     if (flushProbability >= glm::linearRand(0.0f, 1.0f)) {
                         bud.m_status = BudStatus::Flushed;
