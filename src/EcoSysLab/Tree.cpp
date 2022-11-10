@@ -30,7 +30,6 @@ void Tree::OnInspect() {
     }
     if (m_treeDescriptor.Get<TreeDescriptor>()) {
         auto &parameters = m_treeDescriptor.Get<TreeDescriptor>()->m_treeStructuralGrowthParameters;
-        if (!m_treeModel.IsInitialized()) m_treeModel.Initialize(parameters);
         ImGui::Checkbox("Enable History", &m_enableHistory);
         static GrowthNutrients growthNutrients = {999.0f};
         ImGui::DragFloat("Water", &growthNutrients.m_water, 1.0f, 0.0f, 99999.0f);
@@ -59,7 +58,8 @@ void Tree::OnInspect() {
         if (ImGui::Button("Generate Mesh")) {
             std::vector<Vertex> vertices;
             std::vector<unsigned int> indices;
-            BranchMeshGenerator::Generate(m_treeModel.m_treeStructure.Skeleton(), vertices, indices, meshGeneratorSettings);
+            BranchMeshGenerator::Generate(m_treeModel.m_treeStructure.Skeleton(), vertices, indices,
+                                          meshGeneratorSettings);
             auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
             auto material = ProjectManager::CreateTemporaryAsset<Material>();
             material->SetProgram(DefaultResources::GLPrograms::StandardProgram);
@@ -87,6 +87,12 @@ void TreeDescriptor::OnCreate() {
 }
 
 void TreeDescriptor::OnInspect() {
+    if (ImGui::Button("Instantiate")) {
+        auto scene = Application::GetActiveScene();
+        auto treeEntity = scene->CreateEntity(GetTitle());
+        auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
+        tree->m_treeDescriptor = ProjectManager::GetAsset(GetHandle());
+    }
     if (ImGui::TreeNodeEx("Structure", ImGuiTreeNodeFlags_DefaultOpen)) {
         ImGui::DragInt("Lateral bud per node", &m_treeStructuralGrowthParameters.m_lateralBudCount);
         ImGui::DragFloat2("Branching Angle mean/var", &m_treeStructuralGrowthParameters.m_branchingAngleMeanVariance.x,
@@ -117,12 +123,21 @@ void TreeDescriptor::OnInspect() {
 
         ImGui::DragFloat2("Kill probability apical/lateral",
                           &m_treeStructuralGrowthParameters.m_budKillProbabilityApicalLateral.x, 0.01f);
+
+        ImGui::DragFloat3("Base resource shoot/leaf/fruit",
+                          &m_treeStructuralGrowthParameters.m_baseResourceRequirementFactor.x, 0.01f);
+
+        ImGui::DragFloat3("Productive resource shoot/leaf/fruit",
+                          &m_treeStructuralGrowthParameters.m_productiveResourceRequirementFactor.x, 0.01f);
+
         ImGui::TreePop();
     }
     if (ImGui::TreeNodeEx("Internode")) {
         ImGui::DragFloat("Low Branch Pruning", &m_treeStructuralGrowthParameters.m_lowBranchPruning, 0.01f);
         ImGui::DragFloat3("Sagging thickness/reduction/max",
                           &m_treeStructuralGrowthParameters.m_saggingFactorThicknessReductionMax.x, 0.01f);
+
+
         ImGui::TreePop();
     }
 }
@@ -156,6 +171,11 @@ void TreeDescriptor::Serialize(YAML::Emitter &out) {
     out << YAML::Key << "m_lowBranchPruning" << YAML::Value << m_treeStructuralGrowthParameters.m_lowBranchPruning;
     out << YAML::Key << "m_saggingFactorThicknessReductionMax" << YAML::Value
         << m_treeStructuralGrowthParameters.m_saggingFactorThicknessReductionMax;
+
+    out << YAML::Key << "m_baseResourceRequirementFactor" << YAML::Value
+        << m_treeStructuralGrowthParameters.m_baseResourceRequirementFactor;
+    out << YAML::Key << "m_productiveResourceRequirementFactor" << YAML::Value
+        << m_treeStructuralGrowthParameters.m_productiveResourceRequirementFactor;
 }
 
 void TreeDescriptor::Deserialize(const YAML::Node &in) {
@@ -174,6 +194,9 @@ void TreeDescriptor::Deserialize(const YAML::Node &in) {
     if (in["m_budKillProbabilityApicalLateral"]) m_treeStructuralGrowthParameters.m_budKillProbabilityApicalLateral = in["m_budKillProbabilityApicalLateral"].as<glm::vec2>();
     if (in["m_lowBranchPruning"]) m_treeStructuralGrowthParameters.m_lowBranchPruning = in["m_lowBranchPruning"].as<float>();
     if (in["m_saggingFactorThicknessReductionMax"]) m_treeStructuralGrowthParameters.m_saggingFactorThicknessReductionMax = in["m_saggingFactorThicknessReductionMax"].as<glm::vec3>();
+
+    if (in["m_baseResourceRequirementFactor"]) m_treeStructuralGrowthParameters.m_baseResourceRequirementFactor = in["m_baseResourceRequirementFactor"].as<glm::vec3>();
+    if (in["m_productiveResourceRequirementFactor"]) m_treeStructuralGrowthParameters.m_productiveResourceRequirementFactor = in["m_productiveResourceRequirementFactor"].as<glm::vec3>();
 }
 
 

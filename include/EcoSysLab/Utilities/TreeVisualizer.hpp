@@ -232,8 +232,6 @@ namespace EcoSysLab {
                               ImGuiInputTextFlags_ReadOnly);
             ImGui::InputFloat("Root distance", (float *) &internodeData.m_rootDistance, 1, 100, "%.3f",
                               ImGuiInputTextFlags_ReadOnly);
-            ImGui::InputInt("Descendants count", (int *) &internodeData.m_decedentsAmount, 1, 100,
-                            ImGuiInputTextFlags_ReadOnly);
             ImGui::InputFloat3("Light dir", (float *) &internodeData.m_lightDirection.x, "%.3f",
                                ImGuiInputTextFlags_ReadOnly);
             ImGui::InputFloat("Light intensity", (float *) &internodeData.m_lightIntensity, 1, 100, "%.3f",

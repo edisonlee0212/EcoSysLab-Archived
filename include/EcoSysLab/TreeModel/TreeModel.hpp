@@ -49,8 +49,6 @@ namespace EcoSysLab {
 
         float m_rootDistance = 0;
 
-
-        int m_decedentsAmount = 0;
         glm::vec3 m_lightDirection = glm::vec3(0, 1, 0);
         float m_lightIntensity = 1.0f;
 
@@ -62,6 +60,7 @@ namespace EcoSysLab {
         float m_productiveResourceRequirement = 0.0f;
         float m_descendentProductiveResourceRequirement = 0.0f;
         float m_adjustedTotalProductiveWaterRequirement = 0.0f;
+
         void Clear();
     };
 
@@ -182,33 +181,29 @@ namespace EcoSysLab {
     };
 
     class TreeModel {
-        bool m_initialized = false;
-
         inline void LowBranchPruning(float maxDistance, InternodeHandle internodeHandle,
                                      const TreeStructuralGrowthParameters &parameters);
 
         inline void CalculateSagging(InternodeHandle internodeHandle,
-                                                           const TreeStructuralGrowthParameters &parameters);
-        inline void CalculateResourceRequirement(InternodeHandle internodeHandle,
                                      const TreeStructuralGrowthParameters &parameters);
-        inline void CollectInhibitor(InternodeHandle internodeHandle, const TreeStructuralGrowthParameters &parameters);
+
+        inline void CalculateResourceRequirement(InternodeHandle internodeHandle,
+                                                 const TreeStructuralGrowthParameters &parameters);
 
         inline void GrowInternode(InternodeHandle internodeHandle, const TreeStructuralGrowthParameters &parameters,
                                   const GrowthNutrients &growthNutrients);
 
+        void GrowShoots(float extendLength, InternodeHandle internodeHandle,
+                        const TreeStructuralGrowthParameters &parameters, float &collectedInhibitor);
+
+        void Initialize(const TreeStructuralGrowthParameters &parameters);
+
+        bool m_initialized = false;
     public:
         glm::mat4 m_globalTransform = glm::translate(glm::vec3(0.0f)) * glm::mat4_cast(glm::quat(glm::vec3(0.0f))) *
                                       glm::scale(glm::vec3(1.0f));
         glm::vec3 m_gravityDirection = glm::vec3(0, -1, 0);
         TreeStructure<BranchGrowthData, InternodeGrowthData> m_treeStructure = {};
-
-        [[nodiscard]] bool IsInitialized() const;
-
-        /**
-         * To get the model ready for growth. \n!!You MUST call this before calling grow function.
-         * @param parameters The procedural parameters that guides the growth.
-         */
-        void Initialize(const TreeStructuralGrowthParameters &parameters);
 
         /**
          * Erase the entire tree.

@@ -409,6 +409,7 @@ namespace EcoSysLab {
     template<typename FlowData, typename InternodeData>
     void TreeSkeleton<FlowData, InternodeData>::SortLists() {
         if (m_version == m_newVersion) return;
+        if (m_internodes.empty()) return;
         m_version = m_newVersion;
         m_sortedFlowList.clear();
         std::queue<FlowHandle> flowWaitList;

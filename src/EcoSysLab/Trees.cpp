@@ -61,7 +61,6 @@ void Trees::OnInspect() {
                         m_treeModelGroup.m_treeModels.emplace_back();
                         versions.emplace_back(-1);
                         auto &tree = m_treeModelGroup.m_treeModels.back();
-                        tree.Initialize(parameters);
                         Transform transform;
                         transform.SetPosition(glm::vec3(i * gridDistance.x, 0.0f, j * gridDistance.y));
                         tree.m_globalTransform = transform.m_value;
