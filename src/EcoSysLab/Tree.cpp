@@ -12,7 +12,7 @@ using namespace EcoSysLab;
 
 void Tree::OnInspect() {
     static Handle handle;
-    static TreeVisualizer<BranchGrowthData, InternodeGrowthData> treeVisualizer;
+    static TreeVisualizer<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> treeVisualizer;
     static MeshGeneratorSettings meshGeneratorSettings;
     static GlobalTransform globalTransform;
     if (Editor::DragAndDropButton<TreeDescriptor>(m_treeDescriptor, "TreeDescriptor", true)) {

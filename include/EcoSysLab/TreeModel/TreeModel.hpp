@@ -68,6 +68,10 @@ namespace EcoSysLab {
         int m_order = 0;
     };
 
+    struct SkeletonGrowthData{
+
+    };
+
     class TreeStructuralGrowthParameters : public ITreeGrowthParameters<InternodeGrowthData> {
     public:
         int m_lateralBudCount;
@@ -203,7 +207,7 @@ namespace EcoSysLab {
         glm::mat4 m_globalTransform = glm::translate(glm::vec3(0.0f)) * glm::mat4_cast(glm::quat(glm::vec3(0.0f))) *
                                       glm::scale(glm::vec3(1.0f));
         glm::vec3 m_gravityDirection = glm::vec3(0, -1, 0);
-        TreeStructure<BranchGrowthData, InternodeGrowthData> m_treeStructure = {};
+        TreeStructure<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> m_treeStructure = {};
 
         /**
          * Erase the entire tree.

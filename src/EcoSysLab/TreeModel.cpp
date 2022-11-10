@@ -380,6 +380,7 @@ void TreeModel::Grow(const GrowthNutrients &growthNutrients, const TreeStructura
             skeleton.m_max = glm::max(skeleton.m_max, endPosition);
         }
     }
+
     {
         const auto &sortedFlowList = skeleton.RefSortedFlowList();
         for (const auto &flowHandle: sortedFlowList) {

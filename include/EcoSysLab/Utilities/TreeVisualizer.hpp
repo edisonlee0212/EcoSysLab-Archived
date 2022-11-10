@@ -8,7 +8,7 @@
 
 using namespace UniEngine;
 namespace EcoSysLab {
-    template<typename BranchData, typename InternodeData>
+    template<typename SkeletonData, typename BranchData, typename InternodeData>
     class TreeVisualizer {
         std::vector<glm::mat4> m_matrices;
         std::vector<glm::vec4> m_colors;
@@ -18,17 +18,17 @@ namespace EcoSysLab {
         std::vector<InternodeHandle> m_selectedInternodeHierarchyList;
         int m_version = -1;
 
-        bool RayCastSelection(const TreeSkeleton <BranchData, InternodeData> &treeSkeleton,
+        bool RayCastSelection(const TreeSkeleton <SkeletonData, BranchData, InternodeData> &treeSkeleton,
                               const GlobalTransform &globalTransform);
 
-        void SetSelectedInternode(const TreeSkeleton <BranchData, InternodeData> &treeSkeleton,
+        void SetSelectedInternode(const TreeSkeleton <SkeletonData, BranchData, InternodeData> &treeSkeleton,
                                   InternodeHandle internodeHandle);
 
-        bool DrawInternodeInspectionGui(TreeStructure <BranchData, InternodeData> &treeStructure,
+        bool DrawInternodeInspectionGui(TreeStructure <SkeletonData, BranchData, InternodeData> &treeStructure,
                                         InternodeHandle internodeHandle, bool &deleted,
                                         const unsigned &hierarchyLevel);
 
-        void PeekInternodeInspectionGui(const TreeSkeleton <BranchData, InternodeData> &treeSkeleton,
+        void PeekInternodeInspectionGui(const TreeSkeleton <SkeletonData, BranchData, InternodeData> &treeSkeleton,
                                         InternodeHandle internodeHandle,
                                         const unsigned &hierarchyLevel);
 
@@ -37,25 +37,26 @@ namespace EcoSysLab {
 
     public:
         void
-        SyncMatrices(const TreeSkeleton <BranchData, InternodeData> &treeSkeleton,
+        SyncMatrices(const TreeSkeleton <SkeletonData, BranchData, InternodeData> &treeSkeleton,
                      const GlobalTransform &globalTransform);
 
         int m_iteration = 0;
 
         bool
-        OnInspect(TreeStructure <BranchData, InternodeData> &treeStructure, const GlobalTransform &globalTransform);
+        OnInspect(TreeStructure <SkeletonData, BranchData, InternodeData> &treeStructure,
+                  const GlobalTransform &globalTransform);
 
         void Reset();
     };
 
-    template<typename BranchData, typename InternodeData>
+    template<typename SkeletonData, typename BranchData, typename InternodeData>
     bool
-    TreeVisualizer<BranchData, InternodeData>::DrawInternodeInspectionGui(
-            TreeStructure <BranchData, InternodeData> &treeStructure,
+    TreeVisualizer<SkeletonData, BranchData, InternodeData>::DrawInternodeInspectionGui(
+            TreeStructure <SkeletonData, BranchData, InternodeData> &treeStructure,
             InternodeHandle internodeHandle,
             bool &deleted,
             const unsigned int &hierarchyLevel) {
-        auto& treeSkeleton = treeStructure.Skeleton();
+        auto &treeSkeleton = treeStructure.Skeleton();
         const int index = m_selectedInternodeHierarchyList.size() - hierarchyLevel - 1;
         if (!m_selectedInternodeHierarchyList.empty() && index >= 0 &&
             index < m_selectedInternodeHierarchyList.size() &&
@@ -99,10 +100,10 @@ namespace EcoSysLab {
         return modified;
     }
 
-    template<typename BranchData, typename InternodeData>
+    template<typename SkeletonData, typename BranchData, typename InternodeData>
     void
-    TreeVisualizer<BranchData, InternodeData>::PeekInternodeInspectionGui(
-            const TreeSkeleton <BranchData, InternodeData> &treeSkeleton,
+    TreeVisualizer<SkeletonData, BranchData, InternodeData>::PeekInternodeInspectionGui(
+            const TreeSkeleton <SkeletonData, BranchData, InternodeData> &treeSkeleton,
             InternodeHandle internodeHandle,
             const unsigned int &hierarchyLevel) {
         const int index = m_selectedInternodeHierarchyList.size() - hierarchyLevel - 1;
@@ -130,10 +131,11 @@ namespace EcoSysLab {
         }
     }
 
-    template<typename BranchData, typename InternodeData>
+    template<typename SkeletonData, typename BranchData, typename InternodeData>
     bool
-    TreeVisualizer<BranchData, InternodeData>::OnInspect(TreeStructure <BranchData, InternodeData> &treeStructure,
-                                                         const GlobalTransform &globalTransform) {
+    TreeVisualizer<SkeletonData, BranchData, InternodeData>::OnInspect(
+            TreeStructure <SkeletonData, BranchData, InternodeData> &treeStructure,
+            const GlobalTransform &globalTransform) {
         bool needUpdate = false;
         if (ImGui::Button("Update")) needUpdate = true;
         if (treeStructure.CurrentIteration() > 0) {
@@ -202,10 +204,10 @@ namespace EcoSysLab {
         return needUpdate;
     }
 
-    template<typename BranchData, typename InternodeData>
+    template<typename SkeletonData, typename BranchData, typename InternodeData>
     void
-    TreeVisualizer<BranchData, InternodeData>::InspectInternode(const
-                                                                Internode <InternodeData> &internode) {
+    TreeVisualizer<SkeletonData, BranchData, InternodeData>::InspectInternode(const
+                                                                              Internode <InternodeData> &internode) {
         if (ImGui::Begin("Internode Inspector")) {
             ImGui::Text("Thickness: %.3f", internode.m_info.m_thickness);
             ImGui::Text("Length: %.3f", internode.m_info.m_length);
@@ -267,8 +269,10 @@ namespace EcoSysLab {
 
                     auto budRotationAngle = glm::eulerAngles(bud.m_localRotation);
                     ImGui::InputFloat3("Rotation", &budRotationAngle.x, "%.3f", ImGuiInputTextFlags_ReadOnly);
-                    ImGui::InputFloat("Base resource requirement", (float *) &bud.m_baseResourceRequirement, 1, 100, "%.3f", ImGuiInputTextFlags_ReadOnly);
-                    ImGui::InputFloat("Productive resource requirement", (float *) &bud.m_productiveResourceRequirement, 1, 100, "%.3f", ImGuiInputTextFlags_ReadOnly);
+                    ImGui::InputFloat("Base resource requirement", (float *) &bud.m_baseResourceRequirement, 1, 100,
+                                      "%.3f", ImGuiInputTextFlags_ReadOnly);
+                    ImGui::InputFloat("Productive resource requirement", (float *) &bud.m_productiveResourceRequirement,
+                                      1, 100, "%.3f", ImGuiInputTextFlags_ReadOnly);
                 }
                 ImGui::TreePop();
             }
@@ -276,8 +280,8 @@ namespace EcoSysLab {
         ImGui::End();
     }
 
-    template<typename BranchData, typename InternodeData>
-    void TreeVisualizer<BranchData, InternodeData>::Reset() {
+    template<typename SkeletonData, typename BranchData, typename InternodeData>
+    void TreeVisualizer<SkeletonData, BranchData, InternodeData>::Reset() {
         m_version = -1;
         m_selectedInternodeHandle = -1;
         m_selectedInternodeHierarchyList.clear();
@@ -285,10 +289,10 @@ namespace EcoSysLab {
         m_matrices.clear();
     }
 
-    template<typename BranchData, typename InternodeData>
+    template<typename SkeletonData, typename BranchData, typename InternodeData>
     void
-    TreeVisualizer<BranchData, InternodeData>::SetSelectedInternode(
-            const TreeSkeleton <BranchData, InternodeData> &treeSkeleton,
+    TreeVisualizer<SkeletonData, BranchData, InternodeData>::SetSelectedInternode(
+            const TreeSkeleton <SkeletonData, BranchData, InternodeData> &treeSkeleton,
             InternodeHandle internodeHandle) {
         if (internodeHandle == m_selectedInternodeHandle)
             return;
@@ -306,9 +310,9 @@ namespace EcoSysLab {
         }
     }
 
-    template<typename BranchData, typename InternodeData>
-    bool TreeVisualizer<BranchData, InternodeData>::RayCastSelection(
-            const TreeSkeleton <BranchData, InternodeData> &treeSkeleton,
+    template<typename SkeletonData, typename BranchData, typename InternodeData>
+    bool TreeVisualizer<SkeletonData, BranchData, InternodeData>::RayCastSelection(
+            const TreeSkeleton <SkeletonData, BranchData, InternodeData> &treeSkeleton,
             const GlobalTransform &globalTransform) {
         auto editorLayer = Application::GetLayer<EditorLayer>();
         bool changed = false;
@@ -420,10 +424,10 @@ namespace EcoSysLab {
         return changed;
     }
 
-    template<typename BranchData, typename InternodeData>
+    template<typename SkeletonData, typename BranchData, typename InternodeData>
     void
-    TreeVisualizer<BranchData, InternodeData>::SyncMatrices(
-            const TreeSkeleton <BranchData, InternodeData> &treeSkeleton,
+    TreeVisualizer<SkeletonData, BranchData, InternodeData>::SyncMatrices(
+            const TreeSkeleton <SkeletonData, BranchData, InternodeData> &treeSkeleton,
             const GlobalTransform &globalTransform) {
         static std::vector<glm::vec4> randomColors;
         if (randomColors.empty()) {

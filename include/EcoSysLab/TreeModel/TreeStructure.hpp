@@ -37,7 +37,7 @@ namespace EcoSysLab {
         friend
         class Flow;
 
-        template<typename FD, typename ID>
+        template<typename SD, typename FD, typename ID>
         friend
         class TreeSkeleton;
 
@@ -98,7 +98,7 @@ namespace EcoSysLab {
     class Flow {
 #pragma region Private
 
-        template<typename FD, typename ID>
+        template<typename SD, typename FD, typename ID>
         friend
         class TreeSkeleton;
 
@@ -152,7 +152,7 @@ namespace EcoSysLab {
         explicit Flow(FlowHandle handle);
     };
 
-    template<typename FlowData, typename InternodeData>
+    template<typename SkeletonData, typename FlowData, typename InternodeData>
     class TreeSkeleton {
 #pragma region Private
         std::vector<Flow<FlowData>> m_flows;
@@ -183,6 +183,7 @@ namespace EcoSysLab {
 
 #pragma endregion
     public:
+        SkeletonData m_data;
         /**
          * Recycle (Remove) an internode, the descendents of this internode will also be recycled. The relevant flow will also be removed/restructured.
          * @param handle The handle of the internode to be removed. Must be valid (non-zero and the internode should not be recycled prior to this operation).
@@ -273,14 +274,14 @@ namespace EcoSysLab {
         glm::vec3 m_max = glm::vec3(0.0f);
     };
 
-    template<typename FlowData, typename InternodeData>
+    template<typename SkeletonData, typename FlowData, typename InternodeData>
     class TreeStructure {
-        TreeSkeleton<FlowData, InternodeData> m_skeleton;
-        std::vector<TreeSkeleton<FlowData, InternodeData>> m_history;
+        TreeSkeleton<SkeletonData, FlowData, InternodeData> m_skeleton;
+        std::vector<TreeSkeleton<SkeletonData, FlowData, InternodeData>> m_history;
     public:
-        [[nodiscard]] TreeSkeleton<FlowData, InternodeData> &Skeleton();
+        [[nodiscard]] TreeSkeleton<SkeletonData, FlowData, InternodeData> &Skeleton();
 
-        [[nodiscard]] const TreeSkeleton<FlowData, InternodeData> &Peek(int iteration) const;
+        [[nodiscard]] const TreeSkeleton<SkeletonData, FlowData, InternodeData> &Peek(int iteration) const;
 
         void Step();
 
@@ -347,33 +348,33 @@ namespace EcoSysLab {
 
 #pragma region TreeStructure
 
-    template<typename FlowData, typename InternodeData>
-    void TreeStructure<FlowData, InternodeData>::Step() {
+    template<typename SkeletonData, typename FlowData, typename InternodeData>
+    void TreeStructure<SkeletonData, FlowData, InternodeData>::Step() {
         m_history.push_back(m_skeleton);
     }
 
-    template<typename FlowData, typename InternodeData>
-    void TreeStructure<FlowData, InternodeData>::Reverse(int iteration) {
+    template<typename SkeletonData, typename FlowData, typename InternodeData>
+    void TreeStructure<SkeletonData, FlowData, InternodeData>::Reverse(int iteration) {
         assert(iteration >= 0 && iteration < m_history.size());
         m_skeleton = m_history[iteration];
         m_history.erase((m_history.begin() + iteration), m_history.end());
     }
 
-    template<typename FlowData, typename InternodeData>
-    TreeSkeleton<FlowData, InternodeData> &TreeStructure<FlowData, InternodeData>::Skeleton() {
+    template<typename SkeletonData, typename FlowData, typename InternodeData>
+    TreeSkeleton<SkeletonData, FlowData, InternodeData> &TreeStructure<SkeletonData, FlowData, InternodeData>::Skeleton() {
         return m_skeleton;
     }
 
-    template<typename FlowData, typename InternodeData>
-    const TreeSkeleton<FlowData, InternodeData> &TreeStructure<FlowData, InternodeData>::Peek(int iteration) const {
+    template<typename SkeletonData, typename FlowData, typename InternodeData>
+    const TreeSkeleton<SkeletonData, FlowData, InternodeData> &TreeStructure<SkeletonData, FlowData, InternodeData>::Peek(int iteration) const {
         assert(iteration <= m_history.size());
         if (iteration < 0) iteration = 0;
         if (iteration == m_history.size()) return m_skeleton;
         return m_history[iteration];
     }
 
-    template<typename FlowData, typename InternodeData>
-    int TreeStructure<FlowData, InternodeData>::CurrentIteration() const {
+    template<typename SkeletonData, typename FlowData, typename InternodeData>
+    int TreeStructure<SkeletonData, FlowData, InternodeData>::CurrentIteration() const {
         return m_history.size();
     }
 
@@ -381,33 +382,33 @@ namespace EcoSysLab {
 #pragma region TreeSkeleton
 #pragma region Helper
 
-    template<typename FlowData, typename InternodeData>
-    Flow<FlowData> &TreeSkeleton<FlowData, InternodeData>::RefFlow(FlowHandle handle) {
+    template<typename SkeletonData, typename FlowData, typename InternodeData>
+    Flow<FlowData> &TreeSkeleton<SkeletonData, FlowData, InternodeData>::RefFlow(FlowHandle handle) {
         assert(handle >= 0 && handle < m_flows.size());
         return m_flows[handle];
     }
 
-    template<typename FlowData, typename InternodeData>
-    const Flow<FlowData> &TreeSkeleton<FlowData, InternodeData>::PeekFlow(FlowHandle handle) const {
+    template<typename SkeletonData, typename FlowData, typename InternodeData>
+    const Flow<FlowData> &TreeSkeleton<SkeletonData, FlowData, InternodeData>::PeekFlow(FlowHandle handle) const {
         assert(handle >= 0 && handle < m_flows.size());
         return m_flows[handle];
     }
 
-    template<typename FlowData, typename InternodeData>
-    Internode<InternodeData> &TreeSkeleton<FlowData, InternodeData>::RefInternode(InternodeHandle handle) {
+    template<typename SkeletonData, typename FlowData, typename InternodeData>
+    Internode<InternodeData> &TreeSkeleton<SkeletonData, FlowData, InternodeData>::RefInternode(InternodeHandle handle) {
         assert(handle >= 0 && handle < m_internodes.size());
         return m_internodes[handle];
     }
 
-    template<typename FlowData, typename InternodeData>
+    template<typename SkeletonData, typename FlowData, typename InternodeData>
     const Internode<InternodeData> &
-    TreeSkeleton<FlowData, InternodeData>::PeekInternode(InternodeHandle handle) const {
+    TreeSkeleton<SkeletonData, FlowData, InternodeData>::PeekInternode(InternodeHandle handle) const {
         assert(handle >= 0 && handle < m_internodes.size());
         return m_internodes[handle];
     }
 
-    template<typename FlowData, typename InternodeData>
-    void TreeSkeleton<FlowData, InternodeData>::SortLists() {
+    template<typename SkeletonData, typename FlowData, typename InternodeData>
+    void TreeSkeleton<SkeletonData, FlowData, InternodeData>::SortLists() {
         if (m_version == m_newVersion) return;
         if (m_internodes.empty()) return;
         m_version = m_newVersion;
@@ -434,19 +435,19 @@ namespace EcoSysLab {
         }
     }
 
-    template<typename FlowData, typename InternodeData>
-    const std::vector<FlowHandle> &TreeSkeleton<FlowData, InternodeData>::RefSortedFlowList() const {
+    template<typename SkeletonData, typename FlowData, typename InternodeData>
+    const std::vector<FlowHandle> &TreeSkeleton<SkeletonData, FlowData, InternodeData>::RefSortedFlowList() const {
         return m_sortedFlowList;
     }
 
-    template<typename FlowData, typename InternodeData>
-    const std::vector<InternodeHandle> &TreeSkeleton<FlowData, InternodeData>::RefSortedInternodeList() const {
+    template<typename SkeletonData, typename FlowData, typename InternodeData>
+    const std::vector<InternodeHandle> &TreeSkeleton<SkeletonData, FlowData, InternodeData>::RefSortedInternodeList() const {
         return m_sortedInternodeList;
     }
 
-    template<typename FlowData, typename InternodeData>
+    template<typename SkeletonData, typename FlowData, typename InternodeData>
     InternodeHandle
-    TreeSkeleton<FlowData, InternodeData>::Extend(InternodeHandle targetHandle, bool branching) {
+    TreeSkeleton<SkeletonData, FlowData, InternodeData>::Extend(InternodeHandle targetHandle, bool branching) {
         assert(targetHandle < m_internodes.size());
         auto &targetInternode = m_internodes[targetHandle];
         assert(!targetInternode.m_recycled);
@@ -494,8 +495,8 @@ namespace EcoSysLab {
         return newInternodeHandle;
     }
 
-    template<typename FlowData, typename InternodeData>
-    void TreeSkeleton<FlowData, InternodeData>::RecycleFlow(FlowHandle handle) {
+    template<typename SkeletonData, typename FlowData, typename InternodeData>
+    void TreeSkeleton<SkeletonData, FlowData, InternodeData>::RecycleFlow(FlowHandle handle) {
         assert(handle != 0);
         assert(!m_flows[handle].m_recycled);
         auto &flow = m_flows[handle];
@@ -538,8 +539,8 @@ namespace EcoSysLab {
         m_newVersion++;
     }
 
-    template<typename FlowData, typename InternodeData>
-    void TreeSkeleton<FlowData, InternodeData>::RecycleInternode(InternodeHandle handle) {
+    template<typename SkeletonData, typename FlowData, typename InternodeData>
+    void TreeSkeleton<SkeletonData, FlowData, InternodeData>::RecycleInternode(InternodeHandle handle) {
         assert(handle != 0);
         assert(!m_internodes[handle].m_recycled);
         auto &internode = m_internodes[handle];
@@ -660,8 +661,8 @@ namespace EcoSysLab {
         return m_apical;
     }
 
-    template<typename FlowData, typename InternodeData>
-    TreeSkeleton<FlowData, InternodeData>::TreeSkeleton() {
+    template<typename SkeletonData, typename FlowData, typename InternodeData>
+    TreeSkeleton<SkeletonData, FlowData, InternodeData>::TreeSkeleton() {
         AllocateFlow();
         AllocateInternode();
         auto &rootBranch = m_flows[0];
@@ -670,8 +671,8 @@ namespace EcoSysLab {
         rootBranch.m_internodes.emplace_back(0);
     }
 
-    template<typename FlowData, typename InternodeData>
-    void TreeSkeleton<FlowData, InternodeData>::DetachChildInternode(InternodeHandle targetHandle,
+    template<typename SkeletonData, typename FlowData, typename InternodeData>
+    void TreeSkeleton<SkeletonData, FlowData, InternodeData>::DetachChildInternode(InternodeHandle targetHandle,
                                                                      InternodeHandle childHandle) {
         assert(targetHandle >= 0 && childHandle >= 0 && targetHandle < m_internodes.size() &&
                childHandle < m_internodes.size());
@@ -690,8 +691,8 @@ namespace EcoSysLab {
         }
     }
 
-    template<typename FlowData, typename InternodeData>
-    void TreeSkeleton<FlowData, InternodeData>::SetParentInternode(InternodeHandle targetHandle,
+    template<typename SkeletonData, typename FlowData, typename InternodeData>
+    void TreeSkeleton<SkeletonData, FlowData, InternodeData>::SetParentInternode(InternodeHandle targetHandle,
                                                                    InternodeHandle parentHandle) {
         assert(targetHandle >= 0 && parentHandle >= 0 && targetHandle < m_internodes.size() &&
                parentHandle < m_internodes.size());
@@ -703,9 +704,9 @@ namespace EcoSysLab {
         parentInternode.m_childHandles.emplace_back(targetHandle);
     }
 
-    template<typename FlowData, typename InternodeData>
+    template<typename SkeletonData, typename FlowData, typename InternodeData>
     void
-    TreeSkeleton<FlowData, InternodeData>::DetachChildFlow(FlowHandle targetHandle, FlowHandle childHandle) {
+    TreeSkeleton<SkeletonData, FlowData, InternodeData>::DetachChildFlow(FlowHandle targetHandle, FlowHandle childHandle) {
         assert(targetHandle >= 0 && childHandle >= 0 && targetHandle < m_flows.size() &&
                childHandle < m_flows.size());
         auto &targetBranch = m_flows[targetHandle];
@@ -731,9 +732,9 @@ namespace EcoSysLab {
         }
     }
 
-    template<typename FlowData, typename InternodeData>
+    template<typename SkeletonData, typename FlowData, typename InternodeData>
     void
-    TreeSkeleton<FlowData, InternodeData>::SetParentFlow(FlowHandle targetHandle, FlowHandle parentHandle) {
+    TreeSkeleton<SkeletonData, FlowData, InternodeData>::SetParentFlow(FlowHandle targetHandle, FlowHandle parentHandle) {
         assert(targetHandle >= 0 && parentHandle >= 0 && targetHandle < m_flows.size() &&
                parentHandle < m_flows.size());
         auto &targetBranch = m_flows[targetHandle];
@@ -744,8 +745,8 @@ namespace EcoSysLab {
         parentBranch.m_childHandles.emplace_back(targetHandle);
     }
 
-    template<typename FlowData, typename InternodeData>
-    FlowHandle TreeSkeleton<FlowData, InternodeData>::AllocateFlow() {
+    template<typename SkeletonData, typename FlowData, typename InternodeData>
+    FlowHandle TreeSkeleton<SkeletonData, FlowData, InternodeData>::AllocateFlow() {
         if (m_flowPool.empty()) {
             auto newBranch = m_flows.emplace_back(m_flows.size());
             return newBranch.m_handle;
@@ -757,8 +758,8 @@ namespace EcoSysLab {
         return handle;
     }
 
-    template<typename FlowData, typename InternodeData>
-    void TreeSkeleton<FlowData, InternodeData>::RecycleFlowSingle(FlowHandle handle) {
+    template<typename SkeletonData, typename FlowData, typename InternodeData>
+    void TreeSkeleton<SkeletonData, FlowData, InternodeData>::RecycleFlowSingle(FlowHandle handle) {
         assert(!m_flows[handle].m_recycled);
         auto &flow = m_flows[handle];
         flow.m_parentHandle = -1;
@@ -773,8 +774,8 @@ namespace EcoSysLab {
         m_flowPool.emplace(handle);
     }
 
-    template<typename FlowData, typename InternodeData>
-    void TreeSkeleton<FlowData, InternodeData>::RecycleInternodeSingle(InternodeHandle handle) {
+    template<typename SkeletonData, typename FlowData, typename InternodeData>
+    void TreeSkeleton<SkeletonData, FlowData, InternodeData>::RecycleInternodeSingle(InternodeHandle handle) {
         assert(!m_internodes[handle].m_recycled);
         auto &internode = m_internodes[handle];
         internode.m_parentHandle = -1;
@@ -789,8 +790,8 @@ namespace EcoSysLab {
         m_internodePool.emplace(handle);
     }
 
-    template<typename FlowData, typename InternodeData>
-    InternodeHandle TreeSkeleton<FlowData, InternodeData>::AllocateInternode() {
+    template<typename SkeletonData, typename FlowData, typename InternodeData>
+    InternodeHandle TreeSkeleton<SkeletonData, FlowData, InternodeData>::AllocateInternode() {
         if (m_internodePool.empty()) {
             auto newInternode = m_internodes.emplace_back(m_internodes.size());
             return newInternode.m_handle;
@@ -802,13 +803,13 @@ namespace EcoSysLab {
         return handle;
     }
 
-    template<typename FlowData, typename InternodeData>
-    int TreeSkeleton<FlowData, InternodeData>::GetVersion() const {
+    template<typename SkeletonData, typename FlowData, typename InternodeData>
+    int TreeSkeleton<SkeletonData, FlowData, InternodeData>::GetVersion() const {
         return m_version;
     }
 
-    template<typename FlowData, typename InternodeData>
-    void TreeSkeleton<FlowData, InternodeData>::CalculateFlows() {
+    template<typename SkeletonData, typename FlowData, typename InternodeData>
+    void TreeSkeleton<SkeletonData, FlowData, InternodeData>::CalculateFlows() {
         const auto &sortedBranchList = RefSortedFlowList();
         for (const auto &flowHandle: sortedBranchList) {
             auto &flow = m_flows[flowHandle];
