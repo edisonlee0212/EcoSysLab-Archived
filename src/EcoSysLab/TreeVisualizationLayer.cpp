@@ -146,6 +146,8 @@ void TreeVisualizationLayer::LateUpdate() {
                                                   glm::vec3(entityGlobalTransform.GetPosition()));
                     sortedModels[distance] = treeEntity;
                 }
+                m_matrices.clear();
+                m_colors.clear();
                 for (const auto &modelPair: sortedModels) {
                     auto tree = scene->GetOrSetPrivateComponent<Tree>(modelPair.second).lock();
                     auto &treeModel = tree->m_treeModel;
