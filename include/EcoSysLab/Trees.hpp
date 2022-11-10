@@ -2,17 +2,18 @@
 #include "Tree.hpp"
 using namespace UniEngine;
 namespace EcoSysLab {
-
-    class Trees : public IPrivateComponent{
+    class Trees : public IAsset{
     public:
+        std::vector<Transform> m_globalTransforms;
         AssetRef m_treeDescriptor;
-        TreeModelGroup m_treeModelGroup;
-        bool m_enableHistory = true;
-        int m_iteration = 0;
         void OnInspect() override;
 
         void OnCreate() override;
 
-        void OnDestroy() override;
+        void CollectAssetRef(std::vector<AssetRef> &list) override;
+
+        void Serialize(YAML::Emitter &out) override;
+
+        void Deserialize(const YAML::Node &in) override;
     };
 }

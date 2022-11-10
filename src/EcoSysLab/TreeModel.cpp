@@ -416,8 +416,6 @@ void TreeModel::Initialize(const TreeStructuralGrowthParameters &parameters) {
 }
 
 void TreeModel::Clear() {
-    m_globalTransform =
-            glm::translate(glm::vec3(0.0f)) * glm::mat4_cast(glm::quat(glm::vec3(0.0f))) * glm::scale(glm::vec3(1.0f));
     m_treeStructure = {};
     m_initialized = false;
 }

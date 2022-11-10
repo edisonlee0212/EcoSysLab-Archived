@@ -28,7 +28,7 @@ void EngineSetup();
 
 int main() {
     ClassRegistry::RegisterPrivateComponent<Tree>("Tree");
-    ClassRegistry::RegisterPrivateComponent<Trees>("Trees");
+    ClassRegistry::RegisterAsset<Trees>("Trees", {".trees"});
     ClassRegistry::RegisterAsset<TreeDescriptor>("TreeDescriptor", {".td"});
 
     EngineSetup();

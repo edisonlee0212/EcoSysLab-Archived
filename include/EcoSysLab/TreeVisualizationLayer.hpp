@@ -8,7 +8,7 @@ namespace EcoSysLab {
     class TreeVisualizationLayer : public ILayer{
         bool m_displayFlows = true;
         bool m_displayBoundingBox = true;
-        bool m_visualization = false;
+        bool m_visualization = true;
         std::vector<int> m_versions;
         std::vector<glm::vec4> m_randomColors;
         std::vector<glm::mat4> m_matrices;
