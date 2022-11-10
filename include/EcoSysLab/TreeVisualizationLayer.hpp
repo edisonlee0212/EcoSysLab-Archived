@@ -6,13 +6,14 @@
 using namespace UniEngine;
 namespace EcoSysLab {
     class TreeVisualizationLayer : public ILayer{
-        bool m_displayFlows = true;
-        bool m_displayBoundingBox = true;
+        bool m_displayTrees = true;
+        bool m_displayBoundingBox = false;
         bool m_visualization = true;
         std::vector<int> m_versions;
         std::vector<glm::vec4> m_randomColors;
         std::vector<glm::mat4> m_matrices;
         std::vector<glm::vec4> m_colors;
+
         std::vector<glm::mat4> m_boundingBoxMatrices;
         std::vector<glm::vec4> m_boundingBoxColors;
 
@@ -22,8 +23,9 @@ namespace EcoSysLab {
         float m_totalTime = 0.0f;
         int m_internodeSize = 0;
         int m_flowSize = 0;
-        bool m_needUpdate = false;
+        bool m_needFlowUpdate = false;
         bool m_enableHistory = true;
+        Entity m_selectedTree = {};
     public:
         void OnCreate() override;
 

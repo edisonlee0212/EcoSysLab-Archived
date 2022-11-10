@@ -10,8 +10,8 @@
 using namespace EcoSysLab;
 
 void Trees::OnInspect() {
-    static glm::ivec2 gridSize = {32, 32};
-    static glm::vec2 gridDistance = {10, 10};
+    static glm::ivec2 gridSize = {8, 8};
+    static glm::vec2 gridDistance = {20, 20};
     static bool setParent = true;
     ImGui::DragInt2("Grid size", &gridSize.x, 1, 0, 100);
     ImGui::DragFloat2("Grid distance", &gridDistance.x, 0.1f, 0.0f, 100.0f);

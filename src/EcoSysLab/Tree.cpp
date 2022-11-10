@@ -21,6 +21,7 @@ void Tree::OnInspect() {
     }
     if (GetHandle() != handle) {
         treeVisualizer.Reset();
+        treeVisualizer.m_iteration = m_treeModel.m_treeStructure.CurrentIteration();
         handle = GetHandle();
     }
     auto tempGlobalTransform = GetScene()->GetDataComponent<GlobalTransform>(GetOwner());

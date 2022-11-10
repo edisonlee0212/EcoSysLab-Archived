@@ -12,7 +12,7 @@ namespace EcoSysLab {
     class TreeVisualizer {
         std::vector<glm::mat4> m_matrices;
         std::vector<glm::vec4> m_colors;
-        bool m_visualization = false;
+        bool m_visualization = true;
         bool m_treeHierarchyGui = true;
         InternodeHandle m_selectedInternodeHandle = -1;
         std::vector<InternodeHandle> m_selectedInternodeHierarchyList;
@@ -137,7 +137,6 @@ namespace EcoSysLab {
             TreeStructure <SkeletonData, BranchData, InternodeData> &treeStructure,
             const GlobalTransform &globalTransform) {
         bool needUpdate = false;
-        if (ImGui::Button("Update")) needUpdate = true;
         if (treeStructure.CurrentIteration() > 0) {
             if (ImGui::TreeNodeEx("History", ImGuiTreeNodeFlags_DefaultOpen)) {
                 if (ImGui::SliderInt("Iteration", &m_iteration, 0, treeStructure.CurrentIteration())) {
@@ -182,8 +181,10 @@ namespace EcoSysLab {
             const auto &sortedInternodeList = treeSkeleton.RefSortedInternodeList();
             ImGui::Text("Internode count: %d", sortedInternodeList.size());
             ImGui::Text("Branch count: %d", sortedBranchList.size());
-
-            if (treeSkeleton.GetVersion() != m_version) needUpdate = true;
+            if (treeSkeleton.GetVersion() != m_version) {
+                needUpdate = true;
+                m_iteration = treeStructure.CurrentIteration();
+            }
             if (RayCastSelection(treeSkeleton, globalTransform)) needUpdate = true;
             if (needUpdate) {
                 SyncMatrices(treeSkeleton, globalTransform);
@@ -465,7 +466,7 @@ namespace EcoSysLab {
                 m_colors[i] = glm::vec4(1, 0, 0, 1);
             } else {
                 m_colors[i] = randomColors[treeSkeleton.PeekFlow(internode.GetFlowHandle()).m_data.m_order];
-                if (m_selectedInternodeHandle != -1) m_colors[i].a = 0.05f;
+                if (m_selectedInternodeHandle != -1) m_colors[i].a = 0.5f;
             }
         }, results);
         for (auto &i: results) i.wait();
