@@ -150,7 +150,7 @@ void TreeVisualizationLayer::LateUpdate() {
                     auto tree = scene->GetOrSetPrivateComponent<Tree>(modelPair.second).lock();
                     auto &treeModel = tree->m_treeModel;
                     const auto &list = treeModel.m_treeStructure.Skeleton().RefSortedFlowList();
-                    if (startIndex + list.size() > 10000000) break;
+                    if (startIndex + list.size() > 50000000) break;
                     auto entityGlobalTransform = scene->GetDataComponent<GlobalTransform>(modelPair.second);
                     std::vector<std::shared_future<void>> results;
                     m_matrices.resize(startIndex + list.size());

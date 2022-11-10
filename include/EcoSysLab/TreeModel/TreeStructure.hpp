@@ -16,6 +16,7 @@ namespace EcoSysLab {
         glm::quat m_localRotation = glm::vec3(0.0f);
 
         std::vector<glm::mat4> m_leaves;
+        std::vector<glm::mat4> m_fruits;
     };
 
     struct FlowInfo {
