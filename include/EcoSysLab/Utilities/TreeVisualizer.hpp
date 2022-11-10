@@ -379,7 +379,7 @@ namespace EcoSysLab {
                         const auto dotP = a * c - b * b; // always >= 0
                         float sc, tc;
                         // compute the line parameters of the two closest points
-                        if (dotP < 0.001f) { // the lines are almost parallel
+                        if (dotP < 0.00001f) { // the lines are almost parallel
                             sc = 0.0f;
                             tc = (b > c ? d / b : e / c); // use the largest denominator
                         } else {

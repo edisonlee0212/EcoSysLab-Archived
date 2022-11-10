@@ -36,6 +36,7 @@ void TreeModel::GrowShoots(float extendLength, InternodeHandle internodeHandle,
     internodeInfo.m_length += extendLength;
     float extraLength = internodeInfo.m_length - internodeLength;
     auto &apicalBud = internodeData.m_buds.front();
+    //If we need to add a new end node
     if (extraLength > 0) {
         apicalBud.m_status = BudStatus::Died;
         internodeInfo.m_length = internodeLength;
@@ -57,7 +58,6 @@ void TreeModel::GrowShoots(float extendLength, InternodeHandle internodeHandle,
             lateralBud.m_localRotation = glm::vec3(
                     glm::radians(parameters.GetDesiredBranchingAngle(internode)), 0.0f,
                     i * turnAngle);
-            collectedInhibitor += parameters.GetApicalDominanceBase(internode);
         }
 
         //Create new internode
@@ -65,6 +65,7 @@ void TreeModel::GrowShoots(float extendLength, InternodeHandle internodeHandle,
         auto &oldInternode = skeleton.RefInternode(internodeHandle);
         auto &newInternode = skeleton.RefInternode(newInternodeHandle);
         newInternode.m_data.Clear();
+        newInternode.m_data.m_inhibitor = parameters.GetApicalDominanceBase(newInternode);
         newInternode.m_info.m_length = glm::clamp(extendLength, 0.0f, internodeLength);
         newInternode.m_info.m_thickness = parameters.GetEndNodeThickness(newInternode);
         newInternode.m_info.m_localRotation = newInternode.m_data.m_desiredLocalRotation =
@@ -80,12 +81,18 @@ void TreeModel::GrowShoots(float extendLength, InternodeHandle internodeHandle,
         newApicalBud.m_localRotation = glm::vec3(
                 glm::radians(parameters.GetDesiredApicalAngle(newInternode)), 0.0f,
                 parameters.GetDesiredRollAngle(newInternode));
-
         if (extraLength > internodeLength) {
             float childInhibitor = 0.0f;
             GrowShoots(extraLength - internodeLength, newInternodeHandle, parameters, childInhibitor);
-            collectedInhibitor += childInhibitor * parameters.GetApicalDominanceDecrease(oldInternode);
+            childInhibitor *= parameters.GetApicalDominanceDecrease(newInternode);
+            collectedInhibitor += childInhibitor;
+            skeleton.RefInternode(newInternodeHandle).m_data.m_inhibitor = childInhibitor;
+        } else {
+            collectedInhibitor += parameters.GetApicalDominanceBase(newInternode);
         }
+    } else {
+        //Otherwise, we add the inhibitor.
+        collectedInhibitor += parameters.GetApicalDominanceBase(internode);
     }
 }
 
@@ -102,24 +109,24 @@ void TreeModel::GrowInternode(InternodeHandle internodeHandle, const TreeStructu
                                          parameters.GetApicalDominanceDecrease(internode);
         }
     }
-    float collectedInhibitor = 0.0f;
     for (auto &bud: buds) {
         auto &internode = skeleton.RefInternode(internodeHandle);
         auto &internodeData = internode.m_data;
         auto &internodeInfo = internode.m_info;
-        if (bud.m_type == BudType::Apical) {
-            if (bud.m_status == BudStatus::Dormant) {
-                if (parameters.GetApicalBudKillProbability(internode) > glm::linearRand(0.0f, 1.0f)) {
-                    bud.m_status = BudStatus::Died;
-                } else {
-                    float waterReceived = bud.m_productiveResourceRequirement;
-                    auto growthRate = parameters.GetGrowthRate(internode);
-                    float elongateLength = waterReceived * growthRate;
-                    GrowShoots(elongateLength, internodeHandle, parameters, collectedInhibitor);
-                }
-                //If apical bud is dormant, then there's no lateral bud at this stage. We should quit anyway.
-                break;
+        if (bud.m_type == BudType::Apical && bud.m_status == BudStatus::Dormant) {
+            if (parameters.GetApicalBudKillProbability(internode) > glm::linearRand(0.0f, 1.0f)) {
+                bud.m_status = BudStatus::Died;
+            } else {
+                float waterReceived = bud.m_productiveResourceRequirement;
+                auto growthRate = parameters.GetGrowthRate(internode);
+                float elongateLength = waterReceived * growthRate;
+                float collectedInhibitor = 0.0f;
+                auto dd = parameters.GetApicalDominanceDecrease(internode);
+                GrowShoots(elongateLength, internodeHandle, parameters, collectedInhibitor);
+                skeleton.RefInternode(internodeHandle).m_data.m_inhibitor += collectedInhibitor * dd;
             }
+            //If apical bud is dormant, then there's no lateral bud at this stage. We should quit anyway.
+            break;
         } else if (bud.m_type == BudType::Lateral) {
             if (bud.m_status == BudStatus::Dormant) {
                 if (parameters.GetLateralBudKillProbability(internode) > glm::linearRand(0.0f, 1.0f)) {
@@ -155,17 +162,10 @@ void TreeModel::GrowInternode(InternodeHandle internodeHandle, const TreeStructu
                         apicalBud.m_localRotation = glm::vec3(
                                 glm::radians(parameters.GetDesiredApicalAngle(internode)), 0.0f,
                                 parameters.GetDesiredRollAngle(internode));
-                    } else {
-                        collectedInhibitor += parameters.GetApicalDominanceBase(internode);
                     }
                 }
             }
         }
-    }
-    {
-        auto &internode = skeleton.RefInternode(internodeHandle);
-        auto &internodeData = internode.m_data;
-        internodeData.m_inhibitor += collectedInhibitor;
     }
 }
 
@@ -261,7 +261,7 @@ void TreeModel::Grow(const GrowthNutrients &growthNutrients, const TreeStructura
     auto &skeleton = m_treeStructure.Skeleton();
 #pragma region Low Branch Pruning
     skeleton.SortLists();
-    if(!m_initialized){
+    if (!m_initialized) {
         Initialize(parameters);
     }
     {
