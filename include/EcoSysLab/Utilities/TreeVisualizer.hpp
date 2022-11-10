@@ -466,7 +466,7 @@ namespace EcoSysLab {
                 m_colors[i] = glm::vec4(1, 0, 0, 1);
             } else {
                 m_colors[i] = randomColors[treeSkeleton.PeekFlow(internode.GetFlowHandle()).m_data.m_order];
-                if (m_selectedInternodeHandle != -1) m_colors[i].a = 0.5f;
+                if (m_selectedInternodeHandle != -1) m_colors[i].a = 0.3f;
             }
         }, results);
         for (auto &i: results) i.wait();

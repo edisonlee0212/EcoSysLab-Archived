@@ -83,7 +83,7 @@ void TreeVisualizationLayer::LateUpdate() {
                                                     glm::scale((skeleton.m_max - skeleton.m_min) / 2.0f));
                     m_boundingBoxColors.emplace_back();
                     m_boundingBoxColors.back() = m_randomColors[listIndex];
-                    m_boundingBoxColors.back().a = 0.1f;
+                    m_boundingBoxColors.back().a = 0.05f;
                     auto distance = glm::distance(editorLayer->m_sceneCameraPosition,
                                                   glm::vec3(entityGlobalTransform.GetPosition()));
                     sortedModels[distance] = treeEntity;
@@ -118,7 +118,7 @@ void TreeVisualizationLayer::LateUpdate() {
                                         glm::distance(translation, position2) / 2.0f,
                                         flow.m_info.m_startThickness));
                         m_colors[i + startIndex] = m_randomColors[flow.m_data.m_order];
-                        m_colors[i + startIndex].a = m_selectedTree.GetIndex() != 0 ? 0.1f : 1.0f;
+                        m_colors[i + startIndex].a = m_selectedTree.GetIndex() != 0 ? 0.05f : 1.0f;
                     }, results);
                     for (auto &i: results) i.wait();
                     startIndex += list.size();
