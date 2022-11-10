@@ -185,7 +185,10 @@ namespace EcoSysLab {
                 needUpdate = true;
                 m_iteration = treeStructure.CurrentIteration();
             }
-            if (RayCastSelection(treeSkeleton, globalTransform)) needUpdate = true;
+            if (Inputs::GetMouseInternal(GLFW_MOUSE_BUTTON_LEFT,
+                                         Windows::GetWindow())) {
+                if (RayCastSelection(treeSkeleton, globalTransform)) needUpdate = true;
+            }
             if (needUpdate) {
                 SyncMatrices(treeSkeleton, globalTransform);
             }
@@ -368,30 +371,23 @@ namespace EcoSysLab {
                         glm::vec3 u = pos - (pos + dir);
                         glm::vec3 v = position - position2;
                         glm::vec3 w = (pos + dir) - position2;
-                        const auto a = dot(u,
-                                           u); // always >= 0
+                        const auto a = dot(u, u); // always >= 0
                         const auto b = dot(u, v);
-                        const auto c = dot(v,
-                                           v); // always >= 0
+                        const auto c = dot(v, v); // always >= 0
                         const auto d = dot(u, w);
                         const auto e = dot(v, w);
-                        const auto dotP =
-                                a * c - b * b; // always >= 0
+                        const auto dotP = a * c - b * b; // always >= 0
                         float sc, tc;
                         // compute the line parameters of the two closest points
-                        if (dotP <
-                            0.001f) { // the lines are almost parallel
+                        if (dotP < 0.001f) { // the lines are almost parallel
                             sc = 0.0f;
-                            tc = (b > c ? d / b
-                                        : e /
-                                          c); // use the largest denominator
+                            tc = (b > c ? d / b : e / c); // use the largest denominator
                         } else {
                             sc = (b * e - c * d) / dotP;
                             tc = (a * e - b * d) / dotP;
                         }
                         // get the difference of the two closest points
-                        glm::vec3 dP = w + sc * u -
-                                       tc * v; // =  L1(sc) - L2(tc)
+                        glm::vec3 dP = w + sc * u - tc * v; // =  L1(sc) - L2(tc)
                         if (glm::length(dP) > radius)
                             return;
 #pragma endregion
@@ -407,13 +403,12 @@ namespace EcoSysLab {
                     }, results);
                     for (auto &i: results) i.wait();
 
-                    if (Inputs::GetMouseInternal(GLFW_MOUSE_BUTTON_LEFT,
-                                                 Windows::GetWindow())) {
-                        if (currentFocusingInternodeHandle != -1) {
-                            SetSelectedInternode(treeSkeleton, currentFocusingInternodeHandle);
-                            changed = true;
-                        }
+
+                    if (currentFocusingInternodeHandle != -1) {
+                        SetSelectedInternode(treeSkeleton, currentFocusingInternodeHandle);
+                        changed = true;
                     }
+
 #pragma endregion
                 }
             }

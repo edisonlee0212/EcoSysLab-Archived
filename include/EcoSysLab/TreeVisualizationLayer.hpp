@@ -10,7 +10,7 @@ namespace EcoSysLab {
         bool m_displayBoundingBox = false;
         bool m_visualization = true;
         std::vector<int> m_versions;
-        std::vector<glm::vec4> m_randomColors;
+        std::vector<glm::vec3> m_randomColors;
         std::vector<glm::mat4> m_matrices;
         std::vector<glm::vec4> m_colors;
 
@@ -26,6 +26,8 @@ namespace EcoSysLab {
         bool m_needFlowUpdate = false;
         bool m_enableHistory = true;
         Entity m_selectedTree = {};
+
+        bool m_lockTreeSelection = false;
     public:
         void OnCreate() override;
 
