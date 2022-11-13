@@ -68,7 +68,7 @@ namespace EcoSysLab {
         int m_order = 0;
     };
 
-    struct SkeletonGrowthData{
+    struct SkeletonGrowthData {
 
     };
 
@@ -185,7 +185,7 @@ namespace EcoSysLab {
     };
 
     class TreeModel {
-        inline void LowBranchPruning(float maxDistance, InternodeHandle internodeHandle,
+        inline bool LowBranchPruning(float maxDistance, InternodeHandle internodeHandle,
                                      const TreeStructuralGrowthParameters &parameters);
 
         inline void CalculateSagging(InternodeHandle internodeHandle,
@@ -194,10 +194,10 @@ namespace EcoSysLab {
         inline void CalculateResourceRequirement(InternodeHandle internodeHandle,
                                                  const TreeStructuralGrowthParameters &parameters);
 
-        inline void GrowInternode(InternodeHandle internodeHandle, const TreeStructuralGrowthParameters &parameters,
+        inline bool GrowInternode(InternodeHandle internodeHandle, const TreeStructuralGrowthParameters &parameters,
                                   const GrowthNutrients &growthNutrients);
 
-        void GrowShoots(float extendLength, InternodeHandle internodeHandle,
+        bool GrowShoots(float extendLength, InternodeHandle internodeHandle,
                         const TreeStructuralGrowthParameters &parameters, float &collectedInhibitor);
 
         void Initialize(const TreeStructuralGrowthParameters &parameters);
@@ -216,7 +216,8 @@ namespace EcoSysLab {
          * Grow one iteration of the tree, given the nutrients and the procedural parameters.
          * @param growthNutrients The nutrients from the root (water, etc.)
          * @param parameters The procedural parameters that guides the growth.
+         * @return Whether the growth caused a structural change during the growth.
          */
-        void Grow(const GrowthNutrients &growthNutrients, const TreeStructuralGrowthParameters &parameters);
+        bool Grow(const GrowthNutrients &growthNutrients, const TreeStructuralGrowthParameters &parameters);
     };
 }

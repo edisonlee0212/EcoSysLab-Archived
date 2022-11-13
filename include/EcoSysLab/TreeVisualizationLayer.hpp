@@ -24,11 +24,11 @@ namespace EcoSysLab {
         int m_internodeSize = 0;
         int m_flowSize = 0;
         bool m_needFlowUpdate = false;
-        bool m_enableHistory = true;
-        Entity m_selectedTree = {};
-
         bool m_lockTreeSelection = false;
-    public:
+        bool m_autoGrow = false;
+
+        void FixedUpdate() override;
+
         void OnCreate() override;
 
         void OnDestroy() override;
@@ -36,5 +36,9 @@ namespace EcoSysLab {
         void LateUpdate() override;
 
         void OnInspect() override;
+    public:
+        Entity m_selectedTree = {};
+        TreeVisualizer<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> m_treeVisualizer;
+        void GrowAllTrees();
     };
 }

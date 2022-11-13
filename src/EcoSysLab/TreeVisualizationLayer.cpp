@@ -26,6 +26,7 @@ void TreeVisualizationLayer::LateUpdate() {
     if (selectedEntity != m_selectedTree) {
         m_needFlowUpdate = true;
         m_selectedTree = selectedEntity;
+        if(scene->IsEntityValid(m_selectedTree)) m_treeVisualizer.Reset(scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock()->m_treeModel.m_treeStructure);
     }
     const std::vector<Entity> *treeEntities =
             scene->UnsafeGetPrivateComponentOwnersList<Tree>();
@@ -79,6 +80,7 @@ void TreeVisualizationLayer::LateUpdate() {
                         if (detected && currentFocusingTree != m_selectedTree && scene->IsEntityValid(currentFocusingTree)) {
                             editorLayer->SetSelectedEntity(currentFocusingTree);
                             m_selectedTree = currentFocusingTree;
+                            if(scene->IsEntityValid(m_selectedTree)) m_treeVisualizer.Reset(scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock()->m_treeModel.m_treeStructure);
                             m_needFlowUpdate = true;
                         }
 #pragma endregion
@@ -218,41 +220,23 @@ void TreeVisualizationLayer::OnInspect() {
         if (m_visualization) {
             ImGui::Checkbox("Display Flows", &m_displayTrees);
             ImGui::Checkbox("Display Bounding Box", &m_displayBoundingBox);
+
+            if(scene->IsEntityValid(m_selectedTree)) {
+                m_treeVisualizer.OnInspect(
+                        scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock()->m_treeModel.m_treeStructure, scene->GetDataComponent<GlobalTransform>(m_selectedTree));
+            }
         }
         if (treeEntities && !treeEntities->empty()) {
-            if (ImGui::Button("Grow all")) {
-                float time = Application::Time().CurrentTime();
-                std::vector<std::shared_future<void>> results;
-                Jobs::ParallelFor(treeEntities->size(), [&](unsigned i) {
-                    auto treeEntity = treeEntities->at(i);
-                    auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
-                    auto treeDescriptor = tree->m_treeDescriptor.Get<TreeDescriptor>();
-                    if (!treeDescriptor) return;
-                    auto &treeModel = tree->m_treeModel;
-                    if (m_enableHistory) treeModel.m_treeStructure.Step();
-                    treeModel.Grow({999}, treeDescriptor->m_treeStructuralGrowthParameters);
-                }, results);
-                for (auto &i: results) i.wait();
-                m_lastUsedTime = Application::Time().CurrentTime() - time;
-                m_totalTime += m_lastUsedTime;
-            }
-            if (ImGui::Button("Grow all 5 iterations")) {
-                float time = Application::Time().CurrentTime();
-                for (int j = 0; j < 5; j++) {
-                    std::vector<std::shared_future<void>> results;
-                    Jobs::ParallelFor(treeEntities->size(), [&](unsigned i) {
-                        auto treeEntity = treeEntities->at(i);
-                        auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
-                        auto treeDescriptor = tree->m_treeDescriptor.Get<TreeDescriptor>();
-                        if (!treeDescriptor) return;
-                        auto &treeModel = tree->m_treeModel;
-                        if (m_enableHistory) treeModel.m_treeStructure.Step();
-                        treeModel.Grow({999}, treeDescriptor->m_treeStructuralGrowthParameters);
-                    }, results);
-                    for (auto &i: results) i.wait();
+            ImGui::Checkbox("Auto grow", &m_autoGrow);
+            if(!m_autoGrow) {
+                if (ImGui::Button("Grow all")) {
+                    GrowAllTrees();
                 }
-                m_lastUsedTime = Application::Time().CurrentTime() - time;
-                m_totalTime += m_lastUsedTime;
+                if (ImGui::Button("Grow all 10 iterations")) {
+                    for (int j = 0; j < 10; j++) {
+                        GrowAllTrees();
+                    }
+                }
             }
             ImGui::Text("Growth time: %.4f", m_lastUsedTime);
             ImGui::Text("Total time: %.4f", m_totalTime);
@@ -262,4 +246,32 @@ void TreeVisualizationLayer::OnInspect() {
         }
     }
     ImGui::End();
+}
+
+void TreeVisualizationLayer::FixedUpdate() {
+    if(m_autoGrow){
+        GrowAllTrees();
+    }
+}
+
+void TreeVisualizationLayer::GrowAllTrees() {
+    auto scene = GetScene();
+    const std::vector<Entity> *treeEntities =
+            scene->UnsafeGetPrivateComponentOwnersList<Tree>();
+    if (treeEntities && !treeEntities->empty()) {
+        float time = Application::Time().CurrentTime();
+        std::vector<std::shared_future<void>> results;
+        Jobs::ParallelFor(treeEntities->size(), [&](unsigned i) {
+            auto treeEntity = treeEntities->at(i);
+            auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
+            tree->TryGrow();
+        }, results);
+        for (auto &i: results) i.wait();
+        m_lastUsedTime = Application::Time().CurrentTime() - time;
+        m_totalTime += m_lastUsedTime;
+
+        if(scene->IsEntityValid(m_selectedTree)){
+            m_treeVisualizer.Reset(scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock()->m_treeModel.m_treeStructure);
+        }
+    }
 }

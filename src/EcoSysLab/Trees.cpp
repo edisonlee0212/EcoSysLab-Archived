@@ -13,6 +13,8 @@ void Trees::OnInspect() {
     static glm::ivec2 gridSize = {8, 8};
     static glm::vec2 gridDistance = {20, 20};
     static bool setParent = true;
+    static bool enableHistory = true;
+    ImGui::Checkbox("Enable history", &enableHistory);
     ImGui::DragInt2("Grid size", &gridSize.x, 1, 0, 100);
     ImGui::DragFloat2("Grid distance", &gridDistance.x, 0.1f, 0.0f, 100.0f);
     if (ImGui::Button("Reset Grid")) {
@@ -40,6 +42,7 @@ void Trees::OnInspect() {
                 scene->SetDataComponent(treeEntity, gt);
                 auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
                 tree->m_treeDescriptor = m_treeDescriptor;
+                if(enableHistory) tree->m_enableHistory = enableHistory;
                 if(setParent) scene->SetParent(treeEntity, parent);
             }
         }

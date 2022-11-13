@@ -37,8 +37,7 @@ namespace EcoSysLab {
 
     public:
         void
-        SyncMatrices(const TreeSkeleton <SkeletonData, BranchData, InternodeData> &treeSkeleton,
-                     const GlobalTransform &globalTransform);
+        SyncMatrices(const TreeSkeleton <SkeletonData, BranchData, InternodeData> &treeSkeleton);
 
         int m_iteration = 0;
 
@@ -46,7 +45,7 @@ namespace EcoSysLab {
         OnInspect(TreeStructure <SkeletonData, BranchData, InternodeData> &treeStructure,
                   const GlobalTransform &globalTransform);
 
-        void Reset();
+        void Reset(TreeStructure <SkeletonData, BranchData, InternodeData> &treeStructure);
     };
 
     template<typename SkeletonData, typename BranchData, typename InternodeData>
@@ -190,7 +189,7 @@ namespace EcoSysLab {
                 if (RayCastSelection(treeSkeleton, globalTransform)) needUpdate = true;
             }
             if (needUpdate) {
-                SyncMatrices(treeSkeleton, globalTransform);
+                SyncMatrices(treeSkeleton);
             }
             if (!m_matrices.empty()) {
                 auto editorLayer = Application::GetLayer<EditorLayer>();
@@ -202,7 +201,7 @@ namespace EcoSysLab {
                         editorLayer->m_sceneCameraRotation,
                         *reinterpret_cast<std::vector<glm::vec4> *>(&m_colors),
                         *reinterpret_cast<std::vector<glm::mat4> *>(&m_matrices),
-                        glm::mat4(1.0f), 1.0f, m_gizmoSettings);
+                        globalTransform.m_value, 1.0f, m_gizmoSettings);
             }
         }
         return needUpdate;
@@ -285,11 +284,11 @@ namespace EcoSysLab {
     }
 
     template<typename SkeletonData, typename BranchData, typename InternodeData>
-    void TreeVisualizer<SkeletonData, BranchData, InternodeData>::Reset() {
+    void TreeVisualizer<SkeletonData, BranchData, InternodeData>::Reset(TreeStructure <SkeletonData, BranchData, InternodeData> &treeStructure) {
         m_version = -1;
         m_selectedInternodeHandle = -1;
         m_selectedInternodeHierarchyList.clear();
-        m_iteration = 0;
+        m_iteration = treeStructure.CurrentIteration();
         m_matrices.clear();
     }
 
@@ -423,8 +422,7 @@ namespace EcoSysLab {
     template<typename SkeletonData, typename BranchData, typename InternodeData>
     void
     TreeVisualizer<SkeletonData, BranchData, InternodeData>::SyncMatrices(
-            const TreeSkeleton <SkeletonData, BranchData, InternodeData> &treeSkeleton,
-            const GlobalTransform &globalTransform) {
+            const TreeSkeleton <SkeletonData, BranchData, InternodeData> &treeSkeleton) {
         static std::vector<glm::vec4> randomColors;
         if (randomColors.empty()) {
             for (int i = 0; i < 100; i++) {
@@ -441,8 +439,8 @@ namespace EcoSysLab {
         Jobs::ParallelFor(sortedInternodeList.size(), [&](unsigned i) {
             auto internodeHandle = sortedInternodeList[i];
             const auto &internode = treeSkeleton.PeekInternode(internodeHandle);
-            auto rotation = globalTransform.GetRotation() * internode.m_info.m_globalRotation;
-            glm::vec3 translation = (globalTransform.m_value * glm::translate(internode.m_info.m_globalPosition))[3];
+            auto rotation = internode.m_info.m_globalRotation;
+            glm::vec3 translation = (glm::translate(internode.m_info.m_globalPosition))[3];
             const auto direction = glm::normalize(rotation * glm::vec3(0, 0, -1));
             const glm::vec3 position2 =
                     translation + internode.m_info.m_length * direction;

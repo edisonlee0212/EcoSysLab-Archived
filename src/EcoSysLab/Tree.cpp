@@ -7,55 +7,32 @@
 #include "EditorLayer.hpp"
 #include "Application.hpp"
 #include "BranchMeshGenerator.hpp"
+#include "TreeVisualizationLayer.hpp"
 
 using namespace EcoSysLab;
 
 void Tree::OnInspect() {
-    static Handle handle;
-    static TreeVisualizer<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> treeVisualizer;
     static MeshGeneratorSettings meshGeneratorSettings;
-    static GlobalTransform globalTransform;
+    bool modelChanged = false;
     if (Editor::DragAndDropButton<TreeDescriptor>(m_treeDescriptor, "TreeDescriptor", true)) {
         m_treeModel.Clear();
-        treeVisualizer.Reset();
-    }
-    if (GetHandle() != handle) {
-        treeVisualizer.Reset();
-        treeVisualizer.m_iteration = m_treeModel.m_treeStructure.CurrentIteration();
-        handle = GetHandle();
-    }
-    auto tempGlobalTransform = GetScene()->GetDataComponent<GlobalTransform>(GetOwner());
-    if (tempGlobalTransform.m_value != globalTransform.m_value) {
-        globalTransform = tempGlobalTransform;
-        treeVisualizer.SyncMatrices(m_treeModel.m_treeStructure.Peek(treeVisualizer.m_iteration), globalTransform);
+        modelChanged = true;
     }
     if (m_treeDescriptor.Get<TreeDescriptor>()) {
         auto &parameters = m_treeDescriptor.Get<TreeDescriptor>()->m_treeStructuralGrowthParameters;
         ImGui::Checkbox("Enable History", &m_enableHistory);
-        static GrowthNutrients growthNutrients = {999.0f};
-        ImGui::DragFloat("Water", &growthNutrients.m_water, 1.0f, 0.0f, 99999.0f);
+        ImGui::DragFloat("Water", &m_growthNutrients.m_water, 1.0f, 0.0f, 99999.0f);
 
         if (ImGui::Button("Grow")) {
-            if (m_enableHistory) m_treeModel.m_treeStructure.Step();
-            m_treeModel.Grow(growthNutrients, parameters);
-            treeVisualizer.Reset();
-            treeVisualizer.m_iteration = m_treeModel.m_treeStructure.CurrentIteration();
+            TryGrow();
+            modelChanged = true;
         }
-        if (ImGui::Button("Grow 5 iterations")) {
-            if (m_enableHistory) m_treeModel.m_treeStructure.Step();
-            m_treeModel.Grow(growthNutrients, parameters);
-            if (m_enableHistory) m_treeModel.m_treeStructure.Step();
-            m_treeModel.Grow(growthNutrients, parameters);
-            if (m_enableHistory) m_treeModel.m_treeStructure.Step();
-            m_treeModel.Grow(growthNutrients, parameters);
-            if (m_enableHistory) m_treeModel.m_treeStructure.Step();
-            m_treeModel.Grow(growthNutrients, parameters);
-            if (m_enableHistory) m_treeModel.m_treeStructure.Step();
-            m_treeModel.Grow(growthNutrients, parameters);
-            treeVisualizer.Reset();
-            treeVisualizer.m_iteration = m_treeModel.m_treeStructure.CurrentIteration();
+        static int iterations = 5;
+        ImGui::DragInt("Iterations", &iterations, 1, 1, 100);
+        if (ImGui::Button(("Grow " + std::to_string(iterations) + " iterations").c_str())) {
+            for (int i = 0; i < iterations; i++) TryGrow();
+            modelChanged = true;
         }
-        treeVisualizer.OnInspect(m_treeModel.m_treeStructure, globalTransform);
         if (ImGui::Button("Generate Mesh")) {
             std::vector<Vertex> vertices;
             std::vector<unsigned int> indices;
@@ -71,7 +48,13 @@ void Tree::OnInspect() {
         }
         if (ImGui::Button("Clear")) {
             m_treeModel.Clear();
-            treeVisualizer.Reset();
+            modelChanged = true;
+        }
+    }
+    if (modelChanged) {
+        auto treeVisualizationLayer = Application::GetLayer<TreeVisualizationLayer>();
+        if (treeVisualizationLayer && treeVisualizationLayer->m_selectedTree == GetOwner()) {
+            treeVisualizationLayer->m_treeVisualizer.Reset(m_treeModel.m_treeStructure);
         }
     }
 }
@@ -81,6 +64,16 @@ void Tree::OnCreate() {
 
 void Tree::OnDestroy() {
     m_treeModel.Clear();
+    m_growthNutrients = {999};
+    m_treeDescriptor.Clear();
+    m_enableHistory = true;
+}
+
+bool Tree::TryGrow() {
+    auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
+    if (!treeDescriptor) return false;
+    if (m_enableHistory) m_treeModel.m_treeStructure.Step();
+    return m_treeModel.Grow(m_growthNutrients, treeDescriptor->m_treeStructuralGrowthParameters);
 }
 
 void TreeDescriptor::OnCreate() {
