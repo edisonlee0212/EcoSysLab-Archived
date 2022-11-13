@@ -220,11 +220,6 @@ void TreeVisualizationLayer::OnInspect() {
         if (m_visualization) {
             ImGui::Checkbox("Display Flows", &m_displayTrees);
             ImGui::Checkbox("Display Bounding Box", &m_displayBoundingBox);
-
-            if(scene->IsEntityValid(m_selectedTree)) {
-                m_treeVisualizer.OnInspect(
-                        scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock()->m_treeModel.m_treeStructure, scene->GetDataComponent<GlobalTransform>(m_selectedTree));
-            }
         }
         if (treeEntities && !treeEntities->empty()) {
             ImGui::Checkbox("Auto grow", &m_autoGrow);
@@ -232,17 +227,22 @@ void TreeVisualizationLayer::OnInspect() {
                 if (ImGui::Button("Grow all")) {
                     GrowAllTrees();
                 }
-                if (ImGui::Button("Grow all 10 iterations")) {
-                    for (int j = 0; j < 10; j++) {
-                        GrowAllTrees();
-                    }
+                static int iterations = 5;
+                ImGui::DragInt("Iterations", &iterations, 1, 1, 100);
+                if (ImGui::Button(("Grow all " + std::to_string(iterations) + " iterations").c_str())) {
+                    for (int i = 0; i < iterations; i++) GrowAllTrees();
                 }
             }
             ImGui::Text("Growth time: %.4f", m_lastUsedTime);
             ImGui::Text("Total time: %.4f", m_totalTime);
             ImGui::Text("Tree count: %d", treeEntities->size());
-            ImGui::Text("Internode size: %d", m_internodeSize);
-            ImGui::Text("Flow size: %d", m_flowSize);
+            ImGui::Text("Total Internode size: %d", m_internodeSize);
+            ImGui::Text("Total Flow size: %d", m_flowSize);
+        }
+
+        if(scene->IsEntityValid(m_selectedTree)) {
+            m_treeVisualizer.OnInspect(
+                    scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock()->m_treeModel.m_treeStructure, scene->GetDataComponent<GlobalTransform>(m_selectedTree));
         }
     }
     ImGui::End();

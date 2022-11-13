@@ -136,50 +136,52 @@ namespace EcoSysLab {
             TreeStructure <SkeletonData, BranchData, InternodeData> &treeStructure,
             const GlobalTransform &globalTransform) {
         bool needUpdate = false;
-        if (treeStructure.CurrentIteration() > 0) {
-            if (ImGui::TreeNodeEx("History", ImGuiTreeNodeFlags_DefaultOpen)) {
-                if (ImGui::SliderInt("Iteration", &m_iteration, 0, treeStructure.CurrentIteration())) {
-                    m_iteration = glm::clamp(m_iteration, 0, treeStructure.CurrentIteration());
-                    m_selectedInternodeHandle = -1;
-                    m_selectedInternodeHierarchyList.clear();
+        const auto &treeSkeleton = treeStructure.Peek(m_iteration);
+        if (ImGui::TreeNodeEx("Current selected tree", ImGuiTreeNodeFlags_DefaultOpen)) {
+            if (treeStructure.CurrentIteration() > 0) {
+                if (ImGui::TreeNodeEx("History", ImGuiTreeNodeFlags_DefaultOpen)) {
+                    if (ImGui::SliderInt("Iteration", &m_iteration, 0, treeStructure.CurrentIteration())) {
+                        m_iteration = glm::clamp(m_iteration, 0, treeStructure.CurrentIteration());
+                        m_selectedInternodeHandle = -1;
+                        m_selectedInternodeHierarchyList.clear();
+                    }
+                    if (m_iteration != treeStructure.CurrentIteration() && ImGui::Button("Reverse")) {
+                        treeStructure.Reverse(m_iteration);
+                    }
+                    ImGui::TreePop();
                 }
-                if (m_iteration != treeStructure.CurrentIteration() && ImGui::Button("Reverse")) {
-                    treeStructure.Reverse(m_iteration);
-                }
+            }
+
+            if (ImGui::TreeNodeEx("Settings")) {
+                ImGui::Checkbox("Visualization", &m_visualization);
+                ImGui::Checkbox("Tree Hierarchy", &m_treeHierarchyGui);
                 ImGui::TreePop();
             }
-        }
 
-        if (ImGui::TreeNodeEx("Settings", ImGuiTreeNodeFlags_DefaultOpen)) {
-            ImGui::Checkbox("Visualization", &m_visualization);
-            ImGui::Checkbox("Tree Hierarchy", &m_treeHierarchyGui);
+            if (m_treeHierarchyGui) {
+                if (ImGui::TreeNodeEx("Tree Hierarchy")) {
+                    bool deleted = false;
+                    if (m_iteration == treeStructure.CurrentIteration())
+                        needUpdate = DrawInternodeInspectionGui(treeStructure, 0, deleted, 0);
+                    else PeekInternodeInspectionGui(treeStructure.Peek(m_iteration), 0, 0);
+                    m_selectedInternodeHierarchyList.clear();
+                    ImGui::TreePop();
+                }
+            }
+            if (m_treeHierarchyGui) {
+                if (m_selectedInternodeHandle >= 0) {
+                    const auto &internode = treeSkeleton.PeekInternode(m_selectedInternodeHandle);
+                    InspectInternode(internode);
+                }
+            }
+
             ImGui::TreePop();
-        }
-
-        if (m_treeHierarchyGui) {
-            if (ImGui::Begin("Tree Hierarchy")) {
-                bool deleted = false;
-                if (m_iteration == treeStructure.CurrentIteration())
-                    needUpdate = DrawInternodeInspectionGui(treeStructure, 0, deleted, 0);
-                else PeekInternodeInspectionGui(treeStructure.Peek(m_iteration), 0, 0);
-                m_selectedInternodeHierarchyList.clear();
-            }
-            ImGui::End();
-
-        }
-
-        const auto &treeSkeleton = treeStructure.Peek(m_iteration);
-        if (m_treeHierarchyGui) {
-            if (m_selectedInternodeHandle >= 0) {
-                const auto &internode = treeSkeleton.PeekInternode(m_selectedInternodeHandle);
-                InspectInternode(internode);
-            }
         }
         if (m_visualization) {
             const auto &sortedBranchList = treeSkeleton.RefSortedFlowList();
             const auto &sortedInternodeList = treeSkeleton.RefSortedInternodeList();
             ImGui::Text("Internode count: %d", sortedInternodeList.size());
-            ImGui::Text("Branch count: %d", sortedBranchList.size());
+            ImGui::Text("Flow count: %d", sortedBranchList.size());
             if (treeSkeleton.GetVersion() != m_version) {
                 needUpdate = true;
                 m_iteration = treeStructure.CurrentIteration();
@@ -284,7 +286,8 @@ namespace EcoSysLab {
     }
 
     template<typename SkeletonData, typename BranchData, typename InternodeData>
-    void TreeVisualizer<SkeletonData, BranchData, InternodeData>::Reset(TreeStructure <SkeletonData, BranchData, InternodeData> &treeStructure) {
+    void TreeVisualizer<SkeletonData, BranchData, InternodeData>::Reset(
+            TreeStructure <SkeletonData, BranchData, InternodeData> &treeStructure) {
         m_version = -1;
         m_selectedInternodeHandle = -1;
         m_selectedInternodeHierarchyList.clear();

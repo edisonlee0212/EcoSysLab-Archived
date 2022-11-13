@@ -123,7 +123,7 @@ bool TreeModel::GrowInternode(InternodeHandle internodeHandle, const TreeStructu
             } else {
                 float waterReceived = bud.m_productiveResourceRequirement;
                 auto growthRate = parameters.GetGrowthRate(internode);
-                float elongateLength = waterReceived * growthRate;
+                float elongateLength = waterReceived * parameters.GetInternodeLength(internode) * growthRate;
                 float collectedInhibitor = 0.0f;
                 auto dd = parameters.GetApicalDominanceDecrease(internode);
                 graphChanged = GrowShoots(elongateLength, internodeHandle, parameters, collectedInhibitor);
@@ -136,7 +136,7 @@ bool TreeModel::GrowInternode(InternodeHandle internodeHandle, const TreeStructu
                 if (parameters.GetLateralBudKillProbability(internode) > glm::linearRand(0.0f, 1.0f)) {
                     bud.m_status = BudStatus::Died;
                 } else {
-                    float flushProbability = parameters.GetLateralBudFlushingProbability(internode) * parameters.GetGrowthRate(internode) / parameters.GetInternodeLength(internode);
+                    float flushProbability = parameters.GetLateralBudFlushingProbability(internode) * parameters.GetGrowthRate(internode);
                     flushProbability /= (1.0f + internodeData.m_inhibitor);
                     if (flushProbability >= glm::linearRand(0.0f, 1.0f)) {
                         graphChanged = true;
@@ -280,7 +280,8 @@ bool TreeModel::Grow(const GrowthNutrients &growthNutrients, const TreeStructura
             auto &internode = skeleton.RefInternode(internodeHandle);
             //Pruning here.
             if (internode.IsRecycled()) continue;
-            graphChangedDuringGrowth = graphChangedDuringGrowth || LowBranchPruning(maxDistance, internodeHandle, parameters);
+            const bool graphChanged = LowBranchPruning(maxDistance, internodeHandle, parameters);
+            graphChangedDuringGrowth = graphChangedDuringGrowth || graphChanged;
         }
 
     }
@@ -335,7 +336,8 @@ bool TreeModel::Grow(const GrowthNutrients &growthNutrients, const TreeStructura
             }
         }
         for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); it++) {
-            graphChangedDuringGrowth = graphChangedDuringGrowth || GrowInternode(*it, parameters, growthNutrients);
+            const bool graphChanged = GrowInternode(*it, parameters, growthNutrients);
+            graphChangedDuringGrowth = graphChangedDuringGrowth || graphChanged;
         }
     }
 #pragma endregion
