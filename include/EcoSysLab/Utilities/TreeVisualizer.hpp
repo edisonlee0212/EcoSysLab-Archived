@@ -196,6 +196,7 @@ namespace EcoSysLab {
                 treeStructure.Skeleton().RecycleInternode(m_selectedInternodeHandle);
                 treeStructure.Skeleton().SortLists();
                 m_iteration = treeStructure.CurrentIteration();
+                m_selectedInternodeHandle = -1;
                 needUpdate = true;
             }
             if (needUpdate) {
