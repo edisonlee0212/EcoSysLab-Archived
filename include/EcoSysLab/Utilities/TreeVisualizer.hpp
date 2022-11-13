@@ -190,6 +190,14 @@ namespace EcoSysLab {
                                          Windows::GetWindow())) {
                 if (RayCastSelection(treeSkeleton, globalTransform)) needUpdate = true;
             }
+            if (m_iteration == treeStructure.CurrentIteration() && m_selectedInternodeHandle > 0 && Inputs::GetKeyInternal(GLFW_KEY_DELETE,
+                                                                        Windows::GetWindow())){
+                treeStructure.Step();
+                treeStructure.Skeleton().RecycleInternode(m_selectedInternodeHandle);
+                treeStructure.Skeleton().SortLists();
+                m_iteration = treeStructure.CurrentIteration();
+                needUpdate = true;
+            }
             if (needUpdate) {
                 SyncMatrices(treeSkeleton);
             }
@@ -206,6 +214,7 @@ namespace EcoSysLab {
                         globalTransform.m_value, 1.0f, m_gizmoSettings);
             }
         }
+
         return needUpdate;
     }
 
