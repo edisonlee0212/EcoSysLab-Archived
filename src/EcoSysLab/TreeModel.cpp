@@ -273,7 +273,7 @@ bool TreeModel::Grow(const GrowthNutrients &growthNutrients, const TreeStructura
         Initialize(parameters);
         graphChangedDuringGrowth = true;
     }
-    {
+    if(false){
         const auto &sortedInternodeList = skeleton.RefSortedInternodeList();
         const auto maxDistance = skeleton.RefInternode(sortedInternodeList.front()).m_data.m_maxDistanceToAnyBranchEnd;
         for (const auto &internodeHandle: sortedInternodeList) {

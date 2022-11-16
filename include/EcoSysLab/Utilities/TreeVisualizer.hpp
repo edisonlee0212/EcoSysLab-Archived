@@ -33,7 +33,7 @@ namespace EcoSysLab {
                                         const unsigned &hierarchyLevel);
 
         void
-        InspectInternode(const Internode <InternodeData> &internode);
+        InspectInternode(const TreeSkeleton <SkeletonData, BranchData, InternodeData> &treeSkeleton, InternodeHandle internodeHandle);
 
     public:
         void
@@ -170,8 +170,7 @@ namespace EcoSysLab {
             }
             if (m_treeHierarchyGui) {
                 if (m_selectedInternodeHandle >= 0) {
-                    const auto &internode = treeSkeleton.PeekInternode(m_selectedInternodeHandle);
-                    InspectInternode(internode);
+                    InspectInternode(treeSkeleton, m_selectedInternodeHandle);
                 }
             }
 
@@ -221,73 +220,91 @@ namespace EcoSysLab {
 
     template<typename SkeletonData, typename BranchData, typename InternodeData>
     void
-    TreeVisualizer<SkeletonData, BranchData, InternodeData>::InspectInternode(const
-                                                                              Internode <InternodeData> &internode) {
+    TreeVisualizer<SkeletonData, BranchData, InternodeData>::InspectInternode(const TreeSkeleton <SkeletonData, BranchData, InternodeData> &treeSkeleton, InternodeHandle internodeHandle) {
         if (ImGui::Begin("Internode Inspector")) {
-            ImGui::Text("Thickness: %.3f", internode.m_info.m_thickness);
-            ImGui::Text("Length: %.3f", internode.m_info.m_length);
-            ImGui::InputFloat3("Position", (float *) &internode.m_info.m_globalPosition.x, "%.3f",
-                               ImGuiInputTextFlags_ReadOnly);
-            auto globalRotationAngle = glm::eulerAngles(internode.m_info.m_globalRotation);
-            ImGui::InputFloat3("Global rotation", (float *) &globalRotationAngle.x, "%.3f",
-                               ImGuiInputTextFlags_ReadOnly);
-            auto localRotationAngle = glm::eulerAngles(internode.m_info.m_localRotation);
-            ImGui::InputFloat3("Local rotation", (float *) &localRotationAngle.x, "%.3f",
-                               ImGuiInputTextFlags_ReadOnly);
-            auto &internodeData = internode.m_data;
-            ImGui::InputInt("Age", (int *) &internodeData.m_age, 1, 100, ImGuiInputTextFlags_ReadOnly);
-            ImGui::InputFloat("Inhibitor", (float *) &internodeData.m_inhibitor, 1, 100, "%.3f",
-                              ImGuiInputTextFlags_ReadOnly);
-            ImGui::InputFloat("Sagging", (float *) &internodeData.m_sagging, 1, 100, "%.3f",
-                              ImGuiInputTextFlags_ReadOnly);
-            ImGui::InputFloat("Distance to end", (float *) &internodeData.m_maxDistanceToAnyBranchEnd, 1, 100,
-                              "%.3f",
-                              ImGuiInputTextFlags_ReadOnly);
-            ImGui::InputFloat("Level", (float *) &internodeData.m_level, 1, 100, "%.3f",
-                              ImGuiInputTextFlags_ReadOnly);
-            ImGui::InputFloat("Child biomass", (float *) &internodeData.m_childTotalBiomass, 1, 100, "%.3f",
-                              ImGuiInputTextFlags_ReadOnly);
-            ImGui::InputFloat("Root distance", (float *) &internodeData.m_rootDistance, 1, 100, "%.3f",
-                              ImGuiInputTextFlags_ReadOnly);
-            ImGui::InputFloat3("Light dir", (float *) &internodeData.m_lightDirection.x, "%.3f",
-                               ImGuiInputTextFlags_ReadOnly);
-            ImGui::InputFloat("Light intensity", (float *) &internodeData.m_lightIntensity, 1, 100, "%.3f",
-                              ImGuiInputTextFlags_ReadOnly);
+            const auto& internode = treeSkeleton.PeekInternode(internodeHandle);
+            if(ImGui::TreeNode("Internode info")) {
+                ImGui::Text("Thickness: %.3f", internode.m_info.m_thickness);
+                ImGui::Text("Length: %.3f", internode.m_info.m_length);
+                ImGui::InputFloat3("Position", (float *) &internode.m_info.m_globalPosition.x, "%.3f",
+                                   ImGuiInputTextFlags_ReadOnly);
+                auto globalRotationAngle = glm::eulerAngles(internode.m_info.m_globalRotation);
+                ImGui::InputFloat3("Global rotation", (float *) &globalRotationAngle.x, "%.3f",
+                                   ImGuiInputTextFlags_ReadOnly);
+                auto localRotationAngle = glm::eulerAngles(internode.m_info.m_localRotation);
+                ImGui::InputFloat3("Local rotation", (float *) &localRotationAngle.x, "%.3f",
+                                   ImGuiInputTextFlags_ReadOnly);
+                auto &internodeData = internode.m_data;
+                ImGui::InputInt("Age", (int *) &internodeData.m_age, 1, 100, ImGuiInputTextFlags_ReadOnly);
+                ImGui::InputFloat("Inhibitor", (float *) &internodeData.m_inhibitor, 1, 100, "%.3f",
+                                  ImGuiInputTextFlags_ReadOnly);
+                ImGui::InputFloat("Sagging", (float *) &internodeData.m_sagging, 1, 100, "%.3f",
+                                  ImGuiInputTextFlags_ReadOnly);
+                ImGui::InputFloat("Distance to end", (float *) &internodeData.m_maxDistanceToAnyBranchEnd, 1, 100,
+                                  "%.3f",
+                                  ImGuiInputTextFlags_ReadOnly);
+                ImGui::InputFloat("Level", (float *) &internodeData.m_level, 1, 100, "%.3f",
+                                  ImGuiInputTextFlags_ReadOnly);
+                ImGui::InputFloat("Child biomass", (float *) &internodeData.m_childTotalBiomass, 1, 100, "%.3f",
+                                  ImGuiInputTextFlags_ReadOnly);
+                ImGui::InputFloat("Root distance", (float *) &internodeData.m_rootDistance, 1, 100, "%.3f",
+                                  ImGuiInputTextFlags_ReadOnly);
+                ImGui::InputFloat3("Light dir", (float *) &internodeData.m_lightDirection.x, "%.3f",
+                                   ImGuiInputTextFlags_ReadOnly);
+                ImGui::InputFloat("Light intensity", (float *) &internodeData.m_lightIntensity, 1, 100, "%.3f",
+                                  ImGuiInputTextFlags_ReadOnly);
 
-            if (ImGui::TreeNodeEx("Buds")) {
-                for (auto &bud: internodeData.m_buds) {
-                    switch (bud.m_type) {
-                        case BudType::Apical:
-                            ImGui::Text("Apical");
-                            break;
-                        case BudType::Lateral:
-                            ImGui::Text("Lateral");
-                            break;
-                        case BudType::Leaf:
-                            ImGui::Text("Leaf");
-                            break;
-                        case BudType::Fruit:
-                            ImGui::Text("Fruit");
-                            break;
-                    }
-                    switch (bud.m_status) {
-                        case BudStatus::Dormant:
-                            ImGui::Text("Dormant");
-                            break;
-                        case BudStatus::Flushed:
-                            ImGui::Text("Flushed");
-                            break;
-                        case BudStatus::Died:
-                            ImGui::Text("Died");
-                            break;
-                    }
+                if (ImGui::TreeNodeEx("Buds")) {
+                    for (auto &bud: internodeData.m_buds) {
+                        switch (bud.m_type) {
+                            case BudType::Apical:
+                                ImGui::Text("Apical");
+                                break;
+                            case BudType::Lateral:
+                                ImGui::Text("Lateral");
+                                break;
+                            case BudType::Leaf:
+                                ImGui::Text("Leaf");
+                                break;
+                            case BudType::Fruit:
+                                ImGui::Text("Fruit");
+                                break;
+                        }
+                        switch (bud.m_status) {
+                            case BudStatus::Dormant:
+                                ImGui::Text("Dormant");
+                                break;
+                            case BudStatus::Flushed:
+                                ImGui::Text("Flushed");
+                                break;
+                            case BudStatus::Died:
+                                ImGui::Text("Died");
+                                break;
+                        }
 
-                    auto budRotationAngle = glm::eulerAngles(bud.m_localRotation);
-                    ImGui::InputFloat3("Rotation", &budRotationAngle.x, "%.3f", ImGuiInputTextFlags_ReadOnly);
-                    ImGui::InputFloat("Base resource requirement", (float *) &bud.m_baseResourceRequirement, 1, 100,
-                                      "%.3f", ImGuiInputTextFlags_ReadOnly);
-                    ImGui::InputFloat("Productive resource requirement", (float *) &bud.m_productiveResourceRequirement,
-                                      1, 100, "%.3f", ImGuiInputTextFlags_ReadOnly);
+                        auto budRotationAngle = glm::eulerAngles(bud.m_localRotation);
+                        ImGui::InputFloat3("Rotation", &budRotationAngle.x, "%.3f", ImGuiInputTextFlags_ReadOnly);
+                        ImGui::InputFloat("Base resource requirement", (float *) &bud.m_baseResourceRequirement, 1, 100,
+                                          "%.3f", ImGuiInputTextFlags_ReadOnly);
+                        ImGui::InputFloat("Productive resource requirement",
+                                          (float *) &bud.m_productiveResourceRequirement,
+                                          1, 100, "%.3f", ImGuiInputTextFlags_ReadOnly);
+                    }
+                    ImGui::TreePop();
+                }
+                ImGui::TreePop();
+            }
+            if(ImGui::TreeNodeEx("Flow info", ImGuiTreeNodeFlags_DefaultOpen)){
+                const auto& flow = treeSkeleton.PeekFlow(internode.GetFlowHandle());
+                ImGui::Text("Child flow size: %d", flow.RefChildHandles().size());
+                ImGui::Text("Internode size: %d", flow.RefInternodes().size());
+                if(ImGui::TreeNode("Internodes")){
+                    int i = 0;
+                    for(const auto& chainedInternodeHandle : flow.RefInternodes()){
+                        ImGui::Text("No.%d: Handle: %d", i, chainedInternodeHandle);
+                        i++;
+                    }
+                    ImGui::TreePop();
                 }
                 ImGui::TreePop();
             }

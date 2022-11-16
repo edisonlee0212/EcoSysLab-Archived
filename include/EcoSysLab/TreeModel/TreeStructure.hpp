@@ -422,6 +422,7 @@ namespace EcoSysLab {
             for (const auto &i: m_flows[m_sortedFlowList.back()].m_childHandles) {
                 flowWaitList.push(i);
             }
+
         }
 
         m_sortedInternodeList.clear();
@@ -463,22 +464,21 @@ namespace EcoSysLab {
         if (branching) {
             auto newFlowHandle = AllocateFlow();
             auto &newFlow = m_flows[newFlowHandle];
-            SetParentFlow(newFlowHandle, originalInternode.m_flowHandle);
+
             newInternode.m_flowHandle = newFlowHandle;
             newFlow.m_internodes.emplace_back(newInternodeHandle);
             newFlow.m_apical = false;
-            if (targetHandle != m_flows[originalInternode.m_flowHandle].m_internodes.front()) {
+            if (targetHandle != m_flows[originalInternode.m_flowHandle].m_internodes.back()) {
                 auto extendedFlowHandle = AllocateFlow();
                 auto &extendedFlow = m_flows[extendedFlowHandle];
                 extendedFlow.m_apical = true;
-                SetParentFlow(extendedFlowHandle, originalInternode.m_flowHandle);
                 //Find target internode.
                 auto &originalFlow = m_flows[originalInternode.m_flowHandle];
                 for (auto r = originalFlow.m_internodes.begin(); r != originalFlow.m_internodes.end(); r++) {
                     if (*r == targetHandle) {
-                        extendedFlow.m_internodes.insert(extendedFlow.m_internodes.end(), r,
+                        extendedFlow.m_internodes.insert(extendedFlow.m_internodes.end(), r + 1,
                                                          originalFlow.m_internodes.end());
-                        originalFlow.m_internodes.erase(r, originalFlow.m_internodes.end());
+                        originalFlow.m_internodes.erase(r + 1, originalFlow.m_internodes.end());
                         break;
                     }
                 }
@@ -486,12 +486,21 @@ namespace EcoSysLab {
                     auto &extractedInternode = m_internodes[extractedInternodeHandle];
                     extractedInternode.m_flowHandle = extendedFlowHandle;
                 }
+                extendedFlow.m_childHandles = originalFlow.m_childHandles;
+                originalFlow.m_childHandles.clear();
+                for(const auto& childFlowHandle : extendedFlow.m_childHandles){
+                    m_flows[childFlowHandle].m_parentHandle = extendedFlowHandle;
+                }
+                SetParentFlow(extendedFlowHandle, originalInternode.m_flowHandle);
             }
+            SetParentFlow(newFlowHandle, originalInternode.m_flowHandle);
         } else {
             originalInternode.m_endNode = false;
             flow.m_internodes.emplace_back(newInternodeHandle);
             newInternode.m_flowHandle = originalInternode.m_flowHandle;
         }
+
+
         m_newVersion++;
         return newInternodeHandle;
     }
@@ -509,7 +518,7 @@ namespace EcoSysLab {
         }
         //Detach from parent
         auto parentHandle = flow.m_parentHandle;
-        if (flow.m_parentHandle != -1) DetachChildFlow(flow.m_parentHandle, handle);
+        if (parentHandle != -1) DetachChildFlow(parentHandle, handle);
         //Remove internodes
         if (!flow.m_internodes.empty()) {
             //Detach first internode from parent.
