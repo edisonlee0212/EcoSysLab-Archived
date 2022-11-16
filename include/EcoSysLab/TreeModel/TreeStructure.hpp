@@ -499,8 +499,6 @@ namespace EcoSysLab {
             flow.m_internodes.emplace_back(newInternodeHandle);
             newInternode.m_flowHandle = originalInternode.m_flowHandle;
         }
-
-
         m_newVersion++;
         return newInternodeHandle;
     }
