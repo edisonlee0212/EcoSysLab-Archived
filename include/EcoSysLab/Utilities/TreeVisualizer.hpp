@@ -42,6 +42,7 @@ namespace EcoSysLab {
         InspectInternode(const TreeSkeleton <SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeSkeleton, InternodeHandle internodeHandle);
 
     public:
+
         void
         SyncMatrices(const TreeSkeleton <SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeSkeleton);
 

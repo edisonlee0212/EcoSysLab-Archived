@@ -351,11 +351,13 @@ bool TreeVisualizer::RayCastSelection(
                             (position + position2) / 2.0f;
                     auto dir = cameraRay.m_direction;
                     auto pos = cameraRay.m_start;
-                    const auto radius = internode.m_info.m_thickness;
+                    auto radius = internode.m_info.m_thickness;
                     const auto height = glm::distance(position2,
                                                       position);
+                    radius *= height / internode.m_info.m_length;
                     if (!cameraRay.Intersect(center,
-                                             height / 2.0f))
+                                             height / 2.0f) && !cameraRay.Intersect(center,
+                                                                                    radius))
                         return;
 
 #pragma region Line Line intersection
