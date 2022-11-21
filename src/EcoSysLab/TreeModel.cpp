@@ -2,7 +2,7 @@
 // Created by lllll on 10/21/2022.
 //
 
-#include "TreeModel/TreeModel.hpp"
+#include "TreeModel.hpp"
 
 using namespace EcoSysLab;
 

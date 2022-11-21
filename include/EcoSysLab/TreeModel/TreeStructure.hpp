@@ -217,6 +217,8 @@ namespace EcoSysLab {
          */
         [[nodiscard]] const std::vector<FlowHandle> &RefSortedFlowList() const;
 
+        [[nodiscard]] const std::vector<Flow<FlowData>> &RefRawFlows() const;
+        [[nodiscard]] const std::vector<Internode<InternodeData>> &RefRawInternodes() const;
         /**
          *  Force the structure to sort the internode and flow list.
          *  \n!!You MUST call this after you prune the tree or altered the tree structure manually!!
@@ -833,6 +835,17 @@ namespace EcoSysLab {
                                               (lastInternode.m_info.m_globalRotation * glm::vec3(0, 0, -1));
             flow.m_info.m_globalEndRotation = lastInternode.m_info.m_globalRotation;
         }
+    }
+
+    template<typename SkeletonData, typename FlowData, typename InternodeData>
+    const std::vector<Flow<FlowData>> &TreeSkeleton<SkeletonData, FlowData, InternodeData>::RefRawFlows() const {
+        return m_flows;
+    }
+
+    template<typename SkeletonData, typename FlowData, typename InternodeData>
+    const std::vector<Internode<InternodeData>> &
+    TreeSkeleton<SkeletonData, FlowData, InternodeData>::RefRawInternodes() const {
+        return m_internodes;
     }
 
 #pragma endregion

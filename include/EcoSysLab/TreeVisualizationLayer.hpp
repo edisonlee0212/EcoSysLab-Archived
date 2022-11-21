@@ -38,7 +38,7 @@ namespace EcoSysLab {
         void OnInspect() override;
     public:
         Entity m_selectedTree = {};
-        TreeVisualizer<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> m_treeVisualizer;
+        TreeVisualizer m_treeVisualizer;
         void GrowAllTrees();
     };
 }
