@@ -67,7 +67,7 @@ bool TreeModel::GrowShoots(float extendLength, InternodeHandle internodeHandle,
         auto &oldInternode = skeleton.RefInternode(internodeHandle);
         auto &newInternode = skeleton.RefInternode(newInternodeHandle);
         newInternode.m_data.Clear();
-        newInternode.m_data.m_inhibitor = parameters.GetApicalDominanceBase(newInternode);
+        newInternode.m_data.m_inhibitorTarget = newInternode.m_data.m_inhibitor = parameters.GetApicalDominanceBase(newInternode);
         newInternode.m_info.m_length = glm::clamp(extendLength, 0.0f, internodeLength);
         newInternode.m_info.m_thickness = parameters.GetEndNodeThickness(newInternode);
         newInternode.m_info.m_localRotation = newInternode.m_data.m_desiredLocalRotation =
@@ -88,7 +88,7 @@ bool TreeModel::GrowShoots(float extendLength, InternodeHandle internodeHandle,
             GrowShoots(extraLength - internodeLength, newInternodeHandle, parameters, childInhibitor);
             childInhibitor *= parameters.GetApicalDominanceDecrease(newInternode);
             collectedInhibitor += childInhibitor;
-            skeleton.RefInternode(newInternodeHandle).m_data.m_inhibitor = childInhibitor;
+            skeleton.RefInternode(newInternodeHandle).m_data.m_inhibitorTarget = childInhibitor;
         } else {
             collectedInhibitor += parameters.GetApicalDominanceBase(newInternode);
         }
@@ -107,9 +107,9 @@ bool TreeModel::GrowInternode(InternodeHandle internodeHandle, const TreeStructu
     {
         auto &internode = skeleton.RefInternode(internodeHandle);
         auto &internodeData = internode.m_data;
-        internodeData.m_inhibitor = 0;
+        internodeData.m_inhibitorTarget = 0;
         for (const auto &childHandle: internode.RefChildHandles()) {
-            internodeData.m_inhibitor += skeleton.RefInternode(childHandle).m_data.m_inhibitor *
+            internodeData.m_inhibitorTarget += skeleton.RefInternode(childHandle).m_data.m_inhibitor *
                                          parameters.GetApicalDominanceDecrease(internode);
         }
     }
@@ -127,7 +127,7 @@ bool TreeModel::GrowInternode(InternodeHandle internodeHandle, const TreeStructu
                 float collectedInhibitor = 0.0f;
                 auto dd = parameters.GetApicalDominanceDecrease(internode);
                 graphChanged = GrowShoots(elongateLength, internodeHandle, parameters, collectedInhibitor);
-                skeleton.RefInternode(internodeHandle).m_data.m_inhibitor += collectedInhibitor * dd;
+                skeleton.RefInternode(internodeHandle).m_data.m_inhibitorTarget += collectedInhibitor * dd;
             }
             //If apical bud is dormant, then there's no lateral bud at this stage. We should quit anyway.
             break;
@@ -171,6 +171,11 @@ bool TreeModel::GrowInternode(InternodeHandle internodeHandle, const TreeStructu
                 }
             }
         }
+    }
+    {
+        auto &internode = skeleton.RefInternode(internodeHandle);
+        auto &internodeData = internode.m_data;
+        internodeData.m_inhibitor = (internodeData.m_inhibitor + internodeData.m_inhibitorTarget) / 2.0f;
     }
     return graphChanged;
 }
