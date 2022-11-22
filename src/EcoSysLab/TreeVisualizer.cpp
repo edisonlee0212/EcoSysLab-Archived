@@ -349,29 +349,27 @@ bool TreeVisualizer::RayCastSelection(
                             position + internode.m_info.m_length * direction;
                     const auto center =
                             (position + position2) / 2.0f;
-                    auto dir = cameraRay.m_direction;
-                    auto pos = cameraRay.m_start;
                     auto radius = internode.m_info.m_thickness;
                     const auto height = glm::distance(position2,
                                                       position);
                     radius *= height / internode.m_info.m_length;
                     if (!cameraRay.Intersect(center,
                                              height / 2.0f) && !cameraRay.Intersect(center,
-                                                                                    radius))
+                                                                                    radius)) {
                         return;
-
+                    }
+                    const auto& dir = -cameraRay.m_direction;
 #pragma region Line Line intersection
                     /*
  * http://geomalgorithms.com/a07-_distance.html
  */
-                    glm::vec3 u = pos - (pos + dir);
                     glm::vec3 v = position - position2;
-                    glm::vec3 w = (pos + dir) - position2;
-                    const auto a = dot(u, u); // always >= 0
-                    const auto b = dot(u, v);
-                    const auto c = dot(v, v); // always >= 0
-                    const auto d = dot(u, w);
-                    const auto e = dot(v, w);
+                    glm::vec3 w = (cameraRay.m_start + dir) - position2;
+                    const auto a = glm::dot(dir, dir); // always >= 0
+                    const auto b = glm::dot(dir, v);
+                    const auto c = glm::dot(v, v); // always >= 0
+                    const auto d = glm::dot(dir, w);
+                    const auto e = glm::dot(v, w);
                     const auto dotP = a * c - b * b; // always >= 0
                     float sc, tc;
                     // compute the line parameters of the two closest points
@@ -383,7 +381,7 @@ bool TreeVisualizer::RayCastSelection(
                         tc = (a * e - b * d) / dotP;
                     }
                     // get the difference of the two closest points
-                    glm::vec3 dP = w + sc * u - tc * v; // =  L1(sc) - L2(tc)
+                    glm::vec3 dP = w + sc * dir - tc * v; // =  L1(sc) - L2(tc)
                     if (glm::length(dP) > radius)
                         return;
 #pragma endregion

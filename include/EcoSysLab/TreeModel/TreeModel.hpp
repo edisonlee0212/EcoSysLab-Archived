@@ -186,7 +186,7 @@ namespace EcoSysLab {
     };
 
     class TreeModel {
-        inline bool LowBranchPruning(float maxDistance, InternodeHandle internodeHandle,
+        bool LowBranchPruning(float maxDistance, InternodeHandle internodeHandle,
                                      const TreeStructuralGrowthParameters &parameters);
 
         inline void CalculateSagging(InternodeHandle internodeHandle,
@@ -204,6 +204,7 @@ namespace EcoSysLab {
         void Initialize(const TreeStructuralGrowthParameters &parameters);
 
         bool m_initialized = false;
+
     public:
         glm::vec3 m_gravityDirection = glm::vec3(0, -1, 0);
         TreeStructure<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> m_treeStructure = {};

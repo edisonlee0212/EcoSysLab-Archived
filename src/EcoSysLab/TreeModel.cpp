@@ -67,7 +67,8 @@ bool TreeModel::GrowShoots(float extendLength, InternodeHandle internodeHandle,
         auto &oldInternode = skeleton.RefInternode(internodeHandle);
         auto &newInternode = skeleton.RefInternode(newInternodeHandle);
         newInternode.m_data.Clear();
-        newInternode.m_data.m_inhibitorTarget = newInternode.m_data.m_inhibitor = parameters.GetApicalDominanceBase(newInternode);
+        newInternode.m_data.m_inhibitorTarget = newInternode.m_data.m_inhibitor = parameters.GetApicalDominanceBase(
+                newInternode);
         newInternode.m_info.m_length = glm::clamp(extendLength, 0.0f, internodeLength);
         newInternode.m_info.m_thickness = parameters.GetEndNodeThickness(newInternode);
         newInternode.m_info.m_localRotation = newInternode.m_data.m_desiredLocalRotation =
@@ -103,16 +104,16 @@ bool TreeModel::GrowInternode(InternodeHandle internodeHandle, const TreeStructu
                               const GrowthNutrients &growthNutrients) {
     bool graphChanged = false;
     auto &skeleton = m_treeStructure.Skeleton();
-    auto &buds = skeleton.RefInternode(internodeHandle).m_data.m_buds;
     {
         auto &internode = skeleton.RefInternode(internodeHandle);
         auto &internodeData = internode.m_data;
         internodeData.m_inhibitorTarget = 0;
         for (const auto &childHandle: internode.RefChildHandles()) {
             internodeData.m_inhibitorTarget += skeleton.RefInternode(childHandle).m_data.m_inhibitor *
-                                         parameters.GetApicalDominanceDecrease(internode);
+                                               parameters.GetApicalDominanceDecrease(internode);
         }
     }
+    auto &buds = skeleton.RefInternode(internodeHandle).m_data.m_buds;
     for (auto &bud: buds) {
         auto &internode = skeleton.RefInternode(internodeHandle);
         auto &internodeData = internode.m_data;
@@ -136,7 +137,8 @@ bool TreeModel::GrowInternode(InternodeHandle internodeHandle, const TreeStructu
                 if (parameters.GetLateralBudKillProbability(internode) > glm::linearRand(0.0f, 1.0f)) {
                     bud.m_status = BudStatus::Died;
                 } else {
-                    float flushProbability = parameters.GetLateralBudFlushingProbability(internode) * parameters.GetGrowthRate(internode);
+                    float flushProbability = parameters.GetLateralBudFlushingProbability(internode) *
+                                             parameters.GetGrowthRate(internode);
                     flushProbability /= (1.0f + internodeData.m_inhibitor);
                     if (flushProbability >= glm::linearRand(0.0f, 1.0f)) {
                         graphChanged = true;
@@ -279,20 +281,14 @@ bool TreeModel::Grow(const GrowthNutrients &growthNutrients, const TreeStructura
         graphChangedDuringGrowth = true;
     }
     {
-        const auto &sortedInternodeList = skeleton.RefSortedInternodeList();
-        const auto maxDistance = skeleton.RefInternode(sortedInternodeList.front()).m_data.m_maxDistanceToAnyBranchEnd;
-        for (const auto &internodeHandle: sortedInternodeList) {
-            auto &internode = skeleton.RefInternode(internodeHandle);
-            //Pruning here.
-            if (internode.IsRecycled()) continue;
-            const bool graphChanged = LowBranchPruning(maxDistance, internodeHandle, parameters);
-            graphChangedDuringGrowth = graphChangedDuringGrowth || graphChanged;
+        const auto maxDistance = skeleton.RefInternode(0).m_data.m_maxDistanceToAnyBranchEnd;
+        if (LowBranchPruning(maxDistance, 0, parameters)) {
+            graphChangedDuringGrowth = true;
         }
-
     }
 #pragma endregion
 #pragma region Grow
-    if(graphChangedDuringGrowth) skeleton.SortLists();
+    if (graphChangedDuringGrowth) skeleton.SortLists();
     structureChanged = graphChangedDuringGrowth;
     graphChangedDuringGrowth = false;
     {
@@ -347,7 +343,7 @@ bool TreeModel::Grow(const GrowthNutrients &growthNutrients, const TreeStructura
     }
 #pragma endregion
 #pragma region Postprocess
-    if(graphChangedDuringGrowth) skeleton.SortLists();
+    if (graphChangedDuringGrowth) skeleton.SortLists();
     structureChanged = graphChangedDuringGrowth;
     {
         skeleton.m_min = glm::vec3(FLT_MAX);
@@ -451,7 +447,13 @@ bool TreeModel::LowBranchPruning(float maxDistance, InternodeHandle internodeHan
         skeleton.RecycleInternode(internodeHandle);
         return true;
     }
-    return false;
+    bool pruned = false;
+    for (const auto &childHandle: internode.RefChildHandles()) {
+        if (LowBranchPruning(maxDistance, childHandle, parameters)) {
+            pruned = true;
+        }
+    }
+    return pruned;
 }
 
 
