@@ -287,7 +287,7 @@ namespace EcoSysLab {
         [[nodiscard]] const TreeSkeleton<SkeletonData, FlowData, InternodeData> &Peek(int iteration) const;
 
         void Step();
-
+        void Pop();
         [[nodiscard]] int CurrentIteration() const;
 
         void Reverse(int iteration);
@@ -379,6 +379,11 @@ namespace EcoSysLab {
     template<typename SkeletonData, typename FlowData, typename InternodeData>
     int TreeStructure<SkeletonData, FlowData, InternodeData>::CurrentIteration() const {
         return m_history.size();
+    }
+
+    template<typename SkeletonData, typename FlowData, typename InternodeData>
+    void TreeStructure<SkeletonData, FlowData, InternodeData>::Pop() {
+        m_history.pop_back();
     }
 
 #pragma endregion
@@ -558,7 +563,6 @@ namespace EcoSysLab {
         auto &flow = m_flows[flowHandle];
         if (handle == flow.m_internodes[0]) {
             RecycleFlow(internode.m_flowHandle);
-
             return;
         }
         //Collect list of subsequent internodes

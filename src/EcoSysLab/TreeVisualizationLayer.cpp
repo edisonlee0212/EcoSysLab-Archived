@@ -224,13 +224,22 @@ void TreeVisualizationLayer::OnInspect() {
         if (treeEntities && !treeEntities->empty()) {
             ImGui::Checkbox("Auto grow", &m_autoGrow);
             if(!m_autoGrow) {
+                bool changed = false;
                 if (ImGui::Button("Grow all")) {
                     GrowAllTrees();
+                    changed = true;
                 }
                 static int iterations = 5;
                 ImGui::DragInt("Iterations", &iterations, 1, 1, 100);
                 if (ImGui::Button(("Grow all " + std::to_string(iterations) + " iterations").c_str())) {
                     for (int i = 0; i < iterations; i++) GrowAllTrees();
+                    changed = true;
+                }
+                if(changed){
+                    if(scene->IsEntityValid(m_selectedTree)) {
+                        m_treeVisualizer.m_iteration = scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock()->m_treeModel.m_treeStructure.CurrentIteration();
+                        m_treeVisualizer.m_needUpdate = true;
+                    }
                 }
             }
             ImGui::Text("Growth time: %.4f", m_lastUsedTime);

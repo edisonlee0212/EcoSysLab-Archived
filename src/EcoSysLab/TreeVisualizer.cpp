@@ -89,8 +89,7 @@ bool
 TreeVisualizer::OnInspect(
         TreeStructure<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeStructure,
         const GlobalTransform &globalTransform) {
-    bool needUpdate = false;
-    const auto &treeSkeleton = treeStructure.Peek(m_iteration);
+    bool updated = false;
     if (ImGui::TreeNodeEx("Current selected tree", ImGuiTreeNodeFlags_DefaultOpen)) {
         if (treeStructure.CurrentIteration() > 0) {
             if (ImGui::TreeNodeEx("History", ImGuiTreeNodeFlags_DefaultOpen)) {
@@ -98,9 +97,11 @@ TreeVisualizer::OnInspect(
                     m_iteration = glm::clamp(m_iteration, 0, treeStructure.CurrentIteration());
                     m_selectedInternodeHandle = -1;
                     m_selectedInternodeHierarchyList.clear();
+                    m_needUpdate = true;
                 }
                 if (m_iteration != treeStructure.CurrentIteration() && ImGui::Button("Reverse")) {
                     treeStructure.Reverse(m_iteration);
+                    m_needUpdate = true;
                 }
                 ImGui::TreePop();
             }
@@ -115,60 +116,109 @@ TreeVisualizer::OnInspect(
         if (m_treeHierarchyGui) {
             if (ImGui::TreeNodeEx("Tree Hierarchy")) {
                 bool deleted = false;
-                if (m_iteration == treeStructure.CurrentIteration())
-                    needUpdate = DrawInternodeInspectionGui(treeStructure, 0, deleted, 0);
-                else PeekInternodeInspectionGui(treeStructure.Peek(m_iteration), 0, 0);
+                if (m_iteration == treeStructure.CurrentIteration()) {
+                    if (DrawInternodeInspectionGui(treeStructure, 0, deleted, 0)) {
+                        m_needUpdate = true;
+                        updated = true;
+                    }
+                } else PeekInternodeInspectionGui(treeStructure.Peek(m_iteration), 0, 0);
                 m_selectedInternodeHierarchyList.clear();
                 ImGui::TreePop();
             }
-        }
-        if (m_treeHierarchyGui) {
             if (m_selectedInternodeHandle >= 0) {
-                InspectInternode(treeSkeleton, m_selectedInternodeHandle);
+                InspectInternode(treeStructure.Peek(m_iteration), m_selectedInternodeHandle);
             }
         }
 
         ImGui::TreePop();
     }
+    const auto &treeSkeleton = treeStructure.Peek(m_iteration);
+
     if (m_visualization) {
+        auto editorLayer = Application::GetLayer<EditorLayer>();
         const auto &sortedBranchList = treeSkeleton.RefSortedFlowList();
         const auto &sortedInternodeList = treeSkeleton.RefSortedInternodeList();
         ImGui::Text("Internode count: %d", sortedInternodeList.size());
         ImGui::Text("Flow count: %d", sortedBranchList.size());
-        if (treeSkeleton.GetVersion() != m_version) {
-            needUpdate = true;
-            m_iteration = treeStructure.CurrentIteration();
-        }
-        if (Inputs::GetMouseInternal(GLFW_MOUSE_BUTTON_LEFT, Windows::GetWindow())) {
-            if (RayCastSelection(treeSkeleton, globalTransform)) needUpdate = true;
-        }
-        if (m_iteration == treeStructure.CurrentIteration() && m_selectedInternodeHandle > 0 &&
-            Inputs::GetKeyInternal(GLFW_KEY_DELETE,
-                                   Windows::GetWindow())) {
-            treeStructure.Step();
-            auto& skeleton = treeStructure.Skeleton();
-            auto& pruningInternode = skeleton.RefInternode(m_selectedInternodeHandle);
-            auto childHandles = pruningInternode.RefChildHandles();
-            for(const auto& childHandle : childHandles){
-                skeleton.RecycleInternode(childHandle);
+        static bool enableStroke = false;
+        if (ImGui::Checkbox("Enable stroke", &enableStroke)) {
+            if (enableStroke) {
+                m_mode = PruningMode::Stroke;
+            } else {
+                m_mode = PruningMode::None;
             }
-            pruningInternode.m_info.m_length *= m_selectedInternodeLengthFactor;
-            m_selectedInternodeLengthFactor = 1.0f;
-            for(auto& bud : pruningInternode.m_data.m_buds){
-                bud.m_status = BudStatus::Died;
-            }
-            skeleton.SortLists();
-            m_iteration = treeStructure.CurrentIteration();
-            needUpdate = true;
+            m_storedMousePositions.clear();
         }
-        if (needUpdate) {
+        switch (m_mode) {
+            case PruningMode::None: {
+                if (Inputs::GetMouseInternal(GLFW_MOUSE_BUTTON_LEFT, Windows::GetWindow())) {
+                    if (RayCastSelection(treeSkeleton, globalTransform)) {
+                        m_needUpdate = true;
+                        updated = true;
+                    }
+                }
+                if (m_iteration == treeStructure.CurrentIteration() && m_selectedInternodeHandle > 0 &&
+                    Inputs::GetKeyInternal(GLFW_KEY_DELETE,
+                                           Windows::GetWindow())) {
+                    treeStructure.Step();
+                    auto &skeleton = treeStructure.Skeleton();
+                    auto &pruningInternode = skeleton.RefInternode(m_selectedInternodeHandle);
+                    auto childHandles = pruningInternode.RefChildHandles();
+                    for (const auto &childHandle: childHandles) {
+                        skeleton.RecycleInternode(childHandle);
+                    }
+                    pruningInternode.m_info.m_length *= m_selectedInternodeLengthFactor;
+                    m_selectedInternodeLengthFactor = 1.0f;
+                    for (auto &bud: pruningInternode.m_data.m_buds) {
+                        bud.m_status = BudStatus::Died;
+                    }
+                    skeleton.SortLists();
+                    m_iteration = treeStructure.CurrentIteration();
+                    m_needUpdate = true;
+                    updated = true;
+                }
+            }
+                break;
+            case PruningMode::Stroke: {
+                if (m_iteration == treeStructure.CurrentIteration()) {
+                    if (Inputs::GetMouseInternal(GLFW_MOUSE_BUTTON_LEFT, Windows::GetWindow())) {
+                        glm::vec2 mousePosition = editorLayer->GetMouseScreenPosition();
+                        const float halfX = static_cast<float>(editorLayer->m_sceneCamera->GetResolution().x) / 2.0f;
+                        const float halfY = static_cast<float>(editorLayer->m_sceneCamera->GetResolution().y) / 2.0f;
+                        mousePosition = {-1.0f * (mousePosition.x - halfX) / halfX,
+                                         -1.0f * (mousePosition.y - halfY) / halfY};
+                        m_storedMousePositions.emplace_back(mousePosition);
+                    } else {
+                        //Once released, check if empty.
+                        if (!m_storedMousePositions.empty()) {
+                            treeStructure.Step();
+                            auto &skeleton = treeStructure.Skeleton();
+                            bool changed = ScreenCurvePruning(skeleton, 0, globalTransform);
+                            if (changed) {
+                                skeleton.SortLists();
+                                m_iteration = treeStructure.CurrentIteration();
+                                m_needUpdate = true;
+                                updated = true;
+                            } else {
+                                treeStructure.Pop();
+                            }
+                            m_storedMousePositions.clear();
+                        }
+                    }
+                }
+            }
+                break;
+        }
+
+
+        if (m_needUpdate) {
             SyncMatrices(treeSkeleton);
+            m_needUpdate = false;
         }
         if (!m_matrices.empty()) {
-            auto editorLayer = Application::GetLayer<EditorLayer>();
             GizmoSettings m_gizmoSettings;
             m_gizmoSettings.m_drawSettings.m_blending = true;
-            if(m_selectedInternodeHandle == -1){
+            if (m_selectedInternodeHandle == -1) {
                 m_matrices[0] = glm::translate(glm::vec3(1.0f)) * glm::scale(glm::vec3(0.0f));
                 m_colors[0] = glm::vec4(0.0f);
             }
@@ -182,7 +232,7 @@ TreeVisualizer::OnInspect(
         }
     }
 
-    return needUpdate;
+    return updated;
 }
 
 void
@@ -282,7 +332,6 @@ TreeVisualizer::InspectInternode(
 
 void TreeVisualizer::Reset(
         TreeStructure<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeStructure) {
-    m_version = -1;
     m_selectedInternodeHandle = -1;
     m_selectedInternodeHierarchyList.clear();
     m_iteration = treeStructure.CurrentIteration();
@@ -314,103 +363,90 @@ bool TreeVisualizer::RayCastSelection(
         const GlobalTransform &globalTransform) {
     auto editorLayer = Application::GetLayer<EditorLayer>();
     bool changed = false;
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{0, 0});
-    if (ImGui::Begin("Scene")) {
-        // Using a Child allow to fill all the space of the window.
-        // It also allows customization
-        if (ImGui::BeginChild("SceneCameraRenderer", ImVec2(0, 0), false, ImGuiWindowFlags_MenuBar)) {
-            auto mousePosition = glm::vec2(FLT_MAX, FLT_MIN);
-            if (editorLayer->SceneCameraWindowFocused()) {
+
+    if (editorLayer->SceneCameraWindowFocused()) {
 #pragma region Ray selection
-                InternodeHandle currentFocusingInternodeHandle = -1;
-                std::mutex writeMutex;
-                float minDistance = FLT_MAX;
-                GlobalTransform cameraLtw;
-                cameraLtw.m_value =
-                        glm::translate(
-                                editorLayer->m_sceneCameraPosition) *
-                        glm::mat4_cast(
-                                editorLayer->m_sceneCameraRotation);
-                auto mp = ImGui::GetMousePos();
-                auto wp = ImGui::GetWindowPos();
-                mousePosition = glm::vec2(mp.x - wp.x, mp.y - wp.y - 20);
-                const Ray cameraRay = editorLayer->m_sceneCamera->ScreenPointToRay(
-                        cameraLtw, mousePosition);
-                const auto &sortedBranchList = treeSkeleton.RefSortedFlowList();
-                const auto &sortedInternodeList = treeSkeleton.RefSortedInternodeList();
-                std::vector<std::shared_future<void>> results;
-                Jobs::ParallelFor(sortedInternodeList.size(), [&](unsigned i) {
-                    const auto &internode = treeSkeleton.PeekInternode(sortedInternodeList[i]);
-                    auto rotation = globalTransform.GetRotation() * internode.m_info.m_globalRotation;
-                    glm::vec3 position = (globalTransform.m_value *
-                                          glm::translate(internode.m_info.m_globalPosition))[3];
-                    const auto direction = glm::normalize(rotation * glm::vec3(0, 0, -1));
-                    const glm::vec3 position2 =
-                            position + internode.m_info.m_length * direction;
-                    const auto center =
-                            (position + position2) / 2.0f;
-                    auto radius = internode.m_info.m_thickness;
-                    const auto height = glm::distance(position2,
-                                                      position);
-                    radius *= height / internode.m_info.m_length;
-                    if (!cameraRay.Intersect(center,
-                                             height / 2.0f) && !cameraRay.Intersect(center,
-                                                                                    radius)) {
-                        return;
-                    }
-                    const auto& dir = -cameraRay.m_direction;
-#pragma region Line Line intersection
-                    /*
- * http://geomalgorithms.com/a07-_distance.html
- */
-                    glm::vec3 v = position - position2;
-                    glm::vec3 w = (cameraRay.m_start + dir) - position2;
-                    const auto a = glm::dot(dir, dir); // always >= 0
-                    const auto b = glm::dot(dir, v);
-                    const auto c = glm::dot(v, v); // always >= 0
-                    const auto d = glm::dot(dir, w);
-                    const auto e = glm::dot(v, w);
-                    const auto dotP = a * c - b * b; // always >= 0
-                    float sc, tc;
-                    // compute the line parameters of the two closest points
-                    if (dotP < 0.00001f) { // the lines are almost parallel
-                        sc = 0.0f;
-                        tc = (b > c ? d / b : e / c); // use the largest denominator
-                    } else {
-                        sc = (b * e - c * d) / dotP;
-                        tc = (a * e - b * d) / dotP;
-                    }
-                    // get the difference of the two closest points
-                    glm::vec3 dP = w + sc * dir - tc * v; // =  L1(sc) - L2(tc)
-                    if (glm::length(dP) > radius)
-                        return;
-#pragma endregion
-
-                    const auto distance = glm::distance(
-                            glm::vec3(cameraLtw.m_value[3]),
-                            glm::vec3(center));
-                    std::lock_guard<std::mutex> lock(writeMutex);
-                    if (distance < minDistance) {
-                        minDistance = distance;
-                        m_selectedInternodeLengthFactor = glm::clamp(1.0f - tc, 0.0f, 1.0f);
-                        currentFocusingInternodeHandle = sortedInternodeList[i];
-                    }
-                }, results);
-                for (auto &i: results) i.wait();
-
-
-                if (currentFocusingInternodeHandle != -1) {
-                    SetSelectedInternode(treeSkeleton, currentFocusingInternodeHandle);
-                    changed = true;
-                }
-
-#pragma endregion
+        InternodeHandle currentFocusingInternodeHandle = -1;
+        std::mutex writeMutex;
+        float minDistance = FLT_MAX;
+        GlobalTransform cameraLtw;
+        cameraLtw.m_value =
+                glm::translate(
+                        editorLayer->m_sceneCameraPosition) *
+                glm::mat4_cast(
+                        editorLayer->m_sceneCameraRotation);
+        const Ray cameraRay = editorLayer->m_sceneCamera->ScreenPointToRay(
+                cameraLtw, editorLayer->GetMouseScreenPosition());
+        const auto &sortedBranchList = treeSkeleton.RefSortedFlowList();
+        const auto &sortedInternodeList = treeSkeleton.RefSortedInternodeList();
+        std::vector<std::shared_future<void>> results;
+        Jobs::ParallelFor(sortedInternodeList.size(), [&](unsigned i) {
+            const auto &internode = treeSkeleton.PeekInternode(sortedInternodeList[i]);
+            auto rotation = globalTransform.GetRotation() * internode.m_info.m_globalRotation;
+            glm::vec3 position = (globalTransform.m_value *
+                                  glm::translate(internode.m_info.m_globalPosition))[3];
+            const auto direction = glm::normalize(rotation * glm::vec3(0, 0, -1));
+            const glm::vec3 position2 =
+                    position + internode.m_info.m_length * direction;
+            const auto center =
+                    (position + position2) / 2.0f;
+            auto radius = internode.m_info.m_thickness;
+            const auto height = glm::distance(position2,
+                                              position);
+            radius *= height / internode.m_info.m_length;
+            if (!cameraRay.Intersect(center,
+                                     height / 2.0f) && !cameraRay.Intersect(center,
+                                                                            radius)) {
+                return;
             }
+            const auto &dir = -cameraRay.m_direction;
+#pragma region Line Line intersection
+            /*
+* http://geomalgorithms.com/a07-_distance.html
+*/
+            glm::vec3 v = position - position2;
+            glm::vec3 w = (cameraRay.m_start + dir) - position2;
+            const auto a = glm::dot(dir, dir); // always >= 0
+            const auto b = glm::dot(dir, v);
+            const auto c = glm::dot(v, v); // always >= 0
+            const auto d = glm::dot(dir, w);
+            const auto e = glm::dot(v, w);
+            const auto dotP = a * c - b * b; // always >= 0
+            float sc, tc;
+            // compute the line parameters of the two closest points
+            if (dotP < 0.00001f) { // the lines are almost parallel
+                sc = 0.0f;
+                tc = (b > c ? d / b : e / c); // use the largest denominator
+            } else {
+                sc = (b * e - c * d) / dotP;
+                tc = (a * e - b * d) / dotP;
+            }
+            // get the difference of the two closest points
+            glm::vec3 dP = w + sc * dir - tc * v; // =  L1(sc) - L2(tc)
+            if (glm::length(dP) > radius)
+                return;
+#pragma endregion
+
+            const auto distance = glm::distance(
+                    glm::vec3(cameraLtw.m_value[3]),
+                    glm::vec3(center));
+            std::lock_guard<std::mutex> lock(writeMutex);
+            if (distance < minDistance) {
+                minDistance = distance;
+                m_selectedInternodeLengthFactor = glm::clamp(1.0f - tc, 0.0f, 1.0f);
+                currentFocusingInternodeHandle = sortedInternodeList[i];
+            }
+        }, results);
+        for (auto &i: results) i.wait();
+
+
+        if (currentFocusingInternodeHandle != -1) {
+            SetSelectedInternode(treeSkeleton, currentFocusingInternodeHandle);
+            changed = true;
         }
-        ImGui::EndChild();
+
+#pragma endregion
     }
-    ImGui::End();
-    ImGui::PopStyleVar();
 
     return changed;
 }
@@ -424,8 +460,6 @@ TreeVisualizer::SyncMatrices(
             randomColors.emplace_back(glm::ballRand(1.0f), 1.0f);
         }
     }
-
-    m_version = treeSkeleton.GetVersion();
     const auto &sortedBranchList = treeSkeleton.RefSortedFlowList();
     const auto &sortedInternodeList = treeSkeleton.RefSortedInternodeList();
     m_matrices.resize(sortedInternodeList.size() + 1);
@@ -450,13 +484,14 @@ TreeVisualizer::SyncMatrices(
         if (internodeHandle == m_selectedInternodeHandle) {
             m_colors[i + 1] = glm::vec4(1, 0, 0, 1);
 
-            const glm::vec3 selectedCenter = position + (internode.m_info.m_length * m_selectedInternodeLengthFactor) * direction;
+            const glm::vec3 selectedCenter =
+                    position + (internode.m_info.m_length * m_selectedInternodeLengthFactor) * direction;
             m_matrices[0] = glm::translate(selectedCenter) *
-                                    rotationTransform *
-                                    glm::scale(glm::vec3(
-                                            internode.m_info.m_thickness + 0.001f,
-                                            internode.m_info.m_length / 10.0f,
-                                            internode.m_info.m_thickness + 0.001f));
+                            rotationTransform *
+                            glm::scale(glm::vec3(
+                                    internode.m_info.m_thickness + 0.001f,
+                                    internode.m_info.m_length / 10.0f,
+                                    internode.m_info.m_thickness + 0.001f));
             m_colors[0] = glm::vec4(1.0f);
         } else {
             m_colors[i + 1] = randomColors[treeSkeleton.PeekFlow(internode.GetFlowHandle()).m_data.m_order];
@@ -464,4 +499,64 @@ TreeVisualizer::SyncMatrices(
         }
     }, results);
     for (auto &i: results) i.wait();
+}
+
+bool TreeVisualizer::ScreenCurvePruning(
+        TreeSkeleton<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeSkeleton,
+        InternodeHandle internodeHandle,
+        const GlobalTransform &globalTransform) {
+
+    auto editorLayer = Application::GetLayer<EditorLayer>();
+    glm::mat4 projectionView = editorLayer->m_sceneCamera->m_cameraInfoBlock.m_projection *
+                               editorLayer->m_sceneCamera->m_cameraInfoBlock.m_view;
+    auto &internode = treeSkeleton.RefInternode(internodeHandle);
+    const glm::vec3 position = (globalTransform.m_value *
+                                glm::translate(internode.m_info.m_globalPosition))[3];
+    auto rotation = globalTransform.GetRotation() * internode.m_info.m_globalRotation;
+    const auto direction = glm::normalize(rotation * glm::vec3(0, 0, -1));
+    const auto position2 =
+            position + internode.m_info.m_length * direction;
+    const glm::vec4 internodeScreenStart4 = projectionView * glm::vec4(position, 1.0f);
+    const glm::vec4 internodeScreenEnd4 = projectionView * glm::vec4(position2, 1.0f);
+    const glm::vec2 internodeScreenStart = internodeScreenStart4 / internodeScreenStart4.w;
+    const glm::vec2 internodeScreenEnd = internodeScreenEnd4 / internodeScreenEnd4.w;
+    bool intersect = false;
+    for (int i = 0; i < m_storedMousePositions.size() - 1; i++) {
+        auto &lineStart = m_storedMousePositions[i];
+        auto &lineEnd = m_storedMousePositions[i + 1];
+        float a1 = internodeScreenEnd.y - internodeScreenStart.y;
+        float b1 = internodeScreenStart.x - internodeScreenEnd.x;
+        float c1 = a1 * (internodeScreenStart.x) + b1 * (internodeScreenStart.y);
+
+        // Line CD represented as a2x + b2y = c2
+        float a2 = lineEnd.y - lineStart.y;
+        float b2 = lineStart.x - lineEnd.x;
+        float c2 = a2 * (lineStart.x) + b2 * (lineStart.y);
+
+        float determinant = a1 * b2 - a2 * b1;
+        if (determinant < 0.00001f) continue;
+        float x = (b2 * c1 - b1 * c2) / determinant;
+        float y = (a1 * c2 - a2 * c1) / determinant;
+        if (x < glm::max(internodeScreenStart.x, internodeScreenEnd.x) &&
+            x > glm::min(internodeScreenStart.x, internodeScreenEnd.x) &&
+            y < glm::max(internodeScreenStart.y, internodeScreenEnd.y) &&
+            y > glm::min(internodeScreenStart.y, internodeScreenEnd.y)) {
+            intersect = true;
+            break;
+        }
+    }
+    if (intersect) {
+        if (m_selectedInternodeHandle == internodeHandle) {
+            m_selectedInternodeHandle = -1;
+            m_selectedInternodeHierarchyList.clear();
+        }
+        treeSkeleton.RecycleInternode(internodeHandle);
+        return true;
+    }
+    bool changed = false;
+    auto children = internode.RefChildHandles();
+    for (const auto &childInternodeHandle: children) {
+        if (ScreenCurvePruning(treeSkeleton, childInternodeHandle, globalTransform)) changed = true;
+    }
+    return changed;
 }
