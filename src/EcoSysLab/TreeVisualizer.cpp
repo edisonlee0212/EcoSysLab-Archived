@@ -193,7 +193,7 @@ TreeVisualizer::OnInspect(
                         if (!m_storedMousePositions.empty()) {
                             treeStructure.Step();
                             auto &skeleton = treeStructure.Skeleton();
-                            bool changed = ScreenCurvePruning(skeleton, 0, globalTransform);
+                            bool changed = ScreenCurvePruning(skeleton, globalTransform);
                             if (changed) {
                                 skeleton.SortLists();
                                 m_iteration = treeStructure.CurrentIteration();
@@ -503,60 +503,61 @@ TreeVisualizer::SyncMatrices(
 
 bool TreeVisualizer::ScreenCurvePruning(
         TreeSkeleton<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeSkeleton,
-        InternodeHandle internodeHandle,
         const GlobalTransform &globalTransform) {
 
     auto editorLayer = Application::GetLayer<EditorLayer>();
     glm::mat4 projectionView = editorLayer->m_sceneCamera->m_cameraInfoBlock.m_projection *
                                editorLayer->m_sceneCamera->m_cameraInfoBlock.m_view;
-    auto &internode = treeSkeleton.RefInternode(internodeHandle);
-    const glm::vec3 position = (globalTransform.m_value *
-                                glm::translate(internode.m_info.m_globalPosition))[3];
-    auto rotation = globalTransform.GetRotation() * internode.m_info.m_globalRotation;
-    const auto direction = glm::normalize(rotation * glm::vec3(0, 0, -1));
-    const auto position2 =
-            position + internode.m_info.m_length * direction;
-    const glm::vec4 internodeScreenStart4 = projectionView * glm::vec4(position, 1.0f);
-    const glm::vec4 internodeScreenEnd4 = projectionView * glm::vec4(position2, 1.0f);
-    const glm::vec2 internodeScreenStart = internodeScreenStart4 / internodeScreenStart4.w;
-    const glm::vec2 internodeScreenEnd = internodeScreenEnd4 / internodeScreenEnd4.w;
-    bool intersect = false;
-    for (int i = 0; i < m_storedMousePositions.size() - 1; i++) {
-        auto &lineStart = m_storedMousePositions[i];
-        auto &lineEnd = m_storedMousePositions[i + 1];
-        float a1 = internodeScreenEnd.y - internodeScreenStart.y;
-        float b1 = internodeScreenStart.x - internodeScreenEnd.x;
-        float c1 = a1 * (internodeScreenStart.x) + b1 * (internodeScreenStart.y);
 
-        // Line CD represented as a2x + b2y = c2
-        float a2 = lineEnd.y - lineStart.y;
-        float b2 = lineStart.x - lineEnd.x;
-        float c2 = a2 * (lineStart.x) + b2 * (lineStart.y);
-
-        float determinant = a1 * b2 - a2 * b1;
-        if (determinant < 0.00001f) continue;
-        float x = (b2 * c1 - b1 * c2) / determinant;
-        float y = (a1 * c2 - a2 * c1) / determinant;
-        if (x < glm::max(internodeScreenStart.x, internodeScreenEnd.x) &&
-            x > glm::min(internodeScreenStart.x, internodeScreenEnd.x) &&
-            y < glm::max(internodeScreenStart.y, internodeScreenEnd.y) &&
-            y > glm::min(internodeScreenStart.y, internodeScreenEnd.y)) {
-            intersect = true;
-            break;
-        }
-    }
-    if (intersect) {
-        if (m_selectedInternodeHandle == internodeHandle) {
-            m_selectedInternodeHandle = -1;
-            m_selectedInternodeHierarchyList.clear();
-        }
-        treeSkeleton.RecycleInternode(internodeHandle);
-        return true;
-    }
+    const auto &sortedInternodeList = treeSkeleton.RefSortedInternodeList();
     bool changed = false;
-    auto children = internode.RefChildHandles();
-    for (const auto &childInternodeHandle: children) {
-        if (ScreenCurvePruning(treeSkeleton, childInternodeHandle, globalTransform)) changed = true;
+    for (const auto &internodeHandle: sortedInternodeList) {
+        auto &internode = treeSkeleton.RefInternode(internodeHandle);
+        if (internode.IsRecycled()) continue;
+        const glm::vec3 position = (globalTransform.m_value *
+                                    glm::translate(internode.m_info.m_globalPosition))[3];
+        auto rotation = globalTransform.GetRotation() * internode.m_info.m_globalRotation;
+        const auto direction = glm::normalize(rotation * glm::vec3(0, 0, -1));
+        const auto position2 =
+                position + internode.m_info.m_length * direction;
+        const glm::vec4 internodeScreenStart4 = projectionView * glm::vec4(position, 1.0f);
+        const glm::vec4 internodeScreenEnd4 = projectionView * glm::vec4(position2, 1.0f);
+        const glm::vec2 internodeScreenStart = internodeScreenStart4 / internodeScreenStart4.w;
+        const glm::vec2 internodeScreenEnd = internodeScreenEnd4 / internodeScreenEnd4.w;
+        bool intersect = false;
+        for (int i = 0; i < m_storedMousePositions.size() - 1; i++) {
+            auto &lineStart = m_storedMousePositions[i];
+            auto &lineEnd = m_storedMousePositions[i + 1];
+            float a1 = internodeScreenEnd.y - internodeScreenStart.y;
+            float b1 = internodeScreenStart.x - internodeScreenEnd.x;
+            float c1 = a1 * (internodeScreenStart.x) + b1 * (internodeScreenStart.y);
+
+            // Line CD represented as a2x + b2y = c2
+            float a2 = lineEnd.y - lineStart.y;
+            float b2 = lineStart.x - lineEnd.x;
+            float c2 = a2 * (lineStart.x) + b2 * (lineStart.y);
+
+            float determinant = a1 * b2 - a2 * b1;
+            if (determinant < 0.00001f) continue;
+            float x = (b2 * c1 - b1 * c2) / determinant;
+            float y = (a1 * c2 - a2 * c1) / determinant;
+            if (x < glm::max(internodeScreenStart.x, internodeScreenEnd.x) &&
+                x > glm::min(internodeScreenStart.x, internodeScreenEnd.x) &&
+                y < glm::max(internodeScreenStart.y, internodeScreenEnd.y) &&
+                y > glm::min(internodeScreenStart.y, internodeScreenEnd.y)) {
+                intersect = true;
+                break;
+            }
+        }
+        if (intersect) {
+            treeSkeleton.RecycleInternode(internodeHandle);
+            changed = true;
+        }
+
+    }
+    if (changed) {
+        m_selectedInternodeHandle = -1;
+        m_selectedInternodeHierarchyList.clear();
     }
     return changed;
 }

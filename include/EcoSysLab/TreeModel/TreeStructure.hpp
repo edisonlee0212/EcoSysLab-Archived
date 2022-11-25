@@ -185,6 +185,7 @@ namespace EcoSysLab {
 #pragma endregion
     public:
         SkeletonData m_data;
+
         /**
          * Recycle (Remove) an internode, the descendents of this internode will also be recycled. The relevant flow will also be removed/restructured.
          * @param handle The handle of the internode to be removed. Must be valid (non-zero and the internode should not be recycled prior to this operation).
@@ -218,7 +219,9 @@ namespace EcoSysLab {
         [[nodiscard]] const std::vector<FlowHandle> &RefSortedFlowList() const;
 
         [[nodiscard]] const std::vector<Flow<FlowData>> &RefRawFlows() const;
+
         [[nodiscard]] const std::vector<Internode<InternodeData>> &RefRawInternodes() const;
+
         /**
          *  Force the structure to sort the internode and flow list.
          *  \n!!You MUST call this after you prune the tree or altered the tree structure manually!!
@@ -287,7 +290,9 @@ namespace EcoSysLab {
         [[nodiscard]] const TreeSkeleton<SkeletonData, FlowData, InternodeData> &Peek(int iteration) const;
 
         void Step();
+
         void Pop();
+
         [[nodiscard]] int CurrentIteration() const;
 
         void Reverse(int iteration);
@@ -364,12 +369,14 @@ namespace EcoSysLab {
     }
 
     template<typename SkeletonData, typename FlowData, typename InternodeData>
-    TreeSkeleton<SkeletonData, FlowData, InternodeData> &TreeStructure<SkeletonData, FlowData, InternodeData>::Skeleton() {
+    TreeSkeleton<SkeletonData, FlowData, InternodeData> &
+    TreeStructure<SkeletonData, FlowData, InternodeData>::Skeleton() {
         return m_skeleton;
     }
 
     template<typename SkeletonData, typename FlowData, typename InternodeData>
-    const TreeSkeleton<SkeletonData, FlowData, InternodeData> &TreeStructure<SkeletonData, FlowData, InternodeData>::Peek(int iteration) const {
+    const TreeSkeleton<SkeletonData, FlowData, InternodeData> &
+    TreeStructure<SkeletonData, FlowData, InternodeData>::Peek(int iteration) const {
         assert(iteration <= m_history.size());
         if (iteration < 0) iteration = 0;
         if (iteration == m_history.size()) return m_skeleton;
@@ -403,7 +410,8 @@ namespace EcoSysLab {
     }
 
     template<typename SkeletonData, typename FlowData, typename InternodeData>
-    Internode<InternodeData> &TreeSkeleton<SkeletonData, FlowData, InternodeData>::RefInternode(InternodeHandle handle) {
+    Internode<InternodeData> &
+    TreeSkeleton<SkeletonData, FlowData, InternodeData>::RefInternode(InternodeHandle handle) {
         assert(handle >= 0 && handle < m_internodes.size());
         return m_internodes[handle];
     }
@@ -450,7 +458,8 @@ namespace EcoSysLab {
     }
 
     template<typename SkeletonData, typename FlowData, typename InternodeData>
-    const std::vector<InternodeHandle> &TreeSkeleton<SkeletonData, FlowData, InternodeData>::RefSortedInternodeList() const {
+    const std::vector<InternodeHandle> &
+    TreeSkeleton<SkeletonData, FlowData, InternodeData>::RefSortedInternodeList() const {
         return m_sortedInternodeList;
     }
 
@@ -495,7 +504,7 @@ namespace EcoSysLab {
                 }
                 extendedFlow.m_childHandles = originalFlow.m_childHandles;
                 originalFlow.m_childHandles.clear();
-                for(const auto& childFlowHandle : extendedFlow.m_childHandles){
+                for (const auto &childFlowHandle: extendedFlow.m_childHandles) {
                     m_flows[childFlowHandle].m_parentHandle = extendedFlowHandle;
                 }
                 SetParentFlow(extendedFlowHandle, originalInternode.m_flowHandle);
@@ -533,24 +542,6 @@ namespace EcoSysLab {
             }
         }
         RecycleFlowSingle(handle);
-
-        auto &parentFlow = m_flows[parentHandle];
-        if (parentFlow.m_childHandles.size() == 1) {
-            auto childHandle = parentFlow.m_childHandles[0];
-            auto &childFlow = m_flows[childHandle];
-            for (const auto &internodeHandle: childFlow.m_internodes) {
-                m_internodes[internodeHandle].m_flowHandle = parentHandle;
-            }
-            for (const auto &flowHandle: childFlow.m_childHandles) {
-                m_flows[flowHandle].m_parentHandle = parentHandle;
-            }
-            parentFlow.m_internodes.insert(parentFlow.m_internodes.end(), childFlow.m_internodes.begin(),
-                                           childFlow.m_internodes.end());
-            parentFlow.m_childHandles.clear();
-            parentFlow.m_childHandles.insert(parentFlow.m_childHandles.end(), childFlow.m_childHandles.begin(),
-                                             childFlow.m_childHandles.end());
-            RecycleFlowSingle(childHandle);
-        }
         m_newVersion++;
     }
 
@@ -562,7 +553,29 @@ namespace EcoSysLab {
         auto flowHandle = internode.m_flowHandle;
         auto &flow = m_flows[flowHandle];
         if (handle == flow.m_internodes[0]) {
+            auto parentFlowHandle = flow.m_parentHandle;
             RecycleFlow(internode.m_flowHandle);
+            //Connect parent branch with the only apical child flow.
+            auto &parentFlow = m_flows[parentFlowHandle];
+            if (parentFlow.m_childHandles.size() == 1) {
+                auto childHandle = parentFlow.m_childHandles[0];
+                auto &childFlow = m_flows[childHandle];
+                if (childFlow.m_apical) {
+                    for (const auto &internodeHandle: childFlow.m_internodes) {
+                        m_internodes[internodeHandle].m_flowHandle = parentFlowHandle;
+                    }
+                    for (const auto &grandChildFlowHandle: childFlow.m_childHandles) {
+                        m_flows[grandChildFlowHandle].m_parentHandle = parentFlowHandle;
+                    }
+                    parentFlow.m_internodes.insert(parentFlow.m_internodes.end(), childFlow.m_internodes.begin(),
+                                                   childFlow.m_internodes.end());
+                    parentFlow.m_childHandles.clear();
+                    parentFlow.m_childHandles.insert(parentFlow.m_childHandles.end(),
+                                                     childFlow.m_childHandles.begin(),
+                                                     childFlow.m_childHandles.end());
+                    RecycleFlowSingle(childHandle);
+                }
+            }
             return;
         }
         //Collect list of subsequent internodes
@@ -687,7 +700,7 @@ namespace EcoSysLab {
 
     template<typename SkeletonData, typename FlowData, typename InternodeData>
     void TreeSkeleton<SkeletonData, FlowData, InternodeData>::DetachChildInternode(InternodeHandle targetHandle,
-                                                                     InternodeHandle childHandle) {
+                                                                                   InternodeHandle childHandle) {
         assert(targetHandle >= 0 && childHandle >= 0 && targetHandle < m_internodes.size() &&
                childHandle < m_internodes.size());
         auto &targetInternode = m_internodes[targetHandle];
@@ -707,7 +720,7 @@ namespace EcoSysLab {
 
     template<typename SkeletonData, typename FlowData, typename InternodeData>
     void TreeSkeleton<SkeletonData, FlowData, InternodeData>::SetParentInternode(InternodeHandle targetHandle,
-                                                                   InternodeHandle parentHandle) {
+                                                                                 InternodeHandle parentHandle) {
         assert(targetHandle >= 0 && parentHandle >= 0 && targetHandle < m_internodes.size() &&
                parentHandle < m_internodes.size());
         auto &targetInternode = m_internodes[targetHandle];
@@ -720,7 +733,8 @@ namespace EcoSysLab {
 
     template<typename SkeletonData, typename FlowData, typename InternodeData>
     void
-    TreeSkeleton<SkeletonData, FlowData, InternodeData>::DetachChildFlow(FlowHandle targetHandle, FlowHandle childHandle) {
+    TreeSkeleton<SkeletonData, FlowData, InternodeData>::DetachChildFlow(FlowHandle targetHandle,
+                                                                         FlowHandle childHandle) {
         assert(targetHandle >= 0 && childHandle >= 0 && targetHandle < m_flows.size() &&
                childHandle < m_flows.size());
         auto &targetBranch = m_flows[targetHandle];
@@ -748,7 +762,8 @@ namespace EcoSysLab {
 
     template<typename SkeletonData, typename FlowData, typename InternodeData>
     void
-    TreeSkeleton<SkeletonData, FlowData, InternodeData>::SetParentFlow(FlowHandle targetHandle, FlowHandle parentHandle) {
+    TreeSkeleton<SkeletonData, FlowData, InternodeData>::SetParentFlow(FlowHandle targetHandle,
+                                                                       FlowHandle parentHandle) {
         assert(targetHandle >= 0 && parentHandle >= 0 && targetHandle < m_flows.size() &&
                parentHandle < m_flows.size());
         auto &targetBranch = m_flows[targetHandle];

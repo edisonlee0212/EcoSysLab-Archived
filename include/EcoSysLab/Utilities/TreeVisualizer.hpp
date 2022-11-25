@@ -8,7 +8,7 @@
 
 using namespace UniEngine;
 namespace EcoSysLab {
-    enum class PruningMode{
+    enum class PruningMode {
         None,
         Stroke
     };
@@ -25,25 +25,30 @@ namespace EcoSysLab {
         std::vector<InternodeHandle> m_selectedInternodeHierarchyList;
         PruningMode m_mode = PruningMode::None;
 
-        bool RayCastSelection(const TreeSkeleton <SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeSkeleton,
-                              const GlobalTransform &globalTransform);
+        bool
+        RayCastSelection(const TreeSkeleton <SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeSkeleton,
+                         const GlobalTransform &globalTransform);
 
         bool ScreenCurvePruning(TreeSkeleton <SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeSkeleton,
-                                InternodeHandle internodeHandle, const GlobalTransform &globalTransform);
+                                const GlobalTransform &globalTransform);
 
-        void SetSelectedInternode(const TreeSkeleton <SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeSkeleton,
-                                  InternodeHandle internodeHandle);
+        void SetSelectedInternode(
+                const TreeSkeleton <SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeSkeleton,
+                InternodeHandle internodeHandle);
 
-        bool DrawInternodeInspectionGui(TreeStructure <SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeStructure,
-                                        InternodeHandle internodeHandle, bool &deleted,
-                                        const unsigned &hierarchyLevel);
+        bool DrawInternodeInspectionGui(
+                TreeStructure <SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeStructure,
+                InternodeHandle internodeHandle, bool &deleted,
+                const unsigned &hierarchyLevel);
 
-        void PeekInternodeInspectionGui(const TreeSkeleton <SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeSkeleton,
-                                        InternodeHandle internodeHandle,
-                                        const unsigned &hierarchyLevel);
+        void PeekInternodeInspectionGui(
+                const TreeSkeleton <SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeSkeleton,
+                InternodeHandle internodeHandle,
+                const unsigned &hierarchyLevel);
 
         void
-        InspectInternode(const TreeSkeleton <SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeSkeleton, InternodeHandle internodeHandle);
+        InspectInternode(const TreeSkeleton <SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeSkeleton,
+                         InternodeHandle internodeHandle);
 
 
     public:
@@ -53,6 +58,7 @@ namespace EcoSysLab {
 
         int m_iteration = 0;
         bool m_needUpdate = false;
+
         bool
         OnInspect(TreeStructure <SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeStructure,
                   const GlobalTransform &globalTransform);
