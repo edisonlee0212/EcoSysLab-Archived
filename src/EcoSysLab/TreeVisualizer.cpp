@@ -187,7 +187,10 @@ TreeVisualizer::OnInspect(
                         const float halfY = static_cast<float>(editorLayer->m_sceneCamera->GetResolution().y) / 2.0f;
                         mousePosition = {-1.0f * (mousePosition.x - halfX) / halfX,
                                          -1.0f * (mousePosition.y - halfY) / halfY};
-                        m_storedMousePositions.emplace_back(mousePosition);
+                        if (mousePosition.x > -1.0f && mousePosition.x < 1.0f && mousePosition.y > -1.0f &&
+                            mousePosition.y < 1.0f)
+                            m_storedMousePositions.emplace_back(mousePosition);
+
                     } else {
                         //Once released, check if empty.
                         if (!m_storedMousePositions.empty()) {
@@ -506,8 +509,12 @@ bool TreeVisualizer::ScreenCurvePruning(
         const GlobalTransform &globalTransform) {
 
     auto editorLayer = Application::GetLayer<EditorLayer>();
-    glm::mat4 projectionView = editorLayer->m_sceneCamera->m_cameraInfoBlock.m_projection *
-                               editorLayer->m_sceneCamera->m_cameraInfoBlock.m_view;
+    const auto cameraRotation = editorLayer->m_sceneCameraRotation;
+    const auto cameraPosition = editorLayer->m_sceneCameraPosition;
+    const glm::vec3 cameraFront = cameraRotation * glm::vec3(0, 0, -1);
+    const glm::vec3 cameraUp = cameraRotation * glm::vec3(0, 1, 0);
+    glm::mat4 projectionView = editorLayer->m_sceneCamera->GetProjection() *
+                               glm::lookAt(cameraPosition, cameraPosition + cameraFront, cameraUp);
 
     const auto &sortedInternodeList = treeSkeleton.RefSortedInternodeList();
     bool changed = false;
@@ -522,8 +529,10 @@ bool TreeVisualizer::ScreenCurvePruning(
                 position + internode.m_info.m_length * direction;
         const glm::vec4 internodeScreenStart4 = projectionView * glm::vec4(position, 1.0f);
         const glm::vec4 internodeScreenEnd4 = projectionView * glm::vec4(position2, 1.0f);
-        const glm::vec2 internodeScreenStart = internodeScreenStart4 / internodeScreenStart4.w;
-        const glm::vec2 internodeScreenEnd = internodeScreenEnd4 / internodeScreenEnd4.w;
+        glm::vec2 internodeScreenStart = internodeScreenStart4 / internodeScreenStart4.w;
+        glm::vec2 internodeScreenEnd = internodeScreenEnd4 / internodeScreenEnd4.w;
+        internodeScreenStart.x *= -1.0f;
+        internodeScreenEnd.x *= -1.0f;
         bool intersect = false;
         for (int i = 0; i < m_storedMousePositions.size() - 1; i++) {
             auto &lineStart = m_storedMousePositions[i];
@@ -538,7 +547,7 @@ bool TreeVisualizer::ScreenCurvePruning(
             float c2 = a2 * (lineStart.x) + b2 * (lineStart.y);
 
             float determinant = a1 * b2 - a2 * b1;
-            if (determinant < 0.00001f) continue;
+            if (glm::abs(determinant) < 0.00001f) continue;
             float x = (b2 * c1 - b1 * c2) / determinant;
             float y = (a1 * c2 - a2 * c1) / determinant;
             if (x < glm::max(internodeScreenStart.x, internodeScreenEnd.x) &&
