@@ -138,7 +138,7 @@ void
 BranchMeshGenerator::Generate(TreeSkeleton<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeSkeleton, std::vector<Vertex> &vertices,
                               std::vector<unsigned int> &indices, const MeshGeneratorSettings &settings) {
     int parentStep = -1;
-    const auto &sortedInternodeList = treeSkeleton.RefSortedInternodeList();
+    const auto &sortedInternodeList = treeSkeleton.RefSortedNodeList();
     std::vector<std::vector<RingSegment>> ringsList;
     std::vector<int> steps;
     ringsList.resize(sortedInternodeList.size());
@@ -147,7 +147,7 @@ BranchMeshGenerator::Generate(TreeSkeleton<SkeletonGrowthData, BranchGrowthData,
     std::vector<std::shared_future<void>> results;
     Jobs::ParallelFor(sortedInternodeList.size(), [&](unsigned i) {
         auto internodeHandle = sortedInternodeList[i];
-        auto &internode = treeSkeleton.RefInternode(internodeHandle);
+        auto &internode = treeSkeleton.RefNode(internodeHandle);
         auto &internodeInfo = internode.m_info;
         auto &rings = ringsList[i];
         rings.clear();
@@ -162,7 +162,7 @@ BranchMeshGenerator::Generate(TreeSkeleton<SkeletonGrowthData, BranchGrowthData,
         float thicknessEnd = internodeInfo.m_thickness;
 
         if (internode.GetParentHandle() != -1) {
-            auto &parentInternode = treeSkeleton.RefInternode(internode.GetParentHandle());
+            auto &parentInternode = treeSkeleton.RefNode(internode.GetParentHandle());
             thicknessStart = parentInternode.m_info.m_thickness;
             GlobalTransform parentRelativeGlobalTransform;
             directionStart =
@@ -231,7 +231,7 @@ BranchMeshGenerator::Generate(TreeSkeleton<SkeletonGrowthData, BranchGrowthData,
     std::map<unsigned, glm::vec3> normals;
     for (int i = 0; i < sortedInternodeList.size(); i++) {
         auto internodeHandle = sortedInternodeList[i];
-        auto &internode = treeSkeleton.RefInternode(internodeHandle);
+        auto &internode = treeSkeleton.RefNode(internodeHandle);
         auto &internodeInfo = internode.m_info;
         auto parentInternodeHandle = internode.GetParentHandle();
         glm::vec3 newNormalDir;

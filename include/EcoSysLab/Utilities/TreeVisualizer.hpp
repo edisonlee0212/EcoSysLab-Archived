@@ -20,9 +20,9 @@ namespace EcoSysLab {
         std::vector<glm::vec2> m_storedMousePositions;
         bool m_visualization = true;
         bool m_treeHierarchyGui = true;
-        InternodeHandle m_selectedInternodeHandle = -1;
+        NodeHandle m_selectedInternodeHandle = -1;
         float m_selectedInternodeLengthFactor = 0.0f;
-        std::vector<InternodeHandle> m_selectedInternodeHierarchyList;
+        std::vector<NodeHandle> m_selectedInternodeHierarchyList;
         PruningMode m_mode = PruningMode::None;
 
         bool
@@ -34,21 +34,21 @@ namespace EcoSysLab {
 
         void SetSelectedInternode(
                 const TreeSkeleton <SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeSkeleton,
-                InternodeHandle internodeHandle);
+                NodeHandle internodeHandle);
 
         bool DrawInternodeInspectionGui(
                 TreeStructure <SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeStructure,
-                InternodeHandle internodeHandle, bool &deleted,
+                NodeHandle internodeHandle, bool &deleted,
                 const unsigned &hierarchyLevel);
 
         void PeekInternodeInspectionGui(
                 const TreeSkeleton <SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeSkeleton,
-                InternodeHandle internodeHandle,
+                NodeHandle internodeHandle,
                 const unsigned &hierarchyLevel);
 
         void
         InspectInternode(const TreeSkeleton <SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeSkeleton,
-                         InternodeHandle internodeHandle);
+                         NodeHandle internodeHandle);
 
 
     public:

@@ -26,11 +26,11 @@ void ApplyTropism(const glm::vec3 &targetDir, float tropism, glm::quat &rotation
     rotation = glm::quatLookAt(front, up);
 }
 
-bool TreeModel::GrowShoots(float extendLength, InternodeHandle internodeHandle,
-                           const TreeStructuralGrowthParameters &parameters, float &collectedInhibitor) {
+bool TreeModel::GrowShoots(float extendLength, NodeHandle internodeHandle,
+                           const TreeGrowthParameters &parameters, float &collectedInhibitor) {
     bool graphChanged = false;
     auto &skeleton = m_treeStructure.Skeleton();
-    auto &internode = skeleton.RefInternode(internodeHandle);
+    auto &internode = skeleton.RefNode(internodeHandle);
     auto internodeLength = parameters.GetInternodeLength(internode);
     auto &internodeData = internode.m_data;
     auto &internodeInfo = internode.m_info;
@@ -64,8 +64,8 @@ bool TreeModel::GrowShoots(float extendLength, InternodeHandle internodeHandle,
 
         //Create new internode
         auto newInternodeHandle = skeleton.Extend(internodeHandle, false);
-        auto &oldInternode = skeleton.RefInternode(internodeHandle);
-        auto &newInternode = skeleton.RefInternode(newInternodeHandle);
+        auto &oldInternode = skeleton.RefNode(internodeHandle);
+        auto &newInternode = skeleton.RefNode(newInternodeHandle);
         newInternode.m_data.Clear();
         newInternode.m_data.m_inhibitorTarget = newInternode.m_data.m_inhibitor = parameters.GetApicalDominanceBase(
                 newInternode);
@@ -89,7 +89,7 @@ bool TreeModel::GrowShoots(float extendLength, InternodeHandle internodeHandle,
             GrowShoots(extraLength - internodeLength, newInternodeHandle, parameters, childInhibitor);
             childInhibitor *= parameters.GetApicalDominanceDecrease(newInternode);
             collectedInhibitor += childInhibitor;
-            skeleton.RefInternode(newInternodeHandle).m_data.m_inhibitorTarget = childInhibitor;
+            skeleton.RefNode(newInternodeHandle).m_data.m_inhibitorTarget = childInhibitor;
         } else {
             collectedInhibitor += parameters.GetApicalDominanceBase(newInternode);
         }
@@ -100,22 +100,22 @@ bool TreeModel::GrowShoots(float extendLength, InternodeHandle internodeHandle,
     return graphChanged;
 }
 
-bool TreeModel::GrowInternode(InternodeHandle internodeHandle, const TreeStructuralGrowthParameters &parameters,
+bool TreeModel::GrowInternode(NodeHandle internodeHandle, const TreeGrowthParameters &parameters,
                               const GrowthNutrients &growthNutrients) {
     bool graphChanged = false;
     auto &skeleton = m_treeStructure.Skeleton();
     {
-        auto &internode = skeleton.RefInternode(internodeHandle);
+        auto &internode = skeleton.RefNode(internodeHandle);
         auto &internodeData = internode.m_data;
         internodeData.m_inhibitorTarget = 0;
         for (const auto &childHandle: internode.RefChildHandles()) {
-            internodeData.m_inhibitorTarget += skeleton.RefInternode(childHandle).m_data.m_inhibitor *
+            internodeData.m_inhibitorTarget += skeleton.RefNode(childHandle).m_data.m_inhibitor *
                                                parameters.GetApicalDominanceDecrease(internode);
         }
     }
-    auto &buds = skeleton.RefInternode(internodeHandle).m_data.m_buds;
+    auto &buds = skeleton.RefNode(internodeHandle).m_data.m_buds;
     for (auto &bud: buds) {
-        auto &internode = skeleton.RefInternode(internodeHandle);
+        auto &internode = skeleton.RefNode(internodeHandle);
         auto &internodeData = internode.m_data;
         auto &internodeInfo = internode.m_info;
         if (bud.m_type == BudType::Apical && bud.m_status == BudStatus::Dormant) {
@@ -128,7 +128,7 @@ bool TreeModel::GrowInternode(InternodeHandle internodeHandle, const TreeStructu
                 float collectedInhibitor = 0.0f;
                 auto dd = parameters.GetApicalDominanceDecrease(internode);
                 graphChanged = GrowShoots(elongateLength, internodeHandle, parameters, collectedInhibitor);
-                skeleton.RefInternode(internodeHandle).m_data.m_inhibitorTarget += collectedInhibitor * dd;
+                skeleton.RefNode(internodeHandle).m_data.m_inhibitorTarget += collectedInhibitor * dd;
             }
             //If apical bud is dormant, then there's no lateral bud at this stage. We should quit anyway.
             break;
@@ -153,8 +153,8 @@ bool TreeModel::GrowInternode(InternodeHandle internodeHandle, const TreeStructu
                                      desiredGlobalFront, desiredGlobalUp);
                         //Create new internode
                         auto newInternodeHandle = skeleton.Extend(internodeHandle, true);
-                        auto &oldInternode = skeleton.RefInternode(internodeHandle);
-                        auto &newInternode = skeleton.RefInternode(newInternodeHandle);
+                        auto &oldInternode = skeleton.RefNode(internodeHandle);
+                        auto &newInternode = skeleton.RefNode(newInternodeHandle);
                         newInternode.m_data.Clear();
                         newInternode.m_info.m_length = 0.0f;
                         newInternode.m_info.m_thickness = parameters.GetEndNodeThickness(internode);
@@ -175,17 +175,17 @@ bool TreeModel::GrowInternode(InternodeHandle internodeHandle, const TreeStructu
         }
     }
     {
-        auto &internode = skeleton.RefInternode(internodeHandle);
+        auto &internode = skeleton.RefNode(internodeHandle);
         auto &internodeData = internode.m_data;
         internodeData.m_inhibitor = (internodeData.m_inhibitor + internodeData.m_inhibitorTarget) / 2.0f;
     }
     return graphChanged;
 }
 
-void TreeModel::CalculateSagging(InternodeHandle internodeHandle,
-                                 const TreeStructuralGrowthParameters &parameters) {
+void TreeModel::CalculateSagging(NodeHandle internodeHandle,
+                                 const TreeGrowthParameters &parameters) {
     auto &skeleton = m_treeStructure.Skeleton();
-    auto &internode = skeleton.RefInternode(internodeHandle);
+    auto &internode = skeleton.RefNode(internodeHandle);
     auto &internodeData = internode.m_data;
     auto &internodeInfo = internode.m_info;
     internodeData.m_childTotalBiomass = 0;
@@ -195,7 +195,7 @@ void TreeModel::CalculateSagging(InternodeHandle internodeHandle,
         float maxDistanceToAnyBranchEnd = 0;
         float childThicknessCollection = 0.0f;
         for (const auto &i: internode.RefChildHandles()) {
-            auto &childInternode = skeleton.RefInternode(i);
+            auto &childInternode = skeleton.RefNode(i);
             internodeData.m_childTotalBiomass +=
                     childInternode.m_data.m_childTotalBiomass +
                     childInternode.m_info.m_thickness * childInternode.m_info.m_length;
@@ -214,10 +214,10 @@ void TreeModel::CalculateSagging(InternodeHandle internodeHandle,
     }
 }
 
-void TreeModel::CalculateResourceRequirement(InternodeHandle internodeHandle,
-                                             const TreeStructuralGrowthParameters &parameters) {
+void TreeModel::CalculateResourceRequirement(NodeHandle internodeHandle,
+                                             const TreeGrowthParameters &parameters) {
     auto &skeleton = m_treeStructure.Skeleton();
-    auto &internode = skeleton.RefInternode(internodeHandle);
+    auto &internode = skeleton.RefNode(internodeHandle);
     auto &internodeData = internode.m_data;
     auto &internodeInfo = internode.m_info;
     internodeData.m_productiveResourceRequirement = 0.0f;
@@ -263,42 +263,44 @@ void TreeModel::CalculateResourceRequirement(InternodeHandle internodeHandle,
     if (!internode.IsEndNode()) {
         //If current node is not end node
         for (const auto &i: internode.RefChildHandles()) {
-            auto &childInternode = skeleton.RefInternode(i);
+            auto &childInternode = skeleton.RefNode(i);
             internodeData.m_descendentProductiveResourceRequirement += childInternode.m_data.
                     m_productiveResourceRequirement;
         }
     }
 }
 
-bool TreeModel::Grow(const GrowthNutrients &growthNutrients, const TreeStructuralGrowthParameters &parameters) {
+bool TreeModel::Grow(const GrowthNutrients &growthNutrients, const TreeGrowthParameters &parameters) {
     auto &skeleton = m_treeStructure.Skeleton();
-    bool structureChanged = false;
-    bool graphChangedDuringGrowth = false;
-#pragma region Low Branch Pruning
+    bool treeStructureChanged = false;
+    bool rootStructureChanged = false;
+#pragma region Tree Growth
+#pragma region Pruning
+    bool anyBranchPruned = false;
     skeleton.SortLists();
     if (!m_initialized) {
         Initialize(parameters);
-        graphChangedDuringGrowth = true;
+        treeStructureChanged = true;
     }
     {
-        const auto maxDistance = skeleton.RefInternode(0).m_data.m_maxDistanceToAnyBranchEnd;
+        const auto maxDistance = skeleton.RefNode(0).m_data.m_maxDistanceToAnyBranchEnd;
         if (LowBranchPruning(maxDistance, 0, parameters)) {
-            graphChangedDuringGrowth = true;
+            anyBranchPruned = true;
         }
     }
 #pragma endregion
 #pragma region Grow
-    if (graphChangedDuringGrowth) skeleton.SortLists();
-    structureChanged = graphChangedDuringGrowth;
-    graphChangedDuringGrowth = false;
+    if (anyBranchPruned) skeleton.SortLists();
+    treeStructureChanged = treeStructureChanged || anyBranchPruned;
+    bool anyBranchGrown = false;
     {
-        const auto &sortedInternodeList = skeleton.RefSortedInternodeList();
+        const auto &sortedInternodeList = skeleton.RefSortedNodeList();
         for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); it++) {
             auto internodeHandle = *it;
             CalculateResourceRequirement(internodeHandle, parameters);
         }
         for (const auto &internodeHandle: sortedInternodeList) {
-            auto &internode = skeleton.RefInternode(internodeHandle);
+            auto &internode = skeleton.RefNode(internodeHandle);
             auto &internodeData = internode.m_data;
             auto &internodeInfo = internode.m_info;
             if (internode.GetParentHandle() == -1) {
@@ -309,7 +311,7 @@ bool TreeModel::Grow(const GrowthNutrients &growthNutrients, const TreeStructura
             float apicalControl = parameters.GetApicalControl(internode);
             float totalChildResourceRequirement = 0.0f;
             for (const auto &i: internode.RefChildHandles()) {
-                auto &childInternode = skeleton.RefInternode(i);
+                auto &childInternode = skeleton.RefNode(i);
                 auto &childInternodeData = childInternode.m_data;
 
                 childInternodeData.m_adjustedTotalProductiveWaterRequirement =
@@ -321,7 +323,7 @@ bool TreeModel::Grow(const GrowthNutrients &growthNutrients, const TreeStructura
                 totalChildResourceRequirement += childInternodeData.m_adjustedTotalProductiveWaterRequirement;
             }
             for (const auto &i: internode.RefChildHandles()) {
-                auto &childInternode = skeleton.RefInternode(i);
+                auto &childInternode = skeleton.RefNode(i);
                 auto &childInternodeData = childInternode.m_data;
                 childInternodeData.m_adjustedTotalProductiveWaterRequirement =
                         childInternodeData.m_adjustedTotalProductiveWaterRequirement * 1.0f /
@@ -338,24 +340,24 @@ bool TreeModel::Grow(const GrowthNutrients &growthNutrients, const TreeStructura
         }
         for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); it++) {
             const bool graphChanged = GrowInternode(*it, parameters, growthNutrients);
-            graphChangedDuringGrowth = graphChangedDuringGrowth || graphChanged;
+            anyBranchGrown = anyBranchGrown || graphChanged;
         }
     }
 #pragma endregion
 #pragma region Postprocess
-    if (graphChangedDuringGrowth) skeleton.SortLists();
-    structureChanged = graphChangedDuringGrowth;
+    if (anyBranchGrown) skeleton.SortLists();
+    treeStructureChanged = treeStructureChanged || anyBranchGrown;
     {
         skeleton.m_min = glm::vec3(FLT_MAX);
         skeleton.m_max = glm::vec3(FLT_MIN);
 
-        const auto &sortedInternodeList = skeleton.RefSortedInternodeList();
+        const auto &sortedInternodeList = skeleton.RefSortedNodeList();
         for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); it++) {
             auto internodeHandle = *it;
             CalculateSagging(internodeHandle, parameters);
         }
         for (const auto &internodeHandle: sortedInternodeList) {
-            auto &internode = skeleton.RefInternode(internodeHandle);
+            auto &internode = skeleton.RefNode(internodeHandle);
             auto &internodeData = internode.m_data;
             auto &internodeInfo = internode.m_info;
             if (internode.GetParentHandle() == -1) {
@@ -365,12 +367,12 @@ bool TreeModel::Grow(const GrowthNutrients &growthNutrients, const TreeStructura
 
                 internodeData.m_rootDistance = internodeInfo.m_length;
             } else {
-                auto &parentInternode = skeleton.RefInternode(internode.GetParentHandle());
+                auto &parentInternode = skeleton.RefNode(internode.GetParentHandle());
                 internodeData.m_rootDistance = parentInternode.m_data.m_rootDistance + internodeInfo.m_length;
                 internodeInfo.m_globalRotation =
                         parentInternode.m_info.m_globalRotation * internodeInfo.m_localRotation;
 #pragma region Apply Sagging
-                auto parentGlobalRotation = skeleton.RefInternode(internode.GetParentHandle()).m_info.m_globalRotation;
+                auto parentGlobalRotation = skeleton.RefNode(internode.GetParentHandle()).m_info.m_globalRotation;
                 internodeInfo.m_globalRotation = parentGlobalRotation * internodeData.m_desiredLocalRotation;
                 auto front = internodeInfo.m_globalRotation * glm::vec3(0, 0, -1);
                 auto up = internodeInfo.m_globalRotation * glm::vec3(0, 1, 0);
@@ -395,7 +397,7 @@ bool TreeModel::Grow(const GrowthNutrients &growthNutrients, const TreeStructura
             skeleton.m_max = glm::max(skeleton.m_max, endPosition);
         }
     }
-    structureChanged = true;
+    treeStructureChanged = true;
     {
         const auto &sortedFlowList = skeleton.RefSortedFlowList();
         for (const auto &flowHandle: sortedFlowList) {
@@ -408,20 +410,20 @@ bool TreeModel::Grow(const GrowthNutrients &growthNutrients, const TreeStructura
                 if (flow.IsApical()) flowData.m_order = parentFlow.m_data.m_order;
                 else flowData.m_order = parentFlow.m_data.m_order + 1;
             }
-            for (const auto &internodeHandle: flow.RefInternodes()) {
-                skeleton.RefInternode(internodeHandle).m_data.m_order = flowData.m_order;
+            for (const auto &internodeHandle: flow.RefNodeHandles()) {
+                skeleton.RefNode(internodeHandle).m_data.m_order = flowData.m_order;
             }
         }
         skeleton.CalculateFlows();
     }
 #pragma endregion
-
-    return structureChanged;
+#pragma endregion
+    return treeStructureChanged || rootStructureChanged;
 }
 
-void TreeModel::Initialize(const TreeStructuralGrowthParameters &parameters) {
+void TreeModel::Initialize(const TreeGrowthParameters &parameters) {
     auto &skeleton = m_treeStructure.Skeleton();
-    auto &firstInternode = skeleton.RefInternode(0);
+    auto &firstInternode = skeleton.RefNode(0);
     firstInternode.m_info.m_thickness = parameters.GetEndNodeThickness(firstInternode);
     firstInternode.m_data.m_buds.emplace_back();
     auto &apicalBud = firstInternode.m_data.m_buds.back();
@@ -437,14 +439,14 @@ void TreeModel::Clear() {
     m_initialized = false;
 }
 
-bool TreeModel::LowBranchPruning(float maxDistance, InternodeHandle internodeHandle,
-                                 const TreeStructuralGrowthParameters &parameters) {
+bool TreeModel::LowBranchPruning(float maxDistance, NodeHandle internodeHandle,
+                                 const TreeGrowthParameters &parameters) {
     auto &skeleton = m_treeStructure.Skeleton();
-    auto &internode = skeleton.RefInternode(internodeHandle);
+    auto &internode = skeleton.RefNode(internodeHandle);
     //Pruning here.
     if (maxDistance > 5 && internode.m_data.m_order != 0 &&
         internode.m_data.m_rootDistance / maxDistance < parameters.GetLowBranchPruning(internode)) {
-        skeleton.RecycleInternode(internodeHandle);
+        skeleton.RecycleNode(internodeHandle);
         return true;
     }
     bool pruned = false;
@@ -457,7 +459,7 @@ bool TreeModel::LowBranchPruning(float maxDistance, InternodeHandle internodeHan
 }
 
 
-TreeStructuralGrowthParameters::TreeStructuralGrowthParameters() {
+TreeGrowthParameters::TreeGrowthParameters() {
     m_lateralBudCount = 2;
     m_branchingAngleMeanVariance = glm::vec2(30, 3);
     m_rollAngleMeanVariance = glm::vec2(120, 2);
@@ -478,94 +480,94 @@ TreeStructuralGrowthParameters::TreeStructuralGrowthParameters() {
     m_productiveResourceRequirementFactor = glm::vec3(1.0f);
 }
 
-int TreeStructuralGrowthParameters::GetLateralBudCount(const Internode<InternodeGrowthData> &internode) const {
+int TreeGrowthParameters::GetLateralBudCount(const Node<InternodeGrowthData> &internode) const {
     return m_lateralBudCount;
 }
 
-float TreeStructuralGrowthParameters::GetDesiredBranchingAngle(const Internode<InternodeGrowthData> &internode) const {
+float TreeGrowthParameters::GetDesiredBranchingAngle(const Node<InternodeGrowthData> &internode) const {
     return glm::gaussRand(
             m_branchingAngleMeanVariance.x,
             m_branchingAngleMeanVariance.y);
 }
 
-float TreeStructuralGrowthParameters::GetDesiredRollAngle(const Internode<InternodeGrowthData> &internode) const {
+float TreeGrowthParameters::GetDesiredRollAngle(const Node<InternodeGrowthData> &internode) const {
     return glm::gaussRand(
             m_rollAngleMeanVariance.x,
             m_rollAngleMeanVariance.y);
 }
 
-float TreeStructuralGrowthParameters::GetDesiredApicalAngle(const Internode<InternodeGrowthData> &internode) const {
+float TreeGrowthParameters::GetDesiredApicalAngle(const Node<InternodeGrowthData> &internode) const {
     return glm::gaussRand(
             m_apicalAngleMeanVariance.x,
             m_apicalAngleMeanVariance.y);
 }
 
-float TreeStructuralGrowthParameters::GetGravitropism(const Internode<InternodeGrowthData> &internode) const {
+float TreeGrowthParameters::GetGravitropism(const Node<InternodeGrowthData> &internode) const {
     return m_gravitropism;
 }
 
-float TreeStructuralGrowthParameters::GetPhototropism(const Internode<InternodeGrowthData> &internode) const {
+float TreeGrowthParameters::GetPhototropism(const Node<InternodeGrowthData> &internode) const {
     return m_phototropism;
 }
 
-float TreeStructuralGrowthParameters::GetInternodeLength(const Internode<InternodeGrowthData> &internode) const {
+float TreeGrowthParameters::GetInternodeLength(const Node<InternodeGrowthData> &internode) const {
     return m_internodeLength;
 }
 
-float TreeStructuralGrowthParameters::GetGrowthRate(const Internode<InternodeGrowthData> &internode) const {
+float TreeGrowthParameters::GetGrowthRate(const Node<InternodeGrowthData> &internode) const {
     return m_growthRate;
 }
 
-float TreeStructuralGrowthParameters::GetEndNodeThickness(const Internode<InternodeGrowthData> &internode) const {
+float TreeGrowthParameters::GetEndNodeThickness(const Node<InternodeGrowthData> &internode) const {
     return m_endNodeThicknessAndControl.x;
 }
 
-float TreeStructuralGrowthParameters::GetThicknessControlFactor(const Internode<InternodeGrowthData> &internode) const {
+float TreeGrowthParameters::GetThicknessControlFactor(const Node<InternodeGrowthData> &internode) const {
     return m_endNodeThicknessAndControl.y;
 }
 
-float TreeStructuralGrowthParameters::GetLateralBudFlushingProbability(
-        const Internode<InternodeGrowthData> &internode) const {
+float TreeGrowthParameters::GetLateralBudFlushingProbability(
+        const Node<InternodeGrowthData> &internode) const {
     return m_lateralBudFlushingProbability;
 }
 
-float TreeStructuralGrowthParameters::GetApicalControl(const Internode<InternodeGrowthData> &internode) const {
+float TreeGrowthParameters::GetApicalControl(const Node<InternodeGrowthData> &internode) const {
     return glm::pow(m_apicalControlBaseDistFactor.x, glm::max(1.0f, 1.0f /
                                                                     internode.m_data.m_rootDistance *
                                                                     m_apicalControlBaseDistFactor.y));
 }
 
-float TreeStructuralGrowthParameters::GetApicalDominanceBase(const Internode<InternodeGrowthData> &internode) const {
+float TreeGrowthParameters::GetApicalDominanceBase(const Node<InternodeGrowthData> &internode) const {
     return m_apicalDominanceBaseAgeDist.x *
            glm::pow(
                    m_apicalDominanceBaseAgeDist.y,
                    internode.m_data.m_age);
 }
 
-float TreeStructuralGrowthParameters::GetApicalDominanceDecrease(
-        const Internode<InternodeGrowthData> &internode) const {
+float TreeGrowthParameters::GetApicalDominanceDecrease(
+        const Node<InternodeGrowthData> &internode) const {
     return m_apicalDominanceBaseAgeDist.z;
 }
 
 float
-TreeStructuralGrowthParameters::GetApicalBudKillProbability(const Internode<InternodeGrowthData> &internode) const {
+TreeGrowthParameters::GetApicalBudKillProbability(const Node<InternodeGrowthData> &internode) const {
     return m_budKillProbabilityApicalLateral.x;
 }
 
 float
-TreeStructuralGrowthParameters::GetLateralBudKillProbability(const Internode<InternodeGrowthData> &internode) const {
+TreeGrowthParameters::GetLateralBudKillProbability(const Node<InternodeGrowthData> &internode) const {
     return m_budKillProbabilityApicalLateral.y;
 }
 
-float TreeStructuralGrowthParameters::GetLowBranchPruning(const Internode<InternodeGrowthData> &internode) const {
+float TreeGrowthParameters::GetLowBranchPruning(const Node<InternodeGrowthData> &internode) const {
     return m_lowBranchPruning;
 }
 
-bool TreeStructuralGrowthParameters::GetPruning(const Internode<InternodeGrowthData> &internode) const {
+bool TreeGrowthParameters::GetPruning(const Node<InternodeGrowthData> &internode) const {
     return false;
 }
 
-float TreeStructuralGrowthParameters::GetSagging(const Internode<InternodeGrowthData> &internode) const {
+float TreeGrowthParameters::GetSagging(const Node<InternodeGrowthData> &internode) const {
     return glm::min(
             m_saggingFactorThicknessReductionMax.z,
             m_saggingFactorThicknessReductionMax.x *
@@ -576,33 +578,33 @@ float TreeStructuralGrowthParameters::GetSagging(const Internode<InternodeGrowth
                     m_saggingFactorThicknessReductionMax.y));
 }
 
-float TreeStructuralGrowthParameters::GetShootBaseResourceRequirementFactor(
-        const Internode<InternodeGrowthData> &internode) const {
+float TreeGrowthParameters::GetShootBaseResourceRequirementFactor(
+        const Node<InternodeGrowthData> &internode) const {
     return m_baseResourceRequirementFactor.x;
 }
 
-float TreeStructuralGrowthParameters::GetLeafBaseResourceRequirementFactor(
-        const Internode<InternodeGrowthData> &internode) const {
+float TreeGrowthParameters::GetLeafBaseResourceRequirementFactor(
+        const Node<InternodeGrowthData> &internode) const {
     return m_baseResourceRequirementFactor.y;
 }
 
-float TreeStructuralGrowthParameters::GetFruitBaseResourceRequirementFactor(
-        const Internode<InternodeGrowthData> &internode) const {
+float TreeGrowthParameters::GetFruitBaseResourceRequirementFactor(
+        const Node<InternodeGrowthData> &internode) const {
     return m_baseResourceRequirementFactor.z;
 }
 
-float TreeStructuralGrowthParameters::GetShootProductiveResourceRequirementFactor(
-        const Internode<InternodeGrowthData> &internode) const {
+float TreeGrowthParameters::GetShootProductiveResourceRequirementFactor(
+        const Node<InternodeGrowthData> &internode) const {
     return m_productiveResourceRequirementFactor.x;
 }
 
-float TreeStructuralGrowthParameters::GetLeafProductiveResourceRequirementFactor(
-        const Internode<InternodeGrowthData> &internode) const {
+float TreeGrowthParameters::GetLeafProductiveResourceRequirementFactor(
+        const Node<InternodeGrowthData> &internode) const {
     return m_productiveResourceRequirementFactor.y;
 }
 
-float TreeStructuralGrowthParameters::GetFruitProductiveResourceRequirementFactor(
-        const Internode<InternodeGrowthData> &internode) const {
+float TreeGrowthParameters::GetFruitProductiveResourceRequirementFactor(
+        const Node<InternodeGrowthData> &internode) const {
     return m_productiveResourceRequirementFactor.z;
 }
 

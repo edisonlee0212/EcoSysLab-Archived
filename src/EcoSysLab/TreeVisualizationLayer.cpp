@@ -113,7 +113,7 @@ void TreeVisualizationLayer::LateUpdate() {
                 auto treeEntity = treeEntities->at(i);
                 auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
                 auto &treeModel = tree->m_treeModel;
-                totalInternodeSize += treeModel.m_treeStructure.Skeleton().RefSortedInternodeList().size();
+                totalInternodeSize += treeModel.m_treeStructure.Skeleton().RefSortedNodeList().size();
                 totalFlowSize += treeModel.m_treeStructure.Skeleton().RefSortedFlowList().size();
                 if (m_selectedTree == treeEntity) continue;
                 if (m_versions[i] != treeModel.m_treeStructure.Skeleton().GetVersion()) {

@@ -8,7 +8,7 @@ using namespace EcoSysLab;
 
 bool TreeVisualizer::DrawInternodeInspectionGui(
         TreeStructure<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeStructure,
-        InternodeHandle internodeHandle,
+        NodeHandle internodeHandle,
         bool &deleted,
         const unsigned int &hierarchyLevel) {
     auto &treeSkeleton = treeStructure.Skeleton();
@@ -37,13 +37,13 @@ bool TreeVisualizer::DrawInternodeInspectionGui(
     bool modified = deleted;
     if (opened && !deleted) {
         ImGui::TreePush();
-        const auto &internodeChildren = treeSkeleton.RefInternode(internodeHandle).RefChildHandles();
+        const auto &internodeChildren = treeSkeleton.RefNode(internodeHandle).RefChildHandles();
         for (const auto &child: internodeChildren) {
             bool childDeleted = false;
             DrawInternodeInspectionGui(treeStructure, child, childDeleted, hierarchyLevel + 1);
             if (childDeleted) {
                 treeStructure.Step();
-                treeSkeleton.RecycleInternode(child);
+                treeSkeleton.RecycleNode(child);
                 treeSkeleton.SortLists();
                 m_iteration = treeStructure.CurrentIteration();
                 modified = true;
@@ -58,7 +58,7 @@ bool TreeVisualizer::DrawInternodeInspectionGui(
 void
 TreeVisualizer::PeekInternodeInspectionGui(
         const TreeSkeleton<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeSkeleton,
-        InternodeHandle internodeHandle,
+        NodeHandle internodeHandle,
         const unsigned int &hierarchyLevel) {
     const int index = m_selectedInternodeHierarchyList.size() - hierarchyLevel - 1;
     if (!m_selectedInternodeHierarchyList.empty() && index >= 0 &&
@@ -76,7 +76,7 @@ TreeVisualizer::PeekInternodeInspectionGui(
     }
     if (opened) {
         ImGui::TreePush();
-        const auto &internode = treeSkeleton.PeekInternode(internodeHandle);
+        const auto &internode = treeSkeleton.PeekNode(internodeHandle);
         const auto &internodeChildren = internode.RefChildHandles();
         for (const auto &child: internodeChildren) {
             PeekInternodeInspectionGui(treeSkeleton, child, hierarchyLevel + 1);
@@ -137,7 +137,7 @@ TreeVisualizer::OnInspect(
     if (m_visualization) {
         auto editorLayer = Application::GetLayer<EditorLayer>();
         const auto &sortedBranchList = treeSkeleton.RefSortedFlowList();
-        const auto &sortedInternodeList = treeSkeleton.RefSortedInternodeList();
+        const auto &sortedInternodeList = treeSkeleton.RefSortedNodeList();
         ImGui::Text("Internode count: %d", sortedInternodeList.size());
         ImGui::Text("Flow count: %d", sortedBranchList.size());
         static bool enableStroke = false;
@@ -162,10 +162,10 @@ TreeVisualizer::OnInspect(
                                            Windows::GetWindow())) {
                     treeStructure.Step();
                     auto &skeleton = treeStructure.Skeleton();
-                    auto &pruningInternode = skeleton.RefInternode(m_selectedInternodeHandle);
+                    auto &pruningInternode = skeleton.RefNode(m_selectedInternodeHandle);
                     auto childHandles = pruningInternode.RefChildHandles();
                     for (const auto &childHandle: childHandles) {
-                        skeleton.RecycleInternode(childHandle);
+                        skeleton.RecycleNode(childHandle);
                     }
                     pruningInternode.m_info.m_length *= m_selectedInternodeLengthFactor;
                     m_selectedInternodeLengthFactor = 1.0f;
@@ -241,9 +241,9 @@ TreeVisualizer::OnInspect(
 void
 TreeVisualizer::InspectInternode(
         const TreeSkeleton<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeSkeleton,
-        InternodeHandle internodeHandle) {
+        NodeHandle internodeHandle) {
     if (ImGui::Begin("Internode Inspector")) {
-        const auto &internode = treeSkeleton.PeekInternode(internodeHandle);
+        const auto &internode = treeSkeleton.PeekNode(internodeHandle);
         if (ImGui::TreeNode("Internode info")) {
             ImGui::Text("Thickness: %.3f", internode.m_info.m_thickness);
             ImGui::Text("Length: %.3f", internode.m_info.m_length);
@@ -318,10 +318,10 @@ TreeVisualizer::InspectInternode(
         if (ImGui::TreeNodeEx("Flow info", ImGuiTreeNodeFlags_DefaultOpen)) {
             const auto &flow = treeSkeleton.PeekFlow(internode.GetFlowHandle());
             ImGui::Text("Child flow size: %d", flow.RefChildHandles().size());
-            ImGui::Text("Internode size: %d", flow.RefInternodes().size());
+            ImGui::Text("Internode size: %d", flow.RefNodeHandles().size());
             if (ImGui::TreeNode("Internodes")) {
                 int i = 0;
-                for (const auto &chainedInternodeHandle: flow.RefInternodes()) {
+                for (const auto &chainedInternodeHandle: flow.RefNodeHandles()) {
                     ImGui::Text("No.%d: Handle: %d", i, chainedInternodeHandle);
                     i++;
                 }
@@ -339,12 +339,13 @@ void TreeVisualizer::Reset(
     m_selectedInternodeHierarchyList.clear();
     m_iteration = treeStructure.CurrentIteration();
     m_matrices.clear();
+    m_needUpdate = true;
 }
 
 void
 TreeVisualizer::SetSelectedInternode(
         const TreeSkeleton<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeSkeleton,
-        InternodeHandle internodeHandle) {
+        NodeHandle internodeHandle) {
     if (internodeHandle == m_selectedInternodeHandle)
         return;
     m_selectedInternodeHierarchyList.clear();
@@ -356,7 +357,7 @@ TreeVisualizer::SetSelectedInternode(
     auto walker = internodeHandle;
     while (walker != -1) {
         m_selectedInternodeHierarchyList.push_back(walker);
-        const auto &internode = treeSkeleton.PeekInternode(walker);
+        const auto &internode = treeSkeleton.PeekNode(walker);
         walker = internode.GetParentHandle();
     }
 }
@@ -369,7 +370,7 @@ bool TreeVisualizer::RayCastSelection(
 
     if (editorLayer->SceneCameraWindowFocused()) {
 #pragma region Ray selection
-        InternodeHandle currentFocusingInternodeHandle = -1;
+        NodeHandle currentFocusingInternodeHandle = -1;
         std::mutex writeMutex;
         float minDistance = FLT_MAX;
         GlobalTransform cameraLtw;
@@ -381,10 +382,10 @@ bool TreeVisualizer::RayCastSelection(
         const Ray cameraRay = editorLayer->m_sceneCamera->ScreenPointToRay(
                 cameraLtw, editorLayer->GetMouseScreenPosition());
         const auto &sortedBranchList = treeSkeleton.RefSortedFlowList();
-        const auto &sortedInternodeList = treeSkeleton.RefSortedInternodeList();
+        const auto &sortedInternodeList = treeSkeleton.RefSortedNodeList();
         std::vector<std::shared_future<void>> results;
         Jobs::ParallelFor(sortedInternodeList.size(), [&](unsigned i) {
-            const auto &internode = treeSkeleton.PeekInternode(sortedInternodeList[i]);
+            const auto &internode = treeSkeleton.PeekNode(sortedInternodeList[i]);
             auto rotation = globalTransform.GetRotation() * internode.m_info.m_globalRotation;
             glm::vec3 position = (globalTransform.m_value *
                                   glm::translate(internode.m_info.m_globalPosition))[3];
@@ -464,13 +465,13 @@ TreeVisualizer::SyncMatrices(
         }
     }
     const auto &sortedBranchList = treeSkeleton.RefSortedFlowList();
-    const auto &sortedInternodeList = treeSkeleton.RefSortedInternodeList();
+    const auto &sortedInternodeList = treeSkeleton.RefSortedNodeList();
     m_matrices.resize(sortedInternodeList.size() + 1);
     m_colors.resize(sortedInternodeList.size() + 1);
     std::vector<std::shared_future<void>> results;
     Jobs::ParallelFor(sortedInternodeList.size(), [&](unsigned i) {
         auto internodeHandle = sortedInternodeList[i];
-        const auto &internode = treeSkeleton.PeekInternode(internodeHandle);
+        const auto &internode = treeSkeleton.PeekNode(internodeHandle);
         glm::vec3 position = internode.m_info.m_globalPosition;
         const auto direction = glm::normalize(internode.m_info.m_globalRotation * glm::vec3(0, 0, -1));
         auto rotation = glm::quatLookAt(
@@ -516,10 +517,10 @@ bool TreeVisualizer::ScreenCurvePruning(
     glm::mat4 projectionView = editorLayer->m_sceneCamera->GetProjection() *
                                glm::lookAt(cameraPosition, cameraPosition + cameraFront, cameraUp);
 
-    const auto &sortedInternodeList = treeSkeleton.RefSortedInternodeList();
+    const auto &sortedInternodeList = treeSkeleton.RefSortedNodeList();
     bool changed = false;
     for (const auto &internodeHandle: sortedInternodeList) {
-        auto &internode = treeSkeleton.RefInternode(internodeHandle);
+        auto &internode = treeSkeleton.RefNode(internodeHandle);
         if (internode.IsRecycled()) continue;
         const glm::vec3 position = (globalTransform.m_value *
                                     glm::translate(internode.m_info.m_globalPosition))[3];
@@ -559,7 +560,7 @@ bool TreeVisualizer::ScreenCurvePruning(
             }
         }
         if (intersect) {
-            treeSkeleton.RecycleInternode(internodeHandle);
+            treeSkeleton.RecycleNode(internodeHandle);
             changed = true;
         }
 

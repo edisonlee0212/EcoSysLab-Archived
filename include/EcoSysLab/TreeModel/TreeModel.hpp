@@ -73,7 +73,20 @@ namespace EcoSysLab {
 
     };
 
-    class TreeStructuralGrowthParameters : public ITreeGrowthParameters<InternodeGrowthData> {
+    struct RootInternodeGrowthData {};
+    struct RootBranchGrowthData {
+        int m_order = 0;
+    };
+
+    struct RootSkeletonGrowthData {
+
+    };
+
+    class RootGrowthParameters {
+
+    };
+
+    class TreeGrowthParameters {
     public:
         int m_lateralBudCount;
         /**
@@ -119,66 +132,66 @@ namespace EcoSysLab {
         glm::vec3 m_baseResourceRequirementFactor;
         glm::vec3 m_productiveResourceRequirementFactor;
 
-        [[nodiscard]] int GetLateralBudCount(const Internode<InternodeGrowthData> &internode) const override;
+        [[nodiscard]] int GetLateralBudCount(const Node<InternodeGrowthData> &internode) const;
 
-        [[nodiscard]] float GetDesiredBranchingAngle(const Internode<InternodeGrowthData> &internode) const override;
+        [[nodiscard]] float GetDesiredBranchingAngle(const Node<InternodeGrowthData> &internode) const;
 
-        [[nodiscard]] float GetDesiredRollAngle(const Internode<InternodeGrowthData> &internode) const override;
+        [[nodiscard]] float GetDesiredRollAngle(const Node<InternodeGrowthData> &internode) const;
 
-        [[nodiscard]] float GetDesiredApicalAngle(const Internode<InternodeGrowthData> &internode) const override;
+        [[nodiscard]] float GetDesiredApicalAngle(const Node<InternodeGrowthData> &internode) const;
 
-        [[nodiscard]] float GetGravitropism(const Internode<InternodeGrowthData> &internode) const override;
+        [[nodiscard]] float GetGravitropism(const Node<InternodeGrowthData> &internode) const;
 
-        [[nodiscard]] float GetPhototropism(const Internode<InternodeGrowthData> &internode) const override;
+        [[nodiscard]] float GetPhototropism(const Node<InternodeGrowthData> &internode) const;
 
-        [[nodiscard]] float GetInternodeLength(const Internode<InternodeGrowthData> &internode) const override;
+        [[nodiscard]] float GetInternodeLength(const Node<InternodeGrowthData> &internode) const;
 
-        [[nodiscard]] float GetGrowthRate(const Internode<InternodeGrowthData> &internode) const override;
+        [[nodiscard]] float GetGrowthRate(const Node<InternodeGrowthData> &internode) const;
 
-        [[nodiscard]] float GetEndNodeThickness(const Internode<InternodeGrowthData> &internode) const override;
+        [[nodiscard]] float GetEndNodeThickness(const Node<InternodeGrowthData> &internode) const;
 
-        [[nodiscard]] float GetThicknessControlFactor(const Internode<InternodeGrowthData> &internode) const override;
-
-        [[nodiscard]] float
-        GetLateralBudFlushingProbability(const Internode<InternodeGrowthData> &internode) const override;
-
-        [[nodiscard]] float GetApicalControl(const Internode<InternodeGrowthData> &internode) const override;
-
-        [[nodiscard]] float GetApicalDominanceBase(const Internode<InternodeGrowthData> &internode) const override;
-
-        [[nodiscard]] float GetApicalDominanceDecrease(const Internode<InternodeGrowthData> &internode) const override;
-
-        [[nodiscard]] float GetApicalBudKillProbability(const Internode<InternodeGrowthData> &internode) const override;
+        [[nodiscard]] float GetThicknessControlFactor(const Node<InternodeGrowthData> &internode) const;
 
         [[nodiscard]] float
-        GetLateralBudKillProbability(const Internode<InternodeGrowthData> &internode) const override;
+        GetLateralBudFlushingProbability(const Node<InternodeGrowthData> &internode) const;
 
-        [[nodiscard]] bool GetPruning(const Internode<InternodeGrowthData> &internode) const override;
+        [[nodiscard]] float GetApicalControl(const Node<InternodeGrowthData> &internode) const;
 
-        [[nodiscard]] float GetLowBranchPruning(const Internode<InternodeGrowthData> &internode) const override;
+        [[nodiscard]] float GetApicalDominanceBase(const Node<InternodeGrowthData> &internode) const;
 
-        [[nodiscard]] float GetSagging(const Internode<InternodeGrowthData> &internode) const override;
+        [[nodiscard]] float GetApicalDominanceDecrease(const Node<InternodeGrowthData> &internode) const;
+
+        [[nodiscard]] float GetApicalBudKillProbability(const Node<InternodeGrowthData> &internode) const;
+
+        [[nodiscard]] float
+        GetLateralBudKillProbability(const Node<InternodeGrowthData> &internode) const;
+
+        [[nodiscard]] bool GetPruning(const Node<InternodeGrowthData> &internode) const;
+
+        [[nodiscard]] float GetLowBranchPruning(const Node<InternodeGrowthData> &internode) const;
+
+        [[nodiscard]] float GetSagging(const Node<InternodeGrowthData> &internode) const;
 
 
         [[nodiscard]] float
-        GetShootBaseResourceRequirementFactor(const Internode<InternodeGrowthData> &internode) const override;
+        GetShootBaseResourceRequirementFactor(const Node<InternodeGrowthData> &internode) const;
 
         [[nodiscard]] float
-        GetLeafBaseResourceRequirementFactor(const Internode<InternodeGrowthData> &internode) const override;
+        GetLeafBaseResourceRequirementFactor(const Node<InternodeGrowthData> &internode) const;
 
         [[nodiscard]] float
-        GetFruitBaseResourceRequirementFactor(const Internode<InternodeGrowthData> &internode) const override;
+        GetFruitBaseResourceRequirementFactor(const Node<InternodeGrowthData> &internode) const;
 
         [[nodiscard]] float
-        GetShootProductiveResourceRequirementFactor(const Internode<InternodeGrowthData> &internode) const override;
+        GetShootProductiveResourceRequirementFactor(const Node<InternodeGrowthData> &internode) const;
 
         [[nodiscard]] float
-        GetLeafProductiveResourceRequirementFactor(const Internode<InternodeGrowthData> &internode) const override;
+        GetLeafProductiveResourceRequirementFactor(const Node<InternodeGrowthData> &internode) const;
 
         [[nodiscard]] float
-        GetFruitProductiveResourceRequirementFactor(const Internode<InternodeGrowthData> &internode) const override;
+        GetFruitProductiveResourceRequirementFactor(const Node<InternodeGrowthData> &internode) const;
 
-        TreeStructuralGrowthParameters();
+        TreeGrowthParameters();
     };
 
     struct GrowthNutrients {
@@ -186,29 +199,28 @@ namespace EcoSysLab {
     };
 
     class TreeModel {
-        bool LowBranchPruning(float maxDistance, InternodeHandle internodeHandle,
-                                     const TreeStructuralGrowthParameters &parameters);
+#pragma region Tree Growth
+        bool LowBranchPruning(float maxDistance, NodeHandle internodeHandle,
+                              const TreeGrowthParameters &parameters);
 
-        inline void CalculateSagging(InternodeHandle internodeHandle,
-                                     const TreeStructuralGrowthParameters &parameters);
+        inline void CalculateSagging(NodeHandle internodeHandle,
+                                     const TreeGrowthParameters &parameters);
 
-        inline void CalculateResourceRequirement(InternodeHandle internodeHandle,
-                                                 const TreeStructuralGrowthParameters &parameters);
+        inline void CalculateResourceRequirement(NodeHandle internodeHandle,
+                                                 const TreeGrowthParameters &parameters);
 
-        inline bool GrowInternode(InternodeHandle internodeHandle, const TreeStructuralGrowthParameters &parameters,
+        inline bool GrowInternode(NodeHandle internodeHandle, const TreeGrowthParameters &parameters,
                                   const GrowthNutrients &growthNutrients);
 
-        bool GrowShoots(float extendLength, InternodeHandle internodeHandle,
-                        const TreeStructuralGrowthParameters &parameters, float &collectedInhibitor);
-
-        void Initialize(const TreeStructuralGrowthParameters &parameters);
-
+        bool GrowShoots(float extendLength, NodeHandle internodeHandle,
+                        const TreeGrowthParameters &parameters, float &collectedInhibitor);
+#pragma endregion
+        void Initialize(const TreeGrowthParameters &parameters);
         bool m_initialized = false;
-
     public:
         glm::vec3 m_gravityDirection = glm::vec3(0, -1, 0);
         TreeStructure<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> m_treeStructure = {};
-
+        TreeStructure<RootSkeletonGrowthData, RootBranchGrowthData, RootInternodeGrowthData> m_rootStructure = {};
         /**
          * Erase the entire tree.
          */
@@ -220,6 +232,6 @@ namespace EcoSysLab {
          * @param parameters The procedural parameters that guides the growth.
          * @return Whether the growth caused a structural change during the growth.
          */
-        bool Grow(const GrowthNutrients &growthNutrients, const TreeStructuralGrowthParameters &parameters);
+        bool Grow(const GrowthNutrients &growthNutrients, const TreeGrowthParameters &parameters);
     };
 }
