@@ -62,7 +62,7 @@ void TreeVisualizationLayer::LateUpdate() {
                             const auto treeEntity = treeEntities->at(i);
                             auto globalTransform = scene->GetDataComponent<GlobalTransform>(treeEntity);
                             auto skeleton = scene->GetOrSetPrivateComponent<Tree>(
-                                    treeEntity).lock()->m_treeModel.m_treeStructure.Skeleton();
+                                    treeEntity).lock()->m_treeModel.m_treeStructure.RefSkeleton();
                             Bound bound;
                             bound.m_min = skeleton.m_min;
                             bound.m_max = skeleton.m_max;
@@ -113,11 +113,11 @@ void TreeVisualizationLayer::LateUpdate() {
                 auto treeEntity = treeEntities->at(i);
                 auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
                 auto &treeModel = tree->m_treeModel;
-                totalInternodeSize += treeModel.m_treeStructure.Skeleton().RefSortedNodeList().size();
-                totalFlowSize += treeModel.m_treeStructure.Skeleton().RefSortedFlowList().size();
+                totalInternodeSize += treeModel.m_treeStructure.RefSkeleton().RefSortedNodeList().size();
+                totalFlowSize += treeModel.m_treeStructure.RefSkeleton().RefSortedFlowList().size();
                 if (m_selectedTree == treeEntity) continue;
-                if (m_versions[i] != treeModel.m_treeStructure.Skeleton().GetVersion()) {
-                    m_versions[i] = treeModel.m_treeStructure.Skeleton().GetVersion();
+                if (m_versions[i] != treeModel.m_treeStructure.RefSkeleton().GetVersion()) {
+                    m_versions[i] = treeModel.m_treeStructure.RefSkeleton().GetVersion();
                     m_needFlowUpdate = true;
                 }
             }
@@ -135,7 +135,7 @@ void TreeVisualizationLayer::LateUpdate() {
 
                     auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
                     auto &treeModel = tree->m_treeModel;
-                    const auto &skeleton = treeModel.m_treeStructure.Skeleton();
+                    const auto &skeleton = treeModel.m_treeStructure.RefSkeleton();
                     auto entityGlobalTransform = scene->GetDataComponent<GlobalTransform>(treeEntity);
                     m_boundingBoxMatrices.emplace_back();
                     m_boundingBoxMatrices.back() = entityGlobalTransform.m_value *
@@ -153,14 +153,14 @@ void TreeVisualizationLayer::LateUpdate() {
                 for (const auto &modelPair: sortedModels) {
                     auto tree = scene->GetOrSetPrivateComponent<Tree>(modelPair.second).lock();
                     auto &treeModel = tree->m_treeModel;
-                    const auto &list = treeModel.m_treeStructure.Skeleton().RefSortedFlowList();
+                    const auto &list = treeModel.m_treeStructure.RefSkeleton().RefSortedFlowList();
                     if (startIndex + list.size() > 50000000) break;
                     auto entityGlobalTransform = scene->GetDataComponent<GlobalTransform>(modelPair.second);
                     std::vector<std::shared_future<void>> results;
                     m_matrices.resize(startIndex + list.size());
                     m_colors.resize(startIndex + list.size());
                     Jobs::ParallelFor(list.size(), [&](unsigned i) {
-                        const auto &skeleton = treeModel.m_treeStructure.Skeleton();
+                        const auto &skeleton = treeModel.m_treeStructure.RefSkeleton();
                         auto &flow = skeleton.PeekFlow(list[i]);
                         glm::vec3 translation = (entityGlobalTransform.m_value *
                                                  glm::translate(flow.m_info.m_globalStartPosition))[3];
@@ -247,9 +247,17 @@ void TreeVisualizationLayer::OnInspect() {
             ImGui::Text("Tree count: %d", treeEntities->size());
             ImGui::Text("Total Internode size: %d", m_internodeSize);
             ImGui::Text("Total Flow size: %d", m_flowSize);
+
+            if(ImGui::TreeNode("Mesh generation")) {
+                m_meshGeneratorSettings.OnInspect();
+                if (ImGui::Button("Generate Meshes")) {
+                    GenerateMeshes(m_meshGeneratorSettings);
+                }
+                ImGui::TreePop();
+            }
         }
 
-        if(scene->IsEntityValid(m_selectedTree)) {
+        if(m_visualization && scene->IsEntityValid(m_selectedTree)) {
             m_treeVisualizer.OnInspect(
                     scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock()->m_treeModel.m_treeStructure, scene->GetDataComponent<GlobalTransform>(m_selectedTree));
         }
@@ -281,6 +289,18 @@ void TreeVisualizationLayer::GrowAllTrees() {
 
         if(scene->IsEntityValid(m_selectedTree)){
             m_treeVisualizer.Reset(scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock()->m_treeModel.m_treeStructure);
+        }
+    }
+}
+
+void TreeVisualizationLayer::GenerateMeshes(const MeshGeneratorSettings& meshGeneratorSettings) {
+    auto scene = GetScene();
+    const std::vector<Entity> *treeEntities =
+            scene->UnsafeGetPrivateComponentOwnersList<Tree>();
+    if (treeEntities && !treeEntities->empty()) {
+        for(auto treeEntity : *treeEntities){
+            auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
+            tree->GenerateMesh(meshGeneratorSettings);
         }
     }
 }

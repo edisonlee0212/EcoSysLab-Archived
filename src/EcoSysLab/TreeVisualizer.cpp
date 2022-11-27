@@ -7,11 +7,11 @@
 using namespace EcoSysLab;
 
 bool TreeVisualizer::DrawInternodeInspectionGui(
-        TreeStructure<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeStructure,
+        PlantStructure<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeStructure,
         NodeHandle internodeHandle,
         bool &deleted,
         const unsigned int &hierarchyLevel) {
-    auto &treeSkeleton = treeStructure.Skeleton();
+    auto &treeSkeleton = treeStructure.RefSkeleton();
     const int index = m_selectedInternodeHierarchyList.size() - hierarchyLevel - 1;
     if (!m_selectedInternodeHierarchyList.empty() && index >= 0 &&
         index < m_selectedInternodeHierarchyList.size() &&
@@ -57,7 +57,7 @@ bool TreeVisualizer::DrawInternodeInspectionGui(
 
 void
 TreeVisualizer::PeekInternodeInspectionGui(
-        const TreeSkeleton<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeSkeleton,
+        const Skeleton<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeSkeleton,
         NodeHandle internodeHandle,
         const unsigned int &hierarchyLevel) {
     const int index = m_selectedInternodeHierarchyList.size() - hierarchyLevel - 1;
@@ -87,7 +87,7 @@ TreeVisualizer::PeekInternodeInspectionGui(
 
 bool
 TreeVisualizer::OnInspect(
-        TreeStructure<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeStructure,
+        PlantStructure<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeStructure,
         const GlobalTransform &globalTransform) {
     bool updated = false;
     if (ImGui::TreeNodeEx("Current selected tree", ImGuiTreeNodeFlags_DefaultOpen)) {
@@ -161,7 +161,7 @@ TreeVisualizer::OnInspect(
                     Inputs::GetKeyInternal(GLFW_KEY_DELETE,
                                            Windows::GetWindow())) {
                     treeStructure.Step();
-                    auto &skeleton = treeStructure.Skeleton();
+                    auto &skeleton = treeStructure.RefSkeleton();
                     auto &pruningInternode = skeleton.RefNode(m_selectedInternodeHandle);
                     auto childHandles = pruningInternode.RefChildHandles();
                     for (const auto &childHandle: childHandles) {
@@ -195,7 +195,7 @@ TreeVisualizer::OnInspect(
                         //Once released, check if empty.
                         if (!m_storedMousePositions.empty()) {
                             treeStructure.Step();
-                            auto &skeleton = treeStructure.Skeleton();
+                            auto &skeleton = treeStructure.RefSkeleton();
                             bool changed = ScreenCurvePruning(skeleton, globalTransform);
                             if (changed) {
                                 skeleton.SortLists();
@@ -240,7 +240,7 @@ TreeVisualizer::OnInspect(
 
 void
 TreeVisualizer::InspectInternode(
-        const TreeSkeleton<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeSkeleton,
+        const Skeleton<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeSkeleton,
         NodeHandle internodeHandle) {
     if (ImGui::Begin("Internode Inspector")) {
         const auto &internode = treeSkeleton.PeekNode(internodeHandle);
@@ -334,7 +334,7 @@ TreeVisualizer::InspectInternode(
 }
 
 void TreeVisualizer::Reset(
-        TreeStructure<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeStructure) {
+        PlantStructure<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeStructure) {
     m_selectedInternodeHandle = -1;
     m_selectedInternodeHierarchyList.clear();
     m_iteration = treeStructure.CurrentIteration();
@@ -344,7 +344,7 @@ void TreeVisualizer::Reset(
 
 void
 TreeVisualizer::SetSelectedInternode(
-        const TreeSkeleton<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeSkeleton,
+        const Skeleton<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeSkeleton,
         NodeHandle internodeHandle) {
     if (internodeHandle == m_selectedInternodeHandle)
         return;
@@ -363,7 +363,7 @@ TreeVisualizer::SetSelectedInternode(
 }
 
 bool TreeVisualizer::RayCastSelection(
-        const TreeSkeleton<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeSkeleton,
+        const Skeleton<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeSkeleton,
         const GlobalTransform &globalTransform) {
     auto editorLayer = Application::GetLayer<EditorLayer>();
     bool changed = false;
@@ -457,7 +457,7 @@ bool TreeVisualizer::RayCastSelection(
 
 void
 TreeVisualizer::SyncMatrices(
-        const TreeSkeleton<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeSkeleton) {
+        const Skeleton<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeSkeleton) {
     static std::vector<glm::vec4> randomColors;
     if (randomColors.empty()) {
         for (int i = 0; i < 100; i++) {
@@ -506,7 +506,7 @@ TreeVisualizer::SyncMatrices(
 }
 
 bool TreeVisualizer::ScreenCurvePruning(
-        TreeSkeleton<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeSkeleton,
+        Skeleton<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeSkeleton,
         const GlobalTransform &globalTransform) {
 
     auto editorLayer = Application::GetLayer<EditorLayer>();

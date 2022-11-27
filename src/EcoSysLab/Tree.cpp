@@ -33,18 +33,12 @@ void Tree::OnInspect() {
             for (int i = 0; i < iterations; i++) TryGrow();
             modelChanged = true;
         }
-        if (ImGui::Button("Generate Mesh")) {
-            std::vector<Vertex> vertices;
-            std::vector<unsigned int> indices;
-            BranchMeshGenerator::Generate(m_treeModel.m_treeStructure.Skeleton(), vertices, indices,
-                                          meshGeneratorSettings);
-            auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
-            auto material = ProjectManager::CreateTemporaryAsset<Material>();
-            material->SetProgram(DefaultResources::GLPrograms::StandardProgram);
-            mesh->SetVertices(17, vertices, indices);
-            auto meshRenderer = GetScene()->GetOrSetPrivateComponent<MeshRenderer>(GetOwner()).lock();
-            meshRenderer->m_mesh = mesh;
-            meshRenderer->m_material = material;
+        if(ImGui::TreeNode("Mesh generation")) {
+            meshGeneratorSettings.OnInspect();
+            if (ImGui::Button("Generate Mesh")) {
+                GenerateMesh(meshGeneratorSettings);
+            }
+            ImGui::TreePop();
         }
         if (ImGui::Button("Clear")) {
             m_treeModel.Clear();
@@ -73,7 +67,22 @@ bool Tree::TryGrow() {
     auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
     if (!treeDescriptor) return false;
     if (m_enableHistory) m_treeModel.m_treeStructure.Step();
-    return m_treeModel.Grow(m_growthNutrients, treeDescriptor->m_treeStructuralGrowthParameters);
+    return m_treeModel.Grow(m_growthNutrients, treeDescriptor->m_treeStructuralGrowthParameters, treeDescriptor->m_rootGrowthParameters);
+}
+
+void Tree::GenerateMesh(const MeshGeneratorSettings& meshGeneratorSettings) {
+    std::vector<Vertex> vertices;
+    std::vector<unsigned int> indices;
+    BranchMeshGenerator<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> meshGenerator;
+    meshGenerator.Generate(m_treeModel.m_treeStructure.RefSkeleton(), vertices, indices,
+                           meshGeneratorSettings);
+    auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
+    auto material = ProjectManager::CreateTemporaryAsset<Material>();
+    material->SetProgram(DefaultResources::GLPrograms::StandardProgram);
+    mesh->SetVertices(17, vertices, indices);
+    auto meshRenderer = GetScene()->GetOrSetPrivateComponent<MeshRenderer>(GetOwner()).lock();
+    meshRenderer->m_mesh = mesh;
+    meshRenderer->m_material = material;
 }
 
 void TreeDescriptor::OnCreate() {

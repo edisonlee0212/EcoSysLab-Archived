@@ -3,12 +3,14 @@
 #include "ecosyslab_export.h"
 #include "TreeModel.hpp"
 #include "TreeVisualizer.hpp"
+#include "BranchMeshGenerator.hpp"
+
 using namespace UniEngine;
 namespace EcoSysLab {
     class TreeDescriptor : public IAsset {
     public:
         TreeGrowthParameters m_treeStructuralGrowthParameters;
-
+        RootGrowthParameters m_rootGrowthParameters;
         void OnCreate() override;
 
         void OnInspect() override;
@@ -34,5 +36,7 @@ namespace EcoSysLab {
         void OnCreate() override;
 
         bool TryGrow();
+
+        void GenerateMesh(const MeshGeneratorSettings& meshGeneratorSettings);
     };
 }

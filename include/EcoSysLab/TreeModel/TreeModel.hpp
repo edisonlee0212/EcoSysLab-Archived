@@ -1,6 +1,6 @@
 #pragma once
 
-#include "TreeStructure.hpp"
+#include "PlantStructure.hpp"
 
 using namespace UniEngine;
 namespace EcoSysLab {
@@ -219,8 +219,8 @@ namespace EcoSysLab {
         bool m_initialized = false;
     public:
         glm::vec3 m_gravityDirection = glm::vec3(0, -1, 0);
-        TreeStructure<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> m_treeStructure = {};
-        TreeStructure<RootSkeletonGrowthData, RootBranchGrowthData, RootInternodeGrowthData> m_rootStructure = {};
+        PlantStructure<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> m_treeStructure = {};
+        PlantStructure<RootSkeletonGrowthData, RootBranchGrowthData, RootInternodeGrowthData> m_rootStructure = {};
         /**
          * Erase the entire tree.
          */
@@ -232,6 +232,6 @@ namespace EcoSysLab {
          * @param parameters The procedural parameters that guides the growth.
          * @return Whether the growth caused a structural change during the growth.
          */
-        bool Grow(const GrowthNutrients &growthNutrients, const TreeGrowthParameters &parameters);
+        bool Grow(const GrowthNutrients &growthNutrients, const TreeGrowthParameters &parameters, const RootGrowthParameters &rootParameters);
     };
 }

@@ -29,7 +29,7 @@ void ApplyTropism(const glm::vec3 &targetDir, float tropism, glm::quat &rotation
 bool TreeModel::GrowShoots(float extendLength, NodeHandle internodeHandle,
                            const TreeGrowthParameters &parameters, float &collectedInhibitor) {
     bool graphChanged = false;
-    auto &skeleton = m_treeStructure.Skeleton();
+    auto &skeleton = m_treeStructure.RefSkeleton();
     auto &internode = skeleton.RefNode(internodeHandle);
     auto internodeLength = parameters.GetInternodeLength(internode);
     auto &internodeData = internode.m_data;
@@ -103,7 +103,7 @@ bool TreeModel::GrowShoots(float extendLength, NodeHandle internodeHandle,
 bool TreeModel::GrowInternode(NodeHandle internodeHandle, const TreeGrowthParameters &parameters,
                               const GrowthNutrients &growthNutrients) {
     bool graphChanged = false;
-    auto &skeleton = m_treeStructure.Skeleton();
+    auto &skeleton = m_treeStructure.RefSkeleton();
     {
         auto &internode = skeleton.RefNode(internodeHandle);
         auto &internodeData = internode.m_data;
@@ -184,7 +184,7 @@ bool TreeModel::GrowInternode(NodeHandle internodeHandle, const TreeGrowthParame
 
 void TreeModel::CalculateSagging(NodeHandle internodeHandle,
                                  const TreeGrowthParameters &parameters) {
-    auto &skeleton = m_treeStructure.Skeleton();
+    auto &skeleton = m_treeStructure.RefSkeleton();
     auto &internode = skeleton.RefNode(internodeHandle);
     auto &internodeData = internode.m_data;
     auto &internodeInfo = internode.m_info;
@@ -216,7 +216,7 @@ void TreeModel::CalculateSagging(NodeHandle internodeHandle,
 
 void TreeModel::CalculateResourceRequirement(NodeHandle internodeHandle,
                                              const TreeGrowthParameters &parameters) {
-    auto &skeleton = m_treeStructure.Skeleton();
+    auto &skeleton = m_treeStructure.RefSkeleton();
     auto &internode = skeleton.RefNode(internodeHandle);
     auto &internodeData = internode.m_data;
     auto &internodeInfo = internode.m_info;
@@ -270,8 +270,8 @@ void TreeModel::CalculateResourceRequirement(NodeHandle internodeHandle,
     }
 }
 
-bool TreeModel::Grow(const GrowthNutrients &growthNutrients, const TreeGrowthParameters &parameters) {
-    auto &skeleton = m_treeStructure.Skeleton();
+bool TreeModel::Grow(const GrowthNutrients &growthNutrients, const TreeGrowthParameters &parameters, const RootGrowthParameters &rootParameters) {
+    auto &skeleton = m_treeStructure.RefSkeleton();
     bool treeStructureChanged = false;
     bool rootStructureChanged = false;
 #pragma region Tree Growth
@@ -422,7 +422,7 @@ bool TreeModel::Grow(const GrowthNutrients &growthNutrients, const TreeGrowthPar
 }
 
 void TreeModel::Initialize(const TreeGrowthParameters &parameters) {
-    auto &skeleton = m_treeStructure.Skeleton();
+    auto &skeleton = m_treeStructure.RefSkeleton();
     auto &firstInternode = skeleton.RefNode(0);
     firstInternode.m_info.m_thickness = parameters.GetEndNodeThickness(firstInternode);
     firstInternode.m_data.m_buds.emplace_back();
@@ -441,7 +441,7 @@ void TreeModel::Clear() {
 
 bool TreeModel::LowBranchPruning(float maxDistance, NodeHandle internodeHandle,
                                  const TreeGrowthParameters &parameters) {
-    auto &skeleton = m_treeStructure.Skeleton();
+    auto &skeleton = m_treeStructure.RefSkeleton();
     auto &internode = skeleton.RefNode(internodeHandle);
     //Pruning here.
     if (maxDistance > 5 && internode.m_data.m_order != 0 &&

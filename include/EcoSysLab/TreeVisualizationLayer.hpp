@@ -3,6 +3,7 @@
 #include "ecosyslab_export.h"
 #include "TreeModel.hpp"
 #include "TreeVisualizer.hpp"
+#include "BranchMeshGenerator.hpp"
 using namespace UniEngine;
 namespace EcoSysLab {
     class TreeVisualizationLayer : public ILayer{
@@ -37,8 +38,10 @@ namespace EcoSysLab {
 
         void OnInspect() override;
     public:
+        MeshGeneratorSettings m_meshGeneratorSettings;
         Entity m_selectedTree = {};
         TreeVisualizer m_treeVisualizer;
         void GrowAllTrees();
+        void GenerateMeshes(const MeshGeneratorSettings& meshGeneratorSettings);
     };
 }

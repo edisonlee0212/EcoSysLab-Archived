@@ -2,7 +2,7 @@
 // Created by lllll on 10/18/2022.
 //
 
-#include "TreeStructure.hpp"
+#include "PlantStructure.hpp"
 
 using namespace EcoSysLab;
 

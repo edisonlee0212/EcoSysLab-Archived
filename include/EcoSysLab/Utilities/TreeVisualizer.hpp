@@ -26,44 +26,44 @@ namespace EcoSysLab {
         PruningMode m_mode = PruningMode::None;
 
         bool
-        RayCastSelection(const TreeSkeleton <SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeSkeleton,
+        RayCastSelection(const Skeleton <SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeSkeleton,
                          const GlobalTransform &globalTransform);
 
-        bool ScreenCurvePruning(TreeSkeleton <SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeSkeleton,
+        bool ScreenCurvePruning(Skeleton <SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeSkeleton,
                                 const GlobalTransform &globalTransform);
 
         void SetSelectedInternode(
-                const TreeSkeleton <SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeSkeleton,
+                const Skeleton <SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeSkeleton,
                 NodeHandle internodeHandle);
 
         bool DrawInternodeInspectionGui(
-                TreeStructure <SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeStructure,
+                PlantStructure <SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeStructure,
                 NodeHandle internodeHandle, bool &deleted,
                 const unsigned &hierarchyLevel);
 
         void PeekInternodeInspectionGui(
-                const TreeSkeleton <SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeSkeleton,
+                const Skeleton <SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeSkeleton,
                 NodeHandle internodeHandle,
                 const unsigned &hierarchyLevel);
 
         void
-        InspectInternode(const TreeSkeleton <SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeSkeleton,
+        InspectInternode(const Skeleton <SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeSkeleton,
                          NodeHandle internodeHandle);
 
 
     public:
 
         void
-        SyncMatrices(const TreeSkeleton <SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeSkeleton);
+        SyncMatrices(const Skeleton <SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeSkeleton);
 
         int m_iteration = 0;
         bool m_needUpdate = false;
 
         bool
-        OnInspect(TreeStructure <SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeStructure,
+        OnInspect(PlantStructure <SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeStructure,
                   const GlobalTransform &globalTransform);
 
-        void Reset(TreeStructure <SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeStructure);
+        void Reset(PlantStructure <SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeStructure);
     };
 
 
