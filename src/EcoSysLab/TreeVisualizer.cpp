@@ -126,7 +126,11 @@ TreeVisualizer::OnInspect(
                 ImGui::TreePop();
             }
             if (m_selectedInternodeHandle >= 0) {
-                InspectInternode(treeStructure.Peek(m_iteration), m_selectedInternodeHandle);
+                if (m_iteration == treeStructure.CurrentIteration()) {
+                    InspectInternode(treeStructure.RefSkeleton(), m_selectedInternodeHandle);
+                } else {
+                    PeekInternode(treeStructure.Peek(m_iteration), m_selectedInternodeHandle);
+                }
             }
         }
 
@@ -238,8 +242,116 @@ TreeVisualizer::OnInspect(
     return updated;
 }
 
-void
+bool
 TreeVisualizer::InspectInternode(
+        Skeleton<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeSkeleton,
+        NodeHandle internodeHandle) {
+    bool changed = false;
+    if (ImGui::Begin("Internode Inspector")) {
+        const auto &internode = treeSkeleton.PeekNode(internodeHandle);
+        if (ImGui::TreeNode("Internode info")) {
+            ImGui::Text("Thickness: %.3f", internode.m_info.m_thickness);
+            ImGui::Text("Length: %.3f", internode.m_info.m_length);
+            ImGui::InputFloat3("Position", (float *) &internode.m_info.m_globalPosition.x, "%.3f",
+                               ImGuiInputTextFlags_ReadOnly);
+            auto globalRotationAngle = glm::eulerAngles(internode.m_info.m_globalRotation);
+            ImGui::InputFloat3("Global rotation", (float *) &globalRotationAngle.x, "%.3f",
+                               ImGuiInputTextFlags_ReadOnly);
+            auto localRotationAngle = glm::eulerAngles(internode.m_info.m_localRotation);
+            ImGui::InputFloat3("Local rotation", (float *) &localRotationAngle.x, "%.3f",
+                               ImGuiInputTextFlags_ReadOnly);
+            auto &internodeData = internode.m_data;
+            ImGui::InputInt("Age", (int *) &internodeData.m_age, 1, 100, ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputFloat("Distance to end", (float *) &internodeData.m_maxDistanceToAnyBranchEnd, 1, 100,
+                              "%.3f",
+                              ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputFloat("Level", (float *) &internodeData.m_level, 1, 100, "%.3f",
+                              ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputFloat("Child biomass", (float *) &internodeData.m_childTotalBiomass, 1, 100, "%.3f",
+                              ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputFloat("Root distance", (float *) &internodeData.m_rootDistance, 1, 100, "%.3f",
+                              ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputFloat3("Light dir", (float *) &internodeData.m_lightDirection.x, "%.3f",
+                               ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputFloat("Light intensity", (float *) &internodeData.m_lightIntensity, 1, 100, "%.3f",
+                              ImGuiInputTextFlags_ReadOnly);
+
+            if (ImGui::DragFloat("Inhibitor", (float *) &internodeData.m_inhibitor)) {
+                changed = true;
+            }
+            if (ImGui::DragFloat("Sagging", (float *) &internodeData.m_sagging)) {
+                changed = true;
+            }
+            if (ImGui::DragFloat("Extra mass", (float *) &internodeData.m_extraMass)) {
+                changed = true;
+            }
+
+
+            if (ImGui::TreeNodeEx("Buds", ImGuiTreeNodeFlags_DefaultOpen)) {
+                int index = 1;
+                for (auto &bud: internodeData.m_buds) {
+                    if (ImGui::TreeNode(("Bud " + std::to_string(index)).c_str())) {
+                        switch (bud.m_type) {
+                            case BudType::Apical:
+                                ImGui::Text("Apical");
+                                break;
+                            case BudType::Lateral:
+                                ImGui::Text("Lateral");
+                                break;
+                            case BudType::Leaf:
+                                ImGui::Text("Leaf");
+                                break;
+                            case BudType::Fruit:
+                                ImGui::Text("Fruit");
+                                break;
+                        }
+                        switch (bud.m_status) {
+                            case BudStatus::Dormant:
+                                ImGui::Text("Dormant");
+                                break;
+                            case BudStatus::Flushed:
+                                ImGui::Text("Flushed");
+                                break;
+                            case BudStatus::Died:
+                                ImGui::Text("Died");
+                                break;
+                        }
+
+                        auto budRotationAngle = glm::eulerAngles(bud.m_localRotation);
+                        ImGui::InputFloat3("Rotation", &budRotationAngle.x, "%.3f", ImGuiInputTextFlags_ReadOnly);
+                        ImGui::InputFloat("Base resource requirement", (float *) &bud.m_baseResourceRequirement, 1, 100,
+                                          "%.3f", ImGuiInputTextFlags_ReadOnly);
+                        ImGui::InputFloat("Productive resource requirement",
+                                          (float *) &bud.m_productiveResourceRequirement,
+                                          1, 100, "%.3f", ImGuiInputTextFlags_ReadOnly);
+                        ImGui::TreePop();
+                    }
+                }
+                ImGui::TreePop();
+            }
+            ImGui::TreePop();
+        }
+        if (ImGui::TreeNodeEx("Flow info", ImGuiTreeNodeFlags_DefaultOpen)) {
+            const auto &flow = treeSkeleton.PeekFlow(internode.GetFlowHandle());
+            ImGui::Text("Child flow size: %d", flow.RefChildHandles().size());
+            ImGui::Text("Internode size: %d", flow.RefNodeHandles().size());
+            if (ImGui::TreeNode("Internodes")) {
+                int i = 0;
+                for (const auto &chainedInternodeHandle: flow.RefNodeHandles()) {
+                    ImGui::Text("No.%d: Handle: %d", i, chainedInternodeHandle);
+                    i++;
+                }
+                ImGui::TreePop();
+            }
+            ImGui::TreePop();
+        }
+    }
+    ImGui::End();
+    return changed;
+}
+
+void
+TreeVisualizer::PeekInternode(
         const Skeleton<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeSkeleton,
         NodeHandle internodeHandle) {
     if (ImGui::Begin("Internode Inspector")) {

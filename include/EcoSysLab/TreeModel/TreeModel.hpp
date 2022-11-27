@@ -47,7 +47,7 @@ namespace EcoSysLab {
         float m_level = 0;
         int m_order = 0;
         float m_childTotalBiomass = 0;
-
+        float m_extraMass = 0.0f;
         float m_rootDistance = 0;
 
         glm::vec3 m_lightDirection = glm::vec3(0, 1, 0);
@@ -62,18 +62,29 @@ namespace EcoSysLab {
         float m_descendentProductiveResourceRequirement = 0.0f;
         float m_adjustedTotalProductiveWaterRequirement = 0.0f;
 
+        std::vector<glm::mat4> m_leaves;
+        std::vector<glm::mat4> m_fruits;
         void Clear();
     };
 
     struct BranchGrowthData {
         int m_order = 0;
+
     };
 
     struct SkeletonGrowthData {
 
     };
 
-    struct RootInternodeGrowthData {};
+    enum class RootType{
+        Tap,
+        Lateral,
+        Heart
+    };
+    struct RootInternodeGrowthData {
+        float m_rootDistance = 0;
+        int m_order = 0;
+    };
     struct RootBranchGrowthData {
         int m_order = 0;
     };
@@ -83,7 +94,15 @@ namespace EcoSysLab {
     };
 
     class RootGrowthParameters {
+        [[nodiscard]] float GetLateralRootFormingProbability(const Node<RootInternodeGrowthData> &rootNode) const;
+        [[nodiscard]] float GetHeartRootFromTapRootFormingProbability(const Node<RootInternodeGrowthData> &rootNode) const;
+        [[nodiscard]] float GetHeartRootFromLateralRootFormingProbability(const Node<RootInternodeGrowthData> &rootNode) const;
+        [[nodiscard]] float GetRootApicalAngle(const Node<RootInternodeGrowthData> &rootNode) const;
+        [[nodiscard]] float GetRootRollAngle(const Node<RootInternodeGrowthData> &rootNode) const;
+        [[nodiscard]] float GetRootBranchingAngle(const Node<RootInternodeGrowthData> &rootNode) const;
 
+        [[nodiscard]] float GetEndNodeThickness(const Node<RootInternodeGrowthData> &internode) const;
+        [[nodiscard]] float GetThicknessControlFactor(const Node<RootInternodeGrowthData> &internode) const;
     };
 
     class TreeGrowthParameters {
@@ -215,7 +234,7 @@ namespace EcoSysLab {
         bool GrowShoots(float extendLength, NodeHandle internodeHandle,
                         const TreeGrowthParameters &parameters, float &collectedInhibitor);
 #pragma endregion
-        void Initialize(const TreeGrowthParameters &parameters);
+        void Initialize(const TreeGrowthParameters &treeGrowthParameters, const RootGrowthParameters &rootParameters);
         bool m_initialized = false;
     public:
         glm::vec3 m_gravityDirection = glm::vec3(0, -1, 0);
@@ -229,9 +248,9 @@ namespace EcoSysLab {
         /**
          * Grow one iteration of the tree, given the nutrients and the procedural parameters.
          * @param growthNutrients The nutrients from the root (water, etc.)
-         * @param parameters The procedural parameters that guides the growth.
+         * @param treeGrowthParameters The procedural parameters that guides the growth.
          * @return Whether the growth caused a structural change during the growth.
          */
-        bool Grow(const GrowthNutrients &growthNutrients, const TreeGrowthParameters &parameters, const RootGrowthParameters &rootParameters);
+        bool Grow(const GrowthNutrients &growthNutrients, const TreeGrowthParameters &treeGrowthParameters, const RootGrowthParameters &rootGrowthParameters);
     };
 }

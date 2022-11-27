@@ -47,9 +47,11 @@ namespace EcoSysLab {
                 const unsigned &hierarchyLevel);
 
         void
-        InspectInternode(const Skeleton <SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeSkeleton,
+        PeekInternode(const Skeleton <SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeSkeleton,
                          NodeHandle internodeHandle);
-
+        bool
+        InspectInternode(Skeleton <SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeSkeleton,
+                      NodeHandle internodeHandle);
 
     public:
 

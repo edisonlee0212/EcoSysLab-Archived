@@ -52,237 +52,242 @@ namespace EcoSysLab {
     class BranchMeshGenerator {
     public:
         void Generate(Skeleton<SkeletonData, FlowData, NodeData> &treeSkeleton, std::vector<Vertex> &vertices,
-                      std::vector<unsigned int> &indices, const MeshGeneratorSettings &settings) const{
-            int parentStep = -1;
-            const auto &sortedInternodeList = treeSkeleton.RefSortedNodeList();
-            std::vector<std::vector<RingSegment>> ringsList;
-            std::vector<int> steps;
-            ringsList.resize(sortedInternodeList.size());
-            steps.resize(sortedInternodeList.size());
+                      std::vector<unsigned int> &indices, const MeshGeneratorSettings &settings) const;
+    };
 
-            std::vector<std::shared_future<void>> results;
-            Jobs::ParallelFor(sortedInternodeList.size(), [&](unsigned internodeIndex) {
-                auto internodeHandle = sortedInternodeList[internodeIndex];
-                auto &internode = treeSkeleton.RefNode(internodeHandle);
-                auto &internodeInfo = internode.m_info;
-                auto &rings = ringsList[internodeIndex];
-                rings.clear();
+    template<typename SkeletonData, typename FlowData, typename NodeData>
+    void BranchMeshGenerator<SkeletonData, FlowData, NodeData>::Generate(
+            Skeleton<SkeletonData, FlowData, NodeData> &treeSkeleton, std::vector<Vertex> &vertices,
+            std::vector<unsigned int> &indices, const MeshGeneratorSettings &settings) const {
+        int parentStep = -1;
+        const auto &sortedInternodeList = treeSkeleton.RefSortedNodeList();
+        std::vector<std::vector<RingSegment>> ringsList;
+        std::vector<int> steps;
+        ringsList.resize(sortedInternodeList.size());
+        steps.resize(sortedInternodeList.size());
 
-                glm::vec3 directionStart =
-                        internodeInfo.m_globalRotation * glm::vec3(0, 0, -1);
-                glm::vec3 directionEnd = directionStart;
-                glm::vec3 positionStart = internodeInfo.m_globalPosition;
-                glm::vec3 positionEnd =
-                        positionStart + internodeInfo.m_length * settings.m_internodeLengthFactor * directionStart;
-                float thicknessStart = internodeInfo.m_thickness;
-                float thicknessEnd = internodeInfo.m_thickness;
+        std::vector<std::shared_future<void>> results;
+        Jobs::ParallelFor(sortedInternodeList.size(), [&](unsigned internodeIndex) {
+            auto internodeHandle = sortedInternodeList[internodeIndex];
+            auto &internode = treeSkeleton.RefNode(internodeHandle);
+            auto &internodeInfo = internode.m_info;
+            auto &rings = ringsList[internodeIndex];
+            rings.clear();
 
-                if (internode.GetParentHandle() != -1) {
-                    auto &parentInternode = treeSkeleton.RefNode(internode.GetParentHandle());
-                    thicknessStart = parentInternode.m_info.m_thickness;
-                    GlobalTransform parentRelativeGlobalTransform;
-                    directionStart =
-                            parentInternode.m_info.m_globalRotation *
-                            glm::vec3(0, 0, -1);
-                }
+            glm::vec3 directionStart =
+                    internodeInfo.m_globalRotation * glm::vec3(0, 0, -1);
+            glm::vec3 directionEnd = directionStart;
+            glm::vec3 positionStart = internodeInfo.m_globalPosition;
+            glm::vec3 positionEnd =
+                    positionStart + internodeInfo.m_length * settings.m_internodeLengthFactor * directionStart;
+            float thicknessStart = internodeInfo.m_thickness;
+            float thicknessEnd = internodeInfo.m_thickness;
 
-                if (settings.m_overrideRadius) {
-                    thicknessStart = settings.m_radius;
-                    thicknessEnd = settings.m_radius;
-                }
+            if (internode.GetParentHandle() != -1) {
+                auto &parentInternode = treeSkeleton.RefNode(internode.GetParentHandle());
+                thicknessStart = parentInternode.m_info.m_thickness;
+                GlobalTransform parentRelativeGlobalTransform;
+                directionStart =
+                        parentInternode.m_info.m_globalRotation *
+                        glm::vec3(0, 0, -1);
+            }
+
+            if (settings.m_overrideRadius) {
+                thicknessStart = settings.m_radius;
+                thicknessEnd = settings.m_radius;
+            }
 #pragma region Subdivision internode here.
-                int step = thicknessStart / settings.m_resolution;
-                if (step < 4)
-                    step = 4;
-                if (step % 2 != 0)
-                    step++;
-                steps[internodeIndex] = step;
-                int amount = static_cast<int>(0.5f +
-                                              internodeInfo.m_length * settings.m_subdivision);
-                if (amount % 2 != 0)
-                    amount++;
-                BezierCurve curve = BezierCurve(
-                        positionStart,
-                        positionStart +
-                        (settings.m_smoothness ? internodeInfo.m_length / 3.0f : 0.0f) * directionStart,
-                        positionEnd -
-                        (settings.m_smoothness ? internodeInfo.m_length / 3.0f : 0.0f) * directionEnd,
-                        positionEnd);
-                float posStep = 1.0f / static_cast<float>(amount);
-                glm::vec3 dirStep = (directionEnd - directionStart) / static_cast<float>(amount);
-                float radiusStep = (thicknessEnd - thicknessStart) /
-                                   static_cast<float>(amount);
+            int step = thicknessStart / settings.m_resolution;
+            if (step < 4)
+                step = 4;
+            if (step % 2 != 0)
+                step++;
+            steps[internodeIndex] = step;
+            int amount = static_cast<int>(0.5f +
+                                          internodeInfo.m_length * settings.m_subdivision);
+            if (amount % 2 != 0)
+                amount++;
+            BezierCurve curve = BezierCurve(
+                    positionStart,
+                    positionStart +
+                    (settings.m_smoothness ? internodeInfo.m_length / 3.0f : 0.0f) * directionStart,
+                    positionEnd -
+                    (settings.m_smoothness ? internodeInfo.m_length / 3.0f : 0.0f) * directionEnd,
+                    positionEnd);
+            float posStep = 1.0f / static_cast<float>(amount);
+            glm::vec3 dirStep = (directionEnd - directionStart) / static_cast<float>(amount);
+            float radiusStep = (thicknessEnd - thicknessStart) /
+                               static_cast<float>(amount);
 
-                for (int ringIndex = 1; ringIndex < amount; ringIndex++) {
-                    float startThickness = static_cast<float>(ringIndex - 1) * radiusStep;
-                    float endThickness = static_cast<float>(ringIndex) * radiusStep;
-                    if (settings.m_smoothness) {
-                        rings.emplace_back(
-                                curve.GetPoint(posStep * (ringIndex - 1)), curve.GetPoint(posStep * ringIndex),
-                                directionStart + static_cast<float>(ringIndex - 1) * dirStep,
-                                directionStart + static_cast<float>(ringIndex) * dirStep,
-                                thicknessStart + startThickness, thicknessStart + endThickness);
-                    } else {
-                        rings.emplace_back(
-                                curve.GetPoint(posStep * (ringIndex - 1)), curve.GetPoint(posStep * ringIndex),
-                                directionEnd,
-                                directionEnd,
-                                thicknessStart + startThickness, thicknessStart + endThickness);
-                    }
-                }
-                if (amount > 1)
+            for (int ringIndex = 1; ringIndex < amount; ringIndex++) {
+                float startThickness = static_cast<float>(ringIndex - 1) * radiusStep;
+                float endThickness = static_cast<float>(ringIndex) * radiusStep;
+                if (settings.m_smoothness) {
                     rings.emplace_back(
-                            curve.GetPoint(1.0f - posStep), positionEnd, directionEnd - dirStep,
-                            directionEnd,
-                            thicknessEnd - radiusStep,
-                            thicknessEnd);
-                else
-                    rings.emplace_back(positionStart, positionEnd,
-                                       directionStart, directionEnd, thicknessStart,
-                                       thicknessEnd);
-#pragma endregion
-            }, results);
-            for (auto &i: results) i.wait();
-
-            std::map<unsigned, glm::vec3> normals;
-            for (int internodeIndex = 0; internodeIndex < sortedInternodeList.size(); internodeIndex++) {
-                auto internodeHandle = sortedInternodeList[internodeIndex];
-                auto &internode = treeSkeleton.RefNode(internodeHandle);
-                auto &internodeInfo = internode.m_info;
-                auto parentInternodeHandle = internode.GetParentHandle();
-                glm::vec3 newNormalDir;
-                if (parentInternodeHandle != -1) {
-                    newNormalDir = normals.at(parentInternodeHandle);
+                            curve.GetPoint(posStep * (ringIndex - 1)), curve.GetPoint(posStep * ringIndex),
+                            directionStart + static_cast<float>(ringIndex - 1) * dirStep,
+                            directionStart + static_cast<float>(ringIndex) * dirStep,
+                            thicknessStart + startThickness, thicknessStart + endThickness);
                 } else {
-                    newNormalDir = internodeInfo.m_globalRotation * glm::vec3(1, 0, 0);
+                    rings.emplace_back(
+                            curve.GetPoint(posStep * (ringIndex - 1)), curve.GetPoint(posStep * ringIndex),
+                            directionEnd,
+                            directionEnd,
+                            thicknessStart + startThickness, thicknessStart + endThickness);
                 }
-                const glm::vec3 front = internodeInfo.m_globalRotation * glm::vec3(0.0f, 0.0f, -1.0f);
-                newNormalDir = glm::cross(glm::cross(front, newNormalDir), front);
-                normals[internodeHandle] = newNormalDir;
-                auto &rings = ringsList[internodeIndex];
-                if (rings.empty()) {
-                    continue;
-                }
-                auto step = steps[internodeIndex];
-                // For stitching
-                const int pStep = parentStep > 0 ? parentStep : step;
-                parentStep = step;
+            }
+            if (amount > 1)
+                rings.emplace_back(
+                        curve.GetPoint(1.0f - posStep), positionEnd, directionEnd - dirStep,
+                        directionEnd,
+                        thicknessEnd - radiusStep,
+                        thicknessEnd);
+            else
+                rings.emplace_back(positionStart, positionEnd,
+                                   directionStart, directionEnd, thicknessStart,
+                                   thicknessEnd);
+#pragma endregion
+        }, results);
+        for (auto &i: results) i.wait();
 
-                float angleStep = 360.0f / static_cast<float>(pStep);
-                int vertexIndex = vertices.size();
-                Vertex archetype;
-                if (settings.m_overrideVertexColor) archetype.m_color = settings.m_branchVertexColor;
-                //else archetype.m_color = branchColors.at(internodeHandle);
+        std::map<unsigned, glm::vec3> normals;
+        for (int internodeIndex = 0; internodeIndex < sortedInternodeList.size(); internodeIndex++) {
+            auto internodeHandle = sortedInternodeList[internodeIndex];
+            auto &internode = treeSkeleton.RefNode(internodeHandle);
+            auto &internodeInfo = internode.m_info;
+            auto parentInternodeHandle = internode.GetParentHandle();
+            glm::vec3 newNormalDir;
+            if (parentInternodeHandle != -1) {
+                newNormalDir = normals.at(parentInternodeHandle);
+            } else {
+                newNormalDir = internodeInfo.m_globalRotation * glm::vec3(1, 0, 0);
+            }
+            const glm::vec3 front = internodeInfo.m_globalRotation * glm::vec3(0.0f, 0.0f, -1.0f);
+            newNormalDir = glm::cross(glm::cross(front, newNormalDir), front);
+            normals[internodeHandle] = newNormalDir;
+            auto &rings = ringsList[internodeIndex];
+            if (rings.empty()) {
+                continue;
+            }
+            auto step = steps[internodeIndex];
+            // For stitching
+            const int pStep = parentStep > 0 ? parentStep : step;
+            parentStep = step;
 
-                float textureXStep = 1.0f / pStep * 4.0f;
+            float angleStep = 360.0f / static_cast<float>(pStep);
+            int vertexIndex = vertices.size();
+            Vertex archetype;
+            if (settings.m_overrideVertexColor) archetype.m_color = settings.m_branchVertexColor;
+            //else archetype.m_color = branchColors.at(internodeHandle);
 
-                const auto startPosition = rings.at(0).m_startPosition;
-                const auto endPosition = rings.back().m_endPosition;
-                for (int p = 0; p < pStep; p++) {
-                    archetype.m_position =
-                            rings.at(0).GetPoint(newNormalDir, angleStep * p, true);
-                    float distanceToStart = 0;
-                    float distanceToEnd = 1;
-                    const float x =
-                            p < pStep / 2 ? p * textureXStep : (pStep - p) * textureXStep;
-                    archetype.m_texCoord = glm::vec2(x, 0.0f);
-                    vertices.push_back(archetype);
-                }
-                std::vector<float> angles;
-                angles.resize(step);
-                std::vector<float> pAngles;
-                pAngles.resize(pStep);
+            float textureXStep = 1.0f / pStep * 4.0f;
 
-                for (auto p = 0; p < pStep; p++) {
-                    pAngles[p] = angleStep * p;
-                }
-                angleStep = 360.0f / static_cast<float>(step);
-                for (auto s = 0; s < step; s++) {
-                    angles[s] = angleStep * s;
-                }
+            const auto startPosition = rings.at(0).m_startPosition;
+            const auto endPosition = rings.back().m_endPosition;
+            for (int p = 0; p < pStep; p++) {
+                archetype.m_position =
+                        rings.at(0).GetPoint(newNormalDir, angleStep * p, true);
+                float distanceToStart = 0;
+                float distanceToEnd = 1;
+                const float x =
+                        p < pStep / 2 ? p * textureXStep : (pStep - p) * textureXStep;
+                archetype.m_texCoord = glm::vec2(x, 0.0f);
+                vertices.push_back(archetype);
+            }
+            std::vector<float> angles;
+            angles.resize(step);
+            std::vector<float> pAngles;
+            pAngles.resize(pStep);
 
-                std::vector<unsigned> pTarget;
-                std::vector<unsigned> target;
-                pTarget.resize(pStep);
-                target.resize(step);
-                for (int p = 0; p < pStep; p++) {
-                    // First we allocate nearest vertices for parent.
-                    auto minAngleDiff = 360.0f;
-                    for (auto j = 0; j < step; j++) {
-                        const float diff = glm::abs(pAngles[p] - angles[j]);
-                        if (diff < minAngleDiff) {
-                            minAngleDiff = diff;
-                            pTarget[p] = j;
-                        }
-                    }
-                }
-                for (int s = 0; s < step; s++) {
-                    // Second we allocate nearest vertices for child
-                    float minAngleDiff = 360.0f;
-                    for (int j = 0; j < pStep; j++) {
-                        const float diff = glm::abs(angles[s] - pAngles[j]);
-                        if (diff < minAngleDiff) {
-                            minAngleDiff = diff;
-                            target[s] = j;
-                        }
-                    }
-                }
-                for (int p = 0; p < pStep; p++) {
-                    if (pTarget[p] == pTarget[p == pStep - 1 ? 0 : p + 1]) {
-                        indices.push_back(vertexIndex + p);
-                        indices.push_back(vertexIndex + (p == pStep - 1 ? 0 : p + 1));
-                        indices.push_back(vertexIndex + pStep + pTarget[p]);
-                    } else {
-                        indices.push_back(vertexIndex + p);
-                        indices.push_back(vertexIndex + (p == pStep - 1 ? 0 : p + 1));
-                        indices.push_back(vertexIndex + pStep + pTarget[p]);
+            for (auto p = 0; p < pStep; p++) {
+                pAngles[p] = angleStep * p;
+            }
+            angleStep = 360.0f / static_cast<float>(step);
+            for (auto s = 0; s < step; s++) {
+                angles[s] = angleStep * s;
+            }
 
-                        indices.push_back(vertexIndex + pStep +
-                                          pTarget[p == pStep - 1 ? 0 : p + 1]);
-                        indices.push_back(vertexIndex + pStep + pTarget[p]);
-                        indices.push_back(vertexIndex + (p == pStep - 1 ? 0 : p + 1));
-                    }
-                }
-
-                vertexIndex += pStep;
-                textureXStep = 1.0f / step * 4.0f;
-                int ringSize = rings.size();
-                for (auto ringIndex = 0; ringIndex < ringSize; ringIndex++) {
-                    for (auto s = 0; s < step; s++) {
-                        archetype.m_position = rings.at(ringIndex).GetPoint(
-                                newNormalDir, angleStep * s, false);
-                        float distanceToStart = glm::distance(
-                                rings.at(ringIndex).m_endPosition, startPosition);
-                        float distanceToEnd = glm::distance(
-                                rings.at(ringIndex).m_endPosition, endPosition);
-                        const auto x =
-                                s < (step / 2) ? s * textureXStep : (step - s) * textureXStep;
-                        const auto y = ringIndex % 2 == 0 ? 1.0f : 0.0f;
-                        archetype.m_texCoord = glm::vec2(x, y);
-                        vertices.push_back(archetype);
-                    }
-                    if (ringIndex != 0) {
-                        for (int s = 0; s < step - 1; s++) {
-                            // Down triangle
-                            indices.push_back(vertexIndex + (ringIndex - 1) * step + s);
-                            indices.push_back(vertexIndex + (ringIndex - 1) * step + s + 1);
-                            indices.push_back(vertexIndex + (ringIndex) * step + s);
-                            // Up triangle
-                            indices.push_back(vertexIndex + (ringIndex) * step + s + 1);
-                            indices.push_back(vertexIndex + (ringIndex) * step + s);
-                            indices.push_back(vertexIndex + (ringIndex - 1) * step + s + 1);
-                        }
-                        // Down triangle
-                        indices.push_back(vertexIndex + (ringIndex - 1) * step + step - 1);
-                        indices.push_back(vertexIndex + (ringIndex - 1) * step);
-                        indices.push_back(vertexIndex + (ringIndex) * step + step - 1);
-                        // Up triangle
-                        indices.push_back(vertexIndex + (ringIndex) * step);
-                        indices.push_back(vertexIndex + (ringIndex) * step + step - 1);
-                        indices.push_back(vertexIndex + (ringIndex - 1) * step);
+            std::vector<unsigned> pTarget;
+            std::vector<unsigned> target;
+            pTarget.resize(pStep);
+            target.resize(step);
+            for (int p = 0; p < pStep; p++) {
+                // First we allocate nearest vertices for parent.
+                auto minAngleDiff = 360.0f;
+                for (auto j = 0; j < step; j++) {
+                    const float diff = glm::abs(pAngles[p] - angles[j]);
+                    if (diff < minAngleDiff) {
+                        minAngleDiff = diff;
+                        pTarget[p] = j;
                     }
                 }
             }
+            for (int s = 0; s < step; s++) {
+                // Second we allocate nearest vertices for child
+                float minAngleDiff = 360.0f;
+                for (int j = 0; j < pStep; j++) {
+                    const float diff = glm::abs(angles[s] - pAngles[j]);
+                    if (diff < minAngleDiff) {
+                        minAngleDiff = diff;
+                        target[s] = j;
+                    }
+                }
+            }
+            for (int p = 0; p < pStep; p++) {
+                if (pTarget[p] == pTarget[p == pStep - 1 ? 0 : p + 1]) {
+                    indices.push_back(vertexIndex + p);
+                    indices.push_back(vertexIndex + (p == pStep - 1 ? 0 : p + 1));
+                    indices.push_back(vertexIndex + pStep + pTarget[p]);
+                } else {
+                    indices.push_back(vertexIndex + p);
+                    indices.push_back(vertexIndex + (p == pStep - 1 ? 0 : p + 1));
+                    indices.push_back(vertexIndex + pStep + pTarget[p]);
+
+                    indices.push_back(vertexIndex + pStep +
+                                      pTarget[p == pStep - 1 ? 0 : p + 1]);
+                    indices.push_back(vertexIndex + pStep + pTarget[p]);
+                    indices.push_back(vertexIndex + (p == pStep - 1 ? 0 : p + 1));
+                }
+            }
+
+            vertexIndex += pStep;
+            textureXStep = 1.0f / step * 4.0f;
+            int ringSize = rings.size();
+            for (auto ringIndex = 0; ringIndex < ringSize; ringIndex++) {
+                for (auto s = 0; s < step; s++) {
+                    archetype.m_position = rings.at(ringIndex).GetPoint(
+                            newNormalDir, angleStep * s, false);
+                    float distanceToStart = glm::distance(
+                            rings.at(ringIndex).m_endPosition, startPosition);
+                    float distanceToEnd = glm::distance(
+                            rings.at(ringIndex).m_endPosition, endPosition);
+                    const auto x =
+                            s < (step / 2) ? s * textureXStep : (step - s) * textureXStep;
+                    const auto y = ringIndex % 2 == 0 ? 1.0f : 0.0f;
+                    archetype.m_texCoord = glm::vec2(x, y);
+                    vertices.push_back(archetype);
+                }
+                if (ringIndex != 0) {
+                    for (int s = 0; s < step - 1; s++) {
+                        // Down triangle
+                        indices.push_back(vertexIndex + (ringIndex - 1) * step + s);
+                        indices.push_back(vertexIndex + (ringIndex - 1) * step + s + 1);
+                        indices.push_back(vertexIndex + (ringIndex) * step + s);
+                        // Up triangle
+                        indices.push_back(vertexIndex + (ringIndex) * step + s + 1);
+                        indices.push_back(vertexIndex + (ringIndex) * step + s);
+                        indices.push_back(vertexIndex + (ringIndex - 1) * step + s + 1);
+                    }
+                    // Down triangle
+                    indices.push_back(vertexIndex + (ringIndex - 1) * step + step - 1);
+                    indices.push_back(vertexIndex + (ringIndex - 1) * step);
+                    indices.push_back(vertexIndex + (ringIndex) * step + step - 1);
+                    // Up triangle
+                    indices.push_back(vertexIndex + (ringIndex) * step);
+                    indices.push_back(vertexIndex + (ringIndex) * step + step - 1);
+                    indices.push_back(vertexIndex + (ringIndex - 1) * step);
+                }
+            }
         }
-    };
+    }
 }
