@@ -93,6 +93,7 @@ TreeVisualizer::OnInspect(
     if (ImGui::TreeNodeEx("Current selected tree", ImGuiTreeNodeFlags_DefaultOpen)) {
         if (treeStructure.CurrentIteration() > 0) {
             if (ImGui::TreeNodeEx("History", ImGuiTreeNodeFlags_DefaultOpen)) {
+                ImGui::DragInt("History Limit", &treeStructure.m_historyLimit, 1, -1, 1024);
                 if (ImGui::SliderInt("Iteration", &m_iteration, 0, treeStructure.CurrentIteration())) {
                     m_iteration = glm::clamp(m_iteration, 0, treeStructure.CurrentIteration());
                     m_selectedInternodeHandle = -1;
@@ -102,6 +103,10 @@ TreeVisualizer::OnInspect(
                 if (m_iteration != treeStructure.CurrentIteration() && ImGui::Button("Reverse")) {
                     treeStructure.Reverse(m_iteration);
                     m_needUpdate = true;
+                }
+                if(ImGui::Button("Clear history")){
+                    m_iteration = 0;
+                    treeStructure.ClearHistory();
                 }
                 ImGui::TreePop();
             }

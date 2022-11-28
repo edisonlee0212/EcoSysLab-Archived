@@ -282,11 +282,14 @@ namespace EcoSysLab {
     template<typename SkeletonData, typename FlowData, typename NodeData>
     class PlantStructure {
         Skeleton<SkeletonData, FlowData, NodeData> m_skeleton;
-        std::vector<Skeleton<SkeletonData, FlowData, NodeData>> m_history;
+        std::deque<Skeleton<SkeletonData, FlowData, NodeData>> m_history;
     public:
+        int m_historyLimit = -1;
         [[nodiscard]] Skeleton<SkeletonData, FlowData, NodeData> &RefSkeleton();
 
         [[nodiscard]] const Skeleton<SkeletonData, FlowData, NodeData> &Peek(int iteration) const;
+
+        void ClearHistory();
 
         void Step();
 
@@ -302,6 +305,11 @@ namespace EcoSysLab {
     template<typename SkeletonData, typename FlowData, typename NodeData>
     void PlantStructure<SkeletonData, FlowData, NodeData>::Step() {
         m_history.push_back(m_skeleton);
+        if(m_historyLimit > 0){
+            while(m_history.size() > m_historyLimit){
+                m_history.pop_front();
+            }
+        }
     }
 
     template<typename SkeletonData, typename FlowData, typename NodeData>
@@ -334,6 +342,11 @@ namespace EcoSysLab {
     template<typename SkeletonData, typename FlowData, typename NodeData>
     void PlantStructure<SkeletonData, FlowData, NodeData>::Pop() {
         m_history.pop_back();
+    }
+
+    template<typename SkeletonData, typename FlowData, typename NodeData>
+    void PlantStructure<SkeletonData, FlowData, NodeData>::ClearHistory() {
+        m_history.clear();
     }
 
 #pragma endregion

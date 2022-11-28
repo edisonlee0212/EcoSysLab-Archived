@@ -25,7 +25,63 @@ void ApplyTropism(const glm::vec3 &targetDir, float tropism, glm::quat &rotation
     ApplyTropism(targetDir, tropism, front, up);
     rotation = glm::quatLookAt(front, up);
 }
+bool TreeModel::GrowShoots(float extendLength, int internodeHandle, const RootGrowthParameters &parameters,
+                           float &collectedInhibitor) {
+    bool graphChanged = false;
+    /*
+    auto &skeleton = m_rootStructure.RefSkeleton();
+    auto &rootNode = skeleton.RefNode(internodeHandle);
+    auto rootNodeLength = parameters.GetRootNodeLength(rootNode);
+    auto &rootNodeData = rootNode.m_data;
+    auto &rootNodeInfo = rootNode.m_info;
+    rootNodeInfo.m_length += extendLength;
+    float extraLength = rootNodeInfo.m_length - rootNodeLength;
+    //If we need to add a new end node
+    if (extraLength > 0) {
+        graphChanged = true;
+        rootNodeInfo.m_length = rootNodeLength;
+        auto desiredGlobalRotation = rootNodeInfo.m_globalRotation * apicalBud.m_localRotation;
+        auto desiredGlobalFront = desiredGlobalRotation * glm::vec3(0, 0, -1);
+        auto desiredGlobalUp = desiredGlobalRotation * glm::vec3(0, 1, 0);
 
+        //Create new internode
+        auto newInternodeHandle = skeleton.Extend(internodeHandle, false);
+        auto &oldInternode = skeleton.RefNode(internodeHandle);
+        auto &newInternode = skeleton.RefNode(newInternodeHandle);
+        newInternode.m_data.Clear();
+        newInternode.m_data.m_inhibitorTarget = newInternode.m_data.m_inhibitor = parameters.GetApicalDominanceBase(
+                newInternode);
+        newInternode.m_info.m_length = glm::clamp(extendLength, 0.0f, rootNodeLength);
+        newInternode.m_info.m_thickness = parameters.GetEndNodeThickness(newInternode);
+        newInternode.m_info.m_localRotation = newInternode.m_data.m_desiredLocalRotation =
+                glm::inverse(oldInternode.m_info.m_globalRotation) *
+                glm::quatLookAt(desiredGlobalFront, desiredGlobalUp);
+        newInternode.m_info.m_globalRotation =
+                oldInternode.m_info.m_globalRotation * newInternode.m_info.m_localRotation;
+        //Allocate apical bud for new internode
+        newInternode.m_data.m_buds.emplace_back();
+        auto &newApicalBud = newInternode.m_data.m_buds.back();
+        newApicalBud.m_type = BudType::Apical;
+        newApicalBud.m_status = BudStatus::Dormant;
+        newApicalBud.m_localRotation = glm::vec3(
+                glm::radians(parameters.GetDesiredApicalAngle(newInternode)), 0.0f,
+                parameters.GetDesiredRollAngle(newInternode));
+        if (extraLength > rootNodeLength) {
+            float childInhibitor = 0.0f;
+            GrowShoots(extraLength - rootNodeLength, newInternodeHandle, parameters, childInhibitor);
+            childInhibitor *= parameters.GetApicalDominanceDecrease(newInternode);
+            collectedInhibitor += childInhibitor;
+            skeleton.RefNode(newInternodeHandle).m_data.m_inhibitorTarget = childInhibitor;
+        } else {
+            collectedInhibitor += parameters.GetApicalDominanceBase(newInternode);
+        }
+    } else {
+        //Otherwise, we add the inhibitor.
+        collectedInhibitor += parameters.GetApicalDominanceBase(rootNode);
+    }
+     */
+    return graphChanged;
+}
 bool TreeModel::GrowShoots(float extendLength, NodeHandle internodeHandle,
                            const TreeGrowthParameters &parameters, float &collectedInhibitor) {
     bool graphChanged = false;
@@ -294,7 +350,22 @@ bool TreeModel::Grow(const GrowthNutrients &growthNutrients, const TreeGrowthPar
         rootStructureChanged = rootStructureChanged || anyRootPruned;
         bool anyRootGrown = false;
         {
+            const auto &sortedRootNodeList = skeleton.RefSortedNodeList();
+            for(const auto& rootNodeHandle : sortedRootNodeList){
+                auto& rootNode = skeleton.RefNode(rootNodeHandle);
+                switch (rootNode.m_data.m_rootType) {
+                    case RootType::Tap:{
+                        //Elongate downwards
 
+                    }break;
+                    case RootType::Lateral:{
+                        //Elongate towards ground level
+                    }break;
+                    case RootType::Heart:{
+                        //Elongate towards resources
+                    }break;
+                }
+            }
         };
 #pragma endregion
 #pragma region Postprocess
@@ -369,8 +440,12 @@ bool TreeModel::Grow(const GrowthNutrients &growthNutrients, const TreeGrowthPar
         skeleton.SortLists();
         {
             const auto maxDistance = skeleton.RefNode(0).m_data.m_maxDistanceToAnyBranchEnd;
-            if (LowBranchPruning(maxDistance, 0, treeGrowthParameters)) {
-                anyBranchPruned = true;
+            const auto &sortedInternodeList = skeleton.RefSortedNodeList();
+            for (const auto &internodeHandle: sortedInternodeList) {
+                if(skeleton.RefNode(internodeHandle).IsRecycled()) continue;
+                if (LowBranchPruning(maxDistance, internodeHandle, treeGrowthParameters)) {
+                    anyBranchPruned = true;
+                }
             }
         };
 #pragma endregion
@@ -558,14 +633,11 @@ bool TreeModel::LowBranchPruning(float maxDistance, NodeHandle internodeHandle,
         skeleton.RecycleNode(internodeHandle);
         return true;
     }
-    bool pruned = false;
-    for (const auto &childHandle: internode.RefChildHandles()) {
-        if (LowBranchPruning(maxDistance, childHandle, parameters)) {
-            pruned = true;
-        }
-    }
-    return pruned;
+
+    return false;
 }
+
+
 
 
 TreeGrowthParameters::TreeGrowthParameters() {
