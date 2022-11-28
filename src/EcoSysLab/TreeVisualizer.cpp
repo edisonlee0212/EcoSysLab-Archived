@@ -194,7 +194,7 @@ TreeVisualizer::OnInspect(
                         mousePosition = {-1.0f * (mousePosition.x - halfX) / halfX,
                                          -1.0f * (mousePosition.y - halfY) / halfY};
                         if (mousePosition.x > -1.0f && mousePosition.x < 1.0f && mousePosition.y > -1.0f &&
-                            mousePosition.y < 1.0f) {
+                            mousePosition.y < 1.0f && (m_storedMousePositions.empty() || mousePosition != m_storedMousePositions.back())) {
                             m_storedMousePositions.emplace_back(mousePosition);
                         }
                     } else {
