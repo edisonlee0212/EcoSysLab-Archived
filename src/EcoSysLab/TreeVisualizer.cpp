@@ -194,7 +194,8 @@ TreeVisualizer::OnInspect(
                         mousePosition = {-1.0f * (mousePosition.x - halfX) / halfX,
                                          -1.0f * (mousePosition.y - halfY) / halfY};
                         if (mousePosition.x > -1.0f && mousePosition.x < 1.0f && mousePosition.y > -1.0f &&
-                            mousePosition.y < 1.0f && (m_storedMousePositions.empty() || mousePosition != m_storedMousePositions.back())) {
+                            mousePosition.y < 1.0f &&
+                            (m_storedMousePositions.empty() || mousePosition != m_storedMousePositions.back())) {
                             m_storedMousePositions.emplace_back(mousePosition);
                         }
                     } else {
@@ -269,8 +270,11 @@ TreeVisualizer::InspectInternode(
                               ImGuiInputTextFlags_ReadOnly);
             ImGui::InputFloat("Level", (float *) &internodeData.m_level, 1, 100, "%.3f",
                               ImGuiInputTextFlags_ReadOnly);
-            ImGui::InputFloat("Child biomass", (float *) &internodeData.m_childTotalBiomass, 1, 100, "%.3f",
+            ImGui::InputFloat("Descendent biomass", (float *) &internodeData.m_descendentTotalBiomass, 1, 100, "%.3f",
                               ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputFloat("Biomass", (float *) &internodeData.m_biomass, 1, 100, "%.3f",
+                              ImGuiInputTextFlags_ReadOnly);
+
             ImGui::InputFloat("Root distance", (float *) &internodeData.m_rootDistance, 1, 100, "%.3f",
                               ImGuiInputTextFlags_ReadOnly);
             ImGui::InputFloat3("Light dir", (float *) &internodeData.m_lightDirection.x, "%.3f",
@@ -288,6 +292,22 @@ TreeVisualizer::InspectInternode(
                 changed = true;
             }
 
+            ImGui::InputFloat("Productive req", (float *) &internodeData.m_productiveResourceRequirement, 1, 100,
+                              "%.3f",
+                              ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputFloat("Descendent req", (float *) &internodeData.m_descendentProductiveResourceRequirement, 1,
+                              100, "%.3f",
+                              ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputFloat("Adjusted total req", (float *) &internodeData.m_adjustedTotalProductiveWaterRequirement,
+                              1, 100, "%.3f",
+                              ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputFloat("Adjusted productive req",
+                              (float *) &internodeData.m_adjustedProductiveResourceRequirement, 1, 100, "%.3f",
+                              ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputFloat("Adjusted descendent req",
+                              (float *) &internodeData.m_adjustedDescendentProductiveResourceRequirement, 1, 100,
+                              "%.3f",
+                              ImGuiInputTextFlags_ReadOnly);
 
             if (ImGui::TreeNodeEx("Buds", ImGuiTreeNodeFlags_DefaultOpen)) {
                 int index = 1;
@@ -326,8 +346,12 @@ TreeVisualizer::InspectInternode(
                         ImGui::InputFloat("Productive resource requirement",
                                           (float *) &bud.m_productiveResourceRequirement,
                                           1, 100, "%.3f", ImGuiInputTextFlags_ReadOnly);
+                        ImGui::InputFloat("Adjusted productive resource requirement",
+                                          (float *) &bud.m_adjustedProductiveResourceRequirement,
+                                          1, 100, "%.3f", ImGuiInputTextFlags_ReadOnly);
                         ImGui::TreePop();
                     }
+                    index++;
                 }
                 ImGui::TreePop();
             }
@@ -380,7 +404,9 @@ TreeVisualizer::PeekInternode(
                               ImGuiInputTextFlags_ReadOnly);
             ImGui::InputFloat("Level", (float *) &internodeData.m_level, 1, 100, "%.3f",
                               ImGuiInputTextFlags_ReadOnly);
-            ImGui::InputFloat("Child biomass", (float *) &internodeData.m_childTotalBiomass, 1, 100, "%.3f",
+            ImGui::InputFloat("Descendent biomass", (float *) &internodeData.m_descendentTotalBiomass, 1, 100, "%.3f",
+                              ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputFloat("Biomass", (float *) &internodeData.m_biomass, 1, 100, "%.3f",
                               ImGuiInputTextFlags_ReadOnly);
             ImGui::InputFloat("Root distance", (float *) &internodeData.m_rootDistance, 1, 100, "%.3f",
                               ImGuiInputTextFlags_ReadOnly);
@@ -389,41 +415,67 @@ TreeVisualizer::PeekInternode(
             ImGui::InputFloat("Light intensity", (float *) &internodeData.m_lightIntensity, 1, 100, "%.3f",
                               ImGuiInputTextFlags_ReadOnly);
 
-            if (ImGui::TreeNodeEx("Buds")) {
-                for (auto &bud: internodeData.m_buds) {
-                    switch (bud.m_type) {
-                        case BudType::Apical:
-                            ImGui::Text("Apical");
-                            break;
-                        case BudType::Lateral:
-                            ImGui::Text("Lateral");
-                            break;
-                        case BudType::Leaf:
-                            ImGui::Text("Leaf");
-                            break;
-                        case BudType::Fruit:
-                            ImGui::Text("Fruit");
-                            break;
-                    }
-                    switch (bud.m_status) {
-                        case BudStatus::Dormant:
-                            ImGui::Text("Dormant");
-                            break;
-                        case BudStatus::Flushed:
-                            ImGui::Text("Flushed");
-                            break;
-                        case BudStatus::Died:
-                            ImGui::Text("Died");
-                            break;
-                    }
+            ImGui::InputFloat("Productive req", (float *) &internodeData.m_productiveResourceRequirement, 1, 100,
+                              "%.3f",
+                              ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputFloat("Descendent req", (float *) &internodeData.m_descendentProductiveResourceRequirement, 1,
+                              100, "%.3f",
+                              ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputFloat("Adjusted total req", (float *) &internodeData.m_adjustedTotalProductiveWaterRequirement,
+                              1, 100, "%.3f",
+                              ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputFloat("Adjusted productive req",
+                              (float *) &internodeData.m_adjustedProductiveResourceRequirement, 1, 100, "%.3f",
+                              ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputFloat("Adjusted descendent req",
+                              (float *) &internodeData.m_adjustedDescendentProductiveResourceRequirement, 1, 100,
+                              "%.3f",
+                              ImGuiInputTextFlags_ReadOnly);
 
-                    auto budRotationAngle = glm::eulerAngles(bud.m_localRotation);
-                    ImGui::InputFloat3("Rotation", &budRotationAngle.x, "%.3f", ImGuiInputTextFlags_ReadOnly);
-                    ImGui::InputFloat("Base resource requirement", (float *) &bud.m_baseResourceRequirement, 1, 100,
-                                      "%.3f", ImGuiInputTextFlags_ReadOnly);
-                    ImGui::InputFloat("Productive resource requirement",
-                                      (float *) &bud.m_productiveResourceRequirement,
-                                      1, 100, "%.3f", ImGuiInputTextFlags_ReadOnly);
+            if (ImGui::TreeNodeEx("Buds")) {
+                int index = 1;
+                for (auto &bud: internodeData.m_buds) {
+                    if (ImGui::TreeNode(("Bud " + std::to_string(index)).c_str())) {
+                        switch (bud.m_type) {
+                            case BudType::Apical:
+                                ImGui::Text("Apical");
+                                break;
+                            case BudType::Lateral:
+                                ImGui::Text("Lateral");
+                                break;
+                            case BudType::Leaf:
+                                ImGui::Text("Leaf");
+                                break;
+                            case BudType::Fruit:
+                                ImGui::Text("Fruit");
+                                break;
+                        }
+                        switch (bud.m_status) {
+                            case BudStatus::Dormant:
+                                ImGui::Text("Dormant");
+                                break;
+                            case BudStatus::Flushed:
+                                ImGui::Text("Flushed");
+                                break;
+                            case BudStatus::Died:
+                                ImGui::Text("Died");
+                                break;
+                        }
+
+                        auto budRotationAngle = glm::eulerAngles(bud.m_localRotation);
+                        ImGui::InputFloat3("Rotation", &budRotationAngle.x, "%.3f", ImGuiInputTextFlags_ReadOnly);
+                        ImGui::InputFloat("Base resource requirement", (float *) &bud.m_baseResourceRequirement, 1, 100,
+                                          "%.3f", ImGuiInputTextFlags_ReadOnly);
+                        ImGui::InputFloat("Productive resource requirement",
+                                          (float *) &bud.m_productiveResourceRequirement,
+                                          1, 100, "%.3f", ImGuiInputTextFlags_ReadOnly);
+
+                        ImGui::InputFloat("Adjusted productive resource requirement",
+                                          (float *) &bud.m_adjustedProductiveResourceRequirement,
+                                          1, 100, "%.3f", ImGuiInputTextFlags_ReadOnly);
+                        ImGui::TreePop();
+                    }
+                    index++;
                 }
                 ImGui::TreePop();
             }

@@ -32,7 +32,7 @@ namespace EcoSysLab {
          * Depending on apical control.
          */
         float m_productiveResourceRequirement = 0.0f;
-
+        float m_adjustedProductiveResourceRequirement = 0.0f;
         glm::quat m_localRotation = glm::vec3(0.0f);
     };
 
@@ -46,7 +46,8 @@ namespace EcoSysLab {
         float m_maxDistanceToAnyBranchEnd = 0;
         float m_level = 0;
         int m_order = 0;
-        float m_childTotalBiomass = 0;
+        float m_descendentTotalBiomass = 0;
+        float m_biomass = 0;
         float m_extraMass = 0.0f;
         float m_rootDistance = 0;
 
@@ -61,6 +62,8 @@ namespace EcoSysLab {
         float m_productiveResourceRequirement = 0.0f;
         float m_descendentProductiveResourceRequirement = 0.0f;
         float m_adjustedTotalProductiveWaterRequirement = 0.0f;
+        float m_adjustedProductiveResourceRequirement = 0.0f;
+        float m_adjustedDescendentProductiveResourceRequirement = 0.0f;
 
         std::vector<glm::mat4> m_leaves;
         std::vector<glm::mat4> m_fruits;
