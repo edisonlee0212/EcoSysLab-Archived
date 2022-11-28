@@ -20,9 +20,15 @@ namespace EcoSysLab {
         std::vector<glm::vec2> m_storedMousePositions;
         bool m_visualization = true;
         bool m_treeHierarchyGui = true;
+
         NodeHandle m_selectedInternodeHandle = -1;
         float m_selectedInternodeLengthFactor = 0.0f;
         std::vector<NodeHandle> m_selectedInternodeHierarchyList;
+
+        NodeHandle m_selectedRootNodeHandle = -1;
+        float m_selectedRootNodeLengthFactor = 0.0f;
+        std::vector<NodeHandle> m_selectedRootNodeHierarchyList;
+
         PruningMode m_mode = PruningMode::None;
 
         bool

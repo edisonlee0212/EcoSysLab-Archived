@@ -115,6 +115,7 @@ TreeVisualizer::OnInspect(
 
         if (m_treeHierarchyGui) {
             if (ImGui::TreeNodeEx("Tree Hierarchy")) {
+
                 bool deleted = false;
                 if (m_iteration == treeStructure.CurrentIteration()) {
                     if (DrawInternodeInspectionGui(treeStructure, 0, deleted, 0)) {
@@ -123,6 +124,7 @@ TreeVisualizer::OnInspect(
                     }
                 } else PeekInternodeInspectionGui(treeStructure.Peek(m_iteration), 0, 0);
                 m_selectedInternodeHierarchyList.clear();
+
                 ImGui::TreePop();
             }
             if (m_selectedInternodeHandle >= 0) {
@@ -192,9 +194,9 @@ TreeVisualizer::OnInspect(
                         mousePosition = {-1.0f * (mousePosition.x - halfX) / halfX,
                                          -1.0f * (mousePosition.y - halfY) / halfY};
                         if (mousePosition.x > -1.0f && mousePosition.x < 1.0f && mousePosition.y > -1.0f &&
-                            mousePosition.y < 1.0f)
+                            mousePosition.y < 1.0f) {
                             m_storedMousePositions.emplace_back(mousePosition);
-
+                        }
                     } else {
                         //Once released, check if empty.
                         if (!m_storedMousePositions.empty()) {
@@ -632,20 +634,31 @@ bool TreeVisualizer::ScreenCurvePruning(
     const auto &sortedInternodeList = treeSkeleton.RefSortedNodeList();
     bool changed = false;
     for (const auto &internodeHandle: sortedInternodeList) {
+        if (internodeHandle == 0) continue;
         auto &internode = treeSkeleton.RefNode(internodeHandle);
         if (internode.IsRecycled()) continue;
-        const glm::vec3 position = (globalTransform.m_value *
-                                    glm::translate(internode.m_info.m_globalPosition))[3];
-        auto rotation = globalTransform.GetRotation() * internode.m_info.m_globalRotation;
+        glm::vec3 position = internode.m_info.m_globalPosition;
+        auto rotation = internode.m_info.m_globalRotation;
         const auto direction = glm::normalize(rotation * glm::vec3(0, 0, -1));
-        const auto position2 =
+        auto position2 =
                 position + internode.m_info.m_length * direction;
+
+        position = (globalTransform.m_value *
+                    glm::translate(position))[3];
+        position2 = (globalTransform.m_value *
+                     glm::translate(position2))[3];
         const glm::vec4 internodeScreenStart4 = projectionView * glm::vec4(position, 1.0f);
         const glm::vec4 internodeScreenEnd4 = projectionView * glm::vec4(position2, 1.0f);
-        glm::vec2 internodeScreenStart = internodeScreenStart4 / internodeScreenStart4.w;
-        glm::vec2 internodeScreenEnd = internodeScreenEnd4 / internodeScreenEnd4.w;
+        glm::vec3 internodeScreenStart = internodeScreenStart4 / internodeScreenStart4.w;
+        glm::vec3 internodeScreenEnd = internodeScreenEnd4 / internodeScreenEnd4.w;
         internodeScreenStart.x *= -1.0f;
         internodeScreenEnd.x *= -1.0f;
+        if (internodeScreenStart.x < -1.0f || internodeScreenStart.x > 1.0f || internodeScreenStart.y < -1.0f ||
+            internodeScreenStart.y > 1.0f || internodeScreenStart.z < 0.0f)
+            continue;
+        if (internodeScreenEnd.x < -1.0f || internodeScreenEnd.x > 1.0f || internodeScreenEnd.y < -1.0f ||
+            internodeScreenEnd.y > 1.0f || internodeScreenEnd.z < 0.0f)
+            continue;
         bool intersect = false;
         for (int i = 0; i < m_storedMousePositions.size() - 1; i++) {
             auto &lineStart = m_storedMousePositions[i];
@@ -660,13 +673,17 @@ bool TreeVisualizer::ScreenCurvePruning(
             float c2 = a2 * (lineStart.x) + b2 * (lineStart.y);
 
             float determinant = a1 * b2 - a2 * b1;
-            if (glm::abs(determinant) < 0.00001f) continue;
+            if (determinant == 0.0f) continue;
             float x = (b2 * c1 - b1 * c2) / determinant;
             float y = (a1 * c2 - a2 * c1) / determinant;
-            if (x < glm::max(internodeScreenStart.x, internodeScreenEnd.x) &&
-                x > glm::min(internodeScreenStart.x, internodeScreenEnd.x) &&
-                y < glm::max(internodeScreenStart.y, internodeScreenEnd.y) &&
-                y > glm::min(internodeScreenStart.y, internodeScreenEnd.y)) {
+            if (x <= glm::max(internodeScreenStart.x, internodeScreenEnd.x) &&
+                x >= glm::min(internodeScreenStart.x, internodeScreenEnd.x) &&
+                y <= glm::max(internodeScreenStart.y, internodeScreenEnd.y) &&
+                y >= glm::min(internodeScreenStart.y, internodeScreenEnd.y) &&
+                x <= glm::max(lineStart.x, lineEnd.x) &&
+                x >= glm::min(lineStart.x, lineEnd.x) &&
+                y <= glm::max(lineStart.y, lineEnd.y) &&
+                y >= glm::min(lineStart.y, lineEnd.y)) {
                 intersect = true;
                 break;
             }
