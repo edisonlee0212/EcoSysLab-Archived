@@ -98,6 +98,7 @@ void Tree::GenerateMesh(const MeshGeneratorSettings &meshGeneratorSettings) {
         material->SetProgram(DefaultResources::GLPrograms::StandardProgram);
         mesh->SetVertices(17, vertices, indices);
         auto branchEntity = scene->CreateEntity("Tree Branch");
+        scene->SetParent(branchEntity, self);
         auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(branchEntity).lock();
         meshRenderer->m_mesh = mesh;
         meshRenderer->m_material = material;
@@ -114,6 +115,7 @@ void Tree::GenerateMesh(const MeshGeneratorSettings &meshGeneratorSettings) {
         material->SetProgram(DefaultResources::GLPrograms::StandardProgram);
         mesh->SetVertices(17, vertices, indices);
         auto branchEntity = scene->CreateEntity("Root Branch");
+        scene->SetParent(branchEntity, self);
         auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(branchEntity).lock();
         meshRenderer->m_mesh = mesh;
         meshRenderer->m_material = material;

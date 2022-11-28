@@ -42,7 +42,7 @@ void Trees::OnInspect() {
                 scene->SetDataComponent(treeEntity, gt);
                 auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
                 tree->m_treeDescriptor = m_treeDescriptor;
-                if(enableHistory) tree->m_enableHistory = enableHistory;
+                tree->m_enableHistory = enableHistory;
                 if(setParent) scene->SetParent(treeEntity, parent);
             }
         }

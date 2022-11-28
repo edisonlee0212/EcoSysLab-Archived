@@ -298,7 +298,8 @@ void TreeVisualizationLayer::GenerateMeshes(const MeshGeneratorSettings& meshGen
     const std::vector<Entity> *treeEntities =
             scene->UnsafeGetPrivateComponentOwnersList<Tree>();
     if (treeEntities && !treeEntities->empty()) {
-        for(auto treeEntity : *treeEntities){
+        auto copiedEntities = *treeEntities;
+        for(auto treeEntity : copiedEntities){
             auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
             tree->GenerateMesh(meshGeneratorSettings);
         }
