@@ -642,20 +642,20 @@ bool TreeModel::LowBranchPruning(float maxDistance, NodeHandle internodeHandle,
 
 TreeGrowthParameters::TreeGrowthParameters() {
     m_lateralBudCount = 2;
-    m_branchingAngleMeanVariance = glm::vec2(30, 3);
+    m_branchingAngleMeanVariance = glm::vec2(60, 3);
     m_rollAngleMeanVariance = glm::vec2(120, 2);
-    m_apicalAngleMeanVariance = glm::vec2(0, 4);
-    m_gravitropism = -0.1f;
-    m_phototropism = 0.05f;
-    m_internodeLength = 1.0f;
+    m_apicalAngleMeanVariance = glm::vec2(0, 2.5);
+    m_gravitropism = 0.03f;
+    m_phototropism = 0.0f;
+    m_internodeLength = 0.03f;
     m_growthRate = 1.0f;
-    m_endNodeThicknessAndControl = glm::vec2(0.01, 0.5);
-    m_lateralBudFlushingProbability = 0.3f;
-    m_apicalControlBaseDistFactor = {1.1f, 0.95f};
-    m_apicalDominanceBaseAgeDist = glm::vec3(0.12, 1, 0.3);
+    m_endNodeThicknessAndControl = glm::vec2(0.001, 0.5);
+    m_lateralBudFlushingProbability = 0.5f;
+    m_apicalControlBaseDistFactor = {1.1f, 0.99f};
+    m_apicalDominanceBaseAgeDist = glm::vec3(300, 1, 0.97);
     m_budKillProbabilityApicalLateral = glm::vec2(0.0, 0.03);
     m_lowBranchPruning = 0.2f;
-    m_saggingFactorThicknessReductionMax = glm::vec3(6, 3, 0.5);
+    m_saggingFactorThicknessReductionMax = glm::vec3(0.001, 3, 0.7);
 
     m_baseResourceRequirementFactor = glm::vec3(1.0f);
     m_productiveResourceRequirementFactor = glm::vec3(1.0f);
