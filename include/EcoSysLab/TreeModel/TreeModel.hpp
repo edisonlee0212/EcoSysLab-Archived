@@ -101,6 +101,7 @@ namespace EcoSysLab {
     class RootGrowthParameters {
     public:
         [[nodiscard]] float GetRootNodeLength(const Node<RootInternodeGrowthData> &rootNode) const;
+
         [[nodiscard]] float GetLateralRootFormingProbability(const Node<RootInternodeGrowthData> &rootNode) const;
 
         [[nodiscard]] float
@@ -236,8 +237,10 @@ namespace EcoSysLab {
 
     class TreeModel {
 #pragma region Root Growth
+
         bool GrowShoots(float extendLength, NodeHandle rootNodeHandle,
                         const RootGrowthParameters &parameters, float &collectedInhibitor);
+
 #pragma endregion
 #pragma region Tree Growth
 
@@ -261,10 +264,14 @@ namespace EcoSysLab {
         void Initialize(const TreeGrowthParameters &treeGrowthParameters, const RootGrowthParameters &rootParameters);
 
         bool m_initialized = false;
+        Skeleton<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> m_branchSkeleton;
+        Skeleton<RootSkeletonGrowthData, RootBranchGrowthData, RootInternodeGrowthData> m_rootSkeleton;
+        std::deque<
+                std::pair<Skeleton<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData>,
+                        Skeleton<RootSkeletonGrowthData, RootBranchGrowthData, RootInternodeGrowthData>>> m_history;
+
     public:
         glm::vec3 m_gravityDirection = glm::vec3(0, -1, 0);
-        PlantStructure<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> m_treeStructure = {};
-        PlantStructure<RootSkeletonGrowthData, RootBranchGrowthData, RootInternodeGrowthData> m_rootStructure = {};
 
         /**
          * Erase the entire tree.
@@ -279,5 +286,29 @@ namespace EcoSysLab {
          */
         bool Grow(const GrowthNutrients &growthNutrients, const TreeGrowthParameters &treeGrowthParameters,
                   const RootGrowthParameters &rootGrowthParameters);
+
+
+        int m_historyLimit = -1;
+
+        [[nodiscard]] Skeleton<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &RefBranchSkeleton();
+
+        [[nodiscard]] const Skeleton<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &
+        PeekBranchSkeleton(int iteration) const;
+
+        [[nodiscard]] Skeleton<RootSkeletonGrowthData, RootBranchGrowthData, RootInternodeGrowthData> &
+        RefRootSkeleton();
+
+        [[nodiscard]] const Skeleton<RootSkeletonGrowthData, RootBranchGrowthData, RootInternodeGrowthData> &
+        PeekRootSkeleton(int iteration) const;
+
+        void ClearHistory();
+
+        void Step();
+
+        void Pop();
+
+        [[nodiscard]] int CurrentIteration() const;
+
+        void Reverse(int iteration);
     };
 }

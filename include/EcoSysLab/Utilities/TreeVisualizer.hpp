@@ -46,7 +46,7 @@ namespace EcoSysLab {
                 NodeHandle internodeHandle);
 
         bool DrawInternodeInspectionGui(
-                PlantStructure <SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeStructure,
+                TreeModel& treeModel,
                 NodeHandle internodeHandle, bool &deleted,
                 const unsigned &hierarchyLevel);
 
@@ -71,10 +71,10 @@ namespace EcoSysLab {
         bool m_needUpdate = false;
 
         bool
-        OnInspect(PlantStructure <SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeStructure,
+        OnInspect(TreeModel& treeModel,
                   const GlobalTransform &globalTransform);
 
-        void Reset(PlantStructure <SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeStructure);
+        void Reset(TreeModel& treeModel);
     };
 
 

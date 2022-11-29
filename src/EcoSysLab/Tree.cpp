@@ -48,7 +48,7 @@ void Tree::OnInspect() {
     if (modelChanged) {
         auto treeVisualizationLayer = Application::GetLayer<TreeVisualizationLayer>();
         if (treeVisualizationLayer && treeVisualizationLayer->m_selectedTree == GetOwner()) {
-            treeVisualizationLayer->m_treeVisualizer.Reset(m_treeModel.m_treeStructure);
+            treeVisualizationLayer->m_treeVisualizer.Reset(m_treeModel);
         }
     }
 }
@@ -66,7 +66,7 @@ void Tree::OnDestroy() {
 bool Tree::TryGrow() {
     auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
     if (!treeDescriptor) return false;
-    if (m_enableHistory) m_treeModel.m_treeStructure.Step();
+    if (m_enableHistory) m_treeModel.Step();
     return m_treeModel.Grow(m_growthNutrients, treeDescriptor->m_treeStructuralGrowthParameters,
                             treeDescriptor->m_rootGrowthParameters);
 }
@@ -91,7 +91,7 @@ void Tree::GenerateMesh(const MeshGeneratorSettings &meshGeneratorSettings) {
     std::vector<unsigned int> indices;
     {
         BranchMeshGenerator<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> meshGenerator;
-        meshGenerator.Generate(m_treeModel.m_treeStructure.RefSkeleton(), vertices, indices,
+        meshGenerator.Generate(m_treeModel.RefBranchSkeleton(), vertices, indices,
                                meshGeneratorSettings);
         auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
         auto material = ProjectManager::CreateTemporaryAsset<Material>();
@@ -108,7 +108,7 @@ void Tree::GenerateMesh(const MeshGeneratorSettings &meshGeneratorSettings) {
 
     {
         BranchMeshGenerator<RootSkeletonGrowthData, RootBranchGrowthData, RootInternodeGrowthData> meshGenerator;
-        meshGenerator.Generate(m_treeModel.m_rootStructure.RefSkeleton(), vertices, indices,
+        meshGenerator.Generate(m_treeModel.RefRootSkeleton(), vertices, indices,
                                meshGeneratorSettings);
         auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
         auto material = ProjectManager::CreateTemporaryAsset<Material>();

@@ -7,11 +7,11 @@
 using namespace EcoSysLab;
 
 bool TreeVisualizer::DrawInternodeInspectionGui(
-        PlantStructure<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeStructure,
+        TreeModel& treeModel,
         NodeHandle internodeHandle,
         bool &deleted,
         const unsigned int &hierarchyLevel) {
-    auto &treeSkeleton = treeStructure.RefSkeleton();
+    auto &treeSkeleton = treeModel.RefBranchSkeleton();
     const int index = m_selectedInternodeHierarchyList.size() - hierarchyLevel - 1;
     if (!m_selectedInternodeHierarchyList.empty() && index >= 0 &&
         index < m_selectedInternodeHierarchyList.size() &&
@@ -40,12 +40,12 @@ bool TreeVisualizer::DrawInternodeInspectionGui(
         const auto &internodeChildren = treeSkeleton.RefNode(internodeHandle).RefChildHandles();
         for (const auto &child: internodeChildren) {
             bool childDeleted = false;
-            DrawInternodeInspectionGui(treeStructure, child, childDeleted, hierarchyLevel + 1);
+            DrawInternodeInspectionGui(treeModel, child, childDeleted, hierarchyLevel + 1);
             if (childDeleted) {
-                treeStructure.Step();
+                treeModel.Step();
                 treeSkeleton.RecycleNode(child);
                 treeSkeleton.SortLists();
-                m_iteration = treeStructure.CurrentIteration();
+                m_iteration = treeModel.CurrentIteration();
                 modified = true;
                 break;
             }
@@ -87,26 +87,26 @@ TreeVisualizer::PeekInternodeInspectionGui(
 
 bool
 TreeVisualizer::OnInspect(
-        PlantStructure<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeStructure,
+        TreeModel& treeModel,
         const GlobalTransform &globalTransform) {
     bool updated = false;
     if (ImGui::TreeNodeEx("Current selected tree", ImGuiTreeNodeFlags_DefaultOpen)) {
-        if (treeStructure.CurrentIteration() > 0) {
+        if (treeModel.CurrentIteration() > 0) {
             if (ImGui::TreeNodeEx("History", ImGuiTreeNodeFlags_DefaultOpen)) {
-                ImGui::DragInt("History Limit", &treeStructure.m_historyLimit, 1, -1, 1024);
-                if (ImGui::SliderInt("Iteration", &m_iteration, 0, treeStructure.CurrentIteration())) {
-                    m_iteration = glm::clamp(m_iteration, 0, treeStructure.CurrentIteration());
+                ImGui::DragInt("History Limit", &treeModel.m_historyLimit, 1, -1, 1024);
+                if (ImGui::SliderInt("Iteration", &m_iteration, 0, treeModel.CurrentIteration())) {
+                    m_iteration = glm::clamp(m_iteration, 0, treeModel.CurrentIteration());
                     m_selectedInternodeHandle = -1;
                     m_selectedInternodeHierarchyList.clear();
                     m_needUpdate = true;
                 }
-                if (m_iteration != treeStructure.CurrentIteration() && ImGui::Button("Reverse")) {
-                    treeStructure.Reverse(m_iteration);
+                if (m_iteration != treeModel.CurrentIteration() && ImGui::Button("Reverse")) {
+                    treeModel.Reverse(m_iteration);
                     m_needUpdate = true;
                 }
                 if(ImGui::Button("Clear history")){
                     m_iteration = 0;
-                    treeStructure.ClearHistory();
+                    treeModel.ClearHistory();
                 }
                 ImGui::TreePop();
             }
@@ -122,28 +122,28 @@ TreeVisualizer::OnInspect(
             if (ImGui::TreeNodeEx("Tree Hierarchy")) {
 
                 bool deleted = false;
-                if (m_iteration == treeStructure.CurrentIteration()) {
-                    if (DrawInternodeInspectionGui(treeStructure, 0, deleted, 0)) {
+                if (m_iteration == treeModel.CurrentIteration()) {
+                    if (DrawInternodeInspectionGui(treeModel, 0, deleted, 0)) {
                         m_needUpdate = true;
                         updated = true;
                     }
-                } else PeekInternodeInspectionGui(treeStructure.Peek(m_iteration), 0, 0);
+                } else PeekInternodeInspectionGui(treeModel.PeekBranchSkeleton(m_iteration), 0, 0);
                 m_selectedInternodeHierarchyList.clear();
 
                 ImGui::TreePop();
             }
             if (m_selectedInternodeHandle >= 0) {
-                if (m_iteration == treeStructure.CurrentIteration()) {
-                    InspectInternode(treeStructure.RefSkeleton(), m_selectedInternodeHandle);
+                if (m_iteration == treeModel.CurrentIteration()) {
+                    InspectInternode(treeModel.RefBranchSkeleton(), m_selectedInternodeHandle);
                 } else {
-                    PeekInternode(treeStructure.Peek(m_iteration), m_selectedInternodeHandle);
+                    PeekInternode(treeModel.PeekBranchSkeleton(m_iteration), m_selectedInternodeHandle);
                 }
             }
         }
 
         ImGui::TreePop();
     }
-    const auto &treeSkeleton = treeStructure.Peek(m_iteration);
+    const auto &treeSkeleton = treeModel.PeekBranchSkeleton(m_iteration);
 
     if (m_visualization) {
         auto editorLayer = Application::GetLayer<EditorLayer>();
@@ -168,11 +168,11 @@ TreeVisualizer::OnInspect(
                         updated = true;
                     }
                 }
-                if (m_iteration == treeStructure.CurrentIteration() && m_selectedInternodeHandle > 0 &&
+                if (m_iteration == treeModel.CurrentIteration() && m_selectedInternodeHandle > 0 &&
                     Inputs::GetKeyInternal(GLFW_KEY_DELETE,
                                            Windows::GetWindow())) {
-                    treeStructure.Step();
-                    auto &skeleton = treeStructure.RefSkeleton();
+                    treeModel.Step();
+                    auto &skeleton = treeModel.RefBranchSkeleton();
                     auto &pruningInternode = skeleton.RefNode(m_selectedInternodeHandle);
                     auto childHandles = pruningInternode.RefChildHandles();
                     for (const auto &childHandle: childHandles) {
@@ -184,14 +184,14 @@ TreeVisualizer::OnInspect(
                         bud.m_status = BudStatus::Died;
                     }
                     skeleton.SortLists();
-                    m_iteration = treeStructure.CurrentIteration();
+                    m_iteration = treeModel.CurrentIteration();
                     m_needUpdate = true;
                     updated = true;
                 }
             }
                 break;
             case PruningMode::Stroke: {
-                if (m_iteration == treeStructure.CurrentIteration()) {
+                if (m_iteration == treeModel.CurrentIteration()) {
                     if (Inputs::GetMouseInternal(GLFW_MOUSE_BUTTON_LEFT, Windows::GetWindow())) {
                         glm::vec2 mousePosition = editorLayer->GetMouseScreenPosition();
                         const float halfX = static_cast<float>(editorLayer->m_sceneCamera->GetResolution().x) / 2.0f;
@@ -206,16 +206,16 @@ TreeVisualizer::OnInspect(
                     } else {
                         //Once released, check if empty.
                         if (!m_storedMousePositions.empty()) {
-                            treeStructure.Step();
-                            auto &skeleton = treeStructure.RefSkeleton();
+                            treeModel.Step();
+                            auto &skeleton = treeModel.RefBranchSkeleton();
                             bool changed = ScreenCurvePruning(skeleton, globalTransform);
                             if (changed) {
                                 skeleton.SortLists();
-                                m_iteration = treeStructure.CurrentIteration();
+                                m_iteration = treeModel.CurrentIteration();
                                 m_needUpdate = true;
                                 updated = true;
                             } else {
-                                treeStructure.Pop();
+                                treeModel.Pop();
                             }
                             m_storedMousePositions.clear();
                         }
@@ -505,10 +505,10 @@ TreeVisualizer::PeekInternode(
 }
 
 void TreeVisualizer::Reset(
-        PlantStructure<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeStructure) {
+        TreeModel& treeModel) {
     m_selectedInternodeHandle = -1;
     m_selectedInternodeHierarchyList.clear();
-    m_iteration = treeStructure.CurrentIteration();
+    m_iteration = treeModel.CurrentIteration();
     m_internodeMatrices.clear();
     m_needUpdate = true;
 }
