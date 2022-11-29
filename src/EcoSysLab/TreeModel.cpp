@@ -655,7 +655,7 @@ TreeGrowthParameters::TreeGrowthParameters() {
     m_apicalDominanceBaseAgeDist = glm::vec3(300, 1, 0.97);
     m_budKillProbabilityApicalLateral = glm::vec2(0.0, 0.03);
     m_lowBranchPruning = 0.2f;
-    m_saggingFactorThicknessReductionMax = glm::vec3(0.001, 3, 0.7);
+    m_saggingFactorThicknessReductionMax = glm::vec3(0.0001, 2, 0.5);
 
     m_baseResourceRequirementFactor = glm::vec3(1.0f);
     m_productiveResourceRequirementFactor = glm::vec3(1.0f);

@@ -175,7 +175,7 @@ void TreeDescriptor::OnInspect() {
     if (ImGui::TreeNodeEx("Internode")) {
         ImGui::DragFloat("Low Branch Pruning", &m_treeStructuralGrowthParameters.m_lowBranchPruning, 0.01f);
         ImGui::DragFloat3("Sagging thickness/reduction/max",
-                          &m_treeStructuralGrowthParameters.m_saggingFactorThicknessReductionMax.x, 0.01f);
+                          &m_treeStructuralGrowthParameters.m_saggingFactorThicknessReductionMax.x, 0.01f, 0.0f, 1.0f, "%.5f");
 
 
         ImGui::TreePop();
