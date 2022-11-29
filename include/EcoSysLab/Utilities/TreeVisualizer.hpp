@@ -15,8 +15,11 @@ namespace EcoSysLab {
 
 
     class TreeVisualizer {
-        std::vector<glm::mat4> m_matrices;
-        std::vector<glm::vec4> m_colors;
+        std::vector<glm::mat4> m_internodeMatrices;
+        std::vector<glm::vec4> m_internodeColors;
+        std::vector<glm::mat4> m_rootNodeMatrices;
+        std::vector<glm::vec4> m_rootNodeColors;
+
         std::vector<glm::vec2> m_storedMousePositions;
         bool m_visualization = true;
         bool m_treeHierarchyGui = true;
