@@ -7,7 +7,7 @@
 using namespace EcoSysLab;
 
 bool TreeVisualizer::DrawInternodeInspectionGui(
-        TreeModel& treeModel,
+        TreeModel &treeModel,
         NodeHandle internodeHandle,
         bool &deleted,
         const unsigned int &hierarchyLevel) {
@@ -24,7 +24,7 @@ bool TreeVisualizer::DrawInternodeInspectionGui(
                                           (m_selectedInternodeHandle == internodeHandle ? ImGuiTreeNodeFlags_Framed
                                                                                         : ImGuiTreeNodeFlags_FramePadding));
     if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0)) {
-        SetSelectedInternode(treeSkeleton, internodeHandle);
+        SetSelectedNode(treeSkeleton, internodeHandle, m_selectedInternodeHandle, m_selectedInternodeHierarchyList);
     }
 
     if (ImGui::BeginPopupContextItem(std::to_string(internodeHandle).c_str())) {
@@ -55,39 +55,9 @@ bool TreeVisualizer::DrawInternodeInspectionGui(
     return modified;
 }
 
-void
-TreeVisualizer::PeekInternodeInspectionGui(
-        const Skeleton<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeSkeleton,
-        NodeHandle internodeHandle,
-        const unsigned int &hierarchyLevel) {
-    const int index = m_selectedInternodeHierarchyList.size() - hierarchyLevel - 1;
-    if (!m_selectedInternodeHierarchyList.empty() && index >= 0 &&
-        index < m_selectedInternodeHierarchyList.size() &&
-        m_selectedInternodeHierarchyList[index] == internodeHandle) {
-        ImGui::SetNextItemOpen(true);
-    }
-    const bool opened = ImGui::TreeNodeEx(("Handle: " + std::to_string(internodeHandle)).c_str(),
-                                          ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_OpenOnArrow |
-                                          ImGuiTreeNodeFlags_NoAutoOpenOnLog |
-                                          (m_selectedInternodeHandle == internodeHandle ? ImGuiTreeNodeFlags_Framed
-                                                                                        : ImGuiTreeNodeFlags_FramePadding));
-    if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0)) {
-        SetSelectedInternode(treeSkeleton, internodeHandle);
-    }
-    if (opened) {
-        ImGui::TreePush();
-        const auto &internode = treeSkeleton.PeekNode(internodeHandle);
-        const auto &internodeChildren = internode.RefChildHandles();
-        for (const auto &child: internodeChildren) {
-            PeekInternodeInspectionGui(treeSkeleton, child, hierarchyLevel + 1);
-        }
-        ImGui::TreePop();
-    }
-}
-
 bool
 TreeVisualizer::OnInspect(
-        TreeModel& treeModel,
+        TreeModel &treeModel,
         const GlobalTransform &globalTransform) {
     bool updated = false;
     if (ImGui::TreeNodeEx("Current selected tree", ImGuiTreeNodeFlags_DefaultOpen)) {
@@ -104,7 +74,7 @@ TreeVisualizer::OnInspect(
                     treeModel.Reverse(m_iteration);
                     m_needUpdate = true;
                 }
-                if(ImGui::Button("Clear history")){
+                if (ImGui::Button("Clear history")) {
                     m_iteration = 0;
                     treeModel.ClearHistory();
                 }
@@ -127,7 +97,9 @@ TreeVisualizer::OnInspect(
                         m_needUpdate = true;
                         updated = true;
                     }
-                } else PeekInternodeInspectionGui(treeModel.PeekBranchSkeleton(m_iteration), 0, 0);
+                } else
+                    PeekNodeInspectionGui(treeModel.PeekBranchSkeleton(m_iteration), 0, m_selectedInternodeHandle,
+                                          m_selectedInternodeHierarchyList, 0);
                 m_selectedInternodeHierarchyList.clear();
 
                 ImGui::TreePop();
@@ -144,7 +116,7 @@ TreeVisualizer::OnInspect(
         ImGui::TreePop();
     }
     const auto &treeSkeleton = treeModel.PeekBranchSkeleton(m_iteration);
-
+    const auto &rootSkeleton = treeModel.PeekRootSkeleton(m_iteration);
     if (m_visualization) {
         auto editorLayer = Application::GetLayer<EditorLayer>();
         const auto &sortedBranchList = treeSkeleton.RefSortedFlowList();
@@ -163,7 +135,7 @@ TreeVisualizer::OnInspect(
         switch (m_mode) {
             case PruningMode::None: {
                 if (Inputs::GetMouseInternal(GLFW_MOUSE_BUTTON_LEFT, Windows::GetWindow())) {
-                    if (RayCastSelection(treeSkeleton, globalTransform)) {
+                    if (RayCastSelection(treeSkeleton, globalTransform, m_selectedInternodeHandle, m_selectedInternodeHierarchyList)) {
                         m_needUpdate = true;
                         updated = true;
                     }
@@ -208,7 +180,7 @@ TreeVisualizer::OnInspect(
                         if (!m_storedMousePositions.empty()) {
                             treeModel.Step();
                             auto &skeleton = treeModel.RefBranchSkeleton();
-                            bool changed = ScreenCurvePruning(skeleton, globalTransform);
+                            bool changed = ScreenCurvePruning(skeleton, globalTransform, m_selectedInternodeHandle, m_selectedInternodeHierarchyList);
                             if (changed) {
                                 skeleton.SortLists();
                                 m_iteration = treeModel.CurrentIteration();
@@ -227,12 +199,13 @@ TreeVisualizer::OnInspect(
 
 
         if (m_needUpdate) {
-            SyncMatrices(treeSkeleton);
+            SyncMatrices(treeSkeleton, m_internodeMatrices, m_internodeColors, m_selectedInternodeHandle);
+            SyncMatrices(rootSkeleton, m_rootNodeMatrices, m_rootNodeColors, m_selectedRootNodeHandle);
             m_needUpdate = false;
         }
         if (!m_internodeMatrices.empty()) {
-            GizmoSettings m_gizmoSettings;
-            m_gizmoSettings.m_drawSettings.m_blending = true;
+            GizmoSettings gizmoSettings;
+            gizmoSettings.m_drawSettings.m_blending = true;
             if (m_selectedInternodeHandle == -1) {
                 m_internodeMatrices[0] = glm::translate(glm::vec3(1.0f)) * glm::scale(glm::vec3(0.0f));
                 m_internodeColors[0] = glm::vec4(0.0f);
@@ -243,7 +216,23 @@ TreeVisualizer::OnInspect(
                     editorLayer->m_sceneCameraRotation,
                     *reinterpret_cast<std::vector<glm::vec4> *>(&m_internodeColors),
                     *reinterpret_cast<std::vector<glm::mat4> *>(&m_internodeMatrices),
-                    globalTransform.m_value, 1.0f, m_gizmoSettings);
+                    globalTransform.m_value, 1.0f, gizmoSettings);
+
+        }
+        if (!m_rootNodeMatrices.empty()) {
+            GizmoSettings gizmoSettings;
+            gizmoSettings.m_drawSettings.m_blending = true;
+            if (m_selectedRootNodeHandle == -1) {
+                m_rootNodeMatrices[0] = glm::translate(glm::vec3(1.0f)) * glm::scale(glm::vec3(0.0f));
+                m_rootNodeColors[0] = glm::vec4(0.0f);
+            }
+            Gizmos::DrawGizmoMeshInstancedColored(
+                    DefaultResources::Primitives::Cylinder, editorLayer->m_sceneCamera,
+                    editorLayer->m_sceneCameraPosition,
+                    editorLayer->m_sceneCameraRotation,
+                    *reinterpret_cast<std::vector<glm::vec4> *>(&m_rootNodeColors),
+                    *reinterpret_cast<std::vector<glm::mat4> *>(&m_rootNodeMatrices),
+                    globalTransform.m_value, 1.0f, gizmoSettings);
         }
     }
 
@@ -505,7 +494,7 @@ TreeVisualizer::PeekInternode(
 }
 
 void TreeVisualizer::Reset(
-        TreeModel& treeModel) {
+        TreeModel &treeModel) {
     m_selectedInternodeHandle = -1;
     m_selectedInternodeHierarchyList.clear();
     m_iteration = treeModel.CurrentIteration();
@@ -513,247 +502,29 @@ void TreeVisualizer::Reset(
     m_needUpdate = true;
 }
 
-void
-TreeVisualizer::SetSelectedInternode(
-        const Skeleton<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeSkeleton,
-        NodeHandle internodeHandle) {
-    if (internodeHandle == m_selectedInternodeHandle)
-        return;
-    m_selectedInternodeHierarchyList.clear();
-    if (internodeHandle < 0) {
-        m_selectedInternodeHandle = -1;
-        return;
-    }
-    m_selectedInternodeHandle = internodeHandle;
-    auto walker = internodeHandle;
-    while (walker != -1) {
-        m_selectedInternodeHierarchyList.push_back(walker);
-        const auto &internode = treeSkeleton.PeekNode(walker);
-        walker = internode.GetParentHandle();
-    }
+bool TreeVisualizer::DrawRootNodeInspectionGui(TreeModel &treeModel, NodeHandle rootNodeHandle, bool &deleted,
+                                               const unsigned int &hierarchyLevel) {
+    return false;
 }
 
-bool TreeVisualizer::RayCastSelection(
-        const Skeleton<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeSkeleton,
-        const GlobalTransform &globalTransform) {
-    auto editorLayer = Application::GetLayer<EditorLayer>();
-    bool changed = false;
+void TreeVisualizer::PeekRootNode(
+        const Skeleton<RootSkeletonGrowthData, RootBranchGrowthData, RootInternodeGrowthData> &rootSkeleton,
+        NodeHandle rootNodeHandle) {
 
-    if (editorLayer->SceneCameraWindowFocused()) {
-#pragma region Ray selection
-        NodeHandle currentFocusingInternodeHandle = -1;
-        std::mutex writeMutex;
-        float minDistance = FLT_MAX;
-        GlobalTransform cameraLtw;
-        cameraLtw.m_value =
-                glm::translate(
-                        editorLayer->m_sceneCameraPosition) *
-                glm::mat4_cast(
-                        editorLayer->m_sceneCameraRotation);
-        const Ray cameraRay = editorLayer->m_sceneCamera->ScreenPointToRay(
-                cameraLtw, editorLayer->GetMouseScreenPosition());
-        const auto &sortedBranchList = treeSkeleton.RefSortedFlowList();
-        const auto &sortedInternodeList = treeSkeleton.RefSortedNodeList();
-        std::vector<std::shared_future<void>> results;
-        Jobs::ParallelFor(sortedInternodeList.size(), [&](unsigned i) {
-            const auto &internode = treeSkeleton.PeekNode(sortedInternodeList[i]);
-            auto rotation = globalTransform.GetRotation() * internode.m_info.m_globalRotation;
-            glm::vec3 position = (globalTransform.m_value *
-                                  glm::translate(internode.m_info.m_globalPosition))[3];
-            const auto direction = glm::normalize(rotation * glm::vec3(0, 0, -1));
-            const glm::vec3 position2 =
-                    position + internode.m_info.m_length * direction;
-            const auto center =
-                    (position + position2) / 2.0f;
-            auto radius = internode.m_info.m_thickness;
-            const auto height = glm::distance(position2,
-                                              position);
-            radius *= height / internode.m_info.m_length;
-            if (!cameraRay.Intersect(center,
-                                     height / 2.0f) && !cameraRay.Intersect(center,
-                                                                            radius)) {
-                return;
-            }
-            const auto &dir = -cameraRay.m_direction;
-#pragma region Line Line intersection
-            /*
-* http://geomalgorithms.com/a07-_distance.html
-*/
-            glm::vec3 v = position - position2;
-            glm::vec3 w = (cameraRay.m_start + dir) - position2;
-            const auto a = glm::dot(dir, dir); // always >= 0
-            const auto b = glm::dot(dir, v);
-            const auto c = glm::dot(v, v); // always >= 0
-            const auto d = glm::dot(dir, w);
-            const auto e = glm::dot(v, w);
-            const auto dotP = a * c - b * b; // always >= 0
-            float sc, tc;
-            // compute the line parameters of the two closest points
-            if (dotP < 0.00001f) { // the lines are almost parallel
-                sc = 0.0f;
-                tc = (b > c ? d / b : e / c); // use the largest denominator
-            } else {
-                sc = (b * e - c * d) / dotP;
-                tc = (a * e - b * d) / dotP;
-            }
-            // get the difference of the two closest points
-            glm::vec3 dP = w + sc * dir - tc * v; // =  L1(sc) - L2(tc)
-            if (glm::length(dP) > radius)
-                return;
-#pragma endregion
-
-            const auto distance = glm::distance(
-                    glm::vec3(cameraLtw.m_value[3]),
-                    glm::vec3(center));
-            std::lock_guard<std::mutex> lock(writeMutex);
-            if (distance < minDistance) {
-                minDistance = distance;
-                m_selectedInternodeLengthFactor = glm::clamp(1.0f - tc, 0.0f, 1.0f);
-                currentFocusingInternodeHandle = sortedInternodeList[i];
-            }
-        }, results);
-        for (auto &i: results) i.wait();
-
-
-        if (currentFocusingInternodeHandle != -1) {
-            SetSelectedInternode(treeSkeleton, currentFocusingInternodeHandle);
-            changed = true;
-        }
-
-#pragma endregion
-    }
-
-    return changed;
 }
 
-void
-TreeVisualizer::SyncMatrices(
-        const Skeleton<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeSkeleton) {
-    static std::vector<glm::vec4> randomColors;
-    if (randomColors.empty()) {
-        for (int i = 0; i < 100; i++) {
-            randomColors.emplace_back(glm::ballRand(1.0f), 1.0f);
-        }
-    }
-    const auto &sortedBranchList = treeSkeleton.RefSortedFlowList();
-    const auto &sortedInternodeList = treeSkeleton.RefSortedNodeList();
-    m_internodeMatrices.resize(sortedInternodeList.size() + 1);
-    m_internodeColors.resize(sortedInternodeList.size() + 1);
-    std::vector<std::shared_future<void>> results;
-    Jobs::ParallelFor(sortedInternodeList.size(), [&](unsigned i) {
-        auto internodeHandle = sortedInternodeList[i];
-        const auto &internode = treeSkeleton.PeekNode(internodeHandle);
-        glm::vec3 position = internode.m_info.m_globalPosition;
-        const auto direction = glm::normalize(internode.m_info.m_globalRotation * glm::vec3(0, 0, -1));
-        auto rotation = glm::quatLookAt(
-                direction, glm::vec3(direction.y, direction.z, direction.x));
-        rotation *= glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));
-        const glm::mat4 rotationTransform = glm::mat4_cast(rotation);
-        m_internodeMatrices[i + 1] =
-                glm::translate(position + (internode.m_info.m_length / 2.0f) * direction) *
-                rotationTransform *
-                glm::scale(glm::vec3(
-                        internode.m_info.m_thickness,
-                        internode.m_info.m_length / 2.0f,
-                        internode.m_info.m_thickness));
-        if (internodeHandle == m_selectedInternodeHandle) {
-            m_internodeColors[i + 1] = glm::vec4(1, 0, 0, 1);
-
-            const glm::vec3 selectedCenter =
-                    position + (internode.m_info.m_length * m_selectedInternodeLengthFactor) * direction;
-            m_internodeMatrices[0] = glm::translate(selectedCenter) *
-                                     rotationTransform *
-                                     glm::scale(glm::vec3(
-                                    internode.m_info.m_thickness + 0.001f,
-                                    internode.m_info.m_length / 10.0f,
-                                    internode.m_info.m_thickness + 0.001f));
-            m_internodeColors[0] = glm::vec4(1.0f);
-        } else {
-            m_internodeColors[i + 1] = randomColors[treeSkeleton.PeekFlow(internode.GetFlowHandle()).m_data.m_order];
-            if (m_selectedInternodeHandle != -1) m_internodeColors[i + 1].a = 0.3f;
-        }
-    }, results);
-    for (auto &i: results) i.wait();
+bool TreeVisualizer::InspectRootNode(
+        Skeleton<RootSkeletonGrowthData, RootBranchGrowthData, RootInternodeGrowthData> &rootSkeleton,
+        NodeHandle rootNodeHandle) {
+    return false;
 }
 
-bool TreeVisualizer::ScreenCurvePruning(
-        Skeleton<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeSkeleton,
-        const GlobalTransform &globalTransform) {
 
-    auto editorLayer = Application::GetLayer<EditorLayer>();
-    const auto cameraRotation = editorLayer->m_sceneCameraRotation;
-    const auto cameraPosition = editorLayer->m_sceneCameraPosition;
-    const glm::vec3 cameraFront = cameraRotation * glm::vec3(0, 0, -1);
-    const glm::vec3 cameraUp = cameraRotation * glm::vec3(0, 1, 0);
-    glm::mat4 projectionView = editorLayer->m_sceneCamera->GetProjection() *
-                               glm::lookAt(cameraPosition, cameraPosition + cameraFront, cameraUp);
 
-    const auto &sortedInternodeList = treeSkeleton.RefSortedNodeList();
-    bool changed = false;
-    for (const auto &internodeHandle: sortedInternodeList) {
-        if (internodeHandle == 0) continue;
-        auto &internode = treeSkeleton.RefNode(internodeHandle);
-        if (internode.IsRecycled()) continue;
-        glm::vec3 position = internode.m_info.m_globalPosition;
-        auto rotation = internode.m_info.m_globalRotation;
-        const auto direction = glm::normalize(rotation * glm::vec3(0, 0, -1));
-        auto position2 =
-                position + internode.m_info.m_length * direction;
 
-        position = (globalTransform.m_value *
-                    glm::translate(position))[3];
-        position2 = (globalTransform.m_value *
-                     glm::translate(position2))[3];
-        const glm::vec4 internodeScreenStart4 = projectionView * glm::vec4(position, 1.0f);
-        const glm::vec4 internodeScreenEnd4 = projectionView * glm::vec4(position2, 1.0f);
-        glm::vec3 internodeScreenStart = internodeScreenStart4 / internodeScreenStart4.w;
-        glm::vec3 internodeScreenEnd = internodeScreenEnd4 / internodeScreenEnd4.w;
-        internodeScreenStart.x *= -1.0f;
-        internodeScreenEnd.x *= -1.0f;
-        if (internodeScreenStart.x < -1.0f || internodeScreenStart.x > 1.0f || internodeScreenStart.y < -1.0f ||
-            internodeScreenStart.y > 1.0f || internodeScreenStart.z < 0.0f)
-            continue;
-        if (internodeScreenEnd.x < -1.0f || internodeScreenEnd.x > 1.0f || internodeScreenEnd.y < -1.0f ||
-            internodeScreenEnd.y > 1.0f || internodeScreenEnd.z < 0.0f)
-            continue;
-        bool intersect = false;
-        for (int i = 0; i < m_storedMousePositions.size() - 1; i++) {
-            auto &lineStart = m_storedMousePositions[i];
-            auto &lineEnd = m_storedMousePositions[i + 1];
-            float a1 = internodeScreenEnd.y - internodeScreenStart.y;
-            float b1 = internodeScreenStart.x - internodeScreenEnd.x;
-            float c1 = a1 * (internodeScreenStart.x) + b1 * (internodeScreenStart.y);
 
-            // Line CD represented as a2x + b2y = c2
-            float a2 = lineEnd.y - lineStart.y;
-            float b2 = lineStart.x - lineEnd.x;
-            float c2 = a2 * (lineStart.x) + b2 * (lineStart.y);
 
-            float determinant = a1 * b2 - a2 * b1;
-            if (determinant == 0.0f) continue;
-            float x = (b2 * c1 - b1 * c2) / determinant;
-            float y = (a1 * c2 - a2 * c1) / determinant;
-            if (x <= glm::max(internodeScreenStart.x, internodeScreenEnd.x) &&
-                x >= glm::min(internodeScreenStart.x, internodeScreenEnd.x) &&
-                y <= glm::max(internodeScreenStart.y, internodeScreenEnd.y) &&
-                y >= glm::min(internodeScreenStart.y, internodeScreenEnd.y) &&
-                x <= glm::max(lineStart.x, lineEnd.x) &&
-                x >= glm::min(lineStart.x, lineEnd.x) &&
-                y <= glm::max(lineStart.y, lineEnd.y) &&
-                y >= glm::min(lineStart.y, lineEnd.y)) {
-                intersect = true;
-                break;
-            }
-        }
-        if (intersect) {
-            treeSkeleton.RecycleNode(internodeHandle);
-            changed = true;
-        }
 
-    }
-    if (changed) {
-        m_selectedInternodeHandle = -1;
-        m_selectedInternodeHierarchyList.clear();
-    }
-    return changed;
-}
+
+
+
