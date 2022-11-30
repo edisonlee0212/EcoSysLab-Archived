@@ -94,10 +94,12 @@ void TreeVisualizationLayer::LateUpdate() {
 
         if (m_visualization) {
             if (m_versions.size() != treeEntities->size()) {
-                m_matrices.clear();
-                m_colors.clear();
+                m_branchMatrices.clear();
+                m_branchColors.clear();
                 m_boundingBoxColors.clear();
                 m_boundingBoxMatrices.clear();
+                m_rootFlowMatrices.clear();
+                m_rootFlowColors.clear();
 
                 m_internodeSize = 0;
                 m_totalTime = 0.0f;
@@ -122,12 +124,13 @@ void TreeVisualizationLayer::LateUpdate() {
                 }
             }
             m_internodeSize = totalInternodeSize;
-            m_flowSize = totalFlowSize;
+            m_branchSize = totalFlowSize;
             if (m_needFlowUpdate) {
                 m_needFlowUpdate = false;
                 m_boundingBoxMatrices.clear();
                 m_boundingBoxColors.clear();
-                int startIndex = 0;
+                int branchStartIndex = 0;
+                int rootFlowStartIndex = 0;
                 std::map<float, Entity> sortedModels;
                 for (int listIndex = 0; listIndex < treeEntities->size(); listIndex++) {
                     auto treeEntity = treeEntities->at(listIndex);
@@ -148,54 +151,81 @@ void TreeVisualizationLayer::LateUpdate() {
                                                   glm::vec3(entityGlobalTransform.GetPosition()));
                     sortedModels[distance] = treeEntity;
                 }
-                m_matrices.clear();
-                m_colors.clear();
+                m_branchMatrices.clear();
+                m_branchColors.clear();
+                m_rootFlowMatrices.clear();
+                m_rootFlowColors.clear();
                 for (const auto &modelPair: sortedModels) {
                     auto tree = scene->GetOrSetPrivateComponent<Tree>(modelPair.second).lock();
                     auto &treeModel = tree->m_treeModel;
-                    const auto &list = treeModel.RefBranchSkeleton().RefSortedFlowList();
-                    if (startIndex + list.size() > 50000000) break;
+                    const auto &branchList = treeModel.RefBranchSkeleton().RefSortedFlowList();
+                    const auto& rootFlowList = treeModel.RefRootSkeleton().RefSortedFlowList();
+                    if (branchStartIndex + branchList.size() > 50000000) break;
+                    if (rootFlowStartIndex + rootFlowList.size() > 50000000) break;
                     auto entityGlobalTransform = scene->GetDataComponent<GlobalTransform>(modelPair.second);
-                    std::vector<std::shared_future<void>> results;
-                    m_matrices.resize(startIndex + list.size());
-                    m_colors.resize(startIndex + list.size());
-                    Jobs::ParallelFor(list.size(), [&](unsigned i) {
-                        const auto &skeleton = treeModel.RefBranchSkeleton();
-                        auto &flow = skeleton.PeekFlow(list[i]);
+                    {
+                        std::vector<std::shared_future<void>> results;
+                        m_branchMatrices.resize(branchStartIndex + branchList.size());
+                        m_branchColors.resize(branchStartIndex + branchList.size());
+                        Jobs::ParallelFor(branchList.size(), [&](unsigned i) {
+                            const auto& skeleton = treeModel.RefBranchSkeleton();
+                        auto& flow = skeleton.PeekFlow(branchList[i]);
                         glm::vec3 translation = (entityGlobalTransform.m_value *
-                                                 glm::translate(flow.m_info.m_globalStartPosition))[3];
+                            glm::translate(flow.m_info.m_globalStartPosition))[3];
                         const auto direction = glm::normalize(
-                                flow.m_info.m_globalEndPosition - flow.m_info.m_globalStartPosition);
+                            flow.m_info.m_globalEndPosition - flow.m_info.m_globalStartPosition);
                         const glm::vec3 position2 = (entityGlobalTransform.m_value *
-                                                     glm::translate(flow.m_info.m_globalEndPosition))[3];
+                            glm::translate(flow.m_info.m_globalEndPosition))[3];
                         auto rotation = glm::quatLookAt(
-                                direction, glm::vec3(direction.y, direction.z, direction.x));
+                            direction, glm::vec3(direction.y, direction.z, direction.x));
                         rotation *= glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));
                         const glm::mat4 rotationTransform = glm::mat4_cast(rotation);
-                        m_matrices[i + startIndex] =
-                                glm::translate((translation + position2) / 2.0f) *
-                                rotationTransform *
-                                glm::scale(glm::vec3(
-                                        flow.m_info.m_startThickness,
-                                        glm::distance(translation, position2) / 2.0f,
-                                        flow.m_info.m_startThickness));
-                        m_colors[i + startIndex] = glm::vec4(m_randomColors[flow.m_data.m_order], m_selectedTree.GetIndex() != 0 ? 0.05f : 1.0f);
-                    }, results);
-                    for (auto &i: results) i.wait();
-                    startIndex += list.size();
+                        m_branchMatrices[i + branchStartIndex] =
+                            glm::translate((translation + position2) / 2.0f) *
+                            rotationTransform *
+                            glm::scale(glm::vec3(
+                                flow.m_info.m_startThickness,
+                                glm::distance(translation, position2) / 2.0f,
+                                flow.m_info.m_startThickness));
+                        m_branchColors[i + branchStartIndex] = glm::vec4(m_randomColors[flow.m_data.m_order], m_selectedTree.GetIndex() != 0 ? 0.05f : 1.0f);
+                            }, results);
+                        for (auto& i : results) i.wait();
+                        branchStartIndex += branchList.size();
+                    }
+                    {
+                        std::vector<std::shared_future<void>> results;
+                        m_rootFlowMatrices.resize(rootFlowStartIndex + rootFlowList.size());
+                        m_rootFlowColors.resize(rootFlowStartIndex + rootFlowList.size());
+                        Jobs::ParallelFor(rootFlowList.size(), [&](unsigned i) {
+                            const auto& skeleton = treeModel.RefRootSkeleton();
+                        auto& flow = skeleton.PeekFlow(rootFlowList[i]);
+                        glm::vec3 translation = (entityGlobalTransform.m_value *
+                            glm::translate(flow.m_info.m_globalStartPosition))[3];
+                        const auto direction = glm::normalize(
+                            flow.m_info.m_globalEndPosition - flow.m_info.m_globalStartPosition);
+                        const glm::vec3 position2 = (entityGlobalTransform.m_value *
+                            glm::translate(flow.m_info.m_globalEndPosition))[3];
+                        auto rotation = glm::quatLookAt(
+                            direction, glm::vec3(direction.y, direction.z, direction.x));
+                        rotation *= glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));
+                        const glm::mat4 rotationTransform = glm::mat4_cast(rotation);
+                        m_rootFlowMatrices[i + rootFlowStartIndex] =
+                            glm::translate((translation + position2) / 2.0f) *
+                            rotationTransform *
+                            glm::scale(glm::vec3(
+                                flow.m_info.m_startThickness,
+                                glm::distance(translation, position2) / 2.0f,
+                                flow.m_info.m_startThickness));
+                        m_rootFlowColors[i + rootFlowStartIndex] = glm::vec4(m_randomColors[flow.m_data.m_order], m_selectedTree.GetIndex() != 0 ? 0.05f : 1.0f);
+                            }, results);
+                        for (auto& i : results) i.wait();
+                        rootFlowStartIndex += rootFlowList.size();
+                    }
                 }
             }
             GizmoSettings gizmoSettings;
             gizmoSettings.m_drawSettings.m_blending = true;
-            if (m_displayTrees && !m_matrices.empty()) {
-                Gizmos::DrawGizmoMeshInstancedColored(
-                        DefaultResources::Primitives::Cube, editorLayer->m_sceneCamera,
-                        editorLayer->m_sceneCameraPosition,
-                        editorLayer->m_sceneCameraRotation,
-                        *reinterpret_cast<std::vector<glm::vec4> *>(&m_colors),
-                        *reinterpret_cast<std::vector<glm::mat4> *>(&m_matrices),
-                        glm::mat4(1.0f), 1.0f, gizmoSettings);
-            }
+            
             if (m_displayBoundingBox && !m_boundingBoxMatrices.empty()) {
                 Gizmos::DrawGizmoMeshInstancedColored(
                         DefaultResources::Primitives::Cube, editorLayer->m_sceneCamera,
@@ -203,6 +233,25 @@ void TreeVisualizationLayer::LateUpdate() {
                         editorLayer->m_sceneCameraRotation,
                         *reinterpret_cast<std::vector<glm::vec4> *>(&m_boundingBoxColors),
                         *reinterpret_cast<std::vector<glm::mat4> *>(&m_boundingBoxMatrices),
+                        glm::mat4(1.0f), 1.0f, gizmoSettings);
+            }
+            if (m_displayRootFlows && !m_rootFlowMatrices.empty()) {
+                Gizmos::DrawGizmoMeshInstancedColored(
+                    DefaultResources::Primitives::Cube, editorLayer->m_sceneCamera,
+                    editorLayer->m_sceneCameraPosition,
+                    editorLayer->m_sceneCameraRotation,
+                    *reinterpret_cast<std::vector<glm::vec4> *>(&m_rootFlowColors),
+                    *reinterpret_cast<std::vector<glm::mat4> *>(&m_rootFlowMatrices),
+                    glm::mat4(1.0f), 1.0f, gizmoSettings);
+            }
+
+            if (m_displayBranches && !m_branchMatrices.empty()) {
+                Gizmos::DrawGizmoMeshInstancedColored(
+                        DefaultResources::Primitives::Cube, editorLayer->m_sceneCamera,
+                        editorLayer->m_sceneCameraPosition,
+                        editorLayer->m_sceneCameraRotation,
+                        *reinterpret_cast<std::vector<glm::vec4> *>(&m_branchColors),
+                        *reinterpret_cast<std::vector<glm::mat4> *>(&m_branchMatrices),
                         glm::mat4(1.0f), 1.0f, gizmoSettings);
             }
         }
@@ -218,7 +267,8 @@ void TreeVisualizationLayer::OnInspect() {
         ImGui::Checkbox("Lock tree selection", &m_lockTreeSelection);
         ImGui::Checkbox("Visualization", &m_visualization);
         if (m_visualization) {
-            ImGui::Checkbox("Display Flows", &m_displayTrees);
+            ImGui::Checkbox("Display Branches", &m_displayBranches);
+            ImGui::Checkbox("Display Root Flows", &m_displayRootFlows);
             ImGui::Checkbox("Display Bounding Box", &m_displayBoundingBox);
         }
         if (treeEntities && !treeEntities->empty()) {
@@ -246,7 +296,7 @@ void TreeVisualizationLayer::OnInspect() {
             ImGui::Text("Total time: %.4f", m_totalTime);
             ImGui::Text("Tree count: %d", treeEntities->size());
             ImGui::Text("Total Internode size: %d", m_internodeSize);
-            ImGui::Text("Total Flow size: %d", m_flowSize);
+            ImGui::Text("Total Flow size: %d", m_branchSize);
 
             if(ImGui::TreeNode("Mesh generation")) {
                 m_meshGeneratorSettings.OnInspect();

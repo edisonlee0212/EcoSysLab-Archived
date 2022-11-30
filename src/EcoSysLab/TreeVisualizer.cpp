@@ -10,7 +10,7 @@ bool TreeVisualizer::DrawInternodeInspectionGui(
         TreeModel &treeModel,
         NodeHandle internodeHandle,
         bool &deleted,
-        const unsigned int &hierarchyLevel) {
+        const unsigned &hierarchyLevel) {
     auto &treeSkeleton = treeModel.RefBranchSkeleton();
     const int index = m_selectedInternodeHierarchyList.size() - hierarchyLevel - 1;
     if (!m_selectedInternodeHierarchyList.empty() && index >= 0 &&
@@ -68,6 +68,8 @@ TreeVisualizer::OnInspect(
                     m_iteration = glm::clamp(m_iteration, 0, treeModel.CurrentIteration());
                     m_selectedInternodeHandle = -1;
                     m_selectedInternodeHierarchyList.clear();
+                    m_selectedRootNodeHandle = -1;
+                    m_selectedRootNodeHierarchyList.clear();
                     m_needUpdate = true;
                 }
                 if (m_iteration != treeModel.CurrentIteration() && ImGui::Button("Reverse")) {
@@ -85,13 +87,14 @@ TreeVisualizer::OnInspect(
         if (ImGui::TreeNodeEx("Settings")) {
             ImGui::Checkbox("Visualization", &m_visualization);
             ImGui::Checkbox("Tree Hierarchy", &m_treeHierarchyGui);
+            ImGui::Checkbox("Root Hierarchy", &m_rootHierarchyGui);
             ImGui::TreePop();
         }
 
         if (m_treeHierarchyGui) {
             if (ImGui::TreeNodeEx("Tree Hierarchy")) {
-
                 bool deleted = false;
+                auto tempSelection = m_selectedInternodeHandle;
                 if (m_iteration == treeModel.CurrentIteration()) {
                     if (DrawInternodeInspectionGui(treeModel, 0, deleted, 0)) {
                         m_needUpdate = true;
@@ -101,7 +104,10 @@ TreeVisualizer::OnInspect(
                     PeekNodeInspectionGui(treeModel.PeekBranchSkeleton(m_iteration), 0, m_selectedInternodeHandle,
                                           m_selectedInternodeHierarchyList, 0);
                 m_selectedInternodeHierarchyList.clear();
-
+                if (tempSelection != m_selectedInternodeHandle) {
+                    m_selectedRootNodeHandle = -1;
+                    m_selectedRootNodeHierarchyList.clear();
+                }
                 ImGui::TreePop();
             }
             if (m_selectedInternodeHandle >= 0) {
@@ -110,9 +116,38 @@ TreeVisualizer::OnInspect(
                 } else {
                     PeekInternode(treeModel.PeekBranchSkeleton(m_iteration), m_selectedInternodeHandle);
                 }
+                
             }
         }
-
+        if (m_rootHierarchyGui) {
+            if (ImGui::TreeNodeEx("Root Hierarchy")) {
+                bool deleted = false;
+                auto tempSelection = m_selectedRootNodeHandle;
+                if (m_iteration == treeModel.CurrentIteration()) {
+                    if (DrawRootNodeInspectionGui(treeModel, 0, deleted, 0)) {
+                        m_needUpdate = true;
+                        updated = true;
+                    }
+                }
+                else
+                    PeekNodeInspectionGui(treeModel.PeekRootSkeleton(m_iteration), 0, m_selectedRootNodeHandle,
+                        m_selectedRootNodeHierarchyList, 0);
+                m_selectedRootNodeHierarchyList.clear();
+                if (tempSelection != m_selectedRootNodeHandle) {
+                    m_selectedInternodeHandle = -1;
+                    m_selectedInternodeHierarchyList.clear();
+                }
+                ImGui::TreePop();
+            }
+            if (m_selectedRootNodeHandle >= 0) {
+                if (m_iteration == treeModel.CurrentIteration()) {
+                    InspectRootNode(treeModel.RefRootSkeleton(), m_selectedRootNodeHandle);
+                }
+                else {
+                    PeekRootNode(treeModel.PeekRootSkeleton(m_iteration), m_selectedRootNodeHandle);
+                }
+            }
+        }
         ImGui::TreePop();
     }
     const auto &treeSkeleton = treeModel.PeekBranchSkeleton(m_iteration);
@@ -122,7 +157,13 @@ TreeVisualizer::OnInspect(
         const auto &sortedBranchList = treeSkeleton.RefSortedFlowList();
         const auto &sortedInternodeList = treeSkeleton.RefSortedNodeList();
         ImGui::Text("Internode count: %d", sortedInternodeList.size());
-        ImGui::Text("Flow count: %d", sortedBranchList.size());
+        ImGui::Text("Branch count: %d", sortedBranchList.size());
+        
+        const auto& sortedRootFlowList = rootSkeleton.RefSortedFlowList();
+        const auto& sortedRootNodeList = rootSkeleton.RefSortedNodeList();
+        ImGui::Text("Root node count: %d", sortedRootNodeList.size());
+        ImGui::Text("Root flow count: %d", sortedRootFlowList.size());
+
         static bool enableStroke = false;
         if (ImGui::Checkbox("Enable stroke", &enableStroke)) {
             if (enableStroke) {
@@ -135,30 +176,54 @@ TreeVisualizer::OnInspect(
         switch (m_mode) {
             case PruningMode::None: {
                 if (Inputs::GetMouseInternal(GLFW_MOUSE_BUTTON_LEFT, Windows::GetWindow())) {
-                    if (RayCastSelection(treeSkeleton, globalTransform, m_selectedInternodeHandle, m_selectedInternodeHierarchyList)) {
+                    if (RayCastSelection(treeSkeleton, globalTransform, m_selectedInternodeHandle, m_selectedInternodeHierarchyList, m_selectedInternodeLengthFactor)) {
+                        m_needUpdate = true;
+                        updated = true;
+                        m_selectedRootNodeHandle = -1;
+                        m_selectedRootNodeHierarchyList.clear();
+                    }else if (RayCastSelection(rootSkeleton, globalTransform, m_selectedRootNodeHandle, m_selectedRootNodeHierarchyList, m_selectedRootNodeLengthFactor)) {
+                        m_needUpdate = true;
+                        updated = true;
+                        m_selectedInternodeHandle = -1;
+                        m_selectedInternodeHierarchyList.clear();
+                    }
+                }
+				if (m_iteration == treeModel.CurrentIteration() &&
+                    Inputs::GetKeyInternal(GLFW_KEY_DELETE,
+                                           Windows::GetWindow())) {
+                    if (m_selectedInternodeHandle > 0) {
+                        treeModel.Step();
+                        auto& skeleton = treeModel.RefBranchSkeleton();
+                        auto& pruningInternode = skeleton.RefNode(m_selectedInternodeHandle);
+                        auto childHandles = pruningInternode.RefChildHandles();
+                        for (const auto& childHandle : childHandles) {
+                            skeleton.RecycleNode(childHandle);
+                        }
+                        pruningInternode.m_info.m_length *= m_selectedInternodeLengthFactor;
+                        m_selectedInternodeLengthFactor = 1.0f;
+                        for (auto& bud : pruningInternode.m_data.m_buds) {
+                            bud.m_status = BudStatus::Died;
+                        }
+                        skeleton.SortLists();
+                        m_iteration = treeModel.CurrentIteration();
                         m_needUpdate = true;
                         updated = true;
                     }
-                }
-                if (m_iteration == treeModel.CurrentIteration() && m_selectedInternodeHandle > 0 &&
-                    Inputs::GetKeyInternal(GLFW_KEY_DELETE,
-                                           Windows::GetWindow())) {
-                    treeModel.Step();
-                    auto &skeleton = treeModel.RefBranchSkeleton();
-                    auto &pruningInternode = skeleton.RefNode(m_selectedInternodeHandle);
-                    auto childHandles = pruningInternode.RefChildHandles();
-                    for (const auto &childHandle: childHandles) {
-                        skeleton.RecycleNode(childHandle);
+                    if (m_selectedRootNodeHandle > 0) {
+                        treeModel.Step();
+                        auto& skeleton = treeModel.RefRootSkeleton();
+                        auto& pruningRootNode = skeleton.RefNode(m_selectedRootNodeHandle);
+                        auto childHandles = pruningRootNode.RefChildHandles();
+                        for (const auto& childHandle : childHandles) {
+                            skeleton.RecycleNode(childHandle);
+                        }
+                        pruningRootNode.m_info.m_length *= m_selectedRootNodeLengthFactor;
+                        m_selectedRootNodeLengthFactor = 1.0f;
+                        skeleton.SortLists();
+                        m_iteration = treeModel.CurrentIteration();
+                        m_needUpdate = true;
+                        updated = true;
                     }
-                    pruningInternode.m_info.m_length *= m_selectedInternodeLengthFactor;
-                    m_selectedInternodeLengthFactor = 1.0f;
-                    for (auto &bud: pruningInternode.m_data.m_buds) {
-                        bud.m_status = BudStatus::Died;
-                    }
-                    skeleton.SortLists();
-                    m_iteration = treeModel.CurrentIteration();
-                    m_needUpdate = true;
-                    updated = true;
                 }
             }
                 break;
@@ -199,8 +264,8 @@ TreeVisualizer::OnInspect(
 
 
         if (m_needUpdate) {
-            SyncMatrices(treeSkeleton, m_internodeMatrices, m_internodeColors, m_selectedInternodeHandle);
-            SyncMatrices(rootSkeleton, m_rootNodeMatrices, m_rootNodeColors, m_selectedRootNodeHandle);
+            SyncMatrices(treeSkeleton, m_internodeMatrices, m_internodeColors, m_selectedInternodeHandle, m_selectedInternodeLengthFactor);
+            SyncMatrices(rootSkeleton, m_rootNodeMatrices, m_rootNodeColors, m_selectedRootNodeHandle, m_selectedRootNodeLengthFactor);
             m_needUpdate = false;
         }
         if (!m_internodeMatrices.empty()) {
@@ -370,6 +435,11 @@ TreeVisualizer::InspectInternode(
     return changed;
 }
 
+bool TreeVisualizer::DrawRootNodeInspectionGui(TreeModel& treeModel, NodeHandle rootNodeHandle, bool& deleted, const unsigned& hierarchyLevel)
+{
+    return false;
+}
+
 void
 TreeVisualizer::PeekInternode(
         const Skeleton<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeSkeleton,
@@ -502,10 +572,6 @@ void TreeVisualizer::Reset(
     m_needUpdate = true;
 }
 
-bool TreeVisualizer::DrawRootNodeInspectionGui(TreeModel &treeModel, NodeHandle rootNodeHandle, bool &deleted,
-                                               const unsigned int &hierarchyLevel) {
-    return false;
-}
 
 void TreeVisualizer::PeekRootNode(
         const Skeleton<RootSkeletonGrowthData, RootBranchGrowthData, RootInternodeGrowthData> &rootSkeleton,

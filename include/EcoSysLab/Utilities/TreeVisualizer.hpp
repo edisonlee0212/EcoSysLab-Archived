@@ -25,7 +25,7 @@ namespace EcoSysLab {
         std::vector<glm::vec2> m_storedMousePositions;
         bool m_visualization = true;
         bool m_treeHierarchyGui = true;
-
+        bool m_rootHierarchyGui = true;
         NodeHandle m_selectedInternodeHandle = -1;
         float m_selectedInternodeLengthFactor = 0.0f;
         std::vector<NodeHandle> m_selectedInternodeHierarchyList;
@@ -40,7 +40,7 @@ namespace EcoSysLab {
         bool
         RayCastSelection(const Skeleton <SkeletonData, FlowData, NodeData> &skeleton,
                          const GlobalTransform &globalTransform, NodeHandle &selectedNodeHandle,
-                         std::vector<NodeHandle> &hierarchyList);
+                         std::vector<NodeHandle> &hierarchyList, float& lengthFactor);
 
         template<typename SkeletonData, typename FlowData, typename NodeData>
         bool ScreenCurvePruning(Skeleton <SkeletonData, FlowData, NodeData> &skeleton,
@@ -90,7 +90,7 @@ namespace EcoSysLab {
         template<typename SkeletonData, typename FlowData, typename NodeData>
         void
         SyncMatrices(const Skeleton <SkeletonData, FlowData, NodeData> &skeleton, std::vector<glm::mat4> &matrices,
-                     std::vector<glm::vec4> &colors, NodeHandle &selectedNodeHandle);
+                     std::vector<glm::vec4> &colors, NodeHandle &selectedNodeHandle, float& lengthFactor);
 
         int m_iteration = 0;
         bool m_needUpdate = false;
@@ -187,7 +187,7 @@ namespace EcoSysLab {
     template<typename SkeletonData, typename FlowData, typename NodeData>
     bool TreeVisualizer::RayCastSelection(const Skeleton <SkeletonData, FlowData, NodeData> &skeleton,
                                           const GlobalTransform &globalTransform, NodeHandle &selectedNodeHandle,
-                                          std::vector<NodeHandle> &hierarchyList) {
+                                          std::vector<NodeHandle> &hierarchyList, float& lengthFactor) {
         auto editorLayer = Application::GetLayer<EditorLayer>();
         bool changed = false;
 
@@ -260,7 +260,7 @@ namespace EcoSysLab {
                 std::lock_guard<std::mutex> lock(writeMutex);
                 if (distance < minDistance) {
                     minDistance = distance;
-                    m_selectedInternodeLengthFactor = glm::clamp(1.0f - tc, 0.0f, 1.0f);
+                    lengthFactor = glm::clamp(1.0f - tc, 0.0f, 1.0f);
                     currentFocusingNodeHandle = sortedNodeList[i];
                 }
             }, results);
@@ -328,7 +328,7 @@ namespace EcoSysLab {
     template<typename SkeletonData, typename FlowData, typename NodeData>
     void TreeVisualizer::SyncMatrices(const Skeleton <SkeletonData, FlowData, NodeData> &skeleton,
                                       std::vector<glm::mat4> &matrices,
-                                      std::vector<glm::vec4> &colors, NodeHandle &selectedNodeHandle) {
+                                      std::vector<glm::vec4> &colors, NodeHandle &selectedNodeHandle, float& lengthFactor) {
         if (m_randomColors.empty()) {
             for (int i = 0; i < 1000; i++) {
                 m_randomColors.emplace_back(glm::ballRand(1.0f), 1.0f);
@@ -358,7 +358,7 @@ namespace EcoSysLab {
                 colors[i + 1] = glm::vec4(1, 0, 0, 1);
 
                 const glm::vec3 selectedCenter =
-                        position + (node.m_info.m_length * m_selectedInternodeLengthFactor) * direction;
+                        position + (node.m_info.m_length * lengthFactor) * direction;
                 matrices[0] = glm::translate(selectedCenter) *
                               rotationTransform *
                               glm::scale(glm::vec3(

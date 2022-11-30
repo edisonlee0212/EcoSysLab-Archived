@@ -26,7 +26,7 @@ void ApplyTropism(const glm::vec3 &targetDir, float tropism, glm::quat &rotation
     rotation = glm::quatLookAt(front, up);
 }
 
-bool TreeModel::GrowShoots(float extendLength, int internodeHandle, const RootGrowthParameters &parameters,
+bool TreeModel::GrowShoots(float extendLength, NodeHandle internodeHandle, const RootGrowthParameters &parameters,
                            float &collectedInhibitor) {
     bool graphChanged = false;
     /*
@@ -351,24 +351,16 @@ bool TreeModel::Grow(const GrowthNutrients &growthNutrients, const TreeGrowthPar
         bool anyRootGrown = false;
         {
             const auto &sortedRootNodeList = m_rootSkeleton.RefSortedNodeList();
-            for (const auto &rootNodeHandle: sortedRootNodeList) {
-                auto &rootNode = m_rootSkeleton.RefNode(rootNodeHandle);
-                switch (rootNode.m_data.m_rootType) {
-                    case RootType::Tap: {
-                        //Elongate downwards
-
-                    }
-                        break;
-                    case RootType::Lateral: {
-                        //Elongate towards ground level
-                    }
-                        break;
-                    case RootType::Heart: {
-                        //Elongate towards resources
-                    }
-                        break;
-                }
-            }
+            //for (const auto &rootNodeHandle: sortedRootNodeList) {
+                auto &rootNode = m_rootSkeleton.RefNode(sortedRootNodeList.back());
+                auto newRootHandle = m_rootSkeleton.Extend(sortedRootNodeList.back(), false);
+                auto& oldInternode = m_rootSkeleton.RefNode(sortedRootNodeList.back());
+                auto& newInternode = m_rootSkeleton.RefNode(newRootHandle);
+                newInternode.m_info.m_length = 0.01f;
+                newInternode.m_info.m_thickness = 0.001f;
+                newInternode.m_info.m_localRotation = glm::quat(glm::vec3(0.0f));
+                anyRootGrown = true;
+            //}
         };
 #pragma endregion
 #pragma region Postprocess
@@ -379,10 +371,6 @@ bool TreeModel::Grow(const GrowthNutrients &growthNutrients, const TreeGrowthPar
             m_rootSkeleton.m_max = glm::vec3(FLT_MIN);
 
             const auto &sortedRootNodeList = m_rootSkeleton.RefSortedNodeList();
-            for (auto it = sortedRootNodeList.rbegin(); it != sortedRootNodeList.rend(); it++) {
-                auto rootNodeHandle = *it;
-                CalculateSagging(rootNodeHandle, treeGrowthParameters);
-            }
             for (const auto &rootNodeHandle: sortedRootNodeList) {
                 auto &rootNode = m_rootSkeleton.RefNode(rootNodeHandle);
                 auto &rootNodeData = rootNode.m_data;
@@ -390,7 +378,7 @@ bool TreeModel::Grow(const GrowthNutrients &growthNutrients, const TreeGrowthPar
                 if (rootNode.GetParentHandle() == -1) {
                     rootNodeInfo.m_globalPosition = glm::vec3(0.0f);
                     rootNodeInfo.m_localRotation = glm::vec3(0.0f);
-                    rootNodeInfo.m_globalRotation = glm::vec3(glm::radians(90.0f), 0.0f, 0.0f);
+                    rootNodeInfo.m_globalRotation = glm::vec3(glm::radians(-90.0f), 0.0f, 0.0f);
 
                     rootNodeData.m_rootDistance = rootNodeInfo.m_length;
                 } else {
@@ -614,8 +602,8 @@ TreeModel::Initialize(const TreeGrowthParameters &treeGrowthParameters, const Ro
                                               treeGrowthParameters.GetDesiredRollAngle(firstInternode));
     }
     {
-        auto &firstRootNode = m_rootSkeleton.RefNode(0);
-
+        auto& firstRootNode = m_rootSkeleton.RefNode(0);
+        firstRootNode.m_info.m_thickness = 0.003f;
     }
     m_initialized = true;
 }
