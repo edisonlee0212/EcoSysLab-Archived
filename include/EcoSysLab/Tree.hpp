@@ -9,7 +9,7 @@ using namespace UniEngine;
 namespace EcoSysLab {
     class TreeDescriptor : public IAsset {
     public:
-        TreeGrowthParameters m_treeStructuralGrowthParameters;
+        TreeGrowthParameters m_treeGrowthParameters;
         RootGrowthParameters m_rootGrowthParameters;
         void OnCreate() override;
 

@@ -843,3 +843,44 @@ void InternodeGrowthData::Clear() {
     m_lightIntensity = 1.0f;
     m_buds.clear();
 }
+
+float EcoSysLab::RootGrowthParameters::GetGrowthRate(const Node<InternodeGrowthData>& internode) const
+{
+    return m_growthRate;
+}
+
+float EcoSysLab::RootGrowthParameters::GetRootNodeLength(const Node<RootInternodeGrowthData>& rootNode) const
+{
+    return m_rootNodeLength;
+}
+
+float EcoSysLab::RootGrowthParameters::GetRootApicalAngle(const Node<RootInternodeGrowthData>& rootNode) const
+{
+    return glm::gaussRand(
+        m_apicalAngleMeanVariance.x,
+        m_apicalAngleMeanVariance.y);
+}
+
+float EcoSysLab::RootGrowthParameters::GetRootRollAngle(const Node<RootInternodeGrowthData>& rootNode) const
+{
+    return glm::gaussRand(
+        m_rollAngleMeanVariance.x,
+        m_rollAngleMeanVariance.y);
+}
+
+float EcoSysLab::RootGrowthParameters::GetRootBranchingAngle(const Node<RootInternodeGrowthData>& rootNode) const
+{
+    return glm::gaussRand(
+        m_branchingAngleMeanVariance.x,
+		m_branchingAngleMeanVariance.y);
+}
+
+float EcoSysLab::RootGrowthParameters::GetEndNodeThickness(const Node<RootInternodeGrowthData>& internode) const
+{
+    return m_endNodeThicknessAndControl.x;
+}
+
+float EcoSysLab::RootGrowthParameters::GetThicknessControlFactor(const Node<RootInternodeGrowthData>& internode) const
+{
+    return m_endNodeThicknessAndControl.y;
+}
