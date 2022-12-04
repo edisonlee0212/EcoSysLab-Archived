@@ -157,8 +157,7 @@ bool TreeModel::GrowShoots(float extendLength, NodeHandle internodeHandle,
     return graphChanged;
 }
 
-bool TreeModel::GrowInternode(NodeHandle internodeHandle, const TreeGrowthParameters &parameters,
-                              const GrowthNutrients &growthNutrients) {
+bool TreeModel::GrowInternode(NodeHandle internodeHandle, const TreeGrowthParameters &parameters) {
     bool graphChanged = false;
     {
         auto &internode = m_branchSkeleton.RefNode(internodeHandle);
@@ -327,101 +326,8 @@ void TreeModel::CalculateResourceRequirement(NodeHandle internodeHandle,
     }
 }
 
-bool TreeModel::Grow(const GrowthNutrients &growthNutrients, const TreeGrowthParameters &treeGrowthParameters,
-                     const RootGrowthParameters &rootGrowthParameters) {
+bool TreeModel::GrowBranches(ClimateModel& climateModel, const TreeGrowthParameters& treeGrowthParameters) {
     bool treeStructureChanged = false;
-    bool rootStructureChanged = false;
-    if (!m_initialized) {
-        Initialize(treeGrowthParameters, rootGrowthParameters);
-        treeStructureChanged = true;
-        rootStructureChanged = true;
-    }
-#pragma region Root Growth
-    {
-#pragma region Pruning
-        bool anyRootPruned = false;
-        m_rootSkeleton.SortLists();
-        {
-
-        };
-#pragma endregion
-#pragma region Grow
-        if (anyRootPruned) m_rootSkeleton.SortLists();
-        rootStructureChanged = rootStructureChanged || anyRootPruned;
-        bool anyRootGrown = false;
-        {
-            const auto &sortedRootNodeList = m_rootSkeleton.RefSortedNodeList();
-            //for (const auto &rootNodeHandle: sortedRootNodeList) {
-                auto &rootNode = m_rootSkeleton.RefNode(sortedRootNodeList.back());
-                auto newRootHandle = m_rootSkeleton.Extend(sortedRootNodeList.back(), false);
-                auto& oldInternode = m_rootSkeleton.RefNode(sortedRootNodeList.back());
-                auto& newInternode = m_rootSkeleton.RefNode(newRootHandle);
-                newInternode.m_info.m_length = 0.01f;
-                newInternode.m_info.m_thickness = 0.001f;
-                newInternode.m_info.m_localRotation = glm::quat(glm::vec3(0.0f));
-                anyRootGrown = true;
-            //}
-        };
-#pragma endregion
-#pragma region Postprocess
-        if (anyRootGrown) m_rootSkeleton.SortLists();
-        rootStructureChanged = rootStructureChanged || anyRootGrown;
-        {
-            m_rootSkeleton.m_min = glm::vec3(FLT_MAX);
-            m_rootSkeleton.m_max = glm::vec3(FLT_MIN);
-
-            const auto &sortedRootNodeList = m_rootSkeleton.RefSortedNodeList();
-            for (const auto &rootNodeHandle: sortedRootNodeList) {
-                auto &rootNode = m_rootSkeleton.RefNode(rootNodeHandle);
-                auto &rootNodeData = rootNode.m_data;
-                auto &rootNodeInfo = rootNode.m_info;
-                if (rootNode.GetParentHandle() == -1) {
-                    rootNodeInfo.m_globalPosition = glm::vec3(0.0f);
-                    rootNodeInfo.m_localRotation = glm::vec3(0.0f);
-                    rootNodeInfo.m_globalRotation = glm::vec3(glm::radians(-90.0f), 0.0f, 0.0f);
-
-                    rootNodeData.m_rootDistance = rootNodeInfo.m_length;
-                } else {
-                    auto &parentRootNode = m_rootSkeleton.RefNode(rootNode.GetParentHandle());
-                    rootNodeData.m_rootDistance = parentRootNode.m_data.m_rootDistance + rootNodeInfo.m_length;
-                    rootNodeInfo.m_globalRotation =
-                            parentRootNode.m_info.m_globalRotation * rootNodeInfo.m_localRotation;
-                    rootNodeInfo.m_globalPosition =
-                            parentRootNode.m_info.m_globalPosition + parentRootNode.m_info.m_length *
-                                                                     (parentRootNode.m_info.m_globalRotation *
-                                                                      glm::vec3(0, 0, -1));
-
-                }
-                m_rootSkeleton.m_min = glm::min(m_rootSkeleton.m_min, rootNodeInfo.m_globalPosition);
-                m_rootSkeleton.m_max = glm::max(m_rootSkeleton.m_max, rootNodeInfo.m_globalPosition);
-                const auto endPosition = rootNodeInfo.m_globalPosition + rootNodeInfo.m_length *
-                                                                         (rootNodeInfo.m_globalRotation *
-                                                                          glm::vec3(0, 0, -1));
-                m_rootSkeleton.m_min = glm::min(m_rootSkeleton.m_min, endPosition);
-                m_rootSkeleton.m_max = glm::max(m_rootSkeleton.m_max, endPosition);
-            }
-        };
-        {
-            const auto &sortedFlowList = m_rootSkeleton.RefSortedFlowList();
-            for (const auto &flowHandle: sortedFlowList) {
-                auto &flow = m_rootSkeleton.RefFlow(flowHandle);
-                auto &flowData = flow.m_data;
-                if (flow.GetParentHandle() == -1) {
-                    flowData.m_order = 0;
-                } else {
-                    auto &parentFlow = m_rootSkeleton.RefFlow(flow.GetParentHandle());
-                    if (flow.IsApical()) flowData.m_order = parentFlow.m_data.m_order;
-                    else flowData.m_order = parentFlow.m_data.m_order + 1;
-                }
-                for (const auto &rootNodeHandle: flow.RefNodeHandles()) {
-                    m_rootSkeleton.RefNode(rootNodeHandle).m_data.m_order = flowData.m_order;
-                }
-            }
-            m_rootSkeleton.CalculateFlows();
-        };
-#pragma endregion
-    };
-#pragma endregion
 
 #pragma region Tree Growth
     {
@@ -502,7 +408,7 @@ bool TreeModel::Grow(const GrowthNutrients &growthNutrients, const TreeGrowthPar
                 }
             }
             for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); it++) {
-                const bool graphChanged = GrowInternode(*it, treeGrowthParameters, growthNutrients);
+                const bool graphChanged = GrowInternode(*it, treeGrowthParameters);
                 anyBranchGrown = anyBranchGrown || graphChanged;
             }
         };
@@ -585,7 +491,7 @@ bool TreeModel::Grow(const GrowthNutrients &growthNutrients, const TreeGrowthPar
 #pragma endregion
     };
 #pragma endregion
-    return treeStructureChanged || rootStructureChanged;
+    return treeStructureChanged;
 }
 
 void
@@ -626,6 +532,114 @@ bool TreeModel::LowBranchPruning(float maxDistance, NodeHandle internodeHandle,
     }
 
     return false;
+}
+
+bool TreeModel::GrowRoots(SoilModel& soilModel, const RootGrowthParameters& rootGrowthParameters)
+{
+    bool rootStructureChanged = false;
+
+#pragma region Root Growth
+    {
+#pragma region Pruning
+        bool anyRootPruned = false;
+        m_rootSkeleton.SortLists();
+        {
+
+        };
+#pragma endregion
+#pragma region Grow
+        if (anyRootPruned) m_rootSkeleton.SortLists();
+        rootStructureChanged = rootStructureChanged || anyRootPruned;
+        bool anyRootGrown = false;
+        {
+            const auto& sortedRootNodeList = m_rootSkeleton.RefSortedNodeList();
+            for (auto it = sortedRootNodeList.rbegin(); it != sortedRootNodeList.rend(); it++) {
+                //const bool graphChanged = GrowRootNode(*it, treeGrowthParameters, growthNutrients);
+                //anyRootGrown = anyRootGrown || graphChanged;
+            }
+        };
+#pragma endregion
+#pragma region Postprocess
+        if (anyRootGrown) m_rootSkeleton.SortLists();
+        rootStructureChanged = rootStructureChanged || anyRootGrown;
+        {
+            m_rootSkeleton.m_min = glm::vec3(FLT_MAX);
+            m_rootSkeleton.m_max = glm::vec3(FLT_MIN);
+
+            const auto& sortedRootNodeList = m_rootSkeleton.RefSortedNodeList();
+            for (const auto& rootNodeHandle : sortedRootNodeList) {
+                auto& rootNode = m_rootSkeleton.RefNode(rootNodeHandle);
+                auto& rootNodeData = rootNode.m_data;
+                auto& rootNodeInfo = rootNode.m_info;
+                if (rootNode.GetParentHandle() == -1) {
+                    rootNodeInfo.m_globalPosition = glm::vec3(0.0f);
+                    rootNodeInfo.m_localRotation = glm::vec3(0.0f);
+                    rootNodeInfo.m_globalRotation = glm::vec3(glm::radians(-90.0f), 0.0f, 0.0f);
+
+                    rootNodeData.m_rootDistance = rootNodeInfo.m_length;
+                }
+                else {
+                    auto& parentRootNode = m_rootSkeleton.RefNode(rootNode.GetParentHandle());
+                    rootNodeData.m_rootDistance = parentRootNode.m_data.m_rootDistance + rootNodeInfo.m_length;
+                    rootNodeInfo.m_globalRotation =
+                        parentRootNode.m_info.m_globalRotation * rootNodeInfo.m_localRotation;
+                    rootNodeInfo.m_globalPosition =
+                        parentRootNode.m_info.m_globalPosition + parentRootNode.m_info.m_length *
+                        (parentRootNode.m_info.m_globalRotation *
+                            glm::vec3(0, 0, -1));
+
+                }
+                m_rootSkeleton.m_min = glm::min(m_rootSkeleton.m_min, rootNodeInfo.m_globalPosition);
+                m_rootSkeleton.m_max = glm::max(m_rootSkeleton.m_max, rootNodeInfo.m_globalPosition);
+                const auto endPosition = rootNodeInfo.m_globalPosition + rootNodeInfo.m_length *
+                    (rootNodeInfo.m_globalRotation *
+                        glm::vec3(0, 0, -1));
+                m_rootSkeleton.m_min = glm::min(m_rootSkeleton.m_min, endPosition);
+                m_rootSkeleton.m_max = glm::max(m_rootSkeleton.m_max, endPosition);
+            }
+        };
+        {
+            const auto& sortedFlowList = m_rootSkeleton.RefSortedFlowList();
+            for (const auto& flowHandle : sortedFlowList) {
+                auto& flow = m_rootSkeleton.RefFlow(flowHandle);
+                auto& flowData = flow.m_data;
+                if (flow.GetParentHandle() == -1) {
+                    flowData.m_order = 0;
+                }
+                else {
+                    auto& parentFlow = m_rootSkeleton.RefFlow(flow.GetParentHandle());
+                    if (flow.IsApical()) flowData.m_order = parentFlow.m_data.m_order;
+                    else flowData.m_order = parentFlow.m_data.m_order + 1;
+                }
+                for (const auto& rootNodeHandle : flow.RefNodeHandles()) {
+                    m_rootSkeleton.RefNode(rootNodeHandle).m_data.m_order = flowData.m_order;
+                }
+            }
+            m_rootSkeleton.CalculateFlows();
+        };
+#pragma endregion
+    };
+#pragma endregion
+
+    return rootStructureChanged;
+}
+
+bool TreeModel::Grow(SoilModel& soilModel, ClimateModel& climateModel, const TreeGrowthParameters& treeGrowthParameters, const RootGrowthParameters& rootGrowthParameters)
+{
+    bool treeStructureChanged = false;
+    bool rootStructureChanged = false;
+    if (!m_initialized) {
+        Initialize(treeGrowthParameters, rootGrowthParameters);
+        treeStructureChanged = true;
+        rootStructureChanged = true;
+    }
+    if (GrowRoots(soilModel, rootGrowthParameters)) {
+        rootStructureChanged = true;
+    }
+    if (GrowBranches(climateModel, treeGrowthParameters)) {
+        treeStructureChanged = true;
+    }
+    return treeStructureChanged || rootStructureChanged;
 }
 
 Skeleton<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &TreeModel::RefBranchSkeleton() {

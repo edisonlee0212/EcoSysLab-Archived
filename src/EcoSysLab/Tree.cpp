@@ -21,8 +21,6 @@ void Tree::OnInspect() {
 	if (m_treeDescriptor.Get<TreeDescriptor>()) {
 		auto& parameters = m_treeDescriptor.Get<TreeDescriptor>()->m_treeGrowthParameters;
 		ImGui::Checkbox("Enable History", &m_enableHistory);
-		ImGui::DragFloat("Water", &m_growthNutrients.m_water, 1.0f, 0.0f, 99999.0f);
-
 		if (ImGui::Button("Grow")) {
 			TryGrow();
 			modelChanged = true;
@@ -58,7 +56,6 @@ void Tree::OnCreate() {
 
 void Tree::OnDestroy() {
 	m_treeModel.Clear();
-	m_growthNutrients = { 999 };
 	m_treeDescriptor.Clear();
 	m_enableHistory = true;
 }
@@ -67,7 +64,10 @@ bool Tree::TryGrow() {
 	auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
 	if (!treeDescriptor) return false;
 	if (m_enableHistory) m_treeModel.Step();
-	return m_treeModel.Grow(m_growthNutrients, treeDescriptor->m_treeGrowthParameters,
+	static SoilModel soilModel;
+	static ClimateModel climateModel;
+
+	return m_treeModel.Grow(soilModel, climateModel, treeDescriptor->m_treeGrowthParameters,
 		treeDescriptor->m_rootGrowthParameters);
 }
 

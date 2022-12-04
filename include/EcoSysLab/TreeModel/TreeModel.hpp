@@ -1,7 +1,8 @@
 #pragma once
 
 #include "PlantStructure.hpp"
-
+#include "SoilModel.hpp"
+#include "ClimateModel.hpp"
 using namespace UniEngine;
 namespace EcoSysLab {
 	enum class BudType {
@@ -262,8 +263,7 @@ namespace EcoSysLab {
 		inline void CalculateResourceRequirement(NodeHandle internodeHandle,
 												 const TreeGrowthParameters &parameters);
 
-		inline bool GrowInternode(NodeHandle internodeHandle, const TreeGrowthParameters &parameters,
-								  const GrowthNutrients &growthNutrients);
+		inline bool GrowInternode(NodeHandle internodeHandle, const TreeGrowthParameters &parameters);
 
 		bool GrowShoots(float extendLength, NodeHandle internodeHandle,
 						const TreeGrowthParameters &parameters, float &collectedInhibitor);
@@ -278,7 +278,24 @@ namespace EcoSysLab {
 		std::deque<
 				std::pair<Skeleton<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData>,
 						Skeleton<RootSkeletonGrowthData, RootBranchGrowthData, RootInternodeGrowthData>>> m_history;
+		GrowthNutrients m_growthNutrients;
+		
+		/**
+		 * Grow one iteration of the branches, given the climate model and the procedural parameters.
+		 * @param climateModel The climate model
+		 * @param treeGrowthParameters The procedural parameters that guides the growth.
+		 * @return Whether the growth caused a structural change during the growth.
+		 */
+		bool GrowBranches(ClimateModel& climateModel, const TreeGrowthParameters &treeGrowthParameters);
 
+		/**
+		 * Grow one iteration of the roots, given the soil model and the procedural parameters.
+		 * @param soilModel The soil model
+		 * @param rootGrowthParameters The procedural parameters that guides the growth.
+		 * @return Whether the growth caused a structural change during the growth.
+		 */
+		bool GrowRoots(SoilModel& soilModel,
+				  const RootGrowthParameters &rootGrowthParameters);
 	public:
 		glm::vec3 m_gravityDirection = glm::vec3(0, -1, 0);
 
@@ -289,13 +306,14 @@ namespace EcoSysLab {
 
 		/**
 		 * Grow one iteration of the tree, given the nutrients and the procedural parameters.
-		 * @param growthNutrients The nutrients from the root (water, etc.)
+		 * @param soilModel The soil model
+		 * @param climateModel The climate model
 		 * @param treeGrowthParameters The procedural parameters that guides the growth.
+		 * @param rootGrowthParameters
 		 * @return Whether the growth caused a structural change during the growth.
 		 */
-		bool Grow(const GrowthNutrients &growthNutrients, const TreeGrowthParameters &treeGrowthParameters,
-				  const RootGrowthParameters &rootGrowthParameters);
-
+		bool Grow(SoilModel& soilModel, ClimateModel& climateModel, const TreeGrowthParameters& treeGrowthParameters,
+			const RootGrowthParameters& rootGrowthParameters);
 
 		int m_historyLimit = -1;
 

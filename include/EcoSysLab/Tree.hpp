@@ -28,7 +28,6 @@ namespace EcoSysLab {
         AssetRef m_treeDescriptor;
         bool m_enableHistory = true;
         TreeModel m_treeModel;
-        GrowthNutrients m_growthNutrients = {999};
         void OnInspect() override;
 
         void OnDestroy() override;
