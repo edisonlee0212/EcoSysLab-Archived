@@ -67,8 +67,8 @@ bool Tree::TryGrow() {
 	static SoilModel soilModel;
 	static ClimateModel climateModel;
 
-	return m_treeModel.Grow(soilModel, climateModel, treeDescriptor->m_treeGrowthParameters,
-		treeDescriptor->m_rootGrowthParameters);
+	return m_treeModel.Grow(soilModel, climateModel,
+		treeDescriptor->m_rootGrowthParameters, treeDescriptor->m_treeGrowthParameters);
 }
 
 void Tree::GenerateMesh(const MeshGeneratorSettings& meshGeneratorSettings) {

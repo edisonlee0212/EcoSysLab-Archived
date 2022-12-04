@@ -7,35 +7,35 @@
 
 using namespace UniEngine;
 namespace EcoSysLab {
-    class TreeDescriptor : public IAsset {
-    public:
-        TreeGrowthParameters m_treeGrowthParameters;
-        RootGrowthParameters m_rootGrowthParameters;
-        void OnCreate() override;
+	class TreeDescriptor : public IAsset {
+	public:
+		TreeGrowthParameters m_treeGrowthParameters;
+		RootGrowthParameters m_rootGrowthParameters;
+		void OnCreate() override;
 
-        void OnInspect() override;
+		void OnInspect() override;
 
-        void CollectAssetRef(std::vector<AssetRef> &list) override;
+		void CollectAssetRef(std::vector<AssetRef>& list) override;
 
-        void Serialize(YAML::Emitter &out) override;
+		void Serialize(YAML::Emitter& out) override;
 
-        void Deserialize(const YAML::Node &in) override;
-    };
+		void Deserialize(const YAML::Node& in) override;
+	};
 
-    class Tree : public IPrivateComponent {
+	class Tree : public IPrivateComponent {
 
-    public:
-        AssetRef m_treeDescriptor;
-        bool m_enableHistory = true;
-        TreeModel m_treeModel;
-        void OnInspect() override;
+	public:
+		AssetRef m_treeDescriptor;
+		bool m_enableHistory = true;
+		TreeModel m_treeModel;
+		void OnInspect() override;
 
-        void OnDestroy() override;
+		void OnDestroy() override;
 
-        void OnCreate() override;
+		void OnCreate() override;
 
-        bool TryGrow();
+		bool TryGrow();
 
-        void GenerateMesh(const MeshGeneratorSettings& meshGeneratorSettings);
-    };
+		void GenerateMesh(const MeshGeneratorSettings& meshGeneratorSettings);
+	};
 }
