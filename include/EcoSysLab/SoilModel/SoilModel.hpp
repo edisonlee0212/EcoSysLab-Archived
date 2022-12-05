@@ -1,7 +1,6 @@
 #pragma once
 
 #include "ecosyslab_export.h"
-#include "SoilStructure.hpp"
 using namespace UniEngine;
 namespace EcoSysLab {
 	class SoilModel {

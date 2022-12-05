@@ -90,6 +90,9 @@ namespace EcoSysLab {
 		float m_rootDistance = 0;
 		int m_order = 0;
 		RootType m_rootType;
+
+		float m_inhibitorTarget = 0;
+		float m_inhibitor = 0;
 	};
 	struct RootBranchGrowthData {
 		int m_order = 0;
@@ -118,7 +121,11 @@ namespace EcoSysLab {
 		*/
 		glm::vec2 m_apicalAngleMeanVariance{};
 
-		[[nodiscard]] float GetGrowthRate(const Node<InternodeGrowthData>& internode) const;
+		float m_auxinTransportLoss = 1.0f;
+
+		[[nodiscard]] float GetGrowthRate(const Node<RootInternodeGrowthData>& rootNode) const;
+
+		[[nodiscard]] float GetAuxinTransportLoss(const Node<RootInternodeGrowthData>& rootNode) const;
 
 		[[nodiscard]] float GetRootNodeLength(const Node<RootInternodeGrowthData>& rootNode) const;
 
@@ -128,9 +135,9 @@ namespace EcoSysLab {
 
 		[[nodiscard]] float GetRootBranchingAngle(const Node<RootInternodeGrowthData>& rootNode) const;
 
-		[[nodiscard]] float GetEndNodeThickness(const Node<RootInternodeGrowthData>& internode) const;
+		[[nodiscard]] float GetEndNodeThickness(const Node<RootInternodeGrowthData>& rootNode) const;
 
-		[[nodiscard]] float GetThicknessControlFactor(const Node<RootInternodeGrowthData>& internode) const;
+		[[nodiscard]] float GetThicknessControlFactor(const Node<RootInternodeGrowthData>& rootNode) const;
 	};
 
 	class TreeGrowthParameters {
@@ -249,28 +256,33 @@ namespace EcoSysLab {
 #pragma region Root Growth
 
 		bool GrowShoots(float extendLength, NodeHandle rootNodeHandle,
-			const RootGrowthParameters& parameters, float& collectedInhibitor);
+			const RootGrowthParameters& rootGrowthParameters, float& collectedInhibitor);
+
+		inline bool GrowRootNode(SoilModel& soilModel, NodeHandle rootNodeHandle, const RootGrowthParameters& rootGrowthParameters);
 
 #pragma endregion
 #pragma region Tree Growth
 
+		inline void AdjustResourceRequirement(NodeHandle internodeHandle,
+			const TreeGrowthParameters& treeGrowthParameters);
+
 		bool LowBranchPruning(float maxDistance, NodeHandle internodeHandle,
-			const TreeGrowthParameters& parameters);
+			const TreeGrowthParameters& treeGrowthParameters);
 
 		inline void CalculateSagging(NodeHandle internodeHandle,
-			const TreeGrowthParameters& parameters);
+			const TreeGrowthParameters& treeGrowthParameters);
 
 		inline void CalculateResourceRequirement(NodeHandle internodeHandle,
-			const TreeGrowthParameters& parameters);
+			const TreeGrowthParameters& treeGrowthParameters);
 
-		inline bool GrowInternode(NodeHandle internodeHandle, const TreeGrowthParameters& parameters);
+		inline bool GrowInternode(ClimateModel& climateModel, NodeHandle internodeHandle, const TreeGrowthParameters& treeGrowthParameters);
 
 		bool GrowShoots(float extendLength, NodeHandle internodeHandle,
-			const TreeGrowthParameters& parameters, float& collectedInhibitor);
+			const TreeGrowthParameters& treeGrowthParameters, float& collectedInhibitor);
 
 #pragma endregion
 
-		void Initialize(const TreeGrowthParameters& treeGrowthParameters, const RootGrowthParameters& rootParameters);
+		void Initialize(const TreeGrowthParameters& treeGrowthParameters, const RootGrowthParameters& rootGrowthParameters);
 
 		bool m_initialized = false;
 		Skeleton<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> m_branchSkeleton;

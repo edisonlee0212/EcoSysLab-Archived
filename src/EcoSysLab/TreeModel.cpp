@@ -29,58 +29,51 @@ void ApplyTropism(const glm::vec3& targetDir, float tropism, glm::quat& rotation
 bool TreeModel::GrowShoots(float extendLength, NodeHandle internodeHandle, const RootGrowthParameters& parameters,
 	float& collectedInhibitor) {
 	bool graphChanged = false;
-	/*
-	auto &skeleton = m_rootStructure.RefSkeleton();
-	auto &rootNode = skeleton.RefNode(internodeHandle);
+	auto& rootNode = m_rootSkeleton.RefNode(internodeHandle);
 	auto rootNodeLength = parameters.GetRootNodeLength(rootNode);
-	auto &rootNodeData = rootNode.m_data;
-	auto &rootNodeInfo = rootNode.m_info;
+	auto& rootNodeData = rootNode.m_data;
+	auto& rootNodeInfo = rootNode.m_info;
 	rootNodeInfo.m_length += extendLength;
 	float extraLength = rootNodeInfo.m_length - rootNodeLength;
 	//If we need to add a new end node
 	if (extraLength > 0) {
 		graphChanged = true;
 		rootNodeInfo.m_length = rootNodeLength;
-		auto desiredGlobalRotation = rootNodeInfo.m_globalRotation * apicalBud.m_localRotation;
+		auto desiredGlobalRotation = rootNodeInfo.m_globalRotation * glm::vec3(
+			glm::radians(parameters.GetRootApicalAngle(rootNode)), 0.0f,
+			parameters.GetRootRollAngle(rootNode));
 		auto desiredGlobalFront = desiredGlobalRotation * glm::vec3(0, 0, -1);
 		auto desiredGlobalUp = desiredGlobalRotation * glm::vec3(0, 1, 0);
+		//Apply tropisms here.
+
 
 		//Create new internode
-		auto newInternodeHandle = skeleton.Extend(internodeHandle, false);
-		auto &oldInternode = skeleton.RefNode(internodeHandle);
-		auto &newInternode = skeleton.RefNode(newInternodeHandle);
-		newInternode.m_data.Clear();
-		newInternode.m_data.m_inhibitorTarget = newInternode.m_data.m_inhibitor = parameters.GetApicalDominanceBase(
-				newInternode);
+		auto newInternodeHandle = m_rootSkeleton.Extend(internodeHandle, false);
+		auto& oldInternode = m_rootSkeleton.RefNode(internodeHandle);
+		auto& newInternode = m_rootSkeleton.RefNode(newInternodeHandle);
+		//TODO: Nitrite packets here.
+		newInternode.m_data.m_inhibitorTarget = newInternode.m_data.m_inhibitor = 0.0f;
 		newInternode.m_info.m_length = glm::clamp(extendLength, 0.0f, rootNodeLength);
 		newInternode.m_info.m_thickness = parameters.GetEndNodeThickness(newInternode);
-		newInternode.m_info.m_localRotation = newInternode.m_data.m_desiredLocalRotation =
-				glm::inverse(oldInternode.m_info.m_globalRotation) *
-				glm::quatLookAt(desiredGlobalFront, desiredGlobalUp);
-		newInternode.m_info.m_globalRotation =
-				oldInternode.m_info.m_globalRotation * newInternode.m_info.m_localRotation;
-		//Allocate apical bud for new internode
-		newInternode.m_data.m_buds.emplace_back();
-		auto &newApicalBud = newInternode.m_data.m_buds.back();
-		newApicalBud.m_type = BudType::Apical;
-		newApicalBud.m_status = BudStatus::Dormant;
-		newApicalBud.m_localRotation = glm::vec3(
-				glm::radians(parameters.GetDesiredApicalAngle(newInternode)), 0.0f,
-				parameters.GetDesiredRollAngle(newInternode));
+		newInternode.m_info.m_globalRotation = glm::quatLookAt(desiredGlobalFront, desiredGlobalUp);
+		newInternode.m_info.m_localRotation =
+			glm::inverse(oldInternode.m_info.m_globalRotation) *
+			newInternode.m_info.m_globalRotation;
 		if (extraLength > rootNodeLength) {
 			float childInhibitor = 0.0f;
 			GrowShoots(extraLength - rootNodeLength, newInternodeHandle, parameters, childInhibitor);
-			childInhibitor *= parameters.GetApicalDominanceDecrease(newInternode);
+			childInhibitor *= parameters.GetAuxinTransportLoss(newInternode);
 			collectedInhibitor += childInhibitor;
-			skeleton.RefNode(newInternodeHandle).m_data.m_inhibitorTarget = childInhibitor;
-		} else {
-			collectedInhibitor += parameters.GetApicalDominanceBase(newInternode);
+			m_rootSkeleton.RefNode(newInternodeHandle).m_data.m_inhibitorTarget = childInhibitor;
 		}
-	} else {
-		//Otherwise, we add the inhibitor.
-		collectedInhibitor += parameters.GetApicalDominanceBase(rootNode);
+		else {
+			collectedInhibitor += parameters.GetAuxinTransportLoss(newInternode);
+		}
 	}
-	 */
+	else {
+		//Otherwise, we add the inhibitor.
+		collectedInhibitor += parameters.GetAuxinTransportLoss(rootNode);
+	}
 	return graphChanged;
 }
 
@@ -128,11 +121,10 @@ bool TreeModel::GrowShoots(float extendLength, NodeHandle internodeHandle,
 			newInternode);
 		newInternode.m_info.m_length = glm::clamp(extendLength, 0.0f, internodeLength);
 		newInternode.m_info.m_thickness = parameters.GetEndNodeThickness(newInternode);
+		newInternode.m_info.m_globalRotation = glm::quatLookAt(desiredGlobalFront, desiredGlobalUp);
 		newInternode.m_info.m_localRotation = newInternode.m_data.m_desiredLocalRotation =
 			glm::inverse(oldInternode.m_info.m_globalRotation) *
-			glm::quatLookAt(desiredGlobalFront, desiredGlobalUp);
-		newInternode.m_info.m_globalRotation =
-			oldInternode.m_info.m_globalRotation * newInternode.m_info.m_localRotation;
+			newInternode.m_info.m_globalRotation;
 		//Allocate apical bud for new internode
 		newInternode.m_data.m_buds.emplace_back();
 		auto& newApicalBud = newInternode.m_data.m_buds.back();
@@ -159,7 +151,7 @@ bool TreeModel::GrowShoots(float extendLength, NodeHandle internodeHandle,
 	return graphChanged;
 }
 
-bool TreeModel::GrowInternode(NodeHandle internodeHandle, const TreeGrowthParameters& parameters) {
+bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHandle, const TreeGrowthParameters& treeGrowthParameters) {
 	bool graphChanged = false;
 	{
 		auto& internode = m_branchSkeleton.RefNode(internodeHandle);
@@ -167,7 +159,7 @@ bool TreeModel::GrowInternode(NodeHandle internodeHandle, const TreeGrowthParame
 		internodeData.m_inhibitorTarget = 0;
 		for (const auto& childHandle : internode.RefChildHandles()) {
 			internodeData.m_inhibitorTarget += m_branchSkeleton.RefNode(childHandle).m_data.m_inhibitor *
-				parameters.GetApicalDominanceDecrease(internode);
+				treeGrowthParameters.GetApicalDominanceDecrease(internode);
 		}
 	}
 	auto& buds = m_branchSkeleton.RefNode(internodeHandle).m_data.m_buds;
@@ -176,16 +168,16 @@ bool TreeModel::GrowInternode(NodeHandle internodeHandle, const TreeGrowthParame
 		auto& internodeData = internode.m_data;
 		auto& internodeInfo = internode.m_info;
 		if (bud.m_type == BudType::Apical && bud.m_status == BudStatus::Dormant) {
-			if (parameters.GetApicalBudKillProbability(internode) > glm::linearRand(0.0f, 1.0f)) {
+			if (treeGrowthParameters.GetApicalBudKillProbability(internode) > glm::linearRand(0.0f, 1.0f)) {
 				bud.m_status = BudStatus::Died;
 			}
 			else {
 				float waterReceived = bud.m_adjustedProductiveResourceRequirement;
-				auto growthRate = parameters.GetGrowthRate(internode);
-				float elongateLength = waterReceived * parameters.GetInternodeLength(internode) * growthRate;
+				auto growthRate = treeGrowthParameters.GetGrowthRate(internode);
+				float elongateLength = waterReceived * treeGrowthParameters.GetInternodeLength(internode) * growthRate;
 				float collectedInhibitor = 0.0f;
-				auto dd = parameters.GetApicalDominanceDecrease(internode);
-				graphChanged = GrowShoots(elongateLength, internodeHandle, parameters, collectedInhibitor);
+				auto dd = treeGrowthParameters.GetApicalDominanceDecrease(internode);
+				graphChanged = GrowShoots(elongateLength, internodeHandle, treeGrowthParameters, collectedInhibitor);
 				m_branchSkeleton.RefNode(internodeHandle).m_data.m_inhibitorTarget += collectedInhibitor * dd;
 			}
 			//If apical bud is dormant, then there's no lateral bud at this stage. We should quit anyway.
@@ -193,12 +185,12 @@ bool TreeModel::GrowInternode(NodeHandle internodeHandle, const TreeGrowthParame
 		}
 		else if (bud.m_type == BudType::Lateral) {
 			if (bud.m_status == BudStatus::Dormant) {
-				if (parameters.GetLateralBudKillProbability(internode) > glm::linearRand(0.0f, 1.0f)) {
+				if (treeGrowthParameters.GetLateralBudKillProbability(internode) > glm::linearRand(0.0f, 1.0f)) {
 					bud.m_status = BudStatus::Died;
 				}
 				else {
-					float flushProbability = parameters.GetLateralBudFlushingProbability(internode) *
-						parameters.GetGrowthRate(internode);
+					float flushProbability = treeGrowthParameters.GetLateralBudFlushingProbability(internode) *
+						treeGrowthParameters.GetGrowthRate(internode);
 					flushProbability /= (1.0f + internodeData.m_inhibitor);
 					if (flushProbability >= glm::linearRand(0.0f, 1.0f)) {
 						graphChanged = true;
@@ -207,9 +199,9 @@ bool TreeModel::GrowInternode(NodeHandle internodeHandle, const TreeGrowthParame
 						auto desiredGlobalRotation = internodeInfo.m_globalRotation * bud.m_localRotation;
 						auto desiredGlobalFront = desiredGlobalRotation * glm::vec3(0, 0, -1);
 						auto desiredGlobalUp = desiredGlobalRotation * glm::vec3(0, 1, 0);
-						ApplyTropism(-m_gravityDirection, parameters.GetGravitropism(internode), desiredGlobalFront,
+						ApplyTropism(-m_gravityDirection, treeGrowthParameters.GetGravitropism(internode), desiredGlobalFront,
 							desiredGlobalUp);
-						ApplyTropism(internodeData.m_lightDirection, parameters.GetPhototropism(internode),
+						ApplyTropism(internodeData.m_lightDirection, treeGrowthParameters.GetPhototropism(internode),
 							desiredGlobalFront, desiredGlobalUp);
 						//Create new internode
 						auto newInternodeHandle = m_branchSkeleton.Extend(internodeHandle, true);
@@ -217,7 +209,7 @@ bool TreeModel::GrowInternode(NodeHandle internodeHandle, const TreeGrowthParame
 						auto& newInternode = m_branchSkeleton.RefNode(newInternodeHandle);
 						newInternode.m_data.Clear();
 						newInternode.m_info.m_length = 0.0f;
-						newInternode.m_info.m_thickness = parameters.GetEndNodeThickness(internode);
+						newInternode.m_info.m_thickness = treeGrowthParameters.GetEndNodeThickness(internode);
 						newInternode.m_info.m_localRotation = newInternode.m_data.m_desiredLocalRotation =
 							glm::inverse(oldInternode.m_info.m_globalRotation) *
 							glm::quatLookAt(desiredGlobalFront, desiredGlobalUp);
@@ -227,8 +219,8 @@ bool TreeModel::GrowInternode(NodeHandle internodeHandle, const TreeGrowthParame
 						apicalBud.m_type = BudType::Apical;
 						apicalBud.m_status = BudStatus::Dormant;
 						apicalBud.m_localRotation = glm::vec3(
-							glm::radians(parameters.GetDesiredApicalAngle(internode)), 0.0f,
-							parameters.GetDesiredRollAngle(internode));
+							glm::radians(treeGrowthParameters.GetDesiredApicalAngle(internode)), 0.0f,
+							treeGrowthParameters.GetDesiredRollAngle(internode));
 					}
 				}
 			}
@@ -242,15 +234,20 @@ bool TreeModel::GrowInternode(NodeHandle internodeHandle, const TreeGrowthParame
 	return graphChanged;
 }
 
+inline bool EcoSysLab::TreeModel::GrowRootNode(SoilModel& soilModel, NodeHandle rootNodeHandle, const RootGrowthParameters& parameters)
+{
+	return false;
+}
+
 void TreeModel::CalculateSagging(NodeHandle internodeHandle,
-	const TreeGrowthParameters& parameters) {
+	const TreeGrowthParameters& treeGrowthParameters) {
 	auto& internode = m_branchSkeleton.RefNode(internodeHandle);
 	auto& internodeData = internode.m_data;
 	auto& internodeInfo = internode.m_info;
 	internodeData.m_descendentTotalBiomass = 0;
 	internodeData.m_biomass =
-		internodeInfo.m_thickness / parameters.GetEndNodeThickness(internode) * internodeInfo.m_length /
-		parameters.GetInternodeLength(internode);
+		internodeInfo.m_thickness / treeGrowthParameters.GetEndNodeThickness(internode) * internodeInfo.m_length /
+		treeGrowthParameters.GetInternodeLength(internode);
 	if (!internode.IsEndNode()) {
 		//If current node is not end node
 		float maxDistanceToAnyBranchEnd = 0;
@@ -262,22 +259,22 @@ void TreeModel::CalculateSagging(NodeHandle internodeHandle,
 				childInternode.m_data.m_biomass;
 			float childMaxDistanceToAnyBranchEnd =
 				childInternode.m_data.m_maxDistanceToAnyBranchEnd +
-				childInternode.m_info.m_length / parameters.GetInternodeLength(childInternode);
+				childInternode.m_info.m_length / treeGrowthParameters.GetInternodeLength(childInternode);
 			maxDistanceToAnyBranchEnd = glm::max(maxDistanceToAnyBranchEnd, childMaxDistanceToAnyBranchEnd);
 
 			childThicknessCollection += glm::pow(childInternode.m_info.m_thickness,
-				1.0f / parameters.GetThicknessControlFactor(internode));
+				1.0f / treeGrowthParameters.GetThicknessControlFactor(internode));
 		}
 		internodeData.m_maxDistanceToAnyBranchEnd = maxDistanceToAnyBranchEnd;
 		internodeInfo.m_thickness = glm::max(internodeInfo.m_thickness, glm::pow(childThicknessCollection,
-			parameters.GetThicknessControlFactor(
+			treeGrowthParameters.GetThicknessControlFactor(
 				internode)));
-		internodeData.m_sagging = parameters.GetSagging(internode);
+		internodeData.m_sagging = treeGrowthParameters.GetSagging(internode);
 	}
 }
 
 void TreeModel::CalculateResourceRequirement(NodeHandle internodeHandle,
-	const TreeGrowthParameters& parameters) {
+	const TreeGrowthParameters& treeGrowthParameters) {
 	auto& internode = m_branchSkeleton.RefNode(internodeHandle);
 	auto& internodeData = internode.m_data;
 	auto& internodeInfo = internode.m_info;
@@ -292,22 +289,22 @@ void TreeModel::CalculateResourceRequirement(NodeHandle internodeHandle,
 		switch (bud.m_type) {
 		case BudType::Apical: {
 			if (bud.m_status == BudStatus::Dormant) {
-				bud.m_baseResourceRequirement = parameters.GetShootBaseResourceRequirementFactor(
+				bud.m_baseResourceRequirement = treeGrowthParameters.GetShootBaseResourceRequirementFactor(
 					internode);
-				bud.m_productiveResourceRequirement = parameters.GetShootProductiveResourceRequirementFactor(
+				bud.m_productiveResourceRequirement = treeGrowthParameters.GetShootProductiveResourceRequirementFactor(
 					internode);
 			}
 		}
 							break;
 		case BudType::Leaf: {
-			bud.m_baseResourceRequirement = parameters.GetLeafBaseResourceRequirementFactor(internode);
-			bud.m_productiveResourceRequirement = parameters.GetLeafProductiveResourceRequirementFactor(
+			bud.m_baseResourceRequirement = treeGrowthParameters.GetLeafBaseResourceRequirementFactor(internode);
+			bud.m_productiveResourceRequirement = treeGrowthParameters.GetLeafProductiveResourceRequirementFactor(
 				internode);
 		}
 						  break;
 		case BudType::Fruit: {
-			bud.m_baseResourceRequirement = parameters.GetFruitBaseResourceRequirementFactor(internode);
-			bud.m_productiveResourceRequirement = parameters.GetFruitProductiveResourceRequirementFactor(
+			bud.m_baseResourceRequirement = treeGrowthParameters.GetFruitBaseResourceRequirementFactor(internode);
+			bud.m_productiveResourceRequirement = treeGrowthParameters.GetFruitProductiveResourceRequirementFactor(
 				internode);
 		}
 						   break;
@@ -335,168 +332,118 @@ bool TreeModel::GrowBranches(ClimateModel& climateModel, const TreeGrowthParamet
 	bool treeStructureChanged = false;
 
 #pragma region Tree Growth
-	{
+
 #pragma region Pruning
-		bool anyBranchPruned = false;
-		m_branchSkeleton.SortLists();
-		{
-			const auto maxDistance = m_branchSkeleton.RefNode(0).m_data.m_maxDistanceToAnyBranchEnd;
-			const auto& sortedInternodeList = m_branchSkeleton.RefSortedNodeList();
-			for (const auto& internodeHandle : sortedInternodeList) {
-				if (m_branchSkeleton.RefNode(internodeHandle).IsRecycled()) continue;
-				if (LowBranchPruning(maxDistance, internodeHandle, treeGrowthParameters)) {
-					anyBranchPruned = true;
-				}
+	bool anyBranchPruned = false;
+	m_branchSkeleton.SortLists();
+	{
+		const auto maxDistance = m_branchSkeleton.RefNode(0).m_data.m_maxDistanceToAnyBranchEnd;
+		const auto& sortedInternodeList = m_branchSkeleton.RefSortedNodeList();
+		for (const auto& internodeHandle : sortedInternodeList) {
+			if (m_branchSkeleton.RefNode(internodeHandle).IsRecycled()) continue;
+			if (LowBranchPruning(maxDistance, internodeHandle, treeGrowthParameters)) {
+				anyBranchPruned = true;
 			}
-		};
+		}
+	};
 #pragma endregion
 #pragma region Grow
-		if (anyBranchPruned) m_branchSkeleton.SortLists();
-		treeStructureChanged = treeStructureChanged || anyBranchPruned;
-		bool anyBranchGrown = false;
-		{
-			const auto& sortedInternodeList = m_branchSkeleton.RefSortedNodeList();
-			for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); it++) {
-				auto internodeHandle = *it;
-				CalculateResourceRequirement(internodeHandle, treeGrowthParameters);
-			}
-			for (const auto& internodeHandle : sortedInternodeList) {
-				auto& internode = m_branchSkeleton.RefNode(internodeHandle);
-				auto& internodeData = internode.m_data;
-				auto& internodeInfo = internode.m_info;
-				if (internode.GetParentHandle() == -1) {
-					internodeData.m_adjustedTotalProductiveWaterRequirement =
-						internodeData.m_productiveResourceRequirement +
-						internodeData.m_descendentProductiveResourceRequirement;
-					internodeData.m_adjustedDescendentProductiveResourceRequirement = internodeData.m_descendentProductiveResourceRequirement;
-					internodeData.m_adjustedProductiveResourceRequirement = internodeData.m_productiveResourceRequirement;
-					for (auto& bud : internodeData.m_buds) {
-						bud.m_adjustedProductiveResourceRequirement = bud.m_productiveResourceRequirement;
-					}
-				}
-				float apicalControl = treeGrowthParameters.GetApicalControl(internode);
-				float totalChildResourceRequirement = 0.0f;
-
-				for (const auto& i : internode.RefChildHandles()) {
-					auto& childInternode = m_branchSkeleton.RefNode(i);
-					auto& childInternodeData = childInternode.m_data;
-					childInternodeData.m_adjustedTotalProductiveWaterRequirement = 0;
-					if (internodeData.m_adjustedDescendentProductiveResourceRequirement != 0) {
-						childInternodeData.m_adjustedTotalProductiveWaterRequirement =
-							(childInternodeData.m_descendentProductiveResourceRequirement +
-								childInternodeData.m_productiveResourceRequirement) /
-							internodeData.m_adjustedDescendentProductiveResourceRequirement;
-						childInternodeData.m_adjustedTotalProductiveWaterRequirement = glm::pow(
-							childInternodeData.m_adjustedTotalProductiveWaterRequirement, apicalControl);
-						totalChildResourceRequirement += childInternodeData.m_adjustedTotalProductiveWaterRequirement;
-					}
-				}
-				for (const auto& i : internode.RefChildHandles()) {
-					auto& childInternode = m_branchSkeleton.RefNode(i);
-					auto& childInternodeData = childInternode.m_data;
-					if (internodeData.m_adjustedDescendentProductiveResourceRequirement != 0) {
-						childInternodeData.m_adjustedTotalProductiveWaterRequirement *=
-							internodeData.m_adjustedDescendentProductiveResourceRequirement /
-							totalChildResourceRequirement;
-						float resourceFactor = childInternodeData.m_adjustedTotalProductiveWaterRequirement /
-							(childInternodeData.m_descendentProductiveResourceRequirement +
-								childInternodeData.m_productiveResourceRequirement);
-						childInternodeData.m_adjustedProductiveResourceRequirement =
-							childInternodeData.m_productiveResourceRequirement * resourceFactor;
-						childInternodeData.m_adjustedDescendentProductiveResourceRequirement =
-							childInternodeData.m_descendentProductiveResourceRequirement * resourceFactor;
-						for (auto& bud : childInternodeData.m_buds) {
-							bud.m_adjustedProductiveResourceRequirement =
-								bud.m_productiveResourceRequirement * resourceFactor;
-						}
-					}
-				}
-			}
-			for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); it++) {
-				const bool graphChanged = GrowInternode(*it, treeGrowthParameters);
-				anyBranchGrown = anyBranchGrown || graphChanged;
-			}
-		};
+	if (anyBranchPruned) m_branchSkeleton.SortLists();
+	treeStructureChanged = treeStructureChanged || anyBranchPruned;
+	bool anyBranchGrown = false;
+	{
+		const auto& sortedInternodeList = m_branchSkeleton.RefSortedNodeList();
+		for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); it++) {
+			auto internodeHandle = *it;
+			CalculateResourceRequirement(internodeHandle, treeGrowthParameters);
+		}
+		for (const auto& internodeHandle : sortedInternodeList) {
+			AdjustResourceRequirement(internodeHandle, treeGrowthParameters);
+		}
+		for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); it++) {
+			const bool graphChanged = GrowInternode(climateModel, *it, treeGrowthParameters);
+			anyBranchGrown = anyBranchGrown || graphChanged;
+		}
+	};
 #pragma endregion
 #pragma region Postprocess
-		if (anyBranchGrown) m_branchSkeleton.SortLists();
-		treeStructureChanged = treeStructureChanged || anyBranchGrown;
-		{
-			m_branchSkeleton.m_min = glm::vec3(FLT_MAX);
-			m_branchSkeleton.m_max = glm::vec3(FLT_MIN);
+	if (anyBranchGrown) m_branchSkeleton.SortLists();
+	treeStructureChanged = treeStructureChanged || anyBranchGrown;
+	{
+		m_branchSkeleton.m_min = glm::vec3(FLT_MAX);
+		m_branchSkeleton.m_max = glm::vec3(FLT_MIN);
 
-			const auto& sortedInternodeList = m_branchSkeleton.RefSortedNodeList();
-			for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); it++) {
-				auto internodeHandle = *it;
-				CalculateSagging(internodeHandle, treeGrowthParameters);
+		const auto& sortedInternodeList = m_branchSkeleton.RefSortedNodeList();
+		for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); it++) {
+			auto internodeHandle = *it;
+			CalculateSagging(internodeHandle, treeGrowthParameters);
+		}
+		for (const auto& internodeHandle : sortedInternodeList) {
+			auto& internode = m_branchSkeleton.RefNode(internodeHandle);
+			auto& internodeData = internode.m_data;
+			auto& internodeInfo = internode.m_info;
+			if (internode.GetParentHandle() == -1) {
+				internodeInfo.m_globalPosition = glm::vec3(0.0f);
+				internodeInfo.m_localRotation = glm::vec3(0.0f);
+				internodeInfo.m_globalRotation = glm::vec3(glm::radians(90.0f), 0.0f, 0.0f);
+
+				internodeData.m_rootDistance =
+					internodeInfo.m_length / treeGrowthParameters.GetInternodeLength(internode);
 			}
-			for (const auto& internodeHandle : sortedInternodeList) {
-				auto& internode = m_branchSkeleton.RefNode(internodeHandle);
-				auto& internodeData = internode.m_data;
-				auto& internodeInfo = internode.m_info;
-				if (internode.GetParentHandle() == -1) {
-					internodeInfo.m_globalPosition = glm::vec3(0.0f);
-					internodeInfo.m_localRotation = glm::vec3(0.0f);
-					internodeInfo.m_globalRotation = glm::vec3(glm::radians(90.0f), 0.0f, 0.0f);
-
-					internodeData.m_rootDistance =
-						internodeInfo.m_length / treeGrowthParameters.GetInternodeLength(internode);
-				}
-				else {
-					auto& parentInternode = m_branchSkeleton.RefNode(internode.GetParentHandle());
-					internodeData.m_rootDistance = parentInternode.m_data.m_rootDistance + internodeInfo.m_length /
-						treeGrowthParameters.GetInternodeLength(
-							internode);
-					internodeInfo.m_globalRotation =
-						parentInternode.m_info.m_globalRotation * internodeInfo.m_localRotation;
+			else {
+				auto& parentInternode = m_branchSkeleton.RefNode(internode.GetParentHandle());
+				internodeData.m_rootDistance = parentInternode.m_data.m_rootDistance + internodeInfo.m_length /
+					treeGrowthParameters.GetInternodeLength(
+						internode);
+				internodeInfo.m_globalRotation =
+					parentInternode.m_info.m_globalRotation * internodeInfo.m_localRotation;
 #pragma region Apply Sagging
-					auto parentGlobalRotation = m_branchSkeleton.RefNode(
-						internode.GetParentHandle()).m_info.m_globalRotation;
-					internodeInfo.m_globalRotation = parentGlobalRotation * internodeData.m_desiredLocalRotation;
-					auto front = internodeInfo.m_globalRotation * glm::vec3(0, 0, -1);
-					auto up = internodeInfo.m_globalRotation * glm::vec3(0, 1, 0);
-					float dotP = glm::abs(glm::dot(front, m_gravityDirection));
-					ApplyTropism(m_gravityDirection, internodeData.m_sagging * (1.0f - dotP), front, up);
-					internodeInfo.m_globalRotation = glm::quatLookAt(front, up);
-					internodeInfo.m_localRotation = glm::inverse(parentGlobalRotation) * internodeInfo.m_globalRotation;
+				auto parentGlobalRotation = m_branchSkeleton.RefNode(
+					internode.GetParentHandle()).m_info.m_globalRotation;
+				internodeInfo.m_globalRotation = parentGlobalRotation * internodeData.m_desiredLocalRotation;
+				auto front = internodeInfo.m_globalRotation * glm::vec3(0, 0, -1);
+				auto up = internodeInfo.m_globalRotation * glm::vec3(0, 1, 0);
+				float dotP = glm::abs(glm::dot(front, m_gravityDirection));
+				ApplyTropism(m_gravityDirection, internodeData.m_sagging * (1.0f - dotP), front, up);
+				internodeInfo.m_globalRotation = glm::quatLookAt(front, up);
+				internodeInfo.m_localRotation = glm::inverse(parentGlobalRotation) * internodeInfo.m_globalRotation;
 #pragma endregion
 
-					internodeInfo.m_globalPosition =
-						parentInternode.m_info.m_globalPosition + parentInternode.m_info.m_length *
-						(parentInternode.m_info.m_globalRotation *
-							glm::vec3(0, 0, -1));
-
-				}
-				m_branchSkeleton.m_min = glm::min(m_branchSkeleton.m_min, internodeInfo.m_globalPosition);
-				m_branchSkeleton.m_max = glm::max(m_branchSkeleton.m_max, internodeInfo.m_globalPosition);
-				const auto endPosition = internodeInfo.m_globalPosition + internodeInfo.m_length *
-					(internodeInfo.m_globalRotation *
+				internodeInfo.m_globalPosition =
+					parentInternode.m_info.m_globalPosition + parentInternode.m_info.m_length *
+					(parentInternode.m_info.m_globalRotation *
 						glm::vec3(0, 0, -1));
-				m_branchSkeleton.m_min = glm::min(m_branchSkeleton.m_min, endPosition);
-				m_branchSkeleton.m_max = glm::max(m_branchSkeleton.m_max, endPosition);
+
 			}
-		};
-		{
-			const auto& sortedFlowList = m_branchSkeleton.RefSortedFlowList();
-			for (const auto& flowHandle : sortedFlowList) {
-				auto& flow = m_branchSkeleton.RefFlow(flowHandle);
-				auto& flowData = flow.m_data;
-				if (flow.GetParentHandle() == -1) {
-					flowData.m_order = 0;
-				}
-				else {
-					auto& parentFlow = m_branchSkeleton.RefFlow(flow.GetParentHandle());
-					if (flow.IsApical()) flowData.m_order = parentFlow.m_data.m_order;
-					else flowData.m_order = parentFlow.m_data.m_order + 1;
-				}
-				for (const auto& internodeHandle : flow.RefNodeHandles()) {
-					m_branchSkeleton.RefNode(internodeHandle).m_data.m_order = flowData.m_order;
-				}
-			}
-			m_branchSkeleton.CalculateFlows();
-		};
-#pragma endregion
+			m_branchSkeleton.m_min = glm::min(m_branchSkeleton.m_min, internodeInfo.m_globalPosition);
+			m_branchSkeleton.m_max = glm::max(m_branchSkeleton.m_max, internodeInfo.m_globalPosition);
+			const auto endPosition = internodeInfo.m_globalPosition + internodeInfo.m_length *
+				(internodeInfo.m_globalRotation *
+					glm::vec3(0, 0, -1));
+			m_branchSkeleton.m_min = glm::min(m_branchSkeleton.m_min, endPosition);
+			m_branchSkeleton.m_max = glm::max(m_branchSkeleton.m_max, endPosition);
+		}
 	};
+	{
+		const auto& sortedFlowList = m_branchSkeleton.RefSortedFlowList();
+		for (const auto& flowHandle : sortedFlowList) {
+			auto& flow = m_branchSkeleton.RefFlow(flowHandle);
+			auto& flowData = flow.m_data;
+			if (flow.GetParentHandle() == -1) {
+				flowData.m_order = 0;
+			}
+			else {
+				auto& parentFlow = m_branchSkeleton.RefFlow(flow.GetParentHandle());
+				if (flow.IsApical()) flowData.m_order = parentFlow.m_data.m_order;
+				else flowData.m_order = parentFlow.m_data.m_order + 1;
+			}
+			for (const auto& internodeHandle : flow.RefNodeHandles()) {
+				m_branchSkeleton.RefNode(internodeHandle).m_data.m_order = flowData.m_order;
+			}
+		}
+		m_branchSkeleton.CalculateFlows();
+	};
+#pragma endregion
 #pragma endregion
 	return treeStructureChanged;
 }
@@ -528,12 +475,67 @@ void TreeModel::Clear() {
 	m_initialized = false;
 }
 
+inline void EcoSysLab::TreeModel::AdjustResourceRequirement(NodeHandle internodeHandle,
+	const TreeGrowthParameters& treeGrowthParameters)
+{
+	auto& internode = m_branchSkeleton.RefNode(internodeHandle);
+	auto& internodeData = internode.m_data;
+	auto& internodeInfo = internode.m_info;
+	if (internode.GetParentHandle() == -1) {
+		internodeData.m_adjustedTotalProductiveWaterRequirement =
+			internodeData.m_productiveResourceRequirement +
+			internodeData.m_descendentProductiveResourceRequirement;
+		internodeData.m_adjustedDescendentProductiveResourceRequirement = internodeData.m_descendentProductiveResourceRequirement;
+		internodeData.m_adjustedProductiveResourceRequirement = internodeData.m_productiveResourceRequirement;
+		for (auto& bud : internodeData.m_buds) {
+			bud.m_adjustedProductiveResourceRequirement = bud.m_productiveResourceRequirement;
+		}
+	}
+	float apicalControl = treeGrowthParameters.GetApicalControl(internode);
+	float totalChildResourceRequirement = 0.0f;
+
+	for (const auto& i : internode.RefChildHandles()) {
+		auto& childInternode = m_branchSkeleton.RefNode(i);
+		auto& childInternodeData = childInternode.m_data;
+		childInternodeData.m_adjustedTotalProductiveWaterRequirement = 0;
+		if (internodeData.m_adjustedDescendentProductiveResourceRequirement != 0) {
+			childInternodeData.m_adjustedTotalProductiveWaterRequirement =
+				(childInternodeData.m_descendentProductiveResourceRequirement +
+					childInternodeData.m_productiveResourceRequirement) /
+				internodeData.m_adjustedDescendentProductiveResourceRequirement;
+			childInternodeData.m_adjustedTotalProductiveWaterRequirement = glm::pow(
+				childInternodeData.m_adjustedTotalProductiveWaterRequirement, apicalControl);
+			totalChildResourceRequirement += childInternodeData.m_adjustedTotalProductiveWaterRequirement;
+		}
+	}
+	for (const auto& i : internode.RefChildHandles()) {
+		auto& childInternode = m_branchSkeleton.RefNode(i);
+		auto& childInternodeData = childInternode.m_data;
+		if (internodeData.m_adjustedDescendentProductiveResourceRequirement != 0) {
+			childInternodeData.m_adjustedTotalProductiveWaterRequirement *=
+				internodeData.m_adjustedDescendentProductiveResourceRequirement /
+				totalChildResourceRequirement;
+			float resourceFactor = childInternodeData.m_adjustedTotalProductiveWaterRequirement /
+				(childInternodeData.m_descendentProductiveResourceRequirement +
+					childInternodeData.m_productiveResourceRequirement);
+			childInternodeData.m_adjustedProductiveResourceRequirement =
+				childInternodeData.m_productiveResourceRequirement * resourceFactor;
+			childInternodeData.m_adjustedDescendentProductiveResourceRequirement =
+				childInternodeData.m_descendentProductiveResourceRequirement * resourceFactor;
+			for (auto& bud : childInternodeData.m_buds) {
+				bud.m_adjustedProductiveResourceRequirement =
+					bud.m_productiveResourceRequirement * resourceFactor;
+			}
+		}
+	}
+}
+
 bool TreeModel::LowBranchPruning(float maxDistance, NodeHandle internodeHandle,
-	const TreeGrowthParameters& parameters) {
+	const TreeGrowthParameters& treeGrowthParameters) {
 	auto& internode = m_branchSkeleton.RefNode(internodeHandle);
 	//Pruning here.
 	if (maxDistance > 5 && internode.m_data.m_order != 0 &&
-		internode.m_data.m_rootDistance / maxDistance < parameters.GetLowBranchPruning(internode)) {
+		internode.m_data.m_rootDistance / maxDistance < treeGrowthParameters.GetLowBranchPruning(internode)) {
 		m_branchSkeleton.RecycleNode(internodeHandle);
 		return true;
 	}
@@ -561,8 +563,8 @@ bool TreeModel::GrowRoots(SoilModel& soilModel, const RootGrowthParameters& root
 		{
 			const auto& sortedRootNodeList = m_rootSkeleton.RefSortedNodeList();
 			for (auto it = sortedRootNodeList.rbegin(); it != sortedRootNodeList.rend(); it++) {
-				//const bool graphChanged = GrowRootNode(*it, treeGrowthParameters, growthNutrients);
-				//anyRootGrown = anyRootGrown || graphChanged;
+				const bool graphChanged = GrowRootNode(soilModel, *it, rootGrowthParameters);
+				anyRootGrown = anyRootGrown || graphChanged;
 			}
 		};
 #pragma endregion
@@ -695,6 +697,27 @@ void TreeModel::Reverse(int iteration) {
 	m_history.erase((m_history.begin() + iteration), m_history.end());
 }
 
+void InternodeGrowthData::Clear() {
+	m_age = 0;
+	m_inhibitor = 0;
+	m_desiredLocalRotation = glm::vec3(0.0f);
+	m_sagging = 0;
+
+	m_maxDistanceToAnyBranchEnd = 0;
+	m_level = 0;
+	m_descendentTotalBiomass = 0;
+
+	m_rootDistance = 0;
+
+	m_productiveResourceRequirement = 0.0f;
+	m_descendentProductiveResourceRequirement = 0.0f;
+	m_adjustedTotalProductiveWaterRequirement = 0.0f;
+	m_lightDirection = glm::vec3(0, 1, 0);
+	m_lightIntensity = 1.0f;
+	m_buds.clear();
+}
+
+#pragma region TreeGrowthParameters
 TreeGrowthParameters::TreeGrowthParameters() {
 	m_lateralBudCount = 2;
 	m_branchingAngleMeanVariance = glm::vec2(60, 3);
@@ -844,30 +867,17 @@ float TreeGrowthParameters::GetFruitProductiveResourceRequirementFactor(
 	const Node<InternodeGrowthData>& internode) const {
 	return m_productiveResourceRequirementFactor.z;
 }
+#pragma endregion
 
-void InternodeGrowthData::Clear() {
-	m_age = 0;
-	m_inhibitor = 0;
-	m_desiredLocalRotation = glm::vec3(0.0f);
-	m_sagging = 0;
-
-	m_maxDistanceToAnyBranchEnd = 0;
-	m_level = 0;
-	m_descendentTotalBiomass = 0;
-
-	m_rootDistance = 0;
-
-	m_productiveResourceRequirement = 0.0f;
-	m_descendentProductiveResourceRequirement = 0.0f;
-	m_adjustedTotalProductiveWaterRequirement = 0.0f;
-	m_lightDirection = glm::vec3(0, 1, 0);
-	m_lightIntensity = 1.0f;
-	m_buds.clear();
-}
-
-float EcoSysLab::RootGrowthParameters::GetGrowthRate(const Node<InternodeGrowthData>& internode) const
+#pragma region RootGrowthParameters
+float EcoSysLab::RootGrowthParameters::GetGrowthRate(const Node<RootInternodeGrowthData>& rootNode) const
 {
 	return m_growthRate;
+}
+
+float EcoSysLab::RootGrowthParameters::GetAuxinTransportLoss(const Node<RootInternodeGrowthData>& rootNode) const
+{
+	return m_auxinTransportLoss;
 }
 
 float EcoSysLab::RootGrowthParameters::GetRootNodeLength(const Node<RootInternodeGrowthData>& rootNode) const
@@ -896,12 +906,13 @@ float EcoSysLab::RootGrowthParameters::GetRootBranchingAngle(const Node<RootInte
 		m_branchingAngleMeanVariance.y);
 }
 
-float EcoSysLab::RootGrowthParameters::GetEndNodeThickness(const Node<RootInternodeGrowthData>& internode) const
+float EcoSysLab::RootGrowthParameters::GetEndNodeThickness(const Node<RootInternodeGrowthData>& rootNode) const
 {
 	return m_endNodeThicknessAndControl.x;
 }
 
-float EcoSysLab::RootGrowthParameters::GetThicknessControlFactor(const Node<RootInternodeGrowthData>& internode) const
+float EcoSysLab::RootGrowthParameters::GetThicknessControlFactor(const Node<RootInternodeGrowthData>& rootNode) const
 {
 	return m_endNodeThicknessAndControl.y;
 }
+#pragma endregion

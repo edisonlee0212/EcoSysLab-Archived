@@ -38,8 +38,10 @@ namespace EcoSysLab {
         glm::vec3 m_branchVertexColor = glm::vec3(1.0f);
         glm::vec3 m_foliageVertexColor = glm::vec3(1.0f);
 
+        float m_baseControlPointRatio = 0.3f;
+        float m_branchControlPointRatio = 0.6f;
+        float m_lineLengthFactor = 1.0f;
         bool m_smoothness = true;
-        float m_internodeLengthFactor = 1.0f;
 
         void OnInspect();
 
@@ -79,7 +81,7 @@ namespace EcoSysLab {
             glm::vec3 directionEnd = directionStart;
             glm::vec3 positionStart = internodeInfo.m_globalPosition;
             glm::vec3 positionEnd =
-                    positionStart + internodeInfo.m_length * settings.m_internodeLengthFactor * directionStart;
+                    positionStart + internodeInfo.m_length * settings.m_lineLengthFactor * directionStart;
             float thicknessStart = internodeInfo.m_thickness;
             float thicknessEnd = internodeInfo.m_thickness;
 
@@ -110,9 +112,9 @@ namespace EcoSysLab {
             BezierCurve curve = BezierCurve(
                     positionStart,
                     positionStart +
-                    (settings.m_smoothness ? internodeInfo.m_length / 3.0f : 0.0f) * directionStart,
+                    (settings.m_smoothness ? internodeInfo.m_length * settings.m_baseControlPointRatio : 0.0f) * directionStart,
                     positionEnd -
-                    (settings.m_smoothness ? internodeInfo.m_length / 3.0f : 0.0f) * directionEnd,
+                    (settings.m_smoothness ? internodeInfo.m_length * settings.m_branchControlPointRatio : 0.0f) * directionEnd,
                     positionEnd);
             float posStep = 1.0f / static_cast<float>(amount);
             glm::vec3 dirStep = (directionEnd - directionStart) / static_cast<float>(amount);
