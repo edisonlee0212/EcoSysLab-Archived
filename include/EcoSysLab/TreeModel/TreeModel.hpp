@@ -45,7 +45,8 @@ namespace EcoSysLab {
 		float m_sagging = 0;
 
 		float m_maxDistanceToAnyBranchEnd = 0;
-		float m_level = 0;
+		int m_level = 0;
+		int m_reverseLevel = 0;
 		int m_order = 0;
 		float m_descendentTotalBiomass = 0;
 		float m_biomass = 0;
@@ -91,8 +92,11 @@ namespace EcoSysLab {
 		int m_order = 0;
 		RootType m_rootType;
 
-		float m_inhibitorTarget = 0;
-		float m_inhibitor = 0;
+		float m_auxinTarget = 0;
+		float m_auxin = 0;
+
+		float m_horizontalTropism;
+		float m_verticalTropism;
 	};
 	struct RootBranchGrowthData {
 		int m_order = 0;
@@ -123,6 +127,12 @@ namespace EcoSysLab {
 
 		float m_auxinTransportLoss = 1.0f;
 
+		float m_tropismAdjustmentFactor = 0.3f;
+		float m_tropismIntensity;
+
+		float m_baseBranchingProbability;
+		float m_branchingProbabilityChildrenDecrease;
+		float m_branchingProbabilityDistanceFactor;
 		[[nodiscard]] float GetGrowthRate(const Node<RootInternodeGrowthData>& rootNode) const;
 
 		[[nodiscard]] float GetAuxinTransportLoss(const Node<RootInternodeGrowthData>& rootNode) const;
@@ -138,6 +148,10 @@ namespace EcoSysLab {
 		[[nodiscard]] float GetEndNodeThickness(const Node<RootInternodeGrowthData>& rootNode) const;
 
 		[[nodiscard]] float GetThicknessControlFactor(const Node<RootInternodeGrowthData>& rootNode) const;
+
+		[[nodiscard]] float GetBranchingProbability(const Node<RootInternodeGrowthData>& rootNode) const;
+
+		void SetTropisms(Node<RootInternodeGrowthData>& rootNode) const;
 	};
 
 	class TreeGrowthParameters {
@@ -183,8 +197,8 @@ namespace EcoSysLab {
 		 */
 		glm::vec3 m_saggingFactorThicknessReductionMax = glm::vec3(0.8f, 1.75f, 1.0f);
 
-		glm::vec3 m_baseResourceRequirementFactor;
-		glm::vec3 m_productiveResourceRequirementFactor;
+		glm::vec3 m_baseResourceRequirementFactor{};
+		glm::vec3 m_productiveResourceRequirementFactor{};
 
 		[[nodiscard]] int GetLateralBudCount(const Node<InternodeGrowthData>& internode) const;
 
@@ -255,8 +269,8 @@ namespace EcoSysLab {
 	class TreeModel {
 #pragma region Root Growth
 
-		bool GrowShoots(float extendLength, NodeHandle rootNodeHandle,
-			const RootGrowthParameters& rootGrowthParameters, float& collectedInhibitor);
+		bool ElongateRoot(float extendLength, NodeHandle rootNodeHandle,
+			const RootGrowthParameters& rootGrowthParameters, float& collectedAuxin);
 
 		inline bool GrowRootNode(SoilModel& soilModel, NodeHandle rootNodeHandle, const RootGrowthParameters& rootGrowthParameters);
 
@@ -269,7 +283,7 @@ namespace EcoSysLab {
 		bool LowBranchPruning(float maxDistance, NodeHandle internodeHandle,
 			const TreeGrowthParameters& treeGrowthParameters);
 
-		inline void CalculateSagging(NodeHandle internodeHandle,
+		inline void CalculateThicknessAndSagging(NodeHandle internodeHandle,
 			const TreeGrowthParameters& treeGrowthParameters);
 
 		inline void CalculateResourceRequirement(NodeHandle internodeHandle,
@@ -277,7 +291,7 @@ namespace EcoSysLab {
 
 		inline bool GrowInternode(ClimateModel& climateModel, NodeHandle internodeHandle, const TreeGrowthParameters& treeGrowthParameters);
 
-		bool GrowShoots(float extendLength, NodeHandle internodeHandle,
+		bool ElongateInternode(float extendLength, NodeHandle internodeHandle,
 			const TreeGrowthParameters& treeGrowthParameters, float& collectedInhibitor);
 
 #pragma endregion
@@ -329,6 +343,7 @@ namespace EcoSysLab {
 
 		int m_historyLimit = -1;
 
+		
 		[[nodiscard]] Skeleton<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData>& RefBranchSkeleton();
 
 		[[nodiscard]] const Skeleton<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData>&
@@ -336,6 +351,7 @@ namespace EcoSysLab {
 
 		[[nodiscard]] Skeleton<RootSkeletonGrowthData, RootBranchGrowthData, RootInternodeGrowthData>&
 			RefRootSkeleton();
+
 
 		[[nodiscard]] const Skeleton<RootSkeletonGrowthData, RootBranchGrowthData, RootInternodeGrowthData>&
 			PeekRootSkeleton(int iteration) const;

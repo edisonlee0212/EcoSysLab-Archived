@@ -122,7 +122,7 @@ TreeVisualizer::OnInspect(
         if (m_rootHierarchyGui) {
             if (ImGui::TreeNodeEx("Root Hierarchy")) {
                 bool deleted = false;
-                auto tempSelection = m_selectedRootNodeHandle;
+                const auto tempSelection = m_selectedRootNodeHandle;
                 if (m_iteration == treeModel.CurrentIteration()) {
                     if (DrawRootNodeInspectionGui(treeModel, 0, deleted, 0)) {
                         m_needUpdate = true;
@@ -153,7 +153,7 @@ TreeVisualizer::OnInspect(
     const auto &treeSkeleton = treeModel.PeekBranchSkeleton(m_iteration);
     const auto &rootSkeleton = treeModel.PeekRootSkeleton(m_iteration);
     if (m_visualization) {
-        auto editorLayer = Application::GetLayer<EditorLayer>();
+	    const auto editorLayer = Application::GetLayer<EditorLayer>();
         const auto &sortedBranchList = treeSkeleton.RefSortedFlowList();
         const auto &sortedInternodeList = treeSkeleton.RefSortedNodeList();
         ImGui::Text("Internode count: %d", sortedInternodeList.size());
@@ -279,8 +279,8 @@ TreeVisualizer::OnInspect(
                     DefaultResources::Primitives::Cylinder, editorLayer->m_sceneCamera,
                     editorLayer->m_sceneCameraPosition,
                     editorLayer->m_sceneCameraRotation,
-                    *reinterpret_cast<std::vector<glm::vec4> *>(&m_internodeColors),
-                    *reinterpret_cast<std::vector<glm::mat4> *>(&m_internodeMatrices),
+                    *&m_internodeColors,
+                    *&m_internodeMatrices,
                     globalTransform.m_value, 1.0f, gizmoSettings);
 
         }
@@ -295,8 +295,8 @@ TreeVisualizer::OnInspect(
                     DefaultResources::Primitives::Cylinder, editorLayer->m_sceneCamera,
                     editorLayer->m_sceneCameraPosition,
                     editorLayer->m_sceneCameraRotation,
-                    *reinterpret_cast<std::vector<glm::vec4> *>(&m_rootNodeColors),
-                    *reinterpret_cast<std::vector<glm::mat4> *>(&m_rootNodeMatrices),
+                    *&m_rootNodeColors,
+                    *&m_rootNodeMatrices,
                     globalTransform.m_value, 1.0f, gizmoSettings);
         }
     }
@@ -310,7 +310,7 @@ TreeVisualizer::InspectInternode(
         NodeHandle internodeHandle) {
     bool changed = false;
     if (ImGui::Begin("Internode Inspector")) {
-        const auto &internode = treeSkeleton.PeekNode(internodeHandle);
+        const auto &internode = treeSkeleton.RefNode(internodeHandle);
         if (ImGui::TreeNode("Internode info")) {
             ImGui::Text("Thickness: %.3f", internode.m_info.m_thickness);
             ImGui::Text("Length: %.3f", internode.m_info.m_length);

@@ -275,13 +275,13 @@ void TreeVisualizationLayer::OnInspect() {
             ImGui::Checkbox("Auto grow", &m_autoGrow);
             if(!m_autoGrow) {
                 bool changed = false;
-                if (ImGui::Button("GrowBranches all")) {
+                if (ImGui::Button("Grow all")) {
                     GrowAllTrees();
                     changed = true;
                 }
                 static int iterations = 5;
                 ImGui::DragInt("Iterations", &iterations, 1, 1, 100);
-                if (ImGui::Button(("GrowBranches all " + std::to_string(iterations) + " iterations").c_str())) {
+                if (ImGui::Button(("Grow all " + std::to_string(iterations) + " iterations").c_str())) {
                     for (int i = 0; i < iterations; i++) GrowAllTrees();
                     changed = true;
                 }
