@@ -296,7 +296,9 @@ void TreeVisualizationLayer::OnInspect() {
             ImGui::Text("Total time: %.4f", m_totalTime);
             ImGui::Text("Tree count: %d", treeEntities->size());
             ImGui::Text("Total Internode size: %d", m_internodeSize);
-            ImGui::Text("Total Flow size: %d", m_branchSize);
+            ImGui::Text("Total Branch size: %d", m_branchSize);
+            ImGui::Text("Total Root node size: %d", m_rootNodeSize);
+            ImGui::Text("Total Root Flow size: %d", m_rootFlowSize);
 
             if(ImGui::TreeNode("Mesh generation")) {
                 m_meshGeneratorSettings.OnInspect();

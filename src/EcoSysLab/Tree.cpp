@@ -183,6 +183,27 @@ void OnInspectTreeGrowthParameters(TreeGrowthParameters& treeGrowthParameters) {
 
 void OnInspectRootGrowthParameters(RootGrowthParameters& rootGrowthParameters) {
 	if (ImGui::TreeNodeEx("Root Parameters", ImGuiTreeNodeFlags_DefaultOpen)) {
+		if (ImGui::TreeNodeEx("Structure", ImGuiTreeNodeFlags_DefaultOpen)) {
+			ImGui::DragFloat("Root node length", &rootGrowthParameters.m_rootNodeLength, 0.01f);
+			ImGui::DragFloat2("Thickness min/factor", &rootGrowthParameters.m_endNodeThicknessAndControl.x,
+				0.01f);
+			ImGui::DragFloat2("Branching Angle mean/var", &rootGrowthParameters.m_branchingAngleMeanVariance.x,
+				0.01f);
+			ImGui::DragFloat2("Roll Angle mean/var", &rootGrowthParameters.m_rollAngleMeanVariance.x, 0.01f);
+			ImGui::DragFloat2("Apical Angle mean/var", &rootGrowthParameters.m_apicalAngleMeanVariance.x,
+				0.01f);
+			ImGui::TreePop();
+		}
+		if (ImGui::TreeNodeEx("Growth", ImGuiTreeNodeFlags_DefaultOpen))
+		{
+			ImGui::DragFloat("Growth rate", &rootGrowthParameters.m_growthRate, 0.01f);
+			ImGui::DragFloat("Auxin loss", &rootGrowthParameters.m_auxinTransportLoss, 0.01f);
+			ImGui::DragFloat("Tropism adjustment factor", &rootGrowthParameters.m_tropismAdjustmentFactor, 0.01f);
+			ImGui::DragFloat("Tropism intensity", &rootGrowthParameters.m_tropismIntensity, 0.01f);
+			ImGui::DragFloat("Branching prob base", &rootGrowthParameters.m_baseBranchingProbability, 0.01f);
+			ImGui::DragFloat("Branching prob decrease", &rootGrowthParameters.m_branchingProbabilityChildrenDecrease, 0.01f);
+			ImGui::TreePop();
+		}
 		ImGui::TreePop();
 	}
 }
@@ -238,17 +259,21 @@ void SerializeTreeGrowthParamaters(const std::string& name, const TreeGrowthPara
 }
 void SerializeRootGrowthParamaters(const std::string& name, const RootGrowthParameters& rootGrowthParameters, YAML::Emitter& out) {
 	out << YAML::Key << name << YAML::BeginMap;
+	out << YAML::Key << "m_rootNodeLength" << YAML::Value << rootGrowthParameters.m_rootNodeLength;
+	out << YAML::Key << "m_growthRate" << YAML::Value << rootGrowthParameters.m_growthRate;
+	out << YAML::Key << "m_endNodeThicknessAndControl" << YAML::Value
+		<< rootGrowthParameters.m_endNodeThicknessAndControl;
 	out << YAML::Key << "m_branchingAngleMeanVariance" << YAML::Value
 		<< rootGrowthParameters.m_branchingAngleMeanVariance;
 	out << YAML::Key << "m_rollAngleMeanVariance" << YAML::Value
 		<< rootGrowthParameters.m_rollAngleMeanVariance;
 	out << YAML::Key << "m_apicalAngleMeanVariance" << YAML::Value
 		<< rootGrowthParameters.m_apicalAngleMeanVariance;
-	out << YAML::Key << "m_gravitropism" << YAML::Value << rootGrowthParameters.m_gravitropism;
-	out << YAML::Key << "m_rootNodeLength" << YAML::Value << rootGrowthParameters.m_rootNodeLength;
-	out << YAML::Key << "m_growthRate" << YAML::Value << rootGrowthParameters.m_growthRate;
-	out << YAML::Key << "m_endNodeThicknessAndControl" << YAML::Value
-		<< rootGrowthParameters.m_endNodeThicknessAndControl;
+	out << YAML::Key << "m_auxinTransportLoss" << YAML::Value << rootGrowthParameters.m_auxinTransportLoss;
+	out << YAML::Key << "m_tropismAdjustmentFactor" << YAML::Value << rootGrowthParameters.m_tropismAdjustmentFactor;
+	out << YAML::Key << "m_tropismIntensity" << YAML::Value << rootGrowthParameters.m_tropismIntensity;
+	out << YAML::Key << "m_baseBranchingProbability" << YAML::Value << rootGrowthParameters.m_baseBranchingProbability;
+	out << YAML::Key << "m_branchingProbabilityChildrenDecrease" << YAML::Value << rootGrowthParameters.m_branchingProbabilityChildrenDecrease;
 	out << YAML::EndMap;
 }
 void TreeDescriptor::Serialize(YAML::Emitter& out) {
@@ -282,13 +307,19 @@ void DeserializeTreeGrowthParamaters(const std::string& name, TreeGrowthParamete
 void DeserializeRootGrowthParamaters(const std::string& name, RootGrowthParameters& rootGrowthParameters, const YAML::Node& in) {
 	if (in[name]) {
 		auto& param = in[name];
-		if (param["m_branchingAngleMeanVariance"]) rootGrowthParameters.m_branchingAngleMeanVariance = param["m_branchingAngleMeanVariance"].as<glm::vec2>();
-		if (param["m_rollAngleMeanVariance"]) rootGrowthParameters.m_rollAngleMeanVariance = param["m_rollAngleMeanVariance"].as<glm::vec2>();
-		if (param["m_apicalAngleMeanVariance"]) rootGrowthParameters.m_apicalAngleMeanVariance = param["m_apicalAngleMeanVariance"].as<glm::vec2>();
-		if (param["m_gravitropism"]) rootGrowthParameters.m_gravitropism = param["m_gravitropism"].as<float>();
 		if (param["m_rootNodeLength"]) rootGrowthParameters.m_rootNodeLength = param["m_rootNodeLength"].as<float>();
 		if (param["m_growthRate"]) rootGrowthParameters.m_growthRate = param["m_growthRate"].as<float>();
 		if (param["m_endNodeThicknessAndControl"]) rootGrowthParameters.m_endNodeThicknessAndControl = param["m_endNodeThicknessAndControl"].as<glm::vec2>();
+		if (param["m_branchingAngleMeanVariance"]) rootGrowthParameters.m_branchingAngleMeanVariance = param["m_branchingAngleMeanVariance"].as<glm::vec2>();
+		if (param["m_rollAngleMeanVariance"]) rootGrowthParameters.m_rollAngleMeanVariance = param["m_rollAngleMeanVariance"].as<glm::vec2>();
+		if (param["m_apicalAngleMeanVariance"]) rootGrowthParameters.m_apicalAngleMeanVariance = param["m_apicalAngleMeanVariance"].as<glm::vec2>();
+
+		if (param["m_auxinTransportLoss"]) rootGrowthParameters.m_auxinTransportLoss = param["m_auxinTransportLoss"].as<float>();
+		if (param["m_tropismAdjustmentFactor"]) rootGrowthParameters.m_tropismAdjustmentFactor = param["m_tropismAdjustmentFactor"].as<float>();
+		if (param["m_tropismIntensity"]) rootGrowthParameters.m_tropismIntensity = param["m_tropismIntensity"].as<float>();
+		if (param["m_baseBranchingProbability"]) rootGrowthParameters.m_baseBranchingProbability = param["m_baseBranchingProbability"].as<float>();
+		if (param["m_branchingProbabilityChildrenDecrease"]) rootGrowthParameters.m_branchingProbabilityChildrenDecrease = param["m_branchingProbabilityChildrenDecrease"].as<float>();
+		
 	}
 }
 void TreeDescriptor::Deserialize(const YAML::Node& in) {

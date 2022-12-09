@@ -82,15 +82,11 @@ namespace EcoSysLab {
 
 	};
 
-	enum class RootType {
-		Tap,
-		Lateral,
-		Heart
-	};
 	struct RootInternodeGrowthData {
 		float m_rootDistance = 0;
 		int m_order = 0;
-		RootType m_rootType;
+		
+		float m_nitrateLevels;
 
 		float m_auxinTarget = 0;
 		float m_auxin = 0;
@@ -108,8 +104,7 @@ namespace EcoSysLab {
 
 	class RootGrowthParameters {
 	public:
-		float m_growthRate;
-		float m_gravitropism;
+		float m_growthRate = 0.5f;
 		float m_rootNodeLength;
 		glm::vec2 m_endNodeThicknessAndControl;
 		/**
@@ -128,12 +123,11 @@ namespace EcoSysLab {
 		float m_auxinTransportLoss = 1.0f;
 
 		float m_tropismAdjustmentFactor = 0.3f;
-		float m_tropismIntensity;
+		float m_tropismIntensity = 0.3f;
 
-		float m_baseBranchingProbability;
-		float m_branchingProbabilityChildrenDecrease;
-		float m_branchingProbabilityDistanceFactor;
-		[[nodiscard]] float GetGrowthRate(const Node<RootInternodeGrowthData>& rootNode) const;
+		float m_baseBranchingProbability = 1.0f;
+		float m_branchingProbabilityChildrenDecrease = 0.8f;
+		[[nodiscard]] float GetGrowthRate() const;
 
 		[[nodiscard]] float GetAuxinTransportLoss(const Node<RootInternodeGrowthData>& rootNode) const;
 
@@ -152,7 +146,11 @@ namespace EcoSysLab {
 		[[nodiscard]] float GetBranchingProbability(const Node<RootInternodeGrowthData>& rootNode) const;
 
 		void SetTropisms(Node<RootInternodeGrowthData>& rootNode) const;
+
+		RootGrowthParameters();
 	};
+
+	
 
 	class TreeGrowthParameters {
 	public:
@@ -262,8 +260,16 @@ namespace EcoSysLab {
 		TreeGrowthParameters();
 	};
 
-	struct GrowthNutrients {
+	struct BranchGrowthNutrients {
+		float m_waterCapacity = 0.0f;
 		float m_water = 0.0f;
+	};
+
+	struct RootGrowthNutrients
+	{
+		float m_totalNitrate = 0.0f;
+		float m_carbonCapacity = 0.0f;
+		float m_carbon = 0.0f;
 	};
 
 	class TreeModel {
@@ -274,6 +280,7 @@ namespace EcoSysLab {
 
 		inline bool GrowRootNode(SoilModel& soilModel, NodeHandle rootNodeHandle, const RootGrowthParameters& rootGrowthParameters);
 
+		inline void CalculateResourceRequirement(NodeHandle rootNodeHandle, const RootGrowthParameters& rootGrowthParameters);
 #pragma endregion
 #pragma region Tree Growth
 
@@ -304,7 +311,7 @@ namespace EcoSysLab {
 		std::deque<
 			std::pair<Skeleton<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData>,
 			Skeleton<RootSkeletonGrowthData, RootBranchGrowthData, RootInternodeGrowthData>>> m_history;
-		GrowthNutrients m_growthNutrients;
+
 
 		/**
 		 * Grow one iteration of the branches, given the climate model and the procedural parameters.
@@ -323,7 +330,10 @@ namespace EcoSysLab {
 		bool GrowRoots(SoilModel& soilModel,
 			const RootGrowthParameters& rootGrowthParameters);
 	public:
-		glm::vec3 m_gravityDirection = glm::vec3(0, -1, 0);
+		BranchGrowthNutrients m_branchGrowthNutrients;
+		RootGrowthNutrients m_rootGrowthNutrients;
+		glm::mat4 m_globalTransform = glm::translate(glm::vec3(0, 0, 0)) * glm::mat4_cast(glm::quat(glm::vec3(0.0f))) * glm::scale(glm::vec3(1.0f));
+		glm::vec3 m_currentGravityDirection = glm::vec3(0, -1, 0);
 
 		/**
 		 * Erase the entire tree.
@@ -343,7 +353,7 @@ namespace EcoSysLab {
 
 		int m_historyLimit = -1;
 
-		
+
 		[[nodiscard]] Skeleton<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData>& RefBranchSkeleton();
 
 		[[nodiscard]] const Skeleton<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData>&

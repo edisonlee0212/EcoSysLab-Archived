@@ -437,7 +437,48 @@ TreeVisualizer::InspectInternode(
 
 bool TreeVisualizer::DrawRootNodeInspectionGui(TreeModel& treeModel, NodeHandle rootNodeHandle, bool& deleted, const unsigned& hierarchyLevel)
 {
-    return false;
+    auto& rootSkeleton = treeModel.RefRootSkeleton();
+    const int index = m_selectedRootNodeHierarchyList.size() - hierarchyLevel - 1;
+    if (!m_selectedRootNodeHierarchyList.empty() && index >= 0 &&
+        index < m_selectedRootNodeHierarchyList.size() &&
+        m_selectedRootNodeHierarchyList[index] == rootNodeHandle) {
+        ImGui::SetNextItemOpen(true);
+    }
+    const bool opened = ImGui::TreeNodeEx(("Handle: " + std::to_string(rootNodeHandle)).c_str(),
+        ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_OpenOnArrow |
+        ImGuiTreeNodeFlags_NoAutoOpenOnLog |
+        (m_selectedRootNodeHandle == rootNodeHandle ? ImGuiTreeNodeFlags_Framed
+            : ImGuiTreeNodeFlags_FramePadding));
+    if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0)) {
+        SetSelectedNode(rootSkeleton, rootNodeHandle, m_selectedRootNodeHandle, m_selectedRootNodeHierarchyList);
+    }
+
+    if (ImGui::BeginPopupContextItem(std::to_string(rootNodeHandle).c_str())) {
+        ImGui::Text(("Handle: " + std::to_string(rootNodeHandle)).c_str());
+        if (ImGui::Button("Delete")) {
+            deleted = true;
+        }
+        ImGui::EndPopup();
+    }
+    bool modified = deleted;
+    if (opened && !deleted) {
+        ImGui::TreePush();
+        const auto& rootNodeChildren = rootSkeleton.RefNode(rootNodeHandle).RefChildHandles();
+        for (const auto& child : rootNodeChildren) {
+            bool childDeleted = false;
+            DrawRootNodeInspectionGui(treeModel, child, childDeleted, hierarchyLevel + 1);
+            if (childDeleted) {
+                treeModel.Step();
+                rootSkeleton.RecycleNode(child);
+                rootSkeleton.SortLists();
+                m_iteration = treeModel.CurrentIteration();
+                modified = true;
+                break;
+            }
+        }
+        ImGui::TreePop();
+    }
+    return modified;
 }
 
 void
@@ -576,13 +617,98 @@ void TreeVisualizer::Reset(
 void TreeVisualizer::PeekRootNode(
         const Skeleton<RootSkeletonGrowthData, RootBranchGrowthData, RootInternodeGrowthData> &rootSkeleton,
         NodeHandle rootNodeHandle) {
-
+    if (ImGui::Begin("Root Node Inspector")) {
+        const auto& internode = rootSkeleton.PeekNode(rootNodeHandle);
+        if (ImGui::TreeNode("Root node info")) {
+            ImGui::Text("Thickness: %.3f", internode.m_info.m_thickness);
+            ImGui::Text("Length: %.3f", internode.m_info.m_length);
+            ImGui::InputFloat3("Position", (float*)&internode.m_info.m_globalPosition.x, "%.3f",
+                ImGuiInputTextFlags_ReadOnly);
+            auto globalRotationAngle = glm::eulerAngles(internode.m_info.m_globalRotation);
+            ImGui::InputFloat3("Global rotation", (float*)&globalRotationAngle.x, "%.3f",
+                ImGuiInputTextFlags_ReadOnly);
+            auto localRotationAngle = glm::eulerAngles(internode.m_info.m_localRotation);
+            ImGui::InputFloat3("Local rotation", (float*)&localRotationAngle.x, "%.3f",
+                ImGuiInputTextFlags_ReadOnly);
+            auto& internodeData = internode.m_data;
+            
+            ImGui::InputFloat("Nitrate", (float*)&internodeData.m_nitrateLevels, 1, 100, "%.3f",
+                ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputFloat("Auxin", (float*)&internodeData.m_auxin, 1, 100, "%.3f",
+                ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputFloat("Auxin target", (float*)&internodeData.m_auxinTarget, 1, 100,
+                "%.3f",
+                ImGuiInputTextFlags_ReadOnly);
+            ImGui::TreePop();
+        }
+        if (ImGui::TreeNodeEx("Flow info", ImGuiTreeNodeFlags_DefaultOpen)) {
+            const auto& flow = rootSkeleton.PeekFlow(internode.GetFlowHandle());
+            ImGui::Text("Child flow size: %d", flow.RefChildHandles().size());
+            ImGui::Text("Root node size: %d", flow.RefNodeHandles().size());
+            if (ImGui::TreeNode("Root nodes")) {
+                int i = 0;
+                for (const auto& chainedInternodeHandle : flow.RefNodeHandles()) {
+                    ImGui::Text("No.%d: Handle: %d", i, chainedInternodeHandle);
+                    i++;
+                }
+                ImGui::TreePop();
+            }
+            ImGui::TreePop();
+        }
+    }
+    ImGui::End();
 }
 
 bool TreeVisualizer::InspectRootNode(
         Skeleton<RootSkeletonGrowthData, RootBranchGrowthData, RootInternodeGrowthData> &rootSkeleton,
         NodeHandle rootNodeHandle) {
-    return false;
+    bool changed = false;
+    if (ImGui::Begin("Root Node Inspector")) {
+        const auto& internode = rootSkeleton.RefNode(rootNodeHandle);
+        if (ImGui::TreeNode("Root node info")) {
+            ImGui::Text("Thickness: %.3f", internode.m_info.m_thickness);
+            ImGui::Text("Length: %.3f", internode.m_info.m_length);
+            ImGui::InputFloat3("Position", (float*)&internode.m_info.m_globalPosition.x, "%.3f",
+                ImGuiInputTextFlags_ReadOnly);
+            auto globalRotationAngle = glm::eulerAngles(internode.m_info.m_globalRotation);
+            ImGui::InputFloat3("Global rotation", (float*)&globalRotationAngle.x, "%.3f",
+                ImGuiInputTextFlags_ReadOnly);
+            auto localRotationAngle = glm::eulerAngles(internode.m_info.m_localRotation);
+            ImGui::InputFloat3("Local rotation", (float*)&localRotationAngle.x, "%.3f",
+                ImGuiInputTextFlags_ReadOnly);
+            auto& internodeData = internode.m_data;
+            
+            ImGui::InputFloat("Root distance", (float*)&internodeData.m_rootDistance, 1, 100, "%.3f",
+                ImGuiInputTextFlags_ReadOnly);
+            
+            if (ImGui::DragFloat("Nitrate", (float*)&internodeData.m_nitrateLevels)) {
+                changed = true;
+            }
+            if (ImGui::DragFloat("Auxin", (float*)&internodeData.m_auxin)) {
+                changed = true;
+            }
+            if (ImGui::DragFloat("Auxin target", (float*)&internodeData.m_auxinTarget)) {
+                changed = true;
+            }
+            ImGui::TreePop();
+        }
+        if (ImGui::TreeNodeEx("Flow info", ImGuiTreeNodeFlags_DefaultOpen)) {
+            const auto& flow = rootSkeleton.PeekFlow(internode.GetFlowHandle());
+            ImGui::Text("Child flow size: %d", flow.RefChildHandles().size());
+            ImGui::Text("Root node size: %d", flow.RefNodeHandles().size());
+            if (ImGui::TreeNode("Root nodes")) {
+                int i = 0;
+                for (const auto& chainedInternodeHandle : flow.RefNodeHandles()) {
+                    ImGui::Text("No.%d: Handle: %d", i, chainedInternodeHandle);
+                    i++;
+                }
+                ImGui::TreePop();
+            }
+            ImGui::TreePop();
+        }
+    }
+    ImGui::End();
+    return changed;
 }
 
 

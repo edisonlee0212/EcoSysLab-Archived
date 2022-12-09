@@ -38,17 +38,20 @@ endif ()
 # 3rd Party libraries
 # ------------------------------------------------------------------
 set(UNIENGINE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../UniEngine)
-set(RAYTRACERFACILITY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../RayTracerFacility)
+if(BUILD_RAY_TRACER_FACILITY) 
+    set(RAYTRACERFACILITY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../RayTracerFacility)
+endif()
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 if (NOT TARGET uniengine)
     add_subdirectory(${UNIENGINE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/UniEngine)
 endif ()
-
-if (NOT TARGET RayTracerFacility)
-    add_subdirectory(${RAYTRACERFACILITY_DIR} ${CMAKE_CURRENT_BINARY_DIR}/RayTracerFacility)
-endif ()
+if(BUILD_RAY_TRACER_FACILITY) 
+    if (NOT TARGET RayTracerFacility)
+        add_subdirectory(${RAYTRACERFACILITY_DIR} ${CMAKE_CURRENT_BINARY_DIR}/RayTracerFacility)
+    endif ()
+endif()
 
 include_directories(${UNIENGINE_INCLUDES})
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
@@ -127,10 +130,6 @@ target_precompile_headers(EcoSysLabApp
         PRIVATE
         ${ECOSYSLAB_PCH_LOCAL}
         )
-target_include_directories(EcoSysLabApp
-        PUBLIC
-        ${SCRIPTS_INCLUDES_LOCAL}
-        )
 if (BUILD_RAY_TRACER_FACILITY)
     target_link_libraries(EcoSysLabApp
             RayTracerFacility
@@ -144,7 +143,6 @@ if (BUILD_RAY_TRACER_FACILITY)
 else ()
     target_link_libraries(EcoSysLabApp
             EcoSysLab
-            Scripts
             )
     target_compile_definitions(EcoSysLabApp
             PRIVATE
