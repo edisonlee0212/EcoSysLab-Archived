@@ -8,11 +8,11 @@
 using namespace EcoSysLab;
 
 void TreeVisualizationLayer::OnCreate() {
-    if (m_randomColors.empty()) {
-        for (int i = 0; i < 10000; i++) {
-            m_randomColors.emplace_back(glm::linearRand(glm::vec3(0.0f), glm::vec3(1.0f)));
-        }
-    }
+	if (m_randomColors.empty()) {
+		for (int i = 0; i < 10000; i++) {
+			m_randomColors.emplace_back(glm::linearRand(glm::vec3(0.0f), glm::vec3(1.0f)));
+		}
+	}
 }
 
 void TreeVisualizationLayer::OnDestroy() {
@@ -20,340 +20,334 @@ void TreeVisualizationLayer::OnDestroy() {
 }
 
 void TreeVisualizationLayer::LateUpdate() {
-    auto scene = GetScene();
-    auto editorLayer = Application::GetLayer<EditorLayer>();
-    auto selectedEntity = editorLayer->GetSelectedEntity();
-    if (selectedEntity != m_selectedTree) {
-        m_needFlowUpdate = true;
-        m_selectedTree = selectedEntity;
-        if(scene->IsEntityValid(m_selectedTree)) m_treeVisualizer.Reset(scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock()->m_treeModel);
-    }
-    const std::vector<Entity> *treeEntities =
-            scene->UnsafeGetPrivateComponentOwnersList<Tree>();
-    if (treeEntities && !treeEntities->empty()) {
-        //Tree selection
-        if (!m_lockTreeSelection && editorLayer->GetLockEntitySelection() && Inputs::GetMouseInternal(GLFW_MOUSE_BUTTON_LEFT,
-                                                                               Windows::GetWindow())) {
-            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{0, 0});
-            if (ImGui::Begin("Scene")) {
-                // Using a Child allow to fill all the space of the window.
-                // It also allows customization
-                if (ImGui::BeginChild("SceneCameraRenderer", ImVec2(0, 0), false, ImGuiWindowFlags_MenuBar)) {
-                    auto mousePosition = glm::vec2(FLT_MAX, FLT_MIN);
-                    if (editorLayer->SceneCameraWindowFocused()) {
+	auto scene = GetScene();
+	auto editorLayer = Application::GetLayer<EditorLayer>();
+	auto selectedEntity = editorLayer->GetSelectedEntity();
+	if (selectedEntity != m_selectedTree) {
+		m_needFlowUpdate = true;
+		m_selectedTree = selectedEntity;
+		if (scene->IsEntityValid(m_selectedTree)) m_treeVisualizer.Reset(scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock()->m_treeModel);
+	}
+	const std::vector<Entity>* treeEntities =
+		scene->UnsafeGetPrivateComponentOwnersList<Tree>();
+	if (treeEntities && !treeEntities->empty()) {
+		//Tree selection
+		if (editorLayer->SceneCameraWindowFocused() && !m_lockTreeSelection
+			&& editorLayer->GetLockEntitySelection() && Inputs::GetMouseInternal(GLFW_MOUSE_BUTTON_LEFT, Windows::GetWindow())) {
+			glm::vec2 mousePosition = editorLayer->GetMouseScreenPosition();
 #pragma region Ray selection
-                        std::mutex writeMutex;
-                        float minDistance = FLT_MAX;
-                        GlobalTransform cameraLtw;
-                        cameraLtw.m_value =
-                                glm::translate(
-                                        editorLayer->m_sceneCameraPosition) *
-                                glm::mat4_cast(
-                                        editorLayer->m_sceneCameraRotation);
-                        auto mp = ImGui::GetMousePos();
-                        auto wp = ImGui::GetWindowPos();
-                        mousePosition = glm::vec2(mp.x - wp.x, mp.y - wp.y - 20);
-                        const Ray cameraRay = editorLayer->m_sceneCamera->ScreenPointToRay(
-                                cameraLtw, mousePosition);
-                        std::vector<std::shared_future<void>> results;
-                        bool detected = false;
-                        Entity currentFocusingTree;
-                        Jobs::ParallelFor(treeEntities->size(), [&](unsigned i) {
-                            const auto treeEntity = treeEntities->at(i);
-                            auto globalTransform = scene->GetDataComponent<GlobalTransform>(treeEntity);
-                            auto skeleton = scene->GetOrSetPrivateComponent<Tree>(
-                                    treeEntity).lock()->m_treeModel.RefBranchSkeleton();
-                            Bound bound;
-                            bound.m_min = skeleton.m_min;
-                            bound.m_max = skeleton.m_max;
-                            if (!cameraRay.Intersect(globalTransform.m_value, bound)) return;
-                            auto distance = glm::distance(globalTransform.GetPosition(),
-                                                          glm::vec3(cameraLtw.m_value[3]));
-                            std::lock_guard<std::mutex> lock(writeMutex);
-                            if (distance < minDistance) {
-                                minDistance = distance;
-                                currentFocusingTree = treeEntity;
-                                detected = true;
-                            }
-                        }, results);
-                        for (auto &i: results) i.wait();
-                        if (detected && currentFocusingTree != m_selectedTree && scene->IsEntityValid(currentFocusingTree)) {
-                            editorLayer->SetSelectedEntity(currentFocusingTree);
-                            m_selectedTree = currentFocusingTree;
-                            if(scene->IsEntityValid(m_selectedTree)) m_treeVisualizer.Reset(scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock()->m_treeModel);
-                            m_needFlowUpdate = true;
-                        }
+			std::mutex writeMutex;
+			float minDistance = FLT_MAX;
+			GlobalTransform cameraLtw;
+			cameraLtw.m_value =
+				glm::translate(
+					editorLayer->m_sceneCameraPosition) *
+				glm::mat4_cast(
+					editorLayer->m_sceneCameraRotation);
+			const Ray cameraRay = editorLayer->m_sceneCamera->ScreenPointToRay(
+				cameraLtw, mousePosition);
+			std::vector<std::shared_future<void>> results;
+			bool detected = false;
+			Entity currentFocusingTree;
+			Jobs::ParallelFor(treeEntities->size(), [&](unsigned i)
+				{
+					const auto treeEntity = treeEntities->at(i);
+			auto globalTransform = scene->GetDataComponent<GlobalTransform>(treeEntity);
+			auto tree = scene->GetOrSetPrivateComponent<Tree>(
+				treeEntity).lock();
+			auto branchSkeleton = tree->m_treeModel.RefBranchSkeleton();
+			auto rootSkeleton = tree->m_treeModel.RefBranchSkeleton();
+			Bound branchSkeletonBound;
+			branchSkeletonBound.m_min = branchSkeleton.m_min;
+			branchSkeletonBound.m_max = branchSkeleton.m_max;
+			Bound rootSkeletonBound;
+			rootSkeletonBound.m_min = rootSkeleton.m_min;
+			rootSkeletonBound.m_max = rootSkeleton.m_max;
+			if (!cameraRay.Intersect(globalTransform.m_value, branchSkeletonBound) 
+				&& !cameraRay.Intersect(globalTransform.m_value, rootSkeletonBound)) return;
+			auto distance = glm::distance(globalTransform.GetPosition(),
+				glm::vec3(cameraLtw.m_value[3]));
+			std::lock_guard lock(writeMutex);
+			if (distance < minDistance) {
+				minDistance = distance;
+				currentFocusingTree = treeEntity;
+				detected = true;
+			}
+				}, results);
+			for (auto& i : results) i.wait();
+			if (detected && currentFocusingTree != m_selectedTree && scene->IsEntityValid(currentFocusingTree)) {
+				editorLayer->SetSelectedEntity(currentFocusingTree);
+				m_selectedTree = currentFocusingTree;
+				if (scene->IsEntityValid(m_selectedTree)) m_treeVisualizer.Reset(scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock()->m_treeModel);
+				m_needFlowUpdate = true;
+			}
 #pragma endregion
-                    }
-                }
-                ImGui::EndChild();
-            }
-            ImGui::End();
-            ImGui::PopStyleVar();
-        }
 
-        if (m_visualization) {
-            if (m_versions.size() != treeEntities->size()) {
-                m_branchMatrices.clear();
-                m_branchColors.clear();
-                m_boundingBoxColors.clear();
-                m_boundingBoxMatrices.clear();
-                m_rootFlowMatrices.clear();
-                m_rootFlowColors.clear();
+		}
 
-                m_internodeSize = 0;
-                m_totalTime = 0.0f;
-                m_versions.clear();
-                for (int i = 0; i < treeEntities->size(); i++) {
-                    m_versions.emplace_back(-1);
-                }
-                m_needFlowUpdate = true;
-            }
-            int totalInternodeSize = 0;
-            int totalFlowSize = 0;
-            for (int i = 0; i < treeEntities->size(); i++) {
-                auto treeEntity = treeEntities->at(i);
-                auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
-                auto &treeModel = tree->m_treeModel;
-                totalInternodeSize += treeModel.RefBranchSkeleton().RefSortedNodeList().size();
-                totalFlowSize += treeModel.RefBranchSkeleton().RefSortedFlowList().size();
-                if (m_selectedTree == treeEntity) continue;
-                if (m_versions[i] != treeModel.RefBranchSkeleton().GetVersion()) {
-                    m_versions[i] = treeModel.RefBranchSkeleton().GetVersion();
-                    m_needFlowUpdate = true;
-                }
-            }
-            m_internodeSize = totalInternodeSize;
-            m_branchSize = totalFlowSize;
-            if (m_needFlowUpdate) {
-                m_needFlowUpdate = false;
-                m_boundingBoxMatrices.clear();
-                m_boundingBoxColors.clear();
-                int branchStartIndex = 0;
-                int rootFlowStartIndex = 0;
-                std::map<float, Entity> sortedModels;
-                for (int listIndex = 0; listIndex < treeEntities->size(); listIndex++) {
-                    auto treeEntity = treeEntities->at(listIndex);
-                    if (m_selectedTree == treeEntity) continue;
+		if (m_visualization) {
+			if (m_versions.size() != treeEntities->size()) {
+				m_branchMatrices.clear();
+				m_branchColors.clear();
+				m_boundingBoxColors.clear();
+				m_boundingBoxMatrices.clear();
+				m_rootFlowMatrices.clear();
+				m_rootFlowColors.clear();
 
-                    auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
-                    auto &treeModel = tree->m_treeModel;
-                    const auto &skeleton = treeModel.RefBranchSkeleton();
-                    auto entityGlobalTransform = scene->GetDataComponent<GlobalTransform>(treeEntity);
-                    m_boundingBoxMatrices.emplace_back();
-                    m_boundingBoxMatrices.back() = entityGlobalTransform.m_value *
-                                                   (glm::translate(
-                                                           (skeleton.m_max + skeleton.m_min) / 2.0f) *
-                                                    glm::scale((skeleton.m_max - skeleton.m_min) / 2.0f));
-                    m_boundingBoxColors.emplace_back();
-                    m_boundingBoxColors.back() = glm::vec4(m_randomColors[listIndex], 0.05f);
-                    auto distance = glm::distance(editorLayer->m_sceneCameraPosition,
-                                                  glm::vec3(entityGlobalTransform.GetPosition()));
-                    sortedModels[distance] = treeEntity;
-                }
-                m_branchMatrices.clear();
-                m_branchColors.clear();
-                m_rootFlowMatrices.clear();
-                m_rootFlowColors.clear();
-                for (const auto &modelPair: sortedModels) {
-                    auto tree = scene->GetOrSetPrivateComponent<Tree>(modelPair.second).lock();
-                    auto &treeModel = tree->m_treeModel;
-                    const auto &branchList = treeModel.RefBranchSkeleton().RefSortedFlowList();
-                    const auto& rootFlowList = treeModel.RefRootSkeleton().RefSortedFlowList();
-                    if (branchStartIndex + branchList.size() > 50000000) break;
-                    if (rootFlowStartIndex + rootFlowList.size() > 50000000) break;
-                    auto entityGlobalTransform = scene->GetDataComponent<GlobalTransform>(modelPair.second);
-                    {
-                        std::vector<std::shared_future<void>> results;
-                        m_branchMatrices.resize(branchStartIndex + branchList.size());
-                        m_branchColors.resize(branchStartIndex + branchList.size());
-                        Jobs::ParallelFor(branchList.size(), [&](unsigned i) {
-                            const auto& skeleton = treeModel.RefBranchSkeleton();
-                        auto& flow = skeleton.PeekFlow(branchList[i]);
-                        glm::vec3 translation = (entityGlobalTransform.m_value *
-                            glm::translate(flow.m_info.m_globalStartPosition))[3];
-                        const auto direction = glm::normalize(
-                            flow.m_info.m_globalEndPosition - flow.m_info.m_globalStartPosition);
-                        const glm::vec3 position2 = (entityGlobalTransform.m_value *
-                            glm::translate(flow.m_info.m_globalEndPosition))[3];
-                        auto rotation = glm::quatLookAt(
-                            direction, glm::vec3(direction.y, direction.z, direction.x));
-                        rotation *= glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));
-                        const glm::mat4 rotationTransform = glm::mat4_cast(rotation);
-                        m_branchMatrices[i + branchStartIndex] =
-                            glm::translate((translation + position2) / 2.0f) *
-                            rotationTransform *
-                            glm::scale(glm::vec3(
-                                flow.m_info.m_startThickness,
-                                glm::distance(translation, position2) / 2.0f,
-                                flow.m_info.m_startThickness));
-                        m_branchColors[i + branchStartIndex] = glm::vec4(m_randomColors[flow.m_data.m_order], m_selectedTree.GetIndex() != 0 ? 0.05f : 1.0f);
-                            }, results);
-                        for (auto& i : results) i.wait();
-                        branchStartIndex += branchList.size();
-                    }
-                    {
-                        std::vector<std::shared_future<void>> results;
-                        m_rootFlowMatrices.resize(rootFlowStartIndex + rootFlowList.size());
-                        m_rootFlowColors.resize(rootFlowStartIndex + rootFlowList.size());
-                        Jobs::ParallelFor(rootFlowList.size(), [&](unsigned i) {
-                            const auto& skeleton = treeModel.RefRootSkeleton();
-                        auto& flow = skeleton.PeekFlow(rootFlowList[i]);
-                        glm::vec3 translation = (entityGlobalTransform.m_value *
-                            glm::translate(flow.m_info.m_globalStartPosition))[3];
-                        const auto direction = glm::normalize(
-                            flow.m_info.m_globalEndPosition - flow.m_info.m_globalStartPosition);
-                        const glm::vec3 position2 = (entityGlobalTransform.m_value *
-                            glm::translate(flow.m_info.m_globalEndPosition))[3];
-                        auto rotation = glm::quatLookAt(
-                            direction, glm::vec3(direction.y, direction.z, direction.x));
-                        rotation *= glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));
-                        const glm::mat4 rotationTransform = glm::mat4_cast(rotation);
-                        m_rootFlowMatrices[i + rootFlowStartIndex] =
-                            glm::translate((translation + position2) / 2.0f) *
-                            rotationTransform *
-                            glm::scale(glm::vec3(
-                                flow.m_info.m_startThickness,
-                                glm::distance(translation, position2) / 2.0f,
-                                flow.m_info.m_startThickness));
-                        m_rootFlowColors[i + rootFlowStartIndex] = glm::vec4(m_randomColors[flow.m_data.m_order], m_selectedTree.GetIndex() != 0 ? 0.05f : 1.0f);
-                            }, results);
-                        for (auto& i : results) i.wait();
-                        rootFlowStartIndex += rootFlowList.size();
-                    }
-                }
-            }
-            GizmoSettings gizmoSettings;
-            gizmoSettings.m_drawSettings.m_blending = true;
-            
-            if (m_displayBoundingBox && !m_boundingBoxMatrices.empty()) {
-                Gizmos::DrawGizmoMeshInstancedColored(
-                        DefaultResources::Primitives::Cube, editorLayer->m_sceneCamera,
-                        editorLayer->m_sceneCameraPosition,
-                        editorLayer->m_sceneCameraRotation,
-                        *reinterpret_cast<std::vector<glm::vec4> *>(&m_boundingBoxColors),
-                        *reinterpret_cast<std::vector<glm::mat4> *>(&m_boundingBoxMatrices),
-                        glm::mat4(1.0f), 1.0f, gizmoSettings);
-            }
-            if (m_displayRootFlows && !m_rootFlowMatrices.empty()) {
-                Gizmos::DrawGizmoMeshInstancedColored(
-                    DefaultResources::Primitives::Cube, editorLayer->m_sceneCamera,
-                    editorLayer->m_sceneCameraPosition,
-                    editorLayer->m_sceneCameraRotation,
-                    *reinterpret_cast<std::vector<glm::vec4> *>(&m_rootFlowColors),
-                    *reinterpret_cast<std::vector<glm::mat4> *>(&m_rootFlowMatrices),
-                    glm::mat4(1.0f), 1.0f, gizmoSettings);
-            }
+				m_internodeSize = 0;
+				m_totalTime = 0.0f;
+				m_versions.clear();
+				for (int i = 0; i < treeEntities->size(); i++) {
+					m_versions.emplace_back(-1);
+				}
+				m_needFlowUpdate = true;
+			}
+			int totalInternodeSize = 0;
+			int totalFlowSize = 0;
+			for (int i = 0; i < treeEntities->size(); i++) {
+				auto treeEntity = treeEntities->at(i);
+				auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
+				auto& treeModel = tree->m_treeModel;
+				totalInternodeSize += treeModel.RefBranchSkeleton().RefSortedNodeList().size();
+				totalFlowSize += treeModel.RefBranchSkeleton().RefSortedFlowList().size();
+				if (m_selectedTree == treeEntity) continue;
+				if (m_versions[i] != treeModel.RefBranchSkeleton().GetVersion()) {
+					m_versions[i] = treeModel.RefBranchSkeleton().GetVersion();
+					m_needFlowUpdate = true;
+				}
+			}
+			m_internodeSize = totalInternodeSize;
+			m_branchSize = totalFlowSize;
+			if (m_needFlowUpdate) {
+				m_needFlowUpdate = false;
+				m_boundingBoxMatrices.clear();
+				m_boundingBoxColors.clear();
+				int branchStartIndex = 0;
+				int rootFlowStartIndex = 0;
+				std::map<float, Entity> sortedModels;
+				for (int listIndex = 0; listIndex < treeEntities->size(); listIndex++) {
+					auto treeEntity = treeEntities->at(listIndex);
+					if (m_selectedTree == treeEntity) continue;
 
-            if (m_displayBranches && !m_branchMatrices.empty()) {
-                Gizmos::DrawGizmoMeshInstancedColored(
-                        DefaultResources::Primitives::Cube, editorLayer->m_sceneCamera,
-                        editorLayer->m_sceneCameraPosition,
-                        editorLayer->m_sceneCameraRotation,
-                        *reinterpret_cast<std::vector<glm::vec4> *>(&m_branchColors),
-                        *reinterpret_cast<std::vector<glm::mat4> *>(&m_branchMatrices),
-                        glm::mat4(1.0f), 1.0f, gizmoSettings);
-            }
-        }
+					auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
+					auto& treeModel = tree->m_treeModel;
+					const auto& skeleton = treeModel.RefBranchSkeleton();
+					auto entityGlobalTransform = scene->GetDataComponent<GlobalTransform>(treeEntity);
+					m_boundingBoxMatrices.emplace_back();
+					m_boundingBoxMatrices.back() = entityGlobalTransform.m_value *
+						(glm::translate(
+							(skeleton.m_max + skeleton.m_min) / 2.0f) *
+							glm::scale((skeleton.m_max - skeleton.m_min) / 2.0f));
+					m_boundingBoxColors.emplace_back();
+					m_boundingBoxColors.back() = glm::vec4(m_randomColors[listIndex], 0.05f);
+					auto distance = glm::distance(editorLayer->m_sceneCameraPosition,
+						glm::vec3(entityGlobalTransform.GetPosition()));
+					sortedModels[distance] = treeEntity;
+				}
+				m_branchMatrices.clear();
+				m_branchColors.clear();
+				m_rootFlowMatrices.clear();
+				m_rootFlowColors.clear();
+				for (const auto& modelPair : sortedModels) {
+					auto tree = scene->GetOrSetPrivateComponent<Tree>(modelPair.second).lock();
+					auto& treeModel = tree->m_treeModel;
+					const auto& branchList = treeModel.RefBranchSkeleton().RefSortedFlowList();
+					const auto& rootFlowList = treeModel.RefRootSkeleton().RefSortedFlowList();
+					if (branchStartIndex + branchList.size() > 50000000) break;
+					if (rootFlowStartIndex + rootFlowList.size() > 50000000) break;
+					auto entityGlobalTransform = scene->GetDataComponent<GlobalTransform>(modelPair.second);
+					{
+						std::vector<std::shared_future<void>> results;
+						m_branchMatrices.resize(branchStartIndex + branchList.size());
+						m_branchColors.resize(branchStartIndex + branchList.size());
+						Jobs::ParallelFor(branchList.size(), [&](unsigned i) {
+							const auto& skeleton = treeModel.RefBranchSkeleton();
+						auto& flow = skeleton.PeekFlow(branchList[i]);
+						glm::vec3 translation = (entityGlobalTransform.m_value *
+							glm::translate(flow.m_info.m_globalStartPosition))[3];
+						const auto direction = glm::normalize(
+							flow.m_info.m_globalEndPosition - flow.m_info.m_globalStartPosition);
+						const glm::vec3 position2 = (entityGlobalTransform.m_value *
+							glm::translate(flow.m_info.m_globalEndPosition))[3];
+						auto rotation = glm::quatLookAt(
+							direction, glm::vec3(direction.y, direction.z, direction.x));
+						rotation *= glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));
+						const glm::mat4 rotationTransform = glm::mat4_cast(rotation);
+						m_branchMatrices[i + branchStartIndex] =
+							glm::translate((translation + position2) / 2.0f) *
+							rotationTransform *
+							glm::scale(glm::vec3(
+								flow.m_info.m_startThickness,
+								glm::distance(translation, position2) / 2.0f,
+								flow.m_info.m_startThickness));
+						m_branchColors[i + branchStartIndex] = glm::vec4(m_randomColors[flow.m_data.m_order], m_selectedTree.GetIndex() != 0 ? 0.05f : 1.0f);
+							}, results);
+						for (auto& i : results) i.wait();
+						branchStartIndex += branchList.size();
+					}
+					{
+						std::vector<std::shared_future<void>> results;
+						m_rootFlowMatrices.resize(rootFlowStartIndex + rootFlowList.size());
+						m_rootFlowColors.resize(rootFlowStartIndex + rootFlowList.size());
+						Jobs::ParallelFor(rootFlowList.size(),
+							[&](unsigned i) {
+								const auto& skeleton = treeModel.RefRootSkeleton();
+						auto& flow = skeleton.PeekFlow(rootFlowList[i]);
+						glm::vec3 translation = (entityGlobalTransform.m_value *
+							glm::translate(flow.m_info.m_globalStartPosition))[3];
+						const auto direction = glm::normalize(
+							flow.m_info.m_globalEndPosition - flow.m_info.m_globalStartPosition);
+						const glm::vec3 position2 = (entityGlobalTransform.m_value *
+							glm::translate(flow.m_info.m_globalEndPosition))[3];
+						auto rotation = glm::quatLookAt(
+							direction, glm::vec3(direction.y, direction.z, direction.x));
+						rotation *= glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));
+						const glm::mat4 rotationTransform = glm::mat4_cast(rotation);
+						m_rootFlowMatrices[i + rootFlowStartIndex] =
+							glm::translate((translation + position2) / 2.0f) *
+							rotationTransform *
+							glm::scale(glm::vec3(
+								flow.m_info.m_startThickness,
+								glm::distance(translation, position2) / 2.0f,
+								flow.m_info.m_startThickness));
+						m_rootFlowColors[i + rootFlowStartIndex] = glm::vec4(m_randomColors[flow.m_data.m_order], m_selectedTree.GetIndex() != 0 ? 0.05f : 1.0f);
+							}, results);
+						for (auto& i : results) i.wait();
+						rootFlowStartIndex += rootFlowList.size();
+					}
+				}
+			}
+			GizmoSettings gizmoSettings;
+			gizmoSettings.m_drawSettings.m_blending = true;
 
-    }
+			if (m_displayBoundingBox && !m_boundingBoxMatrices.empty()) {
+				Gizmos::DrawGizmoMeshInstancedColored(
+					DefaultResources::Primitives::Cube, editorLayer->m_sceneCamera,
+					editorLayer->m_sceneCameraPosition,
+					editorLayer->m_sceneCameraRotation,
+					*reinterpret_cast<std::vector<glm::vec4> *>(&m_boundingBoxColors),
+					*reinterpret_cast<std::vector<glm::mat4> *>(&m_boundingBoxMatrices),
+					glm::mat4(1.0f), 1.0f, gizmoSettings);
+			}
+			if (m_displayRootFlows && !m_rootFlowMatrices.empty()) {
+				Gizmos::DrawGizmoMeshInstancedColored(
+					DefaultResources::Primitives::Cube, editorLayer->m_sceneCamera,
+					editorLayer->m_sceneCameraPosition,
+					editorLayer->m_sceneCameraRotation,
+					*reinterpret_cast<std::vector<glm::vec4> *>(&m_rootFlowColors),
+					*reinterpret_cast<std::vector<glm::mat4> *>(&m_rootFlowMatrices),
+					glm::mat4(1.0f), 1.0f, gizmoSettings);
+			}
+
+			if (m_displayBranches && !m_branchMatrices.empty()) {
+				Gizmos::DrawGizmoMeshInstancedColored(
+					DefaultResources::Primitives::Cube, editorLayer->m_sceneCamera,
+					editorLayer->m_sceneCameraPosition,
+					editorLayer->m_sceneCameraRotation,
+					*reinterpret_cast<std::vector<glm::vec4> *>(&m_branchColors),
+					*reinterpret_cast<std::vector<glm::mat4> *>(&m_branchMatrices),
+					glm::mat4(1.0f), 1.0f, gizmoSettings);
+			}
+		}
+
+	}
 }
 
 void TreeVisualizationLayer::OnInspect() {
-    if (ImGui::Begin("Tree Visualization Layer")) {
-        auto scene = GetScene();
-        const std::vector<Entity> *treeEntities =
-                scene->UnsafeGetPrivateComponentOwnersList<Tree>();
-        ImGui::Checkbox("Lock tree selection", &m_lockTreeSelection);
-        ImGui::Checkbox("Visualization", &m_visualization);
-        if (m_visualization) {
-            ImGui::Checkbox("Display Branches", &m_displayBranches);
-            ImGui::Checkbox("Display Root Flows", &m_displayRootFlows);
-            ImGui::Checkbox("Display Bounding Box", &m_displayBoundingBox);
-        }
-        if (treeEntities && !treeEntities->empty()) {
-            ImGui::Checkbox("Auto grow", &m_autoGrow);
-            if(!m_autoGrow) {
-                bool changed = false;
-                if (ImGui::Button("Grow all")) {
-                    GrowAllTrees();
-                    changed = true;
-                }
-                static int iterations = 5;
-                ImGui::DragInt("Iterations", &iterations, 1, 1, 100);
-                if (ImGui::Button(("Grow all " + std::to_string(iterations) + " iterations").c_str())) {
-                    for (int i = 0; i < iterations; i++) GrowAllTrees();
-                    changed = true;
-                }
-                if(changed){
-                    if(scene->IsEntityValid(m_selectedTree)) {
-                        m_treeVisualizer.m_iteration = scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock()->m_treeModel.CurrentIteration();
-                        m_treeVisualizer.m_needUpdate = true;
-                    }
-                }
-            }
-            ImGui::Text("Growth time: %.4f", m_lastUsedTime);
-            ImGui::Text("Total time: %.4f", m_totalTime);
-            ImGui::Text("Tree count: %d", treeEntities->size());
-            ImGui::Text("Total Internode size: %d", m_internodeSize);
-            ImGui::Text("Total Branch size: %d", m_branchSize);
-            ImGui::Text("Total Root node size: %d", m_rootNodeSize);
-            ImGui::Text("Total Root Flow size: %d", m_rootFlowSize);
+	if (ImGui::Begin("Tree Visualization Layer")) {
+		auto scene = GetScene();
+		const std::vector<Entity>* treeEntities =
+			scene->UnsafeGetPrivateComponentOwnersList<Tree>();
+		ImGui::Checkbox("Lock tree selection", &m_lockTreeSelection);
+		ImGui::Checkbox("Visualization", &m_visualization);
+		if (m_visualization) {
+			ImGui::Checkbox("Display Branches", &m_displayBranches);
+			ImGui::Checkbox("Display Root Flows", &m_displayRootFlows);
+			ImGui::Checkbox("Display Bounding Box", &m_displayBoundingBox);
+		}
+		if (treeEntities && !treeEntities->empty()) {
+			ImGui::Checkbox("Auto grow", &m_autoGrow);
+			if (!m_autoGrow) {
+				bool changed = false;
+				if (ImGui::Button("Grow all")) {
+					GrowAllTrees();
+					changed = true;
+				}
+				static int iterations = 5;
+				ImGui::DragInt("Iterations", &iterations, 1, 1, 100);
+				if (ImGui::Button(("Grow all " + std::to_string(iterations) + " iterations").c_str())) {
+					for (int i = 0; i < iterations; i++) GrowAllTrees();
+					changed = true;
+				}
+				if (changed) {
+					if (scene->IsEntityValid(m_selectedTree)) {
+						m_treeVisualizer.m_iteration = scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock()->m_treeModel.CurrentIteration();
+						m_treeVisualizer.m_needUpdate = true;
+					}
+				}
+			}
+			ImGui::Text("Growth time: %.4f", m_lastUsedTime);
+			ImGui::Text("Total time: %.4f", m_totalTime);
+			ImGui::Text("Tree count: %d", treeEntities->size());
+			ImGui::Text("Total Internode size: %d", m_internodeSize);
+			ImGui::Text("Total Branch size: %d", m_branchSize);
+			ImGui::Text("Total Root node size: %d", m_rootNodeSize);
+			ImGui::Text("Total Root Flow size: %d", m_rootFlowSize);
 
-            if(ImGui::TreeNode("Mesh generation")) {
-                m_meshGeneratorSettings.OnInspect();
-                if (ImGui::Button("Generate Meshes")) {
-                    GenerateMeshes(m_meshGeneratorSettings);
-                }
-                ImGui::TreePop();
-            }
-        }
+			if (ImGui::TreeNode("Mesh generation")) {
+				m_meshGeneratorSettings.OnInspect();
+				if (ImGui::Button("Generate Meshes")) {
+					GenerateMeshes(m_meshGeneratorSettings);
+				}
+				ImGui::TreePop();
+			}
+		}
 
-        if(m_visualization && scene->IsEntityValid(m_selectedTree)) {
-            m_treeVisualizer.OnInspect(
-                    scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock()->m_treeModel, scene->GetDataComponent<GlobalTransform>(m_selectedTree));
-        }
-    }
-    ImGui::End();
+		if (m_visualization && scene->IsEntityValid(m_selectedTree)) {
+			m_treeVisualizer.OnInspect(
+				scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock()->m_treeModel, scene->GetDataComponent<GlobalTransform>(m_selectedTree));
+		}
+	}
+	ImGui::End();
 }
 
 void TreeVisualizationLayer::FixedUpdate() {
-    if(m_autoGrow){
-        GrowAllTrees();
-    }
+	if (m_autoGrow) {
+		GrowAllTrees();
+	}
 }
 
 void TreeVisualizationLayer::GrowAllTrees() {
-    auto scene = GetScene();
-    const std::vector<Entity> *treeEntities =
-            scene->UnsafeGetPrivateComponentOwnersList<Tree>();
-    if (treeEntities && !treeEntities->empty()) {
-        float time = Application::Time().CurrentTime();
-        std::vector<std::shared_future<void>> results;
-        Jobs::ParallelFor(treeEntities->size(), [&](unsigned i) {
-            auto treeEntity = treeEntities->at(i);
-            auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
-            tree->TryGrow();
-        }, results);
-        for (auto &i: results) i.wait();
-        m_lastUsedTime = Application::Time().CurrentTime() - time;
-        m_totalTime += m_lastUsedTime;
+	auto scene = GetScene();
+	const std::vector<Entity>* treeEntities =
+		scene->UnsafeGetPrivateComponentOwnersList<Tree>();
+	if (treeEntities && !treeEntities->empty()) {
+		float time = Application::Time().CurrentTime();
+		std::vector<std::shared_future<void>> results;
+		Jobs::ParallelFor(treeEntities->size(), [&](unsigned i) {
+			auto treeEntity = treeEntities->at(i);
+		auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
+		tree->TryGrow();
+			}, results);
+		for (auto& i : results) i.wait();
+		m_lastUsedTime = Application::Time().CurrentTime() - time;
+		m_totalTime += m_lastUsedTime;
 
-        if(scene->IsEntityValid(m_selectedTree)){
-            m_treeVisualizer.Reset(scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock()->m_treeModel);
-        }
-    }
+		if (scene->IsEntityValid(m_selectedTree)) {
+			m_treeVisualizer.Reset(scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock()->m_treeModel);
+		}
+	}
 }
 
 void TreeVisualizationLayer::GenerateMeshes(const MeshGeneratorSettings& meshGeneratorSettings) {
-    auto scene = GetScene();
-    const std::vector<Entity> *treeEntities =
-            scene->UnsafeGetPrivateComponentOwnersList<Tree>();
-    if (treeEntities && !treeEntities->empty()) {
-        auto copiedEntities = *treeEntities;
-        for(auto treeEntity : copiedEntities){
-            auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
-            tree->GenerateMesh(meshGeneratorSettings);
-        }
-    }
+	auto scene = GetScene();
+	const std::vector<Entity>* treeEntities =
+		scene->UnsafeGetPrivateComponentOwnersList<Tree>();
+	if (treeEntities && !treeEntities->empty()) {
+		auto copiedEntities = *treeEntities;
+		for (auto treeEntity : copiedEntities) {
+			auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
+			tree->GenerateMesh(meshGeneratorSettings);
+		}
+	}
 }

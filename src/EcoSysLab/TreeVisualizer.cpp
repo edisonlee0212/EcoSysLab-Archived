@@ -231,8 +231,8 @@ TreeVisualizer::OnInspect(
                 if (m_iteration == treeModel.CurrentIteration()) {
                     if (Inputs::GetMouseInternal(GLFW_MOUSE_BUTTON_LEFT, Windows::GetWindow())) {
                         glm::vec2 mousePosition = editorLayer->GetMouseScreenPosition();
-                        const float halfX = static_cast<float>(editorLayer->m_sceneCamera->GetResolution().x) / 2.0f;
-                        const float halfY = static_cast<float>(editorLayer->m_sceneCamera->GetResolution().y) / 2.0f;
+                        const float halfX = editorLayer->m_sceneCamera->GetResolution().x / 2.0f;
+                        const float halfY = editorLayer->m_sceneCamera->GetResolution().y / 2.0f;
                         mousePosition = {-1.0f * (mousePosition.x - halfX) / halfX,
                                          -1.0f * (mousePosition.y - halfY) / halfY};
                         if (mousePosition.x > -1.0f && mousePosition.x < 1.0f && mousePosition.y > -1.0f &&
@@ -639,6 +639,14 @@ void TreeVisualizer::PeekRootNode(
             ImGui::InputFloat("Auxin target", (float*)&internodeData.m_auxinTarget, 1, 100,
                 "%.3f",
                 ImGuiInputTextFlags_ReadOnly);
+
+            ImGui::InputFloat("Horizontal tropism", (float*)&internodeData.m_horizontalTropism, 1, 100,
+                "%.3f",
+                ImGuiInputTextFlags_ReadOnly);
+
+            ImGui::InputFloat("Vertical tropism", (float*)&internodeData.m_verticalTropism, 1, 100,
+                "%.3f",
+                ImGuiInputTextFlags_ReadOnly);
             ImGui::TreePop();
         }
         if (ImGui::TreeNodeEx("Flow info", ImGuiTreeNodeFlags_DefaultOpen)) {
@@ -680,6 +688,9 @@ bool TreeVisualizer::InspectRootNode(
             
             ImGui::InputFloat("Root distance", (float*)&internodeData.m_rootDistance, 1, 100, "%.3f",
                 ImGuiInputTextFlags_ReadOnly);
+
+            ImGui::InputInt("Root unit distance", (int*)&internodeData.m_rootUnitDistance, 1, 100,
+                ImGuiInputTextFlags_ReadOnly);
             
             if (ImGui::DragFloat("Nitrate", (float*)&internodeData.m_nitrateLevels)) {
                 changed = true;
@@ -690,6 +701,13 @@ bool TreeVisualizer::InspectRootNode(
             if (ImGui::DragFloat("Auxin target", (float*)&internodeData.m_auxinTarget)) {
                 changed = true;
             }
+            ImGui::InputFloat("Horizontal tropism", (float*)&internodeData.m_horizontalTropism, 1, 100,
+                "%.3f",
+                ImGuiInputTextFlags_ReadOnly);
+
+            ImGui::InputFloat("Vertical tropism", (float*)&internodeData.m_verticalTropism, 1, 100,
+                "%.3f",
+                ImGuiInputTextFlags_ReadOnly);
             ImGui::TreePop();
         }
         if (ImGui::TreeNodeEx("Flow info", ImGuiTreeNodeFlags_DefaultOpen)) {

@@ -83,7 +83,13 @@ namespace EcoSysLab {
 	};
 
 	struct RootInternodeGrowthData {
+		float m_maxDistanceToAnyBranchEnd = 0;
+		float m_descendentTotalBiomass = 0;
+		float m_biomass = 0;
+		float m_extraMass = 0.0f;
+
 		float m_rootDistance = 0;
+		int m_rootUnitDistance = 0;
 		int m_order = 0;
 		
 		float m_nitrateLevels;
@@ -107,6 +113,7 @@ namespace EcoSysLab {
 		float m_growthRate = 0.5f;
 		float m_rootNodeLength;
 		glm::vec2 m_endNodeThicknessAndControl;
+		float m_thicknessLengthAccumulate = 0.001f;
 		/**
 		* The mean and variance of the angle between the direction of a lateral bud and its parent shoot.
 		*/
@@ -122,11 +129,13 @@ namespace EcoSysLab {
 
 		float m_auxinTransportLoss = 1.0f;
 
-		float m_tropismAdjustmentFactor = 0.3f;
+		float m_tropismSwitchingProbability = 0.3f;
+		float m_tropismSwitchingProbabilityDistanceFactor = 0.8f;
 		float m_tropismIntensity = 0.3f;
 
 		float m_baseBranchingProbability = 1.0f;
 		float m_branchingProbabilityChildrenDecrease = 0.8f;
+		float m_branchingProbabilityDistanceDecrease = 0.8f;
 		[[nodiscard]] float GetGrowthRate() const;
 
 		[[nodiscard]] float GetAuxinTransportLoss(const Node<RootInternodeGrowthData>& rootNode) const;
@@ -142,15 +151,19 @@ namespace EcoSysLab {
 		[[nodiscard]] float GetEndNodeThickness(const Node<RootInternodeGrowthData>& rootNode) const;
 
 		[[nodiscard]] float GetThicknessControlFactor(const Node<RootInternodeGrowthData>& rootNode) const;
+		[[nodiscard]] float GetThicknessAccumulateFactor(const Node<RootInternodeGrowthData>& rootNode) const;
 
 		[[nodiscard]] float GetBranchingProbability(const Node<RootInternodeGrowthData>& rootNode) const;
 
-		void SetTropisms(Node<RootInternodeGrowthData>& rootNode) const;
+		[[nodiscard]] float GetTropismIntensity(const Node<RootInternodeGrowthData>& rootNode) const;
+
+		void SetTropisms(Node<RootInternodeGrowthData>& oldNode, Node<RootInternodeGrowthData>& newNode) const;
 
 		RootGrowthParameters();
 	};
 
 	
+
 
 	class TreeGrowthParameters {
 	public:
@@ -281,6 +294,8 @@ namespace EcoSysLab {
 		inline bool GrowRootNode(SoilModel& soilModel, NodeHandle rootNodeHandle, const RootGrowthParameters& rootGrowthParameters);
 
 		inline void CalculateResourceRequirement(NodeHandle rootNodeHandle, const RootGrowthParameters& rootGrowthParameters);
+		inline void CalculateThickness(NodeHandle rootNodeHandle,
+			const RootGrowthParameters& rootGrowthParameters);
 #pragma endregion
 #pragma region Tree Growth
 
