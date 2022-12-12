@@ -7,6 +7,8 @@
 #include "EditorLayer.hpp"
 #include "Application.hpp"
 #include "BranchMeshGenerator.hpp"
+#include "Soil.hpp"
+#include "Climate.hpp"
 #include "TreeVisualizationLayer.hpp"
 
 using namespace EcoSysLab;
@@ -44,7 +46,7 @@ void Tree::OnInspect() {
 		}
 	}
 	if (modelChanged) {
-		auto treeVisualizationLayer = Application::GetLayer<TreeVisualizationLayer>();
+		const auto treeVisualizationLayer = Application::GetLayer<TreeVisualizationLayer>();
 		if (treeVisualizationLayer && treeVisualizationLayer->m_selectedTree == GetOwner()) {
 			treeVisualizationLayer->m_treeVisualizer.Reset(m_treeModel);
 		}
@@ -61,20 +63,36 @@ void Tree::OnDestroy() {
 }
 
 bool Tree::TryGrow() {
-	auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
+	const auto scene = GetScene();
+	const auto owner = GetOwner();
+	const auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
 	if (!treeDescriptor) return false;
+	std::shared_ptr<Soil> soil;
+	std::shared_ptr<Climate> climate;
+	if (!m_soil.Get<Soil>()) {
+		UNIENGINE_ERROR("No soil model!");
+		soil = scene->GetOrSetPrivateComponent<Soil>(owner).lock();
+	}else
+	{
+		soil = m_soil.Get<Soil>();
+	}
+	if (!m_climate.Get<Climate>()) {
+		UNIENGINE_ERROR("No climate model!");
+		climate = scene->GetOrSetPrivateComponent<Climate>(owner).lock();
+	}
+	else
+	{
+		climate = m_climate.Get<Climate>();
+	}
 	if (m_enableHistory) m_treeModel.Step();
-	static SoilModel soilModel;
-	static ClimateModel climateModel;
-
-	return m_treeModel.Grow(soilModel, climateModel,
+	return m_treeModel.Grow(soil->m_soilModel, climate->m_climateModel,
 		treeDescriptor->m_rootGrowthParameters, treeDescriptor->m_treeGrowthParameters);
 }
 
 void Tree::GenerateMesh(const MeshGeneratorSettings& meshGeneratorSettings) {
-	auto scene = GetScene();
-	auto self = GetOwner();
-	auto children = scene->GetChildren(self);
+	const auto scene = GetScene();
+	const auto self = GetOwner();
+	const auto children = scene->GetChildren(self);
 
 	Entity branchEntity, rootEntity, foliageEntity, fruitEntity;
 

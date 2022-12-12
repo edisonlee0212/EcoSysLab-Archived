@@ -25,6 +25,8 @@ namespace EcoSysLab {
 	class Tree : public IPrivateComponent {
 
 	public:
+		PrivateComponentRef m_soil;
+		PrivateComponentRef m_climate;
 		AssetRef m_treeDescriptor;
 		bool m_enableHistory = true;
 		TreeModel m_treeModel;

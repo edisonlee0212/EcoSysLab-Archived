@@ -3,6 +3,11 @@
 #include "ecosyslab_export.h"
 using namespace UniEngine;
 namespace EcoSysLab {
+	class SoilParameters {
+	public:
+
+	};
+
 	class SoilModel {
 	public:
 		[[nodiscard]] float GetWater(const glm::vec3& position) const;
