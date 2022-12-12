@@ -864,7 +864,7 @@ void InternodeGrowthData::Clear() {
 }
 RootGrowthParameters::RootGrowthParameters()
 {
-	m_growthRate = 0.6f;
+	m_growthRate = 0.075f;
 	m_rootNodeLength = 0.03f;
 	m_endNodeThicknessAndControl = glm::vec2(0.002, 0.5);
 	m_thicknessLengthAccumulate = 0.000002f;
@@ -876,9 +876,9 @@ RootGrowthParameters::RootGrowthParameters()
 	m_tropismSwitchingProbabilityDistanceFactor = 0.99f;
 	m_tropismIntensity = 0.1f;
 
-	m_baseBranchingProbability = 0.1f;
+	m_baseBranchingProbability = 0.3f;
 	m_branchingProbabilityChildrenDecrease = 0.01f;
-	m_branchingProbabilityDistanceDecrease = 0.99f;
+	m_branchingProbabilityDistanceDecrease = 0.98f;
 }
 #pragma region TreeGrowthParameters
 TreeGrowthParameters::TreeGrowthParameters() {
