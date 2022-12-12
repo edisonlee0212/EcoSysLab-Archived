@@ -890,7 +890,7 @@ TreeGrowthParameters::TreeGrowthParameters() {
 	m_phototropism = 0.0f;
 	m_internodeLength = 0.03f;
 	m_growthRate = 1.0f;
-	m_endNodeThicknessAndControl = glm::vec2(0.001, 0.5);
+	m_endNodeThicknessAndControl = glm::vec2(0.002, 0.5);
 	m_lateralBudFlushingProbability = 0.5f;
 	m_apicalControlBaseDistFactor = { 1.1f, 0.99f };
 	m_apicalDominanceBaseAgeDist = glm::vec3(300, 1, 0.97);
