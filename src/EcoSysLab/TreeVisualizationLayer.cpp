@@ -225,8 +225,8 @@ void TreeVisualizationLayer::LateUpdate() {
 					DefaultResources::Primitives::Cube, editorLayer->m_sceneCamera,
 					editorLayer->m_sceneCameraPosition,
 					editorLayer->m_sceneCameraRotation,
-					*reinterpret_cast<std::vector<glm::vec4> *>(&m_boundingBoxColors),
-					*reinterpret_cast<std::vector<glm::mat4> *>(&m_boundingBoxMatrices),
+					m_boundingBoxColors,
+					m_boundingBoxMatrices,
 					glm::mat4(1.0f), 1.0f, gizmoSettings);
 			}
 			if (m_displayRootFlows && !m_rootFlowMatrices.empty()) {
@@ -234,8 +234,8 @@ void TreeVisualizationLayer::LateUpdate() {
 					DefaultResources::Primitives::Cube, editorLayer->m_sceneCamera,
 					editorLayer->m_sceneCameraPosition,
 					editorLayer->m_sceneCameraRotation,
-					*reinterpret_cast<std::vector<glm::vec4> *>(&m_rootFlowColors),
-					*reinterpret_cast<std::vector<glm::mat4> *>(&m_rootFlowMatrices),
+					m_rootFlowColors,
+					m_rootFlowMatrices,
 					glm::mat4(1.0f), 1.0f, gizmoSettings);
 			}
 
@@ -244,8 +244,8 @@ void TreeVisualizationLayer::LateUpdate() {
 					DefaultResources::Primitives::Cube, editorLayer->m_sceneCamera,
 					editorLayer->m_sceneCameraPosition,
 					editorLayer->m_sceneCameraRotation,
-					*reinterpret_cast<std::vector<glm::vec4> *>(&m_branchColors),
-					*reinterpret_cast<std::vector<glm::mat4> *>(&m_branchMatrices),
+					m_branchColors,
+					m_branchMatrices,
 					glm::mat4(1.0f), 1.0f, gizmoSettings);
 			}
 		}
