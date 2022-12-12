@@ -279,8 +279,8 @@ TreeVisualizer::OnInspect(
                     DefaultResources::Primitives::Cylinder, editorLayer->m_sceneCamera,
                     editorLayer->m_sceneCameraPosition,
                     editorLayer->m_sceneCameraRotation,
-                    *&m_internodeColors,
-                    *&m_internodeMatrices,
+                    m_internodeColors,
+                    m_internodeMatrices,
                     globalTransform.m_value, 1.0f, gizmoSettings);
 
         }
