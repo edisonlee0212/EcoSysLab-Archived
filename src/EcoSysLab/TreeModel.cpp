@@ -207,7 +207,7 @@ void TreeModel::CollectResourceRequirement(NodeHandle internodeHandle)
 
 
 bool TreeModel::ElongateInternode(float extendLength, NodeHandle internodeHandle,
-                                  const TreeGrowthParameters& parameters, float& collectedInhibitor) {
+	const TreeGrowthParameters& parameters, float& collectedInhibitor) {
 	bool graphChanged = false;
 	auto& internode = m_branchSkeleton.RefNode(internodeHandle);
 	auto internodeLength = parameters.GetInternodeLength(internode);
@@ -228,19 +228,46 @@ bool TreeModel::ElongateInternode(float extendLength, NodeHandle internodeHandle
 			desiredGlobalUp);
 		ApplyTropism(internodeData.m_lightDirection, parameters.GetPhototropism(internode),
 			desiredGlobalFront, desiredGlobalUp);
-		auto lateralBudCount = parameters.GetLateralBudCount(internode);
 		//Allocate Lateral bud for current internode
-		float turnAngle = glm::radians(360.0f / lateralBudCount);
-		for (int i = 0; i < lateralBudCount; i++) {
-			internodeData.m_buds.emplace_back();
-			auto& lateralBud = internodeData.m_buds.back();
-			lateralBud.m_type = BudType::Lateral;
-			lateralBud.m_status = BudStatus::Dormant;
-			lateralBud.m_localRotation = glm::vec3(
-				glm::radians(parameters.GetDesiredBranchingAngle(internode)), 0.0f,
-				i * turnAngle);
+		{
+			const auto lateralBudCount = parameters.GetLateralBudCount(internode);
+			const float turnAngle = glm::radians(360.0f / lateralBudCount);
+			for (int i = 0; i < lateralBudCount; i++) {
+				internodeData.m_buds.emplace_back();
+				auto& lateralBud = internodeData.m_buds.back();
+				lateralBud.m_type = BudType::Lateral;
+				lateralBud.m_status = BudStatus::Dormant;
+				lateralBud.m_localRotation = glm::vec3(
+					glm::radians(parameters.GetDesiredBranchingAngle(internode)), 0.0f,
+					i * turnAngle);
+			}
 		}
-
+		//Allocate Fruit bud for current internode
+		{
+			const auto fruitBudCount = parameters.GetFruitBudCount(internode);
+			for (int i = 0; i < fruitBudCount; i++) {
+				internodeData.m_buds.emplace_back();
+				auto& fruitBud = internodeData.m_buds.back();
+				fruitBud.m_type = BudType::Fruit;
+				fruitBud.m_status = BudStatus::Dormant;
+				fruitBud.m_localRotation = glm::vec3(
+					glm::radians(parameters.GetDesiredBranchingAngle(internode)), 0.0f,
+					glm::radians(glm::linearRand(0.0f, 360.0f)));
+			}
+		}
+		//Allocate Leaf bud for current internode
+		{
+			const auto leafBudCount = parameters.GetLeafBudCount(internode);
+			for (int i = 0; i < leafBudCount; i++) {
+				internodeData.m_buds.emplace_back();
+				auto& leafBud = internodeData.m_buds.back();
+				leafBud.m_type = BudType::Leaf;
+				leafBud.m_status = BudStatus::Dormant;
+				leafBud.m_localRotation = glm::vec3(
+					glm::radians(parameters.GetDesiredBranchingAngle(internode)), 0.0f,
+					glm::radians(glm::linearRand(0.0f, 360.0f)));
+			}
+		}
 		//Create new internode
 		auto newInternodeHandle = m_branchSkeleton.Extend(internodeHandle, false);
 		auto& oldInternode = m_branchSkeleton.RefNode(internodeHandle);
@@ -296,63 +323,62 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 		auto& internode = m_branchSkeleton.RefNode(internodeHandle);
 		auto& internodeData = internode.m_data;
 		auto& internodeInfo = internode.m_info;
+		const float growthContent = glm::max(0.0f, bud.m_waterGain) * glm::clamp(internodeData.m_lightIntensity, 0.0f, 1.0f);
+		const auto growthRate = treeGrowthParameters.GetGrowthRate(internode);
+		if (bud.m_status == BudStatus::Dormant && treeGrowthParameters.GetBudKillProbability(internode) > glm::linearRand(0.0f, 1.0f)) {
+			bud.m_status = BudStatus::Died;
+		}
+		if (bud.m_status == BudStatus::Died || bud.m_status == BudStatus::Flushed) continue;
 		if (bud.m_type == BudType::Apical && bud.m_status == BudStatus::Dormant) {
-			if (treeGrowthParameters.GetApicalBudKillProbability(internode) > glm::linearRand(0.0f, 1.0f)) {
-				bud.m_status = BudStatus::Died;
-			}
-			else {
-				const float waterReceived = bud.m_waterGain;
-				const auto growthRate = treeGrowthParameters.GetGrowthRate(internode);
-				const float elongateLength = waterReceived * treeGrowthParameters.GetInternodeLength(internode) * growthRate;
-				float collectedInhibitor = 0.0f;
-				const auto dd = treeGrowthParameters.GetApicalDominanceDecrease(internode);
-				graphChanged = ElongateInternode(elongateLength, internodeHandle, treeGrowthParameters, collectedInhibitor);
-				m_branchSkeleton.RefNode(internodeHandle).m_data.m_inhibitorTarget += collectedInhibitor * dd;
-			}
+			const float elongateLength = growthContent * treeGrowthParameters.GetInternodeLength(internode) * growthRate;
+			float collectedInhibitor = 0.0f;
+			const auto dd = treeGrowthParameters.GetApicalDominanceDecrease(internode);
+			graphChanged = ElongateInternode(elongateLength, internodeHandle, treeGrowthParameters, collectedInhibitor);
+			m_branchSkeleton.RefNode(internodeHandle).m_data.m_inhibitorTarget += collectedInhibitor * dd;
 			//If apical bud is dormant, then there's no lateral bud at this stage. We should quit anyway.
 			break;
 		}
-		else if (bud.m_type == BudType::Lateral) {
-			if (bud.m_status == BudStatus::Dormant) {
-				if (treeGrowthParameters.GetLateralBudKillProbability(internode) > glm::linearRand(0.0f, 1.0f)) {
-					bud.m_status = BudStatus::Died;
-				}
-				else {
-					float flushProbability = treeGrowthParameters.GetLateralBudFlushingProbability(internode) *
-						treeGrowthParameters.GetGrowthRate(internode);
-					flushProbability /= (1.0f + internodeData.m_inhibitor);
-					if (flushProbability >= glm::linearRand(0.0f, 1.0f)) {
-						graphChanged = true;
-						bud.m_status = BudStatus::Flushed;
-						//Prepare information for new internode
-						auto desiredGlobalRotation = internodeInfo.m_globalRotation * bud.m_localRotation;
-						auto desiredGlobalFront = desiredGlobalRotation * glm::vec3(0, 0, -1);
-						auto desiredGlobalUp = desiredGlobalRotation * glm::vec3(0, 1, 0);
-						ApplyTropism(-m_currentGravityDirection, treeGrowthParameters.GetGravitropism(internode), desiredGlobalFront,
-							desiredGlobalUp);
-						ApplyTropism(internodeData.m_lightDirection, treeGrowthParameters.GetPhototropism(internode),
-							desiredGlobalFront, desiredGlobalUp);
-						//Create new internode
-						const auto newInternodeHandle = m_branchSkeleton.Extend(internodeHandle, true);
-						auto& oldInternode = m_branchSkeleton.RefNode(internodeHandle);
-						auto& newInternode = m_branchSkeleton.RefNode(newInternodeHandle);
-						newInternode.m_data.Clear();
-						newInternode.m_info.m_length = 0.0f;
-						newInternode.m_info.m_thickness = treeGrowthParameters.GetEndNodeThickness(newInternode);
-						newInternode.m_info.m_localRotation = newInternode.m_data.m_desiredLocalRotation =
-							glm::inverse(oldInternode.m_info.m_globalRotation) *
-							glm::quatLookAt(desiredGlobalFront, desiredGlobalUp);
-						//Allocate apical bud
-						newInternode.m_data.m_buds.emplace_back();
-						auto& apicalBud = newInternode.m_data.m_buds.back();
-						apicalBud.m_type = BudType::Apical;
-						apicalBud.m_status = BudStatus::Dormant;
-						apicalBud.m_localRotation = glm::vec3(
-							glm::radians(treeGrowthParameters.GetDesiredApicalAngle(newInternode)), 0.0f,
-							treeGrowthParameters.GetDesiredRollAngle(newInternode));
-					}
-				}
+		if (bud.m_type == BudType::Lateral) {
+			float flushProbability = treeGrowthParameters.GetLateralBudFlushingProbability(internode) * growthRate;
+			flushProbability /= 1.0f + internodeData.m_inhibitor;
+			if (flushProbability >= glm::linearRand(0.0f, 1.0f)) {
+				graphChanged = true;
+				bud.m_status = BudStatus::Flushed;
+				//Prepare information for new internode
+				auto desiredGlobalRotation = internodeInfo.m_globalRotation * bud.m_localRotation;
+				auto desiredGlobalFront = desiredGlobalRotation * glm::vec3(0, 0, -1);
+				auto desiredGlobalUp = desiredGlobalRotation * glm::vec3(0, 1, 0);
+				ApplyTropism(-m_currentGravityDirection, treeGrowthParameters.GetGravitropism(internode), desiredGlobalFront,
+					desiredGlobalUp);
+				ApplyTropism(internodeData.m_lightDirection, treeGrowthParameters.GetPhototropism(internode),
+					desiredGlobalFront, desiredGlobalUp);
+				//Create new internode
+				const auto newInternodeHandle = m_branchSkeleton.Extend(internodeHandle, true);
+				auto& oldInternode = m_branchSkeleton.RefNode(internodeHandle);
+				auto& newInternode = m_branchSkeleton.RefNode(newInternodeHandle);
+				newInternode.m_data.Clear();
+				newInternode.m_info.m_length = 0.0f;
+				newInternode.m_info.m_thickness = treeGrowthParameters.GetEndNodeThickness(newInternode);
+				newInternode.m_info.m_localRotation = newInternode.m_data.m_desiredLocalRotation =
+					glm::inverse(oldInternode.m_info.m_globalRotation) *
+					glm::quatLookAt(desiredGlobalFront, desiredGlobalUp);
+				//Allocate apical bud
+				newInternode.m_data.m_buds.emplace_back();
+				auto& apicalBud = newInternode.m_data.m_buds.back();
+				apicalBud.m_type = BudType::Apical;
+				apicalBud.m_status = BudStatus::Dormant;
+				apicalBud.m_localRotation = glm::vec3(
+					glm::radians(treeGrowthParameters.GetDesiredApicalAngle(newInternode)), 0.0f,
+					treeGrowthParameters.GetDesiredRollAngle(newInternode));
 			}
+		}
+		else if (bud.m_type == BudType::Fruit)
+		{
+
+		}
+		else if (bud.m_type == BudType::Leaf)
+		{
+
 		}
 	}
 	{
@@ -899,7 +925,7 @@ TreeGrowthParameters::TreeGrowthParameters() {
 	m_lateralBudFlushingProbability = 0.5f;
 	m_apicalControlBaseDistFactor = { 1.1f, 0.99f };
 	m_apicalDominanceBaseAgeDist = glm::vec3(300, 1, 0.97);
-	m_budKillProbabilityApicalLateral = glm::vec2(0.0, 0.03);
+	m_budKillProbability = 0.0f;
 	m_lowBranchPruning = 0.2f;
 	m_saggingFactorThicknessReductionMax = glm::vec3(0.0001, 2, 0.5);
 
@@ -909,6 +935,16 @@ TreeGrowthParameters::TreeGrowthParameters() {
 
 int TreeGrowthParameters::GetLateralBudCount(const Node<InternodeGrowthData>& internode) const {
 	return m_lateralBudCount;
+}
+
+int TreeGrowthParameters::GetFruitBudCount(const Node<InternodeGrowthData>& internode) const
+{
+	return m_fruitBudCount;
+}
+
+int TreeGrowthParameters::GetLeafBudCount(const Node<InternodeGrowthData>& internode) const
+{
+	return m_leafBudCount;
 }
 
 float TreeGrowthParameters::GetDesiredBranchingAngle(const Node<InternodeGrowthData>& internode) const {
@@ -977,13 +1013,9 @@ float TreeGrowthParameters::GetApicalDominanceDecrease(
 }
 
 float
-TreeGrowthParameters::GetApicalBudKillProbability(const Node<InternodeGrowthData>& internode) const {
-	return m_budKillProbabilityApicalLateral.x;
-}
-
-float
-TreeGrowthParameters::GetLateralBudKillProbability(const Node<InternodeGrowthData>& internode) const {
-	return m_budKillProbabilityApicalLateral.y;
+TreeGrowthParameters::GetBudKillProbability(const Node<InternodeGrowthData>& internode) const {
+	if (internode.m_data.m_rootDistance < 1) return 0.0f;
+	return m_budKillProbability;
 }
 
 float TreeGrowthParameters::GetLowBranchPruning(const Node<InternodeGrowthData>& internode) const {

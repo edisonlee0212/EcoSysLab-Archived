@@ -169,17 +169,28 @@ namespace EcoSysLab {
 
 	class TreeGrowthParameters {
 	public:
+		/**
+		 * \brief The number of lateral buds an internode contains
+		 */
 		int m_lateralBudCount;
 		/**
-		* The mean and variance of the angle between the direction of a lateral bud and its parent shoot.
+		 * \brief The number of fruit buds an internode contains
+		 */
+		int m_fruitBudCount;
+		/**
+		 * \brief The number of leaf buds an internode contains
+		 */
+		int m_leafBudCount;
+		/**
+		* \brief The mean and variance of the angle between the direction of a lateral bud and its parent shoot.
 		*/
 		glm::vec2 m_branchingAngleMeanVariance{};
 		/**
-		* The mean and variance of an angular difference orientation of lateral buds between two internodes
+		* \brief The mean and variance of an angular difference orientation of lateral buds between two internodes
 		*/
 		glm::vec2 m_rollAngleMeanVariance{};
 		/**
-		* The mean and variance of the angular difference between the growth direction and the direction of the apical bud
+		* \brief The mean and variance of the angular difference between the growth direction and the direction of the apical bud
 		*/
 		glm::vec2 m_apicalAngleMeanVariance{};
 
@@ -190,23 +201,23 @@ namespace EcoSysLab {
 		glm::vec2 m_endNodeThicknessAndControl{};
 		float m_lateralBudFlushingProbability;
 		/*
-		 * To form significant trunk. Larger than 1 means forming big trunk.
+		 * \brief To form significant trunk. Larger than 1 means forming big trunk.
 		 */
 		glm::vec2 m_apicalControlBaseDistFactor{};
 
 		/**
-		* How much inhibitor will an internode generate.
+		* \brief How much inhibitor will an internode generate.
 		*/
 		glm::vec3 m_apicalDominanceBaseAgeDist{};
 
-		glm::vec2 m_budKillProbabilityApicalLateral{};
+		float m_budKillProbability{};
 		/**
-		* The limit of lateral branches being cut off when too close to the
+		* \brief The limit of lateral branches being cut off when too close to the
 		* root.
 		*/
 		float m_lowBranchPruning;
 		/**
-		 * The strength of gravity bending.
+		 * \brief The strength of gravity bending.
 		 */
 		glm::vec3 m_saggingFactorThicknessReductionMax = glm::vec3(0.8f, 1.75f, 1.0f);
 
@@ -214,6 +225,8 @@ namespace EcoSysLab {
 		glm::vec3 m_productiveResourceRequirementFactor{};
 
 		[[nodiscard]] int GetLateralBudCount(const Node<InternodeGrowthData>& internode) const;
+		[[nodiscard]] int GetFruitBudCount(const Node<InternodeGrowthData>& internode) const;
+		[[nodiscard]] int GetLeafBudCount(const Node<InternodeGrowthData>& internode) const;
 
 		[[nodiscard]] float GetDesiredBranchingAngle(const Node<InternodeGrowthData>& internode) const;
 
@@ -242,10 +255,7 @@ namespace EcoSysLab {
 
 		[[nodiscard]] float GetApicalDominanceDecrease(const Node<InternodeGrowthData>& internode) const;
 
-		[[nodiscard]] float GetApicalBudKillProbability(const Node<InternodeGrowthData>& internode) const;
-
-		[[nodiscard]] float
-			GetLateralBudKillProbability(const Node<InternodeGrowthData>& internode) const;
+		[[nodiscard]] float GetBudKillProbability(const Node<InternodeGrowthData>& internode) const;
 
 		[[nodiscard]] bool GetPruning(const Node<InternodeGrowthData>& internode) const;
 
