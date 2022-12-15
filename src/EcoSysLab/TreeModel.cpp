@@ -191,6 +191,20 @@ void TreeModel::CalculateThickness(NodeHandle rootNodeHandle, const RootGrowthPa
 	}
 }
 
+void TreeModel::CollectResourceRequirement(NodeHandle internodeHandle)
+{
+	auto& internode = m_branchSkeleton.RefNode(internodeHandle);
+	auto& internodeData = internode.m_data;
+	if (!internode.IsEndNode()) {
+		//If current node is not end node
+		for (const auto& i : internode.RefChildHandles()) {
+			auto& childInternode = m_branchSkeleton.RefNode(i);
+			internodeData.m_descendentReproductionWaterRequirement += childInternode.m_data.
+				m_reproductionWaterRequirement + childInternode.m_data.m_descendentReproductionWaterRequirement;
+		}
+	}
+}
+
 
 bool TreeModel::ElongateInternode(float extendLength, NodeHandle internodeHandle,
                                   const TreeGrowthParameters& parameters, float& collectedInhibitor) {
@@ -287,7 +301,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 				bud.m_status = BudStatus::Died;
 			}
 			else {
-				const float waterReceived = bud.m_adjustedProductiveResourceRequirement;
+				const float waterReceived = bud.m_waterGain;
 				const auto growthRate = treeGrowthParameters.GetGrowthRate(internode);
 				const float elongateLength = waterReceived * treeGrowthParameters.GetInternodeLength(internode) * growthRate;
 				float collectedInhibitor = 0.0f;
@@ -349,20 +363,20 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 	return graphChanged;
 }
 
-inline void TreeModel::AdjustResourceRequirement(NodeHandle internodeHandle,
+inline void TreeModel::AdjustProductiveResourceRequirement(NodeHandle internodeHandle,
 	const TreeGrowthParameters& treeGrowthParameters)
 {
 	auto& internode = m_branchSkeleton.RefNode(internodeHandle);
 	auto& internodeData = internode.m_data;
-	auto& internodeInfo = internode.m_info;
 	if (internode.GetParentHandle() == -1) {
-		internodeData.m_adjustedTotalProductiveWaterRequirement =
-			internodeData.m_productiveResourceRequirement +
-			internodeData.m_descendentProductiveResourceRequirement;
-		internodeData.m_adjustedDescendentProductiveResourceRequirement = internodeData.m_descendentProductiveResourceRequirement;
-		internodeData.m_adjustedProductiveResourceRequirement = internodeData.m_productiveResourceRequirement;
+		//Total water collected from root applied to here.
+		internodeData.m_adjustedTotalReproductionWaterRequirement =
+			internodeData.m_reproductionWaterRequirement +
+			internodeData.m_descendentReproductionWaterRequirement;
+		internodeData.m_adjustedDescendentReproductionWaterRequirement = internodeData.m_descendentReproductionWaterRequirement;
 		for (auto& bud : internodeData.m_buds) {
-			bud.m_adjustedProductiveResourceRequirement = bud.m_productiveResourceRequirement;
+			const float adjustedReproductionWaterRequirement = bud.m_reproductionWaterRequirement;
+			bud.m_waterGain = (adjustedReproductionWaterRequirement + bud.m_baseWaterRequirement) * m_branchGrowthNutrients.m_water / m_branchGrowthNutrients.m_waterRequirement;
 		}
 	}
 	const float apicalControl = treeGrowthParameters.GetApicalControl(internode);
@@ -371,34 +385,35 @@ inline void TreeModel::AdjustResourceRequirement(NodeHandle internodeHandle,
 	for (const auto& i : internode.RefChildHandles()) {
 		auto& childInternode = m_branchSkeleton.RefNode(i);
 		auto& childInternodeData = childInternode.m_data;
-		childInternodeData.m_adjustedTotalProductiveWaterRequirement = 0;
-		if (internodeData.m_adjustedDescendentProductiveResourceRequirement != 0) {
-			childInternodeData.m_adjustedTotalProductiveWaterRequirement =
-				(childInternodeData.m_descendentProductiveResourceRequirement +
-					childInternodeData.m_productiveResourceRequirement) /
-				internodeData.m_adjustedDescendentProductiveResourceRequirement;
-			childInternodeData.m_adjustedTotalProductiveWaterRequirement = glm::pow(
-				childInternodeData.m_adjustedTotalProductiveWaterRequirement, apicalControl);
-			totalChildResourceRequirement += childInternodeData.m_adjustedTotalProductiveWaterRequirement;
+
+		childInternodeData.m_adjustedTotalReproductionWaterRequirement = 0;
+		//If current internode has resources to distribute to child
+		if (internodeData.m_adjustedDescendentReproductionWaterRequirement != 0) {
+			childInternodeData.m_adjustedTotalReproductionWaterRequirement =
+				(childInternodeData.m_descendentReproductionWaterRequirement +
+					childInternodeData.m_reproductionWaterRequirement) /
+				internodeData.m_adjustedDescendentReproductionWaterRequirement;
+			childInternodeData.m_adjustedTotalReproductionWaterRequirement = glm::pow(
+				childInternodeData.m_adjustedTotalReproductionWaterRequirement, apicalControl);
+			totalChildResourceRequirement += childInternodeData.m_adjustedTotalReproductionWaterRequirement;
 		}
 	}
 	for (const auto& i : internode.RefChildHandles()) {
 		auto& childInternode = m_branchSkeleton.RefNode(i);
 		auto& childInternodeData = childInternode.m_data;
-		if (internodeData.m_adjustedDescendentProductiveResourceRequirement != 0) {
-			childInternodeData.m_adjustedTotalProductiveWaterRequirement *=
-				internodeData.m_adjustedDescendentProductiveResourceRequirement /
+		if (internodeData.m_adjustedDescendentReproductionWaterRequirement != 0) {
+			childInternodeData.m_adjustedTotalReproductionWaterRequirement *=
+				internodeData.m_adjustedDescendentReproductionWaterRequirement /
 				totalChildResourceRequirement;
-			const float resourceFactor = childInternodeData.m_adjustedTotalProductiveWaterRequirement /
-				(childInternodeData.m_descendentProductiveResourceRequirement +
-					childInternodeData.m_productiveResourceRequirement);
-			childInternodeData.m_adjustedProductiveResourceRequirement =
-				childInternodeData.m_productiveResourceRequirement * resourceFactor;
-			childInternodeData.m_adjustedDescendentProductiveResourceRequirement =
-				childInternodeData.m_descendentProductiveResourceRequirement * resourceFactor;
+			const float resourceFactor = childInternodeData.m_adjustedTotalReproductionWaterRequirement /
+				(childInternodeData.m_descendentReproductionWaterRequirement +
+					childInternodeData.m_reproductionWaterRequirement);
+			childInternodeData.m_adjustedDescendentReproductionWaterRequirement =
+				childInternodeData.m_descendentReproductionWaterRequirement * resourceFactor;
 			for (auto& bud : childInternodeData.m_buds) {
-				bud.m_adjustedProductiveResourceRequirement =
-					bud.m_productiveResourceRequirement * resourceFactor;
+				const float adjustedReproductionWaterRequirement =
+					bud.m_reproductionWaterRequirement * resourceFactor;
+				bud.m_waterGain = (adjustedReproductionWaterRequirement + bud.m_baseWaterRequirement) * m_branchGrowthNutrients.m_water / m_branchGrowthNutrients.m_waterRequirement;
 			}
 		}
 	}
@@ -447,58 +462,45 @@ void TreeModel::CalculateThicknessAndSagging(NodeHandle internodeHandle,
 	internodeData.m_sagging = treeGrowthParameters.GetSagging(internode);
 }
 
-void TreeModel::CalculateResourceRequirement(NodeHandle internodeHandle,
+void TreeModel::CalculateResourceRequirement(float& waterCollection, NodeHandle internodeHandle,
 	const TreeGrowthParameters& treeGrowthParameters) {
 	auto& internode = m_branchSkeleton.RefNode(internodeHandle);
 	auto& internodeData = internode.m_data;
-	auto& internodeInfo = internode.m_info;
-	internodeData.m_productiveResourceRequirement = 0.0f;
-	internodeData.m_descendentProductiveResourceRequirement = 0.0f;
+	internodeData.m_reproductionWaterRequirement = 0.0f;
+	internodeData.m_descendentReproductionWaterRequirement = 0.0f;
 	for (auto& bud : internodeData.m_buds) {
 		if (bud.m_status == BudStatus::Died) {
-			bud.m_baseResourceRequirement = 0.0f;
-			bud.m_productiveResourceRequirement = 0.0f;
+			bud.m_baseWaterRequirement = 0.0f;
+			bud.m_reproductionWaterRequirement = 0.0f;
 			continue;
 		}
 		switch (bud.m_type) {
 		case BudType::Apical: {
+			bud.m_baseWaterRequirement = treeGrowthParameters.GetShootBaseResourceRequirementFactor(
+				internode);
 			if (bud.m_status == BudStatus::Dormant) {
-				bud.m_baseResourceRequirement = treeGrowthParameters.GetShootBaseResourceRequirementFactor(
-					internode);
-				bud.m_productiveResourceRequirement = treeGrowthParameters.GetShootProductiveResourceRequirementFactor(
+				bud.m_reproductionWaterRequirement = treeGrowthParameters.GetShootProductiveResourceRequirementFactor(
 					internode);
 			}
-		}
-							break;
+		}break;
 		case BudType::Leaf: {
-			bud.m_baseResourceRequirement = treeGrowthParameters.GetLeafBaseResourceRequirementFactor(internode);
-			bud.m_productiveResourceRequirement = treeGrowthParameters.GetLeafProductiveResourceRequirementFactor(
+			bud.m_baseWaterRequirement = treeGrowthParameters.GetLeafBaseResourceRequirementFactor(internode);
+			bud.m_reproductionWaterRequirement = treeGrowthParameters.GetLeafProductiveResourceRequirementFactor(
 				internode);
-		}
-						  break;
+		}break;
 		case BudType::Fruit: {
-			bud.m_baseResourceRequirement = treeGrowthParameters.GetFruitBaseResourceRequirementFactor(internode);
-			bud.m_productiveResourceRequirement = treeGrowthParameters.GetFruitProductiveResourceRequirementFactor(
+			bud.m_baseWaterRequirement = treeGrowthParameters.GetFruitBaseResourceRequirementFactor(internode);
+			bud.m_reproductionWaterRequirement = treeGrowthParameters.GetFruitProductiveResourceRequirementFactor(
 				internode);
-		}
-						   break;
+		}break;
 		case BudType::Lateral: {
-			bud.m_baseResourceRequirement = 0.0f;
-			bud.m_productiveResourceRequirement = 0.0f;
-		}
-							 break;
+			bud.m_baseWaterRequirement = 0.0f;
+			bud.m_reproductionWaterRequirement = 0.0f;
+		}break;
 		}
 
-		internodeData.m_productiveResourceRequirement += bud.m_productiveResourceRequirement;
-	}
-
-	if (!internode.IsEndNode()) {
-		//If current node is not end node
-		for (const auto& i : internode.RefChildHandles()) {
-			auto& childInternode = m_branchSkeleton.RefNode(i);
-			internodeData.m_descendentProductiveResourceRequirement += childInternode.m_data.
-				m_productiveResourceRequirement + childInternode.m_data.m_descendentProductiveResourceRequirement;
-		}
+		internodeData.m_reproductionWaterRequirement += bud.m_reproductionWaterRequirement;
+		waterCollection += bud.m_reproductionWaterRequirement + bud.m_baseWaterRequirement;
 	}
 }
 
@@ -528,11 +530,10 @@ bool TreeModel::GrowBranches(ClimateModel& climateModel, const TreeGrowthParamet
 	{
 		const auto& sortedInternodeList = m_branchSkeleton.RefSortedNodeList();
 		for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); it++) {
-			auto internodeHandle = *it;
-			CalculateResourceRequirement(internodeHandle, treeGrowthParameters);
+			CollectResourceRequirement(*it);
 		}
 		for (const auto& internodeHandle : sortedInternodeList) {
-			AdjustResourceRequirement(internodeHandle, treeGrowthParameters);
+			AdjustProductiveResourceRequirement(internodeHandle, treeGrowthParameters);
 		}
 		for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); it++) {
 			const bool graphChanged = GrowInternode(climateModel, *it, treeGrowthParameters);
@@ -552,6 +553,7 @@ bool TreeModel::GrowBranches(ClimateModel& climateModel, const TreeGrowthParamet
 			auto internodeHandle = *it;
 			CalculateThicknessAndSagging(internodeHandle, treeGrowthParameters);
 		}
+		m_branchGrowthNutrients.m_waterRequirement = 0.0f;
 		for (const auto& internodeHandle : sortedInternodeList) {
 			auto& internode = m_branchSkeleton.RefNode(internodeHandle);
 			auto& internodeData = internode.m_data;
@@ -596,6 +598,8 @@ bool TreeModel::GrowBranches(ClimateModel& climateModel, const TreeGrowthParamet
 					glm::vec3(0, 0, -1));
 			m_branchSkeleton.m_min = glm::min(m_branchSkeleton.m_min, endPosition);
 			m_branchSkeleton.m_max = glm::max(m_branchSkeleton.m_max, endPosition);
+
+			CalculateResourceRequirement(m_branchGrowthNutrients.m_waterRequirement, internodeHandle, treeGrowthParameters);
 		}
 	};
 	{
@@ -708,7 +712,7 @@ bool TreeModel::GrowRoots(SoilModel& soilModel, const RootGrowthParameters& root
 			for (auto it = sortedRootNodeList.rbegin(); it != sortedRootNodeList.rend(); it++) {
 				CalculateThickness(*it, rootGrowthParameters);
 			}
-			m_rootGrowthNutrients.m_carbonCapacity = 0;
+			m_rootGrowthNutrients.m_carbonRequirement = 0;
 			m_rootGrowthNutrients.m_totalNitrate = 0;
 			for (const auto& rootNodeHandle : sortedRootNodeList) {
 				auto& rootNode = m_rootSkeleton.RefNode(rootNodeHandle);
@@ -745,7 +749,7 @@ bool TreeModel::GrowRoots(SoilModel& soilModel, const RootGrowthParameters& root
 				m_rootSkeleton.m_min = glm::min(m_rootSkeleton.m_min, endPosition);
 				m_rootSkeleton.m_max = glm::max(m_rootSkeleton.m_max, endPosition);
 			}
-			m_rootGrowthNutrients.m_carbonCapacity = m_rootGrowthNutrients.m_totalNitrate * rootGrowthParameters.GetGrowthRate();
+			m_rootGrowthNutrients.m_carbonRequirement = m_rootGrowthNutrients.m_totalNitrate * rootGrowthParameters.GetGrowthRate();
 		};
 		{
 			const auto& sortedFlowList = m_rootSkeleton.RefSortedFlowList();
@@ -785,11 +789,12 @@ bool TreeModel::Grow(SoilModel& soilModel, ClimateModel& climateModel, const Roo
 	if (GrowRoots(soilModel, rootGrowthParameters)) {
 		rootStructureChanged = true;
 	}
+	m_branchGrowthNutrients.m_water = m_branchGrowthNutrients.m_waterRequirement;
 	if (GrowBranches(climateModel, treeGrowthParameters)) {
 		treeStructureChanged = true;
 	}
+	m_rootGrowthNutrients.m_carbon = m_rootGrowthNutrients.m_carbonRequirement;
 
-	m_rootGrowthNutrients.m_carbon = m_rootGrowthNutrients.m_carbonCapacity;
 	return treeStructureChanged || rootStructureChanged;
 }
 
@@ -855,9 +860,9 @@ void InternodeGrowthData::Clear() {
 
 	m_rootDistance = 0;
 
-	m_productiveResourceRequirement = 0.0f;
-	m_descendentProductiveResourceRequirement = 0.0f;
-	m_adjustedTotalProductiveWaterRequirement = 0.0f;
+	m_reproductionWaterRequirement = 0.0f;
+	m_descendentReproductionWaterRequirement = 0.0f;
+	m_adjustedTotalReproductionWaterRequirement = 0.0f;
 	m_lightDirection = glm::vec3(0, 1, 0);
 	m_lightIntensity = 1.0f;
 	m_buds.clear();
@@ -1086,9 +1091,9 @@ float RootGrowthParameters::GetThicknessAccumulateFactor(const Node<RootInternod
 
 float RootGrowthParameters::GetBranchingProbability(const Node<RootInternodeGrowthData>& rootNode) const
 {
-	return m_baseBranchingProbability * 
+	return m_baseBranchingProbability *
 		glm::pow(m_branchingProbabilityChildrenDecrease, rootNode.RefChildHandles().size())
-	* glm::pow(m_branchingProbabilityDistanceDecrease, glm::max(0, rootNode.m_data.m_rootUnitDistance - 1));
+		* glm::pow(m_branchingProbabilityDistanceDecrease, glm::max(0, rootNode.m_data.m_rootUnitDistance - 1));
 }
 
 float RootGrowthParameters::GetTropismIntensity(const Node<RootInternodeGrowthData>& rootNode) const

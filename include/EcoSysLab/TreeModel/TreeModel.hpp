@@ -27,13 +27,15 @@ namespace EcoSysLab {
 		 * The desired water gain for maintaining current plant structure.
 		 * Depending on the size of fruit/leaf.
 		 */
-		float m_baseResourceRequirement = 0.0f;
+		float m_baseWaterRequirement = 0.0f;
 		/*
 		 * The desired water gain for reproduction (forming shoot/leaf/fruit) of this bud.
 		 * Depending on apical control.
 		 */
-		float m_productiveResourceRequirement = 0.0f;
-		float m_adjustedProductiveResourceRequirement = 0.0f;
+		float m_reproductionWaterRequirement = 0.0f;
+		float m_adjustedReproductionWaterRequirement = 0.0f;
+
+		float m_waterGain;
 		glm::quat m_localRotation = glm::vec3(0.0f);
 	};
 
@@ -60,12 +62,12 @@ namespace EcoSysLab {
 		 * List of buds, first one will always be the apical bud which points forward.
 		 */
 		std::vector<Bud> m_buds;
+		
+		float m_reproductionWaterRequirement = 0.0f;
 
-		float m_productiveResourceRequirement = 0.0f;
-		float m_descendentProductiveResourceRequirement = 0.0f;
-		float m_adjustedTotalProductiveWaterRequirement = 0.0f;
-		float m_adjustedProductiveResourceRequirement = 0.0f;
-		float m_adjustedDescendentProductiveResourceRequirement = 0.0f;
+		float m_descendentReproductionWaterRequirement = 0.0f;
+		float m_adjustedTotalReproductionWaterRequirement = 0.0f;
+		float m_adjustedDescendentReproductionWaterRequirement = 0.0f;
 
 		std::vector<glm::mat4> m_leaves;
 		std::vector<glm::mat4> m_fruits;
@@ -274,14 +276,14 @@ namespace EcoSysLab {
 	};
 
 	struct BranchGrowthNutrients {
-		float m_waterCapacity = 0.0f;
+		float m_waterRequirement = 0.0f;
 		float m_water = 0.0f;
 	};
 
 	struct RootGrowthNutrients
 	{
 		float m_totalNitrate = 0.0f;
-		float m_carbonCapacity = 0.0f;
+		float m_carbonRequirement = 0.0f;
 		float m_carbon = 0.0f;
 	};
 
@@ -298,17 +300,18 @@ namespace EcoSysLab {
 			const RootGrowthParameters& rootGrowthParameters);
 #pragma endregion
 #pragma region Tree Growth
+		inline void CollectResourceRequirement(NodeHandle internodeHandle);
 
-		inline void AdjustResourceRequirement(NodeHandle internodeHandle,
+		inline void CalculateResourceRequirement(float &waterCollection, NodeHandle internodeHandle,
+			const TreeGrowthParameters& treeGrowthParameters);
+
+		inline void AdjustProductiveResourceRequirement(NodeHandle internodeHandle,
 			const TreeGrowthParameters& treeGrowthParameters);
 
 		bool LowBranchPruning(float maxDistance, NodeHandle internodeHandle,
 			const TreeGrowthParameters& treeGrowthParameters);
 
 		inline void CalculateThicknessAndSagging(NodeHandle internodeHandle,
-			const TreeGrowthParameters& treeGrowthParameters);
-
-		inline void CalculateResourceRequirement(NodeHandle internodeHandle,
 			const TreeGrowthParameters& treeGrowthParameters);
 
 		inline bool GrowInternode(ClimateModel& climateModel, NodeHandle internodeHandle, const TreeGrowthParameters& treeGrowthParameters);

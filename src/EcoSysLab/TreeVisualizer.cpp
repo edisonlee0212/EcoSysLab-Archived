@@ -351,21 +351,14 @@ TreeVisualizer::InspectInternode(
                 changed = true;
             }
 
-            ImGui::InputFloat("Productive req", (float *) &internodeData.m_productiveResourceRequirement, 1, 100,
+            ImGui::InputFloat("Productive req", (float *) &internodeData.m_reproductionWaterRequirement, 1, 100,
                               "%.3f",
                               ImGuiInputTextFlags_ReadOnly);
-            ImGui::InputFloat("Descendent req", (float *) &internodeData.m_descendentProductiveResourceRequirement, 1,
+            ImGui::InputFloat("Descendent req", (float *) &internodeData.m_descendentReproductionWaterRequirement, 1,
                               100, "%.3f",
                               ImGuiInputTextFlags_ReadOnly);
-            ImGui::InputFloat("Adjusted total req", (float *) &internodeData.m_adjustedTotalProductiveWaterRequirement,
+            ImGui::InputFloat("Adjusted total req", (float *) &internodeData.m_adjustedTotalReproductionWaterRequirement,
                               1, 100, "%.3f",
-                              ImGuiInputTextFlags_ReadOnly);
-            ImGui::InputFloat("Adjusted productive req",
-                              (float *) &internodeData.m_adjustedProductiveResourceRequirement, 1, 100, "%.3f",
-                              ImGuiInputTextFlags_ReadOnly);
-            ImGui::InputFloat("Adjusted descendent req",
-                              (float *) &internodeData.m_adjustedDescendentProductiveResourceRequirement, 1, 100,
-                              "%.3f",
                               ImGuiInputTextFlags_ReadOnly);
 
             if (ImGui::TreeNodeEx("Buds", ImGuiTreeNodeFlags_DefaultOpen)) {
@@ -400,14 +393,8 @@ TreeVisualizer::InspectInternode(
 
                         auto budRotationAngle = glm::eulerAngles(bud.m_localRotation);
                         ImGui::InputFloat3("Rotation", &budRotationAngle.x, "%.3f", ImGuiInputTextFlags_ReadOnly);
-                        ImGui::InputFloat("Base resource requirement", (float *) &bud.m_baseResourceRequirement, 1, 100,
+                        ImGui::InputFloat("Base resource requirement", (float *) &bud.m_baseWaterRequirement, 1, 100,
                                           "%.3f", ImGuiInputTextFlags_ReadOnly);
-                        ImGui::InputFloat("Productive resource requirement",
-                                          (float *) &bud.m_productiveResourceRequirement,
-                                          1, 100, "%.3f", ImGuiInputTextFlags_ReadOnly);
-                        ImGui::InputFloat("Adjusted productive resource requirement",
-                                          (float *) &bud.m_adjustedProductiveResourceRequirement,
-                                          1, 100, "%.3f", ImGuiInputTextFlags_ReadOnly);
                         ImGui::TreePop();
                     }
                     index++;
@@ -520,23 +507,16 @@ TreeVisualizer::PeekInternode(
             ImGui::InputFloat("Light intensity", (float *) &internodeData.m_lightIntensity, 1, 100, "%.3f",
                               ImGuiInputTextFlags_ReadOnly);
 
-            ImGui::InputFloat("Productive req", (float *) &internodeData.m_productiveResourceRequirement, 1, 100,
+            ImGui::InputFloat("Productive req", (float *) &internodeData.m_reproductionWaterRequirement, 1, 100,
                               "%.3f",
                               ImGuiInputTextFlags_ReadOnly);
-            ImGui::InputFloat("Descendent req", (float *) &internodeData.m_descendentProductiveResourceRequirement, 1,
+            ImGui::InputFloat("Descendent req", (float *) &internodeData.m_descendentReproductionWaterRequirement, 1,
                               100, "%.3f",
                               ImGuiInputTextFlags_ReadOnly);
-            ImGui::InputFloat("Adjusted total req", (float *) &internodeData.m_adjustedTotalProductiveWaterRequirement,
+            ImGui::InputFloat("Adjusted total req", (float *) &internodeData.m_adjustedTotalReproductionWaterRequirement,
                               1, 100, "%.3f",
                               ImGuiInputTextFlags_ReadOnly);
-            ImGui::InputFloat("Adjusted productive req",
-                              (float *) &internodeData.m_adjustedProductiveResourceRequirement, 1, 100, "%.3f",
-                              ImGuiInputTextFlags_ReadOnly);
-            ImGui::InputFloat("Adjusted descendent req",
-                              (float *) &internodeData.m_adjustedDescendentProductiveResourceRequirement, 1, 100,
-                              "%.3f",
-                              ImGuiInputTextFlags_ReadOnly);
-
+            
             if (ImGui::TreeNodeEx("Buds")) {
                 int index = 1;
                 for (auto &bud: internodeData.m_buds) {
@@ -569,15 +549,8 @@ TreeVisualizer::PeekInternode(
 
                         auto budRotationAngle = glm::eulerAngles(bud.m_localRotation);
                         ImGui::InputFloat3("Rotation", &budRotationAngle.x, "%.3f", ImGuiInputTextFlags_ReadOnly);
-                        ImGui::InputFloat("Base resource requirement", (float *) &bud.m_baseResourceRequirement, 1, 100,
+                        ImGui::InputFloat("Base resource requirement", (float *) &bud.m_baseWaterRequirement, 1, 100,
                                           "%.3f", ImGuiInputTextFlags_ReadOnly);
-                        ImGui::InputFloat("Productive resource requirement",
-                                          (float *) &bud.m_productiveResourceRequirement,
-                                          1, 100, "%.3f", ImGuiInputTextFlags_ReadOnly);
-
-                        ImGui::InputFloat("Adjusted productive resource requirement",
-                                          (float *) &bud.m_adjustedProductiveResourceRequirement,
-                                          1, 100, "%.3f", ImGuiInputTextFlags_ReadOnly);
                         ImGui::TreePop();
                     }
                     index++;

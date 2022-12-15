@@ -16,8 +16,11 @@
 #include "ClassRegistry.hpp"
 #include "TreeModel.hpp"
 #include "Tree.hpp"
+#include "Soil.hpp"
+#include "Climate.hpp"
 #include "Trees.hpp"
 #include "TreeVisualizationLayer.hpp"
+#include "RadialBoundingVolume.hpp"
 #ifdef RAYTRACERFACILITY
 using namespace RayTracerFacility;
 #endif
@@ -28,9 +31,13 @@ void EngineSetup();
 
 int main() {
     ClassRegistry::RegisterPrivateComponent<Tree>("Tree");
+    ClassRegistry::RegisterPrivateComponent<Soil>("Soil");
+    ClassRegistry::RegisterPrivateComponent<Climate>("Climate");
     ClassRegistry::RegisterAsset<Trees>("Trees", {".trees"});
     ClassRegistry::RegisterAsset<TreeDescriptor>("TreeDescriptor", {".td"});
-
+    ClassRegistry::RegisterAsset<SoilDescriptor>("SoilDescriptor", { ".sd" });
+    ClassRegistry::RegisterAsset<ClimateDescriptor>("ClimateDescriptor", { ".cd" });
+    ClassRegistry::RegisterAsset<RadialBoundingVolume>("RadialBoundingVolume", { ".rbv" });
     EngineSetup();
 
     ApplicationConfigs applicationConfigs;
