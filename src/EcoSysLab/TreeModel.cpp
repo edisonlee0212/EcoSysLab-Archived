@@ -305,6 +305,23 @@ bool TreeModel::ElongateInternode(float extendLength, NodeHandle internodeHandle
 	return graphChanged;
 }
 
+void TreeModel::CollectLuminousFluxFromLeaves(ClimateModel& climateModel,
+	const TreeGrowthParameters& treeGrowthParameters)
+{
+	const auto& sortedInternodeList = m_branchSkeleton.RefSortedNodeList();
+	for (const auto& internodeHandle : sortedInternodeList) {
+		auto& internode = m_branchSkeleton.RefNode(internodeHandle);
+		for (const auto& bud : internode.m_data.m_buds)
+		{
+			if (bud.m_status == BudStatus::Flushed && bud.m_type == BudType::Leaf)
+			{
+				m_treeGrowthNutrients.m_luminousFlux += bud.m_luminousFlux;
+			}
+		}
+
+	}
+}
+
 bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHandle, const TreeGrowthParameters& treeGrowthParameters) {
 	bool graphChanged = false;
 	{
@@ -330,7 +347,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 		bud.m_drought = glm::max(1.0f, 1.0f - (1.0f - bud.m_drought) * baseWater / bud.m_baseWaterRequirement);
 		const float reproductiveWater = glm::max(0.0f, bud.m_waterGain - bud.m_baseWaterRequirement);
 		const float reproductiveContent = reproductiveWater * m_globalGrowthRate;
-		
+
 		if (bud.m_type == BudType::Apical && bud.m_status == BudStatus::Dormant) {
 			const float elongateLength = reproductiveContent * treeGrowthParameters.GetInternodeLength(internode);
 			float collectedInhibitor = 0.0f;
@@ -582,7 +599,7 @@ bool TreeModel::GrowBranches(ClimateModel& climateModel, const TreeGrowthParamet
 			auto internodeHandle = *it;
 			CalculateThicknessAndSagging(internodeHandle, treeGrowthParameters);
 		}
-		
+
 		for (const auto& internodeHandle : sortedInternodeList) {
 			auto& internode = m_branchSkeleton.RefNode(internodeHandle);
 			auto& internodeData = internode.m_data;
@@ -833,6 +850,7 @@ bool TreeModel::Grow(SoilModel& soilModel, ClimateModel& climateModel, const Roo
 	CollectWaterFromRoots(soilModel, rootGrowthParameters);
 	m_treeGrowthNutrients.m_water = m_treeGrowthNutrientsRequirement.m_water;
 	//Collect light from branches.
+	CollectLuminousFluxFromLeaves(climateModel, treeGrowthParameters);
 	m_treeGrowthNutrients.m_luminousFlux = 0.0f;
 
 	m_treeGrowthNutrients.m_luminousFlux = m_treeGrowthNutrientsRequirement.m_luminousFlux;

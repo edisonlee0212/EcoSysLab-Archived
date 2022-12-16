@@ -39,6 +39,8 @@ namespace EcoSysLab {
 		glm::quat m_localRotation = glm::vec3(0.0f);
 
 		float m_drought = 0.0f;
+
+		float m_luminousFlux = 0.0f;
 	};
 
 	struct InternodeGrowthData {
@@ -64,7 +66,7 @@ namespace EcoSysLab {
 		 * List of buds, first one will always be the apical bud which points forward.
 		 */
 		std::vector<Bud> m_buds;
-		
+
 		float m_reproductionWaterRequirement = 0.0f;
 
 		float m_descendentReproductionWaterRequirement = 0.0f;
@@ -95,7 +97,7 @@ namespace EcoSysLab {
 		float m_rootDistance = 0;
 		int m_rootUnitDistance = 0;
 		int m_order = 0;
-		
+
 		float m_reproductiveWaterRequirement;
 
 		float m_auxinTarget = 0;
@@ -166,7 +168,7 @@ namespace EcoSysLab {
 		RootGrowthParameters();
 	};
 
-	
+
 
 
 	class TreeGrowthParameters {
@@ -304,6 +306,9 @@ namespace EcoSysLab {
 		inline void CalculateResourceRequirement(NodeHandle rootNodeHandle, const RootGrowthParameters& rootGrowthParameters);
 		inline void CalculateThickness(NodeHandle rootNodeHandle,
 			const RootGrowthParameters& rootGrowthParameters);
+
+		void CollectWaterFromRoots(SoilModel& soilModel,
+			const RootGrowthParameters& rootGrowthParameters);
 #pragma endregion
 #pragma region Tree Growth
 		inline void CollectResourceRequirement(NodeHandle internodeHandle);
@@ -324,7 +329,8 @@ namespace EcoSysLab {
 
 		bool ElongateInternode(float extendLength, NodeHandle internodeHandle,
 			const TreeGrowthParameters& treeGrowthParameters, float& collectedInhibitor);
-
+		void CollectLuminousFluxFromLeaves(ClimateModel& climateModel,
+			const TreeGrowthParameters& treeGrowthParameters);
 #pragma endregion
 
 		void Initialize(const TreeGrowthParameters& treeGrowthParameters, const RootGrowthParameters& rootGrowthParameters);
@@ -355,8 +361,7 @@ namespace EcoSysLab {
 		 */
 		bool GrowRoots(SoilModel& soilModel,
 			const RootGrowthParameters& rootGrowthParameters, TreeGrowthNutrients& newTreeGrowthNutrientsRequirement);
-		void CollectWaterFromRoots(SoilModel& soilModel,
-			const RootGrowthParameters& rootGrowthParameters);
+
 	public:
 		TreeGrowthNutrients m_treeGrowthNutrientsRequirement;
 		TreeGrowthNutrients m_treeGrowthNutrients;
