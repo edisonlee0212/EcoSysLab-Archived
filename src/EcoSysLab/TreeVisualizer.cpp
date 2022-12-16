@@ -605,7 +605,7 @@ void TreeVisualizer::PeekRootNode(
                 ImGuiInputTextFlags_ReadOnly);
             auto& internodeData = internode.m_data;
             
-            ImGui::InputFloat("Nitrate", (float*)&internodeData.m_nitrateLevels, 1, 100, "%.3f",
+            ImGui::InputFloat("Nitrate", (float*)&internodeData.m_reproductiveWaterRequirement, 1, 100, "%.3f",
                 ImGuiInputTextFlags_ReadOnly);
             ImGui::InputFloat("Auxin", (float*)&internodeData.m_auxin, 1, 100, "%.3f",
                 ImGuiInputTextFlags_ReadOnly);
@@ -665,7 +665,7 @@ bool TreeVisualizer::InspectRootNode(
             ImGui::InputInt("Root unit distance", (int*)&internodeData.m_rootUnitDistance, 1, 100,
                 ImGuiInputTextFlags_ReadOnly);
             
-            if (ImGui::DragFloat("Nitrate", (float*)&internodeData.m_nitrateLevels)) {
+            if (ImGui::DragFloat("Nitrate", (float*)&internodeData.m_reproductiveWaterRequirement)) {
                 changed = true;
             }
             if (ImGui::DragFloat("Auxin", (float*)&internodeData.m_auxin)) {

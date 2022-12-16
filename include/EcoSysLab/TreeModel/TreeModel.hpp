@@ -37,6 +37,8 @@ namespace EcoSysLab {
 
 		float m_waterGain;
 		glm::quat m_localRotation = glm::vec3(0.0f);
+
+		float m_drought = 0.0f;
 	};
 
 	struct InternodeGrowthData {
@@ -94,7 +96,7 @@ namespace EcoSysLab {
 		int m_rootUnitDistance = 0;
 		int m_order = 0;
 		
-		float m_nitrateLevels;
+		float m_reproductiveWaterRequirement;
 
 		float m_auxinTarget = 0;
 		float m_auxin = 0;
@@ -138,7 +140,7 @@ namespace EcoSysLab {
 		float m_baseBranchingProbability = 1.0f;
 		float m_branchingProbabilityChildrenDecrease = 0.8f;
 		float m_branchingProbabilityDistanceDecrease = 0.8f;
-		[[nodiscard]] float GetGrowthRate() const;
+		[[nodiscard]] float GetExpectedGrowthRate() const;
 
 		[[nodiscard]] float GetAuxinTransportLoss(const Node<RootInternodeGrowthData>& rootNode) const;
 
@@ -240,7 +242,7 @@ namespace EcoSysLab {
 
 		[[nodiscard]] float GetInternodeLength(const Node<InternodeGrowthData>& internode) const;
 
-		[[nodiscard]] float GetGrowthRate(const Node<InternodeGrowthData>& internode) const;
+		[[nodiscard]] float GetExpectedGrowthRate(const Node<InternodeGrowthData>& internode) const;
 
 		[[nodiscard]] float GetEndNodeThickness(const Node<InternodeGrowthData>& internode) const;
 
@@ -285,16 +287,10 @@ namespace EcoSysLab {
 		TreeGrowthParameters();
 	};
 
-	struct BranchGrowthNutrients {
-		float m_waterRequirement = 0.0f;
+	struct TreeGrowthNutrients {
 		float m_water = 0.0f;
-	};
-
-	struct RootGrowthNutrients
-	{
-		float m_totalNitrate = 0.0f;
-		float m_carbonRequirement = 0.0f;
-		float m_carbon = 0.0f;
+		float m_luminousFlux = 0.0f;
+		float m_carbohydrate = 0.0f;
 	};
 
 	class TreeModel {
@@ -312,8 +308,8 @@ namespace EcoSysLab {
 #pragma region Tree Growth
 		inline void CollectResourceRequirement(NodeHandle internodeHandle);
 
-		inline void CalculateResourceRequirement(float &waterCollection, NodeHandle internodeHandle,
-			const TreeGrowthParameters& treeGrowthParameters);
+		inline void CalculateResourceRequirement(NodeHandle internodeHandle,
+			const TreeGrowthParameters& treeGrowthParameters, TreeGrowthNutrients& newTreeGrowthNutrientsRequirement);
 
 		inline void AdjustProductiveResourceRequirement(NodeHandle internodeHandle,
 			const TreeGrowthParameters& treeGrowthParameters);
@@ -345,21 +341,26 @@ namespace EcoSysLab {
 		 * Grow one iteration of the branches, given the climate model and the procedural parameters.
 		 * @param climateModel The climate model
 		 * @param treeGrowthParameters The procedural parameters that guides the growth.
+		 * @param newTreeGrowthNutrientsRequirement
 		 * @return Whether the growth caused a structural change during the growth.
 		 */
-		bool GrowBranches(ClimateModel& climateModel, const TreeGrowthParameters& treeGrowthParameters);
+		bool GrowBranches(ClimateModel& climateModel, const TreeGrowthParameters& treeGrowthParameters, TreeGrowthNutrients& newTreeGrowthNutrientsRequirement);
 
 		/**
 		 * Grow one iteration of the roots, given the soil model and the procedural parameters.
 		 * @param soilModel The soil model
 		 * @param rootGrowthParameters The procedural parameters that guides the growth.
+		 * @param newTreeGrowthNutrientsRequirement
 		 * @return Whether the growth caused a structural change during the growth.
 		 */
 		bool GrowRoots(SoilModel& soilModel,
+			const RootGrowthParameters& rootGrowthParameters, TreeGrowthNutrients& newTreeGrowthNutrientsRequirement);
+		void CollectWaterFromRoots(SoilModel& soilModel,
 			const RootGrowthParameters& rootGrowthParameters);
 	public:
-		BranchGrowthNutrients m_branchGrowthNutrients;
-		RootGrowthNutrients m_rootGrowthNutrients;
+		TreeGrowthNutrients m_treeGrowthNutrientsRequirement;
+		TreeGrowthNutrients m_treeGrowthNutrients;
+		float m_globalGrowthRate = 0.0f;
 		glm::mat4 m_globalTransform = glm::translate(glm::vec3(0, 0, 0)) * glm::mat4_cast(glm::quat(glm::vec3(0.0f))) * glm::scale(glm::vec3(1.0f));
 		glm::vec3 m_currentGravityDirection = glm::vec3(0, -1, 0);
 
