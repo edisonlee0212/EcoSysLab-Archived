@@ -840,6 +840,7 @@ bool TreeModel::Grow(SoilModel& soilModel, ClimateModel& climateModel, const Roo
 	m_treeGrowthNutrients.m_carbohydrate = glm::min(glm::max(m_treeGrowthNutrients.m_water, m_treeGrowthNutrientsRequirement.m_water), glm::max(m_treeGrowthNutrients.m_luminousFlux, m_treeGrowthNutrientsRequirement.m_luminousFlux));
 	if (m_treeGrowthNutrientsRequirement.m_carbohydrate != 0.0f) m_globalGrowthRate = m_treeGrowthNutrients.m_carbohydrate / m_treeGrowthNutrientsRequirement.m_carbohydrate;
 	else m_globalGrowthRate = 0.0f;
+	m_globalGrowthRate = glm::clamp(m_globalGrowthRate, 0.0f, 1.0f);
 	TreeGrowthNutrients newTreeNutrientsRequirement;
 	if (GrowRoots(soilModel, rootGrowthParameters, newTreeNutrientsRequirement)) {
 		rootStructureChanged = true;
