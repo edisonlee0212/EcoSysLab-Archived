@@ -308,6 +308,7 @@ bool TreeModel::ElongateInternode(float extendLength, NodeHandle internodeHandle
 void TreeModel::CollectLuminousFluxFromLeaves(ClimateModel& climateModel,
 	const TreeGrowthParameters& treeGrowthParameters)
 {
+	m_treeGrowthNutrients.m_luminousFlux = 0.0f;
 	const auto& sortedInternodeList = m_branchSkeleton.RefSortedNodeList();
 	for (const auto& internodeHandle : sortedInternodeList) {
 		auto& internode = m_branchSkeleton.RefNode(internodeHandle);
@@ -318,8 +319,8 @@ void TreeModel::CollectLuminousFluxFromLeaves(ClimateModel& climateModel,
 				m_treeGrowthNutrients.m_luminousFlux += bud.m_luminousFlux;
 			}
 		}
-
 	}
+	m_treeGrowthNutrients.m_luminousFlux = m_treeGrowthNutrientsRequirement.m_luminousFlux;
 }
 
 bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHandle, const TreeGrowthParameters& treeGrowthParameters) {
@@ -827,14 +828,17 @@ bool TreeModel::GrowRoots(SoilModel& soilModel, const RootGrowthParameters& root
 
 void TreeModel::CollectWaterFromRoots(SoilModel& soilModel, const RootGrowthParameters& rootGrowthParameters)
 {
+	m_treeGrowthNutrients.m_water = 0.0f;
 	const auto& sortedRootNodeList = m_rootSkeleton.RefSortedNodeList();
 	for (const auto& rootNodeHandle : sortedRootNodeList) {
 		auto& rootNode = m_rootSkeleton.RefNode(rootNodeHandle);
 		m_treeGrowthNutrients.m_water += soilModel.GetWater(rootNode.m_info.m_globalPosition);
 	}
+	m_treeGrowthNutrients.m_water = m_treeGrowthNutrientsRequirement.m_water;
 }
 
-bool TreeModel::Grow(SoilModel& soilModel, ClimateModel& climateModel, const RootGrowthParameters& rootGrowthParameters, const TreeGrowthParameters& treeGrowthParameters)
+bool TreeModel::Grow(SoilModel& soilModel, ClimateModel& climateModel, 
+	const RootGrowthParameters& rootGrowthParameters, const TreeGrowthParameters& treeGrowthParameters)
 {
 	bool treeStructureChanged = false;
 	bool rootStructureChanged = false;
@@ -843,30 +847,34 @@ bool TreeModel::Grow(SoilModel& soilModel, ClimateModel& climateModel, const Roo
 		treeStructureChanged = true;
 		rootStructureChanged = true;
 	}
-	//Set target carbohydrate
+	//Set target carbohydrate.
 	m_treeGrowthNutrientsRequirement.m_carbohydrate = m_treeGrowthNutrientsRequirement.m_luminousFlux;
 	//Collect water from roots.
-	m_treeGrowthNutrients.m_water = 0.0f;
 	CollectWaterFromRoots(soilModel, rootGrowthParameters);
-	m_treeGrowthNutrients.m_water = m_treeGrowthNutrientsRequirement.m_water;
 	//Collect light from branches.
 	CollectLuminousFluxFromLeaves(climateModel, treeGrowthParameters);
-	m_treeGrowthNutrients.m_luminousFlux = 0.0f;
-
-	m_treeGrowthNutrients.m_luminousFlux = m_treeGrowthNutrientsRequirement.m_luminousFlux;
 	//Perform photosynthesis.
-	m_treeGrowthNutrients.m_carbohydrate = glm::min(glm::max(m_treeGrowthNutrients.m_water, m_treeGrowthNutrientsRequirement.m_water), glm::max(m_treeGrowthNutrients.m_luminousFlux, m_treeGrowthNutrientsRequirement.m_luminousFlux));
-	if (m_treeGrowthNutrientsRequirement.m_carbohydrate != 0.0f) m_globalGrowthRate = m_treeGrowthNutrients.m_carbohydrate / m_treeGrowthNutrientsRequirement.m_carbohydrate;
-	else m_globalGrowthRate = 0.0f;
+	m_treeGrowthNutrients.m_carbohydrate = 
+		glm::min(
+			glm::max(m_treeGrowthNutrients.m_water, m_treeGrowthNutrientsRequirement.m_water), 
+			glm::max(m_treeGrowthNutrients.m_luminousFlux, m_treeGrowthNutrientsRequirement.m_luminousFlux));
+	//Calculate global growth rate
+	if (m_treeGrowthNutrientsRequirement.m_carbohydrate != 0.0f) {
+		m_globalGrowthRate = m_treeGrowthNutrients.m_carbohydrate / m_treeGrowthNutrientsRequirement.m_carbohydrate;
+	}
+	else { m_globalGrowthRate = 0.0f; }
 	m_globalGrowthRate = glm::clamp(m_globalGrowthRate, 0.0f, 1.0f);
+
+	//Grow roots and set up nutrient requirements for next iteration.
 	TreeGrowthNutrients newTreeNutrientsRequirement;
 	if (GrowRoots(soilModel, rootGrowthParameters, newTreeNutrientsRequirement)) {
 		rootStructureChanged = true;
 	}
-	//Collect water from root.
+	//Grow branches and set up nutrient requirements for next iteration.
 	if (GrowBranches(climateModel, treeGrowthParameters, newTreeNutrientsRequirement)) {
 		treeStructureChanged = true;
 	}
+	//Set new growth nutrients requirement for next iteration.
 	m_treeGrowthNutrientsRequirement = newTreeNutrientsRequirement;
 	return treeStructureChanged || rootStructureChanged;
 }
