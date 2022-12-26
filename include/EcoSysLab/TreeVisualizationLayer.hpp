@@ -47,13 +47,14 @@ namespace EcoSysLab {
 
 		std::shared_ptr<OpenGLUtils::GLShader> m_treeBranchComp;
 		std::shared_ptr<OpenGLUtils::GLProgram> m_treeBranchComputeProgram;
-		std::shared_ptr<OpenGLUtils::GLBuffer> m_treeBranchBuffer;
-
+		std::unique_ptr<OpenGLUtils::GLBuffer> m_treeBranchBuffer;
+		std::shared_ptr<Mesh> m_treeMesh;
 	public:
 		MeshGeneratorSettings m_meshGeneratorSettings;
 		Entity m_selectedTree = {};
 		TreeVisualizer m_treeVisualizer;
 		void GrowAllTrees();
 		void GenerateMeshes(const MeshGeneratorSettings& meshGeneratorSettings);
+
 	};
 }
