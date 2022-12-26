@@ -13,6 +13,18 @@ void TreeVisualizationLayer::OnCreate() {
 			m_randomColors.emplace_back(glm::linearRand(glm::vec3(0.0f), glm::vec3(1.0f)));
 		}
 	}
+
+	
+	auto compShaderCode =
+		std::string("#version 450 core\n") + *DefaultResources::ShaderIncludes::Uniform + "\n" +
+		FileUtils::LoadFileAsString(std::filesystem::path("./EcoSysLabResources") / "Shaders/Compute/TreeBranch.comp");
+	
+	m_treeBranchComp = ProjectManager::CreateTemporaryAsset<OpenGLUtils::GLShader>();
+	m_treeBranchComp->Set(OpenGLUtils::ShaderType::Compute, compShaderCode);
+	
+	m_treeBranchComputeProgram = ProjectManager::CreateTemporaryAsset<OpenGLUtils::GLProgram>();
+	m_treeBranchComputeProgram->Attach(m_treeBranchComp);
+	m_treeBranchComputeProgram->Link();
 }
 
 void TreeVisualizationLayer::OnDestroy() {
@@ -85,7 +97,12 @@ void TreeVisualizationLayer::LateUpdate() {
 
 		}
 
-		if (m_visualization) {
+		if(m_rendering)
+		{
+			//m_treeBranchBuffer->SetData();
+		}
+
+		if (m_debugVisualization) {
 			if (m_versions.size() != treeEntities->size()) {
 				m_branchMatrices.clear();
 				m_branchColors.clear();
@@ -249,7 +266,6 @@ void TreeVisualizationLayer::LateUpdate() {
 					glm::mat4(1.0f), 1.0f, gizmoSettings);
 			}
 		}
-
 	}
 }
 
@@ -259,8 +275,9 @@ void TreeVisualizationLayer::OnInspect() {
 		const std::vector<Entity>* treeEntities =
 			scene->UnsafeGetPrivateComponentOwnersList<Tree>();
 		ImGui::Checkbox("Lock tree selection", &m_lockTreeSelection);
-		ImGui::Checkbox("Visualization", &m_visualization);
-		if (m_visualization) {
+		ImGui::Checkbox("Rendering", &m_rendering);
+		ImGui::Checkbox("Debug Visualization", &m_debugVisualization);
+		if (m_debugVisualization) {
 			ImGui::Checkbox("Display Branches", &m_displayBranches);
 			ImGui::Checkbox("Display Root Flows", &m_displayRootFlows);
 			ImGui::Checkbox("Display Bounding Box", &m_displayBoundingBox);
@@ -303,7 +320,7 @@ void TreeVisualizationLayer::OnInspect() {
 			}
 		}
 
-		if (m_visualization && scene->IsEntityValid(m_selectedTree)) {
+		if (m_debugVisualization && scene->IsEntityValid(m_selectedTree)) {
 			m_treeVisualizer.OnInspect(
 				scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock()->m_treeModel, scene->GetDataComponent<GlobalTransform>(m_selectedTree));
 		}
