@@ -53,7 +53,7 @@ void Soil::OnInspect()
 							matrices[i] =
 							glm::translate(m_soilModel.GetCenter(m_soilModel.GetCoordinate(i)))
 						* glm::mat4_cast(glm::quat(glm::vec3(0.0f)))
-						* glm::scale(glm::vec3(m_soilModel.GetVoxelDistance() / 2.0f));
+						* glm::scale(glm::vec3(m_soilModel.GetVoxelDistance() / 4.0f));
 						}, results);
 					for (auto& i : results) i.wait();
 				}
