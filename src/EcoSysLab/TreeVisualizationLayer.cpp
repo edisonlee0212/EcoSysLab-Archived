@@ -119,8 +119,8 @@ void TreeVisualizationLayer::LateUpdate() {
 				for (auto& handle : skeleton.RefSortedFlowList())
 				{
 					auto& flow = skeleton.PeekFlow(handle);
-					glm::vec3 start = flow.m_info.m_globalStartPosition;
-					glm::vec3 end = flow.m_info.m_globalEndPosition;
+					glm::vec3 start = (treeTransform.m_value * glm::translate(flow.m_info.m_globalStartPosition))[3];
+					glm::vec3 end = (treeTransform.m_value * glm::translate(flow.m_info.m_globalEndPosition))[3];
 					branches.push_back({
 						start, flow.m_info.m_startThickness,
 						end, flow.m_info.m_endThickness
