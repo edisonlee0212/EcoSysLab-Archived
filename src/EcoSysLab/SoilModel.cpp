@@ -3,9 +3,7 @@ using namespace EcoSysLab;
 
 float SoilModel::GetWater(const glm::vec3& position) const
 {
-	const auto actualPosition = glm::clamp(position, glm::vec3(0, 0, 0), glm::vec3(m_voxelResolution) - glm::vec3(1, 1, 1));
-	const auto unsignedPosition = glm::uvec3(actualPosition);
-	return m_waterDensity[Index(m_voxelResolution, unsignedPosition.x, unsignedPosition.y, unsignedPosition.z)];
+	return m_waterDensity[Index(GetCoordinate(position))];
 }
 
 float SoilModel::GetDensity(const glm::vec3& position) const
@@ -16,9 +14,7 @@ float SoilModel::GetDensity(const glm::vec3& position) const
 
 float SoilModel::GetNutrient(const glm::vec3& position) const
 {
-	const auto actualPosition = glm::clamp(position, glm::vec3(0, 0, 0), glm::vec3(m_voxelResolution) - glm::vec3(1, 1, 1));
-	const auto unsignedPosition = glm::uvec3(actualPosition);
-	return m_nutrientsDensity[Index(m_voxelResolution, unsignedPosition.x, unsignedPosition.y, unsignedPosition.z)];
+	return m_nutrientsDensity[Index(GetCoordinate(position))];
 }
 
 float SoilModel::AddWater(const glm::vec3& position, float value)
@@ -37,34 +33,60 @@ float SoilModel::AddNutrient(const glm::vec3& position, float value)
 }
 
 
-
-int SoilModel::Index(const glm::uvec3& resolution, const int x, const int y, const int z)
+int SoilModel::Index(const int x, const int y, const int z) const
 {
-	auto& r = resolution;
-	return z * r.x * r.y + y * r.x + x;
+	return x + y * m_voxelResolution.x + z * m_voxelResolution.x * m_voxelResolution.y;
+}
+
+unsigned SoilModel::Index(const glm::uvec3& coordinate) const
+{
+	return coordinate.x + coordinate.y * m_voxelResolution.x + coordinate.z * m_voxelResolution.x * m_voxelResolution.y;
+}
+
+glm::uvec3 SoilModel::GetCoordinate(const unsigned index) const
+{
+	return { index % m_voxelResolution.x, index % (m_voxelResolution.x * m_voxelResolution.y) / m_voxelResolution.x, index / (m_voxelResolution.x * m_voxelResolution.y) };
+}
+
+glm::uvec3 SoilModel::GetCoordinate(const glm::vec3& position) const
+{
+	assert(position.x >= m_minPosition.x && position.y >= m_minPosition.y && position.z >= m_minPosition.z);
+	assert(position.x <= m_minPosition.x + m_voxelDistance * m_voxelResolution.x 
+		&& position.y <= m_minPosition.y + m_voxelDistance * m_voxelResolution.y 
+		&& position.z <= m_minPosition.z + m_voxelDistance * m_voxelResolution.z);
+	return {(position.x - m_minPosition.x) / m_voxelDistance, (position.y - m_minPosition.y) / m_voxelDistance,(position.z - m_minPosition.z) / m_voxelDistance };
+}
+
+glm::vec3 SoilModel::GetCenter(const glm::uvec3& coordinate) const
+{
+	return {
+		m_voxelDistance * (static_cast<float>(coordinate.x) + 0.5f) + m_minPosition.x,
+		m_voxelDistance * (static_cast<float>(coordinate.y) + 0.5f) + m_minPosition.y,
+		m_voxelDistance * (static_cast<float>(coordinate.z) + 0.5f) + m_minPosition.z
+	};
 }
 
 
-void Convolution3(const std::vector<float>& input, std::vector<float>& output, std::vector<int>& indices, std::vector<float>& weights, glm::uvec3 resolution)
+void SoilModel::Convolution3(const std::vector<float>& input, std::vector<float>& output, const std::vector<int>& indices, const std::vector<float>& weights)
 {
-	auto entries = resolution.x * resolution.y * resolution.z;
+	auto entries = m_voxelResolution.x * m_voxelResolution.y * m_voxelResolution.z;
 	assert(input.size() == entries);
 	assert(output.size() == entries);
 	assert(indices.size() == weights.size());
 
 	// for a 3D convolution:
-	assert(resolution.x >= 3);
-	assert(resolution.y >= 3);
-	assert(resolution.z >= 3);
+	assert(m_voxelResolution.x >= 3);
+	assert(m_voxelResolution.y >= 3);
+	assert(m_voxelResolution.z >= 3);
 
 	// iterate over all indices that are not part of the boundary, where the whole convolution kernel can be applied
-	for (auto x = 1; x < resolution.x - 1; ++x)
+	for (auto x = 1; x < m_voxelResolution.x - 1; ++x)
 	{
-		for (auto y = 1; y < resolution.y - 1; ++y)
+		for (auto y = 1; y < m_voxelResolution.y - 1; ++y)
 		{
-			for (auto z = 1; z < resolution.z - 1; ++z)
+			for (auto z = 1; z < m_voxelResolution.z - 1; ++z)
 			{
-				auto i = SoilModel::Index(resolution, x, y, z);
+				auto i = Index(x, y, z);
 				output[i] = 0.f;
 				for (auto j = 0; j < indices.size(); ++j)
 				{
@@ -75,52 +97,53 @@ void Convolution3(const std::vector<float>& input, std::vector<float>& output, s
 	}
 }
 
-void SoilModel::Initialize(const SoilParameters& soilParameters, const glm::uvec3& voxelResolution, float voxelDistance) {
+void SoilModel::Initialize(const SoilParameters& soilParameters, const glm::uvec3& voxelResolution, const float voxelDistance, const glm::vec3& minPosition) {
 	m_voxelResolution = voxelResolution;
 	m_time = 0.f;
 	m_voxelDistance = voxelDistance;
-	auto num_voxels = m_voxelResolution.x * m_voxelResolution.y * m_voxelResolution.z;
+	m_minPosition = minPosition;
+	auto numVoxels = m_voxelResolution.x * m_voxelResolution.y * m_voxelResolution.z;
 
-	const auto v = std::vector<float>(num_voxels, 0.f);
+	const auto v = std::vector<float>(numVoxels, 0.f);
 
 
 	auto blur_idx = std::vector<int>({
 
-		Index(m_voxelResolution, -1, -1, -1),
-		Index(m_voxelResolution,  0, -1, -1),
-		Index(m_voxelResolution,  1, -1, -1),
+		Index(-1, -1, -1),
+		Index(0, -1, -1),
+		Index(1, -1, -1),
 
-		Index(m_voxelResolution, -1,  0, -1),
-		Index(m_voxelResolution,  0,  0, -1),
-		Index(m_voxelResolution,  1,  0, -1),
+		Index(-1,  0, -1),
+		Index(0,  0, -1),
+		Index(1,  0, -1),
 
-		Index(m_voxelResolution, -1,  1, -1),
-		Index(m_voxelResolution,  0,  1, -1),
-		Index(m_voxelResolution,  1,  1, -1),
+		Index(-1,  1, -1),
+		Index(0,  1, -1),
+		Index(1,  1, -1),
 
-		Index(m_voxelResolution, -1, -1, 0),
-		Index(m_voxelResolution,  0, -1, 0),
-		Index(m_voxelResolution,  1, -1, 0),
+		Index(-1, -1, 0),
+		Index(0, -1, 0),
+		Index(1, -1, 0),
 
-		Index(m_voxelResolution, -1,  0, 0),
-		Index(m_voxelResolution,  0,  0, 0),
-		Index(m_voxelResolution,  1,  0, 0),
+		Index(-1,  0, 0),
+		Index(0,  0, 0),
+		Index(1,  0, 0),
 
-		Index(m_voxelResolution, -1,  1, 0),
-		Index(m_voxelResolution,  0,  1, 0),
-		Index(m_voxelResolution,  1,  1, 0),
+		Index(-1,  1, 0),
+		Index(0,  1, 0),
+		Index(1,  1, 0),
 
-		Index(m_voxelResolution, -1, -1, 1),
-		Index(m_voxelResolution,  0, -1, 1),
-		Index(m_voxelResolution,  1, -1, 1),
+		Index(-1, -1, 1),
+		Index(0, -1, 1),
+		Index(1, -1, 1),
 
-		Index(m_voxelResolution, -1,  0, 1),
-		Index(m_voxelResolution,  0,  0, 1),
-		Index(m_voxelResolution,  1,  0, 1),
+		Index(-1,  0, 1),
+		Index(0,  0, 1),
+		Index(1,  0, 1),
 
-		Index(m_voxelResolution, -1,  1, 1),
-		Index(m_voxelResolution,  0,  1, 1),
-		Index(m_voxelResolution,  1,  1, 1),
+		Index(-1,  1, 1),
+		Index(0,  1, 1),
+		Index(1,  1, 1),
 		});
 
 	auto blur_weights = std::vector<float>({
@@ -163,11 +186,11 @@ void SoilModel::Initialize(const SoilParameters& soilParameters, const glm::uvec
 
 	m_waterDensity = v;
 	auto tmp = v;
-	m_waterDensity[Index(m_voxelResolution, 32, 32, 16)] = 1.f;
+	m_waterDensity[Index(32, 32, 16)] = 1.f;
 
 	// blur twice
-	Convolution3(m_waterDensity, tmp, blur_idx, blur_weights, m_voxelResolution);
-	Convolution3(tmp, m_waterDensity, blur_idx, blur_weights, m_voxelResolution);
+	Convolution3(m_waterDensity, tmp, blur_idx, blur_weights);
+	Convolution3(tmp, m_waterDensity, blur_idx, blur_weights);
 
 
 	//m_waterDensity[idx(64, 33)] = 1.f;
@@ -195,27 +218,27 @@ void SoilModel::Initialize(const SoilParameters& soilParameters, const glm::uvec
 	m_nutrientsDensity = v;
 
 	// create some nutrients
-	m_nutrientsDensity[Index(m_voxelResolution, 20, 12, 5)] = 100.f;
-	m_nutrientsDensity[Index(m_voxelResolution, 42, 18, 15)] = 100.f;
+	m_nutrientsDensity[Index(20, 12, 5)] = 100.f;
+	m_nutrientsDensity[Index(42, 18, 15)] = 100.f;
 
-	m_nutrientsDensity[Index(m_voxelResolution, 54, 8, 46)] = 50.f;
-	m_nutrientsDensity[Index(m_voxelResolution, 32, 18, 40)] = 50.f;
+	m_nutrientsDensity[Index(54, 8, 46)] = 50.f;
+	m_nutrientsDensity[Index(32, 18, 40)] = 50.f;
 
 	for (auto i = 0; i < 50; ++i)
 	{
-		Convolution3(m_nutrientsDensity, tmp, blur_idx, blur_weights, m_voxelResolution);
-		Convolution3(tmp, m_nutrientsDensity, blur_idx, blur_weights, m_voxelResolution);
+		Convolution3(m_nutrientsDensity, tmp, blur_idx, blur_weights);
+		Convolution3(tmp, m_nutrientsDensity, blur_idx, blur_weights);
 	}
 
-	m_nutrientsDensity[Index(m_voxelResolution, 5, 32, 8)] = 50.f;
-	m_nutrientsDensity[Index(m_voxelResolution, 32, 50, 30)] = 100.f;
+	m_nutrientsDensity[Index(5, 32, 8)] = 50.f;
+	m_nutrientsDensity[Index(32, 50, 30)] = 100.f;
 
-	m_nutrientsDensity[Index(m_voxelResolution, 18, 4, 56)] = 50.f;
-	m_nutrientsDensity[Index(m_voxelResolution, 27, 48, 27)] = 100.f;
+	m_nutrientsDensity[Index(18, 4, 56)] = 50.f;
+	m_nutrientsDensity[Index(27, 48, 27)] = 100.f;
 	for (auto i = 0; i < 40; ++i)
 	{
-		Convolution3(m_nutrientsDensity, tmp, blur_idx, blur_weights, m_voxelResolution);
-		Convolution3(tmp, m_nutrientsDensity, blur_idx, blur_weights, m_voxelResolution);
+		Convolution3(m_nutrientsDensity, tmp, blur_idx, blur_weights);
+		Convolution3(tmp, m_nutrientsDensity, blur_idx, blur_weights);
 	}
 	m_initialized = true;
 }
@@ -223,17 +246,18 @@ void SoilModel::Initialize(const SoilParameters& soilParameters, const glm::uvec
 
 void SoilModel::Step(const SoilParameters& soilParameters)
 {
+	if (!m_initialized) Initialize(soilParameters);
 	auto grad_x1_idx = std::vector<int>({
-		Index(m_voxelResolution, -1, 0, 0),
-		Index(m_voxelResolution, +1, 0, 0),
+		Index(-1, 0, 0),
+		Index(+1, 0, 0),
 		});
 	auto grad_x2_idx = std::vector<int>({
-		Index(m_voxelResolution, 0, -1, 0),
-		Index(m_voxelResolution, 0, +1, 0),
+		Index(0, -1, 0),
+		Index(0, +1, 0),
 		});
 	auto grad_x3_idx = std::vector<int>({
-		Index(m_voxelResolution, 0, 0, -1),
-		Index(m_voxelResolution, 0, 0, +1),
+		Index(0, 0, -1),
+		Index(0, 0, +1),
 		});
 	auto grad_weights = std::vector<float>({
 		-m_voxelDistance / 2.f,
@@ -241,13 +265,13 @@ void SoilModel::Step(const SoilParameters& soilParameters)
 		});
 
 
-	//Convolution3(m_waterDensity, m_waterDensityBlur, blur_idx, blur_weights, m_voxelResolution);
+	//Convolution3(m_waterDensity, m_waterDensityBlur, blur_idx, blur_weights);
 	//m_waterDensityBlur = m_waterDensity;
 
 	// compute gradient dw
-	Convolution3(m_waterDensity, m_gradWaterDensityX1, grad_x1_idx, grad_weights, m_voxelResolution);
-	Convolution3(m_waterDensity, m_gradWaterDensityX2, grad_x2_idx, grad_weights, m_voxelResolution);
-	Convolution3(m_waterDensity, m_gradWaterDensityX3, grad_x3_idx, grad_weights, m_voxelResolution);
+	Convolution3(m_waterDensity, m_gradWaterDensityX1, grad_x1_idx, grad_weights);
+	Convolution3(m_waterDensity, m_gradWaterDensityX2, grad_x2_idx, grad_weights);
+	Convolution3(m_waterDensity, m_gradWaterDensityX3, grad_x3_idx, grad_weights);
 
 	// compute the total flux:
 	const auto grav_dir = glm::vec3(0, 0, 1);
@@ -259,9 +283,9 @@ void SoilModel::Step(const SoilParameters& soilParameters)
 	}
 
 	// compute divergence
-	Convolution3(m_fluxX1, m_divergenceX1, grad_x1_idx, grad_weights, m_voxelResolution);
-	Convolution3(m_fluxX2, m_divergenceX2, grad_x2_idx, grad_weights, m_voxelResolution);
-	Convolution3(m_fluxX3, m_divergenceX3, grad_x3_idx, grad_weights, m_voxelResolution);
+	Convolution3(m_fluxX1, m_divergenceX1, grad_x1_idx, grad_weights);
+	Convolution3(m_fluxX2, m_divergenceX2, grad_x2_idx, grad_weights);
+	Convolution3(m_fluxX3, m_divergenceX3, grad_x3_idx, grad_weights);
 
 	//Convolution3(m_gradWaterDensityX1, m_divergenceX1, grad_x1_idx, grad_weights, m_voxelResolution);
 
@@ -296,6 +320,7 @@ void SoilModel::Step(const SoilParameters& soilParameters)
 		}
 	}
 	*/
+	m_time += soilParameters.m_deltaTime;
 }
 
 glm::uvec3 SoilModel::GetVoxelResolution() const

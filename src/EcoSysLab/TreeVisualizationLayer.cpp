@@ -45,7 +45,7 @@ void TreeVisualizationLayer::LateUpdate() {
 	auto scene = GetScene();
 	auto editorLayer = Application::GetLayer<EditorLayer>();
 	auto selectedEntity = editorLayer->GetSelectedEntity();
-	if (selectedEntity != m_selectedTree) {
+	if (selectedEntity != m_selectedTree && scene->HasPrivateComponent<Tree>(selectedEntity)) {
 		m_needFlowUpdate = true;
 		m_selectedTree = selectedEntity;
 		if (scene->IsEntityValid(m_selectedTree)) m_treeVisualizer.Reset(scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock()->m_treeModel);

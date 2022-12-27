@@ -17,7 +17,16 @@ namespace EcoSysLab
 		 */
 		void OnInspect() override;
 	};
-
+	enum class SoilProperty
+	{
+		WaterDensityBlur,
+		WaterDensity,
+		WaterDensityGradient,
+		Flux,
+		Divergence,
+		ScalarDivergence,
+		NutrientDensity
+	};
 	/**
 	 * \brief The soil is designed to be a private component of an entity.
 	 * It holds the soil model and can be referenced by multiple trees.
@@ -27,6 +36,7 @@ namespace EcoSysLab
 
 	public:
 		SoilModel m_soilModel;
+		AssetRef m_soilDescriptor;
 
 		/**ImGui menu goes to here.Also you can take care you visualization with Gizmos here.
 		 * Note that the visualization will only be activated while you are inspecting the soil private component in the entity inspector.
