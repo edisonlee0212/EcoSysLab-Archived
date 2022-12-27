@@ -27,7 +27,7 @@ void TreeVisualizationLayer::OnCreate() {
 	m_treeBranchComputeProgram->Attach(m_treeBranchComp);
 	m_treeBranchComputeProgram->Link();
 
-	m_treeBranchBuffer = std::make_unique<OpenGLUtils::GLBuffer>(OpenGLUtils::GLBufferTarget::ShaderStorage);
+	m_treeBranchBuffer = std::make_unique<OpenGLUtils::GLBuffer>(OpenGLUtils::GLBufferTarget::ShaderStorage, 0);
 	m_treeMesh = ProjectManager::CreateTemporaryAsset<Mesh>();
 }
 
@@ -119,8 +119,8 @@ void TreeVisualizationLayer::LateUpdate() {
 				for (auto& handle : skeleton.RefSortedFlowList())
 				{
 					auto& flow = skeleton.PeekFlow(handle);
-					glm::vec3 start = (treeTransform.m_value * glm::translate(flow.m_info.m_globalStartPosition))[3];
-					glm::vec3 end = (treeTransform.m_value * glm::translate(flow.m_info.m_globalEndPosition))[3];
+					glm::vec3 start = flow.m_info.m_globalStartPosition;
+					glm::vec3 end = flow.m_info.m_globalEndPosition;
 					branches.push_back({
 						start, flow.m_info.m_startThickness,
 						end, flow.m_info.m_endThickness
@@ -129,24 +129,42 @@ void TreeVisualizationLayer::LateUpdate() {
 			}
 			m_treeBranchBuffer->SetData(branches.size() * sizeof(Branch), branches.data(), GL_DYNAMIC_READ);
 			const auto res = 12;
-			const auto num_vertices = branches.size() * (res + 1) * 2;
-			const auto num_indices = branches.size() * (res * 2 * 2);
+			const auto numVertices = branches.size() * (res + 1) * 2;
+			const auto numTriangles = branches.size() * (res * 2 * 2);
 			auto vao = m_treeMesh->Vao();
-			vao->Vbo().SetData((GLsizei)(num_vertices * sizeof(Vertex)), nullptr, GL_DYNAMIC_DRAW);
-			vao->Ebo().SetData((GLsizei)num_indices * sizeof(glm::uvec3), nullptr, GL_DYNAMIC_DRAW);
+			vao->Vbo().SetData((GLsizei)(numVertices * sizeof(Vertex)), nullptr, GL_DYNAMIC_DRAW);
+			vao->Ebo().SetData((GLsizei)numTriangles * sizeof(glm::uvec3), nullptr, GL_DYNAMIC_DRAW);
 
-			vao->Vbo().SetTarget(OpenGLUtils::GLBufferTarget::ShaderStorage);
-			vao->Ebo().SetTarget(OpenGLUtils::GLBufferTarget::ShaderStorage);
+			m_treeBranchBuffer->Bind();
+			vao->Vbo().SetTargetBase(OpenGLUtils::GLBufferTarget::ShaderStorage, 1);
+			vao->Vbo().Bind();
+			vao->Ebo().SetTargetBase(OpenGLUtils::GLBufferTarget::ShaderStorage, 2);
+			vao->Ebo().Bind();
+			
 
-			m_treeBranchBuffer->SetBase(0);
-			vao->Vbo().SetBase(1);
-			vao->Ebo().SetBase(2);
 			m_treeBranchComputeProgram->DispatchCompute(glm::uvec3(branches.size(), 1, 1));
-			glMemoryBarrier(GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT);
-			glMemoryBarrier(GL_ELEMENT_ARRAY_BARRIER_BIT);
-
+			OpenGLUtils::InsertMemoryBarrier(GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT);
+			OpenGLUtils::InsertMemoryBarrier(GL_ELEMENT_ARRAY_BARRIER_BIT);
+			m_treeMesh->UnsafeSetTrianglesAmount(numTriangles);
+			m_treeMesh->UnsafeSetVerticesAmount(numVertices);
 			vao->Vbo().SetTarget(OpenGLUtils::GLBufferTarget::Array);
 			vao->Ebo().SetTarget(OpenGLUtils::GLBufferTarget::ElementArray);
+			vao->Bind();
+			vao->Vbo().Bind();
+			vao->Ebo().Bind();
+#pragma region AttributePointer
+			vao->EnableAttributeArray(0);
+			vao->SetAttributePointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), 0);
+			vao->EnableAttributeArray(1);
+			vao->SetAttributePointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)(offsetof(Vertex, m_normal)));
+			vao->EnableAttributeArray(2);
+			vao->SetAttributePointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)(offsetof(Vertex, m_tangent)));
+			vao->EnableAttributeArray(3);
+			vao->SetAttributePointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)(offsetof(Vertex, m_color)));
+
+			vao->EnableAttributeArray(4);
+			vao->SetAttributePointer(4, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)(offsetof(Vertex, m_texCoord)));
+#pragma endregion
 			Gizmos::DrawGizmoMesh(m_treeMesh);
 		}
 

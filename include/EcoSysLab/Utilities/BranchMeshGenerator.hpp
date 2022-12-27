@@ -179,7 +179,7 @@ namespace EcoSysLab {
             float angleStep = 360.0f / static_cast<float>(pStep);
             int vertexIndex = vertices.size();
             Vertex archetype;
-            if (settings.m_overrideVertexColor) archetype.m_color = settings.m_branchVertexColor;
+            if (settings.m_overrideVertexColor) archetype.m_color = glm::vec4(settings.m_branchVertexColor, 1.0f);
             //else archetype.m_color = branchColors.at(internodeHandle);
 
             float textureXStep = 1.0f / pStep * 4.0f;
