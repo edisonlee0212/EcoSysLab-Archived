@@ -85,12 +85,21 @@ void Soil::OnInspect()
 			updateVectorMatrices = updateVectorMatrices || forceUpdate;
 			updateVectorColors = updateVectorColors || forceUpdate;
 			static float vectorMultiplier = 50.0f;
-			static glm::vec4 vectorBaseColor = glm::vec4(1.0f, 0.0f, 0.0f, 0.1f);
+			static glm::vec4 vectorBaseColor = glm::vec4(1.0f, 1.0f, 1.0f, 0.8f);
 			static unsigned vectorSoilProperty = 2;
-			static float vectorLineWidthFactor = 1.0f;
+			static float vectorLineWidthFactor = 0.1f;
 			static float vectorLineMaxWidth = 0.1f;
 			if (ImGui::TreeNodeEx("Vector", ImGuiTreeNodeFlags_DefaultOpen))
 			{
+				if(ImGui::Button("Reset"))
+				{
+					vectorMultiplier = 50.0f;
+					vectorBaseColor = glm::vec4(1.0f, 1.0f, 1.0f, 0.8f);
+					vectorSoilProperty = 2;
+					vectorLineWidthFactor = 0.1f;
+					vectorLineMaxWidth = 0.1f;
+					updateVectorColors = updateVectorMatrices = true;
+				}
 				if (ImGui::ColorEdit4("Vector Base Color", &vectorBaseColor.x))
 				{
 					updateVectorColors = true;
@@ -230,6 +239,15 @@ void Soil::OnInspect()
 			static unsigned scalarSoilProperty = 1;
 			if (scalarEnable && ImGui::TreeNodeEx("Scalar", ImGuiTreeNodeFlags_DefaultOpen))
 			{
+				if (ImGui::Button("Reset"))
+				{
+					scalarMultiplier = 1.0f;
+					scalarBoxSize = 0.5f;
+					scalarMinAlpha = 0.00f;
+					scalarBaseColor = glm::vec3(0.0f, 0.0f, 1.0f);
+					scalarSoilProperty = 1;
+					updateScalarColors = updateScalarMatrices = true;
+				}
 				if (ImGui::ColorEdit3("Scalar Base Color", &scalarBaseColor.x))
 				{
 					updateScalarColors = true;
