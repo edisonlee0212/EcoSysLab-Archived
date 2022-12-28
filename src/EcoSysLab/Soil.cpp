@@ -31,7 +31,9 @@ void Soil::OnInspect()
 			ImGui::DragFloat("Alpha", &alpha, 0.01f, 0.0f, 1.0f);
 			static bool forceUpdateMatrices = false;
 			ImGui::Checkbox("Force Update Matrices", &forceUpdateMatrices);
-			static SoilProperty soilProperty = SoilProperty::WaterDensity;
+			static unsigned soilProperty = 0;
+			ImGui::Combo("Mode", { "Water Density Blur", "Water Density", "Water Density Gradient", "Flux", "Divergence", "Scalar Divergence", "NutrientDensity"}, soilProperty);
+			//static SoilProperty soilProperty = SoilProperty::WaterDensity;
 
 			{
 				static std::vector<glm::mat4> matrices;
@@ -58,8 +60,15 @@ void Soil::OnInspect()
 					for (auto& i : results) i.wait();
 				}
 				std::vector<std::shared_future<void>> results;
-				switch (soilProperty)
+				switch (static_cast<SoilProperty>(soilProperty))
 				{
+				case SoilProperty::WaterDensityBlur:
+				{
+					Jobs::ParallelFor(numVoxels, [&](unsigned i)
+						{
+							colors[i] = { glm::vec3(m_soilModel.m_waterDensityBlur[i]) , alpha };
+						}, results);
+				}break;
 				case SoilProperty::WaterDensity:
 				{
 					Jobs::ParallelFor(numVoxels, [&](unsigned i)
@@ -71,7 +80,28 @@ void Soil::OnInspect()
 				{
 					Jobs::ParallelFor(numVoxels, [&](unsigned i)
 						{
-							colors[i] = { m_soilModel.m_gradWaterDensityX1[i], m_soilModel.m_gradWaterDensityX1[i], m_soilModel.m_gradWaterDensityX1[i] , alpha };
+							colors[i] = { m_soilModel.m_gradWaterDensityX1[i], m_soilModel.m_gradWaterDensityX2[i], m_soilModel.m_gradWaterDensityX3[i] , alpha };
+						}, results);
+				}break;
+				case SoilProperty::Flux:
+				{
+					Jobs::ParallelFor(numVoxels, [&](unsigned i)
+						{
+							colors[i] = { m_soilModel.m_fluxX1[i], m_soilModel.m_fluxX2[i], m_soilModel.m_fluxX3[i] , alpha };
+						}, results);
+				}break;
+				case SoilProperty::Divergence:
+				{
+					Jobs::ParallelFor(numVoxels, [&](unsigned i)
+						{
+							colors[i] = { m_soilModel.m_divergenceX1[i], m_soilModel.m_divergenceX2[i], m_soilModel.m_divergenceX3[i] , alpha };
+						}, results);
+				}break;
+				case SoilProperty::ScalarDivergence:
+				{
+					Jobs::ParallelFor(numVoxels, [&](unsigned i)
+						{
+							colors[i] = { glm::vec3(m_soilModel.m_divergence[i]) , alpha };
 						}, results);
 				}break;
 				case SoilProperty::NutrientDensity:
