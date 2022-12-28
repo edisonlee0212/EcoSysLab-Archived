@@ -16,17 +16,17 @@ namespace EcoSysLab {
 	class SoilModel {
 		std::vector<float> m_waterDensity;
 		std::vector<float> m_waterDensityBlur;
-		std::vector<float> m_gradWaterDensityX1;
-		std::vector<float> m_gradWaterDensityX2;
-		std::vector<float> m_gradWaterDensityX3;
+		std::vector<float> m_gradWaterDensityX;
+		std::vector<float> m_gradWaterDensityY;
+		std::vector<float> m_gradWaterDensityZ;
 
-		std::vector<float> m_fluxX1; // three components of the total flux
-		std::vector<float> m_fluxX2;
-		std::vector<float> m_fluxX3;
+		std::vector<float> m_fluxX; // three components of the total flux
+		std::vector<float> m_fluxY;
+		std::vector<float> m_fluxZ;
 
-		std::vector<float> m_divergenceX1; // divergence components before summing
-		std::vector<float> m_divergenceX2;
-		std::vector<float> m_divergenceX3;
+		std::vector<float> m_divergenceX; // divergence components before summing
+		std::vector<float> m_divergenceY;
+		std::vector<float> m_divergenceZ;
 
 		std::vector<float> m_divergence; // scalar divergence of the flux field
 

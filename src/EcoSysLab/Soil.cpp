@@ -17,7 +17,7 @@ void OnInspectSoilParameters(SoilParameters& soilParameters)
 void SoilDescriptor::OnInspect()
 {
 	glm::ivec3 resolution = m_voxelResolution;
-	if(ImGui::DragInt3("Voxel Resolution", &resolution.x, 1, 1, 100))
+	if (ImGui::DragInt3("Voxel Resolution", &resolution.x, 1, 1, 100))
 	{
 		m_voxelResolution = resolution;
 	}
@@ -31,7 +31,7 @@ void SoilDescriptor::OnInspect()
 		soil->m_soilDescriptor = ProjectManager::GetAsset(GetHandle());
 		soil->m_soilModel.Initialize(m_soilParameters, m_voxelResolution, m_voxelSize, m_startPosition);
 
-		
+
 	}
 
 
@@ -42,69 +42,247 @@ void SoilDescriptor::OnInspect()
 
 void Soil::OnInspect()
 {
-	static bool debugVisualization = true;
-	ImGui::Checkbox("Debug Visualization", &debugVisualization);
 	if (m_soilDescriptor.Get<SoilDescriptor>()) {
 		auto soilDescriptor = m_soilDescriptor.Get<SoilDescriptor>();
 		if (!m_soilModel.m_initialized) m_soilModel.Initialize(soilDescriptor->m_soilParameters);
 		static bool autoStep = false;
-		if(ImGui::Button("Test setup"))
+		if (ImGui::Button("Test setup"))
 		{
 			m_soilModel.TestSetup();
 		}
+		bool updateVectorMatrices = false;
+		bool updateVectorColors = false;
+		bool updateScalarMatrices = false;
+		bool updateScalarColors = false;
 
 		ImGui::Checkbox("Auto step", &autoStep);
-		if(autoStep)
+		if (autoStep)
 		{
 			m_soilModel.Step(soilDescriptor->m_soilParameters);
-		}else if (ImGui::Button("Step"))
+			updateVectorMatrices = updateScalarColors = true;
+		}
+		else if (ImGui::Button("Step"))
 		{
 			m_soilModel.Step(soilDescriptor->m_soilParameters);
+			updateVectorMatrices = updateScalarColors = true;
 		}
 
-		if (debugVisualization)
+		static bool forceUpdate;
+		ImGui::Checkbox("Force Update", &forceUpdate);
+		static bool vectorEnable = true;
+		if (ImGui::Checkbox("Vector Visualization", &vectorEnable))
 		{
-			static float minAlpha = 0.00f;
-			ImGui::DragFloat("Min alpha", &minAlpha, 0.001f, 0.0f, 1.0f);
-			static bool forceUpdateMatrices = false;
-			ImGui::Checkbox("Force Update Matrices", &forceUpdateMatrices);
-			static unsigned soilProperty = 1;
-			ImGui::Combo("Mode", { "Water Density Blur", "Water Density", "Water Density Gradient", "Flux", "Divergence", "Scalar Divergence", "NutrientDensity" }, soilProperty);
-			//static SoilProperty soilProperty = SoilProperty::WaterDensity;
+			if (vectorEnable) updateVectorMatrices = updateVectorColors = true;
+		}
+		static bool scalarEnable = true;
+		if (ImGui::Checkbox("Scalar Visualization", &scalarEnable))
+		{
+			if (scalarEnable) updateScalarMatrices = updateScalarColors = true;
+		}
 
+		const auto numVoxels = m_soilModel.m_voxelResolution.x * m_soilModel.m_voxelResolution.y * m_soilModel.m_voxelResolution.z;
+		if (vectorEnable) {
+			updateVectorMatrices = updateVectorMatrices || forceUpdate;
+			updateVectorColors = updateVectorColors || forceUpdate;
+			static float vectorMultiplier = 50.0f;
+			static glm::vec4 vectorBaseColor = glm::vec4(1.0f, 0.0f, 0.0f, 0.1f);
+			static unsigned vectorSoilProperty = 2;
+			static float vectorLineWidthFactor = 1.0f;
+			static float vectorLineMaxWidth = 0.1f;
+			if (ImGui::TreeNodeEx("Vector", ImGuiTreeNodeFlags_DefaultOpen))
 			{
-				static std::vector<glm::mat4> matrices;
-				static std::vector<glm::vec4> colors;
-				const auto numVoxels = m_soilModel.m_voxelResolution.x * m_soilModel.m_voxelResolution.y * m_soilModel.m_voxelResolution.z;
-				bool updateMatrices = forceUpdateMatrices;
-				if (matrices.size() != numVoxels || colors.size() != numVoxels)
+				if (ImGui::ColorEdit4("Vector Base Color", &vectorBaseColor.x))
 				{
-					matrices.resize(numVoxels);
-					colors.resize(numVoxels);
-
-					updateMatrices = true;
+					updateVectorColors = true;
 				}
-				if (updateMatrices)
+				if (ImGui::DragFloat("Multiplier", &vectorMultiplier, 0.1f, 0.0f, 100.0f, "%.3f"))
 				{
-					std::vector<std::shared_future<void>> results;
+					updateVectorMatrices = true;
+				}
+				if (ImGui::DragFloat("Line Width Factor", &vectorLineWidthFactor, 0.01f, 0.0f, 5.0f))
+				{
+					updateVectorMatrices = true;
+				}
+				if (ImGui::DragFloat("Max Line Width", &vectorLineMaxWidth, 0.01f, 0.0f, 5.0f))
+				{
+					updateVectorMatrices = true;
+				}
+				if (ImGui::Combo("Vector Mode", { "N/A", "N/A", "Water Density Gradient", "Flux", "Divergence", "N/A", "N/A" }, vectorSoilProperty))
+				{
+					updateVectorMatrices = true;
+				}
+				ImGui::TreePop();
+			}
+
+			static std::vector<glm::mat4> vectorMatrices;
+			static std::vector<glm::vec4> vectorColors;
+			if (vectorMatrices.size() != numVoxels || vectorColors.size() != numVoxels)
+			{
+				vectorMatrices.resize(numVoxels);
+				vectorColors.resize(numVoxels);
+				updateVectorMatrices = updateVectorColors = true;
+			}
+			if (updateVectorMatrices)
+			{
+				std::vector<std::shared_future<void>> results;
+				const auto actualVectorMultiplier = vectorMultiplier * m_soilModel.m_voxelSize;
+				switch (static_cast<SoilProperty>(vectorSoilProperty))
+				{
+				case SoilProperty::WaterDensityGradient:
+				{
 					Jobs::ParallelFor(numVoxels, [&](unsigned i)
 						{
-							matrices[i] =
+							const auto targetVector = glm::vec3(m_soilModel.m_gradWaterDensityX[i], m_soilModel.m_gradWaterDensityY[i], m_soilModel.m_gradWaterDensityZ[i]);
+					const auto start = m_soilModel.GetCenter(m_soilModel.GetCoordinate(i));
+					const auto end = start + targetVector * actualVectorMultiplier;
+					const auto direction = glm::normalize(end - start);
+					glm::quat rotation = glm::quatLookAt(direction, glm::vec3(direction.y, direction.z, direction.x));
+					rotation *= glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));
+					const auto length = glm::distance(end, start) / 2.0f;
+					const auto width = glm::min(vectorLineMaxWidth, length * vectorLineWidthFactor);
+					const auto model = glm::translate((start + end) / 2.0f) * glm::mat4_cast(rotation) *
+						glm::scale(glm::vec3(width, length, width));
+					vectorMatrices[i] = model;
+						}, results);
+				}break;
+				case SoilProperty::Flux:
+				{
+					Jobs::ParallelFor(numVoxels, [&](unsigned i)
+						{
+							const auto targetVector = glm::vec3(m_soilModel.m_fluxX[i], m_soilModel.m_fluxY[i], m_soilModel.m_fluxZ[i]);
+					const auto start = m_soilModel.GetCenter(m_soilModel.GetCoordinate(i));
+					const auto end = start + targetVector * actualVectorMultiplier;
+					const auto direction = glm::normalize(end - start);
+					glm::quat rotation = glm::quatLookAt(direction, glm::vec3(direction.y, direction.z, direction.x));
+					rotation *= glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));
+					const auto length = glm::distance(end, start) / 2.0f;
+					const auto width = glm::min(vectorLineMaxWidth, length * vectorLineWidthFactor);
+					const auto model = glm::translate((start + end) / 2.0f) * glm::mat4_cast(rotation) *
+						glm::scale(glm::vec3(width, length, width));
+					vectorMatrices[i] = model;
+						}, results);
+				}break;
+				case SoilProperty::Divergence:
+				{
+					Jobs::ParallelFor(numVoxels, [&](unsigned i)
+						{
+							const auto targetVector = glm::vec3(m_soilModel.m_divergenceX[i], m_soilModel.m_divergenceY[i], m_soilModel.m_divergenceZ[i]);
+					const auto start = m_soilModel.GetCenter(m_soilModel.GetCoordinate(i));
+					const auto end = start + targetVector * actualVectorMultiplier;
+					const auto direction = glm::normalize(end - start);
+					glm::quat rotation = glm::quatLookAt(direction, glm::vec3(direction.y, direction.z, direction.x));
+					rotation *= glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));
+					const auto length = glm::distance(end, start) / 2.0f;
+					const auto width = glm::min(vectorLineMaxWidth, length * vectorLineWidthFactor);
+					const auto model = glm::translate((start + end) / 2.0f) * glm::mat4_cast(rotation) *
+						glm::scale(glm::vec3(width, length, width));
+					vectorMatrices[i] = model;
+						}, results);
+				}break;
+				default:
+				{
+					Jobs::ParallelFor(numVoxels, [&](unsigned i)
+						{
+							vectorMatrices[i] =
 							glm::translate(m_soilModel.GetCenter(m_soilModel.GetCoordinate(i)))
 						* glm::mat4_cast(glm::quat(glm::vec3(0.0f)))
-						* glm::scale(glm::vec3(m_soilModel.GetVoxelSize() / 2.0f));
+						* glm::scale(glm::vec3(0.0f));
 						}, results);
-					for (auto& i : results) i.wait();
+				}break;
 				}
+				for (auto& i : results) i.wait();
+			}
+			if (updateVectorColors) {
 				std::vector<std::shared_future<void>> results;
-				switch (static_cast<SoilProperty>(soilProperty))
+				Jobs::ParallelFor(numVoxels, [&](unsigned i)
+					{
+						vectorColors[i] = vectorBaseColor;
+					}, results);
+
+				for (auto& i : results) i.wait();
+			}
+
+			auto editorLayer = Application::GetLayer<EditorLayer>();
+
+			GizmoSettings gizmoSettings;
+			gizmoSettings.m_drawSettings.m_blending = true;
+			gizmoSettings.m_drawSettings.m_blendingSrcFactor = OpenGLBlendFactor::SrcAlpha;
+			gizmoSettings.m_drawSettings.m_blendingDstFactor = OpenGLBlendFactor::OneMinusSrcAlpha;
+			gizmoSettings.m_drawSettings.m_cullFace = true;
+
+			Gizmos::DrawGizmoMeshInstancedColored(
+				DefaultResources::Primitives::Cylinder, editorLayer->m_sceneCamera,
+				editorLayer->m_sceneCameraPosition,
+				editorLayer->m_sceneCameraRotation,
+				vectorColors,
+				vectorMatrices,
+				glm::mat4(1.0f), 1.0f, gizmoSettings);
+
+
+		}
+		if (scalarEnable) {
+			updateScalarMatrices = updateScalarMatrices || forceUpdate;
+			updateScalarColors = updateScalarColors || forceUpdate;
+			static float scalarMultiplier = 1.0f;
+			static float scalarBoxSize = 0.5f;
+			static float scalarMinAlpha = 0.00f;
+			static glm::vec3 scalarBaseColor = glm::vec3(0.0f, 0.0f, 1.0f);
+			static unsigned scalarSoilProperty = 1;
+			if (scalarEnable && ImGui::TreeNodeEx("Scalar", ImGuiTreeNodeFlags_DefaultOpen))
+			{
+				if (ImGui::ColorEdit3("Scalar Base Color", &scalarBaseColor.x))
+				{
+					updateScalarColors = true;
+				}
+				if (ImGui::DragFloat("Multiplier", &scalarMultiplier, 0.001f, 0.0f, 10.0f, "%.5f"))
+				{
+					updateScalarMatrices = true;
+				}
+				if (ImGui::DragFloat("Min alpha", &scalarMinAlpha, 0.001f, 0.0f, 1.0f))
+				{
+					updateScalarColors = true;
+				}
+				if (ImGui::DragFloat("Box size", &scalarBoxSize, 0.001f, 0.0f, 1.0f))
+				{
+					updateScalarMatrices = true;
+				}
+				if (ImGui::Combo("Scalar Mode", { "Water Density Blur", "Water Density", "Water Density Gradient", "Flux", "Divergence", "Scalar Divergence", "NutrientDensity" }, scalarSoilProperty))
+				{
+					updateScalarColors = true;
+				}
+				ImGui::TreePop();
+			}
+
+			static std::vector<glm::mat4> scalarMatrices;
+			static std::vector<glm::vec4> scalarColors;
+			if (scalarMatrices.size() != numVoxels || scalarColors.size() != numVoxels)
+			{
+				scalarMatrices.resize(numVoxels);
+				scalarColors.resize(numVoxels);
+				updateScalarMatrices = updateScalarColors = true;
+			}
+			if (updateScalarMatrices)
+			{
+				std::vector<std::shared_future<void>> results;
+				Jobs::ParallelFor(numVoxels, [&](unsigned i)
+					{
+						scalarMatrices[i] =
+						glm::translate(m_soilModel.GetCenter(m_soilModel.GetCoordinate(i)))
+					* glm::mat4_cast(glm::quat(glm::vec3(0.0f)))
+					* glm::scale(glm::vec3(m_soilModel.GetVoxelSize() * scalarBoxSize));
+					}, results);
+				for (auto& i : results) i.wait();
+			}
+			if (updateScalarColors) {
+				std::vector<std::shared_future<void>> results;
+				switch (static_cast<SoilProperty>(scalarSoilProperty))
 				{
 				case SoilProperty::WaterDensityBlur:
 				{
 					Jobs::ParallelFor(numVoxels, [&](unsigned i)
 						{
 							auto value = glm::vec3(m_soilModel.m_waterDensityBlur[i]);
-					colors[i] = { glm::vec3(1.0f, 0.0f, 0.0f), glm::clamp(glm::length(value), minAlpha, 1.0f) };
+					scalarColors[i] = { scalarBaseColor, glm::clamp(glm::length(value) * scalarMultiplier, scalarMinAlpha, 1.0f) };
 						}, results);
 				}break;
 				case SoilProperty::WaterDensity:
@@ -112,31 +290,31 @@ void Soil::OnInspect()
 					Jobs::ParallelFor(numVoxels, [&](unsigned i)
 						{
 							auto value = glm::vec3(m_soilModel.m_waterDensity[i]);
-					colors[i] = { glm::vec3(0.0f, 0.0f, 1.0f) , glm::clamp(glm::length(value), minAlpha, 1.0f) };
+					scalarColors[i] = { scalarBaseColor, glm::clamp(glm::length(value) * scalarMultiplier, scalarMinAlpha, 1.0f) };
 						}, results);
 				}break;
 				case SoilProperty::WaterDensityGradient:
 				{
 					Jobs::ParallelFor(numVoxels, [&](unsigned i)
 						{
-							auto value = glm::vec3(m_soilModel.m_gradWaterDensityX1[i], m_soilModel.m_gradWaterDensityX2[i], m_soilModel.m_gradWaterDensityX3[i]);
-					colors[i] = { value, glm::clamp(glm::length(value), minAlpha, 1.0f) };
+							auto value = glm::vec3(m_soilModel.m_gradWaterDensityX[i], m_soilModel.m_gradWaterDensityY[i], m_soilModel.m_gradWaterDensityZ[i]);
+					scalarColors[i] = { glm::normalize(value), glm::clamp(glm::length(value) * scalarMultiplier, scalarMinAlpha, 1.0f) };
 						}, results);
 				}break;
 				case SoilProperty::Flux:
 				{
 					Jobs::ParallelFor(numVoxels, [&](unsigned i)
 						{
-							auto value = glm::vec3(m_soilModel.m_fluxX1[i], m_soilModel.m_fluxX2[i], m_soilModel.m_fluxX3[i]);
-					colors[i] = { value, glm::clamp(glm::length(value), minAlpha, 1.0f) };
+							auto value = glm::vec3(m_soilModel.m_fluxX[i], m_soilModel.m_fluxY[i], m_soilModel.m_fluxZ[i]);
+					scalarColors[i] = { glm::normalize(value), glm::clamp(glm::length(value) * scalarMultiplier, scalarMinAlpha, 1.0f) };
 						}, results);
 				}break;
 				case SoilProperty::Divergence:
 				{
 					Jobs::ParallelFor(numVoxels, [&](unsigned i)
 						{
-							auto value = glm::vec3(m_soilModel.m_divergenceX1[i], m_soilModel.m_divergenceX2[i], m_soilModel.m_divergenceX3[i]);
-					colors[i] = { value, glm::clamp(glm::length(value), minAlpha, 1.0f) };
+							auto value = glm::vec3(m_soilModel.m_divergenceX[i], m_soilModel.m_divergenceY[i], m_soilModel.m_divergenceZ[i]);
+					scalarColors[i] = { glm::normalize(value), glm::clamp(glm::length(value) * scalarMultiplier, scalarMinAlpha, 1.0f) };
 						}, results);
 				}break;
 				case SoilProperty::ScalarDivergence:
@@ -144,7 +322,7 @@ void Soil::OnInspect()
 					Jobs::ParallelFor(numVoxels, [&](unsigned i)
 						{
 							auto value = glm::vec3(m_soilModel.m_divergence[i]);
-					colors[i] = { glm::vec3(1.0f, 0.0f, 0.0f), glm::clamp(glm::length(value), minAlpha, 1.0f) };
+					scalarColors[i] = { scalarBaseColor, glm::clamp(glm::length(value) * scalarMultiplier, scalarMinAlpha, 1.0f) };
 						}, results);
 				}break;
 				case SoilProperty::NutrientDensity:
@@ -152,28 +330,33 @@ void Soil::OnInspect()
 					Jobs::ParallelFor(numVoxels, [&](unsigned i)
 						{
 							auto value = glm::vec3(glm::vec3(m_soilModel.m_nutrientsDensity[i]));
-					colors[i] = { glm::vec3(1.0f, 0.0f, 0.0f ), glm::clamp(glm::length(value), minAlpha, 1.0f)};
+					scalarColors[i] = { scalarBaseColor, glm::clamp(glm::length(value) * scalarMultiplier, scalarMinAlpha, 1.0f) };
+						}, results);
+				}break;
+				default:
+				{
+					Jobs::ParallelFor(numVoxels, [&](unsigned i)
+						{
+							scalarColors[i] = glm::vec4(0.0f);
 						}, results);
 				}break;
 				}
-
 				for (auto& i : results) i.wait();
-
-				auto editorLayer = Application::GetLayer<EditorLayer>();
-
-				GizmoSettings gizmoSettings;
-				gizmoSettings.m_drawSettings.m_blending = true;
-				gizmoSettings.m_drawSettings.m_blendingSrcFactor = OpenGLBlendFactor::SrcAlpha;
-				gizmoSettings.m_drawSettings.m_blendingDstFactor = OpenGLBlendFactor::OneMinusSrcAlpha;
-				gizmoSettings.m_drawSettings.m_cullFace = true;
-				Gizmos::DrawGizmoMeshInstancedColored(
-					DefaultResources::Primitives::Cube, editorLayer->m_sceneCamera,
-					editorLayer->m_sceneCameraPosition,
-					editorLayer->m_sceneCameraRotation,
-					colors,
-					matrices,
-					glm::mat4(1.0f), 1.0f, gizmoSettings);
 			}
+
+			auto editorLayer = Application::GetLayer<EditorLayer>();
+			GizmoSettings gizmoSettings;
+			gizmoSettings.m_drawSettings.m_blending = true;
+			gizmoSettings.m_drawSettings.m_blendingSrcFactor = OpenGLBlendFactor::SrcAlpha;
+			gizmoSettings.m_drawSettings.m_blendingDstFactor = OpenGLBlendFactor::OneMinusSrcAlpha;
+			gizmoSettings.m_drawSettings.m_cullFace = true;
+			Gizmos::DrawGizmoMeshInstancedColored(
+				DefaultResources::Primitives::Cube, editorLayer->m_sceneCamera,
+				editorLayer->m_sceneCameraPosition,
+				editorLayer->m_sceneCameraRotation,
+				scalarColors,
+				scalarMatrices,
+				glm::mat4(1.0f), 1.0f, gizmoSettings);
 		}
 	}
 }

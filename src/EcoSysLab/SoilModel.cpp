@@ -101,8 +101,8 @@ void SoilModel::Initialize(const SoilParameters& soilParameters, const glm::uvec
 	m_voxelResolution = voxelResolution;
 	m_voxelSize = voxelDistance;
 	m_startPosition = minPosition;
-	Reset();
 	m_initialized = true;
+	Reset();
 }
 
 void SoilModel::Reset()
@@ -117,27 +117,27 @@ void SoilModel::Reset()
 		m_waterDensityBlur.resize(numVoxels);
 		std::fill(m_waterDensityBlur.begin(), m_waterDensityBlur.end(), 0);
 
-		m_gradWaterDensityX1.resize(numVoxels);
-		std::fill(m_gradWaterDensityX1.begin(), m_gradWaterDensityX1.end(), 0);
-		m_gradWaterDensityX2.resize(numVoxels);
-		std::fill(m_gradWaterDensityX2.begin(), m_gradWaterDensityX2.end(), 0);
-		m_gradWaterDensityX3.resize(numVoxels);
-		std::fill(m_gradWaterDensityX3.begin(), m_gradWaterDensityX3.end(), 0);
+		m_gradWaterDensityX.resize(numVoxels);
+		std::fill(m_gradWaterDensityX.begin(), m_gradWaterDensityX.end(), 0);
+		m_gradWaterDensityY.resize(numVoxels);
+		std::fill(m_gradWaterDensityY.begin(), m_gradWaterDensityY.end(), 0);
+		m_gradWaterDensityZ.resize(numVoxels);
+		std::fill(m_gradWaterDensityZ.begin(), m_gradWaterDensityZ.end(), 0);
 
-		m_fluxX1.resize(numVoxels);
-		std::fill(m_fluxX1.begin(), m_fluxX1.end(), 0);
-		m_fluxX2.resize(numVoxels);
-		std::fill(m_fluxX2.begin(), m_fluxX2.end(), 0);
-		m_fluxX3.resize(numVoxels);
-		std::fill(m_fluxX3.begin(), m_fluxX3.end(), 0);
+		m_fluxX.resize(numVoxels);
+		std::fill(m_fluxX.begin(), m_fluxX.end(), 0);
+		m_fluxY.resize(numVoxels);
+		std::fill(m_fluxY.begin(), m_fluxY.end(), 0);
+		m_fluxZ.resize(numVoxels);
+		std::fill(m_fluxZ.begin(), m_fluxZ.end(), 0);
 
 
-		m_divergenceX1.resize(numVoxels);
-		std::fill(m_divergenceX1.begin(), m_divergenceX1.end(), 0);
-		m_divergenceX2.resize(numVoxels);
-		std::fill(m_divergenceX2.begin(), m_divergenceX2.end(), 0);
-		m_divergenceX3.resize(numVoxels);
-		std::fill(m_divergenceX3.begin(), m_divergenceX3.end(), 0);
+		m_divergenceX.resize(numVoxels);
+		std::fill(m_divergenceX.begin(), m_divergenceX.end(), 0);
+		m_divergenceY.resize(numVoxels);
+		std::fill(m_divergenceY.begin(), m_divergenceY.end(), 0);
+		m_divergenceZ.resize(numVoxels);
+		std::fill(m_divergenceZ.begin(), m_divergenceZ.end(), 0);
 
 		m_divergence.resize(numVoxels);
 		std::fill(m_divergence.begin(), m_divergence.end(), 0);
@@ -287,19 +287,19 @@ float SoilModel::GetTime() const
 void SoilModel::Step(const SoilParameters& soilParameters)
 {
 	if (!m_initialized) Initialize(soilParameters);
-	auto grad_x1_idx = std::vector<int>({
+	auto gradXIndex = std::vector<int>({
 		Index(-1, 0, 0),
 		Index(+1, 0, 0),
 		});
-	auto grad_x2_idx = std::vector<int>({
+	auto gradYIndex = std::vector<int>({
 		Index(0, -1, 0),
 		Index(0, +1, 0),
 		});
-	auto grad_x3_idx = std::vector<int>({
+	auto gradZIndex = std::vector<int>({
 		Index(0, 0, -1),
 		Index(0, 0, +1),
 		});
-	auto grad_weights = std::vector<float>({
+	auto gradWeights = std::vector<float>({
 		-m_voxelSize / 2.f,
 		 m_voxelSize / 2.f
 		});
@@ -309,29 +309,29 @@ void SoilModel::Step(const SoilParameters& soilParameters)
 	//m_waterDensityBlur = m_waterDensity;
 
 	// compute gradient dw
-	Convolution3(m_waterDensity, m_gradWaterDensityX1, grad_x1_idx, grad_weights);
-	Convolution3(m_waterDensity, m_gradWaterDensityX2, grad_x2_idx, grad_weights);
-	Convolution3(m_waterDensity, m_gradWaterDensityX3, grad_x3_idx, grad_weights);
+	Convolution3(m_waterDensity, m_gradWaterDensityX, gradXIndex, gradWeights);
+	Convolution3(m_waterDensity, m_gradWaterDensityY, gradYIndex, gradWeights);
+	Convolution3(m_waterDensity, m_gradWaterDensityZ, gradZIndex, gradWeights);
 
 	// compute the total flux:
 	for (auto i = 0; i < m_waterDensity.size(); ++i)
 	{
-		m_fluxX1[i] = -soilParameters.m_diffusionFactor * m_gradWaterDensityX1[i] + soilParameters.m_gravityFactor * m_gravityDirection.x * m_waterDensity[i];
-		m_fluxX2[i] = -soilParameters.m_diffusionFactor * m_gradWaterDensityX2[i] + soilParameters.m_gravityFactor * m_gravityDirection.y * m_waterDensity[i];
-		m_fluxX3[i] = -soilParameters.m_diffusionFactor * m_gradWaterDensityX3[i] + soilParameters.m_gravityFactor * m_gravityDirection.z * m_waterDensity[i];
+		m_fluxX[i] = -soilParameters.m_diffusionFactor * m_gradWaterDensityX[i] + soilParameters.m_gravityFactor * m_gravityDirection.x * m_waterDensity[i];
+		m_fluxY[i] = -soilParameters.m_diffusionFactor * m_gradWaterDensityY[i] + soilParameters.m_gravityFactor * m_gravityDirection.y * m_waterDensity[i];
+		m_fluxZ[i] = -soilParameters.m_diffusionFactor * m_gradWaterDensityZ[i] + soilParameters.m_gravityFactor * m_gravityDirection.z * m_waterDensity[i];
 	}
 
 	// compute divergence
-	Convolution3(m_fluxX1, m_divergenceX1, grad_x1_idx, grad_weights);
-	Convolution3(m_fluxX2, m_divergenceX2, grad_x2_idx, grad_weights);
-	Convolution3(m_fluxX3, m_divergenceX3, grad_x3_idx, grad_weights);
+	Convolution3(m_fluxX, m_divergenceX, gradXIndex, gradWeights);
+	Convolution3(m_fluxY, m_divergenceY, gradYIndex, gradWeights);
+	Convolution3(m_fluxZ, m_divergenceZ, gradZIndex, gradWeights);
 
-	//Convolution3(m_gradWaterDensityX1, m_divergenceX1, grad_x1_idx, grad_weights, m_voxelResolution);
+	//Convolution3(m_gradWaterDensityX, m_divergenceX, grad_x1_idx, grad_weights, m_voxelResolution);
 
 	// sum divergence
 	for (auto i = 0; i < m_waterDensity.size(); ++i)
 	{
-		m_divergence[i] = m_divergenceX1[i] + m_divergenceX2[i] + m_divergenceX3[i];
+		m_divergence[i] = m_divergenceX[i] + m_divergenceY[i] + m_divergenceZ[i];
 	}
 
 	// apply forward euler:
