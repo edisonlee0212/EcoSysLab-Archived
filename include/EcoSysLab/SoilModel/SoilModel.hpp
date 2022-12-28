@@ -8,7 +8,7 @@ namespace EcoSysLab {
 		// scaling factors for different forces
 		float m_diffusionFactor = 1.0f;
 		float m_gravityFactor = 1.0f;
-		float m_f_cap = 1.0f;
+		float m_capFactor = 1.0f;
 
 		float m_deltaTime = 0.01f; // delta t, time between steps
 	};
@@ -36,15 +36,15 @@ namespace EcoSysLab {
 		std::vector<float> m_nutrientsDensity;
 		float m_totalWaterDensity = 0;
 
-		glm::uvec3 m_voxelResolution = glm::uvec3(65, 32, 65);
+		glm::uvec3 m_voxelResolution = glm::uvec3(65, 33, 65);
 
-		float m_voxelDistance = 1.0f; // delta x, distance between two voxels
+		float m_voxelSize = 1.0f; // delta x, distance between two voxels
 		bool m_initialized = false;
 		float m_time = 0.0f; // time since start
 
 		friend class Soil;
 
-		glm::vec3 m_minPosition = glm::vec3(-32.5f, -10.0f, -32.5f);
+		glm::vec3 m_startPosition = glm::vec3(-32.5f, -16.5f, -32.5f);
 	public:
 		void Convolution3(const std::vector<float>& input, std::vector<float>& output, const std::vector<int>& indices, const std::vector<float>& weights);
 		[[nodiscard]] float GetWater(const glm::vec3& position) const;
@@ -66,8 +66,15 @@ namespace EcoSysLab {
 
 		void Initialize(const SoilParameters& soilParameters, const glm::uvec3& voxelResolution = glm::uvec3(65, 32, 65), float voxelDistance = 1.0f, const glm::vec3& minPosition = glm::vec3(-32.5f, -10.0f, -32.5f));
 
+		void TestSetup();
+		
 		void Step(const SoilParameters& soilParameters);
+
 		[[nodiscard]] glm::uvec3 GetVoxelResolution() const;
-		[[nodiscard]] float GetVoxelDistance() const;
+		[[nodiscard]] float GetVoxelSize() const;
+		[[nodiscard]] glm::vec3 GetStartPosition() const;
+		[[nodiscard]] bool Initialized() const;
+		[[nodiscard]] float GetTime() const;
+
 	};
 }

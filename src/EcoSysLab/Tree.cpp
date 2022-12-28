@@ -264,7 +264,7 @@ void TreeDescriptor::CollectAssetRef(std::vector<AssetRef>& list) {
 
 }
 
-void SerializeTreeGrowthParamaters(const std::string& name, const TreeGrowthParameters& treeGrowthParameters, YAML::Emitter& out) {
+void SerializeTreeGrowthParameters(const std::string& name, const TreeGrowthParameters& treeGrowthParameters, YAML::Emitter& out) {
 	out << YAML::Key << name << YAML::BeginMap;
 	out << YAML::Key << "m_lateralBudCount" << YAML::Value << treeGrowthParameters.m_lateralBudCount;
 	out << YAML::Key << "m_fruitBudCount" << YAML::Value << treeGrowthParameters.m_fruitBudCount;
@@ -300,7 +300,7 @@ void SerializeTreeGrowthParamaters(const std::string& name, const TreeGrowthPara
 
 	out << YAML::EndMap;
 }
-void SerializeRootGrowthParamaters(const std::string& name, const RootGrowthParameters& rootGrowthParameters, YAML::Emitter& out) {
+void SerializeRootGrowthParameters(const std::string& name, const RootGrowthParameters& rootGrowthParameters, YAML::Emitter& out) {
 	out << YAML::Key << name << YAML::BeginMap;
 	out << YAML::Key << "m_rootNodeLength" << YAML::Value << rootGrowthParameters.m_rootNodeLength;
 	out << YAML::Key << "m_growthRate" << YAML::Value << rootGrowthParameters.m_growthRate;
@@ -325,11 +325,11 @@ void SerializeRootGrowthParamaters(const std::string& name, const RootGrowthPara
 	out << YAML::EndMap;
 }
 void TreeDescriptor::Serialize(YAML::Emitter& out) {
-	SerializeTreeGrowthParamaters("m_treeGrowthParameters", m_treeGrowthParameters, out);
-	SerializeRootGrowthParamaters("m_rootGrowthParameters", m_rootGrowthParameters, out);
+	SerializeTreeGrowthParameters("m_treeGrowthParameters", m_treeGrowthParameters, out);
+	SerializeRootGrowthParameters("m_rootGrowthParameters", m_rootGrowthParameters, out);
 }
 
-void DeserializeTreeGrowthParamaters(const std::string& name, TreeGrowthParameters& treeGrowthParameters, const YAML::Node& in) {
+void DeserializeTreeGrowthParameters(const std::string& name, TreeGrowthParameters& treeGrowthParameters, const YAML::Node& in) {
 	if (in[name]) {
 		auto& param = in[name];
 		if (param["m_lateralBudCount"]) treeGrowthParameters.m_lateralBudCount = param["m_lateralBudCount"].as<int>();
@@ -355,7 +355,7 @@ void DeserializeTreeGrowthParamaters(const std::string& name, TreeGrowthParamete
 		if (param["m_productiveResourceRequirementFactor"]) treeGrowthParameters.m_productiveResourceRequirementFactor = param["m_productiveResourceRequirementFactor"].as<glm::vec3>();
 	}
 }
-void DeserializeRootGrowthParamaters(const std::string& name, RootGrowthParameters& rootGrowthParameters, const YAML::Node& in) {
+void DeserializeRootGrowthParameters(const std::string& name, RootGrowthParameters& rootGrowthParameters, const YAML::Node& in) {
 	if (in[name]) {
 		auto& param = in[name];
 		if (param["m_rootNodeLength"]) rootGrowthParameters.m_rootNodeLength = param["m_rootNodeLength"].as<float>();
@@ -380,6 +380,6 @@ void DeserializeRootGrowthParamaters(const std::string& name, RootGrowthParamete
 	}
 }
 void TreeDescriptor::Deserialize(const YAML::Node& in) {
-	DeserializeTreeGrowthParamaters("m_treeGrowthParameters", m_treeGrowthParameters, in);
-	DeserializeRootGrowthParamaters("m_rootGrowthParameters", m_rootGrowthParameters, in);
+	DeserializeTreeGrowthParameters("m_treeGrowthParameters", m_treeGrowthParameters, in);
+	DeserializeRootGrowthParameters("m_rootGrowthParameters", m_rootGrowthParameters, in);
 }
