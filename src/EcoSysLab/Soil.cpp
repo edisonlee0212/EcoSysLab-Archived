@@ -31,7 +31,7 @@ void SoilDescriptor::OnInspect()
 		soil->m_soilDescriptor = ProjectManager::GetAsset(GetHandle());
 		soil->m_soilModel.Initialize(m_soilParameters, m_voxelResolution, m_voxelSize, m_startPosition);
 
-		soil->m_soilModel.TestSetup();
+		
 	}
 
 
@@ -48,6 +48,11 @@ void Soil::OnInspect()
 		auto soilDescriptor = m_soilDescriptor.Get<SoilDescriptor>();
 		if (!m_soilModel.m_initialized) m_soilModel.Initialize(soilDescriptor->m_soilParameters);
 		static bool autoStep = false;
+		if(ImGui::Button("Test setup"))
+		{
+			m_soilModel.TestSetup();
+		}
+
 		ImGui::Checkbox("Auto step", &autoStep);
 		if(autoStep)
 		{
@@ -59,11 +64,11 @@ void Soil::OnInspect()
 
 		if (debugVisualization)
 		{
-			static float minAlpha = 0.01f;
+			static float minAlpha = 0.00f;
 			ImGui::DragFloat("Min alpha", &minAlpha, 0.001f, 0.0f, 1.0f);
 			static bool forceUpdateMatrices = false;
 			ImGui::Checkbox("Force Update Matrices", &forceUpdateMatrices);
-			static unsigned soilProperty = 0;
+			static unsigned soilProperty = 1;
 			ImGui::Combo("Mode", { "Water Density Blur", "Water Density", "Water Density Gradient", "Flux", "Divergence", "Scalar Divergence", "NutrientDensity" }, soilProperty);
 			//static SoilProperty soilProperty = SoilProperty::WaterDensity;
 
@@ -158,6 +163,9 @@ void Soil::OnInspect()
 
 				GizmoSettings gizmoSettings;
 				gizmoSettings.m_drawSettings.m_blending = true;
+				gizmoSettings.m_drawSettings.m_blendingSrcFactor = OpenGLBlendFactor::SrcAlpha;
+				gizmoSettings.m_drawSettings.m_blendingDstFactor = OpenGLBlendFactor::OneMinusSrcAlpha;
+				gizmoSettings.m_drawSettings.m_cullFace = true;
 				Gizmos::DrawGizmoMeshInstancedColored(
 					DefaultResources::Primitives::Cube, editorLayer->m_sceneCamera,
 					editorLayer->m_sceneCameraPosition,

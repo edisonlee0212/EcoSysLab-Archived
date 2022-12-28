@@ -10,7 +10,7 @@ namespace EcoSysLab {
 		float m_gravityFactor = 1.0f;
 		float m_capFactor = 1.0f;
 
-		float m_deltaTime = 0.01f; // delta t, time between steps
+		float m_deltaTime = 0.2f; // delta t, time between steps
 	};
 
 	class SoilModel {
@@ -46,6 +46,7 @@ namespace EcoSysLab {
 
 		glm::vec3 m_startPosition = glm::vec3(-32.5f, -16.5f, -32.5f);
 	public:
+		glm::vec3 m_gravityDirection = glm::vec3(0, -1, 0);
 		void Convolution3(const std::vector<float>& input, std::vector<float>& output, const std::vector<int>& indices, const std::vector<float>& weights);
 		[[nodiscard]] float GetWater(const glm::vec3& position) const;
 		[[nodiscard]] float GetDensity(const glm::vec3& position) const;
@@ -65,6 +66,8 @@ namespace EcoSysLab {
 
 
 		void Initialize(const SoilParameters& soilParameters, const glm::uvec3& voxelResolution = glm::uvec3(65, 32, 65), float voxelDistance = 1.0f, const glm::vec3& minPosition = glm::vec3(-32.5f, -10.0f, -32.5f));
+
+		void Reset();
 
 		void TestSetup();
 		

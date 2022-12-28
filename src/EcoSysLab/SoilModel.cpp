@@ -99,9 +99,16 @@ void SoilModel::Convolution3(const std::vector<float>& input, std::vector<float>
 
 void SoilModel::Initialize(const SoilParameters& soilParameters, const glm::uvec3& voxelResolution, const float voxelDistance, const glm::vec3& minPosition) {
 	m_voxelResolution = voxelResolution;
-	m_time = 0.f;
 	m_voxelSize = voxelDistance;
 	m_startPosition = minPosition;
+	Reset();
+	m_initialized = true;
+}
+
+void SoilModel::Reset()
+{
+	assert(m_initialized);
+	m_time = 0.f;
 	auto numVoxels = m_voxelResolution.x * m_voxelResolution.y * m_voxelResolution.z;
 	{
 		m_waterDensity.resize(numVoxels);
@@ -124,14 +131,14 @@ void SoilModel::Initialize(const SoilParameters& soilParameters, const glm::uvec
 		m_fluxX3.resize(numVoxels);
 		std::fill(m_fluxX3.begin(), m_fluxX3.end(), 0);
 
-		
+
 		m_divergenceX1.resize(numVoxels);
 		std::fill(m_divergenceX1.begin(), m_divergenceX1.end(), 0);
 		m_divergenceX2.resize(numVoxels);
 		std::fill(m_divergenceX2.begin(), m_divergenceX2.end(), 0);
 		m_divergenceX3.resize(numVoxels);
 		std::fill(m_divergenceX3.begin(), m_divergenceX3.end(), 0);
-		
+
 		m_divergence.resize(numVoxels);
 		std::fill(m_divergence.begin(), m_divergence.end(), 0);
 
@@ -141,11 +148,12 @@ void SoilModel::Initialize(const SoilParameters& soilParameters, const glm::uvec
 		m_nutrientsDensity.resize(numVoxels);
 		std::fill(m_nutrientsDensity.begin(), m_nutrientsDensity.end(), 0);
 	}
-	m_initialized = true;
 }
 
 void SoilModel::TestSetup()
 {
+	assert(m_initialized);
+	Reset();
 	auto numVoxels = m_voxelResolution.x * m_voxelResolution.y * m_voxelResolution.z;
 	const auto v = std::vector<float>(numVoxels, 0.f);
 
@@ -306,12 +314,11 @@ void SoilModel::Step(const SoilParameters& soilParameters)
 	Convolution3(m_waterDensity, m_gradWaterDensityX3, grad_x3_idx, grad_weights);
 
 	// compute the total flux:
-	const auto grav_dir = glm::vec3(0, 0, 1);
 	for (auto i = 0; i < m_waterDensity.size(); ++i)
 	{
-		m_fluxX1[i] = -soilParameters.m_diffusionFactor * m_gradWaterDensityX1[i] + soilParameters.m_gravityFactor * grav_dir.x * m_waterDensity[i];
-		m_fluxX2[i] = -soilParameters.m_diffusionFactor * m_gradWaterDensityX2[i] + soilParameters.m_gravityFactor * grav_dir.y * m_waterDensity[i];
-		m_fluxX3[i] = -soilParameters.m_diffusionFactor * m_gradWaterDensityX3[i] + soilParameters.m_gravityFactor * grav_dir.z * m_waterDensity[i];
+		m_fluxX1[i] = -soilParameters.m_diffusionFactor * m_gradWaterDensityX1[i] + soilParameters.m_gravityFactor * m_gravityDirection.x * m_waterDensity[i];
+		m_fluxX2[i] = -soilParameters.m_diffusionFactor * m_gradWaterDensityX2[i] + soilParameters.m_gravityFactor * m_gravityDirection.y * m_waterDensity[i];
+		m_fluxX3[i] = -soilParameters.m_diffusionFactor * m_gradWaterDensityX3[i] + soilParameters.m_gravityFactor * m_gravityDirection.z * m_waterDensity[i];
 	}
 
 	// compute divergence
