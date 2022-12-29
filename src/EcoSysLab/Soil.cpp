@@ -125,6 +125,7 @@ void Soil::OnInspect()
 
 			static std::vector<glm::mat4> vectorMatrices;
 			static std::vector<glm::vec4> vectorColors;
+
 			if (vectorMatrices.size() != numVoxels || vectorColors.size() != numVoxels)
 			{
 				vectorMatrices.resize(numVoxels);
@@ -203,6 +204,7 @@ void Soil::OnInspect()
 			}
 			if (updateVectorColors) {
 				std::vector<std::shared_future<void>> results;
+
 				Jobs::ParallelFor(numVoxels, [&](unsigned i)
 					{
 						vectorColors[i] = vectorBaseColor;
@@ -254,7 +256,7 @@ void Soil::OnInspect()
 				}
 				if (ImGui::DragFloat("Multiplier", &scalarMultiplier, 0.001f, 0.0f, 10.0f, "%.5f"))
 				{
-					updateScalarMatrices = true;
+					updateScalarColors = true;
 				}
 				if (ImGui::DragFloat("Min alpha", &scalarMinAlpha, 0.001f, 0.0f, 1.0f))
 				{

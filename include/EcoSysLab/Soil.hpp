@@ -50,5 +50,7 @@ namespace EcoSysLab
 		 * Note that the visualization will only be activated while you are inspecting the soil private component in the entity inspector.
 		 */
 		void OnInspect() override;
+
+
 	};
 }
