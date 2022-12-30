@@ -1,7 +1,11 @@
 #pragma once
 
+#include <glm/glm.hpp>
+#include <vector>
 #include "ecosyslab_export.h"
+
 using namespace UniEngine;
+
 namespace EcoSysLab {
 	class SoilParameters {
 	public:
@@ -14,6 +18,7 @@ namespace EcoSysLab {
 	};
 
 	class SoilModel {
+	protected:
 		std::vector<float> m_waterDensity;
 		std::vector<float> m_waterDensityBlur;
 		std::vector<float> m_gradWaterDensityX;
@@ -38,6 +43,15 @@ namespace EcoSysLab {
 
 		glm::uvec3 m_voxelResolution = glm::uvec3(65, 33, 65);
 
+		glm::vec3 m_gravityDirection = glm::vec3(0, -1, 0);
+
+		// scaling factors for different forces
+		float m_diffusionForce = 1.0f;
+		float m_gravityForce = 1.0f;
+		float m_capacityForce = 1.0f;
+
+		float m_deltaTime = 0.2f; // delta t, time between steps
+
 		float m_voxelSize = 1.0f; // delta x, distance between two voxels
 		bool m_initialized = false;
 		float m_time = 0.0f; // time since start
@@ -45,9 +59,9 @@ namespace EcoSysLab {
 		friend class Soil;
 
 		glm::vec3 m_startPosition = glm::vec3(-32.5f, -16.5f, -32.5f);
+
+		void Convolution3(const std::vector<float>& input, std::vector<float>& output, const std::vector<int>& indices, const std::vector<float>& weights) const;
 	public:
-		glm::vec3 m_gravityDirection = glm::vec3(0, -1, 0);
-		void Convolution3(const std::vector<float>& input, std::vector<float>& output, const std::vector<int>& indices, const std::vector<float>& weights);
 		[[nodiscard]] float GetWater(const glm::vec3& position) const;
 		[[nodiscard]] float GetDensity(const glm::vec3& position) const;
 		[[nodiscard]] float GetNutrient(const glm::vec3& position) const;
@@ -55,23 +69,26 @@ namespace EcoSysLab {
 		[[nodiscard]] float AddWater(const glm::vec3& position, float value);
 		[[nodiscard]] float AddDensity(const glm::vec3& position, float value);
 		[[nodiscard]] float AddNutrient(const glm::vec3& position, float value);
+
+		[[nodiscard]] static int Index(const glm::uvec3& resolution, int x, int y, int z);
 		[[nodiscard]] int Index(int x, int y, int z) const;
 
-
+		[[nodiscard]] static unsigned Index(const glm::uvec3& resolution, const glm::uvec3& coordinate);
 		[[nodiscard]] unsigned Index(const glm::uvec3& coordinate) const;
+
 		[[nodiscard]] glm::uvec3 GetCoordinate(unsigned index) const;
 
 		[[nodiscard]] glm::uvec3 GetCoordinate(const glm::vec3& position) const;
 		[[nodiscard]] glm::vec3 GetCenter(const glm::uvec3& coordinate) const;
 
 
-		void Initialize(const SoilParameters& soilParameters, const glm::uvec3& voxelResolution = glm::uvec3(65, 32, 65), float voxelDistance = 1.0f, const glm::vec3& minPosition = glm::vec3(-32.5f, -10.0f, -32.5f));
+		void Initialize(const SoilParameters& soilParameters=SoilParameters(), const glm::uvec3& voxelResolution = glm::uvec3(65, 32, 65), float voxelDistance = 1.0f, const glm::vec3& minPosition = glm::vec3(-32.5f, -10.0f, -32.5f));
 
-		void Reset();
+		virtual void Reset();
 
 		void TestSetup();
 		
-		void Step(const SoilParameters& soilParameters);
+		virtual void Step();
 
 		[[nodiscard]] glm::uvec3 GetVoxelResolution() const;
 		[[nodiscard]] float GetVoxelSize() const;

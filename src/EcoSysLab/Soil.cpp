@@ -1,4 +1,7 @@
 #include "Soil.hpp"
+
+#include <cassert>
+
 #include "EditorLayer.hpp"
 #include "Graphics.hpp"
 using namespace EcoSysLab;
@@ -42,9 +45,11 @@ void SoilDescriptor::OnInspect()
 
 void Soil::OnInspect()
 {
-	if (m_soilDescriptor.Get<SoilDescriptor>()) {
-		auto soilDescriptor = m_soilDescriptor.Get<SoilDescriptor>();
-		if (!m_soilModel.m_initialized) m_soilModel.Initialize(soilDescriptor->m_soilParameters);
+	if (m_soilDescriptor.Get<SoilDescriptor>())
+	{
+		//auto soilDescriptor = m_soilDescriptor.Get<SoilDescriptor>();
+		//if (!m_soilModel.m_initialized) m_soilModel.Initialize(soilDescriptor->m_soilParameters);
+		assert(m_soilModel.m_initialized);
 		static bool autoStep = false;
 		if (ImGui::Button("Test setup"))
 		{
@@ -58,12 +63,12 @@ void Soil::OnInspect()
 		ImGui::Checkbox("Auto step", &autoStep);
 		if (autoStep)
 		{
-			m_soilModel.Step(soilDescriptor->m_soilParameters);
+			m_soilModel.Step();
 			updateVectorMatrices = updateScalarColors = true;
 		}
 		else if (ImGui::Button("Step"))
 		{
-			m_soilModel.Step(soilDescriptor->m_soilParameters);
+			m_soilModel.Step();
 			updateVectorMatrices = updateScalarColors = true;
 		}
 
