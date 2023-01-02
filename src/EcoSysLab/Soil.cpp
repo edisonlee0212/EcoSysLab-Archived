@@ -51,9 +51,9 @@ void Soil::OnInspect()
 		//if (!m_soilModel.m_initialized) m_soilModel.Initialize(soilDescriptor->m_soilParameters);
 		assert(m_soilModel.m_initialized);
 		static bool autoStep = false;
-		if (ImGui::Button("Test setup"))
+		if (ImGui::Button("Reset"))
 		{
-			m_soilModel.TestSetup();
+			m_soilModel.Reset();
 		}
 		bool updateVectorMatrices = false;
 		bool updateVectorColors = false;
