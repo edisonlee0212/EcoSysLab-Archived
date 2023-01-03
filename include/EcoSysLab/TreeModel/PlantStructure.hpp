@@ -730,7 +730,7 @@ namespace EcoSysLab {
             auto &lastNode = m_nodes[flow.m_nodes.back()];
             flow.m_info.m_startThickness = firstNode.m_info.m_thickness;
             flow.m_info.m_globalStartPosition = firstNode.m_info.m_globalPosition;
-            flow.m_info.m_globalStartRotation = firstNode.m_info.m_localRotation;
+            flow.m_info.m_globalStartRotation = firstNode.m_info.m_globalRotation;
 
             flow.m_info.m_endThickness = lastNode.m_info.m_thickness;
             flow.m_info.m_globalEndPosition = lastNode.m_info.m_globalPosition +

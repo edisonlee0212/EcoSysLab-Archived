@@ -48,7 +48,7 @@ void TreeVisualizationLayer::LateUpdate() {
 	auto scene = GetScene();
 	auto editorLayer = Application::GetLayer<EditorLayer>();
 	auto selectedEntity = editorLayer->GetSelectedEntity();
-	if (selectedEntity != m_selectedTree && scene->HasPrivateComponent<Tree>(selectedEntity)) {
+	if (scene->IsEntityValid(selectedEntity) && selectedEntity != m_selectedTree && scene->HasPrivateComponent<Tree>(selectedEntity)) {
 		m_needFlowUpdate = true;
 		m_selectedTree = selectedEntity;
 		if (scene->IsEntityValid(m_selectedTree)) m_treeVisualizer.Reset(scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock()->m_treeModel);
@@ -219,9 +219,9 @@ void TreeVisualizationLayer::LateUpdate() {
 					auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
 					auto& treeModel = tree->m_treeModel;
 					const auto& branchSkeleton = treeModel.RefBranchSkeleton();
-
+					const auto& rootSkeleton = treeModel.RefRootSkeleton();
 					const auto& branchList = branchSkeleton.RefSortedFlowList();
-					const auto& rootFlowList = treeModel.RefRootSkeleton().RefSortedFlowList();
+					const auto& rootList = rootSkeleton.RefSortedFlowList();
 
 					auto entityGlobalTransform = scene->GetDataComponent<GlobalTransform>(treeEntity);
 					m_boundingBoxMatrices.emplace_back();
@@ -231,20 +231,17 @@ void TreeVisualizationLayer::LateUpdate() {
 							glm::scale((branchSkeleton.m_max - branchSkeleton.m_min) / 2.0f));
 					m_boundingBoxColors.emplace_back();
 					m_boundingBoxColors.back() = glm::vec4(m_randomColors[listIndex], 0.05f);
-					auto distance = glm::distance(editorLayer->m_sceneCameraPosition,
-						glm::vec3(entityGlobalTransform.GetPosition()));
 					branchLastStartIndex += branchList.size();
 					branchStartIndices.emplace_back(branchLastStartIndex);
 
-					rootLastStartIndex += rootFlowList.size();
+					rootLastStartIndex += rootList.size();
 					rootStartIndices.emplace_back(rootLastStartIndex);
 				}
 				m_branchSegments.resize(branchLastStartIndex);
 				m_branchPoints.resize(branchLastStartIndex * 4);
+
 				m_rootSegments.resize(rootLastStartIndex);
 				m_rootPoints.resize(rootLastStartIndex * 4);
-
-				
 
 
 				{
@@ -257,35 +254,40 @@ void TreeVisualizationLayer::LateUpdate() {
 						const auto& branchSkeleton = treeModel.RefBranchSkeleton();
 						const auto& rootSkeleton = treeModel.RefRootSkeleton();
 						const auto& branchList = branchSkeleton.RefSortedFlowList();
-						const auto& rootList = treeModel.RefRootSkeleton().RefSortedFlowList();
+						const auto& rootList = rootSkeleton.RefSortedFlowList();
 
 						auto entityGlobalTransform = scene->GetDataComponent<GlobalTransform>(treeEntity);
 						auto branchStartIndex = branchStartIndices[treeIndex];
 						for(int i = 0; i < branchList.size(); i++)
 						{
 							auto& flow = branchSkeleton.PeekFlow(branchList[i]);
-							auto startPosition = (entityGlobalTransform.m_value *
-								glm::translate(flow.m_info.m_globalStartPosition))[3];
-							auto endPosition = (entityGlobalTransform.m_value *
-								glm::translate(flow.m_info.m_globalEndPosition))[3];
+							auto cp0 = flow.m_info.m_globalStartPosition;
+							auto cp3 = flow.m_info.m_globalEndPosition;
+							float distance = glm::distance(cp0, cp3);
+							auto cp1 = cp0 + flow.m_info.m_globalStartRotation * glm::vec3(0, 0, -1) * distance / 3.0f;
+							auto cp2 = cp3 + flow.m_info.m_globalEndRotation * glm::vec3(0, 0, 1) * distance / 3.0f;
 							auto& p0 = m_branchPoints[branchStartIndex * 4 + i * 4];
 							auto& p1 = m_branchPoints[branchStartIndex * 4 + i * 4 + 1];
 							auto& p2 = m_branchPoints[branchStartIndex * 4 + i * 4 + 2];
 							auto& p3 = m_branchPoints[branchStartIndex * 4 + i * 4 + 3];
-							p0.m_position = startPosition;
-							p1.m_position = (startPosition + endPosition) / 2.0f;
-							p2.m_position = (startPosition + endPosition) / 2.0f;
-							p3.m_position = endPosition;
+							p0.m_position = (entityGlobalTransform.m_value *
+								glm::translate(cp0))[3];
+							p1.m_position = (entityGlobalTransform.m_value *
+								glm::translate(cp1))[3];
+							p2.m_position = (entityGlobalTransform.m_value *
+								glm::translate(cp2))[3];
+							p3.m_position = (entityGlobalTransform.m_value *
+								glm::translate(cp3))[3];
 
 							p0.m_thickness = flow.m_info.m_startThickness;
 							p1.m_thickness = flow.m_info.m_startThickness;
 							p2.m_thickness = flow.m_info.m_endThickness;
 							p3.m_thickness = flow.m_info.m_endThickness;
 
-							p0.m_color = glm::vec4(1, 0, 0, 1);
-							p1.m_color = glm::vec4(1, 0, 0, 1);
-							p2.m_color = glm::vec4(1, 0, 0, 1);
-							p3.m_color = glm::vec4(1, 0, 0, 1);
+							p0.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
+							p1.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
+							p2.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
+							p3.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
 
 							m_branchSegments[branchStartIndex + i] = branchStartIndex * 4 + i * 4;
 						}
@@ -293,29 +295,33 @@ void TreeVisualizationLayer::LateUpdate() {
 						for (int i = 0; i < rootList.size(); i++)
 						{
 							auto& flow = rootSkeleton.PeekFlow(rootList[i]);
-							auto startPosition = (entityGlobalTransform.m_value *
-								glm::translate(flow.m_info.m_globalStartPosition))[3];
-							auto endPosition = (entityGlobalTransform.m_value *
-								glm::translate(flow.m_info.m_globalEndPosition))[3];
+							auto cp0 = flow.m_info.m_globalStartPosition;
+							auto cp3 = flow.m_info.m_globalEndPosition;
+							float distance = glm::distance(cp0, cp3);
+							auto cp1 = cp0 + flow.m_info.m_globalStartRotation * glm::vec3(0, 0, -1) * distance / 3.0f;
+							auto cp2 = cp3 + flow.m_info.m_globalEndRotation * glm::vec3(0, 0, 1) * distance / 3.0f;
 							auto& p0 = m_rootPoints[rootStartIndex * 4 + i * 4];
 							auto& p1 = m_rootPoints[rootStartIndex * 4 + i * 4 + 1];
 							auto& p2 = m_rootPoints[rootStartIndex * 4 + i * 4 + 2];
 							auto& p3 = m_rootPoints[rootStartIndex * 4 + i * 4 + 3];
-
-							p0.m_position = startPosition;
-							p1.m_position = (startPosition + endPosition) / 2.0f;
-							p2.m_position = (startPosition + endPosition) / 2.0f;
-							p3.m_position = endPosition;
+							p0.m_position = (entityGlobalTransform.m_value *
+								glm::translate(cp0))[3];
+							p1.m_position = (entityGlobalTransform.m_value *
+								glm::translate(cp1))[3];
+							p2.m_position = (entityGlobalTransform.m_value *
+								glm::translate(cp2))[3];
+							p3.m_position = (entityGlobalTransform.m_value *
+								glm::translate(cp3))[3];
 
 							p0.m_thickness = flow.m_info.m_startThickness;
 							p1.m_thickness = flow.m_info.m_startThickness;
 							p2.m_thickness = flow.m_info.m_endThickness;
 							p3.m_thickness = flow.m_info.m_endThickness;
 
-							p0.m_color = glm::vec4(1, 0, 0, 1);
-							p1.m_color = glm::vec4(1, 0, 0, 1);
-							p2.m_color = glm::vec4(1, 0, 0, 1);
-							p3.m_color = glm::vec4(1, 0, 0, 1);
+							p0.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
+							p1.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
+							p2.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
+							p3.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
 
 							m_rootSegments[rootStartIndex + i] = rootStartIndex * 4 + i * 4;
 						}
@@ -327,7 +333,7 @@ void TreeVisualizationLayer::LateUpdate() {
 			}
 			GizmoSettings gizmoSettings;
 			gizmoSettings.m_drawSettings.m_blending = true;
-			
+			gizmoSettings.m_drawSettings.m_cullFace = false;
 			if (m_displayBoundingBox && !m_boundingBoxMatrices.empty()) {
 				Gizmos::DrawGizmoMeshInstancedColored(
 					DefaultResources::Primitives::Cube, editorLayer->m_sceneCamera,
@@ -350,6 +356,12 @@ void TreeVisualizationLayer::LateUpdate() {
 			if (m_displayBranches) {
 				gizmoSettings.m_colorMode = GizmoSettings::ColorMode::VertexColor;
 				Gizmos::DrawGizmoStrands(branchStrands, glm::vec4(1.0f), glm::mat4(1.0f), 1, gizmoSettings);
+				
+			}
+
+			if (m_displayRootFlows)
+			{
+				gizmoSettings.m_colorMode = GizmoSettings::ColorMode::VertexColor;
 				Gizmos::DrawGizmoStrands(rootStrands, glm::vec4(1.0f), glm::mat4(1.0f), 1, gizmoSettings);
 			}
 		}
