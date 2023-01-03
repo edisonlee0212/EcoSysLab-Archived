@@ -64,6 +64,7 @@ void Soil::OnInspect()
 		if (autoStep)
 		{
 			m_soilModel.Step();
+			m_soilModel.WaterLogic();
 			updateVectorMatrices = updateScalarColors = true;
 		}
 		else if (ImGui::Button("Step"))
@@ -85,7 +86,7 @@ void Soil::OnInspect()
 			if (scalarEnable) updateScalarMatrices = updateScalarColors = true;
 		}
 
-		const auto numVoxels = m_soilModel.m_voxelResolution.x * m_soilModel.m_voxelResolution.y * m_soilModel.m_voxelResolution.z;
+		const auto numVoxels = m_soilModel.m_Resolution.x * m_soilModel.m_Resolution.y * m_soilModel.m_Resolution.z;
 		if (vectorEnable) {
 			updateVectorMatrices = updateVectorMatrices || forceUpdate;
 			updateVectorColors = updateVectorColors || forceUpdate;
