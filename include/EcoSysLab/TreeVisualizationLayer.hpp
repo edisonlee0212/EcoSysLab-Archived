@@ -11,7 +11,7 @@ namespace EcoSysLab {
 		bool m_displayRootFlows = false;
 		bool m_displayBoundingBox = false;
 		bool m_debugVisualization = true;
-		bool m_rendering = true;
+		bool m_rendering = false;
 		std::vector<int> m_versions;
 		std::vector<glm::vec3> m_randomColors;
 		
@@ -29,8 +29,6 @@ namespace EcoSysLab {
 		std::vector<glm::mat4> m_boundingBoxMatrices;
 		std::vector<glm::vec4> m_boundingBoxColors;
 
-		glm::ivec2 m_gridSize = { 32, 32 };
-		glm::vec2 m_gridDistance = { 10, 10 };
 		float m_lastUsedTime = 0.0f;
 		float m_totalTime = 0.0f;
 		int m_internodeSize = 0;

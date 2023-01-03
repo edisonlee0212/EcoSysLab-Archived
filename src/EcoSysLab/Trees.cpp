@@ -10,8 +10,8 @@
 using namespace EcoSysLab;
 
 void Trees::OnInspect() {
-    static glm::ivec2 gridSize = {8, 8};
-    static glm::vec2 gridDistance = {20, 20};
+    static glm::ivec2 gridSize = {20, 20};
+    static glm::vec2 gridDistance = {5, 5};
     static bool setParent = true;
     static bool enableHistory = true;
     ImGui::Checkbox("Enable history", &enableHistory);

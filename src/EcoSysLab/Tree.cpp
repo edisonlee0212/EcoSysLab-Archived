@@ -71,18 +71,18 @@ bool Tree::TryGrow() {
 	std::shared_ptr<Climate> climate;
 	if (!m_soil.Get<Soil>()) {
 		UNIENGINE_ERROR("No soil model!");
-		soil = scene->GetOrSetPrivateComponent<Soil>(owner).lock();
+		//soil = scene->GetOrSetPrivateComponent<Soil>(owner).lock();
 	}else
 	{
-		soil = m_soil.Get<Soil>();
+		//soil = m_soil.Get<Soil>();
 	}
 	if (!m_climate.Get<Climate>()) {
 		UNIENGINE_ERROR("No climate model!");
-		climate = scene->GetOrSetPrivateComponent<Climate>(owner).lock();
+		//climate = scene->GetOrSetPrivateComponent<Climate>(owner).lock();
 	}
 	else
 	{
-		climate = m_climate.Get<Climate>();
+		//climate = m_climate.Get<Climate>();
 	}
 	if (m_enableHistory) m_treeModel.Step();
 	return m_treeModel.Grow(soil->m_soilModel, climate->m_climateModel,
