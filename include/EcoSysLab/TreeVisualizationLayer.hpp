@@ -38,7 +38,7 @@ namespace EcoSysLab {
 		bool m_needFlowUpdate = false;
 		bool m_lockTreeSelection = false;
 		bool m_autoGrow = false;
-
+		bool m_generateGeometry = true;
 		void FixedUpdate() override;
 
 		void OnCreate() override;
@@ -56,6 +56,9 @@ namespace EcoSysLab {
 	public:
 		MeshGeneratorSettings m_meshGeneratorSettings;
 		Entity m_selectedTree = {};
+		
+		EntityRef m_branchStrandsHolder;
+		EntityRef m_rootStrandsHolder;
 		TreeVisualizer m_treeVisualizer;
 		void GrowAllTrees();
 		void GenerateMeshes(const MeshGeneratorSettings& meshGeneratorSettings);
