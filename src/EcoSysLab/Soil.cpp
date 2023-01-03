@@ -86,7 +86,7 @@ void Soil::OnInspect()
 			if (scalarEnable) updateScalarMatrices = updateScalarColors = true;
 		}
 
-		const auto numVoxels = m_soilModel.m_Resolution.x * m_soilModel.m_Resolution.y * m_soilModel.m_Resolution.z;
+		const auto numVoxels = m_soilModel.m_resolution.x * m_soilModel.m_resolution.y * m_soilModel.m_resolution.z;
 		if (vectorEnable) {
 			updateVectorMatrices = updateVectorMatrices || forceUpdate;
 			updateVectorColors = updateVectorColors || forceUpdate;
