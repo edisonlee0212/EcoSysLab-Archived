@@ -14,8 +14,16 @@ namespace EcoSysLab {
 		bool m_rendering = true;
 		std::vector<int> m_versions;
 		std::vector<glm::vec3> m_randomColors;
-		std::vector<glm::mat4> m_branchMatrices;
-		std::vector<glm::vec4> m_branchColors;
+		//std::vector<glm::mat4> m_branchMatrices;
+		//std::vector<glm::vec4> m_branchColors;
+		
+		std::vector<glm::uint> m_branchSegments;
+		std::vector<StrandPoint> m_branchPoints;
+		std::vector<glm::uint> m_rootSegments;
+		std::vector<StrandPoint> m_rootPoints;
+
+		AssetRef m_branchStrands;
+		AssetRef m_rootStrands;
 
 		std::vector<glm::mat4> m_rootFlowMatrices;
 		std::vector<glm::vec4> m_rootFlowColors;

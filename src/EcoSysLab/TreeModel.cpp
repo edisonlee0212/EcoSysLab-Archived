@@ -766,7 +766,7 @@ bool TreeModel::GrowRoots(SoilModel& soilModel, const RootGrowthParameters& root
 				auto& rootNodeData = rootNode.m_data;
 				auto& rootNodeInfo = rootNode.m_info;
 				auto pos = m_globalTransform * glm::translate(rootNode.m_info.m_globalPosition);
-				rootNode.m_data.m_reproductiveWaterRequirement = soilModel.GetNutrient(pos[3]) * growthRate;
+				rootNode.m_data.m_reproductiveWaterRequirement = /*soilModel.GetNutrient(pos[3])*/1.0f * growthRate;
 				totalWaterRequirement += rootNodeData.m_reproductiveWaterRequirement;
 				totalLuminousFluxRequirement += rootNodeData.m_reproductiveWaterRequirement;
 				if (rootNode.GetParentHandle() == -1) {
@@ -832,7 +832,7 @@ void TreeModel::CollectWaterFromRoots(SoilModel& soilModel, const RootGrowthPara
 	const auto& sortedRootNodeList = m_rootSkeleton.RefSortedNodeList();
 	for (const auto& rootNodeHandle : sortedRootNodeList) {
 		auto& rootNode = m_rootSkeleton.RefNode(rootNodeHandle);
-		m_treeGrowthNutrients.m_water += soilModel.GetWater(rootNode.m_info.m_globalPosition);
+		m_treeGrowthNutrients.m_water += 1.0f;//soilModel.GetWater(rootNode.m_info.m_globalPosition);
 	}
 	m_treeGrowthNutrients.m_water = m_treeGrowthNutrientsRequirement.m_water;
 }
