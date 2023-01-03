@@ -12,8 +12,8 @@ namespace EcoSysLab
 	class SoilDescriptor : public IAsset {
 	public:
 		glm::uvec3 m_voxelResolution = glm::uvec3(65, 33, 65);
-		float m_voxelSize = 1.0f; // delta x, distance between two voxels
-		glm::vec3 m_startPosition = glm::vec3(-32.5f, -16.5f, -32.5f);
+		float m_voxelSize = 0.1f; // delta x, distance between two voxels
+		glm::vec3 m_startPosition = glm::vec3(-3.25f, -1.65f, -3.25f);
 
 		SoilParameters m_soilParameters;
 		/**ImGui menu goes to here.Also you can take care you visualization with Gizmos here.

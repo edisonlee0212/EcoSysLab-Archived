@@ -9,9 +9,9 @@ void OnInspectSoilParameters(SoilParameters& soilParameters)
 {
 	if (ImGui::TreeNodeEx("Soil Parameters", ImGuiTreeNodeFlags_DefaultOpen))
 	{
-		ImGui::DragFloat("Diffusion Factor", &soilParameters.m_diffusionFactor, 0.01f, 0.0f, 999.0f);
-		ImGui::DragFloat("Gravity Factor", &soilParameters.m_gravityFactor, 0.01f, 0.0f, 999.0f);
-		ImGui::DragFloat("Cap Factor", &soilParameters.m_capFactor, 0.01f, 0.0f, 999.0f);
+		ImGui::DragFloat("Density gradient factor", &soilParameters.m_densityGradientForceFactor, 0.01f, 0.0f, 999.0f);
+		ImGui::DragFloat("Gravity factor", &soilParameters.m_gravityForceFactor, 0.01f, 0.0f, 999.0f);
+		ImGui::DragFloat("Capacity gradient factor", &soilParameters.m_capacityGradientForceFactor, 0.01f, 0.0f, 999.0f);
 
 		ImGui::DragFloat("Delta time", &soilParameters.m_deltaTime, 0.01f, 0.0f, 999.0f);
 		ImGui::TreePop();
@@ -390,9 +390,9 @@ void Soil::OnInspect()
 void SerializeSoilParameters(const std::string& name, const SoilParameters& soilParameters, YAML::Emitter& out) {
 	out << YAML::Key << name << YAML::BeginMap;
 	out << YAML::Key << "m_deltaTime" << YAML::Value << soilParameters.m_deltaTime;
-	out << YAML::Key << "m_diffusionFactor" << YAML::Value << soilParameters.m_diffusionFactor;
-	out << YAML::Key << "m_gravityFactor" << YAML::Value << soilParameters.m_gravityFactor;
-	out << YAML::Key << "m_capFactor" << YAML::Value << soilParameters.m_capFactor;
+	out << YAML::Key << "m_densityGradientForceFactor" << YAML::Value << soilParameters.m_densityGradientForceFactor;
+	out << YAML::Key << "m_gravityForceFactor" << YAML::Value << soilParameters.m_gravityForceFactor;
+	out << YAML::Key << "m_capacityGradientForceFactor" << YAML::Value << soilParameters.m_capacityGradientForceFactor;
 	out << YAML::EndMap;
 }
 
@@ -400,9 +400,9 @@ void DeserializeSoilParameters(const std::string& name, SoilParameters& soilPara
 	if (in[name]) {
 		auto& param = in[name];
 		if (param["m_deltaTime"]) soilParameters.m_deltaTime = param["m_deltaTime"].as<float>();
-		if (param["m_diffusionFactor"]) soilParameters.m_diffusionFactor = param["m_diffusionFactor"].as<float>();
-		if (param["m_gravityFactor"]) soilParameters.m_gravityFactor = param["m_gravityFactor"].as<float>();
-		if (param["m_capFactor"]) soilParameters.m_capFactor = param["m_capFactor"].as<float>();
+		if (param["m_densityGradientForceFactor"]) soilParameters.m_densityGradientForceFactor = param["m_densityGradientForceFactor"].as<float>();
+		if (param["m_gravityForceFactor"]) soilParameters.m_gravityForceFactor = param["m_gravityForceFactor"].as<float>();
+		if (param["m_capacityGradientForceFactor"]) soilParameters.m_capacityGradientForceFactor = param["m_capacityGradientForceFactor"].as<float>();
 	}
 }
 

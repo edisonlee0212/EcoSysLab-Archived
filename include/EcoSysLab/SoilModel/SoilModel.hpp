@@ -10,9 +10,9 @@ namespace EcoSysLab {
 	class SoilParameters {
 	public:
 		// scaling factors for different forces
-		float m_diffusionFactor = 1.0f;
-		float m_gravityFactor = 1.0f;
-		float m_capFactor = 1.0f;
+		float m_densityGradientForceFactor = 1.0f;
+		float m_gravityForceFactor = 1.0f;
+		float m_capacityGradientForceFactor = 1.0f;
 
 		float m_deltaTime = 0.2f; // delta t, time between steps
 	};
@@ -58,7 +58,7 @@ namespace EcoSysLab {
 	protected:
 		bool m_initialized = false;
 
-		glm::uvec3 m_Resolution;
+		glm::uvec3 m_resolution;
 		float m_voxelSize; // delta x, distance between two voxels
 		float m_deltaTime; // delta t, time between steps
 		float m_time = 0.0f; // time since start
