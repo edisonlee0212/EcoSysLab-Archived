@@ -1,4 +1,7 @@
 #include "Soil.hpp"
+
+#include <cassert>
+
 #include "EditorLayer.hpp"
 #include "Graphics.hpp"
 using namespace EcoSysLab;
@@ -42,13 +45,15 @@ void SoilDescriptor::OnInspect()
 
 void Soil::OnInspect()
 {
-	if (m_soilDescriptor.Get<SoilDescriptor>()) {
-		auto soilDescriptor = m_soilDescriptor.Get<SoilDescriptor>();
-		if (!m_soilModel.m_initialized) m_soilModel.Initialize(soilDescriptor->m_soilParameters);
+	if (m_soilDescriptor.Get<SoilDescriptor>())
+	{
+		//auto soilDescriptor = m_soilDescriptor.Get<SoilDescriptor>();
+		//if (!m_soilModel.m_initialized) m_soilModel.Initialize(soilDescriptor->m_soilParameters);
+		assert(m_soilModel.m_initialized);
 		static bool autoStep = false;
-		if (ImGui::Button("Test setup"))
+		if (ImGui::Button("Reset"))
 		{
-			m_soilModel.TestSetup();
+			m_soilModel.Reset();
 		}
 		bool updateVectorMatrices = false;
 		bool updateVectorColors = false;
@@ -58,12 +63,13 @@ void Soil::OnInspect()
 		ImGui::Checkbox("Auto step", &autoStep);
 		if (autoStep)
 		{
-			m_soilModel.Step(soilDescriptor->m_soilParameters);
+			m_soilModel.Step();
+			m_soilModel.WaterLogic();
 			updateVectorMatrices = updateScalarColors = true;
 		}
 		else if (ImGui::Button("Step"))
 		{
-			m_soilModel.Step(soilDescriptor->m_soilParameters);
+			m_soilModel.Step();
 			updateVectorMatrices = updateScalarColors = true;
 		}
 
@@ -80,7 +86,7 @@ void Soil::OnInspect()
 			if (scalarEnable) updateScalarMatrices = updateScalarColors = true;
 		}
 
-		const auto numVoxels = m_soilModel.m_voxelResolution.x * m_soilModel.m_voxelResolution.y * m_soilModel.m_voxelResolution.z;
+		const auto numVoxels = m_soilModel.m_Resolution.x * m_soilModel.m_Resolution.y * m_soilModel.m_Resolution.z;
 		if (vectorEnable) {
 			updateVectorMatrices = updateVectorMatrices || forceUpdate;
 			updateVectorColors = updateVectorColors || forceUpdate;
