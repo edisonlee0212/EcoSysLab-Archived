@@ -9,6 +9,7 @@
 #include "BranchMeshGenerator.hpp"
 #include "Soil.hpp"
 #include "Climate.hpp"
+#include "Octree.hpp"
 #include "TreeVisualizationLayer.hpp"
 
 using namespace EcoSysLab;
@@ -50,6 +51,30 @@ void Tree::OnInspect() {
 		if (treeVisualizationLayer && treeVisualizationLayer->m_selectedTree == GetOwner()) {
 			treeVisualizationLayer->m_treeVisualizer.Reset(m_treeModel);
 		}
+	}
+
+
+	static std::vector<glm::mat4> voxelMatrices;
+	static bool displayVoxels = true;
+	if(ImGui::Button("Scan voxels"))
+	{
+		auto& rootSkeleton = m_treeModel.RefRootSkeleton();
+		Octree octree = {};
+		octree.m_center = (rootSkeleton.m_min + rootSkeleton.m_max) / 2.0f;
+		auto diff = rootSkeleton.m_max - rootSkeleton.m_min;
+		octree.m_radius = glm::max((diff.x, diff.y), glm::max(diff.y, diff.z)) * 1.05f;
+		octree.m_maxSubdivisionLevel = 9;
+		auto& nodeList = rootSkeleton.RefSortedNodeList();
+		for(const auto& nodeIndex : nodeList)
+		{
+			octree.Occupy(rootSkeleton.RefNode(nodeIndex).m_info.m_globalPosition);
+		}
+		octree.GetVoxels(voxelMatrices);
+	}
+	ImGui::Checkbox("Display voxels", &displayVoxels);
+	if(displayVoxels && !voxelMatrices.empty())
+	{
+		Gizmos::DrawGizmoMeshInstanced(DefaultResources::Primitives::Cube, glm::vec4(1.f, 1.f, 0.0f, 0.5f), voxelMatrices);
 	}
 }
 

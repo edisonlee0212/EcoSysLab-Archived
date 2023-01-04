@@ -193,9 +193,9 @@ void SoilModel::Convolution3(const std::vector<float>& input, std::vector<float>
 	assert(indices.size() == weights.size());
 
 	// for a 3D convolution:
-	assert(m_Resolution.x >= 3);
-	assert(m_Resolution.y >= 3);
-	assert(m_Resolution.z >= 3);
+	assert(m_resolution.x >= 3);
+	assert(m_resolution.y >= 3);
+	assert(m_resolution.z >= 3);
 
 	// iterate over all indices that are not part of the boundary, where the whole convolution kernel can be applied
 	for (auto x = 1; x < m_resolution.x - 1; ++x)
@@ -379,9 +379,9 @@ void SoilModel::ChangeWater(const vec3& position, float amount)
 	// todo: actually have a subpixel shift on the kernel, depending on the position
 	auto cc = GetCoordinate(position);
 	assert(cc.x > 0 && cc.y > 0 && cc.z > 0); // for the 3x3 kernel below
-	assert(cc.x < m_Resolution.x-1
-		&& cc.y < m_Resolution.y - 1
-		&& cc.z < m_Resolution.z - 1);
+	assert(cc.x < m_resolution.x-1
+		&& cc.y < m_resolution.y - 1
+		&& cc.z < m_resolution.z - 1);
 
 	auto c = Index(cc);
 
@@ -435,9 +435,9 @@ uvec3 SoilModel::GetCoordinate(const vec3& position) const
 	assert(position.x >= m_volumePositionMin.x
 		&& position.y >= m_volumePositionMin.y
 		&& position.z >= m_volumePositionMin.z);
-	assert(position.x <= m_volumePositionMin.x + m_voxelSize * m_Resolution.x
-		&& position.y <= m_volumePositionMin.y + m_voxelSize * m_Resolution.y
-		&& position.z <= m_volumePositionMin.z + m_voxelSize * m_Resolution.z);
+	assert(position.x <= m_volumePositionMin.x + m_voxelSize * m_resolution.x
+		&& position.y <= m_volumePositionMin.y + m_voxelSize * m_resolution.y
+		&& position.z <= m_volumePositionMin.z + m_voxelSize * m_resolution.z);
 	return {
 		(position.x - m_volumePositionMin.x) / m_voxelSize,
 		(position.y - m_volumePositionMin.y) / m_voxelSize,

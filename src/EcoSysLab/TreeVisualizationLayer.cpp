@@ -293,12 +293,21 @@ void TreeVisualizationLayer::LateUpdate() {
 						p5.m_position = (entityGlobalTransform.m_value *
 							glm::translate(cp5))[3];
 
-						p0.m_thickness = flow.m_info.m_startThickness;
-						p1.m_thickness = flow.m_info.m_startThickness;
-						p2.m_thickness = flow.m_info.m_startThickness;
-						p3.m_thickness = flow.m_info.m_endThickness;
+						if (flow.GetParentHandle() > 0)
+						{
+							p1.m_thickness = branchSkeleton.PeekFlow(flow.GetParentHandle()).m_info.m_endThickness;
+						}
+						else
+						{
+							p1.m_thickness = flow.m_info.m_startThickness;
+						}
 						p4.m_thickness = flow.m_info.m_endThickness;
-						p5.m_thickness = flow.m_info.m_endThickness;
+
+
+						p2.m_thickness = p3.m_thickness = (p1.m_thickness + p4.m_thickness) / 2.0f;
+						p0.m_thickness = 2.0f * p1.m_thickness - p2.m_thickness;
+						p5.m_thickness = 2.0f * p4.m_thickness - p3.m_thickness;
+
 
 						p0.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
 						p1.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
@@ -351,9 +360,14 @@ void TreeVisualizationLayer::LateUpdate() {
 						p5.m_position = (entityGlobalTransform.m_value *
 							glm::translate(cp5))[3];
 
-						p0.m_thickness = flow.m_info.m_startThickness;
-						p1.m_thickness = flow.m_info.m_startThickness;
-						p2.m_thickness = flow.m_info.m_startThickness;
+						if (flow.GetParentHandle() > 0)
+						{
+							p0.m_thickness = p1.m_thickness = p2.m_thickness = rootSkeleton.PeekFlow(flow.GetParentHandle()).m_info.m_endThickness;
+						}
+						else
+						{
+							p0.m_thickness = p1.m_thickness = p2.m_thickness = flow.m_info.m_startThickness;
+						}
 						p3.m_thickness = flow.m_info.m_endThickness;
 						p4.m_thickness = flow.m_info.m_endThickness;
 						p5.m_thickness = flow.m_info.m_endThickness;
