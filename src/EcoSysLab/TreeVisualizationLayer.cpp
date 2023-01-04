@@ -109,7 +109,6 @@ void TreeVisualizationLayer::LateUpdate() {
 #pragma endregion
 
 		}
-
 		if (m_rendering)
 		{
 			std::vector<Branch> branches;
@@ -173,10 +172,7 @@ void TreeVisualizationLayer::LateUpdate() {
 		auto branchStrands = m_branchStrands.Get<Strands>();
 		auto rootStrands = m_rootStrands.Get<Strands>();
 		if (m_generateGeometry) {
-
-
 			if (m_versions.size() != treeEntities->size()) {
-
 				m_internodeSize = 0;
 				m_totalTime = 0.0f;
 				m_versions.clear();
@@ -237,11 +233,11 @@ void TreeVisualizationLayer::LateUpdate() {
 					rootLastStartIndex += rootList.size();
 					rootStartIndices.emplace_back(rootLastStartIndex);
 				}
-				m_branchSegments.resize(branchLastStartIndex);
-				m_branchPoints.resize(branchLastStartIndex * 4);
+				m_branchSegments.resize(branchLastStartIndex * 3);
+				m_branchPoints.resize(branchLastStartIndex * 6);
 
-				m_rootSegments.resize(rootLastStartIndex);
-				m_rootPoints.resize(rootLastStartIndex * 4);
+				m_rootSegments.resize(rootLastStartIndex * 3);
+				m_rootPoints.resize(rootLastStartIndex * 6);
 
 
 				{
@@ -261,15 +257,29 @@ void TreeVisualizationLayer::LateUpdate() {
 					for (int i = 0; i < branchList.size(); i++)
 					{
 						auto& flow = branchSkeleton.PeekFlow(branchList[i]);
-						auto cp0 = flow.m_info.m_globalStartPosition;
-						auto cp3 = flow.m_info.m_globalEndPosition;
-						float distance = glm::distance(cp0, cp3);
-						auto cp1 = cp0 + flow.m_info.m_globalStartRotation * glm::vec3(0, 0, -1) * distance / 3.0f;
-						auto cp2 = cp3 + flow.m_info.m_globalEndRotation * glm::vec3(0, 0, 1) * distance / 3.0f;
-						auto& p0 = m_branchPoints[branchStartIndex * 4 + i * 4];
-						auto& p1 = m_branchPoints[branchStartIndex * 4 + i * 4 + 1];
-						auto& p2 = m_branchPoints[branchStartIndex * 4 + i * 4 + 2];
-						auto& p3 = m_branchPoints[branchStartIndex * 4 + i * 4 + 3];
+						auto cp1 = flow.m_info.m_globalStartPosition;
+						auto cp4 = flow.m_info.m_globalEndPosition;
+						float distance = glm::distance(cp1, cp4);
+						glm::vec3 cp0, cp2;
+						if(flow.GetParentHandle() > 0)
+						{
+							cp0 = cp1 + branchSkeleton.PeekFlow(flow.GetParentHandle()).m_info.m_globalEndRotation * glm::vec3(0, 0, 1) * distance / 4.0f;
+							cp2 = cp1 + branchSkeleton.PeekFlow(flow.GetParentHandle()).m_info.m_globalEndRotation * glm::vec3(0, 0, -1) * distance / 4.0f;
+						}
+						else
+						{
+							cp0 = cp1 + flow.m_info.m_globalStartRotation * glm::vec3(0, 0, 1) * distance / 4.0f;
+							cp2 = cp1 + flow.m_info.m_globalStartRotation * glm::vec3(0, 0, -1) * distance / 4.0f;
+						}
+						auto cp3 = cp4 + flow.m_info.m_globalEndRotation * glm::vec3(0, 0, 1) * distance / 4.0f;
+						auto cp5 = cp4 + flow.m_info.m_globalEndRotation * glm::vec3(0, 0, -1) * distance / 4.0f;
+
+						auto& p0 = m_branchPoints[branchStartIndex * 6 + i * 6];
+						auto& p1 = m_branchPoints[branchStartIndex * 6 + i * 6 + 1];
+						auto& p2 = m_branchPoints[branchStartIndex * 6 + i * 6 + 2];
+						auto& p3 = m_branchPoints[branchStartIndex * 6 + i * 6 + 3];
+						auto& p4 = m_branchPoints[branchStartIndex * 6 + i * 6 + 4];
+						auto& p5 = m_branchPoints[branchStartIndex * 6 + i * 6 + 5];
 						p0.m_position = (entityGlobalTransform.m_value *
 							glm::translate(cp0))[3];
 						p1.m_position = (entityGlobalTransform.m_value *
@@ -278,32 +288,56 @@ void TreeVisualizationLayer::LateUpdate() {
 							glm::translate(cp2))[3];
 						p3.m_position = (entityGlobalTransform.m_value *
 							glm::translate(cp3))[3];
+						p4.m_position = (entityGlobalTransform.m_value *
+							glm::translate(cp4))[3];
+						p5.m_position = (entityGlobalTransform.m_value *
+							glm::translate(cp5))[3];
 
 						p0.m_thickness = flow.m_info.m_startThickness;
 						p1.m_thickness = flow.m_info.m_startThickness;
-						p2.m_thickness = flow.m_info.m_endThickness;
+						p2.m_thickness = flow.m_info.m_startThickness;
 						p3.m_thickness = flow.m_info.m_endThickness;
+						p4.m_thickness = flow.m_info.m_endThickness;
+						p5.m_thickness = flow.m_info.m_endThickness;
 
 						p0.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
 						p1.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
 						p2.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
 						p3.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
+						p4.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
+						p5.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
 
-						m_branchSegments[branchStartIndex + i] = branchStartIndex * 4 + i * 4;
+						m_branchSegments[branchStartIndex * 3 + i * 3] = branchStartIndex * 6 + i * 6;
+						m_branchSegments[branchStartIndex * 3 + i * 3 + 1] = branchStartIndex * 6 + i * 6 + 1;
+						m_branchSegments[branchStartIndex * 3 + i * 3 + 2] = branchStartIndex * 6 + i * 6 + 2;
 					}
 					auto rootStartIndex = rootStartIndices[treeIndex];
 					for (int i = 0; i < rootList.size(); i++)
 					{
 						auto& flow = rootSkeleton.PeekFlow(rootList[i]);
-						auto cp0 = flow.m_info.m_globalStartPosition;
-						auto cp3 = flow.m_info.m_globalEndPosition;
-						float distance = glm::distance(cp0, cp3);
-						auto cp1 = cp0 + flow.m_info.m_globalStartRotation * glm::vec3(0, 0, -1) * distance / 3.0f;
-						auto cp2 = cp3 + flow.m_info.m_globalEndRotation * glm::vec3(0, 0, 1) * distance / 3.0f;
-						auto& p0 = m_rootPoints[rootStartIndex * 4 + i * 4];
-						auto& p1 = m_rootPoints[rootStartIndex * 4 + i * 4 + 1];
-						auto& p2 = m_rootPoints[rootStartIndex * 4 + i * 4 + 2];
-						auto& p3 = m_rootPoints[rootStartIndex * 4 + i * 4 + 3];
+						auto cp1 = flow.m_info.m_globalStartPosition;
+						auto cp4 = flow.m_info.m_globalEndPosition;
+						float distance = glm::distance(cp1, cp4);
+						glm::vec3 cp0, cp2;
+						if (flow.GetParentHandle() > 0)
+						{
+							cp0 = cp1 + rootSkeleton.PeekFlow(flow.GetParentHandle()).m_info.m_globalEndRotation * glm::vec3(0, 0, 1) * distance / 4.0f;
+							cp2 = cp1 + rootSkeleton.PeekFlow(flow.GetParentHandle()).m_info.m_globalEndRotation * glm::vec3(0, 0, -1) * distance / 4.0f;
+						}
+						else
+						{
+							cp0 = cp1 + flow.m_info.m_globalStartRotation * glm::vec3(0, 0, 1) * distance / 4.0f;
+							cp2 = cp1 + flow.m_info.m_globalStartRotation * glm::vec3(0, 0, -1) * distance / 4.0f;
+						}
+						auto cp3 = cp4 + flow.m_info.m_globalEndRotation * glm::vec3(0, 0, 1) * distance / 4.0f;
+						auto cp5 = cp4 + flow.m_info.m_globalEndRotation * glm::vec3(0, 0, -1) * distance / 4.0f;
+
+						auto& p0 = m_rootPoints[rootStartIndex * 6 + i * 6];
+						auto& p1 = m_rootPoints[rootStartIndex * 6 + i * 6 + 1];
+						auto& p2 = m_rootPoints[rootStartIndex * 6 + i * 6 + 2];
+						auto& p3 = m_rootPoints[rootStartIndex * 6 + i * 6 + 3];
+						auto& p4 = m_rootPoints[rootStartIndex * 6 + i * 6 + 4];
+						auto& p5 = m_rootPoints[rootStartIndex * 6 + i * 6 + 5];
 						p0.m_position = (entityGlobalTransform.m_value *
 							glm::translate(cp0))[3];
 						p1.m_position = (entityGlobalTransform.m_value *
@@ -312,18 +346,28 @@ void TreeVisualizationLayer::LateUpdate() {
 							glm::translate(cp2))[3];
 						p3.m_position = (entityGlobalTransform.m_value *
 							glm::translate(cp3))[3];
+						p4.m_position = (entityGlobalTransform.m_value *
+							glm::translate(cp4))[3];
+						p5.m_position = (entityGlobalTransform.m_value *
+							glm::translate(cp5))[3];
 
 						p0.m_thickness = flow.m_info.m_startThickness;
 						p1.m_thickness = flow.m_info.m_startThickness;
-						p2.m_thickness = flow.m_info.m_endThickness;
+						p2.m_thickness = flow.m_info.m_startThickness;
 						p3.m_thickness = flow.m_info.m_endThickness;
+						p4.m_thickness = flow.m_info.m_endThickness;
+						p5.m_thickness = flow.m_info.m_endThickness;
 
 						p0.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
 						p1.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
 						p2.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
 						p3.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
+						p4.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
+						p5.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
 
-						m_rootSegments[rootStartIndex + i] = rootStartIndex * 4 + i * 4;
+						m_rootSegments[rootStartIndex * 3 + i * 3] = rootStartIndex * 6 + i * 6;
+						m_rootSegments[rootStartIndex * 3 + i * 3 + 1] = rootStartIndex * 6 + i * 6 + 1;
+						m_rootSegments[rootStartIndex * 3 + i * 3 + 2] = rootStartIndex * 6 + i * 6 + 2;
 					}
 						}, results);
 					for (auto& i : results) i.wait();
@@ -408,9 +452,12 @@ void TreeVisualizationLayer::OnInspect() {
 		auto scene = GetScene();
 		const std::vector<Entity>* treeEntities =
 			scene->UnsafeGetPrivateComponentOwnersList<Tree>();
-		Editor::DragAndDropButton(m_branchStrandsHolder, "Branch strands holder");
-		Editor::DragAndDropButton(m_rootStrandsHolder, "Root strands holder");
 
+		ImGui::Checkbox("Generate Strands", &m_generateGeometry);
+		if (m_generateGeometry) {
+			Editor::DragAndDropButton(m_branchStrandsHolder, "Branch strands holder");
+			Editor::DragAndDropButton(m_rootStrandsHolder, "Root strands holder");
+		}
 		ImGui::Checkbox("Lock tree selection", &m_lockTreeSelection);
 		ImGui::Checkbox("Rendering", &m_rendering);
 		ImGui::Checkbox("Debug Visualization", &m_debugVisualization);
