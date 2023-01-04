@@ -25,6 +25,8 @@ namespace EcoSysLab
 	{
 		std::vector<OctreeNode> m_octreeNodes;
 		int NewNode();
+		
+		void IterateOccupied(const std::function<void(const glm::vec3& position, float radius)> &func, const glm::vec3 &center, int subdivision, float voxelRadius, int nodeIndex) const;
 	public:
 		Octree();
 		glm::vec3 m_center;
@@ -32,8 +34,10 @@ namespace EcoSysLab
 		int m_maxSubdivisionLevel = 10;
 		[[nodiscard]] bool Occupied(const glm::vec3& position) const;
 		void Reset();
+		int GetIndex(const glm::vec3& position) const;
+		OctreeNode& RefNode(int index);
 		void Occupy(const glm::vec3& position);
-
+		void Occupy(const glm::vec3& position, const glm::quat& rotation, float length, float radius);
 		void GetVoxels(std::vector<glm::mat4>& voxels) const;
 	};
 }

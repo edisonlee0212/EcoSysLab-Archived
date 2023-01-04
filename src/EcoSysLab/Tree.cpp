@@ -62,19 +62,22 @@ void Tree::OnInspect() {
 		Octree octree = {};
 		octree.m_center = (rootSkeleton.m_min + rootSkeleton.m_max) / 2.0f;
 		auto diff = rootSkeleton.m_max - rootSkeleton.m_min;
-		octree.m_radius = glm::max((diff.x, diff.y), glm::max(diff.y, diff.z)) * 1.05f;
-		octree.m_maxSubdivisionLevel = 9;
+		octree.m_radius = glm::max((diff.x, diff.y), glm::max(diff.y, diff.z)) / 2.0f;
+		octree.m_maxSubdivisionLevel = 11;
 		auto& nodeList = rootSkeleton.RefSortedNodeList();
 		for(const auto& nodeIndex : nodeList)
 		{
-			octree.Occupy(rootSkeleton.RefNode(nodeIndex).m_info.m_globalPosition);
+			const auto& info = rootSkeleton.RefNode(nodeIndex).m_info;
+			octree.Occupy(info.m_globalPosition, info.m_globalRotation, info.m_length, info.m_thickness);
 		}
 		octree.GetVoxels(voxelMatrices);
 	}
 	ImGui::Checkbox("Display voxels", &displayVoxels);
 	if(displayVoxels && !voxelMatrices.empty())
 	{
-		Gizmos::DrawGizmoMeshInstanced(DefaultResources::Primitives::Cube, glm::vec4(1.f, 1.f, 0.0f, 0.5f), voxelMatrices);
+		GizmoSettings gizmoSettings;
+		gizmoSettings.m_drawSettings.m_blending = true;
+		Gizmos::DrawGizmoMeshInstanced(DefaultResources::Primitives::Cube, glm::vec4(1.f, 1.f, 0.0f, 0.5f), voxelMatrices, glm::mat4(1), 1, gizmoSettings);
 	}
 }
 
