@@ -40,6 +40,6 @@ namespace EcoSysLab
 		void Occupy(const glm::vec3& position, const glm::quat& rotation, float length, float radius);
 		void GetVoxels(std::vector<glm::mat4>& voxels) const;
 
-		void TriangulateField(std::vector<Vertex>& vertices, std::vector<unsigned>& indices, bool removeDuplicate, bool smoothMesh) const;
+		void TriangulateField(std::vector<Vertex>& vertices, std::vector<unsigned>& indices, bool removeDuplicate, int smoothMeshIteration) const;
 	};
 }

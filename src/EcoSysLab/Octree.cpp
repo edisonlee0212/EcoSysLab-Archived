@@ -155,7 +155,7 @@ void Octree::GetVoxels(std::vector<glm::mat4>& voxels) const
 		}, m_center, 0, m_radius, 0);
 }
 
-void Octree::TriangulateField(std::vector<Vertex>& vertices, std::vector<unsigned>& indices, bool removeDuplicate, bool smoothMesh) const
+void Octree::TriangulateField(std::vector<Vertex>& vertices, std::vector<unsigned>& indices, bool removeDuplicate, int smoothMeshIteration) const
 {
 	std::vector<glm::vec3> testingCells;
 	IterateOccupied([&](const glm::vec3& position, float radius)
@@ -168,13 +168,13 @@ void Octree::TriangulateField(std::vector<Vertex>& vertices, std::vector<unsigne
 	{
 		minRadius /= 2.f;
 	}
-	MarchingCubes::TriangulateField([&](const glm::vec3& samplePoint)
+	MarchingCubes::TriangulateField(m_center, [&](const glm::vec3& samplePoint)
 		{
 			return Occupied(samplePoint) ? 1.0f : 0.0f;
-		}, 0.5f, minRadius, testingCells, vertices, indices, removeDuplicate || smoothMesh);
+		}, 0.5f, minRadius, testingCells, vertices, indices, removeDuplicate || smoothMeshIteration > 0);
 
 
-	if (smoothMesh) {
+	for (int iteration = 0; iteration < smoothMeshIteration; iteration++) {
 		std::vector<std::vector<unsigned>> connectivity;
 		connectivity.resize(vertices.size());
 		for (int i = 0; i < indices.size() / 3; i++)
@@ -245,11 +245,7 @@ void Octree::TriangulateField(std::vector<Vertex>& vertices, std::vector<unsigne
 			{
 				position += vertices.at(index).m_position;
 			}
-			if (!connectivity.at(i).size() > 3) newPositions.push_back(position / static_cast<float>(connectivity.at(i).size()));
-			else
-			{
-				newPositions.push_back(vertices.at(i).m_position);
-			}
+			newPositions.push_back(position / static_cast<float>(connectivity.at(i).size()));
 		}
 		for (int i = 0; i < vertices.size(); i++)
 		{

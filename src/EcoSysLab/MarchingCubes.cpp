@@ -3,6 +3,9 @@
 	http://paulbourke.net/geometry/polygonise/
 */
 #include "MarchingCubes.hpp"
+
+#include <unordered_set>
+
 #include "glm/gtx/hash.hpp"
 using namespace EcoSysLab;
 #pragma region Tables
@@ -341,13 +344,15 @@ void MarchingCubes::TriangulateCell(CubeCell& cell, float isovalue, std::vector<
 	}
 }
 
-void MarchingCubes::TriangulateField(const std::function<float(const glm::vec3& samplePoint)>& sampleFunction,
+void MarchingCubes::TriangulateField(const glm::vec3& center, const std::function<float(const glm::vec3& samplePoint)>& sampleFunction,
 	float isovalue, const float cellRadius, const std::vector<glm::vec3>& testingCells, std::vector<Vertex>& vertices,
 	std::vector<unsigned>& indices, bool removeDuplicate)
 {
-	std::unordered_map<glm::vec3, CubeCell> testedCells;
+	std::unordered_map<glm::ivec3, CubeCell> testedCells;
 	std::vector<Vertex> outVertices;
+	std::vector<unsigned> outIndices;
 	auto cellSize = 2.0f * cellRadius;
+
 	for (const auto& cell : testingCells)
 	{
 		for (int xOffset = -1; xOffset <= 1; xOffset++)
@@ -357,7 +362,7 @@ void MarchingCubes::TriangulateField(const std::function<float(const glm::vec3& 
 				for (int zOffset = -1; zOffset <= 1; zOffset++)
 				{
 					auto adjCenter = cell + glm::vec3(xOffset * cellSize, yOffset * cellSize, zOffset * cellSize);
-					if (testedCells.find(adjCenter) == testedCells.end()) {
+					if (testedCells.find(glm::ivec3(glm::round((adjCenter - center) / cellRadius))) == testedCells.end()) {
 						CubeCell testingCell = {
 						{
 							{adjCenter.x - cellRadius, adjCenter.y - cellRadius, adjCenter.z - cellRadius}, {adjCenter.x + cellRadius, adjCenter.y - cellRadius, adjCenter.z - cellRadius},
@@ -374,46 +379,12 @@ void MarchingCubes::TriangulateField(const std::function<float(const glm::vec3& 
 						};
 						TriangulateCell(testingCell, isovalue, outVertices);
 
-						testedCells[adjCenter] = testingCell;
+						testedCells[glm::ivec3(glm::round((adjCenter - center) / cellRadius))] = testingCell;
 					}
 				}
 			}
 		}
 	}
-	/*
-	for (const auto& cell : testingCells)
-	{
-		if (testedCells.find(cell) == testedCells.end()) {
-			float value[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
-			for (int i = 0; i < 8; i++)
-			{
-				auto adjCenter = cell;
-				adjCenter.x += (i / 4 == 1 ? -cellRadius : cellRadius);
-				adjCenter.y += (i / 2 % 2 == 1 ? -cellRadius : cellRadius);
-				adjCenter.z += (i % 2 == 1 ? -cellRadius : cellRadius);
-				for (int j = 0; j < 8; j++)
-				{
-					auto corner = adjCenter;
-					corner.x += (j / 4 == 1 ? -cellRadius : cellRadius);
-					corner.y += (j / 2 % 2 == 1 ? -cellRadius : cellRadius);
-					corner.z += (j % 2 == 1 ? -cellRadius : cellRadius);
-					value[i] += sampleFunction(corner);
-				}
-			}
-			CubeCell testingCell = {
-				{
-					{cell.x - cellRadius, cell.y - cellRadius, cell.z - cellRadius}, {cell.x + cellRadius, cell.y - cellRadius, cell.z - cellRadius},
-					{cell.x + cellRadius, cell.y - cellRadius, cell.z + cellRadius}, {cell.x - cellRadius, cell.y - cellRadius, cell.z + cellRadius},
-					{cell.x - cellRadius, cell.y + cellRadius, cell.z - cellRadius}, {cell.x + cellRadius, cell.y + cellRadius, cell.z - cellRadius},
-					{cell.x + cellRadius, cell.y + cellRadius, cell.z + cellRadius}, {cell.x - cellRadius, cell.y + cellRadius, cell.z + cellRadius}
-				},
-				{value[0], value[1], value[2], value[3], value[4], value[5], value[6], value[7]}
-			};
-			TriangulateCell(testingCell, isovalue, outVertices);
-			testedCells[cell] = testingCell;
-		}
-	}
-	*/
 	if (!removeDuplicate) {
 		for (int i = 0; i < outVertices.size(); i++)
 		{
@@ -422,20 +393,95 @@ void MarchingCubes::TriangulateField(const std::function<float(const glm::vec3& 
 		}
 	}
 	else {
-		std::unordered_map<glm::vec3, unsigned> verticesList;
+		std::unordered_map<glm::ivec3, unsigned> verticesList;
+
+		//Fold vertices
 		for (const auto& vertex : outVertices)
 		{
-			auto search = verticesList.find(vertex.m_position);
+			auto search = verticesList.find(glm::ivec3(glm::round((vertex.m_position - center) / cellRadius)));
 			if (search == verticesList.end())
 			{
 				auto index = vertices.size();
-				indices.emplace_back(index);
-				verticesList[vertex.m_position] = index;
+				outIndices.emplace_back(index);
+				verticesList[glm::ivec3(glm::round((vertex.m_position - center) / cellRadius))] = index;
 				vertices.push_back(vertex);
 			}
 			else
 			{
-				indices.emplace_back(search->second);
+				outIndices.emplace_back(search->second);
+			}
+		}
+
+		//Fold triangles
+		std::unordered_map<unsigned, std::unordered_map<unsigned, std::unordered_set<unsigned>>> trianglesList;
+		for (int i = 0; i < outIndices.size() / 3; i++) {
+			//012
+			{
+				auto searchA = trianglesList.find(outIndices[i * 3]);
+				if (searchA != trianglesList.end())
+				{
+					auto searchB = searchA->second.find(outIndices[i * 3 + 1]);
+					if (searchB != searchA->second.end() && searchB->second.find(outIndices[i * 3 + 2]) != searchB->second.end()) continue;
+				}
+			}
+			//021
+			{
+				auto searchA = trianglesList.find(outIndices[i * 3]);
+				if (searchA != trianglesList.end())
+				{
+					auto searchB = searchA->second.find(outIndices[i * 3 + 2]);
+					if (searchB != searchA->second.end() && searchB->second.find(outIndices[i * 3 + 1]) != searchB->second.end()) continue;
+				}
+			}
+			//102
+			{
+				auto searchA = trianglesList.find(outIndices[i * 3 + 1]);
+				if (searchA != trianglesList.end())
+				{
+					auto searchB = searchA->second.find(outIndices[i * 3]);
+					if (searchB != searchA->second.end() && searchB->second.find(outIndices[i * 3 + 2]) != searchB->second.end()) continue;
+				}
+			}
+			//120
+			{
+				auto searchA = trianglesList.find(outIndices[i * 3 + 1]);
+				if (searchA != trianglesList.end())
+				{
+					auto searchB = searchA->second.find(outIndices[i * 3 + 2]);
+					if (searchB != searchA->second.end() && searchB->second.find(outIndices[i * 3]) != searchB->second.end()) continue;
+				}
+			}
+			//201
+			{
+				auto searchA = trianglesList.find(outIndices[i * 3 + 2]);
+				if (searchA != trianglesList.end())
+				{
+					auto searchB = searchA->second.find(outIndices[i * 3]);
+					if (searchB != searchA->second.end() && searchB->second.find(outIndices[i * 3 + 1]) != searchB->second.end()) continue;
+				}
+			}
+			//210
+			{
+				auto searchA = trianglesList.find(outIndices[i * 3 + 2]);
+				if (searchA != trianglesList.end())
+				{
+					auto searchB = searchA->second.find(outIndices[i * 3 + 1]);
+					if (searchB != searchA->second.end() && searchB->second.find(outIndices[i * 3]) != searchB->second.end()) continue;
+				}
+			}
+			trianglesList[outIndices[i * 3]][outIndices[i * 3 + 1]].emplace(outIndices[i * 3 + 2]);
+		}
+
+		for(const auto& a : trianglesList)
+		{
+			for(const auto& b : a.second)
+			{
+				for(const auto& c : b.second)
+				{
+					indices.emplace_back(a.first);
+					indices.emplace_back(b.first);
+					indices.emplace_back(c);
+				}
 			}
 		}
 	}

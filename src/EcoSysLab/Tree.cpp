@@ -55,10 +55,10 @@ void Tree::OnInspect() {
 
 
 	static bool removeDuplicate = true;
-	static bool smoothMesh = false;
-	static int subdivisionLevel = 8;
+	static int smoothMeshIteration = 5;
+	static int subdivisionLevel = 10;
 	ImGui::Checkbox("Remove duplicate", &removeDuplicate);
-	ImGui::Checkbox("Smooth mesh", &smoothMesh);
+	ImGui::DragInt("Smooth mesh iteration", &smoothMeshIteration, 1, 0, 100);
 	ImGui::DragInt("Subdivision level", &subdivisionLevel, 1, 4, 16);
 	if (ImGui::Button("Scan voxels"))
 	{
@@ -78,7 +78,7 @@ void Tree::OnInspect() {
 			const auto scene = GetScene();
 			std::vector<Vertex> vertices;
 			std::vector<unsigned> indices;
-			octree.TriangulateField(vertices, indices, removeDuplicate, smoothMesh);
+			octree.TriangulateField(vertices, indices, removeDuplicate, smoothMeshIteration);
 			auto marchingCubeEntity = scene->CreateEntity("Marching cube");
 			auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
 			auto material = ProjectManager::CreateTemporaryAsset<Material>();
