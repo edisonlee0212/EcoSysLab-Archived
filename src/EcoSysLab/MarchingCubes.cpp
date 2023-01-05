@@ -345,9 +345,9 @@ void MarchingCubes::TriangulateField(const std::function<float(const glm::vec3& 
 	float isovalue, const float cellRadius, const std::vector<glm::vec3>& testingCells, std::vector<Vertex>& vertices,
 	std::vector<unsigned>& indices, bool removeDuplicate)
 {
-	const float cellSize = cellRadius * 2;
 	std::unordered_map<glm::vec3, CubeCell> testedCells;
 	std::vector<Vertex> outVertices;
+	auto cellSize = 2.0f * cellRadius;
 	for (const auto& cell : testingCells)
 	{
 		for (int xOffset = -1; xOffset <= 1; xOffset++)
@@ -380,7 +380,40 @@ void MarchingCubes::TriangulateField(const std::function<float(const glm::vec3& 
 			}
 		}
 	}
-
+	/*
+	for (const auto& cell : testingCells)
+	{
+		if (testedCells.find(cell) == testedCells.end()) {
+			float value[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
+			for (int i = 0; i < 8; i++)
+			{
+				auto adjCenter = cell;
+				adjCenter.x += (i / 4 == 1 ? -cellRadius : cellRadius);
+				adjCenter.y += (i / 2 % 2 == 1 ? -cellRadius : cellRadius);
+				adjCenter.z += (i % 2 == 1 ? -cellRadius : cellRadius);
+				for (int j = 0; j < 8; j++)
+				{
+					auto corner = adjCenter;
+					corner.x += (j / 4 == 1 ? -cellRadius : cellRadius);
+					corner.y += (j / 2 % 2 == 1 ? -cellRadius : cellRadius);
+					corner.z += (j % 2 == 1 ? -cellRadius : cellRadius);
+					value[i] += sampleFunction(corner);
+				}
+			}
+			CubeCell testingCell = {
+				{
+					{cell.x - cellRadius, cell.y - cellRadius, cell.z - cellRadius}, {cell.x + cellRadius, cell.y - cellRadius, cell.z - cellRadius},
+					{cell.x + cellRadius, cell.y - cellRadius, cell.z + cellRadius}, {cell.x - cellRadius, cell.y - cellRadius, cell.z + cellRadius},
+					{cell.x - cellRadius, cell.y + cellRadius, cell.z - cellRadius}, {cell.x + cellRadius, cell.y + cellRadius, cell.z - cellRadius},
+					{cell.x + cellRadius, cell.y + cellRadius, cell.z + cellRadius}, {cell.x - cellRadius, cell.y + cellRadius, cell.z + cellRadius}
+				},
+				{value[0], value[1], value[2], value[3], value[4], value[5], value[6], value[7]}
+			};
+			TriangulateCell(testingCell, isovalue, outVertices);
+			testedCells[cell] = testingCell;
+		}
+	}
+	*
 	if (!removeDuplicate) {
 		for (int i = 0; i < outVertices.size(); i++)
 		{

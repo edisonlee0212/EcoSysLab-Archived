@@ -55,19 +55,21 @@ void Tree::OnInspect() {
 
 
 	static bool removeDuplicate = true;
+	static bool smoothMesh = false;
 	static int subdivisionLevel = 8;
 	ImGui::Checkbox("Remove duplicate", &removeDuplicate);
+	ImGui::Checkbox("Smooth mesh", &smoothMesh);
 	ImGui::DragInt("Subdivision level", &subdivisionLevel, 1, 4, 16);
-	if(ImGui::Button("Scan voxels"))
+	if (ImGui::Button("Scan voxels"))
 	{
 		auto& rootSkeleton = m_treeModel.RefRootSkeleton();
 		Octree octree = {};
 		octree.m_center = (rootSkeleton.m_min + rootSkeleton.m_max) / 2.0f;
 		auto diff = rootSkeleton.m_max - rootSkeleton.m_min;
-		octree.m_radius = glm::max((diff.x, diff.y), glm::max(diff.y, diff.z)) / 1.75f;
+		octree.m_radius = glm::max((diff.x, diff.y), glm::max(diff.y, diff.z)) / 2.0f;
 		octree.m_maxSubdivisionLevel = glm::clamp(subdivisionLevel, 4, 16);
 		auto& nodeList = rootSkeleton.RefSortedNodeList();
-		for(const auto& nodeIndex : nodeList)
+		for (const auto& nodeIndex : nodeList)
 		{
 			const auto& info = rootSkeleton.RefNode(nodeIndex).m_info;
 			octree.Occupy(info.m_globalPosition, info.m_globalRotation, info.m_length, info.m_thickness);
@@ -76,8 +78,7 @@ void Tree::OnInspect() {
 			const auto scene = GetScene();
 			std::vector<Vertex> vertices;
 			std::vector<unsigned> indices;
-			octree.TriangulateField(vertices, indices, removeDuplicate);
-
+			octree.TriangulateField(vertices, indices, removeDuplicate, smoothMesh);
 			auto marchingCubeEntity = scene->CreateEntity("Marching cube");
 			auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
 			auto material = ProjectManager::CreateTemporaryAsset<Material>();
@@ -88,7 +89,7 @@ void Tree::OnInspect() {
 			meshRenderer->m_material = material;
 		}
 	}
-	
+
 }
 
 void Tree::OnCreate() {
@@ -110,7 +111,8 @@ bool Tree::TryGrow() {
 	if (!m_soil.Get<Soil>()) {
 		UNIENGINE_ERROR("No soil model!");
 		//soil = scene->GetOrSetPrivateComponent<Soil>(owner).lock();
-	}else
+	}
+	else
 	{
 		//soil = m_soil.Get<Soil>();
 	}
@@ -149,7 +151,7 @@ void Tree::GenerateMesh(const MeshGeneratorSettings& meshGeneratorSettings) {
 			fruitEntity = child;
 		}
 	}
-	if(branchEntity.GetIndex() == 0)
+	if (branchEntity.GetIndex() == 0)
 	{
 		branchEntity = scene->CreateEntity("Branch Mesh");
 		scene->SetParent(branchEntity, self);
