@@ -413,7 +413,7 @@ void MarchingCubes::TriangulateField(const std::function<float(const glm::vec3& 
 			testedCells[cell] = testingCell;
 		}
 	}
-	*
+	*/
 	if (!removeDuplicate) {
 		for (int i = 0; i < outVertices.size(); i++)
 		{
