@@ -1,5 +1,6 @@
 #include "Octree.hpp"
 #include "glm/gtx/quaternion.hpp"
+#include "MarchingCubes.hpp"
 using namespace EcoSysLab;
 
 int Octree::NewNode()
@@ -101,8 +102,6 @@ bool CylinderCollision(const glm::vec3& center, const glm::vec3& position, const
 void Octree::Occupy(const glm::vec3& position, const glm::quat& rotation, float length, float radius)
 {
 	float minRadius = m_radius;
-	glm::vec3 center = m_center;
-	int octreeNodeIndex = 0;
 	const float maxRadius = glm::max(length, radius);
 	for (int subdivision = 0; subdivision < m_maxSubdivisionLevel; subdivision++)
 	{
@@ -149,29 +148,28 @@ void Octree::IterateOccupied(const std::function<void(const glm::vec3& position,
 void Octree::GetVoxels(std::vector<glm::mat4>& voxels) const
 {
 	voxels.clear();
-	/*
-	float currentRadius = m_radius;
-	for (int subdivision = 0; subdivision < m_maxSubdivisionLevel; subdivision++)
-	{
-		currentRadius /= 2.f;
-	}
 
-	for(float x = -m_radius; x < m_radius; x += currentRadius)
-	{
-		for (float y = -m_radius; y < m_radius; y += currentRadius)
-		{
-			for (float z = -m_radius; z < m_radius; z += currentRadius)
-			{
-				if(Occupied(m_center + glm::vec3(x, y, z)))
-				{
-					voxels.push_back(glm::translate(m_center + glm::vec3(x, y, z)) * glm::mat4_cast(glm::quat(glm::vec3(0))) * glm::scale(glm::vec3(currentRadius)));
-				}
-			}
-		}
-	}
-	*/
 	IterateOccupied([&](const glm::vec3& position, float radius)
 		{
 			voxels.push_back(glm::translate(position) * glm::scale(glm::vec3(radius)));
 		}, m_center, 0, m_radius, 0);
+}
+
+void Octree::TriangulateField(std::vector<Vertex>& vertices, std::vector<unsigned>& indices, bool removeDuplicate) const
+{
+	std::vector<glm::vec3> testingCells;
+	IterateOccupied([&](const glm::vec3& position, float radius)
+		{
+			testingCells.push_back(position);
+		}, m_center, 0, m_radius, 0);
+
+	float minRadius = m_radius;
+	for (int subdivision = 0; subdivision < m_maxSubdivisionLevel; subdivision++)
+	{
+		minRadius /= 2.f;
+	}
+	MarchingCubes::TriangulateField([&](const glm::vec3& samplePoint)
+		{
+			return Occupied(samplePoint) ? 1.0f : 0.0f;
+		}, 0.5f, minRadius, testingCells, vertices, indices, removeDuplicate);
 }
