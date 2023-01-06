@@ -63,11 +63,9 @@ void Tree::OnInspect() {
 	if (ImGui::Button("Scan voxels"))
 	{
 		auto& rootSkeleton = m_treeModel.RefRootSkeleton();
-		Octree octree = {};
-		octree.m_center = (rootSkeleton.m_min + rootSkeleton.m_max) / 2.0f;
 		auto diff = rootSkeleton.m_max - rootSkeleton.m_min;
-		octree.m_radius = glm::max((diff.x, diff.y), glm::max(diff.y, diff.z)) / 2.0f;
-		octree.m_maxSubdivisionLevel = glm::clamp(subdivisionLevel, 4, 16);
+		Octree octree(glm::max((diff.x, diff.y), glm::max(diff.y, diff.z)) / 2.0f,
+			glm::clamp(subdivisionLevel, 4, 16), (rootSkeleton.m_min + rootSkeleton.m_max) / 2.0f);
 		auto& nodeList = rootSkeleton.RefSortedNodeList();
 		for (const auto& nodeIndex : nodeList)
 		{

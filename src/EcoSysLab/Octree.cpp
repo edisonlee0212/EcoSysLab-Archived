@@ -3,21 +3,36 @@
 #include "MarchingCubes.hpp"
 using namespace EcoSysLab;
 
-int Octree::NewNode()
+int Octree::NewNode(float radius, unsigned level, const glm::vec3& center)
 {
 	m_octreeNodes.emplace_back();
+	m_octreeNodes.back().m_radius = radius;
+	m_octreeNodes.back().m_level = level;
+	m_octreeNodes.back().m_center = center;
 	return m_octreeNodes.size() - 1;
 }
 
 
 Octree::Octree()
 {
-	Reset();
+	Reset(16, 10, glm::vec3(0.0f));
 }
+
+float Octree::GetMinRadius() const
+{
+	return m_minRadius;
+}
+
+Octree::Octree(float radius, unsigned maxSubdivisionLevel, const glm::vec3& center)
+{
+	Reset(radius, maxSubdivisionLevel, center);
+}
+
+
 
 bool Octree::Occupied(const glm::vec3& position) const
 {
-	float currentRadius = m_radius;
+	float currentRadius = m_fieldRadius;
 	glm::vec3 center = m_center;
 	int octreeNodeIndex = 0;
 	for (int subdivision = 0; subdivision < m_maxSubdivisionLevel; subdivision++)
@@ -37,15 +52,22 @@ bool Octree::Occupied(const glm::vec3& position) const
 	return true;
 }
 
-void Octree::Reset()
+void Octree::Reset(float radius, unsigned maxSubdivisionLevel, const glm::vec3& center)
 {
+	m_fieldRadius = m_minRadius = radius;
+	m_maxSubdivisionLevel = maxSubdivisionLevel;
+	m_center = center;
 	m_octreeNodes.clear();
-	NewNode();
+	for (int subdivision = 0; subdivision < m_maxSubdivisionLevel; subdivision++)
+	{
+		m_minRadius /= 2.f;
+	}
+	NewNode(m_fieldRadius, -1, center);
 }
 
 int Octree::GetIndex(const glm::vec3& position) const
 {
-	float currentRadius = m_radius;
+	float currentRadius = m_fieldRadius;
 	glm::vec3 center = m_center;
 	int octreeNodeIndex = 0;
 	for (int subdivision = 0; subdivision < m_maxSubdivisionLevel; subdivision++)
@@ -72,7 +94,7 @@ OctreeNode& Octree::RefNode(int index)
 
 void Octree::Occupy(const glm::vec3& position)
 {
-	float currentRadius = m_radius;
+	float currentRadius = m_fieldRadius;
 	glm::vec3 center = m_center;
 	int octreeNodeIndex = 0;
 	for (int subdivision = 0; subdivision < m_maxSubdivisionLevel; subdivision++)
@@ -80,16 +102,16 @@ void Octree::Occupy(const glm::vec3& position)
 		currentRadius /= 2.f;
 		const auto& octreeNode = m_octreeNodes[octreeNodeIndex];
 		const int index = 4 * (position.x > center.x ? 0 : 1) + 2 * (position.y > center.y ? 0 : 1) + (position.z > center.z ? 0 : 1);
+		center.x += position.x > center.x ? currentRadius : -currentRadius;
+		center.y += position.y > center.y ? currentRadius : -currentRadius;
+		center.z += position.z > center.z ? currentRadius : -currentRadius;
 		if (octreeNode.m_children[index] == -1)
 		{
-			const auto newIndex = NewNode();
+			const auto newIndex = NewNode(currentRadius, subdivision, center);
 			m_octreeNodes[octreeNodeIndex].m_children[index] = newIndex;
 			octreeNodeIndex = newIndex;
 		}
 		else octreeNodeIndex = octreeNode.m_children[index];
-		center.x += position.x > center.x ? currentRadius : -currentRadius;
-		center.y += position.y > center.y ? currentRadius : -currentRadius;
-		center.z += position.z > center.z ? currentRadius : -currentRadius;
 	}
 }
 
@@ -101,17 +123,12 @@ bool CylinderCollision(const glm::vec3& center, const glm::vec3& position, const
 
 void Octree::Occupy(const glm::vec3& position, const glm::quat& rotation, float length, float radius)
 {
-	float minRadius = m_radius;
 	const float maxRadius = glm::max(length, radius);
-	for (int subdivision = 0; subdivision < m_maxSubdivisionLevel; subdivision++)
+	for (float x = -maxRadius + position.x - m_minRadius; x < maxRadius + position.x + m_minRadius; x += m_minRadius)
 	{
-		minRadius /= 2.f;
-	}
-	for (float x = -maxRadius + position.x - minRadius; x < maxRadius + position.x + minRadius; x += minRadius)
-	{
-		for (float y = -maxRadius + position.y - minRadius; y < maxRadius + position.y + minRadius; y += minRadius)
+		for (float y = -maxRadius + position.y - m_minRadius; y < maxRadius + position.y + m_minRadius; y += m_minRadius)
 		{
-			for (float z = -maxRadius + position.z - minRadius; z < maxRadius + position.z + minRadius; z += minRadius)
+			for (float z = -maxRadius + position.z - m_minRadius; z < maxRadius + position.z + m_minRadius; z += m_minRadius)
 			{
 				if (CylinderCollision(glm::vec3(x, y, z), position, rotation, length, radius))
 				{
@@ -122,6 +139,25 @@ void Octree::Occupy(const glm::vec3& position, const glm::quat& rotation, float 
 	}
 }
 
+void Octree::IterateLeaves(const std::function<void(const OctreeNode& octreeNode)>& func) const
+{
+	for(const auto& node : m_octreeNodes)
+	{
+		if(node.m_level == m_maxSubdivisionLevel - 2)
+		{
+			func(node);
+		}
+	}
+}
+
+void Octree::GetVoxels(std::vector<glm::mat4>& voxels) const
+{
+	voxels.clear();
+	IterateLeaves([&](const OctreeNode& octreeNode)
+		{
+			voxels.push_back(glm::translate(octreeNode.m_center) * glm::scale(glm::vec3(m_minRadius)));
+		});
+}
 void Octree::IterateOccupied(const std::function<void(const glm::vec3& position, float radius)>& func, const glm::vec3& center,
 	int subdivision, float voxelRadius, int nodeIndex) const
 {
@@ -144,112 +180,17 @@ void Octree::IterateOccupied(const std::function<void(const glm::vec3& position,
 		}
 	}
 }
-
-void Octree::GetVoxels(std::vector<glm::mat4>& voxels) const
-{
-	voxels.clear();
-
-	IterateOccupied([&](const glm::vec3& position, float radius)
-		{
-			voxels.push_back(glm::translate(position) * glm::scale(glm::vec3(radius)));
-		}, m_center, 0, m_radius, 0);
-}
-
-void Octree::TriangulateField(std::vector<Vertex>& vertices, std::vector<unsigned>& indices, bool removeDuplicate, int smoothMeshIteration) const
+void Octree::TriangulateField(std::vector<Vertex>& vertices, std::vector<unsigned>& indices, const bool removeDuplicate, const int smoothMeshIteration) const
 {
 	std::vector<glm::vec3> testingCells;
-	IterateOccupied([&](const glm::vec3& position, float radius)
+	std::vector<glm::vec3> validateCells;
+	IterateLeaves([&](const OctreeNode& octreeNode)
 		{
-			testingCells.push_back(position);
-		}, m_center, 0, m_radius, 0);
-
-	float minRadius = m_radius;
-	for (int subdivision = 0; subdivision < m_maxSubdivisionLevel; subdivision++)
-	{
-		minRadius /= 2.f;
-	}
+			testingCells.push_back(octreeNode.m_center);
+		});
+		
 	MarchingCubes::TriangulateField(m_center, [&](const glm::vec3& samplePoint)
 		{
 			return Occupied(samplePoint) ? 1.0f : 0.0f;
-		}, 0.5f, minRadius, testingCells, vertices, indices, removeDuplicate || smoothMeshIteration > 0);
-
-
-	for (int iteration = 0; iteration < smoothMeshIteration; iteration++) {
-		std::vector<std::vector<unsigned>> connectivity;
-		connectivity.resize(vertices.size());
-		for (int i = 0; i < indices.size() / 3; i++)
-		{
-			auto a = indices[3 * i];
-			auto b = indices[3 * i + 1];
-			auto c = indices[3 * i + 2];
-			//a
-			{
-				bool found1 = false;
-				bool found2 = false;
-				for (const auto& index : connectivity.at(a))
-				{
-					if (b == index) found1 = true;
-					if (c == index) found2 = true;
-				}
-				if (!found1)
-				{
-					connectivity.at(a).emplace_back(b);
-				}
-				if (!found2)
-				{
-					connectivity.at(a).emplace_back(c);
-				}
-			}
-			//b
-			{
-				bool found1 = false;
-				bool found2 = false;
-				for (const auto& index : connectivity.at(b))
-				{
-					if (a == index) found1 = true;
-					if (c == index) found2 = true;
-				}
-				if (!found1)
-				{
-					connectivity.at(b).emplace_back(a);
-				}
-				if (!found2)
-				{
-					connectivity.at(b).emplace_back(c);
-				}
-			}
-			//c
-			{
-				bool found1 = false;
-				bool found2 = false;
-				for (const auto& index : connectivity.at(c))
-				{
-					if (a == index) found1 = true;
-					if (b == index) found2 = true;
-				}
-				if (!found1)
-				{
-					connectivity.at(c).emplace_back(a);
-				}
-				if (!found2)
-				{
-					connectivity.at(c).emplace_back(b);
-				}
-			}
-		}
-		std::vector<glm::vec3> newPositions;
-		for (int i = 0; i < vertices.size(); i++)
-		{
-			auto position = glm::vec3(0.0f);
-			for (const auto& index : connectivity.at(i))
-			{
-				position += vertices.at(index).m_position;
-			}
-			newPositions.push_back(position / static_cast<float>(connectivity.at(i).size()));
-		}
-		for (int i = 0; i < vertices.size(); i++)
-		{
-			vertices[i].m_position = newPositions[i];
-		}
-	}
+		}, 0.5f, m_minRadius * 2.0f, testingCells, vertices, indices, removeDuplicate, smoothMeshIteration);	
 }
