@@ -10,10 +10,10 @@ namespace EcoSysLab {
 	class SoilParameters {
 	public:
 		// scaling factors for different forces
-		float m_diffusionFactor = 1.0f;
-		float m_gravityFactor = 1.0f;
-		float m_capFactor = 1.0f;
-
+		float m_diffusionForce = 1.0f;
+		glm::vec3 gravityForce = glm::vec3(0, 0, 0);
+		glm::uvec3 voxelResolution = glm::uvec3(64, 64, 64);
+		float m_deltaX = 1.0f;
 		float m_deltaTime = 0.2f; // delta t, time between steps
 	};
 
@@ -21,9 +21,7 @@ namespace EcoSysLab {
 		friend class Soil;
 	public:
 		void Initialize(const SoilParameters& soilParameters = SoilParameters(),
-			const glm::uvec3& voxelResolution = glm::uvec3(64, 64, 64),
-			float voxelDistance = 1.0f,
-			const glm::vec3& minPosition = glm::vec3(-31.5f, -31.5f, -31.5f));
+			const glm::vec3& minPosition = glm::vec3(-32, -32, -32));
 
 		void Reset();
 		void Step();
@@ -33,58 +31,56 @@ namespace EcoSysLab {
 		[[nodiscard]] float GetDensity(const glm::vec3& position) const;
 		[[nodiscard]] float GetNutrient(const glm::vec3& position) const;
 
-		[[nodiscard]] void ChangeWater(   const glm::vec3& position, float amount);
+		[[nodiscard]] void ChangeWater(   const glm::vec3& center, float amount, float width);
 		[[nodiscard]] void ChangeDensity( const glm::vec3& position, float amount);
 		[[nodiscard]] void ChangeNutrient(const glm::vec3& position, float amount);
 
+		// negative indices are useful as relative offsets
 		[[nodiscard]] static int Index(const glm::uvec3& resolution, int x, int y, int z);
-		[[nodiscard]] int Index(int x, int y, int z) const;
+		[[nodiscard]]        int Index(int x, int y, int z) const;
+		[[nodiscard]] static int Index(const glm::uvec3& resolution, const glm::uvec3& coordinate);
+		[[nodiscard]]        int Index(const glm::uvec3& coordinate) const;
 
-		[[nodiscard]] static unsigned Index(const glm::uvec3& resolution, const glm::uvec3& coordinate);
-		[[nodiscard]] unsigned Index(const glm::uvec3& coordinate) const;
-
-		[[nodiscard]] glm::uvec3 GetCoordinate(unsigned index) const;
-
-		[[nodiscard]] glm::uvec3 GetCoordinate(const glm::vec3& position) const;
-		[[nodiscard]] glm::vec3 GetCenter(const glm::uvec3& coordinate) const;
-
-		
+		[[nodiscard]] glm::ivec3 GetCoordinateFromIndex(const int index) const;
+		[[nodiscard]] glm::ivec3 GetCoordinateFromPosition(const glm::vec3& position) const;
+		[[nodiscard]] glm::vec3  GetPositionFromCoordinate(const glm::ivec3& coordinate) const;
+				
 		[[nodiscard]] glm::uvec3 GetVoxelResolution() const;
 		[[nodiscard]] float GetVoxelSize() const;
-		[[nodiscard]] glm::vec3 GetStartPosition() const;
-		[[nodiscard]] bool Initialized() const;
 		[[nodiscard]] float GetTime() const;
-
+		[[nodiscard]] glm::vec3 GetBoundingBoxCenter() const;
+		[[nodiscard]] glm::vec3 GetBoundingBoxMin() const;
+		[[nodiscard]] glm::vec3 GetBoundingBoxMax() const;
+		[[nodiscard]] bool Initialized() const;
 	protected:
+		void update_w_sum();
 		bool m_initialized = false;
 
 		glm::uvec3 m_Resolution;
-		float m_voxelSize; // delta x, distance between two voxels
-		float m_deltaTime; // delta t, time between steps
+		float m_dx; // delta x, distance between two voxels
+		float m_dt; // delta t, time between steps
 		float m_time = 0.0f; // time since start
 
 		// scaling factors for different forces
 		float m_diffusionForce;
-		float m_gravityForce;
-		float m_capacityForce;
-		glm::vec3 m_gravityDirection = glm::vec3(0, -1, 0);
+		glm::vec3 m_gravityForce;
 
 		// Fields:
-		std::vector<float> m_waterDensity;
-		std::vector<float> m_waterDensityBlur;
-		std::vector<float> m_gradWaterDensityX;
-		std::vector<float> m_gradWaterDensityY;
-		std::vector<float> m_gradWaterDensityZ;
+		std::vector<float> m_w;
 
-		std::vector<float> m_fluxX; // three components of the total flux
-		std::vector<float> m_fluxY;
-		std::vector<float> m_fluxZ;
+		// these field are temporary variables but kept so we don't have to reallocate them each step
+		std::vector<float> m_tmpValue;
+		std::vector<float> m_w_grad_x;
+		std::vector<float> m_w_grad_y;
+		std::vector<float> m_w_grad_z;
 
-		std::vector<float> m_divergenceX; // divergence components before summing
-		std::vector<float> m_divergenceY;
-		std::vector<float> m_divergenceZ;
+		std::vector<float> m_div_diff_x; // divergence components for diffusion process
+		std::vector<float> m_div_diff_y;
+		std::vector<float> m_div_diff_z;
 
-		std::vector<float> m_divergence; // scalar divergence of the flux field
+		std::vector<float> m_div_grav_x; // divergence components for gravity
+		std::vector<float> m_div_grav_y;
+		std::vector<float> m_div_grav_z;
 
 		std::vector<float> m_grad_cw;
 
@@ -92,13 +88,13 @@ namespace EcoSysLab {
 		std::vector<float> m_nutrientsDensity;
 		/////////////////////////////////
 
-		float m_totalWaterDensity = 0;
+		float m_w_sum = 0;
 
 		// helper variables:
 		std::vector<int>   m_blur_3x3_idx;
 		std::vector<float> m_blur_3x3_weights;
 
-		glm::vec3 m_volumePositionMin;
+		glm::vec3 m_boundingBoxMin;
 
 		void Convolution3(const std::vector<float>& input, std::vector<float>& output, const std::vector<int>& indices, const std::vector<float>& weights) const;
 	};
