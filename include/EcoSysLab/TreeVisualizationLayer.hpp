@@ -3,7 +3,7 @@
 #include "ecosyslab_export.h"
 #include "TreeModel.hpp"
 #include "TreeVisualizer.hpp"
-#include "BranchMeshGenerator.hpp"
+#include "TreeMeshGenerator.hpp"
 using namespace UniEngine;
 namespace EcoSysLab {
 	class TreeVisualizationLayer : public ILayer {
@@ -54,14 +54,14 @@ namespace EcoSysLab {
 		std::unique_ptr<OpenGLUtils::GLBuffer> m_treeBranchBuffer;
 		std::shared_ptr<Mesh> m_treeMesh;
 	public:
-		MeshGeneratorSettings m_meshGeneratorSettings;
+		TreeMeshGeneratorSettings m_meshGeneratorSettings;
 		Entity m_selectedTree = {};
 		
 		EntityRef m_branchStrandsHolder;
 		EntityRef m_rootStrandsHolder;
 		TreeVisualizer m_treeVisualizer;
 		void GrowAllTrees();
-		void GenerateMeshes(const MeshGeneratorSettings& meshGeneratorSettings);
+		void GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings);
 
 	};
 }

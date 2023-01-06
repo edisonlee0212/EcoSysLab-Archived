@@ -87,7 +87,7 @@ int Octree::GetIndex(const glm::vec3& position) const
 	return octreeNodeIndex;
 }
 
-OctreeNode& Octree::RefNode(int index)
+const OctreeNode& Octree::RefNode(const int index) const
 {
 	return m_octreeNodes[index];
 }
@@ -158,28 +158,7 @@ void Octree::GetVoxels(std::vector<glm::mat4>& voxels) const
 			voxels.push_back(glm::translate(octreeNode.m_center) * glm::scale(glm::vec3(m_minRadius)));
 		});
 }
-void Octree::IterateOccupied(const std::function<void(const glm::vec3& position, float radius)>& func, const glm::vec3& center,
-	int subdivision, float voxelRadius, int nodeIndex) const
-{
-	if (subdivision == m_maxSubdivisionLevel - 1)
-	{
-		func(center, voxelRadius);
-	}
-	else
-	{
-		voxelRadius /= 2.f;
-		for (int i = 0; i < 8; i++) {
-			const auto childIndex = m_octreeNodes[nodeIndex].m_children[i];
-			if (childIndex != -1) {
-				glm::vec3 newCenter = center;
-				newCenter.x += (i / 4 == 1 ? -voxelRadius : voxelRadius);
-				newCenter.y += (i / 2 % 2 == 1 ? -voxelRadius : voxelRadius);
-				newCenter.z += (i % 2 == 1 ? -voxelRadius : voxelRadius);
-				IterateOccupied(func, newCenter, subdivision + 1, voxelRadius, childIndex);
-			}
-		}
-	}
-}
+
 void Octree::TriangulateField(std::vector<Vertex>& vertices, std::vector<unsigned>& indices, const bool removeDuplicate, const int smoothMeshIteration) const
 {
 	std::vector<glm::vec3> testingCells;

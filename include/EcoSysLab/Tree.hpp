@@ -3,7 +3,7 @@
 #include "ecosyslab_export.h"
 #include "TreeModel.hpp"
 #include "TreeVisualizer.hpp"
-#include "BranchMeshGenerator.hpp"
+#include "TreeMeshGenerator.hpp"
 
 using namespace UniEngine;
 namespace EcoSysLab {
@@ -38,6 +38,6 @@ namespace EcoSysLab {
 
 		bool TryGrow();
 
-		void GenerateMesh(const MeshGeneratorSettings& meshGeneratorSettings);
+		void GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings);
 	};
 }

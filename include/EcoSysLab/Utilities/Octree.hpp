@@ -32,8 +32,6 @@ namespace EcoSysLab
 		unsigned m_maxSubdivisionLevel = 10;
 		float m_minRadius = 0.015625f;
 		glm::vec3 m_center;
-		void IterateOccupied(const std::function<void(const glm::vec3& position, float radius)>& func, const glm::vec3& center,
-			int subdivision, float voxelRadius, int nodeIndex) const;
 	public:
 		Octree();
 		[[nodiscard]] float GetMinRadius() const;
@@ -42,7 +40,7 @@ namespace EcoSysLab
 		[[nodiscard]] bool Occupied(const glm::vec3& position) const;
 		void Reset(float radius, unsigned maxSubdivisionLevel, const glm::vec3& center);
 		[[nodiscard]] int GetIndex(const glm::vec3& position) const;
-		OctreeNode& RefNode(int index);
+		const OctreeNode& RefNode(int index) const;
 		void Occupy(const glm::vec3& position);
 		void Occupy(const glm::vec3& position, const glm::quat& rotation, float length, float radius);
 		void GetVoxels(std::vector<glm::mat4>& voxels) const;

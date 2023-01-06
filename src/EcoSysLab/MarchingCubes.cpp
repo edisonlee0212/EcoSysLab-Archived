@@ -350,9 +350,7 @@ void MarchingCubes::TriangulateField(const glm::vec3& center, const std::functio
 {
 	std::unordered_map<glm::ivec3, CubeCell> testedCells;
 	std::vector<Vertex> outVertices;
-	std::vector<unsigned> outIndices;
 	auto cellRadius = cellSize / 2.0f;
-
 	for (const auto& cell : testingCells)
 	{
 		for (int xOffset = -1; xOffset <= 1; xOffset++)
@@ -378,14 +376,56 @@ void MarchingCubes::TriangulateField(const glm::vec3& center, const std::functio
 						}
 						};
 						TriangulateCell(testingCell, isovalue, outVertices);
-
 						testedCells[glm::ivec3(glm::round((adjCenter - center) / cellRadius))] = testingCell;
 					}
 				}
 			}
 		}
 	}
+	
+	/*
+	std::vector<std::vector<Vertex>> outVerticesTemp;
+	outVerticesTemp.resize(Jobs::Workers().Size());
+	std::mutex mutex;
+	std::vector<std::shared_future<void>> results;
+	Jobs::ParallelFor(testingCells.size(), [&](unsigned i, unsigned threadIndex)
+		{
+			auto& cell = testingCells[i];
+			for (int xOffset = -1; xOffset <= 1; xOffset++)
+			{
+				for (int yOffset = -1; yOffset <= 1; yOffset++)
+				{
+					for (int zOffset = -1; zOffset <= 1; zOffset++)
+					{
+						auto adjCenter = cell + glm::vec3(xOffset * cellSize, yOffset * cellSize, zOffset * cellSize);
+						if (testedCells.find(glm::ivec3(glm::round((adjCenter - center) / cellRadius))) == testedCells.end()) {
+							CubeCell testingCell = {
+							{
+								{adjCenter.x - cellRadius, adjCenter.y - cellRadius, adjCenter.z - cellRadius}, {adjCenter.x + cellRadius, adjCenter.y - cellRadius, adjCenter.z - cellRadius},
+								{adjCenter.x + cellRadius, adjCenter.y - cellRadius, adjCenter.z + cellRadius}, {adjCenter.x - cellRadius, adjCenter.y - cellRadius, adjCenter.z + cellRadius},
+								{adjCenter.x - cellRadius, adjCenter.y + cellRadius, adjCenter.z - cellRadius}, {adjCenter.x + cellRadius, adjCenter.y + cellRadius, adjCenter.z - cellRadius},
+								{adjCenter.x + cellRadius, adjCenter.y + cellRadius, adjCenter.z + cellRadius}, {adjCenter.x - cellRadius, adjCenter.y + cellRadius, adjCenter.z + cellRadius}
+							},
+							{
+								sampleFunction({adjCenter.x - cellRadius, adjCenter.y - cellRadius, adjCenter.z - cellRadius}), sampleFunction({adjCenter.x + cellRadius, adjCenter.y - cellRadius, adjCenter.z - cellRadius}),
+								sampleFunction({adjCenter.x + cellRadius, adjCenter.y - cellRadius, adjCenter.z + cellRadius}), sampleFunction({adjCenter.x - cellRadius, adjCenter.y - cellRadius, adjCenter.z + cellRadius}),
+								sampleFunction({adjCenter.x - cellRadius, adjCenter.y + cellRadius, adjCenter.z - cellRadius}), sampleFunction({adjCenter.x + cellRadius, adjCenter.y + cellRadius, adjCenter.z - cellRadius}),
+								sampleFunction({adjCenter.x + cellRadius, adjCenter.y + cellRadius, adjCenter.z + cellRadius}), sampleFunction({adjCenter.x - cellRadius, adjCenter.y + cellRadius, adjCenter.z + cellRadius})
+							}
+							};
+							TriangulateCell(testingCell, isovalue, outVerticesTemp.at(threadIndex));
+							std::lock_guard<std::mutex> lock(mutex);
+							testedCells[glm::ivec3(glm::round((adjCenter - center) / cellRadius))] = testingCell;
+						}
+					}
+				}
+			}
+	}, results);
+	for (const auto& i : results) i.wait();
+	for (const auto& i : outVerticesTemp) outVertices.insert(outVertices.end(), i.begin(), i.end());
+	*/
 	if (removeDuplicate || smoothMeshIteration != 0) {
+		std::vector<unsigned> outIndices;
 		std::unordered_map<glm::ivec3, unsigned> verticesList;
 		//Fold vertices
 		for (const auto& vertex : outVertices)

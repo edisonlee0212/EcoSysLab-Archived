@@ -6,7 +6,7 @@
 #include "Graphics.hpp"
 #include "EditorLayer.hpp"
 #include "Application.hpp"
-#include "BranchMeshGenerator.hpp"
+#include "TreeMeshGenerator.hpp"
 #include "Soil.hpp"
 #include "Climate.hpp"
 #include "Octree.hpp"
@@ -15,7 +15,7 @@
 using namespace EcoSysLab;
 
 void Tree::OnInspect() {
-	static MeshGeneratorSettings meshGeneratorSettings;
+	static TreeMeshGeneratorSettings meshGeneratorSettings;
 	bool modelChanged = false;
 	if (Editor::DragAndDropButton<TreeDescriptor>(m_treeDescriptor, "TreeDescriptor", true)) {
 		m_treeModel.Clear();
@@ -52,42 +52,6 @@ void Tree::OnInspect() {
 			treeVisualizationLayer->m_treeVisualizer.Reset(m_treeModel);
 		}
 	}
-
-
-	static bool removeDuplicate = true;
-	static int smoothMeshIteration = 5;
-	static int subdivisionLevel = 10;
-	ImGui::Checkbox("Remove duplicate", &removeDuplicate);
-	ImGui::DragInt("Smooth mesh iteration", &smoothMeshIteration, 1, 0, 100);
-	ImGui::DragInt("Subdivision level", &subdivisionLevel, 1, 4, 16);
-	if (ImGui::Button("Scan voxels"))
-	{
-		auto& rootSkeleton = m_treeModel.RefRootSkeleton();
-		auto diff = rootSkeleton.m_max - rootSkeleton.m_min;
-		Octree octree(glm::max((diff.x, diff.y), glm::max(diff.y, diff.z)) / 2.0f,
-			glm::clamp(subdivisionLevel, 4, 16), (rootSkeleton.m_min + rootSkeleton.m_max) / 2.0f);
-		auto& nodeList = rootSkeleton.RefSortedNodeList();
-		for (const auto& nodeIndex : nodeList)
-		{
-			const auto& info = rootSkeleton.RefNode(nodeIndex).m_info;
-			octree.Occupy(info.m_globalPosition, info.m_globalRotation, info.m_length, info.m_thickness);
-		}
-		{
-			const auto scene = GetScene();
-			std::vector<Vertex> vertices;
-			std::vector<unsigned> indices;
-			octree.TriangulateField(vertices, indices, removeDuplicate, smoothMeshIteration);
-			auto marchingCubeEntity = scene->CreateEntity("Marching cube");
-			auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
-			auto material = ProjectManager::CreateTemporaryAsset<Material>();
-			material->SetProgram(DefaultResources::GLPrograms::StandardProgram);
-			mesh->SetVertices(17, vertices, indices);
-			auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(marchingCubeEntity).lock();
-			meshRenderer->m_mesh = mesh;
-			meshRenderer->m_material = material;
-		}
-	}
-
 }
 
 void Tree::OnCreate() {
@@ -127,7 +91,7 @@ bool Tree::TryGrow() {
 		treeDescriptor->m_rootGrowthParameters, treeDescriptor->m_treeGrowthParameters);
 }
 
-void Tree::GenerateMesh(const MeshGeneratorSettings& meshGeneratorSettings) {
+void Tree::GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings) {
 	const auto scene = GetScene();
 	const auto self = GetOwner();
 	const auto children = scene->GetChildren(self);
@@ -169,10 +133,10 @@ void Tree::GenerateMesh(const MeshGeneratorSettings& meshGeneratorSettings) {
 		fruitEntity = scene->CreateEntity("Fruit Mesh");
 		scene->SetParent(fruitEntity, self);
 	}
-	std::vector<Vertex> vertices;
-	std::vector<unsigned int> indices;
 	{
-		BranchMeshGenerator<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> meshGenerator;
+		std::vector<Vertex> vertices;
+		std::vector<unsigned int> indices;
+		CylindricalMeshGenerator<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> meshGenerator;
 		meshGenerator.Generate(m_treeModel.RefBranchSkeleton(), vertices, indices,
 			meshGeneratorSettings);
 		auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
@@ -183,10 +147,10 @@ void Tree::GenerateMesh(const MeshGeneratorSettings& meshGeneratorSettings) {
 		meshRenderer->m_mesh = mesh;
 		meshRenderer->m_material = material;
 	}
-	vertices.clear();
-	indices.clear();
 	{
-		BranchMeshGenerator<RootSkeletonGrowthData, RootBranchGrowthData, RootInternodeGrowthData> meshGenerator;
+		std::vector<Vertex> vertices;
+		std::vector<unsigned int> indices;
+		VoxelMeshGenerator<RootSkeletonGrowthData, RootBranchGrowthData, RootInternodeGrowthData> meshGenerator;
 		meshGenerator.Generate(m_treeModel.RefRootSkeleton(), vertices, indices,
 			meshGeneratorSettings);
 		auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();

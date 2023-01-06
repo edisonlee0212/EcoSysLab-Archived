@@ -2,7 +2,7 @@
 
 #include "TreeModel.hpp"
 #include "Curve.hpp"
-
+#include "Octree.hpp"
 using namespace UniEngine;
 namespace EcoSysLab {
     struct RingSegment {
@@ -22,13 +22,14 @@ namespace EcoSysLab {
         [[nodiscard]] glm::vec3 GetPoint(glm::vec3 &normalDir, float angle, bool isStart);
     };
 
-    struct MeshGeneratorSettings {
-        float m_resolution = 0.001f;
-        float m_subdivision = 4.0f;
+    struct TreeMeshGeneratorSettings {
         bool m_vertexColorOnly = false;
         bool m_enableFoliage = true;
         bool m_enableBranch = true;
+        bool m_enableRoot = true;
 
+        float m_resolution = 0.001f;
+        float m_subdivision = 4.0f;
         bool m_overrideRadius = false;
         float m_radius = 0.01f;
         bool m_overrideVertexColor = false;
@@ -36,12 +37,17 @@ namespace EcoSysLab {
         float m_junctionLowerRatio = 0.4f;
         float m_junctionUpperRatio = 0.0f;
         glm::vec3 m_branchVertexColor = glm::vec3(1.0f);
-        glm::vec3 m_foliageVertexColor = glm::vec3(1.0f);
-
         float m_baseControlPointRatio = 0.3f;
         float m_branchControlPointRatio = 0.6f;
         float m_lineLengthFactor = 1.0f;
         bool m_smoothness = true;
+
+        glm::vec3 m_foliageVertexColor = glm::vec3(1.0f);
+
+        int m_voxelSubdivisionLevel = 10;
+        int m_voxelSmoothIteration = 5;
+        bool m_removeDuplicate = true;
+        glm::vec3 m_rootVertexColor = glm::vec3(1.0f);
 
         void OnInspect();
 
@@ -51,16 +57,28 @@ namespace EcoSysLab {
     };
 
     template<typename SkeletonData, typename FlowData, typename NodeData>
-    class BranchMeshGenerator {
-    public:
-        void Generate(Skeleton<SkeletonData, FlowData, NodeData> &treeSkeleton, std::vector<Vertex> &vertices,
-                      std::vector<unsigned int> &indices, const MeshGeneratorSettings &settings) const;
+    class IPlantMeshGenerator
+    {
+        virtual void Generate(Skeleton<SkeletonData, FlowData, NodeData>& treeSkeleton, std::vector<Vertex>& vertices,
+            std::vector<unsigned int>& indices, const TreeMeshGeneratorSettings& settings) const = 0;
     };
 
     template<typename SkeletonData, typename FlowData, typename NodeData>
-    void BranchMeshGenerator<SkeletonData, FlowData, NodeData>::Generate(
+    class CylindricalMeshGenerator : public IPlantMeshGenerator<SkeletonData, FlowData, NodeData> {
+    public:
+        void Generate(Skeleton<SkeletonData, FlowData, NodeData> &treeSkeleton, std::vector<Vertex> &vertices,
+                      std::vector<unsigned int> &indices, const TreeMeshGeneratorSettings &settings) const override;
+    };
+    template<typename SkeletonData, typename FlowData, typename NodeData>
+    class VoxelMeshGenerator : public IPlantMeshGenerator<SkeletonData, FlowData, NodeData> {
+    public:
+        void Generate(Skeleton<SkeletonData, FlowData, NodeData>& treeSkeleton, std::vector<Vertex>& vertices,
+            std::vector<unsigned int>& indices, const TreeMeshGeneratorSettings& settings) const override;
+    };
+    template<typename SkeletonData, typename FlowData, typename NodeData>
+    void CylindricalMeshGenerator<SkeletonData, FlowData, NodeData>::Generate(
             Skeleton<SkeletonData, FlowData, NodeData> &treeSkeleton, std::vector<Vertex> &vertices,
-            std::vector<unsigned int> &indices, const MeshGeneratorSettings &settings) const {
+            std::vector<unsigned int> &indices, const TreeMeshGeneratorSettings &settings) const {
         int parentStep = -1;
         const auto &sortedInternodeList = treeSkeleton.RefSortedNodeList();
         std::vector<std::vector<RingSegment>> ringsList;
@@ -291,5 +309,28 @@ namespace EcoSysLab {
                 }
             }
         }
+    }
+
+    template <typename SkeletonData, typename FlowData, typename NodeData>
+    void VoxelMeshGenerator<SkeletonData, FlowData, NodeData>::Generate(
+	    Skeleton<SkeletonData, FlowData, NodeData>& treeSkeleton, std::vector<Vertex>& vertices,
+	    std::vector<unsigned>& indices, const TreeMeshGeneratorSettings& settings) const
+    {
+        auto diff = treeSkeleton.m_max - treeSkeleton.m_min;
+        Octree octree(glm::max((diff.x, diff.y), glm::max(diff.y, diff.z)) / 2.0f,
+            glm::clamp(settings.m_voxelSubdivisionLevel, 4, 16), (treeSkeleton.m_min + treeSkeleton.m_max) / 2.0f);
+        auto& nodeList = treeSkeleton.RefSortedNodeList();
+        for (const auto& nodeIndex : nodeList)
+        {
+            const auto& node = treeSkeleton.RefNode(nodeIndex);
+            const auto& info = node.m_info;
+            auto thickness = info.m_thickness;
+            if (node.GetParentHandle() > 0)
+            {
+                thickness = (thickness + treeSkeleton.RefNode(node.GetParentHandle()).m_info.m_thickness) / 2.0f;
+            }
+            octree.Occupy(info.m_globalPosition, info.m_globalRotation, info.m_length, thickness);
+        }
+        octree.TriangulateField(vertices, indices, settings.m_removeDuplicate, settings.m_voxelSmoothIteration);
     }
 }

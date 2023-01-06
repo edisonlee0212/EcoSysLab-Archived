@@ -2,7 +2,7 @@
 // Created by lllll on 10/27/2022.
 //
 
-#include "BranchMeshGenerator.hpp"
+#include "TreeMeshGenerator.hpp"
 
 
 using namespace EcoSysLab;
@@ -66,7 +66,7 @@ glm::vec3 RingSegment::GetPoint(glm::vec3& normalDir, float angle, bool isStart)
 	return position;
 }
 
-void MeshGeneratorSettings::Save(const std::string& name, YAML::Emitter& out) {
+void TreeMeshGeneratorSettings::Save(const std::string& name, YAML::Emitter& out) {
 	out << YAML::Key << name << YAML::Value << YAML::BeginMap;
 	out << YAML::Key << "m_resolution" << YAML::Value << m_resolution;
 	out << YAML::Key << "m_subdivision" << YAML::Value << m_subdivision;
@@ -85,10 +85,18 @@ void MeshGeneratorSettings::Save(const std::string& name, YAML::Emitter& out) {
 	out << YAML::Key << "m_junctionLowerRatio" << YAML::Value << m_junctionLowerRatio;
 	out << YAML::Key << "m_branchVertexColor" << YAML::Value << m_branchVertexColor;
 	out << YAML::Key << "m_foliageVertexColor" << YAML::Value << m_foliageVertexColor;
+
+
+	out << YAML::Key << "m_voxelSubdivisionLevel" << YAML::Value << m_voxelSubdivisionLevel;
+	out << YAML::Key << "m_voxelSmoothIteration" << YAML::Value << m_voxelSmoothIteration;
+	out << YAML::Key << "m_removeDuplicate" << YAML::Value << m_removeDuplicate;
+	out << YAML::Key << "m_rootVertexColor" << YAML::Value << m_rootVertexColor;
+
+
 	out << YAML::EndMap;
 }
 
-void MeshGeneratorSettings::Load(const std::string& name, const YAML::Node& in) {
+void TreeMeshGeneratorSettings::Load(const std::string& name, const YAML::Node& in) {
 	if (in[name]) {
 		const auto& ms = in[name];
 		if (ms["m_resolution"]) m_resolution = ms["m_resolution"].as<float>();
@@ -108,36 +116,63 @@ void MeshGeneratorSettings::Load(const std::string& name, const YAML::Node& in) 
 		if (ms["m_junctionLowerRatio"]) m_junctionLowerRatio = ms["m_junctionLowerRatio"].as<float>();
 		if (ms["m_branchVertexColor"]) m_branchVertexColor = ms["m_branchVertexColor"].as<glm::vec3>();
 		if (ms["m_foliageVertexColor"]) m_foliageVertexColor = ms["m_foliageVertexColor"].as<glm::vec3>();
+
+
+		if (ms["m_voxelSubdivisionLevel"]) m_voxelSubdivisionLevel = ms["m_voxelSubdivisionLevel"].as<int>();
+		if (ms["m_voxelSmoothIteration"]) m_voxelSmoothIteration = ms["m_voxelSmoothIteration"].as<int>();
+		if (ms["m_removeDuplicate"]) m_removeDuplicate = ms["m_removeDuplicate"].as<bool>();
+		if (ms["m_rootVertexColor"]) m_rootVertexColor = ms["m_rootVertexColor"].as<glm::vec3>();
 	}
 }
 
-void MeshGeneratorSettings::OnInspect() {
+void TreeMeshGeneratorSettings::OnInspect() {
 	if (ImGui::TreeNodeEx("Mesh Generator settings")) {
-		ImGui::DragFloat("Resolution", &m_resolution, 0.001f);
-		ImGui::DragFloat("Subdivision", &m_subdivision, 0.001f);
 		ImGui::Checkbox("Vertex color only", &m_vertexColorOnly);
-		ImGui::Checkbox("Foliage", &m_enableFoliage);
 		ImGui::Checkbox("Branch", &m_enableBranch);
-		ImGui::Checkbox("Smoothness", &m_smoothness);
-		if (m_smoothness) {
-			ImGui::DragFloat("Base control point ratio", &m_baseControlPointRatio, 0.001f, 0.0f, 1.0f);
-			ImGui::DragFloat("Branch control point ratio", &m_branchControlPointRatio, 0.001f, 0.0f, 1.0f);
+		ImGui::Checkbox("Foliage", &m_enableFoliage);
+		ImGui::Checkbox("Root", &m_enableRoot);
+		if (m_enableBranch && ImGui::TreeNode("Branch mesh settings")) {
+			ImGui::DragFloat("Resolution", &m_resolution, 0.001f);
+			ImGui::DragFloat("Subdivision", &m_subdivision, 0.001f);
+			ImGui::Checkbox("Smoothness", &m_smoothness);
+			if (m_smoothness) {
+				ImGui::DragFloat("Base control point ratio", &m_baseControlPointRatio, 0.001f, 0.0f, 1.0f);
+				ImGui::DragFloat("Branch control point ratio", &m_branchControlPointRatio, 0.001f, 0.0f, 1.0f);
+			}
+			else {
+				ImGui::DragFloat("Line length factor", &m_lineLengthFactor, 0.001f, 0.0f, 1.0f);
+			}
+			ImGui::Checkbox("Override radius", &m_overrideRadius);
+			if (m_overrideRadius) ImGui::DragFloat("Radius", &m_radius);
+			ImGui::Checkbox("Override vertex color", &m_overrideVertexColor);
+			if (m_overrideVertexColor) {
+				ImGui::ColorEdit3("Branch vertex color", &m_branchVertexColor.x);
+			}
+			ImGui::Checkbox("Mark Junctions", &m_markJunctions);
+			if (m_markJunctions) {
+				ImGui::DragFloat("Junction Lower Ratio", &m_junctionLowerRatio, 0.01f, 0.0f, 0.5f);
+				ImGui::DragFloat("Junction Upper Ratio", &m_junctionUpperRatio, 0.01f, 0.0f, 0.5f);
+			}
+			ImGui::TreePop();
 		}
-		else {
-			ImGui::DragFloat("Line length factor", &m_lineLengthFactor, 0.001f, 0.0f, 1.0f);
+		if (m_enableFoliage && ImGui::TreeNode("Foliage mesh settings"))
+		{
+			if (m_overrideVertexColor) {
+				ImGui::ColorEdit3("Foliage vertex color", &m_foliageVertexColor.x);
+			}
+			ImGui::TreePop();
 		}
-		ImGui::Checkbox("Override radius", &m_overrideRadius);
-		if (m_overrideRadius) ImGui::DragFloat("Radius", &m_radius);
-		ImGui::Checkbox("Override vertex color", &m_overrideVertexColor);
-		if (m_overrideVertexColor) {
-			ImGui::ColorEdit3("Branch vertex color", &m_branchVertexColor.x);
-			ImGui::ColorEdit3("Foliage vertex color", &m_foliageVertexColor.x);
+		if (m_enableRoot && ImGui::TreeNode("Root mesh settings"))
+		{
+			ImGui::DragInt("Voxel subdivision level", &m_voxelSubdivisionLevel, 1, 5, 16);
+			ImGui::DragInt("Smooth iteration", &m_voxelSmoothIteration, 0, 0, 10);
+			if (m_voxelSmoothIteration == 0) ImGui::Checkbox("Remove duplicate", &m_removeDuplicate);
+			if (m_overrideVertexColor) {
+				ImGui::ColorEdit3("Root vertex color", &m_rootVertexColor.x);
+			}
+			ImGui::TreePop();
 		}
-		ImGui::Checkbox("Mark Junctions", &m_markJunctions);
-		if (m_markJunctions) {
-			ImGui::DragFloat("Junction Lower Ratio", &m_junctionLowerRatio, 0.01f, 0.0f, 0.5f);
-			ImGui::DragFloat("Junction Upper Ratio", &m_junctionUpperRatio, 0.01f, 0.0f, 0.5f);
-		}
+
 		ImGui::TreePop();
 	}
 }

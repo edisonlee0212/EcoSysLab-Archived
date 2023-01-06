@@ -554,7 +554,7 @@ void TreeVisualizationLayer::GrowAllTrees() {
 	}
 }
 
-void TreeVisualizationLayer::GenerateMeshes(const MeshGeneratorSettings& meshGeneratorSettings) {
+void TreeVisualizationLayer::GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings) {
 	auto scene = GetScene();
 	const std::vector<Entity>* treeEntities =
 		scene->UnsafeGetPrivateComponentOwnersList<Tree>();
