@@ -8,7 +8,7 @@ using namespace UniEngine;
 namespace EcoSysLab {
 	class TreeVisualizationLayer : public ILayer {
 		bool m_displayBranches = true;
-		bool m_displayRootFlows = false;
+		bool m_displayRootFlows = true;
 		bool m_displayBoundingBox = false;
 		bool m_debugVisualization = true;
 		bool m_rendering = false;
@@ -22,9 +22,6 @@ namespace EcoSysLab {
 
 		AssetRef m_branchStrands;
 		AssetRef m_rootStrands;
-
-		std::vector<glm::mat4> m_rootFlowMatrices;
-		std::vector<glm::vec4> m_rootFlowColors;
 
 		std::vector<glm::mat4> m_boundingBoxMatrices;
 		std::vector<glm::vec4> m_boundingBoxColors;
@@ -60,6 +57,10 @@ namespace EcoSysLab {
 		EntityRef m_branchStrandsHolder;
 		EntityRef m_rootStrandsHolder;
 		TreeVisualizer m_treeVisualizer;
+
+		PrivateComponentRef m_soilHolder;
+		PrivateComponentRef m_climateHolder;
+
 		void GrowAllTrees();
 		void GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings);
 

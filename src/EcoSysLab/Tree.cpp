@@ -15,14 +15,12 @@
 using namespace EcoSysLab;
 
 void Tree::OnInspect() {
-	static TreeMeshGeneratorSettings meshGeneratorSettings;
 	bool modelChanged = false;
 	if (Editor::DragAndDropButton<TreeDescriptor>(m_treeDescriptor, "TreeDescriptor", true)) {
 		m_treeModel.Clear();
 		modelChanged = true;
 	}
 	if (m_treeDescriptor.Get<TreeDescriptor>()) {
-		auto& parameters = m_treeDescriptor.Get<TreeDescriptor>()->m_treeGrowthParameters;
 		ImGui::Checkbox("Enable History", &m_enableHistory);
 		if (ImGui::Button("Grow")) {
 			TryGrow();
@@ -35,6 +33,7 @@ void Tree::OnInspect() {
 			modelChanged = true;
 		}
 		if (ImGui::TreeNode("Mesh generation")) {
+			static TreeMeshGeneratorSettings meshGeneratorSettings;
 			meshGeneratorSettings.OnInspect();
 			if (ImGui::Button("Generate Mesh")) {
 				GenerateMesh(meshGeneratorSettings);
@@ -65,27 +64,21 @@ void Tree::OnDestroy() {
 
 bool Tree::TryGrow() {
 	const auto scene = GetScene();
-	const auto owner = GetOwner();
 	const auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
-	if (!treeDescriptor) return false;
-	std::shared_ptr<Soil> soil;
-	std::shared_ptr<Climate> climate;
+	if (!treeDescriptor) {
+		UNIENGINE_ERROR("No tree descriptor!");
+		return false;
+	}
 	if (!m_soil.Get<Soil>()) {
 		UNIENGINE_ERROR("No soil model!");
-		//soil = scene->GetOrSetPrivateComponent<Soil>(owner).lock();
-	}
-	else
-	{
-		//soil = m_soil.Get<Soil>();
+		return false;
 	}
 	if (!m_climate.Get<Climate>()) {
 		UNIENGINE_ERROR("No climate model!");
-		//climate = scene->GetOrSetPrivateComponent<Climate>(owner).lock();
+		return false;
 	}
-	else
-	{
-		//climate = m_climate.Get<Climate>();
-	}
+	const auto soil = m_soil.Get<Soil>();
+	const auto climate = m_climate.Get<Climate>();
 	if (m_enableHistory) m_treeModel.Step();
 	return m_treeModel.Grow(soil->m_soilModel, climate->m_climateModel,
 		treeDescriptor->m_rootGrowthParameters, treeDescriptor->m_treeGrowthParameters);

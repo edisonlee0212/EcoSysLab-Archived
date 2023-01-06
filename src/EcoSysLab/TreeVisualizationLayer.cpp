@@ -3,6 +3,9 @@
 //
 
 #include "TreeVisualizationLayer.hpp"
+
+#include "Climate.hpp"
+#include "Soil.hpp"
 #include "Tree.hpp"
 
 using namespace EcoSysLab;
@@ -13,8 +16,6 @@ void TreeVisualizationLayer::OnCreate() {
 			m_randomColors.emplace_back(glm::linearRand(glm::vec3(0.0f), glm::vec3(1.0f)));
 		}
 	}
-
-
 
 	auto compShaderCode =
 		std::string("#version 450 core\n") + *DefaultResources::ShaderIncludes::Uniform + "\n" +
@@ -261,7 +262,7 @@ void TreeVisualizationLayer::LateUpdate() {
 						auto cp4 = flow.m_info.m_globalEndPosition;
 						float distance = glm::distance(cp1, cp4);
 						glm::vec3 cp0, cp2;
-						if(flow.GetParentHandle() > 0)
+						if (flow.GetParentHandle() > 0)
 						{
 							cp0 = cp1 + branchSkeleton.PeekFlow(flow.GetParentHandle()).m_info.m_globalEndRotation * glm::vec3(0, 0, 1) * distance / 4.0f;
 							cp2 = cp1 + branchSkeleton.PeekFlow(flow.GetParentHandle()).m_info.m_globalEndRotation * glm::vec3(0, 0, -1) * distance / 4.0f;
@@ -406,15 +407,6 @@ void TreeVisualizationLayer::LateUpdate() {
 					m_boundingBoxMatrices,
 					glm::mat4(1.0f), 1.0f, gizmoSettings);
 			}
-			if (m_displayRootFlows && !m_rootFlowMatrices.empty()) {
-				Gizmos::DrawGizmoMeshInstancedColored(
-					DefaultResources::Primitives::Cube, editorLayer->m_sceneCamera,
-					editorLayer->m_sceneCameraPosition,
-					editorLayer->m_sceneCameraRotation,
-					m_rootFlowColors,
-					m_rootFlowMatrices,
-					glm::mat4(1.0f), 1.0f, gizmoSettings);
-			}
 
 			if (m_displayBranches) {
 				gizmoSettings.m_colorMode = GizmoSettings::ColorMode::VertexColor;
@@ -480,6 +472,10 @@ void TreeVisualizationLayer::OnInspect() {
 			ImGui::Checkbox("Display Root Flows", &m_displayRootFlows);
 			ImGui::Checkbox("Display Bounding Box", &m_displayBoundingBox);
 		}
+
+		Editor::DragAndDropButton<Soil>(m_soilHolder, "Soil");
+		Editor::DragAndDropButton<Climate>(m_climateHolder, "Climate");
+
 		if (treeEntities && !treeEntities->empty()) {
 			ImGui::Checkbox("Auto grow", &m_autoGrow);
 			if (!m_autoGrow) {
@@ -518,6 +514,7 @@ void TreeVisualizationLayer::OnInspect() {
 			}
 		}
 
+
 		if (m_debugVisualization && scene->IsEntityValid(m_selectedTree)) {
 			m_treeVisualizer.OnInspect(
 				scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock()->m_treeModel, scene->GetDataComponent<GlobalTransform>(m_selectedTree));
@@ -542,6 +539,8 @@ void TreeVisualizationLayer::GrowAllTrees() {
 		Jobs::ParallelFor(treeEntities->size(), [&](unsigned i) {
 			auto treeEntity = treeEntities->at(i);
 		auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
+		if (!tree->m_climate.Get<Climate>()) tree->m_climate = m_climateHolder.Get<Climate>();
+		if (!tree->m_soil.Get<Soil>()) tree->m_soil = m_soilHolder.Get<Soil>();
 		tree->TryGrow();
 			}, results);
 		for (auto& i : results) i.wait();
