@@ -27,13 +27,15 @@ the voxel centers are at 0.5 and 1.5.
 
 */
 
-void SoilModel::Initialize(const SoilParameters& soilParameters, const glm::uvec3& voxelResolution, const vec3& minPosition, const std::function<float(const glm::vec3& voxelCenter)>& soilDensitySampleFunc)
+void SoilModel::Initialize(const SoilParameters& soilParameters, const vec3& minPosition, const std::function<float(const glm::vec3& voxelCenter)>& soilDensitySampleFunc)
 {
+	assert(!m_initialized);
+
 	m_diffusionForce = soilParameters.m_diffusionForce;
 	m_gravityForce = soilParameters.m_gravityForce;
 	m_dt = soilParameters.m_deltaTime;
 
-	m_resolution = voxelResolution;
+	m_resolution = soilParameters.m_voxelResolution;
 	m_dx = soilParameters.m_deltaX;
 	m_boundingBoxMin = minPosition;
 
@@ -148,7 +150,7 @@ void SoilModel::Reset()
 
 	m_grad_cw = empty;
 	m_nutrientsDensity = empty;
-	m_soilDensity = empty;
+	//m_soilDensity = empty;
 	auto tmp = empty;
 
 	// add some water
@@ -301,8 +303,8 @@ void SoilModel::Step()
 		{
 			for (auto z = 0u; z < m_resolution.z; ++z)
 			{
-				m_w_grad_x[Index(0, y, z)] = m_w[Index(1, y, z)] / (2 * m_dx);
-				m_w_grad_x[Index(m_resolution.x - 1, y, z)] = -m_w[Index(m_resolution.x - 2, y, z)] / (2 * m_dx);
+				m_w_grad_x[Index(0,                y, z)] =  m_w[Index(1,                y, z)] * wx_d;
+				m_w_grad_x[Index(m_resolution.x-1, y, z)] = -m_w[Index(m_resolution.x-2, y, z)] * wx_d;
 			}
 		}
 
@@ -311,18 +313,18 @@ void SoilModel::Step()
 		{
 			for (auto z = 0u; z < m_resolution.z; ++z)
 			{
-				m_w_grad_y[Index(x, 0, z)] = m_w[Index(x, 1, z)] / (2 * m_dx);
-				m_w_grad_y[Index(x, m_resolution.y - 1, z)] = -m_w[Index(x, m_resolution.y - 2, z)] / (2 * m_dx);
+				m_w_grad_y[Index(x, 0,                z)] =  m_w[Index(x, 1,                z)] * wx_d;
+				m_w_grad_y[Index(x, m_resolution.y-1, z)] = -m_w[Index(x, m_resolution.y-2, z)] * wx_d;
 			}
 		}
 
 		// Z:
-		for (auto x = 0u; x < m_resolution.x; ++x)
+		for(auto x = 0u; x<m_resolution.x; ++x)
 		{
 			for (auto y = 0u; y < m_resolution.y; ++y)
 			{
-				m_w_grad_z[Index(x, y, 0)] = m_w[Index(x, y, 1)] / (2 * m_dx);
-				m_w_grad_z[Index(x, y, m_resolution.z - 1)] = -m_w[Index(x, y, m_resolution.z - 2)] / (2 * m_dx);
+				m_w_grad_z[Index(x, y, 0)]                =   m_w[Index(x, y, 1               )] * wx_d;
+				m_w_grad_z[Index(x, y, m_resolution.z-1)] = - m_w[Index(x, y, m_resolution.z-2)] * wx_d;
 			}
 		}
 		// compute divergence
@@ -341,56 +343,85 @@ void SoilModel::Step()
 
 
 	// ------------ gravity ------------
+	// X direction:
 	{
+		auto a_x = m_gravityForce.x;
+		auto wx = a_x * 1.f/(2.f*m_dx);
+		auto theta = (a_x * m_dt/m_dx) * (a_x * m_dt/m_dx);
+		auto wt = theta * 1/(2*m_dt);
 
-		// Y direction:
+		const auto idx = std::vector<int>({
+			Index( 1, 0, 0),
+			Index(-1, 0, 0),
+			Index( 1, 0, 0),
+			Index( 0, 0, 0),
+			Index(-1, 0, 0),
+			});
+
+		const auto weights = std::vector<float>({
+			-wx, wx, wt, -2*wt, wt
+			});
+
+		Convolution3(m_w, m_div_grav_x, idx, weights);
+
+		if( Boundary::wrap == m_boundary_x)
 		{
-			auto a_y = m_gravityForce.y;
-			auto wx = a_y * 1.f / (2.f * m_dx);
-			auto theta = (a_y * m_dt / m_dx) * (a_y * m_dt / m_dx);
-			auto wt = theta * 1 / (2 * m_dt);
 
-			const auto idx = std::vector<int>({
-				Index(0,  1, 0),
-				Index(0, -1, 0),
-				Index(0,  1, 0),
-				Index(0,  0, 0),
-				Index(0, -1, 0),
-				});
-
-			const auto weights = std::vector<float>({
-				-wx, wx, wt, -2 * wt, wt
-				});
-
-			Convolution3(m_w, m_div_grav_y, idx, weights);
 		}
+	}
 
-		// TODO: boundary conditions here!
+	// Y direction:
+	{
+		auto a_y = m_gravityForce.y;
+		auto wx = a_y * 1.f/(2.f*m_dx);
+		auto theta = (a_y * m_dt/m_dx) * (a_y * m_dt/m_dx);
+		auto wt = theta * 1/(2*m_dt);
+
+		const auto idx = std::vector<int>({
+			Index(0,  1, 0),
+			Index(0, -1, 0),
+			Index(0,  1, 0),
+			Index(0,  0, 0),
+			Index(0, -1, 0),
+			});
+
+		const auto weights = std::vector<float>({
+			-wx, wx, wt, -2*wt, wt
+			});
+
+		Convolution3(m_w, m_div_grav_y, idx, weights);
+	}
+
+	// Z direction:
+	{
+		auto a_z = m_gravityForce.z;
+		auto wx = a_z * 1.f/(2.f*m_dx);
+		auto theta = (a_z * m_dt/m_dx) * (a_z * m_dt/m_dx);
+		auto wt = theta * 1/(2*m_dt);
+
+		const auto idx = std::vector<int>({
+			Index(0, 0,  1),
+			Index(0, 0, -1),
+			Index(0, 0,  1),
+			Index(0, 0,  0),
+			Index(0, 0, -1),
+			});
+
+		const auto weights = std::vector<float>({
+			-wx, wx, wt, -2*wt, wt
+			});
+
+		Convolution3(m_w, m_div_grav_z, idx, weights);
 	}
 
 	// apply all the fluxes:
 	for (auto i = 0; i < m_w.size(); ++i)
 	{
 		auto divergence = (m_div_diff_x[i] + m_div_diff_y[i] + m_div_diff_z[i])
-			+ (m_div_grav_x[i] + m_div_grav_y[i] + m_div_grav_z[i]);
+			            + (m_div_grav_x[i] + m_div_grav_y[i] + m_div_grav_z[i]);
 		// ToDo: Also apply source terms here
 		m_w[i] += m_dt * divergence;
 	}
-
-	/*
-	for (auto x = 1u; x < m_resolution.x-1; x++)
-	{
-		for (auto y = 1u; y < m_resolution.y-1; y++)
-		{
-			dw_c[idx(x, y)] =
-				  dw_o[idx(x-1, y-1)] + dw_o[idx(x, y-1)] + dw_o[idx(x+1, y-1)]
-				+ dw_o[idx(x-1, y  )]                     + dw_o[idx(x+1, y  )]
-				+ dw_o[idx(x-1, y+1)] + dw_o[idx(x, y+1)] + dw_o[idx(x+1, y+1)];
-		}
-	}
-	*/
-
-	WaterLogic();
 
 	m_time += m_dt;
 
@@ -402,8 +433,8 @@ void SoilModel::Step()
 
 void EcoSysLab::SoilModel::WaterLogic()
 {
-	ChangeWater(vec3(0, 10, 0), 10, 12);
-	ChangeWater(vec3(8, -10, 4), 20, 12);
+	ChangeWater(vec3(0, 10, 0),     10, 12);
+	ChangeWater(vec3(8, -10, 4),    20, 12);
 
 	if ((int)(m_time / 20.0) % 2 == 0)
 	{
@@ -452,7 +483,7 @@ void SoilModel::ChangeWater(const vec3& center, float amount, float width)
 			{
 				auto pos = GetPositionFromCoordinate({ x, y, z });
 				auto l = glm::length(pos - center);
-				auto v = glm::exp(-l * l / (2 * width * width));
+				auto v = glm::exp( - l*l / (2* width*width));
 				sum += v;
 			}
 		}
@@ -466,7 +497,7 @@ void SoilModel::ChangeWater(const vec3& center, float amount, float width)
 			{
 				auto pos = GetPositionFromCoordinate({ x, y, z });
 				auto l = glm::length(pos - center);
-				auto v = glm::exp(-l * l / (2 * width * width));
+				auto v = glm::exp( - l*l / (2* width*width));
 				m_w[Index(x, y, z)] += v / sum * amount;
 			}
 		}
@@ -526,7 +557,7 @@ int SoilModel::Index(const uvec3& c) const
 ivec3 SoilModel::GetCoordinateFromIndex(const int index) const
 {
 	return {
-		index % m_resolution.x,
+		index %  m_resolution.x,
 		index % (m_resolution.x * m_resolution.y) / m_resolution.x,
 		index / (m_resolution.x * m_resolution.y) };
 }
@@ -534,18 +565,19 @@ ivec3 SoilModel::GetCoordinateFromIndex(const int index) const
 ivec3 SoilModel::GetCoordinateFromPosition(const vec3& pos) const
 {
 	return {
-		floor((pos.x - (m_boundingBoxMin.x + m_dx / 2.0)) / m_dx),
-		floor((pos.y - (m_boundingBoxMin.y + m_dx / 2.0)) / m_dx),
-		floor((pos.z - (m_boundingBoxMin.z + m_dx / 2.0)) / m_dx)
+		floor((pos.x - (m_boundingBoxMin.x + m_dx/2.0)) / m_dx),
+		floor((pos.y - (m_boundingBoxMin.y + m_dx/2.0)) / m_dx),
+		floor((pos.z - (m_boundingBoxMin.z + m_dx/2.0)) / m_dx)
 	};
 }
 
 vec3 SoilModel::GetPositionFromCoordinate(const glm::ivec3& coordinate) const
 {
 	return {
-		m_boundingBoxMin.x + (m_dx / 2.0) + coordinate.x * m_dx,
-		m_boundingBoxMin.y + (m_dx / 2.0) + coordinate.y * m_dx,
-		m_boundingBoxMin.z + (m_dx / 2.0) + coordinate.z * m_dx };
+		m_boundingBoxMin.x + (m_dx/2.0) + coordinate.x * m_dx,
+		m_boundingBoxMin.y + (m_dx/2.0) + coordinate.y * m_dx,
+		m_boundingBoxMin.z + (m_dx/2.0) + coordinate.z * m_dx
+	};
 }
 
 

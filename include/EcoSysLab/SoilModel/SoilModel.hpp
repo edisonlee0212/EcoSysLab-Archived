@@ -2,26 +2,21 @@
 
 #include <glm/glm.hpp>
 #include <vector>
+#include <functional>
 #include "ecosyslab_export.h"
 
 using namespace UniEngine;
 
 namespace EcoSysLab {
-	class SoilParameters {
-	public:
-		// scaling factors for different forces
-		float m_diffusionForce = 0.2f;
-		glm::vec3 m_gravityForce = glm::vec3(0, 0, 0);
-		float m_deltaX = 0.2f;
-		float m_deltaTime = 0.2f; // delta t, time between steps
-	};
+	class SoilParameters;
 
 	class SoilModel {
 		friend class Soil;
 		friend class EcoSysLabLayer;
 	public:
-		void Initialize(const SoilParameters& soilParameters, const glm::uvec3& voxelResolution,
-			const glm::vec3& minPosition, const std::function<float(const glm::vec3& voxelCenter)>& soilDensitySampleFunc);
+		enum class Boundary : int {remove, block, wrap};
+		void Initialize(const SoilParameters& soilParameters,
+			const glm::vec3& boundingBoxMin, const std::function<float(const glm::vec3& voxelCenter)>& soilDensitySampleFunc);
 
 		void Reset();
 		void Step();
@@ -53,7 +48,7 @@ namespace EcoSysLab {
 		[[nodiscard]] glm::vec3 GetBoundingBoxMax() const;
 		[[nodiscard]] bool Initialized() const;
 
-		int m_version = 0;
+		int m_version = 0; // TODO: what does this do?
 	protected:
 		void update_w_sum();
 		bool m_initialized = false;
@@ -90,6 +85,7 @@ namespace EcoSysLab {
 		std::vector<float> m_nutrientsDensity;
 
 		std::vector<float> m_soilDensity;
+		Boundary m_boundary_x, m_boundary_y, m_boundary_z;
 
 		/////////////////////////////////
 
@@ -102,5 +98,18 @@ namespace EcoSysLab {
 		glm::vec3 m_boundingBoxMin;
 
 		void Convolution3(const std::vector<float>& input, std::vector<float>& output, const std::vector<int>& indices, const std::vector<float>& weights) const;
+	};
+
+	class SoilParameters {
+	public:
+		// scaling factors for different forces
+		float m_diffusionForce = 1.0f;
+		glm::vec3 m_gravityForce = glm::vec3(0, 0, 0);
+		glm::uvec3 m_voxelResolution = glm::uvec3(64, 64, 64);
+		float m_deltaX = 1.0f;
+		float m_deltaTime = 0.2f; // delta t, time between steps
+		SoilModel::Boundary m_boundary_x = SoilModel::Boundary::remove;
+		SoilModel::Boundary m_boundary_y = SoilModel::Boundary::remove;
+		SoilModel::Boundary m_boundary_z = SoilModel::Boundary::remove;
 	};
 }
