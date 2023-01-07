@@ -101,10 +101,10 @@ namespace EcoSysLab {
 
 	class SoilParameters {
 	public:
-		glm::uvec3 m_voxelResolution = glm::uvec3(64, 64, 64);
-		float m_deltaX = 1.0f;
+		glm::uvec3 m_voxelResolution = glm::uvec3(64, 48, 64);
+		float m_deltaX = 0.2f;
 		float m_deltaTime = 0.2f; // delta t, time between steps
-		glm::vec3& m_boundingBoxMin = glm::vec3(-32, -32, -32);
+		glm::vec3& m_boundingBoxMin = glm::vec3(-6.4, -6.4, -6.4);
 
 		SoilModel::Boundary m_boundary_x = SoilModel::Boundary::remove;
 		SoilModel::Boundary m_boundary_y = SoilModel::Boundary::remove;
