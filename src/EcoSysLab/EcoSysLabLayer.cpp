@@ -698,11 +698,11 @@ void EcoSysLabLayer::OnInspect() {
 			ImGui::Text("Total Root Flow size: %d", m_rootFlowSize);
 		}
 		ImGui::Checkbox("Debug Visualization", &m_debugVisualization);
-		if (m_debugVisualization && ImGui::TreeNode("Debug visualization settings")) {
+		if (m_debugVisualization && ImGui::TreeNodeEx("Debug visualization settings", ImGuiTreeNodeFlags_DefaultOpen)) {
 			ImGui::Checkbox("Display Branches", &m_displayBranches);
 			ImGui::Checkbox("Display Root Flows", &m_displayRootFlows);
 			ImGui::Checkbox("Display Soil", &m_displaySoil);
-			if (m_displaySoil && ImGui::TreeNode("Soil visualization settings"))
+			if (m_displaySoil && ImGui::TreeNodeEx("Soil visualization settings", ImGuiTreeNodeFlags_DefaultOpen))
 			{
 				OnSoilVisualizationMenu();
 				ImGui::TreePop();
@@ -744,7 +744,7 @@ void EcoSysLabLayer::OnSoilVisualizationMenu()
 			{
 				m_vectorMultiplier = 50.0f;
 				m_vectorBaseColor = glm::vec4(1.0f, 1.0f, 1.0f, 0.8f);
-				m_vectorSoilProperty = 2;
+				m_vectorSoilProperty = 4;
 				m_vectorLineWidthFactor = 0.1f;
 				m_vectorLineMaxWidth = 0.1f;
 				m_updateVectorColors = m_updateVectorMatrices = true;
