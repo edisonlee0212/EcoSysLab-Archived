@@ -6,16 +6,14 @@
 #include "Graphics.hpp"
 #include "HeightField.hpp"
 using namespace EcoSysLab;
+
+
 bool OnInspectSoilParameters(SoilParameters& soilParameters)
 {
 	bool changed = false;
 	if (ImGui::TreeNodeEx("Soil Parameters", ImGuiTreeNodeFlags_DefaultOpen))
 	{
-		if (ImGui::DragFloat("Diffusion Force", &soilParameters.m_diffusionForce, 0.01f, 0.0f, 999.0f))
-		{
-			changed = true;
-		}
-		if (ImGui::DragFloat3("Gravity Factor", &soilParameters.m_gravityForce.x, 0.01f, 0.0f, 999.0f))
+		if (ImGui::InputInt3("Voxel Resolution", (int*)&soilParameters.m_voxelResolution))
 		{
 			changed = true;
 		}
@@ -27,10 +25,24 @@ bool OnInspectSoilParameters(SoilParameters& soilParameters)
 		{
 			changed = true;
 		}
+		if (ImGui::InputFloat3("Bounding Box Min", (float*)&soilParameters.m_boundingBoxMin))
+		{
+			changed = true;
+		}
+		// TODO: boundaries
+		if (ImGui::DragFloat("Diffusion Force", &soilParameters.m_diffusionForce, 0.01f, 0.0f, 999.0f))
+		{
+			changed = true;
+		}
+		if (ImGui::DragFloat3("Gravity Factor", &soilParameters.m_gravityForce.x, 0.01f, 0.0f, 999.0f))
+		{
+			changed = true;
+		}
 		ImGui::TreePop();
 	}
 	return changed;
 }
+
 void SoilDescriptor::OnInspect()
 {
 	bool changed = false;
@@ -39,6 +51,7 @@ void SoilDescriptor::OnInspect()
 		changed = true;
 	}
 
+	/*
 	glm::ivec3 resolution = m_voxelResolution;
 	if (ImGui::DragInt3("Voxel Resolution", &resolution.x, 1, 1, 100))
 	{
@@ -49,6 +62,7 @@ void SoilDescriptor::OnInspect()
 	{
 		changed = true;
 	}
+	*/
 
 	if (ImGui::Button("Instantiate")) {
 		auto scene = Application::GetActiveScene();
@@ -134,8 +148,8 @@ void Soil::GenerateMesh()
 	}
 	std::vector<Vertex> vertices;
 	std::vector<glm::uvec3> triangles;
-	heightField->GenerateMesh(glm::vec2(soilDescriptor->m_boundingBoxMin.x, soilDescriptor->m_boundingBoxMin.z),
-		glm::uvec2(soilDescriptor->m_voxelResolution.x, soilDescriptor->m_voxelResolution.z), soilDescriptor->m_soilParameters.m_deltaX, vertices, triangles);
+	heightField->GenerateMesh(glm::vec2(soilDescriptor->m_soilParameters.m_boundingBoxMin.x, soilDescriptor->m_soilParameters.m_boundingBoxMin.z),
+		glm::uvec2(soilDescriptor->m_soilParameters.m_voxelResolution.x, soilDescriptor->m_soilParameters.m_voxelResolution.z), soilDescriptor->m_soilParameters.m_deltaX, vertices, triangles);
 
 	const auto scene = Application::GetActiveScene();
 	const auto self = GetOwner();
@@ -170,54 +184,70 @@ void Soil::InitializeSoilModel()
 	if (soilDescriptor)
 	{
 		auto heightField = soilDescriptor->m_heightField.Get<HeightField>();
+
+		auto params = soilDescriptor->m_soilParameters;
+
+
 		if (heightField)
 		{
-			m_soilModel.Initialize(soilDescriptor->m_soilParameters, soilDescriptor->m_voxelResolution, soilDescriptor->m_boundingBoxMin, [&](const glm::vec3& position)
+			params.m_soilDensitySampleFunc = [&](const glm::vec3& position)
 				{
 					auto height = heightField->GetValue(glm::vec2(position.x, position.z));
-			return position.y > height - 1 ? glm::clamp(height - soilDescriptor->m_soilParameters.m_deltaX / 2.0f - position.y, 0.0f, 1.0f) : 1;
-				});
+					return position.y > height - 1 ? glm::clamp(height - params.m_deltaX/2.0f - position.y, 0.0f, 1.0f) : 1;
+				};
 		}
 		else {
-			m_soilModel.Initialize(soilDescriptor->m_soilParameters, soilDescriptor->m_voxelResolution, soilDescriptor->m_boundingBoxMin, [](const glm::vec3& position)
+			params.m_soilDensitySampleFunc =  [](const glm::vec3& position)
 				{
-					return position.y > 0 ? 0 : 1;
-				});
+					return position.y > 0 ? 0.f : 1.f;
+				};
 		}
+		m_soilModel.Initialize(params);
 	}
 }
 
 void SerializeSoilParameters(const std::string& name, const SoilParameters& soilParameters, YAML::Emitter& out) {
 	out << YAML::Key << name << YAML::BeginMap;
+	out << YAML::Key << "m_voxelResolution" << YAML::Value << soilParameters.m_voxelResolution;
+	out << YAML::Key << "m_deltaX" << YAML::Value << soilParameters.m_deltaX;
 	out << YAML::Key << "m_deltaTime" << YAML::Value << soilParameters.m_deltaTime;
+	out << YAML::Key << "m_boundingBoxMin" << YAML::Value << soilParameters.m_boundingBoxMin;
+
+	out << YAML::Key << "m_boundary_x" << YAML::Value << static_cast<int>(soilParameters.m_boundary_x);
+	out << YAML::Key << "m_boundary_y" << YAML::Value << static_cast<int>(soilParameters.m_boundary_y);
+	out << YAML::Key << "m_boundary_z" << YAML::Value << static_cast<int>(soilParameters.m_boundary_z);
+
 	out << YAML::Key << "m_diffusionForce" << YAML::Value << soilParameters.m_diffusionForce;
 	out << YAML::Key << "m_gravityForce" << YAML::Value << soilParameters.m_gravityForce;
-	out << YAML::Key << "m_deltaX" << YAML::Value << soilParameters.m_deltaX;
 	out << YAML::EndMap;
 }
 
 void DeserializeSoilParameters(const std::string& name, SoilParameters& soilParameters, const YAML::Node& in) {
+	// TODO: add warning / error if not all elements are found
 	if (in[name]) {
 		auto& param = in[name];
-		if (param["m_deltaTime"]) soilParameters.m_deltaTime = param["m_deltaTime"].as<float>();
-		if (param["m_diffusionForce"]) soilParameters.m_diffusionForce = param["m_diffusionForce"].as<float>();
+		if (param["m_voxelResolution"]) soilParameters.m_voxelResolution = param["m_voxelResolution"].as<glm::uvec3>();
 		if (param["m_deltaX"]) soilParameters.m_deltaX = param["m_deltaX"].as<float>();
+		if (param["m_deltaTime"]) soilParameters.m_deltaTime = param["m_deltaTime"].as<float>();
+		if (param["m_boundingBoxMin"]) soilParameters.m_boundingBoxMin = param["m_boundingBoxMin"].as<glm::vec3>();
+
+		if (param["m_boundary_x"]) soilParameters.m_boundary_x = static_cast<SoilModel::Boundary>(param["m_boundary_x"].as<int>());
+		if (param["m_boundary_y"]) soilParameters.m_boundary_y = static_cast<SoilModel::Boundary>(param["m_boundary_y"].as<int>());
+		if (param["m_boundary_z"]) soilParameters.m_boundary_z = static_cast<SoilModel::Boundary>(param["m_boundary_z"].as<int>());
+
+		if (param["m_diffusionForce"]) soilParameters.m_diffusionForce = param["m_diffusionForce"].as<float>();
 		if (param["m_gravityForce"]) soilParameters.m_gravityForce = param["m_gravityForce"].as<glm::vec3>();
 	}
 }
 
 void SoilDescriptor::Serialize(YAML::Emitter& out)
 {
-	out << YAML::Key << "m_voxelResolution" << YAML::Value << m_voxelResolution;
-	out << YAML::Key << "m_boundingBoxMin" << YAML::Value << m_boundingBoxMin;
 	m_heightField.Save("m_heightField", out);
 	SerializeSoilParameters("m_soilParameters", m_soilParameters, out);
 }
 
 void SoilDescriptor::Deserialize(const YAML::Node& in)
 {
-	if (in["m_voxelResolution"]) m_voxelResolution = in["m_voxelResolution"].as<glm::uvec3>();
-	if (in["m_boundingBoxMin"]) m_boundingBoxMin = in["m_boundingBoxMin"].as<glm::vec3>();
 	m_heightField.Load("m_heightField", in);
 	DeserializeSoilParameters("m_soilParameters", m_soilParameters, in);
 }

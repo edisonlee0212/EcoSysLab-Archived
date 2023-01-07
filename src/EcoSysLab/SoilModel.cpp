@@ -27,21 +27,21 @@ the voxel centers are at 0.5 and 1.5.
 
 */
 
-void SoilModel::Initialize(const SoilParameters& soilParameters, const vec3& minPosition, const std::function<float(const glm::vec3& voxelCenter)>& soilDensitySampleFunc)
+void SoilModel::Initialize(const SoilParameters& p)
 {
 	assert(!m_initialized);
 
-	m_diffusionForce = soilParameters.m_diffusionForce;
-	m_gravityForce = soilParameters.m_gravityForce;
-	m_dt = soilParameters.m_deltaTime;
+	m_diffusionForce = p.m_diffusionForce;
+	m_gravityForce = p.m_gravityForce;
+	m_dt = p.m_deltaTime;
 
-	m_resolution = soilParameters.m_voxelResolution;
-	m_dx = soilParameters.m_deltaX;
-	m_boundingBoxMin = minPosition;
+	m_resolution = p.m_voxelResolution;
+	m_dx = p.m_deltaX;
+	m_boundingBoxMin = p.m_boundingBoxMin;
 
-	m_boundary_x = soilParameters.m_boundary_x;
-	m_boundary_y = soilParameters.m_boundary_y;
-	m_boundary_z = soilParameters.m_boundary_z;
+	m_boundary_x = p.m_boundary_x;
+	m_boundary_y = p.m_boundary_y;
+	m_boundary_z = p.m_boundary_z;
 
 	m_blur_3x3_idx = std::vector<int>({
 		Index(-1, -1, -1),
@@ -124,7 +124,7 @@ void SoilModel::Initialize(const SoilParameters& soilParameters, const vec3& min
 
 	for(int i = 0; i < m_soilDensity.size(); i++)
 	{
-		m_soilDensity[i] = soilDensitySampleFunc(GetPositionFromCoordinate(GetCoordinateFromIndex(i)));
+		m_soilDensity[i] = p.m_soilDensitySampleFunc(GetPositionFromCoordinate(GetCoordinateFromIndex(i)));
 	}
 }
 

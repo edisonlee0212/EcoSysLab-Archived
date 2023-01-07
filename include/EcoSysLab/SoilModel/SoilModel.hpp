@@ -15,8 +15,7 @@ namespace EcoSysLab {
 		friend class EcoSysLabLayer;
 	public:
 		enum class Boundary : int {remove, block, wrap};
-		void Initialize(const SoilParameters& soilParameters,
-			const glm::vec3& boundingBoxMin, const std::function<float(const glm::vec3& voxelCenter)>& soilDensitySampleFunc);
+		void Initialize(const SoilParameters& soilParameters);
 
 		void Reset();
 		void Step();
@@ -102,14 +101,21 @@ namespace EcoSysLab {
 
 	class SoilParameters {
 	public:
-		// scaling factors for different forces
-		float m_diffusionForce = 1.0f;
-		glm::vec3 m_gravityForce = glm::vec3(0, 0, 0);
 		glm::uvec3 m_voxelResolution = glm::uvec3(64, 64, 64);
 		float m_deltaX = 1.0f;
 		float m_deltaTime = 0.2f; // delta t, time between steps
+		glm::vec3& m_boundingBoxMin = glm::vec3(-32, -32, -32);
+
 		SoilModel::Boundary m_boundary_x = SoilModel::Boundary::remove;
 		SoilModel::Boundary m_boundary_y = SoilModel::Boundary::remove;
 		SoilModel::Boundary m_boundary_z = SoilModel::Boundary::remove;
+
+		float m_diffusionForce = 1.0f;
+		glm::vec3 m_gravityForce = glm::vec3(0, 0, 0);
+
+		std::function<float(const glm::vec3& position)> m_soilDensitySampleFunc = [](const glm::vec3& position)
+			{
+				return position.y > 0 ? 0.f : 1.f;
+			};
 	};
 }
