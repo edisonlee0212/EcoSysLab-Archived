@@ -39,6 +39,10 @@ void SoilModel::Initialize(const SoilParameters& soilParameters, const vec3& min
 	m_dx = soilParameters.m_deltaX;
 	m_boundingBoxMin = minPosition;
 
+	m_boundary_x = soilParameters.m_boundary_x;
+	m_boundary_y = soilParameters.m_boundary_y;
+	m_boundary_z = soilParameters.m_boundary_z;
+
 	m_blur_3x3_idx = std::vector<int>({
 		Index(-1, -1, -1),
 		Index(0, -1, -1),
@@ -299,38 +303,141 @@ void SoilModel::Step()
 		// boundary conditions for gradient:
 
 		// X:
-		for (auto y = 0u; y < m_resolution.y; ++y)
+		if(Boundary::remove == m_boundary_x)
 		{
-			for (auto z = 0u; z < m_resolution.z; ++z)
+			for (auto y = 0u; y < m_resolution.y; ++y)
 			{
-				m_w_grad_x[Index(0,                y, z)] =  m_w[Index(1,                y, z)] * wx_d;
-				m_w_grad_x[Index(m_resolution.x-1, y, z)] = -m_w[Index(m_resolution.x-2, y, z)] * wx_d;
+				for (auto z = 0u; z < m_resolution.z; ++z)
+				{
+					m_w_grad_x[Index(0,                y, z)] =  m_w[Index(1,                y, z)] * wx_d;
+					m_w_grad_x[Index(m_resolution.x-1, y, z)] = -m_w[Index(m_resolution.x-2, y, z)] * wx_d;
+				}
+			}
+		}
+		else if(Boundary::wrap == m_boundary_x)
+		{
+			for (auto y = 0u; y < m_resolution.y; ++y)
+			{
+				for (auto z = 0u; z < m_resolution.z; ++z)
+				{
+					m_w_grad_x[Index(0,                y, z)] = m_w[Index(m_resolution.x-1, y, z)]*grad_weights[0] + m_w[Index(1, y, z)]*grad_weights[1];
+					m_w_grad_x[Index(m_resolution.x-1, y, z)] = m_w[Index(m_resolution.x-2, y, z)]*grad_weights[0] + m_w[Index(0, y, z)]*grad_weights[1];
+				}
 			}
 		}
 
+
 		// Y:
-		for (auto x = 0u; x < m_resolution.x; ++x)
+		if(Boundary::remove == m_boundary_y)
 		{
-			for (auto z = 0u; z < m_resolution.z; ++z)
+			for (auto x = 0u; x < m_resolution.x; ++x)
 			{
-				m_w_grad_y[Index(x, 0,                z)] =  m_w[Index(x, 1,                z)] * wx_d;
-				m_w_grad_y[Index(x, m_resolution.y-1, z)] = -m_w[Index(x, m_resolution.y-2, z)] * wx_d;
+				for (auto z = 0u; z < m_resolution.z; ++z)
+				{
+					m_w_grad_y[Index(x, 0,                z)] =  m_w[Index(x, 1,                z)] * wx_d;
+					m_w_grad_y[Index(x, m_resolution.y-1, z)] = -m_w[Index(x, m_resolution.y-2, z)] * wx_d;
+				}
+			}
+		}
+		else if(Boundary::wrap == m_boundary_y)
+		{
+			for (auto x = 0u; x < m_resolution.x; ++x)
+			{
+				for (auto z = 0u; z < m_resolution.z; ++z)
+				{
+					m_w_grad_y[Index(x, 0,                z)] = m_w[Index(x, m_resolution.y-1, z)]*grad_weights[0] + m_w[Index(x, 1, z)]*grad_weights[1];
+					m_w_grad_y[Index(x, m_resolution.y-1, z)] = m_w[Index(x, m_resolution.y-2, z)]*grad_weights[0] + m_w[Index(x, 0, z)]*grad_weights[1];
+				}
 			}
 		}
 
 		// Z:
-		for(auto x = 0u; x<m_resolution.x; ++x)
+		if(Boundary::remove == m_boundary_z)
 		{
-			for (auto y = 0u; y < m_resolution.y; ++y)
+			for(auto x = 0u; x<m_resolution.x; ++x)
 			{
-				m_w_grad_z[Index(x, y, 0)]                =   m_w[Index(x, y, 1               )] * wx_d;
-				m_w_grad_z[Index(x, y, m_resolution.z-1)] = - m_w[Index(x, y, m_resolution.z-2)] * wx_d;
+				for (auto y = 0u; y < m_resolution.y; ++y)
+				{
+					m_w_grad_z[Index(x, y, 0)]                =   m_w[Index(x, y, 1               )] * wx_d;
+					m_w_grad_z[Index(x, y, m_resolution.z-1)] = - m_w[Index(x, y, m_resolution.z-2)] * wx_d;
+				}
 			}
 		}
+		else if(Boundary::wrap == m_boundary_y)
+		{
+			for(auto x = 0u; x<m_resolution.x; ++x)
+			{
+				for (auto y = 0u; y < m_resolution.y; ++y)
+				{
+					m_w_grad_z[Index(x, y, 0               )] = m_w[Index(x, y, m_resolution.z-1)]*grad_weights[0] + m_w[Index(x, y, 1)]*grad_weights[1];
+					m_w_grad_z[Index(x, y, m_resolution.z-1)] = m_w[Index(x, y, m_resolution.z-2)]*grad_weights[0] + m_w[Index(x, y, 0)]*grad_weights[1];
+				}
+			}
+		}
+
 		// compute divergence
 		Convolution3(m_w_grad_x, m_div_diff_x, grad_index_x, grad_weights);
 		Convolution3(m_w_grad_y, m_div_diff_y, grad_index_y, grad_weights);
 		Convolution3(m_w_grad_z, m_div_diff_z, grad_Index_z, grad_weights);
+
+		// X:
+		if(Boundary::remove == m_boundary_x)
+		{
+			for (auto y = 0u; y < m_resolution.y; ++y)
+			{
+				for (auto z = 0u; z < m_resolution.z; ++z)
+				{
+					// Nothing for now...
+				}
+			}
+		}
+		else if(Boundary::wrap == m_boundary_x)
+		{
+			for (auto y = 0u; y < m_resolution.y; ++y)
+			{
+				for (auto z = 0u; z < m_resolution.z; ++z)
+				{
+					m_div_diff_x[Index(0,                y, z)] = m_w_grad_x[Index(m_resolution.x-1, y, z)]*grad_weights[0] + m_w_grad_x[Index(1, y, z)]*grad_weights[1];
+					m_div_diff_x[Index(m_resolution.x-1, y, z)] = m_w_grad_x[Index(m_resolution.x-2, y, z)]*grad_weights[0] + m_w_grad_x[Index(0, y, z)]*grad_weights[1];
+				}
+			}
+		}
+
+		// Y:
+		if(Boundary::remove == m_boundary_y)
+		{
+			// nothing?
+		}
+		else if(Boundary::wrap == m_boundary_y)
+		{
+			for (auto x = 0u; x < m_resolution.x; ++x)
+			{
+				for (auto z = 0u; z < m_resolution.z; ++z)
+				{
+					m_div_diff_y[Index(x, 0,                z)] = m_w_grad_y[Index(x, m_resolution.y-1, z)]*grad_weights[0] + m_w_grad_y[Index(x, 1, z)]*grad_weights[1];
+					m_div_diff_y[Index(x, m_resolution.y-1, z)] = m_w_grad_y[Index(x, m_resolution.y-2, z)]*grad_weights[0] + m_w_grad_y[Index(x, 0, z)]*grad_weights[1];
+				}
+			}
+		}
+
+		// Z:
+		if(Boundary::remove == m_boundary_z)
+		{
+			// nothing?
+		}
+		else if(Boundary::wrap == m_boundary_z)
+		{
+			for(auto x = 0u; x<m_resolution.x; ++x)
+			{
+				for (auto y = 0u; y < m_resolution.y; ++y)
+				{
+					m_div_diff_z[Index(x, y, 0               )] = m_w_grad_z[Index(x, y, m_resolution.z-1)]*grad_weights[0] + m_w_grad_z[Index(x, y, 1)]*grad_weights[1];
+					m_div_diff_z[Index(x, y, m_resolution.z-1)] = m_w_grad_z[Index(x, y, m_resolution.z-2)]*grad_weights[0] + m_w_grad_z[Index(x, y, 0)]*grad_weights[1];
+				}
+			}
+		}
+
+
 
 		for (auto i = 0; i < m_w.size(); ++i)
 		{
@@ -366,7 +473,26 @@ void SoilModel::Step()
 
 		if( Boundary::wrap == m_boundary_x)
 		{
+			const auto last = m_resolution.x-1;
+			for (auto y = 0u; y < m_resolution.y; ++y)
+			{
+				for (auto z = 0u; z < m_resolution.z; ++z)
+				{
+					m_div_grav_x[Index(0, y, z)] =
+						  m_w[Index(1,    y, z)]*weights[0]
+						+ m_w[Index(last, y, z)]*weights[1]
+						+ m_w[Index(1,    y, z)]*weights[2]
+						+ m_w[Index(0,    y, z)]*weights[3]
+						+ m_w[Index(last, y, z)]*weights[4];
 
+					m_div_grav_x[Index(last, y, z)] =
+						m_w[Index(0,      y, z)]*weights[0]
+					  + m_w[Index(last-1, y, z)]*weights[1]
+					  + m_w[Index(0,      y, z)]*weights[2]
+					  + m_w[Index(last,   y, z)]*weights[3]
+					  + m_w[Index(last-1, y, z)]*weights[4];
+				}
+			}
 		}
 	}
 
@@ -390,6 +516,30 @@ void SoilModel::Step()
 			});
 
 		Convolution3(m_w, m_div_grav_y, idx, weights);
+
+		if( Boundary::wrap == m_boundary_y)
+		{
+			const auto last = m_resolution.y-1;
+			for (auto x = 0u; x < m_resolution.x; ++x)
+			{
+				for (auto z = 0u; z < m_resolution.z; ++z)
+				{
+					m_div_grav_y[Index(x, 0, z)] =
+						  m_w[Index(x, 1,    z)]*weights[0]
+						+ m_w[Index(x, last, z)]*weights[1]
+						+ m_w[Index(x, 1,    z)]*weights[2]
+						+ m_w[Index(x, 0,    z)]*weights[3]
+						+ m_w[Index(x, last, z)]*weights[4];
+
+					m_div_grav_y[Index(x, last, z)] =
+					      m_w[Index(x, 0,      z)]*weights[0]
+						+ m_w[Index(x, last-1, z)]*weights[1]
+						+ m_w[Index(x, 0,      z)]*weights[2]
+						+ m_w[Index(x, last,   z)]*weights[3]
+						+ m_w[Index(x, last-1, z)]*weights[4];
+				}
+			}
+		}
 	}
 
 	// Z direction:
@@ -412,6 +562,30 @@ void SoilModel::Step()
 			});
 
 		Convolution3(m_w, m_div_grav_z, idx, weights);
+
+		if( Boundary::wrap == m_boundary_z)
+		{
+			const auto last = m_resolution.z-1;
+			for(auto x = 0u; x<m_resolution.x; ++x)
+			{
+				for (auto y = 0u; y < m_resolution.y; ++y)
+				{
+					m_div_grav_z[Index(x, y, 0)] =
+						  m_w[Index(x, y, 1   )]*weights[0]
+						+ m_w[Index(x, y, last)]*weights[1]
+						+ m_w[Index(x, y, 1   )]*weights[2]
+						+ m_w[Index(x, y, 0   )]*weights[3]
+						+ m_w[Index(x, y, last)]*weights[4];
+
+					m_div_grav_z[Index(x, y, last)] =
+						  m_w[Index(x, y, 0     )]*weights[0]
+						+ m_w[Index(x, y, last-1)]*weights[1]
+						+ m_w[Index(x, y, 0     )]*weights[2]
+						+ m_w[Index(x, y, last  )]*weights[3]
+						+ m_w[Index(x, y, last-1)]*weights[4];
+				}
+			}
+		}
 	}
 
 	// apply all the fluxes:
