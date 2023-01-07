@@ -744,7 +744,7 @@ void EcoSysLabLayer::OnSoilVisualizationMenu()
 			{
 				m_vectorMultiplier = 50.0f;
 				m_vectorBaseColor = glm::vec4(1.0f, 1.0f, 1.0f, 0.8f);
-				m_vectorSoilProperty = 2;
+				m_vectorSoilProperty = 4;
 				m_vectorLineWidthFactor = 0.1f;
 				m_vectorLineMaxWidth = 0.1f;
 				m_updateVectorColors = m_updateVectorMatrices = true;
