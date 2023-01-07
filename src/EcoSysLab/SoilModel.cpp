@@ -143,7 +143,7 @@ void SoilModel::Reset()
 
 	m_grad_cw = empty;
 	m_nutrientsDensity = empty;
-
+	m_soilDensity = empty;
 	auto tmp = empty;
 
 	// add some water
@@ -381,6 +381,9 @@ void SoilModel::Step()
 		}
 	}
 	*/
+
+	WaterLogic();
+
 	m_time += m_dt;
 
 	update_w_sum();
@@ -410,9 +413,7 @@ float SoilModel::GetWater(const vec3& position) const
 
 float SoilModel::GetDensity(const vec3& position) const
 {
-	// todo replace by actual values
-	if (position.y > 0.0f) return 0.0f;
-	return 1.0f / position.y;
+	return m_soilDensity[Index(GetCoordinateFromPosition(position))];
 }
 
 float SoilModel::GetNutrient(const vec3& position) const

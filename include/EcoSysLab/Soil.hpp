@@ -11,8 +11,8 @@ namespace EcoSysLab
 	 */
 	class SoilDescriptor : public IAsset {
 	public:
-		glm::vec3 m_boundingBoxMin = glm::vec3(-6.4f, -6.4f, -6.4f);
-		glm::uvec3 m_voxelResolution = glm::uvec3(64, 64, 64);
+		glm::vec3 m_boundingBoxMin = glm::vec3(-6.4f, -3.2f, -6.4f);
+		glm::uvec3 m_voxelResolution = glm::uvec3(64, 48, 64);
 		SoilParameters m_soilParameters;
 
 		AssetRef m_heightField;
@@ -30,6 +30,8 @@ namespace EcoSysLab
 	};
 	enum class SoilProperty
 	{
+		Blank,
+		SoilDensity,
 		WaterDensityBlur,
 		WaterDensity,
 		WaterDensityGradient,

@@ -419,6 +419,11 @@ void TreeVisualizationLayer::LateUpdate() {
 				gizmoSettings.m_colorMode = GizmoSettings::ColorMode::VertexColor;
 				Gizmos::DrawGizmoStrands(rootStrands, glm::vec4(1.0f), glm::mat4(1.0f), 1, gizmoSettings);
 			}
+
+			if(m_displaySoil)
+			{
+				
+			}
 		}
 
 		auto strandsHolder = m_branchStrandsHolder.Get();
@@ -471,13 +476,7 @@ void TreeVisualizationLayer::OnInspect() {
 			Editor::DragAndDropButton(m_rootStrandsHolder, "Root strands holder");
 		}
 		ImGui::Checkbox("Lock tree selection", &m_lockTreeSelection);
-		ImGui::Checkbox("Rendering", &m_rendering);
-		ImGui::Checkbox("Debug Visualization", &m_debugVisualization);
-		if (m_debugVisualization) {
-			ImGui::Checkbox("Display Branches", &m_displayBranches);
-			ImGui::Checkbox("Display Root Flows", &m_displayRootFlows);
-			ImGui::Checkbox("Display Bounding Box", &m_displayBoundingBox);
-		}
+		
 
 		Editor::DragAndDropButton<Soil>(m_soilHolder, "Soil");
 		Editor::DragAndDropButton<Climate>(m_climateHolder, "Climate");
@@ -513,7 +512,22 @@ void TreeVisualizationLayer::OnInspect() {
 
 			
 		}
+		ImGui::Checkbox("Debug Visualization", &m_debugVisualization);
+		if (m_debugVisualization && ImGui::TreeNode("Debug visualization settings")) {
+			ImGui::Checkbox("Display Branches", &m_displayBranches);
+			ImGui::Checkbox("Display Root Flows", &m_displayRootFlows);
+			ImGui::Checkbox("Display Soil", &m_displaySoil);
+			if(m_displaySoil && ImGui::TreeNode("Soil visualization settings"))
+			{
+				OnSoilVisualizationMenu();
+				ImGui::TreePop();
+			}
 
+			ImGui::Checkbox("Display Bounding Box", &m_displayBoundingBox);
+
+
+			ImGui::TreePop();
+		}
 
 		if (m_debugVisualization && scene->IsEntityValid(m_selectedTree)) {
 			m_treeVisualizer.OnInspect(
@@ -521,6 +535,10 @@ void TreeVisualizationLayer::OnInspect() {
 		}
 	}
 	ImGui::End();
+}
+
+void TreeVisualizationLayer::OnSoilVisualizationMenu()
+{
 }
 
 void TreeVisualizationLayer::FixedUpdate() {

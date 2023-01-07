@@ -10,6 +10,8 @@ namespace EcoSysLab {
 		bool m_displayBranches = true;
 		bool m_displayRootFlows = true;
 		bool m_displayBoundingBox = false;
+		bool m_displaySoil = true;
+
 		bool m_debugVisualization = true;
 		bool m_rendering = false;
 		std::vector<int> m_versions;
@@ -45,6 +47,8 @@ namespace EcoSysLab {
 		void LateUpdate() override;
 
 		void OnInspect() override;
+
+		void OnSoilVisualizationMenu();
 
 		std::shared_ptr<OpenGLUtils::GLShader> m_treeBranchComp;
 		std::shared_ptr<OpenGLUtils::GLProgram> m_treeBranchComputeProgram;

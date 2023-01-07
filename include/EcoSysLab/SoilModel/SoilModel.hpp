@@ -10,7 +10,7 @@ namespace EcoSysLab {
 	class SoilParameters {
 	public:
 		// scaling factors for different forces
-		float m_diffusionForce = 1.0f;
+		float m_diffusionForce = 0.2f;
 		glm::vec3 m_gravityForce = glm::vec3(0, 0, 0);
 		float m_deltaX = 0.2f;
 		float m_deltaTime = 0.2f; // delta t, time between steps
@@ -85,6 +85,9 @@ namespace EcoSysLab {
 
 		// nutrients
 		std::vector<float> m_nutrientsDensity;
+
+		std::vector<float> m_soilDensity;
+
 		/////////////////////////////////
 
 		float m_w_sum = 0;

@@ -45,12 +45,10 @@ void SoilDescriptor::OnInspect()
 		m_voxelResolution = resolution;
 		changed = true;
 	}
-	if (ImGui::DragFloat3("Bounding box min", &m_boundingBoxMin.x, 0.01f))
+	if (ImGui::DragFloat3("Voxel Bounding box min", &m_boundingBoxMin.x, 0.01f))
 	{
 		changed = true;
 	}
-	
-	ImGui::DragFloat3("Voxel BB Min", &m_boundingBoxMin.x, 0.01f);
 
 	if (ImGui::Button("Instantiate")) {
 		auto scene = Application::GetActiveScene();
@@ -58,8 +56,6 @@ void SoilDescriptor::OnInspect()
 		auto soil = scene->GetOrSetPrivateComponent<Soil>(soilEntity).lock();
 		soil->m_soilDescriptor = ProjectManager::GetAsset(GetHandle());
 		soil->m_soilModel.Initialize(m_soilParameters, m_voxelResolution, m_boundingBoxMin);
-
-
 	}
 
 
@@ -105,7 +101,6 @@ void Soil::OnInspect()
 		if (autoStep)
 		{
 			m_soilModel.Step();
-			m_soilModel.WaterLogic();
 			updateVectorMatrices = updateScalarColors = true;
 		}
 		else if (ImGui::Button("Step"))
@@ -133,7 +128,7 @@ void Soil::OnInspect()
 			updateVectorColors = updateVectorColors || forceUpdate;
 			static float vectorMultiplier = 50.0f;
 			static glm::vec4 vectorBaseColor = glm::vec4(1.0f, 1.0f, 1.0f, 0.8f);
-			static unsigned vectorSoilProperty = 2;
+			static unsigned vectorSoilProperty = 4;
 			static float vectorLineWidthFactor = 0.1f;
 			static float vectorLineMaxWidth = 0.1f;
 			if (ImGui::TreeNodeEx("Vector", ImGuiTreeNodeFlags_DefaultOpen))
@@ -163,7 +158,7 @@ void Soil::OnInspect()
 				{
 					updateVectorMatrices = true;
 				}
-				if (ImGui::Combo("Vector Mode", { "N/A", "N/A", "Water Density Gradient", "Flux", "Divergence", "N/A", "N/A" }, vectorSoilProperty))
+				if (ImGui::Combo("Vector Mode", { "N/A", "N/A", "N/A", "N/A", "Water Density Gradient", "Flux", "Divergence", "N/A", "N/A" }, vectorSoilProperty))
 				{
 					updateVectorMatrices = true;
 				}
@@ -268,7 +263,7 @@ void Soil::OnInspect()
 			static float scalarBoxSize = 0.5f;
 			static float scalarMinAlpha = 0.00f;
 			static glm::vec3 scalarBaseColor = glm::vec3(0.0f, 0.0f, 1.0f);
-			static unsigned scalarSoilProperty = 1;
+			static unsigned scalarSoilProperty = 0;
 			if (scalarEnable && ImGui::TreeNodeEx("Scalar", ImGuiTreeNodeFlags_DefaultOpen))
 			{
 				if (ImGui::Button("Reset"))
@@ -296,7 +291,7 @@ void Soil::OnInspect()
 				{
 					updateScalarMatrices = true;
 				}
-				if (ImGui::Combo("Scalar Mode", { "Water Density Blur", "Water Density", "Water Density Gradient", "Flux", "Divergence", "Scalar Divergence", "NutrientDensity" }, scalarSoilProperty))
+				if (ImGui::Combo("Scalar Mode", { "Blank","Soil Density", "Water Density Blur", "Water Density", "Water Density Gradient", "Flux", "Divergence", "Scalar Divergence", "Nutrient Density" }, scalarSoilProperty))
 				{
 					updateScalarColors = true;
 				}
@@ -327,6 +322,21 @@ void Soil::OnInspect()
 				std::vector<std::shared_future<void>> results;
 				switch (static_cast<SoilProperty>(scalarSoilProperty))
 				{
+				case SoilProperty::Blank:
+				{
+					Jobs::ParallelFor(numVoxels, [&](unsigned i)
+						{
+					scalarColors[i] = { scalarBaseColor, 0.01f };
+						}, results);
+				}break;
+				case SoilProperty::SoilDensity:
+				{
+					Jobs::ParallelFor(numVoxels, [&](unsigned i)
+						{
+							auto value = glm::vec3(m_soilModel.m_soilDensity[i]);
+							scalarColors[i] = { scalarBaseColor, glm::clamp(glm::length(value) * scalarMultiplier, scalarMinAlpha, 1.0f) };
+						}, results);
+				}break;
 				case SoilProperty::WaterDensity:
 				{
 					Jobs::ParallelFor(numVoxels, [&](unsigned i)
