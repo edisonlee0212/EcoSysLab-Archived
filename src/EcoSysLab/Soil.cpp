@@ -21,7 +21,7 @@ bool OnInspectSoilParameters(SoilParameters& soilParameters)
 		{
 			changed = true;
 		}
-		if (ImGui::DragFloat("Delta time", &soilParameters.m_deltaTime, 0.01f, 0.0f, 999.0f))
+		if (ImGui::DragFloat("Delta time", &soilParameters.m_deltaTime, 0.01f, 0.0f, 10.0f))
 		{
 			changed = true;
 		}
@@ -34,7 +34,7 @@ bool OnInspectSoilParameters(SoilParameters& soilParameters)
 		{
 			changed = true;
 		}
-		if (ImGui::DragFloat3("Gravity Factor", &soilParameters.m_gravityForce.x, 0.01f, 0.0f, 999.0f))
+		if (ImGui::DragFloat3("Gravity Force", &soilParameters.m_gravityForce.x, 0.01f, 0.0f, 999.0f))
 		{
 			changed = true;
 		}
@@ -97,21 +97,29 @@ void Soil::OnInspect()
 		//auto soilDescriptor = m_soilDescriptor.Get<SoilDescriptor>();
 		//if (!m_soilModel.m_initialized) m_soilModel.Initialize(soilDescriptor->m_soilParameters);
 		assert(m_soilModel.m_initialized);
-		static bool autoStep = false;
 		if (ImGui::Button("Initialize"))
 		{
 			InitializeSoilModel();
 		}
-		
 
-		ImGui::Checkbox("Auto step", &autoStep);
-		if (autoStep)
+		ImGui::InputFloat("Diffusion Force", &m_soilModel.m_diffusionForce);
+		ImGui::InputFloat3("Gravity Force", &m_soilModel.m_gravityForce.x);
+
+		ImGui::Checkbox("Auto step", &m_autoStep);
+		if (m_autoStep || ImGui::Button("Step"))
 		{
+			if(m_irrigation)
+				m_soilModel.Irrigation();
 			m_soilModel.Step();
 		}
-		else if (ImGui::Button("Step"))
+		ImGui::Checkbox("apply Irrigation", &m_irrigation);
+
+		ImGui::InputFloat3("Source position", (float*)&m_sourcePositon);
+		ImGui::SliderFloat("Source amount", &m_sourceAmount, 1, 10000, "%.4f", ImGuiSliderFlags_Logarithmic);
+		ImGui::InputFloat("Source width", &m_sourceWidth, 0.1, 100, "%.4f", ImGuiSliderFlags_Logarithmic);
+		if(ImGui::Button("Apply Source"))
 		{
-			m_soilModel.Step();
+			m_soilModel.ChangeWater(m_sourcePositon, m_sourceAmount, m_sourceWidth);
 		}
 	}
 }

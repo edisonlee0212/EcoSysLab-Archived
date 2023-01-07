@@ -40,7 +40,7 @@ namespace EcoSysLab {
 
 
 		int m_soilVersion = -1;
-		bool m_vectorEnable = true;
+		bool m_vectorEnable = false;
 		bool m_scalarEnable = true;
 		bool m_updateVectorMatrices = false;
 		bool m_updateVectorColors = false;
@@ -73,6 +73,11 @@ namespace EcoSysLab {
 		void OnInspect() override;
 
 		void OnSoilVisualizationMenu();
+
+		// helper functions to structure code a bit
+		void SoilVisualization();
+		void SoilVisualizationScalar(SoilModel& soilModel); // called durint LateUpdate()
+		void SoilVisualizationVector(SoilModel& soilModel); // called durint LateUpdate()
 
 		std::shared_ptr<OpenGLUtils::GLShader> m_treeBranchComp;
 		std::shared_ptr<OpenGLUtils::GLProgram> m_treeBranchComputeProgram;

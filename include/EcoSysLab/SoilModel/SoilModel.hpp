@@ -19,7 +19,7 @@ namespace EcoSysLab {
 
 		void Reset();
 		void Step();
-		void WaterLogic(); // can be called for each step to add some water to the volume
+		void Irrigation(); // can be called for each step to add some water to the volume
 
 		[[nodiscard]] float GetWater(const glm::vec3& position) const;
 		[[nodiscard]] float GetDensity(const glm::vec3& position) const;

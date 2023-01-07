@@ -608,7 +608,7 @@ void SoilModel::Step()
 	m_version++;
 }
 
-void EcoSysLab::SoilModel::WaterLogic()
+void EcoSysLab::SoilModel::Irrigation()
 {
 	ChangeWater(vec3(0, 10, 0),     10, 12);
 	ChangeWater(vec3(8, -10, 4),    20, 12);
@@ -696,6 +696,8 @@ void SoilModel::ChangeWater(const vec3& center, float amount, float width)
 	}
 	*/
 	update_w_sum();
+
+	m_version++;
 }
 
 void SoilModel::ChangeDensity(const vec3& position, float value)
