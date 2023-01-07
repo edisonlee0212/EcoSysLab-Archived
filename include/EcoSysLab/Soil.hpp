@@ -63,5 +63,7 @@ namespace EcoSysLab
 		void CollectAssetRef(std::vector<AssetRef>& list) override;
 
 		void GenerateMesh();
+
+		void InitializeSoilModel();
 	};
 }

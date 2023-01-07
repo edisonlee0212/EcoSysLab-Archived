@@ -20,7 +20,7 @@ namespace EcoSysLab {
 		friend class Soil;
 	public:
 		void Initialize(const SoilParameters& soilParameters, const glm::uvec3& voxelResolution,
-			const glm::vec3& minPosition);
+			const glm::vec3& minPosition, const std::function<float(const glm::vec3& voxelCenter)>& soilDensitySampleFunc);
 
 		void Reset();
 		void Step();

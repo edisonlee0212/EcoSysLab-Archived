@@ -27,7 +27,7 @@ the voxel centers are at 0.5 and 1.5.
 
 */
 
-void SoilModel::Initialize(const SoilParameters& soilParameters, const glm::uvec3& voxelResolution, const vec3& minPosition)
+void SoilModel::Initialize(const SoilParameters& soilParameters, const glm::uvec3& voxelResolution, const vec3& minPosition, const std::function<float(const glm::vec3& voxelCenter)>& soilDensitySampleFunc)
 {
 	m_diffusionForce = soilParameters.m_diffusionForce;
 	m_gravityForce = soilParameters.m_gravityForce;
@@ -115,6 +115,11 @@ void SoilModel::Initialize(const SoilParameters& soilParameters, const glm::uvec
 
 	m_initialized = true;
 	Reset();
+
+	for(int i = 0; i < m_soilDensity.size(); i++)
+	{
+		m_soilDensity[i] = soilDensitySampleFunc(GetPositionFromCoordinate(GetCoordinateFromIndex(i)));
+	}
 }
 
 void SoilModel::Reset()

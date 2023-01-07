@@ -4,40 +4,6 @@
 
 using namespace EcoSysLab;
 
-void GroundSurface::GenerateMesh(const glm::vec2& start, const glm::uvec2& resolution, float unitSize, const std::function<float(const glm::vec2& position)>& heightFunc, std::vector<Vertex>& vertices, std::vector<glm::uvec3>& triangles) const
-{
-	glm::vec3 randomPositionOffset =
-		glm::linearRand(glm::vec3(0.0f), glm::vec3(10000.0f));
-
-	for (unsigned i = 0; i < resolution.x; i++) {
-		for (unsigned j = 0; j < resolution.y; j++) {
-			Vertex archetype;
-			archetype.m_position.x = start.x + unitSize * i;
-			archetype.m_position.z = start.y + unitSize * j;
-			archetype.m_position.y = 0.0f;
-			for (const auto& noiseDescriptor : m_noiseDescriptors)
-			{
-				float noise = noiseDescriptor.m_offset + glm::pow(glm::simplex(noiseDescriptor.m_noiseScale * archetype.m_position +
-					randomPositionOffset), noiseDescriptor.m_powerFactor) * noiseDescriptor.m_noiseIntensity;
-				archetype.m_position.y += glm::clamp(noise, noiseDescriptor.m_heightMin, noiseDescriptor.m_heightMax);
-			}
-			archetype.m_position.y = glm::clamp(archetype.m_position.y, m_minMax.x, m_minMax.y);
-			archetype.m_position.y += heightFunc({ archetype.m_position.x ,archetype.m_position.z });
-			archetype.m_texCoord = glm::vec2(static_cast<float>(i) / resolution.x,
-				static_cast<float>(j) / resolution.y);
-			vertices.push_back(archetype);
-		}
-	}
-
-	for (int i = 0; i < resolution.x - 1; i++) {
-		for (int j = 0; j < resolution.y - 1; j++) {
-			int n = resolution.x;
-			triangles.emplace_back(i + j * n, i + 1 + j * n, i + (j + 1) * n);
-			triangles.emplace_back(i + 1 + (j + 1) * n, i + (j + 1) * n,
-				i + 1 + j * n);
-		}
-	}
-}
 void GroundSurface::OnInspect() {
 	bool changed = false;
 	if (ImGui::DragFloat2("Min/max", &m_minMax.x, 0, -1000, 1000)) { changed = true; }
@@ -68,12 +34,12 @@ void GroundSurface::OnInspect() {
 			{
 				m_noiseDescriptors[i].m_heightMax = glm::max(m_noiseDescriptors[i].m_heightMin, m_noiseDescriptors[i].m_heightMax);
 			}
-			
+
 			ImGui::TreePop();
 		}
 	}
 
-	
+
 }
 void GroundSurface::Serialize(YAML::Emitter& out) {
 	out << YAML::Key << "m_minMax" << YAML::Value << m_minMax;
@@ -96,9 +62,29 @@ void GroundSurface::Deserialize(const YAML::Node& in) {
 
 }
 
-float HeightField::GetValue(const glm::vec2& position) const
+float GroundSurface::GetValue(const glm::vec2& position) const
 {
-	return 0;
+	float retVal = 0;
+	for (const auto& noiseDescriptor : m_noiseDescriptors)
+	{
+		float noise = noiseDescriptor.m_offset + glm::pow(glm::simplex(noiseDescriptor.m_noiseScale * position +
+			m_positionOffset), noiseDescriptor.m_powerFactor) * noiseDescriptor.m_noiseIntensity;
+		retVal += glm::clamp(noise, noiseDescriptor.m_heightMin, noiseDescriptor.m_heightMax);
+	}
+	return glm::clamp(retVal, m_minMax.x, m_minMax.y);
+}
+
+float HeightField::GetValue(const glm::vec2& position)
+{
+	float retVal = 0.0f;
+	retVal += position.x / 3.0f;
+	const auto groundSurface = m_groundSurface.Get<GroundSurface>();
+	if (groundSurface)
+	{
+		retVal += groundSurface->GetValue(position);
+	}
+
+	return retVal;
 }
 
 void HeightField::OnInspect()
@@ -119,15 +105,31 @@ void HeightField::Deserialize(const YAML::Node& in)
 void HeightField::GenerateMesh(const glm::vec2& start, const glm::uvec2& resolution, float unitSize, std::vector<Vertex>& vertices, std::vector<glm::uvec3>& triangles)
 {
 	const auto groundSurface = m_groundSurface.Get<GroundSurface>();
-	if(!groundSurface)
+	if (!groundSurface)
 	{
 		UNIENGINE_ERROR("No ground surface!");
 		return;
 	}
-	groundSurface->GenerateMesh(start, resolution, unitSize, [&](const glm::vec2& position)
-		{
-			return GetValue(position);
-		}, vertices, triangles);
+	for (unsigned i = 0; i < resolution.x; i++) {
+		for (unsigned j = 0; j < resolution.y; j++) {
+			Vertex archetype;
+			archetype.m_position.x = start.x + unitSize * i;
+			archetype.m_position.z = start.y + unitSize * j;
+			archetype.m_position.y = GetValue({ archetype.m_position.x , archetype.m_position.z });
+			archetype.m_texCoord = glm::vec2(static_cast<float>(i) / resolution.x,
+				static_cast<float>(j) / resolution.y);
+			vertices.push_back(archetype);
+		}
+	}
+
+	for (int i = 0; i < resolution.x - 1; i++) {
+		for (int j = 0; j < resolution.y - 1; j++) {
+			int n = resolution.x;
+			triangles.emplace_back(i + j * n, i + 1 + j * n, i + (j + 1) * n);
+			triangles.emplace_back(i + 1 + (j + 1) * n, i + (j + 1) * n,
+				i + 1 + j * n);
+		}
+	}
 }
 
 void GroundSurface::OnCreate() {

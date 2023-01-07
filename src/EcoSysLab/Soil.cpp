@@ -11,7 +11,7 @@ bool OnInspectSoilParameters(SoilParameters& soilParameters)
 	bool changed = false;
 	if (ImGui::TreeNodeEx("Soil Parameters", ImGuiTreeNodeFlags_DefaultOpen))
 	{
-		if(ImGui::DragFloat("Diffusion Force", &soilParameters.m_diffusionForce, 0.01f, 0.0f, 999.0f))
+		if (ImGui::DragFloat("Diffusion Force", &soilParameters.m_diffusionForce, 0.01f, 0.0f, 999.0f))
 		{
 			changed = true;
 		}
@@ -19,7 +19,7 @@ bool OnInspectSoilParameters(SoilParameters& soilParameters)
 		{
 			changed = true;
 		}
-		if(ImGui::DragFloat("Delta X", &soilParameters.m_deltaX, 0.01f, 0.01f, 1.0f))
+		if (ImGui::DragFloat("Delta X", &soilParameters.m_deltaX, 0.01f, 0.01f, 1.0f))
 		{
 			changed = true;
 		}
@@ -55,7 +55,7 @@ void SoilDescriptor::OnInspect()
 		auto soilEntity = scene->CreateEntity(GetTitle());
 		auto soil = scene->GetOrSetPrivateComponent<Soil>(soilEntity).lock();
 		soil->m_soilDescriptor = ProjectManager::GetAsset(GetHandle());
-		soil->m_soilModel.Initialize(m_soilParameters, m_voxelResolution, m_boundingBoxMin);
+		soil->InitializeSoilModel();
 	}
 
 
@@ -72,11 +72,7 @@ void SoilDescriptor::OnInspect()
 void Soil::OnInspect()
 {
 	if (Editor::DragAndDropButton<SoilDescriptor>(m_soilDescriptor, "SoilDescriptor", true)) {
-		auto soilDescriptor = m_soilDescriptor.Get<SoilDescriptor>();
-		if (soilDescriptor)
-		{
-			m_soilModel.Initialize(soilDescriptor->m_soilParameters, soilDescriptor->m_voxelResolution, soilDescriptor->m_boundingBoxMin);
-		}
+		InitializeSoilModel();
 	}
 	auto soilDescriptor = m_soilDescriptor.Get<SoilDescriptor>();
 	if (soilDescriptor)
@@ -88,9 +84,9 @@ void Soil::OnInspect()
 		//if (!m_soilModel.m_initialized) m_soilModel.Initialize(soilDescriptor->m_soilParameters);
 		assert(m_soilModel.m_initialized);
 		static bool autoStep = false;
-		if (ImGui::Button("Reset"))
+		if (ImGui::Button("Initialize"))
 		{
-			m_soilModel.Initialize(soilDescriptor->m_soilParameters, soilDescriptor->m_voxelResolution, soilDescriptor->m_boundingBoxMin);
+			InitializeSoilModel();
 		}
 		bool updateVectorMatrices = false;
 		bool updateVectorColors = false;
@@ -185,16 +181,16 @@ void Soil::OnInspect()
 					Jobs::ParallelFor(numVoxels, [&](unsigned i)
 						{
 							const auto targetVector = glm::vec3(m_soilModel.m_w_grad_x[i], m_soilModel.m_w_grad_y[i], m_soilModel.m_w_grad_z[i]);
-							const auto start = m_soilModel.GetPositionFromCoordinate(m_soilModel.GetCoordinateFromIndex(i));
-							const auto end = start + targetVector * actualVectorMultiplier;
-							const auto direction = glm::normalize(end - start);
-							glm::quat rotation = glm::quatLookAt(direction, glm::vec3(direction.y, direction.z, direction.x));
-							rotation *= glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));
-							const auto length = glm::distance(end, start) / 2.0f;
-							const auto width = glm::min(vectorLineMaxWidth, length * vectorLineWidthFactor);
-							const auto model = glm::translate((start + end) / 2.0f) * glm::mat4_cast(rotation) *
-								glm::scale(glm::vec3(width, length, width));
-							vectorMatrices[i] = model;
+					const auto start = m_soilModel.GetPositionFromCoordinate(m_soilModel.GetCoordinateFromIndex(i));
+					const auto end = start + targetVector * actualVectorMultiplier;
+					const auto direction = glm::normalize(end - start);
+					glm::quat rotation = glm::quatLookAt(direction, glm::vec3(direction.y, direction.z, direction.x));
+					rotation *= glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));
+					const auto length = glm::distance(end, start) / 2.0f;
+					const auto width = glm::min(vectorLineMaxWidth, length * vectorLineWidthFactor);
+					const auto model = glm::translate((start + end) / 2.0f) * glm::mat4_cast(rotation) *
+						glm::scale(glm::vec3(width, length, width));
+					vectorMatrices[i] = model;
 						}, results);
 				}break;
 				case SoilProperty::Divergence:
@@ -202,16 +198,16 @@ void Soil::OnInspect()
 					Jobs::ParallelFor(numVoxels, [&](unsigned i)
 						{
 							const auto targetVector = glm::vec3(m_soilModel.m_div_diff_x[i], m_soilModel.m_div_diff_y[i], m_soilModel.m_div_diff_z[i]);
-							const auto start = m_soilModel.GetPositionFromCoordinate(m_soilModel.GetCoordinateFromIndex(i));
-							const auto end = start + targetVector * actualVectorMultiplier;
-							const auto direction = glm::normalize(end - start);
-							glm::quat rotation = glm::quatLookAt(direction, glm::vec3(direction.y, direction.z, direction.x));
-							rotation *= glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));
-							const auto length = glm::distance(end, start) / 2.0f;
-							const auto width = glm::min(vectorLineMaxWidth, length * vectorLineWidthFactor);
-							const auto model = glm::translate((start + end) / 2.0f) * glm::mat4_cast(rotation) *
-								glm::scale(glm::vec3(width, length, width));
-							vectorMatrices[i] = model;
+					const auto start = m_soilModel.GetPositionFromCoordinate(m_soilModel.GetCoordinateFromIndex(i));
+					const auto end = start + targetVector * actualVectorMultiplier;
+					const auto direction = glm::normalize(end - start);
+					glm::quat rotation = glm::quatLookAt(direction, glm::vec3(direction.y, direction.z, direction.x));
+					rotation *= glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));
+					const auto length = glm::distance(end, start) / 2.0f;
+					const auto width = glm::min(vectorLineMaxWidth, length * vectorLineWidthFactor);
+					const auto model = glm::translate((start + end) / 2.0f) * glm::mat4_cast(rotation) *
+						glm::scale(glm::vec3(width, length, width));
+					vectorMatrices[i] = model;
 						}, results);
 				}break;
 				default:
@@ -220,8 +216,8 @@ void Soil::OnInspect()
 						{
 							vectorMatrices[i] =
 							glm::translate(m_soilModel.GetPositionFromCoordinate(m_soilModel.GetCoordinateFromIndex(i)))
-							* glm::mat4_cast(glm::quat(glm::vec3(0.0f)))
-							* glm::scale(glm::vec3(0.0f));
+						* glm::mat4_cast(glm::quat(glm::vec3(0.0f)))
+						* glm::scale(glm::vec3(0.0f));
 						}, results);
 				}break;
 				}
@@ -313,8 +309,8 @@ void Soil::OnInspect()
 					{
 						scalarMatrices[i] =
 						glm::translate(m_soilModel.GetPositionFromCoordinate(m_soilModel.GetCoordinateFromIndex(i)))
-						* glm::mat4_cast(glm::quat(glm::vec3(0.0f)))
-						* glm::scale(glm::vec3(m_soilModel.GetVoxelSize() * scalarBoxSize));
+					* glm::mat4_cast(glm::quat(glm::vec3(0.0f)))
+					* glm::scale(glm::vec3(m_soilModel.GetVoxelSize() * scalarBoxSize));
 					}, results);
 				for (auto& i : results) i.wait();
 			}
@@ -326,7 +322,7 @@ void Soil::OnInspect()
 				{
 					Jobs::ParallelFor(numVoxels, [&](unsigned i)
 						{
-					scalarColors[i] = { scalarBaseColor, 0.01f };
+							scalarColors[i] = { scalarBaseColor, 0.01f };
 						}, results);
 				}break;
 				case SoilProperty::SoilDensity:
@@ -334,7 +330,7 @@ void Soil::OnInspect()
 					Jobs::ParallelFor(numVoxels, [&](unsigned i)
 						{
 							auto value = glm::vec3(m_soilModel.m_soilDensity[i]);
-							scalarColors[i] = { scalarBaseColor, glm::clamp(glm::length(value) * scalarMultiplier, scalarMinAlpha, 1.0f) };
+					scalarColors[i] = { scalarBaseColor, glm::clamp(glm::length(value) * scalarMultiplier, scalarMinAlpha, 1.0f) };
 						}, results);
 				}break;
 				case SoilProperty::WaterDensity:
@@ -342,7 +338,7 @@ void Soil::OnInspect()
 					Jobs::ParallelFor(numVoxels, [&](unsigned i)
 						{
 							auto value = glm::vec3(m_soilModel.m_w[i]);
-							scalarColors[i] = { scalarBaseColor, glm::clamp(glm::length(value) * scalarMultiplier, scalarMinAlpha, 1.0f) };
+					scalarColors[i] = { scalarBaseColor, glm::clamp(glm::length(value) * scalarMultiplier, scalarMinAlpha, 1.0f) };
 						}, results);
 				}break;
 				case SoilProperty::WaterDensityGradient:
@@ -350,7 +346,7 @@ void Soil::OnInspect()
 					Jobs::ParallelFor(numVoxels, [&](unsigned i)
 						{
 							auto value = glm::vec3(m_soilModel.m_w_grad_x[i], m_soilModel.m_w_grad_y[i], m_soilModel.m_w_grad_z[i]);
-							scalarColors[i] = { glm::normalize(value), glm::clamp(glm::length(value) * scalarMultiplier, scalarMinAlpha, 1.0f) };
+					scalarColors[i] = { glm::normalize(value), glm::clamp(glm::length(value) * scalarMultiplier, scalarMinAlpha, 1.0f) };
 						}, results);
 				}break;
 				case SoilProperty::Divergence:
@@ -358,7 +354,7 @@ void Soil::OnInspect()
 					Jobs::ParallelFor(numVoxels, [&](unsigned i)
 						{
 							auto value = glm::vec3(m_soilModel.m_div_diff_x[i], m_soilModel.m_div_diff_y[i], m_soilModel.m_div_diff_z[i]);
-							scalarColors[i] = { glm::normalize(value), glm::clamp(glm::length(value) * scalarMultiplier, scalarMinAlpha, 1.0f) };
+					scalarColors[i] = { glm::normalize(value), glm::clamp(glm::length(value) * scalarMultiplier, scalarMinAlpha, 1.0f) };
 						}, results);
 				}break;
 				case SoilProperty::NutrientDensity:
@@ -366,7 +362,7 @@ void Soil::OnInspect()
 					Jobs::ParallelFor(numVoxels, [&](unsigned i)
 						{
 							auto value = glm::vec3(glm::vec3(m_soilModel.m_nutrientsDensity[i]));
-							scalarColors[i] = { scalarBaseColor, glm::clamp(glm::length(value) * scalarMultiplier, scalarMinAlpha, 1.0f) };
+					scalarColors[i] = { scalarBaseColor, glm::clamp(glm::length(value) * scalarMultiplier, scalarMinAlpha, 1.0f) };
 						}, results);
 				}break;
 				default:
@@ -405,10 +401,7 @@ void Soil::Serialize(YAML::Emitter& out)
 void Soil::Deserialize(const YAML::Node& in)
 {
 	m_soilDescriptor.Load("m_soilDescriptor", in);
-	auto soilDescriptor = m_soilDescriptor.Get<SoilDescriptor>();
-	if (soilDescriptor) {
-		m_soilModel.Initialize(soilDescriptor->m_soilParameters, soilDescriptor->m_voxelResolution, soilDescriptor->m_boundingBoxMin);
-	}
+	InitializeSoilModel();
 }
 
 void Soil::CollectAssetRef(std::vector<AssetRef>& list)
@@ -460,6 +453,29 @@ void Soil::GenerateMesh()
 	mesh->SetVertices(17, vertices, triangles);
 	meshRenderer->m_mesh = mesh;
 	meshRenderer->m_material = material;
+}
+
+void Soil::InitializeSoilModel()
+{
+	auto soilDescriptor = m_soilDescriptor.Get<SoilDescriptor>();
+	if (soilDescriptor)
+	{
+		auto heightField = soilDescriptor->m_heightField.Get<HeightField>();
+		if (heightField)
+		{
+			m_soilModel.Initialize(soilDescriptor->m_soilParameters, soilDescriptor->m_voxelResolution, soilDescriptor->m_boundingBoxMin, [&](const glm::vec3& position)
+				{
+					auto height = heightField->GetValue(glm::vec2(position.x, position.z));
+			return position.y > height - 1 ? glm::clamp(height - soilDescriptor->m_soilParameters.m_deltaX / 2.0f - position.y, 0.0f, 1.0f) : 1;
+				});
+		}
+		else {
+			m_soilModel.Initialize(soilDescriptor->m_soilParameters, soilDescriptor->m_voxelResolution, soilDescriptor->m_boundingBoxMin, [](const glm::vec3& position)
+				{
+					return position.y > 0 ? 0 : 1;
+				});
+		}
+	}
 }
 
 void SerializeSoilParameters(const std::string& name, const SoilParameters& soilParameters, YAML::Emitter& out) {

@@ -12,8 +12,8 @@ namespace EcoSysLab
 	{
 	public:
 		AssetRef m_groundSurface;
-
-		[[nodiscard]] float GetValue(const glm::vec2& position) const;
+		
+		[[nodiscard]] float GetValue(const glm::vec2& position);
 
 		void OnInspect() override;
 		void Serialize(YAML::Emitter& out) override;
@@ -34,12 +34,13 @@ namespace EcoSysLab
 	class GroundSurface : public IAsset {
 	public:
 		glm::vec2 m_minMax = glm::vec2(-1000, 1000);
-
+		glm::vec2 m_positionOffset;
 		std::vector<NoiseDescriptor> m_noiseDescriptors;
 		void OnCreate() override;
-		void GenerateMesh(const glm::vec2& start, const glm::uvec2& resolution, float unitSize, const std::function<float(const glm::vec2& position)>& heightFunc, std::vector<Vertex>& vertices, std::vector<glm::uvec3>& triangles) const;
 		void OnInspect() override;
 		void Serialize(YAML::Emitter& out) override;
 		void Deserialize(const YAML::Node& in) override;
+
+		[[nodiscard]] float GetValue(const glm::vec2& position) const;
 	};
 }
