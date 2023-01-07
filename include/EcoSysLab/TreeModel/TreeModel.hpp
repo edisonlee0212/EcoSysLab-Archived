@@ -298,16 +298,16 @@ namespace EcoSysLab {
 	class TreeModel {
 #pragma region Root Growth
 
-		bool ElongateRoot(float extendLength, NodeHandle rootNodeHandle,
+		bool ElongateRoot(const glm::mat4& globalTransform, SoilModel& soilModel, float extendLength, NodeHandle rootNodeHandle,
 			const RootGrowthParameters& rootGrowthParameters, float& collectedAuxin);
 
-		inline bool GrowRootNode(SoilModel& soilModel, NodeHandle rootNodeHandle, const RootGrowthParameters& rootGrowthParameters);
+		inline bool GrowRootNode(const glm::mat4& globalTransform, SoilModel& soilModel, NodeHandle rootNodeHandle, const RootGrowthParameters& rootGrowthParameters);
 
 		inline void CalculateResourceRequirement(NodeHandle rootNodeHandle, const RootGrowthParameters& rootGrowthParameters);
 		inline void CalculateThickness(NodeHandle rootNodeHandle,
 			const RootGrowthParameters& rootGrowthParameters);
 
-		void CollectWaterFromRoots(SoilModel& soilModel,
+		void CollectWaterFromRoots(const glm::mat4& globalTransform, SoilModel& soilModel,
 			const RootGrowthParameters& rootGrowthParameters);
 #pragma endregion
 #pragma region Tree Growth
@@ -325,9 +325,9 @@ namespace EcoSysLab {
 		inline void CalculateThicknessAndSagging(NodeHandle internodeHandle,
 			const TreeGrowthParameters& treeGrowthParameters);
 
-		inline bool GrowInternode(ClimateModel& climateModel, NodeHandle internodeHandle, const TreeGrowthParameters& treeGrowthParameters);
+		inline bool GrowInternode(const glm::mat4& globalTransform, ClimateModel& climateModel, NodeHandle internodeHandle, const TreeGrowthParameters& treeGrowthParameters);
 
-		bool ElongateInternode(float extendLength, NodeHandle internodeHandle,
+		bool ElongateInternode(const glm::mat4& globalTransform, float extendLength, NodeHandle internodeHandle,
 			const TreeGrowthParameters& treeGrowthParameters, float& collectedInhibitor);
 		void CollectLuminousFluxFromLeaves(ClimateModel& climateModel,
 			const TreeGrowthParameters& treeGrowthParameters);
@@ -350,7 +350,7 @@ namespace EcoSysLab {
 		 * @param newTreeGrowthNutrientsRequirement
 		 * @return Whether the growth caused a structural change during the growth.
 		 */
-		bool GrowBranches(ClimateModel& climateModel, const TreeGrowthParameters& treeGrowthParameters, TreeGrowthNutrients& newTreeGrowthNutrientsRequirement);
+		bool GrowBranches(const glm::mat4& globalTransform, ClimateModel& climateModel, const TreeGrowthParameters& treeGrowthParameters, TreeGrowthNutrients& newTreeGrowthNutrientsRequirement);
 
 		/**
 		 * Grow one iteration of the roots, given the soil model and the procedural parameters.
@@ -359,14 +359,13 @@ namespace EcoSysLab {
 		 * @param newTreeGrowthNutrientsRequirement
 		 * @return Whether the growth caused a structural change during the growth.
 		 */
-		bool GrowRoots(SoilModel& soilModel,
+		bool GrowRoots(const glm::mat4& globalTransform, SoilModel& soilModel,
 			const RootGrowthParameters& rootGrowthParameters, TreeGrowthNutrients& newTreeGrowthNutrientsRequirement);
 
 	public:
 		TreeGrowthNutrients m_treeGrowthNutrientsRequirement;
 		TreeGrowthNutrients m_treeGrowthNutrients;
 		float m_globalGrowthRate = 0.0f;
-		glm::mat4 m_globalTransform = glm::translate(glm::vec3(0, 0, 0)) * glm::mat4_cast(glm::quat(glm::vec3(0.0f))) * glm::scale(glm::vec3(1.0f));
 		glm::vec3 m_currentGravityDirection = glm::vec3(0, -1, 0);
 
 		/**
@@ -376,13 +375,14 @@ namespace EcoSysLab {
 
 		/**
 		 * Grow one iteration of the tree, given the nutrients and the procedural parameters.
+		 * @param globalTransform The global transform of tree in world space.
 		 * @param soilModel The soil model
 		 * @param climateModel The climate model
 		 * @param rootGrowthParameters The procedural parameters that guides the growth of the roots.
 		 * @param treeGrowthParameters The procedural parameters that guides the growth of the branches.
 		 * @return Whether the growth caused a structural change during the growth.
 		 */
-		bool Grow(SoilModel& soilModel, ClimateModel& climateModel,
+		bool Grow(const glm::mat4& globalTransform, SoilModel& soilModel, ClimateModel& climateModel,
 			const RootGrowthParameters& rootGrowthParameters, const TreeGrowthParameters& treeGrowthParameters);
 
 		int m_historyLimit = -1;

@@ -12,7 +12,7 @@ namespace EcoSysLab
 	{
 	public:
 		AssetRef m_groundSurface;
-		
+		int m_precisionLevel = 2;
 		[[nodiscard]] float GetValue(const glm::vec2& position);
 
 		void OnInspect() override;

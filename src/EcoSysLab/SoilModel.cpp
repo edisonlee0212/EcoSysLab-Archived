@@ -211,6 +211,9 @@ void SoilModel::Reset()
 	}
 
 	update_w_sum();
+
+
+	m_version++;
 }
 
 
@@ -392,6 +395,9 @@ void SoilModel::Step()
 	m_time += m_dt;
 
 	update_w_sum();
+
+
+	m_version++;
 }
 
 void EcoSysLab::SoilModel::WaterLogic()

@@ -587,6 +587,7 @@ void TreeVisualizer::Reset(
 }
 
 
+
 void TreeVisualizer::PeekRootNode(
         const Skeleton<RootSkeletonGrowthData, RootBranchGrowthData, RootInternodeGrowthData> &rootSkeleton,
         NodeHandle rootNodeHandle) {

@@ -53,6 +53,8 @@ void GroundSurface::Serialize(YAML::Emitter& out) {
 void GroundSurface::Deserialize(const YAML::Node& in) {
 	if (in["m_minMax"])
 		m_minMax = in["m_minMax"].as<glm::vec2>();
+	
+
 	if (in["m_noiseDescriptors"])
 	{
 		const auto& ds = in["m_noiseDescriptors"].as<YAML::Binary>();
@@ -77,7 +79,11 @@ float GroundSurface::GetValue(const glm::vec2& position) const
 float HeightField::GetValue(const glm::vec2& position)
 {
 	float retVal = 0.0f;
-	retVal += position.x / 3.0f;
+	if(position.x < 0)
+	{
+		retVal += glm::max(position.x, -5.0f);
+	}
+	
 	const auto groundSurface = m_groundSurface.Get<GroundSurface>();
 	if (groundSurface)
 	{
@@ -89,16 +95,20 @@ float HeightField::GetValue(const glm::vec2& position)
 
 void HeightField::OnInspect()
 {
+	ImGui::DragInt("Precision level", &m_precisionLevel);
 	Editor::DragAndDropButton<GroundSurface>(m_groundSurface, "GroundSurface", true);
 }
 
 void HeightField::Serialize(YAML::Emitter& out)
 {
+	out << YAML::Key << "m_precisionLevel" << YAML::Value << m_precisionLevel;
 	m_groundSurface.Save("m_groundSurface", out);
 }
 
 void HeightField::Deserialize(const YAML::Node& in)
 {
+	if (in["m_precisionLevel"])
+		m_precisionLevel = in["m_precisionLevel"].as<int>();
 	m_groundSurface.Load("m_groundSurface", in);
 }
 
@@ -110,21 +120,21 @@ void HeightField::GenerateMesh(const glm::vec2& start, const glm::uvec2& resolut
 		UNIENGINE_ERROR("No ground surface!");
 		return;
 	}
-	for (unsigned i = 0; i < resolution.x; i++) {
-		for (unsigned j = 0; j < resolution.y; j++) {
+	for (unsigned i = 0; i < resolution.x * m_precisionLevel; i++) {
+		for (unsigned j = 0; j < resolution.y * m_precisionLevel; j++) {
 			Vertex archetype;
-			archetype.m_position.x = start.x + unitSize * i;
-			archetype.m_position.z = start.y + unitSize * j;
+			archetype.m_position.x = start.x + unitSize * i / m_precisionLevel;
+			archetype.m_position.z = start.y + unitSize * j / m_precisionLevel;
 			archetype.m_position.y = GetValue({ archetype.m_position.x , archetype.m_position.z });
-			archetype.m_texCoord = glm::vec2(static_cast<float>(i) / resolution.x,
-				static_cast<float>(j) / resolution.y);
+			archetype.m_texCoord = glm::vec2(static_cast<float>(i) / (resolution.x * m_precisionLevel),
+				static_cast<float>(j) / (resolution.y * m_precisionLevel));
 			vertices.push_back(archetype);
 		}
 	}
 
-	for (int i = 0; i < resolution.x - 1; i++) {
-		for (int j = 0; j < resolution.y - 1; j++) {
-			int n = resolution.x;
+	for (int i = 0; i < resolution.x * m_precisionLevel - 1; i++) {
+		for (int j = 0; j < resolution.y * m_precisionLevel - 1; j++) {
+			int n = resolution.x * m_precisionLevel;
 			triangles.emplace_back(i + j * n, i + 1 + j * n, i + (j + 1) * n);
 			triangles.emplace_back(i + 1 + (j + 1) * n, i + (j + 1) * n,
 				i + 1 + j * n);

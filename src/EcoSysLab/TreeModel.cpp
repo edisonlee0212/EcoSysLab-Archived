@@ -26,7 +26,7 @@ void ApplyTropism(const glm::vec3& targetDir, float tropism, glm::quat& rotation
 	rotation = glm::quatLookAt(front, up);
 }
 
-bool TreeModel::ElongateRoot(const float extendLength, NodeHandle rootNodeHandle, const RootGrowthParameters& rootGrowthParameters,
+bool TreeModel::ElongateRoot(const glm::mat4& globalTransform, SoilModel& soilModel, const float extendLength, NodeHandle rootNodeHandle, const RootGrowthParameters& rootGrowthParameters,
 	float& collectedAuxin) {
 	bool graphChanged = false;
 	auto& rootNode = m_rootSkeleton.RefNode(rootNodeHandle);
@@ -63,7 +63,10 @@ bool TreeModel::ElongateRoot(const float extendLength, NodeHandle rootNodeHandle
 			desiredGlobalUp);
 		ApplyTropism(m_currentGravityDirection, newRootNode.m_data.m_verticalTropism,
 			desiredGlobalFront, desiredGlobalUp);
-
+		if (soilModel.GetDensity((globalTransform * glm::translate(oldRootNode.m_info.m_globalPosition))[3]) == 0.0f) {
+			ApplyTropism(m_currentGravityDirection, 0.1f, desiredGlobalFront,
+				desiredGlobalUp);
+		}
 
 		//TODO: Nitrite packets here.
 		newRootNode.m_data.m_rootUnitDistance = oldRootNode.m_data.m_rootUnitDistance + 1;
@@ -76,7 +79,7 @@ bool TreeModel::ElongateRoot(const float extendLength, NodeHandle rootNodeHandle
 			newRootNode.m_info.m_globalRotation;
 		if (extraLength > rootNodeLength) {
 			float childAuxin = 0.0f;
-			ElongateRoot(extraLength - rootNodeLength, newRootNodeHandle, rootGrowthParameters, childAuxin);
+			ElongateRoot(globalTransform, soilModel, extraLength - rootNodeLength, newRootNodeHandle, rootGrowthParameters, childAuxin);
 			childAuxin *= rootGrowthParameters.GetAuxinTransportLoss(newRootNode);
 			collectedAuxin += childAuxin;
 			m_rootSkeleton.RefNode(newRootNodeHandle).m_data.m_auxinTarget = childAuxin;
@@ -92,7 +95,7 @@ bool TreeModel::ElongateRoot(const float extendLength, NodeHandle rootNodeHandle
 	return graphChanged;
 }
 
-inline bool TreeModel::GrowRootNode(SoilModel& soilModel, NodeHandle rootNodeHandle, const RootGrowthParameters& rootGrowthParameters)
+inline bool TreeModel::GrowRootNode(const glm::mat4& globalTransform, SoilModel& soilModel, NodeHandle rootNodeHandle, const RootGrowthParameters& rootGrowthParameters)
 {
 	bool graphChanged = false;
 	{
@@ -113,7 +116,7 @@ inline bool TreeModel::GrowRootNode(SoilModel& soilModel, NodeHandle rootNodeHan
 			float collectedAuxin = 0.0f;
 			const float extendLength = rootNode.m_data.m_reproductiveWaterRequirement * m_globalGrowthRate;
 			const auto dd = rootGrowthParameters.GetAuxinTransportLoss(rootNode);
-			ElongateRoot(extendLength, rootNodeHandle, rootGrowthParameters, collectedAuxin);
+			ElongateRoot(globalTransform, soilModel, extendLength, rootNodeHandle, rootGrowthParameters, collectedAuxin);
 			m_rootSkeleton.RefNode(rootNodeHandle).m_data.m_auxinTarget += collectedAuxin * dd;
 		}
 		else
@@ -204,7 +207,7 @@ void TreeModel::CollectResourceRequirement(NodeHandle internodeHandle)
 }
 
 
-bool TreeModel::ElongateInternode(float extendLength, NodeHandle internodeHandle,
+bool TreeModel::ElongateInternode(const glm::mat4& globalTransform, float extendLength, NodeHandle internodeHandle,
 	const TreeGrowthParameters& parameters, float& collectedInhibitor) {
 	bool graphChanged = false;
 	auto& internode = m_branchSkeleton.RefNode(internodeHandle);
@@ -289,7 +292,7 @@ bool TreeModel::ElongateInternode(float extendLength, NodeHandle internodeHandle
 			parameters.GetDesiredRollAngle(newInternode));
 		if (extraLength > internodeLength) {
 			float childInhibitor = 0.0f;
-			ElongateInternode(extraLength - internodeLength, newInternodeHandle, parameters, childInhibitor);
+			ElongateInternode(globalTransform, extraLength - internodeLength, newInternodeHandle, parameters, childInhibitor);
 			childInhibitor *= parameters.GetApicalDominanceDecrease(newInternode);
 			collectedInhibitor += childInhibitor;
 			m_branchSkeleton.RefNode(newInternodeHandle).m_data.m_inhibitorTarget = childInhibitor;
@@ -323,7 +326,7 @@ void TreeModel::CollectLuminousFluxFromLeaves(ClimateModel& climateModel,
 	m_treeGrowthNutrients.m_luminousFlux = m_treeGrowthNutrientsRequirement.m_luminousFlux;
 }
 
-bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHandle, const TreeGrowthParameters& treeGrowthParameters) {
+bool TreeModel::GrowInternode(const glm::mat4& globalTransform, ClimateModel& climateModel, NodeHandle internodeHandle, const TreeGrowthParameters& treeGrowthParameters) {
 	bool graphChanged = false;
 	{
 		auto& internode = m_branchSkeleton.RefNode(internodeHandle);
@@ -353,7 +356,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 			const float elongateLength = reproductiveContent * treeGrowthParameters.GetInternodeLength(internode);
 			float collectedInhibitor = 0.0f;
 			const auto dd = treeGrowthParameters.GetApicalDominanceDecrease(internode);
-			graphChanged = ElongateInternode(elongateLength, internodeHandle, treeGrowthParameters, collectedInhibitor);
+			graphChanged = ElongateInternode(globalTransform, elongateLength, internodeHandle, treeGrowthParameters, collectedInhibitor);
 			m_branchSkeleton.RefNode(internodeHandle).m_data.m_inhibitorTarget += collectedInhibitor * dd;
 			//If apical bud is dormant, then there's no lateral bud at this stage. We should quit anyway.
 			break;
@@ -551,7 +554,7 @@ void TreeModel::CalculateResourceRequirement(NodeHandle internodeHandle,
 	}
 }
 
-bool TreeModel::GrowBranches(ClimateModel& climateModel, const TreeGrowthParameters& treeGrowthParameters, TreeGrowthNutrients& newTreeGrowthNutrientsRequirement) {
+bool TreeModel::GrowBranches(const glm::mat4& globalTransform, ClimateModel& climateModel, const TreeGrowthParameters& treeGrowthParameters, TreeGrowthNutrients& newTreeGrowthNutrientsRequirement) {
 	bool treeStructureChanged = false;
 
 #pragma region Tree Growth
@@ -583,7 +586,7 @@ bool TreeModel::GrowBranches(ClimateModel& climateModel, const TreeGrowthParamet
 			AdjustProductiveResourceRequirement(internodeHandle, treeGrowthParameters);
 		}
 		for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); it++) {
-			const bool graphChanged = GrowInternode(climateModel, *it, treeGrowthParameters);
+			const bool graphChanged = GrowInternode(globalTransform, climateModel, *it, treeGrowthParameters);
 			anyBranchGrown = anyBranchGrown || graphChanged;
 		}
 	};
@@ -700,7 +703,6 @@ TreeModel::Initialize(const TreeGrowthParameters& treeGrowthParameters, const Ro
 }
 
 void TreeModel::Clear() {
-	m_globalTransform = glm::translate(glm::vec3(0, 0, 0)) * glm::mat4_cast(glm::quat(glm::vec3(0.0f))) * glm::scale(glm::vec3(1.0f));
 	m_branchSkeleton = {};
 	m_rootSkeleton = {};
 	m_history = {};
@@ -721,7 +723,7 @@ bool TreeModel::LowBranchPruning(float maxDistance, NodeHandle internodeHandle,
 	return false;
 }
 
-bool TreeModel::GrowRoots(SoilModel& soilModel, const RootGrowthParameters& rootGrowthParameters, TreeGrowthNutrients& newTreeGrowthNutrientsRequirement)
+bool TreeModel::GrowRoots(const glm::mat4& globalTransform, SoilModel& soilModel, const RootGrowthParameters& rootGrowthParameters, TreeGrowthNutrients& newTreeGrowthNutrientsRequirement)
 {
 	bool rootStructureChanged = false;
 
@@ -742,7 +744,7 @@ bool TreeModel::GrowRoots(SoilModel& soilModel, const RootGrowthParameters& root
 			const auto& sortedRootNodeList = m_rootSkeleton.RefSortedNodeList();
 
 			for (auto it = sortedRootNodeList.rbegin(); it != sortedRootNodeList.rend(); it++) {
-				const bool graphChanged = GrowRootNode(soilModel, *it, rootGrowthParameters);
+				const bool graphChanged = GrowRootNode(globalTransform, soilModel, *it, rootGrowthParameters);
 				anyRootGrown = anyRootGrown || graphChanged;
 
 			}
@@ -765,7 +767,6 @@ bool TreeModel::GrowRoots(SoilModel& soilModel, const RootGrowthParameters& root
 				auto& rootNode = m_rootSkeleton.RefNode(rootNodeHandle);
 				auto& rootNodeData = rootNode.m_data;
 				auto& rootNodeInfo = rootNode.m_info;
-				auto pos = m_globalTransform * glm::translate(rootNode.m_info.m_globalPosition);
 				rootNode.m_data.m_reproductiveWaterRequirement = /*soilModel.GetNutrient(pos[3])*/1.0f * growthRate;
 				totalWaterRequirement += rootNodeData.m_reproductiveWaterRequirement;
 				totalLuminousFluxRequirement += rootNodeData.m_reproductiveWaterRequirement;
@@ -826,7 +827,7 @@ bool TreeModel::GrowRoots(SoilModel& soilModel, const RootGrowthParameters& root
 	return rootStructureChanged;
 }
 
-void TreeModel::CollectWaterFromRoots(SoilModel& soilModel, const RootGrowthParameters& rootGrowthParameters)
+void TreeModel::CollectWaterFromRoots(const glm::mat4& globalTransform, SoilModel& soilModel, const RootGrowthParameters& rootGrowthParameters)
 {
 	m_treeGrowthNutrients.m_water = 0.0f;
 	const auto& sortedRootNodeList = m_rootSkeleton.RefSortedNodeList();
@@ -837,7 +838,7 @@ void TreeModel::CollectWaterFromRoots(SoilModel& soilModel, const RootGrowthPara
 	m_treeGrowthNutrients.m_water = m_treeGrowthNutrientsRequirement.m_water;
 }
 
-bool TreeModel::Grow(SoilModel& soilModel, ClimateModel& climateModel, 
+bool TreeModel::Grow(const glm::mat4& globalTransform, SoilModel& soilModel, ClimateModel& climateModel,
 	const RootGrowthParameters& rootGrowthParameters, const TreeGrowthParameters& treeGrowthParameters)
 {
 	bool treeStructureChanged = false;
@@ -850,7 +851,7 @@ bool TreeModel::Grow(SoilModel& soilModel, ClimateModel& climateModel,
 	//Set target carbohydrate.
 	m_treeGrowthNutrientsRequirement.m_carbohydrate = m_treeGrowthNutrientsRequirement.m_luminousFlux;
 	//Collect water from roots.
-	CollectWaterFromRoots(soilModel, rootGrowthParameters);
+	CollectWaterFromRoots(globalTransform, soilModel, rootGrowthParameters);
 	//Collect light from branches.
 	CollectLuminousFluxFromLeaves(climateModel, treeGrowthParameters);
 	//Perform photosynthesis.
@@ -867,11 +868,11 @@ bool TreeModel::Grow(SoilModel& soilModel, ClimateModel& climateModel,
 
 	//Grow roots and set up nutrient requirements for next iteration.
 	TreeGrowthNutrients newTreeNutrientsRequirement;
-	if (GrowRoots(soilModel, rootGrowthParameters, newTreeNutrientsRequirement)) {
+	if (GrowRoots(globalTransform, soilModel, rootGrowthParameters, newTreeNutrientsRequirement)) {
 		rootStructureChanged = true;
 	}
 	//Grow branches and set up nutrient requirements for next iteration.
-	if (GrowBranches(climateModel, treeGrowthParameters, newTreeNutrientsRequirement)) {
+	if (GrowBranches(globalTransform, climateModel, treeGrowthParameters, newTreeNutrientsRequirement)) {
 		treeStructureChanged = true;
 	}
 	//Set new growth nutrients requirement for next iteration.

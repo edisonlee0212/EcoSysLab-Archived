@@ -18,6 +18,7 @@ namespace EcoSysLab {
 
 	class SoilModel {
 		friend class Soil;
+		friend class EcoSysLabLayer;
 	public:
 		void Initialize(const SoilParameters& soilParameters, const glm::uvec3& voxelResolution,
 			const glm::vec3& minPosition, const std::function<float(const glm::vec3& voxelCenter)>& soilDensitySampleFunc);
@@ -51,6 +52,8 @@ namespace EcoSysLab {
 		[[nodiscard]] glm::vec3 GetBoundingBoxMin() const;
 		[[nodiscard]] glm::vec3 GetBoundingBoxMax() const;
 		[[nodiscard]] bool Initialized() const;
+
+		int m_version = 0;
 	protected:
 		void update_w_sum();
 		bool m_initialized = false;

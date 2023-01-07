@@ -37,7 +37,31 @@ namespace EcoSysLab {
 		bool m_needFlowUpdate = false;
 		bool m_lockTreeSelection = false;
 		bool m_autoGrow = false;
-		bool m_generateGeometry = true;
+
+
+		int m_soilVersion = -1;
+		bool m_vectorEnable = true;
+		bool m_scalarEnable = true;
+		bool m_updateVectorMatrices = false;
+		bool m_updateVectorColors = false;
+		bool m_updateScalarMatrices = false;
+		bool m_updateScalarColors = false;
+		float m_vectorMultiplier = 50.0f;
+		glm::vec4 m_vectorBaseColor = glm::vec4(1.0f, 1.0f, 1.0f, 0.8f);
+		unsigned m_vectorSoilProperty = 4;
+		float m_vectorLineWidthFactor = 0.1f;
+		float m_vectorLineMaxWidth = 0.1f;
+		std::vector<glm::mat4> m_vectorMatrices;
+		std::vector<glm::vec4> m_vectorColors;
+
+		float m_scalarMultiplier = 1.0f;
+		float m_scalarBoxSize = 0.5f;
+		float m_scalarMinAlpha = 0.00f;
+		glm::vec3 m_scalarBaseColor = glm::vec3(0.0f, 0.0f, 1.0f);
+		unsigned m_scalarSoilProperty = 0;
+		std::vector<glm::mat4> m_scalarMatrices;
+		std::vector<glm::vec4> m_scalarColors;
+
 		void FixedUpdate() override;
 
 		void OnCreate() override;
@@ -64,7 +88,6 @@ namespace EcoSysLab {
 
 		PrivateComponentRef m_soilHolder;
 		PrivateComponentRef m_climateHolder;
-
 		void GrowAllTrees();
 		void GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings);
 

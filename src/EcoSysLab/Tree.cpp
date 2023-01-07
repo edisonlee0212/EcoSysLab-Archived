@@ -80,7 +80,9 @@ bool Tree::TryGrow() {
 	const auto soil = m_soil.Get<Soil>();
 	const auto climate = m_climate.Get<Climate>();
 	if (m_enableHistory) m_treeModel.Step();
-	return m_treeModel.Grow(soil->m_soilModel, climate->m_climateModel,
+
+	auto owner = GetOwner();
+	return m_treeModel.Grow(scene->GetDataComponent<GlobalTransform>(owner).m_value, soil->m_soilModel, climate->m_climateModel,
 		treeDescriptor->m_rootGrowthParameters, treeDescriptor->m_treeGrowthParameters);
 }
 
@@ -360,7 +362,7 @@ void TreeDescriptor::OnInspect() {
 			if(soilDescriptor)
 			{
 				auto heightField = soilDescriptor->m_heightField.Get<HeightField>();
-				if (heightField) height = heightField->GetValue({ 0.0f, 0.0f }) - 0.2f;
+				if (heightField) height = heightField->GetValue({ 0.0f, 0.0f }) - 0.05f;
 			}
 			GlobalTransform globalTransform;
 			globalTransform.SetPosition(glm::vec3(0, height, 0));
