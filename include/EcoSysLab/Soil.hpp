@@ -11,10 +11,8 @@ namespace EcoSysLab
 	 */
 	class SoilDescriptor : public IAsset {
 	public:
+		glm::vec3 m_boundingBoxMin = glm::vec3(-6.4f, -6.4f, -6.4f);
 		glm::uvec3 m_voxelResolution = glm::uvec3(64, 64, 64);
-		float m_voxelSize = 1.0f; // delta x, distance between two voxels
-		glm::vec3 m_boundingBoxMin = glm::vec3(-32, -32, -32);
-
 		SoilParameters m_soilParameters;
 
 		AssetRef m_heightField;

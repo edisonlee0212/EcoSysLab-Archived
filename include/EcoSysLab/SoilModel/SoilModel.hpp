@@ -11,17 +11,16 @@ namespace EcoSysLab {
 	public:
 		// scaling factors for different forces
 		float m_diffusionForce = 1.0f;
-		glm::vec3 gravityForce = glm::vec3(0, 0, 0);
-		glm::uvec3 voxelResolution = glm::uvec3(64, 64, 64);
-		float m_deltaX = 1.0f;
+		glm::vec3 m_gravityForce = glm::vec3(0, 0, 0);
+		float m_deltaX = 0.2f;
 		float m_deltaTime = 0.2f; // delta t, time between steps
 	};
 
 	class SoilModel {
 		friend class Soil;
 	public:
-		void Initialize(const SoilParameters& soilParameters = SoilParameters(),
-			const glm::vec3& minPosition = glm::vec3(-32, -32, -32));
+		void Initialize(const SoilParameters& soilParameters, const glm::uvec3& voxelResolution,
+			const glm::vec3& minPosition);
 
 		void Reset();
 		void Step();
@@ -56,7 +55,7 @@ namespace EcoSysLab {
 		void update_w_sum();
 		bool m_initialized = false;
 
-		glm::uvec3 m_Resolution;
+		glm::uvec3 m_resolution;
 		float m_dx; // delta x, distance between two voxels
 		float m_dt; // delta t, time between steps
 		float m_time = 0.0f; // time since start
