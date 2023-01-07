@@ -227,6 +227,11 @@ void DeserializeSoilParameters(const std::string& name, SoilParameters& soilPara
 	if (in[name]) {
 		auto& param = in[name];
 		if (param["m_voxelResolution"]) soilParameters.m_voxelResolution = param["m_voxelResolution"].as<glm::uvec3>();
+		else {
+			UNIENGINE_WARNING("DeserializeSoilParameters: m_voxelResolution not found!");
+			//UNIENGINE_ERROR("DeserializeSoilParameters: m_voxelResolution not found!");
+			//UNIENGINE_LOG("DeserializeSoilParameters: m_voxelResolution not found!");
+		}
 		if (param["m_deltaX"]) soilParameters.m_deltaX = param["m_deltaX"].as<float>();
 		if (param["m_deltaTime"]) soilParameters.m_deltaTime = param["m_deltaTime"].as<float>();
 		if (param["m_boundingBoxMin"]) soilParameters.m_boundingBoxMin = param["m_boundingBoxMin"].as<glm::vec3>();
