@@ -19,7 +19,7 @@
 #include "Soil.hpp"
 #include "Climate.hpp"
 #include "Trees.hpp"
-#include "TreeVisualizationLayer.hpp"
+#include "EcoSysLabLayer.hpp"
 #include "RadialBoundingVolume.hpp"
 #include "HeightField.hpp"
 #ifdef RAYTRACERFACILITY
@@ -48,7 +48,7 @@ int main() {
     applicationConfigs.m_applicationName = "EcoSysLab";
     Application::Create(applicationConfigs);
 
-    Application::PushLayer<TreeVisualizationLayer>();
+    Application::PushLayer<EcoSysLabLayer>();
 #ifdef RAYTRACERFACILITY
     Application::PushLayer<RayTracerLayer>();
 #endif

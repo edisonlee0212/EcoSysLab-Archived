@@ -2,7 +2,7 @@
 // Created by lllll on 11/1/2022.
 //
 
-#include "TreeVisualizationLayer.hpp"
+#include "EcoSysLabLayer.hpp"
 
 #include "Climate.hpp"
 #include "Soil.hpp"
@@ -10,7 +10,7 @@
 
 using namespace EcoSysLab;
 
-void TreeVisualizationLayer::OnCreate() {
+void EcoSysLabLayer::OnCreate() {
 	if (m_randomColors.empty()) {
 		for (int i = 0; i < 10000; i++) {
 			m_randomColors.emplace_back(glm::linearRand(glm::vec3(0.0f), glm::vec3(1.0f)));
@@ -35,7 +35,7 @@ void TreeVisualizationLayer::OnCreate() {
 	m_rootStrands = ProjectManager::CreateTemporaryAsset<Strands>();
 }
 
-void TreeVisualizationLayer::OnDestroy() {
+void EcoSysLabLayer::OnDestroy() {
 
 }
 struct Branch
@@ -45,7 +45,7 @@ struct Branch
 	glm::vec3 m_endPosition;
 	float m_endThickness;
 };
-void TreeVisualizationLayer::LateUpdate() {
+void EcoSysLabLayer::LateUpdate() {
 	auto scene = GetScene();
 	auto editorLayer = Application::GetLayer<EditorLayer>();
 	auto selectedEntity = editorLayer->GetSelectedEntity();
@@ -458,8 +458,8 @@ void TreeVisualizationLayer::LateUpdate() {
 	}
 }
 
-void TreeVisualizationLayer::OnInspect() {
-	if (ImGui::Begin("Tree Visualization Layer")) {
+void EcoSysLabLayer::OnInspect() {
+	if (ImGui::Begin("EcoSysLab Layer")) {
 		auto scene = GetScene();
 		const std::vector<Entity>* treeEntities =
 			scene->UnsafeGetPrivateComponentOwnersList<Tree>();
@@ -537,17 +537,17 @@ void TreeVisualizationLayer::OnInspect() {
 	ImGui::End();
 }
 
-void TreeVisualizationLayer::OnSoilVisualizationMenu()
+void EcoSysLabLayer::OnSoilVisualizationMenu()
 {
 }
 
-void TreeVisualizationLayer::FixedUpdate() {
+void EcoSysLabLayer::FixedUpdate() {
 	if (m_autoGrow) {
 		GrowAllTrees();
 	}
 }
 
-void TreeVisualizationLayer::GrowAllTrees() {
+void EcoSysLabLayer::GrowAllTrees() {
 	auto scene = GetScene();
 	const std::vector<Entity>* treeEntities =
 		scene->UnsafeGetPrivateComponentOwnersList<Tree>();
@@ -571,7 +571,7 @@ void TreeVisualizationLayer::GrowAllTrees() {
 	}
 }
 
-void TreeVisualizationLayer::GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings) {
+void EcoSysLabLayer::GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings) {
 	auto scene = GetScene();
 	const std::vector<Entity>* treeEntities =
 		scene->UnsafeGetPrivateComponentOwnersList<Tree>();

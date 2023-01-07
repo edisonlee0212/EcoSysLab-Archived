@@ -6,7 +6,7 @@
 #include "TreeMeshGenerator.hpp"
 using namespace UniEngine;
 namespace EcoSysLab {
-	class TreeVisualizationLayer : public ILayer {
+	class EcoSysLabLayer : public ILayer {
 		bool m_displayBranches = true;
 		bool m_displayRootFlows = true;
 		bool m_displayBoundingBox = false;
