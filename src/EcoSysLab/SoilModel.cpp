@@ -120,12 +120,16 @@ void SoilModel::Initialize(const SoilParameters& p)
 		});
 
 	m_initialized = true;
-	Reset();
 
+	auto numVoxels = m_resolution.x * m_resolution.y * m_resolution.z;
+	m_soilDensity = vector<float>(numVoxels);
 	for(int i = 0; i < m_soilDensity.size(); i++)
 	{
 		m_soilDensity[i] = p.m_soilDensitySampleFunc(GetPositionFromCoordinate(GetCoordinateFromIndex(i)));
 	}
+
+	Reset();
+
 }
 
 void SoilModel::Reset()
@@ -154,7 +158,6 @@ void SoilModel::Reset()
 
 	m_grad_cw = empty;
 	m_nutrientsDensity = empty;
-	//m_soilDensity = empty;
 	auto tmp = empty;
 
 	// add some water
