@@ -458,7 +458,13 @@ void TreeVisualizationLayer::OnInspect() {
 		auto scene = GetScene();
 		const std::vector<Entity>* treeEntities =
 			scene->UnsafeGetPrivateComponentOwnersList<Tree>();
-
+		if (ImGui::TreeNodeEx("Mesh generation", ImGuiTreeNodeFlags_DefaultOpen)) {
+			m_meshGeneratorSettings.OnInspect();
+			if (ImGui::Button("Generate Meshes")) {
+				GenerateMeshes(m_meshGeneratorSettings);
+			}
+			ImGui::TreePop();
+		}
 		ImGui::Checkbox("Generate Strands", &m_generateGeometry);
 		if (m_generateGeometry) {
 			Editor::DragAndDropButton(m_branchStrandsHolder, "Branch strands holder");
@@ -505,13 +511,7 @@ void TreeVisualizationLayer::OnInspect() {
 			ImGui::Text("Total Root node size: %d", m_rootNodeSize);
 			ImGui::Text("Total Root Flow size: %d", m_rootFlowSize);
 
-			if (ImGui::TreeNode("Mesh generation")) {
-				m_meshGeneratorSettings.OnInspect();
-				if (ImGui::Button("Generate Meshes")) {
-					GenerateMeshes(m_meshGeneratorSettings);
-				}
-				ImGui::TreePop();
-			}
+			
 		}
 
 

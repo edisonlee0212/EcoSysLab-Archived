@@ -16,6 +16,9 @@ namespace EcoSysLab
 		glm::vec3 m_startPosition = glm::vec3(-3.25f, -1.65f, -3.25f);
 
 		SoilParameters m_soilParameters;
+
+		AssetRef m_heightField;
+
 		/**ImGui menu goes to here.Also you can take care you visualization with Gizmos here.
 		 * Note that the visualization will only be activated while you are inspecting the soil private component in the entity inspector.
 		 */
@@ -24,6 +27,8 @@ namespace EcoSysLab
 		void Serialize(YAML::Emitter& out) override;
 
 		void Deserialize(const YAML::Node& in) override;
+
+		void CollectAssetRef(std::vector<AssetRef>& list) override;
 	};
 	enum class SoilProperty
 	{
@@ -51,6 +56,12 @@ namespace EcoSysLab
 		 */
 		void OnInspect() override;
 
+		void Serialize(YAML::Emitter& out) override;
 
+		void Deserialize(const YAML::Node& in) override;
+
+		void CollectAssetRef(std::vector<AssetRef>& list) override;
+
+		void GenerateMesh();
 	};
 }

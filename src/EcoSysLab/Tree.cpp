@@ -161,98 +161,201 @@ void TreeDescriptor::OnCreate() {
 }
 
 
-void OnInspectTreeGrowthParameters(TreeGrowthParameters& treeGrowthParameters) {
+bool OnInspectTreeGrowthParameters(TreeGrowthParameters& treeGrowthParameters) {
+	bool changed = false;
 	if (ImGui::TreeNodeEx("Tree Parameters", ImGuiTreeNodeFlags_DefaultOpen)) {
 		if (ImGui::TreeNodeEx("Structure", ImGuiTreeNodeFlags_DefaultOpen)) {
-			ImGui::DragInt("Lateral bud count", &treeGrowthParameters.m_lateralBudCount);
-			ImGui::DragInt("Fruit bud count", &treeGrowthParameters.m_fruitBudCount);
-			ImGui::DragInt("Leaf bud count", &treeGrowthParameters.m_leafBudCount);
-			ImGui::DragFloat2("Branching Angle mean/var", &treeGrowthParameters.m_branchingAngleMeanVariance.x,
-				0.01f);
-			ImGui::DragFloat2("Roll Angle mean/var", &treeGrowthParameters.m_rollAngleMeanVariance.x, 0.01f);
-			ImGui::DragFloat2("Apical Angle mean/var", &treeGrowthParameters.m_apicalAngleMeanVariance.x,
-				0.01f);
-			ImGui::DragFloat("Gravitropism", &treeGrowthParameters.m_gravitropism, 0.01f);
-			ImGui::DragFloat("Phototropism", &treeGrowthParameters.m_phototropism, 0.01f);
-			ImGui::DragFloat("Internode length", &treeGrowthParameters.m_internodeLength, 0.01f);
-			ImGui::DragFloat("Growth rate", &treeGrowthParameters.m_growthRate, 0.01f);
-			ImGui::DragFloat2("Thickness min/factor", &treeGrowthParameters.m_endNodeThicknessAndControl.x,
-				0.01f);
+			if (ImGui::DragInt("Lateral bud count", &treeGrowthParameters.m_lateralBudCount))
+			{
+				changed = true;
+			}
+			if (ImGui::DragInt("Fruit bud count", &treeGrowthParameters.m_fruitBudCount))
+			{
+				changed = true;
+			}
+			if (ImGui::DragInt("Leaf bud count", &treeGrowthParameters.m_leafBudCount))
+			{
+				changed = true;
+			}
+			if (ImGui::DragFloat2("Branching Angle mean/var", &treeGrowthParameters.m_branchingAngleMeanVariance.x,
+				0.01f))
+			{
+				changed = true;
+			}
+			if (ImGui::DragFloat2("Roll Angle mean/var", &treeGrowthParameters.m_rollAngleMeanVariance.x, 0.01f))
+			{
+				changed = true;
+			}
+			if (ImGui::DragFloat2("Apical Angle mean/var", &treeGrowthParameters.m_apicalAngleMeanVariance.x,
+				0.01f))
+			{
+				changed = true;
+			}
+			if (ImGui::DragFloat("Gravitropism", &treeGrowthParameters.m_gravitropism, 0.01f))
+			{
+				changed = true;
+			}
+			if (ImGui::DragFloat("Phototropism", &treeGrowthParameters.m_phototropism, 0.01f))
+			{
+				changed = true;
+			}
+			if (ImGui::DragFloat("Internode length", &treeGrowthParameters.m_internodeLength, 0.01f))
+			{
+				changed = true;
+			}
+			if (ImGui::DragFloat("Growth rate", &treeGrowthParameters.m_growthRate, 0.01f))
+			{
+				changed = true;
+			}
+			if (ImGui::DragFloat2("Thickness min/factor", &treeGrowthParameters.m_endNodeThicknessAndControl.x,
+				0.01f))
+			{
+				changed = true;
+			}
 			ImGui::TreePop();
 		}
 		if (ImGui::TreeNodeEx("Bud", ImGuiTreeNodeFlags_DefaultOpen)) {
-			ImGui::DragFloat("Lateral bud flushing probability",
-				&treeGrowthParameters.m_lateralBudFlushingProbability, 0.01f);
-			ImGui::DragFloat2("Apical control base/dist", &treeGrowthParameters.m_apicalControlBaseDistFactor.x,
-				0.01f);
-			ImGui::DragFloat3("Apical dominance base/age/dist",
-				&treeGrowthParameters.m_apicalDominanceBaseAgeDist.x, 0.01f);
+			if (ImGui::DragFloat("Lateral bud flushing probability",
+				&treeGrowthParameters.m_lateralBudFlushingProbability, 0.01f))
+			{
+				changed = true;
+			}
+			if (ImGui::DragFloat2("Apical control base/dist", &treeGrowthParameters.m_apicalControlBaseDistFactor.x,
+				0.01f))
+			{
+				changed = true;
+			}
+			if (ImGui::DragFloat3("Apical dominance base/age/dist",
+				&treeGrowthParameters.m_apicalDominanceBaseAgeDist.x, 0.01f))
+			{
+				changed = true;
+			}
 			int maxAgeBeforeInhibitorEnds = treeGrowthParameters.m_apicalDominanceBaseAgeDist.x /
 				treeGrowthParameters.m_apicalDominanceBaseAgeDist.y;
 			float maxDistance = treeGrowthParameters.m_apicalDominanceBaseAgeDist.x /
 				treeGrowthParameters.m_apicalDominanceBaseAgeDist.z;
 			ImGui::Text("Max age / distance: [%i, %.3f]", maxAgeBeforeInhibitorEnds, maxDistance);
 
-			ImGui::DragFloat("Kill probability",
-				&treeGrowthParameters.m_budKillProbability, 0.01f);
+			if (ImGui::DragFloat("Kill probability",
+				&treeGrowthParameters.m_budKillProbability, 0.01f))
+			{
+				changed = true;
+			}
 
-			ImGui::DragFloat3("Base resource shoot/leaf/fruit",
-				&treeGrowthParameters.m_baseResourceRequirementFactor.x, 0.01f);
+			if (ImGui::DragFloat3("Base resource shoot/leaf/fruit",
+				&treeGrowthParameters.m_baseResourceRequirementFactor.x, 0.01f))
+			{
+				changed = true;
+			}
 
-			ImGui::DragFloat3("Productive resource shoot/leaf/fruit",
-				&treeGrowthParameters.m_productiveResourceRequirementFactor.x, 0.01f);
+			if (ImGui::DragFloat3("Productive resource shoot/leaf/fruit",
+				&treeGrowthParameters.m_productiveResourceRequirementFactor.x, 0.01f))
+			{
+				changed = true;
+			}
 
 			ImGui::TreePop();
 		}
 		if (ImGui::TreeNodeEx("Internode")) {
-			ImGui::DragFloat("Low Branch Pruning", &treeGrowthParameters.m_lowBranchPruning, 0.01f);
-			ImGui::DragFloat3("Sagging thickness/reduction/max",
-				&treeGrowthParameters.m_saggingFactorThicknessReductionMax.x, 0.01f, 0.0f, 1.0f, "%.5f");
+			if (ImGui::DragFloat("Low Branch Pruning", &treeGrowthParameters.m_lowBranchPruning, 0.01f);
+				ImGui::DragFloat3("Sagging thickness/reduction/max",
+					&treeGrowthParameters.m_saggingFactorThicknessReductionMax.x, 0.01f, 0.0f, 1.0f, "%.5f"))
+			{
+				changed = true;
+			}
 			ImGui::TreePop();
 		}
 		ImGui::TreePop();
 	}
+
+	return changed;
 }
 
-void OnInspectRootGrowthParameters(RootGrowthParameters& rootGrowthParameters) {
+bool OnInspectRootGrowthParameters(RootGrowthParameters& rootGrowthParameters) {
+	bool changed = false;
 	if (ImGui::TreeNodeEx("Root Parameters", ImGuiTreeNodeFlags_DefaultOpen)) {
 		if (ImGui::TreeNodeEx("Structure", ImGuiTreeNodeFlags_DefaultOpen)) {
-			ImGui::DragFloat("Root node length", &rootGrowthParameters.m_rootNodeLength, 0.01f);
-			ImGui::DragFloat2("Thickness min/factor", &rootGrowthParameters.m_endNodeThicknessAndControl.x,
-				0.01f);
-			ImGui::DragFloat("Thickness accmu", &rootGrowthParameters.m_thicknessLengthAccumulate, 0.000001f, 0.0f, 1.0f, "%.6f");
-			ImGui::DragFloat2("Branching Angle mean/var", &rootGrowthParameters.m_branchingAngleMeanVariance.x,
-				0.01f);
-			ImGui::DragFloat2("Roll Angle mean/var", &rootGrowthParameters.m_rollAngleMeanVariance.x, 0.01f);
-			ImGui::DragFloat2("Apical Angle mean/var", &rootGrowthParameters.m_apicalAngleMeanVariance.x,
-				0.01f);
+			if (ImGui::DragFloat("Root node length", &rootGrowthParameters.m_rootNodeLength, 0.01f))
+			{
+				changed = true;
+			}
+			if (ImGui::DragFloat2("Thickness min/factor", &rootGrowthParameters.m_endNodeThicknessAndControl.x,
+				0.01f))
+			{
+				changed = true;
+			}
+			if (ImGui::DragFloat("Thickness accmu", &rootGrowthParameters.m_thicknessLengthAccumulate, 0.000001f, 0.0f, 1.0f, "%.6f"))
+			{
+				changed = true;
+			}
+			if (ImGui::DragFloat2("Branching Angle mean/var", &rootGrowthParameters.m_branchingAngleMeanVariance.x,
+				0.01f))
+			{
+				changed = true;
+			}
+			if (ImGui::DragFloat2("Roll Angle mean/var", &rootGrowthParameters.m_rollAngleMeanVariance.x, 0.01f))
+			{
+				changed = true;
+			}
+			if (ImGui::DragFloat2("Apical Angle mean/var", &rootGrowthParameters.m_apicalAngleMeanVariance.x,
+				0.01f))
+			{
+				changed = true;
+			}
 			ImGui::TreePop();
 		}
 		if (ImGui::TreeNodeEx("Growth", ImGuiTreeNodeFlags_DefaultOpen))
 		{
-			ImGui::DragFloat("Growth rate", &rootGrowthParameters.m_growthRate, 0.01f);
-			ImGui::DragFloat("Auxin loss", &rootGrowthParameters.m_auxinTransportLoss, 0.01f);
-			ImGui::DragFloat("Tropism switching prob", &rootGrowthParameters.m_tropismSwitchingProbability, 0.01f);
-			ImGui::DragFloat("Tropism switching prob dist factor", &rootGrowthParameters.m_tropismSwitchingProbabilityDistanceFactor, 0.01f);
-			ImGui::DragFloat("Tropism intensity", &rootGrowthParameters.m_tropismIntensity, 0.01f);
-			ImGui::DragFloat("Branching prob base", &rootGrowthParameters.m_baseBranchingProbability, 0.01f);
-			ImGui::DragFloat("Branching prob child decrease", &rootGrowthParameters.m_branchingProbabilityChildrenDecrease, 0.01f);
-			ImGui::DragFloat("Branching prob dist decrease", &rootGrowthParameters.m_branchingProbabilityDistanceDecrease, 0.01f);
+			if (ImGui::DragFloat("Growth rate", &rootGrowthParameters.m_growthRate, 0.01f))
+			{
+				changed = true;
+			}
+			if (ImGui::DragFloat("Auxin loss", &rootGrowthParameters.m_auxinTransportLoss, 0.01f))
+			{
+				changed = true;
+			}
+			if (ImGui::DragFloat("Tropism switching prob", &rootGrowthParameters.m_tropismSwitchingProbability, 0.01f))
+			{
+				changed = true;
+			}
+			if (ImGui::DragFloat("Tropism switching prob dist factor", &rootGrowthParameters.m_tropismSwitchingProbabilityDistanceFactor, 0.01f))
+			{
+				changed = true;
+			}
+			if (ImGui::DragFloat("Tropism intensity", &rootGrowthParameters.m_tropismIntensity, 0.01f))
+			{
+				changed = true;
+			}
+			if (ImGui::DragFloat("Branching prob base", &rootGrowthParameters.m_baseBranchingProbability, 0.01f))
+			{
+				changed = true;
+			}
+			if (ImGui::DragFloat("Branching prob child decrease", &rootGrowthParameters.m_branchingProbabilityChildrenDecrease, 0.01f))
+			{
+				changed = true;
+			}
+			if (ImGui::DragFloat("Branching prob dist decrease", &rootGrowthParameters.m_branchingProbabilityDistanceDecrease, 0.01f))
+			{
+				changed = true;
+			}
 			ImGui::TreePop();
 		}
 		ImGui::TreePop();
 	}
+	return changed;
 }
 
 void TreeDescriptor::OnInspect() {
+	bool changed = false;
 	if (ImGui::Button("Instantiate")) {
 		auto scene = Application::GetActiveScene();
 		auto treeEntity = scene->CreateEntity(GetTitle());
 		auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
 		tree->m_treeDescriptor = ProjectManager::GetAsset(GetHandle());
 	}
-	OnInspectTreeGrowthParameters(m_treeGrowthParameters);
-	OnInspectRootGrowthParameters(m_rootGrowthParameters);
+	if (OnInspectTreeGrowthParameters(m_treeGrowthParameters)) { changed = true; }
+	if (OnInspectRootGrowthParameters(m_rootGrowthParameters)) { changed = true; }
+	if (changed) m_saved = false;
 }
 
 void TreeDescriptor::CollectAssetRef(std::vector<AssetRef>& list) {

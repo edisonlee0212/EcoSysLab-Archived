@@ -4,28 +4,56 @@
 
 #include "EditorLayer.hpp"
 #include "Graphics.hpp"
+#include "HeightField.hpp"
 using namespace EcoSysLab;
-void OnInspectSoilParameters(SoilParameters& soilParameters)
+bool OnInspectSoilParameters(SoilParameters& soilParameters)
 {
+	bool changed = false;
 	if (ImGui::TreeNodeEx("Soil Parameters", ImGuiTreeNodeFlags_DefaultOpen))
 	{
-		ImGui::DragFloat("Density gradient factor", &soilParameters.m_densityGradientForceFactor, 0.01f, 0.0f, 999.0f);
-		ImGui::DragFloat("Gravity factor", &soilParameters.m_gravityForceFactor, 0.01f, 0.0f, 999.0f);
-		ImGui::DragFloat("Capacity gradient factor", &soilParameters.m_capacityGradientForceFactor, 0.01f, 0.0f, 999.0f);
+		if (ImGui::DragFloat("Density gradient factor", &soilParameters.m_densityGradientForceFactor, 0.01f, 0.0f, 999.0f))
+		{
+			changed = true;
+		}
+		if (ImGui::DragFloat("Gravity factor", &soilParameters.m_gravityForceFactor, 0.01f, 0.0f, 999.0f))
+		{
+			changed = true;
+		}
+		if (ImGui::DragFloat("Capacity gradient factor", &soilParameters.m_capacityGradientForceFactor, 0.01f, 0.0f, 999.0f))
+		{
+			changed = true;
+		}
 
-		ImGui::DragFloat("Delta time", &soilParameters.m_deltaTime, 0.01f, 0.0f, 999.0f);
+		if (ImGui::DragFloat("Delta time", &soilParameters.m_deltaTime, 0.01f, 0.0f, 999.0f))
+		{
+			changed = true;
+		}
 		ImGui::TreePop();
 	}
+	return changed;
 }
 void SoilDescriptor::OnInspect()
 {
+	bool changed = false;
+	if (Editor::DragAndDropButton<HeightField>(m_heightField, "Height Field", true))
+	{
+		changed = true;
+	}
+
 	glm::ivec3 resolution = m_voxelResolution;
 	if (ImGui::DragInt3("Voxel Resolution", &resolution.x, 1, 1, 100))
 	{
 		m_voxelResolution = resolution;
+		changed = true;
 	}
-	ImGui::DragFloat("Voxel Size", &m_voxelSize, 0.01f, 0.01f, 1.0f);
-	ImGui::DragFloat3("Voxel Start Position", &m_startPosition.x, 0.01f);
+	if (ImGui::DragFloat("Voxel Size", &m_voxelSize, 0.01f, 0.01f, 1.0f))
+	{
+		changed = true;
+	}
+	if (ImGui::DragFloat3("Voxel Start Position", &m_startPosition.x, 0.01f))
+	{
+		changed = true;
+	}
 
 	if (ImGui::Button("Instantiate")) {
 		auto scene = Application::GetActiveScene();
@@ -33,27 +61,41 @@ void SoilDescriptor::OnInspect()
 		auto soil = scene->GetOrSetPrivateComponent<Soil>(soilEntity).lock();
 		soil->m_soilDescriptor = ProjectManager::GetAsset(GetHandle());
 		soil->m_soilModel.Initialize(m_soilParameters, m_voxelResolution, m_voxelSize, m_startPosition);
-
-
 	}
 
 
-	OnInspectSoilParameters(m_soilParameters);
+	if (OnInspectSoilParameters(m_soilParameters))
+	{
+		changed = true;
+	}
+
+	if (changed) m_saved = false;
 }
 
 
 
 void Soil::OnInspect()
 {
-	if (m_soilDescriptor.Get<SoilDescriptor>())
+	if (Editor::DragAndDropButton<SoilDescriptor>(m_soilDescriptor, "SoilDescriptor", true)) {
+		auto soilDescriptor = m_soilDescriptor.Get<SoilDescriptor>();
+		if (soilDescriptor)
+		{
+			m_soilModel.Initialize(soilDescriptor->m_soilParameters, soilDescriptor->m_voxelResolution, soilDescriptor->m_voxelSize, soilDescriptor->m_startPosition);
+		}
+	}
+	auto soilDescriptor = m_soilDescriptor.Get<SoilDescriptor>();
+	if (soilDescriptor)
 	{
+		if (ImGui::Button("Generate surface mesh")) {
+			GenerateMesh();
+		}
 		//auto soilDescriptor = m_soilDescriptor.Get<SoilDescriptor>();
 		//if (!m_soilModel.m_initialized) m_soilModel.Initialize(soilDescriptor->m_soilParameters);
 		assert(m_soilModel.m_initialized);
 		static bool autoStep = false;
 		if (ImGui::Button("Reset"))
 		{
-			m_soilModel.Reset();
+			m_soilModel.Initialize(soilDescriptor->m_soilParameters, soilDescriptor->m_voxelResolution, soilDescriptor->m_voxelSize, soilDescriptor->m_startPosition);
 		}
 		bool updateVectorMatrices = false;
 		bool updateVectorColors = false;
@@ -97,7 +139,7 @@ void Soil::OnInspect()
 			static float vectorLineMaxWidth = 0.1f;
 			if (ImGui::TreeNodeEx("Vector", ImGuiTreeNodeFlags_DefaultOpen))
 			{
-				if(ImGui::Button("Reset"))
+				if (ImGui::Button("Reset"))
 				{
 					vectorMultiplier = 50.0f;
 					vectorBaseColor = glm::vec4(1.0f, 1.0f, 1.0f, 0.8f);
@@ -387,6 +429,71 @@ void Soil::OnInspect()
 	}
 }
 
+void Soil::Serialize(YAML::Emitter& out)
+{
+	m_soilDescriptor.Save("m_soilDescriptor", out);
+}
+
+void Soil::Deserialize(const YAML::Node& in)
+{
+	m_soilDescriptor.Load("m_soilDescriptor", in);
+	auto soilDescriptor = m_soilDescriptor.Get<SoilDescriptor>();
+	if (soilDescriptor) {
+		m_soilModel.Initialize(soilDescriptor->m_soilParameters, soilDescriptor->m_voxelResolution, soilDescriptor->m_voxelSize, soilDescriptor->m_startPosition);
+	}
+}
+
+void Soil::CollectAssetRef(std::vector<AssetRef>& list)
+{
+	list.push_back(m_soilDescriptor);
+}
+
+void Soil::GenerateMesh()
+{
+	const auto soilDescriptor = m_soilDescriptor.Get<SoilDescriptor>();
+	if (!soilDescriptor)
+	{
+		UNIENGINE_ERROR("No soil descriptor!");
+		return;
+	}
+	const auto heightField = soilDescriptor->m_heightField.Get<HeightField>();
+	if (!heightField)
+	{
+		UNIENGINE_ERROR("No height field!");
+		return;
+	}
+	std::vector<Vertex> vertices;
+	std::vector<glm::uvec3> triangles;
+	heightField->GenerateMesh(glm::vec2(soilDescriptor->m_startPosition.x, soilDescriptor->m_startPosition.z), 
+		glm::uvec2(soilDescriptor->m_voxelResolution.x, soilDescriptor->m_voxelResolution.z), soilDescriptor->m_voxelSize, vertices, triangles);
+
+	const auto scene = Application::GetActiveScene();
+	const auto self = GetOwner();
+	Entity groundSurfaceEntity;
+	const auto children = scene->GetChildren(self);
+
+	for (const auto& child : children) {
+		auto name = scene->GetEntityName(child);
+		if (name == "Ground surface") {
+			groundSurfaceEntity = child;
+			break;
+		}
+	}
+	if (groundSurfaceEntity.GetIndex() == 0)
+	{
+		groundSurfaceEntity = scene->CreateEntity("Ground surface");
+		scene->SetParent(groundSurfaceEntity, self);
+	}
+
+	const auto meshRenderer =
+		scene->GetOrSetPrivateComponent<MeshRenderer>(groundSurfaceEntity).lock();
+	const auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
+	const auto material = ProjectManager::CreateTemporaryAsset<Material>();
+	mesh->SetVertices(17, vertices, triangles);
+	meshRenderer->m_mesh = mesh;
+	meshRenderer->m_material = material;
+}
+
 void SerializeSoilParameters(const std::string& name, const SoilParameters& soilParameters, YAML::Emitter& out) {
 	out << YAML::Key << name << YAML::BeginMap;
 	out << YAML::Key << "m_deltaTime" << YAML::Value << soilParameters.m_deltaTime;
@@ -411,7 +518,7 @@ void SoilDescriptor::Serialize(YAML::Emitter& out)
 	out << YAML::Key << "m_voxelResolution" << YAML::Value << m_voxelResolution;
 	out << YAML::Key << "m_voxelSize" << YAML::Value << m_voxelSize;
 	out << YAML::Key << "m_startPosition" << YAML::Value << m_startPosition;
-
+	m_heightField.Save("m_heightField", out);
 	SerializeSoilParameters("m_soilParameters", m_soilParameters, out);
 }
 
@@ -420,7 +527,12 @@ void SoilDescriptor::Deserialize(const YAML::Node& in)
 	if (in["m_voxelResolution"]) m_voxelResolution = in["m_voxelResolution"].as<glm::uvec3>();
 	if (in["m_voxelSize"]) m_voxelSize = in["m_voxelSize"].as<float>();
 	if (in["m_startPosition"]) m_startPosition = in["m_startPosition"].as<glm::vec3>();
-
+	m_heightField.Load("m_heightField", in);
 	DeserializeSoilParameters("m_soilParameters", m_soilParameters, in);
+}
+
+void SoilDescriptor::CollectAssetRef(std::vector<AssetRef>& list)
+{
+	list.push_back(m_heightField);
 }
 

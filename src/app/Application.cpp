@@ -21,6 +21,7 @@
 #include "Trees.hpp"
 #include "TreeVisualizationLayer.hpp"
 #include "RadialBoundingVolume.hpp"
+#include "HeightField.hpp"
 #ifdef RAYTRACERFACILITY
 using namespace RayTracerFacility;
 #endif
@@ -38,6 +39,9 @@ int main() {
     ClassRegistry::RegisterAsset<SoilDescriptor>("SoilDescriptor", { ".sd" });
     ClassRegistry::RegisterAsset<ClimateDescriptor>("ClimateDescriptor", { ".cd" });
     ClassRegistry::RegisterAsset<RadialBoundingVolume>("RadialBoundingVolume", { ".rbv" });
+
+    ClassRegistry::RegisterAsset<HeightField>("HeightField", { ".hf" });
+    ClassRegistry::RegisterAsset<GroundSurface>("GroundSurface", { ".gs" });
     EngineSetup();
 
     ApplicationConfigs applicationConfigs;
