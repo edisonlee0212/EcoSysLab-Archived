@@ -101,6 +101,10 @@ void Soil::OnInspect()
 		{
 			InitializeSoilModel();
 		}
+		if (ImGui::Button("Reset"))
+		{
+			m_soilModel.Reset();
+		}
 
 		ImGui::InputFloat("Diffusion Force", &m_soilModel.m_diffusionForce);
 		ImGui::InputFloat3("Gravity Force", &m_soilModel.m_gravityForce.x);
@@ -112,6 +116,7 @@ void Soil::OnInspect()
 				m_soilModel.Irrigation();
 			m_soilModel.Step();
 		}
+		ImGui::SliderFloat("Irrigation amount", &m_soilModel.m_irrigationAmount, 0.01, 100, "%.2f", ImGuiSliderFlags_Logarithmic);
 		ImGui::Checkbox("apply Irrigation", &m_irrigation);
 
 		ImGui::InputFloat3("Source position", (float*)&m_sourcePositon);
@@ -121,6 +126,14 @@ void Soil::OnInspect()
 		{
 			m_soilModel.ChangeWater(m_sourcePositon, m_sourceAmount, m_sourceWidth);
 		}
+
+
+		// Show some general properties:
+		auto bbmin = m_soilModel.GetBoundingBoxMin();
+		auto bbmax = m_soilModel.GetBoundingBoxMax();
+		ImGui::InputFloat3("BB Min", &bbmin.x, "%.3f", ImGuiInputTextFlags_ReadOnly);
+		ImGui::InputFloat3("BB Max", &bbmax.x, "%.3f", ImGuiInputTextFlags_ReadOnly);
+		ImGui::InputFloat("Total Water", &m_soilModel.m_w_sum, 0.0f, 0.0f, "%.6f", ImGuiInputTextFlags_ReadOnly);
 	}
 }
 
@@ -231,6 +244,10 @@ void SerializeSoilParameters(const std::string& name, const SoilParameters& soil
 }
 
 void DeserializeSoilParameters(const std::string& name, SoilParameters& soilParameters, const YAML::Node& in) {
+
+	// temporarily disable to always use standard values as defined in code. Reenable once we actually want to save different scenes
+	return;
+
 	// TODO: add warning / error if not all elements are found
 	if (in[name]) {
 		auto& param = in[name];

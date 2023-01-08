@@ -92,13 +92,16 @@ namespace EcoSysLab {
 
 		/////////////////////////////////
 
+		glm::vec3 m_boundingBoxMin;
+
 		float m_w_sum = 0;
+		std::mt19937 m_rnd;
+		float m_irrigationAmount = 1;
 
 		// helper variables:
 		std::vector<int>   m_blur_3x3_idx;
 		std::vector<float> m_blur_3x3_weights;
 
-		glm::vec3 m_boundingBoxMin;
 
 		void Convolution3(const std::vector<float>& input, std::vector<float>& output, const std::vector<int>& indices, const std::vector<float>& weights) const;
 	};
@@ -114,8 +117,8 @@ namespace EcoSysLab {
 		SoilModel::Boundary m_boundary_y = SoilModel::Boundary::sink;
 		SoilModel::Boundary m_boundary_z = SoilModel::Boundary::sink;
 
-		float m_diffusionForce = 1.0f;
-		glm::vec3 m_gravityForce = glm::vec3(0, 0, 0);
+		float m_diffusionForce = 0.1;
+		glm::vec3 m_gravityForce = glm::vec3(0, -0.05, 0);
 
 		std::function<float(const glm::vec3& position)> m_soilDensitySampleFunc = [](const glm::vec3& position)
 			{

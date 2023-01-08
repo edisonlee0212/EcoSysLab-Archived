@@ -53,6 +53,12 @@ int main() {
     Application::PushLayer<RayTracerLayer>();
 #endif
 
+    // adjust default camera speed
+    auto editorLayer = Application::GetLayer<EditorLayer>();
+    editorLayer->m_velocity = 15.f;
+    editorLayer->m_defaultSceneCameraPosition = glm::vec3(1.124, 0.218, 14.089);
+    // override default scene camera position etc.
+
 #pragma region Engine Loop
     Application::Start();
 #pragma endregion

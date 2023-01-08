@@ -602,7 +602,7 @@ void EcoSysLabLayer::OnSoilVisualizationMenu()
 			{
 				m_updateScalarColors = true;
 			}
-			if (ImGui::SliderFloat("Multiplier",  &m_scalarMultiplier, 0.1, 10000, "%.4f", ImGuiSliderFlags_Logarithmic))
+			if (ImGui::SliderFloat("Multiplier",  &m_scalarMultiplier, 0.001, 10000, "%.4f", ImGuiSliderFlags_Logarithmic))
 			{
 				m_updateScalarColors = true;
 			}
