@@ -156,7 +156,11 @@ void SoilModel::Reset()
 	m_div_grav_y = empty;
 	m_div_grav_z = empty;
 
-	m_grad_cw = empty;
+	m_c = empty;
+	m_c_grad_x = empty;
+	m_c_grad_y = empty;
+	m_c_grad_z = empty;
+
 	m_nutrientsDensity = empty;
 	auto tmp = empty;
 
@@ -306,7 +310,7 @@ void SoilModel::Step()
 		// boundary conditions for gradient:
 
 		// X:
-		if(Boundary::remove == m_boundary_x)
+		if(Boundary::sink == m_boundary_x)
 		{
 			for (auto y = 0u; y < m_resolution.y; ++y)
 			{
@@ -331,7 +335,7 @@ void SoilModel::Step()
 
 
 		// Y:
-		if(Boundary::remove == m_boundary_y)
+		if(Boundary::sink == m_boundary_y)
 		{
 			for (auto x = 0u; x < m_resolution.x; ++x)
 			{
@@ -355,7 +359,7 @@ void SoilModel::Step()
 		}
 
 		// Z:
-		if(Boundary::remove == m_boundary_z)
+		if(Boundary::sink == m_boundary_z)
 		{
 			for(auto x = 0u; x<m_resolution.x; ++x)
 			{
@@ -384,7 +388,7 @@ void SoilModel::Step()
 		Convolution3(m_w_grad_z, m_div_diff_z, grad_Index_z, grad_weights);
 
 		// X:
-		if(Boundary::remove == m_boundary_x)
+		if(Boundary::sink == m_boundary_x)
 		{
 			for (auto y = 0u; y < m_resolution.y; ++y)
 			{
@@ -407,7 +411,7 @@ void SoilModel::Step()
 		}
 
 		// Y:
-		if(Boundary::remove == m_boundary_y)
+		if(Boundary::sink == m_boundary_y)
 		{
 			// nothing?
 		}
@@ -424,7 +428,7 @@ void SoilModel::Step()
 		}
 
 		// Z:
-		if(Boundary::remove == m_boundary_z)
+		if(Boundary::sink == m_boundary_z)
 		{
 			// nothing?
 		}
@@ -615,7 +619,7 @@ void EcoSysLab::SoilModel::Irrigation()
 
 	if ((int)(m_time / 20.0) % 2 == 0)
 	{
-		ChangeWater(vec3(-18, 00, -15), 10, 8);
+		ChangeWater(vec3(-18, 0, 15), 10, 8);
 	}
 	if ((int)((m_time + 5) / 19.0) % 2 == 0)
 	{
@@ -640,23 +644,24 @@ float SoilModel::GetNutrient(const vec3& position) const
 	return m_nutrientsDensity[Index(GetCoordinateFromPosition(position))];
 }
 
-void SoilModel::ChangeWater(const vec3& center, float amount, float width)
+void SoilModel::ChangeField(std::vector<float>& field, const vec3& center, float amount, float width)
 {
 	width /= 3.0; // seems ok :D
 	auto cutoff = 3.0; // how much of the gaussian to keep
 
 	auto voxel_min = GetCoordinateFromPosition(center - vec3(width * cutoff));
-	auto voxel_max = GetCoordinateFromPosition(center + vec3(width * cutoff)) + ivec3(1);
+	auto voxel_max = GetCoordinateFromPosition(center + vec3(width * cutoff)) + ivec3(2);
 
 	voxel_min = glm::max(voxel_min, ivec3(0));
-	voxel_max = glm::min(voxel_max, static_cast<ivec3>(m_resolution));
+	voxel_max = glm::min(voxel_max, static_cast<ivec3>(m_resolution)-ivec3(1));
 
+	// the <= is important here
 	float sum = 0.f;
-	for (auto z = voxel_min.z; z < voxel_max.z; ++z)
+	for (auto z=voxel_min.z; z <= voxel_max.z; ++z)
 	{
-		for (auto y = voxel_min.y; y < voxel_max.y; ++y)
+		for (auto y=voxel_min.y; y <= voxel_max.y; ++y)
 		{
-			for (auto x = voxel_min.x; x < voxel_max.x; ++x)
+			for (auto x=voxel_min.x; x <= voxel_max.x; ++x)
 			{
 				auto pos = GetPositionFromCoordinate({ x, y, z });
 				auto l = glm::length(pos - center);
@@ -666,48 +671,36 @@ void SoilModel::ChangeWater(const vec3& center, float amount, float width)
 		}
 	}
 
-	for (auto z = voxel_min.z; z < voxel_max.z; ++z)
+	for (auto z = voxel_min.z; z <= voxel_max.z; ++z)
 	{
-		for (auto y = voxel_min.y; y < voxel_max.y; ++y)
+		for (auto y = voxel_min.y; y <= voxel_max.y; ++y)
 		{
-			for (auto x = voxel_min.x; x < voxel_max.x; ++x)
+			for (auto x = voxel_min.x; x <= voxel_max.x; ++x)
 			{
 				auto pos = GetPositionFromCoordinate({ x, y, z });
 				auto l = glm::length(pos - center);
 				auto v = glm::exp( - l*l / (2* width*width));
-				m_w[Index(x, y, z)] += v / sum * amount;
+				field[Index(x, y, z)] += v / sum * amount;
 			}
 		}
 	}
 
-	/*
-	// todo: actually have a subpixel shift on the kernel, depending on the position
-	auto cc = GetCoordinateFromPosition(position);
-	assert(cc.x > 0 && cc.y > 0 && cc.z > 0); // for the 3x3 kernel below
-	assert(cc.x < m_resolution.x-1
-		&& cc.y < m_resolution.y - 1
-		&& cc.z < m_resolution.z - 1);
+}
 
-	auto c = Index(cc);
-
-	for(auto i=0u; i<m_blur_3x3_idx.size(); ++i)
-	{
-		m_w[c+m_blur_3x3_idx[i]] += amount * m_blur_3x3_weights[i];
-	}
-	*/
+void SoilModel::ChangeWater(const glm::vec3& center, float amount, float width)
+{
+	ChangeField(m_w, center, amount, width);
 	update_w_sum();
-
-	m_version++;
 }
 
-void SoilModel::ChangeDensity(const vec3& position, float value)
+void SoilModel::ChangeDensity(const glm::vec3& center, float amount, float width)
 {
-	//return 0.0f;
+	ChangeField(m_soilDensity, center, amount, width);
 }
 
-void SoilModel::ChangeNutrient(const vec3& position, float value)
+void SoilModel::ChangeNutrient(const glm::vec3& center, float amount, float width)
 {
-	//return 0.0f;
+	ChangeField(m_nutrientsDensity, center, amount, width);
 }
 
 
