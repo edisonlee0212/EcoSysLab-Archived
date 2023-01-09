@@ -393,6 +393,9 @@ namespace EcoSysLab {
 		bool GrowRoots(const glm::mat4& globalTransform, SoilModel& soilModel,
 			const RootGrowthParameters& rootGrowthParameters, TreeGrowthNutrients& newTreeGrowthNutrientsRequirement);
 
+
+		int m_leafCount = 0;
+		int m_fruitCount = 0;
 	public:
 		Octree<TreeVoxelData> m_rootOctree;
 		Octree<TreeVoxelData> m_branchOctree;
@@ -408,6 +411,9 @@ namespace EcoSysLab {
 		 * Erase the entire tree.
 		 */
 		void Clear();
+
+		[[nodiscard]] int GetLeafCount() const;
+		[[nodiscard]] int GetFruitCount() const;
 
 		/**
 		 * Grow one iteration of the tree, given the nutrients and the procedural parameters.

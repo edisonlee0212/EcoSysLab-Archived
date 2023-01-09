@@ -8,6 +8,9 @@ using namespace UniEngine;
 namespace EcoSysLab {
 	class EcoSysLabLayer : public ILayer {
 		bool m_displayBranches = true;
+		bool m_displayFoliage = true;
+		bool m_displayFruit = true;
+
 		bool m_displayRootFlows = true;
 		bool m_displayBoundingBox = false;
 		bool m_displaySoil = true;
@@ -28,9 +31,17 @@ namespace EcoSysLab {
 		std::vector<glm::mat4> m_boundingBoxMatrices;
 		std::vector<glm::vec4> m_boundingBoxColors;
 
+		std::vector<glm::mat4> m_foliageMatrices;
+		std::vector<glm::vec4> m_foliageColors;
+
+		std::vector<glm::mat4> m_fruitMatrices;
+		std::vector<glm::vec4> m_fruitColors;
+
 		float m_lastUsedTime = 0.0f;
 		float m_totalTime = 0.0f;
 		int m_internodeSize = 0;
+		int m_leafSize = 0;
+		int m_fruitSize = 0;
 		int m_branchSize = 0;
 		int m_rootNodeSize = 0;
 		int m_rootFlowSize = 0;
@@ -74,10 +85,15 @@ namespace EcoSysLab {
 
 		void OnSoilVisualizationMenu();
 
+
+		void UpdateFlows(const std::vector<Entity>* treeEntities, const std::shared_ptr<Strands>& branchStrands, const std::shared_ptr<Strands>& rootStrands);
+
 		// helper functions to structure code a bit
 		void SoilVisualization();
-		void SoilVisualizationScalar(SoilModel& soilModel); // called durint LateUpdate()
-		void SoilVisualizationVector(SoilModel& soilModel); // called durint LateUpdate()
+		void SoilVisualizationScalar(SoilModel& soilModel); // called during LateUpdate()
+		void SoilVisualizationVector(SoilModel& soilModel); // called during LateUpdate()
+
+		void BranchRenderingGs(const std::vector<Entity>* treeEntities);
 
 		std::shared_ptr<OpenGLUtils::GLShader> m_treeBranchComp;
 		std::shared_ptr<OpenGLUtils::GLProgram> m_treeBranchComputeProgram;

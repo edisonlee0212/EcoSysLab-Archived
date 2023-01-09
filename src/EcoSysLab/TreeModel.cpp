@@ -702,8 +702,13 @@ bool TreeModel::GrowBranches(const glm::mat4& globalTransform, ClimateModel& cli
 			{
 				if(bud.m_status != BudStatus::Flushed) continue;
 				if (bud.m_maturity <= 0.0f) continue;
-				if(bud.m_type == BudType::Leaf || bud.m_type == BudType::Fruit)
+				if(bud.m_type == BudType::Leaf)
 				{
+					m_leafCount++;
+					bud.m_reproductiveModuleGlobalTransform = internodeGlobalTransform * bud.m_reproductiveModuleTransform;
+				}else if(bud.m_type == BudType::Fruit)
+				{
+					m_fruitCount++;
 					bud.m_reproductiveModuleGlobalTransform = internodeGlobalTransform * bud.m_reproductiveModuleTransform;
 				}
 			}
@@ -862,9 +867,19 @@ void TreeModel::Clear() {
 	m_initialized = false;
 }
 
+int TreeModel::GetLeafCount() const
+{
+	return m_leafCount;
+}
+
+int TreeModel::GetFruitCount() const
+{
+	return m_fruitCount;
+}
+
 
 bool TreeModel::LowBranchPruning(float maxDistance, NodeHandle internodeHandle,
-	const TreeGrowthParameters& treeGrowthParameters) {
+                                 const TreeGrowthParameters& treeGrowthParameters) {
 	auto& internode = m_branchSkeleton.RefNode(internodeHandle);
 	//Pruning here.
 	if (maxDistance > 5 && internode.m_data.m_order != 0 &&
@@ -1087,6 +1102,9 @@ void TreeModel::CollectWaterFromRoots(const glm::mat4& globalTransform, SoilMode
 bool TreeModel::Grow(const glm::mat4& globalTransform, SoilModel& soilModel, ClimateModel& climateModel,
 	const RootGrowthParameters& rootGrowthParameters, const TreeGrowthParameters& treeGrowthParameters)
 {
+	m_fruitCount = 0;
+	m_leafCount = 0;
+
 	bool treeStructureChanged = false;
 	bool rootStructureChanged = false;
 	if (!m_initialized) {
