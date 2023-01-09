@@ -86,7 +86,7 @@ void TreeMeshGeneratorSettings::Save(const std::string& name, YAML::Emitter& out
 	out << YAML::Key << "m_branchVertexColor" << YAML::Value << m_branchVertexColor;
 	out << YAML::Key << "m_foliageVertexColor" << YAML::Value << m_foliageVertexColor;
 
-
+	out << YAML::Key << "m_autoLevel" << YAML::Value << m_autoLevel;
 	out << YAML::Key << "m_voxelSubdivisionLevel" << YAML::Value << m_voxelSubdivisionLevel;
 	out << YAML::Key << "m_voxelSmoothIteration" << YAML::Value << m_voxelSmoothIteration;
 	out << YAML::Key << "m_removeDuplicate" << YAML::Value << m_removeDuplicate;
@@ -118,6 +118,7 @@ void TreeMeshGeneratorSettings::Load(const std::string& name, const YAML::Node& 
 		if (ms["m_foliageVertexColor"]) m_foliageVertexColor = ms["m_foliageVertexColor"].as<glm::vec3>();
 
 
+		if (ms["m_autoLevel"]) m_autoLevel = ms["m_autoLevel"].as<bool>();
 		if (ms["m_voxelSubdivisionLevel"]) m_voxelSubdivisionLevel = ms["m_voxelSubdivisionLevel"].as<int>();
 		if (ms["m_voxelSmoothIteration"]) m_voxelSmoothIteration = ms["m_voxelSmoothIteration"].as<int>();
 		if (ms["m_removeDuplicate"]) m_removeDuplicate = ms["m_removeDuplicate"].as<bool>();
@@ -164,7 +165,8 @@ void TreeMeshGeneratorSettings::OnInspect() {
 		}
 		if (m_enableRoot && ImGui::TreeNode("Root mesh settings"))
 		{
-			ImGui::DragInt("Voxel subdivision level", &m_voxelSubdivisionLevel, 1, 5, 16);
+			ImGui::Checkbox("Auto set level", &m_autoLevel);
+			if(!m_autoLevel) ImGui::DragInt("Voxel subdivision level", &m_voxelSubdivisionLevel, 1, 5, 16);
 			ImGui::DragInt("Smooth iteration", &m_voxelSmoothIteration, 0, 0, 10);
 			if (m_voxelSmoothIteration == 0) ImGui::Checkbox("Remove duplicate", &m_removeDuplicate);
 			if (m_overrideVertexColor) {

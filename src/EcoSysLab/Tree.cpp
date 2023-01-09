@@ -145,9 +145,15 @@ void Tree::GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings) 
 	{
 		std::vector<Vertex> vertices;
 		std::vector<unsigned int> indices;
+		const auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
+		float minRadius = 0.01f;
+		if(treeDescriptor)
+		{
+			minRadius = treeDescriptor->m_rootGrowthParameters.m_endNodeThicknessAndControl.x * 4.0f;
+		}
 		VoxelMeshGenerator<RootSkeletonGrowthData, RootBranchGrowthData, RootInternodeGrowthData> meshGenerator;
 		meshGenerator.Generate(m_treeModel.RefRootSkeleton(), vertices, indices,
-			meshGeneratorSettings);
+			meshGeneratorSettings, minRadius);
 		auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
 		auto material = ProjectManager::CreateTemporaryAsset<Material>();
 		material->SetProgram(DefaultResources::GLPrograms::StandardProgram);
@@ -209,7 +215,7 @@ bool OnInspectTreeGrowthParameters(TreeGrowthParameters& treeGrowthParameters) {
 			{
 				changed = true;
 			}
-			if (ImGui::DragFloat2("Thickness min/factor", &treeGrowthParameters.m_endNodeThicknessAndControl.x,
+			if (ImGui::DragFloat2("Thickness min/factor", &treeGrowthParameters.m_endNodeThickness,
 				0.01f))
 			{
 				changed = true;
@@ -227,16 +233,14 @@ bool OnInspectTreeGrowthParameters(TreeGrowthParameters& treeGrowthParameters) {
 			{
 				changed = true;
 			}
-			if (ImGui::DragFloat3("Apical dominance base/age/dist",
-				&treeGrowthParameters.m_apicalDominanceBaseAgeDist.x, 0.01f))
+			if (ImGui::DragFloat2("Apical dominance base/dist",
+				&treeGrowthParameters.m_apicalDominance, 0.01f))
 			{
 				changed = true;
 			}
-			int maxAgeBeforeInhibitorEnds = treeGrowthParameters.m_apicalDominanceBaseAgeDist.x /
-				treeGrowthParameters.m_apicalDominanceBaseAgeDist.y;
-			float maxDistance = treeGrowthParameters.m_apicalDominanceBaseAgeDist.x /
-				treeGrowthParameters.m_apicalDominanceBaseAgeDist.z;
-			ImGui::Text("Max age / distance: [%i, %.3f]", maxAgeBeforeInhibitorEnds, maxDistance);
+			float maxDistance = treeGrowthParameters.m_apicalDominance /
+				treeGrowthParameters.m_apicalDominanceDistanceFactor;
+			ImGui::Text("Max age / distance: [%.3f]", maxDistance);
 
 			if (ImGui::DragFloat("Kill probability",
 				&treeGrowthParameters.m_budKillProbability, 0.01f))
@@ -245,13 +249,13 @@ bool OnInspectTreeGrowthParameters(TreeGrowthParameters& treeGrowthParameters) {
 			}
 
 			if (ImGui::DragFloat3("Base resource shoot/leaf/fruit",
-				&treeGrowthParameters.m_baseResourceRequirementFactor.x, 0.01f))
+				&treeGrowthParameters.m_shootBaseWaterRequirement, 0.01f))
 			{
 				changed = true;
 			}
 
 			if (ImGui::DragFloat3("Productive resource shoot/leaf/fruit",
-				&treeGrowthParameters.m_productiveResourceRequirementFactor.x, 0.01f))
+				&treeGrowthParameters.m_shootProductiveWaterRequirement, 0.01f))
 			{
 				changed = true;
 			}
@@ -397,25 +401,39 @@ void SerializeTreeGrowthParameters(const std::string& name, const TreeGrowthPara
 	out << YAML::Key << "m_phototropism" << YAML::Value << treeGrowthParameters.m_phototropism;
 	out << YAML::Key << "m_internodeLength" << YAML::Value << treeGrowthParameters.m_internodeLength;
 	out << YAML::Key << "m_growthRate" << YAML::Value << treeGrowthParameters.m_growthRate;
-	out << YAML::Key << "m_endNodeThicknessAndControl" << YAML::Value
-		<< treeGrowthParameters.m_endNodeThicknessAndControl;
+	out << YAML::Key << "m_endNodeThickness" << YAML::Value
+		<< treeGrowthParameters.m_endNodeThickness;
+	out << YAML::Key << "m_thicknessAccumulateFactor" << YAML::Value
+		<< treeGrowthParameters.m_thicknessAccumulateFactor;
 	out << YAML::Key << "m_lateralBudFlushingProbability" << YAML::Value
 		<< treeGrowthParameters.m_lateralBudFlushingProbability;
 	out << YAML::Key << "m_apicalControlBaseDistFactor" << YAML::Value
 		<< treeGrowthParameters.m_apicalControlBaseDistFactor;
-	out << YAML::Key << "m_apicalDominanceBaseAgeDist" << YAML::Value
-		<< treeGrowthParameters.m_apicalDominanceBaseAgeDist;
+	out << YAML::Key << "m_apicalDominance" << YAML::Value
+		<< treeGrowthParameters.m_apicalDominance;
+	out << YAML::Key << "m_apicalDominanceDistanceFactor" << YAML::Value
+		<< treeGrowthParameters.m_apicalDominanceDistanceFactor;
+
 	out << YAML::Key << "m_budKillProbability" << YAML::Value
 		<< treeGrowthParameters.m_budKillProbability;
 	out << YAML::Key << "m_lowBranchPruning" << YAML::Value << treeGrowthParameters.m_lowBranchPruning;
 	out << YAML::Key << "m_saggingFactorThicknessReductionMax" << YAML::Value
 		<< treeGrowthParameters.m_saggingFactorThicknessReductionMax;
 
-	out << YAML::Key << "m_baseResourceRequirementFactor" << YAML::Value
-		<< treeGrowthParameters.m_baseResourceRequirementFactor;
-	out << YAML::Key << "m_productiveResourceRequirementFactor" << YAML::Value
-		<< treeGrowthParameters.m_productiveResourceRequirementFactor;
+	out << YAML::Key << "m_shootBaseWaterRequirement" << YAML::Value
+		<< treeGrowthParameters.m_shootBaseWaterRequirement;
+	out << YAML::Key << "m_leafBaseWaterRequirement" << YAML::Value
+		<< treeGrowthParameters.m_leafBaseWaterRequirement;
+	out << YAML::Key << "m_fruitBaseWaterRequirement" << YAML::Value
+		<< treeGrowthParameters.m_fruitBaseWaterRequirement;
 
+
+	out << YAML::Key << "m_shootProductiveWaterRequirement" << YAML::Value
+		<< treeGrowthParameters.m_shootProductiveWaterRequirement;
+	out << YAML::Key << "m_leafProductiveWaterRequirement" << YAML::Value
+		<< treeGrowthParameters.m_leafProductiveWaterRequirement;
+	out << YAML::Key << "m_fruitProductiveWaterRequirement" << YAML::Value
+		<< treeGrowthParameters.m_fruitProductiveWaterRequirement;
 	out << YAML::EndMap;
 }
 void SerializeRootGrowthParameters(const std::string& name, const RootGrowthParameters& rootGrowthParameters, YAML::Emitter& out) {
@@ -460,17 +478,26 @@ void DeserializeTreeGrowthParameters(const std::string& name, TreeGrowthParamete
 		if (param["m_phototropism"]) treeGrowthParameters.m_phototropism = param["m_phototropism"].as<float>();
 		if (param["m_internodeLength"]) treeGrowthParameters.m_internodeLength = param["m_internodeLength"].as<float>();
 		if (param["m_growthRate"]) treeGrowthParameters.m_growthRate = param["m_growthRate"].as<float>();
-		if (param["m_endNodeThicknessAndControl"]) treeGrowthParameters.m_endNodeThicknessAndControl = param["m_endNodeThicknessAndControl"].as<glm::vec2>();
+		if (param["m_endNodeThickness"]) treeGrowthParameters.m_endNodeThickness = param["m_endNodeThickness"].as<float>();
+		if (param["m_thicknessAccumulateFactor"]) treeGrowthParameters.m_thicknessAccumulateFactor = param["m_thicknessAccumulateFactor"].as<float>();
 
 		if (param["m_lateralBudFlushingProbability"]) treeGrowthParameters.m_lateralBudFlushingProbability = param["m_lateralBudFlushingProbability"].as<float>();
 		if (param["m_apicalControlBaseDistFactor"]) treeGrowthParameters.m_apicalControlBaseDistFactor = param["m_apicalControlBaseDistFactor"].as<glm::vec2>();
-		if (param["m_apicalDominanceBaseAgeDist"]) treeGrowthParameters.m_apicalDominanceBaseAgeDist = param["m_apicalDominanceBaseAgeDist"].as<glm::vec3>();
+		if (param["m_apicalDominance"]) treeGrowthParameters.m_apicalDominance = param["m_apicalDominance"].as<float>();
+		if (param["m_apicalDominanceDistanceFactor"]) treeGrowthParameters.m_apicalDominanceDistanceFactor = param["m_apicalDominanceDistanceFactor"].as<float>();
+
 		if (param["m_budKillProbability"]) treeGrowthParameters.m_budKillProbability = param["m_budKillProbability"].as<float>();
 		if (param["m_lowBranchPruning"]) treeGrowthParameters.m_lowBranchPruning = param["m_lowBranchPruning"].as<float>();
 		if (param["m_saggingFactorThicknessReductionMax"]) treeGrowthParameters.m_saggingFactorThicknessReductionMax = param["m_saggingFactorThicknessReductionMax"].as<glm::vec3>();
 
-		if (param["m_baseResourceRequirementFactor"]) treeGrowthParameters.m_baseResourceRequirementFactor = param["m_baseResourceRequirementFactor"].as<glm::vec3>();
-		if (param["m_productiveResourceRequirementFactor"]) treeGrowthParameters.m_productiveResourceRequirementFactor = param["m_productiveResourceRequirementFactor"].as<glm::vec3>();
+		if (param["m_shootBaseWaterRequirement"]) treeGrowthParameters.m_shootBaseWaterRequirement = param["m_shootBaseWaterRequirement"].as<float>();
+		if (param["m_leafBaseWaterRequirement"]) treeGrowthParameters.m_leafBaseWaterRequirement = param["m_leafBaseWaterRequirement"].as<float>();
+		if (param["m_fruitBaseWaterRequirement"]) treeGrowthParameters.m_fruitBaseWaterRequirement = param["m_fruitBaseWaterRequirement"].as<float>();
+
+		if (param["m_shootProductiveWaterRequirement"]) treeGrowthParameters.m_shootProductiveWaterRequirement = param["m_shootProductiveWaterRequirement"].as<float>();
+		if (param["m_leafProductiveWaterRequirement"]) treeGrowthParameters.m_leafProductiveWaterRequirement = param["m_leafProductiveWaterRequirement"].as<float>();
+		if (param["m_fruitProductiveWaterRequirement"]) treeGrowthParameters.m_fruitProductiveWaterRequirement = param["m_fruitProductiveWaterRequirement"].as<float>();
+
 	}
 }
 void DeserializeRootGrowthParameters(const std::string& name, RootGrowthParameters& rootGrowthParameters, const YAML::Node& in) {

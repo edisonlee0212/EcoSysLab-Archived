@@ -185,12 +185,17 @@ void EcoSysLabLayer::LateUpdate() {
 			}
 			int totalInternodeSize = 0;
 			int totalFlowSize = 0;
+			int totalRootNodeSize = 0;
+			int totalRootFlowSize = 0;
 			for (int i = 0; i < treeEntities->size(); i++) {
 				auto treeEntity = treeEntities->at(i);
 				auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
 				auto& treeModel = tree->m_treeModel;
 				totalInternodeSize += treeModel.RefBranchSkeleton().RefSortedNodeList().size();
 				totalFlowSize += treeModel.RefBranchSkeleton().RefSortedFlowList().size();
+				totalRootNodeSize += treeModel.RefRootSkeleton().RefSortedNodeList().size();
+				totalRootFlowSize += treeModel.RefRootSkeleton().RefSortedFlowList().size();
+
 				if (m_selectedTree == treeEntity) continue;
 				if (m_versions[i] != treeModel.RefBranchSkeleton().GetVersion()) {
 					m_versions[i] = treeModel.RefBranchSkeleton().GetVersion();
@@ -199,6 +204,9 @@ void EcoSysLabLayer::LateUpdate() {
 			}
 			m_internodeSize = totalInternodeSize;
 			m_branchSize = totalFlowSize;
+			m_rootNodeSize = totalRootNodeSize;
+			m_rootFlowSize = totalRootFlowSize;
+
 			if (m_needFlowUpdate) {
 				m_needFlowUpdate = false;
 				m_boundingBoxMatrices.clear();

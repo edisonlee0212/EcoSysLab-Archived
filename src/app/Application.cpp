@@ -53,6 +53,9 @@ int main() {
     Application::PushLayer<RayTracerLayer>();
 #endif
 
+    auto editorLayer = Application::GetLayer<EditorLayer>();
+    editorLayer->m_velocity = 15.f;
+
 #pragma region Engine Loop
     Application::Start();
 #pragma endregion

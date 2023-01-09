@@ -3,6 +3,7 @@
 #include "PlantStructure.hpp"
 #include "SoilModel.hpp"
 #include "ClimateModel.hpp"
+#include "Octree.hpp"
 using namespace UniEngine;
 namespace EcoSysLab {
 	enum class BudType {
@@ -197,23 +198,44 @@ namespace EcoSysLab {
 		* \brief The mean and variance of the angular difference between the growth direction and the direction of the apical bud
 		*/
 		glm::vec2 m_apicalAngleMeanVariance{};
-
+		/**
+		 * \brief The gravitropism.
+		 */
 		float m_gravitropism;
+		/**
+		 * \brief The phototropism
+		 */
 		float m_phototropism;
+		/**
+		 * \brief The internode length
+		 */
 		float m_internodeLength;
+		/**
+		 * \brief The growth rate
+		 */
 		float m_growthRate;
-		glm::vec2 m_endNodeThicknessAndControl{};
+		/**
+		 * \brief Thickness of internode
+		 */
+		float m_endNodeThickness;
+		float m_thicknessAccumulateFactor;
+		/**
+		 * \brief Flushing prob
+		 */
 		float m_lateralBudFlushingProbability;
-		/*
-		 * \brief To form significant trunk. Larger than 1 means forming big trunk.
+		/**
+		 * \brief AC
 		 */
 		glm::vec2 m_apicalControlBaseDistFactor{};
 
 		/**
 		* \brief How much inhibitor will an internode generate.
 		*/
-		glm::vec3 m_apicalDominanceBaseAgeDist{};
-
+		float m_apicalDominance;
+		float m_apicalDominanceDistanceFactor;
+		/**
+		* \brief How much inhibitor will an internode generate.
+		*/
 		float m_budKillProbability{};
 		/**
 		* \brief The limit of lateral branches being cut off when too close to the
@@ -224,13 +246,39 @@ namespace EcoSysLab {
 		 * \brief The strength of gravity bending.
 		 */
 		glm::vec3 m_saggingFactorThicknessReductionMax = glm::vec3(0.8f, 1.75f, 1.0f);
+		/**
+		* \brief Base resource requirement factor for internode
+		*/
+		float m_shootBaseWaterRequirement;
+		/**
+		* \brief Base resource requirement factor for leaf
+		*/
+		float m_leafBaseWaterRequirement;
+		/**
+		* \brief Base resource requirement factor for fruit
+		*/
+		float m_fruitBaseWaterRequirement;
+		/**
+		* \brief Productive resource requirement factor for internode elongation
+		*/
+		float m_shootProductiveWaterRequirement;
+		/**
+		* \brief Productive resource requirement factor for leaf to grow larger, later to generate carbohydrates
+		*/
+		float m_leafProductiveWaterRequirement;
+		/**
+		* \brief Productive resource requirement factor for fruit to grow larger
+		*/
+		float m_fruitProductiveWaterRequirement;
 
-		glm::vec3 m_baseResourceRequirementFactor{};
-		glm::vec3 m_productiveResourceRequirementFactor{};
+#pragma region Foliage
 
-		[[nodiscard]] int GetLateralBudCount(const Node<InternodeGrowthData>& internode) const;
-		[[nodiscard]] int GetFruitBudCount(const Node<InternodeGrowthData>& internode) const;
-		[[nodiscard]] int GetLeafBudCount(const Node<InternodeGrowthData>& internode) const;
+		glm::vec2 m_maxLeafSize;
+		float m_positionVariance = 0.5f;
+		float m_randomRotation = 10.0f;
+#pragma endregion
+#pragma region Fruit
+#pragma endregion
 
 		[[nodiscard]] float GetDesiredBranchingAngle(const Node<InternodeGrowthData>& internode) const;
 
@@ -238,53 +286,10 @@ namespace EcoSysLab {
 
 		[[nodiscard]] float GetDesiredApicalAngle(const Node<InternodeGrowthData>& internode) const;
 
-		[[nodiscard]] float GetGravitropism(const Node<InternodeGrowthData>& internode) const;
-
-		[[nodiscard]] float GetPhototropism(const Node<InternodeGrowthData>& internode) const;
-
-		[[nodiscard]] float GetInternodeLength(const Node<InternodeGrowthData>& internode) const;
-
-		[[nodiscard]] float GetExpectedGrowthRate(const Node<InternodeGrowthData>& internode) const;
-
-		[[nodiscard]] float GetEndNodeThickness(const Node<InternodeGrowthData>& internode) const;
-
-		[[nodiscard]] float GetThicknessControlFactor(const Node<InternodeGrowthData>& internode) const;
-
-		[[nodiscard]] float
-			GetLateralBudFlushingProbability(const Node<InternodeGrowthData>& internode) const;
-
 		[[nodiscard]] float GetApicalControl(const Node<InternodeGrowthData>& internode) const;
-
-		[[nodiscard]] float GetApicalDominanceBase(const Node<InternodeGrowthData>& internode) const;
-
-		[[nodiscard]] float GetApicalDominanceDecrease(const Node<InternodeGrowthData>& internode) const;
-
-		[[nodiscard]] float GetBudKillProbability(const Node<InternodeGrowthData>& internode) const;
-
-		[[nodiscard]] bool GetPruning(const Node<InternodeGrowthData>& internode) const;
-
-		[[nodiscard]] float GetLowBranchPruning(const Node<InternodeGrowthData>& internode) const;
 
 		[[nodiscard]] float GetSagging(const Node<InternodeGrowthData>& internode) const;
 
-
-		[[nodiscard]] float
-			GetShootBaseResourceRequirementFactor(const Node<InternodeGrowthData>& internode) const;
-
-		[[nodiscard]] float
-			GetLeafBaseResourceRequirementFactor(const Node<InternodeGrowthData>& internode) const;
-
-		[[nodiscard]] float
-			GetFruitBaseResourceRequirementFactor(const Node<InternodeGrowthData>& internode) const;
-
-		[[nodiscard]] float
-			GetShootProductiveResourceRequirementFactor(const Node<InternodeGrowthData>& internode) const;
-
-		[[nodiscard]] float
-			GetLeafProductiveResourceRequirementFactor(const Node<InternodeGrowthData>& internode) const;
-
-		[[nodiscard]] float
-			GetFruitProductiveResourceRequirementFactor(const Node<InternodeGrowthData>& internode) const;
 
 		TreeGrowthParameters();
 	};
@@ -295,9 +300,16 @@ namespace EcoSysLab {
 		float m_carbohydrate = 0.0f;
 	};
 
+	struct TreeVoxelData
+	{
+		NodeHandle m_nodeHandle = -1;
+		NodeHandle m_flowHandle = -1;
+		unsigned m_referenceCount = 0;
+	};
+
 	class TreeModel {
 #pragma region Root Growth
-
+		
 		bool ElongateRoot(const glm::mat4& globalTransform, SoilModel& soilModel, float extendLength, NodeHandle rootNodeHandle,
 			const RootGrowthParameters& rootGrowthParameters, float& collectedAuxin);
 
@@ -363,6 +375,11 @@ namespace EcoSysLab {
 			const RootGrowthParameters& rootGrowthParameters, TreeGrowthNutrients& newTreeGrowthNutrientsRequirement);
 
 	public:
+		Octree<TreeVoxelData> m_rootOctree;
+		Octree<TreeVoxelData> m_branchOctree;
+		bool m_enableRootCollisionDetection = false;
+		bool m_enableBranchCollisionDetection = false;
+
 		TreeGrowthNutrients m_treeGrowthNutrientsRequirement;
 		TreeGrowthNutrients m_treeGrowthNutrients;
 		float m_globalGrowthRate = 0.0f;

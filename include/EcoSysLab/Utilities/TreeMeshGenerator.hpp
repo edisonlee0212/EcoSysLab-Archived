@@ -43,12 +43,11 @@ namespace EcoSysLab {
         bool m_smoothness = true;
 
         glm::vec3 m_foliageVertexColor = glm::vec3(1.0f);
-
+        bool m_autoLevel = true;
         int m_voxelSubdivisionLevel = 10;
         int m_voxelSmoothIteration = 5;
         bool m_removeDuplicate = true;
         glm::vec3 m_rootVertexColor = glm::vec3(1.0f);
-
         void OnInspect();
 
         void Save(const std::string &name, YAML::Emitter &out);
@@ -56,24 +55,18 @@ namespace EcoSysLab {
         void Load(const std::string &name, const YAML::Node &in);
     };
 
-    template<typename SkeletonData, typename FlowData, typename NodeData>
-    class IPlantMeshGenerator
-    {
-        virtual void Generate(Skeleton<SkeletonData, FlowData, NodeData>& treeSkeleton, std::vector<Vertex>& vertices,
-            std::vector<unsigned int>& indices, const TreeMeshGeneratorSettings& settings) const = 0;
-    };
 
     template<typename SkeletonData, typename FlowData, typename NodeData>
-    class CylindricalMeshGenerator : public IPlantMeshGenerator<SkeletonData, FlowData, NodeData> {
+    class CylindricalMeshGenerator {
     public:
         void Generate(Skeleton<SkeletonData, FlowData, NodeData> &treeSkeleton, std::vector<Vertex> &vertices,
-                      std::vector<unsigned int> &indices, const TreeMeshGeneratorSettings &settings) const override;
+                      std::vector<unsigned int> &indices, const TreeMeshGeneratorSettings &settings) const;
     };
     template<typename SkeletonData, typename FlowData, typename NodeData>
-    class VoxelMeshGenerator : public IPlantMeshGenerator<SkeletonData, FlowData, NodeData> {
+    class VoxelMeshGenerator {
     public:
         void Generate(Skeleton<SkeletonData, FlowData, NodeData>& treeSkeleton, std::vector<Vertex>& vertices,
-            std::vector<unsigned int>& indices, const TreeMeshGeneratorSettings& settings) const override;
+            std::vector<unsigned int>& indices, const TreeMeshGeneratorSettings& settings, float minRadius) const;
     };
     template<typename SkeletonData, typename FlowData, typename NodeData>
     void CylindricalMeshGenerator<SkeletonData, FlowData, NodeData>::Generate(
@@ -314,11 +307,28 @@ namespace EcoSysLab {
     template <typename SkeletonData, typename FlowData, typename NodeData>
     void VoxelMeshGenerator<SkeletonData, FlowData, NodeData>::Generate(
 	    Skeleton<SkeletonData, FlowData, NodeData>& treeSkeleton, std::vector<Vertex>& vertices,
-	    std::vector<unsigned>& indices, const TreeMeshGeneratorSettings& settings) const
+	    std::vector<unsigned>& indices, const TreeMeshGeneratorSettings& settings, float minRadius) const
     {
-        auto diff = treeSkeleton.m_max - treeSkeleton.m_min;
-        Octree octree(glm::max((diff.x, diff.y), glm::max(diff.y, diff.z)) / 2.0f,
-            glm::clamp(settings.m_voxelSubdivisionLevel, 4, 16), (treeSkeleton.m_min + treeSkeleton.m_max) / 2.0f);
+        const auto boxSize = treeSkeleton.m_max - treeSkeleton.m_min;
+        Octree<bool> octree;
+        if(settings.m_autoLevel)
+        {
+            const float maxRadius = glm::max(glm::max(boxSize.x, boxSize.y), boxSize.z) + 2.0f * minRadius;
+            int subdivisionLevel = 0;
+            float testRadius = minRadius;
+            while (testRadius <= maxRadius)
+            {
+                subdivisionLevel++;
+                testRadius *= 2.f;
+            }
+            UNIENGINE_LOG("Root mesh formation: Auto set level to " + std::to_string(subdivisionLevel))
+
+            octree.Reset(maxRadius, subdivisionLevel, (treeSkeleton.m_min + treeSkeleton.m_max) * 0.5f);
+        }
+        else {
+            octree.Reset(glm::max((boxSize.x, boxSize.y), glm::max(boxSize.y, boxSize.z)) / 2.0f,
+                glm::clamp(settings.m_voxelSubdivisionLevel, 4, 16), (treeSkeleton.m_min + treeSkeleton.m_max) / 2.0f);
+        }
         auto& nodeList = treeSkeleton.RefSortedNodeList();
         for (const auto& nodeIndex : nodeList)
         {
@@ -329,7 +339,7 @@ namespace EcoSysLab {
             {
                 thickness = (thickness + treeSkeleton.RefNode(node.GetParentHandle()).m_info.m_thickness) / 2.0f;
             }
-            octree.Occupy(info.m_globalPosition, info.m_globalRotation, info.m_length, thickness);
+            octree.Occupy(info.m_globalPosition, info.m_globalRotation, info.m_length, thickness, [](OctreeNode<bool>&){});
         }
         octree.TriangulateField(vertices, indices, settings.m_removeDuplicate, settings.m_voxelSmoothIteration);
     }
