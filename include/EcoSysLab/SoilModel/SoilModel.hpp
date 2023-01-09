@@ -3,6 +3,7 @@
 #include <glm/glm.hpp>
 #include <vector>
 #include <functional>
+#include <random>
 #include "ecosyslab_export.h"
 
 using namespace UniEngine;
@@ -14,7 +15,7 @@ namespace EcoSysLab {
 		friend class Soil;
 		friend class EcoSysLabLayer;
 	public:
-		enum class Boundary : int {sink, block, wrap};
+		enum class Boundary : int {sink, block, wrap, absorb};
 		void Initialize(const SoilParameters& soilParameters);
 
 		void Reset();
@@ -89,6 +90,7 @@ namespace EcoSysLab {
 
 		std::vector<float> m_soilDensity;
 		Boundary m_boundary_x, m_boundary_y, m_boundary_z;
+		int m_absorption_width= 5;
 
 		/////////////////////////////////
 
