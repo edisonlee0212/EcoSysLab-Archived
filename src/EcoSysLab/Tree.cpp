@@ -22,6 +22,8 @@ void Tree::OnInspect() {
 	}
 	if (m_treeDescriptor.Get<TreeDescriptor>()) {
 		ImGui::Checkbox("Enable History", &m_enableHistory);
+		ImGui::Checkbox("Enable Branch collision detection", &m_treeModel.m_enableBranchCollisionDetection);
+		ImGui::Checkbox("Enable Root collision detection", &m_treeModel.m_enableRootCollisionDetection);
 		if (ImGui::Button("Grow")) {
 			TryGrow();
 			modelChanged = true;
@@ -59,7 +61,9 @@ void Tree::OnCreate() {
 void Tree::OnDestroy() {
 	m_treeModel.Clear();
 	m_treeDescriptor.Clear();
-	m_enableHistory = true;
+	m_soil.Clear();
+	m_climate.Clear();
+	m_enableHistory = false;
 }
 
 bool Tree::TryGrow() {
@@ -81,7 +85,7 @@ bool Tree::TryGrow() {
 	const auto climate = m_climate.Get<Climate>();
 	if (m_enableHistory) m_treeModel.Step();
 
-	auto owner = GetOwner();
+	const auto owner = GetOwner();
 	return m_treeModel.Grow(scene->GetDataComponent<GlobalTransform>(owner).m_value, soil->m_soilModel, climate->m_climateModel,
 		treeDescriptor->m_rootGrowthParameters, treeDescriptor->m_treeGrowthParameters);
 }

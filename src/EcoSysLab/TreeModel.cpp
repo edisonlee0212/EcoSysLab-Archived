@@ -663,24 +663,52 @@ bool TreeModel::GrowBranches(const glm::mat4& globalTransform, ClimateModel& cli
 		}
 		m_branchOctree.Reset(maxRadius, subdivisionLevel, (m_branchSkeleton.m_min + m_branchSkeleton.m_max) * 0.5f);
 		const auto& sortedBranchNodeList = m_branchSkeleton.RefSortedNodeList();
-
+		const auto& sortedBranchFlowList = m_branchSkeleton.RefSortedFlowList();
 		int collisionCount = 0;
-		for (const auto& nodeIndex : sortedBranchNodeList)
+		int flowCollisionCount = 0;
+		std::unordered_map<int, int> nodeCollisionCollection;
+		std::unordered_map<int, int> flowCollisionCollection;
+		for (const auto& nodeHandle : sortedBranchNodeList)
 		{
-			const auto& node = m_branchSkeleton.RefNode(nodeIndex);
+			const auto& node = m_branchSkeleton.RefNode(nodeHandle);
 			const auto& info = node.m_info;
 			bool collision = false;
 			m_branchOctree.Occupy(info.m_globalPosition, info.m_globalRotation, info.m_length, info.m_thickness, [&](OctreeNode<TreeVoxelData>& octreeNode)
 				{
-					if (octreeNode.m_data.m_nodeHandle == nodeIndex) return;
+					if (octreeNode.m_data.m_nodeHandle == nodeHandle) return;
 			if (octreeNode.m_data.m_nodeHandle == node.GetParentHandle()) return;
 			for (const auto& i : node.RefChildHandles()) if (octreeNode.m_data.m_nodeHandle == i) return;
-					octreeNode.m_data.m_nodeHandle = nodeIndex;
-			if (octreeNode.m_data.m_referenceCount != 0) collision = true;
+			auto flowHandle = node.GetFlowHandle();
+			if (octreeNode.m_data.m_referenceCount != 0)
+			{
+				if (octreeNode.m_data.m_nodeHandle > nodeHandle)
+				{
+					nodeCollisionCollection[octreeNode.m_data.m_nodeHandle] = nodeHandle;
+				}
+				else
+				{
+					nodeCollisionCollection[nodeHandle] = octreeNode.m_data.m_nodeHandle;
+				}
+				if (octreeNode.m_data.m_flowHandle != flowHandle) {
+					if (octreeNode.m_data.m_flowHandle > flowHandle)
+					{
+						flowCollisionCollection[octreeNode.m_data.m_flowHandle] = flowHandle;
+					}
+					else
+					{
+						flowCollisionCollection[flowHandle] = octreeNode.m_data.m_flowHandle;
+					}
+				}
+			}
+			else {
+				octreeNode.m_data.m_flowHandle = flowHandle;
+				octreeNode.m_data.m_nodeHandle = nodeHandle;
+			}
 			octreeNode.m_data.m_referenceCount++;
 				});
-			if (collision) collisionCount++;
 		}
+		collisionCount = nodeCollisionCollection.size();
+		flowCollisionCount = flowCollisionCollection.size();
 		std::vector<int> collisionStat;
 		collisionStat.resize(200);
 		for (auto& i : collisionStat) i = 0;
@@ -691,7 +719,7 @@ bool TreeModel::GrowBranches(const glm::mat4& globalTransform, ClimateModel& cli
 		totalVoxel++;
 			});
 
-		std::string report = "Branch collision: [" + std::to_string(collisionCount) + "/" + std::to_string(sortedBranchNodeList.size()) + "], ";
+		std::string report = "Branch collision: [" + std::to_string(collisionCount) + "/" + std::to_string(sortedBranchNodeList.size()) + "], [" + std::to_string(flowCollisionCount) + "/" + std::to_string(sortedBranchFlowList.size()) + "], ";
 		report += "total occupied: " + std::to_string(totalVoxel) + ", collision stat: ";
 
 		std::string appendStat = "";
