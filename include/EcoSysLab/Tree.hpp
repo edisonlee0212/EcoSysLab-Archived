@@ -28,7 +28,7 @@ namespace EcoSysLab {
 		PrivateComponentRef m_soil;
 		PrivateComponentRef m_climate;
 		AssetRef m_treeDescriptor;
-		bool m_enableHistory = true;
+		bool m_enableHistory = false;
 		TreeModel m_treeModel;
 		void OnInspect() override;
 

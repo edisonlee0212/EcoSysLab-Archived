@@ -211,7 +211,7 @@ bool TreeModel::ElongateInternode(const glm::mat4& globalTransform, float extend
 	const TreeGrowthParameters& parameters, float& collectedInhibitor) {
 	bool graphChanged = false;
 	auto& internode = m_branchSkeleton.RefNode(internodeHandle);
-	auto internodeLength = parameters.GetInternodeLength(internode);
+	auto internodeLength = parameters.m_internodeLength;
 	auto& internodeData = internode.m_data;
 	auto& internodeInfo = internode.m_info;
 	internodeInfo.m_length += extendLength;
@@ -225,13 +225,13 @@ bool TreeModel::ElongateInternode(const glm::mat4& globalTransform, float extend
 		auto desiredGlobalRotation = internodeInfo.m_globalRotation * apicalBud.m_localRotation;
 		auto desiredGlobalFront = desiredGlobalRotation * glm::vec3(0, 0, -1);
 		auto desiredGlobalUp = desiredGlobalRotation * glm::vec3(0, 1, 0);
-		ApplyTropism(-m_currentGravityDirection, parameters.GetGravitropism(internode), desiredGlobalFront,
+		ApplyTropism(-m_currentGravityDirection, parameters.m_gravitropism, desiredGlobalFront,
 			desiredGlobalUp);
-		ApplyTropism(internodeData.m_lightDirection, parameters.GetPhototropism(internode),
+		ApplyTropism(internodeData.m_lightDirection, parameters.m_phototropism,
 			desiredGlobalFront, desiredGlobalUp);
 		//Allocate Lateral bud for current internode
 		{
-			const auto lateralBudCount = parameters.GetLateralBudCount(internode);
+			const auto lateralBudCount = parameters.m_lateralBudCount;
 			const float turnAngle = glm::radians(360.0f / lateralBudCount);
 			for (int i = 0; i < lateralBudCount; i++) {
 				internodeData.m_buds.emplace_back();
@@ -245,7 +245,7 @@ bool TreeModel::ElongateInternode(const glm::mat4& globalTransform, float extend
 		}
 		//Allocate Fruit bud for current internode
 		{
-			const auto fruitBudCount = parameters.GetFruitBudCount(internode);
+			const auto fruitBudCount = parameters.m_fruitBudCount;
 			for (int i = 0; i < fruitBudCount; i++) {
 				internodeData.m_buds.emplace_back();
 				auto& fruitBud = internodeData.m_buds.back();
@@ -258,7 +258,7 @@ bool TreeModel::ElongateInternode(const glm::mat4& globalTransform, float extend
 		}
 		//Allocate Leaf bud for current internode
 		{
-			const auto leafBudCount = parameters.GetLeafBudCount(internode);
+			const auto leafBudCount = parameters.m_leafBudCount;
 			for (int i = 0; i < leafBudCount; i++) {
 				internodeData.m_buds.emplace_back();
 				auto& leafBud = internodeData.m_buds.back();
@@ -274,10 +274,9 @@ bool TreeModel::ElongateInternode(const glm::mat4& globalTransform, float extend
 		auto& oldInternode = m_branchSkeleton.RefNode(internodeHandle);
 		auto& newInternode = m_branchSkeleton.RefNode(newInternodeHandle);
 		newInternode.m_data.Clear();
-		newInternode.m_data.m_inhibitorTarget = newInternode.m_data.m_inhibitor = parameters.GetApicalDominanceBase(
-			newInternode);
+		newInternode.m_data.m_inhibitorTarget = newInternode.m_data.m_inhibitor = parameters.m_apicalDominance;
 		newInternode.m_info.m_length = glm::clamp(extendLength, 0.0f, internodeLength);
-		newInternode.m_info.m_thickness = parameters.GetEndNodeThickness(newInternode);
+		newInternode.m_info.m_thickness = parameters.m_endNodeThickness;
 		newInternode.m_info.m_globalRotation = glm::quatLookAt(desiredGlobalFront, desiredGlobalUp);
 		newInternode.m_info.m_localRotation = newInternode.m_data.m_desiredLocalRotation =
 			glm::inverse(oldInternode.m_info.m_globalRotation) *
@@ -293,17 +292,17 @@ bool TreeModel::ElongateInternode(const glm::mat4& globalTransform, float extend
 		if (extraLength > internodeLength) {
 			float childInhibitor = 0.0f;
 			ElongateInternode(globalTransform, extraLength - internodeLength, newInternodeHandle, parameters, childInhibitor);
-			childInhibitor *= parameters.GetApicalDominanceDecrease(newInternode);
+			childInhibitor *= parameters.m_apicalDominanceDistanceFactor;
 			collectedInhibitor += childInhibitor;
 			m_branchSkeleton.RefNode(newInternodeHandle).m_data.m_inhibitorTarget = childInhibitor;
 		}
 		else {
-			collectedInhibitor += parameters.GetApicalDominanceBase(newInternode);
+			collectedInhibitor += parameters.m_apicalDominance;
 		}
 	}
 	else {
 		//Otherwise, we add the inhibitor.
-		collectedInhibitor += parameters.GetApicalDominanceBase(internode);
+		collectedInhibitor += parameters.m_apicalDominance;
 	}
 	return graphChanged;
 }
@@ -334,7 +333,7 @@ bool TreeModel::GrowInternode(const glm::mat4& globalTransform, ClimateModel& cl
 		internodeData.m_inhibitorTarget = 0;
 		for (const auto& childHandle : internode.RefChildHandles()) {
 			internodeData.m_inhibitorTarget += m_branchSkeleton.RefNode(childHandle).m_data.m_inhibitor *
-				treeGrowthParameters.GetApicalDominanceDecrease(internode);
+				treeGrowthParameters.m_apicalDominanceDistanceFactor;
 		}
 	}
 	auto& buds = m_branchSkeleton.RefNode(internodeHandle).m_data.m_buds;
@@ -342,10 +341,13 @@ bool TreeModel::GrowInternode(const glm::mat4& globalTransform, ClimateModel& cl
 		auto& internode = m_branchSkeleton.RefNode(internodeHandle);
 		auto& internodeData = internode.m_data;
 		auto& internodeInfo = internode.m_info;
-		if (bud.m_status == BudStatus::Dormant && treeGrowthParameters.GetBudKillProbability(internode) > glm::linearRand(0.0f, 1.0f)) {
+
+		auto killProbability = treeGrowthParameters.m_budKillProbability;
+		if (internodeData.m_rootDistance < 1.0f) killProbability = 0.0f;
+		if (bud.m_status == BudStatus::Dormant && killProbability > glm::linearRand(0.0f, 1.0f)) {
 			bud.m_status = BudStatus::Died;
 		}
-		if (bud.m_status == BudStatus::Died || bud.m_status == BudStatus::Flushed) continue;
+		if (bud.m_status == BudStatus::Died) continue;
 
 		const float baseWater = glm::clamp(bud.m_waterGain, 0.0f, bud.m_baseWaterRequirement);
 		bud.m_drought = glm::max(1.0f, 1.0f - (1.0f - bud.m_drought) * baseWater / bud.m_baseWaterRequirement);
@@ -353,16 +355,16 @@ bool TreeModel::GrowInternode(const glm::mat4& globalTransform, ClimateModel& cl
 		const float reproductiveContent = reproductiveWater * m_globalGrowthRate;
 
 		if (bud.m_type == BudType::Apical && bud.m_status == BudStatus::Dormant) {
-			const float elongateLength = reproductiveContent * treeGrowthParameters.GetInternodeLength(internode);
+			const float elongateLength = reproductiveContent * treeGrowthParameters.m_internodeLength;
 			float collectedInhibitor = 0.0f;
-			const auto dd = treeGrowthParameters.GetApicalDominanceDecrease(internode);
+			const auto dd = treeGrowthParameters.m_apicalDominanceDistanceFactor;
 			graphChanged = ElongateInternode(globalTransform, elongateLength, internodeHandle, treeGrowthParameters, collectedInhibitor);
 			m_branchSkeleton.RefNode(internodeHandle).m_data.m_inhibitorTarget += collectedInhibitor * dd;
 			//If apical bud is dormant, then there's no lateral bud at this stage. We should quit anyway.
 			break;
 		}
-		if (bud.m_type == BudType::Lateral) {
-			float flushProbability = treeGrowthParameters.GetLateralBudFlushingProbability(internode);
+		if (bud.m_type == BudType::Lateral && bud.m_status == BudStatus::Dormant) {
+			float flushProbability = treeGrowthParameters.m_lateralBudFlushingProbability;
 			flushProbability /= 1.0f + internodeData.m_inhibitor;
 			if (flushProbability >= glm::linearRand(0.0f, 1.0f)) {
 				graphChanged = true;
@@ -371,9 +373,9 @@ bool TreeModel::GrowInternode(const glm::mat4& globalTransform, ClimateModel& cl
 				auto desiredGlobalRotation = internodeInfo.m_globalRotation * bud.m_localRotation;
 				auto desiredGlobalFront = desiredGlobalRotation * glm::vec3(0, 0, -1);
 				auto desiredGlobalUp = desiredGlobalRotation * glm::vec3(0, 1, 0);
-				ApplyTropism(-m_currentGravityDirection, treeGrowthParameters.GetGravitropism(internode), desiredGlobalFront,
+				ApplyTropism(-m_currentGravityDirection, treeGrowthParameters.m_gravitropism, desiredGlobalFront,
 					desiredGlobalUp);
-				ApplyTropism(internodeData.m_lightDirection, treeGrowthParameters.GetPhototropism(internode),
+				ApplyTropism(internodeData.m_lightDirection, treeGrowthParameters.m_phototropism,
 					desiredGlobalFront, desiredGlobalUp);
 				//Create new internode
 				const auto newInternodeHandle = m_branchSkeleton.Extend(internodeHandle, true);
@@ -381,7 +383,7 @@ bool TreeModel::GrowInternode(const glm::mat4& globalTransform, ClimateModel& cl
 				auto& newInternode = m_branchSkeleton.RefNode(newInternodeHandle);
 				newInternode.m_data.Clear();
 				newInternode.m_info.m_length = 0.0f;
-				newInternode.m_info.m_thickness = treeGrowthParameters.GetEndNodeThickness(newInternode);
+				newInternode.m_info.m_thickness = treeGrowthParameters.m_endNodeThickness;
 				newInternode.m_info.m_localRotation = newInternode.m_data.m_desiredLocalRotation =
 					glm::inverse(oldInternode.m_info.m_globalRotation) *
 					glm::quatLookAt(desiredGlobalFront, desiredGlobalUp);
@@ -397,11 +399,46 @@ bool TreeModel::GrowInternode(const glm::mat4& globalTransform, ClimateModel& cl
 		}
 		else if (bud.m_type == BudType::Fruit)
 		{
+			if (bud.m_status == BudStatus::Dormant) {
+				auto temperature = climateModel.GetTemperature(globalTransform * glm::translate(internodeInfo.m_globalPosition)[3]);
+				const auto& probabilityRange = treeGrowthParameters.m_fruitBudFlushingProbabilityTemperatureRange;
+				float flushProbability = glm::mix(probabilityRange.x, probabilityRange.y,
+					glm::clamp((temperature - probabilityRange.z) / (probabilityRange.w - probabilityRange.z), 0.0f, 1.0f));
+				if (flushProbability >= glm::linearRand(0.0f, 1.0f))
+				{
+					bud.m_status = BudStatus::Flushed;
+					bud.m_maturity = 0.0f;
 
+				}
+			}else if(bud.m_status == BudStatus::Flushed)
+			{
+				//Make the fruit larger;
+				bud.m_maturity += 0.05f;
+				bud.m_maturity = glm::clamp(bud.m_maturity, 0.0f, 1.0f);
+				bud.m_reproductiveModuleTransform = glm::translate(glm::vec3(0.0f, 0.0f, 0.0f)) * glm::mat4_cast(glm::quat(glm::vec3(0.0f))) * glm::scale(treeGrowthParameters.m_maxFruitSize * bud.m_maturity);
+			}
 		}
 		else if (bud.m_type == BudType::Leaf)
 		{
-
+			if (bud.m_status == BudStatus::Dormant) {
+				auto temperature = climateModel.GetTemperature(globalTransform * glm::translate(internodeInfo.m_globalPosition)[3]);
+				const auto& probabilityRange = treeGrowthParameters.m_fruitBudFlushingProbabilityTemperatureRange;
+				float flushProbability = glm::mix(probabilityRange.x, probabilityRange.y,
+					glm::clamp((temperature - probabilityRange.z) / (probabilityRange.w - probabilityRange.z), 0.0f, 1.0f));
+				if (flushProbability >= glm::linearRand(0.0f, 1.0f))
+				{
+					bud.m_status = BudStatus::Flushed;
+					bud.m_maturity = 0.0f;
+					
+				}
+			}
+			else if (bud.m_status == BudStatus::Flushed)
+			{
+				//Make the leaf larger
+				bud.m_maturity += 0.05f;
+				bud.m_maturity = glm::clamp(bud.m_maturity, 0.0f, 1.0f);
+				bud.m_reproductiveModuleTransform = glm::translate(glm::vec3(0.0f, 0.0f, 0.0f)) * glm::mat4_cast(glm::quat(glm::vec3(0.0f))) * glm::scale(treeGrowthParameters.m_maxFruitSize * bud.m_maturity);
+			}
 		}
 	}
 	{
@@ -481,26 +518,25 @@ void TreeModel::CalculateThicknessAndSagging(NodeHandle internodeHandle,
 		auto& childInternode = m_branchSkeleton.RefNode(i);
 		const float childMaxDistanceToAnyBranchEnd =
 			childInternode.m_data.m_maxDistanceToAnyBranchEnd +
-			childInternode.m_info.m_length / treeGrowthParameters.GetInternodeLength(childInternode);
+			childInternode.m_info.m_length / treeGrowthParameters.m_internodeLength;
 		maxDistanceToAnyBranchEnd = glm::max(maxDistanceToAnyBranchEnd, childMaxDistanceToAnyBranchEnd);
 
 		childThicknessCollection += glm::pow(childInternode.m_info.m_thickness,
-			1.0f / treeGrowthParameters.GetThicknessControlFactor(internode));
+			1.0f / treeGrowthParameters.m_thicknessAccumulateFactor);
 	}
 	internodeData.m_maxDistanceToAnyBranchEnd = maxDistanceToAnyBranchEnd;
 	if (childThicknessCollection != 0.0f) {
 		internodeInfo.m_thickness = glm::max(internodeInfo.m_thickness, glm::pow(childThicknessCollection,
-			treeGrowthParameters.GetThicknessControlFactor(
-				internode)));
+			treeGrowthParameters.m_thicknessAccumulateFactor));
 	}
 	else
 	{
-		internodeInfo.m_thickness = glm::max(internodeInfo.m_thickness, treeGrowthParameters.GetEndNodeThickness(internode));
+		internodeInfo.m_thickness = glm::max(internodeInfo.m_thickness, treeGrowthParameters.m_endNodeThickness);
 	}
 
 	internodeData.m_biomass =
-		internodeInfo.m_thickness / treeGrowthParameters.GetEndNodeThickness(internode) * internodeInfo.m_length /
-		treeGrowthParameters.GetInternodeLength(internode);
+		internodeInfo.m_thickness / treeGrowthParameters.m_endNodeThickness * internodeInfo.m_length /
+		treeGrowthParameters.m_internodeLength;
 	for (const auto& i : internode.RefChildHandles()) {
 		const auto& childInternode = m_branchSkeleton.RefNode(i);
 		internodeData.m_descendentTotalBiomass +=
@@ -516,7 +552,7 @@ void TreeModel::CalculateResourceRequirement(NodeHandle internodeHandle,
 	auto& internodeData = internode.m_data;
 	internodeData.m_reproductionWaterRequirement = 0.0f;
 	internodeData.m_descendentReproductionWaterRequirement = 0.0f;
-	const auto growthRate = treeGrowthParameters.GetExpectedGrowthRate(internode);
+	const auto growthRate = treeGrowthParameters.m_growthRate;
 	for (auto& bud : internodeData.m_buds) {
 		if (bud.m_status == BudStatus::Died) {
 			bud.m_baseWaterRequirement = 0.0f;
@@ -525,22 +561,19 @@ void TreeModel::CalculateResourceRequirement(NodeHandle internodeHandle,
 		}
 		switch (bud.m_type) {
 		case BudType::Apical: {
-			bud.m_baseWaterRequirement = treeGrowthParameters.GetShootBaseResourceRequirementFactor(
-				internode);
+			bud.m_baseWaterRequirement = treeGrowthParameters.m_shootBaseWaterRequirement;
 			if (bud.m_status == BudStatus::Dormant) {
-				bud.m_reproductionWaterRequirement = treeGrowthParameters.GetShootProductiveResourceRequirementFactor(
-					internode);
+				//Elongation
+				bud.m_reproductionWaterRequirement = treeGrowthParameters.m_shootProductiveWaterRequirement;
 			}
 		}break;
 		case BudType::Leaf: {
-			bud.m_baseWaterRequirement = treeGrowthParameters.GetLeafBaseResourceRequirementFactor(internode);
-			bud.m_reproductionWaterRequirement = treeGrowthParameters.GetLeafProductiveResourceRequirementFactor(
-				internode);
+			bud.m_baseWaterRequirement = treeGrowthParameters.m_leafBaseWaterRequirement;
+			bud.m_reproductionWaterRequirement = treeGrowthParameters.m_leafProductiveWaterRequirement;
 		}break;
 		case BudType::Fruit: {
-			bud.m_baseWaterRequirement = treeGrowthParameters.GetFruitBaseResourceRequirementFactor(internode);
-			bud.m_reproductionWaterRequirement = treeGrowthParameters.GetFruitProductiveResourceRequirementFactor(
-				internode);
+			bud.m_baseWaterRequirement = treeGrowthParameters.m_fruitBaseWaterRequirement;
+			bud.m_reproductionWaterRequirement = treeGrowthParameters.m_fruitProductiveWaterRequirement;
 		}break;
 		case BudType::Lateral: {
 			bud.m_baseWaterRequirement = 0.0f;
@@ -608,19 +641,42 @@ bool TreeModel::GrowBranches(const glm::mat4& globalTransform, ClimateModel& cli
 			auto& internode = m_branchSkeleton.RefNode(internodeHandle);
 			auto& internodeData = internode.m_data;
 			auto& internodeInfo = internode.m_info;
+			if (climateModel.m_days % 360 == 0)
+			{
+				for(auto& bud : internodeData.m_buds)
+				{
+					if (bud.m_status == BudStatus::Flushed) {
+						if (bud.m_type == BudType::Leaf)
+						{
+							bud.m_status = BudStatus::Dormant;
+							bud.m_maturity = -1.0f;
+							bud.m_drought = 0.0f;
+							bud.m_reproductiveModuleGlobalTransform = glm::mat4(01.0f);
+						}
+						else if (bud.m_type == BudType::Fruit)
+						{
+							bud.m_status = BudStatus::Dormant;
+							bud.m_maturity = -1.0f;
+							bud.m_drought = 0.0f;
+							bud.m_reproductiveModuleGlobalTransform = glm::mat4(0.0f);
+						}
+					}
+				}
+			}
+
+
 			if (internode.GetParentHandle() == -1) {
 				internodeInfo.m_globalPosition = glm::vec3(0.0f);
 				internodeInfo.m_localRotation = glm::vec3(0.0f);
 				internodeInfo.m_globalRotation = glm::vec3(glm::radians(90.0f), 0.0f, 0.0f);
 
 				internodeData.m_rootDistance =
-					internodeInfo.m_length / treeGrowthParameters.GetInternodeLength(internode);
+					internodeInfo.m_length / treeGrowthParameters.m_internodeLength;
 			}
 			else {
 				auto& parentInternode = m_branchSkeleton.RefNode(internode.GetParentHandle());
 				internodeData.m_rootDistance = parentInternode.m_data.m_rootDistance + internodeInfo.m_length /
-					treeGrowthParameters.GetInternodeLength(
-						internode);
+					treeGrowthParameters.m_internodeLength;
 				internodeInfo.m_globalRotation =
 					parentInternode.m_info.m_globalRotation * internodeInfo.m_localRotation;
 #pragma region Apply Sagging
@@ -641,6 +697,22 @@ bool TreeModel::GrowBranches(const glm::mat4& globalTransform, ClimateModel& cli
 						glm::vec3(0, 0, -1));
 
 			}
+			auto internodeGlobalTransform = glm::translate(internodeInfo.m_globalPosition) * glm::mat4_cast(internodeInfo.m_globalRotation) * glm::scale(glm::vec3(1.0f));
+			for(auto& bud : internodeData.m_buds)
+			{
+				if(bud.m_status != BudStatus::Flushed) continue;
+				if (bud.m_maturity <= 0.0f) continue;
+				if(bud.m_type == BudType::Leaf)
+				{
+					m_leafCount++;
+					bud.m_reproductiveModuleGlobalTransform = internodeGlobalTransform * bud.m_reproductiveModuleTransform;
+				}else if(bud.m_type == BudType::Fruit)
+				{
+					m_fruitCount++;
+					bud.m_reproductiveModuleGlobalTransform = internodeGlobalTransform * bud.m_reproductiveModuleTransform;
+				}
+			}
+
 			m_branchSkeleton.m_min = glm::min(m_branchSkeleton.m_min, internodeInfo.m_globalPosition);
 			m_branchSkeleton.m_max = glm::max(m_branchSkeleton.m_max, internodeInfo.m_globalPosition);
 			const auto endPosition = internodeInfo.m_globalPosition + internodeInfo.m_length *
@@ -652,6 +724,92 @@ bool TreeModel::GrowBranches(const glm::mat4& globalTransform, ClimateModel& cli
 			CalculateResourceRequirement(internodeHandle, treeGrowthParameters, newTreeGrowthNutrientsRequirement);
 		}
 	};
+
+	if (m_enableBranchCollisionDetection)
+	{
+		const float minRadius = treeGrowthParameters.m_endNodeThickness * 4.0f;
+		const auto boxSize = m_branchSkeleton.m_max - m_branchSkeleton.m_min;
+		const float maxRadius = glm::max(glm::max(boxSize.x, boxSize.y), boxSize.z) + 2.0f * minRadius;
+		int subdivisionLevel = 0;
+		float testRadius = minRadius;
+		while (testRadius <= maxRadius)
+		{
+			subdivisionLevel++;
+			testRadius *= 2.f;
+		}
+		m_branchOctree.Reset(maxRadius, subdivisionLevel, (m_branchSkeleton.m_min + m_branchSkeleton.m_max) * 0.5f);
+		const auto& sortedBranchNodeList = m_branchSkeleton.RefSortedNodeList();
+		const auto& sortedBranchFlowList = m_branchSkeleton.RefSortedFlowList();
+		int collisionCount = 0;
+		int flowCollisionCount = 0;
+		std::unordered_map<int, int> nodeCollisionCollection;
+		std::unordered_map<int, int> flowCollisionCollection;
+		for (const auto& nodeHandle : sortedBranchNodeList)
+		{
+			const auto& node = m_branchSkeleton.RefNode(nodeHandle);
+			const auto& info = node.m_info;
+			m_branchOctree.Occupy(info.m_globalPosition, info.m_globalRotation, info.m_length, info.m_thickness, [&](OctreeNode<TreeVoxelData>& octreeNode)
+				{
+					if (octreeNode.m_data.m_nodeHandle == nodeHandle) return;
+			if (octreeNode.m_data.m_nodeHandle == node.GetParentHandle()) return;
+			for (const auto& i : node.RefChildHandles()) if (octreeNode.m_data.m_nodeHandle == i) return;
+			auto flowHandle = node.GetFlowHandle();
+			if (octreeNode.m_data.m_referenceCount != 0)
+			{
+				if (octreeNode.m_data.m_nodeHandle > nodeHandle)
+				{
+					nodeCollisionCollection[octreeNode.m_data.m_nodeHandle] = nodeHandle;
+				}
+				else
+				{
+					nodeCollisionCollection[nodeHandle] = octreeNode.m_data.m_nodeHandle;
+				}
+				if (octreeNode.m_data.m_flowHandle != flowHandle) {
+					if (octreeNode.m_data.m_flowHandle > flowHandle)
+					{
+						flowCollisionCollection[octreeNode.m_data.m_flowHandle] = flowHandle;
+					}
+					else
+					{
+						flowCollisionCollection[flowHandle] = octreeNode.m_data.m_flowHandle;
+					}
+				}
+			}
+			else {
+				octreeNode.m_data.m_flowHandle = flowHandle;
+				octreeNode.m_data.m_nodeHandle = nodeHandle;
+			}
+			octreeNode.m_data.m_referenceCount++;
+				});
+		}
+		collisionCount = nodeCollisionCollection.size();
+		flowCollisionCount = flowCollisionCollection.size();
+		std::vector<int> collisionStat;
+		collisionStat.resize(200);
+		for (auto& i : collisionStat) i = 0;
+		int totalVoxel = 0;
+		m_branchOctree.IterateLeaves([&](const OctreeNode<TreeVoxelData>& leaf)
+			{
+				collisionStat[leaf.m_data.m_referenceCount]++;
+		totalVoxel++;
+			});
+
+		std::string report = "Branch collision: [" + std::to_string(collisionCount) + "/" + std::to_string(sortedBranchNodeList.size()) + "], [" + std::to_string(flowCollisionCount) + "/" + std::to_string(sortedBranchFlowList.size()) + "], ";
+		report += "total occupied: " + std::to_string(totalVoxel) + ", collision stat: ";
+
+		std::string appendStat = "";
+		for (int i = 199; i > 0; i--)
+		{
+			if (collisionStat[i] != 0)
+			{
+				appendStat += "[" + std::to_string(i) + "]->" + std::to_string(collisionStat[i]) + "; ";
+			}
+		}
+		if (appendStat == "") appendStat = "No collision";
+
+		UNIENGINE_LOG(report + appendStat);
+	}
+
 	{
 		const auto& sortedFlowList = m_branchSkeleton.RefSortedFlowList();
 		for (const auto& flowHandle : sortedFlowList) {
@@ -680,7 +838,7 @@ void
 TreeModel::Initialize(const TreeGrowthParameters& treeGrowthParameters, const RootGrowthParameters& rootGrowthParameters) {
 	{
 		auto& firstInternode = m_branchSkeleton.RefNode(0);
-		firstInternode.m_info.m_thickness = treeGrowthParameters.GetEndNodeThickness(firstInternode);
+		firstInternode.m_info.m_thickness = treeGrowthParameters.m_endNodeThickness;
 		firstInternode.m_data.m_buds.emplace_back();
 		auto& apicalBud = firstInternode.m_data.m_buds.back();
 		apicalBud.m_type = BudType::Apical;
@@ -709,13 +867,23 @@ void TreeModel::Clear() {
 	m_initialized = false;
 }
 
+int TreeModel::GetLeafCount() const
+{
+	return m_leafCount;
+}
+
+int TreeModel::GetFruitCount() const
+{
+	return m_fruitCount;
+}
+
 
 bool TreeModel::LowBranchPruning(float maxDistance, NodeHandle internodeHandle,
-	const TreeGrowthParameters& treeGrowthParameters) {
+                                 const TreeGrowthParameters& treeGrowthParameters) {
 	auto& internode = m_branchSkeleton.RefNode(internodeHandle);
 	//Pruning here.
 	if (maxDistance > 5 && internode.m_data.m_order != 0 &&
-		internode.m_data.m_rootDistance / maxDistance < treeGrowthParameters.GetLowBranchPruning(internode)) {
+		internode.m_data.m_rootDistance / maxDistance < treeGrowthParameters.m_lowBranchPruning) {
 		m_branchSkeleton.RecycleNode(internodeHandle);
 		return true;
 	}
@@ -736,8 +904,14 @@ bool TreeModel::GrowRoots(const glm::mat4& globalTransform, SoilModel& soilModel
 
 		};
 #pragma endregion
+
+
+
 #pragma region Grow
 		if (anyRootPruned) m_rootSkeleton.SortLists();
+
+
+
 		rootStructureChanged = rootStructureChanged || anyRootPruned;
 		bool anyRootGrown = false;
 		{
@@ -801,6 +975,93 @@ bool TreeModel::GrowRoots(const glm::mat4& globalTransform, SoilModel& soilModel
 			newTreeGrowthNutrientsRequirement.m_water += totalWaterRequirement * totalWaterRequirement;
 			newTreeGrowthNutrientsRequirement.m_luminousFlux += totalWaterRequirement * totalLuminousFluxRequirement;
 		};
+
+		if (m_enableRootCollisionDetection)
+		{
+			const float minRadius = rootGrowthParameters.m_endNodeThicknessAndControl.x * 4.0f;
+			const auto boxSize = m_rootSkeleton.m_max - m_rootSkeleton.m_min;
+			const float maxRadius = glm::max(glm::max(boxSize.x, boxSize.y), boxSize.z) + 2.0f * minRadius;
+			int subdivisionLevel = 0;
+			float testRadius = minRadius;
+			while (testRadius <= maxRadius)
+			{
+				subdivisionLevel++;
+				testRadius *= 2.f;
+			}
+			m_rootOctree.Reset(maxRadius, subdivisionLevel, (m_rootSkeleton.m_min + m_rootSkeleton.m_max) * 0.5f);
+			const auto& sortedRootNodeList = m_rootSkeleton.RefSortedNodeList();
+			const auto& sortedRootFlowList = m_rootSkeleton.RefSortedFlowList();
+			int collisionCount = 0;
+			int flowCollisionCount = 0;
+			std::unordered_map<int, int> nodeCollisionCollection;
+			std::unordered_map<int, int> flowCollisionCollection;
+			for (const auto& nodeHandle : sortedRootNodeList)
+			{
+				const auto& node = m_rootSkeleton.RefNode(nodeHandle);
+				const auto& info = node.m_info;
+				m_rootOctree.Occupy(info.m_globalPosition, info.m_globalRotation, info.m_length * 0.9f, info.m_thickness, [&](OctreeNode<TreeVoxelData>& octreeNode)
+					{
+						if (octreeNode.m_data.m_nodeHandle == nodeHandle) return;
+				if (octreeNode.m_data.m_nodeHandle == node.GetParentHandle()) return;
+				for (const auto& i : node.RefChildHandles()) if (octreeNode.m_data.m_nodeHandle == i) return;
+				auto flowHandle = node.GetFlowHandle();
+				if (octreeNode.m_data.m_referenceCount != 0)
+				{
+					if (octreeNode.m_data.m_nodeHandle > nodeHandle)
+					{
+						nodeCollisionCollection[octreeNode.m_data.m_nodeHandle] = nodeHandle;
+					}
+					else
+					{
+						nodeCollisionCollection[nodeHandle] = octreeNode.m_data.m_nodeHandle;
+					}
+					if (octreeNode.m_data.m_flowHandle != flowHandle) {
+						if (octreeNode.m_data.m_flowHandle > flowHandle)
+						{
+							flowCollisionCollection[octreeNode.m_data.m_flowHandle] = flowHandle;
+						}
+						else
+						{
+							flowCollisionCollection[flowHandle] = octreeNode.m_data.m_flowHandle;
+						}
+					}
+				}
+				else {
+					octreeNode.m_data.m_flowHandle = flowHandle;
+					octreeNode.m_data.m_nodeHandle = nodeHandle;
+				}
+				octreeNode.m_data.m_referenceCount++;
+					});
+
+			}
+			collisionCount = nodeCollisionCollection.size();
+			flowCollisionCount = flowCollisionCollection.size();
+			std::vector<int> collisionStat;
+			collisionStat.resize(200);
+			for (auto& i : collisionStat) i = 0;
+			int totalVoxel = 0;
+			m_rootOctree.IterateLeaves([&](const OctreeNode<TreeVoxelData>& leaf)
+				{
+					collisionStat[leaf.m_data.m_referenceCount]++;
+			totalVoxel++;
+				});
+
+			std::string report = "Root collision: [" + std::to_string(collisionCount) + "/" + std::to_string(sortedRootNodeList.size()) + "], [" + std::to_string(flowCollisionCount) + "/" + std::to_string(sortedRootFlowList.size()) + "], ";
+			report += "total occupied: " + std::to_string(totalVoxel) + ", collision stat: ";
+
+			std::string appendStat;
+			for (int i = 199; i > 0; i--)
+			{
+				if (collisionStat[i] != 0)
+				{
+					appendStat += "[" + std::to_string(i) + "]->" + std::to_string(collisionStat[i]) + "; ";
+				}
+			}
+			if (appendStat.empty()) appendStat = "No collision";
+
+			UNIENGINE_LOG(report + appendStat);
+		}
+
 		{
 			const auto& sortedFlowList = m_rootSkeleton.RefSortedFlowList();
 			for (const auto& flowHandle : sortedFlowList) {
@@ -841,6 +1102,9 @@ void TreeModel::CollectWaterFromRoots(const glm::mat4& globalTransform, SoilMode
 bool TreeModel::Grow(const glm::mat4& globalTransform, SoilModel& soilModel, ClimateModel& climateModel,
 	const RootGrowthParameters& rootGrowthParameters, const TreeGrowthParameters& treeGrowthParameters)
 {
+	m_fruitCount = 0;
+	m_leafCount = 0;
+
 	bool treeStructureChanged = false;
 	bool rootStructureChanged = false;
 	if (!m_initialized) {
@@ -855,9 +1119,9 @@ bool TreeModel::Grow(const glm::mat4& globalTransform, SoilModel& soilModel, Cli
 	//Collect light from branches.
 	CollectLuminousFluxFromLeaves(climateModel, treeGrowthParameters);
 	//Perform photosynthesis.
-	m_treeGrowthNutrients.m_carbohydrate = 
+	m_treeGrowthNutrients.m_carbohydrate =
 		glm::min(
-			glm::max(m_treeGrowthNutrients.m_water, m_treeGrowthNutrientsRequirement.m_water), 
+			glm::max(m_treeGrowthNutrients.m_water, m_treeGrowthNutrientsRequirement.m_water),
 			glm::max(m_treeGrowthNutrients.m_luminousFlux, m_treeGrowthNutrientsRequirement.m_luminousFlux));
 	//Calculate global growth rate
 	if (m_treeGrowthNutrientsRequirement.m_carbohydrate != 0.0f) {
@@ -977,31 +1241,28 @@ TreeGrowthParameters::TreeGrowthParameters() {
 	m_phototropism = 0.0f;
 	m_internodeLength = 0.03f;
 	m_growthRate = 1.0f;
-	m_endNodeThicknessAndControl = glm::vec2(0.002, 0.5);
+	m_endNodeThickness = 0.002f;
+	m_thicknessAccumulateFactor = 0.5f;
 	m_lateralBudFlushingProbability = 0.5f;
 	m_apicalControlBaseDistFactor = { 1.1f, 0.99f };
-	m_apicalDominanceBaseAgeDist = glm::vec3(300, 1, 0.97);
+	m_apicalDominance = 300;
+	m_apicalDominanceDistanceFactor = 0.97f;
 	m_budKillProbability = 0.0f;
 	m_lowBranchPruning = 0.2f;
 	m_saggingFactorThicknessReductionMax = glm::vec3(0.0001, 2, 0.5);
 
-	m_baseResourceRequirementFactor = glm::vec3(1.0f);
-	m_productiveResourceRequirementFactor = glm::vec3(1.0f);
+	m_shootBaseWaterRequirement = 1.0f;
+	m_leafBaseWaterRequirement = 1.0f;
+	m_fruitBaseWaterRequirement = 1.0f;
+
+	m_shootProductiveWaterRequirement = 1.0f;
+	m_leafProductiveWaterRequirement = 1.0f;
+	m_fruitProductiveWaterRequirement = 1.0f;
 }
 
-int TreeGrowthParameters::GetLateralBudCount(const Node<InternodeGrowthData>& internode) const {
-	return m_lateralBudCount;
-}
 
-int TreeGrowthParameters::GetFruitBudCount(const Node<InternodeGrowthData>& internode) const
-{
-	return m_fruitBudCount;
-}
 
-int TreeGrowthParameters::GetLeafBudCount(const Node<InternodeGrowthData>& internode) const
-{
-	return m_leafBudCount;
-}
+
 
 float TreeGrowthParameters::GetDesiredBranchingAngle(const Node<InternodeGrowthData>& internode) const {
 	return glm::gaussRand(
@@ -1021,108 +1282,24 @@ float TreeGrowthParameters::GetDesiredApicalAngle(const Node<InternodeGrowthData
 		m_apicalAngleMeanVariance.y);
 }
 
-float TreeGrowthParameters::GetGravitropism(const Node<InternodeGrowthData>& internode) const {
-	return m_gravitropism;
-}
-
-float TreeGrowthParameters::GetPhototropism(const Node<InternodeGrowthData>& internode) const {
-	return m_phototropism;
-}
-
-float TreeGrowthParameters::GetInternodeLength(const Node<InternodeGrowthData>& internode) const {
-	return m_internodeLength;
-}
-
-float TreeGrowthParameters::GetExpectedGrowthRate(const Node<InternodeGrowthData>& internode) const {
-	return m_growthRate;
-}
-
-float TreeGrowthParameters::GetEndNodeThickness(const Node<InternodeGrowthData>& internode) const {
-	return m_endNodeThicknessAndControl.x;
-}
-
-float TreeGrowthParameters::GetThicknessControlFactor(const Node<InternodeGrowthData>& internode) const {
-	return m_endNodeThicknessAndControl.y;
-}
-
-float TreeGrowthParameters::GetLateralBudFlushingProbability(
-	const Node<InternodeGrowthData>& internode) const {
-	return m_lateralBudFlushingProbability;
-}
-
 float TreeGrowthParameters::GetApicalControl(const Node<InternodeGrowthData>& internode) const {
 	return glm::pow(m_apicalControlBaseDistFactor.x, glm::max(1.0f, 1.0f /
 		internode.m_data.m_rootDistance *
 		m_apicalControlBaseDistFactor.y));
 }
 
-float TreeGrowthParameters::GetApicalDominanceBase(const Node<InternodeGrowthData>& internode) const {
-	return m_apicalDominanceBaseAgeDist.x *
-		glm::pow(
-			m_apicalDominanceBaseAgeDist.y,
-			internode.m_data.m_age);
-}
-
-float TreeGrowthParameters::GetApicalDominanceDecrease(
-	const Node<InternodeGrowthData>& internode) const {
-	return m_apicalDominanceBaseAgeDist.z;
-}
-
-float
-TreeGrowthParameters::GetBudKillProbability(const Node<InternodeGrowthData>& internode) const {
-	if (internode.m_data.m_rootDistance < 1) return 0.0f;
-	return m_budKillProbability;
-}
-
-float TreeGrowthParameters::GetLowBranchPruning(const Node<InternodeGrowthData>& internode) const {
-	return m_lowBranchPruning;
-}
-
-bool TreeGrowthParameters::GetPruning(const Node<InternodeGrowthData>& internode) const {
-	return false;
-}
-
 float TreeGrowthParameters::GetSagging(const Node<InternodeGrowthData>& internode) const {
-	auto newSagging = glm::min(
+	const auto newSagging = glm::min(
 		m_saggingFactorThicknessReductionMax.z,
 		m_saggingFactorThicknessReductionMax.x *
 		(internode.m_data.m_descendentTotalBiomass + internode.m_data.m_extraMass) /
 		glm::pow(
 			internode.m_info.m_thickness /
-			m_endNodeThicknessAndControl.x,
+			m_endNodeThickness,
 			m_saggingFactorThicknessReductionMax.y));
 	return glm::max(internode.m_data.m_sagging, newSagging);
 }
 
-float TreeGrowthParameters::GetShootBaseResourceRequirementFactor(
-	const Node<InternodeGrowthData>& internode) const {
-	return m_baseResourceRequirementFactor.x;
-}
-
-float TreeGrowthParameters::GetLeafBaseResourceRequirementFactor(
-	const Node<InternodeGrowthData>& internode) const {
-	return m_baseResourceRequirementFactor.y;
-}
-
-float TreeGrowthParameters::GetFruitBaseResourceRequirementFactor(
-	const Node<InternodeGrowthData>& internode) const {
-	return m_baseResourceRequirementFactor.z;
-}
-
-float TreeGrowthParameters::GetShootProductiveResourceRequirementFactor(
-	const Node<InternodeGrowthData>& internode) const {
-	return m_productiveResourceRequirementFactor.x;
-}
-
-float TreeGrowthParameters::GetLeafProductiveResourceRequirementFactor(
-	const Node<InternodeGrowthData>& internode) const {
-	return m_productiveResourceRequirementFactor.y;
-}
-
-float TreeGrowthParameters::GetFruitProductiveResourceRequirementFactor(
-	const Node<InternodeGrowthData>& internode) const {
-	return m_productiveResourceRequirementFactor.z;
-}
 #pragma endregion
 
 #pragma region RootGrowthParameters
