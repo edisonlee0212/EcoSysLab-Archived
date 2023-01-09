@@ -39,9 +39,14 @@ namespace EcoSysLab {
 		float m_waterGain;
 		glm::quat m_localRotation = glm::vec3(0.0f);
 
+		//-1.0 means the no fruit.
+		float m_maturity = -1.0f;
 		float m_drought = 0.0f;
 
 		float m_luminousFlux = 0.0f;
+
+		glm::mat4 m_reproductiveModuleTransform = glm::mat4(0.0f);
+		glm::mat4 m_reproductiveModuleGlobalTransform = glm::mat4(0.0f);
 	};
 
 	struct InternodeGrowthData {
@@ -220,9 +225,18 @@ namespace EcoSysLab {
 		float m_endNodeThickness;
 		float m_thicknessAccumulateFactor;
 		/**
-		 * \brief Flushing prob
+		 * \brief Flushing prob of lateral bud
 		 */
 		float m_lateralBudFlushingProbability;
+		/**
+		 * \brief Flushing prob of leaf bud
+		 */
+		glm::vec4 m_leafBudFlushingProbabilityTemperatureRange;
+		/**
+		 * \brief Flushing prob of fruit bud
+		 */
+		glm::vec4 m_fruitBudFlushingProbabilityTemperatureRange;
+
 		/**
 		 * \brief AC
 		 */
@@ -273,11 +287,16 @@ namespace EcoSysLab {
 
 #pragma region Foliage
 
-		glm::vec2 m_maxLeafSize;
-		float m_positionVariance = 0.5f;
-		float m_randomRotation = 10.0f;
+		glm::vec3 m_maxLeafSize;
+		float m_leafPositionVariance = 0.5f;
+		float m_leafRandomRotation = 10.0f;
 #pragma endregion
 #pragma region Fruit
+
+		glm::vec3 m_maxFruitSize;
+		float m_fruitPositionVariance = 0.5f;
+		float m_fruitRandomRotation = 10.0f;
+
 #pragma endregion
 
 		[[nodiscard]] float GetDesiredBranchingAngle(const Node<InternodeGrowthData>& internode) const;
