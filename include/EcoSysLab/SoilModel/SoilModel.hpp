@@ -14,20 +14,20 @@ namespace EcoSysLab {
 		friend class Soil;
 		friend class EcoSysLabLayer;
 	public:
-		enum class Boundary : int {remove, block, wrap};
+		enum class Boundary : int {sink, block, wrap};
 		void Initialize(const SoilParameters& soilParameters);
 
 		void Reset();
 		void Step();
-		void WaterLogic(); // can be called for each step to add some water to the volume
+		void Irrigation(); // can be called for each step to add some water to the volume
 
 		[[nodiscard]] float GetWater(const glm::vec3& position) const;
 		[[nodiscard]] float GetDensity(const glm::vec3& position) const;
 		[[nodiscard]] float GetNutrient(const glm::vec3& position) const;
 
 		[[nodiscard]] void ChangeWater(   const glm::vec3& center, float amount, float width);
-		[[nodiscard]] void ChangeDensity( const glm::vec3& position, float amount);
-		[[nodiscard]] void ChangeNutrient(const glm::vec3& position, float amount);
+		[[nodiscard]] void ChangeDensity( const glm::vec3& center, float amount, float width);
+		[[nodiscard]] void ChangeNutrient(const glm::vec3& center, float amount, float width);
 
 		// negative indices are useful as relative offsets
 		[[nodiscard]] static int Index(const glm::uvec3& resolution, int x, int y, int z);
@@ -49,6 +49,7 @@ namespace EcoSysLab {
 
 		int m_version = 0; // TODO: what does this do?
 	protected:
+		void ChangeField(std::vector<float>& field, const glm::vec3& center, float amount, float width);
 		void update_w_sum();
 		bool m_initialized = false;
 
@@ -78,7 +79,10 @@ namespace EcoSysLab {
 		std::vector<float> m_div_grav_y;
 		std::vector<float> m_div_grav_z;
 
-		std::vector<float> m_grad_cw;
+		std::vector<float> m_c; // the capacity of each cell
+		std::vector<float> m_c_grad_x;
+		std::vector<float> m_c_grad_y;
+		std::vector<float> m_c_grad_z;
 
 		// nutrients
 		std::vector<float> m_nutrientsDensity;
@@ -88,13 +92,16 @@ namespace EcoSysLab {
 
 		/////////////////////////////////
 
+		glm::vec3 m_boundingBoxMin;
+
 		float m_w_sum = 0;
+		std::mt19937 m_rnd;
+		float m_irrigationAmount = 1;
 
 		// helper variables:
 		std::vector<int>   m_blur_3x3_idx;
 		std::vector<float> m_blur_3x3_weights;
 
-		glm::vec3 m_boundingBoxMin;
 
 		void Convolution3(const std::vector<float>& input, std::vector<float>& output, const std::vector<int>& indices, const std::vector<float>& weights) const;
 	};
@@ -106,12 +113,12 @@ namespace EcoSysLab {
 		float m_deltaTime = 0.2f; // delta t, time between steps
 		glm::vec3& m_boundingBoxMin = glm::vec3(-6.4, -6.4, -6.4);
 
-		SoilModel::Boundary m_boundary_x = SoilModel::Boundary::remove;
-		SoilModel::Boundary m_boundary_y = SoilModel::Boundary::remove;
-		SoilModel::Boundary m_boundary_z = SoilModel::Boundary::remove;
+		SoilModel::Boundary m_boundary_x = SoilModel::Boundary::sink;
+		SoilModel::Boundary m_boundary_y = SoilModel::Boundary::sink;
+		SoilModel::Boundary m_boundary_z = SoilModel::Boundary::sink;
 
-		float m_diffusionForce = 1.0f;
-		glm::vec3 m_gravityForce = glm::vec3(0, 0, 0);
+		float m_diffusionForce = 0.1;
+		glm::vec3 m_gravityForce = glm::vec3(0, -0.05, 0);
 
 		std::function<float(const glm::vec3& position)> m_soilDensitySampleFunc = [](const glm::vec3& position)
 			{

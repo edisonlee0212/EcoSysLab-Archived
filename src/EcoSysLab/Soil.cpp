@@ -21,7 +21,7 @@ bool OnInspectSoilParameters(SoilParameters& soilParameters)
 		{
 			changed = true;
 		}
-		if (ImGui::DragFloat("Delta time", &soilParameters.m_deltaTime, 0.01f, 0.0f, 999.0f))
+		if (ImGui::DragFloat("Delta time", &soilParameters.m_deltaTime, 0.01f, 0.0f, 10.0f))
 		{
 			changed = true;
 		}
@@ -34,7 +34,7 @@ bool OnInspectSoilParameters(SoilParameters& soilParameters)
 		{
 			changed = true;
 		}
-		if (ImGui::DragFloat3("Gravity Factor", &soilParameters.m_gravityForce.x, 0.01f, 0.0f, 999.0f))
+		if (ImGui::DragFloat3("Gravity Force", &soilParameters.m_gravityForce.x, 0.01f, 0.0f, 999.0f))
 		{
 			changed = true;
 		}
@@ -97,22 +97,43 @@ void Soil::OnInspect()
 		//auto soilDescriptor = m_soilDescriptor.Get<SoilDescriptor>();
 		//if (!m_soilModel.m_initialized) m_soilModel.Initialize(soilDescriptor->m_soilParameters);
 		assert(m_soilModel.m_initialized);
-		static bool autoStep = false;
 		if (ImGui::Button("Initialize"))
 		{
 			InitializeSoilModel();
 		}
-		
+		if (ImGui::Button("Reset"))
+		{
+			m_soilModel.Reset();
+		}
 
-		ImGui::Checkbox("Auto step", &autoStep);
-		if (autoStep)
+		ImGui::InputFloat("Diffusion Force", &m_soilModel.m_diffusionForce);
+		ImGui::InputFloat3("Gravity Force", &m_soilModel.m_gravityForce.x);
+
+		ImGui::Checkbox("Auto step", &m_autoStep);
+		if (m_autoStep || ImGui::Button("Step"))
 		{
+			if(m_irrigation)
+				m_soilModel.Irrigation();
 			m_soilModel.Step();
 		}
-		else if (ImGui::Button("Step"))
+		ImGui::SliderFloat("Irrigation amount", &m_soilModel.m_irrigationAmount, 0.01, 100, "%.2f", ImGuiSliderFlags_Logarithmic);
+		ImGui::Checkbox("apply Irrigation", &m_irrigation);
+
+		ImGui::InputFloat3("Source position", (float*)&m_sourcePositon);
+		ImGui::SliderFloat("Source amount", &m_sourceAmount, 1, 10000, "%.4f", ImGuiSliderFlags_Logarithmic);
+		ImGui::InputFloat("Source width", &m_sourceWidth, 0.1, 100, "%.4f", ImGuiSliderFlags_Logarithmic);
+		if(ImGui::Button("Apply Source"))
 		{
-			m_soilModel.Step();
+			m_soilModel.ChangeWater(m_sourcePositon, m_sourceAmount, m_sourceWidth);
 		}
+
+
+		// Show some general properties:
+		auto bbmin = m_soilModel.GetBoundingBoxMin();
+		auto bbmax = m_soilModel.GetBoundingBoxMax();
+		ImGui::InputFloat3("BB Min", &bbmin.x, "%.3f", ImGuiInputTextFlags_ReadOnly);
+		ImGui::InputFloat3("BB Max", &bbmax.x, "%.3f", ImGuiInputTextFlags_ReadOnly);
+		ImGui::InputFloat("Total Water", &m_soilModel.m_w_sum, 0.0f, 0.0f, "%.6f", ImGuiInputTextFlags_ReadOnly);
 	}
 }
 
@@ -223,6 +244,10 @@ void SerializeSoilParameters(const std::string& name, const SoilParameters& soil
 }
 
 void DeserializeSoilParameters(const std::string& name, SoilParameters& soilParameters, const YAML::Node& in) {
+
+	// temporarily disable to always use standard values as defined in code. Reenable once we actually want to save different scenes
+	return;
+
 	// TODO: add warning / error if not all elements are found
 	if (in[name]) {
 		auto& param = in[name];

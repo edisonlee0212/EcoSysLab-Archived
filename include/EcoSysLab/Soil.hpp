@@ -25,14 +25,15 @@ namespace EcoSysLab
 	enum class SoilProperty
 	{
 		Blank,
-		SoilDensity,
-		WaterDensityBlur,
+
 		WaterDensity,
 		WaterDensityGradient,
-		Flux,
-		Divergence,
-		ScalarDivergence,
-		NutrientDensity
+		DiffusionDivergence,
+		GravityDivergence,
+
+		NutrientDensity,
+
+		SoilDensity
 	};
 	/**
 	 * \brief The soil is designed to be a private component of an entity.
@@ -59,5 +60,14 @@ namespace EcoSysLab
 		void GenerateMesh();
 
 		void InitializeSoilModel();
+	private:
+		// member variables to avoid static variables (in case of multiple Soil instances?)
+		bool m_autoStep = false;
+		bool m_irrigation = true;
+
+		// for user specified sources:
+		glm::vec3 m_sourcePositon = glm::vec3(0, 0, 0);
+		float m_sourceAmount = 50.f;
+		float m_sourceWidth = 1.0f;
 	};
 }
