@@ -313,8 +313,8 @@ namespace EcoSysLab {
         Octree<bool> octree;
         if(settings.m_autoLevel)
         {
-            const float maxRadius = glm::max(glm::max(boxSize.x, boxSize.y), boxSize.z) + 2.0f * minRadius;
-            int subdivisionLevel = 0;
+            const float maxRadius = glm::max(glm::max(boxSize.x, boxSize.y), boxSize.z) * 0.5f + 2.0f * minRadius;
+            int subdivisionLevel = -1;
             float testRadius = minRadius;
             while (testRadius <= maxRadius)
             {
@@ -326,7 +326,7 @@ namespace EcoSysLab {
             octree.Reset(maxRadius, subdivisionLevel, (treeSkeleton.m_min + treeSkeleton.m_max) * 0.5f);
         }
         else {
-            octree.Reset(glm::max((boxSize.x, boxSize.y), glm::max(boxSize.y, boxSize.z)) / 2.0f,
+            octree.Reset(glm::max((boxSize.x, boxSize.y), glm::max(boxSize.y, boxSize.z)) * 0.5f,
                 glm::clamp(settings.m_voxelSubdivisionLevel, 4, 16), (treeSkeleton.m_min + treeSkeleton.m_max) / 2.0f);
         }
         auto& nodeList = treeSkeleton.RefSortedNodeList();

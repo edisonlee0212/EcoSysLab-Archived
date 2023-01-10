@@ -240,6 +240,41 @@ void EcoSysLabLayer::LateUpdate() {
 		}
 	}
 }
+void EcoSysLabLayer::ResetAllTrees(const std::vector<Entity>* treeEntities)
+{
+	auto scene = Application::GetActiveScene();
+	m_days = 0;
+	for (const auto& i : *treeEntities)
+	{
+		scene->GetOrSetPrivateComponent<Tree>(i).lock()->m_treeModel.Clear();
+	}
+	m_needFlowUpdate = true;
+	m_autoGrow = false;
+	m_internodeSize = 0;
+	m_leafSize = 0;
+	m_fruitSize = 0;
+	m_branchSize = 0;
+	m_rootNodeSize = 0;
+	m_rootFlowSize = 0;
+
+	m_branchSegments.clear();
+	m_branchPoints.clear();
+	m_rootSegments.clear();
+	m_rootPoints.clear();
+
+	m_branchStrands = ProjectManager::CreateTemporaryAsset<Strands>();
+	m_rootStrands = ProjectManager::CreateTemporaryAsset<Strands>();
+
+	m_boundingBoxMatrices.clear();
+	m_boundingBoxColors.clear();
+
+	m_foliageMatrices.clear();
+	m_foliageColors.clear();
+
+	m_fruitMatrices.clear();
+	m_fruitColors.clear();
+
+}
 
 void EcoSysLabLayer::OnInspect() {
 	if (ImGui::Begin("EcoSysLab Layer")) {
@@ -264,11 +299,7 @@ void EcoSysLabLayer::OnInspect() {
 		if (treeEntities && !treeEntities->empty()) {
 			if (ImGui::Button("Reset all trees"))
 			{
-				m_days = 0;
-				for(const auto& i : *treeEntities)
-				{
-					scene->GetOrSetPrivateComponent<Tree>(i).lock()->m_treeModel.Clear();
-				}
+				ResetAllTrees(treeEntities );
 			}
 			ImGui::DragInt("Days", &m_days, 1, 0, 9000000);
 			ImGui::Checkbox("Auto grow", &m_autoGrow);
@@ -641,18 +672,21 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 			{
 				const auto& internode = branchSkeleton.PeekNode(internodeHandle);
 				const auto& internodeData = internode.m_data;
+				const auto& internodeInfo = internode.m_info;
+				auto internodeGlobalTransform = glm::translate(internodeInfo.m_globalPosition) * glm::mat4_cast(internodeInfo.m_globalRotation) * glm::scale(glm::vec3(1.0f));
+
 				for (const auto& bud : internodeData.m_buds)
 				{
 					if (bud.m_status != BudStatus::Flushed) continue;
 					if (bud.m_maturity <= 0.0f) continue;
 					if (bud.m_type == BudType::Leaf)
 					{
-						m_foliageMatrices[leafStartIndex + leafIndex] = entityGlobalTransform.m_value * bud.m_reproductiveModuleGlobalTransform;
-						m_foliageColors[leafStartIndex + leafIndex] = glm::vec4(glm::mix(glm::vec3(152 / 255.0f, 203 / 255.0f, 0 / 255.0f), glm::vec3(159 / 255.0f, 100 / 255.0f, 66 / 255.0f), bud.m_drought), 1.0f);
+						m_foliageMatrices[leafStartIndex + leafIndex] = entityGlobalTransform.m_value * internodeGlobalTransform * bud.m_reproductiveModuleTransform;
+						m_foliageColors[leafStartIndex + leafIndex] = glm::vec4(glm::mix(glm::vec3(152 / 255.0f, 203 / 255.0f, 0 / 255.0f), glm::vec3(159 / 255.0f, 100 / 255.0f, 66 / 255.0f), glm::max(bud.m_drought, 1.0f - bud.m_chlorophyll)), 1.0f);
 						leafIndex++;
 					}else if (bud.m_type == BudType::Fruit)
 					{
-						m_fruitMatrices[fruitStartIndex + fruitIndex] = entityGlobalTransform.m_value * bud.m_reproductiveModuleGlobalTransform;
+						m_fruitMatrices[fruitStartIndex + fruitIndex] = entityGlobalTransform.m_value * internodeGlobalTransform * bud.m_reproductiveModuleTransform;
 						m_fruitColors[fruitStartIndex + fruitIndex] = glm::vec4(255 / 255.0f, 165 / 255.0f, 0 / 255.0f, 1.0f);
 
 						fruitIndex++;
@@ -961,7 +995,7 @@ void EcoSysLabLayer::BranchRenderingGs(const std::vector<Entity>* treeEntities)
 }
 
 
-void EcoSysLabLayer::FixedUpdate() {
+void EcoSysLabLayer::Update() {
 	if (m_autoGrow) {
 		Simulate();
 	}

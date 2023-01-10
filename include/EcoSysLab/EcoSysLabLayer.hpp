@@ -73,7 +73,7 @@ namespace EcoSysLab {
 		std::vector<glm::mat4> m_scalarMatrices;
 		std::vector<glm::vec4> m_scalarColors;
 
-		void FixedUpdate() override;
+		void Update() override;
 
 		void OnCreate() override;
 
@@ -114,5 +114,9 @@ namespace EcoSysLab {
 		void Simulate();
 		void GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings);
 
+		void ResetAllTrees(const std::vector<Entity>* treeEntities);
+
 	};
+
+	
 }

@@ -16,7 +16,8 @@ namespace EcoSysLab {
 	enum class BudStatus {
 		Dormant,
 		Flushed,
-		Died
+		Died,
+		Removed
 	};
 
 	class Bud {
@@ -43,10 +44,11 @@ namespace EcoSysLab {
 		float m_maturity = -1.0f;
 		float m_drought = 0.0f;
 
+		float m_chlorophyll = 0.0f;
+
 		float m_luminousFlux = 0.0f;
 
 		glm::mat4 m_reproductiveModuleTransform = glm::mat4(0.0f);
-		glm::mat4 m_reproductiveModuleGlobalTransform = glm::mat4(0.0f);
 	};
 
 	struct InternodeGrowthData {
@@ -250,7 +252,7 @@ namespace EcoSysLab {
 		/**
 		* \brief How much inhibitor will an internode generate.
 		*/
-		float m_budKillProbability{};
+		float m_budKillProbability;
 		/**
 		* \brief The limit of lateral branches being cut off when too close to the
 		* root.
@@ -288,14 +290,17 @@ namespace EcoSysLab {
 #pragma region Foliage
 
 		glm::vec3 m_maxLeafSize;
-		float m_leafPositionVariance = 0.5f;
-		float m_leafRandomRotation = 10.0f;
+		float m_leafPositionVariance;
+		float m_leafRandomRotation;
+		float m_leafChlorophyllLoss;
+		float m_leafChlorophyllSynthesisFactorTemperature;
+		float m_leafFallProbability;
 #pragma endregion
 #pragma region Fruit
 
 		glm::vec3 m_maxFruitSize;
-		float m_fruitPositionVariance = 0.5f;
-		float m_fruitRandomRotation = 10.0f;
+		float m_fruitPositionVariance;
+		float m_fruitRandomRotation;
 
 #pragma endregion
 

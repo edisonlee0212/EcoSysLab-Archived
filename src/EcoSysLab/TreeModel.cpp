@@ -114,7 +114,7 @@ inline bool TreeModel::GrowRootNode(const glm::mat4& globalTransform, SoilModel&
 		{
 			//1. Elongate current node.
 			float collectedAuxin = 0.0f;
-			const float extendLength = rootNode.m_data.m_reproductiveWaterRequirement * m_globalGrowthRate;
+			const float extendLength = rootNode.m_data.m_reproductiveWaterRequirement * rootGrowthParameters.m_rootNodeLength * m_globalGrowthRate;
 			const auto dd = rootGrowthParameters.GetAuxinTransportLoss(rootNode);
 			ElongateRoot(globalTransform, soilModel, extendLength, rootNodeHandle, rootGrowthParameters, collectedAuxin);
 			m_rootSkeleton.RefNode(rootNodeHandle).m_data.m_auxinTarget += collectedAuxin * dd;
@@ -342,12 +342,12 @@ bool TreeModel::GrowInternode(const glm::mat4& globalTransform, ClimateModel& cl
 		auto& internodeData = internode.m_data;
 		auto& internodeInfo = internode.m_info;
 
-		auto killProbability = treeGrowthParameters.m_budKillProbability;
+		auto killProbability = treeGrowthParameters.m_growthRate * treeGrowthParameters.m_budKillProbability;
 		if (internodeData.m_rootDistance < 1.0f) killProbability = 0.0f;
 		if (bud.m_status == BudStatus::Dormant && killProbability > glm::linearRand(0.0f, 1.0f)) {
 			bud.m_status = BudStatus::Died;
 		}
-		if (bud.m_status == BudStatus::Died) continue;
+		if (bud.m_status == BudStatus::Removed) continue;
 
 		const float baseWater = glm::clamp(bud.m_waterGain, 0.0f, bud.m_baseWaterRequirement);
 		bud.m_drought = glm::clamp(1.0f - (1.0f - bud.m_drought) * baseWater / bud.m_baseWaterRequirement, 0.0f, 1.0f);
@@ -364,7 +364,7 @@ bool TreeModel::GrowInternode(const glm::mat4& globalTransform, ClimateModel& cl
 			break;
 		}
 		if (bud.m_type == BudType::Lateral && bud.m_status == BudStatus::Dormant) {
-			float flushProbability = treeGrowthParameters.m_lateralBudFlushingProbability;
+			float flushProbability = treeGrowthParameters.m_growthRate * treeGrowthParameters.m_lateralBudFlushingProbability;
 			flushProbability /= 1.0f + internodeData.m_inhibitor;
 			if (flushProbability >= glm::linearRand(0.0f, 1.0f)) {
 				graphChanged = true;
@@ -396,23 +396,36 @@ bool TreeModel::GrowInternode(const glm::mat4& globalTransform, ClimateModel& cl
 					glm::radians(treeGrowthParameters.GetDesiredApicalAngle(newInternode)), 0.0f,
 					treeGrowthParameters.GetDesiredRollAngle(newInternode));
 			}
+		}else if (climateModel.m_days % 360 == 0)
+		{
+			if (bud.m_type == BudType::Fruit || bud.m_type == BudType::Leaf)
+			{
+				bud.m_status = BudStatus::Dormant;
+				bud.m_maturity = 0.0f;
+				bud.m_drought = 0.0f;
+				bud.m_chlorophyll = 1.0f;
+				bud.m_reproductiveModuleTransform = glm::mat4(0.0f);
+			}
 		}
 		else if (bud.m_type == BudType::Fruit)
 		{
 			if (bud.m_status == BudStatus::Dormant) {
 				auto temperature = climateModel.GetTemperature(globalTransform * glm::translate(internodeInfo.m_globalPosition)[3]);
 				const auto& probabilityRange = treeGrowthParameters.m_fruitBudFlushingProbabilityTemperatureRange;
-				float flushProbability = glm::mix(probabilityRange.x, probabilityRange.y,
+				float flushProbability = treeGrowthParameters.m_growthRate * glm::mix(probabilityRange.x, probabilityRange.y,
 					glm::clamp((temperature - probabilityRange.z) / (probabilityRange.w - probabilityRange.z), 0.0f, 1.0f));
 				if (flushProbability >= glm::linearRand(0.0f, 1.0f))
 				{
 					bud.m_status = BudStatus::Flushed;
 					bud.m_maturity = 0.0f;
-
+					bud.m_drought = 0.0f;
+					bud.m_chlorophyll = 1.0f;
+					bud.m_reproductiveModuleTransform = glm::mat4(0.0f);
 				}
 			}
 			else if (bud.m_status == BudStatus::Flushed)
 			{
+				m_fruitCount++;
 				//Make the fruit larger;
 				bud.m_maturity += 0.05f;
 				bud.m_maturity = glm::clamp(bud.m_maturity, 0.0f, 1.0f);
@@ -426,20 +439,23 @@ bool TreeModel::GrowInternode(const glm::mat4& globalTransform, ClimateModel& cl
 		}
 		else if (bud.m_type == BudType::Leaf)
 		{
+			auto temperature = climateModel.GetTemperature(globalTransform * glm::translate(internodeInfo.m_globalPosition)[3]);
 			if (bud.m_status == BudStatus::Dormant) {
-				auto temperature = climateModel.GetTemperature(globalTransform * glm::translate(internodeInfo.m_globalPosition)[3]);
 				const auto& probabilityRange = treeGrowthParameters.m_fruitBudFlushingProbabilityTemperatureRange;
-				float flushProbability = glm::mix(probabilityRange.x, probabilityRange.y,
+				float flushProbability = treeGrowthParameters.m_growthRate * glm::mix(probabilityRange.x, probabilityRange.y,
 					glm::clamp((temperature - probabilityRange.z) / (probabilityRange.w - probabilityRange.z), 0.0f, 1.0f));
 				if (flushProbability >= glm::linearRand(0.0f, 1.0f))
 				{
 					bud.m_status = BudStatus::Flushed;
 					bud.m_maturity = 0.0f;
-
+					bud.m_drought = 0.0f;
+					bud.m_chlorophyll = 1.0f;
+					bud.m_reproductiveModuleTransform = glm::mat4(0.0f);
 				}
 			}
 			else if (bud.m_status == BudStatus::Flushed)
 			{
+				m_leafCount++;
 				//Make the leaf larger
 				bud.m_maturity += 0.05f;
 				bud.m_maturity = glm::clamp(bud.m_maturity, 0.0f, 1.0f);
@@ -449,8 +465,23 @@ bool TreeModel::GrowInternode(const glm::mat4& globalTransform, ClimateModel& cl
 				ApplyTropism(glm::vec3(0, -1, 0), 0.9f, rotation);
 				auto foliagePosition = front * (leafSize.z * 1.5f);
 				bud.m_reproductiveModuleTransform = glm::translate(foliagePosition) * glm::mat4_cast(rotation) * glm::scale(leafSize);
+				
+				if(climateModel.m_days % 360 > 180 && temperature < treeGrowthParameters.m_leafChlorophyllSynthesisFactorTemperature)
+				{
+					bud.m_chlorophyll -= treeGrowthParameters.m_growthRate * treeGrowthParameters.m_leafChlorophyllLoss;
+					bud.m_chlorophyll = glm::clamp(bud.m_chlorophyll, 0.0f, 1.0f);
+				}
+				if(bud.m_chlorophyll == 0.0f)
+				{
+					auto dropProbability = treeGrowthParameters.m_growthRate * treeGrowthParameters.m_leafFallProbability;
+					if(dropProbability >= glm::linearRand(0.0f, 1.0f))
+					{
+						bud.m_status = BudStatus::Died;
+					}
+				}
 			}
 		}
+		
 	}
 	{
 		auto& internode = m_branchSkeleton.RefNode(internodeHandle);
@@ -652,29 +683,6 @@ bool TreeModel::GrowBranches(const glm::mat4& globalTransform, ClimateModel& cli
 			auto& internode = m_branchSkeleton.RefNode(internodeHandle);
 			auto& internodeData = internode.m_data;
 			auto& internodeInfo = internode.m_info;
-			if (climateModel.m_days % 360 == 0)
-			{
-				for (auto& bud : internodeData.m_buds)
-				{
-					if (bud.m_status == BudStatus::Flushed) {
-						if (bud.m_type == BudType::Leaf)
-						{
-							bud.m_status = BudStatus::Dormant;
-							bud.m_maturity = -1.0f;
-							bud.m_drought = 0.0f;
-							bud.m_reproductiveModuleGlobalTransform = glm::mat4(01.0f);
-						}
-						else if (bud.m_type == BudType::Fruit)
-						{
-							bud.m_status = BudStatus::Dormant;
-							bud.m_maturity = -1.0f;
-							bud.m_drought = 0.0f;
-							bud.m_reproductiveModuleGlobalTransform = glm::mat4(0.0f);
-						}
-					}
-				}
-			}
-
 
 			if (internode.GetParentHandle() == -1) {
 				internodeInfo.m_globalPosition = glm::vec3(0.0f);
@@ -707,24 +715,6 @@ bool TreeModel::GrowBranches(const glm::mat4& globalTransform, ClimateModel& cli
 					(parentInternode.m_info.m_globalRotation *
 						glm::vec3(0, 0, -1));
 
-			}
-			auto internodeGlobalTransform = glm::translate(internodeInfo.m_globalPosition) * glm::mat4_cast(internodeInfo.m_globalRotation) * glm::scale(glm::vec3(1.0f));
-			for (auto& bud : internodeData.m_buds)
-			{
-				if (bud.m_status != BudStatus::Flushed) continue;
-				if (bud.m_maturity <= 0.0f) continue;
-				if (bud.m_type == BudType::Leaf)
-				{
-					m_leafCount++;
-					bud.m_reproductiveModuleGlobalTransform = internodeGlobalTransform * bud.m_reproductiveModuleTransform;
-
-
-				}
-				else if (bud.m_type == BudType::Fruit)
-				{
-					m_fruitCount++;
-					bud.m_reproductiveModuleGlobalTransform = internodeGlobalTransform * bud.m_reproductiveModuleTransform;
-				}
 			}
 
 			m_branchSkeleton.m_min = glm::min(m_branchSkeleton.m_min, internodeInfo.m_globalPosition);
@@ -1229,7 +1219,7 @@ void InternodeGrowthData::Clear() {
 }
 RootGrowthParameters::RootGrowthParameters()
 {
-	m_growthRate = 0.075f;
+	m_growthRate = 0.03f;
 	m_rootNodeLength = 0.03f;
 	m_endNodeThicknessAndControl = glm::vec2(0.002, 0.5);
 	m_thicknessLengthAccumulate = 0.000002f;
@@ -1241,7 +1231,7 @@ RootGrowthParameters::RootGrowthParameters()
 	m_tropismSwitchingProbabilityDistanceFactor = 0.99f;
 	m_tropismIntensity = 0.1f;
 
-	m_baseBranchingProbability = 0.3f;
+	m_baseBranchingProbability = 0.5f;
 	m_branchingProbabilityChildrenDecrease = 0.01f;
 	m_branchingProbabilityDistanceDecrease = 0.98f;
 }
@@ -1257,7 +1247,7 @@ TreeGrowthParameters::TreeGrowthParameters() {
 	m_gravitropism = 0.03f;
 	m_phototropism = 0.0f;
 	m_internodeLength = 0.03f;
-	m_growthRate = 1.0f;
+	m_growthRate = 0.03f;
 	m_endNodeThickness = 0.002f;
 	m_thicknessAccumulateFactor = 0.5f;
 	m_lateralBudFlushingProbability = 0.5f;
@@ -1276,12 +1266,15 @@ TreeGrowthParameters::TreeGrowthParameters() {
 	m_leafProductiveWaterRequirement = 1.0f;
 	m_fruitProductiveWaterRequirement = 1.0f;
 
-	m_leafBudFlushingProbabilityTemperatureRange = glm::vec4(0.0f, 0.25f, 45.0f, 60.0f);
-	m_fruitBudFlushingProbabilityTemperatureRange = glm::vec4(0.0f, 0.25f, 50.0f, 70.0f);
+	m_leafBudFlushingProbabilityTemperatureRange = glm::vec4(0.0f, 1.0f, 45.0f, 60.0f);
+	m_fruitBudFlushingProbabilityTemperatureRange = glm::vec4(0.0f, 1.0f, 50.0f, 70.0f);
 
 	m_maxLeafSize = glm::vec3(0.05f, 1.0f, 0.05f) / 2.0f;
 	m_leafPositionVariance = 0.5f;
 	m_leafRandomRotation = 10.0f;
+	m_leafChlorophyllLoss = 4.0f;
+	m_leafChlorophyllSynthesisFactorTemperature = 65.f;
+	m_leafFallProbability = 3.0f;
 
 	m_maxFruitSize = glm::vec3(0.07f, 0.07f, 0.07f) / 2.0f;
 	m_fruitPositionVariance = 0.5f;
@@ -1384,7 +1377,7 @@ float RootGrowthParameters::GetThicknessAccumulateFactor(const Node<RootInternod
 
 float RootGrowthParameters::GetBranchingProbability(const Node<RootInternodeGrowthData>& rootNode) const
 {
-	return m_baseBranchingProbability *
+	return m_baseBranchingProbability * m_growthRate * 
 		glm::pow(m_branchingProbabilityChildrenDecrease, rootNode.RefChildHandles().size())
 		* glm::pow(m_branchingProbabilityDistanceDecrease, glm::max(0, rootNode.m_data.m_rootUnitDistance - 1));
 }

@@ -149,7 +149,7 @@ void Tree::GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings) 
 		float minRadius = 0.01f;
 		if(treeDescriptor)
 		{
-			minRadius = treeDescriptor->m_rootGrowthParameters.m_endNodeThicknessAndControl.x * 4.0f;
+			minRadius = treeDescriptor->m_rootGrowthParameters.m_endNodeThicknessAndControl.x;
 		}
 		VoxelMeshGenerator<RootSkeletonGrowthData, RootBranchGrowthData, RootInternodeGrowthData> meshGenerator;
 		meshGenerator.Generate(m_treeModel.RefRootSkeleton(), vertices, indices,
