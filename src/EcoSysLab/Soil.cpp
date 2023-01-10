@@ -207,6 +207,9 @@ void Soil::InitializeSoilModel()
 		auto heightField = soilDescriptor->m_heightField.Get<HeightField>();
 
 		auto params = soilDescriptor->m_soilParameters;
+		params.m_boundary_x = SoilModel::Boundary::wrap;
+		params.m_boundary_y = SoilModel::Boundary::absorb;
+		params.m_boundary_z = SoilModel::Boundary::wrap;
 
 
 		if (heightField)

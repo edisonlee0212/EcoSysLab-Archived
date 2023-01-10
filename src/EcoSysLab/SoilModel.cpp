@@ -1,6 +1,7 @@
 #include "SoilModel.hpp"
 
 #include <cassert>
+
 using namespace EcoSysLab;
 using namespace std;
 using namespace glm;
@@ -246,6 +247,13 @@ void EcoSysLab::SoilModel::update_w_sum()
 	m_w_sum = 0.f;
 	for (auto i = 0; i < m_w.size(); ++i)
 		m_w_sum += m_w[i];
+}
+
+
+float AbsorptionValueGaussian(int region_width, int border_distance)
+{
+	auto a = exp(- ((float)border_distance*(float)border_distance) / (0.2*(float)region_width*(float)region_width));
+	return 1-a;
 }
 
 
@@ -571,6 +579,39 @@ void SoilModel::Step()
 			            + (m_div_grav_x[i] + m_div_grav_y[i] + m_div_grav_z[i]);
 		// ToDo: Also apply source terms here
 		m_w[i] += m_dt * divergence;
+	}
+
+
+	// absorbing boundary regions
+	int region_width = 5;
+	if( Boundary::absorb == m_boundary_y )
+	{
+		for(auto i=0; i<region_width; ++i)
+		{
+			auto a = AbsorptionValueGaussian(region_width, i);
+			for (auto x = 0u; x < m_resolution.x; ++x)
+			{
+				for (auto z = 0u; z < m_resolution.z; ++z)
+				{
+					m_w[Index(x, i, z)] *= a;
+					m_w[Index(x, m_resolution.y-1-i, z)] *= a;
+				}
+			}
+		}
+	}
+
+
+	if( Boundary::absorb == m_boundary_z )
+	{
+		for(auto i=0; i<region_width; ++i)
+		{
+			for(auto x = 0u; x<m_resolution.x; ++x)
+			{
+				for (auto y = 0u; y < m_resolution.y; ++y)
+				{
+				}
+			}
+		}
 	}
 
 	m_time += m_dt;
