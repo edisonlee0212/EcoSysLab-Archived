@@ -23,7 +23,8 @@ namespace EcoSysLab {
 	};
 
 	class Tree : public IPrivateComponent {
-
+		friend class EcoSysLabLayer;
+		bool TryGrow();
 	public:
 		PrivateComponentRef m_soil;
 		PrivateComponentRef m_climate;
@@ -35,8 +36,6 @@ namespace EcoSysLab {
 		void OnDestroy() override;
 
 		void OnCreate() override;
-
-		bool TryGrow();
 
 		void GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings);
 	};

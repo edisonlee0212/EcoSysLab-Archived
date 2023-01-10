@@ -29,3 +29,8 @@ float ClimateModel::GetSolarIntensity(const glm::vec3& position) const
 {
 	return 1.0f;
 }
+
+void ClimateModel::Initialize(const ClimateParameters& climateParameters)
+{
+	m_days = 0;
+}

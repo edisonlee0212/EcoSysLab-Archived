@@ -210,13 +210,8 @@ void EcoSysLabLayer::LateUpdate() {
 			gizmoSettings.m_colorMode = GizmoSettings::ColorMode::VertexColor;
 			Gizmos::DrawGizmoStrands(rootStrands, glm::vec4(1.0f), glm::mat4(1.0f), 1, gizmoSettings);
 		}
-		
-		if (m_displaySoil)
-		{
-			SoilVisualization();
-		}
 
-		if(m_displayFruit)
+		if (m_displayFruit && !m_fruitMatrices.empty())
 		{
 			Gizmos::DrawGizmoMeshInstancedColored(
 				DefaultResources::Primitives::Cube, editorLayer->m_sceneCamera,
@@ -227,7 +222,7 @@ void EcoSysLabLayer::LateUpdate() {
 				glm::mat4(1.0f), 1.0f, gizmoSettings);
 		}
 
-		if (m_displayFoliage)
+		if (m_displayFoliage && !m_foliageMatrices.empty())
 		{
 			Gizmos::DrawGizmoMeshInstancedColored(
 				DefaultResources::Primitives::Quad, editorLayer->m_sceneCamera,
@@ -236,6 +231,12 @@ void EcoSysLabLayer::LateUpdate() {
 				m_foliageColors,
 				m_foliageMatrices,
 				glm::mat4(1.0f), 1.0f, gizmoSettings);
+		}
+
+		gizmoSettings.m_colorMode = GizmoSettings::ColorMode::Default;
+		if (m_displaySoil)
+		{
+			SoilVisualization();
 		}
 	}
 }
@@ -259,19 +260,28 @@ void EcoSysLabLayer::OnInspect() {
 
 		Editor::DragAndDropButton<Soil>(m_soilHolder, "Soil");
 		Editor::DragAndDropButton<Climate>(m_climateHolder, "Climate");
-
+		
 		if (treeEntities && !treeEntities->empty()) {
+			if (ImGui::Button("Reset all trees"))
+			{
+				m_days = 0;
+				for(const auto& i : *treeEntities)
+				{
+					scene->GetOrSetPrivateComponent<Tree>(i).lock()->m_treeModel.Clear();
+				}
+			}
+			ImGui::DragInt("Days", &m_days, 1, 0, 9000000);
 			ImGui::Checkbox("Auto grow", &m_autoGrow);
 			if (!m_autoGrow) {
 				bool changed = false;
 				if (ImGui::Button("Grow all")) {
-					GrowAllTrees();
+					Simulate();
 					changed = true;
 				}
 				static int iterations = 5;
 				ImGui::DragInt("Iterations", &iterations, 1, 1, 100);
 				if (ImGui::Button(("Grow all " + std::to_string(iterations) + " iterations").c_str())) {
-					for (int i = 0; i < iterations; i++) GrowAllTrees();
+					for (int i = 0; i < iterations; i++) Simulate();
 					changed = true;
 				}
 				if (changed) {
@@ -290,27 +300,34 @@ void EcoSysLabLayer::OnInspect() {
 			ImGui::Text("Total Leaf size: %d", m_leafSize);
 			ImGui::Text("Total Root node size: %d", m_rootNodeSize);
 			ImGui::Text("Total Root Flow size: %d", m_rootFlowSize);
-		}
-		ImGui::Checkbox("Debug Visualization", &m_debugVisualization);
-		if (m_debugVisualization && ImGui::TreeNodeEx("Debug visualization settings", ImGuiTreeNodeFlags_DefaultOpen)) {
-			ImGui::Checkbox("Display Branches", &m_displayBranches);
-			ImGui::Checkbox("Display Fruits", &m_displayFruit);
-			ImGui::Checkbox("Display Foliage", &m_displayFoliage);
-			ImGui::Checkbox("Display Root Flows", &m_displayRootFlows);
-			ImGui::Checkbox("Display Soil", &m_displaySoil);
-			if (m_displaySoil && ImGui::TreeNodeEx("Soil visualization settings", ImGuiTreeNodeFlags_DefaultOpen))
-			{
-				OnSoilVisualizationMenu();
+
+
+			ImGui::Checkbox("Debug Visualization", &m_debugVisualization);
+			if (m_debugVisualization && ImGui::TreeNodeEx("Debug visualization settings", ImGuiTreeNodeFlags_DefaultOpen)) {
+				ImGui::Checkbox("Display Branches", &m_displayBranches);
+				ImGui::Checkbox("Display Fruits", &m_displayFruit);
+				ImGui::Checkbox("Display Foliage", &m_displayFoliage);
+				ImGui::Checkbox("Display Root Flows", &m_displayRootFlows);
+				ImGui::Checkbox("Display Soil", &m_displaySoil);
+				if (m_displaySoil && ImGui::TreeNodeEx("Soil visualization settings", ImGuiTreeNodeFlags_DefaultOpen))
+				{
+					OnSoilVisualizationMenu();
+					ImGui::TreePop();
+				}
+				ImGui::Checkbox("Display Bounding Box", &m_displayBoundingBox);
 				ImGui::TreePop();
 			}
-			ImGui::Checkbox("Display Bounding Box", &m_displayBoundingBox);
-			ImGui::TreePop();
-		}
 
-		if (m_debugVisualization && scene->IsEntityValid(m_selectedTree)) {
-			m_treeVisualizer.OnInspect(
-				scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock()->m_treeModel, scene->GetDataComponent<GlobalTransform>(m_selectedTree));
+			if (m_debugVisualization && scene->IsEntityValid(m_selectedTree)) {
+				m_treeVisualizer.OnInspect(
+					scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock()->m_treeModel, scene->GetDataComponent<GlobalTransform>(m_selectedTree));
+			}
 		}
+		else
+		{
+			ImGui::Text("No trees in the scene!");
+		}
+		
 	}
 	ImGui::End();
 }
@@ -630,14 +647,15 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 					if (bud.m_maturity <= 0.0f) continue;
 					if (bud.m_type == BudType::Leaf)
 					{
-						leafIndex++;
 						m_foliageMatrices[leafStartIndex + leafIndex] = entityGlobalTransform.m_value * bud.m_reproductiveModuleGlobalTransform;
-						//bud.m_reproductiveModuleGlobalTransform = internodeGlobalTransform * bud.m_reproductiveModuleTransform;
+						m_foliageColors[leafStartIndex + leafIndex] = glm::vec4(glm::mix(glm::vec3(152 / 255.0f, 203 / 255.0f, 0 / 255.0f), glm::vec3(159 / 255.0f, 100 / 255.0f, 66 / 255.0f), bud.m_drought), 1.0f);
+						leafIndex++;
 					}else if (bud.m_type == BudType::Fruit)
 					{
-						fruitIndex++;
 						m_fruitMatrices[fruitStartIndex + fruitIndex] = entityGlobalTransform.m_value * bud.m_reproductiveModuleGlobalTransform;
-						//bud.m_reproductiveModuleGlobalTransform = internodeGlobalTransform * bud.m_reproductiveModuleTransform;
+						m_fruitColors[fruitStartIndex + fruitIndex] = glm::vec4(255 / 255.0f, 165 / 255.0f, 0 / 255.0f, 1.0f);
+
+						fruitIndex++;
 					}
 				}
 			}
@@ -945,22 +963,28 @@ void EcoSysLabLayer::BranchRenderingGs(const std::vector<Entity>* treeEntities)
 
 void EcoSysLabLayer::FixedUpdate() {
 	if (m_autoGrow) {
-		GrowAllTrees();
+		Simulate();
 	}
 }
 
-void EcoSysLabLayer::GrowAllTrees() {
+void EcoSysLabLayer::Simulate() {
 	auto scene = GetScene();
 	const std::vector<Entity>* treeEntities =
 		scene->UnsafeGetPrivateComponentOwnersList<Tree>();
+	m_days++;
 	if (treeEntities && !treeEntities->empty()) {
 		float time = Application::Time().CurrentTime();
+		const auto climate = m_climateHolder.Get<Climate>();
+		const auto soil = m_soilHolder.Get<Soil>();
+
+		climate->m_climateModel.m_days = m_days;
+
 		std::vector<std::shared_future<void>> results;
 		Jobs::ParallelFor(treeEntities->size(), [&](unsigned i) {
 			auto treeEntity = treeEntities->at(i);
 		auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
-		if (!tree->m_climate.Get<Climate>()) tree->m_climate = m_climateHolder.Get<Climate>();
-		if (!tree->m_soil.Get<Soil>()) tree->m_soil = m_soilHolder.Get<Soil>();
+		if (!tree->m_climate.Get<Climate>()) tree->m_climate = climate;
+		if (!tree->m_soil.Get<Soil>()) tree->m_soil = soil;
 		tree->TryGrow();
 			}, results);
 		for (auto& i : results) i.wait();

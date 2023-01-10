@@ -350,7 +350,7 @@ bool TreeModel::GrowInternode(const glm::mat4& globalTransform, ClimateModel& cl
 		if (bud.m_status == BudStatus::Died) continue;
 
 		const float baseWater = glm::clamp(bud.m_waterGain, 0.0f, bud.m_baseWaterRequirement);
-		bud.m_drought = glm::max(1.0f, 1.0f - (1.0f - bud.m_drought) * baseWater / bud.m_baseWaterRequirement);
+		bud.m_drought = glm::clamp(1.0f - (1.0f - bud.m_drought) * baseWater / bud.m_baseWaterRequirement, 0.0f, 1.0f);
 		const float reproductiveWater = glm::max(0.0f, bud.m_waterGain - bud.m_baseWaterRequirement);
 		const float reproductiveContent = reproductiveWater * m_globalGrowthRate;
 
@@ -410,12 +410,18 @@ bool TreeModel::GrowInternode(const glm::mat4& globalTransform, ClimateModel& cl
 					bud.m_maturity = 0.0f;
 
 				}
-			}else if(bud.m_status == BudStatus::Flushed)
+			}
+			else if (bud.m_status == BudStatus::Flushed)
 			{
 				//Make the fruit larger;
 				bud.m_maturity += 0.05f;
 				bud.m_maturity = glm::clamp(bud.m_maturity, 0.0f, 1.0f);
-				bud.m_reproductiveModuleTransform = glm::translate(glm::vec3(0.0f, 0.0f, 0.0f)) * glm::mat4_cast(glm::quat(glm::vec3(0.0f))) * glm::scale(treeGrowthParameters.m_maxFruitSize * bud.m_maturity);
+				auto fruitSize = treeGrowthParameters.m_maxFruitSize * bud.m_maturity;
+				glm::quat rotation = internodeInfo.m_globalRotation * bud.m_localRotation;
+				auto front = rotation * glm::vec3(0, 0, -1);
+				ApplyTropism(glm::vec3(0, -1, 0), 0.25f, rotation);
+				auto fruitPosition = front * (fruitSize.z * 1.5f);
+				bud.m_reproductiveModuleTransform = glm::translate(fruitPosition) * glm::mat4_cast(glm::quat(glm::vec3(0.0f))) * glm::scale(fruitSize);
 			}
 		}
 		else if (bud.m_type == BudType::Leaf)
@@ -429,7 +435,7 @@ bool TreeModel::GrowInternode(const glm::mat4& globalTransform, ClimateModel& cl
 				{
 					bud.m_status = BudStatus::Flushed;
 					bud.m_maturity = 0.0f;
-					
+
 				}
 			}
 			else if (bud.m_status == BudStatus::Flushed)
@@ -437,7 +443,12 @@ bool TreeModel::GrowInternode(const glm::mat4& globalTransform, ClimateModel& cl
 				//Make the leaf larger
 				bud.m_maturity += 0.05f;
 				bud.m_maturity = glm::clamp(bud.m_maturity, 0.0f, 1.0f);
-				bud.m_reproductiveModuleTransform = glm::translate(glm::vec3(0.0f, 0.0f, 0.0f)) * glm::mat4_cast(glm::quat(glm::vec3(0.0f))) * glm::scale(treeGrowthParameters.m_maxFruitSize * bud.m_maturity);
+				auto leafSize = treeGrowthParameters.m_maxLeafSize * bud.m_maturity;
+				glm::quat rotation = internodeInfo.m_globalRotation * bud.m_localRotation;
+				auto front = rotation * glm::vec3(0, 0, -1);
+				ApplyTropism(glm::vec3(0, -1, 0), 0.9f, rotation);
+				auto foliagePosition = front * (leafSize.z * 1.5f);
+				bud.m_reproductiveModuleTransform = glm::translate(foliagePosition) * glm::mat4_cast(rotation) * glm::scale(leafSize);
 			}
 		}
 	}
@@ -643,7 +654,7 @@ bool TreeModel::GrowBranches(const glm::mat4& globalTransform, ClimateModel& cli
 			auto& internodeInfo = internode.m_info;
 			if (climateModel.m_days % 360 == 0)
 			{
-				for(auto& bud : internodeData.m_buds)
+				for (auto& bud : internodeData.m_buds)
 				{
 					if (bud.m_status == BudStatus::Flushed) {
 						if (bud.m_type == BudType::Leaf)
@@ -698,15 +709,18 @@ bool TreeModel::GrowBranches(const glm::mat4& globalTransform, ClimateModel& cli
 
 			}
 			auto internodeGlobalTransform = glm::translate(internodeInfo.m_globalPosition) * glm::mat4_cast(internodeInfo.m_globalRotation) * glm::scale(glm::vec3(1.0f));
-			for(auto& bud : internodeData.m_buds)
+			for (auto& bud : internodeData.m_buds)
 			{
-				if(bud.m_status != BudStatus::Flushed) continue;
+				if (bud.m_status != BudStatus::Flushed) continue;
 				if (bud.m_maturity <= 0.0f) continue;
-				if(bud.m_type == BudType::Leaf)
+				if (bud.m_type == BudType::Leaf)
 				{
 					m_leafCount++;
 					bud.m_reproductiveModuleGlobalTransform = internodeGlobalTransform * bud.m_reproductiveModuleTransform;
-				}else if(bud.m_type == BudType::Fruit)
+
+
+				}
+				else if (bud.m_type == BudType::Fruit)
 				{
 					m_fruitCount++;
 					bud.m_reproductiveModuleGlobalTransform = internodeGlobalTransform * bud.m_reproductiveModuleTransform;
@@ -879,7 +893,7 @@ int TreeModel::GetFruitCount() const
 
 
 bool TreeModel::LowBranchPruning(float maxDistance, NodeHandle internodeHandle,
-                                 const TreeGrowthParameters& treeGrowthParameters) {
+	const TreeGrowthParameters& treeGrowthParameters) {
 	auto& internode = m_branchSkeleton.RefNode(internodeHandle);
 	//Pruning here.
 	if (maxDistance > 5 && internode.m_data.m_order != 0 &&
@@ -1234,6 +1248,9 @@ RootGrowthParameters::RootGrowthParameters()
 #pragma region TreeGrowthParameters
 TreeGrowthParameters::TreeGrowthParameters() {
 	m_lateralBudCount = 2;
+	m_leafBudCount = 1;
+	m_fruitBudCount = 0;
+
 	m_branchingAngleMeanVariance = glm::vec2(60, 3);
 	m_rollAngleMeanVariance = glm::vec2(120, 2);
 	m_apicalAngleMeanVariance = glm::vec2(0, 2.5);
@@ -1258,6 +1275,17 @@ TreeGrowthParameters::TreeGrowthParameters() {
 	m_shootProductiveWaterRequirement = 1.0f;
 	m_leafProductiveWaterRequirement = 1.0f;
 	m_fruitProductiveWaterRequirement = 1.0f;
+
+	m_leafBudFlushingProbabilityTemperatureRange = glm::vec4(0.0f, 0.25f, 45.0f, 60.0f);
+	m_fruitBudFlushingProbabilityTemperatureRange = glm::vec4(0.0f, 0.25f, 50.0f, 70.0f);
+
+	m_maxLeafSize = glm::vec3(0.05f, 1.0f, 0.05f) / 2.0f;
+	m_leafPositionVariance = 0.5f;
+	m_leafRandomRotation = 10.0f;
+
+	m_maxFruitSize = glm::vec3(0.07f, 0.07f, 0.07f) / 2.0f;
+	m_fruitPositionVariance = 0.5f;
+	m_fruitRandomRotation = 10.0f;
 }
 
 

@@ -14,5 +14,7 @@ namespace EcoSysLab {
 
 		[[nodiscard]] float GetTemperature(const glm::vec3& position) const;
 		[[nodiscard]] float GetSolarIntensity(const glm::vec3& position) const;
+
+		void Initialize(const ClimateParameters& climateParameters);
 	};
 }

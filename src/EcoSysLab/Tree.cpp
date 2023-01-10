@@ -30,10 +30,6 @@ void Tree::OnInspect() {
 		}
 		static int iterations = 5;
 		ImGui::DragInt("Iterations", &iterations, 1, 1, 100);
-		if (ImGui::Button(("Grow " + std::to_string(iterations) + " iterations").c_str())) {
-			for (int i = 0; i < iterations; i++) TryGrow();
-			modelChanged = true;
-		}
 		if (ImGui::TreeNode("Mesh generation")) {
 			static TreeMeshGeneratorSettings meshGeneratorSettings;
 			meshGeneratorSettings.OnInspect();
