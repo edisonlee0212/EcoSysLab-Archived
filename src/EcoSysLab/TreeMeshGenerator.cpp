@@ -130,6 +130,7 @@ void TreeMeshGeneratorSettings::OnInspect() {
 	if (ImGui::TreeNodeEx("Mesh Generator settings")) {
 		ImGui::Checkbox("Vertex color only", &m_vertexColorOnly);
 		ImGui::Checkbox("Branch", &m_enableBranch);
+		ImGui::Checkbox("Fruit", &m_enableFruit);
 		ImGui::Checkbox("Foliage", &m_enableFoliage);
 		ImGui::Checkbox("Root", &m_enableRoot);
 		if (m_enableBranch && ImGui::TreeNode("Branch mesh settings")) {

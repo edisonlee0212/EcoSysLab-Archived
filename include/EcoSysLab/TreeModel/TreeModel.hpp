@@ -303,6 +303,8 @@ namespace EcoSysLab {
 		float m_fruitRandomRotation;
 
 #pragma endregion
+		float m_trunkRadius;
+
 
 		[[nodiscard]] float GetDesiredBranchingAngle(const Node<InternodeGrowthData>& internode) const;
 

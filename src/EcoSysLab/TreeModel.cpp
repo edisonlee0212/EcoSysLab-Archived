@@ -345,7 +345,11 @@ bool TreeModel::GrowInternode(const glm::mat4& globalTransform, ClimateModel& cl
 		auto killProbability = treeGrowthParameters.m_growthRate * treeGrowthParameters.m_budKillProbability;
 		if (internodeData.m_rootDistance < 1.0f) killProbability = 0.0f;
 		if (bud.m_status == BudStatus::Dormant && killProbability > glm::linearRand(0.0f, 1.0f)) {
-			bud.m_status = BudStatus::Died;
+			bud.m_status = BudStatus::Removed;
+		}
+		if((bud.m_type == BudType::Leaf || bud.m_type == BudType::Fruit) && internodeInfo.m_thickness > treeGrowthParameters.m_trunkRadius)
+		{
+			bud.m_status = BudStatus::Removed;
 		}
 		if (bud.m_status == BudStatus::Removed) continue;
 
@@ -596,7 +600,7 @@ void TreeModel::CalculateResourceRequirement(NodeHandle internodeHandle,
 	internodeData.m_descendentReproductionWaterRequirement = 0.0f;
 	const auto growthRate = treeGrowthParameters.m_growthRate;
 	for (auto& bud : internodeData.m_buds) {
-		if (bud.m_status == BudStatus::Died) {
+		if (bud.m_status == BudStatus::Died || bud.m_status == BudStatus::Removed) {
 			bud.m_baseWaterRequirement = 0.0f;
 			bud.m_reproductionWaterRequirement = 0.0f;
 			continue;
@@ -1254,7 +1258,7 @@ TreeGrowthParameters::TreeGrowthParameters() {
 	m_apicalControlBaseDistFactor = { 1.1f, 0.99f };
 	m_apicalDominance = 300;
 	m_apicalDominanceDistanceFactor = 0.97f;
-	m_budKillProbability = 0.0f;
+	m_budKillProbability = 0.01f;
 	m_lowBranchPruning = 0.2f;
 	m_saggingFactorThicknessReductionMax = glm::vec3(0.0001, 2, 0.5);
 
@@ -1279,6 +1283,8 @@ TreeGrowthParameters::TreeGrowthParameters() {
 	m_maxFruitSize = glm::vec3(0.07f, 0.07f, 0.07f) / 2.0f;
 	m_fruitPositionVariance = 0.5f;
 	m_fruitRandomRotation = 10.0f;
+
+	m_trunkRadius = 0.02f;
 }
 
 
@@ -1372,7 +1378,7 @@ float RootGrowthParameters::GetThicknessControlFactor(const Node<RootInternodeGr
 
 float RootGrowthParameters::GetThicknessAccumulateFactor(const Node<RootInternodeGrowthData>& rootNode) const
 {
-	return m_thicknessLengthAccumulate;
+	return m_thicknessLengthAccumulate * m_endNodeThicknessAndControl.x;
 }
 
 float RootGrowthParameters::GetBranchingProbability(const Node<RootInternodeGrowthData>& rootNode) const

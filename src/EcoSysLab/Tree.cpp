@@ -96,39 +96,23 @@ void Tree::GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings) 
 	for (const auto& child : children) {
 		auto name = scene->GetEntityName(child);
 		if (name == "Branch Mesh") {
-			branchEntity = child;
+			scene->DeleteEntity(child);
 		}
 		else if (name == "Root Mesh") {
-			rootEntity = child;
+			scene->DeleteEntity(child);
 		}
 		else if (name == "Foliage Mesh") {
-			foliageEntity = child;
+			scene->DeleteEntity(child);
 		}
 		else if (name == "Fruit Mesh") {
-			fruitEntity = child;
+			scene->DeleteEntity(child);
 		}
 	}
-	if (branchEntity.GetIndex() == 0)
+	if (meshGeneratorSettings.m_enableBranch)
 	{
 		branchEntity = scene->CreateEntity("Branch Mesh");
 		scene->SetParent(branchEntity, self);
-	}
-	if (rootEntity.GetIndex() == 0)
-	{
-		rootEntity = scene->CreateEntity("Root Mesh");
-		scene->SetParent(rootEntity, self);
-	}
-	if (foliageEntity.GetIndex() == 0)
-	{
-		foliageEntity = scene->CreateEntity("Foliage Mesh");
-		scene->SetParent(foliageEntity, self);
-	}
-	if (fruitEntity.GetIndex() == 0)
-	{
-		fruitEntity = scene->CreateEntity("Fruit Mesh");
-		scene->SetParent(fruitEntity, self);
-	}
-	{
+
 		std::vector<Vertex> vertices;
 		std::vector<unsigned int> indices;
 		CylindricalMeshGenerator<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> meshGenerator;
@@ -139,15 +123,22 @@ void Tree::GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings) 
 		material->SetProgram(DefaultResources::GLPrograms::StandardProgram);
 		mesh->SetVertices(17, vertices, indices);
 		auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(branchEntity).lock();
+		material->m_materialProperties.m_albedoColor = glm::vec3(109, 79, 75) / 255.0f;
+		material->m_materialProperties.m_roughness = 0.0f;
 		meshRenderer->m_mesh = mesh;
 		meshRenderer->m_material = material;
 	}
+	if (meshGeneratorSettings.m_enableRoot)
 	{
+		rootEntity = scene->CreateEntity("Root Mesh");
+		scene->SetParent(rootEntity, self);
+
+
 		std::vector<Vertex> vertices;
 		std::vector<unsigned int> indices;
 		const auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
 		float minRadius = 0.01f;
-		if(treeDescriptor)
+		if (treeDescriptor)
 		{
 			minRadius = treeDescriptor->m_rootGrowthParameters.m_endNodeThicknessAndControl.x;
 		}
@@ -157,8 +148,71 @@ void Tree::GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings) 
 		auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
 		auto material = ProjectManager::CreateTemporaryAsset<Material>();
 		material->SetProgram(DefaultResources::GLPrograms::StandardProgram);
+		material->m_materialProperties.m_albedoColor = glm::vec3(188, 143, 143) / 255.0f;
+		material->m_materialProperties.m_roughness = 0.0f;
 		mesh->SetVertices(17, vertices, indices);
 		auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(rootEntity).lock();
+		meshRenderer->m_mesh = mesh;
+		meshRenderer->m_material = material;
+	}
+	if (meshGeneratorSettings.m_enableFoliage)
+	{
+		foliageEntity = scene->CreateEntity("Foliage Mesh");
+		scene->SetParent(foliageEntity, self);
+
+
+		std::vector<Vertex> vertices;
+		std::vector<unsigned int> indices;
+		auto quadMesh = DefaultResources::Primitives::Quad;
+		auto& quadTriangles = quadMesh->UnsafeGetTriangles();
+		auto quadVerticesSize = quadMesh->GetVerticesAmount();
+		size_t offset = 0;
+
+		const auto& nodeList = m_treeModel.RefBranchSkeleton().RefSortedNodeList();
+		for (const auto& internodeHandle : nodeList) {
+			const auto& internode = m_treeModel.RefBranchSkeleton().RefNode(internodeHandle);
+			const auto& internodeInfo = internode.m_info;
+			const auto& internodeData = internode.m_data;
+			auto internodeGlobalTransform = glm::translate(internodeInfo.m_globalPosition) * glm::mat4_cast(internodeInfo.m_globalRotation) * glm::scale(glm::vec3(1.0f));
+			for (const auto& bud : internodeData.m_buds) {
+				if (bud.m_status != BudStatus::Flushed) continue;
+				if (bud.m_maturity <= 0.0f) continue;
+				if (bud.m_type == BudType::Leaf)
+				{
+					auto matrix = internodeGlobalTransform * bud.m_reproductiveModuleTransform;
+					Vertex archetype;
+					for (auto i = 0; i < quadMesh->GetVerticesAmount(); i++) {
+						archetype.m_position =
+							matrix * glm::vec4(quadMesh->UnsafeGetVertices()[i].m_position, 1.0f);
+						archetype.m_normal = glm::normalize(glm::vec3(
+							matrix * glm::vec4(quadMesh->UnsafeGetVertices()[i].m_normal, 0.0f)));
+						archetype.m_tangent = glm::normalize(glm::vec3(
+							matrix *
+							glm::vec4(quadMesh->UnsafeGetVertices()[i].m_tangent, 0.0f)));
+						archetype.m_texCoord =
+							quadMesh->UnsafeGetVertices()[i].m_texCoord;
+						vertices.push_back(archetype);
+					}
+					for (auto triangle : quadTriangles) {
+						triangle.x += offset;
+						triangle.y += offset;
+						triangle.z += offset;
+						indices.push_back(triangle.x);
+						indices.push_back(triangle.y);
+						indices.push_back(triangle.z);
+					}
+					offset += quadVerticesSize;
+				}
+			}
+		}
+
+		auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
+		auto material = ProjectManager::CreateTemporaryAsset<Material>();
+		material->SetProgram(DefaultResources::GLPrograms::StandardProgram);
+		mesh->SetVertices(17, vertices, indices);
+		material->m_materialProperties.m_albedoColor = glm::vec3(152 / 255.0f, 203 / 255.0f, 0 / 255.0f);
+		material->m_materialProperties.m_roughness = 0.0f;
+		auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(foliageEntity).lock();
 		meshRenderer->m_mesh = mesh;
 		meshRenderer->m_material = material;
 	}
