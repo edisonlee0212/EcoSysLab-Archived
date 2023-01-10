@@ -295,6 +295,8 @@ namespace EcoSysLab {
 		float m_leafChlorophyllLoss;
 		float m_leafChlorophyllSynthesisFactorTemperature;
 		float m_leafFallProbability;
+
+		float m_leafDistanceToBranchEndLimit;
 #pragma endregion
 #pragma region Fruit
 

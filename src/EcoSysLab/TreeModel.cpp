@@ -448,7 +448,7 @@ bool TreeModel::GrowInternode(const glm::mat4& globalTransform, ClimateModel& cl
 				const auto& probabilityRange = treeGrowthParameters.m_fruitBudFlushingProbabilityTemperatureRange;
 				float flushProbability = treeGrowthParameters.m_growthRate * glm::mix(probabilityRange.x, probabilityRange.y,
 					glm::clamp((temperature - probabilityRange.z) / (probabilityRange.w - probabilityRange.z), 0.0f, 1.0f));
-				if (flushProbability >= glm::linearRand(0.0f, 1.0f))
+				if (internodeData.m_maxDistanceToAnyBranchEnd < treeGrowthParameters.m_leafDistanceToBranchEndLimit && flushProbability >= glm::linearRand(0.0f, 1.0f))
 				{
 					bud.m_status = BudStatus::Flushed;
 					bud.m_maturity = 0.0f;
@@ -1223,10 +1223,10 @@ void InternodeGrowthData::Clear() {
 }
 RootGrowthParameters::RootGrowthParameters()
 {
-	m_growthRate = 0.03f;
+	m_growthRate = 0.04f;
 	m_rootNodeLength = 0.03f;
 	m_endNodeThicknessAndControl = glm::vec2(0.002, 0.5);
-	m_thicknessLengthAccumulate = 0.000002f;
+	m_thicknessLengthAccumulate = 0.0002f;
 	m_branchingAngleMeanVariance = glm::vec2(60, 3);
 	m_rollAngleMeanVariance = glm::vec2(120, 2);
 	m_apicalAngleMeanVariance = glm::vec2(0, 3);
@@ -1235,7 +1235,7 @@ RootGrowthParameters::RootGrowthParameters()
 	m_tropismSwitchingProbabilityDistanceFactor = 0.99f;
 	m_tropismIntensity = 0.1f;
 
-	m_baseBranchingProbability = 0.5f;
+	m_baseBranchingProbability = 0.3f;
 	m_branchingProbabilityChildrenDecrease = 0.01f;
 	m_branchingProbabilityDistanceDecrease = 0.98f;
 }
@@ -1279,6 +1279,7 @@ TreeGrowthParameters::TreeGrowthParameters() {
 	m_leafChlorophyllLoss = 4.0f;
 	m_leafChlorophyllSynthesisFactorTemperature = 65.f;
 	m_leafFallProbability = 3.0f;
+	m_leafDistanceToBranchEndLimit = 10.f;
 
 	m_maxFruitSize = glm::vec3(0.07f, 0.07f, 0.07f) / 2.0f;
 	m_fruitPositionVariance = 0.5f;
