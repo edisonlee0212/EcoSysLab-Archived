@@ -579,7 +579,7 @@ void TreeModel::CollectLuminousFluxFromLeaves(ClimateModel& climateModel,
 			}
 		}
 	}
-	m_treeGrowthNutrients.m_luminousFlux = m_treeGrowthNutrientsRequirement.m_luminousFlux;
+	if(!m_resourceFlow) m_treeGrowthNutrients.m_luminousFlux = m_treeGrowthNutrientsRequirement.m_luminousFlux;
 }
 
 bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHandle, const TreeGrowthParameters& treeGrowthParameters) {
@@ -1245,7 +1245,7 @@ bool TreeModel::GrowRoots(const glm::mat4& globalTransform, SoilModel& soilModel
 				auto& rootNode = m_rootSkeleton.RefNode(rootNodeHandle);
 				auto& rootNodeData = rootNode.m_data;
 				auto& rootNodeInfo = rootNode.m_info;
-				rootNode.m_data.m_reproductiveWaterRequirement = /*soilModel.GetNutrient(pos[3])*/1.0f * growthRate;
+				rootNodeData.m_reproductiveWaterRequirement = growthRate * rootNodeData.m_nitrite;
 				totalWaterRequirement += rootNodeData.m_reproductiveWaterRequirement;
 				totalLuminousFluxRequirement += rootNodeData.m_reproductiveWaterRequirement;
 				if (rootNode.GetParentHandle() == -1) {
@@ -1392,15 +1392,22 @@ bool TreeModel::GrowRoots(const glm::mat4& globalTransform, SoilModel& soilModel
 	return rootStructureChanged;
 }
 
-void TreeModel::CollectWaterFromRoots(const glm::mat4& globalTransform, SoilModel& soilModel, const RootGrowthParameters& rootGrowthParameters)
+void TreeModel::CollectWaterAndNitriteFromRoots(const glm::mat4& globalTransform, SoilModel& soilModel, const RootGrowthParameters& rootGrowthParameters)
 {
 	m_treeGrowthNutrients.m_water = 0.0f;
 	const auto& sortedRootNodeList = m_rootSkeleton.RefSortedNodeList();
 	for (const auto& rootNodeHandle : sortedRootNodeList) {
 		auto& rootNode = m_rootSkeleton.RefNode(rootNodeHandle);
-		m_treeGrowthNutrients.m_water += 1.0f;//soilModel.GetWater(rootNode.m_info.m_globalPosition);
+		auto& rootNodeInfo = rootNode.m_info;
+		auto worldSpacePosition = globalTransform * glm::translate(rootNodeInfo.m_globalPosition)[3];
+		m_treeGrowthNutrients.m_water += soilModel.GetWater(worldSpacePosition);
+		rootNode.m_data.m_nitrite = soilModel.GetNutrient(worldSpacePosition);
+		if (!m_resourceFlow)
+		{
+			rootNode.m_data.m_nitrite = 1.0f;
+		}
 	}
-	m_treeGrowthNutrients.m_water = m_treeGrowthNutrientsRequirement.m_water;
+	if(!m_resourceFlow) m_treeGrowthNutrients.m_water = m_treeGrowthNutrientsRequirement.m_water;
 }
 
 bool TreeModel::Grow(const glm::mat4& globalTransform, SoilModel& soilModel, ClimateModel& climateModel,
@@ -1419,7 +1426,7 @@ bool TreeModel::Grow(const glm::mat4& globalTransform, SoilModel& soilModel, Cli
 	//Set target carbohydrate.
 	m_treeGrowthNutrientsRequirement.m_carbohydrate = m_treeGrowthNutrientsRequirement.m_luminousFlux;
 	//Collect water from roots.
-	CollectWaterFromRoots(globalTransform, soilModel, rootGrowthParameters);
+	CollectWaterAndNitriteFromRoots(globalTransform, soilModel, rootGrowthParameters);
 	//Collect light from branches.
 	CollectLuminousFluxFromLeaves(climateModel, treeGrowthParameters);
 	//Perform photosynthesis.

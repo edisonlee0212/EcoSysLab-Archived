@@ -106,6 +106,8 @@ namespace EcoSysLab {
 		int m_rootUnitDistance = 0;
 		int m_order = 0;
 
+		float m_nitrite = 0.0f;
+
 		float m_reproductiveWaterRequirement;
 
 		float m_auxinTarget = 0;
@@ -382,7 +384,7 @@ namespace EcoSysLab {
 		inline void CalculateThickness(NodeHandle rootNodeHandle,
 			const RootGrowthParameters& rootGrowthParameters);
 
-		void CollectWaterFromRoots(const glm::mat4& globalTransform, SoilModel& soilModel,
+		void CollectWaterAndNitriteFromRoots(const glm::mat4& globalTransform, SoilModel& soilModel,
 			const RootGrowthParameters& rootGrowthParameters);
 #pragma endregion
 #pragma region Tree Growth
@@ -444,6 +446,8 @@ namespace EcoSysLab {
 		int m_fruitCount = 0;
 
 	public:
+		bool m_resourceFlow = false;
+
 		TreeVolume m_treeVolume;
 		IlluminationEstimationSettings m_illuminationEstimationSettings;
 		Octree<TreeVoxelData> m_rootOctree;
