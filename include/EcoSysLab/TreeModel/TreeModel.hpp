@@ -159,15 +159,33 @@ namespace EcoSysLab {
 		* The mean and variance of the angular difference between the growth direction and the direction of the apical bud
 		*/
 		glm::vec2 m_apicalAngleMeanVariance;
-
+		/**
+		* Loss of auxin/inhibitor along the branch
+		*/
 		float m_auxinTransportLoss;
-
+		/**
+		* The possibility of the lateral branch having different tropism as the parent branch
+		*/
 		float m_tropismSwitchingProbability;
+		/**
+		* The distance factor of the possibility of the lateral branch having different tropism as the parent branch
+		*/
 		float m_tropismSwitchingProbabilityDistanceFactor;
+		/**
+		* The overall intensity of the tropism.
+		*/
 		float m_tropismIntensity;
-
+		/**
+		* The base branching probability
+		*/
 		float m_baseBranchingProbability;
+		/**
+		* The probability decrease for each children.
+		*/
 		float m_branchingProbabilityChildrenDecrease;
+		/**
+		* The probability decrease along the branch.
+		*/
 		float m_branchingProbabilityDistanceDecrease;
 
 		[[nodiscard]] float GetRootApicalAngle(const Node<RootInternodeGrowthData>& rootNode) const;
