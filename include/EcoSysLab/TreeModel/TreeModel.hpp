@@ -47,7 +47,7 @@ namespace EcoSysLab {
 		float m_chlorophyll = 0.0f;
 
 		float m_luminousFlux = 0.0f;
-
+		float m_temperature;
 		glm::mat4 m_reproductiveModuleTransform = glm::mat4(0.0f);
 	};
 
@@ -400,10 +400,12 @@ namespace EcoSysLab {
 		inline void CalculateThicknessAndSagging(NodeHandle internodeHandle,
 			const TreeGrowthParameters& treeGrowthParameters);
 
-		inline bool GrowInternode(const glm::mat4& globalTransform, ClimateModel& climateModel, NodeHandle internodeHandle, const TreeGrowthParameters& treeGrowthParameters);
+		inline bool GrowInternode(ClimateModel& climateModel, NodeHandle internodeHandle, const TreeGrowthParameters& treeGrowthParameters);
 
-		bool ElongateInternode(const glm::mat4& globalTransform, float extendLength, NodeHandle internodeHandle,
+		bool ElongateInternode(float extendLength, NodeHandle internodeHandle,
 			const TreeGrowthParameters& treeGrowthParameters, float& collectedInhibitor);
+
+		friend class Tree;
 		void CollectLuminousFluxFromLeaves(ClimateModel& climateModel,
 			const TreeGrowthParameters& treeGrowthParameters);
 #pragma endregion
@@ -440,6 +442,7 @@ namespace EcoSysLab {
 
 		int m_leafCount = 0;
 		int m_fruitCount = 0;
+
 	public:
 		TreeVolume m_treeVolume;
 		IlluminationEstimationSettings m_illuminationEstimationSettings;
@@ -475,8 +478,7 @@ namespace EcoSysLab {
 
 		int m_historyLimit = -1;
 
-
-		void CalculateIllumination();
+		void SampleTemperature(const glm::mat4& globalTransform, ClimateModel& climateModel);
 
 		[[nodiscard]] Skeleton<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData>& RefBranchSkeleton();
 

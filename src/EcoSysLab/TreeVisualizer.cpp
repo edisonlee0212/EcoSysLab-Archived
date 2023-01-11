@@ -148,6 +148,32 @@ TreeVisualizer::OnInspect(
                 }
             }
         }
+
+        if (m_visualization) {
+            const auto& treeSkeleton = treeModel.PeekBranchSkeleton(m_iteration);
+            const auto& rootSkeleton = treeModel.PeekRootSkeleton(m_iteration);
+            const auto editorLayer = Application::GetLayer<EditorLayer>();
+            const auto& sortedBranchList = treeSkeleton.RefSortedFlowList();
+            const auto& sortedInternodeList = treeSkeleton.RefSortedNodeList();
+            ImGui::Text("Internode count: %d", sortedInternodeList.size());
+            ImGui::Text("Branch count: %d", sortedBranchList.size());
+
+            const auto& sortedRootFlowList = rootSkeleton.RefSortedFlowList();
+            const auto& sortedRootNodeList = rootSkeleton.RefSortedNodeList();
+            ImGui::Text("Root node count: %d", sortedRootNodeList.size());
+            ImGui::Text("Root flow count: %d", sortedRootFlowList.size());
+
+            static bool enableStroke = false;
+            if (ImGui::Checkbox("Enable stroke", &enableStroke)) {
+                if (enableStroke) {
+                    m_mode = PruningMode::Stroke;
+                }
+                else {
+                    m_mode = PruningMode::None;
+                }
+                m_storedMousePositions.clear();
+            }
+        }
         ImGui::TreePop();
     }
 
@@ -162,26 +188,6 @@ bool TreeVisualizer::Visualize(TreeModel& treeModel,
     const auto& rootSkeleton = treeModel.PeekRootSkeleton(m_iteration);
     if (m_visualization) {
         const auto editorLayer = Application::GetLayer<EditorLayer>();
-        const auto& sortedBranchList = treeSkeleton.RefSortedFlowList();
-        const auto& sortedInternodeList = treeSkeleton.RefSortedNodeList();
-        ImGui::Text("Internode count: %d", sortedInternodeList.size());
-        ImGui::Text("Branch count: %d", sortedBranchList.size());
-
-        const auto& sortedRootFlowList = rootSkeleton.RefSortedFlowList();
-        const auto& sortedRootNodeList = rootSkeleton.RefSortedNodeList();
-        ImGui::Text("Root node count: %d", sortedRootNodeList.size());
-        ImGui::Text("Root flow count: %d", sortedRootFlowList.size());
-
-        static bool enableStroke = false;
-        if (ImGui::Checkbox("Enable stroke", &enableStroke)) {
-            if (enableStroke) {
-                m_mode = PruningMode::Stroke;
-            }
-            else {
-                m_mode = PruningMode::None;
-            }
-            m_storedMousePositions.clear();
-        }
         switch (m_mode) {
         case PruningMode::None: {
             if (Inputs::GetMouseInternal(GLFW_MOUSE_BUTTON_LEFT, Windows::GetWindow())) {
@@ -592,11 +598,24 @@ void TreeVisualizer::Reset(
         TreeModel &treeModel) {
     m_selectedInternodeHandle = -1;
     m_selectedInternodeHierarchyList.clear();
+    m_selectedRootNodeHandle = -1;
+    m_selectedRootNodeHierarchyList.clear();
     m_iteration = treeModel.CurrentIteration();
     m_internodeMatrices.clear();
+    m_rootNodeMatrices.clear();
     m_needUpdate = true;
 }
 
+void TreeVisualizer::Clear()
+{
+    m_selectedInternodeHandle = -1;
+    m_selectedInternodeHierarchyList.clear();
+    m_selectedRootNodeHandle = -1;
+    m_selectedRootNodeHierarchyList.clear();
+    m_iteration = 0;
+    m_internodeMatrices.clear();
+    m_rootNodeMatrices.clear();
+}
 
 
 void TreeVisualizer::PeekRootNode(

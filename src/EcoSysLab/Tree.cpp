@@ -54,7 +54,7 @@ void Tree::OnInspect() {
 
 	if(ImGui::Button("Calculate illumination"))
 	{
-		m_treeModel.CalculateIllumination();
+		m_treeModel.CollectLuminousFluxFromLeaves(m_climate.Get<Climate>()->m_climateModel, m_treeDescriptor.Get<TreeDescriptor>()->m_treeGrowthParameters);
 		modelChanged = true;
 	}
 	if (modelChanged) {

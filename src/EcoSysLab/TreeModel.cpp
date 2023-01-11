@@ -449,9 +449,6 @@ void TreeModel::CollectResourceRequirement(NodeHandle internodeHandle)
 {
 	auto& internode = m_branchSkeleton.RefNode(internodeHandle);
 	auto& internodeData = internode.m_data;
-	auto& internodeInfo = internode.m_info;
-	internodeData.m_lightIntensity = m_treeVolume.IlluminationEstimation(internodeInfo.m_globalPosition, m_illuminationEstimationSettings);
-	internodeInfo.m_color = glm::mix(glm::vec4(0.0, 0.0, 0.0, 1.0), glm::vec4(1.0f), internodeData.m_lightIntensity);
 	if (!internode.IsEndNode()) {
 		//If current node is not end node
 		for (const auto& i : internode.RefChildHandles()) {
@@ -463,7 +460,7 @@ void TreeModel::CollectResourceRequirement(NodeHandle internodeHandle)
 }
 
 
-bool TreeModel::ElongateInternode(const glm::mat4& globalTransform, float extendLength, NodeHandle internodeHandle,
+bool TreeModel::ElongateInternode(float extendLength, NodeHandle internodeHandle,
 	const TreeGrowthParameters& parameters, float& collectedInhibitor) {
 	bool graphChanged = false;
 	auto& internode = m_branchSkeleton.RefNode(internodeHandle);
@@ -547,7 +544,7 @@ bool TreeModel::ElongateInternode(const glm::mat4& globalTransform, float extend
 			parameters.GetDesiredRollAngle(newInternode));
 		if (extraLength > internodeLength) {
 			float childInhibitor = 0.0f;
-			ElongateInternode(globalTransform, extraLength - internodeLength, newInternodeHandle, parameters, childInhibitor);
+			ElongateInternode(extraLength - internodeLength, newInternodeHandle, parameters, childInhibitor);
 			childInhibitor *= parameters.m_apicalDominanceDistanceFactor;
 			collectedInhibitor += childInhibitor;
 			m_branchSkeleton.RefNode(newInternodeHandle).m_data.m_inhibitorTarget = childInhibitor;
@@ -570,18 +567,22 @@ void TreeModel::CollectLuminousFluxFromLeaves(ClimateModel& climateModel,
 	const auto& sortedInternodeList = m_branchSkeleton.RefSortedNodeList();
 	for (const auto& internodeHandle : sortedInternodeList) {
 		auto& internode = m_branchSkeleton.RefNode(internodeHandle);
+		auto& internodeData = internode.m_data;
+		auto& internodeInfo = internode.m_info;
+		internodeData.m_lightIntensity = m_treeVolume.IlluminationEstimation(internodeInfo.m_globalPosition, m_illuminationEstimationSettings);
+		internodeInfo.m_color = glm::mix(glm::vec4(0.0, 0.0, 0.0, 1.0), glm::vec4(1.0f), internodeData.m_lightIntensity);
 		for (const auto& bud : internode.m_data.m_buds)
 		{
 			if (bud.m_status == BudStatus::Flushed && bud.m_type == BudType::Leaf)
 			{
-				m_treeGrowthNutrients.m_luminousFlux += bud.m_luminousFlux;
+				m_treeGrowthNutrients.m_luminousFlux += internodeData.m_lightIntensity * glm::pow(bud.m_maturity, 2.0f) * bud.m_drought;
 			}
 		}
 	}
 	m_treeGrowthNutrients.m_luminousFlux = m_treeGrowthNutrientsRequirement.m_luminousFlux;
 }
 
-bool TreeModel::GrowInternode(const glm::mat4& globalTransform, ClimateModel& climateModel, NodeHandle internodeHandle, const TreeGrowthParameters& treeGrowthParameters) {
+bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHandle, const TreeGrowthParameters& treeGrowthParameters) {
 	bool graphChanged = false;
 	{
 		auto& internode = m_branchSkeleton.RefNode(internodeHandle);
@@ -618,17 +619,17 @@ bool TreeModel::GrowInternode(const glm::mat4& globalTransform, ClimateModel& cl
 			const float elongateLength = reproductiveContent * treeGrowthParameters.m_internodeLength;
 			float collectedInhibitor = 0.0f;
 			const auto dd = treeGrowthParameters.m_apicalDominanceDistanceFactor;
-			graphChanged = ElongateInternode(globalTransform, elongateLength, internodeHandle, treeGrowthParameters, collectedInhibitor);
+			graphChanged = ElongateInternode(elongateLength, internodeHandle, treeGrowthParameters, collectedInhibitor);
 			m_branchSkeleton.RefNode(internodeHandle).m_data.m_inhibitorTarget += collectedInhibitor * dd;
 			//If apical bud is dormant, then there's no lateral bud at this stage. We should quit anyway.
 			break;
 		}
-		auto temperature = climateModel.GetTemperature(globalTransform * glm::translate(internodeInfo.m_globalPosition)[3]);
 		if (bud.m_type == BudType::Lateral && bud.m_status == BudStatus::Dormant) {
 			const auto& probabilityRange = treeGrowthParameters.m_lateralBudFlushingProbabilityTemperatureRange;
 			float flushProbability = treeGrowthParameters.m_growthRate * glm::mix(probabilityRange.x, probabilityRange.y,
-				glm::clamp((temperature - probabilityRange.z) / (probabilityRange.w - probabilityRange.z), 0.0f, 1.0f));
+				glm::clamp((bud.m_temperature - probabilityRange.z) / (probabilityRange.w - probabilityRange.z), 0.0f, 1.0f));
 			flushProbability /= 1.0f + internodeData.m_inhibitor;
+			flushProbability *= glm::pow(internodeData.m_lightIntensity, treeGrowthParameters.m_lateralBudFlushingProbabilityLightingFactor);
 			if (flushProbability >= glm::linearRand(0.0f, 1.0f)) {
 				graphChanged = true;
 				bud.m_status = BudStatus::Flushed;
@@ -677,7 +678,8 @@ bool TreeModel::GrowInternode(const glm::mat4& globalTransform, ClimateModel& cl
 
 				const auto& probabilityRange = treeGrowthParameters.m_fruitBudFlushingProbabilityTemperatureRange;
 				float flushProbability = treeGrowthParameters.m_growthRate * glm::mix(probabilityRange.x, probabilityRange.y,
-					glm::clamp((temperature - probabilityRange.z) / (probabilityRange.w - probabilityRange.z), 0.0f, 1.0f));
+					glm::clamp((bud.m_temperature - probabilityRange.z) / (probabilityRange.w - probabilityRange.z), 0.0f, 1.0f));
+				flushProbability *= glm::pow(internodeData.m_lightIntensity, treeGrowthParameters.m_fruitBudFlushingProbabilityLightingFactor);
 				if (flushProbability >= glm::linearRand(0.0f, 1.0f))
 				{
 					bud.m_status = BudStatus::Flushed;
@@ -706,7 +708,8 @@ bool TreeModel::GrowInternode(const glm::mat4& globalTransform, ClimateModel& cl
 			if (bud.m_status == BudStatus::Dormant) {
 				const auto& probabilityRange = treeGrowthParameters.m_fruitBudFlushingProbabilityTemperatureRange;
 				float flushProbability = treeGrowthParameters.m_growthRate * glm::mix(probabilityRange.x, probabilityRange.y,
-					glm::clamp((temperature - probabilityRange.z) / (probabilityRange.w - probabilityRange.z), 0.0f, 1.0f));
+					glm::clamp((bud.m_temperature - probabilityRange.z) / (probabilityRange.w - probabilityRange.z), 0.0f, 1.0f));
+				flushProbability *= glm::pow(internodeData.m_lightIntensity, treeGrowthParameters.m_leafBudFlushingProbabilityLightingFactor);
 				if (internodeData.m_maxDistanceToAnyBranchEnd < treeGrowthParameters.m_leafDistanceToBranchEndLimit && flushProbability >= glm::linearRand(0.0f, 1.0f))
 				{
 					bud.m_status = BudStatus::Flushed;
@@ -729,7 +732,7 @@ bool TreeModel::GrowInternode(const glm::mat4& globalTransform, ClimateModel& cl
 				auto foliagePosition = front * (leafSize.z * 1.5f);
 				bud.m_reproductiveModuleTransform = glm::translate(foliagePosition) * glm::mat4_cast(rotation) * glm::scale(leafSize);
 
-				if (climateModel.m_days % 360 > 180 && temperature < treeGrowthParameters.m_leafChlorophyllSynthesisFactorTemperature)
+				if (climateModel.m_days % 360 > 180 && bud.m_temperature < treeGrowthParameters.m_leafChlorophyllSynthesisFactorTemperature)
 				{
 					bud.m_chlorophyll -= treeGrowthParameters.m_growthRate * treeGrowthParameters.m_leafChlorophyllLoss;
 					bud.m_chlorophyll = glm::clamp(bud.m_chlorophyll, 0.0f, 1.0f);
@@ -917,6 +920,7 @@ bool TreeModel::GrowBranches(const glm::mat4& globalTransform, ClimateModel& cli
 	bool anyBranchGrown = false;
 	{
 		const auto& sortedInternodeList = m_branchSkeleton.RefSortedNodeList();
+		SampleTemperature(globalTransform, climateModel);
 		for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); it++) {
 			CollectResourceRequirement(*it);
 		}
@@ -924,7 +928,7 @@ bool TreeModel::GrowBranches(const glm::mat4& globalTransform, ClimateModel& cli
 			AdjustProductiveResourceRequirement(internodeHandle, treeGrowthParameters);
 		}
 		for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); it++) {
-			const bool graphChanged = GrowInternode(globalTransform, climateModel, *it, treeGrowthParameters);
+			const bool graphChanged = GrowInternode(climateModel, *it, treeGrowthParameters);
 			anyBranchGrown = anyBranchGrown || graphChanged;
 		}
 	};
@@ -1444,15 +1448,17 @@ bool TreeModel::Grow(const glm::mat4& globalTransform, SoilModel& soilModel, Cli
 	return treeStructureChanged || rootStructureChanged;
 }
 
-void TreeModel::CalculateIllumination()
+void TreeModel::SampleTemperature(const glm::mat4& globalTransform, ClimateModel& climateModel)
 {
 	const auto& sortedInternodeList = m_branchSkeleton.RefSortedNodeList();
 	for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); it++) {
 		auto& internode = m_branchSkeleton.RefNode(*it);
 		auto& internodeData = internode.m_data;
 		auto& internodeInfo = internode.m_info;
-		internodeData.m_lightIntensity = m_treeVolume.IlluminationEstimation(internodeInfo.m_globalPosition, m_illuminationEstimationSettings);
-		internodeInfo.m_color = glm::mix(glm::vec4(0.0, 0.0, 0.0, 1.0), glm::vec4(1.0f), internodeData.m_lightIntensity);
+		for(auto& bud : internodeData.m_buds)
+		{
+			bud.m_temperature = climateModel.GetTemperature(globalTransform * glm::translate(internodeInfo.m_globalPosition)[3]);
+		}
 	}
 }
 
