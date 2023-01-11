@@ -186,7 +186,7 @@ void Tree::GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings) 
 			float minRadius = 0.01f;
 			if (treeDescriptor)
 			{
-				minRadius = treeDescriptor->m_rootGrowthParameters.m_endNodeThicknessAndControl.x;
+				minRadius = treeDescriptor->m_rootGrowthParameters.m_endNodeThickness;
 			}
 			VoxelMeshGenerator<RootSkeletonGrowthData, RootBranchGrowthData, RootInternodeGrowthData> meshGenerator;
 			meshGenerator.Generate(m_treeModel.RefRootSkeleton(), vertices, indices,
@@ -341,7 +341,7 @@ bool OnInspectRootGrowthParameters(RootGrowthParameters& rootGrowthParameters) {
 			{
 				changed = true;
 			}
-			if (ImGui::DragFloat2("Thickness min/factor", &rootGrowthParameters.m_endNodeThicknessAndControl.x,
+			if (ImGui::DragFloat2("Thickness min/factor", &rootGrowthParameters.m_endNodeThickness,
 				0.01f))
 			{
 				changed = true;
@@ -453,7 +453,7 @@ void SerializeTreeGrowthParameters(const std::string& name, const TreeGrowthPara
 	out << YAML::Key << "m_leafBudCount" << YAML::Value << treeGrowthParameters.m_leafBudCount;
 	out << YAML::Key << "m_internodeLength" << YAML::Value << treeGrowthParameters.m_internodeLength;
 	out << YAML::Key << "m_endNodeThickness" << YAML::Value << treeGrowthParameters.m_endNodeThickness;
-	out << YAML::Key << "m_thicknessAccumulateFactor" << YAML::Value << treeGrowthParameters.m_thicknessAccumulateFactor;
+	out << YAML::Key << "m_thicknessAccumulationFactor" << YAML::Value << treeGrowthParameters.m_thicknessAccumulationFactor;
 	out << YAML::Key << "m_trunkRadius" << YAML::Value << treeGrowthParameters.m_trunkRadius;
 
 	//Bud
@@ -506,8 +506,10 @@ void SerializeRootGrowthParameters(const std::string& name, const RootGrowthPara
 	out << YAML::Key << name << YAML::BeginMap;
 	out << YAML::Key << "m_rootNodeLength" << YAML::Value << rootGrowthParameters.m_rootNodeLength;
 	out << YAML::Key << "m_growthRate" << YAML::Value << rootGrowthParameters.m_growthRate;
-	out << YAML::Key << "m_endNodeThicknessAndControl" << YAML::Value
-		<< rootGrowthParameters.m_endNodeThicknessAndControl;
+	out << YAML::Key << "m_endNodeThickness" << YAML::Value
+		<< rootGrowthParameters.m_endNodeThickness;
+	out << YAML::Key << "m_thicknessAccumulationFactor" << YAML::Value
+		<< rootGrowthParameters.m_thicknessAccumulationFactor;
 	out << YAML::Key << "m_thicknessLengthAccumulate" << YAML::Value
 		<< rootGrowthParameters.m_thicknessLengthAccumulate;
 
@@ -541,7 +543,7 @@ void DeserializeTreeGrowthParameters(const std::string& name, TreeGrowthParamete
 		if (param["m_leafBudCount"]) treeGrowthParameters.m_leafBudCount = param["m_leafBudCount"].as<int>();
 		if (param["m_internodeLength"]) treeGrowthParameters.m_internodeLength = param["m_internodeLength"].as<float>();
 		if (param["m_endNodeThickness"]) treeGrowthParameters.m_endNodeThickness = param["m_endNodeThickness"].as<float>();
-		if (param["m_thicknessAccumulateFactor"]) treeGrowthParameters.m_thicknessAccumulateFactor = param["m_thicknessAccumulateFactor"].as<float>();
+		if (param["m_thicknessAccumulationFactor"]) treeGrowthParameters.m_thicknessAccumulationFactor = param["m_thicknessAccumulationFactor"].as<float>();
 		if (param["m_trunkRadius"]) treeGrowthParameters.m_trunkRadius = param["m_trunkRadius"].as<float>();
 
 		//Bud
@@ -597,7 +599,8 @@ void DeserializeRootGrowthParameters(const std::string& name, RootGrowthParamete
 		auto& param = in[name];
 		if (param["m_rootNodeLength"]) rootGrowthParameters.m_rootNodeLength = param["m_rootNodeLength"].as<float>();
 		if (param["m_growthRate"]) rootGrowthParameters.m_growthRate = param["m_growthRate"].as<float>();
-		if (param["m_endNodeThicknessAndControl"]) rootGrowthParameters.m_endNodeThicknessAndControl = param["m_endNodeThicknessAndControl"].as<glm::vec2>();
+		if (param["m_endNodeThickness"]) rootGrowthParameters.m_endNodeThickness = param["m_endNodeThickness"].as<float>();
+		if (param["m_thicknessAccumulationFactor"]) rootGrowthParameters.m_thicknessAccumulationFactor = param["m_thicknessAccumulationFactor"].as<float>();
 		if (param["m_thicknessLengthAccumulate"]) rootGrowthParameters.m_thicknessLengthAccumulate = param["m_thicknessLengthAccumulate"].as<float>();
 
 		if (param["m_branchingAngleMeanVariance"]) rootGrowthParameters.m_branchingAngleMeanVariance = param["m_branchingAngleMeanVariance"].as<glm::vec2>();

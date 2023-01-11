@@ -283,7 +283,7 @@ bool TreeModel::ElongateRoot(const glm::mat4& globalTransform, SoilModel& soilMo
 	float& collectedAuxin) {
 	bool graphChanged = false;
 	auto& rootNode = m_rootSkeleton.RefNode(rootNodeHandle);
-	const auto rootNodeLength = rootGrowthParameters.GetRootNodeLength(rootNode);
+	const auto rootNodeLength = rootGrowthParameters.m_rootNodeLength;
 	auto& rootNodeData = rootNode.m_data;
 	auto& rootNodeInfo = rootNode.m_info;
 	rootNodeInfo.m_length += extendLength;
@@ -325,7 +325,7 @@ bool TreeModel::ElongateRoot(const glm::mat4& globalTransform, SoilModel& soilMo
 		newRootNode.m_data.m_rootUnitDistance = oldRootNode.m_data.m_rootUnitDistance + 1;
 		newRootNode.m_data.m_auxinTarget = newRootNode.m_data.m_auxin = 0.0f;
 		newRootNode.m_info.m_length = glm::clamp(extendLength, 0.0f, rootNodeLength);
-		newRootNode.m_info.m_thickness = rootGrowthParameters.GetEndNodeThickness(newRootNode);
+		newRootNode.m_info.m_thickness = rootGrowthParameters.m_endNodeThickness;
 		newRootNode.m_info.m_globalRotation = glm::quatLookAt(desiredGlobalFront, desiredGlobalUp);
 		newRootNode.m_info.m_localRotation =
 			glm::inverse(oldRootNode.m_info.m_globalRotation) *
@@ -333,17 +333,17 @@ bool TreeModel::ElongateRoot(const glm::mat4& globalTransform, SoilModel& soilMo
 		if (extraLength > rootNodeLength) {
 			float childAuxin = 0.0f;
 			ElongateRoot(globalTransform, soilModel, extraLength - rootNodeLength, newRootNodeHandle, rootGrowthParameters, childAuxin);
-			childAuxin *= rootGrowthParameters.GetAuxinTransportLoss(newRootNode);
+			childAuxin *= rootGrowthParameters.m_auxinTransportLoss;
 			collectedAuxin += childAuxin;
 			m_rootSkeleton.RefNode(newRootNodeHandle).m_data.m_auxinTarget = childAuxin;
 		}
 		else {
-			collectedAuxin += rootGrowthParameters.GetAuxinTransportLoss(newRootNode);
+			collectedAuxin += rootGrowthParameters.m_auxinTransportLoss;
 		}
 	}
 	else {
 		//Otherwise, we add the inhibitor.
-		collectedAuxin += rootGrowthParameters.GetAuxinTransportLoss(rootNode);
+		collectedAuxin += rootGrowthParameters.m_auxinTransportLoss;
 	}
 	return graphChanged;
 }
@@ -357,7 +357,7 @@ inline bool TreeModel::GrowRootNode(const glm::mat4& globalTransform, SoilModel&
 		rootNodeData.m_auxinTarget = 0;
 		for (const auto& childHandle : rootNode.RefChildHandles()) {
 			rootNodeData.m_auxinTarget += m_rootSkeleton.RefNode(childHandle).m_data.m_auxin *
-				rootGrowthParameters.GetAuxinTransportLoss(rootNode);
+				rootGrowthParameters.m_auxinTransportLoss;
 		}
 	}
 
@@ -368,8 +368,8 @@ inline bool TreeModel::GrowRootNode(const glm::mat4& globalTransform, SoilModel&
 			//1. Elongate current node.
 			float collectedAuxin = 0.0f;
 			const float extendLength = rootNode.m_data.m_reproductiveWaterRequirement * rootGrowthParameters.m_rootNodeLength * m_globalGrowthRate;
-			const auto dd = rootGrowthParameters.GetAuxinTransportLoss(rootNode);
-			ElongateRoot(globalTransform, soilModel, extendLength, rootNodeHandle, rootGrowthParameters, collectedAuxin);
+			const auto dd = rootGrowthParameters.m_auxinTransportLoss;
+			graphChanged = ElongateRoot(globalTransform, soilModel, extendLength, rootNodeHandle, rootGrowthParameters, collectedAuxin) || graphChanged;
 			m_rootSkeleton.RefNode(rootNodeHandle).m_data.m_auxinTarget += collectedAuxin * dd;
 		}
 		else
@@ -383,7 +383,7 @@ inline bool TreeModel::GrowRootNode(const glm::mat4& globalTransform, SoilModel&
 				auto& newRootNode = m_rootSkeleton.RefNode(newRootNodeHandle);
 				rootGrowthParameters.SetTropisms(oldRootNode, newRootNode);
 				newRootNode.m_info.m_length = 0.0f;
-				newRootNode.m_info.m_thickness = rootGrowthParameters.GetEndNodeThickness(newRootNode);
+				newRootNode.m_info.m_thickness = rootGrowthParameters.m_endNodeThickness;
 				newRootNode.m_info.m_localRotation = glm::quat(glm::vec3(0, glm::radians(glm::linearRand(0.0f, 360.0f)), rootGrowthParameters.GetRootBranchingAngle(newRootNode)));
 				newRootNode.m_data.m_rootUnitDistance = oldRootNode.m_data.m_rootUnitDistance + 1;
 			}
@@ -417,26 +417,25 @@ void TreeModel::CalculateThickness(NodeHandle rootNodeHandle, const RootGrowthPa
 		auto& childInternode = m_rootSkeleton.RefNode(i);
 		const float childMaxDistanceToAnyBranchEnd =
 			childInternode.m_data.m_maxDistanceToAnyBranchEnd +
-			childInternode.m_info.m_length / rootGrowthParameters.GetRootNodeLength(childInternode);
+			childInternode.m_info.m_length / rootGrowthParameters.m_rootNodeLength;
 		maxDistanceToAnyBranchEnd = glm::max(maxDistanceToAnyBranchEnd, childMaxDistanceToAnyBranchEnd);
 
 		childThicknessCollection += glm::pow(childInternode.m_info.m_thickness,
-			1.0f / rootGrowthParameters.GetThicknessControlFactor(rootNode));
+			1.0f / rootGrowthParameters.m_thicknessAccumulationFactor);
 	}
 	rootNodeData.m_maxDistanceToAnyBranchEnd = maxDistanceToAnyBranchEnd;
 	if (childThicknessCollection != 0.0f) {
 		rootNodeInfo.m_thickness = glm::max(rootNodeInfo.m_thickness, glm::pow(childThicknessCollection + rootGrowthParameters.GetThicknessAccumulateFactor(rootNode),
-			rootGrowthParameters.GetThicknessControlFactor(
-				rootNode)));
+			rootGrowthParameters.m_thicknessAccumulationFactor));
 	}
 	else
 	{
-		rootNodeInfo.m_thickness = glm::max(rootNodeInfo.m_thickness, rootGrowthParameters.GetEndNodeThickness(rootNode));
+		rootNodeInfo.m_thickness = glm::max(rootNodeInfo.m_thickness, rootGrowthParameters.m_endNodeThickness);
 	}
 
 	rootNodeData.m_biomass =
-		rootNodeInfo.m_thickness / rootGrowthParameters.GetEndNodeThickness(rootNode) * rootNodeInfo.m_length /
-		rootGrowthParameters.GetRootNodeLength(rootNode);
+		rootNodeInfo.m_thickness / rootGrowthParameters.m_endNodeThickness * rootNodeInfo.m_length /
+		rootGrowthParameters.m_rootNodeLength;
 	for (const auto& i : rootNode.RefChildHandles()) {
 		const auto& childInternode = m_rootSkeleton.RefNode(i);
 		rootNodeData.m_descendentTotalBiomass +=
@@ -619,7 +618,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 			const float elongateLength = reproductiveContent * treeGrowthParameters.m_internodeLength;
 			float collectedInhibitor = 0.0f;
 			const auto dd = treeGrowthParameters.m_apicalDominanceDistanceFactor;
-			graphChanged = ElongateInternode(elongateLength, internodeHandle, treeGrowthParameters, collectedInhibitor);
+			graphChanged = ElongateInternode(elongateLength, internodeHandle, treeGrowthParameters, collectedInhibitor) || graphChanged;
 			m_branchSkeleton.RefNode(internodeHandle).m_data.m_inhibitorTarget += collectedInhibitor * dd;
 			//If apical bud is dormant, then there's no lateral bud at this stage. We should quit anyway.
 			break;
@@ -830,12 +829,12 @@ void TreeModel::CalculateThicknessAndSagging(NodeHandle internodeHandle,
 		maxDistanceToAnyBranchEnd = glm::max(maxDistanceToAnyBranchEnd, childMaxDistanceToAnyBranchEnd);
 
 		childThicknessCollection += glm::pow(childInternode.m_info.m_thickness,
-			1.0f / treeGrowthParameters.m_thicknessAccumulateFactor);
+			1.0f / treeGrowthParameters.m_thicknessAccumulationFactor);
 	}
 	internodeData.m_maxDistanceToAnyBranchEnd = maxDistanceToAnyBranchEnd;
 	if (childThicknessCollection != 0.0f) {
 		internodeInfo.m_thickness = glm::max(internodeInfo.m_thickness, glm::pow(childThicknessCollection,
-			treeGrowthParameters.m_thicknessAccumulateFactor));
+			treeGrowthParameters.m_thicknessAccumulationFactor));
 	}
 	else
 	{
@@ -1031,86 +1030,7 @@ bool TreeModel::GrowBranches(const glm::mat4& globalTransform, ClimateModel& cli
 	if (m_enableBranchCollisionDetection)
 	{
 		const float minRadius = treeGrowthParameters.m_endNodeThickness * 4.0f;
-		const auto boxSize = m_branchSkeleton.m_max - m_branchSkeleton.m_min;
-		const float maxRadius = glm::max(glm::max(boxSize.x, boxSize.y), boxSize.z) + 2.0f * minRadius;
-		int subdivisionLevel = 0;
-		float testRadius = minRadius;
-		while (testRadius <= maxRadius)
-		{
-			subdivisionLevel++;
-			testRadius *= 2.f;
-		}
-		m_branchOctree.Reset(maxRadius, subdivisionLevel, (m_branchSkeleton.m_min + m_branchSkeleton.m_max) * 0.5f);
-		const auto& sortedBranchNodeList = m_branchSkeleton.RefSortedNodeList();
-		const auto& sortedBranchFlowList = m_branchSkeleton.RefSortedFlowList();
-		int collisionCount = 0;
-		int flowCollisionCount = 0;
-		std::unordered_map<int, int> nodeCollisionCollection;
-		std::unordered_map<int, int> flowCollisionCollection;
-		for (const auto& nodeHandle : sortedBranchNodeList)
-		{
-			const auto& node = m_branchSkeleton.RefNode(nodeHandle);
-			const auto& info = node.m_info;
-			m_branchOctree.Occupy(info.m_globalPosition, info.m_globalRotation, info.m_length, info.m_thickness, [&](OctreeNode<TreeVoxelData>& octreeNode)
-				{
-					if (octreeNode.m_data.m_nodeHandle == nodeHandle) return;
-			if (octreeNode.m_data.m_nodeHandle == node.GetParentHandle()) return;
-			for (const auto& i : node.RefChildHandles()) if (octreeNode.m_data.m_nodeHandle == i) return;
-			auto flowHandle = node.GetFlowHandle();
-			if (octreeNode.m_data.m_referenceCount != 0)
-			{
-				if (octreeNode.m_data.m_nodeHandle > nodeHandle)
-				{
-					nodeCollisionCollection[octreeNode.m_data.m_nodeHandle] = nodeHandle;
-				}
-				else
-				{
-					nodeCollisionCollection[nodeHandle] = octreeNode.m_data.m_nodeHandle;
-				}
-				if (octreeNode.m_data.m_flowHandle != flowHandle) {
-					if (octreeNode.m_data.m_flowHandle > flowHandle)
-					{
-						flowCollisionCollection[octreeNode.m_data.m_flowHandle] = flowHandle;
-					}
-					else
-					{
-						flowCollisionCollection[flowHandle] = octreeNode.m_data.m_flowHandle;
-					}
-				}
-			}
-			else {
-				octreeNode.m_data.m_flowHandle = flowHandle;
-				octreeNode.m_data.m_nodeHandle = nodeHandle;
-			}
-			octreeNode.m_data.m_referenceCount++;
-				});
-		}
-		collisionCount = nodeCollisionCollection.size();
-		flowCollisionCount = flowCollisionCollection.size();
-		std::vector<int> collisionStat;
-		collisionStat.resize(200);
-		for (auto& i : collisionStat) i = 0;
-		int totalVoxel = 0;
-		m_branchOctree.IterateLeaves([&](const OctreeNode<TreeVoxelData>& leaf)
-			{
-				collisionStat[leaf.m_data.m_referenceCount]++;
-		totalVoxel++;
-			});
-
-		std::string report = "Branch collision: [" + std::to_string(collisionCount) + "/" + std::to_string(sortedBranchNodeList.size()) + "], [" + std::to_string(flowCollisionCount) + "/" + std::to_string(sortedBranchFlowList.size()) + "], ";
-		report += "total occupied: " + std::to_string(totalVoxel) + ", collision stat: ";
-
-		std::string appendStat = "";
-		for (int i = 199; i > 0; i--)
-		{
-			if (collisionStat[i] != 0)
-			{
-				appendStat += "[" + std::to_string(i) + "]->" + std::to_string(collisionStat[i]) + "; ";
-			}
-		}
-		if (appendStat == "") appendStat = "No collision";
-
-		UNIENGINE_LOG(report + appendStat);
+		CollisionDetection(minRadius, m_branchOctree, m_branchSkeleton);
 	}
 
 	{
@@ -1157,7 +1077,7 @@ TreeModel::Initialize(const TreeGrowthParameters& treeGrowthParameters, const Ro
 		firstRootNode.m_info.m_localRotation = glm::vec3(glm::radians(rootGrowthParameters.GetRootApicalAngle(firstRootNode)),
 			0.0f,
 			rootGrowthParameters.GetRootRollAngle(firstRootNode));
-		firstRootNode.m_data.m_verticalTropism = rootGrowthParameters.GetTropismIntensity(firstRootNode);
+		firstRootNode.m_data.m_verticalTropism = rootGrowthParameters.m_tropismIntensity;
 		firstRootNode.m_data.m_horizontalTropism = 0;
 	}
 	m_initialized = true;
@@ -1214,8 +1134,6 @@ bool TreeModel::GrowRoots(const glm::mat4& globalTransform, SoilModel& soilModel
 #pragma region Grow
 		if (anyRootPruned) m_rootSkeleton.SortLists();
 
-
-
 		rootStructureChanged = rootStructureChanged || anyRootPruned;
 		bool anyRootGrown = false;
 		{
@@ -1234,7 +1152,7 @@ bool TreeModel::GrowRoots(const glm::mat4& globalTransform, SoilModel& soilModel
 		{
 			m_rootSkeleton.m_min = glm::vec3(FLT_MAX);
 			m_rootSkeleton.m_max = glm::vec3(FLT_MIN);
-			const float growthRate = rootGrowthParameters.GetExpectedGrowthRate();
+			const float growthRate = rootGrowthParameters.m_growthRate;
 			const auto& sortedRootNodeList = m_rootSkeleton.RefSortedNodeList();
 			for (auto it = sortedRootNodeList.rbegin(); it != sortedRootNodeList.rend(); it++) {
 				CalculateThickness(*it, rootGrowthParameters);
@@ -1282,88 +1200,8 @@ bool TreeModel::GrowRoots(const glm::mat4& globalTransform, SoilModel& soilModel
 
 		if (m_enableRootCollisionDetection)
 		{
-			const float minRadius = rootGrowthParameters.m_endNodeThicknessAndControl.x * 4.0f;
-			const auto boxSize = m_rootSkeleton.m_max - m_rootSkeleton.m_min;
-			const float maxRadius = glm::max(glm::max(boxSize.x, boxSize.y), boxSize.z) + 2.0f * minRadius;
-			int subdivisionLevel = 0;
-			float testRadius = minRadius;
-			while (testRadius <= maxRadius)
-			{
-				subdivisionLevel++;
-				testRadius *= 2.f;
-			}
-			m_rootOctree.Reset(maxRadius, subdivisionLevel, (m_rootSkeleton.m_min + m_rootSkeleton.m_max) * 0.5f);
-			const auto& sortedRootNodeList = m_rootSkeleton.RefSortedNodeList();
-			const auto& sortedRootFlowList = m_rootSkeleton.RefSortedFlowList();
-			int collisionCount = 0;
-			int flowCollisionCount = 0;
-			std::unordered_map<int, int> nodeCollisionCollection;
-			std::unordered_map<int, int> flowCollisionCollection;
-			for (const auto& nodeHandle : sortedRootNodeList)
-			{
-				const auto& node = m_rootSkeleton.RefNode(nodeHandle);
-				const auto& info = node.m_info;
-				m_rootOctree.Occupy(info.m_globalPosition, info.m_globalRotation, info.m_length * 0.9f, info.m_thickness, [&](OctreeNode<TreeVoxelData>& octreeNode)
-					{
-						if (octreeNode.m_data.m_nodeHandle == nodeHandle) return;
-				if (octreeNode.m_data.m_nodeHandle == node.GetParentHandle()) return;
-				for (const auto& i : node.RefChildHandles()) if (octreeNode.m_data.m_nodeHandle == i) return;
-				auto flowHandle = node.GetFlowHandle();
-				if (octreeNode.m_data.m_referenceCount != 0)
-				{
-					if (octreeNode.m_data.m_nodeHandle > nodeHandle)
-					{
-						nodeCollisionCollection[octreeNode.m_data.m_nodeHandle] = nodeHandle;
-					}
-					else
-					{
-						nodeCollisionCollection[nodeHandle] = octreeNode.m_data.m_nodeHandle;
-					}
-					if (octreeNode.m_data.m_flowHandle != flowHandle) {
-						if (octreeNode.m_data.m_flowHandle > flowHandle)
-						{
-							flowCollisionCollection[octreeNode.m_data.m_flowHandle] = flowHandle;
-						}
-						else
-						{
-							flowCollisionCollection[flowHandle] = octreeNode.m_data.m_flowHandle;
-						}
-					}
-				}
-				else {
-					octreeNode.m_data.m_flowHandle = flowHandle;
-					octreeNode.m_data.m_nodeHandle = nodeHandle;
-				}
-				octreeNode.m_data.m_referenceCount++;
-					});
-
-			}
-			collisionCount = nodeCollisionCollection.size();
-			flowCollisionCount = flowCollisionCollection.size();
-			std::vector<int> collisionStat;
-			collisionStat.resize(200);
-			for (auto& i : collisionStat) i = 0;
-			int totalVoxel = 0;
-			m_rootOctree.IterateLeaves([&](const OctreeNode<TreeVoxelData>& leaf)
-				{
-					collisionStat[leaf.m_data.m_referenceCount]++;
-			totalVoxel++;
-				});
-
-			std::string report = "Root collision: [" + std::to_string(collisionCount) + "/" + std::to_string(sortedRootNodeList.size()) + "], [" + std::to_string(flowCollisionCount) + "/" + std::to_string(sortedRootFlowList.size()) + "], ";
-			report += "total occupied: " + std::to_string(totalVoxel) + ", collision stat: ";
-
-			std::string appendStat;
-			for (int i = 199; i > 0; i--)
-			{
-				if (collisionStat[i] != 0)
-				{
-					appendStat += "[" + std::to_string(i) + "]->" + std::to_string(collisionStat[i]) + "; ";
-				}
-			}
-			if (appendStat.empty()) appendStat = "No collision";
-
-			UNIENGINE_LOG(report + appendStat);
+			const float minRadius = rootGrowthParameters.m_endNodeThickness * 4.0f;
+			CollisionDetection(minRadius, m_rootOctree, m_rootSkeleton);
 		}
 
 		{
@@ -1542,7 +1380,8 @@ RootGrowthParameters::RootGrowthParameters()
 {
 	m_growthRate = 0.04f;
 	m_rootNodeLength = 0.03f;
-	m_endNodeThicknessAndControl = glm::vec2(0.002, 0.5);
+	m_endNodeThickness = 0.002f;
+	m_thicknessAccumulationFactor = 0.5f;
 	m_thicknessLengthAccumulate = 0.0002f;
 	m_branchingAngleMeanVariance = glm::vec2(60, 3);
 	m_rollAngleMeanVariance = glm::vec2(120, 2);
@@ -1566,7 +1405,7 @@ TreeGrowthParameters::TreeGrowthParameters() {
 	m_leafBudCount = 1;
 	m_internodeLength = 0.03f;
 	m_endNodeThickness = 0.002f;
-	m_thicknessAccumulateFactor = 0.5f;
+	m_thicknessAccumulationFactor = 0.5f;
 	m_trunkRadius = 0.02f;
 
 	//Bud
@@ -1657,20 +1496,7 @@ float TreeGrowthParameters::GetSagging(const Node<InternodeGrowthData>& internod
 #pragma endregion
 
 #pragma region RootGrowthParameters
-float RootGrowthParameters::GetExpectedGrowthRate() const
-{
-	return m_growthRate;
-}
 
-float RootGrowthParameters::GetAuxinTransportLoss(const Node<RootInternodeGrowthData>& rootNode) const
-{
-	return m_auxinTransportLoss;
-}
-
-float RootGrowthParameters::GetRootNodeLength(const Node<RootInternodeGrowthData>& rootNode) const
-{
-	return m_rootNodeLength;
-}
 
 float RootGrowthParameters::GetRootApicalAngle(const Node<RootInternodeGrowthData>& rootNode) const
 {
@@ -1693,19 +1519,9 @@ float RootGrowthParameters::GetRootBranchingAngle(const Node<RootInternodeGrowth
 		m_branchingAngleMeanVariance.y);
 }
 
-float RootGrowthParameters::GetEndNodeThickness(const Node<RootInternodeGrowthData>& rootNode) const
-{
-	return m_endNodeThicknessAndControl.x;
-}
-
-float RootGrowthParameters::GetThicknessControlFactor(const Node<RootInternodeGrowthData>& rootNode) const
-{
-	return m_endNodeThicknessAndControl.y;
-}
-
 float RootGrowthParameters::GetThicknessAccumulateFactor(const Node<RootInternodeGrowthData>& rootNode) const
 {
-	return m_thicknessLengthAccumulate * m_endNodeThicknessAndControl.x;
+	return m_thicknessLengthAccumulate * m_endNodeThickness;
 }
 
 float RootGrowthParameters::GetBranchingProbability(const Node<RootInternodeGrowthData>& rootNode) const
@@ -1713,11 +1529,6 @@ float RootGrowthParameters::GetBranchingProbability(const Node<RootInternodeGrow
 	return m_baseBranchingProbability * m_growthRate *
 		glm::pow(m_branchingProbabilityChildrenDecrease, rootNode.RefChildHandles().size())
 		* glm::pow(m_branchingProbabilityDistanceDecrease, glm::max(0, rootNode.m_data.m_rootUnitDistance - 1));
-}
-
-float RootGrowthParameters::GetTropismIntensity(const Node<RootInternodeGrowthData>& rootNode) const
-{
-	return m_tropismIntensity;
 }
 
 void RootGrowthParameters::SetTropisms(Node<RootInternodeGrowthData>& oldNode, Node<RootInternodeGrowthData>& newNode) const

@@ -126,37 +126,49 @@ namespace EcoSysLab {
 
 	class RootGrowthParameters {
 	public:
-		float m_growthRate = 0.5f;
+		/**
+		 * \brief The growth rate. The expected internode elongation per iteration
+		 */
+		float m_growthRate;
+		/**
+		 * \brief The root node length
+		 */
 		float m_rootNodeLength;
-		glm::vec2 m_endNodeThicknessAndControl;
-		float m_thicknessLengthAccumulate = 0.001f;
+
+		/**
+		 * \brief Thickness of end internode
+		 */
+		float m_endNodeThickness;
+		/**
+		 * \brief The thickness accumulation factor
+		 */
+		float m_thicknessAccumulationFactor;
+		/**
+		 * \brief The extra thickness gained from node length.
+		 */
+		float m_thicknessLengthAccumulate;
 		/**
 		* The mean and variance of the angle between the direction of a lateral bud and its parent shoot.
 		*/
-		glm::vec2 m_branchingAngleMeanVariance{};
+		glm::vec2 m_branchingAngleMeanVariance;
 		/**
 		* The mean and variance of an angular difference orientation of lateral buds between two internodes
 		*/
-		glm::vec2 m_rollAngleMeanVariance{};
+		glm::vec2 m_rollAngleMeanVariance;
 		/**
 		* The mean and variance of the angular difference between the growth direction and the direction of the apical bud
 		*/
-		glm::vec2 m_apicalAngleMeanVariance{};
+		glm::vec2 m_apicalAngleMeanVariance;
 
-		float m_auxinTransportLoss = 1.0f;
+		float m_auxinTransportLoss;
 
-		float m_tropismSwitchingProbability = 0.3f;
-		float m_tropismSwitchingProbabilityDistanceFactor = 0.8f;
-		float m_tropismIntensity = 0.3f;
+		float m_tropismSwitchingProbability;
+		float m_tropismSwitchingProbabilityDistanceFactor;
+		float m_tropismIntensity;
 
-		float m_baseBranchingProbability = 1.0f;
-		float m_branchingProbabilityChildrenDecrease = 0.8f;
-		float m_branchingProbabilityDistanceDecrease = 0.8f;
-		[[nodiscard]] float GetExpectedGrowthRate() const;
-
-		[[nodiscard]] float GetAuxinTransportLoss(const Node<RootInternodeGrowthData>& rootNode) const;
-
-		[[nodiscard]] float GetRootNodeLength(const Node<RootInternodeGrowthData>& rootNode) const;
+		float m_baseBranchingProbability;
+		float m_branchingProbabilityChildrenDecrease;
+		float m_branchingProbabilityDistanceDecrease;
 
 		[[nodiscard]] float GetRootApicalAngle(const Node<RootInternodeGrowthData>& rootNode) const;
 
@@ -164,14 +176,10 @@ namespace EcoSysLab {
 
 		[[nodiscard]] float GetRootBranchingAngle(const Node<RootInternodeGrowthData>& rootNode) const;
 
-		[[nodiscard]] float GetEndNodeThickness(const Node<RootInternodeGrowthData>& rootNode) const;
-
-		[[nodiscard]] float GetThicknessControlFactor(const Node<RootInternodeGrowthData>& rootNode) const;
 		[[nodiscard]] float GetThicknessAccumulateFactor(const Node<RootInternodeGrowthData>& rootNode) const;
 
 		[[nodiscard]] float GetBranchingProbability(const Node<RootInternodeGrowthData>& rootNode) const;
 
-		[[nodiscard]] float GetTropismIntensity(const Node<RootInternodeGrowthData>& rootNode) const;
 
 		void SetTropisms(Node<RootInternodeGrowthData>& oldNode, Node<RootInternodeGrowthData>& newNode) const;
 
@@ -220,40 +228,43 @@ namespace EcoSysLab {
 		 */
 		float m_internodeLength;
 		/**
-		 * \brief The growth rate
+		 * \brief The growth rate. The expected internode elongation per iteration
 		 */
 		float m_growthRate;
 		/**
-		 * \brief Thickness of internode
+		 * \brief Thickness of end internode
 		 */
 		float m_endNodeThickness;
-		float m_thicknessAccumulateFactor;
 		/**
-		 * \brief Flushing prob of lateral bud
+		 * \brief The thickness accumulation factor
+		 */
+		float m_thicknessAccumulationFactor;
+		/**
+		 * \brief Flushing prob of lateral bud related to the temperature.
 		 */
 		glm::vec4 m_lateralBudFlushingProbabilityTemperatureRange;
 		/**
-		 * \brief Flushing prob of leaf bud
+		 * \brief Flushing prob of leaf bud related to the temperature.
 		 */
 		glm::vec4 m_leafBudFlushingProbabilityTemperatureRange;
 		/**
-		 * \brief Flushing prob of fruit bud
+		 * \brief Flushing prob of fruit bud related to the temperature.
 		 */
 		glm::vec4 m_fruitBudFlushingProbabilityTemperatureRange;
 		/**
-		 * \brief Flushing prob of fruit bud
+		 * \brief The lighting factor for lateral bud flushing probability.
 		 */
 		float m_lateralBudFlushingProbabilityLightingFactor;
 		/**
-		 * \brief Flushing prob of fruit bud
+		 * \brief The lighting factor for leaf bud flushing probability.
 		 */
 		float m_leafBudFlushingProbabilityLightingFactor;
 		/**
-		 * \brief Flushing prob of fruit bud
+		 * \brief The lighting factor for fruit bud flushing probability.
 		 */
 		float m_fruitBudFlushingProbabilityLightingFactor;
 		/**
-		 * \brief AC
+		 * \brief Apical control base and distance decrease from root.
 		 */
 		glm::vec2 m_apicalControlBaseDistFactor{};
 
@@ -261,9 +272,12 @@ namespace EcoSysLab {
 		* \brief How much inhibitor will an internode generate.
 		*/
 		float m_apicalDominance;
+		/**
+		* \brief How much inhibitor will shrink when going through the branch.
+		*/
 		float m_apicalDominanceDistanceFactor;
 		/**
-		* \brief How much inhibitor will an internode generate.
+		* \brief The probability of internode being removed.
 		*/
 		float m_budKillProbability;
 		/**
@@ -446,6 +460,9 @@ namespace EcoSysLab {
 		int m_fruitCount = 0;
 
 	public:
+		template <typename SkeletonData, typename FlowData, typename NodeData>
+		void CollisionDetection(float minRadius, Octree<TreeVoxelData>& octree, Skeleton<SkeletonData, FlowData, NodeData>& skeleton);
+
 		bool m_resourceFlow = false;
 
 		TreeVolume m_treeVolume;
@@ -506,4 +523,91 @@ namespace EcoSysLab {
 
 		void Reverse(int iteration);
 	};
+
+	template <typename SkeletonData, typename FlowData, typename NodeData>
+	void TreeModel::CollisionDetection(float minRadius, Octree<TreeVoxelData>& octree,
+		Skeleton<SkeletonData, FlowData, NodeData>& skeleton)
+	{
+		const auto boxSize = skeleton.m_max - skeleton.m_min;
+		const float maxRadius = glm::max(glm::max(boxSize.x, boxSize.y), boxSize.z) + 2.0f * minRadius;
+		int subdivisionLevel = 0;
+		float testRadius = minRadius;
+		while (testRadius <= maxRadius)
+		{
+			subdivisionLevel++;
+			testRadius *= 2.f;
+		}
+		octree.Reset(maxRadius, subdivisionLevel, (skeleton.m_min + skeleton.m_max) * 0.5f);
+		const auto& sortedRootNodeList = skeleton.RefSortedNodeList();
+		const auto& sortedRootFlowList = skeleton.RefSortedFlowList();
+		int collisionCount = 0;
+		int flowCollisionCount = 0;
+		std::unordered_map<int, int> nodeCollisionCollection;
+		std::unordered_map<int, int> flowCollisionCollection;
+		for (const auto& nodeHandle : sortedRootNodeList)
+		{
+			const auto& node = skeleton.RefNode(nodeHandle);
+			const auto& info = node.m_info;
+			octree.Occupy(info.m_globalPosition, info.m_globalRotation, info.m_length * 0.9f, info.m_thickness, [&](OctreeNode<TreeVoxelData>& octreeNode)
+				{
+					if (octreeNode.m_data.m_nodeHandle == nodeHandle) return;
+			if (octreeNode.m_data.m_nodeHandle == node.GetParentHandle()) return;
+			for (const auto& i : node.RefChildHandles()) if (octreeNode.m_data.m_nodeHandle == i) return;
+			auto flowHandle = node.GetFlowHandle();
+			if (octreeNode.m_data.m_referenceCount != 0)
+			{
+				if (octreeNode.m_data.m_nodeHandle > nodeHandle)
+				{
+					nodeCollisionCollection[octreeNode.m_data.m_nodeHandle] = nodeHandle;
+				}
+				else
+				{
+					nodeCollisionCollection[nodeHandle] = octreeNode.m_data.m_nodeHandle;
+				}
+				if (octreeNode.m_data.m_flowHandle != flowHandle) {
+					if (octreeNode.m_data.m_flowHandle > flowHandle)
+					{
+						flowCollisionCollection[octreeNode.m_data.m_flowHandle] = flowHandle;
+					}
+					else
+					{
+						flowCollisionCollection[flowHandle] = octreeNode.m_data.m_flowHandle;
+					}
+				}
+			}
+			else {
+				octreeNode.m_data.m_flowHandle = flowHandle;
+				octreeNode.m_data.m_nodeHandle = nodeHandle;
+			}
+			octreeNode.m_data.m_referenceCount++;
+				});
+
+		}
+		collisionCount = nodeCollisionCollection.size();
+		flowCollisionCount = flowCollisionCollection.size();
+		std::vector<int> collisionStat;
+		collisionStat.resize(200);
+		for (auto& i : collisionStat) i = 0;
+		int totalVoxel = 0;
+		octree.IterateLeaves([&](const OctreeNode<TreeVoxelData>& leaf)
+			{
+				collisionStat[leaf.m_data.m_referenceCount]++;
+		totalVoxel++;
+			});
+
+		std::string report = "Collision: [" + std::to_string(collisionCount) + "/" + std::to_string(sortedRootNodeList.size()) + "], [" + std::to_string(flowCollisionCount) + "/" + std::to_string(sortedRootFlowList.size()) + "], ";
+		report += "total occupied: " + std::to_string(totalVoxel) + ", collision stat: ";
+
+		std::string appendStat;
+		for (int i = 199; i > 0; i--)
+		{
+			if (collisionStat[i] != 0)
+			{
+				appendStat += "[" + std::to_string(i) + "]->" + std::to_string(collisionStat[i]) + "; ";
+			}
+		}
+		if (appendStat.empty()) appendStat = "No collision";
+
+		UNIENGINE_LOG(report + appendStat);
+	}
 }
