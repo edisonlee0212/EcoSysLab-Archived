@@ -99,6 +99,9 @@ namespace EcoSysLab {
         OnInspect(TreeModel &treeModel,
                   const GlobalTransform &globalTransform);
 
+        bool Visualize(TreeModel& treeModel,
+            const GlobalTransform& globalTransform);
+
         void Reset(TreeModel &treeModel);
     };
 
@@ -367,7 +370,7 @@ namespace EcoSysLab {
                                       node.m_info.m_thickness + 0.001f));
                 colors[0] = glm::vec4(1.0f);
             } else {
-                colors[i + 1] = m_randomColors[skeleton.PeekFlow(node.GetFlowHandle()).m_data.m_order];
+                colors[i + 1] = node.m_info.m_color;
                 if (selectedNodeHandle != -1) colors[i + 1].a = 0.3f;
             }
         }, results);

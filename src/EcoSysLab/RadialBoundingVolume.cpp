@@ -2,6 +2,7 @@
 #include "Graphics.hpp"
 #include "DefaultResources.hpp"
 #include "PointCloud.hpp"
+#include "Tree.hpp"
 
 using namespace EcoSysLab;
 using namespace UniEngine;
@@ -43,7 +44,7 @@ glm::vec3 RadialBoundingVolume::GetRandomPoint() {
     return glm::vec3(distance * glm::sin(glm::radians(angle)), height, distance * glm::cos(glm::radians(angle)));
 }
 
-glm::ivec2 RadialBoundingVolume::SelectSlice(glm::vec3 position) const {
+glm::ivec2 RadialBoundingVolume::SelectSlice(const glm::vec3& position) const {
     glm::ivec2 retVal;
     const float heightLevel = m_maxHeight / m_layerAmount;
     const float sliceAngle = 360.0f / m_sectorAmount;
@@ -61,6 +62,18 @@ glm::ivec2 RadialBoundingVolume::SelectSlice(glm::vec3 position) const {
             sliceAngle);
     if (retVal.y >= m_sectorAmount)
         retVal.y = m_sectorAmount - 1;
+    return retVal;
+}
+
+glm::vec3 RadialBoundingVolume::TipPosition(int layer, int slice) const
+{
+    const float heightLevel = m_maxHeight / m_layerAmount;
+    glm::vec3 retVal;
+    retVal.y = heightLevel * (0.5f + layer);
+    const float sliceAngle = 360.0f / m_sectorAmount;
+
+    retVal.x = m_layers[layer][slice].m_maxDistance * glm::sin(glm::radians(sliceAngle * slice + 180.0f));
+    retVal.z = m_layers[layer][slice].m_maxDistance * glm::cos(glm::radians(sliceAngle * slice + 180.0f));
     return retVal;
 }
 
@@ -287,7 +300,6 @@ std::string RadialBoundingVolume::Save() {
     output += std::to_string(m_layerAmount) + "\n";
     output += std::to_string(m_sectorAmount) + "\n";
     output += std::to_string(m_maxHeight) + "\n";
-    output += std::to_string(m_maxRadius) + "\n";
     int tierIndex = 0;
     for (const auto& tier : m_layers) {
         int sliceIndex = 0;
@@ -359,7 +371,6 @@ void RadialBoundingVolume::Load(const std::string& path) {
         ifs >> m_layerAmount;
         ifs >> m_sectorAmount;
         ifs >> m_maxHeight;
-        ifs >> m_maxRadius;
         m_layers.resize(m_layerAmount);
         for (auto& tier : m_layers) {
             tier.resize(m_sectorAmount);
@@ -375,13 +386,10 @@ void RadialBoundingVolume::CalculateVolume(const std::vector<glm::vec3>& points)
 {
     ResizeVolumes();
     m_maxHeight = 0;
-    m_maxRadius = 0;
     for (const auto& point : points) {
         if (point.y > m_maxHeight)
             m_maxHeight = point.y;
         const float radius = glm::length(glm::vec2(point.x, point.z));
-        if (radius > m_maxRadius)
-            m_maxRadius = radius;
     }
     for (const auto& point : points) {
         const auto sliceIndex = SelectSlice(point);
@@ -404,6 +412,19 @@ void RadialBoundingVolume::CalculateVolume(const std::vector<glm::vec3>& points)
 
 void RadialBoundingVolume::OnInspect() {
     IVolume::OnInspect();
+
+
+    PrivateComponentRef treeRef;
+    if(Editor::DragAndDropButton<Tree>(treeRef, "Apply tree volume"))
+    {
+        auto tree = treeRef.Get<Tree>();
+        if(tree)
+        {
+            CopyVolume(tree->m_treeModel);
+            treeRef.Clear();
+        }
+    }
+
     ImGui::ColorEdit4("Display Color", &m_displayColor.x);
     ImGui::DragFloat("Display Scale", &m_displayScale, 0.01f, 0.01f, 1.0f);
     bool edited = false;
@@ -443,6 +464,8 @@ void RadialBoundingVolume::OnInspect() {
 
                     Gizmos::DrawGizmoMesh(
                         m_boundMeshes[i], m_displayColor);
+
+                    
                     displayLayer = true;
                     ImGui::TreePop();
                 }
@@ -492,6 +515,11 @@ void RadialBoundingVolume::OnInspect() {
             Gizmos::DrawGizmoMesh(
                 i, m_displayColor);
         }
+        for (int i = 0; i < m_layerAmount; i++) {
+            for (int j = 0; j < m_sectorAmount; j++) {
+                Gizmos::DrawGizmoMesh(DefaultResources::Primitives::Cube, glm::vec4(0, 0, 0, 1), glm::translate(TipPosition(i, j)) * glm::scale(glm::vec3(0.1f)));
+            }
+        }
     }
 
 }
@@ -529,11 +557,9 @@ bool RadialBoundingVolume::InVolume(const GlobalTransform& globalTransform,
 void RadialBoundingVolume::Deserialize(const YAML::Node& in) {
     IVolume::Deserialize(in);
     m_meshGenerated = false;
-    m_center = in["m_center"].as<glm::vec3>();
     m_offset = in["m_offset"].as<float>();
     m_displayColor = in["m_displayColor"].as<glm::vec4>();
     m_maxHeight = in["m_maxHeight"].as<float>();
-    m_maxRadius = in["m_maxRadius"].as<float>();
     m_displayScale = in["m_displayScale"].as<float>();
     m_layerAmount = in["m_layerAmount"].as<int>();
     m_sectorAmount = in["m_sectorAmount"].as<int>();
@@ -554,11 +580,9 @@ void RadialBoundingVolume::Deserialize(const YAML::Node& in) {
 
 void RadialBoundingVolume::Serialize(YAML::Emitter& out) {
     IVolume::Serialize(out);
-    out << YAML::Key << "m_center" << YAML::Value << m_center;
     out << YAML::Key << "m_offset" << YAML::Value << m_offset;
     out << YAML::Key << "m_displayColor" << YAML::Value << m_displayColor;
     out << YAML::Key << "m_maxHeight" << YAML::Value << m_maxHeight;
-    out << YAML::Key << "m_maxRadius" << YAML::Value << m_maxRadius;
     out << YAML::Key << "m_displayScale" << YAML::Value << m_displayScale;
     out << YAML::Key << "m_layerAmount" << YAML::Value << m_layerAmount;
     out << YAML::Key << "m_sectorAmount" << YAML::Value << m_sectorAmount;
@@ -584,6 +608,24 @@ void RadialBoundingVolume::Augmentation(float value) {
         }
     }
 
+}
+
+void RadialBoundingVolume::CopyVolume(const TreeModel& treeModel)
+{
+    m_layerAmount = treeModel.m_treeVolume.m_layerAmount;
+    m_sectorAmount = treeModel.m_treeVolume.m_sectorAmount;
+    ResizeVolumes();
+    for (int i = 0; i < m_layerAmount; i++)
+    {
+        for (int j = 0; j < m_sectorAmount; j++)
+        {
+            m_layers[i][j].m_maxDistance = treeModel.m_treeVolume.m_layers[i][j];
+        }
+    }
+
+    m_maxHeight = treeModel.m_treeVolume.m_maxHeight;
+    GenerateMesh();
+    CalculateSizes();
 }
 
 void RadialBoundingVolume::CalculateSizes() {

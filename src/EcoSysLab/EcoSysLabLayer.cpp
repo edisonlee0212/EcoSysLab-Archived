@@ -232,7 +232,10 @@ void EcoSysLabLayer::LateUpdate() {
 				m_foliageMatrices,
 				glm::mat4(1.0f), 1.0f, gizmoSettings);
 		}
-
+		if (scene->IsEntityValid(m_selectedTree)) {
+			m_treeVisualizer.Visualize(
+				scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock()->m_treeModel, scene->GetDataComponent<GlobalTransform>(m_selectedTree));
+		}
 		gizmoSettings.m_colorMode = GizmoSettings::ColorMode::Default;
 		if (m_displaySoil)
 		{

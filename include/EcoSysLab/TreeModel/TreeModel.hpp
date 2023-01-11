@@ -229,7 +229,7 @@ namespace EcoSysLab {
 		/**
 		 * \brief Flushing prob of lateral bud
 		 */
-		float m_lateralBudFlushingProbability;
+		glm::vec4 m_lateralBudFlushingProbabilityTemperatureRange;
 		/**
 		 * \brief Flushing prob of leaf bud
 		 */
@@ -238,7 +238,18 @@ namespace EcoSysLab {
 		 * \brief Flushing prob of fruit bud
 		 */
 		glm::vec4 m_fruitBudFlushingProbabilityTemperatureRange;
-
+		/**
+		 * \brief Flushing prob of fruit bud
+		 */
+		float m_lateralBudFlushingProbabilityLightingFactor;
+		/**
+		 * \brief Flushing prob of fruit bud
+		 */
+		float m_leafBudFlushingProbabilityLightingFactor;
+		/**
+		 * \brief Flushing prob of fruit bud
+		 */
+		float m_fruitBudFlushingProbabilityLightingFactor;
 		/**
 		 * \brief AC
 		 */
@@ -335,9 +346,33 @@ namespace EcoSysLab {
 		unsigned m_referenceCount = 0;
 	};
 
+	struct IlluminationEstimationSettings {
+		int m_probeLayerAmount = 4;
+		int m_probeCountPerLayer = 4;
+		float m_distanceLossMagnitude = 0.2f;
+		float m_distanceLossFactor = 3.0f;
+		float m_probeMinMaxRatio = 0.8f;
+	};
+
+	class TreeVolume
+	{
+	public:
+		std::vector < std::vector <float >> m_layers;
+		int m_layerAmount = 16;
+		int m_sectorAmount = 16;
+		float m_offset = 0;
+		float m_maxHeight = 0.0f;
+		bool m_hasData = false;
+		[[nodiscard]] glm::ivec2 SelectSlice(const glm::vec3& position) const;
+		void Clear();
+		[[nodiscard]] glm::vec3 TipPosition(int layer, int slice) const;
+		void Smooth();
+		[[nodiscard]] float IlluminationEstimation(const glm::vec3& position, const IlluminationEstimationSettings& settings) const;
+	};
+
 	class TreeModel {
 #pragma region Root Growth
-		
+
 		bool ElongateRoot(const glm::mat4& globalTransform, SoilModel& soilModel, float extendLength, NodeHandle rootNodeHandle,
 			const RootGrowthParameters& rootGrowthParameters, float& collectedAuxin);
 
@@ -406,6 +441,8 @@ namespace EcoSysLab {
 		int m_leafCount = 0;
 		int m_fruitCount = 0;
 	public:
+		TreeVolume m_treeVolume;
+		IlluminationEstimationSettings m_illuminationEstimationSettings;
 		Octree<TreeVoxelData> m_rootOctree;
 		Octree<TreeVoxelData> m_branchOctree;
 		bool m_enableRootCollisionDetection = false;

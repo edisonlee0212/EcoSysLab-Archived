@@ -92,6 +92,8 @@ void TreeMeshGeneratorSettings::Save(const std::string& name, YAML::Emitter& out
 	out << YAML::Key << "m_removeDuplicate" << YAML::Value << m_removeDuplicate;
 	out << YAML::Key << "m_rootVertexColor" << YAML::Value << m_rootVertexColor;
 
+	out << YAML::Key << "m_branchMeshType" << YAML::Value << m_branchMeshType;
+	out << YAML::Key << "m_rootMeshType" << YAML::Value << m_rootMeshType;
 
 	out << YAML::EndMap;
 }
@@ -123,6 +125,9 @@ void TreeMeshGeneratorSettings::Load(const std::string& name, const YAML::Node& 
 		if (ms["m_voxelSmoothIteration"]) m_voxelSmoothIteration = ms["m_voxelSmoothIteration"].as<int>();
 		if (ms["m_removeDuplicate"]) m_removeDuplicate = ms["m_removeDuplicate"].as<bool>();
 		if (ms["m_rootVertexColor"]) m_rootVertexColor = ms["m_rootVertexColor"].as<glm::vec3>();
+
+		if (ms["m_branchMeshType"]) m_branchMeshType = ms["m_branchMeshType"].as<unsigned>();
+		if (ms["m_rootMeshType"]) m_rootMeshType = ms["m_rootMeshType"].as<unsigned>();
 	}
 }
 
@@ -133,7 +138,10 @@ void TreeMeshGeneratorSettings::OnInspect() {
 		ImGui::Checkbox("Fruit", &m_enableFruit);
 		ImGui::Checkbox("Foliage", &m_enableFoliage);
 		ImGui::Checkbox("Root", &m_enableRoot);
-		if (m_enableBranch && ImGui::TreeNode("Branch mesh settings")) {
+		ImGui::Combo("Branch mesh mode", { "Cylindrical", "Marching cubes" }, m_branchMeshType);
+		ImGui::Combo("Root mesh mode", { "Cylindrical", "Marching cubes" }, m_rootMeshType);
+		if(ImGui::TreeNode("Cylindrical mesh settings"))
+		{
 			ImGui::DragFloat("Resolution", &m_resolution, 0.001f);
 			ImGui::DragFloat("Subdivision", &m_subdivision, 0.001f);
 			ImGui::Checkbox("Smoothness", &m_smoothness);
@@ -147,9 +155,6 @@ void TreeMeshGeneratorSettings::OnInspect() {
 			ImGui::Checkbox("Override radius", &m_overrideRadius);
 			if (m_overrideRadius) ImGui::DragFloat("Radius", &m_radius);
 			ImGui::Checkbox("Override vertex color", &m_overrideVertexColor);
-			if (m_overrideVertexColor) {
-				ImGui::ColorEdit3("Branch vertex color", &m_branchVertexColor.x);
-			}
 			ImGui::Checkbox("Mark Junctions", &m_markJunctions);
 			if (m_markJunctions) {
 				ImGui::DragFloat("Junction Lower Ratio", &m_junctionLowerRatio, 0.01f, 0.0f, 0.5f);
@@ -157,19 +162,31 @@ void TreeMeshGeneratorSettings::OnInspect() {
 			}
 			ImGui::TreePop();
 		}
-		if (m_enableFoliage && ImGui::TreeNode("Foliage mesh settings"))
+		if(ImGui::TreeNode("Marching cubes settings"))
+		{
+			ImGui::Checkbox("Auto set level", &m_autoLevel);
+			if (!m_autoLevel) ImGui::DragInt("Voxel subdivision level", &m_voxelSubdivisionLevel, 1, 5, 16);
+			ImGui::DragInt("Smooth iteration", &m_voxelSmoothIteration, 0, 0, 10);
+			if (m_voxelSmoothIteration == 0) ImGui::Checkbox("Remove duplicate", &m_removeDuplicate);
+			ImGui::TreePop();
+		}
+		if (m_enableBranch && ImGui::TreeNode("Branch settings")) {
+			
+			if (m_overrideVertexColor) {
+				ImGui::ColorEdit3("Branch vertex color", &m_branchVertexColor.x);
+			}
+			
+			ImGui::TreePop();
+		}
+		if (m_enableFoliage && ImGui::TreeNode("Foliage settings"))
 		{
 			if (m_overrideVertexColor) {
 				ImGui::ColorEdit3("Foliage vertex color", &m_foliageVertexColor.x);
 			}
 			ImGui::TreePop();
 		}
-		if (m_enableRoot && ImGui::TreeNode("Root mesh settings"))
+		if (m_enableRoot && ImGui::TreeNode("Marching cubes settings"))
 		{
-			ImGui::Checkbox("Auto set level", &m_autoLevel);
-			if(!m_autoLevel) ImGui::DragInt("Voxel subdivision level", &m_voxelSubdivisionLevel, 1, 5, 16);
-			ImGui::DragInt("Smooth iteration", &m_voxelSmoothIteration, 0, 0, 10);
-			if (m_voxelSmoothIteration == 0) ImGui::Checkbox("Remove duplicate", &m_removeDuplicate);
 			if (m_overrideVertexColor) {
 				ImGui::ColorEdit3("Root vertex color", &m_rootVertexColor.x);
 			}

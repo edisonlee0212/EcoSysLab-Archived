@@ -150,15 +150,23 @@ TreeVisualizer::OnInspect(
         }
         ImGui::TreePop();
     }
-    const auto &treeSkeleton = treeModel.PeekBranchSkeleton(m_iteration);
-    const auto &rootSkeleton = treeModel.PeekRootSkeleton(m_iteration);
+
+    return updated;
+}
+
+bool TreeVisualizer::Visualize(TreeModel& treeModel,
+    const GlobalTransform& globalTransform)
+{
+    bool updated = false;
+    const auto& treeSkeleton = treeModel.PeekBranchSkeleton(m_iteration);
+    const auto& rootSkeleton = treeModel.PeekRootSkeleton(m_iteration);
     if (m_visualization) {
-	    const auto editorLayer = Application::GetLayer<EditorLayer>();
-        const auto &sortedBranchList = treeSkeleton.RefSortedFlowList();
-        const auto &sortedInternodeList = treeSkeleton.RefSortedNodeList();
+        const auto editorLayer = Application::GetLayer<EditorLayer>();
+        const auto& sortedBranchList = treeSkeleton.RefSortedFlowList();
+        const auto& sortedInternodeList = treeSkeleton.RefSortedNodeList();
         ImGui::Text("Internode count: %d", sortedInternodeList.size());
         ImGui::Text("Branch count: %d", sortedBranchList.size());
-        
+
         const auto& sortedRootFlowList = rootSkeleton.RefSortedFlowList();
         const auto& sortedRootNodeList = rootSkeleton.RefSortedNodeList();
         ImGui::Text("Root node count: %d", sortedRootNodeList.size());
@@ -168,98 +176,102 @@ TreeVisualizer::OnInspect(
         if (ImGui::Checkbox("Enable stroke", &enableStroke)) {
             if (enableStroke) {
                 m_mode = PruningMode::Stroke;
-            } else {
+            }
+            else {
                 m_mode = PruningMode::None;
             }
             m_storedMousePositions.clear();
         }
         switch (m_mode) {
-            case PruningMode::None: {
+        case PruningMode::None: {
+            if (Inputs::GetMouseInternal(GLFW_MOUSE_BUTTON_LEFT, Windows::GetWindow())) {
+                if (RayCastSelection(treeSkeleton, globalTransform, m_selectedInternodeHandle, m_selectedInternodeHierarchyList, m_selectedInternodeLengthFactor)) {
+                    m_needUpdate = true;
+                    updated = true;
+                    m_selectedRootNodeHandle = -1;
+                    m_selectedRootNodeHierarchyList.clear();
+                }
+                else if (RayCastSelection(rootSkeleton, globalTransform, m_selectedRootNodeHandle, m_selectedRootNodeHierarchyList, m_selectedRootNodeLengthFactor)) {
+                    m_needUpdate = true;
+                    updated = true;
+                    m_selectedInternodeHandle = -1;
+                    m_selectedInternodeHierarchyList.clear();
+                }
+            }
+            if (m_iteration == treeModel.CurrentIteration() &&
+                Inputs::GetKeyInternal(GLFW_KEY_DELETE,
+                    Windows::GetWindow())) {
+                if (m_selectedInternodeHandle > 0) {
+                    treeModel.Step();
+                    auto& skeleton = treeModel.RefBranchSkeleton();
+                    auto& pruningInternode = skeleton.RefNode(m_selectedInternodeHandle);
+                    auto childHandles = pruningInternode.RefChildHandles();
+                    for (const auto& childHandle : childHandles) {
+                        skeleton.RecycleNode(childHandle);
+                    }
+                    pruningInternode.m_info.m_length *= m_selectedInternodeLengthFactor;
+                    m_selectedInternodeLengthFactor = 1.0f;
+                    for (auto& bud : pruningInternode.m_data.m_buds) {
+                        bud.m_status = BudStatus::Died;
+                    }
+                    skeleton.SortLists();
+                    m_iteration = treeModel.CurrentIteration();
+                    m_needUpdate = true;
+                    updated = true;
+                }
+                if (m_selectedRootNodeHandle > 0) {
+                    treeModel.Step();
+                    auto& skeleton = treeModel.RefRootSkeleton();
+                    auto& pruningRootNode = skeleton.RefNode(m_selectedRootNodeHandle);
+                    auto childHandles = pruningRootNode.RefChildHandles();
+                    for (const auto& childHandle : childHandles) {
+                        skeleton.RecycleNode(childHandle);
+                    }
+                    pruningRootNode.m_info.m_length *= m_selectedRootNodeLengthFactor;
+                    m_selectedRootNodeLengthFactor = 1.0f;
+                    skeleton.SortLists();
+                    m_iteration = treeModel.CurrentIteration();
+                    m_needUpdate = true;
+                    updated = true;
+                }
+            }
+        }
+                              break;
+        case PruningMode::Stroke: {
+            if (m_iteration == treeModel.CurrentIteration()) {
                 if (Inputs::GetMouseInternal(GLFW_MOUSE_BUTTON_LEFT, Windows::GetWindow())) {
-                    if (RayCastSelection(treeSkeleton, globalTransform, m_selectedInternodeHandle, m_selectedInternodeHierarchyList, m_selectedInternodeLengthFactor)) {
-                        m_needUpdate = true;
-                        updated = true;
-                        m_selectedRootNodeHandle = -1;
-                        m_selectedRootNodeHierarchyList.clear();
-                    }else if (RayCastSelection(rootSkeleton, globalTransform, m_selectedRootNodeHandle, m_selectedRootNodeHierarchyList, m_selectedRootNodeLengthFactor)) {
-                        m_needUpdate = true;
-                        updated = true;
-                        m_selectedInternodeHandle = -1;
-                        m_selectedInternodeHierarchyList.clear();
+                    glm::vec2 mousePosition = editorLayer->GetMouseScreenPosition();
+                    const float halfX = editorLayer->m_sceneCamera->GetResolution().x / 2.0f;
+                    const float halfY = editorLayer->m_sceneCamera->GetResolution().y / 2.0f;
+                    mousePosition = { -1.0f * (mousePosition.x - halfX) / halfX,
+                                     -1.0f * (mousePosition.y - halfY) / halfY };
+                    if (mousePosition.x > -1.0f && mousePosition.x < 1.0f && mousePosition.y > -1.0f &&
+                        mousePosition.y < 1.0f &&
+                        (m_storedMousePositions.empty() || mousePosition != m_storedMousePositions.back())) {
+                        m_storedMousePositions.emplace_back(mousePosition);
                     }
                 }
-				if (m_iteration == treeModel.CurrentIteration() &&
-                    Inputs::GetKeyInternal(GLFW_KEY_DELETE,
-                                           Windows::GetWindow())) {
-                    if (m_selectedInternodeHandle > 0) {
+                else {
+                    //Once released, check if empty.
+                    if (!m_storedMousePositions.empty()) {
                         treeModel.Step();
                         auto& skeleton = treeModel.RefBranchSkeleton();
-                        auto& pruningInternode = skeleton.RefNode(m_selectedInternodeHandle);
-                        auto childHandles = pruningInternode.RefChildHandles();
-                        for (const auto& childHandle : childHandles) {
-                            skeleton.RecycleNode(childHandle);
+                        bool changed = ScreenCurvePruning(skeleton, globalTransform, m_selectedInternodeHandle, m_selectedInternodeHierarchyList);
+                        if (changed) {
+                            skeleton.SortLists();
+                            m_iteration = treeModel.CurrentIteration();
+                            m_needUpdate = true;
+                            updated = true;
                         }
-                        pruningInternode.m_info.m_length *= m_selectedInternodeLengthFactor;
-                        m_selectedInternodeLengthFactor = 1.0f;
-                        for (auto& bud : pruningInternode.m_data.m_buds) {
-                            bud.m_status = BudStatus::Died;
+                        else {
+                            treeModel.Pop();
                         }
-                        skeleton.SortLists();
-                        m_iteration = treeModel.CurrentIteration();
-                        m_needUpdate = true;
-                        updated = true;
-                    }
-                    if (m_selectedRootNodeHandle > 0) {
-                        treeModel.Step();
-                        auto& skeleton = treeModel.RefRootSkeleton();
-                        auto& pruningRootNode = skeleton.RefNode(m_selectedRootNodeHandle);
-                        auto childHandles = pruningRootNode.RefChildHandles();
-                        for (const auto& childHandle : childHandles) {
-                            skeleton.RecycleNode(childHandle);
-                        }
-                        pruningRootNode.m_info.m_length *= m_selectedRootNodeLengthFactor;
-                        m_selectedRootNodeLengthFactor = 1.0f;
-                        skeleton.SortLists();
-                        m_iteration = treeModel.CurrentIteration();
-                        m_needUpdate = true;
-                        updated = true;
+                        m_storedMousePositions.clear();
                     }
                 }
             }
-                break;
-            case PruningMode::Stroke: {
-                if (m_iteration == treeModel.CurrentIteration()) {
-                    if (Inputs::GetMouseInternal(GLFW_MOUSE_BUTTON_LEFT, Windows::GetWindow())) {
-                        glm::vec2 mousePosition = editorLayer->GetMouseScreenPosition();
-                        const float halfX = editorLayer->m_sceneCamera->GetResolution().x / 2.0f;
-                        const float halfY = editorLayer->m_sceneCamera->GetResolution().y / 2.0f;
-                        mousePosition = {-1.0f * (mousePosition.x - halfX) / halfX,
-                                         -1.0f * (mousePosition.y - halfY) / halfY};
-                        if (mousePosition.x > -1.0f && mousePosition.x < 1.0f && mousePosition.y > -1.0f &&
-                            mousePosition.y < 1.0f &&
-                            (m_storedMousePositions.empty() || mousePosition != m_storedMousePositions.back())) {
-                            m_storedMousePositions.emplace_back(mousePosition);
-                        }
-                    } else {
-                        //Once released, check if empty.
-                        if (!m_storedMousePositions.empty()) {
-                            treeModel.Step();
-                            auto &skeleton = treeModel.RefBranchSkeleton();
-                            bool changed = ScreenCurvePruning(skeleton, globalTransform, m_selectedInternodeHandle, m_selectedInternodeHierarchyList);
-                            if (changed) {
-                                skeleton.SortLists();
-                                m_iteration = treeModel.CurrentIteration();
-                                m_needUpdate = true;
-                                updated = true;
-                            } else {
-                                treeModel.Pop();
-                            }
-                            m_storedMousePositions.clear();
-                        }
-                    }
-                }
-            }
-                break;
+        }
+                                break;
         }
 
 
@@ -276,12 +288,12 @@ TreeVisualizer::OnInspect(
                 m_internodeColors[0] = glm::vec4(0.0f);
             }
             Gizmos::DrawGizmoMeshInstancedColored(
-                    DefaultResources::Primitives::Cylinder, editorLayer->m_sceneCamera,
-                    editorLayer->m_sceneCameraPosition,
-                    editorLayer->m_sceneCameraRotation,
-                    m_internodeColors,
-                    m_internodeMatrices,
-                    globalTransform.m_value, 1.0f, gizmoSettings);
+                DefaultResources::Primitives::Cylinder, editorLayer->m_sceneCamera,
+                editorLayer->m_sceneCameraPosition,
+                editorLayer->m_sceneCameraRotation,
+                m_internodeColors,
+                m_internodeMatrices,
+                globalTransform.m_value, 1.0f, gizmoSettings);
 
         }
         if (!m_rootNodeMatrices.empty()) {
@@ -292,15 +304,14 @@ TreeVisualizer::OnInspect(
                 m_rootNodeColors[0] = glm::vec4(0.0f);
             }
             Gizmos::DrawGizmoMeshInstancedColored(
-                    DefaultResources::Primitives::Cylinder, editorLayer->m_sceneCamera,
-                    editorLayer->m_sceneCameraPosition,
-                    editorLayer->m_sceneCameraRotation,
-                    m_rootNodeColors,
-                    m_rootNodeMatrices,
-                    globalTransform.m_value, 1.0f, gizmoSettings);
+                DefaultResources::Primitives::Cylinder, editorLayer->m_sceneCamera,
+                editorLayer->m_sceneCameraPosition,
+                editorLayer->m_sceneCameraRotation,
+                m_rootNodeColors,
+                m_rootNodeMatrices,
+                globalTransform.m_value, 1.0f, gizmoSettings);
         }
     }
-
     return updated;
 }
 
