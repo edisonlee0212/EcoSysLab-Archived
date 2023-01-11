@@ -158,11 +158,11 @@ float TreeVolume::IlluminationEstimation(const glm::vec3& position,
 		for (int j = 0; j < m_sectorAmount; j++)
 		{
 			auto tipPosition = TipPosition(i, j);
-			float distance = glm::distance(position, tipPosition);
+			const float distance = glm::distance(position, tipPosition);
 			auto diff = tipPosition - position;
 			if(diff.x == 0 && diff.z == 0) continue;
-			auto dot = glm::clamp(glm::dot(glm::normalize(diff), glm::normalize(glm::vec3(diff.x, 0.0f, diff.z))), 0.0f, 1.0f);
-			auto rd = glm::acos(dot);
+			const auto dot = glm::clamp(glm::dot(glm::normalize(diff), glm::normalize(glm::vec3(diff.x, 0.0f, diff.z))), 0.0f, 1.0f);
+			const auto rd = glm::acos(dot);
 			const int layerOffset = glm::degrees(rd) / layerAngle;
 			int probeLayerIndex = diff.y > 0 ? settings.m_probeLayerAmount / 2 - layerOffset : layerOffset + settings.m_probeLayerAmount / 2;
 			int probeSectorIndex = glm::degrees(glm::atan(diff.x, diff.z)) / sectorAngle;
@@ -265,7 +265,7 @@ float TreeVolume::IlluminationEstimation(const glm::vec3& position,
 
 	float loss = 0.0f;
 	float ratio = 1.0f;
-	float ratioSum = 1.0f;
+	float ratioSum = 0.0f;
 	for (int i = 0; i < settings.m_probeLayerAmount; i++)
 	{
 		ratioSum += ratio;

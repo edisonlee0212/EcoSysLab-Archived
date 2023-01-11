@@ -276,7 +276,7 @@ void EcoSysLabLayer::ResetAllTrees(const std::vector<Entity>* treeEntities)
 
 	m_fruitMatrices.clear();
 	m_fruitColors.clear();
-
+	if(scene->IsEntityValid(m_selectedTree)) m_treeVisualizer.Reset(scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock()->m_treeModel);
 }
 
 void EcoSysLabLayer::OnInspect() {

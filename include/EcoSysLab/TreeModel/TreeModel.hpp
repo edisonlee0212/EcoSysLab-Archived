@@ -347,10 +347,10 @@ namespace EcoSysLab {
 	};
 
 	struct IlluminationEstimationSettings {
-		int m_probeLayerAmount = 4;
-		int m_probeCountPerLayer = 4;
-		float m_distanceLossMagnitude = 0.2f;
-		float m_distanceLossFactor = 3.0f;
+		int m_probeLayerAmount = 8;
+		int m_probeCountPerLayer = 8;
+		float m_distanceLossMagnitude = 0.25f;
+		float m_distanceLossFactor = 1.5f;
 		float m_probeMinMaxRatio = 0.8f;
 	};
 
