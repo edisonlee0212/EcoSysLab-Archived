@@ -193,7 +193,6 @@ float TreeVolume::IlluminationEstimation(const glm::vec3& position,
 		}
 	}
 	{
-		auto copy = probeAvg;
 		for (int i = 0; i < settings.m_probeLayerAmount; i++)
 		{
 			for (int j = 0; j < settings.m_probeCountPerLayer; j++)
@@ -257,12 +256,11 @@ float TreeVolume::IlluminationEstimation(const glm::vec3& position,
 						}
 						*/
 					}
-					if (count != 0) copy[i][j] = sum / count;
-					else copy[i][j] = 0;
+					if (count != 0) probeAvg[i][j] = sum / count;
+					else probeAvg[i][j] = 0;
 				}
 			}
 		}
-		probeAvg = copy;
 	}
 
 	float loss = 0.0f;
@@ -1444,6 +1442,18 @@ bool TreeModel::Grow(const glm::mat4& globalTransform, SoilModel& soilModel, Cli
 	//Set new growth nutrients requirement for next iteration.
 	m_treeGrowthNutrientsRequirement = newTreeNutrientsRequirement;
 	return treeStructureChanged || rootStructureChanged;
+}
+
+void TreeModel::CalculateIllumination()
+{
+	const auto& sortedInternodeList = m_branchSkeleton.RefSortedNodeList();
+	for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); it++) {
+		auto& internode = m_branchSkeleton.RefNode(*it);
+		auto& internodeData = internode.m_data;
+		auto& internodeInfo = internode.m_info;
+		internodeData.m_lightIntensity = m_treeVolume.IlluminationEstimation(internodeInfo.m_globalPosition, m_illuminationEstimationSettings);
+		internodeInfo.m_color = glm::mix(glm::vec4(0.0, 0.0, 0.0, 1.0), glm::vec4(1.0f), internodeData.m_lightIntensity);
+	}
 }
 
 Skeleton<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData>& TreeModel::RefBranchSkeleton() {

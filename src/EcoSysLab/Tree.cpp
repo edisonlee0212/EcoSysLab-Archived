@@ -43,6 +43,20 @@ void Tree::OnInspect() {
 			modelChanged = true;
 		}
 	}
+
+	if(ImGui::TreeNodeEx("Illumination Estimation settings"))
+	{
+		ImGui::DragFloat("Distance Loss Intensity", &m_treeModel.m_illuminationEstimationSettings.m_distanceLossMagnitude, 0.01f);
+		ImGui::DragFloat("Distance Loss Factor", &m_treeModel.m_illuminationEstimationSettings.m_distanceLossFactor, 0.01f);
+		ImGui::DragFloat("Min/max ratio", &m_treeModel.m_illuminationEstimationSettings.m_probeMinMaxRatio, 0.01f);
+		ImGui::TreePop();
+	}
+
+	if(ImGui::Button("Calculate illumination"))
+	{
+		m_treeModel.CalculateIllumination();
+		modelChanged = true;
+	}
 	if (modelChanged) {
 		const auto treeVisualizationLayer = Application::GetLayer<EcoSysLabLayer>();
 		if (treeVisualizationLayer && treeVisualizationLayer->m_selectedTree == GetOwner()) {

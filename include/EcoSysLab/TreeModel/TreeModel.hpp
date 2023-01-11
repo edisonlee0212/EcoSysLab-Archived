@@ -357,7 +357,7 @@ namespace EcoSysLab {
 	class TreeVolume
 	{
 	public:
-		std::vector < std::vector <float >> m_layers;
+		std::vector<std::vector<float>> m_layers;
 		int m_layerAmount = 16;
 		int m_sectorAmount = 16;
 		float m_offset = 0;
@@ -475,6 +475,8 @@ namespace EcoSysLab {
 
 		int m_historyLimit = -1;
 
+
+		void CalculateIllumination();
 
 		[[nodiscard]] Skeleton<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData>& RefBranchSkeleton();
 
