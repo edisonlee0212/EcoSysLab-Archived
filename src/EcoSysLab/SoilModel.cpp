@@ -146,7 +146,6 @@ void SoilModel::Reset()
 	std::fill(empty.begin(), empty.end(), 0.0f);
 
 	m_w = empty;
-	m_tmpValue = empty;
 	m_w_grad_x = empty;
 	m_w_grad_y = empty;
 	m_w_grad_z = empty;
@@ -159,42 +158,28 @@ void SoilModel::Reset()
 	m_div_grav_y = empty;
 	m_div_grav_z = empty;
 
-	m_c = empty;
-	m_c_grad_x = empty;
-	m_c_grad_y = empty;
-	m_c_grad_z = empty;
+	m_c = vector<float>(numVoxels); // initialize with 1s
+	std::fill(m_c.begin(), m_c.end(), 1.0f);
+
+	SetField(m_c, vec3(-10, -3, -10), vec3(10, 0, 10), 2);
+	BlurField(m_c);
+
+	//ChangeField(m_c, vec3(0, 0, 0),   5000, 3);
+	//ChangeField(m_c, vec3(-1, 0, -1), 5000, 3);
+	//ChangeField(m_c, vec3(1, 0, -1),  5000, 3);
+	//ChangeField(m_c, vec3(-1, 0, 1),  5000, 3);
+	//ChangeField(m_c, vec3(1, 0, 1),   5000, 3);
+
+	m_l = empty;
 
 	m_nutrientsDensity = empty;
-	auto tmp = empty;
-
-	// todo: use change nutrienst here!
 
 	// create some nutrients
-	m_nutrientsDensity[Index(20, 12, 5)] = 100.f;
-	m_nutrientsDensity[Index(42, 18, 15)] = 100.f;
-
-	m_nutrientsDensity[Index(54, 8, 46)] = 50.f;
-	m_nutrientsDensity[Index(32, 18, 40)] = 50.f;
-
-	for (auto i = 0; i < 10; ++i)
-	{
-		Convolution3(m_nutrientsDensity, tmp, m_blur_3x3_idx, m_blur_3x3_weights);
-		Convolution3(tmp, m_nutrientsDensity, m_blur_3x3_idx, m_blur_3x3_weights);
-	}
-
-	m_nutrientsDensity[Index(5, 32, 8)] = 50.f;
-	m_nutrientsDensity[Index(32, 50, 30)] = 100.f;
-
-	m_nutrientsDensity[Index(18, 4, 56)] = 50.f;
-	m_nutrientsDensity[Index(27, 48, 27)] = 100.f;
-	for (auto i = 0; i < 10; ++i)
-	{
-		Convolution3(m_nutrientsDensity, tmp, m_blur_3x3_idx, m_blur_3x3_weights);
-		Convolution3(tmp, m_nutrientsDensity, m_blur_3x3_idx, m_blur_3x3_weights);
-	}
+	ChangeNutrient(vec3(0,0,0),  20000, 4);
+	ChangeNutrient(vec3(1,3,0),   5000, 3);
+	ChangeNutrient(vec3(-5,-3,1), 10500, 5);
 
 	update_w_sum();
-
 
 	m_version++;
 }
@@ -276,85 +261,102 @@ void SoilModel::Step()
 
 	// ----------------- diffusion -----------------
 	{
+		if(m_use_capacity)
+		{
+			for(auto i=0; i<m_w.size(); ++i)
+			{
+				m_l[i] = m_w[i] / m_c[i];
+			}
+		}
+		else
+		{
+			for(auto i=0; i<m_w.size(); ++i)
+			{
+				m_l[i] = m_w[i];
+			}
+		}
+
+
 		const auto wx_d = 1.0f / (2.0f * m_dx);
 		const auto grad_weights = vector<float>({ -wx_d, wx_d });
 
 		// compute gradient dw
-		Convolution3(m_w, m_w_grad_x, grad_index_x, grad_weights);
-		Convolution3(m_w, m_w_grad_y, grad_index_y, grad_weights);
-		Convolution3(m_w, m_w_grad_z, grad_Index_z, grad_weights);
+		Convolution3(m_l, m_w_grad_x, grad_index_x, grad_weights);
+		Convolution3(m_l, m_w_grad_y, grad_index_y, grad_weights);
+		Convolution3(m_l, m_w_grad_z, grad_Index_z, grad_weights);
 
 		// boundary conditions for gradient:
 
 		// X:
-		if(Boundary::sink == m_boundary_x)
+		/*if(Boundary::sink == m_boundary_x)
 		{
 			for (auto y = 0u; y < m_resolution.y; ++y)
 			{
 				for (auto z = 0u; z < m_resolution.z; ++z)
 				{
-					m_w_grad_x[Index(0,                y, z)] =  m_w[Index(1,                y, z)] * wx_d;
-					m_w_grad_x[Index(m_resolution.x-1, y, z)] = -m_w[Index(m_resolution.x-2, y, z)] * wx_d;
+					m_w_grad_x[Index(0,                y, z)] =  m_l[Index(1,                y, z)] * wx_d;
+					m_w_grad_x[Index(m_resolution.x-1, y, z)] = -m_l[Index(m_resolution.x-2, y, z)] * wx_d;
 				}
 			}
-		}
-		else if(Boundary::wrap == m_boundary_x)
+		}*/
+		if(Boundary::wrap == m_boundary_x)
 		{
 			for (auto y = 0u; y < m_resolution.y; ++y)
 			{
 				for (auto z = 0u; z < m_resolution.z; ++z)
 				{
-					m_w_grad_x[Index(0,                y, z)] = m_w[Index(m_resolution.x-1, y, z)]*grad_weights[0] + m_w[Index(1, y, z)]*grad_weights[1];
-					m_w_grad_x[Index(m_resolution.x-1, y, z)] = m_w[Index(m_resolution.x-2, y, z)]*grad_weights[0] + m_w[Index(0, y, z)]*grad_weights[1];
+					m_w_grad_x[Index(0,                y, z)] = m_l[Index(m_resolution.x-1, y, z)]*grad_weights[0] + m_l[Index(1, y, z)]*grad_weights[1];
+					m_w_grad_x[Index(m_resolution.x-1, y, z)] = m_l[Index(m_resolution.x-2, y, z)]*grad_weights[0] + m_l[Index(0, y, z)]*grad_weights[1];
 				}
 			}
 		}
 
 
 		// Y:
+		/*
 		if(Boundary::sink == m_boundary_y)
 		{
 			for (auto x = 0u; x < m_resolution.x; ++x)
 			{
 				for (auto z = 0u; z < m_resolution.z; ++z)
 				{
-					m_w_grad_y[Index(x, 0,                z)] =  m_w[Index(x, 1,                z)] * wx_d;
-					m_w_grad_y[Index(x, m_resolution.y-1, z)] = -m_w[Index(x, m_resolution.y-2, z)] * wx_d;
+					m_w_grad_y[Index(x, 0,                z)] =  m_l[Index(x, 1,                z)] * wx_d;
+					m_w_grad_y[Index(x, m_resolution.y-1, z)] = -m_l[Index(x, m_resolution.y-2, z)] * wx_d;
 				}
 			}
-		}
-		else if(Boundary::wrap == m_boundary_y)
+		}*/
+		if(Boundary::wrap == m_boundary_y)
 		{
 			for (auto x = 0u; x < m_resolution.x; ++x)
 			{
 				for (auto z = 0u; z < m_resolution.z; ++z)
 				{
-					m_w_grad_y[Index(x, 0,                z)] = m_w[Index(x, m_resolution.y-1, z)]*grad_weights[0] + m_w[Index(x, 1, z)]*grad_weights[1];
-					m_w_grad_y[Index(x, m_resolution.y-1, z)] = m_w[Index(x, m_resolution.y-2, z)]*grad_weights[0] + m_w[Index(x, 0, z)]*grad_weights[1];
+					m_w_grad_y[Index(x, 0,                z)] = m_l[Index(x, m_resolution.y-1, z)]*grad_weights[0] + m_l[Index(x, 1, z)]*grad_weights[1];
+					m_w_grad_y[Index(x, m_resolution.y-1, z)] = m_l[Index(x, m_resolution.y-2, z)]*grad_weights[0] + m_l[Index(x, 0, z)]*grad_weights[1];
 				}
 			}
 		}
 
 		// Z:
-		if(Boundary::sink == m_boundary_z)
+		/*if(Boundary::sink == m_boundary_z)
 		{
 			for(auto x = 0u; x<m_resolution.x; ++x)
 			{
 				for (auto y = 0u; y < m_resolution.y; ++y)
 				{
-					m_w_grad_z[Index(x, y, 0)]                =   m_w[Index(x, y, 1               )] * wx_d;
-					m_w_grad_z[Index(x, y, m_resolution.z-1)] = - m_w[Index(x, y, m_resolution.z-2)] * wx_d;
+					m_w_grad_z[Index(x, y, 0)]                =   m_l[Index(x, y, 1               )] * wx_d;
+					m_w_grad_z[Index(x, y, m_resolution.z-1)] = - m_l[Index(x, y, m_resolution.z-2)] * wx_d;
 				}
 			}
-		}
-		else if(Boundary::wrap == m_boundary_y)
+		}*/
+		if(Boundary::wrap == m_boundary_y)
 		{
 			for(auto x = 0u; x<m_resolution.x; ++x)
 			{
 				for (auto y = 0u; y < m_resolution.y; ++y)
 				{
-					m_w_grad_z[Index(x, y, 0               )] = m_w[Index(x, y, m_resolution.z-1)]*grad_weights[0] + m_w[Index(x, y, 1)]*grad_weights[1];
-					m_w_grad_z[Index(x, y, m_resolution.z-1)] = m_w[Index(x, y, m_resolution.z-2)]*grad_weights[0] + m_w[Index(x, y, 0)]*grad_weights[1];
+					m_w_grad_z[Index(x, y, 0               )] = m_l[Index(x, y, m_resolution.z-1)]*grad_weights[0] + m_l[Index(x, y, 1)]*grad_weights[1];
+					m_w_grad_z[Index(x, y, m_resolution.z-1)] = m_l[Index(x, y, m_resolution.z-2)]*grad_weights[0] + m_l[Index(x, y, 0)]*grad_weights[1];
 				}
 			}
 		}
@@ -365,7 +367,7 @@ void SoilModel::Step()
 		Convolution3(m_w_grad_z, m_div_diff_z, grad_Index_z, grad_weights);
 
 		// X:
-		if(Boundary::sink == m_boundary_x)
+		/*if(Boundary::sink == m_boundary_x)
 		{
 			for (auto y = 0u; y < m_resolution.y; ++y)
 			{
@@ -374,8 +376,8 @@ void SoilModel::Step()
 					// Nothing for now...
 				}
 			}
-		}
-		else if(Boundary::wrap == m_boundary_x)
+		}*/
+		if(Boundary::wrap == m_boundary_x)
 		{
 			for (auto y = 0u; y < m_resolution.y; ++y)
 			{
@@ -388,11 +390,11 @@ void SoilModel::Step()
 		}
 
 		// Y:
-		if(Boundary::sink == m_boundary_y)
+		/*if(Boundary::sink == m_boundary_y)
 		{
 			// nothing?
-		}
-		else if(Boundary::wrap == m_boundary_y)
+		}*/
+		if(Boundary::wrap == m_boundary_y)
 		{
 			for (auto x = 0u; x < m_resolution.x; ++x)
 			{
@@ -405,11 +407,11 @@ void SoilModel::Step()
 		}
 
 		// Z:
-		if(Boundary::sink == m_boundary_z)
+		/*if(Boundary::sink == m_boundary_z)
 		{
 			// nothing?
-		}
-		else if(Boundary::wrap == m_boundary_z)
+		}*/
+		if(Boundary::wrap == m_boundary_z)
 		{
 			for(auto x = 0u; x<m_resolution.x; ++x)
 			{
@@ -420,7 +422,6 @@ void SoilModel::Step()
 				}
 			}
 		}
-
 
 
 		for (auto i = 0; i < m_w.size(); ++i)
@@ -455,7 +456,7 @@ void SoilModel::Step()
 
 		Convolution3(m_w, m_div_grav_x, idx, weights);
 
-		if( Boundary::wrap == m_boundary_x)
+		if( Boundary::wrap == m_boundary_x )
 		{
 			const auto last = m_resolution.x-1;
 			for (auto y = 0u; y < m_resolution.y; ++y)
@@ -501,7 +502,7 @@ void SoilModel::Step()
 
 		Convolution3(m_w, m_div_grav_y, idx, weights);
 
-		if( Boundary::wrap == m_boundary_y)
+		if( Boundary::wrap == m_boundary_y )
 		{
 			const auto last = m_resolution.y-1;
 			for (auto x = 0u; x < m_resolution.x; ++x)
@@ -547,7 +548,7 @@ void SoilModel::Step()
 
 		Convolution3(m_w, m_div_grav_z, idx, weights);
 
-		if( Boundary::wrap == m_boundary_z)
+		if( Boundary::wrap == m_boundary_z )
 		{
 			const auto last = m_resolution.z-1;
 			for(auto x = 0u; x<m_resolution.x; ++x)
@@ -584,6 +585,23 @@ void SoilModel::Step()
 
 	// absorbing boundary regions
 	int region_width = 5;
+
+	if( Boundary::absorb == m_boundary_x )
+	{
+		for(auto i=0; i<region_width; ++i)
+		{
+			auto a = AbsorptionValueGaussian(region_width, i);
+			for (auto y = 0u; y < m_resolution.y; ++y)
+			{
+				for (auto z = 0u; z < m_resolution.z; ++z)
+				{
+					m_w[Index(i,                  y, z)] *= a;
+					m_w[Index(m_resolution.x-1-i, y, z)] *= a;
+				}
+			}
+		}
+	}
+
 	if( Boundary::absorb == m_boundary_y )
 	{
 		for(auto i=0; i<region_width; ++i)
@@ -593,22 +611,24 @@ void SoilModel::Step()
 			{
 				for (auto z = 0u; z < m_resolution.z; ++z)
 				{
-					m_w[Index(x, i, z)] *= a;
+					m_w[Index(x, i,                  z)] *= a;
 					m_w[Index(x, m_resolution.y-1-i, z)] *= a;
 				}
 			}
 		}
 	}
 
-
 	if( Boundary::absorb == m_boundary_z )
 	{
 		for(auto i=0; i<region_width; ++i)
 		{
+			auto a = AbsorptionValueGaussian(region_width, i);
 			for(auto x = 0u; x<m_resolution.x; ++x)
 			{
 				for (auto y = 0u; y < m_resolution.y; ++y)
 				{
+					m_w[Index(x, y, i                 )] *= a;
+					m_w[Index(x, y, m_resolution.z-1-i)] *= a;
 				}
 			}
 		}
@@ -660,7 +680,8 @@ float SoilModel::GetWater(const vec3& position) const
 
 float SoilModel::GetDensity(const vec3& position) const
 {
-	return m_soilDensity[Index(GetCoordinateFromPosition(position))];
+	auto coordinate = GetCoordinateFromPosition(position);
+	return m_soilDensity[Index(coordinate)];
 }
 
 float SoilModel::GetNutrient(const vec3& position) const
@@ -711,6 +732,35 @@ void SoilModel::ChangeField(vector<float>& field, const vec3& center, float amou
 
 }
 
+void EcoSysLab::SoilModel::SetField(std::vector<float>& field, const vec3& bb_min, const vec3& bb_max, float value)
+{
+	auto idx_min = GetCoordinateFromPosition(bb_min);
+	auto idx_max = GetCoordinateFromPosition(bb_max);
+	idx_min = glm::clamp(idx_min, ivec3(0, 0, 0), m_resolution);
+	idx_max = glm::clamp(idx_max, ivec3(0, 0, 0), m_resolution);
+
+	for(int z=idx_min.z; z<idx_max.z; ++z)
+	{
+		for(int y=idx_min.y; y<idx_max.y; ++y)
+		{
+			for(int x=idx_min.x; x<idx_max.x; ++x)
+			{
+				field[Index(x, y, z)] = value;
+			}
+		}
+	}
+}
+
+void EcoSysLab::SoilModel::BlurField(std::vector<float>& field)
+{
+	vector<float> tmp(field.size());
+	Convolution3(field, tmp, m_blur_3x3_idx, m_blur_3x3_weights);
+	// do corners:
+
+
+	Convolution3(tmp, field, m_blur_3x3_idx, m_blur_3x3_weights);
+}
+
 void SoilModel::ChangeWater(const vec3& center, float amount, float width)
 {
 	ChangeField(m_w, center, amount, width);
@@ -728,7 +778,7 @@ void SoilModel::ChangeNutrient(const vec3& center, float amount, float width)
 }
 
 
-int EcoSysLab::SoilModel::Index(const uvec3& resolution, int x, int y, int z)
+int EcoSysLab::SoilModel::Index(const ivec3& resolution, int x, int y, int z)
 {
 	return x + y * resolution.x + z * resolution.x * resolution.y;
 }
@@ -738,12 +788,12 @@ int SoilModel::Index(const int x, const int y, const int z) const
 	return Index(m_resolution, x, y, z);
 }
 
-int EcoSysLab::SoilModel::Index(const uvec3& resolution, const uvec3& c)
+int EcoSysLab::SoilModel::Index(const ivec3& resolution, const ivec3& c)
 {
 	return Index(resolution, c.x, c.y, c.z);
 }
 
-int SoilModel::Index(const uvec3& c) const
+int SoilModel::Index(const ivec3& c) const
 {
 	return Index(m_resolution, c.x, c.y, c.z);
 }
@@ -760,10 +810,15 @@ ivec3 SoilModel::GetCoordinateFromIndex(const int index) const
 
 ivec3 SoilModel::GetCoordinateFromPosition(const vec3& pos) const
 {
+	//return {
+	//	floor((pos.x - (m_boundingBoxMin.x + m_dx/2.0)) / m_dx),
+	//	floor((pos.y - (m_boundingBoxMin.y + m_dx/2.0)) / m_dx),
+	//	floor((pos.z - (m_boundingBoxMin.z + m_dx/2.0)) / m_dx)
+	//};
 	return {
-		floor((pos.x - (m_boundingBoxMin.x + m_dx/2.0)) / m_dx),
-		floor((pos.y - (m_boundingBoxMin.y + m_dx/2.0)) / m_dx),
-		floor((pos.z - (m_boundingBoxMin.z + m_dx/2.0)) / m_dx)
+		floor((pos.x - m_boundingBoxMin.x) / m_dx),
+		floor((pos.y - m_boundingBoxMin.y) / m_dx),
+		floor((pos.z - m_boundingBoxMin.z) / m_dx)
 	};
 }
 
@@ -777,7 +832,7 @@ vec3 SoilModel::GetPositionFromCoordinate(const ivec3& coordinate) const
 }
 
 
-uvec3 SoilModel::GetVoxelResolution() const
+ivec3 SoilModel::GetVoxelResolution() const
 {
 	return m_resolution;
 }

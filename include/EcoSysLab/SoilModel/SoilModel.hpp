@@ -31,16 +31,16 @@ namespace EcoSysLab {
 		[[nodiscard]] void ChangeNutrient(const glm::vec3& center, float amount, float width);
 
 		// negative indices are useful as relative offsets
-		[[nodiscard]] static int Index(const glm::uvec3& resolution, int x, int y, int z);
+		[[nodiscard]] static int Index(const glm::ivec3& resolution, int x, int y, int z);
 		[[nodiscard]]        int Index(int x, int y, int z) const;
-		[[nodiscard]] static int Index(const glm::uvec3& resolution, const glm::uvec3& coordinate);
-		[[nodiscard]]        int Index(const glm::uvec3& coordinate) const;
+		[[nodiscard]] static int Index(const glm::ivec3& resolution, const glm::ivec3& coordinate);
+		[[nodiscard]]        int Index(const glm::ivec3& coordinate) const;
 
 		[[nodiscard]] glm::ivec3 GetCoordinateFromIndex(const int index) const;
 		[[nodiscard]] glm::ivec3 GetCoordinateFromPosition(const glm::vec3& position) const;
 		[[nodiscard]] glm::vec3  GetPositionFromCoordinate(const glm::ivec3& coordinate) const;
 				
-		[[nodiscard]] glm::uvec3 GetVoxelResolution() const;
+		[[nodiscard]] glm::ivec3 GetVoxelResolution() const;
 		[[nodiscard]] float GetVoxelSize() const;
 		[[nodiscard]] float GetTime() const;
 		[[nodiscard]] glm::vec3 GetBoundingBoxCenter() const;
@@ -51,10 +51,12 @@ namespace EcoSysLab {
 		int m_version = 0; // TODO: what does this do?
 	protected:
 		void ChangeField(std::vector<float>& field, const glm::vec3& center, float amount, float width);
+		void SetField(std::vector<float>& field, const glm::vec3& bb_min, const glm::vec3& bb_max, float value);
+		void BlurField(std::vector<float>& field); // for now there is just one standard kernel
 		void update_w_sum();
 		bool m_initialized = false;
 
-		glm::uvec3 m_resolution;
+		glm::ivec3 m_resolution;
 		float m_dx; // delta x, distance between two voxels
 		float m_dt; // delta t, time between steps
 		float m_time = 0.0f; // time since start
@@ -62,12 +64,12 @@ namespace EcoSysLab {
 		// scaling factors for different forces
 		float m_diffusionForce;
 		glm::vec3 m_gravityForce;
+		bool m_use_capacity = true;
 
 		// Fields:
 		std::vector<float> m_w;
 
 		// these field are temporary variables but kept so we don't have to reallocate them each step
-		std::vector<float> m_tmpValue;
 		std::vector<float> m_w_grad_x;
 		std::vector<float> m_w_grad_y;
 		std::vector<float> m_w_grad_z;
@@ -81,9 +83,7 @@ namespace EcoSysLab {
 		std::vector<float> m_div_grav_z;
 
 		std::vector<float> m_c; // the capacity of each cell
-		std::vector<float> m_c_grad_x;
-		std::vector<float> m_c_grad_y;
-		std::vector<float> m_c_grad_z;
+		std::vector<float> m_l; // filling level of each cell, w/c
 
 		// nutrients
 		std::vector<float> m_nutrientsDensity;
@@ -110,7 +110,7 @@ namespace EcoSysLab {
 
 	class SoilParameters {
 	public:
-		glm::uvec3 m_voxelResolution = glm::uvec3(64, 48, 64);
+		glm::ivec3 m_voxelResolution = glm::ivec3(64, 48, 64);
 		float m_deltaX = 0.2f;
 		float m_deltaTime = 0.2f; // delta t, time between steps
 		glm::vec3& m_boundingBoxMin = glm::vec3(-6.4, -6.4, -6.4);
