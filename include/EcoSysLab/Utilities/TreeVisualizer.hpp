@@ -103,6 +103,8 @@ namespace EcoSysLab {
             const GlobalTransform& globalTransform);
 
         void Reset(TreeModel &treeModel);
+
+        void Clear();
     };
 
     template<typename SkeletonData, typename FlowData, typename NodeData>
