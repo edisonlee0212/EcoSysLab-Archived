@@ -141,7 +141,7 @@ void TreeVolume::Smooth()
 }
 
 float TreeVolume::IlluminationEstimation(const glm::vec3& position,
-	const IlluminationEstimationSettings& settings) const
+	const IlluminationEstimationSettings& settings, glm::vec3& lightDirection) const
 {
 	if (!m_hasData || m_layers.empty()) return 1.0f;
 	std::vector<std::vector<std::pair<float, int>>> probes;
@@ -266,15 +266,18 @@ float TreeVolume::IlluminationEstimation(const glm::vec3& position,
 	float loss = 0.0f;
 	float ratio = 1.0f;
 	float ratioSum = 0.0f;
+	glm::vec3 direction = glm::vec3(0.0f);
 	for (int i = 0; i < settings.m_probeLayerAmount; i++)
 	{
 		ratioSum += ratio;
 		for (int j = 0; j < settings.m_probeCountPerLayer; j++)
 		{
+			direction += glm::quat(glm::radians(glm::vec3(0, j * sectorAngle + 180.0f, i * layerAngle - 90.0f))) * glm::vec3(0.0f, 0.0f, 1.0f) * probeAvg[i][j];
 			loss += ratio * glm::clamp(settings.m_distanceLossMagnitude * glm::pow(probeAvg[i][j], settings.m_distanceLossFactor), 0.0f, 1.0f);
 		}
 		ratio *= settings.m_probeMinMaxRatio;
 	}
+	lightDirection = -glm::normalize(direction);
 	loss = loss / ratioSum / settings.m_probeCountPerLayer;
 	return glm::clamp(1.0f - loss, 0.0f, 1.0f);
 }
@@ -479,7 +482,7 @@ bool TreeModel::ElongateInternode(float extendLength, NodeHandle internodeHandle
 		auto desiredGlobalUp = desiredGlobalRotation * glm::vec3(0, 1, 0);
 		ApplyTropism(-m_currentGravityDirection, parameters.m_gravitropism, desiredGlobalFront,
 			desiredGlobalUp);
-		ApplyTropism(internodeData.m_lightDirection, parameters.m_phototropism,
+		ApplyTropism(-internodeData.m_lightDirection, parameters.m_phototropism,
 			desiredGlobalFront, desiredGlobalUp);
 		//Allocate Lateral bud for current internode
 		{
@@ -568,8 +571,8 @@ void TreeModel::CollectLuminousFluxFromLeaves(ClimateModel& climateModel,
 		auto& internode = m_branchSkeleton.RefNode(internodeHandle);
 		auto& internodeData = internode.m_data;
 		auto& internodeInfo = internode.m_info;
-		internodeData.m_lightIntensity = m_treeVolume.IlluminationEstimation(internodeInfo.m_globalPosition, m_illuminationEstimationSettings);
-		internodeInfo.m_color = glm::mix(glm::vec4(0.0, 0.0, 0.0, 1.0), glm::vec4(1.0f), internodeData.m_lightIntensity);
+		internodeData.m_lightIntensity = m_treeVolume.IlluminationEstimation(internodeInfo.m_globalPosition, m_illuminationEstimationSettings, internodeData.m_lightDirection);
+		internodeInfo.m_color = glm::mix(glm::vec4(internodeData.m_lightDirection, 1.0), glm::vec4(1.0f), internodeData.m_lightIntensity);
 		for (const auto& bud : internode.m_data.m_buds)
 		{
 			if (bud.m_status == BudStatus::Flushed && bud.m_type == BudType::Leaf)
@@ -603,10 +606,6 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 		if (bud.m_status == BudStatus::Dormant && killProbability > glm::linearRand(0.0f, 1.0f)) {
 			bud.m_status = BudStatus::Removed;
 		}
-		if ((bud.m_type == BudType::Leaf || bud.m_type == BudType::Fruit) && internodeInfo.m_thickness > treeGrowthParameters.m_trunkRadius)
-		{
-			bud.m_status = BudStatus::Removed;
-		}
 		if (bud.m_status == BudStatus::Removed) continue;
 
 		const float baseWater = glm::clamp(bud.m_waterGain, 0.0f, bud.m_baseWaterRequirement);
@@ -627,7 +626,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 			const auto& probabilityRange = treeGrowthParameters.m_lateralBudFlushingProbabilityTemperatureRange;
 			float flushProbability = treeGrowthParameters.m_growthRate * glm::mix(probabilityRange.x, probabilityRange.y,
 				glm::clamp((bud.m_temperature - probabilityRange.z) / (probabilityRange.w - probabilityRange.z), 0.0f, 1.0f));
-			flushProbability /= 1.0f + internodeData.m_inhibitor;
+			flushProbability *= glm::clamp(1.0f - internodeData.m_inhibitor, 0.0f, 1.0f);
 			flushProbability *= glm::pow(internodeData.m_lightIntensity, treeGrowthParameters.m_lateralBudFlushingProbabilityLightingFactor);
 			if (flushProbability >= glm::linearRand(0.0f, 1.0f)) {
 				graphChanged = true;
@@ -907,7 +906,7 @@ bool TreeModel::GrowBranches(const glm::mat4& globalTransform, ClimateModel& cli
 		const auto& sortedInternodeList = m_branchSkeleton.RefSortedNodeList();
 		for (const auto& internodeHandle : sortedInternodeList) {
 			if (m_branchSkeleton.RefNode(internodeHandle).IsRecycled()) continue;
-			if (LowBranchPruning(maxDistance, internodeHandle, treeGrowthParameters)) {
+			if (InternodePruning(maxDistance, internodeHandle, treeGrowthParameters)) {
 				anyBranchPruned = true;
 			}
 		}
@@ -1102,17 +1101,28 @@ int TreeModel::GetFruitCount() const
 }
 
 
-bool TreeModel::LowBranchPruning(float maxDistance, NodeHandle internodeHandle,
+bool TreeModel::InternodePruning(float maxDistance, NodeHandle internodeHandle,
 	const TreeGrowthParameters& treeGrowthParameters) {
 	auto& internode = m_branchSkeleton.RefNode(internodeHandle);
 	//Pruning here.
+	bool pruning = false;
+
 	if (maxDistance > 5 && internode.m_data.m_order != 0 &&
 		internode.m_data.m_rootDistance / maxDistance < treeGrowthParameters.m_lowBranchPruning) {
-		m_branchSkeleton.RecycleNode(internodeHandle);
-		return true;
+		pruning = true;
+	}
+	if(internode.IsEndNode())
+	{
+		float pruningProbability = treeGrowthParameters.m_growthRate * (1.0f - internode.m_data.m_lightIntensity) * treeGrowthParameters.m_endNodePruningLightFactor;
+
+		if (pruningProbability >= glm::linearRand(0.0f, 1.0f)) pruning = true;
 	}
 
-	return false;
+	if(pruning)
+	{
+		m_branchSkeleton.RecycleNode(internodeHandle);
+	}
+	return pruning;
 }
 
 bool TreeModel::GrowRoots(const glm::mat4& globalTransform, SoilModel& soilModel, const RootGrowthParameters& rootGrowthParameters, TreeGrowthNutrients& newTreeGrowthNutrientsRequirement)
@@ -1406,22 +1416,25 @@ TreeGrowthParameters::TreeGrowthParameters() {
 	m_internodeLength = 0.03f;
 	m_endNodeThickness = 0.002f;
 	m_thicknessAccumulationFactor = 0.5f;
-	m_trunkRadius = 0.02f;
-
+	
 	//Bud
-	m_branchingAngleMeanVariance = glm::vec2(60, 3);
+	m_branchingAngleMeanVariance = glm::vec2(45, 3);
 	m_rollAngleMeanVariance = glm::vec2(120, 2);
-	m_apicalAngleMeanVariance = glm::vec2(0, 2.5);
+	m_apicalAngleMeanVariance = glm::vec2(0, 3);
 	m_gravitropism = 0.03f;
 	m_phototropism = 0.0f;
 
-	m_lateralBudFlushingProbabilityTemperatureRange = glm::vec4(1.0f, 1.0f, 0.0f, 100.0f);
+	m_lateralBudFlushingProbabilityTemperatureRange = glm::vec4(0.05f, 0.05f, 0.0f, 100.0f);
 	m_leafBudFlushingProbabilityTemperatureRange = glm::vec4(0.0f, 1.0f, 45.0f, 60.0f);
 	m_fruitBudFlushingProbabilityTemperatureRange = glm::vec4(0.0f, 1.0f, 50.0f, 70.0f);
 
-	m_apicalControlBaseDistFactor = { 1.1f, 0.99f };
-	m_apicalDominance = 300;
-	m_apicalDominanceDistanceFactor = 0.97f;
+	m_lateralBudFlushingProbabilityLightingFactor = 1.0f;
+	m_leafBudFlushingProbabilityLightingFactor = 1.0f;
+	m_fruitBudFlushingProbabilityLightingFactor = 1.0f;
+
+	m_apicalControlBaseDistFactor = { 1.05f, 0.95f };
+	m_apicalDominance = 1.5;
+	m_apicalDominanceDistanceFactor = 0.95f;
 	m_budKillProbability = 0.00f;
 
 	m_shootBaseWaterRequirement = 1.0f;
@@ -1434,8 +1447,8 @@ TreeGrowthParameters::TreeGrowthParameters() {
 
 
 	//Internode
-	m_lowBranchPruning = 0.2f;
-	m_saggingFactorThicknessReductionMax = glm::vec3(0.0001, 2, 0.5);
+	m_lowBranchPruning = 0.15f;
+	m_saggingFactorThicknessReductionMax = glm::vec3(0.0003, 2, 0.5);
 
 	//Foliage
 	m_maxLeafSize = glm::vec3(0.05f, 1.0f, 0.05f) / 2.0f;

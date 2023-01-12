@@ -81,7 +81,7 @@ float HeightField::GetValue(const glm::vec2& position)
 	float retVal = 0.0f;
 	if(position.x < 0)
 	{
-		retVal += glm::max(position.x, -5.0f);
+		//retVal += glm::max(position.x, -5.0f);
 	}
 	
 	const auto groundSurface = m_groundSurface.Get<GroundSurface>();

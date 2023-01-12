@@ -60,7 +60,7 @@ TreeVisualizer::OnInspect(
         TreeModel &treeModel,
         const GlobalTransform &globalTransform) {
     bool updated = false;
-    if (ImGui::TreeNodeEx("Current selected tree", ImGuiTreeNodeFlags_DefaultOpen)) {
+    if (ImGui::TreeNodeEx("Selected Tree Visualizer", ImGuiTreeNodeFlags_DefaultOpen)) {
         if (treeModel.CurrentIteration() > 0) {
             if (ImGui::TreeNodeEx("History", ImGuiTreeNodeFlags_DefaultOpen)) {
                 ImGui::DragInt("History Limit", &treeModel.m_historyLimit, 1, -1, 1024);

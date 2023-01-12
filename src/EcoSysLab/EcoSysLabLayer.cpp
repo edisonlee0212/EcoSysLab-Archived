@@ -341,32 +341,32 @@ void EcoSysLabLayer::OnInspect() {
 			ImGui::Text("Total Root Flow size: %d", m_rootFlowSize);
 
 
-			ImGui::Checkbox("Debug Visualization", &m_debugVisualization);
-			if (m_debugVisualization && ImGui::TreeNodeEx("Debug visualization settings", ImGuiTreeNodeFlags_DefaultOpen)) {
-				ImGui::Checkbox("Display Branches", &m_displayBranches);
-				ImGui::Checkbox("Display Fruits", &m_displayFruit);
-				ImGui::Checkbox("Display Foliage", &m_displayFoliage);
-				ImGui::Checkbox("Display Root Flows", &m_displayRootFlows);
-				ImGui::Checkbox("Display Soil", &m_displaySoil);
-				if (m_displaySoil && ImGui::TreeNodeEx("Soil visualization settings", ImGuiTreeNodeFlags_DefaultOpen))
-				{
-					OnSoilVisualizationMenu();
-					ImGui::TreePop();
-				}
-				ImGui::Checkbox("Display Bounding Box", &m_displayBoundingBox);
-				ImGui::TreePop();
-			}
-
-			if (m_debugVisualization && scene->IsEntityValid(m_selectedTree)) {
-				m_treeVisualizer.OnInspect(
-					scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock()->m_treeModel, scene->GetDataComponent<GlobalTransform>(m_selectedTree));
-			}
+			
 		}
 		else
 		{
 			ImGui::Text("No trees in the scene!");
 		}
-		
+		ImGui::Checkbox("Debug Visualization", &m_debugVisualization);
+		if (m_debugVisualization && ImGui::TreeNodeEx("Debug visualization settings", ImGuiTreeNodeFlags_DefaultOpen)) {
+			ImGui::Checkbox("Display Branches", &m_displayBranches);
+			ImGui::Checkbox("Display Fruits", &m_displayFruit);
+			ImGui::Checkbox("Display Foliage", &m_displayFoliage);
+			ImGui::Checkbox("Display Root Flows", &m_displayRootFlows);
+			ImGui::Checkbox("Display Soil", &m_displaySoil);
+			if (m_displaySoil && ImGui::TreeNodeEx("Soil visualization settings", ImGuiTreeNodeFlags_DefaultOpen))
+			{
+				OnSoilVisualizationMenu();
+				ImGui::TreePop();
+			}
+			ImGui::Checkbox("Display Bounding Box", &m_displayBoundingBox);
+			ImGui::TreePop();
+		}
+
+		if (m_debugVisualization && scene->IsEntityValid(m_selectedTree)) {
+			m_treeVisualizer.OnInspect(
+				scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock()->m_treeModel, scene->GetDataComponent<GlobalTransform>(m_selectedTree));
+		}
 	}
 	ImGui::End();
 }

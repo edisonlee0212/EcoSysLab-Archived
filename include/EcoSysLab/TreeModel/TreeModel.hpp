@@ -131,6 +131,14 @@ namespace EcoSysLab {
 		 */
 		float m_growthRate;
 		/**
+		 * \brief How soil density affects the growth;
+		 */
+		float m_densityFactor;
+		/**
+		 * \brief How soil density affects the growth;
+		 */
+		float m_densityMultiplier;
+		/**
 		 * \brief The root node length
 		 */
 		float m_rootNodeLength;
@@ -258,6 +266,10 @@ namespace EcoSysLab {
 		 */
 		float m_thicknessAccumulationFactor;
 		/**
+		 * \brief The extra thickness gained from node length.
+		 */
+		float m_thicknessLengthAccumulate;
+		/**
 		 * \brief Flushing prob of lateral bud related to the temperature.
 		 */
 		glm::vec4 m_lateralBudFlushingProbabilityTemperatureRange;
@@ -303,6 +315,10 @@ namespace EcoSysLab {
 		* root.
 		*/
 		float m_lowBranchPruning;
+		/**
+		 * \brief The The impact of the amount of incoming light on the shedding of end internodes.
+		 */
+		float m_endNodePruningLightFactor;
 		/**
 		 * \brief The strength of gravity bending.
 		 */
@@ -350,8 +366,6 @@ namespace EcoSysLab {
 		float m_fruitRandomRotation;
 
 #pragma endregion
-		float m_trunkRadius;
-
 
 		[[nodiscard]] float GetDesiredBranchingAngle(const Node<InternodeGrowthData>& internode) const;
 
@@ -401,7 +415,7 @@ namespace EcoSysLab {
 		void Clear();
 		[[nodiscard]] glm::vec3 TipPosition(int layer, int slice) const;
 		void Smooth();
-		[[nodiscard]] float IlluminationEstimation(const glm::vec3& position, const IlluminationEstimationSettings& settings) const;
+		[[nodiscard]] float IlluminationEstimation(const glm::vec3& position, const IlluminationEstimationSettings& settings, glm::vec3& lightDirection) const;
 	};
 
 	class TreeModel {
@@ -428,7 +442,7 @@ namespace EcoSysLab {
 		inline void AdjustProductiveResourceRequirement(NodeHandle internodeHandle,
 			const TreeGrowthParameters& treeGrowthParameters);
 
-		bool LowBranchPruning(float maxDistance, NodeHandle internodeHandle,
+		bool InternodePruning(float maxDistance, NodeHandle internodeHandle,
 			const TreeGrowthParameters& treeGrowthParameters);
 
 		inline void CalculateThicknessAndSagging(NodeHandle internodeHandle,
