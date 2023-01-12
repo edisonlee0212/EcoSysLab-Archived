@@ -1004,6 +1004,24 @@ void EcoSysLabLayer::BranchRenderingGs(const std::vector<Entity>* treeEntities)
 
 
 void EcoSysLabLayer::Update() {
+	
+	const auto scene = Application::GetActiveScene();
+	if (!m_soilHolder.Get<Soil>()) {
+		const std::vector<Entity>* soilEntities =
+			scene->UnsafeGetPrivateComponentOwnersList<Soil>();
+		if(soilEntities && !soilEntities->empty())
+		{
+			m_soilHolder = scene->GetOrSetPrivateComponent<Soil>(soilEntities->at(0)).lock();
+		}
+	}
+	if (!m_climateHolder.Get<Climate>()) {
+		const std::vector<Entity>* climateEntities =
+			scene->UnsafeGetPrivateComponentOwnersList<Climate>();
+		if (climateEntities && !climateEntities->empty())
+		{
+			m_climateHolder = scene->GetOrSetPrivateComponent<Climate>(climateEntities->at(0)).lock();
+		}
+	}
 	if (m_autoGrow) {
 		Simulate();
 	}
