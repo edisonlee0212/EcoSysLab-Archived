@@ -537,7 +537,7 @@ namespace EcoSysLab {
 		int m_fruitCount = 0;
 
 	public:
-		int m_flowNodeLimit = 30;
+		int m_flowNodeLimit = 20;
 		template <typename SkeletonData, typename FlowData, typename NodeData>
 		void CollisionDetection(float minRadius, Octree<TreeVoxelData>& octree, Skeleton<SkeletonData, FlowData, NodeData>& skeleton);
 

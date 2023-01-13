@@ -393,6 +393,20 @@ inline bool TreeModel::GrowRootNode(SoilModel& soilModel, NodeHandle rootNodeHan
 				newRootNode.m_info.m_length = 0.0f;
 				newRootNode.m_info.m_thickness = rootGrowthParameters.m_endNodeThickness;
 				newRootNode.m_info.m_localRotation = glm::quat(glm::vec3(glm::radians(rootGrowthParameters.GetRootBranchingAngle(newRootNode)), glm::radians(glm::linearRand(0.0f, 360.0f)), 0.0f));
+				auto globalRotation = oldRootNode.m_info.m_globalRotation * newRootNode.m_info.m_localRotation;
+				auto front = globalRotation * glm::vec3(0, 0, -1);
+				auto up = globalRotation * glm::vec3(0, 1, 0);
+				auto angleTowardsUp = glm::degrees(glm::acos(glm::dot(front, glm::vec3(0, 1, 0))));
+				const float maxAngle = 60.0f;
+				if (angleTowardsUp < maxAngle) {
+					const glm::vec3 left = glm::cross(front, glm::vec3(0, -1, 0));
+					front = glm::rotate(front, glm::radians(maxAngle - angleTowardsUp), left);
+
+					up = glm::normalize(glm::cross(glm::cross(front, up), front));
+					globalRotation = glm::quatLookAt(front, up);
+					newRootNode.m_info.m_localRotation = glm::inverse(oldRootNode.m_info.m_globalRotation) * globalRotation;
+					front = globalRotation * glm::vec3(0, 0, -1);
+				}
 				newRootNode.m_data.m_rootUnitDistance = oldRootNode.m_data.m_rootUnitDistance + 1;
 			}
 		}
@@ -1657,7 +1671,8 @@ float RootGrowthParameters::GetApicalControlFactor(const Node<RootInternodeGrowt
 
 void RootGrowthParameters::SetTropisms(Node<RootInternodeGrowthData>& oldNode, Node<RootInternodeGrowthData>& newNode) const
 {
-	const bool needSwitch = glm::linearRand(0.0f, 1.0f) < m_tropismSwitchingProbability * glm::pow(m_branchingProbabilityDistanceDecrease, glm::max(0, oldNode.m_data.m_rootUnitDistance - 1));
+	float probability = m_tropismSwitchingProbability * glm::pow(m_tropismSwitchingProbabilityDistanceFactor, glm::max(0, oldNode.m_data.m_rootUnitDistance - 1));
+	const bool needSwitch = probability >= glm::linearRand(0.0f, 1.0f);
 	newNode.m_data.m_horizontalTropism = needSwitch ? oldNode.m_data.m_verticalTropism : oldNode.m_data.m_horizontalTropism;
 	newNode.m_data.m_verticalTropism = needSwitch ? oldNode.m_data.m_horizontalTropism : oldNode.m_data.m_verticalTropism;
 }

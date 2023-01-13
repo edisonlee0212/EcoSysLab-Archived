@@ -172,7 +172,7 @@ void Tree::GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings) 
 		scene->SetParent(rootEntity, self);
 		std::vector<Vertex> vertices;
 		std::vector<unsigned int> indices;
-		switch (meshGeneratorSettings.m_branchMeshType)
+		switch (meshGeneratorSettings.m_rootMeshType)
 		{
 		case 0:
 		{
