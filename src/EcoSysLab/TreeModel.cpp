@@ -299,10 +299,11 @@ bool TreeModel::ElongateRoot(SoilModel& soilModel, const float extendLength, Nod
 			glm::radians(rootGrowthParameters.GetRootApicalAngle(rootNode)), 0.0f,
 			glm::radians(rootGrowthParameters.GetRootRollAngle(rootNode))));
 		//Create new internode
-		auto newRootNodeHandle = m_rootSkeleton.Extend(rootNodeHandle, false);
+		auto newRootNodeHandle = m_rootSkeleton.Extend(rootNodeHandle, false, m_rootSkeleton.RefFlow(rootNode.GetFlowHandle()).RefNodeHandles().size() > m_flowNodeLimit);
 		auto& oldRootNode = m_rootSkeleton.RefNode(rootNodeHandle);
 		auto& newRootNode = m_rootSkeleton.RefNode(newRootNodeHandle);
 		newRootNode.m_data = {};
+		newRootNode.m_data.m_lateral = false;
 		//Set and apply tropisms
 		auto desiredGlobalFront = desiredGlobalRotation * glm::vec3(0, 0, -1);
 		auto desiredGlobalUp = desiredGlobalRotation * glm::vec3(0, 1, 0);
@@ -369,8 +370,10 @@ inline bool TreeModel::GrowRootNode(SoilModel& soilModel, NodeHandle rootNodeHan
 		if (rootNode.RefChildHandles().empty())
 		{
 			//1. Elongate current node.
+			const float reproductiveWater = glm::max(0.0f, rootNode.m_data.m_allocatedResource - rootNode.m_data.m_maintenanceResourceRequirement);
+			const float reproductiveContent = reproductiveWater * m_globalGrowthRate;
+			const float extendLength = reproductiveContent * rootGrowthParameters.m_rootNodeLength * m_globalGrowthRate;
 			float collectedAuxin = 0.0f;
-			const float extendLength = rootNode.m_data.m_developmentResourceRequirement * rootGrowthParameters.m_rootNodeLength * m_globalGrowthRate;
 			const auto dd = rootGrowthParameters.m_apicalDominanceDistanceFactor;
 			graphChanged = ElongateRoot(soilModel, extendLength, rootNodeHandle, rootGrowthParameters, collectedAuxin) || graphChanged;
 			m_rootSkeleton.RefNode(rootNodeHandle).m_data.m_inhibitorTarget += collectedAuxin * dd;
@@ -378,16 +381,18 @@ inline bool TreeModel::GrowRootNode(SoilModel& soilModel, NodeHandle rootNodeHan
 		else
 		{
 			//2. Form new shoot if necessary
-			float branchingProb = rootGrowthParameters.GetBranchingProbability(rootNode);
+			float branchingProb = rootGrowthParameters.m_growthRate * rootGrowthParameters.GetBranchingProbability(rootNode);
 			branchingProb *= glm::clamp(1.0f - rootNode.m_data.m_inhibitor, 0.0f, 1.0f);
 			if (branchingProb >= glm::linearRand(0.0f, 1.0f)) {
 				const auto newRootNodeHandle = m_rootSkeleton.Extend(rootNodeHandle, true);
 				auto& oldRootNode = m_rootSkeleton.RefNode(rootNodeHandle);
 				auto& newRootNode = m_rootSkeleton.RefNode(newRootNodeHandle);
+				newRootNode.m_data = {};
+				newRootNode.m_data.m_lateral = true;
 				rootGrowthParameters.SetTropisms(oldRootNode, newRootNode);
 				newRootNode.m_info.m_length = 0.0f;
 				newRootNode.m_info.m_thickness = rootGrowthParameters.m_endNodeThickness;
-				newRootNode.m_info.m_localRotation = glm::quat(glm::vec3(0, glm::radians(glm::linearRand(0.0f, 360.0f)), rootGrowthParameters.GetRootBranchingAngle(newRootNode)));
+				newRootNode.m_info.m_localRotation = glm::quat(glm::vec3(glm::radians(rootGrowthParameters.GetRootBranchingAngle(newRootNode)), glm::radians(glm::linearRand(0.0f, 360.0f)), 0.0f));
 				newRootNode.m_data.m_rootUnitDistance = oldRootNode.m_data.m_rootUnitDistance + 1;
 			}
 		}
@@ -426,6 +431,7 @@ void TreeModel::CalculateThickness(NodeHandle rootNodeHandle, const RootGrowthPa
 	float childThicknessCollection = 0.0f;
 	NodeHandle maxChildHandle = -1;
 	float maxSubTreeBiomass = -1.0f;
+	std::set<float> thicknessCollection;
 	for (const auto& i : rootNode.RefChildHandles()) {
 		auto& childInternode = m_rootSkeleton.RefNode(i);
 		const float childMaxDistanceToAnyBranchEnd =
@@ -433,13 +439,25 @@ void TreeModel::CalculateThickness(NodeHandle rootNodeHandle, const RootGrowthPa
 			childInternode.m_info.m_length / rootGrowthParameters.m_rootNodeLength;
 		maxDistanceToAnyBranchEnd = glm::max(maxDistanceToAnyBranchEnd, childMaxDistanceToAnyBranchEnd);
 
-		childThicknessCollection += glm::pow(childInternode.m_info.m_thickness,
-			1.0f / rootGrowthParameters.m_thicknessAccumulationFactor);
+		thicknessCollection.emplace(glm::pow(childInternode.m_info.m_thickness,
+			1.0f / rootGrowthParameters.m_thicknessAccumulationFactor));
 	}
+
+	int addedIndex = 0;
+	for(auto i = thicknessCollection.begin(); i != thicknessCollection.end(); ++i)
+	{
+		childThicknessCollection += *i;
+		addedIndex++;
+		if(addedIndex > 1) break;
+	}
+
+	childThicknessCollection += rootGrowthParameters.m_thicknessAccumulateAgeFactor * rootGrowthParameters.m_endNodeThickness * rootGrowthParameters.m_growthRate * rootNodeData.m_age;
+
 	rootNodeData.m_maxDistanceToAnyBranchEnd = maxDistanceToAnyBranchEnd;
 	if (childThicknessCollection != 0.0f) {
-		rootNodeInfo.m_thickness = glm::max(rootNodeInfo.m_thickness, glm::pow(childThicknessCollection + rootGrowthParameters.GetThicknessAccumulateFactor(rootNode),
-			rootGrowthParameters.m_thicknessAccumulationFactor));
+		const auto newThickness = glm::pow(childThicknessCollection,
+			rootGrowthParameters.m_thicknessAccumulationFactor);
+		rootNodeInfo.m_thickness = glm::max(rootNodeInfo.m_thickness, newThickness);
 	}
 	else
 	{
@@ -523,10 +541,11 @@ bool TreeModel::ElongateInternode(float extendLength, NodeHandle internodeHandle
 			}
 		}
 		//Create new internode
-		auto newInternodeHandle = m_branchSkeleton.Extend(internodeHandle, false);
+		auto newInternodeHandle = m_branchSkeleton.Extend(internodeHandle, false, m_branchSkeleton.RefFlow(internode.GetFlowHandle()).RefNodeHandles().size() > m_flowNodeLimit);
 		auto& oldInternode = m_branchSkeleton.RefNode(internodeHandle);
 		auto& newInternode = m_branchSkeleton.RefNode(newInternodeHandle);
 		newInternode.m_data = {};
+		newInternode.m_data.m_lateral = false;
 		newInternode.m_data.m_inhibitorTarget = newInternode.m_data.m_inhibitor = parameters.m_apicalDominance;
 		newInternode.m_info.m_length = glm::clamp(extendLength, 0.0f, internodeLength);
 		newInternode.m_info.m_thickness = parameters.m_endNodeThickness;
@@ -569,6 +588,7 @@ void TreeModel::CollectLuminousFluxFromLeaves(ClimateModel& climateModel,
 		auto& internode = m_branchSkeleton.RefNode(internodeHandle);
 		auto& internodeData = internode.m_data;
 		auto& internodeInfo = internode.m_info;
+		internodeData.m_age++;
 		internodeData.m_lightIntensity = m_treeVolume.IlluminationEstimation(internodeInfo.m_globalPosition, m_illuminationEstimationSettings, internodeData.m_lightDirection);
 		internodeInfo.m_color = glm::mix(glm::vec4(internodeData.m_lightDirection, 1.0), glm::vec4(1.0f), internodeData.m_lightIntensity);
 		for (const auto& bud : internode.m_data.m_buds)
@@ -642,6 +662,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 				auto& oldInternode = m_branchSkeleton.RefNode(internodeHandle);
 				auto& newInternode = m_branchSkeleton.RefNode(newInternodeHandle);
 				newInternode.m_data = {};
+				newInternode.m_data.m_lateral = true;
 				newInternode.m_info.m_length = 0.0f;
 				newInternode.m_info.m_thickness = treeGrowthParameters.m_endNodeThickness;
 				newInternode.m_info.m_localRotation = newInternode.m_data.m_desiredLocalRotation =
@@ -870,6 +891,9 @@ void TreeModel::CalculateThicknessAndSagging(NodeHandle internodeHandle,
 		childThicknessCollection += glm::pow(childInternode.m_info.m_thickness,
 			1.0f / treeGrowthParameters.m_thicknessAccumulationFactor);
 	}
+	childThicknessCollection += treeGrowthParameters.m_thicknessAccumulateAgeFactor * treeGrowthParameters.m_endNodeThickness * treeGrowthParameters.m_growthRate * internodeData.m_age;
+
+
 	internodeData.m_maxDistanceToAnyBranchEnd = maxDistanceToAnyBranchEnd;
 	if (childThicknessCollection != 0.0f) {
 		internodeInfo.m_thickness = glm::max(internodeInfo.m_thickness, glm::pow(childThicknessCollection,
@@ -1273,6 +1297,7 @@ void TreeModel::CollectWaterAndNitriteFromRoots(const glm::mat4& globalTransform
 	const auto& sortedRootNodeList = m_rootSkeleton.RefSortedNodeList();
 	for (const auto& rootNodeHandle : sortedRootNodeList) {
 		auto& rootNode = m_rootSkeleton.RefNode(rootNodeHandle);
+		rootNode.m_data.m_age++;
 		auto& rootNodeInfo = rootNode.m_info;
 		auto worldSpacePosition = globalTransform * glm::translate(rootNodeInfo.m_globalPosition)[3];
 		m_treeGrowthNutrients.m_water += soilModel.GetWater(worldSpacePosition);
@@ -1347,7 +1372,7 @@ void TreeModel::CalculateResourceRequirement(const RootGrowthParameters& rootGro
 		auto& rootNodeData = rootNode.m_data;
 		rootNodeData.m_developmentResourceRequirement = 0.0f;
 		rootNodeData.m_subtreeDevelopmentResourceRequirement = 0.0f;
-		rootNodeData.m_developmentResourceRequirement = growthRate * glm::clamp(rootNodeData.m_nitrite, 0.0f, 1.0f) * glm::pow(1.0f / glm::max(rootNodeData.m_soilDensity * rootGrowthParameters.m_densityMultiplier, 1.0f), rootGrowthParameters.m_densityFactor);
+		rootNodeData.m_developmentResourceRequirement = growthRate * glm::clamp(rootNodeData.m_nitrite, 0.0f, 1.0f) * glm::pow(1.0f / glm::max(rootNodeData.m_soilDensity * rootGrowthParameters.m_environmentalFriction, 1.0f), rootGrowthParameters.m_environmentalFrictionFactor);
 		newTreeGrowthNutrientsRequirement.m_water += rootNodeData.m_developmentResourceRequirement;
 		newTreeGrowthNutrientsRequirement.m_luminousFlux += rootNodeData.m_developmentResourceRequirement;
 	}
@@ -1477,7 +1502,7 @@ RootGrowthParameters::RootGrowthParameters()
 	m_rootNodeLength = 0.03f;
 	m_endNodeThickness = 0.002f;
 	m_thicknessAccumulationFactor = 0.5f;
-	m_thicknessLengthAccumulate = 0.0002f;
+	m_thicknessAccumulationFactor = 0.0002f;
 	m_branchingAngleMeanVariance = glm::vec2(60, 3);
 	m_rollAngleMeanVariance = glm::vec2(120, 2);
 	m_apicalAngleMeanVariance = glm::vec2(0, 3);
@@ -1487,7 +1512,7 @@ RootGrowthParameters::RootGrowthParameters()
 	m_tropismIntensity = 0.1f;
 
 	m_baseBranchingProbability = 0.4f;
-	m_branchingProbabilityChildrenDecrease = 0.01f;
+	m_branchingProbabilityChildrenDecrease = 0.98f;
 	m_branchingProbabilityDistanceDecrease = 0.98f;
 }
 #pragma region TreeGrowthParameters
@@ -1617,16 +1642,10 @@ float RootGrowthParameters::GetRootBranchingAngle(const Node<RootInternodeGrowth
 		m_branchingAngleMeanVariance.y);
 }
 
-float RootGrowthParameters::GetThicknessAccumulateFactor(const Node<RootInternodeGrowthData>& rootNode) const
-{
-	return m_thicknessLengthAccumulate * m_endNodeThickness;
-}
 
 float RootGrowthParameters::GetBranchingProbability(const Node<RootInternodeGrowthData>& rootNode) const
 {
-	return m_baseBranchingProbability * m_growthRate *
-		glm::pow(m_branchingProbabilityChildrenDecrease, rootNode.RefChildHandles().size())
-		* glm::pow(m_branchingProbabilityDistanceDecrease, glm::max(0, rootNode.m_data.m_rootUnitDistance - 1));
+	return m_baseBranchingProbability * glm::pow(m_branchingProbabilityChildrenDecrease, rootNode.RefChildHandles().size()) * glm::pow(m_branchingProbabilityDistanceDecrease, glm::max(0, rootNode.m_data.m_rootUnitDistance - 1));
 }
 
 float RootGrowthParameters::GetApicalControlFactor(const Node<RootInternodeGrowthData>& rootNode) const

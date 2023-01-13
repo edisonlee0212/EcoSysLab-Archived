@@ -655,16 +655,22 @@ void EcoSysLab::SoilModel::Irrigation()
 
 float SoilModel::GetWater(const vec3& position) const
 {
+	auto index = Index(GetCoordinateFromPosition(position));
+	if (index >= m_w.size()) return 0.0f;
 	return m_w[Index(GetCoordinateFromPosition(position))];
 }
 
 float SoilModel::GetDensity(const vec3& position) const
 {
+	auto index = Index(GetCoordinateFromPosition(position));
+	if (index >= m_soilDensity.size()) return 999.0f;
 	return m_soilDensity[Index(GetCoordinateFromPosition(position))];
 }
 
 float SoilModel::GetNutrient(const vec3& position) const
 {
+	auto index = Index(GetCoordinateFromPosition(position));
+	if (index >= m_nutrientsDensity.size()) return 0.0f;
 	return m_nutrientsDensity[Index(GetCoordinateFromPosition(position))];
 }
 

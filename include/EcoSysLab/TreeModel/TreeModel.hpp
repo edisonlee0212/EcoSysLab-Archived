@@ -54,6 +54,7 @@ namespace EcoSysLab {
 	};
 
 	struct InternodeGrowthData {
+		bool m_lateral = false;
 		int m_age = 0;
 		float m_inhibitorTarget = 0;
 		float m_inhibitor = 0;
@@ -110,8 +111,9 @@ namespace EcoSysLab {
 	};
 
 	struct RootInternodeGrowthData {
+		bool m_lateral = false;
 		float m_soilDensity = 0.0f;
-
+		int m_age = 0;
 		float m_maxDistanceToAnyBranchEnd = 0;
 		float m_descendentTotalBiomass = 0;
 		float m_biomass = 0;
@@ -162,13 +164,13 @@ namespace EcoSysLab {
 		 */
 		float m_growthRate;
 		/**
-		 * \brief How soil density affects the growth;
+		 * \brief How much the soil density affects the growth;
 		 */
-		float m_densityFactor;
+		float m_environmentalFriction;
 		/**
-		 * \brief How soil density affects the growth;
+		 * \brief How much will the increase of soil density affects the growth;
 		 */
-		float m_densityMultiplier;
+		float m_environmentalFrictionFactor;
 		/**
 		 * \brief The root node length
 		 */
@@ -185,7 +187,7 @@ namespace EcoSysLab {
 		/**
 		 * \brief The extra thickness gained from node length.
 		 */
-		float m_thicknessLengthAccumulate;
+		float m_thicknessAccumulateAgeFactor;
 		/**
 		* The mean and variance of the angle between the direction of a lateral bud and its parent shoot.
 		*/
@@ -240,8 +242,6 @@ namespace EcoSysLab {
 		[[nodiscard]] float GetRootRollAngle(const Node<RootInternodeGrowthData>& rootNode) const;
 
 		[[nodiscard]] float GetRootBranchingAngle(const Node<RootInternodeGrowthData>& rootNode) const;
-
-		[[nodiscard]] float GetThicknessAccumulateFactor(const Node<RootInternodeGrowthData>& rootNode) const;
 
 		[[nodiscard]] float GetBranchingProbability(const Node<RootInternodeGrowthData>& rootNode) const;
 
@@ -308,7 +308,7 @@ namespace EcoSysLab {
 		/**
 		 * \brief The extra thickness gained from node length.
 		 */
-		float m_thicknessLengthAccumulate;
+		float m_thicknessAccumulateAgeFactor;
 		/**
 		 * \brief Flushing prob of lateral bud related to the temperature.
 		 */
@@ -537,6 +537,7 @@ namespace EcoSysLab {
 		int m_fruitCount = 0;
 
 	public:
+		int m_flowNodeLimit = 30;
 		template <typename SkeletonData, typename FlowData, typename NodeData>
 		void CollisionDetection(float minRadius, Octree<TreeVoxelData>& octree, Skeleton<SkeletonData, FlowData, NodeData>& skeleton);
 
