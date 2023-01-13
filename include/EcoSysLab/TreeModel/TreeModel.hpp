@@ -26,18 +26,21 @@ namespace EcoSysLab {
 		BudStatus m_status = BudStatus::Dormant;
 
 		/*
-		 * The desired water gain for maintaining current plant structure.
+		 * The desired resource needed for maintaining current plant structure.
 		 * Depending on the size of fruit/leaf.
 		 */
-		float m_baseWaterRequirement = 0.0f;
+		float m_maintenanceResourceRequirement = 0.0f;
 		/*
-		 * The desired water gain for reproduction (forming shoot/leaf/fruit) of this bud.
-		 * Depending on apical control.
+		 * The desired resource needed for reproduction (forming shoot/leaf/fruit) of this bud.
+		 * Depending on the size of fruit/leaf.
+		 * Adjusted by apical control.
 		 */
-		float m_reproductionWaterRequirement = 0.0f;
-		float m_adjustedReproductionWaterRequirement = 0.0f;
+		float m_developmentResourceRequirement = 0.0f;
+		/*
+		 * The allocated total resource for maintenance and development of this module.
+		 */
+		float m_allocatedResource;
 
-		float m_waterGain;
 		glm::quat m_localRotation = glm::vec3(0.0f);
 
 		//-1.0 means the no fruit.
@@ -47,7 +50,6 @@ namespace EcoSysLab {
 		float m_chlorophyll = 0.0f;
 
 		float m_luminousFlux = 0.0f;
-		float m_temperature;
 		glm::mat4 m_reproductiveModuleTransform = glm::mat4(0.0f);
 	};
 
@@ -67,6 +69,8 @@ namespace EcoSysLab {
 		float m_extraMass = 0.0f;
 		float m_rootDistance = 0;
 
+		float m_temperature;
+
 		glm::vec3 m_lightDirection = glm::vec3(0, 1, 0);
 		float m_lightIntensity = 1.0f;
 
@@ -74,17 +78,26 @@ namespace EcoSysLab {
 		 * List of buds, first one will always be the apical bud which points forward.
 		 */
 		std::vector<Bud> m_buds;
-
-		float m_reproductionWaterRequirement = 0.0f;
-
-		float m_descendentReproductionWaterRequirement = 0.0f;
-		float m_adjustedTotalReproductionWaterRequirement = 0.0f;
-		float m_adjustedDescendentReproductionWaterRequirement = 0.0f;
-
+		/*
+		 * The desired resource needed for maintaining current plant structure.
+		 * Depending on the volume of internode.
+		 */
+		float m_maintenanceResourceRequirement = 0.0f;
+		/*
+		 * Sum of buds' development resource requirement and internode's development resource requirement.
+		 */
+		float m_developmentResourceRequirement = 0.0f;
+		/*
+		 * Sum of all child node's development resource requirement;
+		 */
+		float m_subtreeDevelopmentResourceRequirement = 0.0f;
+		/*
+		 * The allocated total resource for maintenance and development of this module.
+		 */
+		float m_allocatedResource;
 		std::vector<glm::mat4> m_leaves;
 		std::vector<glm::mat4> m_fruits;
 
-		void Clear();
 	};
 
 	struct BranchGrowthData {
@@ -97,6 +110,8 @@ namespace EcoSysLab {
 	};
 
 	struct RootInternodeGrowthData {
+		float m_soilDensity = 0.0f;
+
 		float m_maxDistanceToAnyBranchEnd = 0;
 		float m_descendentTotalBiomass = 0;
 		float m_biomass = 0;
@@ -106,15 +121,31 @@ namespace EcoSysLab {
 		int m_rootUnitDistance = 0;
 		int m_order = 0;
 
-		float m_nitrite = 0.0f;
-
-		float m_reproductiveWaterRequirement;
-
-		float m_auxinTarget = 0;
-		float m_auxin = 0;
+		float m_nitrite = 1.0f;
+		
+		float m_inhibitorTarget = 0;
+		float m_inhibitor = 0;
 
 		float m_horizontalTropism;
 		float m_verticalTropism;
+		/*
+		 * The desired resource needed for maintaining current plant structure.
+		 * Depending on the volume of root node.
+		 */
+		float m_maintenanceResourceRequirement = 0.0f;
+		/*
+		 * The root node's development resource requirement.
+		 */
+		float m_developmentResourceRequirement = 0.0f;
+		/*
+		 * Sum of all child node's development resource requirement;
+		 */
+		float m_subtreeDevelopmentResourceRequirement = 0.0f;
+		/*
+		 * The allocated total resource for maintenance and development of this module.
+		 */
+		float m_allocatedResource;
+
 	};
 	struct RootBranchGrowthData {
 		int m_order = 0;
@@ -168,9 +199,17 @@ namespace EcoSysLab {
 		*/
 		glm::vec2 m_apicalAngleMeanVariance;
 		/**
-		* Loss of auxin/inhibitor along the branch
+		 * \brief Apical control base and distance decrease from root.
+		 */
+		glm::vec2 m_apicalControlBaseDistFactor;
+		/**
+		* \brief How much inhibitor will an internode generate.
 		*/
-		float m_auxinTransportLoss;
+		float m_apicalDominance;
+		/**
+		* \brief How much inhibitor will shrink when going through the branch.
+		*/
+		float m_apicalDominanceDistanceFactor;
 		/**
 		* The possibility of the lateral branch having different tropism as the parent branch
 		*/
@@ -206,6 +245,7 @@ namespace EcoSysLab {
 
 		[[nodiscard]] float GetBranchingProbability(const Node<RootInternodeGrowthData>& rootNode) const;
 
+		[[nodiscard]] float GetApicalControlFactor(const Node<RootInternodeGrowthData>& rootNode) const;
 
 		void SetTropisms(Node<RootInternodeGrowthData>& oldNode, Node<RootInternodeGrowthData>& newNode) const;
 
@@ -296,7 +336,7 @@ namespace EcoSysLab {
 		/**
 		 * \brief Apical control base and distance decrease from root.
 		 */
-		glm::vec2 m_apicalControlBaseDistFactor{};
+		glm::vec2 m_apicalControlBaseDistFactor;
 
 		/**
 		* \brief How much inhibitor will an internode generate.
@@ -373,7 +413,7 @@ namespace EcoSysLab {
 
 		[[nodiscard]] float GetDesiredApicalAngle(const Node<InternodeGrowthData>& internode) const;
 
-		[[nodiscard]] float GetApicalControl(const Node<InternodeGrowthData>& internode) const;
+		[[nodiscard]] float GetApicalControlFactor(const Node<InternodeGrowthData>& internode) const;
 
 		[[nodiscard]] float GetSagging(const Node<InternodeGrowthData>& internode) const;
 
@@ -421,28 +461,33 @@ namespace EcoSysLab {
 	class TreeModel {
 #pragma region Root Growth
 
-		bool ElongateRoot(const glm::mat4& globalTransform, SoilModel& soilModel, float extendLength, NodeHandle rootNodeHandle,
+		bool ElongateRoot(SoilModel& soilModel, float extendLength, NodeHandle rootNodeHandle,
 			const RootGrowthParameters& rootGrowthParameters, float& collectedAuxin);
 
-		inline bool GrowRootNode(const glm::mat4& globalTransform, SoilModel& soilModel, NodeHandle rootNodeHandle, const RootGrowthParameters& rootGrowthParameters);
+		inline bool GrowRootNode(SoilModel& soilModel, NodeHandle rootNodeHandle, const RootGrowthParameters& rootGrowthParameters);
 
 		inline void CalculateResourceRequirement(NodeHandle rootNodeHandle, const RootGrowthParameters& rootGrowthParameters);
 		inline void CalculateThickness(NodeHandle rootNodeHandle,
 			const RootGrowthParameters& rootGrowthParameters);
 
-		void CollectWaterAndNitriteFromRoots(const glm::mat4& globalTransform, SoilModel& soilModel,
+		inline void CollectWaterAndNitriteFromRoots(const glm::mat4& globalTransform, SoilModel& soilModel,
 			const RootGrowthParameters& rootGrowthParameters);
+
+		inline void AccumulateRootNodeResourceRequirement();
+
+		inline void ApicalControl(const RootGrowthParameters& rootGrowthParameters, float resourceLevel);
+
+		inline void CalculateResourceRequirement(const RootGrowthParameters& rootGrowthParameters, TreeGrowthNutrients& newTreeGrowthNutrientsRequirement);
+
 #pragma endregion
 #pragma region Tree Growth
-		inline void CollectResourceRequirement(NodeHandle internodeHandle);
+		inline void AccumulateInternodeResourceRequirement();
 
-		inline void CalculateResourceRequirement(NodeHandle internodeHandle,
-			const TreeGrowthParameters& treeGrowthParameters, TreeGrowthNutrients& newTreeGrowthNutrientsRequirement);
+		inline void CalculateResourceRequirement(const TreeGrowthParameters& treeGrowthParameters, TreeGrowthNutrients& newTreeGrowthNutrientsRequirement);
 
-		inline void AdjustProductiveResourceRequirement(NodeHandle internodeHandle,
-			const TreeGrowthParameters& treeGrowthParameters);
+		inline void ApicalControl(const TreeGrowthParameters& treeGrowthParameters, float resourceLevel);
 
-		bool InternodePruning(float maxDistance, NodeHandle internodeHandle,
+		inline bool InternodePruning(float maxDistance, NodeHandle internodeHandle,
 			const TreeGrowthParameters& treeGrowthParameters);
 
 		inline void CalculateThicknessAndSagging(NodeHandle internodeHandle,
@@ -532,7 +577,7 @@ namespace EcoSysLab {
 		int m_historyLimit = -1;
 
 		void SampleTemperature(const glm::mat4& globalTransform, ClimateModel& climateModel);
-
+		void SampleSoilDensity(const glm::mat4& globalTransform, SoilModel& soilModel);
 		[[nodiscard]] Skeleton<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData>& RefBranchSkeleton();
 
 		[[nodiscard]] const Skeleton<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData>&

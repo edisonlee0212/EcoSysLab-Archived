@@ -368,15 +368,13 @@ TreeVisualizer::InspectInternode(
                 changed = true;
             }
 
-            ImGui::InputFloat("Productive req", (float *) &internodeData.m_reproductionWaterRequirement, 1, 100,
+            ImGui::InputFloat("Productive req", (float *) &internodeData.m_developmentResourceRequirement, 1, 100,
                               "%.3f",
                               ImGuiInputTextFlags_ReadOnly);
-            ImGui::InputFloat("Descendent req", (float *) &internodeData.m_descendentReproductionWaterRequirement, 1,
+            ImGui::InputFloat("Descendent req", (float *) &internodeData.m_subtreeDevelopmentResourceRequirement, 1,
                               100, "%.3f",
                               ImGuiInputTextFlags_ReadOnly);
-            ImGui::InputFloat("Adjusted total req", (float *) &internodeData.m_adjustedTotalReproductionWaterRequirement,
-                              1, 100, "%.3f",
-                              ImGuiInputTextFlags_ReadOnly);
+            
 
             if (ImGui::TreeNodeEx("Buds", ImGuiTreeNodeFlags_DefaultOpen)) {
                 int index = 1;
@@ -410,7 +408,7 @@ TreeVisualizer::InspectInternode(
 
                         auto budRotationAngle = glm::eulerAngles(bud.m_localRotation);
                         ImGui::InputFloat3("Rotation", &budRotationAngle.x, "%.3f", ImGuiInputTextFlags_ReadOnly);
-                        ImGui::InputFloat("Base resource requirement", (float *) &bud.m_baseWaterRequirement, 1, 100,
+                        ImGui::InputFloat("Base resource requirement", (float *) &bud.m_maintenanceResourceRequirement, 1, 100,
                                           "%.3f", ImGuiInputTextFlags_ReadOnly);
                         ImGui::TreePop();
                     }
@@ -524,15 +522,13 @@ TreeVisualizer::PeekInternode(
             ImGui::InputFloat("Light intensity", (float *) &internodeData.m_lightIntensity, 1, 100, "%.3f",
                               ImGuiInputTextFlags_ReadOnly);
 
-            ImGui::InputFloat("Productive req", (float *) &internodeData.m_reproductionWaterRequirement, 1, 100,
+            ImGui::InputFloat("Productive req", (float *) &internodeData.m_developmentResourceRequirement, 1, 100,
                               "%.3f",
                               ImGuiInputTextFlags_ReadOnly);
-            ImGui::InputFloat("Descendent req", (float *) &internodeData.m_descendentReproductionWaterRequirement, 1,
+            ImGui::InputFloat("Descendent req", (float *) &internodeData.m_subtreeDevelopmentResourceRequirement, 1,
                               100, "%.3f",
                               ImGuiInputTextFlags_ReadOnly);
-            ImGui::InputFloat("Adjusted total req", (float *) &internodeData.m_adjustedTotalReproductionWaterRequirement,
-                              1, 100, "%.3f",
-                              ImGuiInputTextFlags_ReadOnly);
+            
             
             if (ImGui::TreeNodeEx("Buds")) {
                 int index = 1;
@@ -566,7 +562,7 @@ TreeVisualizer::PeekInternode(
 
                         auto budRotationAngle = glm::eulerAngles(bud.m_localRotation);
                         ImGui::InputFloat3("Rotation", &budRotationAngle.x, "%.3f", ImGuiInputTextFlags_ReadOnly);
-                        ImGui::InputFloat("Base resource requirement", (float *) &bud.m_baseWaterRequirement, 1, 100,
+                        ImGui::InputFloat("Base resource requirement", (float *) &bud.m_maintenanceResourceRequirement, 1, 100,
                                           "%.3f", ImGuiInputTextFlags_ReadOnly);
                         ImGui::TreePop();
                     }
@@ -636,11 +632,11 @@ void TreeVisualizer::PeekRootNode(
                 ImGuiInputTextFlags_ReadOnly);
             auto& internodeData = internode.m_data;
             
-            ImGui::InputFloat("Nitrate", (float*)&internodeData.m_reproductiveWaterRequirement, 1, 100, "%.3f",
+            ImGui::InputFloat("Nitrate", (float*)&internodeData.m_nitrite, 1, 100, "%.3f",
                 ImGuiInputTextFlags_ReadOnly);
-            ImGui::InputFloat("Auxin", (float*)&internodeData.m_auxin, 1, 100, "%.3f",
+            ImGui::InputFloat("Auxin", (float*)&internodeData.m_inhibitor, 1, 100, "%.3f",
                 ImGuiInputTextFlags_ReadOnly);
-            ImGui::InputFloat("Auxin target", (float*)&internodeData.m_auxinTarget, 1, 100,
+            ImGui::InputFloat("Auxin target", (float*)&internodeData.m_inhibitorTarget, 1, 100,
                 "%.3f",
                 ImGuiInputTextFlags_ReadOnly);
 
@@ -696,13 +692,13 @@ bool TreeVisualizer::InspectRootNode(
             ImGui::InputInt("Root unit distance", (int*)&internodeData.m_rootUnitDistance, 1, 100,
                 ImGuiInputTextFlags_ReadOnly);
             
-            if (ImGui::DragFloat("Nitrate", (float*)&internodeData.m_reproductiveWaterRequirement)) {
+            if (ImGui::DragFloat("Nitrate", (float*)&internodeData.m_nitrite)) {
                 changed = true;
             }
-            if (ImGui::DragFloat("Auxin", (float*)&internodeData.m_auxin)) {
+            if (ImGui::DragFloat("Inhibitor", (float*)&internodeData.m_inhibitor)) {
                 changed = true;
             }
-            if (ImGui::DragFloat("Auxin target", (float*)&internodeData.m_auxinTarget)) {
+            if (ImGui::DragFloat("Inhibitor target", (float*)&internodeData.m_inhibitorTarget)) {
                 changed = true;
             }
             ImGui::InputFloat("Horizontal tropism", (float*)&internodeData.m_horizontalTropism, 1, 100,

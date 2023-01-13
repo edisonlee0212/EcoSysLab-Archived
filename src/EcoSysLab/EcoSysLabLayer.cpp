@@ -119,12 +119,15 @@ void EcoSysLabLayer::LateUpdate() {
 			BranchRenderingGs(treeEntities);
 		}
 		if (m_debugVisualization) {
-			if (m_versions.size() != treeEntities->size()) {
+			if (m_branchVersions.size() != treeEntities->size() || m_rootVersions.size() != treeEntities->size()) {
 				m_internodeSize = 0;
+				m_rootNodeSize = 0;
 				m_totalTime = 0.0f;
-				m_versions.clear();
+				m_branchVersions.clear();
+				m_rootVersions.clear();
 				for (int i = 0; i < treeEntities->size(); i++) {
-					m_versions.emplace_back(-1);
+					m_branchVersions.emplace_back(-1);
+					m_rootVersions.emplace_back(-1);
 				}
 				m_needFlowUpdate = true;
 			}
@@ -146,8 +149,12 @@ void EcoSysLabLayer::LateUpdate() {
 				totalFruitSize += treeModel.GetFruitCount();
 
 				if (m_selectedTree == treeEntity) continue;
-				if (m_versions[i] != treeModel.RefBranchSkeleton().GetVersion()) {
-					m_versions[i] = treeModel.RefBranchSkeleton().GetVersion();
+				if (m_branchVersions[i] != treeModel.RefBranchSkeleton().GetVersion()) {
+					m_branchVersions[i] = treeModel.RefBranchSkeleton().GetVersion();
+					m_needFlowUpdate = true;
+				}
+				if (m_rootVersions[i] != treeModel.RefRootSkeleton().GetVersion()) {
+					m_rootVersions[i] = treeModel.RefRootSkeleton().GetVersion();
 					m_needFlowUpdate = true;
 				}
 			}

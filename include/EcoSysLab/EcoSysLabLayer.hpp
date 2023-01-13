@@ -17,7 +17,8 @@ namespace EcoSysLab {
 
 		bool m_debugVisualization = true;
 		bool m_rendering = false;
-		std::vector<int> m_versions;
+		std::vector<int> m_branchVersions;
+		std::vector<int> m_rootVersions;
 		std::vector<glm::vec3> m_randomColors;
 		
 		std::vector<glm::uint> m_branchSegments;
