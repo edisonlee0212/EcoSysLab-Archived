@@ -496,6 +496,20 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 		int leafLastStartIndex = 0;
 		leafStartIndices.emplace_back(leafLastStartIndex);
 
+		if(treeEntities->empty())
+		{
+			m_branchSegments.clear();
+			m_branchPoints.clear();
+
+			m_rootSegments.clear();
+			m_rootPoints.clear();
+
+			m_foliageMatrices.clear();
+			m_foliageColors.clear();
+			m_fruitMatrices.clear();
+			m_fruitColors.clear();
+		}
+
 		for (int listIndex = 0; listIndex < treeEntities->size(); listIndex++) {
 			auto treeEntity = treeEntities->at(listIndex);
 			auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
@@ -716,8 +730,6 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 			branchStrands->SetSegments(1, m_branchSegments, m_branchPoints);
 			rootStrands->SetSegments(1, m_rootSegments, m_rootPoints);
 		}
-
-
 	}
 }
 

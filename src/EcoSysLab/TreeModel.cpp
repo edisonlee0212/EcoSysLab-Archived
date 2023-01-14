@@ -1659,7 +1659,10 @@ float RootGrowthParameters::GetRootBranchingAngle(const Node<RootInternodeGrowth
 
 float RootGrowthParameters::GetBranchingProbability(const Node<RootInternodeGrowthData>& rootNode) const
 {
-	return m_baseBranchingProbability * glm::pow(m_branchingProbabilityChildrenDecrease, rootNode.RefChildHandles().size()) * glm::pow(m_branchingProbabilityDistanceDecrease, glm::max(0, rootNode.m_data.m_rootUnitDistance - 1));
+	return m_baseBranchingProbability
+	* glm::pow(m_branchingProbabilityChildrenDecrease, rootNode.RefChildHandles().size())
+	* glm::pow(m_branchingProbabilityDistanceDecrease, glm::max(0, rootNode.m_data.m_rootUnitDistance - 1))
+	* glm::pow(m_branchingProbabilityOrderDecrease, rootNode.m_data.m_order);
 }
 
 float RootGrowthParameters::GetApicalControlFactor(const Node<RootInternodeGrowthData>& rootNode) const

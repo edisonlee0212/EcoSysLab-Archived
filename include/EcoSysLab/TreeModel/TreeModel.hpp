@@ -236,6 +236,10 @@ namespace EcoSysLab {
 		* The probability decrease along the branch.
 		*/
 		float m_branchingProbabilityDistanceDecrease;
+		/**
+		* The probability decrease along the branch.
+		*/
+		float m_branchingProbabilityOrderDecrease;
 
 		[[nodiscard]] float GetRootApicalAngle(const Node<RootInternodeGrowthData>& rootNode) const;
 
