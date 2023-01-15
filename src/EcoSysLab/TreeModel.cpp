@@ -370,9 +370,9 @@ inline bool TreeModel::GrowRootNode(SoilModel& soilModel, NodeHandle rootNodeHan
 		if (rootNode.RefChildHandles().empty())
 		{
 			//1. Elongate current node.
-			const float reproductiveWater = glm::max(0.0f, rootNode.m_data.m_allocatedVigor - rootNode.m_data.m_maintenanceVigorRequirement);
-			const float reproductiveContent = reproductiveWater * m_globalGrowthRate;
-			const float extendLength = reproductiveContent * rootGrowthParameters.m_rootNodeLength * m_globalGrowthRate;
+			const float developmentVigor = glm::max(0.0f, rootNode.m_data.m_allocatedVigor - rootNode.m_data.m_maintenanceVigorRequirement);
+			//const float reproductiveContent = reproductiveWater * m_globalGrowthRate;
+			const float extendLength = developmentVigor * rootGrowthParameters.m_rootNodeLength;
 			float collectedAuxin = 0.0f;
 			const auto dd = rootGrowthParameters.m_apicalDominanceDistanceFactor;
 			graphChanged = ElongateRoot(soilModel, extendLength, rootNodeHandle, rootGrowthParameters, collectedAuxin) || graphChanged;
@@ -1424,15 +1424,6 @@ bool TreeModel::Grow(const glm::mat4& globalTransform, SoilModel& soilModel, Cli
 	CollectShootFlux(climateModel, treeGrowthParameters);
 	//Perform photosynthesis.
 	m_plantGrowthNutrients.m_vigor = glm::min(m_plantGrowthNutrients.m_rootFlux, m_plantGrowthNutrients.m_shootFlux);
-	//Calculate global growth rate
-	if (m_shootGrowthRequirement.m_vigor + m_rootGrowthRequirement.m_vigor != 0.0f) {
-		m_globalGrowthRate = m_plantGrowthNutrients.m_vigor / (m_shootGrowthRequirement.m_vigor + m_rootGrowthRequirement.m_vigor);
-	}
-	else {
-		m_globalGrowthRate = 0.0f;
-	}
-	m_globalGrowthRate = glm::clamp(m_globalGrowthRate, 0.0f, 1.0f);
-
 	//Grow roots and set up nutrient requirements for next iteration.
 	TreeGrowthRequirement newShootGrowthRequirement;
 	TreeGrowthRequirement newRootGrowthRequirement;

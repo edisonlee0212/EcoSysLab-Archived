@@ -581,7 +581,7 @@ namespace EcoSysLab {
 		TreeGrowthRequirement m_rootGrowthRequirement;
 		TreeGrowthNutrients m_plantGrowthNutrients;
 
-		float m_globalGrowthRate = 0.0f;
+		//float m_globalGrowthRate = 0.0f;
 		glm::vec3 m_currentGravityDirection = glm::vec3(0, -1, 0);
 
 		/**
