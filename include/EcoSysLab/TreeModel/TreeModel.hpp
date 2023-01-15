@@ -29,17 +29,17 @@ namespace EcoSysLab {
 		 * The desired resource needed for maintaining current plant structure.
 		 * Depending on the size of fruit/leaf.
 		 */
-		float m_maintenanceResourceRequirement = 0.0f;
+		float m_maintenanceVigorRequirement = 0.0f;
 		/*
 		 * The desired resource needed for reproduction (forming shoot/leaf/fruit) of this bud.
 		 * Depending on the size of fruit/leaf.
 		 * Adjusted by apical control.
 		 */
-		float m_developmentResourceRequirement = 0.0f;
+		float m_developmentVigorRequirement = 0.0f;
 		/*
 		 * The allocated total resource for maintenance and development of this module.
 		 */
-		float m_allocatedResource;
+		float m_allocatedVigor;
 
 		glm::quat m_localRotation = glm::vec3(0.0f);
 
@@ -49,7 +49,7 @@ namespace EcoSysLab {
 
 		float m_chlorophyll = 0.0f;
 
-		float m_luminousFlux = 0.0f;
+		float m_shootFlux = 0.0f;
 		glm::mat4 m_reproductiveModuleTransform = glm::mat4(0.0f);
 	};
 
@@ -86,23 +86,23 @@ namespace EcoSysLab {
 		/*
 		 * The desired resource needed for maintaining current plant structure.
 		 */
-		float m_maintenanceResourceRequirement = 0.0f;
+		float m_maintenanceVigorRequirement = 0.0f;
 		/*
 		 * Sum of buds' development resource requirement and internode's development resource requirement.
 		 */
-		float m_developmentResourceRequirement = 0.0f;
+		float m_developmentalVigorRequirement = 0.0f;
 		/*
 		 * Sum of all child node's development resource requirement and maintenance resource requirement;
 		 */
-		float m_subtreeTotalResourceRequirement = 0.0f;
+		float m_subtreeTotalVigorRequirement = 0.0f;
 		/*
 		 * The allocated total resource for maintenance and development of this module.
 		 */
-		float m_allocatedResource;
+		float m_allocatedVigor;
 		/*
 		 * The allocated total resource for maintenance and development of all descendents.
 		 */
-		float m_subTreeAllocatedResource;
+		float m_subTreeAllocatedVigor;
 
 		std::vector<glm::mat4> m_leaves;
 		std::vector<glm::mat4> m_fruits;
@@ -144,22 +144,22 @@ namespace EcoSysLab {
 		 * The desired resource needed for maintaining current plant structure.
 		 * Depending on the volume of root node.
 		 */
-		float m_maintenanceResourceRequirement = 0.0f;
+		float m_maintenanceVigorRequirement = 0.0f;
 		/*
 		 * Sum of buds' development resource requirement and internode's development resource requirement.
 		 */
-		float m_developmentResourceRequirement = 0.0f;
+		float m_developmentalVigorRequirement = 0.0f;
 
 		float m_growthPotential = 0.0f;
 		float m_subtreeGrowthPotential = 0.0f;
 		/*
 		 * The allocated total resource for maintenance and development of this module.
 		 */
-		float m_allocatedResource = 0.0f;
+		float m_allocatedVigor = 0.0f;
 		/*
 		 * The allocated total resource for maintenance and development of all descendents.
 		 */
-		float m_subTreeAllocatedResource;
+		float m_subTreeAllocatedVigor;
 
 	};
 	struct RootBranchGrowthData {
@@ -493,22 +493,22 @@ namespace EcoSysLab {
 		inline void CalculateThickness(NodeHandle rootNodeHandle,
 			const RootGrowthParameters& rootGrowthParameters);
 
-		inline void CollectWaterAndNitriteFromRoots(const glm::mat4& globalTransform, SoilModel& soilModel,
+		inline void CollectRootFlux(const glm::mat4& globalTransform, SoilModel& soilModel,
 			const RootGrowthParameters& rootGrowthParameters);
 
-		inline void AccumulateRootNodeResourceRequirement();
+		inline void AggregateRootVigorRequirement();
 
-		inline void DistributeResourceToRoots(const RootGrowthParameters& rootGrowthParameters);
+		inline void RootVigorAllocation(const RootGrowthParameters& rootGrowthParameters);
 
-		inline void CalculateResourceRequirement(const RootGrowthParameters& rootGrowthParameters, TreeGrowthRequirement& newRootGrowthNutrientsRequirement);
+		inline void CalculateVigorRequirement(const RootGrowthParameters& rootGrowthParameters, TreeGrowthRequirement& newRootGrowthNutrientsRequirement);
 
 #pragma endregion
 #pragma region Tree Growth
-		inline void AccumulateInternodeResourceRequirement();
+		inline void AggregateInternodeVigorRequirement();
 
-		inline void CalculateResourceRequirement(const TreeGrowthParameters& treeGrowthParameters, TreeGrowthRequirement& newTreeGrowthNutrientsRequirement);
+		inline void CalculateVigorRequirement(const TreeGrowthParameters& treeGrowthParameters, TreeGrowthRequirement& newTreeGrowthNutrientsRequirement);
 
-		inline void DistributeResourceToShoots(const TreeGrowthParameters& treeGrowthParameters);
+		inline void ShootVigorAllocation(const TreeGrowthParameters& treeGrowthParameters);
 
 		inline bool InternodePruning(float maxDistance, NodeHandle internodeHandle,
 			const TreeGrowthParameters& treeGrowthParameters);
@@ -522,7 +522,7 @@ namespace EcoSysLab {
 			const TreeGrowthParameters& treeGrowthParameters, float& collectedInhibitor);
 
 		friend class Tree;
-		void CollectLuminousFluxFromLeaves(ClimateModel& climateModel,
+		void CollectShootFlux(ClimateModel& climateModel,
 			const TreeGrowthParameters& treeGrowthParameters);
 #pragma endregion
 
@@ -540,20 +540,21 @@ namespace EcoSysLab {
 		 * Grow one iteration of the branches, given the climate model and the procedural parameters.
 		 * @param climateModel The climate model
 		 * @param treeGrowthParameters The procedural parameters that guides the growth.
-		 * @param newTreeGrowthNutrientsRequirement
+		 * @param newTreeGrowthRequirement
 		 * @return Whether the growth caused a structural change during the growth.
 		 */
-		bool GrowShoots(const glm::mat4& globalTransform, ClimateModel& climateModel, const TreeGrowthParameters& treeGrowthParameters, TreeGrowthRequirement& newTreeGrowthNutrientsRequirement);
+		bool GrowShoots(const glm::mat4& globalTransform, ClimateModel& climateModel, 
+			const TreeGrowthParameters& treeGrowthParameters, TreeGrowthRequirement& newTreeGrowthRequirement);
 
 		/**
 		 * Grow one iteration of the roots, given the soil model and the procedural parameters.
 		 * @param soilModel The soil model
 		 * @param rootGrowthParameters The procedural parameters that guides the growth.
-		 * @param newTreeGrowthNutrientsRequirement
+		 * @param newTreeGrowthRequirement
 		 * @return Whether the growth caused a structural change during the growth.
 		 */
 		bool GrowRoots(const glm::mat4& globalTransform, SoilModel& soilModel,
-			const RootGrowthParameters& rootGrowthParameters, TreeGrowthRequirement& newTreeGrowthNutrientsRequirement);
+			const RootGrowthParameters& rootGrowthParameters, TreeGrowthRequirement& newTreeGrowthRequirement);
 
 
 		int m_leafCount = 0;
@@ -574,8 +575,8 @@ namespace EcoSysLab {
 		bool m_enableRootCollisionDetection = false;
 		bool m_enableBranchCollisionDetection = false;
 
-		TreeGrowthRequirement m_shootGrowthNutrientsRequirement;
-		TreeGrowthRequirement m_rootGrowthNutrientsRequirement;
+		TreeGrowthRequirement m_shootGrowthRequirement;
+		TreeGrowthRequirement m_rootGrowthRequirement;
 		TreeGrowthNutrients m_plantGrowthNutrients;
 
 		float m_globalGrowthRate = 0.0f;

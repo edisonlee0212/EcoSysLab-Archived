@@ -368,10 +368,10 @@ TreeVisualizer::InspectInternode(
                 changed = true;
             }
 
-            ImGui::InputFloat("Productive req", (float *) &internodeData.m_developmentResourceRequirement, 1, 100,
+            ImGui::InputFloat("Productive req", (float *) &internodeData.m_developmentalVigorRequirement, 1, 100,
                               "%.3f",
                               ImGuiInputTextFlags_ReadOnly);
-            ImGui::InputFloat("Descendent req", (float *) &internodeData.m_subtreeTotalResourceRequirement, 1,
+            ImGui::InputFloat("Descendent req", (float *) &internodeData.m_subtreeTotalVigorRequirement, 1,
                               100, "%.3f",
                               ImGuiInputTextFlags_ReadOnly);
             
@@ -408,7 +408,7 @@ TreeVisualizer::InspectInternode(
 
                         auto budRotationAngle = glm::eulerAngles(bud.m_localRotation);
                         ImGui::InputFloat3("Rotation", &budRotationAngle.x, "%.3f", ImGuiInputTextFlags_ReadOnly);
-                        ImGui::InputFloat("Base resource requirement", (float *) &bud.m_maintenanceResourceRequirement, 1, 100,
+                        ImGui::InputFloat("Base resource requirement", (float *) &bud.m_maintenanceVigorRequirement, 1, 100,
                                           "%.3f", ImGuiInputTextFlags_ReadOnly);
                         ImGui::TreePop();
                     }
@@ -522,10 +522,10 @@ TreeVisualizer::PeekInternode(
             ImGui::InputFloat("Light intensity", (float *) &internodeData.m_lightIntensity, 1, 100, "%.3f",
                               ImGuiInputTextFlags_ReadOnly);
 
-            ImGui::InputFloat("Productive req", (float *) &internodeData.m_developmentResourceRequirement, 1, 100,
+            ImGui::InputFloat("Productive req", (float *) &internodeData.m_developmentalVigorRequirement, 1, 100,
                               "%.3f",
                               ImGuiInputTextFlags_ReadOnly);
-            ImGui::InputFloat("Descendent req", (float *) &internodeData.m_subtreeTotalResourceRequirement, 1,
+            ImGui::InputFloat("Descendent req", (float *) &internodeData.m_subtreeTotalVigorRequirement, 1,
                               100, "%.3f",
                               ImGuiInputTextFlags_ReadOnly);
             
@@ -562,7 +562,7 @@ TreeVisualizer::PeekInternode(
 
                         auto budRotationAngle = glm::eulerAngles(bud.m_localRotation);
                         ImGui::InputFloat3("Rotation", &budRotationAngle.x, "%.3f", ImGuiInputTextFlags_ReadOnly);
-                        ImGui::InputFloat("Base resource requirement", (float *) &bud.m_maintenanceResourceRequirement, 1, 100,
+                        ImGui::InputFloat("Base resource requirement", (float *) &bud.m_maintenanceVigorRequirement, 1, 100,
                                           "%.3f", ImGuiInputTextFlags_ReadOnly);
                         ImGui::TreePop();
                     }
