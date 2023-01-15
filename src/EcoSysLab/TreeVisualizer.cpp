@@ -371,7 +371,7 @@ TreeVisualizer::InspectInternode(
             ImGui::InputFloat("Productive req", (float *) &internodeData.m_developmentResourceRequirement, 1, 100,
                               "%.3f",
                               ImGuiInputTextFlags_ReadOnly);
-            ImGui::InputFloat("Descendent req", (float *) &internodeData.m_subtreeDevelopmentResourceRequirement, 1,
+            ImGui::InputFloat("Descendent req", (float *) &internodeData.m_subtreeTotalResourceRequirement, 1,
                               100, "%.3f",
                               ImGuiInputTextFlags_ReadOnly);
             
@@ -525,7 +525,7 @@ TreeVisualizer::PeekInternode(
             ImGui::InputFloat("Productive req", (float *) &internodeData.m_developmentResourceRequirement, 1, 100,
                               "%.3f",
                               ImGuiInputTextFlags_ReadOnly);
-            ImGui::InputFloat("Descendent req", (float *) &internodeData.m_subtreeDevelopmentResourceRequirement, 1,
+            ImGui::InputFloat("Descendent req", (float *) &internodeData.m_subtreeTotalResourceRequirement, 1,
                               100, "%.3f",
                               ImGuiInputTextFlags_ReadOnly);
             
@@ -632,7 +632,7 @@ void TreeVisualizer::PeekRootNode(
                 ImGuiInputTextFlags_ReadOnly);
             auto& internodeData = internode.m_data;
             
-            ImGui::InputFloat("Nitrate", (float*)&internodeData.m_nitrite, 1, 100, "%.3f",
+            ImGui::InputFloat("Nitrate", (float*)&internodeData.m_growthPotential, 1, 100, "%.3f",
                 ImGuiInputTextFlags_ReadOnly);
             ImGui::InputFloat("Auxin", (float*)&internodeData.m_inhibitor, 1, 100, "%.3f",
                 ImGuiInputTextFlags_ReadOnly);
@@ -692,7 +692,7 @@ bool TreeVisualizer::InspectRootNode(
             ImGui::InputInt("Root unit distance", (int*)&internodeData.m_rootUnitDistance, 1, 100,
                 ImGuiInputTextFlags_ReadOnly);
             
-            if (ImGui::DragFloat("Nitrate", (float*)&internodeData.m_nitrite)) {
+            if (ImGui::DragFloat("Nitrate", (float*)&internodeData.m_growthPotential)) {
                 changed = true;
             }
             if (ImGui::DragFloat("Inhibitor", (float*)&internodeData.m_inhibitor)) {

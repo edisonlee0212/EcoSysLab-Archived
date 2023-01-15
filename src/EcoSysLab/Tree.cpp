@@ -22,7 +22,9 @@ void Tree::OnInspect() {
 	}
 	if (m_treeDescriptor.Get<TreeDescriptor>()) {
 		ImGui::Checkbox("Enable History", &m_enableHistory);
-		ImGui::Checkbox("Enable resource flow", &m_treeModel.m_resourceFlow);
+		ImGui::Checkbox("Receive light", &m_treeModel.m_collectLight);
+		ImGui::Checkbox("Receive water", &m_treeModel.m_collectWater);
+		ImGui::Checkbox("Receive nitrite", &m_treeModel.m_collectNitrite);
 		ImGui::Checkbox("Enable Branch collision detection", &m_treeModel.m_enableBranchCollisionDetection);
 		ImGui::Checkbox("Enable Root collision detection", &m_treeModel.m_enableRootCollisionDetection);
 		if (ImGui::Button("Grow")) {
@@ -359,6 +361,7 @@ bool OnInspectRootGrowthParameters(RootGrowthParameters& rootGrowthParameters) {
 			changed = ImGui::DragFloat("Branching prob base", &rootGrowthParameters.m_baseBranchingProbability, 0.01f) || changed;
 			changed = ImGui::DragFloat("Branching prob child decrease", &rootGrowthParameters.m_branchingProbabilityChildrenDecrease, 0.01f) || changed;
 			changed = ImGui::DragFloat("Branching prob dist decrease", &rootGrowthParameters.m_branchingProbabilityDistanceDecrease, 0.01f) || changed;
+			changed = ImGui::DragFloat("Branching prob order decrease", &rootGrowthParameters.m_branchingProbabilityOrderDecrease, 0.01f) || changed;
 			ImGui::TreePop();
 		}
 		ImGui::TreePop();
@@ -492,6 +495,8 @@ void SerializeRootGrowthParameters(const std::string& name, const RootGrowthPara
 	out << YAML::Key << "m_baseBranchingProbability" << YAML::Value << rootGrowthParameters.m_baseBranchingProbability;
 	out << YAML::Key << "m_branchingProbabilityChildrenDecrease" << YAML::Value << rootGrowthParameters.m_branchingProbabilityChildrenDecrease;
 	out << YAML::Key << "m_branchingProbabilityDistanceDecrease" << YAML::Value << rootGrowthParameters.m_branchingProbabilityDistanceDecrease;
+	out << YAML::Key << "m_branchingProbabilityOrderDecrease" << YAML::Value << rootGrowthParameters.m_branchingProbabilityOrderDecrease;
+
 	out << YAML::EndMap;
 }
 void TreeDescriptor::Serialize(YAML::Emitter& out) {
@@ -587,6 +592,7 @@ void DeserializeRootGrowthParameters(const std::string& name, RootGrowthParamete
 		if (param["m_baseBranchingProbability"]) rootGrowthParameters.m_baseBranchingProbability = param["m_baseBranchingProbability"].as<float>();
 		if (param["m_branchingProbabilityChildrenDecrease"]) rootGrowthParameters.m_branchingProbabilityChildrenDecrease = param["m_branchingProbabilityChildrenDecrease"].as<float>();
 		if (param["m_branchingProbabilityDistanceDecrease"]) rootGrowthParameters.m_branchingProbabilityDistanceDecrease = param["m_branchingProbabilityDistanceDecrease"].as<float>();
+		if (param["m_branchingProbabilityOrderDecrease"]) rootGrowthParameters.m_branchingProbabilityOrderDecrease = param["m_branchingProbabilityOrderDecrease"].as<float>();
 
 	}
 }

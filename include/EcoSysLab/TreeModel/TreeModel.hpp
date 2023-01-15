@@ -75,13 +75,16 @@ namespace EcoSysLab {
 		glm::vec3 m_lightDirection = glm::vec3(0, 1, 0);
 		float m_lightIntensity = 1.0f;
 
+		float m_shootFlux = 0.0f;
 		/**
 		 * List of buds, first one will always be the apical bud which points forward.
 		 */
 		std::vector<Bud> m_buds;
+
+
+
 		/*
 		 * The desired resource needed for maintaining current plant structure.
-		 * Depending on the volume of internode.
 		 */
 		float m_maintenanceResourceRequirement = 0.0f;
 		/*
@@ -89,13 +92,18 @@ namespace EcoSysLab {
 		 */
 		float m_developmentResourceRequirement = 0.0f;
 		/*
-		 * Sum of all child node's development resource requirement;
+		 * Sum of all child node's development resource requirement and maintenance resource requirement;
 		 */
-		float m_subtreeDevelopmentResourceRequirement = 0.0f;
+		float m_subtreeTotalResourceRequirement = 0.0f;
 		/*
 		 * The allocated total resource for maintenance and development of this module.
 		 */
 		float m_allocatedResource;
+		/*
+		 * The allocated total resource for maintenance and development of all descendents.
+		 */
+		float m_subTreeAllocatedResource;
+
 		std::vector<glm::mat4> m_leaves;
 		std::vector<glm::mat4> m_fruits;
 
@@ -124,7 +132,9 @@ namespace EcoSysLab {
 		int m_order = 0;
 
 		float m_nitrite = 1.0f;
+		float m_water = 1.0f;
 		
+
 		float m_inhibitorTarget = 0;
 		float m_inhibitor = 0;
 
@@ -136,17 +146,20 @@ namespace EcoSysLab {
 		 */
 		float m_maintenanceResourceRequirement = 0.0f;
 		/*
-		 * The root node's development resource requirement.
+		 * Sum of buds' development resource requirement and internode's development resource requirement.
 		 */
 		float m_developmentResourceRequirement = 0.0f;
-		/*
-		 * Sum of all child node's development resource requirement;
-		 */
-		float m_subtreeDevelopmentResourceRequirement = 0.0f;
+
+		float m_growthPotential = 0.0f;
+		float m_subtreeGrowthPotential = 0.0f;
 		/*
 		 * The allocated total resource for maintenance and development of this module.
 		 */
-		float m_allocatedResource;
+		float m_allocatedResource = 0.0f;
+		/*
+		 * The allocated total resource for maintenance and development of all descendents.
+		 */
+		float m_subTreeAllocatedResource;
 
 	};
 	struct RootBranchGrowthData {
@@ -426,9 +439,16 @@ namespace EcoSysLab {
 	};
 
 	struct TreeGrowthNutrients {
-		float m_water = 0.0f;
-		float m_luminousFlux = 0.0f;
-		float m_carbohydrate = 0.0f;
+		float m_nitrite = 0.0f;
+		float m_rootFlux = 0.0f;
+		float m_shootFlux = 0.0f;
+		float m_vigor = 0.0f;
+	};
+
+	struct TreeGrowthRequirement
+	{
+		float m_vigor = 0.0f;
+		float m_nitrite = 0.0f;
 	};
 
 	struct TreeVoxelData
@@ -470,7 +490,6 @@ namespace EcoSysLab {
 
 		inline bool GrowRootNode(SoilModel& soilModel, NodeHandle rootNodeHandle, const RootGrowthParameters& rootGrowthParameters);
 
-		inline void CalculateResourceRequirement(NodeHandle rootNodeHandle, const RootGrowthParameters& rootGrowthParameters);
 		inline void CalculateThickness(NodeHandle rootNodeHandle,
 			const RootGrowthParameters& rootGrowthParameters);
 
@@ -479,17 +498,17 @@ namespace EcoSysLab {
 
 		inline void AccumulateRootNodeResourceRequirement();
 
-		inline void ApicalControl(const RootGrowthParameters& rootGrowthParameters, float resourceLevel);
+		inline void DistributeResourceToRoots(const RootGrowthParameters& rootGrowthParameters);
 
-		inline void CalculateResourceRequirement(const RootGrowthParameters& rootGrowthParameters, TreeGrowthNutrients& newTreeGrowthNutrientsRequirement);
+		inline void CalculateResourceRequirement(const RootGrowthParameters& rootGrowthParameters, TreeGrowthRequirement& newRootGrowthNutrientsRequirement);
 
 #pragma endregion
 #pragma region Tree Growth
 		inline void AccumulateInternodeResourceRequirement();
 
-		inline void CalculateResourceRequirement(const TreeGrowthParameters& treeGrowthParameters, TreeGrowthNutrients& newTreeGrowthNutrientsRequirement);
+		inline void CalculateResourceRequirement(const TreeGrowthParameters& treeGrowthParameters, TreeGrowthRequirement& newTreeGrowthNutrientsRequirement);
 
-		inline void ApicalControl(const TreeGrowthParameters& treeGrowthParameters, float resourceLevel);
+		inline void DistributeResourceToShoots(const TreeGrowthParameters& treeGrowthParameters);
 
 		inline bool InternodePruning(float maxDistance, NodeHandle internodeHandle,
 			const TreeGrowthParameters& treeGrowthParameters);
@@ -524,7 +543,7 @@ namespace EcoSysLab {
 		 * @param newTreeGrowthNutrientsRequirement
 		 * @return Whether the growth caused a structural change during the growth.
 		 */
-		bool GrowBranches(const glm::mat4& globalTransform, ClimateModel& climateModel, const TreeGrowthParameters& treeGrowthParameters, TreeGrowthNutrients& newTreeGrowthNutrientsRequirement);
+		bool GrowShoots(const glm::mat4& globalTransform, ClimateModel& climateModel, const TreeGrowthParameters& treeGrowthParameters, TreeGrowthRequirement& newTreeGrowthNutrientsRequirement);
 
 		/**
 		 * Grow one iteration of the roots, given the soil model and the procedural parameters.
@@ -534,7 +553,7 @@ namespace EcoSysLab {
 		 * @return Whether the growth caused a structural change during the growth.
 		 */
 		bool GrowRoots(const glm::mat4& globalTransform, SoilModel& soilModel,
-			const RootGrowthParameters& rootGrowthParameters, TreeGrowthNutrients& newTreeGrowthNutrientsRequirement);
+			const RootGrowthParameters& rootGrowthParameters, TreeGrowthRequirement& newTreeGrowthNutrientsRequirement);
 
 
 		int m_leafCount = 0;
@@ -545,8 +564,9 @@ namespace EcoSysLab {
 		template <typename SkeletonData, typename FlowData, typename NodeData>
 		void CollisionDetection(float minRadius, Octree<TreeVoxelData>& octree, Skeleton<SkeletonData, FlowData, NodeData>& skeleton);
 
-		bool m_resourceFlow = false;
-
+		bool m_collectLight = false;
+		bool m_collectWater = false;
+		bool m_collectNitrite = false;
 		TreeVolume m_treeVolume;
 		IlluminationEstimationSettings m_illuminationEstimationSettings;
 		Octree<TreeVoxelData> m_rootOctree;
@@ -554,8 +574,10 @@ namespace EcoSysLab {
 		bool m_enableRootCollisionDetection = false;
 		bool m_enableBranchCollisionDetection = false;
 
-		TreeGrowthNutrients m_treeGrowthNutrientsRequirement;
-		TreeGrowthNutrients m_treeGrowthNutrients;
+		TreeGrowthRequirement m_shootGrowthNutrientsRequirement;
+		TreeGrowthRequirement m_rootGrowthNutrientsRequirement;
+		TreeGrowthNutrients m_plantGrowthNutrients;
+
 		float m_globalGrowthRate = 0.0f;
 		glm::vec3 m_currentGravityDirection = glm::vec3(0, -1, 0);
 

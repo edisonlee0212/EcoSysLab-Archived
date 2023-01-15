@@ -30,7 +30,7 @@ the voxel centers are at 0.5 and 1.5.
 
 void SoilModel::Initialize(const SoilParameters& p)
 {
-	assert(!m_initialized);
+	//assert(!m_initialized);
 
 	m_diffusionForce = p.m_diffusionForce;
 	m_gravityForce = p.m_gravityForce;

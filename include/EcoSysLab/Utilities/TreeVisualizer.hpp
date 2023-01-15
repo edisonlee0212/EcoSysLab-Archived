@@ -356,9 +356,9 @@ namespace EcoSysLab {
                     glm::translate(position + (node.m_info.m_length / 2.0f) * direction) *
                     rotationTransform *
                     glm::scale(glm::vec3(
-                            node.m_info.m_thickness,
-                            node.m_info.m_length / 2.0f,
-                            node.m_info.m_thickness));
+                            node.m_info.m_thickness * 2.0f,
+                            node.m_info.m_length,
+                            node.m_info.m_thickness * 2.0f));
             if (nodeHandle == selectedNodeHandle) {
                 colors[i + 1] = glm::vec4(1, 0, 0, 1);
 
@@ -367,9 +367,9 @@ namespace EcoSysLab {
                 matrices[0] = glm::translate(selectedCenter) *
                               rotationTransform *
                               glm::scale(glm::vec3(
-                                      node.m_info.m_thickness + 0.001f,
-                                      node.m_info.m_length / 10.0f,
-                                      node.m_info.m_thickness + 0.001f));
+                                      2.0f * node.m_info.m_thickness + 0.001f,
+                                      node.m_info.m_length / 5.0f,
+                                  2.0f * node.m_info.m_thickness + 0.001f));
                 colors[0] = glm::vec4(1.0f);
             } else {
                 colors[i + 1] = node.m_info.m_color;
