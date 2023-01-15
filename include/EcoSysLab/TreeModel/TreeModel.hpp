@@ -538,9 +538,10 @@ namespace EcoSysLab {
 
 		/**
 		 * Grow one iteration of the branches, given the climate model and the procedural parameters.
-		 * @param climateModel The climate model
+		 * @param globalTransform The plant's world transform.
+		 * @param climateModel The climate model.
 		 * @param treeGrowthParameters The procedural parameters that guides the growth.
-		 * @param newTreeGrowthRequirement
+		 * @param newTreeGrowthRequirement Growth requirements from shoots.
 		 * @return Whether the growth caused a structural change during the growth.
 		 */
 		bool GrowShoots(const glm::mat4& globalTransform, ClimateModel& climateModel, 
@@ -548,9 +549,10 @@ namespace EcoSysLab {
 
 		/**
 		 * Grow one iteration of the roots, given the soil model and the procedural parameters.
+		 * @param globalTransform The plant's world transform.
 		 * @param soilModel The soil model
 		 * @param rootGrowthParameters The procedural parameters that guides the growth.
-		 * @param newTreeGrowthRequirement
+		 * @param newTreeGrowthRequirement Growth requirements from roots.
 		 * @return Whether the growth caused a structural change during the growth.
 		 */
 		bool GrowRoots(const glm::mat4& globalTransform, SoilModel& soilModel,
