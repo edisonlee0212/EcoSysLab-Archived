@@ -203,7 +203,7 @@ namespace EcoSysLab {
          * @param branching True if branching, false if prolong. During branching, 2 new flows will be generated.
          * @return The handle of new node.
          */
-        NodeHandle Extend(NodeHandle targetHandle, bool branching);
+        NodeHandle Extend(NodeHandle targetHandle, bool branching, bool breakFlow = false);
 
         /**
          * To retrieve a list of handles of all nodes contained within the tree.
@@ -349,7 +349,7 @@ namespace EcoSysLab {
 
     template<typename SkeletonData, typename FlowData, typename NodeData>
     NodeHandle
-    Skeleton<SkeletonData, FlowData, NodeData>::Extend(NodeHandle targetHandle, bool branching) {
+    Skeleton<SkeletonData, FlowData, NodeData>::Extend(NodeHandle targetHandle, bool branching, bool breakFlow) {
         assert(targetHandle < m_nodes.size());
         auto &targetNode = m_nodes[targetHandle];
         assert(!targetNode.m_recycled);
@@ -360,7 +360,7 @@ namespace EcoSysLab {
         SetParentNode(newNodeHandle, targetHandle);
         auto &originalNode = m_nodes[targetHandle];
         auto &newNode = m_nodes[newNodeHandle];
-
+        originalNode.m_endNode = false;
         if (branching) {
             auto newFlowHandle = AllocateFlow();
             auto &newFlow = m_flows[newFlowHandle];
@@ -394,8 +394,17 @@ namespace EcoSysLab {
                 SetParentFlow(extendedFlowHandle, originalNode.m_flowHandle);
             }
             SetParentFlow(newFlowHandle, originalNode.m_flowHandle);
-        } else {
-            originalNode.m_endNode = false;
+        }
+    	else if(breakFlow)
+        {
+            auto newFlowHandle = AllocateFlow();
+            auto& newFlow = m_flows[newFlowHandle];
+            newNode.m_flowHandle = newFlowHandle;
+            newFlow.m_nodes.emplace_back(newNodeHandle);
+            newFlow.m_apical = true;
+            SetParentFlow(newFlowHandle, originalNode.m_flowHandle);
+        }
+    	else {
             flow.m_nodes.emplace_back(newNodeHandle);
             newNode.m_flowHandle = originalNode.m_flowHandle;
         }
@@ -597,6 +606,7 @@ namespace EcoSysLab {
                 children[i] = children.back();
                 children.pop_back();
                 childNode.m_parentHandle = -1;
+                if (children.empty()) targetNode.m_endNode = true;
                 return;
             }
         }

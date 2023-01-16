@@ -106,6 +106,11 @@ void Soil::OnInspect()
 			m_soilModel.Reset();
 		}
 
+		if(ImGui::Button("Split root test"))
+		{
+			SplitRootTestSetup();
+		}
+
 		ImGui::InputFloat("Diffusion Force", &m_soilModel.m_diffusionForce);
 		ImGui::InputFloat3("Gravity Force", &m_soilModel.m_gravityForce.x);
 
@@ -217,16 +222,31 @@ void Soil::InitializeSoilModel()
 			params.m_soilDensitySampleFunc = [&](const glm::vec3& position)
 				{
 					auto height = heightField->GetValue(glm::vec2(position.x, position.z));
-					return position.y > height - 1 ? glm::clamp(height - params.m_deltaX/2.0f - position.y, 0.0f, 1.0f) : 1;
+					return position.y > height - 1 ? glm::clamp(height - params.m_deltaX/2.0f - position.y, 0.0f, 1.0f) : 1.0f + height - position.y;
 				};
 		}
 		else {
 			params.m_soilDensitySampleFunc =  [](const glm::vec3& position)
 				{
-					return position.y > 0 ? 0.f : 1.f;
+					return position.y > 0 ? 0.f : position.y;
 				};
 		}
 		m_soilModel.Initialize(params);
+	}
+}
+
+void Soil::SplitRootTestSetup()
+{
+	InitializeSoilModel();
+	for(int i = 0; i < m_soilModel.m_nutrientsDensity.size(); i++)
+	{
+		if(m_soilModel.GetPositionFromCoordinate(m_soilModel.GetCoordinateFromIndex(i)).x > 0)
+		{
+			m_soilModel.m_nutrientsDensity[i] = 2.0f;
+		}else
+		{
+			m_soilModel.m_nutrientsDensity[i] = 0.5f;
+		}
 	}
 }
 

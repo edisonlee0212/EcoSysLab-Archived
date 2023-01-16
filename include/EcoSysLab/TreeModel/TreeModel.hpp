@@ -26,18 +26,21 @@ namespace EcoSysLab {
 		BudStatus m_status = BudStatus::Dormant;
 
 		/*
-		 * The desired water gain for maintaining current plant structure.
+		 * The desired resource needed for maintaining current plant structure.
 		 * Depending on the size of fruit/leaf.
 		 */
-		float m_baseWaterRequirement = 0.0f;
+		float m_maintenanceVigorRequirement = 0.0f;
 		/*
-		 * The desired water gain for reproduction (forming shoot/leaf/fruit) of this bud.
-		 * Depending on apical control.
+		 * The desired resource needed for reproduction (forming shoot/leaf/fruit) of this bud.
+		 * Depending on the size of fruit/leaf.
+		 * Adjusted by apical control.
 		 */
-		float m_reproductionWaterRequirement = 0.0f;
-		float m_adjustedReproductionWaterRequirement = 0.0f;
+		float m_developmentVigorRequirement = 0.0f;
+		/*
+		 * The allocated total resource for maintenance and development of this module.
+		 */
+		float m_allocatedVigor;
 
-		float m_waterGain;
 		glm::quat m_localRotation = glm::vec3(0.0f);
 
 		//-1.0 means the no fruit.
@@ -46,12 +49,12 @@ namespace EcoSysLab {
 
 		float m_chlorophyll = 0.0f;
 
-		float m_luminousFlux = 0.0f;
-		float m_temperature;
+		float m_shootFlux = 0.0f;
 		glm::mat4 m_reproductiveModuleTransform = glm::mat4(0.0f);
 	};
 
 	struct InternodeGrowthData {
+		bool m_lateral = false;
 		int m_age = 0;
 		float m_inhibitorTarget = 0;
 		float m_inhibitor = 0;
@@ -67,24 +70,43 @@ namespace EcoSysLab {
 		float m_extraMass = 0.0f;
 		float m_rootDistance = 0;
 
+		float m_temperature;
+
 		glm::vec3 m_lightDirection = glm::vec3(0, 1, 0);
 		float m_lightIntensity = 1.0f;
 
+		float m_shootFlux = 0.0f;
 		/**
 		 * List of buds, first one will always be the apical bud which points forward.
 		 */
 		std::vector<Bud> m_buds;
 
-		float m_reproductionWaterRequirement = 0.0f;
 
-		float m_descendentReproductionWaterRequirement = 0.0f;
-		float m_adjustedTotalReproductionWaterRequirement = 0.0f;
-		float m_adjustedDescendentReproductionWaterRequirement = 0.0f;
+
+		/*
+		 * The desired resource needed for maintaining current plant structure.
+		 */
+		float m_maintenanceVigorRequirement = 0.0f;
+		/*
+		 * Sum of buds' development resource requirement and internode's development resource requirement.
+		 */
+		float m_developmentalVigorRequirement = 0.0f;
+		/*
+		 * Sum of all child node's development resource requirement and maintenance resource requirement;
+		 */
+		float m_subtreeTotalVigorRequirement = 0.0f;
+		/*
+		 * The allocated total resource for maintenance and development of this module.
+		 */
+		float m_allocatedVigor;
+		/*
+		 * The allocated total resource for maintenance and development of all descendents.
+		 */
+		float m_subTreeAllocatedVigor;
 
 		std::vector<glm::mat4> m_leaves;
 		std::vector<glm::mat4> m_fruits;
 
-		void Clear();
 	};
 
 	struct BranchGrowthData {
@@ -97,6 +119,9 @@ namespace EcoSysLab {
 	};
 
 	struct RootInternodeGrowthData {
+		bool m_lateral = false;
+		float m_soilDensity = 0.0f;
+		int m_age = 0;
 		float m_maxDistanceToAnyBranchEnd = 0;
 		float m_descendentTotalBiomass = 0;
 		float m_biomass = 0;
@@ -106,15 +131,36 @@ namespace EcoSysLab {
 		int m_rootUnitDistance = 0;
 		int m_order = 0;
 
-		float m_nitrite = 0.0f;
+		float m_nitrite = 1.0f;
+		float m_water = 1.0f;
+		
 
-		float m_reproductiveWaterRequirement;
-
-		float m_auxinTarget = 0;
-		float m_auxin = 0;
+		float m_inhibitorTarget = 0;
+		float m_inhibitor = 0;
 
 		float m_horizontalTropism;
 		float m_verticalTropism;
+		/*
+		 * The desired resource needed for maintaining current plant structure.
+		 * Depending on the volume of root node.
+		 */
+		float m_maintenanceVigorRequirement = 0.0f;
+		/*
+		 * Sum of buds' development resource requirement and internode's development resource requirement.
+		 */
+		float m_developmentalVigorRequirement = 0.0f;
+
+		float m_growthPotential = 0.0f;
+		float m_subtreeGrowthPotential = 0.0f;
+		/*
+		 * The allocated total resource for maintenance and development of this module.
+		 */
+		float m_allocatedVigor = 0.0f;
+		/*
+		 * The allocated total resource for maintenance and development of all descendents.
+		 */
+		float m_subTreeAllocatedVigor;
+
 	};
 	struct RootBranchGrowthData {
 		int m_order = 0;
@@ -131,6 +177,14 @@ namespace EcoSysLab {
 		 */
 		float m_growthRate;
 		/**
+		 * \brief How much the soil density affects the growth;
+		 */
+		float m_environmentalFriction;
+		/**
+		 * \brief How much will the increase of soil density affects the growth;
+		 */
+		float m_environmentalFrictionFactor;
+		/**
 		 * \brief The root node length
 		 */
 		float m_rootNodeLength;
@@ -146,7 +200,7 @@ namespace EcoSysLab {
 		/**
 		 * \brief The extra thickness gained from node length.
 		 */
-		float m_thicknessLengthAccumulate;
+		float m_thicknessAccumulateAgeFactor;
 		/**
 		* The mean and variance of the angle between the direction of a lateral bud and its parent shoot.
 		*/
@@ -160,9 +214,17 @@ namespace EcoSysLab {
 		*/
 		glm::vec2 m_apicalAngleMeanVariance;
 		/**
-		* Loss of auxin/inhibitor along the branch
+		 * \brief Apical control base and distance decrease from root.
+		 */
+		glm::vec2 m_apicalControlBaseDistFactor;
+		/**
+		* \brief How much inhibitor will an internode generate.
 		*/
-		float m_auxinTransportLoss;
+		float m_apicalDominance;
+		/**
+		* \brief How much inhibitor will shrink when going through the branch.
+		*/
+		float m_apicalDominanceDistanceFactor;
 		/**
 		* The possibility of the lateral branch having different tropism as the parent branch
 		*/
@@ -187,6 +249,10 @@ namespace EcoSysLab {
 		* The probability decrease along the branch.
 		*/
 		float m_branchingProbabilityDistanceDecrease;
+		/**
+		* The probability decrease along the branch.
+		*/
+		float m_branchingProbabilityOrderDecrease;
 
 		[[nodiscard]] float GetRootApicalAngle(const Node<RootInternodeGrowthData>& rootNode) const;
 
@@ -194,10 +260,9 @@ namespace EcoSysLab {
 
 		[[nodiscard]] float GetRootBranchingAngle(const Node<RootInternodeGrowthData>& rootNode) const;
 
-		[[nodiscard]] float GetThicknessAccumulateFactor(const Node<RootInternodeGrowthData>& rootNode) const;
-
 		[[nodiscard]] float GetBranchingProbability(const Node<RootInternodeGrowthData>& rootNode) const;
 
+		[[nodiscard]] float GetApicalControlFactor(const Node<RootInternodeGrowthData>& rootNode) const;
 
 		void SetTropisms(Node<RootInternodeGrowthData>& oldNode, Node<RootInternodeGrowthData>& newNode) const;
 
@@ -209,6 +274,11 @@ namespace EcoSysLab {
 
 	class TreeGrowthParameters {
 	public:
+		/**
+		 * \brief The growth rate. The expected internode elongation per iteration
+		 */
+		float m_growthRate;
+#pragma region Structure
 		/**
 		 * \brief The number of lateral buds an internode contains
 		 */
@@ -245,10 +315,7 @@ namespace EcoSysLab {
 		 * \brief The internode length
 		 */
 		float m_internodeLength;
-		/**
-		 * \brief The growth rate. The expected internode elongation per iteration
-		 */
-		float m_growthRate;
+
 		/**
 		 * \brief Thickness of end internode
 		 */
@@ -257,6 +324,28 @@ namespace EcoSysLab {
 		 * \brief The thickness accumulation factor
 		 */
 		float m_thicknessAccumulationFactor;
+		/**
+		 * \brief The extra thickness gained from node length.
+		 */
+		float m_thicknessAccumulateAgeFactor;
+		/**
+		* \brief The limit of lateral branches being cut off when too close to the
+		* root.
+		*/
+		float m_lowBranchPruning;
+		/**
+		 * \brief The The impact of the amount of incoming light on the shedding of end internodes.
+		 */
+		float m_endNodePruningLightFactor;
+		/**
+		 * \brief The strength of gravity bending.
+		 */
+		glm::vec3 m_saggingFactorThicknessReductionMax = glm::vec3(0.8f, 1.75f, 1.0f);
+
+#pragma endregion
+#pragma region Bud fate
+		
+		
 		/**
 		 * \brief Flushing prob of lateral bud related to the temperature.
 		 */
@@ -270,26 +359,41 @@ namespace EcoSysLab {
 		 */
 		glm::vec4 m_fruitBudFlushingProbabilityTemperatureRange;
 		/**
+		 * \brief The lighting factor for apical bud elongation rate.
+		 */
+		float m_apicalBudLightingFactor;
+		/**
 		 * \brief The lighting factor for lateral bud flushing probability.
 		 */
-		float m_lateralBudFlushingProbabilityLightingFactor;
+		float m_lateralBudLightingFactor;
 		/**
 		 * \brief The lighting factor for leaf bud flushing probability.
 		 */
-		float m_leafBudFlushingProbabilityLightingFactor;
+		float m_leafBudLightingFactor;
 		/**
 		 * \brief The lighting factor for fruit bud flushing probability.
 		 */
-		float m_fruitBudFlushingProbabilityLightingFactor;
+		float m_fruitBudLightingFactor;
 		/**
-		 * \brief Apical control base and distance decrease from root.
+		 * \brief Apical control base
 		 */
-		glm::vec2 m_apicalControlBaseDistFactor{};
-
+		float m_apicalControl;
+		/**
+		 * \brief Age influence on apical control 
+		 */
+		float m_apicalControlAgeFactor;
+		/**
+		 * \brief Distance to root influence on apical control
+		 */
+		float m_apicalControlDistanceFactor;
 		/**
 		* \brief How much inhibitor will an internode generate.
 		*/
 		float m_apicalDominance;
+		/**
+		* \brief How much inhibitor will shrink when the tree ages.
+		*/
+		float m_apicalDominanceAgeFactor;
 		/**
 		* \brief How much inhibitor will shrink when going through the branch.
 		*/
@@ -297,24 +401,29 @@ namespace EcoSysLab {
 		/**
 		* \brief The probability of internode being removed.
 		*/
-		float m_budKillProbability;
+		float m_apicalBudExtinctionRate;
 		/**
-		* \brief The limit of lateral branches being cut off when too close to the
-		* root.
+		* \brief The probability of internode being removed.
 		*/
-		float m_lowBranchPruning;
+		float m_lateralBudExtinctionRate;
 		/**
-		 * \brief The strength of gravity bending.
-		 */
-		glm::vec3 m_saggingFactorThicknessReductionMax = glm::vec3(0.8f, 1.75f, 1.0f);
+		* \brief The probability of internode being removed.
+		*/
+		float m_leafBudExtinctionRate;
+		/**
+		* \brief The probability of internode being removed.
+		*/
+		float m_fruitBudExtinctionRate;
+#pragma endregion
+
 		/**
 		* \brief Base resource requirement factor for internode
 		*/
-		float m_shootBaseWaterRequirement;
+		float m_shootMaintenanceVigorRequirement;
 		/**
 		* \brief Base resource requirement factor for leaf
 		*/
-		float m_leafBaseWaterRequirement;
+		float m_leafMaintenanceVigorRequirement;
 		/**
 		* \brief Base resource requirement factor for fruit
 		*/
@@ -350,8 +459,6 @@ namespace EcoSysLab {
 		float m_fruitRandomRotation;
 
 #pragma endregion
-		float m_trunkRadius;
-
 
 		[[nodiscard]] float GetDesiredBranchingAngle(const Node<InternodeGrowthData>& internode) const;
 
@@ -359,7 +466,7 @@ namespace EcoSysLab {
 
 		[[nodiscard]] float GetDesiredApicalAngle(const Node<InternodeGrowthData>& internode) const;
 
-		[[nodiscard]] float GetApicalControl(const Node<InternodeGrowthData>& internode) const;
+		[[nodiscard]] float GetApicalControlFactor(const Node<InternodeGrowthData>& internode) const;
 
 		[[nodiscard]] float GetSagging(const Node<InternodeGrowthData>& internode) const;
 
@@ -368,9 +475,16 @@ namespace EcoSysLab {
 	};
 
 	struct TreeGrowthNutrients {
-		float m_water = 0.0f;
-		float m_luminousFlux = 0.0f;
-		float m_carbohydrate = 0.0f;
+		float m_nitrite = 0.0f;
+		float m_rootFlux = 0.0f;
+		float m_shootFlux = 0.0f;
+		float m_vigor = 0.0f;
+	};
+
+	struct TreeGrowthRequirement
+	{
+		float m_vigor = 0.0f;
+		float m_nitrite = 0.0f;
 	};
 
 	struct TreeVoxelData
@@ -382,7 +496,7 @@ namespace EcoSysLab {
 
 	struct IlluminationEstimationSettings {
 		int m_probeLayerAmount = 8;
-		int m_probeCountPerLayer = 8;
+		int m_probeSectorAmount = 8;
 		float m_distanceLossMagnitude = 0.25f;
 		float m_distanceLossFactor = 1.5f;
 		float m_probeMinMaxRatio = 0.8f;
@@ -391,44 +505,48 @@ namespace EcoSysLab {
 	class TreeVolume
 	{
 	public:
-		std::vector<std::vector<float>> m_layers;
+		std::vector<float> m_distances;
+		glm::vec3 m_center = glm::vec3(0.0f);
 		int m_layerAmount = 16;
 		int m_sectorAmount = 16;
-		float m_offset = 0;
-		float m_maxHeight = 0.0f;
 		bool m_hasData = false;
-		[[nodiscard]] glm::ivec2 SelectSlice(const glm::vec3& position) const;
+		float m_offset = 0;
+		[[nodiscard]] int GetSectorIndex(const glm::vec3& position) const;
 		void Clear();
-		[[nodiscard]] glm::vec3 TipPosition(int layer, int slice) const;
+		[[nodiscard]] glm::vec3 TipPosition(int layerIndex, int sectorIndex) const;
 		void Smooth();
-		[[nodiscard]] float IlluminationEstimation(const glm::vec3& position, const IlluminationEstimationSettings& settings) const;
+		[[nodiscard]] float IlluminationEstimation(const glm::vec3& position, const IlluminationEstimationSettings& settings, glm::vec3& lightDirection) const;
 	};
 
 	class TreeModel {
 #pragma region Root Growth
 
-		bool ElongateRoot(const glm::mat4& globalTransform, SoilModel& soilModel, float extendLength, NodeHandle rootNodeHandle,
+		bool ElongateRoot(SoilModel& soilModel, float extendLength, NodeHandle rootNodeHandle,
 			const RootGrowthParameters& rootGrowthParameters, float& collectedAuxin);
 
-		inline bool GrowRootNode(const glm::mat4& globalTransform, SoilModel& soilModel, NodeHandle rootNodeHandle, const RootGrowthParameters& rootGrowthParameters);
+		inline bool GrowRootNode(SoilModel& soilModel, NodeHandle rootNodeHandle, const RootGrowthParameters& rootGrowthParameters);
 
-		inline void CalculateResourceRequirement(NodeHandle rootNodeHandle, const RootGrowthParameters& rootGrowthParameters);
 		inline void CalculateThickness(NodeHandle rootNodeHandle,
 			const RootGrowthParameters& rootGrowthParameters);
 
-		void CollectWaterAndNitriteFromRoots(const glm::mat4& globalTransform, SoilModel& soilModel,
+		inline void CollectRootFlux(const glm::mat4& globalTransform, SoilModel& soilModel,
 			const RootGrowthParameters& rootGrowthParameters);
+
+		inline void AggregateRootVigorRequirement();
+
+		inline void RootVigorAllocation(const RootGrowthParameters& rootGrowthParameters);
+
+		inline void CalculateVigorRequirement(const RootGrowthParameters& rootGrowthParameters, TreeGrowthRequirement& newRootGrowthNutrientsRequirement);
+
 #pragma endregion
 #pragma region Tree Growth
-		inline void CollectResourceRequirement(NodeHandle internodeHandle);
+		inline void AggregateInternodeVigorRequirement();
 
-		inline void CalculateResourceRequirement(NodeHandle internodeHandle,
-			const TreeGrowthParameters& treeGrowthParameters, TreeGrowthNutrients& newTreeGrowthNutrientsRequirement);
+		inline void CalculateVigorRequirement(const TreeGrowthParameters& treeGrowthParameters, TreeGrowthRequirement& newTreeGrowthNutrientsRequirement);
 
-		inline void AdjustProductiveResourceRequirement(NodeHandle internodeHandle,
-			const TreeGrowthParameters& treeGrowthParameters);
+		inline void ShootVigorAllocation(const TreeGrowthParameters& treeGrowthParameters);
 
-		bool LowBranchPruning(float maxDistance, NodeHandle internodeHandle,
+		inline bool InternodePruning(float maxDistance, NodeHandle internodeHandle,
 			const TreeGrowthParameters& treeGrowthParameters);
 
 		inline void CalculateThicknessAndSagging(NodeHandle internodeHandle,
@@ -440,7 +558,7 @@ namespace EcoSysLab {
 			const TreeGrowthParameters& treeGrowthParameters, float& collectedInhibitor);
 
 		friend class Tree;
-		void CollectLuminousFluxFromLeaves(ClimateModel& climateModel,
+		void CollectShootFlux(ClimateModel& climateModel,
 			const TreeGrowthParameters& treeGrowthParameters);
 #pragma endregion
 
@@ -456,33 +574,38 @@ namespace EcoSysLab {
 
 		/**
 		 * Grow one iteration of the branches, given the climate model and the procedural parameters.
-		 * @param climateModel The climate model
+		 * @param globalTransform The plant's world transform.
+		 * @param climateModel The climate model.
 		 * @param treeGrowthParameters The procedural parameters that guides the growth.
-		 * @param newTreeGrowthNutrientsRequirement
+		 * @param newTreeGrowthRequirement Growth requirements from shoots.
 		 * @return Whether the growth caused a structural change during the growth.
 		 */
-		bool GrowBranches(const glm::mat4& globalTransform, ClimateModel& climateModel, const TreeGrowthParameters& treeGrowthParameters, TreeGrowthNutrients& newTreeGrowthNutrientsRequirement);
+		bool GrowShoots(const glm::mat4& globalTransform, ClimateModel& climateModel, 
+			const TreeGrowthParameters& treeGrowthParameters, TreeGrowthRequirement& newTreeGrowthRequirement);
 
 		/**
 		 * Grow one iteration of the roots, given the soil model and the procedural parameters.
+		 * @param globalTransform The plant's world transform.
 		 * @param soilModel The soil model
 		 * @param rootGrowthParameters The procedural parameters that guides the growth.
-		 * @param newTreeGrowthNutrientsRequirement
+		 * @param newTreeGrowthRequirement Growth requirements from roots.
 		 * @return Whether the growth caused a structural change during the growth.
 		 */
 		bool GrowRoots(const glm::mat4& globalTransform, SoilModel& soilModel,
-			const RootGrowthParameters& rootGrowthParameters, TreeGrowthNutrients& newTreeGrowthNutrientsRequirement);
+			const RootGrowthParameters& rootGrowthParameters, TreeGrowthRequirement& newTreeGrowthRequirement);
 
 
 		int m_leafCount = 0;
 		int m_fruitCount = 0;
 
 	public:
+		int m_flowNodeLimit = 20;
 		template <typename SkeletonData, typename FlowData, typename NodeData>
 		void CollisionDetection(float minRadius, Octree<TreeVoxelData>& octree, Skeleton<SkeletonData, FlowData, NodeData>& skeleton);
 
-		bool m_resourceFlow = false;
-
+		bool m_collectLight = false;
+		bool m_collectWater = false;
+		bool m_collectNitrite = false;
 		TreeVolume m_treeVolume;
 		IlluminationEstimationSettings m_illuminationEstimationSettings;
 		Octree<TreeVoxelData> m_rootOctree;
@@ -490,9 +613,11 @@ namespace EcoSysLab {
 		bool m_enableRootCollisionDetection = false;
 		bool m_enableBranchCollisionDetection = false;
 
-		TreeGrowthNutrients m_treeGrowthNutrientsRequirement;
-		TreeGrowthNutrients m_treeGrowthNutrients;
-		float m_globalGrowthRate = 0.0f;
+		TreeGrowthRequirement m_shootGrowthRequirement;
+		TreeGrowthRequirement m_rootGrowthRequirement;
+		TreeGrowthNutrients m_plantGrowthNutrients;
+
+		//float m_globalGrowthRate = 0.0f;
 		glm::vec3 m_currentGravityDirection = glm::vec3(0, -1, 0);
 
 		/**
@@ -518,7 +643,7 @@ namespace EcoSysLab {
 		int m_historyLimit = -1;
 
 		void SampleTemperature(const glm::mat4& globalTransform, ClimateModel& climateModel);
-
+		void SampleSoilDensity(const glm::mat4& globalTransform, SoilModel& soilModel);
 		[[nodiscard]] Skeleton<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData>& RefBranchSkeleton();
 
 		[[nodiscard]] const Skeleton<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData>&

@@ -119,12 +119,15 @@ void EcoSysLabLayer::LateUpdate() {
 			BranchRenderingGs(treeEntities);
 		}
 		if (m_debugVisualization) {
-			if (m_versions.size() != treeEntities->size()) {
+			if (m_branchVersions.size() != treeEntities->size() || m_rootVersions.size() != treeEntities->size()) {
 				m_internodeSize = 0;
+				m_rootNodeSize = 0;
 				m_totalTime = 0.0f;
-				m_versions.clear();
+				m_branchVersions.clear();
+				m_rootVersions.clear();
 				for (int i = 0; i < treeEntities->size(); i++) {
-					m_versions.emplace_back(-1);
+					m_branchVersions.emplace_back(-1);
+					m_rootVersions.emplace_back(-1);
 				}
 				m_needFlowUpdate = true;
 			}
@@ -146,8 +149,12 @@ void EcoSysLabLayer::LateUpdate() {
 				totalFruitSize += treeModel.GetFruitCount();
 
 				if (m_selectedTree == treeEntity) continue;
-				if (m_versions[i] != treeModel.RefBranchSkeleton().GetVersion()) {
-					m_versions[i] = treeModel.RefBranchSkeleton().GetVersion();
+				if (m_branchVersions[i] != treeModel.RefBranchSkeleton().GetVersion()) {
+					m_branchVersions[i] = treeModel.RefBranchSkeleton().GetVersion();
+					m_needFlowUpdate = true;
+				}
+				if (m_rootVersions[i] != treeModel.RefRootSkeleton().GetVersion()) {
+					m_rootVersions[i] = treeModel.RefRootSkeleton().GetVersion();
 					m_needFlowUpdate = true;
 				}
 			}
@@ -341,32 +348,32 @@ void EcoSysLabLayer::OnInspect() {
 			ImGui::Text("Total Root Flow size: %d", m_rootFlowSize);
 
 
-			ImGui::Checkbox("Debug Visualization", &m_debugVisualization);
-			if (m_debugVisualization && ImGui::TreeNodeEx("Debug visualization settings", ImGuiTreeNodeFlags_DefaultOpen)) {
-				ImGui::Checkbox("Display Branches", &m_displayBranches);
-				ImGui::Checkbox("Display Fruits", &m_displayFruit);
-				ImGui::Checkbox("Display Foliage", &m_displayFoliage);
-				ImGui::Checkbox("Display Root Flows", &m_displayRootFlows);
-				ImGui::Checkbox("Display Soil", &m_displaySoil);
-				if (m_displaySoil && ImGui::TreeNodeEx("Soil visualization settings", ImGuiTreeNodeFlags_DefaultOpen))
-				{
-					OnSoilVisualizationMenu();
-					ImGui::TreePop();
-				}
-				ImGui::Checkbox("Display Bounding Box", &m_displayBoundingBox);
-				ImGui::TreePop();
-			}
-
-			if (m_debugVisualization && scene->IsEntityValid(m_selectedTree)) {
-				m_treeVisualizer.OnInspect(
-					scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock()->m_treeModel, scene->GetDataComponent<GlobalTransform>(m_selectedTree));
-			}
+			
 		}
 		else
 		{
 			ImGui::Text("No trees in the scene!");
 		}
-		
+		ImGui::Checkbox("Debug Visualization", &m_debugVisualization);
+		if (m_debugVisualization && ImGui::TreeNodeEx("Debug visualization settings", ImGuiTreeNodeFlags_DefaultOpen)) {
+			ImGui::Checkbox("Display Branches", &m_displayBranches);
+			ImGui::Checkbox("Display Fruits", &m_displayFruit);
+			ImGui::Checkbox("Display Foliage", &m_displayFoliage);
+			ImGui::Checkbox("Display Root Flows", &m_displayRootFlows);
+			ImGui::Checkbox("Display Soil", &m_displaySoil);
+			if (m_displaySoil && ImGui::TreeNodeEx("Soil visualization settings", ImGuiTreeNodeFlags_DefaultOpen))
+			{
+				OnSoilVisualizationMenu();
+				ImGui::TreePop();
+			}
+			ImGui::Checkbox("Display Bounding Box", &m_displayBoundingBox);
+			ImGui::TreePop();
+		}
+
+		if (m_debugVisualization && scene->IsEntityValid(m_selectedTree)) {
+			m_treeVisualizer.OnInspect(
+				scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock()->m_treeModel, scene->GetDataComponent<GlobalTransform>(m_selectedTree));
+		}
 	}
 	ImGui::End();
 }
@@ -488,6 +495,20 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 		std::vector<int> leafStartIndices;
 		int leafLastStartIndex = 0;
 		leafStartIndices.emplace_back(leafLastStartIndex);
+
+		if(treeEntities->empty())
+		{
+			m_branchSegments.clear();
+			m_branchPoints.clear();
+
+			m_rootSegments.clear();
+			m_rootPoints.clear();
+
+			m_foliageMatrices.clear();
+			m_foliageColors.clear();
+			m_fruitMatrices.clear();
+			m_fruitColors.clear();
+		}
 
 		for (int listIndex = 0; listIndex < treeEntities->size(); listIndex++) {
 			auto treeEntity = treeEntities->at(listIndex);
@@ -653,15 +674,16 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 
 				if (flow.GetParentHandle() > 0)
 				{
-					p0.m_thickness = p1.m_thickness = p2.m_thickness = rootSkeleton.PeekFlow(flow.GetParentHandle()).m_info.m_endThickness;
+					p0.m_thickness = p1.m_thickness = rootSkeleton.PeekFlow(flow.GetParentHandle()).m_info.m_endThickness;
 				}
 				else
 				{
-					p0.m_thickness = p1.m_thickness = p2.m_thickness = flow.m_info.m_startThickness;
+					p0.m_thickness = p1.m_thickness = flow.m_info.m_startThickness;
 				}
-				p3.m_thickness = flow.m_info.m_endThickness;
+				
 				p4.m_thickness = flow.m_info.m_endThickness;
 				p5.m_thickness = flow.m_info.m_endThickness;
+				p3.m_thickness = p2.m_thickness = (p1.m_thickness + p4.m_thickness) * 0.5f;
 
 				p0.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
 				p1.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
@@ -708,8 +730,6 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 			branchStrands->SetSegments(1, m_branchSegments, m_branchPoints);
 			rootStrands->SetSegments(1, m_rootSegments, m_rootPoints);
 		}
-
-
 	}
 }
 
@@ -1004,6 +1024,24 @@ void EcoSysLabLayer::BranchRenderingGs(const std::vector<Entity>* treeEntities)
 
 
 void EcoSysLabLayer::Update() {
+	
+	const auto scene = Application::GetActiveScene();
+	if (!m_soilHolder.Get<Soil>()) {
+		const std::vector<Entity>* soilEntities =
+			scene->UnsafeGetPrivateComponentOwnersList<Soil>();
+		if(soilEntities && !soilEntities->empty())
+		{
+			m_soilHolder = scene->GetOrSetPrivateComponent<Soil>(soilEntities->at(0)).lock();
+		}
+	}
+	if (!m_climateHolder.Get<Climate>()) {
+		const std::vector<Entity>* climateEntities =
+			scene->UnsafeGetPrivateComponentOwnersList<Climate>();
+		if (climateEntities && !climateEntities->empty())
+		{
+			m_climateHolder = scene->GetOrSetPrivateComponent<Climate>(climateEntities->at(0)).lock();
+		}
+	}
 	if (m_autoGrow) {
 		Simulate();
 	}

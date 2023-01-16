@@ -185,7 +185,7 @@ void TreeMeshGeneratorSettings::OnInspect() {
 			}
 			ImGui::TreePop();
 		}
-		if (m_enableRoot && ImGui::TreeNode("Marching cubes settings"))
+		if (m_enableRoot && ImGui::TreeNode("Root settings"))
 		{
 			if (m_overrideVertexColor) {
 				ImGui::ColorEdit3("Root vertex color", &m_rootVertexColor.x);

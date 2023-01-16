@@ -420,7 +420,7 @@ void RadialBoundingVolume::OnInspect() {
         auto tree = treeRef.Get<Tree>();
         if(tree)
         {
-            CopyVolume(tree->m_treeModel);
+            //CopyVolume(tree->m_treeModel);
             treeRef.Clear();
         }
     }
@@ -608,24 +608,6 @@ void RadialBoundingVolume::Augmentation(float value) {
         }
     }
 
-}
-
-void RadialBoundingVolume::CopyVolume(const TreeModel& treeModel)
-{
-    m_layerAmount = treeModel.m_treeVolume.m_layerAmount;
-    m_sectorAmount = treeModel.m_treeVolume.m_sectorAmount;
-    ResizeVolumes();
-    for (int i = 0; i < m_layerAmount; i++)
-    {
-        for (int j = 0; j < m_sectorAmount; j++)
-        {
-            m_layers[i][j].m_maxDistance = treeModel.m_treeVolume.m_layers[i][j];
-        }
-    }
-
-    m_maxHeight = treeModel.m_treeVolume.m_maxHeight;
-    GenerateMesh();
-    CalculateSizes();
 }
 
 void RadialBoundingVolume::CalculateSizes() {

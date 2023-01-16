@@ -59,6 +59,9 @@ namespace EcoSysLab
 		void GenerateMesh();
 
 		void InitializeSoilModel();
+
+		void SplitRootTestSetup();
+
 	private:
 		// member variables to avoid static variables (in case of multiple Soil instances?)
 		bool m_autoStep = false;
