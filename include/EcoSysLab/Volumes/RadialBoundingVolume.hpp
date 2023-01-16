@@ -56,7 +56,5 @@ namespace EcoSysLab {
         void Deserialize(const YAML::Node& in) override;
 
         void Augmentation(float value);
-
-        void CopyVolume(const TreeModel& treeModel);
     };
 } // namespace EcoSysLab

@@ -275,6 +275,11 @@ namespace EcoSysLab {
 	class TreeGrowthParameters {
 	public:
 		/**
+		 * \brief The growth rate. The expected internode elongation per iteration
+		 */
+		float m_growthRate;
+#pragma region Structure
+		/**
 		 * \brief The number of lateral buds an internode contains
 		 */
 		int m_lateralBudCount;
@@ -310,10 +315,7 @@ namespace EcoSysLab {
 		 * \brief The internode length
 		 */
 		float m_internodeLength;
-		/**
-		 * \brief The growth rate. The expected internode elongation per iteration
-		 */
-		float m_growthRate;
+
 		/**
 		 * \brief Thickness of end internode
 		 */
@@ -327,47 +329,6 @@ namespace EcoSysLab {
 		 */
 		float m_thicknessAccumulateAgeFactor;
 		/**
-		 * \brief Flushing prob of lateral bud related to the temperature.
-		 */
-		glm::vec4 m_lateralBudFlushingProbabilityTemperatureRange;
-		/**
-		 * \brief Flushing prob of leaf bud related to the temperature.
-		 */
-		glm::vec4 m_leafBudFlushingProbabilityTemperatureRange;
-		/**
-		 * \brief Flushing prob of fruit bud related to the temperature.
-		 */
-		glm::vec4 m_fruitBudFlushingProbabilityTemperatureRange;
-		/**
-		 * \brief The lighting factor for lateral bud flushing probability.
-		 */
-		float m_lateralBudFlushingProbabilityLightingFactor;
-		/**
-		 * \brief The lighting factor for leaf bud flushing probability.
-		 */
-		float m_leafBudFlushingProbabilityLightingFactor;
-		/**
-		 * \brief The lighting factor for fruit bud flushing probability.
-		 */
-		float m_fruitBudFlushingProbabilityLightingFactor;
-		/**
-		 * \brief Apical control base and distance decrease from root.
-		 */
-		glm::vec2 m_apicalControlBaseDistFactor;
-
-		/**
-		* \brief How much inhibitor will an internode generate.
-		*/
-		float m_apicalDominance;
-		/**
-		* \brief How much inhibitor will shrink when going through the branch.
-		*/
-		float m_apicalDominanceDistanceFactor;
-		/**
-		* \brief The probability of internode being removed.
-		*/
-		float m_budKillProbability;
-		/**
 		* \brief The limit of lateral branches being cut off when too close to the
 		* root.
 		*/
@@ -380,14 +341,89 @@ namespace EcoSysLab {
 		 * \brief The strength of gravity bending.
 		 */
 		glm::vec3 m_saggingFactorThicknessReductionMax = glm::vec3(0.8f, 1.75f, 1.0f);
+
+#pragma endregion
+#pragma region Bud fate
+		
+		
+		/**
+		 * \brief Flushing prob of lateral bud related to the temperature.
+		 */
+		glm::vec4 m_lateralBudFlushingProbabilityTemperatureRange;
+		/**
+		 * \brief Flushing prob of leaf bud related to the temperature.
+		 */
+		glm::vec4 m_leafBudFlushingProbabilityTemperatureRange;
+		/**
+		 * \brief Flushing prob of fruit bud related to the temperature.
+		 */
+		glm::vec4 m_fruitBudFlushingProbabilityTemperatureRange;
+		/**
+		 * \brief The lighting factor for apical bud elongation rate.
+		 */
+		float m_apicalBudLightingFactor;
+		/**
+		 * \brief The lighting factor for lateral bud flushing probability.
+		 */
+		float m_lateralBudLightingFactor;
+		/**
+		 * \brief The lighting factor for leaf bud flushing probability.
+		 */
+		float m_leafBudLightingFactor;
+		/**
+		 * \brief The lighting factor for fruit bud flushing probability.
+		 */
+		float m_fruitBudLightingFactor;
+		/**
+		 * \brief Apical control base
+		 */
+		float m_apicalControl;
+		/**
+		 * \brief Age influence on apical control 
+		 */
+		float m_apicalControlAgeFactor;
+		/**
+		 * \brief Distance to root influence on apical control
+		 */
+		float m_apicalControlDistanceFactor;
+		/**
+		* \brief How much inhibitor will an internode generate.
+		*/
+		float m_apicalDominance;
+		/**
+		* \brief How much inhibitor will shrink when the tree ages.
+		*/
+		float m_apicalDominanceAgeFactor;
+		/**
+		* \brief How much inhibitor will shrink when going through the branch.
+		*/
+		float m_apicalDominanceDistanceFactor;
+		/**
+		* \brief The probability of internode being removed.
+		*/
+		float m_apicalBudExtinctionRate;
+		/**
+		* \brief The probability of internode being removed.
+		*/
+		float m_lateralBudExtinctionRate;
+		/**
+		* \brief The probability of internode being removed.
+		*/
+		float m_leafBudExtinctionRate;
+		/**
+		* \brief The probability of internode being removed.
+		*/
+		float m_fruitBudExtinctionRate;
+#pragma endregion
+
 		/**
 		* \brief Base resource requirement factor for internode
 		*/
-		float m_shootBaseWaterRequirement;
+		float m_shootMaintenanceVigorRequirement;
 		/**
 		* \brief Base resource requirement factor for leaf
 		*/
-		float m_leafBaseWaterRequirement;
+		float m_leafMaintenanceVigorRequirement;
 		/**
 		* \brief Base resource requirement factor for fruit
 		*/
@@ -460,7 +496,7 @@ namespace EcoSysLab {
 
 	struct IlluminationEstimationSettings {
 		int m_probeLayerAmount = 8;
-		int m_probeCountPerLayer = 8;
+		int m_probeSectorAmount = 8;
 		float m_distanceLossMagnitude = 0.25f;
 		float m_distanceLossFactor = 1.5f;
 		float m_probeMinMaxRatio = 0.8f;
@@ -469,15 +505,15 @@ namespace EcoSysLab {
 	class TreeVolume
 	{
 	public:
-		std::vector<std::vector<float>> m_layers;
+		std::vector<float> m_distances;
+		glm::vec3 m_center = glm::vec3(0.0f);
 		int m_layerAmount = 16;
 		int m_sectorAmount = 16;
-		float m_offset = 0;
-		float m_maxHeight = 0.0f;
 		bool m_hasData = false;
-		[[nodiscard]] glm::ivec2 SelectSlice(const glm::vec3& position) const;
+		float m_offset = 0;
+		[[nodiscard]] int GetSectorIndex(const glm::vec3& position) const;
 		void Clear();
-		[[nodiscard]] glm::vec3 TipPosition(int layer, int slice) const;
+		[[nodiscard]] glm::vec3 TipPosition(int layerIndex, int sectorIndex) const;
 		void Smooth();
 		[[nodiscard]] float IlluminationEstimation(const glm::vec3& position, const IlluminationEstimationSettings& settings, glm::vec3& lightDirection) const;
 	};

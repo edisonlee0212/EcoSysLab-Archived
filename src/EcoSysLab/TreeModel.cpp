@@ -26,132 +26,122 @@ void ApplyTropism(const glm::vec3& targetDir, float tropism, glm::quat& rotation
 	rotation = glm::quatLookAt(front, up);
 }
 
-glm::ivec2 TreeVolume::SelectSlice(const glm::vec3& position) const
+int TreeVolume::GetSectorIndex(const glm::vec3& position) const
 {
-	glm::ivec2 retVal;
-	const float heightLevel = m_maxHeight / m_layerAmount;
-	const float sliceAngle = 360.0f / m_sectorAmount;
-	auto x = static_cast<int>(position.y / heightLevel);
-	if (x < 0)
-		x = 0;
-	retVal.x = x;
-	if (retVal.x >= m_layerAmount)
-		retVal.x = m_layerAmount - 1;
-	if (position.x == 0.0f && position.z == 0.0f)
-		retVal.y = 0;
-	else
-		retVal.y = static_cast<int>(
-			(glm::degrees(glm::atan(position.x, position.z)) + 180.0f) /
-			sliceAngle);
-	if (retVal.y >= m_sectorAmount)
-		retVal.y = m_sectorAmount - 1;
-	return retVal;
+	const float layerAngle = 180.0f / m_layerAmount;
+	const float sectorAngle = 360.0f / m_sectorAmount;
+
+	const auto v = position - m_center;
+	if (glm::abs(v.x + v.z) < 0.000001f) return 0;
+	const auto dot = glm::dot(glm::normalize(v), glm::vec3(0, 1, 0));
+	const auto rd = glm::degrees(glm::acos(dot));
+	const int layerIndex = rd / layerAngle;
+	const int sectorIndex = (glm::degrees(glm::atan(v.x, v.z)) + 180.0f) / sectorAngle;
+	return glm::clamp(layerIndex * m_sectorAmount + sectorIndex, 0, m_layerAmount * m_sectorAmount - 1);
 }
 
 void TreeVolume::Clear()
 {
-	m_layers.resize(m_layerAmount);
-	for (auto& layer : m_layers)
+	m_center = glm::vec3(0.0f);
+	m_distances.resize(m_layerAmount * m_sectorAmount);
+	for (auto& distance : m_distances)
 	{
-		layer.resize(m_sectorAmount);
-		for (auto& distance : layer)
-		{
-			distance = -1;
-		}
+		distance = -1;
 	}
-	m_maxHeight = 0.0f;
 	m_hasData = false;
-
 }
 
-glm::vec3 TreeVolume::TipPosition(int layer, int slice) const
+glm::vec3 TreeVolume::TipPosition(int layerIndex, int sectorIndex) const
 {
-	const float heightLevel = m_maxHeight / m_layerAmount;
-	glm::vec3 retVal;
-	retVal.y = heightLevel * (0.5f + layer);
-	const float sliceAngle = 360.0f / m_sectorAmount;
-	const auto& target = m_layers[layer][slice];
-	retVal.x = target * glm::sin(glm::radians(sliceAngle * slice + 180.0f));
-	retVal.z = target * glm::cos(glm::radians(sliceAngle * slice + 180.0f));
+	glm::vec3 retVal = m_center;
+	const float layerAngle = glm::radians(180.0f / m_layerAmount * layerIndex);
+	const float sectorAngle = glm::radians(360.0f / m_sectorAmount * sectorIndex);
+
+	const auto& distance = m_distances[layerIndex * m_sectorAmount + sectorIndex];
+	if (distance < 0.0f) return m_center;
+	retVal.y += glm::cos(layerAngle) * distance;
+	retVal.x -= glm::sin(layerAngle) * distance * glm::cos(sectorAngle + glm::radians(270.0f));
+	retVal.z += glm::sin(layerAngle) * distance * glm::sin(sectorAngle + glm::radians(270.0f));
+	
 	return retVal;
 }
 
 void TreeVolume::Smooth()
 {
-	auto copy = m_layers;
+	auto copy = m_distances;
 	for (int i = 0; i < m_layerAmount; i++)
 	{
 		for (int j = 0; j < m_sectorAmount; j++)
 		{
 			int count = 0;
 			float sum = 0.0f;
-			if (m_layers[i][j] != -1) continue;
+			if (m_distances[i * m_sectorAmount + j] != -1) continue;
 			if (i > 0) {
-				if (m_layers[i - 1][(j + m_sectorAmount - 1) % m_sectorAmount] != -1)
+				if (m_distances[(i - 1) * m_sectorAmount + (j + m_sectorAmount - 1) % m_sectorAmount] != -1)
 				{
 					count++;
-					sum += m_layers[i - 1][(j + m_sectorAmount - 1) % m_sectorAmount];
+					sum += m_distances[(i - 1) * m_sectorAmount + (j + m_sectorAmount - 1) % m_sectorAmount];
 				}
-				if (m_layers[i - 1][j] != -1)
+				if (m_distances[(i - 1) * m_sectorAmount + j] != -1)
 				{
 					count++;
-					sum += m_layers[i - 1][j];
+					sum += m_distances[(i - 1) * m_sectorAmount + j];
 				}
-				if (m_layers[i - 1][(j + 1) % m_sectorAmount] != -1)
+				if (m_distances[(i - 1) * m_sectorAmount + (j + 1) % m_sectorAmount] != -1)
 				{
 					count++;
-					sum += m_layers[i - 1][(j + 1) % m_sectorAmount];
+					sum += m_distances[(i - 1) * m_sectorAmount + (j + 1) % m_sectorAmount];
 				}
 			}
-			if (m_layers[i][(j + m_sectorAmount - 1) % m_sectorAmount] != -1)
+			if (m_distances[i * m_sectorAmount + (j + m_sectorAmount - 1) % m_sectorAmount] != -1)
 			{
 				count++;
-				sum += m_layers[i][(j + m_sectorAmount - 1) % m_sectorAmount];
+				sum += m_distances[i * m_sectorAmount + (j + m_sectorAmount - 1) % m_sectorAmount];
 			}
-			if (m_layers[i][(j + 1) % m_sectorAmount] != -1)
+			if (m_distances[i * m_sectorAmount + (j + 1) % m_sectorAmount] != -1)
 			{
 				count++;
-				sum += m_layers[i][(j + 1) % m_sectorAmount];
+				sum += m_distances[i * m_sectorAmount + (j + 1) % m_sectorAmount];
 			}
 			if (i < m_layerAmount - 1) {
-				if (m_layers[i + 1][(j + m_sectorAmount - 1) % m_sectorAmount] != -1)
+				if (m_distances[(i + 1) * m_sectorAmount + (j + m_sectorAmount - 1) % m_sectorAmount] != -1)
 				{
 					count++;
-					sum += m_layers[i + 1][(j + m_sectorAmount - 1) % m_sectorAmount];
+					sum += m_distances[(i + 1) * m_sectorAmount + (j + m_sectorAmount - 1) % m_sectorAmount];
 				}
-				if (m_layers[i + 1][j] != -1)
+				if (m_distances[(i + 1) * m_sectorAmount + j] != -1)
 				{
 					count++;
-					sum += m_layers[i + 1][j];
+					sum += m_distances[(i + 1) * m_sectorAmount + j];
 				}
-				if (m_layers[i + 1][(j + 1) % m_sectorAmount] != -1)
+				if (m_distances[(i + 1) * m_sectorAmount + (j + 1) % m_sectorAmount] != -1)
 				{
 					count++;
-					sum += m_layers[i + 1][(j + 1) % m_sectorAmount];
+					sum += m_distances[(i + 1) * m_sectorAmount + (j + 1) % m_sectorAmount];
 				}
 			}
-			if (count != 0) copy[i][j] = sum / count;
+			if (count != 0) copy[i * m_sectorAmount + j] = sum / count;
 			else
 			{
-				copy[i][j] = 0;
+				copy[i * m_sectorAmount + j] = 0;
 			}
 		}
 	}
-	m_layers = copy;
+	m_distances = copy;
 }
 
 float TreeVolume::IlluminationEstimation(const glm::vec3& position,
 	const IlluminationEstimationSettings& settings, glm::vec3& lightDirection) const
 {
-	if (!m_hasData || m_layers.empty()) return 1.0f;
-	std::vector<std::vector<std::pair<float, int>>> probes;
+	if (!m_hasData || m_distances.empty()) return 1.0f;
+	std::vector<std::pair<float, int>> probes;
 	const float layerAngle = 180.0f / settings.m_probeLayerAmount;
-	const float sectorAngle = 360.0f / settings.m_probeCountPerLayer;
-	probes.resize(settings.m_probeLayerAmount);
+	const float sectorAngle = 360.0f / settings.m_probeSectorAmount;
+	const auto maxSectorIndex = settings.m_probeLayerAmount * settings.m_probeSectorAmount - 1;
+	probes.resize(settings.m_probeLayerAmount * settings.m_probeSectorAmount);
 	for (auto& probeLayer : probes)
 	{
-		probeLayer.resize(settings.m_probeCountPerLayer);
-		for (auto& i : probeLayer) i = { 0.0, 0 };
+		probeLayer = { 0.0, 0 };
 	}
 	for (int i = 0; i < m_layerAmount; i++)
 	{
@@ -160,126 +150,130 @@ float TreeVolume::IlluminationEstimation(const glm::vec3& position,
 			auto tipPosition = TipPosition(i, j);
 			const float distance = glm::distance(position, tipPosition);
 			auto diff = tipPosition - position;
-			if (diff.x == 0 && diff.z == 0) continue;
-			const auto dot = glm::clamp(glm::dot(glm::normalize(diff), glm::normalize(glm::vec3(diff.x, 0.0f, diff.z))), 0.0f, 1.0f);
-			const auto rd = glm::acos(dot);
-			const int layerOffset = glm::degrees(rd) / layerAngle;
-			int probeLayerIndex = diff.y > 0 ? settings.m_probeLayerAmount / 2 - layerOffset : layerOffset + settings.m_probeLayerAmount / 2;
-			int probeSectorIndex = glm::degrees(glm::atan(diff.x, diff.z)) / sectorAngle;
-			if (probeLayerIndex < 0) probeLayerIndex += settings.m_probeLayerAmount;
-			if (probeSectorIndex < 0) probeSectorIndex += settings.m_probeCountPerLayer;
-			probeLayerIndex = probeLayerIndex % settings.m_probeLayerAmount;
-			probeSectorIndex = probeSectorIndex % settings.m_probeCountPerLayer;
-			probes[probeLayerIndex][probeSectorIndex].first += distance;
-			probes[probeLayerIndex][probeSectorIndex].second += 1;
+			if (glm::abs(diff.x + diff.z) < 0.000001f) continue;
+			const auto dot = glm::dot(glm::normalize(diff), glm::vec3(0, 1, 0));
+			const auto rd = glm::degrees(glm::acos(dot));
+			const int probeLayerIndex = rd / layerAngle;
+			const int probeSectorIndex = (glm::degrees(glm::atan(diff.x, diff.z)) + 180.0f) / sectorAngle;
+			auto& probe = probes[glm::clamp(probeLayerIndex * settings.m_probeSectorAmount + probeSectorIndex, 0, maxSectorIndex)];
+			probe.first += distance;
+			probe.second += 1;
 		}
 	}
 
-	std::vector<std::vector<float>> probeAvg;
-	probeAvg.resize(settings.m_probeLayerAmount);
+	std::vector<float> probeAvg;
+	probeAvg.resize(settings.m_probeLayerAmount * settings.m_probeSectorAmount);
 	for (int i = 0; i < settings.m_probeLayerAmount; i++)
 	{
-		probeAvg[i].resize(settings.m_probeCountPerLayer);
-		for (int j = 0; j < settings.m_probeCountPerLayer; j++)
+		for (int j = 0; j < settings.m_probeSectorAmount; j++)
 		{
-			const auto& probe = probes[i][j];
+			const auto index = i * settings.m_probeSectorAmount + j;
+			const auto& probe = probes[index];
 			if (probe.second == 0)
 			{
-				probeAvg[i][j] = -1;
+				probeAvg[index] = -1;
 			}
 			else {
-				probeAvg[i][j] = probe.first / probe.second;
+				probeAvg[index] = probe.first / probe.second;
 			}
 		}
 	}
 	{
 		for (int i = 0; i < settings.m_probeLayerAmount; i++)
 		{
-			for (int j = 0; j < settings.m_probeCountPerLayer; j++)
+			for (int j = 0; j < settings.m_probeSectorAmount; j++)
 			{
-				if (probeAvg[i][j] == -1) {
+
+				if (probeAvg[i * settings.m_probeSectorAmount + j] == -1) {
 					int count = 0;
 					float sum = 0.0f;
 
 					if (i > 1) {
 						/*
-						if (probeAvg[i - 1][(j + settings.m_probeCountPerLayer - 1) % settings.m_probeCountPerLayer] != -1)
+						if (probeAvg[i - 1][(j + settings.m_probeSectorAmount - 1) % settings.m_probeSectorAmount] != -1)
 						{
 							count++;
-							sum += probeAvg[i - 1][(j + settings.m_probeCountPerLayer - 1) % settings.m_probeCountPerLayer];
+							sum += probeAvg[i - 1][(j + settings.m_probeSectorAmount - 1) % settings.m_probeSectorAmount];
 						}
 						*/
-						if (probeAvg[i - 1][j] != -1)
+						if (probeAvg[(i - 1) *settings.m_probeSectorAmount + j] != -1)
 						{
 							count++;
-							sum += probeAvg[i - 1][j];
+							sum += probeAvg[(i - 1) * settings.m_probeSectorAmount + j];
 						}
 						/*
-						if (probeAvg[i - 1][(j + 1) % settings.m_probeCountPerLayer] != -1)
+						if (probeAvg[i - 1][(j + 1) % settings.m_probeSectorAmount] != -1)
 						{
 							count++;
-							sum += probeAvg[i - 1][(j + 1) % settings.m_probeCountPerLayer];
+							sum += probeAvg[i - 1][(j + 1) % settings.m_probeSectorAmount];
 						}
 						*/
 					}
 
-					if (probeAvg[i][(j + settings.m_probeCountPerLayer - 1) % settings.m_probeCountPerLayer] != -1)
+					if (probeAvg[i * settings.m_probeSectorAmount + (j + settings.m_probeSectorAmount - 1) % settings.m_probeSectorAmount] != -1)
 					{
 						count++;
-						sum += probeAvg[i][(j + settings.m_probeCountPerLayer - 1) % settings.m_probeCountPerLayer];
+						sum += probeAvg[i * settings.m_probeSectorAmount + (j + settings.m_probeSectorAmount - 1) % settings.m_probeSectorAmount];
 					}
 
-					if (probeAvg[i][(j + 1) % settings.m_probeCountPerLayer] != -1)
+					if (probeAvg[i * settings.m_probeSectorAmount + (j + 1) % settings.m_probeSectorAmount] != -1)
 					{
 						count++;
-						sum += probeAvg[i][(j + 1) % settings.m_probeCountPerLayer];
+						sum += probeAvg[i * settings.m_probeSectorAmount + (j + 1) % settings.m_probeSectorAmount];
 					}
 
 					if (i < settings.m_probeLayerAmount - 1) {
 						/*
-						if (probeAvg[i + 1][(j + settings.m_probeCountPerLayer - 1) % settings.m_probeCountPerLayer] != -1)
+						if (probeAvg[i + 1][(j + settings.m_probeSectorAmount - 1) % settings.m_probeSectorAmount] != -1)
 						{
 							count++;
-							sum += probeAvg[i + 1][(j + settings.m_probeCountPerLayer - 1) % settings.m_probeCountPerLayer];
+							sum += probeAvg[i + 1][(j + settings.m_probeSectorAmount - 1) % settings.m_probeSectorAmount];
 						}
 						*/
-						if (probeAvg[i + 1][j] != -1)
+						if (probeAvg[(i + 1) * settings.m_probeSectorAmount + j] != -1)
 						{
 							count++;
-							sum += probeAvg[i + 1][j];
+							sum += probeAvg[(i + 1) * settings.m_probeSectorAmount + j];
 						}
 						/*
-						if (probeAvg[i + 1][(j + 1) % settings.m_probeCountPerLayer] != -1)
+						if (probeAvg[i + 1][(j + 1) % settings.m_probeSectorAmount] != -1)
 						{
 							count++;
-							sum += probeAvg[i + 1][(j + 1) % settings.m_probeCountPerLayer];
+							sum += probeAvg[i + 1][(j + 1) % settings.m_probeSectorAmount];
 						}
 						*/
 					}
-					if (count != 0) probeAvg[i][j] = sum / count;
-					else probeAvg[i][j] = 0;
+					if (count != 0) probeAvg[i * settings.m_probeSectorAmount + j] = sum / count;
+					else probeAvg[i * settings.m_probeSectorAmount + j] = 0;
 				}
 			}
 		}
 	}
 
-	float loss = 0.0f;
+	float lightIntensity = 0.0f;
 	float ratio = 1.0f;
 	float ratioSum = 0.0f;
-	glm::vec3 direction = glm::vec3(0.0f);
+	auto direction = glm::vec3(0.0f);
 	for (int i = 0; i < settings.m_probeLayerAmount; i++)
 	{
-		ratioSum += ratio;
-		for (int j = 0; j < settings.m_probeCountPerLayer; j++)
+		for (int j = 0; j < settings.m_probeSectorAmount; j++)
 		{
-			direction += glm::quat(glm::radians(glm::vec3(0, j * sectorAngle + 180.0f, i * layerAngle - 90.0f))) * glm::vec3(0.0f, 0.0f, 1.0f) * probeAvg[i][j];
-			loss += ratio * glm::clamp(settings.m_distanceLossMagnitude * glm::pow(probeAvg[i][j], settings.m_distanceLossFactor), 0.0f, 1.0f);
+			ratioSum += ratio;
+
+			glm::vec3 lightDir = glm::vec3(0.0f);
+			lightDir.y += glm::cos(glm::radians(i * layerAngle));
+			lightDir.x -= glm::sin(glm::radians(i * layerAngle)) * glm::cos(glm::radians(j * sectorAngle + 270.0f));
+			lightDir.z += glm::sin(glm::radians(i * layerAngle)) * glm::sin(glm::radians(j * sectorAngle + 270.0f));
+			
+			float sectorLightIntensity = ratio * (1.0f - glm::clamp(settings.m_distanceLossMagnitude * glm::pow(probeAvg[i * settings.m_probeSectorAmount + j], settings.m_distanceLossFactor), 0.0f, 1.0f));
+			lightIntensity += sectorLightIntensity;
+			direction += sectorLightIntensity * lightDir;
 		}
 		ratio *= settings.m_probeMinMaxRatio;
 	}
-	lightDirection = -glm::normalize(direction);
-	loss = loss / ratioSum / settings.m_probeCountPerLayer;
-	return glm::clamp(1.0f - loss, 0.0f, 1.0f);
+	lightDirection = glm::normalize(direction);
+	lightIntensity = lightIntensity / ratioSum;
+	return lightIntensity;
 }
 
 bool TreeModel::ElongateRoot(SoilModel& soilModel, const float extendLength, NodeHandle rootNodeHandle, const RootGrowthParameters& rootGrowthParameters,
@@ -429,8 +423,6 @@ void TreeModel::CalculateThickness(NodeHandle rootNodeHandle, const RootGrowthPa
 	rootNodeData.m_descendentTotalBiomass = 0;
 	float maxDistanceToAnyBranchEnd = 0;
 	float childThicknessCollection = 0.0f;
-	NodeHandle maxChildHandle = -1;
-	float maxSubTreeBiomass = -1.0f;
 	std::set<float> thicknessCollection;
 	for (const auto& i : rootNode.RefChildHandles()) {
 		auto& childInternode = m_rootSkeleton.RefNode(i);
@@ -482,11 +474,11 @@ bool TreeModel::ElongateInternode(float extendLength, NodeHandle internodeHandle
 	const TreeGrowthParameters& parameters, float& collectedInhibitor) {
 	bool graphChanged = false;
 	auto& internode = m_branchSkeleton.RefNode(internodeHandle);
-	auto internodeLength = parameters.m_internodeLength;
+	const auto internodeLength = parameters.m_internodeLength;
 	auto& internodeData = internode.m_data;
 	auto& internodeInfo = internode.m_info;
 	internodeInfo.m_length += extendLength;
-	float extraLength = internodeInfo.m_length - internodeLength;
+	const float extraLength = internodeInfo.m_length - internodeLength;
 	auto& apicalBud = internodeData.m_buds.front();
 	//If we need to add a new end node
 	if (extraLength > 0) {
@@ -498,7 +490,7 @@ bool TreeModel::ElongateInternode(float extendLength, NodeHandle internodeHandle
 		auto desiredGlobalUp = desiredGlobalRotation * glm::vec3(0, 1, 0);
 		ApplyTropism(-m_currentGravityDirection, parameters.m_gravitropism, desiredGlobalFront,
 			desiredGlobalUp);
-		ApplyTropism(-internodeData.m_lightDirection, parameters.m_phototropism,
+		ApplyTropism(internodeData.m_lightDirection, parameters.m_phototropism,
 			desiredGlobalFront, desiredGlobalUp);
 		//Allocate Lateral bud for current internode
 		{
@@ -541,12 +533,12 @@ bool TreeModel::ElongateInternode(float extendLength, NodeHandle internodeHandle
 			}
 		}
 		//Create new internode
-		auto newInternodeHandle = m_branchSkeleton.Extend(internodeHandle, false, m_branchSkeleton.RefFlow(internode.GetFlowHandle()).RefNodeHandles().size() > m_flowNodeLimit);
-		auto& oldInternode = m_branchSkeleton.RefNode(internodeHandle);
+		const auto newInternodeHandle = m_branchSkeleton.Extend(internodeHandle, false, m_branchSkeleton.RefFlow(internode.GetFlowHandle()).RefNodeHandles().size() > m_flowNodeLimit);
+		const auto& oldInternode = m_branchSkeleton.RefNode(internodeHandle);
 		auto& newInternode = m_branchSkeleton.RefNode(newInternodeHandle);
 		newInternode.m_data = {};
 		newInternode.m_data.m_lateral = false;
-		newInternode.m_data.m_inhibitorTarget = newInternode.m_data.m_inhibitor = parameters.m_apicalDominance;
+		newInternode.m_data.m_inhibitorTarget = newInternode.m_data.m_inhibitor = 0.0f;
 		newInternode.m_info.m_length = glm::clamp(extendLength, 0.0f, internodeLength);
 		newInternode.m_info.m_thickness = parameters.m_endNodeThickness;
 		newInternode.m_info.m_globalRotation = glm::quatLookAt(desiredGlobalFront, desiredGlobalUp);
@@ -569,12 +561,13 @@ bool TreeModel::ElongateInternode(float extendLength, NodeHandle internodeHandle
 			m_branchSkeleton.RefNode(newInternodeHandle).m_data.m_inhibitorTarget = childInhibitor;
 		}
 		else {
-			collectedInhibitor += parameters.m_apicalDominance;
+			newInternode.m_data.m_inhibitorTarget = newInternode.m_data.m_inhibitor = parameters.m_apicalDominance;
+			collectedInhibitor += newInternode.m_data.m_inhibitor *= parameters.m_apicalDominanceDistanceFactor;
 		}
 	}
 	else {
 		//Otherwise, we add the inhibitor.
-		collectedInhibitor += parameters.m_apicalDominance;
+		collectedInhibitor += parameters.m_apicalDominance * glm::pow(parameters.m_apicalDominanceAgeFactor, parameters.m_growthRate * internodeData.m_age);
 	}
 	return graphChanged;
 }
@@ -602,7 +595,7 @@ void TreeModel::CollectShootFlux(ClimateModel& climateModel,
 			}
 		}
 	}
-	if (!m_collectLight) m_plantGrowthNutrients.m_shootFlux = m_shootGrowthRequirement.m_vigor;
+	if (!m_collectLight) m_plantGrowthNutrients.m_shootFlux = m_shootGrowthRequirement.m_vigor + m_rootGrowthRequirement.m_vigor;
 }
 
 bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHandle, const TreeGrowthParameters& treeGrowthParameters) {
@@ -622,12 +615,12 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 		auto& internodeData = internode.m_data;
 		auto& internodeInfo = internode.m_info;
 
-		auto killProbability = treeGrowthParameters.m_growthRate * treeGrowthParameters.m_budKillProbability;
-		if (internodeData.m_rootDistance < 1.0f) killProbability = 0.0f;
-		if (bud.m_status == BudStatus::Dormant && killProbability > glm::linearRand(0.0f, 1.0f)) {
-			bud.m_status = BudStatus::Removed;
-		}
-		if (bud.m_status == BudStatus::Removed) continue;
+		//auto killProbability = treeGrowthParameters.m_growthRate * treeGrowthParameters.m_budKillProbability;
+		//if (internodeData.m_rootDistance < 1.0f) killProbability = 0.0f;
+		//if (bud.m_status == BudStatus::Dormant && killProbability > glm::linearRand(0.0f, 1.0f)) {
+		//	bud.m_status = BudStatus::Removed;
+		//}
+		//if (bud.m_status == BudStatus::Removed) continue;
 
 		const float baseWater = glm::clamp(bud.m_allocatedVigor, 0.0f, bud.m_maintenanceVigorRequirement);
 		bud.m_drought = glm::clamp(1.0f - (1.0f - bud.m_drought) * baseWater / bud.m_maintenanceVigorRequirement, 0.0f, 1.0f);
@@ -647,7 +640,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 			float flushProbability = treeGrowthParameters.m_growthRate * glm::mix(probabilityRange.x, probabilityRange.y,
 				glm::clamp((internodeData.m_temperature - probabilityRange.z) / (probabilityRange.w - probabilityRange.z), 0.0f, 1.0f));
 			flushProbability *= glm::clamp(1.0f - internodeData.m_inhibitor, 0.0f, 1.0f);
-			flushProbability *= glm::pow(internodeData.m_lightIntensity, treeGrowthParameters.m_lateralBudFlushingProbabilityLightingFactor);
+			flushProbability *= glm::pow(internodeData.m_lightIntensity, treeGrowthParameters.m_lateralBudLightingFactor);
 			if (flushProbability >= glm::linearRand(0.0f, 1.0f)) {
 				graphChanged = true;
 				bud.m_status = BudStatus::Flushed;
@@ -698,7 +691,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 				const auto& probabilityRange = treeGrowthParameters.m_fruitBudFlushingProbabilityTemperatureRange;
 				float flushProbability = treeGrowthParameters.m_growthRate * glm::mix(probabilityRange.x, probabilityRange.y,
 					glm::clamp((internodeData.m_temperature - probabilityRange.z) / (probabilityRange.w - probabilityRange.z), 0.0f, 1.0f));
-				flushProbability *= glm::pow(internodeData.m_lightIntensity, treeGrowthParameters.m_fruitBudFlushingProbabilityLightingFactor);
+				flushProbability *= glm::pow(internodeData.m_lightIntensity, treeGrowthParameters.m_fruitBudLightingFactor);
 				if (flushProbability >= glm::linearRand(0.0f, 1.0f))
 				{
 					bud.m_status = BudStatus::Flushed;
@@ -728,7 +721,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 				const auto& probabilityRange = treeGrowthParameters.m_fruitBudFlushingProbabilityTemperatureRange;
 				float flushProbability = treeGrowthParameters.m_growthRate * glm::mix(probabilityRange.x, probabilityRange.y,
 					glm::clamp((internodeData.m_temperature - probabilityRange.z) / (probabilityRange.w - probabilityRange.z), 0.0f, 1.0f));
-				flushProbability *= glm::pow(internodeData.m_lightIntensity, treeGrowthParameters.m_leafBudFlushingProbabilityLightingFactor);
+				flushProbability *= glm::pow(internodeData.m_lightIntensity, treeGrowthParameters.m_leafBudLightingFactor);
 				if (internodeData.m_maxDistanceToAnyBranchEnd < treeGrowthParameters.m_leafDistanceToBranchEndLimit && flushProbability >= glm::linearRand(0.0f, 1.0f))
 				{
 					bud.m_status = BudStatus::Flushed;
@@ -938,6 +931,7 @@ void TreeModel::CalculateVigorRequirement(const TreeGrowthParameters& treeGrowth
 	for (const auto& internodeHandle : sortedInternodeList) {
 		auto& internode = m_branchSkeleton.RefNode(internodeHandle);
 		auto& internodeData = internode.m_data;
+		internodeData.m_maintenanceVigorRequirement = 0.0f;
 		internodeData.m_developmentalVigorRequirement = 0.0f;
 		internodeData.m_subtreeTotalVigorRequirement = 0.0f;
 		const auto growthRate = treeGrowthParameters.m_growthRate;
@@ -949,14 +943,14 @@ void TreeModel::CalculateVigorRequirement(const TreeGrowthParameters& treeGrowth
 			}
 			switch (bud.m_type) {
 			case BudType::Apical: {
-				bud.m_maintenanceVigorRequirement = treeGrowthParameters.m_shootBaseWaterRequirement;
+				bud.m_maintenanceVigorRequirement = treeGrowthParameters.m_shootMaintenanceVigorRequirement;
 				if (bud.m_status == BudStatus::Dormant) {
 					//Elongation
 					bud.m_developmentVigorRequirement = treeGrowthParameters.m_shootProductiveWaterRequirement;
 				}
 			}break;
 			case BudType::Leaf: {
-				bud.m_maintenanceVigorRequirement = treeGrowthParameters.m_leafBaseWaterRequirement;
+				bud.m_maintenanceVigorRequirement = treeGrowthParameters.m_leafMaintenanceVigorRequirement;
 				bud.m_developmentVigorRequirement = treeGrowthParameters.m_leafProductiveWaterRequirement;
 			}break;
 			case BudType::Fruit: {
@@ -1070,33 +1064,34 @@ bool TreeModel::GrowShoots(const glm::mat4& globalTransform, ClimateModel& clima
 		SampleTemperature(globalTransform, climateModel);
 		CalculateVigorRequirement(treeGrowthParameters, newTreeGrowthRequirement);
 		m_treeVolume.Clear();
-		m_treeVolume.m_maxHeight = m_branchSkeleton.m_max.y - m_branchSkeleton.m_min.y;
-		for (const auto& internodeHandle : sortedInternodeList)
+		if (!sortedInternodeList.empty())
 		{
-			auto& internode = m_branchSkeleton.RefNode(internodeHandle);
-			auto& internodeInfo = internode.m_info;
-			const auto& point1 = internodeInfo.m_globalPosition;
+			m_treeVolume.m_center = (m_branchSkeleton.m_max + m_branchSkeleton.m_min) * 0.5f;
+			for (const auto& internodeHandle : sortedInternodeList)
 			{
-				const auto sliceIndex = m_treeVolume.SelectSlice(point1);
-				const float currentDistance =
-					glm::length(glm::vec2(point1.x, point1.z));
-				auto& slice = m_treeVolume.m_layers[sliceIndex.x][sliceIndex.y];
-				if (slice <
-					currentDistance + m_treeVolume.m_offset)
-					slice = currentDistance + m_treeVolume.m_offset;
+				auto& internode = m_branchSkeleton.RefNode(internodeHandle);
+				auto& internodeInfo = internode.m_info;
+				const auto& point1 = internodeInfo.m_globalPosition;
+				{
+					const auto sectorIndex = m_treeVolume.GetSectorIndex(point1);
+					const float currentDistance = glm::length(point1 - m_treeVolume.m_center);
+					auto& distance = m_treeVolume.m_distances[sectorIndex];
+					if (distance <
+						currentDistance + m_treeVolume.m_offset)
+						distance = currentDistance + m_treeVolume.m_offset;
+				}
+				{
+					auto point2 = point1 + internodeInfo.m_length * (internodeInfo.m_globalRotation * glm::vec3(0, 0, -1));
+					const auto sectorIndex = m_treeVolume.GetSectorIndex(point2);
+					const float currentDistance = glm::length(point2 - m_treeVolume.m_center);
+					auto& distance = m_treeVolume.m_distances[sectorIndex];
+					if (distance <
+						currentDistance + m_treeVolume.m_offset)
+						distance = currentDistance + m_treeVolume.m_offset;
+				}
 			}
-			{
-				auto point2 = point1 + internodeInfo.m_length * (internodeInfo.m_globalRotation * glm::vec3(0, 0, -1));
-				const auto sliceIndex = m_treeVolume.SelectSlice(point2);
-				const float currentDistance =
-					glm::length(glm::vec2(point2.x, point2.z));
-				auto& slice = m_treeVolume.m_layers[sliceIndex.x][sliceIndex.y];
-				if (slice <
-					currentDistance + m_treeVolume.m_offset)
-					slice = currentDistance + m_treeVolume.m_offset;
-			}
+			//m_treeVolume.Smooth();
 		}
-		m_treeVolume.Smooth();
 		m_treeVolume.m_hasData = true;
 	};
 
@@ -1427,11 +1422,11 @@ bool TreeModel::Grow(const glm::mat4& globalTransform, SoilModel& soilModel, Cli
 	//Grow roots and set up nutrient requirements for next iteration.
 	TreeGrowthRequirement newShootGrowthRequirement;
 	TreeGrowthRequirement newRootGrowthRequirement;
-	if (GrowRoots(globalTransform, soilModel, rootGrowthParameters, newRootGrowthRequirement)) {
+	if (rootGrowthParameters.m_growthRate != 0 && GrowRoots(globalTransform, soilModel, rootGrowthParameters, newRootGrowthRequirement)) {
 		rootStructureChanged = true;
 	}
 	//Grow branches and set up nutrient requirements for next iteration.
-	if (GrowShoots(globalTransform, climateModel, treeGrowthParameters, newShootGrowthRequirement)) {
+	if (treeGrowthParameters.m_growthRate != 0 && GrowShoots(globalTransform, climateModel, treeGrowthParameters, newShootGrowthRequirement)) {
 		treeStructureChanged = true;
 	}
 	//Set new growth nutrients requirement for next iteration.
@@ -1556,17 +1551,17 @@ TreeGrowthParameters::TreeGrowthParameters() {
 	m_leafBudFlushingProbabilityTemperatureRange = glm::vec4(0.0f, 1.0f, 45.0f, 60.0f);
 	m_fruitBudFlushingProbabilityTemperatureRange = glm::vec4(0.0f, 1.0f, 50.0f, 70.0f);
 
-	m_lateralBudFlushingProbabilityLightingFactor = 1.0f;
-	m_leafBudFlushingProbabilityLightingFactor = 1.0f;
-	m_fruitBudFlushingProbabilityLightingFactor = 1.0f;
+	m_lateralBudLightingFactor = 1.0f;
+	m_leafBudLightingFactor = 1.0f;
+	m_fruitBudLightingFactor = 1.0f;
 
-	m_apicalControlBaseDistFactor = { 1.05f, 0.95f };
+	//m_apicalControlBaseDistFactor = { 1.05f, 0.95f };
 	m_apicalDominance = 1.5;
 	m_apicalDominanceDistanceFactor = 0.95f;
-	m_budKillProbability = 0.00f;
+	//m_budKillProbability = 0.00f;
 
-	m_shootBaseWaterRequirement = 1.0f;
-	m_leafBaseWaterRequirement = 1.0f;
+	m_shootMaintenanceVigorRequirement = 1.0f;
+	m_leafMaintenanceVigorRequirement = 1.0f;
 	m_fruitBaseWaterRequirement = 1.0f;
 	m_shootProductiveWaterRequirement = 1.0f;
 	m_leafProductiveWaterRequirement = 1.0f;
@@ -1617,9 +1612,9 @@ float TreeGrowthParameters::GetDesiredApicalAngle(const Node<InternodeGrowthData
 }
 
 float TreeGrowthParameters::GetApicalControlFactor(const Node<InternodeGrowthData>& internode) const {
-	return glm::pow(m_apicalControlBaseDistFactor.x, glm::max(1.0f, 1.0f /
-		internode.m_data.m_rootDistance *
-		m_apicalControlBaseDistFactor.y));
+	const float ageDecrease = glm::pow(m_apicalControlAgeFactor, internode.m_data.m_age * m_growthRate);
+	const float distDecrease = glm::pow(m_apicalControlDistanceFactor, internode.m_data.m_rootDistance);
+	return m_apicalControl * ageDecrease * distDecrease;
 }
 
 float TreeGrowthParameters::GetSagging(const Node<InternodeGrowthData>& internode) const {

@@ -360,7 +360,7 @@ namespace EcoSysLab {
         SetParentNode(newNodeHandle, targetHandle);
         auto &originalNode = m_nodes[targetHandle];
         auto &newNode = m_nodes[newNodeHandle];
-
+        originalNode.m_endNode = false;
         if (branching) {
             auto newFlowHandle = AllocateFlow();
             auto &newFlow = m_flows[newFlowHandle];
@@ -394,19 +394,17 @@ namespace EcoSysLab {
                 SetParentFlow(extendedFlowHandle, originalNode.m_flowHandle);
             }
             SetParentFlow(newFlowHandle, originalNode.m_flowHandle);
-        }else if(breakFlow)
+        }
+    	else if(breakFlow)
         {
-            originalNode.m_endNode = false;
             auto newFlowHandle = AllocateFlow();
             auto& newFlow = m_flows[newFlowHandle];
-
             newNode.m_flowHandle = newFlowHandle;
             newFlow.m_nodes.emplace_back(newNodeHandle);
             newFlow.m_apical = true;
             SetParentFlow(newFlowHandle, originalNode.m_flowHandle);
         }
     	else {
-            originalNode.m_endNode = false;
             flow.m_nodes.emplace_back(newNodeHandle);
             newNode.m_flowHandle = originalNode.m_flowHandle;
         }
@@ -608,7 +606,7 @@ namespace EcoSysLab {
                 children[i] = children.back();
                 children.pop_back();
                 childNode.m_parentHandle = -1;
-                if (children.size() == 1) targetNode.m_endNode = true;
+                if (children.empty()) targetNode.m_endNode = true;
                 return;
             }
         }
