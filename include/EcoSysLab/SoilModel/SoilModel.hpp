@@ -4,11 +4,15 @@
 #include <vector>
 #include <functional>
 #include <random>
+#include <valarray>
 #include "ecosyslab_export.h"
 
 using namespace UniEngine;
 
 namespace EcoSysLab {
+
+	using Field = std::valarray<float>;
+
 	class SoilParameters;
 
 	class SoilModel {
@@ -25,10 +29,12 @@ namespace EcoSysLab {
 		[[nodiscard]] float GetWater(const glm::vec3& position) const;
 		[[nodiscard]] float GetDensity(const glm::vec3& position) const;
 		[[nodiscard]] float GetNutrient(const glm::vec3& position) const;
+		[[nodiscard]] float GetCapacity(const glm::vec3& position) const;
 
 		[[nodiscard]] void ChangeWater(   const glm::vec3& center, float amount, float width);
 		[[nodiscard]] void ChangeDensity( const glm::vec3& center, float amount, float width);
 		[[nodiscard]] void ChangeNutrient(const glm::vec3& center, float amount, float width);
+		[[nodiscard]] void ChangeCapacity(const glm::vec3& center, float amount, float width);
 
 		// negative indices are useful as relative offsets
 		[[nodiscard]] static int Index(const glm::ivec3& resolution, int x, int y, int z);
@@ -50,9 +56,19 @@ namespace EcoSysLab {
 
 		int m_version = 0; // TODO: what does this do?
 	protected:
-		void ChangeField(std::vector<float>& field, const glm::vec3& center, float amount, float width);
-		void SetField(std::vector<float>& field, const glm::vec3& bb_min, const glm::vec3& bb_max, float value);
-		void BlurField(std::vector<float>& field); // for now there is just one standard kernel
+		float GetField(const Field& field, const glm::vec3& position) const;
+		void ChangeField(Field& field, const glm::vec3& center, float amount, float width);
+		void SetField(Field& field, const glm::vec3& bb_min, const glm::vec3& bb_max, float value);
+		void BlurField(Field& field); // for now there is just one standard kernel
+		
+		void Convolution3(   const Field& input, Field& output, const std::vector<int>& indices, const std::vector<float>& weights) const;
+
+		void Boundary_Wrap_Axis(const Field& input, Field& output, const std::vector<int>& indices_1D, const std::vector<float>& weights, int lim_a, int lim_b, int lim_f, std::function<int(int, int, int)> WrapIndex) const;
+		void Boundary_Wrap_X(   const Field& input, Field& output, const std::vector<int>& indices_1D, const std::vector<float>& weights) const;
+		void Boundary_Wrap_Y(   const Field& input, Field& output, const std::vector<int>& indices_1D, const std::vector<float>& weights) const;
+		void Boundary_Wrap_Z(   const Field& input, Field& output, const std::vector<int>& indices_1D, const std::vector<float>& weights) const;
+
+
 		void update_w_sum();
 		bool m_initialized = false;
 
@@ -65,30 +81,41 @@ namespace EcoSysLab {
 		float m_diffusionForce;
 		glm::vec3 m_gravityForce;
 		bool m_use_capacity = true;
+		float m_nutrientForce;
 
 		// Fields:
-		std::vector<float> m_w;
+		Field m_w; // water content of each cell
+		Field m_c; // the capacity of each cell
+		Field m_l; // filling level of each cell, w/c
+		Field m_p; // permeability of each cell
+
 
 		// these field are temporary variables but kept so we don't have to reallocate them each step
-		std::vector<float> m_w_grad_x;
-		std::vector<float> m_w_grad_y;
-		std::vector<float> m_w_grad_z;
+		Field m_w_grad_x;
+		Field m_w_grad_y;
+		Field m_w_grad_z;
 
-		std::vector<float> m_div_diff_x; // divergence components for diffusion process
-		std::vector<float> m_div_diff_y;
-		std::vector<float> m_div_diff_z;
+		Field m_div_diff_x; // divergence components for diffusion process
+		Field m_div_diff_y;
+		Field m_div_diff_z;
 
-		std::vector<float> m_div_grav_x; // divergence components for gravity
-		std::vector<float> m_div_grav_y;
-		std::vector<float> m_div_grav_z;
+		Field m_div_diff_n_x; // divergence components for diffusion process of nutrients
+		Field m_div_diff_n_y;
+		Field m_div_diff_n_z;
 
-		std::vector<float> m_c; // the capacity of each cell
-		std::vector<float> m_l; // filling level of each cell, w/c
+		Field m_div_grav_x; // divergence components for gravity
+		Field m_div_grav_y;
+		Field m_div_grav_z;
+
+		Field m_div_grav_n_x; // divergence components for gravity of nutrients
+		Field m_div_grav_n_y;
+		Field m_div_grav_n_z;
+
 
 		// nutrients
-		std::vector<float> m_nutrientsDensity;
+		Field m_n;
 
-		std::vector<float> m_soilDensity;
+		Field m_soilDensity;
 		Boundary m_boundary_x, m_boundary_y, m_boundary_z;
 		int m_absorption_width= 5;
 
@@ -101,11 +128,8 @@ namespace EcoSysLab {
 		float m_irrigationAmount = 1;
 
 		// helper variables:
-		std::vector<int>   m_blur_3x3_idx;
+		std::vector<glm::ivec3> m_blur_3x3_idx;
 		std::vector<float> m_blur_3x3_weights;
-
-
-		void Convolution3(const std::vector<float>& input, std::vector<float>& output, const std::vector<int>& indices, const std::vector<float>& weights) const;
 	};
 
 	class SoilParameters {
@@ -121,6 +145,7 @@ namespace EcoSysLab {
 
 		float m_diffusionForce = 0.1;
 		glm::vec3 m_gravityForce = glm::vec3(0, -0.05, 0);
+		float m_nutrientForce = 0.05;
 
 		std::function<float(const glm::vec3& position)> m_soilDensitySampleFunc = [](const glm::vec3& position)
 			{
