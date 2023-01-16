@@ -54,8 +54,8 @@ void TreeVolume::Clear()
 glm::vec3 TreeVolume::TipPosition(int layerIndex, int sectorIndex) const
 {
 	glm::vec3 retVal = m_center;
-	const float layerAngle = glm::radians(180.0f / m_layerAmount * layerIndex);
-	const float sectorAngle = glm::radians(360.0f / m_sectorAmount * sectorIndex);
+	const float layerAngle = glm::radians(180.0f / m_layerAmount * (layerIndex + 0.5f));
+	const float sectorAngle = glm::radians(360.0f / m_sectorAmount * (sectorIndex + 0.5f));
 
 	const auto& distance = m_distances[layerIndex * m_sectorAmount + sectorIndex];
 	if (distance < 0.0f) return m_center;

@@ -499,7 +499,7 @@ namespace EcoSysLab {
 		int m_probeSectorAmount = 8;
 		float m_distanceLossMagnitude = 0.25f;
 		float m_distanceLossFactor = 1.5f;
-		float m_probeMinMaxRatio = 0.8f;
+		float m_probeMinMaxRatio = 1.05f;
 	};
 
 	class TreeVolume
