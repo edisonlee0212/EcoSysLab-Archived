@@ -646,26 +646,28 @@ void EcoSysLab::SoilModel::Irrigation()
 
 float SoilModel::GetWater(const vec3& position) const
 {
-	return GetField(m_w, position);
+	return GetField(m_w, position, 0.0f);
 }
 
 float SoilModel::GetDensity(const vec3& position) const
 {
-	return GetField(m_soilDensity, position);
+	return GetField(m_soilDensity, position, 1000.0f);
 }
 
 float SoilModel::GetNutrient(const vec3& position) const
 {
-	return GetField(m_n, position);
+	return GetField(m_n, position, 0.0f);
 }
 
 float EcoSysLab::SoilModel::GetCapacity(const glm::vec3& position) const
 {
-	return GetField(m_c, position);
+	return GetField(m_c, position, 1.0f);
 }
 
-float EcoSysLab::SoilModel::GetField(const Field& field, const glm::vec3& position) const
+float EcoSysLab::SoilModel::GetField(const Field& field, const glm::vec3& position, float default_value) const
 {
+	if( ! PositionInsideVolume(position) )
+		return default_value;
 	return field[Index(GetCoordinateFromPosition(position))];
 }
 
@@ -879,4 +881,15 @@ vec3 SoilModel::GetBoundingBoxMin() const
 vec3 EcoSysLab::SoilModel::GetBoundingBoxMax() const
 {
 	return m_boundingBoxMin + vec3(m_resolution)*m_dx;
+}
+
+bool EcoSysLab::SoilModel::PositionInsideVolume(const glm::vec3& p) const
+{
+	auto min = GetBoundingBoxMin();
+	auto max = GetBoundingBoxMax();
+	if ( p.x < min.x || p.y < min.y || p.z < min.z )
+		return false;
+	if ( p.x >= max.x || p.y >= max.y || p.z >= max.z )
+		return false;
+	return true;
 }

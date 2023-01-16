@@ -52,11 +52,12 @@ namespace EcoSysLab {
 		[[nodiscard]] glm::vec3 GetBoundingBoxCenter() const;
 		[[nodiscard]] glm::vec3 GetBoundingBoxMin() const;
 		[[nodiscard]] glm::vec3 GetBoundingBoxMax() const;
+		bool PositionInsideVolume(const glm::vec3& position) const;
 		[[nodiscard]] bool Initialized() const;
 
 		int m_version = 0; // TODO: what does this do?
 	protected:
-		float GetField(const Field& field, const glm::vec3& position) const;
+		float GetField(const Field& field, const glm::vec3& position, float default_value) const;
 		void ChangeField(Field& field, const glm::vec3& center, float amount, float width);
 		void SetField(Field& field, const glm::vec3& bb_min, const glm::vec3& bb_max, float value);
 		void BlurField(Field& field); // for now there is just one standard kernel
