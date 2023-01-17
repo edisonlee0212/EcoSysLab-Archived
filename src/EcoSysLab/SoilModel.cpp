@@ -31,10 +31,21 @@ the voxel centers are at 0.5 and 1.5.
 
 */
 
+
+namespace EcoSysLab
+{
+	const SoilPhysicalMaterial Soil_Clay       = GetSoilPhysicalMaterial(0.1, 0.1, 0.8, 1);
+	const SoilPhysicalMaterial Soil_Silty_Clay = GetSoilPhysicalMaterial(0.1, 0.4, 0.5, 1);
+	const SoilPhysicalMaterial Soil_Loam       = GetSoilPhysicalMaterial(0.4, 0.4, 0.2, 1);
+	const SoilPhysicalMaterial Soil_Sand       = GetSoilPhysicalMaterial(1,   0,   0, 1);
+	const SoilPhysicalMaterial Soil_Loamy_Sand = GetSoilPhysicalMaterial(0.8, 0.1, 0.1, 1);
+	//Soil_Air      = GetSoilPhysicalMaterial(1,   1,   1,   0);
+	const SoilPhysicalMaterial Soil_Air        = SoilPhysicalMaterial({1, 0, 0});
+}
+
+
 void SoilModel::Initialize(const SoilParameters& p)
 {
-	assert(!m_initialized);
-
 	m_diffusionForce = p.m_diffusionForce;
 	m_gravityForce = p.m_gravityForce;
 	m_nutrientForce = p.m_nutrientForce;
@@ -189,33 +200,14 @@ void SoilModel::Initialize(const SoilParameters& p)
 	BlurField(m_p);
 	//BlurField(m_p);
 
-	BuildFromLayers(p.m_terrainHeightFunction);
+	BuildFromLayers(p.m_terrainHeightFunction, p.m_soil_layers);
 
 	Reset();
 }
 
 
-void EcoSysLab::SoilModel::BuildFromLayers(std::function<float(const glm::vec2& position)> terrainHeight)
+void EcoSysLab::SoilModel::BuildFromLayers(std::function<float(const glm::vec2& position)> terrainHeight, const std::vector<SoilLayer>& soil_layers)
 {
-	struct Layer
-	{
-		SoilPhysicalMaterial mat;
-		float height;
-	};
-
-	std::vector<Layer> layers({
-		Layer({Soil_Air,        0.f}),
-		Layer({Soil_Loam,       2.f}),
-		Layer({Soil_Sand,       1.f}),
-		Layer({Soil_Clay,       0.5f}),
-		Layer({Soil_Loam,      15.f}),
-		});
-	//std::vector<Layer> layers({
-	//	//Layer({Soil_Loam,        0.f}),
-	//	Layer({Soil_Loamy_Sand,  20.f}),
-	//});
-
-
 	auto rain_field = Field(m_w.size());
 	rain_field = 0.f;
 	// Height axis is Y:
@@ -224,6 +216,7 @@ void EcoSysLab::SoilModel::BuildFromLayers(std::function<float(const glm::vec2& 
 		for(auto z=0; z<m_resolution.z; ++z)
 		{
 			auto pos = GetPositionFromCoordinate({x, 0, z}); // y value does not matter
+			vec2 pos_2d(pos.x, pos.z);
 			auto h = terrainHeight({pos.x, pos.z});
 			pos.y = h;
 			rain_field[Index(GetCoordinateFromPosition(pos)+ivec3(0, -2, 0))] = 0.1;// insert water 2 voxels below ground
@@ -235,13 +228,13 @@ void EcoSysLab::SoilModel::BuildFromLayers(std::function<float(const glm::vec2& 
 
 				// find material index:
 				auto idx = 0;
-				while(voxel_height < current_height && idx < layers.size()-1)
+				while(voxel_height < current_height && idx < soil_layers.size()-1)
 				{
 					idx++;
-					current_height -= layers[idx].height;
+					current_height -= glm::max(0.f, soil_layers[idx].height(pos_2d));
 				}
 
-				SetVoxel(x, y, z, layers[idx].mat);
+				SetVoxel(x, y, z, soil_layers[idx].mat);
 			}
 		}
 	}

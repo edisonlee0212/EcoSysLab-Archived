@@ -17,21 +17,28 @@ namespace EcoSysLab {
 
 	struct SoilPhysicalMaterial
 	{
-		float c;
-		float p;
-		float d;
+		float c; // capacity
+		float p; // permeability
+		float d; // density
+
+		float n; // initial amount of nutrients
+		float w; // initial amount of water
 	};
 
 	SoilPhysicalMaterial GetSoilPhysicalMaterial(float sand, float silt, float clay, float compactness);
 
-	const auto Soil_Clay       = GetSoilPhysicalMaterial(0.1, 0.1, 0.8, 1);
-	const auto Soil_Silty_Clay = GetSoilPhysicalMaterial(0.1, 0.4, 0.5, 1);
-	const auto Soil_Loam       = GetSoilPhysicalMaterial(0.4, 0.4, 0.2, 1);
-	const auto Soil_Sand       = GetSoilPhysicalMaterial(1,   0,   0, 1);
-	const auto Soil_Loamy_Sand = GetSoilPhysicalMaterial(0.8, 0.1, 0.1, 1);
-	//const auto Soil_Air        = GetSoilPhysicalMaterial(1,   1,   1,   0);
-	const auto Soil_Air = SoilPhysicalMaterial({1, 0, 0});
+	extern const SoilPhysicalMaterial Soil_Clay;      
+	extern const SoilPhysicalMaterial Soil_Silty_Clay;
+	extern const SoilPhysicalMaterial Soil_Loam;
+	extern const SoilPhysicalMaterial Soil_Sand;
+	extern const SoilPhysicalMaterial Soil_Loamy_Sand;
+	extern const SoilPhysicalMaterial Soil_Air;
 
+	struct SoilLayer
+	{
+		SoilPhysicalMaterial mat;
+		std::function<float(const glm::vec2& position)> height;
+	};
 
 	class SoilModel {
 		friend class Soil;
@@ -85,7 +92,7 @@ namespace EcoSysLab {
 
 		int m_version = 0; // TODO: what does this do?
 	protected:
-		void BuildFromLayers(std::function<float(const glm::vec2& position)> terrainHeight); // helper function called inside initialize to set up soil layers
+		void BuildFromLayers(std::function<float(const glm::vec2& position)> terrainHeight, const std::vector<SoilLayer>& soil_layers); // helper function called inside initialize to set up soil layers
 		void SetVoxel(int x, int y, int z, const SoilPhysicalMaterial& material);
 
 		float GetField(const Field& field, const glm::vec3& position, float default_value) const;
@@ -178,6 +185,8 @@ namespace EcoSysLab {
 		std::vector<float> m_blur_3x3_weights;
 	};
 
+
+
 	class SoilParameters {
 	public:
 		glm::ivec3 m_voxelResolution = glm::ivec3(64, 48, 64);
@@ -201,6 +210,11 @@ namespace EcoSysLab {
 		std::function<float(const glm::vec2& position)> m_terrainHeightFunction= [](const glm::vec2& position)
 		{
 			return 2.f;
+		};
+
+		std::vector<SoilLayer> m_soil_layers = {
+			{Soil_Air,  [](const glm::vec2& pos){ return   0.f;} },  // first layer always has thickness of 0!
+			{Soil_Loam, [](const glm::vec2& pos){ return 100.f;} } // loam layer with constant thickness of 100 m
 		};
 	};
 }
