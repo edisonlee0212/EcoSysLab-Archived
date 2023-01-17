@@ -231,8 +231,9 @@ void Tree::GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings) 
 		auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
 		auto material = ProjectManager::CreateTemporaryAsset<Material>();
 		material->SetProgram(DefaultResources::GLPrograms::StandardProgram);
-		material->m_materialProperties.m_albedoColor = glm::vec3(188, 143, 143) / 255.0f;
-		material->m_materialProperties.m_roughness = 0.0f;
+		material->m_materialProperties.m_albedoColor = glm::vec3(80, 60, 50) / 255.0f;
+		material->m_materialProperties.m_roughness = 1.0f;
+		material->m_materialProperties.m_metallic = 0.0f;
 		mesh->SetVertices(17, vertices, indices);
 		auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(rootEntity).lock();
 		meshRenderer->m_mesh = mesh;

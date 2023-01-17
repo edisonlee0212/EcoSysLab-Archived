@@ -178,8 +178,9 @@ void EcoSysLabLayer::LateUpdate() {
 				material = ProjectManager::CreateTemporaryAsset<Material>();
 				material->SetProgram(DefaultResources::GLPrograms::StandardStrandsProgram);
 				branchStrandsRenderer->m_material = material;
-				material->m_materialProperties.m_albedoColor = glm::vec4(188 / 255.0f, 143 / 255.0f, 143 / 255.0f, 1.0f);
-			}
+				material->m_materialProperties.m_albedoColor = glm::vec3(109, 79, 75) / 255.0f;
+				material->m_materialProperties.m_roughness = 1.0f;
+				material->m_materialProperties.m_metallic = 0.0f;
 		}
 
 		auto rootsHolder = m_rootStrandsHolder.Get();
@@ -193,7 +194,9 @@ void EcoSysLabLayer::LateUpdate() {
 				material = ProjectManager::CreateTemporaryAsset<Material>();
 				material->SetProgram(DefaultResources::GLPrograms::StandardStrandsProgram);
 				rootStrandsRenderer->m_material = material;
-				material->m_materialProperties.m_albedoColor = glm::vec4(255 / 255.0f, 248 / 255.0f, 220 / 255.0f, 1.0f);
+				material->m_materialProperties.m_albedoColor = glm::vec3(80, 60, 50) / 255.0f;
+				material->m_materialProperties.m_roughness = 1.0f;
+				material->m_materialProperties.m_metallic = 0.0f;
 			}
 		}
 	}

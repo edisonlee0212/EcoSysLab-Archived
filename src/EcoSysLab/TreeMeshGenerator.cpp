@@ -142,8 +142,8 @@ void TreeMeshGeneratorSettings::OnInspect() {
 		ImGui::Combo("Root mesh mode", { "Cylindrical", "Marching cubes" }, m_rootMeshType);
 		if(ImGui::TreeNode("Cylindrical mesh settings"))
 		{
-			ImGui::DragFloat("Resolution", &m_resolution, 0.001f);
-			ImGui::DragFloat("Subdivision", &m_subdivision, 0.001f);
+			ImGui::DragFloat("Resolution", &m_resolution, 0.00001f, 0.00001f, 1.0f, "%.3f");
+			ImGui::DragFloat("Subdivision", &m_subdivision, 1.0f, 1.0f, 16.0f);
 			ImGui::Checkbox("Smoothness", &m_smoothness);
 			if (m_smoothness) {
 				ImGui::DragFloat("Base control point ratio", &m_baseControlPointRatio, 0.001f, 0.0f, 1.0f);
