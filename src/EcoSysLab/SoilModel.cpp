@@ -33,14 +33,15 @@ the voxel centers are at 0.5 and 1.5.
 
 
 namespace EcoSysLab
-{
-	const SoilPhysicalMaterial Soil_Clay       = GetSoilPhysicalMaterial(0.1, 0.1, 0.8, 1);
-	const SoilPhysicalMaterial Soil_Silty_Clay = GetSoilPhysicalMaterial(0.1, 0.4, 0.5, 1);
-	const SoilPhysicalMaterial Soil_Loam       = GetSoilPhysicalMaterial(0.4, 0.4, 0.2, 1);
-	const SoilPhysicalMaterial Soil_Sand       = GetSoilPhysicalMaterial(1,   0,   0, 1);
-	const SoilPhysicalMaterial Soil_Loamy_Sand = GetSoilPhysicalMaterial(0.8, 0.1, 0.1, 1);
+{	
+	//                                                                   id  sand  silt  clay  compactness
+	const SoilPhysicalMaterial Soil_Clay       = GetSoilPhysicalMaterial(1,  0.1,  0.1,  0.8,  1);
+	const SoilPhysicalMaterial Soil_Silty_Clay = GetSoilPhysicalMaterial(2,  0.1,  0.4,  0.5,  1);
+	const SoilPhysicalMaterial Soil_Loam       = GetSoilPhysicalMaterial(3,  0.4,  0.4,  0.2,  1);
+	const SoilPhysicalMaterial Soil_Sand       = GetSoilPhysicalMaterial(4,  1,    0,    0,    1);
+	const SoilPhysicalMaterial Soil_Loamy_Sand = GetSoilPhysicalMaterial(5,  0.8,  0.1,  0.1,  1);
 	//Soil_Air      = GetSoilPhysicalMaterial(1,   1,   1,   0);
-	const SoilPhysicalMaterial Soil_Air        = SoilPhysicalMaterial({1, 0, 0});
+	const SoilPhysicalMaterial Soil_Air        = SoilPhysicalMaterial({0, 1, 0, 0});
 }
 
 
@@ -146,6 +147,9 @@ void SoilModel::Initialize(const SoilParameters& p)
 
 	m_rnd = std::mt19937(std::random_device()());
 
+
+	m_material_id.resize(numVoxels);
+	m_material_id = -1;
 
 	// intermediate variables
 	auto empty = Field(numVoxels);
@@ -843,9 +847,12 @@ float EcoSysLab::SoilModel::GetCapacity(const glm::vec3& position) const
 void EcoSysLab::SoilModel::SetVoxel(int x, int y, int z, const SoilPhysicalMaterial& material)
 {
 	auto idx = Index(x, y, z);
+	m_material_id[idx] = material.id;
 	m_c[idx] = material.c;
 	m_p[idx] = material.p;
 	m_soilDensity[idx] = material.d;
+	m_w[idx] += material.w; // not sure if we should do = or += here...
+	m_n[idx] += material.n;
 }
 
 
@@ -1078,7 +1085,7 @@ bool EcoSysLab::SoilModel::PositionInsideVolume(const glm::vec3& p) const
 	return true;
 }
 
-SoilPhysicalMaterial EcoSysLab::GetSoilPhysicalMaterial(float sand, float silt, float clay, float compactness)
+SoilPhysicalMaterial EcoSysLab::GetSoilPhysicalMaterial(int id, float sand, float silt, float clay, float compactness)
 {
 	assert(compactness <= 1 && compactness >= 0);
 	
@@ -1087,11 +1094,11 @@ SoilPhysicalMaterial EcoSysLab::GetSoilPhysicalMaterial(float sand, float silt, 
 	silt /= weight;
 	clay /= weight;
 
-	//                         c    p     d
-	SoilPhysicalMaterial Sand({0.9, 15,   0.5});
-	SoilPhysicalMaterial Clay({2.1, 0.05, 1});
-	SoilPhysicalMaterial Silt({1.9, 1.5,  0.8});
-	SoilPhysicalMaterial  Air({5,   30,   0});
+	//                         id   c     p       d    n     w
+	SoilPhysicalMaterial Sand({-1,  0.9,  15,    0.5,  0.f,  0.f});
+	SoilPhysicalMaterial Clay({-1,  2.1,  0.05,  1,    0.f,  0.f});
+	SoilPhysicalMaterial Silt({-1,  1.9,  1.5,   0.8,  0.f,  0.f});
+	SoilPhysicalMaterial  Air({-1,  5,    30,    0,    0.f,  0.f});
 
 	float air = 1-compactness;
 	sand *= compactness;
@@ -1099,9 +1106,13 @@ SoilPhysicalMaterial EcoSysLab::GetSoilPhysicalMaterial(float sand, float silt, 
 	clay *= compactness;
 
 	SoilPhysicalMaterial result;
+	result.id = id;
 	result.c = sand*Sand.c + silt*Silt.c + clay*Clay.c + air*Air.c;
 	result.p = sand*Sand.p + silt*Silt.p + clay*Clay.p + air*Air.p;
 	result.d = sand*Sand.d + silt*Silt.d + clay*Clay.d + air*Air.d;
+
+	result.n = 0.1f;
+	result.w = 0.f;
 
 	return result;
 }
@@ -1110,4 +1121,41 @@ void EcoSysLab::SoilModel::Source::Apply(Field& target)
 {
 	for(auto i=0u; i<idx.size(); ++i)
 		target[idx[i]] += amounts[i];
+}
+
+
+std::vector<glm::vec4> SoilModel::GetSoilTextureSlideZ(int slize_z, glm::uvec2 resolution, std::map<int, std::vector<glm::vec4>*> textures)
+{
+	assert(resolution.x == resolution.y);
+	vector<vec4> output(resolution.x * resolution.y);
+
+	auto dim_max = glm::max(m_resolution.x, m_resolution.y);
+
+	float tex_to_soil = (float)dim_max / (float)resolution.x;
+
+	for(auto x=0; x<resolution.x; ++x)
+	{
+		for(auto y=0; y<resolution.y; ++y)
+		{
+			auto idx = x+y*resolution.x;
+
+			ivec2 voxel = ivec2((float)x*tex_to_soil, (float)y*tex_to_soil);
+
+			if(voxel.x >= m_resolution.x || voxel.y >= m_resolution.y)
+				output[idx] = vec4(0, 0, 0, 0);
+			else
+			{
+				auto material_id = m_material_id[Index(voxel.x, voxel.y, slize_z)];
+				if(textures.find(material_id) == textures.end())
+				{
+					cout << "Id not found" << material_id << endl;
+					return output;
+				}
+				auto& tex = *textures[material_id];
+				output[idx] = tex[idx];
+			}
+		}
+	}
+
+	return output;
 }

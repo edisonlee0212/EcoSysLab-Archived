@@ -5,6 +5,7 @@
 #include <functional>
 #include <random>
 #include <valarray>
+#include <map>
 #include "ecosyslab_export.h"
 
 using namespace UniEngine;
@@ -17,6 +18,7 @@ namespace EcoSysLab {
 
 	struct SoilPhysicalMaterial
 	{
+		int id; // material id (later used to look up texture etc.)  -1 reserved for invalid material
 		float c; // capacity
 		float p; // permeability
 		float d; // density
@@ -25,7 +27,7 @@ namespace EcoSysLab {
 		float w; // initial amount of water
 	};
 
-	SoilPhysicalMaterial GetSoilPhysicalMaterial(float sand, float silt, float clay, float compactness);
+	SoilPhysicalMaterial GetSoilPhysicalMaterial(int id, float sand, float silt, float clay, float compactness);
 
 	extern const SoilPhysicalMaterial Soil_Clay;      
 	extern const SoilPhysicalMaterial Soil_Silty_Clay;
@@ -90,6 +92,8 @@ namespace EcoSysLab {
 		bool PositionInsideVolume(const glm::vec3& position) const;
 		[[nodiscard]] bool Initialized() const;
 
+		std::vector<glm::vec4> GetSoilTextureSlideZ(int slize_z, glm::uvec2 resolution, std::map<int, std::vector<glm::vec4>*> textures); // the output as well as all input textures must have the same resolution!
+
 		int m_version = 0; // TODO: what does this do?
 	protected:
 		void BuildFromLayers(std::function<float(const glm::vec2& position)> terrainHeight, const std::vector<SoilLayer>& soil_layers); // helper function called inside initialize to set up soil layers
@@ -133,6 +137,8 @@ namespace EcoSysLab {
 		float m_nutrientForce;
 
 		// Fields:
+		std::valarray<int> m_material_id; // material id for each foxel in the soil volume
+
 		Field m_w; // water content of each cell
 		Field m_c; // the capacity of each cell
 		Field m_l; // filling level of each cell, w/c
