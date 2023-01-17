@@ -49,9 +49,10 @@ void Tree::OnInspect() {
 
 	if (ImGui::TreeNodeEx("Illumination Estimation settings"))
 	{
-		ImGui::DragFloat("Distance Loss Intensity", &m_treeModel.m_illuminationEstimationSettings.m_distanceLossMagnitude, 0.01f);
-		ImGui::DragFloat("Distance Loss Factor", &m_treeModel.m_illuminationEstimationSettings.m_distanceLossFactor, 0.01f);
-		ImGui::DragFloat("Min/max ratio", &m_treeModel.m_illuminationEstimationSettings.m_probeMinMaxRatio, 0.01f);
+		ImGui::DragFloat("Overall intensity", &m_treeModel.m_illuminationEstimationSettings.m_overallIntensity, 0.01f);
+		ImGui::DragFloat("Occlusion", &m_treeModel.m_illuminationEstimationSettings.m_occlusion, 0.01f);
+		ImGui::DragFloat("Occlusion distance Factor", &m_treeModel.m_illuminationEstimationSettings.m_occlusionDistanceFactor, 0.01f);
+		ImGui::DragFloat("Min/max ratio", &m_treeModel.m_illuminationEstimationSettings.m_layerAngleFactor, 0.01f);
 		ImGui::TreePop();
 	}
 
@@ -69,7 +70,7 @@ void Tree::OnInspect() {
 
 	static bool visualizeVolume = false;
 	ImGui::Checkbox("Visualize illumination volume", &visualizeVolume);
-	if(visualizeVolume)
+	if(visualizeVolume && m_treeModel.m_treeVolume.m_hasData)
 	{
 		std::vector<glm::mat4> matrices;
 
@@ -77,7 +78,9 @@ void Tree::OnInspect() {
 		{
 			for (int j = 0; j < m_treeModel.m_treeVolume.m_sectorAmount; j++)
 			{
-				matrices.push_back(glm::translate(m_treeModel.m_treeVolume.TipPosition(i, j)) * glm::scale(glm::vec3(0.1f)));
+				glm::vec3 tipPosition;
+				m_treeModel.m_treeVolume.TipPosition(i, j, tipPosition);
+				matrices.push_back(glm::translate(tipPosition) * glm::scale(glm::vec3(0.05f)));
 			}
 		}
 
@@ -118,6 +121,16 @@ bool Tree::TryGrow() {
 	const auto owner = GetOwner();
 	return m_treeModel.Grow(scene->GetDataComponent<GlobalTransform>(owner).m_value, soil->m_soilModel, climate->m_climateModel,
 		treeDescriptor->m_rootGrowthParameters, treeDescriptor->m_treeGrowthParameters);
+}
+
+void Tree::Serialize(YAML::Emitter& out)
+{
+	m_treeDescriptor.Save("m_treeDescriptor", out);
+}
+
+void Tree::Deserialize(const YAML::Node& in)
+{
+	m_treeDescriptor.Load("m_treeDescriptor", in);
 }
 
 void Tree::GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings) {
@@ -181,7 +194,8 @@ void Tree::GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings) 
 		mesh->SetVertices(17, vertices, indices);
 		auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(branchEntity).lock();
 		material->m_materialProperties.m_albedoColor = glm::vec3(109, 79, 75) / 255.0f;
-		material->m_materialProperties.m_roughness = 0.0f;
+		material->m_materialProperties.m_roughness = 1.0f;
+		material->m_materialProperties.m_metallic = 0.0f;
 		meshRenderer->m_mesh = mesh;
 		meshRenderer->m_material = material;
 	}
@@ -218,8 +232,9 @@ void Tree::GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings) 
 		auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
 		auto material = ProjectManager::CreateTemporaryAsset<Material>();
 		material->SetProgram(DefaultResources::GLPrograms::StandardProgram);
-		material->m_materialProperties.m_albedoColor = glm::vec3(188, 143, 143) / 255.0f;
-		material->m_materialProperties.m_roughness = 0.0f;
+		material->m_materialProperties.m_albedoColor = glm::vec3(80, 60, 50) / 255.0f;
+		material->m_materialProperties.m_roughness = 1.0f;
+		material->m_materialProperties.m_metallic = 0.0f;
 		mesh->SetVertices(17, vertices, indices);
 		auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(rootEntity).lock();
 		meshRenderer->m_mesh = mesh;

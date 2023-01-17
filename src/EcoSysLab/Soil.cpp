@@ -237,15 +237,32 @@ void Soil::InitializeSoilModel()
 
 void Soil::SplitRootTestSetup()
 {
-	InitializeSoilModel();
-	for(int i = 0; i < m_soilModel.m_n.size(); i++)
-	{
-		if(m_soilModel.GetPositionFromCoordinate(m_soilModel.GetCoordinateFromIndex(i)).x > 0)
+	//InitializeSoilModel();
+	auto soilDescriptor = m_soilDescriptor.Get<SoilDescriptor>();
+	if (soilDescriptor) {
+		auto heightField = soilDescriptor->m_heightField.Get<HeightField>();
+		for (int i = 0; i < m_soilModel.m_n.size(); i++)
 		{
-			m_soilModel.m_n[i] = 2.0f;
-		}else
-		{
-			m_soilModel.m_n[i] = 0.5f;
+			auto position = m_soilModel.GetPositionFromCoordinate(m_soilModel.GetCoordinateFromIndex(i));
+			bool underGround = true;
+			if(heightField)
+			{
+				auto height = heightField->GetValue(glm::vec2(position.x, position.z));
+				if (position.y >= height) underGround = false;
+			}
+			if (underGround) {
+				if (position.x > 0)
+				{
+					m_soilModel.m_n[i] = 2.0f;
+				}
+				else
+				{
+					m_soilModel.m_n[i] = 0.5f;
+				}
+			}else
+			{
+				m_soilModel.m_n[i] = 0.01f;
+			}
 		}
 	}
 }

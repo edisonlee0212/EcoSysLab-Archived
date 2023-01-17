@@ -58,7 +58,18 @@ int main() {
     editorLayer->m_velocity = 15.f;
     editorLayer->m_defaultSceneCameraPosition = glm::vec3(1.124, 0.218, 14.089);
     // override default scene camera position etc.
+    editorLayer->m_showCameraWindow = false;
+    editorLayer->m_showSceneWindow = true;
+    editorLayer->m_showEntityExplorerWindow = true;
+    editorLayer->m_showEntityInspectorWindow = true;
 
+    auto consoleLayer = Application::GetLayer<ConsoleLayer>();
+    consoleLayer->m_showConsoleWindow = true;
+
+    auto rayTracerLayer = Application::GetLayer<RayTracerLayer>();
+    rayTracerLayer->m_showCameraWindow = false;
+    rayTracerLayer->m_showSceneWindow = false;
+    rayTracerLayer->m_showRayTracerWindow = false;
 #pragma region Engine Loop
     Application::Start();
 #pragma endregion

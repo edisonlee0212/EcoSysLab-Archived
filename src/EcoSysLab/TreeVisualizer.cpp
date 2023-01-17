@@ -61,6 +61,11 @@ TreeVisualizer::OnInspect(
         const GlobalTransform &globalTransform) {
     bool updated = false;
     if (ImGui::TreeNodeEx("Selected Tree Visualizer", ImGuiTreeNodeFlags_DefaultOpen)) {
+        if(ImGui::Checkbox("Use node color", &m_useNodeColor))
+        {
+            m_needUpdate = true;
+        }
+
         if (treeModel.CurrentIteration() > 0) {
             if (ImGui::TreeNodeEx("History", ImGuiTreeNodeFlags_DefaultOpen)) {
                 ImGui::DragInt("History Limit", &treeModel.m_historyLimit, 1, -1, 1024);
@@ -618,39 +623,48 @@ void TreeVisualizer::PeekRootNode(
         const Skeleton<RootSkeletonGrowthData, RootBranchGrowthData, RootInternodeGrowthData> &rootSkeleton,
         NodeHandle rootNodeHandle) {
     if (ImGui::Begin("Root Node Inspector")) {
-        const auto& internode = rootSkeleton.PeekNode(rootNodeHandle);
+        const auto& rootNode = rootSkeleton.PeekNode(rootNodeHandle);
         if (ImGui::TreeNode("Root node info")) {
-            ImGui::Text("Thickness: %.3f", internode.m_info.m_thickness);
-            ImGui::Text("Length: %.3f", internode.m_info.m_length);
-            ImGui::InputFloat3("Position", (float*)&internode.m_info.m_globalPosition.x, "%.3f",
+            ImGui::Text("Thickness: %.3f", rootNode.m_info.m_thickness);
+            ImGui::Text("Length: %.3f", rootNode.m_info.m_length);
+            ImGui::InputFloat3("Position", (float*)&rootNode.m_info.m_globalPosition.x, "%.3f",
                 ImGuiInputTextFlags_ReadOnly);
-            auto globalRotationAngle = glm::eulerAngles(internode.m_info.m_globalRotation);
+            auto globalRotationAngle = glm::eulerAngles(rootNode.m_info.m_globalRotation);
             ImGui::InputFloat3("Global rotation", (float*)&globalRotationAngle.x, "%.3f",
                 ImGuiInputTextFlags_ReadOnly);
-            auto localRotationAngle = glm::eulerAngles(internode.m_info.m_localRotation);
+            auto localRotationAngle = glm::eulerAngles(rootNode.m_info.m_localRotation);
             ImGui::InputFloat3("Local rotation", (float*)&localRotationAngle.x, "%.3f",
                 ImGuiInputTextFlags_ReadOnly);
-            auto& internodeData = internode.m_data;
-            
-            ImGui::InputFloat("Nitrate", (float*)&internodeData.m_growthPotential, 1, 100, "%.3f",
+            auto& rootNodeData = rootNode.m_data;
+            ImGui::InputFloat("Nitrite", (float*)&rootNodeData.m_nitrite, 1, 100, "%.3f",
                 ImGuiInputTextFlags_ReadOnly);
-            ImGui::InputFloat("Auxin", (float*)&internodeData.m_inhibitor, 1, 100, "%.3f",
+            ImGui::InputFloat("Root flux", (float*)&rootNodeData.m_rootFlux, 1, 100, "%.3f",
                 ImGuiInputTextFlags_ReadOnly);
-            ImGui::InputFloat("Auxin target", (float*)&internodeData.m_inhibitorTarget, 1, 100,
+            ImGui::InputFloat("Growth potential", (float*)&rootNodeData.m_growthPotential, 1, 100, "%.3f",
+                ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputFloat("Subtree Growth potential", (float*)&rootNodeData.m_subtreeGrowthPotential, 1, 100, "%.3f",
+                ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputFloat("Vigor", (float*)&rootNodeData.m_allocatedVigor, 1, 100, "%.3f",
+                ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputFloat("Subtree vigor", (float*)&rootNodeData.m_subTreeAllocatedVigor, 1, 100, "%.3f",
+                ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputFloat("Auxin", (float*)&rootNodeData.m_inhibitor, 1, 100, "%.3f",
+                ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputFloat("Auxin target", (float*)&rootNodeData.m_inhibitorTarget, 1, 100,
                 "%.3f",
                 ImGuiInputTextFlags_ReadOnly);
 
-            ImGui::InputFloat("Horizontal tropism", (float*)&internodeData.m_horizontalTropism, 1, 100,
+            ImGui::InputFloat("Horizontal tropism", (float*)&rootNodeData.m_horizontalTropism, 1, 100,
                 "%.3f",
                 ImGuiInputTextFlags_ReadOnly);
 
-            ImGui::InputFloat("Vertical tropism", (float*)&internodeData.m_verticalTropism, 1, 100,
+            ImGui::InputFloat("Vertical tropism", (float*)&rootNodeData.m_verticalTropism, 1, 100,
                 "%.3f",
                 ImGuiInputTextFlags_ReadOnly);
             ImGui::TreePop();
         }
         if (ImGui::TreeNodeEx("Flow info", ImGuiTreeNodeFlags_DefaultOpen)) {
-            const auto& flow = rootSkeleton.PeekFlow(internode.GetFlowHandle());
+            const auto& flow = rootSkeleton.PeekFlow(rootNode.GetFlowHandle());
             ImGui::Text("Child flow size: %d", flow.RefChildHandles().size());
             ImGui::Text("Root node size: %d", flow.RefNodeHandles().size());
             if (ImGui::TreeNode("Root nodes")) {
@@ -672,46 +686,56 @@ bool TreeVisualizer::InspectRootNode(
         NodeHandle rootNodeHandle) {
     bool changed = false;
     if (ImGui::Begin("Root Node Inspector")) {
-        const auto& internode = rootSkeleton.RefNode(rootNodeHandle);
+        const auto& rootNode = rootSkeleton.RefNode(rootNodeHandle);
         if (ImGui::TreeNode("Root node info")) {
-            ImGui::Text("Thickness: %.3f", internode.m_info.m_thickness);
-            ImGui::Text("Length: %.3f", internode.m_info.m_length);
-            ImGui::InputFloat3("Position", (float*)&internode.m_info.m_globalPosition.x, "%.3f",
+            ImGui::Text("Thickness: %.3f", rootNode.m_info.m_thickness);
+            ImGui::Text("Length: %.3f", rootNode.m_info.m_length);
+            ImGui::InputFloat3("Position", (float*)&rootNode.m_info.m_globalPosition.x, "%.3f",
                 ImGuiInputTextFlags_ReadOnly);
-            auto globalRotationAngle = glm::eulerAngles(internode.m_info.m_globalRotation);
+            auto globalRotationAngle = glm::eulerAngles(rootNode.m_info.m_globalRotation);
             ImGui::InputFloat3("Global rotation", (float*)&globalRotationAngle.x, "%.3f",
                 ImGuiInputTextFlags_ReadOnly);
-            auto localRotationAngle = glm::eulerAngles(internode.m_info.m_localRotation);
+            auto localRotationAngle = glm::eulerAngles(rootNode.m_info.m_localRotation);
             ImGui::InputFloat3("Local rotation", (float*)&localRotationAngle.x, "%.3f",
                 ImGuiInputTextFlags_ReadOnly);
-            auto& internodeData = internode.m_data;
+            auto& rootNodeData = rootNode.m_data;
             
-            ImGui::InputFloat("Root distance", (float*)&internodeData.m_rootDistance, 1, 100, "%.3f",
+            ImGui::InputFloat("Root distance", (float*)&rootNodeData.m_rootDistance, 1, 100, "%.3f",
                 ImGuiInputTextFlags_ReadOnly);
-
-            ImGui::InputInt("Root unit distance", (int*)&internodeData.m_rootUnitDistance, 1, 100,
+            ImGui::InputFloat("Soil density", (float*)&rootNodeData.m_soilDensity, 1, 100, "%.3f",
+                ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputInt("Root unit distance", (int*)&rootNodeData.m_rootUnitDistance, 1, 100,
                 ImGuiInputTextFlags_ReadOnly);
             
-            if (ImGui::DragFloat("Nitrate", (float*)&internodeData.m_growthPotential)) {
+            ImGui::InputFloat("Nitrite", (float*)&rootNodeData.m_nitrite, 1, 100, "%.3f",
+                ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputFloat("Root flux", (float*)&rootNodeData.m_rootFlux, 1, 100, "%.3f",
+                ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputFloat("Growth potential", (float*)&rootNodeData.m_growthPotential, 1, 100, "%.3f",
+                ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputFloat("Subtree Growth potential", (float*)&rootNodeData.m_subtreeGrowthPotential, 1, 100, "%.3f",
+                ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputFloat("Vigor", (float*)&rootNodeData.m_allocatedVigor, 1, 100, "%.3f",
+                ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputFloat("Subtree vigor", (float*)&rootNodeData.m_subTreeAllocatedVigor, 1, 100, "%.3f",
+                ImGuiInputTextFlags_ReadOnly);
+            if (ImGui::DragFloat("Inhibitor", (float*)&rootNodeData.m_inhibitor)) {
                 changed = true;
             }
-            if (ImGui::DragFloat("Inhibitor", (float*)&internodeData.m_inhibitor)) {
+            if (ImGui::DragFloat("Inhibitor target", (float*)&rootNodeData.m_inhibitorTarget)) {
                 changed = true;
             }
-            if (ImGui::DragFloat("Inhibitor target", (float*)&internodeData.m_inhibitorTarget)) {
-                changed = true;
-            }
-            ImGui::InputFloat("Horizontal tropism", (float*)&internodeData.m_horizontalTropism, 1, 100,
+            ImGui::InputFloat("Horizontal tropism", (float*)&rootNodeData.m_horizontalTropism, 1, 100,
                 "%.3f",
                 ImGuiInputTextFlags_ReadOnly);
 
-            ImGui::InputFloat("Vertical tropism", (float*)&internodeData.m_verticalTropism, 1, 100,
+            ImGui::InputFloat("Vertical tropism", (float*)&rootNodeData.m_verticalTropism, 1, 100,
                 "%.3f",
                 ImGuiInputTextFlags_ReadOnly);
             ImGui::TreePop();
         }
         if (ImGui::TreeNodeEx("Flow info", ImGuiTreeNodeFlags_DefaultOpen)) {
-            const auto& flow = rootSkeleton.PeekFlow(internode.GetFlowHandle());
+            const auto& flow = rootSkeleton.PeekFlow(rootNode.GetFlowHandle());
             ImGui::Text("Child flow size: %d", flow.RefChildHandles().size());
             ImGui::Text("Root node size: %d", flow.RefNodeHandles().size());
             if (ImGui::TreeNode("Root nodes")) {

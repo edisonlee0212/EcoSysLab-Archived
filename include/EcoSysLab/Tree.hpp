@@ -26,6 +26,10 @@ namespace EcoSysLab {
 		friend class EcoSysLabLayer;
 		bool TryGrow();
 	public:
+		void Serialize(YAML::Emitter& out) override;
+
+		void Deserialize(const YAML::Node& in) override;
+
 		PrivateComponentRef m_soil;
 		PrivateComponentRef m_climate;
 		AssetRef m_treeDescriptor;
