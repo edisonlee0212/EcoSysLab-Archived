@@ -495,27 +495,29 @@ namespace EcoSysLab {
 	};
 
 	struct IlluminationEstimationSettings {
-		int m_probeLayerAmount = 8;
-		int m_probeSectorAmount = 8;
-		float m_distanceLossMagnitude = 0.25f;
-		float m_distanceLossFactor = 1.5f;
-		float m_probeMinMaxRatio = 1.05f;
+		int m_probeLayerAmount = 4;
+		int m_probeSectorAmount = 4;
+		float m_occlusion = 0.15f;
+		float m_occlusionDistanceFactor = 2.0f;
+		float m_overallIntensity = 2.0f;
+		float m_probeMinMaxRatio = 0.95f;
 	};
 
 	class TreeVolume
 	{
+		std::vector<std::pair<float, int>> m_probe;
 	public:
 		std::vector<float> m_distances;
 		glm::vec3 m_center = glm::vec3(0.0f);
-		int m_layerAmount = 16;
-		int m_sectorAmount = 16;
+		int m_layerAmount = 8;
+		int m_sectorAmount = 8;
 		bool m_hasData = false;
 		float m_offset = 0;
 		[[nodiscard]] int GetSectorIndex(const glm::vec3& position) const;
 		void Clear();
-		[[nodiscard]] glm::vec3 TipPosition(int layerIndex, int sectorIndex) const;
+		void TipPosition(int layerIndex, int sectorIndex, glm::vec3& position) const;
 		void Smooth();
-		[[nodiscard]] float IlluminationEstimation(const glm::vec3& position, const IlluminationEstimationSettings& settings, glm::vec3& lightDirection) const;
+		[[nodiscard]] float IlluminationEstimation(const glm::vec3& position, const IlluminationEstimationSettings& settings, glm::vec3& lightDirection);
 	};
 
 	class TreeModel {

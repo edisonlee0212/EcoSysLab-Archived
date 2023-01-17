@@ -49,8 +49,9 @@ void Tree::OnInspect() {
 
 	if (ImGui::TreeNodeEx("Illumination Estimation settings"))
 	{
-		ImGui::DragFloat("Distance Loss Intensity", &m_treeModel.m_illuminationEstimationSettings.m_distanceLossMagnitude, 0.01f);
-		ImGui::DragFloat("Distance Loss Factor", &m_treeModel.m_illuminationEstimationSettings.m_distanceLossFactor, 0.01f);
+		ImGui::DragFloat("Overall intensity", &m_treeModel.m_illuminationEstimationSettings.m_overallIntensity, 0.01f);
+		ImGui::DragFloat("Occlusion", &m_treeModel.m_illuminationEstimationSettings.m_occulusion, 0.01f);
+		ImGui::DragFloat("Occlusion distance Factor", &m_treeModel.m_illuminationEstimationSettings.m_occulusionDistanceFactor, 0.01f);
 		ImGui::DragFloat("Min/max ratio", &m_treeModel.m_illuminationEstimationSettings.m_probeMinMaxRatio, 0.01f);
 		ImGui::TreePop();
 	}
@@ -69,7 +70,7 @@ void Tree::OnInspect() {
 
 	static bool visualizeVolume = false;
 	ImGui::Checkbox("Visualize illumination volume", &visualizeVolume);
-	if(visualizeVolume)
+	if(visualizeVolume && m_treeModel.m_treeVolume.m_hasData)
 	{
 		std::vector<glm::mat4> matrices;
 
@@ -77,7 +78,9 @@ void Tree::OnInspect() {
 		{
 			for (int j = 0; j < m_treeModel.m_treeVolume.m_sectorAmount; j++)
 			{
-				matrices.push_back(glm::translate(m_treeModel.m_treeVolume.TipPosition(i, j)) * glm::scale(glm::vec3(0.1f)));
+				glm::vec3 tipPosition;
+				m_treeModel.m_treeVolume.TipPosition(i, j, tipPosition);
+				matrices.push_back(glm::translate(tipPosition) * glm::scale(glm::vec3(0.05f)));
 			}
 		}
 

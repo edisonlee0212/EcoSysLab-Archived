@@ -51,19 +51,17 @@ void TreeVolume::Clear()
 	m_hasData = false;
 }
 
-glm::vec3 TreeVolume::TipPosition(int layerIndex, int sectorIndex) const
+void TreeVolume::TipPosition(int layerIndex, int sectorIndex, glm::vec3& position) const
 {
-	glm::vec3 retVal = m_center;
+	position = m_center;
 	const float layerAngle = glm::radians(180.0f / m_layerAmount * (layerIndex + 0.5f));
 	const float sectorAngle = glm::radians(360.0f / m_sectorAmount * (sectorIndex + 0.5f));
 
 	const auto& distance = m_distances[layerIndex * m_sectorAmount + sectorIndex];
-	if (distance < 0.0f) return m_center;
-	retVal.y += glm::cos(layerAngle) * distance;
-	retVal.x -= glm::sin(layerAngle) * distance * glm::cos(sectorAngle + glm::radians(270.0f));
-	retVal.z += glm::sin(layerAngle) * distance * glm::sin(sectorAngle + glm::radians(270.0f));
-	
-	return retVal;
+	if (distance < 0.0f) return;
+	position.y += glm::cos(layerAngle) * distance;
+	position.x -= glm::sin(layerAngle) * distance * glm::cos(sectorAngle + glm::radians(270.0f));
+	position.z += glm::sin(layerAngle) * distance * glm::sin(sectorAngle + glm::radians(270.0f));
 }
 
 void TreeVolume::Smooth()
@@ -131,23 +129,20 @@ void TreeVolume::Smooth()
 }
 
 float TreeVolume::IlluminationEstimation(const glm::vec3& position,
-	const IlluminationEstimationSettings& settings, glm::vec3& lightDirection) const
+	const IlluminationEstimationSettings& settings, glm::vec3& lightDirection)
 {
 	if (!m_hasData || m_distances.empty()) return 1.0f;
-	std::vector<std::pair<float, int>> probes;
 	const float layerAngle = 180.0f / settings.m_probeLayerAmount;
 	const float sectorAngle = 360.0f / settings.m_probeSectorAmount;
 	const auto maxSectorIndex = settings.m_probeLayerAmount * settings.m_probeSectorAmount - 1;
-	probes.resize(settings.m_probeLayerAmount * settings.m_probeSectorAmount);
-	for (auto& probeLayer : probes)
-	{
-		probeLayer = { 0.0, 0 };
-	}
+	m_probe.resize(settings.m_probeLayerAmount * settings.m_probeSectorAmount);
+	for (auto& sector : m_probe) sector = { 0.0f, 0 };
 	for (int i = 0; i < m_layerAmount; i++)
 	{
 		for (int j = 0; j < m_sectorAmount; j++)
 		{
-			auto tipPosition = TipPosition(i, j);
+			glm::vec3 tipPosition;
+			TipPosition(i, j, tipPosition);
 			const float distance = glm::distance(position, tipPosition);
 			auto diff = tipPosition - position;
 			if (glm::abs(diff.x + diff.z) < 0.000001f) continue;
@@ -155,9 +150,9 @@ float TreeVolume::IlluminationEstimation(const glm::vec3& position,
 			const auto rd = glm::degrees(glm::acos(dot));
 			const int probeLayerIndex = rd / layerAngle;
 			const int probeSectorIndex = (glm::degrees(glm::atan(diff.x, diff.z)) + 180.0f) / sectorAngle;
-			auto& probe = probes[glm::clamp(probeLayerIndex * settings.m_probeSectorAmount + probeSectorIndex, 0, maxSectorIndex)];
-			probe.first += distance;
-			probe.second += 1;
+			auto& probeSector = m_probe[glm::clamp(probeLayerIndex * settings.m_probeSectorAmount + probeSectorIndex, 0, maxSectorIndex)];
+			probeSector.first += distance;
+			probeSector.second += 1;
 		}
 	}
 
@@ -168,13 +163,13 @@ float TreeVolume::IlluminationEstimation(const glm::vec3& position,
 		for (int j = 0; j < settings.m_probeSectorAmount; j++)
 		{
 			const auto index = i * settings.m_probeSectorAmount + j;
-			const auto& probe = probes[index];
-			if (probe.second == 0)
+			const auto& probeSector = m_probe[index];
+			if (probeSector.second == 0)
 			{
 				probeAvg[index] = -1;
 			}
 			else {
-				probeAvg[index] = probe.first / probe.second;
+				probeAvg[index] = probeSector.first / probeSector.second;
 			}
 		}
 	}
@@ -265,14 +260,14 @@ float TreeVolume::IlluminationEstimation(const glm::vec3& position,
 			lightDir.x -= glm::sin(glm::radians(i * layerAngle)) * glm::cos(glm::radians(j * sectorAngle + 270.0f));
 			lightDir.z += glm::sin(glm::radians(i * layerAngle)) * glm::sin(glm::radians(j * sectorAngle + 270.0f));
 			
-			float sectorLightIntensity = ratio * (1.0f - glm::clamp(settings.m_distanceLossMagnitude * glm::pow(probeAvg[i * settings.m_probeSectorAmount + j], settings.m_distanceLossFactor), 0.0f, 1.0f));
+			float sectorLightIntensity = ratio * (1.0f - glm::clamp(settings.m_occlusion * glm::pow(probeAvg[i * settings.m_probeSectorAmount + j], settings.m_occlusionDistanceFactor), 0.0f, 1.0f));
 			lightIntensity += sectorLightIntensity;
 			direction += sectorLightIntensity * lightDir;
 		}
 		ratio *= settings.m_probeMinMaxRatio;
 	}
 	lightDirection = glm::normalize(direction);
-	lightIntensity = lightIntensity / ratioSum;
+	lightIntensity = glm::clamp(lightIntensity / ratioSum * settings.m_overallIntensity, 0.0f, 1.0f);
 	return lightIntensity;
 }
 
@@ -583,7 +578,7 @@ void TreeModel::CollectShootFlux(ClimateModel& climateModel,
 		auto& internodeInfo = internode.m_info;
 		internodeData.m_age++;
 		internodeData.m_lightIntensity = m_treeVolume.IlluminationEstimation(internodeInfo.m_globalPosition, m_illuminationEstimationSettings, internodeData.m_lightDirection);
-		internodeInfo.m_color = glm::mix(glm::vec4(internodeData.m_lightDirection, 1.0), glm::vec4(1.0f), internodeData.m_lightIntensity);
+		internodeInfo.m_color = glm::mix(glm::vec4(0.0f, 0.0f, 0.0f, 1.0f), glm::vec4(1.0f), internodeData.m_lightIntensity);
 		for (const auto& bud : internode.m_data.m_buds)
 		{
 			if (bud.m_status == BudStatus::Flushed && bud.m_type == BudType::Leaf)
@@ -1070,6 +1065,7 @@ bool TreeModel::GrowShoots(const glm::mat4& globalTransform, ClimateModel& clima
 			for (const auto& internodeHandle : sortedInternodeList)
 			{
 				auto& internode = m_branchSkeleton.RefNode(internodeHandle);
+				if (!internode.IsEndNode()) continue;
 				auto& internodeInfo = internode.m_info;
 				const auto& point1 = internodeInfo.m_globalPosition;
 				{
@@ -1080,7 +1076,7 @@ bool TreeModel::GrowShoots(const glm::mat4& globalTransform, ClimateModel& clima
 						currentDistance + m_treeVolume.m_offset)
 						distance = currentDistance + m_treeVolume.m_offset;
 				}
-				{
+				/*{
 					auto point2 = point1 + internodeInfo.m_length * (internodeInfo.m_globalRotation * glm::vec3(0, 0, -1));
 					const auto sectorIndex = m_treeVolume.GetSectorIndex(point2);
 					const float currentDistance = glm::length(point2 - m_treeVolume.m_center);
@@ -1088,9 +1084,9 @@ bool TreeModel::GrowShoots(const glm::mat4& globalTransform, ClimateModel& clima
 					if (distance <
 						currentDistance + m_treeVolume.m_offset)
 						distance = currentDistance + m_treeVolume.m_offset;
-				}
+				}*/
 			}
-			//m_treeVolume.Smooth();
+			m_treeVolume.Smooth();
 		}
 		m_treeVolume.m_hasData = true;
 	};
