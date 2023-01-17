@@ -61,6 +61,11 @@ TreeVisualizer::OnInspect(
         const GlobalTransform &globalTransform) {
     bool updated = false;
     if (ImGui::TreeNodeEx("Selected Tree Visualizer", ImGuiTreeNodeFlags_DefaultOpen)) {
+        if(ImGui::Checkbox("Use node color", &m_useNodeColor))
+        {
+            m_needUpdate = true;
+        }
+
         if (treeModel.CurrentIteration() > 0) {
             if (ImGui::TreeNodeEx("History", ImGuiTreeNodeFlags_DefaultOpen)) {
                 ImGui::DragInt("History Limit", &treeModel.m_historyLimit, 1, -1, 1024);

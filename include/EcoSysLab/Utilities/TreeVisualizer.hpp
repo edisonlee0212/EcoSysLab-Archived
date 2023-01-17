@@ -26,6 +26,9 @@ namespace EcoSysLab {
         bool m_visualization = true;
         bool m_treeHierarchyGui = true;
         bool m_rootHierarchyGui = true;
+
+        bool m_useNodeColor = false;
+
         NodeHandle m_selectedInternodeHandle = -1;
         float m_selectedInternodeLengthFactor = 0.0f;
         std::vector<NodeHandle> m_selectedInternodeHierarchyList;
@@ -372,7 +375,7 @@ namespace EcoSysLab {
                                   2.0f * node.m_info.m_thickness + 0.001f));
                 colors[0] = glm::vec4(1.0f);
             } else {
-                colors[i + 1] = node.m_info.m_color;
+                colors[i + 1] = m_useNodeColor ? node.m_info.m_color : m_randomColors[node.m_data.m_order];
                 if (selectedNodeHandle != -1) colors[i + 1].a = 0.3f;
             }
         }, results);
