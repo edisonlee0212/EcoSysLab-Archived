@@ -201,16 +201,9 @@ void EcoSysLabLayer::LateUpdate() {
 	if (m_debugVisualization) {
 		GizmoSettings gizmoSettings;
 		gizmoSettings.m_drawSettings.m_blending = true;
-		gizmoSettings.m_drawSettings.m_cullFace = false;
-		if (m_displayBoundingBox && !m_boundingBoxMatrices.empty()) {
-			Gizmos::DrawGizmoMeshInstancedColored(
-				DefaultResources::Primitives::Cube, editorLayer->m_sceneCamera,
-				editorLayer->m_sceneCameraPosition,
-				editorLayer->m_sceneCameraRotation,
-				m_boundingBoxColors,
-				m_boundingBoxMatrices,
-				glm::mat4(1.0f), 1.0f, gizmoSettings);
-		}
+		gizmoSettings.m_drawSettings.m_blendingSrcFactor = OpenGLBlendFactor::SrcAlpha;
+		gizmoSettings.m_drawSettings.m_blendingDstFactor = OpenGLBlendFactor::OneMinusSrcAlpha;
+		gizmoSettings.m_drawSettings.m_cullFace = true;
 
 		if (m_displayBranches && !m_branchPoints.empty()) {
 			gizmoSettings.m_colorMode = GizmoSettings::ColorMode::VertexColor;
@@ -248,6 +241,17 @@ void EcoSysLabLayer::LateUpdate() {
 			m_treeVisualizer.Visualize(
 				scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock()->m_treeModel, scene->GetDataComponent<GlobalTransform>(m_selectedTree));
 		}
+
+		if (m_displayBoundingBox && !m_boundingBoxMatrices.empty()) {
+			Gizmos::DrawGizmoMeshInstancedColored(
+				DefaultResources::Primitives::Cube, editorLayer->m_sceneCamera,
+				editorLayer->m_sceneCameraPosition,
+				editorLayer->m_sceneCameraRotation,
+				m_boundingBoxColors,
+				m_boundingBoxMatrices,
+				glm::mat4(1.0f), 1.0f, gizmoSettings);
+		}
+
 		gizmoSettings.m_colorMode = GizmoSettings::ColorMode::Default;
 		if (m_displaySoil)
 		{
@@ -524,7 +528,7 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 			m_boundingBoxMatrices.back() = entityGlobalTransform.m_value *
 				(glm::translate(
 					(branchSkeleton.m_max + branchSkeleton.m_min) / 2.0f) *
-					glm::scale((branchSkeleton.m_max - branchSkeleton.m_min) / 2.0f));
+					glm::scale(branchSkeleton.m_max - branchSkeleton.m_min));
 			m_boundingBoxColors.emplace_back();
 			m_boundingBoxColors.back() = glm::vec4(m_randomColors[listIndex], 0.05f);
 			branchLastStartIndex += branchList.size();

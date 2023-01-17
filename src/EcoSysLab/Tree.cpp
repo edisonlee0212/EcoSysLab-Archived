@@ -50,9 +50,9 @@ void Tree::OnInspect() {
 	if (ImGui::TreeNodeEx("Illumination Estimation settings"))
 	{
 		ImGui::DragFloat("Overall intensity", &m_treeModel.m_illuminationEstimationSettings.m_overallIntensity, 0.01f);
-		ImGui::DragFloat("Occlusion", &m_treeModel.m_illuminationEstimationSettings.m_occulusion, 0.01f);
-		ImGui::DragFloat("Occlusion distance Factor", &m_treeModel.m_illuminationEstimationSettings.m_occulusionDistanceFactor, 0.01f);
-		ImGui::DragFloat("Min/max ratio", &m_treeModel.m_illuminationEstimationSettings.m_probeMinMaxRatio, 0.01f);
+		ImGui::DragFloat("Occlusion", &m_treeModel.m_illuminationEstimationSettings.m_occlusion, 0.01f);
+		ImGui::DragFloat("Occlusion distance Factor", &m_treeModel.m_illuminationEstimationSettings.m_occlusionDistanceFactor, 0.01f);
+		ImGui::DragFloat("Min/max ratio", &m_treeModel.m_illuminationEstimationSettings.m_layerAngleFactor, 0.01f);
 		ImGui::TreePop();
 	}
 

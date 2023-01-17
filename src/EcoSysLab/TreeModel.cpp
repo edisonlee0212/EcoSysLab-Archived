@@ -264,7 +264,7 @@ float TreeVolume::IlluminationEstimation(const glm::vec3& position,
 			lightIntensity += sectorLightIntensity;
 			direction += sectorLightIntensity * lightDir;
 		}
-		ratio *= settings.m_probeMinMaxRatio;
+		ratio *= settings.m_layerAngleFactor;
 	}
 	lightDirection = glm::normalize(direction);
 	lightIntensity = glm::clamp(lightIntensity / ratioSum * settings.m_overallIntensity, 0.0f, 1.0f);

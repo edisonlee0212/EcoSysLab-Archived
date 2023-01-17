@@ -498,9 +498,9 @@ namespace EcoSysLab {
 		int m_probeLayerAmount = 4;
 		int m_probeSectorAmount = 4;
 		float m_occlusion = 0.15f;
-		float m_occlusionDistanceFactor = 2.0f;
+		float m_occlusionDistanceFactor = 2.5f;
 		float m_overallIntensity = 2.0f;
-		float m_probeMinMaxRatio = 0.95f;
+		float m_layerAngleFactor = 0.8f;
 	};
 
 	class TreeVolume
