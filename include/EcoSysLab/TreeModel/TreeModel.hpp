@@ -132,7 +132,7 @@ namespace EcoSysLab {
 		int m_order = 0;
 
 		float m_nitrite = 1.0f;
-		float m_water = 1.0f;
+		float m_rootFlux = 1.0f;
 		
 
 		float m_inhibitorTarget = 0;
@@ -149,7 +149,7 @@ namespace EcoSysLab {
 		 * Sum of buds' development resource requirement and internode's development resource requirement.
 		 */
 		float m_developmentalVigorRequirement = 0.0f;
-
+		float m_subtreeDevelopmentalVigorRequirement = 0.0f;
 		float m_growthPotential = 0.0f;
 		float m_subtreeGrowthPotential = 0.0f;
 		/*
@@ -484,7 +484,6 @@ namespace EcoSysLab {
 	struct TreeGrowthRequirement
 	{
 		float m_vigor = 0.0f;
-		float m_nitrite = 0.0f;
 	};
 
 	struct TreeVoxelData
@@ -539,7 +538,7 @@ namespace EcoSysLab {
 		inline void RootVigorAllocation(const RootGrowthParameters& rootGrowthParameters);
 
 		inline void CalculateVigorRequirement(const RootGrowthParameters& rootGrowthParameters, TreeGrowthRequirement& newRootGrowthNutrientsRequirement);
-
+		inline void SampleNitrite(const glm::mat4& globalTransform, SoilModel& soilModel);
 #pragma endregion
 #pragma region Tree Growth
 		inline void AggregateInternodeVigorRequirement();
@@ -607,7 +606,7 @@ namespace EcoSysLab {
 
 		bool m_collectLight = false;
 		bool m_collectWater = false;
-		bool m_collectNitrite = false;
+		bool m_collectNitrite = true;
 		TreeVolume m_treeVolume;
 		IlluminationEstimationSettings m_illuminationEstimationSettings;
 		Octree<TreeVoxelData> m_rootOctree;

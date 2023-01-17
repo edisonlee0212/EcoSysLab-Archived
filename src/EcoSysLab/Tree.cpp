@@ -123,6 +123,16 @@ bool Tree::TryGrow() {
 		treeDescriptor->m_rootGrowthParameters, treeDescriptor->m_treeGrowthParameters);
 }
 
+void Tree::Serialize(YAML::Emitter& out)
+{
+	m_treeDescriptor.Save("m_treeDescriptor", out);
+}
+
+void Tree::Deserialize(const YAML::Node& in)
+{
+	m_treeDescriptor.Load("m_treeDescriptor", in);
+}
+
 void Tree::GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings) {
 	const auto scene = GetScene();
 	const auto self = GetOwner();
