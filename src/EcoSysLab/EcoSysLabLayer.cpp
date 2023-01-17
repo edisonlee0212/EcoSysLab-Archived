@@ -181,6 +181,7 @@ void EcoSysLabLayer::LateUpdate() {
 				material->m_materialProperties.m_albedoColor = glm::vec3(109, 79, 75) / 255.0f;
 				material->m_materialProperties.m_roughness = 1.0f;
 				material->m_materialProperties.m_metallic = 0.0f;
+			}
 		}
 
 		auto rootsHolder = m_rootStrandsHolder.Get();
