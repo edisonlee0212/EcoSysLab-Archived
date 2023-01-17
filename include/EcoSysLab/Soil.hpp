@@ -2,18 +2,38 @@
 
 #include "ecosyslab_export.h"
 #include "SoilModel.hpp"
+#include "HeightField.hpp"
 using namespace UniEngine;
 namespace EcoSysLab
 {
+	enum class SoilMaterialType {
+		Clay,
+		SiltyClay,
+		Loam,
+		Sand,
+		LoamySand,
+		Air
+	};
+
+	class SoilLayerDescriptor : public IAsset
+	{
+	public:
+		unsigned m_type;
+		Noises2D m_thickness;
+		void OnInspect() override;
+		void Serialize(YAML::Emitter& out) override;
+		void Deserialize(const YAML::Node& in) override;
+	};
+
 	/**
-	 * \brief The soil descriptor contains the procedural paremeters for soil model.
+	 * \brief The soil descriptor contains the procedural parameters for soil model.
 	 * It helps provide the user's control menu and serialization outside the portable soil model
 	 */
 	class SoilDescriptor : public IAsset {
 	public:
 		SoilParameters m_soilParameters;
+		std::vector<AssetRef> m_soilLayerDescriptors;
 		AssetRef m_heightField;
-
 		/**ImGui menu goes to here. Also you can take care you visualization with Gizmos here.
 		 * Note that the visualization will only be activated while you are inspecting the soil private component in the entity inspector.
 		 */

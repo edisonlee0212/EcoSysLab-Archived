@@ -41,7 +41,8 @@ int main() {
     ClassRegistry::RegisterAsset<RadialBoundingVolume>("RadialBoundingVolume", { ".rbv" });
 
     ClassRegistry::RegisterAsset<HeightField>("HeightField", { ".hf" });
-    ClassRegistry::RegisterAsset<GroundSurface>("GroundSurface", { ".gs" });
+
+    ClassRegistry::RegisterAsset<SoilLayerDescriptor>("SoilLayerDescriptor", { ".sld" });
     EngineSetup();
 
     ApplicationConfigs applicationConfigs;

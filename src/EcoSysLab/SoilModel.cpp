@@ -32,19 +32,7 @@ the voxel centers are at 0.5 and 1.5.
 */
 
 
-namespace EcoSysLab
-{
-	const SoilPhysicalMaterial Soil_Clay       = GetSoilPhysicalMaterial(0.1, 0.1, 0.8, 1);
-	const SoilPhysicalMaterial Soil_Silty_Clay = GetSoilPhysicalMaterial(0.1, 0.4, 0.5, 1);
-	const SoilPhysicalMaterial Soil_Loam       = GetSoilPhysicalMaterial(0.4, 0.4, 0.2, 1);
-	const SoilPhysicalMaterial Soil_Sand       = GetSoilPhysicalMaterial(1,   0,   0, 1);
-	const SoilPhysicalMaterial Soil_Loamy_Sand = GetSoilPhysicalMaterial(0.8, 0.1, 0.1, 1);
-	//Soil_Air      = GetSoilPhysicalMaterial(1,   1,   1,   0);
-	const SoilPhysicalMaterial Soil_Air        = SoilPhysicalMaterial({1, 0, 0});
-}
-
-
-void SoilModel::Initialize(const SoilParameters& p)
+void SoilModel::Initialize(const SoilParameters& p, const SoilSurface& soilSurface, const std::vector<SoilLayer>& soilLayers)
 {
 	m_diffusionForce = p.m_diffusionForce;
 	m_gravityForce = p.m_gravityForce;
@@ -138,19 +126,16 @@ void SoilModel::Initialize(const SoilParameters& p)
 	m_initialized = true;
 
 	auto numVoxels = m_resolution.x * m_resolution.y * m_resolution.z;
-	m_soilDensity = Field(numVoxels);
-	for(int i = 0; i < m_soilDensity.size(); i++)
-	{
-		m_soilDensity[i] = p.m_soilDensitySampleFunc(GetPositionFromCoordinate(GetCoordinateFromIndex(i)));
-	}
-
+	
 	m_rnd = std::mt19937(std::random_device()());
+	
 
 
 	// intermediate variables
 	auto empty = Field(numVoxels);
 	empty = 0.f;
 
+	m_soilDensity = empty;
 	// also to initilzie their size
 	m_w = empty;
 	m_n = empty;
@@ -200,41 +185,43 @@ void SoilModel::Initialize(const SoilParameters& p)
 	BlurField(m_p);
 	//BlurField(m_p);
 
-	BuildFromLayers(p.m_terrainHeightFunction, p.m_soil_layers);
+	BuildFromLayers(soilSurface, soilLayers);
 
 	Reset();
 }
 
 
-void EcoSysLab::SoilModel::BuildFromLayers(std::function<float(const glm::vec2& position)> terrainHeight, const std::vector<SoilLayer>& soil_layers)
+void EcoSysLab::SoilModel::BuildFromLayers(const SoilSurface& soilSurface, const std::vector<SoilLayer>& soil_layers)
 {
 	auto rain_field = Field(m_w.size());
 	rain_field = 0.f;
 	// Height axis is Y:
+
+	
 	for(auto x=0; x<m_resolution.x; ++x)
 	{
 		for(auto z=0; z<m_resolution.z; ++z)
 		{
 			auto pos = GetPositionFromCoordinate({x, 0, z}); // y value does not matter
 			vec2 pos_2d(pos.x, pos.z);
-			auto h = terrainHeight({pos.x, pos.z});
-			pos.y = h;
+			auto groundHeight = soilSurface.m_height({pos.x, pos.z});
+			pos.y = groundHeight;
 			rain_field[Index(GetCoordinateFromPosition(pos)+ivec3(0, -2, 0))] = 0.1;// insert water 2 voxels below ground
 
 			for(auto y=0; y<m_resolution.y; ++y)
 			{
-				float current_height = h;
+				float current_height = groundHeight;
 				auto voxel_height = m_boundingBoxMin.y + y*m_dx + (m_dx/2.0);
 
 				// find material index:
-				auto idx = 0;
-				while(voxel_height < current_height && idx < soil_layers.size()-1)
+				int idx = 0;
+				while(voxel_height < current_height && idx < static_cast<int>(soil_layers.size())-1)
 				{
 					idx++;
-					current_height -= glm::max(0.f, soil_layers[idx].height(pos_2d));
+					current_height -= glm::max(0.f, soil_layers[idx].m_thickness(pos_2d));
 				}
 
-				SetVoxel(x, y, z, soil_layers[idx].mat);
+				SetVoxel(x, y, z, soil_layers[idx].m_mat);
 			}
 		}
 	}
@@ -843,9 +830,10 @@ float EcoSysLab::SoilModel::GetCapacity(const glm::vec3& position) const
 void EcoSysLab::SoilModel::SetVoxel(int x, int y, int z, const SoilPhysicalMaterial& material)
 {
 	auto idx = Index(x, y, z);
-	m_c[idx] = material.c;
-	m_p[idx] = material.p;
-	m_soilDensity[idx] = material.d;
+	auto position = GetPositionFromCoordinate({ x, y, z });
+	m_c[idx] = material.m_c(position);
+	m_p[idx] = material.m_p(position);
+	m_soilDensity[idx] = material.m_d(position);
 }
 
 
@@ -1076,34 +1064,6 @@ bool EcoSysLab::SoilModel::PositionInsideVolume(const glm::vec3& p) const
 	if ( p.x >= max.x || p.y >= max.y || p.z >= max.z )
 		return false;
 	return true;
-}
-
-SoilPhysicalMaterial EcoSysLab::GetSoilPhysicalMaterial(float sand, float silt, float clay, float compactness)
-{
-	assert(compactness <= 1 && compactness >= 0);
-	
-	float weight = sand+silt+clay;
-	sand /= weight;
-	silt /= weight;
-	clay /= weight;
-
-	//                         c    p     d
-	SoilPhysicalMaterial Sand({0.9, 15,   0.5});
-	SoilPhysicalMaterial Clay({2.1, 0.05, 1});
-	SoilPhysicalMaterial Silt({1.9, 1.5,  0.8});
-	SoilPhysicalMaterial  Air({5,   30,   0});
-
-	float air = 1-compactness;
-	sand *= compactness;
-	silt *= compactness;
-	clay *= compactness;
-
-	SoilPhysicalMaterial result;
-	result.c = sand*Sand.c + silt*Silt.c + clay*Clay.c + air*Air.c;
-	result.p = sand*Sand.p + silt*Silt.p + clay*Clay.p + air*Air.p;
-	result.d = sand*Sand.d + silt*Silt.d + clay*Clay.d + air*Air.d;
-
-	return result;
 }
 
 void EcoSysLab::SoilModel::Source::Apply(Field& target)

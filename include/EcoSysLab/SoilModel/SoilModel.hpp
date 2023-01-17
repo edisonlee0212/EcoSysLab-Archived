@@ -15,29 +15,26 @@ namespace EcoSysLab {
 
 	class SoilParameters;
 
-	struct SoilPhysicalMaterial
-	{
-		float c; // capacity
-		float p; // permeability
-		float d; // density
 
-		float n; // initial amount of nutrients
-		float w; // initial amount of water
+	struct SoilSurface
+	{
+		std::function<float(const glm::vec2& position)> m_height;
 	};
 
-	SoilPhysicalMaterial GetSoilPhysicalMaterial(float sand, float silt, float clay, float compactness);
+	struct SoilPhysicalMaterial
+	{
+		std::function<float(const glm::vec3& position)> m_c; // capacity
+		std::function<float(const glm::vec3& position)> m_p; // permeability
+		std::function<float(const glm::vec3& position)> m_d; // density
 
-	extern const SoilPhysicalMaterial Soil_Clay;      
-	extern const SoilPhysicalMaterial Soil_Silty_Clay;
-	extern const SoilPhysicalMaterial Soil_Loam;
-	extern const SoilPhysicalMaterial Soil_Sand;
-	extern const SoilPhysicalMaterial Soil_Loamy_Sand;
-	extern const SoilPhysicalMaterial Soil_Air;
+		std::function<float(const glm::vec3& position)> m_n; // initial amount of nutrients
+		std::function<float(const glm::vec3& position)> m_w; // initial amount of water
+	};
 
 	struct SoilLayer
 	{
-		SoilPhysicalMaterial mat;
-		std::function<float(const glm::vec2& position)> height;
+		SoilPhysicalMaterial m_mat;
+		std::function<float(const glm::vec2& position)> m_thickness;
 	};
 
 	class SoilModel {
@@ -55,7 +52,7 @@ namespace EcoSysLab {
 		};
 
 
-		void Initialize(const SoilParameters& soilParameters);
+		void Initialize(const SoilParameters& p, const SoilSurface& soilSurface, const std::vector<SoilLayer>& soilLayers);
 
 		void Reset();
 		void Step();
@@ -92,7 +89,7 @@ namespace EcoSysLab {
 
 		int m_version = 0; // TODO: what does this do?
 	protected:
-		void BuildFromLayers(std::function<float(const glm::vec2& position)> terrainHeight, const std::vector<SoilLayer>& soil_layers); // helper function called inside initialize to set up soil layers
+		void BuildFromLayers(const SoilSurface& soilSurface, const std::vector<SoilLayer>& soil_layers); // helper function called inside initialize to set up soil layers
 		void SetVoxel(int x, int y, int z, const SoilPhysicalMaterial& material);
 
 		float GetField(const Field& field, const glm::vec3& position, float default_value) const;
@@ -201,20 +198,5 @@ namespace EcoSysLab {
 		float m_diffusionForce = 0.1;
 		glm::vec3 m_gravityForce = glm::vec3(0, -0.05, 0);
 		float m_nutrientForce = 0.05;
-
-		std::function<float(const glm::vec3& position)> m_soilDensitySampleFunc = [](const glm::vec3& position)
-			{
-				return position.y > 0 ? 0.f : 1.f;
-			};
-
-		std::function<float(const glm::vec2& position)> m_terrainHeightFunction= [](const glm::vec2& position)
-		{
-			return 2.f;
-		};
-
-		std::vector<SoilLayer> m_soil_layers = {
-			{Soil_Air,  [](const glm::vec2& pos){ return   0.f;} },  // first layer always has thickness of 0!
-			{Soil_Loam, [](const glm::vec2& pos){ return 100.f;} } // loam layer with constant thickness of 100 m
-		};
 	};
 }
