@@ -783,7 +783,7 @@ void EcoSysLab::EcoSysLabLayer::SoilVisualizationScalar(SoilModel& soilModel)
 	if (m_updateScalarColors) {
 		std::vector<std::shared_future<void>> results;
 
-		auto visualize_vec3 = [this, &numVoxels, &results](const std::vector<float>& x, const std::vector<float>& y, const std::vector<float>& z)
+		auto visualize_vec3 = [this, &numVoxels, &results](const Field& x, const Field& y, const Field& z)
 		{
 			Jobs::ParallelFor(numVoxels, [&](unsigned i)
 				{
@@ -792,7 +792,7 @@ void EcoSysLab::EcoSysLabLayer::SoilVisualizationScalar(SoilModel& soilModel)
 				}, results);
 		};
 
-		auto visualize_float = [this, &numVoxels, &results](const std::vector<float>& v)
+		auto visualize_float = [this, &numVoxels, &results](const Field& v)
 		{
 			Jobs::ParallelFor(numVoxels, [&](unsigned i)
 				{
@@ -817,7 +817,7 @@ void EcoSysLab::EcoSysLabLayer::SoilVisualizationScalar(SoilModel& soilModel)
 		}break;
 		case SoilProperty::NutrientDensity:
 		{
-			visualize_float(soilModel.m_nutrientsDensity);
+			visualize_float(soilModel.m_n);
 		}break;
 		case SoilProperty::SoilDensity:
 		{

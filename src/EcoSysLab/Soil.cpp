@@ -115,7 +115,7 @@ void Soil::OnInspect()
 		ImGui::InputFloat3("Gravity Force", &m_soilModel.m_gravityForce.x);
 
 		ImGui::Checkbox("Auto step", &m_autoStep);
-		if (m_autoStep || ImGui::Button("Step"))
+		if ( ImGui::Button("Step") || m_autoStep )
 		{
 			if(m_irrigation)
 				m_soilModel.Irrigation();
@@ -238,14 +238,14 @@ void Soil::InitializeSoilModel()
 void Soil::SplitRootTestSetup()
 {
 	InitializeSoilModel();
-	for(int i = 0; i < m_soilModel.m_nutrientsDensity.size(); i++)
+	for(int i = 0; i < m_soilModel.m_n.size(); i++)
 	{
 		if(m_soilModel.GetPositionFromCoordinate(m_soilModel.GetCoordinateFromIndex(i)).x > 0)
 		{
-			m_soilModel.m_nutrientsDensity[i] = 2.0f;
+			m_soilModel.m_n[i] = 2.0f;
 		}else
 		{
-			m_soilModel.m_nutrientsDensity[i] = 0.5f;
+			m_soilModel.m_n[i] = 0.5f;
 		}
 	}
 }
