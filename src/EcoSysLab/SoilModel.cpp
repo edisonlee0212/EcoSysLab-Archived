@@ -135,59 +135,15 @@ void SoilModel::Initialize(const SoilParameters& p)
 
 	m_rnd = std::mt19937(std::random_device()());
 
-	Reset();
 
-}
-
-void SoilModel::Reset()
-{
-	assert(m_initialized);
-
-	m_time = 0.f;
-
-	auto numVoxels = m_resolution.x * m_resolution.y * m_resolution.z;
+	// intermediate variables
 	auto empty = Field(numVoxels);
 	empty = 0.f;
 
-	// Water
+	// also to initilzie their size
 	m_w = empty;
-
-	// Capacity
-	m_c = Field(numVoxels); // initialize with 1s
-	m_c = 1.0f;
-
-	//SetField(m_c, vec3(-10, -3, -10), vec3(10, 0, 10), 2);
-	//BlurField(m_c);
-
-	//ChangeField(m_c, vec3(0, 0, 0),   5000, 3);
-	//ChangeField(m_c, vec3(-1, 0, -1), 5000, 3);
-	//ChangeField(m_c, vec3(1, 0, -1),  5000, 3);
-	//ChangeField(m_c, vec3(-1, 0, 1),  5000, 3);
-	//ChangeField(m_c, vec3(1, 0, 1),   5000, 3);
-
-	m_l = empty;
-
-
-	// Nutrients
 	m_n = empty;
-	SetField(m_n, vec3(-10, -3, -10), vec3(10, 0, 10), 2);
-	BlurField(m_n);
-	// create some nutrients
-	//ChangeNutrient(vec3(0,0,0),  20000, 4);
-	//ChangeNutrient(vec3(1,3,0),   5000, 3);
-	//ChangeNutrient(vec3(-5,-3,1), 10500, 5);
 
-
-	// Permeability
-	m_p = Field(numVoxels); // initialize with 1s
-	m_p = 1.0f;
-	//SetField(m_p, vec3(-6.4, -5, -6.4), vec3(6.4, 1, 6.4), 0.5f);
-	SetField(m_p, vec3(-2, -5, -6.4), vec3(0, 1, 6.4), 0.0f);
-	BlurField(m_p);
-	//BlurField(m_p);
-
-
-	// intermediate variables
 	m_w_grad_x = empty;
 	m_w_grad_y = empty;
 	m_w_grad_z = empty;
@@ -208,8 +164,130 @@ void SoilModel::Reset()
 	m_div_grav_n_y = empty;
 	m_div_grav_n_z = empty;
 
+	m_l = empty;
 
-	update_w_sum();
+
+	// Capacity
+	m_c = Field(numVoxels); // initialize with 1s
+	m_c = 1.0f;
+
+	//SetField(m_c, vec3(-10, -3, -10), vec3(10, 0, 10), 2);
+	//BlurField(m_c);
+
+	//ChangeField(m_c, vec3(0, 0, 0),   5000, 3);
+	//ChangeField(m_c, vec3(-1, 0, -1), 5000, 3);
+	//ChangeField(m_c, vec3(1, 0, -1),  5000, 3);
+	//ChangeField(m_c, vec3(-1, 0, 1),  5000, 3);
+	//ChangeField(m_c, vec3(1, 0, 1),   5000, 3);
+
+
+	// Permeability
+	m_p = Field(numVoxels); // initialize with 1s
+	m_p = 1.0f;
+	//SetField(m_p, vec3(-6.4, -5, -6.4), vec3(6.4, 1, 6.4), 0.5f);
+	SetField(m_p, vec3(-2, -5, -6.4), vec3(0, 1, 6.4), 0.0f);
+	BlurField(m_p);
+	//BlurField(m_p);
+
+	BuildFromLayers(p.m_terrainHeightFunction);
+
+	Reset();
+}
+
+
+void EcoSysLab::SoilModel::BuildFromLayers(std::function<float(const glm::vec2& position)> terrainHeight)
+{
+	struct Layer
+	{
+		SoilPhysicalMaterial mat;
+		float height;
+	};
+
+	std::vector<Layer> layers({
+		Layer({Soil_Air,        0.f}),
+		Layer({Soil_Loam,       2.f}),
+		Layer({Soil_Sand,       1.f}),
+		Layer({Soil_Clay,       0.5f}),
+		Layer({Soil_Loam,      15.f}),
+		});
+	//std::vector<Layer> layers({
+	//	//Layer({Soil_Loam,        0.f}),
+	//	Layer({Soil_Loamy_Sand,  20.f}),
+	//});
+
+
+	auto rain_field = Field(m_w.size());
+	rain_field = 0.f;
+	// Height axis is Y:
+	for(auto x=0; x<m_resolution.x; ++x)
+	{
+		for(auto z=0; z<m_resolution.z; ++z)
+		{
+			auto pos = GetPositionFromCoordinate({x, 0, z}); // y value does not matter
+			auto h = terrainHeight({pos.x, pos.z});
+			pos.y = h;
+			rain_field[Index(GetCoordinateFromPosition(pos)+ivec3(0, -2, 0))] = 0.1;// insert water 2 voxels below ground
+
+			for(auto y=0; y<m_resolution.y; ++y)
+			{
+				float current_height = h;
+				auto voxel_height = m_boundingBoxMin.y + y*m_dx + (m_dx/2.0);
+
+				// find material index:
+				auto idx = 0;
+				while(voxel_height < current_height && idx < layers.size()-1)
+				{
+					idx++;
+					current_height -= layers[idx].height;
+				}
+
+				SetVoxel(x, y, z, layers[idx].mat);
+			}
+		}
+	}
+
+	// blur everything to make it smooth
+	BlurField(m_c);
+	BlurField(m_p);
+	BlurField(m_soilDensity);
+
+	Source rain_source;
+	BlurField(rain_field);
+	BlurField(rain_field);
+	for(auto i=0; i<rain_field.size(); ++i)
+	{
+		if( rain_field[i] > 0 )
+		{
+			rain_source.idx.push_back(i);
+			rain_source.amounts.push_back(rain_field[i]);
+		}
+	}
+	AddSource(move(rain_source));
+}
+
+
+void SoilModel::Reset()
+{
+	assert(m_initialized);
+
+	m_time = 0.f;
+
+	auto numVoxels = m_resolution.x * m_resolution.y * m_resolution.z;
+
+	// Water
+	m_w = 0.f;
+
+
+	// Nutrients
+	m_n = 0.f;
+	SetField(m_n, vec3(-10, -3, -10), vec3(10, 0, 10), 2);
+	BlurField(m_n);
+	// create some nutrients
+	//ChangeNutrient(vec3(0,0,0),  20000, 4);
+	//ChangeNutrient(vec3(1,3,0),   5000, 3);
+	//ChangeNutrient(vec3(-5,-3,1), 10500, 5);
+
+	UpdateStats();
 
 	m_version++;
 }
@@ -282,44 +360,103 @@ void EcoSysLab::SoilModel::Boundary_Wrap_Axis(const Field& input, Field& output,
 
 void EcoSysLab::SoilModel::Boundary_Wrap_X(const Field& input, Field& output, const std::vector<int>& indices_1D, const std::vector<float>& weights) const
 {
-	int lim_a = m_resolution.y;
-	int lim_b = m_resolution.z;
-	int lim_f = m_resolution.x;
+	auto WrapIndex = [&](int a, int b, int f)
+	{	return Index(f, a, b);	};
 
-	auto WrapIndex_X = [&](int a, int b, int f)
-	{
-		return Index(f, a, b);
-	};
-
-	Boundary_Wrap_Axis(input, output, indices_1D, weights, lim_a, lim_b, lim_f, WrapIndex_X);
+	Boundary_Wrap_Axis(input, output, indices_1D, weights, m_resolution.y, m_resolution.z, m_resolution.x, WrapIndex);
 }
 
 void EcoSysLab::SoilModel::Boundary_Wrap_Y(const Field& input, Field& output, const std::vector<int>& indices_1D, const std::vector<float>& weights) const
 {
-	int lim_a = m_resolution.x;
-	int lim_b = m_resolution.z;
-	int lim_f = m_resolution.y;
+	auto WrapIndex = [&](int a, int b, int f)
+	{	return Index(a, f, b);	};
 
-	auto WrapIndex_X = [&](int a, int b, int f)
-	{
-		return Index(a, f, b);
-	};
-
-	Boundary_Wrap_Axis(input, output, indices_1D, weights, lim_a, lim_b, lim_f, WrapIndex_X);
+	Boundary_Wrap_Axis(input, output, indices_1D, weights, m_resolution.x, m_resolution.z, m_resolution.y, WrapIndex);
 }
 
 void EcoSysLab::SoilModel::Boundary_Wrap_Z(const Field& input, Field& output, const std::vector<int>& indices_1D, const std::vector<float>& weights) const
 {
-	int lim_a = m_resolution.x;
-	int lim_b = m_resolution.y;
-	int lim_f = m_resolution.z;
+	auto WrapIndex = [&](int a, int b, int f)
+	{	return Index(a, b, f);	};
 
-	auto WrapIndex_X = [&](int a, int b, int f)
+	Boundary_Wrap_Axis(input, output, indices_1D, weights, m_resolution.x, m_resolution.y, m_resolution.z, WrapIndex);
+}
+
+
+
+void EcoSysLab::SoilModel::Boundary_Barrier_Axis(const Field& input, Field& output, const std::vector<int>& indices_1D, const std::vector<float>& weights, int lim_a, int lim_b, int lim_f, std::function<int(int, int, int)> WrapIndex) const
+{
+	/*
+	Out of bonds indices (v[-1] etc.) are undefined. However, using the mirror method, we can substitute them:
+
+	v[-1] == v[0]
+	v[-2] == v[1]
+
+	v[lim]   == v[lim-1]
+	v[lim+1] == v[lim-2]
+
+	*/	
+	
+	for (int a = 0; a < lim_a; ++a)
 	{
-		return Index(a, b, f);
-	};
+		for (int b = 0; b < lim_b; ++b)
+		{
+			output[WrapIndex(a, b, 0      )] = 0;
+			output[WrapIndex(a, b, lim_f-1)] = 0;
 
-	Boundary_Wrap_Axis(input, output, indices_1D, weights, lim_a, lim_b, lim_f, WrapIndex_X);
+			for(auto i=0u; i<indices_1D.size(); ++i)
+			{
+				auto idx = indices_1D[i];
+				auto w   = weights[i];
+				if( idx < 0 )
+				{
+					output[WrapIndex(a, b, 0      )] += input[WrapIndex(a, b, -idx-1)] * w;
+					output[WrapIndex(a, b, lim_f-1)] += input[WrapIndex(a, b, lim_f-1+idx)] * w;
+				}
+				else if( idx > 0 )
+				{
+					output[WrapIndex(a, b, 0      )] += input[WrapIndex(a, b, idx  )] * w;
+					output[WrapIndex(a, b, lim_f-1)] += input[WrapIndex(a, b, lim_f-idx )] * w;
+				}
+				else
+				{
+					output[WrapIndex(a, b, 0      )] += input[WrapIndex(a, b, 0      )] * w;
+					output[WrapIndex(a, b, lim_f-1)] += input[WrapIndex(a, b, lim_f-1)] * w;
+				}
+			}
+		}
+	}
+}
+
+
+void EcoSysLab::SoilModel::Boundary_Barrier_X(const Field& input, Field& output, const std::vector<int>& indices_1D, const std::vector<float>& weights) const
+{
+	auto WrapIndex = [&](int a, int b, int f)
+	{	return Index(f, a, b);	};
+
+	Boundary_Barrier_Axis(input, output, indices_1D, weights, m_resolution.y, m_resolution.z, m_resolution.x, WrapIndex);
+}
+
+void EcoSysLab::SoilModel::Boundary_Barrier_Y(const Field& input, Field& output, const std::vector<int>& indices_1D, const std::vector<float>& weights) const
+{
+	auto WrapIndex = [&](int a, int b, int f)
+	{	return Index(a, f, b);	};
+
+	Boundary_Barrier_Axis(input, output, indices_1D, weights, m_resolution.x, m_resolution.z, m_resolution.y, WrapIndex);
+}
+
+void EcoSysLab::SoilModel::Boundary_Barrier_Z(const Field& input, Field& output, const std::vector<int>& indices_1D, const std::vector<float>& weights) const
+{
+	auto WrapIndex = [&](int a, int b, int f)
+	{	return Index(a, b, f);	};
+
+	Boundary_Barrier_Axis(input, output, indices_1D, weights, m_resolution.x, m_resolution.y, m_resolution.z, WrapIndex);
+}
+
+
+void EcoSysLab::SoilModel::AddSource(Source&& source)
+{
+	m_water_sources.emplace_back(source);
 }
 
 
@@ -333,12 +470,18 @@ float SoilModel::GetTime() const
 	return m_time;
 }
 
-void EcoSysLab::SoilModel::update_w_sum()
+void EcoSysLab::SoilModel::UpdateStats()
 {
 	// count total water:
 	m_w_sum = 0.f;
 	for (auto i = 0; i < m_w.size(); ++i)
 		m_w_sum += m_w[i];
+
+	auto max_p = m_p.max();
+	auto max_l = m_l.max();
+	auto max_grav = glm::max(m_gravityForce.x, glm::max(m_gravityForce.y, m_gravityForce.z));
+	m_max_speed_diff = max_p * max_l * m_diffusionForce;
+	m_max_speed_grav = max_p * max_l * max_grav;
 }
 
 
@@ -389,12 +532,21 @@ void SoilModel::Step()
 		Convolution3(m_l, m_w_grad_y, grad_index_y, grad_weights);
 		Convolution3(m_l, m_w_grad_z, grad_index_z, grad_weights);
 
-		if(Boundary::wrap == m_boundary_x)
-			Boundary_Wrap_X(m_l, m_w_grad_x, grad_index_1D, grad_weights);
-		if(Boundary::wrap == m_boundary_y)
-			Boundary_Wrap_Y(m_l, m_w_grad_y, grad_index_1D, grad_weights);
-		if(Boundary::wrap == m_boundary_z)
-			Boundary_Wrap_Z(m_l, m_w_grad_z, grad_index_1D, grad_weights);
+		if(Boundary::wrap  == m_boundary_x)
+			Boundary_Wrap_X(   m_l, m_w_grad_x, grad_index_1D, grad_weights);
+		if(Boundary::block == m_boundary_x)
+			Boundary_Barrier_X(m_l, m_w_grad_x, grad_index_1D, grad_weights);
+
+		if(Boundary::wrap  == m_boundary_y)
+			Boundary_Wrap_Y(   m_l, m_w_grad_y, grad_index_1D, grad_weights);
+		if(Boundary::block == m_boundary_y)
+			Boundary_Barrier_Y(m_l, m_w_grad_y, grad_index_1D, grad_weights);
+
+		if(Boundary::wrap  == m_boundary_z)
+			Boundary_Wrap_Z(   m_l, m_w_grad_z, grad_index_1D, grad_weights);
+		if(Boundary::block == m_boundary_z)
+			Boundary_Barrier_Z(m_l, m_w_grad_z, grad_index_1D, grad_weights);
+
 
 		// apply effect of permeability
 		// it must be applied after computing the gradient, since it is inhomogeneous!
@@ -408,28 +560,43 @@ void SoilModel::Step()
 		Convolution3(m_w_grad_y, m_div_diff_y, grad_index_y, grad_weights);
 		Convolution3(m_w_grad_z, m_div_diff_z, grad_index_z, grad_weights);
 
-		if(Boundary::wrap == m_boundary_x)
-			Boundary_Wrap_X(m_w_grad_x, m_div_diff_x, grad_index_1D, grad_weights);
-		if(Boundary::wrap == m_boundary_y)
-			Boundary_Wrap_Y(m_w_grad_y, m_div_diff_y, grad_index_1D, grad_weights);
-		if(Boundary::wrap == m_boundary_z)
-			Boundary_Wrap_Y(m_w_grad_z, m_div_diff_z, grad_index_1D, grad_weights);
+		if(Boundary::wrap  == m_boundary_x)
+			Boundary_Wrap_X(   m_w_grad_x, m_div_diff_x, grad_index_1D, grad_weights);
+		if(Boundary::block == m_boundary_x)
+			Boundary_Barrier_X(m_w_grad_x, m_div_diff_x, grad_index_1D, grad_weights);
+
+		if(Boundary::wrap  == m_boundary_y)
+			Boundary_Wrap_Y(   m_w_grad_y, m_div_diff_y, grad_index_1D, grad_weights);
+		if(Boundary::block == m_boundary_y)
+			Boundary_Barrier_Y(m_w_grad_y, m_div_diff_y, grad_index_1D, grad_weights);
+
+		if(Boundary::wrap  == m_boundary_z)
+			Boundary_Wrap_Y(   m_w_grad_z, m_div_diff_z, grad_index_1D, grad_weights);
+		if(Boundary::block == m_boundary_z)
+			Boundary_Barrier_Z(m_w_grad_z, m_div_diff_z, grad_index_1D, grad_weights);
+
 
 		// divergence for nutrients
 		tmp = m_w_grad_x * m_diffusionForce * m_n;
-		Convolution3(tmp, m_div_diff_n_x, grad_index_x, grad_weights);
-		if(Boundary::wrap == m_boundary_x)
-			Boundary_Wrap_X(tmp, m_div_diff_n_x, grad_index_1D, grad_weights);
+		Convolution3(          tmp, m_div_diff_n_x, grad_index_x, grad_weights);
+		if(Boundary::wrap  == m_boundary_x)
+			Boundary_Wrap_X(   tmp, m_div_diff_n_x, grad_index_1D, grad_weights);
+		if(Boundary::block == m_boundary_x)
+			Boundary_Barrier_X(tmp, m_div_diff_n_x, grad_index_1D, grad_weights);
 
 		tmp = m_w_grad_y * m_diffusionForce * m_n;
-		Convolution3(tmp, m_div_diff_n_y, grad_index_y, grad_weights);
-		if(Boundary::wrap == m_boundary_y)
-			Boundary_Wrap_X(tmp, m_div_diff_n_y, grad_index_1D, grad_weights);
+		Convolution3          (tmp, m_div_diff_n_y, grad_index_y, grad_weights);
+		if(Boundary::wrap  == m_boundary_y)
+			Boundary_Wrap_Y(   tmp, m_div_diff_n_y, grad_index_1D, grad_weights);
+		if(Boundary::block == m_boundary_y)
+			Boundary_Barrier_Y(tmp, m_div_diff_n_y, grad_index_1D, grad_weights);
 		
 		tmp = m_w_grad_z * m_diffusionForce * m_n;
-		Convolution3(tmp, m_div_diff_n_z, grad_index_z, grad_weights);
-		if(Boundary::wrap == m_boundary_z)
-			Boundary_Wrap_X(tmp, m_div_diff_n_z, grad_index_1D, grad_weights);
+		Convolution3(          tmp, m_div_diff_n_z, grad_index_z, grad_weights);
+		if(Boundary::wrap  == m_boundary_z)
+			Boundary_Wrap_Z(   tmp, m_div_diff_n_z, grad_index_1D, grad_weights);
+		if(Boundary::block == m_boundary_z)
+			Boundary_Barrier_Z(tmp, m_div_diff_n_z, grad_index_1D, grad_weights);
 
 		m_div_diff_x *= m_diffusionForce;
 		m_div_diff_y *= m_diffusionForce;
@@ -466,14 +633,18 @@ void SoilModel::Step()
 			-wx, wx, wt, -2*wt, wt
 			});
 
-		Convolution3(wp, m_div_grav_x, idx, weights);
-		if( Boundary::wrap == m_boundary_x )
-			Boundary_Wrap_X(wp, m_div_grav_x, idx_1D, weights);
+		Convolution3(          wp, m_div_grav_x, idx, weights);
+		if( Boundary::wrap  == m_boundary_x )
+			Boundary_Wrap_X(   wp, m_div_grav_x, idx_1D, weights);
+		if( Boundary::block == m_boundary_x )
+			Boundary_Barrier_X(wp, m_div_grav_x, idx_1D, weights);
 
 		// gravity force on nutrients
-		Convolution3(wpn, m_div_grav_n_x, idx, weights);
-		if( Boundary::wrap == m_boundary_x )
-			Boundary_Wrap_X(wpn, m_div_grav_n_x, idx_1D, weights);
+		Convolution3(          wpn, m_div_grav_n_x, idx, weights);
+		if( Boundary::wrap  == m_boundary_x )
+			Boundary_Wrap_X(   wpn, m_div_grav_n_x, idx_1D, weights);
+		if( Boundary::block == m_boundary_x )
+			Boundary_Barrier_X(wpn, m_div_grav_n_x, idx_1D, weights);
 	}
 
 	// Y direction:
@@ -496,14 +667,18 @@ void SoilModel::Step()
 			-wx, wx, wt, -2*wt, wt
 			});
 
-		Convolution3(wp, m_div_grav_y, idx, weights);
-		if( Boundary::wrap == m_boundary_y )
-			Boundary_Wrap_X(wp, m_div_grav_y, idx_1D, weights);
+		Convolution3          (wp, m_div_grav_y, idx, weights);
+		if( Boundary::wrap  == m_boundary_y )
+			Boundary_Wrap_Y(   wp, m_div_grav_y, idx_1D, weights);
+		if( Boundary::block == m_boundary_y )
+			Boundary_Barrier_Y(wp, m_div_grav_y, idx_1D, weights);
 
 		// gravity force on nutrients
-		Convolution3(wpn, m_div_grav_n_y, idx, weights);
+		Convolution3(          wpn, m_div_grav_n_y, idx, weights);
 		if( Boundary::wrap == m_boundary_y )
-			Boundary_Wrap_X(wpn, m_div_grav_n_y, idx_1D, weights);
+			Boundary_Wrap_Y(   wpn, m_div_grav_n_y, idx_1D, weights);
+		if( Boundary::block == m_boundary_y )
+			Boundary_Barrier_Y(wpn, m_div_grav_n_y, idx_1D, weights);
 	}
 
 	// Z direction:
@@ -526,14 +701,18 @@ void SoilModel::Step()
 			-wx, wx, wt, -2*wt, wt
 			});
 
-		Convolution3(wp, m_div_grav_z, idx, weights);
-		if( Boundary::wrap == m_boundary_z )
-			Boundary_Wrap_X(wp, m_div_grav_z, idx_1D, weights);
+		Convolution3(          wp, m_div_grav_z, idx, weights);
+		if( Boundary::wrap  == m_boundary_z )
+			Boundary_Wrap_Z(   wp, m_div_grav_z, idx_1D, weights);
+		if( Boundary::block == m_boundary_z )
+			Boundary_Barrier_Z(wp, m_div_grav_z, idx_1D, weights);
 
 		// gravity force on nutrients
-		Convolution3(wpn, m_div_grav_n_z, idx, weights);
-		if( Boundary::wrap == m_boundary_z )
-			Boundary_Wrap_X(wpn, m_div_grav_n_z, idx_1D, weights);
+		Convolution3(          wpn, m_div_grav_n_z, idx, weights);
+		if( Boundary::wrap  == m_boundary_z )
+			Boundary_Wrap_Z(   wpn, m_div_grav_n_z, idx_1D, weights);
+		if( Boundary::block == m_boundary_z )
+			Boundary_Barrier_Z(wpn, m_div_grav_n_z, idx_1D, weights);
 	}
 
 	// apply all the fluxes:
@@ -605,13 +784,16 @@ void SoilModel::Step()
 
 	m_time += m_dt;
 
-	update_w_sum();
-
 	m_version++;
 }
 
 void EcoSysLab::SoilModel::Irrigation()
 {
+	//ChangeWater(vec3(0, 2, 0), m_irrigationAmount, 0.5);
+
+	for(auto& s : m_water_sources)
+		s.Apply(m_w);
+/*
 	m_rnd = std::mt19937(27);
 
 	auto bb_min = GetBoundingBoxMin();
@@ -622,16 +804,15 @@ void EcoSysLab::SoilModel::Irrigation()
 
 	std::uniform_real_distribution<> width(0.5, 2);
 
-	/*
+
+	
 	for(auto i=0; i<30; ++i)
 	{
 		auto pos = vec3(dist_x(m_rnd), dist_y(m_rnd), dist_z(m_rnd));
 		auto amount = m_irrigationAmount * GetDensity(pos);
 		ChangeWater(pos, amount, width(m_rnd));
-	}*/
-	ChangeWater(vec3(0, 2, 0), m_irrigationAmount, 1);
+	}
 
-	/*
 	if ((int)(m_time / 20.0) % 2 == 0)
 	{
 		ChangeWater(vec3(-18, 0, 15), 10, 8);
@@ -640,6 +821,7 @@ void EcoSysLab::SoilModel::Irrigation()
 	{
 		ChangeWater(vec3(0, 20, -15), -10, 15);
 	}*/
+
 }
 
 
@@ -663,6 +845,16 @@ float EcoSysLab::SoilModel::GetCapacity(const glm::vec3& position) const
 {
 	return GetField(m_c, position, 1.0f);
 }
+
+
+void EcoSysLab::SoilModel::SetVoxel(int x, int y, int z, const SoilPhysicalMaterial& material)
+{
+	auto idx = Index(x, y, z);
+	m_c[idx] = material.c;
+	m_p[idx] = material.p;
+	m_soilDensity[idx] = material.d;
+}
+
 
 float EcoSysLab::SoilModel::GetField(const Field& field, const glm::vec3& position, float default_value) const
 {
@@ -790,7 +982,6 @@ void EcoSysLab::SoilModel::BlurField(Field& field)
 void SoilModel::ChangeWater(const vec3& center, float amount, float width)
 {
 	ChangeField(m_w, center, amount, width);
-	update_w_sum();
 }
 
 void SoilModel::ChangeDensity(const vec3& center, float amount, float width)
@@ -892,4 +1083,38 @@ bool EcoSysLab::SoilModel::PositionInsideVolume(const glm::vec3& p) const
 	if ( p.x >= max.x || p.y >= max.y || p.z >= max.z )
 		return false;
 	return true;
+}
+
+SoilPhysicalMaterial EcoSysLab::GetSoilPhysicalMaterial(float sand, float silt, float clay, float compactness)
+{
+	assert(compactness <= 1 && compactness >= 0);
+	
+	float weight = sand+silt+clay;
+	sand /= weight;
+	silt /= weight;
+	clay /= weight;
+
+	//                         c    p     d
+	SoilPhysicalMaterial Sand({0.9, 15,   0.5});
+	SoilPhysicalMaterial Clay({2.1, 0.05, 1});
+	SoilPhysicalMaterial Silt({1.9, 1.5,  0.8});
+	SoilPhysicalMaterial  Air({5,   30,   0});
+
+	float air = 1-compactness;
+	sand *= compactness;
+	silt *= compactness;
+	clay *= compactness;
+
+	SoilPhysicalMaterial result;
+	result.c = sand*Sand.c + silt*Silt.c + clay*Clay.c + air*Air.c;
+	result.p = sand*Sand.p + silt*Silt.p + clay*Clay.p + air*Air.p;
+	result.d = sand*Sand.d + silt*Silt.d + clay*Clay.d + air*Air.d;
+
+	return result;
+}
+
+void EcoSysLab::SoilModel::Source::Apply(Field& target)
+{
+	for(auto i=0u; i<idx.size(); ++i)
+		target[idx[i]] += amounts[i];
 }
