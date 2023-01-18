@@ -136,7 +136,7 @@ void SoilModel::Initialize(const SoilParameters& p, const SoilSurface& soilSurfa
 	auto empty = Field(numVoxels);
 	empty = 0.f;
 
-	m_soilDensity = empty;
+	m_d = empty;
 	// also to initilzie their size
 	m_w = empty;
 	m_n = empty;
@@ -230,7 +230,7 @@ void EcoSysLab::SoilModel::BuildFromLayers(const SoilSurface& soilSurface, const
 	// blur everything to make it smooth
 	BlurField(m_c);
 	BlurField(m_p);
-	BlurField(m_soilDensity);
+	BlurField(m_d);
 
 	Source rain_source;
 	BlurField(rain_field);
@@ -814,7 +814,7 @@ float SoilModel::GetWater(const vec3& position) const
 
 float SoilModel::GetDensity(const vec3& position) const
 {
-	return GetField(m_soilDensity, position, 1000.0f);
+	return GetField(m_d, position, 1000.0f);
 }
 
 float SoilModel::GetNutrient(const vec3& position) const
@@ -835,7 +835,7 @@ void EcoSysLab::SoilModel::SetVoxel(const glm::ivec3& coordinate, const SoilPhys
 	m_material_id[idx] = material.m_id;
 	m_c[idx] = material.m_c(position);
 	m_p[idx] = material.m_p(position);
-	m_soilDensity[idx] = material.m_d(position);
+	m_d[idx] = material.m_d(position);
 }
 
 
@@ -969,7 +969,7 @@ void SoilModel::ChangeWater(const vec3& center, float amount, float width)
 
 void SoilModel::ChangeDensity(const vec3& center, float amount, float width)
 {
-	ChangeField(m_soilDensity, center, amount, width);
+	ChangeField(m_d, center, amount, width);
 }
 
 void SoilModel::ChangeNutrient(const vec3& center, float amount, float width)

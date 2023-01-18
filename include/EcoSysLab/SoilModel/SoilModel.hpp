@@ -167,8 +167,8 @@ namespace EcoSysLab {
 		
 		// nutrients
 		Field m_n;
-
-		Field m_soilDensity;
+		// soil density
+		Field m_d;
 		Boundary m_boundary_x, m_boundary_y, m_boundary_z;
 		int m_absorption_width= 5;
 

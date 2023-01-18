@@ -348,13 +348,13 @@ void Soil::GenerateMesh()
 
 void SetSoilPhysicalMaterial(SoilPhysicalMaterial& target, float sandRatio, float siltRatio, float clayRatio, float compactness)
 {
-	assert(compactness <= 1 && compactness >= 0);
+	assert(compactness <= 1.0f && compactness >= 0.0f);
 
-	float weight = sandRatio + siltRatio + clayRatio;
-	sandRatio /= weight;
-	siltRatio /= weight;
-	clayRatio /= weight;
-	float  airRatio = 1.f - compactness;
+	const float weight = sandRatio + siltRatio + clayRatio;
+	sandRatio = sandRatio * compactness / weight;
+	siltRatio = siltRatio * compactness / weight;
+	clayRatio = clayRatio * compactness / weight;
+	const float airRatio = 1.f - compactness;
 
 	//                         c    p     d
 	static SoilPhysicalMaterial sand({-1, 
@@ -381,13 +381,13 @@ void SetSoilPhysicalMaterial(SoilPhysicalMaterial& target, float sandRatio, floa
 	static SoilPhysicalMaterial air({ -1,
 		[&](const glm::vec3& pos) { return 5.0f; },
 		[&](const glm::vec3& pos) { return 30.0f; },
-		[&](const glm::vec3& pos) { return 1.0f; },
+		[&](const glm::vec3& pos) { return 0.0f; },
 		[&](const glm::vec3& pos) { return 0.0f; },
 		[&](const glm::vec3& pos) { return 0.0f; } });
 
-	target.m_c = [&](const glm::vec3& pos) { return sandRatio * sand.m_c(pos) + siltRatio * silt.m_c(pos) + clayRatio * clay.m_c(pos) + airRatio * air.m_c(pos); };
-	target.m_p = [&](const glm::vec3& pos) { return sandRatio * sand.m_p(pos) + siltRatio * silt.m_p(pos) + clayRatio * clay.m_p(pos) + airRatio * air.m_p(pos); };
-	target.m_d = [&](const glm::vec3& pos) { return sandRatio * sand.m_d(pos) + siltRatio * silt.m_d(pos) + clayRatio * clay.m_d(pos) + airRatio * air.m_d(pos); };
+	target.m_c = [=](const glm::vec3& pos) { return sandRatio * sand.m_c(pos) + siltRatio * silt.m_c(pos) + clayRatio * clay.m_c(pos) + airRatio * air.m_c(pos); };
+	target.m_p = [=](const glm::vec3& pos) { return sandRatio * sand.m_p(pos) + siltRatio * silt.m_p(pos) + clayRatio * clay.m_p(pos) + airRatio * air.m_p(pos); };
+	target.m_d = [=](const glm::vec3& pos) { return sandRatio * sand.m_d(pos) + siltRatio * silt.m_d(pos) + clayRatio * clay.m_d(pos) + airRatio * air.m_d(pos); };
 
 }
 void Soil::InitializeSoilModel()
@@ -447,11 +447,6 @@ void Soil::InitializeSoilModel()
 				soilLayer.m_thickness = [soilLayerDescriptor](const glm::vec2& position)
 				{
 					return soilLayerDescriptor->m_thickness.GetValue(position);
-				};
-				soilLayer.m_mat.m_d = [&, soilSurface](const glm::vec2& position)
-				{
-					const auto height = soilSurface.m_height(position);
-					return position.y > height - 1 ? glm::clamp(height - params.m_deltaX / 2.0f - position.y, 0.0f, 1.0f) : 1.0f + height - position.y;;
 				};
 				materialIndex++;
 			}

@@ -925,7 +925,7 @@ void EcoSysLab::EcoSysLabLayer::SoilVisualizationScalar(SoilModel& soilModel)
 		}break;
 		case SoilProperty::SoilDensity:
 		{
-			visualize_float(soilModel.m_soilDensity);
+			visualize_float(soilModel.m_d);
 		}break;
 		case SoilProperty::SoilLayer:
 		{
