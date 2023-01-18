@@ -338,7 +338,7 @@ void Soil::InitializeSoilModel()
 
 		if (heightField)
 		{
-			soilSurface.m_height = [&](const glm::vec2& position)
+			soilSurface.m_height = [heightField](const glm::vec2& position)
 			{
 				return heightField->GetValue(glm::vec2(position.x, position.y));
 			};
@@ -369,7 +369,6 @@ void Soil::InitializeSoilModel()
 			{
 				soilLayers.emplace_back();
 				auto& soilLayer = soilLayers.back();
-				soilLayer.m_thickness = [&](const glm::vec2& position) { return soilLayerDescriptor->m_thickness.GetValue(position); };
 				switch (static_cast<SoilMaterialType>(soilLayerDescriptor->m_type))
 				{
 				case SoilMaterialType::Clay:
@@ -396,7 +395,11 @@ void Soil::InitializeSoilModel()
 					[&](const glm::vec3& pos) { return 0.0f; } });
 					break;
 				}
-				soilLayer.m_mat.m_d = [&](const glm::vec2& position)
+				soilLayer.m_thickness = [soilLayerDescriptor](const glm::vec2& position)
+				{
+					return soilLayerDescriptor->m_thickness.GetValue(position);
+				};
+				soilLayer.m_mat.m_d = [&, soilSurface](const glm::vec2& position)
 				{
 					const auto height = soilSurface.m_height(position);
 					return position.y > height - 1 ? glm::clamp(height - params.m_deltaX / 2.0f - position.y, 0.0f, 1.0f) : 1.0f + height - position.y;;

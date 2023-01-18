@@ -205,25 +205,25 @@ void EcoSysLab::SoilModel::BuildFromLayers(const SoilSurface& soilSurface, const
 		{
 			auto pos = GetPositionFromCoordinate({x, 0, z}); // y value does not matter
 			vec2 pos_2d(pos.x, pos.z);
-			auto groundHeight = soilSurface.m_height({pos.x, pos.z});
+			auto groundHeight = glm::clamp(soilSurface.m_height({pos.x, pos.z}), m_boundingBoxMin.y, m_boundingBoxMin.y + m_resolution.y * m_dx);
 			pos.y = groundHeight;
-			rain_field[Index(GetCoordinateFromPosition(pos)+ivec3(0, -2, 0))] = 0.1;// insert water 2 voxels below ground
+			auto index = Index(GetCoordinateFromPosition(pos) + ivec3(0, -2, 0));
+			rain_field[index] = 0.1;// insert water 2 voxels below ground
 
-			for(auto y=0; y<m_resolution.y; ++y)
+			int currentMaterialIndex = 0;
+			float currentMaterialLowestHeight = groundHeight;
+			for(auto y= m_resolution.y - 1; y >= 0; --y)
 			{
-				float current_height = groundHeight;
-				auto voxel_height = m_boundingBoxMin.y + y*m_dx + (m_dx/2.0);
-
-				// find material index:
-				int idx = 0;
-				while(voxel_height < current_height && idx < static_cast<int>(soil_layers.size())-1)
+				auto currentHeight = m_boundingBoxMin.y + y * m_dx + (m_dx/2.0);
+				if(currentHeight < currentMaterialLowestHeight && currentMaterialIndex < static_cast<int>(soil_layers.size()) - 1)
 				{
-					idx++;
-					current_height -= glm::max(0.f, soil_layers[idx].m_thickness(pos_2d));
+					currentMaterialIndex++;
+					currentMaterialLowestHeight -= glm::max(0.f, soil_layers[currentMaterialIndex].m_thickness(pos_2d));
 				}
+				// find material index:
 				auto voxelIdx = Index(x, y, z);
-				m_soilLayerIndices[voxelIdx] = idx;
-				SetVoxel({ x, y, z }, soil_layers[idx].m_mat);
+				m_soilLayerIndices[voxelIdx] = currentMaterialIndex;
+				SetVoxel({ x, y, z }, soil_layers[currentMaterialIndex].m_mat);
 			}
 		}
 	}
