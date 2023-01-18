@@ -81,7 +81,8 @@ namespace EcoSysLab {
 
 		[[nodiscard]] glm::ivec3 GetCoordinateFromIndex(const int index) const;
 		[[nodiscard]] glm::ivec3 GetCoordinateFromPosition(const glm::vec3& position) const;
-		[[nodiscard]] glm::vec3  GetPositionFromCoordinate(const glm::ivec3& coordinate) const;
+		[[nodiscard]] glm::vec3  GetPositionFromCoordinate(const glm::ivec3& coordinate, float dx) const;
+		[[nodiscard]] glm::vec3  GetPositionFromCoordinate(const glm::ivec3& coordinate) const; // uses m_dx as dx
 				
 		[[nodiscard]] glm::ivec3 GetVoxelResolution() const;
 		[[nodiscard]] float GetVoxelSize() const;
@@ -90,9 +91,10 @@ namespace EcoSysLab {
 		[[nodiscard]] glm::vec3 GetBoundingBoxMin() const;
 		[[nodiscard]] glm::vec3 GetBoundingBoxMax() const;
 		bool PositionInsideVolume(const glm::vec3& position) const;
+		bool CoordinateInsideVolume(const glm::ivec3& coordinate) const;
 		[[nodiscard]] bool Initialized() const;
 
-		std::vector<glm::vec4> GetSoilTextureSlideZ(int slize_z, glm::uvec2 resolution, std::map<int, std::vector<glm::vec4>*> textures); // the output as well as all input textures must have the same resolution!
+		std::vector<glm::vec4> GetSoilTextureSlideZ(int slize_z, glm::uvec2 resolution, std::map<int, std::vector<glm::vec4>*> textures, float blur_width=1); // the output as well as all input textures must have the same resolution!
 
 		int m_version = 0; // TODO: what does this do?
 	protected:

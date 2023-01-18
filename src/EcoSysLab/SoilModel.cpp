@@ -1046,10 +1046,15 @@ ivec3 SoilModel::GetCoordinateFromPosition(const vec3& pos) const
 
 vec3 SoilModel::GetPositionFromCoordinate(const ivec3& coordinate) const
 {
+	return GetPositionFromCoordinate(coordinate, m_dx);
+}
+
+vec3 EcoSysLab::SoilModel::GetPositionFromCoordinate(const glm::ivec3& coordinate, float dx) const
+{
 	return {
-		m_boundingBoxMin.x + (m_dx/2.0) + coordinate.x * m_dx,
-		m_boundingBoxMin.y + (m_dx/2.0) + coordinate.y * m_dx,
-		m_boundingBoxMin.z + (m_dx/2.0) + coordinate.z * m_dx
+		m_boundingBoxMin.x + (dx/2.0) + coordinate.x * dx,
+		m_boundingBoxMin.y + (dx/2.0) + coordinate.y * dx,
+		m_boundingBoxMin.z + (dx/2.0) + coordinate.z * dx
 	};
 }
 
@@ -1063,6 +1068,7 @@ float SoilModel::GetVoxelSize() const
 {
 	return m_dx;
 }
+
 
 vec3 SoilModel::GetBoundingBoxMin() const
 {
@@ -1084,6 +1090,16 @@ bool EcoSysLab::SoilModel::PositionInsideVolume(const glm::vec3& p) const
 		return false;
 	return true;
 }
+
+bool EcoSysLab::SoilModel::CoordinateInsideVolume(const glm::ivec3& coordinate) const
+{
+	if( coordinate.x < 0 || coordinate.y < 0 || coordinate.z < 0)
+		return false;
+	if( coordinate.x >= m_resolution.x || coordinate.y >= m_resolution.y || coordinate.z >= m_resolution.z)
+		return false;
+	return true;
+}
+
 
 SoilPhysicalMaterial EcoSysLab::GetSoilPhysicalMaterial(int id, float sand, float silt, float clay, float compactness)
 {
@@ -1124,35 +1140,61 @@ void EcoSysLab::SoilModel::Source::Apply(Field& target)
 }
 
 
-std::vector<glm::vec4> SoilModel::GetSoilTextureSlideZ(int slize_z, glm::uvec2 resolution, std::map<int, std::vector<glm::vec4>*> textures)
+std::vector<glm::vec4> SoilModel::GetSoilTextureSlideZ(int slize_z, glm::uvec2 resolution, std::map<int, std::vector<glm::vec4>*> textures, float blur_width)
 {
 	assert(resolution.x == resolution.y);
 	vector<vec4> output(resolution.x * resolution.y);
 
 	auto dim_max = glm::max(m_resolution.x, m_resolution.y);
 
-	float tex_to_soil = (float)dim_max / (float)resolution.x;
+	//const float tex_to_soil = (float)dim_max / (float)resolution.x;
+	const float slize_z_position = GetPositionFromCoordinate(ivec3(0, 0, slize_z)).z;
+	const float tex_dx = m_dx * (float)dim_max / (float)resolution.x;
+
+	const float blur_kernel_width = m_dx*m_dx * blur_width * blur_width;
 
 	for(auto x=0; x<resolution.x; ++x)
 	{
 		for(auto y=0; y<resolution.y; ++y)
 		{
-			auto idx = x+y*resolution.x;
+			auto texture_idx = x+y*resolution.x;
 
-			ivec2 voxel = ivec2((float)x*tex_to_soil, (float)y*tex_to_soil);
+			vec3 texel_position = GetPositionFromCoordinate(ivec3(x, y, 0), tex_dx);
+			texel_position.z = slize_z_position;
 
-			if(voxel.x >= m_resolution.x || voxel.y >= m_resolution.y)
-				output[idx] = vec4(0, 0, 0, 0);
+			if( ! PositionInsideVolume(texel_position) )
+				output[texture_idx] = vec4(0, 0, 0, 0);
 			else
 			{
-				auto material_id = m_material_id[Index(voxel.x, voxel.y, slize_z)];
-				if(textures.find(material_id) == textures.end())
+				auto soil_voxel_base = GetCoordinateFromPosition(texel_position);
+				// do some gaussian blending
+				vec4 output_color(0, 0, 0, 0);
+				float total_weight=0;
+				for(auto i=0; i<m_blur_3x3_idx.size(); ++i) // iterate over blur kernel
 				{
-					cout << "Id not found" << material_id << endl;
-					return output;
+					auto soil_voxel = soil_voxel_base + m_blur_3x3_idx[i];
+					if(CoordinateInsideVolume(soil_voxel))
+					{
+						const auto p = GetPositionFromCoordinate(soil_voxel);
+						const auto dist = glm::length(p - texel_position);
+
+						// compute weight:
+						const float weight = glm::exp(- dist*dist / blur_kernel_width);
+						total_weight += weight;
+
+						// fetch color
+						auto material_id = m_material_id[Index(soil_voxel)];
+						if(textures.find(material_id) == textures.end())
+						{
+							cout << "Id not found" << material_id << endl;
+							return output;
+						}
+						auto& tex = *textures[material_id];
+						output_color += tex[texture_idx] * weight;
+					}
 				}
-				auto& tex = *textures[material_id];
-				output[idx] = tex[idx];
+				output[texture_idx] = output_color / total_weight;
+
 			}
 		}
 	}
