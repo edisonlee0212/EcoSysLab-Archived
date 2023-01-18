@@ -92,9 +92,13 @@ namespace EcoSysLab {
 		 */
 		float m_developmentalVigorRequirement = 0.0f;
 		/*
-		 * Sum of all child node's development resource requirement and maintenance resource requirement;
+		 * Sum of all child node's development resource requirement;
 		 */
-		float m_subtreeTotalVigorRequirement = 0.0f;
+		float m_subtreeDevelopmentalVigorRequirement = 0.0f;
+		/*
+		 * Sum of all child node's maintenance resource requirement;
+		 */
+		float m_subtreeMaintenanceVigorRequirement = 0.0f;
 		/*
 		 * The allocated total resource for maintenance and development of this module.
 		 */
