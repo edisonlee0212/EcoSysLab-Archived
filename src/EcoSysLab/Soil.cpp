@@ -357,28 +357,28 @@ void SetSoilPhysicalMaterial(SoilPhysicalMaterial& target, float sandRatio, floa
 	float  airRatio = 1.f - compactness;
 
 	//                         c    p     d
-	static SoilPhysicalMaterial sand({
+	static SoilPhysicalMaterial sand({-1, 
 		[&](const glm::vec3& pos) { return 0.9f; },
 		[&](const glm::vec3& pos) { return 15.0f; },
 		[&](const glm::vec3& pos) { return 0.5f; },
 		[&](const glm::vec3& pos) { return 0.0f; },
 		[&](const glm::vec3& pos) { return 0.0f; } });
 
-	static SoilPhysicalMaterial clay({
+	static SoilPhysicalMaterial clay({ -1,
 		[&](const glm::vec3& pos) { return 2.1f; },
 		[&](const glm::vec3& pos) { return 0.05f; },
 		[&](const glm::vec3& pos) { return 1.0f; },
 		[&](const glm::vec3& pos) { return 0.0f; },
 		[&](const glm::vec3& pos) { return 0.0f; } });
 
-	static SoilPhysicalMaterial silt({
+	static SoilPhysicalMaterial silt({ -1,
 		[&](const glm::vec3& pos) { return 1.9f; },
 		[&](const glm::vec3& pos) { return 1.5f; },
 		[&](const glm::vec3& pos) { return 0.8f; },
 		[&](const glm::vec3& pos) { return 0.0f; },
 		[&](const glm::vec3& pos) { return 0.0f; } });
 
-	static SoilPhysicalMaterial air({
+	static SoilPhysicalMaterial air({ -1,
 		[&](const glm::vec3& pos) { return 5.0f; },
 		[&](const glm::vec3& pos) { return 30.0f; },
 		[&](const glm::vec3& pos) { return 1.0f; },
@@ -422,24 +422,28 @@ void Soil::InitializeSoilModel()
 
 		}
 		//Add top air layer
+		int materialIndex = 0;
+
 		soilLayers.emplace_back();
-		soilLayers.back().m_mat = SoilPhysicalMaterial({
+		soilLayers.back().m_mat = SoilPhysicalMaterial({ materialIndex,
 					[&](const glm::vec3& pos) { return 1.0f; },
 					[&](const glm::vec3& pos) { return 0.0f; },
 					[&](const glm::vec3& pos) { return 0.0f; },
 					[&](const glm::vec3& pos) { return 0.0f; },
 					[&](const glm::vec3& pos) { return 0.0f; } });
 		soilLayers.back().m_thickness = [](const glm::vec2& position) {return 0.f; };
-
+		materialIndex++;
 		//Add user defined layers
 		auto& soilLayerDescriptors = soilDescriptor->m_soilLayerDescriptors;
 		for (int i = 0; i < soilDescriptor->m_soilLayerDescriptors.size(); i++)
 		{
+			
 			if (auto soilLayerDescriptor = soilLayerDescriptors[i].Get<SoilLayerDescriptor>())
 			{
 				soilLayers.emplace_back();
 				auto& soilLayer = soilLayers.back();
 				SetSoilPhysicalMaterial(soilLayer.m_mat, soilLayerDescriptor->m_sandRatio, soilLayerDescriptor->m_siltRatio, soilLayerDescriptor->m_clayRatio, soilLayerDescriptor->m_compactness);
+				soilLayer.m_mat.m_id = materialIndex;
 				soilLayer.m_thickness = [soilLayerDescriptor](const glm::vec2& position)
 				{
 					return soilLayerDescriptor->m_thickness.GetValue(position);
@@ -449,6 +453,7 @@ void Soil::InitializeSoilModel()
 					const auto height = soilSurface.m_height(position);
 					return position.y > height - 1 ? glm::clamp(height - params.m_deltaX / 2.0f - position.y, 0.0f, 1.0f) : 1.0f + height - position.y;;
 				};
+				materialIndex++;
 			}
 			else
 			{
@@ -461,7 +466,7 @@ void Soil::InitializeSoilModel()
 		soilLayers.emplace_back();
 		SetSoilPhysicalMaterial(soilLayers.back().m_mat, 0.4, 0.4, 0.2, 1);
 		soilLayers.back().m_thickness = [](const glm::vec2& position) {return 1000.f; };
-
+		soilLayers.back().m_mat.m_id = materialIndex;
 		m_soilModel.Initialize(params, soilSurface, soilLayers);
 	}
 }

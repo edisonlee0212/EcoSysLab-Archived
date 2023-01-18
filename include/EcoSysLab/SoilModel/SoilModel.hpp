@@ -24,6 +24,7 @@ namespace EcoSysLab {
 
 	struct SoilPhysicalMaterial
 	{
+		int m_id = -1;
 		std::function<float(const glm::vec3& position)> m_c; // capacity
 		std::function<float(const glm::vec3& position)> m_p; // permeability
 		std::function<float(const glm::vec3& position)> m_d; // density
@@ -163,8 +164,7 @@ namespace EcoSysLab {
 		Field m_div_grav_n_x; // divergence components for gravity of nutrients
 		Field m_div_grav_n_y;
 		Field m_div_grav_n_z;
-		std::vector<int> m_soilLayerIndices;
-
+		
 		// nutrients
 		Field m_n;
 

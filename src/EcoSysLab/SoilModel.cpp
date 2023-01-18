@@ -128,9 +128,6 @@ void SoilModel::Initialize(const SoilParameters& p, const SoilSurface& soilSurfa
 	auto numVoxels = m_resolution.x * m_resolution.y * m_resolution.z;
 	
 	m_rnd = std::mt19937(std::random_device()());
-	
-	m_soilLayerIndices.resize(numVoxels);
-	std::fill(m_soilLayerIndices.begin(), m_soilLayerIndices.end(), 0);
 
 	m_material_id.resize(numVoxels);
 	m_material_id = -1;
@@ -225,7 +222,6 @@ void EcoSysLab::SoilModel::BuildFromLayers(const SoilSurface& soilSurface, const
 				}
 				// find material index:
 				auto voxelIdx = Index(x, y, z);
-				m_soilLayerIndices[voxelIdx] = currentMaterialIndex;
 				SetVoxel({ x, y, z }, soil_layers[currentMaterialIndex].m_mat);
 			}
 		}
@@ -1085,38 +1081,6 @@ bool EcoSysLab::SoilModel::CoordinateInsideVolume(const glm::ivec3& coordinate) 
 	if( coordinate.x >= m_resolution.x || coordinate.y >= m_resolution.y || coordinate.z >= m_resolution.z)
 		return false;
 	return true;
-}
-
-SoilPhysicalMaterial EcoSysLab::GetSoilPhysicalMaterial(int id, float sand, float silt, float clay, float compactness)
-{
-	assert(compactness <= 1 && compactness >= 0);
-	
-	float weight = sand+silt+clay;
-	sand /= weight;
-	silt /= weight;
-	clay /= weight;
-
-	//                         id   c     p       d    n     w
-	SoilPhysicalMaterial Sand({-1,  0.9,  15,    0.5,  0.f,  0.f});
-	SoilPhysicalMaterial Clay({-1,  2.1,  0.05,  1,    0.f,  0.f});
-	SoilPhysicalMaterial Silt({-1,  1.9,  1.5,   0.8,  0.f,  0.f});
-	SoilPhysicalMaterial  Air({-1,  5,    30,    0,    0.f,  0.f});
-
-	float air = 1-compactness;
-	sand *= compactness;
-	silt *= compactness;
-	clay *= compactness;
-
-	SoilPhysicalMaterial result;
-	result.id = id;
-	result.c = sand*Sand.c + silt*Silt.c + clay*Clay.c + air*Air.c;
-	result.p = sand*Sand.p + silt*Silt.p + clay*Clay.p + air*Air.p;
-	result.d = sand*Sand.d + silt*Silt.d + clay*Clay.d + air*Air.d;
-
-	result.n = 0.1f;
-	result.w = 0.f;
-
-	return result;
 }
 
 void EcoSysLab::SoilModel::Source::Apply(Field& target)

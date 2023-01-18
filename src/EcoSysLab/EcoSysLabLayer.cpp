@@ -942,7 +942,7 @@ void EcoSysLab::EcoSysLabLayer::SoilVisualizationScalar(SoilModel& soilModel)
 		{
 			Jobs::ParallelFor(numVoxels, [&](unsigned i)
 				{
-					auto layerIndex = soilModel.m_soilLayerIndices[i];
+					auto layerIndex = soilModel.m_material_id[i];
 					if(layerIndex == 0) m_scalarColors[i] = glm::vec4(0.0f);
 					else
 					{
