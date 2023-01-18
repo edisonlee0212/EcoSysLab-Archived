@@ -132,6 +132,9 @@ void SoilModel::Initialize(const SoilParameters& p, const SoilSurface& soilSurfa
 	m_soilLayerIndices.resize(numVoxels);
 	std::fill(m_soilLayerIndices.begin(), m_soilLayerIndices.end(), 0);
 
+	m_material_id.resize(numVoxels);
+	m_material_id = -1;
+
 	// intermediate variables
 	auto empty = Field(numVoxels);
 	empty = 0.f;
@@ -833,6 +836,7 @@ void EcoSysLab::SoilModel::SetVoxel(const glm::ivec3& coordinate, const SoilPhys
 {
 	auto idx = Index(coordinate.x, coordinate.y, coordinate.z);
 	auto position = GetPositionFromCoordinate({ coordinate.x, coordinate.y, coordinate.z });
+	m_material_id[idx] = material.m_id;
 	m_c[idx] = material.m_c(position);
 	m_p[idx] = material.m_p(position);
 	m_soilDensity[idx] = material.m_d(position);
@@ -1029,10 +1033,15 @@ ivec3 SoilModel::GetCoordinateFromPosition(const vec3& pos) const
 
 vec3 SoilModel::GetPositionFromCoordinate(const ivec3& coordinate) const
 {
+	return GetPositionFromCoordinate(coordinate, m_dx);
+}
+
+vec3 EcoSysLab::SoilModel::GetPositionFromCoordinate(const glm::ivec3& coordinate, float dx) const
+{
 	return {
-		m_boundingBoxMin.x + (m_dx/2.0) + coordinate.x * m_dx,
-		m_boundingBoxMin.y + (m_dx/2.0) + coordinate.y * m_dx,
-		m_boundingBoxMin.z + (m_dx/2.0) + coordinate.z * m_dx
+		m_boundingBoxMin.x + (dx/2.0) + coordinate.x * dx,
+		m_boundingBoxMin.y + (dx/2.0) + coordinate.y * dx,
+		m_boundingBoxMin.z + (dx/2.0) + coordinate.z * dx
 	};
 }
 
@@ -1046,6 +1055,7 @@ float SoilModel::GetVoxelSize() const
 {
 	return m_dx;
 }
+
 
 vec3 SoilModel::GetBoundingBoxMin() const
 {
@@ -1068,8 +1078,112 @@ bool EcoSysLab::SoilModel::PositionInsideVolume(const glm::vec3& p) const
 	return true;
 }
 
+bool EcoSysLab::SoilModel::CoordinateInsideVolume(const glm::ivec3& coordinate) const
+{
+	if( coordinate.x < 0 || coordinate.y < 0 || coordinate.z < 0)
+		return false;
+	if( coordinate.x >= m_resolution.x || coordinate.y >= m_resolution.y || coordinate.z >= m_resolution.z)
+		return false;
+	return true;
+}
+
+SoilPhysicalMaterial EcoSysLab::GetSoilPhysicalMaterial(int id, float sand, float silt, float clay, float compactness)
+{
+	assert(compactness <= 1 && compactness >= 0);
+	
+	float weight = sand+silt+clay;
+	sand /= weight;
+	silt /= weight;
+	clay /= weight;
+
+	//                         id   c     p       d    n     w
+	SoilPhysicalMaterial Sand({-1,  0.9,  15,    0.5,  0.f,  0.f});
+	SoilPhysicalMaterial Clay({-1,  2.1,  0.05,  1,    0.f,  0.f});
+	SoilPhysicalMaterial Silt({-1,  1.9,  1.5,   0.8,  0.f,  0.f});
+	SoilPhysicalMaterial  Air({-1,  5,    30,    0,    0.f,  0.f});
+
+	float air = 1-compactness;
+	sand *= compactness;
+	silt *= compactness;
+	clay *= compactness;
+
+	SoilPhysicalMaterial result;
+	result.id = id;
+	result.c = sand*Sand.c + silt*Silt.c + clay*Clay.c + air*Air.c;
+	result.p = sand*Sand.p + silt*Silt.p + clay*Clay.p + air*Air.p;
+	result.d = sand*Sand.d + silt*Silt.d + clay*Clay.d + air*Air.d;
+
+	result.n = 0.1f;
+	result.w = 0.f;
+
+	return result;
+}
+
 void EcoSysLab::SoilModel::Source::Apply(Field& target)
 {
 	for(auto i=0u; i<idx.size(); ++i)
 		target[idx[i]] += amounts[i];
+}
+
+
+std::vector<glm::vec4> SoilModel::GetSoilTextureSlideZ(int slize_z, glm::uvec2 resolution, std::map<int, std::vector<glm::vec4>*> textures, float blur_width)
+{
+	assert(resolution.x == resolution.y);
+	vector<vec4> output(resolution.x * resolution.y);
+
+	auto dim_max = glm::max(m_resolution.x, m_resolution.y);
+
+	//const float tex_to_soil = (float)dim_max / (float)resolution.x;
+	const float slize_z_position = GetPositionFromCoordinate(ivec3(0, 0, slize_z)).z;
+	const float tex_dx = m_dx * (float)dim_max / (float)resolution.x;
+
+	const float blur_kernel_width = m_dx*m_dx * blur_width * blur_width;
+
+	for(auto x=0; x<resolution.x; ++x)
+	{
+		for(auto y=0; y<resolution.y; ++y)
+		{
+			auto texture_idx = x+y*resolution.x;
+
+			vec3 texel_position = GetPositionFromCoordinate(ivec3(x, y, 0), tex_dx);
+			texel_position.z = slize_z_position;
+
+			if( ! PositionInsideVolume(texel_position) )
+				output[texture_idx] = vec4(0, 0, 0, 0);
+			else
+			{
+				auto soil_voxel_base = GetCoordinateFromPosition(texel_position);
+				// do some gaussian blending
+				vec4 output_color(0, 0, 0, 0);
+				float total_weight=0;
+				for(auto i=0; i<m_blur_3x3_idx.size(); ++i) // iterate over blur kernel
+				{
+					auto soil_voxel = soil_voxel_base + m_blur_3x3_idx[i];
+					if(CoordinateInsideVolume(soil_voxel))
+					{
+						const auto p = GetPositionFromCoordinate(soil_voxel);
+						const auto dist = glm::length(p - texel_position);
+
+						// compute weight:
+						const float weight = glm::exp(- dist*dist / blur_kernel_width);
+						total_weight += weight;
+
+						// fetch color
+						auto material_id = m_material_id[Index(soil_voxel)];
+						if(textures.find(material_id) == textures.end())
+						{
+							cout << "Id not found" << material_id << endl;
+							return output;
+						}
+						auto& tex = *textures[material_id];
+						output_color += tex[texture_idx] * weight;
+					}
+				}
+				output[texture_idx] = output_color / total_weight;
+
+			}
+		}
+	}
+
+	return output;
 }

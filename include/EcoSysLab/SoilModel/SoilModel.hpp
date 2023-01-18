@@ -5,6 +5,7 @@
 #include <functional>
 #include <random>
 #include <valarray>
+#include <map>
 #include "ecosyslab_export.h"
 
 using namespace UniEngine;
@@ -76,7 +77,8 @@ namespace EcoSysLab {
 
 		[[nodiscard]] glm::ivec3 GetCoordinateFromIndex(const int index) const;
 		[[nodiscard]] glm::ivec3 GetCoordinateFromPosition(const glm::vec3& position) const;
-		[[nodiscard]] glm::vec3  GetPositionFromCoordinate(const glm::ivec3& coordinate) const;
+		[[nodiscard]] glm::vec3  GetPositionFromCoordinate(const glm::ivec3& coordinate, float dx) const;
+		[[nodiscard]] glm::vec3  GetPositionFromCoordinate(const glm::ivec3& coordinate) const; // uses m_dx as dx
 				
 		[[nodiscard]] glm::ivec3 GetVoxelResolution() const;
 		[[nodiscard]] float GetVoxelSize() const;
@@ -85,7 +87,10 @@ namespace EcoSysLab {
 		[[nodiscard]] glm::vec3 GetBoundingBoxMin() const;
 		[[nodiscard]] glm::vec3 GetBoundingBoxMax() const;
 		bool PositionInsideVolume(const glm::vec3& position) const;
+		bool CoordinateInsideVolume(const glm::ivec3& coordinate) const;
 		[[nodiscard]] bool Initialized() const;
+
+		std::vector<glm::vec4> GetSoilTextureSlideZ(int slize_z, glm::uvec2 resolution, std::map<int, std::vector<glm::vec4>*> textures, float blur_width=1); // the output as well as all input textures must have the same resolution!
 
 		int m_version = 0; // TODO: what does this do?
 	protected:
@@ -130,6 +135,8 @@ namespace EcoSysLab {
 		float m_nutrientForce;
 
 		// Fields:
+		std::valarray<int> m_material_id; // material id for each foxel in the soil volume
+
 		Field m_w; // water content of each cell
 		Field m_c; // the capacity of each cell
 		Field m_l; // filling level of each cell, w/c
