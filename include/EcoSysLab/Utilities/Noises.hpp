@@ -10,24 +10,26 @@ namespace EcoSysLab
 {
 	enum class NoiseType
 	{
+		Simplex,
 		Perlin,
-		Simplex
+		Constant
 	};
 
 	struct NoiseDescriptor
 	{
-		NoiseType m_type;
-		float m_noiseScale = 20.0f;
-		float m_offset = 0.0f;
+		unsigned m_type;
+		float m_noiseScale = 0.5f;
+		float m_base = 0.0f;
 		float m_powerFactor = 1.0f;
-		float m_noiseIntensity = 0.01f;
+		float m_noiseIntensity = 1.0f;
 		float m_heightMin = -10;
 		float m_heightMax = 10;
+		float m_offset;
 	};
 	class Noises2D {
 	public:
 		glm::vec2 m_minMax = glm::vec2(-1000, 1000);
-		glm::vec2 m_positionOffset;
+		
 		std::vector<NoiseDescriptor> m_noiseDescriptors;
 		Noises2D();
 		bool OnInspect();
@@ -40,10 +42,9 @@ namespace EcoSysLab
 	class Noises3D {
 	public:
 		glm::vec2 m_minMax = glm::vec2(-1000, 1000);
-		glm::vec3 m_positionOffset;
 		std::vector<NoiseDescriptor> m_noiseDescriptors;
 		Noises3D();
-		void OnInspect();
+		bool OnInspect();
 		void Save(const std::string& name, YAML::Emitter& out) const;
 		void Load(const std::string& name, const YAML::Node& in);
 
