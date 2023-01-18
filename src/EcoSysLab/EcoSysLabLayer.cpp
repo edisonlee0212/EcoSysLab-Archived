@@ -432,7 +432,7 @@ void EcoSysLabLayer::OnSoilVisualizationMenu()
 			{
 				m_updateVectorMatrices = true;
 			}
-			if (ImGui::Combo("Vector Mode", { "N/A", "N/A", "N/A", "N/A", "Water Density Gradient", "Flux", "Divergence", "N/A", "N/A" }, m_vectorSoilProperty))
+			if (ImGui::Combo("Vector Mode", { "N/A", "N/A", "N/A", "N/A", "Water Density Gradient", "Flux", "Divergence", "N/A", "N/A", "N/A"}, m_vectorSoilProperty))
 			{
 				m_updateVectorMatrices = true;
 			}
@@ -471,7 +471,7 @@ void EcoSysLabLayer::OnSoilVisualizationMenu()
 				m_updateScalarMatrices = true;
 			}
 			// disable less useful visualizations to avoid clutter in the gui
-			if (ImGui::Combo("Scalar Mode", { "Blank", "Water Density", "N/A", "N/A", "N/A", "Nutrient Density", "Soil Density", "N/A" }, m_scalarSoilProperty))
+			if (ImGui::Combo("Scalar Mode", { "Blank", "Water Density", "N/A", "N/A", "N/A", "Nutrient Density", "Soil Density", "N/A", "Soil Layer"}, m_scalarSoilProperty))
 			{
 				m_updateScalarColors = true;
 			}
@@ -831,10 +831,13 @@ void EcoSysLab::EcoSysLabLayer::SoilVisualizationScalar(SoilModel& soilModel)
 		{
 			visualize_float(soilModel.m_soilDensity);
 		}break;
-		/*case SoilProperty::WaterDensityGradient:
+		case SoilProperty::SoilLayer:
 		{
-			visualize_vec3(soilModel.m_w_grad_x, soilModel.m_w_grad_y, soilModel.m_w_grad_z);
-		}break;*/
+			Jobs::ParallelFor(numVoxels, [&](unsigned i)
+				{
+					m_scalarColors[i] = { m_scalarBaseColor, 0.01f };
+				}, results);
+		}break;
 		/*case SoilProperty::DiffusionDivergence:
 		{
 			visualize_vec3(soilModel.m_div_diff_x, soilModel.m_div_diff_y, soilModel.m_div_diff_z);
@@ -843,7 +846,12 @@ void EcoSysLab::EcoSysLabLayer::SoilVisualizationScalar(SoilModel& soilModel)
 		{
 			Jobs::ParallelFor(numVoxels, [&](unsigned i)
 				{
-					m_scalarColors[i] = glm::vec4(0.0f);
+					auto layerIndex = soilModel.m_soilLayerIndices[i];
+					if(layerIndex == 0) m_scalarColors[i] = glm::vec4(0.0f);
+					else
+					{
+						m_scalarColors[i] = glm::vec4(glm::normalize(m_randomColors[layerIndex]) * 2.0f, glm::clamp(m_scalarMultiplier, 0.0f, 1.0f));
+					}
 				}, results);
 		}break;
 		}

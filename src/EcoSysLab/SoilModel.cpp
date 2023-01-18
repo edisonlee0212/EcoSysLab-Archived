@@ -129,7 +129,8 @@ void SoilModel::Initialize(const SoilParameters& p, const SoilSurface& soilSurfa
 	
 	m_rnd = std::mt19937(std::random_device()());
 	
-
+	m_soilLayerIndices.resize(numVoxels);
+	std::fill(m_soilLayerIndices.begin(), m_soilLayerIndices.end(), 0);
 
 	// intermediate variables
 	auto empty = Field(numVoxels);
@@ -220,8 +221,9 @@ void EcoSysLab::SoilModel::BuildFromLayers(const SoilSurface& soilSurface, const
 					idx++;
 					current_height -= glm::max(0.f, soil_layers[idx].m_thickness(pos_2d));
 				}
-
-				SetVoxel(x, y, z, soil_layers[idx].m_mat);
+				auto voxelIdx = Index(x, y, z);
+				m_soilLayerIndices[voxelIdx] = idx;
+				SetVoxel({ x, y, z }, soil_layers[idx].m_mat);
 			}
 		}
 	}
@@ -827,10 +829,10 @@ float EcoSysLab::SoilModel::GetCapacity(const glm::vec3& position) const
 }
 
 
-void EcoSysLab::SoilModel::SetVoxel(int x, int y, int z, const SoilPhysicalMaterial& material)
+void EcoSysLab::SoilModel::SetVoxel(const glm::ivec3& coordinate, const SoilPhysicalMaterial& material)
 {
-	auto idx = Index(x, y, z);
-	auto position = GetPositionFromCoordinate({ x, y, z });
+	auto idx = Index(coordinate.x, coordinate.y, coordinate.z);
+	auto position = GetPositionFromCoordinate({ coordinate.x, coordinate.y, coordinate.z });
 	m_c[idx] = material.m_c(position);
 	m_p[idx] = material.m_p(position);
 	m_soilDensity[idx] = material.m_d(position);

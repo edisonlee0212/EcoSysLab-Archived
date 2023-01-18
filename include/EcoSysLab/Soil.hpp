@@ -53,7 +53,9 @@ namespace EcoSysLab
 
 		NutrientDensity,
 
-		SoilDensity
+		SoilDensity,
+
+		SoilLayer
 	};
 	/**
 	 * \brief The soil is designed to be a private component of an entity.

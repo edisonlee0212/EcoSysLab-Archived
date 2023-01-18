@@ -113,7 +113,7 @@ void SoilDescriptor::OnInspect()
 	{
 		if (auto soilLayerDescriptor = m_soilLayerDescriptors[i].Get<SoilLayerDescriptor>())
 		{
-			if (ImGui::TreeNodeEx(("No." + std::to_string(i)).c_str(), ImGuiTreeNodeFlags_DefaultOpen))
+			if (ImGui::TreeNodeEx(("No." + std::to_string(i) + ": " + soilLayerDescriptor->GetTitle()).c_str(), ImGuiTreeNodeFlags_DefaultOpen))
 			{
 				if (ImGui::Button("Remove"))
 				{
@@ -499,7 +499,9 @@ void SoilDescriptor::Serialize(YAML::Emitter& out)
 	{
 		if (auto soilLayerDescriptor = m_soilLayerDescriptors[i].Get<SoilLayerDescriptor>())
 		{
+			out << YAML::BeginMap;
 			m_soilLayerDescriptors[i].Serialize(out);
+			out << YAML::EndMap;
 		}
 		else
 		{
@@ -507,9 +509,7 @@ void SoilDescriptor::Serialize(YAML::Emitter& out)
 			i--;
 		}
 	}
-	m_heightField.Save("m_heightField", out);
 	out << YAML::EndSeq;
-
 }
 
 void SoilDescriptor::Deserialize(const YAML::Node& in)

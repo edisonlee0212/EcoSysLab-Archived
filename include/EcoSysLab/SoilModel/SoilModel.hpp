@@ -90,7 +90,7 @@ namespace EcoSysLab {
 		int m_version = 0; // TODO: what does this do?
 	protected:
 		void BuildFromLayers(const SoilSurface& soilSurface, const std::vector<SoilLayer>& soil_layers); // helper function called inside initialize to set up soil layers
-		void SetVoxel(int x, int y, int z, const SoilPhysicalMaterial& material);
+		void SetVoxel(const glm::ivec3& coordinate, const SoilPhysicalMaterial& material);
 
 		float GetField(const Field& field, const glm::vec3& position, float default_value) const;
 		void ChangeField(Field& field, const glm::vec3& center, float amount, float width);
@@ -156,7 +156,7 @@ namespace EcoSysLab {
 		Field m_div_grav_n_x; // divergence components for gravity of nutrients
 		Field m_div_grav_n_y;
 		Field m_div_grav_n_z;
-
+		std::vector<int> m_soilLayerIndices;
 
 		// nutrients
 		Field m_n;

@@ -67,7 +67,7 @@ namespace EcoSysLab {
 		std::vector<glm::vec4> m_vectorColors;
 
 		float m_scalarMultiplier = 1.0f;
-		float m_scalarBoxSize = 0.5f;
+		float m_scalarBoxSize = 1.0f;
 		float m_scalarMinAlpha = 0.00f;
 		glm::vec3 m_scalarBaseColor = glm::vec3(0.0f, 0.0f, 1.0f);
 		unsigned m_scalarSoilProperty = 1;
