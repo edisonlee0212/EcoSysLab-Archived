@@ -46,7 +46,53 @@ bool OnInspectSoilParameters(SoilParameters& soilParameters)
 void SoilLayerDescriptor::OnInspect()
 {
 	bool changed = false;
-	changed = ImGui::Combo({ "Soil Type" }, { "Clay", "Silty Clay", "Loam", "Sand", "Loamy Sand", "Air" }, m_type) || changed;
+
+	static unsigned soilTypePreset = 0;
+	ImGui::Combo({ "Select soil type preset" }, { "Clay", "Silty Clay", "Loam", "Sand", "Loamy Sand" }, soilTypePreset);
+
+	if(ImGui::Button("Apply soil type preset"))
+	{
+		switch (static_cast<SoilMaterialType>(soilTypePreset))
+		{
+		case SoilMaterialType::Clay:
+			m_sandRatio = 0.1f;
+			m_siltRatio = 0.1f;
+			m_clayRatio = 0.8f;
+			m_compactness = 1.f;
+			break;
+		case SoilMaterialType::SiltyClay:
+			m_sandRatio = 0.1f;
+			m_siltRatio = 0.4f;
+			m_clayRatio = 0.5f;
+			m_compactness = 1.f;
+			break;
+		case SoilMaterialType::Loam:
+			m_sandRatio = 0.4f;
+			m_siltRatio = 0.4f;
+			m_clayRatio = 0.2f;
+			m_compactness = 1.f;
+			break;
+		case SoilMaterialType::Sand:
+			m_sandRatio = 1.f;
+			m_siltRatio = 0.f;
+			m_clayRatio = 0.f;
+			m_compactness = 1.f;
+			break;
+		case SoilMaterialType::LoamySand:
+			m_sandRatio = 0.8f;
+			m_siltRatio = 0.1f;
+			m_clayRatio = 0.1f;
+			m_compactness = 1.f;
+			break;
+		}
+		changed = true;
+	}
+
+	changed = ImGui::DragFloat("Sand ratio", &m_sandRatio, 0.01f, 0.0f, 1.0f) || changed;
+	changed = ImGui::DragFloat("Silt ratio", &m_siltRatio, 0.01f, 0.0f, 1.0f) || changed;
+	changed = ImGui::DragFloat("Clay ratio", &m_clayRatio, 0.01f, 0.0f, 1.0f) || changed;
+	changed = ImGui::DragFloat("Compactness", &m_compactness, 0.01f, 0.0f, 1.0f) || changed;
+
 	if (ImGui::TreeNode("Thickness")) {
 		changed = m_thickness.OnInspect() || changed;
 		ImGui::TreePop();
@@ -56,13 +102,20 @@ void SoilLayerDescriptor::OnInspect()
 
 void SoilLayerDescriptor::Serialize(YAML::Emitter& out)
 {
-	out << YAML::Key << "m_type" << YAML::Value << m_type;
+	out << YAML::Key << "m_sandRatio" << YAML::Value << m_sandRatio;
+	out << YAML::Key << "m_siltRatio" << YAML::Value << m_siltRatio;
+	out << YAML::Key << "m_clayRatio" << YAML::Value << m_clayRatio;
+	out << YAML::Key << "m_compactness" << YAML::Value << m_compactness;
+
 	m_thickness.Save("m_thickness", out);
 }
 
 void SoilLayerDescriptor::Deserialize(const YAML::Node& in)
 {
-	if (in["m_type"]) m_type = in["m_type"].as<unsigned>();
+	if (in["m_sandRatio"]) m_sandRatio = in["m_sandRatio"].as<float>();
+	if (in["m_siltRatio"]) m_siltRatio = in["m_siltRatio"].as<float>();
+	if (in["m_clayRatio"]) m_clayRatio = in["m_clayRatio"].as<float>();
+	if (in["m_compactness"]) m_compactness = in["m_compactness"].as<float>();
 	m_thickness.Load("m_thickness", in);
 }
 
@@ -113,8 +166,10 @@ void SoilDescriptor::OnInspect()
 	{
 		if (auto soilLayerDescriptor = m_soilLayerDescriptors[i].Get<SoilLayerDescriptor>())
 		{
-			if (ImGui::TreeNodeEx(("No." + std::to_string(i) + ": " + soilLayerDescriptor->GetTitle()).c_str(), ImGuiTreeNodeFlags_DefaultOpen))
+			if (ImGui::TreeNodeEx(("No." + std::to_string(i + 1)).c_str(), ImGuiTreeNodeFlags_DefaultOpen))
 			{
+				ImGui::Text(("Name: " + soilLayerDescriptor->GetTitle()).c_str());
+				
 				if (ImGui::Button("Remove"))
 				{
 					m_soilLayerDescriptors.erase(m_soilLayerDescriptors.begin() + i);
@@ -122,12 +177,22 @@ void SoilDescriptor::OnInspect()
 					ImGui::TreePop();
 					continue;
 				}
+				if(!soilLayerDescriptor->Saved())
+				{
+					ImGui::SameLine();
+					if (ImGui::Button("Save"))
+					{
+						soilLayerDescriptor->Save();
+					}
+				}
 				if (i < m_soilLayerDescriptors.size() - 1) {
 					ImGui::SameLine();
 					if (ImGui::Button("Move down"))
 					{
 						changed = true;
-						std::swap(m_soilLayerDescriptors.begin() + i, m_soilLayerDescriptors.begin() + i + 1);
+						const auto temp = m_soilLayerDescriptors[i];
+						m_soilLayerDescriptors[i] = m_soilLayerDescriptors[i + 1];
+						m_soilLayerDescriptors[i + 1] = temp;
 					}
 				}
 				if (i > 0) {
@@ -135,10 +200,15 @@ void SoilDescriptor::OnInspect()
 					if (ImGui::Button("Move up"))
 					{
 						changed = true;
-						std::swap(m_soilLayerDescriptors.begin() + i - 1, m_soilLayerDescriptors.begin() + i);
+						const auto temp = m_soilLayerDescriptors[i - 1];
+						m_soilLayerDescriptors[i - 1] = m_soilLayerDescriptors[i];
+						m_soilLayerDescriptors[i] = temp;
 					}
 				}
-				soilLayerDescriptor->OnInspect();
+				if (ImGui::TreeNode("Settings")) {
+					soilLayerDescriptor->OnInspect();
+					ImGui::TreePop();
+				}
 				ImGui::TreePop();
 			}
 		}
@@ -369,32 +439,7 @@ void Soil::InitializeSoilModel()
 			{
 				soilLayers.emplace_back();
 				auto& soilLayer = soilLayers.back();
-				switch (static_cast<SoilMaterialType>(soilLayerDescriptor->m_type))
-				{
-				case SoilMaterialType::Clay:
-					SetSoilPhysicalMaterial(soilLayer.m_mat, 0.1, 0.1, 0.8, 1);
-					break;
-				case SoilMaterialType::SiltyClay:
-					SetSoilPhysicalMaterial(soilLayer.m_mat, 0.1, 0.4, 0.5, 1);
-					break;
-				case SoilMaterialType::Loam:
-					SetSoilPhysicalMaterial(soilLayer.m_mat, 0.4, 0.4, 0.2, 1);
-					break;
-				case SoilMaterialType::Sand:
-					SetSoilPhysicalMaterial(soilLayer.m_mat, 1, 0, 0, 1);
-					break;
-				case SoilMaterialType::LoamySand:
-					SetSoilPhysicalMaterial(soilLayer.m_mat, 0.8, 0.1, 0.1, 1);
-					break;
-				case SoilMaterialType::Air:
-					soilLayer.m_mat = SoilPhysicalMaterial({
-					[&](const glm::vec3& pos) { return 1.0f; },
-					[&](const glm::vec3& pos) { return 0.0f; },
-					[&](const glm::vec3& pos) { return 0.0f; },
-					[&](const glm::vec3& pos) { return 0.0f; },
-					[&](const glm::vec3& pos) { return 0.0f; } });
-					break;
-				}
+				SetSoilPhysicalMaterial(soilLayer.m_mat, soilLayerDescriptor->m_sandRatio, soilLayerDescriptor->m_siltRatio, soilLayerDescriptor->m_clayRatio, soilLayerDescriptor->m_compactness);
 				soilLayer.m_thickness = [soilLayerDescriptor](const glm::vec2& position)
 				{
 					return soilLayerDescriptor->m_thickness.GetValue(position);

@@ -18,7 +18,10 @@ namespace EcoSysLab
 	class SoilLayerDescriptor : public IAsset
 	{
 	public:
-		unsigned m_type;
+		float m_sandRatio;
+		float m_siltRatio;
+		float m_clayRatio;
+		float m_compactness;
 		Noises2D m_thickness;
 		void OnInspect() override;
 		void Serialize(YAML::Emitter& out) override;
