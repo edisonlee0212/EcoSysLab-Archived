@@ -376,7 +376,7 @@ TreeVisualizer::InspectInternode(
             ImGui::InputFloat("Productive req", (float *) &internodeData.m_developmentalVigorRequirement, 1, 100,
                               "%.3f",
                               ImGuiInputTextFlags_ReadOnly);
-            ImGui::InputFloat("Descendent req", (float *) &internodeData.m_subtreeTotalVigorRequirement, 1,
+            ImGui::InputFloat("Descendent req", (float *) &internodeData.m_subtreeDevelopmentalVigorRequirement, 1,
                               100, "%.3f",
                               ImGuiInputTextFlags_ReadOnly);
             
@@ -530,7 +530,7 @@ TreeVisualizer::PeekInternode(
             ImGui::InputFloat("Productive req", (float *) &internodeData.m_developmentalVigorRequirement, 1, 100,
                               "%.3f",
                               ImGuiInputTextFlags_ReadOnly);
-            ImGui::InputFloat("Descendent req", (float *) &internodeData.m_subtreeTotalVigorRequirement, 1,
+            ImGui::InputFloat("Descendent req", (float *) &internodeData.m_subtreeDevelopmentalVigorRequirement, 1,
                               100, "%.3f",
                               ImGuiInputTextFlags_ReadOnly);
             
