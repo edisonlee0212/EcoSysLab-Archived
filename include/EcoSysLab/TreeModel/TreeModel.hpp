@@ -161,6 +161,8 @@ namespace EcoSysLab {
 		 */
 		float m_subTreeAllocatedVigor;
 
+		std::vector<glm::vec4> m_fineRootAnchors;
+
 	};
 	struct RootBranchGrowthData {
 		int m_order = 0;
@@ -253,6 +255,13 @@ namespace EcoSysLab {
 		* The probability decrease along the branch.
 		*/
 		float m_branchingProbabilityOrderDecrease;
+
+		float m_fineRootSegmentLength = 0.02f;
+		float m_fineRootApicalAngleVariance = 2.5f;
+		float m_fineRootBranchingAngle = 60.f;
+		float m_fineRootThickness = 0.002f;
+		float m_fineRootMinNodeThickness = 0.05f;
+		int m_fineRootNodeCount = 2;
 
 		[[nodiscard]] float GetRootApicalAngle(const Node<RootInternodeGrowthData>& rootNode) const;
 
@@ -598,8 +607,11 @@ namespace EcoSysLab {
 
 		int m_leafCount = 0;
 		int m_fruitCount = 0;
-
+		int m_fineRootCount = 0;
 	public:
+		std::vector<int> m_internodeOrderCounts;
+		std::vector<int> m_rootNodeOrderCounts;
+
 		int m_flowNodeLimit = 20;
 		template <typename SkeletonData, typename FlowData, typename NodeData>
 		void CollisionDetection(float minRadius, Octree<TreeVoxelData>& octree, Skeleton<SkeletonData, FlowData, NodeData>& skeleton);
@@ -628,7 +640,7 @@ namespace EcoSysLab {
 
 		[[nodiscard]] int GetLeafCount() const;
 		[[nodiscard]] int GetFruitCount() const;
-
+		[[nodiscard]] int GetFineRootCount() const;
 		/**
 		 * Grow one iteration of the tree, given the nutrients and the procedural parameters.
 		 * @param globalTransform The global transform of tree in world space.

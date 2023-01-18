@@ -10,7 +10,7 @@ namespace EcoSysLab {
 		bool m_displayBranches = true;
 		bool m_displayFoliage = true;
 		bool m_displayFruit = true;
-
+		bool m_displayFineRoot = false;
 		bool m_displayRootFlows = true;
 		bool m_displayBoundingBox = false;
 		bool m_displaySoil = true;
@@ -26,8 +26,12 @@ namespace EcoSysLab {
 		std::vector<glm::uint> m_rootSegments;
 		std::vector<StrandPoint> m_rootPoints;
 
+		std::vector<glm::uint> m_fineRootSegments;
+		std::vector<StrandPoint> m_fineRootPoints;
+
 		AssetRef m_branchStrands;
 		AssetRef m_rootStrands;
+		AssetRef m_fineRootStrands;
 
 		std::vector<glm::mat4> m_boundingBoxMatrices;
 		std::vector<glm::vec4> m_boundingBoxColors;
@@ -87,7 +91,7 @@ namespace EcoSysLab {
 		void OnSoilVisualizationMenu();
 
 
-		void UpdateFlows(const std::vector<Entity>* treeEntities, const std::shared_ptr<Strands>& branchStrands, const std::shared_ptr<Strands>& rootStrands);
+		void UpdateFlows(const std::vector<Entity>* treeEntities, const std::shared_ptr<Strands>& branchStrands, const std::shared_ptr<Strands>& rootStrands, const std::shared_ptr<Strands>& fineRootStrands);
 
 		// helper functions to structure code a bit
 		void SoilVisualization();
@@ -108,6 +112,7 @@ namespace EcoSysLab {
 		
 		EntityRef m_branchStrandsHolder;
 		EntityRef m_rootStrandsHolder;
+		EntityRef m_fineRootStrandsHolder;
 		TreeVisualizer m_treeVisualizer;
 
 		PrivateComponentRef m_soilHolder;

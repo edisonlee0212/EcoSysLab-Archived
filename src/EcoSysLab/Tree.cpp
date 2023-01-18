@@ -390,6 +390,14 @@ bool OnInspectRootGrowthParameters(RootGrowthParameters& rootGrowthParameters) {
 			changed = ImGui::DragFloat("Branching prob child decrease", &rootGrowthParameters.m_branchingProbabilityChildrenDecrease, 0.01f) || changed;
 			changed = ImGui::DragFloat("Branching prob dist decrease", &rootGrowthParameters.m_branchingProbabilityDistanceDecrease, 0.01f) || changed;
 			changed = ImGui::DragFloat("Branching prob order decrease", &rootGrowthParameters.m_branchingProbabilityOrderDecrease, 0.01f) || changed;
+
+			changed = ImGui::DragFloat("Fine root segment length", &rootGrowthParameters.m_fineRootSegmentLength, 0.01f) || changed;
+			changed = ImGui::DragFloat("Fine root apical angle variance", &rootGrowthParameters.m_fineRootApicalAngleVariance, 0.01f) || changed;
+			changed = ImGui::DragFloat("Fine root branching angle", &rootGrowthParameters.m_fineRootBranchingAngle, 0.01f) || changed;
+			changed = ImGui::DragFloat("Fine root thickness", &rootGrowthParameters.m_fineRootThickness, 0.01f) || changed;
+			changed = ImGui::DragFloat("Fine root min node thickness", &rootGrowthParameters.m_fineRootMinNodeThickness) || changed;
+			changed = ImGui::DragInt("Fine root node count", &rootGrowthParameters.m_fineRootNodeCount) || changed;
+
 			ImGui::TreePop();
 		}
 		ImGui::TreePop();

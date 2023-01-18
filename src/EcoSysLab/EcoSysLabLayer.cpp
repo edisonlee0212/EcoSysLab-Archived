@@ -33,6 +33,7 @@ void EcoSysLabLayer::OnCreate() {
 
 	m_branchStrands = ProjectManager::CreateTemporaryAsset<Strands>();
 	m_rootStrands = ProjectManager::CreateTemporaryAsset<Strands>();
+	m_fineRootStrands = ProjectManager::CreateTemporaryAsset<Strands>();
 }
 
 void EcoSysLabLayer::OnDestroy() {
@@ -60,6 +61,7 @@ void EcoSysLabLayer::LateUpdate() {
 
 	auto branchStrands = m_branchStrands.Get<Strands>();
 	auto rootStrands = m_rootStrands.Get<Strands>();
+	auto fineRootStrands = m_fineRootStrands.Get<Strands>();
 	if (treeEntities && !treeEntities->empty()) {
 		//Tree selection
 		if (editorLayer->SceneCameraWindowFocused() && !m_lockTreeSelection
@@ -164,7 +166,7 @@ void EcoSysLabLayer::LateUpdate() {
 			m_rootFlowSize = totalRootFlowSize;
 			m_leafSize = totalLeafSize;
 			m_fruitSize = totalFruitSize;
-			if (m_needFlowUpdate) UpdateFlows(treeEntities, branchStrands, rootStrands);
+			if (m_needFlowUpdate) UpdateFlows(treeEntities, branchStrands, rootStrands, fineRootStrands);
 		}
 
 		auto strandsHolder = m_branchStrandsHolder.Get();
@@ -200,6 +202,23 @@ void EcoSysLabLayer::LateUpdate() {
 				material->m_materialProperties.m_metallic = 0.0f;
 			}
 		}
+
+		auto fineRootsHolder = m_fineRootStrandsHolder.Get();
+		if (scene->IsEntityValid(fineRootsHolder))
+		{
+			auto fineRootStrandsRenderer = scene->GetOrSetPrivateComponent<StrandsRenderer>(fineRootsHolder).lock();
+			fineRootStrandsRenderer->m_strands = m_fineRootStrands;
+			auto material = fineRootStrandsRenderer->m_material.Get<Material>();
+			if (!material)
+			{
+				material = ProjectManager::CreateTemporaryAsset<Material>();
+				material->SetProgram(DefaultResources::GLPrograms::StandardStrandsProgram);
+				fineRootStrandsRenderer->m_material = material;
+				material->m_materialProperties.m_albedoColor = glm::vec3(80, 60, 50) / 255.0f;
+				material->m_materialProperties.m_roughness = 1.0f;
+				material->m_materialProperties.m_metallic = 0.2f;
+			}
+		}
 	}
 
 	if (m_debugVisualization) {
@@ -219,7 +238,11 @@ void EcoSysLabLayer::LateUpdate() {
 			gizmoSettings.m_colorMode = GizmoSettings::ColorMode::VertexColor;
 			Gizmos::DrawGizmoStrands(rootStrands, glm::vec4(1.0f), glm::mat4(1.0f), 1, gizmoSettings);
 		}
-
+		if (m_displayFineRoot && !m_fineRootPoints.empty())
+		{
+			gizmoSettings.m_colorMode = GizmoSettings::ColorMode::VertexColor;
+			Gizmos::DrawGizmoStrands(fineRootStrands, glm::vec4(1.0f), glm::mat4(1.0f), 1, gizmoSettings);
+		}
 		if (m_displayFruit && !m_fruitMatrices.empty())
 		{
 			Gizmos::DrawGizmoMeshInstancedColored(
@@ -230,7 +253,7 @@ void EcoSysLabLayer::LateUpdate() {
 				m_fruitMatrices,
 				glm::mat4(1.0f), 1.0f, gizmoSettings);
 		}
-
+		
 		if (m_displayFoliage && !m_foliageMatrices.empty())
 		{
 			Gizmos::DrawGizmoMeshInstancedColored(
@@ -287,6 +310,7 @@ void EcoSysLabLayer::ResetAllTrees(const std::vector<Entity>* treeEntities)
 
 	m_branchStrands = ProjectManager::CreateTemporaryAsset<Strands>();
 	m_rootStrands = ProjectManager::CreateTemporaryAsset<Strands>();
+	m_fineRootStrands = ProjectManager::CreateTemporaryAsset<Strands>();
 
 	m_boundingBoxMatrices.clear();
 	m_boundingBoxColors.clear();
@@ -313,6 +337,7 @@ void EcoSysLabLayer::OnInspect() {
 
 			Editor::DragAndDropButton(m_branchStrandsHolder, "Branch strands holder");
 			Editor::DragAndDropButton(m_rootStrandsHolder, "Root strands holder");
+			Editor::DragAndDropButton(m_fineRootStrandsHolder, "Fine Root strands holder");
 			ImGui::TreePop();
 		}
 
@@ -364,8 +389,13 @@ void EcoSysLabLayer::OnInspect() {
 		}
 		ImGui::Checkbox("Debug Visualization", &m_debugVisualization);
 		if (m_debugVisualization && ImGui::TreeNodeEx("Debug visualization settings", ImGuiTreeNodeFlags_DefaultOpen)) {
+			if(ImGui::Button("Update"))
+			{
+				m_needFlowUpdate = true;
+			}
 			ImGui::Checkbox("Display Branches", &m_displayBranches);
 			ImGui::Checkbox("Display Fruits", &m_displayFruit);
+			ImGui::Checkbox("Display Fine Roots", &m_displayFineRoot);
 			ImGui::Checkbox("Display Foliage", &m_displayFoliage);
 			ImGui::Checkbox("Display Root Flows", &m_displayRootFlows);
 			ImGui::Checkbox("Display Soil", &m_displaySoil);
@@ -480,7 +510,7 @@ void EcoSysLabLayer::OnSoilVisualizationMenu()
 	}
 }
 
-void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const std::shared_ptr<Strands>& branchStrands, const std::shared_ptr<Strands>& rootStrands)
+void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const std::shared_ptr<Strands>& branchStrands, const std::shared_ptr<Strands>& rootStrands, const std::shared_ptr<Strands>& fineRootStrands)
 {
 	{
 		const auto scene = Application::GetActiveScene();
@@ -504,6 +534,10 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 		int leafLastStartIndex = 0;
 		leafStartIndices.emplace_back(leafLastStartIndex);
 
+		std::vector<int> fineRootStartIndices;
+		int fineRootLastStartIndex = 0;
+		fineRootStartIndices.emplace_back(fineRootLastStartIndex);
+
 		if(treeEntities->empty())
 		{
 			m_branchSegments.clear();
@@ -511,6 +545,9 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 
 			m_rootSegments.clear();
 			m_rootPoints.clear();
+
+			m_fineRootSegments.clear();
+			m_fineRootPoints.clear();
 
 			m_foliageMatrices.clear();
 			m_foliageColors.clear();
@@ -546,6 +583,9 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 
 			leafLastStartIndex += treeModel.GetLeafCount();
 			leafStartIndices.emplace_back(leafLastStartIndex);
+
+			fineRootLastStartIndex += treeModel.GetFineRootCount();
+			fineRootStartIndices.emplace_back(fineRootLastStartIndex);
 		}
 		m_branchSegments.resize(branchLastStartIndex * 3);
 		m_branchPoints.resize(branchLastStartIndex * 6);
@@ -557,6 +597,9 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 		m_foliageColors.resize(leafLastStartIndex);
 		m_fruitMatrices.resize(fruitLastStartIndex);
 		m_fruitColors.resize(fruitLastStartIndex);
+
+		m_fineRootSegments.resize(fineRootLastStartIndex * 5);
+		m_fineRootPoints.resize(fineRootLastStartIndex * 8);
 		{
 			std::vector<std::shared_future<void>> results;
 			Jobs::ParallelFor(treeEntities->size(), [&](unsigned treeIndex)
@@ -566,15 +609,15 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 			auto& treeModel = tree->m_treeModel;
 			const auto& branchSkeleton = treeModel.RefBranchSkeleton();
 			const auto& rootSkeleton = treeModel.RefRootSkeleton();
-			const auto& branchList = branchSkeleton.RefSortedFlowList();
+			const auto& branchFlowList = branchSkeleton.RefSortedFlowList();
 			const auto& internodeList = branchSkeleton.RefSortedNodeList();
-			const auto& rootList = rootSkeleton.RefSortedFlowList();
-
+			const auto& rootFlowList = rootSkeleton.RefSortedFlowList();
+			const auto& rootNodeList = rootSkeleton.RefSortedNodeList();
 			auto entityGlobalTransform = scene->GetDataComponent<GlobalTransform>(treeEntity);
 			auto branchStartIndex = branchStartIndices[treeIndex];
-			for (int i = 0; i < branchList.size(); i++)
+			for (int i = 0; i < branchFlowList.size(); i++)
 			{
-				auto& flow = branchSkeleton.PeekFlow(branchList[i]);
+				auto& flow = branchSkeleton.PeekFlow(branchFlowList[i]);
 				auto cp1 = flow.m_info.m_globalStartPosition;
 				auto cp4 = flow.m_info.m_globalEndPosition;
 				float distance = glm::distance(cp1, cp4);
@@ -641,9 +684,10 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 			auto rootStartIndex = rootStartIndices[treeIndex];
 			auto leafStartIndex = leafStartIndices[treeIndex];
 			auto fruitStartIndex = fruitStartIndices[treeIndex];
-			for (int i = 0; i < rootList.size(); i++)
+			auto fineRootStartIndex = fineRootStartIndices[treeIndex];
+			for (int i = 0; i < rootFlowList.size(); i++)
 			{
-				auto& flow = rootSkeleton.PeekFlow(rootList[i]);
+				auto& flow = rootSkeleton.PeekFlow(rootFlowList[i]);
 				auto cp1 = flow.m_info.m_globalStartPosition;
 				auto cp4 = flow.m_info.m_globalEndPosition;
 				float distance = glm::distance(cp1, cp4);
@@ -704,6 +748,57 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 				m_rootSegments[rootStartIndex * 3 + i * 3 + 1] = rootStartIndex * 6 + i * 6 + 1;
 				m_rootSegments[rootStartIndex * 3 + i * 3 + 2] = rootStartIndex * 6 + i * 6 + 2;
 			}
+			int fineRootIndex = 0;
+			for (int i = 0; i < rootNodeList.size(); i++)
+			{
+				const auto& rootNode = rootSkeleton.PeekNode(rootNodeList[i]);
+				const auto& rootNodeData = rootNode.m_data;
+				const auto& rootNodeInfo = rootNode.m_info;
+				if(rootNodeData.m_fineRootAnchors.empty()) continue;
+				auto& p0 = m_fineRootPoints[fineRootStartIndex * 8 + fineRootIndex * 8];
+				auto& p1 = m_fineRootPoints[fineRootStartIndex * 8 + fineRootIndex * 8 + 1];
+				auto& p2 = m_fineRootPoints[fineRootStartIndex * 8 + fineRootIndex * 8 + 2];
+				auto& p3 = m_fineRootPoints[fineRootStartIndex * 8 + fineRootIndex * 8 + 3];
+				auto& p4 = m_fineRootPoints[fineRootStartIndex * 8 + fineRootIndex * 8 + 4];
+				auto& p5 = m_fineRootPoints[fineRootStartIndex * 8 + fineRootIndex * 8 + 5];
+				auto& p6 = m_fineRootPoints[fineRootStartIndex * 8 + fineRootIndex * 8 + 6];
+				auto& p7 = m_fineRootPoints[fineRootStartIndex * 8 + fineRootIndex * 8 + 7];
+				
+				p0.m_position = (entityGlobalTransform.m_value *
+					glm::translate(rootNodeInfo.m_globalPosition * 2.0f - glm::vec3(rootNodeData.m_fineRootAnchors[0])))[3];
+				p1.m_position = (entityGlobalTransform.m_value *
+					glm::translate(rootNodeInfo.m_globalPosition))[3];
+				p2.m_position = (entityGlobalTransform.m_value *
+					glm::translate(glm::vec3(rootNodeData.m_fineRootAnchors[0])))[3];
+				p3.m_position = (entityGlobalTransform.m_value *
+					glm::translate(glm::vec3(rootNodeData.m_fineRootAnchors[1])))[3];
+				p4.m_position = (entityGlobalTransform.m_value *
+					glm::translate(glm::vec3(rootNodeData.m_fineRootAnchors[2])))[3];
+				p5.m_position = (entityGlobalTransform.m_value *
+					glm::translate(glm::vec3(rootNodeData.m_fineRootAnchors[3])))[3];
+				p6.m_position = (entityGlobalTransform.m_value *
+					glm::translate(glm::vec3(rootNodeData.m_fineRootAnchors[4])))[3];
+				p7.m_position = (entityGlobalTransform.m_value *
+					glm::translate(glm::vec3(rootNodeData.m_fineRootAnchors[4]) * 2.0f - glm::vec3(rootNodeData.m_fineRootAnchors[3])))[3];
+
+				p0.m_thickness = rootNodeInfo.m_thickness;
+				p1.m_thickness = rootNodeData.m_fineRootAnchors[0].w;
+				p2.m_thickness = rootNodeData.m_fineRootAnchors[0].w;
+				p3.m_thickness = rootNodeData.m_fineRootAnchors[1].w;
+				p4.m_thickness = rootNodeData.m_fineRootAnchors[2].w;
+				p5.m_thickness = rootNodeData.m_fineRootAnchors[3].w;
+				p6.m_thickness = rootNodeData.m_fineRootAnchors[4].w;
+				p7.m_thickness = rootNodeData.m_fineRootAnchors[4].w;
+
+				m_fineRootSegments[fineRootStartIndex * 5 + fineRootIndex * 5] = fineRootStartIndex * 8 + fineRootIndex * 8;
+				m_fineRootSegments[fineRootStartIndex * 5 + fineRootIndex * 5 + 1] = fineRootStartIndex * 8 + fineRootIndex * 8 + 1;
+				m_fineRootSegments[fineRootStartIndex * 5 + fineRootIndex * 5 + 2] = fineRootStartIndex * 8 + fineRootIndex * 8 + 2;
+				m_fineRootSegments[fineRootStartIndex * 5 + fineRootIndex * 5 + 3] = fineRootStartIndex * 8 + fineRootIndex * 8 + 3;
+				m_fineRootSegments[fineRootStartIndex * 5 + fineRootIndex * 5 + 4] = fineRootStartIndex * 8 + fineRootIndex * 8 + 4;
+
+				fineRootIndex++;
+			}
+
 			int leafIndex = 0;
 			int fruitIndex = 0;
 			for(const auto& internodeHandle : internodeList)
@@ -731,12 +826,13 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 					}
 				}
 			}
-
+			
 
 				}, results);
 			for (auto& i : results) i.wait();
 			branchStrands->SetSegments(1, m_branchSegments, m_branchPoints);
 			rootStrands->SetSegments(1, m_rootSegments, m_rootPoints);
+			fineRootStrands->SetSegments(1, m_fineRootSegments, m_fineRootPoints);
 		}
 	}
 }

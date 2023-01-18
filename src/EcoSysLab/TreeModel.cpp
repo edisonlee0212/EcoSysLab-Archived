@@ -1110,8 +1110,9 @@ bool TreeModel::GrowShoots(const glm::mat4& globalTransform, ClimateModel& clima
 		const float minRadius = treeGrowthParameters.m_endNodeThickness * 4.0f;
 		CollisionDetection(minRadius, m_branchOctree, m_branchSkeleton);
 	}
-
+	m_internodeOrderCounts.clear();
 	{
+		int maxOrder = 0;
 		const auto& sortedFlowList = m_branchSkeleton.RefSortedFlowList();
 		for (const auto& flowHandle : sortedFlowList) {
 			auto& flow = m_branchSkeleton.RefFlow(flowHandle);
@@ -1124,9 +1125,17 @@ bool TreeModel::GrowShoots(const glm::mat4& globalTransform, ClimateModel& clima
 				if (flow.IsApical()) flowData.m_order = parentFlow.m_data.m_order;
 				else flowData.m_order = parentFlow.m_data.m_order + 1;
 			}
-			for (const auto& internodeHandle : flow.RefNodeHandles()) {
-				m_branchSkeleton.RefNode(internodeHandle).m_data.m_order = flowData.m_order;
-			}
+			maxOrder = glm::max(maxOrder, flowData.m_order);
+		}
+		m_internodeOrderCounts.resize(maxOrder + 1);
+		std::fill(m_internodeOrderCounts.begin(), m_internodeOrderCounts.end(), 0);
+		const auto& sortedInternodeList = m_branchSkeleton.RefSortedNodeList();
+		for (const auto& internodeHandle : sortedInternodeList)
+		{
+			auto& internode = m_branchSkeleton.RefNode(internodeHandle);
+			const auto order = m_branchSkeleton.RefFlow(internode.GetFlowHandle()).m_data.m_order;
+			internode.m_data.m_order = order;
+			m_internodeOrderCounts[order]++;
 		}
 		m_branchSkeleton.CalculateFlows();
 	};
@@ -1179,6 +1188,10 @@ int TreeModel::GetFruitCount() const
 	return m_fruitCount;
 }
 
+int TreeModel::GetFineRootCount() const
+{
+	return m_fineRootCount;
+}
 
 bool TreeModel::InternodePruning(float maxDistance, NodeHandle internodeHandle,
 	const TreeGrowthParameters& treeGrowthParameters) {
@@ -1236,6 +1249,7 @@ bool TreeModel::GrowRoots(const glm::mat4& globalTransform, SoilModel& soilModel
 #pragma endregion
 #pragma region Postprocess
 		if (anyRootGrown) m_rootSkeleton.SortLists();
+		
 		rootStructureChanged = rootStructureChanged || anyRootGrown;
 		{
 			m_rootSkeleton.m_min = glm::vec3(FLT_MAX);
@@ -1268,6 +1282,8 @@ bool TreeModel::GrowRoots(const glm::mat4& globalTransform, SoilModel& soilModel
 						(parentRootNode.m_info.m_globalRotation *
 							glm::vec3(0, 0, -1));
 
+					
+
 				}
 				m_rootSkeleton.m_min = glm::min(m_rootSkeleton.m_min, rootNodeInfo.m_globalPosition);
 				m_rootSkeleton.m_max = glm::max(m_rootSkeleton.m_max, rootNodeInfo.m_globalPosition);
@@ -1286,8 +1302,9 @@ bool TreeModel::GrowRoots(const glm::mat4& globalTransform, SoilModel& soilModel
 			const float minRadius = rootGrowthParameters.m_endNodeThickness * 4.0f;
 			CollisionDetection(minRadius, m_rootOctree, m_rootSkeleton);
 		}
-
+		m_rootNodeOrderCounts.clear();
 		{
+			int maxOrder = 0;
 			const auto& sortedFlowList = m_rootSkeleton.RefSortedFlowList();
 			for (const auto& flowHandle : sortedFlowList) {
 				auto& flow = m_rootSkeleton.RefFlow(flowHandle);
@@ -1300,8 +1317,44 @@ bool TreeModel::GrowRoots(const glm::mat4& globalTransform, SoilModel& soilModel
 					if (flow.IsApical()) flowData.m_order = parentFlow.m_data.m_order;
 					else flowData.m_order = parentFlow.m_data.m_order + 1;
 				}
-				for (const auto& rootNodeHandle : flow.RefNodeHandles()) {
-					m_rootSkeleton.RefNode(rootNodeHandle).m_data.m_order = flowData.m_order;
+				maxOrder = glm::max(maxOrder, flowData.m_order);
+			}
+			m_rootNodeOrderCounts.resize(maxOrder + 1);
+			std::fill(m_rootNodeOrderCounts.begin(), m_rootNodeOrderCounts.end(), 0);
+			const auto& sortedRootNodeList = m_rootSkeleton.RefSortedNodeList();
+			m_fineRootCount = 0;
+			for (const auto& rootNodeHandle : sortedRootNodeList)
+			{
+				auto& rootNode = m_rootSkeleton.RefNode(rootNodeHandle);
+				const auto order = m_rootSkeleton.RefFlow(rootNode.GetFlowHandle()).m_data.m_order;
+				rootNode.m_data.m_order = order;
+				m_rootNodeOrderCounts[order]++;
+
+				//Generate fine root here
+				if (rootNode.m_info.m_thickness < rootGrowthParameters.m_fineRootMinNodeThickness && rootNodeHandle % rootGrowthParameters.m_fineRootNodeCount == 0)
+				{
+					m_fineRootCount++;
+					if(rootNode.m_data.m_fineRootAnchors.empty())
+					{
+						rootNode.m_data.m_fineRootAnchors.resize(5);
+						auto desiredGlobalRotation = rootNode.m_info.m_globalRotation * glm::quat(glm::vec3(
+							glm::radians(rootGrowthParameters.m_fineRootBranchingAngle), 0.0f,
+							glm::radians(rootGrowthParameters.GetRootRollAngle(rootNode))));
+
+						glm::vec3 positionWalker = rootNode.m_info.m_globalPosition;
+						for(int i = 0; i < 5; i++)
+						{
+							auto front = desiredGlobalRotation * glm::vec3(0, 0, -1);
+							positionWalker = positionWalker + front * rootGrowthParameters.m_fineRootSegmentLength;
+							rootNode.m_data.m_fineRootAnchors[i] = glm::vec4(positionWalker, rootGrowthParameters.m_fineRootThickness);
+							desiredGlobalRotation = rootNode.m_info.m_globalRotation * glm::quat(glm::vec3(
+								glm::radians(glm::gaussRand(0.f, rootGrowthParameters.m_fineRootApicalAngleVariance) + rootGrowthParameters.m_fineRootBranchingAngle), 0.0f,
+								glm::radians(glm::linearRand(0.0f, 360.0f))));
+						}
+					}
+				}else
+				{
+					rootNode.m_data.m_fineRootAnchors.clear();
 				}
 			}
 			m_rootSkeleton.CalculateFlows();
