@@ -18,13 +18,13 @@ namespace EcoSysLab
 	struct NoiseDescriptor
 	{
 		unsigned m_type;
-		float m_noiseScale = 0.5f;
+		float m_noiseFrequency = 0.5f;
 		float m_base = 0.0f;
 		float m_powerFactor = 1.0f;
 		float m_noiseIntensity = 1.0f;
-		float m_heightMin = -10;
-		float m_heightMax = 10;
-		float m_offset;
+		float m_min = -10;
+		float m_max = 10;
+		float m_offset = 0.0f;
 	};
 	class Noises2D {
 	public:
