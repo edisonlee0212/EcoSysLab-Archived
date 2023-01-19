@@ -210,19 +210,20 @@ void EcoSysLab::SoilModel::BuildFromLayers(const SoilSurface& soilSurface, const
 			auto index = Index(GetCoordinateFromPosition(pos) + ivec3(0, -2, 0));
 			rain_field[index] = 0.1;// insert water 2 voxels below ground
 
-			int currentMaterialIndex = 0;
-			float currentMaterialLowestHeight = groundHeight;
 			for(auto y= m_resolution.y - 1; y >= 0; --y)
 			{
-				auto currentHeight = m_boundingBoxMin.y + y * m_dx + (m_dx/2.0);
-				if(currentHeight < currentMaterialLowestHeight && currentMaterialIndex < static_cast<int>(soil_layers.size()) - 1)
-				{
-					currentMaterialIndex++;
-					currentMaterialLowestHeight -= glm::max(0.f, soil_layers[currentMaterialIndex].m_thickness(pos_2d));
-				}
+				float current_height = groundHeight;
+				auto voxel_height = m_boundingBoxMin.y + y*m_dx + (m_dx/2.0);
+
 				// find material index:
-				auto voxelIdx = Index(x, y, z);
-				SetVoxel({ x, y, z }, soil_layers[currentMaterialIndex].m_mat);
+				auto idx = 0;
+				while(voxel_height < current_height && idx < soil_layers.size()-1)
+				{
+					idx++;
+					current_height -= glm::max(0.f, soil_layers[idx].m_thickness(pos_2d));
+				}
+
+				SetVoxel({x, y, z}, soil_layers[idx].m_mat);
 			}
 		}
 	}
@@ -1093,18 +1094,14 @@ void EcoSysLab::SoilModel::Source::Apply(Field& target)
 }
 
 
-std::vector<glm::vec4> SoilModel::GetSoilTextureSlideZ(int slize_z, glm::uvec2 resolution, std::map<int, std::vector<glm::vec4>*> textures, float blur_width)
+std::vector<glm::vec4> SoilModel::GetSoilTextureSlideZ(int slize_z, glm::uvec2 resolution, const std::map<int, SoilMaterialTexture*>& textures, float blur_width)
 {
 	assert(resolution.x == resolution.y);
 	vector<vec4> output(resolution.x * resolution.y);
-
 	auto dim_max = glm::max(m_resolution.x, m_resolution.y);
 
-	//const float tex_to_soil = (float)dim_max / (float)resolution.x;
 	const float slize_z_position = GetPositionFromCoordinate(ivec3(0, 0, slize_z)).z;
 	const float tex_dx = m_dx * (float)dim_max / (float)resolution.x;
-
-	const float blur_kernel_width = m_dx*m_dx * blur_width * blur_width;
 
 	for(auto x=0; x<resolution.x; ++x)
 	{
@@ -1119,38 +1116,108 @@ std::vector<glm::vec4> SoilModel::GetSoilTextureSlideZ(int slize_z, glm::uvec2 r
 				output[texture_idx] = vec4(0, 0, 0, 0);
 			else
 			{
-				auto soil_voxel_base = GetCoordinateFromPosition(texel_position);
-				// do some gaussian blending
-				vec4 output_color(0, 0, 0, 0);
-				float total_weight=0;
-				for(auto i=0; i<m_blur_3x3_idx.size(); ++i) // iterate over blur kernel
-				{
-					auto soil_voxel = soil_voxel_base + m_blur_3x3_idx[i];
-					if(CoordinateInsideVolume(soil_voxel))
-					{
-						const auto p = GetPositionFromCoordinate(soil_voxel);
-						const auto dist = glm::length(p - texel_position);
-
-						// compute weight:
-						const float weight = glm::exp(- dist*dist / blur_kernel_width);
-						total_weight += weight;
-
-						// fetch color
-						auto material_id = m_material_id[Index(soil_voxel)];
-						if(textures.find(material_id) == textures.end())
-						{
-							cout << "Id not found" << material_id << endl;
-							return output;
-						}
-						auto& tex = *textures[material_id];
-						output_color += tex[texture_idx] * weight;
-					}
-				}
-				output[texture_idx] = output_color / total_weight;
-
+				output[texture_idx] = GetSoilTextureColorForPosition(texel_position, texture_idx, textures, blur_width);
 			}
 		}
 	}
+
+	return output;
+}
+
+
+std::vector<glm::vec4> SoilModel::GetSoilTextureSlideX(int slize_x, glm::uvec2 resolution, const std::map<int, SoilMaterialTexture*>& textures, float blur_width)
+{
+	assert(resolution.x == resolution.y);
+	vector<vec4> output(resolution.x * resolution.y);
+	auto dim_max = glm::max(m_resolution.x, m_resolution.y);
+
+	const float slize_x_position = GetPositionFromCoordinate(ivec3(slize_x, 0, 0)).z;
+	const float tex_dx = m_dx * (float)dim_max / (float)resolution.x;
+
+	for(auto x=0; x<resolution.x; ++x)
+	{
+		for(auto y=0; y<resolution.y; ++y)
+		{
+			auto texture_idx = x+y*resolution.x;
+
+			vec3 texel_position = GetPositionFromCoordinate(ivec3(0, y, x), tex_dx);
+			texel_position.x = slize_x_position;
+
+			if( ! PositionInsideVolume(texel_position) )
+				output[texture_idx] = vec4(0, 0, 0, 0);
+			else
+			{
+				output[texture_idx] = GetSoilTextureColorForPosition(texel_position, texture_idx, textures, blur_width);
+			}
+		}
+	}
+
+	return output;
+}
+
+
+glm::vec4 EcoSysLab::SoilModel::GetSoilTextureColorForPosition(const glm::vec3& position, int texture_idx, const std::map<int, SoilMaterialTexture*>& textures, float blur_width)
+{
+	const float blur_kernel_width = m_dx*m_dx * blur_width * blur_width;
+	auto soil_voxel_base = GetCoordinateFromPosition(position);
+	std::map<int, float> contributing_materials; // we need to store the total some for each material:
+
+												 // do some gaussian blending
+
+	for(auto i=0; i<m_blur_3x3_idx.size(); ++i) // iterate over blur kernel
+	{
+		auto soil_voxel = soil_voxel_base + m_blur_3x3_idx[i];
+		if(CoordinateInsideVolume(soil_voxel))
+		{
+			// fetch material
+			auto material_id = m_material_id[Index(soil_voxel)];
+			if(textures.find(material_id) == textures.end())
+			{
+				cout << "Id not found" << material_id << endl;
+				return vec4(0.f);
+			}
+			auto& tex = *textures.at(material_id);
+
+			const auto p = GetPositionFromCoordinate(soil_voxel);
+			const auto dist = glm::length(p - position);
+
+			// compute weight:
+			const float weight = glm::exp(- dist*dist / blur_kernel_width);
+
+			if( contributing_materials.find(material_id) == contributing_materials.end())
+				contributing_materials[material_id] = 0;
+
+			auto heightmap_height = tex.m_height_map[texture_idx];
+			contributing_materials[material_id] += weight * heightmap_height * heightmap_height;
+			//total_weight +=  weight * tex.m_height_map[texture_idx];
+
+			//total_weight += weight;
+			//output_color += tex.m_color_map[texture_idx] * weight;
+		}
+	}
+
+	// max texture:
+	/*
+	using pair_type = decltype(contributing_materials)::value_type;
+	auto max_mat = std::max_element(contributing_materials.begin(), contributing_materials.end(), []
+	(const pair_type & p1, const pair_type & p2)
+	{
+	return p1.second < p2.second;
+	}
+	);
+	output[texture_idx] = textures[max_mat->first]->m_color_map[texture_idx];
+	*/
+
+	// blend according to weights:
+	float total_weight=0;
+	vec4 output(0.f);
+	for(auto& p : contributing_materials)
+	{
+		auto weight = p.second * p.second;
+		output += textures.at(p.first)->m_color_map[texture_idx] * weight;
+		total_weight += weight;
+	}
+	output /= total_weight;
 
 	return output;
 }

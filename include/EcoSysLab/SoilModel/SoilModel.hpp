@@ -39,6 +39,12 @@ namespace EcoSysLab {
 		std::function<float(const glm::vec2& position)> m_thickness;
 	};
 
+	struct SoilMaterialTexture
+	{
+		std::vector<glm::vec4> m_color_map;
+		std::vector<float> m_height_map;
+	};
+
 	class SoilModel {
 		friend class Soil;
 		friend class EcoSysLabLayer;
@@ -91,7 +97,11 @@ namespace EcoSysLab {
 		bool CoordinateInsideVolume(const glm::ivec3& coordinate) const;
 		[[nodiscard]] bool Initialized() const;
 
-		std::vector<glm::vec4> GetSoilTextureSlideZ(int slize_z, glm::uvec2 resolution, std::map<int, std::vector<glm::vec4>*> textures, float blur_width=1); // the output as well as all input textures must have the same resolution!
+		std::vector<glm::vec4> GetSoilTextureSlideZ(int slize_z, glm::uvec2 resolution, const std::map<int, SoilMaterialTexture*>& textures, float blur_width=1); // the output as well as all input textures must have the same resolution!
+		std::vector<glm::vec4> GetSoilTextureSlideX(int slize_x, glm::uvec2 resolution, const std::map<int, SoilMaterialTexture*>& textures, float blur_width=1); // the output as well as all input textures must have the same resolution!
+		
+		glm::vec4 GetSoilTextureColorForPosition(const glm::vec3& position, int texture_index, const std::map<int, SoilMaterialTexture*>& textures, float blur_width);
+
 
 		int m_version = 0; // TODO: what does this do?
 	protected:
