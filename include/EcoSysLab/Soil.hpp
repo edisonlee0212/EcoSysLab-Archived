@@ -15,19 +15,22 @@ namespace EcoSysLab
 		Air
 	};
 
-	class SoilLayerDescriptor : public IAsset
+	class ISoilLayerDescriptor : public IAsset {};
+
+	class NoiseSoilLayerDescriptor : public ISoilLayerDescriptor
 	{
 	public:
-		float m_sandRatio;
-		float m_siltRatio;
-		float m_clayRatio;
-		float m_compactness;
+		Noises3D m_capacity;
+		Noises3D m_permeability;
+		Noises3D m_density;
+		Noises3D m_initialNutrients;
+		Noises3D m_initialWater;
 		Noises2D m_thickness;
 		void OnInspect() override;
 		void Serialize(YAML::Emitter& out) override;
 		void Deserialize(const YAML::Node& in) override;
 	};
-
+	
 	/**
 	 * \brief The soil descriptor contains the procedural parameters for soil model.
 	 * It helps provide the user's control menu and serialization outside the portable soil model

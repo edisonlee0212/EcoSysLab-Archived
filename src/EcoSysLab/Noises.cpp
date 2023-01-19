@@ -17,7 +17,7 @@ Noises3D::Noises3D()
 
 bool Noises2D::OnInspect() {
 	bool changed = false;
-	if (ImGui::DragFloat2("Min/max", &m_minMax.x, 0, -1000, 1000)) { changed = true; }
+	if (ImGui::DragFloat2("Global Min/max", &m_minMax.x, 0, -1000, 1000)) { changed = true; }
 	if (ImGui::Button("New start descriptor")) {
 		changed = true;
 		m_noiseDescriptors.emplace_back();
@@ -33,23 +33,60 @@ bool Noises2D::OnInspect() {
 				ImGui::TreePop();
 				continue;
 			}
-			changed = ImGui::Combo("Type", { "Simplex", "Perlin", "Constant" }, m_noiseDescriptors[i].m_type) || changed;
-			changed = ImGui::DragFloat("Frequency", &m_noiseDescriptors[i].m_noiseFrequency, 0.01f) || changed;
-			changed = ImGui::DragFloat("Base", &m_noiseDescriptors[i].m_base, 0.01f) || changed;
-			changed = ImGui::DragFloat("Power factor", &m_noiseDescriptors[i].m_powerFactor, 0.01f) || changed;
-			changed = ImGui::DragFloat("Offset", &m_noiseDescriptors[i].m_offset, 0.01f) || changed;
-			changed = ImGui::DragFloat("Intensity", &m_noiseDescriptors[i].m_noiseIntensity, 0.01f) || changed;
-			if (ImGui::DragFloat("Min", &m_noiseDescriptors[i].m_min, 0.01f, -99999, m_noiseDescriptors[i].m_max))
+			changed = ImGui::Combo("Type", { "Constant", "Linear", "Simplex", "Perlin" }, m_noiseDescriptors[i].m_type) || changed;
+			switch (static_cast<NoiseType>(m_noiseDescriptors[i].m_type))
 			{
-				changed = true;
-				m_noiseDescriptors[i].m_min = glm::min(m_noiseDescriptors[i].m_min, m_noiseDescriptors[i].m_max);
+			case NoiseType::Perlin:
+				changed = ImGui::DragFloat("Frequency", &m_noiseDescriptors[i].m_frequency, 0.01f) || changed;
+				changed = ImGui::DragFloat("Intensity", &m_noiseDescriptors[i].m_intensity, 0.01f) || changed;
+				changed = ImGui::DragFloat("Multiplier", &m_noiseDescriptors[i].m_multiplier, 0.01f) || changed;
+				if (ImGui::DragFloat("Min", &m_noiseDescriptors[i].m_min, 0.01f, -99999, m_noiseDescriptors[i].m_max))
+				{
+					changed = true;
+					m_noiseDescriptors[i].m_min = glm::min(m_noiseDescriptors[i].m_min, m_noiseDescriptors[i].m_max);
+				}
+				if (ImGui::DragFloat("Max", &m_noiseDescriptors[i].m_max, 0.01f, m_noiseDescriptors[i].m_min, 99999))
+				{
+					changed = true;
+					m_noiseDescriptors[i].m_max = glm::max(m_noiseDescriptors[i].m_min, m_noiseDescriptors[i].m_max);
+				}
+				changed = ImGui::DragFloat("Offset", &m_noiseDescriptors[i].m_offset, 0.01f) || changed;
+				break;
+			case NoiseType::Simplex:
+				changed = ImGui::DragFloat("Frequency", &m_noiseDescriptors[i].m_frequency, 0.01f) || changed;
+				changed = ImGui::DragFloat("Intensity", &m_noiseDescriptors[i].m_intensity, 0.01f) || changed;
+				changed = ImGui::DragFloat("Multiplier", &m_noiseDescriptors[i].m_multiplier, 0.01f) || changed;
+				if (ImGui::DragFloat("Min", &m_noiseDescriptors[i].m_min, 0.01f, -99999, m_noiseDescriptors[i].m_max))
+				{
+					changed = true;
+					m_noiseDescriptors[i].m_min = glm::min(m_noiseDescriptors[i].m_min, m_noiseDescriptors[i].m_max);
+				}
+				if (ImGui::DragFloat("Max", &m_noiseDescriptors[i].m_max, 0.01f, m_noiseDescriptors[i].m_min, 99999))
+				{
+					changed = true;
+					m_noiseDescriptors[i].m_max = glm::max(m_noiseDescriptors[i].m_min, m_noiseDescriptors[i].m_max);
+				}
+				changed = ImGui::DragFloat("Offset", &m_noiseDescriptors[i].m_offset, 0.01f) || changed;
+				break;
+			case NoiseType::Constant:
+				changed = ImGui::DragFloat("Value", &m_noiseDescriptors[i].m_offset, 0.01f) || changed;
+				break;
+			case NoiseType::Linear:
+				changed = ImGui::DragFloat("X multiplier", &m_noiseDescriptors[i].m_frequency, 0.01f) || changed;
+				changed = ImGui::DragFloat("Y multiplier", &m_noiseDescriptors[i].m_intensity, 0.01f) || changed;
+				changed = ImGui::DragFloat("Base", &m_noiseDescriptors[i].m_offset, 0.01f) || changed;
+				if (ImGui::DragFloat("Min", &m_noiseDescriptors[i].m_min, 0.01f, -99999, m_noiseDescriptors[i].m_max))
+				{
+					changed = true;
+					m_noiseDescriptors[i].m_min = glm::min(m_noiseDescriptors[i].m_min, m_noiseDescriptors[i].m_max);
+				}
+				if (ImGui::DragFloat("Max", &m_noiseDescriptors[i].m_max, 0.01f, m_noiseDescriptors[i].m_min, 99999))
+				{
+					changed = true;
+					m_noiseDescriptors[i].m_max = glm::max(m_noiseDescriptors[i].m_min, m_noiseDescriptors[i].m_max);
+				}
+				break;
 			}
-			if (ImGui::DragFloat("Max", &m_noiseDescriptors[i].m_max, 0.01f, m_noiseDescriptors[i].m_min, 99999))
-			{
-				changed = true;
-				m_noiseDescriptors[i].m_max = glm::max(m_noiseDescriptors[i].m_min, m_noiseDescriptors[i].m_max);
-			}
-
 			ImGui::TreePop();
 		}
 	}
@@ -104,8 +141,6 @@ void Noises3D::Load(const std::string& name, const YAML::Node& in)
 		const auto& n = in[name];
 		if (n["m_minMax"])
 			m_minMax = n["m_minMax"].as<glm::vec2>();
-
-
 		if (n["m_noiseDescriptors"])
 		{
 			const auto& ds = n["m_noiseDescriptors"].as<YAML::Binary>();
@@ -124,18 +159,24 @@ float Noises2D::GetValue(const glm::vec2& position) const
 		switch (static_cast<NoiseType>(noiseDescriptor.m_type))
 		{
 		case NoiseType::Perlin:
-			noise = noiseDescriptor.m_base + glm::pow(glm::perlin(noiseDescriptor.m_noiseFrequency * position +
-				glm::vec2(noiseDescriptor.m_offset)), noiseDescriptor.m_powerFactor) * noiseDescriptor.m_noiseIntensity;
+			noise = glm::pow(glm::perlin(noiseDescriptor.m_frequency * position +
+				glm::vec2(noiseDescriptor.m_offset)), noiseDescriptor.m_intensity) * noiseDescriptor.m_multiplier;
+			noise = glm::clamp(noise, noiseDescriptor.m_min, noiseDescriptor.m_max);
 			break;
 		case NoiseType::Simplex:
-			noise = noiseDescriptor.m_base + glm::pow(glm::simplex(noiseDescriptor.m_noiseFrequency * position +
-				glm::vec2(noiseDescriptor.m_offset)), noiseDescriptor.m_powerFactor) * noiseDescriptor.m_noiseIntensity;
+			noise = glm::pow(glm::simplex(noiseDescriptor.m_frequency * position +
+				glm::vec2(noiseDescriptor.m_offset)), noiseDescriptor.m_intensity) * noiseDescriptor.m_multiplier;
+			noise = glm::clamp(noise, noiseDescriptor.m_min, noiseDescriptor.m_max);
 			break;
 		case NoiseType::Constant:
-			noise = noiseDescriptor.m_base;
+			noise = noiseDescriptor.m_offset;
+			break;
+		case NoiseType::Linear:
+			noise = noiseDescriptor.m_offset + noiseDescriptor.m_frequency * position.x + noiseDescriptor.m_intensity * position.y;
+			noise = glm::clamp(noise, noiseDescriptor.m_min, noiseDescriptor.m_max);
 			break;
 		}
-		retVal += glm::clamp(noise, noiseDescriptor.m_min, noiseDescriptor.m_max);
+		retVal += noise;
 	}
 	return glm::clamp(retVal, m_minMax.x, m_minMax.y);
 }
@@ -143,7 +184,7 @@ float Noises2D::GetValue(const glm::vec2& position) const
 
 bool Noises3D::OnInspect() {
 	bool changed = false;
-	if (ImGui::DragFloat2("Min/max", &m_minMax.x, 0, -1000, 1000)) { changed = true; }
+	if (ImGui::DragFloat2("Global Min/max", &m_minMax.x, 0, -1000, 1000)) { changed = true; }
 	if (ImGui::Button("New start descriptor")) {
 		changed = true;
 		m_noiseDescriptors.emplace_back();
@@ -159,23 +200,61 @@ bool Noises3D::OnInspect() {
 				ImGui::TreePop();
 				continue;
 			}
-			changed = ImGui::Combo("Type", { "Simplex", "Perlin", "Constant" }, m_noiseDescriptors[i].m_type) || changed;
-			changed = ImGui::DragFloat("Frequency", &m_noiseDescriptors[i].m_noiseFrequency, 0.01f) || changed;
-			changed = ImGui::DragFloat("Base", &m_noiseDescriptors[i].m_base, 0.01f) || changed;
-			changed = ImGui::DragFloat("Power factor", &m_noiseDescriptors[i].m_powerFactor, 0.01f) || changed;
-			changed = ImGui::DragFloat("Offset", &m_noiseDescriptors[i].m_offset, 0.01f) || changed;
-			changed = ImGui::DragFloat("Intensity", &m_noiseDescriptors[i].m_noiseIntensity, 0.01f) || changed;
-			if (ImGui::DragFloat("Min", &m_noiseDescriptors[i].m_min, 0.01f, -99999, m_noiseDescriptors[i].m_max))
+			changed = ImGui::Combo("Type", { "Constant", "Linear", "Simplex", "Perlin" }, m_noiseDescriptors[i].m_type) || changed;
+			switch (static_cast<NoiseType>(m_noiseDescriptors[i].m_type))
 			{
-				changed = true;
-				m_noiseDescriptors[i].m_min = glm::min(m_noiseDescriptors[i].m_min, m_noiseDescriptors[i].m_max);
+			case NoiseType::Perlin:
+				changed = ImGui::DragFloat("Frequency", &m_noiseDescriptors[i].m_frequency, 0.01f) || changed;
+				changed = ImGui::DragFloat("Intensity", &m_noiseDescriptors[i].m_intensity, 0.01f) || changed;
+				changed = ImGui::DragFloat("Multiplier", &m_noiseDescriptors[i].m_multiplier, 0.01f) || changed;
+				if (ImGui::DragFloat("Min", &m_noiseDescriptors[i].m_min, 0.01f, -99999, m_noiseDescriptors[i].m_max))
+				{
+					changed = true;
+					m_noiseDescriptors[i].m_min = glm::min(m_noiseDescriptors[i].m_min, m_noiseDescriptors[i].m_max);
+				}
+				if (ImGui::DragFloat("Max", &m_noiseDescriptors[i].m_max, 0.01f, m_noiseDescriptors[i].m_min, 99999))
+				{
+					changed = true;
+					m_noiseDescriptors[i].m_max = glm::max(m_noiseDescriptors[i].m_min, m_noiseDescriptors[i].m_max);
+				}
+				changed = ImGui::DragFloat("Offset", &m_noiseDescriptors[i].m_offset, 0.01f) || changed;
+				break;
+			case NoiseType::Simplex:
+				changed = ImGui::DragFloat("Frequency", &m_noiseDescriptors[i].m_frequency, 0.01f) || changed;
+				changed = ImGui::DragFloat("Intensity", &m_noiseDescriptors[i].m_intensity, 0.01f) || changed;
+				changed = ImGui::DragFloat("Multiplier", &m_noiseDescriptors[i].m_multiplier, 0.01f) || changed;
+				if (ImGui::DragFloat("Min", &m_noiseDescriptors[i].m_min, 0.01f, -99999, m_noiseDescriptors[i].m_max))
+				{
+					changed = true;
+					m_noiseDescriptors[i].m_min = glm::min(m_noiseDescriptors[i].m_min, m_noiseDescriptors[i].m_max);
+				}
+				if (ImGui::DragFloat("Max", &m_noiseDescriptors[i].m_max, 0.01f, m_noiseDescriptors[i].m_min, 99999))
+				{
+					changed = true;
+					m_noiseDescriptors[i].m_max = glm::max(m_noiseDescriptors[i].m_min, m_noiseDescriptors[i].m_max);
+				}
+				changed = ImGui::DragFloat("Offset", &m_noiseDescriptors[i].m_offset, 0.01f) || changed;
+				break;
+			case NoiseType::Constant:
+				changed = ImGui::DragFloat("Value", &m_noiseDescriptors[i].m_offset, 0.01f) || changed;
+				break;
+			case NoiseType::Linear:
+				changed = ImGui::DragFloat("X multiplier", &m_noiseDescriptors[i].m_frequency, 0.01f) || changed;
+				changed = ImGui::DragFloat("Y multiplier", &m_noiseDescriptors[i].m_intensity, 0.01f) || changed;
+				changed = ImGui::DragFloat("Z multiplier", &m_noiseDescriptors[i].m_multiplier, 0.01f) || changed;
+				changed = ImGui::DragFloat("Base", &m_noiseDescriptors[i].m_offset, 0.01f) || changed;
+				if (ImGui::DragFloat("Min", &m_noiseDescriptors[i].m_min, 0.01f, -99999, m_noiseDescriptors[i].m_max))
+				{
+					changed = true;
+					m_noiseDescriptors[i].m_min = glm::min(m_noiseDescriptors[i].m_min, m_noiseDescriptors[i].m_max);
+				}
+				if (ImGui::DragFloat("Max", &m_noiseDescriptors[i].m_max, 0.01f, m_noiseDescriptors[i].m_min, 99999))
+				{
+					changed = true;
+					m_noiseDescriptors[i].m_max = glm::max(m_noiseDescriptors[i].m_min, m_noiseDescriptors[i].m_max);
+				}
+				break;
 			}
-			if (ImGui::DragFloat("Max", &m_noiseDescriptors[i].m_max, 0.01f, m_noiseDescriptors[i].m_min, 99999))
-			{
-				changed = true;
-				m_noiseDescriptors[i].m_max = glm::max(m_noiseDescriptors[i].m_min, m_noiseDescriptors[i].m_max);
-			}
-
 			ImGui::TreePop();
 		}
 	}
@@ -192,18 +271,24 @@ float Noises3D::GetValue(const glm::vec3& position) const
 		switch (static_cast<NoiseType>(noiseDescriptor.m_type))
 		{
 		case NoiseType::Perlin:
-			noise = noiseDescriptor.m_base + glm::pow(glm::perlin(noiseDescriptor.m_noiseFrequency * position +
-				glm::vec3(noiseDescriptor.m_offset)), noiseDescriptor.m_powerFactor) * noiseDescriptor.m_noiseIntensity;
+			noise = glm::pow(glm::perlin(noiseDescriptor.m_frequency * position +
+				glm::vec3(noiseDescriptor.m_offset)), noiseDescriptor.m_intensity) * noiseDescriptor.m_multiplier;
+			noise = glm::clamp(noise, noiseDescriptor.m_min, noiseDescriptor.m_max);
 			break;
 		case NoiseType::Simplex:
-			noise = noiseDescriptor.m_base + glm::pow(glm::simplex(noiseDescriptor.m_noiseFrequency * position +
-				glm::vec3(noiseDescriptor.m_offset)), noiseDescriptor.m_powerFactor) * noiseDescriptor.m_noiseIntensity;
+			noise = glm::pow(glm::simplex(noiseDescriptor.m_frequency * position +
+				glm::vec3(noiseDescriptor.m_offset)), noiseDescriptor.m_intensity) * noiseDescriptor.m_multiplier;
+			noise = glm::clamp(noise, noiseDescriptor.m_min, noiseDescriptor.m_max);
 			break;
 		case NoiseType::Constant:
-			noise = noiseDescriptor.m_base;
+			noise = noiseDescriptor.m_offset;
+			break;
+		case NoiseType::Linear:
+			noise = noiseDescriptor.m_offset + noiseDescriptor.m_frequency * position.x + noiseDescriptor.m_intensity * position.y + noiseDescriptor.m_multiplier * position.z;
+			noise = glm::clamp(noise, noiseDescriptor.m_min, noiseDescriptor.m_max);
 			break;
 		}
-		retVal += glm::clamp(noise, noiseDescriptor.m_min, noiseDescriptor.m_max);
+		retVal += noise;
 	}
 	return glm::clamp(retVal, m_minMax.x, m_minMax.y);
 }

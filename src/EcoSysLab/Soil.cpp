@@ -43,55 +43,110 @@ bool OnInspectSoilParameters(SoilParameters& soilParameters)
 	return changed;
 }
 
-void SoilLayerDescriptor::OnInspect()
+void SetSoilPhysicalMaterial(Noises3D &c, Noises3D& p, float sandRatio, float siltRatio, float clayRatio, float compactness)
+{
+	assert(compactness <= 1.0f && compactness >= 0.0f);
+
+	const float weight = sandRatio + siltRatio + clayRatio;
+	sandRatio = sandRatio * compactness / weight;
+	siltRatio = siltRatio * compactness / weight;
+	clayRatio = clayRatio * compactness / weight;
+	const float airRatio = 1.f - compactness;
+
+	static glm::vec2 sandMaterialProperties = glm::vec2(0.9f, 15.0f);
+	static glm::vec2 siltMaterialProperties = glm::vec2(1.9f, 1.5f);
+	static glm::vec2 clayMaterialProperties = glm::vec2(2.1f, 0.05f);
+	static glm::vec2 airMaterialProperties = glm::vec2(5.0f, 30.0f);
+
+	c.m_noiseDescriptors.resize(1);
+	p.m_noiseDescriptors.resize(1);
+	c.m_noiseDescriptors[0].m_type = 0;
+	c.m_noiseDescriptors[1].m_type = 0;
+	c.m_noiseDescriptors[0].m_offset = sandRatio * sandMaterialProperties.x + siltRatio * siltMaterialProperties.x + clayRatio * clayMaterialProperties.x + airRatio * airMaterialProperties.x;
+	p.m_noiseDescriptors[0].m_offset = sandRatio * sandMaterialProperties.y + siltRatio * siltMaterialProperties.y + clayRatio * clayMaterialProperties.y + airRatio * airMaterialProperties.y;
+}
+
+void NoiseSoilLayerDescriptor::OnInspect()
 {
 	bool changed = false;
-
-	static unsigned soilTypePreset = 0;
-	ImGui::Combo({ "Select soil type preset" }, { "Clay", "Silty Clay", "Loam", "Sand", "Loamy Sand" }, soilTypePreset);
-
-	if(ImGui::Button("Apply soil type preset"))
-	{
-		switch (static_cast<SoilMaterialType>(soilTypePreset))
+	if (ImGui::TreeNodeEx("Generate from preset soil ratio", ImGuiTreeNodeFlags_DefaultOpen)) {
+		static float sandRatio = 0.1f;
+		static float siltRatio = 0.1f;
+		static float clayRatio = 0.8f;
+		static float compactness = 1.0f;
+		ImGui::SliderFloat("Sand ratio", &sandRatio, 0.0f, 1.0f);
+		ImGui::SliderFloat("Silt ratio", &siltRatio, 0.0f, 1.0f);
+		ImGui::SliderFloat("Clay ratio", &clayRatio, 0.0f, 1.0f);
+		ImGui::SliderFloat("Compactness", &compactness, 0.0f, 1.0f);
+		if (ImGui::Button("Generate soil"))
 		{
-		case SoilMaterialType::Clay:
-			m_sandRatio = 0.1f;
-			m_siltRatio = 0.1f;
-			m_clayRatio = 0.8f;
-			m_compactness = 1.f;
-			break;
-		case SoilMaterialType::SiltyClay:
-			m_sandRatio = 0.1f;
-			m_siltRatio = 0.4f;
-			m_clayRatio = 0.5f;
-			m_compactness = 1.f;
-			break;
-		case SoilMaterialType::Loam:
-			m_sandRatio = 0.4f;
-			m_siltRatio = 0.4f;
-			m_clayRatio = 0.2f;
-			m_compactness = 1.f;
-			break;
-		case SoilMaterialType::Sand:
-			m_sandRatio = 1.f;
-			m_siltRatio = 0.f;
-			m_clayRatio = 0.f;
-			m_compactness = 1.f;
-			break;
-		case SoilMaterialType::LoamySand:
-			m_sandRatio = 0.8f;
-			m_siltRatio = 0.1f;
-			m_clayRatio = 0.1f;
-			m_compactness = 1.f;
-			break;
+			SetSoilPhysicalMaterial(m_capacity, m_permeability, sandRatio, siltRatio, clayRatio, compactness);
+			changed = true;
 		}
-		changed = true;
+		if (ImGui::TreeNode("Generate from preset combination")) {
+			static unsigned soilTypePreset = 0;
+			ImGui::Combo({ "Select soil combination preset" }, { "Clay", "Silty Clay", "Loam", "Sand", "Loamy Sand" }, soilTypePreset);
+			if (ImGui::Button("Apply combination"))
+			{
+				switch (static_cast<SoilMaterialType>(soilTypePreset))
+				{
+				case SoilMaterialType::Clay:
+					sandRatio = 0.1f;
+					siltRatio = 0.1f;
+					clayRatio = 0.8f;
+					compactness = 1.f;
+					break;
+				case SoilMaterialType::SiltyClay:
+					sandRatio = 0.1f;
+					siltRatio = 0.4f;
+					clayRatio = 0.5f;
+					compactness = 1.f;
+					break;
+				case SoilMaterialType::Loam:
+					sandRatio = 0.4f;
+					siltRatio = 0.4f;
+					clayRatio = 0.2f;
+					compactness = 1.f;
+					break;
+				case SoilMaterialType::Sand:
+					sandRatio = 1.f;
+					siltRatio = 0.f;
+					clayRatio = 0.f;
+					compactness = 1.f;
+					break;
+				case SoilMaterialType::LoamySand:
+					sandRatio = 0.8f;
+					siltRatio = 0.1f;
+					clayRatio = 0.1f;
+					compactness = 1.f;
+					break;
+				}
+			}
+			ImGui::TreePop();
+		}
+		ImGui::TreePop();
 	}
 
-	changed = ImGui::DragFloat("Sand ratio", &m_sandRatio, 0.01f, 0.0f, 1.0f) || changed;
-	changed = ImGui::DragFloat("Silt ratio", &m_siltRatio, 0.01f, 0.0f, 1.0f) || changed;
-	changed = ImGui::DragFloat("Clay ratio", &m_clayRatio, 0.01f, 0.0f, 1.0f) || changed;
-	changed = ImGui::DragFloat("Compactness", &m_compactness, 0.01f, 0.0f, 1.0f) || changed;
+	if (ImGui::TreeNode("Capacity")) {
+		changed = m_capacity.OnInspect() || changed;
+		ImGui::TreePop();
+	}
+	if (ImGui::TreeNode("Permeability")) {
+		changed = m_permeability.OnInspect() || changed;
+		ImGui::TreePop();
+	}
+	if (ImGui::TreeNode("Density")) {
+		changed = m_density.OnInspect() || changed;
+		ImGui::TreePop();
+	}
+	if (ImGui::TreeNode("Initial nutrients")) {
+		changed = m_initialNutrients.OnInspect() || changed;
+		ImGui::TreePop();
+	}
+	if (ImGui::TreeNode("Initial water")) {
+		changed = m_initialWater.OnInspect() || changed;
+		ImGui::TreePop();
+	}
 
 	if (ImGui::TreeNode("Thickness")) {
 		changed = m_thickness.OnInspect() || changed;
@@ -100,22 +155,24 @@ void SoilLayerDescriptor::OnInspect()
 	if (changed) m_saved = false;
 }
 
-void SoilLayerDescriptor::Serialize(YAML::Emitter& out)
+void NoiseSoilLayerDescriptor::Serialize(YAML::Emitter& out)
 {
-	out << YAML::Key << "m_sandRatio" << YAML::Value << m_sandRatio;
-	out << YAML::Key << "m_siltRatio" << YAML::Value << m_siltRatio;
-	out << YAML::Key << "m_clayRatio" << YAML::Value << m_clayRatio;
-	out << YAML::Key << "m_compactness" << YAML::Value << m_compactness;
+	m_capacity.Save("m_capacity", out);
+	m_permeability.Save("m_permeability", out);
+	m_density.Save("m_density", out);
+	m_initialNutrients.Save("m_initialNutrients", out);
+	m_initialWater.Save("m_initialWater", out);
 
 	m_thickness.Save("m_thickness", out);
 }
 
-void SoilLayerDescriptor::Deserialize(const YAML::Node& in)
+void NoiseSoilLayerDescriptor::Deserialize(const YAML::Node& in)
 {
-	if (in["m_sandRatio"]) m_sandRatio = in["m_sandRatio"].as<float>();
-	if (in["m_siltRatio"]) m_siltRatio = in["m_siltRatio"].as<float>();
-	if (in["m_clayRatio"]) m_clayRatio = in["m_clayRatio"].as<float>();
-	if (in["m_compactness"]) m_compactness = in["m_compactness"].as<float>();
+	m_capacity.Load("m_capacity", in);
+	m_permeability.Load("m_permeability", in);
+	m_density.Load("m_density", in);
+	m_initialNutrients.Load("m_initialNutrients", in);
+	m_initialWater.Load("m_initialWater", in);
 	m_thickness.Load("m_thickness", in);
 }
 
@@ -154,8 +211,8 @@ void SoilDescriptor::OnInspect()
 		changed = true;
 	}
 	AssetRef tempSoilLayerDescriptorHolder;
-	if (Editor::DragAndDropButton<SoilLayerDescriptor>(tempSoilLayerDescriptorHolder, "Drop new SoilLayerDescriptor here...")) {
-		auto sld = tempSoilLayerDescriptorHolder.Get<SoilLayerDescriptor>();
+	if (Editor::DragAndDropButton<NoiseSoilLayerDescriptor>(tempSoilLayerDescriptorHolder, "Drop new SoilLayerDescriptor here...")) {
+		auto sld = tempSoilLayerDescriptorHolder.Get<NoiseSoilLayerDescriptor>();
 		if (sld) {
 			m_soilLayerDescriptors.emplace_back(sld);
 			changed = true;
@@ -164,7 +221,7 @@ void SoilDescriptor::OnInspect()
 	}
 	for (int i = 0; i < m_soilLayerDescriptors.size(); i++)
 	{
-		if (auto soilLayerDescriptor = m_soilLayerDescriptors[i].Get<SoilLayerDescriptor>())
+		if (auto soilLayerDescriptor = m_soilLayerDescriptors[i].Get<NoiseSoilLayerDescriptor>())
 		{
 			if (ImGui::TreeNodeEx(("No." + std::to_string(i + 1)).c_str(), ImGuiTreeNodeFlags_DefaultOpen))
 			{
@@ -346,50 +403,7 @@ void Soil::GenerateMesh()
 	meshRenderer->m_material = material;
 }
 
-void SetSoilPhysicalMaterial(SoilPhysicalMaterial& target, float sandRatio, float siltRatio, float clayRatio, float compactness)
-{
-	assert(compactness <= 1.0f && compactness >= 0.0f);
 
-	const float weight = sandRatio + siltRatio + clayRatio;
-	sandRatio = sandRatio * compactness / weight;
-	siltRatio = siltRatio * compactness / weight;
-	clayRatio = clayRatio * compactness / weight;
-	const float airRatio = 1.f - compactness;
-
-	//                         c    p     d
-	static SoilPhysicalMaterial sand({-1, 
-		[&](const glm::vec3& pos) { return 0.9f; },
-		[&](const glm::vec3& pos) { return 15.0f; },
-		[&](const glm::vec3& pos) { return 0.5f; },
-		[&](const glm::vec3& pos) { return 0.0f; },
-		[&](const glm::vec3& pos) { return 0.0f; } });
-
-	static SoilPhysicalMaterial clay({ -1,
-		[&](const glm::vec3& pos) { return 2.1f; },
-		[&](const glm::vec3& pos) { return 0.05f; },
-		[&](const glm::vec3& pos) { return 1.0f; },
-		[&](const glm::vec3& pos) { return 0.0f; },
-		[&](const glm::vec3& pos) { return 0.0f; } });
-
-	static SoilPhysicalMaterial silt({ -1,
-		[&](const glm::vec3& pos) { return 1.9f; },
-		[&](const glm::vec3& pos) { return 1.5f; },
-		[&](const glm::vec3& pos) { return 0.8f; },
-		[&](const glm::vec3& pos) { return 0.0f; },
-		[&](const glm::vec3& pos) { return 0.0f; } });
-
-	static SoilPhysicalMaterial air({ -1,
-		[&](const glm::vec3& pos) { return 5.0f; },
-		[&](const glm::vec3& pos) { return 30.0f; },
-		[&](const glm::vec3& pos) { return 0.0f; },
-		[&](const glm::vec3& pos) { return 0.0f; },
-		[&](const glm::vec3& pos) { return 0.0f; } });
-
-	target.m_c = [=](const glm::vec3& pos) { return sandRatio * sand.m_c(pos) + siltRatio * silt.m_c(pos) + clayRatio * clay.m_c(pos) + airRatio * air.m_c(pos); };
-	target.m_p = [=](const glm::vec3& pos) { return sandRatio * sand.m_p(pos) + siltRatio * silt.m_p(pos) + clayRatio * clay.m_p(pos) + airRatio * air.m_p(pos); };
-	target.m_d = [=](const glm::vec3& pos) { return sandRatio * sand.m_d(pos) + siltRatio * silt.m_d(pos) + clayRatio * clay.m_d(pos) + airRatio * air.m_d(pos); };
-
-}
 void Soil::InitializeSoilModel()
 {
 	auto soilDescriptor = m_soilDescriptor.Get<SoilDescriptor>();
@@ -426,11 +440,11 @@ void Soil::InitializeSoilModel()
 
 		soilLayers.emplace_back();
 		soilLayers.back().m_mat = SoilPhysicalMaterial({ materialIndex,
-					[&](const glm::vec3& pos) { return 1.0f; },
-					[&](const glm::vec3& pos) { return 0.0f; },
-					[&](const glm::vec3& pos) { return 0.0f; },
-					[&](const glm::vec3& pos) { return 0.0f; },
-					[&](const glm::vec3& pos) { return 0.0f; } });
+					[](const glm::vec3& pos) { return 1.0f; },
+					[](const glm::vec3& pos) { return 0.0f; },
+					[](const glm::vec3& pos) { return 0.0f; },
+					[](const glm::vec3& pos) { return 0.0f; },
+					[](const glm::vec3& pos) { return 0.0f; } });
 		soilLayers.back().m_thickness = [](const glm::vec2& position) {return 0.f; };
 		materialIndex++;
 		//Add user defined layers
@@ -438,11 +452,15 @@ void Soil::InitializeSoilModel()
 		for (int i = 0; i < soilDescriptor->m_soilLayerDescriptors.size(); i++)
 		{
 			
-			if (auto soilLayerDescriptor = soilLayerDescriptors[i].Get<SoilLayerDescriptor>())
+			if (auto soilLayerDescriptor = soilLayerDescriptors[i].Get<NoiseSoilLayerDescriptor>())
 			{
 				soilLayers.emplace_back();
 				auto& soilLayer = soilLayers.back();
-				SetSoilPhysicalMaterial(soilLayer.m_mat, soilLayerDescriptor->m_sandRatio, soilLayerDescriptor->m_siltRatio, soilLayerDescriptor->m_clayRatio, soilLayerDescriptor->m_compactness);
+				soilLayer.m_mat.m_c = [=](const glm::vec3& position) { return soilLayerDescriptor->m_capacity.GetValue(position); };
+				soilLayer.m_mat.m_p = [=](const glm::vec3& position) { return soilLayerDescriptor->m_permeability.GetValue(position); };
+				soilLayer.m_mat.m_d = [=](const glm::vec3& position) { return soilLayerDescriptor->m_density.GetValue(position); };
+				soilLayer.m_mat.m_n = [=](const glm::vec3& position) { return soilLayerDescriptor->m_initialNutrients.GetValue(position); };
+				soilLayer.m_mat.m_w = [=](const glm::vec3& position) { return soilLayerDescriptor->m_initialWater.GetValue(position); };
 				soilLayer.m_mat.m_id = materialIndex;
 				soilLayer.m_thickness = [soilLayerDescriptor](const glm::vec2& position)
 				{
@@ -459,9 +477,13 @@ void Soil::InitializeSoilModel()
 
 		//Add bottom layer
 		soilLayers.emplace_back();
-		SetSoilPhysicalMaterial(soilLayers.back().m_mat, 0.4, 0.4, 0.2, 1);
 		soilLayers.back().m_thickness = [](const glm::vec2& position) {return 1000.f; };
 		soilLayers.back().m_mat.m_id = materialIndex;
+		soilLayers.back().m_mat.m_c = [](const glm::vec3& position) {return 1000.f; };
+		soilLayers.back().m_mat.m_p = [](const glm::vec3& position) {return 0.0f; };
+		soilLayers.back().m_mat.m_d = [](const glm::vec3& position) {return 1000.f; };
+		soilLayers.back().m_mat.m_n = [](const glm::vec3& position) {return 0.0f; };
+		soilLayers.back().m_mat.m_w = [](const glm::vec3& position) {return 0.0f; };
 		m_soilModel.Initialize(params, soilSurface, soilLayers);
 	}
 }
@@ -545,7 +567,7 @@ void SoilDescriptor::Serialize(YAML::Emitter& out)
 	out << YAML::Key << "m_soilLayerDescriptors" << YAML::Value << YAML::BeginSeq;
 	for (int i = 0; i < m_soilLayerDescriptors.size(); i++)
 	{
-		if (auto soilLayerDescriptor = m_soilLayerDescriptors[i].Get<SoilLayerDescriptor>())
+		if (auto soilLayerDescriptor = m_soilLayerDescriptors[i].Get<ISoilLayerDescriptor>())
 		{
 			out << YAML::BeginMap;
 			m_soilLayerDescriptors[i].Serialize(out);
@@ -581,7 +603,7 @@ void SoilDescriptor::CollectAssetRef(std::vector<AssetRef>& list)
 
 	for (int i = 0; i < m_soilLayerDescriptors.size(); i++)
 	{
-		if (auto soilLayerDescriptor = m_soilLayerDescriptors[i].Get<SoilLayerDescriptor>())
+		if (auto soilLayerDescriptor = m_soilLayerDescriptors[i].Get<ISoilLayerDescriptor>())
 		{
 			list.push_back(m_soilLayerDescriptors[i]);
 		}

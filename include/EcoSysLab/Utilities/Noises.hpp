@@ -10,18 +10,18 @@ namespace EcoSysLab
 {
 	enum class NoiseType
 	{
+		Constant,
+		Linear,
 		Simplex,
 		Perlin,
-		Constant
 	};
 
 	struct NoiseDescriptor
 	{
-		unsigned m_type;
-		float m_noiseFrequency = 0.5f;
-		float m_base = 0.0f;
-		float m_powerFactor = 1.0f;
-		float m_noiseIntensity = 1.0f;
+		unsigned m_type = 0;
+		float m_frequency = 0.1f;
+		float m_intensity = 1.0f;
+		float m_multiplier = 1.0f;
 		float m_min = -10;
 		float m_max = 10;
 		float m_offset = 0.0f;

@@ -42,7 +42,7 @@ int main() {
 
     ClassRegistry::RegisterAsset<HeightField>("HeightField", { ".hf" });
 
-    ClassRegistry::RegisterAsset<SoilLayerDescriptor>("SoilLayerDescriptor", { ".sld" });
+    ClassRegistry::RegisterAsset<NoiseSoilLayerDescriptor>("NoiseSoilLayerDescriptor", { ".nsld" });
     EngineSetup();
 
     ApplicationConfigs applicationConfigs;
