@@ -210,19 +210,21 @@ void EcoSysLab::SoilModel::BuildFromLayers(const SoilSurface& soilSurface, const
 			auto index = Index(GetCoordinateFromPosition(pos) + ivec3(0, -2, 0));
 			rain_field[index] = 0.1;// insert water 2 voxels below ground
 
-			int currentMaterialIndex = 0;
-			float currentMaterialLowestHeight = groundHeight;
 			for(auto y= m_resolution.y - 1; y >= 0; --y)
 			{
-				auto currentHeight = m_boundingBoxMin.y + y * m_dx + (m_dx/2.0);
-				if(currentHeight < currentMaterialLowestHeight && currentMaterialIndex < static_cast<int>(soil_layers.size()) - 1)
-				{
-					currentMaterialIndex++;
-					currentMaterialLowestHeight -= glm::max(0.f, soil_layers[currentMaterialIndex].m_thickness(pos_2d));
-				}
+
+				float current_height = groundHeight;
+				auto voxel_height = m_boundingBoxMin.y + y*m_dx + (m_dx/2.0);
+
 				// find material index:
-				auto voxelIdx = Index(x, y, z);
-				SetVoxel({ x, y, z }, soil_layers[currentMaterialIndex].m_mat);
+				auto idx = 0;
+				while(voxel_height < current_height && idx < soil_layers.size()-1)
+				{
+					idx++;
+					current_height -= glm::max(0.f, soil_layers[idx].m_thickness(pos_2d));
+				}
+
+				SetVoxel({x, y, z}, soil_layers[idx].m_mat);
 			}
 		}
 	}
