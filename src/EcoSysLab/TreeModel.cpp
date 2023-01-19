@@ -919,12 +919,12 @@ inline void TreeModel::AllocateShootVigor(const TreeGrowthParameters& treeGrowth
 
 				//Combine maintenance and development allocated to this child.
 				childInternodeData.m_allocatedVigor = 0.0f;
-				if (childTotalAllocatedMaintenanceVigor != 0.0f) {
+				if (childTotalAllocatedMaintenanceVigor != 0.0f && childInternodeData.m_maintenanceVigorRequirement + childInternodeData.m_subtreeMaintenanceVigorRequirement != 0.0f) {
 					childInternodeData.m_allocatedVigor += childTotalAllocatedMaintenanceVigor *
 						childInternodeData.m_maintenanceVigorRequirement
 						/ (childInternodeData.m_maintenanceVigorRequirement + childInternodeData.m_subtreeMaintenanceVigorRequirement);
 				}
-				if (childTotalAllocatedDevelopmentVigor != 0.0f) {
+				if (childTotalAllocatedDevelopmentVigor != 0.0f && childInternodeData.m_developmentalVigorRequirement + childInternodeData.m_subtreeDevelopmentalVigorRequirement != 0.0f) {
 					childInternodeData.m_allocatedVigor += childTotalAllocatedDevelopmentVigor *
 						childInternodeData.m_developmentalVigorRequirement
 						/ (childInternodeData.m_developmentalVigorRequirement + childInternodeData.m_subtreeDevelopmentalVigorRequirement);
