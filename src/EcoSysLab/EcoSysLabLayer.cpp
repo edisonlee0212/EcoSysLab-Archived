@@ -379,9 +379,6 @@ void EcoSysLabLayer::OnInspect() {
 			ImGui::Text("Total Leaf size: %d", m_leafSize);
 			ImGui::Text("Total Root node size: %d", m_rootNodeSize);
 			ImGui::Text("Total Root Flow size: %d", m_rootFlowSize);
-
-
-			
 		}
 		else
 		{

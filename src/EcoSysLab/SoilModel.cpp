@@ -836,6 +836,9 @@ void EcoSysLab::SoilModel::SetVoxel(const glm::ivec3& coordinate, const SoilPhys
 	m_c[idx] = material.m_c(position);
 	m_p[idx] = material.m_p(position);
 	m_d[idx] = material.m_d(position);
+
+	m_n[idx] = material.m_n(position);
+	m_w[idx] = material.m_w(position);
 }
 
 
