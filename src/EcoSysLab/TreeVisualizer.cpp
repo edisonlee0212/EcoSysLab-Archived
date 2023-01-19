@@ -644,7 +644,7 @@ void TreeVisualizer::PeekRootNode(
                 ImGuiInputTextFlags_ReadOnly);
             ImGui::InputFloat("Subtree Growth potential", (float*)&rootNodeData.m_subtreeGrowthPotential, 1, 100, "%.3f",
                 ImGuiInputTextFlags_ReadOnly);
-            ImGui::InputFloat("Vigor", (float*)&rootNodeData.m_allocatedVigor, 1, 100, "%.3f",
+            ImGui::InputFloat("Vigor", (float*)&rootNodeData.m_vigorSink, 1, 100, "%.3f",
                 ImGuiInputTextFlags_ReadOnly);
             ImGui::InputFloat("Subtree vigor", (float*)&rootNodeData.m_subTreeAllocatedVigor, 1, 100, "%.3f",
                 ImGuiInputTextFlags_ReadOnly);
@@ -715,7 +715,7 @@ bool TreeVisualizer::InspectRootNode(
                 ImGuiInputTextFlags_ReadOnly);
             ImGui::InputFloat("Subtree Growth potential", (float*)&rootNodeData.m_subtreeGrowthPotential, 1, 100, "%.3f",
                 ImGuiInputTextFlags_ReadOnly);
-            ImGui::InputFloat("Vigor", (float*)&rootNodeData.m_allocatedVigor, 1, 100, "%.3f",
+            ImGui::InputFloat("Vigor", (float*)&rootNodeData.m_vigorSink, 1, 100, "%.3f",
                 ImGuiInputTextFlags_ReadOnly);
             ImGui::InputFloat("Subtree vigor", (float*)&rootNodeData.m_subTreeAllocatedVigor, 1, 100, "%.3f",
                 ImGuiInputTextFlags_ReadOnly);

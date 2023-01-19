@@ -358,9 +358,12 @@ inline bool TreeModel::GrowRootNode(SoilModel& soilModel, NodeHandle rootNodeHan
 		if (rootNode.RefChildHandles().empty())
 		{
 			//1. Elongate current node.
-			const float developmentVigor = glm::max(0.0f, rootNode.m_data.m_allocatedVigor - rootNode.m_data.m_maintenanceVigorRequirement);
-			//const float reproductiveContent = reproductiveWater * m_globalGrowthRate;
+			const float maintenanceVigor = glm::clamp(rootNode.m_data.m_vigorSink, 0.0f, rootNode.m_data.m_maintenanceVigorRequirement);
+			//Subtract maintenance vigor and the rest is for development.
+			rootNode.m_data.m_vigorSink -= maintenanceVigor;
+			const float developmentVigor = rootNode.m_data.m_vigorSink;
 			const float extendLength = developmentVigor * rootGrowthParameters.m_rootNodeLength;
+			rootNode.m_data.m_vigorSink -= developmentVigor;
 			float collectedAuxin = 0.0f;
 			const auto dd = rootGrowthParameters.m_apicalDominanceDistanceFactor;
 			graphChanged = ElongateRoot(soilModel, extendLength, rootNodeHandle, rootGrowthParameters, collectedAuxin) || graphChanged;
@@ -368,9 +371,17 @@ inline bool TreeModel::GrowRootNode(SoilModel& soilModel, NodeHandle rootNodeHan
 		}
 		else
 		{
+			const float maintenanceVigor = glm::clamp(rootNode.m_data.m_vigorSink, 0.0f, rootNode.m_data.m_maintenanceVigorRequirement);
+			//Subtract maintenance vigor and the rest is for development.
+			rootNode.m_data.m_vigorSink -= maintenanceVigor;
+			const float developmentVigor = rootNode.m_data.m_vigorSink;
+			rootNode.m_data.m_vigorSink -= developmentVigor;
+
 			//2. Form new shoot if necessary
 			float branchingProb = rootGrowthParameters.m_growthRate * rootGrowthParameters.GetBranchingProbability(rootNode);
 			branchingProb *= glm::clamp(1.0f - rootNode.m_data.m_inhibitor, 0.0f, 1.0f);
+			branchingProb *= rootNode.m_data.m_nitrite;
+
 			if (branchingProb >= glm::linearRand(0.0f, 1.0f)) {
 				const auto newRootNodeHandle = m_rootSkeleton.Extend(rootNodeHandle, true);
 				auto& oldRootNode = m_rootSkeleton.RefNode(rootNodeHandle);
@@ -616,12 +627,17 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 		//}
 		//if (bud.m_status == BudStatus::Removed) continue;
 
-		const float baseWater = glm::clamp(bud.m_allocatedVigor, 0.0f, bud.m_maintenanceVigorRequirement);
-		bud.m_drought = glm::clamp(1.0f - (1.0f - bud.m_drought) * baseWater / bud.m_maintenanceVigorRequirement, 0.0f, 1.0f);
-		const float developmentVigor = glm::max(0.0f, bud.m_allocatedVigor - bud.m_maintenanceVigorRequirement);
+		//Calculate vigor used for maintenance and development.
+		const float maintenanceVigor = glm::clamp(bud.m_vigorSink, 0.0f, bud.m_maintenanceVigorRequirement);
+		bud.m_drought = glm::clamp(1.0f - (1.0f - bud.m_drought) * maintenanceVigor / bud.m_maintenanceVigorRequirement, 0.0f, 1.0f);
+		//Subtract maintenance vigor and the rest is for development.
+		bud.m_vigorSink -= maintenanceVigor;
+		const float developmentVigor = bud.m_vigorSink;
 
 		if (bud.m_type == BudType::Apical && bud.m_status == BudStatus::Dormant) {
 			const float elongateLength = developmentVigor * treeGrowthParameters.m_internodeLength;
+			//Use up the vigor stored in this bud.
+			bud.m_vigorSink -= developmentVigor;
 			float collectedInhibitor = 0.0f;
 			const auto dd = treeGrowthParameters.m_apicalDominanceDistanceFactor;
 			graphChanged = ElongateInternode(elongateLength, internodeHandle, treeGrowthParameters, collectedInhibitor) || graphChanged;
@@ -630,6 +646,8 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 			break;
 		}
 		if (bud.m_type == BudType::Lateral && bud.m_status == BudStatus::Dormant) {
+			bud.m_vigorSink -= developmentVigor;
+
 			const auto& probabilityRange = treeGrowthParameters.m_lateralBudFlushingProbabilityTemperatureRange;
 			float flushProbability = treeGrowthParameters.m_growthRate * glm::mix(probabilityRange.x, probabilityRange.y,
 				glm::clamp((internodeData.m_temperature - probabilityRange.z) / (probabilityRange.w - probabilityRange.z), 0.0f, 1.0f));
@@ -669,6 +687,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 		}
 		else if (climateModel.m_days % 360 == 0)
 		{
+			bud.m_vigorSink -= developmentVigor;
 			if (bud.m_type == BudType::Fruit || bud.m_type == BudType::Leaf)
 			{
 				bud.m_status = BudStatus::Dormant;
@@ -680,6 +699,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 		}
 		else if (bud.m_type == BudType::Fruit)
 		{
+			bud.m_vigorSink -= developmentVigor;
 			if (bud.m_status == BudStatus::Dormant) {
 
 				const auto& probabilityRange = treeGrowthParameters.m_fruitBudFlushingProbabilityTemperatureRange;
@@ -711,6 +731,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 		}
 		else if (bud.m_type == BudType::Leaf)
 		{
+			bud.m_vigorSink -= developmentVigor;
 			if (bud.m_status == BudStatus::Dormant) {
 				const auto& probabilityRange = treeGrowthParameters.m_fruitBudFlushingProbabilityTemperatureRange;
 				float flushProbability = treeGrowthParameters.m_growthRate * glm::mix(probabilityRange.x, probabilityRange.y,
@@ -833,13 +854,9 @@ inline void TreeModel::AllocateShootVigor(const TreeGrowthParameters& treeGrowth
 			//The buds will get its own resources
 			for (auto& bud : internodeData.m_buds) {
 				if (internodeData.m_maintenanceVigorRequirement + internodeData.m_developmentalVigorRequirement != 0.0f) {
-					bud.m_allocatedVigor = internodeData.m_allocatedVigor *
+					bud.m_vigorSink += internodeData.m_allocatedVigor *
 						(bud.m_developmentVigorRequirement + bud.m_maintenanceVigorRequirement)
 					/ (internodeData.m_maintenanceVigorRequirement + internodeData.m_developmentalVigorRequirement);
-				}
-				else
-				{
-					bud.m_allocatedVigor = 0.0f;
 				}
 			}
 		}
@@ -916,20 +933,9 @@ inline void TreeModel::AllocateShootVigor(const TreeGrowthParameters& treeGrowth
 					childTotalAllocatedMaintenanceVigor + childTotalAllocatedDevelopmentVigor - childInternodeData.m_allocatedVigor;
 
 				for (auto& bud : childInternodeData.m_buds) {
-					bud.m_allocatedVigor = childInternodeData.m_allocatedVigor *
+					bud.m_vigorSink += childInternodeData.m_allocatedVigor *
 						(bud.m_developmentVigorRequirement + bud.m_maintenanceVigorRequirement)
 						/ (childInternodeData.m_maintenanceVigorRequirement + childInternodeData.m_developmentalVigorRequirement);
-				}
-			}
-		}
-		else
-		{
-			for (const auto& i : internode.RefChildHandles()) {
-				auto& childInternode = m_branchSkeleton.RefNode(i);
-				auto& childInternodeData = childInternode.m_data;
-				childInternodeData.m_allocatedVigor = childInternodeData.m_subTreeAllocatedVigor = 0.0f;
-				for (auto& bud : childInternodeData.m_buds) {
-					bud.m_allocatedVigor = 0.0f;
 				}
 			}
 		}
@@ -1224,6 +1230,10 @@ void TreeModel::Clear() {
 	m_history = {};
 	m_initialized = false;
 	m_treeVolume.Clear();
+
+	m_shootGrowthRequirement = {};
+	m_rootGrowthRequirement = {};
+	m_plantGrowthNutrients = {};
 }
 
 int TreeModel::GetLeafCount() const
@@ -1458,16 +1468,20 @@ void TreeModel::AllocateRootVigor(const RootGrowthParameters& rootGrowthParamete
 				const auto totalResourceForRoot = m_plantGrowthNutrients.m_vigor *
 					m_rootGrowthRequirement.m_vigor / (m_shootGrowthRequirement.m_vigor + m_rootGrowthRequirement.m_vigor);
 
-				rootNodeData.m_allocatedVigor = totalResourceForRoot *
+				float allocatedVigor = totalResourceForRoot *
 					(rootNodeData.m_growthPotential + rootNodeData.m_maintenanceVigorRequirement)
 				/ (rootNodeData.m_growthPotential + rootNodeData.m_maintenanceVigorRequirement
 					+ rootNodeData.m_subtreeGrowthPotential + rootNodeData.m_subtreeMaintenanceVigorRequirement);
+				if (rootNodeData.m_growthPotential + rootNodeData.m_maintenanceVigorRequirement
+					+ rootNodeData.m_subtreeGrowthPotential + rootNodeData.m_subtreeMaintenanceVigorRequirement == 0.0f) allocatedVigor = 0.0f;
 
-				rootNodeData.m_subTreeAllocatedVigor = totalResourceForRoot - rootNodeData.m_allocatedVigor;
+				rootNodeData.m_vigorSink += allocatedVigor;
+
+				rootNodeData.m_subTreeAllocatedVigor = totalResourceForRoot - allocatedVigor;
 			}
 			else
 			{
-				rootNodeData.m_allocatedVigor = rootNodeData.m_subTreeAllocatedVigor = 0.0f;
+				rootNodeData.m_subTreeAllocatedVigor = 0.0f;
 			}
 		}
 		if (rootNodeData.m_subTreeAllocatedVigor != 0.0f) {
@@ -1491,18 +1505,18 @@ void TreeModel::AllocateRootVigor(const RootGrowthParameters& rootGrowthParamete
 				childMaintenanceVigorRequirementWeightSum += childMaintenanceVigorRequirementWeight;
 			}
 
-			float internodeSubtreeAllocatedMaintenanceVigor =
+			float rootNodeSubtreeAllocatedMaintenanceVigor =
 				rootNodeData.m_subTreeAllocatedVigor *
 				rootNodeData.m_subtreeMaintenanceVigorRequirement
 				/ (rootNodeData.m_subtreeGrowthPotential + rootNodeData.m_subtreeMaintenanceVigorRequirement);
-			float internodeSubtreeAllocatedDevelopmentVigor =
+			float rootNodeSubtreeAllocatedDevelopmentVigor =
 				rootNodeData.m_subTreeAllocatedVigor *
 				rootNodeData.m_subtreeGrowthPotential
 				/ (rootNodeData.m_subtreeGrowthPotential + rootNodeData.m_subtreeMaintenanceVigorRequirement);
 
 			if (rootNodeData.m_subtreeGrowthPotential + rootNodeData.m_subtreeMaintenanceVigorRequirement == 0.0f)
 			{
-				internodeSubtreeAllocatedMaintenanceVigor = internodeSubtreeAllocatedDevelopmentVigor = 0.0f;
+				rootNodeSubtreeAllocatedMaintenanceVigor = rootNodeSubtreeAllocatedDevelopmentVigor = 0.0f;
 			}
 
 			for (const auto& i : rootNode.RefChildHandles()) {
@@ -1520,29 +1534,31 @@ void TreeModel::AllocateRootVigor(const RootGrowthParameters& rootGrowthParamete
 				if (rootNodeData.m_subtreeMaintenanceVigorRequirement == 0.0f) childMaintenanceVigorRequirementWeight = 0;
 
 				//Firstly calculate total amount of maintenance vigor belongs to this child from internode.
-				float childTotalAllocatedMaintenanceVigor = internodeSubtreeAllocatedMaintenanceVigor *
+				float childTotalAllocatedMaintenanceVigor = rootNodeSubtreeAllocatedMaintenanceVigor *
 					childMaintenanceVigorRequirementWeight / childMaintenanceVigorRequirementWeightSum;
 				if (childMaintenanceVigorRequirementWeightSum == 0.0f) childTotalAllocatedMaintenanceVigor = 0;
 
 				//Then calculate total amount of development vigor belongs to this child from internode received vigor for its children.
-				float childTotalAllocatedDevelopmentVigor = internodeSubtreeAllocatedDevelopmentVigor *
+				float childTotalAllocatedDevelopmentVigor = rootNodeSubtreeAllocatedDevelopmentVigor *
 					childDevelopmentalVigorRequirementWeight / childDevelopmentalVigorRequirementWeightSum;
 				if (childDevelopmentalVigorRequirementWeightSum == 0.0f) childTotalAllocatedDevelopmentVigor = 0;
-
+				float allocatedVigor = 0.0f;
 				//Combine maintenance and development allocated to this child.
-				childRootNodeData.m_allocatedVigor = 0.0f;
-				if (childTotalAllocatedMaintenanceVigor != 0.0f) {
-					childRootNodeData.m_allocatedVigor += childTotalAllocatedMaintenanceVigor *
+				if (childTotalAllocatedMaintenanceVigor != 0.0f && childRootNodeData.m_maintenanceVigorRequirement + childRootNodeData.m_subtreeMaintenanceVigorRequirement != 0.0f) {
+					allocatedVigor += childTotalAllocatedMaintenanceVigor *
 						childRootNodeData.m_maintenanceVigorRequirement
 						/ (childRootNodeData.m_maintenanceVigorRequirement + childRootNodeData.m_subtreeMaintenanceVigorRequirement);
 				}
-				if (childTotalAllocatedDevelopmentVigor != 0.0f) {
-					childRootNodeData.m_allocatedVigor += childTotalAllocatedDevelopmentVigor *
+				if (childTotalAllocatedDevelopmentVigor != 0.0f && childRootNodeData.m_growthPotential + childRootNodeData.m_subtreeGrowthPotential != 0.0f) {
+					allocatedVigor += childTotalAllocatedDevelopmentVigor *
 						childRootNodeData.m_growthPotential
 						/ (childRootNodeData.m_growthPotential + childRootNodeData.m_subtreeGrowthPotential);
 				}
+
+				childRootNodeData.m_vigorSink += allocatedVigor;
+
 				childRootNodeData.m_subTreeAllocatedVigor =
-					childTotalAllocatedMaintenanceVigor + childTotalAllocatedDevelopmentVigor - childRootNodeData.m_allocatedVigor;
+					childTotalAllocatedMaintenanceVigor + childTotalAllocatedDevelopmentVigor - allocatedVigor;
 			}
 		}
 		else
@@ -1551,7 +1567,7 @@ void TreeModel::AllocateRootVigor(const RootGrowthParameters& rootGrowthParamete
 			{
 				auto& childRootNode = m_rootSkeleton.RefNode(i);
 				auto& childRootNodeData = childRootNode.m_data;
-				childRootNodeData.m_allocatedVigor = childRootNodeData.m_subTreeAllocatedVigor = 0.0f;
+				childRootNodeData.m_subTreeAllocatedVigor = 0.0f;
 			}
 		}
 	}

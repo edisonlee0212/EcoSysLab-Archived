@@ -37,9 +37,9 @@ namespace EcoSysLab {
 		 */
 		float m_developmentVigorRequirement = 0.0f;
 		/*
-		 * The allocated total resource for maintenance and development of this module.
+		 * Stores the allocated total vigor for maintenance and development of this module.
 		 */
-		float m_allocatedVigor;
+		float m_vigorSink = 0.0f;
 
 		glm::quat m_localRotation = glm::vec3(0.0f);
 
@@ -162,7 +162,7 @@ namespace EcoSysLab {
 		/*
 		 * The allocated total resource for maintenance and development of this module.
 		 */
-		float m_allocatedVigor = 0.0f;
+		float m_vigorSink = 0.0f;
 		/*
 		 * The allocated total resource for maintenance and development of all descendents.
 		 */
@@ -619,7 +619,7 @@ namespace EcoSysLab {
 		std::vector<int> m_internodeOrderCounts;
 		std::vector<int> m_rootNodeOrderCounts;
 
-		int m_flowNodeLimit = 20;
+		int m_flowNodeLimit = 10;
 		template <typename SkeletonData, typename FlowData, typename NodeData>
 		void CollisionDetection(float minRadius, Octree<TreeVoxelData>& octree, Skeleton<SkeletonData, FlowData, NodeData>& skeleton);
 
