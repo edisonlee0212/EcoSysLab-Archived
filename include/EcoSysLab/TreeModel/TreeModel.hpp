@@ -153,8 +153,11 @@ namespace EcoSysLab {
 		 * Sum of buds' development resource requirement and internode's development resource requirement.
 		 */
 		float m_developmentalVigorRequirement = 0.0f;
-		float m_subtreeDevelopmentalVigorRequirement = 0.0f;
+
+		float m_subtreeMaintenanceVigorRequirement = 0.0f;
+
 		float m_growthPotential = 0.0f;
+
 		float m_subtreeGrowthPotential = 0.0f;
 		/*
 		 * The allocated total resource for maintenance and development of this module.
@@ -548,7 +551,7 @@ namespace EcoSysLab {
 
 		inline void AggregateRootVigorRequirement();
 
-		inline void RootVigorAllocation(const RootGrowthParameters& rootGrowthParameters);
+		inline void AllocateRootVigor(const RootGrowthParameters& rootGrowthParameters);
 
 		inline void CalculateVigorRequirement(const RootGrowthParameters& rootGrowthParameters, TreeGrowthRequirement& newRootGrowthNutrientsRequirement);
 		inline void SampleNitrite(const glm::mat4& globalTransform, SoilModel& soilModel);
@@ -558,9 +561,9 @@ namespace EcoSysLab {
 
 		inline void CalculateVigorRequirement(const TreeGrowthParameters& treeGrowthParameters, TreeGrowthRequirement& newTreeGrowthNutrientsRequirement);
 
-		inline void ShootVigorAllocation(const TreeGrowthParameters& treeGrowthParameters);
+		inline void AllocateShootVigor(const TreeGrowthParameters& treeGrowthParameters);
 
-		inline bool InternodePruning(float maxDistance, NodeHandle internodeHandle,
+		inline bool PruneInternodes(float maxDistance, NodeHandle internodeHandle,
 			const TreeGrowthParameters& treeGrowthParameters);
 
 		inline void CalculateThicknessAndSagging(NodeHandle internodeHandle,
