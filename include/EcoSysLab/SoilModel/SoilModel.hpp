@@ -100,12 +100,12 @@ namespace EcoSysLab {
 		std::vector<glm::vec4> GetSoilTextureSlideZ(int slize_z, glm::uvec2 resolution, const std::map<int, SoilMaterialTexture*>& textures, float blur_width=1); // the output as well as all input textures must have the same resolution!
 		std::vector<glm::vec4> GetSoilTextureSlideX(int slize_x, glm::uvec2 resolution, const std::map<int, SoilMaterialTexture*>& textures, float blur_width=1); // the output as well as all input textures must have the same resolution!
 		
-		glm::vec4 GetSoilTextureColorForPosition(const glm::vec3& position, int texture_index, const std::map<int, SoilMaterialTexture*>& textures, float blur_width);
+		glm::vec4 GetSoilTextureColorForPosition(const glm::vec3& position, int texture_idx, const std::map<int, SoilMaterialTexture*>& textures, float blur_width);
 
 
 		int m_version = 0; // TODO: what does this do?
 	protected:
-		void BuildFromLayers(const SoilSurface& soilSurface, const std::vector<SoilLayer>& soil_layers); // helper function called inside initialize to set up soil layers
+		void BuildFromLayers(); // helper function called inside initialize to set up soil layers
 		void SetVoxel(const glm::ivec3& coordinate, const SoilPhysicalMaterial& material);
 
 		float GetField(const Field& field, const glm::vec3& position, float default_value) const;
@@ -197,6 +197,9 @@ namespace EcoSysLab {
 		// helper variables:
 		std::vector<glm::ivec3> m_blur_3x3_idx;
 		std::vector<float> m_blur_3x3_weights;
+
+		std::vector<SoilLayer> m_soilLayers;
+		SoilSurface m_soilSurface;
 	};
 
 

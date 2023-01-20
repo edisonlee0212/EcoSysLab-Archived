@@ -838,8 +838,10 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 void EcoSysLab::EcoSysLabLayer::SoilVisualization()
 {
 	auto soil = m_soilHolder.Get<Soil>();
-	if( ! soil )
+	if (!soil) {
+		m_soilHolder.Clear();
 		return;
+	}
 
 	auto& soilModel = soil->m_soilModel;
 	if (m_soilVersion != soilModel.m_version)
@@ -1135,7 +1137,9 @@ void EcoSysLabLayer::BranchRenderingGs(const std::vector<Entity>* treeEntities)
 void EcoSysLabLayer::Update() {
 	
 	const auto scene = Application::GetActiveScene();
-	if (!m_soilHolder.Get<Soil>()) {
+	const auto soilEntity = scene->GetEntity(m_soilHolder.GetEntityHandle());
+	if (!scene->IsEntityValid(soilEntity) || !scene->HasPrivateComponent<Soil>(soilEntity)) {
+		m_soilHolder.Clear();
 		const std::vector<Entity>* soilEntities =
 			scene->UnsafeGetPrivateComponentOwnersList<Soil>();
 		if(soilEntities && !soilEntities->empty())
@@ -1143,7 +1147,9 @@ void EcoSysLabLayer::Update() {
 			m_soilHolder = scene->GetOrSetPrivateComponent<Soil>(soilEntities->at(0)).lock();
 		}
 	}
-	if (!m_climateHolder.Get<Climate>()) {
+	const auto climateEntity = scene->GetEntity(m_climateHolder.GetEntityHandle());
+	if (scene->IsEntityValid(climateEntity) || !scene->HasPrivateComponent<Climate>(climateEntity)) {
+		m_climateHolder.Clear();
 		const std::vector<Entity>* climateEntities =
 			scene->UnsafeGetPrivateComponentOwnersList<Climate>();
 		if (climateEntities && !climateEntities->empty())

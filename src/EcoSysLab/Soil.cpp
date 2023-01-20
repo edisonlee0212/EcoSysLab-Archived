@@ -490,7 +490,7 @@ void Soil::InitializeSoilModel()
 
 void Soil::SplitRootTestSetup()
 {
-	//InitializeSoilModel();
+	InitializeSoilModel();
 	auto soilDescriptor = m_soilDescriptor.Get<SoilDescriptor>();
 	if (soilDescriptor) {
 		auto heightField = soilDescriptor->m_heightField.Get<HeightField>();
@@ -506,17 +506,17 @@ void Soil::SplitRootTestSetup()
 			if (underGround) {
 				if (position.x > m_soilModel.m_boundingBoxMin.x && position.x < m_soilModel.GetVoxelResolution().x * m_soilModel.m_dx * 0.25f + m_soilModel.m_boundingBoxMin.x)
 				{
-					m_soilModel.m_n[i] = 0.1f;
+					m_soilModel.m_n[i] = 0.75f;
 				}
 				else if(position.x < m_soilModel.GetVoxelResolution().x * m_soilModel.m_dx * 0.5f + m_soilModel.m_boundingBoxMin.x)
 				{
-					m_soilModel.m_n[i] = 0.5f;
+					m_soilModel.m_n[i] = 0.75f;
 				}else if(position.x < m_soilModel.GetVoxelResolution().x * m_soilModel.m_dx * 0.75f + m_soilModel.m_boundingBoxMin.x)
 				{
-					m_soilModel.m_n[i] = 1.5f;
+					m_soilModel.m_n[i] = 1.25f;
 				}else
 				{
-					m_soilModel.m_n[i] = 10.0f;
+					m_soilModel.m_n[i] = 1.25f;
 				}
 			}
 			else

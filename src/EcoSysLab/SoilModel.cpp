@@ -34,6 +34,8 @@ the voxel centers are at 0.5 and 1.5.
 
 void SoilModel::Initialize(const SoilParameters& p, const SoilSurface& soilSurface, const std::vector<SoilLayer>& soilLayers)
 {
+	//Update version so the debug visualization is also updated.
+	m_version++;
 	m_diffusionForce = p.m_diffusionForce;
 	m_gravityForce = p.m_gravityForce;
 	m_nutrientForce = p.m_nutrientForce;
@@ -137,7 +139,7 @@ void SoilModel::Initialize(const SoilParameters& p, const SoilSurface& soilSurfa
 	empty = 0.f;
 
 	m_d = empty;
-	// also to initilzie their size
+	// also to initialize their size
 	m_w = empty;
 	m_n = empty;
 
@@ -186,18 +188,20 @@ void SoilModel::Initialize(const SoilParameters& p, const SoilSurface& soilSurfa
 	BlurField(m_p);
 	//BlurField(m_p);
 
-	BuildFromLayers(soilSurface, soilLayers);
+	m_soilSurface = soilSurface;
+	m_soilLayers = soilLayers;
+
+	BuildFromLayers();
 
 	Reset();
 }
 
 
-void EcoSysLab::SoilModel::BuildFromLayers(const SoilSurface& soilSurface, const std::vector<SoilLayer>& soil_layers)
+void EcoSysLab::SoilModel::BuildFromLayers()
 {
 	auto rain_field = Field(m_w.size());
 	rain_field = 0.f;
 	// Height axis is Y:
-
 	
 	for(auto x=0; x<m_resolution.x; ++x)
 	{
@@ -205,7 +209,7 @@ void EcoSysLab::SoilModel::BuildFromLayers(const SoilSurface& soilSurface, const
 		{
 			auto pos = GetPositionFromCoordinate({x, 0, z}); // y value does not matter
 			vec2 pos_2d(pos.x, pos.z);
-			auto groundHeight = glm::clamp(soilSurface.m_height({pos.x, pos.z}), m_boundingBoxMin.y, m_boundingBoxMin.y + m_resolution.y * m_dx);
+			auto groundHeight = glm::clamp(m_soilSurface.m_height({pos.x, pos.z}), m_boundingBoxMin.y, m_boundingBoxMin.y + m_resolution.y * m_dx);
 			pos.y = groundHeight;
 			auto index = Index(GetCoordinateFromPosition(pos) + ivec3(0, -2, 0));
 			rain_field[index] = 0.1;// insert water 2 voxels below ground
@@ -217,13 +221,13 @@ void EcoSysLab::SoilModel::BuildFromLayers(const SoilSurface& soilSurface, const
 
 				// find material index:
 				auto idx = 0;
-				while(voxel_height < current_height && idx < soil_layers.size()-1)
+				while(voxel_height < current_height && idx < m_soilLayers.size()-1)
 				{
 					idx++;
-					current_height -= glm::max(0.f, soil_layers[idx].m_thickness(pos_2d));
+					current_height -= glm::max(0.f, m_soilLayers[idx].m_thickness(pos_2d));
 				}
 
-				SetVoxel({x, y, z}, soil_layers[idx].m_mat);
+				SetVoxel({x, y, z}, m_soilLayers[idx].m_mat);
 			}
 		}
 	}
@@ -253,17 +257,12 @@ void SoilModel::Reset()
 	assert(m_initialized);
 
 	m_time = 0.f;
-
-	auto numVoxels = m_resolution.x * m_resolution.y * m_resolution.z;
-
 	// Water
-	m_w = 0.f;
-
-
+	//m_w = 0.f;
 	// Nutrients
-	m_n = 0.f;
-	SetField(m_n, vec3(-10, -3, -10), vec3(10, 0, 10), 2);
-	BlurField(m_n);
+	//m_n = 0.f;
+	//SetField(m_n, vec3(-10, -3, -10), vec3(10, 0, 10), 2);
+	//BlurField(m_n);
 	// create some nutrients
 	//ChangeNutrient(vec3(0,0,0),  20000, 4);
 	//ChangeNutrient(vec3(1,3,0),   5000, 3);
@@ -1065,6 +1064,10 @@ vec3 SoilModel::GetBoundingBoxMin() const
 vec3 EcoSysLab::SoilModel::GetBoundingBoxMax() const
 {
 	return m_boundingBoxMin + vec3(m_resolution)*m_dx;
+}
+vec3 EcoSysLab::SoilModel::GetBoundingBoxCenter() const
+{
+	return m_boundingBoxMin + vec3(m_resolution) * m_dx * 0.5f;
 }
 
 bool EcoSysLab::SoilModel::PositionInsideVolume(const glm::vec3& p) const
