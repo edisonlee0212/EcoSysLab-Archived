@@ -45,6 +45,10 @@ void SoilModel::Initialize(const SoilParameters& p, const SoilSurface& soilSurfa
 	m_dx = p.m_deltaX;
 	m_boundingBoxMin = p.m_boundingBoxMin;
 
+	m_voxel_volume_in_cm3 = (m_dx*m_dx*m_dx) / 1e-6;
+	m_water_g_per_cm3 = 1;
+	m_nutrient_unit_per_cm3 = 1;
+
 	m_boundary_x = p.m_boundary_x;
 	m_boundary_y = p.m_boundary_y;
 	m_boundary_z = p.m_boundary_z;
@@ -211,8 +215,11 @@ void EcoSysLab::SoilModel::BuildFromLayers()
 			vec2 pos_2d(pos.x, pos.z);
 			auto groundHeight = glm::clamp(m_soilSurface.m_height({pos.x, pos.z}), m_boundingBoxMin.y, m_boundingBoxMin.y + m_resolution.y * m_dx);
 			pos.y = groundHeight;
-			auto index = Index(GetCoordinateFromPosition(pos) + ivec3(0, -2, 0));
-			rain_field[index] = 0.1;// insert water 2 voxels below ground
+
+			// insert water 2 voxels below ground
+			auto rain_coord = GetCoordinateFromPosition(pos) + ivec3(0, -2, 0);
+			if(CoordinateInsideVolume(rain_coord))
+				rain_field[Index(rain_coord)] = 0.1;
 
 			for(auto y= m_resolution.y - 1; y >= 0; --y)
 			{
@@ -449,20 +456,6 @@ bool SoilModel::Initialized() const
 float SoilModel::GetTime() const
 {
 	return m_time;
-}
-
-void EcoSysLab::SoilModel::UpdateStats()
-{
-	// count total water:
-	m_w_sum = 0.f;
-	for (auto i = 0; i < m_w.size(); ++i)
-		m_w_sum += m_w[i];
-
-	auto max_p = m_p.max();
-	auto max_l = m_l.max();
-	auto max_grav = glm::max(m_gravityForce.x, glm::max(m_gravityForce.y, m_gravityForce.z));
-	m_max_speed_diff = max_p * max_l * m_diffusionForce;
-	m_max_speed_grav = max_p * max_l * max_grav;
 }
 
 
@@ -806,21 +799,34 @@ void EcoSysLab::SoilModel::Irrigation()
 }
 
 
+float SoilModel::IntegrateWater(const glm::vec3& position, float width) const
+{
+	auto water_in_cm3 = IntegrateFieldValue(m_w, position, width);
+	return water_in_cm3 * m_water_g_per_cm3;
+}
 
-float SoilModel::GetWater(const vec3& position) const
+float SoilModel::GetWaterDensity(const vec3& position) const
 {
 	return GetField(m_w, position, 0.0f);
 }
+
+float SoilModel::IntegrateNutrient(const vec3& position, float width) const
+{
+	auto nutrient_in_cm3 = IntegrateFieldValue(m_n, position, width);
+	return nutrient_in_cm3 * m_nutrient_unit_per_cm3;
+}
+
+float SoilModel::GetNutrientDensity(const vec3& position) const
+{
+	return GetField(m_n, position, 0.0f);
+}
+
 
 float SoilModel::GetDensity(const vec3& position) const
 {
 	return GetField(m_d, position, 1000.0f);
 }
 
-float SoilModel::GetNutrient(const vec3& position) const
-{
-	return GetField(m_n, position, 0.0f);
-}
 
 float EcoSysLab::SoilModel::GetCapacity(const glm::vec3& position) const
 {
@@ -849,32 +855,35 @@ float EcoSysLab::SoilModel::GetField(const Field& field, const glm::vec3& positi
 	return field[Index(GetCoordinateFromPosition(position))];
 }
 
-void SoilModel::ChangeField(Field& field, const vec3& center, float amount, float width)
+void SoilModel::ChangeField(Field& field, const vec3& center, float amount_in_cm3, float width_in_m)
 {
-	width /= 3.0; // seems ok :D
+	// TODO: Remove Code DUPLICATION!!! (IntegrateFieldValue)
+	width_in_m /= 3.0; // seems ok :D
 	auto cutoff = 3.0; // how much of the gaussian to keep
 
-	auto voxel_min = GetCoordinateFromPosition(center - vec3(width * cutoff));
-	auto voxel_max = GetCoordinateFromPosition(center + vec3(width * cutoff)) + ivec3(2);
+	auto voxel_min = GetCoordinateFromPosition(center - vec3(width_in_m * cutoff)) - ivec3(2);
+	auto voxel_max = GetCoordinateFromPosition(center + vec3(width_in_m * cutoff)) + ivec3(2);
 
 	voxel_min = glm::max(voxel_min, ivec3(0));
 	voxel_max = glm::min(voxel_max, static_cast<ivec3>(m_resolution)-ivec3(1));
 
 	// the <= is important here
-	float sum = 0.f;
-	for (auto z=voxel_min.z; z <= voxel_max.z; ++z)
+	float volume_of_gaussian_in_cm3 = 0.f; // count the weighted number of voxels and multiply by volume of 1 voxel
+	for (auto z = voxel_min.z; z <= voxel_max.z; ++z)
 	{
-		for (auto y=voxel_min.y; y <= voxel_max.y; ++y)
+		for (auto y = voxel_min.y; y <= voxel_max.y; ++y)
 		{
-			for (auto x=voxel_min.x; x <= voxel_max.x; ++x)
+			for (auto x = voxel_min.x; x <= voxel_max.x; ++x)
 			{
 				auto pos = GetPositionFromCoordinate({ x, y, z });
 				auto l = glm::length(pos - center);
-				auto v = glm::exp( - l*l / (2* width*width));
-				sum += v;
+				auto v = glm::exp( - l*l / (2*width_in_m*width_in_m));
+
+				volume_of_gaussian_in_cm3 += v;
 			}
 		}
 	}
+	volume_of_gaussian_in_cm3 *= m_voxel_volume_in_cm3;
 
 	for (auto z = voxel_min.z; z <= voxel_max.z; ++z)
 	{
@@ -884,13 +893,49 @@ void SoilModel::ChangeField(Field& field, const vec3& center, float amount, floa
 			{
 				auto pos = GetPositionFromCoordinate({ x, y, z });
 				auto l = glm::length(pos - center);
-				auto v = glm::exp( - l*l / (2* width*width));
-				field[Index(x, y, z)] += v / sum * amount;
+				auto v = glm::exp( - l*l / (2*width_in_m*width_in_m));
+
+				field[Index(x, y, z)] += v * amount_in_cm3 / volume_of_gaussian_in_cm3;
+			}
+		}
+	}
+}
+
+
+float SoilModel::IntegrateFieldValue(const Field& field, const vec3& center, float width_in_m) const
+{
+	float result = 0.f;
+
+	// TODO: Remove Code DUPLICATION!!! (ChangeField)
+	width_in_m /= 3.0; // seems ok :D
+	auto cutoff = 3.0; // how much of the gaussian to keep
+
+	auto voxel_min = GetCoordinateFromPosition(center - vec3(width_in_m * cutoff)) - ivec3(2);
+	auto voxel_max = GetCoordinateFromPosition(center + vec3(width_in_m * cutoff)) + ivec3(2);
+
+	voxel_min = glm::max(voxel_min, ivec3(0));
+	voxel_max = glm::min(voxel_max, static_cast<ivec3>(m_resolution)-ivec3(1));
+
+	float sum = glm::exp(0.f); // center voxel has weight 1, all others have a lower value
+	// the <= is important here
+	for (auto z = voxel_min.z; z <= voxel_max.z; ++z)
+	{
+		for (auto y = voxel_min.y; y <= voxel_max.y; ++y)
+		{
+			for (auto x = voxel_min.x; x <= voxel_max.x; ++x)
+			{
+				auto pos = GetPositionFromCoordinate({ x, y, z });
+				auto l = glm::length(pos - center);
+				auto v = glm::exp( - l*l / (2*width_in_m*width_in_m));
+
+				result += v * field[Index(x, y, z)] / sum;
 			}
 		}
 	}
 
+	return result * m_voxel_volume_in_cm3;
 }
+
 
 void EcoSysLab::SoilModel::SetField(Field& field, const vec3& bb_min, const vec3& bb_max, float value)
 {
@@ -965,9 +1010,10 @@ void EcoSysLab::SoilModel::BlurField(Field& field)
 	field = tmp;
 }
 
-void SoilModel::ChangeWater(const vec3& center, float amount, float width)
+void SoilModel::ChangeWater(const vec3& center, float amount_in_g, float width)
 {
-	ChangeField(m_w, center, amount, width);
+	auto amount_in_cm3 = amount_in_g / m_water_g_per_cm3;
+	ChangeField(m_w, center, amount_in_cm3, width);
 }
 
 void SoilModel::ChangeDensity(const vec3& center, float amount, float width)
@@ -975,9 +1021,10 @@ void SoilModel::ChangeDensity(const vec3& center, float amount, float width)
 	ChangeField(m_d, center, amount, width);
 }
 
-void SoilModel::ChangeNutrient(const vec3& center, float amount, float width)
+void SoilModel::ChangeNutrient(const vec3& center, float amount_in_AU, float width)
 {
-	ChangeField(m_n, center, amount, width);
+	auto amount_in_cm3 = amount_in_AU / m_nutrient_unit_per_cm3;
+	ChangeField(m_n, center, amount_in_cm3, width);
 }
 
 void EcoSysLab::SoilModel::ChangeCapacity(const glm::vec3& center, float amount, float width)
@@ -1223,4 +1270,194 @@ glm::vec4 EcoSysLab::SoilModel::GetSoilTextureColorForPosition(const glm::vec3& 
 	output /= total_weight;
 
 	return output;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/////////////////////////////////////////
+
+
+
+
+
+
+
+void EcoSysLab::SoilModel::UpdateStats()
+{
+	// count total water:
+	m_w_sum_in_g = 0.f;
+	m_n_sum = 0.f;
+	for (auto i = 0; i < m_w.size(); ++i)
+	{
+		m_w_sum_in_g += m_w[i];
+		m_n_sum += m_n[i];
+	}
+	m_w_sum_in_g *= m_voxel_volume_in_cm3 * m_water_g_per_cm3;
+	m_n_sum      *= m_voxel_volume_in_cm3 * m_nutrient_unit_per_cm3;
+
+	auto max_p = m_p.max();
+	auto max_l = m_l.max();
+	auto max_grav = glm::max(m_gravityForce.x, glm::max(m_gravityForce.y, m_gravityForce.z));
+	m_max_speed_diff = max_p * max_l * m_diffusionForce;
+	m_max_speed_grav = max_p * max_l * max_grav;
+}
+
+
+
+void EcoSysLab::SoilModel::Test_InitializeEmpty(glm::uvec3 resolution)
+{
+	SoilParameters p;
+	p.m_boundary_x = Boundary::wrap;
+	p.m_boundary_y = Boundary::wrap;
+	p.m_boundary_z = Boundary::wrap;
+	p.m_boundingBoxMin = vec3(0, 0, 0);
+	p.m_voxelResolution = resolution;
+	p.m_deltaX = 1.f/static_cast<float>(resolution.x);
+	p.m_gravityForce = vec3(0, 0, 0);
+	p.m_diffusionForce = 1;
+	p.m_deltaTime = 0.1;
+
+	const auto lambda_0  = [](const vec2& p) { return 0.f; };
+	const auto lambda_1  = [](const vec2& p) { return 1.f; };
+	const auto lambda_10 = [](const vec2& p) { return 10.f; };
+
+	SoilSurface surface;
+	surface.m_height = lambda_0;
+
+	SoilPhysicalMaterial mat;
+	mat.m_c = lambda_1;
+	mat.m_d = lambda_1;
+	mat.m_p = lambda_1;
+	mat.m_n = lambda_0;
+	mat.m_w = lambda_0;
+
+	auto soil_layers = std::vector<SoilLayer>({
+		SoilLayer({mat, lambda_10})
+		});
+
+	Initialize(p, surface, soil_layers);
+}
+
+
+void EcoSysLab::SoilModel::Test_WaterDensity()
+{
+	auto water_density_test = [this]()
+	{
+		cout << "\nWater Density test:" << endl;
+
+		m_w = 0.f;
+		UpdateStats();
+		cout << "Initial water: " << m_w_sum_in_g << endl;
+
+		ChangeWater(vec3(0.5, 0.5, 0.5), 1000, 0.5);
+		UpdateStats();
+		cout << "Adding 1000: " << m_w_sum_in_g << endl;
+
+		ChangeWater(vec3(0.5, 0.5, 0.5), 500, 2);
+		UpdateStats();
+		cout << "Adding 500: " << m_w_sum_in_g << endl;
+
+		ChangeWater(vec3(0.5, 0.5, 0.5), 500, 0.1);
+		UpdateStats();
+		cout << "Adding 500: " << m_w_sum_in_g << endl;
+
+		ChangeWater(vec3(0.1, 0.8, 0.5), 1000, 0.1);
+		UpdateStats();
+		cout << "Adding 1000: " << m_w_sum_in_g << endl;
+
+		cout << "Water density at center: " << GetWaterDensity(vec3(0.5, 0.5, 0.5)) << endl;
+	};
+
+	auto nutrient_density_test = [this]()
+	{
+		cout << "\nNutrient Density test:" << endl;
+		m_n = 0.f;
+		UpdateStats();
+		cout << "Initial nutrient: " << m_n_sum << endl;
+
+		ChangeNutrient(vec3(0.0, 0.5, 0.5), 100, 0.5);
+		UpdateStats();
+		cout << "Adding 100: " << m_n_sum << endl;
+		cout << "Nutrient density at center: " << GetNutrientDensity(vec3(0.5, 0.5, 0.5)) << endl;
+	};
+
+	auto water_fetch_test = [this]()
+	{
+		cout << "\nFetch Water test:" << endl;
+
+		m_w = 0.f;
+		auto positon = vec3(0.51, 0.52, 0.53);
+		ChangeWater(positon, 100, 0.5);
+		UpdateStats();
+		cout << "Total water (added 100): " << m_w_sum_in_g << endl;
+		cout << "Fetch Water larger width: "  << IntegrateWater(positon, 0.8) << endl;
+		cout << "Fetch Water same width: "    << IntegrateWater(positon, 0.5) << endl;
+		cout << "Fetch Water smaller width: " << IntegrateWater(positon, 0.2) << endl;
+		cout << "Fetch Water tiny width: "    << IntegrateWater(positon, 0.01) << endl;
+		cout << "Water density at center: "    << GetWaterDensity(positon) << endl;
+	};
+
+	auto nutrient_fetch_test = [this]()
+	{
+		cout << "\nFetch Nutrient test:" << endl;
+
+		m_n = 0.f;
+		auto positon = vec3(0.3, 0.5211, 0.53);
+		ChangeNutrient(positon, 17, 0.1);
+		UpdateStats();
+		cout << "Total nutrient (added 17): " << m_n_sum << endl;
+		cout << "Fetch Nutrient larger: " << IntegrateNutrient(positon, 0.8) << endl;
+		cout << "Fetch Nutrient medium: " << IntegrateNutrient(positon, 0.5) << endl;
+		cout << "Fetch Nutrient small:  " << IntegrateNutrient(positon, 0.2) << endl;
+		cout << "Fetch Nutrient tiny:   " << IntegrateNutrient(positon, 0.05) << endl;
+
+		m_n = 1.f;
+		cout << "Set Nutrient Density to constant 1" << endl;
+		UpdateStats();
+		cout << "Total nutrient: " << m_n_sum << endl;
+		cout << "Fetch Nutrient Density 1, width 0.1 : " << IntegrateNutrient(positon, 0.1) << endl;
+		cout << "Fetch Nutrient Density 1, width 0.2 : " << IntegrateNutrient(positon, 0.2) << endl;
+	};
+
+	Test_InitializeEmpty(uvec3(100, 100, 100));
+	cout << "\n Resolution: " << m_resolution.x << "\n";
+
+	water_density_test();
+	nutrient_density_test();
+	water_fetch_test();
+	nutrient_fetch_test();
+
+	// change resolution and test again:
+	Test_InitializeEmpty(uvec3(64, 64, 64));
+	cout << "\n Resolution: " << m_resolution.x << "\n";
+
+	water_density_test();
+	nutrient_density_test();
+	water_fetch_test();
+	nutrient_fetch_test();
+
+
+	// change resolution and test again:
+	Test_InitializeEmpty(uvec3(30, 30, 30));
+	cout << "\n Resolution: " << m_resolution.x << "\n";
+
+	water_density_test();
+	nutrient_density_test();
+	water_fetch_test();
+	nutrient_fetch_test();
 }
