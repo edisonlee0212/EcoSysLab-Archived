@@ -50,6 +50,8 @@ namespace EcoSysLab {
 		float m_chlorophyll = 0.0f;
 
 		float m_shootFlux = 0.0f;
+
+		glm::vec3 m_reproductiveModuleSize = glm::vec3(0.0f);
 		glm::mat4 m_reproductiveModuleTransform = glm::mat4(0.0f);
 	};
 

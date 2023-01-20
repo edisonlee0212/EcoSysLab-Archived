@@ -358,11 +358,13 @@ inline bool TreeModel::GrowRootNode(SoilModel& soilModel, NodeHandle rootNodeHan
 		if (rootNode.RefChildHandles().empty())
 		{
 			//1. Elongate current node.
-			const float maintenanceVigor = glm::clamp(rootNode.m_data.m_vigorSink, 0.0f, rootNode.m_data.m_maintenanceVigorRequirement);
+			const float maintenanceVigor = 
+				glm::clamp(rootNode.m_data.m_vigorSink, 0.0f, rootNode.m_data.m_maintenanceVigorRequirement);
 			//Subtract maintenance vigor and the rest is for development.
 			rootNode.m_data.m_vigorSink -= maintenanceVigor;
 			const float developmentVigor = rootNode.m_data.m_vigorSink;
 			const float extendLength = developmentVigor * rootGrowthParameters.m_rootNodeLength;
+			//Remove development vigor from sink since it's used for elongation
 			rootNode.m_data.m_vigorSink -= developmentVigor;
 			float collectedAuxin = 0.0f;
 			const auto dd = rootGrowthParameters.m_apicalDominanceDistanceFactor;
@@ -371,27 +373,33 @@ inline bool TreeModel::GrowRootNode(SoilModel& soilModel, NodeHandle rootNodeHan
 		}
 		else
 		{
-			const float maintenanceVigor = glm::clamp(rootNode.m_data.m_vigorSink, 0.0f, rootNode.m_data.m_maintenanceVigorRequirement);
+			const float maintenanceVigor = glm::clamp(rootNode.m_data.m_vigorSink, 0.0f, 
+				rootNode.m_data.m_maintenanceVigorRequirement);
 			//Subtract maintenance vigor and the rest is for development.
 			rootNode.m_data.m_vigorSink -= maintenanceVigor;
 			const float developmentVigor = rootNode.m_data.m_vigorSink;
+			//Subtract development vigor.
 			rootNode.m_data.m_vigorSink -= developmentVigor;
 
 			//2. Form new shoot if necessary
 			float branchingProb = rootGrowthParameters.m_growthRate * rootGrowthParameters.GetBranchingProbability(rootNode);
 			branchingProb *= glm::clamp(1.0f - rootNode.m_data.m_inhibitor, 0.0f, 1.0f);
-			branchingProb *= rootNode.m_data.m_nitrite;
-
+			//More nitrite, more likely to form new shoot.
+			
 			if (branchingProb >= glm::linearRand(0.0f, 1.0f)) {
 				const auto newRootNodeHandle = m_rootSkeleton.Extend(rootNodeHandle, true);
 				auto& oldRootNode = m_rootSkeleton.RefNode(rootNodeHandle);
 				auto& newRootNode = m_rootSkeleton.RefNode(newRootNodeHandle);
 				newRootNode.m_data = {};
 				newRootNode.m_data.m_lateral = true;
+				//Assign new tropism for new shoot based on parent node. The tropism switching happens here.
 				rootGrowthParameters.SetTropisms(oldRootNode, newRootNode);
 				newRootNode.m_info.m_length = 0.0f;
 				newRootNode.m_info.m_thickness = rootGrowthParameters.m_endNodeThickness;
-				newRootNode.m_info.m_localRotation = glm::quat(glm::vec3(glm::radians(rootGrowthParameters.GetRootBranchingAngle(newRootNode)), glm::radians(glm::linearRand(0.0f, 360.0f)), 0.0f));
+				newRootNode.m_info.m_localRotation = 
+					glm::quat(glm::vec3(
+						glm::radians(rootGrowthParameters.GetRootBranchingAngle(newRootNode)), 
+						glm::radians(glm::linearRand(0.0f, 360.0f)), 0.0f));
 				auto globalRotation = oldRootNode.m_info.m_globalRotation * newRootNode.m_info.m_localRotation;
 				auto front = globalRotation * glm::vec3(0, 0, -1);
 				auto up = globalRotation * glm::vec3(0, 1, 0);
@@ -587,7 +595,8 @@ void TreeModel::CollectShootFlux(ClimateModel& climateModel,
 		auto& internodeData = internode.m_data;
 		auto& internodeInfo = internode.m_info;
 		internodeData.m_age++;
-		internodeData.m_lightIntensity = m_treeVolume.IlluminationEstimation(internodeInfo.m_globalPosition, m_illuminationEstimationSettings, internodeData.m_lightDirection);
+		internodeData.m_lightIntensity = 
+			m_treeVolume.IlluminationEstimation(internodeInfo.m_globalPosition, m_illuminationEstimationSettings, internodeData.m_lightDirection);
 		internodeInfo.m_color = glm::mix(glm::vec4(0.0f, 0.0f, 0.0f, 1.0f), glm::vec4(1.0f), internodeData.m_lightIntensity);
 		for (const auto& bud : internode.m_data.m_buds)
 		{
@@ -818,8 +827,10 @@ void TreeModel::AggregateRootVigorRequirement()
 			//If current node is not end node
 			for (const auto& i : rootNode.RefChildHandles()) {
 				const auto& childInternode = m_rootSkeleton.RefNode(i);
-				rootNodeData.m_subtreeGrowthPotential += childInternode.m_data.m_growthPotential + childInternode.m_data.m_subtreeGrowthPotential;
-				rootNodeData.m_subtreeMaintenanceVigorRequirement += childInternode.m_data.m_maintenanceVigorRequirement + childInternode.m_data.m_subtreeMaintenanceVigorRequirement;
+				rootNodeData.m_subtreeGrowthPotential += 
+					childInternode.m_data.m_growthPotential + childInternode.m_data.m_subtreeGrowthPotential;
+				rootNodeData.m_subtreeMaintenanceVigorRequirement += 
+					childInternode.m_data.m_maintenanceVigorRequirement + childInternode.m_data.m_subtreeMaintenanceVigorRequirement;
 			}
 		}
 	}
@@ -854,6 +865,7 @@ inline void TreeModel::AllocateShootVigor(const TreeGrowthParameters& treeGrowth
 			//The buds will get its own resources
 			for (auto& bud : internodeData.m_buds) {
 				if (internodeData.m_maintenanceVigorRequirement + internodeData.m_developmentalVigorRequirement != 0.0f) {
+					//The vigor gets allocated and stored eventually into the buds
 					bud.m_vigorSink += internodeData.m_allocatedVigor *
 						(bud.m_developmentVigorRequirement + bud.m_maintenanceVigorRequirement)
 					/ (internodeData.m_maintenanceVigorRequirement + internodeData.m_developmentalVigorRequirement);
@@ -919,12 +931,14 @@ inline void TreeModel::AllocateShootVigor(const TreeGrowthParameters& treeGrowth
 
 				//Combine maintenance and development allocated to this child.
 				childInternodeData.m_allocatedVigor = 0.0f;
-				if (childTotalAllocatedMaintenanceVigor != 0.0f && childInternodeData.m_maintenanceVigorRequirement + childInternodeData.m_subtreeMaintenanceVigorRequirement != 0.0f) {
+				if (childTotalAllocatedMaintenanceVigor != 0.0f && 
+					childInternodeData.m_maintenanceVigorRequirement + childInternodeData.m_subtreeMaintenanceVigorRequirement != 0.0f) {
 					childInternodeData.m_allocatedVigor += childTotalAllocatedMaintenanceVigor *
 						childInternodeData.m_maintenanceVigorRequirement
 						/ (childInternodeData.m_maintenanceVigorRequirement + childInternodeData.m_subtreeMaintenanceVigorRequirement);
 				}
-				if (childTotalAllocatedDevelopmentVigor != 0.0f && childInternodeData.m_developmentalVigorRequirement + childInternodeData.m_subtreeDevelopmentalVigorRequirement != 0.0f) {
+				if (childTotalAllocatedDevelopmentVigor != 0.0f && 
+					childInternodeData.m_developmentalVigorRequirement + childInternodeData.m_subtreeDevelopmentalVigorRequirement != 0.0f) {
 					childInternodeData.m_allocatedVigor += childTotalAllocatedDevelopmentVigor *
 						childInternodeData.m_developmentalVigorRequirement
 						/ (childInternodeData.m_developmentalVigorRequirement + childInternodeData.m_subtreeDevelopmentalVigorRequirement);
@@ -933,6 +947,7 @@ inline void TreeModel::AllocateShootVigor(const TreeGrowthParameters& treeGrowth
 					childTotalAllocatedMaintenanceVigor + childTotalAllocatedDevelopmentVigor - childInternodeData.m_allocatedVigor;
 
 				for (auto& bud : childInternodeData.m_buds) {
+					//The vigor gets allocated and stored eventually into the buds
 					bud.m_vigorSink += childInternodeData.m_allocatedVigor *
 						(bud.m_developmentVigorRequirement + bud.m_maintenanceVigorRequirement)
 						/ (childInternodeData.m_maintenanceVigorRequirement + childInternodeData.m_developmentalVigorRequirement);
@@ -1013,21 +1028,34 @@ void TreeModel::CalculateVigorRequirement(const TreeGrowthParameters& treeGrowth
 				}
 			}break;
 			case BudType::Leaf: {
+					//The maintenance vigor requirement is related to the size and the drought factor of the leaf.
 				bud.m_maintenanceVigorRequirement = treeGrowthParameters.m_leafMaintenanceVigorRequirement;
+					//* bud.m_drought * bud.m_reproductiveModuleSize.x * bud.m_reproductiveModuleSize.z;
+					//The development vigor is constant for now. Meaning the size of the leaf is growing in a constant speed.
 				bud.m_developmentVigorRequirement = treeGrowthParameters.m_leafProductiveWaterRequirement;
 			}break;
 			case BudType::Fruit: {
+				//The maintenance vigor requirement is related to the volume and the drought factor of the fruit.
 				bud.m_maintenanceVigorRequirement = treeGrowthParameters.m_fruitBaseWaterRequirement;
+					//* bud.m_drought * bud.m_reproductiveModuleSize.x * bud.m_reproductiveModuleSize.y * bud.m_reproductiveModuleSize.z;
+				//The development vigor is constant for now. Meaning the size of the fruit is growing in a constant speed.
 				bud.m_developmentVigorRequirement = treeGrowthParameters.m_fruitProductiveWaterRequirement;
 			}break;
 			case BudType::Lateral: {
+					//No requirement since the lateral bud only gets activated and turned into new shoot.
+					//We can make use of the development vigor for bud flushing probability here in future.
 				bud.m_maintenanceVigorRequirement = 0.0f;
 				bud.m_developmentVigorRequirement = 0.0f;
 			}break;
 			}
+			//Apply overall growth rate to control the growth speed of the shoot.
 			bud.m_developmentVigorRequirement = growthRate * bud.m_developmentVigorRequirement;
+
+			//Collect requirement for internode. The internode doesn't has it's own requirement for now since we consider it as simple pipes
+			//that only perform transportation. However this can be change in future.
 			internodeData.m_developmentalVigorRequirement += bud.m_developmentVigorRequirement;
 			internodeData.m_maintenanceVigorRequirement += bud.m_maintenanceVigorRequirement;
+			//Collect vigor requirement to system graph.
 			newTreeGrowthNutrientsRequirement.m_vigor += bud.m_developmentVigorRequirement + bud.m_maintenanceVigorRequirement;
 		}
 	}
@@ -1544,7 +1572,8 @@ void TreeModel::AllocateRootVigor(const RootGrowthParameters& rootGrowthParamete
 				if (childDevelopmentalVigorRequirementWeightSum == 0.0f) childTotalAllocatedDevelopmentVigor = 0;
 				float allocatedVigor = 0.0f;
 				//Combine maintenance and development allocated to this child.
-				if (childTotalAllocatedMaintenanceVigor != 0.0f && childRootNodeData.m_maintenanceVigorRequirement + childRootNodeData.m_subtreeMaintenanceVigorRequirement != 0.0f) {
+				if (childTotalAllocatedMaintenanceVigor != 0.0f && 
+					childRootNodeData.m_maintenanceVigorRequirement + childRootNodeData.m_subtreeMaintenanceVigorRequirement != 0.0f) {
 					allocatedVigor += childTotalAllocatedMaintenanceVigor *
 						childRootNodeData.m_maintenanceVigorRequirement
 						/ (childRootNodeData.m_maintenanceVigorRequirement + childRootNodeData.m_subtreeMaintenanceVigorRequirement);
@@ -1582,10 +1611,21 @@ void TreeModel::CalculateVigorRequirement(const RootGrowthParameters& rootGrowth
 		auto& rootNode = m_rootSkeleton.RefNode(rootNodeHandle);
 		auto& rootNodeData = rootNode.m_data;
 		rootNodeData.m_developmentalVigorRequirement = 0.0f;
+		//This one has 0 always but we will put value in it in future.
 		rootNodeData.m_maintenanceVigorRequirement = 0.0f;
-		rootNodeData.m_developmentalVigorRequirement = growthRate * glm::pow(1.0f / glm::max(rootNodeData.m_soilDensity * rootGrowthParameters.m_environmentalFriction, 1.0f), rootGrowthParameters.m_environmentalFrictionFactor);
-		rootNodeData.m_growthPotential = rootNodeData.m_nitrite * rootNodeData.m_developmentalVigorRequirement + rootNodeData.m_maintenanceVigorRequirement;
-		newRootGrowthNutrientsRequirement.m_vigor += rootNodeData.m_developmentalVigorRequirement + rootNodeData.m_maintenanceVigorRequirement;
+		//Calculate the developmental vigor requirement based on the soil density.
+		rootNodeData.m_developmentalVigorRequirement = 
+			growthRate * 
+			glm::pow(
+				1.0f / glm::max(rootNodeData.m_soilDensity * rootGrowthParameters.m_environmentalFriction, 1.0f)
+				, rootGrowthParameters.m_environmentalFrictionFactor);
+		//The growth potential is the final weight that will be used to allocate vigor. It's affected by the nitrite level.
+		rootNodeData.m_growthPotential = 
+			rootNodeData.m_nitrite * rootNodeData.m_developmentalVigorRequirement + rootNodeData.m_maintenanceVigorRequirement;
+		//We sum the vigor requirement with the developmentalVigorRequirement,
+		//so the overall nitrite will not affect the root growth. Thus we will have same growth rate for low/high nitrite density.
+		newRootGrowthNutrientsRequirement.m_vigor += 
+			rootNodeData.m_developmentalVigorRequirement + rootNodeData.m_maintenanceVigorRequirement;
 	}
 }
 
@@ -1611,11 +1651,13 @@ bool TreeModel::Grow(const glm::mat4& globalTransform, SoilModel& soilModel, Cli
 	//Grow roots and set up nutrient requirements for next iteration.
 	TreeGrowthRequirement newShootGrowthRequirement;
 	TreeGrowthRequirement newRootGrowthRequirement;
-	if (rootGrowthParameters.m_growthRate != 0 && GrowRoots(globalTransform, soilModel, rootGrowthParameters, newRootGrowthRequirement)) {
+	if (rootGrowthParameters.m_growthRate != 0.0f 
+		&& GrowRoots(globalTransform, soilModel, rootGrowthParameters, newRootGrowthRequirement)) {
 		rootStructureChanged = true;
 	}
 	//Grow branches and set up nutrient requirements for next iteration.
-	if (treeGrowthParameters.m_growthRate != 0 && GrowShoots(globalTransform, climateModel, treeGrowthParameters, newShootGrowthRequirement)) {
+	if (treeGrowthParameters.m_growthRate != 0.0f 
+		&& GrowShoots(globalTransform, climateModel, treeGrowthParameters, newShootGrowthRequirement)) {
 		treeStructureChanged = true;
 	}
 	//Set new growth nutrients requirement for next iteration.

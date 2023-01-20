@@ -504,18 +504,24 @@ void Soil::SplitRootTestSetup()
 				if (position.y >= height) underGround = false;
 			}
 			if (underGround) {
-				if (position.x > 0)
+				if (position.x > m_soilModel.m_boundingBoxMin.x && position.x < m_soilModel.GetVoxelResolution().x * m_soilModel.m_dx * 0.25f + m_soilModel.m_boundingBoxMin.x)
 				{
-					m_soilModel.m_n[i] = 2.0f;
+					m_soilModel.m_n[i] = 0.1f;
 				}
-				else
+				else if(position.x < m_soilModel.GetVoxelResolution().x * m_soilModel.m_dx * 0.5f + m_soilModel.m_boundingBoxMin.x)
 				{
 					m_soilModel.m_n[i] = 0.5f;
+				}else if(position.x < m_soilModel.GetVoxelResolution().x * m_soilModel.m_dx * 0.75f + m_soilModel.m_boundingBoxMin.x)
+				{
+					m_soilModel.m_n[i] = 1.5f;
+				}else
+				{
+					m_soilModel.m_n[i] = 10.0f;
 				}
 			}
 			else
 			{
-				m_soilModel.m_n[i] = 0.01f;
+				m_soilModel.m_n[i] = 0.0f;
 			}
 		}
 	}
