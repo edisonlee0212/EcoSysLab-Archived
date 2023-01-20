@@ -1928,7 +1928,9 @@ float RootGrowthParameters::GetApicalControlFactor(const Node<RootInternodeGrowt
 
 void RootGrowthParameters::SetTropisms(Node<RootInternodeGrowthData>& oldNode, Node<RootInternodeGrowthData>& newNode) const
 {
-	float probability = m_tropismSwitchingProbability * glm::pow(m_tropismSwitchingProbabilityDistanceFactor, glm::max(0, oldNode.m_data.m_rootUnitDistance - 1));
+	float probability = m_tropismSwitchingProbability * 
+		glm::pow(m_tropismSwitchingProbabilityDistanceFactor, glm::max(0, oldNode.m_data.m_rootUnitDistance - 1));
+
 	const bool needSwitch = probability >= glm::linearRand(0.0f, 1.0f);
 	newNode.m_data.m_horizontalTropism = needSwitch ? oldNode.m_data.m_verticalTropism : oldNode.m_data.m_horizontalTropism;
 	newNode.m_data.m_verticalTropism = needSwitch ? oldNode.m_data.m_horizontalTropism : oldNode.m_data.m_verticalTropism;
