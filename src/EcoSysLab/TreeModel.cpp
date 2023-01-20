@@ -1028,24 +1028,44 @@ void TreeModel::CalculateVigorRequirement(const TreeGrowthParameters& treeGrowth
 				}
 			}break;
 			case BudType::Leaf: {
-					//The maintenance vigor requirement is related to the size and the drought factor of the leaf.
-				bud.m_maintenanceVigorRequirement = treeGrowthParameters.m_leafMaintenanceVigorRequirement;
-					//* bud.m_drought * bud.m_reproductiveModuleSize.x * bud.m_reproductiveModuleSize.z;
-					//The development vigor is constant for now. Meaning the size of the leaf is growing in a constant speed.
-				bud.m_developmentVigorRequirement = treeGrowthParameters.m_leafProductiveWaterRequirement;
+					if(bud.m_status == BudStatus::Dormant)
+					{
+						//No requirement since the lateral bud only gets activated and turned into new shoot.
+					//We can make use of the development vigor for bud flushing probability here in future.
+						bud.m_maintenanceVigorRequirement = treeGrowthParameters.m_leafMaintenanceVigorRequirement;
+						bud.m_developmentVigorRequirement = treeGrowthParameters.m_leafProductiveWaterRequirement;
+					}else if(bud.m_status == BudStatus::Flushed)
+					{
+						//The maintenance vigor requirement is related to the size and the drought factor of the leaf.
+						bud.m_maintenanceVigorRequirement = treeGrowthParameters.m_leafMaintenanceVigorRequirement * (1.0f - bud.m_drought);
+						//The development vigor is constant for now. Meaning the size of the leaf is growing in a constant speed.
+						bud.m_developmentVigorRequirement = treeGrowthParameters.m_leafProductiveWaterRequirement;
+					}
 			}break;
 			case BudType::Fruit: {
-				//The maintenance vigor requirement is related to the volume and the drought factor of the fruit.
-				bud.m_maintenanceVigorRequirement = treeGrowthParameters.m_fruitBaseWaterRequirement;
-					//* bud.m_drought * bud.m_reproductiveModuleSize.x * bud.m_reproductiveModuleSize.y * bud.m_reproductiveModuleSize.z;
-				//The development vigor is constant for now. Meaning the size of the fruit is growing in a constant speed.
-				bud.m_developmentVigorRequirement = treeGrowthParameters.m_fruitProductiveWaterRequirement;
-			}break;
-			case BudType::Lateral: {
+				if (bud.m_status == BudStatus::Dormant)
+				{
 					//No requirement since the lateral bud only gets activated and turned into new shoot.
 					//We can make use of the development vigor for bud flushing probability here in future.
-				bud.m_maintenanceVigorRequirement = 0.0f;
-				bud.m_developmentVigorRequirement = 0.0f;
+					bud.m_maintenanceVigorRequirement = treeGrowthParameters.m_fruitBaseWaterRequirement;
+					bud.m_developmentVigorRequirement = treeGrowthParameters.m_fruitProductiveWaterRequirement;
+				}
+				else if (bud.m_status == BudStatus::Flushed)
+				{
+					//The maintenance vigor requirement is related to the volume and the drought factor of the fruit.
+					bud.m_maintenanceVigorRequirement = treeGrowthParameters.m_fruitBaseWaterRequirement * (1.0f - bud.m_drought);
+					//The development vigor is constant for now. Meaning the size of the fruit is growing in a constant speed.
+					bud.m_developmentVigorRequirement = treeGrowthParameters.m_fruitProductiveWaterRequirement;
+				}				
+			}break;
+			case BudType::Lateral: {
+				if (bud.m_status == BudStatus::Dormant)
+				{
+					//No requirement since the lateral bud only gets activated and turned into new shoot.
+					//We can make use of the development vigor for bud flushing probability here in future.
+					bud.m_maintenanceVigorRequirement = 0.0f;
+					bud.m_developmentVigorRequirement = 0.0f;
+				}
 			}break;
 			}
 			//Apply overall growth rate to control the growth speed of the shoot.
