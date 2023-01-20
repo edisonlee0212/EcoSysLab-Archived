@@ -1532,6 +1532,7 @@ void TreeModel::AllocateRootVigor(const RootGrowthParameters& rootGrowthParamete
 				rootNodeData.m_subTreeAllocatedVigor = 0.0f;
 			}
 		}
+		const float apicalControl = rootGrowthParameters.GetApicalControlFactor(rootNode);
 		if (rootNodeData.m_subTreeAllocatedVigor != 0.0f) {
 			float childDevelopmentalVigorRequirementWeightSum = 0.0f;
 			float childMaintenanceVigorRequirementWeightSum = 0.0f;
@@ -1548,6 +1549,8 @@ void TreeModel::AllocateRootVigor(const RootGrowthParameters& rootGrowthParamete
 					(childRootNodeData.m_maintenanceVigorRequirement + childRootNodeData.m_subtreeMaintenanceVigorRequirement)
 					/ rootNodeData.m_subtreeMaintenanceVigorRequirement;
 				if (rootNodeData.m_subtreeMaintenanceVigorRequirement == 0.0f) childMaintenanceVigorRequirementWeight = 0;
+				//Perform Apical control here.
+				childDevelopmentalVigorRequirementWeight = glm::pow(childDevelopmentalVigorRequirementWeight, apicalControl);
 
 				childDevelopmentalVigorRequirementWeightSum += childDevelopmentalVigorRequirementWeight;
 				childMaintenanceVigorRequirementWeightSum += childMaintenanceVigorRequirementWeight;
@@ -1580,6 +1583,8 @@ void TreeModel::AllocateRootVigor(const RootGrowthParameters& rootGrowthParamete
 					(childRootNodeData.m_maintenanceVigorRequirement + childRootNodeData.m_subtreeMaintenanceVigorRequirement)
 					/ rootNodeData.m_subtreeMaintenanceVigorRequirement;
 				if (rootNodeData.m_subtreeMaintenanceVigorRequirement == 0.0f) childMaintenanceVigorRequirementWeight = 0;
+				//Perform Apical control here.
+				childDevelopmentalVigorRequirementWeight = glm::pow(childDevelopmentalVigorRequirementWeight, apicalControl);
 
 				//Firstly calculate total amount of maintenance vigor belongs to this child from internode.
 				float childTotalAllocatedMaintenanceVigor = rootNodeSubtreeAllocatedMaintenanceVigor *
