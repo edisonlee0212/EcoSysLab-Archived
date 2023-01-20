@@ -893,17 +893,23 @@ inline void TreeModel::AllocateShootVigor(const TreeGrowthParameters& treeGrowth
 				childDevelopmentalVigorRequirementWeightSum += childDevelopmentalVigorRequirementWeight;
 				childMaintenanceVigorRequirementWeightSum += childMaintenanceVigorRequirementWeight;
 			}
-			float internodeSubtreeAllocatedMaintenanceVigor =
-				internodeData.m_subTreeAllocatedVigor *
-				internodeData.m_subtreeMaintenanceVigorRequirement
-			/ (internodeData.m_subtreeDevelopmentalVigorRequirement + internodeData.m_subtreeMaintenanceVigorRequirement);
-			float internodeSubtreeAllocatedDevelopmentVigor =
-				internodeData.m_subTreeAllocatedVigor *
-				internodeData.m_subtreeDevelopmentalVigorRequirement
-			/ (internodeData.m_subtreeDevelopmentalVigorRequirement + internodeData.m_subtreeMaintenanceVigorRequirement);
-			if(internodeData.m_subtreeDevelopmentalVigorRequirement + internodeData.m_subtreeMaintenanceVigorRequirement == 0.0f)
+			float internodeSubtreeAllocatedMaintenanceVigor;
+			float internodeSubtreeAllocatedDevelopmentVigor;
+			if (!treeGrowthParameters.m_maintenanceVigorRequirementPriority) {
+				internodeSubtreeAllocatedMaintenanceVigor =
+					internodeData.m_subTreeAllocatedVigor *
+					internodeData.m_subtreeMaintenanceVigorRequirement
+					/ (internodeData.m_subtreeDevelopmentalVigorRequirement + internodeData.m_subtreeMaintenanceVigorRequirement);
+				internodeSubtreeAllocatedDevelopmentVigor = internodeData.m_subTreeAllocatedVigor - internodeSubtreeAllocatedMaintenanceVigor;
+				if (internodeData.m_subtreeDevelopmentalVigorRequirement + internodeData.m_subtreeMaintenanceVigorRequirement == 0.0f)
+				{
+					internodeSubtreeAllocatedMaintenanceVigor = internodeSubtreeAllocatedDevelopmentVigor = 0.0f;
+				}
+			}else
 			{
-				internodeSubtreeAllocatedMaintenanceVigor = internodeSubtreeAllocatedDevelopmentVigor = 0.0f;
+				internodeSubtreeAllocatedMaintenanceVigor = glm::min(internodeData.m_subTreeAllocatedVigor,
+					internodeData.m_subtreeMaintenanceVigorRequirement);
+				internodeSubtreeAllocatedDevelopmentVigor = internodeData.m_subTreeAllocatedVigor - internodeSubtreeAllocatedMaintenanceVigor;
 			}
 			for (const auto& i : internode.RefChildHandles()) {
 				auto& childInternode = m_branchSkeleton.RefNode(i);
@@ -1555,21 +1561,27 @@ void TreeModel::AllocateRootVigor(const RootGrowthParameters& rootGrowthParamete
 				childDevelopmentalVigorRequirementWeightSum += childDevelopmentalVigorRequirementWeight;
 				childMaintenanceVigorRequirementWeightSum += childMaintenanceVigorRequirementWeight;
 			}
-
-			float rootNodeSubtreeAllocatedMaintenanceVigor =
-				rootNodeData.m_subTreeAllocatedVigor *
-				rootNodeData.m_subtreeMaintenanceVigorRequirement
-				/ (rootNodeData.m_subtreeGrowthPotential + rootNodeData.m_subtreeMaintenanceVigorRequirement);
-			float rootNodeSubtreeAllocatedDevelopmentVigor =
-				rootNodeData.m_subTreeAllocatedVigor *
-				rootNodeData.m_subtreeGrowthPotential
-				/ (rootNodeData.m_subtreeGrowthPotential + rootNodeData.m_subtreeMaintenanceVigorRequirement);
-
-			if (rootNodeData.m_subtreeGrowthPotential + rootNodeData.m_subtreeMaintenanceVigorRequirement == 0.0f)
+			//Calculate total subtree vigor used for maintenance and development here.
+			float rootNodeSubtreeAllocatedMaintenanceVigor;
+			float rootNodeSubtreeAllocatedDevelopmentVigor;
+			if (!rootGrowthParameters.m_maintenanceVigorRequirementPriority) {
+				//Vigor divided by maintenance/development ratio
+				rootNodeSubtreeAllocatedMaintenanceVigor =
+					rootNodeData.m_subTreeAllocatedVigor *
+					rootNodeData.m_subtreeMaintenanceVigorRequirement
+					/ (rootNodeData.m_subtreeGrowthPotential + rootNodeData.m_subtreeMaintenanceVigorRequirement);
+				rootNodeSubtreeAllocatedDevelopmentVigor = rootNodeData.m_subTreeAllocatedVigor - rootNodeSubtreeAllocatedMaintenanceVigor;
+				if (rootNodeData.m_subtreeGrowthPotential + rootNodeData.m_subtreeMaintenanceVigorRequirement == 0.0f)
+				{
+					rootNodeSubtreeAllocatedMaintenanceVigor = rootNodeSubtreeAllocatedDevelopmentVigor = 0.0f;
+				}
+			}else
 			{
-				rootNodeSubtreeAllocatedMaintenanceVigor = rootNodeSubtreeAllocatedDevelopmentVigor = 0.0f;
+				//Vigor firstly try to suffice maintenance requirement
+				rootNodeSubtreeAllocatedMaintenanceVigor = glm::min(rootNodeData.m_subTreeAllocatedVigor, 
+					rootNodeData.m_subtreeMaintenanceVigorRequirement);
+				rootNodeSubtreeAllocatedDevelopmentVigor = rootNodeData.m_subTreeAllocatedVigor - rootNodeSubtreeAllocatedMaintenanceVigor;
 			}
-
 			for (const auto& i : rootNode.RefChildHandles()) {
 				auto& childRootNode = m_rootSkeleton.RefNode(i);
 				auto& childRootNodeData = childRootNode.m_data;

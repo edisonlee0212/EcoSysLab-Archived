@@ -265,6 +265,8 @@ namespace EcoSysLab {
 		*/
 		float m_branchingProbabilityOrderDecrease;
 
+		bool m_maintenanceVigorRequirementPriority = true;
+
 		float m_fineRootSegmentLength = 0.02f;
 		float m_fineRootApicalAngleVariance = 2.5f;
 		float m_fineRootBranchingAngle = 60.f;
@@ -459,6 +461,7 @@ namespace EcoSysLab {
 		*/
 		float m_fruitProductiveWaterRequirement;
 
+		bool m_maintenanceVigorRequirementPriority = true;
 #pragma region Foliage
 
 		glm::vec3 m_maxLeafSize;

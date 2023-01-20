@@ -337,7 +337,7 @@ bool OnInspectTreeGrowthParameters(TreeGrowthParameters& treeGrowthParameters) {
 			changed = ImGui::DragFloat4("Remove rate apical/lateral/leaf/fruit", &treeGrowthParameters.m_apicalBudExtinctionRate, 0.01f) || changed;
 			changed = ImGui::DragFloat3("Base resource shoot/leaf/fruit", &treeGrowthParameters.m_shootMaintenanceVigorRequirement, 0.01f) || changed;
 			changed = ImGui::DragFloat3("Productive resource shoot/leaf/fruit", &treeGrowthParameters.m_shootProductiveWaterRequirement, 0.01f) || changed;
-
+			changed = ImGui::Checkbox("Maintenance Vigor Priority", &treeGrowthParameters.m_maintenanceVigorRequirementPriority) || changed;
 			ImGui::TreePop();
 		}
 		if (ImGui::TreeNodeEx("Foliage", ImGuiTreeNodeFlags_DefaultOpen))
@@ -397,7 +397,7 @@ bool OnInspectRootGrowthParameters(RootGrowthParameters& rootGrowthParameters) {
 			changed = ImGui::DragFloat("Fine root thickness", &rootGrowthParameters.m_fineRootThickness, 0.01f) || changed;
 			changed = ImGui::DragFloat("Fine root min node thickness", &rootGrowthParameters.m_fineRootMinNodeThickness) || changed;
 			changed = ImGui::DragInt("Fine root node count", &rootGrowthParameters.m_fineRootNodeCount) || changed;
-
+			changed = ImGui::Checkbox("Maintenance Vigor Priority", &rootGrowthParameters.m_maintenanceVigorRequirementPriority) || changed;
 			ImGui::TreePop();
 		}
 		ImGui::TreePop();
@@ -489,7 +489,7 @@ void SerializeTreeGrowthParameters(const std::string& name, const TreeGrowthPara
 	out << YAML::Key << "m_shootProductiveWaterRequirement" << YAML::Value << treeGrowthParameters.m_shootProductiveWaterRequirement;
 	out << YAML::Key << "m_leafProductiveWaterRequirement" << YAML::Value << treeGrowthParameters.m_leafProductiveWaterRequirement;
 	out << YAML::Key << "m_fruitProductiveWaterRequirement" << YAML::Value << treeGrowthParameters.m_fruitProductiveWaterRequirement;
-
+	out << YAML::Key << "m_maintenanceVigorRequirementPriority" << YAML::Value << treeGrowthParameters.m_maintenanceVigorRequirementPriority;
 
 	//Internode
 	out << YAML::Key << "m_lowBranchPruning" << YAML::Value << treeGrowthParameters.m_lowBranchPruning;
@@ -546,6 +546,7 @@ void SerializeRootGrowthParameters(const std::string& name, const RootGrowthPara
 	out << YAML::Key << "m_branchingProbabilityDistanceDecrease" << YAML::Value << rootGrowthParameters.m_branchingProbabilityDistanceDecrease;
 	out << YAML::Key << "m_branchingProbabilityOrderDecrease" << YAML::Value << rootGrowthParameters.m_branchingProbabilityOrderDecrease;
 
+	out << YAML::Key << "m_maintenanceVigorRequirementPriority" << YAML::Value << rootGrowthParameters.m_maintenanceVigorRequirementPriority;
 	out << YAML::EndMap;
 }
 void TreeDescriptor::Serialize(YAML::Emitter& out) {
@@ -605,6 +606,7 @@ void DeserializeTreeGrowthParameters(const std::string& name, TreeGrowthParamete
 		if (param["m_shootProductiveWaterRequirement"]) treeGrowthParameters.m_shootProductiveWaterRequirement = param["m_shootProductiveWaterRequirement"].as<float>();
 		if (param["m_leafProductiveWaterRequirement"]) treeGrowthParameters.m_leafProductiveWaterRequirement = param["m_leafProductiveWaterRequirement"].as<float>();
 		if (param["m_fruitProductiveWaterRequirement"]) treeGrowthParameters.m_fruitProductiveWaterRequirement = param["m_fruitProductiveWaterRequirement"].as<float>();
+		if (param["m_maintenanceVigorRequirementPriority"]) treeGrowthParameters.m_maintenanceVigorRequirementPriority = param["m_maintenanceVigorRequirementPriority"].as<bool>();
 
 
 		//Foliage
@@ -651,6 +653,7 @@ void DeserializeRootGrowthParameters(const std::string& name, RootGrowthParamete
 		if (param["m_branchingProbabilityChildrenDecrease"]) rootGrowthParameters.m_branchingProbabilityChildrenDecrease = param["m_branchingProbabilityChildrenDecrease"].as<float>();
 		if (param["m_branchingProbabilityDistanceDecrease"]) rootGrowthParameters.m_branchingProbabilityDistanceDecrease = param["m_branchingProbabilityDistanceDecrease"].as<float>();
 		if (param["m_branchingProbabilityOrderDecrease"]) rootGrowthParameters.m_branchingProbabilityOrderDecrease = param["m_branchingProbabilityOrderDecrease"].as<float>();
+		if (param["m_maintenanceVigorRequirementPriority"]) rootGrowthParameters.m_maintenanceVigorRequirementPriority = param["m_maintenanceVigorRequirementPriority"].as<bool>();
 
 	}
 }
