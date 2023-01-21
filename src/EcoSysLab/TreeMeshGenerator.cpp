@@ -138,6 +138,7 @@ void TreeMeshGeneratorSettings::OnInspect() {
 		ImGui::Checkbox("Fruit", &m_enableFruit);
 		ImGui::Checkbox("Foliage", &m_enableFoliage);
 		ImGui::Checkbox("Root", &m_enableRoot);
+		ImGui::Checkbox("Fine Root", &m_enableFineRoot);
 		ImGui::Combo("Branch mesh mode", { "Cylindrical", "Marching cubes" }, m_branchMeshType);
 		ImGui::Combo("Root mesh mode", { "Cylindrical", "Marching cubes" }, m_rootMeshType);
 		if(ImGui::TreeNode("Cylindrical mesh settings"))

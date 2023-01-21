@@ -39,6 +39,7 @@ namespace EcoSysLab {
 		bool m_enableFruit = true;
 		bool m_enableBranch = true;
 		bool m_enableRoot = true;
+		bool m_enableFineRoot = true;
 		bool m_overridePresentation = true;
 		PresentationOverrideSettings m_presentationOverrideSettings;
 		AssetRef m_foliageTexture;

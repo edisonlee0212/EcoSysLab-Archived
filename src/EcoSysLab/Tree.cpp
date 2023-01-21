@@ -35,11 +35,15 @@ void Tree::OnInspect() {
 		ImGui::DragInt("Iterations", &iterations, 1, 0, m_treeModel.CurrentIteration());
 		iterations = glm::clamp(iterations, 0, m_treeModel.CurrentIteration());
 		
-		if (ImGui::TreeNode("Mesh generation")) {
+		if (ImGui::TreeNodeEx("Mesh generation", ImGuiTreeNodeFlags_DefaultOpen)) {
 			static TreeMeshGeneratorSettings meshGeneratorSettings;
 			meshGeneratorSettings.OnInspect();
 			if (ImGui::Button("Generate Mesh")) {
 				GenerateMesh(meshGeneratorSettings, iterations);
+			}
+			if (ImGui::Button("Clear Mesh"))
+			{
+				ClearMeshHolders();
 			}
 			ImGui::TreePop();
 		}
@@ -99,6 +103,8 @@ void Tree::OnInspect() {
 
 void Tree::OnCreate() {
 }
+
+
 
 void Tree::OnDestroy() {
 	m_treeModel.Clear();
@@ -174,12 +180,37 @@ void Tree::Deserialize(const YAML::Node& in)
 	m_treeDescriptor.Load("m_treeDescriptor", in);
 }
 
+void Tree::ClearMeshHolders()
+{
+	const auto scene = GetScene();
+	const auto self = GetOwner();
+	const auto children = scene->GetChildren(self);
+	for (const auto& child : children) {
+		auto name = scene->GetEntityName(child);
+		if (name == "Branch Mesh") {
+			scene->DeleteEntity(child);
+		}
+		else if (name == "Root Mesh") {
+			scene->DeleteEntity(child);
+		}
+		else if (name == "Foliage Mesh") {
+			scene->DeleteEntity(child);
+		}
+		else if (name == "Fruit Mesh") {
+			scene->DeleteEntity(child);
+		}
+		else if (name == "Fine Root Mesh") {
+			scene->DeleteEntity(child);
+		}
+	}
+}
+
 void Tree::GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings, int iteration) {
 	const auto scene = GetScene();
 	const auto self = GetOwner();
 	const auto children = scene->GetChildren(self);
 
-	Entity branchEntity, rootEntity, foliageEntity, fruitEntity;
+	Entity branchEntity, rootEntity, foliageEntity, fruitEntity, fineRootEntity;
 
 	for (const auto& child : children) {
 		auto name = scene->GetEntityName(child);
@@ -193,6 +224,9 @@ void Tree::GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings, 
 			scene->DeleteEntity(child);
 		}
 		else if (name == "Fruit Mesh") {
+			scene->DeleteEntity(child);
+		}
+		else if (name == "Fine Root Mesh") {
 			scene->DeleteEntity(child);
 		}
 	}
@@ -213,7 +247,8 @@ void Tree::GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings, 
 		{
 			CylindricalMeshGenerator<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> meshGenerator;
 			meshGenerator.Generate(m_treeModel.PeekBranchSkeleton(actualIteration), vertices, indices,
-				meshGeneratorSettings, m_treeModel.PeekBranchSkeleton(actualIteration).PeekNode(0).m_info.m_thickness);
+				meshGeneratorSettings, glm::min(m_treeModel.PeekBranchSkeleton(actualIteration).PeekNode(0).m_info.m_thickness,
+					m_treeModel.PeekRootSkeleton(actualIteration).PeekNode(0).m_info.m_thickness));
 		}
 		break;
 		case 1:
@@ -256,7 +291,8 @@ void Tree::GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings, 
 		{
 			CylindricalMeshGenerator<RootSkeletonGrowthData, RootBranchGrowthData, RootInternodeGrowthData> meshGenerator;
 			meshGenerator.Generate(m_treeModel.PeekRootSkeleton(actualIteration), vertices, indices,
-				meshGeneratorSettings, m_treeModel.PeekRootSkeleton(actualIteration).PeekNode(0).m_info.m_thickness);
+				meshGeneratorSettings, glm::min(m_treeModel.PeekBranchSkeleton(actualIteration).PeekNode(0).m_info.m_thickness,
+					m_treeModel.PeekRootSkeleton(actualIteration).PeekNode(0).m_info.m_thickness));
 		}
 		break;
 		case 1:
@@ -285,6 +321,71 @@ void Tree::GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings, 
 		meshRenderer->m_mesh = mesh;
 		meshRenderer->m_material = material;
 	}
+	if (meshGeneratorSettings.m_enableFineRoot)
+	{
+		fineRootEntity = scene->CreateEntity("Fine Root Mesh");
+		scene->SetParent(fineRootEntity, self);
+		std::vector<glm::uint> fineRootSegments;
+		std::vector<StrandPoint> fineRootPoints;
+		const auto& rootSkeleton = m_treeModel.PeekRootSkeleton(iteration);
+		const auto& rootNodeList = rootSkeleton.RefSortedNodeList();
+		int fineRootIndex = 0;
+		for (int i = 0; i < rootNodeList.size(); i++)
+		{
+			const auto& rootNode = rootSkeleton.PeekNode(rootNodeList[i]);
+			const auto& rootNodeData = rootNode.m_data;
+			const auto& rootNodeInfo = rootNode.m_info;
+			if (rootNodeData.m_fineRootAnchors.empty()) continue;
+			fineRootPoints.resize(fineRootPoints.size() + 8);
+			fineRootSegments.resize(fineRootSegments.size() + 5);
+			auto& p0 = fineRootPoints[fineRootIndex * 8];
+			auto& p1 = fineRootPoints[fineRootIndex * 8 + 1];
+			auto& p2 = fineRootPoints[fineRootIndex * 8 + 2];
+			auto& p3 = fineRootPoints[fineRootIndex * 8 + 3];
+			auto& p4 = fineRootPoints[fineRootIndex * 8 + 4];
+			auto& p5 = fineRootPoints[fineRootIndex * 8 + 5];
+			auto& p6 = fineRootPoints[fineRootIndex * 8 + 6];
+			auto& p7 = fineRootPoints[fineRootIndex * 8 + 7];
+
+			p0.m_position = rootNodeInfo.m_globalPosition * 2.0f - glm::vec3(rootNodeData.m_fineRootAnchors[0]);
+			p1.m_position = rootNodeInfo.m_globalPosition;
+			p2.m_position = glm::vec3(rootNodeData.m_fineRootAnchors[0]);
+			p3.m_position = glm::vec3(rootNodeData.m_fineRootAnchors[1]);
+			p4.m_position = glm::vec3(rootNodeData.m_fineRootAnchors[2]);
+			p5.m_position = glm::vec3(rootNodeData.m_fineRootAnchors[3]);
+			p6.m_position = glm::vec3(rootNodeData.m_fineRootAnchors[4]);
+			p7.m_position = glm::vec3(rootNodeData.m_fineRootAnchors[4]) * 2.0f - glm::vec3(rootNodeData.m_fineRootAnchors[3]);
+
+			p0.m_thickness = rootNodeInfo.m_thickness;
+			p1.m_thickness = rootNodeData.m_fineRootAnchors[0].w;
+			p2.m_thickness = rootNodeData.m_fineRootAnchors[0].w;
+			p3.m_thickness = rootNodeData.m_fineRootAnchors[1].w;
+			p4.m_thickness = rootNodeData.m_fineRootAnchors[2].w;
+			p5.m_thickness = rootNodeData.m_fineRootAnchors[3].w;
+			p6.m_thickness = rootNodeData.m_fineRootAnchors[4].w;
+			p7.m_thickness = rootNodeData.m_fineRootAnchors[4].w;
+
+			fineRootSegments[fineRootIndex * 5] = fineRootIndex * 8;
+			fineRootSegments[fineRootIndex * 5 + 1] = fineRootIndex * 8 + 1;
+			fineRootSegments[fineRootIndex * 5 + 2] = fineRootIndex * 8 + 2;
+			fineRootSegments[fineRootIndex * 5 + 3] = fineRootIndex * 8 + 3;
+			fineRootSegments[fineRootIndex * 5 + 4] = fineRootIndex * 8 + 4;
+
+			fineRootIndex++;
+		}
+
+		auto strands = ProjectManager::CreateTemporaryAsset<Strands>();
+		auto material = ProjectManager::CreateTemporaryAsset<Material>();
+		material->SetProgram(DefaultResources::GLPrograms::StandardProgram);
+		material->m_materialProperties.m_albedoColor = glm::vec3(80, 60, 50) / 255.0f;
+		material->m_materialProperties.m_roughness = 1.0f;
+		material->m_materialProperties.m_metallic = 0.0f;
+		strands->SetSegments(1, fineRootSegments, fineRootPoints);
+		auto strandsRenderer = scene->GetOrSetPrivateComponent<StrandsRenderer>(fineRootEntity).lock();
+		strandsRenderer->m_strands = strands;
+		strandsRenderer->m_material = material;
+	}
+
 	if (meshGeneratorSettings.m_enableFoliage)
 	{
 		foliageEntity = scene->CreateEntity("Foliage Mesh");
