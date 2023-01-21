@@ -1513,7 +1513,7 @@ void TreeModel::CollectRootFlux(const glm::mat4& globalTransform, SoilModel& soi
 		auto& rootNodeInfo = rootNode.m_info;
 		auto worldSpacePosition = globalTransform * glm::translate(rootNodeInfo.m_globalPosition)[3];
 		if (m_collectWater) {
-			rootNode.m_data.m_rootFlux = soilModel.GetWater(worldSpacePosition);
+			rootNode.m_data.m_rootFlux = soilModel.IntegrateWater(worldSpacePosition, 0.2);
 			m_plantGrowthNutrients.m_rootFlux += rootNode.m_data.m_rootFlux;
 		}
 	}
@@ -1528,7 +1528,7 @@ void TreeModel::SampleNitrite(const glm::mat4& globalTransform, SoilModel& soilM
 		auto& rootNodeInfo = rootNode.m_info;
 		auto worldSpacePosition = globalTransform * glm::translate(rootNodeInfo.m_globalPosition)[3];
 		if (m_collectNitrite) {
-			rootNode.m_data.m_nitrite = soilModel.GetNutrient(worldSpacePosition);
+			rootNode.m_data.m_nitrite = soilModel.IntegrateNutrient(worldSpacePosition, 0.2);
 			m_plantGrowthNutrients.m_nitrite += rootNode.m_data.m_nitrite;
 		}
 	}
