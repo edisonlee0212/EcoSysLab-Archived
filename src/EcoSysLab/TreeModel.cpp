@@ -6,7 +6,7 @@
 
 using namespace EcoSysLab;
 
-void ApplyTropism(const glm::vec3& targetDir, float tropism, glm::vec3& front, glm::vec3& up) {
+void TreeModel::ApplyTropism(const glm::vec3& targetDir, float tropism, glm::vec3& front, glm::vec3& up) {
 	const glm::vec3 dir = glm::normalize(targetDir);
 	const float dotP = glm::abs(glm::dot(front, dir));
 	if (dotP < 0.99f && dotP > -0.99f) {
@@ -19,7 +19,7 @@ void ApplyTropism(const glm::vec3& targetDir, float tropism, glm::vec3& front, g
 	}
 }
 
-void ApplyTropism(const glm::vec3& targetDir, float tropism, glm::quat& rotation) {
+void TreeModel::ApplyTropism(const glm::vec3& targetDir, float tropism, glm::quat& rotation) {
 	auto front = rotation * glm::vec3(0, 0, -1);
 	auto up = rotation * glm::vec3(0, 1, 0);
 	ApplyTropism(targetDir, tropism, front, up);
@@ -854,7 +854,10 @@ inline void TreeModel::AllocateShootVigor(const TreeGrowthParameters& treeGrowth
 {
 	const auto& sortedInternodeList = m_branchSkeleton.RefSortedNodeList();
 	//Go from rooting point to all end nodes
-	const float apicalControl = 1.0f + treeGrowthParameters.m_apicalControl * glm::exp(-treeGrowthParameters.m_apicalControlAgeFactor * m_age * treeGrowthParameters.m_growthRate);
+	const float apicalControl = 
+		1.0f + treeGrowthParameters.m_apicalControl
+		* glm::exp(-treeGrowthParameters.m_apicalControlAgeFactor * m_age * treeGrowthParameters.m_growthRate);
+
 	for (const auto& internodeHandle : sortedInternodeList) {
 		auto& internode = m_branchSkeleton.RefNode(internodeHandle);
 		auto& internodeData = internode.m_data;
@@ -1538,7 +1541,9 @@ void TreeModel::AllocateRootVigor(const RootGrowthParameters& rootGrowthParamete
 {
 	//For how this works, refer to AllocateShootVigor().
 	const auto& sortedRootNodeList = m_rootSkeleton.RefSortedNodeList();
-	const float apicalControl = 1.0f + rootGrowthParameters.m_apicalControl * glm::exp(-rootGrowthParameters.m_apicalControlAgeFactor * m_age * rootGrowthParameters.m_growthRate);
+	const float apicalControl = 
+		1.0f + rootGrowthParameters.m_apicalControl
+		* glm::exp(-rootGrowthParameters.m_apicalControlAgeFactor * m_age * rootGrowthParameters.m_growthRate);
 	for (const auto& rootNodeHandle : sortedRootNodeList) {
 		auto& rootNode = m_rootSkeleton.RefNode(rootNodeHandle);
 		auto& rootNodeData = rootNode.m_data;
@@ -1676,7 +1681,7 @@ void TreeModel::CalculateVigorRequirement(const RootGrowthParameters& rootGrowth
 		rootNodeData.m_maintenanceVigorRequirement = 0.0f;
 		//Calculate the developmental vigor requirement based on the soil density.
 		rootNodeData.m_developmentalVigorRequirement = growthRate;
-		//The growth potential is the final weight that will be used to allocate vigor. It's affected by the nitrite level.
+	//The growth potential is the final weight that will be used to allocate vigor. It's affected by the nitrite level.
 		rootNodeData.m_growthPotential = 
 			rootNodeData.m_nitrite * rootNodeData.m_developmentalVigorRequirement *
 			glm::pow(1.0f / glm::max(rootNodeData.m_soilDensity * rootGrowthParameters.m_environmentalFriction, 1.0f), rootGrowthParameters.m_environmentalFrictionFactor);

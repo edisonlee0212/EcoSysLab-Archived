@@ -192,7 +192,21 @@ void TreeMeshGeneratorSettings::OnInspect() {
 			}
 			ImGui::TreePop();
 		}
+		ImGui::Checkbox("Override presentation", &m_overridePresentation);
+		if (m_overridePresentation && ImGui::TreeNodeEx("Override settings"))
+		{
+			ImGui::DragFloat3("Leaf size", &m_presentationOverrideSettings.m_leafSize.x, 0.01f);
+			ImGui::DragInt("Leaf per node", &m_presentationOverrideSettings.m_leafCountPerInternode);
+			ImGui::DragFloat("Distance to end limit", &m_presentationOverrideSettings.m_distanceToEndLimit, 0.01f);
+			ImGui::DragFloat("Position variance", &m_presentationOverrideSettings.m_positionVariance, 0.01f);
+			ImGui::DragFloat("Phototropism", &m_presentationOverrideSettings.m_phototropism, 0.01f);
+			ImGui::Checkbox("Limit max thickness", &m_presentationOverrideSettings.m_limitMaxThickness);
 
+			Editor::DragAndDropButton<Texture2D>(m_foliageTexture, "Foliage tex");
+
+
+			ImGui::TreePop();
+		}
 		ImGui::TreePop();
 	}
 }

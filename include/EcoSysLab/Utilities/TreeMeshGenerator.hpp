@@ -22,13 +22,26 @@ namespace EcoSysLab {
 		[[nodiscard]] glm::vec3 GetPoint(glm::vec3& normalDir, float angle, bool isStart);
 	};
 
+	struct PresentationOverrideSettings
+	{
+		glm::vec3 m_leafSize = glm::vec3(0.03f, 1.0f, 0.03f);
+		int m_leafCountPerInternode = 8;
+		float m_distanceToEndLimit = 2.f;
+		float m_positionVariance = 0.2f;
+		float m_phototropism = 0.9f;
+		
+		bool m_limitMaxThickness = true;
+	};
+
 	struct TreeMeshGeneratorSettings {
 		bool m_vertexColorOnly = false;
 		bool m_enableFoliage = true;
 		bool m_enableFruit = true;
 		bool m_enableBranch = true;
 		bool m_enableRoot = true;
-
+		bool m_overridePresentation = true;
+		PresentationOverrideSettings m_presentationOverrideSettings;
+		AssetRef m_foliageTexture;
 
 		float m_resolution = 0.0002f;
 		float m_subdivision = 3.0f;
@@ -67,7 +80,7 @@ namespace EcoSysLab {
 	class CylindricalMeshGenerator {
 	public:
 		void Generate(Skeleton<SkeletonData, FlowData, NodeData>& treeSkeleton, std::vector<Vertex>& vertices,
-			std::vector<unsigned int>& indices, const TreeMeshGeneratorSettings& settings) const;
+			std::vector<unsigned int>& indices, const TreeMeshGeneratorSettings& settings, float maxThickness) const;
 	};
 	template<typename SkeletonData, typename FlowData, typename NodeData>
 	class VoxelMeshGenerator {
@@ -78,7 +91,7 @@ namespace EcoSysLab {
 	template<typename SkeletonData, typename FlowData, typename NodeData>
 	void CylindricalMeshGenerator<SkeletonData, FlowData, NodeData>::Generate(
 		Skeleton<SkeletonData, FlowData, NodeData>& treeSkeleton, std::vector<Vertex>& vertices,
-		std::vector<unsigned int>& indices, const TreeMeshGeneratorSettings& settings) const {
+		std::vector<unsigned int>& indices, const TreeMeshGeneratorSettings& settings, float maxThickness) const {
 		int parentStep = -1;
 		const auto& sortedInternodeList = treeSkeleton.RefSortedNodeList();
 		std::vector<std::vector<RingSegment>> ringsList;
@@ -102,11 +115,10 @@ namespace EcoSysLab {
 			positionStart + internodeInfo.m_length * settings.m_lineLengthFactor * directionStart;
 		float thicknessStart = internodeInfo.m_thickness;
 		float thicknessEnd = internodeInfo.m_thickness;
-
+		
 		if (internode.GetParentHandle() != -1) {
 			auto& parentInternode = treeSkeleton.RefNode(internode.GetParentHandle());
 			thicknessStart = parentInternode.m_info.m_thickness;
-			GlobalTransform parentRelativeGlobalTransform;
 			directionStart =
 				parentInternode.m_info.m_globalRotation *
 				glm::vec3(0, 0, -1);
@@ -116,6 +128,13 @@ namespace EcoSysLab {
 			thicknessStart = settings.m_radius;
 			thicknessEnd = settings.m_radius;
 		}
+
+		if (settings.m_overridePresentation && settings.m_presentationOverrideSettings.m_limitMaxThickness)
+		{
+			thicknessStart = glm::min(thicknessStart, maxThickness);
+			thicknessEnd = glm::min(thicknessEnd, maxThickness);
+		}
+
 #pragma region Subdivision internode here.
 		int step = thicknessStart / settings.m_resolution;
 		if (step < 4)

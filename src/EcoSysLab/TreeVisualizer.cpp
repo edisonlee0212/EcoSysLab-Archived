@@ -641,6 +641,9 @@ void TreeVisualizer::PeekRootNode(
             auto& rootNodeData = rootNode.m_data;
             ImGui::InputFloat("Nitrite", (float*)&rootNodeData.m_nitrite, 1, 100, "%.3f",
                 ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputFloat("Soil Density", (float*)&rootNodeData.m_soilDensity, 1, 100, "%.3f",
+                ImGuiInputTextFlags_ReadOnly);
+
             ImGui::InputFloat("Root flux", (float*)&rootNodeData.m_rootFlux, 1, 100, "%.3f",
                 ImGuiInputTextFlags_ReadOnly);
             ImGui::InputFloat("Growth potential", (float*)&rootNodeData.m_growthPotential, 1, 100, "%.3f",

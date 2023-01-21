@@ -1150,7 +1150,7 @@ void EcoSysLabLayer::Update() {
 		}
 	}
 	const auto climateEntity = scene->GetEntity(m_climateHolder.GetEntityHandle());
-	if (scene->IsEntityValid(climateEntity) || !scene->HasPrivateComponent<Climate>(climateEntity)) {
+	if (!scene->IsEntityValid(climateEntity) || !scene->HasPrivateComponent<Climate>(climateEntity)) {
 		m_climateHolder.Clear();
 		const std::vector<Entity>* climateEntities =
 			scene->UnsafeGetPrivateComponentOwnersList<Climate>();

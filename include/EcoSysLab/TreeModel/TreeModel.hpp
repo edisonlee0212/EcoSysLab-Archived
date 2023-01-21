@@ -6,6 +6,7 @@
 #include "Octree.hpp"
 using namespace UniEngine;
 namespace EcoSysLab {
+	
 	enum class BudType {
 		Apical,
 		Lateral,
@@ -614,6 +615,12 @@ namespace EcoSysLab {
 		int m_age = 0;
 
 	public:
+		static void ApplyTropism(const glm::vec3& targetDir, float tropism, glm::vec3& front, glm::vec3& up);
+
+		static void ApplyTropism(const glm::vec3& targetDir, float tropism, glm::quat& rotation);
+
+
+
 		std::vector<int> m_internodeOrderCounts;
 		std::vector<int> m_rootNodeOrderCounts;
 

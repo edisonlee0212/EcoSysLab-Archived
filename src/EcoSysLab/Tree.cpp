@@ -207,7 +207,7 @@ void Tree::GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings) 
 		{
 			CylindricalMeshGenerator<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> meshGenerator;
 			meshGenerator.Generate(m_treeModel.RefBranchSkeleton(), vertices, indices,
-				meshGeneratorSettings);
+				meshGeneratorSettings, m_treeModel.RefBranchSkeleton().RefNode(0).m_info.m_thickness);
 		}
 		break;
 		case 1:
@@ -250,7 +250,7 @@ void Tree::GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings) 
 		{
 			CylindricalMeshGenerator<RootSkeletonGrowthData, RootBranchGrowthData, RootInternodeGrowthData> meshGenerator;
 			meshGenerator.Generate(m_treeModel.RefRootSkeleton(), vertices, indices,
-				meshGeneratorSettings);
+				meshGeneratorSettings, m_treeModel.RefBranchSkeleton().RefNode(0).m_info.m_thickness);
 		}
 		break;
 		case 1:
@@ -298,34 +298,74 @@ void Tree::GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings) 
 			const auto& internodeInfo = internode.m_info;
 			const auto& internodeData = internode.m_data;
 			auto internodeGlobalTransform = glm::translate(internodeInfo.m_globalPosition) * glm::mat4_cast(internodeInfo.m_globalRotation) * glm::scale(glm::vec3(1.0f));
-			for (const auto& bud : internodeData.m_buds) {
-				if (bud.m_status != BudStatus::Flushed) continue;
-				if (bud.m_maturity <= 0.0f) continue;
-				if (bud.m_type == BudType::Leaf)
-				{
-					auto matrix = internodeGlobalTransform * bud.m_reproductiveModuleTransform;
-					Vertex archetype;
-					for (auto i = 0; i < quadMesh->GetVerticesAmount(); i++) {
-						archetype.m_position =
-							matrix * glm::vec4(quadMesh->UnsafeGetVertices()[i].m_position, 1.0f);
-						archetype.m_normal = glm::normalize(glm::vec3(
-							matrix * glm::vec4(quadMesh->UnsafeGetVertices()[i].m_normal, 0.0f)));
-						archetype.m_tangent = glm::normalize(glm::vec3(
-							matrix *
-							glm::vec4(quadMesh->UnsafeGetVertices()[i].m_tangent, 0.0f)));
-						archetype.m_texCoord =
-							quadMesh->UnsafeGetVertices()[i].m_texCoord;
-						vertices.push_back(archetype);
+			if (!meshGeneratorSettings.m_overridePresentation) {
+				for (const auto& bud : internodeData.m_buds) {
+					if (bud.m_status != BudStatus::Flushed) continue;
+					if (bud.m_maturity <= 0.0f) continue;
+					if (bud.m_type == BudType::Leaf)
+					{
+						auto matrix = internodeGlobalTransform * bud.m_reproductiveModuleTransform;
+						Vertex archetype;
+						for (auto i = 0; i < quadMesh->GetVerticesAmount(); i++) {
+							archetype.m_position =
+								matrix * glm::vec4(quadMesh->UnsafeGetVertices()[i].m_position, 1.0f);
+							archetype.m_normal = glm::normalize(glm::vec3(
+								matrix * glm::vec4(quadMesh->UnsafeGetVertices()[i].m_normal, 0.0f)));
+							archetype.m_tangent = glm::normalize(glm::vec3(
+								matrix *
+								glm::vec4(quadMesh->UnsafeGetVertices()[i].m_tangent, 0.0f)));
+							archetype.m_texCoord =
+								quadMesh->UnsafeGetVertices()[i].m_texCoord;
+							vertices.push_back(archetype);
+						}
+						for (auto triangle : quadTriangles) {
+							triangle.x += offset;
+							triangle.y += offset;
+							triangle.z += offset;
+							indices.push_back(triangle.x);
+							indices.push_back(triangle.y);
+							indices.push_back(triangle.z);
+						}
+						offset += quadVerticesSize;
 					}
-					for (auto triangle : quadTriangles) {
-						triangle.x += offset;
-						triangle.y += offset;
-						triangle.z += offset;
-						indices.push_back(triangle.x);
-						indices.push_back(triangle.y);
-						indices.push_back(triangle.z);
+				}
+			}else
+			{
+				const auto& presentationSettings = meshGeneratorSettings.m_presentationOverrideSettings;
+				if (internodeData.m_maxDistanceToAnyBranchEnd < presentationSettings.m_distanceToEndLimit) {
+					for (int i = 0; i < presentationSettings.m_leafCountPerInternode; i++)
+					{
+						auto leafSize = presentationSettings.m_leafSize;
+						glm::quat rotation = internodeInfo.m_globalRotation * glm::quat(glm::radians(glm::linearRand(glm::vec3(0.0f), glm::vec3(360.0f))));
+						auto front = rotation * glm::vec3(0, 0, -1);
+						TreeModel::ApplyTropism(internodeData.m_lightDirection, presentationSettings.m_phototropism, rotation);
+						auto foliagePosition = front * (leafSize.z * 1.5f);
+						auto leafTransform = glm::translate(foliagePosition) * glm::mat4_cast(rotation) * glm::scale(leafSize);
+
+						auto matrix = internodeGlobalTransform * leafTransform;
+						Vertex archetype;
+						for (auto i = 0; i < quadMesh->GetVerticesAmount(); i++) {
+							archetype.m_position =
+								matrix * glm::vec4(quadMesh->UnsafeGetVertices()[i].m_position, 1.0f);
+							archetype.m_normal = glm::normalize(glm::vec3(
+								matrix * glm::vec4(quadMesh->UnsafeGetVertices()[i].m_normal, 0.0f)));
+							archetype.m_tangent = glm::normalize(glm::vec3(
+								matrix *
+								glm::vec4(quadMesh->UnsafeGetVertices()[i].m_tangent, 0.0f)));
+							archetype.m_texCoord =
+								quadMesh->UnsafeGetVertices()[i].m_texCoord;
+							vertices.push_back(archetype);
+						}
+						for (auto triangle : quadTriangles) {
+							triangle.x += offset;
+							triangle.y += offset;
+							triangle.z += offset;
+							indices.push_back(triangle.x);
+							indices.push_back(triangle.y);
+							indices.push_back(triangle.z);
+						}
+						offset += quadVerticesSize;
 					}
-					offset += quadVerticesSize;
 				}
 			}
 		}
@@ -336,6 +376,11 @@ void Tree::GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings) 
 		mesh->SetVertices(17, vertices, indices);
 		material->m_materialProperties.m_albedoColor = glm::vec3(152 / 255.0f, 203 / 255.0f, 0 / 255.0f);
 		material->m_materialProperties.m_roughness = 0.0f;
+		auto texRef = meshGeneratorSettings.m_foliageTexture;
+		if(texRef.Get<Texture2D>())
+		{
+			material->m_albedoTexture = texRef.Get<Texture2D>();
+		}
 		auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(foliageEntity).lock();
 		meshRenderer->m_mesh = mesh;
 		meshRenderer->m_material = material;
