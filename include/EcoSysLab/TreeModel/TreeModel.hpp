@@ -56,6 +56,7 @@ namespace EcoSysLab {
 	};
 
 	struct InternodeGrowthData {
+		bool m_isMaxChild = false;
 		bool m_lateral = false;
 		int m_age = 0;
 		float m_inhibitorTarget = 0;
@@ -125,6 +126,7 @@ namespace EcoSysLab {
 	};
 
 	struct RootInternodeGrowthData {
+		bool m_isMaxChild = false;
 		bool m_lateral = false;
 		float m_soilDensity = 0.0f;
 		int m_age = 0;
@@ -134,7 +136,6 @@ namespace EcoSysLab {
 		float m_extraMass = 0.0f;
 
 		float m_rootDistance = 0;
-		int m_rootUnitDistance = 0;
 		int m_order = 0;
 
 		float m_nitrite = 1.0f;
@@ -225,13 +226,21 @@ namespace EcoSysLab {
 		*/
 		glm::vec2 m_apicalAngleMeanVariance;
 		/**
-		 * \brief Apical control base and distance decrease from root.
+		 * \brief Apical control base
 		 */
-		glm::vec2 m_apicalControlBaseDistFactor;
+		float m_apicalControl;
+		/**
+		 * \brief Age influence on apical control
+		 */
+		float m_apicalControlAgeFactor;
 		/**
 		* \brief How much inhibitor will an internode generate.
 		*/
 		float m_apicalDominance;
+		/**
+		* \brief How much inhibitor will shrink when the tree ages.
+		*/
+		float m_apicalDominanceAgeFactor;
 		/**
 		* \brief How much inhibitor will shrink when going through the branch.
 		*/
@@ -251,19 +260,7 @@ namespace EcoSysLab {
 		/**
 		* The base branching probability
 		*/
-		float m_baseBranchingProbability;
-		/**
-		* The probability decrease for each children.
-		*/
-		float m_branchingProbabilityChildrenDecrease;
-		/**
-		* The probability decrease along the branch.
-		*/
-		float m_branchingProbabilityDistanceDecrease;
-		/**
-		* The probability decrease along the branch.
-		*/
-		float m_branchingProbabilityOrderDecrease;
+		float m_branchingProbability;
 
 		bool m_maintenanceVigorRequirementPriority = true;
 
@@ -280,9 +277,7 @@ namespace EcoSysLab {
 
 		[[nodiscard]] float GetRootBranchingAngle(const Node<RootInternodeGrowthData>& rootNode) const;
 
-		[[nodiscard]] float GetBranchingProbability(const Node<RootInternodeGrowthData>& rootNode) const;
 
-		[[nodiscard]] float GetApicalControlFactor(const Node<RootInternodeGrowthData>& rootNode) const;
 
 		void SetTropisms(Node<RootInternodeGrowthData>& oldNode, Node<RootInternodeGrowthData>& newNode) const;
 
@@ -403,10 +398,6 @@ namespace EcoSysLab {
 		 */
 		float m_apicalControlAgeFactor;
 		/**
-		 * \brief Distance to root influence on apical control
-		 */
-		float m_apicalControlDistanceFactor;
-		/**
 		* \brief How much inhibitor will an internode generate.
 		*/
 		float m_apicalDominance;
@@ -487,7 +478,6 @@ namespace EcoSysLab {
 
 		[[nodiscard]] float GetDesiredApicalAngle(const Node<InternodeGrowthData>& internode) const;
 
-		[[nodiscard]] float GetApicalControlFactor(const Node<InternodeGrowthData>& internode) const;
 
 		[[nodiscard]] float GetSagging(const Node<InternodeGrowthData>& internode) const;
 
@@ -620,6 +610,9 @@ namespace EcoSysLab {
 		int m_leafCount = 0;
 		int m_fruitCount = 0;
 		int m_fineRootCount = 0;
+
+		int m_age = 0;
+
 	public:
 		std::vector<int> m_internodeOrderCounts;
 		std::vector<int> m_rootNodeOrderCounts;
