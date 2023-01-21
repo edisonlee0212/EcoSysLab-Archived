@@ -337,7 +337,7 @@ void Soil::OnInspect()
 		auto bbmax = m_soilModel.GetBoundingBoxMax();
 		ImGui::InputFloat3("BB Min", &bbmin.x, "%.3f", ImGuiInputTextFlags_ReadOnly);
 		ImGui::InputFloat3("BB Max", &bbmax.x, "%.3f", ImGuiInputTextFlags_ReadOnly);
-		ImGui::InputFloat("Total Water", &m_soilModel.m_w_sum, 0.0f, 0.0f, "%.6f", ImGuiInputTextFlags_ReadOnly);
+		ImGui::InputFloat("Total Water", &m_soilModel.m_w_sum_in_g, 0.0f, 0.0f, "%.2f", ImGuiInputTextFlags_ReadOnly);
 	}
 }
 
