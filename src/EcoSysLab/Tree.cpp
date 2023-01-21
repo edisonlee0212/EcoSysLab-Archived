@@ -32,12 +32,14 @@ void Tree::OnInspect() {
 			modelChanged = true;
 		}
 		static int iterations = 5;
-		ImGui::DragInt("Iterations", &iterations, 1, 1, 100);
+		ImGui::DragInt("Iterations", &iterations, 1, 0, m_treeModel.CurrentIteration());
+		iterations = glm::clamp(iterations, 0, m_treeModel.CurrentIteration());
+		
 		if (ImGui::TreeNode("Mesh generation")) {
 			static TreeMeshGeneratorSettings meshGeneratorSettings;
 			meshGeneratorSettings.OnInspect();
 			if (ImGui::Button("Generate Mesh")) {
-				GenerateMesh(meshGeneratorSettings);
+				GenerateMesh(meshGeneratorSettings, iterations);
 			}
 			ImGui::TreePop();
 		}
@@ -172,7 +174,7 @@ void Tree::Deserialize(const YAML::Node& in)
 	m_treeDescriptor.Load("m_treeDescriptor", in);
 }
 
-void Tree::GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings) {
+void Tree::GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings, int iteration) {
 	const auto scene = GetScene();
 	const auto self = GetOwner();
 	const auto children = scene->GetChildren(self);
@@ -194,11 +196,15 @@ void Tree::GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings) 
 			scene->DeleteEntity(child);
 		}
 	}
+	auto actualIteration = iteration;
+	if (actualIteration < 0 || actualIteration > m_treeModel.CurrentIteration())
+	{
+		actualIteration = m_treeModel.CurrentIteration();
+	}
 	if (meshGeneratorSettings.m_enableBranch)
 	{
 		branchEntity = scene->CreateEntity("Branch Mesh");
 		scene->SetParent(branchEntity, self);
-
 		std::vector<Vertex> vertices;
 		std::vector<unsigned int> indices;
 		switch (meshGeneratorSettings.m_branchMeshType)
@@ -206,8 +212,8 @@ void Tree::GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings) 
 		case 0:
 		{
 			CylindricalMeshGenerator<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> meshGenerator;
-			meshGenerator.Generate(m_treeModel.RefBranchSkeleton(), vertices, indices,
-				meshGeneratorSettings, m_treeModel.RefBranchSkeleton().RefNode(0).m_info.m_thickness);
+			meshGenerator.Generate(m_treeModel.PeekBranchSkeleton(actualIteration), vertices, indices,
+				meshGeneratorSettings, m_treeModel.PeekBranchSkeleton(actualIteration).PeekNode(0).m_info.m_thickness);
 		}
 		break;
 		case 1:
@@ -219,7 +225,7 @@ void Tree::GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings) 
 				minRadius = treeDescriptor->m_treeGrowthParameters.m_endNodeThickness;
 			}
 			VoxelMeshGenerator<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> meshGenerator;
-			meshGenerator.Generate(m_treeModel.RefBranchSkeleton(), vertices, indices,
+			meshGenerator.Generate(m_treeModel.PeekBranchSkeleton(actualIteration), vertices, indices,
 				meshGeneratorSettings, minRadius);
 		}
 		break;
@@ -249,8 +255,8 @@ void Tree::GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings) 
 		case 0:
 		{
 			CylindricalMeshGenerator<RootSkeletonGrowthData, RootBranchGrowthData, RootInternodeGrowthData> meshGenerator;
-			meshGenerator.Generate(m_treeModel.RefRootSkeleton(), vertices, indices,
-				meshGeneratorSettings, m_treeModel.RefBranchSkeleton().RefNode(0).m_info.m_thickness);
+			meshGenerator.Generate(m_treeModel.PeekRootSkeleton(actualIteration), vertices, indices,
+				meshGeneratorSettings, m_treeModel.PeekRootSkeleton(actualIteration).PeekNode(0).m_info.m_thickness);
 		}
 		break;
 		case 1:
@@ -262,7 +268,7 @@ void Tree::GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings) 
 				minRadius = treeDescriptor->m_rootGrowthParameters.m_endNodeThickness;
 			}
 			VoxelMeshGenerator<RootSkeletonGrowthData, RootBranchGrowthData, RootInternodeGrowthData> meshGenerator;
-			meshGenerator.Generate(m_treeModel.RefRootSkeleton(), vertices, indices,
+			meshGenerator.Generate(m_treeModel.PeekRootSkeleton(actualIteration), vertices, indices,
 				meshGeneratorSettings, minRadius);
 		}
 		break;
@@ -292,9 +298,9 @@ void Tree::GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings) 
 		auto quadVerticesSize = quadMesh->GetVerticesAmount();
 		size_t offset = 0;
 
-		const auto& nodeList = m_treeModel.RefBranchSkeleton().RefSortedNodeList();
+		const auto& nodeList = m_treeModel.PeekBranchSkeleton(actualIteration).RefSortedNodeList();
 		for (const auto& internodeHandle : nodeList) {
-			const auto& internode = m_treeModel.RefBranchSkeleton().RefNode(internodeHandle);
+			const auto& internode = m_treeModel.PeekBranchSkeleton(actualIteration).PeekNode(internodeHandle);
 			const auto& internodeInfo = internode.m_info;
 			const auto& internodeData = internode.m_data;
 			auto internodeGlobalTransform = glm::translate(internodeInfo.m_globalPosition) * glm::mat4_cast(internodeInfo.m_globalRotation) * glm::scale(glm::vec3(1.0f));

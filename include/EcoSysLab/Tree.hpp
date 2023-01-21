@@ -49,6 +49,6 @@ namespace EcoSysLab {
 
 		void OnCreate() override;
 
-		void GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings);
+		void GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings, int iteration = -1);
 	};
 }
