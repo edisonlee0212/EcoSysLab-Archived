@@ -28,9 +28,16 @@ namespace EcoSysLab {
 		bool TryGrow();
 	public:
 		void Serialize(YAML::Emitter& out) override;
+		bool m_splitRootTest = true;
+		bool m_recordBiomassHistory = true;
+		float m_leftSideBiomass;
+		float m_rightSideBiomass;
 
 		void Deserialize(const YAML::Node& in) override;
 
+		std::vector<float> m_rootBiomassHistory;
+		std::vector<float> m_shootBiomassHistory;
+		
 		PrivateComponentRef m_soil;
 		PrivateComponentRef m_climate;
 		AssetRef m_treeDescriptor;

@@ -51,7 +51,8 @@ void EcoSysLabLayer::LateUpdate() {
 			m_needFlowUpdate = true;
 			m_selectedTree = selectedEntity;
 			m_treeVisualizer.Reset(scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock()->m_treeModel);
-		}else
+		}
+		else
 		{
 			m_selectedTree = Entity();
 		}
@@ -253,7 +254,7 @@ void EcoSysLabLayer::LateUpdate() {
 				m_fruitMatrices,
 				glm::mat4(1.0f), 1.0f, gizmoSettings);
 		}
-		
+
 		if (m_displayFoliage && !m_foliageMatrices.empty())
 		{
 			Gizmos::DrawGizmoMeshInstancedColored(
@@ -320,7 +321,7 @@ void EcoSysLabLayer::ResetAllTrees(const std::vector<Entity>* treeEntities)
 
 	m_fruitMatrices.clear();
 	m_fruitColors.clear();
-	if(scene->IsEntityValid(m_selectedTree)) m_treeVisualizer.Reset(scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock()->m_treeModel);
+	if (scene->IsEntityValid(m_selectedTree)) m_treeVisualizer.Reset(scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock()->m_treeModel);
 }
 
 void EcoSysLabLayer::OnInspect() {
@@ -343,11 +344,11 @@ void EcoSysLabLayer::OnInspect() {
 
 		Editor::DragAndDropButton<Soil>(m_soilHolder, "Soil");
 		Editor::DragAndDropButton<Climate>(m_climateHolder, "Climate");
-		
+
 		if (treeEntities && !treeEntities->empty()) {
 			if (ImGui::Button("Reset all trees"))
 			{
-				ResetAllTrees(treeEntities );
+				ResetAllTrees(treeEntities);
 			}
 			ImGui::DragInt("Days", &m_days, 1, 0, 9000000);
 			ImGui::Checkbox("Auto grow", &m_autoGrow);
@@ -386,7 +387,7 @@ void EcoSysLabLayer::OnInspect() {
 		}
 		ImGui::Checkbox("Debug Visualization", &m_debugVisualization);
 		if (m_debugVisualization && ImGui::TreeNodeEx("Debug visualization settings", ImGuiTreeNodeFlags_DefaultOpen)) {
-			if(ImGui::Button("Update"))
+			if (ImGui::Button("Update"))
 			{
 				m_needFlowUpdate = true;
 			}
@@ -459,7 +460,7 @@ void EcoSysLabLayer::OnSoilVisualizationMenu()
 			{
 				m_updateVectorMatrices = true;
 			}
-			if (ImGui::Combo("Vector Mode", { "N/A", "N/A", "N/A", "N/A", "Water Density Gradient", "Flux", "Divergence", "N/A", "N/A", "N/A"}, m_vectorSoilProperty))
+			if (ImGui::Combo("Vector Mode", { "N/A", "N/A", "N/A", "N/A", "Water Density Gradient", "Flux", "Divergence", "N/A", "N/A", "N/A" }, m_vectorSoilProperty))
 			{
 				m_updateVectorMatrices = true;
 			}
@@ -485,7 +486,7 @@ void EcoSysLabLayer::OnSoilVisualizationMenu()
 			{
 				m_updateScalarColors = true;
 			}
-			if (ImGui::SliderFloat("Multiplier",  &m_scalarMultiplier, 0.001, 10000, "%.4f", ImGuiSliderFlags_Logarithmic))
+			if (ImGui::SliderFloat("Multiplier", &m_scalarMultiplier, 0.001, 10000, "%.4f", ImGuiSliderFlags_Logarithmic))
 			{
 				m_updateScalarColors = true;
 			}
@@ -498,7 +499,7 @@ void EcoSysLabLayer::OnSoilVisualizationMenu()
 				m_updateScalarMatrices = true;
 			}
 			// disable less useful visualizations to avoid clutter in the gui
-			if (ImGui::Combo("Scalar Mode", { "Blank", "Water Density", "N/A", "N/A", "N/A", "Nutrient Density", "Soil Density", "N/A", "Soil Layer"}, m_scalarSoilProperty))
+			if (ImGui::Combo("Scalar Mode", { "Blank", "Water Density", "N/A", "N/A", "N/A", "Nutrient Density", "Soil Density", "N/A", "Soil Layer" }, m_scalarSoilProperty))
 			{
 				m_updateScalarColors = true;
 			}
@@ -535,7 +536,7 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 		int fineRootLastStartIndex = 0;
 		fineRootStartIndices.emplace_back(fineRootLastStartIndex);
 
-		if(treeEntities->empty())
+		if (treeEntities->empty())
 		{
 			m_branchSegments.clear();
 			m_branchPoints.clear();
@@ -729,7 +730,7 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 				{
 					p0.m_thickness = p1.m_thickness = flow.m_info.m_startThickness;
 				}
-				
+
 				p4.m_thickness = flow.m_info.m_endThickness;
 				p5.m_thickness = flow.m_info.m_endThickness;
 				p3.m_thickness = p2.m_thickness = (p1.m_thickness + p4.m_thickness) * 0.5f;
@@ -751,7 +752,7 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 				const auto& rootNode = rootSkeleton.PeekNode(rootNodeList[i]);
 				const auto& rootNodeData = rootNode.m_data;
 				const auto& rootNodeInfo = rootNode.m_info;
-				if(rootNodeData.m_fineRootAnchors.empty()) continue;
+				if (rootNodeData.m_fineRootAnchors.empty()) continue;
 				auto& p0 = m_fineRootPoints[fineRootStartIndex * 8 + fineRootIndex * 8];
 				auto& p1 = m_fineRootPoints[fineRootStartIndex * 8 + fineRootIndex * 8 + 1];
 				auto& p2 = m_fineRootPoints[fineRootStartIndex * 8 + fineRootIndex * 8 + 2];
@@ -760,7 +761,7 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 				auto& p5 = m_fineRootPoints[fineRootStartIndex * 8 + fineRootIndex * 8 + 5];
 				auto& p6 = m_fineRootPoints[fineRootStartIndex * 8 + fineRootIndex * 8 + 6];
 				auto& p7 = m_fineRootPoints[fineRootStartIndex * 8 + fineRootIndex * 8 + 7];
-				
+
 				p0.m_position = (entityGlobalTransform.m_value *
 					glm::translate(rootNodeInfo.m_globalPosition * 2.0f - glm::vec3(rootNodeData.m_fineRootAnchors[0])))[3];
 				p1.m_position = (entityGlobalTransform.m_value *
@@ -798,7 +799,7 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 
 			int leafIndex = 0;
 			int fruitIndex = 0;
-			for(const auto& internodeHandle : internodeList)
+			for (const auto& internodeHandle : internodeList)
 			{
 				const auto& internode = branchSkeleton.PeekNode(internodeHandle);
 				const auto& internodeData = internode.m_data;
@@ -814,7 +815,8 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 						m_foliageMatrices[leafStartIndex + leafIndex] = entityGlobalTransform.m_value * internodeGlobalTransform * bud.m_reproductiveModuleTransform;
 						m_foliageColors[leafStartIndex + leafIndex] = glm::vec4(glm::mix(glm::vec3(152 / 255.0f, 203 / 255.0f, 0 / 255.0f), glm::vec3(159 / 255.0f, 100 / 255.0f, 66 / 255.0f), glm::max(bud.m_drought, 1.0f - bud.m_chlorophyll)), 1.0f);
 						leafIndex++;
-					}else if (bud.m_type == BudType::Fruit)
+					}
+					else if (bud.m_type == BudType::Fruit)
 					{
 						m_fruitMatrices[fruitStartIndex + fruitIndex] = entityGlobalTransform.m_value * internodeGlobalTransform * bud.m_reproductiveModuleTransform;
 						m_fruitColors[fruitStartIndex + fruitIndex] = glm::vec4(255 / 255.0f, 165 / 255.0f, 0 / 255.0f, 1.0f);
@@ -823,7 +825,7 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 					}
 				}
 			}
-			
+
 
 				}, results);
 			for (auto& i : results) i.wait();
@@ -877,9 +879,9 @@ void EcoSysLab::EcoSysLabLayer::SoilVisualizationScalar(SoilModel& soilModel)
 		Jobs::ParallelFor(numVoxels, [&](unsigned i)
 			{
 				m_scalarMatrices[i] =
-					glm::translate(soilModel.GetPositionFromCoordinate(soilModel.GetCoordinateFromIndex(i)))
-					* glm::mat4_cast(glm::quat(glm::vec3(0.0f)))
-					* glm::scale(glm::vec3(soilModel.GetVoxelSize() * m_scalarBoxSize));
+				glm::translate(soilModel.GetPositionFromCoordinate(soilModel.GetCoordinateFromIndex(i)))
+			* glm::mat4_cast(glm::quat(glm::vec3(0.0f)))
+			* glm::scale(glm::vec3(soilModel.GetVoxelSize() * m_scalarBoxSize));
 			}, results);
 		for (auto& i : results) i.wait();
 	}
@@ -891,7 +893,7 @@ void EcoSysLab::EcoSysLabLayer::SoilVisualizationScalar(SoilModel& soilModel)
 			Jobs::ParallelFor(numVoxels, [&](unsigned i)
 				{
 					auto value = glm::vec3(x[i], y[i], z[i]);
-					m_scalarColors[i] = { glm::normalize(value), glm::clamp(glm::length(value) * m_scalarMultiplier, m_scalarMinAlpha, 1.0f) };
+			m_scalarColors[i] = { glm::normalize(value), glm::clamp(glm::length(value) * m_scalarMultiplier, m_scalarMinAlpha, 1.0f) };
 				}, results);
 		};
 
@@ -900,7 +902,7 @@ void EcoSysLab::EcoSysLabLayer::SoilVisualizationScalar(SoilModel& soilModel)
 			Jobs::ParallelFor(numVoxels, [&](unsigned i)
 				{
 					auto value = glm::vec3(v[i]);
-					m_scalarColors[i] = { m_scalarBaseColor, glm::clamp(glm::length(value) * m_scalarMultiplier, m_scalarMinAlpha, 1.0f) };
+			m_scalarColors[i] = { m_scalarBaseColor, glm::clamp(glm::length(value) * m_scalarMultiplier, m_scalarMinAlpha, 1.0f) };
 				}, results);
 		};
 
@@ -942,11 +944,11 @@ void EcoSysLab::EcoSysLabLayer::SoilVisualizationScalar(SoilModel& soilModel)
 			Jobs::ParallelFor(numVoxels, [&](unsigned i)
 				{
 					auto layerIndex = soilModel.m_material_id[i];
-					if(layerIndex == 0) m_scalarColors[i] = glm::vec4(0.0f);
-					else
-					{
-						m_scalarColors[i] = glm::vec4(glm::normalize(m_randomColors[layerIndex]) * 2.0f, glm::clamp(m_scalarMultiplier, 0.0f, 1.0f));
-					}
+			if (layerIndex == 0) m_scalarColors[i] = glm::vec4(0.0f);
+			else
+			{
+				m_scalarColors[i] = glm::vec4(glm::normalize(m_randomColors[layerIndex]) * 2.0f, glm::clamp(m_scalarMultiplier, 0.0f, 1.0f));
+			}
 				}, results);
 		}break;
 		}
@@ -986,51 +988,51 @@ void EcoSysLab::EcoSysLabLayer::SoilVisualizationVector(SoilModel& soilModel)
 		const auto actualVectorMultiplier = m_vectorMultiplier * soilModel.m_dx;
 		switch (static_cast<SoilProperty>(m_vectorSoilProperty))
 		{
-		/*
-		case SoilProperty::WaterDensityGradient:
-		{
-			Jobs::ParallelFor(numVoxels, [&](unsigned i)
-				{
-					const auto targetVector = glm::vec3(soilModel.m_w_grad_x[i], soilModel.m_w_grad_y[i], soilModel.m_w_grad_z[i]);
-					const auto start = soilModel.GetPositionFromCoordinate(soilModel.GetCoordinateFromIndex(i));
-					const auto end = start + targetVector * actualVectorMultiplier;
-					const auto direction = glm::normalize(end - start);
-					glm::quat rotation = glm::quatLookAt(direction, glm::vec3(direction.y, direction.z, direction.x));
-					rotation *= glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));
-					const auto length = glm::distance(end, start) / 2.0f;
-					const auto width = glm::min(m_vectorLineMaxWidth, length * m_vectorLineWidthFactor);
-					const auto model = glm::translate((start + end) / 2.0f) * glm::mat4_cast(rotation) *
-						glm::scale(glm::vec3(width, length, width));
-					m_vectorMatrices[i] = model;
-				}, results);
-		}break;*/
-		/*
-		case SoilProperty::Divergence:
-		{
-			Jobs::ParallelFor(numVoxels, [&](unsigned i)
-				{
-					const auto targetVector = glm::vec3(soilModel.m_div_diff_x[i], soilModel.m_div_diff_y[i], soilModel.m_div_diff_z[i]);
-					const auto start = soilModel.GetPositionFromCoordinate(soilModel.GetCoordinateFromIndex(i));
-					const auto end = start + targetVector * actualVectorMultiplier;
-					const auto direction = glm::normalize(end - start);
-					glm::quat rotation = glm::quatLookAt(direction, glm::vec3(direction.y, direction.z, direction.x));
-					rotation *= glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));
-					const auto length = glm::distance(end, start) / 2.0f;
-					const auto width = glm::min(m_vectorLineMaxWidth, length * m_vectorLineWidthFactor);
-					const auto model = glm::translate((start + end) / 2.0f) * glm::mat4_cast(rotation) *
-						glm::scale(glm::vec3(width, length, width));
-					m_vectorMatrices[i] = model;
-				}, results);
-		}break;
-		*/
+			/*
+			case SoilProperty::WaterDensityGradient:
+			{
+				Jobs::ParallelFor(numVoxels, [&](unsigned i)
+					{
+						const auto targetVector = glm::vec3(soilModel.m_w_grad_x[i], soilModel.m_w_grad_y[i], soilModel.m_w_grad_z[i]);
+						const auto start = soilModel.GetPositionFromCoordinate(soilModel.GetCoordinateFromIndex(i));
+						const auto end = start + targetVector * actualVectorMultiplier;
+						const auto direction = glm::normalize(end - start);
+						glm::quat rotation = glm::quatLookAt(direction, glm::vec3(direction.y, direction.z, direction.x));
+						rotation *= glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));
+						const auto length = glm::distance(end, start) / 2.0f;
+						const auto width = glm::min(m_vectorLineMaxWidth, length * m_vectorLineWidthFactor);
+						const auto model = glm::translate((start + end) / 2.0f) * glm::mat4_cast(rotation) *
+							glm::scale(glm::vec3(width, length, width));
+						m_vectorMatrices[i] = model;
+					}, results);
+			}break;*/
+			/*
+			case SoilProperty::Divergence:
+			{
+				Jobs::ParallelFor(numVoxels, [&](unsigned i)
+					{
+						const auto targetVector = glm::vec3(soilModel.m_div_diff_x[i], soilModel.m_div_diff_y[i], soilModel.m_div_diff_z[i]);
+						const auto start = soilModel.GetPositionFromCoordinate(soilModel.GetCoordinateFromIndex(i));
+						const auto end = start + targetVector * actualVectorMultiplier;
+						const auto direction = glm::normalize(end - start);
+						glm::quat rotation = glm::quatLookAt(direction, glm::vec3(direction.y, direction.z, direction.x));
+						rotation *= glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));
+						const auto length = glm::distance(end, start) / 2.0f;
+						const auto width = glm::min(m_vectorLineMaxWidth, length * m_vectorLineWidthFactor);
+						const auto model = glm::translate((start + end) / 2.0f) * glm::mat4_cast(rotation) *
+							glm::scale(glm::vec3(width, length, width));
+						m_vectorMatrices[i] = model;
+					}, results);
+			}break;
+			*/
 		default:
 		{
 			Jobs::ParallelFor(numVoxels, [&](unsigned i)
 				{
 					m_vectorMatrices[i] =
-						glm::translate(soilModel.GetPositionFromCoordinate(soilModel.GetCoordinateFromIndex(i)))
-						* glm::mat4_cast(glm::quat(glm::vec3(0.0f)))
-						* glm::scale(glm::vec3(0.0f));
+					glm::translate(soilModel.GetPositionFromCoordinate(soilModel.GetCoordinateFromIndex(i)))
+				* glm::mat4_cast(glm::quat(glm::vec3(0.0f)))
+				* glm::scale(glm::vec3(0.0f));
 				}, results);
 		}break;
 		}
@@ -1135,14 +1137,14 @@ void EcoSysLabLayer::BranchRenderingGs(const std::vector<Entity>* treeEntities)
 
 
 void EcoSysLabLayer::Update() {
-	
+
 	const auto scene = Application::GetActiveScene();
 	const auto soilEntity = scene->GetEntity(m_soilHolder.GetEntityHandle());
 	if (!scene->IsEntityValid(soilEntity) || !scene->HasPrivateComponent<Soil>(soilEntity)) {
 		m_soilHolder.Clear();
 		const std::vector<Entity>* soilEntities =
 			scene->UnsafeGetPrivateComponentOwnersList<Soil>();
-		if(soilEntities && !soilEntities->empty())
+		if (soilEntities && !soilEntities->empty())
 		{
 			m_soilHolder = scene->GetOrSetPrivateComponent<Soil>(soilEntities->at(0)).lock();
 		}
@@ -1177,7 +1179,9 @@ void EcoSysLabLayer::Simulate() {
 		std::vector<std::shared_future<void>> results;
 		Jobs::ParallelFor(treeEntities->size(), [&](unsigned i) {
 			auto treeEntity = treeEntities->at(i);
+		if (!scene->IsEntityEnabled(treeEntity)) return;
 		auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
+		if (!tree->IsEnabled()) return;
 		if (!tree->m_climate.Get<Climate>()) tree->m_climate = climate;
 		if (!tree->m_soil.Get<Soil>()) tree->m_soil = soil;
 		tree->TryGrow();

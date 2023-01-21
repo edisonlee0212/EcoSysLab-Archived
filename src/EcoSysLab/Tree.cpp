@@ -67,7 +67,7 @@ void Tree::OnInspect() {
 			treeVisualizationLayer->m_treeVisualizer.Reset(m_treeModel);
 		}
 	}
-
+	/*
 	static bool visualizeVolume = false;
 	ImGui::Checkbox("Visualize illumination volume", &visualizeVolume);
 	if(visualizeVolume && m_treeModel.m_treeVolume.m_hasData)
@@ -86,6 +86,13 @@ void Tree::OnInspect() {
 
 		Gizmos::DrawGizmoMeshInstanced(DefaultResources::Primitives::Cube, glm::vec4(1, 0, 0, 1), matrices);
 	}
+	*/
+
+	ImGui::Checkbox("Split root test", &m_splitRootTest);
+	ImGui::Checkbox("Biomass history", &m_recordBiomassHistory);
+
+	if (m_splitRootTest) ImGui::Text(("Left/Right side biomass: [" + std::to_string(m_leftSideBiomass) + ", " + std::to_string(m_rightSideBiomass) + "]").c_str());
+
 }
 
 void Tree::OnCreate() {
@@ -97,6 +104,10 @@ void Tree::OnDestroy() {
 	m_soil.Clear();
 	m_climate.Clear();
 	m_enableHistory = false;
+
+	m_leftSideBiomass = m_rightSideBiomass = 0.0f;
+	m_rootBiomassHistory.clear();
+	m_shootBiomassHistory.clear();
 }
 
 bool Tree::TryGrow() {
@@ -119,8 +130,36 @@ bool Tree::TryGrow() {
 	if (m_enableHistory) m_treeModel.Step();
 
 	const auto owner = GetOwner();
-	return m_treeModel.Grow(scene->GetDataComponent<GlobalTransform>(owner).m_value, soil->m_soilModel, climate->m_climateModel,
+
+	bool grown = m_treeModel.Grow(scene->GetDataComponent<GlobalTransform>(owner).m_value, soil->m_soilModel, climate->m_climateModel,
 		treeDescriptor->m_rootGrowthParameters, treeDescriptor->m_treeGrowthParameters);
+
+	if(m_recordBiomassHistory)
+	{
+		const auto& baseRootNode = m_treeModel.RefRootSkeleton().RefNode(0);
+		const auto& baseShootNode = m_treeModel.RefBranchSkeleton().RefNode(0);
+		m_rootBiomassHistory.emplace_back(baseRootNode.m_data.m_biomass + baseRootNode.m_data.m_descendentTotalBiomass);
+		m_shootBiomassHistory.emplace_back(baseShootNode.m_data.m_biomass + baseShootNode.m_data.m_descendentTotalBiomass);
+	}
+
+	if(m_splitRootTest)
+	{
+		const auto& rootNodeList = m_treeModel.RefRootSkeleton().RefSortedNodeList();
+		m_leftSideBiomass = m_rightSideBiomass = 0.0f;
+		for(const auto& rootNodeHandle : rootNodeList)
+		{
+			const auto& rootNode = m_treeModel.RefRootSkeleton().RefNode(rootNodeHandle);
+			if(rootNode.m_info.m_globalPosition.x < 0.0f)
+			{
+				m_leftSideBiomass += rootNode.m_data.m_biomass;
+			}else
+			{
+				m_rightSideBiomass += rootNode.m_data.m_biomass;
+			}
+		}
+	}
+
+	return grown;
 }
 
 void Tree::Serialize(YAML::Emitter& out)

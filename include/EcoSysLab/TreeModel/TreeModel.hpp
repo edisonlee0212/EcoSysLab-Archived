@@ -72,7 +72,7 @@ namespace EcoSysLab {
 		float m_extraMass = 0.0f;
 		float m_rootDistance = 0;
 
-		float m_temperature;
+		float m_temperature = 0.0f;
 
 		glm::vec3 m_lightDirection = glm::vec3(0, 1, 0);
 		float m_lightIntensity = 1.0f;
@@ -104,11 +104,11 @@ namespace EcoSysLab {
 		/*
 		 * The allocated total resource for maintenance and development of this module.
 		 */
-		float m_allocatedVigor;
+		float m_allocatedVigor = 0.0f;
 		/*
 		 * The allocated total resource for maintenance and development of all descendents.
 		 */
-		float m_subTreeAllocatedVigor;
+		float m_subTreeAllocatedVigor = 0.0f;
 
 		std::vector<glm::mat4> m_leaves;
 		std::vector<glm::mat4> m_fruits;
@@ -144,8 +144,8 @@ namespace EcoSysLab {
 		float m_inhibitorTarget = 0;
 		float m_inhibitor = 0;
 
-		float m_horizontalTropism;
-		float m_verticalTropism;
+		float m_horizontalTropism = 0.0f;
+		float m_verticalTropism = 0.0f;
 		/*
 		 * The desired resource needed for maintaining current plant structure.
 		 * Depending on the volume of root node.
@@ -168,7 +168,7 @@ namespace EcoSysLab {
 		/*
 		 * The allocated total resource for maintenance and development of all descendents.
 		 */
-		float m_subTreeAllocatedVigor;
+		float m_subTreeAllocatedVigor = 0.0f;
 
 		std::vector<glm::vec4> m_fineRootAnchors;
 

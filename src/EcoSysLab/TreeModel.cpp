@@ -971,8 +971,6 @@ void TreeModel::CalculateThicknessAndSagging(NodeHandle internodeHandle,
 	internodeData.m_descendentTotalBiomass = 0;
 	float maxDistanceToAnyBranchEnd = 0;
 	float childThicknessCollection = 0.0f;
-	NodeHandle maxChildHandle = -1;
-	float maxSubTreeBiomass = -1.0f;
 	for (const auto& i : internode.RefChildHandles()) {
 		auto& childInternode = m_branchSkeleton.RefNode(i);
 		const float childMaxDistanceToAnyBranchEnd =
