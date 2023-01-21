@@ -4,6 +4,7 @@
 #include <iostream>
 
 #include <glm/gtx/string_cast.hpp>
+#include <fstream>
 
 using namespace EcoSysLab;
 using namespace std;
@@ -40,6 +41,8 @@ void SoilModel::Initialize(const SoilParameters& p, const SoilSurface& soilSurfa
 	m_gravityForce = p.m_gravityForce;
 	m_nutrientForce = p.m_nutrientForce;
 	m_dt = p.m_deltaTime;
+	m_time_since_start_in_hrs = 0.f;
+	m_time_since_start_requested = 0.f;
 
 	m_resolution = p.m_voxelResolution;
 	m_dx = p.m_deltaX;
@@ -52,6 +55,8 @@ void SoilModel::Initialize(const SoilParameters& p, const SoilSurface& soilSurfa
 	m_boundary_x = p.m_boundary_x;
 	m_boundary_y = p.m_boundary_y;
 	m_boundary_z = p.m_boundary_z;
+
+	m_water_sources.clear();
 
 	m_blur_3x3_idx = vector<ivec3>({
 		{-1, -1, -1},
@@ -263,7 +268,11 @@ void SoilModel::Reset()
 {
 	assert(m_initialized);
 
-	m_time = 0.f;
+	m_time_since_start_in_hrs    = 0.f;
+	m_time_since_start_requested = 0.f;
+
+	// why not reset water here? what is the purpose of this function now??
+
 	// Water
 	//m_w = 0.f;
 	// Nutrients
@@ -455,7 +464,7 @@ bool SoilModel::Initialized() const
 
 float SoilModel::GetTime() const
 {
-	return m_time;
+	return m_time_since_start_in_hrs;
 }
 
 
@@ -756,7 +765,7 @@ void SoilModel::Step()
 		}
 	}
 
-	m_time += m_dt;
+	m_time_since_start_in_hrs += m_dt;
 
 	m_version++;
 }
@@ -821,6 +830,16 @@ float SoilModel::GetNutrientDensity(const vec3& position) const
 	return GetField(m_n, position, 0.0f);
 }
 
+
+void EcoSysLab::SoilModel::Run(float t_in_hrs)
+{
+	m_time_since_start_requested += t_in_hrs;
+	while (m_time_since_start_requested - m_time_since_start_in_hrs >= m_dt)
+	{
+		Irrigation();
+		Step();
+	}
+}
 
 float SoilModel::GetDensity(const vec3& position) const
 {
@@ -1351,6 +1370,8 @@ void EcoSysLab::SoilModel::Test_InitializeEmpty(glm::uvec3 resolution)
 		});
 
 	Initialize(p, surface, soil_layers);
+
+	m_water_sources.clear(); // clear rain source
 }
 
 
@@ -1460,4 +1481,118 @@ void EcoSysLab::SoilModel::Test_WaterDensity()
 	nutrient_density_test();
 	water_fetch_test();
 	nutrient_fetch_test();
+}
+
+void EcoSysLab::SoilModel::Test_PermeabilitySpeed()
+{
+	m_boundary_x = Boundary::absorb;
+	m_boundary_y = Boundary::absorb;
+	m_boundary_z = Boundary::absorb;
+
+	auto perm_setup = [this](uvec3 resolution={50, 100, 50}, float water_width=0.2f)
+	{
+		Test_InitializeEmpty(resolution);
+		m_boundary_x = Boundary::absorb;
+		m_boundary_y = Boundary::absorb;
+		m_boundary_z = Boundary::absorb;
+		m_dt = 0.01f;
+		m_gravityForce = vec3(0, -1, 0);
+		m_diffusionForce = 0.0f;
+		ChangeWater({0.5, 1.5, 0.5}, 100, water_width);
+	};
+
+	auto center_of_mass = [this](){
+		vec3 position(0.f);
+
+		float density_sum = 0;
+
+		for (auto z = 0; z < m_resolution.z; ++z)
+		{
+			for (auto y = 0; y < m_resolution.y; ++y)
+			{
+				for (auto x = 0; x < m_resolution.x; ++x)
+				{
+					auto density =m_w[Index(x, y, z)];
+					density_sum += density;
+					position += GetPositionFromCoordinate({x, y, z}) * density;
+				}
+			}
+		}
+
+		position /= density_sum;
+		return position;
+	};
+
+	auto test_timesteps = [this]()
+	{
+		m_dt = 1.f;
+		Run(1);
+		cout << "run for 1: " << GetTime() << endl;
+		Run(0.6);
+		cout << "run for 0.6: " << GetTime() << endl;
+		Run(0.5);
+		cout << "run for 0.5: " << GetTime() << endl;
+		Run(3.8);
+		cout << "run for 3.8: " << GetTime() << endl;
+		Run(0.2);
+		cout << "run for 0.2: " << GetTime() << endl;
+
+		m_dt = 0.1f;
+		Reset();
+		cout << "Reset" << endl;
+		Run(1);
+		cout << "run for 1: " << GetTime() << endl;
+		Run(0.6);
+		cout << "run for 0.6: " << GetTime() << endl;
+		Run(0.5);
+		cout << "run for 0.5: " << GetTime() << endl;
+		Run(3.8);
+		cout << "run for 3.8: " << GetTime() << endl;
+		Run(0.2);
+		cout << "run for 0.2: " << GetTime() << endl;
+
+		Reset();
+	};
+
+	// test time:
+	//test_timesteps();
+
+	auto perform_measurement = [&](string filename){
+		cout << "Starting " << filename << "..." << endl;
+		auto file = fstream(filename, ios_base::out | ios_base::trunc);
+		for(auto i=0; i<200; ++i)
+		{
+			Step();
+			UpdateStats();
+			auto center = center_of_mass();
+			file << GetTime() << "," << center.x << ", " << center.y << ", " << center.z << ", " << m_w_sum_in_g << endl;
+		}
+		cout << "done." << endl;
+	};
+
+	//perm_setup();
+	//perform_measurement("Water_Speed_01_reference.csv");
+	//
+	//perm_setup();
+	//m_dt = 0.008f;
+	//perform_measurement("Water_Speed_02_dt.csv");
+	//
+	//perm_setup({64, 128, 64});
+	//perform_measurement("Water_Speed_03_resolution.csv");
+	//
+	//perm_setup();
+	//m_p = 0.75f;
+	//perform_measurement("Water_Speed_04_permeability.csv");
+
+	perm_setup();
+	m_diffusionForce = 0.1f;
+	m_dt = 0.0025; // much smaller time step with diffusion
+	perform_measurement("Water_Speed_05_diffusion.csv");
+
+	//perm_setup();
+	//m_gravityForce = vec3(0, -0.6, 0);
+	//perform_measurement("Water_Speed_06_gravity.csv");
+	//
+	//perm_setup({50, 100, 50}, 0.075);
+	//perform_measurement("Water_Speed_07_water_width.csv");
 }

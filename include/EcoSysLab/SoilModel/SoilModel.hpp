@@ -63,7 +63,8 @@ namespace EcoSysLab {
 		void Initialize(const SoilParameters& p, const SoilSurface& soilSurface, const std::vector<SoilLayer>& soilLayers);
 
 		void Reset();
-		void Step();
+		void Run(float t_in_hrs); // simulates a given amount of hours
+		void Step(); // performs a single forward step (same as calling Run(t = m_dt);
 		void Irrigation(); // can be called for each step to add some water to the volume
 
 		[[nodiscard]] float IntegrateWater(const glm::vec3& position, float width) const; // returns the amount of water in grams within a certain area.
@@ -113,10 +114,10 @@ namespace EcoSysLab {
 		void SetVoxel(const glm::ivec3& coordinate, const SoilPhysicalMaterial& material);
 
 		float GetField(           const Field& field, const glm::vec3& position, float default_value) const;
-		void ChangeField(               Field& field, const glm::vec3& center, float amount_in_cm3, float width_in_m);
+		void  ChangeField(              Field& field, const glm::vec3& center, float amount_in_cm3, float width_in_m);
 		float IntegrateFieldValue(const Field& field, const glm::vec3& center, float width) const; // returns the cm3 of a certain quantity within the width in the field
-		void SetField(Field& field, const glm::vec3& bb_min, const glm::vec3& bb_max, float value);
-		void BlurField(Field& field); // for now there is just one standard kernel
+		void  SetField(Field& field, const glm::vec3& bb_min, const glm::vec3& bb_max, float value);
+		void  BlurField(Field& field); // for now there is just one standard kernel
 		
 		void AddSource(Source&& source);
 
@@ -141,6 +142,7 @@ namespace EcoSysLab {
 		void UpdateStats(); // updates sum of water and max speeds
 		void Test_InitializeEmpty(glm::uvec3 resolution);
 		void Test_WaterDensity();
+		void Test_PermeabilitySpeed();
 
 
 		bool m_initialized = false;
@@ -150,8 +152,9 @@ namespace EcoSysLab {
 		float m_voxel_volume_in_cm3;
 		float m_water_g_per_cm3; // how much water in g a volume of 1 cm^3 with density 1 contains
 		float m_nutrient_unit_per_cm3; // how much nutrient units a volume of 1 cm^3 with density 1 contains
-		float m_dt; // delta t, time between steps
-		float m_time = 0.0f; // time since start
+		float m_dt; // delta t, time between steps, also measured in hrs
+		float m_time_since_start_in_hrs = 0.0f; // time since start, always a multiple of m_dt
+		float m_time_since_start_requested = 0.f; // up until which time we should simulate
 
 		// scaling factors for different forces
 		float m_diffusionForce;
@@ -230,8 +233,8 @@ namespace EcoSysLab {
 		SoilModel::Boundary m_boundary_y = SoilModel::Boundary::sink;
 		SoilModel::Boundary m_boundary_z = SoilModel::Boundary::sink;
 
-		float m_diffusionForce = 0.1;
-		glm::vec3 m_gravityForce = glm::vec3(0, -0.05, 0);
-		float m_nutrientForce = 0.05;
+		float m_diffusionForce = 1;
+		glm::vec3 m_gravityForce = glm::vec3(0, -1.0, 0);
+		float m_nutrientForce = 0.5;
 	};
 }
