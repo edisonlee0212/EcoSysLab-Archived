@@ -20,6 +20,9 @@ namespace EcoSysLab
 	class NoiseSoilLayerDescriptor : public ISoilLayerDescriptor
 	{
 	public:
+		AssetRef m_albedoTexture;
+		AssetRef m_heightTexture;
+
 		Noises3D m_capacity;
 		Noises3D m_permeability;
 		Noises3D m_density;

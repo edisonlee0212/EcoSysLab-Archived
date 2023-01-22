@@ -1098,15 +1098,15 @@ ivec3 SoilModel::GetCoordinateFromPosition(const vec3& pos) const
 
 vec3 SoilModel::GetPositionFromCoordinate(const ivec3& coordinate) const
 {
-	return GetPositionFromCoordinate(coordinate, m_dx);
+	return GetPositionFromCoordinate(coordinate, m_dx, m_dx, m_dx);
 }
 
-vec3 EcoSysLab::SoilModel::GetPositionFromCoordinate(const glm::ivec3& coordinate, float dx) const
+vec3 EcoSysLab::SoilModel::GetPositionFromCoordinate(const glm::ivec3& coordinate, float dx, float dy, float dz) const
 {
 	return {
 		m_boundingBoxMin.x + (dx/2.0) + coordinate.x * dx,
-		m_boundingBoxMin.y + (dx/2.0) + coordinate.y * dx,
-		m_boundingBoxMin.z + (dx/2.0) + coordinate.z * dx
+		m_boundingBoxMin.y + (dy/2.0) + coordinate.y * dy,
+		m_boundingBoxMin.z + (dz/2.0) + coordinate.z * dz
 	};
 }
 
@@ -1163,25 +1163,26 @@ void EcoSysLab::SoilModel::Source::Apply(Field& target)
 }
 
 
-std::vector<glm::vec4> SoilModel::GetSoilTextureSlideZ(int slize_z, glm::uvec2 resolution, const std::map<int, SoilMaterialTexture*>& textures, float blur_width)
+std::vector<glm::vec4> SoilModel::GetSoilTextureSlideZ(int slize_z, const glm::vec2& xyMin, const glm::vec2& xyMax, const glm::uvec2& resolution, const std::map<int, std::shared_ptr<SoilMaterialTexture>>& textures, float blur_width)
 {
-	assert(resolution.x == resolution.y);
-	vector<vec4> output(resolution.x * resolution.y);
-	auto dim_max = glm::max(m_resolution.x, m_resolution.y);
+	std::vector<vec4> output(resolution.x * resolution.y);
+	const float texRangeX = xyMax.x - xyMin.x;
+	const float texRangeY = xyMax.y - xyMin.y;
 
 	const float slize_z_position = GetPositionFromCoordinate(ivec3(0, 0, slize_z)).z;
-	const float tex_dx = m_dx * (float)dim_max / (float)resolution.x;
-
-	for(auto x=0; x<resolution.x; ++x)
+	const float tex_dx = texRangeX * m_dx * static_cast<float>(m_resolution.x) / static_cast<float>(resolution.x);
+	const float tex_dy = texRangeY * m_dx * static_cast<float>(m_resolution.y) / static_cast<float>(resolution.y);
+	for (auto texCoordX = 0; texCoordX < resolution.x; ++texCoordX)
 	{
-		for(auto y=0; y<resolution.y; ++y)
+		for (auto texCoordY = 0; texCoordY < resolution.y; ++texCoordY)
 		{
-			auto texture_idx = x+y*resolution.x;
-
-			vec3 texel_position = GetPositionFromCoordinate(ivec3(x, y, 0), tex_dx);
+			auto texture_idx = texCoordX + texCoordY * resolution.x;
+			int gridCoordX = xyMin.x / tex_dx + texCoordX;
+			int gridCoordY = xyMin.y / tex_dy + texCoordY;
+			glm::vec3 texel_position = GetPositionFromCoordinate(ivec3(gridCoordX, gridCoordY, 0), tex_dx, tex_dy, m_dx);
 			texel_position.z = slize_z_position;
 
-			if( ! PositionInsideVolume(texel_position) )
+			if (!PositionInsideVolume(texel_position))
 				output[texture_idx] = vec4(0, 0, 0, 0);
 			else
 			{
@@ -1190,29 +1191,31 @@ std::vector<glm::vec4> SoilModel::GetSoilTextureSlideZ(int slize_z, glm::uvec2 r
 		}
 	}
 
-	return output;
+	return std::move(output);
 }
 
 
-std::vector<glm::vec4> SoilModel::GetSoilTextureSlideX(int slize_x, glm::uvec2 resolution, const std::map<int, SoilMaterialTexture*>& textures, float blur_width)
+std::vector<glm::vec4> SoilModel::GetSoilTextureSlideX(int slize_x, const glm::vec2& yzMin, const glm::vec2& yzMax, const glm::uvec2& resolution, const std::map<int, std::shared_ptr<SoilMaterialTexture>>& textures, float blur_width)
 {
-	assert(resolution.x == resolution.y);
-	vector<vec4> output(resolution.x * resolution.y);
-	auto dim_max = glm::max(m_resolution.x, m_resolution.y);
+	std::vector<vec4> output(resolution.x * resolution.y);
+	const float texRangeY = yzMax.x - yzMin.x;
+	const float texRangeZ = yzMax.y - yzMin.y;
 
 	const float slize_x_position = GetPositionFromCoordinate(ivec3(slize_x, 0, 0)).z;
-	const float tex_dx = m_dx * (float)dim_max / (float)resolution.x;
+	const float tex_dy = texRangeY * m_dx * static_cast<float>(m_resolution.x) / static_cast<float>(resolution.x);
+	const float tex_dz = texRangeZ * m_dx * static_cast<float>(m_resolution.y) / static_cast<float>(resolution.y);
 
-	for(auto x=0; x<resolution.x; ++x)
+	for (auto x = 0; x < resolution.x; ++x)
 	{
-		for(auto y=0; y<resolution.y; ++y)
+		for (auto y = 0; y < resolution.y; ++y)
 		{
-			auto texture_idx = x+y*resolution.x;
-
-			vec3 texel_position = GetPositionFromCoordinate(ivec3(0, y, x), tex_dx);
+			auto texture_idx = x + y * resolution.x;
+			int coordY = yzMin.x / tex_dy + x;
+			int coordZ = yzMin.y / tex_dz + y;
+			glm::vec3 texel_position = GetPositionFromCoordinate(ivec3(0, coordY, coordZ), m_dx, tex_dy, tex_dz);
 			texel_position.x = slize_x_position;
 
-			if( ! PositionInsideVolume(texel_position) )
+			if (!PositionInsideVolume(texel_position))
 				output[texture_idx] = vec4(0, 0, 0, 0);
 			else
 			{
@@ -1221,11 +1224,11 @@ std::vector<glm::vec4> SoilModel::GetSoilTextureSlideX(int slize_x, glm::uvec2 r
 		}
 	}
 
-	return output;
+	return std::move(output);
 }
 
 
-glm::vec4 EcoSysLab::SoilModel::GetSoilTextureColorForPosition(const glm::vec3& position, int texture_idx, const std::map<int, SoilMaterialTexture*>& textures, float blur_width)
+glm::vec4 EcoSysLab::SoilModel::GetSoilTextureColorForPosition(const glm::vec3& position, int texture_idx, const std::map<int, std::shared_ptr<SoilMaterialTexture>>& textures, float blur_width)
 {
 	const float blur_kernel_width = m_dx*m_dx * blur_width * blur_width;
 	auto soil_voxel_base = GetCoordinateFromPosition(position);
@@ -1242,11 +1245,11 @@ glm::vec4 EcoSysLab::SoilModel::GetSoilTextureColorForPosition(const glm::vec3& 
 			auto material_id = m_material_id[Index(soil_voxel)];
 			if(textures.find(material_id) == textures.end())
 			{
-				cout << "Id not found" << material_id << endl;
+				//cout << "Id not found" << material_id << endl;
 				return vec4(0.f);
 			}
-			auto& tex = *textures.at(material_id);
-
+			const auto& texPtr = textures.at(material_id);
+			if(!texPtr) return vec4(0.f);
 			const auto p = GetPositionFromCoordinate(soil_voxel);
 			const auto dist = glm::length(p - position);
 
@@ -1256,7 +1259,7 @@ glm::vec4 EcoSysLab::SoilModel::GetSoilTextureColorForPosition(const glm::vec3& 
 			if( contributing_materials.find(material_id) == contributing_materials.end())
 				contributing_materials[material_id] = 0;
 
-			auto heightmap_height = tex.m_height_map[texture_idx];
+			auto heightmap_height = texPtr->m_height_map[texture_idx];
 			contributing_materials[material_id] += weight * heightmap_height * heightmap_height;
 			//total_weight +=  weight * tex.m_height_map[texture_idx];
 

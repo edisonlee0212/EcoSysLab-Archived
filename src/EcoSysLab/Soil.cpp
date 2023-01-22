@@ -152,6 +152,9 @@ void NoiseSoilLayerDescriptor::OnInspect()
 		changed = m_thickness.OnInspect() || changed;
 		ImGui::TreePop();
 	}
+
+	if (Editor::DragAndDropButton<Texture2D>(m_albedoTexture, "Albedo")) changed = true;
+	if (Editor::DragAndDropButton<Texture2D>(m_heightTexture, "Height")) changed = true;
 	if (changed) m_saved = false;
 }
 
@@ -164,6 +167,9 @@ void NoiseSoilLayerDescriptor::Serialize(YAML::Emitter& out)
 	m_initialWater.Save("m_initialWater", out);
 
 	m_thickness.Save("m_thickness", out);
+
+	m_albedoTexture.Save("m_albedoTexture", out);
+	m_heightTexture.Save("m_heightTexture", out);
 }
 
 void NoiseSoilLayerDescriptor::Deserialize(const YAML::Node& in)
@@ -174,6 +180,9 @@ void NoiseSoilLayerDescriptor::Deserialize(const YAML::Node& in)
 	m_initialNutrients.Load("m_initialNutrients", in);
 	m_initialWater.Load("m_initialWater", in);
 	m_thickness.Load("m_thickness", in);
+
+	m_albedoTexture.Load("m_albedoTexture", in);
+	m_heightTexture.Load("m_heightTexture", in);
 }
 
 void SoilDescriptor::OnInspect()

@@ -22,9 +22,16 @@ namespace EcoSysLab {
 		std::function<float(const glm::vec2& position)> m_height;
 	};
 
+	struct SoilMaterialTexture
+	{
+		std::vector<glm::vec4> m_color_map;
+		std::vector<float> m_height_map;
+	};
+
 	struct SoilPhysicalMaterial
 	{
 		int m_id = -1;
+
 		std::function<float(const glm::vec3& position)> m_c; // capacity
 		std::function<float(const glm::vec3& position)> m_p; // permeability
 		std::function<float(const glm::vec3& position)> m_d; // density
@@ -39,11 +46,7 @@ namespace EcoSysLab {
 		std::function<float(const glm::vec2& position)> m_thickness;
 	};
 
-	struct SoilMaterialTexture
-	{
-		std::vector<glm::vec4> m_color_map;
-		std::vector<float> m_height_map;
-	};
+	
 
 	class SoilModel {
 		friend class Soil;
@@ -89,7 +92,7 @@ namespace EcoSysLab {
 
 		[[nodiscard]] glm::ivec3 GetCoordinateFromIndex(const int index) const;
 		[[nodiscard]] glm::ivec3 GetCoordinateFromPosition(const glm::vec3& position) const;
-		[[nodiscard]] glm::vec3  GetPositionFromCoordinate(const glm::ivec3& coordinate, float dx) const;
+		[[nodiscard]] glm::vec3  GetPositionFromCoordinate(const glm::ivec3& coordinate, float dx, float dy, float dz) const;
 		[[nodiscard]] glm::vec3  GetPositionFromCoordinate(const glm::ivec3& coordinate) const; // uses m_dx as dx
 				
 		[[nodiscard]] glm::ivec3 GetVoxelResolution() const;
@@ -102,10 +105,10 @@ namespace EcoSysLab {
 		bool CoordinateInsideVolume(const glm::ivec3& coordinate) const;
 		[[nodiscard]] bool Initialized() const;
 
-		std::vector<glm::vec4> GetSoilTextureSlideZ(int slize_z, glm::uvec2 resolution, const std::map<int, SoilMaterialTexture*>& textures, float blur_width=1); // the output as well as all input textures must have the same resolution!
-		std::vector<glm::vec4> GetSoilTextureSlideX(int slize_x, glm::uvec2 resolution, const std::map<int, SoilMaterialTexture*>& textures, float blur_width=1); // the output as well as all input textures must have the same resolution!
+		std::vector<glm::vec4> GetSoilTextureSlideZ(int slize_z, const glm::vec2 &xyMin, const glm::vec2 &xyMax, const glm::uvec2& resolution, const std::map<int, std::shared_ptr<SoilMaterialTexture>>& textures, float blur_width=1); // the output as well as all input textures must have the same resolution!
+		std::vector<glm::vec4> GetSoilTextureSlideX(int slize_x, const glm::vec2& yzMin, const glm::vec2& yzMax, const glm::uvec2& resolution, const std::map<int, std::shared_ptr<SoilMaterialTexture>>& textures, float blur_width=1); // the output as well as all input textures must have the same resolution!
 		
-		glm::vec4 GetSoilTextureColorForPosition(const glm::vec3& position, int texture_idx, const std::map<int, SoilMaterialTexture*>& textures, float blur_width);
+		glm::vec4 GetSoilTextureColorForPosition(const glm::vec3& position, int texture_idx, const std::map<int, std::shared_ptr<SoilMaterialTexture>>& textures, float blur_width);
 
 
 		int m_version = 0; // TODO: what does this do?
