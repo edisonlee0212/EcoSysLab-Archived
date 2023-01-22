@@ -865,7 +865,7 @@ inline void TreeModel::AllocateShootVigor(const TreeGrowthParameters& treeGrowth
 		if (internode.GetParentHandle() == -1) {
 			if (m_shootGrowthRequirement.m_vigor + m_rootGrowthRequirement.m_vigor != 0.0f) {
 				//We firstly determine how much resource being allocated to shoot system on system graph level.
-				const auto totalResourceForTree = m_plantGrowthNutrients.m_vigor *
+				auto totalResourceForTree = m_plantGrowthNutrients.m_vigor *
 					m_shootGrowthRequirement.m_vigor / (m_shootGrowthRequirement.m_vigor + m_rootGrowthRequirement.m_vigor);
 				//The root internode firstly extract it's own resources needed for itself.
 				internodeData.m_allocatedVigor = totalResourceForTree *
@@ -986,7 +986,7 @@ void TreeModel::CalculateThicknessAndSagging(NodeHandle internodeHandle,
 	auto& internode = m_branchSkeleton.RefNode(internodeHandle);
 	auto& internodeData = internode.m_data;
 	auto& internodeInfo = internode.m_info;
-	internodeData.m_descendentTotalBiomass = 0;
+	internodeData.m_descendentTotalBiomass = internodeData.m_biomass = 0.0f;
 	float maxDistanceToAnyBranchEnd = 0;
 	float childThicknessCollection = 0.0f;
 
@@ -1350,7 +1350,7 @@ bool TreeModel::PruneInternodes(float maxDistance, NodeHandle internodeHandle,
 
 		if (pruningProbability >= glm::linearRand(0.0f, 1.0f)) pruning = true;
 	}
-
+	if (internode.m_info.m_globalPosition.y <= 0.5f && internode.m_data.m_order != 0 && glm::linearRand(0.0f, 1.0f) < treeGrowthParameters.m_growthRate * 0.1f) pruning = true;
 	if (pruning)
 	{
 		m_branchSkeleton.RecycleNode(internodeHandle);
@@ -1551,7 +1551,6 @@ void TreeModel::AllocateRootVigor(const RootGrowthParameters& rootGrowthParamete
 			if (m_shootGrowthRequirement.m_vigor + m_rootGrowthRequirement.m_vigor != 0.0f) {
 				const auto totalResourceForRoot = m_plantGrowthNutrients.m_vigor *
 					m_rootGrowthRequirement.m_vigor / (m_shootGrowthRequirement.m_vigor + m_rootGrowthRequirement.m_vigor);
-
 				float allocatedVigor = totalResourceForRoot *
 					(rootNodeData.m_growthPotential + rootNodeData.m_maintenanceVigorRequirement)
 				/ (rootNodeData.m_growthPotential + rootNodeData.m_maintenanceVigorRequirement
