@@ -57,6 +57,7 @@ void SoilModel::Initialize(const SoilParameters& p, const SoilSurface& soilSurfa
 	m_boundary_z = p.m_boundary_z;
 
 	m_water_sources.clear();
+	m_nutrient_sources.clear();
 
 	m_blur_3x3_idx = vector<ivec3>({
 		{-1, -1, -1},
@@ -191,7 +192,8 @@ void SoilModel::Initialize(const SoilParameters& p, const SoilSurface& soilSurfa
 
 	// Permeability
 	m_p = Field(numVoxels); // initialize with 1s
-	m_p = 1.0f;
+	m_p = 0.0f;
+
 	//SetField(m_p, vec3(-6.4, -5, -6.4), vec3(6.4, 1, 6.4), 0.5f);
 	SetField(m_p, vec3(-2, -5, -6.4), vec3(0, 1, 6.4), 0.0f);
 	BlurField(m_p);
@@ -222,7 +224,7 @@ void EcoSysLab::SoilModel::BuildFromLayers()
 			pos.y = groundHeight;
 
 			// insert water 2 voxels below ground
-			auto rain_coord = GetCoordinateFromPosition(pos) + ivec3(0, -2, 0);
+			auto rain_coord = GetCoordinateFromPosition(pos) + ivec3(0, -1, 0);
 			if(CoordinateInsideVolume(rain_coord))
 				rain_field[Index(rain_coord)] = 0.1;
 
@@ -251,7 +253,7 @@ void EcoSysLab::SoilModel::BuildFromLayers()
 
 	Source rain_source;
 	BlurField(rain_field);
-	BlurField(rain_field);
+	//BlurField(rain_field);
 	for(auto i=0; i<rain_field.size(); ++i)
 	{
 		if( rain_field[i] > 0 )
@@ -260,7 +262,7 @@ void EcoSysLab::SoilModel::BuildFromLayers()
 			rain_source.amounts.push_back(rain_field[i]);
 		}
 	}
-	AddSource(move(rain_source));
+	AddWaterSource(move(rain_source));
 }
 
 
@@ -451,9 +453,14 @@ void EcoSysLab::SoilModel::Boundary_Barrier_Z(const Field& input, Field& output,
 }
 
 
-void EcoSysLab::SoilModel::AddSource(Source&& source)
+void EcoSysLab::SoilModel::AddWaterSource(Source&& source)
 {
 	m_water_sources.emplace_back(source);
+}
+
+void EcoSysLab::SoilModel::AddNutrientSource(Source&& source)
+{
+	m_nutrient_sources.emplace_back(source);
 }
 
 
@@ -498,12 +505,11 @@ void SoilModel::Step()
 
 	// ----------------- diffusion -----------------
 	{
-		if(m_use_capacity)
+		if(true)
 		{
-			for(auto i=0; i<num_voxels; ++i)
-				m_l[i] = m_w[i] / m_c[i];
+			m_l = m_w / m_c;
 		}
-		else
+		else // don't use capacity forces
 			m_l = m_w;
 
 
@@ -776,6 +782,8 @@ void EcoSysLab::SoilModel::Irrigation()
 
 	for(auto& s : m_water_sources)
 		s.Apply(m_w);
+	for(auto& s : m_nutrient_sources)
+		s.Apply(m_n);
 /*
 	m_rnd = std::mt19937(27);
 
@@ -1485,10 +1493,6 @@ void EcoSysLab::SoilModel::Test_WaterDensity()
 
 void EcoSysLab::SoilModel::Test_PermeabilitySpeed()
 {
-	m_boundary_x = Boundary::absorb;
-	m_boundary_y = Boundary::absorb;
-	m_boundary_z = Boundary::absorb;
-
 	auto perm_setup = [this](uvec3 resolution={50, 100, 50}, float water_width=0.2f)
 	{
 		Test_InitializeEmpty(resolution);
@@ -1557,10 +1561,10 @@ void EcoSysLab::SoilModel::Test_PermeabilitySpeed()
 	// test time:
 	//test_timesteps();
 
-	auto perform_measurement = [&](string filename){
+	auto perform_measurement = [&](string filename, int steps=200){
 		cout << "Starting " << filename << "..." << endl;
 		auto file = fstream(filename, ios_base::out | ios_base::trunc);
-		for(auto i=0; i<200; ++i)
+		for(auto i=0; i<steps; ++i)
 		{
 			Step();
 			UpdateStats();
@@ -1570,29 +1574,130 @@ void EcoSysLab::SoilModel::Test_PermeabilitySpeed()
 		cout << "done." << endl;
 	};
 
-	//perm_setup();
-	//perform_measurement("Water_Speed_01_reference.csv");
-	//
-	//perm_setup();
-	//m_dt = 0.008f;
-	//perform_measurement("Water_Speed_02_dt.csv");
-	//
-	//perm_setup({64, 128, 64});
-	//perform_measurement("Water_Speed_03_resolution.csv");
-	//
-	//perm_setup();
-	//m_p = 0.75f;
-	//perform_measurement("Water_Speed_04_permeability.csv");
+	perm_setup();
+	perform_measurement("Water_Speed_01_reference.csv");
+	
+	perm_setup();
+	m_dt = 0.008f;
+	perform_measurement("Water_Speed_02_dt.csv");
+	
+	perm_setup({64, 128, 64});
+	perform_measurement("Water_Speed_03_resolution.csv");
+	
+	perm_setup();
+	m_p = 0.75f;
+	perform_measurement("Water_Speed_04_permeability.csv");
 
 	perm_setup();
 	m_diffusionForce = 0.1f;
 	m_dt = 0.0025; // much smaller time step with diffusion
 	perform_measurement("Water_Speed_05_diffusion.csv");
 
-	//perm_setup();
-	//m_gravityForce = vec3(0, -0.6, 0);
-	//perform_measurement("Water_Speed_06_gravity.csv");
-	//
-	//perm_setup({50, 100, 50}, 0.075);
-	//perform_measurement("Water_Speed_07_water_width.csv");
+	perm_setup();
+	m_gravityForce = vec3(0, -0.6, 0);
+	perform_measurement("Water_Speed_06_gravity.csv");
+	
+	perm_setup({50, 100, 50}, 0.075);
+	perform_measurement("Water_Speed_07_water_width.csv");
+
+	perm_setup();
+	m_c = 0.5;
+	m_diffusionForce = 0.2f;
+	m_dt = 0.001;
+	perform_measurement("Water_Speed_08_capacity_low.csv", 600);
+
+	perm_setup();
+	m_c = 1.5;
+	m_diffusionForce = 0.2f;
+	m_dt = 0.001;
+	perform_measurement("Water_Speed_09_capacity_high.csv", 600);
+
+	perm_setup();
+	m_c = 0.5;
+	m_diffusionForce = 0.05f;
+	m_dt = 0.001;
+	perform_measurement("Water_Speed_10_capacity_low_diffusion_low.csv", 600);
+}
+
+
+void EcoSysLab::SoilModel::Test_NutrientTransport(float p, float c)
+{
+	auto setup = [this](float permeability, float capacity)
+	{
+		SoilParameters p; // standard values as defined when this function was first added are fine.
+		p.m_boundary_x = Boundary::wrap;
+		p.m_boundary_y = Boundary::absorb;
+		p.m_boundary_z = Boundary::wrap;
+		p.m_nutrientForce = 1.f;
+
+		const auto Value      = [](float v){
+			return [v](const vec2& p) { return v; };
+		};
+
+		const auto l_0      = [](const vec2& p) { return 0.f; };
+		const auto l_1      = [](const vec2& p) { return 1.f; };
+		const auto l_10     = [](const vec2& p) { return 10.f; };
+		const auto l_height = [](const vec2& p) { return 1.5f; };
+
+		SoilSurface surface;
+		surface.m_height = l_height;
+
+
+		SoilPhysicalMaterial Air;
+		Air.m_c = Value(1);
+		Air.m_d = Value(0);
+		Air.m_p = Value(0);
+		Air.m_n = Value(0);
+		Air.m_w = Value(0);
+
+		SoilPhysicalMaterial nutrient;
+		nutrient.m_c = l_0;
+		nutrient.m_d = l_1;
+		nutrient.m_p = l_0;
+		nutrient.m_n = l_10;
+		nutrient.m_w = l_0;
+
+
+		SoilPhysicalMaterial soil;
+		soil.m_c = l_0;
+		soil.m_d = l_1;
+		soil.m_p = l_0;
+		soil.m_n = l_0;
+		soil.m_w = l_0;
+
+		auto soil_layers = std::vector<SoilLayer>({
+			SoilLayer({Air, Value(0)}),
+			SoilLayer({soil, Value(0.2)}),
+			SoilLayer({nutrient, Value(0.5)}),
+			SoilLayer({soil, Value(10)})
+			});
+
+		Initialize(p, surface, soil_layers);
+
+		//m_water_sources.clear(); // clear rain source
+
+		m_p = permeability;
+		m_c = capacity;
+		m_dt = 0.1; // seems stable enough
+	};
+
+	setup(p, c); // sand material
+
+	// to create a nutrient source, we copy the water source:
+	//m_nutrient_sources.push_back(*m_water_sources.begin());
+}
+
+void EcoSysLab::SoilModel::Test_NutrientTransport_Sand()
+{
+	Test_NutrientTransport(0.5, 100);
+}
+
+void EcoSysLab::SoilModel::Test_NutrientTransport_Loam()
+{
+	Test_NutrientTransport(0.1, 75);
+}
+
+void EcoSysLab::SoilModel::Test_NutrientTransport_Silt()
+{
+	Test_NutrientTransport(0.033, 50);
 }
