@@ -31,13 +31,13 @@ namespace EcoSysLab {
 	struct SoilPhysicalMaterial
 	{
 		int m_id = -1;
-
 		std::function<float(const glm::vec3& position)> m_c; // capacity
 		std::function<float(const glm::vec3& position)> m_p; // permeability
 		std::function<float(const glm::vec3& position)> m_d; // density
 
 		std::function<float(const glm::vec3& position)> m_n; // initial amount of nutrients
 		std::function<float(const glm::vec3& position)> m_w; // initial amount of water
+		std::shared_ptr<SoilMaterialTexture> m_soilMaterialTexture;
 	};
 
 	struct SoilLayer
@@ -105,10 +105,10 @@ namespace EcoSysLab {
 		bool CoordinateInsideVolume(const glm::ivec3& coordinate) const;
 		[[nodiscard]] bool Initialized() const;
 
-		std::vector<glm::vec4> GetSoilTextureSlideZ(int slize_z, const glm::vec2 &xyMin, const glm::vec2 &xyMax, const glm::uvec2& resolution, const std::map<int, std::shared_ptr<SoilMaterialTexture>>& textures, float blur_width=1); // the output as well as all input textures must have the same resolution!
-		std::vector<glm::vec4> GetSoilTextureSlideX(int slize_x, const glm::vec2& yzMin, const glm::vec2& yzMax, const glm::uvec2& resolution, const std::map<int, std::shared_ptr<SoilMaterialTexture>>& textures, float blur_width=1); // the output as well as all input textures must have the same resolution!
+		std::vector<glm::vec4> GetSoilTextureSlideZ(int slize_z, const glm::vec2 &xyMin, const glm::vec2 &xyMax, const glm::uvec2& resolution, float blur_width=1); // the output as well as all input textures must have the same resolution!
+		std::vector<glm::vec4> GetSoilTextureSlideX(int slize_x, const glm::vec2& yzMin, const glm::vec2& yzMax, const glm::uvec2& resolution, float blur_width=1); // the output as well as all input textures must have the same resolution!
 		
-		glm::vec4 GetSoilTextureColorForPosition(const glm::vec3& position, int texture_idx, const std::map<int, std::shared_ptr<SoilMaterialTexture>>& textures, float blur_width);
+		glm::vec4 GetSoilTextureColorForPosition(const glm::vec3& position, int texture_idx, float blur_width);
 
 
 		int m_version = 0; // TODO: what does this do?

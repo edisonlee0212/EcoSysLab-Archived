@@ -1163,7 +1163,7 @@ void EcoSysLab::SoilModel::Source::Apply(Field& target)
 }
 
 
-std::vector<glm::vec4> SoilModel::GetSoilTextureSlideZ(int slize_z, const glm::vec2& xyMin, const glm::vec2& xyMax, const glm::uvec2& resolution, const std::map<int, std::shared_ptr<SoilMaterialTexture>>& textures, float blur_width)
+std::vector<glm::vec4> SoilModel::GetSoilTextureSlideZ(int slize_z, const glm::vec2& xyMin, const glm::vec2& xyMax, const glm::uvec2& resolution, float blur_width)
 {
 	std::vector<vec4> output(resolution.x * resolution.y);
 	const float texRangeX = xyMax.x - xyMin.x;
@@ -1186,7 +1186,7 @@ std::vector<glm::vec4> SoilModel::GetSoilTextureSlideZ(int slize_z, const glm::v
 				output[texture_idx] = vec4(0, 0, 0, 0);
 			else
 			{
-				output[texture_idx] = GetSoilTextureColorForPosition(texel_position, texture_idx, textures, blur_width);
+				output[texture_idx] = GetSoilTextureColorForPosition(texel_position, texture_idx, blur_width);
 			}
 		}
 	}
@@ -1195,7 +1195,7 @@ std::vector<glm::vec4> SoilModel::GetSoilTextureSlideZ(int slize_z, const glm::v
 }
 
 
-std::vector<glm::vec4> SoilModel::GetSoilTextureSlideX(int slize_x, const glm::vec2& yzMin, const glm::vec2& yzMax, const glm::uvec2& resolution, const std::map<int, std::shared_ptr<SoilMaterialTexture>>& textures, float blur_width)
+std::vector<glm::vec4> SoilModel::GetSoilTextureSlideX(int slize_x, const glm::vec2& yzMin, const glm::vec2& yzMax, const glm::uvec2& resolution, float blur_width)
 {
 	std::vector<vec4> output(resolution.x * resolution.y);
 	const float texRangeY = yzMax.x - yzMin.x;
@@ -1219,7 +1219,7 @@ std::vector<glm::vec4> SoilModel::GetSoilTextureSlideX(int slize_x, const glm::v
 				output[texture_idx] = vec4(0, 0, 0, 0);
 			else
 			{
-				output[texture_idx] = GetSoilTextureColorForPosition(texel_position, texture_idx, textures, blur_width);
+				output[texture_idx] = GetSoilTextureColorForPosition(texel_position, texture_idx, blur_width);
 			}
 		}
 	}
@@ -1228,7 +1228,7 @@ std::vector<glm::vec4> SoilModel::GetSoilTextureSlideX(int slize_x, const glm::v
 }
 
 
-glm::vec4 EcoSysLab::SoilModel::GetSoilTextureColorForPosition(const glm::vec3& position, int texture_idx, const std::map<int, std::shared_ptr<SoilMaterialTexture>>& textures, float blur_width)
+glm::vec4 EcoSysLab::SoilModel::GetSoilTextureColorForPosition(const glm::vec3& position, int texture_idx, float blur_width)
 {
 	const float blur_kernel_width = m_dx*m_dx * blur_width * blur_width;
 	auto soil_voxel_base = GetCoordinateFromPosition(position);
@@ -1243,12 +1243,9 @@ glm::vec4 EcoSysLab::SoilModel::GetSoilTextureColorForPosition(const glm::vec3& 
 		{
 			// fetch material
 			auto material_id = m_material_id[Index(soil_voxel)];
-			if(textures.find(material_id) == textures.end())
-			{
-				//cout << "Id not found" << material_id << endl;
-				return vec4(0.f);
-			}
-			const auto& texPtr = textures.at(material_id);
+			if(material_id < 0 || material_id >= m_soilLayers.size()) return vec4(0.f);
+			const auto& material = m_soilLayers[material_id].m_mat;
+			const auto& texPtr = material.m_soilMaterialTexture;
 			if(!texPtr) return vec4(0.f);
 			const auto p = GetPositionFromCoordinate(soil_voxel);
 			const auto dist = glm::length(p - position);
@@ -1286,7 +1283,7 @@ glm::vec4 EcoSysLab::SoilModel::GetSoilTextureColorForPosition(const glm::vec3& 
 	for(auto& p : contributing_materials)
 	{
 		auto weight = p.second * p.second;
-		output += textures.at(p.first)->m_color_map[texture_idx] * weight;
+		output += m_soilLayers[p.first].m_mat.m_soilMaterialTexture->m_color_map[texture_idx] * weight;
 		total_weight += weight;
 	}
 	output /= total_weight;
