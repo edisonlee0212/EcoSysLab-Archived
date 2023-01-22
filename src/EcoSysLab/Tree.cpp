@@ -32,12 +32,18 @@ void Tree::OnInspect() {
 			modelChanged = true;
 		}
 		static int iterations = 5;
-		ImGui::DragInt("Iterations", &iterations, 1, 1, 100);
-		if (ImGui::TreeNode("Mesh generation")) {
+		ImGui::DragInt("Iterations", &iterations, 1, 0, m_treeModel.CurrentIteration());
+		iterations = glm::clamp(iterations, 0, m_treeModel.CurrentIteration());
+		
+		if (ImGui::TreeNodeEx("Mesh generation", ImGuiTreeNodeFlags_DefaultOpen)) {
 			static TreeMeshGeneratorSettings meshGeneratorSettings;
 			meshGeneratorSettings.OnInspect();
 			if (ImGui::Button("Generate Mesh")) {
-				GenerateMesh(meshGeneratorSettings);
+				GenerateMesh(meshGeneratorSettings, iterations);
+			}
+			if (ImGui::Button("Clear Mesh"))
+			{
+				ClearMeshHolders();
 			}
 			ImGui::TreePop();
 		}
@@ -67,7 +73,7 @@ void Tree::OnInspect() {
 			treeVisualizationLayer->m_treeVisualizer.Reset(m_treeModel);
 		}
 	}
-
+	/*
 	static bool visualizeVolume = false;
 	ImGui::Checkbox("Visualize illumination volume", &visualizeVolume);
 	if(visualizeVolume && m_treeModel.m_treeVolume.m_hasData)
@@ -86,10 +92,19 @@ void Tree::OnInspect() {
 
 		Gizmos::DrawGizmoMeshInstanced(DefaultResources::Primitives::Cube, glm::vec4(1, 0, 0, 1), matrices);
 	}
+	*/
+
+	ImGui::Checkbox("Split root test", &m_splitRootTest);
+	ImGui::Checkbox("Biomass history", &m_recordBiomassHistory);
+
+	if (m_splitRootTest) ImGui::Text(("Left/Right side biomass: [" + std::to_string(m_leftSideBiomass) + ", " + std::to_string(m_rightSideBiomass) + "]").c_str());
+
 }
 
 void Tree::OnCreate() {
 }
+
+
 
 void Tree::OnDestroy() {
 	m_treeModel.Clear();
@@ -97,6 +112,10 @@ void Tree::OnDestroy() {
 	m_soil.Clear();
 	m_climate.Clear();
 	m_enableHistory = false;
+
+	m_leftSideBiomass = m_rightSideBiomass = 0.0f;
+	m_rootBiomassHistory.clear();
+	m_shootBiomassHistory.clear();
 }
 
 bool Tree::TryGrow() {
@@ -119,8 +138,36 @@ bool Tree::TryGrow() {
 	if (m_enableHistory) m_treeModel.Step();
 
 	const auto owner = GetOwner();
-	return m_treeModel.Grow(scene->GetDataComponent<GlobalTransform>(owner).m_value, soil->m_soilModel, climate->m_climateModel,
+
+	bool grown = m_treeModel.Grow(scene->GetDataComponent<GlobalTransform>(owner).m_value, soil->m_soilModel, climate->m_climateModel,
 		treeDescriptor->m_rootGrowthParameters, treeDescriptor->m_treeGrowthParameters);
+
+	if(m_recordBiomassHistory)
+	{
+		const auto& baseRootNode = m_treeModel.RefRootSkeleton().RefNode(0);
+		const auto& baseShootNode = m_treeModel.RefBranchSkeleton().RefNode(0);
+		m_rootBiomassHistory.emplace_back(baseRootNode.m_data.m_biomass + baseRootNode.m_data.m_descendentTotalBiomass);
+		m_shootBiomassHistory.emplace_back(baseShootNode.m_data.m_biomass + baseShootNode.m_data.m_descendentTotalBiomass);
+	}
+
+	if(m_splitRootTest)
+	{
+		const auto& rootNodeList = m_treeModel.RefRootSkeleton().RefSortedNodeList();
+		m_leftSideBiomass = m_rightSideBiomass = 0.0f;
+		for(const auto& rootNodeHandle : rootNodeList)
+		{
+			const auto& rootNode = m_treeModel.RefRootSkeleton().RefNode(rootNodeHandle);
+			if(rootNode.m_info.m_globalPosition.x < 0.0f)
+			{
+				m_leftSideBiomass += rootNode.m_data.m_biomass;
+			}else
+			{
+				m_rightSideBiomass += rootNode.m_data.m_biomass;
+			}
+		}
+	}
+
+	return grown;
 }
 
 void Tree::Serialize(YAML::Emitter& out)
@@ -133,12 +180,37 @@ void Tree::Deserialize(const YAML::Node& in)
 	m_treeDescriptor.Load("m_treeDescriptor", in);
 }
 
-void Tree::GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings) {
+void Tree::ClearMeshHolders()
+{
+	const auto scene = GetScene();
+	const auto self = GetOwner();
+	const auto children = scene->GetChildren(self);
+	for (const auto& child : children) {
+		auto name = scene->GetEntityName(child);
+		if (name == "Branch Mesh") {
+			scene->DeleteEntity(child);
+		}
+		else if (name == "Root Mesh") {
+			scene->DeleteEntity(child);
+		}
+		else if (name == "Foliage Mesh") {
+			scene->DeleteEntity(child);
+		}
+		else if (name == "Fruit Mesh") {
+			scene->DeleteEntity(child);
+		}
+		else if (name == "Fine Root Mesh") {
+			scene->DeleteEntity(child);
+		}
+	}
+}
+
+void Tree::GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings, int iteration) {
 	const auto scene = GetScene();
 	const auto self = GetOwner();
 	const auto children = scene->GetChildren(self);
 
-	Entity branchEntity, rootEntity, foliageEntity, fruitEntity;
+	Entity branchEntity, rootEntity, foliageEntity, fruitEntity, fineRootEntity;
 
 	for (const auto& child : children) {
 		auto name = scene->GetEntityName(child);
@@ -154,12 +226,19 @@ void Tree::GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings) 
 		else if (name == "Fruit Mesh") {
 			scene->DeleteEntity(child);
 		}
+		else if (name == "Fine Root Mesh") {
+			scene->DeleteEntity(child);
+		}
+	}
+	auto actualIteration = iteration;
+	if (actualIteration < 0 || actualIteration > m_treeModel.CurrentIteration())
+	{
+		actualIteration = m_treeModel.CurrentIteration();
 	}
 	if (meshGeneratorSettings.m_enableBranch)
 	{
 		branchEntity = scene->CreateEntity("Branch Mesh");
 		scene->SetParent(branchEntity, self);
-
 		std::vector<Vertex> vertices;
 		std::vector<unsigned int> indices;
 		switch (meshGeneratorSettings.m_branchMeshType)
@@ -167,8 +246,9 @@ void Tree::GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings) 
 		case 0:
 		{
 			CylindricalMeshGenerator<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> meshGenerator;
-			meshGenerator.Generate(m_treeModel.RefBranchSkeleton(), vertices, indices,
-				meshGeneratorSettings);
+			meshGenerator.Generate(m_treeModel.PeekBranchSkeleton(actualIteration), vertices, indices,
+				meshGeneratorSettings, glm::min(m_treeModel.PeekBranchSkeleton(actualIteration).PeekNode(0).m_info.m_thickness,
+					m_treeModel.PeekRootSkeleton(actualIteration).PeekNode(0).m_info.m_thickness));
 		}
 		break;
 		case 1:
@@ -180,7 +260,7 @@ void Tree::GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings) 
 				minRadius = treeDescriptor->m_treeGrowthParameters.m_endNodeThickness;
 			}
 			VoxelMeshGenerator<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> meshGenerator;
-			meshGenerator.Generate(m_treeModel.RefBranchSkeleton(), vertices, indices,
+			meshGenerator.Generate(m_treeModel.PeekBranchSkeleton(actualIteration), vertices, indices,
 				meshGeneratorSettings, minRadius);
 		}
 		break;
@@ -210,8 +290,9 @@ void Tree::GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings) 
 		case 0:
 		{
 			CylindricalMeshGenerator<RootSkeletonGrowthData, RootBranchGrowthData, RootInternodeGrowthData> meshGenerator;
-			meshGenerator.Generate(m_treeModel.RefRootSkeleton(), vertices, indices,
-				meshGeneratorSettings);
+			meshGenerator.Generate(m_treeModel.PeekRootSkeleton(actualIteration), vertices, indices,
+				meshGeneratorSettings, glm::min(m_treeModel.PeekBranchSkeleton(actualIteration).PeekNode(0).m_info.m_thickness,
+					m_treeModel.PeekRootSkeleton(actualIteration).PeekNode(0).m_info.m_thickness));
 		}
 		break;
 		case 1:
@@ -223,7 +304,7 @@ void Tree::GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings) 
 				minRadius = treeDescriptor->m_rootGrowthParameters.m_endNodeThickness;
 			}
 			VoxelMeshGenerator<RootSkeletonGrowthData, RootBranchGrowthData, RootInternodeGrowthData> meshGenerator;
-			meshGenerator.Generate(m_treeModel.RefRootSkeleton(), vertices, indices,
+			meshGenerator.Generate(m_treeModel.PeekRootSkeleton(actualIteration), vertices, indices,
 				meshGeneratorSettings, minRadius);
 		}
 		break;
@@ -240,6 +321,71 @@ void Tree::GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings) 
 		meshRenderer->m_mesh = mesh;
 		meshRenderer->m_material = material;
 	}
+	if (meshGeneratorSettings.m_enableFineRoot)
+	{
+		fineRootEntity = scene->CreateEntity("Fine Root Mesh");
+		scene->SetParent(fineRootEntity, self);
+		std::vector<glm::uint> fineRootSegments;
+		std::vector<StrandPoint> fineRootPoints;
+		const auto& rootSkeleton = m_treeModel.PeekRootSkeleton(iteration);
+		const auto& rootNodeList = rootSkeleton.RefSortedNodeList();
+		int fineRootIndex = 0;
+		for (int i = 0; i < rootNodeList.size(); i++)
+		{
+			const auto& rootNode = rootSkeleton.PeekNode(rootNodeList[i]);
+			const auto& rootNodeData = rootNode.m_data;
+			const auto& rootNodeInfo = rootNode.m_info;
+			if (rootNodeData.m_fineRootAnchors.empty()) continue;
+			fineRootPoints.resize(fineRootPoints.size() + 8);
+			fineRootSegments.resize(fineRootSegments.size() + 5);
+			auto& p0 = fineRootPoints[fineRootIndex * 8];
+			auto& p1 = fineRootPoints[fineRootIndex * 8 + 1];
+			auto& p2 = fineRootPoints[fineRootIndex * 8 + 2];
+			auto& p3 = fineRootPoints[fineRootIndex * 8 + 3];
+			auto& p4 = fineRootPoints[fineRootIndex * 8 + 4];
+			auto& p5 = fineRootPoints[fineRootIndex * 8 + 5];
+			auto& p6 = fineRootPoints[fineRootIndex * 8 + 6];
+			auto& p7 = fineRootPoints[fineRootIndex * 8 + 7];
+
+			p0.m_position = rootNodeInfo.m_globalPosition * 2.0f - glm::vec3(rootNodeData.m_fineRootAnchors[0]);
+			p1.m_position = rootNodeInfo.m_globalPosition;
+			p2.m_position = glm::vec3(rootNodeData.m_fineRootAnchors[0]);
+			p3.m_position = glm::vec3(rootNodeData.m_fineRootAnchors[1]);
+			p4.m_position = glm::vec3(rootNodeData.m_fineRootAnchors[2]);
+			p5.m_position = glm::vec3(rootNodeData.m_fineRootAnchors[3]);
+			p6.m_position = glm::vec3(rootNodeData.m_fineRootAnchors[4]);
+			p7.m_position = glm::vec3(rootNodeData.m_fineRootAnchors[4]) * 2.0f - glm::vec3(rootNodeData.m_fineRootAnchors[3]);
+
+			p0.m_thickness = rootNodeInfo.m_thickness;
+			p1.m_thickness = rootNodeData.m_fineRootAnchors[0].w;
+			p2.m_thickness = rootNodeData.m_fineRootAnchors[0].w;
+			p3.m_thickness = rootNodeData.m_fineRootAnchors[1].w;
+			p4.m_thickness = rootNodeData.m_fineRootAnchors[2].w;
+			p5.m_thickness = rootNodeData.m_fineRootAnchors[3].w;
+			p6.m_thickness = rootNodeData.m_fineRootAnchors[4].w;
+			p7.m_thickness = rootNodeData.m_fineRootAnchors[4].w;
+
+			fineRootSegments[fineRootIndex * 5] = fineRootIndex * 8;
+			fineRootSegments[fineRootIndex * 5 + 1] = fineRootIndex * 8 + 1;
+			fineRootSegments[fineRootIndex * 5 + 2] = fineRootIndex * 8 + 2;
+			fineRootSegments[fineRootIndex * 5 + 3] = fineRootIndex * 8 + 3;
+			fineRootSegments[fineRootIndex * 5 + 4] = fineRootIndex * 8 + 4;
+
+			fineRootIndex++;
+		}
+
+		auto strands = ProjectManager::CreateTemporaryAsset<Strands>();
+		auto material = ProjectManager::CreateTemporaryAsset<Material>();
+		material->SetProgram(DefaultResources::GLPrograms::StandardProgram);
+		material->m_materialProperties.m_albedoColor = glm::vec3(80, 60, 50) / 255.0f;
+		material->m_materialProperties.m_roughness = 1.0f;
+		material->m_materialProperties.m_metallic = 0.0f;
+		strands->SetSegments(1, fineRootSegments, fineRootPoints);
+		auto strandsRenderer = scene->GetOrSetPrivateComponent<StrandsRenderer>(fineRootEntity).lock();
+		strandsRenderer->m_strands = strands;
+		strandsRenderer->m_material = material;
+	}
+
 	if (meshGeneratorSettings.m_enableFoliage)
 	{
 		foliageEntity = scene->CreateEntity("Foliage Mesh");
@@ -253,40 +399,80 @@ void Tree::GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings) 
 		auto quadVerticesSize = quadMesh->GetVerticesAmount();
 		size_t offset = 0;
 
-		const auto& nodeList = m_treeModel.RefBranchSkeleton().RefSortedNodeList();
+		const auto& nodeList = m_treeModel.PeekBranchSkeleton(actualIteration).RefSortedNodeList();
 		for (const auto& internodeHandle : nodeList) {
-			const auto& internode = m_treeModel.RefBranchSkeleton().RefNode(internodeHandle);
+			const auto& internode = m_treeModel.PeekBranchSkeleton(actualIteration).PeekNode(internodeHandle);
 			const auto& internodeInfo = internode.m_info;
 			const auto& internodeData = internode.m_data;
 			auto internodeGlobalTransform = glm::translate(internodeInfo.m_globalPosition) * glm::mat4_cast(internodeInfo.m_globalRotation) * glm::scale(glm::vec3(1.0f));
-			for (const auto& bud : internodeData.m_buds) {
-				if (bud.m_status != BudStatus::Flushed) continue;
-				if (bud.m_maturity <= 0.0f) continue;
-				if (bud.m_type == BudType::Leaf)
-				{
-					auto matrix = internodeGlobalTransform * bud.m_reproductiveModuleTransform;
-					Vertex archetype;
-					for (auto i = 0; i < quadMesh->GetVerticesAmount(); i++) {
-						archetype.m_position =
-							matrix * glm::vec4(quadMesh->UnsafeGetVertices()[i].m_position, 1.0f);
-						archetype.m_normal = glm::normalize(glm::vec3(
-							matrix * glm::vec4(quadMesh->UnsafeGetVertices()[i].m_normal, 0.0f)));
-						archetype.m_tangent = glm::normalize(glm::vec3(
-							matrix *
-							glm::vec4(quadMesh->UnsafeGetVertices()[i].m_tangent, 0.0f)));
-						archetype.m_texCoord =
-							quadMesh->UnsafeGetVertices()[i].m_texCoord;
-						vertices.push_back(archetype);
+			if (!meshGeneratorSettings.m_overridePresentation) {
+				for (const auto& bud : internodeData.m_buds) {
+					if (bud.m_status != BudStatus::Flushed) continue;
+					if (bud.m_maturity <= 0.0f) continue;
+					if (bud.m_type == BudType::Leaf)
+					{
+						auto matrix = internodeGlobalTransform * bud.m_reproductiveModuleTransform;
+						Vertex archetype;
+						for (auto i = 0; i < quadMesh->GetVerticesAmount(); i++) {
+							archetype.m_position =
+								matrix * glm::vec4(quadMesh->UnsafeGetVertices()[i].m_position, 1.0f);
+							archetype.m_normal = glm::normalize(glm::vec3(
+								matrix * glm::vec4(quadMesh->UnsafeGetVertices()[i].m_normal, 0.0f)));
+							archetype.m_tangent = glm::normalize(glm::vec3(
+								matrix *
+								glm::vec4(quadMesh->UnsafeGetVertices()[i].m_tangent, 0.0f)));
+							archetype.m_texCoord =
+								quadMesh->UnsafeGetVertices()[i].m_texCoord;
+							vertices.push_back(archetype);
+						}
+						for (auto triangle : quadTriangles) {
+							triangle.x += offset;
+							triangle.y += offset;
+							triangle.z += offset;
+							indices.push_back(triangle.x);
+							indices.push_back(triangle.y);
+							indices.push_back(triangle.z);
+						}
+						offset += quadVerticesSize;
 					}
-					for (auto triangle : quadTriangles) {
-						triangle.x += offset;
-						triangle.y += offset;
-						triangle.z += offset;
-						indices.push_back(triangle.x);
-						indices.push_back(triangle.y);
-						indices.push_back(triangle.z);
+				}
+			}else
+			{
+				const auto& presentationSettings = meshGeneratorSettings.m_presentationOverrideSettings;
+				if (internodeData.m_maxDistanceToAnyBranchEnd < presentationSettings.m_distanceToEndLimit) {
+					for (int i = 0; i < presentationSettings.m_leafCountPerInternode; i++)
+					{
+						auto leafSize = presentationSettings.m_leafSize;
+						glm::quat rotation = internodeInfo.m_globalRotation * glm::quat(glm::radians(glm::linearRand(glm::vec3(0.0f), glm::vec3(360.0f))));
+						auto front = rotation * glm::vec3(0, 0, -1);
+						TreeModel::ApplyTropism(internodeData.m_lightDirection, presentationSettings.m_phototropism, rotation);
+						auto foliagePosition = front * (leafSize.z * 1.5f);
+						auto leafTransform = glm::translate(foliagePosition) * glm::mat4_cast(rotation) * glm::scale(leafSize);
+
+						auto matrix = internodeGlobalTransform * leafTransform;
+						Vertex archetype;
+						for (auto i = 0; i < quadMesh->GetVerticesAmount(); i++) {
+							archetype.m_position =
+								matrix * glm::vec4(quadMesh->UnsafeGetVertices()[i].m_position, 1.0f);
+							archetype.m_normal = glm::normalize(glm::vec3(
+								matrix * glm::vec4(quadMesh->UnsafeGetVertices()[i].m_normal, 0.0f)));
+							archetype.m_tangent = glm::normalize(glm::vec3(
+								matrix *
+								glm::vec4(quadMesh->UnsafeGetVertices()[i].m_tangent, 0.0f)));
+							archetype.m_texCoord =
+								quadMesh->UnsafeGetVertices()[i].m_texCoord;
+							vertices.push_back(archetype);
+						}
+						for (auto triangle : quadTriangles) {
+							triangle.x += offset;
+							triangle.y += offset;
+							triangle.z += offset;
+							indices.push_back(triangle.x);
+							indices.push_back(triangle.y);
+							indices.push_back(triangle.z);
+						}
+						offset += quadVerticesSize;
 					}
-					offset += quadVerticesSize;
 				}
 			}
 		}
@@ -297,6 +483,11 @@ void Tree::GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings) 
 		mesh->SetVertices(17, vertices, indices);
 		material->m_materialProperties.m_albedoColor = glm::vec3(152 / 255.0f, 203 / 255.0f, 0 / 255.0f);
 		material->m_materialProperties.m_roughness = 0.0f;
+		auto texRef = meshGeneratorSettings.m_foliageTexture;
+		if(texRef.Get<Texture2D>())
+		{
+			material->m_albedoTexture = texRef.Get<Texture2D>();
+		}
 		auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(foliageEntity).lock();
 		meshRenderer->m_mesh = mesh;
 		meshRenderer->m_material = material;
@@ -331,13 +522,13 @@ bool OnInspectTreeGrowthParameters(TreeGrowthParameters& treeGrowthParameters) {
 			changed = ImGui::DragFloat4("Leaf flushing prob/temp range", &treeGrowthParameters.m_leafBudFlushingProbabilityTemperatureRange.x, 0.01f) || changed;
 			changed = ImGui::DragFloat4("Fruit flushing prob/temp range", &treeGrowthParameters.m_fruitBudFlushingProbabilityTemperatureRange.x, 0.01f) || changed;
 			changed = ImGui::DragFloat4("Bud light factor apical/lateral/leaf/fruit", &treeGrowthParameters.m_apicalBudLightingFactor, 0.01f) || changed;
-			changed = ImGui::DragFloat3("Apical control base/age/dist", &treeGrowthParameters.m_apicalControl, 0.01f) || changed;
+			changed = ImGui::DragFloat2("Apical control base/age", &treeGrowthParameters.m_apicalControl, 0.01f) || changed;
 			changed = ImGui::DragFloat3("Apical dominance base/age/dist", &treeGrowthParameters.m_apicalDominance, 0.01f) || changed;
 			//ImGui::Text("Max age / distance: [%.3f]", treeGrowthParameters.m_apicalDominance / treeGrowthParameters.m_apicalDominanceDistanceFactor);
 			changed = ImGui::DragFloat4("Remove rate apical/lateral/leaf/fruit", &treeGrowthParameters.m_apicalBudExtinctionRate, 0.01f) || changed;
 			changed = ImGui::DragFloat3("Base resource shoot/leaf/fruit", &treeGrowthParameters.m_shootMaintenanceVigorRequirement, 0.01f) || changed;
 			changed = ImGui::DragFloat3("Productive resource shoot/leaf/fruit", &treeGrowthParameters.m_shootProductiveWaterRequirement, 0.01f) || changed;
-
+			changed = ImGui::Checkbox("Maintenance Vigor Priority", &treeGrowthParameters.m_maintenanceVigorRequirementPriority) || changed;
 			ImGui::TreePop();
 		}
 		if (ImGui::TreeNodeEx("Foliage", ImGuiTreeNodeFlags_DefaultOpen))
@@ -381,23 +572,20 @@ bool OnInspectRootGrowthParameters(RootGrowthParameters& rootGrowthParameters) {
 			changed = ImGui::DragFloat2("Roll Angle mean/var", &rootGrowthParameters.m_rollAngleMeanVariance.x, 0.01f) || changed;
 			changed = ImGui::DragFloat2("Apical Angle mean/var", &rootGrowthParameters.m_apicalAngleMeanVariance.x, 0.01f) || changed;
 			changed = ImGui::DragFloat2("Environmental friction base/factor", &rootGrowthParameters.m_environmentalFriction, 0.01f) || changed;
-			changed = ImGui::DragFloat2("Apical control base/dist", &rootGrowthParameters.m_apicalControlBaseDistFactor.x, 0.01f) || changed;
-			changed = ImGui::DragFloat2("Apical dominance base/dist", &rootGrowthParameters.m_apicalDominance, 0.01f) || changed;
+			changed = ImGui::DragFloat2("Apical control base/age", &rootGrowthParameters.m_apicalControl, 0.01f) || changed;
+			changed = ImGui::DragFloat3("Apical dominance base/age/dist", &rootGrowthParameters.m_apicalDominance, 0.01f) || changed;
 			changed = ImGui::DragFloat("Tropism switching prob", &rootGrowthParameters.m_tropismSwitchingProbability, 0.01f) || changed;
 			changed = ImGui::DragFloat("Tropism switching prob dist factor", &rootGrowthParameters.m_tropismSwitchingProbabilityDistanceFactor, 0.01f) || changed;
 			changed = ImGui::DragFloat("Tropism intensity", &rootGrowthParameters.m_tropismIntensity, 0.01f) || changed;
-			changed = ImGui::DragFloat("Branching prob base", &rootGrowthParameters.m_baseBranchingProbability, 0.01f) || changed;
-			changed = ImGui::DragFloat("Branching prob child decrease", &rootGrowthParameters.m_branchingProbabilityChildrenDecrease, 0.01f) || changed;
-			changed = ImGui::DragFloat("Branching prob dist decrease", &rootGrowthParameters.m_branchingProbabilityDistanceDecrease, 0.01f) || changed;
-			changed = ImGui::DragFloat("Branching prob order decrease", &rootGrowthParameters.m_branchingProbabilityOrderDecrease, 0.01f) || changed;
-
+			changed = ImGui::DragFloat("Branching probability", &rootGrowthParameters.m_branchingProbability, 0.01f) || changed;
+			
 			changed = ImGui::DragFloat("Fine root segment length", &rootGrowthParameters.m_fineRootSegmentLength, 0.01f) || changed;
 			changed = ImGui::DragFloat("Fine root apical angle variance", &rootGrowthParameters.m_fineRootApicalAngleVariance, 0.01f) || changed;
 			changed = ImGui::DragFloat("Fine root branching angle", &rootGrowthParameters.m_fineRootBranchingAngle, 0.01f) || changed;
 			changed = ImGui::DragFloat("Fine root thickness", &rootGrowthParameters.m_fineRootThickness, 0.01f) || changed;
 			changed = ImGui::DragFloat("Fine root min node thickness", &rootGrowthParameters.m_fineRootMinNodeThickness) || changed;
 			changed = ImGui::DragInt("Fine root node count", &rootGrowthParameters.m_fineRootNodeCount) || changed;
-
+			changed = ImGui::Checkbox("Maintenance Vigor Priority", &rootGrowthParameters.m_maintenanceVigorRequirementPriority) || changed;
 			ImGui::TreePop();
 		}
 		ImGui::TreePop();
@@ -472,7 +660,6 @@ void SerializeTreeGrowthParameters(const std::string& name, const TreeGrowthPara
 
 	out << YAML::Key << "m_apicalControl" << YAML::Value << treeGrowthParameters.m_apicalControl;
 	out << YAML::Key << "m_apicalControlAgeFactor" << YAML::Value << treeGrowthParameters.m_apicalControlAgeFactor;
-	out << YAML::Key << "m_apicalControlDistanceFactor" << YAML::Value << treeGrowthParameters.m_apicalControlDistanceFactor;
 
 	out << YAML::Key << "m_apicalDominance" << YAML::Value << treeGrowthParameters.m_apicalDominance;
 	out << YAML::Key << "m_apicalDominanceAgeFactor" << YAML::Value << treeGrowthParameters.m_apicalDominanceAgeFactor;
@@ -489,7 +676,7 @@ void SerializeTreeGrowthParameters(const std::string& name, const TreeGrowthPara
 	out << YAML::Key << "m_shootProductiveWaterRequirement" << YAML::Value << treeGrowthParameters.m_shootProductiveWaterRequirement;
 	out << YAML::Key << "m_leafProductiveWaterRequirement" << YAML::Value << treeGrowthParameters.m_leafProductiveWaterRequirement;
 	out << YAML::Key << "m_fruitProductiveWaterRequirement" << YAML::Value << treeGrowthParameters.m_fruitProductiveWaterRequirement;
-
+	out << YAML::Key << "m_maintenanceVigorRequirementPriority" << YAML::Value << treeGrowthParameters.m_maintenanceVigorRequirementPriority;
 
 	//Internode
 	out << YAML::Key << "m_lowBranchPruning" << YAML::Value << treeGrowthParameters.m_lowBranchPruning;
@@ -535,17 +722,17 @@ void SerializeRootGrowthParameters(const std::string& name, const RootGrowthPara
 	out << YAML::Key << "m_environmentalFrictionFactor" << YAML::Value << rootGrowthParameters.m_environmentalFrictionFactor;
 
 
-	out << YAML::Key << "m_apicalControlBaseDistFactor" << YAML::Value << rootGrowthParameters.m_apicalControlBaseDistFactor;
+	out << YAML::Key << "m_apicalControl" << YAML::Value << rootGrowthParameters.m_apicalControl;
+	out << YAML::Key << "m_apicalControlAgeFactor" << YAML::Value << rootGrowthParameters.m_apicalControlAgeFactor;
 	out << YAML::Key << "m_apicalDominance" << YAML::Value << rootGrowthParameters.m_apicalDominance;
+	out << YAML::Key << "m_apicalDominanceAgeFactor" << YAML::Value << rootGrowthParameters.m_apicalDominanceAgeFactor;
 	out << YAML::Key << "m_apicalDominanceDistanceFactor" << YAML::Value << rootGrowthParameters.m_apicalDominanceDistanceFactor;
 	out << YAML::Key << "m_tropismSwitchingProbability" << YAML::Value << rootGrowthParameters.m_tropismSwitchingProbability;
 	out << YAML::Key << "m_tropismSwitchingProbabilityDistanceFactor" << YAML::Value << rootGrowthParameters.m_tropismSwitchingProbabilityDistanceFactor;
 	out << YAML::Key << "m_tropismIntensity" << YAML::Value << rootGrowthParameters.m_tropismIntensity;
-	out << YAML::Key << "m_baseBranchingProbability" << YAML::Value << rootGrowthParameters.m_baseBranchingProbability;
-	out << YAML::Key << "m_branchingProbabilityChildrenDecrease" << YAML::Value << rootGrowthParameters.m_branchingProbabilityChildrenDecrease;
-	out << YAML::Key << "m_branchingProbabilityDistanceDecrease" << YAML::Value << rootGrowthParameters.m_branchingProbabilityDistanceDecrease;
-	out << YAML::Key << "m_branchingProbabilityOrderDecrease" << YAML::Value << rootGrowthParameters.m_branchingProbabilityOrderDecrease;
-
+	out << YAML::Key << "m_branchingProbability" << YAML::Value << rootGrowthParameters.m_branchingProbability;
+	
+	out << YAML::Key << "m_maintenanceVigorRequirementPriority" << YAML::Value << rootGrowthParameters.m_maintenanceVigorRequirementPriority;
 	out << YAML::EndMap;
 }
 void TreeDescriptor::Serialize(YAML::Emitter& out) {
@@ -589,7 +776,6 @@ void DeserializeTreeGrowthParameters(const std::string& name, TreeGrowthParamete
 
 		if (param["m_apicalControl"]) treeGrowthParameters.m_apicalControl = param["m_apicalControl"].as<float>();
 		if (param["m_apicalControlAgeFactor"]) treeGrowthParameters.m_apicalControlAgeFactor = param["m_apicalControlAgeFactor"].as<float>();
-		if (param["m_apicalControlDistanceFactor"]) treeGrowthParameters.m_apicalControlDistanceFactor = param["m_apicalControlDistanceFactor"].as<float>();
 		if (param["m_apicalDominance"]) treeGrowthParameters.m_apicalDominance = param["m_apicalDominance"].as<float>();
 		if (param["m_apicalDominanceAgeFactor"]) treeGrowthParameters.m_apicalDominanceAgeFactor = param["m_apicalDominanceAgeFactor"].as<float>();
 		if (param["m_apicalDominanceDistanceFactor"]) treeGrowthParameters.m_apicalDominanceDistanceFactor = param["m_apicalDominanceDistanceFactor"].as<float>();
@@ -605,6 +791,7 @@ void DeserializeTreeGrowthParameters(const std::string& name, TreeGrowthParamete
 		if (param["m_shootProductiveWaterRequirement"]) treeGrowthParameters.m_shootProductiveWaterRequirement = param["m_shootProductiveWaterRequirement"].as<float>();
 		if (param["m_leafProductiveWaterRequirement"]) treeGrowthParameters.m_leafProductiveWaterRequirement = param["m_leafProductiveWaterRequirement"].as<float>();
 		if (param["m_fruitProductiveWaterRequirement"]) treeGrowthParameters.m_fruitProductiveWaterRequirement = param["m_fruitProductiveWaterRequirement"].as<float>();
+		if (param["m_maintenanceVigorRequirementPriority"]) treeGrowthParameters.m_maintenanceVigorRequirementPriority = param["m_maintenanceVigorRequirementPriority"].as<bool>();
 
 
 		//Foliage
@@ -639,18 +826,18 @@ void DeserializeRootGrowthParameters(const std::string& name, RootGrowthParamete
 		if(param["m_environmentalFriction"]) rootGrowthParameters.m_environmentalFriction = param["m_environmentalFriction"].as<float>();
 		if(param["m_environmentalFrictionFactor"]) rootGrowthParameters.m_environmentalFrictionFactor = param["m_environmentalFrictionFactor"].as<float>();
 
-		if (param["m_apicalControlBaseDistFactor"]) rootGrowthParameters.m_apicalControlBaseDistFactor = param["m_apicalControlBaseDistFactor"].as<glm::vec2>();
+		if (param["m_apicalControl"]) rootGrowthParameters.m_apicalControl = param["m_apicalControl"].as<float>();
+		if (param["m_apicalControlAgeFactor"]) rootGrowthParameters.m_apicalControlAgeFactor = param["m_apicalControlAgeFactor"].as<float>();
 		if (param["m_apicalDominance"]) rootGrowthParameters.m_apicalDominance = param["m_apicalDominance"].as<float>();
+		if (param["m_apicalDominanceAgeFactor"]) rootGrowthParameters.m_apicalDominanceAgeFactor = param["m_apicalDominanceAgeFactor"].as<float>();
 		if (param["m_apicalDominanceDistanceFactor"]) rootGrowthParameters.m_apicalDominanceDistanceFactor = param["m_apicalDominanceDistanceFactor"].as<float>();
 
 		if (param["m_tropismSwitchingProbability"]) rootGrowthParameters.m_tropismSwitchingProbability = param["m_tropismSwitchingProbability"].as<float>();
 		if (param["m_tropismSwitchingProbabilityDistanceFactor"]) rootGrowthParameters.m_tropismSwitchingProbabilityDistanceFactor = param["m_tropismSwitchingProbabilityDistanceFactor"].as<float>();
 		if (param["m_tropismIntensity"]) rootGrowthParameters.m_tropismIntensity = param["m_tropismIntensity"].as<float>();
 
-		if (param["m_baseBranchingProbability"]) rootGrowthParameters.m_baseBranchingProbability = param["m_baseBranchingProbability"].as<float>();
-		if (param["m_branchingProbabilityChildrenDecrease"]) rootGrowthParameters.m_branchingProbabilityChildrenDecrease = param["m_branchingProbabilityChildrenDecrease"].as<float>();
-		if (param["m_branchingProbabilityDistanceDecrease"]) rootGrowthParameters.m_branchingProbabilityDistanceDecrease = param["m_branchingProbabilityDistanceDecrease"].as<float>();
-		if (param["m_branchingProbabilityOrderDecrease"]) rootGrowthParameters.m_branchingProbabilityOrderDecrease = param["m_branchingProbabilityOrderDecrease"].as<float>();
+		if (param["m_branchingProbability"]) rootGrowthParameters.m_branchingProbability = param["m_branchingProbability"].as<float>();
+		if (param["m_maintenanceVigorRequirementPriority"]) rootGrowthParameters.m_maintenanceVigorRequirementPriority = param["m_maintenanceVigorRequirementPriority"].as<bool>();
 
 	}
 }

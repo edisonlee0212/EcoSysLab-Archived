@@ -334,6 +334,7 @@ TreeVisualizer::InspectInternode(
     if (ImGui::Begin("Internode Inspector")) {
         const auto &internode = treeSkeleton.RefNode(internodeHandle);
         if (ImGui::TreeNode("Internode info")) {
+            ImGui::Checkbox("Is max child", (bool*)&internode.m_data.m_isMaxChild);
             ImGui::Text("Thickness: %.3f", internode.m_info.m_thickness);
             ImGui::Text("Length: %.3f", internode.m_info.m_length);
             ImGui::InputFloat3("Position", (float *) &internode.m_info.m_globalPosition.x, "%.3f",
@@ -495,6 +496,7 @@ TreeVisualizer::PeekInternode(
     if (ImGui::Begin("Internode Inspector")) {
         const auto &internode = treeSkeleton.PeekNode(internodeHandle);
         if (ImGui::TreeNode("Internode info")) {
+            ImGui::Checkbox("Is max child", (bool*)&internode.m_data.m_isMaxChild);
             ImGui::Text("Thickness: %.3f", internode.m_info.m_thickness);
             ImGui::Text("Length: %.3f", internode.m_info.m_length);
             ImGui::InputFloat3("Position", (float *) &internode.m_info.m_globalPosition.x, "%.3f",
@@ -625,6 +627,7 @@ void TreeVisualizer::PeekRootNode(
     if (ImGui::Begin("Root Node Inspector")) {
         const auto& rootNode = rootSkeleton.PeekNode(rootNodeHandle);
         if (ImGui::TreeNode("Root node info")) {
+            ImGui::Checkbox("Is max child", (bool*)&rootNode.m_data.m_isMaxChild);
             ImGui::Text("Thickness: %.3f", rootNode.m_info.m_thickness);
             ImGui::Text("Length: %.3f", rootNode.m_info.m_length);
             ImGui::InputFloat3("Position", (float*)&rootNode.m_info.m_globalPosition.x, "%.3f",
@@ -638,6 +641,9 @@ void TreeVisualizer::PeekRootNode(
             auto& rootNodeData = rootNode.m_data;
             ImGui::InputFloat("Nitrite", (float*)&rootNodeData.m_nitrite, 1, 100, "%.3f",
                 ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputFloat("Soil Density", (float*)&rootNodeData.m_soilDensity, 1, 100, "%.3f",
+                ImGuiInputTextFlags_ReadOnly);
+
             ImGui::InputFloat("Root flux", (float*)&rootNodeData.m_rootFlux, 1, 100, "%.3f",
                 ImGuiInputTextFlags_ReadOnly);
             ImGui::InputFloat("Growth potential", (float*)&rootNodeData.m_growthPotential, 1, 100, "%.3f",
@@ -688,6 +694,7 @@ bool TreeVisualizer::InspectRootNode(
     if (ImGui::Begin("Root Node Inspector")) {
         const auto& rootNode = rootSkeleton.RefNode(rootNodeHandle);
         if (ImGui::TreeNode("Root node info")) {
+            ImGui::Checkbox("Is max child", (bool*) & rootNode.m_data.m_isMaxChild);
             ImGui::Text("Thickness: %.3f", rootNode.m_info.m_thickness);
             ImGui::Text("Length: %.3f", rootNode.m_info.m_length);
             ImGui::InputFloat3("Position", (float*)&rootNode.m_info.m_globalPosition.x, "%.3f",
@@ -704,8 +711,7 @@ bool TreeVisualizer::InspectRootNode(
                 ImGuiInputTextFlags_ReadOnly);
             ImGui::InputFloat("Soil density", (float*)&rootNodeData.m_soilDensity, 1, 100, "%.3f",
                 ImGuiInputTextFlags_ReadOnly);
-            ImGui::InputInt("Root unit distance", (int*)&rootNodeData.m_rootUnitDistance, 1, 100,
-                ImGuiInputTextFlags_ReadOnly);
+            
             
             ImGui::InputFloat("Nitrite", (float*)&rootNodeData.m_nitrite, 1, 100, "%.3f",
                 ImGuiInputTextFlags_ReadOnly);

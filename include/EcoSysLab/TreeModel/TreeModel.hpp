@@ -6,6 +6,7 @@
 #include "Octree.hpp"
 using namespace UniEngine;
 namespace EcoSysLab {
+	
 	enum class BudType {
 		Apical,
 		Lateral,
@@ -56,6 +57,7 @@ namespace EcoSysLab {
 	};
 
 	struct InternodeGrowthData {
+		bool m_isMaxChild = false;
 		bool m_lateral = false;
 		int m_age = 0;
 		float m_inhibitorTarget = 0;
@@ -72,7 +74,7 @@ namespace EcoSysLab {
 		float m_extraMass = 0.0f;
 		float m_rootDistance = 0;
 
-		float m_temperature;
+		float m_temperature = 0.0f;
 
 		glm::vec3 m_lightDirection = glm::vec3(0, 1, 0);
 		float m_lightIntensity = 1.0f;
@@ -104,11 +106,11 @@ namespace EcoSysLab {
 		/*
 		 * The allocated total resource for maintenance and development of this module.
 		 */
-		float m_allocatedVigor;
+		float m_allocatedVigor = 0.0f;
 		/*
 		 * The allocated total resource for maintenance and development of all descendents.
 		 */
-		float m_subTreeAllocatedVigor;
+		float m_subTreeAllocatedVigor = 0.0f;
 
 		std::vector<glm::mat4> m_leaves;
 		std::vector<glm::mat4> m_fruits;
@@ -125,6 +127,7 @@ namespace EcoSysLab {
 	};
 
 	struct RootInternodeGrowthData {
+		bool m_isMaxChild = false;
 		bool m_lateral = false;
 		float m_soilDensity = 0.0f;
 		int m_age = 0;
@@ -134,7 +137,6 @@ namespace EcoSysLab {
 		float m_extraMass = 0.0f;
 
 		float m_rootDistance = 0;
-		int m_rootUnitDistance = 0;
 		int m_order = 0;
 
 		float m_nitrite = 1.0f;
@@ -144,8 +146,8 @@ namespace EcoSysLab {
 		float m_inhibitorTarget = 0;
 		float m_inhibitor = 0;
 
-		float m_horizontalTropism;
-		float m_verticalTropism;
+		float m_horizontalTropism = 0.0f;
+		float m_verticalTropism = 0.0f;
 		/*
 		 * The desired resource needed for maintaining current plant structure.
 		 * Depending on the volume of root node.
@@ -168,7 +170,7 @@ namespace EcoSysLab {
 		/*
 		 * The allocated total resource for maintenance and development of all descendents.
 		 */
-		float m_subTreeAllocatedVigor;
+		float m_subTreeAllocatedVigor = 0.0f;
 
 		std::vector<glm::vec4> m_fineRootAnchors;
 
@@ -225,13 +227,21 @@ namespace EcoSysLab {
 		*/
 		glm::vec2 m_apicalAngleMeanVariance;
 		/**
-		 * \brief Apical control base and distance decrease from root.
+		 * \brief Apical control base
 		 */
-		glm::vec2 m_apicalControlBaseDistFactor;
+		float m_apicalControl;
+		/**
+		 * \brief Age influence on apical control
+		 */
+		float m_apicalControlAgeFactor;
 		/**
 		* \brief How much inhibitor will an internode generate.
 		*/
 		float m_apicalDominance;
+		/**
+		* \brief How much inhibitor will shrink when the tree ages.
+		*/
+		float m_apicalDominanceAgeFactor;
 		/**
 		* \brief How much inhibitor will shrink when going through the branch.
 		*/
@@ -251,19 +261,9 @@ namespace EcoSysLab {
 		/**
 		* The base branching probability
 		*/
-		float m_baseBranchingProbability;
-		/**
-		* The probability decrease for each children.
-		*/
-		float m_branchingProbabilityChildrenDecrease;
-		/**
-		* The probability decrease along the branch.
-		*/
-		float m_branchingProbabilityDistanceDecrease;
-		/**
-		* The probability decrease along the branch.
-		*/
-		float m_branchingProbabilityOrderDecrease;
+		float m_branchingProbability;
+
+		bool m_maintenanceVigorRequirementPriority = true;
 
 		float m_fineRootSegmentLength = 0.02f;
 		float m_fineRootApicalAngleVariance = 2.5f;
@@ -278,9 +278,7 @@ namespace EcoSysLab {
 
 		[[nodiscard]] float GetRootBranchingAngle(const Node<RootInternodeGrowthData>& rootNode) const;
 
-		[[nodiscard]] float GetBranchingProbability(const Node<RootInternodeGrowthData>& rootNode) const;
 
-		[[nodiscard]] float GetApicalControlFactor(const Node<RootInternodeGrowthData>& rootNode) const;
 
 		void SetTropisms(Node<RootInternodeGrowthData>& oldNode, Node<RootInternodeGrowthData>& newNode) const;
 
@@ -401,10 +399,6 @@ namespace EcoSysLab {
 		 */
 		float m_apicalControlAgeFactor;
 		/**
-		 * \brief Distance to root influence on apical control
-		 */
-		float m_apicalControlDistanceFactor;
-		/**
 		* \brief How much inhibitor will an internode generate.
 		*/
 		float m_apicalDominance;
@@ -459,6 +453,7 @@ namespace EcoSysLab {
 		*/
 		float m_fruitProductiveWaterRequirement;
 
+		bool m_maintenanceVigorRequirementPriority = true;
 #pragma region Foliage
 
 		glm::vec3 m_maxLeafSize;
@@ -484,7 +479,6 @@ namespace EcoSysLab {
 
 		[[nodiscard]] float GetDesiredApicalAngle(const Node<InternodeGrowthData>& internode) const;
 
-		[[nodiscard]] float GetApicalControlFactor(const Node<InternodeGrowthData>& internode) const;
 
 		[[nodiscard]] float GetSagging(const Node<InternodeGrowthData>& internode) const;
 
@@ -617,7 +611,16 @@ namespace EcoSysLab {
 		int m_leafCount = 0;
 		int m_fruitCount = 0;
 		int m_fineRootCount = 0;
+
+		int m_age = 0;
+
 	public:
+		static void ApplyTropism(const glm::vec3& targetDir, float tropism, glm::vec3& front, glm::vec3& up);
+
+		static void ApplyTropism(const glm::vec3& targetDir, float tropism, glm::quat& rotation);
+
+
+
 		std::vector<int> m_internodeOrderCounts;
 		std::vector<int> m_rootNodeOrderCounts;
 
