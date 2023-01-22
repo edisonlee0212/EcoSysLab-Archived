@@ -41,6 +41,7 @@ namespace EcoSysLab
 	class SoilDescriptor : public IAsset {
 	public:
 		SoilParameters m_soilParameters;
+		glm::ivec2 m_textureResolution = { 128, 128 };
 		std::vector<AssetRef> m_soilLayerDescriptors;
 		AssetRef m_heightField;
 		/**ImGui menu goes to here. Also you can take care you visualization with Gizmos here.

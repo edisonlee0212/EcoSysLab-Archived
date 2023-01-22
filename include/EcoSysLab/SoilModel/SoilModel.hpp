@@ -42,6 +42,7 @@ namespace EcoSysLab {
 
 	struct SoilLayer
 	{
+		
 		SoilPhysicalMaterial m_mat;
 		std::function<float(const glm::vec2& position)> m_thickness;
 	};
@@ -105,8 +106,8 @@ namespace EcoSysLab {
 		bool CoordinateInsideVolume(const glm::ivec3& coordinate) const;
 		[[nodiscard]] bool Initialized() const;
 
-		std::vector<glm::vec4> GetSoilTextureSlideZ(int slize_z, const glm::vec2 &xyMin, const glm::vec2 &xyMax, const glm::uvec2& resolution, float blur_width=1); // the output as well as all input textures must have the same resolution!
-		std::vector<glm::vec4> GetSoilTextureSlideX(int slize_x, const glm::vec2& yzMin, const glm::vec2& yzMax, const glm::uvec2& resolution, float blur_width=1); // the output as well as all input textures must have the same resolution!
+		std::vector<glm::vec4> GetSoilTextureSlideZ(float z, const glm::vec2 &xyMin, const glm::vec2 &xyMax, float blur_width=1); // the output as well as all input textures must have the same resolution!
+		std::vector<glm::vec4> GetSoilTextureSlideX(float x, const glm::vec2& yzMin, const glm::vec2& yzMax, float blur_width=1); // the output as well as all input textures must have the same resolution!
 		
 		glm::vec4 GetSoilTextureColorForPosition(const glm::vec3& position, int texture_idx, float blur_width);
 
@@ -219,6 +220,7 @@ namespace EcoSysLab {
 		std::vector<glm::ivec3> m_blur_3x3_idx;
 		std::vector<float> m_blur_3x3_weights;
 
+		glm::ivec2 m_materialTextureResolution = { 128, 128 };
 		std::vector<SoilLayer> m_soilLayers;
 		SoilSurface m_soilSurface;
 	};

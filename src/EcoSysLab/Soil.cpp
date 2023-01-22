@@ -347,6 +347,69 @@ void Soil::OnInspect()
 		ImGui::InputFloat3("BB Min", &bbmin.x, "%.3f", ImGuiInputTextFlags_ReadOnly);
 		ImGui::InputFloat3("BB Max", &bbmax.x, "%.3f", ImGuiInputTextFlags_ReadOnly);
 		ImGui::InputFloat("Total Water", &m_soilModel.m_w_sum_in_g, 0.0f, 0.0f, "%.2f", ImGuiInputTextFlags_ReadOnly);
+
+		static float depth = 0.0f;
+		ImGui::SliderFloat("Depth", &depth, 0, 1);
+		static unsigned xz = 0;
+		ImGui::Combo("Direction", { "X", "Z" }, xz);
+		static glm::vec2 minXY, maxXY;
+		if (xz == 0) {
+			ImGui::SliderFloat("Min X", &minXY.x, 0, maxXY.x);
+			ImGui::SliderFloat("Min Y", &minXY.y, 0, maxXY.y);
+			ImGui::SliderFloat("Max X", &maxXY.x, minXY.x, 1);
+			ImGui::SliderFloat("Max Y", &maxXY.y, minXY.y, 1);
+		}else
+		{
+			ImGui::SliderFloat("Min Z", &minXY.x, 0, maxXY.x);
+			ImGui::SliderFloat("Min Y", &minXY.y, 0, maxXY.y);
+			ImGui::SliderFloat("Max Z", &maxXY.x, minXY.x, 1);
+			ImGui::SliderFloat("Max Y", &maxXY.y, minXY.y, 1);
+		}
+		if(ImGui::Button("Get textured quad"))
+		{
+			auto scene = Application::GetActiveScene();
+			auto quadEntity = scene->CreateEntity("Slice");
+
+			const auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(quadEntity).lock();
+			auto material = ProjectManager::CreateTemporaryAsset<Material>();
+			material->SetProgram(DefaultResources::GLPrograms::StandardProgram);
+			auto albedoTex = ProjectManager::CreateTemporaryAsset<Texture2D>();
+			if (xz == 0) {
+				auto textureData = m_soilModel.GetSoilTextureSlideX(depth, minXY, maxXY);
+				albedoTex->SetRgbaChannelData(textureData, m_soilModel.m_materialTextureResolution);
+			}else
+			{
+				auto textureData = m_soilModel.GetSoilTextureSlideZ(depth, minXY, maxXY);
+				albedoTex->SetRgbaChannelData(textureData, m_soilModel.m_materialTextureResolution);
+			}
+			material->m_albedoTexture = albedoTex;
+			meshRenderer->m_material = material;
+			material->m_drawSettings.m_cullFace = false;
+			meshRenderer->m_mesh = DefaultResources::Primitives::Quad;
+
+			GlobalTransform globalTransform;
+			glm::vec3 scale;
+			glm::vec3 position;
+			glm::vec3 rotation;
+			auto soilModelSize = glm::vec3(m_soilModel.m_resolution) * m_soilModel.m_dx;
+			if (xz == 0) {
+				//Xaxis
+				scale = glm::vec3(soilModelSize.z * (maxXY.x - minXY.x), 1.0f, soilModelSize.y * (maxXY.y - minXY.y));
+				rotation = glm::vec3(glm::radians(90.0f), -glm::radians(90.0f), 0.0f);
+				position = m_soilModel.m_boundingBoxMin + glm::vec3(soilModelSize.x * depth, soilModelSize.y * (minXY.y + maxXY.y) * 0.5f, soilModelSize.z * (minXY.x + maxXY.x) * 0.5f);
+			}
+			else
+			{
+				scale = glm::vec3(soilModelSize.x * (maxXY.x - minXY.x), 1.0f, soilModelSize.y * (maxXY.y - minXY.y));
+				rotation = glm::vec3(glm::radians(90.0f), 0.0f, 0.0f);
+				position = m_soilModel.m_boundingBoxMin + glm::vec3(soilModelSize.x * (minXY.x + maxXY.x) * 0.5f, soilModelSize.y * (minXY.y + maxXY.y) * 0.5f, soilModelSize.z * depth);
+
+			}
+			globalTransform.SetPosition(position);
+			globalTransform.SetEulerRotation(rotation);
+			globalTransform.SetScale(scale);
+			scene->SetDataComponent(quadEntity, globalTransform);
+		}
 	}
 }
 
@@ -444,6 +507,8 @@ void Soil::InitializeSoilModel()
 			};
 
 		}
+
+		m_soilModel.m_materialTextureResolution = soilDescriptor->m_textureResolution;
 		//Add top air layer
 		int materialIndex = 0;
 
@@ -475,6 +540,21 @@ void Soil::InitializeSoilModel()
 				{
 					return soilLayerDescriptor->m_thickness.GetValue(position);
 				};
+				const auto albedo = soilLayerDescriptor->m_albedoTexture.Get<Texture2D>();
+				const auto height = soilLayerDescriptor->m_heightTexture.Get<Texture2D>();
+				if(albedo)
+				{
+					soilLayer.m_mat.m_soilMaterialTexture = std::make_shared<SoilMaterialTexture>();
+					albedo->GetRgbaChannelData(soilLayer.m_mat.m_soilMaterialTexture->m_color_map, soilDescriptor->m_textureResolution.x, soilDescriptor->m_textureResolution.y);
+					if (height) {
+						height->GetRedChannelData(soilLayer.m_mat.m_soilMaterialTexture->m_height_map, soilDescriptor->m_textureResolution.x, soilDescriptor->m_textureResolution.y);
+					}else
+					{
+						soilLayer.m_mat.m_soilMaterialTexture->m_height_map.resize(soilDescriptor->m_textureResolution.x, soilDescriptor->m_textureResolution.y);
+						std::fill(soilLayer.m_mat.m_soilMaterialTexture->m_height_map.begin(), soilLayer.m_mat.m_soilMaterialTexture->m_height_map.end(), 0);
+					}
+				}
+
 				materialIndex++;
 			}
 			else
