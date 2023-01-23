@@ -1223,7 +1223,7 @@ std::vector<glm::vec4> SoilModel::GetSoilTextureSlideX(float x, const glm::vec2&
 			texel_position.x = slize_x_position;
 
 			if (!PositionInsideVolume(texel_position))
-				output[texture_idx] = vec4(1, 0, 1, 1);
+				output[texture_idx] = vec4(1, 0, 1, 0);
 			else
 			{
 				output[texture_idx] = GetSoilTextureColorForPosition(texel_position, texture_idx, blur_width);

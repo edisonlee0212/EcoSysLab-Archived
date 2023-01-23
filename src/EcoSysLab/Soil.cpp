@@ -43,7 +43,7 @@ bool OnInspectSoilParameters(SoilParameters& soilParameters)
 	return changed;
 }
 
-void SetSoilPhysicalMaterial(Noises3D &c, Noises3D& p, float sandRatio, float siltRatio, float clayRatio, float compactness)
+void SetSoilPhysicalMaterial(Noises3D& c, Noises3D& p, float sandRatio, float siltRatio, float clayRatio, float compactness)
 {
 	assert(compactness <= 1.0f && compactness >= 0.0f);
 
@@ -235,7 +235,7 @@ void SoilDescriptor::OnInspect()
 			if (ImGui::TreeNodeEx(("No." + std::to_string(i + 1)).c_str(), ImGuiTreeNodeFlags_DefaultOpen))
 			{
 				ImGui::Text(("Name: " + soilLayerDescriptor->GetTitle()).c_str());
-				
+
 				if (ImGui::Button("Remove"))
 				{
 					m_soilLayerDescriptors.erase(m_soilLayerDescriptors.begin() + i);
@@ -243,7 +243,7 @@ void SoilDescriptor::OnInspect()
 					ImGui::TreePop();
 					continue;
 				}
-				if(!soilLayerDescriptor->Saved())
+				if (!soilLayerDescriptor->Saved())
 				{
 					ImGui::SameLine();
 					if (ImGui::Button("Save"))
@@ -347,70 +347,182 @@ void Soil::OnInspect()
 		ImGui::InputFloat3("BB Min", &bbmin.x, "%.3f", ImGuiInputTextFlags_ReadOnly);
 		ImGui::InputFloat3("BB Max", &bbmax.x, "%.3f", ImGuiInputTextFlags_ReadOnly);
 		ImGui::InputFloat("Total Water", &m_soilModel.m_w_sum_in_g, 0.0f, 0.0f, "%.2f", ImGuiInputTextFlags_ReadOnly);
-
-		static float depth = 0.0f;
-		ImGui::SliderFloat("Depth", &depth, 0, 1);
-		static unsigned xz = 0;
-		ImGui::Combo("Direction", { "X", "Z" }, xz);
-		static glm::vec2 minXY, maxXY;
-		if (xz == 0) {
-			ImGui::SliderFloat("Min X", &minXY.x, 0, maxXY.x);
-			ImGui::SliderFloat("Min Y", &minXY.y, 0, maxXY.y);
-			ImGui::SliderFloat("Max X", &maxXY.x, minXY.x, 1);
-			ImGui::SliderFloat("Max Y", &maxXY.y, minXY.y, 1);
-		}else
-		{
-			ImGui::SliderFloat("Min Z", &minXY.x, 0, maxXY.x);
-			ImGui::SliderFloat("Min Y", &minXY.y, 0, maxXY.y);
-			ImGui::SliderFloat("Max Z", &maxXY.x, minXY.x, 1);
-			ImGui::SliderFloat("Max Y", &maxXY.y, minXY.y, 1);
-		}
-		if(ImGui::Button("Get textured quad"))
-		{
-			auto scene = Application::GetActiveScene();
-			auto quadEntity = scene->CreateEntity("Slice");
-
-			const auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(quadEntity).lock();
-			auto material = ProjectManager::CreateTemporaryAsset<Material>();
-			material->SetProgram(DefaultResources::GLPrograms::StandardProgram);
-			auto albedoTex = ProjectManager::CreateTemporaryAsset<Texture2D>();
+		if (ImGui::TreeNode("Textured soil surface quad")) {
+			static float depth = 0.0f;
+			ImGui::SliderFloat("Depth", &depth, 0, 0.99);
+			static unsigned xz = 0;
+			ImGui::Combo("Direction", { "X", "Z" }, xz);
+			static glm::vec2 minXY;
+			static glm::vec2 maxXY = { 0.99, 0.99 };
 			if (xz == 0) {
-				auto textureData = m_soilModel.GetSoilTextureSlideX(depth, minXY, maxXY);
-				albedoTex->SetRgbaChannelData(textureData, m_soilModel.m_materialTextureResolution);
-			}else
-			{
-				auto textureData = m_soilModel.GetSoilTextureSlideZ(depth, minXY, maxXY);
-				albedoTex->SetRgbaChannelData(textureData, m_soilModel.m_materialTextureResolution);
-			}
-			material->m_albedoTexture = albedoTex;
-			meshRenderer->m_material = material;
-			material->m_drawSettings.m_cullFace = false;
-			meshRenderer->m_mesh = DefaultResources::Primitives::Quad;
-
-			GlobalTransform globalTransform;
-			glm::vec3 scale;
-			glm::vec3 position;
-			glm::vec3 rotation;
-			auto soilModelSize = glm::vec3(m_soilModel.m_resolution) * m_soilModel.m_dx;
-			if (xz == 0) {
-				//Xaxis
-				scale = glm::vec3(soilModelSize.z * (maxXY.x - minXY.x), 1.0f, soilModelSize.y * (maxXY.y - minXY.y));
-				rotation = glm::vec3(glm::radians(90.0f), -glm::radians(90.0f), 0.0f);
-				position = m_soilModel.m_boundingBoxMin + glm::vec3(soilModelSize.x * depth, soilModelSize.y * (minXY.y + maxXY.y) * 0.5f, soilModelSize.z * (minXY.x + maxXY.x) * 0.5f);
+				ImGui::SliderFloat("Min X", &minXY.x, 0, maxXY.x);
+				ImGui::SliderFloat("Max X", &maxXY.x, minXY.x, 1);
+				ImGui::SliderFloat("Min Y", &minXY.y, 0, maxXY.y);
+				ImGui::SliderFloat("Max Y", &maxXY.y, minXY.y, 1);
 			}
 			else
 			{
-				scale = glm::vec3(soilModelSize.x * (maxXY.x - minXY.x), 1.0f, soilModelSize.y * (maxXY.y - minXY.y));
-				rotation = glm::vec3(glm::radians(90.0f), 0.0f, 0.0f);
-				position = m_soilModel.m_boundingBoxMin + glm::vec3(soilModelSize.x * (minXY.x + maxXY.x) * 0.5f, soilModelSize.y * (minXY.y + maxXY.y) * 0.5f, soilModelSize.z * depth);
-
+				ImGui::SliderFloat("Min Z", &minXY.x, 0, maxXY.x);
+				ImGui::SliderFloat("Max Z", &maxXY.x, minXY.x, 1);
+				ImGui::SliderFloat("Min Y", &minXY.y, 0, maxXY.y);
+				ImGui::SliderFloat("Max Y", &maxXY.y, minXY.y, 1);
 			}
-			globalTransform.SetPosition(position);
-			globalTransform.SetEulerRotation(rotation);
-			globalTransform.SetScale(scale);
-			scene->SetDataComponent(quadEntity, globalTransform);
+			if (ImGui::Button("Get textured quad"))
+			{
+				auto scene = Application::GetActiveScene();
+				auto quadEntity = scene->CreateEntity("Slice");
+
+				const auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(quadEntity).lock();
+				auto material = ProjectManager::CreateTemporaryAsset<Material>();
+				material->SetProgram(DefaultResources::GLPrograms::StandardProgram);
+				auto albedoTex = ProjectManager::CreateTemporaryAsset<Texture2D>();
+				if (xz == 0) {
+					auto textureData = m_soilModel.GetSoilTextureSlideX(depth, minXY, maxXY);
+					albedoTex->SetRgbaChannelData(textureData, m_soilModel.m_materialTextureResolution);
+				}
+				else
+				{
+					auto textureData = m_soilModel.GetSoilTextureSlideZ(depth, minXY, maxXY);
+					albedoTex->SetRgbaChannelData(textureData, m_soilModel.m_materialTextureResolution);
+				}
+				material->m_albedoTexture = albedoTex;
+				meshRenderer->m_material = material;
+				material->m_drawSettings.m_cullFace = false;
+				meshRenderer->m_mesh = DefaultResources::Primitives::Quad;
+
+				GlobalTransform globalTransform;
+				glm::vec3 scale;
+				glm::vec3 position;
+				glm::vec3 rotation;
+				auto soilModelSize = glm::vec3(m_soilModel.m_resolution) * m_soilModel.m_dx;
+				if (xz == 0) {
+					//Xaxis
+					scale = glm::vec3(soilModelSize.z * (maxXY.x - minXY.x), 1.0f, soilModelSize.y * (maxXY.y - minXY.y));
+					rotation = glm::vec3(glm::radians(90.0f), -glm::radians(90.0f), 0.0f);
+					position = m_soilModel.m_boundingBoxMin + glm::vec3(soilModelSize.x * depth, soilModelSize.y * (minXY.y + maxXY.y) * 0.5f, soilModelSize.z * (minXY.x + maxXY.x) * 0.5f);
+				}
+				else
+				{
+					scale = glm::vec3(soilModelSize.x * (maxXY.x - minXY.x), 1.0f, soilModelSize.y * (maxXY.y - minXY.y));
+					rotation = glm::vec3(glm::radians(90.0f), 0.0f, 0.0f);
+					position = m_soilModel.m_boundingBoxMin + glm::vec3(soilModelSize.x * (minXY.x + maxXY.x) * 0.5f, soilModelSize.y * (minXY.y + maxXY.y) * 0.5f, soilModelSize.z * depth);
+
+				}
+				globalTransform.SetPosition(position);
+				globalTransform.SetEulerRotation(rotation);
+				globalTransform.SetScale(scale);
+				scene->SetDataComponent(quadEntity, globalTransform);
+			}
+			ImGui::TreePop();
+		}
+
+		static float xDepth = 0.5f;
+		static float zDepth = 0.5f;
+		ImGui::DragFloat("Cutout X Depth", &xDepth, 0.01f, 0.0f, 0.99f);
+		ImGui::DragFloat("Cutout Z Depth", &zDepth, 0.01f, 0.0f, 0.99f);
+		if(ImGui::Button("Generate Cutout"))
+		{
+			auto scene = Application::GetActiveScene();
+			auto owner = GetOwner();
+			for(const auto& child : scene->GetChildren(owner))
+			{
+				if(scene->GetEntityName(child) == "CutOut")
+				{
+					scene->DeleteEntity(child);
+					break;
+				}
+			}
+
+			auto cutOutEntity = GenerateCutOut(xDepth, zDepth);
+			scene->SetParent(cutOutEntity, owner);
 		}
 	}
+}
+Entity Soil::GenerateSurfaceQuadX(float depth, const glm::vec2& minXY, const glm::vec2 maxXY)
+{
+	auto scene = Application::GetActiveScene();
+	auto quadEntity = scene->CreateEntity("Slice");
+
+	const auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(quadEntity).lock();
+	auto material = ProjectManager::CreateTemporaryAsset<Material>();
+	material->SetProgram(DefaultResources::GLPrograms::StandardProgram);
+	auto albedoTex = ProjectManager::CreateTemporaryAsset<Texture2D>();
+
+	auto textureData = m_soilModel.GetSoilTextureSlideX(depth, minXY, maxXY);
+	albedoTex->SetRgbaChannelData(textureData, m_soilModel.m_materialTextureResolution);
+
+	material->m_albedoTexture = albedoTex;
+	meshRenderer->m_material = material;
+	material->m_drawSettings.m_cullFace = false;
+	meshRenderer->m_mesh = DefaultResources::Primitives::Quad;
+
+	GlobalTransform globalTransform;
+	glm::vec3 scale;
+	glm::vec3 position;
+	glm::vec3 rotation;
+	auto soilModelSize = glm::vec3(m_soilModel.m_resolution) * m_soilModel.m_dx;
+
+	scale = glm::vec3(soilModelSize.z * (maxXY.x - minXY.x), 1.0f, soilModelSize.y * (maxXY.y - minXY.y));
+	rotation = glm::vec3(glm::radians(90.0f), -glm::radians(90.0f), 0.0f);
+	position = m_soilModel.m_boundingBoxMin + glm::vec3(soilModelSize.x * depth, soilModelSize.y * (minXY.y + maxXY.y) * 0.5f, soilModelSize.z * (minXY.x + maxXY.x) * 0.5f);
+	globalTransform.SetPosition(position);
+	globalTransform.SetEulerRotation(rotation);
+	globalTransform.SetScale(scale);
+	scene->SetDataComponent(quadEntity, globalTransform);
+	return quadEntity;
+}
+
+Entity Soil::GenerateSurfaceQuadZ(float depth, const glm::vec2& minXY, const glm::vec2 maxXY)
+{
+	auto scene = Application::GetActiveScene();
+	auto quadEntity = scene->CreateEntity("Slice");
+
+	const auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(quadEntity).lock();
+	auto material = ProjectManager::CreateTemporaryAsset<Material>();
+	material->SetProgram(DefaultResources::GLPrograms::StandardProgram);
+	auto albedoTex = ProjectManager::CreateTemporaryAsset<Texture2D>();
+
+	auto textureData = m_soilModel.GetSoilTextureSlideZ(depth, minXY, maxXY);
+	albedoTex->SetRgbaChannelData(textureData, m_soilModel.m_materialTextureResolution);
+
+	material->m_albedoTexture = albedoTex;
+	meshRenderer->m_material = material;
+	material->m_drawSettings.m_cullFace = false;
+	meshRenderer->m_mesh = DefaultResources::Primitives::Quad;
+
+	GlobalTransform globalTransform;
+	glm::vec3 scale;
+	glm::vec3 position;
+	glm::vec3 rotation;
+	auto soilModelSize = glm::vec3(m_soilModel.m_resolution) * m_soilModel.m_dx;
+
+	scale = glm::vec3(soilModelSize.x * (maxXY.x - minXY.x), 1.0f, soilModelSize.y * (maxXY.y - minXY.y));
+	rotation = glm::vec3(glm::radians(90.0f), 0.0f, 0.0f);
+	position = m_soilModel.m_boundingBoxMin + glm::vec3(soilModelSize.x * (minXY.x + maxXY.x) * 0.5f, soilModelSize.y * (minXY.y + maxXY.y) * 0.5f, soilModelSize.z * depth);
+
+	globalTransform.SetPosition(position);
+	globalTransform.SetEulerRotation(rotation);
+	globalTransform.SetScale(scale);
+	scene->SetDataComponent(quadEntity, globalTransform);
+	return quadEntity;
+}
+
+Entity Soil::GenerateCutOut(float xDepth, float zDepth)
+{
+	auto scene = Application::GetActiveScene();
+	auto combinedEntity = scene->CreateEntity("CutOut");
+
+	auto quad1 = GenerateSurfaceQuadX(0, { 0, 0 }, { 1 - zDepth , 1 });
+	auto quad2 = GenerateSurfaceQuadX(xDepth, { 1 - zDepth, 0 }, { 1 , 1 });
+	auto quad3 = GenerateSurfaceQuadZ(zDepth, { 0, 0 }, { xDepth , 1 });
+	auto quad4 = GenerateSurfaceQuadZ(0.99, { xDepth, 0 }, { 1 , 1 });
+
+	scene->SetParent(quad1, combinedEntity);
+	scene->SetParent(quad2, combinedEntity);
+	scene->SetParent(quad3, combinedEntity);
+	scene->SetParent(quad4, combinedEntity);
+
+	return combinedEntity;
 }
 
 void Soil::Serialize(YAML::Emitter& out)
@@ -525,7 +637,7 @@ void Soil::InitializeSoilModel()
 		auto& soilLayerDescriptors = soilDescriptor->m_soilLayerDescriptors;
 		for (int i = 0; i < soilDescriptor->m_soilLayerDescriptors.size(); i++)
 		{
-			
+
 			if (auto soilLayerDescriptor = soilLayerDescriptors[i].Get<NoiseSoilLayerDescriptor>())
 			{
 				soilLayers.emplace_back();
@@ -542,16 +654,17 @@ void Soil::InitializeSoilModel()
 				};
 				const auto albedo = soilLayerDescriptor->m_albedoTexture.Get<Texture2D>();
 				const auto height = soilLayerDescriptor->m_heightTexture.Get<Texture2D>();
-				if(albedo)
+				if (albedo)
 				{
 					soilLayer.m_mat.m_soilMaterialTexture = std::make_shared<SoilMaterialTexture>();
 					albedo->GetRgbaChannelData(soilLayer.m_mat.m_soilMaterialTexture->m_color_map, soilDescriptor->m_textureResolution.x, soilDescriptor->m_textureResolution.y);
 					if (height) {
 						height->GetRedChannelData(soilLayer.m_mat.m_soilMaterialTexture->m_height_map, soilDescriptor->m_textureResolution.x, soilDescriptor->m_textureResolution.y);
-					}else
+					}
+					else
 					{
-						soilLayer.m_mat.m_soilMaterialTexture->m_height_map.resize(soilDescriptor->m_textureResolution.x, soilDescriptor->m_textureResolution.y);
-						std::fill(soilLayer.m_mat.m_soilMaterialTexture->m_height_map.begin(), soilLayer.m_mat.m_soilMaterialTexture->m_height_map.end(), 0);
+						soilLayer.m_mat.m_soilMaterialTexture->m_height_map.resize(soilDescriptor->m_textureResolution.x * soilDescriptor->m_textureResolution.y);
+						std::fill(soilLayer.m_mat.m_soilMaterialTexture->m_height_map.begin(), soilLayer.m_mat.m_soilMaterialTexture->m_height_map.end(), 1.0f);
 					}
 				}
 
@@ -597,13 +710,15 @@ void Soil::SplitRootTestSetup()
 				{
 					m_soilModel.m_n[i] = 0.75f;
 				}
-				else if(position.x < m_soilModel.GetVoxelResolution().x * m_soilModel.m_dx * 0.5f + m_soilModel.m_boundingBoxMin.x)
+				else if (position.x < m_soilModel.GetVoxelResolution().x * m_soilModel.m_dx * 0.5f + m_soilModel.m_boundingBoxMin.x)
 				{
 					m_soilModel.m_n[i] = 0.75f;
-				}else if(position.x < m_soilModel.GetVoxelResolution().x * m_soilModel.m_dx * 0.75f + m_soilModel.m_boundingBoxMin.x)
+				}
+				else if (position.x < m_soilModel.GetVoxelResolution().x * m_soilModel.m_dx * 0.75f + m_soilModel.m_boundingBoxMin.x)
 				{
 					m_soilModel.m_n[i] = 1.25f;
-				}else
+				}
+				else
 				{
 					m_soilModel.m_n[i] = 1.25f;
 				}
@@ -615,6 +730,8 @@ void Soil::SplitRootTestSetup()
 		}
 	}
 }
+
+
 
 void SerializeSoilParameters(const std::string& name, const SoilParameters& soilParameters, YAML::Emitter& out) {
 	out << YAML::Key << name << YAML::BeginMap;

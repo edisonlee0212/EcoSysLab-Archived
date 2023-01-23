@@ -41,7 +41,7 @@ namespace EcoSysLab
 	class SoilDescriptor : public IAsset {
 	public:
 		SoilParameters m_soilParameters;
-		glm::ivec2 m_textureResolution = { 128, 128 };
+		glm::ivec2 m_textureResolution = { 512, 512 };
 		std::vector<AssetRef> m_soilLayerDescriptors;
 		AssetRef m_heightField;
 		/**ImGui menu goes to here. Also you can take care you visualization with Gizmos here.
@@ -94,6 +94,11 @@ namespace EcoSysLab
 
 		void SplitRootTestSetup();
 
+
+		Entity GenerateSurfaceQuadX(float depth, const glm::vec2& minXY, const glm::vec2 maxXY);
+		Entity GenerateSurfaceQuadZ(float depth, const glm::vec2& minXY, const glm::vec2 maxXY);
+
+		Entity GenerateCutOut(float xDepth, float zDepth);
 	private:
 		// member variables to avoid static variables (in case of multiple Soil instances?)
 		bool m_autoStep = false;

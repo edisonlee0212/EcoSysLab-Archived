@@ -53,7 +53,7 @@ namespace EcoSysLab {
 		bool m_needFlowUpdate = false;
 		bool m_lockTreeSelection = false;
 		bool m_autoGrow = false;
-
+		bool m_autoGrowWithSoilStep = false;
 
 		int m_soilVersion = -1;
 		bool m_vectorEnable = false;
@@ -73,11 +73,16 @@ namespace EcoSysLab {
 		float m_scalarMultiplier = 1.0f;
 		float m_scalarBoxSize = 1.0f;
 		float m_scalarMinAlpha = 0.00f;
+
+		std::vector<glm::vec4> m_soilLayerColors;
+
+		float m_soilCutoutXDepth = 0.0f;
+		float m_soilCutoutZDepth = 0.0f;
+
 		glm::vec3 m_scalarBaseColor = glm::vec3(0.0f, 0.0f, 1.0f);
 		unsigned m_scalarSoilProperty = 1;
 		std::vector<glm::mat4> m_scalarMatrices;
 		std::vector<glm::vec4> m_scalarColors;
-
 		void Update() override;
 
 		void OnCreate() override;
