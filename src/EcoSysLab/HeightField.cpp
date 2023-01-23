@@ -36,7 +36,7 @@ void HeightField::Deserialize(const YAML::Node& in)
 	m_noises2D.Load("m_noises2D", in);
 }
 
-void HeightField::GenerateMesh(const glm::vec2& start, const glm::uvec2& resolution, float unitSize, std::vector<Vertex>& vertices, std::vector<glm::uvec3>& triangles)
+void HeightField::GenerateMesh(const glm::vec2& start, const glm::uvec2& resolution, float unitSize, std::vector<Vertex>& vertices, std::vector<glm::uvec3>& triangles, float xDepth, float zDepth)
 {
 	for (unsigned i = 0; i < resolution.x * m_precisionLevel; i++) {
 		for (unsigned j = 0; j < resolution.y * m_precisionLevel; j++) {
@@ -52,7 +52,8 @@ void HeightField::GenerateMesh(const glm::vec2& start, const glm::uvec2& resolut
 
 	for (int i = 0; i < resolution.x * m_precisionLevel - 1; i++) {
 		for (int j = 0; j < resolution.y * m_precisionLevel - 1; j++) {
-			int n = resolution.x * m_precisionLevel;
+			if (static_cast<float>(i) / (resolution.x * m_precisionLevel - 2) > (1.0 - zDepth) && static_cast<float>(j) / (resolution.y * m_precisionLevel - 2) < xDepth) continue;
+			const int n = resolution.x * m_precisionLevel;
 			triangles.emplace_back(i + j * n, i + 1 + j * n, i + (j + 1) * n);
 			triangles.emplace_back(i + 1 + (j + 1) * n, i + (j + 1) * n,
 				i + 1 + j * n);

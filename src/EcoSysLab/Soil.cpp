@@ -2,6 +2,7 @@
 
 #include <cassert>
 
+#include "EcoSysLabLayer.hpp"
 #include "EditorLayer.hpp"
 #include "Graphics.hpp"
 #include "HeightField.hpp"
@@ -349,11 +350,11 @@ void Soil::OnInspect()
 		ImGui::InputFloat("Total Water", &m_soilModel.m_w_sum_in_g, 0.0f, 0.0f, "%.2f", ImGuiInputTextFlags_ReadOnly);
 		if (ImGui::TreeNode("Textured soil surface quad")) {
 			static float depth = 0.0f;
-			ImGui::SliderFloat("Depth", &depth, 0, 0.99);
+			ImGui::SliderFloat("Depth", &depth, 0, 1.0);
 			static unsigned xz = 0;
 			ImGui::Combo("Direction", { "X", "Z" }, xz);
 			static glm::vec2 minXY;
-			static glm::vec2 maxXY = { 0.99, 0.99 };
+			static glm::vec2 maxXY = { 1.0, 1.0 };
 			if (xz == 0) {
 				ImGui::SliderFloat("Min X", &minXY.x, 0, maxXY.x);
 				ImGui::SliderFloat("Max X", &maxXY.x, minXY.x, 1);
@@ -418,8 +419,8 @@ void Soil::OnInspect()
 
 		static float xDepth = 0.5f;
 		static float zDepth = 0.5f;
-		ImGui::DragFloat("Cutout X Depth", &xDepth, 0.01f, 0.0f, 0.99f);
-		ImGui::DragFloat("Cutout Z Depth", &zDepth, 0.01f, 0.0f, 0.99f);
+		ImGui::DragFloat("Cutout X Depth", &xDepth, 0.01f, 0.0f, 1.0f);
+		ImGui::DragFloat("Cutout Z Depth", &zDepth, 0.01f, 0.0f, 1.0f);
 		if(ImGui::Button("Generate Cutout"))
 		{
 			auto scene = Application::GetActiveScene();
@@ -432,7 +433,7 @@ void Soil::OnInspect()
 					break;
 				}
 			}
-
+			
 			auto cutOutEntity = GenerateCutOut(xDepth, zDepth);
 			scene->SetParent(cutOutEntity, owner);
 		}
@@ -512,16 +513,35 @@ Entity Soil::GenerateCutOut(float xDepth, float zDepth)
 	auto scene = Application::GetActiveScene();
 	auto combinedEntity = scene->CreateEntity("CutOut");
 
-	auto quad1 = GenerateSurfaceQuadX(0, { 0, 0 }, { 1 - zDepth , 1 });
-	auto quad2 = GenerateSurfaceQuadX(xDepth, { 1 - zDepth, 0 }, { 1 , 1 });
-	auto quad3 = GenerateSurfaceQuadZ(zDepth, { 0, 0 }, { xDepth , 1 });
-	auto quad4 = GenerateSurfaceQuadZ(0.99, { xDepth, 0 }, { 1 , 1 });
+	auto quad1 = GenerateSurfaceQuadX(0, { 0, 0 }, { 1.0 - zDepth , 1 });
+	auto quad2 = GenerateSurfaceQuadX(xDepth, { 1.0 - zDepth, 0 }, { 1 , 1 });
+	auto quad3 = GenerateSurfaceQuadZ(1.0 - zDepth, { 0, 0 }, { xDepth , 1 });
+	auto quad4 = GenerateSurfaceQuadZ(1.0, { xDepth, 0 }, { 1 , 1 });
 
 	scene->SetParent(quad1, combinedEntity);
 	scene->SetParent(quad2, combinedEntity);
 	scene->SetParent(quad3, combinedEntity);
 	scene->SetParent(quad4, combinedEntity);
 
+	auto groundSurface = GenerateMesh(xDepth, zDepth);
+	auto soilDescriptor = m_soilDescriptor.Get<SoilDescriptor>();
+	if (soilDescriptor)
+	{
+		auto& soilLayerDescriptors = soilDescriptor->m_soilLayerDescriptors;
+
+		if(!soilLayerDescriptors.empty())
+		{
+			auto firstDescriptor = soilLayerDescriptors[0].Get<NoiseSoilLayerDescriptor>();
+			if(firstDescriptor)
+			{
+				auto mmr = scene->GetOrSetPrivateComponent<MeshRenderer>(groundSurface).lock();
+				auto mat = mmr->m_material.Get<Material>();
+				mat->m_albedoTexture = firstDescriptor->m_albedoTexture;
+				mat->m_normalTexture = firstDescriptor->m_normalTexture;
+				mat->m_roughnessTexture = firstDescriptor->m_roughnessTexture;
+			}
+		}
+	}
 	return combinedEntity;
 }
 
@@ -541,24 +561,25 @@ void Soil::CollectAssetRef(std::vector<AssetRef>& list)
 	list.push_back(m_soilDescriptor);
 }
 
-void Soil::GenerateMesh()
+Entity Soil::GenerateMesh(float xDepth, float zDepth)
 {
 	const auto soilDescriptor = m_soilDescriptor.Get<SoilDescriptor>();
 	if (!soilDescriptor)
 	{
 		UNIENGINE_ERROR("No soil descriptor!");
-		return;
+		return Entity();
 	}
 	const auto heightField = soilDescriptor->m_heightField.Get<HeightField>();
 	if (!heightField)
 	{
 		UNIENGINE_ERROR("No height field!");
-		return;
+		return Entity();
 	}
 	std::vector<Vertex> vertices;
 	std::vector<glm::uvec3> triangles;
 	heightField->GenerateMesh(glm::vec2(soilDescriptor->m_soilParameters.m_boundingBoxMin.x, soilDescriptor->m_soilParameters.m_boundingBoxMin.z),
-		glm::uvec2(soilDescriptor->m_soilParameters.m_voxelResolution.x, soilDescriptor->m_soilParameters.m_voxelResolution.z), soilDescriptor->m_soilParameters.m_deltaX, vertices, triangles);
+		glm::uvec2(soilDescriptor->m_soilParameters.m_voxelResolution.x, soilDescriptor->m_soilParameters.m_voxelResolution.z), soilDescriptor->m_soilParameters.m_deltaX, vertices, triangles
+	, xDepth, zDepth);
 
 	const auto scene = Application::GetActiveScene();
 	const auto self = GetOwner();
@@ -585,6 +606,8 @@ void Soil::GenerateMesh()
 	mesh->SetVertices(17, vertices, triangles);
 	meshRenderer->m_mesh = mesh;
 	meshRenderer->m_material = material;
+
+	return groundSurfaceEntity;
 }
 
 
@@ -625,13 +648,19 @@ void Soil::InitializeSoilModel()
 		int materialIndex = 0;
 
 		soilLayers.emplace_back();
-		soilLayers.back().m_mat = SoilPhysicalMaterial({ materialIndex,
+		auto& firstLayer = soilLayers.back();
+		firstLayer.m_mat = SoilPhysicalMaterial({ materialIndex,
 					[](const glm::vec3& pos) { return 1.0f; },
 					[](const glm::vec3& pos) { return 0.0f; },
 					[](const glm::vec3& pos) { return 0.0f; },
 					[](const glm::vec3& pos) { return 0.0f; },
 					[](const glm::vec3& pos) { return 0.0f; } });
-		soilLayers.back().m_thickness = [](const glm::vec2& position) {return 0.f; };
+		firstLayer.m_thickness = [](const glm::vec2& position) {return 0.f; };
+		firstLayer.m_mat.m_soilMaterialTexture = std::make_shared<SoilMaterialTexture>();
+		firstLayer.m_mat.m_soilMaterialTexture->m_color_map.resize(soilDescriptor->m_textureResolution.x * soilDescriptor->m_textureResolution.y);
+		std::fill(firstLayer.m_mat.m_soilMaterialTexture->m_color_map.begin(), firstLayer.m_mat.m_soilMaterialTexture->m_color_map.end(), glm::vec4(62.0f / 255, 49.0f / 255, 23.0f / 255, 0.0f));
+		firstLayer.m_mat.m_soilMaterialTexture->m_height_map.resize(soilDescriptor->m_textureResolution.x * soilDescriptor->m_textureResolution.y);
+		std::fill(firstLayer.m_mat.m_soilMaterialTexture->m_height_map.begin(), firstLayer.m_mat.m_soilMaterialTexture->m_height_map.end(), 0.5f);
 		materialIndex++;
 		//Add user defined layers
 		auto& soilLayerDescriptors = soilDescriptor->m_soilLayerDescriptors;
@@ -654,20 +683,23 @@ void Soil::InitializeSoilModel()
 				};
 				const auto albedo = soilLayerDescriptor->m_albedoTexture.Get<Texture2D>();
 				const auto height = soilLayerDescriptor->m_heightTexture.Get<Texture2D>();
+				soilLayer.m_mat.m_soilMaterialTexture = std::make_shared<SoilMaterialTexture>();
 				if (albedo)
 				{
-					soilLayer.m_mat.m_soilMaterialTexture = std::make_shared<SoilMaterialTexture>();
 					albedo->GetRgbaChannelData(soilLayer.m_mat.m_soilMaterialTexture->m_color_map, soilDescriptor->m_textureResolution.x, soilDescriptor->m_textureResolution.y);
-					if (height) {
-						height->GetRedChannelData(soilLayer.m_mat.m_soilMaterialTexture->m_height_map, soilDescriptor->m_textureResolution.x, soilDescriptor->m_textureResolution.y);
-					}
-					else
-					{
-						soilLayer.m_mat.m_soilMaterialTexture->m_height_map.resize(soilDescriptor->m_textureResolution.x * soilDescriptor->m_textureResolution.y);
-						std::fill(soilLayer.m_mat.m_soilMaterialTexture->m_height_map.begin(), soilLayer.m_mat.m_soilMaterialTexture->m_height_map.end(), 1.0f);
-					}
+				}else
+				{
+					soilLayer.m_mat.m_soilMaterialTexture->m_color_map.resize(soilDescriptor->m_textureResolution.x * soilDescriptor->m_textureResolution.y);
+					std::fill(soilLayer.m_mat.m_soilMaterialTexture->m_color_map.begin(), soilLayer.m_mat.m_soilMaterialTexture->m_color_map.end(), Application::GetLayer<EcoSysLabLayer>()->m_soilLayerColors[materialIndex]);
 				}
-
+				if (height) {
+					height->GetRedChannelData(soilLayer.m_mat.m_soilMaterialTexture->m_height_map, soilDescriptor->m_textureResolution.x, soilDescriptor->m_textureResolution.y);
+				}
+				else
+				{
+					soilLayer.m_mat.m_soilMaterialTexture->m_height_map.resize(soilDescriptor->m_textureResolution.x * soilDescriptor->m_textureResolution.y);
+					std::fill(soilLayer.m_mat.m_soilMaterialTexture->m_height_map.begin(), soilLayer.m_mat.m_soilMaterialTexture->m_height_map.end(), 1.0f);
+				}
 				materialIndex++;
 			}
 			else

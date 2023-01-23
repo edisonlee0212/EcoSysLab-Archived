@@ -21,6 +21,8 @@ namespace EcoSysLab
 	{
 	public:
 		AssetRef m_albedoTexture;
+		AssetRef m_roughnessTexture;
+		AssetRef m_normalTexture;
 		AssetRef m_heightTexture;
 
 		Noises3D m_capacity;
@@ -88,7 +90,7 @@ namespace EcoSysLab
 
 		void CollectAssetRef(std::vector<AssetRef>& list) override;
 
-		void GenerateMesh();
+		Entity GenerateMesh(float xDepth = 1.0f, float zDepth = 1.0f);
 
 		void InitializeSoilModel();
 

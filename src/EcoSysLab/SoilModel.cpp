@@ -1174,15 +1174,15 @@ void EcoSysLab::SoilModel::Source::Apply(Field& target)
 std::vector<glm::vec4> SoilModel::GetSoilTextureSlideZ(float z, const glm::vec2& xyMin, const glm::vec2& xyMax, float blur_width)
 {
 	std::vector<vec4> output(m_materialTextureResolution.x * m_materialTextureResolution.y);
-	const float texRangeX = xyMax.x - xyMin.x;
-	const float texRangeY = xyMax.y - xyMin.y;
+	const float texRangeX = glm::clamp(xyMax.x, 0.0f, 0.99f) - glm::clamp(xyMin.x, 0.0f, 0.99f);
+	const float texRangeY = glm::clamp(xyMax.y, 0.0f, 0.99f) - glm::clamp(xyMin.y, 0.0f, 0.99f);
 
-	const float slize_z_position = GetPositionFromCoordinate(ivec3(0, 0, z * m_resolution.z)).z;
+	const float slize_z_position = GetPositionFromCoordinate(ivec3(0, 0, glm::clamp(z, 0.0f, 0.99f) * m_resolution.z)).z;
 	const float tex_dx = texRangeX * m_dx * static_cast<float>(m_resolution.x) / static_cast<float>(m_materialTextureResolution.x);
 	const float tex_dy = texRangeY * m_dx * static_cast<float>(m_resolution.y) / static_cast<float>(m_materialTextureResolution.y);
 
-	const int texCoordXStart = xyMin.x * m_dx * static_cast<float>(m_resolution.x) / tex_dx;
-	const int texCoordYStart = xyMin.y * m_dx * static_cast<float>(m_resolution.y) / tex_dy;
+	const int texCoordXStart = glm::clamp(xyMin.x, 0.0f, 0.99f) * m_dx * static_cast<float>(m_resolution.x) / tex_dx;
+	const int texCoordYStart = glm::clamp(xyMin.y, 0.0f, 0.99f) * m_dx * static_cast<float>(m_resolution.y) / tex_dy;
 
 	for (auto texCoordX = 0; texCoordX < m_materialTextureResolution.x; ++texCoordX)
 	{
@@ -1193,7 +1193,6 @@ std::vector<glm::vec4> SoilModel::GetSoilTextureSlideZ(float z, const glm::vec2&
 			int gridCoordY = texCoordYStart + texCoordY;
 			glm::vec3 texel_position = GetPositionFromCoordinate(ivec3(gridCoordX, gridCoordY, 0), tex_dx, tex_dy, m_dx);
 			texel_position.z = slize_z_position;
-
 			if (!PositionInsideVolume(texel_position))
 				output[texture_idx] = vec4(1, 0, 1, 1);
 			else
@@ -1210,15 +1209,15 @@ std::vector<glm::vec4> SoilModel::GetSoilTextureSlideZ(float z, const glm::vec2&
 std::vector<glm::vec4> SoilModel::GetSoilTextureSlideX(float x, const glm::vec2& yzMin, const glm::vec2& yzMax, float blur_width)
 {
 	std::vector<glm::vec4> output(m_materialTextureResolution.x * m_materialTextureResolution.y);
-	const float texRangeZ = yzMax.x - yzMin.x;
-	const float texRangeY = yzMax.y - yzMin.y;
+	const float texRangeZ = glm::clamp(yzMax.x, 0.0f, 0.99f) - glm::clamp(yzMin.x, 0.0f, 0.99f);
+	const float texRangeY = glm::clamp(yzMax.y, 0.0f, 0.99f) - glm::clamp(yzMin.y, 0.0f, 0.99f);
 
-	const float slize_x_position = GetPositionFromCoordinate(ivec3(x * m_resolution.x, 0, 0)).x;
+	const float slize_x_position = GetPositionFromCoordinate(ivec3(glm::clamp(x, 0.0f, 0.99f) * m_resolution.x, 0, 0)).x;
 	const float tex_dz = texRangeZ * m_dx * static_cast<float>(m_resolution.x) / static_cast<float>(m_materialTextureResolution.x);
 	const float tex_dy = texRangeY * m_dx * static_cast<float>(m_resolution.y) / static_cast<float>(m_materialTextureResolution.y);
 
-	const int texCoordXStart = yzMin.x * m_dx * static_cast<float>(m_resolution.z) / tex_dz;
-	const int texCoordYStart = yzMin.y * m_dx * static_cast<float>(m_resolution.y) / tex_dy;
+	const int texCoordXStart = glm::clamp(yzMin.x, 0.0f, 0.99f)* m_dx * static_cast<float>(m_resolution.z) / tex_dz;
+	const int texCoordYStart = glm::clamp(yzMin.y, 0.0f, 0.99f)* m_dx * static_cast<float>(m_resolution.y) / tex_dy;
 
 	for (auto texCoordX = 0; texCoordX < m_materialTextureResolution.x; ++texCoordX)
 	{
@@ -1229,9 +1228,8 @@ std::vector<glm::vec4> SoilModel::GetSoilTextureSlideX(float x, const glm::vec2&
 			int gridCoordY = texCoordYStart + texCoordY;
 			glm::vec3 texel_position = GetPositionFromCoordinate(ivec3(0, gridCoordY, gridCoordZ), m_dx, tex_dy, tex_dz);
 			texel_position.x = slize_x_position;
-
 			if (!PositionInsideVolume(texel_position))
-				output[texture_idx] = vec4(1, 0, 1, 0);
+				output[texture_idx] = vec4(0, 0, 0, 0);
 			else
 			{
 				output[texture_idx] = GetSoilTextureColorForPosition(texel_position, texture_idx, blur_width);
@@ -1250,7 +1248,7 @@ glm::vec4 EcoSysLab::SoilModel::GetSoilTextureColorForPosition(const glm::vec3& 
 	std::map<int, float> contributing_materials; // we need to store the total some for each material:
 
 												 // do some gaussian blending
-
+	
 	for(auto i=0; i<m_blur_3x3_idx.size(); ++i) // iterate over blur kernel
 	{
 		auto soil_voxel = soil_voxel_base + m_blur_3x3_idx[i];

@@ -75,7 +75,7 @@ namespace EcoSysLab {
 		float m_scalarMinAlpha = 0.00f;
 
 		std::vector<glm::vec4> m_soilLayerColors;
-
+		friend class Soil;
 		float m_soilCutoutXDepth = 0.0f;
 		float m_soilCutoutZDepth = 0.0f;
 
