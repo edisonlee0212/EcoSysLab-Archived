@@ -37,9 +37,9 @@ bool Noises2D::OnInspect() {
 			switch (static_cast<NoiseType>(m_noiseDescriptors[i].m_type))
 			{
 			case NoiseType::Perlin:
-				changed = ImGui::DragFloat("Frequency", &m_noiseDescriptors[i].m_frequency, 0.01f) || changed;
-				changed = ImGui::DragFloat("Intensity", &m_noiseDescriptors[i].m_intensity, 0.01f) || changed;
-				changed = ImGui::DragFloat("Multiplier", &m_noiseDescriptors[i].m_multiplier, 0.01f) || changed;
+				changed = ImGui::DragFloat("Frequency", &m_noiseDescriptors[i].m_frequency, 0.00001f, 0, 0, "%.5f") || changed;
+				changed = ImGui::DragFloat("Intensity", &m_noiseDescriptors[i].m_intensity, 0.00001f, 0, 0, "%.5f") || changed;
+				changed = ImGui::DragFloat("Multiplier", &m_noiseDescriptors[i].m_multiplier, 0.00001f, 0, 0, "%.5f") || changed;
 				if (ImGui::DragFloat("Min", &m_noiseDescriptors[i].m_min, 0.01f, -99999, m_noiseDescriptors[i].m_max))
 				{
 					changed = true;
@@ -53,9 +53,9 @@ bool Noises2D::OnInspect() {
 				changed = ImGui::DragFloat("Offset", &m_noiseDescriptors[i].m_offset, 0.01f) || changed;
 				break;
 			case NoiseType::Simplex:
-				changed = ImGui::DragFloat("Frequency", &m_noiseDescriptors[i].m_frequency, 0.01f) || changed;
-				changed = ImGui::DragFloat("Intensity", &m_noiseDescriptors[i].m_intensity, 0.01f) || changed;
-				changed = ImGui::DragFloat("Multiplier", &m_noiseDescriptors[i].m_multiplier, 0.01f) || changed;
+				changed = ImGui::DragFloat("Frequency", &m_noiseDescriptors[i].m_frequency, 0.00001f, 0, 0, "%.5f") || changed;
+				changed = ImGui::DragFloat("Intensity", &m_noiseDescriptors[i].m_intensity, 0.00001f, 0, 0, "%.5f") || changed;
+				changed = ImGui::DragFloat("Multiplier", &m_noiseDescriptors[i].m_multiplier, 0.00001f, 0, 0, "%.5f") || changed;
 				if (ImGui::DragFloat("Min", &m_noiseDescriptors[i].m_min, 0.01f, -99999, m_noiseDescriptors[i].m_max))
 				{
 					changed = true;
@@ -69,12 +69,12 @@ bool Noises2D::OnInspect() {
 				changed = ImGui::DragFloat("Offset", &m_noiseDescriptors[i].m_offset, 0.01f) || changed;
 				break;
 			case NoiseType::Constant:
-				changed = ImGui::DragFloat("Value", &m_noiseDescriptors[i].m_offset, 0.01f) || changed;
+				changed = ImGui::DragFloat("Value", &m_noiseDescriptors[i].m_offset, 0.00001f, 0, 0, "%.5f") || changed;
 				break;
 			case NoiseType::Linear:
-				changed = ImGui::DragFloat("X multiplier", &m_noiseDescriptors[i].m_frequency, 0.01f) || changed;
-				changed = ImGui::DragFloat("Y multiplier", &m_noiseDescriptors[i].m_intensity, 0.01f) || changed;
-				changed = ImGui::DragFloat("Base", &m_noiseDescriptors[i].m_offset, 0.01f) || changed;
+				changed = ImGui::DragFloat("X multiplier", &m_noiseDescriptors[i].m_frequency, 0.00001f, 0, 0, "%.5f") || changed;
+				changed = ImGui::DragFloat("Y multiplier", &m_noiseDescriptors[i].m_intensity, 0.00001f, 0, 0, "%.5f") || changed;
+				changed = ImGui::DragFloat("Base", &m_noiseDescriptors[i].m_offset, 0.00001f, 0, 0, "%.5f") || changed;
 				if (ImGui::DragFloat("Min", &m_noiseDescriptors[i].m_min, 0.01f, -99999, m_noiseDescriptors[i].m_max))
 				{
 					changed = true;
@@ -204,9 +204,9 @@ bool Noises3D::OnInspect() {
 			switch (static_cast<NoiseType>(m_noiseDescriptors[i].m_type))
 			{
 			case NoiseType::Perlin:
-				changed = ImGui::DragFloat("Frequency", &m_noiseDescriptors[i].m_frequency, 0.01f) || changed;
-				changed = ImGui::DragFloat("Intensity", &m_noiseDescriptors[i].m_intensity, 0.01f) || changed;
-				changed = ImGui::DragFloat("Multiplier", &m_noiseDescriptors[i].m_multiplier, 0.01f) || changed;
+				changed = ImGui::DragFloat("Frequency", &m_noiseDescriptors[i].m_frequency, 0.00001f, 0, 0, "%.5f") || changed;
+				changed = ImGui::DragFloat("Intensity", &m_noiseDescriptors[i].m_intensity, 0.00001f, 0, 0, "%.5f") || changed;
+				changed = ImGui::DragFloat("Multiplier", &m_noiseDescriptors[i].m_multiplier, 0.00001f, 0, 0, "%.5f") || changed;
 				if (ImGui::DragFloat("Min", &m_noiseDescriptors[i].m_min, 0.01f, -99999, m_noiseDescriptors[i].m_max))
 				{
 					changed = true;
@@ -217,12 +217,12 @@ bool Noises3D::OnInspect() {
 					changed = true;
 					m_noiseDescriptors[i].m_max = glm::max(m_noiseDescriptors[i].m_min, m_noiseDescriptors[i].m_max);
 				}
-				changed = ImGui::DragFloat("Offset", &m_noiseDescriptors[i].m_offset, 0.01f) || changed;
+				changed = ImGui::DragFloat("Offset", &m_noiseDescriptors[i].m_offset, 0.00001f, 0, 0, "%.5f") || changed;
 				break;
 			case NoiseType::Simplex:
-				changed = ImGui::DragFloat("Frequency", &m_noiseDescriptors[i].m_frequency, 0.01f) || changed;
-				changed = ImGui::DragFloat("Intensity", &m_noiseDescriptors[i].m_intensity, 0.01f) || changed;
-				changed = ImGui::DragFloat("Multiplier", &m_noiseDescriptors[i].m_multiplier, 0.01f) || changed;
+				changed = ImGui::DragFloat("Frequency", &m_noiseDescriptors[i].m_frequency, 0.00001f, 0, 0, "%.5f") || changed;
+				changed = ImGui::DragFloat("Intensity", &m_noiseDescriptors[i].m_intensity, 0.00001f, 0, 0, "%.5f") || changed;
+				changed = ImGui::DragFloat("Multiplier", &m_noiseDescriptors[i].m_multiplier, 0.00001f, 0, 0, "%.5f") || changed;
 				if (ImGui::DragFloat("Min", &m_noiseDescriptors[i].m_min, 0.01f, -99999, m_noiseDescriptors[i].m_max))
 				{
 					changed = true;
@@ -233,16 +233,16 @@ bool Noises3D::OnInspect() {
 					changed = true;
 					m_noiseDescriptors[i].m_max = glm::max(m_noiseDescriptors[i].m_min, m_noiseDescriptors[i].m_max);
 				}
-				changed = ImGui::DragFloat("Offset", &m_noiseDescriptors[i].m_offset, 0.01f) || changed;
+				changed = ImGui::DragFloat("Offset", &m_noiseDescriptors[i].m_offset, 0.00001f, 0, 0, "%.5f") || changed;
 				break;
 			case NoiseType::Constant:
-				changed = ImGui::DragFloat("Value", &m_noiseDescriptors[i].m_offset, 0.01f) || changed;
+				changed = ImGui::DragFloat("Value", &m_noiseDescriptors[i].m_offset, 0.00001f, 0, 0, "%.5f") || changed;
 				break;
 			case NoiseType::Linear:
-				changed = ImGui::DragFloat("X multiplier", &m_noiseDescriptors[i].m_frequency, 0.01f) || changed;
-				changed = ImGui::DragFloat("Y multiplier", &m_noiseDescriptors[i].m_intensity, 0.01f) || changed;
-				changed = ImGui::DragFloat("Z multiplier", &m_noiseDescriptors[i].m_multiplier, 0.01f) || changed;
-				changed = ImGui::DragFloat("Base", &m_noiseDescriptors[i].m_offset, 0.01f) || changed;
+				changed = ImGui::DragFloat("X multiplier", &m_noiseDescriptors[i].m_frequency, 0.00001f, 0, 0, "%.5f") || changed;
+				changed = ImGui::DragFloat("Y multiplier", &m_noiseDescriptors[i].m_intensity, 0.00001f, 0, 0, "%.5f") || changed;
+				changed = ImGui::DragFloat("Z multiplier", &m_noiseDescriptors[i].m_multiplier, 0.00001f, 0, 0, "%.5f") || changed;
+				changed = ImGui::DragFloat("Base", &m_noiseDescriptors[i].m_offset, 0.00001f, 0, 0, "%.5f") || changed;
 				if (ImGui::DragFloat("Min", &m_noiseDescriptors[i].m_min, 0.01f, -99999, m_noiseDescriptors[i].m_max))
 				{
 					changed = true;
