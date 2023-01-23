@@ -123,7 +123,8 @@ namespace EcoSysLab {
 		void  SetField(Field& field, const glm::vec3& bb_min, const glm::vec3& bb_max, float value);
 		void  BlurField(Field& field); // for now there is just one standard kernel
 		
-		void AddSource(Source&& source);
+		void AddWaterSource(Source&& source);
+		void AddNutrientSource(Source&& source);
 
 		void Convolution3(   const Field& input, Field& output, const std::vector<int>& indices, const std::vector<float>& weights) const;
 
@@ -148,6 +149,11 @@ namespace EcoSysLab {
 		void Test_WaterDensity();
 		void Test_PermeabilitySpeed();
 
+		void Test_NutrientTransport(float p, float c);
+		void Test_NutrientTransport_Sand();
+		void Test_NutrientTransport_Loam();
+		void Test_NutrientTransport_Silt();
+
 
 		bool m_initialized = false;
 
@@ -163,7 +169,6 @@ namespace EcoSysLab {
 		// scaling factors for different forces
 		float m_diffusionForce;
 		glm::vec3 m_gravityForce;
-		bool m_use_capacity = true;
 		float m_nutrientForce;
 
 		// Fields:
@@ -215,6 +220,7 @@ namespace EcoSysLab {
 		float m_irrigationAmount = 1;
 
 		std::vector<Source> m_water_sources;
+		std::vector<Source> m_nutrient_sources;
 
 		// helper variables:
 		std::vector<glm::ivec3> m_blur_3x3_idx;
@@ -231,12 +237,12 @@ namespace EcoSysLab {
 	public:
 		glm::ivec3 m_voxelResolution = glm::ivec3(64, 48, 64);
 		float m_deltaX = 0.2f;
-		float m_deltaTime = 0.01f; // delta t, time between steps
+		float m_deltaTime = 0.001f; // delta t, time between steps
 		glm::vec3& m_boundingBoxMin = glm::vec3(-6.4, -6.4, -6.4);
 
-		SoilModel::Boundary m_boundary_x = SoilModel::Boundary::sink;
-		SoilModel::Boundary m_boundary_y = SoilModel::Boundary::sink;
-		SoilModel::Boundary m_boundary_z = SoilModel::Boundary::sink;
+		SoilModel::Boundary m_boundary_x = SoilModel::Boundary::absorb;
+		SoilModel::Boundary m_boundary_y = SoilModel::Boundary::absorb;
+		SoilModel::Boundary m_boundary_z = SoilModel::Boundary::absorb;
 
 		float m_diffusionForce = 1;
 		glm::vec3 m_gravityForce = glm::vec3(0, -1.0, 0);
