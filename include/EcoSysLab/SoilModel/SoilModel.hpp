@@ -24,6 +24,9 @@ namespace EcoSysLab {
 
 	struct SoilMaterialTexture
 	{
+		std::vector<float> m_metallic_map;
+		std::vector<float> m_roughness_map;
+		std::vector<glm::vec3> m_normal_map;
 		std::vector<glm::vec4> m_color_map;
 		std::vector<float> m_height_map;
 	};
@@ -106,10 +109,26 @@ namespace EcoSysLab {
 		bool CoordinateInsideVolume(const glm::ivec3& coordinate) const;
 		[[nodiscard]] bool Initialized() const;
 
-		std::vector<glm::vec4> GetSoilTextureSlideZ(float z, const glm::vec2 &xyMin, const glm::vec2 &xyMax, float blur_width=1); // the output as well as all input textures must have the same resolution!
-		std::vector<glm::vec4> GetSoilTextureSlideX(float x, const glm::vec2& yzMin, const glm::vec2& yzMax, float blur_width=1); // the output as well as all input textures must have the same resolution!
+		void GetSoilTextureSlideZ(float z, const glm::vec2 &xyMin, const glm::vec2 &xyMax, 
+			std::vector<glm::vec4> &albedoData,
+			std::vector<glm::vec3> &normalData,
+			std::vector<float> &roughnessData,
+			std::vector<float> &metallicData,
+			glm::ivec2& outputResolution,
+			float blur_width=1); // the output as well as all input textures must have the same resolution!
+		void GetSoilTextureSlideX(float x, const glm::vec2& yzMin, const glm::vec2& yzMax, 
+			std::vector<glm::vec4> &albedoData,
+			std::vector<glm::vec3> &normalData,
+			std::vector<float> &roughnessData,
+			std::vector<float> &metallicData,
+			glm::ivec2& outputResolution,
+			float blur_width=1); // the output as well as all input textures must have the same resolution!
 		
-		glm::vec4 GetSoilTextureColorForPosition(const glm::vec3& position, int texture_idx, float blur_width);
+		void GetSoilTextureColorForPosition(const glm::vec3& position, int texture_idx, float blur_width,
+			glm::vec4& albedo,
+			glm::vec3& normal,
+			float &roughness,
+			float &metallic);
 
 
 		int m_version = 0; // TODO: what does this do?

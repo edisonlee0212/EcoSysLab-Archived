@@ -1171,77 +1171,124 @@ void EcoSysLab::SoilModel::Source::Apply(Field& target)
 }
 
 
-std::vector<glm::vec4> SoilModel::GetSoilTextureSlideZ(float z, const glm::vec2& xyMin, const glm::vec2& xyMax, float blur_width)
+void SoilModel::GetSoilTextureSlideZ(float z, const glm::vec2& xyMin, const glm::vec2& xyMax, std::vector<glm::vec4> &albedoData,
+	std::vector<glm::vec3> &normalData,
+	std::vector<float> &roughnessData,
+	std::vector<float> &metallicData,
+	glm::ivec2& outputResolution,
+	float blur_width)
 {
-	std::vector<vec4> output(m_materialTextureResolution.x * m_materialTextureResolution.y);
-	const float texRangeX = glm::clamp(xyMax.x, 0.0f, 0.99f) - glm::clamp(xyMin.x, 0.0f, 0.99f);
-	const float texRangeY = glm::clamp(xyMax.y, 0.0f, 0.99f) - glm::clamp(xyMin.y, 0.0f, 0.99f);
+	const float rangeX = glm::clamp(xyMax.x, 0.0f, 0.99f) - glm::clamp(xyMin.x, 0.0f, 0.99f);
+	const float rangeY = glm::clamp(xyMax.y, 0.0f, 0.99f) - glm::clamp(xyMin.y, 0.0f, 0.99f);
+	outputResolution.x = rangeX * m_materialTextureResolution.x;
+	outputResolution.y = rangeY * m_materialTextureResolution.y;
 
 	const float slize_z_position = GetPositionFromCoordinate(ivec3(0, 0, glm::clamp(z, 0.0f, 0.99f) * m_resolution.z)).z;
-	const float tex_dx = texRangeX * m_dx * static_cast<float>(m_resolution.x) / static_cast<float>(m_materialTextureResolution.x);
-	const float tex_dy = texRangeY * m_dx * static_cast<float>(m_resolution.y) / static_cast<float>(m_materialTextureResolution.y);
+	const float tex_dx = m_dx * static_cast<float>(m_resolution.x) / static_cast<float>(m_materialTextureResolution.x);
+	const float tex_dy = m_dx * static_cast<float>(m_resolution.y) / static_cast<float>(m_materialTextureResolution.y);
 
-	const int texCoordXStart = glm::clamp(xyMin.x, 0.0f, 0.99f) * m_dx * static_cast<float>(m_resolution.x) / tex_dx;
-	const int texCoordYStart = glm::clamp(xyMin.y, 0.0f, 0.99f) * m_dx * static_cast<float>(m_resolution.y) / tex_dy;
+	const int texCoordXStart = glm::clamp(xyMin.x, 0.0f, 0.99f) * static_cast<float>(m_materialTextureResolution.x);
+	const int texCoordYStart = glm::clamp(xyMin.y, 0.0f, 0.99f) * static_cast<float>(m_materialTextureResolution.y);
 
-	for (auto texCoordX = 0; texCoordX < m_materialTextureResolution.x; ++texCoordX)
+	albedoData.resize(outputResolution.x * outputResolution.y);
+	normalData.resize(outputResolution.x * outputResolution.y);
+	roughnessData.resize(outputResolution.x * outputResolution.y);
+	metallicData.resize(outputResolution.x * outputResolution.y);
+
+	for (auto texCoordX = 0; texCoordX < outputResolution.x; ++texCoordX)
 	{
-		for (auto texCoordY = 0; texCoordY < m_materialTextureResolution.y; ++texCoordY)
+		for (auto texCoordY = 0; texCoordY < outputResolution.y; ++texCoordY)
 		{
-			auto texture_idx = texCoordX + texCoordY * m_materialTextureResolution.x;
+			auto outputTex_idx = texCoordX + texCoordY * outputResolution.x;
+			auto texture_idx = texCoordXStart + texCoordX + (texCoordYStart + texCoordY) * m_materialTextureResolution.x;
 			int gridCoordX = texCoordXStart + texCoordX;
 			int gridCoordY = texCoordYStart + texCoordY;
 			glm::vec3 texel_position = GetPositionFromCoordinate(ivec3(gridCoordX, gridCoordY, 0), tex_dx, tex_dy, m_dx);
 			texel_position.z = slize_z_position;
 			if (!PositionInsideVolume(texel_position))
-				output[texture_idx] = vec4(1, 0, 1, 1);
-			else
 			{
-				output[texture_idx] = GetSoilTextureColorForPosition(texel_position, texture_idx, blur_width);
+				albedoData[outputTex_idx] = glm::vec4(0.f);
+				normalData[outputTex_idx] = glm::vec3(0, 0, 1);
+				roughnessData[outputTex_idx] = 0.8f;
+				metallicData[outputTex_idx] = 0.2f;
+			}else{
+				GetSoilTextureColorForPosition(texel_position, texture_idx, blur_width,
+					albedoData[outputTex_idx],
+					normalData[outputTex_idx],
+					roughnessData[outputTex_idx],
+					metallicData[outputTex_idx]
+				);
+				if(texel_position.y > m_soilSurface.m_height({ texel_position.x, texel_position.z }) + 0.01f)
+				{
+					albedoData[outputTex_idx].w = 0.0f;
+				}
 			}
 		}
 	}
-
-	return std::move(output);
 }
 
 
-std::vector<glm::vec4> SoilModel::GetSoilTextureSlideX(float x, const glm::vec2& yzMin, const glm::vec2& yzMax, float blur_width)
+void SoilModel::GetSoilTextureSlideX(float x, const glm::vec2& yzMin, const glm::vec2& yzMax, std::vector<glm::vec4> &albedoData,
+	std::vector<glm::vec3> &normalData,
+	std::vector<float> &roughnessData,
+	std::vector<float> &metallicData,
+	glm::ivec2& outputResolution,
+	float blur_width)
 {
-	std::vector<glm::vec4> output(m_materialTextureResolution.x * m_materialTextureResolution.y);
-	const float texRangeZ = glm::clamp(yzMax.x, 0.0f, 0.99f) - glm::clamp(yzMin.x, 0.0f, 0.99f);
-	const float texRangeY = glm::clamp(yzMax.y, 0.0f, 0.99f) - glm::clamp(yzMin.y, 0.0f, 0.99f);
-
+	const float rangeZ = glm::clamp(yzMax.x, 0.0f, 0.99f) - glm::clamp(yzMin.x, 0.0f, 0.99f);
+	const float rangeY = glm::clamp(yzMax.y, 0.0f, 0.99f) - glm::clamp(yzMin.y, 0.0f, 0.99f);
+	outputResolution.x = rangeZ * m_materialTextureResolution.x;
+	outputResolution.y = rangeY * m_materialTextureResolution.y;
 	const float slize_x_position = GetPositionFromCoordinate(ivec3(glm::clamp(x, 0.0f, 0.99f) * m_resolution.x, 0, 0)).x;
-	const float tex_dz = texRangeZ * m_dx * static_cast<float>(m_resolution.x) / static_cast<float>(m_materialTextureResolution.x);
-	const float tex_dy = texRangeY * m_dx * static_cast<float>(m_resolution.y) / static_cast<float>(m_materialTextureResolution.y);
+	const float tex_dz = m_dx * static_cast<float>(m_resolution.z) / static_cast<float>(m_materialTextureResolution.x);
+	const float tex_dy = m_dx * static_cast<float>(m_resolution.y) / static_cast<float>(m_materialTextureResolution.y);
 
-	const int texCoordXStart = glm::clamp(yzMin.x, 0.0f, 0.99f)* m_dx * static_cast<float>(m_resolution.z) / tex_dz;
-	const int texCoordYStart = glm::clamp(yzMin.y, 0.0f, 0.99f)* m_dx * static_cast<float>(m_resolution.y) / tex_dy;
+	const int texCoordXStart = glm::clamp(yzMin.x, 0.0f, 0.99f) * static_cast<float>(m_materialTextureResolution.x);
+	const int texCoordYStart = glm::clamp(yzMin.y, 0.0f, 0.99f) * static_cast<float>(m_materialTextureResolution.y);
 
-	for (auto texCoordX = 0; texCoordX < m_materialTextureResolution.x; ++texCoordX)
+	albedoData.resize(outputResolution.x * outputResolution.y);
+	normalData.resize(outputResolution.x * outputResolution.y);
+	roughnessData.resize(outputResolution.x * outputResolution.y);
+	metallicData.resize(outputResolution.x * outputResolution.y);
+
+	for (auto texCoordX = 0; texCoordX < outputResolution.x; ++texCoordX)
 	{
-		for (auto texCoordY = 0; texCoordY < m_materialTextureResolution.y; ++texCoordY)
+		for (auto texCoordY = 0; texCoordY < outputResolution.y; ++texCoordY)
 		{
-			auto texture_idx = texCoordX + texCoordY * m_materialTextureResolution.x;
+			auto outputTex_idx = texCoordX + texCoordY * outputResolution.x;
+			auto texture_idx = texCoordXStart + texCoordX + (texCoordYStart + texCoordY) * m_materialTextureResolution.x;
 			int gridCoordZ = texCoordXStart + texCoordX;
 			int gridCoordY = texCoordYStart + texCoordY;
 			glm::vec3 texel_position = GetPositionFromCoordinate(ivec3(0, gridCoordY, gridCoordZ), m_dx, tex_dy, tex_dz);
 			texel_position.x = slize_x_position;
-			if (!PositionInsideVolume(texel_position))
-				output[texture_idx] = vec4(0, 0, 0, 0);
+			if (!PositionInsideVolume(texel_position)) {
+				albedoData[outputTex_idx] = glm::vec4(0.f);
+				normalData[outputTex_idx] = glm::vec3(0, 0, 1);
+				roughnessData[outputTex_idx] = 0.8f;
+				metallicData[outputTex_idx] = 0.2f;
+			}
 			else
 			{
-				output[texture_idx] = GetSoilTextureColorForPosition(texel_position, texture_idx, blur_width);
+				GetSoilTextureColorForPosition(texel_position, texture_idx, blur_width,
+					albedoData[outputTex_idx],
+					normalData[outputTex_idx],
+					roughnessData[outputTex_idx],
+					metallicData[outputTex_idx]
+					);
+				if (texel_position.y > m_soilSurface.m_height({ texel_position.x, texel_position.z }) + 0.01f)
+				{
+					albedoData[outputTex_idx].w = 0.0f;
+				}
 			}
 		}
 	}
-
-	return std::move(output);
 }
 
 
-glm::vec4 EcoSysLab::SoilModel::GetSoilTextureColorForPosition(const glm::vec3& position, int texture_idx, float blur_width)
+void EcoSysLab::SoilModel::GetSoilTextureColorForPosition(const glm::vec3& position, int texture_idx, float blur_width, glm::vec4& albedo,
+	glm::vec3& normal,
+	float& roughness,
+	float& metallic)
 {
 	const float blur_kernel_width = m_dx*m_dx * blur_width * blur_width;
 	auto soil_voxel_base = GetCoordinateFromPosition(position);
@@ -1256,10 +1303,23 @@ glm::vec4 EcoSysLab::SoilModel::GetSoilTextureColorForPosition(const glm::vec3& 
 		{
 			// fetch material
 			auto material_id = m_material_id[Index(soil_voxel)];
-			if(material_id < 0 || material_id >= m_soilLayers.size()) return vec4(0.f);
+			if (material_id < 0 || material_id >= m_soilLayers.size()) {
+				albedo = glm::vec4(0.f);
+				normal = glm::vec3(0, 0, 1);
+				roughness = 0.8f;
+				metallic = 0.2f;
+				return;
+			}
 			const auto& material = m_soilLayers[material_id].m_mat;
 			const auto& texPtr = material.m_soilMaterialTexture;
-			if(!texPtr) return vec4(0.f);
+			if(!texPtr)
+			{
+				albedo = glm::vec4(0.f);
+				normal = glm::vec3(0, 0, 1);
+				roughness = 0.8f;
+				metallic = 0.2f;
+				return;
+			}
 			const auto p = GetPositionFromCoordinate(soil_voxel);
 			const auto dist = glm::length(p - position);
 
@@ -1292,17 +1352,24 @@ glm::vec4 EcoSysLab::SoilModel::GetSoilTextureColorForPosition(const glm::vec3& 
 
 	// blend according to weights:
 	float total_weight=0;
-	vec4 output(0.f);
+	albedo = glm::vec4(0.0f);
+	normal = glm::vec3(0.f);
+	metallic = 0.0f;
+	roughness = 0.0f;
 	for(auto& p : contributing_materials)
 	{
 		auto weight = p.second * p.second;
 		auto& textures = m_soilLayers[p.first].m_mat.m_soilMaterialTexture;
-		output += textures->m_color_map[texture_idx] * weight;
+		albedo += textures->m_color_map[texture_idx] * weight;
+		normal += textures->m_normal_map[texture_idx] * weight;
+		metallic += textures->m_metallic_map[texture_idx] * weight;
+		roughness += textures->m_roughness_map[texture_idx] * weight;
 		total_weight += weight;
 	}
-	output /= total_weight;
-
-	return output;
+	albedo /= total_weight;
+	normal /= total_weight;
+	metallic /= total_weight;
+	roughness /= total_weight;
 }
 
 

@@ -505,6 +505,7 @@ void EcoSysLabLayer::OnSoilVisualizationMenu()
 				{
 					ImGui::ColorEdit4(("Layer " + std::to_string(i)).c_str(), &m_soilLayerColors[i].x);
 				}
+				ImGui::TreePop();
 			}
 
 			if (ImGui::ColorEdit3("Scalar Base Color", &m_scalarBaseColor.x))

@@ -22,6 +22,7 @@ namespace EcoSysLab
 	public:
 		AssetRef m_albedoTexture;
 		AssetRef m_roughnessTexture;
+		AssetRef m_metallicTexture;
 		AssetRef m_normalTexture;
 		AssetRef m_heightTexture;
 
