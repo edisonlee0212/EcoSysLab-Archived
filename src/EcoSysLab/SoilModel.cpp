@@ -1698,6 +1698,8 @@ void EcoSysLab::SoilModel::Test_NutrientTransport(float p, float c)
 	auto setup = [this](float permeability, float capacity)
 	{
 		SoilParameters p; // standard values as defined when this function was first added are fine.
+		p.m_voxelResolution = {32, 48, 32};
+		p.m_boundingBoxMin = { -3.2, -6.4, -3.2 };
 		p.m_boundary_x = Boundary::wrap;
 		p.m_boundary_y = Boundary::absorb;
 		p.m_boundary_z = Boundary::wrap;

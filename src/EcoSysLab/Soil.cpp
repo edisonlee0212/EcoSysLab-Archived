@@ -330,7 +330,18 @@ void Soil::OnInspect()
 		{
 			SplitRootTestSetup();
 		}
-
+		if(ImGui::Button("Nutrient Transport: Sand"))
+		{
+			m_soilModel.Test_NutrientTransport_Sand();
+		}
+		if (ImGui::Button("Nutrient Transport: Loam"))
+		{
+			m_soilModel.Test_NutrientTransport_Loam();
+		}
+		if (ImGui::Button("Nutrient Transport: Silt"))
+		{
+			m_soilModel.Test_NutrientTransport_Silt();
+		}
 		ImGui::InputFloat("Diffusion Force", &m_soilModel.m_diffusionForce);
 		ImGui::InputFloat3("Gravity Force", &m_soilModel.m_gravityForce.x);
 
@@ -384,8 +395,8 @@ void Soil::OnInspect()
 
 		static float xDepth = 0.5f;
 		static float zDepth = 0.5f;
-		ImGui::DragFloat("Cutout X Depth", &xDepth, 0.01f, 0.0f, 1.0f);
-		ImGui::DragFloat("Cutout Z Depth", &zDepth, 0.01f, 0.0f, 1.0f);
+		ImGui::DragFloat("Cutout X Depth", &xDepth, 0.1f, 0.0f, 1.0f, "%.1f");
+		ImGui::DragFloat("Cutout Z Depth", &zDepth, 0.1f, 0.0f, 1.0f, "%.1f");
 		if(ImGui::Button("Generate Cutout"))
 		{
 			auto scene = Application::GetActiveScene();
@@ -506,13 +517,19 @@ Entity Soil::GenerateCutOut(float xDepth, float zDepth)
 	auto combinedEntity = scene->CreateEntity("CutOut");
 
 	auto quad1 = GenerateSurfaceQuadX(0, { 0, 0 }, { 1.0 - zDepth , 1 });
-	auto quad2 = GenerateSurfaceQuadX(xDepth, { 1.0 - zDepth, 0 }, { 1 , 1 });
-	auto quad3 = GenerateSurfaceQuadZ(1.0 - zDepth, { 0, 0 }, { xDepth , 1 });
+	if (zDepth >= 0.01f) {
+		auto quad2 = GenerateSurfaceQuadX(xDepth, { 1.0 - zDepth, 0 }, { 1 , 1 });
+		scene->SetParent(quad2, combinedEntity);
+	}
+	if (xDepth >= 0.01f) {
+		auto quad3 = GenerateSurfaceQuadZ(1.0 - zDepth, { 0, 0 }, { xDepth , 1 });
+		scene->SetParent(quad3, combinedEntity);
+	}
 	auto quad4 = GenerateSurfaceQuadZ(1.0, { xDepth, 0 }, { 1 , 1 });
 
 	scene->SetParent(quad1, combinedEntity);
-	scene->SetParent(quad2, combinedEntity);
-	scene->SetParent(quad3, combinedEntity);
+	
+	
 	scene->SetParent(quad4, combinedEntity);
 
 	auto groundSurface = GenerateMesh(xDepth, zDepth);
