@@ -114,21 +114,23 @@ namespace EcoSysLab {
 			std::vector<glm::vec3> &normalData,
 			std::vector<float> &roughnessData,
 			std::vector<float> &metallicData,
-			glm::ivec2& outputResolution,
+			glm::ivec2& outputResolution
+			, float waterFactor, float nutrientFactor,
 			float blur_width=1); // the output as well as all input textures must have the same resolution!
 		void GetSoilTextureSlideX(float x, const glm::vec2& yzMin, const glm::vec2& yzMax, 
 			std::vector<glm::vec4> &albedoData,
 			std::vector<glm::vec3> &normalData,
 			std::vector<float> &roughnessData,
 			std::vector<float> &metallicData,
-			glm::ivec2& outputResolution,
+			glm::ivec2& outputResolution
+			, float waterFactor, float nutrientFactor,
 			float blur_width=1); // the output as well as all input textures must have the same resolution!
 		
 		void GetSoilTextureColorForPosition(const glm::vec3& position, int texture_idx, float blur_width,
 			glm::vec4& albedo,
 			glm::vec3& normal,
 			float &roughness,
-			float &metallic);
+			float &metallic, float waterFactor, float nutrientFactor);
 
 
 		int m_version = 0; // TODO: what does this do?
@@ -168,10 +170,10 @@ namespace EcoSysLab {
 		void Test_WaterDensity();
 		void Test_PermeabilitySpeed();
 
-		void Test_NutrientTransport(float p, float c);
-		void Test_NutrientTransport_Sand();
-		void Test_NutrientTransport_Loam();
-		void Test_NutrientTransport_Silt();
+		void Test_NutrientTransport(float p, float c, const std::shared_ptr<SoilMaterialTexture>& texture);
+		void Test_NutrientTransport_Sand(const std::shared_ptr<SoilMaterialTexture>& texture);
+		void Test_NutrientTransport_Loam(const std::shared_ptr<SoilMaterialTexture>& texture);
+		void Test_NutrientTransport_Silt(const std::shared_ptr<SoilMaterialTexture>& texture);
 
 
 		bool m_initialized = false;

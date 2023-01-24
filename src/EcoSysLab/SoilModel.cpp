@@ -1175,7 +1175,8 @@ void SoilModel::GetSoilTextureSlideZ(float z, const glm::vec2& xyMin, const glm:
 	std::vector<glm::vec3> &normalData,
 	std::vector<float> &roughnessData,
 	std::vector<float> &metallicData,
-	glm::ivec2& outputResolution,
+	glm::ivec2& outputResolution, 
+	float waterFactor, float nutrientFactor,
 	float blur_width)
 {
 	const float rangeX = glm::clamp(xyMax.x, 0.0f, 0.99f) - glm::clamp(xyMin.x, 0.0f, 0.99f);
@@ -1216,7 +1217,7 @@ void SoilModel::GetSoilTextureSlideZ(float z, const glm::vec2& xyMin, const glm:
 					albedoData[outputTex_idx],
 					normalData[outputTex_idx],
 					roughnessData[outputTex_idx],
-					metallicData[outputTex_idx]
+					metallicData[outputTex_idx], waterFactor, nutrientFactor
 				);
 				if(texel_position.y > m_soilSurface.m_height({ texel_position.x, texel_position.z }) + 0.01f)
 				{
@@ -1233,6 +1234,7 @@ void SoilModel::GetSoilTextureSlideX(float x, const glm::vec2& yzMin, const glm:
 	std::vector<float> &roughnessData,
 	std::vector<float> &metallicData,
 	glm::ivec2& outputResolution,
+	float waterFactor, float nutrientFactor,
 	float blur_width)
 {
 	const float rangeZ = glm::clamp(yzMax.x, 0.0f, 0.99f) - glm::clamp(yzMin.x, 0.0f, 0.99f);
@@ -1273,7 +1275,7 @@ void SoilModel::GetSoilTextureSlideX(float x, const glm::vec2& yzMin, const glm:
 					albedoData[outputTex_idx],
 					normalData[outputTex_idx],
 					roughnessData[outputTex_idx],
-					metallicData[outputTex_idx]
+					metallicData[outputTex_idx], waterFactor, nutrientFactor
 					);
 				if (texel_position.y > m_soilSurface.m_height({ texel_position.x, texel_position.z }) + 0.01f)
 				{
@@ -1288,14 +1290,15 @@ void SoilModel::GetSoilTextureSlideX(float x, const glm::vec2& yzMin, const glm:
 void EcoSysLab::SoilModel::GetSoilTextureColorForPosition(const glm::vec3& position, int texture_idx, float blur_width, glm::vec4& albedo,
 	glm::vec3& normal,
 	float& roughness,
-	float& metallic)
+	float& metallic, float waterFactor, float nutrientFactor)
 {
 	const float blur_kernel_width = m_dx*m_dx * blur_width * blur_width;
 	auto soil_voxel_base = GetCoordinateFromPosition(position);
 	std::map<int, float> contributing_materials; // we need to store the total some for each material:
 
 												 // do some gaussian blending
-	
+	float waterLevel = 0.0f;
+	float nutrientLevel = 0.0f;
 	for(auto i=0; i<m_blur_3x3_idx.size(); ++i) // iterate over blur kernel
 	{
 		auto soil_voxel = soil_voxel_base + m_blur_3x3_idx[i];
@@ -1333,8 +1336,10 @@ void EcoSysLab::SoilModel::GetSoilTextureColorForPosition(const glm::vec3& posit
 			contributing_materials[material_id] += weight * heightmap_height * heightmap_height;
 			//total_weight +=  weight * tex.m_height_map[texture_idx];
 
-			//total_weight += weight;
 			//output_color += tex.m_color_map[texture_idx] * weight;
+
+			waterLevel += m_w[Index(soil_voxel)] * waterFactor * weight;
+			nutrientLevel += m_n[Index(soil_voxel)] * nutrientFactor * weight;
 		}
 	}
 
@@ -1367,6 +1372,12 @@ void EcoSysLab::SoilModel::GetSoilTextureColorForPosition(const glm::vec3& posit
 		total_weight += weight;
 	}
 	albedo /= total_weight;
+	waterLevel /= total_weight;
+	nutrientLevel /= total_weight;
+	albedo = glm::mix(albedo, glm::vec4(glm::vec3(albedo * 0.2f), 1.0f), glm::clamp(waterLevel, 0.0f, 1.0f));
+	albedo = glm::mix(albedo, albedo * 0.8f + glm::vec4(0.0, 0.2, 0, 0.2), glm::clamp(nutrientLevel, 0.0f, 1.0f));
+
+
 	normal /= total_weight;
 	metallic /= total_weight;
 	roughness /= total_weight;
@@ -1693,13 +1704,14 @@ void EcoSysLab::SoilModel::Test_PermeabilitySpeed()
 }
 
 
-void EcoSysLab::SoilModel::Test_NutrientTransport(float p, float c)
+void EcoSysLab::SoilModel::Test_NutrientTransport(float p, float c, const std::shared_ptr<SoilMaterialTexture>& texture)
 {
-	auto setup = [this](float permeability, float capacity)
+	auto setup = [this, texture](float permeability, float capacity)
 	{
 		SoilParameters p; // standard values as defined when this function was first added are fine.
 		p.m_voxelResolution = {32, 48, 32};
 		p.m_boundingBoxMin = { -3.2, -6.4, -3.2 };
+		p.m_deltaX = 0.2f;
 		p.m_boundary_x = Boundary::wrap;
 		p.m_boundary_y = Boundary::absorb;
 		p.m_boundary_z = Boundary::wrap;
@@ -1724,6 +1736,7 @@ void EcoSysLab::SoilModel::Test_NutrientTransport(float p, float c)
 		Air.m_p = Value(0);
 		Air.m_n = Value(0);
 		Air.m_w = Value(0);
+		Air.m_soilMaterialTexture = texture;
 
 		SoilPhysicalMaterial nutrient;
 		nutrient.m_c = l_0;
@@ -1731,7 +1744,7 @@ void EcoSysLab::SoilModel::Test_NutrientTransport(float p, float c)
 		nutrient.m_p = l_0;
 		nutrient.m_n = l_10;
 		nutrient.m_w = l_0;
-
+		nutrient.m_soilMaterialTexture = texture;
 
 		SoilPhysicalMaterial soil;
 		soil.m_c = l_0;
@@ -1739,6 +1752,7 @@ void EcoSysLab::SoilModel::Test_NutrientTransport(float p, float c)
 		soil.m_p = l_0;
 		soil.m_n = l_0;
 		soil.m_w = l_0;
+		soil.m_soilMaterialTexture = texture;
 
 		auto soil_layers = std::vector<SoilLayer>({
 			SoilLayer({Air, Value(0)}),
@@ -1746,6 +1760,11 @@ void EcoSysLab::SoilModel::Test_NutrientTransport(float p, float c)
 			SoilLayer({nutrient, Value(0.5)}),
 			SoilLayer({soil, Value(10)})
 			});
+
+		for(int i = 0; i < soil_layers.size(); i++)
+		{
+			soil_layers[i].m_mat.m_id = i;
+		}
 
 		Initialize(p, surface, soil_layers);
 
@@ -1762,17 +1781,17 @@ void EcoSysLab::SoilModel::Test_NutrientTransport(float p, float c)
 	//m_nutrient_sources.push_back(*m_water_sources.begin());
 }
 
-void EcoSysLab::SoilModel::Test_NutrientTransport_Sand()
+void EcoSysLab::SoilModel::Test_NutrientTransport_Sand(const std::shared_ptr<SoilMaterialTexture>& texture)
 {
-	Test_NutrientTransport(0.5, 100);
+	Test_NutrientTransport(0.5, 100, texture);
 }
 
-void EcoSysLab::SoilModel::Test_NutrientTransport_Loam()
+void EcoSysLab::SoilModel::Test_NutrientTransport_Loam(const std::shared_ptr<SoilMaterialTexture>& texture)
 {
-	Test_NutrientTransport(0.1, 75);
+	Test_NutrientTransport(0.1, 75, texture);
 }
 
-void EcoSysLab::SoilModel::Test_NutrientTransport_Silt()
+void EcoSysLab::SoilModel::Test_NutrientTransport_Silt(const std::shared_ptr<SoilMaterialTexture>& texture)
 {
-	Test_NutrientTransport(0.033, 50);
+	Test_NutrientTransport(0.033, 50, texture);
 }

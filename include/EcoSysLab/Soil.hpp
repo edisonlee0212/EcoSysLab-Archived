@@ -98,10 +98,10 @@ namespace EcoSysLab
 		void SplitRootTestSetup();
 
 
-		Entity GenerateSurfaceQuadX(float depth, const glm::vec2& minXY, const glm::vec2 maxXY);
-		Entity GenerateSurfaceQuadZ(float depth, const glm::vec2& minXY, const glm::vec2 maxXY);
+		Entity GenerateSurfaceQuadX(float depth, const glm::vec2& minXY, const glm::vec2 maxXY, float waterFactor, float nutrientFactor);
+		Entity GenerateSurfaceQuadZ(float depth, const glm::vec2& minXY, const glm::vec2 maxXY, float waterFactor, float nutrientFactor);
 
-		Entity GenerateCutOut(float xDepth, float zDepth);
+		Entity GenerateCutOut(float xDepth, float zDepth, float waterFactor, float nutrientFactor, bool groundSurface);
 	private:
 		// member variables to avoid static variables (in case of multiple Soil instances?)
 		bool m_autoStep = false;
