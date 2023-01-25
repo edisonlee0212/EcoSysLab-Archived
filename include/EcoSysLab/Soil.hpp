@@ -45,7 +45,7 @@ namespace EcoSysLab
 	class SoilDescriptor : public IAsset {
 	public:
 		SoilParameters m_soilParameters;
-		glm::ivec2 m_textureResolution = { 1024, 1024 };
+		glm::ivec2 m_textureResolution = { 512, 512 };
 		std::vector<AssetRef> m_soilLayerDescriptors;
 		AssetRef m_heightField;
 		/**ImGui menu goes to here. Also you can take care you visualization with Gizmos here.
@@ -92,22 +92,24 @@ namespace EcoSysLab
 
 		void CollectAssetRef(std::vector<AssetRef>& list) override;
 
-		Entity GenerateMesh(float xDepth = 1.0f, float zDepth = 1.0f);
+		Entity GenerateMesh(float xDepth = 0.0f, float zDepth = 0.0f);
 
 		void InitializeSoilModel();
 
 		void SplitRootTestSetup();
 
-
+		void FixedUpdate() override;
 		Entity GenerateSurfaceQuadX(float depth, const glm::vec2& minXY, const glm::vec2 maxXY, float waterFactor, float nutrientFactor);
 		Entity GenerateSurfaceQuadZ(float depth, const glm::vec2& minXY, const glm::vec2 maxXY, float waterFactor, float nutrientFactor);
 
 		Entity GenerateCutOut(float xDepth, float zDepth, float waterFactor, float nutrientFactor, bool groundSurface);
+		Entity GenerateFullBox(float waterFactor, float nutrientFactor, bool groundSurface);
 	private:
 		// member variables to avoid static variables (in case of multiple Soil instances?)
 		bool m_autoStep = false;
 		bool m_irrigation = true;
-
+		float m_temporalProgressionProgress = 0;
+		bool m_temporalProgression = false;
 		// for user specified sources:
 		glm::vec3 m_sourcePositon = glm::vec3(0, 0, 0);
 		float m_sourceAmount = 50.f;

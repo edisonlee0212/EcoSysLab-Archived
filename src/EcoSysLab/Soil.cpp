@@ -323,6 +323,59 @@ void Soil::OnInspect()
 		if (ImGui::Button("Generate surface mesh")) {
 			GenerateMesh();
 		}
+		// Show some general properties:
+
+		static float xDepth = 1;
+		static float zDepth = 1;
+		static float waterFactor = 20.f;
+		static float nutrientFactor = 1.f;
+		static bool groundSurface = false;
+		ImGui::DragFloat("Cutout X Depth", &xDepth, 0.01f, 0.0f, 1.0f, "%.2f");
+		ImGui::DragFloat("Cutout Z Depth", &zDepth, 0.01f, 0.0f, 1.0f, "%.2f");
+		ImGui::DragFloat("Water factor", &waterFactor, 0.0001f, 0.0f, 1.0f, "%.4f");
+		ImGui::DragFloat("Nutrient factor", &nutrientFactor, 0.0001f, 0.0f, 1.0f, "%.4f");
+		ImGui::Checkbox("Ground surface", &groundSurface);
+		if (ImGui::Button("Generate Cutout"))
+		{
+			auto scene = Application::GetActiveScene();
+			auto owner = GetOwner();
+			for (const auto& child : scene->GetChildren(owner))
+			{
+				if (scene->GetEntityName(child) == "CutOut")
+				{
+					scene->DeleteEntity(child);
+					break;
+				}
+			}
+
+			auto cutOutEntity = GenerateCutOut(xDepth, zDepth, waterFactor, nutrientFactor, groundSurface);
+
+			scene->SetParent(cutOutEntity, owner);
+		}
+		if (ImGui::Button("Generate Cube"))
+		{
+			auto scene = Application::GetActiveScene();
+			auto owner = GetOwner();
+			for (const auto& child : scene->GetChildren(owner))
+			{
+				if (scene->GetEntityName(child) == "Cube")
+				{
+					scene->DeleteEntity(child);
+					break;
+				}
+			}
+
+			auto cutOutEntity = GenerateFullBox(waterFactor, nutrientFactor, groundSurface);
+
+			scene->SetParent(cutOutEntity, owner);
+		}
+
+		if(ImGui::Button("Temporal Progression"))
+		{
+			m_temporalProgressionProgress = 0;
+			m_temporalProgression = true;
+		}
+
 		//auto soilDescriptor = m_soilDescriptor.Get<SoilDescriptor>();
 		//if (!m_soilModel.m_initialized) m_soilModel.Initialize(soilDescriptor->m_soilParameters);
 		assert(m_soilModel.m_initialized);
@@ -530,62 +583,7 @@ void Soil::OnInspect()
 		}
 
 
-		// Show some general properties:
-		auto bbmin = m_soilModel.GetBoundingBoxMin();
-		auto bbmax = m_soilModel.GetBoundingBoxMax();
-		ImGui::InputFloat3("BB Min", &bbmin.x, "%.3f", ImGuiInputTextFlags_ReadOnly);
-		ImGui::InputFloat3("BB Max", &bbmax.x, "%.3f", ImGuiInputTextFlags_ReadOnly);
-		ImGui::InputFloat("Total Water", &m_soilModel.m_w_sum_in_g, 0.0f, 0.0f, "%.2f", ImGuiInputTextFlags_ReadOnly);
-		if (ImGui::TreeNode("Textured soil surface quad")) {
-			static float depth = 0.0f;
-			ImGui::SliderFloat("Depth", &depth, 0, 1.0);
-			static unsigned xz = 0;
-			ImGui::Combo("Direction", { "X", "Z" }, xz);
-			static glm::vec2 minXY;
-			static glm::vec2 maxXY = { 1.0, 1.0 };
-			if (xz == 0) {
-				ImGui::SliderFloat("Min X", &minXY.x, 0, maxXY.x);
-				ImGui::SliderFloat("Max X", &maxXY.x, minXY.x, 1);
-				ImGui::SliderFloat("Min Y", &minXY.y, 0, maxXY.y);
-				ImGui::SliderFloat("Max Y", &maxXY.y, minXY.y, 1);
-			}
-			else
-			{
-				ImGui::SliderFloat("Min Z", &minXY.x, 0, maxXY.x);
-				ImGui::SliderFloat("Max Z", &maxXY.x, minXY.x, 1);
-				ImGui::SliderFloat("Min Y", &minXY.y, 0, maxXY.y);
-				ImGui::SliderFloat("Max Y", &maxXY.y, minXY.y, 1);
-			}
-			ImGui::TreePop();
-		}
-
-		static float xDepth = 1;
-		static float zDepth = 1;
-		static float waterFactor = 20.f;
-		static float nutrientFactor = 1.f;
-		static bool groundSurface = false;
-		ImGui::DragFloat("Cutout X Depth", &xDepth, 0.01f, 0.0f, 1.0f, "%.2f");
-		ImGui::DragFloat("Cutout Z Depth", &zDepth, 0.01f, 0.0f, 1.0f, "%.2f");
-		ImGui::DragFloat("Water factor", &waterFactor, 0.0001f, 0.0f, 1.0f, "%.4f");
-		ImGui::DragFloat("Nutrient factor", &nutrientFactor, 0.0001f, 0.0f, 1.0f, "%.4f");
-		ImGui::Checkbox("Ground surface", &groundSurface);
-		if(ImGui::Button("Generate Cutout"))
-		{
-			auto scene = Application::GetActiveScene();
-			auto owner = GetOwner();
-			for(const auto& child : scene->GetChildren(owner))
-			{
-				if(scene->GetEntityName(child) == "CutOut")
-				{
-					scene->DeleteEntity(child);
-					break;
-				}
-			}
-			
-			auto cutOutEntity = GenerateCutOut(xDepth, zDepth, waterFactor, nutrientFactor, groundSurface);
-			
-			scene->SetParent(cutOutEntity, owner);
-		}
+		
 	}
 }
 Entity Soil::GenerateSurfaceQuadX(float depth, const glm::vec2& minXY, const glm::vec2 maxXY, float waterFactor, float nutrientFactor)
@@ -708,6 +706,54 @@ Entity Soil::GenerateCutOut(float xDepth, float zDepth, float waterFactor, float
 	
 	if (groundSurface) {
 		auto groundSurface = GenerateMesh(xDepth, zDepth);
+		auto soilDescriptor = m_soilDescriptor.Get<SoilDescriptor>();
+		if (soilDescriptor)
+		{
+			auto& soilLayerDescriptors = soilDescriptor->m_soilLayerDescriptors;
+
+			if (!soilLayerDescriptors.empty())
+			{
+				auto firstDescriptor = soilLayerDescriptors[0].Get<NoiseSoilLayerDescriptor>();
+				if (firstDescriptor)
+				{
+					auto mmr = scene->GetOrSetPrivateComponent<MeshRenderer>(groundSurface).lock();
+					auto mat = mmr->m_material.Get<Material>();
+					mat->m_albedoTexture = firstDescriptor->m_albedoTexture;
+					mat->m_normalTexture = firstDescriptor->m_normalTexture;
+					mat->m_roughnessTexture = firstDescriptor->m_roughnessTexture;
+					mat->m_metallicTexture = firstDescriptor->m_metallicTexture;
+				}
+			}
+		}
+	}
+	return combinedEntity;
+}
+
+Entity Soil::GenerateFullBox(float waterFactor, float nutrientFactor, bool groundSurface)
+{
+	auto scene = Application::GetActiveScene();
+	auto combinedEntity = scene->CreateEntity("Cube");
+
+	
+	auto quad1 = GenerateSurfaceQuadX(0, { 0, 0 }, { 1 , 1 }, waterFactor, nutrientFactor);
+	scene->SetParent(quad1, combinedEntity);
+	
+	
+	auto quad2 = GenerateSurfaceQuadX(1, { 0, 0 }, { 1 , 1 }, waterFactor, nutrientFactor);
+	scene->SetParent(quad2, combinedEntity);
+	
+	
+	auto quad3 = GenerateSurfaceQuadZ(0, { 0, 0 }, { 1 , 1 }, waterFactor, nutrientFactor);
+	scene->SetParent(quad3, combinedEntity);
+
+	auto quad4 = GenerateSurfaceQuadZ(1, { 0, 0 }, { 1 , 1 }, waterFactor, nutrientFactor);
+	scene->SetParent(quad4, combinedEntity);
+	
+
+
+
+	if (groundSurface) {
+		auto groundSurface = GenerateMesh(0, 0);
 		auto soilDescriptor = m_soilDescriptor.Get<SoilDescriptor>();
 		if (soilDescriptor)
 		{
@@ -990,6 +1036,31 @@ void Soil::SplitRootTestSetup()
 	}
 }
 
+void Soil::FixedUpdate()
+{
+	if (m_temporalProgression) {
+		if (m_temporalProgressionProgress < 1.0f) {
+			auto scene = Application::GetActiveScene();
+			auto owner = GetOwner();
+			for (const auto& child : scene->GetChildren(owner))
+			{
+				if (scene->GetEntityName(child) == "CutOut")
+				{
+					scene->DeleteEntity(child);
+					break;
+				}
+			}
+			auto cutOutEntity = GenerateCutOut(m_temporalProgressionProgress, 0.99f, 0, 0, true);
+			scene->SetParent(cutOutEntity, owner);
+			m_temporalProgressionProgress += 0.01f;
+		}
+		else
+		{
+			m_temporalProgressionProgress = 0;
+			m_temporalProgression = false;
+		}
+	}
+}
 
 
 void SerializeSoilParameters(const std::string& name, const SoilParameters& soilParameters, YAML::Emitter& out) {
