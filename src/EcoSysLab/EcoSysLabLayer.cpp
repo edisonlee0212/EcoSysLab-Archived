@@ -41,6 +41,8 @@ void EcoSysLabLayer::OnCreate() {
 	m_branchStrands = ProjectManager::CreateTemporaryAsset<Strands>();
 	m_rootStrands = ProjectManager::CreateTemporaryAsset<Strands>();
 	m_fineRootStrands = ProjectManager::CreateTemporaryAsset<Strands>();
+
+	m_foliageMatrices = std::make_shared<ParticleMatrices>();
 }
 
 void EcoSysLabLayer::OnDestroy() {
@@ -128,6 +130,8 @@ void EcoSysLabLayer::LateUpdate() {
 		{
 			BranchRenderingGs(treeEntities);
 		}
+
+		bool floatUpdated = false;
 		if (m_debugVisualization) {
 			if (m_branchVersions.size() != treeEntities->size() || m_rootVersions.size() != treeEntities->size()) {
 				m_internodeSize = 0;
@@ -174,61 +178,101 @@ void EcoSysLabLayer::LateUpdate() {
 			m_rootFlowSize = totalRootFlowSize;
 			m_leafSize = totalLeafSize;
 			m_fruitSize = totalFruitSize;
-			if (m_needFlowUpdate) UpdateFlows(treeEntities, branchStrands, rootStrands, fineRootStrands);
-		}
-
-		auto strandsHolder = m_branchStrandsHolder.Get();
-		if (scene->IsEntityValid(strandsHolder))
-		{
-			auto branchStrandsRenderer = scene->GetOrSetPrivateComponent<StrandsRenderer>(strandsHolder).lock();
-			branchStrandsRenderer->m_strands = m_branchStrands;
-			auto material = branchStrandsRenderer->m_material.Get<Material>();
-			if (!material)
-			{
-				material = ProjectManager::CreateTemporaryAsset<Material>();
-				material->SetProgram(DefaultResources::GLPrograms::StandardStrandsProgram);
-				branchStrandsRenderer->m_material = material;
-				material->m_materialProperties.m_albedoColor = glm::vec3(109, 79, 75) / 255.0f;
-				material->m_materialProperties.m_roughness = 1.0f;
-				material->m_materialProperties.m_metallic = 0.0f;
+			if (m_needFlowUpdate) {
+				UpdateFlows(treeEntities, branchStrands, rootStrands, fineRootStrands);
+				floatUpdated = true;
 			}
-		}
 
-		auto rootsHolder = m_rootStrandsHolder.Get();
-		if (scene->IsEntityValid(rootsHolder))
-		{
-			auto rootStrandsRenderer = scene->GetOrSetPrivateComponent<StrandsRenderer>(rootsHolder).lock();
-			rootStrandsRenderer->m_strands = m_rootStrands;
-			auto material = rootStrandsRenderer->m_material.Get<Material>();
-			if (!material)
+		}
+		if (floatUpdated) {
+			auto strandsHolder = m_branchStrandsHolder.Get();
+			if (scene->IsEntityValid(strandsHolder))
 			{
-				material = ProjectManager::CreateTemporaryAsset<Material>();
-				material->SetProgram(DefaultResources::GLPrograms::StandardStrandsProgram);
-				rootStrandsRenderer->m_material = material;
-				material->m_materialProperties.m_albedoColor = glm::vec3(80, 60, 50) / 255.0f;
-				material->m_materialProperties.m_roughness = 1.0f;
-				material->m_materialProperties.m_metallic = 0.0f;
+				auto branchStrandsRenderer = scene->GetOrSetPrivateComponent<StrandsRenderer>(strandsHolder).lock();
+				branchStrandsRenderer->m_strands = m_branchStrands;
+				auto material = branchStrandsRenderer->m_material.Get<Material>();
+				if (!material)
+				{
+					material = ProjectManager::CreateTemporaryAsset<Material>();
+					material->SetProgram(DefaultResources::GLPrograms::StandardStrandsProgram);
+					branchStrandsRenderer->m_material = material;
+					material->m_materialProperties.m_albedoColor = glm::vec3(109, 79, 75) / 255.0f;
+					if (m_meshGeneratorSettings.m_overridePresentation)
+					{
+						material->m_materialProperties.m_albedoColor = m_meshGeneratorSettings.m_presentationOverrideSettings.m_branchOverrideColor;
+					}
+					material->m_materialProperties.m_roughness = 1.0f;
+					material->m_materialProperties.m_metallic = 0.0f;
+				}
 			}
-		}
 
-		auto fineRootsHolder = m_fineRootStrandsHolder.Get();
-		if (scene->IsEntityValid(fineRootsHolder))
-		{
-			auto fineRootStrandsRenderer = scene->GetOrSetPrivateComponent<StrandsRenderer>(fineRootsHolder).lock();
-			fineRootStrandsRenderer->m_strands = m_fineRootStrands;
-			auto material = fineRootStrandsRenderer->m_material.Get<Material>();
-			if (!material)
+			auto rootsHolder = m_rootStrandsHolder.Get();
+			if (scene->IsEntityValid(rootsHolder))
 			{
-				material = ProjectManager::CreateTemporaryAsset<Material>();
-				material->SetProgram(DefaultResources::GLPrograms::StandardStrandsProgram);
-				fineRootStrandsRenderer->m_material = material;
-				material->m_materialProperties.m_albedoColor = glm::vec3(80, 60, 50) / 255.0f;
-				material->m_materialProperties.m_roughness = 1.0f;
-				material->m_materialProperties.m_metallic = 0.2f;
+				auto rootStrandsRenderer = scene->GetOrSetPrivateComponent<StrandsRenderer>(rootsHolder).lock();
+				rootStrandsRenderer->m_strands = m_rootStrands;
+				auto material = rootStrandsRenderer->m_material.Get<Material>();
+				if (!material)
+				{
+					material = ProjectManager::CreateTemporaryAsset<Material>();
+					material->SetProgram(DefaultResources::GLPrograms::StandardStrandsProgram);
+					rootStrandsRenderer->m_material = material;
+					material->m_materialProperties.m_albedoColor = glm::vec3(80, 60, 50) / 255.0f;
+					if (m_meshGeneratorSettings.m_overridePresentation)
+					{
+						material->m_materialProperties.m_albedoColor = m_meshGeneratorSettings.m_presentationOverrideSettings.m_rootOverrideColor;
+					}
+					material->m_materialProperties.m_roughness = 1.0f;
+					material->m_materialProperties.m_metallic = 0.0f;
+				}
+			}
+
+			auto fineRootsHolder = m_fineRootStrandsHolder.Get();
+			if (scene->IsEntityValid(fineRootsHolder))
+			{
+				auto fineRootStrandsRenderer = scene->GetOrSetPrivateComponent<StrandsRenderer>(fineRootsHolder).lock();
+				fineRootStrandsRenderer->m_strands = m_fineRootStrands;
+				auto material = fineRootStrandsRenderer->m_material.Get<Material>();
+				if (!material)
+				{
+					material = ProjectManager::CreateTemporaryAsset<Material>();
+					material->SetProgram(DefaultResources::GLPrograms::StandardStrandsProgram);
+					fineRootStrandsRenderer->m_material = material;
+					material->m_materialProperties.m_albedoColor = glm::vec3(80, 60, 50) / 255.0f;
+					if (m_meshGeneratorSettings.m_overridePresentation)
+					{
+						material->m_materialProperties.m_albedoColor = m_meshGeneratorSettings.m_presentationOverrideSettings.m_rootOverrideColor;
+					}
+					material->m_materialProperties.m_roughness = 1.0f;
+					material->m_materialProperties.m_metallic = 0.2f;
+				}
+			}
+
+			auto foliageHolder = m_foliageHolder.Get();
+			if (scene->IsEntityValid(foliageHolder))
+			{
+				auto foliageRenderer = scene->GetOrSetPrivateComponent<Particles>(foliageHolder).lock();
+				auto mesh = foliageRenderer->m_mesh.Get<Mesh>();
+				if (!mesh) foliageRenderer->m_mesh = DefaultResources::Primitives::Quad;
+				foliageRenderer->m_matrices = m_foliageMatrices;
+				auto material = foliageRenderer->m_material.Get<Material>();
+				if (!material)
+				{
+					material = ProjectManager::CreateTemporaryAsset<Material>();
+					material->SetProgram(DefaultResources::GLPrograms::StandardInstancedProgram);
+					foliageRenderer->m_material = material;
+					material->m_materialProperties.m_albedoColor = glm::vec3(80, 60, 50) / 255.0f;
+					if (m_meshGeneratorSettings.m_overridePresentation)
+					{
+						material->m_materialProperties.m_albedoColor = m_meshGeneratorSettings.m_presentationOverrideSettings.m_foliageOverrideColor;
+					}
+					material->m_materialProperties.m_roughness = 1.0f;
+					material->m_materialProperties.m_metallic = 0.2f;
+				}
+				foliageRenderer->m_matrices->Update();
 			}
 		}
 	}
-
 	if (m_debugVisualization) {
 		GizmoSettings gizmoSettings;
 		gizmoSettings.m_drawSettings.m_blending = true;
@@ -262,14 +306,14 @@ void EcoSysLabLayer::LateUpdate() {
 				glm::mat4(1.0f), 1.0f, gizmoSettings);
 		}
 
-		if (m_displayFoliage && !m_foliageMatrices.empty())
+		if (m_displayFoliage && !m_foliageMatrices->m_value.empty())
 		{
 			Gizmos::DrawGizmoMeshInstancedColored(
 				DefaultResources::Primitives::Quad, editorLayer->m_sceneCamera,
 				editorLayer->m_sceneCameraPosition,
 				editorLayer->m_sceneCameraRotation,
 				m_foliageColors,
-				m_foliageMatrices,
+				m_foliageMatrices->m_value,
 				glm::mat4(1.0f), 1.0f, gizmoSettings);
 		}
 		if (scene->IsEntityValid(m_selectedTree)) {
@@ -315,6 +359,9 @@ void EcoSysLabLayer::ResetAllTrees(const std::vector<Entity>* treeEntities)
 	m_branchPoints.clear();
 	m_rootSegments.clear();
 	m_rootPoints.clear();
+	m_fineRootPoints.clear();
+	m_fineRootSegments.clear();
+
 
 	m_branchStrands = ProjectManager::CreateTemporaryAsset<Strands>();
 	m_rootStrands = ProjectManager::CreateTemporaryAsset<Strands>();
@@ -323,7 +370,7 @@ void EcoSysLabLayer::ResetAllTrees(const std::vector<Entity>* treeEntities)
 	m_boundingBoxMatrices.clear();
 	m_boundingBoxColors.clear();
 
-	m_foliageMatrices.clear();
+	m_foliageMatrices->m_value.clear();
 	m_foliageColors.clear();
 
 	m_fruitMatrices.clear();
@@ -346,6 +393,7 @@ void EcoSysLabLayer::OnInspect() {
 			Editor::DragAndDropButton(m_branchStrandsHolder, "Branch strands holder");
 			Editor::DragAndDropButton(m_rootStrandsHolder, "Root strands holder");
 			Editor::DragAndDropButton(m_fineRootStrandsHolder, "Fine Root strands holder");
+			//Editor::DragAndDropButton(m_foliageHolder, "Foliage holder");
 			ImGui::TreePop();
 		}
 
@@ -573,7 +621,7 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 			m_fineRootSegments.clear();
 			m_fineRootPoints.clear();
 
-			m_foliageMatrices.clear();
+			m_foliageMatrices->m_value.clear();
 			m_foliageColors.clear();
 			m_fruitMatrices.clear();
 			m_fruitColors.clear();
@@ -617,7 +665,7 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 		m_rootSegments.resize(rootLastStartIndex * 3);
 		m_rootPoints.resize(rootLastStartIndex * 6);
 
-		m_foliageMatrices.resize(leafLastStartIndex);
+		m_foliageMatrices->m_value.resize(leafLastStartIndex);
 		m_foliageColors.resize(leafLastStartIndex);
 		m_fruitMatrices.resize(fruitLastStartIndex);
 		m_fruitColors.resize(fruitLastStartIndex);
@@ -825,6 +873,7 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 
 			int leafIndex = 0;
 			int fruitIndex = 0;
+			auto& foliageMatrices = m_foliageMatrices->m_value;
 			for (const auto& internodeHandle : internodeList)
 			{
 				const auto& internode = branchSkeleton.PeekNode(internodeHandle);
@@ -838,7 +887,7 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 					if (bud.m_maturity <= 0.0f) continue;
 					if (bud.m_type == BudType::Leaf)
 					{
-						m_foliageMatrices[leafStartIndex + leafIndex] = entityGlobalTransform.m_value * internodeGlobalTransform * bud.m_reproductiveModuleTransform;
+						foliageMatrices[leafStartIndex + leafIndex] = entityGlobalTransform.m_value * internodeGlobalTransform * bud.m_reproductiveModuleTransform;
 						m_foliageColors[leafStartIndex + leafIndex] = glm::vec4(glm::mix(glm::vec3(152 / 255.0f, 203 / 255.0f, 0 / 255.0f), glm::vec3(159 / 255.0f, 100 / 255.0f, 66 / 255.0f), glm::max(bud.m_drought, 1.0f - bud.m_chlorophyll)), 1.0f);
 						leafIndex++;
 					}

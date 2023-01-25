@@ -35,6 +35,7 @@ namespace EcoSysLab
 		void OnInspect() override;
 		void Serialize(YAML::Emitter& out) override;
 		void Deserialize(const YAML::Node& in) override;
+		void CollectAssetRef(std::vector<AssetRef>& list) override;
 	};
 	
 	/**
@@ -44,7 +45,7 @@ namespace EcoSysLab
 	class SoilDescriptor : public IAsset {
 	public:
 		SoilParameters m_soilParameters;
-		glm::ivec2 m_textureResolution = { 512, 512 };
+		glm::ivec2 m_textureResolution = { 1024, 1024 };
 		std::vector<AssetRef> m_soilLayerDescriptors;
 		AssetRef m_heightField;
 		/**ImGui menu goes to here. Also you can take care you visualization with Gizmos here.

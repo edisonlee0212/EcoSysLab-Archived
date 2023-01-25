@@ -202,7 +202,9 @@ void TreeMeshGeneratorSettings::OnInspect() {
 			ImGui::DragFloat("Position variance", &m_presentationOverrideSettings.m_positionVariance, 0.01f);
 			ImGui::DragFloat("Phototropism", &m_presentationOverrideSettings.m_phototropism, 0.01f);
 			ImGui::Checkbox("Limit max thickness", &m_presentationOverrideSettings.m_limitMaxThickness);
-
+			ImGui::ColorEdit3("Root color", &m_presentationOverrideSettings.m_rootOverrideColor.x);
+			ImGui::ColorEdit3("Branch color", &m_presentationOverrideSettings.m_branchOverrideColor.x);
+			ImGui::ColorEdit3("Foliage color", &m_presentationOverrideSettings.m_foliageOverrideColor.x);
 			Editor::DragAndDropButton<Texture2D>(m_foliageTexture, "Foliage tex");
 
 

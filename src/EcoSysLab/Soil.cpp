@@ -70,7 +70,7 @@ void SetSoilPhysicalMaterial(Noises3D& c, Noises3D& p, float sandRatio, float si
 void NoiseSoilLayerDescriptor::OnInspect()
 {
 	bool changed = false;
-	if (ImGui::TreeNodeEx("Generate from preset soil ratio", ImGuiTreeNodeFlags_DefaultOpen)) {
+	if (ImGui::TreeNodeEx("Generate from preset soil ratio")) {
 		static float sandRatio = 0.1f;
 		static float siltRatio = 0.1f;
 		static float clayRatio = 0.8f;
@@ -195,6 +195,15 @@ void NoiseSoilLayerDescriptor::Deserialize(const YAML::Node& in)
 	m_metallicTexture.Load("m_metallicTexture", in);
 	m_normalTexture.Load("m_normalTexture", in);
 	m_heightTexture.Load("m_heightTexture", in);
+}
+
+void NoiseSoilLayerDescriptor::CollectAssetRef(std::vector<AssetRef>& list)
+{
+	list.push_back(m_albedoTexture);
+	list.push_back(m_roughnessTexture);
+	list.push_back(m_metallicTexture);
+	list.push_back(m_normalTexture);
+	list.push_back(m_heightTexture);
 }
 
 void SoilDescriptor::OnInspect()
@@ -555,8 +564,8 @@ void Soil::OnInspect()
 		static float waterFactor = 20.f;
 		static float nutrientFactor = 1.f;
 		static bool groundSurface = false;
-		ImGui::DragFloat("Cutout X Depth", &xDepth, 0.1f, 0.0f, 1.0f, "%.1f");
-		ImGui::DragFloat("Cutout Z Depth", &zDepth, 0.1f, 0.0f, 1.0f, "%.1f");
+		ImGui::DragFloat("Cutout X Depth", &xDepth, 0.01f, 0.0f, 1.0f, "%.2f");
+		ImGui::DragFloat("Cutout Z Depth", &zDepth, 0.01f, 0.0f, 1.0f, "%.2f");
 		ImGui::DragFloat("Water factor", &waterFactor, 0.0001f, 0.0f, 1.0f, "%.4f");
 		ImGui::DragFloat("Nutrient factor", &nutrientFactor, 0.0001f, 0.0f, 1.0f, "%.4f");
 		ImGui::Checkbox("Ground surface", &groundSurface);

@@ -34,12 +34,11 @@ void Tree::OnInspect() {
 		static int iterations = 5;
 		ImGui::DragInt("Iterations", &iterations, 1, 0, m_treeModel.CurrentIteration());
 		iterations = glm::clamp(iterations, 0, m_treeModel.CurrentIteration());
-		
+
 		if (ImGui::TreeNodeEx("Mesh generation", ImGuiTreeNodeFlags_DefaultOpen)) {
-			static TreeMeshGeneratorSettings meshGeneratorSettings;
-			meshGeneratorSettings.OnInspect();
+			m_meshGeneratorSettings.OnInspect();
 			if (ImGui::Button("Generate Mesh")) {
-				GenerateMesh(meshGeneratorSettings, iterations);
+				GenerateMesh(m_meshGeneratorSettings, iterations);
 			}
 			if (ImGui::Button("Clear Mesh"))
 			{
@@ -51,56 +50,35 @@ void Tree::OnInspect() {
 			m_treeModel.Clear();
 			modelChanged = true;
 		}
-	}
 
-	if (ImGui::TreeNodeEx("Illumination Estimation settings"))
-	{
-		ImGui::DragFloat("Overall intensity", &m_treeModel.m_illuminationEstimationSettings.m_overallIntensity, 0.01f);
-		ImGui::DragFloat("Occlusion", &m_treeModel.m_illuminationEstimationSettings.m_occlusion, 0.01f);
-		ImGui::DragFloat("Occlusion distance Factor", &m_treeModel.m_illuminationEstimationSettings.m_occlusionDistanceFactor, 0.01f);
-		ImGui::DragFloat("Min/max ratio", &m_treeModel.m_illuminationEstimationSettings.m_layerAngleFactor, 0.01f);
-		ImGui::TreePop();
-	}
-
-	if (ImGui::Button("Calculate illumination"))
-	{
-		m_treeModel.CollectShootFlux(m_climate.Get<Climate>()->m_climateModel, m_treeDescriptor.Get<TreeDescriptor>()->m_treeGrowthParameters);
-		modelChanged = true;
-	}
-	if (modelChanged) {
-		const auto treeVisualizationLayer = Application::GetLayer<EcoSysLabLayer>();
-		if (treeVisualizationLayer && treeVisualizationLayer->m_selectedTree == GetOwner()) {
-			treeVisualizationLayer->m_treeVisualizer.Reset(m_treeModel);
-		}
-	}
-	/*
-	static bool visualizeVolume = false;
-	ImGui::Checkbox("Visualize illumination volume", &visualizeVolume);
-	if(visualizeVolume && m_treeModel.m_treeVolume.m_hasData)
-	{
-		std::vector<glm::mat4> matrices;
-
-		for(int i = 0; i < m_treeModel.m_treeVolume.m_layerAmount; i++)
+		if (m_enableHistory)
 		{
-			for (int j = 0; j < m_treeModel.m_treeVolume.m_sectorAmount; j++)
+			if (ImGui::Button("Temporal Progression"))
 			{
-				glm::vec3 tipPosition;
-				m_treeModel.m_treeVolume.TipPosition(i, j, tipPosition);
-				matrices.push_back(glm::translate(tipPosition) * glm::scale(glm::vec3(0.05f)));
+				m_temporalProgression = true;
+				m_temporalProgressionIteration = 0;
 			}
 		}
-
-		Gizmos::DrawGizmoMeshInstanced(DefaultResources::Primitives::Cube, glm::vec4(1, 0, 0, 1), matrices);
 	}
-	*/
-
 	ImGui::Checkbox("Split root test", &m_splitRootTest);
 	ImGui::Checkbox("Biomass history", &m_recordBiomassHistory);
 
 	if (m_splitRootTest) ImGui::Text(("Left/Right side biomass: [" + std::to_string(m_leftSideBiomass) + ", " + std::to_string(m_rightSideBiomass) + "]").c_str());
 
 }
-
+void Tree::Update()
+{
+	if (m_temporalProgression) {
+		if (m_temporalProgressionIteration <= m_treeModel.CurrentIteration()) {
+			GenerateMesh(m_meshGeneratorSettings, m_temporalProgressionIteration);
+			m_temporalProgressionIteration++;
+		}else
+		{
+			m_temporalProgressionIteration = 0;
+			m_temporalProgression = false;
+		}
+	}
+}
 void Tree::OnCreate() {
 }
 
@@ -142,7 +120,7 @@ bool Tree::TryGrow() {
 	bool grown = m_treeModel.Grow(scene->GetDataComponent<GlobalTransform>(owner).m_value, soil->m_soilModel, climate->m_climateModel,
 		treeDescriptor->m_rootGrowthParameters, treeDescriptor->m_treeGrowthParameters);
 
-	if(m_recordBiomassHistory)
+	if (m_recordBiomassHistory)
 	{
 		const auto& baseRootNode = m_treeModel.RefRootSkeleton().RefNode(0);
 		const auto& baseShootNode = m_treeModel.RefBranchSkeleton().RefNode(0);
@@ -150,17 +128,18 @@ bool Tree::TryGrow() {
 		m_shootBiomassHistory.emplace_back(baseShootNode.m_data.m_biomass + baseShootNode.m_data.m_descendentTotalBiomass);
 	}
 
-	if(m_splitRootTest)
+	if (m_splitRootTest)
 	{
 		const auto& rootNodeList = m_treeModel.RefRootSkeleton().RefSortedNodeList();
 		m_leftSideBiomass = m_rightSideBiomass = 0.0f;
-		for(const auto& rootNodeHandle : rootNodeList)
+		for (const auto& rootNodeHandle : rootNodeList)
 		{
 			const auto& rootNode = m_treeModel.RefRootSkeleton().RefNode(rootNodeHandle);
-			if(rootNode.m_info.m_globalPosition.x < 0.0f)
+			if (rootNode.m_info.m_globalPosition.x < 0.0f)
 			{
 				m_leftSideBiomass += rootNode.m_data.m_biomass;
-			}else
+			}
+			else
 			{
 				m_rightSideBiomass += rootNode.m_data.m_biomass;
 			}
@@ -174,6 +153,8 @@ void Tree::Serialize(YAML::Emitter& out)
 {
 	m_treeDescriptor.Save("m_treeDescriptor", out);
 }
+
+
 
 void Tree::Deserialize(const YAML::Node& in)
 {
@@ -273,7 +254,13 @@ void Tree::GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings, 
 		material->SetProgram(DefaultResources::GLPrograms::StandardProgram);
 		mesh->SetVertices(17, vertices, indices);
 		auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(branchEntity).lock();
-		material->m_materialProperties.m_albedoColor = glm::vec3(109, 79, 75) / 255.0f;
+		if (meshGeneratorSettings.m_overridePresentation)
+		{
+			material->m_materialProperties.m_albedoColor = meshGeneratorSettings.m_presentationOverrideSettings.m_branchOverrideColor;
+		}
+		else {
+			material->m_materialProperties.m_albedoColor = glm::vec3(109, 79, 75) / 255.0f;
+		}
 		material->m_materialProperties.m_roughness = 1.0f;
 		material->m_materialProperties.m_metallic = 0.0f;
 		meshRenderer->m_mesh = mesh;
@@ -313,7 +300,13 @@ void Tree::GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings, 
 		auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
 		auto material = ProjectManager::CreateTemporaryAsset<Material>();
 		material->SetProgram(DefaultResources::GLPrograms::StandardProgram);
-		material->m_materialProperties.m_albedoColor = glm::vec3(80, 60, 50) / 255.0f;
+		if (meshGeneratorSettings.m_overridePresentation)
+		{
+			material->m_materialProperties.m_albedoColor = meshGeneratorSettings.m_presentationOverrideSettings.m_rootOverrideColor;
+		}
+		else {
+			material->m_materialProperties.m_albedoColor = glm::vec3(80, 60, 50) / 255.0f;
+		}
 		material->m_materialProperties.m_roughness = 1.0f;
 		material->m_materialProperties.m_metallic = 0.0f;
 		mesh->SetVertices(17, vertices, indices);
@@ -377,7 +370,13 @@ void Tree::GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings, 
 		auto strands = ProjectManager::CreateTemporaryAsset<Strands>();
 		auto material = ProjectManager::CreateTemporaryAsset<Material>();
 		material->SetProgram(DefaultResources::GLPrograms::StandardProgram);
-		material->m_materialProperties.m_albedoColor = glm::vec3(80, 60, 50) / 255.0f;
+		if (meshGeneratorSettings.m_overridePresentation)
+		{
+			material->m_materialProperties.m_albedoColor = meshGeneratorSettings.m_presentationOverrideSettings.m_rootOverrideColor;
+		}
+		else {
+			material->m_materialProperties.m_albedoColor = glm::vec3(80, 60, 50) / 255.0f;
+		}
 		material->m_materialProperties.m_roughness = 1.0f;
 		material->m_materialProperties.m_metallic = 0.0f;
 		strands->SetSegments(1, fineRootSegments, fineRootPoints);
@@ -436,7 +435,8 @@ void Tree::GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings, 
 						offset += quadVerticesSize;
 					}
 				}
-			}else
+			}
+			else
 			{
 				const auto& presentationSettings = meshGeneratorSettings.m_presentationOverrideSettings;
 				if (internodeData.m_maxDistanceToAnyBranchEnd < presentationSettings.m_distanceToEndLimit) {
@@ -481,10 +481,16 @@ void Tree::GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings, 
 		auto material = ProjectManager::CreateTemporaryAsset<Material>();
 		material->SetProgram(DefaultResources::GLPrograms::StandardProgram);
 		mesh->SetVertices(17, vertices, indices);
-		material->m_materialProperties.m_albedoColor = glm::vec3(152 / 255.0f, 203 / 255.0f, 0 / 255.0f);
+		if (meshGeneratorSettings.m_overridePresentation)
+		{
+			material->m_materialProperties.m_albedoColor = meshGeneratorSettings.m_presentationOverrideSettings.m_foliageOverrideColor;
+		}
+		else {
+			material->m_materialProperties.m_albedoColor = glm::vec3(152 / 255.0f, 203 / 255.0f, 0 / 255.0f);
+		}
 		material->m_materialProperties.m_roughness = 0.0f;
 		auto texRef = meshGeneratorSettings.m_foliageTexture;
-		if(texRef.Get<Texture2D>())
+		if (texRef.Get<Texture2D>())
 		{
 			material->m_albedoTexture = texRef.Get<Texture2D>();
 		}
@@ -561,9 +567,9 @@ bool OnInspectRootGrowthParameters(RootGrowthParameters& rootGrowthParameters) {
 		changed = ImGui::DragFloat("Growth rate", &rootGrowthParameters.m_growthRate, 0.01f) || changed;
 		if (ImGui::TreeNodeEx("Structure", ImGuiTreeNodeFlags_DefaultOpen)) {
 			changed = ImGui::DragFloat("Root node length", &rootGrowthParameters.m_rootNodeLength, 0.01f) || changed;
-			
+
 			changed = ImGui::DragFloat3("Thickness min/factor/age", &rootGrowthParameters.m_endNodeThickness, 0.00001f, 0.0f, 1.0f, "%.6f") || changed;
-			
+
 			ImGui::TreePop();
 		}
 		if (ImGui::TreeNodeEx("Growth", ImGuiTreeNodeFlags_DefaultOpen))
@@ -578,7 +584,7 @@ bool OnInspectRootGrowthParameters(RootGrowthParameters& rootGrowthParameters) {
 			changed = ImGui::DragFloat("Tropism switching prob dist factor", &rootGrowthParameters.m_tropismSwitchingProbabilityDistanceFactor, 0.01f) || changed;
 			changed = ImGui::DragFloat("Tropism intensity", &rootGrowthParameters.m_tropismIntensity, 0.01f) || changed;
 			changed = ImGui::DragFloat("Branching probability", &rootGrowthParameters.m_branchingProbability, 0.01f) || changed;
-			
+
 			changed = ImGui::DragFloat("Fine root segment length", &rootGrowthParameters.m_fineRootSegmentLength, 0.01f) || changed;
 			changed = ImGui::DragFloat("Fine root apical angle variance", &rootGrowthParameters.m_fineRootApicalAngleVariance, 0.01f) || changed;
 			changed = ImGui::DragFloat("Fine root branching angle", &rootGrowthParameters.m_fineRootBranchingAngle, 0.01f) || changed;
@@ -708,7 +714,7 @@ void SerializeRootGrowthParameters(const std::string& name, const RootGrowthPara
 	out << YAML::Key << "m_apicalAngleMeanVariance" << YAML::Value
 		<< rootGrowthParameters.m_apicalAngleMeanVariance;
 	out << YAML::Key << "m_rootNodeLength" << YAML::Value << rootGrowthParameters.m_rootNodeLength;
-	
+
 	out << YAML::Key << "m_endNodeThickness" << YAML::Value
 		<< rootGrowthParameters.m_endNodeThickness;
 	out << YAML::Key << "m_thicknessAccumulationFactor" << YAML::Value
@@ -716,7 +722,7 @@ void SerializeRootGrowthParameters(const std::string& name, const RootGrowthPara
 	out << YAML::Key << "m_thicknessAccumulateAgeFactor" << YAML::Value
 		<< rootGrowthParameters.m_thicknessAccumulateAgeFactor;
 
-	
+
 
 	out << YAML::Key << "m_environmentalFriction" << YAML::Value << rootGrowthParameters.m_environmentalFriction;
 	out << YAML::Key << "m_environmentalFrictionFactor" << YAML::Value << rootGrowthParameters.m_environmentalFrictionFactor;
@@ -731,7 +737,7 @@ void SerializeRootGrowthParameters(const std::string& name, const RootGrowthPara
 	out << YAML::Key << "m_tropismSwitchingProbabilityDistanceFactor" << YAML::Value << rootGrowthParameters.m_tropismSwitchingProbabilityDistanceFactor;
 	out << YAML::Key << "m_tropismIntensity" << YAML::Value << rootGrowthParameters.m_tropismIntensity;
 	out << YAML::Key << "m_branchingProbability" << YAML::Value << rootGrowthParameters.m_branchingProbability;
-	
+
 	out << YAML::Key << "m_maintenanceVigorRequirementPriority" << YAML::Value << rootGrowthParameters.m_maintenanceVigorRequirementPriority;
 	out << YAML::EndMap;
 }
@@ -764,7 +770,7 @@ void DeserializeTreeGrowthParameters(const std::string& name, TreeGrowthParamete
 		if (param["m_saggingFactorThicknessReductionMax"]) treeGrowthParameters.m_saggingFactorThicknessReductionMax = param["m_saggingFactorThicknessReductionMax"].as<glm::vec3>();
 
 		//Bud fate
-		
+
 		if (param["m_lateralBudFlushingProbabilityTemperatureRange"]) treeGrowthParameters.m_lateralBudFlushingProbabilityTemperatureRange = param["m_lateralBudFlushingProbabilityTemperatureRange"].as<glm::vec4>();
 		if (param["m_leafBudFlushingProbabilityTemperatureRange"]) treeGrowthParameters.m_leafBudFlushingProbabilityTemperatureRange = param["m_leafBudFlushingProbabilityTemperatureRange"].as< glm::vec4>();
 		if (param["m_fruitBudFlushingProbabilityTemperatureRange"]) treeGrowthParameters.m_fruitBudFlushingProbabilityTemperatureRange = param["m_fruitBudFlushingProbabilityTemperatureRange"].as<glm::vec4>();
@@ -823,8 +829,8 @@ void DeserializeRootGrowthParameters(const std::string& name, RootGrowthParamete
 		if (param["m_rollAngleMeanVariance"]) rootGrowthParameters.m_rollAngleMeanVariance = param["m_rollAngleMeanVariance"].as<glm::vec2>();
 		if (param["m_apicalAngleMeanVariance"]) rootGrowthParameters.m_apicalAngleMeanVariance = param["m_apicalAngleMeanVariance"].as<glm::vec2>();
 
-		if(param["m_environmentalFriction"]) rootGrowthParameters.m_environmentalFriction = param["m_environmentalFriction"].as<float>();
-		if(param["m_environmentalFrictionFactor"]) rootGrowthParameters.m_environmentalFrictionFactor = param["m_environmentalFrictionFactor"].as<float>();
+		if (param["m_environmentalFriction"]) rootGrowthParameters.m_environmentalFriction = param["m_environmentalFriction"].as<float>();
+		if (param["m_environmentalFrictionFactor"]) rootGrowthParameters.m_environmentalFrictionFactor = param["m_environmentalFrictionFactor"].as<float>();
 
 		if (param["m_apicalControl"]) rootGrowthParameters.m_apicalControl = param["m_apicalControl"].as<float>();
 		if (param["m_apicalControlAgeFactor"]) rootGrowthParameters.m_apicalControlAgeFactor = param["m_apicalControlAgeFactor"].as<float>();

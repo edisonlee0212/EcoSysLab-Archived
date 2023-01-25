@@ -22,6 +22,7 @@
 #include "EcoSysLabLayer.hpp"
 #include "RadialBoundingVolume.hpp"
 #include "HeightField.hpp"
+#include "ObjectRotator.hpp"
 #ifdef RAYTRACERFACILITY
 using namespace RayTracerFacility;
 #endif
@@ -34,6 +35,7 @@ int main() {
     ClassRegistry::RegisterPrivateComponent<Tree>("Tree");
     ClassRegistry::RegisterPrivateComponent<Soil>("Soil");
     ClassRegistry::RegisterPrivateComponent<Climate>("Climate");
+    ClassRegistry::RegisterPrivateComponent<ObjectRotator>("ObjectRotator");
     ClassRegistry::RegisterAsset<Trees>("Trees", {".trees"});
     ClassRegistry::RegisterAsset<TreeDescriptor>("TreeDescriptor", {".td"});
     ClassRegistry::RegisterAsset<SoilDescriptor>("SoilDescriptor", { ".sd" });

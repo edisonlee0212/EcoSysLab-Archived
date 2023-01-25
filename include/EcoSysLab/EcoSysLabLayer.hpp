@@ -36,7 +36,7 @@ namespace EcoSysLab {
 		std::vector<glm::mat4> m_boundingBoxMatrices;
 		std::vector<glm::vec4> m_boundingBoxColors;
 
-		std::vector<glm::mat4> m_foliageMatrices;
+		std::shared_ptr<ParticleMatrices> m_foliageMatrices;
 		std::vector<glm::vec4> m_foliageColors;
 
 		std::vector<glm::mat4> m_fruitMatrices;
@@ -118,6 +118,7 @@ namespace EcoSysLab {
 		EntityRef m_branchStrandsHolder;
 		EntityRef m_rootStrandsHolder;
 		EntityRef m_fineRootStrandsHolder;
+		EntityRef m_foliageHolder;
 		TreeVisualizer m_treeVisualizer;
 
 		PrivateComponentRef m_soilHolder;

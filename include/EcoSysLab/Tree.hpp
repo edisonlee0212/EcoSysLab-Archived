@@ -33,6 +33,11 @@ namespace EcoSysLab {
 		float m_leftSideBiomass;
 		float m_rightSideBiomass;
 
+		TreeMeshGeneratorSettings m_meshGeneratorSettings;
+		int m_temporalProgressionIteration = 0;
+		bool m_temporalProgression = false;
+		void Update() override;
+
 		void Deserialize(const YAML::Node& in) override;
 
 		std::vector<float> m_rootBiomassHistory;

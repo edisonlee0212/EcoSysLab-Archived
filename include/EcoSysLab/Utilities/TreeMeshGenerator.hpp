@@ -29,7 +29,10 @@ namespace EcoSysLab {
 		float m_distanceToEndLimit = 2.f;
 		float m_positionVariance = 0.2f;
 		float m_phototropism = 0.9f;
-		
+		glm::vec3 m_rootOverrideColor = glm::vec3(80, 60, 50) / 255.0f;
+		glm::vec3 m_branchOverrideColor = glm::vec3(109, 79, 75) / 255.0f;
+		glm::vec3 m_foliageOverrideColor = glm::vec3(152 / 255.0f, 203 / 255.0f, 0 / 255.0f);
+
 		bool m_limitMaxThickness = true;
 	};
 
