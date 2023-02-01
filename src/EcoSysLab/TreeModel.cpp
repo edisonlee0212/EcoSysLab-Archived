@@ -498,7 +498,7 @@ void TreeModel::CalculateThickness(NodeHandle rootNodeHandle, const RootGrowthPa
 bool TreeModel::ElongateInternode(float extendLength, NodeHandle internodeHandle,
 	const TreeGrowthParameters& treeGrowthParameters, float& collectedInhibitor) {
 	bool graphChanged = false;
-	auto& internode = m_branchSkeleton.RefNode(internodeHandle);
+	auto& internode = m_shootSkeleton.RefNode(internodeHandle);
 	const auto internodeLength = treeGrowthParameters.m_internodeLength;
 	auto& internodeData = internode.m_data;
 	auto& internodeInfo = internode.m_info;
@@ -558,9 +558,9 @@ bool TreeModel::ElongateInternode(float extendLength, NodeHandle internodeHandle
 			}
 		}
 		//Create new internode
-		const auto newInternodeHandle = m_branchSkeleton.Extend(internodeHandle, false, m_branchSkeleton.RefFlow(internode.GetFlowHandle()).RefNodeHandles().size() > m_flowNodeLimit);
-		const auto& oldInternode = m_branchSkeleton.RefNode(internodeHandle);
-		auto& newInternode = m_branchSkeleton.RefNode(newInternodeHandle);
+		const auto newInternodeHandle = m_shootSkeleton.Extend(internodeHandle, false, m_shootSkeleton.RefFlow(internode.GetFlowHandle()).RefNodeHandles().size() > m_flowNodeLimit);
+		const auto& oldInternode = m_shootSkeleton.RefNode(internodeHandle);
+		auto& newInternode = m_shootSkeleton.RefNode(newInternodeHandle);
 		newInternode.m_data = {};
 		newInternode.m_data.m_order = oldInternode.m_data.m_order;
 		newInternode.m_data.m_lateral = false;
@@ -584,7 +584,7 @@ bool TreeModel::ElongateInternode(float extendLength, NodeHandle internodeHandle
 			ElongateInternode(extraLength - internodeLength, newInternodeHandle, treeGrowthParameters, childInhibitor);
 			childInhibitor *= treeGrowthParameters.m_apicalDominanceDistanceFactor;
 			collectedInhibitor += childInhibitor;
-			m_branchSkeleton.RefNode(newInternodeHandle).m_data.m_inhibitorTarget = childInhibitor;
+			m_shootSkeleton.RefNode(newInternodeHandle).m_data.m_inhibitorTarget = childInhibitor;
 		}
 		else {
 			newInternode.m_data.m_inhibitorTarget = newInternode.m_data.m_inhibitor = treeGrowthParameters.m_apicalDominance * glm::exp(-treeGrowthParameters.m_apicalDominanceAgeFactor * treeGrowthParameters.m_growthRate * m_age);
@@ -602,9 +602,9 @@ void TreeModel::CollectShootFlux(ClimateModel& climateModel,
 	const TreeGrowthParameters& treeGrowthParameters)
 {
 	m_plantGrowthNutrients.m_shootFlux = 0.0f;
-	const auto& sortedInternodeList = m_branchSkeleton.RefSortedNodeList();
+	const auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
 	for (const auto& internodeHandle : sortedInternodeList) {
-		auto& internode = m_branchSkeleton.RefNode(internodeHandle);
+		auto& internode = m_shootSkeleton.RefNode(internodeHandle);
 		auto& internodeData = internode.m_data;
 		auto& internodeInfo = internode.m_info;
 		internodeData.m_age++;
@@ -628,17 +628,17 @@ void TreeModel::CollectShootFlux(ClimateModel& climateModel,
 bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHandle, const TreeGrowthParameters& treeGrowthParameters) {
 	bool graphChanged = false;
 	{
-		auto& internode = m_branchSkeleton.RefNode(internodeHandle);
+		auto& internode = m_shootSkeleton.RefNode(internodeHandle);
 		auto& internodeData = internode.m_data;
 		internodeData.m_inhibitorTarget = 0;
 		for (const auto& childHandle : internode.RefChildHandles()) {
-			internodeData.m_inhibitorTarget += m_branchSkeleton.RefNode(childHandle).m_data.m_inhibitor *
+			internodeData.m_inhibitorTarget += m_shootSkeleton.RefNode(childHandle).m_data.m_inhibitor *
 				treeGrowthParameters.m_apicalDominanceDistanceFactor;
 		}
 	}
-	auto& buds = m_branchSkeleton.RefNode(internodeHandle).m_data.m_buds;
+	auto& buds = m_shootSkeleton.RefNode(internodeHandle).m_data.m_buds;
 	for (auto& bud : buds) {
-		auto& internode = m_branchSkeleton.RefNode(internodeHandle);
+		auto& internode = m_shootSkeleton.RefNode(internodeHandle);
 		auto& internodeData = internode.m_data;
 		auto& internodeInfo = internode.m_info;
 
@@ -663,7 +663,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 			float collectedInhibitor = 0.0f;
 			const auto dd = treeGrowthParameters.m_apicalDominanceDistanceFactor;
 			graphChanged = ElongateInternode(elongateLength, internodeHandle, treeGrowthParameters, collectedInhibitor) || graphChanged;
-			m_branchSkeleton.RefNode(internodeHandle).m_data.m_inhibitorTarget += collectedInhibitor * dd;
+			m_shootSkeleton.RefNode(internodeHandle).m_data.m_inhibitorTarget += collectedInhibitor * dd;
 			//If apical bud is dormant, then there's no lateral bud at this stage. We should quit anyway.
 			break;
 		}
@@ -687,9 +687,9 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 				ApplyTropism(internodeData.m_lightDirection, treeGrowthParameters.m_phototropism,
 					desiredGlobalFront, desiredGlobalUp);
 				//Create new internode
-				const auto newInternodeHandle = m_branchSkeleton.Extend(internodeHandle, true);
-				auto& oldInternode = m_branchSkeleton.RefNode(internodeHandle);
-				auto& newInternode = m_branchSkeleton.RefNode(newInternodeHandle);
+				const auto newInternodeHandle = m_shootSkeleton.Extend(internodeHandle, true);
+				auto& oldInternode = m_shootSkeleton.RefNode(internodeHandle);
+				auto& newInternode = m_shootSkeleton.RefNode(newInternodeHandle);
 				newInternode.m_data = {};
 				newInternode.m_data.m_order = oldInternode.m_data.m_order + 1;
 				newInternode.m_data.m_lateral = true;
@@ -800,7 +800,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 
 	}
 	{
-		auto& internode = m_branchSkeleton.RefNode(internodeHandle);
+		auto& internode = m_shootSkeleton.RefNode(internodeHandle);
 		auto& internodeData = internode.m_data;
 		internodeData.m_inhibitor = (internodeData.m_inhibitor + internodeData.m_inhibitorTarget) / 2.0f;
 	}
@@ -809,14 +809,14 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 
 void TreeModel::AggregateInternodeVigorRequirement()
 {
-	const auto& sortedInternodeList = m_branchSkeleton.RefSortedNodeList();
+	const auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
 	for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); it++) {
-		auto& internode = m_branchSkeleton.RefNode(*it);
+		auto& internode = m_shootSkeleton.RefNode(*it);
 		auto& internodeData = internode.m_data;
 		if (!internode.IsEndNode()) {
 			//If current node is not end node
 			for (const auto& i : internode.RefChildHandles()) {
-				auto& childInternode = m_branchSkeleton.RefNode(i);
+				auto& childInternode = m_shootSkeleton.RefNode(i);
 				internodeData.m_subtreeDevelopmentalVigorRequirement +=
 					childInternode.m_data.m_developmentalVigorRequirement
 					+ childInternode.m_data.m_subtreeDevelopmentalVigorRequirement;
@@ -852,14 +852,14 @@ void TreeModel::AggregateRootVigorRequirement()
 
 inline void TreeModel::AllocateShootVigor(const TreeGrowthParameters& treeGrowthParameters)
 {
-	const auto& sortedInternodeList = m_branchSkeleton.RefSortedNodeList();
+	const auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
 	//Go from rooting point to all end nodes
 	const float apicalControl = 
 		1.0f + treeGrowthParameters.m_apicalControl
 		* glm::exp(-treeGrowthParameters.m_apicalControlAgeFactor * m_age * treeGrowthParameters.m_growthRate);
 
 	for (const auto& internodeHandle : sortedInternodeList) {
-		auto& internode = m_branchSkeleton.RefNode(internodeHandle);
+		auto& internode = m_shootSkeleton.RefNode(internodeHandle);
 		auto& internodeData = internode.m_data;
 		//If this is the first node (node at the rooting point)
 		if (internode.GetParentHandle() == -1) {
@@ -894,7 +894,7 @@ inline void TreeModel::AllocateShootVigor(const TreeGrowthParameters& treeGrowth
 			float childDevelopmentalVigorRequirementWeightSum = 0.0f;
 			float childMaintenanceVigorRequirementWeightSum = 0.0f;
 			for (const auto& i : internode.RefChildHandles()) {
-				auto& childInternode = m_branchSkeleton.RefNode(i);
+				auto& childInternode = m_shootSkeleton.RefNode(i);
 				const auto& childInternodeData = childInternode.m_data;
 
 				float childDevelopmentalVigorRequirementWeight =
@@ -929,7 +929,7 @@ inline void TreeModel::AllocateShootVigor(const TreeGrowthParameters& treeGrowth
 				internodeSubtreeAllocatedDevelopmentVigor = internodeData.m_subTreeAllocatedVigor - internodeSubtreeAllocatedMaintenanceVigor;
 			}
 			for (const auto& i : internode.RefChildHandles()) {
-				auto& childInternode = m_branchSkeleton.RefNode(i);
+				auto& childInternode = m_shootSkeleton.RefNode(i);
 				auto& childInternodeData = childInternode.m_data;
 				float childDevelopmentalVigorRequirementWeight =
 					(childInternodeData.m_developmentalVigorRequirement + childInternodeData.m_subtreeDevelopmentalVigorRequirement)
@@ -983,7 +983,7 @@ inline void TreeModel::AllocateShootVigor(const TreeGrowthParameters& treeGrowth
 
 void TreeModel::CalculateThicknessAndSagging(NodeHandle internodeHandle,
 	const TreeGrowthParameters& treeGrowthParameters) {
-	auto& internode = m_branchSkeleton.RefNode(internodeHandle);
+	auto& internode = m_shootSkeleton.RefNode(internodeHandle);
 	auto& internodeData = internode.m_data;
 	auto& internodeInfo = internode.m_info;
 	internodeData.m_descendentTotalBiomass = internodeData.m_biomass = 0.0f;
@@ -994,7 +994,7 @@ void TreeModel::CalculateThicknessAndSagging(NodeHandle internodeHandle,
 	//float maxChildBiomass = 999.f;
 	int minChildOrder = 999;
 	for (const auto& i : internode.RefChildHandles()) {
-		auto& childInternode = m_branchSkeleton.RefNode(i);
+		auto& childInternode = m_shootSkeleton.RefNode(i);
 		const float childMaxDistanceToAnyBranchEnd =
 			childInternode.m_data.m_maxDistanceToAnyBranchEnd +
 			childInternode.m_info.m_length / treeGrowthParameters.m_internodeLength;
@@ -1026,7 +1026,7 @@ void TreeModel::CalculateThicknessAndSagging(NodeHandle internodeHandle,
 		internodeInfo.m_thickness / treeGrowthParameters.m_endNodeThickness * internodeInfo.m_length /
 		treeGrowthParameters.m_internodeLength;
 	for (const auto& i : internode.RefChildHandles()) {
-		auto& childInternode = m_branchSkeleton.RefNode(i);
+		auto& childInternode = m_shootSkeleton.RefNode(i);
 		internodeData.m_descendentTotalBiomass +=
 			childInternode.m_data.m_descendentTotalBiomass +
 			childInternode.m_data.m_biomass;
@@ -1037,9 +1037,9 @@ void TreeModel::CalculateThicknessAndSagging(NodeHandle internodeHandle,
 
 void TreeModel::CalculateVigorRequirement(const TreeGrowthParameters& treeGrowthParameters, TreeGrowthRequirement& newTreeGrowthNutrientsRequirement) {
 
-	const auto& sortedInternodeList = m_branchSkeleton.RefSortedNodeList();
+	const auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
 	for (const auto& internodeHandle : sortedInternodeList) {
-		auto& internode = m_branchSkeleton.RefNode(internodeHandle);
+		auto& internode = m_shootSkeleton.RefNode(internodeHandle);
 		auto& internodeData = internode.m_data;
 		internodeData.m_maintenanceVigorRequirement = 0.0f;
 		internodeData.m_developmentalVigorRequirement = 0.0f;
@@ -1121,12 +1121,12 @@ bool TreeModel::GrowShoots(const glm::mat4& globalTransform, ClimateModel& clima
 
 #pragma region Pruning
 	bool anyBranchPruned = false;
-	m_branchSkeleton.SortLists();
+	m_shootSkeleton.SortLists();
 	{
-		const auto maxDistance = m_branchSkeleton.RefNode(0).m_data.m_maxDistanceToAnyBranchEnd;
-		const auto& sortedInternodeList = m_branchSkeleton.RefSortedNodeList();
+		const auto maxDistance = m_shootSkeleton.RefNode(0).m_data.m_maxDistanceToAnyBranchEnd;
+		const auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
 		for (const auto& internodeHandle : sortedInternodeList) {
-			if (m_branchSkeleton.RefNode(internodeHandle).IsRecycled()) continue;
+			if (m_shootSkeleton.RefNode(internodeHandle).IsRecycled()) continue;
 			if (PruneInternodes(maxDistance, internodeHandle, treeGrowthParameters)) {
 				anyBranchPruned = true;
 			}
@@ -1134,13 +1134,13 @@ bool TreeModel::GrowShoots(const glm::mat4& globalTransform, ClimateModel& clima
 	};
 #pragma endregion
 #pragma region Grow
-	if (anyBranchPruned) m_branchSkeleton.SortLists();
+	if (anyBranchPruned) m_shootSkeleton.SortLists();
 	treeStructureChanged = treeStructureChanged || anyBranchPruned;
 	bool anyBranchGrown = false;
 	{
 		AggregateInternodeVigorRequirement();
 		AllocateShootVigor(treeGrowthParameters);
-		const auto& sortedInternodeList = m_branchSkeleton.RefSortedNodeList();
+		const auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
 		for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); it++) {
 			const bool graphChanged = GrowInternode(climateModel, *it, treeGrowthParameters);
 			anyBranchGrown = anyBranchGrown || graphChanged;
@@ -1148,19 +1148,19 @@ bool TreeModel::GrowShoots(const glm::mat4& globalTransform, ClimateModel& clima
 	};
 #pragma endregion
 #pragma region Postprocess
-	if (anyBranchGrown) m_branchSkeleton.SortLists();
+	if (anyBranchGrown) m_shootSkeleton.SortLists();
 	treeStructureChanged = treeStructureChanged || anyBranchGrown;
 	{
-		m_branchSkeleton.m_min = glm::vec3(FLT_MAX);
-		m_branchSkeleton.m_max = glm::vec3(FLT_MIN);
-		const auto& sortedInternodeList = m_branchSkeleton.RefSortedNodeList();
+		m_shootSkeleton.m_min = glm::vec3(FLT_MAX);
+		m_shootSkeleton.m_max = glm::vec3(FLT_MIN);
+		const auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
 		for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); it++) {
 			auto internodeHandle = *it;
 			CalculateThicknessAndSagging(internodeHandle, treeGrowthParameters);
 		}
 
 		for (const auto& internodeHandle : sortedInternodeList) {
-			auto& internode = m_branchSkeleton.RefNode(internodeHandle);
+			auto& internode = m_shootSkeleton.RefNode(internodeHandle);
 			auto& internodeData = internode.m_data;
 			auto& internodeInfo = internode.m_info;
 
@@ -1173,13 +1173,13 @@ bool TreeModel::GrowShoots(const glm::mat4& globalTransform, ClimateModel& clima
 					internodeInfo.m_length / treeGrowthParameters.m_internodeLength;
 			}
 			else {
-				auto& parentInternode = m_branchSkeleton.RefNode(internode.GetParentHandle());
+				auto& parentInternode = m_shootSkeleton.RefNode(internode.GetParentHandle());
 				internodeData.m_rootDistance = parentInternode.m_data.m_rootDistance + internodeInfo.m_length /
 					treeGrowthParameters.m_internodeLength;
 				internodeInfo.m_globalRotation =
 					parentInternode.m_info.m_globalRotation * internodeInfo.m_localRotation;
 #pragma region Apply Sagging
-				auto parentGlobalRotation = m_branchSkeleton.RefNode(
+				auto parentGlobalRotation = m_shootSkeleton.RefNode(
 					internode.GetParentHandle()).m_info.m_globalRotation;
 				internodeInfo.m_globalRotation = parentGlobalRotation * internodeData.m_desiredLocalRotation;
 				auto front = internodeInfo.m_globalRotation * glm::vec3(0, 0, -1);
@@ -1197,23 +1197,23 @@ bool TreeModel::GrowShoots(const glm::mat4& globalTransform, ClimateModel& clima
 
 			}
 
-			m_branchSkeleton.m_min = glm::min(m_branchSkeleton.m_min, internodeInfo.m_globalPosition);
-			m_branchSkeleton.m_max = glm::max(m_branchSkeleton.m_max, internodeInfo.m_globalPosition);
+			m_shootSkeleton.m_min = glm::min(m_shootSkeleton.m_min, internodeInfo.m_globalPosition);
+			m_shootSkeleton.m_max = glm::max(m_shootSkeleton.m_max, internodeInfo.m_globalPosition);
 			const auto endPosition = internodeInfo.m_globalPosition + internodeInfo.m_length *
 				(internodeInfo.m_globalRotation *
 					glm::vec3(0, 0, -1));
-			m_branchSkeleton.m_min = glm::min(m_branchSkeleton.m_min, endPosition);
-			m_branchSkeleton.m_max = glm::max(m_branchSkeleton.m_max, endPosition);
+			m_shootSkeleton.m_min = glm::min(m_shootSkeleton.m_min, endPosition);
+			m_shootSkeleton.m_max = glm::max(m_shootSkeleton.m_max, endPosition);
 		}
 		SampleTemperature(globalTransform, climateModel);
 		CalculateVigorRequirement(treeGrowthParameters, newTreeGrowthRequirement);
 		m_treeVolume.Clear();
 		if (!sortedInternodeList.empty())
 		{
-			m_treeVolume.m_center = (m_branchSkeleton.m_max + m_branchSkeleton.m_min) * 0.5f;
+			m_treeVolume.m_center = (m_shootSkeleton.m_max + m_shootSkeleton.m_min) * 0.5f;
 			for (const auto& internodeHandle : sortedInternodeList)
 			{
-				auto& internode = m_branchSkeleton.RefNode(internodeHandle);
+				auto& internode = m_shootSkeleton.RefNode(internodeHandle);
 				if (!internode.IsEndNode()) continue;
 				auto& internodeInfo = internode.m_info;
 				const auto& point1 = internodeInfo.m_globalPosition;
@@ -1243,20 +1243,20 @@ bool TreeModel::GrowShoots(const glm::mat4& globalTransform, ClimateModel& clima
 	if (m_enableBranchCollisionDetection)
 	{
 		const float minRadius = treeGrowthParameters.m_endNodeThickness * 4.0f;
-		CollisionDetection(minRadius, m_branchOctree, m_branchSkeleton);
+		CollisionDetection(minRadius, m_branchOctree, m_shootSkeleton);
 	}
 	m_internodeOrderCounts.clear();
 	{
 		int maxOrder = 0;
-		const auto& sortedFlowList = m_branchSkeleton.RefSortedFlowList();
+		const auto& sortedFlowList = m_shootSkeleton.RefSortedFlowList();
 		for (const auto& flowHandle : sortedFlowList) {
-			auto& flow = m_branchSkeleton.RefFlow(flowHandle);
+			auto& flow = m_shootSkeleton.RefFlow(flowHandle);
 			auto& flowData = flow.m_data;
 			if (flow.GetParentHandle() == -1) {
 				flowData.m_order = 0;
 			}
 			else {
-				auto& parentFlow = m_branchSkeleton.RefFlow(flow.GetParentHandle());
+				auto& parentFlow = m_shootSkeleton.RefFlow(flow.GetParentHandle());
 				if (flow.IsApical()) flowData.m_order = parentFlow.m_data.m_order;
 				else flowData.m_order = parentFlow.m_data.m_order + 1;
 			}
@@ -1264,15 +1264,15 @@ bool TreeModel::GrowShoots(const glm::mat4& globalTransform, ClimateModel& clima
 		}
 		m_internodeOrderCounts.resize(maxOrder + 1);
 		std::fill(m_internodeOrderCounts.begin(), m_internodeOrderCounts.end(), 0);
-		const auto& sortedInternodeList = m_branchSkeleton.RefSortedNodeList();
+		const auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
 		for (const auto& internodeHandle : sortedInternodeList)
 		{
-			auto& internode = m_branchSkeleton.RefNode(internodeHandle);
-			const auto order = m_branchSkeleton.RefFlow(internode.GetFlowHandle()).m_data.m_order;
+			auto& internode = m_shootSkeleton.RefNode(internodeHandle);
+			const auto order = m_shootSkeleton.RefFlow(internode.GetFlowHandle()).m_data.m_order;
 			internode.m_data.m_order = order;
 			m_internodeOrderCounts[order]++;
 		}
-		m_branchSkeleton.CalculateFlows();
+		m_shootSkeleton.CalculateFlows();
 	};
 #pragma endregion
 #pragma endregion
@@ -1282,7 +1282,7 @@ bool TreeModel::GrowShoots(const glm::mat4& globalTransform, ClimateModel& clima
 void
 TreeModel::Initialize(const TreeGrowthParameters& treeGrowthParameters, const RootGrowthParameters& rootGrowthParameters) {
 	{
-		auto& firstInternode = m_branchSkeleton.RefNode(0);
+		auto& firstInternode = m_shootSkeleton.RefNode(0);
 		firstInternode.m_info.m_thickness = treeGrowthParameters.m_endNodeThickness;
 		firstInternode.m_data.m_buds.emplace_back();
 		auto& apicalBud = firstInternode.m_data.m_buds.back();
@@ -1306,7 +1306,7 @@ TreeModel::Initialize(const TreeGrowthParameters& treeGrowthParameters, const Ro
 }
 
 void TreeModel::Clear() {
-	m_branchSkeleton = {};
+	m_shootSkeleton = {};
 	m_rootSkeleton = {};
 	m_history = {};
 	m_initialized = false;
@@ -1336,7 +1336,7 @@ int TreeModel::GetFineRootCount() const
 
 bool TreeModel::PruneInternodes(float maxDistance, NodeHandle internodeHandle,
 	const TreeGrowthParameters& treeGrowthParameters) {
-	auto& internode = m_branchSkeleton.RefNode(internodeHandle);
+	auto& internode = m_shootSkeleton.RefNode(internodeHandle);
 	//Pruning here.
 	bool pruning = false;
 
@@ -1353,7 +1353,7 @@ bool TreeModel::PruneInternodes(float maxDistance, NodeHandle internodeHandle,
 	if (internode.m_info.m_globalPosition.y <= 0.5f && internode.m_data.m_order != 0 && glm::linearRand(0.0f, 1.0f) < treeGrowthParameters.m_growthRate * 0.1f) pruning = true;
 	if (pruning)
 	{
-		m_branchSkeleton.RecycleNode(internodeHandle);
+		m_shootSkeleton.RecycleNode(internodeHandle);
 	}
 	return pruning;
 }
@@ -1732,9 +1732,9 @@ bool TreeModel::Grow(const glm::mat4& globalTransform, SoilModel& soilModel, Cli
 
 void TreeModel::SampleTemperature(const glm::mat4& globalTransform, ClimateModel& climateModel)
 {
-	const auto& sortedInternodeList = m_branchSkeleton.RefSortedNodeList();
+	const auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
 	for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); it++) {
-		auto& internode = m_branchSkeleton.RefNode(*it);
+		auto& internode = m_shootSkeleton.RefNode(*it);
 		auto& internodeData = internode.m_data;
 		auto& internodeInfo = internode.m_info;
 		internodeData.m_temperature = climateModel.GetTemperature(globalTransform * glm::translate(internodeInfo.m_globalPosition)[3]);
@@ -1752,22 +1752,22 @@ void TreeModel::SampleSoilDensity(const glm::mat4& globalTransform, SoilModel& s
 	}
 }
 
-Skeleton<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData>& TreeModel::RefBranchSkeleton() {
-	return m_branchSkeleton;
+ShootSkeleton& TreeModel::RefShootSkeleton() {
+	return m_shootSkeleton;
 }
 
-const Skeleton<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData>&
-TreeModel::PeekBranchSkeleton(const int iteration) const {
+const ShootSkeleton&
+TreeModel::PeekShootSkeleton(const int iteration) const {
 	assert(iteration >= 0 && iteration <= m_history.size());
-	if (iteration == m_history.size()) return m_branchSkeleton;
+	if (iteration == m_history.size()) return m_shootSkeleton;
 	return m_history.at(iteration).first;
 }
 
-Skeleton<RootSkeletonGrowthData, RootBranchGrowthData, RootInternodeGrowthData>& TreeModel::RefRootSkeleton() {
+RootSkeleton& TreeModel::RefRootSkeleton() {
 	return m_rootSkeleton;
 }
 
-const Skeleton<RootSkeletonGrowthData, RootBranchGrowthData, RootInternodeGrowthData>&
+const RootSkeleton&
 TreeModel::PeekRootSkeleton(const int iteration) const {
 	assert(iteration >= 0 && iteration <= m_history.size());
 	if (iteration == m_history.size()) return m_rootSkeleton;
@@ -1779,7 +1779,7 @@ void TreeModel::ClearHistory() {
 }
 
 void TreeModel::Step() {
-	m_history.emplace_back(m_branchSkeleton, m_rootSkeleton);
+	m_history.emplace_back(m_shootSkeleton, m_rootSkeleton);
 	if (m_historyLimit > 0) {
 		while (m_history.size() > m_historyLimit) {
 			m_history.pop_front();
@@ -1797,7 +1797,7 @@ int TreeModel::CurrentIteration() const {
 
 void TreeModel::Reverse(int iteration) {
 	assert(iteration >= 0 && iteration < m_history.size());
-	m_branchSkeleton = m_history[iteration].first;
+	m_shootSkeleton = m_history[iteration].first;
 	m_rootSkeleton = m_history[iteration].second;
 	m_history.erase((m_history.begin() + iteration), m_history.end());
 }
@@ -1920,28 +1920,28 @@ float TreeGrowthParameters::GetSagging(const Node<InternodeGrowthData>& internod
 #pragma region RootGrowthParameters
 
 
-float RootGrowthParameters::GetRootApicalAngle(const Node<RootInternodeGrowthData>& rootNode) const
+float RootGrowthParameters::GetRootApicalAngle(const Node<RootNodeGrowthData>& rootNode) const
 {
 	return glm::gaussRand(
 		m_apicalAngleMeanVariance.x,
 		m_apicalAngleMeanVariance.y);
 }
 
-float RootGrowthParameters::GetRootRollAngle(const Node<RootInternodeGrowthData>& rootNode) const
+float RootGrowthParameters::GetRootRollAngle(const Node<RootNodeGrowthData>& rootNode) const
 {
 	return glm::gaussRand(
 		m_rollAngleMeanVariance.x,
 		m_rollAngleMeanVariance.y);
 }
 
-float RootGrowthParameters::GetRootBranchingAngle(const Node<RootInternodeGrowthData>& rootNode) const
+float RootGrowthParameters::GetRootBranchingAngle(const Node<RootNodeGrowthData>& rootNode) const
 {
 	return glm::gaussRand(
 		m_branchingAngleMeanVariance.x,
 		m_branchingAngleMeanVariance.y);
 }
 
-void RootGrowthParameters::SetTropisms(Node<RootInternodeGrowthData>& oldNode, Node<RootInternodeGrowthData>& newNode) const
+void RootGrowthParameters::SetTropisms(Node<RootNodeGrowthData>& oldNode, Node<RootNodeGrowthData>& newNode) const
 {
 	float probability = m_tropismSwitchingProbability * 
 		glm::exp(-m_tropismSwitchingProbabilityDistanceFactor * oldNode.m_data.m_rootDistance);

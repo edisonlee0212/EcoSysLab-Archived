@@ -55,7 +55,7 @@ namespace EcoSysLab {
 		glm::vec3 m_reproductiveModuleSize = glm::vec3(0.0f);
 		glm::mat4 m_reproductiveModuleTransform = glm::mat4(0.0f);
 	};
-
+	
 	struct InternodeGrowthData {
 		bool m_isMaxChild = false;
 		bool m_lateral = false;
@@ -66,8 +66,6 @@ namespace EcoSysLab {
 		float m_sagging = 0;
 
 		float m_maxDistanceToAnyBranchEnd = 0;
-		int m_level = 0;
-		int m_reverseLevel = 0;
 		int m_order = 0;
 		float m_descendentTotalBiomass = 0;
 		float m_biomass = 0;
@@ -117,16 +115,16 @@ namespace EcoSysLab {
 
 	};
 
-	struct BranchGrowthData {
+	struct ShootStemGrowthData {
 		int m_order = 0;
 
 	};
 
-	struct SkeletonGrowthData {
+	struct ShootGrowthData {
 
 	};
 
-	struct RootInternodeGrowthData {
+	struct RootNodeGrowthData {
 		bool m_isMaxChild = false;
 		bool m_lateral = false;
 		float m_soilDensity = 0.0f;
@@ -175,11 +173,11 @@ namespace EcoSysLab {
 		std::vector<glm::vec4> m_fineRootAnchors;
 
 	};
-	struct RootBranchGrowthData {
+	struct RootStemGrowthData {
 		int m_order = 0;
 	};
 
-	struct RootSkeletonGrowthData {
+	struct RootGrowthData {
 
 	};
 
@@ -272,15 +270,15 @@ namespace EcoSysLab {
 		float m_fineRootMinNodeThickness = 0.05f;
 		int m_fineRootNodeCount = 2;
 
-		[[nodiscard]] float GetRootApicalAngle(const Node<RootInternodeGrowthData>& rootNode) const;
+		[[nodiscard]] float GetRootApicalAngle(const Node<RootNodeGrowthData>& rootNode) const;
 
-		[[nodiscard]] float GetRootRollAngle(const Node<RootInternodeGrowthData>& rootNode) const;
+		[[nodiscard]] float GetRootRollAngle(const Node<RootNodeGrowthData>& rootNode) const;
 
-		[[nodiscard]] float GetRootBranchingAngle(const Node<RootInternodeGrowthData>& rootNode) const;
+		[[nodiscard]] float GetRootBranchingAngle(const Node<RootNodeGrowthData>& rootNode) const;
 
 
 
-		void SetTropisms(Node<RootInternodeGrowthData>& oldNode, Node<RootInternodeGrowthData>& newNode) const;
+		void SetTropisms(Node<RootNodeGrowthData>& oldNode, Node<RootNodeGrowthData>& newNode) const;
 
 		RootGrowthParameters();
 	};
@@ -530,7 +528,8 @@ namespace EcoSysLab {
 		void Smooth();
 		[[nodiscard]] float IlluminationEstimation(const glm::vec3& position, const IlluminationEstimationSettings& settings, glm::vec3& lightDirection);
 	};
-
+	typedef Skeleton<ShootGrowthData, ShootStemGrowthData, InternodeGrowthData> ShootSkeleton;
+	typedef Skeleton<RootGrowthData, RootStemGrowthData, RootNodeGrowthData> RootSkeleton;
 	class TreeModel {
 #pragma region Root Growth
 
@@ -578,12 +577,9 @@ namespace EcoSysLab {
 		void Initialize(const TreeGrowthParameters& treeGrowthParameters, const RootGrowthParameters& rootGrowthParameters);
 
 		bool m_initialized = false;
-		Skeleton<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> m_branchSkeleton;
-		Skeleton<RootSkeletonGrowthData, RootBranchGrowthData, RootInternodeGrowthData> m_rootSkeleton;
-		std::deque<
-			std::pair<Skeleton<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData>,
-			Skeleton<RootSkeletonGrowthData, RootBranchGrowthData, RootInternodeGrowthData>>> m_history;
-
+		ShootSkeleton m_shootSkeleton;
+		RootSkeleton m_rootSkeleton;
+		std::deque<std::pair<ShootSkeleton, RootSkeleton>> m_history;
 
 		/**
 		 * Grow one iteration of the branches, given the climate model and the procedural parameters.
@@ -669,17 +665,15 @@ namespace EcoSysLab {
 
 		void SampleTemperature(const glm::mat4& globalTransform, ClimateModel& climateModel);
 		void SampleSoilDensity(const glm::mat4& globalTransform, SoilModel& soilModel);
-		[[nodiscard]] Skeleton<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData>& RefBranchSkeleton();
+		[[nodiscard]] ShootSkeleton& RefShootSkeleton();
 
-		[[nodiscard]] const Skeleton<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData>&
-			PeekBranchSkeleton(int iteration) const;
+		[[nodiscard]] const ShootSkeleton& PeekShootSkeleton(int iteration) const;
 
-		[[nodiscard]] Skeleton<RootSkeletonGrowthData, RootBranchGrowthData, RootInternodeGrowthData>&
+		[[nodiscard]] RootSkeleton&
 			RefRootSkeleton();
 
 
-		[[nodiscard]] const Skeleton<RootSkeletonGrowthData, RootBranchGrowthData, RootInternodeGrowthData>&
-			PeekRootSkeleton(int iteration) const;
+		[[nodiscard]] const RootSkeleton& PeekRootSkeleton(int iteration) const;
 
 		void ClearHistory();
 

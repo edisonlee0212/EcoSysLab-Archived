@@ -11,7 +11,7 @@ bool TreeVisualizer::DrawInternodeInspectionGui(
         NodeHandle internodeHandle,
         bool &deleted,
         const unsigned &hierarchyLevel) {
-    auto &treeSkeleton = treeModel.RefBranchSkeleton();
+    auto &treeSkeleton = treeModel.RefShootSkeleton();
     const int index = m_selectedInternodeHierarchyList.size() - hierarchyLevel - 1;
     if (!m_selectedInternodeHierarchyList.empty() && index >= 0 &&
         index < m_selectedInternodeHierarchyList.size() &&
@@ -106,7 +106,7 @@ TreeVisualizer::OnInspect(
                         updated = true;
                     }
                 } else
-                    PeekNodeInspectionGui(treeModel.PeekBranchSkeleton(m_iteration), 0, m_selectedInternodeHandle,
+                    PeekNodeInspectionGui(treeModel.PeekShootSkeleton(m_iteration), 0, m_selectedInternodeHandle,
                                           m_selectedInternodeHierarchyList, 0);
                 m_selectedInternodeHierarchyList.clear();
                 if (tempSelection != m_selectedInternodeHandle) {
@@ -117,9 +117,9 @@ TreeVisualizer::OnInspect(
             }
             if (m_selectedInternodeHandle >= 0) {
                 if (m_iteration == treeModel.CurrentIteration()) {
-                    InspectInternode(treeModel.RefBranchSkeleton(), m_selectedInternodeHandle);
+                    InspectInternode(treeModel.RefShootSkeleton(), m_selectedInternodeHandle);
                 } else {
-                    PeekInternode(treeModel.PeekBranchSkeleton(m_iteration), m_selectedInternodeHandle);
+                    PeekInternode(treeModel.PeekShootSkeleton(m_iteration), m_selectedInternodeHandle);
                 }
                 
             }
@@ -155,18 +155,18 @@ TreeVisualizer::OnInspect(
         }
 
         if (m_visualization) {
-            const auto& treeSkeleton = treeModel.PeekBranchSkeleton(m_iteration);
+            const auto& treeSkeleton = treeModel.PeekShootSkeleton(m_iteration);
             const auto& rootSkeleton = treeModel.PeekRootSkeleton(m_iteration);
             const auto editorLayer = Application::GetLayer<EditorLayer>();
             const auto& sortedBranchList = treeSkeleton.RefSortedFlowList();
             const auto& sortedInternodeList = treeSkeleton.RefSortedNodeList();
             ImGui::Text("Internode count: %d", sortedInternodeList.size());
-            ImGui::Text("Branch count: %d", sortedBranchList.size());
+            ImGui::Text("Shoot stem count: %d", sortedBranchList.size());
 
             const auto& sortedRootFlowList = rootSkeleton.RefSortedFlowList();
             const auto& sortedRootNodeList = rootSkeleton.RefSortedNodeList();
             ImGui::Text("Root node count: %d", sortedRootNodeList.size());
-            ImGui::Text("Root flow count: %d", sortedRootFlowList.size());
+            ImGui::Text("Root stem count: %d", sortedRootFlowList.size());
 
             static bool enableStroke = false;
             if (ImGui::Checkbox("Enable stroke", &enableStroke)) {
@@ -189,7 +189,7 @@ bool TreeVisualizer::Visualize(TreeModel& treeModel,
     const GlobalTransform& globalTransform)
 {
     bool updated = false;
-    const auto& treeSkeleton = treeModel.PeekBranchSkeleton(m_iteration);
+    const auto& treeSkeleton = treeModel.PeekShootSkeleton(m_iteration);
     const auto& rootSkeleton = treeModel.PeekRootSkeleton(m_iteration);
     if (m_visualization) {
         const auto editorLayer = Application::GetLayer<EditorLayer>();
@@ -214,7 +214,7 @@ bool TreeVisualizer::Visualize(TreeModel& treeModel,
                     Windows::GetWindow())) {
                 if (m_selectedInternodeHandle > 0) {
                     treeModel.Step();
-                    auto& skeleton = treeModel.RefBranchSkeleton();
+                    auto& skeleton = treeModel.RefShootSkeleton();
                     auto& pruningInternode = skeleton.RefNode(m_selectedInternodeHandle);
                     auto childHandles = pruningInternode.RefChildHandles();
                     for (const auto& childHandle : childHandles) {
@@ -266,7 +266,7 @@ bool TreeVisualizer::Visualize(TreeModel& treeModel,
                     //Once released, check if empty.
                     if (!m_storedMousePositions.empty()) {
                         treeModel.Step();
-                        auto& skeleton = treeModel.RefBranchSkeleton();
+                        auto& skeleton = treeModel.RefShootSkeleton();
                         bool changed = ScreenCurvePruning(skeleton, globalTransform, m_selectedInternodeHandle, m_selectedInternodeHierarchyList);
                         if (changed) {
                             skeleton.SortLists();
@@ -328,11 +328,11 @@ bool TreeVisualizer::Visualize(TreeModel& treeModel,
 
 bool
 TreeVisualizer::InspectInternode(
-        Skeleton<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeSkeleton,
+        ShootSkeleton &shootSkeleton,
         NodeHandle internodeHandle) {
     bool changed = false;
     if (ImGui::Begin("Internode Inspector")) {
-        const auto &internode = treeSkeleton.RefNode(internodeHandle);
+        const auto &internode = shootSkeleton.RefNode(internodeHandle);
         if (ImGui::TreeNode("Internode info")) {
             ImGui::Checkbox("Is max child", (bool*)&internode.m_data.m_isMaxChild);
             ImGui::Text("Thickness: %.3f", internode.m_info.m_thickness);
@@ -349,8 +349,6 @@ TreeVisualizer::InspectInternode(
             ImGui::InputInt("Age", (int *) &internodeData.m_age, 1, 100, ImGuiInputTextFlags_ReadOnly);
             ImGui::InputFloat("Distance to end", (float *) &internodeData.m_maxDistanceToAnyBranchEnd, 1, 100,
                               "%.3f",
-                              ImGuiInputTextFlags_ReadOnly);
-            ImGui::InputFloat("Level", (float *) &internodeData.m_level, 1, 100, "%.3f",
                               ImGuiInputTextFlags_ReadOnly);
             ImGui::InputFloat("Descendent biomass", (float *) &internodeData.m_descendentTotalBiomass, 1, 100, "%.3f",
                               ImGuiInputTextFlags_ReadOnly);
@@ -425,7 +423,7 @@ TreeVisualizer::InspectInternode(
             ImGui::TreePop();
         }
         if (ImGui::TreeNodeEx("Flow info", ImGuiTreeNodeFlags_DefaultOpen)) {
-            const auto &flow = treeSkeleton.PeekFlow(internode.GetFlowHandle());
+            const auto &flow = shootSkeleton.PeekFlow(internode.GetFlowHandle());
             ImGui::Text("Child flow size: %d", flow.RefChildHandles().size());
             ImGui::Text("Internode size: %d", flow.RefNodeHandles().size());
             if (ImGui::TreeNode("Internodes")) {
@@ -490,11 +488,10 @@ bool TreeVisualizer::DrawRootNodeInspectionGui(TreeModel& treeModel, NodeHandle 
 }
 
 void
-TreeVisualizer::PeekInternode(
-        const Skeleton<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> &treeSkeleton,
-        NodeHandle internodeHandle) {
+TreeVisualizer::PeekInternode(const ShootSkeleton &shootSkeleton, NodeHandle internodeHandle) const
+{
     if (ImGui::Begin("Internode Inspector")) {
-        const auto &internode = treeSkeleton.PeekNode(internodeHandle);
+        const auto &internode = shootSkeleton.PeekNode(internodeHandle);
         if (ImGui::TreeNode("Internode info")) {
             ImGui::Checkbox("Is max child", (bool*)&internode.m_data.m_isMaxChild);
             ImGui::Text("Thickness: %.3f", internode.m_info.m_thickness);
@@ -515,8 +512,6 @@ TreeVisualizer::PeekInternode(
                               ImGuiInputTextFlags_ReadOnly);
             ImGui::InputFloat("Distance to end", (float *) &internodeData.m_maxDistanceToAnyBranchEnd, 1, 100,
                               "%.3f",
-                              ImGuiInputTextFlags_ReadOnly);
-            ImGui::InputFloat("Level", (float *) &internodeData.m_level, 1, 100, "%.3f",
                               ImGuiInputTextFlags_ReadOnly);
             ImGui::InputFloat("Descendent biomass", (float *) &internodeData.m_descendentTotalBiomass, 1, 100, "%.3f",
                               ImGuiInputTextFlags_ReadOnly);
@@ -579,9 +574,9 @@ TreeVisualizer::PeekInternode(
             }
             ImGui::TreePop();
         }
-        if (ImGui::TreeNodeEx("Flow info", ImGuiTreeNodeFlags_DefaultOpen)) {
-            const auto &flow = treeSkeleton.PeekFlow(internode.GetFlowHandle());
-            ImGui::Text("Child flow size: %d", flow.RefChildHandles().size());
+        if (ImGui::TreeNodeEx("Stem info", ImGuiTreeNodeFlags_DefaultOpen)) {
+            const auto &flow = shootSkeleton.PeekFlow(internode.GetFlowHandle());
+            ImGui::Text("Child stem size: %d", flow.RefChildHandles().size());
             ImGui::Text("Internode size: %d", flow.RefNodeHandles().size());
             if (ImGui::TreeNode("Internodes")) {
                 int i = 0;
@@ -622,8 +617,9 @@ void TreeVisualizer::Clear()
 
 
 void TreeVisualizer::PeekRootNode(
-        const Skeleton<RootSkeletonGrowthData, RootBranchGrowthData, RootInternodeGrowthData> &rootSkeleton,
-        NodeHandle rootNodeHandle) {
+        const RootSkeleton &rootSkeleton,
+        NodeHandle rootNodeHandle) const
+{
     if (ImGui::Begin("Root Node Inspector")) {
         const auto& rootNode = rootSkeleton.PeekNode(rootNodeHandle);
         if (ImGui::TreeNode("Root node info")) {
@@ -669,9 +665,9 @@ void TreeVisualizer::PeekRootNode(
                 ImGuiInputTextFlags_ReadOnly);
             ImGui::TreePop();
         }
-        if (ImGui::TreeNodeEx("Flow info", ImGuiTreeNodeFlags_DefaultOpen)) {
+        if (ImGui::TreeNodeEx("Stem info", ImGuiTreeNodeFlags_DefaultOpen)) {
             const auto& flow = rootSkeleton.PeekFlow(rootNode.GetFlowHandle());
-            ImGui::Text("Child flow size: %d", flow.RefChildHandles().size());
+            ImGui::Text("Child stem size: %d", flow.RefChildHandles().size());
             ImGui::Text("Root node size: %d", flow.RefNodeHandles().size());
             if (ImGui::TreeNode("Root nodes")) {
                 int i = 0;
@@ -688,7 +684,7 @@ void TreeVisualizer::PeekRootNode(
 }
 
 bool TreeVisualizer::InspectRootNode(
-        Skeleton<RootSkeletonGrowthData, RootBranchGrowthData, RootInternodeGrowthData> &rootSkeleton,
+        RootSkeleton &rootSkeleton,
         NodeHandle rootNodeHandle) {
     bool changed = false;
     if (ImGui::Begin("Root Node Inspector")) {

@@ -2,10 +2,12 @@
 
 #include "ecosyslab_export.h"
 
-#define NodeHandle int
-#define FlowHandle int
+
 using namespace UniEngine;
 namespace EcoSysLab {
+    typedef int NodeHandle;
+    typedef int FlowHandle;
+
 #pragma region Structural Info
     struct NodeInfo {
         glm::vec3 m_globalPosition = glm::vec3(0.0f);

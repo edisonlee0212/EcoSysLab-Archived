@@ -123,7 +123,7 @@ bool Tree::TryGrow() {
 	if (m_recordBiomassHistory)
 	{
 		const auto& baseRootNode = m_treeModel.RefRootSkeleton().RefNode(0);
-		const auto& baseShootNode = m_treeModel.RefBranchSkeleton().RefNode(0);
+		const auto& baseShootNode = m_treeModel.RefShootSkeleton().RefNode(0);
 		m_rootBiomassHistory.emplace_back(baseRootNode.m_data.m_biomass + baseRootNode.m_data.m_descendentTotalBiomass);
 		m_shootBiomassHistory.emplace_back(baseShootNode.m_data.m_biomass + baseShootNode.m_data.m_descendentTotalBiomass);
 	}
@@ -226,9 +226,9 @@ void Tree::GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings, 
 		{
 		case 0:
 		{
-			CylindricalMeshGenerator<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> meshGenerator;
-			meshGenerator.Generate(m_treeModel.PeekBranchSkeleton(actualIteration), vertices, indices,
-				meshGeneratorSettings, glm::min(m_treeModel.PeekBranchSkeleton(actualIteration).PeekNode(0).m_info.m_thickness,
+			CylindricalMeshGenerator<ShootGrowthData, ShootStemGrowthData, InternodeGrowthData> meshGenerator;
+			meshGenerator.Generate(m_treeModel.PeekShootSkeleton(actualIteration), vertices, indices,
+				meshGeneratorSettings, glm::min(m_treeModel.PeekShootSkeleton(actualIteration).PeekNode(0).m_info.m_thickness,
 					m_treeModel.PeekRootSkeleton(actualIteration).PeekNode(0).m_info.m_thickness));
 		}
 		break;
@@ -240,8 +240,8 @@ void Tree::GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings, 
 			{
 				minRadius = treeDescriptor->m_treeGrowthParameters.m_endNodeThickness;
 			}
-			VoxelMeshGenerator<SkeletonGrowthData, BranchGrowthData, InternodeGrowthData> meshGenerator;
-			meshGenerator.Generate(m_treeModel.PeekBranchSkeleton(actualIteration), vertices, indices,
+			VoxelMeshGenerator<ShootGrowthData, ShootStemGrowthData, InternodeGrowthData> meshGenerator;
+			meshGenerator.Generate(m_treeModel.PeekShootSkeleton(actualIteration), vertices, indices,
 				meshGeneratorSettings, minRadius);
 		}
 		break;
@@ -276,9 +276,9 @@ void Tree::GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings, 
 		{
 		case 0:
 		{
-			CylindricalMeshGenerator<RootSkeletonGrowthData, RootBranchGrowthData, RootInternodeGrowthData> meshGenerator;
+			CylindricalMeshGenerator<RootGrowthData, RootStemGrowthData, RootNodeGrowthData> meshGenerator;
 			meshGenerator.Generate(m_treeModel.PeekRootSkeleton(actualIteration), vertices, indices,
-				meshGeneratorSettings, glm::min(m_treeModel.PeekBranchSkeleton(actualIteration).PeekNode(0).m_info.m_thickness,
+				meshGeneratorSettings, glm::min(m_treeModel.PeekShootSkeleton(actualIteration).PeekNode(0).m_info.m_thickness,
 					m_treeModel.PeekRootSkeleton(actualIteration).PeekNode(0).m_info.m_thickness));
 		}
 		break;
@@ -290,7 +290,7 @@ void Tree::GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings, 
 			{
 				minRadius = treeDescriptor->m_rootGrowthParameters.m_endNodeThickness;
 			}
-			VoxelMeshGenerator<RootSkeletonGrowthData, RootBranchGrowthData, RootInternodeGrowthData> meshGenerator;
+			VoxelMeshGenerator<RootGrowthData, RootStemGrowthData, RootNodeGrowthData> meshGenerator;
 			meshGenerator.Generate(m_treeModel.PeekRootSkeleton(actualIteration), vertices, indices,
 				meshGeneratorSettings, minRadius);
 		}
@@ -398,9 +398,9 @@ void Tree::GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings, 
 		auto quadVerticesSize = quadMesh->GetVerticesAmount();
 		size_t offset = 0;
 
-		const auto& nodeList = m_treeModel.PeekBranchSkeleton(actualIteration).RefSortedNodeList();
+		const auto& nodeList = m_treeModel.PeekShootSkeleton(actualIteration).RefSortedNodeList();
 		for (const auto& internodeHandle : nodeList) {
-			const auto& internode = m_treeModel.PeekBranchSkeleton(actualIteration).PeekNode(internodeHandle);
+			const auto& internode = m_treeModel.PeekShootSkeleton(actualIteration).PeekNode(internodeHandle);
 			const auto& internodeInfo = internode.m_info;
 			const auto& internodeData = internode.m_data;
 			auto internodeGlobalTransform = glm::translate(internodeInfo.m_globalPosition) * glm::mat4_cast(internodeInfo.m_globalRotation) * glm::scale(glm::vec3(1.0f));
@@ -498,6 +498,18 @@ void Tree::GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings, 
 		meshRenderer->m_mesh = mesh;
 		meshRenderer->m_material = material;
 	}
+}
+
+void Tree::FromLSystemString(const std::shared_ptr<LSystemString>& lSystemString)
+{
+}
+
+void Tree::FromTreeGraph(const std::shared_ptr<TreeGraph>& treeGraph)
+{
+}
+
+void Tree::FromTreeGraphV2(const std::shared_ptr<TreeGraphV2>& treeGraphV2)
+{
 }
 
 void TreeDescriptor::OnCreate() {

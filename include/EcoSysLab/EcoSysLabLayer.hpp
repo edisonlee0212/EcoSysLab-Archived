@@ -1,36 +1,37 @@
 #pragma once
 
 #include "ecosyslab_export.h"
-#include "TreeModel.hpp"
-#include "TreeVisualizer.hpp"
-#include "TreeMeshGenerator.hpp"
+#include "Tree.hpp"
+#include "Soil.hpp"
+#include "Climate.hpp"
+
 using namespace UniEngine;
 namespace EcoSysLab {
 	class EcoSysLabLayer : public ILayer {
-		bool m_displayBranches = true;
+		bool m_displayShootStem = true;
 		bool m_displayFoliage = true;
 		bool m_displayFruit = true;
 		bool m_displayFineRoot = false;
-		bool m_displayRootFlows = true;
+		bool m_displayRootStem = true;
 		bool m_displayBoundingBox = false;
 		bool m_displaySoil = true;
 
 		bool m_debugVisualization = true;
 		bool m_rendering = false;
-		std::vector<int> m_branchVersions;
+		std::vector<int> m_shootVersions;
 		std::vector<int> m_rootVersions;
 		std::vector<glm::vec3> m_randomColors;
 		
-		std::vector<glm::uint> m_branchSegments;
-		std::vector<StrandPoint> m_branchPoints;
-		std::vector<glm::uint> m_rootSegments;
-		std::vector<StrandPoint> m_rootPoints;
+		std::vector<glm::uint> m_shootStemSegments;
+		std::vector<StrandPoint> m_shootStemPoints;
+		std::vector<glm::uint> m_rootStemSegments;
+		std::vector<StrandPoint> m_rootStemPoints;
 
 		std::vector<glm::uint> m_fineRootSegments;
 		std::vector<StrandPoint> m_fineRootPoints;
 
-		AssetRef m_branchStrands;
-		AssetRef m_rootStrands;
+		AssetRef m_shootStemStrands;
+		AssetRef m_rootStemStrands;
 		AssetRef m_fineRootStrands;
 
 		std::vector<glm::mat4> m_boundingBoxMatrices;
@@ -47,9 +48,9 @@ namespace EcoSysLab {
 		int m_internodeSize = 0;
 		int m_leafSize = 0;
 		int m_fruitSize = 0;
-		int m_branchSize = 0;
+		int m_shootStemSize = 0;
 		int m_rootNodeSize = 0;
-		int m_rootFlowSize = 0;
+		int m_rootStemSize = 0;
 		bool m_needFlowUpdate = false;
 		bool m_lockTreeSelection = false;
 		bool m_autoGrow = false;
@@ -103,20 +104,13 @@ namespace EcoSysLab {
 		void SoilVisualizationScalar(SoilModel& soilModel); // called during LateUpdate()
 		void SoilVisualizationVector(SoilModel& soilModel); // called during LateUpdate()
 
-		void BranchRenderingGs(const std::vector<Entity>* treeEntities);
-
-		std::shared_ptr<OpenGLUtils::GLShader> m_treeBranchComp;
-		std::shared_ptr<OpenGLUtils::GLProgram> m_treeBranchComputeProgram;
-		std::unique_ptr<OpenGLUtils::GLBuffer> m_treeBranchBuffer;
-		std::shared_ptr<Mesh> m_treeMesh;
-
 		int m_days = 0;
 	public:
 		TreeMeshGeneratorSettings m_meshGeneratorSettings;
 		Entity m_selectedTree = {};
 		
-		EntityRef m_branchStrandsHolder;
-		EntityRef m_rootStrandsHolder;
+		EntityRef m_shootStemStrandsHolder;
+		EntityRef m_rootStemStrandsHolder;
 		EntityRef m_fineRootStrandsHolder;
 		EntityRef m_foliageHolder;
 		TreeVisualizer m_treeVisualizer;

@@ -5,6 +5,9 @@
 #include "TreeVisualizer.hpp"
 #include "TreeMeshGenerator.hpp"
 
+#include "LSystemString.hpp"
+#include "TreeGraph.hpp"
+
 using namespace UniEngine;
 namespace EcoSysLab {
 
@@ -57,5 +60,9 @@ namespace EcoSysLab {
 		void ClearMeshHolders();
 
 		void GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings, int iteration = -1);
+
+		void FromLSystemString(const std::shared_ptr<LSystemString>& lSystemString);
+		void FromTreeGraph(const std::shared_ptr<TreeGraph>& treeGraph);
+		void FromTreeGraphV2(const std::shared_ptr<TreeGraphV2>& treeGraphV2);
 	};
 }
