@@ -362,9 +362,6 @@ TreeVisualizer::InspectInternode(
             ImGui::InputFloat("Light intensity", (float *) &internodeData.m_lightIntensity, 1, 100, "%.3f",
                               ImGuiInputTextFlags_ReadOnly);
 
-            if (ImGui::DragFloat("Inhibitor", (float *) &internodeData.m_inhibitor)) {
-                changed = true;
-            }
             if (ImGui::DragFloat("Sagging", (float *) &internodeData.m_sagging)) {
                 changed = true;
             }
@@ -506,8 +503,6 @@ TreeVisualizer::PeekInternode(const ShootSkeleton &shootSkeleton, NodeHandle int
                                ImGuiInputTextFlags_ReadOnly);
             auto &internodeData = internode.m_data;
             ImGui::InputInt("Age", (int *) &internodeData.m_age, 1, 100, ImGuiInputTextFlags_ReadOnly);
-            ImGui::InputFloat("Inhibitor", (float *) &internodeData.m_inhibitor, 1, 100, "%.3f",
-                              ImGuiInputTextFlags_ReadOnly);
             ImGui::InputFloat("Sagging", (float *) &internodeData.m_sagging, 1, 100, "%.3f",
                               ImGuiInputTextFlags_ReadOnly);
             ImGui::InputFloat("Distance to end", (float *) &internodeData.m_maxDistanceToAnyBranchEnd, 1, 100,
@@ -640,11 +635,11 @@ void TreeVisualizer::PeekRootNode(
             ImGui::InputFloat("Soil Density", (float*)&rootNodeData.m_soilDensity, 1, 100, "%.3f",
                 ImGuiInputTextFlags_ReadOnly);
 
-            ImGui::InputFloat("Root flux", (float*)&rootNodeData.m_rootFlux, 1, 100, "%.3f",
+            ImGui::InputFloat("Root flux", (float*)&rootNodeData.m_water, 1, 100, "%.3f",
                 ImGuiInputTextFlags_ReadOnly);
-            ImGui::InputFloat("Growth potential", (float*)&rootNodeData.m_growthPotential, 1, 100, "%.3f",
+            ImGui::InputFloat("Growth potential", (float*)&rootNodeData.m_developmentalVigorRequirement, 1, 100, "%.3f",
                 ImGuiInputTextFlags_ReadOnly);
-            ImGui::InputFloat("Subtree Growth potential", (float*)&rootNodeData.m_subtreeGrowthPotential, 1, 100, "%.3f",
+            ImGui::InputFloat("Subtree Growth potential", (float*)&rootNodeData.m_subtreeDevelopmentalVigorRequirement, 1, 100, "%.3f",
                 ImGuiInputTextFlags_ReadOnly);
             ImGui::InputFloat("Vigor", (float*)&rootNodeData.m_vigorSink, 1, 100, "%.3f",
                 ImGuiInputTextFlags_ReadOnly);
@@ -711,11 +706,11 @@ bool TreeVisualizer::InspectRootNode(
             
             ImGui::InputFloat("Nitrite", (float*)&rootNodeData.m_nitrite, 1, 100, "%.3f",
                 ImGuiInputTextFlags_ReadOnly);
-            ImGui::InputFloat("Root flux", (float*)&rootNodeData.m_rootFlux, 1, 100, "%.3f",
+            ImGui::InputFloat("Root flux", (float*)&rootNodeData.m_water, 1, 100, "%.3f",
                 ImGuiInputTextFlags_ReadOnly);
-            ImGui::InputFloat("Growth potential", (float*)&rootNodeData.m_growthPotential, 1, 100, "%.3f",
+            ImGui::InputFloat("Growth potential", (float*)&rootNodeData.m_developmentalVigorRequirement, 1, 100, "%.3f",
                 ImGuiInputTextFlags_ReadOnly);
-            ImGui::InputFloat("Subtree Growth potential", (float*)&rootNodeData.m_subtreeGrowthPotential, 1, 100, "%.3f",
+            ImGui::InputFloat("Subtree Growth potential", (float*)&rootNodeData.m_subtreeDevelopmentalVigorRequirement, 1, 100, "%.3f",
                 ImGuiInputTextFlags_ReadOnly);
             ImGui::InputFloat("Vigor", (float*)&rootNodeData.m_vigorSink, 1, 100, "%.3f",
                 ImGuiInputTextFlags_ReadOnly);

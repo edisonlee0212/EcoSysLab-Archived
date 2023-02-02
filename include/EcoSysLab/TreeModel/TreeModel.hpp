@@ -60,7 +60,6 @@ namespace EcoSysLab {
 		bool m_isMaxChild = false;
 		bool m_lateral = false;
 		int m_age = 0;
-		float m_inhibitorTarget = 0;
 		float m_inhibitor = 0;
 		glm::quat m_desiredLocalRotation = glm::vec3(0.0f);
 		float m_sagging = 0;
@@ -77,7 +76,7 @@ namespace EcoSysLab {
 		glm::vec3 m_lightDirection = glm::vec3(0, 1, 0);
 		float m_lightIntensity = 1.0f;
 
-		float m_shootFlux = 0.0f;
+		float m_lightEnergy = 0.0f;
 		/**
 		 * List of buds, first one will always be the apical bud which points forward.
 		 */
@@ -138,7 +137,7 @@ namespace EcoSysLab {
 		int m_order = 0;
 
 		float m_nitrite = 1.0f;
-		float m_rootFlux = 1.0f;
+		float m_water = 1.0f;
 		
 
 		float m_inhibitorTarget = 0;
@@ -154,17 +153,19 @@ namespace EcoSysLab {
 		/*
 		 * Sum of buds' development resource requirement and internode's development resource requirement.
 		 */
-		float m_developmentalVigorRequirement = 0.0f;
+		float m_growthPotential = 0.0f;
 
 		float m_subtreeMaintenanceVigorRequirement = 0.0f;
 
-		float m_growthPotential = 0.0f;
+		float m_developmentalVigorRequirement = 0.0f;
 
-		float m_subtreeGrowthPotential = 0.0f;
+		float m_subtreeDevelopmentalVigorRequirement = 0.0f;
 		/*
 		 * The allocated total resource for maintenance and development of this module.
 		 */
 		float m_vigorSink = 0.0f;
+
+		float m_allocatedVigor = 0.0f;
 		/*
 		 * The allocated total resource for maintenance and development of all descendents.
 		 */
@@ -484,16 +485,25 @@ namespace EcoSysLab {
 		TreeGrowthParameters();
 	};
 
-	struct TreeGrowthNutrients {
+	struct RootFlux {
 		float m_nitrite = 0.0f;
-		float m_rootFlux = 0.0f;
-		float m_shootFlux = 0.0f;
-		float m_vigor = 0.0f;
+		float m_water = 0.0f;
 	};
 
-	struct TreeGrowthRequirement
+	struct ShootFlux {
+		float m_lightEnergy = 0.0f;
+	};
+
+	struct PlantVigor
 	{
-		float m_vigor = 0.0f;
+		float m_rootVigor = 0.0f;
+		float m_shootVigor = 0.0f;
+	};
+
+	struct PlantGrowthRequirement
+	{
+		float m_maintenanceVigor = 0.0f;
+		float m_developmentalVigor = 0.0f;
 	};
 
 	struct TreeVoxelData
@@ -510,6 +520,12 @@ namespace EcoSysLab {
 		float m_occlusionDistanceFactor = 2.5f;
 		float m_overallIntensity = 2.0f;
 		float m_layerAngleFactor = 0.8f;
+	};
+
+	struct ShootRootVigorRatio
+	{
+		float m_rootVigorWeight = 1.0f;
+		float m_shootVigorWeight = 1.0f;
 	};
 
 	class TreeVolume
@@ -548,13 +564,13 @@ namespace EcoSysLab {
 
 		inline void AllocateRootVigor(const RootGrowthParameters& rootGrowthParameters);
 
-		inline void CalculateVigorRequirement(const RootGrowthParameters& rootGrowthParameters, TreeGrowthRequirement& newRootGrowthNutrientsRequirement);
+		inline void CalculateVigorRequirement(const RootGrowthParameters& rootGrowthParameters, PlantGrowthRequirement& newRootGrowthNutrientsRequirement);
 		inline void SampleNitrite(const glm::mat4& globalTransform, SoilModel& soilModel);
 #pragma endregion
 #pragma region Tree Growth
 		inline void AggregateInternodeVigorRequirement();
 
-		inline void CalculateVigorRequirement(const TreeGrowthParameters& treeGrowthParameters, TreeGrowthRequirement& newTreeGrowthNutrientsRequirement);
+		inline void CalculateVigorRequirement(const TreeGrowthParameters& treeGrowthParameters, PlantGrowthRequirement& newTreeGrowthNutrientsRequirement);
 
 		inline void AllocateShootVigor(const TreeGrowthParameters& treeGrowthParameters);
 
@@ -590,7 +606,7 @@ namespace EcoSysLab {
 		 * @return Whether the growth caused a structural change during the growth.
 		 */
 		bool GrowShoots(const glm::mat4& globalTransform, ClimateModel& climateModel, 
-			const TreeGrowthParameters& treeGrowthParameters, TreeGrowthRequirement& newTreeGrowthRequirement);
+			const TreeGrowthParameters& treeGrowthParameters, PlantGrowthRequirement& newTreeGrowthRequirement);
 
 		/**
 		 * Grow one iteration of the roots, given the soil model and the procedural parameters.
@@ -601,7 +617,7 @@ namespace EcoSysLab {
 		 * @return Whether the growth caused a structural change during the growth.
 		 */
 		bool GrowRoots(const glm::mat4& globalTransform, SoilModel& soilModel,
-			const RootGrowthParameters& rootGrowthParameters, TreeGrowthRequirement& newTreeGrowthRequirement);
+			const RootGrowthParameters& rootGrowthParameters, PlantGrowthRequirement& newTreeGrowthRequirement);
 
 
 		int m_leafCount = 0;
@@ -634,11 +650,12 @@ namespace EcoSysLab {
 		bool m_enableRootCollisionDetection = false;
 		bool m_enableBranchCollisionDetection = false;
 
-		TreeGrowthRequirement m_shootGrowthRequirement;
-		TreeGrowthRequirement m_rootGrowthRequirement;
-		TreeGrowthNutrients m_plantGrowthNutrients;
-
-		//float m_globalGrowthRate = 0.0f;
+		PlantGrowthRequirement m_shootGrowthRequirement;
+		PlantGrowthRequirement m_rootGrowthRequirement;
+		ShootFlux m_shootFlux;
+		RootFlux m_rootFlux;
+		PlantVigor m_plantVigor;
+		ShootRootVigorRatio m_vigorRatio;
 		glm::vec3 m_currentGravityDirection = glm::vec3(0, -1, 0);
 
 		/**
