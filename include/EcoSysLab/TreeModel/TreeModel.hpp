@@ -1,6 +1,7 @@
 #pragma once
 
 #include "PlantStructure.hpp"
+#include "TreeVolume.hpp"
 #include "SoilModel.hpp"
 #include "ClimateModel.hpp"
 #include "Octree.hpp"
@@ -513,14 +514,7 @@ namespace EcoSysLab {
 		unsigned m_referenceCount = 0;
 	};
 
-	struct IlluminationEstimationSettings {
-		int m_probeLayerAmount = 4;
-		int m_probeSectorAmount = 4;
-		float m_occlusion = 0.15f;
-		float m_occlusionDistanceFactor = 2.5f;
-		float m_overallIntensity = 2.0f;
-		float m_layerAngleFactor = 0.8f;
-	};
+	
 
 	struct ShootRootVigorRatio
 	{
@@ -528,22 +522,7 @@ namespace EcoSysLab {
 		float m_shootVigorWeight = 1.0f;
 	};
 
-	class TreeVolume
-	{
-		std::vector<std::pair<float, int>> m_probe;
-	public:
-		std::vector<float> m_distances;
-		glm::vec3 m_center = glm::vec3(0.0f);
-		int m_layerAmount = 8;
-		int m_sectorAmount = 8;
-		bool m_hasData = false;
-		float m_offset = 0;
-		[[nodiscard]] int GetSectorIndex(const glm::vec3& position) const;
-		void Clear();
-		void TipPosition(int layerIndex, int sectorIndex, glm::vec3& position) const;
-		void Smooth();
-		[[nodiscard]] float IlluminationEstimation(const glm::vec3& position, const IlluminationEstimationSettings& settings, glm::vec3& lightDirection);
-	};
+	
 	typedef Skeleton<ShootGrowthData, ShootStemGrowthData, InternodeGrowthData> ShootSkeleton;
 	typedef Skeleton<RootGrowthData, RootStemGrowthData, RootNodeGrowthData> RootSkeleton;
 	class TreeModel {
@@ -586,7 +565,7 @@ namespace EcoSysLab {
 			const ShootGrowthParameters& shootGrowthParameters, float& collectedInhibitor);
 
 		friend class Tree;
-		void CollectShootFlux(ClimateModel& climateModel,
+		void CollectShootFlux(const glm::mat4& globalTransform, ClimateModel& climateModel,
 			const ShootGrowthParameters& shootGrowthParameters);
 #pragma endregion
 
@@ -619,6 +598,7 @@ namespace EcoSysLab {
 		bool GrowRoots(const glm::mat4& globalTransform, SoilModel& soilModel,
 			const RootGrowthParameters& rootGrowthParameters, PlantGrowthRequirement& newRootGrowthRequirement);
 
+		inline void PlantVigorAllocation();
 
 		int m_leafCount = 0;
 		int m_fruitCount = 0;
@@ -630,8 +610,6 @@ namespace EcoSysLab {
 		static void ApplyTropism(const glm::vec3& targetDir, float tropism, glm::vec3& front, glm::vec3& up);
 
 		static void ApplyTropism(const glm::vec3& targetDir, float tropism, glm::quat& rotation);
-
-
 
 		std::vector<int> m_internodeOrderCounts;
 		std::vector<int> m_rootNodeOrderCounts;
