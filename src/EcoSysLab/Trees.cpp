@@ -28,7 +28,7 @@ void Trees::OnInspect() {
     }
     Editor::DragAndDropButton<TreeDescriptor>(m_treeDescriptor, "TreeDescriptor", true);
     if (!m_globalTransforms.empty() && m_treeDescriptor.Get<TreeDescriptor>()) {
-        auto &parameters = m_treeDescriptor.Get<TreeDescriptor>()->m_treeGrowthParameters;
+        auto &parameters = m_treeDescriptor.Get<TreeDescriptor>()->m_shootGrowthParameters;
         if (ImGui::Button("Instantiate trees")) {
             auto scene = Application::GetActiveScene();
             Entity parent;

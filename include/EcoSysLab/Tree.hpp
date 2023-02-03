@@ -13,7 +13,7 @@ namespace EcoSysLab {
 
 	class TreeDescriptor : public IAsset {
 	public:
-		TreeGrowthParameters m_treeGrowthParameters;
+		ShootGrowthParameters m_shootGrowthParameters;
 		RootGrowthParameters m_rootGrowthParameters;
 		void OnCreate() override;
 

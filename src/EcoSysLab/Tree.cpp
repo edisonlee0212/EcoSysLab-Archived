@@ -118,7 +118,7 @@ bool Tree::TryGrow() {
 	const auto owner = GetOwner();
 
 	bool grown = m_treeModel.Grow(scene->GetDataComponent<GlobalTransform>(owner).m_value, soil->m_soilModel, climate->m_climateModel,
-		treeDescriptor->m_rootGrowthParameters, treeDescriptor->m_treeGrowthParameters);
+		treeDescriptor->m_rootGrowthParameters, treeDescriptor->m_shootGrowthParameters);
 
 	if (m_recordBiomassHistory)
 	{
@@ -238,7 +238,7 @@ void Tree::GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings, 
 			float minRadius = 0.01f;
 			if (treeDescriptor)
 			{
-				minRadius = treeDescriptor->m_treeGrowthParameters.m_endNodeThickness;
+				minRadius = treeDescriptor->m_shootGrowthParameters.m_endNodeThickness;
 			}
 			VoxelMeshGenerator<ShootGrowthData, ShootStemGrowthData, InternodeGrowthData> meshGenerator;
 			meshGenerator.Generate(m_treeModel.PeekShootSkeleton(actualIteration), vertices, indices,
@@ -517,9 +517,9 @@ void TreeDescriptor::OnCreate() {
 }
 
 
-bool OnInspectTreeGrowthParameters(TreeGrowthParameters& treeGrowthParameters) {
+bool OnInspectShootGrowthParameters(ShootGrowthParameters& treeGrowthParameters) {
 	bool changed = false;
-	if (ImGui::TreeNodeEx("Tree Parameters", ImGuiTreeNodeFlags_DefaultOpen)) {
+	if (ImGui::TreeNodeEx("Shoot Parameters", ImGuiTreeNodeFlags_DefaultOpen)) {
 		changed = ImGui::DragFloat("Growth rate", &treeGrowthParameters.m_growthRate, 0.01f) || changed;
 		if (ImGui::TreeNodeEx("Structure", ImGuiTreeNodeFlags_DefaultOpen)) {
 			changed = ImGui::DragInt3("Bud count lateral/fruit/leaf", &treeGrowthParameters.m_lateralBudCount, 1, 0, 3) || changed;
@@ -638,7 +638,7 @@ void TreeDescriptor::OnInspect() {
 	{
 		ImGui::Text("Attach soil and climate entity to instantiate!");
 	}
-	if (OnInspectTreeGrowthParameters(m_treeGrowthParameters)) { changed = true; }
+	if (OnInspectShootGrowthParameters(m_shootGrowthParameters)) { changed = true; }
 	if (OnInspectRootGrowthParameters(m_rootGrowthParameters)) { changed = true; }
 	if (changed) m_saved = false;
 }
@@ -647,7 +647,7 @@ void TreeDescriptor::CollectAssetRef(std::vector<AssetRef>& list) {
 
 }
 
-void SerializeTreeGrowthParameters(const std::string& name, const TreeGrowthParameters& treeGrowthParameters, YAML::Emitter& out) {
+void SerializeShootGrowthParameters(const std::string& name, const ShootGrowthParameters& treeGrowthParameters, YAML::Emitter& out) {
 	out << YAML::Key << name << YAML::BeginMap;
 	out << YAML::Key << "m_growthRate" << YAML::Value << treeGrowthParameters.m_growthRate;
 
@@ -754,11 +754,11 @@ void SerializeRootGrowthParameters(const std::string& name, const RootGrowthPara
 	out << YAML::EndMap;
 }
 void TreeDescriptor::Serialize(YAML::Emitter& out) {
-	SerializeTreeGrowthParameters("m_treeGrowthParameters", m_treeGrowthParameters, out);
+	SerializeShootGrowthParameters("m_shootGrowthParameters", m_shootGrowthParameters, out);
 	SerializeRootGrowthParameters("m_rootGrowthParameters", m_rootGrowthParameters, out);
 }
 
-void DeserializeTreeGrowthParameters(const std::string& name, TreeGrowthParameters& treeGrowthParameters, const YAML::Node& in) {
+void DeserializeShootGrowthParameters(const std::string& name, ShootGrowthParameters& treeGrowthParameters, const YAML::Node& in) {
 	if (in[name]) {
 		auto& param = in[name];
 		if (param["m_growthRate"]) treeGrowthParameters.m_growthRate = param["m_growthRate"].as<float>();
@@ -860,6 +860,6 @@ void DeserializeRootGrowthParameters(const std::string& name, RootGrowthParamete
 	}
 }
 void TreeDescriptor::Deserialize(const YAML::Node& in) {
-	DeserializeTreeGrowthParameters("m_treeGrowthParameters", m_treeGrowthParameters, in);
+	DeserializeShootGrowthParameters("m_shootGrowthParameters", m_shootGrowthParameters, in);
 	DeserializeRootGrowthParameters("m_rootGrowthParameters", m_rootGrowthParameters, in);
 }

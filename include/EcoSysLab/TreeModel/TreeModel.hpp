@@ -287,7 +287,7 @@ namespace EcoSysLab {
 
 
 
-	class TreeGrowthParameters {
+	class ShootGrowthParameters {
 	public:
 		/**
 		 * \brief The growth rate. The expected internode elongation per iteration
@@ -482,7 +482,7 @@ namespace EcoSysLab {
 		[[nodiscard]] float GetSagging(const Node<InternodeGrowthData>& internode) const;
 
 
-		TreeGrowthParameters();
+		ShootGrowthParameters();
 	};
 
 	struct RootFlux {
@@ -570,27 +570,27 @@ namespace EcoSysLab {
 #pragma region Tree Growth
 		inline void AggregateInternodeVigorRequirement();
 
-		inline void CalculateVigorRequirement(const TreeGrowthParameters& treeGrowthParameters, PlantGrowthRequirement& newTreeGrowthNutrientsRequirement);
+		inline void CalculateVigorRequirement(const ShootGrowthParameters& shootGrowthParameters, PlantGrowthRequirement& newTreeGrowthNutrientsRequirement);
 
-		inline void AllocateShootVigor(const TreeGrowthParameters& treeGrowthParameters);
+		inline void AllocateShootVigor(const ShootGrowthParameters& shootGrowthParameters);
 
 		inline bool PruneInternodes(float maxDistance, NodeHandle internodeHandle,
-			const TreeGrowthParameters& treeGrowthParameters);
+			const ShootGrowthParameters& shootGrowthParameters);
 
 		inline void CalculateThicknessAndSagging(NodeHandle internodeHandle,
-			const TreeGrowthParameters& treeGrowthParameters);
+			const ShootGrowthParameters& shootGrowthParameters);
 
-		inline bool GrowInternode(ClimateModel& climateModel, NodeHandle internodeHandle, const TreeGrowthParameters& treeGrowthParameters);
+		inline bool GrowInternode(ClimateModel& climateModel, NodeHandle internodeHandle, const ShootGrowthParameters& shootGrowthParameters);
 
 		bool ElongateInternode(float extendLength, NodeHandle internodeHandle,
-			const TreeGrowthParameters& treeGrowthParameters, float& collectedInhibitor);
+			const ShootGrowthParameters& shootGrowthParameters, float& collectedInhibitor);
 
 		friend class Tree;
 		void CollectShootFlux(ClimateModel& climateModel,
-			const TreeGrowthParameters& treeGrowthParameters);
+			const ShootGrowthParameters& shootGrowthParameters);
 #pragma endregion
 
-		void Initialize(const TreeGrowthParameters& treeGrowthParameters, const RootGrowthParameters& rootGrowthParameters);
+		void Initialize(const ShootGrowthParameters& shootGrowthParameters, const RootGrowthParameters& rootGrowthParameters);
 
 		bool m_initialized = false;
 		ShootSkeleton m_shootSkeleton;
@@ -601,23 +601,23 @@ namespace EcoSysLab {
 		 * Grow one iteration of the branches, given the climate model and the procedural parameters.
 		 * @param globalTransform The plant's world transform.
 		 * @param climateModel The climate model.
-		 * @param treeGrowthParameters The procedural parameters that guides the growth.
-		 * @param newTreeGrowthRequirement Growth requirements from shoots.
+		 * @param shootGrowthParameters The procedural parameters that guides the growth.
+		 * @param newShootGrowthRequirement Growth requirements from shoots.
 		 * @return Whether the growth caused a structural change during the growth.
 		 */
 		bool GrowShoots(const glm::mat4& globalTransform, ClimateModel& climateModel, 
-			const TreeGrowthParameters& treeGrowthParameters, PlantGrowthRequirement& newTreeGrowthRequirement);
+			const ShootGrowthParameters& shootGrowthParameters, PlantGrowthRequirement& newShootGrowthRequirement);
 
 		/**
 		 * Grow one iteration of the roots, given the soil model and the procedural parameters.
 		 * @param globalTransform The plant's world transform.
 		 * @param soilModel The soil model
 		 * @param rootGrowthParameters The procedural parameters that guides the growth.
-		 * @param newTreeGrowthRequirement Growth requirements from roots.
+		 * @param newRootGrowthRequirement Growth requirements from roots.
 		 * @return Whether the growth caused a structural change during the growth.
 		 */
 		bool GrowRoots(const glm::mat4& globalTransform, SoilModel& soilModel,
-			const RootGrowthParameters& rootGrowthParameters, PlantGrowthRequirement& newTreeGrowthRequirement);
+			const RootGrowthParameters& rootGrowthParameters, PlantGrowthRequirement& newRootGrowthRequirement);
 
 
 		int m_leafCount = 0;
@@ -672,11 +672,11 @@ namespace EcoSysLab {
 		 * @param soilModel The soil model
 		 * @param climateModel The climate model
 		 * @param rootGrowthParameters The procedural parameters that guides the growth of the roots.
-		 * @param treeGrowthParameters The procedural parameters that guides the growth of the branches.
+		 * @param shootGrowthParameters The procedural parameters that guides the growth of the branches.
 		 * @return Whether the growth caused a structural change during the growth.
 		 */
 		bool Grow(const glm::mat4& globalTransform, SoilModel& soilModel, ClimateModel& climateModel,
-			const RootGrowthParameters& rootGrowthParameters, const TreeGrowthParameters& treeGrowthParameters);
+			const RootGrowthParameters& rootGrowthParameters, const ShootGrowthParameters& shootGrowthParameters);
 
 		int m_historyLimit = -1;
 
