@@ -69,34 +69,7 @@ namespace EcoSysLab {
 		 * List of buds, first one will always be the apical bud which points forward.
 		 */
 		std::vector<Bud> m_buds;
-
-
-
-		/*
-		 * The desired resource needed for maintaining current plant structure.
-		 */
-		float m_maintenanceVigorRequirementWeight = 0.0f;
-		/*
-		 * Sum of buds' development resource requirement and internode's development resource requirement.
-		 */
-		float m_developmentalVigorRequirementWeight = 0.0f;
-		/*
-		 * Sum of all child node's development resource requirement;
-		 */
-		float m_subtreeDevelopmentalVigorRequirementWeight = 0.0f;
-		/*
-		 * Sum of all child node's maintenance resource requirement;
-		 */
-		float m_subtreeMaintenanceVigorRequirementWeight = 0.0f;
-		/*
-		 * The allocated total resource for maintenance and development of this module.
-		 */
-		float m_allocatedVigor = 0.0f;
-		/*
-		 * The allocated total resource for maintenance and development of all descendents.
-		 */
-		float m_subTreeAllocatedVigor = 0.0f;
-
+		VigorFlow m_vigorFlow;
 		std::vector<glm::mat4> m_leaves;
 		std::vector<glm::mat4> m_fruits;
 
@@ -133,27 +106,11 @@ namespace EcoSysLab {
 
 		float m_horizontalTropism = 0.0f;
 		float m_verticalTropism = 0.0f;
-		/*
-		 * The desired resource needed for maintaining current plant structure.
-		 * Depending on the volume of root node.
-		 */
-		float m_maintenanceVigorRequirementWeight = 0.0f;
-		
-		float m_subtreeMaintenanceVigorRequirementWeight = 0.0f;
-
-		float m_developmentalVigorRequirementWeight = 0.0f;
-
-		float m_subtreeDevelopmentalVigorRequirementWeight = 0.0f;
+		VigorFlow m_vigorFlow;
 		/*
 		 * The allocated total resource for maintenance and development of this module.
 		 */
 		VigorSink m_vigorSink;
-
-		float m_allocatedVigor = 0.0f;
-		/*
-		 * The allocated total resource for maintenance and development of all descendents.
-		 */
-		float m_subTreeAllocatedVigor = 0.0f;
 
 		std::vector<glm::vec4> m_fineRootAnchors;
 

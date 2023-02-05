@@ -36,4 +36,25 @@ namespace EcoSysLab
 		[[nodiscard]] float GetAvailableMaintenanceVigor() const;
 		void EmptyVigor();
 	};
+
+	struct VigorFlow
+	{
+		/*
+		 * The desired resource needed for maintaining current plant structure.
+		 * Depending on the volume of root node.
+		 */
+		float m_maintenanceVigorRequirementWeight = 0.0f;
+
+		float m_subtreeMaintenanceVigorRequirementWeight = 0.0f;
+
+		float m_developmentalVigorRequirementWeight = 0.0f;
+
+		float m_subtreeDevelopmentalVigorRequirementWeight = 0.0f;
+
+		float m_allocatedVigor = 0.0f;
+		/*
+		 * The allocated total resource for maintenance and development of all descendents.
+		 */
+		float m_subTreeAllocatedVigor = 0.0f;
+	};
 }
