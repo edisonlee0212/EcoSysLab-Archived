@@ -1,6 +1,7 @@
 #pragma once
 
 #include "PlantStructure.hpp"
+#include "VigorSink.hpp"
 #include "TreeVolume.hpp"
 #include "SoilModel.hpp"
 #include "ClimateModel.hpp"
@@ -27,21 +28,7 @@ namespace EcoSysLab {
 		BudType m_type = BudType::Apical;
 		BudStatus m_status = BudStatus::Dormant;
 
-		/*
-		 * The desired resource needed for maintaining current plant structure.
-		 * Depending on the size of fruit/leaf.
-		 */
-		float m_maintenanceVigorRequirement = 0.0f;
-		/*
-		 * The desired resource needed for reproduction (forming shoot/leaf/fruit) of this bud.
-		 * Depending on the size of fruit/leaf.
-		 * Adjusted by apical control.
-		 */
-		float m_developmentVigorRequirement = 0.0f;
-		/*
-		 * Stores the allocated total vigor for maintenance and development of this module.
-		 */
-		float m_vigorSink = 0.0f;
+		VigorSink m_vigorSink;
 
 		glm::quat m_localRotation = glm::vec3(0.0f);
 
@@ -88,19 +75,19 @@ namespace EcoSysLab {
 		/*
 		 * The desired resource needed for maintaining current plant structure.
 		 */
-		float m_maintenanceVigorRequirement = 0.0f;
+		float m_maintenanceVigorRequirementWeight = 0.0f;
 		/*
 		 * Sum of buds' development resource requirement and internode's development resource requirement.
 		 */
-		float m_developmentalVigorRequirement = 0.0f;
+		float m_developmentalVigorRequirementWeight = 0.0f;
 		/*
 		 * Sum of all child node's development resource requirement;
 		 */
-		float m_subtreeDevelopmentalVigorRequirement = 0.0f;
+		float m_subtreeDevelopmentalVigorRequirementWeight = 0.0f;
 		/*
 		 * Sum of all child node's maintenance resource requirement;
 		 */
-		float m_subtreeMaintenanceVigorRequirement = 0.0f;
+		float m_subtreeMaintenanceVigorRequirementWeight = 0.0f;
 		/*
 		 * The allocated total resource for maintenance and development of this module.
 		 */
@@ -150,21 +137,17 @@ namespace EcoSysLab {
 		 * The desired resource needed for maintaining current plant structure.
 		 * Depending on the volume of root node.
 		 */
-		float m_maintenanceVigorRequirement = 0.0f;
-		/*
-		 * Sum of buds' development resource requirement and internode's development resource requirement.
-		 */
-		float m_growthPotential = 0.0f;
+		float m_maintenanceVigorRequirementWeight = 0.0f;
+		
+		float m_subtreeMaintenanceVigorRequirementWeight = 0.0f;
 
-		float m_subtreeMaintenanceVigorRequirement = 0.0f;
+		float m_developmentalVigorRequirementWeight = 0.0f;
 
-		float m_developmentalVigorRequirement = 0.0f;
-
-		float m_subtreeDevelopmentalVigorRequirement = 0.0f;
+		float m_subtreeDevelopmentalVigorRequirementWeight = 0.0f;
 		/*
 		 * The allocated total resource for maintenance and development of this module.
 		 */
-		float m_vigorSink = 0.0f;
+		VigorSink m_vigorSink;
 
 		float m_allocatedVigor = 0.0f;
 		/*

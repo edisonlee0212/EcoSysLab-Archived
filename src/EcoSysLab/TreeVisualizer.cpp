@@ -369,10 +369,10 @@ TreeVisualizer::InspectInternode(
                 changed = true;
             }
 
-            ImGui::InputFloat("Productive req", (float *) &internodeData.m_developmentalVigorRequirement, 1, 100,
+            ImGui::InputFloat("Productive req", (float *) &internodeData.m_developmentalVigorRequirementWeight, 1, 100,
                               "%.3f",
                               ImGuiInputTextFlags_ReadOnly);
-            ImGui::InputFloat("Descendent req", (float *) &internodeData.m_subtreeDevelopmentalVigorRequirement, 1,
+            ImGui::InputFloat("Descendent req", (float *) &internodeData.m_subtreeDevelopmentalVigorRequirementWeight, 1,
                               100, "%.3f",
                               ImGuiInputTextFlags_ReadOnly);
             
@@ -409,8 +409,10 @@ TreeVisualizer::InspectInternode(
 
                         auto budRotationAngle = glm::eulerAngles(bud.m_localRotation);
                         ImGui::InputFloat3("Rotation", &budRotationAngle.x, "%.3f", ImGuiInputTextFlags_ReadOnly);
-                        ImGui::InputFloat("Base resource requirement", (float *) &bud.m_maintenanceVigorRequirement, 1, 100,
+                        /*
+                        ImGui::InputFloat("Base resource requirement", (float *) &bud.m_maintenanceVigorRequirementWeight, 1, 100,
                                           "%.3f", ImGuiInputTextFlags_ReadOnly);
+                                          */
                         ImGui::TreePop();
                     }
                     index++;
@@ -519,10 +521,10 @@ TreeVisualizer::PeekInternode(const ShootSkeleton &shootSkeleton, NodeHandle int
             ImGui::InputFloat("Light intensity", (float *) &internodeData.m_lightIntensity, 1, 100, "%.3f",
                               ImGuiInputTextFlags_ReadOnly);
 
-            ImGui::InputFloat("Productive req", (float *) &internodeData.m_developmentalVigorRequirement, 1, 100,
+            ImGui::InputFloat("Productive req", (float *) &internodeData.m_developmentalVigorRequirementWeight, 1, 100,
                               "%.3f",
                               ImGuiInputTextFlags_ReadOnly);
-            ImGui::InputFloat("Descendent req", (float *) &internodeData.m_subtreeDevelopmentalVigorRequirement, 1,
+            ImGui::InputFloat("Descendent req", (float *) &internodeData.m_subtreeDevelopmentalVigorRequirementWeight, 1,
                               100, "%.3f",
                               ImGuiInputTextFlags_ReadOnly);
             
@@ -559,8 +561,10 @@ TreeVisualizer::PeekInternode(const ShootSkeleton &shootSkeleton, NodeHandle int
 
                         auto budRotationAngle = glm::eulerAngles(bud.m_localRotation);
                         ImGui::InputFloat3("Rotation", &budRotationAngle.x, "%.3f", ImGuiInputTextFlags_ReadOnly);
-                        ImGui::InputFloat("Base resource requirement", (float *) &bud.m_maintenanceVigorRequirement, 1, 100,
+                        /*
+                        ImGui::InputFloat("Base resource requirement", (float *) &bud.m_maintenanceVigorRequirementWeight, 1, 100,
                                           "%.3f", ImGuiInputTextFlags_ReadOnly);
+                                          */
                         ImGui::TreePop();
                     }
                     index++;
@@ -637,9 +641,9 @@ void TreeVisualizer::PeekRootNode(
 
             ImGui::InputFloat("Root flux", (float*)&rootNodeData.m_water, 1, 100, "%.3f",
                 ImGuiInputTextFlags_ReadOnly);
-            ImGui::InputFloat("Growth potential", (float*)&rootNodeData.m_developmentalVigorRequirement, 1, 100, "%.3f",
+            ImGui::InputFloat("Growth potential", (float*)&rootNodeData.m_developmentalVigorRequirementWeight, 1, 100, "%.3f",
                 ImGuiInputTextFlags_ReadOnly);
-            ImGui::InputFloat("Subtree Growth potential", (float*)&rootNodeData.m_subtreeDevelopmentalVigorRequirement, 1, 100, "%.3f",
+            ImGui::InputFloat("Subtree Growth potential", (float*)&rootNodeData.m_subtreeDevelopmentalVigorRequirementWeight, 1, 100, "%.3f",
                 ImGuiInputTextFlags_ReadOnly);
             ImGui::InputFloat("Vigor", (float*)&rootNodeData.m_vigorSink, 1, 100, "%.3f",
                 ImGuiInputTextFlags_ReadOnly);
@@ -708,9 +712,9 @@ bool TreeVisualizer::InspectRootNode(
                 ImGuiInputTextFlags_ReadOnly);
             ImGui::InputFloat("Root flux", (float*)&rootNodeData.m_water, 1, 100, "%.3f",
                 ImGuiInputTextFlags_ReadOnly);
-            ImGui::InputFloat("Growth potential", (float*)&rootNodeData.m_developmentalVigorRequirement, 1, 100, "%.3f",
+            ImGui::InputFloat("Growth potential", (float*)&rootNodeData.m_developmentalVigorRequirementWeight, 1, 100, "%.3f",
                 ImGuiInputTextFlags_ReadOnly);
-            ImGui::InputFloat("Subtree Growth potential", (float*)&rootNodeData.m_subtreeDevelopmentalVigorRequirement, 1, 100, "%.3f",
+            ImGui::InputFloat("Subtree Growth potential", (float*)&rootNodeData.m_subtreeDevelopmentalVigorRequirementWeight, 1, 100, "%.3f",
                 ImGuiInputTextFlags_ReadOnly);
             ImGui::InputFloat("Vigor", (float*)&rootNodeData.m_vigorSink, 1, 100, "%.3f",
                 ImGuiInputTextFlags_ReadOnly);
