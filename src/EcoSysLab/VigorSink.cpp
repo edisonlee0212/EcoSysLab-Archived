@@ -64,7 +64,7 @@ float VigorSink::SubtractDevelopmentalVigor(const float maxValue)
 
 float VigorSink::SubtractVigor(const float maxValue)
 {
-	const auto retVal = glm::max(maxValue, m_vigor);
+	const auto retVal = glm::min(maxValue, m_vigor);
 	m_vigor -= retVal;
 	return retVal;
 }
@@ -76,7 +76,7 @@ float VigorSink::GetAvailableDevelopmentalVigor() const
 
 float VigorSink::GetAvailableMaintenanceVigor() const
 {
-	return glm::max(m_desiredMaintenanceVigorRequirement, m_vigor);
+	return glm::clamp(m_vigor, 0.0f, m_desiredMaintenanceVigorRequirement);
 }
 
 void VigorSink::EmptyVigor()

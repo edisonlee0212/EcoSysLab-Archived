@@ -595,8 +595,8 @@ bool OnInspectRootGrowthParameters(RootGrowthParameters& rootGrowthParameters) {
 			changed = ImGui::DragFloat("Tropism switching prob", &rootGrowthParameters.m_tropismSwitchingProbability, 0.01f) || changed;
 			changed = ImGui::DragFloat("Tropism switching prob dist factor", &rootGrowthParameters.m_tropismSwitchingProbabilityDistanceFactor, 0.01f) || changed;
 			changed = ImGui::DragFloat("Tropism intensity", &rootGrowthParameters.m_tropismIntensity, 0.01f) || changed;
+			changed = ImGui::DragFloat("Branching vigor requirement", &rootGrowthParameters.m_branchingVigorRequirement, 0.01f) || changed;
 			changed = ImGui::DragFloat("Branching probability", &rootGrowthParameters.m_branchingProbability, 0.01f) || changed;
-
 			changed = ImGui::DragFloat("Fine root segment length", &rootGrowthParameters.m_fineRootSegmentLength, 0.01f) || changed;
 			changed = ImGui::DragFloat("Fine root apical angle variance", &rootGrowthParameters.m_fineRootApicalAngleVariance, 0.01f) || changed;
 			changed = ImGui::DragFloat("Fine root branching angle", &rootGrowthParameters.m_fineRootBranchingAngle, 0.01f) || changed;
@@ -748,6 +748,7 @@ void SerializeRootGrowthParameters(const std::string& name, const RootGrowthPara
 	out << YAML::Key << "m_tropismSwitchingProbability" << YAML::Value << rootGrowthParameters.m_tropismSwitchingProbability;
 	out << YAML::Key << "m_tropismSwitchingProbabilityDistanceFactor" << YAML::Value << rootGrowthParameters.m_tropismSwitchingProbabilityDistanceFactor;
 	out << YAML::Key << "m_tropismIntensity" << YAML::Value << rootGrowthParameters.m_tropismIntensity;
+	out << YAML::Key << "m_branchingVigorRequirement" << YAML::Value << rootGrowthParameters.m_branchingVigorRequirement;
 	out << YAML::Key << "m_branchingProbability" << YAML::Value << rootGrowthParameters.m_branchingProbability;
 
 	out << YAML::Key << "m_maintenanceVigorRequirementPriority" << YAML::Value << rootGrowthParameters.m_maintenanceVigorRequirementPriority;
@@ -854,7 +855,9 @@ void DeserializeRootGrowthParameters(const std::string& name, RootGrowthParamete
 		if (param["m_tropismSwitchingProbabilityDistanceFactor"]) rootGrowthParameters.m_tropismSwitchingProbabilityDistanceFactor = param["m_tropismSwitchingProbabilityDistanceFactor"].as<float>();
 		if (param["m_tropismIntensity"]) rootGrowthParameters.m_tropismIntensity = param["m_tropismIntensity"].as<float>();
 
+		if (param["m_branchingVigorRequirement"]) rootGrowthParameters.m_branchingVigorRequirement = param["m_branchingVigorRequirement"].as<float>();
 		if (param["m_branchingProbability"]) rootGrowthParameters.m_branchingProbability = param["m_branchingProbability"].as<float>();
+
 		if (param["m_maintenanceVigorRequirementPriority"]) rootGrowthParameters.m_maintenanceVigorRequirementPriority = param["m_maintenanceVigorRequirementPriority"].as<bool>();
 
 	}

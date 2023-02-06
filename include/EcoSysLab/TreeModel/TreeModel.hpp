@@ -198,11 +198,9 @@ namespace EcoSysLab {
 		* The overall intensity of the tropism.
 		*/
 		float m_tropismIntensity;
-		/**
-		* The base branching probability
-		*/
-		float m_branchingProbability;
 
+		float m_branchingVigorRequirement = 1.0f;
+		float m_branchingProbability = 1.0f;
 		bool m_maintenanceVigorRequirementPriority = true;
 
 		float m_fineRootSegmentLength = 0.02f;

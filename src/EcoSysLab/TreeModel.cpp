@@ -671,28 +671,27 @@ inline bool TreeModel::GrowRootNode(SoilModel& soilModel, NodeHandle rootNodeHan
 		auto& rootNode = m_rootSkeleton.RefNode(rootNodeHandle);
 		//1. Elongate current node.
 		const float availableMaintenanceVigor = rootNode.m_data.m_vigorSink.GetAvailableMaintenanceVigor();
-		const float availableDevelopmentalVigor = rootNode.m_data.m_vigorSink.GetAvailableDevelopmentalVigor();
+		float availableDevelopmentalVigor = rootNode.m_data.m_vigorSink.GetAvailableDevelopmentalVigor();
 		const float developmentVigor = rootNode.m_data.m_vigorSink.SubtractAllDevelopmentalVigor();
-		const float maintenanceVigor = rootNode.m_data.m_vigorSink.SubtractVigor(availableMaintenanceVigor);
+		
 		if (rootNode.RefChildHandles().empty())
 		{
-			
 			const float extendLength = developmentVigor * rootGrowthParameters.m_rootNodeLength;
 			//Remove development vigor from sink since it's used for elongation
 			float collectedAuxin = 0.0f;
 			const auto dd = rootGrowthParameters.m_apicalDominanceDistanceFactor;
 			graphChanged = ElongateRoot(soilModel, extendLength, rootNodeHandle, rootGrowthParameters, collectedAuxin) || graphChanged;
 			m_rootSkeleton.RefNode(rootNodeHandle).m_data.m_inhibitorTarget += collectedAuxin * dd;
+
+			const float maintenanceVigor = m_rootSkeleton.RefNode(rootNodeHandle).m_data.m_vigorSink.SubtractVigor(availableMaintenanceVigor);
 		}
 		else
 		{
-			
 			//2. Form new shoot if necessary
 			float branchingProb = rootGrowthParameters.m_growthRate * rootGrowthParameters.m_branchingProbability;
 			if (rootNode.m_data.m_inhibitor > 0.0f) branchingProb *= glm::exp(-rootNode.m_data.m_inhibitor);
 			//More nitrite, more likely to form new shoot.
-
-			if (branchingProb >= glm::linearRand(0.0f, 1.0f)) {
+			if (availableMaintenanceVigor >= rootGrowthParameters.m_branchingVigorRequirement && branchingProb >= glm::linearRand(0.0f, 1.0f)) {
 				const auto newRootNodeHandle = m_rootSkeleton.Extend(rootNodeHandle, true);
 				auto& oldRootNode = m_rootSkeleton.RefNode(rootNodeHandle);
 				auto& newRootNode = m_rootSkeleton.RefNode(newRootNodeHandle);
@@ -721,8 +720,11 @@ inline bool TreeModel::GrowRootNode(SoilModel& soilModel, NodeHandle rootNodeHan
 					newRootNode.m_info.m_localRotation = glm::inverse(oldRootNode.m_info.m_globalRotation) * globalRotation;
 					front = globalRotation * glm::vec3(0, 0, -1);
 				}
+				const float maintenanceVigor = m_rootSkeleton.RefNode(rootNodeHandle).m_data.m_vigorSink.SubtractVigor(availableMaintenanceVigor);
 			}
 		}
+		
+		
 	}
 
 
@@ -1501,12 +1503,19 @@ void TreeModel::CalculateVigorRequirement(const RootGrowthParameters& rootGrowth
 		auto& rootNodeVigorFlow = rootNodeData.m_vigorFlow;
 		//This one has 0 always but we will put value in it in future.
 		rootNodeVigorFlow.m_maintenanceVigorRequirementWeight = 0.0f;
-		float growthPotential = growthRate;
-		rootNodeVigorFlow.m_developmentalVigorRequirementWeight =
-			rootNodeData.m_nitrite * growthPotential *
-			glm::pow(1.0f / glm::max(rootNodeData.m_soilDensity * rootGrowthParameters.m_environmentalFriction, 1.0f), rootGrowthParameters.m_environmentalFrictionFactor);
-
-		rootNodeData.m_vigorSink.SetDesiredMaintenanceVigorRequirement(0.0f);
+		rootNodeVigorFlow.m_developmentalVigorRequirementWeight = 0.0f;
+		float growthPotential = 0.0f;
+		if (rootNode.RefChildHandles().empty())
+		{
+			growthPotential = growthRate;
+			rootNodeVigorFlow.m_developmentalVigorRequirementWeight =
+				rootNodeData.m_nitrite * growthPotential *
+				glm::pow(1.0f / glm::max(rootNodeData.m_soilDensity * rootGrowthParameters.m_environmentalFriction, 1.0f), rootGrowthParameters.m_environmentalFrictionFactor);
+		}else
+		{
+			rootNodeVigorFlow.m_maintenanceVigorRequirementWeight = rootGrowthParameters.m_branchingVigorRequirement;
+		}
+		rootNodeData.m_vigorSink.SetDesiredMaintenanceVigorRequirement(rootNodeVigorFlow.m_maintenanceVigorRequirementWeight);
 		rootNodeData.m_vigorSink.SetDesiredDevelopmentalVigorRequirement(rootNodeVigorFlow.m_developmentalVigorRequirementWeight);
 		//We sum the vigor requirement with the developmentalVigorRequirement,
 		//so the overall nitrite will not affect the root growth. Thus we will have same growth rate for low/high nitrite density.
@@ -1696,8 +1705,6 @@ RootGrowthParameters::RootGrowthParameters()
 	m_tropismSwitchingProbability = 1.0f;
 	m_tropismSwitchingProbabilityDistanceFactor = 0.99f;
 	m_tropismIntensity = 0.1f;
-
-	m_branchingProbability = 0.4f;
 }
 
 float RootGrowthParameters::GetRootApicalAngle(const Node<RootNodeGrowthData>& rootNode) const
