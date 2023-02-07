@@ -346,7 +346,7 @@ TreeVisualizer::InspectInternode(
             ImGui::InputFloat3("Local rotation", (float *) &localRotationAngle.x, "%.3f",
                                ImGuiInputTextFlags_ReadOnly);
             auto &internodeData = internode.m_data;
-            ImGui::InputInt("Age", (int *) &internodeData.m_age, 1, 100, ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputFloat("Age", (float *) &internodeData.m_age, 1, 100, "%.3f", ImGuiInputTextFlags_ReadOnly);
             ImGui::InputFloat("Distance to end", (float *) &internodeData.m_maxDistanceToAnyBranchEnd, 1, 100,
                               "%.3f",
                               ImGuiInputTextFlags_ReadOnly);
@@ -628,9 +628,6 @@ void TreeVisualizer::PeekRootNode(
                 ImGuiInputTextFlags_ReadOnly);
             ImGui::InputFloat("Auxin", (float*)&rootNodeData.m_inhibitor, 1, 100, "%.3f",
                 ImGuiInputTextFlags_ReadOnly);
-            ImGui::InputFloat("Auxin target", (float*)&rootNodeData.m_inhibitorTarget, 1, 100,
-                "%.3f",
-                ImGuiInputTextFlags_ReadOnly);
 
             ImGui::InputFloat("Horizontal tropism", (float*)&rootNodeData.m_horizontalTropism, 1, 100,
                 "%.3f",
@@ -691,9 +688,6 @@ bool TreeVisualizer::InspectRootNode(
                 ImGuiInputTextFlags_ReadOnly);
             
             if (ImGui::DragFloat("Inhibitor", (float*)&rootNodeData.m_inhibitor)) {
-                changed = true;
-            }
-            if (ImGui::DragFloat("Inhibitor target", (float*)&rootNodeData.m_inhibitorTarget)) {
                 changed = true;
             }
             ImGui::InputFloat("Horizontal tropism", (float*)&rootNodeData.m_horizontalTropism, 1, 100,

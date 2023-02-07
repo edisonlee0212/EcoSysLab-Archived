@@ -47,7 +47,7 @@ namespace EcoSysLab {
 	struct InternodeGrowthData {
 		bool m_isMaxChild = false;
 		bool m_lateral = false;
-		int m_age = 0;
+		float m_age = 0;
 		float m_inhibitor = 0;
 		glm::quat m_desiredLocalRotation = glm::vec3(0.0f);
 		float m_sagging = 0;
@@ -88,7 +88,7 @@ namespace EcoSysLab {
 		bool m_isMaxChild = false;
 		bool m_lateral = false;
 		float m_soilDensity = 0.0f;
-		int m_age = 0;
+		float m_age = 0;
 		float m_maxDistanceToAnyBranchEnd = 0;
 		float m_descendentTotalBiomass = 0;
 		float m_biomass = 0;
@@ -99,9 +99,7 @@ namespace EcoSysLab {
 
 		float m_nitrite = 1.0f;
 		float m_water = 1.0f;
-		
 
-		float m_inhibitorTarget = 0;
 		float m_inhibitor = 0;
 
 		float m_horizontalTropism = 0.0f;
@@ -141,7 +139,7 @@ namespace EcoSysLab {
 		 * \brief The root node length
 		 */
 		float m_rootNodeLength;
-		float m_rootNodeElongationRate;
+		float m_rootNodeGrowthRate;
 		/**
 		 * \brief Thickness of end internode
 		 */
@@ -230,7 +228,12 @@ namespace EcoSysLab {
 		 * \brief The growth rate. The expected internode elongation per iteration
 		 */
 		float m_growthRate;
-#pragma region Structure
+
+		float m_internodeGrowthRate;
+		float m_leafGrowthRate = 0.05f;
+		float m_fruitGrowthRate = 0.05f;
+
+#pragma region Bud
 		/**
 		 * \brief The number of lateral buds an internode contains
 		 */
@@ -262,41 +265,7 @@ namespace EcoSysLab {
 		/**
 		 * \brief The phototropism
 		 */
-		float m_phototropism;
-		/**
-		 * \brief The internode length
-		 */
-		float m_internodeLength;
-		float m_internodeElongationRate;
-		/**
-		 * \brief Thickness of end internode
-		 */
-		float m_endNodeThickness;
-		/**
-		 * \brief The thickness accumulation factor
-		 */
-		float m_thicknessAccumulationFactor;
-		/**
-		 * \brief The extra thickness gained from node length.
-		 */
-		float m_thicknessAccumulateAgeFactor;
-		/**
-		* \brief The limit of lateral branches being cut off when too close to the
-		* root.
-		*/
-		float m_lowBranchPruning;
-		/**
-		 * \brief The The impact of the amount of incoming light on the shedding of end internodes.
-		 */
-		float m_endNodePruningLightFactor;
-		/**
-		 * \brief The strength of gravity bending.
-		 */
-		glm::vec3 m_saggingFactorThicknessReductionMax = glm::vec3(0.8f, 1.75f, 1.0f);
-
-#pragma endregion
-#pragma region Bud fate
-		
+		float m_phototropism;		
 		
 		/**
 		 * \brief Flushing prob of lateral bud related to the temperature.
@@ -362,7 +331,7 @@ namespace EcoSysLab {
 		* \brief The probability of internode being removed.
 		*/
 		float m_fruitBudExtinctionRate;
-#pragma endregion
+
 		/**
 		* \brief Productive resource requirement factor for internode elongation
 		*/
@@ -375,8 +344,42 @@ namespace EcoSysLab {
 		* \brief Base resource requirement factor for fruit
 		*/
 		float m_fruitVigorRequirement;
+#pragma endregion
+#pragma region Internode
+		/**
+		 * \brief The internode length
+		 */
+		float m_internodeLength;
+
+		/**
+		 * \brief Thickness of end internode
+		 */
+		float m_endNodeThickness;
+		/**
+		 * \brief The thickness accumulation factor
+		 */
+		float m_thicknessAccumulationFactor;
+		/**
+		 * \brief The extra thickness gained from node length.
+		 */
+		float m_thicknessAccumulateAgeFactor;
+		/**
+		* \brief The limit of lateral branches being cut off when too close to the
+		* root.
+		*/
+		float m_lowBranchPruning;
+		/**
+		 * \brief The The impact of the amount of incoming light on the shedding of end internodes.
+		 */
+		float m_endNodePruningLightFactor;
+		/**
+		 * \brief The strength of gravity bending.
+		 */
+		glm::vec3 m_saggingFactorThicknessReductionMax = glm::vec3(0.8f, 1.75f, 1.0f);
+
+#pragma endregion
 		
-#pragma region Foliage
+#pragma region Leaf
 
 		glm::vec3 m_maxLeafSize;
 		float m_leafPositionVariance;
