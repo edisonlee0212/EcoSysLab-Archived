@@ -200,7 +200,6 @@ namespace EcoSysLab {
 		float m_tropismIntensity;
 		float m_rootNodeVigorRequirement = 1.0f;
 		float m_branchingProbability = 1.0f;
-		bool m_maintenanceVigorRequirementPriority = true;
 
 		float m_fineRootSegmentLength = 0.02f;
 		float m_fineRootApicalAngleVariance = 2.5f;
@@ -377,8 +376,6 @@ namespace EcoSysLab {
 		*/
 		float m_fruitVigorRequirement;
 		
-
-		bool m_maintenanceVigorRequirementPriority = true;
 #pragma region Foliage
 
 		glm::vec3 m_maxLeafSize;
