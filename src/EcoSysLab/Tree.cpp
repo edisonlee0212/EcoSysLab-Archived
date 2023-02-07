@@ -529,6 +529,7 @@ bool OnInspectShootGrowthParameters(ShootGrowthParameters& treeGrowthParameters)
 			changed = ImGui::DragFloat("Gravitropism", &treeGrowthParameters.m_gravitropism, 0.01f) || changed;
 			changed = ImGui::DragFloat("Phototropism", &treeGrowthParameters.m_phototropism, 0.01f) || changed;
 			changed = ImGui::DragFloat("Internode length", &treeGrowthParameters.m_internodeLength, 0.01f) || changed;
+			changed = ImGui::DragFloat("Internode elongation rate", &treeGrowthParameters.m_internodeElongationRate, 0.01f) || changed;
 			changed = ImGui::DragFloat3("Thickness min/factor/age", &treeGrowthParameters.m_endNodeThickness, 0.00001f, 0.0f, 1.0f, "%.6f") || changed;
 			changed = ImGui::DragFloat("Low Branch Pruning", &treeGrowthParameters.m_lowBranchPruning, 0.01f) || changed;
 			changed = ImGui::DragFloat("Light pruning factor", &treeGrowthParameters.m_endNodePruningLightFactor, 0.01f) || changed;
@@ -544,8 +545,7 @@ bool OnInspectShootGrowthParameters(ShootGrowthParameters& treeGrowthParameters)
 			changed = ImGui::DragFloat3("Apical dominance base/age/dist", &treeGrowthParameters.m_apicalDominance, 0.01f) || changed;
 			//ImGui::Text("Max age / distance: [%.3f]", treeGrowthParameters.m_apicalDominance / treeGrowthParameters.m_apicalDominanceDistanceFactor);
 			changed = ImGui::DragFloat4("Remove rate apical/lateral/leaf/fruit", &treeGrowthParameters.m_apicalBudExtinctionRate, 0.01f) || changed;
-			changed = ImGui::DragFloat3("Base resource shoot/leaf/fruit", &treeGrowthParameters.m_shootMaintenanceVigorRequirement, 0.01f) || changed;
-			changed = ImGui::DragFloat3("Productive resource shoot/leaf/fruit", &treeGrowthParameters.m_shootProductiveWaterRequirement, 0.01f) || changed;
+			changed = ImGui::DragFloat3("Vigor requirement shoot/leaf/fruit", &treeGrowthParameters.m_internodeVigorRequirement, 0.01f) || changed;
 			changed = ImGui::Checkbox("Maintenance Vigor Priority", &treeGrowthParameters.m_maintenanceVigorRequirementPriority) || changed;
 			ImGui::TreePop();
 		}
@@ -579,13 +579,15 @@ bool OnInspectRootGrowthParameters(RootGrowthParameters& rootGrowthParameters) {
 		changed = ImGui::DragFloat("Growth rate", &rootGrowthParameters.m_growthRate, 0.01f) || changed;
 		if (ImGui::TreeNodeEx("Structure", ImGuiTreeNodeFlags_DefaultOpen)) {
 			changed = ImGui::DragFloat("Root node length", &rootGrowthParameters.m_rootNodeLength, 0.01f) || changed;
-
+			changed = ImGui::DragFloat("Root node elongation rate", &rootGrowthParameters.m_rootNodeElongationRate, 0.01f) || changed;
+			
 			changed = ImGui::DragFloat3("Thickness min/factor/age", &rootGrowthParameters.m_endNodeThickness, 0.00001f, 0.0f, 1.0f, "%.6f") || changed;
 
 			ImGui::TreePop();
 		}
 		if (ImGui::TreeNodeEx("Growth", ImGuiTreeNodeFlags_DefaultOpen))
 		{
+			changed = ImGui::DragFloat("Root node elongation vigor requirement", &rootGrowthParameters.m_rootNodeVigorRequirement, 0.01f) || changed;
 			changed = ImGui::DragFloat2("Branching Angle mean/var", &rootGrowthParameters.m_branchingAngleMeanVariance.x, 0.01f) || changed;
 			changed = ImGui::DragFloat2("Roll Angle mean/var", &rootGrowthParameters.m_rollAngleMeanVariance.x, 0.01f) || changed;
 			changed = ImGui::DragFloat2("Apical Angle mean/var", &rootGrowthParameters.m_apicalAngleMeanVariance.x, 0.01f) || changed;
@@ -595,7 +597,6 @@ bool OnInspectRootGrowthParameters(RootGrowthParameters& rootGrowthParameters) {
 			changed = ImGui::DragFloat("Tropism switching prob", &rootGrowthParameters.m_tropismSwitchingProbability, 0.01f) || changed;
 			changed = ImGui::DragFloat("Tropism switching prob dist factor", &rootGrowthParameters.m_tropismSwitchingProbabilityDistanceFactor, 0.01f) || changed;
 			changed = ImGui::DragFloat("Tropism intensity", &rootGrowthParameters.m_tropismIntensity, 0.01f) || changed;
-			changed = ImGui::DragFloat("Branching vigor requirement", &rootGrowthParameters.m_branchingVigorRequirement, 0.01f) || changed;
 			changed = ImGui::DragFloat("Branching probability", &rootGrowthParameters.m_branchingProbability, 0.01f) || changed;
 			changed = ImGui::DragFloat("Fine root segment length", &rootGrowthParameters.m_fineRootSegmentLength, 0.01f) || changed;
 			changed = ImGui::DragFloat("Fine root apical angle variance", &rootGrowthParameters.m_fineRootApicalAngleVariance, 0.01f) || changed;
@@ -661,6 +662,7 @@ void SerializeShootGrowthParameters(const std::string& name, const ShootGrowthPa
 	out << YAML::Key << "m_gravitropism" << YAML::Value << treeGrowthParameters.m_gravitropism;
 	out << YAML::Key << "m_phototropism" << YAML::Value << treeGrowthParameters.m_phototropism;
 	out << YAML::Key << "m_internodeLength" << YAML::Value << treeGrowthParameters.m_internodeLength;
+	out << YAML::Key << "m_internodeElongationRate" << YAML::Value << treeGrowthParameters.m_internodeElongationRate;
 	out << YAML::Key << "m_endNodeThickness" << YAML::Value << treeGrowthParameters.m_endNodeThickness;
 	out << YAML::Key << "m_thicknessAccumulationFactor" << YAML::Value << treeGrowthParameters.m_thicknessAccumulationFactor;
 	out << YAML::Key << "m_thicknessAccumulateAgeFactor" << YAML::Value << treeGrowthParameters.m_thicknessAccumulateAgeFactor;
@@ -688,12 +690,9 @@ void SerializeShootGrowthParameters(const std::string& name, const ShootGrowthPa
 	out << YAML::Key << "m_leafBudExtinctionRate" << YAML::Value << treeGrowthParameters.m_leafBudExtinctionRate;
 	out << YAML::Key << "m_fruitBudExtinctionRate" << YAML::Value << treeGrowthParameters.m_fruitBudExtinctionRate;
 
-	out << YAML::Key << "m_shootMaintenanceVigorRequirement" << YAML::Value << treeGrowthParameters.m_shootMaintenanceVigorRequirement;
-	out << YAML::Key << "m_leafMaintenanceVigorRequirement" << YAML::Value << treeGrowthParameters.m_leafMaintenanceVigorRequirement;
-	out << YAML::Key << "m_fruitBaseWaterRequirement" << YAML::Value << treeGrowthParameters.m_fruitBaseWaterRequirement;
-	out << YAML::Key << "m_shootProductiveWaterRequirement" << YAML::Value << treeGrowthParameters.m_shootProductiveWaterRequirement;
-	out << YAML::Key << "m_leafProductiveWaterRequirement" << YAML::Value << treeGrowthParameters.m_leafProductiveWaterRequirement;
-	out << YAML::Key << "m_fruitProductiveWaterRequirement" << YAML::Value << treeGrowthParameters.m_fruitProductiveWaterRequirement;
+	out << YAML::Key << "m_leafVigorRequirement" << YAML::Value << treeGrowthParameters.m_leafVigorRequirement;
+	out << YAML::Key << "m_fruitVigorRequirement" << YAML::Value << treeGrowthParameters.m_fruitVigorRequirement;
+	out << YAML::Key << "m_internodeVigorRequirement" << YAML::Value << treeGrowthParameters.m_internodeVigorRequirement;
 	out << YAML::Key << "m_maintenanceVigorRequirementPriority" << YAML::Value << treeGrowthParameters.m_maintenanceVigorRequirementPriority;
 
 	//Internode
@@ -726,7 +725,7 @@ void SerializeRootGrowthParameters(const std::string& name, const RootGrowthPara
 	out << YAML::Key << "m_apicalAngleMeanVariance" << YAML::Value
 		<< rootGrowthParameters.m_apicalAngleMeanVariance;
 	out << YAML::Key << "m_rootNodeLength" << YAML::Value << rootGrowthParameters.m_rootNodeLength;
-
+	out << YAML::Key << "m_rootNodeElongationRate" << YAML::Value << rootGrowthParameters.m_rootNodeElongationRate;
 	out << YAML::Key << "m_endNodeThickness" << YAML::Value
 		<< rootGrowthParameters.m_endNodeThickness;
 	out << YAML::Key << "m_thicknessAccumulationFactor" << YAML::Value
@@ -735,7 +734,7 @@ void SerializeRootGrowthParameters(const std::string& name, const RootGrowthPara
 		<< rootGrowthParameters.m_thicknessAccumulateAgeFactor;
 
 
-
+	out << YAML::Key << "m_rootNodeVigorRequirement" << YAML::Value << rootGrowthParameters.m_rootNodeVigorRequirement;
 	out << YAML::Key << "m_environmentalFriction" << YAML::Value << rootGrowthParameters.m_environmentalFriction;
 	out << YAML::Key << "m_environmentalFrictionFactor" << YAML::Value << rootGrowthParameters.m_environmentalFrictionFactor;
 
@@ -748,7 +747,6 @@ void SerializeRootGrowthParameters(const std::string& name, const RootGrowthPara
 	out << YAML::Key << "m_tropismSwitchingProbability" << YAML::Value << rootGrowthParameters.m_tropismSwitchingProbability;
 	out << YAML::Key << "m_tropismSwitchingProbabilityDistanceFactor" << YAML::Value << rootGrowthParameters.m_tropismSwitchingProbabilityDistanceFactor;
 	out << YAML::Key << "m_tropismIntensity" << YAML::Value << rootGrowthParameters.m_tropismIntensity;
-	out << YAML::Key << "m_branchingVigorRequirement" << YAML::Value << rootGrowthParameters.m_branchingVigorRequirement;
 	out << YAML::Key << "m_branchingProbability" << YAML::Value << rootGrowthParameters.m_branchingProbability;
 
 	out << YAML::Key << "m_maintenanceVigorRequirementPriority" << YAML::Value << rootGrowthParameters.m_maintenanceVigorRequirementPriority;
@@ -775,6 +773,7 @@ void DeserializeShootGrowthParameters(const std::string& name, ShootGrowthParame
 		if (param["m_phototropism"]) treeGrowthParameters.m_phototropism = param["m_phototropism"].as<float>();
 
 		if (param["m_internodeLength"]) treeGrowthParameters.m_internodeLength = param["m_internodeLength"].as<float>();
+		if (param["m_internodeElongationRate"]) treeGrowthParameters.m_internodeElongationRate = param["m_internodeElongationRate"].as<float>();
 		if (param["m_endNodeThickness"]) treeGrowthParameters.m_endNodeThickness = param["m_endNodeThickness"].as<float>();
 		if (param["m_thicknessAccumulationFactor"]) treeGrowthParameters.m_thicknessAccumulationFactor = param["m_thicknessAccumulationFactor"].as<float>();
 		if (param["m_thicknessAccumulateAgeFactor"]) treeGrowthParameters.m_thicknessAccumulateAgeFactor = param["m_thicknessAccumulateAgeFactor"].as<float>();
@@ -804,12 +803,9 @@ void DeserializeShootGrowthParameters(const std::string& name, ShootGrowthParame
 		if (param["m_leafBudExtinctionRate"]) treeGrowthParameters.m_leafBudExtinctionRate = param["m_leafBudExtinctionRate"].as<float>();
 		if (param["m_fruitBudExtinctionRate"]) treeGrowthParameters.m_fruitBudExtinctionRate = param["m_fruitBudExtinctionRate"].as<float>();
 
-		if (param["m_shootMaintenanceVigorRequirement"]) treeGrowthParameters.m_shootMaintenanceVigorRequirement = param["m_shootMaintenanceVigorRequirement"].as<float>();
-		if (param["m_leafMaintenanceVigorRequirement"]) treeGrowthParameters.m_leafMaintenanceVigorRequirement = param["m_leafMaintenanceVigorRequirement"].as<float>();
-		if (param["m_fruitBaseWaterRequirement"]) treeGrowthParameters.m_fruitBaseWaterRequirement = param["m_fruitBaseWaterRequirement"].as<float>();
-		if (param["m_shootProductiveWaterRequirement"]) treeGrowthParameters.m_shootProductiveWaterRequirement = param["m_shootProductiveWaterRequirement"].as<float>();
-		if (param["m_leafProductiveWaterRequirement"]) treeGrowthParameters.m_leafProductiveWaterRequirement = param["m_leafProductiveWaterRequirement"].as<float>();
-		if (param["m_fruitProductiveWaterRequirement"]) treeGrowthParameters.m_fruitProductiveWaterRequirement = param["m_fruitProductiveWaterRequirement"].as<float>();
+		if (param["m_leafVigorRequirement"]) treeGrowthParameters.m_leafVigorRequirement = param["m_leafVigorRequirement"].as<float>();
+		if (param["m_fruitVigorRequirement"]) treeGrowthParameters.m_fruitVigorRequirement = param["m_fruitVigorRequirement"].as<float>();
+		if (param["m_internodeVigorRequirement"]) treeGrowthParameters.m_internodeVigorRequirement = param["m_internodeVigorRequirement"].as<float>();
 		if (param["m_maintenanceVigorRequirementPriority"]) treeGrowthParameters.m_maintenanceVigorRequirementPriority = param["m_maintenanceVigorRequirementPriority"].as<bool>();
 
 
@@ -833,6 +829,7 @@ void DeserializeRootGrowthParameters(const std::string& name, RootGrowthParamete
 	if (in[name]) {
 		auto& param = in[name];
 		if (param["m_rootNodeLength"]) rootGrowthParameters.m_rootNodeLength = param["m_rootNodeLength"].as<float>();
+		if (param["m_rootNodeElongationRate"]) rootGrowthParameters.m_rootNodeElongationRate = param["m_rootNodeElongationRate"].as<float>();
 		if (param["m_growthRate"]) rootGrowthParameters.m_growthRate = param["m_growthRate"].as<float>();
 		if (param["m_endNodeThickness"]) rootGrowthParameters.m_endNodeThickness = param["m_endNodeThickness"].as<float>();
 		if (param["m_thicknessAccumulationFactor"]) rootGrowthParameters.m_thicknessAccumulationFactor = param["m_thicknessAccumulationFactor"].as<float>();
@@ -842,6 +839,7 @@ void DeserializeRootGrowthParameters(const std::string& name, RootGrowthParamete
 		if (param["m_rollAngleMeanVariance"]) rootGrowthParameters.m_rollAngleMeanVariance = param["m_rollAngleMeanVariance"].as<glm::vec2>();
 		if (param["m_apicalAngleMeanVariance"]) rootGrowthParameters.m_apicalAngleMeanVariance = param["m_apicalAngleMeanVariance"].as<glm::vec2>();
 
+		if (param["m_rootNodeVigorRequirement"]) rootGrowthParameters.m_rootNodeVigorRequirement = param["m_rootNodeVigorRequirement"].as<float>();
 		if (param["m_environmentalFriction"]) rootGrowthParameters.m_environmentalFriction = param["m_environmentalFriction"].as<float>();
 		if (param["m_environmentalFrictionFactor"]) rootGrowthParameters.m_environmentalFrictionFactor = param["m_environmentalFrictionFactor"].as<float>();
 
@@ -855,7 +853,6 @@ void DeserializeRootGrowthParameters(const std::string& name, RootGrowthParamete
 		if (param["m_tropismSwitchingProbabilityDistanceFactor"]) rootGrowthParameters.m_tropismSwitchingProbabilityDistanceFactor = param["m_tropismSwitchingProbabilityDistanceFactor"].as<float>();
 		if (param["m_tropismIntensity"]) rootGrowthParameters.m_tropismIntensity = param["m_tropismIntensity"].as<float>();
 
-		if (param["m_branchingVigorRequirement"]) rootGrowthParameters.m_branchingVigorRequirement = param["m_branchingVigorRequirement"].as<float>();
 		if (param["m_branchingProbability"]) rootGrowthParameters.m_branchingProbability = param["m_branchingProbability"].as<float>();
 
 		if (param["m_maintenanceVigorRequirementPriority"]) rootGrowthParameters.m_maintenanceVigorRequirementPriority = param["m_maintenanceVigorRequirementPriority"].as<bool>();

@@ -141,7 +141,7 @@ namespace EcoSysLab {
 		 * \brief The root node length
 		 */
 		float m_rootNodeLength;
-
+		float m_rootNodeElongationRate;
 		/**
 		 * \brief Thickness of end internode
 		 */
@@ -198,8 +198,7 @@ namespace EcoSysLab {
 		* The overall intensity of the tropism.
 		*/
 		float m_tropismIntensity;
-
-		float m_branchingVigorRequirement = 1.0f;
+		float m_rootNodeVigorRequirement = 1.0f;
 		float m_branchingProbability = 1.0f;
 		bool m_maintenanceVigorRequirementPriority = true;
 
@@ -269,7 +268,7 @@ namespace EcoSysLab {
 		 * \brief The internode length
 		 */
 		float m_internodeLength;
-
+		float m_internodeElongationRate;
 		/**
 		 * \brief Thickness of end internode
 		 */
@@ -365,31 +364,19 @@ namespace EcoSysLab {
 		*/
 		float m_fruitBudExtinctionRate;
 #pragma endregion
-
-		/**
-		* \brief Base resource requirement factor for internode
-		*/
-		float m_shootMaintenanceVigorRequirement;
-		/**
-		* \brief Base resource requirement factor for leaf
-		*/
-		float m_leafMaintenanceVigorRequirement;
-		/**
-		* \brief Base resource requirement factor for fruit
-		*/
-		float m_fruitBaseWaterRequirement;
 		/**
 		* \brief Productive resource requirement factor for internode elongation
 		*/
-		float m_shootProductiveWaterRequirement;
+		float m_internodeVigorRequirement;
 		/**
-		* \brief Productive resource requirement factor for leaf to grow larger, later to generate carbohydrates
+		* \brief Base resource requirement factor for leaf
 		*/
-		float m_leafProductiveWaterRequirement;
+		float m_leafVigorRequirement;
 		/**
-		* \brief Productive resource requirement factor for fruit to grow larger
+		* \brief Base resource requirement factor for fruit
 		*/
-		float m_fruitProductiveWaterRequirement;
+		float m_fruitVigorRequirement;
+		
 
 		bool m_maintenanceVigorRequirementPriority = true;
 #pragma region Foliage
@@ -543,7 +530,8 @@ namespace EcoSysLab {
 		int m_fineRootCount = 0;
 
 		int m_age = 0;
-
+		float m_internodeDevelopmentRate = 1.0f;
+		float m_rootNodeDevelopmentRate = 1.0f;
 	public:
 		static void ApplyTropism(const glm::vec3& targetDir, float tropism, glm::vec3& front, glm::vec3& up);
 
