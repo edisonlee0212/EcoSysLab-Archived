@@ -837,7 +837,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 				m_fruitCount++;
 				//Make the fruit larger;
 				const float maxMaturityIncrease = bud.m_vigorSink.GetAvailableMaintenanceVigor() / shootGrowthParameters.m_fruitGrowthRate;
-				const float maturityIncrease = glm::min(maxMaturityIncrease, glm::min(shootGrowthParameters.m_fruitGrowthRate, 1.0f - bud.m_maturity));
+				const float maturityIncrease = glm::min(maxMaturityIncrease, glm::min(shootGrowthParameters.m_fruitGrowthRate * shootGrowthParameters.m_growthRate, 1.0f - bud.m_maturity));
 				bud.m_maturity += maturityIncrease;
 				const auto maintenanceVigor = bud.m_vigorSink.SubtractVigor(maturityIncrease * shootGrowthParameters.m_fruitGrowthRate);
 				auto fruitSize = shootGrowthParameters.m_maxFruitSize * bud.m_maturity;
@@ -869,7 +869,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 				m_leafCount++;
 				//Make the leaf larger
 				const float maxMaturityIncrease = bud.m_vigorSink.GetAvailableMaintenanceVigor() / shootGrowthParameters.m_leafGrowthRate;
-				const float maturityIncrease = glm::min(maxMaturityIncrease, glm::min(shootGrowthParameters.m_leafGrowthRate, 1.0f - bud.m_maturity));
+				const float maturityIncrease = glm::min(maxMaturityIncrease, glm::min(shootGrowthParameters.m_leafGrowthRate * shootGrowthParameters.m_growthRate, 1.0f - bud.m_maturity));
 				bud.m_maturity += maturityIncrease;
 				const auto maintenanceVigor = bud.m_vigorSink.SubtractVigor(maturityIncrease * shootGrowthParameters.m_leafGrowthRate);
 				auto leafSize = shootGrowthParameters.m_maxLeafSize * bud.m_maturity;
