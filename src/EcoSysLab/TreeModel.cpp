@@ -73,6 +73,7 @@ void TreeModel::Initialize(const ShootGrowthParameters& shootGrowthParameters, c
 		auto& apicalBud = firstInternode.m_data.m_buds.back();
 		apicalBud.m_type = BudType::Apical;
 		apicalBud.m_status = BudStatus::Dormant;
+		apicalBud.m_vigorSink.AddVigor(shootGrowthParameters.m_internodeVigorRequirement);
 		apicalBud.m_localRotation = glm::vec3(glm::radians(shootGrowthParameters.GetDesiredApicalAngle(firstInternode)),
 			0.0f,
 			shootGrowthParameters.GetDesiredRollAngle(firstInternode));
@@ -86,6 +87,7 @@ void TreeModel::Initialize(const ShootGrowthParameters& shootGrowthParameters, c
 			rootGrowthParameters.GetRootRollAngle(firstRootNode));
 		firstRootNode.m_data.m_verticalTropism = rootGrowthParameters.m_tropismIntensity;
 		firstRootNode.m_data.m_horizontalTropism = 0;
+		firstRootNode.m_data.m_vigorSink.AddVigor(rootGrowthParameters.m_rootNodeVigorRequirement);
 	}
 	m_initialized = true;
 }
@@ -128,7 +130,7 @@ void TreeModel::CollectShootFlux(const glm::mat4& globalTransform, ClimateModel&
 			if (bud.m_status == BudStatus::Flushed && bud.m_type == BudType::Leaf)
 			{
 				if (m_collectLight) {
-					internodeData.m_lightEnergy = internodeData.m_lightIntensity * glm::pow(bud.m_maturity, 2.0f) * bud.m_drought;
+					internodeData.m_lightEnergy = internodeData.m_lightIntensity * glm::pow(bud.m_maturity, 2.0f) * (1.0 - bud.m_drought);
 					m_shootFlux.m_lightEnergy += internodeData.m_lightEnergy;
 				}
 			}
@@ -566,7 +568,7 @@ bool TreeModel::ElongateInternode(float extendLength, NodeHandle internodeHandle
 	const float extraLength = internodeInfo.m_length - internodeLength;
 	auto& apicalBud = internodeData.m_buds.front();
 	//If we need to add a new end node
-	if (extraLength > 0) {
+	if (extraLength >= 0) {
 		graphChanged = true;
 		apicalBud.m_status = BudStatus::Died;
 		internodeInfo.m_length = internodeLength;
@@ -610,6 +612,8 @@ bool TreeModel::ElongateInternode(float extendLength, NodeHandle internodeHandle
 			for (int i = 0; i < leafBudCount; i++) {
 				internodeData.m_buds.emplace_back();
 				auto& leafBud = internodeData.m_buds.back();
+				//Hack: Leaf bud will be given vigor for the first time.
+				leafBud.m_vigorSink.AddVigor(shootGrowthParameters.m_leafVigorRequirement);
 				leafBud.m_type = BudType::Leaf;
 				leafBud.m_status = BudStatus::Dormant;
 				leafBud.m_localRotation = glm::vec3(
@@ -760,7 +764,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 
 		//Calculate vigor used for maintenance and development.
 		const float availableMaintenanceVigor = bud.m_vigorSink.GetAvailableMaintenanceVigor();
-		if (bud.m_vigorSink.GetDesiredMaintenanceVigorRequirement() != 0.0f) bud.m_drought = glm::clamp(1.0f - (1.0f - bud.m_drought) * availableMaintenanceVigor / bud.m_vigorSink.GetDesiredMaintenanceVigorRequirement(), 0.0f, 1.0f);
+		//if (bud.m_vigorSink.GetDesiredMaintenanceVigorRequirement() != 0.0f) bud.m_drought = glm::clamp(1.0f - (1.0f - bud.m_drought) * availableMaintenanceVigor / bud.m_vigorSink.GetDesiredMaintenanceVigorRequirement(), 0.0f, 1.0f);
 		//Subtract maintenance vigor and the rest is for development.
 		const float developmentalVigor = bud.m_vigorSink.SubtractAllDevelopmentalVigor();
 		if (bud.m_type == BudType::Apical && bud.m_status == BudStatus::Dormant) {
@@ -826,7 +830,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 			if (bud.m_status == BudStatus::Dormant) {
 
 				const auto& probabilityRange = shootGrowthParameters.m_fruitBudFlushingProbabilityTemperatureRange;
-				float flushProbability = m_internodeDevelopmentRate * m_currentDeltaTime * glm::mix(probabilityRange.x, probabilityRange.y,
+				float flushProbability = m_currentDeltaTime * glm::mix(probabilityRange.x, probabilityRange.y,
 					glm::clamp((internodeData.m_temperature - probabilityRange.z) / (probabilityRange.w - probabilityRange.z), 0.0f, 1.0f));
 				flushProbability *= glm::pow(internodeData.m_lightIntensity, shootGrowthParameters.m_fruitBudLightingFactor);
 				if (flushProbability >= glm::linearRand(0.0f, 1.0f))
@@ -842,10 +846,10 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 			{
 				m_fruitCount++;
 				//Make the fruit larger;
-				const float maxMaturityIncrease = bud.m_vigorSink.GetAvailableMaintenanceVigor() / shootGrowthParameters.m_fruitGrowthRate;
+				const float maxMaturityIncrease = bud.m_vigorSink.GetAvailableMaintenanceVigor() / shootGrowthParameters.m_fruitVigorRequirement;
 				const float maturityIncrease = glm::min(maxMaturityIncrease, glm::min(m_currentDeltaTime * shootGrowthParameters.m_fruitGrowthRate, 1.0f - bud.m_maturity));
 				bud.m_maturity += maturityIncrease;
-				const auto maintenanceVigor = bud.m_vigorSink.SubtractVigor(maturityIncrease * shootGrowthParameters.m_fruitGrowthRate);
+				const auto maintenanceVigor = bud.m_vigorSink.SubtractVigor(maturityIncrease * shootGrowthParameters.m_fruitVigorRequirement);
 				auto fruitSize = shootGrowthParameters.m_maxFruitSize * bud.m_maturity;
 				glm::quat rotation = internodeInfo.m_globalRotation * bud.m_localRotation;
 				auto front = rotation * glm::vec3(0, 0, -1);
@@ -857,8 +861,8 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 		else if (bud.m_type == BudType::Leaf)
 		{
 			if (bud.m_status == BudStatus::Dormant) {
-				const auto& probabilityRange = shootGrowthParameters.m_fruitBudFlushingProbabilityTemperatureRange;
-				float flushProbability = m_internodeDevelopmentRate * m_currentDeltaTime * glm::mix(probabilityRange.x, probabilityRange.y,
+				const auto& probabilityRange = shootGrowthParameters.m_leafBudFlushingProbabilityTemperatureRange;
+				float flushProbability = m_currentDeltaTime * glm::mix(probabilityRange.x, probabilityRange.y,
 					glm::clamp((internodeData.m_temperature - probabilityRange.z) / (probabilityRange.w - probabilityRange.z), 0.0f, 1.0f));
 				flushProbability *= glm::pow(internodeData.m_lightIntensity, shootGrowthParameters.m_leafBudLightingFactor);
 				if (internodeData.m_maxDistanceToAnyBranchEnd < shootGrowthParameters.m_leafDistanceToBranchEndLimit && flushProbability >= glm::linearRand(0.0f, 1.0f))
@@ -874,10 +878,10 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 			{
 				m_leafCount++;
 				//Make the leaf larger
-				const float maxMaturityIncrease = bud.m_vigorSink.GetAvailableMaintenanceVigor() / shootGrowthParameters.m_leafGrowthRate;
+				const float maxMaturityIncrease = bud.m_vigorSink.GetAvailableMaintenanceVigor() / shootGrowthParameters.m_leafVigorRequirement;
 				const float maturityIncrease = glm::min(maxMaturityIncrease, glm::min(m_currentDeltaTime * shootGrowthParameters.m_leafGrowthRate, 1.0f - bud.m_maturity));
 				bud.m_maturity += maturityIncrease;
-				const auto maintenanceVigor = bud.m_vigorSink.SubtractVigor(maturityIncrease * shootGrowthParameters.m_leafGrowthRate);
+				const auto maintenanceVigor = bud.m_vigorSink.SubtractVigor(maturityIncrease * shootGrowthParameters.m_leafVigorRequirement);
 				auto leafSize = shootGrowthParameters.m_maxLeafSize * bud.m_maturity;
 				glm::quat rotation = internodeInfo.m_globalRotation * bud.m_localRotation;
 				auto front = rotation * glm::vec3(0, 0, -1);
