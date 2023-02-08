@@ -8,7 +8,7 @@
 #include "Octree.hpp"
 using namespace UniEngine;
 namespace EcoSysLab {
-	
+
 	enum class BudType {
 		Apical,
 		Lateral,
@@ -43,7 +43,7 @@ namespace EcoSysLab {
 		glm::vec3 m_reproductiveModuleSize = glm::vec3(0.0f);
 		glm::mat4 m_reproductiveModuleTransform = glm::mat4(0.0f);
 	};
-	
+
 	struct InternodeGrowthData {
 		bool m_isMaxChild = false;
 		bool m_lateral = false;
@@ -256,8 +256,8 @@ namespace EcoSysLab {
 		/**
 		 * \brief The phototropism
 		 */
-		float m_phototropism;		
-		
+		float m_phototropism;
+
 		/**
 		 * \brief Flushing prob of lateral bud related to the temperature.
 		 */
@@ -291,7 +291,7 @@ namespace EcoSysLab {
 		 */
 		float m_apicalControl;
 		/**
-		 * \brief Age influence on apical control 
+		 * \brief Age influence on apical control
 		 */
 		float m_apicalControlAgeFactor;
 		/**
@@ -369,7 +369,7 @@ namespace EcoSysLab {
 		glm::vec3 m_saggingFactorThicknessReductionMax = glm::vec3(0.8f, 1.75f, 1.0f);
 
 #pragma endregion
-		
+
 #pragma region Leaf
 
 		glm::vec3 m_maxLeafSize;
@@ -430,7 +430,7 @@ namespace EcoSysLab {
 		unsigned m_referenceCount = 0;
 	};
 
-	
+
 
 	struct ShootRootVigorRatio
 	{
@@ -438,7 +438,7 @@ namespace EcoSysLab {
 		float m_shootVigorWeight = 1.0f;
 	};
 
-	
+
 	typedef Skeleton<ShootGrowthData, ShootStemGrowthData, InternodeGrowthData> ShootSkeleton;
 	typedef Skeleton<RootGrowthData, RootStemGrowthData, RootNodeGrowthData> RootSkeleton;
 	class TreeModel {
@@ -500,7 +500,7 @@ namespace EcoSysLab {
 		 * @param newShootGrowthRequirement Growth requirements from shoots.
 		 * @return Whether the growth caused a structural change during the growth.
 		 */
-		bool GrowShoots(const glm::mat4& globalTransform, ClimateModel& climateModel, 
+		bool GrowShoots(const glm::mat4& globalTransform, ClimateModel& climateModel,
 			const ShootGrowthParameters& shootGrowthParameters, PlantGrowthRequirement& newShootGrowthRequirement);
 
 		/**
@@ -525,7 +525,7 @@ namespace EcoSysLab {
 		float m_rootNodeDevelopmentRate = 1.0f;
 		float m_currentDeltaTime = 1.0f;
 	public:
-		bool m_autoBalance = true;
+		int m_iteration = 0;
 
 
 		static void ApplyTropism(const glm::vec3& targetDir, float tropism, glm::vec3& front, glm::vec3& up);
@@ -539,8 +539,9 @@ namespace EcoSysLab {
 		template <typename SkeletonData, typename FlowData, typename NodeData>
 		void CollisionDetection(float minRadius, Octree<TreeVoxelData>& octree, Skeleton<SkeletonData, FlowData, NodeData>& skeleton);
 
-		bool m_collectLight = false;
-		bool m_collectWater = false;
+		bool m_autoBalance = true;
+		bool m_collectLight = true;
+		bool m_collectWater = true;
 		bool m_collectNitrite = true;
 		TreeVolume m_treeVolume;
 		IlluminationEstimationSettings m_illuminationEstimationSettings;

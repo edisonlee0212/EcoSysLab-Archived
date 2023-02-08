@@ -525,7 +525,7 @@ void EcoSysLabLayer::OnSoilVisualizationMenu()
 				m_scalarSoilProperty = 1;
 				m_updateScalarColors = m_updateScalarMatrices = true;
 			}
-			if(ImGui::SliderFloat("X Depth", &m_soilCutoutXDepth, 0.0f, 1.0f))
+			if (ImGui::SliderFloat("X Depth", &m_soilCutoutXDepth, 0.0f, 1.0f))
 			{
 				m_updateScalarMatrices = true;
 			}
@@ -534,9 +534,9 @@ void EcoSysLabLayer::OnSoilVisualizationMenu()
 				m_updateScalarMatrices = true;
 			}
 
-			if(ImGui::TreeNodeEx("Layer colors", ImGuiTreeNodeFlags_DefaultOpen))
+			if (ImGui::TreeNodeEx("Layer colors", ImGuiTreeNodeFlags_DefaultOpen))
 			{
-				for(int i = 0; i < 10; i++)
+				for (int i = 0; i < 10; i++)
 				{
 					ImGui::ColorEdit4(("Layer " + std::to_string(i)).c_str(), &m_soilLayerColors[i].x);
 				}
@@ -941,17 +941,17 @@ void EcoSysLab::EcoSysLabLayer::SoilVisualizationScalar(SoilModel& soilModel)
 		Jobs::ParallelFor(numVoxels, [&](unsigned i)
 			{
 				const auto coordinate = soilModel.GetCoordinateFromIndex(i);
-			if(static_cast<float>(coordinate.x) / soilModel.m_resolution.x < m_soilCutoutXDepth || static_cast<float>(coordinate.z) / soilModel.m_resolution.z > (1.0f - m_soilCutoutZDepth))
-			{
-				m_scalarMatrices[i] =
-					glm::mat4(0.0f);
-			}
-			else {
-				m_scalarMatrices[i] =
-					glm::translate(soilModel.GetPositionFromCoordinate(coordinate))
-					* glm::mat4_cast(glm::quat(glm::vec3(0.0f)))
-					* glm::scale(glm::vec3(soilModel.GetVoxelSize() * m_scalarBoxSize));
-			}
+		if (static_cast<float>(coordinate.x) / soilModel.m_resolution.x < m_soilCutoutXDepth || static_cast<float>(coordinate.z) / soilModel.m_resolution.z >(1.0f - m_soilCutoutZDepth))
+		{
+			m_scalarMatrices[i] =
+				glm::mat4(0.0f);
+		}
+		else {
+			m_scalarMatrices[i] =
+				glm::translate(soilModel.GetPositionFromCoordinate(coordinate))
+				* glm::mat4_cast(glm::quat(glm::vec3(0.0f)))
+				* glm::scale(glm::vec3(soilModel.GetVoxelSize() * m_scalarBoxSize));
+		}
 			}, results);
 		for (auto& i : results) i.wait();
 	}

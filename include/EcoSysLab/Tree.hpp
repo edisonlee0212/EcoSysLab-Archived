@@ -45,11 +45,12 @@ namespace EcoSysLab {
 
 		std::vector<float> m_rootBiomassHistory;
 		std::vector<float> m_shootBiomassHistory;
-		
+
 		PrivateComponentRef m_soil;
 		PrivateComponentRef m_climate;
 		AssetRef m_treeDescriptor;
 		bool m_enableHistory = false;
+		int m_historyIteration = 1;
 		TreeModel m_treeModel;
 		void OnInspect() override;
 
