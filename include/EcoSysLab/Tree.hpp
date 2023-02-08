@@ -28,7 +28,7 @@ namespace EcoSysLab {
 
 	class Tree : public IPrivateComponent {
 		friend class EcoSysLabLayer;
-		bool TryGrow();
+		bool TryGrow(float deltaTime);
 	public:
 		void Serialize(YAML::Emitter& out) override;
 		bool m_splitRootTest = true;

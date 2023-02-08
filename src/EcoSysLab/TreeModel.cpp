@@ -26,12 +26,12 @@ void TreeModel::ApplyTropism(const glm::vec3& targetDir, float tropism, glm::qua
 	rotation = glm::quatLookAt(front, up);
 }
 
-bool TreeModel::Grow(const glm::mat4& globalTransform, SoilModel& soilModel, ClimateModel& climateModel,
+bool TreeModel::Grow(float deltaTime, const glm::mat4& globalTransform, SoilModel& soilModel, ClimateModel& climateModel,
 	const RootGrowthParameters& rootGrowthParameters, const ShootGrowthParameters& shootGrowthParameters)
 {
 	m_fruitCount = 0;
 	m_leafCount = 0;
-
+	m_currentDeltaTime = deltaTime;
 	bool treeStructureChanged = false;
 	bool rootStructureChanged = false;
 	if (!m_initialized) {
@@ -61,7 +61,7 @@ bool TreeModel::Grow(const glm::mat4& globalTransform, SoilModel& soilModel, Cli
 	m_shootGrowthRequirement = newShootGrowthRequirement;
 	m_rootGrowthRequirement = newRootGrowthRequirement;
 
-	m_age++;
+	m_age += m_currentDeltaTime;
 	return treeStructureChanged || rootStructureChanged;
 }
 
@@ -96,7 +96,7 @@ void TreeModel::CollectRootFlux(const glm::mat4& globalTransform, SoilModel& soi
 	const auto& sortedRootNodeList = m_rootSkeleton.RefSortedNodeList();
 	for (const auto& rootNodeHandle : sortedRootNodeList) {
 		auto& rootNode = m_rootSkeleton.RefNode(rootNodeHandle);
-		rootNode.m_data.m_age += rootGrowthParameters.m_growthRate;
+		rootNode.m_data.m_age += m_currentDeltaTime;
 		auto& rootNodeInfo = rootNode.m_info;
 		auto worldSpacePosition = globalTransform * glm::translate(rootNodeInfo.m_globalPosition)[3];
 		if (m_collectWater) {
@@ -119,7 +119,7 @@ void TreeModel::CollectShootFlux(const glm::mat4& globalTransform, ClimateModel&
 		auto& internode = m_shootSkeleton.RefNode(internodeHandle);
 		auto& internodeData = internode.m_data;
 		auto& internodeInfo = internode.m_info;
-		internodeData.m_age += shootGrowthParameters.m_growthRate;
+		internodeData.m_age += m_currentDeltaTime;
 		internodeData.m_lightIntensity =
 			m_treeVolume.IlluminationEstimation(internodeInfo.m_globalPosition, m_illuminationEstimationSettings, internodeData.m_lightDirection);
 		internodeInfo.m_color = glm::mix(glm::vec4(0.0f, 0.0f, 0.0f, 1.0f), glm::vec4(1.0f), internodeData.m_lightIntensity);
@@ -687,7 +687,7 @@ inline bool TreeModel::GrowRootNode(SoilModel& soilModel, NodeHandle rootNodeHan
 		else
 		{
 			//2. Form new shoot if necessary
-			float branchingProb = m_rootNodeDevelopmentRate * rootGrowthParameters.m_growthRate * rootGrowthParameters.m_rootNodeGrowthRate * rootGrowthParameters.m_branchingProbability;
+			float branchingProb = m_rootNodeDevelopmentRate * m_currentDeltaTime * rootGrowthParameters.m_growthRate * rootGrowthParameters.m_rootNodeGrowthRate * rootGrowthParameters.m_branchingProbability;
 			if (rootNode.m_data.m_inhibitor > 0.0f) branchingProb *= glm::exp(-rootNode.m_data.m_inhibitor);
 			//More nitrite, more likely to form new shoot.
 			if (branchingProb >= glm::linearRand(0.0f, 1.0f)) {
@@ -767,7 +767,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 		}
 		if (bud.m_type == BudType::Lateral && bud.m_status == BudStatus::Dormant) {
 			const auto& probabilityRange = shootGrowthParameters.m_lateralBudFlushingProbabilityTemperatureRange;
-			float flushProbability = m_internodeDevelopmentRate * shootGrowthParameters.m_growthRate * shootGrowthParameters.m_internodeGrowthRate * glm::mix(probabilityRange.x, probabilityRange.y,
+			float flushProbability = m_internodeDevelopmentRate * m_currentDeltaTime * shootGrowthParameters.m_growthRate * shootGrowthParameters.m_internodeGrowthRate * glm::mix(probabilityRange.x, probabilityRange.y,
 				glm::clamp((internodeData.m_temperature - probabilityRange.z) / (probabilityRange.w - probabilityRange.z), 0.0f, 1.0f));
 			if (internodeData.m_inhibitor > 0.0f) flushProbability *= glm::exp(-internodeData.m_inhibitor);
 			flushProbability *= glm::pow(internodeData.m_lightIntensity, shootGrowthParameters.m_lateralBudLightingFactor);
@@ -804,7 +804,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 					shootGrowthParameters.GetDesiredRollAngle(newInternode));
 			}
 		}
-		else if (climateModel.m_days % 360 == 0)
+		else if (static_cast<int>(climateModel.m_time * 365) % 365 == 0)
 		{
 			if (bud.m_type == BudType::Fruit || bud.m_type == BudType::Leaf)
 			{
@@ -820,7 +820,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 			if (bud.m_status == BudStatus::Dormant) {
 
 				const auto& probabilityRange = shootGrowthParameters.m_fruitBudFlushingProbabilityTemperatureRange;
-				float flushProbability = m_internodeDevelopmentRate * shootGrowthParameters.m_growthRate * glm::mix(probabilityRange.x, probabilityRange.y,
+				float flushProbability = m_internodeDevelopmentRate * m_currentDeltaTime * shootGrowthParameters.m_growthRate * glm::mix(probabilityRange.x, probabilityRange.y,
 					glm::clamp((internodeData.m_temperature - probabilityRange.z) / (probabilityRange.w - probabilityRange.z), 0.0f, 1.0f));
 				flushProbability *= glm::pow(internodeData.m_lightIntensity, shootGrowthParameters.m_fruitBudLightingFactor);
 				if (flushProbability >= glm::linearRand(0.0f, 1.0f))
@@ -837,7 +837,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 				m_fruitCount++;
 				//Make the fruit larger;
 				const float maxMaturityIncrease = bud.m_vigorSink.GetAvailableMaintenanceVigor() / shootGrowthParameters.m_fruitGrowthRate;
-				const float maturityIncrease = glm::min(maxMaturityIncrease, glm::min(shootGrowthParameters.m_fruitGrowthRate * shootGrowthParameters.m_growthRate, 1.0f - bud.m_maturity));
+				const float maturityIncrease = glm::min(maxMaturityIncrease, glm::min(m_currentDeltaTime * shootGrowthParameters.m_fruitGrowthRate * shootGrowthParameters.m_growthRate, 1.0f - bud.m_maturity));
 				bud.m_maturity += maturityIncrease;
 				const auto maintenanceVigor = bud.m_vigorSink.SubtractVigor(maturityIncrease * shootGrowthParameters.m_fruitGrowthRate);
 				auto fruitSize = shootGrowthParameters.m_maxFruitSize * bud.m_maturity;
@@ -852,7 +852,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 		{
 			if (bud.m_status == BudStatus::Dormant) {
 				const auto& probabilityRange = shootGrowthParameters.m_fruitBudFlushingProbabilityTemperatureRange;
-				float flushProbability = m_internodeDevelopmentRate * shootGrowthParameters.m_growthRate * glm::mix(probabilityRange.x, probabilityRange.y,
+				float flushProbability = m_internodeDevelopmentRate * m_currentDeltaTime * shootGrowthParameters.m_growthRate * glm::mix(probabilityRange.x, probabilityRange.y,
 					glm::clamp((internodeData.m_temperature - probabilityRange.z) / (probabilityRange.w - probabilityRange.z), 0.0f, 1.0f));
 				flushProbability *= glm::pow(internodeData.m_lightIntensity, shootGrowthParameters.m_leafBudLightingFactor);
 				if (internodeData.m_maxDistanceToAnyBranchEnd < shootGrowthParameters.m_leafDistanceToBranchEndLimit && flushProbability >= glm::linearRand(0.0f, 1.0f))
@@ -869,7 +869,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 				m_leafCount++;
 				//Make the leaf larger
 				const float maxMaturityIncrease = bud.m_vigorSink.GetAvailableMaintenanceVigor() / shootGrowthParameters.m_leafGrowthRate;
-				const float maturityIncrease = glm::min(maxMaturityIncrease, glm::min(shootGrowthParameters.m_leafGrowthRate * shootGrowthParameters.m_growthRate, 1.0f - bud.m_maturity));
+				const float maturityIncrease = glm::min(maxMaturityIncrease, glm::min(m_currentDeltaTime * shootGrowthParameters.m_leafGrowthRate * shootGrowthParameters.m_growthRate, 1.0f - bud.m_maturity));
 				bud.m_maturity += maturityIncrease;
 				const auto maintenanceVigor = bud.m_vigorSink.SubtractVigor(maturityIncrease * shootGrowthParameters.m_leafGrowthRate);
 				auto leafSize = shootGrowthParameters.m_maxLeafSize * bud.m_maturity;
@@ -879,14 +879,14 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 				auto foliagePosition = front * (leafSize.z * 1.5f);
 				bud.m_reproductiveModuleTransform = glm::translate(foliagePosition) * glm::mat4_cast(rotation) * glm::scale(leafSize);
 
-				if (climateModel.m_days % 360 > 180 && internodeData.m_temperature < shootGrowthParameters.m_leafChlorophyllSynthesisFactorTemperature)
+				if (static_cast<int>(climateModel.m_time * 365) % 365 > 180 && internodeData.m_temperature < shootGrowthParameters.m_leafChlorophyllSynthesisFactorTemperature)
 				{
-					bud.m_chlorophyll -= shootGrowthParameters.m_growthRate * shootGrowthParameters.m_leafChlorophyllLoss;
+					bud.m_chlorophyll -= m_currentDeltaTime * shootGrowthParameters.m_growthRate * shootGrowthParameters.m_leafChlorophyllLoss;
 					bud.m_chlorophyll = glm::clamp(bud.m_chlorophyll, 0.0f, 1.0f);
 				}
 				if (bud.m_chlorophyll == 0.0f)
 				{
-					auto dropProbability = shootGrowthParameters.m_growthRate * shootGrowthParameters.m_leafFallProbability;
+					auto dropProbability = m_currentDeltaTime * shootGrowthParameters.m_growthRate * shootGrowthParameters.m_leafFallProbability;
 					if (dropProbability >= glm::linearRand(0.0f, 1.0f))
 					{
 						bud.m_status = BudStatus::Died;
@@ -934,7 +934,7 @@ void TreeModel::CalculateThickness(NodeHandle rootNodeHandle, const RootGrowthPa
 		//if (addedIndex > 1) break;
 	//}
 
-	childThicknessCollection += rootGrowthParameters.m_thicknessAccumulateAgeFactor * rootGrowthParameters.m_endNodeThickness * rootGrowthParameters.m_rootNodeGrowthRate * rootNodeData.m_age;
+	childThicknessCollection += rootGrowthParameters.m_thicknessAccumulateAgeFactor * rootGrowthParameters.m_endNodeThickness * rootGrowthParameters.m_growthRate * rootGrowthParameters.m_rootNodeGrowthRate * rootNodeData.m_age;
 
 	rootNodeData.m_maxDistanceToAnyBranchEnd = maxDistanceToAnyBranchEnd;
 	if (childThicknessCollection != 0.0f) {
@@ -1131,7 +1131,7 @@ void TreeModel::CalculateThicknessAndSagging(NodeHandle internodeHandle,
 			maxChildHandle = i;
 		}
 	}
-	childThicknessCollection += shootGrowthParameters.m_thicknessAccumulateAgeFactor * shootGrowthParameters.m_endNodeThickness * shootGrowthParameters.m_internodeGrowthRate * internodeData.m_age;
+	childThicknessCollection += shootGrowthParameters.m_thicknessAccumulateAgeFactor * shootGrowthParameters.m_endNodeThickness * shootGrowthParameters.m_growthRate * shootGrowthParameters.m_internodeGrowthRate * internodeData.m_age;
 
 
 	internodeData.m_maxDistanceToAnyBranchEnd = maxDistanceToAnyBranchEnd;
@@ -1168,7 +1168,7 @@ void TreeModel::CalculateVigorRequirement(const ShootGrowthParameters& shootGrow
 		internodeVigorFlow.m_developmentalVigorRequirementWeight = 0.0f;
 		internodeVigorFlow.m_subtreeDevelopmentalVigorRequirementWeight = 0.0f;
 		internodeVigorFlow.m_subtreeMaintenanceVigorRequirementWeight = 0.0f;
-		const auto growthRate = shootGrowthParameters.m_growthRate;
+		const auto growthRate = m_currentDeltaTime * shootGrowthParameters.m_growthRate;
 
 
 		for (auto& bud : internodeData.m_buds) {
@@ -1267,11 +1267,11 @@ bool TreeModel::PruneInternodes(float maxDistance, NodeHandle internodeHandle,
 	}
 	if (internode.IsEndNode())
 	{
-		float pruningProbability = shootGrowthParameters.m_growthRate * (1.0f - internode.m_data.m_lightIntensity) * shootGrowthParameters.m_endNodePruningLightFactor;
+		float pruningProbability = m_currentDeltaTime * shootGrowthParameters.m_growthRate * (1.0f - internode.m_data.m_lightIntensity) * shootGrowthParameters.m_endNodePruningLightFactor;
 
 		if (pruningProbability >= glm::linearRand(0.0f, 1.0f)) pruning = true;
 	}
-	if (internode.m_info.m_globalPosition.y <= 0.5f && internode.m_data.m_order != 0 && glm::linearRand(0.0f, 1.0f) < shootGrowthParameters.m_growthRate * 0.1f) pruning = true;
+	if (internode.m_info.m_globalPosition.y <= 0.5f && internode.m_data.m_order != 0 && glm::linearRand(0.0f, 1.0f) < m_currentDeltaTime * shootGrowthParameters.m_growthRate * 0.1f) pruning = true;
 	if (pruning)
 	{
 		m_shootSkeleton.RecycleNode(internodeHandle);
@@ -1391,7 +1391,7 @@ void TreeModel::CalculateVigorRequirement(const RootGrowthParameters& rootGrowth
 	PlantGrowthRequirement& newRootGrowthNutrientsRequirement)
 {
 	const auto& sortedRootNodeList = m_rootSkeleton.RefSortedNodeList();
-	const auto growthRate = rootGrowthParameters.m_growthRate;
+	const auto growthRate = m_currentDeltaTime * rootGrowthParameters.m_growthRate;
 	for (const auto& rootNodeHandle : sortedRootNodeList) {
 		auto& rootNode = m_rootSkeleton.RefNode(rootNodeHandle);
 		auto& rootNodeData = rootNode.m_data;

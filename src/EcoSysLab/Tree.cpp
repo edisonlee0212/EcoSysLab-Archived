@@ -27,10 +27,6 @@ void Tree::OnInspect() {
 		ImGui::Checkbox("Receive nitrite", &m_treeModel.m_collectNitrite);
 		ImGui::Checkbox("Enable Branch collision detection", &m_treeModel.m_enableBranchCollisionDetection);
 		ImGui::Checkbox("Enable Root collision detection", &m_treeModel.m_enableRootCollisionDetection);
-		if (ImGui::Button("Grow")) {
-			TryGrow();
-			modelChanged = true;
-		}
 		static int iterations = 5;
 		ImGui::DragInt("Iterations", &iterations, 1, 0, m_treeModel.CurrentIteration());
 		iterations = glm::clamp(iterations, 0, m_treeModel.CurrentIteration());
@@ -96,7 +92,7 @@ void Tree::OnDestroy() {
 	m_shootBiomassHistory.clear();
 }
 
-bool Tree::TryGrow() {
+bool Tree::TryGrow(float deltaTime) {
 	const auto scene = GetScene();
 	const auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
 	if (!treeDescriptor) {
@@ -117,7 +113,7 @@ bool Tree::TryGrow() {
 
 	const auto owner = GetOwner();
 
-	bool grown = m_treeModel.Grow(scene->GetDataComponent<GlobalTransform>(owner).m_value, soil->m_soilModel, climate->m_climateModel,
+	bool grown = m_treeModel.Grow(deltaTime, scene->GetDataComponent<GlobalTransform>(owner).m_value, soil->m_soilModel, climate->m_climateModel,
 		treeDescriptor->m_rootGrowthParameters, treeDescriptor->m_shootGrowthParameters);
 
 	if (m_recordBiomassHistory)

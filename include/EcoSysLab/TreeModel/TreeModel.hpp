@@ -529,9 +529,10 @@ namespace EcoSysLab {
 		int m_fruitCount = 0;
 		int m_fineRootCount = 0;
 
-		int m_age = 0;
+		float m_age = 0;
 		float m_internodeDevelopmentRate = 1.0f;
 		float m_rootNodeDevelopmentRate = 1.0f;
+		float m_currentDeltaTime = 1.0f;
 	public:
 		static void ApplyTropism(const glm::vec3& targetDir, float tropism, glm::vec3& front, glm::vec3& up);
 
@@ -579,7 +580,7 @@ namespace EcoSysLab {
 		 * @param shootGrowthParameters The procedural parameters that guides the growth of the branches.
 		 * @return Whether the growth caused a structural change during the growth.
 		 */
-		bool Grow(const glm::mat4& globalTransform, SoilModel& soilModel, ClimateModel& climateModel,
+		bool Grow(float deltaTime, const glm::mat4& globalTransform, SoilModel& soilModel, ClimateModel& climateModel,
 			const RootGrowthParameters& rootGrowthParameters, const ShootGrowthParameters& shootGrowthParameters);
 
 		int m_historyLimit = -1;

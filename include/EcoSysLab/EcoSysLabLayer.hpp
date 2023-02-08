@@ -104,7 +104,8 @@ namespace EcoSysLab {
 		void SoilVisualizationScalar(SoilModel& soilModel); // called during LateUpdate()
 		void SoilVisualizationVector(SoilModel& soilModel); // called during LateUpdate()
 
-		int m_days = 0;
+		float m_time;
+		float m_deltaTime = 0.00274f;
 	public:
 		TreeMeshGeneratorSettings m_meshGeneratorSettings;
 		Entity m_selectedTree = {};
@@ -117,7 +118,7 @@ namespace EcoSysLab {
 
 		PrivateComponentRef m_soilHolder;
 		PrivateComponentRef m_climateHolder;
-		void Simulate();
+		void Simulate(float deltaTime);
 		void GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings);
 
 		void ResetAllTrees(const std::vector<Entity>* treeEntities);

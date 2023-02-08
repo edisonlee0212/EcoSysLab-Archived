@@ -327,7 +327,7 @@ void EcoSysLabLayer::LateUpdate() {
 void EcoSysLabLayer::ResetAllTrees(const std::vector<Entity>* treeEntities)
 {
 	auto scene = Application::GetActiveScene();
-	m_days = 0;
+	m_time = 0;
 	for (const auto& i : *treeEntities)
 	{
 		scene->GetOrSetPrivateComponent<Tree>(i).lock()->m_treeModel.Clear();
@@ -391,19 +391,20 @@ void EcoSysLabLayer::OnInspect() {
 			{
 				ResetAllTrees(treeEntities);
 			}
-			ImGui::DragInt("Days", &m_days, 1, 0, 9000000);
+			ImGui::DragFloat("Time", &m_time, 1, 0, 9000000);
 			ImGui::Checkbox("Auto grow with soil step", &m_autoGrowWithSoilStep);
 			ImGui::Checkbox("Auto grow", &m_autoGrow);
+			ImGui::DragFloat("Delta time", &m_deltaTime, 0.00001f, 0, 1, "%.5f");
 			if (!m_autoGrow) {
 				bool changed = false;
 				if (ImGui::Button("Grow all")) {
-					Simulate();
+					Simulate(m_deltaTime);
 					changed = true;
 				}
 				static int iterations = 5;
 				ImGui::DragInt("Iterations", &iterations, 1, 1, 100);
 				if (ImGui::Button(("Grow all " + std::to_string(iterations) + " iterations").c_str())) {
-					for (int i = 0; i < iterations; i++) Simulate();
+					for (int i = 0; i < iterations; i++) Simulate(m_deltaTime);
 					changed = true;
 				}
 				if (changed) {
@@ -1159,21 +1160,21 @@ void EcoSysLabLayer::Update() {
 		}
 	}
 	if (m_autoGrow) {
-		Simulate();
+		Simulate(m_deltaTime);
 	}
 }
 
-void EcoSysLabLayer::Simulate() {
+void EcoSysLabLayer::Simulate(float deltaTime) {
 	auto scene = GetScene();
 	const std::vector<Entity>* treeEntities =
 		scene->UnsafeGetPrivateComponentOwnersList<Tree>();
-	m_days++;
+	m_time += deltaTime;
 	if (treeEntities && !treeEntities->empty()) {
 		float time = Application::Time().CurrentTime();
 		const auto climate = m_climateHolder.Get<Climate>();
 		const auto soil = m_soilHolder.Get<Soil>();
 
-		climate->m_climateModel.m_days = m_days;
+		climate->m_climateModel.m_time = m_time;
 
 		std::vector<std::shared_future<void>> results;
 		Jobs::ParallelFor(treeEntities->size(), [&](unsigned i) {
@@ -1187,7 +1188,7 @@ void EcoSysLabLayer::Simulate() {
 			soil->m_soilModel.Irrigation();
 			soil->m_soilModel.Step();
 		}
-		tree->TryGrow();
+		tree->TryGrow(deltaTime);
 			}, results);
 		for (auto& i : results) i.wait();
 		m_lastUsedTime = Application::Time().CurrentTime() - time;

@@ -4,8 +4,8 @@ using namespace EcoSysLab;
 
 float ClimateModel::GetTemperature(const glm::vec3& position) const
 {
-	int month = m_days / 30 % 12;
-	int days = m_days % 30;
+	int month = static_cast<int>(m_time * 365) / 30 % 12;
+	int days = static_cast<int>(m_time * 365) % 30;
 	
 	int startIndex = month - 1;
 	int endIndex = month + 1;
@@ -32,5 +32,5 @@ float ClimateModel::GetSolarIntensity(const glm::vec3& position) const
 
 void ClimateModel::Initialize(const ClimateParameters& climateParameters)
 {
-	m_days = 0;
+	m_time = 0;
 }
