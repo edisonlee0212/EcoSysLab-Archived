@@ -155,8 +155,15 @@ void TreeModel::PlantVigorAllocation()
 		m_plantVigor.m_shootVigor += maintenanceVigor * m_shootGrowthRequirement.m_maintenanceVigor
 			/ totalMaintenanceVigorRequirement;
 	}
-	m_vigorRatio.m_shootVigorWeight = m_rootSkeleton.RefSortedNodeList().size();
-	m_vigorRatio.m_rootVigorWeight = m_shootSkeleton.RefSortedNodeList().size();
+	if (m_autoBalance) {
+		m_vigorRatio.m_shootVigorWeight = m_rootSkeleton.RefSortedNodeList().size() * m_shootGrowthRequirement.m_developmentalVigor;
+		m_vigorRatio.m_rootVigorWeight = m_shootSkeleton.RefSortedNodeList().size() * m_rootGrowthRequirement.m_developmentalVigor;
+	}
+	else {
+		m_vigorRatio.m_rootVigorWeight = m_rootGrowthRequirement.m_developmentalVigor / totalDevelopmentalVigorRequirement;
+		m_vigorRatio.m_shootVigorWeight = m_shootGrowthRequirement.m_developmentalVigor / totalDevelopmentalVigorRequirement;
+	}
+
 	if (m_vigorRatio.m_shootVigorWeight + m_vigorRatio.m_rootVigorWeight != 0.0f) {
 		m_plantVigor.m_rootVigor += developmentVigor * m_vigorRatio.m_rootVigorWeight / (m_vigorRatio.m_shootVigorWeight + m_vigorRatio.m_rootVigorWeight);
 		m_plantVigor.m_shootVigor += developmentVigor * m_vigorRatio.m_shootVigorWeight / (m_vigorRatio.m_shootVigorWeight + m_vigorRatio.m_rootVigorWeight);
@@ -1185,12 +1192,12 @@ void TreeModel::CalculateVigorRequirement(const ShootGrowthParameters& shootGrow
 				{
 					//No requirement since the lateral bud only gets activated and turned into new shoot.
 					//We can make use of the development vigor for bud flushing probability here in future.
-					bud.m_vigorSink.SetDesiredMaintenanceVigorRequirement(m_currentDeltaTime * shootGrowthParameters.m_leafVigorRequirement);
+					bud.m_vigorSink.SetDesiredMaintenanceVigorRequirement(shootGrowthParameters.m_leafVigorRequirement);
 				}
 				else if (bud.m_status == BudStatus::Flushed)
 				{
 					//The maintenance vigor requirement is related to the size and the drought factor of the leaf.
-					bud.m_vigorSink.SetDesiredMaintenanceVigorRequirement(m_currentDeltaTime * shootGrowthParameters.m_leafVigorRequirement * (1.0f - bud.m_drought));
+					bud.m_vigorSink.SetDesiredMaintenanceVigorRequirement(shootGrowthParameters.m_leafVigorRequirement * (1.0f - bud.m_drought));
 				}
 			}break;
 			case BudType::Fruit: {
@@ -1198,12 +1205,12 @@ void TreeModel::CalculateVigorRequirement(const ShootGrowthParameters& shootGrow
 				{
 					//No requirement since the lateral bud only gets activated and turned into new shoot.
 					//We can make use of the development vigor for bud flushing probability here in future.
-					bud.m_vigorSink.SetDesiredMaintenanceVigorRequirement(m_currentDeltaTime * shootGrowthParameters.m_fruitVigorRequirement);
+					bud.m_vigorSink.SetDesiredMaintenanceVigorRequirement(shootGrowthParameters.m_fruitVigorRequirement);
 				}
 				else if (bud.m_status == BudStatus::Flushed)
 				{
 					//The maintenance vigor requirement is related to the volume and the drought factor of the fruit.
-					bud.m_vigorSink.SetDesiredMaintenanceVigorRequirement(m_currentDeltaTime * shootGrowthParameters.m_fruitVigorRequirement * (1.0f - bud.m_drought));
+					bud.m_vigorSink.SetDesiredMaintenanceVigorRequirement(shootGrowthParameters.m_fruitVigorRequirement * (1.0f - bud.m_drought));
 				}
 			}break;
 			default: break;

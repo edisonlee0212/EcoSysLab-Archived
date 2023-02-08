@@ -525,6 +525,9 @@ namespace EcoSysLab {
 		float m_rootNodeDevelopmentRate = 1.0f;
 		float m_currentDeltaTime = 1.0f;
 	public:
+		bool m_autoBalance = true;
+
+
 		static void ApplyTropism(const glm::vec3& targetDir, float tropism, glm::vec3& front, glm::vec3& up);
 
 		static void ApplyTropism(const glm::vec3& targetDir, float tropism, glm::quat& rotation);
