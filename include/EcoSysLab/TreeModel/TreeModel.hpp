@@ -124,10 +124,6 @@ namespace EcoSysLab {
 	class RootGrowthParameters {
 	public:
 		/**
-		 * \brief The growth rate. The expected internode elongation per iteration
-		 */
-		float m_growthRate;
-		/**
 		 * \brief How much the soil density affects the growth;
 		 */
 		float m_environmentalFriction;
@@ -224,11 +220,6 @@ namespace EcoSysLab {
 
 	class ShootGrowthParameters {
 	public:
-		/**
-		 * \brief The growth rate. The expected internode elongation per iteration
-		 */
-		float m_growthRate;
-
 		float m_internodeGrowthRate;
 		float m_leafGrowthRate = 0.05f;
 		float m_fruitGrowthRate = 0.05f;

@@ -48,12 +48,12 @@ bool TreeModel::Grow(float deltaTime, const glm::mat4& globalTransform, SoilMode
 	//Grow roots and set up nutrient requirements for next iteration.
 	PlantGrowthRequirement newShootGrowthRequirement;
 	PlantGrowthRequirement newRootGrowthRequirement;
-	if (rootGrowthParameters.m_growthRate != 0.0f
+	if (m_currentDeltaTime != 0.0f
 		&& GrowRoots(globalTransform, soilModel, rootGrowthParameters, newRootGrowthRequirement)) {
 		rootStructureChanged = true;
 	}
 	//Grow branches and set up nutrient requirements for next iteration.
-	if (shootGrowthParameters.m_growthRate != 0.0f
+	if (m_currentDeltaTime != 0.0f
 		&& GrowShoots(globalTransform, climateModel, shootGrowthParameters, newShootGrowthRequirement)) {
 		treeStructureChanged = true;
 	}
@@ -538,13 +538,13 @@ bool TreeModel::ElongateRoot(SoilModel& soilModel, const float extendLength, Nod
 			m_rootSkeleton.RefNode(newRootNodeHandle).m_data.m_inhibitor = childAuxin;
 		}
 		else {
-			newRootNode.m_data.m_inhibitor = rootGrowthParameters.m_apicalDominance * glm::exp(-rootGrowthParameters.m_apicalDominanceAgeFactor * rootGrowthParameters.m_growthRate * m_age);
+			newRootNode.m_data.m_inhibitor = rootGrowthParameters.m_apicalDominance * glm::exp(-rootGrowthParameters.m_apicalDominanceAgeFactor * m_age);
 			collectedAuxin += newRootNode.m_data.m_inhibitor *= rootGrowthParameters.m_apicalDominanceDistanceFactor;
 		}
 	}
 	else {
 		//Otherwise, we add the inhibitor.
-		collectedAuxin += rootGrowthParameters.m_apicalDominance * glm::exp(-rootGrowthParameters.m_apicalDominanceAgeFactor * rootGrowthParameters.m_growthRate * m_age);
+		collectedAuxin += rootGrowthParameters.m_apicalDominance * glm::exp(-rootGrowthParameters.m_apicalDominanceAgeFactor * m_age);
 	}
 	return graphChanged;
 }
@@ -641,13 +641,13 @@ bool TreeModel::ElongateInternode(float extendLength, NodeHandle internodeHandle
 			m_shootSkeleton.RefNode(newInternodeHandle).m_data.m_inhibitor = childInhibitor;
 		}
 		else {
-			newInternode.m_data.m_inhibitor = shootGrowthParameters.m_apicalDominance * glm::exp(-shootGrowthParameters.m_apicalDominanceAgeFactor * shootGrowthParameters.m_growthRate * m_age);
+			newInternode.m_data.m_inhibitor = shootGrowthParameters.m_apicalDominance * glm::exp(-shootGrowthParameters.m_apicalDominanceAgeFactor * m_age);
 			collectedInhibitor += newInternode.m_data.m_inhibitor *= shootGrowthParameters.m_apicalDominanceDistanceFactor;
 		}
 	}
 	else {
 		//Otherwise, we add the inhibitor.
-		collectedInhibitor += shootGrowthParameters.m_apicalDominance * glm::exp(-shootGrowthParameters.m_apicalDominanceAgeFactor * shootGrowthParameters.m_growthRate * m_age);
+		collectedInhibitor += shootGrowthParameters.m_apicalDominance * glm::exp(-shootGrowthParameters.m_apicalDominanceAgeFactor * m_age);
 	}
 	return graphChanged;
 }
@@ -687,7 +687,7 @@ inline bool TreeModel::GrowRootNode(SoilModel& soilModel, NodeHandle rootNodeHan
 		else
 		{
 			//2. Form new shoot if necessary
-			float branchingProb = m_rootNodeDevelopmentRate * m_currentDeltaTime * rootGrowthParameters.m_growthRate * rootGrowthParameters.m_rootNodeGrowthRate * rootGrowthParameters.m_branchingProbability;
+			float branchingProb = m_rootNodeDevelopmentRate * m_currentDeltaTime * rootGrowthParameters.m_rootNodeGrowthRate * rootGrowthParameters.m_branchingProbability;
 			if (rootNode.m_data.m_inhibitor > 0.0f) branchingProb *= glm::exp(-rootNode.m_data.m_inhibitor);
 			//More nitrite, more likely to form new shoot.
 			if (branchingProb >= glm::linearRand(0.0f, 1.0f)) {
@@ -767,7 +767,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 		}
 		if (bud.m_type == BudType::Lateral && bud.m_status == BudStatus::Dormant) {
 			const auto& probabilityRange = shootGrowthParameters.m_lateralBudFlushingProbabilityTemperatureRange;
-			float flushProbability = m_internodeDevelopmentRate * m_currentDeltaTime * shootGrowthParameters.m_growthRate * shootGrowthParameters.m_internodeGrowthRate * glm::mix(probabilityRange.x, probabilityRange.y,
+			float flushProbability = m_internodeDevelopmentRate * m_currentDeltaTime * shootGrowthParameters.m_internodeGrowthRate * glm::mix(probabilityRange.x, probabilityRange.y,
 				glm::clamp((internodeData.m_temperature - probabilityRange.z) / (probabilityRange.w - probabilityRange.z), 0.0f, 1.0f));
 			if (internodeData.m_inhibitor > 0.0f) flushProbability *= glm::exp(-internodeData.m_inhibitor);
 			flushProbability *= glm::pow(internodeData.m_lightIntensity, shootGrowthParameters.m_lateralBudLightingFactor);
@@ -820,7 +820,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 			if (bud.m_status == BudStatus::Dormant) {
 
 				const auto& probabilityRange = shootGrowthParameters.m_fruitBudFlushingProbabilityTemperatureRange;
-				float flushProbability = m_internodeDevelopmentRate * m_currentDeltaTime * shootGrowthParameters.m_growthRate * glm::mix(probabilityRange.x, probabilityRange.y,
+				float flushProbability = m_internodeDevelopmentRate * m_currentDeltaTime * glm::mix(probabilityRange.x, probabilityRange.y,
 					glm::clamp((internodeData.m_temperature - probabilityRange.z) / (probabilityRange.w - probabilityRange.z), 0.0f, 1.0f));
 				flushProbability *= glm::pow(internodeData.m_lightIntensity, shootGrowthParameters.m_fruitBudLightingFactor);
 				if (flushProbability >= glm::linearRand(0.0f, 1.0f))
@@ -837,7 +837,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 				m_fruitCount++;
 				//Make the fruit larger;
 				const float maxMaturityIncrease = bud.m_vigorSink.GetAvailableMaintenanceVigor() / shootGrowthParameters.m_fruitGrowthRate;
-				const float maturityIncrease = glm::min(maxMaturityIncrease, glm::min(m_currentDeltaTime * shootGrowthParameters.m_fruitGrowthRate * shootGrowthParameters.m_growthRate, 1.0f - bud.m_maturity));
+				const float maturityIncrease = glm::min(maxMaturityIncrease, glm::min(m_currentDeltaTime * shootGrowthParameters.m_fruitGrowthRate, 1.0f - bud.m_maturity));
 				bud.m_maturity += maturityIncrease;
 				const auto maintenanceVigor = bud.m_vigorSink.SubtractVigor(maturityIncrease * shootGrowthParameters.m_fruitGrowthRate);
 				auto fruitSize = shootGrowthParameters.m_maxFruitSize * bud.m_maturity;
@@ -852,7 +852,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 		{
 			if (bud.m_status == BudStatus::Dormant) {
 				const auto& probabilityRange = shootGrowthParameters.m_fruitBudFlushingProbabilityTemperatureRange;
-				float flushProbability = m_internodeDevelopmentRate * m_currentDeltaTime * shootGrowthParameters.m_growthRate * glm::mix(probabilityRange.x, probabilityRange.y,
+				float flushProbability = m_internodeDevelopmentRate * m_currentDeltaTime * glm::mix(probabilityRange.x, probabilityRange.y,
 					glm::clamp((internodeData.m_temperature - probabilityRange.z) / (probabilityRange.w - probabilityRange.z), 0.0f, 1.0f));
 				flushProbability *= glm::pow(internodeData.m_lightIntensity, shootGrowthParameters.m_leafBudLightingFactor);
 				if (internodeData.m_maxDistanceToAnyBranchEnd < shootGrowthParameters.m_leafDistanceToBranchEndLimit && flushProbability >= glm::linearRand(0.0f, 1.0f))
@@ -869,7 +869,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 				m_leafCount++;
 				//Make the leaf larger
 				const float maxMaturityIncrease = bud.m_vigorSink.GetAvailableMaintenanceVigor() / shootGrowthParameters.m_leafGrowthRate;
-				const float maturityIncrease = glm::min(maxMaturityIncrease, glm::min(m_currentDeltaTime * shootGrowthParameters.m_leafGrowthRate * shootGrowthParameters.m_growthRate, 1.0f - bud.m_maturity));
+				const float maturityIncrease = glm::min(maxMaturityIncrease, glm::min(m_currentDeltaTime * shootGrowthParameters.m_leafGrowthRate, 1.0f - bud.m_maturity));
 				bud.m_maturity += maturityIncrease;
 				const auto maintenanceVigor = bud.m_vigorSink.SubtractVigor(maturityIncrease * shootGrowthParameters.m_leafGrowthRate);
 				auto leafSize = shootGrowthParameters.m_maxLeafSize * bud.m_maturity;
@@ -881,12 +881,12 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 
 				if (static_cast<int>(climateModel.m_time * 365) % 365 > 180 && internodeData.m_temperature < shootGrowthParameters.m_leafChlorophyllSynthesisFactorTemperature)
 				{
-					bud.m_chlorophyll -= m_currentDeltaTime * shootGrowthParameters.m_growthRate * shootGrowthParameters.m_leafChlorophyllLoss;
+					bud.m_chlorophyll -= m_currentDeltaTime * shootGrowthParameters.m_leafChlorophyllLoss;
 					bud.m_chlorophyll = glm::clamp(bud.m_chlorophyll, 0.0f, 1.0f);
 				}
 				if (bud.m_chlorophyll == 0.0f)
 				{
-					auto dropProbability = m_currentDeltaTime * shootGrowthParameters.m_growthRate * shootGrowthParameters.m_leafFallProbability;
+					auto dropProbability = m_currentDeltaTime * shootGrowthParameters.m_leafFallProbability;
 					if (dropProbability >= glm::linearRand(0.0f, 1.0f))
 					{
 						bud.m_status = BudStatus::Died;
@@ -934,7 +934,7 @@ void TreeModel::CalculateThickness(NodeHandle rootNodeHandle, const RootGrowthPa
 		//if (addedIndex > 1) break;
 	//}
 
-	childThicknessCollection += rootGrowthParameters.m_thicknessAccumulateAgeFactor * rootGrowthParameters.m_endNodeThickness * rootGrowthParameters.m_growthRate * rootGrowthParameters.m_rootNodeGrowthRate * rootNodeData.m_age;
+	childThicknessCollection += rootGrowthParameters.m_thicknessAccumulateAgeFactor * rootGrowthParameters.m_endNodeThickness * rootGrowthParameters.m_rootNodeGrowthRate * rootNodeData.m_age;
 
 	rootNodeData.m_maxDistanceToAnyBranchEnd = maxDistanceToAnyBranchEnd;
 	if (childThicknessCollection != 0.0f) {
@@ -1008,7 +1008,7 @@ inline void TreeModel::AllocateShootVigor(const ShootGrowthParameters& shootGrow
 	//Go from rooting point to all end nodes
 	const float apicalControl =
 		1.0f + shootGrowthParameters.m_apicalControl
-		* glm::exp(-shootGrowthParameters.m_apicalControlAgeFactor * m_age * shootGrowthParameters.m_growthRate);
+		* glm::exp(-shootGrowthParameters.m_apicalControlAgeFactor * m_age);
 	const float shootMaintenanceVigor = glm::min(m_plantVigor.m_shootVigor, m_shootGrowthRequirement.m_maintenanceVigor);
 	float shootMaintenanceVigorFillingRate = 0.0f;
 	if(m_shootGrowthRequirement.m_maintenanceVigor != 0.0f) shootMaintenanceVigorFillingRate = shootMaintenanceVigor / m_shootGrowthRequirement.m_maintenanceVigor;
@@ -1131,7 +1131,7 @@ void TreeModel::CalculateThicknessAndSagging(NodeHandle internodeHandle,
 			maxChildHandle = i;
 		}
 	}
-	childThicknessCollection += shootGrowthParameters.m_thicknessAccumulateAgeFactor * shootGrowthParameters.m_endNodeThickness * shootGrowthParameters.m_growthRate * shootGrowthParameters.m_internodeGrowthRate * internodeData.m_age;
+	childThicknessCollection += shootGrowthParameters.m_thicknessAccumulateAgeFactor * shootGrowthParameters.m_endNodeThickness * shootGrowthParameters.m_internodeGrowthRate * internodeData.m_age;
 
 
 	internodeData.m_maxDistanceToAnyBranchEnd = maxDistanceToAnyBranchEnd;
@@ -1168,9 +1168,6 @@ void TreeModel::CalculateVigorRequirement(const ShootGrowthParameters& shootGrow
 		internodeVigorFlow.m_developmentalVigorRequirementWeight = 0.0f;
 		internodeVigorFlow.m_subtreeDevelopmentalVigorRequirementWeight = 0.0f;
 		internodeVigorFlow.m_subtreeMaintenanceVigorRequirementWeight = 0.0f;
-		const auto growthRate = m_currentDeltaTime * shootGrowthParameters.m_growthRate;
-
-
 		for (auto& bud : internodeData.m_buds) {
 			bud.m_vigorSink.SetDesiredDevelopmentalVigorRequirement(0.0f);
 			bud.m_vigorSink.SetDesiredMaintenanceVigorRequirement(0.0f);
@@ -1181,7 +1178,7 @@ void TreeModel::CalculateVigorRequirement(const ShootGrowthParameters& shootGrow
 			case BudType::Apical: {
 				if (bud.m_status == BudStatus::Dormant) {
 					//Elongation
-					bud.m_vigorSink.SetDesiredDevelopmentalVigorRequirement(growthRate * shootGrowthParameters.m_internodeGrowthRate * shootGrowthParameters.m_internodeVigorRequirement);
+					bud.m_vigorSink.SetDesiredDevelopmentalVigorRequirement(m_currentDeltaTime * shootGrowthParameters.m_internodeGrowthRate * shootGrowthParameters.m_internodeVigorRequirement);
 				}
 			}break;
 			case BudType::Leaf: {
@@ -1189,12 +1186,12 @@ void TreeModel::CalculateVigorRequirement(const ShootGrowthParameters& shootGrow
 				{
 					//No requirement since the lateral bud only gets activated and turned into new shoot.
 					//We can make use of the development vigor for bud flushing probability here in future.
-					bud.m_vigorSink.SetDesiredMaintenanceVigorRequirement(shootGrowthParameters.m_leafVigorRequirement);
+					bud.m_vigorSink.SetDesiredMaintenanceVigorRequirement(m_currentDeltaTime * shootGrowthParameters.m_leafVigorRequirement);
 				}
 				else if (bud.m_status == BudStatus::Flushed)
 				{
 					//The maintenance vigor requirement is related to the size and the drought factor of the leaf.
-					bud.m_vigorSink.SetDesiredMaintenanceVigorRequirement(shootGrowthParameters.m_leafVigorRequirement * (1.0f - bud.m_drought));
+					bud.m_vigorSink.SetDesiredMaintenanceVigorRequirement(m_currentDeltaTime * shootGrowthParameters.m_leafVigorRequirement * (1.0f - bud.m_drought));
 				}
 			}break;
 			case BudType::Fruit: {
@@ -1202,12 +1199,12 @@ void TreeModel::CalculateVigorRequirement(const ShootGrowthParameters& shootGrow
 				{
 					//No requirement since the lateral bud only gets activated and turned into new shoot.
 					//We can make use of the development vigor for bud flushing probability here in future.
-					bud.m_vigorSink.SetDesiredMaintenanceVigorRequirement(shootGrowthParameters.m_fruitVigorRequirement);
+					bud.m_vigorSink.SetDesiredMaintenanceVigorRequirement(m_currentDeltaTime * shootGrowthParameters.m_fruitVigorRequirement);
 				}
 				else if (bud.m_status == BudStatus::Flushed)
 				{
 					//The maintenance vigor requirement is related to the volume and the drought factor of the fruit.
-					bud.m_vigorSink.SetDesiredMaintenanceVigorRequirement(shootGrowthParameters.m_fruitVigorRequirement * (1.0f - bud.m_drought));
+					bud.m_vigorSink.SetDesiredMaintenanceVigorRequirement(m_currentDeltaTime * shootGrowthParameters.m_fruitVigorRequirement * (1.0f - bud.m_drought));
 				}
 			}break;
 			default: break;
@@ -1267,11 +1264,11 @@ bool TreeModel::PruneInternodes(float maxDistance, NodeHandle internodeHandle,
 	}
 	if (internode.IsEndNode())
 	{
-		float pruningProbability = m_currentDeltaTime * shootGrowthParameters.m_growthRate * (1.0f - internode.m_data.m_lightIntensity) * shootGrowthParameters.m_endNodePruningLightFactor;
+		float pruningProbability = m_currentDeltaTime * (1.0f - internode.m_data.m_lightIntensity) * shootGrowthParameters.m_endNodePruningLightFactor;
 
 		if (pruningProbability >= glm::linearRand(0.0f, 1.0f)) pruning = true;
 	}
-	if (internode.m_info.m_globalPosition.y <= 0.5f && internode.m_data.m_order != 0 && glm::linearRand(0.0f, 1.0f) < m_currentDeltaTime * shootGrowthParameters.m_growthRate * 0.1f) pruning = true;
+	if (internode.m_info.m_globalPosition.y <= 0.5f && internode.m_data.m_order != 0 && glm::linearRand(0.0f, 1.0f) < m_currentDeltaTime * 0.1f) pruning = true;
 	if (pruning)
 	{
 		m_shootSkeleton.RecycleNode(internodeHandle);
@@ -1303,7 +1300,7 @@ void TreeModel::AllocateRootVigor(const RootGrowthParameters& rootGrowthParamete
 	const auto& sortedRootNodeList = m_rootSkeleton.RefSortedNodeList();
 	const float apicalControl =
 		1.0f + rootGrowthParameters.m_apicalControl
-		* glm::exp(-rootGrowthParameters.m_apicalControlAgeFactor * m_age * rootGrowthParameters.m_growthRate);
+		* glm::exp(-rootGrowthParameters.m_apicalControlAgeFactor * m_age);
 
 	const float rootMaintenanceVigor = glm::min(m_plantVigor.m_rootVigor, m_rootGrowthRequirement.m_maintenanceVigor);
 	float rootMaintenanceVigorFillingRate = 0.0f;
@@ -1391,7 +1388,6 @@ void TreeModel::CalculateVigorRequirement(const RootGrowthParameters& rootGrowth
 	PlantGrowthRequirement& newRootGrowthNutrientsRequirement)
 {
 	const auto& sortedRootNodeList = m_rootSkeleton.RefSortedNodeList();
-	const auto growthRate = m_currentDeltaTime * rootGrowthParameters.m_growthRate;
 	for (const auto& rootNodeHandle : sortedRootNodeList) {
 		auto& rootNode = m_rootSkeleton.RefNode(rootNodeHandle);
 		auto& rootNodeData = rootNode.m_data;
@@ -1402,7 +1398,7 @@ void TreeModel::CalculateVigorRequirement(const RootGrowthParameters& rootGrowth
 		float growthPotential = 0.0f;
 		if (rootNode.RefChildHandles().empty())
 		{
-			growthPotential = growthRate * rootGrowthParameters.m_rootNodeGrowthRate * rootGrowthParameters.m_rootNodeVigorRequirement;
+			growthPotential = m_currentDeltaTime * rootGrowthParameters.m_rootNodeGrowthRate * rootGrowthParameters.m_rootNodeVigorRequirement;
 			rootNodeVigorFlow.m_developmentalVigorRequirementWeight =
 				rootNodeData.m_nitrite * growthPotential *
 				glm::pow(1.0f / glm::max(rootNodeData.m_soilDensity * rootGrowthParameters.m_environmentalFriction, 1.0f), rootGrowthParameters.m_environmentalFrictionFactor);
@@ -1491,8 +1487,7 @@ void TreeModel::Reverse(int iteration) {
 
 #pragma region TreeGrowthParameters
 ShootGrowthParameters::ShootGrowthParameters() {
-	m_growthRate = 0.03f;
-
+	
 	//Structure
 	m_lateralBudCount = 2;
 	m_fruitBudCount = 0;
@@ -1579,7 +1574,6 @@ float ShootGrowthParameters::GetSagging(const Node<InternodeGrowthData>& interno
 #pragma region RootGrowthParameters
 RootGrowthParameters::RootGrowthParameters()
 {
-	m_growthRate = 0.04f;
 	m_rootNodeLength = 0.03f;
 	m_endNodeThickness = 0.002f;
 	m_thicknessAccumulationFactor = 0.5f;
