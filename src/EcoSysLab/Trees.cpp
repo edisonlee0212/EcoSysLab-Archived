@@ -14,7 +14,9 @@ void Trees::OnInspect() {
     static glm::vec2 gridDistance = {5, 5};
     static bool setParent = true;
     static bool enableHistory = true;
+    static int historyIteration = 30;
     ImGui::Checkbox("Enable history", &enableHistory);
+    if (enableHistory) ImGui::DragInt("History iteration", &historyIteration, 1, 1, 999);
     ImGui::DragInt2("Grid size", &gridSize.x, 1, 0, 100);
     ImGui::DragFloat2("Grid distance", &gridDistance.x, 0.1f, 0.0f, 100.0f);
     if (ImGui::Button("Reset Grid")) {
@@ -29,6 +31,15 @@ void Trees::OnInspect() {
     Editor::DragAndDropButton<TreeDescriptor>(m_treeDescriptor, "TreeDescriptor", true);
     if (!m_globalTransforms.empty() && m_treeDescriptor.Get<TreeDescriptor>()) {
         auto &parameters = m_treeDescriptor.Get<TreeDescriptor>()->m_shootGrowthParameters;
+
+        ImGui::DragInt("Flow max node size", &m_treeGrowthSettings.m_flowNodeLimit, 1, 1, 100);
+        ImGui::Checkbox("Auto balance vigor", &m_treeGrowthSettings.m_autoBalance);
+        ImGui::Checkbox("Receive light", &m_treeGrowthSettings.m_collectLight);
+        ImGui::Checkbox("Receive water", &m_treeGrowthSettings.m_collectWater);
+        ImGui::Checkbox("Receive nitrite", &m_treeGrowthSettings.m_collectNitrite);
+        ImGui::Checkbox("Enable Branch collision detection", &m_treeGrowthSettings.m_enableBranchCollisionDetection);
+        ImGui::Checkbox("Enable Root collision detection", &m_treeGrowthSettings.m_enableRootCollisionDetection);
+
         if (ImGui::Button("Instantiate trees")) {
             auto scene = Application::GetActiveScene();
             Entity parent;
@@ -41,8 +52,10 @@ void Trees::OnInspect() {
                 i++;
                 scene->SetDataComponent(treeEntity, gt);
                 auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
+                tree->m_treeModel.m_treeGrowthSettings = m_treeGrowthSettings;
                 tree->m_treeDescriptor = m_treeDescriptor;
                 tree->m_enableHistory = enableHistory;
+                tree->m_historyIteration = historyIteration;
                 if(setParent) scene->SetParent(treeEntity, parent);
             }
         }
@@ -57,14 +70,44 @@ void Trees::OnCreate() {
 
 }
 
+void SerializeTreeGrowthSettings(const std::string& name, const TreeGrowthSettings& treeGrowthSettings, YAML::Emitter& out)
+{
+    out << YAML::Key << name << YAML::BeginMap;
+    out << YAML::Key << "m_flowNodeLimit" << YAML::Value << treeGrowthSettings.m_flowNodeLimit;
+    out << YAML::Key << "m_autoBalance" << YAML::Value << treeGrowthSettings.m_autoBalance;
+    out << YAML::Key << "m_collectLight" << YAML::Value << treeGrowthSettings.m_collectLight;
+    out << YAML::Key << "m_collectWater" << YAML::Value << treeGrowthSettings.m_collectWater;
+    out << YAML::Key << "m_collectNitrite" << YAML::Value << treeGrowthSettings.m_collectNitrite;
+    out << YAML::Key << "m_enableRootCollisionDetection" << YAML::Value << treeGrowthSettings.m_enableRootCollisionDetection;
+    out << YAML::Key << "m_enableBranchCollisionDetection" << YAML::Value << treeGrowthSettings.m_enableBranchCollisionDetection;
+    out << YAML::EndMap;
+}
+void DeserializeTreeGrowthSettings(const std::string& name, TreeGrowthSettings& treeGrowthSettings, const YAML::Node& in) {
+    if (in[name]) {
+        auto& param = in[name];
+        if (param["m_flowNodeLimit"]) treeGrowthSettings.m_flowNodeLimit = param["m_flowNodeLimit"].as<int>();
+        if (param["m_autoBalance"]) treeGrowthSettings.m_autoBalance = param["m_autoBalance"].as<bool>();
+        if (param["m_collectLight"]) treeGrowthSettings.m_collectLight = param["m_collectLight"].as<bool>();
+        if (param["m_collectWater"]) treeGrowthSettings.m_collectWater = param["m_collectWater"].as<bool>();
+        if (param["m_collectNitrite"]) treeGrowthSettings.m_collectNitrite = param["m_collectNitrite"].as<bool>();
+        if (param["m_enableRootCollisionDetection"]) treeGrowthSettings.m_enableRootCollisionDetection = param["m_enableRootCollisionDetection"].as<bool>();
+        if (param["m_enableBranchCollisionDetection"]) treeGrowthSettings.m_enableBranchCollisionDetection = param["m_enableBranchCollisionDetection"].as<bool>();
+    }
+}
+
+
 void Trees::CollectAssetRef(std::vector<AssetRef> &list) {
     list.push_back(m_treeDescriptor);
 }
 
 void Trees::Serialize(YAML::Emitter &out) {
     m_treeDescriptor.Save("m_treeDescriptor", out);
+
+    SerializeTreeGrowthSettings("m_treeGrowthSettings", m_treeGrowthSettings, out);
 }
 
 void Trees::Deserialize(const YAML::Node &in) {
     m_treeDescriptor.Load("m_treeDescriptor", in);
+
+    DeserializeTreeGrowthSettings("m_treeGrowthSettings", m_treeGrowthSettings, in);
 }

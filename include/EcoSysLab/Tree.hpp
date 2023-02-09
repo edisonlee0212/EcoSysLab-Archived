@@ -50,7 +50,7 @@ namespace EcoSysLab {
 		PrivateComponentRef m_climate;
 		AssetRef m_treeDescriptor;
 		bool m_enableHistory = false;
-		int m_historyIteration = 1;
+		int m_historyIteration = 30;
 		TreeModel m_treeModel;
 		void OnInspect() override;
 

@@ -446,6 +446,17 @@ namespace EcoSysLab {
 		float m_vigor = 0;
 	};
 
+	struct TreeGrowthSettings
+	{
+		int m_flowNodeLimit = 10;
+		bool m_autoBalance = true;
+		bool m_collectLight = true;
+		bool m_collectWater = true;
+		bool m_collectNitrite = true;
+		bool m_enableRootCollisionDetection = false;
+		bool m_enableBranchCollisionDetection = false;
+	};
+
 	typedef Skeleton<ShootGrowthData, ShootStemGrowthData, InternodeGrowthData> ShootSkeleton;
 	typedef Skeleton<RootGrowthData, RootStemGrowthData, RootNodeGrowthData> RootSkeleton;
 	class TreeModel {
@@ -542,22 +553,14 @@ namespace EcoSysLab {
 		std::vector<int> m_internodeOrderCounts;
 		std::vector<int> m_rootNodeOrderCounts;
 
-		int m_flowNodeLimit = 10;
 		template <typename SkeletonData, typename FlowData, typename NodeData>
 		void CollisionDetection(float minRadius, Octree<TreeVoxelData>& octree, Skeleton<SkeletonData, FlowData, NodeData>& skeleton);
 
-		bool m_autoBalance = true;
-		bool m_collectLight = true;
-		bool m_collectWater = true;
-		bool m_collectNitrite = true;
+		TreeGrowthSettings m_treeGrowthSettings;
+
 		TreeVolume m_shootVolume;
 		IlluminationEstimationSettings m_illuminationEstimationSettings;
 		
-		
-		bool m_enableRootCollisionDetection = false;
-		bool m_enableBranchCollisionDetection = false;
-
-
 		ShootRootVigorRatio m_vigorRatio;
 		glm::vec3 m_currentGravityDirection = glm::vec3(0, -1, 0);
 

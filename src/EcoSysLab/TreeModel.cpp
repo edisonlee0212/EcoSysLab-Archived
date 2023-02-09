@@ -102,12 +102,12 @@ void TreeModel::CollectRootFlux(const glm::mat4& globalTransform, SoilModel& soi
 		rootNode.m_data.m_age += m_currentDeltaTime;
 		auto& rootNodeInfo = rootNode.m_info;
 		auto worldSpacePosition = globalTransform * glm::translate(rootNodeInfo.m_globalPosition)[3];
-		if (m_collectWater) {
+		if (m_treeGrowthSettings.m_collectWater) {
 			rootNode.m_data.m_water = soilModel.IntegrateWater(worldSpacePosition, 0.2);
 			m_rootSkeleton.m_data.m_rootFlux.m_water += rootNode.m_data.m_water;
 		}
 	}
-	if (!m_collectWater) {
+	if (!m_treeGrowthSettings.m_collectWater) {
 		m_rootSkeleton.m_data.m_rootFlux.m_water = m_shootSkeleton.m_data.m_vigorRequirement.m_leafDevelopmentalVigor + m_rootSkeleton.m_data.m_vigorRequirement.m_leafDevelopmentalVigor
 			+ m_shootSkeleton.m_data.m_vigorRequirement.m_nodeDevelopmentalVigor + m_rootSkeleton.m_data.m_vigorRequirement.m_nodeDevelopmentalVigor;
 	}
@@ -130,14 +130,14 @@ void TreeModel::CollectShootFlux(const glm::mat4& globalTransform, ClimateModel&
 		{
 			if (bud.m_status == BudStatus::Flushed && bud.m_type == BudType::Leaf)
 			{
-				if (m_collectLight) {
+				if (m_treeGrowthSettings.m_collectLight) {
 					internodeData.m_lightEnergy = internodeData.m_lightIntensity * glm::pow(bud.m_maturity, 2.0f) * (1.0 - bud.m_drought);
 					m_shootSkeleton.m_data.m_shootFlux.m_lightEnergy += internodeData.m_lightEnergy;
 				}
 			}
 		}
 	}
-	if (!m_collectLight) {
+	if (!m_treeGrowthSettings.m_collectLight) {
 		m_shootSkeleton.m_data.m_shootFlux.m_lightEnergy =
 			m_shootSkeleton.m_data.m_vigorRequirement.m_leafDevelopmentalVigor + m_rootSkeleton.m_data.m_vigorRequirement.m_leafDevelopmentalVigor
 			+ m_shootSkeleton.m_data.m_vigorRequirement.m_nodeDevelopmentalVigor + m_rootSkeleton.m_data.m_vigorRequirement.m_nodeDevelopmentalVigor;
@@ -185,7 +185,7 @@ void TreeModel::PlantVigorAllocation()
 	}
 
 
-	if (m_autoBalance) {
+	if (m_treeGrowthSettings.m_autoBalance) {
 		m_vigorRatio.m_shootVigorWeight = m_rootSkeleton.RefSortedNodeList().size() * m_shootSkeleton.m_data.m_vigorRequirement.m_nodeDevelopmentalVigor;
 		m_vigorRatio.m_rootVigorWeight = m_shootSkeleton.RefSortedNodeList().size() * m_rootSkeleton.m_data.m_vigorRequirement.m_nodeDevelopmentalVigor;
 	}
@@ -278,7 +278,7 @@ bool TreeModel::GrowRoots(const glm::mat4& globalTransform, SoilModel& soilModel
 		SampleSoilDensity(globalTransform, soilModel);
 		SampleNitrite(globalTransform, soilModel);
 		CalculateVigorRequirement(rootGrowthParameters, newRootGrowthRequirement);
-		if (m_enableRootCollisionDetection)
+		if (m_treeGrowthSettings.m_enableRootCollisionDetection)
 		{
 			const float minRadius = rootGrowthParameters.m_endNodeThickness * 4.0f;
 			CollisionDetection(minRadius, m_rootSkeleton.m_data.m_octree, m_rootSkeleton);
@@ -474,7 +474,7 @@ bool TreeModel::GrowShoots(const glm::mat4& globalTransform, ClimateModel& clima
 		m_shootVolume.m_hasData = true;
 	};
 
-	if (m_enableBranchCollisionDetection)
+	if (m_treeGrowthSettings.m_enableBranchCollisionDetection)
 	{
 		const float minRadius = shootGrowthParameters.m_endNodeThickness * 4.0f;
 		CollisionDetection(minRadius, m_shootSkeleton.m_data.m_octree, m_shootSkeleton);
@@ -530,7 +530,7 @@ bool TreeModel::ElongateRoot(SoilModel& soilModel, const float extendLength, Nod
 			glm::radians(rootGrowthParameters.GetRootApicalAngle(rootNode)), 0.0f,
 			glm::radians(rootGrowthParameters.GetRootRollAngle(rootNode))));
 		//Create new internode
-		auto newRootNodeHandle = m_rootSkeleton.Extend(rootNodeHandle, false, m_rootSkeleton.RefFlow(rootNode.GetFlowHandle()).RefNodeHandles().size() > m_flowNodeLimit);
+		auto newRootNodeHandle = m_rootSkeleton.Extend(rootNodeHandle, false, m_rootSkeleton.RefFlow(rootNode.GetFlowHandle()).RefNodeHandles().size() > m_treeGrowthSettings.m_flowNodeLimit);
 		auto& oldRootNode = m_rootSkeleton.RefNode(rootNodeHandle);
 		auto& newRootNode = m_rootSkeleton.RefNode(newRootNodeHandle);
 		newRootNode.m_data = {};
@@ -650,7 +650,7 @@ bool TreeModel::ElongateInternode(float extendLength, NodeHandle internodeHandle
 			}
 		}
 		//Create new internode
-		const auto newInternodeHandle = m_shootSkeleton.Extend(internodeHandle, false, m_shootSkeleton.RefFlow(internode.GetFlowHandle()).RefNodeHandles().size() > m_flowNodeLimit);
+		const auto newInternodeHandle = m_shootSkeleton.Extend(internodeHandle, false, m_shootSkeleton.RefFlow(internode.GetFlowHandle()).RefNodeHandles().size() > m_treeGrowthSettings.m_flowNodeLimit);
 		const auto& oldInternode = m_shootSkeleton.RefNode(internodeHandle);
 		auto& newInternode = m_shootSkeleton.RefNode(newInternodeHandle);
 		newInternode.m_data = {};
@@ -1353,7 +1353,7 @@ void TreeModel::SampleNitrite(const glm::mat4& globalTransform, SoilModel& soilM
 		auto& rootNode = m_rootSkeleton.RefNode(rootNodeHandle);
 		auto& rootNodeInfo = rootNode.m_info;
 		auto worldSpacePosition = globalTransform * glm::translate(rootNodeInfo.m_globalPosition)[3];
-		if (m_collectNitrite) {
+		if (m_treeGrowthSettings.m_collectNitrite) {
 			rootNode.m_data.m_nitrite = soilModel.IntegrateNutrient(worldSpacePosition, 0.2);
 			m_rootSkeleton.m_data.m_rootFlux.m_nitrite += rootNode.m_data.m_nitrite;
 		}

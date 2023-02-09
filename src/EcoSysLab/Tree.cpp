@@ -26,13 +26,13 @@ void Tree::OnInspect() {
 		{
 			ImGui::DragInt("History per iteration", &m_historyIteration, 1, 1, 1000);
 		}
-		ImGui::DragInt("Flow max node size", &m_treeModel.m_flowNodeLimit, 1, 1, 100);
-		ImGui::Checkbox("Auto balance vigor", &m_treeModel.m_autoBalance);
-		ImGui::Checkbox("Receive light", &m_treeModel.m_collectLight);
-		ImGui::Checkbox("Receive water", &m_treeModel.m_collectWater);
-		ImGui::Checkbox("Receive nitrite", &m_treeModel.m_collectNitrite);
-		ImGui::Checkbox("Enable Branch collision detection", &m_treeModel.m_enableBranchCollisionDetection);
-		ImGui::Checkbox("Enable Root collision detection", &m_treeModel.m_enableRootCollisionDetection);
+		ImGui::DragInt("Flow max node size", &m_treeModel.m_treeGrowthSettings.m_flowNodeLimit, 1, 1, 100);
+		ImGui::Checkbox("Auto balance vigor", &m_treeModel.m_treeGrowthSettings.m_autoBalance);
+		ImGui::Checkbox("Receive light", &m_treeModel.m_treeGrowthSettings.m_collectLight);
+		ImGui::Checkbox("Receive water", &m_treeModel.m_treeGrowthSettings.m_collectWater);
+		ImGui::Checkbox("Receive nitrite", &m_treeModel.m_treeGrowthSettings.m_collectNitrite);
+		ImGui::Checkbox("Enable Branch collision detection", &m_treeModel.m_treeGrowthSettings.m_enableBranchCollisionDetection);
+		ImGui::Checkbox("Enable Root collision detection", &m_treeModel.m_treeGrowthSettings.m_enableRootCollisionDetection);
 		static int iterations = 5;
 		ImGui::DragInt("Iterations", &iterations, 1, 0, m_treeModel.CurrentIteration());
 		iterations = glm::clamp(iterations, 0, m_treeModel.CurrentIteration());

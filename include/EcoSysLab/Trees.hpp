@@ -6,6 +6,9 @@ namespace EcoSysLab {
     public:
         std::vector<Transform> m_globalTransforms;
         AssetRef m_treeDescriptor;
+
+        TreeGrowthSettings m_treeGrowthSettings;
+
         void OnInspect() override;
 
         void OnCreate() override;
