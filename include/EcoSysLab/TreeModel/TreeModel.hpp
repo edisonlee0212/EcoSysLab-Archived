@@ -408,7 +408,9 @@ namespace EcoSysLab {
 
 	struct PlantGrowthRequirement
 	{
+		float m_leafMaintenanceVigor = 0.0f;
 		float m_leafDevelopmentalVigor = 0.0f;
+		float m_fruitMaintenanceVigor = 0.0f;
 		float m_fruitDevelopmentalVigor = 0.0f;
 		float m_nodeDevelopmentalVigor = 0.0f;
 	};
