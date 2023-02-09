@@ -379,7 +379,7 @@ void EcoSysLabLayer::OnInspect() {
 			Editor::DragAndDropButton(m_shootStemStrandsHolder, "Shoot stem holder");
 			Editor::DragAndDropButton(m_rootStemStrandsHolder, "Root stem holder");
 			Editor::DragAndDropButton(m_fineRootStrandsHolder, "Fine Root holder");
-			//Editor::DragAndDropButton(m_foliageHolder, "Foliage holder");
+			Editor::DragAndDropButton(m_foliageHolder, "Foliage holder");
 			ImGui::TreePop();
 		}
 
@@ -894,6 +894,7 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 			branchStrands->SetSegments(1, m_shootStemSegments, m_shootStemPoints);
 			rootStrands->SetSegments(1, m_rootStemSegments, m_rootStemPoints);
 			fineRootStrands->SetSegments(1, m_fineRootSegments, m_fineRootPoints);
+			m_foliageMatrices->Update();
 		}
 	}
 }
