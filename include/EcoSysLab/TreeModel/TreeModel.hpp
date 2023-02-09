@@ -77,12 +77,9 @@ namespace EcoSysLab {
 
 	struct ShootStemGrowthData {
 		int m_order = 0;
-
 	};
 
-	struct ShootGrowthData {
-
-	};
+	
 
 	struct RootNodeGrowthData {
 		bool m_isMaxChild = false;
@@ -117,9 +114,7 @@ namespace EcoSysLab {
 		int m_order = 0;
 	};
 
-	struct RootGrowthData {
-
-	};
+	
 
 	class RootGrowthParameters {
 	public:
@@ -411,16 +406,11 @@ namespace EcoSysLab {
 		float m_lightEnergy = 0.0f;
 	};
 
-	struct PlantVigor
-	{
-		float m_rootVigor = 0.0f;
-		float m_shootVigor = 0.0f;
-	};
-
 	struct PlantGrowthRequirement
 	{
-		float m_maintenanceVigor = 0.0f;
-		float m_developmentalVigor = 0.0f;
+		float m_leafDevelopmentalVigor = 0.0f;
+		float m_fruitDevelopmentalVigor = 0.0f;
+		float m_nodeDevelopmentalVigor = 0.0f;
 	};
 
 	struct TreeVoxelData
@@ -438,6 +428,21 @@ namespace EcoSysLab {
 		float m_shootVigorWeight = 1.0f;
 	};
 
+	struct ShootGrowthData {
+		Octree<TreeVoxelData> m_octree = {};
+		PlantGrowthRequirement m_vigorRequirement = {};
+		ShootFlux m_shootFlux = {};
+
+		float m_vigor = 0;
+	};
+
+	struct RootGrowthData {
+		Octree<TreeVoxelData> m_octree = {};
+		PlantGrowthRequirement m_vigorRequirement = {};
+		RootFlux m_rootFlux = {};
+
+		float m_vigor = 0;
+	};
 
 	typedef Skeleton<ShootGrowthData, ShootStemGrowthData, InternodeGrowthData> ShootSkeleton;
 	typedef Skeleton<RootGrowthData, RootStemGrowthData, RootNodeGrowthData> RootSkeleton;
@@ -543,18 +548,14 @@ namespace EcoSysLab {
 		bool m_collectLight = true;
 		bool m_collectWater = true;
 		bool m_collectNitrite = true;
-		TreeVolume m_treeVolume;
+		TreeVolume m_shootVolume;
 		IlluminationEstimationSettings m_illuminationEstimationSettings;
-		Octree<TreeVoxelData> m_rootOctree;
-		Octree<TreeVoxelData> m_branchOctree;
+		
+		
 		bool m_enableRootCollisionDetection = false;
 		bool m_enableBranchCollisionDetection = false;
 
-		PlantGrowthRequirement m_shootGrowthRequirement;
-		PlantGrowthRequirement m_rootGrowthRequirement;
-		ShootFlux m_shootFlux;
-		RootFlux m_rootFlux;
-		PlantVigor m_plantVigor;
+
 		ShootRootVigorRatio m_vigorRatio;
 		glm::vec3 m_currentGravityDirection = glm::vec3(0, -1, 0);
 
