@@ -33,6 +33,7 @@ void EcoSysLabLayer::OnCreate() {
 	m_fineRootStrands = ProjectManager::CreateTemporaryAsset<Strands>();
 
 	m_foliageMatrices = std::make_shared<ParticleMatrices>();
+	m_fruitMatrices = std::make_shared<ParticleMatrices>();
 }
 
 void EcoSysLabLayer::OnDestroy() {
@@ -257,6 +258,29 @@ void EcoSysLabLayer::LateUpdate() {
 				}
 				foliageRenderer->m_matrices->Update();
 			}
+			auto fruitHolder = m_fruitHolder.Get();
+			if (scene->IsEntityValid(fruitHolder))
+			{
+				auto fruitRenderer = scene->GetOrSetPrivateComponent<Particles>(fruitHolder).lock();
+				auto mesh = fruitRenderer->m_mesh.Get<Mesh>();
+				if (!mesh) fruitRenderer->m_mesh = DefaultResources::Primitives::Sphere;
+				fruitRenderer->m_matrices = m_fruitMatrices;
+				auto material = fruitRenderer->m_material.Get<Material>();
+				if (!material)
+				{
+					material = ProjectManager::CreateTemporaryAsset<Material>();
+					material->SetProgram(DefaultResources::GLPrograms::StandardInstancedProgram);
+					fruitRenderer->m_material = material;
+					material->m_materialProperties.m_albedoColor = glm::vec3(80, 60, 50) / 255.0f;
+					if (m_meshGeneratorSettings.m_overridePresentation)
+					{
+						material->m_materialProperties.m_albedoColor = m_meshGeneratorSettings.m_presentationOverrideSettings.m_foliageOverrideColor;
+					}
+					material->m_materialProperties.m_roughness = 1.0f;
+					material->m_materialProperties.m_metallic = 0.2f;
+				}
+				fruitRenderer->m_matrices->Update();
+			}
 		}
 	}
 	if (m_debugVisualization) {
@@ -281,25 +305,25 @@ void EcoSysLabLayer::LateUpdate() {
 			gizmoSettings.m_colorMode = GizmoSettings::ColorMode::VertexColor;
 			Gizmos::DrawGizmoStrands(fineRootStrands, glm::vec4(1.0f), glm::mat4(1.0f), 1, gizmoSettings);
 		}
-		if (m_displayFruit && !m_fruitMatrices.empty())
+		if (m_displayFruit && !m_fruitMatrices->RefMatrices().empty())
 		{
 			Gizmos::DrawGizmoMeshInstancedColored(
 				DefaultResources::Primitives::Cube, editorLayer->m_sceneCamera,
 				editorLayer->m_sceneCameraPosition,
 				editorLayer->m_sceneCameraRotation,
-				m_fruitColors,
-				m_fruitMatrices,
+				m_fruitMatrices->RefColors(),
+				m_fruitMatrices->RefMatrices(),
 				glm::mat4(1.0f), 1.0f, gizmoSettings);
 		}
 
-		if (m_displayFoliage && !m_foliageMatrices->m_value.empty())
+		if (m_displayFoliage && !m_foliageMatrices->RefMatrices().empty())
 		{
 			Gizmos::DrawGizmoMeshInstancedColored(
 				DefaultResources::Primitives::Quad, editorLayer->m_sceneCamera,
 				editorLayer->m_sceneCameraPosition,
 				editorLayer->m_sceneCameraRotation,
-				m_foliageColors,
-				m_foliageMatrices->m_value,
+				m_foliageMatrices->RefColors(),
+				m_foliageMatrices->RefMatrices(),
 				glm::mat4(1.0f), 1.0f, gizmoSettings);
 		}
 		if (scene->IsEntityValid(m_selectedTree)) {
@@ -356,11 +380,9 @@ void EcoSysLabLayer::ResetAllTrees(const std::vector<Entity>* treeEntities)
 	m_boundingBoxMatrices.clear();
 	m_boundingBoxColors.clear();
 
-	m_foliageMatrices->m_value.clear();
-	m_foliageColors.clear();
+	m_foliageMatrices->Reset();
 
-	m_fruitMatrices.clear();
-	m_fruitColors.clear();
+	m_fruitMatrices->Reset();
 	if (scene->IsEntityValid(m_selectedTree)) m_treeVisualizer.Reset(scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock()->m_treeModel);
 }
 
@@ -380,6 +402,7 @@ void EcoSysLabLayer::OnInspect() {
 			Editor::DragAndDropButton(m_rootStemStrandsHolder, "Root stem holder");
 			Editor::DragAndDropButton(m_fineRootStrandsHolder, "Fine Root holder");
 			Editor::DragAndDropButton(m_foliageHolder, "Foliage holder");
+			Editor::DragAndDropButton(m_fruitHolder, "Fruit holder");
 			ImGui::TreePop();
 		}
 
@@ -608,10 +631,8 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 			m_fineRootSegments.clear();
 			m_fineRootPoints.clear();
 
-			m_foliageMatrices->m_value.clear();
-			m_foliageColors.clear();
-			m_fruitMatrices.clear();
-			m_fruitColors.clear();
+			m_foliageMatrices->RefMatrices().clear();
+			m_fruitMatrices->RefMatrices().clear();
 		}
 
 		for (int listIndex = 0; listIndex < treeEntities->size(); listIndex++) {
@@ -652,15 +673,20 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 		m_rootStemSegments.resize(rootLastStartIndex * 3);
 		m_rootStemPoints.resize(rootLastStartIndex * 6);
 
-		m_foliageMatrices->m_value.resize(leafLastStartIndex);
-		m_foliageColors.resize(leafLastStartIndex);
-		m_fruitMatrices.resize(fruitLastStartIndex);
-		m_fruitColors.resize(fruitLastStartIndex);
+		m_foliageMatrices->RefMatrices().resize(leafLastStartIndex);
+		m_foliageMatrices->RefColors().resize(leafLastStartIndex);
+		m_fruitMatrices->RefMatrices().resize(fruitLastStartIndex);
+		m_fruitMatrices->RefColors().resize(fruitLastStartIndex);
 
 		m_fineRootSegments.resize(fineRootLastStartIndex * 5);
 		m_fineRootPoints.resize(fineRootLastStartIndex * 8);
 		{
 			std::vector<std::shared_future<void>> results;
+			auto& foliageMatrices = m_foliageMatrices->RefMatrices();
+			auto& fruitMatrices = m_fruitMatrices->RefMatrices();
+
+			auto& foliageColors = m_foliageMatrices->RefColors();
+			auto& fruitColors = m_fruitMatrices->RefColors();
 			Jobs::ParallelFor(treeEntities->size(), [&](unsigned treeIndex)
 				{
 					auto treeEntity = treeEntities->at(treeIndex);
@@ -860,7 +886,7 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 
 			int leafIndex = 0;
 			int fruitIndex = 0;
-			auto& foliageMatrices = m_foliageMatrices->m_value;
+			
 			for (const auto& internodeHandle : internodeList)
 			{
 				const auto& internode = branchSkeleton.PeekNode(internodeHandle);
@@ -875,13 +901,13 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 					if (bud.m_type == BudType::Leaf)
 					{
 						foliageMatrices[leafStartIndex + leafIndex] = entityGlobalTransform.m_value * internodeGlobalTransform * bud.m_reproductiveModuleTransform;
-						m_foliageColors[leafStartIndex + leafIndex] = glm::vec4(glm::mix(glm::vec3(152 / 255.0f, 203 / 255.0f, 0 / 255.0f), glm::vec3(159 / 255.0f, 100 / 255.0f, 66 / 255.0f), glm::max(bud.m_drought, 1.0f - bud.m_chlorophyll)), 1.0f);
+						foliageColors[leafStartIndex + leafIndex] = glm::vec4(glm::mix(glm::vec3(152 / 255.0f, 203 / 255.0f, 0 / 255.0f), glm::vec3(159 / 255.0f, 100 / 255.0f, 66 / 255.0f), glm::max(bud.m_drought, 1.0f - bud.m_chlorophyll)), 1.0f);
 						leafIndex++;
 					}
 					else if (bud.m_type == BudType::Fruit)
 					{
-						m_fruitMatrices[fruitStartIndex + fruitIndex] = entityGlobalTransform.m_value * internodeGlobalTransform * bud.m_reproductiveModuleTransform;
-						m_fruitColors[fruitStartIndex + fruitIndex] = glm::vec4(255 / 255.0f, 165 / 255.0f, 0 / 255.0f, 1.0f);
+						fruitMatrices[fruitStartIndex + fruitIndex] = entityGlobalTransform.m_value * internodeGlobalTransform * bud.m_reproductiveModuleTransform;
+						fruitColors[fruitStartIndex + fruitIndex] = glm::vec4(255 / 255.0f, 165 / 255.0f, 0 / 255.0f, 1.0f);
 
 						fruitIndex++;
 					}
@@ -895,6 +921,7 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 			rootStrands->SetSegments(1, m_rootStemSegments, m_rootStemPoints);
 			fineRootStrands->SetSegments(1, m_fineRootSegments, m_fineRootPoints);
 			m_foliageMatrices->Update();
+			m_fruitMatrices->Update();
 		}
 	}
 }

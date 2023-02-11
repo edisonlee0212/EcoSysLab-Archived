@@ -38,10 +38,8 @@ namespace EcoSysLab {
 		std::vector<glm::vec4> m_boundingBoxColors;
 
 		std::shared_ptr<ParticleMatrices> m_foliageMatrices;
-		std::vector<glm::vec4> m_foliageColors;
-
-		std::vector<glm::mat4> m_fruitMatrices;
-		std::vector<glm::vec4> m_fruitColors;
+		
+		std::shared_ptr<ParticleMatrices> m_fruitMatrices;
 
 		float m_lastUsedTime = 0.0f;
 		float m_totalTime = 0.0f;
@@ -114,6 +112,7 @@ namespace EcoSysLab {
 		EntityRef m_rootStemStrandsHolder;
 		EntityRef m_fineRootStrandsHolder;
 		EntityRef m_foliageHolder;
+		EntityRef m_fruitHolder;
 		TreeVisualizer m_treeVisualizer;
 
 		PrivateComponentRef m_soilHolder;
