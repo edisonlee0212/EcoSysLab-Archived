@@ -48,13 +48,14 @@ void EcoSysLabLayer::LateUpdate() {
 	auto selectedEntity = editorLayer->GetSelectedEntity();
 	if (selectedEntity != m_selectedTree) {
 		if (scene->IsEntityValid(selectedEntity) && scene->HasPrivateComponent<Tree>(selectedEntity)) {
-			m_needFlowUpdate = true;
 			m_selectedTree = selectedEntity;
 			m_treeVisualizer.Reset(scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock()->m_treeModel);
+			m_needFlowUpdate = true;
 		}
 		else
 		{
 			m_selectedTree = Entity();
+			m_needFlowUpdate = true;
 		}
 	}
 	const std::vector<Entity>* treeEntities =
@@ -690,6 +691,8 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 			Jobs::ParallelFor(treeEntities->size(), [&](unsigned treeIndex)
 				{
 					auto treeEntity = treeEntities->at(treeIndex);
+			bool isSelected = treeEntities->at(treeIndex).GetIndex() == m_selectedTree.GetIndex();
+
 			auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
 			auto& treeModel = tree->m_treeModel;
 			const auto& branchSkeleton = treeModel.RefShootSkeleton();
@@ -738,30 +741,35 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 					glm::translate(cp4))[3];
 				p5.m_position = (entityGlobalTransform.m_value *
 					glm::translate(cp5))[3];
+				if (!isSelected) {
+					if (flow.GetParentHandle() > 0)
+					{
+						p1.m_thickness = branchSkeleton.PeekFlow(flow.GetParentHandle()).m_info.m_endThickness;
+					}
+					else
+					{
+						p1.m_thickness = flow.m_info.m_startThickness;
+					}
+					p4.m_thickness = flow.m_info.m_endThickness;
 
-				if (flow.GetParentHandle() > 0)
-				{
-					p1.m_thickness = branchSkeleton.PeekFlow(flow.GetParentHandle()).m_info.m_endThickness;
+
+					p2.m_thickness = p3.m_thickness = (p1.m_thickness + p4.m_thickness) / 2.0f;
+					p0.m_thickness = 2.0f * p1.m_thickness - p2.m_thickness;
+					p5.m_thickness = 2.0f * p4.m_thickness - p3.m_thickness;
+
+
+					p0.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
+					p1.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
+					p2.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
+					p3.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
+					p4.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
+					p5.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
 				}
 				else
 				{
-					p1.m_thickness = flow.m_info.m_startThickness;
+					p0.m_thickness = p1.m_thickness = p2.m_thickness = p3.m_thickness = p4.m_thickness = p5.m_thickness = 0.0f;
+					p0.m_color = p1.m_color = p2.m_color = p3.m_color = p4.m_color = p5.m_color = glm::vec4(0.0f);
 				}
-				p4.m_thickness = flow.m_info.m_endThickness;
-
-
-				p2.m_thickness = p3.m_thickness = (p1.m_thickness + p4.m_thickness) / 2.0f;
-				p0.m_thickness = 2.0f * p1.m_thickness - p2.m_thickness;
-				p5.m_thickness = 2.0f * p4.m_thickness - p3.m_thickness;
-
-
-				p0.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
-				p1.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
-				p2.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
-				p3.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
-				p4.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
-				p5.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
-
 				m_shootStemSegments[branchStartIndex * 3 + i * 3] = branchStartIndex * 6 + i * 6;
 				m_shootStemSegments[branchStartIndex * 3 + i * 3 + 1] = branchStartIndex * 6 + i * 6 + 1;
 				m_shootStemSegments[branchStartIndex * 3 + i * 3 + 2] = branchStartIndex * 6 + i * 6 + 2;
@@ -808,27 +816,32 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 					glm::translate(cp4))[3];
 				p5.m_position = (entityGlobalTransform.m_value *
 					glm::translate(cp5))[3];
+				if (!isSelected) {
+					if (flow.GetParentHandle() > 0)
+					{
+						p0.m_thickness = p1.m_thickness = rootSkeleton.PeekFlow(flow.GetParentHandle()).m_info.m_endThickness;
+					}
+					else
+					{
+						p0.m_thickness = p1.m_thickness = flow.m_info.m_startThickness;
+					}
 
-				if (flow.GetParentHandle() > 0)
-				{
-					p0.m_thickness = p1.m_thickness = rootSkeleton.PeekFlow(flow.GetParentHandle()).m_info.m_endThickness;
+					p4.m_thickness = flow.m_info.m_endThickness;
+					p5.m_thickness = flow.m_info.m_endThickness;
+					p3.m_thickness = p2.m_thickness = (p1.m_thickness + p4.m_thickness) * 0.5f;
+
+					p0.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
+					p1.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
+					p2.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
+					p3.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
+					p4.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
+					p5.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
 				}
 				else
 				{
-					p0.m_thickness = p1.m_thickness = flow.m_info.m_startThickness;
+					p0.m_thickness = p1.m_thickness = p2.m_thickness = p3.m_thickness = p4.m_thickness = p5.m_thickness = 0.0f;
+					p0.m_color = p1.m_color = p2.m_color = p3.m_color = p4.m_color = p5.m_color = glm::vec4(0.0f);
 				}
-
-				p4.m_thickness = flow.m_info.m_endThickness;
-				p5.m_thickness = flow.m_info.m_endThickness;
-				p3.m_thickness = p2.m_thickness = (p1.m_thickness + p4.m_thickness) * 0.5f;
-
-				p0.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
-				p1.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
-				p2.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
-				p3.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
-				p4.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
-				p5.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
-
 				m_rootStemSegments[rootStartIndex * 3 + i * 3] = rootStartIndex * 6 + i * 6;
 				m_rootStemSegments[rootStartIndex * 3 + i * 3 + 1] = rootStartIndex * 6 + i * 6 + 1;
 				m_rootStemSegments[rootStartIndex * 3 + i * 3 + 2] = rootStartIndex * 6 + i * 6 + 2;
@@ -865,16 +878,22 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 					glm::translate(glm::vec3(rootNodeData.m_fineRootAnchors[4])))[3];
 				p7.m_position = (entityGlobalTransform.m_value *
 					glm::translate(glm::vec3(rootNodeData.m_fineRootAnchors[4]) * 2.0f - glm::vec3(rootNodeData.m_fineRootAnchors[3])))[3];
-
-				p0.m_thickness = rootNodeInfo.m_thickness;
-				p1.m_thickness = rootNodeData.m_fineRootAnchors[0].w;
-				p2.m_thickness = rootNodeData.m_fineRootAnchors[0].w;
-				p3.m_thickness = rootNodeData.m_fineRootAnchors[1].w;
-				p4.m_thickness = rootNodeData.m_fineRootAnchors[2].w;
-				p5.m_thickness = rootNodeData.m_fineRootAnchors[3].w;
-				p6.m_thickness = rootNodeData.m_fineRootAnchors[4].w;
-				p7.m_thickness = rootNodeData.m_fineRootAnchors[4].w;
-
+				if (!isSelected) {
+					p0.m_thickness = rootNodeInfo.m_thickness;
+					p1.m_thickness = rootNodeData.m_fineRootAnchors[0].w;
+					p2.m_thickness = rootNodeData.m_fineRootAnchors[0].w;
+					p3.m_thickness = rootNodeData.m_fineRootAnchors[1].w;
+					p4.m_thickness = rootNodeData.m_fineRootAnchors[2].w;
+					p5.m_thickness = rootNodeData.m_fineRootAnchors[3].w;
+					p6.m_thickness = rootNodeData.m_fineRootAnchors[4].w;
+					p7.m_thickness = rootNodeData.m_fineRootAnchors[4].w;
+					p0.m_color = p1.m_color = p2.m_color = p3.m_color = p4.m_color = p5.m_color = p6.m_color = p7.m_color = glm::vec4(1.0f);
+				}
+				else
+				{
+					p0.m_thickness = p1.m_thickness = p2.m_thickness = p3.m_thickness = p4.m_thickness = p5.m_thickness = p6.m_thickness = p6.m_thickness = 0.0f;
+					p0.m_color = p1.m_color = p2.m_color = p3.m_color = p4.m_color = p5.m_color = p6.m_color = p7.m_color = glm::vec4(0.0f);
+				}
 				m_fineRootSegments[fineRootStartIndex * 5 + fineRootIndex * 5] = fineRootStartIndex * 8 + fineRootIndex * 8;
 				m_fineRootSegments[fineRootStartIndex * 5 + fineRootIndex * 5 + 1] = fineRootStartIndex * 8 + fineRootIndex * 8 + 1;
 				m_fineRootSegments[fineRootStartIndex * 5 + fineRootIndex * 5 + 2] = fineRootStartIndex * 8 + fineRootIndex * 8 + 2;
@@ -886,7 +905,7 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 
 			int leafIndex = 0;
 			int fruitIndex = 0;
-			
+
 			for (const auto& internodeHandle : internodeList)
 			{
 				const auto& internode = branchSkeleton.PeekNode(internodeHandle);
@@ -896,19 +915,35 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 
 				for (const auto& bud : internodeData.m_buds)
 				{
+
 					if (bud.m_status != BudStatus::Flushed) continue;
 					if (bud.m_maturity <= 0.0f) continue;
+
+
 					if (bud.m_type == BudType::Leaf)
 					{
-						foliageMatrices[leafStartIndex + leafIndex] = entityGlobalTransform.m_value * internodeGlobalTransform * bud.m_reproductiveModuleTransform;
-						foliageColors[leafStartIndex + leafIndex] = glm::vec4(glm::mix(glm::vec3(152 / 255.0f, 203 / 255.0f, 0 / 255.0f), glm::vec3(159 / 255.0f, 100 / 255.0f, 66 / 255.0f), glm::max(bud.m_drought, 1.0f - bud.m_chlorophyll)), 1.0f);
+						if (isSelected)
+						{
+							foliageMatrices[leafStartIndex + leafIndex] = entityGlobalTransform.m_value * internodeGlobalTransform * bud.m_reproductiveModuleTransform;
+							foliageColors[leafStartIndex + leafIndex] = glm::vec4(glm::mix(glm::vec3(152 / 255.0f, 203 / 255.0f, 0 / 255.0f), glm::vec3(159 / 255.0f, 100 / 255.0f, 66 / 255.0f), glm::max(bud.m_drought, 1.0f - bud.m_chlorophyll)), 1.0f);
+						}
+						else {
+							foliageMatrices[leafStartIndex + leafIndex] = glm::mat4(0.0f);
+							foliageColors[leafStartIndex + leafIndex] = glm::vec4(0.0f);
+						}
 						leafIndex++;
 					}
 					else if (bud.m_type == BudType::Fruit)
 					{
-						fruitMatrices[fruitStartIndex + fruitIndex] = entityGlobalTransform.m_value * internodeGlobalTransform * bud.m_reproductiveModuleTransform;
-						fruitColors[fruitStartIndex + fruitIndex] = glm::vec4(255 / 255.0f, 165 / 255.0f, 0 / 255.0f, 1.0f);
-
+						if (isSelected)
+						{
+							fruitMatrices[fruitStartIndex + fruitIndex] = entityGlobalTransform.m_value * internodeGlobalTransform * bud.m_reproductiveModuleTransform;
+							fruitColors[fruitStartIndex + fruitIndex] = glm::vec4(255 / 255.0f, 165 / 255.0f, 0 / 255.0f, 1.0f);
+						}
+						else {
+							foliageMatrices[leafStartIndex + leafIndex] = glm::mat4(0.0f);
+							foliageColors[leafStartIndex + leafIndex] = glm::vec4(0.0f);
+						}
 						fruitIndex++;
 					}
 				}
