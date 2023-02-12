@@ -50,12 +50,13 @@ void EcoSysLabLayer::LateUpdate() {
 		if (scene->IsEntityValid(selectedEntity) && scene->HasPrivateComponent<Tree>(selectedEntity)) {
 			m_selectedTree = selectedEntity;
 			m_treeVisualizer.Reset(scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock()->m_treeModel);
-			m_needFlowUpdate = true;
+			m_lastSelectedTreeIndex = m_selectedTree.GetIndex();
+			m_needFlowUpdateForSelection = true;
 		}
 		else
 		{
 			m_selectedTree = Entity();
-			m_needFlowUpdate = true;
+			m_needFlowUpdateForSelection = true;
 		}
 	}
 	const std::vector<Entity>* treeEntities =
@@ -113,13 +114,13 @@ void EcoSysLabLayer::LateUpdate() {
 				editorLayer->SetSelectedEntity(currentFocusingTree);
 				m_selectedTree = currentFocusingTree;
 				if (scene->IsEntityValid(m_selectedTree)) m_treeVisualizer.Reset(scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock()->m_treeModel);
-				m_needFlowUpdate = true;
+				m_needFullFlowUpdate = true;
 			}
 #pragma endregion
 
 		}
 
-		bool floatUpdated = false;
+		bool flowUpdated = false;
 		if (m_debugVisualization) {
 			if (m_shootVersions.size() != treeEntities->size() || m_rootVersions.size() != treeEntities->size()) {
 				m_internodeSize = 0;
@@ -131,7 +132,7 @@ void EcoSysLabLayer::LateUpdate() {
 					m_shootVersions.emplace_back(-1);
 					m_rootVersions.emplace_back(-1);
 				}
-				m_needFlowUpdate = true;
+				m_needFullFlowUpdate = true;
 			}
 			int totalInternodeSize = 0;
 			int totalFlowSize = 0;
@@ -153,11 +154,11 @@ void EcoSysLabLayer::LateUpdate() {
 				if (m_selectedTree == treeEntity) continue;
 				if (m_shootVersions[i] != treeModel.RefShootSkeleton().GetVersion()) {
 					m_shootVersions[i] = treeModel.RefShootSkeleton().GetVersion();
-					m_needFlowUpdate = true;
+					m_needFullFlowUpdate = true;
 				}
 				if (m_rootVersions[i] != treeModel.RefRootSkeleton().GetVersion()) {
 					m_rootVersions[i] = treeModel.RefRootSkeleton().GetVersion();
-					m_needFlowUpdate = true;
+					m_needFullFlowUpdate = true;
 				}
 			}
 			m_internodeSize = totalInternodeSize;
@@ -166,13 +167,18 @@ void EcoSysLabLayer::LateUpdate() {
 			m_rootStemSize = totalRootFlowSize;
 			m_leafSize = totalLeafSize;
 			m_fruitSize = totalFruitSize;
-			if (m_needFlowUpdate) {
-				UpdateFlows(treeEntities, branchStrands, rootStrands, fineRootStrands);
-				floatUpdated = true;
+			if (m_needFullFlowUpdate) {
+				UpdateFlows(treeEntities, branchStrands, rootStrands, fineRootStrands, -1);
+				m_needFullFlowUpdate = false;
+				flowUpdated = true;
 			}
-
+			if (m_needFlowUpdateForSelection) {
+				UpdateFlows(treeEntities, branchStrands, rootStrands, fineRootStrands, m_lastSelectedTreeIndex);
+				m_needFlowUpdateForSelection = false;
+				flowUpdated = true;
+			}
 		}
-		if (floatUpdated) {
+		if (flowUpdated) {
 			auto strandsHolder = m_shootStemStrandsHolder.Get();
 			if (scene->IsEntityValid(strandsHolder))
 			{
@@ -357,7 +363,7 @@ void EcoSysLabLayer::ResetAllTrees(const std::vector<Entity>* treeEntities)
 	{
 		scene->GetOrSetPrivateComponent<Tree>(i).lock()->m_treeModel.Clear();
 	}
-	m_needFlowUpdate = true;
+	m_needFullFlowUpdate = true;
 	m_autoGrow = false;
 	m_internodeSize = 0;
 	m_leafSize = 0;
@@ -456,7 +462,7 @@ void EcoSysLabLayer::OnInspect() {
 		if (m_debugVisualization && ImGui::TreeNodeEx("Debug visualization settings", ImGuiTreeNodeFlags_DefaultOpen)) {
 			if (ImGui::Button("Update"))
 			{
-				m_needFlowUpdate = true;
+				m_needFullFlowUpdate = true;
 			}
 			ImGui::Checkbox("Display shoot stem", &m_displayShootStem);
 			ImGui::Checkbox("Display fruits", &m_displayFruit);
@@ -593,11 +599,11 @@ void EcoSysLabLayer::OnSoilVisualizationMenu()
 	}
 }
 
-void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const std::shared_ptr<Strands>& branchStrands, const std::shared_ptr<Strands>& rootStrands, const std::shared_ptr<Strands>& fineRootStrands)
+void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const std::shared_ptr<Strands>& branchStrands, const std::shared_ptr<Strands>& rootStrands, const std::shared_ptr<Strands>& fineRootStrands, int targetTreeIndex)
 {
 	{
 		const auto scene = Application::GetActiveScene();
-		m_needFlowUpdate = false;
+
 		m_boundingBoxMatrices.clear();
 		m_boundingBoxColors.clear();
 
@@ -691,8 +697,8 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 			Jobs::ParallelFor(treeEntities->size(), [&](unsigned treeIndex)
 				{
 					auto treeEntity = treeEntities->at(treeIndex);
-			bool isSelected = treeEntities->at(treeIndex).GetIndex() == m_selectedTree.GetIndex();
-
+			bool isSelected = treeEntity.GetIndex() == m_selectedTree.GetIndex();
+			if (targetTreeIndex != -1 && treeEntity.GetIndex() != targetTreeIndex) return;
 			auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
 			auto& treeModel = tree->m_treeModel;
 			const auto& branchSkeleton = treeModel.RefShootSkeleton();
@@ -922,7 +928,7 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 
 					if (bud.m_type == BudType::Leaf)
 					{
-						if (isSelected)
+						if (!isSelected)
 						{
 							foliageMatrices[leafStartIndex + leafIndex] = entityGlobalTransform.m_value * internodeGlobalTransform * bud.m_reproductiveModuleTransform;
 							foliageColors[leafStartIndex + leafIndex] = glm::vec4(glm::mix(glm::vec3(152 / 255.0f, 203 / 255.0f, 0 / 255.0f), glm::vec3(159 / 255.0f, 100 / 255.0f, 66 / 255.0f), glm::max(bud.m_drought, 1.0f - bud.m_chlorophyll)), 1.0f);
@@ -935,14 +941,14 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 					}
 					else if (bud.m_type == BudType::Fruit)
 					{
-						if (isSelected)
+						if (!isSelected)
 						{
 							fruitMatrices[fruitStartIndex + fruitIndex] = entityGlobalTransform.m_value * internodeGlobalTransform * bud.m_reproductiveModuleTransform;
 							fruitColors[fruitStartIndex + fruitIndex] = glm::vec4(255 / 255.0f, 165 / 255.0f, 0 / 255.0f, 1.0f);
 						}
 						else {
-							foliageMatrices[leafStartIndex + leafIndex] = glm::mat4(0.0f);
-							foliageColors[leafStartIndex + leafIndex] = glm::vec4(0.0f);
+							fruitMatrices[fruitStartIndex + fruitIndex] = glm::mat4(0.0f);
+							fruitColors[fruitStartIndex + fruitIndex] = glm::vec4(0.0f);
 						}
 						fruitIndex++;
 					}

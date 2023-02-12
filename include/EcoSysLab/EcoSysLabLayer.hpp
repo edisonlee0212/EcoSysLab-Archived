@@ -49,7 +49,9 @@ namespace EcoSysLab {
 		int m_shootStemSize = 0;
 		int m_rootNodeSize = 0;
 		int m_rootStemSize = 0;
-		bool m_needFlowUpdate = false;
+		bool m_needFullFlowUpdate = false;
+		bool m_needFlowUpdateForSelection = false;
+		int m_lastSelectedTreeIndex = -1;
 		bool m_lockTreeSelection = false;
 		bool m_autoGrow = false;
 		bool m_autoGrowWithSoilStep = false;
@@ -95,7 +97,7 @@ namespace EcoSysLab {
 		void OnSoilVisualizationMenu();
 
 
-		void UpdateFlows(const std::vector<Entity>* treeEntities, const std::shared_ptr<Strands>& branchStrands, const std::shared_ptr<Strands>& rootStrands, const std::shared_ptr<Strands>& fineRootStrands);
+		void UpdateFlows(const std::vector<Entity>* treeEntities, const std::shared_ptr<Strands>& branchStrands, const std::shared_ptr<Strands>& rootStrands, const std::shared_ptr<Strands>& fineRootStrands, int targetTreeIndex = -1);
 
 		// helper functions to structure code a bit
 		void SoilVisualization();
