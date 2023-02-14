@@ -453,6 +453,14 @@ namespace EcoSysLab {
 		bool m_collectLight = true;
 		bool m_collectWater = true;
 		bool m_collectNitrite = true;
+
+		float m_leafMaintenanceVigorFillingRate = 1.0f;
+		float m_leafDevelopmentalVigorFillingRate = 1.0f;
+		float m_fruitMaintenanceVigorFillingRate = 1.0f;
+		float m_fruitDevelopmentalVigorFillingRate = 1.0f;
+		float m_nodeDevelopmentalVigorFillingRate = 1.0f;
+
+
 		bool m_enableRootCollisionDetection = false;
 		bool m_enableBranchCollisionDetection = false;
 	};

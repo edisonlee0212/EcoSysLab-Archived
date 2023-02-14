@@ -26,9 +26,9 @@ float VigorSink::GetMaintenanceVigorRequirement() const
 	return glm::max(0.0f, m_desiredMaintenanceVigorRequirement - m_vigor);
 }
 
-float VigorSink::GetDevelopmentalVigorRequirement() const
+float VigorSink::GetMaxVigorRequirement() const
 {
-	return glm::max(0.0f, m_desiredDevelopmentalVigorRequirement - glm::min(0.0f, m_vigor - m_desiredMaintenanceVigorRequirement));
+	return glm::max(0.0f, m_desiredDevelopmentalVigorRequirement + m_desiredMaintenanceVigorRequirement - m_vigor);
 }
 
 void VigorSink::AddVigor(const float value)

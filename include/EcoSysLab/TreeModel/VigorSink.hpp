@@ -24,7 +24,7 @@ namespace EcoSysLab
 		[[nodiscard]] float GetDesiredMaintenanceVigorRequirement() const;
 		[[nodiscard]] float GetDesiredDevelopmentalVigorRequirement() const;
 		[[nodiscard]] float GetMaintenanceVigorRequirement() const;
-		[[nodiscard]] float GetDevelopmentalVigorRequirement() const;
+		[[nodiscard]] float GetMaxVigorRequirement() const;
 
 		void AddVigor(float value);
 		[[nodiscard]] float GetVigor() const;

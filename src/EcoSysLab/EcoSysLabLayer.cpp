@@ -1266,6 +1266,7 @@ void EcoSysLabLayer::Simulate(float deltaTime) {
 		if (scene->IsEntityValid(m_selectedTree)) {
 			m_treeVisualizer.Reset(scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock()->m_treeModel);
 		}
+		m_needFullFlowUpdate = true;
 	}
 }
 
