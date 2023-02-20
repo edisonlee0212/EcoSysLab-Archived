@@ -392,7 +392,7 @@ void Tree::GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings, 
 		scene->SetParent(fineRootEntity, self);
 		std::vector<glm::uint> fineRootSegments;
 		std::vector<StrandPoint> fineRootPoints;
-		const auto& rootSkeleton = m_treeModel.PeekRootSkeleton(iteration);
+		const auto& rootSkeleton = m_treeModel.PeekRootSkeleton(actualIteration);
 		const auto& rootNodeList = rootSkeleton.RefSortedNodeList();
 		int fineRootIndex = 0;
 		for (int i = 0; i < rootNodeList.size(); i++)
