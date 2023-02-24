@@ -14,7 +14,7 @@ namespace EcoSysLab {
 		bool m_displayFineRoot = false;
 		bool m_displayRootStem = true;
 		bool m_displayBoundingBox = false;
-		bool m_displaySoil = true;
+		bool m_displaySoil = false;
 
 		bool m_debugVisualization = true;
 		bool m_rendering = false;
@@ -121,7 +121,7 @@ namespace EcoSysLab {
 		PrivateComponentRef m_climateHolder;
 		void Simulate(float deltaTime);
 		void GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings);
-
+		void ClearMeshes();
 		void ResetAllTrees(const std::vector<Entity>* treeEntities);
 
 	};

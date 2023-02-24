@@ -58,9 +58,9 @@ namespace EcoSysLab {
 
 		void OnCreate() override;
 
-		void ClearMeshHolders();
+		void ClearMeshes();
 
-		void GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings, int iteration = -1);
+		void GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings, int iteration = -1);
 
 		void FromLSystemString(const std::shared_ptr<LSystemString>& lSystemString);
 		void FromTreeGraph(const std::shared_ptr<TreeGraph>& treeGraph);

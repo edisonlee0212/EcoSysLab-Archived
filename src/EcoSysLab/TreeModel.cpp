@@ -6,6 +6,29 @@
 
 using namespace EcoSysLab;
 
+void TreeModel::ResetReproductiveModule()
+{
+	const auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
+	for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); it++) {
+		auto& internode = m_shootSkeleton.RefNode(*it);
+		auto& internodeData = internode.m_data;
+		auto& buds = internodeData.m_buds;
+		for (auto& bud : buds)
+		{
+			if (bud.m_status == BudStatus::Removed) continue;
+			if (bud.m_type == BudType::Fruit || bud.m_type == BudType::Leaf)
+			{
+				bud.m_status = BudStatus::Dormant;
+				bud.m_maturity = 0.0f;
+				bud.m_drought = 0.0f;
+				bud.m_health = 1.0f;
+				bud.m_chlorophyll = 1.0f;
+				bud.m_reproductiveModuleTransform = glm::mat4(0.0f);
+			}
+		}
+	}
+}
+
 void TreeModel::ApplyTropism(const glm::vec3& targetDir, float tropism, glm::vec3& front, glm::vec3& up) {
 	const glm::vec3 dir = glm::normalize(targetDir);
 	const float dotP = glm::abs(glm::dot(front, dir));
@@ -58,6 +81,11 @@ bool TreeModel::Grow(float deltaTime, const glm::mat4& globalTransform, SoilMode
 		&& GrowShoots(globalTransform, climateModel, shootGrowthParameters, newShootGrowthRequirement)) {
 		treeStructureChanged = true;
 	}
+
+	if(static_cast<int>(climateModel.m_time * 365) % 365 == 0)
+	{
+		ResetReproductiveModule();
+	}
 	//Set new growth nutrients requirement for next iteration.
 	m_shootSkeleton.m_data.m_vigorRequirement = newShootGrowthRequirement;
 	m_rootSkeleton.m_data.m_vigorRequirement = newRootGrowthRequirement;
@@ -107,7 +135,7 @@ void TreeModel::CollectRootFlux(const glm::mat4& globalTransform, SoilModel& soi
 			m_rootSkeleton.m_data.m_rootFlux.m_water += rootNode.m_data.m_water;
 		}
 	}
-	
+
 }
 
 void TreeModel::CollectShootFlux(const glm::mat4& globalTransform, ClimateModel& climateModel,
@@ -135,7 +163,7 @@ void TreeModel::CollectShootFlux(const glm::mat4& globalTransform, ClimateModel&
 		}
 	}
 
-	
+
 }
 
 void TreeModel::PlantVigorAllocation()
@@ -170,7 +198,8 @@ void TreeModel::PlantVigorAllocation()
 				//+ m_rootSkeleton.m_data.m_vigorRequirement.m_fruitDevelopmentalVigor
 				+m_rootSkeleton.m_data.m_vigorRequirement.m_nodeDevelopmentalVigor;
 		}
-	}else if(!m_treeGrowthSettings.m_collectLight)
+	}
+	else if (!m_treeGrowthSettings.m_collectLight)
 	{
 		m_shootSkeleton.m_data.m_shootFlux.m_lightEnergy =
 			m_shootSkeleton.m_data.m_vigorRequirement.m_leafMaintenanceVigor
@@ -886,17 +915,6 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 					shootGrowthParameters.GetDesiredRollAngle(newInternode));
 			}
 		}
-		else if (static_cast<int>(climateModel.m_time * 365) % 365 == 0)
-		{
-			if (bud.m_type == BudType::Fruit || bud.m_type == BudType::Leaf)
-			{
-				bud.m_status = BudStatus::Dormant;
-				bud.m_maturity = 0.0f;
-				bud.m_drought = 0.0f;
-				bud.m_chlorophyll = 1.0f;
-				bud.m_reproductiveModuleTransform = glm::mat4(0.0f);
-			}
-		}
 		else if (bud.m_type == BudType::Fruit)
 		{
 			if (bud.m_status == BudStatus::Dormant) {
@@ -1090,7 +1108,7 @@ inline void TreeModel::AllocateShootVigor(const ShootGrowthParameters& shootGrow
 	const float leafMaintenanceVigor = glm::min(remainingVigor, m_shootSkeleton.m_data.m_vigorRequirement.m_leafMaintenanceVigor);
 	remainingVigor -= leafMaintenanceVigor;
 	float leafMaintenanceVigorFillingRate = 0.0f;
-	if (m_shootSkeleton.m_data.m_vigorRequirement.m_leafMaintenanceVigor != 0.0f) 
+	if (m_shootSkeleton.m_data.m_vigorRequirement.m_leafMaintenanceVigor != 0.0f)
 		leafMaintenanceVigorFillingRate = leafMaintenanceVigor / m_shootSkeleton.m_data.m_vigorRequirement.m_leafMaintenanceVigor;
 
 	const float leafDevelopmentVigor = glm::min(remainingVigor, m_shootSkeleton.m_data.m_vigorRequirement.m_leafDevelopmentalVigor);
@@ -1134,9 +1152,9 @@ inline void TreeModel::AllocateShootVigor(const ShootGrowthParameters& shootGrow
 				bud.m_vigorSink.AddVigor(fruitMaintenanceVigorFillingRate * bud.m_vigorSink.GetMaintenanceVigorRequirement());
 				bud.m_vigorSink.AddVigor(fruitDevelopmentVigorFillingRate * bud.m_vigorSink.GetMaxVigorRequirement());
 			}break;
-				default:break;
+			default:break;
 			}
-			
+
 		}
 		//2. Allocate development vigor for structural growth
 		//If this is the first node (node at the rooting point)
@@ -1330,7 +1348,7 @@ void TreeModel::CalculateVigorRequirement(const ShootGrowthParameters& shootGrow
 			}break;
 			default: break;
 			}
-			
+
 		}
 	}
 }

@@ -109,11 +109,11 @@ void Tree::OnInspect() {
 		if (ImGui::TreeNodeEx("Mesh generation", ImGuiTreeNodeFlags_DefaultOpen)) {
 			m_meshGeneratorSettings.OnInspect();
 			if (ImGui::Button("Generate Mesh")) {
-				GenerateMesh(m_meshGeneratorSettings, iterations);
+				GenerateMeshes(m_meshGeneratorSettings, iterations);
 			}
 			if (ImGui::Button("Clear Mesh"))
 			{
-				ClearMeshHolders();
+				ClearMeshes();
 			}
 			ImGui::TreePop();
 		}
@@ -141,7 +141,7 @@ void Tree::Update()
 {
 	if (m_temporalProgression) {
 		if (m_temporalProgressionIteration <= m_treeModel.CurrentIteration()) {
-			GenerateMesh(m_meshGeneratorSettings, m_temporalProgressionIteration);
+			GenerateMeshes(m_meshGeneratorSettings, m_temporalProgressionIteration);
 			m_temporalProgressionIteration++;
 		}
 		else
@@ -233,7 +233,7 @@ void Tree::Deserialize(const YAML::Node& in)
 	m_treeDescriptor.Load("m_treeDescriptor", in);
 }
 
-void Tree::ClearMeshHolders()
+void Tree::ClearMeshes()
 {
 	const auto scene = GetScene();
 	const auto self = GetOwner();
@@ -258,31 +258,13 @@ void Tree::ClearMeshHolders()
 	}
 }
 
-void Tree::GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings, int iteration) {
+void Tree::GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings, int iteration) {
 	const auto scene = GetScene();
 	const auto self = GetOwner();
 	const auto children = scene->GetChildren(self);
 
-	Entity branchEntity, rootEntity, foliageEntity, fruitEntity, fineRootEntity;
+	ClearMeshes();
 
-	for (const auto& child : children) {
-		auto name = scene->GetEntityName(child);
-		if (name == "Branch Mesh") {
-			scene->DeleteEntity(child);
-		}
-		else if (name == "Root Mesh") {
-			scene->DeleteEntity(child);
-		}
-		else if (name == "Foliage Mesh") {
-			scene->DeleteEntity(child);
-		}
-		else if (name == "Fruit Mesh") {
-			scene->DeleteEntity(child);
-		}
-		else if (name == "Fine Root Mesh") {
-			scene->DeleteEntity(child);
-		}
-	}
 	auto actualIteration = iteration;
 	if (actualIteration < 0 || actualIteration > m_treeModel.CurrentIteration())
 	{
@@ -290,6 +272,7 @@ void Tree::GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings, 
 	}
 	if (meshGeneratorSettings.m_enableBranch)
 	{
+		Entity branchEntity;
 		branchEntity = scene->CreateEntity("Branch Mesh");
 		scene->SetParent(branchEntity, self);
 		std::vector<Vertex> vertices;
@@ -340,6 +323,7 @@ void Tree::GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings, 
 	}
 	if (meshGeneratorSettings.m_enableRoot)
 	{
+		Entity rootEntity;
 		rootEntity = scene->CreateEntity("Root Mesh");
 		scene->SetParent(rootEntity, self);
 		std::vector<Vertex> vertices;
@@ -388,6 +372,7 @@ void Tree::GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings, 
 	}
 	if (meshGeneratorSettings.m_enableFineRoot)
 	{
+		Entity fineRootEntity;
 		fineRootEntity = scene->CreateEntity("Fine Root Mesh");
 		scene->SetParent(fineRootEntity, self);
 		std::vector<glm::uint> fineRootSegments;
@@ -456,13 +441,11 @@ void Tree::GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings, 
 		strandsRenderer->m_strands = strands;
 		strandsRenderer->m_material = material;
 	}
-
 	if (meshGeneratorSettings.m_enableFoliage)
 	{
+		Entity foliageEntity;
 		foliageEntity = scene->CreateEntity("Foliage Mesh");
 		scene->SetParent(foliageEntity, self);
-
-
 		std::vector<Vertex> vertices;
 		std::vector<unsigned int> indices;
 		auto quadMesh = DefaultResources::Primitives::Quad;
@@ -567,6 +550,79 @@ void Tree::GenerateMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings, 
 			material->m_albedoTexture = texRef.Get<Texture2D>();
 		}
 		auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(foliageEntity).lock();
+		meshRenderer->m_mesh = mesh;
+		meshRenderer->m_material = material;
+	}
+	if (meshGeneratorSettings.m_enableFruit)
+	{
+		Entity fruitEntity;
+		fruitEntity = scene->CreateEntity("Fruit Mesh");
+		scene->SetParent(fruitEntity, self);
+		std::vector<Vertex> vertices;
+		std::vector<unsigned int> indices;
+		auto fruitMesh = DefaultResources::Primitives::Sphere;
+		auto& fruitTriangles = fruitMesh->UnsafeGetTriangles();
+		auto fruitVerticesSize = fruitMesh->GetVerticesAmount();
+		size_t offset = 0;
+
+		const auto& nodeList = m_treeModel.PeekShootSkeleton(actualIteration).RefSortedNodeList();
+		for (const auto& internodeHandle : nodeList) {
+			const auto& internode = m_treeModel.PeekShootSkeleton(actualIteration).PeekNode(internodeHandle);
+			const auto& internodeInfo = internode.m_info;
+			const auto& internodeData = internode.m_data;
+			auto internodeGlobalTransform = glm::translate(internodeInfo.m_globalPosition) * glm::mat4_cast(internodeInfo.m_globalRotation) * glm::scale(glm::vec3(1.0f));
+			if (!meshGeneratorSettings.m_overridePresentation) {
+				for (const auto& bud : internodeData.m_buds) {
+					if (bud.m_status != BudStatus::Flushed) continue;
+					if (bud.m_maturity <= 0.0f) continue;
+					if (bud.m_type == BudType::Fruit)
+					{
+						auto matrix = internodeGlobalTransform * bud.m_reproductiveModuleTransform;
+						Vertex archetype;
+						for (auto i = 0; i < fruitMesh->GetVerticesAmount(); i++) {
+							archetype.m_position =
+								matrix * glm::vec4(fruitMesh->UnsafeGetVertices()[i].m_position, 1.0f);
+							archetype.m_normal = glm::normalize(glm::vec3(
+								matrix * glm::vec4(fruitMesh->UnsafeGetVertices()[i].m_normal, 0.0f)));
+							archetype.m_tangent = glm::normalize(glm::vec3(
+								matrix *
+								glm::vec4(fruitMesh->UnsafeGetVertices()[i].m_tangent, 0.0f)));
+							archetype.m_texCoord =
+								fruitMesh->UnsafeGetVertices()[i].m_texCoord;
+							vertices.push_back(archetype);
+						}
+						for (auto triangle : fruitTriangles) {
+							triangle.x += offset;
+							triangle.y += offset;
+							triangle.z += offset;
+							indices.push_back(triangle.x);
+							indices.push_back(triangle.y);
+							indices.push_back(triangle.z);
+						}
+						offset += fruitVerticesSize;
+					}
+				}
+			}
+		}
+
+		auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
+		auto material = ProjectManager::CreateTemporaryAsset<Material>();
+		material->SetProgram(DefaultResources::GLPrograms::StandardProgram);
+		mesh->SetVertices(17, vertices, indices);
+		if (meshGeneratorSettings.m_overridePresentation)
+		{
+			material->m_materialProperties.m_albedoColor = meshGeneratorSettings.m_presentationOverrideSettings.m_foliageOverrideColor;
+		}
+		else {
+			material->m_materialProperties.m_albedoColor = glm::vec3(152 / 255.0f, 203 / 255.0f, 0 / 255.0f);
+		}
+		material->m_materialProperties.m_roughness = 0.0f;
+		auto texRef = meshGeneratorSettings.m_foliageTexture;
+		if (texRef.Get<Texture2D>())
+		{
+			material->m_albedoTexture = texRef.Get<Texture2D>();
+		}
+		auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(fruitEntity).lock();
 		meshRenderer->m_mesh = mesh;
 		meshRenderer->m_material = material;
 	}

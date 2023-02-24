@@ -401,18 +401,21 @@ void EcoSysLabLayer::OnInspect() {
 			scene->UnsafeGetPrivateComponentOwnersList<Tree>();
 		if (ImGui::TreeNodeEx("Mesh generation")) {
 			m_meshGeneratorSettings.OnInspect();
-			if (ImGui::Button("Generate Meshes")) {
-				GenerateMeshes(m_meshGeneratorSettings);
-			}
-
-			Editor::DragAndDropButton(m_shootStemStrandsHolder, "Shoot stem holder");
-			Editor::DragAndDropButton(m_rootStemStrandsHolder, "Root stem holder");
-			Editor::DragAndDropButton(m_fineRootStrandsHolder, "Fine Root holder");
-			Editor::DragAndDropButton(m_foliageHolder, "Foliage holder");
-			Editor::DragAndDropButton(m_fruitHolder, "Fruit holder");
+			
 			ImGui::TreePop();
 		}
-
+		if (ImGui::Button("Generate Meshes")) {
+			GenerateMeshes(m_meshGeneratorSettings);
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Clear Meshes")) {
+			ClearMeshes();
+		}
+		Editor::DragAndDropButton(m_shootStemStrandsHolder, "Shoot stem holder");
+		Editor::DragAndDropButton(m_rootStemStrandsHolder, "Root stem holder");
+		Editor::DragAndDropButton(m_fineRootStrandsHolder, "Fine Root holder");
+		Editor::DragAndDropButton(m_foliageHolder, "Foliage holder");
+		Editor::DragAndDropButton(m_fruitHolder, "Fruit holder");
 		Editor::DragAndDropButton<Soil>(m_soilHolder, "Soil");
 		Editor::DragAndDropButton<Climate>(m_climateHolder, "Climate");
 
@@ -420,6 +423,7 @@ void EcoSysLabLayer::OnInspect() {
 			if (ImGui::Button("Reset all trees"))
 			{
 				ResetAllTrees(treeEntities);
+				ClearMeshes();
 			}
 			ImGui::DragFloat("Time", &m_time, 1, 0, 9000000);
 			ImGui::Checkbox("Auto grow with soil step", &m_autoGrowWithSoilStep);
@@ -1278,7 +1282,21 @@ void EcoSysLabLayer::GenerateMeshes(const TreeMeshGeneratorSettings& meshGenerat
 		auto copiedEntities = *treeEntities;
 		for (auto treeEntity : copiedEntities) {
 			auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
-			tree->GenerateMesh(meshGeneratorSettings);
+			tree->GenerateMeshes(meshGeneratorSettings);
+		}
+	}
+}
+
+void EcoSysLabLayer::ClearMeshes()
+{
+	auto scene = GetScene();
+	const std::vector<Entity>* treeEntities =
+		scene->UnsafeGetPrivateComponentOwnersList<Tree>();
+	if (treeEntities && !treeEntities->empty()) {
+		auto copiedEntities = *treeEntities;
+		for (auto treeEntity : copiedEntities) {
+			auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
+			tree->ClearMeshes();
 		}
 	}
 }

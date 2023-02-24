@@ -35,6 +35,7 @@ namespace EcoSysLab {
 		//-1.0 means the no fruit.
 		float m_maturity = -1.0f;
 		float m_drought = 0.0f;
+		float m_health = 1.0f;
 
 		float m_chlorophyll = 0.0f;
 
@@ -550,6 +551,9 @@ namespace EcoSysLab {
 		float m_internodeDevelopmentRate = 1.0f;
 		float m_rootNodeDevelopmentRate = 1.0f;
 		float m_currentDeltaTime = 1.0f;
+
+		void ResetReproductiveModule();
+
 	public:
 		int m_iteration = 0;
 
