@@ -13,6 +13,15 @@ namespace EcoSysLab {
 		Stroke
 	};
 
+	enum class TreeVisualizerMode
+	{
+		Default,
+		LightIntensity,
+		LightDirection,
+		IsMaxChild,
+		AllocatedVigor,
+
+	};
 
 	class TreeVisualizer {
 		std::vector<glm::vec4> m_randomColors;
@@ -27,7 +36,7 @@ namespace EcoSysLab {
 		bool m_treeHierarchyGui = true;
 		bool m_rootHierarchyGui = true;
 
-		bool m_useNodeColor = false;
+		unsigned m_visualizationMode = 0;
 
 		NodeHandle m_selectedInternodeHandle = -1;
 		float m_selectedInternodeLengthFactor = 0.0f;
@@ -95,9 +104,12 @@ namespace EcoSysLab {
 			SyncMatrices(const Skeleton <SkeletonData, FlowData, NodeData>& skeleton, std::vector<glm::mat4>& matrices,
 				std::vector<glm::vec4>& colors, NodeHandle& selectedNodeHandle, float& lengthFactor);
 
+		void SyncColors(const ShootSkeleton& shootSkeleton, NodeHandle& selectedNodeHandle);
+		void SyncColors(const RootSkeleton& rootSkeleton, NodeHandle& selectedNodeHandle);
+
 		int m_iteration = 0;
 		bool m_needUpdate = false;
-
+		bool m_needColorUpdate = false;
 		bool
 			OnInspect(TreeModel& treeModel,
 				const GlobalTransform& globalTransform);
@@ -339,14 +351,9 @@ namespace EcoSysLab {
 	void TreeVisualizer::SyncMatrices(const Skeleton <SkeletonData, FlowData, NodeData>& skeleton,
 		std::vector<glm::mat4>& matrices,
 		std::vector<glm::vec4>& colors, NodeHandle& selectedNodeHandle, float& lengthFactor) {
-		if (m_randomColors.empty()) {
-			for (int i = 0; i < 1000; i++) {
-				m_randomColors.emplace_back(glm::ballRand(1.0f), 1.0f);
-			}
-		}
+		
 		const auto& sortedNodeList = skeleton.RefSortedNodeList();
 		matrices.resize(sortedNodeList.size() + 1);
-		colors.resize(sortedNodeList.size() + 1);
 		std::vector<std::shared_future<void>> results;
 		Jobs::ParallelFor(sortedNodeList.size(), [&](unsigned i) {
 			auto nodeHandle = sortedNodeList[i];
@@ -365,8 +372,6 @@ namespace EcoSysLab {
 				node.m_info.m_length,
 				node.m_info.m_thickness * 2.0f));
 		if (nodeHandle == selectedNodeHandle) {
-			colors[i + 1] = glm::vec4(1, 0, 0, 1);
-
 			const glm::vec3 selectedCenter =
 				position + (node.m_info.m_length * lengthFactor) * direction;
 			matrices[0] = glm::translate(selectedCenter) *
@@ -376,10 +381,6 @@ namespace EcoSysLab {
 					node.m_info.m_length / 5.0f,
 					2.0f * node.m_info.m_thickness + 0.001f));
 			colors[0] = glm::vec4(1.0f);
-		}
-		else {
-			colors[i + 1] = m_useNodeColor ? node.m_info.m_color : m_randomColors[node.m_data.m_order];
-			if (selectedNodeHandle != -1) colors[i + 1].a = 0.3f;
 		}
 			}, results);
 		for (auto& i : results) i.wait();

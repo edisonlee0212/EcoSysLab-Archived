@@ -394,8 +394,8 @@ void EcoSysLabLayer::ResetAllTrees(const std::vector<Entity>* treeEntities)
 }
 
 void EcoSysLabLayer::OnInspect() {
+	auto scene = GetScene();
 	if (ImGui::Begin("EcoSysLab Layer")) {
-		auto scene = GetScene();
 		ImGui::Checkbox("Lock tree selection", &m_lockTreeSelection);
 		const std::vector<Entity>* treeEntities =
 			scene->UnsafeGetPrivateComponentOwnersList<Tree>();
@@ -483,9 +483,18 @@ void EcoSysLabLayer::OnInspect() {
 			ImGui::TreePop();
 		}
 
-		if (m_debugVisualization && scene->IsEntityValid(m_selectedTree)) {
+		
+	}
+	ImGui::End();
+
+	if (ImGui::Begin("Tree Inspector"))
+	{
+		if (scene->IsEntityValid(m_selectedTree)) {
 			m_treeVisualizer.OnInspect(
 				scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock()->m_treeModel, scene->GetDataComponent<GlobalTransform>(m_selectedTree));
+		}else
+		{
+			ImGui::Text("No tree selected.");
 		}
 	}
 	ImGui::End();

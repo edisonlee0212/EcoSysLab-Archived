@@ -150,7 +150,6 @@ void TreeModel::CollectShootFlux(const glm::mat4& globalTransform, ClimateModel&
 		internodeData.m_age += m_currentDeltaTime;
 		internodeData.m_lightIntensity =
 			m_shootVolume.IlluminationEstimation(internodeInfo.m_globalPosition, m_illuminationEstimationSettings, internodeData.m_lightDirection);
-		internodeInfo.m_color = glm::mix(glm::vec4(0.0f, 0.0f, 0.0f, 1.0f), glm::vec4(1.0f), internodeData.m_lightIntensity);
 		for (const auto& bud : internode.m_data.m_buds)
 		{
 			if (bud.m_status == BudStatus::Flushed && bud.m_type == BudType::Leaf)
