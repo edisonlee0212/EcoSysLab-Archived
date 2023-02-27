@@ -9,7 +9,7 @@ namespace EcoSysLab
 		float m_occlusion = 0.15f;
 		float m_occlusionDistanceFactor = 2.5f;
 		float m_overallIntensity = 2.0f;
-		float m_layerAngleFactor = 1.0f;
+		float m_layerAngleFactor = 0.9f;
 	};
 	class TreeVolume
 	{
