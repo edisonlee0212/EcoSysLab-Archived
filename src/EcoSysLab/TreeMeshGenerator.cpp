@@ -95,6 +95,7 @@ void TreeMeshGeneratorSettings::Save(const std::string& name, YAML::Emitter& out
 	out << YAML::Key << "m_branchMeshType" << YAML::Value << m_branchMeshType;
 	out << YAML::Key << "m_rootMeshType" << YAML::Value << m_rootMeshType;
 
+	out << YAML::Key << "m_detailedFoliage" << YAML::Value << m_detailedFoliage;
 	out << YAML::EndMap;
 }
 
@@ -128,6 +129,8 @@ void TreeMeshGeneratorSettings::Load(const std::string& name, const YAML::Node& 
 
 		if (ms["m_branchMeshType"]) m_branchMeshType = ms["m_branchMeshType"].as<unsigned>();
 		if (ms["m_rootMeshType"]) m_rootMeshType = ms["m_rootMeshType"].as<unsigned>();
+
+		if (ms["m_detailedFoliage"]) m_detailedFoliage = ms["m_detailedFoliage"].as<bool>();
 	}
 }
 
@@ -184,6 +187,7 @@ void TreeMeshGeneratorSettings::OnInspect() {
 			if (m_overrideVertexColor) {
 				ImGui::ColorEdit3("Foliage vertex color", &m_foliageVertexColor.x);
 			}
+			ImGui::Checkbox("Detailed foliage", &m_detailedFoliage);
 			ImGui::TreePop();
 		}
 		if (m_enableRoot && ImGui::TreeNode("Root settings"))

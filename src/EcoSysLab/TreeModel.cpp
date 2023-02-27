@@ -871,8 +871,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 		auto& internode = m_shootSkeleton.RefNode(internodeHandle);
 		auto& internodeData = internode.m_data;
 		auto& internodeInfo = internode.m_info;
-		auto internodeGlobalTransform = glm::translate(internodeInfo.m_globalPosition) * glm::mat4_cast(internodeInfo.m_globalRotation) * glm::scale(glm::vec3(1.0f));
-
+		
 		//auto killProbability = shootGrowthParameters.m_growthRate * shootGrowthParameters.m_budKillProbability;
 		//if (internodeData.m_rootDistance < 1.0f) killProbability = 0.0f;
 		//if (bud.m_status == BudStatus::Dormant && killProbability > glm::linearRand(0.0f, 1.0f)) {
@@ -958,10 +957,10 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 				bud.m_reproductiveModule.m_maturity += maturityIncrease;
 				const auto developmentVigor = bud.m_vigorSink.SubtractVigor(maturityIncrease * shootGrowthParameters.m_fruitVigorRequirement);
 				auto fruitSize = shootGrowthParameters.m_maxFruitSize * bud.m_reproductiveModule.m_maturity;
-				glm::quat rotation = internodeInfo.m_globalRotation * bud.m_localRotation;
+				float angle = glm::radians(glm::linearRand(0.0f, 360.0f));
+				glm::quat rotation = glm::quatLookAt(glm::vec3(glm::sin(angle), 0.f, glm::cos(angle)), glm::vec3(0, 1, 0));
 				auto front = rotation * glm::vec3(0, 0, -1);
-				ApplyTropism(glm::vec3(0, -1, 0), 0.25f, rotation);
-				auto fruitPosition = front * (fruitSize.z * 1.5f);
+				auto fruitPosition = internodeInfo.m_globalPosition + front * (fruitSize.z * 1.5f);
 				bud.m_reproductiveModule.m_transform = glm::translate(fruitPosition) * glm::mat4_cast(glm::quat(glm::vec3(0.0f))) * glm::scale(fruitSize);
 
 				//Handle fruit drop here.
@@ -971,7 +970,6 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 					if (dropProbability >= glm::linearRand(0.0f, 1.0f))
 					{
 						bud.m_status = BudStatus::Died;
-						bud.m_reproductiveModule.m_transform = internodeGlobalTransform * bud.m_reproductiveModule.m_transform;
 						m_shootSkeleton.m_data.m_droppedFruits.emplace_back(bud.m_reproductiveModule);
 						bud.m_reproductiveModule.Reset();
 					}
@@ -1002,13 +1000,13 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 				bud.m_reproductiveModule.m_maturity += maturityIncrease;
 				const auto developmentVigor = bud.m_vigorSink.SubtractVigor(maturityIncrease * shootGrowthParameters.m_leafVigorRequirement);
 				auto leafSize = shootGrowthParameters.m_maxLeafSize * bud.m_reproductiveModule.m_maturity;
-				glm::quat rotation = internodeInfo.m_globalRotation * bud.m_localRotation;
+				glm::quat rotation = internodeData.m_desiredLocalRotation * bud.m_localRotation;
+				auto up = rotation * glm::vec3(0, 1, 0);
 				auto front = rotation * glm::vec3(0, 0, -1);
-				ApplyTropism(glm::vec3(0, -1, 0), 0.9f, rotation);
-				auto foliagePosition = front * (leafSize.z * 1.5f);
+				ApplyTropism(internodeData.m_lightDirection, 0.3f, up, front);
+				rotation = glm::quatLookAt(front, up);
+				auto foliagePosition = internodeInfo.m_globalPosition + front * (leafSize.z * 1.5f);
 				bud.m_reproductiveModule.m_transform = glm::translate(foliagePosition) * glm::mat4_cast(rotation) * glm::scale(leafSize);
-
-
 				//Handle leaf drop here.
 				if (static_cast<int>(climateModel.m_time * 365) % 365 > 180 && internodeData.m_temperature < shootGrowthParameters.m_leafChlorophyllSynthesisFactorTemperature)
 				{
@@ -1021,7 +1019,6 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 					if (dropProbability >= glm::linearRand(0.0f, 1.0f))
 					{
 						bud.m_status = BudStatus::Died;
-						bud.m_reproductiveModule.m_transform = internodeGlobalTransform * bud.m_reproductiveModule.m_transform;
 						m_shootSkeleton.m_data.m_droppedLeaves.emplace_back(bud.m_reproductiveModule);
 						bud.m_reproductiveModule.Reset();
 					}

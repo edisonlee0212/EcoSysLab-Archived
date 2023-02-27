@@ -72,6 +72,9 @@ namespace EcoSysLab {
 
 		unsigned m_branchMeshType = 0;
 		unsigned m_rootMeshType = 0;
+
+		bool m_detailedFoliage = false;
+
 		void OnInspect();
 
 		void Save(const std::string& name, YAML::Emitter& out);
