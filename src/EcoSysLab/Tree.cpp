@@ -458,14 +458,13 @@ void Tree::GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings
 				const auto& internode = m_treeModel.PeekShootSkeleton(actualIteration).PeekNode(internodeHandle);
 				const auto& internodeInfo = internode.m_info;
 				const auto& internodeData = internode.m_data;
-				auto internodeGlobalTransform = glm::translate(internodeInfo.m_globalPosition) * glm::mat4_cast(internodeInfo.m_globalRotation) * glm::scale(glm::vec3(1.0f));
 				if (!meshGeneratorSettings.m_overridePresentation) {
 					for (const auto& bud : internodeData.m_buds) {
 						if (bud.m_status != BudStatus::Flushed) continue;
 						if (bud.m_reproductiveModule.m_maturity <= 0.0f) continue;
 						if (bud.m_type == BudType::Leaf)
 						{
-							auto matrix = internodeGlobalTransform * bud.m_reproductiveModule.m_transform;
+							auto& matrix = bud.m_reproductiveModule.m_transform;
 							Vertex archetype;
 							for (auto i = 0; i < quadMesh->GetVerticesAmount(); i++) {
 								archetype.m_position =
@@ -504,7 +503,7 @@ void Tree::GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings
 							auto foliagePosition = front * (leafSize.z * 1.5f);
 							auto leafTransform = glm::translate(foliagePosition) * glm::mat4_cast(rotation) * glm::scale(leafSize);
 
-							auto matrix = internodeGlobalTransform * leafTransform;
+							auto& matrix = leafTransform;
 							Vertex archetype;
 							for (auto i = 0; i < quadMesh->GetVerticesAmount(); i++) {
 								archetype.m_position =
@@ -563,14 +562,13 @@ void Tree::GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings
 					const auto& internode = m_treeModel.PeekShootSkeleton(actualIteration).PeekNode(internodeHandle);
 					const auto& internodeInfo = internode.m_info;
 					const auto& internodeData = internode.m_data;
-					auto internodeGlobalTransform = glm::translate(internodeInfo.m_globalPosition) * glm::mat4_cast(internodeInfo.m_globalRotation) * glm::scale(glm::vec3(1.0f));
 					if (!meshGeneratorSettings.m_overridePresentation) {
 						for (const auto& bud : internodeData.m_buds) {
 							if (bud.m_status != BudStatus::Flushed) continue;
 							if (bud.m_reproductiveModule.m_maturity <= 0.0f) continue;
 							if (bud.m_type == BudType::Leaf)
 							{
-								auto matrix = internodeGlobalTransform * bud.m_reproductiveModule.m_transform;
+								auto matrix = bud.m_reproductiveModule.m_transform;
 								Vertex archetype;
 								
 							}
@@ -597,14 +595,13 @@ void Tree::GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings
 			const auto& internode = m_treeModel.PeekShootSkeleton(actualIteration).PeekNode(internodeHandle);
 			const auto& internodeInfo = internode.m_info;
 			const auto& internodeData = internode.m_data;
-			auto internodeGlobalTransform = glm::translate(internodeInfo.m_globalPosition) * glm::mat4_cast(internodeInfo.m_globalRotation) * glm::scale(glm::vec3(1.0f));
 			if (!meshGeneratorSettings.m_overridePresentation) {
 				for (const auto& bud : internodeData.m_buds) {
 					if (bud.m_status != BudStatus::Flushed) continue;
 					if (bud.m_reproductiveModule.m_maturity <= 0.0f) continue;
 					if (bud.m_type == BudType::Fruit)
 					{
-						auto matrix = internodeGlobalTransform * bud.m_reproductiveModule.m_transform;
+						auto matrix = bud.m_reproductiveModule.m_transform;
 						Vertex archetype;
 						for (auto i = 0; i < fruitMesh->GetVerticesAmount(); i++) {
 							archetype.m_position =
