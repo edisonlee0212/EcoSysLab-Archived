@@ -5,7 +5,12 @@
 #include "TreeModel.hpp"
 
 using namespace EcoSysLab;
-
+void ReproductiveModule::Reset()
+{
+	m_maturity = 0.0f;
+	m_health = 1.0f;
+	m_transform = glm::mat4(0.0f);
+}
 void TreeModel::ResetReproductiveModule()
 {
 	const auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
@@ -19,11 +24,27 @@ void TreeModel::ResetReproductiveModule()
 			if (bud.m_type == BudType::Fruit || bud.m_type == BudType::Leaf)
 			{
 				bud.m_status = BudStatus::Dormant;
-				bud.m_maturity = 0.0f;
-				bud.m_drought = 0.0f;
-				bud.m_health = 1.0f;
-				bud.m_chlorophyll = 1.0f;
-				bud.m_reproductiveModuleTransform = glm::mat4(0.0f);
+				bud.m_reproductiveModule.Reset();
+			}
+		}
+	}
+}
+
+void TreeModel::HarvestFruits(const std::function<bool(const ReproductiveModule& fruit)>& harvestFunction)
+{
+	const auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
+	for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); it++) {
+		auto& internode = m_shootSkeleton.RefNode(*it);
+		auto& internodeData = internode.m_data;
+		auto& buds = internodeData.m_buds;
+		for (auto& bud : buds)
+		{
+			if (bud.m_type == BudType::Fruit && bud.m_status == BudStatus::Flushed)
+			{
+				if (harvestFunction(bud.m_reproductiveModule)) {
+					bud.m_reproductiveModule.Reset();
+					bud.m_status = BudStatus::Died;
+				}
 			}
 		}
 	}
@@ -155,7 +176,7 @@ void TreeModel::CollectShootFlux(const glm::mat4& globalTransform, ClimateModel&
 			if (bud.m_status == BudStatus::Flushed && bud.m_type == BudType::Leaf)
 			{
 				if (m_treeGrowthSettings.m_collectLight) {
-					internodeData.m_lightEnergy = internodeData.m_lightIntensity * glm::pow(bud.m_maturity, 2.0f) * (1.0 - bud.m_drought);
+					internodeData.m_lightEnergy = internodeData.m_lightIntensity * glm::pow(bud.m_reproductiveModule.m_maturity, 2.0f) * bud.m_reproductiveModule.m_health;
 					m_shootSkeleton.m_data.m_shootFlux.m_lightEnergy += internodeData.m_lightEnergy;
 				}
 			}
@@ -850,6 +871,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 		auto& internode = m_shootSkeleton.RefNode(internodeHandle);
 		auto& internodeData = internode.m_data;
 		auto& internodeInfo = internode.m_info;
+		auto internodeGlobalTransform = glm::translate(internodeInfo.m_globalPosition) * glm::mat4_cast(internodeInfo.m_globalRotation) * glm::scale(glm::vec3(1.0f));
 
 		//auto killProbability = shootGrowthParameters.m_growthRate * shootGrowthParameters.m_budKillProbability;
 		//if (internodeData.m_rootDistance < 1.0f) killProbability = 0.0f;
@@ -864,7 +886,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 		const float availableDevelopmentVigor = bud.m_vigorSink.GetAvailableDevelopmentalVigor();
 		const float maintenanceVigor = bud.m_vigorSink.SubtractVigor(availableMaintenanceVigor);
 		if (desiredMaintenanceVigor != 0.0f && availableMaintenanceVigor < desiredMaintenanceVigor) {
-			bud.m_drought = glm::clamp(1.0f - (1.0f - bud.m_drought) * availableMaintenanceVigor / desiredMaintenanceVigor, 0.0f, 1.0f);
+			bud.m_reproductiveModule.m_health = glm::clamp(bud.m_reproductiveModule.m_health * availableMaintenanceVigor / desiredMaintenanceVigor, 0.0f, 1.0f);
 		}
 		if (bud.m_type == BudType::Apical && bud.m_status == BudStatus::Dormant) {
 			const float developmentalVigor = bud.m_vigorSink.SubtractVigor(availableDevelopmentVigor);
@@ -925,10 +947,6 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 				if (flushProbability >= glm::linearRand(0.0f, 1.0f))
 				{
 					bud.m_status = BudStatus::Flushed;
-					bud.m_maturity = 0.0f;
-					bud.m_drought = 0.0f;
-					bud.m_chlorophyll = 1.0f;
-					bud.m_reproductiveModuleTransform = glm::mat4(0.0f);
 				}
 			}
 			else if (bud.m_status == BudStatus::Flushed)
@@ -936,15 +954,29 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 				m_fruitCount++;
 				//Make the fruit larger;
 				const float maxMaturityIncrease = availableDevelopmentVigor / shootGrowthParameters.m_fruitVigorRequirement;
-				const float maturityIncrease = glm::min(maxMaturityIncrease, glm::min(m_currentDeltaTime * shootGrowthParameters.m_fruitGrowthRate, 1.0f - bud.m_maturity));
-				bud.m_maturity += maturityIncrease;
+				const float maturityIncrease = glm::min(maxMaturityIncrease, glm::min(m_currentDeltaTime * shootGrowthParameters.m_fruitGrowthRate, 1.0f - bud.m_reproductiveModule.m_maturity));
+				bud.m_reproductiveModule.m_maturity += maturityIncrease;
 				const auto developmentVigor = bud.m_vigorSink.SubtractVigor(maturityIncrease * shootGrowthParameters.m_fruitVigorRequirement);
-				auto fruitSize = shootGrowthParameters.m_maxFruitSize * bud.m_maturity;
+				auto fruitSize = shootGrowthParameters.m_maxFruitSize * bud.m_reproductiveModule.m_maturity;
 				glm::quat rotation = internodeInfo.m_globalRotation * bud.m_localRotation;
 				auto front = rotation * glm::vec3(0, 0, -1);
 				ApplyTropism(glm::vec3(0, -1, 0), 0.25f, rotation);
 				auto fruitPosition = front * (fruitSize.z * 1.5f);
-				bud.m_reproductiveModuleTransform = glm::translate(fruitPosition) * glm::mat4_cast(glm::quat(glm::vec3(0.0f))) * glm::scale(fruitSize);
+				bud.m_reproductiveModule.m_transform = glm::translate(fruitPosition) * glm::mat4_cast(glm::quat(glm::vec3(0.0f))) * glm::scale(fruitSize);
+
+				//Handle fruit drop here.
+				if (bud.m_reproductiveModule.m_maturity >= 0.95f || bud.m_reproductiveModule.m_health <= 0.05f)
+				{
+					auto dropProbability = m_currentDeltaTime * shootGrowthParameters.m_fruitFallProbability;
+					if (dropProbability >= glm::linearRand(0.0f, 1.0f))
+					{
+						bud.m_status = BudStatus::Died;
+						bud.m_reproductiveModule.m_transform = internodeGlobalTransform * bud.m_reproductiveModule.m_transform;
+						m_shootSkeleton.m_data.m_droppedFruits.emplace_back(bud.m_reproductiveModule);
+						bud.m_reproductiveModule.Reset();
+					}
+				}
+
 			}
 		}
 		else if (bud.m_type == BudType::Leaf)
@@ -957,38 +989,41 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 				if (internodeData.m_maxDistanceToAnyBranchEnd < shootGrowthParameters.m_leafDistanceToBranchEndLimit && flushProbability >= glm::linearRand(0.0f, 1.0f))
 				{
 					bud.m_status = BudStatus::Flushed;
-					bud.m_maturity = 0.0f;
-					bud.m_drought = 0.0f;
-					bud.m_chlorophyll = 1.0f;
-					bud.m_reproductiveModuleTransform = glm::mat4(0.0f);
 				}
+
+				
 			}
 			else if (bud.m_status == BudStatus::Flushed)
 			{
 				m_leafCount++;
 				//Make the leaf larger
 				const float maxMaturityIncrease = availableDevelopmentVigor / shootGrowthParameters.m_leafVigorRequirement;
-				const float maturityIncrease = glm::min(maxMaturityIncrease, glm::min(m_currentDeltaTime * shootGrowthParameters.m_leafGrowthRate, 1.0f - bud.m_maturity));
-				bud.m_maturity += maturityIncrease;
+				const float maturityIncrease = glm::min(maxMaturityIncrease, glm::min(m_currentDeltaTime * shootGrowthParameters.m_leafGrowthRate, 1.0f - bud.m_reproductiveModule.m_maturity));
+				bud.m_reproductiveModule.m_maturity += maturityIncrease;
 				const auto developmentVigor = bud.m_vigorSink.SubtractVigor(maturityIncrease * shootGrowthParameters.m_leafVigorRequirement);
-				auto leafSize = shootGrowthParameters.m_maxLeafSize * bud.m_maturity;
+				auto leafSize = shootGrowthParameters.m_maxLeafSize * bud.m_reproductiveModule.m_maturity;
 				glm::quat rotation = internodeInfo.m_globalRotation * bud.m_localRotation;
 				auto front = rotation * glm::vec3(0, 0, -1);
 				ApplyTropism(glm::vec3(0, -1, 0), 0.9f, rotation);
 				auto foliagePosition = front * (leafSize.z * 1.5f);
-				bud.m_reproductiveModuleTransform = glm::translate(foliagePosition) * glm::mat4_cast(rotation) * glm::scale(leafSize);
+				bud.m_reproductiveModule.m_transform = glm::translate(foliagePosition) * glm::mat4_cast(rotation) * glm::scale(leafSize);
 
+
+				//Handle leaf drop here.
 				if (static_cast<int>(climateModel.m_time * 365) % 365 > 180 && internodeData.m_temperature < shootGrowthParameters.m_leafChlorophyllSynthesisFactorTemperature)
 				{
-					bud.m_chlorophyll -= m_currentDeltaTime * shootGrowthParameters.m_leafChlorophyllLoss;
-					bud.m_chlorophyll = glm::clamp(bud.m_chlorophyll, 0.0f, 1.0f);
+					bud.m_reproductiveModule.m_health -= m_currentDeltaTime * shootGrowthParameters.m_leafChlorophyllLoss;
+					bud.m_reproductiveModule.m_health = glm::clamp(bud.m_reproductiveModule.m_health, 0.0f, 1.0f);
 				}
-				if (bud.m_chlorophyll == 0.0f)
+				if (bud.m_reproductiveModule.m_health <= 0.05f)
 				{
 					auto dropProbability = m_currentDeltaTime * shootGrowthParameters.m_leafFallProbability;
 					if (dropProbability >= glm::linearRand(0.0f, 1.0f))
 					{
 						bud.m_status = BudStatus::Died;
+						bud.m_reproductiveModule.m_transform = internodeGlobalTransform * bud.m_reproductiveModule.m_transform;
+						m_shootSkeleton.m_data.m_droppedLeaves.emplace_back(bud.m_reproductiveModule);
+						bud.m_reproductiveModule.Reset();
 					}
 				}
 			}
@@ -1326,7 +1361,7 @@ void TreeModel::CalculateVigorRequirement(const ShootGrowthParameters& shootGrow
 				else if (bud.m_status == BudStatus::Flushed)
 				{
 					//The maintenance vigor requirement is related to the size and the drought factor of the leaf.
-					bud.m_vigorSink.SetDesiredDevelopmentalVigorRequirement(shootGrowthParameters.m_leafVigorRequirement * (1.0f - bud.m_drought));
+					bud.m_vigorSink.SetDesiredDevelopmentalVigorRequirement(shootGrowthParameters.m_leafVigorRequirement * bud.m_reproductiveModule.m_health);
 					newTreeGrowthNutrientsRequirement.m_leafDevelopmentalVigor += bud.m_vigorSink.GetMaxVigorRequirement();
 				}
 			}break;
@@ -1341,7 +1376,7 @@ void TreeModel::CalculateVigorRequirement(const ShootGrowthParameters& shootGrow
 				else if (bud.m_status == BudStatus::Flushed)
 				{
 					//The maintenance vigor requirement is related to the volume and the drought factor of the fruit.
-					bud.m_vigorSink.SetDesiredDevelopmentalVigorRequirement(shootGrowthParameters.m_fruitVigorRequirement * (1.0f - bud.m_drought) * (1.0f - bud.m_maturity));
+					bud.m_vigorSink.SetDesiredDevelopmentalVigorRequirement(shootGrowthParameters.m_fruitVigorRequirement * bud.m_reproductiveModule.m_health);
 					newTreeGrowthNutrientsRequirement.m_fruitDevelopmentalVigor += bud.m_vigorSink.GetMaxVigorRequirement();
 				}
 			}break;
@@ -1663,6 +1698,8 @@ ShootGrowthParameters::ShootGrowthParameters() {
 	m_maxFruitSize = glm::vec3(0.07f, 0.07f, 0.07f) / 2.0f;
 	m_fruitPositionVariance = 0.5f;
 	m_fruitRandomRotation = 10.0f;
+
+	m_fruitFallProbability = 3.0f;
 }
 
 
@@ -1712,6 +1749,8 @@ RootGrowthParameters::RootGrowthParameters()
 	m_tropismSwitchingProbabilityDistanceFactor = 0.99f;
 	m_tropismIntensity = 0.1f;
 }
+
+
 
 float RootGrowthParameters::GetRootApicalAngle(const Node<RootNodeGrowthData>& rootNode) const
 {

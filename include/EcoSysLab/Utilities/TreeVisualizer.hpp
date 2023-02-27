@@ -13,7 +13,7 @@ namespace EcoSysLab {
 		Stroke
 	};
 
-	enum class TreeVisualizerMode
+	enum class ShootVisualizerMode
 	{
 		Default,
 		LightIntensity,
@@ -21,6 +21,20 @@ namespace EcoSysLab {
 		IsMaxChild,
 		AllocatedVigor,
 
+	};
+
+	enum class RootVisualizerMode
+	{
+		Default,
+		AllocatedVigor,
+	};
+
+	struct TreeVisualizerColorSettings
+	{
+		int m_shootVisualizationMode = static_cast<int>(ShootVisualizerMode::Default);
+		int m_rootVisualizationMode = static_cast<int>(RootVisualizerMode::Default);
+		float m_shootColorMultiplier = 1.0f;
+		float m_rootColorMultiplier = 1.0f;
 	};
 
 	class TreeVisualizer {
@@ -36,7 +50,7 @@ namespace EcoSysLab {
 		bool m_treeHierarchyGui = true;
 		bool m_rootHierarchyGui = true;
 
-		unsigned m_visualizationMode = 0;
+		TreeVisualizerColorSettings m_settings;
 
 		NodeHandle m_selectedInternodeHandle = -1;
 		float m_selectedInternodeLengthFactor = 0.0f;
@@ -109,7 +123,8 @@ namespace EcoSysLab {
 
 		int m_iteration = 0;
 		bool m_needUpdate = false;
-		bool m_needColorUpdate = false;
+		bool m_needShootColorUpdate = false;
+		bool m_needRootColorUpdate = false;
 		bool
 			OnInspect(TreeModel& treeModel,
 				const GlobalTransform& globalTransform);

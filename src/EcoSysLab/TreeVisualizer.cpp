@@ -61,9 +61,41 @@ TreeVisualizer::OnInspect(
 	const GlobalTransform& globalTransform) {
 	bool updated = false;
 	if (ImGui::TreeNodeEx("Selected Tree Visualizer", ImGuiTreeNodeFlags_DefaultOpen)) {
-		if (ImGui::Combo("Color mode", { "Default", "LightIntensity", "LightDirection", "IsMaxChild", "AllocatedVigor" }, m_visualizationMode))
+		if (ImGui::Combo("Shoot Color mode", { "Default", "LightIntensity", "LightDirection", "IsMaxChild", "AllocatedVigor" }, m_settings.m_shootVisualizationMode))
 		{
-			m_needColorUpdate = true;
+			m_needShootColorUpdate = true;
+		}
+		if (ImGui::Combo("Root Color mode", { "Default" , "AllocatedVigor" }, m_settings.m_rootVisualizationMode))
+		{
+			m_needRootColorUpdate = true;
+		}
+		if (ImGui::TreeNode("Shoot Color settings")) {
+			switch (static_cast<ShootVisualizerMode>(m_settings.m_shootVisualizationMode))
+			{
+			case ShootVisualizerMode::LightIntensity:
+				ImGui::DragFloat("Light intensity multiplier", &m_settings.m_shootColorMultiplier, 0.001f);
+				m_needShootColorUpdate = true;
+				break;
+			case ShootVisualizerMode::AllocatedVigor:
+				ImGui::DragFloat("Vigor multiplier", &m_settings.m_shootColorMultiplier, 0.001f);
+				m_needShootColorUpdate = true;
+				break;
+			default:
+				break;
+			}
+			ImGui::TreePop();
+		}
+		if (ImGui::TreeNode("Root Color settings")) {
+			switch (static_cast<RootVisualizerMode>(m_settings.m_rootVisualizationMode))
+			{
+			case RootVisualizerMode::AllocatedVigor:
+				ImGui::DragFloat("Vigor multiplier", &m_settings.m_rootColorMultiplier, 0.001f);
+				m_needRootColorUpdate = true;
+				break;
+			default:
+				break;
+			}
+			ImGui::TreePop();
 		}
 		if (treeModel.CurrentIteration() > 0) {
 			if (ImGui::TreeNodeEx("History", ImGuiTreeNodeFlags_DefaultOpen)) {
@@ -111,7 +143,7 @@ TreeVisualizer::OnInspect(
 			}
 		}
 
-		
+
 		if (m_visualization) {
 			const auto& treeSkeleton = treeModel.PeekShootSkeleton(m_iteration);
 			const auto& rootSkeleton = treeModel.PeekRootSkeleton(m_iteration);
@@ -296,11 +328,17 @@ bool TreeVisualizer::Visualize(TreeModel& treeModel,
 			SyncColors(rootSkeleton, m_selectedRootNodeHandle);
 			m_needUpdate = false;
 		}
-		else if (m_needColorUpdate)
-		{
-			SyncColors(treeSkeleton, m_selectedInternodeHandle);
-			SyncColors(rootSkeleton, m_selectedRootNodeHandle);
-			m_needColorUpdate = false;
+		else {
+			if (m_needShootColorUpdate)
+			{
+				SyncColors(treeSkeleton, m_selectedInternodeHandle);
+				m_needShootColorUpdate = false;
+			}
+			if (m_needRootColorUpdate)
+			{
+				SyncColors(rootSkeleton, m_selectedRootNodeHandle);
+				m_needRootColorUpdate = false;
+			}
 		}
 		if (!m_internodeMatrices.empty()) {
 			GizmoSettings gizmoSettings;
@@ -738,18 +776,25 @@ void TreeVisualizer::SyncColors(const ShootSkeleton& shootSkeleton, NodeHandle& 
 		m_internodeColors[i + 1] = glm::vec4(1, 0, 0, 1);
 	}
 	else {
-		switch (static_cast<TreeVisualizerMode>(m_visualizationMode))
+		switch (static_cast<ShootVisualizerMode>(m_settings.m_shootVisualizationMode))
 		{
-		case TreeVisualizerMode::Default:
-			m_internodeColors[i + 1] = m_randomColors[node.m_data.m_order];
+		case ShootVisualizerMode::LightIntensity:
+			m_internodeColors[i + 1] = glm::vec4(glm::clamp(node.m_data.m_lightIntensity * m_settings.m_shootColorMultiplier, 0.0f, 1.f));
 			break;
-		case TreeVisualizerMode::LightIntensity:
-			m_internodeColors[i + 1] = glm::vec4(glm::clamp(node.m_data.m_lightIntensity, 0.0f, 1.f));
+		case ShootVisualizerMode::LightDirection:
+			m_internodeColors[i + 1] = glm::vec4(glm::vec3(glm::clamp(node.m_data.m_lightDirection, 0.0f, 1.f)), 1.0f);
+			break;
+		case ShootVisualizerMode::IsMaxChild:
+			m_internodeColors[i + 1] = glm::vec4(glm::vec3(node.m_data.m_isMaxChild ? 1.0f : 0.0f), 1.0f);
+			break;
+		case ShootVisualizerMode::AllocatedVigor:
+			m_internodeColors[i + 1] = glm::vec4(glm::clamp(glm::vec3(node.m_data.m_vigorFlow.m_allocatedVigor * m_settings.m_shootColorMultiplier), 0.0f, 1.f), 1.0f);
 			break;
 		default:
 			m_internodeColors[i + 1] = m_randomColors[node.m_data.m_order];
 			break;
 		}
+		m_internodeColors[i + 1].a = 1.0f;
 		if (selectedNodeHandle != -1) m_internodeColors[i + 1].a = 0.3f;
 	}
 		}, results);
@@ -774,15 +819,16 @@ void TreeVisualizer::SyncColors(const RootSkeleton& rootSkeleton, NodeHandle& se
 		m_rootNodeColors[i + 1] = glm::vec4(1, 0, 0, 1);
 	}
 	else {
-		switch (static_cast<TreeVisualizerMode>(m_visualizationMode))
+		switch (static_cast<RootVisualizerMode>(m_settings.m_rootVisualizationMode))
 		{
-		case TreeVisualizerMode::Default:
-			m_rootNodeColors[i + 1] = m_randomColors[node.m_data.m_order];
+		case RootVisualizerMode::AllocatedVigor:
+			m_internodeColors[i + 1] = glm::vec4(glm::clamp(glm::vec3(node.m_data.m_vigorSink.GetVigor() * m_settings.m_rootColorMultiplier), 0.0f, 1.f), 1.0f);
 			break;
 		default:
 			m_rootNodeColors[i + 1] = m_randomColors[node.m_data.m_order];
 			break;
 		}
+		m_rootNodeColors[i + 1].a = 1.0f;
 		if (selectedNodeHandle != -1) m_rootNodeColors[i + 1].a = 0.3f;
 	}
 		}, results);

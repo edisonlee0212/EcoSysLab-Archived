@@ -185,12 +185,11 @@ bool Tree::TryGrow(float deltaTime) {
 	}
 	const auto soil = m_soil.Get<Soil>();
 	const auto climate = m_climate.Get<Climate>();
-	if (m_enableHistory && m_treeModel.m_iteration % m_historyIteration == 0) m_treeModel.Step();
-
 	const auto owner = GetOwner();
-
 	bool grown = m_treeModel.Grow(deltaTime, scene->GetDataComponent<GlobalTransform>(owner).m_value, soil->m_soilModel, climate->m_climateModel,
 		treeDescriptor->m_rootGrowthParameters, treeDescriptor->m_shootGrowthParameters);
+
+	if (m_enableHistory && m_treeModel.m_iteration % m_historyIteration == 0) m_treeModel.Step();
 
 	if (m_recordBiomassHistory)
 	{
@@ -462,10 +461,10 @@ void Tree::GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings
 			if (!meshGeneratorSettings.m_overridePresentation) {
 				for (const auto& bud : internodeData.m_buds) {
 					if (bud.m_status != BudStatus::Flushed) continue;
-					if (bud.m_maturity <= 0.0f) continue;
+					if (bud.m_reproductiveModule.m_maturity <= 0.0f) continue;
 					if (bud.m_type == BudType::Leaf)
 					{
-						auto matrix = internodeGlobalTransform * bud.m_reproductiveModuleTransform;
+						auto matrix = internodeGlobalTransform * bud.m_reproductiveModule.m_transform;
 						Vertex archetype;
 						for (auto i = 0; i < quadMesh->GetVerticesAmount(); i++) {
 							archetype.m_position =
@@ -574,10 +573,10 @@ void Tree::GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings
 			if (!meshGeneratorSettings.m_overridePresentation) {
 				for (const auto& bud : internodeData.m_buds) {
 					if (bud.m_status != BudStatus::Flushed) continue;
-					if (bud.m_maturity <= 0.0f) continue;
+					if (bud.m_reproductiveModule.m_maturity <= 0.0f) continue;
 					if (bud.m_type == BudType::Fruit)
 					{
-						auto matrix = internodeGlobalTransform * bud.m_reproductiveModuleTransform;
+						auto matrix = internodeGlobalTransform * bud.m_reproductiveModule.m_transform;
 						Vertex archetype;
 						for (auto i = 0; i < fruitMesh->GetVerticesAmount(); i++) {
 							archetype.m_position =
@@ -698,6 +697,8 @@ bool OnInspectShootGrowthParameters(ShootGrowthParameters& treeGrowthParameters)
 			changed = ImGui::DragFloat3("Size", &treeGrowthParameters.m_maxFruitSize.x, 0.01f) || changed;
 			changed = ImGui::DragFloat("Position Variance", &treeGrowthParameters.m_fruitPositionVariance, 0.01f) || changed;
 			changed = ImGui::DragFloat("Random rotation", &treeGrowthParameters.m_fruitRandomRotation, 0.01f) || changed;
+
+			changed = ImGui::DragFloat("Drop prob", &treeGrowthParameters.m_fruitFallProbability, 0.01f) || changed;
 			ImGui::TreePop();
 		}
 		ImGui::TreePop();
@@ -842,7 +843,7 @@ void SerializeShootGrowthParameters(const std::string& name, const ShootGrowthPa
 	out << YAML::Key << "m_maxFruitSize" << YAML::Value << treeGrowthParameters.m_maxFruitSize;
 	out << YAML::Key << "m_fruitPositionVariance" << YAML::Value << treeGrowthParameters.m_fruitPositionVariance;
 	out << YAML::Key << "m_fruitRandomRotation" << YAML::Value << treeGrowthParameters.m_fruitRandomRotation;
-
+	out << YAML::Key << "m_fruitFallProbability" << YAML::Value << treeGrowthParameters.m_fruitFallProbability;
 	out << YAML::EndMap;
 }
 void SerializeRootGrowthParameters(const std::string& name, const RootGrowthParameters& rootGrowthParameters, YAML::Emitter& out) {
@@ -953,7 +954,7 @@ void DeserializeShootGrowthParameters(const std::string& name, ShootGrowthParame
 		if (param["m_maxFruitSize"]) treeGrowthParameters.m_maxFruitSize = param["m_maxFruitSize"].as<glm::vec3>();
 		if (param["m_fruitPositionVariance"]) treeGrowthParameters.m_fruitPositionVariance = param["m_fruitPositionVariance"].as<float>();
 		if (param["m_fruitRandomRotation"]) treeGrowthParameters.m_fruitRandomRotation = param["m_fruitRandomRotation"].as<float>();
-
+		if (param["m_fruitFallProbability"]) treeGrowthParameters.m_fruitFallProbability = param["m_fruitFallProbability"].as<float>();
 	}
 }
 void DeserializeRootGrowthParameters(const std::string& name, RootGrowthParameters& rootGrowthParameters, const YAML::Node& in) {

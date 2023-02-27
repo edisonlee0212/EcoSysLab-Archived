@@ -7,6 +7,20 @@
 
 using namespace UniEngine;
 namespace EcoSysLab {
+	struct Fruit
+	{
+		GlobalTransform m_globalTransform;
+		float m_maturity = 0.0f;
+		float m_health = 1.0f;
+	};
+
+	struct Leaf
+	{
+		GlobalTransform m_globalTransform;
+		float m_maturity = 0.0f;
+		float m_health = 1.0f;
+	};
+
 	class EcoSysLabLayer : public ILayer {
 		bool m_displayShootStem = true;
 		bool m_displayFoliage = true;
@@ -15,6 +29,8 @@ namespace EcoSysLab {
 		bool m_displayRootStem = true;
 		bool m_displayBoundingBox = false;
 		bool m_displaySoil = false;
+		bool m_displayGroundFruit = true;
+		bool m_displayGroundLeaves = true;
 
 		bool m_debugVisualization = true;
 		bool m_rendering = false;
@@ -38,8 +54,10 @@ namespace EcoSysLab {
 		std::vector<glm::vec4> m_boundingBoxColors;
 
 		std::shared_ptr<ParticleMatrices> m_foliageMatrices;
-		
 		std::shared_ptr<ParticleMatrices> m_fruitMatrices;
+
+		std::shared_ptr<ParticleMatrices> m_groundFruitMatrices;
+		std::shared_ptr<ParticleMatrices> m_groundLeafMatrices;
 
 		float m_lastUsedTime = 0.0f;
 		float m_totalTime = 0.0f;
@@ -99,6 +117,8 @@ namespace EcoSysLab {
 
 		void UpdateFlows(const std::vector<Entity>* treeEntities, const std::shared_ptr<Strands>& branchStrands, const std::shared_ptr<Strands>& rootStrands, const std::shared_ptr<Strands>& fineRootStrands, int targetTreeIndex = -1);
 
+		void ClearGroundFruitAndLeaf();
+		void UpdateGroundFruitAndLeaves() const;
 		// helper functions to structure code a bit
 		void SoilVisualization();
 		void SoilVisualizationScalar(SoilModel& soilModel); // called during LateUpdate()
@@ -106,6 +126,10 @@ namespace EcoSysLab {
 
 		float m_time;
 		float m_deltaTime = 0.00274f;
+
+		std::vector<Fruit> m_fruits;
+		std::vector<Leaf> m_leaves;
+
 	public:
 		TreeMeshGeneratorSettings m_meshGeneratorSettings;
 		Entity m_selectedTree = {};
@@ -115,6 +139,8 @@ namespace EcoSysLab {
 		EntityRef m_fineRootStrandsHolder;
 		EntityRef m_foliageHolder;
 		EntityRef m_fruitHolder;
+		EntityRef m_groundLeavesHolder;
+		EntityRef m_groundFruitsHolder;
 		TreeVisualizer m_treeVisualizer;
 
 		PrivateComponentRef m_soilHolder;

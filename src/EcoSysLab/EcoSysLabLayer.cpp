@@ -34,6 +34,9 @@ void EcoSysLabLayer::OnCreate() {
 
 	m_foliageMatrices = std::make_shared<ParticleMatrices>();
 	m_fruitMatrices = std::make_shared<ParticleMatrices>();
+
+	m_groundFruitMatrices = std::make_shared<ParticleMatrices>();
+	m_groundLeafMatrices = std::make_shared<ParticleMatrices>();
 }
 
 void EcoSysLabLayer::OnDestroy() {
@@ -169,6 +172,7 @@ void EcoSysLabLayer::LateUpdate() {
 			m_fruitSize = totalFruitSize;
 			if (m_needFullFlowUpdate) {
 				UpdateFlows(treeEntities, branchStrands, rootStrands, fineRootStrands, -1);
+				UpdateGroundFruitAndLeaves();
 				m_needFullFlowUpdate = false;
 				flowUpdated = true;
 			}
@@ -333,6 +337,29 @@ void EcoSysLabLayer::LateUpdate() {
 				m_foliageMatrices->RefMatrices(),
 				glm::mat4(1.0f), 1.0f, gizmoSettings);
 		}
+
+		if(m_displayGroundFruit && !m_groundFruitMatrices->RefMatrices().empty())
+		{
+			Gizmos::DrawGizmoMeshInstancedColored(
+				DefaultResources::Primitives::Cube, editorLayer->m_sceneCamera,
+				editorLayer->m_sceneCameraPosition,
+				editorLayer->m_sceneCameraRotation,
+				m_groundFruitMatrices->RefColors(),
+				m_groundFruitMatrices->RefMatrices(),
+				glm::mat4(1.0f), 1.0f, gizmoSettings);
+		}
+
+		if (m_displayGroundLeaves && !m_groundLeafMatrices->RefMatrices().empty())
+		{
+			Gizmos::DrawGizmoMeshInstancedColored(
+				DefaultResources::Primitives::Quad, editorLayer->m_sceneCamera,
+				editorLayer->m_sceneCameraPosition,
+				editorLayer->m_sceneCameraRotation,
+				m_groundLeafMatrices->RefColors(),
+				m_groundLeafMatrices->RefMatrices(),
+				glm::mat4(1.0f), 1.0f, gizmoSettings);
+		}
+
 		if (scene->IsEntityValid(m_selectedTree)) {
 			m_treeVisualizer.Visualize(
 				scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock()->m_treeModel, scene->GetDataComponent<GlobalTransform>(m_selectedTree));
@@ -416,6 +443,9 @@ void EcoSysLabLayer::OnInspect() {
 		Editor::DragAndDropButton(m_fineRootStrandsHolder, "Fine Root holder");
 		Editor::DragAndDropButton(m_foliageHolder, "Foliage holder");
 		Editor::DragAndDropButton(m_fruitHolder, "Fruit holder");
+		Editor::DragAndDropButton(m_groundFruitsHolder, "Ground fruit holder");
+		Editor::DragAndDropButton(m_groundLeavesHolder, "Ground leaves holder");
+
 		Editor::DragAndDropButton<Soil>(m_soilHolder, "Soil");
 		Editor::DragAndDropButton<Climate>(m_climateHolder, "Climate");
 
@@ -448,6 +478,10 @@ void EcoSysLabLayer::OnInspect() {
 					}
 				}
 			}
+			if(ImGui::Button("Clear ground leaves and fruits"))
+			{
+				ClearGroundFruitAndLeaf();
+			}
 			ImGui::Text("Growth time: %.4f", m_lastUsedTime);
 			ImGui::Text("Total time: %.4f", m_totalTime);
 			ImGui::Text("Tree count: %d", treeEntities->size());
@@ -473,6 +507,10 @@ void EcoSysLabLayer::OnInspect() {
 			ImGui::Checkbox("Display fine roots", &m_displayFineRoot);
 			ImGui::Checkbox("Display foliage", &m_displayFoliage);
 			ImGui::Checkbox("Display root stem", &m_displayRootStem);
+
+			ImGui::Checkbox("Display ground fruit", &m_displayGroundFruit);
+			ImGui::Checkbox("Display ground leaves", &m_displayGroundLeaves);
+
 			ImGui::Checkbox("Display Soil", &m_displaySoil);
 			if (m_displaySoil && ImGui::TreeNodeEx("Soil visualization settings", ImGuiTreeNodeFlags_DefaultOpen))
 			{
@@ -936,15 +974,15 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 				{
 
 					if (bud.m_status != BudStatus::Flushed) continue;
-					if (bud.m_maturity <= 0.0f) continue;
+					if (bud.m_reproductiveModule.m_maturity <= 0.0f) continue;
 
 
 					if (bud.m_type == BudType::Leaf)
 					{
 						if (!isSelected)
 						{
-							foliageMatrices[leafStartIndex + leafIndex] = entityGlobalTransform.m_value * internodeGlobalTransform * bud.m_reproductiveModuleTransform;
-							foliageColors[leafStartIndex + leafIndex] = glm::vec4(glm::mix(glm::vec3(152 / 255.0f, 203 / 255.0f, 0 / 255.0f), glm::vec3(159 / 255.0f, 100 / 255.0f, 66 / 255.0f), glm::max(bud.m_drought, 1.0f - bud.m_chlorophyll)), 1.0f);
+							foliageMatrices[leafStartIndex + leafIndex] = entityGlobalTransform.m_value * internodeGlobalTransform * bud.m_reproductiveModule.m_transform;
+							foliageColors[leafStartIndex + leafIndex] = glm::vec4(glm::mix(glm::vec3(152 / 255.0f, 203 / 255.0f, 0 / 255.0f), glm::vec3(159 / 255.0f, 100 / 255.0f, 66 / 255.0f), bud.m_reproductiveModule.m_health), 1.0f);
 						}
 						else {
 							foliageMatrices[leafStartIndex + leafIndex] = glm::mat4(0.0f);
@@ -956,7 +994,7 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 					{
 						if (!isSelected)
 						{
-							fruitMatrices[fruitStartIndex + fruitIndex] = entityGlobalTransform.m_value * internodeGlobalTransform * bud.m_reproductiveModuleTransform;
+							fruitMatrices[fruitStartIndex + fruitIndex] = entityGlobalTransform.m_value * internodeGlobalTransform * bud.m_reproductiveModule.m_transform;
 							fruitColors[fruitStartIndex + fruitIndex] = glm::vec4(255 / 255.0f, 165 / 255.0f, 0 / 255.0f, 1.0f);
 						}
 						else {
@@ -980,8 +1018,38 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 	}
 }
 
+void EcoSysLabLayer::ClearGroundFruitAndLeaf()
+{
+	m_fruits.clear();
+	m_leaves.clear();
+	UpdateGroundFruitAndLeaves();
+}
 
-void EcoSysLab::EcoSysLabLayer::SoilVisualization()
+void EcoSysLabLayer::UpdateGroundFruitAndLeaves() const
+{
+	auto& fruitMatrices = m_groundFruitMatrices->RefMatrices();
+	auto& fruitColors = m_groundFruitMatrices->RefColors();
+	fruitMatrices.resize(m_fruits.size());
+	fruitColors.resize(m_fruits.size());
+	for(int i = 0; i < m_fruits.size(); i++)
+	{
+		fruitMatrices[i] = m_fruits[i].m_globalTransform.m_value;
+		fruitColors[i] = glm::vec4(255 / 255.0f, 165 / 255.0f, 0 / 255.0f, 1.0f);
+	}
+
+	auto& leafMatrices = m_groundLeafMatrices->RefMatrices();
+	auto& leafColors = m_groundLeafMatrices->RefColors();
+	leafMatrices.resize(m_leaves.size());
+	leafColors.resize(m_leaves.size());
+	for (int i = 0; i < m_leaves.size(); i++)
+	{
+		leafMatrices[i] = m_leaves[i].m_globalTransform.m_value;
+		leafColors[i] = glm::vec4(glm::mix(glm::vec3(152 / 255.0f, 203 / 255.0f, 0 / 255.0f), glm::vec3(159 / 255.0f, 100 / 255.0f, 66 / 255.0f), m_leaves[i].m_health), 1.0f);
+	}
+}
+
+
+void EcoSysLabLayer::SoilVisualization()
 {
 	auto soil = m_soilHolder.Get<Soil>();
 	if (!soil) {
@@ -1007,7 +1075,7 @@ void EcoSysLab::EcoSysLabLayer::SoilVisualization()
 }
 
 
-void EcoSysLab::EcoSysLabLayer::SoilVisualizationScalar(SoilModel& soilModel)
+void EcoSysLabLayer::SoilVisualizationScalar(SoilModel& soilModel)
 {
 	const auto numVoxels = soilModel.m_resolution.x * soilModel.m_resolution.y * soilModel.m_resolution.z;
 
@@ -1258,6 +1326,12 @@ void EcoSysLabLayer::Simulate(float deltaTime) {
 
 		climate->m_climateModel.m_time = m_time;
 
+		
+		if (m_autoGrowWithSoilStep) {
+			soil->m_soilModel.Irrigation();
+			soil->m_soilModel.Step();
+		}
+
 		std::vector<std::shared_future<void>> results;
 		Jobs::ParallelFor(treeEntities->size(), [&](unsigned i) {
 			auto treeEntity = treeEntities->at(i);
@@ -1266,13 +1340,57 @@ void EcoSysLabLayer::Simulate(float deltaTime) {
 		if (!tree->IsEnabled()) return;
 		if (!tree->m_climate.Get<Climate>()) tree->m_climate = climate;
 		if (!tree->m_soil.Get<Soil>()) tree->m_soil = soil;
-		if (m_autoGrowWithSoilStep) {
-			soil->m_soilModel.Irrigation();
-			soil->m_soilModel.Step();
-		}
 		tree->TryGrow(deltaTime);
 			}, results);
 		for (auto& i : results) i.wait();
+
+		auto heightField = soil->m_soilDescriptor.Get<SoilDescriptor>()->m_heightField.Get<HeightField>();
+		for(const auto& treeEntity : *treeEntities)
+		{
+			if (!scene->IsEntityEnabled(treeEntity)) return;
+			auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
+			auto treeGlobalTransform = scene->GetDataComponent<GlobalTransform>(treeEntity);
+			if (!tree->IsEnabled()) return;
+			//Collect fruit and leaves here.
+			for(const auto& fruit : tree->m_treeModel.RefShootSkeleton().m_data.m_droppedFruits)
+			{
+				Fruit newFruit;
+				newFruit.m_globalTransform.m_value = treeGlobalTransform.m_value * fruit.m_transform;
+
+				auto position = newFruit.m_globalTransform.GetPosition();
+				const auto groundHeight = heightField->GetValue({position.x, position.z});
+				const auto height = position.y - groundHeight;
+				position.x += glm::gaussRand(0.0f, height * 0.1f);
+				position.z += glm::gaussRand(0.0f, height * 0.1f);
+				position.y = groundHeight + 0.1f;
+				newFruit.m_globalTransform.SetPosition(position);
+
+				newFruit.m_maturity = fruit.m_maturity;
+				newFruit.m_health = fruit.m_health;
+				m_fruits.emplace_back(newFruit);
+			}
+			tree->m_treeModel.RefShootSkeleton().m_data.m_droppedFruits.clear();
+			for (const auto& leaf : tree->m_treeModel.RefShootSkeleton().m_data.m_droppedLeaves)
+			{
+				Leaf newLeaf;
+				newLeaf.m_globalTransform.m_value = treeGlobalTransform.m_value * leaf.m_transform;
+
+				auto position = newLeaf.m_globalTransform.GetPosition();
+				const auto groundHeight = heightField->GetValue({ position.x, position.z });
+				const auto height = position.y - groundHeight;
+				position.x += glm::gaussRand(0.0f, height * 0.1f);
+				position.z += glm::gaussRand(0.0f, height * 0.1f);
+				position.y = groundHeight + 0.1f;
+				newLeaf.m_globalTransform.SetPosition(position);
+
+				newLeaf.m_maturity = leaf.m_maturity;
+				newLeaf.m_health = leaf.m_health;
+				m_leaves.emplace_back(newLeaf);
+			}
+			tree->m_treeModel.RefShootSkeleton().m_data.m_droppedLeaves.clear();
+		}
+
+
 		m_lastUsedTime = Application::Time().CurrentTime() - time;
 		m_totalTime += m_lastUsedTime;
 

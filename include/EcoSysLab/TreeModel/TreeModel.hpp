@@ -23,6 +23,14 @@ namespace EcoSysLab {
 		Removed
 	};
 
+	struct ReproductiveModule
+	{
+		float m_maturity = 0.0f;
+		float m_health = 1.0f;
+		glm::mat4 m_transform = glm::mat4(0.0f);
+		void Reset();
+	};
+
 	class Bud {
 	public:
 		BudType m_type = BudType::Apical;
@@ -33,16 +41,9 @@ namespace EcoSysLab {
 		glm::quat m_localRotation = glm::vec3(0.0f);
 
 		//-1.0 means the no fruit.
-		float m_maturity = -1.0f;
-		float m_drought = 0.0f;
-		float m_health = 1.0f;
-
-		float m_chlorophyll = 0.0f;
+		ReproductiveModule m_reproductiveModule;
 
 		float m_shootFlux = 0.0f;
-
-		glm::vec3 m_reproductiveModuleSize = glm::vec3(0.0f);
-		glm::mat4 m_reproductiveModuleTransform = glm::mat4(0.0f);
 	};
 
 	struct InternodeGrowthData {
@@ -383,6 +384,7 @@ namespace EcoSysLab {
 		float m_fruitPositionVariance;
 		float m_fruitRandomRotation;
 
+		float m_fruitFallProbability;
 #pragma endregion
 
 		[[nodiscard]] float GetDesiredBranchingAngle(const Node<InternodeGrowthData>& internode) const;
@@ -435,6 +437,9 @@ namespace EcoSysLab {
 		Octree<TreeVoxelData> m_octree = {};
 		PlantGrowthRequirement m_vigorRequirement = {};
 		ShootFlux m_shootFlux = {};
+
+		std::vector<ReproductiveModule> m_droppedLeaves;
+		std::vector<ReproductiveModule> m_droppedFruits;
 
 		float m_vigor = 0;
 	};
@@ -555,6 +560,9 @@ namespace EcoSysLab {
 		void ResetReproductiveModule();
 
 	public:
+
+		void HarvestFruits(const std::function<bool(const ReproductiveModule& fruit)>& harvestFunction);
+
 		int m_iteration = 0;
 
 
