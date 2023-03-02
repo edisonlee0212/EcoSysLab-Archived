@@ -2,10 +2,11 @@
 
 #include "PlantStructure.hpp"
 #include "VigorSink.hpp"
-#include "TreeVolume.hpp"
 #include "SoilModel.hpp"
 #include "ClimateModel.hpp"
 #include "Octree.hpp"
+#include "TreeVolume.hpp"
+#include "Voxel.hpp"
 using namespace UniEngine;
 namespace EcoSysLab {
 
@@ -582,7 +583,7 @@ namespace EcoSysLab {
 
 		TreeGrowthSettings m_treeGrowthSettings;
 
-		TreeVolume m_shootVolume;
+		TreeSphericalVolume m_shootVolume;
 		IlluminationEstimationSettings m_illuminationEstimationSettings;
 		
 		ShootRootVigorRatio m_vigorRatio;

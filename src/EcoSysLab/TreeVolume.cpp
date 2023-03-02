@@ -1,6 +1,6 @@
 #include "TreeVolume.hpp"
 using namespace EcoSysLab;
-int TreeVolume::GetSectorIndex(const glm::vec3& position) const
+int TreeSphericalVolume::GetSectorIndex(const glm::vec3& position) const
 {
 	const float layerAngle = 180.0f / m_layerAmount;
 	const float sectorAngle = 360.0f / m_sectorAmount;
@@ -14,7 +14,7 @@ int TreeVolume::GetSectorIndex(const glm::vec3& position) const
 	return glm::clamp(layerIndex * m_sectorAmount + sectorIndex, 0, m_layerAmount * m_sectorAmount - 1);
 }
 
-void TreeVolume::Clear()
+void TreeSphericalVolume::Clear()
 {
 	m_center = glm::vec3(0.0f);
 	m_distances.resize(m_layerAmount * m_sectorAmount);
@@ -25,7 +25,7 @@ void TreeVolume::Clear()
 	m_hasData = false;
 }
 
-void TreeVolume::TipPosition(int layerIndex, int sectorIndex, glm::vec3& position) const
+void TreeSphericalVolume::TipPosition(int layerIndex, int sectorIndex, glm::vec3& position) const
 {
 	position = m_center;
 	const float layerAngle = glm::radians(180.0f / m_layerAmount * (layerIndex + 0.5f));
@@ -38,7 +38,7 @@ void TreeVolume::TipPosition(int layerIndex, int sectorIndex, glm::vec3& positio
 	position.z += glm::sin(layerAngle) * distance * glm::sin(sectorAngle + glm::radians(270.0f));
 }
 
-void TreeVolume::Smooth()
+void TreeSphericalVolume::Smooth()
 {
 	auto copy = m_distances;
 	for (int i = 0; i < m_layerAmount; i++)
@@ -102,7 +102,7 @@ void TreeVolume::Smooth()
 	m_distances = copy;
 }
 
-float TreeVolume::IlluminationEstimation(const glm::vec3& position,
+float TreeSphericalVolume::IlluminationEstimation(const glm::vec3& position,
 	const IlluminationEstimationSettings& settings, glm::vec3& lightDirection)
 {
 	if (!m_hasData || m_distances.empty()) return 1.0f;
@@ -244,3 +244,4 @@ float TreeVolume::IlluminationEstimation(const glm::vec3& position,
 	lightIntensity = glm::clamp(lightIntensity / ratioSum * settings.m_overallIntensity, 0.0f, 1.0f);
 	return lightIntensity;
 }
+

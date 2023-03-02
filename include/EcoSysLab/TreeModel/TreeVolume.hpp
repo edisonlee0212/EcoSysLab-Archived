@@ -11,7 +11,7 @@ namespace EcoSysLab
 		float m_overallIntensity = 2.0f;
 		float m_layerAngleFactor = 0.9f;
 	};
-	class TreeVolume
+	class TreeSphericalVolume
 	{
 		std::vector<std::pair<float, int>> m_probe;
 	public:
@@ -27,4 +27,6 @@ namespace EcoSysLab
 		void Smooth();
 		[[nodiscard]] float IlluminationEstimation(const glm::vec3& position, const IlluminationEstimationSettings& settings, glm::vec3& lightDirection);
 	};
+
+	
 }
