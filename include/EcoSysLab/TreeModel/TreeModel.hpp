@@ -190,6 +190,7 @@ namespace EcoSysLab {
 		*/
 		float m_tropismIntensity;
 		float m_rootNodeVigorRequirement = 1.0f;
+		float m_vigorRequirementAggregateLoss = 1.0f;
 		float m_branchingProbability = 1.0f;
 
 		float m_fineRootSegmentLength = 0.02f;
@@ -332,6 +333,8 @@ namespace EcoSysLab {
 		* \brief Base resource requirement factor for fruit
 		*/
 		float m_fruitVigorRequirement;
+
+		float m_vigorRequirementAggregateLoss = 1.0f;
 #pragma endregion
 #pragma region Internode
 		/**
@@ -364,6 +367,7 @@ namespace EcoSysLab {
 		 * \brief The strength of gravity bending.
 		 */
 		glm::vec3 m_saggingFactorThicknessReductionMax = glm::vec3(0.8f, 1.75f, 1.0f);
+
 
 #pragma endregion
 
@@ -487,7 +491,7 @@ namespace EcoSysLab {
 		inline void CollectRootFlux(const glm::mat4& globalTransform, SoilModel& soilModel,
 			const RootGrowthParameters& rootGrowthParameters);
 
-		inline void AggregateRootVigorRequirement();
+		inline void AggregateRootVigorRequirement(const RootGrowthParameters& rootGrowthParameters);
 
 		inline void AllocateRootVigor(const RootGrowthParameters& rootGrowthParameters);
 
@@ -495,7 +499,7 @@ namespace EcoSysLab {
 		inline void SampleNitrite(const glm::mat4& globalTransform, SoilModel& soilModel);
 #pragma endregion
 #pragma region Tree Growth
-		inline void AggregateInternodeVigorRequirement();
+		inline void AggregateInternodeVigorRequirement(const ShootGrowthParameters& shootGrowthParameters);
 
 		inline void CalculateVigorRequirement(const ShootGrowthParameters& shootGrowthParameters, PlantGrowthRequirement& newTreeGrowthNutrientsRequirement);
 

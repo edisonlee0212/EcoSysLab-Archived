@@ -311,7 +311,7 @@ bool TreeModel::GrowRoots(const glm::mat4& globalTransform, SoilModel& soilModel
 		bool anyRootGrown = false;
 		{
 			const auto& sortedRootNodeList = m_rootSkeleton.RefSortedNodeList();
-			AggregateRootVigorRequirement();
+			AggregateRootVigorRequirement(rootGrowthParameters);
 			AllocateRootVigor(rootGrowthParameters);
 			for (auto it = sortedRootNodeList.rbegin(); it != sortedRootNodeList.rend(); it++) {
 				const bool graphChanged = GrowRootNode(soilModel, *it, rootGrowthParameters);
@@ -461,7 +461,7 @@ bool TreeModel::GrowShoots(const glm::mat4& globalTransform, ClimateModel& clima
 	treeStructureChanged = treeStructureChanged || anyBranchPruned;
 	bool anyBranchGrown = false;
 	{
-		AggregateInternodeVigorRequirement();
+		AggregateInternodeVigorRequirement(shootGrowthParameters);
 		AllocateShootVigor(shootGrowthParameters);
 		const auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
 		for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); it++) {
@@ -1090,7 +1090,7 @@ void TreeModel::CalculateThickness(NodeHandle rootNodeHandle, const RootGrowthPa
 	}
 }
 
-void TreeModel::AggregateInternodeVigorRequirement()
+void TreeModel::AggregateInternodeVigorRequirement(const ShootGrowthParameters& shootGrowthParameters)
 {
 	const auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
 	for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); it++) {
@@ -1101,14 +1101,15 @@ void TreeModel::AggregateInternodeVigorRequirement()
 			for (const auto& i : internode.RefChildHandles()) {
 				auto& childInternode = m_shootSkeleton.RefNode(i);
 				internodeData.m_vigorFlow.m_subtreeVigorRequirementWeight +=
-					childInternode.m_data.m_vigorFlow.m_vigorRequirementWeight
-					+ childInternode.m_data.m_vigorFlow.m_subtreeVigorRequirementWeight;
+					shootGrowthParameters.m_vigorRequirementAggregateLoss * 
+					(childInternode.m_data.m_vigorFlow.m_vigorRequirementWeight
+					+ childInternode.m_data.m_vigorFlow.m_subtreeVigorRequirementWeight);
 			}
 		}
 	}
 }
 
-void TreeModel::AggregateRootVigorRequirement()
+void TreeModel::AggregateRootVigorRequirement(const RootGrowthParameters& rootGrowthParameters)
 {
 	const auto& sortedRootNodeList = m_rootSkeleton.RefSortedNodeList();
 
@@ -1121,7 +1122,8 @@ void TreeModel::AggregateRootVigorRequirement()
 			for (const auto& i : rootNode.RefChildHandles()) {
 				const auto& childInternode = m_rootSkeleton.RefNode(i);
 				rootNodeData.m_vigorFlow.m_subtreeVigorRequirementWeight +=
-					childInternode.m_data.m_vigorFlow.m_vigorRequirementWeight + childInternode.m_data.m_vigorFlow.m_subtreeVigorRequirementWeight;
+					rootGrowthParameters.m_vigorRequirementAggregateLoss *
+					(childInternode.m_data.m_vigorFlow.m_vigorRequirementWeight + childInternode.m_data.m_vigorFlow.m_subtreeVigorRequirementWeight);
 			}
 		}
 	}
