@@ -162,15 +162,33 @@ void TreeModel::CollectRootFlux(const glm::mat4& globalTransform, SoilModel& soi
 void TreeModel::CollectShootFlux(const glm::mat4& globalTransform, ClimateModel& climateModel,
 	const ShootGrowthParameters& shootGrowthParameters)
 {
-	m_shootSkeleton.m_data.m_shootFlux.m_lightEnergy = 0.0f;
+	auto& shootData = m_shootSkeleton.m_data;
+	shootData.m_shootFlux.m_lightEnergy = 0.0f;
 	const auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
+
+	shootData.m_treeVoxelVolume.m_voxel.Initialize(m_shootSkeleton.m_data.m_treeVoxelVolume.m_settings.m_voxelSize, m_shootSkeleton.m_min, m_shootSkeleton.m_max);
+	for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); it++) {
+		const auto& internode = m_shootSkeleton.RefNode(*it);
+		const auto& internodeData = internode.m_data;
+		const auto& internodeInfo = internode.m_info;
+		float shadowSize = 0.0f;
+		for(const auto& i : internodeData.m_buds)
+		{
+			if(i.m_type == BudType::Leaf)
+			{
+				shadowSize += 1.0f;// i.m_reproductiveModule.m_maturity;
+			}
+		}
+		shootData.m_treeVoxelVolume.AddShadowVolume({ internodeInfo.m_globalPosition, shadowSize });
+	}
+
 	for (const auto& internodeHandle : sortedInternodeList) {
 		auto& internode = m_shootSkeleton.RefNode(internodeHandle);
 		auto& internodeData = internode.m_data;
 		auto& internodeInfo = internode.m_info;
 		internodeData.m_age += m_currentDeltaTime;
 		internodeData.m_lightIntensity =
-			m_shootVolume.IlluminationEstimation(internodeInfo.m_globalPosition, m_illuminationEstimationSettings, internodeData.m_lightDirection);
+			m_shootSkeleton.m_data.m_treeVoxelVolume.IlluminationEstimation(internodeInfo.m_globalPosition, internodeData.m_lightDirection);
 		for (const auto& bud : internode.m_data.m_buds)
 		{
 			if (bud.m_status == BudStatus::Flushed && bud.m_type == BudType::Leaf)
@@ -530,6 +548,7 @@ bool TreeModel::GrowShoots(const glm::mat4& globalTransform, ClimateModel& clima
 		}
 		SampleTemperature(globalTransform, climateModel);
 		CalculateVigorRequirement(shootGrowthParameters, newShootGrowthRequirement);
+		/*
 		m_shootVolume.Clear();
 		if (!sortedInternodeList.empty())
 		{
@@ -548,7 +567,7 @@ bool TreeModel::GrowShoots(const glm::mat4& globalTransform, ClimateModel& clima
 						currentDistance + m_shootVolume.m_offset)
 						distance = currentDistance + m_shootVolume.m_offset;
 				}
-				/*{
+				/
 					auto point2 = point1 + internodeInfo.m_length * (internodeInfo.m_globalRotation * glm::vec3(0, 0, -1));
 					const auto sectorIndex = m_shootVolume.GetSectorIndex(point2);
 					const float currentDistance = glm::length(point2 - m_shootVolume.m_center);
@@ -556,11 +575,12 @@ bool TreeModel::GrowShoots(const glm::mat4& globalTransform, ClimateModel& clima
 					if (distance <
 						currentDistance + m_shootVolume.m_offset)
 						distance = currentDistance + m_shootVolume.m_offset;
-				}*/
+				}
 			}
 			m_shootVolume.Smooth();
 		}
 		m_shootVolume.m_hasData = true;
+		*/
 	};
 
 	if (m_treeGrowthSettings.m_enableBranchCollisionDetection)
@@ -1391,7 +1411,7 @@ void TreeModel::Clear() {
 	m_rootSkeleton = {};
 	m_history = {};
 	m_initialized = false;
-	m_shootVolume.Clear();
+	//m_shootVolume.Clear();
 
 	m_age = 0;
 	m_iteration = 0;

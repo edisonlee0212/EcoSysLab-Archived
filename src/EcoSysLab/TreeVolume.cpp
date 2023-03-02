@@ -245,3 +245,47 @@ float TreeSphericalVolume::IlluminationEstimation(const glm::vec3& position,
 	return lightIntensity;
 }
 
+float TreeShadowEstimator::IlluminationEstimation(const glm::vec3& position, glm::vec3& lightDirection) const
+{
+	const auto& data = m_voxel.Peek(position);
+	const float shadowIntensity = glm::length(data);
+	const float lightIntensity = glm::max(0.0f, 1.0f - shadowIntensity);
+	if (lightIntensity == 0.0f)
+	{
+		lightDirection = glm::vec3(0.0f);
+	}else
+	{
+		lightDirection = glm::normalize(glm::vec3(0.0f, 1.0f, 0.0f) + data);
+	}
+
+	return lightIntensity;
+}
+
+void TreeShadowEstimator::AddShadowVolume(const ShadowVolume& shadowVolume)
+{
+	const auto sinAngle = glm::sin(glm::radians(m_settings.m_coneAngle));
+	const auto voxelMinBound = m_voxel.GetMinBound();
+	const auto dx = m_voxel.GetVoxelDiameter();
+	const auto voxelResolution = m_voxel.GetResolution();
+	const int maxY = glm::clamp(static_cast<int>(glm::ceil((shadowVolume.m_position.y - voxelMinBound.y) / dx)), 0, voxelResolution.y);
+	const int minY = glm::clamp(static_cast<int>(glm::floor((shadowVolume.m_position.y - voxelMinBound.y - m_settings.m_coneRadius) / dx)), 0, voxelResolution.y - 1);
+
+	const int xCenter = (shadowVolume.m_position.x - voxelMinBound.x) / dx;
+	const int zCenter = (shadowVolume.m_position.z - voxelMinBound.z) / dx;
+	for(int y = minY; y < maxY; y++)
+	{
+		const int maxR = glm::max(static_cast<int>(sinAngle * (y - minY) * dx), 0);
+		for(int x = glm::clamp(xCenter - maxR, 0, voxelResolution.x); x <= glm::clamp(xCenter + maxR, 0, voxelResolution.x - 1); x++)
+		{
+			for (int z = glm::clamp(zCenter - maxR, 0, voxelResolution.z); z <= glm::clamp(zCenter + maxR, 0, voxelResolution.z - 1); z++)
+			{
+				const auto positionDiff = m_voxel.GetPosition({ x, y, z }) - shadowVolume.m_position;
+				const auto distance = glm::length(positionDiff);
+				const auto direction = glm::normalize(positionDiff);
+				auto& data = m_voxel.Ref(glm::ivec3(x, y, z));
+				data += direction * glm::max(0.0f, 1.0f - distance * distance * m_settings.m_shadowDecrease) * shadowVolume.m_size * m_settings.m_shadowIntensity;
+			}
+		}
+	}
+}
+

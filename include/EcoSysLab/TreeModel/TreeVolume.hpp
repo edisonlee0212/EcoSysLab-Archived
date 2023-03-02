@@ -1,5 +1,5 @@
 #pragma once
-
+#include "Voxel.hpp"
 using namespace UniEngine;
 namespace EcoSysLab
 {
@@ -27,6 +27,27 @@ namespace EcoSysLab
 		void Smooth();
 		[[nodiscard]] float IlluminationEstimation(const glm::vec3& position, const IlluminationEstimationSettings& settings, glm::vec3& lightDirection);
 	};
+	struct ShadowEstimationSettings
+	{
+		float m_voxelSize = 0.05f;
 
-	
+		float m_coneRadius = 5.0f;
+		float m_coneAngle = 45.0f;
+		float m_shadowDecrease = 0.1f;
+		float m_shadowIntensity = 0.1f;
+	};
+	struct ShadowVolume
+	{
+		glm::vec3 m_position;
+		float m_size;
+	};
+
+	class TreeShadowEstimator
+	{
+	public:
+		ShadowEstimationSettings m_settings;
+		Voxel<glm::vec3> m_voxel;
+		[[nodiscard]] float IlluminationEstimation(const glm::vec3& position, glm::vec3& lightDirection) const;
+		void AddShadowVolume(const ShadowVolume& shadowVolume);
+	};
 }

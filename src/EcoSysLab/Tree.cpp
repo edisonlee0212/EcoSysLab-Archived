@@ -773,25 +773,26 @@ bool OnInspectRootGrowthParameters(RootGrowthParameters& rootGrowthParameters) {
 
 void TreeDescriptor::OnInspect() {
 	bool changed = false;
-	auto environmentLayer = Application::GetLayer<EcoSysLabLayer>();
-	const auto soil = environmentLayer->m_soilHolder.Get<Soil>();
-	const auto climate = environmentLayer->m_climateHolder.Get<Climate>();
+	const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
+	const auto soil = ecoSysLabLayer->m_soilHolder.Get<Soil>();
+	const auto climate = ecoSysLabLayer->m_climateHolder.Get<Climate>();
 	if (soil && climate) {
 		if (ImGui::Button("Instantiate")) {
-			auto scene = Application::GetActiveScene();
-			auto treeEntity = scene->CreateEntity(GetTitle());
-			auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
+			const auto scene = Application::GetActiveScene();
+			const auto treeEntity = scene->CreateEntity(GetTitle());
+			const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
 			float height = 0;
-			auto soilDescriptor = soil->m_soilDescriptor.Get<SoilDescriptor>();
+			const auto soilDescriptor = soil->m_soilDescriptor.Get<SoilDescriptor>();
 			if (soilDescriptor)
 			{
-				auto heightField = soilDescriptor->m_heightField.Get<HeightField>();
+				const auto heightField = soilDescriptor->m_heightField.Get<HeightField>();
 				if (heightField) height = heightField->GetValue({ 0.0f, 0.0f }) - 0.05f;
 			}
 			GlobalTransform globalTransform;
 			globalTransform.SetPosition(glm::vec3(0, height, 0));
 			scene->SetDataComponent(treeEntity, globalTransform);
 			tree->m_treeDescriptor = ProjectManager::GetAsset(GetHandle());
+			tree->m_treeModel.RefShootSkeleton().m_data.m_treeVoxelVolume.m_settings = ecoSysLabLayer->m_shadowEstimationSettings;
 		}
 	}
 	else

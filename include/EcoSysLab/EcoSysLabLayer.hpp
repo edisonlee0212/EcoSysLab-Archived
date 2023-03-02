@@ -131,6 +131,9 @@ namespace EcoSysLab {
 		std::vector<Leaf> m_leaves;
 
 	public:
+		ShadowEstimationSettings m_shadowEstimationSettings;
+
+
 		TreeMeshGeneratorSettings m_meshGeneratorSettings;
 		Entity m_selectedTree = {};
 		

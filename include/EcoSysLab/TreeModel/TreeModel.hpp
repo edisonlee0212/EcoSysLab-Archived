@@ -440,6 +440,8 @@ namespace EcoSysLab {
 
 	struct ShootGrowthData {
 		Octree<TreeVoxelData> m_octree = {};
+
+		TreeShadowEstimator m_treeVoxelVolume;
 		PlantGrowthRequirement m_vigorRequirement = {};
 		ShootFlux m_shootFlux = {};
 
@@ -583,9 +585,10 @@ namespace EcoSysLab {
 
 		TreeGrowthSettings m_treeGrowthSettings;
 
-		TreeSphericalVolume m_shootVolume;
-		IlluminationEstimationSettings m_illuminationEstimationSettings;
-		
+		//TreeSphericalVolume m_shootVolume;
+		//IlluminationEstimationSettings m_illuminationEstimationSettings;
+
+
 		ShootRootVigorRatio m_vigorRatio;
 		glm::vec3 m_currentGravityDirection = glm::vec3(0, -1, 0);
 

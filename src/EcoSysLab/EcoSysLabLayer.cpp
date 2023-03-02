@@ -391,6 +391,7 @@ void EcoSysLabLayer::ResetAllTrees(const std::vector<Entity>* treeEntities)
 	for (const auto& i : *treeEntities)
 	{
 		scene->GetOrSetPrivateComponent<Tree>(i).lock()->m_treeModel.Clear();
+		scene->GetOrSetPrivateComponent<Tree>(i).lock()->m_treeModel.RefShootSkeleton().m_data.m_treeVoxelVolume.m_settings = m_shadowEstimationSettings;
 	}
 	m_needFullFlowUpdate = true;
 	m_autoGrow = false;
@@ -452,6 +453,23 @@ void EcoSysLabLayer::OnInspect() {
 		Editor::DragAndDropButton<Climate>(m_climateHolder, "Climate");
 
 		if (treeEntities && !treeEntities->empty()) {
+			if(ImGui::TreeNode("Shadow Estimation Settings"))
+			{
+				ImGui::DragFloat("Voxel size", &m_shadowEstimationSettings.m_voxelSize, 0.01f);
+				ImGui::DragFloat("Cone radius", &m_shadowEstimationSettings.m_coneRadius, 0.01f);
+				ImGui::DragFloat("Cone angle", &m_shadowEstimationSettings.m_coneAngle, 0.01f);
+				ImGui::DragFloat("Shadow decrease", &m_shadowEstimationSettings.m_shadowDecrease, 0.01f);
+				ImGui::DragFloat("Shadow intensity", &m_shadowEstimationSettings.m_shadowIntensity, 0.01f);
+				if(ImGui::Button("Apply to all trees"))
+				{
+					for (const auto& i : *treeEntities)
+					{
+						scene->GetOrSetPrivateComponent<Tree>(i).lock()->m_treeModel.RefShootSkeleton().m_data.m_treeVoxelVolume.m_settings = m_shadowEstimationSettings;
+					}
+				}
+				ImGui::TreePop();
+			}
+
 			if (ImGui::Button("Reset all trees"))
 			{
 				ResetAllTrees(treeEntities);

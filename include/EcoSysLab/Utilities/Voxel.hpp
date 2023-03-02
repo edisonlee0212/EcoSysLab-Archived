@@ -28,8 +28,8 @@ namespace EcoSysLab {
 		float m_voxelSize = 1.0f;
 		glm::ivec3 m_resolution = { 0, 0, 0 };
 	public:
-		void Initialize(float voxelSize, const glm::ivec3& resolution, const glm::vec3& minBound);
-		void Initialize(float voxelSize, const glm::vec3& minBound, const glm::vec3& maxBound);
+		void Initialize(float voxelSize, const glm::ivec3& resolution, const glm::vec3& minBound, const VoxelData& defaultData = {});
+		void Initialize(float voxelSize, const glm::vec3& minBound, const glm::vec3& maxBound, const VoxelData& defaultData = {});
 		[[nodiscard]] size_t GetVoxelSize() const;
 		[[nodiscard]] glm::ivec3 GetResolution() const;
 		[[nodiscard]] glm::vec3 GetMinBound() const;
@@ -48,27 +48,29 @@ namespace EcoSysLab {
 		[[nodiscard]] glm::ivec3 GetCoordinate(const glm::vec3& position) const;
 		[[nodiscard]] glm::vec3	GetPosition(int index) const;
 		[[nodiscard]] glm::vec3	GetPosition(const glm::ivec3& coordinate) const;
+
+		[[nodiscard]] bool IsValid(const glm::vec3& position) const;
 	};
 
 	template <typename VoxelData>
-	void Voxel<VoxelData>::Initialize(const float voxelSize, const glm::ivec3& resolution, const glm::vec3& minBound)
+	void Voxel<VoxelData>::Initialize(const float voxelSize, const glm::ivec3& resolution, const glm::vec3& minBound, const VoxelData& defaultData)
 	{
 		m_resolution = resolution;
 		m_voxelSize = voxelSize;
 		m_minBound = minBound;
 		auto numVoxels = m_resolution.x * m_resolution.y * m_resolution.z;
 		m_data.resize(numVoxels);
-		std::fill(m_data.begin(), m_data.end(), VoxelData());
+		std::fill(m_data.begin(), m_data.end(), defaultData);
 	}
 
 	template <typename VoxelData>
-	void Voxel<VoxelData>::Initialize(const float voxelSize, const glm::vec3& minBound, const glm::vec3& maxBound)
+	void Voxel<VoxelData>::Initialize(const float voxelSize, const glm::vec3& minBound, const glm::vec3& maxBound, const VoxelData& defaultData)
 	{
-		Initialize(voxelSize, minBound,
+		Initialize(voxelSize, 
 			glm::ivec3(
 				glm::ceil((maxBound.x - minBound.x) / voxelSize),
 				glm::ceil((maxBound.y - minBound.y) / voxelSize),
-				glm::ceil((maxBound.z - minBound.z) / voxelSize)));
+				glm::ceil((maxBound.z - minBound.z) / voxelSize)), minBound, defaultData);
 	}
 
 	template <typename VoxelData>
@@ -170,6 +172,15 @@ namespace EcoSysLab {
 			m_minBound.y + m_voxelSize / 2.0 + coordinate.y * m_voxelSize,
 			m_minBound.z + m_voxelSize / 2.0 + coordinate.z * m_voxelSize
 		};
+	}
+
+	template <typename VoxelData>
+	bool Voxel<VoxelData>::IsValid(const glm::vec3& position) const
+	{
+		const auto maxBound = m_minBound + m_voxelSize * glm::vec3(m_resolution);
+		if (position.x < m_minBound.x || position.y < m_minBound.y || position.z < m_minBound.z
+			|| position.x >= maxBound.x || position.y >= maxBound.y || position.z >= maxBound.z) return false;
+		return true;
 	}
 
 	template <typename VoxelData>

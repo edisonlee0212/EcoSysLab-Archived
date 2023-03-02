@@ -6,7 +6,9 @@
 #include "Graphics.hpp"
 #include "EditorLayer.hpp"
 #include "Application.hpp"
+#include "Climate.hpp"
 #include "Tree.hpp"
+#include "EcoSysLabLayer.hpp"
 using namespace EcoSysLab;
 
 void Trees::OnInspect() {
@@ -21,17 +23,35 @@ void Trees::OnInspect() {
     ImGui::DragFloat2("Grid distance", &gridDistance.x, 0.1f, 0.0f, 100.0f);
     if (ImGui::Button("Reset Grid")) {
         m_globalTransforms.clear();
-        for (int i = 0; i < gridSize.x; i++) {
-            for (int j = 0; j < gridSize.y; j++) {
-                m_globalTransforms.emplace_back();
-                m_globalTransforms.back().SetPosition(glm::vec3(i * gridDistance.x, 0.0f, j * gridDistance.y));
+        const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
+        const auto soil = ecoSysLabLayer->m_soilHolder.Get<Soil>();
+        const auto soilDescriptor = soil->m_soilDescriptor.Get<SoilDescriptor>();
+        bool heightSet = false;
+        if (soilDescriptor)
+        {
+	        if (const auto heightField = soilDescriptor->m_heightField.Get<HeightField>()) {
+                heightSet = true;
+                for (int i = 0; i < gridSize.x; i++) {
+                    for (int j = 0; j < gridSize.y; j++) {
+                        m_globalTransforms.emplace_back();
+                        m_globalTransforms.back().SetPosition(glm::vec3(i * gridDistance.x, heightField->GetValue({ i * gridDistance.x, j * gridDistance.y }) - 0.05f, j * gridDistance.y));
+                    }
+                }
+            }
+        }
+        if (!heightSet) {
+            for (int i = 0; i < gridSize.x; i++) {
+                for (int j = 0; j < gridSize.y; j++) {
+                    m_globalTransforms.emplace_back();
+                    m_globalTransforms.back().SetPosition(glm::vec3(i * gridDistance.x, 0.0f, j * gridDistance.y));
+                }
             }
         }
     }
     Editor::DragAndDropButton<TreeDescriptor>(m_treeDescriptor, "TreeDescriptor", true);
     if (!m_globalTransforms.empty() && m_treeDescriptor.Get<TreeDescriptor>()) {
         auto &parameters = m_treeDescriptor.Get<TreeDescriptor>()->m_shootGrowthParameters;
-
+        const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
         ImGui::DragInt("Flow max node size", &m_treeGrowthSettings.m_flowNodeLimit, 1, 1, 100);
         ImGui::Checkbox("Auto balance vigor", &m_treeGrowthSettings.m_autoBalance);
         ImGui::Checkbox("Receive light", &m_treeGrowthSettings.m_collectLight);
@@ -56,6 +76,7 @@ void Trees::OnInspect() {
                 tree->m_treeDescriptor = m_treeDescriptor;
                 tree->m_enableHistory = enableHistory;
                 tree->m_historyIteration = historyIteration;
+                tree->m_treeModel.RefShootSkeleton().m_data.m_treeVoxelVolume.m_settings = ecoSysLabLayer->m_shadowEstimationSettings;
                 if(setParent) scene->SetParent(treeEntity, parent);
             }
         }
