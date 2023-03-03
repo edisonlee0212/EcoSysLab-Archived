@@ -31,10 +31,11 @@ namespace EcoSysLab
 	{
 		float m_voxelSize = 0.05f;
 
-		float m_coneRadius = 5.0f;
+		float m_coneRadius = 2.0f;
 		float m_coneAngle = 45.0f;
-		float m_shadowDecrease = 0.1f;
-		float m_shadowIntensity = 0.1f;
+		float m_shadowDecrease = 0.2f;
+		float m_shadowIntensity = 0.05f;
+		float m_baseShadow = 0.1f;
 	};
 	struct ShadowVolume
 	{
@@ -42,11 +43,17 @@ namespace EcoSysLab
 		float m_size;
 	};
 
+	struct ShadowVoxel
+	{
+		glm::vec3 m_shadowDirection = glm::vec3(0.0f);
+		float m_shadowIntensity = 0.0f;
+	};
+
 	class TreeShadowEstimator
 	{
 	public:
 		ShadowEstimationSettings m_settings;
-		Voxel<glm::vec3> m_voxel;
+		Voxel<ShadowVoxel> m_voxel;
 		[[nodiscard]] float IlluminationEstimation(const glm::vec3& position, glm::vec3& lightDirection) const;
 		void AddShadowVolume(const ShadowVolume& shadowVolume);
 	};

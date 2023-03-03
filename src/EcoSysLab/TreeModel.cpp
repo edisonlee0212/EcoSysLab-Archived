@@ -171,12 +171,12 @@ void TreeModel::CollectShootFlux(const glm::mat4& globalTransform, ClimateModel&
 		const auto& internode = m_shootSkeleton.RefNode(*it);
 		const auto& internodeData = internode.m_data;
 		const auto& internodeInfo = internode.m_info;
-		float shadowSize = 0.0f;
+		float shadowSize = shootData.m_treeVoxelVolume.m_settings.m_baseShadow;
 		for(const auto& i : internodeData.m_buds)
 		{
 			if(i.m_type == BudType::Leaf)
 			{
-				shadowSize += 1.0f;// i.m_reproductiveModule.m_maturity;
+				shadowSize += i.m_reproductiveModule.m_maturity;
 			}
 		}
 		shootData.m_treeVoxelVolume.AddShadowVolume({ internodeInfo.m_globalPosition, shadowSize });

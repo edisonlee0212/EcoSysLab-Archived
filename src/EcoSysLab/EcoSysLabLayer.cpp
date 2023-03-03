@@ -455,17 +455,28 @@ void EcoSysLabLayer::OnInspect() {
 		if (treeEntities && !treeEntities->empty()) {
 			if(ImGui::TreeNode("Shadow Estimation Settings"))
 			{
-				ImGui::DragFloat("Voxel size", &m_shadowEstimationSettings.m_voxelSize, 0.01f);
-				ImGui::DragFloat("Cone radius", &m_shadowEstimationSettings.m_coneRadius, 0.01f);
-				ImGui::DragFloat("Cone angle", &m_shadowEstimationSettings.m_coneAngle, 0.01f);
-				ImGui::DragFloat("Shadow decrease", &m_shadowEstimationSettings.m_shadowDecrease, 0.01f);
-				ImGui::DragFloat("Shadow intensity", &m_shadowEstimationSettings.m_shadowIntensity, 0.01f);
-				if(ImGui::Button("Apply to all trees"))
+				bool settingsChanged = false;
+				settingsChanged = ImGui::DragFloat("Voxel size", &m_shadowEstimationSettings.m_voxelSize, 0.01f, 0.01f, 1.0f) || settingsChanged;
+				settingsChanged = ImGui::DragFloat("Max cone radius", &m_shadowEstimationSettings.m_coneRadius, 0.01f, 0.01f, 20.0f) || settingsChanged;
+				settingsChanged = ImGui::DragFloat("Cone angle", &m_shadowEstimationSettings.m_coneAngle, 0.01f, 0.0f, 90.0f) || settingsChanged;
+				settingsChanged = ImGui::DragFloat("Shadow decrease", &m_shadowEstimationSettings.m_shadowDecrease, 0.01f, 0.0f, 100.0f) || settingsChanged;
+				settingsChanged = ImGui::DragFloat("Shadow intensity", &m_shadowEstimationSettings.m_shadowIntensity, 0.01f, 0.0f, 1.0f) || settingsChanged;
+				if(settingsChanged)
 				{
+					m_shadowEstimationSettings.m_voxelSize = glm::clamp(m_shadowEstimationSettings.m_voxelSize, 0.05f, 1.0f);
+					m_shadowEstimationSettings.m_coneRadius = glm::clamp(m_shadowEstimationSettings.m_coneRadius, 0.01f, 20.0f);
 					for (const auto& i : *treeEntities)
 					{
 						scene->GetOrSetPrivateComponent<Tree>(i).lock()->m_treeModel.RefShootSkeleton().m_data.m_treeVoxelVolume.m_settings = m_shadowEstimationSettings;
 					}
+					if (const auto climate = m_climateHolder.Get<Climate>()) {
+						for (const auto& i : *treeEntities)
+						{
+							const auto tree = scene->GetOrSetPrivateComponent<Tree>(i).lock();
+							tree->m_treeModel.CollectShootFlux(scene->GetDataComponent<GlobalTransform>(i).m_value, climate->m_climateModel, tree->m_treeDescriptor.Get<TreeDescriptor>()->m_shootGrowthParameters);
+						}
+					}
+					m_treeVisualizer.m_needShootColorUpdate = true;
 				}
 				ImGui::TreePop();
 			}
@@ -498,10 +509,13 @@ void EcoSysLabLayer::OnInspect() {
 					}
 				}
 			}
+			ImGui::Checkbox("Auto clear fruit and leaves", &m_autoClearFruitAndLeaves);
 			if(ImGui::Button("Clear ground leaves and fruits"))
 			{
 				ClearGroundFruitAndLeaf();
 			}
+
+
 			ImGui::Text("Growth time: %.4f", m_lastUsedTime);
 			ImGui::Text("Total time: %.4f", m_totalTime);
 			ImGui::Text("Tree count: %d", treeEntities->size());
@@ -1332,6 +1346,10 @@ void EcoSysLabLayer::Update() {
 	}
 	if (m_autoGrow) {
 		Simulate(m_deltaTime);
+		if(m_autoClearFruitAndLeaves)
+		{
+			ClearGroundFruitAndLeaf();
+		}
 	}
 }
 

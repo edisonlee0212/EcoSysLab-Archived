@@ -73,7 +73,7 @@ namespace EcoSysLab {
 		bool m_lockTreeSelection = false;
 		bool m_autoGrow = false;
 		bool m_autoGrowWithSoilStep = false;
-
+		bool m_autoClearFruitAndLeaves = true;
 		int m_soilVersion = -1;
 		bool m_vectorEnable = false;
 		bool m_scalarEnable = true;

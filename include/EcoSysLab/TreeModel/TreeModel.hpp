@@ -491,8 +491,7 @@ namespace EcoSysLab {
 		inline void CalculateThickness(NodeHandle rootNodeHandle,
 			const RootGrowthParameters& rootGrowthParameters);
 
-		inline void CollectRootFlux(const glm::mat4& globalTransform, SoilModel& soilModel,
-			const RootGrowthParameters& rootGrowthParameters);
+		
 
 		inline void AggregateRootVigorRequirement(const RootGrowthParameters& rootGrowthParameters);
 
@@ -520,8 +519,8 @@ namespace EcoSysLab {
 			const ShootGrowthParameters& shootGrowthParameters, float& collectedInhibitor);
 
 		friend class Tree;
-		void CollectShootFlux(const glm::mat4& globalTransform, ClimateModel& climateModel,
-			const ShootGrowthParameters& shootGrowthParameters);
+
+		
 #pragma endregion
 
 		void Initialize(const ShootGrowthParameters& shootGrowthParameters, const RootGrowthParameters& rootGrowthParameters);
@@ -567,7 +566,10 @@ namespace EcoSysLab {
 		void ResetReproductiveModule();
 
 	public:
-
+		inline void CollectRootFlux(const glm::mat4& globalTransform, SoilModel& soilModel,
+			const RootGrowthParameters& rootGrowthParameters);
+		inline void CollectShootFlux(const glm::mat4& globalTransform, ClimateModel& climateModel,
+			const ShootGrowthParameters& shootGrowthParameters);
 		void HarvestFruits(const std::function<bool(const ReproductiveModule& fruit)>& harvestFunction);
 
 		int m_iteration = 0;
