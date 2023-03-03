@@ -274,7 +274,7 @@ void TreeShadowEstimator::AddShadowVolume(const ShadowVolume& shadowVolume)
 
 	const int xCenter = (shadowVolume.m_position.x - voxelMinBound.x) / dx;
 	const int zCenter = (shadowVolume.m_position.z - voxelMinBound.z) / dx;
-	for(int y = minY; y < maxY; y++)
+	for(int y = minY; y <= maxY; y++)
 	{
 		const int maxR = glm::max(static_cast<int>(tanAngle * (y - minY)), 0);
 		for(int x = glm::clamp(xCenter - maxR, 0, voxelResolution.x); x <= glm::clamp(xCenter + maxR, 0, voxelResolution.x - 1); x++)
