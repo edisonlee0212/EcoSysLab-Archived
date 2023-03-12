@@ -165,18 +165,24 @@ void TreeModel::CollectShootFlux(const glm::mat4& globalTransform, ClimateModel&
 	auto& shootData = m_shootSkeleton.m_data;
 	shootData.m_shootFlux.m_lightEnergy = 0.0f;
 	const auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
-
+	const auto& settings = shootData.m_treeVoxelVolume.m_settings;
 	shootData.m_treeVoxelVolume.m_voxel.Initialize(m_shootSkeleton.m_data.m_treeVoxelVolume.m_settings.m_voxelSize, m_shootSkeleton.m_min, m_shootSkeleton.m_max);
+
+	const float maxLeafSize = glm::pow((shootGrowthParameters.m_maxLeafSize.x + shootGrowthParameters.m_maxLeafSize.z) / 2.0f, 2.0f);
+	const float maxFruitSize = glm::pow((shootGrowthParameters.m_maxFruitSize.x + shootGrowthParameters.m_maxFruitSize.y + shootGrowthParameters.m_maxFruitSize.z) / 3.0f, 2.0f);
 	for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); it++) {
 		const auto& internode = m_shootSkeleton.RefNode(*it);
 		const auto& internodeData = internode.m_data;
 		const auto& internodeInfo = internode.m_info;
-		float shadowSize = shootData.m_treeVoxelVolume.m_settings.m_baseShadow;
+		float shadowSize = internodeInfo.m_length * internodeInfo.m_thickness * 2.0f;
 		for(const auto& i : internodeData.m_buds)
 		{
-			if(i.m_type == BudType::Leaf)
+			if(i.m_type == BudType::Leaf && i.m_reproductiveModule.m_maturity > 0.0f)
 			{
-				shadowSize += i.m_reproductiveModule.m_maturity;
+				shadowSize += maxLeafSize * glm::pow(i.m_reproductiveModule.m_maturity, 0.5f);
+			}else if(i.m_type == BudType::Fruit && i.m_reproductiveModule.m_maturity > 0.0f)
+			{
+				shadowSize += maxFruitSize * glm::pow(i.m_reproductiveModule.m_maturity, 1.0f / 3.0f);
 			}
 		}
 		shootData.m_treeVoxelVolume.AddShadowVolume({ internodeInfo.m_globalPosition, shadowSize });
@@ -976,7 +982,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 				const float maturityIncrease = glm::min(maxMaturityIncrease, glm::min(m_currentDeltaTime * shootGrowthParameters.m_fruitGrowthRate, 1.0f - bud.m_reproductiveModule.m_maturity));
 				bud.m_reproductiveModule.m_maturity += maturityIncrease;
 				const auto developmentVigor = bud.m_vigorSink.SubtractVigor(maturityIncrease * shootGrowthParameters.m_fruitVigorRequirement);
-				auto fruitSize = shootGrowthParameters.m_maxFruitSize * bud.m_reproductiveModule.m_maturity;
+				auto fruitSize = shootGrowthParameters.m_maxFruitSize * glm::pow(bud.m_reproductiveModule.m_maturity, 1.0f / 3.0f);
 				float angle = glm::radians(glm::linearRand(0.0f, 360.0f));
 				glm::quat rotation = glm::quatLookAt(glm::vec3(glm::sin(angle), 0.f, glm::cos(angle)), glm::vec3(0, 1, 0));
 				auto front = rotation * glm::vec3(0, 0, -1);
@@ -1019,7 +1025,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 				const float maturityIncrease = glm::min(maxMaturityIncrease, glm::min(m_currentDeltaTime * shootGrowthParameters.m_leafGrowthRate, 1.0f - bud.m_reproductiveModule.m_maturity));
 				bud.m_reproductiveModule.m_maturity += maturityIncrease;
 				const auto developmentVigor = bud.m_vigorSink.SubtractVigor(maturityIncrease * shootGrowthParameters.m_leafVigorRequirement);
-				auto leafSize = shootGrowthParameters.m_maxLeafSize * bud.m_reproductiveModule.m_maturity;
+				auto leafSize = shootGrowthParameters.m_maxLeafSize * glm::pow(bud.m_reproductiveModule.m_maturity, 1.0f / 2.0f);
 				glm::quat rotation = internodeData.m_desiredLocalRotation * bud.m_localRotation;
 				auto up = rotation * glm::vec3(0, 1, 0);
 				auto front = rotation * glm::vec3(0, 0, -1);

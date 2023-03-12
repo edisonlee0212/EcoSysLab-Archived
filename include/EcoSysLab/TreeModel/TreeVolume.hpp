@@ -30,13 +30,12 @@ namespace EcoSysLab
 	struct ShadowEstimationSettings
 	{
 		float m_voxelSize = 0.1f;
-		float m_minShadowIntensity = 0.01f;
+		float m_minShadowIntensity = 0.02f;
 		float m_maxShadowIntensity = 1.0f;
 		float m_distancePowerFactor = 2.0f;
-		float m_distanceMultiplier = 3.0f;
+		float m_distanceMultiplier = 2.0f;
 
-		float m_sizeMultiplier = 0.03f;
-		float m_baseShadow = 0.4f;
+		float m_shadowIntensityMultiplier = 10.0f;
 	};
 	struct ShadowVolume
 	{

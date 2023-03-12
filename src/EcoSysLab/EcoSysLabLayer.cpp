@@ -461,8 +461,8 @@ void EcoSysLabLayer::OnInspect() {
 				settingsChanged = ImGui::DragFloat2("Shadow intensity (Min/Max)", &m_shadowEstimationSettings.m_minShadowIntensity, 0.0001f, 0.0f, 1.0f) || settingsChanged;
 				settingsChanged = ImGui::DragFloat("Distance power factor", &m_shadowEstimationSettings.m_distancePowerFactor, 0.01f, 1.0f, 5.0f) || settingsChanged;
 				settingsChanged = ImGui::DragFloat("Distance multiplier", &m_shadowEstimationSettings.m_distanceMultiplier, 0.01f, 0.0f, 10.0f) || settingsChanged;
-				settingsChanged = ImGui::DragFloat("Blocker size multiplier", &m_shadowEstimationSettings.m_sizeMultiplier, 0.001f, 0.0f, 5.0f, "%.4f") || settingsChanged;
-				settingsChanged = ImGui::DragFloat("Base shadow", &m_shadowEstimationSettings.m_baseShadow, 0.01f, 0.0f, 5.0f) || settingsChanged;
+				settingsChanged = ImGui::DragFloat("Shadow intensity multiplier", &m_shadowEstimationSettings.m_shadowIntensityMultiplier, 0.001f, 0.0f, 5.0f, "%.4f") || settingsChanged;
+				
 				if(settingsChanged)
 				{
 					m_shadowEstimationSettings.m_voxelSize = glm::clamp(m_shadowEstimationSettings.m_voxelSize, 0.05f, 1.0f);
