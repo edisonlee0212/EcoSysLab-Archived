@@ -119,7 +119,7 @@ namespace EcoSysLab {
 				std::vector<glm::vec4>& colors, NodeHandle& selectedNodeHandle, float& lengthFactor);
 
 		void SyncColors(const ShootSkeleton& shootSkeleton, NodeHandle& selectedNodeHandle);
-		void SyncColors(const RootSkeleton& rootSkeleton, NodeHandle& selectedNodeHandle);
+		void SyncColors(const RootSkeleton& rootSkeleton, const NodeHandle& selectedNodeHandle);
 
 		int m_iteration = 0;
 		bool m_needUpdate = false;

@@ -169,9 +169,9 @@ namespace EcoSysLab {
 
         NodeHandle AllocateNode();
 
-        void RecycleNodeSingle(NodeHandle handle, const std::function<void(const Node<NodeData>&)>& nodeHandler);
+        void RecycleNodeSingle(NodeHandle handle, const std::function<void(NodeHandle)>& nodeHandler);
 
-        void RecycleFlowSingle(FlowHandle handle, const std::function<void(const Flow<FlowData>&)>& flowHandler);
+        void RecycleFlowSingle(FlowHandle handle, const std::function<void(FlowHandle)>& flowHandler);
 
         FlowHandle AllocateFlow();
 
@@ -194,8 +194,8 @@ namespace EcoSysLab {
          * @param nodeHandler Function to be called right before a node in recycled.
          */
         void RecycleNode(NodeHandle handle,
-            const std::function<void(const Flow<FlowData>&)>& flowHandler,
-            const std::function<void(const Node<NodeData>&)>& nodeHandler);
+            const std::function<void(FlowHandle)>& flowHandler,
+            const std::function<void(NodeHandle)>& nodeHandler);
 
         /**
          * Recycle (Remove) a flow, the descendents of this flow will also be recycled. The relevant node will also be removed/restructured.
@@ -204,8 +204,8 @@ namespace EcoSysLab {
          * @param nodeHandler Function to be called right before a node in recycled.
          */
         void RecycleFlow(FlowHandle handle, 
-            const std::function<void(const Flow<FlowData>&)>& flowHandler,
-            const std::function<void(const Node<NodeData>&)>& nodeHandler);
+            const std::function<void(FlowHandle)>& flowHandler,
+            const std::function<void(NodeHandle)>& nodeHandler);
 
         /**
          * Branch/prolong node during growth process. The flow structure will also be updated.
@@ -428,8 +428,8 @@ namespace EcoSysLab {
 
     template<typename SkeletonData, typename FlowData, typename NodeData>
     void Skeleton<SkeletonData, FlowData, NodeData>::RecycleFlow(FlowHandle handle, 
-        const std::function<void(const Flow<FlowData>&)>& flowHandler,
-        const std::function<void(const Node<NodeData>&)>& nodeHandler) {
+        const std::function<void(FlowHandle)>& flowHandler,
+        const std::function<void(NodeHandle)>& nodeHandler) {
         assert(handle != 0);
         assert(!m_flows[handle].m_recycled);
         auto &flow = m_flows[handle];
@@ -456,8 +456,8 @@ namespace EcoSysLab {
 
     template<typename SkeletonData, typename FlowData, typename NodeData>
     void Skeleton<SkeletonData, FlowData, NodeData>::RecycleNode(NodeHandle handle,
-        const std::function<void(const Flow<FlowData>&)>& flowHandler,
-        const std::function<void(const Node<NodeData>&)>& nodeHandler) {
+        const std::function<void(FlowHandle)>& flowHandler,
+        const std::function<void(NodeHandle)>& nodeHandler) {
         assert(handle != 0);
         assert(!m_nodes[handle].m_recycled);
         auto &node = m_nodes[handle];
@@ -707,10 +707,10 @@ namespace EcoSysLab {
     }
 
     template<typename SkeletonData, typename FlowData, typename NodeData>
-    void Skeleton<SkeletonData, FlowData, NodeData>::RecycleFlowSingle(FlowHandle handle, const std::function<void(const Flow<FlowData>&)>& flowHandler) {
+    void Skeleton<SkeletonData, FlowData, NodeData>::RecycleFlowSingle(FlowHandle handle, const std::function<void(FlowHandle)>& flowHandler) {
         assert(!m_flows[handle].m_recycled);
         auto &flow = m_flows[handle];
-        flowHandler(flow);
+        flowHandler(handle);
         flow.m_parentHandle = -1;
         flow.m_childHandles.clear();
         flow.m_nodes.clear();
@@ -724,10 +724,10 @@ namespace EcoSysLab {
     }
 
     template<typename SkeletonData, typename FlowData, typename NodeData>
-    void Skeleton<SkeletonData, FlowData, NodeData>::RecycleNodeSingle(NodeHandle handle, const std::function<void(const Node<NodeData>&)>& nodeHandler) {
+    void Skeleton<SkeletonData, FlowData, NodeData>::RecycleNodeSingle(NodeHandle handle, const std::function<void(NodeHandle)>& nodeHandler) {
         assert(!m_nodes[handle].m_recycled);
         auto &node = m_nodes[handle];
-        nodeHandler(node);
+        nodeHandler(handle);
         node.m_parentHandle = -1;
         node.m_flowHandle = -1;
         node.m_endNode = true;

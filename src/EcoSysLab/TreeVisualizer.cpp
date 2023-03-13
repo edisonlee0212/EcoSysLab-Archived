@@ -802,7 +802,7 @@ void TreeVisualizer::SyncColors(const ShootSkeleton& shootSkeleton, NodeHandle& 
 	for (auto& i : results) i.wait();
 }
 
-void TreeVisualizer::SyncColors(const RootSkeleton& rootSkeleton, NodeHandle& selectedNodeHandle)
+void TreeVisualizer::SyncColors(const RootSkeleton& rootSkeleton, const NodeHandle& selectedNodeHandle)
 {
 	if (m_randomColors.empty()) {
 		for (int i = 0; i < 1000; i++) {

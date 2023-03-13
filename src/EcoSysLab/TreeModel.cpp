@@ -36,10 +36,10 @@ void TreeModel::PruneInternode(NodeHandle internodeHandle)
 	if (m_enablePipe) {
 		auto& pipeGroup = m_shootSkeleton.m_data.m_shootPipeGroup;
 		m_shootSkeleton.RecycleNode(internodeHandle,
-			[&](const auto& flow) {},
-			[&](const auto& node)
+			[&](FlowHandle flowHandle) {},
+			[&](NodeHandle nodeHandle)
 			{
-				
+				const auto& node = m_shootSkeleton.PeekNode(nodeHandle);
 				if (node.IsFlowStartNode())
 				{
 					pipeGroup.RecyclePipeNode(node.m_data.m_pipeNodeHandle);
@@ -49,7 +49,9 @@ void TreeModel::PruneInternode(NodeHandle internodeHandle)
 	}
 	else
 	{
-		m_shootSkeleton.RecycleNode(internodeHandle, {}, {});
+		m_shootSkeleton.RecycleNode(internodeHandle, [&](FlowHandle flowHandle) {},
+			[&](NodeHandle nodeHandle)
+			{});
 	}
 }
 
@@ -58,20 +60,22 @@ void TreeModel::PruneRootNode(NodeHandle rootNodeHandle)
 	if (false) {
 		auto& pipeGroup = m_rootSkeleton.m_data.m_rootPipeGroup;
 		m_rootSkeleton.RecycleNode(rootNodeHandle,
-			[&](const auto& flow) {},
-			[&](const auto& node)
+			[&](FlowHandle flowHandle) {},
+			[&](NodeHandle nodeHandle)
 			{
-
-				if (node.IsFlowStartNode())
-				{
-					pipeGroup.RecyclePipeNode(node.m_data.m_pipeNodeHandle);
-				}
+				const auto& node = m_shootSkeleton.PeekNode(nodeHandle);
+		if (node.IsFlowStartNode())
+		{
+			pipeGroup.RecyclePipeNode(node.m_data.m_pipeNodeHandle);
+		}
 
 			});
 	}
 	else
 	{
-		m_shootSkeleton.RecycleNode(rootNodeHandle, {}, {});
+		m_shootSkeleton.RecycleNode(rootNodeHandle, [&](FlowHandle flowHandle) {},
+			[&](NodeHandle nodeHandle)
+			{});
 	}
 }
 
