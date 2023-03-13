@@ -1041,8 +1041,6 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 					}
 				}
 			}
-
-
 				}, results);
 			for (auto& i : results) i.wait();
 			branchStrands->SetSegments(1, m_shootStemSegments, m_shootStemPoints);

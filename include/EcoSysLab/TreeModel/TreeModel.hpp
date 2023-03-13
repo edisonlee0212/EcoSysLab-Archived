@@ -574,7 +574,7 @@ namespace EcoSysLab {
 
 		bool m_initialized = false;
 
-		bool m_enablePipe = false;
+		bool m_enablePipe = true;
 		ShootSkeleton m_shootSkeleton;
 		RootSkeleton m_rootSkeleton;
 
@@ -617,7 +617,9 @@ namespace EcoSysLab {
 
 		void ResetReproductiveModule();
 
+		
 	public:
+
 		void PruneInternode(NodeHandle internodeHandle);
 		void PruneRootNode(NodeHandle rootNodeHandle);
 

@@ -29,7 +29,16 @@ namespace EcoSysLab {
 	class Tree : public IPrivateComponent {
 		friend class EcoSysLabLayer;
 		bool TryGrow(float deltaTime);
+		template<typename PipeGroupData, typename PipeData, typename PipeNodeData>
+		void BuildStrand(const PipeGroup<PipeGroupData, PipeData, PipeNodeData>& pipeGroup, const Pipe<PipeData>& pipe, std::vector<glm::uint>& strands, std::vector<StrandPoint>& points) const;
+
+
 	public:
+		template<typename PipeGroupData, typename PipeData, typename PipeNodeData>
+		void BuildStrands(const PipeGroup<PipeGroupData, PipeData, PipeNodeData>& pipeGroup, std::vector<glm::uint>& strands, std::vector<StrandPoint>& points) const;
+
+		void InitializeStrandRenderer() const;
+
 		void Serialize(YAML::Emitter& out) override;
 		bool m_splitRootTest = true;
 		bool m_recordBiomassHistory = true;
@@ -66,4 +75,49 @@ namespace EcoSysLab {
 		void FromTreeGraph(const std::shared_ptr<TreeGraph>& treeGraph);
 		void FromTreeGraphV2(const std::shared_ptr<TreeGraphV2>& treeGraphV2);
 	};
+
+	template <typename PipeGroupData, typename PipeData, typename PipeNodeData>
+	void Tree::BuildStrand(const PipeGroup<PipeGroupData, PipeData, PipeNodeData>& pipeGroup,
+		const Pipe<PipeData>& pipe, std::vector<glm::uint>& strands, std::vector<StrandPoint>& points) const
+	{
+		const auto& nodeHandles = pipe.PeekPipeNodeHandles();
+		if (nodeHandles.empty()) return;
+		strands.emplace_back(points.size());
+		auto frontPointIndex = points.size();
+		StrandPoint point;
+		const auto& firstNode = pipeGroup.PeekPipeNode(nodeHandles.front());
+		point.m_position = firstNode.m_info.m_globalStartPosition;
+		point.m_thickness = 0.001f;
+		point.m_color = glm::vec4(0, 1, 0, 1);
+
+		points.emplace_back(point);
+		points.emplace_back(point);
+		for (const auto& pipeNodeHandle : pipe.PeekPipeNodeHandles())
+		{
+			const auto& pipeNode = pipeGroup.PeekPipeNode(pipeNodeHandle);
+			point.m_color = glm::vec4(0, 1, 0, 1);
+			point.m_thickness = 0.001f;
+			point.m_position = pipeNode.m_info.m_globalEndPosition;
+			points.emplace_back(point);
+		}
+
+		StrandPoint frontPoint;
+		frontPoint = points.at(frontPointIndex);
+		frontPoint.m_position = 2.0f * frontPoint.m_position - points.at(frontPointIndex + 1).m_position;
+		points.at(frontPointIndex) = frontPoint;
+
+		StrandPoint backPoint;
+		backPoint = points.at(points.size() - 2);
+		backPoint.m_position = 2.0f * points.at(points.size() - 1).m_position - backPoint.m_position;
+		points.emplace_back(backPoint);
+	}
+
+	template <typename PipeGroupData, typename PipeData, typename PipeNodeData>
+	void Tree::BuildStrands(const PipeGroup<PipeGroupData, PipeData, PipeNodeData>& pipeGroup, std::vector<glm::uint>& strands, std::vector<StrandPoint>& points) const
+	{
+		for(const auto& pipe : pipeGroup.PeekPipes())
+		{
+			BuildStrand(pipeGroup, pipe, strands, points);
+		}
+	}
 }

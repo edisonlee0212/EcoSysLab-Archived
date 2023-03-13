@@ -40,7 +40,7 @@ void TreeModel::PruneInternode(NodeHandle internodeHandle)
 			[&](NodeHandle nodeHandle)
 			{
 				const auto& node = m_shootSkeleton.PeekNode(nodeHandle);
-				if (node.IsFlowStartNode())
+				if (node.IsFlowStartNode() && !pipeGroup.PeekPipeNode(node.m_data.m_pipeNodeHandle).IsRecycled())
 				{
 					pipeGroup.RecyclePipeNode(node.m_data.m_pipeNodeHandle);
 				}
@@ -664,6 +664,27 @@ bool TreeModel::GrowShoots(const glm::mat4& globalTransform, ClimateModel& clima
 
 		}
 		m_shootSkeleton.CalculateFlows();
+		if(m_enablePipe)
+		{
+			auto& shootPipeGroup = m_shootSkeleton.m_data.m_shootPipeGroup;
+			for(auto& pipe : shootPipeGroup.RefPipeNodes())
+			{
+				const auto& flow = m_shootSkeleton.PeekFlow(pipe.m_data.m_flowHandle);
+				const auto& flowInfo = flow.m_info;
+				const glm::vec3 startLeft = flowInfo.m_globalStartRotation * glm::vec3(1, 0, 0);
+				const glm::vec3 startFront = flowInfo.m_globalStartRotation * glm::vec3(0, 0, -1);
+				const glm::vec3 endLeft = flowInfo.m_globalEndRotation * glm::vec3(1, 0, 0);
+				const glm::vec3 endFront = flowInfo.m_globalEndRotation * glm::vec3(0, 0, -1);
+
+				auto& pipeInfo = pipe.m_info;
+				pipeInfo.m_globalStartPosition = flowInfo.m_globalStartPosition + startLeft * pipeInfo.m_localPosition.x + startFront * pipeInfo.m_localPosition.y;
+				pipeInfo.m_globalStartRotation = flowInfo.m_globalStartRotation;
+				pipeInfo.m_globalEndPosition = flowInfo.m_globalEndPosition + endLeft * pipeInfo.m_localPosition.x + endFront * pipeInfo.m_localPosition.y;
+				pipeInfo.m_globalEndRotation = flowInfo.m_globalEndRotation;
+
+			}
+		}
+
 	};
 #pragma endregion
 #pragma endregion

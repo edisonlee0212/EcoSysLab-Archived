@@ -33,6 +33,15 @@ void Tree::OnInspect() {
 		ImGui::Checkbox("Receive nitrite", &m_treeModel.m_treeGrowthSettings.m_collectNitrite);
 		ImGui::Checkbox("Enable Branch collision detection", &m_treeModel.m_treeGrowthSettings.m_enableBranchCollisionDetection);
 		ImGui::Checkbox("Enable Root collision detection", &m_treeModel.m_treeGrowthSettings.m_enableRootCollisionDetection);
+		if(!m_treeModel.m_initialized)
+		{
+			ImGui::Checkbox("Enable pipe", &m_treeModel.m_enablePipe);
+		}
+
+		if(m_treeModel.m_enablePipe && ImGui::Button("Build strands"))
+		{
+			InitializeStrandRenderer();
+		}
 
 		if(!m_treeModel.m_treeGrowthSettings.m_collectLight && !m_treeModel.m_treeGrowthSettings.m_collectWater)
 		{
@@ -218,6 +227,25 @@ bool Tree::TryGrow(float deltaTime) {
 	}
 
 	return grown;
+}
+
+void Tree::InitializeStrandRenderer() const
+{
+	if(!m_treeModel.m_enablePipe)
+	{
+		UNIENGINE_ERROR("Pipe not enabled!");
+		return;
+	}
+	const auto scene = GetScene();
+	const auto owner = GetOwner();
+	const auto renderer = scene->GetOrSetPrivateComponent<StrandsRenderer>(owner).lock();
+	const auto strandsAsset = ProjectManager::CreateTemporaryAsset<Strands>();
+	std::vector<glm::uint> strandsList;
+	std::vector<StrandPoint> points;
+	BuildStrands(m_treeModel.m_shootSkeleton.m_data.m_shootPipeGroup, strandsList, points);
+	strandsAsset->SetStrands(static_cast<unsigned>(StrandPointAttribute::Position) | static_cast<unsigned>(StrandPointAttribute::Thickness) | static_cast<unsigned>(StrandPointAttribute::Color), strandsList, points);
+	renderer->m_strands = strandsAsset;
+	renderer->m_material = ProjectManager::CreateTemporaryAsset<Material>();
 }
 
 void Tree::Serialize(YAML::Emitter& out)

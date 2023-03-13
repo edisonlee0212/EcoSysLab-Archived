@@ -9,9 +9,11 @@ namespace EcoSysLab
 
 	struct PipeNodeInfo
 	{
-		glm::vec3 m_globalPosition = glm::vec3(0.0f);
-		glm::quat m_globalRotation = glm::vec3(0.0f);
+		glm::vec3 m_globalStartPosition = glm::vec3(0.0f);
+		glm::quat m_globalStartRotation = glm::vec3(0.0f);
 
+		glm::vec3 m_globalEndPosition = glm::vec3(0.0f);
+		glm::quat m_globalEndRotation = glm::vec3(0.0f);
 		glm::vec2 m_localPosition = glm::vec2(0.0f);
 	};
 
@@ -106,7 +108,7 @@ namespace EcoSysLab
 		 * Access the nodes that belongs to this flow.
 		 * @return The list of handles.
 		 */
-		[[nodiscard]] const std::vector<PipeNodeHandle>& RefPipeNodeHandles() const;
+		[[nodiscard]] const std::vector<PipeNodeHandle>& PeekPipeNodeHandles() const;
 
 		explicit Pipe(PipeHandle handle);
 	};
@@ -149,11 +151,15 @@ namespace EcoSysLab
 		void RecyclePipe(PipeHandle handle);
 
 
-		[[nodiscard]] std::vector<Pipe<PipeData>>& RefPipes() const;
+		[[nodiscard]] const std::vector<Pipe<PipeData>>& PeekPipes() const;
 
-		[[nodiscard]] std::vector<PipeNode<PipeNodeData>>& RefPipeNodes() const;
+		[[nodiscard]] const std::vector<PipeNode<PipeNodeData>>& PeekPipeNodes() const;
 
-		[[nodiscard]] Pipe<PipeData>& RefPipe(PipeHandle handle) const;
+		[[nodiscard]] std::vector<Pipe<PipeData>>& RefPipes();
+
+		[[nodiscard]] std::vector<PipeNode<PipeNodeData>>& RefPipeNodes();
+
+		[[nodiscard]] Pipe<PipeData>& RefPipe(PipeHandle handle);
 
 		[[nodiscard]] PipeNode<PipeNodeData>& RefPipeNode(PipeNodeHandle handle);
 
@@ -237,6 +243,7 @@ namespace EcoSysLab
 		}
 		if (node.m_prevHandle != -1)
 		{
+			m_pipeNodes[node.m_prevHandle].m_nextHandle = -1;
 			m_pipeNodes[node.m_prevHandle].m_endNode = true;
 		}
 
@@ -283,19 +290,31 @@ namespace EcoSysLab
 	}
 
 	template <typename PipeGroupData, typename PipeData, typename PipeNodeData>
-	std::vector<Pipe<PipeData>>& PipeGroup<PipeGroupData, PipeData, PipeNodeData>::RefPipes() const
+	const std::vector<Pipe<PipeData>>& PipeGroup<PipeGroupData, PipeData, PipeNodeData>::PeekPipes() const
 	{
 		return m_pipes;
 	}
 
 	template <typename PipeGroupData, typename PipeData, typename PipeNodeData>
-	std::vector<PipeNode<PipeNodeData>>& PipeGroup<PipeGroupData, PipeData, PipeNodeData>::RefPipeNodes() const
+	const std::vector<PipeNode<PipeNodeData>>& PipeGroup<PipeGroupData, PipeData, PipeNodeData>::PeekPipeNodes() const
 	{
 		return m_pipeNodes;
 	}
 
 	template <typename PipeGroupData, typename PipeData, typename PipeNodeData>
-	Pipe<PipeData>& PipeGroup<PipeGroupData, PipeData, PipeNodeData>::RefPipe(PipeHandle handle) const
+	std::vector<Pipe<PipeData>>& PipeGroup<PipeGroupData, PipeData, PipeNodeData>::RefPipes()
+	{
+		return m_pipes;
+	}
+
+	template <typename PipeGroupData, typename PipeData, typename PipeNodeData>
+	std::vector<PipeNode<PipeNodeData>>& PipeGroup<PipeGroupData, PipeData, PipeNodeData>::RefPipeNodes()
+	{
+		return m_pipeNodes;
+	}
+
+	template <typename PipeGroupData, typename PipeData, typename PipeNodeData>
+	Pipe<PipeData>& PipeGroup<PipeGroupData, PipeData, PipeNodeData>::RefPipe(PipeHandle handle)
 	{
 		return m_pipes[handle];
 	}
@@ -388,7 +407,7 @@ namespace EcoSysLab
 	}
 
 	template <typename PipeData>
-	const std::vector<PipeNodeHandle>& Pipe<PipeData>::RefPipeNodeHandles() const
+	const std::vector<PipeNodeHandle>& Pipe<PipeData>::PeekPipeNodeHandles() const
 	{
 		return m_nodeHandles;
 	}
