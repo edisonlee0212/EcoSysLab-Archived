@@ -69,7 +69,7 @@ namespace EcoSysLab {
 				std::vector<NodeHandle>& hierarchyList, float& lengthFactor);
 
 		template<typename SkeletonData, typename FlowData, typename NodeData>
-		bool ScreenCurvePruning(Skeleton <SkeletonData, FlowData, NodeData>& skeleton,
+		bool ScreenCurvePruning(const std::function<void(NodeHandle)>& handler, Skeleton <SkeletonData, FlowData, NodeData>& skeleton,
 			const GlobalTransform& globalTransform, NodeHandle& selectedNodeHandle,
 			std::vector<NodeHandle>& hierarchyList);
 
@@ -138,7 +138,7 @@ namespace EcoSysLab {
 	};
 
 	template<typename SkeletonData, typename FlowData, typename NodeData>
-	bool TreeVisualizer::ScreenCurvePruning(Skeleton <SkeletonData, FlowData, NodeData>& skeleton,
+	bool TreeVisualizer::ScreenCurvePruning(const std::function<void(NodeHandle)>& handler, Skeleton <SkeletonData, FlowData, NodeData>& skeleton,
 		const GlobalTransform& globalTransform, NodeHandle& selectedNodeHandle,
 		std::vector<NodeHandle>& hierarchyList) {
 		auto editorLayer = Application::GetLayer<EditorLayer>();
@@ -207,7 +207,7 @@ namespace EcoSysLab {
 				}
 			}
 			if (intersect) {
-				skeleton.RecycleNode(internodeHandle);
+				handler(internodeHandle);
 				changed = true;
 			}
 

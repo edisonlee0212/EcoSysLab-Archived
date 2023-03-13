@@ -84,8 +84,7 @@ namespace EcoSysLab
 		bool m_recycled = false;
 		PipeHandle m_handle = -1;
 
-		std::vector<PipeNodeHandle> m_forwardNodeHandles;
-		std::vector<PipeNodeHandle> m_backwardNodeHandles;
+		std::vector<PipeNodeHandle> m_nodeHandles;
 
 	public:
 		PipeData m_data;
@@ -107,12 +106,7 @@ namespace EcoSysLab
 		 * Access the nodes that belongs to this flow.
 		 * @return The list of handles.
 		 */
-		[[nodiscard]] const std::vector<PipeNodeHandle>& RefForwardPipeNodeHandles() const;
-		/**
-		 * Access the nodes that belongs to this flow.
-		 * @return The list of handles.
-		 */
-		[[nodiscard]] const std::vector<PipeNodeHandle>& RefBackwardPipeNodeHandles() const;
+		[[nodiscard]] const std::vector<PipeNodeHandle>& RefPipeNodeHandles() const;
 
 		explicit Pipe(PipeHandle handle);
 	};
@@ -139,14 +133,7 @@ namespace EcoSysLab
 		 * @param targetHandle The handle of the node to branch/prolong
 		 * @return The handle of new node.
 		 */
-		[[nodiscard]] PipeNodeHandle ExtendForward(PipeHandle targetHandle);
-
-		/**
-		 * Extend pipe during growth process. The flow structure will also be updated.
-		 * @param targetHandle The handle of the node to branch/prolong
-		 * @return The handle of new node.
-		 */
-		[[nodiscard]] PipeNodeHandle ExtendBackward(PipeHandle targetHandle);
+		[[nodiscard]] PipeNodeHandle Extend(PipeHandle targetHandle);
 
 
 		/**
@@ -224,27 +211,14 @@ namespace EcoSysLab
 	
 
 	template <typename PipeGroupData, typename PipeData, typename PipeNodeData>
-	PipeNodeHandle PipeGroup<PipeGroupData, PipeData, PipeNodeData>::ExtendForward(PipeHandle targetHandle)
+	PipeNodeHandle PipeGroup<PipeGroupData, PipeData, PipeNodeData>::Extend(PipeHandle targetHandle)
 	{
 		auto& pipe = m_pipes[targetHandle];
 		assert(!pipe.m_recycled);
 		auto prevHandle = -1;
-		if (!pipe.m_forwardNodeHandles.empty()) prevHandle = pipe.m_forwardNodeHandles.back();
+		if (!pipe.m_nodeHandles.empty()) prevHandle = pipe.m_nodeHandles.back();
 		const auto newNodeHandle = AllocatePipeNode(targetHandle, prevHandle);
-		pipe.m_forwardNodeHandles.emplace_back(newNodeHandle);
-
-		m_version++;
-		return newNodeHandle;
-	}
-
-	template <typename PipeGroupData, typename PipeData, typename PipeNodeData>
-	PipeNodeHandle PipeGroup<PipeGroupData, PipeData, PipeNodeData>::ExtendBackward(PipeHandle targetHandle)
-	{
-		auto& pipe = m_pipes[targetHandle];
-		assert(!pipe.m_recycled);
-
-		const auto newNodeHandle = AllocatePipeNode(targetHandle, pipe.m_backwardNodeHandles.back());
-		pipe.m_backwardNodeHandles.emplace_back(newNodeHandle);
+		pipe.m_nodeHandles.emplace_back(newNodeHandle);
 
 		m_version++;
 		return newNodeHandle;
@@ -271,8 +245,10 @@ namespace EcoSysLab
 		node.m_prevHandle = node.m_nextHandle = -1;
 		node.m_data = {};
 		node.m_info = {};
-		if (auto& pipe = m_pipes[node.m_pipeHandle]; pipe.m_forwardNodeHandles.back() == handle) pipe.m_forwardNodeHandles.pop_back();
-		else pipe.m_backwardNodeHandles.pop_back();
+
+		auto& pipe = m_pipes[node.m_pipeHandle];
+		assert(pipe.m_nodeHandles.back() == handle);
+		pipe.m_nodeHandles.pop_back();
 
 		node.m_pipeHandle = -1;
 		m_pipeNodePool.emplace(handle);
@@ -285,7 +261,7 @@ namespace EcoSysLab
 		//Recycle all nodes;
 		auto& pipe = m_pipes[handle];
 		assert(!pipe.m_recycled);
-		for (const auto& nodeHandle : pipe.m_forwardNodeHandles)
+		for (const auto& nodeHandle : pipe.m_nodeHandles)
 		{
 			auto& node = m_pipeNodes[nodeHandle];
 			node.m_recycled = true;
@@ -296,19 +272,7 @@ namespace EcoSysLab
 			node.m_pipeHandle = -1;
 			m_pipeNodePool.emplace(nodeHandle);
 		}
-		for (const auto& nodeHandle : pipe.m_backwardNodeHandles)
-		{
-			auto& node = m_pipeNodes[nodeHandle];
-			node.m_recycled = true;
-			node.m_endNode = true;
-			node.m_prevHandle = node.m_nextHandle = -1;
-			node.m_data = {};
-			node.m_info = {};
-			node.m_pipeHandle = -1;
-			m_pipeNodePool.emplace(nodeHandle);
-		}
-		pipe.m_forwardNodeHandles.clear();
-		pipe.m_backwardNodeHandles.clear();
+		pipe.m_nodeHandles.clear();
 
 		//Recycle pipe.
 		pipe.m_recycled = true;
@@ -424,15 +388,9 @@ namespace EcoSysLab
 	}
 
 	template <typename PipeData>
-	const std::vector<PipeNodeHandle>& Pipe<PipeData>::RefForwardPipeNodeHandles() const
+	const std::vector<PipeNodeHandle>& Pipe<PipeData>::RefPipeNodeHandles() const
 	{
-		return m_forwardNodeHandles;
-	}
-
-	template <typename PipeData>
-	const std::vector<PipeNodeHandle>& Pipe<PipeData>::RefBackwardPipeNodeHandles() const
-	{
-		return m_backwardNodeHandles;
+		return m_nodeHandles;
 	}
 
 	template <typename PipeData>
@@ -441,8 +399,7 @@ namespace EcoSysLab
 		m_handle = handle;
 		m_recycled = false;
 
-		m_forwardNodeHandles.clear();
-		m_backwardNodeHandles.clear();
+		m_nodeHandles.clear();
 
 		m_data = {};
 		m_info = {};

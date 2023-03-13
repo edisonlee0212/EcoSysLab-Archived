@@ -31,6 +31,50 @@ void TreeModel::ResetReproductiveModule()
 	m_fruitCount = m_leafCount = 0;
 }
 
+void TreeModel::PruneInternode(NodeHandle internodeHandle)
+{
+	if (m_enablePipe) {
+		auto& pipeGroup = m_shootSkeleton.m_data.m_shootPipeGroup;
+		m_shootSkeleton.RecycleNode(internodeHandle,
+			[&](const auto& flow) {},
+			[&](const auto& node)
+			{
+				
+				if (node.IsFlowStartNode())
+				{
+					pipeGroup.RecyclePipeNode(node.m_data.m_pipeNodeHandle);
+				}
+				
+			});
+	}
+	else
+	{
+		m_shootSkeleton.RecycleNode(internodeHandle, {}, {});
+	}
+}
+
+void TreeModel::PruneRootNode(NodeHandle rootNodeHandle)
+{
+	if (false) {
+		auto& pipeGroup = m_rootSkeleton.m_data.m_rootPipeGroup;
+		m_rootSkeleton.RecycleNode(rootNodeHandle,
+			[&](const auto& flow) {},
+			[&](const auto& node)
+			{
+
+				if (node.IsFlowStartNode())
+				{
+					pipeGroup.RecyclePipeNode(node.m_data.m_pipeNodeHandle);
+				}
+
+			});
+	}
+	else
+	{
+		m_shootSkeleton.RecycleNode(rootNodeHandle, {}, {});
+	}
+}
+
 void TreeModel::HarvestFruits(const std::function<bool(const ReproductiveModule& fruit)>& harvestFunction)
 {
 	const auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
@@ -43,13 +87,13 @@ void TreeModel::HarvestFruits(const std::function<bool(const ReproductiveModule&
 		for (auto& bud : buds)
 		{
 			if (bud.m_type != BudType::Fruit || bud.m_status != BudStatus::Flushed) continue;
-			
-				if (harvestFunction(bud.m_reproductiveModule)) {
-					bud.m_reproductiveModule.Reset();
-					bud.m_status = BudStatus::Died;
-				}
-				else if (bud.m_reproductiveModule.m_maturity > 0) m_fruitCount++;
-			
+
+			if (harvestFunction(bud.m_reproductiveModule)) {
+				bud.m_reproductiveModule.Reset();
+				bud.m_status = BudStatus::Died;
+			}
+			else if (bud.m_reproductiveModule.m_maturity > 0) m_fruitCount++;
+
 		}
 	}
 }
@@ -105,8 +149,8 @@ bool TreeModel::Grow(float deltaTime, const glm::mat4& globalTransform, SoilMode
 		&& GrowShoots(globalTransform, climateModel, shootGrowthParameters, newShootGrowthRequirement)) {
 		treeStructureChanged = true;
 	}
-
-	if (static_cast<int>(climateModel.m_time * 365) % 365 == 0)
+	const auto remain = static_cast<int>(climateModel.m_time * 365.0f);
+	if (remain % 365 == 0)
 	{
 		ResetReproductiveModule();
 	}
@@ -133,9 +177,10 @@ void TreeModel::Initialize(const ShootGrowthParameters& shootGrowthParameters, c
 
 		if (m_enablePipe)
 		{
-			m_treePipeGroup = {};
-			firstInternode.m_data.m_pipeNodeHandle = m_treePipeGroup.ExtendForward(m_treePipeGroup.AllocatePipe());
-			m_treePipeGroup.RefPipeNode(firstInternode.m_data.m_pipeNodeHandle).m_data.m_flowHandle = firstInternode.GetFlowHandle();
+			auto& pipeGroup = m_shootSkeleton.m_data.m_shootPipeGroup;
+			pipeGroup = {};
+			firstInternode.m_data.m_pipeNodeHandle = pipeGroup.Extend(pipeGroup.AllocatePipe());
+			pipeGroup.RefPipeNode(firstInternode.m_data.m_pipeNodeHandle).m_data.m_flowHandle = firstInternode.GetFlowHandle();
 		}
 	}
 	{
@@ -601,7 +646,7 @@ bool TreeModel::GrowShoots(const glm::mat4& globalTransform, ClimateModel& clima
 
 			for (const auto& bud : internode.m_data.m_buds)
 			{
-				if(bud.m_status != BudStatus::Flushed || bud.m_reproductiveModule.m_maturity <= 0) continue;
+				if (bud.m_status != BudStatus::Flushed || bud.m_reproductiveModule.m_maturity <= 0) continue;
 				if (bud.m_type == BudType::Fruit)
 				{
 					m_fruitCount++;
@@ -781,10 +826,11 @@ bool TreeModel::ElongateInternode(float extendLength, NodeHandle internodeHandle
 		if (m_enablePipe)
 		{
 			if (newInternode.GetFlowHandle() != oldInternode.GetFlowHandle()) {
-				const auto newPipeNodeHandle = m_treePipeGroup.ExtendForward(m_treePipeGroup.RefPipeNode(oldInternode.m_data.m_pipeNodeHandle).GetPipeHandle());
+				auto& pipeGroup = m_shootSkeleton.m_data.m_shootPipeGroup;
+				const auto newPipeNodeHandle = pipeGroup.Extend(pipeGroup.RefPipeNode(oldInternode.m_data.m_pipeNodeHandle).GetPipeHandle());
 				newInternode.m_data.m_pipeNodeHandle = newPipeNodeHandle;
 				assert(newInternode.m_data.m_pipeNodeHandle != -1);
-				m_treePipeGroup.RefPipeNode(newPipeNodeHandle).m_data.m_flowHandle = newInternode.GetFlowHandle();
+				pipeGroup.RefPipeNode(newPipeNodeHandle).m_data.m_flowHandle = newInternode.GetFlowHandle();
 			}
 			else
 			{
@@ -971,7 +1017,8 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 
 				if (m_enablePipe)
 				{
-					const auto newPipeHandle = m_treePipeGroup.AllocatePipe();
+					auto& pipeGroup = m_shootSkeleton.m_data.m_shootPipeGroup;
+					const auto newPipeHandle = pipeGroup.AllocatePipe();
 					std::vector<FlowHandle> flowHandleChain;
 					auto walkerFlowHandle = oldInternode.GetFlowHandle();
 					auto walkerParentFlowHandle = m_shootSkeleton.RefFlow(walkerFlowHandle).GetParentHandle();
@@ -986,12 +1033,12 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 					PipeNodeHandle currentPipeNodeHandle = -1;
 					for (auto it = flowHandleChain.rbegin(); it != flowHandleChain.rend(); ++it)
 					{
-						currentPipeNodeHandle = m_treePipeGroup.ExtendForward(newPipeHandle);
-						m_treePipeGroup.RefPipeNode(currentPipeNodeHandle).m_data.m_flowHandle = *it;
+						currentPipeNodeHandle = pipeGroup.Extend(newPipeHandle);
+						pipeGroup.RefPipeNode(currentPipeNodeHandle).m_data.m_flowHandle = *it;
 					}
 
-					currentPipeNodeHandle = m_treePipeGroup.ExtendForward(newPipeHandle);
-					m_treePipeGroup.RefPipeNode(currentPipeNodeHandle).m_data.m_flowHandle = newInternode.GetFlowHandle();
+					currentPipeNodeHandle = pipeGroup.Extend(newPipeHandle);
+					pipeGroup.RefPipeNode(currentPipeNodeHandle).m_data.m_flowHandle = newInternode.GetFlowHandle();
 					newInternode.m_data.m_pipeNodeHandle = currentPipeNodeHandle;
 
 					assert(newInternode.m_data.m_pipeNodeHandle != -1);
@@ -1492,21 +1539,7 @@ bool TreeModel::PruneInternodes(float maxDistance, NodeHandle internodeHandle,
 	if (internode.m_info.m_globalPosition.y <= 0.5f && internode.m_data.m_order != 0 && glm::linearRand(0.0f, 1.0f) < m_currentDeltaTime * 0.1f) pruning = true;
 	if (pruning)
 	{
-		if (m_enablePipe) {
-			m_shootSkeleton.RecycleNode(internodeHandle);
-		}
-		else
-		{
-			m_shootSkeleton.RecycleNode(internodeHandle,
-				[&](const auto& flow) {},
-				[&](const auto& node)
-				{
-					if (node.IsFlowStartNode())
-					{
-						m_treePipeGroup.RecyclePipeNode(node.m_data.m_pipeNodeHandle);
-					}
-				});
-		}
+		PruneInternode(internodeHandle);
 	}
 	return pruning;
 }

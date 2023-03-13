@@ -116,6 +116,8 @@ namespace EcoSysLab {
 
 		std::vector<glm::vec4> m_fineRootAnchors;
 
+		PipeNodeHandle m_pipeNodeHandle = -1;
+
 	};
 	struct RootStemGrowthData {
 		int m_order = 0;
@@ -442,6 +444,39 @@ namespace EcoSysLab {
 		float m_shootVigorWeight = 1.0f;
 	};
 
+	struct ShootPipeGroupGrowthData
+	{
+
+	};
+
+	struct ShootPipeGrowthData
+	{
+
+	};
+
+	struct ShootPipeNodeGrowthData
+	{
+		FlowHandle m_flowHandle;
+	};
+
+	struct RootPipeGroupGrowthData
+	{
+
+	};
+
+	struct RootPipeGrowthData
+	{
+
+	};
+
+	struct RootPipeNodeGrowthData
+	{
+		FlowHandle m_flowHandle;
+	};
+
+	typedef PipeGroup<ShootPipeGroupGrowthData, ShootPipeGrowthData, ShootPipeNodeGrowthData> ShootPipeGroup;
+	typedef PipeGroup<RootPipeGroupGrowthData, RootPipeGrowthData, RootPipeNodeGrowthData> RootPipeGroup;
+
 	struct ShootGrowthData {
 		Octree<TreeVoxelData> m_octree = {};
 
@@ -452,6 +487,8 @@ namespace EcoSysLab {
 		std::vector<ReproductiveModule> m_droppedLeaves;
 		std::vector<ReproductiveModule> m_droppedFruits;
 
+		ShootPipeGroup m_shootPipeGroup;
+
 		float m_vigor = 0;
 	};
 
@@ -459,6 +496,8 @@ namespace EcoSysLab {
 		Octree<TreeVoxelData> m_octree = {};
 		PlantGrowthRequirement m_vigorRequirement = {};
 		RootFlux m_rootFlux = {};
+
+		RootPipeGroup m_rootPipeGroup;
 
 		float m_vigor = 0;
 	};
@@ -486,23 +525,7 @@ namespace EcoSysLab {
 	typedef Skeleton<RootGrowthData, RootStemGrowthData, RootNodeGrowthData> RootSkeleton;
 
 
-	struct PipeGroupGrowthData
-	{
-		
-	};
-
-	struct PipeGrowthData
-	{
-
-	};
-
-	struct PipeNodeGrowthData
-	{
-		FlowHandle m_flowHandle;
-	};
-
-	typedef PipeGroup<PipeGroupGrowthData, PipeGrowthData, PipeNodeGrowthData> TreePipeGroup;
-
+	
 
 	class TreeModel {
 #pragma region Root Growth
@@ -555,7 +578,7 @@ namespace EcoSysLab {
 		ShootSkeleton m_shootSkeleton;
 		RootSkeleton m_rootSkeleton;
 
-		TreePipeGroup m_treePipeGroup;
+		
 		std::deque<std::pair<ShootSkeleton, RootSkeleton>> m_history;
 
 		/**
@@ -594,6 +617,9 @@ namespace EcoSysLab {
 		void ResetReproductiveModule();
 
 	public:
+		void PruneInternode(NodeHandle internodeHandle);
+		void PruneRootNode(NodeHandle rootNodeHandle);
+
 		inline void CollectRootFlux(const glm::mat4& globalTransform, SoilModel& soilModel,
 			const RootGrowthParameters& rootGrowthParameters);
 		inline void CollectShootFlux(const glm::mat4& globalTransform, ClimateModel& climateModel,

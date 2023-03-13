@@ -43,7 +43,8 @@ bool TreeVisualizer::DrawInternodeInspectionGui(
 			DrawInternodeInspectionGui(treeModel, child, childDeleted, hierarchyLevel + 1);
 			if (childDeleted) {
 				treeModel.Step();
-				treeSkeleton.RecycleNode(child);
+				treeModel.PruneInternode(child);
+
 				treeSkeleton.SortLists();
 				m_iteration = treeModel.CurrentIteration();
 				modified = true;
@@ -253,7 +254,7 @@ bool TreeVisualizer::Visualize(TreeModel& treeModel,
 					auto& pruningInternode = skeleton.RefNode(m_selectedInternodeHandle);
 					auto childHandles = pruningInternode.RefChildHandles();
 					for (const auto& childHandle : childHandles) {
-						skeleton.RecycleNode(childHandle);
+						treeModel.PruneInternode(childHandle);
 					}
 					pruningInternode.m_info.m_length *= m_selectedInternodeLengthFactor;
 					m_selectedInternodeLengthFactor = 1.0f;
@@ -271,7 +272,7 @@ bool TreeVisualizer::Visualize(TreeModel& treeModel,
 					auto& pruningRootNode = skeleton.RefNode(m_selectedRootNodeHandle);
 					auto childHandles = pruningRootNode.RefChildHandles();
 					for (const auto& childHandle : childHandles) {
-						skeleton.RecycleNode(childHandle);
+						treeModel.PruneRootNode(childHandle);
 					}
 					pruningRootNode.m_info.m_length *= m_selectedRootNodeLengthFactor;
 					m_selectedRootNodeLengthFactor = 1.0f;
@@ -302,7 +303,7 @@ bool TreeVisualizer::Visualize(TreeModel& treeModel,
 					if (!m_storedMousePositions.empty()) {
 						treeModel.Step();
 						auto& skeleton = treeModel.RefShootSkeleton();
-						bool changed = ScreenCurvePruning(skeleton, globalTransform, m_selectedInternodeHandle, m_selectedInternodeHierarchyList);
+						bool changed = ScreenCurvePruning([&](NodeHandle nodeHandle) {treeModel.PruneInternode(nodeHandle); }, skeleton, globalTransform, m_selectedInternodeHandle, m_selectedInternodeHierarchyList);
 						if (changed) {
 							skeleton.SortLists();
 							m_iteration = treeModel.CurrentIteration();
@@ -514,7 +515,7 @@ bool TreeVisualizer::DrawRootNodeInspectionGui(TreeModel& treeModel, NodeHandle 
 			DrawRootNodeInspectionGui(treeModel, child, childDeleted, hierarchyLevel + 1);
 			if (childDeleted) {
 				treeModel.Step();
-				rootSkeleton.RecycleNode(child);
+				treeModel.PruneRootNode(child);
 				rootSkeleton.SortLists();
 				m_iteration = treeModel.CurrentIteration();
 				modified = true;
