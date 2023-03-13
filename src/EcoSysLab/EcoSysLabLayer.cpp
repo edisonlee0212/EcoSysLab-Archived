@@ -1078,7 +1078,7 @@ void EcoSysLabLayer::UpdateGroundFruitAndLeaves() const
 	for (int i = 0; i < m_leaves.size(); i++)
 	{
 		leafMatrices[i] = m_leaves[i].m_globalTransform.m_value;
-		leafColors[i] = glm::vec4(glm::mix(glm::vec3(152 / 255.0f, 203 / 255.0f, 0 / 255.0f), glm::vec3(159 / 255.0f, 100 / 255.0f, 66 / 255.0f), m_leaves[i].m_health), 1.0f);
+		leafColors[i] = glm::vec4(glm::mix(glm::vec3(152 / 255.0f, 203 / 255.0f, 0 / 255.0f), glm::vec3(159 / 255.0f, 100 / 255.0f, 66 / 255.0f), 1.0f - m_leaves[i].m_health), 1.0f);
 	}
 }
 

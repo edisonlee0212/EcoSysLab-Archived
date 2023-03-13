@@ -40,11 +40,11 @@ void TreeModel::PruneInternode(NodeHandle internodeHandle)
 			[&](NodeHandle nodeHandle)
 			{
 				const auto& node = m_shootSkeleton.PeekNode(nodeHandle);
-				if (node.IsFlowStartNode() && !pipeGroup.PeekPipeNode(node.m_data.m_pipeNodeHandle).IsRecycled())
-				{
-					pipeGroup.RecyclePipeNode(node.m_data.m_pipeNodeHandle);
-				}
-				
+		if (node.IsFlowStartNode() && !pipeGroup.PeekPipeNode(node.m_data.m_pipeNodeHandle).IsRecycled())
+		{
+			pipeGroup.RecyclePipeNode(node.m_data.m_pipeNodeHandle);
+		}
+
 			});
 	}
 	else
@@ -664,10 +664,10 @@ bool TreeModel::GrowShoots(const glm::mat4& globalTransform, ClimateModel& clima
 
 		}
 		m_shootSkeleton.CalculateFlows();
-		if(m_enablePipe)
+		if (m_enablePipe)
 		{
 			auto& shootPipeGroup = m_shootSkeleton.m_data.m_shootPipeGroup;
-			for(auto& pipe : shootPipeGroup.RefPipeNodes())
+			for (auto& pipe : shootPipeGroup.RefPipeNodes())
 			{
 				const auto& flow = m_shootSkeleton.PeekFlow(pipe.m_data.m_flowHandle);
 				const auto& flowInfo = flow.m_info;
@@ -1095,8 +1095,11 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 				const auto developmentVigor = bud.m_vigorSink.SubtractVigor(maturityIncrease * shootGrowthParameters.m_fruitVigorRequirement);
 				auto fruitSize = shootGrowthParameters.m_maxFruitSize * glm::pow(bud.m_reproductiveModule.m_maturity, 1.0f / 3.0f);
 				float angle = glm::radians(glm::linearRand(0.0f, 360.0f));
-				glm::quat rotation = glm::quatLookAt(glm::vec3(glm::sin(angle), 0.f, glm::cos(angle)), glm::vec3(0, 1, 0));
+				glm::quat rotation = internodeData.m_desiredLocalRotation * bud.m_localRotation;
+				auto up = rotation * glm::vec3(0, 1, 0);
 				auto front = rotation * glm::vec3(0, 0, -1);
+				ApplyTropism(internodeData.m_lightDirection, 0.3f, up, front);
+				rotation = glm::quatLookAt(front, up);
 				auto fruitPosition = internodeInfo.m_globalPosition + front * (fruitSize.z * 1.5f);
 				bud.m_reproductiveModule.m_transform = glm::translate(fruitPosition) * glm::mat4_cast(glm::quat(glm::vec3(0.0f))) * glm::scale(fruitSize);
 

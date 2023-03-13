@@ -574,7 +574,7 @@ namespace EcoSysLab {
 
 		bool m_initialized = false;
 
-		bool m_enablePipe = true;
+		bool m_enablePipe = false;
 		ShootSkeleton m_shootSkeleton;
 		RootSkeleton m_rootSkeleton;
 
