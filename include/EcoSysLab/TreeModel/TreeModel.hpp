@@ -7,6 +7,7 @@
 #include "Octree.hpp"
 #include "TreeVolume.hpp"
 #include "Voxel.hpp"
+#include "PipeStructure.hpp"
 using namespace UniEngine;
 namespace EcoSysLab {
 
@@ -76,10 +77,13 @@ namespace EcoSysLab {
 		std::vector<glm::mat4> m_leaves;
 		std::vector<glm::mat4> m_fruits;
 
+		PipeNodeHandle m_pipeNodeHandle = -1;
 	};
 
 	struct ShootStemGrowthData {
 		int m_order = 0;
+
+		
 	};
 
 	
@@ -480,6 +484,26 @@ namespace EcoSysLab {
 
 	typedef Skeleton<ShootGrowthData, ShootStemGrowthData, InternodeGrowthData> ShootSkeleton;
 	typedef Skeleton<RootGrowthData, RootStemGrowthData, RootNodeGrowthData> RootSkeleton;
+
+
+	struct PipeGroupGrowthData
+	{
+		
+	};
+
+	struct PipeGrowthData
+	{
+
+	};
+
+	struct PipeNodeGrowthData
+	{
+		FlowHandle m_flowHandle;
+	};
+
+	typedef PipeGroup<PipeGroupGrowthData, PipeGrowthData, PipeNodeGrowthData> TreePipeGroup;
+
+
 	class TreeModel {
 #pragma region Root Growth
 
@@ -526,8 +550,12 @@ namespace EcoSysLab {
 		void Initialize(const ShootGrowthParameters& shootGrowthParameters, const RootGrowthParameters& rootGrowthParameters);
 
 		bool m_initialized = false;
+
+		bool m_enablePipe = false;
 		ShootSkeleton m_shootSkeleton;
 		RootSkeleton m_rootSkeleton;
+
+		TreePipeGroup m_treePipeGroup;
 		std::deque<std::pair<ShootSkeleton, RootSkeleton>> m_history;
 
 		/**
