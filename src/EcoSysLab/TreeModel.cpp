@@ -153,10 +153,11 @@ bool TreeModel::Grow(float deltaTime, const glm::mat4& globalTransform, SoilMode
 		&& GrowShoots(globalTransform, climateModel, shootGrowthParameters, newShootGrowthRequirement)) {
 		treeStructureChanged = true;
 	}
-	const auto remain = static_cast<int>(climateModel.m_time * 365.0f);
-	if (remain % 365 == 0)
+	const int year = climateModel.m_time;
+	if (year != m_ageInYear)
 	{
 		ResetReproductiveModule();
+		m_ageInYear = year;
 	}
 	//Set new growth nutrients requirement for next iteration.
 	m_shootSkeleton.m_data.m_vigorRequirement = newShootGrowthRequirement;
@@ -957,12 +958,14 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 		auto& internodeData = internode.m_data;
 		auto& internodeInfo = internode.m_info;
 
-		//auto killProbability = shootGrowthParameters.m_growthRate * shootGrowthParameters.m_budKillProbability;
-		//if (internodeData.m_rootDistance < 1.0f) killProbability = 0.0f;
-		//if (bud.m_status == BudStatus::Dormant && killProbability > glm::linearRand(0.0f, 1.0f)) {
-		//	bud.m_status = BudStatus::Removed;
-		//}
-		//if (bud.m_status == BudStatus::Removed) continue;
+		/*
+		auto killProbability = shootGrowthParameters.m_growthRate * shootGrowthParameters.m_pro;
+		if (internodeData.m_rootDistance < 1.0f) killProbability = 0.0f;
+		if (bud.m_status == BudStatus::Dormant && killProbability > glm::linearRand(0.0f, 1.0f)) {
+			bud.m_status = BudStatus::Died;
+		}
+		if (bud.m_status == BudStatus::Died) continue;
+		*/
 
 		//Calculate vigor used for maintenance and development.
 		const float desiredMaintenanceVigor = bud.m_vigorSink.GetDesiredMaintenanceVigorRequirement();
@@ -1120,7 +1123,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 				auto foliagePosition = internodeInfo.m_globalPosition + front * (leafSize.z * 1.5f);
 				bud.m_reproductiveModule.m_transform = glm::translate(foliagePosition) * glm::mat4_cast(rotation) * glm::scale(leafSize);
 				//Handle leaf drop here.
-				if (static_cast<int>(climateModel.m_time * 365) % 365 > 180 && internodeData.m_temperature < shootGrowthParameters.m_leafChlorophyllSynthesisFactorTemperature)
+				if (climateModel.m_time - glm::floor(climateModel.m_time) > 0.5f && internodeData.m_temperature < shootGrowthParameters.m_leafChlorophyllSynthesisFactorTemperature)
 				{
 					bud.m_reproductiveModule.m_health -= m_currentDeltaTime * shootGrowthParameters.m_leafChlorophyllLoss;
 					bud.m_reproductiveModule.m_health = glm::clamp(bud.m_reproductiveModule.m_health, 0.0f, 1.0f);

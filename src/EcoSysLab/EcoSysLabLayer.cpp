@@ -1018,7 +1018,7 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 						if (!isSelected)
 						{
 							foliageMatrices[leafStartIndex + leafIndex] = entityGlobalTransform.m_value * bud.m_reproductiveModule.m_transform;
-							foliageColors[leafStartIndex + leafIndex] = glm::vec4(glm::mix(glm::vec3(152 / 255.0f, 203 / 255.0f, 0 / 255.0f), glm::vec3(159 / 255.0f, 100 / 255.0f, 66 / 255.0f), bud.m_reproductiveModule.m_health), 1.0f);
+							foliageColors[leafStartIndex + leafIndex] = glm::vec4(glm::mix(glm::vec3(152 / 255.0f, 203 / 255.0f, 0 / 255.0f), glm::vec3(159 / 255.0f, 100 / 255.0f, 66 / 255.0f), 1.0f - bud.m_reproductiveModule.m_health), 1.0f);
 						}
 						else {
 							foliageMatrices[leafStartIndex + leafIndex] = glm::mat4(0.0f);

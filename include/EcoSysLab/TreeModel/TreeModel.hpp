@@ -610,6 +610,7 @@ namespace EcoSysLab {
 		int m_fineRootCount = 0;
 
 		float m_age = 0;
+		int m_ageInYear = 0;
 		float m_internodeDevelopmentRate = 1.0f;
 		float m_rootNodeDevelopmentRate = 1.0f;
 		float m_currentDeltaTime = 1.0f;
