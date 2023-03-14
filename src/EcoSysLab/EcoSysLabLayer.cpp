@@ -12,7 +12,7 @@ using namespace EcoSysLab;
 
 void EcoSysLabLayer::OnCreate() {
 	if (m_randomColors.empty()) {
-		for (int i = 0; i < 10000; i++) {
+		for (int i = 0; i < 30000; i++) {
 			m_randomColors.emplace_back(glm::linearRand(glm::vec3(0.0f), glm::vec3(1.0f)));
 		}
 	}

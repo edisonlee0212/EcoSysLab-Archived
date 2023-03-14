@@ -10,7 +10,7 @@
 
 using namespace UniEngine;
 namespace EcoSysLab {
-	
+
 	class TreeDescriptor : public IAsset {
 	public:
 		ShootGrowthParameters m_shootGrowthParameters;
@@ -86,36 +86,54 @@ namespace EcoSysLab {
 		auto frontPointIndex = points.size();
 		StrandPoint point;
 		const auto& firstNode = pipeGroup.PeekPipeNode(nodeHandles.front());
+		point.m_normal = glm::normalize(firstNode.m_info.m_globalStartRotation * glm::vec3(0, 0, -1));
 		point.m_position = firstNode.m_info.m_globalStartPosition;
 		point.m_thickness = 0.001f;
-		point.m_color = glm::vec4(0, 1, 0, 1);
+		point.m_color = glm::vec4(glm::linearRand(glm::vec3(0, 0, 0), glm::vec3(1, 1, 1)), 1.0f);
 
 		points.emplace_back(point);
 		points.emplace_back(point);
-		for (const auto& pipeNodeHandle : pipe.PeekPipeNodeHandles())
+
+		const auto& pipeNodeHandles = pipe.PeekPipeNodeHandles();
+		if (pipeNodeHandles.size() < 3)
 		{
-			const auto& pipeNode = pipeGroup.PeekPipeNode(pipeNodeHandle);
-			point.m_color = glm::vec4(0, 1, 0, 1);
-			point.m_thickness = 0.001f;
+			const auto& pipeNode = pipeGroup.PeekPipeNode(pipe.PeekPipeNodeHandles()[0]);
+			auto distance = glm::distance(pipeNode.m_info.m_globalStartPosition, pipeNode.m_info.m_globalEndPosition) * 0.25f;
+			point.m_normal = glm::normalize(pipeNode.m_info.m_globalStartRotation * glm::vec3(0, 0, -1));
+			point.m_position = pipeNode.m_info.m_globalStartPosition + pipeNode.m_info.m_globalStartRotation * glm::vec3(0, 0, -1) * distance;
+			points.emplace_back(point);
+
+			point.m_normal = glm::normalize(pipeNode.m_info.m_globalStartRotation * glm::vec3(0, 0, -1));
+			point.m_position = pipeNode.m_info.m_globalEndPosition + pipeNode.m_info.m_globalEndRotation * glm::vec3(0, 0, 1) * distance;
+			points.emplace_back(point);
+		}
+
+		for (int i = 0; i < pipeNodeHandles.size(); i++)
+		{
+			const auto& pipeNode = pipeGroup.PeekPipeNode(pipeNodeHandles[i]);
+			point.m_normal = glm::normalize(pipeNode.m_info.m_globalEndRotation * glm::vec3(0, 0, -1));
 			point.m_position = pipeNode.m_info.m_globalEndPosition;
 			points.emplace_back(point);
 		}
 
 		StrandPoint frontPoint;
 		frontPoint = points.at(frontPointIndex);
-		frontPoint.m_position = 2.0f * frontPoint.m_position - points.at(frontPointIndex + 1).m_position;
+		frontPoint.m_position = 2.0f * frontPoint.m_position - points.at(frontPointIndex + 2).m_position;
+		frontPoint.m_normal = 2.0f * frontPoint.m_normal - points.at(frontPointIndex + 2).m_normal;
 		points.at(frontPointIndex) = frontPoint;
 
 		StrandPoint backPoint;
 		backPoint = points.at(points.size() - 2);
 		backPoint.m_position = 2.0f * points.at(points.size() - 1).m_position - backPoint.m_position;
+		backPoint.m_normal = 2.0f * points.at(points.size() - 1).m_normal - backPoint.m_normal;
 		points.emplace_back(backPoint);
+
 	}
 
 	template <typename PipeGroupData, typename PipeData, typename PipeNodeData>
 	void Tree::BuildStrands(const PipeGroup<PipeGroupData, PipeData, PipeNodeData>& pipeGroup, std::vector<glm::uint>& strands, std::vector<StrandPoint>& points) const
 	{
-		for(const auto& pipe : pipeGroup.PeekPipes())
+		for (const auto& pipe : pipeGroup.PeekPipes())
 		{
 			BuildStrand(pipeGroup, pipe, strands, points);
 		}

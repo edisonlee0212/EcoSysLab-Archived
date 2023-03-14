@@ -77,7 +77,7 @@ namespace EcoSysLab {
 		std::vector<glm::mat4> m_leaves;
 		std::vector<glm::mat4> m_fruits;
 
-		PipeNodeHandle m_pipeNodeHandle = -1;
+		std::vector<PipeNodeHandle> m_pipeNodeHandles;
 	};
 
 	struct ShootStemGrowthData {
@@ -456,7 +456,7 @@ namespace EcoSysLab {
 
 	struct ShootPipeNodeGrowthData
 	{
-		FlowHandle m_flowHandle;
+		FlowHandle m_nodeHandle;
 	};
 
 	struct RootPipeGroupGrowthData
@@ -471,7 +471,7 @@ namespace EcoSysLab {
 
 	struct RootPipeNodeGrowthData
 	{
-		FlowHandle m_flowHandle;
+		FlowHandle m_nodeHandle;
 	};
 
 	typedef PipeGroup<ShootPipeGroupGrowthData, ShootPipeGrowthData, ShootPipeNodeGrowthData> ShootPipeGroup;

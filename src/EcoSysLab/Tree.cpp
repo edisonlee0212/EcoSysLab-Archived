@@ -245,7 +245,11 @@ void Tree::InitializeStrandRenderer() const
 	BuildStrands(m_treeModel.m_shootSkeleton.m_data.m_shootPipeGroup, strandsList, points);
 	strandsAsset->SetStrands(static_cast<unsigned>(StrandPointAttribute::Position) | static_cast<unsigned>(StrandPointAttribute::Thickness) | static_cast<unsigned>(StrandPointAttribute::Color), strandsList, points);
 	renderer->m_strands = strandsAsset;
-	renderer->m_material = ProjectManager::CreateTemporaryAsset<Material>();
+
+	auto material = ProjectManager::CreateTemporaryAsset<Material>();
+	renderer->m_material = material;
+	material->m_vertexColorOnly = true;
+
 }
 
 void Tree::Serialize(YAML::Emitter& out)

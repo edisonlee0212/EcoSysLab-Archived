@@ -35,48 +35,31 @@ void TreeModel::PruneInternode(NodeHandle internodeHandle)
 {
 	if (m_enablePipe) {
 		auto& pipeGroup = m_shootSkeleton.m_data.m_shootPipeGroup;
-		m_shootSkeleton.RecycleNode(internodeHandle,
-			[&](FlowHandle flowHandle) {},
-			[&](NodeHandle nodeHandle)
-			{
-				const auto& node = m_shootSkeleton.PeekNode(nodeHandle);
-		if (node.IsFlowStartNode() && !pipeGroup.PeekPipeNode(node.m_data.m_pipeNodeHandle).IsRecycled())
+		auto& nodeData = m_shootSkeleton.RefNode(internodeHandle).m_data;
+		for(const auto& i : nodeData.m_pipeNodeHandles)
 		{
-			pipeGroup.RecyclePipeNode(node.m_data.m_pipeNodeHandle);
+			pipeGroup.RecyclePipeNode(i);
 		}
-
-			});
+		nodeData.m_pipeNodeHandles.clear();
 	}
-	else
-	{
-		m_shootSkeleton.RecycleNode(internodeHandle, [&](FlowHandle flowHandle) {},
-			[&](NodeHandle nodeHandle)
-			{});
-	}
+	m_shootSkeleton.RecycleNode(internodeHandle,
+		[&](FlowHandle flowHandle) {},
+		[&](NodeHandle nodeHandle)
+		{});
 }
 
 void TreeModel::PruneRootNode(NodeHandle rootNodeHandle)
 {
-	if (false) {
+	if (m_enablePipe) {
 		auto& pipeGroup = m_rootSkeleton.m_data.m_rootPipeGroup;
-		m_rootSkeleton.RecycleNode(rootNodeHandle,
-			[&](FlowHandle flowHandle) {},
-			[&](NodeHandle nodeHandle)
-			{
-				const auto& node = m_shootSkeleton.PeekNode(nodeHandle);
-		if (node.IsFlowStartNode())
+		for (const auto& i : m_shootSkeleton.PeekNode(rootNodeHandle).m_data.m_pipeNodeHandles)
 		{
-			pipeGroup.RecyclePipeNode(node.m_data.m_pipeNodeHandle);
+			pipeGroup.RecyclePipeNode(i);
 		}
-
-			});
 	}
-	else
-	{
-		m_shootSkeleton.RecycleNode(rootNodeHandle, [&](FlowHandle flowHandle) {},
-			[&](NodeHandle nodeHandle)
-			{});
-	}
+	m_rootSkeleton.RecycleNode(rootNodeHandle, [&](FlowHandle flowHandle) {},
+		[&](NodeHandle nodeHandle)
+		{});
 }
 
 void TreeModel::HarvestFruits(const std::function<bool(const ReproductiveModule& fruit)>& harvestFunction)
@@ -184,8 +167,8 @@ void TreeModel::Initialize(const ShootGrowthParameters& shootGrowthParameters, c
 		{
 			auto& pipeGroup = m_shootSkeleton.m_data.m_shootPipeGroup;
 			pipeGroup = {};
-			firstInternode.m_data.m_pipeNodeHandle = pipeGroup.Extend(pipeGroup.AllocatePipe());
-			pipeGroup.RefPipeNode(firstInternode.m_data.m_pipeNodeHandle).m_data.m_flowHandle = firstInternode.GetFlowHandle();
+			firstInternode.m_data.m_pipeNodeHandles.emplace_back(pipeGroup.Extend(pipeGroup.AllocatePipe()));
+			pipeGroup.RefPipeNode(firstInternode.m_data.m_pipeNodeHandles[0]).m_data.m_nodeHandle = firstInternode.GetFlowHandle();
 		}
 	}
 	{
@@ -669,18 +652,16 @@ bool TreeModel::GrowShoots(const glm::mat4& globalTransform, ClimateModel& clima
 			auto& shootPipeGroup = m_shootSkeleton.m_data.m_shootPipeGroup;
 			for (auto& pipe : shootPipeGroup.RefPipeNodes())
 			{
-				const auto& flow = m_shootSkeleton.PeekFlow(pipe.m_data.m_flowHandle);
-				const auto& flowInfo = flow.m_info;
-				const glm::vec3 startLeft = flowInfo.m_globalStartRotation * glm::vec3(1, 0, 0);
-				const glm::vec3 startFront = flowInfo.m_globalStartRotation * glm::vec3(0, 0, -1);
-				const glm::vec3 endLeft = flowInfo.m_globalEndRotation * glm::vec3(1, 0, 0);
-				const glm::vec3 endFront = flowInfo.m_globalEndRotation * glm::vec3(0, 0, -1);
-
+				const auto& node = m_shootSkeleton.PeekNode(pipe.m_data.m_nodeHandle);
+				const auto& nodeInfo = node.m_info;
+				const glm::vec3 left = nodeInfo.m_globalRotation * glm::vec3(1, 0, 0);
+				const glm::vec3 up = nodeInfo.m_globalRotation * glm::vec3(0, 1, 0);
+				const glm::vec3 front = nodeInfo.m_globalRotation * glm::vec3(0, 0, -1);
 				auto& pipeInfo = pipe.m_info;
-				pipeInfo.m_globalStartPosition = flowInfo.m_globalStartPosition + startLeft * pipeInfo.m_localPosition.x + startFront * pipeInfo.m_localPosition.y;
-				pipeInfo.m_globalStartRotation = flowInfo.m_globalStartRotation;
-				pipeInfo.m_globalEndPosition = flowInfo.m_globalEndPosition + endLeft * pipeInfo.m_localPosition.x + endFront * pipeInfo.m_localPosition.y;
-				pipeInfo.m_globalEndRotation = flowInfo.m_globalEndRotation;
+				pipeInfo.m_globalStartPosition = nodeInfo.m_globalPosition + left * pipeInfo.m_localPosition.x + up * pipeInfo.m_localPosition.y;
+				pipeInfo.m_globalStartRotation = nodeInfo.m_globalRotation;
+				pipeInfo.m_globalEndPosition = nodeInfo.m_globalPosition + nodeInfo.m_length * front + left * pipeInfo.m_localPosition.x + up * pipeInfo.m_localPosition.y;
+				pipeInfo.m_globalEndRotation = nodeInfo.m_globalRotation;
 
 			}
 		}
@@ -851,18 +832,10 @@ bool TreeModel::ElongateInternode(float extendLength, NodeHandle internodeHandle
 			shootGrowthParameters.GetDesiredRollAngle(newInternode));
 		if (m_enablePipe)
 		{
-			if (newInternode.GetFlowHandle() != oldInternode.GetFlowHandle()) {
-				auto& pipeGroup = m_shootSkeleton.m_data.m_shootPipeGroup;
-				const auto newPipeNodeHandle = pipeGroup.Extend(pipeGroup.RefPipeNode(oldInternode.m_data.m_pipeNodeHandle).GetPipeHandle());
-				newInternode.m_data.m_pipeNodeHandle = newPipeNodeHandle;
-				assert(newInternode.m_data.m_pipeNodeHandle != -1);
-				pipeGroup.RefPipeNode(newPipeNodeHandle).m_data.m_flowHandle = newInternode.GetFlowHandle();
-			}
-			else
-			{
-				newInternode.m_data.m_pipeNodeHandle = oldInternode.m_data.m_pipeNodeHandle;
-				assert(newInternode.m_data.m_pipeNodeHandle != -1);
-			}
+			auto& pipeGroup = m_shootSkeleton.m_data.m_shootPipeGroup;
+			const auto newPipeNodeHandle = pipeGroup.Extend(pipeGroup.RefPipeNode(oldInternode.m_data.m_pipeNodeHandles[0]).GetPipeHandle());
+			newInternode.m_data.m_pipeNodeHandles.emplace_back(newPipeNodeHandle);
+			pipeGroup.RefPipeNode(newPipeNodeHandle).m_data.m_nodeHandle = newInternode.GetHandle();
 		}
 
 		if (extraLength > internodeLength) {
@@ -1047,29 +1020,35 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 				{
 					auto& pipeGroup = m_shootSkeleton.m_data.m_shootPipeGroup;
 					const auto newPipeHandle = pipeGroup.AllocatePipe();
-					std::vector<FlowHandle> flowHandleChain;
-					auto walkerFlowHandle = oldInternode.GetFlowHandle();
-					auto walkerParentFlowHandle = m_shootSkeleton.RefFlow(walkerFlowHandle).GetParentHandle();
-					flowHandleChain.emplace_back(walkerFlowHandle);
-					while (walkerParentFlowHandle != -1)
+					std::vector<NodeHandle> nodeHandleChain;
+					auto walkerNodeHandle = oldInternode.GetHandle();
+					auto walkerParentNodeHandle = m_shootSkeleton.RefNode(walkerNodeHandle).GetParentHandle();
+					nodeHandleChain.emplace_back(walkerNodeHandle);
+					while (walkerParentNodeHandle != -1)
 					{
-						walkerFlowHandle = walkerParentFlowHandle;
-						walkerParentFlowHandle = m_shootSkeleton.RefNode(walkerParentFlowHandle).GetParentHandle();
-						flowHandleChain.emplace_back(walkerFlowHandle);
+						walkerNodeHandle = walkerParentNodeHandle;
+						walkerParentNodeHandle = m_shootSkeleton.RefNode(walkerParentNodeHandle).GetParentHandle();
+						nodeHandleChain.emplace_back(walkerNodeHandle);
 					}
-
+					const auto localFront = newInternode.m_info.m_localRotation * glm::vec3(0, 0, -1);
+					//glm::vec2 offset = shootGrowthParameters.m_endNodeThickness * glm::normalize(glm::vec2(localFront.x, localFront.z));
+					glm::vec2 offset = shootGrowthParameters.m_endNodeThickness * glm::diskRand(1.0f) * 5.0f;
 					PipeNodeHandle currentPipeNodeHandle = -1;
-					for (auto it = flowHandleChain.rbegin(); it != flowHandleChain.rend(); ++it)
+					for (auto it = nodeHandleChain.rbegin(); it != nodeHandleChain.rend(); ++it)
 					{
 						currentPipeNodeHandle = pipeGroup.Extend(newPipeHandle);
-						pipeGroup.RefPipeNode(currentPipeNodeHandle).m_data.m_flowHandle = *it;
+						auto& newPipeNode = pipeGroup.RefPipeNode(currentPipeNodeHandle);
+						newPipeNode.m_data.m_nodeHandle = *it;
+						auto& currentVisitingNode = m_shootSkeleton.RefNode(*it);
+						//const auto& originalPipeNode = pipeGroup.RefPipeNode(currentVisitingNode.m_data.m_pipeNodeHandles[glm::linearRand(0, static_cast<int>(currentVisitingNode.m_data.m_pipeNodeHandles.size() - 1))]);
+
+						currentVisitingNode.m_data.m_pipeNodeHandles.emplace_back(currentPipeNodeHandle);
+						newPipeNode.m_info.m_localPosition = currentVisitingNode.m_info.m_thickness * glm::diskRand(1.0f);
 					}
 
 					currentPipeNodeHandle = pipeGroup.Extend(newPipeHandle);
-					pipeGroup.RefPipeNode(currentPipeNodeHandle).m_data.m_flowHandle = newInternode.GetFlowHandle();
-					newInternode.m_data.m_pipeNodeHandle = currentPipeNodeHandle;
-
-					assert(newInternode.m_data.m_pipeNodeHandle != -1);
+					pipeGroup.RefPipeNode(currentPipeNodeHandle).m_data.m_nodeHandle = newInternode.GetHandle();
+					newInternode.m_data.m_pipeNodeHandles.emplace_back(currentPipeNodeHandle);
 				}
 			}
 		}

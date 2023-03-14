@@ -247,15 +247,15 @@ namespace EcoSysLab
 			m_pipeNodes[node.m_prevHandle].m_endNode = true;
 		}
 
+		auto& pipe = m_pipes[node.m_pipeHandle];
+		assert(pipe.m_nodeHandles.back() == handle);
+		pipe.m_nodeHandles.pop_back();
+
 		node.m_recycled = true;
 		node.m_endNode = true;
 		node.m_prevHandle = node.m_nextHandle = -1;
 		node.m_data = {};
 		node.m_info = {};
-
-		auto& pipe = m_pipes[node.m_pipeHandle];
-		assert(pipe.m_nodeHandles.back() == handle);
-		pipe.m_nodeHandles.pop_back();
 
 		node.m_pipeHandle = -1;
 		m_pipeNodePool.emplace(handle);
