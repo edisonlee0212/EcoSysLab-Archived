@@ -8,7 +8,7 @@
 #include "TreeVolume.hpp"
 #include "Voxel.hpp"
 #include "PipeStructure.hpp"
-#include "ConnectedHexagonGrid.hpp"
+#include "HexagonGrid.hpp"
 using namespace UniEngine;
 namespace EcoSysLab {
 
@@ -84,7 +84,7 @@ namespace EcoSysLab {
 	struct ShootStemGrowthData {
 		int m_order = 0;
 
-		
+		HexagonGrid<PipeHandle> m_pipeHexagonGrid;
 	};
 
 	
@@ -457,7 +457,10 @@ namespace EcoSysLab {
 
 	struct ShootPipeNodeGrowthData
 	{
-		FlowHandle m_nodeHandle;
+		NodeHandle m_nodeHandle;
+
+		HexagonCellHandle m_cellHandle;
+		glm::ivec2 m_coordinate;
 	};
 
 	struct RootPipeGroupGrowthData
@@ -472,7 +475,7 @@ namespace EcoSysLab {
 
 	struct RootPipeNodeGrowthData
 	{
-		FlowHandle m_nodeHandle;
+		NodeHandle m_nodeHandle;
 	};
 
 	typedef PipeGroup<ShootPipeGroupGrowthData, ShootPipeGrowthData, ShootPipeNodeGrowthData> ShootPipeGroup;
