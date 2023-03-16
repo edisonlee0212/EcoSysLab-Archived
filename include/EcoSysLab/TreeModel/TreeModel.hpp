@@ -8,6 +8,7 @@
 #include "TreeVolume.hpp"
 #include "Voxel.hpp"
 #include "PipeStructure.hpp"
+#include "ConnectedHexagonGrid.hpp"
 using namespace UniEngine;
 namespace EcoSysLab {
 
