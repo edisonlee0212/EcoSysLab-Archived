@@ -489,8 +489,13 @@ void EcoSysLabLayer::OnInspect() {
 			}
 			ImGui::DragFloat("Time", &m_time, 1, 0, 9000000);
 			ImGui::Checkbox("Auto grow with soil step", &m_autoGrowWithSoilStep);
-			ImGui::Checkbox("Auto grow", &m_autoGrow);
 			ImGui::DragFloat("Delta time", &m_deltaTime, 0.00001f, 0, 1, "%.5f");
+			if (ImGui::Button("Day")) m_deltaTime = 0.00274f;
+			ImGui::SameLine();
+			if (ImGui::Button("Week")) m_deltaTime = 0.01918f;
+			ImGui::SameLine();
+			if (ImGui::Button("Month")) m_deltaTime = 0.0822f;
+			ImGui::Checkbox("Auto grow", &m_autoGrow);
 			if (!m_autoGrow) {
 				bool changed = false;
 				if (ImGui::Button("Grow all")) {
