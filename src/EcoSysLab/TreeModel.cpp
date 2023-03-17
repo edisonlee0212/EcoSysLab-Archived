@@ -696,8 +696,8 @@ bool TreeModel::GrowShoots(const glm::mat4& globalTransform, ClimateModel& clima
 				const auto& grid = gridGroup.PeekGrid(node.m_data.m_gridHandle);
 				const auto& cell = grid.PeekCell(pipeNode.m_data.m_cellHandle);
 
-				pipeInfo.m_localPosition = shootGrowthParameters.m_endNodeThickness * grid.GetPosition(cell.GetCoordinate());
-
+				pipeInfo.m_localPosition = shootGrowthParameters.m_endNodeThickness * 2.0f * grid.GetPosition(cell.GetCoordinate());
+				pipeInfo.m_startThickness = pipeInfo.m_endThickness = shootGrowthParameters.m_endNodeThickness;
 				pipeInfo.m_globalStartPosition = nodeInfo.m_globalPosition + left * pipeInfo.m_localPosition.x + up * pipeInfo.m_localPosition.y;
 				pipeInfo.m_globalStartRotation = nodeInfo.m_regulatedGlobalRotation;
 				pipeInfo.m_globalEndPosition = nodeInfo.m_globalPosition + nodeInfo.m_length * front + left * pipeInfo.m_localPosition.x + up * pipeInfo.m_localPosition.y;

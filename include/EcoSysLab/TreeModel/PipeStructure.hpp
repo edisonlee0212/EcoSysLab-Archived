@@ -15,6 +15,9 @@ namespace EcoSysLab
 		glm::vec3 m_globalEndPosition = glm::vec3(0.0f);
 		glm::quat m_globalEndRotation = glm::vec3(0.0f);
 		glm::vec2 m_localPosition = glm::vec2(0.0f);
+
+		float m_startThickness = 0.0f;
+		float m_endThickness = 0.0f;
 	};
 
 	struct PipeInfo
