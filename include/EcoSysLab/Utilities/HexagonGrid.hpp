@@ -84,6 +84,8 @@ namespace EcoSysLab
 		template<typename CD>
 		friend class HexagonGridGroup;
 	public:
+		[[nodiscard]] bool IsRecycled() const;
+		[[nodiscard]] HexagonGridHandle GetHandle() const;
 		[[nodiscard]] glm::vec2 GetPosition(const glm::ivec2& coordinate) const;
 		[[nodiscard]] glm::ivec2 GetCoordinate(const glm::vec2& position) const;
 
@@ -221,6 +223,18 @@ namespace EcoSysLab
 	HexagonCellHandle HexagonCell<CellData>::GetLeftHandle() const
 	{
 		return m_left;
+	}
+
+	template <typename CellData>
+	bool HexagonGrid<CellData>::IsRecycled() const
+	{
+		return m_recycled;
+	}
+
+	template <typename CellData>
+	HexagonGridHandle HexagonGrid<CellData>::GetHandle() const
+	{
+		return m_handle;
 	}
 
 	template <typename CellData>

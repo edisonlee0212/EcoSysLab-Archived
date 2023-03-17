@@ -35,19 +35,31 @@ void TreeModel::PruneInternode(NodeHandle internodeHandle)
 {
 	if (m_enablePipe) {
 		auto& pipeGroup = m_shootSkeleton.m_data.m_shootPipeGroup;
-		auto& grid = m_shootSkeleton.m_data.m_hexagonGridGroup;
-
-		auto& nodeData = m_shootSkeleton.RefNode(internodeHandle).m_data;
+		auto& gridGroup = m_shootSkeleton.m_data.m_hexagonGridGroup;
+		auto& node = m_shootSkeleton.RefNode(internodeHandle);
+		auto& nodeData = node.m_data;
 		for (const auto& i : nodeData.m_pipeNodeHandles)
 		{
 			pipeGroup.RecyclePipeNode(i);
 		}
 		nodeData.m_pipeNodeHandles.clear();
+		const auto baseGridHandle = m_shootSkeleton.PeekNode(node.GetParentHandle()).m_data.m_gridHandle;
+		m_shootSkeleton.RecycleNode(internodeHandle,
+			[&](FlowHandle flowHandle) {},
+			[&](NodeHandle nodeHandle)
+			{
+				if (nodeHandle == internodeHandle) return;
+				const auto& currentNode = m_shootSkeleton.PeekNode(nodeHandle);
+				if(currentNode.m_data.m_gridHandle == baseGridHandle) return;
+				if(!gridGroup.PeekGrid(currentNode.m_data.m_gridHandle).IsRecycled()) gridGroup.RecycleGrid(currentNode.m_data.m_gridHandle);
+			});
 	}
-	m_shootSkeleton.RecycleNode(internodeHandle,
-		[&](FlowHandle flowHandle) {},
-		[&](NodeHandle nodeHandle)
-		{});
+	else {
+		m_shootSkeleton.RecycleNode(internodeHandle,
+			[&](FlowHandle flowHandle) {},
+			[&](NodeHandle nodeHandle)
+			{});
+	}
 }
 
 void TreeModel::PruneRootNode(NodeHandle rootNodeHandle)
@@ -182,7 +194,7 @@ void TreeModel::Initialize(const ShootGrowthParameters& shootGrowthParameters, c
 			auto& newCell = newGrid.RefCell(newCellHandle);
 			newCell.m_data = newPipeHandle;
 			newPipeNode.m_data.m_cellHandle = newCellHandle;
-			newPipeNode.m_data.m_gridHandle = newGridHandle;
+			firstInternode.m_data.m_gridHandle = newGridHandle;
 		}
 	}
 	{
@@ -674,7 +686,7 @@ bool TreeModel::GrowShoots(const glm::mat4& globalTransform, ClimateModel& clima
 				const glm::vec3 up = nodeInfo.m_globalRotation * glm::vec3(0, 1, 0);
 				const glm::vec3 front = nodeInfo.m_globalRotation * glm::vec3(0, 0, -1);
 				auto& pipeInfo = pipeNode.m_info;
-				const auto& grid = gridGroup.PeekGrid(pipeNode.m_data.m_gridHandle);
+				const auto& grid = gridGroup.PeekGrid(node.m_data.m_gridHandle);
 				const auto& cell = grid.PeekCell(pipeNode.m_data.m_cellHandle);
 
 				pipeInfo.m_localPosition = shootGrowthParameters.m_endNodeThickness * grid.GetPosition(cell.GetCoordinate());
@@ -860,10 +872,11 @@ bool TreeModel::ElongateInternode(float extendLength, NodeHandle internodeHandle
 			const auto& oldPipeNode = pipeGroup.RefPipeNode(oldPipeNodeHandle);
 			auto& newPipeNode = pipeGroup.RefPipeNode(newPipeNodeHandle);
 
+			newInternode.m_data.m_gridHandle = oldInternode.m_data.m_gridHandle;
 			newInternode.m_data.m_pipeNodeHandles.emplace_back(newPipeNodeHandle);
 			newPipeNode.m_data.m_nodeHandle = newInternode.GetHandle();
 			newPipeNode.m_data.m_cellHandle = oldPipeNode.m_data.m_cellHandle;
-			newPipeNode.m_data.m_gridHandle = oldPipeNode.m_data.m_gridHandle;
+			//newPipeNode.m_data.m_gridHandle = oldPipeNode.m_data.m_gridHandle;
 		}
 
 		if (extraLength > internodeLength) {
@@ -1072,9 +1085,9 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 
 						auto& currentVisitingNode = m_shootSkeleton.RefNode(prevNodeHandle);
 						currentVisitingNode.m_data.m_pipeNodeHandles.emplace_back(newPipeNodeHandle);
-						if (prevPipeNode.m_gridHandle != currentGridHandle) {
+						if (currentVisitingNode.m_data.m_gridHandle != currentGridHandle) {
 							//If we are meeting a new grid, we need to create a new cell for current pipe.
-							currentGridHandle = prevPipeNode.m_gridHandle;
+							currentGridHandle = currentVisitingNode.m_data.m_gridHandle;
 							auto& grid = gridGroup.RefGrid(currentGridHandle);
 							auto newCoordinate = grid.FindClosestEmptyCoordinate(prevPipeNode.m_cellHandle, glm::diskRand(1.0f));
 							currentCellHandle = grid.Allocate(newCoordinate);
@@ -1082,10 +1095,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 							cell.m_data = newPipeHandle;
 						}
 						newPipeNode.m_data.m_cellHandle = currentCellHandle;
-						newPipeNode.m_data.m_gridHandle = currentGridHandle;
-						
 						if (prevNodeHandle == internodeHandle) break;
-						//if (prevPipeNodeHandle == prevPipeNodeEnd.GetHandle()) break;
 					}
 
 					newPipeNodeHandle = pipeGroup.Extend(newPipeHandle);
@@ -1096,7 +1106,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 					auto& newGrid = gridGroup.RefGrid(newGridHandle);
 					const auto newCellHandle = newGrid.Allocate(glm::ivec2(0, 0));
 					newPipeNode.m_data.m_cellHandle = newCellHandle;
-					newPipeNode.m_data.m_gridHandle = newGridHandle;
+					newInternode.m_data.m_gridHandle = newGridHandle;
 					newInternode.m_data.m_pipeNodeHandles.emplace_back(newPipeNodeHandle);
 
 					auto& cell = newGrid.RefCell(newCellHandle);

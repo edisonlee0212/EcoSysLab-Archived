@@ -78,6 +78,7 @@ namespace EcoSysLab {
 		std::vector<glm::mat4> m_leaves;
 		std::vector<glm::mat4> m_fruits;
 
+		HexagonGridHandle m_gridHandle = -1;
 		std::vector<PipeNodeHandle> m_pipeNodeHandles;
 	};
 
@@ -456,7 +457,7 @@ namespace EcoSysLab {
 	{
 		NodeHandle m_nodeHandle = -1;
 
-		HexagonGridHandle m_gridHandle = -1;
+		//HexagonGridHandle m_gridHandle = -1;
 		HexagonCellHandle m_cellHandle = -1;
 	};
 
