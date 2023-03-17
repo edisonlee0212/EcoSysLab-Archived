@@ -30,7 +30,7 @@ namespace EcoSysLab
 
 		glm::ivec2 m_coordinate = glm::ivec2(0);
 
-		template<typename CD>
+		template<typename GD, typename CD>
 		friend class HexagonGrid;
 
 	public:
@@ -69,7 +69,7 @@ namespace EcoSysLab
 
 	typedef int HexagonGridHandle;
 
-	template<typename CellData>
+	template<typename GridData, typename CellData>
 	class HexagonGrid
 	{
 		std::vector<HexagonCell<CellData>> m_cells;
@@ -81,9 +81,11 @@ namespace EcoSysLab
 		HexagonGridHandle m_handle = -1;
 		bool m_recycled = false;
 
-		template<typename CD>
+		template<typename GD, typename CD>
 		friend class HexagonGridGroup;
 	public:
+		GridData m_data;
+
 		[[nodiscard]] bool IsRecycled() const;
 		[[nodiscard]] HexagonGridHandle GetHandle() const;
 		[[nodiscard]] glm::vec2 GetPosition(const glm::ivec2& coordinate) const;
@@ -110,10 +112,10 @@ namespace EcoSysLab
 
 	
 
-	template<typename CellData>
+	template<typename GridData, typename CellData>
 	class HexagonGridGroup
 	{
-		std::vector<HexagonGrid<CellData>> m_grids;
+		std::vector<HexagonGrid<GridData, CellData>> m_grids;
 		std::queue<HexagonGridHandle> m_gridPool;
 
 		int m_version = -1;
@@ -122,9 +124,9 @@ namespace EcoSysLab
 
 		void RecycleGrid(HexagonGridHandle handle);
 
-		[[nodiscard]] const HexagonGrid<CellData>& PeekGrid(HexagonGridHandle handle) const;
+		[[nodiscard]] const HexagonGrid<GridData, CellData>& PeekGrid(HexagonGridHandle handle) const;
 
-		[[nodiscard]] HexagonGrid<CellData>& RefGrid(HexagonGridHandle handle);
+		[[nodiscard]] HexagonGrid<GridData, CellData>& RefGrid(HexagonGridHandle handle);
 	};
 #pragma region Implementations
 	template <typename CellData>
@@ -225,34 +227,34 @@ namespace EcoSysLab
 		return m_left;
 	}
 
-	template <typename CellData>
-	bool HexagonGrid<CellData>::IsRecycled() const
+	template <typename GridData, typename CellData>
+	bool HexagonGrid<GridData, CellData>::IsRecycled() const
 	{
 		return m_recycled;
 	}
 
-	template <typename CellData>
-	HexagonGridHandle HexagonGrid<CellData>::GetHandle() const
+	template <typename GridData, typename CellData>
+	HexagonGridHandle HexagonGrid<GridData, CellData>::GetHandle() const
 	{
 		return m_handle;
 	}
 
-	template <typename CellData>
-	glm::vec2 HexagonGrid<CellData>::GetPosition(const glm::ivec2& coordinate) const
+	template <typename GridData, typename CellData>
+	glm::vec2 HexagonGrid<GridData, CellData>::GetPosition(const glm::ivec2& coordinate) const
 	{
 		return { coordinate.x + coordinate.y / 2.0f,
 			coordinate.y * glm::cos(glm::radians(30.0f)) };
 	}
 
-	template <typename CellData>
-	glm::ivec2 HexagonGrid<CellData>::GetCoordinate(const glm::vec2& position) const
+	template <typename GridData, typename CellData>
+	glm::ivec2 HexagonGrid<GridData, CellData>::GetCoordinate(const glm::vec2& position) const
 	{
 		int y = glm::round(position.y / glm::cos(glm::radians(30.0f)));
 		return { glm::round((position.x - y / 2.0f)), y };
 	}
 
-	template <typename CellData>
-	HexagonCellHandle HexagonGrid<CellData>::AllocateAdjacent(HexagonCellHandle targetHandle,
+	template <typename GridData, typename CellData>
+	HexagonCellHandle HexagonGrid<GridData, CellData>::AllocateAdjacent(HexagonCellHandle targetHandle,
 		const HexagonGridDirection direction)
 	{
 		auto& originalCell = m_cells[targetHandle];
@@ -575,8 +577,8 @@ namespace EcoSysLab
 		return newCellHandle;
 	}
 
-	template <typename CellData>
-	HexagonCellHandle HexagonGrid<CellData>::Allocate(const glm::ivec2& coordinate)
+	template <typename GridData, typename CellData>
+	HexagonCellHandle HexagonGrid<GridData, CellData>::Allocate(const glm::ivec2& coordinate)
 	{
 		if (m_cellMap.find({ coordinate.x, coordinate.y }) != m_cellMap.end())
 		{
@@ -648,8 +650,8 @@ namespace EcoSysLab
 		return newCellHandle;
 	}
 
-	template <typename CellData>
-	void HexagonGrid<CellData>::RecycleCell(const glm::ivec2& coordinate)
+	template <typename GridData, typename CellData>
+	void HexagonGrid<GridData, CellData>::RecycleCell(const glm::ivec2& coordinate)
 	{
 		const auto search = m_cellMap.find({ coordinate.x, coordinate.y });
 		if(search == m_cellMap.end())
@@ -677,8 +679,8 @@ namespace EcoSysLab
 		m_cellPool.push(search->second);
 	}
 
-	template <typename CellData>
-	void HexagonGrid<CellData>::RecycleCell(HexagonCellHandle handle)
+	template <typename GridData, typename CellData>
+	void HexagonGrid<GridData, CellData>::RecycleCell(HexagonCellHandle handle)
 	{
 		auto& cell = m_cells[handle];
 		assert(!cell.m_recycled);
@@ -702,8 +704,8 @@ namespace EcoSysLab
 		m_cellPool.push(handle);
 	}
 
-	template <typename CellData>
-	glm::ivec2 HexagonGrid<CellData>::FindClosestEmptyCoordinate(HexagonCellHandle targetHandle,
+	template <typename GridData, typename CellData>
+	glm::ivec2 HexagonGrid<GridData, CellData>::FindClosestEmptyCoordinate(HexagonCellHandle targetHandle,
 		const glm::vec2& direction)
 	{
 		const auto& cell = m_cells[targetHandle];
@@ -990,36 +992,36 @@ namespace EcoSysLab
 		return coordinate;
 	}
 
-	template <typename CellData>
-	HexagonCell<CellData>& HexagonGrid<CellData>::RefCell(HexagonCellHandle handle)
+	template <typename GridData, typename CellData>
+	HexagonCell<CellData>& HexagonGrid<GridData, CellData>::RefCell(HexagonCellHandle handle)
 	{
 		return m_cells[handle];
 	}
 
-	template <typename CellData>
-	const HexagonCell<CellData>& HexagonGrid<CellData>::PeekCell(HexagonCellHandle handle) const
+	template <typename GridData, typename CellData>
+	const HexagonCell<CellData>& HexagonGrid<GridData, CellData>::PeekCell(HexagonCellHandle handle) const
 	{
 		return m_cells[handle];
 	}
 
-	template <typename CellData>
-	HexagonCellHandle HexagonGrid<CellData>::GetCellHandle(const glm::ivec2& coordinate) const
+	template <typename GridData, typename CellData>
+	HexagonCellHandle HexagonGrid<GridData, CellData>::GetCellHandle(const glm::ivec2& coordinate) const
 	{
 		const auto search = m_cellMap.find({ coordinate.x, coordinate.y });
 		if (search != m_cellMap.end()) return search->second;
 		return -1;
 	}
 
-	template <typename CellData>
-	HexagonGrid<CellData>::HexagonGrid(const HexagonGridHandle handle)
+	template <typename GridData, typename CellData>
+	HexagonGrid<GridData, CellData>::HexagonGrid(const HexagonGridHandle handle)
 	{
 		m_handle = handle;
 		m_recycled = false;
 		m_version = -1;
 	}
 
-	template <typename CellData>
-	HexagonGridHandle HexagonGridGroup<CellData>::Allocate()
+	template <typename GridData, typename CellData>
+	HexagonGridHandle HexagonGridGroup<GridData, CellData>::Allocate()
 	{
 		HexagonGridHandle newGridHandle;
 		if (m_gridPool.empty()) {
@@ -1035,8 +1037,8 @@ namespace EcoSysLab
 		return newGridHandle;
 	}
 
-	template <typename CellData>
-	void HexagonGridGroup<CellData>::RecycleGrid(HexagonGridHandle handle)
+	template <typename GridData, typename CellData>
+	void HexagonGridGroup<GridData, CellData>::RecycleGrid(HexagonGridHandle handle)
 	{
 		auto& grid = m_grids[handle];
 		assert(!grid.m_recycled);
@@ -1048,14 +1050,14 @@ namespace EcoSysLab
 		m_gridPool.push(handle);
 	}
 
-	template <typename CellData>
-	const HexagonGrid<CellData>& HexagonGridGroup<CellData>::PeekGrid(HexagonGridHandle handle) const
+	template <typename GridData, typename CellData>
+	const HexagonGrid<GridData, CellData>& HexagonGridGroup<GridData, CellData>::PeekGrid(HexagonGridHandle handle) const
 	{
 		return m_grids[handle];
 	}
 
-	template <typename CellData>
-	HexagonGrid<CellData>& HexagonGridGroup<CellData>::RefGrid(HexagonGridHandle handle)
+	template <typename GridData, typename CellData>
+	HexagonGrid<GridData, CellData>& HexagonGridGroup<GridData, CellData>::RefGrid(HexagonGridHandle handle)
 	{
 		return m_grids[handle];
 	}

@@ -482,6 +482,16 @@ namespace EcoSysLab {
 	typedef PipeGroup<ShootPipeGroupGrowthData, ShootPipeGrowthData, ShootPipeNodeGrowthData> ShootPipeGroup;
 	typedef PipeGroup<RootPipeGroupGrowthData, RootPipeGrowthData, RootPipeNodeGrowthData> RootPipeGroup;
 
+
+	struct HexagonGridCellData
+	{
+		PipeHandle m_pipeNodeHandle = -1;
+	};
+	struct HexagonGridData
+	{
+		NodeHandle m_nodeHandle = -1;
+	};
+
 	struct ShootGrowthData {
 		Octree<TreeVoxelData> m_octree = {};
 
@@ -496,7 +506,7 @@ namespace EcoSysLab {
 
 		float m_vigor = 0;
 
-		HexagonGridGroup<PipeHandle> m_hexagonGridGroup;
+		HexagonGridGroup<HexagonGridData, HexagonGridCellData> m_hexagonGridGroup;
 	};
 
 	struct RootGrowthData {

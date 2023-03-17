@@ -190,9 +190,10 @@ void TreeModel::Initialize(const ShootGrowthParameters& shootGrowthParameters, c
 			auto& gridGroup = m_shootSkeleton.m_data.m_hexagonGridGroup;
 			const auto newGridHandle = gridGroup.Allocate();
 			auto& newGrid = gridGroup.RefGrid(newGridHandle);
+			newGrid.m_data.m_nodeHandle = firstInternode.GetHandle();
 			const auto newCellHandle = newGrid.Allocate(glm::ivec2(0, 0));
 			auto& newCell = newGrid.RefCell(newCellHandle);
-			newCell.m_data = newPipeHandle;
+			newCell.m_data.m_pipeNodeHandle = newPipeNodeHandle;
 			newPipeNode.m_data.m_cellHandle = newCellHandle;
 			firstInternode.m_data.m_gridHandle = newGridHandle;
 		}
@@ -583,7 +584,7 @@ bool TreeModel::GrowShoots(const glm::mat4& globalTransform, ClimateModel& clima
 			if (internode.GetParentHandle() == -1) {
 				internodeInfo.m_globalPosition = glm::vec3(0.0f);
 				internodeInfo.m_localRotation = glm::vec3(0.0f);
-				internodeInfo.m_globalRotation = glm::vec3(glm::radians(90.0f), 0.0f, 0.0f);
+				internodeInfo.m_globalRotation = internodeInfo.m_regulatedGlobalRotation = glm::vec3(glm::radians(90.0f), 0.0f, 0.0f);
 
 				internodeData.m_rootDistance =
 					internodeInfo.m_length / shootGrowthParameters.m_internodeLength;
@@ -595,8 +596,9 @@ bool TreeModel::GrowShoots(const glm::mat4& globalTransform, ClimateModel& clima
 				internodeInfo.m_globalRotation =
 					parentInternode.m_info.m_globalRotation * internodeInfo.m_localRotation;
 #pragma region Apply Sagging
-				auto parentGlobalRotation = m_shootSkeleton.RefNode(
-					internode.GetParentHandle()).m_info.m_globalRotation;
+				const auto& parentNode = m_shootSkeleton.RefNode(
+					internode.GetParentHandle());
+				auto parentGlobalRotation = parentNode.m_info.m_globalRotation;
 				internodeInfo.m_globalRotation = parentGlobalRotation * internodeData.m_desiredLocalRotation;
 				auto front = internodeInfo.m_globalRotation * glm::vec3(0, 0, -1);
 				auto up = internodeInfo.m_globalRotation * glm::vec3(0, 1, 0);
@@ -604,12 +606,17 @@ bool TreeModel::GrowShoots(const glm::mat4& globalTransform, ClimateModel& clima
 				ApplyTropism(m_currentGravityDirection, internodeData.m_sagging * (1.0f - dotP), front, up);
 				internodeInfo.m_globalRotation = glm::quatLookAt(front, up);
 				internodeInfo.m_localRotation = glm::inverse(parentGlobalRotation) * internodeInfo.m_globalRotation;
+
+				auto parentRegulatedUp = parentNode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
+				auto regulatedUp = glm::normalize(glm::cross(glm::cross(front, parentRegulatedUp), front));
+				internodeInfo.m_regulatedGlobalRotation = glm::quatLookAt(front, regulatedUp);
 #pragma endregion
 
 				internodeInfo.m_globalPosition =
 					parentInternode.m_info.m_globalPosition + parentInternode.m_info.m_length *
 					(parentInternode.m_info.m_globalRotation *
 						glm::vec3(0, 0, -1));
+
 
 			}
 
@@ -682,9 +689,9 @@ bool TreeModel::GrowShoots(const glm::mat4& globalTransform, ClimateModel& clima
 				if(pipeNode.IsRecycled()) continue;
 				const auto& node = m_shootSkeleton.PeekNode(pipeNode.m_data.m_nodeHandle);
 				const auto& nodeInfo = node.m_info;
-				const glm::vec3 left = nodeInfo.m_globalRotation * glm::vec3(1, 0, 0);
-				const glm::vec3 up = nodeInfo.m_globalRotation * glm::vec3(0, 1, 0);
-				const glm::vec3 front = nodeInfo.m_globalRotation * glm::vec3(0, 0, -1);
+				const glm::vec3 left = nodeInfo.m_regulatedGlobalRotation * glm::vec3(1, 0, 0);
+				const glm::vec3 up = nodeInfo.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
+				const glm::vec3 front = nodeInfo.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
 				auto& pipeInfo = pipeNode.m_info;
 				const auto& grid = gridGroup.PeekGrid(node.m_data.m_gridHandle);
 				const auto& cell = grid.PeekCell(pipeNode.m_data.m_cellHandle);
@@ -692,9 +699,9 @@ bool TreeModel::GrowShoots(const glm::mat4& globalTransform, ClimateModel& clima
 				pipeInfo.m_localPosition = shootGrowthParameters.m_endNodeThickness * grid.GetPosition(cell.GetCoordinate());
 
 				pipeInfo.m_globalStartPosition = nodeInfo.m_globalPosition + left * pipeInfo.m_localPosition.x + up * pipeInfo.m_localPosition.y;
-				pipeInfo.m_globalStartRotation = nodeInfo.m_globalRotation;
+				pipeInfo.m_globalStartRotation = nodeInfo.m_regulatedGlobalRotation;
 				pipeInfo.m_globalEndPosition = nodeInfo.m_globalPosition + nodeInfo.m_length * front + left * pipeInfo.m_localPosition.x + up * pipeInfo.m_localPosition.y;
-				pipeInfo.m_globalEndRotation = nodeInfo.m_globalRotation;
+				pipeInfo.m_globalEndRotation = nodeInfo.m_regulatedGlobalRotation;
 
 			}
 		}
@@ -1070,7 +1077,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 					//To be inherited when the flow stays the same
 					//To be used to track flow changes.
 					//Walk along the old pipe, create new pipe nodes one by one until the branching point.
-
+					glm::vec2 principleDirection = glm::diskRand(1.0f);
 					HexagonGridHandle currentGridHandle = -1;
 					HexagonCellHandle currentCellHandle = -1;
 					for (const auto& prevPipeNodeHandle : prevPipe.PeekPipeNodeHandles())
@@ -1089,10 +1096,10 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 							//If we are meeting a new grid, we need to create a new cell for current pipe.
 							currentGridHandle = currentVisitingNode.m_data.m_gridHandle;
 							auto& grid = gridGroup.RefGrid(currentGridHandle);
-							auto newCoordinate = grid.FindClosestEmptyCoordinate(prevPipeNode.m_cellHandle, glm::diskRand(1.0f));
+							auto newCoordinate = grid.FindClosestEmptyCoordinate(prevPipeNode.m_cellHandle, principleDirection);
 							currentCellHandle = grid.Allocate(newCoordinate);
 							auto& cell = grid.RefCell(currentCellHandle);
-							cell.m_data = newPipeHandle;
+							cell.m_data.m_pipeNodeHandle = newPipeNodeHandle;
 						}
 						newPipeNode.m_data.m_cellHandle = currentCellHandle;
 						if (prevNodeHandle == internodeHandle) break;
@@ -1104,13 +1111,14 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 
 					const auto newGridHandle = gridGroup.Allocate();
 					auto& newGrid = gridGroup.RefGrid(newGridHandle);
+					newGrid.m_data.m_nodeHandle = newInternodeHandle;
 					const auto newCellHandle = newGrid.Allocate(glm::ivec2(0, 0));
 					newPipeNode.m_data.m_cellHandle = newCellHandle;
 					newInternode.m_data.m_gridHandle = newGridHandle;
 					newInternode.m_data.m_pipeNodeHandles.emplace_back(newPipeNodeHandle);
 
 					auto& cell = newGrid.RefCell(newCellHandle);
-					cell.m_data = newPipeHandle;
+					cell.m_data.m_pipeNodeHandle = newPipeNodeHandle;
 				}
 			}
 		}
