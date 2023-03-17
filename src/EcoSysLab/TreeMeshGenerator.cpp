@@ -57,7 +57,8 @@ void RingSegment::AppendPoints(std::vector<Vertex>& vertices, glm::vec3& normalD
 	vertices.push_back(startRing[0]);
 }
 
-glm::vec3 RingSegment::GetPoint(glm::vec3& normalDir, float angle, bool isStart) {
+glm::vec3 RingSegment::GetPoint(const glm::vec3& normalDir, const float angle, const bool isStart) const
+{
 	glm::vec3 direction = glm::cross(normalDir, isStart ? this->m_startAxis : this->m_endAxis);
 	direction = glm::rotate(direction, glm::radians(angle), isStart ? this->m_startAxis : this->m_endAxis);
 	direction = glm::normalize(direction);

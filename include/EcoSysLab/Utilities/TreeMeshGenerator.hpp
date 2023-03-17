@@ -19,7 +19,7 @@ namespace EcoSysLab {
 		void AppendPoints(std::vector<Vertex>& vertices, glm::vec3& normalDir,
 			int step);
 
-		[[nodiscard]] glm::vec3 GetPoint(glm::vec3& normalDir, float angle, bool isStart);
+		[[nodiscard]] glm::vec3 GetPoint(const glm::vec3& normalDir, float angle, bool isStart) const;
 	};
 
 	struct PresentationOverrideSettings
@@ -197,22 +197,12 @@ namespace EcoSysLab {
 			}, results);
 		for (auto& i : results) i.wait();
 
-		std::map<unsigned, glm::vec3> normals;
 		for (int internodeIndex = 0; internodeIndex < sortedInternodeList.size(); internodeIndex++) {
 			auto internodeHandle = sortedInternodeList[internodeIndex];
 			const auto& internode = treeSkeleton.PeekNode(internodeHandle);
 			const auto& internodeInfo = internode.m_info;
 			auto parentInternodeHandle = internode.GetParentHandle();
-			glm::vec3 newNormalDir;
-			if (parentInternodeHandle != -1) {
-				newNormalDir = normals.at(parentInternodeHandle);
-			}
-			else {
-				newNormalDir = internodeInfo.m_globalRotation * glm::vec3(1, 0, 0);
-			}
-			const glm::vec3 front = internodeInfo.m_globalRotation * glm::vec3(0.0f, 0.0f, -1.0f);
-			newNormalDir = glm::cross(glm::cross(front, newNormalDir), front);
-			normals[internodeHandle] = newNormalDir;
+			const glm::vec3 up = internodeInfo.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
 			auto& rings = ringsList[internodeIndex];
 			if (rings.empty()) {
 				continue;
@@ -234,7 +224,7 @@ namespace EcoSysLab {
 			const auto endPosition = rings.back().m_endPosition;
 			for (int p = 0; p < pStep; p++) {
 				archetype.m_position =
-					rings.at(0).GetPoint(newNormalDir, angleStep * p, true);
+					rings.at(0).GetPoint(up, angleStep * p, true);
 				float distanceToStart = 0;
 				float distanceToEnd = 1;
 				const float x =
@@ -305,7 +295,7 @@ namespace EcoSysLab {
 			for (auto ringIndex = 0; ringIndex < ringSize; ringIndex++) {
 				for (auto s = 0; s < step; s++) {
 					archetype.m_position = rings.at(ringIndex).GetPoint(
-						newNormalDir, angleStep * s, false);
+						up, angleStep * s, false);
 					float distanceToStart = glm::distance(
 						rings.at(ringIndex).m_endPosition, startPosition);
 					float distanceToEnd = glm::distance(
