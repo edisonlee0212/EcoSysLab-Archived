@@ -637,6 +637,8 @@ namespace EcoSysLab {
 		
 	public:
 
+		[[nodiscard]] bool IsPipeEnabled() const;
+
 		void PruneInternode(NodeHandle internodeHandle);
 		void PruneRootNode(NodeHandle rootNodeHandle);
 

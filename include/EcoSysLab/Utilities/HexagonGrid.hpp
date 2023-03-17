@@ -107,6 +107,8 @@ namespace EcoSysLab
 
 		[[nodiscard]] HexagonCellHandle GetCellHandle(const glm::ivec2& coordinate) const;
 
+		[[nodiscard]] const std::vector<HexagonCell<CellData>>& PeekCells() const;
+
 		explicit HexagonGrid(HexagonGridHandle handle);
 	};
 
@@ -1010,6 +1012,12 @@ namespace EcoSysLab
 		const auto search = m_cellMap.find({ coordinate.x, coordinate.y });
 		if (search != m_cellMap.end()) return search->second;
 		return -1;
+	}
+
+	template <typename GridData, typename CellData>
+	const std::vector<HexagonCell<CellData>>& HexagonGrid<GridData, CellData>::PeekCells() const
+	{
+		return m_cells;
 	}
 
 	template <typename GridData, typename CellData>

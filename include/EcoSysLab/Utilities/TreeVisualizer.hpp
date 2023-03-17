@@ -47,8 +47,10 @@ namespace EcoSysLab {
 
 		std::vector<glm::vec2> m_storedMousePositions;
 		bool m_visualization = true;
-		bool m_treeHierarchyGui = true;
-		bool m_rootHierarchyGui = true;
+
+		bool m_hexagonGridGui = false;
+		bool m_treeHierarchyGui = false;
+		bool m_rootHierarchyGui = false;
 
 		TreeVisualizerColorSettings m_settings;
 

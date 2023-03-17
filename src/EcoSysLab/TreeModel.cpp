@@ -31,6 +31,11 @@ void TreeModel::ResetReproductiveModule()
 	m_fruitCount = m_leafCount = 0;
 }
 
+bool TreeModel::IsPipeEnabled() const
+{
+	return m_enablePipe;
+}
+
 void TreeModel::PruneInternode(NodeHandle internodeHandle)
 {
 	if (m_enablePipe) {
