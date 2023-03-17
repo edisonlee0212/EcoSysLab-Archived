@@ -138,5 +138,6 @@ namespace EcoSysLab {
 			if (pipe.IsRecycled()) continue;
 			BuildStrand(pipeGroup, pipe, strands, points);
 		}
+		if(!points.empty()) strands.emplace_back(points.size());
 	}
 }

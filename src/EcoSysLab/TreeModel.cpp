@@ -1084,7 +1084,8 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 						newPipeNode.m_data.m_cellHandle = currentCellHandle;
 						newPipeNode.m_data.m_gridHandle = currentGridHandle;
 						
-						if (prevPipeNodeHandle == prevPipeNodeEnd.GetHandle()) break;
+						if (prevNodeHandle == internodeHandle) break;
+						//if (prevPipeNodeHandle == prevPipeNodeEnd.GetHandle()) break;
 					}
 
 					newPipeNodeHandle = pipeGroup.Extend(newPipeHandle);
