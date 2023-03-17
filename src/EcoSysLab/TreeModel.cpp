@@ -35,6 +35,8 @@ void TreeModel::PruneInternode(NodeHandle internodeHandle)
 {
 	if (m_enablePipe) {
 		auto& pipeGroup = m_shootSkeleton.m_data.m_shootPipeGroup;
+		auto& grid = m_shootSkeleton.m_data.m_hexagonGridGroup;
+
 		auto& nodeData = m_shootSkeleton.RefNode(internodeHandle).m_data;
 		for (const auto& i : nodeData.m_pipeNodeHandles)
 		{
@@ -167,12 +169,20 @@ void TreeModel::Initialize(const ShootGrowthParameters& shootGrowthParameters, c
 		{
 			auto& pipeGroup = m_shootSkeleton.m_data.m_shootPipeGroup;
 			pipeGroup = {};
-			firstInternode.m_data.m_pipeNodeHandles.emplace_back(pipeGroup.Extend(pipeGroup.AllocatePipe()));
-			auto& pipeNode = pipeGroup.RefPipeNode(firstInternode.m_data.m_pipeNodeHandles[0]);
-			pipeNode.m_data.m_nodeHandle = firstInternode.GetHandle();
-			pipeNode.m_data.m_coordinate = glm::ivec2(0, 0);
-			auto& flow = m_shootSkeleton.RefFlow(firstInternode.GetFlowHandle());
-			pipeNode.m_data.m_cellHandle = flow.m_data.m_pipeHexagonGrid.Allocate(glm::ivec2(0, 0));
+			const auto& newPipeHandle = pipeGroup.AllocatePipe();
+			const auto newPipeNodeHandle = pipeGroup.Extend(newPipeHandle);
+			firstInternode.m_data.m_pipeNodeHandles.emplace_back(newPipeNodeHandle);
+			auto& newPipeNode = pipeGroup.RefPipeNode(newPipeNodeHandle);
+			newPipeNode.m_data.m_nodeHandle = firstInternode.GetHandle();
+
+			auto& gridGroup = m_shootSkeleton.m_data.m_hexagonGridGroup;
+			const auto newGridHandle = gridGroup.Allocate();
+			auto& newGrid = gridGroup.RefGrid(newGridHandle);
+			const auto newCellHandle = newGrid.Allocate(glm::ivec2(0, 0));
+			auto& newCell = newGrid.RefCell(newCellHandle);
+			newCell.m_data = newPipeHandle;
+			newPipeNode.m_data.m_cellHandle = newCellHandle;
+			newPipeNode.m_data.m_gridHandle = newGridHandle;
 		}
 	}
 	{
@@ -654,14 +664,21 @@ bool TreeModel::GrowShoots(const glm::mat4& globalTransform, ClimateModel& clima
 		if (m_enablePipe)
 		{
 			auto& shootPipeGroup = m_shootSkeleton.m_data.m_shootPipeGroup;
-			for (auto& pipe : shootPipeGroup.RefPipeNodes())
+			auto& gridGroup = m_shootSkeleton.m_data.m_hexagonGridGroup;
+			for (auto& pipeNode : shootPipeGroup.RefPipeNodes())
 			{
-				const auto& node = m_shootSkeleton.PeekNode(pipe.m_data.m_nodeHandle);
+				if(pipeNode.IsRecycled()) continue;
+				const auto& node = m_shootSkeleton.PeekNode(pipeNode.m_data.m_nodeHandle);
 				const auto& nodeInfo = node.m_info;
 				const glm::vec3 left = nodeInfo.m_globalRotation * glm::vec3(1, 0, 0);
 				const glm::vec3 up = nodeInfo.m_globalRotation * glm::vec3(0, 1, 0);
 				const glm::vec3 front = nodeInfo.m_globalRotation * glm::vec3(0, 0, -1);
-				auto& pipeInfo = pipe.m_info;
+				auto& pipeInfo = pipeNode.m_info;
+				const auto& grid = gridGroup.PeekGrid(pipeNode.m_data.m_gridHandle);
+				const auto& cell = grid.PeekCell(pipeNode.m_data.m_cellHandle);
+
+				pipeInfo.m_localPosition = shootGrowthParameters.m_endNodeThickness * grid.GetPosition(cell.GetCoordinate());
+
 				pipeInfo.m_globalStartPosition = nodeInfo.m_globalPosition + left * pipeInfo.m_localPosition.x + up * pipeInfo.m_localPosition.y;
 				pipeInfo.m_globalStartRotation = nodeInfo.m_globalRotation;
 				pipeInfo.m_globalEndPosition = nodeInfo.m_globalPosition + nodeInfo.m_length * front + left * pipeInfo.m_localPosition.x + up * pipeInfo.m_localPosition.y;
@@ -837,19 +854,16 @@ bool TreeModel::ElongateInternode(float extendLength, NodeHandle internodeHandle
 		if (m_enablePipe)
 		{
 			auto& pipeGroup = m_shootSkeleton.m_data.m_shootPipeGroup;
-			const auto newPipeNodeHandle = pipeGroup.Extend(pipeGroup.RefPipeNode(oldInternode.m_data.m_pipeNodeHandles[0]).GetPipeHandle());
+			const auto oldPipeNodeHandle = oldInternode.m_data.m_pipeNodeHandles[0];
+			const auto pipeHandle = pipeGroup.RefPipeNode(oldPipeNodeHandle).GetPipeHandle();
+			const auto newPipeNodeHandle = pipeGroup.Extend(pipeHandle);
+			const auto& oldPipeNode = pipeGroup.RefPipeNode(oldPipeNodeHandle);
+			auto& newPipeNode = pipeGroup.RefPipeNode(newPipeNodeHandle);
+
 			newInternode.m_data.m_pipeNodeHandles.emplace_back(newPipeNodeHandle);
-			pipeGroup.RefPipeNode(newPipeNodeHandle).m_data.m_nodeHandle = newInternode.GetHandle();
-
-			if (oldInternode.GetFlowHandle() != newInternode.GetFlowHandle())
-			{
-				auto& flow = m_shootSkeleton.RefFlow(newInternode.GetFlowHandle());
-				const auto hexagonCellHandle = flow.m_data.m_pipeHexagonGrid.Allocate({ 0, 0 });
-				auto& cell = flow.m_data.m_pipeHexagonGrid.RefCell(hexagonCellHandle);
-				cell.m_data = newPipeNodeHandle;
-
-				
-			}
+			newPipeNode.m_data.m_nodeHandle = newInternode.GetHandle();
+			newPipeNode.m_data.m_cellHandle = oldPipeNode.m_data.m_cellHandle;
+			newPipeNode.m_data.m_gridHandle = oldPipeNode.m_data.m_gridHandle;
 		}
 
 		if (extraLength > internodeLength) {
@@ -1033,66 +1047,59 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 				if (m_enablePipe)
 				{
 					auto& pipeGroup = m_shootSkeleton.m_data.m_shootPipeGroup;
+					auto& gridGroup = m_shootSkeleton.m_data.m_hexagonGridGroup;
 					const auto newPipeHandle = pipeGroup.AllocatePipe();
 					PipeNodeHandle newPipeNodeHandle = -1;
 
 					//Here, we want to build a new pipe that is close to the original pipe that this node branches from.
-					const auto& oldPipeNode = pipeGroup.PeekPipeNode(oldInternode.m_data.m_pipeNodeHandles[0]);
-					const auto& oldPipe = pipeGroup.PeekPipe(oldPipeNode.GetPipeHandle());
+					const auto& prevPipeNodeEnd = pipeGroup.PeekPipeNode(oldInternode.m_data.m_pipeNodeHandles[0]);
+					const auto& prevPipe = pipeGroup.PeekPipe(prevPipeNodeEnd.GetPipeHandle());
 					//To be inherited when the flow stays the same
-					glm::ivec2 currentCoordinate = glm::ivec2(0, 0);
-					glm::vec2 currentLocalPosition = glm::vec2(0, 0);
 					//To be used to track flow changes.
-					FlowHandle currentFlowHandle = -1;
-					HexagonCellHandle currentCellHandle = -1;
-					glm::vec2 desiredDirection = glm::vec2(desiredGlobalFront.x, desiredGlobalFront.z);
-					if (glm::length(desiredDirection) == 0) desiredDirection = glm::vec2(1, 0);
-					else desiredDirection = glm::normalize(desiredDirection);
 					//Walk along the old pipe, create new pipe nodes one by one until the branching point.
-					for (const auto& currentOldPipeNodeHandle : oldPipe.PeekPipeNodeHandles())
+
+					HexagonGridHandle currentGridHandle = -1;
+					HexagonCellHandle currentCellHandle = -1;
+					for (const auto& prevPipeNodeHandle : prevPipe.PeekPipeNodeHandles())
 					{
 						//First, create a new pipe node from new pipe.
 						newPipeNodeHandle = pipeGroup.Extend(newPipeHandle);
 						auto& newPipeNode = pipeGroup.RefPipeNode(newPipeNodeHandle);
 						//Find the node that includes the current old pipe node.
-						auto& originalPipeNode = pipeGroup.PeekPipeNode(currentOldPipeNodeHandle).m_data;
-						auto currentNodeHandle = originalPipeNode.m_nodeHandle;
-						newPipeNode.m_data.m_nodeHandle = currentNodeHandle;
-						auto& currentVisitingNode = m_shootSkeleton.RefNode(currentNodeHandle);
+						auto& prevPipeNode = pipeGroup.PeekPipeNode(prevPipeNodeHandle).m_data;
+						auto prevNodeHandle = prevPipeNode.m_nodeHandle;
+						newPipeNode.m_data.m_nodeHandle = prevNodeHandle;
+
+						auto& currentVisitingNode = m_shootSkeleton.RefNode(prevNodeHandle);
 						currentVisitingNode.m_data.m_pipeNodeHandles.emplace_back(newPipeNodeHandle);
-						//Get which flow we are on right now.
-						if (currentFlowHandle != currentVisitingNode.GetFlowHandle())
-						{
-							//Here we need to access the grid from next flow and assign new coordinate/position
-							currentFlowHandle = currentVisitingNode.GetFlowHandle();
-							auto& currentFlow = m_shootSkeleton.RefFlow(currentFlowHandle);
-							auto& grid = currentFlow.m_data.m_pipeHexagonGrid;
-							auto oldCellHandle = grid.GetCellHandle(originalPipeNode.m_coordinate);
-							currentCoordinate = grid.FindClosestEmptyCoordinate(oldCellHandle, desiredDirection);
-							currentCellHandle = grid.Allocate(currentCoordinate);
-							currentLocalPosition = grid.GetPosition(currentCoordinate);
+						if (prevPipeNode.m_gridHandle != currentGridHandle) {
+							//If we are meeting a new grid, we need to create a new cell for current pipe.
+							currentGridHandle = prevPipeNode.m_gridHandle;
+							auto& grid = gridGroup.RefGrid(currentGridHandle);
+							auto newCoordinate = grid.FindClosestEmptyCoordinate(prevPipeNode.m_cellHandle, glm::diskRand(1.0f));
+							currentCellHandle = grid.Allocate(newCoordinate);
+							auto& cell = grid.RefCell(currentCellHandle);
+							cell.m_data = newPipeHandle;
 						}
-						newPipeNode.m_data.m_coordinate = currentCoordinate;
 						newPipeNode.m_data.m_cellHandle = currentCellHandle;
-						newPipeNode.m_info.m_localPosition = shootGrowthParameters.m_endNodeThickness * 2.0f * currentLocalPosition;
-						if (currentOldPipeNodeHandle == oldPipeNode.GetHandle()) break;
+						newPipeNode.m_data.m_gridHandle = currentGridHandle;
+						
+						if (prevPipeNodeHandle == prevPipeNodeEnd.GetHandle()) break;
 					}
 
 					newPipeNodeHandle = pipeGroup.Extend(newPipeHandle);
 					auto& newPipeNode = pipeGroup.RefPipeNode(newPipeNodeHandle);
 					newPipeNode.m_data.m_nodeHandle = newInternode.GetHandle();
 
-					currentFlowHandle = newInternode.GetFlowHandle();
-					auto& currentFlow = m_shootSkeleton.RefFlow(currentFlowHandle);
-					auto& grid = currentFlow.m_data.m_pipeHexagonGrid;
-					currentCoordinate = glm::ivec2(0, 0);
-					currentCellHandle = grid.Allocate(currentCoordinate);
-					currentLocalPosition = grid.GetPosition(currentCoordinate);
-					newPipeNode.m_data.m_coordinate = currentCoordinate;
-					newPipeNode.m_data.m_cellHandle = currentCellHandle;
-					newPipeNode.m_info.m_localPosition = shootGrowthParameters.m_endNodeThickness * 2.0f * currentLocalPosition;
-
+					const auto newGridHandle = gridGroup.Allocate();
+					auto& newGrid = gridGroup.RefGrid(newGridHandle);
+					const auto newCellHandle = newGrid.Allocate(glm::ivec2(0, 0));
+					newPipeNode.m_data.m_cellHandle = newCellHandle;
+					newPipeNode.m_data.m_gridHandle = newGridHandle;
 					newInternode.m_data.m_pipeNodeHandles.emplace_back(newPipeNodeHandle);
+
+					auto& cell = newGrid.RefCell(newCellHandle);
+					cell.m_data = newPipeHandle;
 				}
 			}
 		}

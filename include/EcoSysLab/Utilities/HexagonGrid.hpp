@@ -52,6 +52,8 @@ namespace EcoSysLab
 
 		[[nodiscard]] glm::ivec2 GetLeftCoordinate() const;
 
+		[[nodiscard]] HexagonCellHandle GetHandle() const;
+
 		[[nodiscard]] HexagonCellHandle GetUpLeftHandle() const;
 
 		[[nodiscard]] HexagonCellHandle GetUpRightHandle() const;
@@ -64,6 +66,9 @@ namespace EcoSysLab
 
 		[[nodiscard]] HexagonCellHandle GetLeftHandle() const;
 	};
+
+	typedef int HexagonGridHandle;
+
 	template<typename CellData>
 	class HexagonGrid
 	{
@@ -72,6 +77,12 @@ namespace EcoSysLab
 
 		std::queue<HexagonCellHandle> m_cellPool;
 		int m_version = -1;
+
+		HexagonGridHandle m_handle = -1;
+		bool m_recycled = false;
+
+		template<typename CD>
+		friend class HexagonGridGroup;
 	public:
 		[[nodiscard]] glm::vec2 GetPosition(const glm::ivec2& coordinate) const;
 		[[nodiscard]] glm::ivec2 GetCoordinate(const glm::vec2& position) const;
@@ -91,8 +102,28 @@ namespace EcoSysLab
 		[[nodiscard]] const HexagonCell<CellData>& PeekCell(HexagonCellHandle handle) const;
 
 		[[nodiscard]] HexagonCellHandle GetCellHandle(const glm::ivec2& coordinate) const;
+
+		explicit HexagonGrid(HexagonGridHandle handle);
 	};
 
+	
+
+	template<typename CellData>
+	class HexagonGridGroup
+	{
+		std::vector<HexagonGrid<CellData>> m_grids;
+		std::queue<HexagonGridHandle> m_gridPool;
+
+		int m_version = -1;
+	public:
+		[[nodiscard]] HexagonGridHandle Allocate();
+
+		void RecycleGrid(HexagonGridHandle handle);
+
+		[[nodiscard]] const HexagonGrid<CellData>& PeekGrid(HexagonGridHandle handle) const;
+
+		[[nodiscard]] HexagonGrid<CellData>& RefGrid(HexagonGridHandle handle);
+	};
 #pragma region Implementations
 	template <typename CellData>
 	glm::ivec2 HexagonCell<CellData>::GetCoordinate() const
@@ -148,6 +179,12 @@ namespace EcoSysLab
 	glm::ivec2 HexagonCell<CellData>::GetLeftCoordinate() const
 	{
 		return { m_coordinate.x - 1, m_coordinate.y };
+	}
+
+	template <typename CellData>
+	HexagonCellHandle HexagonCell<CellData>::GetHandle() const
+	{
+		return m_handle;
 	}
 
 	template <typename CellData>
@@ -723,10 +760,10 @@ namespace EcoSysLab
 						if(distance1 <= distance2 && distance1 <= distance3)
 						{
 							currentHandle = currentCell.GetLeftHandle();
-						}else if (distance2 <= distance1 && distance1 <= distance3)
+						}else if (distance2 <= distance1 && distance2 <= distance3)
 						{
 							currentHandle = currentCell.GetUpLeftHandle();
-						}else if (distance3 <= distance1 && distance1 <= distance2)
+						}else if (distance3 <= distance1 && distance3 <= distance2)
 						{
 							currentHandle = currentCell.GetUpRightHandle();
 						}
@@ -763,11 +800,11 @@ namespace EcoSysLab
 						{
 							currentHandle = currentCell.GetUpLeftHandle();
 						}
-						else if (distance2 <= distance1 && distance1 <= distance3)
+						else if (distance2 <= distance1 && distance2 <= distance3)
 						{
 							currentHandle = currentCell.GetUpRightHandle();
 						}
-						else if (distance3 <= distance1 && distance1 <= distance2)
+						else if (distance3 <= distance1 && distance3 <= distance2)
 						{
 							currentHandle = currentCell.GetRightHandle();
 						}
@@ -803,11 +840,11 @@ namespace EcoSysLab
 						{
 							currentHandle = currentCell.GetUpRightHandle();
 						}
-						else if (distance2 <= distance1 && distance1 <= distance3)
+						else if (distance2 <= distance1 && distance2 <= distance3)
 						{
 							currentHandle = currentCell.GetRightHandle();
 						}
-						else if (distance3 <= distance1 && distance1 <= distance2)
+						else if (distance3 <= distance1 && distance3 <= distance2)
 						{
 							currentHandle = currentCell.GetDownRightHandle();
 						}
@@ -843,11 +880,11 @@ namespace EcoSysLab
 						{
 							currentHandle = currentCell.GetRightHandle();
 						}
-						else if (distance2 <= distance1 && distance1 <= distance3)
+						else if (distance2 <= distance1 && distance2 <= distance3)
 						{
 							currentHandle = currentCell.GetDownRightHandle();
 						}
-						else if (distance3 <= distance1 && distance1 <= distance2)
+						else if (distance3 <= distance1 && distance3 <= distance2)
 						{
 							currentHandle = currentCell.GetDownLeftHandle();
 						}
@@ -883,11 +920,11 @@ namespace EcoSysLab
 						{
 							currentHandle = currentCell.GetDownRightHandle();
 						}
-						else if (distance2 <= distance1 && distance1 <= distance3)
+						else if (distance2 <= distance1 && distance2 <= distance3)
 						{
 							currentHandle = currentCell.GetDownLeftHandle();
 						}
-						else if (distance3 <= distance1 && distance1 <= distance2)
+						else if (distance3 <= distance1 && distance3 <= distance2)
 						{
 							currentHandle = currentCell.GetLeftHandle();
 						}
@@ -923,11 +960,11 @@ namespace EcoSysLab
 						{
 							currentHandle = currentCell.GetDownLeftHandle();
 						}
-						else if (distance2 <= distance1 && distance1 <= distance3)
+						else if (distance2 <= distance1 && distance2 <= distance3)
 						{
 							currentHandle = currentCell.GetLeftHandle();
 						}
-						else if (distance3 <= distance1 && distance1 <= distance2)
+						else if (distance3 <= distance1 && distance3 <= distance2)
 						{
 							currentHandle = currentCell.GetUpLeftHandle();
 						}
@@ -957,6 +994,56 @@ namespace EcoSysLab
 		const auto search = m_cellMap.find({ coordinate.x, coordinate.y });
 		if (search != m_cellMap.end()) return search->second;
 		return -1;
+	}
+
+	template <typename CellData>
+	HexagonGrid<CellData>::HexagonGrid(const HexagonGridHandle handle)
+	{
+		m_handle = handle;
+		m_recycled = false;
+		m_version = -1;
+	}
+
+	template <typename CellData>
+	HexagonGridHandle HexagonGridGroup<CellData>::Allocate()
+	{
+		HexagonGridHandle newGridHandle;
+		if (m_gridPool.empty()) {
+			auto newGrid = m_grids.emplace_back(m_grids.size());
+			newGridHandle = newGrid.m_handle;
+		}
+		else {
+			newGridHandle = m_gridPool.front();
+			m_gridPool.pop();
+		}
+		m_version++;
+		m_grids[newGridHandle].m_recycled = false;
+		return newGridHandle;
+	}
+
+	template <typename CellData>
+	void HexagonGridGroup<CellData>::RecycleGrid(HexagonGridHandle handle)
+	{
+		auto& grid = m_grids[handle];
+		assert(!grid.m_recycled);
+		grid.m_recycled = true;
+		grid.m_cells.clear();
+		grid.m_cellMap.clear();
+		grid.m_cellPool = {};
+
+		m_gridPool.push(handle);
+	}
+
+	template <typename CellData>
+	const HexagonGrid<CellData>& HexagonGridGroup<CellData>::PeekGrid(HexagonGridHandle handle) const
+	{
+		return m_grids[handle];
+	}
+
+	template <typename CellData>
+	HexagonGrid<CellData>& HexagonGridGroup<CellData>::RefGrid(HexagonGridHandle handle)
+	{
+		return m_grids[handle];
 	}
 #pragma endregion
 }

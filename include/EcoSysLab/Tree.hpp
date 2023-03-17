@@ -135,6 +135,7 @@ namespace EcoSysLab {
 	{
 		for (const auto& pipe : pipeGroup.PeekPipes())
 		{
+			if (pipe.IsRecycled()) continue;
 			BuildStrand(pipeGroup, pipe, strands, points);
 		}
 	}
