@@ -116,6 +116,7 @@ namespace EcoSysLab {
 
 		std::vector<glm::vec4> m_fineRootAnchors;
 
+		HexagonGridHandle m_gridHandle = -1;
 		std::vector<PipeNodeHandle> m_pipeNodeHandles;
 	};
 	struct RootStemGrowthData {
@@ -456,14 +457,11 @@ namespace EcoSysLab {
 	struct ShootPipeNodeGrowthData
 	{
 		NodeHandle m_nodeHandle = -1;
-
-		//HexagonGridHandle m_gridHandle = -1;
 		HexagonCellHandle m_cellHandle = -1;
 	};
 
 	struct RootPipeGroupGrowthData
 	{
-
 	};
 
 	struct RootPipeGrowthData
@@ -474,8 +472,6 @@ namespace EcoSysLab {
 	struct RootPipeNodeGrowthData
 	{
 		NodeHandle m_nodeHandle = -1;
-
-		HexagonGridHandle m_gridHandle = -1;
 		HexagonCellHandle m_cellHandle = -1;
 	};
 
@@ -517,6 +513,8 @@ namespace EcoSysLab {
 		RootPipeGroup m_rootPipeGroup;
 
 		float m_vigor = 0;
+
+		HexagonGridGroup<HexagonGridData, HexagonGridCellData> m_hexagonGridGroup;
 	};
 
 	struct TreeGrowthSettings

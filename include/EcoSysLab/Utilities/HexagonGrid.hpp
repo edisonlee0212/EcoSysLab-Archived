@@ -109,6 +109,8 @@ namespace EcoSysLab
 
 		[[nodiscard]] const std::vector<HexagonCell<CellData>>& PeekCells() const;
 
+		void Copy(const HexagonGrid<GridData, CellData>& src);
+
 		explicit HexagonGrid(HexagonGridHandle handle);
 	};
 
@@ -129,8 +131,27 @@ namespace EcoSysLab
 		[[nodiscard]] const HexagonGrid<GridData, CellData>& PeekGrid(HexagonGridHandle handle) const;
 
 		[[nodiscard]] HexagonGrid<GridData, CellData>& RefGrid(HexagonGridHandle handle);
+
+		[[nodiscard]] std::vector<HexagonGrid<GridData, CellData>>& RefGrids();
+
+		[[nodiscard]] std::queue<HexagonGridHandle>& RefGridPool();
 	};
+
+	
 #pragma region Implementations
+
+	template <typename GridData, typename CellData>
+	std::vector<HexagonGrid<GridData, CellData>>& HexagonGridGroup<GridData, CellData>::RefGrids()
+	{
+		return m_grids;
+	}
+
+	template <typename GridData, typename CellData>
+	std::queue<HexagonGridHandle>& HexagonGridGroup<GridData, CellData>::RefGridPool()
+	{
+		return m_gridPool;
+	}
+
 	template <typename CellData>
 	glm::ivec2 HexagonCell<CellData>::GetCoordinate() const
 	{
@@ -1021,6 +1042,14 @@ namespace EcoSysLab
 	}
 
 	template <typename GridData, typename CellData>
+	void HexagonGrid<GridData, CellData>::Copy(const HexagonGrid<GridData, CellData>& src)
+	{
+		m_cells = src.m_cells;
+		m_cellMap = src.m_cellMap;
+		m_cellPool = src.m_cellPool;
+	}
+
+	template <typename GridData, typename CellData>
 	HexagonGrid<GridData, CellData>::HexagonGrid(const HexagonGridHandle handle)
 	{
 		m_handle = handle;
@@ -1042,6 +1071,7 @@ namespace EcoSysLab
 		}
 		m_version++;
 		m_grids[newGridHandle].m_recycled = false;
+		m_grids[newGridHandle].m_data = {};
 		return newGridHandle;
 	}
 

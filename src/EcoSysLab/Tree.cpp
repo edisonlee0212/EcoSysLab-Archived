@@ -243,6 +243,8 @@ void Tree::InitializeStrandRenderer() const
 	std::vector<glm::uint> strandsList;
 	std::vector<StrandPoint> points;
 	BuildStrands(m_treeModel.m_shootSkeleton.m_data.m_shootPipeGroup, strandsList, points);
+	BuildStrands(m_treeModel.m_rootSkeleton.m_data.m_rootPipeGroup, strandsList, points);
+	if (!points.empty()) strandsList.emplace_back(points.size());
 	strandsAsset->SetStrands(static_cast<unsigned>(StrandPointAttribute::Position) | static_cast<unsigned>(StrandPointAttribute::Thickness) | static_cast<unsigned>(StrandPointAttribute::Color), strandsList, points);
 	renderer->m_strands = strandsAsset;
 
