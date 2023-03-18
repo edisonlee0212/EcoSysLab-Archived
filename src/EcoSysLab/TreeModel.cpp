@@ -848,11 +848,27 @@ bool TreeModel::ElongateRoot(SoilModel& soilModel, const float extendLength, Nod
 			const auto newPipeNodeHandle = pipeGroup.Extend(pipeHandle);
 			const auto& oldPipeNode = pipeGroup.RefPipeNode(oldPipeNodeHandle);
 			auto& newPipeNode = pipeGroup.RefPipeNode(newPipeNodeHandle);
-
-			newRootNode.m_data.m_gridHandle = oldRootNode.m_data.m_gridHandle;
 			newRootNode.m_data.m_pipeNodeHandles.emplace_back(newPipeNodeHandle);
 			newPipeNode.m_data.m_nodeHandle = newRootNode.GetHandle();
-			newPipeNode.m_data.m_cellHandle = oldPipeNode.m_data.m_cellHandle;
+
+			const auto parentInternodeHandle = oldRootNode.GetParentHandle();
+			bool needReplacement = false;
+			if (parentInternodeHandle > 0)
+			{
+				if (m_rootSkeleton.RefNode(parentInternodeHandle).RefChildHandles().size() > 1) needReplacement = true;
+			}
+			if (needReplacement)
+			{
+				auto newGridHandle = m_rootSkeleton.m_data.m_hexagonGridGroup.Allocate();
+				auto& newGrid = m_rootSkeleton.m_data.m_hexagonGridGroup.RefGrid(newGridHandle);
+				newGrid.m_data.m_nodeHandle = newRootNodeHandle;
+				newPipeNode.m_data.m_cellHandle = newGrid.Allocate(glm::vec2(0, 0));
+				newRootNode.m_data.m_gridHandle = newGridHandle;
+			}
+			else {
+				newRootNode.m_data.m_gridHandle = oldRootNode.m_data.m_gridHandle;
+				newPipeNode.m_data.m_cellHandle = oldPipeNode.m_data.m_cellHandle;
+			}
 		}
 
 		if (extraLength > rootNodeLength) {
@@ -968,11 +984,27 @@ bool TreeModel::ElongateInternode(float extendLength, NodeHandle internodeHandle
 			const auto newPipeNodeHandle = pipeGroup.Extend(pipeHandle);
 			const auto& oldPipeNode = pipeGroup.RefPipeNode(oldPipeNodeHandle);
 			auto& newPipeNode = pipeGroup.RefPipeNode(newPipeNodeHandle);
-
-			newInternode.m_data.m_gridHandle = oldInternode.m_data.m_gridHandle;
 			newInternode.m_data.m_pipeNodeHandles.emplace_back(newPipeNodeHandle);
 			newPipeNode.m_data.m_nodeHandle = newInternode.GetHandle();
-			newPipeNode.m_data.m_cellHandle = oldPipeNode.m_data.m_cellHandle;
+
+			const auto parentInternodeHandle = oldInternode.GetParentHandle();
+			bool needReplacement = false;
+			if(parentInternodeHandle > 0)
+			{
+				if (m_shootSkeleton.RefNode(parentInternodeHandle).RefChildHandles().size() > 1) needReplacement = true;
+			}
+			if(needReplacement)
+			{
+				auto newGridHandle = m_shootSkeleton.m_data.m_hexagonGridGroup.Allocate();
+				auto& newGrid = m_shootSkeleton.m_data.m_hexagonGridGroup.RefGrid(newGridHandle);
+				newGrid.m_data.m_nodeHandle = newInternodeHandle;
+				newPipeNode.m_data.m_cellHandle = newGrid.Allocate(glm::vec2(0, 0));
+				newInternode.m_data.m_gridHandle = newGridHandle;
+			}
+			else {
+				newInternode.m_data.m_gridHandle = oldInternode.m_data.m_gridHandle;
+				newPipeNode.m_data.m_cellHandle = oldPipeNode.m_data.m_cellHandle;
+			}
 		}
 
 		if (extraLength > internodeLength) {
