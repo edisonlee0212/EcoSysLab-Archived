@@ -228,13 +228,13 @@ TreeVisualizer::OnInspect(
 			{
 				auto& shootSkeleton = treeModel.RefShootSkeleton();
 				auto& grid = shootSkeleton.m_data.m_hexagonGridGroup.RefGrid(shootSkeleton.RefNode(m_selectedInternodeHandle).m_data.m_gridHandle);
-				VisualizeGrid(grid);
+				VisualizeGrid(shootSkeleton, grid);
 			}
 			else if (m_selectedRootNodeHandle >= 0)
 			{
 				auto& rootSkeleton = treeModel.RefRootSkeleton();
 				auto& grid = rootSkeleton.m_data.m_hexagonGridGroup.RefGrid(rootSkeleton.RefNode(m_selectedRootNodeHandle).m_data.m_gridHandle);
-				VisualizeGrid(grid);
+				VisualizeGrid(rootSkeleton, grid);
 			}
 			else
 			{
@@ -422,7 +422,7 @@ TreeVisualizer::InspectInternode(
 		ImGui::InputFloat3("Local rotation", (float*)&localRotationAngle.x, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
 		auto& internodeData = internode.m_data;
-		ImGui::InputFloat("Age", (float*)&internodeData.m_age, 1, 100, "%.3f", ImGuiInputTextFlags_ReadOnly);
+		ImGui::InputFloat("Start Age", (float*)&internodeData.m_startAge, 1, 100, "%.3f", ImGuiInputTextFlags_ReadOnly);
 		ImGui::InputFloat("Distance to end", (float*)&internodeData.m_maxDistanceToAnyBranchEnd, 1, 100,
 			"%.3f",
 			ImGuiInputTextFlags_ReadOnly);
@@ -570,7 +570,7 @@ TreeVisualizer::PeekInternode(const ShootSkeleton& shootSkeleton, NodeHandle int
 		ImGui::InputFloat3("Local rotation", (float*)&localRotationAngle.x, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
 		auto& internodeData = internode.m_data;
-		ImGui::InputInt("Age", (int*)&internodeData.m_age, 1, 100, ImGuiInputTextFlags_ReadOnly);
+		ImGui::InputInt("Start Age", (int*)&internodeData.m_startAge, 1, 100, ImGuiInputTextFlags_ReadOnly);
 		ImGui::InputFloat("Sagging", (float*)&internodeData.m_sagging, 1, 100, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
 		ImGui::InputFloat("Distance to end", (float*)&internodeData.m_maxDistanceToAnyBranchEnd, 1, 100,

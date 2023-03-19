@@ -89,7 +89,7 @@ namespace EcoSysLab {
 		point.m_normal = glm::normalize(firstNode.m_info.m_globalStartRotation * glm::vec3(0, 0, -1));
 		point.m_position = firstNode.m_info.m_globalStartPosition;
 		point.m_thickness = firstNode.m_info.m_startThickness;
-		point.m_color = glm::vec4(glm::linearRand(glm::vec3(0, 0, 0), glm::vec3(1, 1, 1)), 1.0f);
+		point.m_color = pipe.m_info.m_color;
 
 		points.emplace_back(point);
 		points.emplace_back(point);

@@ -48,7 +48,7 @@ namespace EcoSysLab {
 		std::vector<glm::vec2> m_storedMousePositions;
 		bool m_visualization = true;
 
-		bool m_hexagonGridGui = false;
+		bool m_hexagonGridGui = true;
 		bool m_treeHierarchyGui = false;
 		bool m_rootHierarchyGui = false;
 
@@ -110,8 +110,8 @@ namespace EcoSysLab {
 				NodeHandle rootNodeHandle);
 
 	public:
-		template <typename GridData, typename CellData>
-		bool VisualizeGrid(HexagonGrid<GridData, CellData>& grid);
+		template <typename SkeletonData, typename FlowData, typename NodeData, typename GridData, typename CellData>
+		bool VisualizeGrid(const Skeleton <SkeletonData, FlowData, NodeData>& skeleton, HexagonGrid<GridData, CellData>& grid);
 
 
 		template<typename SkeletonData, typename FlowData, typename NodeData>
@@ -347,8 +347,9 @@ namespace EcoSysLab {
 		}
 	}
 
-	template <typename GridData, typename CellData>
-	bool TreeVisualizer::VisualizeGrid(HexagonGrid<GridData, CellData>& grid)
+	template <typename SkeletonData, typename FlowData, typename NodeData, typename GridData, typename CellData>
+	bool TreeVisualizer::VisualizeGrid(const Skeleton<SkeletonData, FlowData, NodeData>& skeleton,
+		HexagonGrid<GridData, CellData>& grid)
 	{
 		bool changed = false;
 		static auto scrolling = glm::vec2(0.0f);
@@ -404,12 +405,16 @@ namespace EcoSysLab {
 		draw_list->PushClipRect(canvas_p0, canvas_p1, true);
 
 		for (const auto& cell : grid.PeekCells()) {
+			
 			const auto pointPosition = grid.GetPosition(cell.GetCoordinate());
 			const auto canvasPosition = ImVec2(origin.x + pointPosition.x * zoomFactor,
 				origin.y + pointPosition.y * zoomFactor);
+
+			const auto& pipe = skeleton.m_data.m_pipeGroup.PeekPipe(cell.m_data.m_pipeHandle);
+
 			draw_list->AddCircleFilled(canvasPosition,
 				glm::clamp(0.4f * zoomFactor, 1.0f, 100.0f),
-				IM_COL32(255, 255, 255, 255));
+				IM_COL32(pipe.m_info.m_color.x * 255.0f, pipe.m_info.m_color.y * 255.0f, pipe.m_info.m_color.z * 255.0f, 255));
 			/*
 			if (knot->m_selected) {
 				draw_list->AddCircle(canvasPosition,
@@ -438,6 +443,8 @@ namespace EcoSysLab {
 
 		return changed;
 	}
+
+	
 
 	template<typename SkeletonData, typename FlowData, typename NodeData>
 	void TreeVisualizer::SetSelectedNode(

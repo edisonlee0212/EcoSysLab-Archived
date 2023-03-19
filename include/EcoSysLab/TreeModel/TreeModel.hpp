@@ -52,7 +52,7 @@ namespace EcoSysLab {
 	struct InternodeGrowthData {
 		bool m_isMaxChild = false;
 		bool m_lateral = false;
-		float m_age = 0;
+		float m_startAge = 0;
 		float m_inhibitor = 0;
 		glm::quat m_desiredLocalRotation = glm::vec3(0.0f);
 		float m_sagging = 0;
@@ -92,7 +92,7 @@ namespace EcoSysLab {
 		bool m_isMaxChild = false;
 		bool m_lateral = false;
 		float m_soilDensity = 0.0f;
-		float m_age = 0;
+		float m_startAge = 0;
 		float m_maxDistanceToAnyBranchEnd = 0;
 		float m_descendentTotalBiomass = 0;
 		float m_biomass = 0;
@@ -446,12 +446,13 @@ namespace EcoSysLab {
 
 	struct ShootPipeGroupGrowthData
 	{
-
+		glm::vec4 m_innerColor = glm::vec4(233, 216, 201, 255) / 255.0f;
+		glm::vec4 m_outerColor = glm::vec4(44, 32, 21, 255) / 255.0f;
 	};
 
 	struct ShootPipeGrowthData
 	{
-
+		float m_startAge = 0.0f;
 	};
 
 	struct ShootPipeNodeGrowthData
@@ -462,11 +463,13 @@ namespace EcoSysLab {
 
 	struct RootPipeGroupGrowthData
 	{
+		glm::vec4 m_innerColor = glm::vec4(233, 216, 201, 255) / 255.0f;
+		glm::vec4 m_outerColor = glm::vec4(44, 32, 21, 255) / 255.0f;
 	};
 
 	struct RootPipeGrowthData
 	{
-
+		float m_startAge = 0.0f;
 	};
 
 	struct RootPipeNodeGrowthData
@@ -481,7 +484,7 @@ namespace EcoSysLab {
 
 	struct HexagonGridCellData
 	{
-		PipeHandle m_pipeNodeHandle = -1;
+		PipeHandle m_pipeHandle = -1;
 	};
 	struct HexagonGridData
 	{
@@ -498,7 +501,7 @@ namespace EcoSysLab {
 		std::vector<ReproductiveModule> m_droppedLeaves;
 		std::vector<ReproductiveModule> m_droppedFruits;
 
-		ShootPipeGroup m_shootPipeGroup;
+		ShootPipeGroup m_pipeGroup;
 
 		float m_vigor = 0;
 
@@ -510,7 +513,7 @@ namespace EcoSysLab {
 		PlantGrowthRequirement m_vigorRequirement = {};
 		RootFlux m_rootFlux = {};
 
-		RootPipeGroup m_rootPipeGroup;
+		RootPipeGroup m_pipeGroup;
 
 		float m_vigor = 0;
 
@@ -634,6 +637,8 @@ namespace EcoSysLab {
 
 		
 	public:
+
+		
 
 		[[nodiscard]] bool IsPipeEnabled() const;
 

@@ -18,11 +18,13 @@ namespace EcoSysLab
 
 		float m_startThickness = 0.0f;
 		float m_endThickness = 0.0f;
+
+		
 	};
 
 	struct PipeInfo
 	{
-
+		glm::vec4 m_color = glm::vec4(1.0f);
 	};
 
 	template<typename PipeNodeData>
