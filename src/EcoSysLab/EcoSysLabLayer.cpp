@@ -391,7 +391,7 @@ void EcoSysLabLayer::ResetAllTrees(const std::vector<Entity>* treeEntities)
 	for (const auto& i : *treeEntities)
 	{
 		scene->GetOrSetPrivateComponent<Tree>(i).lock()->m_treeModel.Clear();
-		scene->GetOrSetPrivateComponent<Tree>(i).lock()->m_treeModel.RefShootSkeleton().m_data.m_treeVoxelVolume.m_settings = m_shadowEstimationSettings;
+		scene->GetOrSetPrivateComponent<Tree>(i).lock()->m_treeModel.RefShootSkeleton().m_data.m_treeIlluminationEstimator.m_settings = m_shadowEstimationSettings;
 	}
 	m_needFullFlowUpdate = true;
 	m_totalTime = 0;
@@ -468,7 +468,7 @@ void EcoSysLabLayer::OnInspect() {
 					m_shadowEstimationSettings.m_voxelSize = glm::clamp(m_shadowEstimationSettings.m_voxelSize, 0.05f, 1.0f);
 					for (const auto& i : *treeEntities)
 					{
-						scene->GetOrSetPrivateComponent<Tree>(i).lock()->m_treeModel.RefShootSkeleton().m_data.m_treeVoxelVolume.m_settings = m_shadowEstimationSettings;
+						scene->GetOrSetPrivateComponent<Tree>(i).lock()->m_treeModel.RefShootSkeleton().m_data.m_treeIlluminationEstimator.m_settings = m_shadowEstimationSettings;
 					}
 					if (const auto climate = m_climateHolder.Get<Climate>()) {
 						for (const auto& i : *treeEntities)

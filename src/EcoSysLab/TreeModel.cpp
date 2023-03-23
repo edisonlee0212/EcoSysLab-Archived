@@ -278,7 +278,7 @@ void TreeModel::CollectShootFlux(const glm::mat4& globalTransform, ClimateModel&
 	auto& shootData = m_shootSkeleton.m_data;
 	shootData.m_shootFlux.m_lightEnergy = 0.0f;
 	const auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
-	shootData.m_treeVoxelVolume.m_voxel.Initialize(m_shootSkeleton.m_data.m_treeVoxelVolume.m_settings.m_voxelSize, m_shootSkeleton.m_min, m_shootSkeleton.m_max);
+	shootData.m_treeIlluminationEstimator.m_voxel.Initialize(m_shootSkeleton.m_data.m_treeIlluminationEstimator.m_settings.m_voxelSize, m_shootSkeleton.m_min, m_shootSkeleton.m_max);
 
 	const float maxLeafSize = glm::pow((shootGrowthParameters.m_maxLeafSize.x + shootGrowthParameters.m_maxLeafSize.z) / 2.0f, 2.0f);
 	const float maxFruitSize = glm::pow((shootGrowthParameters.m_maxFruitSize.x + shootGrowthParameters.m_maxFruitSize.y + shootGrowthParameters.m_maxFruitSize.z) / 3.0f, 2.0f);
@@ -298,7 +298,7 @@ void TreeModel::CollectShootFlux(const glm::mat4& globalTransform, ClimateModel&
 				shadowSize += maxFruitSize * glm::pow(i.m_reproductiveModule.m_maturity, 1.0f / 3.0f);
 			}
 		}
-		shootData.m_treeVoxelVolume.AddShadowVolume({ internodeInfo.m_globalPosition, shadowSize });
+		shootData.m_treeIlluminationEstimator.AddShadowVolume({ internodeInfo.m_globalPosition, shadowSize });
 	}
 
 	for (const auto& internodeHandle : sortedInternodeList) {
@@ -306,7 +306,7 @@ void TreeModel::CollectShootFlux(const glm::mat4& globalTransform, ClimateModel&
 		auto& internodeData = internode.m_data;
 		auto& internodeInfo = internode.m_info;
 		internodeData.m_lightIntensity =
-			m_shootSkeleton.m_data.m_treeVoxelVolume.IlluminationEstimation(internodeInfo.m_globalPosition, internodeData.m_lightDirection);
+			m_shootSkeleton.m_data.m_treeIlluminationEstimator.IlluminationEstimation(internodeInfo.m_globalPosition, internodeData.m_lightDirection);
 		for (const auto& bud : internode.m_data.m_buds)
 		{
 			if (bud.m_status == BudStatus::Flushed && bud.m_type == BudType::Leaf)

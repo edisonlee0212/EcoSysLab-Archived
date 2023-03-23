@@ -826,7 +826,7 @@ void TreeDescriptor::OnInspect() {
 			globalTransform.SetPosition(glm::vec3(0, height, 0));
 			scene->SetDataComponent(treeEntity, globalTransform);
 			tree->m_treeDescriptor = ProjectManager::GetAsset(GetHandle());
-			tree->m_treeModel.RefShootSkeleton().m_data.m_treeVoxelVolume.m_settings = ecoSysLabLayer->m_shadowEstimationSettings;
+			tree->m_treeModel.RefShootSkeleton().m_data.m_treeIlluminationEstimator.m_settings = ecoSysLabLayer->m_shadowEstimationSettings;
 		}
 	}
 	else

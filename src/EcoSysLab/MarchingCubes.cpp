@@ -311,7 +311,7 @@ int MarchingCubes::m_triangleTable[256][16] =
 };
 #pragma endregion
 
-void MarchingCubes::TriangulateCell(CubeCell& cell, float isovalue, std::vector<Vertex>& vertices)
+void MarchingCubes::TriangulateCell(MarchingCubeCell& cell, float isovalue, std::vector<Vertex>& vertices)
 {
 	int cubeIndex = 0;
 	for (int i = 0; i < 8; i++)
@@ -348,7 +348,7 @@ void MarchingCubes::TriangulateField(const glm::vec3& center, const std::functio
 	float isovalue, const float cellSize, const std::vector<glm::vec3>& testingCells, std::vector<Vertex>& vertices,
 	std::vector<unsigned>& indices, bool removeDuplicate, int smoothMeshIteration)
 {
-	std::unordered_map<glm::ivec3, CubeCell> testedCells;
+	std::unordered_map<glm::ivec3, MarchingCubeCell> testedCells;
 	std::vector<Vertex> outVertices;
 	auto cellRadius = cellSize / 2.0f;
 	for (const auto& cell : testingCells)
@@ -361,7 +361,7 @@ void MarchingCubes::TriangulateField(const glm::vec3& center, const std::functio
 				{
 					auto adjCenter = cell + glm::vec3(xOffset * cellSize, yOffset * cellSize, zOffset * cellSize);
 					if (testedCells.find(glm::ivec3(glm::round((adjCenter - center) / cellRadius))) == testedCells.end()) {
-						CubeCell testingCell = {
+						MarchingCubeCell testingCell = {
 						{
 							{adjCenter.x - cellRadius, adjCenter.y - cellRadius, adjCenter.z - cellRadius}, {adjCenter.x + cellRadius, adjCenter.y - cellRadius, adjCenter.z - cellRadius},
 							{adjCenter.x + cellRadius, adjCenter.y - cellRadius, adjCenter.z + cellRadius}, {adjCenter.x - cellRadius, adjCenter.y - cellRadius, adjCenter.z + cellRadius},
@@ -399,7 +399,7 @@ void MarchingCubes::TriangulateField(const glm::vec3& center, const std::functio
 					{
 						auto adjCenter = cell + glm::vec3(xOffset * cellSize, yOffset * cellSize, zOffset * cellSize);
 						if (testedCells.find(glm::ivec3(glm::round((adjCenter - center) / cellRadius))) == testedCells.end()) {
-							CubeCell testingCell = {
+							MarchingCubeCell testingCell = {
 							{
 								{adjCenter.x - cellRadius, adjCenter.y - cellRadius, adjCenter.z - cellRadius}, {adjCenter.x + cellRadius, adjCenter.y - cellRadius, adjCenter.z - cellRadius},
 								{adjCenter.x + cellRadius, adjCenter.y - cellRadius, adjCenter.z + cellRadius}, {adjCenter.x - cellRadius, adjCenter.y - cellRadius, adjCenter.z + cellRadius},

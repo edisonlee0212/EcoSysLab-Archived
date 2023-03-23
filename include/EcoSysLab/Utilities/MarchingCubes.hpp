@@ -10,7 +10,7 @@
 using namespace UniEngine;
 namespace EcoSysLab
 {
-    struct CubeCell
+    struct MarchingCubeCell
     {
         glm::vec3 m_vertex[8];
         float m_value[8];
@@ -31,7 +31,7 @@ namespace EcoSysLab
         static int m_triangleTable[256][16];
 #pragma endregion
         /// Get triangles of a single cell
-        static void TriangulateCell(CubeCell& cell, float isovalue, std::vector<Vertex>& vertices);
+        static void TriangulateCell(MarchingCubeCell& cell, float isovalue, std::vector<Vertex>& vertices);
         
         /// Triangulate a scalar field represented by `scalarFunction`. `isovalue` should be used for isovalue computation
         static void TriangulateField(const glm::vec3 &center, const std::function<float(const glm::vec3 &samplePoint)>& sampleFunction, float isovalue, float cellSize, const std::vector<glm::vec3>& testingCells, 
