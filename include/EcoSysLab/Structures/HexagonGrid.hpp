@@ -65,6 +65,8 @@ namespace EcoSysLab
 		[[nodiscard]] HexagonCellHandle GetDownLeftHandle() const;
 
 		[[nodiscard]] HexagonCellHandle GetLeftHandle() const;
+
+		[[nodiscard]] bool IsBoundary() const;
 	};
 
 	typedef int HexagonGridHandle;
@@ -74,6 +76,7 @@ namespace EcoSysLab
 	{
 		std::vector<HexagonCell<CellData>> m_cells;
 		std::map<std::pair<int, int>, HexagonCellHandle> m_cellMap;
+		std::set<HexagonCellHandle> m_boundary;
 
 		std::queue<HexagonCellHandle> m_cellPool;
 		int m_version = -1;
@@ -87,19 +90,20 @@ namespace EcoSysLab
 		GridData m_data;
 
 		[[nodiscard]] bool IsRecycled() const;
-		[[nodiscard]] HexagonGridHandle GetHandle() const;
-		[[nodiscard]] glm::vec2 GetPosition(const glm::ivec2& coordinate) const;
-		[[nodiscard]] glm::ivec2 GetCoordinate(const glm::vec2& position) const;
 
-		[[nodiscard]] HexagonCellHandle AllocateAdjacent(HexagonCellHandle targetHandle, HexagonGridDirection direction);
+		[[nodiscard]] HexagonGridHandle GetHandle() const;
+
+		[[nodiscard]] glm::vec2 GetPosition(const glm::ivec2& coordinate) const;
+
+		[[nodiscard]] glm::ivec2 GetCoordinate(const glm::vec2& position) const;
 
 		[[nodiscard]] HexagonCellHandle Allocate(const glm::ivec2& coordinate);
 
-		void RecycleCell(const glm::ivec2& coordinate);
-
 		void RecycleCell(HexagonCellHandle handle);
 
-		[[nodiscard]] glm::ivec2 FindClosestEmptyCoordinate(HexagonCellHandle targetHandle, const glm::vec2& direction);
+		[[nodiscard]] const std::set<HexagonCellHandle>& GetBoundary() const;
+
+		[[nodiscard]] glm::ivec2 FindAvailableCoordinate(HexagonCellHandle targetHandle, const glm::vec2& direction);
 
 		[[nodiscard]] HexagonCell<CellData>& RefCell(HexagonCellHandle handle);
 
@@ -250,6 +254,12 @@ namespace EcoSysLab
 		return m_left;
 	}
 
+	template <typename CellData>
+	bool HexagonCell<CellData>::IsBoundary() const
+	{
+		return m_downLeft == -1 || m_downRight == -1 || m_left == -1 || m_right == -1 || m_upLeft == -1 || m_upRight == -1;
+	}
+
 	template <typename GridData, typename CellData>
 	bool HexagonGrid<GridData, CellData>::IsRecycled() const
 	{
@@ -274,330 +284,6 @@ namespace EcoSysLab
 	{
 		int y = glm::round(position.y / glm::cos(glm::radians(30.0f)));
 		return { glm::round((position.x - y / 2.0f)), y };
-	}
-
-	template <typename GridData, typename CellData>
-	HexagonCellHandle HexagonGrid<GridData, CellData>::AllocateAdjacent(HexagonCellHandle targetHandle,
-		const HexagonGridDirection direction)
-	{
-		auto& originalCell = m_cells[targetHandle];
-		switch (direction)
-		{
-		case HexagonGridDirection::UpLeft:
-			if (originalCell.GetUpLeftHandle() != -1) {
-				UNIENGINE_ERROR("Cell exists!");
-				return -1;
-			}
-			break;
-		case HexagonGridDirection::UpRight:
-			if (originalCell.GetUpRightHandle() != -1) {
-				UNIENGINE_ERROR("Cell exists!");
-				return -1;
-			}
-			break;
-		case HexagonGridDirection::Right:
-			if (originalCell.GetRightHandle() != -1) {
-				UNIENGINE_ERROR("Cell exists!");
-				return -1;
-			}
-			break;
-		case HexagonGridDirection::DownRight:
-			if (originalCell.GetDownRightHandle() != -1) {
-				UNIENGINE_ERROR("Cell exists!");
-				return -1;
-			}
-			break;
-		case HexagonGridDirection::DownLeft:
-			if (originalCell.GetDownLeftHandle() != -1) {
-				UNIENGINE_ERROR("Cell exists!");
-				return -1;
-			}
-			break;
-		case HexagonGridDirection::Left:
-			if (originalCell.GetLeftHandle() != -1) {
-				UNIENGINE_ERROR("Cell exists!");
-				return -1;
-			}
-			break;
-		}
-		HexagonCellHandle newCellHandle;
-		if (m_cellPool.empty()) {
-			auto newCell = m_cells.emplace_back(m_cells.size());
-			newCellHandle = newCell.m_handle;
-		}
-		else {
-			newCellHandle = m_cellPool.front();
-			m_cellPool.pop();
-		}
-		auto& newCell = m_cells[newCellHandle];
-		newCell.m_recycled = false;
-
-		m_version++;
-		//Set adjacent handles.
-		switch (direction)
-		{
-		case HexagonGridDirection::UpLeft:
-		{
-			//First set self.
-			newCell.m_downRight = targetHandle;
-			originalCell.m_upLeft = newCellHandle;
-			if (originalCell.m_upRight != -1)
-			{
-				auto& cell1 = m_cells[originalCell.m_upRight];
-				newCell.m_right = originalCell.m_upRight;
-				cell1.m_left = newCellHandle;
-			}
-			if (originalCell.m_left != -1)
-			{
-				auto& cell5 = m_cells[originalCell.m_left];
-				newCell.m_downLeft = originalCell.m_left;
-				cell5.m_upRight = newCellHandle;
-			}
-			const auto targetCoordinate = originalCell.GetUpLeftCoordinate();
-			newCell.m_coordinate = targetCoordinate;
-			m_cellMap[{ targetCoordinate.x, targetCoordinate.y}] = newCellHandle;
-			const auto coordinate1 = newCell.GetLeftCoordinate();
-			auto search1 = m_cellMap.find({ coordinate1.x, coordinate1.y });
-			if (search1 != m_cellMap.end())
-			{
-				newCell.m_left = search1->second;
-				m_cells[search1->second].m_right = newCellHandle;
-			}
-			const auto coordinate2 = newCell.GetUpLeftCoordinate();
-			auto search2 = m_cellMap.find({ coordinate2.x, coordinate2.y });
-			if (search2 != m_cellMap.end())
-			{
-				newCell.m_upLeft = search2->second;
-				m_cells[search2->second].m_downRight = newCellHandle;
-			}
-			const auto coordinate3 = newCell.GetUpRightCoordinate();
-			auto search3 = m_cellMap.find({ coordinate3.x, coordinate3.y });
-			if (search3 != m_cellMap.end())
-			{
-				newCell.m_upRight = search3->second;
-				m_cells[search3->second].m_downLeft = newCellHandle;
-			}
-		}
-		break;
-		case HexagonGridDirection::UpRight:
-		{
-			newCell.m_downLeft = targetHandle;
-			originalCell.m_upRight = newCellHandle;
-			if (originalCell.m_right != -1)
-			{
-				auto& cell1 = m_cells[originalCell.m_right];
-				newCell.m_downRight = originalCell.m_right;
-				cell1.m_upLeft = newCellHandle;
-
-			}
-			if (originalCell.m_upLeft != -1)
-			{
-				auto& cell5 = m_cells[originalCell.m_upLeft];
-				newCell.m_left = originalCell.m_upLeft;
-				cell5.m_right = newCellHandle;
-			}
-
-			const auto targetCoordinate = originalCell.GetUpRightCoordinate();
-			newCell.m_coordinate = targetCoordinate;
-			m_cellMap[{ targetCoordinate.x, targetCoordinate.y}] = newCellHandle;
-			const auto coordinate1 = newCell.GetUpLeftCoordinate();
-			auto search1 = m_cellMap.find({ coordinate1.x, coordinate1.y });
-			if (search1 != m_cellMap.end())
-			{
-				newCell.m_upLeft = search1->second;
-				m_cells[search1->second].m_downRight = newCellHandle;
-			}
-			const auto coordinate2 = newCell.GetUpRightCoordinate();
-			auto search2 = m_cellMap.find({ coordinate2.x, coordinate2.y });
-			if (search2 != m_cellMap.end())
-			{
-				newCell.m_upRight = search2->second;
-				m_cells[search2->second].m_downLeft = newCellHandle;
-			}
-			const auto coordinate3 = newCell.GetRightCoordinate();
-			auto search3 = m_cellMap.find({ coordinate3.x, coordinate3.y });
-			if (search3 != m_cellMap.end())
-			{
-				newCell.m_right = search3->second;
-				m_cells[search3->second].m_left = newCellHandle;
-			}
-		}
-		break;
-		case HexagonGridDirection::Right:
-		{
-			newCell.m_left = targetHandle;
-			originalCell.m_right = newCellHandle;
-			if (originalCell.m_downRight != -1)
-			{
-				auto& cell1 = m_cells[originalCell.m_downRight];
-				newCell.m_downLeft = originalCell.m_downRight;
-				cell1.m_upRight = newCellHandle;
-			}
-			if (originalCell.m_upRight != -1)
-			{
-				auto& cell5 = m_cells[originalCell.m_upRight];
-				newCell.m_upLeft = originalCell.m_upRight;
-				cell5.m_downRight = newCellHandle;
-			}
-
-			const auto targetCoordinate = originalCell.GetRightCoordinate();
-			newCell.m_coordinate = targetCoordinate;
-			m_cellMap[{ targetCoordinate.x, targetCoordinate.y}] = newCellHandle;
-			const auto coordinate1 = newCell.GetUpRightCoordinate();
-			auto search1 = m_cellMap.find({ coordinate1.x, coordinate1.y });
-			if (search1 != m_cellMap.end())
-			{
-				newCell.m_upRight = search1->second;
-				m_cells[search1->second].m_downLeft = newCellHandle;
-			}
-			const auto coordinate2 = newCell.GetRightCoordinate();
-			auto search2 = m_cellMap.find({ coordinate2.x, coordinate2.y });
-			if (search2 != m_cellMap.end())
-			{
-				newCell.m_right = search2->second;
-				m_cells[search2->second].m_left = newCellHandle;
-			}
-			const auto coordinate3 = newCell.GetDownRightCoordinate();
-			auto search3 = m_cellMap.find({ coordinate3.x, coordinate3.y });
-			if (search3 != m_cellMap.end())
-			{
-				newCell.m_downRight = search3->second;
-				m_cells[search3->second].m_upLeft = newCellHandle;
-			}
-		}
-		break;
-		case HexagonGridDirection::DownRight:
-		{
-			newCell.m_upLeft = targetHandle;
-			originalCell.m_downRight = newCellHandle;
-			if (originalCell.m_downLeft != -1)
-			{
-				auto& cell1 = m_cells[originalCell.m_downLeft];
-				newCell.m_left = originalCell.m_downLeft;
-				cell1.m_right = newCellHandle;
-			}
-			if (originalCell.m_right != -1)
-			{
-				auto& cell5 = m_cells[originalCell.m_right];
-				newCell.m_upRight = originalCell.m_right;
-				cell5.m_downLeft = newCellHandle;
-			}
-
-			const auto targetCoordinate = originalCell.GetDownRightCoordinate();
-			newCell.m_coordinate = targetCoordinate;
-			m_cellMap[{ targetCoordinate.x, targetCoordinate.y}] = newCellHandle;
-			const auto coordinate1 = newCell.GetRightCoordinate();
-			auto search1 = m_cellMap.find({ coordinate1.x, coordinate1.y });
-			if (search1 != m_cellMap.end())
-			{
-				newCell.m_right = search1->second;
-				m_cells[search1->second].m_left = newCellHandle;
-			}
-			const auto coordinate2 = newCell.GetDownRightCoordinate();
-			auto search2 = m_cellMap.find({ coordinate2.x, coordinate2.y });
-			if (search2 != m_cellMap.end())
-			{
-				newCell.m_downRight = search2->second;
-				m_cells[search2->second].m_upLeft = newCellHandle;
-			}
-			const auto coordinate3 = newCell.GetDownLeftCoordinate();
-			auto search3 = m_cellMap.find({ coordinate3.x, coordinate3.y });
-			if (search3 != m_cellMap.end())
-			{
-				newCell.m_downLeft = search3->second;
-				m_cells[search3->second].m_upRight = newCellHandle;
-			}
-
-		}
-		break;
-		case HexagonGridDirection::DownLeft:
-		{
-			newCell.m_upRight = targetHandle;
-			originalCell.m_downLeft = newCellHandle;
-			if (originalCell.m_left != -1)
-			{
-				auto& cell1 = m_cells[originalCell.m_left];
-				newCell.m_upLeft = originalCell.m_left;
-				cell1.m_downRight = newCellHandle;
-			}
-			if (originalCell.m_downRight != -1)
-			{
-				auto& cell5 = m_cells[originalCell.m_downRight];
-				newCell.m_left = originalCell.m_downRight;
-				cell5.m_right = newCellHandle;
-			}
-
-			const auto targetCoordinate = originalCell.GetDownLeftCoordinate();
-			newCell.m_coordinate = targetCoordinate;
-			m_cellMap[{ targetCoordinate.x, targetCoordinate.y}] = newCellHandle;
-			const auto coordinate1 = newCell.GetDownRightCoordinate();
-			auto search1 = m_cellMap.find({ coordinate1.x, coordinate1.y });
-			if (search1 != m_cellMap.end())
-			{
-				newCell.m_downRight = search1->second;
-				m_cells[search1->second].m_upLeft = newCellHandle;
-			}
-			const auto coordinate2 = newCell.GetDownLeftCoordinate();
-			auto search2 = m_cellMap.find({ coordinate2.x, coordinate2.y });
-			if (search2 != m_cellMap.end())
-			{
-				newCell.m_downLeft = search2->second;
-				m_cells[search2->second].m_upRight = newCellHandle;
-			}
-			const auto coordinate3 = newCell.GetLeftCoordinate();
-			auto search3 = m_cellMap.find({ coordinate3.x, coordinate3.y });
-			if (search3 != m_cellMap.end())
-			{
-				newCell.m_left = search3->second;
-				m_cells[search3->second].m_right = newCellHandle;
-			}
-		}
-		break;
-		case HexagonGridDirection::Left:
-		{
-			newCell.m_right = targetHandle;
-			originalCell.m_left = newCellHandle;
-			if (originalCell.m_upLeft != -1)
-			{
-				auto& cell1 = m_cells[originalCell.m_upLeft];
-				newCell.m_upRight = originalCell.m_upLeft;
-				cell1.m_downLeft = newCellHandle;
-			}
-			if (originalCell.m_downLeft != -1)
-			{
-				auto& cell5 = m_cells[originalCell.m_downLeft];
-				newCell.m_downRight = originalCell.m_downLeft;
-				cell5.m_upLeft = newCellHandle;
-			}
-
-			const auto targetCoordinate = originalCell.GetLeftCoordinate();
-			newCell.m_coordinate = targetCoordinate;
-			m_cellMap[{ targetCoordinate.x, targetCoordinate.y}] = newCellHandle;
-			const auto coordinate1 = newCell.GetDownLeftCoordinate();
-			auto search1 = m_cellMap.find({ coordinate1.x, coordinate1.y });
-			if (search1 != m_cellMap.end())
-			{
-				newCell.m_downLeft = search1->second;
-				m_cells[search1->second].m_upRight = newCellHandle;
-			}
-			const auto coordinate2 = newCell.GetLeftCoordinate();
-			auto search2 = m_cellMap.find({ coordinate2.x, coordinate2.y });
-			if (search2 != m_cellMap.end())
-			{
-				newCell.m_left = search2->second;
-				m_cells[search2->second].m_right = newCellHandle;
-			}
-			const auto coordinate3 = newCell.GetUpLeftCoordinate();
-			auto search3 = m_cellMap.find({ coordinate3.x, coordinate3.y });
-			if (search3 != m_cellMap.end())
-			{
-				newCell.m_upLeft = search3->second;
-				m_cells[search3->second].m_downRight = newCellHandle;
-			}
-		}
-		break;
-		}
-		return newCellHandle;
 	}
 
 	template <typename GridData, typename CellData>
@@ -629,21 +315,36 @@ namespace EcoSysLab
 		if (search1 != m_cellMap.end())
 		{
 			newCell.m_left = search1->second;
-			m_cells[search1->second].m_right = newCellHandle;
+			auto& targetCell = m_cells[search1->second];
+			targetCell.m_right = newCellHandle;
+			if(!targetCell.IsBoundary())
+			{
+				m_boundary.erase(search1->second);
+			}
 		}
 		const auto coordinate2 = newCell.GetUpLeftCoordinate();
 		auto search2 = m_cellMap.find({ coordinate2.x, coordinate2.y });
 		if (search2 != m_cellMap.end())
 		{
 			newCell.m_upLeft = search2->second;
-			m_cells[search2->second].m_downRight = newCellHandle;
+			auto& targetCell = m_cells[search2->second];
+			targetCell.m_downRight = newCellHandle;
+			if (!targetCell.IsBoundary())
+			{
+				m_boundary.erase(search2->second);
+			}
 		}
 		const auto coordinate3 = newCell.GetUpRightCoordinate();
 		auto search3 = m_cellMap.find({ coordinate3.x, coordinate3.y });
 		if (search3 != m_cellMap.end())
 		{
 			newCell.m_upRight = search3->second;
-			m_cells[search3->second].m_downLeft = newCellHandle;
+			auto& targetCell = m_cells[search3->second];
+			targetCell.m_downLeft = newCellHandle;
+			if (!targetCell.IsBoundary())
+			{
+				m_boundary.erase(search3->second);
+			}
 		}
 
 		const auto coordinate4 = newCell.GetRightCoordinate();
@@ -651,7 +352,12 @@ namespace EcoSysLab
 		if (search4 != m_cellMap.end())
 		{
 			newCell.m_right = search4->second;
-			m_cells[search4->second].m_left = newCellHandle;
+			auto& targetCell = m_cells[search4->second];
+			targetCell.m_left = newCellHandle;
+			if (!targetCell.IsBoundary())
+			{
+				m_boundary.erase(search4->second);
+			}
 		}
 
 		const auto coordinate5 = newCell.GetDownRightCoordinate();
@@ -659,7 +365,12 @@ namespace EcoSysLab
 		if (search5 != m_cellMap.end())
 		{
 			newCell.m_downRight = search5->second;
-			m_cells[search5->second].m_upLeft = newCellHandle;
+			auto& targetCell = m_cells[search5->second];
+			targetCell.m_upLeft = newCellHandle;
+			if (!targetCell.IsBoundary())
+			{
+				m_boundary.erase(search5->second);
+			}
 		}
 
 		const auto coordinate6 = newCell.GetDownLeftCoordinate();
@@ -667,39 +378,15 @@ namespace EcoSysLab
 		if (search6 != m_cellMap.end())
 		{
 			newCell.m_downLeft = search6->second;
-			m_cells[search6->second].m_upRight = newCellHandle;
+			auto& targetCell = m_cells[search6->second];
+			targetCell.m_upRight = newCellHandle;
+			if (!targetCell.IsBoundary())
+			{
+				m_boundary.erase(search6->second);
+			}
 		}
-
+		if (newCell.IsBoundary()) m_boundary.insert(newCellHandle);
 		return newCellHandle;
-	}
-
-	template <typename GridData, typename CellData>
-	void HexagonGrid<GridData, CellData>::RecycleCell(const glm::ivec2& coordinate)
-	{
-		const auto search = m_cellMap.find({ coordinate.x, coordinate.y });
-		if(search == m_cellMap.end())
-		{
-			UNIENGINE_ERROR("Cell doesn't exist");
-			return;
-		}
-		auto& cell = m_cells[search->second];
-		m_cellMap.erase({ coordinate.x, coordinate.y });
-
-		cell.m_recycled = true;
-
-		if (cell.m_upLeft != -1) m_cells[cell.m_upLeft].m_downRight = -1;
-		if (cell.m_upRight != -1) m_cells[cell.m_upRight].m_downLeft = -1;
-		if (cell.m_right != -1) m_cells[cell.m_right].m_left = -1;
-		if (cell.m_downRight != -1) m_cells[cell.m_downRight].m_upLeft = -1;
-		if (cell.m_downLeft != -1) m_cells[cell.m_downLeft].m_upRight = -1;
-		if (cell.m_left != -1) m_cells[cell.m_left].m_right = -1;
-
-		cell.m_upLeft = cell.m_upRight = cell.m_right = cell.m_downRight = cell.m_downLeft = cell.m_left = -1;
-
-		cell.m_data = {};
-		cell.m_coordinate = glm::ivec2(0);
-
-		m_cellPool.push(search->second);
 	}
 
 	template <typename GridData, typename CellData>
@@ -712,12 +399,36 @@ namespace EcoSysLab
 
 		cell.m_recycled = true;
 
-		if (cell.m_upLeft != -1) m_cells[cell.m_upLeft].m_downRight = -1;
-		if (cell.m_upRight != -1) m_cells[cell.m_upRight].m_downLeft = -1;
-		if (cell.m_right != -1) m_cells[cell.m_right].m_left = -1;
-		if (cell.m_downRight != -1) m_cells[cell.m_downRight].m_upLeft = -1;
-		if (cell.m_downLeft != -1) m_cells[cell.m_downLeft].m_upRight = -1;
-		if (cell.m_left != -1) m_cells[cell.m_left].m_right = -1;
+		if (cell.m_upLeft != -1) {
+			auto& targetCell = m_cells[cell.m_upLeft];
+			targetCell.m_downRight = -1;
+			if (targetCell.IsBoundary()) m_boundary.insert(cell.m_upLeft);
+		}
+		if (cell.m_upRight != -1) {
+			auto& targetCell = m_cells[cell.m_upRight];
+			targetCell.m_downLeft = -1;
+			if (targetCell.IsBoundary()) m_boundary.insert(cell.m_upRight);
+		}
+		if (cell.m_right != -1) {
+			auto& targetCell = m_cells[cell.m_right];
+			targetCell.m_left = -1;
+			if (targetCell.IsBoundary()) m_boundary.insert(cell.m_right);
+		}
+		if (cell.m_downRight != -1) {
+			auto& targetCell = m_cells[cell.m_downRight];
+			targetCell.m_upLeft = -1;
+			if (targetCell.IsBoundary()) m_boundary.insert(cell.m_downRight);
+		}
+		if (cell.m_downLeft != -1) {
+			auto& targetCell = m_cells[cell.m_downLeft];
+			targetCell.m_upRight = -1;
+			if (targetCell.IsBoundary()) m_boundary.insert(cell.m_downLeft);
+		}
+		if (cell.m_left != -1) {
+			auto& targetCell = m_cells[cell.m_left];
+			targetCell.m_right = -1;
+			if (targetCell.IsBoundary()) m_boundary.insert(cell.m_left);
+		}
 
 		cell.m_upLeft = cell.m_upRight = cell.m_right = cell.m_downRight = cell.m_downLeft = cell.m_left = -1;
 
@@ -725,10 +436,17 @@ namespace EcoSysLab
 		cell.m_coordinate = glm::ivec2(0);
 
 		m_cellPool.push(handle);
+		m_boundary.erase(handle);
 	}
 
 	template <typename GridData, typename CellData>
-	glm::ivec2 HexagonGrid<GridData, CellData>::FindClosestEmptyCoordinate(HexagonCellHandle targetHandle,
+	const std::set<HexagonCellHandle>& HexagonGrid<GridData, CellData>::GetBoundary() const
+	{
+		return m_boundary;
+	}
+
+	template <typename GridData, typename CellData>
+	glm::ivec2 HexagonGrid<GridData, CellData>::FindAvailableCoordinate(HexagonCellHandle targetHandle,
 		const glm::vec2& direction)
 	{
 		const auto& cell = m_cells[targetHandle];

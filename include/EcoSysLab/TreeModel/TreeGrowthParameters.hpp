@@ -99,9 +99,6 @@ namespace EcoSysLab
 		RootGrowthParameters();
 	};
 
-
-
-
 	class ShootGrowthParameters {
 	public:
 		float m_internodeGrowthRate;

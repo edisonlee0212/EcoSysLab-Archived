@@ -40,7 +40,7 @@ void TreeModel::PruneInternode(NodeHandle internodeHandle)
 {
 	if (m_enablePipe) {
 		auto& pipeGroup = m_shootSkeleton.m_data.m_pipeGroup;
-		auto& gridGroup = m_shootSkeleton.m_data.m_hexagonGridGroup;
+		auto& gridGroup = pipeGroup.m_data.m_hexagonGridGroup;
 		auto& node = m_shootSkeleton.RefNode(internodeHandle);
 		auto& nodeData = node.m_data;
 		for (const auto& i : nodeData.m_pipeNodeHandles)
@@ -71,7 +71,7 @@ void TreeModel::PruneRootNode(NodeHandle rootNodeHandle)
 {
 	if (m_enablePipe) {
 		auto& pipeGroup = m_rootSkeleton.m_data.m_pipeGroup;
-		auto& gridGroup = m_rootSkeleton.m_data.m_hexagonGridGroup;
+		auto& gridGroup = pipeGroup.m_data.m_hexagonGridGroup;
 		auto& node = m_rootSkeleton.RefNode(rootNodeHandle);
 		auto& nodeData = node.m_data;
 		for (const auto& i : nodeData.m_pipeNodeHandles)
@@ -209,7 +209,7 @@ void TreeModel::Initialize(const ShootGrowthParameters& shootGrowthParameters, c
 			auto& newPipeNode = pipeGroup.RefPipeNode(newPipeNodeHandle);
 			newPipeNode.m_data.m_nodeHandle = firstInternode.GetHandle();
 
-			auto& gridGroup = m_shootSkeleton.m_data.m_hexagonGridGroup;
+			auto& gridGroup = pipeGroup.m_data.m_hexagonGridGroup;
 			const auto newGridHandle = gridGroup.Allocate();
 			auto& newGrid = gridGroup.RefGrid(newGridHandle);
 			newGrid.m_data.m_nodeHandle = firstInternode.GetHandle();
@@ -241,7 +241,7 @@ void TreeModel::Initialize(const ShootGrowthParameters& shootGrowthParameters, c
 			auto& newPipeNode = pipeGroup.RefPipeNode(newPipeNodeHandle);
 			newPipeNode.m_data.m_nodeHandle = firstRootNode.GetHandle();
 
-			auto& gridGroup = m_rootSkeleton.m_data.m_hexagonGridGroup;
+			auto& gridGroup = pipeGroup.m_data.m_hexagonGridGroup;
 			const auto newGridHandle = gridGroup.Allocate();
 			auto& newGrid = gridGroup.RefGrid(newGridHandle);
 			newGrid.m_data.m_nodeHandle = firstRootNode.GetHandle();
@@ -573,7 +573,7 @@ bool TreeModel::GrowRoots(const glm::mat4& globalTransform, SoilModel& soilModel
 			if (m_enablePipe)
 			{
 				auto& pipeGroup = m_rootSkeleton.m_data.m_pipeGroup;
-				auto& gridGroup = m_rootSkeleton.m_data.m_hexagonGridGroup;
+				auto& gridGroup = pipeGroup.m_data.m_hexagonGridGroup;
 				for (auto& pipeNode : pipeGroup.RefPipeNodes())
 				{
 					if (pipeNode.IsRecycled()) continue;
@@ -759,7 +759,7 @@ bool TreeModel::GrowShoots(const glm::mat4& globalTransform, ClimateModel& clima
 		if (m_enablePipe)
 		{
 			auto& pipeGroup = m_shootSkeleton.m_data.m_pipeGroup;
-			auto& gridGroup = m_shootSkeleton.m_data.m_hexagonGridGroup;
+			auto& gridGroup = pipeGroup.m_data.m_hexagonGridGroup;
 			for (auto& pipeNode : pipeGroup.RefPipeNodes())
 			{
 				if (pipeNode.IsRecycled()) continue;
@@ -850,6 +850,7 @@ bool TreeModel::ElongateRoot(SoilModel& soilModel, const float extendLength, Nod
 		if (m_enablePipe)
 		{
 			auto& pipeGroup = m_rootSkeleton.m_data.m_pipeGroup;
+			auto& gridGroup = pipeGroup.m_data.m_hexagonGridGroup;
 			const auto oldPipeNodeHandle = oldRootNode.m_data.m_pipeNodeHandles[0];
 			const auto pipeHandle = pipeGroup.RefPipeNode(oldPipeNodeHandle).GetPipeHandle();
 			const auto newPipeNodeHandle = pipeGroup.Extend(pipeHandle);
@@ -866,8 +867,8 @@ bool TreeModel::ElongateRoot(SoilModel& soilModel, const float extendLength, Nod
 			}
 			if (needReplacement)
 			{
-				auto newGridHandle = m_rootSkeleton.m_data.m_hexagonGridGroup.Allocate();
-				auto& newGrid = m_rootSkeleton.m_data.m_hexagonGridGroup.RefGrid(newGridHandle);
+				auto newGridHandle = gridGroup.Allocate();
+				auto& newGrid = gridGroup.RefGrid(newGridHandle);
 				newGrid.m_data.m_nodeHandle = newRootNodeHandle;
 				newPipeNode.m_data.m_cellHandle = newGrid.Allocate(glm::vec2(0, 0));
 				newRootNode.m_data.m_gridHandle = newGridHandle;
@@ -987,6 +988,7 @@ bool TreeModel::ElongateInternode(float extendLength, NodeHandle internodeHandle
 		if (m_enablePipe)
 		{
 			auto& pipeGroup = m_shootSkeleton.m_data.m_pipeGroup;
+			auto& gridGroup = pipeGroup.m_data.m_hexagonGridGroup;
 			const auto oldPipeNodeHandle = oldInternode.m_data.m_pipeNodeHandles[0];
 			const auto pipeHandle = pipeGroup.RefPipeNode(oldPipeNodeHandle).GetPipeHandle();
 			const auto newPipeNodeHandle = pipeGroup.Extend(pipeHandle);
@@ -1003,8 +1005,8 @@ bool TreeModel::ElongateInternode(float extendLength, NodeHandle internodeHandle
 			}
 			if(needReplacement)
 			{
-				auto newGridHandle = m_shootSkeleton.m_data.m_hexagonGridGroup.Allocate();
-				auto& newGrid = m_shootSkeleton.m_data.m_hexagonGridGroup.RefGrid(newGridHandle);
+				auto newGridHandle = gridGroup.Allocate();
+				auto& newGrid = gridGroup.RefGrid(newGridHandle);
 				newGrid.m_data.m_nodeHandle = newInternodeHandle;
 				newPipeNode.m_data.m_cellHandle = newGrid.Allocate(glm::vec2(0, 0));
 				newInternode.m_data.m_gridHandle = newGridHandle;
@@ -1109,7 +1111,7 @@ inline bool TreeModel::GrowRootNode(SoilModel& soilModel, NodeHandle rootNodeHan
 				if (m_enablePipe)
 				{
 					auto& pipeGroup = m_rootSkeleton.m_data.m_pipeGroup;
-					auto& gridGroup = m_rootSkeleton.m_data.m_hexagonGridGroup;
+					auto& gridGroup = pipeGroup.m_data.m_hexagonGridGroup;
 					const auto newPipeHandle = pipeGroup.AllocatePipe();
 					auto& newPipe = pipeGroup.RefPipe(newPipeHandle);
 					newPipe.m_data.m_startAge = m_age;
@@ -1144,7 +1146,7 @@ inline bool TreeModel::GrowRootNode(SoilModel& soilModel, NodeHandle rootNodeHan
 								//If we are meeting a new grid, we need to create a new cell for current pipe.
 								currentGridHandle = currentVisitingNode.m_data.m_gridHandle;
 								auto& grid = gridGroup.RefGrid(currentGridHandle);
-								auto newCoordinate = grid.FindClosestEmptyCoordinate(prevPipeNode.m_cellHandle, principleDirection);
+								auto newCoordinate = grid.FindAvailableCoordinate(prevPipeNode.m_cellHandle, principleDirection);
 								currentCellHandle = grid.Allocate(newCoordinate);
 								auto& cell = grid.RefCell(currentCellHandle);
 								cell.m_data.m_pipeHandle = newPipeHandle;
@@ -1286,7 +1288,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 				if (m_enablePipe)
 				{
 					auto& pipeGroup = m_shootSkeleton.m_data.m_pipeGroup;
-					auto& gridGroup = m_shootSkeleton.m_data.m_hexagonGridGroup;
+					auto& gridGroup = pipeGroup.m_data.m_hexagonGridGroup;
 					const auto newPipeHandle = pipeGroup.AllocatePipe();
 					auto& newPipe = pipeGroup.RefPipe(newPipeHandle);
 					newPipe.m_data.m_startAge = m_age;
@@ -1321,7 +1323,19 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 								//If we are meeting a new grid, we need to create a new cell for current pipe.
 								currentGridHandle = currentVisitingNode.m_data.m_gridHandle;
 								auto& grid = gridGroup.RefGrid(currentGridHandle);
-								auto newCoordinate = grid.FindClosestEmptyCoordinate(prevPipeNode.m_cellHandle, principleDirection);
+								auto centerPipeNodeHandle = currentVisitingNode.m_data.m_pipeNodeHandles[0];
+								const auto& centerPipeNode = pipeGroup.RefPipeNode(centerPipeNodeHandle);
+								auto newCoordinate = grid.FindAvailableCoordinate(centerPipeNode.m_data.m_cellHandle, principleDirection);
+								/*
+								const auto& boundary = grid.GetBoundary();
+								HexagonCellHandle closestBoundary = -1;
+								float distance = 100000;
+								for(const auto& handle : boundary)
+								{
+									const auto position = grid.GetPosition(grid.GetPosition(grid.PeekCell(handle).GetCoordinate()));
+
+								}
+								*/
 								currentCellHandle = grid.Allocate(newCoordinate);
 								auto& cell = grid.RefCell(currentCellHandle);
 								cell.m_data.m_pipeHandle = newPipeHandle;

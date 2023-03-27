@@ -71,10 +71,24 @@ namespace EcoSysLab
 		float m_shootVigorWeight = 1.0f;
 	};
 
+	struct HexagonGridCellData
+	{
+		PipeHandle m_pipeHandle = -1;
+
+		NodeHandle m_branchingNodeHandle = -1;
+	};
+
+	struct HexagonGridData
+	{
+		NodeHandle m_nodeHandle = -1;
+	};
+
 	struct ShootPipeGroupGrowthData
 	{
 		glm::vec4 m_innerColor = glm::vec4(233, 216, 201, 255) / 255.0f;
 		glm::vec4 m_outerColor = glm::vec4(44, 32, 21, 255) / 255.0f;
+
+		HexagonGridGroup<HexagonGridData, HexagonGridCellData> m_hexagonGridGroup;
 	};
 
 	struct ShootPipeGrowthData
@@ -92,6 +106,8 @@ namespace EcoSysLab
 	{
 		glm::vec4 m_innerColor = glm::vec4(233, 216, 201, 255) / 255.0f;
 		glm::vec4 m_outerColor = glm::vec4(44, 32, 21, 255) / 255.0f;
+
+		HexagonGridGroup<HexagonGridData, HexagonGridCellData> m_hexagonGridGroup;
 	};
 
 	struct RootPipeGrowthData
@@ -105,14 +121,7 @@ namespace EcoSysLab
 		HexagonCellHandle m_cellHandle = -1;
 	};
 
-	struct HexagonGridCellData
-	{
-		PipeHandle m_pipeHandle = -1;
-	};
-	struct HexagonGridData
-	{
-		NodeHandle m_nodeHandle = -1;
-	};
+	
 #pragma endregion
 
 	struct InternodeGrowthData {
@@ -204,8 +213,6 @@ namespace EcoSysLab
 		ShootPipeGroup m_pipeGroup;
 
 		float m_vigor = 0;
-
-		HexagonGridGroup<HexagonGridData, HexagonGridCellData> m_hexagonGridGroup;
 	};
 
 	struct RootGrowthData {
@@ -216,7 +223,5 @@ namespace EcoSysLab
 		RootPipeGroup m_pipeGroup;
 
 		float m_vigor = 0;
-
-		HexagonGridGroup<HexagonGridData, HexagonGridCellData> m_hexagonGridGroup;
 	};
 }

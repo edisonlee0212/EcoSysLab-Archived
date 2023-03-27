@@ -227,13 +227,13 @@ TreeVisualizer::OnInspect(
 			}else if (m_selectedInternodeHandle >= 0)
 			{
 				auto& shootSkeleton = treeModel.RefShootSkeleton();
-				auto& grid = shootSkeleton.m_data.m_hexagonGridGroup.RefGrid(shootSkeleton.RefNode(m_selectedInternodeHandle).m_data.m_gridHandle);
+				auto& grid = shootSkeleton.m_data.m_pipeGroup.m_data.m_hexagonGridGroup.RefGrid(shootSkeleton.RefNode(m_selectedInternodeHandle).m_data.m_gridHandle);
 				VisualizeGrid(shootSkeleton, grid);
 			}
 			else if (m_selectedRootNodeHandle >= 0)
 			{
 				auto& rootSkeleton = treeModel.RefRootSkeleton();
-				auto& grid = rootSkeleton.m_data.m_hexagonGridGroup.RefGrid(rootSkeleton.RefNode(m_selectedRootNodeHandle).m_data.m_gridHandle);
+				auto& grid = rootSkeleton.m_data.m_pipeGroup.m_data.m_hexagonGridGroup.RefGrid(rootSkeleton.RefNode(m_selectedRootNodeHandle).m_data.m_gridHandle);
 				VisualizeGrid(rootSkeleton, grid);
 			}
 			else
