@@ -12,6 +12,8 @@ using namespace UniEngine;
 namespace EcoSysLab {
 	class RootGrowthParameters {
 	public:
+		float m_rootNodeGrowthRate;
+
 		/**
 		 * \brief How much the soil density affects the growth;
 		 */
@@ -24,7 +26,7 @@ namespace EcoSysLab {
 		 * \brief The root node length
 		 */
 		float m_rootNodeLength;
-		float m_rootNodeGrowthRate;
+		
 		/**
 		 * \brief Thickness of end internode
 		 */
@@ -252,7 +254,7 @@ namespace EcoSysLab {
 
 		glm::vec3 m_maxLeafSize;
 		float m_leafPositionVariance;
-		float m_leafRandomRotation;
+		float m_leafRotationVariance;
 		float m_leafChlorophyllLoss;
 		float m_leafChlorophyllSynthesisFactorTemperature;
 		float m_leafFallProbability;
@@ -263,7 +265,7 @@ namespace EcoSysLab {
 
 		glm::vec3 m_maxFruitSize;
 		float m_fruitPositionVariance;
-		float m_fruitRandomRotation;
+		float m_fruitRotationVariance;
 
 		float m_fruitFallProbability;
 #pragma endregion

@@ -6,19 +6,11 @@ namespace EcoSysLab
 {
 	class RootGrowthController {
 	public:
-		/**
-		 * \brief How much the soil density affects the growth;
-		 */
-		float m_environmentalFriction;
-		/**
-		 * \brief How much will the increase of soil density affects the growth;
-		 */
-		float m_environmentalFrictionFactor;
+		float m_rootNodeGrowthRate;
 		/**
 		 * \brief The root node length
 		 */
 		float m_rootNodeLength;
-		float m_rootNodeGrowthRate;
 		/**
 		 * \brief Thickness of end internode
 		 */
@@ -34,15 +26,19 @@ namespace EcoSysLab
 		/**
 		* The mean and variance of the angle between the direction of a lateral bud and its parent shoot.
 		*/
-		glm::vec2 m_branchingAngleMeanVariance;
+		std::function<float(const Node<RootNodeGrowthData>& rootNode)> m_branchingAngle;
 		/**
 		* The mean and variance of an angular difference orientation of lateral buds between two internodes
 		*/
-		glm::vec2 m_rollAngleMeanVariance;
+		std::function<float(const Node<RootNodeGrowthData>& rootNode)> m_rollAngle;
 		/**
 		* The mean and variance of the angular difference between the growth direction and the direction of the apical bud
 		*/
-		glm::vec2 m_apicalAngleMeanVariance;
+		std::function<float(const Node<RootNodeGrowthData>& rootNode)> m_apicalAngle;
+		/**
+		 * \brief How much the soil density affects the growth;
+		 */
+		std::function<float(const Node<RootNodeGrowthData>& rootNode)> m_environmentalFriction;
 		/**
 		 * \brief Apical control base
 		 */
@@ -54,7 +50,7 @@ namespace EcoSysLab
 		/**
 		* \brief How much inhibitor will an internode generate.
 		*/
-		float m_apicalDominance;
+		std::function<float(const Node<RootNodeGrowthData>& rootNode)> m_apicalDominance;
 		/**
 		* \brief How much inhibitor will shrink when the tree ages.
 		*/
@@ -75,9 +71,10 @@ namespace EcoSysLab
 		* The overall intensity of the tropism.
 		*/
 		float m_tropismIntensity;
+
 		float m_rootNodeVigorRequirement = 1.0f;
 		float m_vigorRequirementAggregateLoss = 1.0f;
-		float m_branchingProbability = 1.0f;
+		std::function<float(const Node<RootNodeGrowthData>& rootNode)> m_branchingProbability;
 
 		float m_fineRootSegmentLength = 0.02f;
 		float m_fineRootApicalAngleVariance = 2.5f;
@@ -86,17 +83,7 @@ namespace EcoSysLab
 		float m_fineRootMinNodeThickness = 0.05f;
 		int m_fineRootNodeCount = 2;
 
-		[[nodiscard]] float GetRootApicalAngle(const Node<RootNodeGrowthData>& rootNode) const;
-
-		[[nodiscard]] float GetRootRollAngle(const Node<RootNodeGrowthData>& rootNode) const;
-
-		[[nodiscard]] float GetRootBranchingAngle(const Node<RootNodeGrowthData>& rootNode) const;
-
-
-
 		void SetTropisms(Node<RootNodeGrowthData>& oldNode, Node<RootNodeGrowthData>& newNode) const;
-
-		RootGrowthController();
 	};
 
 	class ShootGrowthController {
@@ -138,7 +125,10 @@ namespace EcoSysLab
 		 * \brief The phototropism
 		 */
 		std::function<float(const Node<InternodeGrowthData>& internode)> m_phototropism;
-
+		/**
+		 * \brief The strength of gravity bending.
+		 */
+		std::function<float(const Node<InternodeGrowthData>& internode)> m_sagging;
 		/**
 		 * \brief Flushing prob of lateral bud.
 		 */
@@ -162,7 +152,7 @@ namespace EcoSysLab
 		/**
 		* \brief How much inhibitor will an internode generate.
 		*/
-		float m_apicalDominance;
+		std::function<float(const Node<InternodeGrowthData>& internode)> m_apicalDominance;
 		/**
 		* \brief How much inhibitor will shrink when the tree ages.
 		*/
@@ -185,6 +175,7 @@ namespace EcoSysLab
 		float m_fruitVigorRequirement;
 
 		float m_vigorRequirementAggregateLoss = 1.0f;
+		
 #pragma endregion
 #pragma region Internode
 		/**
@@ -204,33 +195,57 @@ namespace EcoSysLab
 		 * \brief The extra thickness gained from node length.
 		 */
 		float m_thicknessAccumulateAgeFactor;
+
+		float m_lowBranchPruning;
 		/**
 		 * \brief The The impact of the amount of incoming light on the shedding of end internodes.
 		 */
 		std::function<float(const Node<InternodeGrowthData>& internode)> m_pruningFactor;
-		/**
-		 * \brief The strength of gravity bending.
-		 */
-		glm::vec3 m_saggingFactorThicknessReductionMax = glm::vec3(0.8f, 1.75f, 1.0f);
 #pragma endregion
 
 #pragma region Leaf
+		/**
+		 * \brief The size of the leaf when it reaches full maturity.
+		 */
 		glm::vec3 m_maxLeafSize;
+		/**
+		 * \brief The relative distance variance between leaf and bud.
+		 */
 		float m_leafPositionVariance;
-		float m_leafRandomRotation;
+		/**
+		 * \brief The rotation variance between leaf and bud.
+		 */
+		float m_leafRotationVariance;
+		/**
+		 * \brief The damage to the leaf during this iteration caused by various factors
+		 */
 		std::function<float(const Node<InternodeGrowthData>& internode)> m_leafDamage;
-		float m_leafFallProbability;
+		/**
+		 * \brief The probability of leaf falling after health return to 0.0
+		 */
+		std::function<float(const Node<InternodeGrowthData>& internode)> m_leafFallProbability;
 #pragma endregion
 #pragma region Fruit
+		/**
+		 * \brief The size of the fruit when it reaches full maturity.
+		 */
 		glm::vec3 m_maxFruitSize;
+		/**
+		 * \brief The position variance between fruit and bud.
+		 */
 		float m_fruitPositionVariance;
-		float m_fruitRandomRotation;
+		/**
+		 * \brief The rotation variance between fruit and bud.
+		 */
+		float m_fruitRotationVariance;
+		/**
+		 * \brief The damage to the fruit during this iteration caused by various factors
+		 */
 		std::function<float(const Node<InternodeGrowthData>& internode)> m_fruitDamage;
-		float m_fruitFallProbability;
+		/**
+		 * \brief The probability of fruit falling after health return to 0.0
+		 */
+		std::function<float(const Node<InternodeGrowthData>& internode)> m_fruitFallProbability;
 #pragma endregion
-		[[nodiscard]] float GetSagging(const Node<InternodeGrowthData>& internode) const;
-
-
-		ShootGrowthController();
-	};
+		};
 }

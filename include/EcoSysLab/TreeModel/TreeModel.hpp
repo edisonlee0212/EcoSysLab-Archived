@@ -2,7 +2,7 @@
 #include "SoilModel.hpp"
 #include "ClimateModel.hpp"
 #include "Octree.hpp"
-#include "TreeGrowthParameters.hpp"
+#include "TreeGrowthController.hpp"
 using namespace UniEngine;
 namespace EcoSysLab {
 	struct TreeGrowthSettings
