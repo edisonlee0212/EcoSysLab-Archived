@@ -1,13 +1,7 @@
 #pragma once
-
-#include "PlantStructure.hpp"
-#include "VigorSink.hpp"
 #include "SoilModel.hpp"
 #include "ClimateModel.hpp"
 #include "Octree.hpp"
-#include "TreeIlluminationEstimator.hpp"
-#include "PipeStructure.hpp"
-#include "HexagonGrid.hpp"
 #include "TreeGrowthParameters.hpp"
 using namespace UniEngine;
 namespace EcoSysLab {
@@ -30,57 +24,55 @@ namespace EcoSysLab {
 		bool m_enableBranchCollisionDetection = false;
 	};
 
-	typedef Skeleton<ShootGrowthData, ShootStemGrowthData, InternodeGrowthData> ShootSkeleton;
-	typedef Skeleton<RootGrowthData, RootStemGrowthData, RootNodeGrowthData> RootSkeleton;
+	
 
 	class TreeModel {
 #pragma region Root Growth
 
 		bool ElongateRoot(SoilModel& soilModel, float extendLength, NodeHandle rootNodeHandle,
-			const RootGrowthParameters& rootGrowthParameters, float& collectedAuxin);
+			const RootGrowthController& rootGrowthParameters, float& collectedAuxin);
 
-		inline bool GrowRootNode(SoilModel& soilModel, NodeHandle rootNodeHandle, const RootGrowthParameters& rootGrowthParameters);
+		inline bool GrowRootNode(SoilModel& soilModel, NodeHandle rootNodeHandle, const RootGrowthController& rootGrowthParameters);
 
 		inline void CalculateThickness(NodeHandle rootNodeHandle,
-			const RootGrowthParameters& rootGrowthParameters);
+			const RootGrowthController& rootGrowthParameters);
 
 		
 
-		inline void AggregateRootVigorRequirement(const RootGrowthParameters& rootGrowthParameters);
+		inline void AggregateRootVigorRequirement(const RootGrowthController& rootGrowthParameters);
 
-		inline void AllocateRootVigor(const RootGrowthParameters& rootGrowthParameters);
+		inline void AllocateRootVigor(const RootGrowthController& rootGrowthParameters);
 
-		inline void CalculateVigorRequirement(const RootGrowthParameters& rootGrowthParameters, PlantGrowthRequirement& newRootGrowthNutrientsRequirement);
+		inline void CalculateVigorRequirement(const RootGrowthController& rootGrowthParameters, PlantGrowthRequirement& newRootGrowthNutrientsRequirement);
 		inline void SampleNitrite(const glm::mat4& globalTransform, SoilModel& soilModel);
 #pragma endregion
 #pragma region Tree Growth
-		inline void AggregateInternodeVigorRequirement(const ShootGrowthParameters& shootGrowthParameters);
+		inline void AggregateInternodeVigorRequirement(const ShootGrowthController& shootGrowthParameters);
 
-		inline void CalculateVigorRequirement(const ShootGrowthParameters& shootGrowthParameters, PlantGrowthRequirement& newTreeGrowthNutrientsRequirement);
+		inline void CalculateVigorRequirement(const ShootGrowthController& shootGrowthParameters, PlantGrowthRequirement& newTreeGrowthNutrientsRequirement);
 
-		inline void AllocateShootVigor(const ShootGrowthParameters& shootGrowthParameters);
+		inline void AllocateShootVigor(const ShootGrowthController& shootGrowthParameters);
 
 		inline bool PruneInternodes(float maxDistance, NodeHandle internodeHandle,
-			const ShootGrowthParameters& shootGrowthParameters);
+			const ShootGrowthController& shootGrowthParameters);
 
 		inline void CalculateThicknessAndSagging(NodeHandle internodeHandle,
-			const ShootGrowthParameters& shootGrowthParameters);
+			const ShootGrowthController& shootGrowthParameters);
 
-		inline bool GrowInternode(ClimateModel& climateModel, NodeHandle internodeHandle, const ShootGrowthParameters& shootGrowthParameters);
+		inline bool GrowInternode(ClimateModel& climateModel, NodeHandle internodeHandle, const ShootGrowthController& shootGrowthParameters);
 
 		bool ElongateInternode(float extendLength, NodeHandle internodeHandle,
-			const ShootGrowthParameters& shootGrowthParameters, float& collectedInhibitor);
+			const ShootGrowthController& shootGrowthParameters, float& collectedInhibitor);
 
 		friend class Tree;
 
 		
 #pragma endregion
 
-		void Initialize(const ShootGrowthParameters& shootGrowthParameters, const RootGrowthParameters& rootGrowthParameters);
+		void Initialize(const ShootGrowthController& shootGrowthParameters, const RootGrowthController& rootGrowthParameters);
 
 		bool m_initialized = false;
 
-		bool m_enablePipe = false;
 		ShootSkeleton m_shootSkeleton;
 		RootSkeleton m_rootSkeleton;
 
@@ -96,7 +88,7 @@ namespace EcoSysLab {
 		 * @return Whether the growth caused a structural change during the growth.
 		 */
 		bool GrowShoots(const glm::mat4& globalTransform, ClimateModel& climateModel,
-			const ShootGrowthParameters& shootGrowthParameters, PlantGrowthRequirement& newShootGrowthRequirement);
+			const ShootGrowthController& shootGrowthParameters, PlantGrowthRequirement& newShootGrowthRequirement);
 
 		/**
 		 * Grow one iteration of the roots, given the soil model and the procedural parameters.
@@ -107,7 +99,7 @@ namespace EcoSysLab {
 		 * @return Whether the growth caused a structural change during the growth.
 		 */
 		bool GrowRoots(const glm::mat4& globalTransform, SoilModel& soilModel,
-			const RootGrowthParameters& rootGrowthParameters, PlantGrowthRequirement& newRootGrowthRequirement);
+			const RootGrowthController& rootGrowthParameters, PlantGrowthRequirement& newRootGrowthRequirement);
 
 		inline void PlantVigorAllocation();
 
@@ -126,17 +118,13 @@ namespace EcoSysLab {
 		
 	public:
 
-		
-
-		[[nodiscard]] bool IsPipeEnabled() const;
-
 		void PruneInternode(NodeHandle internodeHandle);
 		void PruneRootNode(NodeHandle rootNodeHandle);
 
 		inline void CollectRootFlux(const glm::mat4& globalTransform, SoilModel& soilModel,
-			const RootGrowthParameters& rootGrowthParameters);
+			const RootGrowthController& rootGrowthParameters);
 		inline void CollectShootFlux(const glm::mat4& globalTransform, ClimateModel& climateModel,
-			const ShootGrowthParameters& shootGrowthParameters);
+			const ShootGrowthController& shootGrowthParameters);
 		void HarvestFruits(const std::function<bool(const ReproductiveModule& fruit)>& harvestFunction);
 
 		int m_iteration = 0;
@@ -179,7 +167,7 @@ namespace EcoSysLab {
 		 * @return Whether the growth caused a structural change during the growth.
 		 */
 		bool Grow(float deltaTime, const glm::mat4& globalTransform, SoilModel& soilModel, ClimateModel& climateModel,
-			const RootGrowthParameters& rootGrowthParameters, const ShootGrowthParameters& shootGrowthParameters);
+			const RootGrowthController& rootGrowthParameters, const ShootGrowthController& shootGrowthParameters);
 
 		int m_historyLimit = -1;
 

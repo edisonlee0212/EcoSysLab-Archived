@@ -4,7 +4,7 @@
 using namespace UniEngine;
 namespace EcoSysLab
 {
-	class RootGrowthParameters {
+	class RootGrowthController {
 	public:
 		/**
 		 * \brief How much the soil density affects the growth;
@@ -96,10 +96,10 @@ namespace EcoSysLab
 
 		void SetTropisms(Node<RootNodeGrowthData>& oldNode, Node<RootNodeGrowthData>& newNode) const;
 
-		RootGrowthParameters();
+		RootGrowthController();
 	};
 
-	class ShootGrowthParameters {
+	class ShootGrowthController {
 	public:
 		float m_internodeGrowthRate;
 		float m_leafGrowthRate = 0.05f;
@@ -121,52 +121,36 @@ namespace EcoSysLab
 		/**
 		* \brief The mean and variance of the angle between the direction of a lateral bud and its parent shoot.
 		*/
-		glm::vec2 m_branchingAngleMeanVariance{};
+		std::function<float(const Node<InternodeGrowthData>& internode)> m_branchingAngle;
 		/**
 		* \brief The mean and variance of an angular difference orientation of lateral buds between two internodes
 		*/
-		glm::vec2 m_rollAngleMeanVariance{};
+		std::function<float(const Node<InternodeGrowthData>& internode)> m_rollAngle;
 		/**
 		* \brief The mean and variance of the angular difference between the growth direction and the direction of the apical bud
 		*/
-		glm::vec2 m_apicalAngleMeanVariance{};
+		std::function<float(const Node<InternodeGrowthData>& internode)> m_apicalAngle;
 		/**
 		 * \brief The gravitropism.
 		 */
-		float m_gravitropism;
+		std::function<float(const Node<InternodeGrowthData>& internode)> m_gravitropism;
 		/**
 		 * \brief The phototropism
 		 */
-		float m_phototropism;
+		std::function<float(const Node<InternodeGrowthData>& internode)> m_phototropism;
 
 		/**
-		 * \brief Flushing prob of lateral bud related to the temperature.
+		 * \brief Flushing prob of lateral bud.
 		 */
-		glm::vec4 m_lateralBudFlushingProbabilityTemperatureRange;
+		std::function<float(const Node<InternodeGrowthData>& internode)> m_lateralBudFlushingProbability;
 		/**
-		 * \brief Flushing prob of leaf bud related to the temperature.
+		 * \brief Flushing prob of leaf bud.
 		 */
-		glm::vec4 m_leafBudFlushingProbabilityTemperatureRange;
+		std::function<float(const Node<InternodeGrowthData>& internode)> m_leafBudFlushingProbability;
 		/**
-		 * \brief Flushing prob of fruit bud related to the temperature.
+		 * \brief Flushing prob of fruit bud.
 		 */
-		glm::vec4 m_fruitBudFlushingProbabilityTemperatureRange;
-		/**
-		 * \brief The lighting factor for apical bud elongation rate.
-		 */
-		float m_apicalBudLightingFactor;
-		/**
-		 * \brief The lighting factor for lateral bud flushing probability.
-		 */
-		float m_lateralBudLightingFactor;
-		/**
-		 * \brief The lighting factor for leaf bud flushing probability.
-		 */
-		float m_leafBudLightingFactor;
-		/**
-		 * \brief The lighting factor for fruit bud flushing probability.
-		 */
-		float m_fruitBudLightingFactor;
+		std::function<float(const Node<InternodeGrowthData>& internode)> m_fruitBudFlushingProbability;
 		/**
 		 * \brief Apical control base
 		 */
@@ -187,23 +171,6 @@ namespace EcoSysLab
 		* \brief How much inhibitor will shrink when going through the branch.
 		*/
 		float m_apicalDominanceDistanceFactor;
-		/**
-		* \brief The probability of internode being removed.
-		*/
-		float m_apicalBudExtinctionRate;
-		/**
-		* \brief The probability of internode being removed.
-		*/
-		float m_lateralBudExtinctionRate;
-		/**
-		* \brief The probability of internode being removed.
-		*/
-		float m_leafBudExtinctionRate;
-		/**
-		* \brief The probability of internode being removed.
-		*/
-		float m_fruitBudExtinctionRate;
-
 		/**
 		* \brief Productive resource requirement factor for internode elongation
 		*/
@@ -238,52 +205,32 @@ namespace EcoSysLab
 		 */
 		float m_thicknessAccumulateAgeFactor;
 		/**
-		* \brief The limit of lateral branches being cut off when too close to the
-		* root.
-		*/
-		float m_lowBranchPruning;
-		/**
 		 * \brief The The impact of the amount of incoming light on the shedding of end internodes.
 		 */
-		float m_endNodePruningLightFactor;
+		std::function<float(const Node<InternodeGrowthData>& internode)> m_pruningFactor;
 		/**
 		 * \brief The strength of gravity bending.
 		 */
 		glm::vec3 m_saggingFactorThicknessReductionMax = glm::vec3(0.8f, 1.75f, 1.0f);
-
-
 #pragma endregion
 
 #pragma region Leaf
-
 		glm::vec3 m_maxLeafSize;
 		float m_leafPositionVariance;
 		float m_leafRandomRotation;
-		float m_leafChlorophyllLoss;
-		float m_leafChlorophyllSynthesisFactorTemperature;
+		std::function<float(const Node<InternodeGrowthData>& internode)> m_leafDamage;
 		float m_leafFallProbability;
-
-		float m_leafDistanceToBranchEndLimit;
 #pragma endregion
 #pragma region Fruit
-
 		glm::vec3 m_maxFruitSize;
 		float m_fruitPositionVariance;
 		float m_fruitRandomRotation;
-
+		std::function<float(const Node<InternodeGrowthData>& internode)> m_fruitDamage;
 		float m_fruitFallProbability;
 #pragma endregion
-
-		[[nodiscard]] float GetDesiredBranchingAngle(const Node<InternodeGrowthData>& internode) const;
-
-		[[nodiscard]] float GetDesiredRollAngle(const Node<InternodeGrowthData>& internode) const;
-
-		[[nodiscard]] float GetDesiredApicalAngle(const Node<InternodeGrowthData>& internode) const;
-
-
 		[[nodiscard]] float GetSagging(const Node<InternodeGrowthData>& internode) const;
 
 
-		ShootGrowthParameters();
+		ShootGrowthController();
 	};
 }

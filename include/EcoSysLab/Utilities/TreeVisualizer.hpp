@@ -5,6 +5,8 @@
 #include "Graphics.hpp"
 #include "EditorLayer.hpp"
 #include "Application.hpp"
+#include "HexagonGrid.hpp"
+#include "PipeModel.hpp"
 
 using namespace UniEngine;
 namespace EcoSysLab {
@@ -132,7 +134,7 @@ namespace EcoSysLab {
 		bool m_needShootColorUpdate = false;
 		bool m_needRootColorUpdate = false;
 		bool
-			OnInspect(TreeModel& treeModel,
+			OnInspect(TreeModel& treeModel, PipeModel& pipeModel,
 				const GlobalTransform& globalTransform);
 
 		bool Visualize(TreeModel& treeModel,

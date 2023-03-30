@@ -33,12 +33,8 @@ void Tree::OnInspect() {
 		ImGui::Checkbox("Receive nitrite", &m_treeModel.m_treeGrowthSettings.m_collectNitrite);
 		ImGui::Checkbox("Enable Branch collision detection", &m_treeModel.m_treeGrowthSettings.m_enableBranchCollisionDetection);
 		ImGui::Checkbox("Enable Root collision detection", &m_treeModel.m_treeGrowthSettings.m_enableRootCollisionDetection);
-		if(!m_treeModel.m_initialized)
-		{
-			ImGui::Checkbox("Enable pipe", &m_treeModel.m_enablePipe);
-		}
-
-		if(m_treeModel.m_enablePipe && ImGui::Button("Build strands"))
+		
+		if(ImGui::Button("Build strands"))
 		{
 			InitializeStrandRenderer();
 		}
@@ -196,7 +192,7 @@ bool Tree::TryGrow(float deltaTime) {
 	const auto climate = m_climate.Get<Climate>();
 	const auto owner = GetOwner();
 	bool grown = m_treeModel.Grow(deltaTime, scene->GetDataComponent<GlobalTransform>(owner).m_value, soil->m_soilModel, climate->m_climateModel,
-		treeDescriptor->m_rootGrowthParameters, treeDescriptor->m_shootGrowthParameters);
+		m_rootGrowthController, m_shootGrowthController);
 
 	if (m_enableHistory && m_treeModel.m_iteration % m_historyIteration == 0) m_treeModel.Step();
 
@@ -231,19 +227,14 @@ bool Tree::TryGrow(float deltaTime) {
 
 void Tree::InitializeStrandRenderer() const
 {
-	if(!m_treeModel.m_enablePipe)
-	{
-		UNIENGINE_ERROR("Pipe not enabled!");
-		return;
-	}
 	const auto scene = GetScene();
 	const auto owner = GetOwner();
 	const auto renderer = scene->GetOrSetPrivateComponent<StrandsRenderer>(owner).lock();
 	const auto strandsAsset = ProjectManager::CreateTemporaryAsset<Strands>();
 	std::vector<glm::uint> strandsList;
 	std::vector<StrandPoint> points;
-	BuildStrands(m_treeModel.m_shootSkeleton.m_data.m_pipeGroup, strandsList, points);
-	BuildStrands(m_treeModel.m_rootSkeleton.m_data.m_pipeGroup, strandsList, points);
+	BuildStrands(m_pipeModel.m_shootSkeleton.m_data.m_pipeGroup, strandsList, points);
+	BuildStrands(m_pipeModel.m_rootSkeleton.m_data.m_pipeGroup, strandsList, points);
 	if (!points.empty()) strandsList.emplace_back(points.size());
 	strandsAsset->SetStrands(static_cast<unsigned>(StrandPointAttribute::Position) | static_cast<unsigned>(StrandPointAttribute::Thickness) | static_cast<unsigned>(StrandPointAttribute::Color), strandsList, points);
 	renderer->m_strands = strandsAsset;

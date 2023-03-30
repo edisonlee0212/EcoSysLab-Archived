@@ -1,4 +1,7 @@
 #pragma once
+#include "PlantStructure.hpp"
+#include "VigorSink.hpp"
+#include "TreeIlluminationEstimator.hpp"
 using namespace UniEngine;
 namespace EcoSysLab
 {
@@ -71,55 +74,7 @@ namespace EcoSysLab
 		float m_shootVigorWeight = 1.0f;
 	};
 
-	struct HexagonGridCellData
-	{
-		PipeHandle m_pipeHandle = -1;
-
-		NodeHandle m_branchingNodeHandle = -1;
-	};
-
-	struct HexagonGridData
-	{
-		NodeHandle m_nodeHandle = -1;
-	};
-
-	struct ShootPipeGroupGrowthData
-	{
-		glm::vec4 m_innerColor = glm::vec4(233, 216, 201, 255) / 255.0f;
-		glm::vec4 m_outerColor = glm::vec4(44, 32, 21, 255) / 255.0f;
-
-		HexagonGridGroup<HexagonGridData, HexagonGridCellData> m_hexagonGridGroup;
-	};
-
-	struct ShootPipeGrowthData
-	{
-		float m_startAge = 0.0f;
-	};
-
-	struct ShootPipeNodeGrowthData
-	{
-		NodeHandle m_nodeHandle = -1;
-		HexagonCellHandle m_cellHandle = -1;
-	};
-
-	struct RootPipeGroupGrowthData
-	{
-		glm::vec4 m_innerColor = glm::vec4(233, 216, 201, 255) / 255.0f;
-		glm::vec4 m_outerColor = glm::vec4(44, 32, 21, 255) / 255.0f;
-
-		HexagonGridGroup<HexagonGridData, HexagonGridCellData> m_hexagonGridGroup;
-	};
-
-	struct RootPipeGrowthData
-	{
-		float m_startAge = 0.0f;
-	};
-
-	struct RootPipeNodeGrowthData
-	{
-		NodeHandle m_nodeHandle = -1;
-		HexagonCellHandle m_cellHandle = -1;
-	};
+	
 
 	
 #pragma endregion
@@ -151,10 +106,7 @@ namespace EcoSysLab
 		std::vector<Bud> m_buds;
 		VigorFlow m_vigorFlow;
 		std::vector<glm::mat4> m_leaves;
-		std::vector<glm::mat4> m_fruits;
-
-		HexagonGridHandle m_gridHandle = -1;
-		std::vector<PipeNodeHandle> m_pipeNodeHandles;
+		std::vector<glm::mat4> m_fruits;		
 	};
 
 	struct RootNodeGrowthData {
@@ -184,9 +136,6 @@ namespace EcoSysLab
 		VigorSink m_vigorSink;
 
 		std::vector<glm::vec4> m_fineRootAnchors;
-
-		HexagonGridHandle m_gridHandle = -1;
-		std::vector<PipeNodeHandle> m_pipeNodeHandles;
 	};
 
 	struct ShootStemGrowthData {
@@ -197,8 +146,7 @@ namespace EcoSysLab
 		int m_order = 0;
 	};
 
-	typedef PipeGroup<ShootPipeGroupGrowthData, ShootPipeGrowthData, ShootPipeNodeGrowthData> ShootPipeGroup;
-	typedef PipeGroup<RootPipeGroupGrowthData, RootPipeGrowthData, RootPipeNodeGrowthData> RootPipeGroup;
+	
 
 	struct ShootGrowthData {
 		Octree<TreeVoxelData> m_octree = {};
@@ -210,8 +158,6 @@ namespace EcoSysLab
 		std::vector<ReproductiveModule> m_droppedLeaves;
 		std::vector<ReproductiveModule> m_droppedFruits;
 
-		ShootPipeGroup m_pipeGroup;
-
 		float m_vigor = 0;
 	};
 
@@ -220,8 +166,9 @@ namespace EcoSysLab
 		PlantGrowthRequirement m_vigorRequirement = {};
 		RootFlux m_rootFlux = {};
 
-		RootPipeGroup m_pipeGroup;
-
 		float m_vigor = 0;
 	};
+
+	typedef Skeleton<ShootGrowthData, ShootStemGrowthData, InternodeGrowthData> ShootSkeleton;
+	typedef Skeleton<RootGrowthData, RootStemGrowthData, RootNodeGrowthData> RootSkeleton;
 }

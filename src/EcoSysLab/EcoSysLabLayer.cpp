@@ -474,7 +474,7 @@ void EcoSysLabLayer::OnInspect() {
 						for (const auto& i : *treeEntities)
 						{
 							const auto tree = scene->GetOrSetPrivateComponent<Tree>(i).lock();
-							tree->m_treeModel.CollectShootFlux(scene->GetDataComponent<GlobalTransform>(i).m_value, climate->m_climateModel, tree->m_treeDescriptor.Get<TreeDescriptor>()->m_shootGrowthParameters);
+							tree->m_treeModel.CollectShootFlux(scene->GetDataComponent<GlobalTransform>(i).m_value, climate->m_climateModel, tree->m_shootGrowthController);
 						}
 					}
 					m_treeVisualizer.m_needShootColorUpdate = true;
@@ -570,8 +570,9 @@ void EcoSysLabLayer::OnInspect() {
 
 
 	if (scene->IsEntityValid(m_selectedTree)) {
+		const auto tree = scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock();
 		m_treeVisualizer.OnInspect(
-			scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock()->m_treeModel, scene->GetDataComponent<GlobalTransform>(m_selectedTree));
+			tree->m_treeModel, tree->m_pipeModel, scene->GetDataComponent<GlobalTransform>(m_selectedTree));
 	}
 	else
 	{

@@ -93,6 +93,7 @@ if (BUILD_RAY_TRACER_FACILITY)
             ${CMAKE_CURRENT_SOURCE_DIR}/include/EcoSysLab/ClimateModel
             ${CMAKE_CURRENT_SOURCE_DIR}/include/EcoSysLab/SoilModel
             ${CMAKE_CURRENT_SOURCE_DIR}/include/EcoSysLab/TreeModel
+            ${CMAKE_CURRENT_SOURCE_DIR}/include/EcoSysLab/PipeModel
             ${CMAKE_CURRENT_SOURCE_DIR}/include/EcoSysLab/Utilities
             ${CMAKE_CURRENT_SOURCE_DIR}/include/EcoSysLab/Structures
             )
@@ -111,6 +112,7 @@ else ()
             ${CMAKE_CURRENT_SOURCE_DIR}/include/EcoSysLab
             ${CMAKE_CURRENT_SOURCE_DIR}/include/EcoSysLab/ClimateModel
             ${CMAKE_CURRENT_SOURCE_DIR}/include/EcoSysLab/SoilModel
+            ${CMAKE_CURRENT_SOURCE_DIR}/include/EcoSysLab/PipeModel
             ${CMAKE_CURRENT_SOURCE_DIR}/include/EcoSysLab/TreeModel
             ${CMAKE_CURRENT_SOURCE_DIR}/include/EcoSysLab/Utilities
             ${CMAKE_CURRENT_SOURCE_DIR}/include/EcoSysLab/Structures

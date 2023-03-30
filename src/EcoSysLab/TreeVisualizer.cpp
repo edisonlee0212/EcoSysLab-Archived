@@ -59,6 +59,7 @@ bool TreeVisualizer::DrawInternodeInspectionGui(
 bool
 TreeVisualizer::OnInspect(
 	TreeModel& treeModel,
+	PipeModel& pipeModel,
 	const GlobalTransform& globalTransform) {
 	bool updated = false;
 	if (ImGui::Begin("Tree Inspector"))
@@ -221,24 +222,20 @@ TreeVisualizer::OnInspect(
 	ImGui::End();
 	if (m_hexagonGridGui) {
 		if (ImGui::Begin("Hexagon Grid")) {
-			if(!treeModel.IsPipeEnabled())
+			if (m_selectedInternodeHandle >= 0 && pipeModel.m_shootSkeleton.RefSortedNodeList().size() > m_selectedInternodeHandle)
 			{
-				ImGui::Text("Pipe disabled for this tree!");
-			}else if (m_selectedInternodeHandle >= 0)
-			{
-				auto& shootSkeleton = treeModel.RefShootSkeleton();
-				auto& grid = shootSkeleton.m_data.m_pipeGroup.m_data.m_hexagonGridGroup.RefGrid(shootSkeleton.RefNode(m_selectedInternodeHandle).m_data.m_gridHandle);
+				auto& shootSkeleton = pipeModel.m_shootSkeleton;
+				auto& grid = shootSkeleton.m_data.m_hexagonGridGroup.RefGrid(shootSkeleton.RefNode(m_selectedInternodeHandle).m_data.m_gridHandle);
 				VisualizeGrid(shootSkeleton, grid);
-			}
-			else if (m_selectedRootNodeHandle >= 0)
+			}else if (m_selectedRootNodeHandle >= 0 && pipeModel.m_rootSkeleton.RefSortedNodeList().size() > m_selectedRootNodeHandle)
 			{
-				auto& rootSkeleton = treeModel.RefRootSkeleton();
-				auto& grid = rootSkeleton.m_data.m_pipeGroup.m_data.m_hexagonGridGroup.RefGrid(rootSkeleton.RefNode(m_selectedRootNodeHandle).m_data.m_gridHandle);
+				auto& rootSkeleton = pipeModel.m_rootSkeleton;
+				auto& grid = rootSkeleton.m_data.m_hexagonGridGroup.RefGrid(rootSkeleton.RefNode(m_selectedRootNodeHandle).m_data.m_gridHandle);
 				VisualizeGrid(rootSkeleton, grid);
 			}
 			else
 			{
-				ImGui::Text("No node selected!");
+				ImGui::Text("No node selected or pipe model is invalid!");
 			}
 
 		}

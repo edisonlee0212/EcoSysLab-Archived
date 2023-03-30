@@ -9,16 +9,12 @@ namespace EcoSysLab
 
 	struct PipeNodeInfo
 	{
-		glm::vec3 m_globalStartPosition = glm::vec3(0.0f);
-		glm::quat m_globalStartRotation = glm::vec3(0.0f);
+		glm::vec3 m_globalPosition = glm::vec3(0.0f);
+		glm::quat m_globalRotation = glm::vec3(0.0f);
 
-		glm::vec3 m_globalEndPosition = glm::vec3(0.0f);
-		glm::quat m_globalEndRotation = glm::vec3(0.0f);
 		glm::vec2 m_localPosition = glm::vec2(0.0f);
 
-		float m_startThickness = 0.0f;
-		float m_endThickness = 0.0f;
-
+		float m_thickness = 0.0f;
 		
 	};
 
@@ -40,6 +36,8 @@ namespace EcoSysLab
 		PipeNodeHandle m_nextHandle = -1;
 		
 		PipeHandle m_pipeHandle = -1;
+
+		int m_index = -1;
 	public:
 		PipeNodeData m_data;
 		PipeNodeInfo m_info;
@@ -78,6 +76,8 @@ namespace EcoSysLab
 		 * @return PipeNodeHandle of current node.
 		 */
 		[[nodiscard]] PipeNodeHandle GetNextHandle() const;
+
+		[[nodiscard]] int GetIndex() const;
 
 		explicit PipeNode(PipeHandle pipeHandle, PipeNodeHandle handle, PipeNodeHandle prevHandle);
 	};
@@ -129,7 +129,7 @@ namespace EcoSysLab
 
 		int m_version = -1;
 
-		[[nodiscard]] PipeNodeHandle AllocatePipeNode(PipeHandle pipeHandle, PipeNodeHandle prevHandle);
+		[[nodiscard]] PipeNodeHandle AllocatePipeNode(PipeHandle pipeHandle, PipeNodeHandle prevHandle, int index);
 	public:
 		PipeGroupData m_data;
 
@@ -142,6 +142,13 @@ namespace EcoSysLab
 		 */
 		[[nodiscard]] PipeNodeHandle Extend(PipeHandle targetHandle);
 
+		/**
+		 * Insert pipe node during growth process. The flow structure will also be updated.
+		 * @param targetHandle The handle of the pipe to be inserted.
+		 * @param targetNodeHandle The handle of the pipe node to be inserted. If there's no subsequent node this will be a simple extend.
+		 * @return The handle of new node.
+		 */
+		[[nodiscard]] PipeNodeHandle Insert(PipeHandle targetHandle, PipeNodeHandle targetNodeHandle);
 
 		/**
 		 * Recycle (Remove) a node, the descendents of this node will also be recycled. The relevant flow will also be removed/restructured.
@@ -180,28 +187,27 @@ namespace EcoSysLab
 	};
 
 	template <typename PipeGroupData, typename PipeData, typename PipeNodeData>
-	PipeNodeHandle PipeGroup<PipeGroupData, PipeData, PipeNodeData>::AllocatePipeNode(PipeHandle pipeHandle, PipeNodeHandle prevHandle)
+	PipeNodeHandle PipeGroup<PipeGroupData, PipeData, PipeNodeData>::AllocatePipeNode(PipeHandle pipeHandle, PipeNodeHandle prevHandle, const int index)
 	{
+		PipeNodeHandle newNodeHandle;
 		if (m_pipeNodePool.empty()) {
 			auto newNode = m_pipeNodes.emplace_back(pipeHandle, m_pipeNodes.size(), prevHandle);
-			if (prevHandle != -1) {
-				m_pipeNodes[prevHandle].m_nextHandle = newNode.m_handle;
-				m_pipeNodes[prevHandle].m_endNode = false;
-			}
-			return newNode.m_handle;
+			newNodeHandle = newNode.m_handle;
 		}
-		auto handle = m_pipeNodePool.front();
-		m_pipeNodePool.pop();
-		auto& node = m_pipeNodes[handle];
+		else {
+			newNodeHandle = m_pipeNodePool.front();
+			m_pipeNodePool.pop();
+		}
+		auto& node = m_pipeNodes[newNodeHandle];
 		if (prevHandle != -1) {
-			m_pipeNodes[prevHandle].m_nextHandle = handle;
+			m_pipeNodes[prevHandle].m_nextHandle = newNodeHandle;
 			m_pipeNodes[prevHandle].m_endNode = false;
 			node.m_prevHandle = prevHandle;
 		}
 		node.m_pipeHandle = pipeHandle;
-		node.m_endNode = true;
+		node.m_index = index;
 		node.m_recycled = false;
-		return handle;
+		return newNodeHandle;
 	}
 
 	template <typename PipeGroupData, typename PipeData, typename PipeNodeData>
@@ -228,9 +234,34 @@ namespace EcoSysLab
 		assert(!pipe.m_recycled);
 		auto prevHandle = -1;
 		if (!pipe.m_nodeHandles.empty()) prevHandle = pipe.m_nodeHandles.back();
-		const auto newNodeHandle = AllocatePipeNode(targetHandle, prevHandle);
+		const auto newNodeHandle = AllocatePipeNode(targetHandle, prevHandle, pipe.m_nodeHandles.size());
 		pipe.m_nodeHandles.emplace_back(newNodeHandle);
+		auto& node = m_pipeNodes[newNodeHandle];
+		node.m_endNode = true;
+		m_version++;
+		return newNodeHandle;
+	}
 
+	template <typename PipeGroupData, typename PipeData, typename PipeNodeData>
+	PipeNodeHandle PipeGroup<PipeGroupData, PipeData, PipeNodeData>::Insert(PipeHandle targetHandle, PipeNodeHandle targetNodeHandle)
+	{
+		auto& pipe = m_pipes[targetHandle];
+		assert(!pipe.m_recycled);
+		auto& prevNode = m_pipeNodes[targetNodeHandle];
+		const auto prevNodeIndex = prevNode.m_index;
+		const auto nextNodeHandle = pipe.m_nodeHandles[prevNodeIndex + 1];
+		if (pipe.m_nodeHandles.size() - 1 == prevNodeIndex) return Extend(targetHandle);
+		const auto newNodeHandle = AllocatePipeNode(targetHandle, targetNodeHandle, prevNodeIndex + 1);
+		auto& newNode = m_pipeNodes[newNodeHandle];
+		newNode.m_endNode = false;
+		newNode.m_nextHandle = nextNodeHandle;
+		auto& nextNode = m_pipeNodes[nextNodeHandle];
+		nextNode.m_prevHandle = newNodeHandle;
+		pipe.m_nodeHandles.insert(pipe.m_nodeHandles.begin() + prevNodeIndex + 1, newNodeHandle);
+		for(int i = prevNodeIndex + 2; i < pipe.m_nodeHandles.size(); ++i)
+		{
+			m_pipeNodes[pipe.m_nodeHandles[i]].m_index = i;
+		}
 		m_version++;
 		return newNodeHandle;
 	}
@@ -262,6 +293,7 @@ namespace EcoSysLab
 		node.m_data = {};
 		node.m_info = {};
 
+		node.m_index = -1;
 		node.m_pipeHandle = -1;
 		m_pipeNodePool.emplace(handle);
 		m_version++;
@@ -281,6 +313,8 @@ namespace EcoSysLab
 			node.m_prevHandle = node.m_nextHandle = -1;
 			node.m_data = {};
 			node.m_info = {};
+
+			node.m_index = -1;
 			node.m_pipeHandle = -1;
 			m_pipeNodePool.emplace(nodeHandle);
 		}
@@ -386,6 +420,12 @@ namespace EcoSysLab
 	}
 
 	template <typename PipeNodeData>
+	int PipeNode<PipeNodeData>::GetIndex() const
+	{
+		return m_index;
+	}
+
+	template <typename PipeNodeData>
 	PipeNode<PipeNodeData>::PipeNode(const PipeHandle pipeHandle, const PipeNodeHandle handle, const PipeNodeHandle prevHandle)
 	{
 		m_pipeHandle = pipeHandle;
@@ -395,6 +435,7 @@ namespace EcoSysLab
 		m_recycled = false;
 		m_endNode = true;
 
+		m_index = -1;
 		m_data = {};
 		m_info = {};
 	}
