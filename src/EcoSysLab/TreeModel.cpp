@@ -702,13 +702,13 @@ bool TreeModel::ElongateRoot(SoilModel& soilModel, const float extendLength, Nod
 			m_rootSkeleton.RefNode(newRootNodeHandle).m_data.m_inhibitor = childAuxin;
 		}
 		else {
-			newRootNode.m_data.m_inhibitor = rootGrowthParameters.m_apicalDominance(newRootNode) * glm::exp(-rootGrowthParameters.m_apicalDominanceAgeFactor * m_age);
+			newRootNode.m_data.m_inhibitor = rootGrowthParameters.m_apicalDominance(newRootNode);
 			collectedAuxin += newRootNode.m_data.m_inhibitor *= rootGrowthParameters.m_apicalDominanceDistanceFactor;
 		}
 	}
 	else {
 		//Otherwise, we add the inhibitor.
-		collectedAuxin += rootGrowthParameters.m_apicalDominance(rootNode) * glm::exp(-rootGrowthParameters.m_apicalDominanceAgeFactor * m_age);
+		collectedAuxin += rootGrowthParameters.m_apicalDominance(rootNode);
 	}
 	return graphChanged;
 }
@@ -808,13 +808,13 @@ bool TreeModel::ElongateInternode(float extendLength, NodeHandle internodeHandle
 			m_shootSkeleton.RefNode(newInternodeHandle).m_data.m_inhibitor = childInhibitor;
 		}
 		else {
-			newInternode.m_data.m_inhibitor = shootGrowthParameters.m_apicalDominance(newInternode) * glm::exp(-shootGrowthParameters.m_apicalDominanceAgeFactor * m_age);
+			newInternode.m_data.m_inhibitor = shootGrowthParameters.m_apicalDominance(newInternode);
 			collectedInhibitor += newInternode.m_data.m_inhibitor *= shootGrowthParameters.m_apicalDominanceDistanceFactor;
 		}
 	}
 	else {
 		//Otherwise, we add the inhibitor.
-		collectedInhibitor += shootGrowthParameters.m_apicalDominance(internode) * glm::exp(-shootGrowthParameters.m_apicalDominanceAgeFactor * m_age);
+		collectedInhibitor += shootGrowthParameters.m_apicalDominance(internode);
 	}
 	return graphChanged;
 }
@@ -1167,9 +1167,7 @@ inline void TreeModel::AllocateShootVigor(const ShootGrowthController& shootGrow
 {
 	const auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
 	//Go from rooting point to all end nodes
-	const float apicalControl =
-		1.0f + shootGrowthParameters.m_apicalControl
-		* glm::exp(-shootGrowthParameters.m_apicalControlAgeFactor * m_age);
+	const float apicalControl = shootGrowthParameters.m_apicalControl;
 	float remainingVigor = m_shootSkeleton.m_data.m_vigor;
 
 	const float leafMaintenanceVigor = glm::min(remainingVigor, m_shootSkeleton.m_data.m_vigorRequirement.m_leafMaintenanceVigor);
@@ -1488,9 +1486,7 @@ void TreeModel::AllocateRootVigor(const RootGrowthController& rootGrowthParamete
 {
 	//For how this works, refer to AllocateShootVigor().
 	const auto& sortedRootNodeList = m_rootSkeleton.RefSortedNodeList();
-	const float apicalControl =
-		1.0f + rootGrowthParameters.m_apicalControl
-		* glm::exp(-rootGrowthParameters.m_apicalControlAgeFactor * m_age);
+	const float apicalControl = rootGrowthParameters.m_apicalControl;
 
 	const float rootMaintenanceVigor = glm::min(m_rootSkeleton.m_data.m_vigor, m_rootSkeleton.m_data.m_vigorRequirement.m_leafDevelopmentalVigor);
 	float rootMaintenanceVigorFillingRate = 0.0f;

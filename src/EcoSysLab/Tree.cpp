@@ -263,13 +263,12 @@ bool Tree::TryGrow(float deltaTime) {
 			flushProbability *= glm::pow(internodeData.m_lightIntensity, shootGrowthParameters.m_fruitBudLightingFactor);
 			return flushProbability;
 		};
-		m_shootGrowthController.m_apicalControl = treeDescriptor->m_shootGrowthParameters.m_apicalControl;
-		m_shootGrowthController.m_apicalControlAgeFactor = treeDescriptor->m_shootGrowthParameters.m_apicalControlAgeFactor;
+		m_shootGrowthController.m_apicalControl = 
+			1.0f + treeDescriptor->m_shootGrowthParameters.m_apicalControl * glm::exp(-treeDescriptor->m_shootGrowthParameters.m_apicalControlAgeFactor * m_treeModel.m_age);
 		m_shootGrowthController.m_apicalDominance = [=](const Node<InternodeGrowthData>& internode)
 		{
-			return treeDescriptor->m_shootGrowthParameters.m_apicalDominance;
+			return treeDescriptor->m_shootGrowthParameters.m_apicalDominance * glm::exp(-treeDescriptor->m_shootGrowthParameters.m_apicalDominanceAgeFactor * m_treeModel.m_age);
 		};
-		m_shootGrowthController.m_apicalDominanceAgeFactor = treeDescriptor->m_shootGrowthParameters.m_apicalDominanceAgeFactor;
 		m_shootGrowthController.m_apicalDominanceDistanceFactor = treeDescriptor->m_shootGrowthParameters.m_apicalDominanceDistanceFactor;
 		m_shootGrowthController.m_internodeVigorRequirement = treeDescriptor->m_shootGrowthParameters.m_internodeVigorRequirement;
 		m_shootGrowthController.m_leafVigorRequirement = treeDescriptor->m_shootGrowthParameters.m_leafVigorRequirement;
@@ -348,13 +347,11 @@ bool Tree::TryGrow(float deltaTime) {
 			return 1.0f - glm::pow(1.0f / glm::max(rootNodeData.m_soilDensity * treeDescriptor->m_rootGrowthParameters.m_environmentalFriction, 1.0f), treeDescriptor->m_rootGrowthParameters.m_environmentalFrictionFactor);
 		};
 
-		m_rootGrowthController.m_apicalControl = treeDescriptor->m_rootGrowthParameters.m_apicalControl;
-		m_rootGrowthController.m_apicalControlAgeFactor = treeDescriptor->m_rootGrowthParameters.m_apicalControlAgeFactor;
+		m_rootGrowthController.m_apicalControl = treeDescriptor->m_rootGrowthParameters.m_apicalControl * glm::exp(-treeDescriptor->m_rootGrowthParameters.m_apicalControlAgeFactor * m_treeModel.m_age);
 		m_rootGrowthController.m_apicalDominance = [=](const Node<RootNodeGrowthData>& rootNode)
 		{
-			return treeDescriptor->m_rootGrowthParameters.m_apicalDominance;
+			return treeDescriptor->m_rootGrowthParameters.m_apicalDominance * glm::exp(-treeDescriptor->m_rootGrowthParameters.m_apicalDominanceAgeFactor * m_treeModel.m_age);
 		};
-		m_rootGrowthController.m_apicalDominanceAgeFactor = treeDescriptor->m_rootGrowthParameters.m_apicalDominanceAgeFactor;
 		m_rootGrowthController.m_apicalDominanceDistanceFactor = treeDescriptor->m_rootGrowthParameters.m_apicalDominanceDistanceFactor;
 		m_rootGrowthController.m_tropismSwitchingProbability = treeDescriptor->m_rootGrowthParameters.m_tropismSwitchingProbability;
 		m_rootGrowthController.m_tropismSwitchingProbabilityDistanceFactor = treeDescriptor->m_rootGrowthParameters.m_tropismSwitchingProbabilityDistanceFactor;

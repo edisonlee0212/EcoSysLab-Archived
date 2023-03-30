@@ -44,17 +44,9 @@ namespace EcoSysLab
 		 */
 		float m_apicalControl;
 		/**
-		 * \brief Age influence on apical control
-		 */
-		float m_apicalControlAgeFactor;
-		/**
 		* \brief How much inhibitor will an internode generate.
 		*/
 		std::function<float(const Node<RootNodeGrowthData>& rootNode)> m_apicalDominance;
-		/**
-		* \brief How much inhibitor will shrink when the tree ages.
-		*/
-		float m_apicalDominanceAgeFactor;
 		/**
 		* \brief How much inhibitor will shrink when going through the branch.
 		*/
@@ -146,17 +138,9 @@ namespace EcoSysLab
 		 */
 		float m_apicalControl;
 		/**
-		 * \brief Age influence on apical control
-		 */
-		float m_apicalControlAgeFactor;
-		/**
 		* \brief How much inhibitor will an internode generate.
 		*/
 		std::function<float(const Node<InternodeGrowthData>& internode)> m_apicalDominance;
-		/**
-		* \brief How much inhibitor will shrink when the tree ages.
-		*/
-		float m_apicalDominanceAgeFactor;
 		/**
 		* \brief How much inhibitor will shrink when going through the branch.
 		*/
