@@ -20,7 +20,7 @@ void PipeModel::CalculatePipeTransforms(PipeModelSkeleton& targetSkeleton, const
 
 		pipeInfo.m_localPosition = pipeModelParameters.m_endNodeThickness * 2.0f * grid.GetPosition(cell.GetCoordinate());
 		pipeInfo.m_thickness = pipeModelParameters.m_endNodeThickness;
-		pipeInfo.m_globalPosition = nodeInfo.m_globalPosition + left * pipeInfo.m_localPosition.x + up * pipeInfo.m_localPosition.y;
+		pipeInfo.m_globalPosition = nodeInfo.m_globalPosition + front * nodeInfo.m_length + left * pipeInfo.m_localPosition.x + up * pipeInfo.m_localPosition.y;
 		pipeInfo.m_globalRotation = nodeInfo.m_regulatedGlobalRotation;
 	}
 
@@ -31,24 +31,68 @@ void PipeModel::CalculatePipeTransforms(PipeModelSkeleton& targetSkeleton, const
 	}
 }
 
-void PipeModel::DistributePipes(PipeModelSkeleton& targetSkeleton, const PipeModelParameters& pipeModelParameters)
+void PipeModel::DistributePipes(bool isShoot, const PipeModelParameters& pipeModelParameters)
 {
+	//1. Reverse calculate number of distribution ratio.
+	auto& targetSkeleton = isShoot ? m_shootSkeleton : m_rootSkeleton;
+	const auto nodeList = targetSkeleton.RefSortedNodeList();
+	for (auto it = nodeList.rbegin(); it != nodeList.rend(); it++)
+	{
+		auto& node = targetSkeleton.RefNode(*it);
+		auto& nodeData = node.m_data;
+		nodeData.m_endNodeCount = 0;
+		if (node.IsEndNode()) nodeData.m_endNodeCount = 1;
+		else
+		{
+			for(const auto& childNodeHandle : node.RefChildHandles())
+			{
+				const auto& childNode = targetSkeleton.RefNode(childNodeHandle);
+				node.m_data.m_endNodeCount += childNode.m_data.m_endNodeCount;
+			}
+		}
+	}
 
+	targetSkeleton.m_data.m_hexagonGridGroup = {};
+	targetSkeleton.m_data.m_pipeGroup = {};
+	auto& pipeGroup = targetSkeleton.m_data.m_pipeGroup;
+	const auto& gridGroup = targetSkeleton.m_data.m_hexagonGridGroup;
+	//2. Allocate pipe for target skeleton.
+	for(const auto& readOnlyCell : m_baseGrid.PeekCells())
+	{
+		if(readOnlyCell.IsRecycled()) continue;
+		auto& cell = m_baseGrid.RefCell(readOnlyCell.GetHandle());
+		const auto newPipeHandle = pipeGroup.AllocatePipe();
+		if(isShoot) cell.m_data.m_shootPipeHandle = newPipeHandle;
+		else cell.m_data.m_rootPipeHandle = newPipeHandle;
+	}
+	//3. Create traverse graph and setup pipes.
+	for(const auto& nodeHandle : nodeList)
+	{
+		auto& node = targetSkeleton.RefNode(nodeHandle);
+		auto& nodeData = node.m_data;
+		if(nodeHandle == 0)
+		{
+			//Make a copy of base grid for trunk nodes.
+		}else
+		{
+			//Create a hexagon grid for every node that has multiple child, and a hexagon grid for each child.
+		}
+	}
 }
 
 void PipeModel::BuildGraph(const PipeModelParameters& pipeModelParameters)
 {
-	const auto& baseGridCells = m_baseGrid.PeekCells();
+	const auto& baseGridCellCount = m_baseGrid.GetCellCount();
 	const auto& shootFlowList = m_shootSkeleton.RefSortedFlowList();
 	const auto& rootFlowList = m_rootSkeleton.RefSortedFlowList();
-	if(baseGridCells.size() >= shootFlowList.size())
+	if(baseGridCellCount >= shootFlowList.size())
 	{
-		DistributePipes(m_shootSkeleton, pipeModelParameters);
+		DistributePipes(true, pipeModelParameters);
 		CalculatePipeTransforms(m_shootSkeleton, pipeModelParameters);
 	}
-	if (baseGridCells.size() >= rootFlowList.size())
+	if (baseGridCellCount >= rootFlowList.size())
 	{
-		DistributePipes(m_rootSkeleton, pipeModelParameters);
+		DistributePipes(false, pipeModelParameters);
 		CalculatePipeTransforms(m_rootSkeleton, pipeModelParameters);
 	}
 }

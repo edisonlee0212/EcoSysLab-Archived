@@ -477,7 +477,7 @@ void Tree::BuildPipeModel()
 {
 	m_pipeModel.InitializeSkeleton(m_treeModel.m_shootSkeleton, m_pipeModel.m_shootSkeleton);
 	m_pipeModel.InitializeSkeleton(m_treeModel.m_rootSkeleton, m_pipeModel.m_rootSkeleton);
-	//m_pipeModel.CalculateGraph();
+	//m_pipeModel.BuildGraph();
 }
 
 void Tree::BuildStrands(const PipeModelPipeGroup& pipeGroup, std::vector<glm::uint>& strands,

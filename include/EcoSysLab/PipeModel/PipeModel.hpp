@@ -6,9 +6,9 @@ namespace EcoSysLab
 	class PipeModel
 	{
 		void CalculatePipeTransforms(PipeModelSkeleton& targetSkeleton, const PipeModelParameters& pipeModelParameters) const;
-		void DistributePipes(PipeModelSkeleton& targetSkeleton, const PipeModelParameters& pipeModelParameters);
+		void DistributePipes(bool isShoot, const PipeModelParameters& pipeModelParameters);
 	public:
-		PipeModelHexagonGrid m_baseGrid;
+		PipeModelBaseHexagonGrid m_baseGrid;
 		PipeModelSkeleton m_shootSkeleton;
 		PipeModelSkeleton m_rootSkeleton;
 		template<typename SkeletonData, typename FlowData, typename NodeData>

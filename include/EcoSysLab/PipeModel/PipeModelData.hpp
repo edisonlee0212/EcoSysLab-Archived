@@ -5,6 +5,16 @@
 using namespace UniEngine;
 namespace EcoSysLab
 {
+	struct BaseHexagonGridCellData
+	{
+		PipeHandle m_shootPipeHandle = -1;
+		PipeHandle m_rootPipeHandle = -1;
+	};
+
+	struct BaseHexagonGridData
+	{
+	};
+
 	struct HexagonGridCellData
 	{
 		PipeHandle m_pipeHandle = -1;
@@ -15,7 +25,7 @@ namespace EcoSysLab
 		NodeHandle m_nodeHandle = -1;
 	};
 
-	typedef HexagonGrid<HexagonGridData, HexagonGridCellData> PipeModelHexagonGrid;
+	typedef HexagonGrid<BaseHexagonGridData, BaseHexagonGridCellData> PipeModelBaseHexagonGrid;
 	typedef HexagonGridGroup<HexagonGridData, HexagonGridCellData> PipeModelHexagonGridGroup;
 
 	struct PipeModelPipeGroupData
@@ -43,6 +53,8 @@ namespace EcoSysLab
 	{
 		HexagonGridHandle m_gridHandle = -1;
 		std::vector<PipeNodeHandle> m_pipeNodeHandles;
+
+		int m_endNodeCount = 0;
 	};
 
 	struct PipeModelFlowData

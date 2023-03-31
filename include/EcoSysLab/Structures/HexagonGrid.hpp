@@ -67,6 +67,7 @@ namespace EcoSysLab
 		[[nodiscard]] HexagonCellHandle GetLeftHandle() const;
 
 		[[nodiscard]] bool IsBoundary() const;
+		[[nodiscard]] bool IsRecycled() const;
 	};
 
 	typedef int HexagonGridHandle;
@@ -88,7 +89,7 @@ namespace EcoSysLab
 		friend class HexagonGridGroup;
 	public:
 		GridData m_data;
-
+		[[nodiscard]] size_t GetCellCount() const;
 		[[nodiscard]] bool IsRecycled() const;
 
 		[[nodiscard]] HexagonGridHandle GetHandle() const;
@@ -258,6 +259,18 @@ namespace EcoSysLab
 	bool HexagonCell<CellData>::IsBoundary() const
 	{
 		return m_downLeft == -1 || m_downRight == -1 || m_left == -1 || m_right == -1 || m_upLeft == -1 || m_upRight == -1;
+	}
+
+	template <typename CellData>
+	bool HexagonCell<CellData>::IsRecycled() const
+	{
+		return m_recycled;
+	}
+
+	template <typename GridData, typename CellData>
+	size_t HexagonGrid<GridData, CellData>::GetCellCount() const
+	{
+		return m_cellMap.size();
 	}
 
 	template <typename GridData, typename CellData>
