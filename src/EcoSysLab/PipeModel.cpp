@@ -55,8 +55,10 @@ void PipeModel::DistributePipes(bool isShoot, const PipeModelParameters& pipeMod
 	targetSkeleton.m_data.m_hexagonGridGroup = {};
 	targetSkeleton.m_data.m_pipeGroup = {};
 	auto& pipeGroup = targetSkeleton.m_data.m_pipeGroup;
-	const auto& gridGroup = targetSkeleton.m_data.m_hexagonGridGroup;
+	auto& gridGroup = targetSkeleton.m_data.m_hexagonGridGroup;
 	//2. Allocate pipe for target skeleton.
+	const auto firstGridHandle = gridGroup.Allocate();
+	auto& firstGrid = gridGroup.RefGrid(firstGridHandle);
 	for(const auto& readOnlyCell : m_baseGrid.PeekCells())
 	{
 		if(readOnlyCell.IsRecycled()) continue;
@@ -64,18 +66,27 @@ void PipeModel::DistributePipes(bool isShoot, const PipeModelParameters& pipeMod
 		const auto newPipeHandle = pipeGroup.AllocatePipe();
 		if(isShoot) cell.m_data.m_shootPipeHandle = newPipeHandle;
 		else cell.m_data.m_rootPipeHandle = newPipeHandle;
+
+		auto& firstNode = targetSkeleton.RefNode(0);
+		const auto firstGridCellHandle = firstGrid.Allocate(cell.GetCoordinate());
+		auto& firstGridCell = firstGrid.RefCell(firstGridCellHandle);
+		firstGridCell.m_data.m_pipeHandle = newPipeHandle;
+		firstNode.m_data.m_gridHandle = firstGridCellHandle;
+		const auto firstPipeNodeHandle = pipeGroup.Extend(newPipeHandle);
+		auto& firstPipeNode = pipeGroup.RefPipeNode(firstPipeNodeHandle);
+		firstPipeNode.m_data.m_cellHandle = firstGridCellHandle;
+		firstPipeNode.m_data.m_nodeHandle = 0;
+		firstNode.m_data.m_pipeNodeHandles.emplace_back(firstPipeNodeHandle);
 	}
 	//3. Create traverse graph and setup pipes.
 	for(const auto& nodeHandle : nodeList)
 	{
 		auto& node = targetSkeleton.RefNode(nodeHandle);
 		auto& nodeData = node.m_data;
-		if(nodeHandle == 0)
-		{
-			//Make a copy of base grid for trunk nodes.
-		}else
+		if(nodeHandle != 0)
 		{
 			//Create a hexagon grid for every node that has multiple child, and a hexagon grid for each child.
+
 		}
 	}
 }
