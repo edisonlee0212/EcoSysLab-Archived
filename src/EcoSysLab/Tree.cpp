@@ -36,6 +36,7 @@ void Tree::OnInspect() {
 		
 		if(ImGui::Button("Build strands"))
 		{
+			BuildPipeModel();
 			InitializeStrandRenderer();
 		}
 
@@ -347,7 +348,7 @@ bool Tree::TryGrow(float deltaTime) {
 			return 1.0f - glm::pow(1.0f / glm::max(rootNodeData.m_soilDensity * treeDescriptor->m_rootGrowthParameters.m_environmentalFriction, 1.0f), treeDescriptor->m_rootGrowthParameters.m_environmentalFrictionFactor);
 		};
 
-		m_rootGrowthController.m_apicalControl = treeDescriptor->m_rootGrowthParameters.m_apicalControl * glm::exp(-treeDescriptor->m_rootGrowthParameters.m_apicalControlAgeFactor * m_treeModel.m_age);
+		m_rootGrowthController.m_apicalControl = 1.0f + treeDescriptor->m_rootGrowthParameters.m_apicalControl * glm::exp(-treeDescriptor->m_rootGrowthParameters.m_apicalControlAgeFactor * m_treeModel.m_age);
 		m_rootGrowthController.m_apicalDominance = [=](const Node<RootNodeGrowthData>& rootNode)
 		{
 			return treeDescriptor->m_rootGrowthParameters.m_apicalDominance * glm::exp(-treeDescriptor->m_rootGrowthParameters.m_apicalDominanceAgeFactor * m_treeModel.m_age);
@@ -404,6 +405,89 @@ bool Tree::TryGrow(float deltaTime) {
 	}
 
 	return grown;
+}
+
+void Tree::BuildStrand(const PipeModelPipeGroup& pipeGroup, const Pipe<PipeModelPipeData>& pipe,
+	std::vector<glm::uint>& strands, std::vector<StrandPoint>& points) const
+{
+	const auto& pipeNodeHandles = pipe.PeekPipeNodeHandles();
+	if (pipeNodeHandles.empty()) return;
+
+	strands.emplace_back(points.size());
+	auto frontPointIndex = points.size();
+	StrandPoint point;
+	point.m_normal = glm::normalize(pipe.m_data.m_baseInfo.m_globalRotation * glm::vec3(0, 0, -1));
+	point.m_position = pipe.m_data.m_baseInfo.m_globalPosition;
+	point.m_thickness = pipe.m_data.m_baseInfo.m_thickness;
+	point.m_color = pipe.m_info.m_color;
+
+	points.emplace_back(point);
+	points.emplace_back(point);
+
+
+	if (pipeNodeHandles.size() == 1)
+	{
+		const auto& secondPipeNode = pipeGroup.PeekPipeNode(pipe.PeekPipeNodeHandles()[0]);
+		auto distance = glm::distance(pipe.m_data.m_baseInfo.m_globalPosition, secondPipeNode.m_info.m_globalPosition) * 0.25f;
+		point.m_normal = glm::normalize(pipe.m_data.m_baseInfo.m_globalRotation * glm::vec3(0, 0, -1) * 0.75f + secondPipeNode.m_info.m_globalRotation * glm::vec3(0, 0, -1) * 0.25f);
+		point.m_position = pipe.m_data.m_baseInfo.m_globalPosition + pipe.m_data.m_baseInfo.m_globalRotation * glm::vec3(0, 0, -1) * distance;
+		point.m_thickness = pipe.m_data.m_baseInfo.m_thickness * 0.75f + secondPipeNode.m_info.m_thickness * 0.25f;
+		points.emplace_back(point);
+
+		point.m_normal = glm::normalize(pipe.m_data.m_baseInfo.m_globalRotation * glm::vec3(0, 0, -1) * 0.25f + secondPipeNode.m_info.m_globalRotation * glm::vec3(0, 0, -1) * 0.75f);
+		point.m_position = secondPipeNode.m_info.m_globalPosition + secondPipeNode.m_info.m_globalRotation * glm::vec3(0, 0, 1) * distance;
+		point.m_thickness = pipe.m_data.m_baseInfo.m_thickness * 0.25f + secondPipeNode.m_info.m_thickness * 0.75f;
+		points.emplace_back(point);
+	}
+	else if (pipeNodeHandles.size() == 2)
+	{
+		const auto& secondPipeNode = pipeGroup.PeekPipeNode(pipe.PeekPipeNodeHandles()[0]);
+		auto distance = glm::distance(pipe.m_data.m_baseInfo.m_globalPosition, secondPipeNode.m_info.m_globalPosition) * 0.5f;
+		point.m_normal = glm::normalize(pipe.m_data.m_baseInfo.m_globalRotation * glm::vec3(0, 0, -1) + secondPipeNode.m_info.m_globalRotation * glm::vec3(0, 0, -1));
+		point.m_position = pipe.m_data.m_baseInfo.m_globalPosition + secondPipeNode.m_info.m_globalRotation * glm::vec3(0, 0, -1) * distance;
+		point.m_thickness = pipe.m_data.m_baseInfo.m_thickness * 0.5f + secondPipeNode.m_info.m_thickness * 0.5f;
+		points.emplace_back(point);
+	}
+
+	for (int i = 1; i < pipeNodeHandles.size(); i++)
+	{
+		const auto& pipeNode = pipeGroup.PeekPipeNode(pipeNodeHandles[i]);
+		point.m_normal = glm::normalize(pipeNode.m_info.m_globalRotation * glm::vec3(0, 0, -1));
+		point.m_position = pipeNode.m_info.m_globalPosition;
+		point.m_thickness = pipeNode.m_info.m_thickness;
+		points.emplace_back(point);
+	}
+
+	StrandPoint frontPoint;
+	frontPoint = points.at(frontPointIndex);
+	frontPoint.m_position = 2.0f * frontPoint.m_position - points.at(frontPointIndex + 2).m_position;
+	frontPoint.m_normal = 2.0f * frontPoint.m_normal - points.at(frontPointIndex + 2).m_normal;
+	frontPoint.m_thickness = 2.0f * frontPoint.m_thickness - points.at(frontPointIndex + 2).m_thickness;
+	points.at(frontPointIndex) = frontPoint;
+
+	StrandPoint backPoint;
+	backPoint = points.at(points.size() - 2);
+	backPoint.m_position = 2.0f * points.at(points.size() - 1).m_position - backPoint.m_position;
+	backPoint.m_normal = 2.0f * points.at(points.size() - 1).m_normal - backPoint.m_normal;
+	backPoint.m_thickness = 2.0f * points.at(points.size() - 1).m_thickness - backPoint.m_thickness;
+	points.emplace_back(backPoint);
+}
+
+void Tree::BuildPipeModel()
+{
+	m_pipeModel.InitializeSkeleton(m_treeModel.m_shootSkeleton, m_pipeModel.m_shootSkeleton);
+	m_pipeModel.InitializeSkeleton(m_treeModel.m_rootSkeleton, m_pipeModel.m_rootSkeleton);
+	//m_pipeModel.CalculateGraph();
+}
+
+void Tree::BuildStrands(const PipeModelPipeGroup& pipeGroup, std::vector<glm::uint>& strands,
+	std::vector<StrandPoint>& points) const
+{
+	for (const auto& pipe : pipeGroup.PeekPipes())
+	{
+		if (pipe.IsRecycled()) continue;
+		BuildStrand(pipeGroup, pipe, strands, points);
+	}
 }
 
 void Tree::InitializeStrandRenderer() const

@@ -26,6 +26,8 @@ namespace EcoSysLab
 	struct PipeModelPipeData
 	{
 		float m_startAge = 0.0f;
+
+		PipeNodeInfo m_baseInfo;
 	};
 
 	struct PipeModelPipeNodeData

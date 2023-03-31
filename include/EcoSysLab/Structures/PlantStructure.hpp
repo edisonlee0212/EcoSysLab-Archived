@@ -46,6 +46,7 @@ namespace EcoSysLab {
         FlowHandle m_flowHandle = -1;
         NodeHandle m_parentHandle = -1;
         std::vector<NodeHandle> m_childHandles;
+        bool m_apical = true;
 #pragma endregion
     public:
         NodeData m_data;
@@ -71,7 +72,11 @@ namespace EcoSysLab {
          * @return True if this node is recycled (removed), false else wise.
          */
         [[nodiscard]] bool IsRecycled() const;
-
+        /**
+         * Whether this node is apical.
+         * @return True if this node is apical, false else wise.
+         */
+        [[nodiscard]] bool IsApical() const;
         /**
          * Get the handle of self.
          * @return NodeHandle of current node.
@@ -379,6 +384,7 @@ namespace EcoSysLab {
             auto &newFlow = m_flows[newFlowHandle];
 
             newNode.m_flowHandle = newFlowHandle;
+            newNode.m_apical = false;
             newFlow.m_nodes.emplace_back(newNodeHandle);
             newFlow.m_apical = false;
             newNode.m_flowStartNode = true;
@@ -414,6 +420,7 @@ namespace EcoSysLab {
             auto newFlowHandle = AllocateFlow();
             auto& newFlow = m_flows[newFlowHandle];
             newNode.m_flowHandle = newFlowHandle;
+            newNode.m_apical = true;
             newNode.m_flowStartNode = true;
             newFlow.m_nodes.emplace_back(newNodeHandle);
             newFlow.m_apical = true;
@@ -423,6 +430,7 @@ namespace EcoSysLab {
             flow.m_nodes.emplace_back(newNodeHandle);
             newNode.m_flowHandle = originalNode.m_flowHandle;
             newNode.m_flowStartNode = false;
+            newNode.m_apical = true;
         }
         m_newVersion++;
         return newNodeHandle;
@@ -549,6 +557,12 @@ namespace EcoSysLab {
     template<typename NodeData>
     bool Node<NodeData>::IsRecycled() const {
         return m_recycled;
+    }
+
+    template <typename NodeData>
+    bool Node<NodeData>::IsApical() const
+    {
+        return m_apical;
     }
 
     template<typename NodeData>
