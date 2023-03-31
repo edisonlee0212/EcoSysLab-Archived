@@ -8,13 +8,14 @@ namespace EcoSysLab
 	struct HexagonGridCellData
 	{
 		PipeHandle m_pipeHandle = -1;
-		NodeHandle m_branchingNodeHandle = -1;
 	};
 
 	struct HexagonGridData
 	{
 		NodeHandle m_nodeHandle = -1;
 	};
+
+	typedef HexagonGrid<HexagonGridData, HexagonGridCellData> PipeModelHexagonGrid;
 	typedef HexagonGridGroup<HexagonGridData, HexagonGridCellData> PipeModelHexagonGridGroup;
 
 	struct PipeModelPipeGroupData

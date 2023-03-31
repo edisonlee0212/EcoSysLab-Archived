@@ -296,6 +296,13 @@ namespace EcoSysLab {
          */
         glm::vec3 m_max = glm::vec3(0.0f);
     };
+
+    struct BaseSkeletonData{};
+    struct BaseFlowData {};
+    struct BaseNodeData {};
+
+    typedef Skeleton<BaseSkeletonData, BaseFlowData, BaseNodeData> BaseSkeleton;
+
 #pragma region TreeSkeleton
 #pragma region Helper
 

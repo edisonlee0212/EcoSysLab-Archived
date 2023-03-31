@@ -5,12 +5,15 @@ namespace EcoSysLab
 {
 	class PipeModel
 	{
+		void CalculatePipeTransforms(PipeModelSkeleton& targetSkeleton, const PipeModelParameters& pipeModelParameters) const;
+		void DistributePipes(PipeModelSkeleton& targetSkeleton, const PipeModelParameters& pipeModelParameters);
 	public:
+		PipeModelHexagonGrid m_baseGrid;
 		PipeModelSkeleton m_shootSkeleton;
 		PipeModelSkeleton m_rootSkeleton;
 		template<typename SkeletonData, typename FlowData, typename NodeData>
 		void InitializeSkeleton(const Skeleton<SkeletonData, FlowData, NodeData>& srcSkeleton, PipeModelSkeleton& dstSkeleton);
-		void CalculateGraph(const PipeModelParameters& pipeModelParameters);
+		void BuildGraph(const PipeModelParameters& pipeModelParameters);
 	};
 
 	template <typename SkeletonData, typename FlowData, typename NodeData>

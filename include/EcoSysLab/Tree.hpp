@@ -271,7 +271,6 @@ namespace EcoSysLab {
 #pragma endregion
 	};
 
-
 	class TreeDescriptor : public IAsset {
 	public:
 		ShootGrowthParameters m_shootGrowthParameters;
