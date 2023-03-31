@@ -114,6 +114,8 @@ namespace EcoSysLab
 
 		[[nodiscard]] const std::vector<HexagonCell<CellData>>& PeekCells() const;
 
+		[[nodiscard]] const std::map<std::pair<int, int>, HexagonCellHandle>& PeekCellMap() const;
+
 		void Copy(const HexagonGrid<GridData, CellData>& src);
 
 		explicit HexagonGrid(HexagonGridHandle handle);
@@ -770,6 +772,12 @@ namespace EcoSysLab
 	const std::vector<HexagonCell<CellData>>& HexagonGrid<GridData, CellData>::PeekCells() const
 	{
 		return m_cells;
+	}
+
+	template <typename GridData, typename CellData>
+	const std::map<std::pair<int, int>, HexagonCellHandle>& HexagonGrid<GridData, CellData>::PeekCellMap() const
+	{
+		return m_cellMap;
 	}
 
 	template <typename GridData, typename CellData>

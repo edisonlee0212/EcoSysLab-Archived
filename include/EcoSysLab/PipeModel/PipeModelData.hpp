@@ -52,8 +52,6 @@ namespace EcoSysLab
 	struct PipeModelNodeData
 	{
 		HexagonGridHandle m_gridHandle = -1;
-		std::vector<PipeNodeHandle> m_pipeNodeHandles;
-
 		int m_endNodeCount = 0;
 	};
 

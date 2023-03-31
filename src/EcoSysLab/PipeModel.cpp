@@ -36,18 +36,18 @@ void PipeModel::DistributePipes(bool isShoot, const PipeModelParameters& pipeMod
 	//1. Reverse calculate number of distribution ratio.
 	auto& targetSkeleton = isShoot ? m_shootSkeleton : m_rootSkeleton;
 	const auto nodeList = targetSkeleton.RefSortedNodeList();
-	for (auto it = nodeList.rbegin(); it != nodeList.rend(); it++)
+	for (auto it = nodeList.rbegin(); it != nodeList.rend(); ++it)
 	{
 		auto& node = targetSkeleton.RefNode(*it);
 		auto& nodeData = node.m_data;
-		nodeData.m_endNodeCount = 0;
 		if (node.IsEndNode()) nodeData.m_endNodeCount = 1;
 		else
 		{
+			nodeData.m_endNodeCount = 0;
 			for (const auto& childNodeHandle : node.RefChildHandles())
 			{
 				const auto& childNode = targetSkeleton.RefNode(childNodeHandle);
-				node.m_data.m_endNodeCount += childNode.m_data.m_endNodeCount;
+				nodeData.m_endNodeCount += childNode.m_data.m_endNodeCount;
 			}
 		}
 	}
@@ -56,7 +56,7 @@ void PipeModel::DistributePipes(bool isShoot, const PipeModelParameters& pipeMod
 	targetSkeleton.m_data.m_pipeGroup = {};
 	auto& pipeGroup = targetSkeleton.m_data.m_pipeGroup;
 	auto& gridGroup = targetSkeleton.m_data.m_hexagonGridGroup;
-	//2. Allocate pipe for target skeleton.
+	//2. Allocate pipe for target skeleton. Also create new grid for first node and copy cells from base grid.
 	const auto firstGridHandle = gridGroup.Allocate();
 	auto& firstGrid = gridGroup.RefGrid(firstGridHandle);
 	for (const auto& readOnlyCell : m_baseGrid.PeekCells())
@@ -76,7 +76,7 @@ void PipeModel::DistributePipes(bool isShoot, const PipeModelParameters& pipeMod
 		auto& firstPipeNode = pipeGroup.RefPipeNode(firstPipeNodeHandle);
 		firstPipeNode.m_data.m_cellHandle = firstGridCellHandle;
 		firstPipeNode.m_data.m_nodeHandle = 0;
-		firstNode.m_data.m_pipeNodeHandles.emplace_back(firstPipeNodeHandle);
+
 	}
 	//3. Create traverse graph and setup pipes.
 	for (const auto& nodeHandle : nodeList)
@@ -89,20 +89,79 @@ void PipeModel::DistributePipes(bool isShoot, const PipeModelParameters& pipeMod
 		if (node.RefChildHandles().size() > 1) {
 			const auto parentGridHandle = parentNode.m_data.m_gridHandle;
 			const auto newGridHandle = gridGroup.Allocate();
+			nodeData.m_gridHandle = newGridHandle;
 			const auto& parentGrid = gridGroup.PeekGrid(parentGridHandle);
 			auto& newGrid = gridGroup.RefGrid(newGridHandle);
 			//Copy all cells from parent grid.
 			for(const auto& parentCell : parentGrid.PeekCells())
 			{
 				if(parentCell.IsRecycled()) continue;
+				const auto newCellHandle = newGrid.Allocate(parentCell.GetCoordinate());
+				auto& newCell = newGrid.RefCell(newCellHandle);
+				newCell.m_data.m_pipeHandle = parentCell.m_data.m_pipeHandle;
+				const auto newPipeNodeHandle = pipeGroup.Extend(newCell.m_data.m_pipeHandle);
+				auto& newPipeNode = pipeGroup.RefPipeNode(newPipeNodeHandle);
+				newPipeNode.m_data.m_cellHandle = newCellHandle;
+				newPipeNode.m_data.m_nodeHandle = nodeHandle;
 
 			}
+			//Sort child by their end node sizes.
+			int totalAllocatedCellCount = 0;
+			std::map<int, std::pair<NodeHandle, int>> childNodeHandles;
+			for (const auto& childNodeHandle : node.RefChildHandles())
+			{
+				const auto& childNode = targetSkeleton.RefNode(childNodeHandle);
+				int cellCount = static_cast<float>(newGrid.GetCellCount()) * childNode.m_data.m_endNodeCount / node.m_data.m_endNodeCount;
+				childNodeHandles[childNode.m_data.m_endNodeCount] = { childNodeHandle , cellCount };
+				totalAllocatedCellCount += cellCount;
+			}
+			childNodeHandles.end()->second.second += newGrid.GetCellCount() - totalAllocatedCellCount;
+
+			std::map<std::pair<int, int>, HexagonCellHandle> remainingCells = newGrid.PeekCellMap();
+			for (auto it = childNodeHandles.rbegin(); it != childNodeHandles.rend(); ++it)
+			{
+				auto& childNode = targetSkeleton.RefNode(it->second.first);
+				auto& childNodeData = childNode.m_data;
+				const auto childNewGridHandle = gridGroup.Allocate();
+				childNodeData.m_gridHandle = childNewGridHandle;
+				auto& childNewGrid = gridGroup.RefGrid(childNewGridHandle);
+				const auto cellCount = it->second.second;
+				//1. Find the start cell.
+				//2. Sort cell based on distance to the start cell
+				//3. Extract cells based on distance.
+				for(int i = 0; i < cellCount; i++)
+				{
+					const auto allocatedCellHandle = remainingCells.begin()->second;
+					remainingCells.erase(remainingCells.begin());
+					const auto& allocatedCell = newGrid.PeekCell(allocatedCellHandle);
+					const auto childNewCellHandle = childNewGrid.Allocate(allocatedCell.GetCoordinate());
+					auto& childNewCell = childNewGrid.RefCell(childNewCellHandle);
+					childNewCell.m_data.m_pipeHandle = allocatedCell.m_data.m_pipeHandle;
+
+					const auto childNewPipeNodeHandle = pipeGroup.Extend(childNewCell.m_data.m_pipeHandle);
+					auto& childNewPipeNode = pipeGroup.RefPipeNode(childNewPipeNodeHandle);
+					childNewPipeNode.m_data.m_cellHandle = childNewCellHandle;
+					childNewPipeNode.m_data.m_nodeHandle = it->second.first;
+
+				}
+			}
+
 			continue;
 		}
 		if(parentNode.RefChildHandles().size() == 1)
 		{
-			node.m_data.m_gridHandle = parentNode.m_data.m_gridHandle;
 			//Extend all pipe nodes from parent.
+			const auto parentGridHandle = parentNode.m_data.m_gridHandle;
+			nodeData.m_gridHandle = parentGridHandle;
+			const auto& parentGrid = gridGroup.PeekGrid(parentGridHandle);
+			for (const auto& parentCell : parentGrid.PeekCells())
+			{
+				if (parentCell.IsRecycled()) continue;
+				const auto newPipeNodeHandle = pipeGroup.Extend(parentCell.m_data.m_pipeHandle);
+				auto& newPipeNode = pipeGroup.RefPipeNode(newPipeNodeHandle);
+				newPipeNode.m_data.m_cellHandle = parentCell.GetHandle();
+				newPipeNode.m_data.m_nodeHandle = nodeHandle;
+			}
 		}
 
 	}
