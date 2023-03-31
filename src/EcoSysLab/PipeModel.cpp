@@ -27,12 +27,13 @@ void PipeModel::CalculatePipeTransforms(PipeModelSkeleton& targetSkeleton, const
 	for (auto& pipe : pipeGroup.RefPipes())
 	{
 		if (pipe.IsRecycled()) continue;
-		pipe.m_info.m_color = glm::mix(pipeGroup.m_data.m_innerColor, pipeGroup.m_data.m_outerColor, pipe.m_data.m_startAge - glm::floor(pipe.m_data.m_startAge));
+		pipe.m_info.m_color = glm::vec4(1.0f);
 	}
 }
 
 void PipeModel::DistributePipes(bool isShoot, const PipeModelParameters& pipeModelParameters)
 {
+	/*
 	//1. Reverse calculate number of distribution ratio.
 	auto& targetSkeleton = isShoot ? m_shootSkeleton : m_rootSkeleton;
 	const auto nodeList = targetSkeleton.RefSortedNodeList();
@@ -165,6 +166,7 @@ void PipeModel::DistributePipes(bool isShoot, const PipeModelParameters& pipeMod
 		}
 
 	}
+	*/
 }
 
 void PipeModel::BuildGraph(const PipeModelParameters& pipeModelParameters)

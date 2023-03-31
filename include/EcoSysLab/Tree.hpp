@@ -293,6 +293,9 @@ namespace EcoSysLab {
 
 		ShootGrowthController m_shootGrowthController;
 		RootGrowthController m_rootGrowthController;
+
+		bool OnInspectBaseHexagonGrid(bool editable);
+
 	public:
 		void BuildPipeModel();
 

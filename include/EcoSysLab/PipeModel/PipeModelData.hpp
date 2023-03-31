@@ -30,14 +30,10 @@ namespace EcoSysLab
 
 	struct PipeModelPipeGroupData
 	{
-		glm::vec4 m_innerColor = glm::vec4(233, 216, 201, 255) / 255.0f;
-		glm::vec4 m_outerColor = glm::vec4(44, 32, 21, 255) / 255.0f;
 	};
 
 	struct PipeModelPipeData
 	{
-		float m_startAge = 0.0f;
-
 		PipeNodeInfo m_baseInfo;
 	};
 

@@ -119,9 +119,15 @@ namespace EcoSysLab
 		void Copy(const HexagonGrid<GridData, CellData>& src);
 
 		explicit HexagonGrid(HexagonGridHandle handle);
+
+		[[nodiscard]] static bool CheckBoundary(const std::vector<glm::vec2>& points);
+		void Construct(const std::vector<glm::vec2>& points);
+		static bool RayLineIntersect(const glm::vec2 &rayOrigin, const glm::vec2& rayDirection, const glm::vec2& point1, const glm::vec2& point2);
+		static bool InBoundary(const std::vector<glm::vec2>& boundary, const glm::vec2& point);
+		static bool LineLineIntersect(const glm::vec2& pa, const glm::vec2& pb, const glm::vec2& pc, const glm::vec2& pd);
 	};
 
-	
+
 
 	template<typename GridData, typename CellData>
 	class HexagonGridGroup
@@ -144,7 +150,7 @@ namespace EcoSysLab
 		[[nodiscard]] std::queue<HexagonGridHandle>& RefGridPool();
 	};
 
-	
+
 #pragma region Implementations
 
 	template <typename GridData, typename CellData>
@@ -189,7 +195,7 @@ namespace EcoSysLab
 		return { m_coordinate.x, m_coordinate.y + 1 };
 	}
 
-	
+
 
 	template <typename CellData>
 	glm::ivec2 HexagonCell<CellData>::GetRightCoordinate() const
@@ -332,7 +338,7 @@ namespace EcoSysLab
 			newCell.m_left = search1->second;
 			auto& targetCell = m_cells[search1->second];
 			targetCell.m_right = newCellHandle;
-			if(!targetCell.IsBoundary())
+			if (!targetCell.IsBoundary())
 			{
 				m_boundary.erase(search1->second);
 			}
@@ -468,7 +474,7 @@ namespace EcoSysLab
 		const auto angle = glm::degrees(glm::abs(glm::atan(direction.y / direction.x)));
 
 		HexagonGridDirection hexDirection;
-		if(angle > 30.0f)
+		if (angle > 30.0f)
 		{
 			if (direction.y >= 0) {
 				if (direction.x >= 0) {
@@ -478,7 +484,8 @@ namespace EcoSysLab
 				{
 					hexDirection = HexagonGridDirection::UpLeft;
 				}
-			}else
+			}
+			else
 			{
 				if (direction.x >= 0) {
 					hexDirection = HexagonGridDirection::DownRight;
@@ -488,12 +495,14 @@ namespace EcoSysLab
 					hexDirection = HexagonGridDirection::DownLeft;
 				}
 			}
-		}else
+		}
+		else
 		{
-			if(direction.x >= 0)
+			if (direction.x >= 0)
 			{
 				hexDirection = HexagonGridDirection::Right;
-			}else
+			}
+			else
 			{
 				hexDirection = HexagonGridDirection::Left;
 			}
@@ -506,243 +515,247 @@ namespace EcoSysLab
 			switch (hexDirection)
 			{
 			case HexagonGridDirection::UpLeft:
+			{
+				if (currentCell.GetLeftHandle() == -1)
 				{
-					if(currentCell.GetLeftHandle() == -1)
-					{
-						found = true;
-						coordinate = currentCell.GetLeftCoordinate();
-					}else if(currentCell.GetUpLeftHandle() == -1)
-					{
-						found = true;
-						coordinate = currentCell.GetUpLeftCoordinate();
-					}
-					else if (currentCell.GetUpRightHandle() == -1)
-					{
-						found = true;
-						coordinate = currentCell.GetUpRightCoordinate();
-					}else
-					{
-						const auto pos1 = GetPosition(currentCell.GetLeftCoordinate());
-						const auto pos2 = GetPosition(currentCell.GetUpLeftCoordinate());
-						const auto pos3 = GetPosition(currentCell.GetUpRightCoordinate());
-						const auto distance1 = glm::distance(pos1, glm::closestPointOnLine(pos1, glm::vec2(0), direction * 10000.0f));
-						const auto distance2 = glm::distance(pos2, glm::closestPointOnLine(pos2, glm::vec2(0), direction * 10000.0f));
-						const auto distance3 = glm::distance(pos3, glm::closestPointOnLine(pos3, glm::vec2(0), direction * 10000.0f));
+					found = true;
+					coordinate = currentCell.GetLeftCoordinate();
+				}
+				else if (currentCell.GetUpLeftHandle() == -1)
+				{
+					found = true;
+					coordinate = currentCell.GetUpLeftCoordinate();
+				}
+				else if (currentCell.GetUpRightHandle() == -1)
+				{
+					found = true;
+					coordinate = currentCell.GetUpRightCoordinate();
+				}
+				else
+				{
+					const auto pos1 = GetPosition(currentCell.GetLeftCoordinate());
+					const auto pos2 = GetPosition(currentCell.GetUpLeftCoordinate());
+					const auto pos3 = GetPosition(currentCell.GetUpRightCoordinate());
+					const auto distance1 = glm::distance(pos1, glm::closestPointOnLine(pos1, glm::vec2(0), direction * 10000.0f));
+					const auto distance2 = glm::distance(pos2, glm::closestPointOnLine(pos2, glm::vec2(0), direction * 10000.0f));
+					const auto distance3 = glm::distance(pos3, glm::closestPointOnLine(pos3, glm::vec2(0), direction * 10000.0f));
 
-						if(distance1 <= distance2 && distance1 <= distance3)
-						{
-							currentHandle = currentCell.GetLeftHandle();
-						}else if (distance2 <= distance1 && distance2 <= distance3)
-						{
-							currentHandle = currentCell.GetUpLeftHandle();
-						}else if (distance3 <= distance1 && distance3 <= distance2)
-						{
-							currentHandle = currentCell.GetUpRightHandle();
-						}
+					if (distance1 <= distance2 && distance1 <= distance3)
+					{
+						currentHandle = currentCell.GetLeftHandle();
+					}
+					else if (distance2 <= distance1 && distance2 <= distance3)
+					{
+						currentHandle = currentCell.GetUpLeftHandle();
+					}
+					else if (distance3 <= distance1 && distance3 <= distance2)
+					{
+						currentHandle = currentCell.GetUpRightHandle();
 					}
 				}
-				break;
+			}
+			break;
 			case HexagonGridDirection::UpRight:
+			{
+				if (currentCell.GetUpLeftHandle() == -1)
 				{
-					if (currentCell.GetUpLeftHandle() == -1)
-					{
-						found = true;
-						coordinate = currentCell.GetUpLeftCoordinate();
-					}
-					else if (currentCell.GetUpRightHandle() == -1)
-					{
-						found = true;
-						coordinate = currentCell.GetUpRightCoordinate();
-					}
-					else if (currentCell.GetRightHandle() == -1)
-					{
-						found = true;
-						coordinate = currentCell.GetRightCoordinate();
-					}
-					else
-					{
-						const auto pos1 = GetPosition(currentCell.GetUpLeftCoordinate());
-						const auto pos2 = GetPosition(currentCell.GetUpRightCoordinate());
-						const auto pos3 = GetPosition(currentCell.GetRightCoordinate());
-						const auto distance1 = glm::distance(pos1, glm::closestPointOnLine(pos1, glm::vec2(0), direction * 10000.0f));
-						const auto distance2 = glm::distance(pos2, glm::closestPointOnLine(pos2, glm::vec2(0), direction * 10000.0f));
-						const auto distance3 = glm::distance(pos3, glm::closestPointOnLine(pos3, glm::vec2(0), direction * 10000.0f));
+					found = true;
+					coordinate = currentCell.GetUpLeftCoordinate();
+				}
+				else if (currentCell.GetUpRightHandle() == -1)
+				{
+					found = true;
+					coordinate = currentCell.GetUpRightCoordinate();
+				}
+				else if (currentCell.GetRightHandle() == -1)
+				{
+					found = true;
+					coordinate = currentCell.GetRightCoordinate();
+				}
+				else
+				{
+					const auto pos1 = GetPosition(currentCell.GetUpLeftCoordinate());
+					const auto pos2 = GetPosition(currentCell.GetUpRightCoordinate());
+					const auto pos3 = GetPosition(currentCell.GetRightCoordinate());
+					const auto distance1 = glm::distance(pos1, glm::closestPointOnLine(pos1, glm::vec2(0), direction * 10000.0f));
+					const auto distance2 = glm::distance(pos2, glm::closestPointOnLine(pos2, glm::vec2(0), direction * 10000.0f));
+					const auto distance3 = glm::distance(pos3, glm::closestPointOnLine(pos3, glm::vec2(0), direction * 10000.0f));
 
-						if (distance1 <= distance2 && distance1 <= distance3)
-						{
-							currentHandle = currentCell.GetUpLeftHandle();
-						}
-						else if (distance2 <= distance1 && distance2 <= distance3)
-						{
-							currentHandle = currentCell.GetUpRightHandle();
-						}
-						else if (distance3 <= distance1 && distance3 <= distance2)
-						{
-							currentHandle = currentCell.GetRightHandle();
-						}
+					if (distance1 <= distance2 && distance1 <= distance3)
+					{
+						currentHandle = currentCell.GetUpLeftHandle();
+					}
+					else if (distance2 <= distance1 && distance2 <= distance3)
+					{
+						currentHandle = currentCell.GetUpRightHandle();
+					}
+					else if (distance3 <= distance1 && distance3 <= distance2)
+					{
+						currentHandle = currentCell.GetRightHandle();
 					}
 				}
-				break;
+			}
+			break;
 			case HexagonGridDirection::Right:
+			{
+				if (currentCell.GetUpRightHandle() == -1)
 				{
-					if (currentCell.GetUpRightHandle() == -1)
+					found = true;
+					coordinate = currentCell.GetUpRightCoordinate();
+				}
+				else if (currentCell.GetRightHandle() == -1)
+				{
+					found = true;
+					coordinate = currentCell.GetRightCoordinate();
+				}
+				else if (currentCell.GetDownRightHandle() == -1)
+				{
+					found = true;
+					coordinate = currentCell.GetDownRightCoordinate();
+				}
+				else
+				{
+					const auto pos1 = GetPosition(currentCell.GetUpRightCoordinate());
+					const auto pos2 = GetPosition(currentCell.GetRightCoordinate());
+					const auto pos3 = GetPosition(currentCell.GetDownRightCoordinate());
+					const auto distance1 = glm::distance(pos1, glm::closestPointOnLine(pos1, glm::vec2(0), direction * 10000.0f));
+					const auto distance2 = glm::distance(pos2, glm::closestPointOnLine(pos2, glm::vec2(0), direction * 10000.0f));
+					const auto distance3 = glm::distance(pos3, glm::closestPointOnLine(pos3, glm::vec2(0), direction * 10000.0f));
+					if (distance1 <= distance2 && distance1 <= distance3)
 					{
-						found = true;
-						coordinate = currentCell.GetUpRightCoordinate();
+						currentHandle = currentCell.GetUpRightHandle();
 					}
-					else if (currentCell.GetRightHandle() == -1)
+					else if (distance2 <= distance1 && distance2 <= distance3)
 					{
-						found = true;
-						coordinate = currentCell.GetRightCoordinate();
+						currentHandle = currentCell.GetRightHandle();
 					}
-					else if (currentCell.GetDownRightHandle() == -1)
+					else if (distance3 <= distance1 && distance3 <= distance2)
 					{
-						found = true;
-						coordinate = currentCell.GetDownRightCoordinate();
-					}
-					else
-					{
-						const auto pos1 = GetPosition(currentCell.GetUpRightCoordinate());
-						const auto pos2 = GetPosition(currentCell.GetRightCoordinate());
-						const auto pos3 = GetPosition(currentCell.GetDownRightCoordinate());
-						const auto distance1 = glm::distance(pos1, glm::closestPointOnLine(pos1, glm::vec2(0), direction * 10000.0f));
-						const auto distance2 = glm::distance(pos2, glm::closestPointOnLine(pos2, glm::vec2(0), direction * 10000.0f));
-						const auto distance3 = glm::distance(pos3, glm::closestPointOnLine(pos3, glm::vec2(0), direction * 10000.0f));
-						if (distance1 <= distance2 && distance1 <= distance3)
-						{
-							currentHandle = currentCell.GetUpRightHandle();
-						}
-						else if (distance2 <= distance1 && distance2 <= distance3)
-						{
-							currentHandle = currentCell.GetRightHandle();
-						}
-						else if (distance3 <= distance1 && distance3 <= distance2)
-						{
-							currentHandle = currentCell.GetDownRightHandle();
-						}
+						currentHandle = currentCell.GetDownRightHandle();
 					}
 				}
-				break;
+			}
+			break;
 			case HexagonGridDirection::DownRight:
+			{
+				if (currentCell.GetRightHandle() == -1)
 				{
-					if (currentCell.GetRightHandle() == -1)
+					found = true;
+					coordinate = currentCell.GetRightCoordinate();
+				}
+				else if (currentCell.GetDownRightHandle() == -1)
+				{
+					found = true;
+					coordinate = currentCell.GetDownRightCoordinate();
+				}
+				else if (currentCell.GetDownLeftHandle() == -1)
+				{
+					found = true;
+					coordinate = currentCell.GetDownLeftCoordinate();
+				}
+				else
+				{
+					const auto pos1 = GetPosition(currentCell.GetRightCoordinate());
+					const auto pos2 = GetPosition(currentCell.GetDownRightCoordinate());
+					const auto pos3 = GetPosition(currentCell.GetDownLeftCoordinate());
+					const auto distance1 = glm::distance(pos1, glm::closestPointOnLine(pos1, glm::vec2(0), direction * 10000.0f));
+					const auto distance2 = glm::distance(pos2, glm::closestPointOnLine(pos2, glm::vec2(0), direction * 10000.0f));
+					const auto distance3 = glm::distance(pos3, glm::closestPointOnLine(pos3, glm::vec2(0), direction * 10000.0f));
+					if (distance1 <= distance2 && distance1 <= distance3)
 					{
-						found = true;
-						coordinate = currentCell.GetRightCoordinate();
+						currentHandle = currentCell.GetRightHandle();
 					}
-					else if (currentCell.GetDownRightHandle() == -1)
+					else if (distance2 <= distance1 && distance2 <= distance3)
 					{
-						found = true;
-						coordinate = currentCell.GetDownRightCoordinate();
+						currentHandle = currentCell.GetDownRightHandle();
 					}
-					else if (currentCell.GetDownLeftHandle() == -1)
+					else if (distance3 <= distance1 && distance3 <= distance2)
 					{
-						found = true;
-						coordinate = currentCell.GetDownLeftCoordinate();
-					}
-					else
-					{
-						const auto pos1 = GetPosition(currentCell.GetRightCoordinate());
-						const auto pos2 = GetPosition(currentCell.GetDownRightCoordinate());
-						const auto pos3 = GetPosition(currentCell.GetDownLeftCoordinate());
-						const auto distance1 = glm::distance(pos1, glm::closestPointOnLine(pos1, glm::vec2(0), direction * 10000.0f));
-						const auto distance2 = glm::distance(pos2, glm::closestPointOnLine(pos2, glm::vec2(0), direction * 10000.0f));
-						const auto distance3 = glm::distance(pos3, glm::closestPointOnLine(pos3, glm::vec2(0), direction * 10000.0f));
-						if (distance1 <= distance2 && distance1 <= distance3)
-						{
-							currentHandle = currentCell.GetRightHandle();
-						}
-						else if (distance2 <= distance1 && distance2 <= distance3)
-						{
-							currentHandle = currentCell.GetDownRightHandle();
-						}
-						else if (distance3 <= distance1 && distance3 <= distance2)
-						{
-							currentHandle = currentCell.GetDownLeftHandle();
-						}
+						currentHandle = currentCell.GetDownLeftHandle();
 					}
 				}
-				break;
+			}
+			break;
 			case HexagonGridDirection::DownLeft:
+			{
+				if (currentCell.GetDownRightHandle() == -1)
 				{
-					if (currentCell.GetDownRightHandle() == -1)
+					found = true;
+					coordinate = currentCell.GetDownRightCoordinate();
+				}
+				else if (currentCell.GetDownLeftHandle() == -1)
+				{
+					found = true;
+					coordinate = currentCell.GetDownLeftCoordinate();
+				}
+				else if (currentCell.GetLeftHandle() == -1)
+				{
+					found = true;
+					coordinate = currentCell.GetLeftCoordinate();
+				}
+				else
+				{
+					const auto pos1 = GetPosition(currentCell.GetDownRightCoordinate());
+					const auto pos2 = GetPosition(currentCell.GetDownLeftCoordinate());
+					const auto pos3 = GetPosition(currentCell.GetLeftCoordinate());
+					const auto distance1 = glm::distance(pos1, glm::closestPointOnLine(pos1, glm::vec2(0), direction * 10000.0f));
+					const auto distance2 = glm::distance(pos2, glm::closestPointOnLine(pos2, glm::vec2(0), direction * 10000.0f));
+					const auto distance3 = glm::distance(pos3, glm::closestPointOnLine(pos3, glm::vec2(0), direction * 10000.0f));
+					if (distance1 <= distance2 && distance1 <= distance3)
 					{
-						found = true;
-						coordinate = currentCell.GetDownRightCoordinate();
+						currentHandle = currentCell.GetDownRightHandle();
 					}
-					else if (currentCell.GetDownLeftHandle() == -1)
+					else if (distance2 <= distance1 && distance2 <= distance3)
 					{
-						found = true;
-						coordinate = currentCell.GetDownLeftCoordinate();
+						currentHandle = currentCell.GetDownLeftHandle();
 					}
-					else if (currentCell.GetLeftHandle() == -1)
+					else if (distance3 <= distance1 && distance3 <= distance2)
 					{
-						found = true;
-						coordinate = currentCell.GetLeftCoordinate();
-					}
-					else
-					{
-						const auto pos1 = GetPosition(currentCell.GetDownRightCoordinate());
-						const auto pos2 = GetPosition(currentCell.GetDownLeftCoordinate());
-						const auto pos3 = GetPosition(currentCell.GetLeftCoordinate());
-						const auto distance1 = glm::distance(pos1, glm::closestPointOnLine(pos1, glm::vec2(0), direction * 10000.0f));
-						const auto distance2 = glm::distance(pos2, glm::closestPointOnLine(pos2, glm::vec2(0), direction * 10000.0f));
-						const auto distance3 = glm::distance(pos3, glm::closestPointOnLine(pos3, glm::vec2(0), direction * 10000.0f));
-						if (distance1 <= distance2 && distance1 <= distance3)
-						{
-							currentHandle = currentCell.GetDownRightHandle();
-						}
-						else if (distance2 <= distance1 && distance2 <= distance3)
-						{
-							currentHandle = currentCell.GetDownLeftHandle();
-						}
-						else if (distance3 <= distance1 && distance3 <= distance2)
-						{
-							currentHandle = currentCell.GetLeftHandle();
-						}
+						currentHandle = currentCell.GetLeftHandle();
 					}
 				}
-				break;
+			}
+			break;
 			case HexagonGridDirection::Left:
+			{
+				if (currentCell.GetDownLeftHandle() == -1)
 				{
-					if (currentCell.GetDownLeftHandle() == -1)
+					found = true;
+					coordinate = currentCell.GetDownLeftCoordinate();
+				}
+				else if (currentCell.GetLeftHandle() == -1)
+				{
+					found = true;
+					coordinate = currentCell.GetLeftCoordinate();
+				}
+				else if (currentCell.GetUpLeftHandle() == -1)
+				{
+					found = true;
+					coordinate = currentCell.GetUpLeftCoordinate();
+				}
+				else
+				{
+					const auto pos1 = GetPosition(currentCell.GetDownLeftCoordinate());
+					const auto pos2 = GetPosition(currentCell.GetLeftCoordinate());
+					const auto pos3 = GetPosition(currentCell.GetUpLeftCoordinate());
+					const auto distance1 = glm::distance(pos1, glm::closestPointOnLine(pos1, glm::vec2(0), direction * 10000.0f));
+					const auto distance2 = glm::distance(pos2, glm::closestPointOnLine(pos2, glm::vec2(0), direction * 10000.0f));
+					const auto distance3 = glm::distance(pos3, glm::closestPointOnLine(pos3, glm::vec2(0), direction * 10000.0f));
+					if (distance1 <= distance2 && distance1 <= distance3)
 					{
-						found = true;
-						coordinate = currentCell.GetDownLeftCoordinate();
+						currentHandle = currentCell.GetDownLeftHandle();
 					}
-					else if (currentCell.GetLeftHandle() == -1)
+					else if (distance2 <= distance1 && distance2 <= distance3)
 					{
-						found = true;
-						coordinate = currentCell.GetLeftCoordinate();
+						currentHandle = currentCell.GetLeftHandle();
 					}
-					else if (currentCell.GetUpLeftHandle() == -1)
+					else if (distance3 <= distance1 && distance3 <= distance2)
 					{
-						found = true;
-						coordinate = currentCell.GetUpLeftCoordinate();
-					}
-					else
-					{
-						const auto pos1 = GetPosition(currentCell.GetDownLeftCoordinate());
-						const auto pos2 = GetPosition(currentCell.GetLeftCoordinate());
-						const auto pos3 = GetPosition(currentCell.GetUpLeftCoordinate());
-						const auto distance1 = glm::distance(pos1, glm::closestPointOnLine(pos1, glm::vec2(0), direction * 10000.0f));
-						const auto distance2 = glm::distance(pos2, glm::closestPointOnLine(pos2, glm::vec2(0), direction * 10000.0f));
-						const auto distance3 = glm::distance(pos3, glm::closestPointOnLine(pos3, glm::vec2(0), direction * 10000.0f));
-						if (distance1 <= distance2 && distance1 <= distance3)
-						{
-							currentHandle = currentCell.GetDownLeftHandle();
-						}
-						else if (distance2 <= distance1 && distance2 <= distance3)
-						{
-							currentHandle = currentCell.GetLeftHandle();
-						}
-						else if (distance3 <= distance1 && distance3 <= distance2)
-						{
-							currentHandle = currentCell.GetUpLeftHandle();
-						}
+						currentHandle = currentCell.GetUpLeftHandle();
 					}
 				}
-				break;
+			}
+			break;
 			}
 		}
 		return coordinate;
@@ -794,6 +807,133 @@ namespace EcoSysLab
 		m_handle = handle;
 		m_recycled = false;
 		m_version = -1;
+	}
+
+	template <typename GridData, typename CellData>
+	bool HexagonGrid<GridData, CellData>::CheckBoundary(const std::vector<glm::vec2>& points)
+	{
+		for (int i = 0; i < points.size(); i++) {
+			auto& pa = points[(i == 0 ? points.size() - 1 : i - 1)];
+			auto& pb = points[i];
+			for (int j = 0; j < points.size(); j++) {
+				auto& pc = points[(j == 0 ? points.size() - 1 : j - 1)];
+				auto& pd = points[j];
+				if (LineLineIntersect(pa, pb, pc, pd)) return true;
+			}
+		}
+		return false;
+	}
+
+	template <typename GridData, typename CellData>
+	void HexagonGrid<GridData, CellData>::Construct(const std::vector<glm::vec2>& points)
+	{
+		/*
+		m_cells.clear();
+		m_cellMap.clear();
+		m_cellPool = {};
+		m_boundary.clear();
+		auto copiedPoints = points;
+		//1. Calculate min/max bound
+		auto max = glm::vec2(FLT_MIN);
+		auto min = glm::vec2(FLT_MAX);
+		for (const auto& point : copiedPoints) {
+			if (max.x < point.x) max.x = point.x;
+			if (max.y < point.y) max.y = point.y;
+			if (min.x > point.x) min.x = point.x;
+			if (min.y > point.y) min.y = point.y;
+		}
+		const auto center = (max + min) / 2.0f;
+		const auto boundaryRadius = (max - min) / 2.0f;
+		max -= center;
+		min -= center;
+		for (auto& point : copiedPoints) {
+			point -= center;
+		}
+		auto sum = glm::ivec2(0);
+		const int yRange = glm::ceil(boundaryRadius.y / glm::cos(glm::radians(30.0f)));
+		const int xRange = glm::ceil(boundaryRadius.x);
+		for (int i = -xRange; i <= xRange; i++) {
+			for (int j = -yRange; j <= yRange; j++) {
+				glm::ivec2 coordinate;
+				coordinate.y = j;
+				coordinate.x = i - j / 2;
+				if (InBoundary(copiedPoints, GetPosition(coordinate))) {
+					const auto cellHandle = Allocate(coordinate);
+					sum += coordinate;
+				}
+			}
+		}
+		if (m_cells.empty()) return;
+		sum /= m_cells.size();
+		for (auto& cell : m_cells) {
+			cell.m_coordinate -= sum;
+		}*/
+	}
+
+	template <typename GridData, typename CellData>
+	bool HexagonGrid<GridData, CellData>::RayLineIntersect(const glm::vec2& rayOrigin, const glm::vec2& rayDirection,
+		const glm::vec2& point1, const glm::vec2& point2)
+	{
+		const auto v1 = rayOrigin - point1;
+		const auto v2 = point2 - point1;
+		const auto v3 = glm::vec2(-rayDirection.y, rayDirection.x);
+
+		const float dot = glm::dot(v2, v3);
+		if (dot == 0.0f)
+			return false;
+
+		const float t1 = (v2.x * v1.y - v2.y * v1.x) / dot;
+		const float t2 = glm::dot(v1, v3) / dot;
+
+		//!!!!Check t2 >= 0 if we allow intersect on point 1
+		if (t1 >= 0.0f && t2 > 0.0f && 1.0f - t2 >= 0.0f)
+			return true;
+
+		return false;
+	}
+
+	template <typename GridData, typename CellData>
+	bool HexagonGrid<GridData, CellData>::InBoundary(const std::vector<glm::vec2>& boundary, const glm::vec2& point)
+	{
+		constexpr auto point2 = glm::vec2(1.0f, 0.0f);
+		constexpr auto point3 = glm::vec2(1.0f, 0.0f);
+		int windingNumber = 0;
+		const auto size = boundary.size();
+		if (size < 3) return false;
+		for (int i = 0; i < size - 1; i++) {
+			if (RayLineIntersect(point, point2, boundary[i], boundary[i + 1]) &&
+				RayLineIntersect(point, point3, boundary[i], boundary[i + 1])) {
+				windingNumber++;
+			}
+		}
+		if (RayLineIntersect(point, point2, boundary[size - 1], boundary[0]) &&
+			RayLineIntersect(point, point3, boundary[size - 1], boundary[0]))
+			windingNumber++;
+		if (windingNumber % 2 == 1) {
+			return true;
+		}
+		return false;
+	}
+
+	template <typename GridData, typename CellData>
+	bool HexagonGrid<GridData, CellData>::LineLineIntersect(const glm::vec2& pa, const glm::vec2& pb,
+		const glm::vec2& pc, const glm::vec2& pd)
+	{
+		const auto v1 = pa - pc;
+		const auto v2 = pd - pc;
+		const auto v3 = glm::vec2(-(pb.y - pa.y), (pb.x - pa.x));
+
+		const float dot = glm::dot(v2, v3);
+		if (dot == 0.0f)
+			return false;
+
+		const float t1 = (v2.x * v1.y - v2.y * v1.x) / dot;
+		const float t2 = glm::dot(v1, v3) / dot;
+
+		if (t1 > 0.0f && t1 < 1.0f && t2 > 0.0f && t2 < 1.0f)
+			return true;
+
+		return false;
 	}
 
 	template <typename GridData, typename CellData>
