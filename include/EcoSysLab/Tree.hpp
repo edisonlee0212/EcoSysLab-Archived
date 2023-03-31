@@ -298,7 +298,7 @@ namespace EcoSysLab {
 
 	public:
 		void BuildPipeModel();
-
+		PipeModelParameters m_pipeModelParameters;
 		void BuildStrands(const PipeModelPipeGroup& pipeGroup, std::vector<glm::uint>& strands, std::vector<StrandPoint>& points) const;
 
 		void InitializeStrandRenderer() const;

@@ -117,8 +117,8 @@ namespace EcoSysLab
 		[[nodiscard]] const std::map<std::pair<int, int>, HexagonCellHandle>& PeekCellMap() const;
 
 		void Copy(const HexagonGrid<GridData, CellData>& src);
-
-		explicit HexagonGrid(HexagonGridHandle handle);
+		HexagonGrid();
+		HexagonGrid(HexagonGridHandle handle);
 
 		[[nodiscard]] static bool CheckBoundary(const std::vector<glm::vec2>& points);
 		void Construct(const std::vector<glm::vec2>& points);
@@ -802,6 +802,11 @@ namespace EcoSysLab
 	}
 
 	template <typename GridData, typename CellData>
+	HexagonGrid<GridData, CellData>::HexagonGrid()
+	{
+	}
+
+	template <typename GridData, typename CellData>
 	HexagonGrid<GridData, CellData>::HexagonGrid(const HexagonGridHandle handle)
 	{
 		m_handle = handle;
@@ -827,7 +832,7 @@ namespace EcoSysLab
 	template <typename GridData, typename CellData>
 	void HexagonGrid<GridData, CellData>::Construct(const std::vector<glm::vec2>& points)
 	{
-		/*
+		
 		m_cells.clear();
 		m_cellMap.clear();
 		m_cellPool = {};
@@ -867,7 +872,7 @@ namespace EcoSysLab
 		sum /= m_cells.size();
 		for (auto& cell : m_cells) {
 			cell.m_coordinate -= sum;
-		}*/
+		}
 	}
 
 	template <typename GridData, typename CellData>

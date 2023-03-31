@@ -38,7 +38,7 @@ void Tree::OnInspect() {
 		if(visualizeBaseGrid)
 		{
 			if (ImGui::Begin("Base Grid")){
-				//OnInspectBaseHexagonGrid(true);
+				OnInspectBaseHexagonGrid(true);
 			}
 			ImGui::End();
 		}
@@ -599,9 +599,9 @@ bool Tree::OnInspectBaseHexagonGrid(bool editable)
 
 void Tree::BuildPipeModel()
 {
-	m_pipeModel.InitializeSkeleton(m_treeModel.m_shootSkeleton, m_pipeModel.m_shootSkeleton);
-	m_pipeModel.InitializeSkeleton(m_treeModel.m_rootSkeleton, m_pipeModel.m_rootSkeleton);
-	//m_pipeModel.BuildGraph();
+	m_pipeModel.m_shootSkeleton.Clone(m_treeModel.m_shootSkeleton);
+	m_pipeModel.m_rootSkeleton.Clone(m_treeModel.m_rootSkeleton);
+	m_pipeModel.BuildGraph(m_pipeModelParameters);
 }
 
 void Tree::BuildStrands(const PipeModelPipeGroup& pipeGroup, std::vector<glm::uint>& strands,

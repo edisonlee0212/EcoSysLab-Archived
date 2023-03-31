@@ -100,8 +100,8 @@ namespace EcoSysLab {
          * @return The list of handles.
          */
         [[nodiscard]] const std::vector<NodeHandle> &RefChildHandles() const;
-
-        explicit Node(NodeHandle handle);
+        Node();
+        Node(NodeHandle handle);
     };
 
     template<typename FlowData>
@@ -192,6 +192,10 @@ namespace EcoSysLab {
 
 #pragma endregion
     public:
+        template<typename SrcSkeletonData, typename SrcFlowData, typename SrcNodeData>
+        void Clone(const Skeleton<SrcSkeletonData, SrcFlowData, SrcNodeData>& srcSkeleton);
+
+
         SkeletonData m_data;
 
         /**
@@ -592,6 +596,16 @@ namespace EcoSysLab {
         return m_childHandles;
     }
 
+    template <typename NodeData>
+    Node<NodeData>::Node()
+    {
+        m_handle = -1;
+        m_recycled = false;
+        m_endNode = true;
+        m_data = {};
+        m_info = {};
+    }
+
     template<typename FlowData>
     Flow<FlowData>::Flow(const FlowHandle handle) {
         m_handle = handle;
@@ -658,6 +672,47 @@ namespace EcoSysLab {
                 return;
             }
         }
+    }
+
+    template <typename SkeletonData, typename FlowData, typename NodeData>
+    template <typename SrcSkeletonData, typename SrcFlowData, typename SrcNodeData>
+    void Skeleton<SkeletonData, FlowData, NodeData>::Clone(
+	    const Skeleton<SrcSkeletonData, SrcFlowData, SrcNodeData>& srcSkeleton)
+    {
+        
+        m_data = {};
+        m_nodes.clear();
+        m_flows.clear();
+        m_flowPool = {};
+        m_nodePool = {};
+        m_sortedNodeList.clear();
+        m_sortedFlowList.clear();
+
+        AllocateFlow();
+        auto firstNodeHandle = AllocateNode();
+        auto& rootBranch = m_flows[0];
+        auto& rootNode = m_nodes[firstNodeHandle];
+        rootNode.m_flowHandle = 0;
+        rootBranch.m_nodes.emplace_back(0);
+
+        const auto& sortedSrcNodeList = srcSkeleton.RefSortedNodeList();
+        std::unordered_map<NodeHandle, NodeHandle> nodeHandleMap;
+        nodeHandleMap[0] = 0;
+        for (const auto& srcNodeHandle : sortedSrcNodeList)
+        {
+            if (srcNodeHandle == 0)
+            {
+                m_nodes[0].m_info = srcSkeleton.PeekNode(0).m_info;
+            }
+            else
+            {
+                const auto& srcNode = srcSkeleton.PeekNode(srcNodeHandle);
+                auto dstNodeHandle = this->Extend(nodeHandleMap.at(srcNode.GetParentHandle()), !srcNode.IsApical(), false);
+                nodeHandleMap[srcNodeHandle] = dstNodeHandle;
+                m_nodes[dstNodeHandle].m_info = srcNode.m_info;
+            }
+        }
+        SortLists();
     }
 
     template<typename SkeletonData, typename FlowData, typename NodeData>
@@ -766,8 +821,7 @@ namespace EcoSysLab {
     template<typename SkeletonData, typename FlowData, typename NodeData>
     NodeHandle Skeleton<SkeletonData, FlowData, NodeData>::AllocateNode() {
         if (m_nodePool.empty()) {
-            auto newNode = m_nodes.emplace_back(m_nodes.size());
-            return newNode.m_handle;
+            return m_nodes.emplace_back(m_nodes.size()).m_handle;
         }
         auto handle = m_nodePool.front();
         m_nodePool.pop();
