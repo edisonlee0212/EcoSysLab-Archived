@@ -8,6 +8,8 @@ namespace EcoSysLab
 		static void CalculatePipeTransforms(PipeModelSkeleton& targetSkeleton, const PipeModelParameters& pipeModelParameters);
 		void DistributePipes(bool isShoot, const PipeModelParameters& pipeModelParameters);
 	public:
+		std::unordered_map<NodeHandle, NodeHandle> m_shootSkeletonLinks;
+		std::unordered_map<NodeHandle, NodeHandle> m_rootSkeletonLinks;
 		PipeModelBaseHexagonGrid m_baseGrid;
 		PipeModelSkeleton m_shootSkeleton;
 		PipeModelSkeleton m_rootSkeleton;

@@ -49,6 +49,8 @@ namespace EcoSysLab
 	{
 		HexagonGridHandle m_gridHandle = -1;
 		int m_endNodeCount = 0;
+
+		NodeHandle m_originalSkeletonHandle = -1;
 	};
 
 	struct PipeModelFlowData

@@ -599,8 +599,16 @@ bool Tree::OnInspectBaseHexagonGrid(bool editable)
 
 void Tree::BuildPipeModel()
 {
-	m_pipeModel.m_shootSkeleton.Clone(m_treeModel.m_shootSkeleton);
-	m_pipeModel.m_rootSkeleton.Clone(m_treeModel.m_rootSkeleton);
+	m_pipeModel.m_shootSkeleton.Clone(m_treeModel.m_shootSkeleton, [&](NodeHandle srcNodeHandle, NodeHandle dstNodeHandle)
+	{
+			m_pipeModel.m_shootSkeleton.RefNode(dstNodeHandle).m_data.m_originalSkeletonHandle = srcNodeHandle;
+			m_pipeModel.m_shootSkeletonLinks[srcNodeHandle] = dstNodeHandle;
+	});
+	m_pipeModel.m_rootSkeleton.Clone(m_treeModel.m_rootSkeleton, [&](NodeHandle srcNodeHandle, NodeHandle dstNodeHandle)
+		{
+			m_pipeModel.m_rootSkeleton.RefNode(dstNodeHandle).m_data.m_originalSkeletonHandle = srcNodeHandle;
+			m_pipeModel.m_rootSkeletonLinks[srcNodeHandle] = dstNodeHandle;
+		});
 	m_pipeModel.BuildGraph(m_pipeModelParameters);
 }
 

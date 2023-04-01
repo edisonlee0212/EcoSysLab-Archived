@@ -225,12 +225,12 @@ TreeVisualizer::OnInspect(
 			if (m_selectedInternodeHandle >= 0 && pipeModel.m_shootSkeleton.RefSortedNodeList().size() > m_selectedInternodeHandle)
 			{
 				auto& shootSkeleton = pipeModel.m_shootSkeleton;
-				auto& grid = shootSkeleton.m_data.m_hexagonGridGroup.RefGrid(shootSkeleton.RefNode(m_selectedInternodeHandle).m_data.m_gridHandle);
+				auto& grid = shootSkeleton.m_data.m_hexagonGridGroup.RefGrid(shootSkeleton.RefNode(pipeModel.m_shootSkeletonLinks[m_selectedInternodeHandle]).m_data.m_gridHandle);
 				VisualizeGrid(shootSkeleton, grid);
 			}else if (m_selectedRootNodeHandle >= 0 && pipeModel.m_rootSkeleton.RefSortedNodeList().size() > m_selectedRootNodeHandle)
 			{
 				auto& rootSkeleton = pipeModel.m_rootSkeleton;
-				auto& grid = rootSkeleton.m_data.m_hexagonGridGroup.RefGrid(rootSkeleton.RefNode(m_selectedRootNodeHandle).m_data.m_gridHandle);
+				auto& grid = rootSkeleton.m_data.m_hexagonGridGroup.RefGrid(rootSkeleton.RefNode(pipeModel.m_rootSkeletonLinks[m_selectedRootNodeHandle]).m_data.m_gridHandle);
 				VisualizeGrid(rootSkeleton, grid);
 			}
 			else

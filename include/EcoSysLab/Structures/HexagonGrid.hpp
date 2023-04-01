@@ -89,6 +89,9 @@ namespace EcoSysLab
 		friend class HexagonGridGroup;
 	public:
 		GridData m_data;
+
+		void ShiftCoordinate(const glm::ivec2& offset);
+
 		[[nodiscard]] size_t GetCellCount() const;
 		[[nodiscard]] bool IsRecycled() const;
 
@@ -273,6 +276,21 @@ namespace EcoSysLab
 	bool HexagonCell<CellData>::IsRecycled() const
 	{
 		return m_recycled;
+	}
+
+	template <typename GridData, typename CellData>
+	void HexagonGrid<GridData, CellData>::ShiftCoordinate(const glm::ivec2& offset)
+	{
+		for(auto& cell : m_cells)
+		{
+			cell.m_coordinate += offset;
+		}
+		std::map<std::pair<int, int>, HexagonCellHandle> newMap;
+		for(const auto& i : m_cellMap)
+		{
+			newMap[std::make_pair(i.first.first + offset.x, i.first.second + offset.y)] = i.second;
+		}
+		m_cellMap = newMap;
 	}
 
 	template <typename GridData, typename CellData>

@@ -193,7 +193,7 @@ namespace EcoSysLab {
 #pragma endregion
     public:
         template<typename SrcSkeletonData, typename SrcFlowData, typename SrcNodeData>
-        void Clone(const Skeleton<SrcSkeletonData, SrcFlowData, SrcNodeData>& srcSkeleton);
+        void Clone(const Skeleton<SrcSkeletonData, SrcFlowData, SrcNodeData>& srcSkeleton, const std::function<void(NodeHandle srcNodeHandle, NodeHandle dstNodeHandle)>& postProcess);
 
 
         SkeletonData m_data;
@@ -677,7 +677,7 @@ namespace EcoSysLab {
     template <typename SkeletonData, typename FlowData, typename NodeData>
     template <typename SrcSkeletonData, typename SrcFlowData, typename SrcNodeData>
     void Skeleton<SkeletonData, FlowData, NodeData>::Clone(
-	    const Skeleton<SrcSkeletonData, SrcFlowData, SrcNodeData>& srcSkeleton)
+	    const Skeleton<SrcSkeletonData, SrcFlowData, SrcNodeData>& srcSkeleton, const std::function<void(NodeHandle srcNodeHandle, NodeHandle dstNodeHandle)>& postProcess)
     {
         
         m_data = {};
@@ -703,6 +703,7 @@ namespace EcoSysLab {
             if (srcNodeHandle == 0)
             {
                 m_nodes[0].m_info = srcSkeleton.PeekNode(0).m_info;
+                postProcess(0, 0);
             }
             else
             {
@@ -710,6 +711,7 @@ namespace EcoSysLab {
                 auto dstNodeHandle = this->Extend(nodeHandleMap.at(srcNode.GetParentHandle()), !srcNode.IsApical(), false);
                 nodeHandleMap[srcNodeHandle] = dstNodeHandle;
                 m_nodes[dstNodeHandle].m_info = srcNode.m_info;
+                postProcess(srcNodeHandle, dstNodeHandle);
             }
         }
         SortLists();
