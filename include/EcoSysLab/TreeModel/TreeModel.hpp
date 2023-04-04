@@ -8,6 +8,10 @@ namespace EcoSysLab {
 	struct TreeGrowthSettings
 	{
 		int m_flowNodeLimit = 10;
+
+		bool m_enableRoot = true;
+		bool m_enableShoot = true;
+
 		bool m_autoBalance = true;
 		bool m_collectLight = true;
 		bool m_collectWater = true;
@@ -113,6 +117,9 @@ namespace EcoSysLab {
 		float m_rootNodeDevelopmentRate = 1.0f;
 		float m_currentDeltaTime = 1.0f;
 
+		bool m_enableRoot = true;
+		bool m_enableShoot = true;
+
 		void ResetReproductiveModule();
 
 		
@@ -159,6 +166,7 @@ namespace EcoSysLab {
 		[[nodiscard]] int GetFineRootCount() const;
 		/**
 		 * Grow one iteration of the tree, given the nutrients and the procedural parameters.
+		 * @param deltaTime The real world time for this iteration
 		 * @param globalTransform The global transform of tree in world space.
 		 * @param soilModel The soil model
 		 * @param climateModel The climate model

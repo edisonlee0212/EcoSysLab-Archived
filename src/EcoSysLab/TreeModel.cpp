@@ -105,20 +105,20 @@ bool TreeModel::Grow(float deltaTime, const glm::mat4& globalTransform, SoilMode
 		rootStructureChanged = true;
 	}
 	//Collect water from roots.
-	CollectRootFlux(globalTransform, soilModel, rootGrowthParameters);
+	if(m_treeGrowthSettings.m_enableRoot) CollectRootFlux(globalTransform, soilModel, rootGrowthParameters);
 	//Collect light from branches.
-	CollectShootFlux(globalTransform, climateModel, shootGrowthParameters);
+	if (m_treeGrowthSettings.m_enableShoot) CollectShootFlux(globalTransform, climateModel, shootGrowthParameters);
 	//Perform photosynthesis.
 	PlantVigorAllocation();
 	//Grow roots and set up nutrient requirements for next iteration.
 	PlantGrowthRequirement newShootGrowthRequirement;
 	PlantGrowthRequirement newRootGrowthRequirement;
-	if (m_currentDeltaTime != 0.0f
+	if (m_treeGrowthSettings.m_enableRoot && m_currentDeltaTime != 0.0f
 		&& GrowRoots(globalTransform, soilModel, rootGrowthParameters, newRootGrowthRequirement)) {
 		rootStructureChanged = true;
 	}
 	//Grow branches and set up nutrient requirements for next iteration.
-	if (m_currentDeltaTime != 0.0f
+	if (m_treeGrowthSettings.m_enableShoot && m_currentDeltaTime != 0.0f
 		&& GrowShoots(globalTransform, climateModel, shootGrowthParameters, newShootGrowthRequirement)) {
 		treeStructureChanged = true;
 	}
@@ -129,14 +129,15 @@ bool TreeModel::Grow(float deltaTime, const glm::mat4& globalTransform, SoilMode
 		m_ageInYear = year;
 	}
 	//Set new growth nutrients requirement for next iteration.
-	m_shootSkeleton.m_data.m_vigorRequirement = newShootGrowthRequirement;
-	m_rootSkeleton.m_data.m_vigorRequirement = newRootGrowthRequirement;
+	if (m_treeGrowthSettings.m_enableShoot) m_shootSkeleton.m_data.m_vigorRequirement = newShootGrowthRequirement;
+	if (m_treeGrowthSettings.m_enableRoot) m_rootSkeleton.m_data.m_vigorRequirement = newRootGrowthRequirement;
 	m_iteration++;
 	m_age += m_currentDeltaTime;
 	return treeStructureChanged || rootStructureChanged;
 }
 
 void TreeModel::Initialize(const ShootGrowthController& shootGrowthParameters, const RootGrowthController& rootGrowthParameters) {
+	if (m_initialized) Clear();
 	{
 		auto& firstInternode = m_shootSkeleton.RefNode(0);
 		firstInternode.m_info.m_thickness = shootGrowthParameters.m_endNodeThickness;
@@ -277,8 +278,11 @@ void TreeModel::PlantVigorAllocation()
 			//+ m_rootSkeleton.m_data.m_vigorRequirement.m_fruitDevelopmentalVigor
 			+m_rootSkeleton.m_data.m_vigorRequirement.m_nodeDevelopmentalVigor;
 	}
-
-	const float totalVigor = glm::min(m_rootSkeleton.m_data.m_rootFlux.m_water, m_shootSkeleton.m_data.m_shootFlux.m_lightEnergy);
+	float totalVigor = glm::max(m_rootSkeleton.m_data.m_rootFlux.m_water, m_shootSkeleton.m_data.m_shootFlux.m_lightEnergy);
+	if(m_treeGrowthSettings.m_enableShoot && m_treeGrowthSettings.m_enableRoot)
+	{
+		totalVigor = glm::min(m_rootSkeleton.m_data.m_rootFlux.m_water, m_shootSkeleton.m_data.m_shootFlux.m_lightEnergy);
+	}
 	const float totalLeafMaintenanceVigorRequirement = m_shootSkeleton.m_data.m_vigorRequirement.m_leafMaintenanceVigor + m_rootSkeleton.m_data.m_vigorRequirement.m_leafMaintenanceVigor;
 	const float totalLeafDevelopmentVigorRequirement = m_shootSkeleton.m_data.m_vigorRequirement.m_leafDevelopmentalVigor + m_rootSkeleton.m_data.m_vigorRequirement.m_leafDevelopmentalVigor;
 	const float totalFruitMaintenanceVigorRequirement = m_shootSkeleton.m_data.m_vigorRequirement.m_fruitMaintenanceVigor + m_rootSkeleton.m_data.m_vigorRequirement.m_fruitMaintenanceVigor;
@@ -317,7 +321,7 @@ void TreeModel::PlantVigorAllocation()
 	}
 
 
-	if (m_treeGrowthSettings.m_autoBalance) {
+	if (m_treeGrowthSettings.m_autoBalance && m_treeGrowthSettings.m_enableRoot && m_treeGrowthSettings.m_enableShoot) {
 		m_vigorRatio.m_shootVigorWeight = m_rootSkeleton.RefSortedNodeList().size() * m_shootSkeleton.m_data.m_vigorRequirement.m_nodeDevelopmentalVigor;
 		m_vigorRatio.m_rootVigorWeight = m_shootSkeleton.RefSortedNodeList().size() * m_rootSkeleton.m_data.m_vigorRequirement.m_nodeDevelopmentalVigor;
 	}

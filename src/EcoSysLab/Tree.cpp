@@ -26,6 +26,8 @@ void Tree::OnInspect() {
 		{
 			ImGui::DragInt("History per iteration", &m_historyIteration, 1, 1, 1000);
 		}
+		ImGui::Checkbox("Enable Root", &m_treeModel.m_treeGrowthSettings.m_enableRoot);
+		ImGui::Checkbox("Enable Shoot", &m_treeModel.m_treeGrowthSettings.m_enableShoot);
 		ImGui::DragInt("Flow max node size", &m_treeModel.m_treeGrowthSettings.m_flowNodeLimit, 1, 1, 100);
 		ImGui::Checkbox("Auto balance vigor", &m_treeModel.m_treeGrowthSettings.m_autoBalance);
 		ImGui::Checkbox("Receive light", &m_treeModel.m_treeGrowthSettings.m_collectLight);
@@ -922,7 +924,7 @@ void Tree::GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings
 							glm::quat rotation = internodeInfo.m_globalRotation * glm::quat(glm::radians(glm::linearRand(glm::vec3(0.0f), glm::vec3(360.0f))));
 							auto front = rotation * glm::vec3(0, 0, -1);
 							TreeModel::ApplyTropism(internodeData.m_lightDirection, presentationSettings.m_phototropism, rotation);
-							auto foliagePosition = front * (leafSize.z * 1.5f);
+							auto foliagePosition = internodeInfo.m_globalPosition + front * (leafSize.z * 1.5f);
 							auto leafTransform = glm::translate(foliagePosition) * glm::mat4_cast(rotation) * glm::scale(leafSize);
 
 							auto& matrix = leafTransform;
