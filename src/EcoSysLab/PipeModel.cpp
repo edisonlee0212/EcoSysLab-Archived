@@ -2,10 +2,28 @@
 
 using namespace EcoSysLab;
 
+void PipeModel::CalculatePipeLocalPositions(PipeModelSkeleton& targetSkeleton,
+	const PipeModelParameters& pipeModelParameters)
+{
+	auto& pipeGroup = targetSkeleton.m_data.m_pipeGroup;
+	for (auto& pipeNode : pipeGroup.RefPipeNodes())
+	{
+		if (pipeNode.IsRecycled()) continue;
+		const auto& node = targetSkeleton.PeekNode(pipeNode.m_data.m_nodeHandle);
+		auto& pipeInfo = pipeNode.m_info;
+		pipeInfo.m_thickness = pipeModelParameters.m_endNodeThickness;
+	}
+
+	for (auto& pipe : pipeGroup.RefPipes())
+	{
+		if (pipe.IsRecycled()) continue;
+		pipe.m_info.m_color = glm::vec4(1.0f);
+	}
+}
+
 void PipeModel::CalculatePipeTransforms(PipeModelSkeleton& targetSkeleton, const PipeModelParameters& pipeModelParameters)
 {
 	auto& pipeGroup = targetSkeleton.m_data.m_pipeGroup;
-	const auto& gridGroup = targetSkeleton.m_data.m_hexagonGridGroup;
 	for (auto& pipeNode : pipeGroup.RefPipeNodes())
 	{
 		if (pipeNode.IsRecycled()) continue;
@@ -15,19 +33,8 @@ void PipeModel::CalculatePipeTransforms(PipeModelSkeleton& targetSkeleton, const
 		const glm::vec3 up = nodeInfo.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
 		const glm::vec3 front = nodeInfo.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
 		auto& pipeInfo = pipeNode.m_info;
-		const auto& grid = gridGroup.PeekGrid(node.m_data.m_gridHandle);
-		const auto& cell = grid.PeekCell(pipeNode.m_data.m_cellHandle);
-
-		pipeInfo.m_localPosition = pipeModelParameters.m_endNodeThickness * 2.0f * grid.GetPosition(cell.GetCoordinate());
-		pipeInfo.m_thickness = pipeModelParameters.m_endNodeThickness;
 		pipeInfo.m_globalPosition = nodeInfo.m_globalPosition + front * nodeInfo.m_length + left * pipeInfo.m_localPosition.x + up * pipeInfo.m_localPosition.y;
 		pipeInfo.m_globalRotation = nodeInfo.m_regulatedGlobalRotation;
-	}
-
-	for (auto& pipe : pipeGroup.RefPipes())
-	{
-		if (pipe.IsRecycled()) continue;
-		pipe.m_info.m_color = glm::vec4(1.0f);
 	}
 }
 
@@ -41,7 +48,6 @@ void PipeModel::DistributePipes(bool isShoot, const PipeModelParameters& pipeMod
 	{
 		auto& node = targetSkeleton.RefNode(*it);
 		auto& nodeData = node.m_data;
-		nodeData.m_gridHandle = -1;
 		if (node.IsEndNode()) nodeData.m_endNodeCount = 1;
 		else
 		{
@@ -53,11 +59,10 @@ void PipeModel::DistributePipes(bool isShoot, const PipeModelParameters& pipeMod
 			}
 		}
 	}
-
-	targetSkeleton.m_data.m_hexagonGridGroup = {};
 	targetSkeleton.m_data.m_pipeGroup = {};
 	auto& pipeGroup = targetSkeleton.m_data.m_pipeGroup;
-	auto& gridGroup = targetSkeleton.m_data.m_hexagonGridGroup;
+	PipeModelHexagonGridGroup gridGroup;
+	std::unordered_map<NodeHandle, HexagonGridHandle> gridHandleMap;
 	//2. Allocate pipe for target skeleton. Also create new grid for first node and copy cells from base grid.
 	const auto firstGridHandle = gridGroup.Allocate();
 	auto& firstGrid = gridGroup.RefGrid(firstGridHandle);
@@ -73,10 +78,12 @@ void PipeModel::DistributePipes(bool isShoot, const PipeModelParameters& pipeMod
 		const auto firstGridCellHandle = firstGrid.Allocate(cell.GetCoordinate());
 		auto& firstGridCell = firstGrid.RefCell(firstGridCellHandle);
 		firstGridCell.m_data.m_pipeHandle = newPipeHandle;
-		firstNode.m_data.m_gridHandle = firstGridHandle;
+		gridHandleMap[0] = firstGridHandle;
+		//firstNode.m_data.m_gridHandle = firstGridHandle;
 		const auto firstPipeNodeHandle = pipeGroup.Extend(newPipeHandle);
 		auto& firstPipeNode = pipeGroup.RefPipeNode(firstPipeNodeHandle);
-		firstPipeNode.m_data.m_cellHandle = firstGridCellHandle;
+		firstPipeNode.m_info.m_localPosition = pipeModelParameters.m_endNodeThickness * 2.0f * firstGrid.GetPosition(cell.GetCoordinate());
+		//firstPipeNode.m_data.m_cellHandle = firstGridCellHandle;
 		firstPipeNode.m_data.m_nodeHandle = 0;
 
 	}
@@ -86,12 +93,12 @@ void PipeModel::DistributePipes(bool isShoot, const PipeModelParameters& pipeMod
 		auto& node = targetSkeleton.RefNode(nodeHandle);
 		auto& nodeData = node.m_data;
 		//Create a hexagon grid for every node that has multiple child, and a hexagon grid for each child.
-		const auto currentGridHandle = nodeData.m_gridHandle;
+		const auto currentGridHandle = gridHandleMap.at(nodeHandle);
 		//No pipe left for this node.
 		if(currentGridHandle < 0) continue;
 		if (node.RefChildHandles().size() > 1) {
 			const auto newGridHandle = gridGroup.Allocate();
-			nodeData.m_gridHandle = newGridHandle;
+			gridHandleMap[nodeHandle] = newGridHandle;
 			auto& newGrid = gridGroup.RefGrid(newGridHandle);
 			//Copy all cells from parent grid.
 			const auto& previousGrid = gridGroup.PeekGrid(currentGridHandle);
@@ -104,10 +111,12 @@ void PipeModel::DistributePipes(bool isShoot, const PipeModelParameters& pipeMod
 
 				const auto newPipeNodeHandle = pipeGroup.Extend(newCell.m_data.m_pipeHandle);
 				auto& newPipeNode = pipeGroup.RefPipeNode(newPipeNodeHandle);
-				newPipeNode.m_data.m_cellHandle = newCellHandle;
+
+				newPipeNode.m_info.m_localPosition = pipeModelParameters.m_endNodeThickness * 2.0f * firstGrid.GetPosition(newCell.GetCoordinate());
+				//newPipeNode.m_data.m_cellHandle = newCellHandle;
 				newPipeNode.m_data.m_nodeHandle = nodeHandle;
 			}
-			SplitPipes(targetSkeleton, nodeHandle, newGridHandle);
+			SplitPipes(gridHandleMap, gridGroup, targetSkeleton, nodeHandle, newGridHandle, pipeModelParameters);
 		}
 		else if(node.RefChildHandles().size() == 1)
 		{
@@ -115,7 +124,8 @@ void PipeModel::DistributePipes(bool isShoot, const PipeModelParameters& pipeMod
 			auto& childNode = targetSkeleton.RefNode(childNodeHandle);
 			auto& childNodeData = childNode.m_data;
 			//Extend all pipe nodes from parent.
-			childNodeData.m_gridHandle = currentGridHandle;
+			gridHandleMap[childNodeHandle] = currentGridHandle;
+			//childNodeData.m_gridHandle = currentGridHandle;
 			const auto& previousGrid = gridGroup.PeekGrid(currentGridHandle);
 			for (const auto& parentCell : previousGrid.PeekCells())
 			{
@@ -123,17 +133,19 @@ void PipeModel::DistributePipes(bool isShoot, const PipeModelParameters& pipeMod
 
 				const auto newPipeNodeHandle = pipeGroup.Extend(parentCell.m_data.m_pipeHandle);
 				auto& newPipeNode = pipeGroup.RefPipeNode(newPipeNodeHandle);
-				newPipeNode.m_data.m_cellHandle = parentCell.GetHandle();
+				newPipeNode.m_info.m_localPosition = pipeModelParameters.m_endNodeThickness * 2.0f * firstGrid.GetPosition(parentCell.GetCoordinate());
+				//newPipeNode.m_data.m_cellHandle = parentCell.GetHandle();
 				newPipeNode.m_data.m_nodeHandle = childNodeHandle;
 			}
 		}
 	}
 }
 
-void PipeModel::SplitPipes(PipeModelSkeleton& targetSkeleton, NodeHandle nodeHandle, HexagonGridHandle newGridHandle) const
+void PipeModel::SplitPipes(std::unordered_map<NodeHandle, HexagonGridHandle>& gridHandleMap, 
+	PipeModelHexagonGridGroup& gridGroup, PipeModelSkeleton& targetSkeleton, 
+	NodeHandle nodeHandle, HexagonGridHandle newGridHandle, const PipeModelParameters& pipeModelParameters) const
 {
 	auto& pipeGroup = targetSkeleton.m_data.m_pipeGroup;
-	auto& gridGroup = targetSkeleton.m_data.m_hexagonGridGroup;
 	auto& node = targetSkeleton.RefNode(nodeHandle);
 	auto& newGrid = gridGroup.RefGrid(newGridHandle);
 	const auto nodeUp = node.m_info.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
@@ -160,7 +172,8 @@ void PipeModel::SplitPipes(PipeModelSkeleton& targetSkeleton, NodeHandle nodeHan
 		if (cellCount == 0) continue;
 
 		const auto childNewGridHandle = gridGroup.Allocate();
-		childNodeData.m_gridHandle = childNewGridHandle;
+		gridHandleMap[it->second.first] = childNewGridHandle;
+		//childNodeData.m_gridHandle = childNewGridHandle;
 		auto& childNewGrid = gridGroup.RefGrid(childNewGridHandle);
 		const auto& prevGrid = gridGroup.RefGrid(newGridHandle);
 		//1. Find the start cell.
@@ -218,7 +231,8 @@ void PipeModel::SplitPipes(PipeModelSkeleton& targetSkeleton, NodeHandle nodeHan
 
 			const auto childNewPipeNodeHandle = pipeGroup.Extend(childNewCell.m_data.m_pipeHandle);
 			auto& childNewPipeNode = pipeGroup.RefPipeNode(childNewPipeNodeHandle);
-			childNewPipeNode.m_data.m_cellHandle = childNewCellHandle;
+			childNewPipeNode.m_info.m_localPosition = pipeModelParameters.m_endNodeThickness * 2.0f * childNewGrid.GetPosition(childNewCell.GetCoordinate());
+			//childNewPipeNode.m_data.m_cellHandle = childNewCellHandle;
 			childNewPipeNode.m_data.m_nodeHandle = it->second.first;
 
 		}
@@ -229,16 +243,19 @@ void PipeModel::SplitPipes(PipeModelSkeleton& targetSkeleton, NodeHandle nodeHan
 
 void PipeModel::BuildGraph(const PipeModelParameters& pipeModelParameters)
 {
+	if(m_baseGrid.GetCellCount() == 0) return;
 	const auto& shootFlowList = m_shootSkeleton.RefSortedFlowList();
 	const auto& rootFlowList = m_rootSkeleton.RefSortedFlowList();
 	if (!shootFlowList.empty())
 	{
 		DistributePipes(true, pipeModelParameters);
+		CalculatePipeLocalPositions(m_shootSkeleton, pipeModelParameters);
 		CalculatePipeTransforms(m_shootSkeleton, pipeModelParameters);
 	}
 	if (!rootFlowList.empty())
 	{
 		DistributePipes(false, pipeModelParameters);
+		CalculatePipeLocalPositions(m_rootSkeleton, pipeModelParameters);
 		CalculatePipeTransforms(m_rootSkeleton, pipeModelParameters);
 	}
 }

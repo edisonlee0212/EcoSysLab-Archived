@@ -611,7 +611,7 @@ void Tree::BuildPipeModel()
 			m_pipeModel.m_rootSkeleton.RefNode(dstNodeHandle).m_data.m_originalSkeletonHandle = srcNodeHandle;
 			m_pipeModel.m_rootSkeletonLinks[srcNodeHandle] = dstNodeHandle;
 		});
-	m_pipeModel.BuildGraph(m_pipeModelParameters);
+	m_pipeModel.InitializePipes(m_pipeModelParameters);
 }
 
 void Tree::BuildStrands(const PipeModelPipeGroup& pipeGroup, std::vector<glm::uint>& strands,

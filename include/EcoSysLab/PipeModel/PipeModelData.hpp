@@ -40,16 +40,13 @@ namespace EcoSysLab
 	struct PipeModelPipeNodeData
 	{
 		NodeHandle m_nodeHandle = -1;
-		HexagonCellHandle m_cellHandle = -1;
 	};
 
 	typedef PipeGroup<PipeModelPipeGroupData, PipeModelPipeData, PipeModelPipeNodeData> PipeModelPipeGroup;
 
 	struct PipeModelNodeData
 	{
-		HexagonGridHandle m_gridHandle = -1;
 		int m_endNodeCount = 0;
-
 		NodeHandle m_originalSkeletonHandle = -1;
 	};
 
@@ -61,7 +58,6 @@ namespace EcoSysLab
 	struct PipeModelSkeletonData
 	{
 		PipeModelPipeGroup m_pipeGroup;
-		PipeModelHexagonGridGroup m_hexagonGridGroup;
 	};
 	typedef Skeleton<PipeModelSkeletonData, PipeModelFlowData, PipeModelNodeData> PipeModelSkeleton;
 }
