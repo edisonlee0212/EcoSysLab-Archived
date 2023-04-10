@@ -79,11 +79,9 @@ void PipeModel::DistributePipes(bool isShoot, const PipeModelParameters& pipeMod
 		auto& firstGridCell = firstGrid.RefCell(firstGridCellHandle);
 		firstGridCell.m_data.m_pipeHandle = newPipeHandle;
 		gridHandleMap[0] = firstGridHandle;
-		//firstNode.m_data.m_gridHandle = firstGridHandle;
 		const auto firstPipeNodeHandle = pipeGroup.Extend(newPipeHandle);
 		auto& firstPipeNode = pipeGroup.RefPipeNode(firstPipeNodeHandle);
 		firstPipeNode.m_info.m_localPosition = pipeModelParameters.m_endNodeThickness * 2.0f * firstGrid.GetPosition(cell.GetCoordinate());
-		//firstPipeNode.m_data.m_cellHandle = firstGridCellHandle;
 		firstPipeNode.m_data.m_nodeHandle = 0;
 
 	}
@@ -113,7 +111,6 @@ void PipeModel::DistributePipes(bool isShoot, const PipeModelParameters& pipeMod
 				auto& newPipeNode = pipeGroup.RefPipeNode(newPipeNodeHandle);
 
 				newPipeNode.m_info.m_localPosition = pipeModelParameters.m_endNodeThickness * 2.0f * firstGrid.GetPosition(newCell.GetCoordinate());
-				//newPipeNode.m_data.m_cellHandle = newCellHandle;
 				newPipeNode.m_data.m_nodeHandle = nodeHandle;
 			}
 			SplitPipes(gridHandleMap, gridGroup, targetSkeleton, nodeHandle, newGridHandle, pipeModelParameters);
@@ -125,7 +122,6 @@ void PipeModel::DistributePipes(bool isShoot, const PipeModelParameters& pipeMod
 			auto& childNodeData = childNode.m_data;
 			//Extend all pipe nodes from parent.
 			gridHandleMap[childNodeHandle] = currentGridHandle;
-			//childNodeData.m_gridHandle = currentGridHandle;
 			const auto& previousGrid = gridGroup.PeekGrid(currentGridHandle);
 			for (const auto& parentCell : previousGrid.PeekCells())
 			{
@@ -134,7 +130,6 @@ void PipeModel::DistributePipes(bool isShoot, const PipeModelParameters& pipeMod
 				const auto newPipeNodeHandle = pipeGroup.Extend(parentCell.m_data.m_pipeHandle);
 				auto& newPipeNode = pipeGroup.RefPipeNode(newPipeNodeHandle);
 				newPipeNode.m_info.m_localPosition = pipeModelParameters.m_endNodeThickness * 2.0f * firstGrid.GetPosition(parentCell.GetCoordinate());
-				//newPipeNode.m_data.m_cellHandle = parentCell.GetHandle();
 				newPipeNode.m_data.m_nodeHandle = childNodeHandle;
 			}
 		}
@@ -228,20 +223,25 @@ void PipeModel::SplitPipes(std::unordered_map<NodeHandle, HexagonGridHandle>& gr
 			const auto childNewCellHandle = childNewGrid.Allocate(coordinate);
 			auto& childNewCell = childNewGrid.RefCell(childNewCellHandle);
 			childNewCell.m_data.m_pipeHandle = allocatedCell.m_data.m_pipeHandle;
+		}
+		sumCoordinate /= cellCount;
+		const auto shiftPosition = childNewGrid.GetPosition(sumCoordinate);
+		childNewGrid.ShiftCoordinate(-sumCoordinate);
 
+		childNode.m_info.m_localPosition = pipeModelParameters.m_endNodeThickness * 2.0f * (nodeLeft * shiftPosition.x + nodeUp * shiftPosition.y);
+		for (const auto& cell : childNewGrid.PeekCells())
+		{
+			if (cell.IsRecycled()) continue;
+			auto& childNewCell = childNewGrid.RefCell(cell.GetHandle());
 			const auto childNewPipeNodeHandle = pipeGroup.Extend(childNewCell.m_data.m_pipeHandle);
 			auto& childNewPipeNode = pipeGroup.RefPipeNode(childNewPipeNodeHandle);
 			childNewPipeNode.m_info.m_localPosition = pipeModelParameters.m_endNodeThickness * 2.0f * childNewGrid.GetPosition(childNewCell.GetCoordinate());
-			//childNewPipeNode.m_data.m_cellHandle = childNewCellHandle;
 			childNewPipeNode.m_data.m_nodeHandle = it->second.first;
-
 		}
-		sumCoordinate /= cellCount;
-		//childNewGrid.ShiftCoordinate(-sumCoordinate);
 	}
 }
 
-void PipeModel::BuildGraph(const PipeModelParameters& pipeModelParameters)
+void PipeModel::InitializePipes(const PipeModelParameters& pipeModelParameters)
 {
 	if(m_baseGrid.GetCellCount() == 0) return;
 	const auto& shootFlowList = m_shootSkeleton.RefSortedFlowList();
@@ -250,12 +250,14 @@ void PipeModel::BuildGraph(const PipeModelParameters& pipeModelParameters)
 	{
 		DistributePipes(true, pipeModelParameters);
 		CalculatePipeLocalPositions(m_shootSkeleton, pipeModelParameters);
+		m_shootSkeleton.CalculateTransforms();
 		CalculatePipeTransforms(m_shootSkeleton, pipeModelParameters);
 	}
 	if (!rootFlowList.empty())
 	{
 		DistributePipes(false, pipeModelParameters);
 		CalculatePipeLocalPositions(m_rootSkeleton, pipeModelParameters);
+		m_rootSkeleton.CalculateTransforms();
 		CalculatePipeTransforms(m_rootSkeleton, pipeModelParameters);
 	}
 }

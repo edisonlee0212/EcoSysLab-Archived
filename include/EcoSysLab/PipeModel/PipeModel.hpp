@@ -17,6 +17,6 @@ namespace EcoSysLab
 		PipeModelBaseHexagonGrid m_baseGrid;
 		PipeModelSkeleton m_shootSkeleton;
 		PipeModelSkeleton m_rootSkeleton;
-		void BuildGraph(const PipeModelParameters& pipeModelParameters);
+		void InitializePipes(const PipeModelParameters& pipeModelParameters);
 	};
 }

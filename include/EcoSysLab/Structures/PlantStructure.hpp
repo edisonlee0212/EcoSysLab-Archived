@@ -14,6 +14,7 @@ namespace EcoSysLab {
         float m_length = 0.0f;
         float m_thickness = 0.1f;
         glm::quat m_localRotation = glm::vec3(0.0f);
+        glm::vec3 m_localPosition = glm::vec3(0.0f);
 
         glm::quat m_regulatedGlobalRotation = glm::vec3(0.0f);
     };
@@ -262,6 +263,10 @@ namespace EcoSysLab {
          */
         void CalculateFlows();
 
+        /* 
+         * Calculate the global transforms for nodes based on relative information.
+         */
+        void CalculateTransforms();
         /**
          * Retrieve a modifiable reference to the node with the handle.
          * @param handle The handle to the target node.
@@ -839,8 +844,7 @@ namespace EcoSysLab {
 
     template<typename SkeletonData, typename FlowData, typename NodeData>
     void Skeleton<SkeletonData, FlowData, NodeData>::CalculateFlows() {
-        const auto &sortedBranchList = RefSortedFlowList();
-        for (const auto &flowHandle: sortedBranchList) {
+        for (const auto &flowHandle: m_sortedFlowList) {
             auto &flow = m_flows[flowHandle];
             auto &firstNode = m_nodes[flow.m_nodes.front()];
             auto &lastNode = m_nodes[flow.m_nodes.back()];
@@ -853,6 +857,38 @@ namespace EcoSysLab {
                                               lastNode.m_info.m_length *
                                               (lastNode.m_info.m_globalRotation * glm::vec3(0, 0, -1));
             flow.m_info.m_globalEndRotation = lastNode.m_info.m_globalRotation;
+        }
+    }
+
+    template<typename SkeletonData, typename FlowData, typename NodeData>
+    void Skeleton<SkeletonData, FlowData, NodeData>::CalculateTransforms()
+    {
+        m_min = glm::vec3(FLT_MAX);
+        m_max = glm::vec3(FLT_MIN);
+        for (const auto& nodeHandle : m_sortedNodeList) {
+            auto& node = m_nodes[nodeHandle];
+            auto& nodeInfo = node.m_info;
+            if (node.m_parentHandle != -1) {
+                auto& parentInfo = m_nodes[node.m_parentHandle].m_info;
+                nodeInfo.m_globalRotation =
+                    parentInfo.m_globalRotation * nodeInfo.m_localRotation;
+                nodeInfo.m_globalPosition =
+                    parentInfo.m_globalPosition + parentInfo.m_length *
+                    (parentInfo.m_globalRotation * glm::vec3(0, 0, -1))
+                    + nodeInfo.m_localPosition;
+                auto front = nodeInfo.m_globalRotation * glm::vec3(0, 0, -1);
+                auto parentRegulatedUp = parentInfo.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
+                auto regulatedUp = glm::normalize(glm::cross(glm::cross(front, parentRegulatedUp), front));
+                nodeInfo.m_regulatedGlobalRotation = glm::quatLookAt(front, regulatedUp);
+
+            }
+            m_min = glm::min(m_min, nodeInfo.m_globalPosition);
+            m_max = glm::max(m_max, nodeInfo.m_globalPosition);
+            const auto endPosition = nodeInfo.m_globalPosition + nodeInfo.m_length *
+                (nodeInfo.m_globalRotation *
+                    glm::vec3(0, 0, -1));
+            m_min = glm::min(m_min, endPosition);
+            m_max = glm::max(m_max, endPosition);
         }
     }
 

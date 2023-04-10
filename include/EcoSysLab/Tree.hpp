@@ -297,6 +297,8 @@ namespace EcoSysLab {
 		bool OnInspectBaseHexagonGrid(bool editable);
 
 	public:
+		
+
 		void BuildPipeModel();
 		PipeModelParameters m_pipeModelParameters;
 		void BuildStrands(const PipeModelPipeGroup& pipeGroup, std::vector<glm::uint>& strands, std::vector<StrandPoint>& points) const;
