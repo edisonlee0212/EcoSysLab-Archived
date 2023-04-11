@@ -17,6 +17,7 @@ void PipeModel::CalculatePipeLocalPositions(PipeModelSkeleton& targetSkeleton,
 	for (auto& pipe : pipeGroup.RefPipes())
 	{
 		if (pipe.IsRecycled()) continue;
+		pipe.m_data.m_baseInfo.m_thickness = pipeModelParameters.m_endNodeThickness;
 		pipe.m_info.m_color = glm::vec4(1.0f);
 	}
 }
@@ -32,9 +33,17 @@ void PipeModel::CalculatePipeTransforms(PipeModelSkeleton& targetSkeleton, const
 		const glm::vec3 left = nodeInfo.m_regulatedGlobalRotation * glm::vec3(1, 0, 0);
 		const glm::vec3 up = nodeInfo.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
 		const glm::vec3 front = nodeInfo.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
-		auto& pipeInfo = pipeNode.m_info;
-		pipeInfo.m_globalPosition = nodeInfo.m_globalPosition + front * nodeInfo.m_length + left * pipeInfo.m_localPosition.x + up * pipeInfo.m_localPosition.y;
-		pipeInfo.m_globalRotation = nodeInfo.m_regulatedGlobalRotation;
+		auto& pipeNodeInfo = pipeNode.m_info;
+		pipeNodeInfo.m_globalPosition = nodeInfo.m_globalPosition + front * nodeInfo.m_length + left * pipeNodeInfo.m_localPosition.x + up * pipeNodeInfo.m_localPosition.y;
+		pipeNodeInfo.m_globalRotation = nodeInfo.m_regulatedGlobalRotation;
+	}
+	for(auto& pipe : pipeGroup.RefPipes())
+	{
+		if (pipe.IsRecycled()) continue;
+		auto& pipeInfo = pipe.m_data.m_baseInfo;
+		const glm::vec3 left = pipeInfo.m_globalRotation * glm::vec3(1, 0, 0);
+		const glm::vec3 up = pipeInfo.m_globalRotation * glm::vec3(0, 1, 0);
+		pipeInfo.m_globalPosition = pipeInfo.m_globalPosition + left * pipeInfo.m_localPosition.x + up * pipeInfo.m_localPosition.y;
 	}
 }
 
@@ -84,6 +93,9 @@ void PipeModel::DistributePipes(bool isShoot, const PipeModelParameters& pipeMod
 		firstPipeNode.m_info.m_localPosition = pipeModelParameters.m_endNodeThickness * 2.0f * firstGrid.GetPosition(cell.GetCoordinate());
 		firstPipeNode.m_data.m_nodeHandle = 0;
 
+		auto& firstPipe = pipeGroup.RefPipe(newPipeHandle);
+		firstPipe.m_data.m_baseInfo.m_localPosition = pipeModelParameters.m_endNodeThickness * 2.0f * firstGrid.GetPosition(cell.GetCoordinate());
+		firstPipe.m_data.m_baseInfo.m_globalRotation = firstNode.m_info.m_regulatedGlobalRotation;
 	}
 	//3. Create traverse graph and setup pipes.
 	for (const auto& nodeHandle : nodeList)
