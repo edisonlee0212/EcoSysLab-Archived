@@ -5,7 +5,6 @@
 #endif
 #include "ClassRegistry.hpp"
 #include "DefaultResources.hpp"
-#include "FieldGround.hpp"
 #include "Graphics.hpp"
 #include "LeafData.hpp"
 #include "PanicleData.hpp"
@@ -35,7 +34,6 @@ void SorghumLayer::OnCreate() {
       "PanicleGeometryTag");
   ClassRegistry::RegisterDataComponent<StemGeometryTag>("StemGeometryTag");
 
-  ClassRegistry::RegisterAsset<FieldGround>("FieldGround", {".fieldground"});
   ClassRegistry::RegisterPrivateComponent<SorghumData>("SorghumData");
   ClassRegistry::RegisterPrivateComponent<LeafData>("LeafData");
   ClassRegistry::RegisterPrivateComponent<StemData>("StemData");
@@ -244,7 +242,7 @@ void SorghumLayer::GenerateMeshForAllSorghums() {
 
 void SorghumLayer::OnInspect() {
   auto scene = GetScene();
-  if (ImGui::Begin("Sorghum")) {
+  if (ImGui::Begin("Sorghum Layer")) {
 #ifdef RAYTRACERFACILITY
     if (ImGui::TreeNodeEx("Illumination Estimation")) {
       ImGui::Checkbox("Display light probes", &m_displayLightProbes);
