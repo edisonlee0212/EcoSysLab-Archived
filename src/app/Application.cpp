@@ -23,6 +23,7 @@
 #include "RadialBoundingVolume.hpp"
 #include "HeightField.hpp"
 #include "ObjectRotator.hpp"
+#include "SorghumLayer.hpp"
 #ifdef RAYTRACERFACILITY
 using namespace RayTracerFacility;
 #endif
@@ -45,13 +46,18 @@ int main() {
     ClassRegistry::RegisterAsset<HeightField>("HeightField", { ".hf" });
 
     ClassRegistry::RegisterAsset<NoiseSoilLayerDescriptor>("NoiseSoilLayerDescriptor", { ".nsld" });
-    EngineSetup();
+
+
+
+
+	EngineSetup();
 
     ApplicationConfigs applicationConfigs;
     applicationConfigs.m_applicationName = "EcoSysLab";
     Application::Create(applicationConfigs);
 
     Application::PushLayer<EcoSysLabLayer>();
+    Application::PushLayer<SorghumLayer>();
 #ifdef RAYTRACERFACILITY
     Application::PushLayer<RayTracerLayer>();
 #endif

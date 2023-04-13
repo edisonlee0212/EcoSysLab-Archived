@@ -16,4 +16,12 @@ namespace EcoSysLab {
         virtual void InVolume(const std::vector<glm::vec3>& positions, std::vector<bool>& results);
 
     };
+    class SphericalVolume : public IVolume {
+    public:
+        glm::vec3 m_radius = glm::vec3(1.0f);
+        glm::vec3 GetRandomPoint() override;
+        bool InVolume(const GlobalTransform& globalTransform,
+            const glm::vec3& position) override;
+        bool InVolume(const glm::vec3& position) override;
+    };
 } // namespace EcoSysLab

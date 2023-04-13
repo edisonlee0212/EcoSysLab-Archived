@@ -28,3 +28,15 @@ void IVolume::InVolume(const std::vector<glm::vec3>& positions, std::vector<bool
         i.wait();
     }
 }
+
+glm::vec3 SphericalVolume::GetRandomPoint() {
+    return glm::ballRand(1.0f) * m_radius;
+}
+bool SphericalVolume::InVolume(
+    const GlobalTransform& globalTransform, const glm::vec3& position) {
+    return false;
+}
+bool SphericalVolume::InVolume(const glm::vec3& position) {
+    auto relativePosition = glm::vec3(position.x / m_radius.x, position.y / m_radius.y, position.z / m_radius.z);
+    return glm::length(relativePosition) <= 1.0f;
+}
