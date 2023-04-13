@@ -327,15 +327,18 @@ namespace EcoSysLab {
 		bool m_enableHistory = false;
 		int m_historyIteration = 30;
 		TreeModel m_treeModel;
-		PipeModel m_pipeModel;
+		PipeModel m_shootPipeModel;
+		PipeModel m_rootPipeModel;
+		PipeModelBaseHexagonGrid m_baseGrid;
+
 		void OnInspect() override;
 
 		void OnDestroy() override;
 
 		void OnCreate() override;
 
-		void ClearMeshes();
-
+		void ClearMeshes() const;
+		void ClearStrands() const;
 		void GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings, int iteration = -1);
 
 		void FromLSystemString(const std::shared_ptr<LSystemString>& lSystemString);

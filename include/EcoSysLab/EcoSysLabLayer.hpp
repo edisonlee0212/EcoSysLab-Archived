@@ -149,8 +149,8 @@ namespace EcoSysLab {
 		PrivateComponentRef m_soilHolder;
 		PrivateComponentRef m_climateHolder;
 		void Simulate(float deltaTime);
-		void GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings);
-		void ClearMeshes();
+		void GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings) const;
+		void ClearGeometries() const;
 		void ResetAllTrees(const std::vector<Entity>* treeEntities);
 
 	};

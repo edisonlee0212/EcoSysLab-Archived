@@ -44,6 +44,9 @@ void Tree::OnInspect() {
 			}
 			ImGui::End();
 		}
+
+		ImGui::DragFloat("Pipe radius", &m_pipeModelParameters.m_pipeRadius, 0.001f, 0.001f, 1.0f);
+
 		if(ImGui::Button("Build strands"))
 		{
 			BuildPipeModel();
@@ -485,7 +488,7 @@ void Tree::BuildStrand(const PipeModelPipeGroup& pipeGroup, const Pipe<PipeModel
 
 bool Tree::OnInspectBaseHexagonGrid(bool editable)
 {
-	auto& baseHexagonGrid = m_pipeModel.m_baseGrid;
+	auto& baseHexagonGrid = m_baseGrid;
 	bool changed = false;
 	static auto scrolling = glm::vec2(0.0f);
 	static float zoomFactor = 10.0f;
@@ -601,17 +604,8 @@ bool Tree::OnInspectBaseHexagonGrid(bool editable)
 
 void Tree::BuildPipeModel()
 {
-	m_pipeModel.m_shootSkeleton.Clone(m_treeModel.m_shootSkeleton, [&](NodeHandle srcNodeHandle, NodeHandle dstNodeHandle)
-	{
-			m_pipeModel.m_shootSkeleton.RefNode(dstNodeHandle).m_data.m_originalSkeletonHandle = srcNodeHandle;
-			m_pipeModel.m_shootSkeletonLinks[srcNodeHandle] = dstNodeHandle;
-	});
-	m_pipeModel.m_rootSkeleton.Clone(m_treeModel.m_rootSkeleton, [&](NodeHandle srcNodeHandle, NodeHandle dstNodeHandle)
-		{
-			m_pipeModel.m_rootSkeleton.RefNode(dstNodeHandle).m_data.m_originalSkeletonHandle = srcNodeHandle;
-			m_pipeModel.m_rootSkeletonLinks[srcNodeHandle] = dstNodeHandle;
-		});
-	m_pipeModel.InitializePipes(m_pipeModelParameters);
+	m_shootPipeModel.InitializePipes(m_treeModel.m_shootSkeleton, m_baseGrid, m_pipeModelParameters);
+	m_rootPipeModel.InitializePipes(m_treeModel.m_rootSkeleton, m_baseGrid, m_pipeModelParameters);
 }
 
 void Tree::BuildStrands(const PipeModelPipeGroup& pipeGroup, std::vector<glm::uint>& strands,
@@ -628,12 +622,16 @@ void Tree::InitializeStrandRenderer() const
 {
 	const auto scene = GetScene();
 	const auto owner = GetOwner();
-	const auto renderer = scene->GetOrSetPrivateComponent<StrandsRenderer>(owner).lock();
+
+	ClearStrands();
+	const auto strandsEntity = scene->CreateEntity("Branch Strands");
+	scene->SetParent(strandsEntity, owner);
+
+	const auto renderer = scene->GetOrSetPrivateComponent<StrandsRenderer>(strandsEntity).lock();
 	const auto strandsAsset = ProjectManager::CreateTemporaryAsset<Strands>();
 	std::vector<glm::uint> strandsList;
 	std::vector<StrandPoint> points;
-	BuildStrands(m_pipeModel.m_shootSkeleton.m_data.m_pipeGroup, strandsList, points);
-	BuildStrands(m_pipeModel.m_rootSkeleton.m_data.m_pipeGroup, strandsList, points);
+	BuildStrands(m_shootPipeModel.m_pipeGroup, strandsList, points);
 	if (!points.empty()) strandsList.emplace_back(points.size());
 	strandsAsset->SetStrands(static_cast<unsigned>(StrandPointAttribute::Position) | static_cast<unsigned>(StrandPointAttribute::Thickness) | static_cast<unsigned>(StrandPointAttribute::Color), strandsList, points);
 	renderer->m_strands = strandsAsset;
@@ -656,7 +654,7 @@ void Tree::Deserialize(const YAML::Node& in)
 	m_treeDescriptor.Load("m_treeDescriptor", in);
 }
 
-void Tree::ClearMeshes()
+void Tree::ClearMeshes() const
 {
 	const auto scene = GetScene();
 	const auto self = GetOwner();
@@ -676,6 +674,22 @@ void Tree::ClearMeshes()
 			scene->DeleteEntity(child);
 		}
 		else if (name == "Fine Root Mesh") {
+			scene->DeleteEntity(child);
+		}
+	}
+}
+
+void Tree::ClearStrands() const
+{
+	const auto scene = GetScene();
+	const auto self = GetOwner();
+	const auto children = scene->GetChildren(self);
+	for (const auto& child : children) {
+		auto name = scene->GetEntityName(child);
+		if (name == "Branch Strands") {
+			scene->DeleteEntity(child);
+		}
+		else if (name == "Root Strands") {
 			scene->DeleteEntity(child);
 		}
 	}

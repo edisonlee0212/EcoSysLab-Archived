@@ -222,6 +222,7 @@ TreeVisualizer::OnInspect(
 	ImGui::End();
 	if (m_hexagonGridGui) {
 		if (ImGui::Begin("Hexagon Grid")) {
+			/*
 			if (m_selectedInternodeHandle >= 0 && pipeModel.m_shootSkeleton.RefSortedNodeList().size() > m_selectedInternodeHandle)
 			{
 				auto& shootSkeleton = pipeModel.m_shootSkeleton;
@@ -237,7 +238,7 @@ TreeVisualizer::OnInspect(
 			{
 				ImGui::Text("No node selected or pipe model is invalid!");
 			}
-
+			*/
 		}
 		ImGui::End();
 	}

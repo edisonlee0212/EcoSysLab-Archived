@@ -440,7 +440,7 @@ void EcoSysLabLayer::OnInspect() {
 		}
 		ImGui::SameLine();
 		if (ImGui::Button("Clear Meshes")) {
-			ClearMeshes();
+			ClearGeometries();
 		}
 		Editor::DragAndDropButton(m_shootStemStrandsHolder, "Shoot stem holder");
 		Editor::DragAndDropButton(m_rootStemStrandsHolder, "Root stem holder");
@@ -485,7 +485,7 @@ void EcoSysLabLayer::OnInspect() {
 			if (ImGui::Button("Reset all trees"))
 			{
 				ResetAllTrees(treeEntities);
-				ClearMeshes();
+				ClearGeometries();
 			}
 			ImGui::DragFloat("Time", &m_time, 1, 0, 9000000);
 			ImGui::Checkbox("Auto grow with soil step", &m_autoGrowWithSoilStep);
@@ -572,7 +572,7 @@ void EcoSysLabLayer::OnInspect() {
 	if (scene->IsEntityValid(m_selectedTree)) {
 		const auto tree = scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock();
 		m_treeVisualizer.OnInspect(
-			tree->m_treeModel, tree->m_pipeModel, scene->GetDataComponent<GlobalTransform>(m_selectedTree));
+			tree->m_treeModel, tree->m_shootPipeModel, scene->GetDataComponent<GlobalTransform>(m_selectedTree));
 	}
 	else
 	{
@@ -1448,7 +1448,8 @@ void EcoSysLabLayer::Simulate(float deltaTime) {
 	}
 }
 
-void EcoSysLabLayer::GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings) {
+void EcoSysLabLayer::GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings) const
+{
 	auto scene = GetScene();
 	const std::vector<Entity>* treeEntities =
 		scene->UnsafeGetPrivateComponentOwnersList<Tree>();
@@ -1461,7 +1462,7 @@ void EcoSysLabLayer::GenerateMeshes(const TreeMeshGeneratorSettings& meshGenerat
 	}
 }
 
-void EcoSysLabLayer::ClearMeshes()
+void EcoSysLabLayer::ClearGeometries() const
 {
 	auto scene = GetScene();
 	const std::vector<Entity>* treeEntities =
@@ -1471,6 +1472,7 @@ void EcoSysLabLayer::ClearMeshes()
 		for (auto treeEntity : copiedEntities) {
 			auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
 			tree->ClearMeshes();
+			tree->ClearStrands();
 		}
 	}
 }
