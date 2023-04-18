@@ -25,6 +25,7 @@ namespace EcoSysLab
 	};
 
 	typedef HexagonGrid<BaseHexagonGridData, BaseHexagonGridCellData> PipeModelBaseHexagonGrid;
+	typedef HexagonGrid<HexagonGridData, HexagonGridCellData> PipeModelHexagonGrid;
 	typedef HexagonGridGroup<HexagonGridData, HexagonGridCellData> PipeModelHexagonGridGroup;
 
 	struct PipeModelPipeGroupData

@@ -3,12 +3,22 @@
 using namespace UniEngine;
 namespace EcoSysLab
 {
+	struct CellSortSettings
+	{
+		bool m_flatCut = true;
+	};
+
 	class PipeModel
 	{
 		void CalculatePipeLocalPositions(const PipeModelSkeleton& targetSkeleton, const PipeModelParameters& pipeModelParameters);
 		void CalculatePipeTransforms(const PipeModelSkeleton& targetSkeleton, const PipeModelParameters& pipeModelParameters);
 		void DistributePipes(PipeModelBaseHexagonGrid baseGrid, PipeModelSkeleton& targetSkeleton, const PipeModelParameters& pipeModelParameters);
 
+		static void SortCells(const CellSortSettings& cellExtractionSettings, std::multimap<float, HexagonCellHandle>& sortedCellHandles, const std::map<std::pair<int, int>, HexagonCellHandle>& newGridCellMap, const PipeModelHexagonGrid& prevGrid, const glm::vec2& direction);
+		static void ExtractCells(int cellCount, const std::multimap<float, HexagonCellHandle>& sortedCellHandles,
+		                         std::map<std::pair<int, int>, HexagonCellHandle>& newGridCellMap,
+		                         const PipeModelHexagonGrid& prevGrid,
+		                         PipeModelHexagonGrid& childNewGrid);
 		void SplitPipes(std::unordered_map<NodeHandle, HexagonGridHandle>& gridHandleMap, PipeModelHexagonGridGroup& gridGroup, 
 			PipeModelSkeleton& targetSkeleton, NodeHandle nodeHandle, HexagonGridHandle newGridHandle, const PipeModelParameters& pipeModelParameters);
 	public:
