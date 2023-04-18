@@ -145,6 +145,11 @@ void PipeModel::DistributePipes(PipeModelBaseHexagonGrid baseGrid, PipeModelSkel
 	}
 }
 
+void PipeModel::SqueezeCells(const CellSqueezeSettings& cellSqueezeSettings, const PipeModelHexagonGrid& prevGrid,
+	const PipeModelHexagonGrid& newGrid)
+{
+
+}
 
 
 void PipeModel::SplitPipes(std::unordered_map<NodeHandle, HexagonGridHandle>& gridHandleMap, 
@@ -168,7 +173,12 @@ void PipeModel::SplitPipes(std::unordered_map<NodeHandle, HexagonGridHandle>& gr
 		totalAllocatedCellCount += cellCount;
 	}
 	int mainChildCellCount = newGrid.GetCellCount() - totalAllocatedCellCount;
-	auto newGridCellMap = newGrid.PeekCellMap();
+	const auto& newGridCellMap = newGrid.PeekCellMap();
+	std::set<CellHandle> availableCellHandles;
+	for(const auto& i : newGridCellMap)
+	{
+		availableCellHandles.insert(i.second);
+	}
 	for (auto it = childNodeHandles.rbegin(); it != childNodeHandles.rend(); ++it)
 	{
 		const auto cellCount = it->second.second;
@@ -179,13 +189,13 @@ void PipeModel::SplitPipes(std::unordered_map<NodeHandle, HexagonGridHandle>& gr
 		auto& childNewGrid = gridGroup.RefGrid(childNewGridHandle);
 		const auto& prevGrid = gridGroup.RefGrid(newGridHandle);
 		//1. Sort cells.
-		std::multimap<float, HexagonCellHandle> sortedCellHandles;
+		std::multimap<float, CellHandle> sortedCellHandles;
 		auto childNodeFront = glm::inverse(node.m_info.m_regulatedGlobalRotation) * childNode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
 		glm::vec2 direction = glm::normalize(glm::vec2(childNodeFront.x, childNodeFront.y));
 		CellSortSettings cellSortSettings;
-		SortCells(cellSortSettings, sortedCellHandles, newGridCellMap, prevGrid, direction);
+		SortCells(cellSortSettings, sortedCellHandles, availableCellHandles, prevGrid, direction);
 		//2. Extract cells based on distance.
-		ExtractCells(cellCount, sortedCellHandles, newGridCellMap, prevGrid, childNewGrid);
+		ExtractCells(cellCount, sortedCellHandles, availableCellHandles, prevGrid, childNewGrid);
 		glm::ivec2 extractedCellSumCoordinate = glm::ivec2(0, 0);
 		for (const auto& cell : childNewGrid.PeekCells())
 		{
@@ -203,7 +213,7 @@ void PipeModel::SplitPipes(std::unordered_map<NodeHandle, HexagonGridHandle>& gr
 			auto& childNewCell = childNewGrid.RefCell(cell.GetHandle());
 			const auto childNewPipeNodeHandle = pipeGroup.Extend(childNewCell.m_data.m_pipeHandle);
 			auto& childNewPipeNode = pipeGroup.RefPipeNode(childNewPipeNodeHandle);
-			childNewPipeNode.m_info.m_localPosition = pipeModelParameters.m_pipeRadius * 2.0f * childNewGrid.GetPosition(childNewCell.GetCoordinate());
+			childNewPipeNode.m_info.m_localPosition = pipeModelParameters.m_pipeRadius * 2.0f * childNewGrid.GetPosition(cell.GetHandle());
 			childNewPipeNode.m_data.m_nodeHandle = it->second.first;
 		}
 	}
@@ -216,11 +226,10 @@ void PipeModel::SplitPipes(std::unordered_map<NodeHandle, HexagonGridHandle>& gr
 		gridHandleMap[childNodeHandle] = childNewGridHandle;
 		auto& childNewGrid = gridGroup.RefGrid(childNewGridHandle);
 		const auto& prevGrid = gridGroup.RefGrid(newGridHandle);
-		for (const auto& cellHandle : newGridCellMap)
+		for (const auto& cellHandle : availableCellHandles)
 		{
-			const auto& allocatedCell = prevGrid.PeekCell(cellHandle.second);
-			auto coordinate = allocatedCell.GetCoordinate();
-			const auto childNewCellHandle = childNewGrid.Allocate(coordinate);
+			const auto& allocatedCell = prevGrid.PeekCell(cellHandle);
+			const auto childNewCellHandle = childNewGrid.Allocate(prevGrid.GetPosition(cellHandle));
 			auto& childNewCell = childNewGrid.RefCell(childNewCellHandle);
 			childNewCell.m_data.m_pipeHandle = allocatedCell.m_data.m_pipeHandle;
 		}
@@ -241,14 +250,14 @@ void PipeModel::SplitPipes(std::unordered_map<NodeHandle, HexagonGridHandle>& gr
 			auto& childNewCell = childNewGrid.RefCell(cell.GetHandle());
 			const auto childNewPipeNodeHandle = pipeGroup.Extend(childNewCell.m_data.m_pipeHandle);
 			auto& childNewPipeNode = pipeGroup.RefPipeNode(childNewPipeNodeHandle);
-			childNewPipeNode.m_info.m_localPosition = pipeModelParameters.m_pipeRadius * 2.0f * childNewGrid.GetPosition(childNewCell.GetCoordinate());
+			childNewPipeNode.m_info.m_localPosition = pipeModelParameters.m_pipeRadius * 2.0f * childNewGrid.GetPosition(cell.GetHandle());
 			childNewPipeNode.m_data.m_nodeHandle = childNodeHandle;
 		}
 	}
 }
 
-void PipeModel::ExtractCells(const int cellCount, const std::multimap<float, HexagonCellHandle>& sortedCellHandles,
-                             std::map<std::pair<int, int>, HexagonCellHandle>& newGridCellMap, 
+void PipeModel::ExtractCells(const int cellCount, const std::multimap<float, CellHandle>& sortedCellHandles,
+	std::set<CellHandle>& availableCellHandles,
                              const PipeModelHexagonGrid& prevGrid,
                              PipeModelHexagonGrid& childNewGrid)
 {
@@ -258,33 +267,28 @@ void PipeModel::ExtractCells(const int cellCount, const std::multimap<float, Hex
 		const auto allocatedCellHandle = it->second;
 		++it;
 		const auto& allocatedCell = prevGrid.PeekCell(allocatedCellHandle);
-		auto coordinate = allocatedCell.GetCoordinate();
-		newGridCellMap.erase({ coordinate.x, coordinate.y });
-		const auto childNewCellHandle = childNewGrid.Allocate(coordinate);
+		availableCellHandles.erase(allocatedCellHandle);
+		const auto childNewCellHandle = childNewGrid.Allocate(prevGrid.GetPosition(allocatedCellHandle));
 		auto& childNewCell = childNewGrid.RefCell(childNewCellHandle);
 		childNewCell.m_data.m_pipeHandle = allocatedCell.m_data.m_pipeHandle;
 	}
 }
 
-void PipeModel::SortCells(const CellSortSettings& cellExtractionSettings, std::multimap<float, HexagonCellHandle>& sortedCellHandles, const std::map<std::pair<int, int>, HexagonCellHandle>& newGridCellMap, const PipeModelHexagonGrid& prevGrid, const glm::vec2& direction)
+void PipeModel::SortCells(const CellSortSettings& cellSortSettings, std::multimap<float, CellHandle>& sortedCellHandles, const std::set<CellHandle>& availableCellHandles, const PipeModelHexagonGrid& prevGrid, const glm::vec2& direction)
 {
 	//1. Find start cell.
-	std::multimap<float, HexagonCellHandle> distanceSortedCellHandles;
+	std::multimap<float, CellHandle> distanceSortedCellHandles;
 	auto avgPosition = glm::vec2(0.0f);
-	auto sumCoordinate = glm::ivec2(0, 0);
-	for (const auto& i : newGridCellMap) {
-		const auto& prevCell = prevGrid.PeekCell(i.second);
-		avgPosition += prevGrid.GetPosition(prevCell.GetCoordinate());
-		sumCoordinate += prevCell.GetCoordinate();
+	for (const auto& i : availableCellHandles) {
+		avgPosition += prevGrid.GetPosition(i);
 	}
-	avgPosition /= newGridCellMap.size();
-	for (const auto& i : newGridCellMap) {
-		const auto& prevCell = prevGrid.PeekCell(i.second);
-		auto position = prevGrid.GetPosition(prevCell.GetCoordinate());// -avgPosition;
+	avgPosition /= availableCellHandles.size();
+	for (const auto& i : availableCellHandles) {
+		auto position = prevGrid.GetPosition(i) - avgPosition;
 		const float distance = glm::dot(position, direction) / glm::length(direction);
-		distanceSortedCellHandles.insert({ -distance, i.second });
+		distanceSortedCellHandles.insert({ -distance, i });
 	}
-	if(cellExtractionSettings.m_flatCut)
+	if(cellSortSettings.m_flatCut)
 	{
 		sortedCellHandles = distanceSortedCellHandles;
 		return;
@@ -293,11 +297,10 @@ void PipeModel::SortCells(const CellSortSettings& cellExtractionSettings, std::m
 	const auto baseCellHandle = distanceSortedCellHandles.begin()->second;
 	const auto& baseCell = prevGrid.PeekCell(baseCellHandle);
 	const auto basePosition = prevGrid.GetPosition(baseCell.GetCoordinate());
-	for (const auto& i : newGridCellMap) {
-		const auto& prevCell = prevGrid.PeekCell(i.second);
-		auto position = prevGrid.GetPosition(prevCell.GetCoordinate());
+	for (const auto& i : availableCellHandles) {
+		auto position = prevGrid.GetPosition(i);
 		float distance = glm::distance(position, basePosition);
-		sortedCellHandles.insert({ distance, prevCell.GetHandle() });
+		sortedCellHandles.insert({ distance, i });
 	}
 }
 
