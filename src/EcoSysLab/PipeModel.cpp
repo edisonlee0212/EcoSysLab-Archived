@@ -99,6 +99,7 @@ void PipeModel::DistributePipes(PipeModelBaseHexagonGrid baseGrid, PipeModelSkel
 	{
 		auto& node = targetSkeleton.RefNode(nodeHandle);
 		auto& nodeData = node.m_data;
+		if(gridHandleMap.find(nodeHandle) == gridHandleMap.end()) continue;
 		//Create a hexagon grid for every node that has multiple child, and a hexagon grid for each child.
 		const auto currentGridHandle = gridHandleMap.at(nodeHandle);
 		//No pipe left for this node.
