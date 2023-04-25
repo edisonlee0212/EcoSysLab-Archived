@@ -424,6 +424,11 @@ void EcoSysLabLayer::ResetAllTrees(const std::vector<Entity>* treeEntities)
 	if (scene->IsEntityValid(m_selectedTree)) m_treeVisualizer.Reset(scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock()->m_treeModel);
 }
 
+const std::vector<glm::vec3>& EcoSysLabLayer::RandomColors()
+{
+	return m_randomColors;
+}
+
 void EcoSysLabLayer::OnInspect() {
 	auto scene = GetScene();
 	if (ImGui::Begin("EcoSysLab Layer")) {

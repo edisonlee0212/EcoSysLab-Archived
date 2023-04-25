@@ -152,7 +152,7 @@ namespace EcoSysLab {
 		void GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings) const;
 		void ClearGeometries() const;
 		void ResetAllTrees(const std::vector<Entity>* treeEntities);
-
+		const std::vector<glm::vec3>& RandomColors();
 	};
 
 	

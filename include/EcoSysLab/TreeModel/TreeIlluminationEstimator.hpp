@@ -1,5 +1,5 @@
 #pragma once
-#include "Voxel.hpp"
+#include "VoxelGrid.hpp"
 using namespace UniEngine;
 namespace EcoSysLab
 {
@@ -29,7 +29,7 @@ namespace EcoSysLab
 	{
 	public:
 		IlluminationEstimationSettings m_settings;
-		Voxel<ShadowVoxel> m_voxel;
+		VoxelGrid<ShadowVoxel> m_voxel;
 		[[nodiscard]] float IlluminationEstimation(const glm::vec3& position, glm::vec3& lightDirection) const;
 		void AddShadowVolume(const ShadowVolume& shadowVolume);
 	};

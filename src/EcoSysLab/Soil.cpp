@@ -14,7 +14,7 @@ bool OnInspectSoilParameters(SoilParameters& soilParameters)
 	bool changed = false;
 	if (ImGui::TreeNodeEx("Soil Parameters", ImGuiTreeNodeFlags_DefaultOpen))
 	{
-		if (ImGui::InputInt3("Voxel Resolution", (int*)&soilParameters.m_voxelResolution))
+		if (ImGui::InputInt3("VoxelGrid Resolution", (int*)&soilParameters.m_voxelResolution))
 		{
 			changed = true;
 		}
@@ -216,12 +216,12 @@ void SoilDescriptor::OnInspect()
 
 	/*
 	glm::ivec3 resolution = m_voxelResolution;
-	if (ImGui::DragInt3("Voxel Resolution", &resolution.x, 1, 1, 100))
+	if (ImGui::DragInt3("VoxelGrid Resolution", &resolution.x, 1, 1, 100))
 	{
 		m_voxelResolution = resolution;
 		changed = true;
 	}
-	if (ImGui::DragFloat3("Voxel Bounding box min", &m_boundingBoxMin.x, 0.01f))
+	if (ImGui::DragFloat3("VoxelGrid Bounding box min", &m_boundingBoxMin.x, 0.01f))
 	{
 		changed = true;
 	}

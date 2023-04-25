@@ -21,7 +21,7 @@ namespace EcoSysLab {
 
 	*/
 	template <typename VoxelData>
-	class Voxel
+	class VoxelGrid
 	{
 		std::vector<VoxelData> m_data;
 		glm::vec3 m_minBound = glm::vec3(0.0f);
@@ -49,11 +49,13 @@ namespace EcoSysLab {
 		[[nodiscard]] glm::vec3	GetPosition(int index) const;
 		[[nodiscard]] glm::vec3	GetPosition(const glm::ivec3& coordinate) const;
 
+		[[nodiscard]] void ForEach(const glm::vec3& minBound, const glm::vec3& maxBound, const std::function<void(VoxelData& data)>& func);
+		[[nodiscard]] void ForEach(const glm::vec3& center, float radius, const std::function<void(VoxelData& data)>& func);
 		[[nodiscard]] bool IsValid(const glm::vec3& position) const;
 	};
 
 	template <typename VoxelData>
-	void Voxel<VoxelData>::Initialize(const float voxelSize, const glm::ivec3& resolution, const glm::vec3& minBound, const VoxelData& defaultData)
+	void VoxelGrid<VoxelData>::Initialize(const float voxelSize, const glm::ivec3& resolution, const glm::vec3& minBound, const VoxelData& defaultData)
 	{
 		m_resolution = resolution;
 		m_voxelSize = voxelSize;
@@ -64,9 +66,9 @@ namespace EcoSysLab {
 	}
 
 	template <typename VoxelData>
-	void Voxel<VoxelData>::Initialize(const float voxelSize, const glm::vec3& minBound, const glm::vec3& maxBound, const VoxelData& defaultData)
+	void VoxelGrid<VoxelData>::Initialize(const float voxelSize, const glm::vec3& minBound, const glm::vec3& maxBound, const VoxelData& defaultData)
 	{
-		Initialize(voxelSize, 
+		Initialize(voxelSize,
 			glm::ivec3(
 				glm::ceil((maxBound.x - minBound.x) / voxelSize),
 				glm::ceil((maxBound.y - minBound.y) / voxelSize),
@@ -74,79 +76,79 @@ namespace EcoSysLab {
 	}
 
 	template <typename VoxelData>
-	size_t Voxel<VoxelData>::GetVoxelSize() const
+	size_t VoxelGrid<VoxelData>::GetVoxelSize() const
 	{
 		return m_data.size();
 	}
 
 	template <typename VoxelData>
-	glm::ivec3 Voxel<VoxelData>::GetResolution() const
+	glm::ivec3 VoxelGrid<VoxelData>::GetResolution() const
 	{
 		return m_resolution;
 	}
 
 	template <typename VoxelData>
-	glm::vec3 Voxel<VoxelData>::GetMinBound() const
+	glm::vec3 VoxelGrid<VoxelData>::GetMinBound() const
 	{
 		return m_minBound;
 	}
 
 	template <typename VoxelData>
-	float Voxel<VoxelData>::GetVoxelDiameter() const
+	float VoxelGrid<VoxelData>::GetVoxelDiameter() const
 	{
 		return m_voxelSize;
 	}
 
 	template <typename VoxelData>
-	VoxelData& Voxel<VoxelData>::Ref(const int index)
+	VoxelData& VoxelGrid<VoxelData>::Ref(const int index)
 	{
 		return m_data[index];
 	}
 
 	template <typename VoxelData>
-	const VoxelData& Voxel<VoxelData>::Peek(const int index) const
+	const VoxelData& VoxelGrid<VoxelData>::Peek(const int index) const
 	{
 		return m_data[index];
 	}
 
 	template <typename VoxelData>
-	VoxelData& Voxel<VoxelData>::Ref(const glm::ivec3& coordinate)
+	VoxelData& VoxelGrid<VoxelData>::Ref(const glm::ivec3& coordinate)
 	{
 		return Ref(GetIndex(coordinate));
 	}
 
 	template <typename VoxelData>
-	const VoxelData& Voxel<VoxelData>::Peek(const glm::ivec3& coordinate) const
+	const VoxelData& VoxelGrid<VoxelData>::Peek(const glm::ivec3& coordinate) const
 	{
 		return Peek(GetIndex(coordinate));
 	}
 
 	template <typename VoxelData>
-	VoxelData& Voxel<VoxelData>::Ref(const glm::vec3& position)
+	VoxelData& VoxelGrid<VoxelData>::Ref(const glm::vec3& position)
 	{
 		return Ref(GetIndex(position));
 	}
 
 	template <typename VoxelData>
-	const VoxelData& Voxel<VoxelData>::Peek(const glm::vec3& position) const
+	const VoxelData& VoxelGrid<VoxelData>::Peek(const glm::vec3& position) const
 	{
 		return Peek(GetIndex(position));
 	}
 
 	template <typename VoxelData>
-	int Voxel<VoxelData>::GetIndex(const glm::ivec3& coordinate) const
+	int VoxelGrid<VoxelData>::GetIndex(const glm::ivec3& coordinate) const
 	{
 		return coordinate.x + coordinate.y * m_resolution.x + coordinate.z * m_resolution.x * m_resolution.y;
 	}
 
 	template <typename VoxelData>
-	int Voxel<VoxelData>::GetIndex(const glm::vec3& position) const
+	int VoxelGrid<VoxelData>::GetIndex(const glm::vec3& position) const
 	{
 		return GetIndex(GetCoordinate(position));
 	}
 
 	template <typename VoxelData>
-	glm::ivec3 Voxel<VoxelData>::GetCoordinate(int index) const
+	glm::ivec3 VoxelGrid<VoxelData>::GetCoordinate(int index) const
 	{
 		return {
 			index % m_resolution.x,
@@ -155,7 +157,7 @@ namespace EcoSysLab {
 	}
 
 	template <typename VoxelData>
-	glm::ivec3 Voxel<VoxelData>::GetCoordinate(const glm::vec3& position) const
+	glm::ivec3 VoxelGrid<VoxelData>::GetCoordinate(const glm::vec3& position) const
 	{
 		return {
 			floor((position.x - m_minBound.x) / m_voxelSize),
@@ -165,7 +167,7 @@ namespace EcoSysLab {
 	}
 
 	template <typename VoxelData>
-	glm::vec3 Voxel<VoxelData>::GetPosition(const glm::ivec3& coordinate) const
+	glm::vec3 VoxelGrid<VoxelData>::GetPosition(const glm::ivec3& coordinate) const
 	{
 		return {
 			m_minBound.x + m_voxelSize / 2.0 + coordinate.x * m_voxelSize,
@@ -175,7 +177,46 @@ namespace EcoSysLab {
 	}
 
 	template <typename VoxelData>
-	bool Voxel<VoxelData>::IsValid(const glm::vec3& position) const
+	void VoxelGrid<VoxelData>::ForEach(const glm::vec3& minBound, const glm::vec3& maxBound,
+		const std::function<void(VoxelData& data)>& func)
+	{
+		const glm::vec3 boundSize = maxBound - minBound;
+		const glm::ivec3 start = glm::max(glm::ivec3(glm::floor(minBound / glm::vec3(m_voxelSize))), glm::ivec3(0));
+		const glm::ivec3 span = glm::ceil(boundSize / glm::vec3(m_voxelSize));
+		for (int i = start.x; i <= start.x + span.x; i++) {
+			for (int j = start.y; j <= start.y + span.y; j++) {
+				for (int k = start.z; k <= start.z + span.z; k++) {
+					auto index = GetIndex(glm::ivec3(i, j, k));
+					if (index >= m_data.size()) continue;
+					func(Ref(index));
+				}
+			}
+		}
+	}
+
+	template <typename VoxelData>
+	void VoxelGrid<VoxelData>::ForEach(const glm::vec3& center, float radius,
+		const std::function<void(VoxelData& data)>& func)
+	{
+		const glm::vec3 minBound = center - glm::vec3(radius);
+		const glm::vec3 maxBound = center + glm::vec3(radius);
+		const glm::vec3 boundSize = maxBound - minBound;
+		const glm::ivec3 start = glm::max(glm::ivec3(glm::floor(minBound / glm::vec3(m_voxelSize))), glm::ivec3(0));
+		const glm::ivec3 span = glm::ceil(boundSize / glm::vec3(m_voxelSize));
+		for (int i = start.x; i <= start.x + span.x; i++) {
+			for (int j = start.y; j <= start.y + span.y; j++) {
+				for (int k = start.z; k <= start.z + span.z; k++) {
+					auto index = GetIndex(glm::ivec3(i, j, k));
+					if (index >= m_data.size()) continue;
+					if (glm::distance(GetPosition(index), center) > radius + m_voxelSize / 2.0f) continue;
+					func(Ref(index));
+				}
+			}
+		}
+	}
+
+	template <typename VoxelData>
+	bool VoxelGrid<VoxelData>::IsValid(const glm::vec3& position) const
 	{
 		const auto maxBound = m_minBound + m_voxelSize * glm::vec3(m_resolution);
 		if (position.x < m_minBound.x || position.y < m_minBound.y || position.z < m_minBound.z
@@ -184,7 +225,7 @@ namespace EcoSysLab {
 	}
 
 	template <typename VoxelData>
-	glm::vec3 Voxel<VoxelData>::GetPosition(const int index) const
+	glm::vec3 VoxelGrid<VoxelData>::GetPosition(const int index) const
 	{
 		return GetPosition(GetCoordinate(index));
 	}

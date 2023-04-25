@@ -24,6 +24,7 @@
 #include "HeightField.hpp"
 #include "ObjectRotator.hpp"
 #include "SorghumLayer.hpp"
+#include "TreePointCloud.hpp"
 #ifdef RAYTRACERFACILITY
 using namespace RayTracerFacility;
 #endif
@@ -34,6 +35,7 @@ void EngineSetup();
 
 int main() {
     ClassRegistry::RegisterPrivateComponent<Tree>("Tree");
+    ClassRegistry::RegisterPrivateComponent<TreePointCloud>("TreePointCloud");
     ClassRegistry::RegisterPrivateComponent<Soil>("Soil");
     ClassRegistry::RegisterPrivateComponent<Climate>("Climate");
     ClassRegistry::RegisterPrivateComponent<ObjectRotator>("ObjectRotator");
