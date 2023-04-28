@@ -355,8 +355,7 @@ void EcoSysLabLayer::LateUpdate() {
 				if (scene->IsEntityValid(m_selectedTree)) {
 						m_treeVisualizer.Visualize(
 										scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock()->m_treeModel,
-										scene->GetDataComponent<GlobalTransform>(m_selectedTree), m_visualizationCamera, editorLayer->m_sceneCameraPosition,
-										editorLayer->m_sceneCameraRotation);
+										scene->GetDataComponent<GlobalTransform>(m_selectedTree));
 				}
 
 				if (m_displayBoundingBox && !m_boundingBoxMatrices.empty()) {

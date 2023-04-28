@@ -4,7 +4,8 @@
 
 #include "TreeVisualizer.hpp"
 #include "Utilities.hpp"
-
+#include "Application.hpp"
+#include "EcoSysLabLayer.hpp"
 using namespace EcoSysLab;
 
 bool TreeVisualizer::DrawInternodeInspectionGui(
@@ -239,107 +240,107 @@ TreeVisualizer::OnInspect(
 }
 
 bool TreeVisualizer::Visualize(TreeModel &treeModel,
-															 const GlobalTransform &globalTransform, const std::shared_ptr<Camera> &cameraComponent,
-															 const glm::vec3 &cameraPosition,
-															 const glm::quat &cameraRotation) {
+															 const GlobalTransform &globalTransform) {
 		bool updated = false;
+		auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
 		const auto &treeSkeleton = treeModel.PeekShootSkeleton(m_iteration);
 		const auto &rootSkeleton = treeModel.PeekRootSkeleton(m_iteration);
 		if (m_visualization) {
 				const auto editorLayer = Application::GetLayer<EditorLayer>();
-				switch (m_mode) {
-						case PruningMode::None: {
-								if (Inputs::GetMouseInternal(GLFW_MOUSE_BUTTON_LEFT, Windows::GetWindow())) {
-										if (RayCastSelection(treeSkeleton, globalTransform, m_selectedInternodeHandle,
-																				 m_selectedInternodeHierarchyList, m_selectedInternodeLengthFactor)) {
-												m_needUpdate = true;
-												updated = true;
-												m_selectedRootNodeHandle = -1;
-												m_selectedRootNodeHierarchyList.clear();
-										} else if (RayCastSelection(rootSkeleton, globalTransform, m_selectedRootNodeHandle,
-																								m_selectedRootNodeHierarchyList, m_selectedRootNodeLengthFactor)) {
-												m_needUpdate = true;
-												updated = true;
-												m_selectedInternodeHandle = -1;
-												m_selectedInternodeHierarchyList.clear();
-										}
-								}
-								if (m_iteration == treeModel.CurrentIteration() &&
-										Inputs::GetKeyInternal(GLFW_KEY_DELETE,
-																					 Windows::GetWindow())) {
-										if (m_selectedInternodeHandle > 0) {
-												treeModel.Step();
-												auto &skeleton = treeModel.RefShootSkeleton();
-												auto &pruningInternode = skeleton.RefNode(m_selectedInternodeHandle);
-												auto childHandles = pruningInternode.RefChildHandles();
-												for (const auto &childHandle: childHandles) {
-														treeModel.PruneInternode(childHandle);
-												}
-												pruningInternode.m_info.m_length *= m_selectedInternodeLengthFactor;
-												m_selectedInternodeLengthFactor = 1.0f;
-												for (auto &bud: pruningInternode.m_data.m_buds) {
-														bud.m_status = BudStatus::Died;
-												}
-												skeleton.SortLists();
-												m_iteration = treeModel.CurrentIteration();
-												m_needUpdate = true;
-												updated = true;
-										}
-										if (m_selectedRootNodeHandle > 0) {
-												treeModel.Step();
-												auto &skeleton = treeModel.RefRootSkeleton();
-												auto &pruningRootNode = skeleton.RefNode(m_selectedRootNodeHandle);
-												auto childHandles = pruningRootNode.RefChildHandles();
-												for (const auto &childHandle: childHandles) {
-														treeModel.PruneRootNode(childHandle);
-												}
-												pruningRootNode.m_info.m_length *= m_selectedRootNodeLengthFactor;
-												m_selectedRootNodeLengthFactor = 1.0f;
-												skeleton.SortLists();
-												m_iteration = treeModel.CurrentIteration();
-												m_needUpdate = true;
-												updated = true;
-										}
-								}
-						}
-								break;
-						case PruningMode::Stroke: {
-								if (m_iteration == treeModel.CurrentIteration()) {
+				if(ecoSysLabLayer->m_visualizationCameraWindowFocused) {
+						switch (m_mode) {
+								case PruningMode::None: {
 										if (Inputs::GetMouseInternal(GLFW_MOUSE_BUTTON_LEFT, Windows::GetWindow())) {
-												glm::vec2 mousePosition = editorLayer->GetMouseScreenPosition();
-												const float halfX = editorLayer->m_sceneCamera->GetResolution().x / 2.0f;
-												const float halfY = editorLayer->m_sceneCamera->GetResolution().y / 2.0f;
-												mousePosition = {-1.0f * (mousePosition.x - halfX) / halfX,
-																				 -1.0f * (mousePosition.y - halfY) / halfY};
-												if (mousePosition.x > -1.0f && mousePosition.x < 1.0f && mousePosition.y > -1.0f &&
-														mousePosition.y < 1.0f &&
-														(m_storedMousePositions.empty() || mousePosition != m_storedMousePositions.back())) {
-														m_storedMousePositions.emplace_back(mousePosition);
+												if (RayCastSelection(ecoSysLabLayer->m_visualizationCamera, ecoSysLabLayer->m_visualizationCameraMousePosition, treeSkeleton, globalTransform, m_selectedInternodeHandle,
+																						 m_selectedInternodeHierarchyList, m_selectedInternodeLengthFactor)) {
+														m_needUpdate = true;
+														updated = true;
+														m_selectedRootNodeHandle = -1;
+														m_selectedRootNodeHierarchyList.clear();
+												} else if (RayCastSelection(ecoSysLabLayer->m_visualizationCamera, ecoSysLabLayer->m_visualizationCameraMousePosition, rootSkeleton, globalTransform, m_selectedRootNodeHandle,
+																										m_selectedRootNodeHierarchyList, m_selectedRootNodeLengthFactor)) {
+														m_needUpdate = true;
+														updated = true;
+														m_selectedInternodeHandle = -1;
+														m_selectedInternodeHierarchyList.clear();
 												}
-										} else {
-												//Once released, check if empty.
-												if (!m_storedMousePositions.empty()) {
+										}
+										if (m_iteration == treeModel.CurrentIteration() &&
+												Inputs::GetKeyInternal(GLFW_KEY_DELETE,
+																							 Windows::GetWindow())) {
+												if (m_selectedInternodeHandle > 0) {
 														treeModel.Step();
 														auto &skeleton = treeModel.RefShootSkeleton();
-														bool changed = ScreenCurvePruning(
-																		[&](NodeHandle nodeHandle) { treeModel.PruneInternode(nodeHandle); }, skeleton,
-																		globalTransform, m_selectedInternodeHandle, m_selectedInternodeHierarchyList);
-														if (changed) {
-																skeleton.SortLists();
-																m_iteration = treeModel.CurrentIteration();
-																m_needUpdate = true;
-																updated = true;
-														} else {
-																treeModel.Pop();
+														auto &pruningInternode = skeleton.RefNode(m_selectedInternodeHandle);
+														auto childHandles = pruningInternode.RefChildHandles();
+														for (const auto &childHandle: childHandles) {
+																treeModel.PruneInternode(childHandle);
 														}
-														m_storedMousePositions.clear();
+														pruningInternode.m_info.m_length *= m_selectedInternodeLengthFactor;
+														m_selectedInternodeLengthFactor = 1.0f;
+														for (auto &bud: pruningInternode.m_data.m_buds) {
+																bud.m_status = BudStatus::Died;
+														}
+														skeleton.SortLists();
+														m_iteration = treeModel.CurrentIteration();
+														m_needUpdate = true;
+														updated = true;
+												}
+												if (m_selectedRootNodeHandle > 0) {
+														treeModel.Step();
+														auto &skeleton = treeModel.RefRootSkeleton();
+														auto &pruningRootNode = skeleton.RefNode(m_selectedRootNodeHandle);
+														auto childHandles = pruningRootNode.RefChildHandles();
+														for (const auto &childHandle: childHandles) {
+																treeModel.PruneRootNode(childHandle);
+														}
+														pruningRootNode.m_info.m_length *= m_selectedRootNodeLengthFactor;
+														m_selectedRootNodeLengthFactor = 1.0f;
+														skeleton.SortLists();
+														m_iteration = treeModel.CurrentIteration();
+														m_needUpdate = true;
+														updated = true;
 												}
 										}
 								}
+										break;
+								case PruningMode::Stroke: {
+										if (m_iteration == treeModel.CurrentIteration()) {
+												if (Inputs::GetMouseInternal(GLFW_MOUSE_BUTTON_LEFT, Windows::GetWindow())) {
+														glm::vec2 mousePosition = editorLayer->GetMouseScreenPosition();
+														const float halfX = editorLayer->m_sceneCamera->GetResolution().x / 2.0f;
+														const float halfY = editorLayer->m_sceneCamera->GetResolution().y / 2.0f;
+														mousePosition = {-1.0f * (mousePosition.x - halfX) / halfX,
+																						 -1.0f * (mousePosition.y - halfY) / halfY};
+														if (mousePosition.x > -1.0f && mousePosition.x < 1.0f && mousePosition.y > -1.0f &&
+																mousePosition.y < 1.0f &&
+																(m_storedMousePositions.empty() || mousePosition != m_storedMousePositions.back())) {
+																m_storedMousePositions.emplace_back(mousePosition);
+														}
+												} else {
+														//Once released, check if empty.
+														if (!m_storedMousePositions.empty()) {
+																treeModel.Step();
+																auto &skeleton = treeModel.RefShootSkeleton();
+																bool changed = ScreenCurvePruning(
+																				[&](NodeHandle nodeHandle) { treeModel.PruneInternode(nodeHandle); }, skeleton,
+																				globalTransform, m_selectedInternodeHandle, m_selectedInternodeHierarchyList);
+																if (changed) {
+																		skeleton.SortLists();
+																		m_iteration = treeModel.CurrentIteration();
+																		m_needUpdate = true;
+																		updated = true;
+																} else {
+																		treeModel.Pop();
+																}
+																m_storedMousePositions.clear();
+														}
+												}
+										}
+								}
+										break;
 						}
-								break;
 				}
-
 
 				if (m_needUpdate) {
 						SyncMatrices(treeSkeleton, m_internodeMatrices, m_internodeColors, m_selectedInternodeHandle,
@@ -367,9 +368,9 @@ bool TreeVisualizer::Visualize(TreeModel &treeModel,
 								m_internodeColors[0] = glm::vec4(0.0f);
 						}
 						Gizmos::DrawGizmoMeshInstancedColored(
-										DefaultResources::Primitives::Cylinder, cameraComponent,
-										cameraPosition,
-										cameraRotation,
+										DefaultResources::Primitives::Cylinder, ecoSysLabLayer->m_visualizationCamera,
+										editorLayer->m_sceneCameraPosition,
+										editorLayer->m_sceneCameraRotation,
 										m_internodeColors,
 										m_internodeMatrices,
 										globalTransform.m_value, 1.0f, gizmoSettings);
@@ -383,9 +384,9 @@ bool TreeVisualizer::Visualize(TreeModel &treeModel,
 								m_rootNodeColors[0] = glm::vec4(0.0f);
 						}
 						Gizmos::DrawGizmoMeshInstancedColored(
-										DefaultResources::Primitives::Cylinder, cameraComponent,
-										cameraPosition,
-										cameraRotation,
+										DefaultResources::Primitives::Cylinder, ecoSysLabLayer->m_visualizationCamera,
+										editorLayer->m_sceneCameraPosition,
+										editorLayer->m_sceneCameraRotation,
 										m_rootNodeColors,
 										m_rootNodeMatrices,
 										globalTransform.m_value, 1.0f, gizmoSettings);

@@ -20,6 +20,7 @@ namespace EcoSysLab {
 	};
 
 	class EcoSysLabLayer : public ILayer {
+		friend class TreeVisualizer;
 		bool m_displayShootStem = true;
 		bool m_displayFoliage = true;
 		bool m_displayFruit = true;

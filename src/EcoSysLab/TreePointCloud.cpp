@@ -58,7 +58,7 @@ void TreePointCloud::OnInspect()
 		previousHandle = GetHandle();
 		matrices.resize(m_points.size());
 		colors.resize(m_points.size());
-		auto& ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
+		const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
 		for (int i = 0; i < m_points.size(); i++)
 		{
 			matrices[i] = glm::translate(m_points[i].m_position) * glm::scale(glm::vec3(pointSize));

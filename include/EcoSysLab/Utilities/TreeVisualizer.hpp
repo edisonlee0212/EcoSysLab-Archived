@@ -65,7 +65,8 @@ namespace EcoSysLab {
 
 		template<typename SkeletonData, typename FlowData, typename NodeData>
 		bool
-		RayCastSelection(const Skeleton<SkeletonData, FlowData, NodeData> &skeleton,
+		RayCastSelection(const std::shared_ptr<Camera> &cameraComponent,
+										 const glm::vec2 &mousePosition, const Skeleton<SkeletonData, FlowData, NodeData> &skeleton,
 										 const GlobalTransform &globalTransform, NodeHandle &selectedNodeHandle,
 										 std::vector<NodeHandle> &hierarchyList, float &lengthFactor);
 
@@ -139,9 +140,7 @@ namespace EcoSysLab {
 							const GlobalTransform &globalTransform);
 
 		bool Visualize(TreeModel &treeModel,
-									 const GlobalTransform &globalTransform, const std::shared_ptr<Camera> &cameraComponent,
-									 const glm::vec3 &cameraPosition,
-									 const glm::quat &cameraRotation);
+									 const GlobalTransform &globalTransform);
 
 		void Reset(TreeModel &treeModel);
 
@@ -232,91 +231,89 @@ namespace EcoSysLab {
 	}
 
 	template<typename SkeletonData, typename FlowData, typename NodeData>
-	bool TreeVisualizer::RayCastSelection(const Skeleton<SkeletonData, FlowData, NodeData> &skeleton,
+	bool TreeVisualizer::RayCastSelection(const std::shared_ptr<Camera> &cameraComponent,
+																				const glm::vec2 &mousePosition,
+																				const Skeleton<SkeletonData, FlowData, NodeData> &skeleton,
 																				const GlobalTransform &globalTransform, NodeHandle &selectedNodeHandle,
 																				std::vector<NodeHandle> &hierarchyList, float &lengthFactor) {
 			auto editorLayer = Application::GetLayer<EditorLayer>();
 			bool changed = false;
-
-			if (editorLayer->SceneCameraWindowFocused()) {
 #pragma region Ray selection
-					NodeHandle currentFocusingNodeHandle = -1;
-					std::mutex writeMutex;
-					float minDistance = FLT_MAX;
-					GlobalTransform cameraLtw;
-					cameraLtw.m_value =
-									glm::translate(
-													editorLayer->m_sceneCameraPosition) *
-									glm::mat4_cast(
-													editorLayer->m_sceneCameraRotation);
-					const Ray cameraRay = editorLayer->m_sceneCamera->ScreenPointToRay(
-									cameraLtw, editorLayer->GetMouseScreenPosition());
-					const auto &sortedFlowList = skeleton.RefSortedFlowList();
-					const auto &sortedNodeList = skeleton.RefSortedNodeList();
-					std::vector<std::shared_future<void>> results;
-					Jobs::ParallelFor(sortedNodeList.size(), [&](unsigned i) {
-						const auto &node = skeleton.PeekNode(sortedNodeList[i]);
-						auto rotation = globalTransform.GetRotation() * node.m_info.m_globalRotation;
-						glm::vec3 position = (globalTransform.m_value *
-																	glm::translate(node.m_info.m_globalPosition))[3];
-						const auto direction = glm::normalize(rotation * glm::vec3(0, 0, -1));
-						const glm::vec3 position2 =
-										position + node.m_info.m_length * direction;
-						const auto center =
-										(position + position2) / 2.0f;
-						auto radius = node.m_info.m_thickness;
-						const auto height = glm::distance(position2,
-																							position);
-						radius *= height / node.m_info.m_length;
-						if (!cameraRay.Intersect(center,
-																		 height / 2.0f) && !cameraRay.Intersect(center,
-																																						radius)) {
-								return;
-						}
-						const auto &dir = -cameraRay.m_direction;
+			NodeHandle currentFocusingNodeHandle = -1;
+			std::mutex writeMutex;
+			float minDistance = FLT_MAX;
+			GlobalTransform cameraLtw;
+			cameraLtw.m_value =
+							glm::translate(
+											editorLayer->m_sceneCameraPosition) *
+							glm::mat4_cast(
+											editorLayer->m_sceneCameraRotation);
+			const Ray cameraRay = cameraComponent->ScreenPointToRay(
+							cameraLtw, mousePosition);
+			const auto &sortedNodeList = skeleton.RefSortedNodeList();
+			std::vector<std::shared_future<void>> results;
+			Jobs::ParallelFor(sortedNodeList.size(), [&](unsigned i) {
+				const auto &node = skeleton.PeekNode(sortedNodeList[i]);
+				auto rotation = globalTransform.GetRotation() * node.m_info.m_globalRotation;
+				glm::vec3 position = (globalTransform.m_value *
+															glm::translate(node.m_info.m_globalPosition))[3];
+				const auto direction = glm::normalize(rotation * glm::vec3(0, 0, -1));
+				const glm::vec3 position2 =
+								position + node.m_info.m_length * direction;
+				const auto center =
+								(position + position2) / 2.0f;
+				auto radius = node.m_info.m_thickness;
+				const auto height = glm::distance(position2,
+																					position);
+				radius *= height / node.m_info.m_length;
+				if (!cameraRay.Intersect(center,
+																 height / 2.0f) && !cameraRay.Intersect(center,
+																																				radius)) {
+						return;
+				}
+				const auto &dir = -cameraRay.m_direction;
 #pragma region Line Line intersection
-						/*
-			* http://geomalgorithms.com/a07-_distance.html
-			*/
-						glm::vec3 v = position - position2;
-						glm::vec3 w = (cameraRay.m_start + dir) - position2;
-						const auto a = glm::dot(dir, dir); // always >= 0
-						const auto b = glm::dot(dir, v);
-						const auto c = glm::dot(v, v); // always >= 0
-						const auto d = glm::dot(dir, w);
-						const auto e = glm::dot(v, w);
-						const auto dotP = a * c - b * b; // always >= 0
-						float sc, tc;
-						// compute the line parameters of the two closest points
-						if (dotP < 0.00001f) { // the lines are almost parallel
-								sc = 0.0f;
-								tc = (b > c ? d / b : e / c); // use the largest denominator
-						} else {
-								sc = (b * e - c * d) / dotP;
-								tc = (a * e - b * d) / dotP;
-						}
-						// get the difference of the two closest points
-						glm::vec3 dP = w + sc * dir - tc * v; // =  L1(sc) - L2(tc)
-						if (glm::length(dP) > radius)
-								return;
+				/*
+	* http://geomalgorithms.com/a07-_distance.html
+	*/
+				glm::vec3 v = position - position2;
+				glm::vec3 w = (cameraRay.m_start + dir) - position2;
+				const auto a = glm::dot(dir, dir); // always >= 0
+				const auto b = glm::dot(dir, v);
+				const auto c = glm::dot(v, v); // always >= 0
+				const auto d = glm::dot(dir, w);
+				const auto e = glm::dot(v, w);
+				const auto dotP = a * c - b * b; // always >= 0
+				float sc, tc;
+				// compute the line parameters of the two closest points
+				if (dotP < 0.00001f) { // the lines are almost parallel
+						sc = 0.0f;
+						tc = (b > c ? d / b : e / c); // use the largest denominator
+				} else {
+						sc = (b * e - c * d) / dotP;
+						tc = (a * e - b * d) / dotP;
+				}
+				// get the difference of the two closest points
+				glm::vec3 dP = w + sc * dir - tc * v; // =  L1(sc) - L2(tc)
+				if (glm::length(dP) > radius)
+						return;
 #pragma endregion
 
-						const auto distance = glm::distance(
-										glm::vec3(cameraLtw.m_value[3]),
-										glm::vec3(center));
-						std::lock_guard<std::mutex> lock(writeMutex);
-						if (distance < minDistance) {
-								minDistance = distance;
-								lengthFactor = glm::clamp(1.0f - tc, 0.0f, 1.0f);
-								currentFocusingNodeHandle = sortedNodeList[i];
-						}
-					}, results);
-					for (auto &i: results) i.wait();
-					if (currentFocusingNodeHandle != -1) {
-							SetSelectedNode(skeleton, currentFocusingNodeHandle, selectedNodeHandle,
-															hierarchyList);
-							changed = true;
-					}
+				const auto distance = glm::distance(
+								glm::vec3(cameraLtw.m_value[3]),
+								glm::vec3(center));
+				std::lock_guard<std::mutex> lock(writeMutex);
+				if (distance < minDistance) {
+						minDistance = distance;
+						lengthFactor = glm::clamp(1.0f - tc, 0.0f, 1.0f);
+						currentFocusingNodeHandle = sortedNodeList[i];
+				}
+			}, results);
+			for (auto &i: results) i.wait();
+			if (currentFocusingNodeHandle != -1) {
+					SetSelectedNode(skeleton, currentFocusingNodeHandle, selectedNodeHandle,
+													hierarchyList);
+					changed = true;
 #pragma endregion
 			}
 			return changed;
