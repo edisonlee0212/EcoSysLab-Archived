@@ -7,15 +7,13 @@
 
 using namespace UniEngine;
 namespace EcoSysLab {
-	struct Fruit
-	{
+	struct Fruit {
 		GlobalTransform m_globalTransform;
 		float m_maturity = 0.0f;
 		float m_health = 1.0f;
 	};
 
-	struct Leaf
-	{
+	struct Leaf {
 		GlobalTransform m_globalTransform;
 		float m_maturity = 0.0f;
 		float m_health = 1.0f;
@@ -33,11 +31,10 @@ namespace EcoSysLab {
 		bool m_displayGroundLeaves = true;
 
 		bool m_debugVisualization = true;
-		bool m_rendering = false;
 		std::vector<int> m_shootVersions;
 		std::vector<int> m_rootVersions;
 		std::vector<glm::vec3> m_randomColors;
-		
+
 		std::vector<glm::uint> m_shootStemSegments;
 		std::vector<StrandPoint> m_shootStemPoints;
 		std::vector<glm::uint> m_rootStemSegments;
@@ -94,7 +91,9 @@ namespace EcoSysLab {
 		float m_scalarMinAlpha = 0.00f;
 
 		std::vector<glm::vec4> m_soilLayerColors;
+
 		friend class Soil;
+
 		float m_soilCutoutXDepth = 0.0f;
 		float m_soilCutoutZDepth = 0.0f;
 
@@ -102,6 +101,9 @@ namespace EcoSysLab {
 		unsigned m_scalarSoilProperty = 1;
 		std::vector<glm::mat4> m_scalarMatrices;
 		std::vector<glm::vec4> m_scalarColors;
+
+		void UpdateVisualizationCamera();
+
 		void Update() override;
 
 		void OnCreate() override;
@@ -115,14 +117,19 @@ namespace EcoSysLab {
 		void OnSoilVisualizationMenu();
 
 
-		void UpdateFlows(const std::vector<Entity>* treeEntities, const std::shared_ptr<Strands>& branchStrands, const std::shared_ptr<Strands>& rootStrands, const std::shared_ptr<Strands>& fineRootStrands, int targetTreeIndex = -1);
+		void UpdateFlows(const std::vector<Entity> *treeEntities, const std::shared_ptr<Strands> &branchStrands,
+										 const std::shared_ptr<Strands> &rootStrands, const std::shared_ptr<Strands> &fineRootStrands,
+										 int targetTreeIndex = -1);
 
 		void ClearGroundFruitAndLeaf();
+
 		void UpdateGroundFruitAndLeaves() const;
+
 		// helper functions to structure code a bit
 		void SoilVisualization();
-		void SoilVisualizationScalar(SoilModel& soilModel); // called during LateUpdate()
-		void SoilVisualizationVector(SoilModel& soilModel); // called during LateUpdate()
+
+		void SoilVisualizationScalar(SoilModel &soilModel); // called during LateUpdate()
+		void SoilVisualizationVector(SoilModel &soilModel); // called during LateUpdate()
 
 		float m_time;
 		float m_deltaTime = 0.01918f;
@@ -130,13 +137,28 @@ namespace EcoSysLab {
 		std::vector<Fruit> m_fruits;
 		std::vector<Leaf> m_leaves;
 
-	public:
+
+		std::shared_ptr<Camera> m_visualizationCamera;
+
+		glm::vec2 m_visualizationCameraMousePosition;
+		bool m_visualizationCameraWindowFocused = false;
+		public:
+		int m_visualizationCameraResolutionX = 1;
+		int m_visualizationCameraResolutionY = 1;
+		float m_lastX = 0;
+		float m_lastY = 0;
+		float m_lastScrollY = 0;
+		bool m_startMouse = false;
+		bool m_startScroll = false;
+		bool m_rightMouseButtonHold = false;
+
+
 		IlluminationEstimationSettings m_shadowEstimationSettings;
 
 
 		TreeMeshGeneratorSettings m_meshGeneratorSettings;
 		Entity m_selectedTree = {};
-		
+
 		EntityRef m_shootStemStrandsHolder;
 		EntityRef m_rootStemStrandsHolder;
 		EntityRef m_fineRootStrandsHolder;
@@ -148,12 +170,17 @@ namespace EcoSysLab {
 
 		PrivateComponentRef m_soilHolder;
 		PrivateComponentRef m_climateHolder;
+
 		void Simulate(float deltaTime);
-		void GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings) const;
+
+		void GenerateMeshes(const TreeMeshGeneratorSettings &meshGeneratorSettings) const;
+
 		void ClearGeometries() const;
-		void ResetAllTrees(const std::vector<Entity>* treeEntities);
-		const std::vector<glm::vec3>& RandomColors();
+
+		void ResetAllTrees(const std::vector<Entity> *treeEntities);
+
+		const std::vector<glm::vec3> &RandomColors();
 	};
 
-	
+
 }
