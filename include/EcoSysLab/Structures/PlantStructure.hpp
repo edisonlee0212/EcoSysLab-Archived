@@ -880,7 +880,6 @@ namespace EcoSysLab {
                 auto parentRegulatedUp = parentInfo.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
                 auto regulatedUp = glm::normalize(glm::cross(glm::cross(front, parentRegulatedUp), front));
                 nodeInfo.m_regulatedGlobalRotation = glm::quatLookAt(front, regulatedUp);
-
             }
             m_min = glm::min(m_min, nodeInfo.m_globalPosition);
             m_max = glm::max(m_max, nodeInfo.m_globalPosition);
