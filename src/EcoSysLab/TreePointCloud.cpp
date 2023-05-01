@@ -11,8 +11,8 @@ void TreePointCloud::FindPoints(PointHandle targetPoint, VoxelGrid<std::vector<P
 		auto &point = m_points[targetPoint];
 		pointVoxelGrid.ForEach(point.m_position, radius * 2.0f, [&](const std::vector<PointHandle> &pointHandles) {
 			for (const auto pointHandle: pointHandles) {
-					auto& currentPoint = m_points[pointHandle];
-					if(glm::distance(point.m_position, currentPoint.m_position) > radius) continue;
+					auto &currentPoint = m_points[pointHandle];
+					if (glm::distance(point.m_position, currentPoint.m_position) > radius) continue;
 					func(pointHandle);
 			}
 		});
@@ -25,7 +25,7 @@ void TreePointCloud::ImportCsv(const std::filesystem::path &path) {
 		m_scatterPointsConnections.clear();
 		m_min = glm::vec3(FLT_MAX);
 		m_max = glm::vec3(FLT_MIN);
-
+		int maxJunctionSize = 0;
 		for (int i = 0; i < pointSize; i++) {
 				auto &point = m_points[i];
 				point.m_handle = i;
@@ -34,15 +34,32 @@ void TreePointCloud::ImportCsv(const std::filesystem::path &path) {
 				point.m_prevHandle = doc.GetCell<int>(5, i);
 				point.m_nextHandle = -1;
 				point.m_width = doc.GetCell<float>(4, i);
-
+				maxJunctionSize = glm::max(point.m_junctionIndex, maxJunctionSize);
 				m_min = glm::min(point.m_position, m_min);
 				m_max = glm::max(point.m_position, m_max);
 		}
+		m_junctions.resize(maxJunctionSize + 1);
 		for (int i = 0; i < pointSize; i++) {
 				auto &point = m_points[i];
+				if (point.m_junctionIndex == -1) continue;
 				if (point.m_prevHandle != -1) {
 						m_points[point.m_prevHandle].m_nextHandle = i;
+				} else {
+						m_junctions[point.m_junctionIndex].m_start = point.m_position;
+						m_junctions[point.m_junctionIndex].m_startHandle = i;
 				}
+				if (point.m_nextHandle == -1) {
+						m_junctions[point.m_junctionIndex].m_end = point.m_position;
+						m_junctions[point.m_junctionIndex].m_endHandle = i;
+				}
+		}
+		for (auto &junction: m_junctions) {
+				junction.m_center = (junction.m_start + junction.m_end) / 2.0f;
+				if (glm::distance(junction.m_start, junction.m_end) == 0.0f) {
+						UNIENGINE_ERROR("Junction with zero length!");
+						continue;
+				}
+				junction.m_direction = glm::normalize(junction.m_end - junction.m_start);
 		}
 }
 
@@ -100,8 +117,10 @@ void TreePointCloud::OnInspect() {
 		if (enableDebugRendering && !matrices.empty()) {
 				Gizmos::DrawGizmoMeshInstancedColored(DefaultResources::Primitives::Cube, colors, matrices, glm::mat4(1.0f),
 																							pointSize);
-				Gizmos::DrawGizmoRays(scatterPointCollectionColor, scatterConnectionStarts, scatterConnectionEnds, connectionWidth);
-				Gizmos::DrawGizmoRays(junctionCollectionColor, junctionConnectionStarts, junctionConnectionEnds, connectionWidth);
+				Gizmos::DrawGizmoRays(scatterPointCollectionColor, scatterConnectionStarts, scatterConnectionEnds,
+															connectionWidth);
+				Gizmos::DrawGizmoRays(junctionCollectionColor, junctionConnectionStarts, junctionConnectionEnds,
+															connectionWidth);
 		}
 
 		FileUtils::OpenFile("Load CSV", "CSV", {".csv"}, [&](const std::filesystem::path &path) {
@@ -113,6 +132,9 @@ void TreePointCloud::OnInspect() {
 
 						ImGui::DragFloat("Finder step", &settings.m_finderStep, 0.01f, 0.01f, 1.0f);
 						ImGui::DragFloat("Edge width", &settings.m_edgeLength, 0.01f, 0.01f, 1.0f);
+
+						ImGui::DragFloat("Junction finder angle", &settings.m_junctionLimit, 0.01f, 0.01f, 90.0f);
+						ImGui::DragInt("Junction finder timeout", &settings.m_maxTimeout, 1, 1, 30);
 						ImGui::TreePop();
 				}
 				if (ImGui::Button("Establish Connectivity Graph")) EstablishConnectivityGraph(settings);
@@ -130,9 +152,9 @@ void TreePointCloud::EstablishConnectivityGraph(const ConnectivityGraphSettings 
 				pointVoxelGrid.Ref(point.m_position).emplace_back(point.m_handle);
 		}
 		m_scatterPointsConnections.clear();
+		m_junctionConnections.clear();
 
-
-		for(const auto& currentProcessingPointHandle : processingPoints) {
+		for (const auto &currentProcessingPointHandle: processingPoints) {
 				if (m_scatterPointsConnections.size() > 1000000) {
 						UNIENGINE_ERROR("Too much connections!");
 						return;
@@ -146,7 +168,7 @@ void TreePointCloud::EstablishConnectivityGraph(const ConnectivityGraphSettings 
 														 if (pointHandle == neighbor) return;
 												 }
 												 auto &otherPoint = m_points[pointHandle];
-												 if(otherPoint.m_junctionIndex != -1) return;
+												 if (otherPoint.m_junctionIndex != -1) return;
 												 currentProcessingPoint.m_neighbors.emplace_back(pointHandle);
 												 otherPoint.m_neighbors.emplace_back(currentProcessingPointHandle);
 												 m_scatterPointsConnections.emplace_back(currentProcessingPointHandle, pointHandle);
@@ -154,12 +176,33 @@ void TreePointCloud::EstablishConnectivityGraph(const ConnectivityGraphSettings 
 				} else {
 						float currentEdgeLength = settings.m_edgeLength;
 						int timeout = 0;
-						while (currentProcessingPoint.m_neighbors.empty() && timeout < settings.m_maxTimeout) {
+						bool isJunctionStart = currentProcessingPoint.m_prevHandle == -1;
+						const auto &junction = m_junctions[currentProcessingPoint.m_junctionIndex];
+						bool findScatterPoint = false;
+						while (!findScatterPoint && timeout < settings.m_maxTimeout) {
 								FindPoints(currentProcessingPointHandle, pointVoxelGrid, currentEdgeLength,
 													 [&](PointHandle pointHandle) {
 														 auto &otherPoint = m_points[pointHandle];
 														 if (pointHandle == currentProcessingPointHandle ||
-																 otherPoint.m_junctionIndex == currentProcessingPoint.m_junctionIndex) return;
+																 otherPoint.m_junctionIndex == currentProcessingPoint.m_junctionIndex)
+																 return;
+														 if (isJunctionStart) {
+																 if (glm::dot(glm::normalize(otherPoint.m_position - junction.m_center),
+																							-junction.m_direction) <
+																		 glm::cos(glm::radians(settings.m_junctionLimit)))
+																		 return;
+																 if (otherPoint.m_prevHandle == -1) return;
+														 }
+
+														 if (!isJunctionStart) {
+																 if (glm::dot(glm::normalize(otherPoint.m_position - junction.m_center),
+																							junction.m_direction) <
+																		 glm::cos(glm::radians(settings.m_junctionLimit))) {
+																		 return;
+																 }
+																 if (otherPoint.m_nextHandle == -1) return;
+														 }
+														 if (otherPoint.m_junctionIndex == -1) findScatterPoint = true;
 														 currentProcessingPoint.m_neighbors.emplace_back(pointHandle);
 														 otherPoint.m_neighbors.emplace_back(currentProcessingPointHandle);
 														 m_junctionConnections.emplace_back(currentProcessingPointHandle, pointHandle);
@@ -169,5 +212,25 @@ void TreePointCloud::EstablishConnectivityGraph(const ConnectivityGraphSettings 
 						}
 				}
 		}
+		int endJunctionCount = 0;
+		int startJunctionCount = 0;
+		for (auto &junction: m_junctions) {
+				if (m_points[junction.m_endHandle].m_neighbors.empty()) {
+						junction.m_endJunction = true;
+						endJunctionCount++;
+				} else {
+						junction.m_endJunction = false;
+				}
+				if (m_points[junction.m_startHandle].m_neighbors.empty()) {
+						startJunctionCount++;
+				}
+		}
+		UNIENGINE_LOG("End junction: " + std::to_string(endJunctionCount));
+		UNIENGINE_LOG("Start junction: " + std::to_string(startJunctionCount));
+}
 
+BaseSkeleton TreePointCloud::BuildTreeStructure() {
+		BaseSkeleton retVal;
+
+		return retVal;
 }
