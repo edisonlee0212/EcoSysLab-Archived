@@ -45,7 +45,7 @@ namespace EcoSysLab {
 										const std::function<void(PointHandle handle)> &func) const;
 
 		public:
-		void ImportCsv(const std::filesystem::path &path);
+		void ImportCsv(const std::filesystem::path &path, float scaleFactor = 0.1f);
 
 		glm::vec3 m_min;
 		glm::vec3 m_max;

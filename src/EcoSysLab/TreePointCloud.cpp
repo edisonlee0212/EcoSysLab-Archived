@@ -19,7 +19,7 @@ void TreePointCloud::FindPoints(PointHandle targetPoint, VoxelGrid<std::vector<P
 		});
 }
 
-void TreePointCloud::ImportCsv(const std::filesystem::path &path) {
+void TreePointCloud::ImportCsv(const std::filesystem::path &path, float scaleFactor) {
 		rapidcsv::Document doc(path.string(), rapidcsv::LabelParams(-1, -1));
 		auto pointSize = doc.GetColumn<float>(0).size();
 		m_points.resize(pointSize);
@@ -30,11 +30,11 @@ void TreePointCloud::ImportCsv(const std::filesystem::path &path) {
 		for (int i = 0; i < pointSize; i++) {
 				auto &point = m_points[i];
 				point.m_handle = i;
-				point.m_position = glm::vec3(doc.GetCell<float>(0, i), doc.GetCell<float>(1, i), doc.GetCell<float>(2, i));
+				point.m_position = glm::vec3(doc.GetCell<float>(0, i), doc.GetCell<float>(1, i), doc.GetCell<float>(2, i)) * scaleFactor;
 				point.m_junctionHandle = doc.GetCell<int>(3, i);
 				point.m_prevHandle = doc.GetCell<int>(5, i);
 				point.m_nextHandle = -1;
-				point.m_thickness = doc.GetCell<float>(4, i);
+				point.m_thickness = doc.GetCell<float>(4, i) * scaleFactor;
 				maxJunctionSize = glm::max(point.m_junctionHandle, maxJunctionSize);
 				m_min = glm::min(point.m_position, m_min);
 				m_max = glm::max(point.m_position, m_max);
@@ -137,9 +137,8 @@ void TreePointCloud::OnInspect() {
 								filteredJunctionConnectionEnds[i] = m_points[m_filteredJunctionConnections[i].second].m_position;
 						}
 				}
-				TreeMeshGeneratorSettings meshGeneratorSettings;
-				meshGeneratorSettings.m_subdivision = 1.0f;
-				meshGeneratorSettings.m_resolution = 1.0f;
+				static TreeMeshGeneratorSettings meshGeneratorSettings;
+				meshGeneratorSettings.OnInspect();
 				if (ImGui::Button("Form tree mesh")) {
 						GenerateMeshes(meshGeneratorSettings);
 				}
@@ -355,7 +354,6 @@ BaseSkeleton TreePointCloud::BuildTreeStructure() {
 						}
 
 						prevNodeHandle = currentPoint.m_nodeHandle;
-						auto perspectivePosition = currentPoint.m_position;
 						if (currentPoint.m_parentNodeHandle == 0) {
 								auto& rootNode = retVal.RefNode(0);
 								rootNode.m_info.m_localPosition = rootNode.m_info.m_globalPosition = glm::vec3(0.0f);
@@ -386,13 +384,15 @@ BaseSkeleton TreePointCloud::BuildTreeStructure() {
 				auto& parentNode = retVal.RefNode(node.GetParentHandle());
 				parentNode.m_info.m_length = glm::distance(node.m_info.m_globalPosition, parentNode.m_info.m_globalPosition);
 				parentNode.m_info.m_localPosition = node.m_info.m_globalPosition - parentNode.m_info.m_globalPosition;
-				auto front = glm::normalize(parentNode.m_info.m_localPosition);
-				parentNode.m_info.m_globalRotation = glm::quatLookAt(front, glm::vec3(front.y, front.z, front.x));
 		}
 		for(const auto& nodeHandle : sortedNodeList){
 				auto& node = retVal.RefNode(nodeHandle);
 				if(node.GetParentHandle() < 0) continue;
 				auto& parentNode = retVal.RefNode(node.GetParentHandle());
+				auto front = glm::normalize(node.m_info.m_localPosition);
+				auto parentUp = parentNode.m_info.m_globalRotation * glm::vec3(0, 1, 0);
+				auto regulatedUp = glm::normalize(glm::cross(glm::cross(front, parentUp), front));
+				node.m_info.m_globalRotation = glm::quatLookAt(front, regulatedUp);
 				node.m_info.m_localRotation = glm::inverse(parentNode.m_info.m_globalRotation) * node.m_info.m_globalRotation;
 		}
 		//retVal.CalculateTransforms();
