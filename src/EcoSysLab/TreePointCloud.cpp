@@ -6,61 +6,72 @@
 
 using namespace EcoSysLab;
 
-void TreePointCloud::FindPoints(PointHandle targetPoint, VoxelGrid<std::vector<PointHandle>> &pointVoxelGrid,
-																const float radius,
-																const std::function<void(PointHandle handle)> &func) const {
-		auto &point = m_points[targetPoint];
-		pointVoxelGrid.ForEach(point.m_position, radius * 2.0f, [&](const std::vector<PointHandle> &pointHandles) {
-			for (const auto pointHandle: pointHandles) {
-					auto &currentPoint = m_points[pointHandle];
-					if (glm::distance(point.m_position, currentPoint.m_position) > radius) continue;
-					func(pointHandle);
+void TreePointCloud::FindPoints(const glm::vec3 &position, VoxelGrid<std::vector<PointCloudVoxel>> &pointVoxelGrid,
+																float radius,
+																const std::function<void(const PointCloudVoxel &voxel)> &func) const {
+		pointVoxelGrid.ForEach(position, radius * 2.0f, [&](const std::vector<PointCloudVoxel> &voxels) {
+			for (const auto &voxel: voxels) {
+					if (glm::distance(position, voxel.m_position) > radius) continue;
+					func(voxel);
 			}
 		});
 }
 
-void TreePointCloud::ImportCsv(const std::filesystem::path &path, float scaleFactor) {
-		rapidcsv::Document doc(path.string(), rapidcsv::LabelParams(-1, -1));
-		auto pointSize = doc.GetColumn<float>(0).size();
-		m_points.resize(pointSize);
-		m_scatterPointsConnections.clear();
-		m_min = glm::vec3(FLT_MAX);
-		m_max = glm::vec3(FLT_MIN);
-		int maxJunctionSize = 0;
-		for (int i = 0; i < pointSize; i++) {
-				auto &point = m_points[i];
-				point.m_handle = i;
-				point.m_position = glm::vec3(doc.GetCell<float>(0, i), doc.GetCell<float>(1, i), doc.GetCell<float>(2, i)) * scaleFactor;
-				point.m_junctionHandle = doc.GetCell<int>(3, i);
-				point.m_prevHandle = doc.GetCell<int>(5, i);
-				point.m_nextHandle = -1;
-				point.m_thickness = doc.GetCell<float>(4, i) * scaleFactor;
-				maxJunctionSize = glm::max(point.m_junctionHandle, maxJunctionSize);
-				m_min = glm::min(point.m_position, m_min);
-				m_max = glm::max(point.m_position, m_max);
+void TreePointCloud::ImportGraph(const std::filesystem::path &path, float scaleFactor) {
+		if (!std::filesystem::exists(path)) {
+				UNIENGINE_ERROR("Not exist!");
+				return;
 		}
-		m_junctions.resize(maxJunctionSize + 1);
-		for (int i = 0; i < pointSize; i++) {
-				auto &point = m_points[i];
-				if (point.m_junctionHandle == -1) continue;
-				if (point.m_prevHandle != -1) {
-						m_points[point.m_prevHandle].m_nextHandle = i;
-				} else {
-						m_junctions[point.m_junctionHandle].m_start = point.m_position;
-						m_junctions[point.m_junctionHandle].m_startHandle = i;
+		try {
+				std::ifstream stream(path.string());
+				std::stringstream stringStream;
+				stringStream << stream.rdbuf();
+				YAML::Node in = YAML::Load(stringStream.str());
+
+				const auto &tree = in["Tree"];
+				const auto &branches = tree["Branches"]["Content"];
+				const auto &scatterPoints = tree["Scatter Points"]["Content"];
+
+				m_min = glm::vec3(FLT_MAX);
+				m_max = glm::vec3(FLT_MIN);
+
+				m_points.resize(scatterPoints.size());
+
+				for (int i = 0; i < scatterPoints.size(); i++) {
+						auto &point = m_points[i];
+						point.m_position = scatterPoints[i].as<glm::vec3>();
+						m_min = glm::min(m_min, point.m_position);
+						m_max = glm::max(m_max, point.m_position);
+						point.m_handle = i;
+						point.m_neighbors.clear();
 				}
-				if (point.m_nextHandle == -1) {
-						m_junctions[point.m_junctionHandle].m_end = point.m_position;
-						m_junctions[point.m_junctionHandle].m_endHandle = i;
+				m_branches.resize(branches.size());
+				for (int i = 0; i < branches.size(); i++) {
+						const auto &inBranch = branches[i];
+						auto &branch = m_branches[i];
+						branch.m_bezierCurve.m_p0 = inBranch["Start Pos"].as<glm::vec3>();
+						branch.m_bezierCurve.m_p3 = inBranch["End Pos"].as<glm::vec3>();
+						auto cPLength = glm::distance(branch.m_bezierCurve.m_p0, branch.m_bezierCurve.m_p3) * 0.3f;
+						branch.m_bezierCurve.m_p1 =
+										glm::normalize(inBranch["Start Dir"].as<glm::vec3>()) * cPLength + branch.m_bezierCurve.m_p0;
+						branch.m_bezierCurve.m_p2 =
+										branch.m_bezierCurve.m_p3 - glm::normalize(inBranch["End Dir"].as<glm::vec3>()) * cPLength;
+						branch.m_startThickness = inBranch["Start Radius"].as<float>();
+						branch.m_endThickness = inBranch["End Radius"].as<float>();
+						branch.m_handle = i;
+						branch.m_parentHandle = -1;
+						branch.m_endJunction = false;
+						branch.m_childHandles.clear();
+
+						m_min = glm::min(m_min, branch.m_bezierCurve.m_p0);
+						m_max = glm::max(m_max, branch.m_bezierCurve.m_p0);
+						m_min = glm::min(m_min, branch.m_bezierCurve.m_p3);
+						m_max = glm::max(m_max, branch.m_bezierCurve.m_p3);
 				}
 		}
-		for (auto &junction: m_junctions) {
-				junction.m_center = (junction.m_start + junction.m_end) / 2.0f;
-				if (glm::distance(junction.m_start, junction.m_end) == 0.0f) {
-						UNIENGINE_ERROR("Junction with zero length!");
-						continue;
-				}
-				junction.m_direction = glm::normalize(junction.m_end - junction.m_start);
+		catch (std::exception e) {
+				UNIENGINE_ERROR("Failed to load!");
+				return;
 		}
 }
 
@@ -74,12 +85,17 @@ void TreePointCloud::OnInspect() {
 		static std::vector<glm::vec3> junctionConnectionEnds;
 		static std::vector<glm::vec3> filteredJunctionConnectionStarts;
 		static std::vector<glm::vec3> filteredJunctionConnectionEnds;
+
+		static std::vector<glm::vec3> scannedBranchStarts;
+		static std::vector<glm::vec3> scannedBranchEnds;
 		static bool enableDebugRendering = true;
 
+		static bool drawBranches = true;
 		static bool drawScatterPointsConnections = false;
 		static bool drawJunctionConnections = false;
 		static bool drawFilteredConnections = true;
 
+		static float branchWidth = 0.01f;
 		static float connectionWidth = 0.001f;
 		static float pointSize = 0.02f;
 
@@ -87,17 +103,20 @@ void TreePointCloud::OnInspect() {
 		static glm::vec4 scatterPointCollectionColor = glm::vec4(1, 1, 1, 1);
 		static glm::vec4 junctionCollectionColor = glm::vec4(1, 0, 0, 1);
 		static glm::vec4 filteredJunctionCollectionColor = glm::vec4(1, 1, 0, 1);
-		static ConnectivityGraphSettings settings;
+		static glm::vec4 branchColor = glm::vec4(0, 1, 1, 1);
+		static ConnectivityGraphSettings connectivityGraphSettings;
+		ImGui::DragFloat("Branch width", &branchWidth, 0.001f, 0.001f, 1.0f);
 		ImGui::DragFloat("Connection width", &connectionWidth, 0.001f, 0.001f, 1.0f);
 		ImGui::DragFloat("Point size", &pointSize, 0.001f, 0.001f, 1.0f);
 		ImGui::Checkbox("Debug Rendering", &enableDebugRendering);
 		if (enableDebugRendering) {
 				ImGui::Checkbox("Render scatter point connections", &drawScatterPointsConnections);
+				ImGui::Checkbox("Render branch", &drawBranches);
 				ImGui::Checkbox("Render all junction connections", &drawJunctionConnections);
 				ImGui::Checkbox("Render filtered junction connections", &drawFilteredConnections);
 
 				ImGui::ColorEdit4("Scatter Point Color", &scatterPointColor.x);
-
+				if (drawBranches) ImGui::ColorEdit4("Branch Color", &branchColor.x);
 				if (drawScatterPointsConnections) ImGui::ColorEdit4("Scatter Connection Color", &scatterPointCollectionColor.x);
 				if (drawJunctionConnections) ImGui::ColorEdit4("Junction Connection Color", &junctionCollectionColor.x);
 				if (drawFilteredConnections)
@@ -110,36 +129,49 @@ void TreePointCloud::OnInspect() {
 						const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
 						for (int i = 0; i < m_points.size(); i++) {
 								matrices[i] = glm::translate(m_points[i].m_position) * glm::scale(glm::vec3(1.0f));
-								if (m_points[i].m_junctionHandle == -1) {
-										colors[i] = scatterPointColor;
-								} else {
-										colors[i] = glm::vec4(ecoSysLabLayer->RandomColors()[m_points[i].m_junctionHandle], 1.0f);
-								}
+								colors[i] = scatterPointColor;
 						}
 						scatterConnectionStarts.resize(m_scatterPointsConnections.size());
 						scatterConnectionEnds.resize(m_scatterPointsConnections.size());
 						for (int i = 0; i < m_scatterPointsConnections.size(); i++) {
-								scatterConnectionStarts[i] = m_points[m_scatterPointsConnections[i].first].m_position;
-								scatterConnectionEnds[i] = m_points[m_scatterPointsConnections[i].second].m_position;
+								scatterConnectionStarts[i] = m_scatterPointsConnections[i].first;
+								scatterConnectionEnds[i] = m_scatterPointsConnections[i].second;
 						}
 
-						junctionConnectionStarts.resize(m_junctionConnections.size());
-						junctionConnectionEnds.resize(m_junctionConnections.size());
-						for (int i = 0; i < m_junctionConnections.size(); i++) {
-								junctionConnectionStarts[i] = m_points[m_junctionConnections[i].first].m_position;
-								junctionConnectionEnds[i] = m_points[m_junctionConnections[i].second].m_position;
+						junctionConnectionStarts.resize(m_branchConnections.size());
+						junctionConnectionEnds.resize(m_branchConnections.size());
+						for (int i = 0; i < m_branchConnections.size(); i++) {
+								junctionConnectionStarts[i] = m_branchConnections[i].first;
+								junctionConnectionEnds[i] = m_branchConnections[i].second;
 						}
 
 						filteredJunctionConnectionStarts.resize(m_filteredJunctionConnections.size());
 						filteredJunctionConnectionEnds.resize(m_filteredJunctionConnections.size());
 						for (int i = 0; i < m_filteredJunctionConnections.size(); i++) {
-								filteredJunctionConnectionStarts[i] = m_points[m_filteredJunctionConnections[i].first].m_position;
-								filteredJunctionConnectionEnds[i] = m_points[m_filteredJunctionConnections[i].second].m_position;
+								filteredJunctionConnectionStarts[i] = m_filteredJunctionConnections[i].first;
+								filteredJunctionConnectionEnds[i] = m_filteredJunctionConnections[i].second;
+						}
+
+						scannedBranchStarts.resize(m_branches.size());
+						scannedBranchEnds.resize(m_branches.size());
+						for (int i = 0; i < m_filteredJunctionConnections.size(); i++) {
+								scannedBranchStarts[i] = m_branches[i].m_bezierCurve.m_p0;
+								scannedBranchEnds[i] = m_branches[i].m_bezierCurve.m_p3;
 						}
 				}
+				static ReconstructionSettings reconstructionSettings;
+				if (ImGui::Button("Build Skeleton")) {
+						BuildTreeStructure(reconstructionSettings);
+				}
+
 				static TreeMeshGeneratorSettings meshGeneratorSettings;
 				meshGeneratorSettings.OnInspect();
 				if (ImGui::Button("Form tree mesh")) {
+						if (m_filteredJunctionConnections.empty()) {
+								m_skeleton = {};
+								EstablishConnectivityGraph(connectivityGraphSettings);
+						}
+						if (m_skeleton.RefSortedNodeList().empty()) BuildTreeStructure(reconstructionSettings);
 						GenerateMeshes(meshGeneratorSettings);
 				}
 
@@ -147,6 +179,9 @@ void TreePointCloud::OnInspect() {
 						Gizmos::DrawGizmoMeshInstancedColored(DefaultResources::Primitives::Sphere, colors, matrices,
 																									glm::mat4(1.0f),
 																									pointSize);
+						if (drawBranches)
+								Gizmos::DrawGizmoRays(branchColor, scannedBranchStarts, scannedBranchEnds,
+																			branchWidth);
 						if (drawScatterPointsConnections)
 								Gizmos::DrawGizmoRays(scatterPointCollectionColor, scatterConnectionStarts, scatterConnectionEnds,
 																			connectionWidth);
@@ -159,123 +194,174 @@ void TreePointCloud::OnInspect() {
 																			connectionWidth * 1.2f);
 				}
 		}
-		FileUtils::OpenFile("Load CSV", "CSV", {".csv"}, [&](const std::filesystem::path &path) {
-			ImportCsv(path);
+		FileUtils::OpenFile("Load YAML", "YAML", {".yml"}, [&](const std::filesystem::path &path) {
+			ImportGraph(path);
 		}, false);
 
 		if (!m_points.empty()) {
-				if (ImGui::TreeNodeEx("Connectivity settings", ImGuiTreeNodeFlags_DefaultOpen)) {
+				if (ImGui::TreeNodeEx("Connectivity connectivityGraphSettings", ImGuiTreeNodeFlags_DefaultOpen)) {
 
-						ImGui::DragFloat("Finder step", &settings.m_finderStep, 0.01f, 0.01f, 1.0f);
-						ImGui::DragFloat("Edge width", &settings.m_edgeLength, 0.01f, 0.01f, 1.0f);
+						ImGui::DragFloat("Finder step", &connectivityGraphSettings.m_finderStep, 0.01f, 0.01f, 1.0f);
+						ImGui::DragFloat("Edge width", &connectivityGraphSettings.m_edgeLength, 0.01f, 0.01f, 1.0f);
 
-						ImGui::DragFloat("Junction finder angle", &settings.m_junctionLimit, 0.01f, 0.01f, 90.0f);
-						ImGui::DragInt("Junction finder timeout", &settings.m_maxTimeout, 1, 1, 30);
+						ImGui::DragFloat("Junction finder angle", &connectivityGraphSettings.m_junctionLimit, 0.01f, 0.01f, 90.0f);
+						ImGui::DragInt("Junction finder timeout", &connectivityGraphSettings.m_maxTimeout, 1, 1, 30);
 						ImGui::TreePop();
 				}
-				if (ImGui::Button("Establish Connectivity Graph")) EstablishConnectivityGraph(settings);
+				if (ImGui::Button("Establish Connectivity Graph")) EstablishConnectivityGraph(connectivityGraphSettings);
 		}
 }
 
 void TreePointCloud::EstablishConnectivityGraph(const ConnectivityGraphSettings &settings) {
-		std::vector<PointHandle> processingPoints;
-		VoxelGrid<std::vector<PointHandle>> pointVoxelGrid;
+		VoxelGrid<std::vector<PointCloudVoxel>> pointVoxelGrid;
 		pointVoxelGrid.Initialize(3.0f * settings.m_edgeLength, m_min, m_max);
 		for (auto &point: m_points) {
 				point.m_neighbors.clear();
-				if (point.m_junctionHandle != -1 && point.m_nextHandle >= 0 && point.m_prevHandle >= 0) continue;
-				processingPoints.emplace_back(point.m_handle);
-				pointVoxelGrid.Ref(point.m_position).emplace_back(point.m_handle);
+				point.m_neighborBranchStarts.clear();
+				point.m_neighborBranchEnds.clear();
+				PointCloudVoxel voxel;
+				voxel.m_handle = point.m_handle;
+				voxel.m_position = point.m_position;
+				voxel.m_type = PointCloudVoxelType::ScatteredPoint;
+				pointVoxelGrid.Ref(point.m_position).emplace_back(voxel);
 		}
-		m_scatterPointsConnections.clear();
-		m_junctionConnections.clear();
 
-		for (const auto &currentProcessingPointHandle: processingPoints) {
+		for (auto &branch: m_branches) {
+				branch.m_childHandles.clear();
+				branch.m_startNeighbors.clear();
+				branch.m_endNeighbors.clear();
+
+				branch.m_neighborBranchStarts.clear();
+				branch.m_neighborBranchEnds.clear();
+
+				branch.m_parentHandle = -1;
+				PointCloudVoxel voxel;
+				voxel.m_handle = branch.m_handle;
+				voxel.m_position = branch.m_bezierCurve.m_p0;
+				voxel.m_type = PointCloudVoxelType::BranchStart;
+				pointVoxelGrid.Ref(branch.m_bezierCurve.m_p0).emplace_back(voxel);
+				voxel.m_position = branch.m_bezierCurve.m_p3;
+				voxel.m_type = PointCloudVoxelType::BranchEnd;
+				pointVoxelGrid.Ref(branch.m_bezierCurve.m_p3).emplace_back(voxel);
+		}
+
+		m_scatterPointsConnections.clear();
+
+		for (auto &point: m_points) {
 				if (m_scatterPointsConnections.size() > 1000000) {
 						UNIENGINE_ERROR("Too much connections!");
 						return;
 				}
-				auto &currentProcessingPoint = m_points[currentProcessingPointHandle];
-				if (currentProcessingPoint.m_junctionHandle == -1) {
-						FindPoints(currentProcessingPointHandle, pointVoxelGrid, settings.m_edgeLength,
-											 [&](PointHandle pointHandle) {
-												 if (pointHandle == currentProcessingPointHandle) return;
-												 for (const auto &neighbor: currentProcessingPoint.m_neighbors) {
-														 if (pointHandle == neighbor) return;
+				FindPoints(point.m_position, pointVoxelGrid, settings.m_edgeLength,
+									 [&](const PointCloudVoxel &voxel) {
+										 if (voxel.m_type != PointCloudVoxelType::ScatteredPoint) return;
+										 if (voxel.m_handle == point.m_handle) return;
+										 for (const auto &neighbor: point.m_neighbors) {
+												 if (voxel.m_handle == neighbor) return;
+										 }
+										 auto &otherPoint = m_points[voxel.m_handle];
+										 point.m_neighbors.emplace_back(voxel.m_handle);
+										 otherPoint.m_neighbors.emplace_back(point.m_handle);
+										 m_scatterPointsConnections.emplace_back(point.m_position, otherPoint.m_position);
+									 });
+		}
+		m_branchConnections.clear();
+		for (auto &branch: m_branches) {
+				float currentEdgeLength = settings.m_edgeLength;
+				int timeout = 0;
+				bool findScatterPoint = false;
+				while (!findScatterPoint && timeout < settings.m_maxTimeout) {
+						FindPoints(branch.m_bezierCurve.m_p0, pointVoxelGrid, currentEdgeLength,
+											 [&](const PointCloudVoxel &voxel) {
+												 if (voxel.m_type == PointCloudVoxelType::BranchStart) return;
+												 if (voxel.m_type == PointCloudVoxelType::ScatteredPoint) {
+														 findScatterPoint = true;
+														 auto &otherPoint = m_points[voxel.m_handle];
+														 for (const auto &i: branch.m_startNeighbors) {
+																 if (i == voxel.m_handle) return;
+														 }
+														 branch.m_startNeighbors.emplace_back(voxel.m_handle);
+														 otherPoint.m_neighborBranchStarts.emplace_back(branch.m_handle);
+												 } else {
+														 if (glm::dot(glm::normalize(voxel.m_position - branch.m_bezierCurve.m_p0),
+																					glm::normalize(branch.m_bezierCurve.m_p0 - branch.m_bezierCurve.m_p1)) <
+																 glm::cos(glm::radians(settings.m_junctionLimit)))
+																 return;
+														 for (const auto &i: branch.m_neighborBranchEnds) {
+																 if (i == voxel.m_handle) return;
+														 }
+														 auto &otherBranch = m_branches[voxel.m_handle];
+														 branch.m_neighborBranchEnds.emplace_back(voxel.m_handle);
+														 otherBranch.m_neighborBranchStarts.emplace_back(branch.m_handle);
 												 }
-												 auto &otherPoint = m_points[pointHandle];
-												 if (otherPoint.m_junctionHandle != -1) return;
-												 currentProcessingPoint.m_neighbors.emplace_back(pointHandle);
-												 otherPoint.m_neighbors.emplace_back(currentProcessingPointHandle);
-												 m_scatterPointsConnections.emplace_back(currentProcessingPointHandle, pointHandle);
+												 m_branchConnections.emplace_back(branch.m_bezierCurve.m_p0, voxel.m_position);
 											 });
-				} else {
-						float currentEdgeLength = settings.m_edgeLength;
-						int timeout = 0;
-						bool isJunctionStart = currentProcessingPoint.m_prevHandle == -1;
-						bool isJunctionEnd = currentProcessingPoint.m_nextHandle == -1;
-						const auto &junction = m_junctions[currentProcessingPoint.m_junctionHandle];
-						bool findScatterPoint = false;
-						while (!findScatterPoint && timeout < settings.m_maxTimeout) {
-								FindPoints(currentProcessingPointHandle, pointVoxelGrid, currentEdgeLength,
-													 [&](PointHandle pointHandle) {
-														 auto &otherPoint = m_points[pointHandle];
-														 if (pointHandle == currentProcessingPointHandle ||
-																 otherPoint.m_junctionHandle == currentProcessingPoint.m_junctionHandle)
-																 return;
-														 if (otherPoint.m_junctionHandle != -1 && otherPoint.m_nextHandle != -1 &&
-																 otherPoint.m_prevHandle != -1)
-																 return;
-														 if (isJunctionStart) {
-																 if (glm::dot(glm::normalize(otherPoint.m_position - junction.m_center),
-																							-junction.m_direction) <
-																		 glm::cos(glm::radians(settings.m_junctionLimit)))
-																		 return;
-																 if (otherPoint.m_prevHandle == -1) return;
-														 }
+						currentEdgeLength += settings.m_finderStep;
+						timeout++;
+				}
 
-														 if (isJunctionEnd) {
-																 if (glm::dot(glm::normalize(otherPoint.m_position - junction.m_center),
-																							junction.m_direction) <
-																		 glm::cos(glm::radians(settings.m_junctionLimit))) {
-																		 return;
-																 }
-																 if (otherPoint.m_nextHandle == -1) return;
+				currentEdgeLength = settings.m_edgeLength;
+				timeout = 0;
+				findScatterPoint = false;
+				while (!findScatterPoint && timeout < settings.m_maxTimeout) {
+						FindPoints(branch.m_bezierCurve.m_p3, pointVoxelGrid, currentEdgeLength,
+											 [&](const PointCloudVoxel &voxel) {
+												 if (voxel.m_type == PointCloudVoxelType::BranchEnd) return;
+												 if (voxel.m_type == PointCloudVoxelType::ScatteredPoint) {
+														 findScatterPoint = true;
+														 auto &otherPoint = m_points[voxel.m_handle];
+														 for (const auto &i: branch.m_endNeighbors) {
+																 if (i == voxel.m_handle) return;
 														 }
-														 if (otherPoint.m_junctionHandle == -1) findScatterPoint = true;
-														 currentProcessingPoint.m_neighbors.emplace_back(pointHandle);
-														 otherPoint.m_neighbors.emplace_back(currentProcessingPointHandle);
-														 m_junctionConnections.emplace_back(currentProcessingPointHandle, pointHandle);
-													 });
-								currentEdgeLength += settings.m_finderStep;
-								timeout++;
-						}
+														 branch.m_endNeighbors.emplace_back(voxel.m_handle);
+														 otherPoint.m_neighborBranchEnds.emplace_back(branch.m_handle);
+												 } else {
+														 if (glm::dot(glm::normalize(voxel.m_position - branch.m_bezierCurve.m_p3),
+																					glm::normalize(branch.m_bezierCurve.m_p3 - branch.m_bezierCurve.m_p2)) <
+																 glm::cos(glm::radians(settings.m_junctionLimit)))
+																 return;
+														 for (const auto &i: branch.m_neighborBranchStarts) {
+																 if (i == voxel.m_handle) return;
+														 }
+														 auto &otherBranch = m_branches[voxel.m_handle];
+														 branch.m_neighborBranchStarts.emplace_back(voxel.m_handle);
+														 otherBranch.m_neighborBranchEnds.emplace_back(branch.m_handle);
+												 }
+												 m_branchConnections.emplace_back(branch.m_bezierCurve.m_p3, voxel.m_position);
+											 });
+						currentEdgeLength += settings.m_finderStep;
+						timeout++;
 				}
 		}
+
 		int endJunctionCount = 0;
 		int startJunctionCount = 0;
-		for (auto &junction: m_junctions) {
-				if (m_points[junction.m_endHandle].m_neighbors.empty()) {
-						junction.m_endJunction = true;
+		for (auto &branches: m_branches) {
+				if (branches.m_endNeighbors.empty() && branches.m_neighborBranchStarts.empty()) {
+						branches.m_endJunction = true;
 						endJunctionCount++;
 				} else {
-						junction.m_endJunction = false;
+						branches.m_endJunction = false;
 				}
-				if (m_points[junction.m_startHandle].m_neighbors.empty()) {
+				if (branches.m_startNeighbors.empty() && branches.m_neighborBranchEnds.empty()) {
 						startJunctionCount++;
 				}
-				junction.m_parentHandle = -1;
-				junction.m_childHandles.clear();
 		}
 		UNIENGINE_LOG("End junction: " + std::to_string(endJunctionCount));
 		UNIENGINE_LOG("Start junction: " + std::to_string(startJunctionCount));
+
 		m_filteredJunctionConnections.clear();
-		for (JunctionHandle i = 0; i < m_junctions.size(); i++) {
-				auto &junction = m_junctions[i];
-				std::vector<JunctionHandle> availableCandidates;
+		for (auto &branch: m_branches) {
+				//Detect connection to branch start.
+				std::unordered_set<BranchHandle> availableCandidates;
+				for (const auto &branchEndHandle: branch.m_neighborBranchEnds) {
+						availableCandidates.emplace(branchEndHandle);
+				}
 				std::unordered_set<PointHandle> visitedPoints;
-				visitedPoints.emplace(junction.m_startHandle);
-				std::vector<PointHandle> processingPoints = {junction.m_startHandle};
+				std::vector<PointHandle> processingPoints = branch.m_startNeighbors;
+				for (const auto &i: processingPoints) {
+						visitedPoints.emplace(i);
+				}
 				while (!processingPoints.empty()) {
 						auto currentPointHandle = processingPoints.back();
 						visitedPoints.emplace(currentPointHandle);
@@ -285,120 +371,112 @@ void TreePointCloud::EstablishConnectivityGraph(const ConnectivityGraphSettings 
 								if (visitedPoints.find(neighborHandle) != visitedPoints.end()) continue;
 								auto &neighbor = m_points[neighborHandle];
 								//We stop search if the point is junction point.
-								if (neighbor.m_junctionHandle != -1) {
-										availableCandidates.emplace_back(neighbor.m_junctionHandle);
-								} else {
-										processingPoints.emplace_back(neighborHandle);
+								for (const auto &branchEndHandle: neighbor.m_neighborBranchEnds) {
+										availableCandidates.emplace(branchEndHandle);
 								}
+								processingPoints.emplace_back(neighborHandle);
 						}
 				}
 				if (availableCandidates.empty()) continue;
 				float minDistance = 999.0f;
-				JunctionHandle bestCandidate;
+				BranchHandle bestCandidate;
 				for (const auto &candidateHandle: availableCandidates) {
-						auto &candidate = m_junctions[candidateHandle];
-						auto distance = glm::distance(junction.m_start, candidate.m_end);
+						auto &candidate = m_branches[candidateHandle];
+						auto distance = glm::distance(branch.m_bezierCurve.m_p0, candidate.m_bezierCurve.m_p3);
 						if (distance < minDistance) {
 								minDistance = distance;
 								bestCandidate = candidateHandle;
 						}
 				}
-				m_junctions[bestCandidate].m_childHandles.emplace_back(i);
-				junction.m_parentHandle = bestCandidate;
-				m_filteredJunctionConnections.emplace_back(junction.m_startHandle, m_junctions[bestCandidate].m_endHandle);
+				m_branches[bestCandidate].m_childHandles.emplace_back(branch.m_handle);
+				branch.m_parentHandle = bestCandidate;
+				m_filteredJunctionConnections.emplace_back(branch.m_bezierCurve.m_p0,
+																									 m_branches[bestCandidate].m_bezierCurve.m_p3);
 		}
+
 }
 
-BaseSkeleton TreePointCloud::BuildTreeStructure() {
-		BaseSkeleton retVal;
+void TreePointCloud::BuildTreeStructure(const ReconstructionSettings &reconstructionSettings) {
+		m_skeleton = {};
 
-		JunctionHandle rootJunctionHandle;
+		BranchHandle rootBranchHandle;
 		float minHeight = 999.0f;
-		for (auto &point: m_points) {
-				point.m_parentNodeHandle = point.m_nodeHandle = -1;
-				if (point.m_junctionHandle != -1 && point.m_prevHandle == -1
-						&& point.m_position.y < minHeight) {
-						rootJunctionHandle = point.m_junctionHandle;
-						minHeight = point.m_position.y;
+		for (auto &branch: m_branches) {
+				branch.m_chainNodeHandles.clear();
+				if (branch.m_bezierCurve.m_p0.y < minHeight) {
+						rootBranchHandle = branch.m_handle;
+						minHeight = branch.m_bezierCurve.m_p0.y;
 				}
 		}
 
-		std::queue<JunctionHandle> processingJunctionHandles;
-		processingJunctionHandles.emplace(rootJunctionHandle);
-		while (!processingJunctionHandles.empty()) {
-				auto processingJunctionHandle = processingJunctionHandles.front();
-				processingJunctionHandles.pop();
-				auto &processingJunction = m_junctions[processingJunctionHandle];
+		std::queue<BranchHandle> processingBranchHandles;
+		processingBranchHandles.emplace(rootBranchHandle);
+		while (!processingBranchHandles.empty()) {
+				auto processingBranchHandle = processingBranchHandles.front();
+				processingBranchHandles.pop();
+				auto &processingBranch = m_branches[processingBranchHandle];
 				bool onlyChild = true;
 				NodeHandle prevNodeHandle = -1;
-				if(processingJunction.m_parentHandle != -1) {
-						auto& parentJunction = m_junctions[processingJunction.m_parentHandle];
-						if (parentJunction.m_childHandles.size() > 1) onlyChild = false;
-						prevNodeHandle = m_points[parentJunction.m_endHandle].m_nodeHandle;
+				float chainLength = glm::distance(processingBranch.m_bezierCurve.m_p0, processingBranch.m_bezierCurve.m_p3);
+				int chainAmount = chainLength /
+													reconstructionSettings.m_internodeLength;
+				if (processingBranch.m_handle == rootBranchHandle) {
+						prevNodeHandle = 0;
+						processingBranch.m_chainNodeHandles.emplace_back(0);
+				} else {
+						auto &parentBranch = m_branches[processingBranch.m_parentHandle];
+						if (parentBranch.m_childHandles.size() > 1) onlyChild = false;
+						auto chainFirstNodeHandle = m_skeleton.Extend(parentBranch.m_chainNodeHandles.back(), !onlyChild);
+						processingBranch.m_chainNodeHandles.emplace_back(chainFirstNodeHandle);
+						prevNodeHandle = chainFirstNodeHandle;
 				}
-				auto pointWalkerHandle = processingJunction.m_startHandle;
-				while (pointWalkerHandle != -1) {
-						auto &currentPoint = m_points[pointWalkerHandle];
-						currentPoint.m_parentNodeHandle = prevNodeHandle;
-						if (currentPoint.m_parentNodeHandle == -1) {
-								currentPoint.m_parentNodeHandle = 0;
-								currentPoint.m_nodeHandle = retVal.Extend(currentPoint.m_parentNodeHandle, false);
-						} else if (pointWalkerHandle == processingJunction.m_startHandle) {
-								if (onlyChild) {
-										currentPoint.m_nodeHandle = retVal.Extend(currentPoint.m_parentNodeHandle, false);
-								} else {
-										currentPoint.m_nodeHandle = retVal.Extend(currentPoint.m_parentNodeHandle, true);
-								}
-						} else {
-								currentPoint.m_nodeHandle = retVal.Extend(currentPoint.m_parentNodeHandle, false);
-						}
-
-						prevNodeHandle = currentPoint.m_nodeHandle;
-						if (currentPoint.m_parentNodeHandle == 0) {
-								auto& rootNode = retVal.RefNode(0);
-								rootNode.m_info.m_localPosition = rootNode.m_info.m_globalPosition = glm::vec3(0.0f);
-								rootNode.m_info.m_localRotation = glm::vec3(0.0f);
-								rootNode.m_info.m_globalRotation = rootNode.m_info.m_regulatedGlobalRotation = glm::vec3(glm::radians(90.0f), 0.0f, 0.0f);
-								rootNode.m_info.m_thickness = currentPoint.m_thickness;
-						}
-						auto &newNode = retVal.RefNode(currentPoint.m_nodeHandle);
-						newNode.m_info.m_thickness = currentPoint.m_thickness;
-						newNode.m_info.m_localPosition = currentPoint.m_position;
-						pointWalkerHandle = currentPoint.m_nextHandle;
+				for (int i = 1; i < chainAmount; i++) {
+						auto newNodeHandle = m_skeleton.Extend(prevNodeHandle, false);
+						processingBranch.m_chainNodeHandles.emplace_back(newNodeHandle);
+						prevNodeHandle = newNodeHandle;
 				}
-				for (const auto &childJunctionHandle: processingJunction.m_childHandles) {
-						processingJunctionHandles.emplace(childJunctionHandle);
+				for (int i = 0; i < chainAmount; i++) {
+						auto &node = m_skeleton.RefNode(processingBranch.m_chainNodeHandles[i]);
+						node.m_info.m_globalPosition = processingBranch.m_bezierCurve.GetPoint(chainLength * i / chainAmount);
+						node.m_info.m_length = glm::distance(processingBranch.m_bezierCurve.GetPoint(chainLength * i / chainAmount), processingBranch.m_bezierCurve.GetPoint(chainLength * (i + 1) / chainAmount));
+						node.m_info.m_localPosition = glm::normalize(
+										processingBranch.m_bezierCurve.GetAxis(chainLength * i / chainAmount));
+						node.m_info.m_thickness = glm::mix(processingBranch.m_startThickness, processingBranch.m_endThickness,
+																							 static_cast<float>(i / chainAmount));
+				}
+				for (const auto &childBranchHandle: processingBranch.m_childHandles) {
+						processingBranchHandles.emplace(childBranchHandle);
 				}
 		}
-		retVal.SortLists();
-		auto& sortedNodeList = retVal.RefSortedNodeList();
-		for(const auto& nodeHandle : sortedNodeList){
-				auto& node = retVal.RefNode(nodeHandle);
-				if(node.GetParentHandle() < 0) continue;
-				auto& parentNode = retVal.RefNode(node.GetParentHandle());
-				node.m_info.m_globalPosition = parentNode.m_info.m_localPosition;
-		}
-		for(const auto& nodeHandle : sortedNodeList){
-				auto& node = retVal.RefNode(nodeHandle);
-				if(node.GetParentHandle() < 0) continue;
-				auto& parentNode = retVal.RefNode(node.GetParentHandle());
-				parentNode.m_info.m_length = glm::distance(node.m_info.m_globalPosition, parentNode.m_info.m_globalPosition);
-				parentNode.m_info.m_localPosition = node.m_info.m_globalPosition - parentNode.m_info.m_globalPosition;
-		}
-		for(const auto& nodeHandle : sortedNodeList){
-				auto& node = retVal.RefNode(nodeHandle);
-				if(node.GetParentHandle() < 0) continue;
-				auto& parentNode = retVal.RefNode(node.GetParentHandle());
-				auto front = glm::normalize(node.m_info.m_localPosition);
+		m_skeleton.SortLists();
+		auto &sortedNodeList = m_skeleton.RefSortedNodeList();
+		auto &rootNode = m_skeleton.RefNode(0);
+		rootNode.m_info.m_globalPosition = glm::vec3(0.0f);
+		rootNode.m_info.m_localRotation = glm::vec3(0.0f);
+		rootNode.m_info.m_globalRotation = rootNode.m_info.m_regulatedGlobalRotation = glm::vec3(glm::radians(90.0f), 0.0f,
+																																														 0.0f);
+		for (const auto &nodeHandle: sortedNodeList) {
+				auto &node = m_skeleton.RefNode(nodeHandle);
+				if (node.GetParentHandle() <= 0) continue;
+				auto &nodeInfo = node.m_info;
+				auto &parentNode = m_skeleton.RefNode(node.GetParentHandle());
+				auto front = nodeInfo.m_localPosition;
+				nodeInfo.m_localPosition = nodeInfo.m_globalPosition - parentNode.m_info.m_localPosition;
 				auto parentUp = parentNode.m_info.m_globalRotation * glm::vec3(0, 1, 0);
 				auto regulatedUp = glm::normalize(glm::cross(glm::cross(front, parentUp), front));
-				node.m_info.m_globalRotation = glm::quatLookAt(front, regulatedUp);
-				node.m_info.m_localRotation = glm::inverse(parentNode.m_info.m_globalRotation) * node.m_info.m_globalRotation;
+				nodeInfo.m_globalRotation = glm::quatLookAt(front, regulatedUp);
+				nodeInfo.m_localRotation = glm::inverse(parentNode.m_info.m_globalRotation) * nodeInfo.m_globalRotation;
+
+				m_min = glm::min(m_min, nodeInfo.m_globalPosition);
+				m_max = glm::max(m_max, nodeInfo.m_globalPosition);
+				const auto endPosition = nodeInfo.m_globalPosition + nodeInfo.m_length *
+																														 (nodeInfo.m_globalRotation *
+																															glm::vec3(0, 0, -1));
+				m_min = glm::min(m_min, endPosition);
+				m_max = glm::max(m_max, endPosition);
 		}
 		//retVal.CalculateTransforms();
-		retVal.CalculateFlows();
-
-		return retVal;
+		m_skeleton.CalculateFlows();
 }
 
 void TreePointCloud::ClearMeshes() const {
@@ -434,9 +512,8 @@ void TreePointCloud::GenerateMeshes(const TreeMeshGeneratorSettings &meshGenerat
 
 				std::vector<Vertex> vertices;
 				std::vector<unsigned int> indices;
-				auto skeleton = BuildTreeStructure();
 				CylindricalMeshGenerator<BaseSkeletonData, BaseFlowData, BaseNodeData> meshGenerator;
-				meshGenerator.Generate(skeleton, vertices, indices, meshGeneratorSettings, 999.0f);
+				meshGenerator.Generate(m_skeleton, vertices, indices, meshGeneratorSettings, 999.0f);
 
 				auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
 				auto material = ProjectManager::CreateTemporaryAsset<Material>();

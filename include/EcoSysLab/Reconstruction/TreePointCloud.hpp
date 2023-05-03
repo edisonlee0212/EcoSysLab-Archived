@@ -4,33 +4,34 @@
 #include "VoxelGrid.hpp"
 #include "PlantStructure.hpp"
 #include "TreeMeshGenerator.hpp"
+#include "Curve.hpp"
 using namespace UniEngine;
 namespace EcoSysLab {
 	typedef int PointHandle;
-	typedef int JunctionHandle;
-	struct ScannedPoint {
-		PointHandle m_handle;
+	typedef int BranchHandle;
+	struct ScatteredPoint {
+		PointHandle m_handle = -1;
 		std::vector<PointHandle> m_neighbors;
-		JunctionHandle m_junctionHandle = -1;
-		PointHandle m_prevHandle = -1;
-		PointHandle m_nextHandle = -1;
+		std::vector<BranchHandle> m_neighborBranchStarts;
+		std::vector<BranchHandle> m_neighborBranchEnds;
 		glm::vec3 m_position = glm::vec3(0.0f);
-		float m_thickness = 0;
-		NodeHandle m_parentNodeHandle = -1;
-		NodeHandle m_nodeHandle = -1;
 	};
 
-	struct ScannedJunction{
-		glm::vec3 m_start = glm::vec3(0.0f);
-		glm::vec3 m_end = glm::vec3(0.0f);
-		glm::vec3 m_center = glm::vec3(0.0f);
-		glm::vec3 m_direction = glm::vec3(0.0f);
-
-		PointHandle m_startHandle = -1;
-		PointHandle m_endHandle = -1;
+	struct ScannedBranch{
+		BranchHandle m_handle = -1;
+		BezierCurve m_bezierCurve;
+		float m_startThickness = 0.0f;
+		float m_endThickness = 0.0f;
 		bool m_endJunction = false;
-		JunctionHandle m_parentHandle = -1;
-		std::vector<JunctionHandle> m_childHandles;
+		std::vector<PointHandle> m_startNeighbors;
+		std::vector<PointHandle> m_endNeighbors;
+
+		std::vector<BranchHandle> m_neighborBranchStarts;
+		std::vector<BranchHandle> m_neighborBranchEnds;
+		BranchHandle m_parentHandle = -1;
+		std::vector<BranchHandle> m_childHandles;
+
+		std::vector<NodeHandle> m_chainNodeHandles;
 	};
 
 	struct ConnectivityGraphSettings {
@@ -40,24 +41,42 @@ namespace EcoSysLab {
 		float m_junctionLimit = 10.0f;
 	};
 
+	enum class PointCloudVoxelType{
+		ScatteredPoint,
+		BranchStart,
+		BranchEnd
+	};
+
+	struct PointCloudVoxel{
+		PointCloudVoxelType m_type;
+		glm::vec3 m_position;
+		int m_handle;
+	};
+
+	struct ReconstructionSettings{
+			float m_internodeLength = 0.003f;
+	};
+
 	class TreePointCloud : public IPrivateComponent {
-		void FindPoints(PointHandle targetPoint, VoxelGrid<std::vector<PointHandle>> &pointVoxelGrid, float radius,
-										const std::function<void(PointHandle handle)> &func) const;
+		void FindPoints(const glm::vec3 &position, VoxelGrid<std::vector<PointCloudVoxel>> &pointVoxelGrid, float radius,
+										const std::function<void(const PointCloudVoxel& voxel)> &func) const;
 
 		public:
-		void ImportCsv(const std::filesystem::path &path, float scaleFactor = 0.1f);
+		void ImportGraph(const std::filesystem::path &path, float scaleFactor = 0.1f);
 
 		glm::vec3 m_min;
 		glm::vec3 m_max;
-		std::vector<ScannedPoint> m_points;
-		std::vector<ScannedJunction> m_junctions;
+		std::vector<ScatteredPoint> m_points;
+		std::vector<ScannedBranch> m_branches;
 		void OnInspect() override;
 
-		std::vector<std::pair<PointHandle, PointHandle>> m_scatterPointsConnections;
-		std::vector<std::pair<PointHandle, PointHandle>> m_junctionConnections;
-		std::vector<std::pair<PointHandle, PointHandle>> m_filteredJunctionConnections;
-		void EstablishConnectivityGraph(const ConnectivityGraphSettings &settings);
-		BaseSkeleton BuildTreeStructure();
+		BaseSkeleton m_skeleton;
+
+		std::vector<std::pair<glm::vec3, glm::vec3>> m_scatterPointsConnections;
+		std::vector<std::pair<glm::vec3, glm::vec3>> m_branchConnections;
+		std::vector<std::pair<glm::vec3, glm::vec3>> m_filteredJunctionConnections;
+		void EstablishConnectivityGraph(const ConnectivityGraphSettings &otherPointHandle);
+		void BuildTreeStructure(const ReconstructionSettings &reconstructionSettings);
 
 		void ClearMeshes() const;
 		void GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings);
