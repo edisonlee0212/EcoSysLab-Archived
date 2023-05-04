@@ -39,6 +39,8 @@ namespace EcoSysLab {
 		float m_edgeLength = 0.25f;
 		int m_maxTimeout = 10;
 		float m_junctionLimit = 10.0f;
+		float m_forceConnectionLength = 0.05f;
+		void OnInspect();
 	};
 
 	enum class PointCloudVoxelType{
@@ -54,7 +56,7 @@ namespace EcoSysLab {
 	};
 
 	struct ReconstructionSettings{
-			float m_internodeLength = 0.003f;
+			float m_internodeLength = 0.01f;
 	};
 
 	class TreePointCloud : public IPrivateComponent {

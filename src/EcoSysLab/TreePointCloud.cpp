@@ -77,8 +77,8 @@ void TreePointCloud::ImportGraph(const std::filesystem::path &path, float scaleF
 
 void TreePointCloud::OnInspect() {
 		static Handle previousHandle = 0;
-		static std::vector<glm::mat4> matrices;
-		static std::vector<glm::vec4> colors;
+		static std::vector<glm::mat4> scatterPointMatrices;
+		static std::vector<glm::mat4> nodeMatrices;
 		static std::vector<glm::vec3> scatterConnectionStarts;
 		static std::vector<glm::vec3> scatterConnectionEnds;
 		static std::vector<glm::vec3> junctionConnectionStarts;
@@ -94,42 +94,46 @@ void TreePointCloud::OnInspect() {
 		static bool drawScatterPointsConnections = false;
 		static bool drawJunctionConnections = false;
 		static bool drawFilteredConnections = true;
-
+		static bool drawNode = true;
 		static float branchWidth = 0.01f;
 		static float connectionWidth = 0.001f;
 		static float pointSize = 0.02f;
+
+		static float nodeSize = 1.0f;
 
 		static glm::vec4 scatterPointColor = glm::vec4(0, 1, 0, 1);
 		static glm::vec4 scatterPointCollectionColor = glm::vec4(1, 1, 1, 1);
 		static glm::vec4 junctionCollectionColor = glm::vec4(1, 0, 0, 1);
 		static glm::vec4 filteredJunctionCollectionColor = glm::vec4(1, 1, 0, 1);
 		static glm::vec4 branchColor = glm::vec4(0, 1, 1, 1);
+		static glm::vec4 nodeColor = glm::vec4(1, 1, 1, 1);
 		static ConnectivityGraphSettings connectivityGraphSettings;
 		ImGui::DragFloat("Branch width", &branchWidth, 0.001f, 0.001f, 1.0f);
 		ImGui::DragFloat("Connection width", &connectionWidth, 0.001f, 0.001f, 1.0f);
 		ImGui::DragFloat("Point size", &pointSize, 0.001f, 0.001f, 1.0f);
+		ImGui::DragFloat("Node size", &nodeSize, 0.01f, 0.01f, 10.0f);
 		ImGui::Checkbox("Debug Rendering", &enableDebugRendering);
 		if (enableDebugRendering) {
 				ImGui::Checkbox("Render scatter point connections", &drawScatterPointsConnections);
 				ImGui::Checkbox("Render branch", &drawBranches);
 				ImGui::Checkbox("Render all junction connections", &drawJunctionConnections);
 				ImGui::Checkbox("Render filtered junction connections", &drawFilteredConnections);
-
+				ImGui::Checkbox("Render nodes", &drawNode);
 				ImGui::ColorEdit4("Scatter Point Color", &scatterPointColor.x);
 				if (drawBranches) ImGui::ColorEdit4("Branch Color", &branchColor.x);
 				if (drawScatterPointsConnections) ImGui::ColorEdit4("Scatter Connection Color", &scatterPointCollectionColor.x);
 				if (drawJunctionConnections) ImGui::ColorEdit4("Junction Connection Color", &junctionCollectionColor.x);
 				if (drawFilteredConnections)
 						ImGui::ColorEdit4("Filtered Scatter Connection Color", &filteredJunctionCollectionColor.x);
+				if (drawNode)
+						ImGui::ColorEdit4("Node Color", &nodeColor.x);
 
 				if (ImGui::Button("Refresh Data")) {
 						previousHandle = GetHandle();
-						matrices.resize(m_points.size());
-						colors.resize(m_points.size());
+						scatterPointMatrices.resize(m_points.size());
 						const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
 						for (int i = 0; i < m_points.size(); i++) {
-								matrices[i] = glm::translate(m_points[i].m_position) * glm::scale(glm::vec3(1.0f));
-								colors[i] = scatterPointColor;
+								scatterPointMatrices[i] = glm::translate(m_points[i].m_position) * glm::scale(glm::vec3(1.0f));
 						}
 						scatterConnectionStarts.resize(m_scatterPointsConnections.size());
 						scatterConnectionEnds.resize(m_scatterPointsConnections.size());
@@ -158,6 +162,13 @@ void TreePointCloud::OnInspect() {
 								scannedBranchStarts[i] = m_branches[i].m_bezierCurve.m_p0;
 								scannedBranchEnds[i] = m_branches[i].m_bezierCurve.m_p3;
 						}
+						const auto &nodeList = m_skeleton.RefSortedNodeList();
+						nodeMatrices.resize(nodeList.size());
+						for (int i = 0; i < nodeMatrices.size(); i++) {
+								const auto &node = m_skeleton.RefNode(nodeList[i]);
+								nodeMatrices[i] = glm::translate(node.m_info.m_globalPosition) *
+																	glm::scale(glm::vec3(node.m_info.m_thickness * nodeSize));
+						}
 				}
 				static ReconstructionSettings reconstructionSettings;
 				if (ImGui::Button("Build Skeleton")) {
@@ -175,10 +186,11 @@ void TreePointCloud::OnInspect() {
 						GenerateMeshes(meshGeneratorSettings);
 				}
 
-				if (enableDebugRendering && !matrices.empty()) {
-						Gizmos::DrawGizmoMeshInstancedColored(DefaultResources::Primitives::Sphere, colors, matrices,
-																									glm::mat4(1.0f),
-																									pointSize);
+				if (enableDebugRendering && !scatterPointMatrices.empty()) {
+						Gizmos::DrawGizmoMeshInstanced(DefaultResources::Primitives::Sphere, scatterPointColor,
+																					 scatterPointMatrices,
+																					 glm::mat4(1.0f),
+																					 pointSize);
 						if (drawBranches)
 								Gizmos::DrawGizmoRays(branchColor, scannedBranchStarts, scannedBranchEnds,
 																			branchWidth);
@@ -192,6 +204,10 @@ void TreePointCloud::OnInspect() {
 								Gizmos::DrawGizmoRays(filteredJunctionCollectionColor, filteredJunctionConnectionStarts,
 																			filteredJunctionConnectionEnds,
 																			connectionWidth * 1.2f);
+
+						if (drawNode) {
+								Gizmos::DrawGizmoMeshInstanced(DefaultResources::Primitives::Sphere, nodeColor, nodeMatrices);
+						}
 				}
 		}
 		FileUtils::OpenFile("Load YAML", "YAML", {".yml"}, [&](const std::filesystem::path &path) {
@@ -199,13 +215,9 @@ void TreePointCloud::OnInspect() {
 		}, false);
 
 		if (!m_points.empty()) {
-				if (ImGui::TreeNodeEx("Connectivity connectivityGraphSettings", ImGuiTreeNodeFlags_DefaultOpen)) {
+				if (ImGui::TreeNodeEx("Connectivity Graph Settings", ImGuiTreeNodeFlags_DefaultOpen)) {
+						connectivityGraphSettings.OnInspect();
 
-						ImGui::DragFloat("Finder step", &connectivityGraphSettings.m_finderStep, 0.01f, 0.01f, 1.0f);
-						ImGui::DragFloat("Edge width", &connectivityGraphSettings.m_edgeLength, 0.01f, 0.01f, 1.0f);
-
-						ImGui::DragFloat("Junction finder angle", &connectivityGraphSettings.m_junctionLimit, 0.01f, 0.01f, 90.0f);
-						ImGui::DragInt("Junction finder timeout", &connectivityGraphSettings.m_maxTimeout, 1, 1, 30);
 						ImGui::TreePop();
 				}
 				if (ImGui::Button("Establish Connectivity Graph")) EstablishConnectivityGraph(connectivityGraphSettings);
@@ -283,7 +295,9 @@ void TreePointCloud::EstablishConnectivityGraph(const ConnectivityGraphSettings 
 														 branch.m_startNeighbors.emplace_back(voxel.m_handle);
 														 otherPoint.m_neighborBranchStarts.emplace_back(branch.m_handle);
 												 } else {
-														 if (glm::dot(glm::normalize(voxel.m_position - branch.m_bezierCurve.m_p0),
+														 if (glm::distance(voxel.m_position, branch.m_bezierCurve.m_p0) >
+																 settings.m_forceConnectionLength &&
+																 glm::dot(glm::normalize(voxel.m_position - branch.m_bezierCurve.m_p0),
 																					glm::normalize(branch.m_bezierCurve.m_p0 - branch.m_bezierCurve.m_p1)) <
 																 glm::cos(glm::radians(settings.m_junctionLimit)))
 																 return;
@@ -316,7 +330,9 @@ void TreePointCloud::EstablishConnectivityGraph(const ConnectivityGraphSettings 
 														 branch.m_endNeighbors.emplace_back(voxel.m_handle);
 														 otherPoint.m_neighborBranchEnds.emplace_back(branch.m_handle);
 												 } else {
-														 if (glm::dot(glm::normalize(voxel.m_position - branch.m_bezierCurve.m_p3),
+														 if (glm::distance(voxel.m_position, branch.m_bezierCurve.m_p3) >
+																 settings.m_forceConnectionLength &&
+																 glm::dot(glm::normalize(voxel.m_position - branch.m_bezierCurve.m_p3),
 																					glm::normalize(branch.m_bezierCurve.m_p3 - branch.m_bezierCurve.m_p2)) <
 																 glm::cos(glm::radians(settings.m_junctionLimit)))
 																 return;
@@ -418,8 +434,8 @@ void TreePointCloud::BuildTreeStructure(const ReconstructionSettings &reconstruc
 				bool onlyChild = true;
 				NodeHandle prevNodeHandle = -1;
 				float chainLength = glm::distance(processingBranch.m_bezierCurve.m_p0, processingBranch.m_bezierCurve.m_p3);
-				int chainAmount = chainLength /
-													reconstructionSettings.m_internodeLength;
+				int chainAmount = glm::max(2, (int) (chainLength /
+																						 reconstructionSettings.m_internodeLength));
 				if (processingBranch.m_handle == rootBranchHandle) {
 						prevNodeHandle = 0;
 						processingBranch.m_chainNodeHandles.emplace_back(0);
@@ -437,12 +453,14 @@ void TreePointCloud::BuildTreeStructure(const ReconstructionSettings &reconstruc
 				}
 				for (int i = 0; i < chainAmount; i++) {
 						auto &node = m_skeleton.RefNode(processingBranch.m_chainNodeHandles[i]);
-						node.m_info.m_globalPosition = processingBranch.m_bezierCurve.GetPoint(chainLength * i / chainAmount);
-						node.m_info.m_length = glm::distance(processingBranch.m_bezierCurve.GetPoint(chainLength * i / chainAmount), processingBranch.m_bezierCurve.GetPoint(chainLength * (i + 1) / chainAmount));
+						node.m_info.m_globalPosition = processingBranch.m_bezierCurve.GetPoint(static_cast<float>(i) / chainAmount);
+						node.m_info.m_length = glm::distance(
+										processingBranch.m_bezierCurve.GetPoint(static_cast<float>(i) / chainAmount),
+										processingBranch.m_bezierCurve.GetPoint(static_cast<float>(i + 1) / chainAmount));
 						node.m_info.m_localPosition = glm::normalize(
-										processingBranch.m_bezierCurve.GetAxis(chainLength * i / chainAmount));
+										processingBranch.m_bezierCurve.GetAxis(static_cast<float>(i) / chainAmount));
 						node.m_info.m_thickness = glm::mix(processingBranch.m_startThickness, processingBranch.m_endThickness,
-																							 static_cast<float>(i / chainAmount));
+																							 static_cast<float>(i) / chainAmount);
 				}
 				for (const auto &childBranchHandle: processingBranch.m_childHandles) {
 						processingBranchHandles.emplace(childBranchHandle);
@@ -455,6 +473,7 @@ void TreePointCloud::BuildTreeStructure(const ReconstructionSettings &reconstruc
 		rootNode.m_info.m_localRotation = glm::vec3(0.0f);
 		rootNode.m_info.m_globalRotation = rootNode.m_info.m_regulatedGlobalRotation = glm::vec3(glm::radians(90.0f), 0.0f,
 																																														 0.0f);
+
 		for (const auto &nodeHandle: sortedNodeList) {
 				auto &node = m_skeleton.RefNode(nodeHandle);
 				if (node.GetParentHandle() <= 0) continue;
@@ -466,7 +485,7 @@ void TreePointCloud::BuildTreeStructure(const ReconstructionSettings &reconstruc
 				auto regulatedUp = glm::normalize(glm::cross(glm::cross(front, parentUp), front));
 				nodeInfo.m_globalRotation = glm::quatLookAt(front, regulatedUp);
 				nodeInfo.m_localRotation = glm::inverse(parentNode.m_info.m_globalRotation) * nodeInfo.m_globalRotation;
-
+				nodeInfo.m_regulatedGlobalRotation = nodeInfo.m_globalRotation;
 				m_min = glm::min(m_min, nodeInfo.m_globalPosition);
 				m_max = glm::max(m_max, nodeInfo.m_globalPosition);
 				const auto endPosition = nodeInfo.m_globalPosition + nodeInfo.m_length *
@@ -475,7 +494,7 @@ void TreePointCloud::BuildTreeStructure(const ReconstructionSettings &reconstruc
 				m_min = glm::min(m_min, endPosition);
 				m_max = glm::max(m_max, endPosition);
 		}
-		//retVal.CalculateTransforms();
+		//m_skeleton.CalculateTransforms();
 		m_skeleton.CalculateFlows();
 }
 
@@ -530,4 +549,13 @@ void TreePointCloud::GenerateMeshes(const TreeMeshGeneratorSettings &meshGenerat
 				meshRenderer->m_mesh = mesh;
 				meshRenderer->m_material = material;
 		}
+}
+
+void ConnectivityGraphSettings::OnInspect() {
+		ImGui::DragFloat("Finder step", &m_finderStep, 0.01f, 0.01f, 1.0f);
+		ImGui::DragFloat("Edge width", &m_edgeLength, 0.01f, 0.01f, 1.0f);
+		ImGui::DragFloat("Force connection length", &m_forceConnectionLength, 0.01f, 0.01f, 1.0f);
+
+		ImGui::DragFloat("Junction finder angle", &m_junctionLimit, 0.01f, 0.01f, 90.0f);
+		ImGui::DragInt("Junction finder timeout", &m_maxTimeout, 1, 1, 30);
 }
