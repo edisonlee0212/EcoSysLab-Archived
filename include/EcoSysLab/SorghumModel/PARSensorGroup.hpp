@@ -7,7 +7,7 @@ using namespace RayTracerFacility;
 namespace EcoSysLab {
 class PARSensorGroup : public IAsset {
 public:
-  std::vector<IlluminationSampler<float>> m_samplers;
+  std::vector<IlluminationSampler<glm::vec3>> m_samplers;
   void CalculateIllumination(const RayProperties& rayProperties, int seed, float pushNormalDistance);
   void OnInspect();
   void Serialize(YAML::Emitter &out) override;

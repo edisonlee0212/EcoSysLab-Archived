@@ -45,11 +45,10 @@ void PARSensorGroup::OnInspect() {
             float y = ((i / sz) % sy) * step + minRange.y;
             float x = ((i / sz / sy) % sx) * step + minRange.x;
             glm::vec3 start = {x, y, z};
-            m_samplers[i].m_position = start;
-            m_samplers[i].m_direction = glm::vec3(0, 0, 0);
-            m_samplers[i].m_doubleFace = false;
-            m_samplers[i].m_surfaceNormal = glm::vec3(0, 1, 0);
-            m_samplers[i].m_energy = 0;
+            m_samplers[i].m_a.m_position = m_samplers[i].m_b.m_position = m_samplers[i].m_c.m_position = start;
+            m_samplers[i].m_frontFace = true;
+						m_samplers[i].m_backFace = false;
+						m_samplers[i].m_a.m_normal = m_samplers[i].m_b.m_normal = m_samplers[i].m_c.m_normal = glm::vec3(0, 1, 0);
           },
           results);
       for (const auto &i : results)
@@ -87,7 +86,7 @@ void PARSensorGroup::OnInspect() {
     Jobs::ParallelFor(
         m_samplers.size(),
         [&](unsigned i) {
-          const auto start = m_samplers[i].m_position;
+          const auto start = m_samplers[i].m_a.m_position;
           starts[i] = start;
           ends[i] = start + m_samplers[i].m_direction * lineLengthFactor * m_samplers[i].m_energy;
           matrices[i] =
@@ -105,14 +104,14 @@ void PARSensorGroup::Serialize(YAML::Emitter &out) {
   if (!m_samplers.empty())
   {
     out << YAML::Key << "m_samplers" << YAML::Value
-        << YAML::Binary((const unsigned char *)m_samplers.data(), m_samplers.size() * sizeof(IlluminationSampler<float>));
+        << YAML::Binary((const unsigned char *)m_samplers.data(), m_samplers.size() * sizeof(IlluminationSampler<glm::vec3>));
   }
 }
 void PARSensorGroup::Deserialize(const YAML::Node &in) {
   if (in["m_samplers"])
   {
     auto binaryList = in["m_samplers"].as<YAML::Binary>();
-    m_samplers.resize(binaryList.size() / sizeof(IlluminationSampler<float>));
+    m_samplers.resize(binaryList.size() / sizeof(IlluminationSampler<glm::vec3>));
     std::memcpy(m_samplers.data(), binaryList.data(), binaryList.size());
   }
 }

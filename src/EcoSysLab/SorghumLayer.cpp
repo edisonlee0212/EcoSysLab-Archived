@@ -245,11 +245,6 @@ void SorghumLayer::OnInspect() {
   if (ImGui::Begin("Sorghum Layer")) {
 #ifdef RAYTRACERFACILITY
     if (ImGui::TreeNodeEx("Illumination Estimation")) {
-      ImGui::Checkbox("Display light probes", &m_displayLightProbes);
-      if (m_displayLightProbes) {
-        ImGui::DragFloat("Size", &m_lightProbeSize, 0.0001f, 0.0001f, 0.2f,
-                         "%.5f");
-      }
       ImGui::DragInt("Seed", &m_seed);
       ImGui::DragFloat("Push distance along normal", &m_pushDistance, 0.0001f,
                        -1.0f, 1.0f, "%.5f");
@@ -472,16 +467,7 @@ void SorghumLayer::ExportAllSorghumsModel(const std::string &filename) {
     UNIENGINE_ERROR("Can't open file!");
   }
 }
-#ifdef RAYTRACERFACILITY
-void SorghumLayer::RenderLightProbes() {
-  if (m_probeTransforms.empty() || m_probeColors.empty() ||
-      m_probeTransforms.size() != m_probeColors.size())
-    return;
-  Gizmos::DrawGizmoMeshInstancedColored(DefaultResources::Primitives::Cube,
-                                        m_probeColors, m_probeTransforms,
-                                        glm::mat4(1.0f), m_lightProbeSize);
-}
-#endif
+
 
 #ifdef RAYTRACERFACILITY
 void SorghumLayer::CalculateIlluminationFrameByFrame() {
@@ -491,8 +477,7 @@ void SorghumLayer::CalculateIlluminationFrameByFrame() {
   if (!owners)
     return;
   m_processingEntities.clear();
-  m_probeTransforms.clear();
-  m_probeColors.clear();
+
   m_processingEntities.insert(m_processingEntities.begin(), owners->begin(),
                               owners->end());
   m_processingIndex = m_processingEntities.size();
@@ -505,8 +490,7 @@ void SorghumLayer::CalculateIllumination() {
   if (!owners)
     return;
   m_processingEntities.clear();
-  m_probeTransforms.clear();
-  m_probeColors.clear();
+
   m_processingEntities.insert(m_processingEntities.begin(), owners->begin(),
                               owners->end());
   m_processingIndex = m_processingEntities.size();
@@ -521,14 +505,9 @@ void SorghumLayer::CalculateIllumination() {
               ->GetOrSetPrivateComponent<TriangleIlluminationEstimator>(
                   m_processingEntities[m_processingIndex])
               .lock();
-      estimator->CalculateIlluminationForDescendents(m_rayProperties, m_seed,
+			estimator->PrepareLightProbeGroup();
+      estimator->SampleLightProbeGroup(m_rayProperties, m_seed,
                                                      m_pushDistance);
-      m_probeTransforms.insert(m_probeTransforms.end(),
-                               estimator->m_probeTransforms.begin(),
-                               estimator->m_probeTransforms.end());
-      m_probeColors.insert(m_probeColors.end(),
-                           estimator->m_probeColors.begin(),
-                           estimator->m_probeColors.end());
     }
   }
 }
@@ -536,9 +515,6 @@ void SorghumLayer::CalculateIllumination() {
 void SorghumLayer::Update() {
   auto scene = GetScene();
 #ifdef RAYTRACERFACILITY
-  if (m_displayLightProbes) {
-    RenderLightProbes();
-  }
   if (m_processing) {
     m_processingIndex--;
     if (m_processingIndex == -1) {
@@ -550,14 +526,9 @@ void SorghumLayer::Update() {
               ->GetOrSetPrivateComponent<TriangleIlluminationEstimator>(
                   m_processingEntities[m_processingIndex])
               .lock();
-      estimator->CalculateIlluminationForDescendents(m_rayProperties, m_seed,
-                                                     m_pushDistance);
-      m_probeTransforms.insert(m_probeTransforms.end(),
-                               estimator->m_probeTransforms.begin(),
-                               estimator->m_probeTransforms.end());
-      m_probeColors.insert(m_probeColors.end(),
-                           estimator->m_probeColors.begin(),
-                           estimator->m_probeColors.end());
+				estimator->PrepareLightProbeGroup();
+				estimator->SampleLightProbeGroup(m_rayProperties, m_seed,
+																				 m_pushDistance);
       m_perPlantCalculationTime = Application::Time().CurrentTime() - timer;
     }
   }

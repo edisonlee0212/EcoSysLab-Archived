@@ -34,16 +34,11 @@ public:
   RayTracerFacility::RayProperties m_rayProperties;
 
   bool m_enableCompressedBTF = false;
-  std::vector<glm::mat4> m_probeTransforms;
-  std::vector<glm::vec4> m_probeColors;
   std::vector<Entity> m_processingEntities;
   int m_processingIndex;
   bool m_processing = false;
   float m_lightProbeSize = 0.05f;
   float m_perPlantCalculationTime = 0.0f;
-  bool m_displayLightProbes = true;
-
-  void RenderLightProbes();
   void CalculateIlluminationFrameByFrame();
   void CalculateIllumination();
 
