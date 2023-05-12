@@ -39,7 +39,7 @@ namespace EcoSysLab {
 		float m_edgeLength = 0.25f;
 		int m_maxTimeout = 10;
 		float m_junctionLimit = 10.0f;
-		float m_forceConnectionLength = 0.05f;
+		float m_forceConnectionLength = 0.35f;
 		void OnInspect();
 	};
 
@@ -57,6 +57,8 @@ namespace EcoSysLab {
 
 	struct ReconstructionSettings{
 			float m_internodeLength = 0.01f;
+			float m_minHeight = 0.1f;
+			float m_maxTreeDistance;
 	};
 
 	class TreePointCloud : public IPrivateComponent {
@@ -72,7 +74,7 @@ namespace EcoSysLab {
 		std::vector<ScannedBranch> m_branches;
 		void OnInspect() override;
 
-		BaseSkeleton m_skeleton;
+		std::vector<BaseSkeleton> m_skeletons;
 
 		std::vector<std::pair<glm::vec3, glm::vec3>> m_scatterPointsConnections;
 		std::vector<std::pair<glm::vec3, glm::vec3>> m_branchConnections;
