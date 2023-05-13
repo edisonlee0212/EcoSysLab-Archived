@@ -22,7 +22,6 @@ namespace EcoSysLab {
 		BezierCurve m_bezierCurve;
 		float m_startThickness = 0.0f;
 		float m_endThickness = 0.0f;
-		bool m_endJunction = false;
 		std::vector<PointHandle> m_startNeighbors;
 		std::vector<PointHandle> m_endNeighbors;
 
@@ -56,7 +55,7 @@ namespace EcoSysLab {
 	};
 
 	struct ReconstructionSettings{
-			float m_internodeLength = 0.01f;
+			float m_internodeLength = 0.1f;
 			float m_minHeight = 0.1f;
 			float m_maxTreeDistance;
 	};

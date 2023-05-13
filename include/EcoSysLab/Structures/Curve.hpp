@@ -28,6 +28,8 @@ namespace EcoSysLab {
 
 		[[nodiscard]] glm::vec3 GetEndAxis() const;
 
+		[[nodiscard]] float GetLength() const;
+
 		glm::vec3 m_p0, m_p1, m_p2, m_p3;
 	};
 

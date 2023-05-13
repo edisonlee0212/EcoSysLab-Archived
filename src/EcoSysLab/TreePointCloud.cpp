@@ -60,7 +60,6 @@ void TreePointCloud::ImportGraph(const std::filesystem::path &path, float scaleF
 						branch.m_endThickness = inBranch["End Radius"].as<float>();
 						branch.m_handle = i;
 						branch.m_parentHandle = -1;
-						branch.m_endJunction = false;
 						branch.m_childHandles.clear();
 
 						m_min = glm::min(m_min, branch.m_bezierCurve.m_p0);
@@ -170,7 +169,7 @@ void TreePointCloud::OnInspect() {
 								for (int i = 0; i < nodeList.size(); i++) {
 										const auto &node = skeleton.PeekNode(nodeList[i]);
 										nodeMatrices[startIndex + i] = glm::translate(node.m_info.m_globalPosition) *
-																									 glm::scale(glm::vec3(node.m_info.m_thickness * nodeSize));
+																									 glm::scale(glm::vec3(node.m_info.m_thickness));
 								}
 						}
 				}
@@ -210,7 +209,8 @@ void TreePointCloud::OnInspect() {
 																			connectionWidth * 1.2f);
 
 						if (drawNode) {
-								Gizmos::DrawGizmoMeshInstanced(DefaultResources::Primitives::Sphere, nodeColor, nodeMatrices);
+								Gizmos::DrawGizmoMeshInstanced(DefaultResources::Primitives::Sphere, nodeColor, nodeMatrices,
+																							 glm::mat4(1.0f), nodeSize);
 						}
 				}
 		}
@@ -358,10 +358,8 @@ void TreePointCloud::EstablishConnectivityGraph(const ConnectivityGraphSettings 
 		int startJunctionCount = 0;
 		for (auto &branches: m_branches) {
 				if (branches.m_endNeighbors.empty() && branches.m_neighborBranchStarts.empty()) {
-						branches.m_endJunction = true;
 						endJunctionCount++;
 				} else {
-						branches.m_endJunction = false;
 				}
 				if (branches.m_startNeighbors.empty() && branches.m_neighborBranchEnds.empty()) {
 						startJunctionCount++;
@@ -416,6 +414,21 @@ void TreePointCloud::EstablishConnectivityGraph(const ConnectivityGraphSettings 
 
 }
 
+void ApplyCurve(BaseSkeleton &skeleton, ScannedBranch &branch) {
+		const auto chainAmount = branch.m_chainNodeHandles.size();
+		for (int i = 0; i < chainAmount; i++) {
+				auto &node = skeleton.RefNode(branch.m_chainNodeHandles[i]);
+				node.m_info.m_globalPosition = branch.m_bezierCurve.GetPoint(
+								static_cast<float>(i) / chainAmount);
+				node.m_info.m_length = glm::distance(
+								branch.m_bezierCurve.GetPoint(static_cast<float>(i) / chainAmount),
+								branch.m_bezierCurve.GetPoint(static_cast<float>(i + 1) / chainAmount));
+				node.m_info.m_localPosition = glm::normalize(branch.m_bezierCurve.GetPoint(static_cast<float>(i + 1) / chainAmount) - branch.m_bezierCurve.GetPoint(static_cast<float>(i) / chainAmount));
+				node.m_info.m_thickness = glm::mix(branch.m_startThickness, branch.m_endThickness,
+																					 static_cast<float>(i) / chainAmount);
+		}
+}
+
 void TreePointCloud::BuildTreeStructure(const ReconstructionSettings &reconstructionSettings) {
 		m_skeletons.clear();
 		auto copiedBranches = m_branches;
@@ -437,71 +450,101 @@ void TreePointCloud::BuildTreeStructure(const ReconstructionSettings &reconstruc
 						if (!replaced) rootBranchHandles.emplace_back(branch.m_handle);
 				}
 		}
-		for(const auto& rootBranchHandle : rootBranchHandles) {
+		for (const auto &rootBranchHandle: rootBranchHandles) {
 				auto &skeleton = m_skeletons.emplace_back();
 				std::queue<BranchHandle> processingBranchHandles;
 				processingBranchHandles.emplace(rootBranchHandle);
 				while (!processingBranchHandles.empty()) {
 						auto processingBranchHandle = processingBranchHandles.front();
 						processingBranchHandles.pop();
-						auto &processingBranch = copiedBranches[processingBranchHandle];
+						for (const auto &childBranchHandle: copiedBranches[processingBranchHandle].m_childHandles) {
+								processingBranchHandles.emplace(childBranchHandle);
+						}
 						bool onlyChild = true;
 						NodeHandle prevNodeHandle = -1;
-						float chainLength = glm::distance(processingBranch.m_bezierCurve.m_p0, processingBranch.m_bezierCurve.m_p3);
-						int chainAmount = glm::max(2, (int) (chainLength /
-																								 reconstructionSettings.m_internodeLength));
-						if (processingBranch.m_handle == rootBranchHandle) {
+						if (copiedBranches[processingBranchHandle].m_handle == rootBranchHandle) {
 								prevNodeHandle = 0;
-								processingBranch.m_chainNodeHandles.emplace_back(0);
+								copiedBranches[processingBranchHandle].m_chainNodeHandles.emplace_back(0);
 						} else {
+								copiedBranches.emplace_back();
+								auto &processingBranch = copiedBranches[processingBranchHandle];
+								auto &connectionBranch = copiedBranches.back();
 								auto &parentBranch = copiedBranches[processingBranch.m_parentHandle];
+								connectionBranch.m_handle = copiedBranches.size() - 1;
+								connectionBranch.m_bezierCurve.m_p0 = parentBranch.m_bezierCurve.m_p3;
+								connectionBranch.m_bezierCurve.m_p3 = processingBranch.m_bezierCurve.m_p0;
+								auto connectionLength = glm::distance(connectionBranch.m_bezierCurve.m_p0,
+																											connectionBranch.m_bezierCurve.m_p3);
+								/*
+								connectionBranch.m_bezierCurve.m_p1 = parentBranch.m_bezierCurve.m_p3 +
+																											(parentBranch.m_bezierCurve.m_p3 -
+																											 parentBranch.m_bezierCurve.m_p2) * 0.1f * connectionLength;
+								connectionBranch.m_bezierCurve.m_p2 = processingBranch.m_bezierCurve.m_p0 +
+																											(processingBranch.m_bezierCurve.m_p0 -
+																											 processingBranch.m_bezierCurve.m_p1) * 0.1f * connectionLength;
+								*/
+								connectionBranch.m_bezierCurve.m_p1 = glm::mix(connectionBranch.m_bezierCurve.m_p0, connectionBranch.m_bezierCurve.m_p3, 0.25f);
+								connectionBranch.m_bezierCurve.m_p2 = glm::mix(connectionBranch.m_bezierCurve.m_p0, connectionBranch.m_bezierCurve.m_p3, 0.75f);
+								connectionBranch.m_startThickness = parentBranch.m_endThickness;
+								connectionBranch.m_endThickness = processingBranch.m_startThickness;
+								connectionBranch.m_childHandles.emplace_back(processingBranch.m_handle);
+								connectionBranch.m_parentHandle = processingBranch.m_parentHandle;
+								processingBranch.m_parentHandle = connectionBranch.m_handle;
+								for (int i = 0; i < parentBranch.m_childHandles.size(); i++) {
+										if (parentBranch.m_childHandles[i] == processingBranch.m_handle) {
+												parentBranch.m_childHandles[i] = connectionBranch.m_handle;
+												break;
+										}
+								}
 								if (parentBranch.m_childHandles.size() > 1) onlyChild = false;
-								auto chainFirstNodeHandle = skeleton.Extend(parentBranch.m_chainNodeHandles.back(), !onlyChild);
+								prevNodeHandle = parentBranch.m_chainNodeHandles.back();
+								auto connectionFirstNodeHandle = skeleton.Extend(prevNodeHandle, !onlyChild);
+								connectionBranch.m_chainNodeHandles.emplace_back(connectionFirstNodeHandle);
+								prevNodeHandle = connectionFirstNodeHandle;
+
+								float connectionChainLength = connectionBranch.m_bezierCurve.GetLength();
+								int connectionChainAmount = glm::max(2, (int) (connectionChainLength /
+																															 reconstructionSettings.m_internodeLength));
+								for (int i = 1; i < connectionChainAmount; i++) {
+										auto newNodeHandle = skeleton.Extend(prevNodeHandle, false);
+										connectionBranch.m_chainNodeHandles.emplace_back(newNodeHandle);
+										prevNodeHandle = newNodeHandle;
+								}
+								ApplyCurve(skeleton, connectionBranch);
+								auto chainFirstNodeHandle = skeleton.Extend(prevNodeHandle, false);
 								processingBranch.m_chainNodeHandles.emplace_back(chainFirstNodeHandle);
 								prevNodeHandle = chainFirstNodeHandle;
 						}
+						auto &processingBranch = copiedBranches[processingBranchHandle];
+						float chainLength = processingBranch.m_bezierCurve.GetLength();
+						int chainAmount = glm::max(2, (int) (chainLength /
+																								 reconstructionSettings.m_internodeLength));
 						for (int i = 1; i < chainAmount; i++) {
 								auto newNodeHandle = skeleton.Extend(prevNodeHandle, false);
 								processingBranch.m_chainNodeHandles.emplace_back(newNodeHandle);
 								prevNodeHandle = newNodeHandle;
 						}
-						for (int i = 0; i < chainAmount; i++) {
-								auto &node = skeleton.RefNode(processingBranch.m_chainNodeHandles[i]);
-								node.m_info.m_globalPosition = processingBranch.m_bezierCurve.GetPoint(
-												static_cast<float>(i) / chainAmount);
-								node.m_info.m_length = glm::distance(
-												processingBranch.m_bezierCurve.GetPoint(static_cast<float>(i) / chainAmount),
-												processingBranch.m_bezierCurve.GetPoint(static_cast<float>(i + 1) / chainAmount));
-								node.m_info.m_localPosition = glm::normalize(
-												processingBranch.m_bezierCurve.GetAxis(static_cast<float>(i) / chainAmount));
-								node.m_info.m_thickness = glm::mix(processingBranch.m_startThickness, processingBranch.m_endThickness,
-																									 static_cast<float>(i) / chainAmount);
-						}
-						for (const auto &childBranchHandle: processingBranch.m_childHandles) {
-								processingBranchHandles.emplace(childBranchHandle);
-						}
+						ApplyCurve(skeleton, processingBranch);
+
 				}
 				skeleton.SortLists();
 				auto &sortedNodeList = skeleton.RefSortedNodeList();
 				auto &rootNode = skeleton.RefNode(0);
-				rootNode.m_info.m_globalPosition = glm::vec3(0.0f);
 				rootNode.m_info.m_localRotation = glm::vec3(0.0f);
-				rootNode.m_info.m_globalRotation = rootNode.m_info.m_regulatedGlobalRotation = glm::vec3(glm::radians(90.0f),
-																																																 0.0f,
-																																																 0.0f);
+				rootNode.m_info.m_globalRotation = rootNode.m_info.m_regulatedGlobalRotation = glm::quatLookAt(rootNode.m_info.m_localPosition, glm::vec3(0, 0, -1));
+				rootNode.m_info.m_localPosition = glm::vec3(0.0f);
 
 				for (const auto &nodeHandle: sortedNodeList) {
+						if (nodeHandle == 0) continue;
 						auto &node = skeleton.RefNode(nodeHandle);
-						if (node.GetParentHandle() <= 0) continue;
 						auto &nodeInfo = node.m_info;
 						auto &parentNode = skeleton.RefNode(node.GetParentHandle());
-						auto front = nodeInfo.m_localPosition;
-						nodeInfo.m_localPosition = nodeInfo.m_globalPosition - parentNode.m_info.m_localPosition;
+						auto front = glm::normalize(nodeInfo.m_localPosition);
+						nodeInfo.m_localPosition = glm::vec3(0.0f);
 						auto parentUp = parentNode.m_info.m_globalRotation * glm::vec3(0, 1, 0);
 						auto regulatedUp = glm::normalize(glm::cross(glm::cross(front, parentUp), front));
 						nodeInfo.m_globalRotation = glm::quatLookAt(front, regulatedUp);
 						nodeInfo.m_localRotation = glm::inverse(parentNode.m_info.m_globalRotation) * nodeInfo.m_globalRotation;
-						nodeInfo.m_regulatedGlobalRotation = nodeInfo.m_globalRotation;
 						m_min = glm::min(m_min, nodeInfo.m_globalPosition);
 						m_max = glm::max(m_max, nodeInfo.m_globalPosition);
 						const auto endPosition = nodeInfo.m_globalPosition + nodeInfo.m_length *
@@ -510,7 +553,7 @@ void TreePointCloud::BuildTreeStructure(const ReconstructionSettings &reconstruc
 						m_min = glm::min(m_min, endPosition);
 						m_max = glm::max(m_max, endPosition);
 				}
-				//m_skeleton.CalculateTransforms();
+				//skeleton.CalculateTransforms();
 				skeleton.CalculateFlows();
 		}
 }
@@ -521,7 +564,7 @@ void TreePointCloud::ClearMeshes() const {
 		const auto children = scene->GetChildren(self);
 		for (const auto &child: children) {
 				auto name = scene->GetEntityName(child);
-				if(name.substr(0, 4) == "Tree"){
+				if (name.substr(0, 4) == "Tree") {
 						scene->DeleteEntity(child);
 				}
 		}
@@ -533,7 +576,7 @@ void TreePointCloud::GenerateMeshes(const TreeMeshGeneratorSettings &meshGenerat
 		const auto children = scene->GetChildren(self);
 
 		ClearMeshes();
-		for(int i = 0; i < m_skeletons.size(); i++) {
+		for (int i = 0; i < m_skeletons.size(); i++) {
 				Entity treeEntity;
 				treeEntity = scene->CreateEntity("Tree " + std::to_string(i));
 				scene->SetParent(treeEntity, self);

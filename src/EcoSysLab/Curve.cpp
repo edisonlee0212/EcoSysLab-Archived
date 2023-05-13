@@ -44,6 +44,10 @@ glm::vec3 BezierCurve::GetEndAxis() const {
     return glm::normalize(m_p3 - m_p2);
 }
 
+float BezierCurve::GetLength() const {
+		return glm::distance(m_p0, m_p3);
+}
+
 glm::vec3 BezierSpline::EvaluatePointFromCurves(float point) const {
     const float splineU = glm::clamp(point, 0.0f, 1.0f) * float(m_curves.size());
 
