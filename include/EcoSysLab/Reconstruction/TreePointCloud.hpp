@@ -55,9 +55,9 @@ namespace EcoSysLab {
 	};
 
 	struct ReconstructionSettings{
-			float m_internodeLength = 0.1f;
+			float m_internodeLength = 0.03f;
 			float m_minHeight = 0.1f;
-			float m_maxTreeDistance;
+			float m_maxTreeDistance = 0.05f;
 	};
 
 	class TreePointCloud : public IPrivateComponent {

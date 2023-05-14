@@ -545,15 +545,14 @@ void TreePointCloud::BuildTreeStructure(const ReconstructionSettings &reconstruc
 						auto regulatedUp = glm::normalize(glm::cross(glm::cross(front, parentUp), front));
 						nodeInfo.m_globalRotation = glm::quatLookAt(front, regulatedUp);
 						nodeInfo.m_localRotation = glm::inverse(parentNode.m_info.m_globalRotation) * nodeInfo.m_globalRotation;
-						m_min = glm::min(m_min, nodeInfo.m_globalPosition);
-						m_max = glm::max(m_max, nodeInfo.m_globalPosition);
-						const auto endPosition = nodeInfo.m_globalPosition + nodeInfo.m_length *
-																																 (nodeInfo.m_globalRotation *
-																																	glm::vec3(0, 0, -1));
-						m_min = glm::min(m_min, endPosition);
-						m_max = glm::max(m_max, endPosition);
 				}
-				//skeleton.CalculateTransforms();
+
+				for(auto i = sortedNodeList.rbegin(); i != sortedNodeList.rend(); i++){
+						auto &node = skeleton.RefNode(*i);
+						auto &nodeInfo = node.m_info;
+						
+				}
+				skeleton.CalculateTransforms();
 				skeleton.CalculateFlows();
 		}
 }
