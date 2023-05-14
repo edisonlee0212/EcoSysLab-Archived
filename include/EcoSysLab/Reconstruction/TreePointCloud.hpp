@@ -33,6 +33,11 @@ namespace EcoSysLab {
 		std::vector<NodeHandle> m_chainNodeHandles;
 	};
 
+    struct TreeParts{
+        std::vector<glm::vec3> m_allocatedPoints;
+        std::vector<BranchHandle> m_branchHandles;
+    };
+
 	struct ConnectivityGraphSettings {
 		float m_finderStep = 0.05f;
 		float m_edgeLength = 0.25f;
@@ -71,6 +76,7 @@ namespace EcoSysLab {
 		glm::vec3 m_max;
 		std::vector<ScatteredPoint> m_points;
 		std::vector<ScannedBranch> m_branches;
+        std::vector<TreePart> m_treeParts;
 		void OnInspect() override;
 
 		std::vector<BaseSkeleton> m_skeletons;

@@ -29,8 +29,8 @@ void TreePointCloud::ImportGraph(const std::filesystem::path &path, float scaleF
 				YAML::Node in = YAML::Load(stringStream.str());
 
 				const auto &tree = in["Tree"];
-				const auto &branches = tree["Branches"]["Content"];
-				const auto &scatterPoints = tree["Scatter Points"]["Content"];
+				const auto &scatterPoints = tree["Scatter Points"];
+                const auto &treeParts = tree["Tree Parts"];
 
 				m_min = glm::vec3(FLT_MAX);
 				m_max = glm::vec3(FLT_MIN);
@@ -45,27 +45,34 @@ void TreePointCloud::ImportGraph(const std::filesystem::path &path, float scaleF
 						point.m_handle = i;
 						point.m_neighbors.clear();
 				}
-				m_branches.resize(branches.size());
-				for (int i = 0; i < branches.size(); i++) {
-						const auto &inBranch = branches[i];
-						auto &branch = m_branches[i];
-						branch.m_bezierCurve.m_p0 = inBranch["Start Pos"].as<glm::vec3>();
-						branch.m_bezierCurve.m_p3 = inBranch["End Pos"].as<glm::vec3>();
-						auto cPLength = glm::distance(branch.m_bezierCurve.m_p0, branch.m_bezierCurve.m_p3) * 0.3f;
-						branch.m_bezierCurve.m_p1 =
-										glm::normalize(inBranch["Start Dir"].as<glm::vec3>()) * cPLength + branch.m_bezierCurve.m_p0;
-						branch.m_bezierCurve.m_p2 =
-										branch.m_bezierCurve.m_p3 - glm::normalize(inBranch["End Dir"].as<glm::vec3>()) * cPLength;
-						branch.m_startThickness = inBranch["Start Radius"].as<float>();
-						branch.m_endThickness = inBranch["End Radius"].as<float>();
-						branch.m_handle = i;
-						branch.m_parentHandle = -1;
-						branch.m_childHandles.clear();
+				m_branches.clear();
+                m_treeParts.clear();
+				for (int i = 0; i < treeParts.size(); i++) {
+						const auto &inTreeParts = treeParts[i];
+                        auto& treePart = m_treeParts.emplace_back();
+                        for(const auto& inBranch : inTreeParts["Branches"]) {
+                            auto& branch = m_branches.emplace_back();
+                            branch.m_bezierCurve.m_p0 = inBranch["Start Pos"].as<glm::vec3>();
+                            branch.m_bezierCurve.m_p3 = inBranch["End Pos"].as<glm::vec3>();
+                            auto cPLength = glm::distance(branch.m_bezierCurve.m_p0, branch.m_bezierCurve.m_p3) * 0.3f;
+                            branch.m_bezierCurve.m_p1 =
+                                    glm::normalize(inBranch["Start Dir"].as<glm::vec3>()) * cPLength + branch.m_bezierCurve.m_p0;
+                            branch.m_bezierCurve.m_p2 =
+                                    branch.m_bezierCurve.m_p3 - glm::normalize(inBranch["End Dir"].as<glm::vec3>()) * cPLength;
+                            branch.m_startThickness = inBranch["Start Radius"].as<float>();
+                            branch.m_endThickness = inBranch["End Radius"].as<float>();
+                            branch.m_handle = m_branches.size() - 1;
+                            branch.m_parentHandle = -1;
+                            branch.m_childHandles.clear();
 
-						m_min = glm::min(m_min, branch.m_bezierCurve.m_p0);
-						m_max = glm::max(m_max, branch.m_bezierCurve.m_p0);
-						m_min = glm::min(m_min, branch.m_bezierCurve.m_p3);
-						m_max = glm::max(m_max, branch.m_bezierCurve.m_p3);
+                            m_min = glm::min(m_min, branch.m_bezierCurve.m_p0);
+                            m_max = glm::max(m_max, branch.m_bezierCurve.m_p0);
+                            m_min = glm::min(m_min, branch.m_bezierCurve.m_p3);
+                            m_max = glm::max(m_max, branch.m_bezierCurve.m_p3);
+                        }
+                        for(const auto& inAllocatedPoint : inTreeParts["Allocated Points"]) {
+                            auto &point = treePart.m_allocatedPoints.emplace_back(inAllocatedPoint.as<glm::vec3>());
+                        }
 				}
 		}
 		catch (std::exception e) {
