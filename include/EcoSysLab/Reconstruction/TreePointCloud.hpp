@@ -40,12 +40,13 @@ namespace EcoSysLab {
 	};
 
 	struct ConnectivityGraphSettings {
-		float m_finderStep = 0.05f;
+		float m_edgeExtendStep = 0.05f;
 		float m_edgeLength = 0.25f;
 		int m_maxTimeout = 30;
-		float m_junctionAngleLimit = 10.0f;
-		float m_forceConnectionLength = 0.35f;
-		float m_forceJunctionAngleLimit = 135.0f;
+		float m_baseAngleLimit = 30.0f;
+		float m_forceConnectionRatio = 0.0f;
+		float m_absoluteAngleLimit = 135.0f;
+		float m_branchShortening = 0.1f;
 		void OnInspect();
 	};
 

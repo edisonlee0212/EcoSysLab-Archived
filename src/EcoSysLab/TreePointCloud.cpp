@@ -262,12 +262,14 @@ void TreePointCloud::EstablishConnectivityGraph(const ConnectivityGraphSettings 
 				branch.m_parentHandle = -1;
 				PointCloudVoxel voxel;
 				voxel.m_handle = branch.m_handle;
-				voxel.m_position = branch.m_bezierCurve.m_p0;
+				auto shortenedP0 = branch.m_bezierCurve.GetPoint(settings.m_branchShortening);
+				auto shortenedP3 = branch.m_bezierCurve.GetPoint(1.0f - settings.m_branchShortening);
+				voxel.m_position = shortenedP0;
 				voxel.m_type = PointCloudVoxelType::BranchStart;
-				pointVoxelGrid.Ref(branch.m_bezierCurve.m_p0).emplace_back(voxel);
-				voxel.m_position = branch.m_bezierCurve.m_p3;
+				pointVoxelGrid.Ref(shortenedP0).emplace_back(voxel);
+				voxel.m_position = shortenedP3;
 				voxel.m_type = PointCloudVoxelType::BranchEnd;
-				pointVoxelGrid.Ref(branch.m_bezierCurve.m_p3).emplace_back(voxel);
+				pointVoxelGrid.Ref(shortenedP3).emplace_back(voxel);
 		}
 
 		m_scatterPointsConnections.clear();
@@ -293,10 +295,14 @@ void TreePointCloud::EstablishConnectivityGraph(const ConnectivityGraphSettings 
 		m_branchConnections.clear();
 		for (auto &branch: m_branches) {
 				float currentEdgeLength = settings.m_edgeLength;
+				auto shortenedP0 = branch.m_bezierCurve.GetPoint(settings.m_branchShortening);
+				auto shortenedP3 = branch.m_bezierCurve.GetPoint(1.0f - settings.m_branchShortening);
+
+				float branchLength = glm::distance(shortenedP0, shortenedP3);
 				int timeout = 0;
 				bool findScatterPoint = false;
 				while (!findScatterPoint && timeout < settings.m_maxTimeout) {
-						FindPoints(branch.m_bezierCurve.m_p0, pointVoxelGrid, currentEdgeLength,
+						FindPoints(shortenedP0, pointVoxelGrid, currentEdgeLength,
 											 [&](const PointCloudVoxel &voxel) {
 												 if (voxel.m_type == PointCloudVoxelType::BranchStart) return;
 												 if (voxel.m_type == PointCloudVoxelType::ScatteredPoint) {
@@ -308,14 +314,13 @@ void TreePointCloud::EstablishConnectivityGraph(const ConnectivityGraphSettings 
 														 branch.m_startNeighbors.emplace_back(voxel.m_handle);
 														 otherPoint.m_neighborBranchStarts.emplace_back(branch.m_handle);
 												 } else {
-														 auto dotP = glm::dot(glm::normalize(voxel.m_position - branch.m_bezierCurve.m_p0),
+														 auto dotP = glm::dot(glm::normalize(voxel.m_position - shortenedP0),
 																									glm::normalize(
-																													branch.m_bezierCurve.m_p0 - branch.m_bezierCurve.m_p1));
-														 if (dotP < glm::cos(glm::radians(settings.m_forceJunctionAngleLimit)))
-																 return;
-														 if (glm::distance(voxel.m_position, branch.m_bezierCurve.m_p0) >
-																 settings.m_forceConnectionLength &&
-																 dotP < glm::cos(glm::radians(settings.m_junctionAngleLimit)))
+																													shortenedP0 - shortenedP3));
+														 if(dotP < glm::cos(glm::radians(settings.m_absoluteAngleLimit))) return;
+														 if (glm::distance(voxel.m_position, shortenedP0) >
+																 settings.m_forceConnectionRatio * branchLength &&
+																 dotP < glm::cos(glm::radians(settings.m_baseAngleLimit)))
 																 return;
 														 for (const auto &i: branch.m_neighborBranchEnds) {
 																 if (i == voxel.m_handle) return;
@@ -323,10 +328,10 @@ void TreePointCloud::EstablishConnectivityGraph(const ConnectivityGraphSettings 
 														 auto &otherBranch = m_branches[voxel.m_handle];
 														 branch.m_neighborBranchEnds.emplace_back(voxel.m_handle);
 														 otherBranch.m_neighborBranchStarts.emplace_back(branch.m_handle);
-														 m_branchConnections.emplace_back(branch.m_bezierCurve.m_p0, voxel.m_position);
+														 m_branchConnections.emplace_back(shortenedP0, voxel.m_position);
 												 }
 											 });
-						currentEdgeLength += settings.m_finderStep;
+						currentEdgeLength += settings.m_edgeExtendStep;
 						timeout++;
 				}
 
@@ -334,7 +339,7 @@ void TreePointCloud::EstablishConnectivityGraph(const ConnectivityGraphSettings 
 				timeout = 0;
 				findScatterPoint = false;
 				while (!findScatterPoint && timeout < settings.m_maxTimeout) {
-						FindPoints(branch.m_bezierCurve.m_p3, pointVoxelGrid, currentEdgeLength,
+						FindPoints(shortenedP3, pointVoxelGrid, currentEdgeLength,
 											 [&](const PointCloudVoxel &voxel) {
 												 if (voxel.m_type == PointCloudVoxelType::BranchEnd) return;
 												 if (voxel.m_type == PointCloudVoxelType::ScatteredPoint) {
@@ -346,14 +351,14 @@ void TreePointCloud::EstablishConnectivityGraph(const ConnectivityGraphSettings 
 														 branch.m_endNeighbors.emplace_back(voxel.m_handle);
 														 otherPoint.m_neighborBranchEnds.emplace_back(branch.m_handle);
 												 } else {
-														 auto dotP = glm::dot(glm::normalize(voxel.m_position - branch.m_bezierCurve.m_p3),
+														 auto dotP = glm::dot(glm::normalize(voxel.m_position - shortenedP3),
 																									glm::normalize(
-																													branch.m_bezierCurve.m_p3 - branch.m_bezierCurve.m_p2));
-														 if (dotP < glm::cos(glm::radians(settings.m_forceJunctionAngleLimit)))
+																													shortenedP3 - shortenedP0));
+														 if (dotP < glm::cos(glm::radians(settings.m_absoluteAngleLimit)))
 																 return;
-														 if (glm::distance(voxel.m_position, branch.m_bezierCurve.m_p3) >
-																 settings.m_forceConnectionLength &&
-																 dotP < glm::cos(glm::radians(settings.m_junctionAngleLimit)))
+														 if (glm::distance(voxel.m_position, shortenedP3) >
+																 settings.m_forceConnectionRatio * branchLength &&
+																 dotP < glm::cos(glm::radians(settings.m_baseAngleLimit)))
 																 return;
 														 for (const auto &i: branch.m_neighborBranchStarts) {
 																 if (i == voxel.m_handle) return;
@@ -361,10 +366,10 @@ void TreePointCloud::EstablishConnectivityGraph(const ConnectivityGraphSettings 
 														 auto &otherBranch = m_branches[voxel.m_handle];
 														 branch.m_neighborBranchStarts.emplace_back(voxel.m_handle);
 														 otherBranch.m_neighborBranchEnds.emplace_back(branch.m_handle);
-														 m_branchConnections.emplace_back(branch.m_bezierCurve.m_p3, voxel.m_position);
+														 m_branchConnections.emplace_back(shortenedP3, voxel.m_position);
 												 }
 											 });
-						currentEdgeLength += settings.m_finderStep;
+						currentEdgeLength += settings.m_edgeExtendStep;
 						timeout++;
 				}
 		}
@@ -419,7 +424,9 @@ void TreePointCloud::EstablishConnectivityGraph(const ConnectivityGraphSettings 
 				BranchHandle bestCandidate;
 				for (const auto &candidateHandle: availableCandidates) {
 						auto &candidate = m_branches[candidateHandle];
-						auto distance = glm::distance(branch.m_bezierCurve.m_p0, candidate.m_bezierCurve.m_p3);
+						auto shortenedP0 = branch.m_bezierCurve.GetPoint(settings.m_branchShortening);
+						auto shortenedP3 = candidate.m_bezierCurve.GetPoint(1.0f - settings.m_branchShortening);
+						auto distance = glm::distance(shortenedP0, shortenedP3);
 						if (distance < minDistance) {
 								minDistance = distance;
 								bestCandidate = candidateHandle;
@@ -636,10 +643,14 @@ void TreePointCloud::GenerateMeshes(const TreeMeshGeneratorSettings &meshGenerat
 }
 
 void ConnectivityGraphSettings::OnInspect() {
-		ImGui::DragFloat("Finder step", &m_finderStep, 0.01f, 0.01f, 1.0f);
-		ImGui::DragFloat("Edge width", &m_edgeLength, 0.01f, 0.01f, 1.0f);
-		ImGui::DragFloat("Force connection length", &m_forceConnectionLength, 0.01f, 0.01f, 1.0f);
-
-		ImGui::DragFloat("Junction finder angle", &m_junctionAngleLimit, 0.01f, 0.01f, 90.0f);
 		ImGui::DragInt("Junction finder timeout", &m_maxTimeout, 1, 1, 30);
+		ImGui::DragFloat("Edge length", &m_edgeLength, 0.01f, 0.01f, 1.0f);
+		ImGui::DragFloat("Finder extend step", &m_edgeExtendStep, 0.01f, 0.01f, 1.0f);
+		ImGui::DragFloat("Base angle limit", &m_baseAngleLimit, 0.01f, 0.01f, 90.0f);
+		ImGui::DragFloat("Branch shortening", &m_branchShortening, 0.01f, 0.00f, 0.5f);
+		ImGui::DragFloat("Force connection ratio", &m_forceConnectionRatio, 0.01f, 0.01f, 1.0f);
+		if(m_forceConnectionRatio > 0.0f) {
+				ImGui::DragFloat("Absolute angle limit", &m_absoluteAngleLimit, 0.01f, 0.0f, 180.0f);
+		}
+
 }
