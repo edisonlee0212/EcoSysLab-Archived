@@ -33,7 +33,7 @@ namespace EcoSysLab {
 		std::vector<NodeHandle> m_chainNodeHandles;
 	};
 
-    struct TreeParts{
+    struct TreePart{
         std::vector<glm::vec3> m_allocatedPoints;
         std::vector<BranchHandle> m_branchHandles;
     };
