@@ -59,22 +59,22 @@ void SorghumLayer::OnCreate() {
 
   auto texture2D = std::make_shared<Texture2D>();
   texture2D->Import(std::filesystem::absolute(
-      std::filesystem::path("./SorghumFactoryResources/Textures") /
+      std::filesystem::path("./EcoSysLabResources/Textures") /
       "ProceduralSorghum.png"));
   Editor::AssetIcons()["ProceduralSorghum"] = texture2D;
   texture2D = std::make_shared<Texture2D>();
   texture2D->Import(std::filesystem::absolute(
-      std::filesystem::path("./SorghumFactoryResources/Textures") /
+      std::filesystem::path("./EcoSysLabResources/Textures") /
       "SorghumStateGenerator.png"));
   Editor::AssetIcons()["SorghumStateGenerator"] = texture2D;
   texture2D = std::make_shared<Texture2D>();
   texture2D->Import(std::filesystem::absolute(
-      std::filesystem::path("./SorghumFactoryResources/Textures") /
+      std::filesystem::path("./EcoSysLabResources/Textures") /
       "PositionsField.png"));
   Editor::AssetIcons()["PositionsField"] = texture2D;
 
   texture2D->Import(std::filesystem::absolute(
-      std::filesystem::path("./SorghumFactoryResources/Textures") /
+      std::filesystem::path("./EcoSysLabResources/Textures") /
       "GeneralDataPipeline.png"));
   Editor::AssetIcons()["GeneralDataCapture"] = texture2D;
 
@@ -117,7 +117,7 @@ void SorghumLayer::OnCreate() {
   if (!m_leafAlbedoTexture.Get<Texture2D>()) {
     auto albedo = ProjectManager::CreateTemporaryAsset<Texture2D>();
     albedo->Import(std::filesystem::absolute(
-        std::filesystem::path("./SorghumFactoryResources/Textures") /
+        std::filesystem::path("./EcoSysLabResources/Textures") /
         "leafSurface.png"));
     m_leafAlbedoTexture.Set(albedo);
   }
