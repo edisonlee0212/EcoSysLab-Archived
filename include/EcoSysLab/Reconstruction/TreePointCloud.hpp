@@ -43,9 +43,9 @@ namespace EcoSysLab {
 		float m_edgeExtendStep = 0.05f;
 		float m_edgeLength = 0.25f;
 		int m_maxTimeout = 30;
-		float m_baseAngleLimit = 30.0f;
+		float m_forceConnectionAngleLimit = 135.0f;
 		float m_forceConnectionRatio = 0.0f;
-		float m_absoluteAngleLimit = 135.0f;
+		float m_absoluteAngleLimit = 45.0f;
 		float m_branchShortening = 0.1f;
 		void OnInspect();
 	};
@@ -66,6 +66,7 @@ namespace EcoSysLab {
 		float m_internodeLength = 0.03f;
 		float m_minHeight = 0.1f;
 		float m_maxTreeDistance = 0.05f;
+		float m_branchShortening = 0.1f;
 	};
 
 	class TreePointCloud : public IPrivateComponent {
@@ -77,17 +78,19 @@ namespace EcoSysLab {
 
 		glm::vec3 m_min;
 		glm::vec3 m_max;
-		std::vector<ScatteredPoint> m_points;
-		std::vector<ScannedBranch> m_branches;
+		std::vector<ScatteredPoint> m_scatteredPoints;
+		std::vector<ScannedBranch> m_scannedBranches;
 		std::vector<TreePart> m_treeParts;
 
 		void OnInspect() override;
 
 		std::vector<BaseSkeleton> m_skeletons;
 
+		std::vector<std::pair<glm::vec3, glm::vec3>> m_scatterPointToBranchEndConnections;
+		std::vector<std::pair<glm::vec3, glm::vec3>> m_scatterPointToBranchStartConnections;
 		std::vector<std::pair<glm::vec3, glm::vec3>> m_scatterPointsConnections;
 		std::vector<std::pair<glm::vec3, glm::vec3>> m_branchConnections;
-		std::vector<std::pair<glm::vec3, glm::vec3>> m_filteredJunctionConnections;
+		std::vector<std::pair<glm::vec3, glm::vec3>> m_filteredBranchConnections;
 
 		void EstablishConnectivityGraph(const ConnectivityGraphSettings &otherPointHandle);
 
