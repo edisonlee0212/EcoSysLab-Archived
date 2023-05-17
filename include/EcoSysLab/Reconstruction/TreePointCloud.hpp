@@ -7,26 +7,37 @@
 #include "Curve.hpp"
 
 using namespace UniEngine;
+#define TREEPOINTCLOUD_CLEAN
 namespace EcoSysLab {
 	typedef int PointHandle;
 	typedef int BranchHandle;
+	typedef int TreePartHandle;
 	struct ScatteredPoint {
 		PointHandle m_handle = -1;
 		std::vector<PointHandle> m_neighbors;
+#ifndef TREEPOINTCLOUD_CLEAN
 		std::vector<BranchHandle> m_neighborBranchStarts;
+#endif
 		std::vector<BranchHandle> m_neighborBranchEnds;
 		glm::vec3 m_position = glm::vec3(0.0f);
 	};
-
+	struct AllocatedPoint {
+		glm::vec3 m_position;
+		PointHandle m_handle = -1;
+		TreePartHandle m_treePartHandle = -1;
+		BranchHandle m_branchHandle = -1;
+	};
 	struct ScannedBranch {
+		TreePartHandle m_treePartHandle = -1;
 		BranchHandle m_handle = -1;
 		BezierCurve m_bezierCurve;
 		float m_startThickness = 0.0f;
 		float m_endThickness = 0.0f;
 		std::vector<PointHandle> m_startNeighbors;
+#ifndef TREEPOINTCLOUD_CLEAN
 		std::vector<PointHandle> m_endNeighbors;
-
 		std::vector<BranchHandle> m_neighborBranchStarts;
+#endif
 		std::vector<BranchHandle> m_neighborBranchEnds;
 		BranchHandle m_parentHandle = -1;
 		std::vector<BranchHandle> m_childHandles;
@@ -35,7 +46,8 @@ namespace EcoSysLab {
 	};
 
 	struct TreePart {
-		std::vector<glm::vec3> m_allocatedPoints;
+		TreePartHandle m_handle = -1;
+		std::vector<PointHandle> m_allocatedPoints;
 		std::vector<BranchHandle> m_branchHandles;
 	};
 
@@ -47,6 +59,7 @@ namespace EcoSysLab {
 		float m_forceConnectionRatio = 0.0f;
 		float m_absoluteAngleLimit = 45.0f;
 		float m_branchShortening = 0.1f;
+
 		void OnInspect();
 	};
 
@@ -79,6 +92,7 @@ namespace EcoSysLab {
 		glm::vec3 m_min;
 		glm::vec3 m_max;
 		std::vector<ScatteredPoint> m_scatteredPoints;
+		std::vector<AllocatedPoint> m_allocatedPoints;
 		std::vector<ScannedBranch> m_scannedBranches;
 		std::vector<TreePart> m_treeParts;
 
