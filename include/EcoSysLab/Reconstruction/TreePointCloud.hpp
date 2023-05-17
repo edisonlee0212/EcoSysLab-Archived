@@ -44,8 +44,21 @@ namespace EcoSysLab {
 		BranchHandle m_parentHandle = -1;
 		std::vector<BranchHandle> m_childHandles;
 
+	};
+
+	struct OperatingBranch{
+		TreePartHandle m_treePartHandle = -1;
+		BranchHandle m_handle = -1;
+		BezierCurve m_bezierCurve;
+		float m_startThickness = 0.0f;
+		float m_endThickness = 0.0f;
+
+		BranchHandle m_parentHandle = -1;
+		std::vector<BranchHandle> m_childHandles;
+
 		int m_skeletonIndex = -1;
 		std::vector<NodeHandle> m_chainNodeHandles;
+		void Apply(const ScannedBranch& target);
 	};
 
 	struct TreePart {
@@ -55,13 +68,13 @@ namespace EcoSysLab {
 	};
 
 	struct ConnectivityGraphSettings {
-		float m_edgeExtendStep = 0.005f;
-		float m_edgeLength = 0.025f;
-		int m_maxTimeout = 30;
+		float m_edgeExtendStep = 0.05f;
+		float m_edgeLength = 0.1f;
+		int m_maxTimeout = 60;
 		float m_forceConnectionAngleLimit = 135.0f;
 		float m_forceConnectionRatio = 0.0f;
-		float m_absoluteAngleLimit = 45.0f;
-		float m_branchShortening = 0.1f;
+		float m_absoluteAngleLimit = 60.0f;
+		float m_branchShortening = 0.15f;
 
 		void OnInspect();
 	};
@@ -74,8 +87,8 @@ namespace EcoSysLab {
 
 	struct PointCloudVoxel {
 		PointCloudVoxelType m_type;
-		glm::vec3 m_position;
-		int m_handle;
+		glm::vec3 m_position = glm::vec3(0.0f);
+		int m_handle = -1;
 	};
 
 	struct ReconstructionSettings {
@@ -83,6 +96,8 @@ namespace EcoSysLab {
 		float m_minHeight = 0.01f;
 		float m_maxTreeDistance = 0.01f;
 		float m_branchShortening = 0.3f;
+
+		void OnInspect();
 	};
 
 	struct ReconstructionSkeletonData {
@@ -110,6 +125,8 @@ namespace EcoSysLab {
 		std::vector<ScatteredPoint> m_scatteredPoints;
 		std::vector<AllocatedPoint> m_allocatedPoints;
 		std::vector<ScannedBranch> m_scannedBranches;
+
+		std::vector<OperatingBranch> m_operatingBranches;
 		std::vector<TreePart> m_treeParts;
 
 		void OnInspect() override;
