@@ -69,6 +69,7 @@ void TreePointCloud::ImportGraph(const std::filesystem::path &path, float scaleF
 								branch.m_startThickness = inBranch["Start Radius"].as<float>() * scaleFactor;
 								branch.m_endThickness = inBranch["End Radius"].as<float>() * scaleFactor;
 								branch.m_handle = m_scannedBranches.size() - 1;
+								treePart.m_branchHandles.emplace_back(branch.m_handle);
 								branch.m_parentHandle = -1;
 								branch.m_treePartHandle = treePart.m_handle;
 								branch.m_childHandles.clear();
@@ -309,8 +310,7 @@ void TreePointCloud::OnInspect() {
 										for (int i = 0; i < m_scannedBranches.size(); i++) {
 												scannedBranchStarts[i] = m_scannedBranches[i].m_bezierCurve.m_p0;
 												scannedBranchEnds[i] = m_scannedBranches[i].m_bezierCurve.m_p3;
-												scannedBranchColors[i] = glm::vec4(
-																ecoSysLabLayer->RandomColors()[m_scannedBranches[i].m_treePartHandle], 1.0f);
+												scannedBranchColors[i] = glm::vec4(1.0f);
 										}
 										for (const auto &skeleton: m_skeletons) {
 												const auto &nodeList = skeleton.RefSortedNodeList();
@@ -757,6 +757,7 @@ void TreePointCloud::BuildTreeStructure(const ReconstructionSettings &reconstruc
 								prevNodeHandle = chainFirstNodeHandle;
 						}
 						auto &processingBranch = copiedBranches[processingBranchHandle];
+						processingBranch.m_skeletonIndex = m_skeletons.size() - 1;
 						float chainLength = processingBranch.m_bezierCurve.GetLength();
 						int chainAmount = glm::max(2, (int) (chainLength /
 																								 reconstructionSettings.m_internodeLength));
@@ -799,6 +800,33 @@ void TreePointCloud::BuildTreeStructure(const ReconstructionSettings &reconstruc
 				}
 				skeleton.CalculateTransforms();
 				skeleton.CalculateFlows();
+		}
+
+
+		for(auto& allocatedPoint : m_allocatedPoints){
+				const auto& treePart = m_treeParts[allocatedPoint.m_treePartHandle];
+				float minDistance = 999.f;
+				NodeHandle closestNodeHandle = -1;
+				BranchHandle cloeseBranchHandle = -1;
+				int closestSkeletonIndex = -1;
+				for(const auto& branchHandle : treePart.m_branchHandles){
+						auto& branch = copiedBranches[branchHandle];
+						for(const auto& nodeHandle : branch.m_chainNodeHandles){
+								auto& node = m_skeletons[branch.m_skeletonIndex].RefNode(nodeHandle);
+								auto distance = glm::distance(node.m_info.m_globalPosition, allocatedPoint.m_position);
+								if(distance < minDistance){
+										minDistance = distance;
+										closestNodeHandle = nodeHandle;
+										closestSkeletonIndex = branch.m_skeletonIndex;
+										cloeseBranchHandle = branchHandle;
+								}
+						}
+				}
+				allocatedPoint.m_nodeHandle = closestNodeHandle;
+				allocatedPoint.m_branchHandle = cloeseBranchHandle;
+				allocatedPoint.m_skeletonIndex = closestSkeletonIndex;
+				if(allocatedPoint.m_skeletonIndex != -1)
+						m_skeletons[allocatedPoint.m_skeletonIndex].RefNode(closestNodeHandle).m_data.m_allocatedPoints.emplace_back(allocatedPoint.m_handle);
 		}
 }
 

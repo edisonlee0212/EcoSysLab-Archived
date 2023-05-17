@@ -27,6 +27,7 @@ namespace EcoSysLab {
 		TreePartHandle m_treePartHandle = -1;
 		BranchHandle m_branchHandle = -1;
 		NodeHandle m_nodeHandle = -1;
+		int m_skeletonIndex = -1;
 	};
 	struct ScannedBranch {
 		TreePartHandle m_treePartHandle = -1;
@@ -43,6 +44,7 @@ namespace EcoSysLab {
 		BranchHandle m_parentHandle = -1;
 		std::vector<BranchHandle> m_childHandles;
 
+		int m_skeletonIndex = -1;
 		std::vector<NodeHandle> m_chainNodeHandles;
 	};
 
