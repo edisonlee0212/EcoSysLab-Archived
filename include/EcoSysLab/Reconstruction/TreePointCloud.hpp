@@ -26,6 +26,7 @@ namespace EcoSysLab {
 		PointHandle m_handle = -1;
 		TreePartHandle m_treePartHandle = -1;
 		BranchHandle m_branchHandle = -1;
+		NodeHandle m_nodeHandle = -1;
 	};
 	struct ScannedBranch {
 		TreePartHandle m_treePartHandle = -1;
@@ -52,8 +53,8 @@ namespace EcoSysLab {
 	};
 
 	struct ConnectivityGraphSettings {
-		float m_edgeExtendStep = 0.05f;
-		float m_edgeLength = 0.25f;
+		float m_edgeExtendStep = 0.005f;
+		float m_edgeLength = 0.025f;
 		int m_maxTimeout = 30;
 		float m_forceConnectionAngleLimit = 135.0f;
 		float m_forceConnectionRatio = 0.0f;
@@ -77,10 +78,23 @@ namespace EcoSysLab {
 
 	struct ReconstructionSettings {
 		float m_internodeLength = 0.03f;
-		float m_minHeight = 0.1f;
-		float m_maxTreeDistance = 0.05f;
-		float m_branchShortening = 0.1f;
+		float m_minHeight = 0.01f;
+		float m_maxTreeDistance = 0.01f;
+		float m_branchShortening = 0.3f;
 	};
+
+	struct ReconstructionSkeletonData {
+
+	};
+	struct ReconstructionFlowData {
+
+	};
+	struct ReconstructionNodeData {
+		std::vector<PointHandle> m_allocatedPoints;
+		std::vector<PointHandle> m_filteredPoints;
+		BranchHandle m_branchHandle;
+	};
+	typedef Skeleton<ReconstructionSkeletonData, ReconstructionFlowData, ReconstructionNodeData> ReconstructionSkeleton;
 
 	class TreePointCloud : public IPrivateComponent {
 		void FindPoints(const glm::vec3 &position, VoxelGrid<std::vector<PointCloudVoxel>> &pointVoxelGrid, float radius,
@@ -98,7 +112,7 @@ namespace EcoSysLab {
 
 		void OnInspect() override;
 
-		std::vector<BaseSkeleton> m_skeletons;
+		std::vector<ReconstructionSkeleton> m_skeletons;
 
 		std::vector<std::pair<glm::vec3, glm::vec3>> m_scatterPointToBranchEndConnections;
 		std::vector<std::pair<glm::vec3, glm::vec3>> m_scatterPointToBranchStartConnections;

@@ -39,7 +39,7 @@ void TreePointCloud::ImportGraph(const std::filesystem::path &path, float scaleF
 
 				for (int i = 0; i < scatterPoints.size(); i++) {
 						auto &point = m_scatteredPoints[i];
-						point.m_position = scatterPoints[i].as<glm::vec3>();
+						point.m_position = scatterPoints[i].as<glm::vec3>() * scaleFactor;
 						m_min = glm::min(m_min, point.m_position);
 						m_max = glm::max(m_max, point.m_position);
 						point.m_handle = i;
@@ -54,8 +54,8 @@ void TreePointCloud::ImportGraph(const std::filesystem::path &path, float scaleF
 						treePart.m_handle = m_treeParts.size() - 1;
 						for (const auto &inBranch: inTreeParts["Branches"]) {
 								auto &branch = m_scannedBranches.emplace_back();
-								branch.m_bezierCurve.m_p0 = inBranch["Start Pos"].as<glm::vec3>();
-								branch.m_bezierCurve.m_p3 = inBranch["End Pos"].as<glm::vec3>();
+								branch.m_bezierCurve.m_p0 = inBranch["Start Pos"].as<glm::vec3>() * scaleFactor;
+								branch.m_bezierCurve.m_p3 = inBranch["End Pos"].as<glm::vec3>() * scaleFactor;
 
 								auto cPLength = glm::distance(branch.m_bezierCurve.m_p0, branch.m_bezierCurve.m_p3) * 0.3f;
 								branch.m_bezierCurve.m_p1 =
@@ -66,8 +66,8 @@ void TreePointCloud::ImportGraph(const std::filesystem::path &path, float scaleF
 								branch.m_bezierCurve.m_p1 = glm::mix(branch.m_bezierCurve.m_p0, branch.m_bezierCurve.m_p3, 0.3f);
 								branch.m_bezierCurve.m_p2 = glm::mix(branch.m_bezierCurve.m_p0, branch.m_bezierCurve.m_p3, 0.7f);
 								*/
-								branch.m_startThickness = inBranch["Start Radius"].as<float>();
-								branch.m_endThickness = inBranch["End Radius"].as<float>();
+								branch.m_startThickness = inBranch["Start Radius"].as<float>() * scaleFactor;
+								branch.m_endThickness = inBranch["End Radius"].as<float>() * scaleFactor;
 								branch.m_handle = m_scannedBranches.size() - 1;
 								branch.m_parentHandle = -1;
 								branch.m_treePartHandle = treePart.m_handle;
@@ -90,7 +90,7 @@ void TreePointCloud::ImportGraph(const std::filesystem::path &path, float scaleF
 						}
 						for (const auto &inAllocatedPoint: inTreeParts["Allocated Points"]) {
 								auto &allocatedPoint = m_allocatedPoints.emplace_back();
-								allocatedPoint.m_position = inAllocatedPoint.as<glm::vec3>();
+								allocatedPoint.m_position = inAllocatedPoint.as<glm::vec3>() * scaleFactor;
 								allocatedPoint.m_handle = m_allocatedPoints.size() - 1;
 								allocatedPoint.m_treePartHandle = treePart.m_handle;
 								allocatedPoint.m_branchHandle = -1;
@@ -111,6 +111,7 @@ void TreePointCloud::OnInspect() {
 
 		static std::vector<glm::mat4> scatterPointMatrices;
 		static std::vector<glm::mat4> nodeMatrices;
+		static std::vector<glm::vec4> nodeColors;
 		static std::vector<glm::vec3> scatteredPointConnectionsStarts;
 		static std::vector<glm::vec3> scatterConnectionEnds;
 		static std::vector<glm::vec3> branchConnectionStarts;
@@ -129,24 +130,26 @@ void TreePointCloud::OnInspect() {
 		static bool drawAllocatedPoints = true;
 		static bool drawScannedBranches = true;
 		static bool drawScatteredPoints = true;
+		static bool drawScatteredPointConnections = false;
 		static bool drawBranchConnections = false;
 		static bool drawFilteredConnections = true;
 		static bool drawScatterPointToBranchConnections = false;
 		static bool drawNode = true;
-		static float scannedBranchWidth = 0.01f;
+		static float scannedBranchWidth = 0.005f;
 		static float connectionWidth = 0.001f;
-		static float pointSize = 0.02f;
+		static float pointSize = 0.002f;
 
 		static float nodeSize = 1.0f;
 		bool refreshData = false;
+
+		static int colorMode = 0;
+		if (ImGui::Combo("Color mode", {"TreePart", "Branch", "Node"}, colorMode)) refreshData = true;
 
 		static glm::vec4 scatterPointToBranchConnectionColor = glm::vec4(1, 0, 1, 1);
 		static glm::vec4 scatterPointColor = glm::vec4(0, 1, 0, 1);
 		static glm::vec4 scatteredPointConnectionColor = glm::vec4(1, 1, 1, 1);
 		static glm::vec4 branchConnectionColor = glm::vec4(1, 0, 0, 1);
 		static glm::vec4 filteredBranchConnectionColor = glm::vec4(1, 1, 0, 1);
-		static glm::vec4 scannedBranchColor = glm::vec4(0, 1, 1, 1);
-		static glm::vec4 nodeColor = glm::vec4(1, 1, 1, 1);
 		FileUtils::OpenFile("Load YAML", "YAML", {".yml"}, [&](const std::filesystem::path &path) {
 			ImportGraph(path);
 			refreshData = true;
@@ -158,7 +161,7 @@ void TreePointCloud::OnInspect() {
 
 		if (!m_scatteredPoints.empty()) {
 				static ConnectivityGraphSettings connectivityGraphSettings;
-				if (ImGui::TreeNodeEx("Graph Settings", ImGuiTreeNodeFlags_DefaultOpen)) {
+				if (ImGui::TreeNodeEx("Graph Settings")) {
 						connectivityGraphSettings.OnInspect();
 						ImGui::TreePop();
 				}
@@ -180,44 +183,152 @@ void TreePointCloud::OnInspect() {
 				}
 		}
 
-		if (enableDebugRendering) {
-				ImGui::DragFloat("Branch width", &scannedBranchWidth, 0.001f, 0.001f, 1.0f);
-				ImGui::DragFloat("Connection width", &connectionWidth, 0.001f, 0.001f, 1.0f);
-				ImGui::DragFloat("Point size", &pointSize, 0.001f, 0.001f, 1.0f);
-				ImGui::DragFloat("Node size", &nodeSize, 0.01f, 0.01f, 10.0f);
-				ImGui::Checkbox("Debug Rendering", &enableDebugRendering);
-				ImGui::Checkbox("Render allocated point", &drawAllocatedPoints);
-				ImGui::Checkbox("Render scatter point connections", &drawScatteredPoints);
-				ImGui::Checkbox("Render branch", &drawScannedBranches);
-				ImGui::Checkbox("Render all junction connections", &drawBranchConnections);
-				ImGui::Checkbox("Render filtered junction connections", &drawFilteredConnections);
-				ImGui::Checkbox("Render scatter point to branch connections", &drawScatterPointToBranchConnections);
-				ImGui::Checkbox("Render nodes", &drawNode);
-				ImGui::ColorEdit4("Scatter Point Color", &scatterPointColor.x);
-				if (drawScannedBranches) ImGui::ColorEdit4("Branch Color", &scannedBranchColor.x);
-				if (drawScatteredPoints) ImGui::ColorEdit4("Scatter Connection Color", &scatteredPointConnectionColor.x);
-				if (drawBranchConnections) ImGui::ColorEdit4("Junction Connection Color", &branchConnectionColor.x);
-				if (drawFilteredConnections)
-						ImGui::ColorEdit4("Filtered Scatter Connection Color", &filteredBranchConnectionColor.x);
-				if (drawNode)
-						ImGui::ColorEdit4("Node Color", &nodeColor.x);
-				if (drawScatterPointToBranchConnections)
-						ImGui::ColorEdit4("Scattered point to branch connection color", &scatterPointToBranchConnectionColor.x);
 
+		if (enableDebugRendering) {
+				GizmoSettings gizmoSettings;
+				if (ImGui::TreeNode("Render settings")) {
+						ImGui::DragFloat("Branch width", &scannedBranchWidth, 0.0001f, 0.0001f, 1.0f, "%.4f");
+						ImGui::DragFloat("Connection width", &connectionWidth, 0.0001f, 0.0001f, 1.0f, "%.4f");
+						ImGui::DragFloat("Point size", &pointSize, 0.0001f, 0.0001f, 1.0f, "%.4f");
+						ImGui::DragFloat("Node size", &nodeSize, 0.01f, 0.1f, 10.0f);
+						ImGui::Checkbox("Debug Rendering", &enableDebugRendering);
+						ImGui::Checkbox("Render allocated point", &drawAllocatedPoints);
+						ImGui::Checkbox("Render scattered point", &drawScatteredPoints);
+						ImGui::Checkbox("Render scatter point connections", &drawScatteredPointConnections);
+						ImGui::Checkbox("Render branch", &drawScannedBranches);
+						ImGui::Checkbox("Render all junction connections", &drawBranchConnections);
+						ImGui::Checkbox("Render filtered junction connections", &drawFilteredConnections);
+						ImGui::Checkbox("Render scatter point to branch connections", &drawScatterPointToBranchConnections);
+						ImGui::Checkbox("Render nodes", &drawNode);
+						ImGui::ColorEdit4("Scatter Point Color", &scatterPointColor.x);
+						if (drawScatteredPoints) ImGui::ColorEdit4("Scatter Connection Color", &scatteredPointConnectionColor.x);
+						if (drawBranchConnections) ImGui::ColorEdit4("Junction Connection Color", &branchConnectionColor.x);
+						if (drawFilteredConnections)
+								ImGui::ColorEdit4("Filtered Scatter Connection Color", &filteredBranchConnectionColor.x);
+						if (drawScatterPointToBranchConnections)
+								ImGui::ColorEdit4("Scattered point to branch connection color", &scatterPointToBranchConnectionColor.x);
+
+						gizmoSettings.m_drawSettings.OnInspect();
+
+						ImGui::TreePop();
+				}
 				if (GetHandle() != previousHandle) refreshData = true;
 
 				if (refreshData) {
 						previousHandle = GetHandle();
+						const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
 
 						allocatedPointColors.resize(m_allocatedPoints.size());
 						allocatedPointMatrices.resize(m_allocatedPoints.size());
-						const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
-						for (int i = 0; i < m_allocatedPoints.size(); i++) {
-								allocatedPointMatrices[i] =
-												glm::translate(m_allocatedPoints[i].m_position) * glm::scale(glm::vec3(1.0f));
-								allocatedPointColors[i] = glm::vec4(
-												ecoSysLabLayer->RandomColors()[m_allocatedPoints[i].m_treePartHandle], 1.0f);
+
+						scannedBranchStarts.resize(m_scannedBranches.size());
+						scannedBranchEnds.resize(m_scannedBranches.size());
+						scannedBranchColors.resize(m_scannedBranches.size());
+
+						nodeMatrices.clear();
+						nodeColors.clear();
+						switch (colorMode) {
+								case 0: {
+										//TreePart
+										for (int i = 0; i < m_allocatedPoints.size(); i++) {
+												allocatedPointMatrices[i] =
+																glm::translate(m_allocatedPoints[i].m_position) * glm::scale(glm::vec3(1.0f));
+												allocatedPointColors[i] = glm::vec4(
+																ecoSysLabLayer->RandomColors()[m_allocatedPoints[i].m_treePartHandle], 1.0f);
+										}
+										for (int i = 0; i < m_scannedBranches.size(); i++) {
+												scannedBranchStarts[i] = m_scannedBranches[i].m_bezierCurve.m_p0;
+												scannedBranchEnds[i] = m_scannedBranches[i].m_bezierCurve.m_p3;
+												scannedBranchColors[i] = glm::vec4(
+																ecoSysLabLayer->RandomColors()[m_scannedBranches[i].m_treePartHandle], 1.0f);
+										}
+										for (const auto &skeleton: m_skeletons) {
+												const auto &nodeList = skeleton.RefSortedNodeList();
+												auto startIndex = nodeMatrices.size();
+												nodeMatrices.resize(startIndex + nodeList.size());
+												nodeColors.resize(startIndex + nodeList.size());
+												for (int i = 0; i < nodeList.size(); i++) {
+														const auto &node = skeleton.PeekNode(nodeList[i]);
+														nodeMatrices[startIndex + i] = glm::translate(node.m_info.m_globalPosition) *
+																													 glm::scale(glm::vec3(node.m_info.m_thickness));
+														nodeColors[startIndex + i] = glm::vec4(1.0f);
+												}
+										}
+								}
+										break;
+								case 1: {
+										//Branch
+										for (int i = 0; i < m_allocatedPoints.size(); i++) {
+												allocatedPointMatrices[i] =
+																glm::translate(m_allocatedPoints[i].m_position) * glm::scale(glm::vec3(1.0f));
+												if (m_allocatedPoints[i].m_branchHandle >= 0) {
+														allocatedPointColors[i] = glm::vec4(
+																		ecoSysLabLayer->RandomColors()[m_allocatedPoints[i].m_branchHandle], 1.0f);
+												} else {
+														allocatedPointColors[i] = glm::vec4(
+																		ecoSysLabLayer->RandomColors()[m_allocatedPoints[i].m_treePartHandle], 1.0f);
+												}
+										}
+
+										for (int i = 0; i < m_scannedBranches.size(); i++) {
+												scannedBranchStarts[i] = m_scannedBranches[i].m_bezierCurve.m_p0;
+												scannedBranchEnds[i] = m_scannedBranches[i].m_bezierCurve.m_p3;
+												scannedBranchColors[i] = glm::vec4(
+																ecoSysLabLayer->RandomColors()[m_scannedBranches[i].m_handle], 1.0f);
+										}
+										for (const auto &skeleton: m_skeletons) {
+												const auto &nodeList = skeleton.RefSortedNodeList();
+												auto startIndex = nodeMatrices.size();
+												nodeMatrices.resize(startIndex + nodeList.size());
+												nodeColors.resize(startIndex + nodeList.size());
+												for (int i = 0; i < nodeList.size(); i++) {
+														const auto &node = skeleton.PeekNode(nodeList[i]);
+														nodeMatrices[startIndex + i] = glm::translate(node.m_info.m_globalPosition) *
+																													 glm::scale(glm::vec3(node.m_info.m_thickness));
+														nodeColors[startIndex + i] = glm::vec4(
+																		ecoSysLabLayer->RandomColors()[node.m_data.m_branchHandle],
+																		1.0f);
+												}
+										}
+								}
+										break;
+								case 2: {
+										//Node
+										for (int i = 0; i < m_allocatedPoints.size(); i++) {
+												allocatedPointMatrices[i] =
+																glm::translate(m_allocatedPoints[i].m_position) * glm::scale(glm::vec3(1.0f));
+												if (m_allocatedPoints[i].m_nodeHandle >= 0) {
+														allocatedPointColors[i] = glm::vec4(
+																		ecoSysLabLayer->RandomColors()[m_allocatedPoints[i].m_nodeHandle], 1.0f);
+												} else {
+														allocatedPointColors[i] = glm::vec4(
+																		ecoSysLabLayer->RandomColors()[m_allocatedPoints[i].m_treePartHandle], 1.0f);
+												}
+										}
+
+										for (int i = 0; i < m_scannedBranches.size(); i++) {
+												scannedBranchStarts[i] = m_scannedBranches[i].m_bezierCurve.m_p0;
+												scannedBranchEnds[i] = m_scannedBranches[i].m_bezierCurve.m_p3;
+												scannedBranchColors[i] = glm::vec4(
+																ecoSysLabLayer->RandomColors()[m_scannedBranches[i].m_treePartHandle], 1.0f);
+										}
+										for (const auto &skeleton: m_skeletons) {
+												const auto &nodeList = skeleton.RefSortedNodeList();
+												auto startIndex = nodeMatrices.size();
+												nodeMatrices.resize(startIndex + nodeList.size());
+												nodeColors.resize(startIndex + nodeList.size());
+												for (int i = 0; i < nodeList.size(); i++) {
+														const auto &node = skeleton.PeekNode(nodeList[i]);
+														nodeMatrices[startIndex + i] = glm::translate(node.m_info.m_globalPosition) *
+																													 glm::scale(glm::vec3(node.m_info.m_thickness));
+														nodeColors[startIndex + i] = glm::vec4(ecoSysLabLayer->RandomColors()[node.GetHandle()],
+																																	 1.0f);
+												}
+										}
+								}
+										break;
 						}
+
 						scatterPointMatrices.resize(m_scatteredPoints.size());
 						for (int i = 0; i < m_scatteredPoints.size(); i++) {
 								scatterPointMatrices[i] = glm::translate(m_scatteredPoints[i].m_position) * glm::scale(glm::vec3(1.0f));
@@ -243,27 +354,6 @@ void TreePointCloud::OnInspect() {
 								filteredBranchConnectionEnds[i] = m_filteredBranchConnections[i].second;
 						}
 
-						scannedBranchStarts.resize(m_scannedBranches.size());
-						scannedBranchEnds.resize(m_scannedBranches.size());
-						scannedBranchColors.resize(m_scannedBranches.size());
-						for (int i = 0; i < m_scannedBranches.size(); i++) {
-								scannedBranchStarts[i] = m_scannedBranches[i].m_bezierCurve.m_p0;
-								scannedBranchEnds[i] = m_scannedBranches[i].m_bezierCurve.m_p3;
-								scannedBranchColors[i] = glm::vec4(
-												ecoSysLabLayer->RandomColors()[m_scannedBranches[i].m_treePartHandle], 1.0f);
-						}
-						nodeMatrices.clear();
-						for (const auto &skeleton: m_skeletons) {
-								const auto &nodeList = skeleton.RefSortedNodeList();
-								auto startIndex = nodeMatrices.size();
-								nodeMatrices.resize(startIndex + nodeList.size());
-								for (int i = 0; i < nodeList.size(); i++) {
-										const auto &node = skeleton.PeekNode(nodeList[i]);
-										nodeMatrices[startIndex + i] = glm::translate(node.m_info.m_globalPosition) *
-																									 glm::scale(glm::vec3(node.m_info.m_thickness));
-								}
-						}
-
 						scatterPointToBranchConnectionStarts.resize(
 										m_scatterPointToBranchStartConnections.size() + m_scatterPointToBranchEndConnections.size());
 						scatterPointToBranchConnectionEnds.resize(
@@ -281,37 +371,39 @@ void TreePointCloud::OnInspect() {
 						}
 				}
 				if (!scatterPointMatrices.empty()) {
-						Gizmos::DrawGizmoMeshInstanced(DefaultResources::Primitives::Sphere, scatterPointColor,
-																					 scatterPointMatrices,
-																					 glm::mat4(1.0f),
-																					 pointSize);
+						if (drawScatteredPoints) {
+								Gizmos::DrawGizmoMeshInstanced(DefaultResources::Primitives::Sphere, scatterPointColor,
+																							 scatterPointMatrices,
+																							 glm::mat4(1.0f),
+																							 pointSize, gizmoSettings);
+						}
 						if (drawAllocatedPoints) {
 								Gizmos::DrawGizmoMeshInstancedColored(DefaultResources::Primitives::Sphere, allocatedPointColors,
 																											allocatedPointMatrices,
 																											glm::mat4(1.0f),
-																											pointSize);
+																											pointSize, gizmoSettings);
 						}
 						if (drawScannedBranches)
 								Gizmos::DrawGizmoRays(scannedBranchColors, scannedBranchStarts, scannedBranchEnds,
-																			scannedBranchWidth);
-						if (drawScatteredPoints)
+																			scannedBranchWidth, gizmoSettings);
+						if (drawScatteredPointConnections)
 								Gizmos::DrawGizmoRays(scatteredPointConnectionColor, scatteredPointConnectionsStarts,
 																			scatterConnectionEnds,
-																			connectionWidth);
+																			connectionWidth, gizmoSettings);
 						if (drawBranchConnections)
 								Gizmos::DrawGizmoRays(branchConnectionColor, branchConnectionStarts, branchConnectionEnds,
-																			connectionWidth * 1.5f);
+																			connectionWidth * 1.5f, gizmoSettings);
 						if (drawFilteredConnections)
 								Gizmos::DrawGizmoRays(filteredBranchConnectionColor, filteredBranchConnectionStarts,
 																			filteredBranchConnectionEnds,
-																			connectionWidth * 2.0f);
+																			connectionWidth * 2.0f, gizmoSettings);
 						if (drawScatterPointToBranchConnections)
 								Gizmos::DrawGizmoRays(scatterPointToBranchConnectionColor, scatterPointToBranchConnectionStarts,
 																			scatterPointToBranchConnectionEnds,
-																			connectionWidth);
+																			connectionWidth, gizmoSettings);
 						if (drawNode) {
-								Gizmos::DrawGizmoMeshInstanced(DefaultResources::Primitives::Sphere, nodeColor, nodeMatrices,
-																							 glm::mat4(1.0f), nodeSize);
+								Gizmos::DrawGizmoMeshInstancedColored(DefaultResources::Primitives::Sphere, nodeColors, nodeMatrices,
+																											glm::mat4(1.0f), nodeSize, gizmoSettings);
 						}
 				}
 		}
@@ -542,7 +634,7 @@ void TreePointCloud::EstablishConnectivityGraph(const ConnectivityGraphSettings 
 
 }
 
-void ApplyCurve(BaseSkeleton &skeleton, ScannedBranch &branch) {
+void ApplyCurve(ReconstructionSkeleton &skeleton, ScannedBranch &branch) {
 		const auto chainAmount = branch.m_chainNodeHandles.size();
 		for (int i = 0; i < chainAmount; i++) {
 				auto &node = skeleton.RefNode(branch.m_chainNodeHandles[i]);
@@ -556,6 +648,7 @@ void ApplyCurve(BaseSkeleton &skeleton, ScannedBranch &branch) {
 								branch.m_bezierCurve.GetPoint(static_cast<float>(i) / chainAmount));
 				node.m_info.m_thickness = glm::mix(branch.m_startThickness, branch.m_endThickness,
 																					 static_cast<float>(i) / chainAmount);
+				node.m_data.m_branchHandle = branch.m_handle;
 		}
 }
 
@@ -738,7 +831,7 @@ void TreePointCloud::GenerateMeshes(const TreeMeshGeneratorSettings &meshGenerat
 
 						std::vector<Vertex> vertices;
 						std::vector<unsigned int> indices;
-						CylindricalMeshGenerator<BaseSkeletonData, BaseFlowData, BaseNodeData> meshGenerator;
+						CylindricalMeshGenerator<ReconstructionSkeletonData, ReconstructionFlowData, ReconstructionNodeData> meshGenerator;
 						meshGenerator.Generate(m_skeletons[i], vertices, indices, meshGeneratorSettings, 999.0f);
 
 						auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
