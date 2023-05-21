@@ -192,6 +192,10 @@ void TreePointCloud::OnInspect() {
 						ImGui::TreePop();
 				}
 				static ReconstructionSettings reconstructionSettings;
+				if (ImGui::TreeNodeEx("Reconstruction Settings")) {
+						reconstructionSettings.OnInspect();
+						ImGui::TreePop();
+				}
 				if (ImGui::Button("Build Skeleton")) {
 						EstablishConnectivityGraph(connectivityGraphSettings);
 						BuildTreeStructure(reconstructionSettings);
@@ -493,7 +497,7 @@ void TreePointCloud::EstablishConnectivityGraph(const ConnectivityGraphSettings 
 						UNIENGINE_ERROR("Too much connections!");
 						return;
 				}
-				FindPoints(point.m_position, pointVoxelGrid, settings.m_edgeLength,
+				FindPoints(point.m_position, pointVoxelGrid, settings.m_scatterPointConnectionMaxLength,
 									 [&](const PointCloudVoxel &voxel) {
 										 if (voxel.m_type != PointCloudVoxelType::ScatteredPoint) return;
 										 if (voxel.m_handle == point.m_handle) return;
@@ -922,9 +926,10 @@ void TreePointCloud::GenerateMeshes(const TreeMeshGeneratorSettings &meshGenerat
 }
 
 void ConnectivityGraphSettings::OnInspect() {
-		ImGui::DragInt("Junction finder timeout", &m_maxTimeout, 1, 1, 30);
-		ImGui::DragFloat("Edge length", &m_edgeLength, 0.01f, 0.01f, 1.0f);
-		ImGui::DragFloat("Finder extend step", &m_edgeExtendStep, 0.01f, 0.01f, 1.0f);
+	ImGui::DragFloat("Scatter point connection length", &m_scatterPointConnectionMaxLength, 0.01f, 0.01f, 1.0f);
+		ImGui::DragInt("Branch finder timeout", &m_maxTimeout, 1, 1, 30);
+		ImGui::DragFloat("Branch finder length", &m_edgeLength, 0.01f, 0.01f, 1.0f);
+		ImGui::DragFloat("Branch finder step", &m_edgeExtendStep, 0.01f, 0.01f, 1.0f);
 		ImGui::DragFloat("Absolute angle limit", &m_absoluteAngleLimit, 0.01f, 0.0f, 180.0f);
 		ImGui::DragFloat("Branch shortening", &m_branchShortening, 0.01f, 0.00f, 0.5f);
 		ImGui::DragFloat("Force connection ratio", &m_forceConnectionRatio, 0.01f, 0.01f, 1.0f);

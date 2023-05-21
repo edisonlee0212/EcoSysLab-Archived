@@ -68,6 +68,8 @@ namespace EcoSysLab {
 	};
 
 	struct ConnectivityGraphSettings {
+		float m_scatterPointConnectionMaxLength = 0.05f;
+
 		float m_edgeExtendStep = 0.05f;
 		float m_edgeLength = 0.1f;
 		int m_maxTimeout = 60;
@@ -93,8 +95,8 @@ namespace EcoSysLab {
 
 	struct ReconstructionSettings {
 		float m_internodeLength = 0.03f;
-		float m_minHeight = 0.01f;
-		float m_maxTreeDistance = 0.01f;
+		float m_minHeight = 0.15f;
+		float m_maxTreeDistance = 0.05f;
 		float m_branchShortening = 0.3f;
 
 		void OnInspect();
