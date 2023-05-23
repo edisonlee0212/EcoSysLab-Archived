@@ -7,7 +7,6 @@
 #include "Curve.hpp"
 
 using namespace UniEngine;
-#define TREEPOINTCLOUD_CLEAN
 namespace EcoSysLab {
 	typedef int PointHandle;
 	typedef int BranchHandle;
@@ -15,9 +14,7 @@ namespace EcoSysLab {
 	struct ScatteredPoint {
 		PointHandle m_handle = -1;
 		std::vector<PointHandle> m_neighbors;
-#ifndef TREEPOINTCLOUD_CLEAN
-		std::vector<BranchHandle> m_neighborBranchStarts;
-#endif
+
 		std::vector<BranchHandle> m_neighborBranchEnds;
 		glm::vec3 m_position = glm::vec3(0.0f);
 	};
@@ -36,10 +33,7 @@ namespace EcoSysLab {
 		float m_startThickness = 0.0f;
 		float m_endThickness = 0.0f;
 		std::vector<PointHandle> m_startNeighbors;
-#ifndef TREEPOINTCLOUD_CLEAN
-		std::vector<PointHandle> m_endNeighbors;
-		std::vector<BranchHandle> m_neighborBranchStarts;
-#endif
+
 		std::vector<BranchHandle> m_neighborBranchEnds;
 		BranchHandle m_parentHandle = -1;
 		std::vector<BranchHandle> m_childHandles;
@@ -68,7 +62,9 @@ namespace EcoSysLab {
 	};
 
 	struct ConnectivityGraphSettings {
-		float m_scatterPointConnectionMaxLength = 0.05f;
+		float m_scatterPointsConnectionMaxLength = 0.05f;
+
+		float m_scatterPointBranchConnectionMaxLength = 0.1f;
 
 		float m_edgeExtendStep = 0.05f;
 		float m_edgeLength = 0.1f;
@@ -81,21 +77,19 @@ namespace EcoSysLab {
 		void OnInspect();
 	};
 
-	enum class PointCloudVoxelType {
-		ScatteredPoint,
-		BranchStart,
-		BranchEnd
-	};
-
 	struct PointCloudVoxel {
-		PointCloudVoxelType m_type;
 		glm::vec3 m_position = glm::vec3(0.0f);
-		int m_handle = -1;
+		int m_pointHandle = -1;
+	};
+	struct BranchEndsVoxel{
+		bool m_isStart = true;
+		glm::vec3 m_position = glm::vec3(0.0f);
+		int m_branchHandle = -1;
 	};
 
 	struct ReconstructionSettings {
 		float m_internodeLength = 0.03f;
-		float m_minHeight = 0.15f;
+		float m_minHeight = 0.05f;
 		float m_maxTreeDistance = 0.05f;
 		float m_branchShortening = 0.3f;
 
@@ -118,6 +112,8 @@ namespace EcoSysLab {
 	class TreePointCloud : public IPrivateComponent {
 		void FindPoints(const glm::vec3 &position, VoxelGrid<std::vector<PointCloudVoxel>> &pointVoxelGrid, float radius,
 										const std::function<void(const PointCloudVoxel &voxel)> &func) const;
+		void FindBranchEnds(const glm::vec3 &position, VoxelGrid<std::vector<BranchEndsVoxel>> &branchEndsVoxelGrid, float radius,
+										const std::function<void(const BranchEndsVoxel &voxel)> &func) const;
 
 		public:
 		void ImportGraph(const std::filesystem::path &path, float scaleFactor = 0.1f);

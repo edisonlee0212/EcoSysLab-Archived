@@ -17,6 +17,18 @@ void TreePointCloud::FindPoints(const glm::vec3 &position, VoxelGrid<std::vector
 		});
 }
 
+void
+TreePointCloud::FindBranchEnds(const glm::vec3 &position, VoxelGrid<std::vector<BranchEndsVoxel>> &branchEndsVoxelGrid,
+															 float radius,
+															 const std::function<void(const BranchEndsVoxel &voxel)> &func) const {
+		branchEndsVoxelGrid.ForEach(position, radius * 2.0f, [&](const std::vector<BranchEndsVoxel> &voxels) {
+			for (const auto &voxel: voxels) {
+					if (glm::distance(position, voxel.m_position) > radius) continue;
+					func(voxel);
+			}
+		});
+}
+
 void TreePointCloud::ImportGraph(const std::filesystem::path &path, float scaleFactor) {
 		if (!std::filesystem::exists(path)) {
 				UNIENGINE_ERROR("Not exist!");
@@ -446,21 +458,19 @@ void TreePointCloud::OnInspect() {
 
 void TreePointCloud::EstablishConnectivityGraph(const ConnectivityGraphSettings &settings) {
 		VoxelGrid<std::vector<PointCloudVoxel>> pointVoxelGrid;
+		VoxelGrid<std::vector<BranchEndsVoxel>> branchVoxelGrid;
 		pointVoxelGrid.Initialize(3.0f * settings.m_edgeLength, m_min, m_max);
+		branchVoxelGrid.Initialize(3.0f * settings.m_edgeLength, m_min, m_max);
 		for (auto &point: m_allocatedPoints) {
 				point.m_branchHandle = point.m_nodeHandle = point.m_skeletonIndex = -1;
 		}
 		for (auto &point: m_scatteredPoints) {
 				point.m_neighbors.clear();
 				point.m_neighborBranchEnds.clear();
-#ifndef TREEPOINTCLOUD_CLEAN
-				point.m_neighborBranchStarts.clear();
-#endif
 
 				PointCloudVoxel voxel;
-				voxel.m_handle = point.m_handle;
+				voxel.m_pointHandle = point.m_handle;
 				voxel.m_position = point.m_position;
-				voxel.m_type = PointCloudVoxelType::ScatteredPoint;
 				pointVoxelGrid.Ref(point.m_position).emplace_back(voxel);
 		}
 
@@ -470,21 +480,17 @@ void TreePointCloud::EstablishConnectivityGraph(const ConnectivityGraphSettings 
 				scannedBranch.m_parentHandle = -1;
 				scannedBranch.m_childHandles.clear();
 
-#ifndef TREEPOINTCLOUD_CLEAN
-				scannedBranch.m_endNeighbors.clear();
-				scannedBranch.m_neighborBranchStarts.clear();
-#endif
 
-				PointCloudVoxel voxel;
-				voxel.m_handle = scannedBranch.m_handle;
+				BranchEndsVoxel voxel;
+				voxel.m_branchHandle = scannedBranch.m_handle;
 				auto shortenedP0 = scannedBranch.m_bezierCurve.GetPoint(settings.m_branchShortening);
 				auto shortenedP3 = scannedBranch.m_bezierCurve.GetPoint(1.0f - settings.m_branchShortening);
 				voxel.m_position = shortenedP0;
-				voxel.m_type = PointCloudVoxelType::BranchStart;
-				pointVoxelGrid.Ref(shortenedP0).emplace_back(voxel);
+				voxel.m_isStart = true;
+				branchVoxelGrid.Ref(shortenedP0).emplace_back(voxel);
 				voxel.m_position = shortenedP3;
-				voxel.m_type = PointCloudVoxelType::BranchEnd;
-				pointVoxelGrid.Ref(shortenedP3).emplace_back(voxel);
+				voxel.m_isStart = false;
+				branchVoxelGrid.Ref(shortenedP3).emplace_back(voxel);
 		}
 		m_scatterPointsConnections.clear();
 		m_filteredBranchConnections.clear();
@@ -497,15 +503,14 @@ void TreePointCloud::EstablishConnectivityGraph(const ConnectivityGraphSettings 
 						UNIENGINE_ERROR("Too much connections!");
 						return;
 				}
-				FindPoints(point.m_position, pointVoxelGrid, settings.m_scatterPointConnectionMaxLength,
+				FindPoints(point.m_position, pointVoxelGrid, settings.m_scatterPointsConnectionMaxLength,
 									 [&](const PointCloudVoxel &voxel) {
-										 if (voxel.m_type != PointCloudVoxelType::ScatteredPoint) return;
-										 if (voxel.m_handle == point.m_handle) return;
+										 if (voxel.m_pointHandle == point.m_handle) return;
 										 for (const auto &neighbor: point.m_neighbors) {
-												 if (voxel.m_handle == neighbor) return;
+												 if (voxel.m_pointHandle == neighbor) return;
 										 }
-										 auto &otherPoint = m_scatteredPoints[voxel.m_handle];
-										 point.m_neighbors.emplace_back(voxel.m_handle);
+										 auto &otherPoint = m_scatteredPoints[voxel.m_pointHandle];
+										 point.m_neighbors.emplace_back(voxel.m_pointHandle);
 										 otherPoint.m_neighbors.emplace_back(point.m_handle);
 										 m_scatterPointsConnections.emplace_back(point.m_position, otherPoint.m_position);
 									 });
@@ -515,27 +520,33 @@ void TreePointCloud::EstablishConnectivityGraph(const ConnectivityGraphSettings 
 				float currentEdgeLength = settings.m_edgeLength;
 				auto shortenedP0 = branch.m_bezierCurve.GetPoint(settings.m_branchShortening);
 				auto shortenedP3 = branch.m_bezierCurve.GetPoint(1.0f - settings.m_branchShortening);
-
 				float branchLength = glm::distance(shortenedP0, shortenedP3);
+				FindPoints(shortenedP0, pointVoxelGrid, settings.m_scatterPointBranchConnectionMaxLength,
+									 [&](const PointCloudVoxel &voxel) {
+										 for (const auto &i: branch.m_startNeighbors) {
+												 if (i == voxel.m_pointHandle) return;
+										 }
+										 branch.m_startNeighbors.emplace_back(voxel.m_pointHandle);
+										 m_scatterPointToBranchStartConnections.emplace_back(branch.m_bezierCurve.m_p0,
+																																				 voxel.m_position);
+									 });
+				FindPoints(shortenedP3, pointVoxelGrid, settings.m_scatterPointBranchConnectionMaxLength,
+									 [&](const PointCloudVoxel &voxel) {
+										 auto &otherPoint = m_scatteredPoints[voxel.m_pointHandle];
+										 for (const auto &i: otherPoint.m_neighborBranchEnds) {
+												 if (i == branch.m_handle) return;
+										 }
+										 otherPoint.m_neighborBranchEnds.emplace_back(branch.m_handle);
+										 m_scatterPointToBranchEndConnections.emplace_back(branch.m_bezierCurve.m_p3,
+																																			 voxel.m_position);
+									 });
+
+				bool findBranchEnd = false;
 				int timeout = 0;
-				bool findScatterPoint = false;
-				while (!findScatterPoint && timeout < settings.m_maxTimeout) {
-						FindPoints(shortenedP0, pointVoxelGrid, currentEdgeLength,
-											 [&](const PointCloudVoxel &voxel) {
-												 if (voxel.m_type == PointCloudVoxelType::BranchStart) return;
-												 if (voxel.m_type == PointCloudVoxelType::ScatteredPoint) {
-														 findScatterPoint = true;
-														 for (const auto &i: branch.m_startNeighbors) {
-																 if (i == voxel.m_handle) return;
-														 }
-														 branch.m_startNeighbors.emplace_back(voxel.m_handle);
-#ifndef TREEPOINTCLOUD_CLEAN
-														 auto &otherPoint = m_scatteredPoints[voxel.m_handle];
-														 otherPoint.m_neighborBranchStarts.emplace_back(branch.m_handle);
-#endif
-														 m_scatterPointToBranchStartConnections.emplace_back(branch.m_bezierCurve.m_p0,
-																																								 voxel.m_position);
-												 } else {
+				while (!findBranchEnd && timeout < settings.m_maxTimeout) {
+						FindBranchEnds(shortenedP0, branchVoxelGrid, currentEdgeLength,
+													 [&](const BranchEndsVoxel &voxel) {
+														 if (voxel.m_isStart) return;
 														 auto dotP = glm::dot(glm::normalize(voxel.m_position - shortenedP0),
 																									glm::normalize(shortenedP0 - shortenedP3));
 														 if (dotP < glm::cos(glm::radians(settings.m_absoluteAngleLimit))) return;
@@ -544,41 +555,25 @@ void TreePointCloud::EstablishConnectivityGraph(const ConnectivityGraphSettings 
 																 dotP < glm::cos(glm::radians(settings.m_forceConnectionAngleLimit)))
 																 return;
 														 for (const auto &i: branch.m_neighborBranchEnds) {
-																 if (i == voxel.m_handle) return;
+																 if (i == voxel.m_branchHandle) return;
 														 }
-														 auto &otherBranch = m_scannedBranches[voxel.m_handle];
-														 branch.m_neighborBranchEnds.emplace_back(voxel.m_handle);
-#ifndef TREEPOINTCLOUD_CLEAN
-														 otherBranch.m_neighborBranchStarts.emplace_back(branch.m_handle);
-#endif
+														 findBranchEnd = true;
+														 auto &otherBranch = m_scannedBranches[voxel.m_branchHandle];
+														 branch.m_neighborBranchEnds.emplace_back(voxel.m_branchHandle);
 														 m_branchConnections.emplace_back(branch.m_bezierCurve.m_p0,
 																															otherBranch.m_bezierCurve.m_p3);
-												 }
-											 });
+
+													 });
 						currentEdgeLength += settings.m_edgeExtendStep;
 						timeout++;
 				}
-
+				bool findBranchStart = false;
 				currentEdgeLength = settings.m_edgeLength;
 				timeout = 0;
-				findScatterPoint = false;
-				while (!findScatterPoint && timeout < settings.m_maxTimeout) {
-						FindPoints(shortenedP3, pointVoxelGrid, currentEdgeLength,
-											 [&](const PointCloudVoxel &voxel) {
-												 if (voxel.m_type == PointCloudVoxelType::BranchEnd) return;
-												 if (voxel.m_type == PointCloudVoxelType::ScatteredPoint) {
-														 findScatterPoint = true;
-														 auto &otherPoint = m_scatteredPoints[voxel.m_handle];
-														 for (const auto &i: otherPoint.m_neighborBranchEnds) {
-																 if (i == branch.m_handle) return;
-														 }
-#ifndef TREEPOINTCLOUD_CLEAN
-														 branch.m_endNeighbors.emplace_back(voxel.m_handle);
-#endif
-														 otherPoint.m_neighborBranchEnds.emplace_back(branch.m_handle);
-														 m_scatterPointToBranchEndConnections.emplace_back(branch.m_bezierCurve.m_p3,
-																																							 voxel.m_position);
-												 } else {
+				while (!findBranchStart && timeout < settings.m_maxTimeout) {
+						FindBranchEnds(shortenedP3, branchVoxelGrid, currentEdgeLength,
+													 [&](const BranchEndsVoxel &voxel) {
+														 if (!voxel.m_isStart) return;
 														 auto dotP = glm::dot(glm::normalize(voxel.m_position - shortenedP3),
 																									glm::normalize(shortenedP3 - shortenedP0));
 														 if (dotP < glm::cos(glm::radians(settings.m_absoluteAngleLimit)))
@@ -587,18 +582,16 @@ void TreePointCloud::EstablishConnectivityGraph(const ConnectivityGraphSettings 
 																 settings.m_forceConnectionRatio * branchLength &&
 																 dotP < glm::cos(glm::radians(settings.m_forceConnectionAngleLimit)))
 																 return;
-														 auto &otherBranch = m_scannedBranches[voxel.m_handle];
+														 auto &otherBranch = m_scannedBranches[voxel.m_branchHandle];
 														 for (const auto &i: otherBranch.m_neighborBranchEnds) {
 																 if (i == branch.m_handle) return;
 														 }
-#ifndef TREEPOINTCLOUD_CLEAN
-														 branch.m_neighborBranchStarts.emplace_back(voxel.m_handle);
-#endif
+														 findBranchStart = true;
 														 otherBranch.m_neighborBranchEnds.emplace_back(branch.m_handle);
 														 m_branchConnections.emplace_back(branch.m_bezierCurve.m_p3,
 																															otherBranch.m_bezierCurve.m_p0);
-												 }
-											 });
+
+													 });
 						currentEdgeLength += settings.m_edgeExtendStep;
 						timeout++;
 				}
@@ -632,9 +625,7 @@ void TreePointCloud::EstablishConnectivityGraph(const ConnectivityGraphSettings 
 										if (dotP < glm::cos(glm::radians(settings.m_absoluteAngleLimit))) skip = true;
 										if (!skip) {
 												branch.m_neighborBranchEnds.emplace_back(branchEndHandle);
-#ifndef TREEPOINTCLOUD_CLEAN
-												otherBranch.m_neighborBranchStarts.emplace_back(branch.m_handle);
-#endif
+
 												m_branchConnections.emplace_back(branch.m_bezierCurve.m_p0, otherBranch.m_bezierCurve.m_p3);
 										}
 								}
@@ -663,10 +654,17 @@ void TreePointCloud::EstablishConnectivityGraph(const ConnectivityGraphSettings 
 								bestCandidate = candidateHandle;
 						}
 				}
-				m_scannedBranches[bestCandidate].m_childHandles.emplace_back(branch.m_handle);
+				auto &candidate = m_scannedBranches[bestCandidate];
+				candidate.m_childHandles.emplace_back(branch.m_handle);
 				branch.m_parentHandle = bestCandidate;
 				m_filteredBranchConnections.emplace_back(branch.m_bezierCurve.m_p0,
-																								 m_scannedBranches[bestCandidate].m_bezierCurve.m_p3);
+																								 candidate.m_bezierCurve.m_p3);
+				for (int i = 0; i < candidate.m_neighborBranchEnds.size(); i++) {
+						if (candidate.m_neighborBranchEnds[i] == branch.m_handle) {
+								candidate.m_neighborBranchEnds.erase(candidate.m_neighborBranchEnds.begin() + i);
+								break;
+						}
+				}
 		}
 
 }
@@ -925,11 +923,13 @@ void TreePointCloud::GenerateMeshes(const TreeMeshGeneratorSettings &meshGenerat
 		}
 }
 
+
 void ConnectivityGraphSettings::OnInspect() {
-	ImGui::DragFloat("Scatter point connection length", &m_scatterPointConnectionMaxLength, 0.01f, 0.01f, 1.0f);
-		ImGui::DragInt("Branch finder timeout", &m_maxTimeout, 1, 1, 30);
-		ImGui::DragFloat("Branch finder length", &m_edgeLength, 0.01f, 0.01f, 1.0f);
-		ImGui::DragFloat("Branch finder step", &m_edgeExtendStep, 0.01f, 0.01f, 1.0f);
+		ImGui::DragFloat("Point-point max length", &m_scatterPointsConnectionMaxLength, 0.01f, 0.01f, 1.0f);
+		ImGui::DragFloat("Point-branch max length", &m_scatterPointBranchConnectionMaxLength, 0.01f, 0.01f, 1.0f);
+		ImGui::DragInt("Branch-branch search timeout", &m_maxTimeout, 1, 1, 30);
+		ImGui::DragFloat("Branch-branch search length", &m_edgeLength, 0.01f, 0.01f, 1.0f);
+		ImGui::DragFloat("Branch-branch search step", &m_edgeExtendStep, 0.01f, 0.01f, 1.0f);
 		ImGui::DragFloat("Absolute angle limit", &m_absoluteAngleLimit, 0.01f, 0.0f, 180.0f);
 		ImGui::DragFloat("Branch shortening", &m_branchShortening, 0.01f, 0.00f, 0.5f);
 		ImGui::DragFloat("Force connection ratio", &m_forceConnectionRatio, 0.01f, 0.01f, 1.0f);
