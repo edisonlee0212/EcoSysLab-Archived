@@ -40,7 +40,7 @@ namespace EcoSysLab {
 
 	};
 
-	struct OperatingBranch{
+	struct OperatingBranch {
 		TreePartHandle m_treePartHandle = -1;
 		BranchHandle m_handle = -1;
 		BezierCurve m_bezierCurve;
@@ -81,7 +81,7 @@ namespace EcoSysLab {
 		glm::vec3 m_position = glm::vec3(0.0f);
 		int m_pointHandle = -1;
 	};
-	struct BranchEndsVoxel{
+	struct BranchEndsVoxel {
 		bool m_isStart = true;
 		glm::vec3 m_position = glm::vec3(0.0f);
 		int m_branchHandle = -1;
@@ -92,6 +92,9 @@ namespace EcoSysLab {
 		float m_minHeight = 0.05f;
 		float m_maxTreeDistance = 0.05f;
 		float m_branchShortening = 0.3f;
+
+		float m_minThickness = 0.003f;
+		bool m_overrideThickness = true;
 
 		void OnInspect();
 	};
@@ -110,13 +113,13 @@ namespace EcoSysLab {
 	typedef Skeleton<ReconstructionSkeletonData, ReconstructionFlowData, ReconstructionNodeData> ReconstructionSkeleton;
 
 	class TreePointCloud : public IPrivateComponent {
-		void FindPoints(const glm::vec3 &position, VoxelGrid<std::vector<PointCloudVoxel>> &pointVoxelGrid, float radius,
-										const std::function<void(const PointCloudVoxel &voxel)> &func) const;
-		void FindBranchEnds(const glm::vec3 &position, VoxelGrid<std::vector<BranchEndsVoxel>> &branchEndsVoxelGrid, float radius,
-										const std::function<void(const BranchEndsVoxel &voxel)> &func) const;
+		void FindPoints(const glm::vec3& position, VoxelGrid<std::vector<PointCloudVoxel>>& pointVoxelGrid, float radius,
+			const std::function<void(const PointCloudVoxel& voxel)>& func) const;
+		void FindBranchEnds(const glm::vec3& position, VoxelGrid<std::vector<BranchEndsVoxel>>& branchEndsVoxelGrid, float radius,
+			const std::function<void(const BranchEndsVoxel& voxel)>& func) const;
 
-		public:
-		void ImportGraph(const std::filesystem::path &path, float scaleFactor = 0.1f);
+	public:
+		void ImportGraph(const std::filesystem::path& path, float scaleFactor = 0.1f);
 
 		glm::vec3 m_min;
 		glm::vec3 m_max;
@@ -137,12 +140,12 @@ namespace EcoSysLab {
 		std::vector<std::pair<glm::vec3, glm::vec3>> m_branchConnections;
 		std::vector<std::pair<glm::vec3, glm::vec3>> m_filteredBranchConnections;
 
-		void EstablishConnectivityGraph(const ConnectivityGraphSettings &otherPointHandle);
+		void EstablishConnectivityGraph(const ConnectivityGraphSettings& settings);
 
-		void BuildTreeStructure(const ReconstructionSettings &reconstructionSettings);
+		void BuildTreeStructure(const ReconstructionSettings& reconstructionSettings);
 
 		void ClearMeshes() const;
 
-		void GenerateMeshes(const TreeMeshGeneratorSettings &meshGeneratorSettings);
+		void GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings);
 	};
 }
