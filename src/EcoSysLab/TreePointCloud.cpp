@@ -879,6 +879,16 @@ void TreePointCloud::BuildTreeStructure(const ReconstructionSettings& reconstruc
 			m_skeletons[allocatedPoint.m_skeletonIndex].RefNode(
 				closestNodeHandle).m_data.m_allocatedPoints.emplace_back(allocatedPoint.m_handle);
 	}
+
+	for(int i = 0; i < m_skeletons.size(); i++)
+	{
+		auto& skeleton = m_skeletons[i];
+		if(skeleton.RefSortedNodeList().size() < reconstructionSettings.m_minimumNodeCount)
+		{
+			m_skeletons.erase(m_skeletons.begin() + i);
+			i--;
+		}
+	}
 }
 
 void TreePointCloud::ClearMeshes() const {
@@ -967,4 +977,6 @@ void ReconstructionSettings::OnInspect() {
 
 	ImGui::Checkbox("Override thickness", &m_overrideThickness);
 	ImGui::DragFloat("End node thickness", &m_minThickness, 0.001f, 0.001f, 1.0f);
+
+	ImGui::DragInt("Minimum node count", &m_minimumNodeCount, 1, 0, 100);
 }
