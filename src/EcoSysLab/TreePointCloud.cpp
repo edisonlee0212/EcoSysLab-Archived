@@ -136,6 +136,12 @@ void TreePointCloud::ImportGraph(const std::filesystem::path& path, float scaleF
 			m_min = glm::min(m_min, scannedBranch.m_bezierCurve.m_p3);
 			m_max = glm::max(m_max, scannedBranch.m_bezierCurve.m_p3);
 		}
+
+		auto center = (m_min + m_max) / 2.0f;
+		auto newMin = center + (m_min - center) * 1.25f;
+		auto newMax = center + (m_max - center) * 1.25f;
+		m_min = newMin;
+		m_max = newMax;
 	}
 	catch (std::exception e) {
 		UNIENGINE_ERROR("Failed to load!");
@@ -461,8 +467,8 @@ void TreePointCloud::OnInspect() {
 void TreePointCloud::EstablishConnectivityGraph(const ConnectivityGraphSettings& settings) {
 	VoxelGrid<std::vector<PointCloudVoxel>> pointVoxelGrid;
 	VoxelGrid<std::vector<BranchEndsVoxel>> branchVoxelGrid;
-	pointVoxelGrid.Initialize(3.0f * settings.m_edgeLength, m_min, m_max);
-	branchVoxelGrid.Initialize(3.0f * settings.m_edgeLength, m_min, m_max);
+	pointVoxelGrid.Initialize(2.0f * settings.m_edgeLength, m_min, m_max);
+	branchVoxelGrid.Initialize(2.0f * settings.m_edgeLength, m_min, m_max);
 	for (auto& point : m_allocatedPoints) {
 		point.m_branchHandle = point.m_nodeHandle = point.m_skeletonIndex = -1;
 	}
@@ -879,14 +885,15 @@ void TreePointCloud::BuildTreeStructure(const ReconstructionSettings& reconstruc
 			m_skeletons[allocatedPoint.m_skeletonIndex].RefNode(
 				closestNodeHandle).m_data.m_allocatedPoints.emplace_back(allocatedPoint.m_handle);
 	}
-
-	for(int i = 0; i < m_skeletons.size(); i++)
-	{
-		auto& skeleton = m_skeletons[i];
-		if(skeleton.RefSortedNodeList().size() < reconstructionSettings.m_minimumNodeCount)
+	if (m_skeletons.size() > 1) {
+		for (int i = 0; i < m_skeletons.size(); i++)
 		{
-			m_skeletons.erase(m_skeletons.begin() + i);
-			i--;
+			auto& skeleton = m_skeletons[i];
+			if (skeleton.RefSortedNodeList().size() < reconstructionSettings.m_minimumNodeCount)
+			{
+				m_skeletons.erase(m_skeletons.begin() + i);
+				i--;
+			}
 		}
 	}
 }
