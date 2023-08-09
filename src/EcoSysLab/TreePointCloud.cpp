@@ -81,6 +81,14 @@ void TreePointCloud::ImportGraph(const std::filesystem::path& path, float scaleF
 					glm::normalize(inBranch["Start Dir"].as<glm::vec3>()) * cPLength + branch.m_bezierCurve.m_p0;
 				branch.m_bezierCurve.m_p2 =
 					branch.m_bezierCurve.m_p3 - glm::normalize(inBranch["End Dir"].as<glm::vec3>()) * cPLength;
+				if(glm::any(glm::isnan(branch.m_bezierCurve.m_p1)))
+				{
+					branch.m_bezierCurve.m_p1 = glm::mix(branch.m_bezierCurve.m_p0, branch.m_bezierCurve.m_p3, 0.25f);
+				}
+				if (glm::any(glm::isnan(branch.m_bezierCurve.m_p2)))
+				{
+					branch.m_bezierCurve.m_p2 = glm::mix(branch.m_bezierCurve.m_p0, branch.m_bezierCurve.m_p3, 0.75f);
+				}
 				/*
 				branch.m_bezierCurve.m_p1 = glm::mix(branch.m_bezierCurve.m_p0, branch.m_bezierCurve.m_p3, 0.3f);
 				branch.m_bezierCurve.m_p2 = glm::mix(branch.m_bezierCurve.m_p0, branch.m_bezierCurve.m_p3, 0.7f);
@@ -822,6 +830,7 @@ void TreePointCloud::BuildTreeStructure(const ReconstructionSettings& reconstruc
 				processingBranch.m_chainNodeHandles.emplace_back(newNodeHandle);
 				prevNodeHandle = newNodeHandle;
 			}
+			//assert(glm::isnan(processingBranch.m_bezierCurve.m_p0.x))
 			ApplyCurve(skeleton, processingBranch);
 
 		}
