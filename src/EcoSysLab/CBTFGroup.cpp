@@ -8,7 +8,7 @@
 #endif
 
 using namespace EcoSysLab;
-void CBTFGroup::OnInspect() {
+void CBTFGroup::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 #ifdef RAYTRACERFACILITY
   AssetRef temp;
   if (Editor::DragAndDropButton<DoubleCBTF>(temp, ("Drop to add..."))) {

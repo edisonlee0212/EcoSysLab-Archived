@@ -1,6 +1,6 @@
 #pragma once
 
-using namespace UniEngine;
+using namespace EvoEngine;
 namespace EcoSysLab {
 
 class RectangularSorghumFieldPattern {
@@ -24,7 +24,7 @@ public:
   virtual void GenerateMatrices(){};
   Entity InstantiateField();
 
-  void OnInspect() override;
+  void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
   void Serialize(YAML::Emitter &out) override;
   void Deserialize(const YAML::Node &in) override;
   void CollectAssetRef(std::vector<AssetRef> &list) override;
@@ -41,7 +41,7 @@ class RectangularSorghumField : public SorghumField {
 public:
   void GenerateMatrices() override;
 
-  void OnInspect() override;
+  void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
   void Serialize(YAML::Emitter &out) override;
   void Deserialize(const YAML::Node &in) override;
   void CollectAssetRef(std::vector<AssetRef> &list) override;
@@ -63,7 +63,7 @@ public:
   void GenerateMatrices() override;
   std::pair<Entity, Entity> InstantiateAroundIndex(unsigned i, float radius, glm::dvec2& offset, float positionVariance = 0.0f);
   void ImportFromFile(const std::filesystem::path &path);
-  void OnInspect() override;
+  void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
   void Serialize(YAML::Emitter &out) override;
   void Deserialize(const YAML::Node &in) override;
   void CollectAssetRef(std::vector<AssetRef> &list) override;

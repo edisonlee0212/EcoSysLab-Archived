@@ -1,8 +1,11 @@
 #include "Climate.hpp"
 
+
+#include "EditorLayer.hpp"
+
 using namespace EcoSysLab;
 
-void ClimateDescriptor::OnInspect()
+void ClimateDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
 	if (ImGui::Button("Instantiate")) {
 		auto scene = Application::GetActiveScene();
@@ -22,9 +25,9 @@ void ClimateDescriptor::Deserialize(const YAML::Node& in)
 	
 }
 
-void Climate::OnInspect()
+void Climate::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
-	if(Editor::DragAndDropButton<ClimateDescriptor>(m_climateDescriptor, "ClimateDescriptor", true))
+	if(editorLayer->DragAndDropButton<ClimateDescriptor>(m_climateDescriptor, "ClimateDescriptor", true))
 	{
 		InitializeClimateModel();
 	}

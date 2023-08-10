@@ -3,8 +3,10 @@
 #include <SorghumStateGenerator.hpp>
 #include <Curve.hpp>
 #include <LeafSegment.hpp>
+#include <Vertex.hpp>
+
 #include "Spline.hpp"
-using namespace UniEngine;
+using namespace EvoEngine;
 namespace EcoSysLab {
 class LeafData : public IPrivateComponent {
   void LeafStateHelper(ProceduralLeafState& left, ProceduralLeafState& right, float& a, const SorghumStatePair &sorghumStatePair, int leafIndex);
@@ -34,7 +36,7 @@ public:
 
   void FormLeaf(const SorghumStatePair & sorghumStatePair, bool skeleton = false, bool doubleFace = false);
   void Copy(const std::shared_ptr<LeafData> &target);
-  void OnInspect() override;
+  void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
   void OnDestroy() override;
   void Serialize(YAML::Emitter &out) override;
   void Deserialize(const YAML::Node &in) override;

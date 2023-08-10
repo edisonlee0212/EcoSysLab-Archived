@@ -2,7 +2,7 @@
 
 #include "Plot2D.hpp"
 #include "ProceduralSorghum.hpp"
-using namespace UniEngine;
+using namespace EvoEngine;
 namespace EcoSysLab {
 
 class SorghumStateGenerator : public IAsset {
@@ -38,7 +38,7 @@ public:
   Curve2D m_wavinessAlongLeaf;
   [[nodiscard]] unsigned GetVersion() const;
   void OnCreate() override;
-  void OnInspect() override;
+  void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
   void Serialize(YAML::Emitter &out) override;
   void Deserialize(const YAML::Node &in) override;
   [[nodiscard]] SorghumState Generate(unsigned int seed);

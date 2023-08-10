@@ -1,6 +1,6 @@
 #pragma once
 #include "VoxelGrid.hpp"
-using namespace UniEngine;
+using namespace EvoEngine;
 namespace EcoSysLab
 {
 	struct IlluminationEstimationSettings

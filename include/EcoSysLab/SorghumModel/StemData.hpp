@@ -4,7 +4,8 @@
 #include <Curve.hpp>
 #include <LeafSegment.hpp>
 #include <SorghumStateGenerator.hpp>
-using namespace UniEngine;
+#include <Vertex.hpp>
+using namespace EvoEngine;
 namespace EcoSysLab {
 class StemData : public IPrivateComponent {
   void GenerateStemGeometry();
@@ -23,7 +24,7 @@ public:
   glm::vec4 m_vertexColor = glm::vec4(0, 1, 0, 1);
   void Copy(const std::shared_ptr<StemData> &target);
   void FormStem(const SorghumStatePair &sorghumStatePair, bool skeleton = false);
-  void OnInspect() override;
+  void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
   void OnDestroy() override;
   void Serialize(YAML::Emitter &out) override;
   void Deserialize(const YAML::Node &in) override;

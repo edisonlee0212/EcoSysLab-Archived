@@ -3,11 +3,14 @@
 //
 
 #include "StemData.hpp"
-#include "DefaultResources.hpp"
+
+#include "Gizmos.hpp"
+#include "Scene.hpp"
+
 #include "Graphics.hpp"
 #include "SorghumLayer.hpp"
 using namespace EcoSysLab;
-void StemData::OnInspect() {
+void StemData::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
   if (ImGui::TreeNodeEx("Curves", ImGuiTreeNodeFlags_DefaultOpen)) {
     for (int i = 0; i < m_curves.size(); i++) {
       ImGui::Text(("Curve" + std::to_string(i)).c_str());
@@ -28,16 +31,20 @@ void StemData::OnInspect() {
       ImGui::ColorEdit4("Color", &renderColor.x);
       ImGui::TreePop();
     }
-    std::vector<glm::mat4> matrices;
-    matrices.resize(m_nodes.size());
-    for (int i = 0; i < m_nodes.size(); i++) {
-      matrices[i] =
-          glm::translate(m_nodes[i].m_position) * glm::scale(glm::vec3(1.0f));
+    static std::shared_ptr<ParticleInfoList> particleInfoList;
+    if (!particleInfoList)
+    {
+        particleInfoList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
     }
-    Gizmos::DrawGizmoMeshInstanced(
-        DefaultResources::Primitives::Sphere, renderColor, matrices,
-        GetScene()->GetDataComponent<GlobalTransform>(GetOwner()).m_value,
-        nodeSize);
+    for (int i = 0; i < m_nodes.size(); i++) {
+        particleInfoList->m_particleInfos[i].m_instanceMatrix.m_value =
+            glm::translate(m_nodes[i].m_position) * glm::scale(glm::vec3(1.0f));
+        particleInfoList->m_particleInfos[i].m_instanceColor = renderColor;
+    }
+    auto owner = GetOwner();
+    auto scene = GetScene();
+    Gizmos::DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_SPHERE"), particleInfoList,
+        scene->GetDataComponent<GlobalTransform>(owner).m_value, nodeSize);
   }
 }
 void StemData::OnDestroy() {

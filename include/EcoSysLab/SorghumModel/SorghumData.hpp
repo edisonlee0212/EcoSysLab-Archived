@@ -1,7 +1,7 @@
 #pragma once
 #include "ProceduralSorghum.hpp"
 #include <SorghumStateGenerator.hpp>
-using namespace UniEngine;
+using namespace EvoEngine;
 namespace EcoSysLab {
 enum class SorghumMode{
   ProceduralSorghum,
@@ -26,7 +26,7 @@ public:
 
   void OnCreate() override;
   void OnDestroy() override;
-  void OnInspect() override;
+  void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
   void SetTime(float time);
   void ExportModel(const std::string &filename,
                    const bool &includeFoliage = true) const;

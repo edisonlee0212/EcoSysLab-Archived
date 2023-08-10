@@ -98,7 +98,7 @@ void EngineSetup() {
         transform = Transform();
         transform.SetPosition(glm::vec3(0, 2, 35));
         transform.SetEulerRotation(glm::radians(glm::vec3(15, 0, 0)));
-        auto mainCamera = Application::GetActiveScene()->m_mainCamera.Get<UniEngine::Camera>();
+        auto mainCamera = Application::GetActiveScene()->m_mainCamera.Get<EvoEngine::Camera>();
         if (mainCamera) {
             auto postProcessing =
                     scene->GetOrSetPrivateComponent<PostProcessing>(mainCamera->GetOwner()).lock();

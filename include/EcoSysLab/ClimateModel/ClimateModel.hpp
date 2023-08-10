@@ -1,7 +1,7 @@
 #pragma once
 
 #include "ecosyslab_export.h"
-using namespace UniEngine;
+using namespace EvoEngine;
 namespace EcoSysLab {
 	class ClimateParameters {
 	public:

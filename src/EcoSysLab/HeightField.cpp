@@ -15,7 +15,7 @@ float HeightField::GetValue(const glm::vec2& position)
 	return retVal;
 }
 
-void HeightField::OnInspect()
+void HeightField::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
 	bool changed = false;
 	changed = ImGui::DragInt("Precision level", &m_precisionLevel) || changed;

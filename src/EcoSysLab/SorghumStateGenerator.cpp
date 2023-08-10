@@ -1,6 +1,11 @@
 #include "ProjectManager.hpp"
 #include "SorghumLayer.hpp"
-#include <SorghumStateGenerator.hpp>
+#include "SorghumStateGenerator.hpp"
+
+#include <Time.hpp>
+
+#include "Scene.hpp"
+
 using namespace EcoSysLab;
 
 void TipMenu(const std::string &content) {
@@ -11,11 +16,11 @@ void TipMenu(const std::string &content) {
   }
 }
 
-void SorghumStateGenerator::OnInspect() {
+void SorghumStateGenerator::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
   if (ImGui::Button("Instantiate")) {
     auto sorghum = Application::GetLayer<SorghumLayer>()->CreateSorghum(
-        std::dynamic_pointer_cast<SorghumStateGenerator>(m_self.lock()));
-    Application::GetActiveScene()->SetEntityName(sorghum, m_self.lock()->GetAssetRecord().lock()->GetAssetFileName());
+        std::dynamic_pointer_cast<SorghumStateGenerator>(GetSelf()));
+    Application::GetActiveScene()->SetEntityName(sorghum, GetSelf()->GetAssetRecord().lock()->GetAssetFileName());
   }
   static bool autoSave = true;
   ImGui::Checkbox("Auto save", &autoSave);
@@ -184,13 +189,13 @@ void SorghumStateGenerator::OnInspect() {
       ImGui::TreePop();
     }
     if (lastAutoSaveTime == 0) {
-      lastAutoSaveTime = Application::Time().CurrentTime();
+      lastAutoSaveTime = Time::CurrentTime();
     } else if (lastAutoSaveTime + autoSaveInterval <
-               Application::Time().CurrentTime()) {
-      lastAutoSaveTime = Application::Time().CurrentTime();
+               Time::CurrentTime()) {
+      lastAutoSaveTime = Time::CurrentTime();
       if (!m_saved) {
         Save();
-        UNIENGINE_LOG(GetTypeName() + " autosaved!");
+        EVOENGINE_LOG(GetTypeName() + " autosaved!");
       }
     }
   } else {
@@ -225,9 +230,9 @@ void SorghumStateGenerator::Serialize(YAML::Emitter &out) {
   m_leafLength.Serialize("m_leafLength", out);
   m_leafWidth.Serialize("m_leafWidth", out);
 
-  m_widthAlongStem.UniEngine::ISerializable::Serialize("m_widthAlongStem", out);
-  m_widthAlongLeaf.UniEngine::ISerializable::Serialize("m_widthAlongLeaf", out);
-  m_wavinessAlongLeaf.UniEngine::ISerializable::Serialize("m_wavinessAlongLeaf",
+  m_widthAlongStem.EvoEngine::ISerializable::Serialize("m_widthAlongStem", out);
+  m_widthAlongLeaf.EvoEngine::ISerializable::Serialize("m_widthAlongLeaf", out);
+  m_wavinessAlongLeaf.EvoEngine::ISerializable::Serialize("m_wavinessAlongLeaf",
                                                           out);
 }
 void SorghumStateGenerator::Deserialize(const YAML::Node &in) {
@@ -258,11 +263,11 @@ void SorghumStateGenerator::Deserialize(const YAML::Node &in) {
   m_leafLength.Deserialize("m_leafLength", in);
   m_leafWidth.Deserialize("m_leafWidth", in);
 
-  m_widthAlongStem.UniEngine::ISerializable::Deserialize("m_widthAlongStem",
+  m_widthAlongStem.EvoEngine::ISerializable::Deserialize("m_widthAlongStem",
                                                          in);
-  m_widthAlongLeaf.UniEngine::ISerializable::Deserialize("m_widthAlongLeaf",
+  m_widthAlongLeaf.EvoEngine::ISerializable::Deserialize("m_widthAlongLeaf",
                                                          in);
-  m_wavinessAlongLeaf.UniEngine::ISerializable::Deserialize(
+  m_wavinessAlongLeaf.EvoEngine::ISerializable::Deserialize(
       "m_wavinessAlongLeaf", in);
 }
 SorghumState SorghumStateGenerator::Generate(unsigned int seed) {

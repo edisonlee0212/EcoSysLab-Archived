@@ -1,6 +1,8 @@
 #include "Soil.hpp"
 
 #include <cassert>
+#include <Material.hpp>
+#include <Mesh.hpp>
 
 #include "EcoSysLabLayer.hpp"
 #include "EditorLayer.hpp"
@@ -67,7 +69,7 @@ void SetSoilPhysicalMaterial(Noises3D& c, Noises3D& p, float sandRatio, float si
 	p.m_noiseDescriptors[0].m_offset = sandRatio * sandMaterialProperties.y + siltRatio * siltMaterialProperties.y + clayRatio * clayMaterialProperties.y + airRatio * airMaterialProperties.y;
 }
 
-void NoiseSoilLayerDescriptor::OnInspect()
+void NoiseSoilLayerDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
 	bool changed = false;
 	if (ImGui::TreeNodeEx("Generate from preset soil ratio")) {
@@ -154,11 +156,11 @@ void NoiseSoilLayerDescriptor::OnInspect()
 		ImGui::TreePop();
 	}
 	if (ImGui::TreeNode("Textures")) {
-		if (Editor::DragAndDropButton<Texture2D>(m_albedoTexture, "Albedo")) changed = true;
-		if (Editor::DragAndDropButton<Texture2D>(m_roughnessTexture, "Roughness")) changed = true;
-		if (Editor::DragAndDropButton<Texture2D>(m_metallicTexture, "Metallic")) changed = true;
-		if (Editor::DragAndDropButton<Texture2D>(m_normalTexture, "Normal")) changed = true;
-		if (Editor::DragAndDropButton<Texture2D>(m_heightTexture, "Height")) changed = true;
+		if (editorLayer->DragAndDropButton<Texture2D>(m_albedoTexture, "Albedo")) changed = true;
+		if (editorLayer->DragAndDropButton<Texture2D>(m_roughnessTexture, "Roughness")) changed = true;
+		if (editorLayer->DragAndDropButton<Texture2D>(m_metallicTexture, "Metallic")) changed = true;
+		if (editorLayer->DragAndDropButton<Texture2D>(m_normalTexture, "Normal")) changed = true;
+		if (editorLayer->DragAndDropButton<Texture2D>(m_heightTexture, "Height")) changed = true;
 		ImGui::TreePop();
 	}
 	if (changed) m_saved = false;
@@ -206,10 +208,10 @@ void NoiseSoilLayerDescriptor::CollectAssetRef(std::vector<AssetRef>& list)
 	list.push_back(m_heightTexture);
 }
 
-void SoilDescriptor::OnInspect()
+void SoilDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
 	bool changed = false;
-	if (Editor::DragAndDropButton<HeightField>(m_heightField, "Height Field", true))
+	if (editorLayer->DragAndDropButton<HeightField>(m_heightField, "Height Field", true))
 	{
 		changed = true;
 	}
@@ -241,7 +243,7 @@ void SoilDescriptor::OnInspect()
 		changed = true;
 	}
 	AssetRef tempSoilLayerDescriptorHolder;
-	if (Editor::DragAndDropButton<NoiseSoilLayerDescriptor>(tempSoilLayerDescriptorHolder, "Drop new SoilLayerDescriptor here...")) {
+	if (editorLayer->DragAndDropButton<NoiseSoilLayerDescriptor>(tempSoilLayerDescriptorHolder, "Drop new SoilLayerDescriptor here...")) {
 		auto sld = tempSoilLayerDescriptorHolder.Get<NoiseSoilLayerDescriptor>();
 		if (sld) {
 			m_soilLayerDescriptors.emplace_back(sld);
@@ -293,7 +295,7 @@ void SoilDescriptor::OnInspect()
 					}
 				}
 				if (ImGui::TreeNode("Settings")) {
-					soilLayerDescriptor->OnInspect();
+					soilLayerDescriptor->OnInspect(editorLayer);
 					ImGui::TreePop();
 				}
 				ImGui::TreePop();
@@ -312,9 +314,9 @@ void SoilDescriptor::OnInspect()
 
 
 
-void Soil::OnInspect()
+void Soil::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
-	if (Editor::DragAndDropButton<SoilDescriptor>(m_soilDescriptor, "SoilDescriptor", true)) {
+	if (editorLayer->DragAndDropButton<SoilDescriptor>(m_soilDescriptor, "SoilDescriptor", true)) {
 		InitializeSoilModel();
 	}
 	auto soilDescriptor = m_soilDescriptor.Get<SoilDescriptor>();
@@ -397,11 +399,11 @@ void Soil::OnInspect()
 		static AssetRef soilRoughnessTexture;
 		static AssetRef soilHeightTexture;
 		static AssetRef soilMetallicTexture;
-		Editor::DragAndDropButton<Texture2D>(soilAlbedoTexture, "Albedo", true);
-		Editor::DragAndDropButton<Texture2D>(soilNormalTexture, "Normal", true);
-		Editor::DragAndDropButton<Texture2D>(soilRoughnessTexture, "Roughness", true);
-		Editor::DragAndDropButton<Texture2D>(soilHeightTexture, "Height", true);
-		Editor::DragAndDropButton<Texture2D>(soilMetallicTexture, "Metallic", true);
+		editorLayer->DragAndDropButton<Texture2D>(soilAlbedoTexture, "Albedo", true);
+		editorLayer->DragAndDropButton<Texture2D>(soilNormalTexture, "Normal", true);
+		editorLayer->DragAndDropButton<Texture2D>(soilRoughnessTexture, "Roughness", true);
+		editorLayer->DragAndDropButton<Texture2D>(soilHeightTexture, "Height", true);
+		editorLayer->DragAndDropButton<Texture2D>(soilMetallicTexture, "Metallic", true);
 		if(ImGui::Button("Nutrient Transport: Sand"))
 		{
 			auto albedo = soilAlbedoTexture.Get<Texture2D>();
@@ -591,7 +593,6 @@ Entity Soil::GenerateSurfaceQuadX(float depth, const glm::vec2& minXY, const glm
 	auto scene = Application::GetActiveScene();
 	auto quadEntity = scene->CreateEntity("Slice");
 	auto material = ProjectManager::CreateTemporaryAsset<Material>();
-	material->SetProgram(DefaultResources::GLPrograms::StandardProgram);
 	auto albedoTex = ProjectManager::CreateTemporaryAsset<Texture2D>();
 	auto normalTex = ProjectManager::CreateTemporaryAsset<Texture2D>();
 	auto metallicTex = ProjectManager::CreateTemporaryAsset<Texture2D>();
@@ -606,14 +607,14 @@ Entity Soil::GenerateSurfaceQuadX(float depth, const glm::vec2& minXY, const glm
 	normalTex->SetRgbChannelData(normalData, textureResolution);
 	metallicTex->SetRedChannelData(metallicData, textureResolution);
 	roughnessTex->SetRedChannelData(roughnessData, textureResolution);
-	material->m_albedoTexture = albedoTex;
-	material->m_normalTexture = normalTex;
-	material->m_metallicTexture = metallicTex;
-	material->m_roughnessTexture = roughnessTex;
+	material->SetAlbedoTexture(albedoTex);
+	material->SetNormalTexture(normalTex);
+	material->SetMetallicTexture(metallicTex);
+	material->SetRoughnessTexture(roughnessTex);
 	const auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(quadEntity).lock();
 	meshRenderer->m_material = material;
-	material->m_drawSettings.m_cullFace = false;
-	meshRenderer->m_mesh = DefaultResources::Primitives::Quad;
+	material->m_drawSettings.m_cullMode = VK_CULL_MODE_NONE;
+	meshRenderer->m_mesh = Resources::GetResource<Mesh>("PRIMITIVE_QUAD");
 
 	GlobalTransform globalTransform;
 	glm::vec3 scale;
@@ -638,7 +639,6 @@ Entity Soil::GenerateSurfaceQuadZ(float depth, const glm::vec2& minXY, const glm
 
 	const auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(quadEntity).lock();
 	auto material = ProjectManager::CreateTemporaryAsset<Material>();
-	material->SetProgram(DefaultResources::GLPrograms::StandardProgram);
 	auto albedoTex = ProjectManager::CreateTemporaryAsset<Texture2D>();
 	auto normalTex = ProjectManager::CreateTemporaryAsset<Texture2D>();
 	auto metallicTex = ProjectManager::CreateTemporaryAsset<Texture2D>();
@@ -653,15 +653,15 @@ Entity Soil::GenerateSurfaceQuadZ(float depth, const glm::vec2& minXY, const glm
 	normalTex->SetRgbChannelData(normalData, textureResolution);
 	metallicTex->SetRedChannelData(metallicData, textureResolution);
 	roughnessTex->SetRedChannelData(roughnessData, textureResolution);
-	material->m_albedoTexture = albedoTex;
-	material->m_normalTexture = normalTex;
-	material->m_metallicTexture = metallicTex;
-	material->m_roughnessTexture = roughnessTex;
+	material->SetAlbedoTexture(albedoTex);
+	material->SetNormalTexture(normalTex);
+	material->SetMetallicTexture(metallicTex);
+	material->SetRoughnessTexture(roughnessTex);
 
 
 	meshRenderer->m_material = material;
-	material->m_drawSettings.m_cullFace = false;
-	meshRenderer->m_mesh = DefaultResources::Primitives::Quad;
+	material->m_drawSettings.m_cullMode = VK_CULL_MODE_NONE;
+	meshRenderer->m_mesh = Resources::GetResource<Mesh>("PRIMITIVE_QUAD");
 
 	GlobalTransform globalTransform;
 	glm::vec3 scale;
@@ -718,10 +718,10 @@ Entity Soil::GenerateCutOut(float xDepth, float zDepth, float waterFactor, float
 				{
 					auto mmr = scene->GetOrSetPrivateComponent<MeshRenderer>(groundSurface).lock();
 					auto mat = mmr->m_material.Get<Material>();
-					mat->m_albedoTexture = firstDescriptor->m_albedoTexture;
-					mat->m_normalTexture = firstDescriptor->m_normalTexture;
-					mat->m_roughnessTexture = firstDescriptor->m_roughnessTexture;
-					mat->m_metallicTexture = firstDescriptor->m_metallicTexture;
+					mat->SetAlbedoTexture(firstDescriptor->m_albedoTexture.Get<Texture2D>());
+					mat->SetNormalTexture(firstDescriptor->m_normalTexture.Get<Texture2D>());
+					mat->SetRoughnessTexture(firstDescriptor->m_roughnessTexture.Get<Texture2D>());
+					mat->SetMetallicTexture(firstDescriptor->m_metallicTexture.Get<Texture2D>());
 				}
 			}
 		}
@@ -766,10 +766,10 @@ Entity Soil::GenerateFullBox(float waterFactor, float nutrientFactor, bool groun
 				{
 					auto mmr = scene->GetOrSetPrivateComponent<MeshRenderer>(groundSurface).lock();
 					auto mat = mmr->m_material.Get<Material>();
-					mat->m_albedoTexture = firstDescriptor->m_albedoTexture;
-					mat->m_normalTexture = firstDescriptor->m_normalTexture;
-					mat->m_roughnessTexture = firstDescriptor->m_roughnessTexture;
-					mat->m_metallicTexture = firstDescriptor->m_metallicTexture;
+					mat->SetAlbedoTexture(firstDescriptor->m_albedoTexture.Get<Texture2D>());
+					mat->SetNormalTexture(firstDescriptor->m_normalTexture.Get<Texture2D>());
+					mat->SetRoughnessTexture(firstDescriptor->m_roughnessTexture.Get<Texture2D>());
+					mat->SetMetallicTexture(firstDescriptor->m_metallicTexture.Get<Texture2D>());
 				}
 			}
 		}
@@ -798,13 +798,13 @@ Entity Soil::GenerateMesh(float xDepth, float zDepth)
 	const auto soilDescriptor = m_soilDescriptor.Get<SoilDescriptor>();
 	if (!soilDescriptor)
 	{
-		UNIENGINE_ERROR("No soil descriptor!");
+		EVOENGINE_ERROR("No soil descriptor!");
 		return Entity();
 	}
 	const auto heightField = soilDescriptor->m_heightField.Get<HeightField>();
 	if (!heightField)
 	{
-		UNIENGINE_ERROR("No height field!");
+		EVOENGINE_ERROR("No height field!");
 		return Entity();
 	}
 	std::vector<Vertex> vertices;
@@ -835,7 +835,9 @@ Entity Soil::GenerateMesh(float xDepth, float zDepth)
 		scene->GetOrSetPrivateComponent<MeshRenderer>(groundSurfaceEntity).lock();
 	const auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
 	const auto material = ProjectManager::CreateTemporaryAsset<Material>();
-	mesh->SetVertices(17, vertices, triangles);
+	VertexAttributes vertexAttributes{};
+	vertexAttributes.m_texCoord = true;
+	mesh->SetVertices(vertexAttributes, vertices, triangles);
 	meshRenderer->m_mesh = mesh;
 	meshRenderer->m_material = material;
 
@@ -1084,9 +1086,9 @@ void DeserializeSoilParameters(const std::string& name, SoilParameters& soilPara
 		auto& param = in[name];
 		if (param["m_voxelResolution"]) soilParameters.m_voxelResolution = param["m_voxelResolution"].as<glm::uvec3>();
 		else {
-			UNIENGINE_WARNING("DeserializeSoilParameters: m_voxelResolution not found!");
-			//UNIENGINE_ERROR("DeserializeSoilParameters: m_voxelResolution not found!");
-			//UNIENGINE_LOG("DeserializeSoilParameters: m_voxelResolution not found!");
+			EVOENGINE_WARNING("DeserializeSoilParameters: m_voxelResolution not found!");
+			//EVOENGINE_ERROR("DeserializeSoilParameters: m_voxelResolution not found!");
+			//EVOENGINE_LOG("DeserializeSoilParameters: m_voxelResolution not found!");
 		}
 		if (param["m_deltaX"]) soilParameters.m_deltaX = param["m_deltaX"].as<float>();
 		if (param["m_deltaTime"]) soilParameters.m_deltaTime = param["m_deltaTime"].as<float>();

@@ -2,11 +2,11 @@ cmake_minimum_required(VERSION 3.17)
 project(
         EcoSysLab
         VERSION 0.1
-        DESCRIPTION "An interactive application developed for my research purposes based on UniEngine"
+        DESCRIPTION "An interactive application developed for my research purposes based on EvoEngine"
 )
 
-option(BUILD_RAY_TRACER_FACILITY "Build Ray Tracer Facility" ON)
-set(BUILD_RAY_TRACER_FACILITY ON)
+option(BUILD_RAY_TRACER_FACILITY "Build Ray Tracer Facility" OFF)
+set(BUILD_RAY_TRACER_FACILITY OFF)
 include(GenerateExportHeader)
 
 # Set a default build type if none was specified
@@ -37,15 +37,15 @@ endif ()
 # ------------------------------------------------------------------
 # 3rd Party libraries
 # ------------------------------------------------------------------
-set(UNIENGINE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../UniEngine)
+set(EVOENGINE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../EvoEngine)
 if(BUILD_RAY_TRACER_FACILITY) 
     set(RAYTRACERFACILITY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../RayTracerFacility)
 endif()
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-if (NOT TARGET uniengine)
-    add_subdirectory(${UNIENGINE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/UniEngine)
+if (NOT TARGET evoengine)
+    add_subdirectory(${EVOENGINE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/EvoEngine)
 endif ()
 if(BUILD_RAY_TRACER_FACILITY) 
     if (NOT TARGET RayTracerFacility)
@@ -53,7 +53,7 @@ if(BUILD_RAY_TRACER_FACILITY)
     endif ()
 endif()
 
-include_directories(${UNIENGINE_INCLUDES})
+include_directories(${EVOENGINE_INCLUDES})
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 
@@ -66,7 +66,7 @@ add_library(EcoSysLab
         ${ECOSYSLAB_SOURCES_LOCAL}
         )
 set(ECOSYSLAB_PCH_LOCAL
-        ${UNIENGINE_PCH}
+        ${EVOENGINE_PCH}
         ${RAY_TRACER_FACILITY_PCH}
         ${CMAKE_CURRENT_SOURCE_DIR}/include/EcoSysLab/EcoSysLab-pch.hpp
         )
@@ -109,7 +109,7 @@ else ()
             NOMINMAX
             )
     set(ECOSYSLAB_INCLUDES_LOCAL
-            ${UNIENGINE_INCLUDES}
+            ${EVOENGINE_INCLUDES}
             ${CMAKE_CURRENT_BINARY_DIR}
             ${CMAKE_CURRENT_SOURCE_DIR}/include/EcoSysLab
             ${CMAKE_CURRENT_SOURCE_DIR}/include/EcoSysLab/SorghumModel
@@ -122,7 +122,7 @@ else ()
             ${CMAKE_CURRENT_SOURCE_DIR}/include/EcoSysLab/Reconstruction
             )
     target_link_libraries(EcoSysLab
-            uniengine
+            evoengine
             )
 endif ()
 target_include_directories(EcoSysLab

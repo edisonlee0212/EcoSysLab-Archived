@@ -3,7 +3,7 @@
 #include "ecosyslab_export.h"
 #include "glm/gtx/quaternion.hpp"
 #include "MarchingCubes.hpp"
-using namespace UniEngine;
+using namespace EvoEngine;
 namespace EcoSysLab
 {
 	template <typename NodeData>

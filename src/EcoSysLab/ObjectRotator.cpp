@@ -3,16 +3,19 @@
 //
 
 #include "ObjectRotator.hpp"
+#include "Scene.hpp"
+#include "Time.hpp"
+#include "Transform.hpp"
 using namespace EcoSysLab;
 void ObjectRotator::FixedUpdate() {
     auto scene = GetScene();
     auto transform = scene->GetDataComponent<Transform>(GetOwner());
-    m_rotation.y += Application::Time().FixedDeltaTime() * m_rotateSpeed;
+    m_rotation.y += Time::FixedDeltaTime() * m_rotateSpeed;
     transform.SetEulerRotation(glm::radians(m_rotation));
     scene->SetDataComponent(GetOwner(), transform);
 }
 
-void ObjectRotator::OnInspect() {
+void ObjectRotator::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
     ImGui::DragFloat("Speed", &m_rotateSpeed);
     ImGui::DragFloat3("Rotation", &m_rotation.x);
 }

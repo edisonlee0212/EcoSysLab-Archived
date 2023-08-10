@@ -8,7 +8,7 @@
 #include "LSystemString.hpp"
 #include "TreeGraph.hpp"
 
-using namespace UniEngine;
+using namespace EvoEngine;
 namespace EcoSysLab {
 	class RootGrowthParameters {
 	public:
@@ -277,7 +277,7 @@ namespace EcoSysLab {
 		RootGrowthParameters m_rootGrowthParameters;
 		void OnCreate() override;
 
-		void OnInspect() override;
+		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 
 		void CollectAssetRef(std::vector<AssetRef>& list) override;
 
@@ -331,7 +331,7 @@ namespace EcoSysLab {
 		PipeModel m_rootPipeModel;
 		PipeModelBaseHexagonGrid m_baseGrid;
 
-		void OnInspect() override;
+		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 
 		void OnDestroy() override;
 

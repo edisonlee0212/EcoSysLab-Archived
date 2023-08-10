@@ -7,7 +7,10 @@
 #include "SorghumStateGenerator.hpp"
 #include "Utilities.hpp"
 #include "rapidcsv.h"
-#include <utility>
+#include "EditorLayer.hpp"
+#include "Application.hpp"
+#include "Scene.hpp"
+#include "Time.hpp"
 using namespace EcoSysLab;
 static const char *StateModes[]{"Default", "Cubic-Bezier"};
 
@@ -361,7 +364,7 @@ bool SorghumState::OnInspect(int mode) {
         [&](const std::filesystem::path &path) {
           std::ifstream file(path, std::fstream::in);
           if (!file.is_open()) {
-            UNIENGINE_LOG("Failed to open file!");
+            EVOENGINE_LOG("Failed to open file!");
             return;
           }
           changed = true;
@@ -450,12 +453,12 @@ SorghumState::SorghumState() {
   m_name = "Unnamed";
 }
 
-void ProceduralSorghum::OnInspect() {
+void ProceduralSorghum::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
   if (ImGui::Button("Instantiate")) {
     auto sorghum = Application::GetLayer<SorghumLayer>()->CreateSorghum(
-        std::dynamic_pointer_cast<ProceduralSorghum>(m_self.lock()));
+        std::dynamic_pointer_cast<ProceduralSorghum>(GetSelf()));
     Application::GetActiveScene()->SetEntityName(
-        sorghum, m_self.lock()->GetAssetRecord().lock()->GetAssetFileName());
+        sorghum, GetSelf()->GetAssetRecord().lock()->GetAssetFileName());
   }
   static bool autoSave = false;
   ImGui::Checkbox("Auto save", &autoSave);
@@ -474,13 +477,13 @@ void ProceduralSorghum::OnInspect() {
       ImGui::TreePop();
     }
     if (lastAutoSaveTime == 0) {
-      lastAutoSaveTime = Application::Time().CurrentTime();
+      lastAutoSaveTime = Time::CurrentTime();
     } else if (lastAutoSaveTime + autoSaveInterval <
-               Application::Time().CurrentTime()) {
-      lastAutoSaveTime = Application::Time().CurrentTime();
+        Time::CurrentTime()) {
+      lastAutoSaveTime = Time::CurrentTime();
       if (!m_saved) {
         Save();
-        UNIENGINE_LOG(GetTypeName() + " autosaved!");
+        EVOENGINE_LOG(GetTypeName() + " autosaved!");
       }
     }
   }
@@ -599,7 +602,7 @@ void ProceduralSorghum::OnInspect() {
     static int seed = 0;
     ImGui::DragInt("Using seed", &seed);
     static AssetRef descriptor;
-    Editor::DragAndDropButton<SorghumStateGenerator>(
+    editorLayer->DragAndDropButton<SorghumStateGenerator>(
         descriptor, "Drag SPD here to add end state");
     auto temp = descriptor.Get<SorghumStateGenerator>();
     if (temp) {
@@ -668,7 +671,7 @@ void ProceduralSorghum::ResetTime(float previousTime, float newTime) {
       return;
     }
   }
-  UNIENGINE_ERROR("Failed: State at previous time not exists!");
+  EVOENGINE_ERROR("Failed: State at previous time not exists!");
 }
 void ProceduralSorghum::Remove(float time) {
   for (auto it = m_sorghumStates.begin(); it != m_sorghumStates.end(); ++it) {

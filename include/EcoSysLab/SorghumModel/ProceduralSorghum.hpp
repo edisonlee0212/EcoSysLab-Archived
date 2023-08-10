@@ -1,6 +1,8 @@
 #pragma once
+#include "Plot2D.hpp"
+
 #include "Curve.hpp"
-using namespace UniEngine;
+using namespace EvoEngine;
 namespace EcoSysLab {
 #pragma region States
 enum class StateMode { Default, CubicBezier };
@@ -99,7 +101,7 @@ public:
   void Remove(float time);
   [[nodiscard]] SorghumStatePair Get(float time) const;
 
-  void OnInspect() override;
+  void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
   void Serialize(YAML::Emitter &out) override;
   void Deserialize(const YAML::Node &in) override;
 };

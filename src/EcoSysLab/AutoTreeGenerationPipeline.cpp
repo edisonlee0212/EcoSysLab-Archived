@@ -77,7 +77,7 @@ void AutoTreeGenerationPipeline::Update() {
 			}
 			else {
 				pipelineBehaviour->OnEnd(*this);
-				UNIENGINE_LOG("Task finished!");
+				EVOENGINE_LOG("Task finished!");
 				m_busy = false;
 			}
 			break;
@@ -141,7 +141,7 @@ void AutoTreeGenerationPipeline::Update() {
 				for (const auto& tree : m_currentGrowingTrees) {
 					if (!scene->IsEntityValid(tree) ||
 						!m_currentInternodeBehaviour->RootCheck(scene, tree)) {
-						UNIENGINE_ERROR("No tree created or wrongly created!");
+						EVOENGINE_ERROR("No tree created or wrongly created!");
 						m_status = AutoTreeGenerationPipelineStatus::BeforeGrowth;
 					}
 				}

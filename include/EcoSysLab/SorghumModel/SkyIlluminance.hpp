@@ -1,6 +1,6 @@
 #pragma once
 
-using namespace UniEngine;
+using namespace EvoEngine;
 namespace EcoSysLab {
 struct SkyIlluminanceSnapshot {
   float m_ghi = 1000;
@@ -16,7 +16,7 @@ public:
   float m_maxTime;
   [[nodiscard]] SkyIlluminanceSnapshot Get(float time);
   void ImportCSV(const std::filesystem::path &path);
-  void OnInspect() override;
+  void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
   void Serialize(YAML::Emitter &out) override;
   void Deserialize(const YAML::Node &in) override;
 };

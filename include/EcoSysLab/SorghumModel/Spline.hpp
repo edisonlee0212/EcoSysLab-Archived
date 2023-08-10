@@ -2,7 +2,7 @@
 #include <Curve.hpp>
 #include <LeafSegment.hpp>
 #include "ProceduralSorghum.hpp"
-using namespace UniEngine;
+using namespace EvoEngine;
 namespace EcoSysLab {
 struct SplineNode {
   glm::vec3 m_position;

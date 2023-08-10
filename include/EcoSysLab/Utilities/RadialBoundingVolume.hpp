@@ -1,11 +1,13 @@
 #pragma once
 
+#include <Mesh.hpp>
+
 #include "ecosyslab_export.h"
 #include "PlantStructure.hpp"
 #include "IVolume.hpp"
 #include "TreeModel.hpp"
 
-using namespace UniEngine;
+using namespace EvoEngine;
 namespace EcoSysLab {
     struct RadialBoundingVolumeSlice {
         float m_maxDistance;
@@ -43,7 +45,7 @@ namespace EcoSysLab {
         float m_totalSize = 0;
         void CalculateVolume(const std::vector<glm::vec3>& points);
         
-        void OnInspect() override;
+        void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 
         void ResizeVolumes();
 

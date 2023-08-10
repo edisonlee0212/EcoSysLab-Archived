@@ -1,11 +1,14 @@
 #include "RadialBoundingVolume.hpp"
+
+#include <Gizmos.hpp>
+#include <Material.hpp>
+
 #include "Graphics.hpp"
-#include "DefaultResources.hpp"
 #include "PointCloud.hpp"
 #include "Tree.hpp"
 
 using namespace EcoSysLab;
-using namespace UniEngine;
+using namespace EvoEngine;
 
 glm::vec3 RadialBoundingVolume::GetRandomPoint() {
     if (!m_meshGenerated)
@@ -265,7 +268,10 @@ void RadialBoundingVolume::GenerateMesh() {
                 }
             }
         }
-        mesh->SetVertices(19, vertices, indices);
+        VertexAttributes vertexAttributes;
+        vertexAttributes.m_normal = true;
+        vertexAttributes.m_texCoord = true;
+        mesh->SetVertices(vertexAttributes, vertices, indices);
         m_boundMeshes.push_back(std::move(mesh));
     }
     m_meshGenerated = true;
@@ -288,8 +294,6 @@ void RadialBoundingVolume::FormEntity() {
         auto mmc = scene->GetOrSetPrivateComponent<MeshRenderer>(slice).lock();
         auto mat = ProjectManager::CreateTemporaryAsset<Material>();
         mmc->m_material = mat;
-        mat->SetProgram(DefaultResources::GLPrograms::StandardProgram);
-        mmc->m_forwardRendering = false;
         mmc->m_mesh = m_boundMeshes[i];
         scene->SetParent(slice, rBVEntity, false);
     }
@@ -366,7 +370,7 @@ void RadialBoundingVolume::ExportAsObj(const std::string& filename) {
 void RadialBoundingVolume::Load(const std::string& path) {
     std::ifstream ifs;
     ifs.open(path.c_str());
-    UNIENGINE_LOG("Loading from " + path);
+    EVOENGINE_LOG("Loading from " + path);
     if (ifs.is_open()) {
         ifs >> m_layerAmount;
         ifs >> m_sectorAmount;
@@ -410,12 +414,12 @@ void RadialBoundingVolume::CalculateVolume(const std::vector<glm::vec3>& points)
     CalculateSizes();
 }
 
-void RadialBoundingVolume::OnInspect() {
-    IVolume::OnInspect();
+void RadialBoundingVolume::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
+    IVolume::OnInspect(editorLayer);
 
 
     PrivateComponentRef treeRef;
-    if(Editor::DragAndDropButton<Tree>(treeRef, "Apply tree volume"))
+    if(editorLayer->DragAndDropButton<Tree>(treeRef, "Apply tree volume"))
     {
         auto tree = treeRef.Get<Tree>();
         if(tree)
@@ -492,7 +496,7 @@ void RadialBoundingVolume::OnInspect() {
         });
 
     static AssetRef pointCloud;
-    if (Editor::DragAndDropButton(pointCloud, "Import from Point Cloud",
+    if (editorLayer->DragAndDropButton(pointCloud, "Import from Point Cloud",
         { "PointCloud" }, true))
     {
         if (auto pc = pointCloud.Get<PointCloud>())
@@ -517,7 +521,7 @@ void RadialBoundingVolume::OnInspect() {
         }
         for (int i = 0; i < m_layerAmount; i++) {
             for (int j = 0; j < m_sectorAmount; j++) {
-                Gizmos::DrawGizmoMesh(DefaultResources::Primitives::Cube, glm::vec4(0, 0, 0, 1), glm::translate(TipPosition(i, j)) * glm::scale(glm::vec3(0.1f)));
+                Gizmos::DrawGizmoMesh(Resources::GetResource<Mesh>("PRIMITIVE_CUBE"), glm::vec4(0, 0, 0, 1), glm::translate(TipPosition(i, j))* glm::scale(glm::vec3(0.1f)));
             }
         }
     }

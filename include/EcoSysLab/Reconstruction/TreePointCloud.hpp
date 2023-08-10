@@ -6,7 +6,7 @@
 #include "TreeMeshGenerator.hpp"
 #include "Curve.hpp"
 
-using namespace UniEngine;
+using namespace EvoEngine;
 namespace EcoSysLab {
 	typedef int PointHandle;
 	typedef int BranchHandle;
@@ -131,7 +131,7 @@ namespace EcoSysLab {
 		std::vector<OperatingBranch> m_operatingBranches;
 		std::vector<TreePart> m_treeParts;
 
-		void OnInspect() override;
+		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 
 		std::vector<ReconstructionSkeleton> m_skeletons;
 

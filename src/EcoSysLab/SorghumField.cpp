@@ -3,11 +3,16 @@
 //
 
 #include "SorghumField.hpp"
+
+#include <Joint.hpp>
+
 #include "SorghumData.hpp"
 #include "SorghumLayer.hpp"
 #include "SorghumStateGenerator.hpp"
-#include "TransformLayer.hpp"
-#include <SorghumField.hpp>
+#include "Scene.hpp"
+#include "EditorLayer.hpp"
+#include "TransformGraph.hpp"
+
 using namespace EcoSysLab;
 void RectangularSorghumFieldPattern::GenerateField(
     std::vector<std::vector<glm::mat4>> &matricesList) {
@@ -29,7 +34,7 @@ void RectangularSorghumFieldPattern::GenerateField(
     }
   }
 }
-void SorghumField::OnInspect() {
+void SorghumField::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
   ImGui::Checkbox("Seperated", &m_seperated);
   ImGui::Checkbox("Include stem", &m_includeStem);
 
@@ -89,7 +94,7 @@ Entity SorghumField::InstantiateField() {
   if (m_newSorghums.empty())
     GenerateMatrices();
   if (m_newSorghums.empty()) {
-    UNIENGINE_ERROR("No matrices generated!");
+    EVOENGINE_ERROR("No matrices generated!");
     return {};
   }
 
@@ -97,7 +102,7 @@ Entity SorghumField::InstantiateField() {
   auto sorghumLayer = Application::GetLayer<SorghumLayer>();
   auto scene = sorghumLayer->GetScene();
   if (sorghumLayer) {
-    auto fieldAsset = std::dynamic_pointer_cast<SorghumField>(m_self.lock());
+    auto fieldAsset = std::dynamic_pointer_cast<SorghumField>(GetSelf());
     auto field = scene->CreateEntity("Field");
     // Create sorghums here.
     int size = 0;
@@ -123,12 +128,11 @@ Entity SorghumField::InstantiateField() {
 
     Application::GetLayer<SorghumLayer>()->GenerateMeshForAllSorghums();
 
-    Application::GetLayer<TransformLayer>()
-        ->CalculateTransformGraphForDescendents(scene,
+    TransformGraph::CalculateTransformGraphForDescendents(scene,
                                                 field);
     return field;
   } else {
-    UNIENGINE_ERROR("No sorghum layer!");
+    EVOENGINE_ERROR("No sorghum layer!");
     return {};
   }
 }
@@ -152,9 +156,9 @@ void RectangularSorghumField::GenerateMatrices() {
     }
   }
 }
-void RectangularSorghumField::OnInspect() {
-  SorghumField::OnInspect();
-  Editor::DragAndDropButton<SorghumStateGenerator>(m_sorghumStateGenerator,
+void RectangularSorghumField::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
+  SorghumField::OnInspect(editorLayer);
+  editorLayer->DragAndDropButton<SorghumStateGenerator>(m_sorghumStateGenerator,
                                                    "SorghumStateGenerator");
   ImGui::DragFloat4("Distance mean/var", &m_distance.x, 0.01f);
   ImGui::DragFloat3("Rotation variance", &m_rotationVariance.x, 0.01f, 0.0f,
@@ -204,9 +208,9 @@ void PositionsField::GenerateMatrices() {
                                    glm::scale(glm::vec3(1.0f)));
   }
 }
-void PositionsField::OnInspect() {
-  SorghumField::OnInspect();
-  Editor::DragAndDropButton<SorghumStateGenerator>(m_sorghumStateGenerator,
+void PositionsField::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
+  SorghumField::OnInspect(editorLayer);
+  editorLayer->DragAndDropButton<SorghumStateGenerator>(m_sorghumStateGenerator,
                                                    "SorghumStateGenerator");
   ImGui::Text("Available count: %d", m_positions.size());
   ImGui::DragFloat("Distance factor", &m_factor, 0.01f, 0.0f, 20.0f);
@@ -273,7 +277,7 @@ void PositionsField::CollectAssetRef(std::vector<AssetRef> &list) {
 void PositionsField::ImportFromFile(const std::filesystem::path &path) {
   std::ifstream ifs;
   ifs.open(path.c_str());
-  UNIENGINE_LOG("Loading from " + path.string());
+  EVOENGINE_LOG("Loading from " + path.string());
   if (ifs.is_open()) {
     int amount;
     ifs >> amount;
@@ -297,7 +301,7 @@ PositionsField::InstantiateAroundIndex(unsigned i, float radius, glm::dvec2& off
   auto scene = sorghumLayer->GetScene();
   if (sorghumLayer) {
     glm::dvec2 center = offset = m_positions[i];
-    auto fieldAsset = std::dynamic_pointer_cast<PositionsField>(m_self.lock());
+    auto fieldAsset = std::dynamic_pointer_cast<PositionsField>(GetSelf());
     auto field = scene->CreateEntity("Field");
     // Create sorghums here.
     int size = 0;
@@ -335,12 +339,11 @@ PositionsField::InstantiateAroundIndex(unsigned i, float radius, glm::dvec2& off
 
     Application::GetLayer<SorghumLayer>()->GenerateMeshForAllSorghums();
 
-    Application::GetLayer<TransformLayer>()
-        ->CalculateTransformGraphForDescendents(scene, field);
+    TransformGraph::CalculateTransformGraphForDescendents(scene, field);
 
     return {centerSorghum, field};
   } else {
-    UNIENGINE_ERROR("No sorghum layer!");
+    EVOENGINE_ERROR("No sorghum layer!");
     return {};
   }
 }

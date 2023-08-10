@@ -3,7 +3,7 @@
 #include "ClimateModel.hpp"
 #include "Octree.hpp"
 #include "TreeGrowthController.hpp"
-using namespace UniEngine;
+using namespace EvoEngine;
 namespace EcoSysLab {
 	struct TreeGrowthSettings
 	{
@@ -286,6 +286,6 @@ namespace EcoSysLab {
 		}
 		if (appendStat.empty()) appendStat = "No collision";
 
-		UNIENGINE_LOG(report + appendStat);
+		EVOENGINE_LOG(report + appendStat);
 	}
 }

@@ -2,7 +2,7 @@
 
 #include "ecosyslab_export.h"
 #include "PlantStructure.hpp"
-using namespace UniEngine;
+using namespace EvoEngine;
 namespace EcoSysLab
 {
     struct TreeGraphNode {
@@ -32,7 +32,7 @@ namespace EcoSysLab
 
         void Deserialize(const YAML::Node& in) override;
 
-        void OnInspect() override;
+        void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
     };
 
     class TreeGraphV2 : public IAsset {
@@ -49,6 +49,6 @@ namespace EcoSysLab
 
         void Deserialize(const YAML::Node& in) override;
 
-        void OnInspect() override;
+        void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
     };
 }

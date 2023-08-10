@@ -1,9 +1,11 @@
 #pragma once
 
+#include "Vertex.hpp"
+#include "Jobs.hpp"
 #include "TreeModel.hpp"
 #include "Curve.hpp"
 #include "Octree.hpp"
-using namespace UniEngine;
+using namespace EvoEngine;
 namespace EcoSysLab {
 	struct RingSegment {
 		glm::vec3 m_startPosition, m_endPosition;
@@ -347,7 +349,7 @@ namespace EcoSysLab {
 				subdivisionLevel++;
 				testRadius *= 2.f;
 			}
-			UNIENGINE_LOG("Root mesh formation: Auto set level to " + std::to_string(subdivisionLevel))
+			EVOENGINE_LOG("Root mesh formation: Auto set level to " + std::to_string(subdivisionLevel))
 
 				octree.Reset(maxRadius, subdivisionLevel, (treeSkeleton.m_min + treeSkeleton.m_max) * 0.5f);
 		}

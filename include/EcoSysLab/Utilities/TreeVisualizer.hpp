@@ -8,7 +8,7 @@
 #include "HexagonGrid.hpp"
 #include "PipeModel.hpp"
 
-using namespace UniEngine;
+using namespace EvoEngine;
 namespace EcoSysLab {
 	enum class PruningMode {
 		None,

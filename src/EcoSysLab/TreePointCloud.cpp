@@ -3,7 +3,7 @@
 #include "Graphics.hpp"
 #include "EcoSysLabLayer.hpp"
 #include "rapidcsv.h"
-
+#include "Gizmos.hpp"
 using namespace EcoSysLab;
 
 void TreePointCloud::FindPoints(const glm::vec3& position, VoxelGrid<std::vector<PointCloudVoxel>>& pointVoxelGrid,
@@ -31,7 +31,7 @@ TreePointCloud::FindBranchEnds(const glm::vec3& position, VoxelGrid<std::vector<
 
 void TreePointCloud::ImportGraph(const std::filesystem::path& path, float scaleFactor) {
 	if (!std::filesystem::exists(path)) {
-		UNIENGINE_ERROR("Not exist!");
+		EVOENGINE_ERROR("Not exist!");
 		return;
 	}
 	try {
@@ -152,32 +152,59 @@ void TreePointCloud::ImportGraph(const std::filesystem::path& path, float scaleF
 		m_max = newMax;
 	}
 	catch (std::exception e) {
-		UNIENGINE_ERROR("Failed to load!");
+		EVOENGINE_ERROR("Failed to load!");
 		return;
 	}
 }
 
-void TreePointCloud::OnInspect() {
+void TreePointCloud::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	static Handle previousHandle = 0;
-	static std::vector<glm::mat4> allocatedPointMatrices;
-	static std::vector<glm::vec4> allocatedPointColors;
-
-	static std::vector<glm::mat4> scatterPointMatrices;
-	static std::vector<glm::mat4> nodeMatrices;
-	static std::vector<glm::vec4> nodeColors;
+	static std::shared_ptr<ParticleInfoList> allocatedPointInfoList;
+	static std::shared_ptr<ParticleInfoList> scatterPointInfoList;
+	static std::shared_ptr<ParticleInfoList> nodeInfoList;
+	
+	static std::shared_ptr<ParticleInfoList> scatteredPointConnectionInfoList;
 	static std::vector<glm::vec3> scatteredPointConnectionsStarts;
-	static std::vector<glm::vec3> scatterConnectionEnds;
+	static std::vector<glm::vec3> scatteredPointConnectionsEnds;
+	static std::vector<glm::vec4> scatteredPointConnectionColors;
+
+	static std::shared_ptr<ParticleInfoList> branchConnectionInfoList;
 	static std::vector<glm::vec3> branchConnectionStarts;
 	static std::vector<glm::vec3> branchConnectionEnds;
+	static std::vector<glm::vec4> branchConnectionColors;
+
+	static std::shared_ptr<ParticleInfoList> filteredBranchConnectionInfoList;
 	static std::vector<glm::vec3> filteredBranchConnectionStarts;
 	static std::vector<glm::vec3> filteredBranchConnectionEnds;
+	static std::vector<glm::vec4> filteredBranchConnectionColors;
+
+	static std::shared_ptr<ParticleInfoList> scatterPointToBranchConnectionInfoList;
 	static std::vector<glm::vec3> scatterPointToBranchConnectionStarts;
 	static std::vector<glm::vec3> scatterPointToBranchConnectionEnds;
+	static std::vector<glm::vec4> scatterPointToBranchConnectionColors;
+
+	static std::shared_ptr<ParticleInfoList> scannedBranchConnectionInfoList;
+	static std::vector<glm::vec3> scannedBranchConnectionStarts;
+	static std::vector<glm::vec3> scannedBranchConnectionEnds;
+	static std::vector<glm::vec4> scannedBranchConnectionColors;
+
+	if (!allocatedPointInfoList) allocatedPointInfoList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
+	if (!scatterPointInfoList) scatterPointInfoList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
+	if (!nodeInfoList) nodeInfoList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
+	if (!scatteredPointConnectionInfoList) scatteredPointConnectionInfoList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
+	if (!filteredBranchConnectionInfoList) filteredBranchConnectionInfoList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
+	if (!scatterPointToBranchConnectionInfoList) scatterPointToBranchConnectionInfoList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
+	if (!scannedBranchConnectionInfoList) scannedBranchConnectionInfoList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
+
+	auto& allocatedPointMatrices = allocatedPointInfoList->m_particleInfos;
+	auto& scatterPointMatrices = scatterPointInfoList->m_particleInfos;
+	auto& nodeMatrices = nodeInfoList->m_particleInfos;
+	auto& scatteredPointConnectionMatrices = scatteredPointConnectionInfoList->m_particleInfos;
+	auto& filteredBranchConnectionMatrices = filteredBranchConnectionInfoList->m_particleInfos;
+	auto& scatterPointToBranchConnectionMatrices = scatterPointToBranchConnectionInfoList->m_particleInfos;
+	auto& scannedBranchConnectionMatrices = scannedBranchConnectionInfoList->m_particleInfos;
 
 
-	static std::vector<glm::vec3> scannedBranchStarts;
-	static std::vector<glm::vec3> scannedBranchEnds;
-	static std::vector<glm::vec4> scannedBranchColors;
 	static bool enableDebugRendering = true;
 
 	static bool drawAllocatedPoints = true;
@@ -278,40 +305,38 @@ void TreePointCloud::OnInspect() {
 			previousHandle = GetHandle();
 			const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
 
-			allocatedPointColors.resize(m_allocatedPoints.size());
 			allocatedPointMatrices.resize(m_allocatedPoints.size());
 
-			scannedBranchStarts.resize(m_scannedBranches.size());
-			scannedBranchEnds.resize(m_scannedBranches.size());
-			scannedBranchColors.resize(m_scannedBranches.size());
+			scannedBranchConnectionStarts.resize(m_scannedBranches.size());
+			scannedBranchConnectionEnds.resize(m_scannedBranches.size());
+			scannedBranchConnectionColors.resize(m_scannedBranches.size());
 
 			nodeMatrices.clear();
-			nodeColors.clear();
 			switch (colorMode) {
 			case 0: {
 				//TreePart
 				for (int i = 0; i < m_allocatedPoints.size(); i++) {
-					allocatedPointMatrices[i] =
+					allocatedPointMatrices[i].m_instanceMatrix.m_value =
 						glm::translate(m_allocatedPoints[i].m_position) * glm::scale(glm::vec3(1.0f));
-					allocatedPointColors[i] = glm::vec4(
+					allocatedPointMatrices[i].m_instanceColor = glm::vec4(
 						ecoSysLabLayer->RandomColors()[m_allocatedPoints[i].m_treePartHandle], 1.0f);
 				}
 				for (int i = 0; i < m_scannedBranches.size(); i++) {
-					scannedBranchStarts[i] = m_scannedBranches[i].m_bezierCurve.m_p0;
-					scannedBranchEnds[i] = m_scannedBranches[i].m_bezierCurve.m_p3;
-					scannedBranchColors[i] = glm::vec4(
+					scannedBranchConnectionStarts[i] = m_scannedBranches[i].m_bezierCurve.m_p0;
+					scannedBranchConnectionEnds[i] = m_scannedBranches[i].m_bezierCurve.m_p3;
+					scannedBranchConnectionColors[i] = glm::vec4(
 						ecoSysLabLayer->RandomColors()[m_scannedBranches[i].m_treePartHandle], 1.0f);
 				}
+				scannedBranchConnectionInfoList->ApplyConnections(scannedBranchConnectionStarts, scannedBranchConnectionEnds, scannedBranchConnectionColors, scannedBranchWidth);
 				for (const auto& skeleton : m_skeletons) {
 					const auto& nodeList = skeleton.RefSortedNodeList();
 					auto startIndex = nodeMatrices.size();
 					nodeMatrices.resize(startIndex + nodeList.size());
-					nodeColors.resize(startIndex + nodeList.size());
 					for (int i = 0; i < nodeList.size(); i++) {
 						const auto& node = skeleton.PeekNode(nodeList[i]);
-						nodeMatrices[startIndex + i] = glm::translate(node.m_info.m_globalPosition) *
+						nodeMatrices[startIndex + i].m_instanceMatrix.m_value = glm::translate(node.m_info.m_globalPosition) *
 							glm::scale(glm::vec3(node.m_info.m_thickness));
-						nodeColors[startIndex + i] = glm::vec4(1.0f);
+						nodeMatrices[startIndex + i].m_instanceColor = glm::vec4(1.0f);
 					}
 				}
 			}
@@ -319,34 +344,35 @@ void TreePointCloud::OnInspect() {
 			case 1: {
 				//Branch
 				for (int i = 0; i < m_allocatedPoints.size(); i++) {
-					allocatedPointMatrices[i] =
+					allocatedPointMatrices[i].m_instanceMatrix.m_value =
 						glm::translate(m_allocatedPoints[i].m_position) * glm::scale(glm::vec3(1.0f));
 					if (m_allocatedPoints[i].m_branchHandle >= 0) {
-						allocatedPointColors[i] = glm::vec4(
+						allocatedPointMatrices[i].m_instanceColor = glm::vec4(
 							ecoSysLabLayer->RandomColors()[m_allocatedPoints[i].m_branchHandle], 1.0f);
 					}
 					else {
-						allocatedPointColors[i] = glm::vec4(
+						allocatedPointMatrices[i].m_instanceColor = glm::vec4(
 							ecoSysLabLayer->RandomColors()[m_allocatedPoints[i].m_treePartHandle], 1.0f);
 					}
 				}
 
 				for (int i = 0; i < m_scannedBranches.size(); i++) {
-					scannedBranchStarts[i] = m_scannedBranches[i].m_bezierCurve.m_p0;
-					scannedBranchEnds[i] = m_scannedBranches[i].m_bezierCurve.m_p3;
-					scannedBranchColors[i] = glm::vec4(
+					scannedBranchConnectionStarts[i] = m_scannedBranches[i].m_bezierCurve.m_p0;
+					scannedBranchConnectionEnds[i] = m_scannedBranches[i].m_bezierCurve.m_p3;
+					scannedBranchConnectionColors[i] = glm::vec4(
 						ecoSysLabLayer->RandomColors()[m_scannedBranches[i].m_handle], 1.0f);
 				}
+				scannedBranchConnectionInfoList->ApplyConnections(scannedBranchConnectionStarts, scannedBranchConnectionEnds, scannedBranchConnectionColors, scannedBranchWidth);
+
 				for (const auto& skeleton : m_skeletons) {
 					const auto& nodeList = skeleton.RefSortedNodeList();
 					auto startIndex = nodeMatrices.size();
 					nodeMatrices.resize(startIndex + nodeList.size());
-					nodeColors.resize(startIndex + nodeList.size());
 					for (int i = 0; i < nodeList.size(); i++) {
 						const auto& node = skeleton.PeekNode(nodeList[i]);
-						nodeMatrices[startIndex + i] = glm::translate(node.m_info.m_globalPosition) *
+						nodeMatrices[startIndex + i].m_instanceMatrix.m_value = glm::translate(node.m_info.m_globalPosition) *
 							glm::scale(glm::vec3(node.m_info.m_thickness));
-						nodeColors[startIndex + i] = glm::vec4(
+						nodeMatrices[startIndex + i].m_instanceColor = glm::vec4(
 							ecoSysLabLayer->RandomColors()[node.m_data.m_branchHandle],
 							1.0f);
 					}
@@ -356,33 +382,33 @@ void TreePointCloud::OnInspect() {
 			case 2: {
 				//Node
 				for (int i = 0; i < m_allocatedPoints.size(); i++) {
-					allocatedPointMatrices[i] =
+					allocatedPointMatrices[i].m_instanceMatrix.m_value =
 						glm::translate(m_allocatedPoints[i].m_position) * glm::scale(glm::vec3(1.0f));
 					if (m_allocatedPoints[i].m_nodeHandle >= 0) {
-						allocatedPointColors[i] = glm::vec4(
+						allocatedPointMatrices[i].m_instanceColor = glm::vec4(
 							ecoSysLabLayer->RandomColors()[m_allocatedPoints[i].m_nodeHandle], 1.0f);
 					}
 					else {
-						allocatedPointColors[i] = glm::vec4(
+						allocatedPointMatrices[i].m_instanceColor = glm::vec4(
 							ecoSysLabLayer->RandomColors()[m_allocatedPoints[i].m_treePartHandle], 1.0f);
 					}
 				}
 
 				for (int i = 0; i < m_scannedBranches.size(); i++) {
-					scannedBranchStarts[i] = m_scannedBranches[i].m_bezierCurve.m_p0;
-					scannedBranchEnds[i] = m_scannedBranches[i].m_bezierCurve.m_p3;
-					scannedBranchColors[i] = glm::vec4(1.0f);
+					scannedBranchConnectionStarts[i] = m_scannedBranches[i].m_bezierCurve.m_p0;
+					scannedBranchConnectionEnds[i] = m_scannedBranches[i].m_bezierCurve.m_p3;
+					scannedBranchConnectionColors[i] = glm::vec4(1.0f);
 				}
+				scannedBranchConnectionInfoList->ApplyConnections(scannedBranchConnectionStarts, scannedBranchConnectionEnds, scannedBranchConnectionColors, scannedBranchWidth);
 				for (const auto& skeleton : m_skeletons) {
 					const auto& nodeList = skeleton.RefSortedNodeList();
 					auto startIndex = nodeMatrices.size();
 					nodeMatrices.resize(startIndex + nodeList.size());
-					nodeColors.resize(startIndex + nodeList.size());
 					for (int i = 0; i < nodeList.size(); i++) {
 						const auto& node = skeleton.PeekNode(nodeList[i]);
-						nodeMatrices[startIndex + i] = glm::translate(node.m_info.m_globalPosition) *
+						nodeMatrices[startIndex + i].m_instanceMatrix.m_value = glm::translate(node.m_info.m_globalPosition) *
 							glm::scale(glm::vec3(node.m_info.m_thickness));
-						nodeColors[startIndex + i] = glm::vec4(ecoSysLabLayer->RandomColors()[node.GetHandle()],
+						nodeMatrices[startIndex + i].m_instanceColor = glm::vec4(ecoSysLabLayer->RandomColors()[node.GetHandle()],
 							1.0f);
 					}
 				}
@@ -392,36 +418,61 @@ void TreePointCloud::OnInspect() {
 
 			scatterPointMatrices.resize(m_scatteredPoints.size());
 			for (int i = 0; i < m_scatteredPoints.size(); i++) {
-				scatterPointMatrices[i] = glm::translate(m_scatteredPoints[i].m_position) * glm::scale(glm::vec3(1.0f));
-			}
-			scatteredPointConnectionsStarts.resize(m_scatterPointsConnections.size());
-			scatterConnectionEnds.resize(m_scatterPointsConnections.size());
-			for (int i = 0; i < m_scatterPointsConnections.size(); i++) {
-				scatteredPointConnectionsStarts[i] = m_scatterPointsConnections[i].first;
-				scatterConnectionEnds[i] = m_scatterPointsConnections[i].second;
+				scatterPointMatrices[i].m_instanceMatrix.m_value = glm::translate(m_scatteredPoints[i].m_position) * glm::scale(glm::vec3(1.0f));
+				scatterPointMatrices[i].m_instanceColor = scatterPointColor;
 			}
 
+			scatteredPointConnectionsStarts.resize(m_scatterPointsConnections.size());
+			scatteredPointConnectionsEnds.resize(m_scatterPointsConnections.size());
+			scatteredPointConnectionColors.resize(m_scatterPointsConnections.size());
+			for (int i = 0; i < m_scatterPointsConnections.size(); i++) {
+				scatteredPointConnectionsStarts[i] = m_scatterPointsConnections[i].first;
+				scatteredPointConnectionsEnds[i] = m_scatterPointsConnections[i].second;
+				scatteredPointConnectionColors[i] = scatterPointToBranchConnectionColor;
+			}
+			scatterPointToBranchConnectionInfoList->ApplyConnections(
+				scatteredPointConnectionsStarts,
+				scatteredPointConnectionsEnds,
+				scatteredPointConnectionColors, connectionWidth
+			);
 			branchConnectionStarts.resize(m_branchConnections.size());
 			branchConnectionEnds.resize(m_branchConnections.size());
+			branchConnectionColors.resize(m_branchConnections.size());
 			for (int i = 0; i < m_branchConnections.size(); i++) {
 				branchConnectionStarts[i] = m_branchConnections[i].first;
 				branchConnectionEnds[i] = m_branchConnections[i].second;
+				branchConnectionColors[i] = branchConnectionColor;
 			}
+			branchConnectionInfoList->ApplyConnections(
+				branchConnectionStarts,
+				branchConnectionEnds,
+				branchConnectionColors, connectionWidth * 1.5f
+			);
 
 			filteredBranchConnectionStarts.resize(m_filteredBranchConnections.size());
 			filteredBranchConnectionEnds.resize(m_filteredBranchConnections.size());
+			filteredBranchConnectionColors.resize(m_filteredBranchConnections.size());
 			for (int i = 0; i < m_filteredBranchConnections.size(); i++) {
 				filteredBranchConnectionStarts[i] = m_filteredBranchConnections[i].first;
 				filteredBranchConnectionEnds[i] = m_filteredBranchConnections[i].second;
+				filteredBranchConnectionColors[i] = filteredBranchConnectionColor;
 			}
+			filteredBranchConnectionInfoList->ApplyConnections(
+				filteredBranchConnectionStarts,
+				filteredBranchConnectionEnds,
+				filteredBranchConnectionColors, connectionWidth * 2.0f
+			);
 
 			scatterPointToBranchConnectionStarts.resize(
 				m_scatterPointToBranchStartConnections.size() + m_scatterPointToBranchEndConnections.size());
 			scatterPointToBranchConnectionEnds.resize(
 				m_scatterPointToBranchStartConnections.size() + m_scatterPointToBranchEndConnections.size());
+			scatterPointToBranchConnectionColors.resize(
+				m_scatterPointToBranchStartConnections.size() + m_scatterPointToBranchEndConnections.size());
 			for (int i = 0; i < m_scatterPointToBranchStartConnections.size(); i++) {
 				scatterPointToBranchConnectionStarts[i] = m_scatterPointToBranchStartConnections[i].first;
 				scatterPointToBranchConnectionEnds[i] = m_scatterPointToBranchStartConnections[i].second;
+				scatterPointToBranchConnectionColors[i] = scatterPointToBranchConnectionColor;
 			}
 			for (int i = m_scatterPointToBranchStartConnections.size();
 				i < m_scatterPointToBranchStartConnections.size() + m_scatterPointToBranchEndConnections.size(); i++) {
@@ -430,46 +481,41 @@ void TreePointCloud::OnInspect() {
 				scatterPointToBranchConnectionEnds[i] = m_scatterPointToBranchEndConnections[i -
 					m_scatterPointToBranchStartConnections.size()].second;
 			}
+			scatterPointToBranchConnectionInfoList->ApplyConnections(
+				scatterPointToBranchConnectionStarts,
+				scatterPointToBranchConnectionEnds,
+				scatterPointToBranchConnectionColors, connectionWidth
+			);
 		}
 		if (!scatterPointMatrices.empty()) {
 			if (drawScatteredPoints) {
-				Gizmos::DrawGizmoMeshInstanced(DefaultResources::Primitives::Sphere, scatterPointColor,
-					scatterPointMatrices,
+				Gizmos::DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CUBE"),
+					scatterPointInfoList,
 					glm::mat4(1.0f),
 					pointSize, gizmoSettings);
 			}
 			if (drawAllocatedPoints) {
-				Gizmos::DrawGizmoMeshInstancedColored(DefaultResources::Primitives::Sphere, allocatedPointColors,
-					allocatedPointMatrices,
+				Gizmos::DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CUBE"),
+					allocatedPointInfoList,
 					glm::mat4(1.0f),
 					pointSize, gizmoSettings);
 			}
 			if (drawScannedBranches)
-				Gizmos::DrawGizmoRays(scannedBranchColors, scannedBranchStarts, scannedBranchEnds,
-					scannedBranchWidth, gizmoSettings);
+				Gizmos::DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER"), scannedBranchConnectionInfoList, glm::mat4(1.0f), 1.0f, gizmoSettings);
 			if (drawScatteredPointConnections)
-				Gizmos::DrawGizmoRays(scatteredPointConnectionColor, scatteredPointConnectionsStarts,
-					scatterConnectionEnds,
-					connectionWidth, gizmoSettings);
+				Gizmos::DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER"), scatteredPointConnectionInfoList, glm::mat4(1.0f), 1.0f, gizmoSettings);
 			if (drawBranchConnections)
-				Gizmos::DrawGizmoRays(branchConnectionColor, branchConnectionStarts, branchConnectionEnds,
-					connectionWidth * 1.5f, gizmoSettings);
+				Gizmos::DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER"), branchConnectionInfoList, glm::mat4(1.0f), 1.0f, gizmoSettings);
 			if (drawFilteredConnections)
-				Gizmos::DrawGizmoRays(filteredBranchConnectionColor, filteredBranchConnectionStarts,
-					filteredBranchConnectionEnds,
-					connectionWidth * 2.0f, gizmoSettings);
+				Gizmos::DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER"), filteredBranchConnectionInfoList, glm::mat4(1.0f), 1.0f, gizmoSettings);
 			if (drawScatterPointToBranchConnections)
-				Gizmos::DrawGizmoRays(scatterPointToBranchConnectionColor, scatterPointToBranchConnectionStarts,
-					scatterPointToBranchConnectionEnds,
-					connectionWidth, gizmoSettings);
+				Gizmos::DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER"), scatterPointToBranchConnectionInfoList, glm::mat4(1.0f), 1.0f, gizmoSettings);
 			if (drawNode) {
-				Gizmos::DrawGizmoMeshInstancedColored(DefaultResources::Primitives::Sphere, nodeColors, nodeMatrices,
+				Gizmos::DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CUBE"), nodeInfoList,
 					glm::mat4(1.0f), nodeSize, gizmoSettings);
 			}
 		}
 	}
-
-
 }
 
 void TreePointCloud::EstablishConnectivityGraph(const ConnectivityGraphSettings& settings) {
@@ -516,7 +562,7 @@ void TreePointCloud::EstablishConnectivityGraph(const ConnectivityGraphSettings&
 
 	for (auto& point : m_scatteredPoints) {
 		if (m_scatterPointsConnections.size() > 1000000) {
-			UNIENGINE_ERROR("Too much connections!");
+			EVOENGINE_ERROR("Too much connections!");
 			return;
 		}
 		FindPoints(point.m_position, pointVoxelGrid, settings.m_scatterPointsConnectionMaxLength,
@@ -941,8 +987,9 @@ void TreePointCloud::GenerateMeshes(const TreeMeshGeneratorSettings& meshGenerat
 
 			auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
 			auto material = ProjectManager::CreateTemporaryAsset<Material>();
-			material->SetProgram(DefaultResources::GLPrograms::StandardProgram);
-			mesh->SetVertices(17, vertices, indices);
+			VertexAttributes attributes{};
+			attributes.m_texCoord = true;
+			mesh->SetVertices(attributes, vertices, indices);
 			auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(branchEntity).lock();
 			if (meshGeneratorSettings.m_overridePresentation) {
 				material->m_materialProperties.m_albedoColor = meshGeneratorSettings.m_presentationOverrideSettings.m_branchOverrideColor;

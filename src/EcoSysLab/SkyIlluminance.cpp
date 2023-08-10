@@ -71,7 +71,7 @@ void SkyIlluminance::ImportCSV(const std::filesystem::path& path) {
   }
 
 }
-void SkyIlluminance::OnInspect() {
+void SkyIlluminance::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
   FileUtils::OpenFile("Import CSV", "CSV", {".csv"}, [&](const std::filesystem::path &path){
     ImportCSV(path);
   }, false);

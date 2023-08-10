@@ -2,7 +2,7 @@
 #include "PlantStructure.hpp"
 #include "VigorSink.hpp"
 #include "TreeIlluminationEstimator.hpp"
-using namespace UniEngine;
+using namespace EvoEngine;
 namespace EcoSysLab
 {
 #pragma region Utilities

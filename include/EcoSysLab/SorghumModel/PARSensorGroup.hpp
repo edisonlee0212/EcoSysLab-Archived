@@ -2,7 +2,7 @@
 #ifdef RAYTRACERFACILITY
 
 #include <CUDAModule.hpp>
-using namespace UniEngine;
+using namespace EvoEngine;
 using namespace RayTracerFacility;
 namespace EcoSysLab {
 class PARSensorGroup : public IAsset {

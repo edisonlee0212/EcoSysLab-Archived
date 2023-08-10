@@ -3,6 +3,10 @@
 //
 
 #include "Tree.hpp"
+
+#include <Material.hpp>
+#include <Mesh.hpp>
+
 #include "Graphics.hpp"
 #include "EditorLayer.hpp"
 #include "Application.hpp"
@@ -14,9 +18,9 @@
 #include "HeightField.hpp"
 using namespace EcoSysLab;
 
-void Tree::OnInspect() {
+void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	bool modelChanged = false;
-	if (Editor::DragAndDropButton<TreeDescriptor>(m_treeDescriptor, "TreeDescriptor", true)) {
+	if (editorLayer->DragAndDropButton<TreeDescriptor>(m_treeDescriptor, "TreeDescriptor", true)) {
 		m_treeModel.Clear();
 		modelChanged = true;
 	}
@@ -191,15 +195,15 @@ bool Tree::TryGrow(float deltaTime) {
 	const auto scene = GetScene();
 	const auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
 	if (!treeDescriptor) {
-		UNIENGINE_ERROR("No tree descriptor!");
+		EVOENGINE_ERROR("No tree descriptor!");
 		return false;
 	}
 	if (!m_soil.Get<Soil>()) {
-		UNIENGINE_ERROR("No soil model!");
+		EVOENGINE_ERROR("No soil model!");
 		return false;
 	}
 	if (!m_climate.Get<Climate>()) {
-		UNIENGINE_ERROR("No climate model!");
+		EVOENGINE_ERROR("No climate model!");
 		return false;
 	}
 	const auto soil = m_soil.Get<Soil>();
@@ -743,8 +747,9 @@ void Tree::GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings
 
 		auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
 		auto material = ProjectManager::CreateTemporaryAsset<Material>();
-		material->SetProgram(DefaultResources::GLPrograms::StandardProgram);
-		mesh->SetVertices(17, vertices, indices);
+		VertexAttributes vertexAttributes{};
+		vertexAttributes.m_texCoord = true;
+		mesh->SetVertices(vertexAttributes, vertices, indices);
 		auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(branchEntity).lock();
 		if (meshGeneratorSettings.m_overridePresentation)
 		{
@@ -792,7 +797,6 @@ void Tree::GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings
 		}
 		auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
 		auto material = ProjectManager::CreateTemporaryAsset<Material>();
-		material->SetProgram(DefaultResources::GLPrograms::StandardProgram);
 		if (meshGeneratorSettings.m_overridePresentation)
 		{
 			material->m_materialProperties.m_albedoColor = meshGeneratorSettings.m_presentationOverrideSettings.m_rootOverrideColor;
@@ -802,7 +806,9 @@ void Tree::GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings
 		}
 		material->m_materialProperties.m_roughness = 1.0f;
 		material->m_materialProperties.m_metallic = 0.0f;
-		mesh->SetVertices(17, vertices, indices);
+		VertexAttributes vertexAttributes{};
+		vertexAttributes.m_texCoord = true;
+		mesh->SetVertices(vertexAttributes, vertices, indices);
 		auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(rootEntity).lock();
 		meshRenderer->m_mesh = mesh;
 		meshRenderer->m_material = material;
@@ -863,7 +869,6 @@ void Tree::GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings
 
 		auto strands = ProjectManager::CreateTemporaryAsset<Strands>();
 		auto material = ProjectManager::CreateTemporaryAsset<Material>();
-		material->SetProgram(DefaultResources::GLPrograms::StandardProgram);
 		if (meshGeneratorSettings.m_overridePresentation)
 		{
 			material->m_materialProperties.m_albedoColor = meshGeneratorSettings.m_presentationOverrideSettings.m_rootOverrideColor;
@@ -886,7 +891,7 @@ void Tree::GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings
 		if (!meshGeneratorSettings.m_detailedFoliage) {
 			std::vector<Vertex> vertices;
 			std::vector<unsigned int> indices;
-			auto quadMesh = DefaultResources::Primitives::Quad;
+			auto quadMesh = Resources::GetResource<Mesh>("PRIMITIVE_QUAD");
 			auto& quadTriangles = quadMesh->UnsafeGetTriangles();
 			auto quadVerticesSize = quadMesh->GetVerticesAmount();
 			size_t offset = 0;
@@ -971,8 +976,9 @@ void Tree::GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings
 
 			auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
 			auto material = ProjectManager::CreateTemporaryAsset<Material>();
-			material->SetProgram(DefaultResources::GLPrograms::StandardProgram);
-			mesh->SetVertices(17, vertices, indices);
+			VertexAttributes vertexAttributes{};
+			vertexAttributes.m_texCoord = true;
+			mesh->SetVertices(vertexAttributes, vertices, indices);
 			if (meshGeneratorSettings.m_overridePresentation)
 			{
 				material->m_materialProperties.m_albedoColor = meshGeneratorSettings.m_presentationOverrideSettings.m_foliageOverrideColor;
@@ -984,7 +990,7 @@ void Tree::GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings
 			auto texRef = meshGeneratorSettings.m_foliageTexture;
 			if (texRef.Get<Texture2D>())
 			{
-				material->m_albedoTexture = texRef.Get<Texture2D>();
+				material->SetAlbedoTexture(texRef.Get<Texture2D>());
 
 			}
 			auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(foliageEntity).lock();
@@ -1023,7 +1029,7 @@ void Tree::GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings
 		scene->SetParent(fruitEntity, self);
 		std::vector<Vertex> vertices;
 		std::vector<unsigned int> indices;
-		auto fruitMesh = DefaultResources::Primitives::Sphere;
+		auto fruitMesh = Resources::GetResource<Mesh>("PRIMITIVE_SPHERE");
 		auto& fruitTriangles = fruitMesh->UnsafeGetTriangles();
 		auto fruitVerticesSize = fruitMesh->GetVerticesAmount();
 		size_t offset = 0;
@@ -1069,8 +1075,9 @@ void Tree::GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings
 
 		auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
 		auto material = ProjectManager::CreateTemporaryAsset<Material>();
-		material->SetProgram(DefaultResources::GLPrograms::StandardProgram);
-		mesh->SetVertices(17, vertices, indices);
+		VertexAttributes vertexAttributes{};
+		vertexAttributes.m_texCoord = true;
+		mesh->SetVertices(vertexAttributes, vertices, indices);
 		if (meshGeneratorSettings.m_overridePresentation)
 		{
 			material->m_materialProperties.m_albedoColor = meshGeneratorSettings.m_presentationOverrideSettings.m_foliageOverrideColor;
@@ -1082,7 +1089,7 @@ void Tree::GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings
 		auto texRef = meshGeneratorSettings.m_foliageTexture;
 		if (texRef.Get<Texture2D>())
 		{
-			material->m_albedoTexture = texRef.Get<Texture2D>();
+			material->SetAlbedoTexture(texRef.Get<Texture2D>());
 		}
 		auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(fruitEntity).lock();
 		meshRenderer->m_mesh = mesh;
@@ -1209,7 +1216,7 @@ bool OnInspectRootGrowthParameters(RootGrowthParameters& rootGrowthParameters) {
 	return changed;
 }
 
-void TreeDescriptor::OnInspect() {
+void TreeDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	bool changed = false;
 	const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
 	const auto soil = ecoSysLabLayer->m_soilHolder.Get<Soil>();

@@ -5,7 +5,7 @@
 #include "PanicleData.hpp"
 #include "IVolume.hpp"
 using namespace EcoSysLab;
-void PanicleData::OnInspect() {
+void PanicleData::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 
 }
 void PanicleData::OnDestroy() {
@@ -28,7 +28,7 @@ void PanicleData::FormPanicle(const SorghumStatePair &sorghumStatePair) {
   std::vector<glm::uvec3> icosahedronTriangles;
   SphereMeshGenerator::Icosahedron(icosahedronVertices, icosahedronTriangles);
   int offset = 0;
-  UniEngine::Vertex archetype = {};
+  EvoEngine::Vertex archetype = {};
   SphericalVolume volume;
   volume.m_radius = pinnacleSize;
   for (int seedIndex = 0;

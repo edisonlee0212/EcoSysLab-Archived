@@ -138,12 +138,12 @@ void LSystemString::ParseLString(const std::string& string) {
         m_commands.push_back(command);
     }
     if (stackCheck != 0) {
-        UNIENGINE_ERROR("Stack check failed! Something wrong with the string!");
+        EVOENGINE_ERROR("Stack check failed! Something wrong with the string!");
         m_commands.clear();
     }
 }
 
-void LSystemString::OnInspect() {
+void LSystemString::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
     ImGui::Text(("Command Size: " + std::to_string(m_commands.size())).c_str());
     ImGui::DragFloat("Internode Length", &m_internodeLength);
     ImGui::DragFloat("Thickness Factor", &m_thicknessFactor);

@@ -8,7 +8,7 @@
 #include <Curve.hpp>
 #include <LeafSegment.hpp>
 #include <Spline.hpp>
-using namespace UniEngine;
+using namespace EvoEngine;
 namespace EcoSysLab {
 struct LeafTag : IDataComponent {};
 struct LeafGeometryTag : IDataComponent {};
@@ -90,7 +90,7 @@ public:
   Entity CreateSorghumLeaf(const Entity &plantEntity, int leafIndex);
   Entity CreateSorghumPanicle(const Entity &plantEntity);
   void GenerateMeshForAllSorghums();
-  void OnInspect() override;
+  void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
   void Update() override;
   void LateUpdate() override;
 
