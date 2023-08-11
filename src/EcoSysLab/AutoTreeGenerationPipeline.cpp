@@ -3,7 +3,7 @@
 //
 
 #include "AutoTreeGenerationPipeline.hpp"
-#include "Editor.hpp"
+#include "EditorLayer.hpp"
 using namespace EcoSysLab;
 
 /*

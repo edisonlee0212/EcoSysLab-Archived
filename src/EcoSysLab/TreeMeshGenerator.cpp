@@ -3,7 +3,7 @@
 //
 
 #include "TreeMeshGenerator.hpp"
-
+#include "EditorLayer.hpp"
 
 using namespace EcoSysLab;
 
@@ -135,7 +135,7 @@ void TreeMeshGeneratorSettings::Load(const std::string& name, const YAML::Node& 
 	}
 }
 
-void TreeMeshGeneratorSettings::OnInspect() {
+void TreeMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	if (ImGui::TreeNodeEx("Mesh Generator settings")) {
 		ImGui::Checkbox("Vertex color only", &m_vertexColorOnly);
 		ImGui::Checkbox("Branch", &m_enableBranch);
@@ -210,7 +210,7 @@ void TreeMeshGeneratorSettings::OnInspect() {
 			ImGui::ColorEdit3("Root color", &m_presentationOverrideSettings.m_rootOverrideColor.x);
 			ImGui::ColorEdit3("Branch color", &m_presentationOverrideSettings.m_branchOverrideColor.x);
 			ImGui::ColorEdit3("Foliage color", &m_presentationOverrideSettings.m_foliageOverrideColor.x);
-			Editor::DragAndDropButton<Texture2D>(m_foliageTexture, "Foliage tex");
+			editorLayer->DragAndDropButton<Texture2D>(m_foliageTexture, "Foliage tex");
 
 
 			ImGui::TreePop();

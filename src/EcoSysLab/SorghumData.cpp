@@ -258,8 +258,7 @@ void SorghumData::ApplyGeometry() {
 					.lock();
 				if (!panicleData->m_vertices.empty()) {
 					meshRenderer->m_mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
-					VertexAttributes vertexAttributes{};
-					vertexAttributes.m_position = true;
+					constexpr VertexAttributes vertexAttributes{};
 					meshRenderer->m_mesh.Get<Mesh>()->SetVertices(vertexAttributes
 						, panicleData->m_vertices, panicleData->m_triangles);
 					meshRenderer->m_material = sorghumLayer->m_panicleMaterial;
@@ -288,8 +287,7 @@ void SorghumData::ApplyGeometry() {
 		if (!vertices.empty()) {
 			leafTopFaceMeshRenderer->m_mesh =
 				ProjectManager::CreateTemporaryAsset<Mesh>();
-			VertexAttributes vertexAttributes{};
-			vertexAttributes.m_position = true;
+			constexpr VertexAttributes vertexAttributes{};
 			leafTopFaceMeshRenderer->m_mesh.Get<Mesh>()->SetVertices(vertexAttributes, vertices,
 				triangles);
 		}
@@ -346,8 +344,7 @@ void SorghumData::ApplyGeometry() {
 			if (!vertices.empty()) {
 				leafBottomFaceMeshRenderer->m_mesh =
 					ProjectManager::CreateTemporaryAsset<Mesh>();
-				VertexAttributes vertexAttributes{};
-				vertexAttributes.m_position = true;
+				constexpr VertexAttributes vertexAttributes{};
 				leafBottomFaceMeshRenderer->m_mesh.Get<Mesh>()->SetVertices(
 					vertexAttributes, vertices, triangles);
 			}
@@ -395,8 +392,7 @@ void SorghumData::ApplyGeometry() {
 					.lock();
 				if (!stemData->m_vertices.empty()) {
 					meshRenderer->m_mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
-					VertexAttributes vertexAttributes{};
-					vertexAttributes.m_position = true;
+					constexpr VertexAttributes vertexAttributes{};
 					meshRenderer->m_mesh.Get<Mesh>()->SetVertices(
 						vertexAttributes, stemData->m_vertices, stemData->m_triangles);
 				}
@@ -455,8 +451,7 @@ void SorghumData::ApplyGeometry() {
 				if (!leafData->m_vertices.empty()) {
 					leafTopFaceMeshRenderer->m_mesh =
 						ProjectManager::CreateTemporaryAsset<Mesh>();
-					VertexAttributes vertexAttributes{};
-					vertexAttributes.m_position = true;
+					constexpr VertexAttributes vertexAttributes{};
 					leafTopFaceMeshRenderer->m_mesh.Get<Mesh>()->SetVertices(
 						vertexAttributes, leafData->m_vertices, leafData->m_triangles);
 				}
@@ -515,8 +510,7 @@ void SorghumData::ApplyGeometry() {
 					if (!leafData->m_bottomFaceVertices.empty()) {
 						leafBottomFaceMeshRenderer->m_mesh =
 							ProjectManager::CreateTemporaryAsset<Mesh>();
-						VertexAttributes vertexAttributes{};
-						vertexAttributes.m_position = true;
+						constexpr VertexAttributes vertexAttributes{};
 						leafBottomFaceMeshRenderer->m_mesh.Get<Mesh>()->SetVertices(
 							vertexAttributes, leafData->m_bottomFaceVertices,
 							leafData->m_bottomFaceTriangles);
@@ -566,8 +560,7 @@ void SorghumData::ApplyGeometry() {
 					.lock();
 				if (!panicleData->m_vertices.empty()) {
 					meshRenderer->m_mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
-					VertexAttributes vertexAttributes{};
-					vertexAttributes.m_position = true;
+					constexpr VertexAttributes vertexAttributes{};
 					meshRenderer->m_mesh.Get<Mesh>()->SetVertices(
 						vertexAttributes, panicleData->m_vertices, panicleData->m_triangles);
 				}

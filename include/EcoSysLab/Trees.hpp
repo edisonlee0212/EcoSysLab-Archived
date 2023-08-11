@@ -9,7 +9,7 @@ namespace EcoSysLab {
 
         TreeGrowthSettings m_treeGrowthSettings;
 
-        void OnInspect() override;
+        void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 
         void OnCreate() override;
 

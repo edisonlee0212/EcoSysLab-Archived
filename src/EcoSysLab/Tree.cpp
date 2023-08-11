@@ -6,8 +6,7 @@
 
 #include <Material.hpp>
 #include <Mesh.hpp>
-
-#include "Graphics.hpp"
+#include "Strands.hpp"
 #include "EditorLayer.hpp"
 #include "Application.hpp"
 #include "TreeMeshGenerator.hpp"
@@ -16,6 +15,7 @@
 #include "Octree.hpp"
 #include "EcoSysLabLayer.hpp"
 #include "HeightField.hpp"
+#include "StrandsRenderer.hpp"
 using namespace EcoSysLab;
 
 void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
@@ -130,7 +130,7 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 		iterations = glm::clamp(iterations, 0, m_treeModel.CurrentIteration());
 
 		if (ImGui::TreeNodeEx("Mesh generation", ImGuiTreeNodeFlags_DefaultOpen)) {
-			m_meshGeneratorSettings.OnInspect();
+			m_meshGeneratorSettings.OnInspect(editorLayer);
 			if (ImGui::Button("Generate Mesh")) {
 				GenerateMeshes(m_meshGeneratorSettings, iterations);
 			}
@@ -637,7 +637,10 @@ void Tree::InitializeStrandRenderer() const
 	std::vector<StrandPoint> points;
 	BuildStrands(m_shootPipeModel.m_pipeGroup, strandsList, points);
 	if (!points.empty()) strandsList.emplace_back(points.size());
-	strandsAsset->SetStrands(static_cast<unsigned>(StrandPointAttribute::Position) | static_cast<unsigned>(StrandPointAttribute::Thickness) | static_cast<unsigned>(StrandPointAttribute::Color), strandsList, points);
+	StrandPointAttributes strandPointAttributes{};
+	strandPointAttributes.m_thickness = true;
+	strandPointAttributes.m_color = true;
+	strandsAsset->SetStrands(strandPointAttributes, strandsList, points);
 	renderer->m_strands = strandsAsset;
 
 	auto material = ProjectManager::CreateTemporaryAsset<Material>();
@@ -878,7 +881,9 @@ void Tree::GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings
 		}
 		material->m_materialProperties.m_roughness = 1.0f;
 		material->m_materialProperties.m_metallic = 0.0f;
-		strands->SetSegments(1, fineRootSegments, fineRootPoints);
+		StrandPointAttributes strandPointAttributes{};
+		strandPointAttributes.m_thickness = true;
+		strands->SetSegments(strandPointAttributes, fineRootSegments, fineRootPoints);
 		auto strandsRenderer = scene->GetOrSetPrivateComponent<StrandsRenderer>(fineRootEntity).lock();
 		strandsRenderer->m_strands = strands;
 		strandsRenderer->m_material = material;

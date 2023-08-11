@@ -11,7 +11,7 @@
 #include "EcoSysLabLayer.hpp"
 using namespace EcoSysLab;
 
-void Trees::OnInspect() {
+void Trees::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
     static glm::ivec2 gridSize = {20, 20};
     static glm::vec2 gridDistance = {5, 5};
     static bool setParent = true;
@@ -48,7 +48,7 @@ void Trees::OnInspect() {
             }
         }
     }
-    Editor::DragAndDropButton<TreeDescriptor>(m_treeDescriptor, "TreeDescriptor", true);
+    editorLayer->DragAndDropButton<TreeDescriptor>(m_treeDescriptor, "TreeDescriptor", true);
     if (!m_globalTransforms.empty() && m_treeDescriptor.Get<TreeDescriptor>()) {
         auto &parameters = m_treeDescriptor.Get<TreeDescriptor>()->m_shootGrowthParameters;
         const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();

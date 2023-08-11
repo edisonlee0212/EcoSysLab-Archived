@@ -77,7 +77,7 @@ namespace EcoSysLab {
 
 		bool m_detailedFoliage = false;
 
-		void OnInspect();
+		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer);
 
 		void Save(const std::string& name, YAML::Emitter& out);
 

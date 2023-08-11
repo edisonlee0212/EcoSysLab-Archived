@@ -199,11 +199,6 @@ void TreePointCloud::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 	auto& allocatedPointMatrices = allocatedPointInfoList->m_particleInfos;
 	auto& scatterPointMatrices = scatterPointInfoList->m_particleInfos;
 	auto& nodeMatrices = nodeInfoList->m_particleInfos;
-	auto& scatteredPointConnectionMatrices = scatteredPointConnectionInfoList->m_particleInfos;
-	auto& filteredBranchConnectionMatrices = filteredBranchConnectionInfoList->m_particleInfos;
-	auto& scatterPointToBranchConnectionMatrices = scatterPointToBranchConnectionInfoList->m_particleInfos;
-	auto& scannedBranchConnectionMatrices = scannedBranchConnectionInfoList->m_particleInfos;
-
 
 	static bool enableDebugRendering = true;
 
@@ -255,7 +250,7 @@ void TreePointCloud::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 			refreshData = true;
 		}
 		static TreeMeshGeneratorSettings meshGeneratorSettings;
-		meshGeneratorSettings.OnInspect();
+		meshGeneratorSettings.OnInspect(editorLayer);
 		if (ImGui::Button("Form tree mesh")) {
 			if (m_filteredBranchConnections.empty()) {
 				m_skeletons.clear();
@@ -311,6 +306,10 @@ void TreePointCloud::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 			scannedBranchConnectionEnds.resize(m_scannedBranches.size());
 			scannedBranchConnectionColors.resize(m_scannedBranches.size());
 
+			allocatedPointInfoList->m_needUpdate = true;
+			scatterPointInfoList->m_needUpdate = true;
+			nodeInfoList->m_needUpdate = true;
+
 			nodeMatrices.clear();
 			switch (colorMode) {
 			case 0: {
@@ -321,6 +320,7 @@ void TreePointCloud::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 					allocatedPointMatrices[i].m_instanceColor = glm::vec4(
 						ecoSysLabLayer->RandomColors()[m_allocatedPoints[i].m_treePartHandle], 1.0f);
 				}
+				
 				for (int i = 0; i < m_scannedBranches.size(); i++) {
 					scannedBranchConnectionStarts[i] = m_scannedBranches[i].m_bezierCurve.m_p0;
 					scannedBranchConnectionEnds[i] = m_scannedBranches[i].m_bezierCurve.m_p3;

@@ -10,9 +10,10 @@
 
 #endif
 
+#include <Time.hpp>
+
 #include "ProjectManager.hpp"
 #include "PhysicsLayer.hpp"
-#include "PostProcessing.hpp"
 #include "ClassRegistry.hpp"
 #include "TreeModel.hpp"
 #include "Tree.hpp"
@@ -54,14 +55,18 @@ int main() {
 
 	EngineSetup();
 
-    ApplicationConfigs applicationConfigs;
+    ApplicationInfo applicationConfigs;
     applicationConfigs.m_applicationName = "EcoSysLab";
-    Application::Create(applicationConfigs);
+    Application::Initialize(applicationConfigs);
 
     Application::PushLayer<EcoSysLabLayer>();
     Application::PushLayer<SorghumLayer>();
 #ifdef RAYTRACERFACILITY
     Application::PushLayer<RayTracerLayer>();
+    auto rayTracerLayer = Application::GetLayer<RayTracerLayer>();
+    rayTracerLayer->m_showCameraWindow = false;
+    rayTracerLayer->m_showSceneWindow = false;
+    rayTracerLayer->m_showRayTracerWindow = false;
 #endif
 
     // adjust default camera speed
@@ -73,14 +78,7 @@ int main() {
     editorLayer->m_showSceneWindow = true;
     editorLayer->m_showEntityExplorerWindow = true;
     editorLayer->m_showEntityInspectorWindow = true;
-
-    auto consoleLayer = Application::GetLayer<ConsoleLayer>();
-    consoleLayer->m_showConsoleWindow = true;
-
-    auto rayTracerLayer = Application::GetLayer<RayTracerLayer>();
-    rayTracerLayer->m_showCameraWindow = false;
-    rayTracerLayer->m_showSceneWindow = false;
-    rayTracerLayer->m_showRayTracerWindow = false;
+    
 #pragma region Engine Loop
     Application::Start();
 #pragma endregion
@@ -88,22 +86,18 @@ int main() {
 }
 
 void EngineSetup() {
-    ProjectManager::SetScenePostLoadActions([=]() {
-        auto scene = Application::GetActiveScene();
+    ProjectManager::SetScenePostLoadActions([=](const std::shared_ptr<Scene>& scene) {
 #pragma region Engine Setup
         Transform transform;
         transform.SetEulerRotation(glm::radians(glm::vec3(150, 30, 0)));
 #pragma region Preparations
-        Application::Time().SetTimeStep(0.016f);
+        Time::SetTimeStep(0.016f);
         transform = Transform();
         transform.SetPosition(glm::vec3(0, 2, 35));
         transform.SetEulerRotation(glm::radians(glm::vec3(15, 0, 0)));
         auto mainCamera = Application::GetActiveScene()->m_mainCamera.Get<EvoEngine::Camera>();
         if (mainCamera) {
-            auto postProcessing =
-                    scene->GetOrSetPrivateComponent<PostProcessing>(mainCamera->GetOwner()).lock();
-            auto ssao = postProcessing->GetLayer<SSAO>().lock();
-            ssao->m_kernelRadius = 0.1;
+            
             scene->SetDataComponent(mainCamera->GetOwner(), transform);
             mainCamera->m_useClearColor = true;
             mainCamera->m_clearColor = glm::vec3(0.5f);
