@@ -246,7 +246,7 @@ TreeVisualizer::OnInspect(
 
 bool TreeVisualizer::Visualize(TreeModel& treeModel, const GlobalTransform& globalTransform) {
 	bool updated = false;
-	auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
+	const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
 	const auto& treeSkeleton = treeModel.PeekShootSkeleton(m_iteration);
 	const auto& rootSkeleton = treeModel.PeekRootSkeleton(m_iteration);
 	if (m_visualization) {

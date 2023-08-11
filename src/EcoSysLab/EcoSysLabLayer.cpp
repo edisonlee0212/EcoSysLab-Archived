@@ -569,7 +569,7 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 			m_visualizationCameraResolutionX = viewPortSize.x;
 			m_visualizationCameraResolutionY = viewPortSize.y;
 			ImGui::Image(m_visualizationCamera->GetRenderTexture()->GetColorImTextureId(),
-				ImVec2(viewPortSize.x, viewPortSize.y - 20), ImVec2(0, 1), ImVec2(1, 0));
+				ImVec2(viewPortSize.x, viewPortSize.y), ImVec2(0, 1), ImVec2(1, 0));
 			m_visualizationCameraMousePosition = glm::vec2(FLT_MAX, FLT_MIN);
 			if (ImGui::IsWindowFocused()) {
 				m_visualizationCameraWindowFocused = true;
