@@ -4,7 +4,6 @@
 
 #include "EcoSysLabLayer.hpp"
 
-#include <Gizmos.hpp>
 #include <Time.hpp>
 
 #include "StrandsRenderer.hpp"
@@ -87,9 +86,9 @@ void EcoSysLabLayer::LateUpdate() {
 			GlobalTransform cameraLtw;
 			cameraLtw.m_value =
 				glm::translate(
-					editorLayer->m_sceneCameraPosition) *
+					editorLayer->GetSceneCameraPosition()) *
 				glm::mat4_cast(
-					editorLayer->m_sceneCameraRotation);
+					editorLayer->GetSceneCameraRotation());
 			const Ray cameraRay = m_visualizationCamera->ScreenPointToRay(
 				cameraLtw, m_visualizationCameraMousePosition);
 			std::vector<std::shared_future<void>> results;
@@ -295,56 +294,45 @@ void EcoSysLabLayer::LateUpdate() {
 
 		if (m_displayShootStem && !m_shootStemPoints.empty()) {
 			gizmoSettings.m_colorMode = GizmoSettings::ColorMode::VertexColor;
-			Gizmos::DrawGizmoStrands(branchStrands, m_visualizationCamera, editorLayer->m_sceneCameraPosition,
-				editorLayer->m_sceneCameraRotation, glm::vec4(1.0f), glm::mat4(1.0f), 1,
+			editorLayer->DrawGizmoStrands(branchStrands, m_visualizationCamera, glm::vec4(1.0f), glm::mat4(1.0f), 1,
 				gizmoSettings);
 		}
 
 		if (m_displayRootStem && !m_rootStemPoints.empty()) {
 			gizmoSettings.m_colorMode = GizmoSettings::ColorMode::VertexColor;
-			Gizmos::DrawGizmoStrands(rootStrands, m_visualizationCamera, editorLayer->m_sceneCameraPosition,
-				editorLayer->m_sceneCameraRotation, glm::vec4(1.0f), glm::mat4(1.0f), 1,
+			editorLayer->DrawGizmoStrands(rootStrands, m_visualizationCamera, glm::vec4(1.0f), glm::mat4(1.0f), 1,
 				gizmoSettings);
 		}
 		if (m_displayFineRoot && !m_fineRootPoints.empty()) {
 			gizmoSettings.m_colorMode = GizmoSettings::ColorMode::VertexColor;
-			Gizmos::DrawGizmoStrands(fineRootStrands, m_visualizationCamera, editorLayer->m_sceneCameraPosition,
-				editorLayer->m_sceneCameraRotation, glm::vec4(1.0f), glm::mat4(1.0f), 1,
+			editorLayer->DrawGizmoStrands(fineRootStrands, m_visualizationCamera, glm::vec4(1.0f), glm::mat4(1.0f), 1,
 				gizmoSettings);
 		}
-		if (m_displayFruit && !m_fruitMatrices->RefMatrices().empty()) {
-			Gizmos::DrawGizmoMeshInstancedColored(
-				Resources::GetResource<Mesh>("PRIMITIVE_CUBE"), m_visualizationCamera, editorLayer->m_sceneCameraPosition,
-				editorLayer->m_sceneCameraRotation,
-				m_fruitMatrices->RefColors(),
-				m_fruitMatrices->RefMatrices(),
+		if (m_displayFruit && !m_fruitMatrices->m_particleInfos.empty()) {
+			editorLayer->DrawGizmoMeshInstancedColored(
+				Resources::GetResource<Mesh>("PRIMITIVE_CUBE"), m_visualizationCamera,
+				m_fruitMatrices,
 				glm::mat4(1.0f), 1.0f, gizmoSettings);
 		}
-		gizmoSettings.m_drawSettings.m_cullFace = false;
-		if (m_displayFoliage && !m_foliageMatrices->RefMatrices().empty()) {
-			Gizmos::DrawGizmoMeshInstancedColored(
-				Resources::GetResource<Mesh>("PRIMITIVE_QUAD") , m_visualizationCamera, editorLayer->m_sceneCameraPosition,
-				editorLayer->m_sceneCameraRotation,
-				m_foliageMatrices->RefColors(),
-				m_foliageMatrices->RefMatrices(),
+		gizmoSettings.m_drawSettings.m_cullMode = VK_CULL_MODE_NONE;
+		if (m_displayFoliage && !m_foliageMatrices->m_particleInfos.empty()) {
+			editorLayer->DrawGizmoMeshInstancedColored(
+				Resources::GetResource<Mesh>("PRIMITIVE_QUAD") , m_visualizationCamera,
+				m_foliageMatrices,
 				glm::mat4(1.0f), 1.0f, gizmoSettings);
 		}
-		if (m_displayGroundLeaves && !m_groundLeafMatrices->RefMatrices().empty()) {
-			Gizmos::DrawGizmoMeshInstancedColored(
-				Resources::GetResource<Mesh>("PRIMITIVE_QUAD") , m_visualizationCamera, editorLayer->m_sceneCameraPosition,
-				editorLayer->m_sceneCameraRotation,
-				m_groundLeafMatrices->RefColors(),
-				m_groundLeafMatrices->RefMatrices(),
+		if (m_displayGroundLeaves && !m_groundLeafMatrices->m_particleInfos.empty()) {
+			editorLayer->DrawGizmoMeshInstancedColored(
+				Resources::GetResource<Mesh>("PRIMITIVE_QUAD") , m_visualizationCamera,
+				m_groundLeafMatrices,
 				glm::mat4(1.0f), 1.0f, gizmoSettings);
 		}
-		gizmoSettings.m_drawSettings.m_cullFace = true;
+		gizmoSettings.m_drawSettings.m_cullMode = VK_CULL_MODE_BACK_BIT;
 
-		if (m_displayGroundFruit && !m_groundFruitMatrices->RefMatrices().empty()) {
-			Gizmos::DrawGizmoMeshInstancedColored(
-				Resources::GetResource<Mesh>("PRIMITIVE_CUBE"), m_visualizationCamera, editorLayer->m_sceneCameraPosition,
-				editorLayer->m_sceneCameraRotation,
-				m_groundFruitMatrices->RefColors(),
-				m_groundFruitMatrices->RefMatrices(),
+		if (m_displayGroundFruit && !m_groundFruitMatrices->m_particleInfos.empty()) {
+			editorLayer->DrawGizmoMeshInstancedColored(
+				Resources::GetResource<Mesh>("PRIMITIVE_CUBE"), m_visualizationCamera,
+				m_groundFruitMatrices,
 				glm::mat4(1.0f), 1.0f, gizmoSettings);
 		}
 
@@ -355,11 +343,9 @@ void EcoSysLabLayer::LateUpdate() {
 				scene->GetDataComponent<GlobalTransform>(m_selectedTree));
 		}
 
-		if (m_displayBoundingBox && !m_boundingBoxMatrices.empty()) {
-			Gizmos::DrawGizmoMeshInstancedColored(
-				Resources::GetResource<Mesh>("PRIMITIVE_CUBE"), m_visualizationCamera, editorLayer->m_sceneCameraPosition,
-				editorLayer->m_sceneCameraRotation,
-				m_boundingBoxColors,
+		if (m_displayBoundingBox && !m_boundingBoxMatrices->m_particleInfos.empty()) {
+			editorLayer->DrawGizmoMeshInstancedColored(
+				Resources::GetResource<Mesh>("PRIMITIVE_CUBE"), m_visualizationCamera,
 				m_boundingBoxMatrices,
 				glm::mat4(1.0f), 1.0f, gizmoSettings);
 		}
@@ -401,9 +387,8 @@ void EcoSysLabLayer::ResetAllTrees(const std::vector<Entity>* treeEntities) {
 	m_rootStemStrands = ProjectManager::CreateTemporaryAsset<Strands>();
 	m_fineRootStrands = ProjectManager::CreateTemporaryAsset<Strands>();
 
-	m_boundingBoxMatrices.clear();
-	m_boundingBoxColors.clear();
-
+	m_boundingBoxMatrices->m_particleInfos.clear();
+	m_boundingBoxMatrices->m_needUpdate = true;
 	m_foliageMatrices->m_particleInfos.clear();
 	m_foliageMatrices->m_needUpdate = true;
 	m_fruitMatrices->m_particleInfos.clear();
@@ -424,7 +409,7 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 		const std::vector<Entity>* treeEntities =
 			scene->UnsafeGetPrivateComponentOwnersList<Tree>();
 		if (ImGui::TreeNodeEx("Mesh generation")) {
-			m_meshGeneratorSettings.OnInspect();
+			m_meshGeneratorSettings.OnInspect(editorLayer);
 
 			ImGui::TreePop();
 		}
@@ -567,7 +552,6 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 	ImGui::End();
 
 #pragma region Internode debugging camera
-	auto editorLayer = Application::GetLayer<EditorLayer>();
 	if (!editorLayer) return;
 	ImVec2 viewPortSize;
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{ 0, 0 });
@@ -607,41 +591,40 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 					prevY = m_visualizationCameraResolutionY;
 					isDraggingPreviously = mouseDrag;
 #pragma region Scene Camera Controller
-					if (mouseDrag &&
-						!editorLayer->m_lockCamera) {
-						glm::vec3 front =
-							editorLayer->m_sceneCameraRotation *
+					if (mouseDrag && !editorLayer->m_lockCamera) {
+						auto sceneCameraRotation = editorLayer->GetSceneCameraRotation();
+						auto sceneCameraPosition = editorLayer->GetSceneCameraPosition();
+						glm::vec3 front = sceneCameraRotation *
 							glm::vec3(0, 0, -1);
-						glm::vec3 right =
-							editorLayer->m_sceneCameraRotation *
+						glm::vec3 right = sceneCameraRotation *
 							glm::vec3(1, 0, 0);
 						if (editorLayer->GetKey(GLFW_KEY_W) == KeyActionType::Hold) {
-							editorLayer->m_sceneCameraPosition +=
+							sceneCameraPosition +=
 								front * static_cast<float>(Time::DeltaTime()) *
 								editorLayer->m_velocity;
 						}
 						if (editorLayer->GetKey(GLFW_KEY_A) == KeyActionType::Hold) {
-							editorLayer->m_sceneCameraPosition -=
+							sceneCameraPosition -=
 								front * static_cast<float>(Time::DeltaTime()) *
 								editorLayer->m_velocity;
 						}
 						if (editorLayer->GetKey(GLFW_KEY_S) == KeyActionType::Hold) {
-							editorLayer->m_sceneCameraPosition -=
+							sceneCameraPosition -=
 								right * static_cast<float>(Time::DeltaTime()) *
 								editorLayer->m_velocity;
 						}
 						if (editorLayer->GetKey(GLFW_KEY_D) == KeyActionType::Hold) {
-							editorLayer->m_sceneCameraPosition +=
+							sceneCameraPosition +=
 								right * static_cast<float>(Time::DeltaTime()) *
 								editorLayer->m_velocity;
 						}
 						if (editorLayer->GetKey(GLFW_KEY_LEFT_SHIFT) == KeyActionType::Hold) {
-							editorLayer->m_sceneCameraPosition.y +=
+							sceneCameraPosition.y +=
 								editorLayer->m_velocity *
 								static_cast<float>(Time::DeltaTime());
 						}
 						if (editorLayer->GetKey(GLFW_KEY_LEFT_CONTROL) == KeyActionType::Hold) {
-							editorLayer->m_sceneCameraPosition.y -=
+							sceneCameraPosition.y -=
 								editorLayer->m_velocity *
 								static_cast<float>(Time::DeltaTime());
 						}
@@ -655,12 +638,14 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 							if (editorLayer->m_sceneCameraPitchAngle < -89.0f)
 								editorLayer->m_sceneCameraPitchAngle = -89.0f;
 
-							editorLayer->m_sceneCameraRotation =
+							sceneCameraRotation =
 								Camera::ProcessMouseMovement(
 									editorLayer->m_sceneCameraYawAngle,
 									editorLayer->m_sceneCameraPitchAngle,
 									false);
 						}
+						editorLayer->SetCameraRotation(editorLayer->GetSceneCamera(), sceneCameraRotation);
+						editorLayer->SetCameraPosition(editorLayer->GetSceneCamera(), sceneCameraPosition);
 					}
 #pragma endregion
 				}
@@ -794,8 +779,8 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 		{
 			const auto scene = Application::GetActiveScene();
 
-			m_boundingBoxMatrices.clear();
-			m_boundingBoxColors.clear();
+			m_boundingBoxMatrices->m_particleInfos.clear();
+			m_boundingBoxMatrices->m_needUpdate = true;
 
 			std::vector<int> branchStartIndices;
 			int branchLastStartIndex = 0;
@@ -843,13 +828,12 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 				const auto& rootList = rootSkeleton.RefSortedFlowList();
 
 				auto entityGlobalTransform = scene->GetDataComponent<GlobalTransform>(treeEntity);
-				m_boundingBoxMatrices.emplace_back();
-				m_boundingBoxMatrices.back() = entityGlobalTransform.m_value *
+				auto& [instanceMatrix, instanceColor] = m_boundingBoxMatrices->m_particleInfos.emplace_back();
+				instanceMatrix.m_value = entityGlobalTransform.m_value *
 					(glm::translate(
 						(branchSkeleton.m_max + branchSkeleton.m_min) / 2.0f) *
 						glm::scale(branchSkeleton.m_max - branchSkeleton.m_min));
-				m_boundingBoxColors.emplace_back();
-				m_boundingBoxColors.back() = glm::vec4(m_randomColors[listIndex], 0.05f);
+				instanceColor = glm::vec4(m_randomColors[listIndex], 0.05f);
 				branchLastStartIndex += branchList.size();
 				branchStartIndices.emplace_back(branchLastStartIndex);
 
@@ -1294,7 +1278,7 @@ void EcoSysLabLayer::SoilVisualizationScalar(SoilModel& soilModel) {
 	gizmoSettings.m_drawSettings.m_blendingSrcFactor = VK_BLEND_FACTOR_SRC_ALPHA;
 	gizmoSettings.m_drawSettings.m_blendingDstFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
 	gizmoSettings.m_drawSettings.m_cullMode = VK_CULL_MODE_NONE;
-	Gizmos::DrawGizmoMeshInstancedColored(
+	editorLayer->DrawGizmoMeshInstancedColored(
 		Resources::GetResource<Mesh>("PRIMITIVE_CUBE"),
 		m_scalarMatrices,
 		glm::mat4(1.0f), 1.0f, gizmoSettings);
@@ -1375,7 +1359,7 @@ void EcoSysLab::EcoSysLabLayer::SoilVisualizationVector(SoilModel& soilModel) {
 	gizmoSettings.m_drawSettings.m_blendingDstFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
 	gizmoSettings.m_drawSettings.m_cullMode = VK_CULL_MODE_BACK_BIT;
 
-	Gizmos::DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER"), m_vectorMatrices, glm::mat4(1.0f), 1.0f, gizmoSettings);
+	editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER"), m_vectorMatrices, glm::mat4(1.0f), 1.0f, gizmoSettings);
 }
 
 void EcoSysLabLayer::Update() {
@@ -1519,23 +1503,9 @@ void EcoSysLabLayer::ClearGeometries() const {
 }
 
 void EcoSysLabLayer::UpdateVisualizationCamera() {
-	if (m_rightMouseButtonHold &&
-		!Inputs::GetMouseInternal(GLFW_MOUSE_BUTTON_RIGHT,
-			Windows::GetWindow())) {
-		m_rightMouseButtonHold = false;
-		m_startMouse = false;
-	}
 	auto editorLayer = Application::GetLayer<EditorLayer>();
 	if (!editorLayer) return;
-
-	m_visualizationCamera->ResizeResolution(
+	m_visualizationCamera->Resize({
 		m_visualizationCameraResolutionX,
-		m_visualizationCameraResolutionY);
-	m_visualizationCamera->Clear();
-	auto renderLayer = Application::GetLayer<RenderLayer>();
-	renderLayer->ApplyEnvironmentalSettings(m_visualizationCamera);
-	GlobalTransform sceneCameraGT;
-	sceneCameraGT.SetValue(editorLayer->m_sceneCameraPosition,
-		editorLayer->m_sceneCameraRotation, glm::vec3(1.0f));
-	renderLayer->RenderToCamera(m_visualizationCamera, sceneCameraGT);
+		m_visualizationCameraResolutionY });
 }

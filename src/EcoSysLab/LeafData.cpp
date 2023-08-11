@@ -3,7 +3,6 @@
 //
 #include "LeafData.hpp"
 
-#include <Gizmos.hpp>
 #include "Scene.hpp"
 #include "Graphics.hpp"
 #include "ProceduralSorghum.hpp"
@@ -43,7 +42,7 @@ void LeafData::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 		}
 		auto owner = GetOwner();
 		auto scene = GetScene();
-		Gizmos::DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_SPHERE"), particleInfoList,
+		editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_SPHERE"), particleInfoList,
 			scene->GetDataComponent<GlobalTransform>(owner).m_value, nodeSize);
 	}
 }

@@ -1,6 +1,5 @@
 #include "RadialBoundingVolume.hpp"
 
-#include <Gizmos.hpp>
 #include <Material.hpp>
 
 #include "Graphics.hpp"
@@ -466,7 +465,7 @@ void RadialBoundingVolume::OnInspect(const std::shared_ptr<EditorLayer>& editorL
                             GenerateMesh();
                     }
 
-                    Gizmos::DrawGizmoMesh(
+                    editorLayer->DrawGizmoMesh(
                         m_boundMeshes[i], m_displayColor);
 
                     
@@ -516,12 +515,12 @@ void RadialBoundingVolume::OnInspect(const std::shared_ptr<EditorLayer>& editorL
     ImGui::Checkbox("Display Bound", &displayBound);
     if (!displayLayer && displayBound && m_meshGenerated) {
         for (auto& i : m_boundMeshes) {
-            Gizmos::DrawGizmoMesh(
+            editorLayer->DrawGizmoMesh(
                 i, m_displayColor);
         }
         for (int i = 0; i < m_layerAmount; i++) {
             for (int j = 0; j < m_sectorAmount; j++) {
-                Gizmos::DrawGizmoMesh(Resources::GetResource<Mesh>("PRIMITIVE_CUBE"), glm::vec4(0, 0, 0, 1), glm::translate(TipPosition(i, j))* glm::scale(glm::vec3(0.1f)));
+                editorLayer->DrawGizmoMesh(Resources::GetResource<Mesh>("PRIMITIVE_CUBE"), glm::vec4(0, 0, 0, 1), glm::translate(TipPosition(i, j))* glm::scale(glm::vec3(0.1f)));
             }
         }
     }

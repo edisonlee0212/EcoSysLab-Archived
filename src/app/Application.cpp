@@ -55,12 +55,16 @@ int main() {
 
 	EngineSetup();
 
+    Application::PushLayer<WindowLayer>();
+    Application::PushLayer<PhysicsLayer>();
+    Application::PushLayer<EditorLayer>();
+    Application::PushLayer<RenderLayer>();
+    Application::PushLayer<EcoSysLabLayer>();
+    Application::PushLayer<SorghumLayer>();
     ApplicationInfo applicationConfigs;
     applicationConfigs.m_applicationName = "EcoSysLab";
     Application::Initialize(applicationConfigs);
-
-    Application::PushLayer<EcoSysLabLayer>();
-    Application::PushLayer<SorghumLayer>();
+    
 #ifdef RAYTRACERFACILITY
     Application::PushLayer<RayTracerLayer>();
     auto rayTracerLayer = Application::GetLayer<RayTracerLayer>();

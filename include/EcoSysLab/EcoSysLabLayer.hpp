@@ -48,8 +48,7 @@ namespace EcoSysLab {
 		AssetRef m_rootStemStrands;
 		AssetRef m_fineRootStrands;
 
-		std::vector<glm::mat4> m_boundingBoxMatrices;
-		std::vector<glm::vec4> m_boundingBoxColors;
+		std::shared_ptr<ParticleInfoList> m_boundingBoxMatrices;
 
 		std::shared_ptr<ParticleInfoList> m_foliageMatrices;
 		std::shared_ptr<ParticleInfoList> m_fruitMatrices;
@@ -142,10 +141,7 @@ namespace EcoSysLab {
 		public:
 		int m_visualizationCameraResolutionX = 1;
 		int m_visualizationCameraResolutionY = 1;
-		bool m_startMouse = false;
-		bool m_startScroll = false;
-
-
+		
 		IlluminationEstimationSettings m_shadowEstimationSettings;
 
 

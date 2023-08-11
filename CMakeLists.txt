@@ -61,8 +61,8 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 # EcoSysLab
 # ------------------------------------------------------------------
 file(GLOB ECOSYSLAB_SOURCES_LOCAL "src/EcoSysLab/*.cpp")
-add_library(EcoSysLab
-        SHARED
+add_library(EcoSysLab 
+        STATIC
         ${ECOSYSLAB_SOURCES_LOCAL}
         )
 set(ECOSYSLAB_PCH_LOCAL

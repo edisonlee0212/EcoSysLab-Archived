@@ -58,17 +58,17 @@ void SorghumLayer::OnCreate() {
 		{ ".possorghumfield" });
 
 	if (const auto editorLayer = Application::GetLayer<EditorLayer>()) {
-		auto texture2D = std::make_shared<Texture2D>();
+		auto texture2D = ProjectManager::CreateTemporaryAsset<Texture2D>();
 		texture2D->Import(std::filesystem::absolute(
 			std::filesystem::path("./EcoSysLabResources/Textures") /
 			"ProceduralSorghum.png"));
 		editorLayer->AssetIcons()["ProceduralSorghum"] = texture2D;
-		texture2D = std::make_shared<Texture2D>();
+		texture2D = ProjectManager::CreateTemporaryAsset<Texture2D>();
 		texture2D->Import(std::filesystem::absolute(
 			std::filesystem::path("./EcoSysLabResources/Textures") /
 			"SorghumStateGenerator.png"));
 		editorLayer->AssetIcons()["SorghumStateGenerator"] = texture2D;
-		texture2D = std::make_shared<Texture2D>();
+		texture2D = ProjectManager::CreateTemporaryAsset<Texture2D>();
 		texture2D->Import(std::filesystem::absolute(
 			std::filesystem::path("./EcoSysLabResources/Textures") /
 			"PositionsField.png"));

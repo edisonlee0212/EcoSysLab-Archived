@@ -7,7 +7,7 @@
 #include "Application.hpp"
 #include "HexagonGrid.hpp"
 #include "PipeModel.hpp"
-
+#include "Jobs.hpp"
 using namespace EvoEngine;
 namespace EcoSysLab {
 	enum class PruningMode {
@@ -39,10 +39,8 @@ namespace EcoSysLab {
 	class TreeVisualizer {
 		std::vector<glm::vec4> m_randomColors;
 
-		std::vector<glm::mat4> m_internodeMatrices;
-		std::vector<glm::vec4> m_internodeColors;
-		std::vector<glm::mat4> m_rootNodeMatrices;
-		std::vector<glm::vec4> m_rootNodeColors;
+		std::shared_ptr<ParticleInfoList> m_internodeMatrices;
+		std::shared_ptr<ParticleInfoList> m_rootNodeMatrices;
 
 		std::vector<glm::vec2> m_storedMousePositions;
 		bool m_visualization = true;
@@ -123,8 +121,7 @@ namespace EcoSysLab {
 
 		template<typename SkeletonData, typename FlowData, typename NodeData>
 		void
-		SyncMatrices(const Skeleton<SkeletonData, FlowData, NodeData> &skeleton, std::vector<glm::mat4> &matrices,
-								 std::vector<glm::vec4> &colors, NodeHandle &selectedNodeHandle, float &lengthFactor);
+		SyncMatrices(const Skeleton<SkeletonData, FlowData, NodeData> &skeleton, const std::shared_ptr<ParticleInfoList>& particleInfoList, NodeHandle &selectedNodeHandle, float &lengthFactor);
 
 		void SyncColors(const ShootSkeleton &shootSkeleton, NodeHandle &selectedNodeHandle);
 
@@ -153,11 +150,11 @@ namespace EcoSysLab {
 																					const GlobalTransform &globalTransform, NodeHandle &selectedNodeHandle,
 																					std::vector<NodeHandle> &hierarchyList) {
 			auto editorLayer = Application::GetLayer<EditorLayer>();
-			const auto cameraRotation = editorLayer->m_sceneCameraRotation;
-			const auto cameraPosition = editorLayer->m_sceneCameraPosition;
+			const auto cameraRotation = editorLayer->GetSceneCameraRotation();
+			const auto cameraPosition = editorLayer->GetSceneCameraPosition();
 			const glm::vec3 cameraFront = cameraRotation * glm::vec3(0, 0, -1);
 			const glm::vec3 cameraUp = cameraRotation * glm::vec3(0, 1, 0);
-			glm::mat4 projectionView = editorLayer->m_sceneCamera->GetProjection() *
+			glm::mat4 projectionView = editorLayer->GetSceneCamera()->GetProjection() *
 																 glm::lookAt(cameraPosition, cameraPosition + cameraFront, cameraUp);
 
 			const auto &sortedInternodeList = skeleton.RefSortedNodeList();
@@ -245,9 +242,9 @@ namespace EcoSysLab {
 			GlobalTransform cameraLtw;
 			cameraLtw.m_value =
 							glm::translate(
-											editorLayer->m_sceneCameraPosition) *
+											editorLayer->GetSceneCameraPosition()) *
 							glm::mat4_cast(
-											editorLayer->m_sceneCameraRotation);
+											editorLayer->GetSceneCameraRotation());
 			const Ray cameraRay = cameraComponent->ScreenPointToRay(
 							cameraLtw, mousePosition);
 			const auto &sortedNodeList = skeleton.RefSortedNodeList();
@@ -339,7 +336,7 @@ namespace EcoSysLab {
 					SetSelectedNode(skeleton, nodeHandle, selectedNodeHandle, hierarchyList);
 			}
 			if (opened) {
-					ImGui::TreePush();
+					ImGui::TreePush(std::to_string(nodeHandle).c_str());
 					const auto &internode = skeleton.PeekNode(nodeHandle);
 					const auto &internodeChildren = internode.RefChildHandles();
 					for (const auto &child: internodeChildren) {
@@ -468,14 +465,13 @@ namespace EcoSysLab {
 	}
 
 	template<typename SkeletonData, typename FlowData, typename NodeData>
-	void TreeVisualizer::SyncMatrices(const Skeleton<SkeletonData, FlowData, NodeData> &skeleton,
-																		std::vector<glm::mat4> &matrices,
-																		std::vector<glm::vec4> &colors, NodeHandle &selectedNodeHandle,
+	void TreeVisualizer::SyncMatrices(const Skeleton<SkeletonData, FlowData, NodeData> &skeleton, const std::shared_ptr<ParticleInfoList>& particleInfoList, NodeHandle &selectedNodeHandle,
 																		float &lengthFactor) {
 
 			const auto &sortedNodeList = skeleton.RefSortedNodeList();
+			auto& matrices = particleInfoList->m_particleInfos;
+			particleInfoList->m_needUpdate = true;
 			matrices.resize(sortedNodeList.size() + 1);
-			std::vector<std::shared_future<void>> results;
 			Jobs::ParallelFor(sortedNodeList.size(), [&](unsigned i) {
 				auto nodeHandle = sortedNodeList[i];
 				const auto &node = skeleton.PeekNode(nodeHandle);
@@ -485,7 +481,7 @@ namespace EcoSysLab {
 								direction, glm::vec3(direction.y, direction.z, direction.x));
 				rotation *= glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));
 				const glm::mat4 rotationTransform = glm::mat4_cast(rotation);
-				matrices[i + 1] =
+				matrices[i + 1].m_instanceMatrix.m_value =
 								glm::translate(position + (node.m_info.m_length / 2.0f) * direction) *
 								rotationTransform *
 								glm::scale(glm::vec3(
@@ -495,15 +491,14 @@ namespace EcoSysLab {
 				if (nodeHandle == selectedNodeHandle) {
 						const glm::vec3 selectedCenter =
 										position + (node.m_info.m_length * lengthFactor) * direction;
-						matrices[0] = glm::translate(selectedCenter) *
+						matrices[0].m_instanceMatrix.m_value = glm::translate(selectedCenter) *
 													rotationTransform *
 													glm::scale(glm::vec3(
 																	2.0f * node.m_info.m_thickness + 0.001f,
 																	node.m_info.m_length / 5.0f,
 																	2.0f * node.m_info.m_thickness + 0.001f));
-						colors[0] = glm::vec4(1.0f);
+						matrices[0].m_instanceColor = glm::vec4(1.0f);
 				}
-			}, results);
-			for (auto &i: results) i.wait();
+			});
 	}
 }

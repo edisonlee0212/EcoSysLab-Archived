@@ -3,9 +3,6 @@
 //
 
 #include "TreeVisualizer.hpp"
-
-#include <Gizmos.hpp>
-
 #include "Utilities.hpp"
 #include "Application.hpp"
 #include "EcoSysLabLayer.hpp"
@@ -352,9 +349,9 @@ bool TreeVisualizer::Visualize(TreeModel& treeModel, const GlobalTransform& glob
 		}
 
 		if (m_needUpdate) {
-			SyncMatrices(treeSkeleton, m_internodeMatrices, m_internodeColors, m_selectedInternodeHandle,
+			SyncMatrices(treeSkeleton, m_internodeMatrices, m_selectedInternodeHandle,
 				m_selectedInternodeLengthFactor);
-			SyncMatrices(rootSkeleton, m_rootNodeMatrices, m_rootNodeColors, m_selectedRootNodeHandle,
+			SyncMatrices(rootSkeleton, m_rootNodeMatrices, m_selectedRootNodeHandle,
 				m_selectedRootNodeLengthFactor);
 			SyncColors(treeSkeleton, m_selectedInternodeHandle);
 			SyncColors(rootSkeleton, m_selectedRootNodeHandle);
@@ -370,32 +367,28 @@ bool TreeVisualizer::Visualize(TreeModel& treeModel, const GlobalTransform& glob
 				m_needRootColorUpdate = false;
 			}
 		}
-		if (!m_internodeMatrices.empty()) {
+		if (!m_internodeMatrices->m_particleInfos.empty()) {
 			GizmoSettings gizmoSettings;
 			gizmoSettings.m_drawSettings.m_blending = true;
 			if (m_selectedInternodeHandle == -1) {
-				m_internodeMatrices[0] = glm::translate(glm::vec3(1.0f)) * glm::scale(glm::vec3(0.0f));
-				m_internodeColors[0] = glm::vec4(0.0f);
+				m_internodeMatrices->m_particleInfos[0].m_instanceMatrix.m_value = glm::translate(glm::vec3(1.0f)) * glm::scale(glm::vec3(0.0f));
+				m_internodeMatrices->m_particleInfos[0].m_instanceColor = glm::vec4(0.0f);
 			}
-			Gizmos::DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER"), ecoSysLabLayer->m_visualizationCamera,
-				editorLayer->m_sceneCameraPosition,
-				editorLayer->m_sceneCameraRotation,
-				m_internodeColors,
+			m_internodeMatrices->m_needUpdate = true;
+			editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER"), ecoSysLabLayer->m_visualizationCamera,
 				m_internodeMatrices,
 				globalTransform.m_value, 1.0f, gizmoSettings);
 
 		}
-		if (!m_rootNodeMatrices.empty()) {
+		if (!m_rootNodeMatrices->m_particleInfos.empty()) {
 			GizmoSettings gizmoSettings;
 			gizmoSettings.m_drawSettings.m_blending = true;
 			if (m_selectedRootNodeHandle == -1) {
-				m_rootNodeMatrices[0] = glm::translate(glm::vec3(1.0f)) * glm::scale(glm::vec3(0.0f));
-				m_rootNodeColors[0] = glm::vec4(0.0f);
+				m_rootNodeMatrices->m_particleInfos[0].m_instanceMatrix.m_value = glm::translate(glm::vec3(1.0f)) * glm::scale(glm::vec3(0.0f));
+				m_rootNodeMatrices->m_particleInfos[0].m_instanceColor = glm::vec4(0.0f);
 			}
-			Gizmos::DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER"), ecoSysLabLayer->m_visualizationCamera,
-				editorLayer->m_sceneCameraPosition,
-				editorLayer->m_sceneCameraRotation,
-				m_rootNodeColors,
+			m_rootNodeMatrices->m_needUpdate = true;
+			editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER"), ecoSysLabLayer->m_visualizationCamera,
 				m_rootNodeMatrices,
 				globalTransform.m_value, 1.0f, gizmoSettings);
 		}
@@ -655,8 +648,10 @@ void TreeVisualizer::Reset(
 	m_selectedRootNodeHandle = -1;
 	m_selectedRootNodeHierarchyList.clear();
 	m_iteration = treeModel.CurrentIteration();
-	m_internodeMatrices.clear();
-	m_rootNodeMatrices.clear();
+	m_internodeMatrices->m_particleInfos.clear();
+	m_internodeMatrices->m_needUpdate = true;
+	m_rootNodeMatrices->m_particleInfos.clear();
+	m_rootNodeMatrices->m_needUpdate = true;
 	m_needUpdate = true;
 }
 
@@ -666,8 +661,10 @@ void TreeVisualizer::Clear() {
 	m_selectedRootNodeHandle = -1;
 	m_selectedRootNodeHierarchyList.clear();
 	m_iteration = 0;
-	m_internodeMatrices.clear();
-	m_rootNodeMatrices.clear();
+	m_internodeMatrices->m_particleInfos.clear();
+	m_internodeMatrices->m_needUpdate = true;
+	m_rootNodeMatrices->m_particleInfos.clear();
+	m_rootNodeMatrices->m_needUpdate = true;
 }
 
 
@@ -792,41 +789,41 @@ void TreeVisualizer::SyncColors(const ShootSkeleton& shootSkeleton, NodeHandle& 
 	}
 
 	const auto& sortedNodeList = shootSkeleton.RefSortedNodeList();
-	m_internodeColors.resize(sortedNodeList.size() + 1);
-	std::vector<std::shared_future<void>> results;
+	auto& matrices = m_internodeMatrices->m_particleInfos;
+	m_internodeMatrices->m_needUpdate = true;
+	matrices.resize(sortedNodeList.size() + 1);
 	Jobs::ParallelFor(sortedNodeList.size(), [&](unsigned i) {
 		const auto nodeHandle = sortedNodeList[i];
 		const auto& node = shootSkeleton.PeekNode(nodeHandle);
 		if (nodeHandle == selectedNodeHandle) {
-			m_internodeColors[i + 1] = glm::vec4(1, 0, 0, 1);
+			matrices[i + 1].m_instanceColor = glm::vec4(1, 0, 0, 1);
 		}
 		else {
 			switch (static_cast<ShootVisualizerMode>(m_settings.m_shootVisualizationMode)) {
 			case ShootVisualizerMode::LightIntensity:
-				m_internodeColors[i + 1] = glm::vec4(
+				matrices[i + 1].m_instanceColor = glm::vec4(
 					glm::clamp(node.m_data.m_lightIntensity * m_settings.m_shootColorMultiplier, 0.0f, 1.f));
 				break;
 			case ShootVisualizerMode::LightDirection:
-				m_internodeColors[i + 1] = glm::vec4(glm::vec3(glm::clamp(node.m_data.m_lightDirection, 0.0f, 1.f)),
+				matrices[i + 1].m_instanceColor = glm::vec4(glm::vec3(glm::clamp(node.m_data.m_lightDirection, 0.0f, 1.f)),
 					1.0f);
 				break;
 			case ShootVisualizerMode::IsMaxChild:
-				m_internodeColors[i + 1] = glm::vec4(glm::vec3(node.m_data.m_isMaxChild ? 1.0f : 0.0f), 1.0f);
+				matrices[i + 1].m_instanceColor = glm::vec4(glm::vec3(node.m_data.m_isMaxChild ? 1.0f : 0.0f), 1.0f);
 				break;
 			case ShootVisualizerMode::AllocatedVigor:
-				m_internodeColors[i + 1] = glm::vec4(glm::clamp(
+				matrices[i + 1].m_instanceColor = glm::vec4(glm::clamp(
 					glm::vec3(node.m_data.m_vigorFlow.m_allocatedVigor * m_settings.m_shootColorMultiplier), 0.0f,
 					1.f), 1.0f);
 				break;
 			default:
-				m_internodeColors[i + 1] = m_randomColors[node.m_data.m_order];
+				matrices[i + 1].m_instanceColor = m_randomColors[node.m_data.m_order];
 				break;
 			}
-			m_internodeColors[i + 1].a = 1.0f;
-			if (selectedNodeHandle != -1) m_internodeColors[i + 1].a = 0.3f;
+			matrices[i + 1].m_instanceColor.a = 1.0f;
+			if (selectedNodeHandle != -1) matrices[i + 1].m_instanceColor.a = 0.3f;
 		}
-		}, results);
-	for (auto& i : results) i.wait();
+		});
 }
 
 void TreeVisualizer::SyncColors(const RootSkeleton& rootSkeleton, const NodeHandle& selectedNodeHandle) {
@@ -837,28 +834,28 @@ void TreeVisualizer::SyncColors(const RootSkeleton& rootSkeleton, const NodeHand
 	}
 
 	const auto& sortedNodeList = rootSkeleton.RefSortedNodeList();
-	m_rootNodeColors.resize(sortedNodeList.size() + 1);
-	std::vector<std::shared_future<void>> results;
+	auto& matrices = m_rootNodeMatrices->m_particleInfos;
+	m_rootNodeMatrices->m_needUpdate = true;
+	matrices.resize(sortedNodeList.size() + 1);
 	Jobs::ParallelFor(sortedNodeList.size(), [&](unsigned i) {
 		const auto nodeHandle = sortedNodeList[i];
 		const auto& node = rootSkeleton.PeekNode(nodeHandle);
 		if (nodeHandle == selectedNodeHandle) {
-			m_rootNodeColors[i + 1] = glm::vec4(1, 0, 0, 1);
+			matrices[i + 1].m_instanceColor = glm::vec4(1, 0, 0, 1);
 		}
 		else {
 			switch (static_cast<RootVisualizerMode>(m_settings.m_rootVisualizationMode)) {
 			case RootVisualizerMode::AllocatedVigor:
-				m_internodeColors[i + 1] = glm::vec4(
+				matrices[i + 1].m_instanceColor = glm::vec4(
 					glm::clamp(glm::vec3(node.m_data.m_vigorSink.GetVigor() * m_settings.m_rootColorMultiplier),
 						0.0f, 1.f), 1.0f);
 				break;
 			default:
-				m_rootNodeColors[i + 1] = m_randomColors[node.m_data.m_order];
+				matrices[i + 1].m_instanceColor = m_randomColors[node.m_data.m_order];
 				break;
 			}
-			m_rootNodeColors[i + 1].a = 1.0f;
-			if (selectedNodeHandle != -1) m_rootNodeColors[i + 1].a = 0.3f;
+			matrices[i + 1].m_instanceColor.a = 1.0f;
+			if (selectedNodeHandle != -1) matrices[i + 1].m_instanceColor.a = 0.3f;
 		}
-		}, results);
-	for (auto& i : results) i.wait();
+		});
 }
