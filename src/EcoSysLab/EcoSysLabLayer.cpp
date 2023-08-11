@@ -301,18 +301,18 @@ void EcoSysLabLayer::Visualization() {
 		gizmoSettings.m_drawSettings.m_cullMode = VK_CULL_MODE_BACK_BIT;
 
 		if (m_displayShootStem && !m_shootStemPoints.empty()) {
-			gizmoSettings.m_colorMode = GizmoSettings::ColorMode::VertexColor;
+			gizmoSettings.m_colorMode = GizmoSettings::ColorMode::Default;
 			editorLayer->DrawGizmoStrands(branchStrands, m_visualizationCamera, glm::vec4(1.0f), glm::mat4(1.0f), 1,
 				gizmoSettings);
 		}
 
 		if (m_displayRootStem && !m_rootStemPoints.empty()) {
-			gizmoSettings.m_colorMode = GizmoSettings::ColorMode::VertexColor;
+			gizmoSettings.m_colorMode = GizmoSettings::ColorMode::Default;
 			editorLayer->DrawGizmoStrands(rootStrands, m_visualizationCamera, glm::vec4(1.0f), glm::mat4(1.0f), 1,
 				gizmoSettings);
 		}
 		if (m_displayFineRoot && !m_fineRootPoints.empty()) {
-			gizmoSettings.m_colorMode = GizmoSettings::ColorMode::VertexColor;
+			gizmoSettings.m_colorMode = GizmoSettings::ColorMode::Default;
 			editorLayer->DrawGizmoStrands(fineRootStrands, m_visualizationCamera, glm::vec4(1.0f), glm::mat4(1.0f), 1,
 				gizmoSettings);
 		}
@@ -411,7 +411,7 @@ const std::vector<glm::vec3>& EcoSysLabLayer::RandomColors() {
 }
 
 void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
-	UpdateVisualizationCamera();
+	
 	auto scene = GetScene();
 	if (ImGui::Begin("EcoSysLab Layer")) {
 		ImGui::Checkbox("Lock tree selection", &m_lockTreeSelection);
@@ -571,6 +571,8 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 			ImGui::Image(m_visualizationCamera->GetRenderTexture()->GetColorImTextureId(),
 				ImVec2(viewPortSize.x, viewPortSize.y), ImVec2(0, 1), ImVec2(1, 0));
 			m_visualizationCameraMousePosition = glm::vec2(FLT_MAX, FLT_MIN);
+			auto sceneCameraRotation = editorLayer->GetSceneCameraRotation();
+			auto sceneCameraPosition = editorLayer->GetSceneCameraPosition();
 			if (ImGui::IsWindowFocused()) {
 				m_visualizationCameraWindowFocused = true;
 				bool valid = true;
@@ -580,27 +582,26 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 				if (valid) {
 					static bool isDraggingPreviously = false;
 					bool mouseDrag = true;
-					if (m_visualizationCameraResolutionX < 0 || m_visualizationCameraResolutionY < 0 ||
-						m_visualizationCameraResolutionX > viewPortSize.x ||
-						m_visualizationCameraResolutionY > viewPortSize.y ||
+					if (m_visualizationCameraMousePosition.x < 0 || m_visualizationCameraMousePosition.y < 0 ||
+						m_visualizationCameraMousePosition.x > viewPortSize.x ||
+						m_visualizationCameraMousePosition.y > viewPortSize.y ||
 						editorLayer->GetKey(GLFW_MOUSE_BUTTON_RIGHT) != KeyActionType::Hold) {
 						mouseDrag = false;
 					}
 					static float prevX = 0;
 					static float prevY = 0;
 					if (mouseDrag && !isDraggingPreviously) {
-						prevX = m_visualizationCameraResolutionX;
-						prevY = m_visualizationCameraResolutionY;
+						prevX = m_visualizationCameraMousePosition.x;
+						prevY = m_visualizationCameraMousePosition.y;
 					}
-					const float xOffset = m_visualizationCameraResolutionX - prevX;
-					const float yOffset = m_visualizationCameraResolutionY - prevY;
-					prevX = m_visualizationCameraResolutionX;
-					prevY = m_visualizationCameraResolutionY;
+					const float xOffset = m_visualizationCameraMousePosition.x - prevX;
+					const float yOffset = m_visualizationCameraMousePosition.y - prevY;
+					prevX = m_visualizationCameraMousePosition.x;
+					prevY = m_visualizationCameraMousePosition.y;
 					isDraggingPreviously = mouseDrag;
 #pragma region Scene Camera Controller
+					
 					if (mouseDrag && !editorLayer->m_lockCamera) {
-						auto sceneCameraRotation = editorLayer->GetSceneCameraRotation();
-						auto sceneCameraPosition = editorLayer->GetSceneCameraPosition();
 						glm::vec3 front = sceneCameraRotation *
 							glm::vec3(0, 0, -1);
 						glm::vec3 right = sceneCameraRotation *
@@ -610,12 +611,12 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 								front * static_cast<float>(Time::DeltaTime()) *
 								editorLayer->m_velocity;
 						}
-						if (editorLayer->GetKey(GLFW_KEY_A) == KeyActionType::Hold) {
+						if (editorLayer->GetKey(GLFW_KEY_S) == KeyActionType::Hold) {
 							sceneCameraPosition -=
 								front * static_cast<float>(Time::DeltaTime()) *
 								editorLayer->m_velocity;
 						}
-						if (editorLayer->GetKey(GLFW_KEY_S) == KeyActionType::Hold) {
+						if (editorLayer->GetKey(GLFW_KEY_A) == KeyActionType::Hold) {
 							sceneCameraPosition -=
 								right * static_cast<float>(Time::DeltaTime()) *
 								editorLayer->m_velocity;
@@ -638,7 +639,7 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 						if (xOffset != 0.0f || yOffset != 0.0f) {
 							editorLayer->m_sceneCameraYawAngle +=
 								xOffset * editorLayer->m_sensitivity;
-							editorLayer->m_sceneCameraPitchAngle +=
+							editorLayer->m_sceneCameraPitchAngle -=
 								yOffset * editorLayer->m_sensitivity;
 							if (editorLayer->m_sceneCameraPitchAngle > 89.0f)
 								editorLayer->m_sceneCameraPitchAngle = 89.0f;
@@ -652,7 +653,7 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 									false);
 						}
 						editorLayer->SetCameraRotation(editorLayer->GetSceneCamera(), sceneCameraRotation);
-						editorLayer->SetCameraPosition(editorLayer->GetSceneCamera(), sceneCameraPosition);
+						editorLayer->SetCameraPosition(editorLayer->GetSceneCamera(), sceneCameraPosition);						
 					}
 #pragma endregion
 				}
@@ -660,6 +661,8 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 			else {
 				m_visualizationCameraWindowFocused = false;
 			}
+			editorLayer->SetCameraRotation(m_visualizationCamera, sceneCameraRotation);
+			editorLayer->SetCameraPosition(m_visualizationCamera, sceneCameraPosition);
 		}
 		ImGui::EndChild();
 		auto* window = ImGui::FindWindowByName("Plant Visual");
@@ -1512,9 +1515,13 @@ void EcoSysLabLayer::ClearGeometries() const {
 }
 
 void EcoSysLabLayer::UpdateVisualizationCamera() {
-	auto editorLayer = Application::GetLayer<EditorLayer>();
-	if (!editorLayer) return;
+	if (const auto editorLayer = Application::GetLayer<EditorLayer>(); !editorLayer) return;
 	m_visualizationCamera->Resize({
 		m_visualizationCameraResolutionX,
 		m_visualizationCameraResolutionY });
+}
+
+void EcoSysLabLayer::PreUpdate()
+{
+	UpdateVisualizationCamera();
 }

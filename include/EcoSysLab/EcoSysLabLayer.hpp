@@ -31,7 +31,7 @@ namespace EcoSysLab {
 		bool m_displayGroundFruit = true;
 		bool m_displayGroundLeaves = true;
 
-		bool m_debugVisualization = false;
+		bool m_debugVisualization = true;
 		std::vector<int> m_shootVersions;
 		std::vector<int> m_rootVersions;
 		std::vector<glm::vec3> m_randomColors;
@@ -99,7 +99,7 @@ namespace EcoSysLab {
 		std::shared_ptr<ParticleInfoList> m_scalarMatrices;
 
 		void UpdateVisualizationCamera();
-
+		void PreUpdate() override;
 		void Update() override;
 
 		void OnCreate() override;
