@@ -30,11 +30,16 @@ void EcoSysLabLayer::OnCreate() {
 	m_rootStemStrands = ProjectManager::CreateTemporaryAsset<Strands>();
 	m_fineRootStrands = ProjectManager::CreateTemporaryAsset<Strands>();
 
+	m_boundingBoxMatrices = std::make_shared<ParticleInfoList>();
 	m_foliageMatrices = std::make_shared<ParticleInfoList>();
 	m_fruitMatrices = std::make_shared<ParticleInfoList>();
 
 	m_groundFruitMatrices = std::make_shared<ParticleInfoList>();
 	m_groundLeafMatrices = std::make_shared<ParticleInfoList>();
+	m_vectorMatrices = std::make_shared<ParticleInfoList>();
+	m_scalarMatrices = std::make_shared<ParticleInfoList>();
+
+	m_treeVisualizer.Initialize();
 
 #pragma region Internode camera
 	m_visualizationCamera =
@@ -43,6 +48,11 @@ void EcoSysLabLayer::OnCreate() {
 	m_visualizationCamera->m_clearColor = glm::vec3(0.1f);
 	m_visualizationCamera->OnCreate();
 #pragma endregion
+
+	if(const auto editorLayer = Application::GetLayer<EditorLayer>())
+	{
+		editorLayer->RegisterEditorCamera(m_visualizationCamera);
+	}
 }
 
 void EcoSysLabLayer::OnDestroy() {
@@ -51,10 +61,10 @@ void EcoSysLabLayer::OnDestroy() {
 
 
 void EcoSysLabLayer::LateUpdate() {
+
+	return;
 	auto scene = GetScene();
 	auto editorLayer = Application::GetLayer<EditorLayer>();
-
-	UpdateVisualizationCamera();
 
 	auto selectedEntity = editorLayer->GetSelectedEntity();
 	if (selectedEntity != m_selectedTree) {
@@ -262,7 +272,7 @@ void EcoSysLabLayer::LateUpdate() {
 					material->m_materialProperties.m_roughness = 1.0f;
 					material->m_materialProperties.m_metallic = 0.2f;
 				}
-				foliageRenderer->m_particleInfoList.Get<ParticleInfoList>()->m_needUpdate = true;
+				foliageRenderer->m_particleInfoList.Get<ParticleInfoList>()->SetPendingUpdate();
 			}
 			auto fruitHolder = m_fruitHolder.Get();
 			if (scene->IsEntityValid(fruitHolder)) {
@@ -281,7 +291,7 @@ void EcoSysLabLayer::LateUpdate() {
 					material->m_materialProperties.m_roughness = 1.0f;
 					material->m_materialProperties.m_metallic = 0.2f;
 				}
-				fruitRenderer->m_particleInfoList.Get<ParticleInfoList>()->m_needUpdate = true;
+				fruitRenderer->m_particleInfoList.Get<ParticleInfoList>()->SetPendingUpdate();
 			}
 		}
 	}
@@ -388,11 +398,11 @@ void EcoSysLabLayer::ResetAllTrees(const std::vector<Entity>* treeEntities) {
 	m_fineRootStrands = ProjectManager::CreateTemporaryAsset<Strands>();
 
 	m_boundingBoxMatrices->m_particleInfos.clear();
-	m_boundingBoxMatrices->m_needUpdate = true;
+	m_boundingBoxMatrices->SetPendingUpdate();
 	m_foliageMatrices->m_particleInfos.clear();
-	m_foliageMatrices->m_needUpdate = true;
+	m_foliageMatrices->SetPendingUpdate();
 	m_fruitMatrices->m_particleInfos.clear();
-	m_fruitMatrices->m_needUpdate = true;
+	m_fruitMatrices->SetPendingUpdate();
 
 	if (scene->IsEntityValid(m_selectedTree))
 		m_treeVisualizer.Reset(scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock()->m_treeModel);
@@ -550,7 +560,7 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 
 	}
 	ImGui::End();
-
+	return;
 #pragma region Internode debugging camera
 	if (!editorLayer) return;
 	ImVec2 viewPortSize;
@@ -780,7 +790,7 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 			const auto scene = Application::GetActiveScene();
 
 			m_boundingBoxMatrices->m_particleInfos.clear();
-			m_boundingBoxMatrices->m_needUpdate = true;
+			m_boundingBoxMatrices->SetPendingUpdate();
 
 			std::vector<int> branchStartIndices;
 			int branchLastStartIndex = 0;
@@ -813,9 +823,9 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 				m_fineRootPoints.clear();
 
 				m_foliageMatrices->m_particleInfos.clear();
-				m_foliageMatrices->m_needUpdate = true;
+				m_foliageMatrices->SetPendingUpdate();
 				m_fruitMatrices->m_particleInfos.clear();
-				m_fruitMatrices->m_needUpdate = true;
+				m_fruitMatrices->SetPendingUpdate();
 			}
 
 			for (int listIndex = 0; listIndex < treeEntities->size(); listIndex++) {
@@ -856,9 +866,9 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 			m_rootStemPoints.resize(rootLastStartIndex * 6);
 
 			m_foliageMatrices->m_particleInfos.resize(leafLastStartIndex);
-			m_foliageMatrices->m_needUpdate = true;
+			m_foliageMatrices->SetPendingUpdate();
 			m_fruitMatrices->m_particleInfos.resize(fruitLastStartIndex);
-			m_fruitMatrices->m_needUpdate = true;
+			m_fruitMatrices->SetPendingUpdate();
 
 			m_fineRootSegments.resize(fineRootLastStartIndex * 5);
 			m_fineRootPoints.resize(fineRootLastStartIndex * 8);
@@ -1130,8 +1140,8 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 				branchStrands->SetSegments(strandPointAttributes, m_shootStemSegments, m_shootStemPoints);
 				rootStrands->SetSegments(strandPointAttributes, m_rootStemSegments, m_rootStemPoints);
 				fineRootStrands->SetSegments(strandPointAttributes, m_fineRootSegments, m_fineRootPoints);
-				m_foliageMatrices->m_needUpdate = true;
-				m_fruitMatrices->m_needUpdate = true;
+				m_foliageMatrices->SetPendingUpdate();
+				m_fruitMatrices->SetPendingUpdate();
 			}
 		}
 }
@@ -1158,8 +1168,8 @@ void EcoSysLabLayer::UpdateGroundFruitAndLeaves() const {
 			glm::vec3(159 / 255.0f, 100 / 255.0f, 66 / 255.0f),
 			1.0f - m_leaves[i].m_health), 1.0f);
 	}
-	m_groundFruitMatrices->m_needUpdate = true;
-	m_groundLeafMatrices->m_needUpdate = true;
+	m_groundFruitMatrices->SetPendingUpdate();
+	m_groundLeafMatrices->SetPendingUpdate();
 }
 
 
@@ -1196,7 +1206,7 @@ void EcoSysLabLayer::SoilVisualizationScalar(SoilModel& soilModel) {
 		m_updateScalarMatrices = true;
 	}
 	if (m_updateScalarMatrices) {
-		m_groundFruitMatrices->m_needUpdate = true;
+		m_groundFruitMatrices->SetPendingUpdate();
 		Jobs::ParallelFor(numVoxels, [&](unsigned i) {
 			const auto coordinate = soilModel.GetCoordinateFromIndex(i);
 			if (static_cast<float>(coordinate.x) / soilModel.m_resolution.x<
@@ -1293,7 +1303,7 @@ void EcoSysLab::EcoSysLabLayer::SoilVisualizationVector(SoilModel& soilModel) {
 		m_updateVectorMatrices = true;
 	}
 	if (m_updateVectorMatrices) {
-		m_groundFruitMatrices->m_needUpdate = true;
+		m_groundFruitMatrices->SetPendingUpdate();
 		const auto actualVectorMultiplier = m_vectorMultiplier * soilModel.m_dx;
 		switch (static_cast<SoilProperty>(m_vectorSoilProperty)) {
 			/*
@@ -1450,7 +1460,7 @@ void EcoSysLabLayer::Simulate(float deltaTime) {
 				newLeaf.m_globalTransform.m_value = treeGlobalTransform.m_value * leaf.m_transform;
 
 				auto position = newLeaf.m_globalTransform.GetPosition();
-				const auto groundHeight = heightField->GetValue({ position.x, position.z });
+				const auto groundHeight = heightField ? heightField->GetValue({ position.x, position.z }) : 0.0f;
 				const auto height = position.y - groundHeight;
 				position.x += glm::gaussRand(0.0f, height * 0.1f);
 				position.z += glm::gaussRand(0.0f, height * 0.1f);
@@ -1508,4 +1518,9 @@ void EcoSysLabLayer::UpdateVisualizationCamera() {
 	m_visualizationCamera->Resize({
 		m_visualizationCameraResolutionX,
 		m_visualizationCameraResolutionY });
+}
+
+void EcoSysLabLayer::PreUpdate()
+{
+	UpdateVisualizationCamera();
 }

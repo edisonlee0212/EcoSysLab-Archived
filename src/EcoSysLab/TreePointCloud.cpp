@@ -187,6 +187,7 @@ void TreePointCloud::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 	static std::vector<glm::vec3> scannedBranchConnectionEnds;
 	static std::vector<glm::vec4> scannedBranchConnectionColors;
 
+	if (!branchConnectionInfoList) branchConnectionInfoList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
 	if (!allocatedPointInfoList) allocatedPointInfoList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
 	if (!scatterPointInfoList) scatterPointInfoList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
 	if (!nodeInfoList) nodeInfoList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
@@ -305,9 +306,9 @@ void TreePointCloud::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 			scannedBranchConnectionEnds.resize(m_scannedBranches.size());
 			scannedBranchConnectionColors.resize(m_scannedBranches.size());
 
-			allocatedPointInfoList->m_needUpdate = true;
-			scatterPointInfoList->m_needUpdate = true;
-			nodeInfoList->m_needUpdate = true;
+			allocatedPointInfoList->SetPendingUpdate();
+			scatterPointInfoList->SetPendingUpdate();
+			nodeInfoList->SetPendingUpdate();
 
 			nodeMatrices.clear();
 			switch (colorMode) {

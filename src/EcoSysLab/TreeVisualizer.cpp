@@ -374,7 +374,7 @@ bool TreeVisualizer::Visualize(TreeModel& treeModel, const GlobalTransform& glob
 				m_internodeMatrices->m_particleInfos[0].m_instanceMatrix.m_value = glm::translate(glm::vec3(1.0f)) * glm::scale(glm::vec3(0.0f));
 				m_internodeMatrices->m_particleInfos[0].m_instanceColor = glm::vec4(0.0f);
 			}
-			m_internodeMatrices->m_needUpdate = true;
+			m_internodeMatrices->SetPendingUpdate();
 			editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER"), ecoSysLabLayer->m_visualizationCamera,
 				m_internodeMatrices,
 				globalTransform.m_value, 1.0f, gizmoSettings);
@@ -387,7 +387,7 @@ bool TreeVisualizer::Visualize(TreeModel& treeModel, const GlobalTransform& glob
 				m_rootNodeMatrices->m_particleInfos[0].m_instanceMatrix.m_value = glm::translate(glm::vec3(1.0f)) * glm::scale(glm::vec3(0.0f));
 				m_rootNodeMatrices->m_particleInfos[0].m_instanceColor = glm::vec4(0.0f);
 			}
-			m_rootNodeMatrices->m_needUpdate = true;
+			m_rootNodeMatrices->SetPendingUpdate();
 			editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER"), ecoSysLabLayer->m_visualizationCamera,
 				m_rootNodeMatrices,
 				globalTransform.m_value, 1.0f, gizmoSettings);
@@ -649,9 +649,9 @@ void TreeVisualizer::Reset(
 	m_selectedRootNodeHierarchyList.clear();
 	m_iteration = treeModel.CurrentIteration();
 	m_internodeMatrices->m_particleInfos.clear();
-	m_internodeMatrices->m_needUpdate = true;
+	m_internodeMatrices->SetPendingUpdate();
 	m_rootNodeMatrices->m_particleInfos.clear();
-	m_rootNodeMatrices->m_needUpdate = true;
+	m_rootNodeMatrices->SetPendingUpdate();
 	m_needUpdate = true;
 }
 
@@ -662,9 +662,9 @@ void TreeVisualizer::Clear() {
 	m_selectedRootNodeHierarchyList.clear();
 	m_iteration = 0;
 	m_internodeMatrices->m_particleInfos.clear();
-	m_internodeMatrices->m_needUpdate = true;
+	m_internodeMatrices->SetPendingUpdate();
 	m_rootNodeMatrices->m_particleInfos.clear();
-	m_rootNodeMatrices->m_needUpdate = true;
+	m_rootNodeMatrices->SetPendingUpdate();
 }
 
 
@@ -781,6 +781,12 @@ bool TreeVisualizer::InspectRootNode(
 	return changed;
 }
 
+void TreeVisualizer::Initialize()
+{
+	m_internodeMatrices = std::make_shared<ParticleInfoList>();
+	m_rootNodeMatrices = std::make_shared<ParticleInfoList>();
+}
+
 void TreeVisualizer::SyncColors(const ShootSkeleton& shootSkeleton, NodeHandle& selectedNodeHandle) {
 	if (m_randomColors.empty()) {
 		for (int i = 0; i < 1000; i++) {
@@ -790,7 +796,7 @@ void TreeVisualizer::SyncColors(const ShootSkeleton& shootSkeleton, NodeHandle& 
 
 	const auto& sortedNodeList = shootSkeleton.RefSortedNodeList();
 	auto& matrices = m_internodeMatrices->m_particleInfos;
-	m_internodeMatrices->m_needUpdate = true;
+	m_internodeMatrices->SetPendingUpdate();
 	matrices.resize(sortedNodeList.size() + 1);
 	Jobs::ParallelFor(sortedNodeList.size(), [&](unsigned i) {
 		const auto nodeHandle = sortedNodeList[i];
@@ -835,7 +841,7 @@ void TreeVisualizer::SyncColors(const RootSkeleton& rootSkeleton, const NodeHand
 
 	const auto& sortedNodeList = rootSkeleton.RefSortedNodeList();
 	auto& matrices = m_rootNodeMatrices->m_particleInfos;
-	m_rootNodeMatrices->m_needUpdate = true;
+	m_rootNodeMatrices->SetPendingUpdate();
 	matrices.resize(sortedNodeList.size() + 1);
 	Jobs::ParallelFor(sortedNodeList.size(), [&](unsigned i) {
 		const auto nodeHandle = sortedNodeList[i];

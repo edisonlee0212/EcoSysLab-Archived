@@ -100,6 +100,8 @@ namespace EcoSysLab {
 
 		void UpdateVisualizationCamera();
 
+		void PreUpdate() override;
+
 		void Update() override;
 
 		void OnCreate() override;

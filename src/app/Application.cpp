@@ -35,23 +35,38 @@ void EngineSetup();
 
 
 int main() {
-    ClassRegistry::RegisterPrivateComponent<Tree>("Tree");
-    ClassRegistry::RegisterPrivateComponent<TreePointCloud>("TreePointCloud");
-    ClassRegistry::RegisterPrivateComponent<Soil>("Soil");
-    ClassRegistry::RegisterPrivateComponent<Climate>("Climate");
-    ClassRegistry::RegisterPrivateComponent<ObjectRotator>("ObjectRotator");
-    ClassRegistry::RegisterAsset<Trees>("Trees", {".trees"});
-    ClassRegistry::RegisterAsset<TreeDescriptor>("TreeDescriptor", {".td"});
-    ClassRegistry::RegisterAsset<SoilDescriptor>("SoilDescriptor", { ".sd" });
-    ClassRegistry::RegisterAsset<ClimateDescriptor>("ClimateDescriptor", { ".cd" });
-    ClassRegistry::RegisterAsset<RadialBoundingVolume>("RadialBoundingVolume", { ".rbv" });
-
-    ClassRegistry::RegisterAsset<HeightField>("HeightField", { ".hf" });
-
-    ClassRegistry::RegisterAsset<NoiseSoilLayerDescriptor>("NoiseSoilLayerDescriptor", { ".nsld" });
-
-
-
+    const std::filesystem::path resourceFolderPath("../../../Resources");
+    for (auto i : std::filesystem::recursive_directory_iterator(resourceFolderPath))
+    {
+        if (i.is_directory()) continue;
+        auto oldPath = i.path();
+        auto newPath = i.path();
+        bool remove = false;
+        if (i.path().extension().string() == ".uescene")
+        {
+            newPath.replace_extension(".evescene");
+            remove = true;
+        }
+        if (i.path().extension().string() == ".umeta")
+        {
+            newPath.replace_extension(".evefilemeta");
+            remove = true;
+        }
+        if (i.path().extension().string() == ".ueproj")
+        {
+            newPath.replace_extension(".eveproj");
+            remove = true;
+        }
+        if (i.path().extension().string() == ".ufmeta")
+        {
+            newPath.replace_extension(".evefoldermeta");
+            remove = true;
+        }
+        if (remove) {
+            std::filesystem::copy(oldPath, newPath);
+            std::filesystem::remove(oldPath);
+        }
+    }
 
 	EngineSetup();
 
@@ -61,6 +76,21 @@ int main() {
     Application::PushLayer<RenderLayer>();
     Application::PushLayer<EcoSysLabLayer>();
     Application::PushLayer<SorghumLayer>();
+
+    ClassRegistry::RegisterPrivateComponent<Tree>("Tree");
+    ClassRegistry::RegisterPrivateComponent<TreePointCloud>("TreePointCloud");
+    ClassRegistry::RegisterPrivateComponent<Soil>("Soil");
+    ClassRegistry::RegisterPrivateComponent<Climate>("Climate");
+    ClassRegistry::RegisterPrivateComponent<ObjectRotator>("ObjectRotator");
+    ClassRegistry::RegisterAsset<Trees>("Trees", { ".trees" });
+    ClassRegistry::RegisterAsset<TreeDescriptor>("TreeDescriptor", { ".td" });
+    ClassRegistry::RegisterAsset<SoilDescriptor>("SoilDescriptor", { ".sd" });
+    ClassRegistry::RegisterAsset<ClimateDescriptor>("ClimateDescriptor", { ".cd" });
+    ClassRegistry::RegisterAsset<RadialBoundingVolume>("RadialBoundingVolume", { ".rbv" });
+    ClassRegistry::RegisterAsset<HeightField>("HeightField", { ".hf" });
+    ClassRegistry::RegisterAsset<NoiseSoilLayerDescriptor>("NoiseSoilLayerDescriptor", { ".nsld" });
+
+
     ApplicationInfo applicationConfigs;
     applicationConfigs.m_applicationName = "EcoSysLab";
     Application::Initialize(applicationConfigs);
