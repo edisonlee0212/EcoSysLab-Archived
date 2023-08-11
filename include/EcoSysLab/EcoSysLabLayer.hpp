@@ -31,7 +31,7 @@ namespace EcoSysLab {
 		bool m_displayGroundFruit = true;
 		bool m_displayGroundLeaves = true;
 
-		bool m_debugVisualization = true;
+		bool m_debugVisualization = false;
 		std::vector<int> m_shootVersions;
 		std::vector<int> m_rootVersions;
 		std::vector<glm::vec3> m_randomColors;
@@ -100,15 +100,13 @@ namespace EcoSysLab {
 
 		void UpdateVisualizationCamera();
 
-		void PreUpdate() override;
-
 		void Update() override;
 
 		void OnCreate() override;
 
 		void OnDestroy() override;
 
-		void LateUpdate() override;
+		void Visualization();
 
 		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 

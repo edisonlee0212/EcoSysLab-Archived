@@ -60,9 +60,7 @@ void EcoSysLabLayer::OnDestroy() {
 }
 
 
-void EcoSysLabLayer::LateUpdate() {
-
-	return;
+void EcoSysLabLayer::Visualization() {
 	auto scene = GetScene();
 	auto editorLayer = Application::GetLayer<EditorLayer>();
 
@@ -413,6 +411,7 @@ const std::vector<glm::vec3>& EcoSysLabLayer::RandomColors() {
 }
 
 void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
+	UpdateVisualizationCamera();
 	auto scene = GetScene();
 	if (ImGui::Begin("EcoSysLab Layer")) {
 		ImGui::Checkbox("Lock tree selection", &m_lockTreeSelection);
@@ -560,9 +559,7 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 
 	}
 	ImGui::End();
-	return;
 #pragma region Internode debugging camera
-	if (!editorLayer) return;
 	ImVec2 viewPortSize;
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{ 0, 0 });
 	ImGui::Begin("Plant Visual");
@@ -687,6 +684,8 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 		ImGui::End();
 	}
 
+
+	Visualization();
 }
 
 void EcoSysLabLayer::OnSoilVisualizationMenu() {
@@ -1518,9 +1517,4 @@ void EcoSysLabLayer::UpdateVisualizationCamera() {
 	m_visualizationCamera->Resize({
 		m_visualizationCameraResolutionX,
 		m_visualizationCameraResolutionY });
-}
-
-void EcoSysLabLayer::PreUpdate()
-{
-	UpdateVisualizationCamera();
 }
