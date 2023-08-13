@@ -638,7 +638,6 @@ void Tree::InitializeStrandRenderer() const
 	BuildStrands(m_shootPipeModel.m_pipeGroup, strandsList, points);
 	if (!points.empty()) strandsList.emplace_back(points.size());
 	StrandPointAttributes strandPointAttributes{};
-	strandPointAttributes.m_thickness = true;
 	strandPointAttributes.m_color = true;
 	strandsAsset->SetStrands(strandPointAttributes, strandsList, points);
 	renderer->m_strands = strandsAsset;
@@ -882,7 +881,6 @@ void Tree::GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings
 		material->m_materialProperties.m_roughness = 1.0f;
 		material->m_materialProperties.m_metallic = 0.0f;
 		StrandPointAttributes strandPointAttributes{};
-		strandPointAttributes.m_thickness = true;
 		strands->SetSegments(strandPointAttributes, fineRootSegments, fineRootPoints);
 		auto strandsRenderer = scene->GetOrSetPrivateComponent<StrandsRenderer>(fineRootEntity).lock();
 		strandsRenderer->m_strands = strands;

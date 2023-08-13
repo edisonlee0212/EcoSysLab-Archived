@@ -219,9 +219,10 @@ TreeVisualizer::OnInspect(
 		}
 	}
 	ImGui::End();
+	/*
 	if (m_hexagonGridGui) {
 		if (ImGui::Begin("Hexagon Grid")) {
-			/*
+			
 			if (m_selectedInternodeHandle >= 0 && pipeModel.m_shootSkeleton.RefSortedNodeList().size() > m_selectedInternodeHandle)
 			{
 				auto& shootSkeleton = pipeModel.m_shootSkeleton;
@@ -237,10 +238,10 @@ TreeVisualizer::OnInspect(
 			{
 				ImGui::Text("No node selected or pipe model is invalid!");
 			}
-			*/
+			
 		}
 		ImGui::End();
-	}
+	}*/
 	return updated;
 }
 
@@ -827,7 +828,7 @@ void TreeVisualizer::SyncColors(const ShootSkeleton& shootSkeleton, NodeHandle& 
 				break;
 			}
 			matrices[i + 1].m_instanceColor.a = 1.0f;
-			if (selectedNodeHandle != -1) matrices[i + 1].m_instanceColor.a = 0.3f;
+			if (selectedNodeHandle != -1) matrices[i + 1].m_instanceColor.a = 0.5f;
 		}
 		});
 }

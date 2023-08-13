@@ -875,10 +875,8 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 			m_fineRootSegments.resize(fineRootLastStartIndex * 5);
 			m_fineRootPoints.resize(fineRootLastStartIndex * 8);
 			{
-				std::vector<std::shared_future<void>> results;
 				auto& foliageMatrices = m_foliageMatrices->m_particleInfos;
 				auto& fruitMatrices = m_fruitMatrices->m_particleInfos;
-
 				Jobs::ParallelFor(treeEntities->size(), [&](unsigned treeIndex) {
 					auto treeEntity = treeEntities->at(treeIndex);
 					bool isSelected = treeEntity.GetIndex() == m_selectedTree.GetIndex();
@@ -1136,9 +1134,9 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 							}
 						}
 					}
-					}, results);
-				for (auto& i : results) i.wait();
+					});
 				StrandPointAttributes strandPointAttributes{};
+				strandPointAttributes.m_normal = false;
 				branchStrands->SetSegments(strandPointAttributes, m_shootStemSegments, m_shootStemPoints);
 				rootStrands->SetSegments(strandPointAttributes, m_rootStemSegments, m_rootStemPoints);
 				fineRootStrands->SetSegments(strandPointAttributes, m_fineRootSegments, m_fineRootPoints);
