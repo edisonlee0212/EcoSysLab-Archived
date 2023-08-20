@@ -44,7 +44,7 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 		if (visualizeBaseProfile)
 		{
 			if (ImGui::Begin("Base Profile")) {
-				OnInspectBaseHexagonProfile(true);
+				modelChanged = m_baseProfile.OnInspect(true) || modelChanged;
 			}
 			ImGui::End();
 		}
@@ -488,126 +488,6 @@ void Tree::BuildStrand(const PipeModelPipeGroup& pipeGroup, const Pipe<PipeModel
 	backPoint.m_normal = 2.0f * points.at(points.size() - 1).m_normal - backPoint.m_normal;
 	backPoint.m_thickness = 2.0f * points.at(points.size() - 1).m_thickness - backPoint.m_thickness;
 	points.emplace_back(backPoint);
-}
-
-bool Tree::OnInspectBaseHexagonProfile(bool editable)
-{
-	bool changed = false;
-	/*
-	auto& baseHexagonProfile = m_baseProfile;
-
-	static auto scrolling = glm::vec2(0.0f);
-	static float zoomFactor = 10.0f;
-	if (ImGui::Button("Recenter")) {
-		scrolling = glm::vec2(0.0f);
-	}
-	ImGui::DragFloat("Zoom", &zoomFactor, zoomFactor / 100.0f, 1.0f, 50.0f);
-	zoomFactor = glm::clamp(zoomFactor, 1.0f, 50.0f);
-	ImGuiIO& io = ImGui::GetIO();
-	ImDrawList* draw_list = ImGui::GetWindowDrawList();
-
-	ImVec2 canvas_p0 = ImGui::GetCursorScreenPos();      // ImDrawList API uses screen coordinates!
-	ImVec2 canvas_sz = ImGui::GetContentRegionAvail();   // Resize canvas to what's available
-	if (canvas_sz.x < 50.0f) canvas_sz.x = 50.0f;
-	if (canvas_sz.y < 50.0f) canvas_sz.y = 50.0f;
-	ImVec2 canvas_p1 = ImVec2(canvas_p0.x + canvas_sz.x, canvas_p0.y + canvas_sz.y);
-	const ImVec2 origin(canvas_p0.x + canvas_sz.x / 2.0f + scrolling.x,
-		canvas_p0.y + canvas_sz.y / 2.0f + scrolling.y); // Lock scrolled origin
-	const ImVec2 mousePosInCanvas((io.MousePos.x - origin.x) / zoomFactor,
-		(io.MousePos.y - origin.y) / zoomFactor);
-
-	// Draw border and background color
-	draw_list->AddRectFilled(canvas_p0, canvas_p1, IM_COL32(50, 50, 50, 255));
-	draw_list->AddRect(canvas_p0, canvas_p1, IM_COL32(255, 255, 255, 255));
-
-	// This will catch our interactions
-	ImGui::InvisibleButton("canvas", canvas_sz,
-		ImGuiButtonFlags_MouseButtonLeft | ImGuiButtonFlags_MouseButtonRight);
-	const bool isMouseHovered = ImGui::IsItemHovered(); // Hovered
-	const bool isMouseActive = ImGui::IsItemActive();   // Held
-
-	// Pan (we use a zero mouse threshold when there's no context menu)
-	// You may decide to make that threshold dynamic based on whether the mouse is hovering something etc.
-	const float mouse_threshold_for_pan = -1.0f;
-	if (isMouseActive && ImGui::IsMouseDragging(ImGuiMouseButton_Right, mouse_threshold_for_pan)) {
-		scrolling.x += io.MouseDelta.x;
-		scrolling.y += io.MouseDelta.y;
-	}
-	static bool addingLine = false;
-	// Context menu (under default mouse threshold)
-	ImVec2 drag_delta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Right);
-	if (drag_delta.x == 0.0f && drag_delta.y == 0.0f)
-		ImGui::OpenPopupOnItemClick("context", ImGuiPopupFlags_MouseButtonRight);
-	static std::vector<glm::vec2> points = {};
-	if (ImGui::BeginPopup("context")) {
-
-		ImGui::EndPopup();
-	}
-
-	// Draw profile + all lines in the canvas
-	draw_list->PushClipRect(canvas_p0, canvas_p1, true);
-	if (editable && isMouseHovered && !addingLine && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
-		points.clear();
-		points.emplace_back(mousePosInCanvas.x, mousePosInCanvas.y);
-		addingLine = true;
-	}
-	for (const auto& cell : baseHexagonProfile.PeekCells()) {
-
-		const auto pointPosition = baseHexagonProfile.GetPosition(cell.GetCoordinate());
-		const auto canvasPosition = ImVec2(origin.x + pointPosition.x * zoomFactor,
-			origin.y + pointPosition.y * zoomFactor);
-
-		draw_list->AddCircleFilled(canvasPosition,
-			glm::clamp(0.4f * zoomFactor, 1.0f, 100.0f),
-			IM_COL32(255, 255, 255, 255));
-
-		if (knot->m_selected) {
-			draw_list->AddCircle(canvasPosition,
-				glm::clamp(0.5f * zoomFactor, 1.0f, 100.0f),
-				IM_COL32(255,
-					255,
-					0, 128));
-		}
-
-		if (zoomFactor > 20) {
-			auto textCanvasPosition = ImVec2(origin.x + pointPosition.x * zoomFactor - 0.3f * zoomFactor,
-				origin.y + pointPosition.y * zoomFactor - 0.3f * zoomFactor);
-			auto text = std::to_string(knot->m_distanceToBoundary);
-			draw_list->AddText(nullptr, 0.5f * zoomFactor, textCanvasPosition, IM_COL32(255, 0, 0, 255),
-				text.c_str());
-		}
-
-	}
-	draw_list->AddCircle(origin,
-		glm::clamp(0.5f * zoomFactor, 1.0f, 100.0f),
-		IM_COL32(255,
-			0,
-			0, 255));
-	if (addingLine) {
-		const auto size = points.size();
-		for (int i = 0; i < size - 1; i++) {
-			draw_list->AddLine(ImVec2(origin.x + points[i].x * zoomFactor,
-				origin.y + points[i].y * zoomFactor),
-				ImVec2(origin.x + points[i + 1].x * zoomFactor,
-					origin.y + points[i + 1].y * zoomFactor),
-				IM_COL32(255, 0, 0, 255), 2.0f);
-		}
-		if (glm::distance(points.back(), { mousePosInCanvas.x, mousePosInCanvas.y }) >= 10.0f / zoomFactor)
-			points.emplace_back(mousePosInCanvas.x, mousePosInCanvas.y);
-		if (editable && !ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
-			addingLine = false;
-			if (!PipeModelBaseHexagonProfile::CheckBoundary(points)) {
-				baseHexagonProfile.Construct(points);
-				changed = true;
-			}
-		}
-	}
-	draw_list->PopClipRect();
-
-
-	*/
-
-	return changed;
 }
 
 void Tree::BuildPipeModel()

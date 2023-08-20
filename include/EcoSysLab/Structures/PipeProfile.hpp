@@ -38,7 +38,13 @@ namespace EcoSysLab
 
 	struct ProfileInfo
 	{
+		std::vector<glm::vec2> m_boundary;
 
+		[[nodiscard]] bool IsBoundaryValid() const;
+		[[nodiscard]] static bool IsBoundaryValid(const std::vector<glm::vec2>& points);
+		[[nodiscard]] bool InBoundary(const glm::vec2& point) const;
+
+		
 	};
 
 	template<typename ProfileData, typename CellData>
@@ -55,6 +61,8 @@ namespace EcoSysLab
 		template<typename PGD, typename PD, typename CD>
 		friend class PipeProfileGroup;
 	public:
+		[[nodiscard]] bool OnInspect(bool editable);
+
 		ProfileData m_data = {};
 		ProfileInfo m_info = {};
 		[[nodiscard]] bool IsRecycled() const;
@@ -83,27 +91,6 @@ namespace EcoSysLab
 		explicit PipeProfile(ProfileHandle handle);
 	};
 
-	template<typename ProfileGroupData, typename ProfileData, typename CellData>
-	class PipeProfileGroup
-	{
-		std::vector<PipeProfile<ProfileData, CellData>> m_profiles;
-		std::queue<ProfileHandle> m_profilePool;
-
-		int m_version = -1;
-	public:
-		[[nodiscard]] ProfileHandle Allocate();
-
-		void RecycleProfile(ProfileHandle handle);
-
-		[[nodiscard]] const PipeProfile<ProfileData, CellData>& PeekProfile(ProfileHandle handle) const;
-
-		[[nodiscard]] PipeProfile<ProfileData, CellData>& RefProfile(ProfileHandle handle);
-
-		[[nodiscard]] std::vector<PipeProfile<ProfileData, CellData>>& RefProfiles();
-
-		[[nodiscard]] std::queue<ProfileHandle>& RefProfilePool();
-	};
-
 
 	template <typename CellData>
 	CellHandle PipeCell<CellData>::GetHandle() const
@@ -124,6 +111,131 @@ namespace EcoSysLab
 		m_recycled = false;
 		m_data = {};
 		m_info = {};
+	}
+
+	template <typename ProfileData, typename CellData>
+	bool PipeProfile<ProfileData, CellData>::OnInspect(const bool editable)
+	{
+		bool changed = false;
+
+		static auto scrolling = glm::vec2(0.0f);
+		static float zoomFactor = 10.0f;
+		if (ImGui::Button("Recenter")) {
+			scrolling = glm::vec2(0.0f);
+		}
+		ImGui::DragFloat("Zoom", &zoomFactor, zoomFactor / 100.0f, 1.0f, 50.0f);
+		zoomFactor = glm::clamp(zoomFactor, 1.0f, 50.0f);
+		const ImGuiIO& io = ImGui::GetIO();
+		ImDrawList* drawList = ImGui::GetWindowDrawList();
+
+		const ImVec2 canvasP0 = ImGui::GetCursorScreenPos();      // ImDrawList API uses screen coordinates!
+		ImVec2 canvasSz = ImGui::GetContentRegionAvail();   // Resize canvas to what's available
+		if (canvasSz.x < 50.0f) canvasSz.x = 50.0f;
+		if (canvasSz.y < 50.0f) canvasSz.y = 50.0f;
+		const ImVec2 canvasP1 = ImVec2(canvasP0.x + canvasSz.x, canvasP0.y + canvasSz.y);
+		const ImVec2 origin(canvasP0.x + canvasSz.x / 2.0f + scrolling.x,
+			canvasP0.y + canvasSz.y / 2.0f + scrolling.y); // Lock scrolled origin
+		const ImVec2 mousePosInCanvas((io.MousePos.x - origin.x) / zoomFactor,
+			(io.MousePos.y - origin.y) / zoomFactor);
+
+		// Draw border and background color
+		drawList->AddRectFilled(canvasP0, canvasP1, IM_COL32(50, 50, 50, 255));
+		drawList->AddRect(canvasP0, canvasP1, IM_COL32(255, 255, 255, 255));
+
+		// This will catch our interactions
+		ImGui::InvisibleButton("canvas", canvasSz,
+			ImGuiButtonFlags_MouseButtonLeft | ImGuiButtonFlags_MouseButtonRight);
+		const bool isMouseHovered = ImGui::IsItemHovered(); // Hovered
+		const bool isMouseActive = ImGui::IsItemActive();   // Held
+
+		// Pan (we use a zero mouse threshold when there's no context menu)
+		// You may decide to make that threshold dynamic based on whether the mouse is hovering something etc.
+		const float mouseThresholdForPan = -1.0f;
+		if (isMouseActive && ImGui::IsMouseDragging(ImGuiMouseButton_Right, mouseThresholdForPan)) {
+			scrolling.x += io.MouseDelta.x;
+			scrolling.y += io.MouseDelta.y;
+		}
+		static bool addingLine = false;
+		// Context menu (under default mouse threshold)
+		const ImVec2 dragDelta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Right);
+		if (dragDelta.x == 0.0f && dragDelta.y == 0.0f)
+			ImGui::OpenPopupOnItemClick("context", ImGuiPopupFlags_MouseButtonRight);
+		static std::vector<glm::vec2> points = {};
+		if (ImGui::BeginPopup("context")) {
+
+			ImGui::EndPopup();
+		}
+
+		// Draw profile + all lines in the canvas
+		drawList->PushClipRect(canvasP0, canvasP1, true);
+		if (editable && isMouseHovered && !addingLine && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+			points.clear();
+			points.emplace_back(mousePosInCanvas.x, mousePosInCanvas.y);
+			addingLine = true;
+		}
+		for (const auto& cell : m_cells) {
+			if(cell.IsRecycled()) continue;
+			const auto pointPosition = cell.m_info.m_offset;
+			const auto canvasPosition = ImVec2(origin.x + pointPosition.x * zoomFactor,
+				origin.y + pointPosition.y * zoomFactor);
+
+			drawList->AddCircleFilled(canvasPosition,
+				glm::clamp(0.4f * zoomFactor, 1.0f, 100.0f),
+				IM_COL32(255, 255, 255, 255));
+			/*
+			if (knot->m_selected) {
+				draw_list->AddCircle(canvasPosition,
+					glm::clamp(0.5f * zoomFactor, 1.0f, 100.0f),
+					IM_COL32(255,
+						255,
+						0, 128));
+			}
+
+			if (zoomFactor > 20) {
+				auto textCanvasPosition = ImVec2(origin.x + pointPosition.x * zoomFactor - 0.3f * zoomFactor,
+					origin.y + pointPosition.y * zoomFactor - 0.3f * zoomFactor);
+				auto text = std::to_string(knot->m_distanceToBoundary);
+				draw_list->AddText(nullptr, 0.5f * zoomFactor, textCanvasPosition, IM_COL32(255, 0, 0, 255),
+					text.c_str());
+			}
+			*/
+		}
+		for (int i = 0; i < m_info.m_boundary.size(); i++)
+		{
+			drawList->AddLine(ImVec2(origin.x + m_info.m_boundary[i].x * zoomFactor,
+				origin.y + m_info.m_boundary[i].y * zoomFactor),
+				ImVec2(origin.x + m_info.m_boundary[(i + 1) % m_info.m_boundary.size()].x * zoomFactor,
+					origin.y + m_info.m_boundary[(i + 1) % m_info.m_boundary.size()].y * zoomFactor),
+				IM_COL32(255, 0, 0, 255), 2.0f);
+		}
+
+		drawList->AddCircle(origin,
+			glm::clamp(0.5f * zoomFactor, 1.0f, 100.0f),
+			IM_COL32(255,
+				0,
+				0, 255));
+		if (addingLine) {
+			const auto size = points.size();
+			for (int i = 0; i < size - 1; i++) {
+				drawList->AddLine(ImVec2(origin.x + points[i].x * zoomFactor,
+					origin.y + points[i].y * zoomFactor),
+					ImVec2(origin.x + points[i + 1].x * zoomFactor,
+						origin.y + points[i + 1].y * zoomFactor),
+					IM_COL32(255, 0, 0, 255), 2.0f);
+			}
+			if (glm::distance(points.back(), { mousePosInCanvas.x, mousePosInCanvas.y }) >= 10.0f / zoomFactor)
+				points.emplace_back(mousePosInCanvas.x, mousePosInCanvas.y);
+			if (editable && !ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+				addingLine = false;
+				if (!ProfileInfo::IsBoundaryValid(points)) {
+					m_info.m_boundary = points;
+					changed = true;
+				}
+			}
+		}
+		drawList->PopClipRect();
+
+		return changed;
 	}
 
 	template <typename ProfileData, typename CellData>
@@ -224,62 +336,5 @@ namespace EcoSysLab
 		m_handle = handle;
 		m_recycled = false;
 		m_version = -1;
-	}
-
-	template <typename ProfileGroupData, typename ProfileData, typename CellData>
-	ProfileHandle PipeProfileGroup<ProfileGroupData, ProfileData, CellData>::Allocate()
-	{
-		ProfileHandle newProfileHandle;
-		if (m_profilePool.empty()) {
-			auto newProfile = m_profiles.emplace_back(m_profiles.size());
-			newProfileHandle = newProfile.m_handle;
-		}
-		else {
-			newProfileHandle = m_profilePool.front();
-			m_profilePool.pop();
-		}
-		m_version++;
-		m_profiles[newProfileHandle].m_recycled = false;
-		m_profiles[newProfileHandle].m_data = {};
-		m_profiles[newProfileHandle].m_info = {};
-		return newProfileHandle;
-	}
-
-	template <typename ProfileGroupData, typename ProfileData, typename CellData>
-	void PipeProfileGroup<ProfileGroupData, ProfileData, CellData>::RecycleProfile(ProfileHandle handle)
-	{
-		auto& profile = m_profiles[handle];
-		assert(!profile.m_recycled);
-		profile.m_recycled = true;
-		profile.m_cells.clear();
-		profile.m_cellMap.clear();
-		profile.m_cellPool = {};
-
-		m_profilePool.push(handle);
-	}
-
-	template <typename ProfileGroupData, typename ProfileData, typename CellData>
-	const PipeProfile<ProfileData, CellData>& PipeProfileGroup<ProfileGroupData, ProfileData, CellData>::PeekProfile(ProfileHandle handle) const
-	{
-		return m_profiles[handle];
-	}
-
-	template <typename ProfileGroupData, typename ProfileData, typename CellData>
-	PipeProfile<ProfileData, CellData>& PipeProfileGroup<ProfileGroupData, ProfileData, CellData>::RefProfile(ProfileHandle handle)
-	{
-		return m_profiles[handle];
-	}
-
-	template <typename ProfileGroupData, typename ProfileData, typename CellData>
-	std::vector<PipeProfile<ProfileData, CellData>>& PipeProfileGroup<ProfileGroupData, ProfileData, CellData>::
-	RefProfiles()
-	{
-		return m_profiles;
-	}
-
-	template <typename ProfileGroupData, typename ProfileData, typename CellData>
-	std::queue<ProfileHandle>& PipeProfileGroup<ProfileGroupData, ProfileData, CellData>::RefProfilePool()
-	{
-		return m_profilePool;
 	}
 }

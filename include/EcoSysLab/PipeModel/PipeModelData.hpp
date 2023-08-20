@@ -5,14 +5,6 @@
 using namespace EvoEngine;
 namespace EcoSysLab
 {
-	struct HexagonProfileGroupData {
-
-	};
-
-	typedef PipeProfile<HexagonProfileData, HexagonCellData> PipeModelBaseHexagonProfile;
-	typedef PipeProfile<HexagonProfileData, HexagonCellData> PipeModelHexagonProfile;
-	typedef PipeProfileGroup<HexagonProfileGroupData, HexagonProfileData, HexagonCellData> PipeModelHexagonProfileGroup;
-
 	struct PipeModelPipeGroupData
 	{
 	};
@@ -29,9 +21,22 @@ namespace EcoSysLab
 
 	typedef PipeGroup<PipeModelPipeGroupData, PipeModelPipeData, PipeModelPipeNodeData> PipeModelPipeGroup;
 
+
+	struct PipeCellData
+	{
+		
+	};
+
+	struct PipeProfileData
+	{
+		
+	};
+
 	struct PipeModelNodeData
 	{
 		int m_endNodeCount = 0;
+
+		PipeProfile<PipeProfileData, PipeCellData> m_profile;
 	};
 
 	struct PipeModelFlowData

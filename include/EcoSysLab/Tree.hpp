@@ -329,7 +329,7 @@ namespace EcoSysLab {
 		TreeModel m_treeModel;
 		PipeModel m_shootPipeModel;
 		PipeModel m_rootPipeModel;
-		PipeModelBaseHexagonProfile m_baseProfile;
+		PipeProfile<PipeProfileData, PipeCellData> m_baseProfile;
 
 		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 
