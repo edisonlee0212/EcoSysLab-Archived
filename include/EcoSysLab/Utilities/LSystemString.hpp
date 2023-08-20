@@ -1,7 +1,7 @@
 #pragma once
 
 #include "ecosyslab_export.h"
-#include "PlantStructure.hpp"
+#include "Skeleton.hpp"
 using namespace EvoEngine;
 namespace EcoSysLab
 {

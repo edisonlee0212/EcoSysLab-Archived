@@ -2,7 +2,7 @@
 
 #include "ecosyslab_export.h"
 #include "VoxelGrid.hpp"
-#include "PlantStructure.hpp"
+#include "Skeleton.hpp"
 #include "TreeMeshGenerator.hpp"
 #include "Curve.hpp"
 

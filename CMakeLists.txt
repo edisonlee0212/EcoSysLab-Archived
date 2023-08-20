@@ -82,7 +82,6 @@ target_precompile_headers(EcoSysLab
 if (BUILD_RAY_TRACER_FACILITY)
     target_compile_definitions(EcoSysLab
             PRIVATE
-            GLAD_GLAPI_EXPORT
             NOMINMAX
             RAYTRACERFACILITY
             )
@@ -105,7 +104,6 @@ if (BUILD_RAY_TRACER_FACILITY)
 else ()
     target_compile_definitions(EcoSysLab
             PRIVATE
-            GLAD_GLAPI_EXPORT
             NOMINMAX
             )
     set(ECOSYSLAB_INCLUDES_LOCAL

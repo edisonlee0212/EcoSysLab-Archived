@@ -124,7 +124,7 @@ TreeVisualizer::OnInspect(
 
 		if (ImGui::TreeNodeEx("Settings")) {
 			ImGui::Checkbox("Visualization", &m_visualization);
-			ImGui::Checkbox("Hexagon grid", &m_hexagonGridGui);
+			ImGui::Checkbox("Hexagon profile", &m_hexagonProfileGui);
 			ImGui::Checkbox("Tree Hierarchy", &m_treeHierarchyGui);
 			ImGui::Checkbox("Root Hierarchy", &m_rootHierarchyGui);
 			ImGui::TreePop();
@@ -220,19 +220,19 @@ TreeVisualizer::OnInspect(
 	}
 	ImGui::End();
 	/*
-	if (m_hexagonGridGui) {
-		if (ImGui::Begin("Hexagon Grid")) {
+	if (m_hexagonProfileGui) {
+		if (ImGui::Begin("Hexagon Profile")) {
 			
 			if (m_selectedInternodeHandle >= 0 && pipeModel.m_shootSkeleton.RefSortedNodeList().size() > m_selectedInternodeHandle)
 			{
 				auto& shootSkeleton = pipeModel.m_shootSkeleton;
-				//auto& grid = shootSkeleton.m_data.m_hexagonGridGroup.RefGrid(shootSkeleton.RefNode(pipeModel.m_shootSkeletonLinks[m_selectedInternodeHandle]).m_data.m_gridHandle);
-				//VisualizeGrid(shootSkeleton, grid);
+				//auto& profile = shootSkeleton.m_data.m_hexagonProfileGroup.RefProfile(shootSkeleton.RefNode(pipeModel.m_shootSkeletonLinks[m_selectedInternodeHandle]).m_data.m_profileHandle);
+				//VisualizeProfile(shootSkeleton, profile);
 			}else if (m_selectedRootNodeHandle >= 0 && pipeModel.m_rootSkeleton.RefSortedNodeList().size() > m_selectedRootNodeHandle)
 			{
 				auto& rootSkeleton = pipeModel.m_rootSkeleton;
-				//auto& grid = rootSkeleton.m_data.m_hexagonGridGroup.RefGrid(rootSkeleton.RefNode(pipeModel.m_rootSkeletonLinks[m_selectedRootNodeHandle]).m_data.m_gridHandle);
-				//VisualizeGrid(rootSkeleton, grid);
+				//auto& profile = rootSkeleton.m_data.m_hexagonProfileGroup.RefProfile(rootSkeleton.RefNode(pipeModel.m_rootSkeletonLinks[m_selectedRootNodeHandle]).m_data.m_profileHandle);
+				//VisualizeProfile(rootSkeleton, profile);
 			}
 			else
 			{

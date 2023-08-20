@@ -1,32 +1,17 @@
 #pragma once
-#include "PlantStructure.hpp"
-#include "PipeStructure.hpp"
-#include "HexagonGrid.hpp"
+#include "Skeleton.hpp"
+#include "PipeGroup.hpp"
+#include "HexagonProfileData.hpp"
 using namespace EvoEngine;
 namespace EcoSysLab
 {
-	struct BaseHexagonGridCellData
-	{
-		PipeHandle m_pipeHandle = -1;
+	struct HexagonProfileGroupData {
+
 	};
 
-	struct BaseHexagonGridData
-	{
-	};
-
-	struct HexagonGridCellData
-	{
-		PipeHandle m_pipeHandle = -1;
-	};
-
-	struct HexagonGridData
-	{
-		NodeHandle m_nodeHandle = -1;
-	};
-
-	typedef HexagonGrid<BaseHexagonGridData, BaseHexagonGridCellData> PipeModelBaseHexagonGrid;
-	typedef HexagonGrid<HexagonGridData, HexagonGridCellData> PipeModelHexagonGrid;
-	typedef HexagonGridGroup<HexagonGridData, HexagonGridCellData> PipeModelHexagonGridGroup;
+	typedef PipeProfile<HexagonProfileData, HexagonCellData> PipeModelBaseHexagonProfile;
+	typedef PipeProfile<HexagonProfileData, HexagonCellData> PipeModelHexagonProfile;
+	typedef PipeProfileGroup<HexagonProfileGroupData, HexagonProfileData, HexagonCellData> PipeModelHexagonProfileGroup;
 
 	struct PipeModelPipeGroupData
 	{
@@ -34,7 +19,7 @@ namespace EcoSysLab
 
 	struct PipeModelPipeData
 	{
-		PipeNodeInfo m_baseInfo;
+		PipeSegmentInfo m_baseInfo;
 	};
 
 	struct PipeModelPipeNodeData

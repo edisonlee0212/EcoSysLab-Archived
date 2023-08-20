@@ -3,7 +3,7 @@
 #include <Mesh.hpp>
 
 #include "ecosyslab_export.h"
-#include "PlantStructure.hpp"
+#include "Skeleton.hpp"
 #include "IVolume.hpp"
 #include "TreeModel.hpp"
 

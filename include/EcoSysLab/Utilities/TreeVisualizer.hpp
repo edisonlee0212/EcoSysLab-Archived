@@ -5,7 +5,7 @@
 #include "Graphics.hpp"
 #include "EditorLayer.hpp"
 #include "Application.hpp"
-#include "HexagonGrid.hpp"
+#include "HexagonProfileData.hpp"
 #include "PipeModel.hpp"
 #include "Jobs.hpp"
 using namespace EvoEngine;
@@ -45,7 +45,7 @@ namespace EcoSysLab {
 		std::vector<glm::vec2> m_storedMousePositions;
 		bool m_visualization = true;
 
-		bool m_hexagonGridGui = true;
+		bool m_hexagonProfileGui = true;
 		bool m_treeHierarchyGui = false;
 		bool m_rootHierarchyGui = false;
 
@@ -110,12 +110,12 @@ namespace EcoSysLab {
 
 	public:
 		void Initialize();
-
-		template<typename SkeletonData, typename FlowData, typename NodeData, typename GridData, typename CellData>
+		/*
+		template<typename SkeletonData, typename FlowData, typename NodeData, typename ProfileData, typename CellData>
 		bool
-			VisualizeGrid(const Skeleton<SkeletonData, FlowData, NodeData>& skeleton, HexagonGrid<GridData, CellData>& grid);
+			VisualizeProfile(const Skeleton<SkeletonData, FlowData, NodeData>& skeleton, HexagonProfileData<ProfileData, CellData>& grid);
 
-
+		*/
 		template<typename SkeletonData, typename FlowData, typename NodeData>
 		void SetSelectedNode(
 			const Skeleton<SkeletonData, FlowData, NodeData>& skeleton,
@@ -348,10 +348,10 @@ namespace EcoSysLab {
 			ImGui::TreePop();
 		}
 	}
-
-	template<typename SkeletonData, typename FlowData, typename NodeData, typename GridData, typename CellData>
-	bool TreeVisualizer::VisualizeGrid(const Skeleton<SkeletonData, FlowData, NodeData>& skeleton,
-		HexagonGrid<GridData, CellData>& grid) {
+	/*
+	template<typename SkeletonData, typename FlowData, typename NodeData, typename ProfileData, typename CellData>
+	bool TreeVisualizer::VisualizeProfile(const Skeleton<SkeletonData, FlowData, NodeData>& skeleton,
+		HexagonProfileData<ProfileData, CellData>& grid) {
 		bool changed = false;
 		static auto scrolling = glm::vec2(0.0f);
 		static float zoomFactor = 10.0f;
@@ -359,7 +359,7 @@ namespace EcoSysLab {
 			scrolling = glm::vec2(0.0f);
 		}
 		ImGui::DragFloat("Zoom", &zoomFactor, zoomFactor / 100.0f, 1.0f, 50.0f);
-		ImGui::Text("Grid Handle: %d", grid.GetHandle());
+		ImGui::Text("Profile Handle: %d", grid.GetHandle());
 		zoomFactor = glm::clamp(zoomFactor, 1.0f, 50.0f);
 		ImGuiIO& io = ImGui::GetIO();
 		ImDrawList* draw_list = ImGui::GetWindowDrawList();
@@ -417,7 +417,7 @@ namespace EcoSysLab {
 				glm::clamp(0.4f * zoomFactor, 1.0f, 100.0f),
 				IM_COL32(pipe.m_info.m_color.x * 255.0f, pipe.m_info.m_color.y * 255.0f,
 					pipe.m_info.m_color.z * 255.0f, 255));
-			/*
+
 			if (knot->m_selected) {
 				draw_list->AddCircle(canvasPosition,
 					glm::clamp(0.5f * zoomFactor, 1.0f, 100.0f),
@@ -433,7 +433,7 @@ namespace EcoSysLab {
 				draw_list->AddText(nullptr, 0.5f * zoomFactor, textCanvasPosition, IM_COL32(255, 0, 0, 255),
 					text.c_str());
 			}
-			*/
+
 		}
 		draw_list->AddCircle(origin,
 			glm::clamp(0.5f * zoomFactor, 1.0f, 100.0f),
@@ -445,7 +445,7 @@ namespace EcoSysLab {
 
 		return changed;
 	}
-
+	*/
 
 	template<typename SkeletonData, typename FlowData, typename NodeData>
 	void TreeVisualizer::SetSelectedNode(

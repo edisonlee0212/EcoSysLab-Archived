@@ -294,7 +294,7 @@ namespace EcoSysLab {
 		ShootGrowthController m_shootGrowthController;
 		RootGrowthController m_rootGrowthController;
 
-		bool OnInspectBaseHexagonGrid(bool editable);
+		bool OnInspectBaseHexagonProfile(bool editable);
 
 	public:
 		
@@ -329,7 +329,7 @@ namespace EcoSysLab {
 		TreeModel m_treeModel;
 		PipeModel m_shootPipeModel;
 		PipeModel m_rootPipeModel;
-		PipeModelBaseHexagonGrid m_baseGrid;
+		PipeModelBaseHexagonProfile m_baseProfile;
 
 		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 

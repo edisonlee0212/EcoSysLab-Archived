@@ -39,29 +39,29 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 		ImGui::Checkbox("Receive nitrite", &m_treeModel.m_treeGrowthSettings.m_collectNitrite);
 		ImGui::Checkbox("Enable Branch collision detection", &m_treeModel.m_treeGrowthSettings.m_enableBranchCollisionDetection);
 		ImGui::Checkbox("Enable Root collision detection", &m_treeModel.m_treeGrowthSettings.m_enableRootCollisionDetection);
-		static bool visualizeBaseGrid = false;
-		ImGui::Checkbox("Visualize base grid", &visualizeBaseGrid);
-		if(visualizeBaseGrid)
+		static bool visualizeBaseProfile = false;
+		ImGui::Checkbox("Visualize base profile", &visualizeBaseProfile);
+		if (visualizeBaseProfile)
 		{
-			if (ImGui::Begin("Base Grid")){
-				OnInspectBaseHexagonGrid(true);
+			if (ImGui::Begin("Base Profile")) {
+				OnInspectBaseHexagonProfile(true);
 			}
 			ImGui::End();
 		}
 
 		ImGui::DragFloat("Pipe radius", &m_pipeModelParameters.m_pipeRadius, 0.001f, 0.001f, 1.0f);
 
-		if(ImGui::Button("Build strands"))
+		if (ImGui::Button("Build strands"))
 		{
 			BuildPipeModel();
 			InitializeStrandRenderer();
 		}
 
-		if(!m_treeModel.m_treeGrowthSettings.m_collectLight && !m_treeModel.m_treeGrowthSettings.m_collectWater)
+		if (!m_treeModel.m_treeGrowthSettings.m_collectLight && !m_treeModel.m_treeGrowthSettings.m_collectWater)
 		{
-			if(ImGui::TreeNode("Vigor filling rates"))
+			if (ImGui::TreeNode("Vigor filling rates"))
 			{
-				if(ImGui::SliderFloat("Leaf maintenance", &m_treeModel.m_treeGrowthSettings.m_leafMaintenanceVigorFillingRate, 0.0f, 1.0f))
+				if (ImGui::SliderFloat("Leaf maintenance", &m_treeModel.m_treeGrowthSettings.m_leafMaintenanceVigorFillingRate, 0.0f, 1.0f))
 				{
 					if (m_treeModel.m_treeGrowthSettings.m_leafMaintenanceVigorFillingRate != 1.0f)
 					{
@@ -73,9 +73,9 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 				}
 				if (m_treeModel.m_treeGrowthSettings.m_leafMaintenanceVigorFillingRate == 1.0f)
 				{
-					if(ImGui::SliderFloat("Leaf development", &m_treeModel.m_treeGrowthSettings.m_leafDevelopmentalVigorFillingRate, 0.0f, 1.0f))
+					if (ImGui::SliderFloat("Leaf development", &m_treeModel.m_treeGrowthSettings.m_leafDevelopmentalVigorFillingRate, 0.0f, 1.0f))
 					{
-						if(m_treeModel.m_treeGrowthSettings.m_leafMaintenanceVigorFillingRate != 1.0f)
+						if (m_treeModel.m_treeGrowthSettings.m_leafMaintenanceVigorFillingRate != 1.0f)
 						{
 							m_treeModel.m_treeGrowthSettings.m_fruitMaintenanceVigorFillingRate
 								= m_treeModel.m_treeGrowthSettings.m_fruitDevelopmentalVigorFillingRate
@@ -112,7 +112,7 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 					ImGui::SliderFloat("Node development", &m_treeModel.m_treeGrowthSettings.m_nodeDevelopmentalVigorFillingRate, 0.0f, 1.0f);
 				}
 
-				if(ImGui::Button("Reset"))
+				if (ImGui::Button("Reset"))
 				{
 					m_treeModel.m_treeGrowthSettings.m_leafMaintenanceVigorFillingRate
 						= m_treeModel.m_treeGrowthSettings.m_leafDevelopmentalVigorFillingRate
@@ -218,75 +218,75 @@ bool Tree::TryGrow(float deltaTime) {
 		m_shootGrowthController.m_fruitBudCount = treeDescriptor->m_shootGrowthParameters.m_fruitBudCount;
 		m_shootGrowthController.m_leafBudCount = treeDescriptor->m_shootGrowthParameters.m_leafBudCount;
 		m_shootGrowthController.m_branchingAngle = [=](const Node<InternodeGrowthData>& internode)
-		{
-			return glm::gaussRand(treeDescriptor->m_shootGrowthParameters.m_branchingAngleMeanVariance.x, treeDescriptor->m_shootGrowthParameters.m_branchingAngleMeanVariance.y);
-		};
+			{
+				return glm::gaussRand(treeDescriptor->m_shootGrowthParameters.m_branchingAngleMeanVariance.x, treeDescriptor->m_shootGrowthParameters.m_branchingAngleMeanVariance.y);
+			};
 		m_shootGrowthController.m_rollAngle = [=](const Node<InternodeGrowthData>& internode)
-		{
-			return glm::gaussRand(treeDescriptor->m_shootGrowthParameters.m_rollAngleMeanVariance.x, treeDescriptor->m_shootGrowthParameters.m_rollAngleMeanVariance.y);
-		};
+			{
+				return glm::gaussRand(treeDescriptor->m_shootGrowthParameters.m_rollAngleMeanVariance.x, treeDescriptor->m_shootGrowthParameters.m_rollAngleMeanVariance.y);
+			};
 		m_shootGrowthController.m_apicalAngle = [=](const Node<InternodeGrowthData>& internode)
-		{
-			return glm::gaussRand(treeDescriptor->m_shootGrowthParameters.m_apicalAngleMeanVariance.x, treeDescriptor->m_shootGrowthParameters.m_apicalAngleMeanVariance.y);
-		};
+			{
+				return glm::gaussRand(treeDescriptor->m_shootGrowthParameters.m_apicalAngleMeanVariance.x, treeDescriptor->m_shootGrowthParameters.m_apicalAngleMeanVariance.y);
+			};
 		m_shootGrowthController.m_gravitropism = [=](const Node<InternodeGrowthData>& internode)
-		{
-			return treeDescriptor->m_shootGrowthParameters.m_gravitropism;
-		};
+			{
+				return treeDescriptor->m_shootGrowthParameters.m_gravitropism;
+			};
 		m_shootGrowthController.m_phototropism = [=](const Node<InternodeGrowthData>& internode)
-		{
-			return treeDescriptor->m_shootGrowthParameters.m_phototropism;
-		};
+			{
+				return treeDescriptor->m_shootGrowthParameters.m_phototropism;
+			};
 		m_shootGrowthController.m_sagging = [=](const Node<InternodeGrowthData>& internode)
-		{
-			const auto& shootGrowthParameters = treeDescriptor->m_shootGrowthParameters;
-			const auto newSagging = glm::min(
-				shootGrowthParameters.m_saggingFactorThicknessReductionMax.z,
-				shootGrowthParameters.m_saggingFactorThicknessReductionMax.x *
-				(internode.m_data.m_descendentTotalBiomass + internode.m_data.m_extraMass) /
-				glm::pow(
-					internode.m_info.m_thickness /
-					shootGrowthParameters.m_endNodeThickness,
-					shootGrowthParameters.m_saggingFactorThicknessReductionMax.y));
-			return glm::max(internode.m_data.m_sagging, newSagging);
-		};
+			{
+				const auto& shootGrowthParameters = treeDescriptor->m_shootGrowthParameters;
+				const auto newSagging = glm::min(
+					shootGrowthParameters.m_saggingFactorThicknessReductionMax.z,
+					shootGrowthParameters.m_saggingFactorThicknessReductionMax.x *
+					(internode.m_data.m_descendentTotalBiomass + internode.m_data.m_extraMass) /
+					glm::pow(
+						internode.m_info.m_thickness /
+						shootGrowthParameters.m_endNodeThickness,
+						shootGrowthParameters.m_saggingFactorThicknessReductionMax.y));
+				return glm::max(internode.m_data.m_sagging, newSagging);
+			};
 		m_shootGrowthController.m_lateralBudFlushingProbability = [=](const Node<InternodeGrowthData>& internode)
-		{
-			const auto& shootGrowthParameters = treeDescriptor->m_shootGrowthParameters;
-			const auto& probabilityRange = shootGrowthParameters.m_lateralBudFlushingProbabilityTemperatureRange;
-			const auto& internodeData = internode.m_data;
-			float flushProbability = glm::mix(probabilityRange.x, probabilityRange.y,
-				glm::clamp((internodeData.m_temperature - probabilityRange.z) / (probabilityRange.w - probabilityRange.z), 0.0f, 1.0f));
-			if (internodeData.m_inhibitor > 0.0f) flushProbability *= glm::exp(-internodeData.m_inhibitor);
-			flushProbability *= glm::pow(internodeData.m_lightIntensity, shootGrowthParameters.m_lateralBudLightingFactor);
-			return flushProbability;
-		};
+			{
+				const auto& shootGrowthParameters = treeDescriptor->m_shootGrowthParameters;
+				const auto& probabilityRange = shootGrowthParameters.m_lateralBudFlushingProbabilityTemperatureRange;
+				const auto& internodeData = internode.m_data;
+				float flushProbability = glm::mix(probabilityRange.x, probabilityRange.y,
+					glm::clamp((internodeData.m_temperature - probabilityRange.z) / (probabilityRange.w - probabilityRange.z), 0.0f, 1.0f));
+				if (internodeData.m_inhibitor > 0.0f) flushProbability *= glm::exp(-internodeData.m_inhibitor);
+				flushProbability *= glm::pow(internodeData.m_lightIntensity, shootGrowthParameters.m_lateralBudLightingFactor);
+				return flushProbability;
+			};
 		m_shootGrowthController.m_leafBudFlushingProbability = [=](const Node<InternodeGrowthData>& internode)
-		{
-			const auto& shootGrowthParameters = treeDescriptor->m_shootGrowthParameters;
-			const auto& internodeData = internode.m_data;
-			const auto& probabilityRange = shootGrowthParameters.m_leafBudFlushingProbabilityTemperatureRange;
-			float flushProbability = glm::mix(probabilityRange.x, probabilityRange.y,
-				glm::clamp((internodeData.m_temperature - probabilityRange.z) / (probabilityRange.w - probabilityRange.z), 0.0f, 1.0f));
-			flushProbability *= glm::pow(internodeData.m_lightIntensity, shootGrowthParameters.m_leafBudLightingFactor);
-			return flushProbability;
-		};
+			{
+				const auto& shootGrowthParameters = treeDescriptor->m_shootGrowthParameters;
+				const auto& internodeData = internode.m_data;
+				const auto& probabilityRange = shootGrowthParameters.m_leafBudFlushingProbabilityTemperatureRange;
+				float flushProbability = glm::mix(probabilityRange.x, probabilityRange.y,
+					glm::clamp((internodeData.m_temperature - probabilityRange.z) / (probabilityRange.w - probabilityRange.z), 0.0f, 1.0f));
+				flushProbability *= glm::pow(internodeData.m_lightIntensity, shootGrowthParameters.m_leafBudLightingFactor);
+				return flushProbability;
+			};
 		m_shootGrowthController.m_fruitBudFlushingProbability = [=](const Node<InternodeGrowthData>& internode)
-		{
-			const auto& shootGrowthParameters = treeDescriptor->m_shootGrowthParameters;
-			const auto& internodeData = internode.m_data;
-			const auto& probabilityRange = shootGrowthParameters.m_fruitBudFlushingProbabilityTemperatureRange;
-			float flushProbability = glm::mix(probabilityRange.x, probabilityRange.y,
-				glm::clamp((internodeData.m_temperature - probabilityRange.z) / (probabilityRange.w - probabilityRange.z), 0.0f, 1.0f));
-			flushProbability *= glm::pow(internodeData.m_lightIntensity, shootGrowthParameters.m_fruitBudLightingFactor);
-			return flushProbability;
-		};
-		m_shootGrowthController.m_apicalControl = 
+			{
+				const auto& shootGrowthParameters = treeDescriptor->m_shootGrowthParameters;
+				const auto& internodeData = internode.m_data;
+				const auto& probabilityRange = shootGrowthParameters.m_fruitBudFlushingProbabilityTemperatureRange;
+				float flushProbability = glm::mix(probabilityRange.x, probabilityRange.y,
+					glm::clamp((internodeData.m_temperature - probabilityRange.z) / (probabilityRange.w - probabilityRange.z), 0.0f, 1.0f));
+				flushProbability *= glm::pow(internodeData.m_lightIntensity, shootGrowthParameters.m_fruitBudLightingFactor);
+				return flushProbability;
+			};
+		m_shootGrowthController.m_apicalControl =
 			1.0f + treeDescriptor->m_shootGrowthParameters.m_apicalControl * glm::exp(-treeDescriptor->m_shootGrowthParameters.m_apicalControlAgeFactor * m_treeModel.m_age);
 		m_shootGrowthController.m_apicalDominance = [=](const Node<InternodeGrowthData>& internode)
-		{
-			return treeDescriptor->m_shootGrowthParameters.m_apicalDominance * glm::exp(-treeDescriptor->m_shootGrowthParameters.m_apicalDominanceAgeFactor * m_treeModel.m_age);
-		};
+			{
+				return treeDescriptor->m_shootGrowthParameters.m_apicalDominance * glm::exp(-treeDescriptor->m_shootGrowthParameters.m_apicalDominanceAgeFactor * m_treeModel.m_age);
+			};
 		m_shootGrowthController.m_apicalDominanceDistanceFactor = treeDescriptor->m_shootGrowthParameters.m_apicalDominanceDistanceFactor;
 		m_shootGrowthController.m_internodeVigorRequirement = treeDescriptor->m_shootGrowthParameters.m_internodeVigorRequirement;
 		m_shootGrowthController.m_leafVigorRequirement = treeDescriptor->m_shootGrowthParameters.m_leafVigorRequirement;
@@ -298,48 +298,48 @@ bool Tree::TryGrow(float deltaTime) {
 		m_shootGrowthController.m_thicknessAccumulateAgeFactor = treeDescriptor->m_shootGrowthParameters.m_thicknessAccumulateAgeFactor;
 		m_shootGrowthController.m_lowBranchPruning = treeDescriptor->m_shootGrowthParameters.m_lowBranchPruning;
 		m_shootGrowthController.m_pruningFactor = [=](const Node<InternodeGrowthData>& internode)
-		{
-			float pruningProbability = 0.0f;
-			const auto& shootGrowthParameters = treeDescriptor->m_shootGrowthParameters;
-			const auto& internodeData = internode.m_data;
-			if (internode.IsEndNode())
 			{
-				pruningProbability = (1.0f - internode.m_data.m_lightIntensity) * shootGrowthParameters.m_endNodePruningLightFactor;
-			}
-			return pruningProbability;
-		};
+				float pruningProbability = 0.0f;
+				const auto& shootGrowthParameters = treeDescriptor->m_shootGrowthParameters;
+				const auto& internodeData = internode.m_data;
+				if (internode.IsEndNode())
+				{
+					pruningProbability = (1.0f - internode.m_data.m_lightIntensity) * shootGrowthParameters.m_endNodePruningLightFactor;
+				}
+				return pruningProbability;
+			};
 		m_shootGrowthController.m_maxLeafSize = treeDescriptor->m_shootGrowthParameters.m_maxLeafSize;
 		m_shootGrowthController.m_leafPositionVariance = treeDescriptor->m_shootGrowthParameters.m_leafPositionVariance;
 		m_shootGrowthController.m_leafRotationVariance = treeDescriptor->m_shootGrowthParameters.m_leafRotationVariance;
 		m_shootGrowthController.m_leafDamage = [=](const Node<InternodeGrowthData>& internode)
-		{
-			const auto& shootGrowthParameters = treeDescriptor->m_shootGrowthParameters;
-			const auto& internodeData = internode.m_data;
-			float leafDamage = 0.0f;
-			if(climate->m_climateModel.m_time - glm::floor(climate->m_climateModel.m_time) > 0.5f && internodeData.m_temperature < shootGrowthParameters.m_leafChlorophyllSynthesisFactorTemperature)
 			{
-				leafDamage += shootGrowthParameters.m_leafChlorophyllLoss;
-			}
-			return leafDamage;
-		};
+				const auto& shootGrowthParameters = treeDescriptor->m_shootGrowthParameters;
+				const auto& internodeData = internode.m_data;
+				float leafDamage = 0.0f;
+				if (climate->m_climateModel.m_time - glm::floor(climate->m_climateModel.m_time) > 0.5f && internodeData.m_temperature < shootGrowthParameters.m_leafChlorophyllSynthesisFactorTemperature)
+				{
+					leafDamage += shootGrowthParameters.m_leafChlorophyllLoss;
+				}
+				return leafDamage;
+			};
 		m_shootGrowthController.m_leafFallProbability = [=](const Node<InternodeGrowthData>& internode)
-		{
-			return treeDescriptor->m_shootGrowthParameters.m_leafFallProbability;
-		};
+			{
+				return treeDescriptor->m_shootGrowthParameters.m_leafFallProbability;
+			};
 		m_shootGrowthController.m_maxFruitSize = treeDescriptor->m_shootGrowthParameters.m_maxFruitSize;
 		m_shootGrowthController.m_fruitPositionVariance = treeDescriptor->m_shootGrowthParameters.m_fruitPositionVariance;
 		m_shootGrowthController.m_fruitRotationVariance = treeDescriptor->m_shootGrowthParameters.m_fruitRotationVariance;
 		m_shootGrowthController.m_fruitDamage = [=](const Node<InternodeGrowthData>& internode)
-		{
-			const auto& shootGrowthParameters = treeDescriptor->m_shootGrowthParameters;
-			const auto& internodeData = internode.m_data;
-			float fruitDamage = 0.0f;
-			return fruitDamage;
-		};
+			{
+				const auto& shootGrowthParameters = treeDescriptor->m_shootGrowthParameters;
+				const auto& internodeData = internode.m_data;
+				float fruitDamage = 0.0f;
+				return fruitDamage;
+			};
 		m_shootGrowthController.m_fruitFallProbability = [=](const Node<InternodeGrowthData>& internode)
-		{
-			return treeDescriptor->m_shootGrowthParameters.m_fruitFallProbability;
-		};
+			{
+				return treeDescriptor->m_shootGrowthParameters.m_fruitFallProbability;
+			};
 	}
 	{
 		m_rootGrowthController.m_rootNodeGrowthRate = treeDescriptor->m_rootGrowthParameters.m_rootNodeGrowthRate;
@@ -348,28 +348,28 @@ bool Tree::TryGrow(float deltaTime) {
 		m_rootGrowthController.m_thicknessAccumulationFactor = treeDescriptor->m_rootGrowthParameters.m_thicknessAccumulationFactor;
 		m_rootGrowthController.m_thicknessAccumulateAgeFactor = treeDescriptor->m_rootGrowthParameters.m_thicknessAccumulateAgeFactor;
 		m_rootGrowthController.m_branchingAngle = [=](const Node<RootNodeGrowthData>& rootNode)
-		{
-			return glm::gaussRand(treeDescriptor->m_rootGrowthParameters.m_branchingAngleMeanVariance.x, treeDescriptor->m_rootGrowthParameters.m_branchingAngleMeanVariance.y);
-		};
+			{
+				return glm::gaussRand(treeDescriptor->m_rootGrowthParameters.m_branchingAngleMeanVariance.x, treeDescriptor->m_rootGrowthParameters.m_branchingAngleMeanVariance.y);
+			};
 		m_rootGrowthController.m_rollAngle = [=](const Node<RootNodeGrowthData>& rootNode)
-		{
-			return glm::gaussRand(treeDescriptor->m_rootGrowthParameters.m_rollAngleMeanVariance.x, treeDescriptor->m_rootGrowthParameters.m_rollAngleMeanVariance.y);
-		};
+			{
+				return glm::gaussRand(treeDescriptor->m_rootGrowthParameters.m_rollAngleMeanVariance.x, treeDescriptor->m_rootGrowthParameters.m_rollAngleMeanVariance.y);
+			};
 		m_rootGrowthController.m_apicalAngle = [=](const Node<RootNodeGrowthData>& rootNode)
-		{
-			return glm::gaussRand(treeDescriptor->m_rootGrowthParameters.m_apicalAngleMeanVariance.x, treeDescriptor->m_rootGrowthParameters.m_apicalAngleMeanVariance.y);
-		};
+			{
+				return glm::gaussRand(treeDescriptor->m_rootGrowthParameters.m_apicalAngleMeanVariance.x, treeDescriptor->m_rootGrowthParameters.m_apicalAngleMeanVariance.y);
+			};
 		m_rootGrowthController.m_environmentalFriction = [=](const Node<RootNodeGrowthData>& rootNode)
-		{
-			const auto& rootNodeData = rootNode.m_data;
-			return 1.0f - glm::pow(1.0f / glm::max(rootNodeData.m_soilDensity * treeDescriptor->m_rootGrowthParameters.m_environmentalFriction, 1.0f), treeDescriptor->m_rootGrowthParameters.m_environmentalFrictionFactor);
-		};
+			{
+				const auto& rootNodeData = rootNode.m_data;
+				return 1.0f - glm::pow(1.0f / glm::max(rootNodeData.m_soilDensity * treeDescriptor->m_rootGrowthParameters.m_environmentalFriction, 1.0f), treeDescriptor->m_rootGrowthParameters.m_environmentalFrictionFactor);
+			};
 
 		m_rootGrowthController.m_apicalControl = 1.0f + treeDescriptor->m_rootGrowthParameters.m_apicalControl * glm::exp(-treeDescriptor->m_rootGrowthParameters.m_apicalControlAgeFactor * m_treeModel.m_age);
 		m_rootGrowthController.m_apicalDominance = [=](const Node<RootNodeGrowthData>& rootNode)
-		{
-			return treeDescriptor->m_rootGrowthParameters.m_apicalDominance * glm::exp(-treeDescriptor->m_rootGrowthParameters.m_apicalDominanceAgeFactor * m_treeModel.m_age);
-		};
+			{
+				return treeDescriptor->m_rootGrowthParameters.m_apicalDominance * glm::exp(-treeDescriptor->m_rootGrowthParameters.m_apicalDominanceAgeFactor * m_treeModel.m_age);
+			};
 		m_rootGrowthController.m_apicalDominanceDistanceFactor = treeDescriptor->m_rootGrowthParameters.m_apicalDominanceDistanceFactor;
 		m_rootGrowthController.m_tropismSwitchingProbability = treeDescriptor->m_rootGrowthParameters.m_tropismSwitchingProbability;
 		m_rootGrowthController.m_tropismSwitchingProbabilityDistanceFactor = treeDescriptor->m_rootGrowthParameters.m_tropismSwitchingProbabilityDistanceFactor;
@@ -378,9 +378,9 @@ bool Tree::TryGrow(float deltaTime) {
 		m_rootGrowthController.m_vigorRequirementAggregateLoss = treeDescriptor->m_rootGrowthParameters.m_vigorRequirementAggregateLoss;
 
 		m_rootGrowthController.m_branchingProbability = [=](const Node<RootNodeGrowthData>& rootNode)
-		{
-			return treeDescriptor->m_rootGrowthParameters.m_branchingProbability;
-		};
+			{
+				return treeDescriptor->m_rootGrowthParameters.m_branchingProbability;
+			};
 
 		m_rootGrowthController.m_fineRootSegmentLength = treeDescriptor->m_rootGrowthParameters.m_fineRootSegmentLength;
 		m_rootGrowthController.m_fineRootApicalAngleVariance = treeDescriptor->m_rootGrowthParameters.m_fineRootApicalAngleVariance;
@@ -427,7 +427,7 @@ bool Tree::TryGrow(float deltaTime) {
 void Tree::BuildStrand(const PipeModelPipeGroup& pipeGroup, const Pipe<PipeModelPipeData>& pipe,
 	std::vector<glm::uint>& strands, std::vector<StrandPoint>& points) const
 {
-	const auto& pipeNodeHandles = pipe.PeekPipeNodeHandles();
+	const auto& pipeNodeHandles = pipe.PeekPipeSegmentHandles();
 	if (pipeNodeHandles.empty()) return;
 
 	strands.emplace_back(points.size());
@@ -444,7 +444,7 @@ void Tree::BuildStrand(const PipeModelPipeGroup& pipeGroup, const Pipe<PipeModel
 
 	if (pipeNodeHandles.size() == 1)
 	{
-		const auto& secondPipeNode = pipeGroup.PeekPipeNode(pipe.PeekPipeNodeHandles()[0]);
+		const auto& secondPipeNode = pipeGroup.PeekPipeSegment(pipe.PeekPipeSegmentHandles()[0]);
 		auto distance = glm::distance(pipe.m_data.m_baseInfo.m_globalPosition, secondPipeNode.m_info.m_globalPosition) * 0.25f;
 		point.m_normal = glm::normalize(pipe.m_data.m_baseInfo.m_globalRotation * glm::vec3(0, 0, -1) * 0.75f + secondPipeNode.m_info.m_globalRotation * glm::vec3(0, 0, -1) * 0.25f);
 		point.m_position = pipe.m_data.m_baseInfo.m_globalPosition + pipe.m_data.m_baseInfo.m_globalRotation * glm::vec3(0, 0, -1) * distance;
@@ -458,7 +458,7 @@ void Tree::BuildStrand(const PipeModelPipeGroup& pipeGroup, const Pipe<PipeModel
 	}
 	else if (pipeNodeHandles.size() == 2)
 	{
-		const auto& secondPipeNode = pipeGroup.PeekPipeNode(pipe.PeekPipeNodeHandles()[0]);
+		const auto& secondPipeNode = pipeGroup.PeekPipeSegment(pipe.PeekPipeSegmentHandles()[0]);
 		auto distance = glm::distance(pipe.m_data.m_baseInfo.m_globalPosition, secondPipeNode.m_info.m_globalPosition) * 0.5f;
 		point.m_normal = glm::normalize(pipe.m_data.m_baseInfo.m_globalRotation * glm::vec3(0, 0, -1) + secondPipeNode.m_info.m_globalRotation * glm::vec3(0, 0, -1));
 		point.m_position = pipe.m_data.m_baseInfo.m_globalPosition + secondPipeNode.m_info.m_globalRotation * glm::vec3(0, 0, -1) * distance;
@@ -468,7 +468,7 @@ void Tree::BuildStrand(const PipeModelPipeGroup& pipeGroup, const Pipe<PipeModel
 
 	for (int i = 1; i < pipeNodeHandles.size(); i++)
 	{
-		const auto& pipeNode = pipeGroup.PeekPipeNode(pipeNodeHandles[i]);
+		const auto& pipeNode = pipeGroup.PeekPipeSegment(pipeNodeHandles[i]);
 		point.m_normal = glm::normalize(pipeNode.m_info.m_globalRotation * glm::vec3(0, 0, -1));
 		point.m_position = pipeNode.m_info.m_globalPosition;
 		point.m_thickness = pipeNode.m_info.m_thickness;
@@ -490,10 +490,12 @@ void Tree::BuildStrand(const PipeModelPipeGroup& pipeGroup, const Pipe<PipeModel
 	points.emplace_back(backPoint);
 }
 
-bool Tree::OnInspectBaseHexagonGrid(bool editable)
+bool Tree::OnInspectBaseHexagonProfile(bool editable)
 {
-	auto& baseHexagonGrid = m_baseGrid;
 	bool changed = false;
+	/*
+	auto& baseHexagonProfile = m_baseProfile;
+
 	static auto scrolling = glm::vec2(0.0f);
 	static float zoomFactor = 10.0f;
 	if (ImGui::Button("Recenter")) {
@@ -542,23 +544,23 @@ bool Tree::OnInspectBaseHexagonGrid(bool editable)
 		ImGui::EndPopup();
 	}
 
-	// Draw grid + all lines in the canvas
+	// Draw profile + all lines in the canvas
 	draw_list->PushClipRect(canvas_p0, canvas_p1, true);
 	if (editable && isMouseHovered && !addingLine && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
 		points.clear();
 		points.emplace_back(mousePosInCanvas.x, mousePosInCanvas.y);
 		addingLine = true;
 	}
-	for (const auto& cell : baseHexagonGrid.PeekCells()) {
+	for (const auto& cell : baseHexagonProfile.PeekCells()) {
 
-		const auto pointPosition = baseHexagonGrid.GetPosition(cell.GetCoordinate());
+		const auto pointPosition = baseHexagonProfile.GetPosition(cell.GetCoordinate());
 		const auto canvasPosition = ImVec2(origin.x + pointPosition.x * zoomFactor,
 			origin.y + pointPosition.y * zoomFactor);
 
 		draw_list->AddCircleFilled(canvasPosition,
 			glm::clamp(0.4f * zoomFactor, 1.0f, 100.0f),
 			IM_COL32(255, 255, 255, 255));
-		/*
+
 		if (knot->m_selected) {
 			draw_list->AddCircle(canvasPosition,
 				glm::clamp(0.5f * zoomFactor, 1.0f, 100.0f),
@@ -574,7 +576,7 @@ bool Tree::OnInspectBaseHexagonGrid(bool editable)
 			draw_list->AddText(nullptr, 0.5f * zoomFactor, textCanvasPosition, IM_COL32(255, 0, 0, 255),
 				text.c_str());
 		}
-		*/
+
 	}
 	draw_list->AddCircle(origin,
 		glm::clamp(0.5f * zoomFactor, 1.0f, 100.0f),
@@ -594,22 +596,24 @@ bool Tree::OnInspectBaseHexagonGrid(bool editable)
 			points.emplace_back(mousePosInCanvas.x, mousePosInCanvas.y);
 		if (editable && !ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
 			addingLine = false;
-			if (!PipeModelBaseHexagonGrid::CheckBoundary(points)) {
-				baseHexagonGrid.Construct(points);
+			if (!PipeModelBaseHexagonProfile::CheckBoundary(points)) {
+				baseHexagonProfile.Construct(points);
 				changed = true;
 			}
 		}
 	}
 	draw_list->PopClipRect();
 
-	return changed;
 
+	*/
+
+	return changed;
 }
 
 void Tree::BuildPipeModel()
 {
-	m_shootPipeModel.InitializePipes(m_treeModel.m_shootSkeleton, m_baseGrid, m_pipeModelParameters);
-	m_rootPipeModel.InitializePipes(m_treeModel.m_rootSkeleton, m_baseGrid, m_pipeModelParameters);
+	//m_shootPipeModel.InitializePipes(m_treeModel.m_shootSkeleton, m_baseProfile, m_pipeModelParameters);
+	//m_rootPipeModel.InitializePipes(m_treeModel.m_rootSkeleton, m_baseProfile, m_pipeModelParameters);
 }
 
 void Tree::BuildStrands(const PipeModelPipeGroup& pipeGroup, std::vector<glm::uint>& strands,
@@ -999,9 +1003,10 @@ void Tree::GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings
 			auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(foliageEntity).lock();
 			meshRenderer->m_mesh = mesh;
 			meshRenderer->m_material = material;
-		}else
+		}
+		else
 		{
-			for(int i = 0; i < 8; i++)
+			for (int i = 0; i < 8; i++)
 			{
 				float maxHealth = i / 8.0f;
 				const auto& nodeList = m_treeModel.PeekShootSkeleton(actualIteration).RefSortedNodeList();
@@ -1017,7 +1022,7 @@ void Tree::GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings
 							{
 								auto matrix = bud.m_reproductiveModule.m_transform;
 								Vertex archetype;
-								
+
 							}
 						}
 					}

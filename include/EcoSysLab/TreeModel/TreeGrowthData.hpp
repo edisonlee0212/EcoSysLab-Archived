@@ -1,5 +1,5 @@
 #pragma once
-#include "PlantStructure.hpp"
+#include "Skeleton.hpp"
 #include "VigorSink.hpp"
 #include "TreeIlluminationEstimator.hpp"
 using namespace EvoEngine;
