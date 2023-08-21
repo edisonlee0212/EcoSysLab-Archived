@@ -11,14 +11,14 @@ using namespace EcoSysLab;
 void CBTFGroup::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 #ifdef RAYTRACERFACILITY
   AssetRef temp;
-  if (Editor::DragAndDropButton<DoubleCBTF>(temp, ("Drop to add..."))) {
+  if (editorLayer->DragAndDropButton<DoubleCBTF>(temp, ("Drop to add..."))) {
     m_doubleCBTFs.emplace_back(temp);
     temp.Clear();
   }
 
   if (ImGui::TreeNodeEx("List", ImGuiTreeNodeFlags_DefaultOpen)) {
     for (int i = 0; i < m_doubleCBTFs.size(); i++) {
-      if (Editor::DragAndDropButton<DoubleCBTF>(
+      if (editorLayer->DragAndDropButton<DoubleCBTF>(
               m_doubleCBTFs[i], ("No." + std::to_string(i + 1))) &&
           !m_doubleCBTFs[i].Get<DoubleCBTF>()) {
         m_doubleCBTFs.erase(m_doubleCBTFs.begin() + i);

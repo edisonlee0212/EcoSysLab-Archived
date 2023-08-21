@@ -1,10 +1,10 @@
 //
 // Created by lllll on 2/23/2022.
 //
+#include <Jobs.hpp>
 #ifdef RAYTRACERFACILITY
 #include "PARSensorGroup.hpp"
 #include "RayTracerLayer.hpp"
-#include "DefaultResources.hpp"
 #include "Graphics.hpp"
 
 using namespace EcoSysLab;
@@ -16,7 +16,7 @@ void EcoSysLab::PARSensorGroup::CalculateIllumination(
       Application::GetLayer<RayTracerLayer>()->m_environmentProperties,
       rayProperties, m_samplers, seed, pushNormalDistance);
 }
-void PARSensorGroup::OnInspect() {
+void PARSensorGroup::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
   ImGui::Text("Sampler size: %llu", m_samplers.size());
   if (ImGui::TreeNode("Grid settings")) {
     static auto minRange = glm::vec3(-25, 0, -25);
@@ -71,33 +71,38 @@ void PARSensorGroup::OnInspect() {
     static float pointSize = 0.1f;
     static std::vector<glm::vec3> starts;
     static std::vector<glm::vec3> ends;
-    static std::vector<glm::mat4> matrices;
+    static std::shared_ptr<ParticleInfoList> rayParticleInfoList;
+    static std::shared_ptr<ParticleInfoList> pointParticleInfoList;
+    if(!rayParticleInfoList)
+    {
+        rayParticleInfoList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
+        pointParticleInfoList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
+    }
+    
     static glm::vec4 color = {0.0f, 1.0f, 0.0f, 0.5f};
     static glm::vec4 pointColor = {1.0f, 0.0f, 0.0f, 0.75f};
     starts.resize(m_samplers.size());
     ends.resize(m_samplers.size());
-    matrices.resize(m_samplers.size());
+    rayParticleInfoList->m_particleInfos.resize(m_samplers.size());
+    pointParticleInfoList->m_particleInfos.resize(m_samplers.size());
     ImGui::DragFloat("Vector width", &lineWidth, 0.01f);
     ImGui::DragFloat("Vector length factor", &lineLengthFactor, 0.01f);
     ImGui::ColorEdit4("Vector Color", &color.x);
     ImGui::DragFloat("Point Size", &pointSize, 0.01f);
     ImGui::ColorEdit4("Point Color", &pointColor.x);
-    std::vector<std::shared_future<void>> results;
     Jobs::ParallelFor(
         m_samplers.size(),
         [&](unsigned i) {
           const auto start = m_samplers[i].m_a.m_position;
           starts[i] = start;
           ends[i] = start + m_samplers[i].m_direction * lineLengthFactor * m_samplers[i].m_energy;
-          matrices[i] =
+          pointParticleInfoList->m_particleInfos[i].m_instanceMatrix.m_value =
               glm::translate(start) * glm::scale(glm::vec3(pointSize));
-        },
-        results);
-    for (const auto &i : results)
-      i.wait();
-    Gizmos::DrawGizmoRays(color, starts, ends, lineWidth);
-    Gizmos::DrawGizmoMeshInstanced(DefaultResources::Primitives::Cube,
-                                     pointColor, matrices);
+          pointParticleInfoList->m_particleInfos[i].m_instanceColor = pointColor;
+        });
+    rayParticleInfoList->ApplyConnections(starts, ends, color, lineWidth);
+    editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER"), rayParticleInfoList);
+    editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CUBE"), pointParticleInfoList);
   }
 }
 void PARSensorGroup::Serialize(YAML::Emitter &out) {

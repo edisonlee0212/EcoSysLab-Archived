@@ -76,6 +76,7 @@ int main() {
     Application::PushLayer<RenderLayer>();
     Application::PushLayer<EcoSysLabLayer>();
     Application::PushLayer<SorghumLayer>();
+    Application::PushLayer<RayTracerLayer>();
 
     ClassRegistry::RegisterPrivateComponent<Tree>("Tree");
     ClassRegistry::RegisterPrivateComponent<TreePointCloud>("TreePointCloud");
@@ -96,7 +97,7 @@ int main() {
     Application::Initialize(applicationConfigs);
     
 #ifdef RAYTRACERFACILITY
-    Application::PushLayer<RayTracerLayer>();
+    
     auto rayTracerLayer = Application::GetLayer<RayTracerLayer>();
     rayTracerLayer->m_showCameraWindow = false;
     rayTracerLayer->m_showSceneWindow = false;
