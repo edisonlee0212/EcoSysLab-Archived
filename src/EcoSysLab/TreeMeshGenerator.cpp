@@ -74,6 +74,10 @@ void TreeMeshGeneratorSettings::Save(const std::string& name, YAML::Emitter& out
 	out << YAML::Key << "m_vertexColorOnly" << YAML::Value << m_vertexColorOnly;
 	out << YAML::Key << "m_enableFoliage" << YAML::Value << m_enableFoliage;
 	out << YAML::Key << "m_enableBranch" << YAML::Value << m_enableBranch;
+	out << YAML::Key << "m_enableFruit" << YAML::Value << m_enableFruit;
+	out << YAML::Key << "m_enableFineRoot" << YAML::Value << m_enableFineRoot;
+	out << YAML::Key << "m_enableTwig" << YAML::Value << m_enableTwig;
+
 	out << YAML::Key << "m_smoothness" << YAML::Value << m_smoothness;
 	out << YAML::Key << "m_overrideRadius" << YAML::Value << m_overrideRadius;
 	out << YAML::Key << "m_boundaryRadius" << YAML::Value << m_radius;
@@ -108,6 +112,10 @@ void TreeMeshGeneratorSettings::Load(const std::string& name, const YAML::Node& 
 		if (ms["m_vertexColorOnly"]) m_vertexColorOnly = ms["m_vertexColorOnly"].as<bool>();
 		if (ms["m_enableFoliage"]) m_enableFoliage = ms["m_enableFoliage"].as<bool>();
 		if (ms["m_enableBranch"]) m_enableBranch = ms["m_enableBranch"].as<bool>();
+		if (ms["m_enableFruit"]) m_enableFruit = ms["m_enableFruit"].as<bool>();
+		if (ms["m_enableFineRoot"]) m_enableFineRoot = ms["m_enableFineRoot"].as<bool>();
+		if (ms["m_enableTwig"]) m_enableTwig = ms["m_enableTwig"].as<bool>();
+
 		if (ms["m_smoothness"]) m_smoothness = ms["m_smoothness"].as<bool>();
 		if (ms["m_overrideRadius"]) m_overrideRadius = ms["m_overrideRadius"].as<bool>();
 		if (ms["m_boundaryRadius"]) m_radius = ms["m_boundaryRadius"].as<float>();
@@ -143,6 +151,7 @@ void TreeMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLayer>& ed
 		ImGui::Checkbox("Foliage", &m_enableFoliage);
 		ImGui::Checkbox("Root", &m_enableRoot);
 		ImGui::Checkbox("Fine Root", &m_enableFineRoot);
+		ImGui::Checkbox("Twig", &m_enableTwig);
 		ImGui::Combo("Branch mesh mode", { "Cylindrical", "Marching cubes" }, m_branchMeshType);
 		ImGui::Combo("Root mesh mode", { "Cylindrical", "Marching cubes" }, m_rootMeshType);
 		if(ImGui::TreeNode("Cylindrical mesh settings"))

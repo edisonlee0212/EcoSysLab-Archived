@@ -106,7 +106,9 @@ namespace EcoSysLab
 		std::vector<Bud> m_buds;
 		VigorFlow m_vigorFlow;
 		std::vector<glm::mat4> m_leaves;
-		std::vector<glm::mat4> m_fruits;		
+		std::vector<glm::mat4> m_fruits;
+
+		std::vector<glm::vec4> m_twigAnchors;
 	};
 
 	struct RootNodeGrowthData {

@@ -105,11 +105,19 @@ namespace EcoSysLab {
 		bool GrowRoots(const glm::mat4& globalTransform, SoilModel& soilModel,
 			const RootGrowthController& rootGrowthParameters, PlantGrowthRequirement& newRootGrowthRequirement);
 
+		void FormFineRoots(const glm::mat4& globalTransform, SoilModel& soilModel,
+			const RootGrowthController& rootGrowthParameters, const FineRootController& fineRootController);
+
+		void FormTwigs(const glm::mat4& globalTransform, ClimateModel& climateModel,
+			const ShootGrowthController& shootGrowthParameters, const TwigController& twigController);
+
+
 		inline void PlantVigorAllocation();
 
 		int m_leafCount = 0;
 		int m_fruitCount = 0;
 		int m_fineRootCount = 0;
+		int m_twigCount = 0;
 
 		float m_age = 0;
 		int m_ageInYear = 0;
@@ -171,11 +179,14 @@ namespace EcoSysLab {
 		 * @param soilModel The soil model
 		 * @param climateModel The climate model
 		 * @param rootGrowthParameters The procedural parameters that guides the growth of the roots.
+		 * @param fineRootController
 		 * @param shootGrowthParameters The procedural parameters that guides the growth of the branches.
+		 * @param twigController 
 		 * @return Whether the growth caused a structural change during the growth.
 		 */
 		bool Grow(float deltaTime, const glm::mat4& globalTransform, SoilModel& soilModel, ClimateModel& climateModel,
-			const RootGrowthController& rootGrowthParameters, const ShootGrowthController& shootGrowthParameters);
+			const RootGrowthController& rootGrowthParameters, const FineRootController& fineRootController, 
+			const ShootGrowthController& shootGrowthParameters, const TwigController& twigController);
 
 		int m_historyLimit = -1;
 
