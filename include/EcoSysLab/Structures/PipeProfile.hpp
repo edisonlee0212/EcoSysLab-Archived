@@ -89,6 +89,8 @@ namespace EcoSysLab
 
 		PipeProfile();
 		explicit PipeProfile(ProfileHandle handle);
+
+		void FillCells();
 	};
 
 	template<typename GroupData, typename ProfileData, typename CellData>
@@ -249,6 +251,7 @@ namespace EcoSysLab
 				addingLine = false;
 				if (ProfileInfo::IsBoundaryValid(points)) {
 					m_info.m_boundary = points;
+					FillCells();
 					changed = true;
 				}
 			}
@@ -359,6 +362,12 @@ namespace EcoSysLab
 		m_handle = handle;
 		m_recycled = false;
 		m_version = -1;
+	}
+
+	template <typename ProfileData, typename CellData>
+	void PipeProfile<ProfileData, CellData>::FillCells()
+	{
+
 	}
 
 	template <typename GroupData, typename ProfileData, typename CellData>

@@ -13,6 +13,7 @@ namespace EcoSysLab
 		PipeModelParameters m_pipeModelParameters {};
 		void Update() override;
 		void AssignProfiles();
+		
 		void EstablishPipes();
 		void InitializeStrandRenderer() const;
 		void ClearStrands() const;

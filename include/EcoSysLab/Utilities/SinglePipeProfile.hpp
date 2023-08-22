@@ -20,5 +20,6 @@ namespace EcoSysLab
 		ProfileHandle m_profileHandle = -1;
 
 		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
+		void Relink(const std::unordered_map<Handle, Handle>& map, const std::shared_ptr<Scene>& scene) override;
 	};
 }

@@ -43,7 +43,6 @@ void PipeModelBase::EstablishPipes()
 			if (scene->HasPrivateComponent<SinglePipeProfile>(entity)) {
 				const auto singlePipeProfile = scene->GetOrSetPrivateComponent<SinglePipeProfile>(entity).lock();
 				auto& profile = m_pipeModel.m_pipeProfileGroup.RefProfile(singlePipeProfile->m_profileHandle);
-
 				if (scene->HasPrivateComponent<SinglePipeProfile>(parent))
 				{
 					NodeHandle parentNodeHandle = -1;

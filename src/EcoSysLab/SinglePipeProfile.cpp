@@ -55,3 +55,8 @@ void SinglePipeProfile::OnInspect(const std::shared_ptr<EditorLayer>& editorLaye
 	ImGui::Text(std::string("Profile Handle " + std::to_string(m_profileHandle)).c_str());
 }
 
+void SinglePipeProfile::Relink(const std::unordered_map<Handle, Handle>& map, const std::shared_ptr<Scene>& scene)
+{
+	m_pipeModelBase.Relink(map, scene);
+}
+
