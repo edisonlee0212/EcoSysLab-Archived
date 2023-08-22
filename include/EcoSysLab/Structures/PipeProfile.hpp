@@ -1,6 +1,8 @@
 #pragma once
 
 #include "ecosyslab_export.h"
+#include "PipeGroup.hpp"
+#include "Skeleton.hpp"
 
 namespace EcoSysLab
 {
@@ -43,8 +45,6 @@ namespace EcoSysLab
 		[[nodiscard]] bool IsBoundaryValid() const;
 		[[nodiscard]] static bool IsBoundaryValid(const std::vector<glm::vec2>& points);
 		[[nodiscard]] bool InBoundary(const glm::vec2& point) const;
-
-		
 	};
 
 	template<typename ProfileData, typename CellData>
@@ -91,6 +91,26 @@ namespace EcoSysLab
 		explicit PipeProfile(ProfileHandle handle);
 	};
 
+	template<typename GroupData, typename ProfileData, typename CellData>
+	class PipeProfileGroup
+	{
+		std::vector<PipeProfile<ProfileData, CellData>> m_profiles;
+		std::queue<ProfileHandle> m_profilePool;
+
+		int m_version = -1;
+	public:
+		[[nodiscard]] ProfileHandle Allocate();
+
+		void RecycleProfile(ProfileHandle handle);
+
+		[[nodiscard]] const PipeProfile<ProfileData, CellData>& PeekProfile(ProfileHandle handle) const;
+
+		[[nodiscard]] PipeProfile<ProfileData, CellData>& RefProfile(ProfileHandle handle);
+
+		[[nodiscard]] std::vector<PipeProfile<ProfileData, CellData>>& RefProfiles();
+
+		[[nodiscard]] std::queue<ProfileHandle>& RefProfilePool();
+	};
 
 	template <typename CellData>
 	CellHandle PipeCell<CellData>::GetHandle() const
@@ -227,7 +247,7 @@ namespace EcoSysLab
 				points.emplace_back(mousePosInCanvas.x, mousePosInCanvas.y);
 			if (editable && !ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
 				addingLine = false;
-				if (!ProfileInfo::IsBoundaryValid(points)) {
+				if (ProfileInfo::IsBoundaryValid(points)) {
 					m_info.m_boundary = points;
 					changed = true;
 				}
@@ -328,6 +348,9 @@ namespace EcoSysLab
 	template <typename ProfileData, typename CellData>
 	PipeProfile<ProfileData, CellData>::PipeProfile()
 	{
+		m_handle = 0;
+		m_recycled = false;
+		m_version = -1;
 	}
 
 	template <typename ProfileData, typename CellData>
@@ -336,5 +359,61 @@ namespace EcoSysLab
 		m_handle = handle;
 		m_recycled = false;
 		m_version = -1;
+	}
+
+	template <typename GroupData, typename ProfileData, typename CellData>
+	ProfileHandle PipeProfileGroup<GroupData, ProfileData, CellData>::Allocate()
+	{
+		ProfileHandle newProfileHandle;
+		if (m_profilePool.empty()) {
+			auto newProfile = m_profiles.emplace_back(m_profiles.size());
+			newProfileHandle = newProfile.m_handle;
+		}
+		else {
+			newProfileHandle = m_profilePool.front();
+			m_profilePool.pop();
+		}
+		m_version++;
+		m_profiles[newProfileHandle].m_recycled = false;
+		m_profiles[newProfileHandle].m_data = {};
+		return newProfileHandle;
+	}
+
+	template <typename GroupData, typename ProfileData, typename CellData>
+	void PipeProfileGroup<GroupData, ProfileData, CellData>::RecycleProfile(ProfileHandle handle)
+	{
+		auto& profile = m_profiles[handle];
+		assert(!profile.m_recycled);
+		profile.m_recycled = true;
+		profile.m_cells.clear();
+		profile.m_cellPool = {};
+
+		m_profilePool.push(handle);
+	}
+
+	template <typename GroupData, typename ProfileData, typename CellData>
+	const PipeProfile<ProfileData, CellData>& PipeProfileGroup<GroupData, ProfileData, CellData>::PeekProfile(
+		ProfileHandle handle) const
+	{
+		return m_profiles[handle];
+	}
+
+	template <typename GroupData, typename ProfileData, typename CellData>
+	PipeProfile<ProfileData, CellData>& PipeProfileGroup<GroupData, ProfileData, CellData>::RefProfile(
+		ProfileHandle handle)
+	{
+		return m_profiles[handle];
+	}
+
+	template <typename GroupData, typename ProfileData, typename CellData>
+	std::vector<PipeProfile<ProfileData, CellData>>& PipeProfileGroup<GroupData, ProfileData, CellData>::RefProfiles()
+	{
+		return m_profiles;
+	}
+
+	template <typename GroupData, typename ProfileData, typename CellData>
+	std::queue<ProfileHandle>& PipeProfileGroup<GroupData, ProfileData, CellData>::RefProfilePool()
+	{
+		return m_profilePool;
 	}
 }

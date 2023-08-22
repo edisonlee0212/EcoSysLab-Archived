@@ -24,8 +24,10 @@
 #include "RadialBoundingVolume.hpp"
 #include "HeightField.hpp"
 #include "ObjectRotator.hpp"
+#include "SinglePipeProfile.hpp"
 #include "SorghumLayer.hpp"
 #include "TreePointCloud.hpp"
+#include "PipeModelBase.hpp"
 #ifdef RAYTRACERFACILITY
 using namespace RayTracerFacility;
 #endif
@@ -90,7 +92,8 @@ int main() {
     ClassRegistry::RegisterAsset<RadialBoundingVolume>("RadialBoundingVolume", { ".rbv" });
     ClassRegistry::RegisterAsset<HeightField>("HeightField", { ".hf" });
     ClassRegistry::RegisterAsset<NoiseSoilLayerDescriptor>("NoiseSoilLayerDescriptor", { ".nsld" });
-
+    ClassRegistry::RegisterPrivateComponent<SinglePipeProfile>("SinglePipeProfile");
+    ClassRegistry::RegisterPrivateComponent<PipeModelBase>("PipeModelBase");
 
     ApplicationInfo applicationConfigs;
     applicationConfigs.m_applicationName = "EcoSysLab";

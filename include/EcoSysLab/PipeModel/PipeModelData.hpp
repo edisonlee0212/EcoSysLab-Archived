@@ -11,32 +11,39 @@ namespace EcoSysLab
 
 	struct PipeModelPipeData
 	{
-		PipeSegmentInfo m_baseInfo;
 	};
 
-	struct PipeModelPipeNodeData
+	struct PipeModelPipeSegmentData
 	{
 		NodeHandle m_nodeHandle = -1;
 	};
 
-	typedef PipeGroup<PipeModelPipeGroupData, PipeModelPipeData, PipeModelPipeNodeData> PipeModelPipeGroup;
+	typedef PipeGroup<PipeModelPipeGroupData, PipeModelPipeData, PipeModelPipeSegmentData> PipeModelPipeGroup;
 
 
 	struct PipeCellData
 	{
-		
+		PipeHandle m_pipeHandle = -1;
+		PipeSegmentHandle m_pipeSegmentHandle = -1;
 	};
 
 	struct PipeProfileData
 	{
+		NodeHandle m_nodeHandle = -1;
+	};
+
+	struct PipeProfileGroupData
+	{
 		
 	};
 
+	typedef PipeProfile<PipeProfileData, PipeCellData> PipeModelPipeProfile;
+	typedef PipeProfileGroup<PipeProfileGroupData, PipeProfileData, PipeCellData> PipeModelPipeProfileGroup;
 	struct PipeModelNodeData
 	{
 		int m_endNodeCount = 0;
 
-		PipeProfile<PipeProfileData, PipeCellData> m_profile;
+		ProfileHandle m_profileHandle = -1;
 	};
 
 	struct PipeModelFlowData
@@ -46,6 +53,8 @@ namespace EcoSysLab
 
 	struct PipeModelSkeletonData
 	{
+		ProfileHandle m_baseProfileHandle = -1;
 	};
+
 	typedef Skeleton<PipeModelSkeletonData, PipeModelFlowData, PipeModelNodeData> PipeModelSkeleton;
 }

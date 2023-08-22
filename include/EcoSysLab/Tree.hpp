@@ -32,8 +32,7 @@ namespace EcoSysLab {
 	class Tree : public IPrivateComponent {
 		friend class EcoSysLabLayer;
 		bool TryGrow(float deltaTime);
-		void BuildStrand(const PipeModelPipeGroup& pipeGroup, const Pipe<PipeModelPipeData>& pipe, std::vector<glm::uint>& strands, std::vector<StrandPoint>& points) const;
-
+		
 		ShootGrowthController m_shootGrowthController;
 		RootGrowthController m_rootGrowthController;
 		FineRootController m_fineRootController;
@@ -41,8 +40,7 @@ namespace EcoSysLab {
 	public:
 		void BuildPipeModel();
 		PipeModelParameters m_pipeModelParameters;
-		void BuildStrands(const PipeModelPipeGroup& pipeGroup, std::vector<glm::uint>& strands, std::vector<StrandPoint>& points) const;
-
+		
 		void InitializeStrandRenderer() const;
 
 		void Serialize(YAML::Emitter& out) override;
@@ -69,7 +67,7 @@ namespace EcoSysLab {
 		TreeModel m_treeModel;
 		PipeModel m_shootPipeModel;
 		PipeModel m_rootPipeModel;
-		PipeProfile<PipeProfileData, PipeCellData> m_baseProfile;
+		PipeModelPipeProfile m_baseProfile;
 
 		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 

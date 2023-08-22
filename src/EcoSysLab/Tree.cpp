@@ -431,86 +431,10 @@ bool Tree::TryGrow(float deltaTime) {
 	return grown;
 }
 
-void Tree::BuildStrand(const PipeModelPipeGroup& pipeGroup, const Pipe<PipeModelPipeData>& pipe,
-	std::vector<glm::uint>& strands, std::vector<StrandPoint>& points) const
-{
-	const auto& pipeNodeHandles = pipe.PeekPipeSegmentHandles();
-	if (pipeNodeHandles.empty()) return;
-
-	strands.emplace_back(points.size());
-	auto frontPointIndex = points.size();
-	StrandPoint point;
-	point.m_normal = glm::normalize(pipe.m_data.m_baseInfo.m_globalRotation * glm::vec3(0, 0, -1));
-	point.m_position = pipe.m_data.m_baseInfo.m_globalPosition;
-	point.m_thickness = pipe.m_data.m_baseInfo.m_thickness;
-	point.m_color = pipe.m_info.m_color;
-
-	points.emplace_back(point);
-	points.emplace_back(point);
-
-
-	if (pipeNodeHandles.size() == 1)
-	{
-		const auto& secondPipeNode = pipeGroup.PeekPipeSegment(pipe.PeekPipeSegmentHandles()[0]);
-		auto distance = glm::distance(pipe.m_data.m_baseInfo.m_globalPosition, secondPipeNode.m_info.m_globalPosition) * 0.25f;
-		point.m_normal = glm::normalize(pipe.m_data.m_baseInfo.m_globalRotation * glm::vec3(0, 0, -1) * 0.75f + secondPipeNode.m_info.m_globalRotation * glm::vec3(0, 0, -1) * 0.25f);
-		point.m_position = pipe.m_data.m_baseInfo.m_globalPosition + pipe.m_data.m_baseInfo.m_globalRotation * glm::vec3(0, 0, -1) * distance;
-		point.m_thickness = pipe.m_data.m_baseInfo.m_thickness * 0.75f + secondPipeNode.m_info.m_thickness * 0.25f;
-		points.emplace_back(point);
-
-		point.m_normal = glm::normalize(pipe.m_data.m_baseInfo.m_globalRotation * glm::vec3(0, 0, -1) * 0.25f + secondPipeNode.m_info.m_globalRotation * glm::vec3(0, 0, -1) * 0.75f);
-		point.m_position = secondPipeNode.m_info.m_globalPosition + secondPipeNode.m_info.m_globalRotation * glm::vec3(0, 0, 1) * distance;
-		point.m_thickness = pipe.m_data.m_baseInfo.m_thickness * 0.25f + secondPipeNode.m_info.m_thickness * 0.75f;
-		points.emplace_back(point);
-	}
-	else if (pipeNodeHandles.size() == 2)
-	{
-		const auto& secondPipeNode = pipeGroup.PeekPipeSegment(pipe.PeekPipeSegmentHandles()[0]);
-		auto distance = glm::distance(pipe.m_data.m_baseInfo.m_globalPosition, secondPipeNode.m_info.m_globalPosition) * 0.5f;
-		point.m_normal = glm::normalize(pipe.m_data.m_baseInfo.m_globalRotation * glm::vec3(0, 0, -1) + secondPipeNode.m_info.m_globalRotation * glm::vec3(0, 0, -1));
-		point.m_position = pipe.m_data.m_baseInfo.m_globalPosition + secondPipeNode.m_info.m_globalRotation * glm::vec3(0, 0, -1) * distance;
-		point.m_thickness = pipe.m_data.m_baseInfo.m_thickness * 0.5f + secondPipeNode.m_info.m_thickness * 0.5f;
-		points.emplace_back(point);
-	}
-
-	for (int i = 1; i < pipeNodeHandles.size(); i++)
-	{
-		const auto& pipeNode = pipeGroup.PeekPipeSegment(pipeNodeHandles[i]);
-		point.m_normal = glm::normalize(pipeNode.m_info.m_globalRotation * glm::vec3(0, 0, -1));
-		point.m_position = pipeNode.m_info.m_globalPosition;
-		point.m_thickness = pipeNode.m_info.m_thickness;
-		points.emplace_back(point);
-	}
-
-	StrandPoint frontPoint;
-	frontPoint = points.at(frontPointIndex);
-	frontPoint.m_position = 2.0f * frontPoint.m_position - points.at(frontPointIndex + 2).m_position;
-	frontPoint.m_normal = 2.0f * frontPoint.m_normal - points.at(frontPointIndex + 2).m_normal;
-	frontPoint.m_thickness = 2.0f * frontPoint.m_thickness - points.at(frontPointIndex + 2).m_thickness;
-	points.at(frontPointIndex) = frontPoint;
-
-	StrandPoint backPoint;
-	backPoint = points.at(points.size() - 2);
-	backPoint.m_position = 2.0f * points.at(points.size() - 1).m_position - backPoint.m_position;
-	backPoint.m_normal = 2.0f * points.at(points.size() - 1).m_normal - backPoint.m_normal;
-	backPoint.m_thickness = 2.0f * points.at(points.size() - 1).m_thickness - backPoint.m_thickness;
-	points.emplace_back(backPoint);
-}
-
 void Tree::BuildPipeModel()
 {
 	//m_shootPipeModel.InitializePipes(m_treeModel.m_shootSkeleton, m_baseProfile, m_pipeModelParameters);
 	//m_rootPipeModel.InitializePipes(m_treeModel.m_rootSkeleton, m_baseProfile, m_pipeModelParameters);
-}
-
-void Tree::BuildStrands(const PipeModelPipeGroup& pipeGroup, std::vector<glm::uint>& strands,
-	std::vector<StrandPoint>& points) const
-{
-	for (const auto& pipe : pipeGroup.PeekPipes())
-	{
-		if (pipe.IsRecycled()) continue;
-		BuildStrand(pipeGroup, pipe, strands, points);
-	}
 }
 
 void Tree::InitializeStrandRenderer() const
@@ -526,7 +450,7 @@ void Tree::InitializeStrandRenderer() const
 	const auto strandsAsset = ProjectManager::CreateTemporaryAsset<Strands>();
 	std::vector<glm::uint> strandsList;
 	std::vector<StrandPoint> points;
-	BuildStrands(m_shootPipeModel.m_pipeGroup, strandsList, points);
+	m_shootPipeModel.m_pipeGroup.BuildStrands(strandsList, points);
 	if (!points.empty()) strandsList.emplace_back(points.size());
 	StrandPointAttributes strandPointAttributes{};
 	strandPointAttributes.m_color = true;

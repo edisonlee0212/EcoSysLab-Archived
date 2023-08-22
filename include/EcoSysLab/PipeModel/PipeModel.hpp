@@ -1,6 +1,7 @@
 #pragma once
 #include "PipeModelParameters.hpp"
 #include "PipeProfile.hpp"
+#include "PipeModelData.hpp"
 using namespace EvoEngine;
 namespace EcoSysLab
 {
@@ -14,7 +15,12 @@ namespace EcoSysLab
 	};
 	class PipeModel
 	{
+		void MapProfiles(ProfileHandle srcProfileHandle, const std::vector<ProfileHandle>& dstProfileHandles);
 	public:
 		PipeModelPipeGroup m_pipeGroup;
+		PipeModelPipeProfileGroup m_pipeProfileGroup;
+		PipeModelSkeleton m_skeleton;
+
+		void InitializePipes(const PipeModelParameters& pipeModelParameters);
 	};
 }

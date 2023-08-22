@@ -50,10 +50,10 @@ bool ProfileInfo::IsBoundaryValid() const
 		for (int j = 0; j < m_boundary.size(); j++) {
 			auto& pc = m_boundary[(j == 0 ? m_boundary.size() - 1 : j - 1)];
 			auto& pd = m_boundary[j];
-			if (LineLineIntersect(pa, pb, pc, pd)) return true;
+			if (LineLineIntersect(pa, pb, pc, pd)) return false;
 		}
 	}
-	return false;
+	return true;
 }
 
 bool ProfileInfo::IsBoundaryValid(const std::vector<glm::vec2>& points)
@@ -64,10 +64,10 @@ bool ProfileInfo::IsBoundaryValid(const std::vector<glm::vec2>& points)
 		for (int j = 0; j < points.size(); j++) {
 			auto& pc = points[(j == 0 ? points.size() - 1 : j - 1)];
 			auto& pd = points[j];
-			if (LineLineIntersect(pa, pb, pc, pd)) return true;
+			if (LineLineIntersect(pa, pb, pc, pd)) return false;
 		}
 	}
-	return false;
+	return true;
 }
 
 bool ProfileInfo::InBoundary(const glm::vec2& point) const
