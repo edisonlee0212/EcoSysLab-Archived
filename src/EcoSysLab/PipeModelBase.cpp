@@ -6,6 +6,19 @@ using namespace EcoSysLab;
 
 void PipeModelBase::Update()
 {
+	if (m_showProfile)
+	{
+		auto& profile = m_pipeModel.m_pipeProfileGroup.RefProfile(m_baseProfileHandle);
+		const std::string tag = "Base Profile";
+		if (ImGui::Begin(tag.c_str()))
+		{
+			if (profile.OnInspect(true))
+			{
+				EVOENGINE_LOG("Base Profile Updated.");
+			}
+		}
+		ImGui::End();
+	}
 }
 
 void PipeModelBase::AssignProfiles()
@@ -136,6 +149,9 @@ void PipeModelBase::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
 	const auto scene = GetScene();
 	const auto owner = GetOwner();
+
+	ImGui::Checkbox("Show Profile", &m_showProfile);
+
 	if (ImGui::Button("Establish pipes"))
 	{
 		EstablishPipes();
@@ -163,5 +179,10 @@ void PipeModelBase::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 		scene->GetOrSetPrivateComponent<SinglePipeProfile>(rightChild);
 
 		AssignProfiles();
+	}
+
+	if(ImGui::Button("Initialize Strands"))
+	{
+		InitializeStrandRenderer();
 	}
 }

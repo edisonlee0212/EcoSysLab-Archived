@@ -8,6 +8,8 @@ namespace EcoSysLab
 	class PipeModelBase : public IPrivateComponent
 	{
 	public:
+
+		bool m_showProfile = false;
 		PipeModel m_pipeModel;
 		ProfileHandle m_baseProfileHandle = -1;
 		PipeModelParameters m_pipeModelParameters {};

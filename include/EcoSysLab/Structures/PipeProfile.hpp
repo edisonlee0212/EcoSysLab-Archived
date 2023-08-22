@@ -41,7 +41,6 @@ namespace EcoSysLab
 	struct ProfileInfo
 	{
 		std::vector<glm::vec2> m_boundary;
-
 		[[nodiscard]] bool IsBoundaryValid() const;
 		[[nodiscard]] static bool IsBoundaryValid(const std::vector<glm::vec2>& points);
 		[[nodiscard]] bool InBoundary(const glm::vec2& point) const;
@@ -198,11 +197,12 @@ namespace EcoSysLab
 		for (const auto& cell : m_cells) {
 			if(cell.IsRecycled()) continue;
 			const auto pointPosition = cell.m_info.m_offset;
+			const auto pointRadius = cell.m_info.m_radius;
 			const auto canvasPosition = ImVec2(origin.x + pointPosition.x * zoomFactor,
 				origin.y + pointPosition.y * zoomFactor);
 
 			drawList->AddCircleFilled(canvasPosition,
-				glm::clamp(0.4f * zoomFactor, 1.0f, 100.0f),
+				glm::clamp(0.4f * zoomFactor * pointRadius, 1.0f, 100.0f),
 				IM_COL32(255, 255, 255, 255));
 			/*
 			if (knot->m_selected) {
@@ -367,7 +367,33 @@ namespace EcoSysLab
 	template <typename ProfileData, typename CellData>
 	void PipeProfile<ProfileData, CellData>::FillCells()
 	{
+		auto min = glm::vec2(FLT_MAX);
+		auto max = glm::vec2(FLT_MIN);
+		for(const auto& i : m_cells)
+		{
+			RecycleCell(i.GetHandle());
+		}
+		for(const auto& i : m_info.m_boundary)
+		{
+			min = glm::min(min, i);
+			max = glm::max(i, max);
+		}
 
+		for(int i = min.x; i <= max.x; i++)
+		{
+			for(int j = min.y; j <= max.y; j++)
+			{
+				auto position = glm::vec2(i, j);
+				if(m_info.InBoundary(position))
+				{
+					auto newCellHandle = AllocateCell();
+					auto& newCell = RefCell(newCellHandle);
+					newCell.m_info.m_offset = position;
+					newCell.m_info.m_radius = 1.0f;
+					newCell.m_info.m_boundary = false;
+				}
+			}
+		}
 	}
 
 	template <typename GroupData, typename ProfileData, typename CellData>
