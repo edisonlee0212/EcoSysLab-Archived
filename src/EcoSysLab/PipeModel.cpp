@@ -22,6 +22,7 @@ void PipeModel::MapProfiles(ProfileHandle srcProfileHandle, const std::vector<Pr
 		if (dstProfileIndex >= dstProfileHandles.size()) break;
 		auto& dstCell = m_pipeProfileGroup.RefProfile(dstProfileHandles[dstProfileIndex]).RefCell(dstProfileCellIndex);
 		dstCell.m_data.m_pipeHandle = srcCell.m_data.m_pipeHandle;
+		dstProfileCellIndex++;
 	}
 }
 
@@ -56,8 +57,8 @@ void PipeModel::InitializePipes(const PipeModelParameters& pipeModelParameters)
 	}
 
 	//1. Map first node profile from base profile.
-	const std::vector firstProfileHandle = { m_skeleton.RefNode(0).m_data.m_profileHandle };
-	MapProfiles(m_skeleton.m_data.m_baseProfileHandle, firstProfileHandle);
+	//const std::vector firstProfileHandle = { m_skeleton.RefNode(0).m_data.m_profileHandle };
+	//MapProfiles(m_skeleton.m_data.m_baseProfileHandle, firstProfileHandle);
 
 	//2. Map all profiles.
 	for (const auto& i : nodeList)
@@ -80,8 +81,11 @@ void PipeModel::InitializePipes(const PipeModelParameters& pipeModelParameters)
 		auto& profile = m_pipeProfileGroup.RefProfile(profileHandle);
 		for (auto& cell : profile.RefCells())
 		{
+			if (cell.IsRecycled()) continue;
+			if (cell.m_data.m_pipeHandle == -1) continue;
 			cell.m_data.m_pipeSegmentHandle = m_pipeGroup.Extend(cell.m_data.m_pipeHandle);
 			auto& pipeSegment = m_pipeGroup.RefPipeSegment(cell.m_data.m_pipeSegmentHandle);
+			pipeSegment.m_data.m_nodeHandle = i;
 			pipeSegment.m_info.m_localPosition = pipeModelParameters.m_pipeRadius * cell.m_info.m_offset;
 			pipeSegment.m_info.m_thickness = pipeModelParameters.m_pipeRadius * cell.m_info.m_radius;
 		}

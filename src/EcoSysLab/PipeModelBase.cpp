@@ -49,6 +49,15 @@ void PipeModelBase::EstablishPipes()
 	m_pipeModel.m_pipeGroup = {};
 
 	m_pipeModel.m_skeleton.m_data.m_baseProfileHandle = m_baseProfileHandle;
+	m_pipeModel.m_pipeProfileGroup.RefProfile(m_baseProfileHandle).m_data.m_nodeHandle = 0;
+
+	auto& rootNode = m_pipeModel.m_skeleton.RefNode(0);
+	const auto transform = scene->GetDataComponent<Transform>(owner);
+	rootNode.m_info.m_globalRotation = transform.GetRotation();
+	rootNode.m_info.m_globalPosition = transform.GetPosition();
+	rootNode.m_info.m_length = 0;
+
+	rootNode.m_data.m_profileHandle = m_baseProfileHandle;
 
 	scene->ForEachDescendant(owner, [&](const Entity& entity)
 		{
@@ -58,15 +67,11 @@ void PipeModelBase::EstablishPipes()
 				auto& profile = m_pipeModel.m_pipeProfileGroup.RefProfile(singlePipeProfile->m_profileHandle);
 				if (scene->HasPrivateComponent<SinglePipeProfile>(parent))
 				{
-					NodeHandle parentNodeHandle = -1;
 					const auto parentSinglePipeProfile = scene->GetOrSetPrivateComponent<SinglePipeProfile>(parent).lock();
 					auto& parentProfile = m_pipeModel.m_pipeProfileGroup.RefProfile(parentSinglePipeProfile->m_profileHandle);
-					parentNodeHandle = parentProfile.m_data.m_nodeHandle;
+					NodeHandle parentNodeHandle = parentProfile.m_data.m_nodeHandle;
 					if (parentNodeHandle == -1) return;
-					if (profile.m_data.m_nodeHandle == -1)
-					{
-						profile.m_data.m_nodeHandle = m_pipeModel.m_skeleton.Extend(parentNodeHandle, true);
-					}
+					profile.m_data.m_nodeHandle = m_pipeModel.m_skeleton.Extend(parentNodeHandle, true);
 					auto& node = m_pipeModel.m_skeleton.RefNode(profile.m_data.m_nodeHandle);
 
 					const auto transform = scene->GetDataComponent<Transform>(entity);
@@ -79,14 +84,19 @@ void PipeModelBase::EstablishPipes()
 				}
 				else if (scene->HasPrivateComponent<PipeModelBase>(parent))
 				{
-					const auto pipeModelBase = scene->GetOrSetPrivateComponent<PipeModelBase>(parent).lock();
-					auto& rootNode = m_pipeModel.m_skeleton.RefNode(0);
+					const auto parentPipeModelBase = scene->GetOrSetPrivateComponent<PipeModelBase>(parent).lock();
+					auto& parentProfile = m_pipeModel.m_pipeProfileGroup.RefProfile(parentPipeModelBase->m_baseProfileHandle);
+					NodeHandle parentNodeHandle = parentProfile.m_data.m_nodeHandle;
+					if (parentNodeHandle == -1) return;
+					profile.m_data.m_nodeHandle = m_pipeModel.m_skeleton.Extend(parentNodeHandle, true);
+					auto& node = m_pipeModel.m_skeleton.RefNode(profile.m_data.m_nodeHandle);
 					const auto transform = scene->GetDataComponent<Transform>(entity);
-					rootNode.m_info.m_globalRotation = transform.GetRotation();
-					rootNode.m_info.m_globalPosition = transform.GetPosition();
-					rootNode.m_info.m_length = 0;
+					const auto localPosition = transform.GetPosition();
+					node.m_info.m_localRotation = transform.GetRotation();
+					node.m_info.m_localPosition = localPosition;
+					node.m_info.m_length = 0;
 
-					rootNode.m_data.m_profileHandle = singlePipeProfile->m_profileHandle;
+					node.m_data.m_profileHandle = singlePipeProfile->m_profileHandle;
 				}
 			}
 		}

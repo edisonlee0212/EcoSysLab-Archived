@@ -42,22 +42,31 @@ bool RayLineIntersect(const glm::vec2& rayOrigin, const glm::vec2& rayDirection,
 	return false;
 }
 
-bool ProfileInfo::IsBoundaryValid() const
+void ProfileInfo::CheckBoundary()
 {
+	if (m_boundary.size() <= 2)
+	{
+		m_boundaryValid = false;
+		return;
+	}
 	for (int i = 0; i < m_boundary.size(); i++) {
 		auto& pa = m_boundary[(i == 0 ? m_boundary.size() - 1 : i - 1)];
 		auto& pb = m_boundary[i];
 		for (int j = 0; j < m_boundary.size(); j++) {
 			auto& pc = m_boundary[(j == 0 ? m_boundary.size() - 1 : j - 1)];
 			auto& pd = m_boundary[j];
-			if (LineLineIntersect(pa, pb, pc, pd)) return false;
+			if (LineLineIntersect(pa, pb, pc, pd)) {
+				m_boundaryValid = false;
+				return;
+			}
 		}
 	}
-	return true;
+	m_boundaryValid = true;
 }
 
 bool ProfileInfo::IsBoundaryValid(const std::vector<glm::vec2>& points)
 {
+	if (points.size() <= 2) return false;
 	for (int i = 0; i < points.size(); i++) {
 		auto& pa = points[(i == 0 ? points.size() - 1 : i - 1)];
 		auto& pb = points[i];

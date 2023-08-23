@@ -41,7 +41,10 @@ namespace EcoSysLab
 	struct ProfileInfo
 	{
 		std::vector<glm::vec2> m_boundary;
-		[[nodiscard]] bool IsBoundaryValid() const;
+		bool m_boundaryValid = false;
+
+		
+		void CheckBoundary();
 		[[nodiscard]] static bool IsBoundaryValid(const std::vector<glm::vec2>& points);
 		[[nodiscard]] bool InBoundary(const glm::vec2& point) const;
 	};
@@ -57,6 +60,8 @@ namespace EcoSysLab
 		ProfileHandle m_handle = -1;
 		bool m_recycled = false;
 
+
+		bool m_addingLine = false;
 		template<typename PGD, typename PD, typename CD>
 		friend class PipeProfileGroup;
 	public:
@@ -176,12 +181,10 @@ namespace EcoSysLab
 			scrolling.x += io.MouseDelta.x;
 			scrolling.y += io.MouseDelta.y;
 		}
-		static bool addingLine = false;
 		// Context menu (under default mouse threshold)
 		const ImVec2 dragDelta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Right);
 		if (dragDelta.x == 0.0f && dragDelta.y == 0.0f)
 			ImGui::OpenPopupOnItemClick("context", ImGuiPopupFlags_MouseButtonRight);
-		static std::vector<glm::vec2> points = {};
 		if (ImGui::BeginPopup("context")) {
 
 			ImGui::EndPopup();
@@ -189,10 +192,10 @@ namespace EcoSysLab
 
 		// Draw profile + all lines in the canvas
 		drawList->PushClipRect(canvasP0, canvasP1, true);
-		if (editable && isMouseHovered && !addingLine && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
-			points.clear();
-			points.emplace_back(mousePosInCanvas.x, mousePosInCanvas.y);
-			addingLine = true;
+		if (editable && isMouseHovered && !m_addingLine && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+			m_info.m_boundary.clear();
+			m_info.m_boundary.emplace_back(mousePosInCanvas.x, mousePosInCanvas.y);
+			m_addingLine = true;
 		}
 		for (const auto& cell : m_cells) {
 			if(cell.IsRecycled()) continue;
@@ -222,38 +225,41 @@ namespace EcoSysLab
 			}
 			*/
 		}
-		for (int i = 0; i < m_info.m_boundary.size(); i++)
-		{
-			drawList->AddLine(ImVec2(origin.x + m_info.m_boundary[i].x * zoomFactor,
-				origin.y + m_info.m_boundary[i].y * zoomFactor),
-				ImVec2(origin.x + m_info.m_boundary[(i + 1) % m_info.m_boundary.size()].x * zoomFactor,
-					origin.y + m_info.m_boundary[(i + 1) % m_info.m_boundary.size()].y * zoomFactor),
-				IM_COL32(255, 0, 0, 255), 2.0f);
-		}
 
 		drawList->AddCircle(origin,
 			glm::clamp(0.5f * zoomFactor, 1.0f, 100.0f),
 			IM_COL32(255,
 				0,
 				0, 255));
-		if (addingLine) {
-			const auto size = points.size();
-			for (int i = 0; i < size - 1; i++) {
-				drawList->AddLine(ImVec2(origin.x + points[i].x * zoomFactor,
-					origin.y + points[i].y * zoomFactor),
-					ImVec2(origin.x + points[i + 1].x * zoomFactor,
-						origin.y + points[i + 1].y * zoomFactor),
+		if (m_info.m_boundary.size() >= 2) {
+			for (int i = 0; i < m_info.m_boundary.size() - 1; i++) {
+				drawList->AddLine(ImVec2(origin.x + m_info.m_boundary[i].x * zoomFactor,
+					origin.y + m_info.m_boundary[i].y * zoomFactor),
+					ImVec2(origin.x + m_info.m_boundary[i + 1].x * zoomFactor,
+						origin.y + m_info.m_boundary[i + 1].y * zoomFactor),
 					IM_COL32(255, 0, 0, 255), 2.0f);
 			}
-			if (glm::distance(points.back(), { mousePosInCanvas.x, mousePosInCanvas.y }) >= 10.0f / zoomFactor)
-				points.emplace_back(mousePosInCanvas.x, mousePosInCanvas.y);
+		}
+		if (m_addingLine) {
+			if (glm::distance(m_info.m_boundary.back(), { mousePosInCanvas.x, mousePosInCanvas.y }) >= 10.0f / zoomFactor)
+				m_info.m_boundary.emplace_back(mousePosInCanvas.x, mousePosInCanvas.y);
 			if (editable && !ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
-				addingLine = false;
-				if (ProfileInfo::IsBoundaryValid(points)) {
-					m_info.m_boundary = points;
+				m_addingLine = false;
+				changed = true;
+				m_info.CheckBoundary();
+				if (m_info.m_boundaryValid) {
 					FillCells();
-					changed = true;
 				}
+			}
+		}else if(m_info.m_boundaryValid)
+		{
+			for (int i = 0; i < m_info.m_boundary.size(); i++)
+			{
+				drawList->AddLine(ImVec2(origin.x + m_info.m_boundary[m_info.m_boundary.size() - 1].x * zoomFactor,
+					origin.y + m_info.m_boundary[m_info.m_boundary.size() - 1].y * zoomFactor),
+					ImVec2(origin.x + m_info.m_boundary[0].x * zoomFactor,
+						origin.y + m_info.m_boundary[0].y * zoomFactor),
+					IM_COL32(255, 0, 0, 255), 2.0f);
 			}
 		}
 		drawList->PopClipRect();
@@ -371,7 +377,7 @@ namespace EcoSysLab
 		auto max = glm::vec2(FLT_MIN);
 		for(const auto& i : m_cells)
 		{
-			RecycleCell(i.GetHandle());
+			if(!i.IsRecycled()) RecycleCell(i.GetHandle());
 		}
 		for(const auto& i : m_info.m_boundary)
 		{
