@@ -375,6 +375,7 @@ namespace EcoSysLab
 	{
 		auto min = glm::vec2(FLT_MAX);
 		auto max = glm::vec2(FLT_MIN);
+		float radius = 0.1f;
 		for(const auto& i : m_cells)
 		{
 			if(!i.IsRecycled()) RecycleCell(i.GetHandle());
@@ -385,9 +386,9 @@ namespace EcoSysLab
 			max = glm::max(i, max);
 		}
 
-		for(int i = min.x; i <= max.x; i++)
+		for(float i = min.x; i <= max.x; i += radius * 2.0f)
 		{
-			for(int j = min.y; j <= max.y; j++)
+			for(float j = min.y; j <= max.y; j += radius * 2.0f)
 			{
 				auto position = glm::vec2(i, j);
 				if(m_info.InBoundary(position))
@@ -395,7 +396,7 @@ namespace EcoSysLab
 					auto newCellHandle = AllocateCell();
 					auto& newCell = RefCell(newCellHandle);
 					newCell.m_info.m_offset = position;
-					newCell.m_info.m_radius = 1.0f;
+					newCell.m_info.m_radius = radius;
 					newCell.m_info.m_boundary = false;
 				}
 			}

@@ -49,7 +49,7 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 			ImGui::End();
 		}
 
-		ImGui::DragFloat("Pipe radius", &m_pipeModelParameters.m_pipeRadius, 0.001f, 0.001f, 1.0f);
+		ImGui::DragFloat("Pipe radius", &m_pipeModelParameters.m_profileScale, 0.001f, 0.001f, 1.0f);
 
 		if (ImGui::Button("Build strands"))
 		{

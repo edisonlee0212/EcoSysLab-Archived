@@ -48,17 +48,26 @@ void PipeModel::InitializePipes(const PipeModelParameters& pipeModelParameters)
 
 	//0. Allocate pipes for target skeleton.
 	auto& baseProfile = m_pipeProfileGroup.RefProfile(m_skeleton.m_data.m_baseProfileHandle);
+	auto& baseNode = m_skeleton.RefNode(0);
 	for (const auto& readOnlyCell : baseProfile.PeekCells())
 	{
 		if (readOnlyCell.IsRecycled()) continue;
 		auto& cell = baseProfile.RefCell(readOnlyCell.GetHandle());
 		const auto newPipeHandle = m_pipeGroup.AllocatePipe();
 		cell.m_data.m_pipeHandle = newPipeHandle;
+
+		auto& pipe = m_pipeGroup.RefPipe(newPipeHandle);
+		const glm::vec3 left = baseNode.m_info.m_regulatedGlobalRotation * glm::vec3(1, 0, 0);
+		const glm::vec3 up = baseNode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
+		auto localPosition = pipeModelParameters.m_profileScale * cell.m_info.m_offset;
+		pipe.m_info.m_baseInfo.m_globalPosition = baseNode.m_info.m_globalPosition + left * localPosition.x + up * localPosition.y;
+		pipe.m_info.m_baseInfo.m_globalRotation = baseNode.m_info.m_regulatedGlobalRotation;
+		pipe.m_info.m_baseInfo.m_thickness = pipeModelParameters.m_profileScale * cell.m_info.m_radius;
 	}
 
 	//1. Map first node profile from base profile.
-	//const std::vector firstProfileHandle = { m_skeleton.RefNode(0).m_data.m_profileHandle };
-	//MapProfiles(m_skeleton.m_data.m_baseProfileHandle, firstProfileHandle);
+	const std::vector firstProfileHandle = { m_skeleton.RefNode(0).m_data.m_profileHandle };
+	MapProfiles(m_skeleton.m_data.m_baseProfileHandle, firstProfileHandle);
 
 	//2. Map all profiles.
 	for (const auto& i : nodeList)
@@ -86,8 +95,8 @@ void PipeModel::InitializePipes(const PipeModelParameters& pipeModelParameters)
 			cell.m_data.m_pipeSegmentHandle = m_pipeGroup.Extend(cell.m_data.m_pipeHandle);
 			auto& pipeSegment = m_pipeGroup.RefPipeSegment(cell.m_data.m_pipeSegmentHandle);
 			pipeSegment.m_data.m_nodeHandle = i;
-			pipeSegment.m_info.m_localPosition = pipeModelParameters.m_pipeRadius * cell.m_info.m_offset;
-			pipeSegment.m_info.m_thickness = pipeModelParameters.m_pipeRadius * cell.m_info.m_radius;
+			pipeSegment.m_info.m_localPosition = pipeModelParameters.m_profileScale * cell.m_info.m_offset;
+			pipeSegment.m_info.m_thickness = pipeModelParameters.m_profileScale * cell.m_info.m_radius;
 		}
 	}
 
@@ -102,13 +111,5 @@ void PipeModel::InitializePipes(const PipeModelParameters& pipeModelParameters)
 		auto& pipeSegmentInfo = pipeSegment.m_info;
 		pipeSegmentInfo.m_globalPosition = nodeInfo.m_globalPosition + front * nodeInfo.m_length + left * pipeSegmentInfo.m_localPosition.x + up * pipeSegmentInfo.m_localPosition.y;
 		pipeSegmentInfo.m_globalRotation = nodeInfo.m_regulatedGlobalRotation;
-	}
-	for (auto& pipe : m_pipeGroup.RefPipes())
-	{
-		if (pipe.IsRecycled()) continue;
-		auto& pipeInfo = pipe.m_info.m_baseInfo;
-		const glm::vec3 left = pipeInfo.m_globalRotation * glm::vec3(1, 0, 0);
-		const glm::vec3 up = pipeInfo.m_globalRotation * glm::vec3(0, 1, 0);
-		pipeInfo.m_globalPosition = pipeInfo.m_globalPosition + left * pipeInfo.m_localPosition.x + up * pipeInfo.m_localPosition.y;
 	}
 }

@@ -5,6 +5,6 @@ namespace EcoSysLab
 {
 	struct PipeModelParameters
 	{
-		float m_pipeRadius = 0.001f;
+		float m_profileScale = 0.1f;
 	};
 }

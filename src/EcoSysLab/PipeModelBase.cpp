@@ -49,16 +49,9 @@ void PipeModelBase::EstablishPipes()
 	m_pipeModel.m_pipeGroup = {};
 
 	m_pipeModel.m_skeleton.m_data.m_baseProfileHandle = m_baseProfileHandle;
-	m_pipeModel.m_pipeProfileGroup.RefProfile(m_baseProfileHandle).m_data.m_nodeHandle = 0;
+	m_pipeModel.m_pipeProfileGroup.RefProfile(m_baseProfileHandle).m_data.m_nodeHandle = -1;
 
-	auto& rootNode = m_pipeModel.m_skeleton.RefNode(0);
-	const auto transform = scene->GetDataComponent<Transform>(owner);
-	rootNode.m_info.m_globalRotation = transform.GetRotation();
-	rootNode.m_info.m_globalPosition = transform.GetPosition();
-	rootNode.m_info.m_length = 0;
-
-	rootNode.m_data.m_profileHandle = m_baseProfileHandle;
-
+	
 	scene->ForEachDescendant(owner, [&](const Entity& entity)
 		{
 			const auto parent = scene->GetParent(entity);
@@ -76,25 +69,22 @@ void PipeModelBase::EstablishPipes()
 
 					const auto transform = scene->GetDataComponent<Transform>(entity);
 					const auto localPosition = transform.GetPosition();
-					node.m_info.m_localRotation = transform.GetRotation();
-					node.m_info.m_localPosition = localPosition;
-					node.m_info.m_length = 0;
+					node.m_info.m_length = glm::length(localPosition);
+					const auto front = glm::normalize(localPosition);
+					node.m_info.m_localRotation = glm::quatLookAt(front, glm::vec3(front.y, front.z, front.x));
 
 					node.m_data.m_profileHandle = singlePipeProfile->m_profileHandle;
 				}
 				else if (scene->HasPrivateComponent<PipeModelBase>(parent))
 				{
+					//There can only be one entity for this.
 					const auto parentPipeModelBase = scene->GetOrSetPrivateComponent<PipeModelBase>(parent).lock();
-					auto& parentProfile = m_pipeModel.m_pipeProfileGroup.RefProfile(parentPipeModelBase->m_baseProfileHandle);
-					NodeHandle parentNodeHandle = parentProfile.m_data.m_nodeHandle;
-					if (parentNodeHandle == -1) return;
-					profile.m_data.m_nodeHandle = m_pipeModel.m_skeleton.Extend(parentNodeHandle, true);
+					profile.m_data.m_nodeHandle = 0;
 					auto& node = m_pipeModel.m_skeleton.RefNode(profile.m_data.m_nodeHandle);
+
 					const auto transform = scene->GetDataComponent<Transform>(entity);
 					const auto localPosition = transform.GetPosition();
-					node.m_info.m_localRotation = transform.GetRotation();
-					node.m_info.m_localPosition = localPosition;
-					node.m_info.m_length = 0;
+					node.m_info.m_length = glm::length(localPosition);
 
 					node.m_data.m_profileHandle = singlePipeProfile->m_profileHandle;
 				}
@@ -160,6 +150,8 @@ void PipeModelBase::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 	const auto scene = GetScene();
 	const auto owner = GetOwner();
 
+	ImGui::DragFloat("Pipe Model Profile Scale", &m_pipeModelParameters.m_profileScale);
+
 	ImGui::Checkbox("Show Profile", &m_showProfile);
 
 	if (ImGui::Button("Establish pipes"))
@@ -174,17 +166,23 @@ void PipeModelBase::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 		{
 			scene->DeleteEntity(i);
 		}
+		const auto centerChild = scene->CreateEntity("Center child");
 
 		const auto leftChild = scene->CreateEntity("Left child");
 		const auto rightChild = scene->CreateEntity("Right child");
 		auto transform = Transform();
-		transform.SetPosition(glm::vec3(-1, 3, 0));
-		scene->SetDataComponent(leftChild, transform);
-		transform.SetPosition(glm::vec3(1, 3, 0));
-		scene->SetDataComponent(rightChild, transform);
-		scene->SetParent(leftChild, owner);
-		scene->SetParent(rightChild, owner);
 
+		scene->SetParent(centerChild, owner);
+		scene->SetParent(leftChild, centerChild);
+		scene->SetParent(rightChild, centerChild);
+		transform.SetPosition(glm::vec3(0, 0, -2));
+		scene->SetDataComponent(centerChild, transform);
+		transform.SetPosition(glm::vec3(-1, 0, -4));
+		scene->SetDataComponent(leftChild, transform);
+		transform.SetPosition(glm::vec3(1, 0, -4));
+		scene->SetDataComponent(rightChild, transform);
+		
+		scene->GetOrSetPrivateComponent<SinglePipeProfile>(centerChild);
 		scene->GetOrSetPrivateComponent<SinglePipeProfile>(leftChild);
 		scene->GetOrSetPrivateComponent<SinglePipeProfile>(rightChild);
 
