@@ -203,16 +203,16 @@ namespace EcoSysLab
 		auto& baseInfo = pipe.m_info.m_baseInfo;
 		strands.emplace_back(points.size());
 		auto frontPointIndex = points.size();
+		StrandPoint basePoint;
+		basePoint.m_normal = glm::normalize(baseInfo.m_globalRotation * glm::vec3(0, 0, -1));
+		basePoint.m_position = baseInfo.m_globalPosition;
+		basePoint.m_thickness = baseInfo.m_thickness;
+		basePoint.m_color = pipe.m_info.m_color;
+
+		points.emplace_back(basePoint);
+		points.emplace_back(basePoint);
+
 		StrandPoint point;
-		point.m_normal = glm::normalize(baseInfo.m_globalRotation * glm::vec3(0, 0, -1));
-		point.m_position = baseInfo.m_globalPosition;
-		point.m_thickness = baseInfo.m_thickness;
-		point.m_color = pipe.m_info.m_color;
-
-		points.emplace_back(point);
-		points.emplace_back(point);
-
-
 		if (pipeSegmentHandles.size() == 1)
 		{
 			const auto& secondPipeSegment = PeekPipeSegment(pipe.PeekPipeSegmentHandles()[0]);

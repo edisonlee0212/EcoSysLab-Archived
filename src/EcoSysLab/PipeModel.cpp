@@ -1,5 +1,5 @@
 #include "PipeModel.hpp"
-
+#include "algorithm"
 #include "PipeProfile.hpp"
 
 using namespace EcoSysLab;
@@ -8,10 +8,33 @@ void PipeModel::MapProfiles(ProfileHandle srcProfileHandle, const std::vector<Pr
 {
 	const auto& srcProfile = m_pipeProfileGroup.PeekProfile(srcProfileHandle);
 	//Simply assign profile cell one by one.
-	int dstProfileIndex = 0;
-	int dstProfileCellIndex = 0;
+	std::vector<PipeHandle> srcPipeHandles;
+
+
+	std::vector<std::pair<ProfileHandle, CellHandle>> dstCells;
+	for (const auto& dstProfileHandle : dstProfileHandles)
+	{
+		auto& dstProfile = m_pipeProfileGroup.RefProfile(dstProfileHandle);
+		for (auto& dstCell : dstProfile.RefCells())
+		{
+			if (dstCell.IsRecycled()) continue;
+			dstCell.m_data.m_pipeHandle = 0;
+			dstCells.emplace_back(dstProfileHandle, dstCell.GetHandle());
+		}
+	}
+	std::random_device rd;
+	std::mt19937 g(rd());
+	std::shuffle(dstCells.begin(), dstCells.end(), g);
+	int dstCellIndex = 0;
 	for (const auto& srcCell : srcProfile.PeekCells())
 	{
+		if (srcCell.IsRecycled() || srcCell.m_data.m_pipeHandle == -1) continue;
+		if (dstCellIndex >= dstCells.size()) break;
+		auto& dstCell = m_pipeProfileGroup.RefProfile(dstCells[dstCellIndex].first).RefCell(dstCells[dstCellIndex].second);
+		dstCell.m_data.m_pipeHandle = srcCell.m_data.m_pipeHandle;
+		dstCellIndex++;
+
+		/*
 		//Break if we ran out of dst profile handles.
 		while (dstProfileIndex < dstProfileHandles.size()
 			&& dstProfileCellIndex >= m_pipeProfileGroup.RefProfile(dstProfileHandles[dstProfileIndex]).PeekCells().size())
@@ -21,8 +44,9 @@ void PipeModel::MapProfiles(ProfileHandle srcProfileHandle, const std::vector<Pr
 		}
 		if (dstProfileIndex >= dstProfileHandles.size()) break;
 		auto& dstCell = m_pipeProfileGroup.RefProfile(dstProfileHandles[dstProfileIndex]).RefCell(dstProfileCellIndex);
-		dstCell.m_data.m_pipeHandle = srcCell.m_data.m_pipeHandle;
 		dstProfileCellIndex++;
+		dstCell.m_data.m_pipeHandle = srcCell.m_data.m_pipeHandle;
+		*/
 	}
 }
 

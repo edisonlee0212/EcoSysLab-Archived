@@ -13,7 +13,7 @@ namespace EcoSysLab
 	public:
 		void OnCreate() override;
 		void OnDestroy() override;
-		bool m_showProfile = false;
+		bool m_showProfile = true;
 		void Update() override;
 
 		PrivateComponentRef m_pipeModelBase;

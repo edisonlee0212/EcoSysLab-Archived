@@ -9,7 +9,7 @@ namespace EcoSysLab
 	{
 	public:
 
-		bool m_showProfile = false;
+		bool m_showProfile = true;
 		PipeModel m_pipeModel;
 		ProfileHandle m_baseProfileHandle = -1;
 		PipeModelParameters m_pipeModelParameters {};

@@ -36,7 +36,7 @@ bool RayLineIntersect(const glm::vec2& rayOrigin, const glm::vec2& rayDirection,
 	const float t2 = glm::dot(v1, v3) / dot;
 
 	//!!!!Check t2 >= 0 if we allow intersect on point 1
-	if (t1 >= 0.0f && t2 > 0.0f && 1.0f - t2 >= 0.0f)
+	if (t1 >= 0.0f && t2 >= 0.0f && 1.0f - t2 >= 0.0f)
 		return true;
 
 	return false;
