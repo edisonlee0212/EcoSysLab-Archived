@@ -31,6 +31,65 @@ void TreeModel::ResetReproductiveModule()
 	m_fruitCount = m_leafCount = 0;
 }
 
+void TreeModel::CalculateInternodeTransforms()
+{
+	m_shootSkeleton.m_min = glm::vec3(FLT_MAX);
+	m_shootSkeleton.m_max = glm::vec3(FLT_MIN);
+	for (const auto& nodeHandle : m_shootSkeleton.RefSortedNodeList()) {
+		auto& node = m_shootSkeleton.RefNode(nodeHandle);
+		auto& nodeInfo = node.m_info;
+		auto& nodeData = node.m_data;
+		if (node.GetParentHandle() != -1) {
+			auto& parentInfo = m_shootSkeleton.RefNode(node.GetParentHandle()).m_info;
+			nodeInfo.m_globalRotation =
+				parentInfo.m_globalRotation * nodeData.m_localRotation;
+			nodeInfo.m_globalDirection = glm::normalize(nodeInfo.m_globalRotation * glm::vec3(0, 0, -1));
+			nodeInfo.m_globalPosition =
+				parentInfo.m_globalPosition
+				+ parentInfo.m_length * parentInfo.m_globalDirection;
+			auto parentRegulatedUp = parentInfo.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
+			auto regulatedUp = glm::normalize(glm::cross(glm::cross(nodeInfo.m_globalDirection, parentRegulatedUp), nodeInfo.m_globalDirection));
+			nodeInfo.m_regulatedGlobalRotation = glm::quatLookAt(nodeInfo.m_globalDirection, regulatedUp);
+		}
+		m_shootSkeleton.m_min = glm::min(m_shootSkeleton.m_min, nodeInfo.m_globalPosition);
+		m_shootSkeleton.m_max = glm::max(m_shootSkeleton.m_max, nodeInfo.m_globalPosition);
+		const auto endPosition = nodeInfo.m_globalPosition
+		+ nodeInfo.m_length * nodeInfo.m_globalDirection;
+		m_shootSkeleton.m_min = glm::min(m_shootSkeleton.m_min, endPosition);
+		m_shootSkeleton.m_max = glm::max(m_shootSkeleton.m_max, endPosition);
+	}
+}
+
+void TreeModel::CalculateRootNodeTransforms()
+{
+	m_rootSkeleton.m_min = glm::vec3(FLT_MAX);
+	m_rootSkeleton.m_max = glm::vec3(FLT_MIN);
+	for (const auto& nodeHandle : m_rootSkeleton.RefSortedNodeList()) {
+		auto& node = m_rootSkeleton.RefNode(nodeHandle);
+		auto& nodeInfo = node.m_info;
+		auto& nodeData = node.m_data;
+		if (node.GetParentHandle() != -1) {
+			auto& parentInfo = m_rootSkeleton.RefNode(node.GetParentHandle()).m_info;
+			nodeInfo.m_globalRotation =
+				parentInfo.m_globalRotation * nodeData.m_localRotation;
+			nodeInfo.m_globalDirection = glm::normalize(nodeInfo.m_globalRotation * glm::vec3(0, 0, -1));
+			nodeInfo.m_globalPosition =
+				parentInfo.m_globalPosition
+				+ parentInfo.m_length * parentInfo.m_globalDirection
+				+ nodeData.m_localPosition;
+			auto parentRegulatedUp = parentInfo.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
+			auto regulatedUp = glm::normalize(glm::cross(glm::cross(nodeInfo.m_globalDirection, parentRegulatedUp), nodeInfo.m_globalDirection));
+			nodeInfo.m_regulatedGlobalRotation = glm::quatLookAt(nodeInfo.m_globalDirection, regulatedUp);
+		}
+		m_rootSkeleton.m_min = glm::min(m_rootSkeleton.m_min, nodeInfo.m_globalPosition);
+		m_rootSkeleton.m_max = glm::max(m_rootSkeleton.m_max, nodeInfo.m_globalPosition);
+		const auto endPosition = nodeInfo.m_globalPosition
+			+ nodeInfo.m_length * nodeInfo.m_globalDirection;
+		m_rootSkeleton.m_min = glm::min(m_rootSkeleton.m_min, endPosition);
+		m_rootSkeleton.m_max = glm::max(m_rootSkeleton.m_max, endPosition);
+	}
+}
+
 void TreeModel::PruneInternode(NodeHandle internodeHandle)
 {
 		m_shootSkeleton.RecycleNode(internodeHandle,
@@ -157,7 +216,7 @@ void TreeModel::Initialize(const ShootGrowthController& shootGrowthParameters, c
 		auto& firstRootNode = m_rootSkeleton.RefNode(0);
 		firstRootNode.m_info.m_thickness = 0.003f;
 		firstRootNode.m_info.m_length = 0.0f;
-		firstRootNode.m_info.m_localRotation = glm::vec3(glm::radians(rootGrowthParameters.m_apicalAngle(firstRootNode)),
+		firstRootNode.m_data.m_localRotation = glm::vec3(glm::radians(rootGrowthParameters.m_apicalAngle(firstRootNode)),
 			0.0f,
 			glm::radians(rootGrowthParameters.m_rollAngle(firstRootNode)));
 		firstRootNode.m_data.m_verticalTropism = rootGrowthParameters.m_tropismIntensity;
@@ -387,33 +446,31 @@ bool TreeModel::GrowRoots(const glm::mat4& globalTransform, SoilModel& soilModel
 
 				if (rootNode.GetParentHandle() == -1) {
 					rootNodeInfo.m_globalPosition = glm::vec3(0.0f);
-					rootNodeInfo.m_localRotation = glm::vec3(0.0f);
+					rootNodeData.m_localRotation = glm::vec3(0.0f);
 					rootNodeInfo.m_globalRotation = rootNodeInfo.m_regulatedGlobalRotation = glm::vec3(glm::radians(-90.0f), 0.0f, 0.0f);
-
+					rootNodeInfo.m_globalDirection = glm::normalize(rootNodeInfo.m_globalRotation * glm::vec3(0, 0, -1));
 					rootNodeData.m_rootDistance = rootNodeInfo.m_length / rootGrowthParameters.m_rootNodeLength;
 				}
 				else {
 					auto& parentRootNode = m_rootSkeleton.RefNode(rootNode.GetParentHandle());
 					rootNodeData.m_rootDistance = parentRootNode.m_data.m_rootDistance + rootNodeInfo.m_length / rootGrowthParameters.m_rootNodeLength;
 					rootNodeInfo.m_globalRotation =
-						parentRootNode.m_info.m_globalRotation * rootNodeInfo.m_localRotation;
+						parentRootNode.m_info.m_globalRotation * rootNodeData.m_localRotation;
+					rootNodeInfo.m_globalDirection = glm::normalize(rootNodeInfo.m_globalRotation * glm::vec3(0, 0, -1));
 					rootNodeInfo.m_globalPosition =
-						parentRootNode.m_info.m_globalPosition + parentRootNode.m_info.m_length *
-						(parentRootNode.m_info.m_globalRotation *
-							glm::vec3(0, 0, -1));
+						parentRootNode.m_info.m_globalPosition
+						+ parentRootNode.m_info.m_length * parentRootNode.m_info.m_globalDirection;
 
 
-					auto front = rootNodeInfo.m_globalRotation * glm::vec3(0, 0, -1);
 					auto parentRegulatedUp = parentRootNode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
-					auto regulatedUp = glm::normalize(glm::cross(glm::cross(front, parentRegulatedUp), front));
-					rootNodeInfo.m_regulatedGlobalRotation = glm::quatLookAt(front, regulatedUp);
+					auto regulatedUp = glm::normalize(glm::cross(glm::cross(rootNodeInfo.m_globalDirection, parentRegulatedUp), rootNodeInfo.m_globalDirection));
+					rootNodeInfo.m_regulatedGlobalRotation = glm::quatLookAt(rootNodeInfo.m_globalDirection, regulatedUp);
 
 				}
 				m_rootSkeleton.m_min = glm::min(m_rootSkeleton.m_min, rootNodeInfo.m_globalPosition);
 				m_rootSkeleton.m_max = glm::max(m_rootSkeleton.m_max, rootNodeInfo.m_globalPosition);
-				const auto endPosition = rootNodeInfo.m_globalPosition + rootNodeInfo.m_length *
-					(rootNodeInfo.m_globalRotation *
-						glm::vec3(0, 0, -1));
+				const auto endPosition = rootNodeInfo.m_globalPosition
+					+ rootNodeInfo.m_length * rootNodeInfo.m_globalDirection;
 				m_rootSkeleton.m_min = glm::min(m_rootSkeleton.m_min, endPosition);
 				m_rootSkeleton.m_max = glm::max(m_rootSkeleton.m_max, endPosition);
 			}
@@ -590,9 +647,9 @@ bool TreeModel::GrowShoots(const glm::mat4& globalTransform, ClimateModel& clima
 
 			if (internode.GetParentHandle() == -1) {
 				internodeInfo.m_globalPosition = glm::vec3(0.0f);
-				internodeInfo.m_localRotation = glm::vec3(0.0f);
+				internodeData.m_localRotation = glm::vec3(0.0f);
 				internodeInfo.m_globalRotation = internodeInfo.m_regulatedGlobalRotation = glm::vec3(glm::radians(90.0f), 0.0f, 0.0f);
-
+				internodeInfo.m_globalDirection = glm::normalize(internodeInfo.m_globalRotation * glm::vec3(0, 0, -1));
 				internodeData.m_rootDistance =
 					internodeInfo.m_length / shootGrowthParameters.m_internodeLength;
 			}
@@ -601,7 +658,8 @@ bool TreeModel::GrowShoots(const glm::mat4& globalTransform, ClimateModel& clima
 				internodeData.m_rootDistance = parentInternode.m_data.m_rootDistance + internodeInfo.m_length /
 					shootGrowthParameters.m_internodeLength;
 				internodeInfo.m_globalRotation =
-					parentInternode.m_info.m_globalRotation * internodeInfo.m_localRotation;
+					parentInternode.m_info.m_globalRotation * internodeData.m_localRotation;
+				
 #pragma region Apply Sagging
 				const auto& parentNode = m_shootSkeleton.RefNode(
 					internode.GetParentHandle());
@@ -612,26 +670,24 @@ bool TreeModel::GrowShoots(const glm::mat4& globalTransform, ClimateModel& clima
 				float dotP = glm::abs(glm::dot(front, m_currentGravityDirection));
 				ApplyTropism(m_currentGravityDirection, internodeData.m_sagging * (1.0f - dotP), front, up);
 				internodeInfo.m_globalRotation = glm::quatLookAt(front, up);
-				internodeInfo.m_localRotation = glm::inverse(parentGlobalRotation) * internodeInfo.m_globalRotation;
+				internodeData.m_localRotation = glm::inverse(parentGlobalRotation) * internodeInfo.m_globalRotation;
 
 				auto parentRegulatedUp = parentNode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
 				auto regulatedUp = glm::normalize(glm::cross(glm::cross(front, parentRegulatedUp), front));
 				internodeInfo.m_regulatedGlobalRotation = glm::quatLookAt(front, regulatedUp);
 #pragma endregion
-
+				internodeInfo.m_globalDirection = glm::normalize(internodeInfo.m_globalRotation * glm::vec3(0, 0, -1));
 				internodeInfo.m_globalPosition =
-					parentInternode.m_info.m_globalPosition + parentInternode.m_info.m_length *
-					(parentInternode.m_info.m_globalRotation *
-						glm::vec3(0, 0, -1));
+					parentInternode.m_info.m_globalPosition
+				+ parentInternode.m_info.m_length * parentInternode.m_info.m_globalDirection;
 
 
 			}
 
 			m_shootSkeleton.m_min = glm::min(m_shootSkeleton.m_min, internodeInfo.m_globalPosition);
 			m_shootSkeleton.m_max = glm::max(m_shootSkeleton.m_max, internodeInfo.m_globalPosition);
-			const auto endPosition = internodeInfo.m_globalPosition + internodeInfo.m_length *
-				(internodeInfo.m_globalRotation *
-					glm::vec3(0, 0, -1));
+			const auto endPosition = internodeInfo.m_globalPosition
+				+ internodeInfo.m_length * internodeInfo.m_globalDirection;
 			m_shootSkeleton.m_min = glm::min(m_shootSkeleton.m_min, endPosition);
 			m_shootSkeleton.m_max = glm::max(m_shootSkeleton.m_max, endPosition);
 		}
@@ -744,7 +800,7 @@ bool TreeModel::ElongateRoot(SoilModel& soilModel, const float extendLength, Nod
 		newRootNode.m_data.m_rootDistance = oldRootNode.m_data.m_rootDistance + newRootNode.m_info.m_length / rootGrowthParameters.m_rootNodeLength;
 		newRootNode.m_info.m_thickness = rootGrowthParameters.m_endNodeThickness;
 		newRootNode.m_info.m_globalRotation = glm::quatLookAt(desiredGlobalFront, desiredGlobalUp);
-		newRootNode.m_info.m_localRotation =
+		newRootNode.m_data.m_localRotation =
 			glm::inverse(oldRootNode.m_info.m_globalRotation) *
 			newRootNode.m_info.m_globalRotation;
 
@@ -842,7 +898,7 @@ bool TreeModel::ElongateInternode(float extendLength, NodeHandle internodeHandle
 		newInternode.m_info.m_length = glm::clamp(extendLength, 0.0f, internodeLength);
 		newInternode.m_info.m_thickness = shootGrowthParameters.m_endNodeThickness;
 		newInternode.m_info.m_globalRotation = glm::quatLookAt(desiredGlobalFront, desiredGlobalUp);
-		newInternode.m_info.m_localRotation = newInternode.m_data.m_desiredLocalRotation =
+		newInternode.m_data.m_localRotation = newInternode.m_data.m_desiredLocalRotation =
 			glm::inverse(oldInternode.m_info.m_globalRotation) *
 			newInternode.m_info.m_globalRotation;
 		//Allocate apical bud for new internode
@@ -923,11 +979,11 @@ inline bool TreeModel::GrowRootNode(SoilModel& soilModel, NodeHandle rootNodeHan
 				rootGrowthParameters.SetTropisms(oldRootNode, newRootNode);
 				newRootNode.m_info.m_length = 0.0f;
 				newRootNode.m_info.m_thickness = rootGrowthParameters.m_endNodeThickness;
-				newRootNode.m_info.m_localRotation =
+				newRootNode.m_data.m_localRotation =
 					glm::quat(glm::vec3(
 						glm::radians(rootGrowthParameters.m_branchingAngle(newRootNode)),
 						glm::radians(glm::linearRand(0.0f, 360.0f)), 0.0f));
-				auto globalRotation = oldRootNode.m_info.m_globalRotation * newRootNode.m_info.m_localRotation;
+				auto globalRotation = oldRootNode.m_info.m_globalRotation * newRootNode.m_data.m_localRotation;
 				auto front = globalRotation * glm::vec3(0, 0, -1);
 				auto up = globalRotation * glm::vec3(0, 1, 0);
 				auto angleTowardsUp = glm::degrees(glm::acos(glm::dot(front, glm::vec3(0, 1, 0))));
@@ -938,7 +994,7 @@ inline bool TreeModel::GrowRootNode(SoilModel& soilModel, NodeHandle rootNodeHan
 
 					up = glm::normalize(glm::cross(glm::cross(front, up), front));
 					globalRotation = glm::quatLookAt(front, up);
-					newRootNode.m_info.m_localRotation = glm::inverse(oldRootNode.m_info.m_globalRotation) * globalRotation;
+					newRootNode.m_data.m_localRotation = glm::inverse(oldRootNode.m_info.m_globalRotation) * globalRotation;
 					front = globalRotation * glm::vec3(0, 0, -1);
 				}
 				const float maintenanceVigor = m_rootSkeleton.RefNode(rootNodeHandle).m_data.m_vigorSink.SubtractVigor(availableMaintenanceVigor);
@@ -1016,7 +1072,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 				newInternode.m_data.m_lateral = true;
 				newInternode.m_info.m_length = 0.0f;
 				newInternode.m_info.m_thickness = shootGrowthParameters.m_endNodeThickness;
-				newInternode.m_info.m_localRotation = newInternode.m_data.m_desiredLocalRotation =
+				newInternode.m_data.m_localRotation = newInternode.m_data.m_desiredLocalRotation =
 					glm::inverse(oldInternode.m_info.m_globalRotation) *
 					glm::quatLookAt(desiredGlobalFront, desiredGlobalUp);
 				//Allocate apical bud

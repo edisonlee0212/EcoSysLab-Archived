@@ -67,12 +67,9 @@ void PipeModelBase::EstablishPipes()
 					profile.m_data.m_nodeHandle = m_pipeModel.m_skeleton.Extend(parentNodeHandle, true);
 					auto& node = m_pipeModel.m_skeleton.RefNode(profile.m_data.m_nodeHandle);
 
-					const auto transform = scene->GetDataComponent<Transform>(entity);
-					const auto localPosition = transform.GetPosition();
-					node.m_info.m_length = glm::length(localPosition);
-					const auto front = glm::normalize(localPosition);
-					node.m_info.m_localRotation = glm::quatLookAt(front, glm::vec3(front.y, front.z, front.x));
-
+					const auto globalTransform = scene->GetDataComponent<GlobalTransform>(entity);
+					node.m_info.m_globalPosition = globalTransform.GetPosition();
+					node.m_info.m_globalRotation = globalTransform.GetRotation();
 					node.m_data.m_profileHandle = singlePipeProfile->m_profileHandle;
 				}
 				else if (scene->HasPrivateComponent<PipeModelBase>(parent))
@@ -82,9 +79,9 @@ void PipeModelBase::EstablishPipes()
 					profile.m_data.m_nodeHandle = 0;
 					auto& node = m_pipeModel.m_skeleton.RefNode(profile.m_data.m_nodeHandle);
 
-					const auto transform = scene->GetDataComponent<Transform>(entity);
-					const auto localPosition = transform.GetPosition();
-					node.m_info.m_length = glm::length(localPosition);
+					const auto globalTransform = scene->GetDataComponent<GlobalTransform>(parent);
+					node.m_info.m_globalPosition = globalTransform.GetPosition();
+					node.m_info.m_globalRotation = globalTransform.GetRotation();
 
 					node.m_data.m_profileHandle = singlePipeProfile->m_profileHandle;
 				}
@@ -92,7 +89,6 @@ void PipeModelBase::EstablishPipes()
 		}
 	);
 	m_pipeModel.m_skeleton.SortLists();
-	m_pipeModel.m_skeleton.CalculateTransforms();
 	m_pipeModel.m_skeleton.CalculateFlows();
 
 	m_pipeModel.InitializePipes(m_pipeModelParameters);
@@ -175,11 +171,11 @@ void PipeModelBase::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 		scene->SetParent(centerChild, owner);
 		scene->SetParent(leftChild, centerChild);
 		scene->SetParent(rightChild, centerChild);
-		transform.SetPosition(glm::vec3(0, 0, -2));
+		transform.SetPosition(glm::vec3(0, 2, 0));
 		scene->SetDataComponent(centerChild, transform);
-		transform.SetPosition(glm::vec3(-1, 0, -4));
+		transform.SetPosition(glm::vec3(-1, 4, 0));
 		scene->SetDataComponent(leftChild, transform);
-		transform.SetPosition(glm::vec3(1, 0, -4));
+		transform.SetPosition(glm::vec3(1, 4, 0));
 		scene->SetDataComponent(rightChild, transform);
 		
 		scene->GetOrSetPrivateComponent<SinglePipeProfile>(centerChild);

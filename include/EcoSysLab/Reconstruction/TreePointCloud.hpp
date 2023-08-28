@@ -107,6 +107,10 @@ namespace EcoSysLab {
 
 	};
 	struct ReconstructionNodeData {
+		glm::quat m_localRotation = glm::vec3(0.0f);
+		glm::vec3 m_localPosition = glm::vec3(0.0f);
+
+
 		std::vector<PointHandle> m_allocatedPoints;
 		std::vector<PointHandle> m_filteredPoints;
 		BranchHandle m_branchHandle;
@@ -118,6 +122,8 @@ namespace EcoSysLab {
 			const std::function<void(const PointCloudVoxel& voxel)>& func) const;
 		void FindBranchEnds(const glm::vec3& position, VoxelGrid<std::vector<BranchEndsVoxel>>& branchEndsVoxelGrid, float radius,
 			const std::function<void(const BranchEndsVoxel& voxel)>& func) const;
+
+		void CalculateNodeTransforms(ReconstructionSkeleton& skeleton);
 
 	public:
 		void ImportGraph(const std::filesystem::path& path, float scaleFactor = 0.1f);

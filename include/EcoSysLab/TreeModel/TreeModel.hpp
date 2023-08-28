@@ -133,6 +133,9 @@ namespace EcoSysLab {
 		
 	public:
 
+		void CalculateInternodeTransforms();
+		void CalculateRootNodeTransforms();
+
 		void PruneInternode(NodeHandle internodeHandle);
 		void PruneRootNode(NodeHandle rootNodeHandle);
 

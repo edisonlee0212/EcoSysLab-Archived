@@ -28,6 +28,35 @@ TreePointCloud::FindBranchEnds(const glm::vec3& position, VoxelGrid<std::vector<
 		});
 }
 
+void TreePointCloud::CalculateNodeTransforms(ReconstructionSkeleton& skeleton)
+{
+	skeleton.m_min = glm::vec3(FLT_MAX);
+	skeleton.m_max = glm::vec3(FLT_MIN);
+	for (const auto& nodeHandle : skeleton.RefSortedNodeList()) {
+		auto& node = skeleton.RefNode(nodeHandle);
+		auto& nodeInfo = node.m_info;
+		auto& nodeData = node.m_data;
+		if (node.GetParentHandle() != -1) {
+			auto& parentInfo = skeleton.RefNode(node.GetParentHandle()).m_info;
+			nodeInfo.m_globalRotation =
+				parentInfo.m_globalRotation * nodeData.m_localRotation;
+			nodeInfo.m_globalDirection = glm::normalize(nodeInfo.m_globalRotation * glm::vec3(0, 0, -1));
+			nodeInfo.m_globalPosition =
+				parentInfo.m_globalPosition
+				+ parentInfo.m_length * parentInfo.m_globalDirection;
+			auto parentRegulatedUp = parentInfo.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
+			auto regulatedUp = glm::normalize(glm::cross(glm::cross(nodeInfo.m_globalDirection, parentRegulatedUp), nodeInfo.m_globalDirection));
+			nodeInfo.m_regulatedGlobalRotation = glm::quatLookAt(nodeInfo.m_globalDirection, regulatedUp);
+		}
+		skeleton.m_min = glm::min(skeleton.m_min, nodeInfo.m_globalPosition);
+		skeleton.m_max = glm::max(skeleton.m_max, nodeInfo.m_globalPosition);
+		const auto endPosition = nodeInfo.m_globalPosition
+			+ nodeInfo.m_length * nodeInfo.m_globalDirection;
+		skeleton.m_min = glm::min(skeleton.m_min, endPosition);
+		skeleton.m_max = glm::max(skeleton.m_max, endPosition);
+	}
+}
+
 void TreePointCloud::ImportGraph(const std::filesystem::path& path, float scaleFactor) {
 	if (!std::filesystem::exists(path)) {
 		EVOENGINE_ERROR("Not exist!");
@@ -740,7 +769,7 @@ void ApplyCurve(ReconstructionSkeleton& skeleton, OperatingBranch& branch) {
 		node.m_info.m_length = glm::distance(
 			branch.m_bezierCurve.GetPoint(static_cast<float>(i) / chainAmount),
 			branch.m_bezierCurve.GetPoint(static_cast<float>(i + 1) / chainAmount));
-		node.m_info.m_localPosition = glm::normalize(
+		node.m_data.m_localPosition = glm::normalize(
 			branch.m_bezierCurve.GetPoint(static_cast<float>(i + 1) / chainAmount) -
 			branch.m_bezierCurve.GetPoint(static_cast<float>(i) / chainAmount));
 		node.m_info.m_thickness = glm::mix(branch.m_startThickness, branch.m_endThickness,
@@ -883,22 +912,23 @@ void TreePointCloud::BuildTreeStructure(const ReconstructionSettings& reconstruc
 		skeleton.SortLists();
 		auto& sortedNodeList = skeleton.RefSortedNodeList();
 		auto& rootNode = skeleton.RefNode(0);
-		rootNode.m_info.m_localRotation = glm::vec3(0.0f);
+		rootNode.m_data.m_localRotation = glm::vec3(0.0f);
 		rootNode.m_info.m_globalRotation = rootNode.m_info.m_regulatedGlobalRotation = glm::quatLookAt(
-			rootNode.m_info.m_localPosition, glm::vec3(0, 0, -1));
-		rootNode.m_info.m_localPosition = glm::vec3(0.0f);
+			rootNode.m_data.m_localPosition, glm::vec3(0, 0, -1));
+		rootNode.m_data.m_localPosition = glm::vec3(0.0f);
 
 		for (const auto& nodeHandle : sortedNodeList) {
 			if (nodeHandle == 0) continue;
 			auto& node = skeleton.RefNode(nodeHandle);
 			auto& nodeInfo = node.m_info;
+			auto& nodeData = node.m_data;
 			auto& parentNode = skeleton.RefNode(node.GetParentHandle());
-			auto front = glm::normalize(nodeInfo.m_localPosition);
-			nodeInfo.m_localPosition = glm::vec3(0.0f);
+			auto front = glm::normalize(nodeData.m_localPosition);
+			nodeData.m_localPosition = glm::vec3(0.0f);
 			auto parentUp = parentNode.m_info.m_globalRotation * glm::vec3(0, 1, 0);
 			auto regulatedUp = glm::normalize(glm::cross(glm::cross(front, parentUp), front));
 			nodeInfo.m_globalRotation = glm::quatLookAt(front, regulatedUp);
-			nodeInfo.m_localRotation = glm::inverse(parentNode.m_info.m_globalRotation) * nodeInfo.m_globalRotation;
+			nodeData.m_localRotation = glm::inverse(parentNode.m_info.m_globalRotation) * nodeInfo.m_globalRotation;
 		}
 
 		for (auto i = sortedNodeList.rbegin(); i != sortedNodeList.rend(); i++) {
@@ -909,7 +939,7 @@ void TreePointCloud::BuildTreeStructure(const ReconstructionSettings& reconstruc
 				nodeInfo.m_thickness = glm::max(childNode.m_info.m_thickness, nodeInfo.m_thickness);
 			}
 		}
-		skeleton.CalculateTransforms();
+		CalculateNodeTransforms(skeleton);
 		skeleton.CalculateFlows();
 	}
 

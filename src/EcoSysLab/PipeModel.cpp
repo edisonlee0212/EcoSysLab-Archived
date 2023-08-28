@@ -18,7 +18,7 @@ void PipeModel::MapProfiles(ProfileHandle srcProfileHandle, const std::vector<Pr
 		for (auto& dstCell : dstProfile.RefCells())
 		{
 			if (dstCell.IsRecycled()) continue;
-			dstCell.m_data.m_pipeHandle = 0;
+			dstCell.m_data.m_pipeHandle = -1;
 			dstCells.emplace_back(dstProfileHandle, dstCell.GetHandle());
 		}
 	}
@@ -131,9 +131,8 @@ void PipeModel::InitializePipes(const PipeModelParameters& pipeModelParameters)
 		const auto& nodeInfo = node.m_info;
 		const glm::vec3 left = nodeInfo.m_regulatedGlobalRotation * glm::vec3(1, 0, 0);
 		const glm::vec3 up = nodeInfo.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
-		const glm::vec3 front = nodeInfo.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
 		auto& pipeSegmentInfo = pipeSegment.m_info;
-		pipeSegmentInfo.m_globalPosition = nodeInfo.m_globalPosition + front * nodeInfo.m_length + left * pipeSegmentInfo.m_localPosition.x + up * pipeSegmentInfo.m_localPosition.y;
+		pipeSegmentInfo.m_globalPosition = nodeInfo.m_globalPosition + left * pipeSegmentInfo.m_localPosition.x + up * pipeSegmentInfo.m_localPosition.y;
 		pipeSegmentInfo.m_globalRotation = nodeInfo.m_regulatedGlobalRotation;
 	}
 }

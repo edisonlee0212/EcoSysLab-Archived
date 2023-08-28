@@ -80,6 +80,8 @@ namespace EcoSysLab
 #pragma endregion
 
 	struct InternodeGrowthData {
+		glm::quat m_localRotation = glm::vec3(0.0f);
+
 		bool m_isMaxChild = false;
 		bool m_lateral = false;
 		float m_startAge = 0;
@@ -112,6 +114,10 @@ namespace EcoSysLab
 	};
 
 	struct RootNodeGrowthData {
+		
+		glm::quat m_localRotation = glm::vec3(0.0f);
+		glm::vec3 m_localPosition = glm::vec3(0.0f);
+
 		bool m_isMaxChild = false;
 		bool m_lateral = false;
 		float m_soilDensity = 0.0f;

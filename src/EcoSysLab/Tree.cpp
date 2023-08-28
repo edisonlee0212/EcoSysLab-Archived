@@ -830,7 +830,7 @@ void Tree::GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings
 						for (int i = 0; i < presentationSettings.m_leafCountPerInternode; i++)
 						{
 							auto leafSize = presentationSettings.m_leafSize;
-							glm::quat rotation = internodeInfo.m_globalRotation * glm::quat(glm::radians(glm::linearRand(glm::vec3(0.0f), glm::vec3(360.0f))));
+							glm::quat rotation = internodeInfo.m_globalDirection * glm::quat(glm::radians(glm::linearRand(glm::vec3(0.0f), glm::vec3(360.0f))));
 							auto front = rotation * glm::vec3(0, 0, -1);
 							TreeModel::ApplyTropism(internodeData.m_lightDirection, presentationSettings.m_phototropism, rotation);
 							auto foliagePosition = internodeInfo.m_globalPosition + front * (leafSize.z * 1.5f);

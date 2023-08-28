@@ -378,7 +378,7 @@ namespace EcoSysLab {
 			auto nodeHandle = sortedNodeList[i];
 			const auto& node = skeleton.PeekNode(nodeHandle);
 			glm::vec3 position = node.m_info.m_globalPosition;
-			const auto direction = glm::normalize(node.m_info.m_globalRotation * glm::vec3(0, 0, -1));
+			const auto direction = node.m_info.m_globalDirection;
 			auto rotation = glm::quatLookAt(
 				direction, glm::vec3(direction.y, direction.z, direction.x));
 			rotation *= glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));

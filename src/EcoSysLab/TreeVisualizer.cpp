@@ -413,7 +413,7 @@ TreeVisualizer::InspectInternode(
 		auto globalRotationAngle = glm::eulerAngles(internode.m_info.m_globalRotation);
 		ImGui::InputFloat3("Global rotation", (float*)&globalRotationAngle.x, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
-		auto localRotationAngle = glm::eulerAngles(internode.m_info.m_localRotation);
+		auto localRotationAngle = glm::eulerAngles(internode.m_data.m_localRotation);
 		ImGui::InputFloat3("Local rotation", (float*)&localRotationAngle.x, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
 		auto& internodeData = internode.m_data;
@@ -561,7 +561,7 @@ TreeVisualizer::PeekInternode(const ShootSkeleton& shootSkeleton, NodeHandle int
 		auto globalRotationAngle = glm::eulerAngles(internode.m_info.m_globalRotation);
 		ImGui::InputFloat3("Global rotation", (float*)&globalRotationAngle.x, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
-		auto localRotationAngle = glm::eulerAngles(internode.m_info.m_localRotation);
+		auto localRotationAngle = glm::eulerAngles(internode.m_data.m_localRotation);
 		ImGui::InputFloat3("Local rotation", (float*)&localRotationAngle.x, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
 		auto& internodeData = internode.m_data;
@@ -683,7 +683,7 @@ void TreeVisualizer::PeekRootNode(
 		auto globalRotationAngle = glm::eulerAngles(rootNode.m_info.m_globalRotation);
 		ImGui::InputFloat3("Global rotation", (float*)&globalRotationAngle.x, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
-		auto localRotationAngle = glm::eulerAngles(rootNode.m_info.m_localRotation);
+		auto localRotationAngle = glm::eulerAngles(rootNode.m_data.m_localRotation);
 		ImGui::InputFloat3("Local rotation", (float*)&localRotationAngle.x, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
 		auto& rootNodeData = rootNode.m_data;
@@ -737,7 +737,7 @@ bool TreeVisualizer::InspectRootNode(
 		auto globalRotationAngle = glm::eulerAngles(rootNode.m_info.m_globalRotation);
 		ImGui::InputFloat3("Global rotation", (float*)&globalRotationAngle.x, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
-		auto localRotationAngle = glm::eulerAngles(rootNode.m_info.m_localRotation);
+		auto localRotationAngle = glm::eulerAngles(rootNode.m_data.m_localRotation);
 		ImGui::InputFloat3("Local rotation", (float*)&localRotationAngle.x, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
 		auto& rootNodeData = rootNode.m_data;

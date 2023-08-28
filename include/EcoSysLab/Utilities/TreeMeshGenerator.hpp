@@ -117,12 +117,12 @@ namespace EcoSysLab {
 		auto& rings = ringsList[internodeIndex];
 		rings.clear();
 
-		glm::vec3 directionStart =
-			internodeInfo.m_globalRotation * glm::vec3(0, 0, -1);
+		glm::vec3 directionStart = internodeInfo.m_globalRotation * glm::vec3(0, 0, -1);
 		glm::vec3 directionEnd = directionStart;
+
 		glm::vec3 positionStart = internodeInfo.m_globalPosition;
 		glm::vec3 positionEnd =
-			positionStart + internodeInfo.m_length * settings.m_lineLengthFactor * directionStart;
+			positionStart + internodeInfo.m_length * settings.m_lineLengthFactor * internodeInfo.m_globalDirection;
 		float thicknessStart = internodeInfo.m_thickness;
 		float thicknessEnd = internodeInfo.m_thickness;
 		

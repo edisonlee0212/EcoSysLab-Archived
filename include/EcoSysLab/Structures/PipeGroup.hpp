@@ -199,20 +199,26 @@ namespace EcoSysLab
 		std::vector<glm::uint>& strands, std::vector<StrandPoint>& points) const
 	{
 		const auto& pipeSegmentHandles = pipe.PeekPipeSegmentHandles();
-		if (pipeSegmentHandles.empty()) return;
+		if (pipeSegmentHandles.empty())
+			return;
 		auto& baseInfo = pipe.m_info.m_baseInfo;
 		strands.emplace_back(points.size());
-		auto frontPointIndex = points.size();
 		StrandPoint basePoint;
+		const auto& secondPipeSegment = PeekPipeSegment(pipeSegmentHandles[0]);
+		auto basePointDistance = glm::distance(baseInfo.m_globalPosition, secondPipeSegment.m_info.m_globalPosition);
 		basePoint.m_normal = glm::normalize(baseInfo.m_globalRotation * glm::vec3(0, 0, -1));
-		basePoint.m_position = baseInfo.m_globalPosition;
+		basePoint.m_position = baseInfo.m_globalPosition - basePoint.m_normal * basePointDistance * 0.25f;
 		basePoint.m_thickness = baseInfo.m_thickness;
 		basePoint.m_color = pipe.m_info.m_color;
-
 		points.emplace_back(basePoint);
+		basePoint.m_position = baseInfo.m_globalPosition;
+		points.emplace_back(basePoint);
+		basePoint.m_position = baseInfo.m_globalPosition + basePoint.m_normal * basePointDistance * 0.25f;
 		points.emplace_back(basePoint);
 
 		StrandPoint point;
+		/*
+		
 		if (pipeSegmentHandles.size() == 1)
 		{
 			const auto& secondPipeSegment = PeekPipeSegment(pipe.PeekPipeSegmentHandles()[0]);
@@ -236,16 +242,22 @@ namespace EcoSysLab
 			point.m_thickness = baseInfo.m_thickness * 0.5f + secondPipeSegment.m_info.m_thickness * 0.5f;
 			points.emplace_back(point);
 		}
-
-		for (int i = 1; i < pipeSegmentHandles.size(); i++)
+		*/
+		for (int i = 0; i < pipeSegmentHandles.size(); i++)
 		{
 			const auto& pipeSegment = PeekPipeSegment(pipeSegmentHandles[i]);
+			const auto& prevPipeSegment = PeekPipeSegment(pipeSegmentHandles[i - 1]);
+			auto distance = glm::distance(pipeSegment.m_info.m_globalPosition, prevPipeSegment.m_info.m_globalPosition);
 			point.m_normal = glm::normalize(pipeSegment.m_info.m_globalRotation * glm::vec3(0, 0, -1));
-			point.m_position = pipeSegment.m_info.m_globalPosition;
+			point.m_position = pipeSegment.m_info.m_globalPosition - point.m_normal * distance * 0.25f;
 			point.m_thickness = pipeSegment.m_info.m_thickness;
 			points.emplace_back(point);
+			point.m_position = pipeSegment.m_info.m_globalPosition;
+			points.emplace_back(point);
+			point.m_position = pipeSegment.m_info.m_globalPosition + point.m_normal * distance * 0.25f;
+			points.emplace_back(point);
 		}
-
+		/*
 		StrandPoint frontPoint;
 		frontPoint = points.at(frontPointIndex);
 		frontPoint.m_position = 2.0f * frontPoint.m_position - points.at(frontPointIndex + 2).m_position;
@@ -259,6 +271,7 @@ namespace EcoSysLab
 		backPoint.m_normal = 2.0f * points.at(points.size() - 1).m_normal - backPoint.m_normal;
 		backPoint.m_thickness = 2.0f * points.at(points.size() - 1).m_thickness - backPoint.m_thickness;
 		points.emplace_back(backPoint);
+		*/
 	}
 
 	template <typename PipeGroupData, typename PipeData, typename PipeSegmentData>
