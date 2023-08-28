@@ -43,7 +43,7 @@ namespace EcoSysLab
 		std::vector<glm::vec2> m_boundary = {};
 		bool m_boundaryValid = false;
 
-		
+
 		void CheckBoundary();
 		[[nodiscard]] static bool IsBoundaryValid(const std::vector<glm::vec2>& points);
 		[[nodiscard]] bool InBoundary(const glm::vec2& point) const;
@@ -94,6 +94,7 @@ namespace EcoSysLab
 		PipeProfile();
 		explicit PipeProfile(ProfileHandle handle);
 
+		void Recenter();
 		void FillCells();
 	};
 
@@ -198,7 +199,7 @@ namespace EcoSysLab
 			m_addingLine = true;
 		}
 		for (const auto& cell : m_cells) {
-			if(cell.IsRecycled()) continue;
+			if (cell.IsRecycled()) continue;
 			const auto pointPosition = cell.m_info.m_offset;
 			const auto pointRadius = cell.m_info.m_radius;
 			const auto canvasPosition = ImVec2(origin.x + pointPosition.x * zoomFactor,
@@ -248,10 +249,12 @@ namespace EcoSysLab
 				changed = true;
 				m_info.CheckBoundary();
 				if (m_info.m_boundaryValid) {
+					Recenter();
 					FillCells();
 				}
 			}
-		}else if(m_info.m_boundaryValid)
+		}
+		else if (m_info.m_boundaryValid)
 		{
 			for (int i = 0; i < m_info.m_boundary.size(); i++)
 			{
@@ -337,7 +340,7 @@ namespace EcoSysLab
 	}
 
 	template <typename ProfileData, typename CellData>
-	const std::queue<CellHandle>& PipeProfile<ProfileData, CellData>::PeekCellPool() const 
+	const std::queue<CellHandle>& PipeProfile<ProfileData, CellData>::PeekCellPool() const
 	{
 		return m_cellPool;
 	}
@@ -371,27 +374,39 @@ namespace EcoSysLab
 	}
 
 	template <typename ProfileData, typename CellData>
+	void PipeProfile<ProfileData, CellData>::Recenter()
+	{
+		glm::vec2 sum = glm::vec2(0.0f);
+		for (const auto& i : m_info.m_boundary) sum += i;
+		sum /= m_info.m_boundary.size();
+		for (auto& i : m_info.m_boundary)
+		{
+			i -= sum;
+		}
+	}
+
+	template <typename ProfileData, typename CellData>
 	void PipeProfile<ProfileData, CellData>::FillCells()
 	{
 		auto min = glm::vec2(FLT_MAX);
 		auto max = glm::vec2(FLT_MIN);
 		float radius = 0.1f;
-		for(const auto& i : m_cells)
+		for (const auto& i : m_cells)
 		{
-			if(!i.IsRecycled()) RecycleCell(i.GetHandle());
+			if (!i.IsRecycled()) RecycleCell(i.GetHandle());
 		}
-		for(const auto& i : m_info.m_boundary)
+		for (const auto& i : m_info.m_boundary)
 		{
 			min = glm::min(min, i);
 			max = glm::max(i, max);
 		}
 
-		for(float i = min.x; i <= max.x; i += radius * 2.0f)
+		for (float i = min.x; i <= max.x; i += radius * 2.0f)
 		{
-			for(float j = min.y; j <= max.y; j += radius * 2.0f)
+			for (float j = min.y; j <= max.y; j += radius * 2.0f)
 			{
 				auto position = glm::vec2(i, j);
-				if(m_info.InBoundary(position))
+				if (m_info.InBoundary(position))
 				{
 					auto newCellHandle = AllocateCell();
 					auto& newCell = RefCell(newCellHandle);
@@ -417,7 +432,7 @@ namespace EcoSysLab
 		}
 		m_version++;
 		m_profiles[newProfileHandle].m_recycled = false;
-		
+
 		return newProfileHandle;
 	}
 
@@ -431,7 +446,7 @@ namespace EcoSysLab
 		profile.m_cellPool = {};
 		profile.m_info = {};
 		profile.m_data = {};
-		
+
 		m_profilePool.push(handle);
 	}
 
