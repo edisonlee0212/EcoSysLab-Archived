@@ -207,6 +207,8 @@ namespace EcoSysLab {
 
         SkeletonData m_data;
 
+
+        void CalculateRegulatedGlobalRotation();
         /**
          * Recycle (Remove) a node, the descendents of this node will also be recycled. The relevant flow will also be removed/restructured.
          * @param handle The handle of the node to be removed. Must be valid (non-zero and the node should not be recycled prior to this operation).
@@ -724,6 +726,25 @@ namespace EcoSysLab {
             }
         }
         SortLists();
+    }
+
+    template<typename SkeletonData, typename FlowData, typename NodeData>
+    void Skeleton<SkeletonData, FlowData, NodeData>::CalculateRegulatedGlobalRotation()
+    {
+        for (const auto& nodeHandle : m_sortedNodeList) {
+            auto& node = m_nodes[nodeHandle];
+            auto& nodeInfo = node.m_info;
+            if (node.m_parentHandle != -1) {
+                auto& parentInfo = m_nodes[node.m_parentHandle].m_info;
+                auto front = nodeInfo.m_globalRotation * glm::vec3(0, 0, -1);
+                auto parentRegulatedUp = parentInfo.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
+                auto regulatedUp = glm::normalize(glm::cross(glm::cross(front, parentRegulatedUp), front));
+                nodeInfo.m_regulatedGlobalRotation = glm::quatLookAt(front, regulatedUp);
+            }else
+            {
+                nodeInfo.m_regulatedGlobalRotation = nodeInfo.m_globalRotation;
+            }
+        }
     }
 
     template<typename SkeletonData, typename FlowData, typename NodeData>

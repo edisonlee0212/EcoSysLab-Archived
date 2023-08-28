@@ -40,7 +40,7 @@ namespace EcoSysLab
 
 	struct ProfileInfo
 	{
-		std::vector<glm::vec2> m_boundary;
+		std::vector<glm::vec2> m_boundary = {};
 		bool m_boundaryValid = false;
 
 		
@@ -417,7 +417,7 @@ namespace EcoSysLab
 		}
 		m_version++;
 		m_profiles[newProfileHandle].m_recycled = false;
-		m_profiles[newProfileHandle].m_data = {};
+		
 		return newProfileHandle;
 	}
 
@@ -429,7 +429,9 @@ namespace EcoSysLab
 		profile.m_recycled = true;
 		profile.m_cells.clear();
 		profile.m_cellPool = {};
-
+		profile.m_info = {};
+		profile.m_data = {};
+		
 		m_profilePool.push(handle);
 	}
 

@@ -117,7 +117,7 @@ namespace EcoSysLab {
 		auto& rings = ringsList[internodeIndex];
 		rings.clear();
 
-		glm::vec3 directionStart = internodeInfo.m_globalRotation * glm::vec3(0, 0, -1);
+		glm::vec3 directionStart = internodeInfo.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
 		glm::vec3 directionEnd = directionStart;
 
 		glm::vec3 positionStart = internodeInfo.m_globalPosition;
@@ -130,7 +130,7 @@ namespace EcoSysLab {
 			const auto& parentInternode = treeSkeleton.PeekNode(internode.GetParentHandle());
 			thicknessStart = parentInternode.m_info.m_thickness;
 			directionStart =
-				parentInternode.m_info.m_globalRotation *
+				parentInternode.m_info.m_regulatedGlobalRotation *
 				glm::vec3(0, 0, -1);
 		}
 

@@ -67,9 +67,14 @@ void PipeModelBase::EstablishPipes()
 					profile.m_data.m_nodeHandle = m_pipeModel.m_skeleton.Extend(parentNodeHandle, true);
 					auto& node = m_pipeModel.m_skeleton.RefNode(profile.m_data.m_nodeHandle);
 
+					const auto parentGlobalTransform = scene->GetDataComponent<GlobalTransform>(parent);
 					const auto globalTransform = scene->GetDataComponent<GlobalTransform>(entity);
-					node.m_info.m_globalPosition = globalTransform.GetPosition();
-					node.m_info.m_globalRotation = globalTransform.GetRotation();
+					node.m_info.m_globalPosition = parentGlobalTransform.GetPosition();
+					node.m_info.m_globalRotation = parentGlobalTransform.GetRotation() * glm::quat(glm::radians(glm::vec3(90, 0 ,0)));
+					node.m_data.m_globalEndRotation = globalTransform.GetRotation() * glm::quat(glm::radians(glm::vec3(90, 0, 0)));
+					node.m_info.m_length = glm::distance(parentGlobalTransform.GetPosition(), globalTransform.GetPosition());
+					node.m_info.m_globalDirection = glm::normalize(globalTransform.GetPosition() - parentGlobalTransform.GetPosition());
+
 					node.m_data.m_profileHandle = singlePipeProfile->m_profileHandle;
 				}
 				else if (scene->HasPrivateComponent<PipeModelBase>(parent))
@@ -79,9 +84,13 @@ void PipeModelBase::EstablishPipes()
 					profile.m_data.m_nodeHandle = 0;
 					auto& node = m_pipeModel.m_skeleton.RefNode(profile.m_data.m_nodeHandle);
 
-					const auto globalTransform = scene->GetDataComponent<GlobalTransform>(parent);
-					node.m_info.m_globalPosition = globalTransform.GetPosition();
-					node.m_info.m_globalRotation = globalTransform.GetRotation();
+					const auto parentGlobalTransform = scene->GetDataComponent<GlobalTransform>(parent);
+					const auto globalTransform = scene->GetDataComponent<GlobalTransform>(entity);
+					node.m_info.m_globalPosition = parentGlobalTransform.GetPosition();
+					node.m_info.m_globalRotation = parentGlobalTransform.GetRotation() * glm::quat(glm::radians(glm::vec3(90, 0, 0)));
+					node.m_data.m_globalEndRotation = globalTransform.GetRotation() * glm::quat(glm::radians(glm::vec3(90, 0, 0)));
+					node.m_info.m_length = glm::distance(parentGlobalTransform.GetPosition(), globalTransform.GetPosition());
+					node.m_info.m_globalDirection = glm::normalize(globalTransform.GetPosition() - parentGlobalTransform.GetPosition());
 
 					node.m_data.m_profileHandle = singlePipeProfile->m_profileHandle;
 				}
@@ -89,6 +98,24 @@ void PipeModelBase::EstablishPipes()
 		}
 	);
 	m_pipeModel.m_skeleton.SortLists();
+	m_pipeModel.m_skeleton.CalculateRegulatedGlobalRotation();
+
+	for (const auto& nodeHandle : m_pipeModel.m_skeleton.RefSortedNodeList()) {
+		auto& node = m_pipeModel.m_skeleton.RefNode(nodeHandle);
+		auto& nodeData = node.m_data;
+		if (node.GetParentHandle() != -1) {
+			auto& parentData = m_pipeModel.m_skeleton.RefNode(node.GetParentHandle()).m_data;
+			auto front = nodeData.m_globalEndRotation * glm::vec3(0, 0, -1);
+			auto parentRegulatedUp = parentData.m_regulatedGlobalEndRotation * glm::vec3(0, 1, 0);
+			auto regulatedUp = glm::normalize(glm::cross(glm::cross(front, parentRegulatedUp), front));
+			nodeData.m_regulatedGlobalEndRotation = glm::quatLookAt(front, regulatedUp);
+		}
+		else
+		{
+			nodeData.m_regulatedGlobalEndRotation = nodeData.m_globalEndRotation;
+		}
+	}
+
 	m_pipeModel.m_skeleton.CalculateFlows();
 
 	m_pipeModel.InitializePipes(m_pipeModelParameters);

@@ -43,6 +43,8 @@ namespace EcoSysLab
 	{
 		int m_endNodeCount = 0;
 
+		glm::quat m_globalEndRotation = {};
+		glm::quat m_regulatedGlobalEndRotation = {};
 		ProfileHandle m_profileHandle = -1;
 	};
 
