@@ -78,8 +78,9 @@ int main() {
     Application::PushLayer<RenderLayer>();
     Application::PushLayer<EcoSysLabLayer>();
     Application::PushLayer<SorghumLayer>();
+#ifdef RAYTRACERFACILITY
     Application::PushLayer<RayTracerLayer>();
-
+#endif
     ClassRegistry::RegisterPrivateComponent<Tree>("Tree");
     ClassRegistry::RegisterPrivateComponent<TreePointCloud>("TreePointCloud");
     ClassRegistry::RegisterPrivateComponent<Soil>("Soil");

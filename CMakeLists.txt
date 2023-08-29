@@ -7,7 +7,6 @@ project(
 
 option(BUILD_RAY_TRACER_FACILITY "Build Ray Tracer Facility" ON)
 set(BUILD_RAY_TRACER_FACILITY ON)
-include(GenerateExportHeader)
 
 # Set a default build type if none was specified
 set(default_build_type "Release")
@@ -48,7 +47,7 @@ if (NOT TARGET evoengine)
     add_subdirectory(${EVOENGINE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/EvoEngine)
 endif ()
 if(BUILD_RAY_TRACER_FACILITY) 
-    if (NOT TARGET RayTracerFacility)
+    if (NOT TARGET raytracerfacility)
         add_subdirectory(${RAYTRACERFACILITY_DIR} ${CMAKE_CURRENT_BINARY_DIR}/RayTracerFacility)
     endif ()
 endif()
@@ -58,99 +57,133 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 
 # ------------------------------------------------------------------
-# EcoSysLab
+# ecosyslab
 # ------------------------------------------------------------------
-file(GLOB ECOSYSLAB_SOURCES_LOCAL "src/EcoSysLab/*.cpp")
-add_library(EcoSysLab 
+file(GLOB LOCAL_ECOSYSLAB_SOURCES "src/lib/*.cpp")
+add_library(ecosyslab 
         STATIC
-        ${ECOSYSLAB_SOURCES_LOCAL}
+        ${LOCAL_ECOSYSLAB_SOURCES}
         )
-set(ECOSYSLAB_PCH_LOCAL
+set(LOCAL_ECOSYSLAB_PCH
         ${EVOENGINE_PCH}
         ${RAY_TRACER_FACILITY_PCH}
-        ${CMAKE_CURRENT_SOURCE_DIR}/include/EcoSysLab/EcoSysLab-pch.hpp
-        )
-generate_export_header(EcoSysLab
-        BASE_NAME ECOSYSLAB
-        EXPORT_MACRO_NAME ECOSYSLAB_API
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/lib/EcoSysLab-pch.hpp
         )
 
-target_precompile_headers(EcoSysLab
+target_precompile_headers(ecosyslab
         PRIVATE
-        ${ECOSYSLAB_PCH_LOCAL}
+        ${LOCAL_ECOSYSLAB_PCH}
         )
 if (BUILD_RAY_TRACER_FACILITY)
-    target_compile_definitions(EcoSysLab
+    target_compile_definitions(ecosyslab
             PRIVATE
             NOMINMAX
             RAYTRACERFACILITY
             )
-    set(ECOSYSLAB_INCLUDES_LOCAL
+    set(LOCAL_ECOSYSLAB_INCLUDES
             ${RAY_TRACER_FACILITY_INCLUDES}
             ${CMAKE_CURRENT_BINARY_DIR}
-            ${CMAKE_CURRENT_SOURCE_DIR}/include/EcoSysLab
-            ${CMAKE_CURRENT_SOURCE_DIR}/include/EcoSysLab/SorghumModel
-            ${CMAKE_CURRENT_SOURCE_DIR}/include/EcoSysLab/ClimateModel
-            ${CMAKE_CURRENT_SOURCE_DIR}/include/EcoSysLab/SoilModel
-            ${CMAKE_CURRENT_SOURCE_DIR}/include/EcoSysLab/TreeModel
-            ${CMAKE_CURRENT_SOURCE_DIR}/include/EcoSysLab/PipeModel
-            ${CMAKE_CURRENT_SOURCE_DIR}/include/EcoSysLab/Utilities
-            ${CMAKE_CURRENT_SOURCE_DIR}/include/EcoSysLab/Structures
-            ${CMAKE_CURRENT_SOURCE_DIR}/include/EcoSysLab/Reconstruction
+            ${CMAKE_CURRENT_SOURCE_DIR}/include/lib
+            ${CMAKE_CURRENT_SOURCE_DIR}/include/lib/SorghumModel
+            ${CMAKE_CURRENT_SOURCE_DIR}/include/lib/ClimateModel
+            ${CMAKE_CURRENT_SOURCE_DIR}/include/lib/SoilModel
+            ${CMAKE_CURRENT_SOURCE_DIR}/include/lib/TreeModel
+            ${CMAKE_CURRENT_SOURCE_DIR}/include/lib/PipeModel
+            ${CMAKE_CURRENT_SOURCE_DIR}/include/lib/Utilities
+            ${CMAKE_CURRENT_SOURCE_DIR}/include/lib/Structures
+            ${CMAKE_CURRENT_SOURCE_DIR}/include/lib/Reconstruction
             )
-    target_link_libraries(EcoSysLab
-            RayTracerFacility
+    target_link_libraries(ecosyslab
+            raytracerfacility
             )
 else ()
-    target_compile_definitions(EcoSysLab
+    target_compile_definitions(ecosyslab
             PRIVATE
             NOMINMAX
             )
-    set(ECOSYSLAB_INCLUDES_LOCAL
+    set(LOCAL_ECOSYSLAB_INCLUDES
             ${EVOENGINE_INCLUDES}
             ${CMAKE_CURRENT_BINARY_DIR}
-            ${CMAKE_CURRENT_SOURCE_DIR}/include/EcoSysLab
-            ${CMAKE_CURRENT_SOURCE_DIR}/include/EcoSysLab/SorghumModel
-            ${CMAKE_CURRENT_SOURCE_DIR}/include/EcoSysLab/ClimateModel
-            ${CMAKE_CURRENT_SOURCE_DIR}/include/EcoSysLab/SoilModel
-            ${CMAKE_CURRENT_SOURCE_DIR}/include/EcoSysLab/PipeModel
-            ${CMAKE_CURRENT_SOURCE_DIR}/include/EcoSysLab/TreeModel
-            ${CMAKE_CURRENT_SOURCE_DIR}/include/EcoSysLab/Utilities
-            ${CMAKE_CURRENT_SOURCE_DIR}/include/EcoSysLab/Structures
-            ${CMAKE_CURRENT_SOURCE_DIR}/include/EcoSysLab/Reconstruction
+            ${CMAKE_CURRENT_SOURCE_DIR}/include/lib
+            ${CMAKE_CURRENT_SOURCE_DIR}/include/lib/SorghumModel
+            ${CMAKE_CURRENT_SOURCE_DIR}/include/lib/ClimateModel
+            ${CMAKE_CURRENT_SOURCE_DIR}/include/lib/SoilModel
+            ${CMAKE_CURRENT_SOURCE_DIR}/include/lib/PipeModel
+            ${CMAKE_CURRENT_SOURCE_DIR}/include/lib/TreeModel
+            ${CMAKE_CURRENT_SOURCE_DIR}/include/lib/Utilities
+            ${CMAKE_CURRENT_SOURCE_DIR}/include/lib/Structures
+            ${CMAKE_CURRENT_SOURCE_DIR}/include/lib/Reconstruction
             )
-    target_link_libraries(EcoSysLab
+    target_link_libraries(ecosyslab
             evoengine
             )
 endif ()
-target_include_directories(EcoSysLab
+target_include_directories(ecosyslab
         PUBLIC
-        ${ECOSYSLAB_INCLUDES_LOCAL}
+        ${LOCAL_ECOSYSLAB_INCLUDES}
         )
+
+
+# ------------------------------------------------------------------
+# ecosyslab - python binding
+# ------------------------------------------------------------------
+file(GLOB LOCAL_PYECOSYSLAB_SOURCES "src/python/*.cpp")
+pybind11_add_module(pyecosyslab ${LOCAL_PYECOSYSLAB_SOURCES})
+
+target_include_directories(pyecosyslab
+            PRIVATE
+            ${LOCAL_ECOSYSLAB_INCLUDES}
+            ${CMAKE_CURRENT_SOURCE_DIR}/include/python
+            )
+target_precompile_headers(pyecosyslab
+            PRIVATE
+            ${LOCAL_ECOSYSLAB_PCH}
+            )
+
+if (BUILD_RAY_TRACER_FACILITY)
+target_compile_definitions(pyecosyslab
+            PRIVATE
+            NOMINMAX
+            RAYTRACERFACILITY
+            )
+target_link_libraries(pyecosyslab
+            PRIVATE
+            raytracerfacility
+            ecosyslab
+            )
+else()
+target_link_libraries(pyecosyslab
+            PRIVATE
+            evoengine
+            ecosyslab
+            )
+endif()
+
+
 # ------------------------------------------------------------------
 # Example program
 # ------------------------------------------------------------------
-add_executable(EcoSysLabApp
+add_executable(ecosyslab-app
         "src/app/Application.cpp")
-target_precompile_headers(EcoSysLabApp
+target_precompile_headers(ecosyslab-app
         PRIVATE
-        ${ECOSYSLAB_PCH_LOCAL}
+        ${LOCAL_ECOSYSLAB_PCH}
         )
 if (BUILD_RAY_TRACER_FACILITY)
-    target_link_libraries(EcoSysLabApp
-            RayTracerFacility
-            EcoSysLab
+    target_link_libraries(ecosyslab-app
+            raytracerfacility
+            ecosyslab
             )
-    target_compile_definitions(EcoSysLabApp
+    target_compile_definitions(ecosyslab-app
             PRIVATE
             RAYTRACERFACILITY
             NOMINMAX
             )
 else ()
-    target_link_libraries(EcoSysLabApp
-            EcoSysLab
+    target_link_libraries(ecosyslab-app
+            ecosyslab
             )
-    target_compile_definitions(EcoSysLabApp
+    target_compile_definitions(ecosyslab-app
             PRIVATE
             NOMINMAX
             )
@@ -159,7 +192,7 @@ endif ()
 # ------------------------------------------------------------------
 # Copy Internal resources
 # ------------------------------------------------------------------
-add_custom_command(TARGET EcoSysLab POST_BUILD
+add_custom_command(TARGET ecosyslab POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_CURRENT_SOURCE_DIR}/src/Internals
         ${CMAKE_BINARY_DIR})
