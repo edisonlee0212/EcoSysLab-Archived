@@ -28,6 +28,7 @@
 #include "SorghumLayer.hpp"
 #include "TreePointCloud.hpp"
 #include "PipeModelBase.hpp"
+#include "WindowLayer.hpp"
 #ifdef RAYTRACERFACILITY
 using namespace RayTracerFacility;
 #endif
@@ -121,7 +122,7 @@ int main() {
 #pragma region Engine Loop
     Application::Start();
 #pragma endregion
-    Application::End();
+    Application::Terminate();
 }
 
 void EngineSetup() {

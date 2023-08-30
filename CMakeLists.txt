@@ -5,8 +5,8 @@ project(
         DESCRIPTION "An interactive application developed for my research purposes based on EvoEngine"
 )
 
-option(BUILD_RAY_TRACER_FACILITY "Build Ray Tracer Facility" ON)
-set(BUILD_RAY_TRACER_FACILITY ON)
+option(BUILD_RAY_TRACER_FACILITY "Build Ray Tracer Facility" OFF)
+set(BUILD_RAY_TRACER_FACILITY OFF)
 
 # Set a default build type if none was specified
 set(default_build_type "Release")

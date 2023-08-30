@@ -1,3 +1,4 @@
+#include "TreePointCloud.hpp"
 #include <unordered_set>
 #include "TreePointCloud.hpp"
 #include "Graphics.hpp"
@@ -286,7 +287,7 @@ void TreePointCloud::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 				EstablishConnectivityGraph(connectivityGraphSettings);
 			}
 			if (m_skeletons.empty()) BuildTreeStructure(reconstructionSettings);
-			GenerateMeshes(meshGeneratorSettings);
+			FormGeometryEntity(meshGeneratorSettings);
 		}
 		if (ImGui::Button("Refresh Data")) {
 			refreshData = true;
@@ -995,7 +996,7 @@ void TreePointCloud::ClearMeshes() const {
 	}
 }
 
-void TreePointCloud::GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings) {
+void TreePointCloud::FormGeometryEntity(const TreeMeshGeneratorSettings& meshGeneratorSettings) {
 	const auto scene = GetScene();
 	const auto self = GetOwner();
 	const auto children = scene->GetChildren(self);
@@ -1033,6 +1034,26 @@ void TreePointCloud::GenerateMeshes(const TreeMeshGeneratorSettings& meshGenerat
 			meshRenderer->m_material = material;
 		}
 	}
+}
+
+std::vector<std::shared_ptr<Mesh>>EcoSysLab::TreePointCloud::GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings)
+{
+	std::vector<std::shared_ptr<Mesh>> meshes{};
+	for (int i = 0; i < m_skeletons.size(); i++) {
+		if (meshGeneratorSettings.m_enableBranch) {
+			std::vector<Vertex> vertices;
+			std::vector<unsigned int> indices;
+			CylindricalMeshGenerator<ReconstructionSkeletonData, ReconstructionFlowData, ReconstructionNodeData> meshGenerator;
+			meshGenerator.Generate(m_skeletons[i], vertices, indices, meshGeneratorSettings, 999.0f);
+
+			auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
+			VertexAttributes attributes{};
+			attributes.m_texCoord = true;
+			mesh->SetVertices(attributes, vertices, indices);
+			meshes.emplace_back(mesh);
+		}
+	}
+	return meshes;
 }
 
 

@@ -27,6 +27,7 @@
 #include "SorghumLayer.hpp"
 #include "TreePointCloud.hpp"
 #include "PipeModelBase.hpp"
+#include "Scene.hpp"
 #ifdef RAYTRACERFACILITY
 
 #include <CUDAModule.hpp>
@@ -60,46 +61,27 @@ void RegisterClasses() {
     ClassRegistry::RegisterPrivateComponent<PipeModelBase>("PipeModelBase");
 }
 
-void StartEditor(const std::string& projectPath) {
-    RegisterClasses();
-
+void PushWindowLayer() {
     Application::PushLayer<WindowLayer>();
-    Application::PushLayer<PhysicsLayer>();
+}
+void PushEditorLayer() {
     Application::PushLayer<EditorLayer>();
+}
+void PushRenderLayer() {
     Application::PushLayer<RenderLayer>();
+}
+void PushEcoSysLabLayer() {
     Application::PushLayer<EcoSysLabLayer>();
+}
+void PushSorghumLayer() {
     Application::PushLayer<SorghumLayer>();
-#ifdef RAYTRACERFACILITY
-    Application::PushLayer<RayTracerLayer>();
-#endif
+}
 
+void Initialize(const std::string& projectPath) {
     ApplicationInfo applicationInfo;
     applicationInfo.m_applicationName = "EcoSysLab";
     applicationInfo.m_projectPath = projectPath;
     Application::Initialize(applicationInfo);
-    Application::Start();
-
-    Application::Terminate();
-}
-
-void StartEmptyEditor() {
-    RegisterClasses();
-    Application::PushLayer<WindowLayer>();
-    Application::PushLayer<PhysicsLayer>();
-    Application::PushLayer<EditorLayer>();
-    Application::PushLayer<RenderLayer>();
-    Application::PushLayer<EcoSysLabLayer>();
-    Application::PushLayer<SorghumLayer>();
-#ifdef RAYTRACERFACILITY
-    Application::PushLayer<RayTracerLayer>();
-#endif
-
-    ApplicationInfo applicationInfo;
-    applicationInfo.m_applicationName = "EcoSysLab";
-    Application::Initialize(applicationInfo);
-    Application::Start();
-
-    Application::Terminate();
 }
 
 void RenderScene(const std::string& projectPath, const int resolutionX, const int resolutionY, const std::string& outputPath)
@@ -119,25 +101,24 @@ void RenderScene(const std::string& projectPath, const int resolutionX, const in
         return;
     }
     RegisterClasses();
-    Application::PushLayer<PhysicsLayer>();
     Application::PushLayer<RenderLayer>();
     Application::PushLayer<EcoSysLabLayer>();
     Application::PushLayer<SorghumLayer>();
 
     ApplicationInfo applicationInfo;
     applicationInfo.m_projectPath = std::filesystem::path(projectPath);
-    ProjectManager::SetScenePostLoadActions([&](const std::shared_ptr<Scene>& scene)
-        {
-            const auto mainCamera = scene->m_mainCamera.Get<Camera>();
-            mainCamera->Resize({ resolutionX, resolutionY });
-        });
     Application::Initialize(applicationInfo);
     EVOENGINE_LOG("Loaded scene at " + projectPath);
-    Application::Start(false);
-    Application::Loop();
-    Graphics::WaitForDeviceIdle();
+    Application::Start();
+    
+    
     auto scene = Application::GetActiveScene();
     const auto mainCamera = scene->m_mainCamera.Get<Camera>();
+    mainCamera->Resize({ resolutionX, resolutionY });
+
+    Application::Loop();
+    Graphics::WaitForDeviceIdle();
+
     mainCamera->GetRenderTexture()->StoreToPng(outputPath);
     EVOENGINE_LOG("Exported image to " + outputPath);
     Application::Terminate();
@@ -155,12 +136,58 @@ void RenderMesh(const std::string& meshPath, const int resolutionX, const int re
         EVOENGINE_ERROR("Resolution error!");
         return;
     }
-
 }
 
-PYBIND11_MODULE(pyevoengine, m) {
-    m.doc() = "EvoEngine"; // optional module docstring
-    m.def("start_editor", &StartEditor, "Start editor with target project");
-    m.def("start_empty_editor", &StartEmptyEditor, "Start editor without project");
-    m.def("render_scene", &RenderScene, "Render the default scene for given project");
+void YamlToMesh(const std::string& yamlPath, 
+    const ConnectivityGraphSettings &connectivityGraphSettings, 
+    const ReconstructionSettings& reconstructionSettings,
+    const TreeMeshGeneratorSettings& meshGeneratorSettings,
+    const std::string& meshPath) {
+    auto treePointCloud = std::make_shared<TreePointCloud>();
+    treePointCloud->ImportGraph(yamlPath);
+    
+    treePointCloud->EstablishConnectivityGraph(connectivityGraphSettings);
+    treePointCloud->BuildTreeStructure(reconstructionSettings);
+    auto meshes = treePointCloud->GenerateMeshes(meshGeneratorSettings);
+    if (meshes.size() == 1) {
+        meshes[0]->Export(meshPath);
+    }
+    else {
+        int index = 0;
+        for (const auto& i : meshes) {
+            auto savePath = std::filesystem::path(meshPath);
+            savePath.replace_filename(savePath.filename().string() + "_" + std::to_string(index));
+            index++;
+            i->Export(savePath);
+        }
+    }
+}
+
+PYBIND11_MODULE(pyecosyslab, m) {
+    py::class_<Entity>(m, "Entity")
+        .def("GetIndex", &Entity::GetIndex)
+        .def("GetVersion", &Entity::GetVersion);
+
+    py::class_<ConnectivityGraphSettings>(m, "ConnectivityGraphSettings");
+
+    py::class_<ReconstructionSettings>(m, "ReconstructionSettings");
+
+    py::class_<TreeMeshGeneratorSettings>(m, "TreeMeshGeneratorSettings");
+
+    py::class_<Scene>(m, "Scene")
+        .def("CreateEntity", static_cast<Entity(Scene::*)(const std::string&)>(&Scene::CreateEntity))
+        .def("DeleteEntity", &Scene::DeleteEntity);
+
+
+    py::class_<Application>(m, "Application")
+        .def_static("Start", &Application::Start)
+        .def("Loop", &Application::Loop)
+        .def("Terminate", &Application::Terminate)
+        .def("GetActiveScene", &Application::GetActiveScene);
+
+    py::class_<ProjectManager>(m, "ProjectManager")
+        .def("GetOrCreateProject", &ProjectManager::GetOrCreateProject);
+
+    m.doc() = "EcoSysLab"; // optional module docstring
+    m.def("yaml_to_mesh", &YamlToMesh, "YamlToMesh");
 }
