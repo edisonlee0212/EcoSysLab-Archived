@@ -121,6 +121,7 @@ int main() {
     
 #pragma region Engine Loop
     Application::Start();
+    Application::Run();
 #pragma endregion
     Application::Terminate();
 }
