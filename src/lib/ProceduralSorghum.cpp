@@ -10,7 +10,7 @@
 #include "EditorLayer.hpp"
 #include "Application.hpp"
 #include "Scene.hpp"
-#include "Time.hpp"
+#include "Times.hpp"
 using namespace EcoSysLab;
 static const char *StateModes[]{"Default", "Cubic-Bezier"};
 
@@ -477,10 +477,10 @@ void ProceduralSorghum::OnInspect(const std::shared_ptr<EditorLayer>& editorLaye
       ImGui::TreePop();
     }
     if (lastAutoSaveTime == 0) {
-      lastAutoSaveTime = Time::CurrentTime();
+      lastAutoSaveTime = Times::Now();
     } else if (lastAutoSaveTime + autoSaveInterval <
-        Time::CurrentTime()) {
-      lastAutoSaveTime = Time::CurrentTime();
+        Times::Now()) {
+      lastAutoSaveTime = Times::Now();
       if (!m_saved) {
         Save();
         EVOENGINE_LOG(GetTypeName() + " autosaved!");

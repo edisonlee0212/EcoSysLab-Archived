@@ -11,7 +11,7 @@
 #include "StemData.hpp"
 #include <SorghumData.hpp>
 #include <SorghumLayer.hpp>
-#include <Time.hpp>
+#include "Times.hpp"
 
 #include "Material.hpp"
 #ifdef RAYTRACERFACILITY
@@ -497,7 +497,7 @@ void SorghumLayer::CalculateIllumination() {
 			m_processing = false;
 		}
 		else {
-			const float timer = Time::CurrentTime();
+			const float timer = Times::Now();
 			auto estimator =
 				scene
 				->GetOrSetPrivateComponent<TriangleIlluminationEstimator>(
@@ -519,7 +519,7 @@ void SorghumLayer::Update() {
 			m_processing = false;
 		}
 		else {
-			const float timer = Time::CurrentTime();
+			const float timer = Times::Now();
 			auto estimator =
 				scene
 				->GetOrSetPrivateComponent<TriangleIlluminationEstimator>(
@@ -528,7 +528,7 @@ void SorghumLayer::Update() {
 			estimator->PrepareLightProbeGroup();
 			estimator->SampleLightProbeGroup(m_rayProperties, m_seed,
 				m_pushDistance);
-			m_perPlantCalculationTime = Time::CurrentTime() - timer;
+			m_perPlantCalculationTime = Times::Now() - timer;
 		}
 }
 #endif

@@ -4,13 +4,13 @@
 
 #include "ObjectRotator.hpp"
 #include "Scene.hpp"
-#include "Time.hpp"
+#include "Times.hpp"
 #include "Transform.hpp"
 using namespace EcoSysLab;
 void ObjectRotator::FixedUpdate() {
     auto scene = GetScene();
     auto transform = scene->GetDataComponent<Transform>(GetOwner());
-    m_rotation.y += Time::FixedDeltaTime() * m_rotateSpeed;
+    m_rotation.y += Times::FixedDeltaTime() * m_rotateSpeed;
     transform.SetEulerRotation(glm::radians(m_rotation));
     scene->SetDataComponent(GetOwner(), transform);
 }

@@ -2,7 +2,7 @@
 #include "SorghumLayer.hpp"
 #include "SorghumStateGenerator.hpp"
 
-#include <Time.hpp>
+#include "Times.hpp"
 
 #include "Scene.hpp"
 
@@ -189,10 +189,10 @@ void SorghumStateGenerator::OnInspect(const std::shared_ptr<EditorLayer>& editor
       ImGui::TreePop();
     }
     if (lastAutoSaveTime == 0) {
-      lastAutoSaveTime = Time::CurrentTime();
+      lastAutoSaveTime = Times::Now();
     } else if (lastAutoSaveTime + autoSaveInterval <
-               Time::CurrentTime()) {
-      lastAutoSaveTime = Time::CurrentTime();
+               Times::Now()) {
+      lastAutoSaveTime = Times::Now();
       if (!m_saved) {
         Save();
         EVOENGINE_LOG(GetTypeName() + " autosaved!");

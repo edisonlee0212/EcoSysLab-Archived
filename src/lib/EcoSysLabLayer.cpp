@@ -4,7 +4,7 @@
 
 #include "EcoSysLabLayer.hpp"
 
-#include <Time.hpp>
+#include "Times.hpp"
 
 #include "StrandsRenderer.hpp"
 #include "Climate.hpp"
@@ -608,33 +608,33 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 							glm::vec3(1, 0, 0);
 						if (editorLayer->GetKey(GLFW_KEY_W) == KeyActionType::Hold) {
 							sceneCameraPosition +=
-								front * static_cast<float>(Time::DeltaTime()) *
+								front * static_cast<float>(Times::DeltaTime()) *
 								editorLayer->m_velocity;
 						}
 						if (editorLayer->GetKey(GLFW_KEY_S) == KeyActionType::Hold) {
 							sceneCameraPosition -=
-								front * static_cast<float>(Time::DeltaTime()) *
+								front * static_cast<float>(Times::DeltaTime()) *
 								editorLayer->m_velocity;
 						}
 						if (editorLayer->GetKey(GLFW_KEY_A) == KeyActionType::Hold) {
 							sceneCameraPosition -=
-								right * static_cast<float>(Time::DeltaTime()) *
+								right * static_cast<float>(Times::DeltaTime()) *
 								editorLayer->m_velocity;
 						}
 						if (editorLayer->GetKey(GLFW_KEY_D) == KeyActionType::Hold) {
 							sceneCameraPosition +=
-								right * static_cast<float>(Time::DeltaTime()) *
+								right * static_cast<float>(Times::DeltaTime()) *
 								editorLayer->m_velocity;
 						}
 						if (editorLayer->GetKey(GLFW_KEY_LEFT_SHIFT) == KeyActionType::Hold) {
 							sceneCameraPosition.y +=
 								editorLayer->m_velocity *
-								static_cast<float>(Time::DeltaTime());
+								static_cast<float>(Times::DeltaTime());
 						}
 						if (editorLayer->GetKey(GLFW_KEY_LEFT_CONTROL) == KeyActionType::Hold) {
 							sceneCameraPosition.y -=
 								editorLayer->m_velocity *
-								static_cast<float>(Time::DeltaTime());
+								static_cast<float>(Times::DeltaTime());
 						}
 						if (xOffset != 0.0f || yOffset != 0.0f) {
 							editorLayer->m_sceneCameraYawAngle +=
@@ -1407,7 +1407,7 @@ void EcoSysLabLayer::Simulate(float deltaTime) {
 		scene->UnsafeGetPrivateComponentOwnersList<Tree>();
 	m_time += deltaTime;
 	if (treeEntities && !treeEntities->empty()) {
-		float time = Time::CurrentTime();
+		float time = Times::Now();
 		const auto climate = m_climateHolder.Get<Climate>();
 		const auto soil = m_soilHolder.Get<Soil>();
 
@@ -1475,7 +1475,7 @@ void EcoSysLabLayer::Simulate(float deltaTime) {
 		}
 
 
-		m_lastUsedTime = Time::CurrentTime() - time;
+		m_lastUsedTime = Times::Now() - time;
 		m_totalTime += m_lastUsedTime;
 
 		if (scene->IsEntityValid(m_selectedTree)) {

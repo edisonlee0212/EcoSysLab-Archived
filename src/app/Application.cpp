@@ -10,7 +10,7 @@
 
 #endif
 
-#include <Time.hpp>
+#include "Times.hpp"
 
 #include "ProjectManager.hpp"
 #include "PhysicsLayer.hpp"
@@ -74,7 +74,7 @@ int main() {
 	EngineSetup();
 
     Application::PushLayer<WindowLayer>();
-    Application::PushLayer<PhysicsLayer>();
+    //Application::PushLayer<PhysicsLayer>();
     Application::PushLayer<EditorLayer>();
     Application::PushLayer<RenderLayer>();
     Application::PushLayer<EcoSysLabLayer>();
@@ -132,7 +132,7 @@ void EngineSetup() {
         Transform transform;
         transform.SetEulerRotation(glm::radians(glm::vec3(150, 30, 0)));
 #pragma region Preparations
-        Time::SetTimeStep(0.016f);
+        Times::SetTimeStep(0.016f);
         transform = Transform();
         transform.SetPosition(glm::vec3(0, 2, 35));
         transform.SetEulerRotation(glm::radians(glm::vec3(15, 0, 0)));
