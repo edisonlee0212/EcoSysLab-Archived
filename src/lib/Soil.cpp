@@ -1,8 +1,7 @@
 #include "Soil.hpp"
 
-#include <cassert>
-#include <Material.hpp>
-#include <Mesh.hpp>
+#include "Material.hpp"
+#include "Mesh.hpp"
 
 #include "EcoSysLabLayer.hpp"
 #include "EditorLayer.hpp"
@@ -853,9 +852,9 @@ void Soil::InitializeSoilModel()
 		auto heightField = soilDescriptor->m_heightField.Get<HeightField>();
 
 		auto params = soilDescriptor->m_soilParameters;
-		params.m_boundary_x = SoilModel::Boundary::wrap;
-		params.m_boundary_y = SoilModel::Boundary::absorb;
-		params.m_boundary_z = SoilModel::Boundary::wrap;
+		params.m_boundary_x = VoxelSoilModel::Boundary::wrap;
+		params.m_boundary_y = VoxelSoilModel::Boundary::absorb;
+		params.m_boundary_z = VoxelSoilModel::Boundary::wrap;
 
 		SoilSurface soilSurface;
 		std::vector<SoilLayer> soilLayers;
@@ -1094,9 +1093,9 @@ void DeserializeSoilParameters(const std::string& name, SoilParameters& soilPara
 		if (param["m_deltaTime"]) soilParameters.m_deltaTime = param["m_deltaTime"].as<float>();
 		if (param["m_boundingBoxMin"]) soilParameters.m_boundingBoxMin = param["m_boundingBoxMin"].as<glm::vec3>();
 
-		if (param["m_boundary_x"]) soilParameters.m_boundary_x = static_cast<SoilModel::Boundary>(param["m_boundary_x"].as<int>());
-		if (param["m_boundary_y"]) soilParameters.m_boundary_y = static_cast<SoilModel::Boundary>(param["m_boundary_y"].as<int>());
-		if (param["m_boundary_z"]) soilParameters.m_boundary_z = static_cast<SoilModel::Boundary>(param["m_boundary_z"].as<int>());
+		if (param["m_boundary_x"]) soilParameters.m_boundary_x = static_cast<VoxelSoilModel::Boundary>(param["m_boundary_x"].as<int>());
+		if (param["m_boundary_y"]) soilParameters.m_boundary_y = static_cast<VoxelSoilModel::Boundary>(param["m_boundary_y"].as<int>());
+		if (param["m_boundary_z"]) soilParameters.m_boundary_z = static_cast<VoxelSoilModel::Boundary>(param["m_boundary_z"].as<int>());
 
 		if (param["m_diffusionForce"]) soilParameters.m_diffusionForce = param["m_diffusionForce"].as<float>();
 		if (param["m_gravityForce"]) soilParameters.m_gravityForce = param["m_gravityForce"].as<glm::vec3>();

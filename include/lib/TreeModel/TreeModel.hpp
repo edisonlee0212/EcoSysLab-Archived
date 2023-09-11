@@ -1,5 +1,5 @@
 #pragma once
-#include "SoilModel.hpp"
+#include "VoxelSoilModel.hpp"
 #include "ClimateModel.hpp"
 #include "Octree.hpp"
 #include "TreeGrowthController.hpp"
@@ -28,27 +28,27 @@ namespace EcoSysLab {
 		bool m_enableBranchCollisionDetection = false;
 	};
 
-	
+
 
 	class TreeModel {
 #pragma region Root Growth
 
-		bool ElongateRoot(SoilModel& soilModel, float extendLength, NodeHandle rootNodeHandle,
+		bool ElongateRoot(VoxelSoilModel& soilModel, float extendLength, NodeHandle rootNodeHandle,
 			const RootGrowthController& rootGrowthParameters, float& collectedAuxin);
 
-		inline bool GrowRootNode(SoilModel& soilModel, NodeHandle rootNodeHandle, const RootGrowthController& rootGrowthParameters);
+		inline bool GrowRootNode(VoxelSoilModel& soilModel, NodeHandle rootNodeHandle, const RootGrowthController& rootGrowthParameters);
 
 		inline void CalculateThickness(NodeHandle rootNodeHandle,
 			const RootGrowthController& rootGrowthParameters);
 
-		
+
 
 		inline void AggregateRootVigorRequirement(const RootGrowthController& rootGrowthParameters);
 
 		inline void AllocateRootVigor(const RootGrowthController& rootGrowthParameters);
 
 		inline void CalculateVigorRequirement(const RootGrowthController& rootGrowthParameters, PlantGrowthRequirement& newRootGrowthNutrientsRequirement);
-		inline void SampleNitrite(const glm::mat4& globalTransform, SoilModel& soilModel);
+		inline void SampleNitrite(const glm::mat4& globalTransform, VoxelSoilModel& soilModel);
 #pragma endregion
 #pragma region Tree Growth
 		inline void AggregateInternodeVigorRequirement(const ShootGrowthController& shootGrowthParameters);
@@ -70,7 +70,7 @@ namespace EcoSysLab {
 
 		friend class Tree;
 
-		
+
 #pragma endregion
 
 		void Initialize(const ShootGrowthController& shootGrowthParameters, const RootGrowthController& rootGrowthParameters);
@@ -80,7 +80,7 @@ namespace EcoSysLab {
 		ShootSkeleton m_shootSkeleton;
 		RootSkeleton m_rootSkeleton;
 
-		
+
 		std::deque<std::pair<ShootSkeleton, RootSkeleton>> m_history;
 
 		/**
@@ -102,10 +102,10 @@ namespace EcoSysLab {
 		 * @param newRootGrowthRequirement Growth requirements from roots.
 		 * @return Whether the growth caused a structural change during the growth.
 		 */
-		bool GrowRoots(const glm::mat4& globalTransform, SoilModel& soilModel,
+		bool GrowRoots(const glm::mat4& globalTransform, VoxelSoilModel& soilModel,
 			const RootGrowthController& rootGrowthParameters, PlantGrowthRequirement& newRootGrowthRequirement);
 
-		void FormFineRoots(const glm::mat4& globalTransform, SoilModel& soilModel,
+		void FormFineRoots(const glm::mat4& globalTransform, VoxelSoilModel& soilModel,
 			const RootGrowthController& rootGrowthParameters, const FineRootController& fineRootController);
 
 		void FormTwigs(const glm::mat4& globalTransform, ClimateModel& climateModel,
@@ -130,7 +130,7 @@ namespace EcoSysLab {
 
 		void ResetReproductiveModule();
 
-		
+
 	public:
 
 		void CalculateInternodeTransforms();
@@ -139,7 +139,7 @@ namespace EcoSysLab {
 		void PruneInternode(NodeHandle internodeHandle);
 		void PruneRootNode(NodeHandle rootNodeHandle);
 
-		inline void CollectRootFlux(const glm::mat4& globalTransform, SoilModel& soilModel,
+		inline void CollectRootFlux(const glm::mat4& globalTransform, VoxelSoilModel& soilModel,
 			const RootGrowthController& rootGrowthParameters);
 		inline void CollectShootFlux(const glm::mat4& globalTransform, ClimateModel& climateModel,
 			const ShootGrowthController& shootGrowthParameters);
@@ -184,17 +184,17 @@ namespace EcoSysLab {
 		 * @param rootGrowthParameters The procedural parameters that guides the growth of the roots.
 		 * @param fineRootController
 		 * @param shootGrowthParameters The procedural parameters that guides the growth of the branches.
-		 * @param twigController 
+		 * @param twigController
 		 * @return Whether the growth caused a structural change during the growth.
 		 */
-		bool Grow(float deltaTime, const glm::mat4& globalTransform, SoilModel& soilModel, ClimateModel& climateModel,
-			const RootGrowthController& rootGrowthParameters, const FineRootController& fineRootController, 
+		bool Grow(float deltaTime, const glm::mat4& globalTransform, VoxelSoilModel& soilModel, ClimateModel& climateModel,
+			const RootGrowthController& rootGrowthParameters, const FineRootController& fineRootController,
 			const ShootGrowthController& shootGrowthParameters, const TwigController& twigController);
 
 		int m_historyLimit = -1;
 
 		void SampleTemperature(const glm::mat4& globalTransform, ClimateModel& climateModel);
-		void SampleSoilDensity(const glm::mat4& globalTransform, SoilModel& soilModel);
+		void SampleSoilDensity(const glm::mat4& globalTransform, VoxelSoilModel& soilModel);
 		[[nodiscard]] ShootSkeleton& RefShootSkeleton();
 
 		[[nodiscard]] const ShootSkeleton& PeekShootSkeleton(int iteration) const;
@@ -240,38 +240,39 @@ namespace EcoSysLab {
 		{
 			const auto& node = skeleton.RefNode(nodeHandle);
 			const auto& info = node.m_info;
-			octree.Occupy(info.m_globalPosition, info.m_globalRotation, info.m_length * 0.9f, info.m_thickness, [&](OctreeNode<TreeVoxelData>& octreeNode)
+			octree.Occupy(info.m_globalPosition, info.m_globalRotation, info.m_length * 0.9f, info.m_thickness, [&](OctreeNode& octreeNode)
 				{
-					if (octreeNode.m_data.m_nodeHandle == nodeHandle) return;
-			if (octreeNode.m_data.m_nodeHandle == node.GetParentHandle()) return;
-			for (const auto& i : node.RefChildHandles()) if (octreeNode.m_data.m_nodeHandle == i) return;
-			auto flowHandle = node.GetFlowHandle();
-			if (octreeNode.m_data.m_referenceCount != 0)
-			{
-				if (octreeNode.m_data.m_nodeHandle > nodeHandle)
-				{
-					nodeCollisionCollection[octreeNode.m_data.m_nodeHandle] = nodeHandle;
-				}
-				else
-				{
-					nodeCollisionCollection[nodeHandle] = octreeNode.m_data.m_nodeHandle;
-				}
-				if (octreeNode.m_data.m_flowHandle != flowHandle) {
-					if (octreeNode.m_data.m_flowHandle > flowHandle)
+					auto& data = octree.RefNodeData(octreeNode);
+					if (data.m_nodeHandle == nodeHandle) return;
+					if (data.m_nodeHandle == node.GetParentHandle()) return;
+					for (const auto& i : node.RefChildHandles()) if (data.m_nodeHandle == i) return;
+					auto flowHandle = node.GetFlowHandle();
+					if (data.m_referenceCount != 0)
 					{
-						flowCollisionCollection[octreeNode.m_data.m_flowHandle] = flowHandle;
+						if (data.m_nodeHandle > nodeHandle)
+						{
+							nodeCollisionCollection[data.m_nodeHandle] = nodeHandle;
+						}
+						else
+						{
+							nodeCollisionCollection[nodeHandle] = data.m_nodeHandle;
+						}
+						if (data.m_flowHandle != flowHandle) {
+							if (data.m_flowHandle > flowHandle)
+							{
+								flowCollisionCollection[data.m_flowHandle] = flowHandle;
+							}
+							else
+							{
+								flowCollisionCollection[flowHandle] = data.m_flowHandle;
+							}
+						}
 					}
-					else
-					{
-						flowCollisionCollection[flowHandle] = octreeNode.m_data.m_flowHandle;
+					else {
+						data.m_flowHandle = flowHandle;
+						data.m_nodeHandle = nodeHandle;
 					}
-				}
-			}
-			else {
-				octreeNode.m_data.m_flowHandle = flowHandle;
-				octreeNode.m_data.m_nodeHandle = nodeHandle;
-			}
-			octreeNode.m_data.m_referenceCount++;
+					data.m_referenceCount++;
 				});
 
 		}
@@ -281,10 +282,10 @@ namespace EcoSysLab {
 		collisionStat.resize(200);
 		for (auto& i : collisionStat) i = 0;
 		int totalVoxel = 0;
-		octree.IterateLeaves([&](const OctreeNode<TreeVoxelData>& leaf)
+		octree.IterateLeaves([&](const OctreeNode& leaf)
 			{
-				collisionStat[leaf.m_data.m_referenceCount]++;
-		totalVoxel++;
+				collisionStat[octree.PeekNodeData(leaf).m_referenceCount]++;
+				totalVoxel++;
 			});
 
 		std::string report = "Collision: [" + std::to_string(collisionCount) + "/" + std::to_string(sortedRootNodeList.size()) + "], [" + std::to_string(flowCollisionCount) + "/" + std::to_string(sortedRootFlowList.size()) + "], ";

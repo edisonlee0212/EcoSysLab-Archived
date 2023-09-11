@@ -5,22 +5,24 @@
 using namespace EvoEngine;
 namespace EcoSysLab
 {
-	template <typename NodeData>
+	typedef int OctreeNodeHandle;
+	typedef int OctreeNodeDataHandle;
 	class OctreeNode
 	{
 		float m_radius = 0.0f;
 		unsigned m_level = 0;
 		glm::vec3 m_center = glm::vec3(0.0f);
-		int m_children[8] = { -1 , -1, -1, -1, -1, -1, -1, -1 };
-
+		OctreeNodeHandle m_children[8] = { -1, -1, -1, -1, -1, -1, -1, -1 };
+		OctreeNodeDataHandle m_dataHandle = -1;
 		template<typename ND>
-		friend
-			class Octree;
+		friend class Octree;
+		bool m_recycled = true;
 	public:
-		NodeData m_data = {};
 		[[nodiscard]] float GetRadius() const { return m_radius; }
 		[[nodiscard]] unsigned GetLevel() const { return m_level; }
 		[[nodiscard]] glm::vec3 GetCenter() const { return m_center; }
+		[[nodiscard]] OctreeNodeDataHandle GetNodeDataHandle() const { return m_dataHandle; }
+		[[nodiscard]] bool IsRecycled() const { return m_recycled; }
 		/*
 		int m_leftUpBack = -1;
 		int m_leftUpFront = -1;
@@ -33,11 +35,16 @@ namespace EcoSysLab
 		*/
 	};
 
+
 	template <typename NodeData>
 	class Octree
 	{
-		std::vector<OctreeNode<NodeData>> m_octreeNodes;
-		int NewNode(float radius, unsigned level, const glm::vec3 &center);
+		std::vector<OctreeNode> m_octreeNodes = {};
+		std::queue<size_t> m_nodePool = {};
+		std::vector<NodeData> m_nodeData = {};
+		std::queue<size_t> m_nodeDataPool = {};
+		OctreeNodeHandle Allocate(float radius, unsigned level, const glm::vec3 &center);
+		void Recycle(OctreeNodeHandle nodeHandle);
 		float m_chunkRadius = 16;
 		unsigned m_maxSubdivisionLevel = 10;
 		float m_minimumNodeRadius = 0.015625f;
@@ -46,28 +53,71 @@ namespace EcoSysLab
 		Octree();
 		[[nodiscard]] float GetMinRadius() const;
 		Octree(float radius, unsigned maxSubdivisionLevel, const glm::vec3& center);
-		void IterateLeaves(const std::function<void(const OctreeNode<NodeData>& octreeNode)>& func) const;
+		void IterateLeaves(const std::function<void(const OctreeNode& octreeNode)>& func) const;
 		[[nodiscard]] bool Occupied(const glm::vec3& position) const;
 		void Reset(float radius, unsigned maxSubdivisionLevel, const glm::vec3& center);
-		[[nodiscard]] int GetIndex(const glm::vec3& position) const;
-		[[nodiscard]] const OctreeNode<NodeData>& RefNode(int index) const;
-		void Occupy(const glm::vec3& position, const std::function<void(OctreeNode<NodeData>&)>& occupiedNodes);
-		void Occupy(const glm::vec3& position, const glm::quat& rotation, float length, float radius, const std::function<void(OctreeNode<NodeData>&)>& occupiedNodes);
-		void Occupy(const glm::vec3& min, const glm::vec3 &max, const std::function<bool(const glm::vec3& boxCenter)>& collisionHandle, const std::function<void(OctreeNode<NodeData>&)>& occupiedNodes);
+		[[nodiscard]] OctreeNodeHandle GetNodeHandle(const glm::vec3& position) const;
+		[[nodiscard]] const OctreeNode& RefNode(OctreeNodeHandle nodeHandle) const;
 
+		//void Expand(OctreeNodeHandle nodeHandle);
+		//void Collapse(OctreeNodeHandle nodeHandle);
+
+		void Occupy(const glm::vec3& position, const std::function<void(OctreeNode&)>& occupiedNodes);
+		void Occupy(const glm::vec3& position, const glm::quat& rotation, float length, float radius, const std::function<void(OctreeNode&)>& occupiedNodes);
+		void Occupy(const glm::vec3& min, const glm::vec3 &max, const std::function<bool(const glm::vec3& boxCenter)>& collisionHandle, const std::function<void(OctreeNode&)>& occupiedNodes);
+		[[nodiscard]] NodeData& RefNodeData(OctreeNodeDataHandle nodeDataHandle);
+		[[nodiscard]] const NodeData& PeekNodeData(OctreeNodeDataHandle nodeDataHandle) const;
+		[[nodiscard]] NodeData& RefNodeData(const OctreeNode& octreeNode);
+		[[nodiscard]] const NodeData& PeekNodeData(const OctreeNode& octreeNode) const;
 		void GetVoxels(std::vector<glm::mat4>& voxels) const;
-
 		void TriangulateField(std::vector<Vertex>& vertices, std::vector<unsigned>& indices, bool removeDuplicate, int smoothMeshIteration) const;
 	};
 
 	template <typename NodeData>
-	int Octree<NodeData>::NewNode(float radius, unsigned level, const glm::vec3& center)
+	OctreeNodeHandle Octree<NodeData>::Allocate(const float radius, const unsigned level, const glm::vec3& center)
 	{
-		m_octreeNodes.emplace_back();
-		m_octreeNodes.back().m_radius = radius;
-		m_octreeNodes.back().m_level = level;
-		m_octreeNodes.back().m_center = center;
+		OctreeNodeHandle newNodeHandle;
+		if(m_nodePool.empty())
+		{
+			newNodeHandle = m_octreeNodes.size();
+			m_octreeNodes.emplace_back();
+		}else
+		{
+			newNodeHandle = m_nodePool.front();
+			m_nodePool.pop();
+		}
+
+		auto& node = m_octreeNodes.at(newNodeHandle);
+		node.m_radius = radius;
+		node.m_level = level;
+		node.m_center = center;
+		node.m_recycled = false;
+		if(m_nodeDataPool.empty())
+		{
+			node.m_dataHandle = m_nodeData.size();
+			m_nodeData.emplace_back();
+		}else
+		{
+			node.m_dataHandle = m_nodeDataPool.front();
+			m_nodeDataPool.pop();
+		}
+		m_nodeData.at(node.m_dataHandle) = {};
 		return m_octreeNodes.size() - 1;
+	}
+
+	template <typename NodeData>
+	void Octree<NodeData>::Recycle(const OctreeNodeHandle nodeHandle)
+	{
+		m_nodeDataPool.push(nodeHandle);
+		auto& node = m_octreeNodes[nodeHandle];
+		node.m_radius = 0;
+		node.m_level = 0;
+		node.m_center = {};
+		node.m_recycled = true;
+
+		m_nodeDataPool.push(node.m_dataHandle);
+		node.m_dataHandle = -1;
+
 	}
 
 	template <typename NodeData>
@@ -81,7 +131,7 @@ namespace EcoSysLab
 		return m_minimumNodeRadius;
 	}
 	template <typename NodeData>
-	Octree<NodeData>::Octree(float radius, unsigned maxSubdivisionLevel, const glm::vec3& center)
+	Octree<NodeData>::Octree(const float radius, const unsigned maxSubdivisionLevel, const glm::vec3& center)
 	{
 		Reset(radius, maxSubdivisionLevel, center);
 	}
@@ -120,14 +170,14 @@ namespace EcoSysLab
 		{
 			m_minimumNodeRadius /= 2.f;
 		}
-		NewNode(m_chunkRadius, -1, center);
+		Allocate(m_chunkRadius, -1, center);
 	}
 	template <typename NodeData>
-	int Octree<NodeData>::GetIndex(const glm::vec3& position) const
+	OctreeNodeHandle Octree<NodeData>::GetNodeHandle(const glm::vec3& position) const
 	{
 		float currentRadius = m_chunkRadius;
 		glm::vec3 center = m_center;
-		int octreeNodeIndex = 0;
+		OctreeNodeHandle octreeNodeIndex = 0;
 		for (int subdivision = 0; subdivision < m_maxSubdivisionLevel; subdivision++)
 		{
 			currentRadius /= 2.f;
@@ -145,13 +195,13 @@ namespace EcoSysLab
 		return octreeNodeIndex;
 	}
 	template <typename NodeData>
-	const OctreeNode<NodeData>& Octree<NodeData>::RefNode(const int index) const
+	const OctreeNode& Octree<NodeData>::RefNode(const OctreeNodeHandle nodeHandle) const
 	{
-		return m_octreeNodes[index];
+		return m_octreeNodes[nodeHandle];
 	}
 
 	template <typename NodeData>
-	void Octree<NodeData>::Occupy(const glm::vec3& position, const std::function<void(OctreeNode<NodeData>&)>& occupiedNodes)
+	void Octree<NodeData>::Occupy(const glm::vec3& position, const std::function<void(OctreeNode&)>& occupiedNodes)
 	{
 		float currentRadius = m_chunkRadius;
 		glm::vec3 center = m_center;
@@ -166,7 +216,7 @@ namespace EcoSysLab
 			center.z += position.z > center.z ? currentRadius : -currentRadius;
 			if (octreeNode.m_children[index] == -1)
 			{
-				const auto newIndex = NewNode(currentRadius, subdivision, center);
+				const auto newIndex = Allocate(currentRadius, subdivision, center);
 				m_octreeNodes[octreeNodeIndex].m_children[index] = newIndex;
 				octreeNodeIndex = newIndex;
 			}
@@ -176,7 +226,7 @@ namespace EcoSysLab
 	}
 
 	template <typename NodeData>
-	void Octree<NodeData>::Occupy(const glm::vec3& position, const glm::quat& rotation, float length, float radius, const std::function<void(OctreeNode<NodeData>&)>& occupiedNodes)
+	void Octree<NodeData>::Occupy(const glm::vec3& position, const glm::quat& rotation, float length, float radius, const std::function<void(OctreeNode&)>& occupiedNodes)
 	{
 		const float maxRadius = glm::max(length, radius);
 		Occupy(glm::vec3(position - glm::vec3(maxRadius)), glm::vec3(position + glm::vec3(maxRadius)), [&](const glm::vec3& boxCenter)
@@ -189,7 +239,7 @@ namespace EcoSysLab
 	template <typename NodeData>
 	void Octree<NodeData>::Occupy(const glm::vec3& min, const glm::vec3& max,
 		const std::function<bool(const glm::vec3& boxCenter)>& collisionHandle,
-		const std::function<void(OctreeNode<NodeData>&)>& occupiedNodes)
+		const std::function<void(OctreeNode&)>& occupiedNodes)
 	{
 		for (float x = min.x - m_minimumNodeRadius; x < max.x + m_minimumNodeRadius; x += m_minimumNodeRadius)
 		{
@@ -207,7 +257,35 @@ namespace EcoSysLab
 	}
 
 	template <typename NodeData>
-	void Octree<NodeData>::IterateLeaves(const std::function<void(const OctreeNode<NodeData>& octreeNode)>& func) const
+	NodeData& Octree<NodeData>::RefNodeData(int nodeDataHandle)
+	{
+		assert(index > 0 && index < m_nodeData.size());
+		return m_nodeData[nodeDataHandle];
+	}
+
+	template <typename NodeData>
+	const NodeData& Octree<NodeData>::PeekNodeData(int nodeDataHandle) const
+	{
+		assert(index > 0 && index < m_nodeData.size());
+		return m_nodeData[nodeDataHandle];
+	}
+
+	template <typename NodeData>
+	NodeData& Octree<NodeData>::RefNodeData(const OctreeNode& octreeNode)
+	{
+		assert(!octreeNode.m_recycled);
+		return m_nodeData[octreeNode.m_dataHandle];
+	}
+
+	template <typename NodeData>
+	const NodeData& Octree<NodeData>::PeekNodeData(const OctreeNode& octreeNode) const
+	{
+		assert(!octreeNode.m_recycled);
+		return m_nodeData[octreeNode.m_dataHandle];
+	}
+
+	template <typename NodeData>
+	void Octree<NodeData>::IterateLeaves(const std::function<void(const OctreeNode& octreeNode)>& func) const
 	{
 		for (const auto& node : m_octreeNodes)
 		{
@@ -221,7 +299,7 @@ namespace EcoSysLab
 	void Octree<NodeData>::GetVoxels(std::vector<glm::mat4>& voxels) const
 	{
 		voxels.clear();
-		IterateLeaves([&](const OctreeNode<NodeData>& octreeNode)
+		IterateLeaves([&](const OctreeNode& octreeNode)
 			{
 				voxels.push_back(glm::translate(octreeNode.m_center) * glm::scale(glm::vec3(m_minimumNodeRadius)));
 			});
@@ -231,7 +309,7 @@ namespace EcoSysLab
 	{
 		std::vector<glm::vec3> testingCells;
 		std::vector<glm::vec3> validateCells;
-		IterateLeaves([&](const OctreeNode<NodeData>& octreeNode)
+		IterateLeaves([&](const OctreeNode& octreeNode)
 			{
 				testingCells.push_back(octreeNode.m_center);
 			});

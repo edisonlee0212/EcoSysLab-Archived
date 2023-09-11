@@ -150,7 +150,7 @@ void TreeModel::ApplyTropism(const glm::vec3& targetDir, float tropism, glm::qua
 	rotation = glm::quatLookAt(front, up);
 }
 
-bool TreeModel::Grow(float deltaTime, const glm::mat4& globalTransform, SoilModel& soilModel, ClimateModel& climateModel,
+bool TreeModel::Grow(float deltaTime, const glm::mat4& globalTransform, VoxelSoilModel& soilModel, ClimateModel& climateModel,
 	const RootGrowthController& rootGrowthParameters, const FineRootController& fineRootController,
 	const ShootGrowthController& shootGrowthParameters, const TwigController& twigController)
 {
@@ -226,7 +226,7 @@ void TreeModel::Initialize(const ShootGrowthController& shootGrowthParameters, c
 	m_initialized = true;
 }
 
-void TreeModel::CollectRootFlux(const glm::mat4& globalTransform, SoilModel& soilModel, const RootGrowthController& rootGrowthParameters)
+void TreeModel::CollectRootFlux(const glm::mat4& globalTransform, VoxelSoilModel& soilModel, const RootGrowthController& rootGrowthParameters)
 {
 	m_rootSkeleton.m_data.m_rootFlux.m_water = 0.0f;
 	const auto& sortedRootNodeList = m_rootSkeleton.RefSortedNodeList();
@@ -398,7 +398,7 @@ void TreeModel::PlantVigorAllocation()
 	}
 }
 
-bool TreeModel::GrowRoots(const glm::mat4& globalTransform, SoilModel& soilModel, const RootGrowthController& rootGrowthParameters, PlantGrowthRequirement& newRootGrowthRequirement)
+bool TreeModel::GrowRoots(const glm::mat4& globalTransform, VoxelSoilModel& soilModel, const RootGrowthController& rootGrowthParameters, PlantGrowthRequirement& newRootGrowthRequirement)
 {
 	bool rootStructureChanged = false;
 
@@ -519,7 +519,7 @@ bool TreeModel::GrowRoots(const glm::mat4& globalTransform, SoilModel& soilModel
 	return rootStructureChanged;
 }
 
-void TreeModel::FormFineRoots(const glm::mat4& globalTransform, SoilModel& soilModel,
+void TreeModel::FormFineRoots(const glm::mat4& globalTransform, VoxelSoilModel& soilModel,
 	const RootGrowthController& rootGrowthParameters, const FineRootController& fineRootController)
 {
 	m_fineRootCount = 0;
@@ -749,7 +749,7 @@ bool TreeModel::GrowShoots(const glm::mat4& globalTransform, ClimateModel& clima
 	return treeStructureChanged;
 }
 
-bool TreeModel::ElongateRoot(SoilModel& soilModel, const float extendLength, NodeHandle rootNodeHandle, const RootGrowthController& rootGrowthParameters,
+bool TreeModel::ElongateRoot(VoxelSoilModel& soilModel, const float extendLength, NodeHandle rootNodeHandle, const RootGrowthController& rootGrowthParameters,
 	float& collectedAuxin) {
 	bool graphChanged = false;
 	auto& rootNode = m_rootSkeleton.RefNode(rootNodeHandle);
@@ -929,7 +929,7 @@ bool TreeModel::ElongateInternode(float extendLength, NodeHandle internodeHandle
 	return graphChanged;
 }
 
-inline bool TreeModel::GrowRootNode(SoilModel& soilModel, NodeHandle rootNodeHandle, const RootGrowthController& rootGrowthParameters)
+inline bool TreeModel::GrowRootNode(VoxelSoilModel& soilModel, NodeHandle rootNodeHandle, const RootGrowthController& rootGrowthParameters)
 {
 	bool graphChanged = false;
 	{
@@ -1573,7 +1573,7 @@ bool TreeModel::PruneInternodes(float maxDistance, NodeHandle internodeHandle,
 	return pruning;
 }
 
-void TreeModel::SampleNitrite(const glm::mat4& globalTransform, SoilModel& soilModel)
+void TreeModel::SampleNitrite(const glm::mat4& globalTransform, VoxelSoilModel& soilModel)
 {
 	m_rootSkeleton.m_data.m_rootFlux.m_nitrite = 0.0f;
 	const auto& sortedRootNodeList = m_rootSkeleton.RefSortedNodeList();
@@ -1717,7 +1717,7 @@ void TreeModel::SampleTemperature(const glm::mat4& globalTransform, ClimateModel
 	}
 }
 
-void TreeModel::SampleSoilDensity(const glm::mat4& globalTransform, SoilModel& soilModel)
+void TreeModel::SampleSoilDensity(const glm::mat4& globalTransform, VoxelSoilModel& soilModel)
 {
 	const auto& sortedRootNodeList = m_rootSkeleton.RefSortedNodeList();
 	for (auto it = sortedRootNodeList.rbegin(); it != sortedRootNodeList.rend(); it++) {

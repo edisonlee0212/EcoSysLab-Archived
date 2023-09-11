@@ -123,8 +123,8 @@ namespace EcoSysLab {
 		// helper functions to structure code a bit
 		void SoilVisualization();
 
-		void SoilVisualizationScalar(SoilModel &soilModel); // called during LateUpdate()
-		void SoilVisualizationVector(SoilModel &soilModel); // called during LateUpdate()
+		void SoilVisualizationScalar(VoxelSoilModel &soilModel); // called during LateUpdate()
+		void SoilVisualizationVector(VoxelSoilModel &soilModel); // called during LateUpdate()
 
 		float m_time;
 		float m_deltaTime = 0.01918f;

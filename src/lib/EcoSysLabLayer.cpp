@@ -1197,7 +1197,7 @@ void EcoSysLabLayer::SoilVisualization() {
 }
 
 
-void EcoSysLabLayer::SoilVisualizationScalar(SoilModel& soilModel) {
+void EcoSysLabLayer::SoilVisualizationScalar(VoxelSoilModel& soilModel) {
 	const auto numVoxels = soilModel.m_resolution.x * soilModel.m_resolution.y * soilModel.m_resolution.z;
 	auto& scalarMatrices = m_groundFruitMatrices->m_particleInfos;
 	
@@ -1295,7 +1295,7 @@ void EcoSysLabLayer::SoilVisualizationScalar(SoilModel& soilModel) {
 }
 
 
-void EcoSysLab::EcoSysLabLayer::SoilVisualizationVector(SoilModel& soilModel) {
+void EcoSysLab::EcoSysLabLayer::SoilVisualizationVector(VoxelSoilModel& soilModel) {
 	const auto numVoxels = soilModel.m_resolution.x * soilModel.m_resolution.y * soilModel.m_resolution.z;
 	auto& vectorMatrices = m_groundFruitMatrices->m_particleInfos;
 	if (vectorMatrices.size() != numVoxels) {
