@@ -3,13 +3,10 @@
 //
 #include "rapidcsv.h"
 #include "SkyIlluminance.hpp"
-#ifdef RAYTRACERFACILITY
+#ifdef BUILD_WITH_RAYTRACER
 #include "RayTracerLayer.hpp"
 #endif
 
-#ifdef RAYTRACERFACILITY
-using namespace RayTracerFacility;
-#endif
 using namespace EcoSysLab;SkyIlluminanceSnapshot
 SkyIlluminanceSnapshotLerp(const SkyIlluminanceSnapshot &l,
                            const SkyIlluminanceSnapshot &r, float a) {
@@ -81,7 +78,7 @@ void SkyIlluminance::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
   ImGui::Checkbox("Auto Apply", &autoApply);
   if(ImGui::SliderFloat("Time", &time, m_minTime, m_maxTime)){
     snapshot = Get(time);
-#ifdef RAYTRACERFACILITY
+#ifdef BUILD_WITH_RAYTRACER
     if(autoApply){
       auto& envProp = Application::GetLayer<RayTracerLayer>()->m_environmentProperties;
       envProp.m_sunDirection = snapshot.GetSunDirection();

@@ -4,8 +4,6 @@
 
 #include "SorghumField.hpp"
 
-#include <Joint.hpp>
-
 #include "SorghumData.hpp"
 #include "SorghumLayer.hpp"
 #include "SorghumStateGenerator.hpp"

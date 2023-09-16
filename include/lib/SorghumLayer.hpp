@@ -1,5 +1,5 @@
 #pragma once
-#ifdef RAYTRACERFACILITY
+#ifdef BUILD_WITH_RAYTRACER
 #include <CUDAModule.hpp>
 #endif
 #include "ILayer.hpp"
@@ -27,11 +27,11 @@ class SorghumLayer : public ILayer {
                               std::ofstream &of, unsigned &startIndex);
 
 public:
-#ifdef RAYTRACERFACILITY
+#ifdef BUILD_WITH_RAYTRACER
 #pragma region Illumination
   int m_seed = 0;
   float m_pushDistance = 0.001f;
-  RayTracerFacility::RayProperties m_rayProperties;
+  RayProperties m_rayProperties;
 
   bool m_enableCompressedBTF = false;
   std::vector<Entity> m_processingEntities;

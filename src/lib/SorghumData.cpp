@@ -1,4 +1,4 @@
-#ifdef RAYTRACERFACILITY
+#ifdef BUILD_WITH_RAYTRACER
 #include "BTFMeshRenderer.hpp"
 #include "CompressedBTF.hpp"
 #endif
@@ -15,9 +15,7 @@
 #include "EditorLayer.hpp"
 #include "Material.hpp"
 #include "Mesh.hpp"
-#ifdef RAYTRACERFACILITY
-using namespace RayTracerFacility;
-#endif
+
 using namespace EcoSysLab;
 
 void SorghumData::OnCreate() {}
@@ -208,7 +206,7 @@ void SorghumData::ApplyGeometry() {
 	auto sorghumLayer = Application::GetLayer<SorghumLayer>();
 	bool seperated = m_seperated || m_segmentedMask;
 	auto bottomFace = !m_skeleton && !m_segmentedMask && m_bottomFace;
-#ifdef RAYTRACERFACILITY
+#ifdef BUILD_WITH_RAYTRACER
 	auto leafCBTFGroup = sorghumLayer->m_leafCBTFGroup.Get<CBTFGroup>();
 	bool btfAvailable = false;
 	std::shared_ptr<DoubleCBTF> doubleCBTF;
@@ -294,7 +292,7 @@ void SorghumData::ApplyGeometry() {
 		else {
 			leafTopFaceMeshRenderer->m_mesh.Clear();
 		}
-#ifdef RAYTRACERFACILITY
+#ifdef BUILD_WITH_RAYTRACER
 		if (btfAvailable) {
 			auto leafTopFaceBtfMeshRenderer =
 				scene->GetOrSetPrivateComponent<BTFMeshRenderer>(leavesGeometryEntity)
@@ -353,7 +351,7 @@ void SorghumData::ApplyGeometry() {
 			}
 			leafBottomFaceMeshRenderer->m_material =
 				sorghumLayer->m_leafBottomFaceMaterial;
-#ifdef RAYTRACERFACILITY
+#ifdef BUILD_WITH_RAYTRACER
 			if (btfAvailable) {
 				auto leafBottomFaceBtfMeshRenderer =
 					scene
@@ -418,7 +416,7 @@ void SorghumData::ApplyGeometry() {
 				else {
 					meshRenderer->m_material = sorghumLayer->m_leafMaterial;
 				}
-#ifdef RAYTRACERFACILITY
+#ifdef BUILD_WITH_RAYTRACER
 				if (btfAvailable) {
 					auto btfMeshRenderer =
 						scene
@@ -476,7 +474,7 @@ void SorghumData::ApplyGeometry() {
 				else {
 					leafTopFaceMeshRenderer->m_material = sorghumLayer->m_leafMaterial;
 				}
-#ifdef RAYTRACERFACILITY
+#ifdef BUILD_WITH_RAYTRACER
 				if (btfAvailable) {
 					auto leafTopFaceBtfMeshRenderer =
 						scene
@@ -520,7 +518,7 @@ void SorghumData::ApplyGeometry() {
 					}
 					leafBottomFaceMeshRenderer->m_material =
 						Application::GetLayer<SorghumLayer>()->m_leafBottomFaceMaterial;
-#ifdef RAYTRACERFACILITY
+#ifdef BUILD_WITH_RAYTRACER
 					if (btfAvailable) {
 						auto leafBottomFaceBtfMeshRenderer =
 							scene
@@ -629,7 +627,7 @@ void SorghumData::SetEnableSegmentedMask(bool value) {
 			else {
 				meshRenderer->m_material = sorghumLayer->m_leafMaterial;
 			}
-#ifdef RAYTRACERFACILITY
+#ifdef BUILD_WITH_RAYTRACER
 			auto btfMeshRenderer =
 				scene->GetOrSetPrivateComponent<BTFMeshRenderer>(stemGeometryEntity)
 				.lock();
@@ -668,7 +666,7 @@ void SorghumData::SetEnableSegmentedMask(bool value) {
 			else {
 				leafTopFaceMeshRenderer->m_material = sorghumLayer->m_leafMaterial;
 			}
-#ifdef RAYTRACERFACILITY
+#ifdef BUILD_WITH_RAYTRACER
 			auto leafTopFaceBtfMeshRenderer =
 				scene
 				->GetOrSetPrivateComponent<BTFMeshRenderer>(
@@ -693,7 +691,7 @@ void SorghumData::SetEnableSegmentedMask(bool value) {
 				.lock();
 			if (bottomFace) {
 				leafBottomFaceMeshRenderer->SetEnabled(true);
-#ifdef RAYTRACERFACILITY
+#ifdef BUILD_WITH_RAYTRACER
 				auto leafBottomFaceBtfMeshRenderer =
 					scene
 					->GetOrSetPrivateComponent<BTFMeshRenderer>(
@@ -707,7 +705,7 @@ void SorghumData::SetEnableSegmentedMask(bool value) {
 			}
 			else {
 				leafBottomFaceMeshRenderer->SetEnabled(false);
-#ifdef RAYTRACERFACILITY
+#ifdef BUILD_WITH_RAYTRACER
 				auto leafBottomFaceBtfMeshRenderer =
 					scene
 					->GetOrSetPrivateComponent<BTFMeshRenderer>(

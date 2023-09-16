@@ -2,7 +2,7 @@
 // Created by lllll on 2/23/2022.
 //
 #include <Jobs.hpp>
-#ifdef RAYTRACERFACILITY
+#ifdef BUILD_WITH_RAYTRACER
 #include "PARSensorGroup.hpp"
 #include "RayTracerLayer.hpp"
 #include "Graphics.hpp"

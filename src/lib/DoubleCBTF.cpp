@@ -3,13 +3,12 @@
 //
 
 #include "DoubleCBTF.hpp"
-#ifdef RAYTRACERFACILITY
+#ifdef BUILD_WITH_RAYTRACER
 #include "CompressedBTF.hpp"
-using namespace RayTracerFacility;
 #endif
 using namespace EcoSysLab;
 void DoubleCBTF::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
-#ifdef RAYTRACERFACILITY
+#ifdef BUILD_WITH_RAYTRACER
 	editorLayer->DragAndDropButton<CompressedBTF>(m_top, "Top");
 	editorLayer->DragAndDropButton<CompressedBTF>(m_bottom, "Bottom");
 #endif

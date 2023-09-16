@@ -3,13 +3,13 @@
 //
 
 #include "CBTFGroup.hpp"
-#ifdef RAYTRACERFACILITY
+#ifdef BUILD_WITH_RAYTRACER
 #include "DoubleCBTF.hpp"
 #endif
 
 using namespace EcoSysLab;
 void CBTFGroup::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
-#ifdef RAYTRACERFACILITY
+#ifdef BUILD_WITH_RAYTRACER
   AssetRef temp;
   if (editorLayer->DragAndDropButton<DoubleCBTF>(temp, ("Drop to add..."))) {
     m_doubleCBTFs.emplace_back(temp);

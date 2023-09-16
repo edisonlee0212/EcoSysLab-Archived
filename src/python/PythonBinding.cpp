@@ -10,10 +10,8 @@
 #include "PlayerController.hpp"
 #include "Prefab.hpp"
 #include "Times.hpp"
-#include "PhysicsLayer.hpp"
 #include "PostProcessingStack.hpp"
 #include "ProjectManager.hpp"
-#include "PhysicsLayer.hpp"
 #include "ClassRegistry.hpp"
 #include "TreeModel.hpp"
 #include "Tree.hpp"
@@ -29,7 +27,7 @@
 #include "TreePointCloud.hpp"
 #include "PipeModelBase.hpp"
 #include "Scene.hpp"
-#ifdef RAYTRACERFACILITY
+#ifdef BUILD_WITH_RAYTRACER
 
 #include <CUDAModule.hpp>
 #include <RayTracerLayer.hpp>
@@ -37,10 +35,6 @@
 #endif
 
 using namespace EvoEngine;
-
-#ifdef RAYTRACERFACILITY
-using namespace RayTracerFacility;
-#endif
 using namespace EcoSysLab;
 
 namespace py = pybind11;

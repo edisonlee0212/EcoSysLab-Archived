@@ -1,9 +1,8 @@
 #pragma once
-#ifdef RAYTRACERFACILITY
+#ifdef BUILD_WITH_RAYTRACER
 
 #include <CUDAModule.hpp>
 using namespace EvoEngine;
-using namespace RayTracerFacility;
 namespace EcoSysLab {
 class PARSensorGroup : public IAsset {
 public:

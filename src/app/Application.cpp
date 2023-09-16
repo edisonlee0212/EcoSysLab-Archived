@@ -3,17 +3,14 @@
 //
 #include <Application.hpp>
 
-#ifdef RAYTRACERFACILITY
-
+#ifdef BUILD_WITH_RAYTRACER
 #include <CUDAModule.hpp>
 #include <RayTracerLayer.hpp>
-
 #endif
 
 #include "Times.hpp"
 
 #include "ProjectManager.hpp"
-#include "PhysicsLayer.hpp"
 #include "ClassRegistry.hpp"
 #include "TreeModel.hpp"
 #include "Tree.hpp"
@@ -29,9 +26,7 @@
 #include "TreePointCloud.hpp"
 #include "PipeModelBase.hpp"
 #include "WindowLayer.hpp"
-#ifdef RAYTRACERFACILITY
-using namespace RayTracerFacility;
-#endif
+
 using namespace EcoSysLab;
 
 void EngineSetup();
@@ -74,12 +69,11 @@ int main() {
 	EngineSetup();
 
     Application::PushLayer<WindowLayer>();
-    //Application::PushLayer<PhysicsLayer>();
     Application::PushLayer<EditorLayer>();
     Application::PushLayer<RenderLayer>();
     Application::PushLayer<EcoSysLabLayer>();
     Application::PushLayer<SorghumLayer>();
-#ifdef RAYTRACERFACILITY
+#ifdef BUILD_WITH_RAYTRACER
     Application::PushLayer<RayTracerLayer>();
 #endif
     ClassRegistry::RegisterPrivateComponent<Tree>("Tree");
@@ -101,7 +95,7 @@ int main() {
     applicationConfigs.m_applicationName = "EcoSysLab";
     Application::Initialize(applicationConfigs);
     
-#ifdef RAYTRACERFACILITY
+#ifdef BUILD_WITH_RAYTRACER
     
     auto rayTracerLayer = Application::GetLayer<RayTracerLayer>();
     rayTracerLayer->m_showCameraWindow = false;

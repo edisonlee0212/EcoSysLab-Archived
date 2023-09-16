@@ -1,4 +1,4 @@
-#ifdef RAYTRACERFACILITY
+#ifdef BUILD_WITH_RAYTRACER
 #include "BTFMeshRenderer.hpp"
 #include "RayTracerLayer.hpp"
 #include <TriangleIlluminationEstimator.hpp>
@@ -14,11 +14,10 @@
 #include "Times.hpp"
 
 #include "Material.hpp"
-#ifdef RAYTRACERFACILITY
+#ifdef BUILD_WITH_RAYTRACER
 #include "CBTFGroup.hpp"
 #include "DoubleCBTF.hpp"
 #include "PARSensorGroup.hpp"
-using namespace RayTracerFacility;
 #endif
 using namespace EcoSysLab;
 using namespace EvoEngine;
@@ -46,7 +45,7 @@ void SorghumLayer::OnCreate() {
 	ClassRegistry::RegisterAsset<SorghumStateGenerator>(
 		"SorghumStateGenerator", { ".sorghumstategenerator" });
 	ClassRegistry::RegisterAsset<SorghumField>("SorghumField", { ".sorghumfield" });
-#ifdef RAYTRACERFACILITY
+#ifdef BUILD_WITH_RAYTRACER
 	ClassRegistry::RegisterAsset<PARSensorGroup>("PARSensorGroup",
 		{ ".parsensorgroup" });
 	ClassRegistry::RegisterAsset<CBTFGroup>("CBTFGroup", { ".cbtfg" });
@@ -177,7 +176,7 @@ Entity SorghumLayer::CreateSorghum() {
 	auto sorghumData =
 		scene->GetOrSetPrivateComponent<SorghumData>(entity).lock();
 	scene->SetEntityName(entity, "Sorghum");
-#ifdef RAYTRACERFACILITY
+#ifdef BUILD_WITH_RAYTRACER
 	scene->GetOrSetPrivateComponent<TriangleIlluminationEstimator>(entity);
 #endif
 	return entity;
@@ -239,7 +238,7 @@ void SorghumLayer::GenerateMeshForAllSorghums() {
 void SorghumLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	auto scene = GetScene();
 	if (ImGui::Begin("Sorghum Layer")) {
-#ifdef RAYTRACERFACILITY
+#ifdef BUILD_WITH_RAYTRACER
 		if (ImGui::TreeNodeEx("Illumination Estimation")) {
 			ImGui::DragInt("Seed", &m_seed);
 			ImGui::DragFloat("Push distance along normal", &m_pushDistance, 0.0001f,
@@ -329,7 +328,7 @@ void SorghumLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 			});
 
 		static bool opened = false;
-#ifdef RAYTRACERFACILITY
+#ifdef BUILD_WITH_RAYTRACER
 		if (m_processing && !opened) {
 			ImGui::OpenPopup("Illumination Estimation");
 			opened = true;
@@ -466,7 +465,7 @@ void SorghumLayer::ExportAllSorghumsModel(const std::string& filename) {
 }
 
 
-#ifdef RAYTRACERFACILITY
+#ifdef BUILD_WITH_RAYTRACER
 void SorghumLayer::CalculateIlluminationFrameByFrame() {
 	auto scene = GetScene();
 	const auto* owners = scene->UnsafeGetPrivateComponentOwnersList<
@@ -512,7 +511,7 @@ void SorghumLayer::CalculateIllumination() {
 #endif
 void SorghumLayer::Update() {
 	auto scene = GetScene();
-#ifdef RAYTRACERFACILITY
+#ifdef BUILD_WITH_RAYTRACER
 	if (m_processing) {
 		m_processingIndex--;
 		if (m_processingIndex == -1) {
