@@ -259,14 +259,14 @@ namespace EcoSysLab
 	template <typename NodeData>
 	NodeData& Octree<NodeData>::RefNodeData(int nodeDataHandle)
 	{
-		assert(index > 0 && index < m_nodeData.size());
+		assert(nodeDataHandle > 0 && nodeDataHandle < m_nodeData.size());
 		return m_nodeData[nodeDataHandle];
 	}
 
 	template <typename NodeData>
 	const NodeData& Octree<NodeData>::PeekNodeData(int nodeDataHandle) const
 	{
-		assert(index > 0 && index < m_nodeData.size());
+		assert(nodeDataHandle > 0 && nodeDataHandle < m_nodeData.size());
 		return m_nodeData[nodeDataHandle];
 	}
 

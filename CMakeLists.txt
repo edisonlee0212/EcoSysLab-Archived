@@ -5,8 +5,8 @@ project(
 		DESCRIPTION "An interactive application developed for my research purposes based on EvoEngine"
 )
 
-option(BUILD_WITH_RAYTRACER "Build with Ray Tracer" ON)
-option(BUILD_WITH_PHYSICS "Build with Physics" ON)
+option(BUILD_WITH_RAYTRACER "Build with Ray Tracer" OFF)
+option(BUILD_WITH_PHYSICS "Build with Physics" OFF)
 
 # Set a default build type if none was specified
 set(default_build_type "Release")

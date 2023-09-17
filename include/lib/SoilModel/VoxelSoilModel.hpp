@@ -258,7 +258,7 @@ namespace EcoSysLab {
 		glm::ivec3 m_voxelResolution = glm::ivec3(64, 64, 64);
 		float m_deltaX = 0.1f;
 		float m_deltaTime = 0.001f; // delta t, time between steps
-		glm::vec3& m_boundingBoxMin = glm::vec3(-3.2, -4.8, -3.2);
+		glm::vec3 m_boundingBoxMin = glm::vec3(-3.2, -4.8, -3.2);
 
 		VoxelSoilModel::Boundary m_boundary_x = VoxelSoilModel::Boundary::absorb;
 		VoxelSoilModel::Boundary m_boundary_y = VoxelSoilModel::Boundary::absorb;
