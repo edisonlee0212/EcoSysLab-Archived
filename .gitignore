@@ -1,4 +1,7 @@
-build
+#vscode
+.vscode/
+build/
+
 # Include Resource folder
 !Resources/
 
