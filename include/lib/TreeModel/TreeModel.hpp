@@ -36,34 +36,34 @@ namespace EcoSysLab {
 		bool ElongateRoot(VoxelSoilModel& soilModel, float extendLength, NodeHandle rootNodeHandle,
 			const RootGrowthController& rootGrowthParameters, float& collectedAuxin);
 
-		inline bool GrowRootNode(VoxelSoilModel& soilModel, NodeHandle rootNodeHandle, const RootGrowthController& rootGrowthParameters);
+		bool GrowRootNode(VoxelSoilModel& soilModel, NodeHandle rootNodeHandle, const RootGrowthController& rootGrowthParameters);
 
-		inline void CalculateThickness(NodeHandle rootNodeHandle,
+		void CalculateThickness(NodeHandle rootNodeHandle,
 			const RootGrowthController& rootGrowthParameters);
 
 
 
-		inline void AggregateRootVigorRequirement(const RootGrowthController& rootGrowthParameters);
+		void AggregateRootVigorRequirement(const RootGrowthController& rootGrowthParameters);
 
-		inline void AllocateRootVigor(const RootGrowthController& rootGrowthParameters);
+		void AllocateRootVigor(const RootGrowthController& rootGrowthParameters);
 
-		inline void CalculateVigorRequirement(const RootGrowthController& rootGrowthParameters, PlantGrowthRequirement& newRootGrowthNutrientsRequirement);
-		inline void SampleNitrite(const glm::mat4& globalTransform, VoxelSoilModel& soilModel);
+		void CalculateVigorRequirement(const RootGrowthController& rootGrowthParameters, PlantGrowthRequirement& newRootGrowthNutrientsRequirement);
+		void SampleNitrite(const glm::mat4& globalTransform, VoxelSoilModel& soilModel);
 #pragma endregion
 #pragma region Tree Growth
-		inline void AggregateInternodeVigorRequirement(const ShootGrowthController& shootGrowthParameters);
+		void AggregateInternodeVigorRequirement(const ShootGrowthController& shootGrowthParameters);
 
-		inline void CalculateVigorRequirement(const ShootGrowthController& shootGrowthParameters, PlantGrowthRequirement& newTreeGrowthNutrientsRequirement);
+		void CalculateVigorRequirement(const ShootGrowthController& shootGrowthParameters, PlantGrowthRequirement& newTreeGrowthNutrientsRequirement);
 
-		inline void AllocateShootVigor(const ShootGrowthController& shootGrowthParameters);
+		void AllocateShootVigor(const ShootGrowthController& shootGrowthParameters);
 
-		inline bool PruneInternodes(float maxDistance, NodeHandle internodeHandle,
+		bool PruneInternodes(float maxDistance, NodeHandle internodeHandle,
 			const ShootGrowthController& shootGrowthParameters);
 
-		inline void CalculateThicknessAndSagging(NodeHandle internodeHandle,
+		void CalculateThicknessAndSagging(NodeHandle internodeHandle,
 			const ShootGrowthController& shootGrowthParameters);
 
-		inline bool GrowInternode(ClimateModel& climateModel, NodeHandle internodeHandle, const ShootGrowthController& shootGrowthParameters);
+		bool GrowInternode(ClimateModel& climateModel, NodeHandle internodeHandle, const ShootGrowthController& shootGrowthParameters);
 
 		bool ElongateInternode(float extendLength, NodeHandle internodeHandle,
 			const ShootGrowthController& shootGrowthParameters, float& collectedInhibitor);
@@ -112,7 +112,7 @@ namespace EcoSysLab {
 			const ShootGrowthController& shootGrowthParameters, const TwigController& twigController);
 
 
-		inline void PlantVigorAllocation();
+		void PlantVigorAllocation();
 
 		int m_leafCount = 0;
 		int m_fruitCount = 0;
@@ -139,9 +139,9 @@ namespace EcoSysLab {
 		void PruneInternode(NodeHandle internodeHandle);
 		void PruneRootNode(NodeHandle rootNodeHandle);
 
-		inline void CollectRootFlux(const glm::mat4& globalTransform, VoxelSoilModel& soilModel,
+		void CollectRootFlux(const glm::mat4& globalTransform, VoxelSoilModel& soilModel,
 			const RootGrowthController& rootGrowthParameters);
-		inline void CollectShootFlux(const glm::mat4& globalTransform, ClimateModel& climateModel,
+		void CollectShootFlux(const glm::mat4& globalTransform, ClimateModel& climateModel,
 			const ShootGrowthController& shootGrowthParameters);
 		void HarvestFruits(const std::function<bool(const ReproductiveModule& fruit)>& harvestFunction);
 

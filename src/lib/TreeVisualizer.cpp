@@ -167,7 +167,7 @@ TreeVisualizer::OnInspect(
 					m_mode = PruningMode::Stroke;
 				}
 				else {
-					m_mode = PruningMode::None;
+					m_mode = PruningMode::Empty;
 				}
 				m_storedMousePositions.clear();
 			}
@@ -254,7 +254,7 @@ bool TreeVisualizer::Visualize(TreeModel& treeModel, const GlobalTransform& glob
 		const auto editorLayer = Application::GetLayer<EditorLayer>();
 		if (ecoSysLabLayer->m_visualizationCameraWindowFocused) {
 			switch (m_mode) {
-			case PruningMode::None: {
+			case PruningMode::Empty: {
 				if (editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Press) {
 					if (RayCastSelection(ecoSysLabLayer->m_visualizationCamera, ecoSysLabLayer->m_visualizationCameraMousePosition, treeSkeleton, globalTransform, m_selectedInternodeHandle,
 						m_selectedInternodeHierarchyList, m_selectedInternodeLengthFactor)) {

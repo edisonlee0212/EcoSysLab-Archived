@@ -10,7 +10,7 @@
 using namespace EvoEngine;
 namespace EcoSysLab {
 	enum class PruningMode {
-		None,
+		Empty,
 		Stroke
 	};
 
@@ -58,7 +58,7 @@ namespace EcoSysLab {
 		float m_selectedRootNodeLengthFactor = 0.0f;
 		std::vector<NodeHandle> m_selectedRootNodeHierarchyList;
 
-		PruningMode m_mode = PruningMode::None;
+		PruningMode m_mode = PruningMode::Empty;
 
 		template<typename SkeletonData, typename FlowData, typename NodeData>
 		bool
