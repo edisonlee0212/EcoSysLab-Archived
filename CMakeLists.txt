@@ -38,6 +38,9 @@ endif ()
 # 3rd Party libraries
 # ------------------------------------------------------------------
 set(EVOENGINE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../EvoEngine)
+
+include_directories(${EVOENGINE_INCLUDES})
+
 if (NOT TARGET evoengine)
 	if (NOT TARGET evoengine)
 		add_subdirectory(${EVOENGINE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/EvoEngine)
@@ -60,6 +63,7 @@ endif()
 # ecosyslab - includes and sources
 # ------------------------------------------------------------------
 file(GLOB LOCAL_ECOSYSLAB_SOURCES "src/lib/*.cpp")
+
 set(LOCAL_ECOSYSLAB_INCLUDES
 	${EVOENGINE_INCLUDES}
 	${CMAKE_CURRENT_BINARY_DIR}
@@ -77,7 +81,7 @@ set(LOCAL_ECOSYSLAB_PCH
 	${EVOENGINE_PCH}
 	${CMAKE_CURRENT_SOURCE_DIR}/include/lib/EcoSysLab-pch.hpp
 	)
-
+message(${LOCAL_ECOSYSLAB_INCLUDES})
 # ------------------------------------------------------------------
 # ecosyslab
 # ------------------------------------------------------------------
@@ -87,14 +91,14 @@ add_library(ecosyslab
 	${LOCAL_ECOSYSLAB_SOURCES}
 	)
 
-target_precompile_headers(ecosyslab
-	PRIVATE
-	${LOCAL_ECOSYSLAB_PCH}
-	)
-
 target_include_directories(ecosyslab
 	PRIVATE
 	${LOCAL_ECOSYSLAB_INCLUDES}
+	)
+
+target_precompile_headers(ecosyslab
+	PRIVATE
+	${LOCAL_ECOSYSLAB_PCH}
 	)
 
 target_link_libraries(ecosyslab
@@ -148,15 +152,15 @@ file(GLOB LOCAL_PYECOSYSLAB_SOURCES "src/python/*.cpp")
 
 pybind11_add_module(pyecosyslab ${LOCAL_PYECOSYSLAB_SOURCES})
 
-target_precompile_headers(pyecosyslab
-	PRIVATE
-	${LOCAL_ECOSYSLAB_PCH}
-	)
-
 target_include_directories(pyecosyslab
 	PRIVATE
 	${LOCAL_ECOSYSLAB_INCLUDES}
 	${CMAKE_CURRENT_SOURCE_DIR}/include/python
+	)
+
+target_precompile_headers(pyecosyslab
+	PRIVATE
+	${LOCAL_ECOSYSLAB_PCH}
 	)
 
 target_link_libraries(pyecosyslab
@@ -207,13 +211,14 @@ endif()
 add_executable(ecosyslab-app
 		"src/app/Application.cpp")
 
-target_precompile_headers(ecosyslab-app
-	PRIVATE
-	${LOCAL_ECOSYSLAB_PCH}
-	)
 target_include_directories(ecosyslab-app
 	PRIVATE
 	${LOCAL_ECOSYSLAB_INCLUDES}
+	)
+
+target_precompile_headers(ecosyslab-app
+	PRIVATE
+	${LOCAL_ECOSYSLAB_PCH}
 	)
 
 target_link_libraries(ecosyslab-app
