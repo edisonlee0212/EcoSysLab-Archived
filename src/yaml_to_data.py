@@ -12,5 +12,7 @@ cgs = pesl.ConnectivityGraphSettings()
 rs = pesl.ReconstructionSettings()
 tmgs = pesl.TreeMeshGeneratorSettings()
 
+#Parameters: path, cgs, rs, tmgs, outputPath
 pesl.yaml_to_mesh(target_yaml_path, cgs, rs, tmgs, target_mesh_path)
+#Parameters: path, cgs, rs, tmgs, camPosX, camPosY, camPosZ, camAngleX, camAngleY, camAngleZ, resolutionX, resolutionY, outputPath
 pesl.visualize_yaml(target_yaml_path, cgs, rs, tmgs, 0, 1.25, 2.5, 0, 0, 0, 4096, 4096, target_capture_path);
