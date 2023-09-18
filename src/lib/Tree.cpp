@@ -497,6 +497,9 @@ void Tree::ClearMeshes() const
 		else if (name == "Fine Root Mesh") {
 			scene->DeleteEntity(child);
 		}
+		else if (name == "Twig Mesh") {
+			scene->DeleteEntity(child);
+		}
 	}
 }
 

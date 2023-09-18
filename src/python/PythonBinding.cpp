@@ -28,10 +28,8 @@
 #include "PipeModelBase.hpp"
 #include "Scene.hpp"
 #ifdef BUILD_WITH_RAYTRACER
-
 #include <CUDAModule.hpp>
 #include <RayTracerLayer.hpp>
-
 #endif
 
 using namespace EvoEngine;
@@ -112,7 +110,10 @@ void StartProjectWithEditor(const std::filesystem::path& projectPath)
 	Application::Run();
 }
 
-void CaptureActiveScene(const int resolutionX, const int resolutionY, const std::string& outputPath)
+void CaptureScene(
+	float posX, float posY, float posZ,
+	float angleX, float angleY, float angleZ, 
+	const int resolutionX, const int resolutionY, const std::string& outputPath)
 {
 	if (resolutionX <= 0 || resolutionY <= 0)
 	{
@@ -126,16 +127,44 @@ void CaptureActiveScene(const int resolutionX, const int resolutionY, const std:
 		EVOENGINE_ERROR("No active scene!");
 		return;
 	}
-	const auto mainCamera = scene->m_mainCamera.Get<Camera>();
+	auto mainCamera = scene->m_mainCamera.Get<Camera>();
+	Entity mainCameraEntity;
+	bool tempCamera = false;
 	if(!mainCamera)
 	{
-		EVOENGINE_ERROR("No main camera in scene!");
-		return;
+		mainCameraEntity = scene->CreateEntity("Main Camera");
+		mainCamera = scene->GetOrSetPrivateComponent<Camera>(mainCameraEntity).lock();
+		tempCamera = true;
+	}else
+	{
+		mainCameraEntity = mainCamera->GetOwner();
 	}
+	auto globalTransform = scene->GetDataComponent<GlobalTransform>(mainCameraEntity);
+	const auto originalTransform = globalTransform;
+	globalTransform.SetPosition({ posX, posY, posZ });
+	globalTransform.SetEulerRotation(glm::radians(glm::vec3(angleX, angleY, angleZ)));
+	scene->SetDataComponent(mainCameraEntity, globalTransform);
 	mainCamera->Resize({ resolutionX, resolutionY });
 	Application::Loop();
 	mainCamera->GetRenderTexture()->StoreToPng(outputPath);
+
+	if(tempCamera)
+	{
+		scene->DeleteEntity(mainCameraEntity);
+	}else
+	{
+		scene->SetDataComponent(mainCameraEntity, originalTransform);
+	}
 	EVOENGINE_LOG("Exported image to " + outputPath);
+}
+
+Entity ImportTreePointCloud(const std::string& yamlPath)
+{
+	const auto scene = Application::GetActiveScene();
+	const auto retVal = scene->CreateEntity("TreePointCloud");
+	const auto treePointCloud = scene->GetOrSetPrivateComponent<TreePointCloud>(retVal).lock();
+	treePointCloud->ImportGraph(yamlPath);
+	return retVal;
 }
 
 void YamlToMesh(const std::string& yamlPath,
@@ -151,7 +180,6 @@ void YamlToMesh(const std::string& yamlPath,
 	treePointCloud->EstablishConnectivityGraph(connectivityGraphSettings);
 	treePointCloud->BuildTreeStructure(reconstructionSettings);
 	const auto meshes = treePointCloud->GenerateMeshes(meshGeneratorSettings);
-	EVOENGINE_LOG("Exporting " + std::to_string(meshes.size()) + " meshes");
 	if (meshes.size() == 1) {
 		meshes[0]->Export(meshPath);
 	}
@@ -164,10 +192,29 @@ void YamlToMesh(const std::string& yamlPath,
 			i->Export(savePath);
 		}
 	}
-	EVOENGINE_LOG("Export finished!");
+	EVOENGINE_LOG("Exported " + std::to_string(meshes.size()) + " meshes");
 	scene->DeleteEntity(tempEntity);
 }
+void VisualizeYaml(const std::string& yamlPath,
+	const ConnectivityGraphSettings& connectivityGraphSettings,
+	const ReconstructionSettings& reconstructionSettings,
+	const TreeMeshGeneratorSettings& meshGeneratorSettings,
+	float posX, float posY, float posZ,
+	float angleX, float angleY, float angleZ,
+	const int resolutionX, const int resolutionY, const std::string& outputPath)
+{
+	const auto scene = Application::GetActiveScene();
+	const auto tempEntity = scene->CreateEntity("Temp");
+	const auto treePointCloud = scene->GetOrSetPrivateComponent<TreePointCloud>(tempEntity).lock();
+	treePointCloud->ImportGraph(yamlPath);
 
+	treePointCloud->EstablishConnectivityGraph(connectivityGraphSettings);
+	treePointCloud->BuildTreeStructure(reconstructionSettings);
+	treePointCloud->FormGeometryEntity(meshGeneratorSettings);
+
+	CaptureScene(posX, posY, posZ, angleX, angleY, angleZ, resolutionX, resolutionY, outputPath);
+	scene->DeleteEntity(tempEntity);
+}
 PYBIND11_MODULE(pyecosyslab, m) {
 	py::class_<Entity>(m, "Entity")
 		.def("get_index", &Entity::GetIndex)
@@ -238,7 +285,7 @@ PYBIND11_MODULE(pyecosyslab, m) {
 
 	py::class_<Scene>(m, "Scene")
 		.def("create_entity", static_cast<Entity(Scene::*)(const std::string&)>(&Scene::CreateEntity))
-		.def("delete_entity", &Scene::DeleteEntity);
+		.def("delete_entity", static_cast<void(Scene::*)(const Entity&)>(&Scene::DeleteEntity));
 
 	py::class_<ApplicationInfo>(m, "ApplicationInfo")
 		.def(py::init<>())
@@ -266,5 +313,6 @@ PYBIND11_MODULE(pyecosyslab, m) {
 	m.def("start_project_with_editor", &StartProjectWithEditor, "StartProjectWithEditor");
 
 	m.def("yaml_to_mesh", &YamlToMesh, "YamlToMesh");
-	m.def("capture_active_scene", &CaptureActiveScene, "CaptureActiveScene");
+	m.def("capture_scene", &CaptureScene, "CaptureScene");
+	m.def("visualize_yaml", &VisualizeYaml, "VisualizeYaml");
 }

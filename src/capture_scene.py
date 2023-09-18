@@ -6,4 +6,4 @@ project_path = "C:\\Users\\lllll\\Documents\\GitHub\\EvoEngine\\Resources\\Examp
 output_path = current_directory + "\\out.png"
 
 pesl.start_project_windowless(project_path)
-pesl.capture_active_scene(1920, 1080, output_path)
+pesl.capture_scene(0, 0, -10, 0, 0, 0, 1920, 1080, output_path)
