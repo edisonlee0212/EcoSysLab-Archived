@@ -102,18 +102,17 @@ void StartProjectWithEditor(const std::filesystem::path& projectPath)
 		}
 	}
 	RegisterClasses();
-	RegisterLayers(false, false);
+	RegisterLayers(true, true);
 	ApplicationInfo applicationInfo{};
 	applicationInfo.m_projectPath = projectPath;
 	Application::Initialize(applicationInfo);
 	Application::Start();
-	Application::Run();
 }
 
 void CaptureScene(
-	float posX, float posY, float posZ,
-	float angleX, float angleY, float angleZ, 
-	const int resolutionX, const int resolutionY, const std::string& outputPath)
+	const float posX, const float posY, const float posZ,
+	const float angleX, const float angleY, const float angleZ,
+	const int resolutionX, const int resolutionY, bool whiteBackground, const std::string& outputPath)
 {
 	if (resolutionX <= 0 || resolutionY <= 0)
 	{
@@ -134,6 +133,7 @@ void CaptureScene(
 	{
 		mainCameraEntity = scene->CreateEntity("Main Camera");
 		mainCamera = scene->GetOrSetPrivateComponent<Camera>(mainCameraEntity).lock();
+		scene->m_mainCamera = mainCamera;
 		tempCamera = true;
 	}else
 	{
@@ -145,15 +145,26 @@ void CaptureScene(
 	globalTransform.SetEulerRotation(glm::radians(glm::vec3(angleX, angleY, angleZ)));
 	scene->SetDataComponent(mainCameraEntity, globalTransform);
 	mainCamera->Resize({ resolutionX, resolutionY });
+	const auto useClearColor = mainCamera->m_useClearColor;
+	const auto clearColor = mainCamera->m_clearColor;
+	if(whiteBackground)
+	{
+		mainCamera->m_useClearColor = true;
+		mainCamera->m_clearColor = glm::vec3(1, 1, 1);
+	}
 	Application::Loop();
 	mainCamera->GetRenderTexture()->StoreToPng(outputPath);
-
 	if(tempCamera)
 	{
 		scene->DeleteEntity(mainCameraEntity);
 	}else
 	{
 		scene->SetDataComponent(mainCameraEntity, originalTransform);
+		if (whiteBackground)
+		{
+			mainCamera->m_useClearColor = useClearColor;
+			mainCamera->m_clearColor = clearColor;
+		}
 	}
 	EVOENGINE_LOG("Exported image to " + outputPath);
 }
@@ -199,8 +210,8 @@ void VisualizeYaml(const std::string& yamlPath,
 	const ConnectivityGraphSettings& connectivityGraphSettings,
 	const ReconstructionSettings& reconstructionSettings,
 	const TreeMeshGeneratorSettings& meshGeneratorSettings,
-	float posX, float posY, float posZ,
-	float angleX, float angleY, float angleZ,
+	const float posX, const float posY, const float posZ,
+	const float angleX, const float angleY, const float angleZ,
 	const int resolutionX, const int resolutionY, const std::string& outputPath)
 {
 	const auto scene = Application::GetActiveScene();
@@ -212,7 +223,7 @@ void VisualizeYaml(const std::string& yamlPath,
 	treePointCloud->BuildTreeStructure(reconstructionSettings);
 	treePointCloud->FormGeometryEntity(meshGeneratorSettings);
 
-	CaptureScene(posX, posY, posZ, angleX, angleY, angleZ, resolutionX, resolutionY, outputPath);
+	CaptureScene(posX, posY, posZ, angleX, angleY, angleZ, resolutionX, resolutionY, true, outputPath);
 	scene->DeleteEntity(tempEntity);
 }
 PYBIND11_MODULE(pyecosyslab, m) {

@@ -13,4 +13,4 @@ rs = pesl.ReconstructionSettings()
 tmgs = pesl.TreeMeshGeneratorSettings()
 
 pesl.yaml_to_mesh(target_yaml_path, cgs, rs, tmgs, target_mesh_path)
-pesl.visualize_yaml(target_yaml_path, cgs, rs, tmgs, 0, 0, -10, 0, 0, 0, 600, 800, target_capture_path);
+pesl.visualize_yaml(target_yaml_path, cgs, rs, tmgs, 0, 1.25, 2.5, 0, 0, 0, 4096, 4096, target_capture_path);
