@@ -73,6 +73,7 @@ set(LOCAL_ECOSYSLAB_INCLUDES
 	${CMAKE_CURRENT_SOURCE_DIR}/include/lib/SoilModel
 	${CMAKE_CURRENT_SOURCE_DIR}/include/lib/PipeModel
 	${CMAKE_CURRENT_SOURCE_DIR}/include/lib/TreeModel
+	${CMAKE_CURRENT_SOURCE_DIR}/include/lib/SpaceColonizationTreeModel
 	${CMAKE_CURRENT_SOURCE_DIR}/include/lib/Utilities
 	${CMAKE_CURRENT_SOURCE_DIR}/include/lib/Structures
 	${CMAKE_CURRENT_SOURCE_DIR}/include/lib/Reconstruction

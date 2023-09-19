@@ -16,7 +16,7 @@ namespace EcoSysLab {
 	X-Coordinate:   -- 0 --- 1 --- 2 --- 3 -----
 
 	The "m_minBound" stores the lower left corner of the lower left voxel.
-	I.e. for m_volumePositionMin=(0, 0) and m_resolution=(2, 2), and m_dx=1,
+	I.e. for m_minBound = (0, 0) and m_resolution= (2, 2), and m_size = 1,
 	the voxel centers are at 0.5 and 1.5.
 
 	*/
@@ -49,8 +49,8 @@ namespace EcoSysLab {
 		[[nodiscard]] glm::vec3	GetPosition(int index) const;
 		[[nodiscard]] glm::vec3	GetPosition(const glm::ivec3& coordinate) const;
 
-		[[nodiscard]] void ForEach(const glm::vec3& minBound, const glm::vec3& maxBound, const std::function<void(VoxelData& data)>& func);
-		[[nodiscard]] void ForEach(const glm::vec3& center, float radius, const std::function<void(VoxelData& data)>& func);
+		void ForEach(const glm::vec3& minBound, const glm::vec3& maxBound, const std::function<void(VoxelData& data)>& func);
+		void ForEach(const glm::vec3& center, float radius, const std::function<void(VoxelData& data)>& func);
 		[[nodiscard]] bool IsValid(const glm::vec3& position) const;
 	};
 
