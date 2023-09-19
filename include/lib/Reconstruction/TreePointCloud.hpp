@@ -14,7 +14,7 @@ namespace EcoSysLab {
 		PointHandle m_handle = -1;
 		std::vector<PointHandle> m_neighbors;
 
-		std::vector<BranchHandle> m_neighborBranchEnds;
+		std::vector<BranchHandle> m_branchP3sNearScatterPoint;
 		glm::vec3 m_position = glm::vec3(0.0f);
 	};
 	struct AllocatedPoint {
@@ -31,7 +31,7 @@ namespace EcoSysLab {
 		BezierCurve m_bezierCurve;
 		float m_startThickness = 0.0f;
 		float m_endThickness = 0.0f;
-		std::vector<PointHandle> m_startNeighbors;
+		std::vector<PointHandle> m_scatterPointsNearBranchP0s;
 
 		std::vector<BranchHandle> m_neighborBranchEnds;
 		BranchHandle m_parentHandle = -1;
@@ -76,12 +76,12 @@ namespace EcoSysLab {
 		void OnInspect();
 	};
 
-	struct PointCloudVoxel {
+	struct ScatterPointData {
 		glm::vec3 m_position = glm::vec3(0.0f);
 		int m_pointHandle = -1;
 	};
-	struct BranchEndsVoxel {
-		bool m_isStart = true;
+	struct BranchEndData {
+		bool m_isP0 = true;
 		glm::vec3 m_position = glm::vec3(0.0f);
 		int m_branchHandle = -1;
 	};
@@ -117,10 +117,10 @@ namespace EcoSysLab {
 	typedef Skeleton<ReconstructionSkeletonData, ReconstructionFlowData, ReconstructionNodeData> ReconstructionSkeleton;
 
 	class TreePointCloud : public IPrivateComponent {
-		void FindPoints(const glm::vec3& position, VoxelGrid<std::vector<PointCloudVoxel>>& pointVoxelGrid, float radius,
-			const std::function<void(const PointCloudVoxel& voxel)>& func) const;
-		void FindBranchEnds(const glm::vec3& position, VoxelGrid<std::vector<BranchEndsVoxel>>& branchEndsVoxelGrid, float radius,
-			const std::function<void(const BranchEndsVoxel& voxel)>& func) const;
+		void FindPoints(const glm::vec3& position, VoxelGrid<std::vector<ScatterPointData>>& pointVoxelGrid, float radius,
+			const std::function<void(const ScatterPointData& voxel)>& func) const;
+		void ForEachBranchEnd(const glm::vec3& position, VoxelGrid<std::vector<BranchEndData>>& branchEndsVoxelGrid, float radius,
+			const std::function<void(const BranchEndData& voxel)>& func) const;
 
 		void CalculateNodeTransforms(ReconstructionSkeleton& skeleton);
 
