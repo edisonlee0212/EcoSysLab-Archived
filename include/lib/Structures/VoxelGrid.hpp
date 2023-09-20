@@ -180,14 +180,15 @@ namespace EcoSysLab {
 	void VoxelGrid<VoxelData>::ForEach(const glm::vec3& minBound, const glm::vec3& maxBound,
 		const std::function<void(VoxelData& data)>& func)
 	{
-		const glm::vec3 boundSize = maxBound - minBound;
-		const glm::ivec3 start = glm::max(glm::ivec3(glm::floor(minBound / glm::vec3(m_voxelSize))), glm::ivec3(0));
-		const glm::ivec3 span = glm::ceil(boundSize / glm::vec3(m_voxelSize));
-		for (int i = start.x; i <= start.x + span.x; i++) {
-			for (int j = start.y; j <= start.y + span.y; j++) {
-				for (int k = start.z; k <= start.z + span.z; k++) {
+		const auto actualMinBound = minBound - m_minBound;
+		const auto actualMaxBound = maxBound - m_minBound;
+		const auto start = glm::ivec3(glm::floor(actualMinBound / glm::vec3(m_voxelSize)));
+		const auto end = glm::ivec3(glm::ceil(actualMaxBound / glm::vec3(m_voxelSize)));
+		for (int i = start.x; i <= end.x; i++) {
+			for (int j = start.y; j <= end.y; j++) {
+				for (int k = start.z; k <= end.z; k++) {
+					if (i < 0 || i >= m_resolution.x || j < 0 || j >= m_resolution.y || k < 0 || k >= m_resolution.z) continue;
 					auto index = GetIndex(glm::ivec3(i, j, k));
-					if (index >= m_data.size()) continue;
 					func(Ref(index));
 				}
 			}
@@ -198,17 +199,16 @@ namespace EcoSysLab {
 	void VoxelGrid<VoxelData>::ForEach(const glm::vec3& center, float radius,
 		const std::function<void(VoxelData& data)>& func)
 	{
-		const glm::vec3 minBound = center - glm::vec3(radius);
-		const glm::vec3 maxBound = center + glm::vec3(radius);
-		const glm::vec3 boundSize = maxBound - minBound;
-		const glm::ivec3 start = glm::max(glm::ivec3(glm::floor(minBound / glm::vec3(m_voxelSize))), glm::ivec3(0));
-		const glm::ivec3 span = glm::ceil(boundSize / glm::vec3(m_voxelSize));
-		for (int i = start.x; i <= start.x + span.x; i++) {
-			for (int j = start.y; j <= start.y + span.y; j++) {
-				for (int k = start.z; k <= start.z + span.z; k++) {
+		auto actualCenter = center - m_minBound;
+		const auto actualMinBound = actualCenter - glm::vec3(radius);
+		const auto actualMaxBound = actualCenter + glm::vec3(radius);
+		const auto start = glm::ivec3(glm::floor(actualMinBound / glm::vec3(m_voxelSize)));
+		const auto end = glm::ivec3(glm::ceil(actualMaxBound / glm::vec3(m_voxelSize)));
+		for (int i = start.x; i <= end.x; i++) {
+			for (int j = start.y; j <= end.y; j++) {
+				for (int k = start.z; k <= end.z; k++) {
+					if (i < 0 || i >= m_resolution.x || j < 0 || j >= m_resolution.y || k < 0 || k >= m_resolution.z) continue;
 					auto index = GetIndex(glm::ivec3(i, j, k));
-					if (index >= m_data.size()) continue;
-					if (glm::distance(GetPosition(index), center) > radius + m_voxelSize / 2.0f) continue;
 					func(Ref(index));
 				}
 			}

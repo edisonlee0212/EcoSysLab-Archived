@@ -9,7 +9,7 @@ using namespace EcoSysLab;
 void TreePointCloud::FindPoints(const glm::vec3& position, VoxelGrid<std::vector<ScatterPointData>>& pointVoxelGrid,
 	float radius,
 	const std::function<void(const ScatterPointData& voxel)>& func) const {
-	pointVoxelGrid.ForEach(position, radius * 4.0f, [&](const std::vector<ScatterPointData>& voxels) {
+	pointVoxelGrid.ForEach(position, radius, [&](const std::vector<ScatterPointData>& voxels) {
 		for (const auto& voxel : voxels) {
 			if (glm::distance(position, voxel.m_position) > radius) continue;
 			func(voxel);
@@ -21,7 +21,7 @@ void
 TreePointCloud::ForEachBranchEnd(const glm::vec3& position, VoxelGrid<std::vector<BranchEndData>>& branchEndsVoxelGrid,
 	float radius,
 	const std::function<void(const BranchEndData& voxel)>& func) const {
-	branchEndsVoxelGrid.ForEach(position, radius * 4.0f, [&](const std::vector<BranchEndData>& branchEnds) {
+	branchEndsVoxelGrid.ForEach(position, radius, [&](const std::vector<BranchEndData>& branchEnds) {
 		for (const auto& branchEnd : branchEnds) {
 			if (glm::distance(position, branchEnd.m_position) > radius) continue;
 			func(branchEnd);

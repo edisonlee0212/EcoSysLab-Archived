@@ -61,7 +61,7 @@ namespace EcoSysLab {
 	};
 
 	struct ConnectivityGraphSettings {
-		float m_scatterPointsConnectionMaxLength = 0.05f;
+		float m_scatterPointsConnectionMaxLength = 0.03f;
 
 		float m_scatterPointBranchConnectionMaxLength = 0.1f;
 
