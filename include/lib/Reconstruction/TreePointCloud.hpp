@@ -33,7 +33,7 @@ namespace EcoSysLab {
 		float m_endThickness = 0.0f;
 		std::vector<PointHandle> m_scatterPointsNearBranchP0s;
 
-		std::vector<BranchHandle> m_neighborBranchEnds;
+		std::vector<std::pair<float, BranchHandle>> m_neighborBranchP3;
 		BranchHandle m_parentHandle = -1;
 		std::vector<BranchHandle> m_childHandles;
 

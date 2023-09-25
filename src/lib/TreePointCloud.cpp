@@ -568,7 +568,7 @@ void TreePointCloud::EstablishConnectivityGraph(const ConnectivityGraphSettings&
 
 	for (auto& scannedBranch : m_scannedBranches) {
 		scannedBranch.m_scatterPointsNearBranchP0s.clear();
-		scannedBranch.m_neighborBranchEnds.clear();
+		scannedBranch.m_neighborBranchP3.clear();
 		scannedBranch.m_parentHandle = -1;
 		scannedBranch.m_childHandles.clear();
 
@@ -644,16 +644,17 @@ void TreePointCloud::EstablishConnectivityGraph(const ConnectivityGraphSettings&
 					const auto dotP = glm::dot(glm::normalize(voxel.m_position - shortenedP0),
 						glm::normalize(shortenedP0 - shortenedP3));
 					if (dotP < glm::cos(glm::radians(settings.m_absoluteAngleLimit))) return;
-					if (glm::distance(voxel.m_position, shortenedP0) >
+					const auto distance = glm::distance(voxel.m_position, shortenedP0);
+					if (distance >
 						settings.m_forceConnectionRatio * branchLength &&
 						dotP < glm::cos(glm::radians(settings.m_forceConnectionAngleLimit)))
 						return;
-					for (const auto& i : branch.m_neighborBranchEnds) {
-						if (i == voxel.m_branchHandle) return;
+					for (const auto& i : branch.m_neighborBranchP3) {
+						if (i.second == voxel.m_branchHandle) return;
 					}
 					findBranchP3 = true;
 					auto& otherBranch = m_scannedBranches[voxel.m_branchHandle];
-					branch.m_neighborBranchEnds.emplace_back(voxel.m_branchHandle);
+					branch.m_neighborBranchP3.emplace_back(distance, voxel.m_branchHandle);
 					m_branchConnections.emplace_back(branch.m_bezierCurve.m_p0,
 						otherBranch.m_bezierCurve.m_p3);
 
@@ -673,16 +674,17 @@ void TreePointCloud::EstablishConnectivityGraph(const ConnectivityGraphSettings&
 						glm::normalize(shortenedP3 - shortenedP0));
 					if (dotP < glm::cos(glm::radians(settings.m_absoluteAngleLimit)))
 						return;
+					const auto distance = glm::distance(voxel.m_position, shortenedP3);
 					if (glm::distance(voxel.m_position, shortenedP3) >
 						settings.m_forceConnectionRatio * branchLength &&
 						dotP < glm::cos(glm::radians(settings.m_forceConnectionAngleLimit)))
 						return;
 					auto& otherBranch = m_scannedBranches[voxel.m_branchHandle];
-					for (const auto& i : otherBranch.m_neighborBranchEnds) {
-						if (i == branch.m_handle) return;
+					for (const auto& i : otherBranch.m_neighborBranchP3) {
+						if (i.second == branch.m_handle) return;
 					}
 					findBranchP0 = true;
-					otherBranch.m_neighborBranchEnds.emplace_back(branch.m_handle);
+					otherBranch.m_neighborBranchP3.emplace_back(distance, branch.m_handle);
 					m_branchConnections.emplace_back(branch.m_bezierCurve.m_p3,
 						otherBranch.m_bezierCurve.m_p0);
 
@@ -709,7 +711,7 @@ void TreePointCloud::EstablishConnectivityGraph(const ConnectivityGraphSettings&
 				//We stop search if the point is junction point.
 				for (const auto& branchEndHandle : neighbor.m_branchP3sNearScatterPoint) {
 					bool skip = false;
-					for (const auto& i : branch.m_neighborBranchEnds) if (branchEndHandle == i) skip = true;
+					for (const auto& i : branch.m_neighborBranchP3) if (branchEndHandle == i.second) skip = true;
 					auto& otherBranch = m_scannedBranches[branchEndHandle];
 					auto shortenedP0 = branch.m_bezierCurve.GetPoint(settings.m_branchShortening);
 					auto shortenedP3 = branch.m_bezierCurve.GetPoint(1.0f - settings.m_branchShortening);
@@ -720,8 +722,7 @@ void TreePointCloud::EstablishConnectivityGraph(const ConnectivityGraphSettings&
 						glm::normalize(shortenedP0 - shortenedP3));
 					if (dotP < glm::cos(glm::radians(settings.m_absoluteAngleLimit))) skip = true;
 					if (!skip) {
-						branch.m_neighborBranchEnds.emplace_back(branchEndHandle);
-
+						branch.m_neighborBranchP3.emplace_back(0, branchEndHandle);
 						m_branchConnections.emplace_back(branch.m_bezierCurve.m_p0, otherBranch.m_bezierCurve.m_p3);
 					}
 				}
@@ -731,33 +732,22 @@ void TreePointCloud::EstablishConnectivityGraph(const ConnectivityGraphSettings&
 	}
 	for (auto& branch : m_scannedBranches) {
 		//Detect connection to branch start.
-		if (branch.m_neighborBranchEnds.empty()) {
+		if (branch.m_neighborBranchP3.empty()) {
 			continue;
 		}
-		std::unordered_set<BranchHandle> availableCandidates;
-		for (const auto& branchEndHandle : branch.m_neighborBranchEnds) {
-			availableCandidates.emplace(branchEndHandle);
+		std::map<float, BranchHandle> availableCandidates;
+		for (const auto& branchEndHandle : branch.m_neighborBranchP3) {
+			availableCandidates.emplace(branchEndHandle.first, branchEndHandle.second);
 		}
-		float minDistance = 999.0f;
-		BranchHandle bestCandidate;
-		for (const auto& candidateHandle : availableCandidates) {
-			auto& candidate = m_scannedBranches[candidateHandle];
-			auto shortenedP0 = branch.m_bezierCurve.GetPoint(settings.m_branchShortening);
-			auto shortenedP3 = candidate.m_bezierCurve.GetPoint(1.0f - settings.m_branchShortening);
-			auto distance = glm::distance(branch.m_bezierCurve.m_p0, candidate.m_bezierCurve.m_p3);
-			if (distance < minDistance) {
-				minDistance = distance;
-				bestCandidate = candidateHandle;
-			}
-		}
+		BranchHandle bestCandidate = availableCandidates.begin()->second;
 		auto& candidate = m_scannedBranches[bestCandidate];
 		candidate.m_childHandles.emplace_back(branch.m_handle);
 		branch.m_parentHandle = bestCandidate;
 		m_filteredBranchConnections.emplace_back(branch.m_bezierCurve.m_p0,
 			candidate.m_bezierCurve.m_p3);
-		for (int i = 0; i < candidate.m_neighborBranchEnds.size(); i++) {
-			if (candidate.m_neighborBranchEnds[i] == branch.m_handle) {
-				candidate.m_neighborBranchEnds.erase(candidate.m_neighborBranchEnds.begin() + i);
+		for (int i = 0; i < candidate.m_neighborBranchP3.size(); i++) {
+			if (candidate.m_neighborBranchP3[i].second == branch.m_handle) {
+				candidate.m_neighborBranchP3.erase(candidate.m_neighborBranchP3.begin() + i);
 				break;
 			}
 		}
