@@ -33,7 +33,7 @@ namespace EcoSysLab {
 		float m_endThickness = 0.0f;
 		std::vector<PointHandle> m_scatterPointsNearBranchP0s;
 
-		std::vector<std::pair<float, BranchHandle>> m_neighborBranchP3;
+		std::unordered_map<BranchHandle, float> m_neighborBranchP3;
 		BranchHandle m_parentHandle = -1;
 		std::vector<BranchHandle> m_childHandles;
 
@@ -63,7 +63,7 @@ namespace EcoSysLab {
 	struct ConnectivityGraphSettings {
 		float m_scatterPointsConnectionMaxLength = 0.03f;
 
-		float m_scatterPointBranchConnectionMaxLength = 0.1f;
+		float m_scatterPointBranchConnectionMaxLength = 0.08f;
 
 		float m_edgeExtendStep = 0.05f;
 		float m_edgeLength = 0.1f;
