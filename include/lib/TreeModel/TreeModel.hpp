@@ -56,9 +56,9 @@ namespace EcoSysLab {
 #pragma region Tree Growth
 		void AggregateInternodeVigorRequirement(const ShootGrowthController& shootGrowthParameters, NodeHandle baseInternodeHandle);
 
-		void CalculateVigorRequirement(const ShootGrowthController& shootGrowthParameters, ShootGrowthRequirement& newTreeGrowthNutrientsRequirement);
+		void CalculateVigorRequirement(const std::vector<NodeHandle>& sortedInternodeList, const ShootGrowthController& shootGrowthParameters, ShootGrowthRequirement& newTreeGrowthNutrientsRequirement);
 
-		void AllocateShootVigor(const ShootGrowthController& shootGrowthParameters);
+		void AllocateShootVigor(float vigor, NodeHandle baseInternodeHandle, const std::vector<NodeHandle>& sortedInternodeList, const ShootGrowthController& shootGrowthParameters);
 
 		bool PruneInternodes(const ShootGrowthController& shootGrowthParameters);
 
@@ -196,7 +196,7 @@ namespace EcoSysLab {
 			const RootGrowthController& rootGrowthParameters, const FineRootController& fineRootController,
 			const ShootGrowthController& shootGrowthParameters, const TwigController& twigController);
 
-		bool GrowSubTree(NodeHandle baseInternodeHandle, const glm::mat4& globalTransform, ClimateModel& climateModel,
+		bool GrowSubTree(float deltaTime, NodeHandle baseInternodeHandle, const glm::mat4& globalTransform, ClimateModel& climateModel,
 			const ShootGrowthController& shootGrowthParameters, const TwigController& twigController);
 
 

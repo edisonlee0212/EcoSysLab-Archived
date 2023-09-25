@@ -108,6 +108,8 @@ namespace EcoSysLab {
 				NodeHandle rootNodeHandle);
 
 	public:
+		[[nodiscard]] NodeHandle GetSelectedInternodeHandle() const;
+		[[nodiscard]] NodeHandle GetSelectedRootNodeHandle() const;
 		void Initialize();
 
 		template<typename SkeletonData, typename FlowData, typename NodeData>

@@ -30,8 +30,9 @@ namespace EcoSysLab {
 
 	class Tree : public IPrivateComponent {
 		friend class EcoSysLabLayer;
+		void PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescriptor);
 		bool TryGrow(float deltaTime);
-		
+		bool TryGrowSubTree(NodeHandle internodeHandle, float deltaTime);
 		ShootGrowthController m_shootGrowthController;
 		RootGrowthController m_rootGrowthController;
 		FineRootController m_fineRootController;

@@ -482,24 +482,25 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 				ResetAllTrees(treeEntities);
 				ClearGeometries();
 			}
+			bool subtree = scene->IsEntityValid(m_selectedTree) && m_treeVisualizer.GetSelectedInternodeHandle() >= 0;
 			ImGui::DragFloat("Time", &m_time, 1, 0, 9000000);
-			ImGui::Checkbox("Auto grow with soil step", &m_autoGrowWithSoilStep);
+			ImGui::Checkbox(subtree ? "Auto grow subtree with soil step" : "Auto grow with soil step", &m_autoGrowWithSoilStep);
 			ImGui::DragFloat("Delta time", &m_deltaTime, 0.00001f, 0, 1, "%.5f");
 			if (ImGui::Button("Day")) m_deltaTime = 0.00274f;
 			ImGui::SameLine();
 			if (ImGui::Button("Week")) m_deltaTime = 0.01918f;
 			ImGui::SameLine();
 			if (ImGui::Button("Month")) m_deltaTime = 0.0822f;
-			ImGui::Checkbox("Auto grow", &m_autoGrow);
+			ImGui::Checkbox(subtree ? "Auto grow subtree" : "Auto grow", &m_autoGrow);
 			if (!m_autoGrow) {
 				bool changed = false;
-				if (ImGui::Button("Grow all")) {
+				if (ImGui::Button(subtree ? "Grow subtree" : "Grow all")) {
 					Simulate(m_deltaTime);
 					changed = true;
 				}
 				static int iterations = 5;
 				ImGui::DragInt("Iterations", &iterations, 1, 1, 100);
-				if (ImGui::Button(("Grow all " + std::to_string(iterations) + " iterations").c_str())) {
+				if (ImGui::Button(((subtree ? "Grow subtree with " : "Grow all with ") + std::to_string(iterations) + " iterations").c_str())) {
 					for (int i = 0; i < iterations; i++) Simulate(m_deltaTime);
 					changed = true;
 				}
@@ -1402,86 +1403,98 @@ void EcoSysLabLayer::Update() {
 }
 
 void EcoSysLabLayer::Simulate(float deltaTime) {
-	auto scene = GetScene();
-	const std::vector<Entity>* treeEntities =
-		scene->UnsafeGetPrivateComponentOwnersList<Tree>();
-	m_time += deltaTime;
-	if (treeEntities && !treeEntities->empty()) {
-		float time = Times::Now();
+	const auto scene = GetScene();
+	if(scene->IsEntityValid(m_selectedTree) && m_treeVisualizer.GetSelectedInternodeHandle() >= 0)
+	{
 		const auto climate = m_climateHolder.Get<Climate>();
 		const auto soil = m_soilHolder.Get<Soil>();
+		auto tree = scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock();
+		if (!tree->IsEnabled()) return;
+		if (!tree->m_climate.Get<Climate>()) tree->m_climate = climate;
+		if (!tree->m_soil.Get<Soil>()) tree->m_soil = soil;
+		tree->TryGrowSubTree(m_treeVisualizer.GetSelectedInternodeHandle(), deltaTime);
+	}
+	else {
+		const std::vector<Entity>* treeEntities =
+			scene->UnsafeGetPrivateComponentOwnersList<Tree>();
+		m_time += deltaTime;
+		if (treeEntities && !treeEntities->empty()) {
+			float time = Times::Now();
+			const auto climate = m_climateHolder.Get<Climate>();
+			const auto soil = m_soilHolder.Get<Soil>();
 
-		climate->m_climateModel.m_time = m_time;
+			climate->m_climateModel.m_time = m_time;
 
 
-		if (m_autoGrowWithSoilStep) {
-			soil->m_soilModel.Irrigation();
-			soil->m_soilModel.Step();
-		}
-
-		std::vector<std::shared_future<void>> results;
-		Jobs::ParallelFor(treeEntities->size(), [&](unsigned i) {
-			auto treeEntity = treeEntities->at(i);
-			if (!scene->IsEntityEnabled(treeEntity)) return;
-			auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
-			if (!tree->IsEnabled()) return;
-			if (!tree->m_climate.Get<Climate>()) tree->m_climate = climate;
-			if (!tree->m_soil.Get<Soil>()) tree->m_soil = soil;
-			tree->TryGrow(deltaTime);
-			}, results);
-		for (auto& i : results) i.wait();
-
-		auto heightField = soil->m_soilDescriptor.Get<SoilDescriptor>()->m_heightField.Get<HeightField>();
-		for (const auto& treeEntity : *treeEntities) {
-			if (!scene->IsEntityEnabled(treeEntity)) return;
-			auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
-			auto treeGlobalTransform = scene->GetDataComponent<GlobalTransform>(treeEntity);
-			if (!tree->IsEnabled()) return;
-			//Collect fruit and leaves here.
-			for (const auto& fruit : tree->m_treeModel.RefShootSkeleton().m_data.m_droppedFruits) {
-				Fruit newFruit;
-				newFruit.m_globalTransform.m_value = treeGlobalTransform.m_value * fruit.m_transform;
-
-				auto position = newFruit.m_globalTransform.GetPosition();
-				const auto groundHeight = heightField->GetValue({ position.x, position.z });
-				const auto height = position.y - groundHeight;
-				position.x += glm::gaussRand(0.0f, height * 0.1f);
-				position.z += glm::gaussRand(0.0f, height * 0.1f);
-				position.y = groundHeight + 0.1f;
-				newFruit.m_globalTransform.SetPosition(position);
-
-				newFruit.m_maturity = fruit.m_maturity;
-				newFruit.m_health = fruit.m_health;
-				m_fruits.emplace_back(newFruit);
+			if (m_autoGrowWithSoilStep) {
+				soil->m_soilModel.Irrigation();
+				soil->m_soilModel.Step();
 			}
-			tree->m_treeModel.RefShootSkeleton().m_data.m_droppedFruits.clear();
-			for (const auto& leaf : tree->m_treeModel.RefShootSkeleton().m_data.m_droppedLeaves) {
-				Leaf newLeaf;
-				newLeaf.m_globalTransform.m_value = treeGlobalTransform.m_value * leaf.m_transform;
 
-				auto position = newLeaf.m_globalTransform.GetPosition();
-				const auto groundHeight = heightField ? heightField->GetValue({ position.x, position.z }) : 0.0f;
-				const auto height = position.y - groundHeight;
-				position.x += glm::gaussRand(0.0f, height * 0.1f);
-				position.z += glm::gaussRand(0.0f, height * 0.1f);
-				position.y = groundHeight + 0.1f;
-				newLeaf.m_globalTransform.SetPosition(position);
+			std::vector<std::shared_future<void>> results;
+			Jobs::ParallelFor(treeEntities->size(), [&](unsigned i) {
+				auto treeEntity = treeEntities->at(i);
+				if (!scene->IsEntityEnabled(treeEntity)) return;
+				auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
+				if (!tree->IsEnabled()) return;
+				if (!tree->m_climate.Get<Climate>()) tree->m_climate = climate;
+				if (!tree->m_soil.Get<Soil>()) tree->m_soil = soil;
+				tree->TryGrow(deltaTime);
+				}, results);
+			for (auto& i : results) i.wait();
 
-				newLeaf.m_maturity = leaf.m_maturity;
-				newLeaf.m_health = leaf.m_health;
-				m_leaves.emplace_back(newLeaf);
+			auto heightField = soil->m_soilDescriptor.Get<SoilDescriptor>()->m_heightField.Get<HeightField>();
+			for (const auto& treeEntity : *treeEntities) {
+				if (!scene->IsEntityEnabled(treeEntity)) return;
+				auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
+				auto treeGlobalTransform = scene->GetDataComponent<GlobalTransform>(treeEntity);
+				if (!tree->IsEnabled()) return;
+				//Collect fruit and leaves here.
+				for (const auto& fruit : tree->m_treeModel.RefShootSkeleton().m_data.m_droppedFruits) {
+					Fruit newFruit;
+					newFruit.m_globalTransform.m_value = treeGlobalTransform.m_value * fruit.m_transform;
+
+					auto position = newFruit.m_globalTransform.GetPosition();
+					const auto groundHeight = heightField->GetValue({ position.x, position.z });
+					const auto height = position.y - groundHeight;
+					position.x += glm::gaussRand(0.0f, height * 0.1f);
+					position.z += glm::gaussRand(0.0f, height * 0.1f);
+					position.y = groundHeight + 0.1f;
+					newFruit.m_globalTransform.SetPosition(position);
+
+					newFruit.m_maturity = fruit.m_maturity;
+					newFruit.m_health = fruit.m_health;
+					m_fruits.emplace_back(newFruit);
+				}
+				tree->m_treeModel.RefShootSkeleton().m_data.m_droppedFruits.clear();
+				for (const auto& leaf : tree->m_treeModel.RefShootSkeleton().m_data.m_droppedLeaves) {
+					Leaf newLeaf;
+					newLeaf.m_globalTransform.m_value = treeGlobalTransform.m_value * leaf.m_transform;
+
+					auto position = newLeaf.m_globalTransform.GetPosition();
+					const auto groundHeight = heightField ? heightField->GetValue({ position.x, position.z }) : 0.0f;
+					const auto height = position.y - groundHeight;
+					position.x += glm::gaussRand(0.0f, height * 0.1f);
+					position.z += glm::gaussRand(0.0f, height * 0.1f);
+					position.y = groundHeight + 0.1f;
+					newLeaf.m_globalTransform.SetPosition(position);
+
+					newLeaf.m_maturity = leaf.m_maturity;
+					newLeaf.m_health = leaf.m_health;
+					m_leaves.emplace_back(newLeaf);
+				}
+				tree->m_treeModel.RefShootSkeleton().m_data.m_droppedLeaves.clear();
 			}
-			tree->m_treeModel.RefShootSkeleton().m_data.m_droppedLeaves.clear();
+
+
+			m_lastUsedTime = Times::Now() - time;
+			m_totalTime += m_lastUsedTime;
+
+			if (scene->IsEntityValid(m_selectedTree)) {
+				m_treeVisualizer.Reset(scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock()->m_treeModel);
+			}
+			m_needFullFlowUpdate = true;
 		}
-
-
-		m_lastUsedTime = Times::Now() - time;
-		m_totalTime += m_lastUsedTime;
-
-		if (scene->IsEntityValid(m_selectedTree)) {
-			m_treeVisualizer.Reset(scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock()->m_treeModel);
-		}
-		m_needFullFlowUpdate = true;
 	}
 }
 

@@ -782,6 +782,16 @@ bool TreeVisualizer::InspectRootNode(
 	return changed;
 }
 
+NodeHandle TreeVisualizer::GetSelectedInternodeHandle() const
+{
+	return m_selectedInternodeHandle;
+}
+
+NodeHandle TreeVisualizer::GetSelectedRootNodeHandle() const
+{
+	return m_selectedRootNodeHandle;
+}
+
 void TreeVisualizer::Initialize()
 {
 	m_internodeMatrices = std::make_shared<ParticleInfoList>();

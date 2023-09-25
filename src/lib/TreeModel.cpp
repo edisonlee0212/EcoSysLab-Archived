@@ -196,15 +196,24 @@ bool TreeModel::Grow(float deltaTime, const glm::mat4& globalTransform, VoxelSoi
 	return treeStructureChanged || rootStructureChanged;
 }
 
-bool TreeModel::GrowSubTree(const NodeHandle baseInternodeHandle, const glm::mat4& globalTransform, ClimateModel& climateModel,
+bool TreeModel::GrowSubTree(const float deltaTime, const NodeHandle baseInternodeHandle, const glm::mat4& globalTransform, ClimateModel& climateModel,
 	const ShootGrowthController& shootGrowthParameters, const TwigController& twigController)
 {
+	m_currentDeltaTime = deltaTime;
 	bool treeStructureChanged = false;
 	m_shootSkeleton.SortLists();
 	bool anyBranchGrown = false;
-	AggregateInternodeVigorRequirement(shootGrowthParameters, baseInternodeHandle);
-	AllocateShootVigor(shootGrowthParameters);
 	const auto sortedInternodeList = m_shootSkeleton.GetSubTree(baseInternodeHandle);
+	ShootGrowthRequirement subTreeGrowthRequirement{};
+	CalculateVigorRequirement(sortedInternodeList, shootGrowthParameters, subTreeGrowthRequirement);
+	AggregateInternodeVigorRequirement(shootGrowthParameters, baseInternodeHandle);
+	float vigor = 0.0f;
+	vigor += subTreeGrowthRequirement.m_leafMaintenanceVigor;
+	vigor += subTreeGrowthRequirement.m_leafDevelopmentalVigor;
+	vigor += subTreeGrowthRequirement.m_fruitMaintenanceVigor;
+	vigor += subTreeGrowthRequirement.m_fruitDevelopmentalVigor;
+	vigor += subTreeGrowthRequirement.m_nodeDevelopmentalVigor;
+	AllocateShootVigor(vigor, baseInternodeHandle, sortedInternodeList, shootGrowthParameters);
 	for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); ++it) {
 		const bool graphChanged = GrowInternode(climateModel, *it, shootGrowthParameters);
 		anyBranchGrown = anyBranchGrown || graphChanged;
@@ -217,6 +226,7 @@ bool TreeModel::GrowSubTree(const NodeHandle baseInternodeHandle, const glm::mat
 	{
 		FormTwigs(globalTransform, climateModel, shootGrowthParameters, twigController);
 	}
+	m_iteration++;
 	m_shootSkeleton.m_data.m_vigorRequirement = newShootGrowthRequirement;
 	return treeStructureChanged;
 }
@@ -547,7 +557,7 @@ void TreeModel::FormFineRoots(const glm::mat4& globalTransform, VoxelSoilModel& 
 	}
 }
 
-void TreeModel::FormTwigs(const glm::mat4& globalTransform, ClimateModel& climateModel,
+void TreeModel::FormTwigs(const glm::mat4& globalTransform, ClimateModel& climateModel, 
 	const ShootGrowthController& shootGrowthParameters, const TwigController& twigController)
 {
 	m_twigCount = 0;
@@ -592,9 +602,9 @@ bool TreeModel::GrowShoots(const glm::mat4& globalTransform, ClimateModel& clima
 	if (anyBranchPruned) m_shootSkeleton.SortLists();
 	treeStructureChanged = treeStructureChanged || anyBranchPruned;
 	bool anyBranchGrown = false;
-	AggregateInternodeVigorRequirement(shootGrowthParameters, 0);
-	AllocateShootVigor(shootGrowthParameters);
 	const auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
+	AggregateInternodeVigorRequirement(shootGrowthParameters, 0);
+	AllocateShootVigor(m_shootSkeleton.m_data.m_vigor, 0, sortedInternodeList, shootGrowthParameters);
 	for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); ++it) {
 		const bool graphChanged = GrowInternode(climateModel, *it, shootGrowthParameters);
 		anyBranchGrown = anyBranchGrown || graphChanged;
@@ -670,7 +680,7 @@ void TreeModel::ShootGrowthPostProcess(const glm::mat4& globalTransform, Climate
 			m_shootSkeleton.m_max = glm::max(m_shootSkeleton.m_max, endPosition);
 		}
 		SampleTemperature(globalTransform, climateModel);
-		CalculateVigorRequirement(shootGrowthParameters, newShootGrowthRequirement);
+		CalculateVigorRequirement(sortedInternodeList, shootGrowthParameters, newShootGrowthRequirement);
 	};
 
 	if (m_treeGrowthSettings.m_enableBranchCollisionDetection)
@@ -906,7 +916,7 @@ bool TreeModel::ElongateInternode(float extendLength, NodeHandle internodeHandle
 }
 
 
-inline bool TreeModel::GrowRootNode(VoxelSoilModel& soilModel, NodeHandle rootNodeHandle, const RootGrowthController& rootGrowthParameters)
+bool TreeModel::GrowRootNode(VoxelSoilModel& soilModel, NodeHandle rootNodeHandle, const RootGrowthController& rootGrowthParameters)
 {
 	bool graphChanged = false;
 	{
@@ -1257,12 +1267,11 @@ void TreeModel::AggregateRootVigorRequirement(const RootGrowthController& rootGr
 	}
 }
 
-inline void TreeModel::AllocateShootVigor(const ShootGrowthController& shootGrowthParameters)
+void TreeModel::AllocateShootVigor(const float vigor, const NodeHandle baseInternodeHandle, const std::vector<NodeHandle>& sortedInternodeList, const ShootGrowthController& shootGrowthParameters)
 {
-	const auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
 	//Go from rooting point to all end nodes
 	const float apicalControl = shootGrowthParameters.m_apicalControl;
-	float remainingVigor = m_shootSkeleton.m_data.m_vigor;
+	float remainingVigor = vigor;
 
 	const float leafMaintenanceVigor = glm::min(remainingVigor, m_shootSkeleton.m_data.m_vigorRequirement.m_leafMaintenanceVigor);
 	remainingVigor -= leafMaintenanceVigor;
@@ -1317,7 +1326,7 @@ inline void TreeModel::AllocateShootVigor(const ShootGrowthController& shootGrow
 		}
 		//2. Allocate development vigor for structural growth
 		//If this is the first node (node at the rooting point)
-		if (internode.GetParentHandle() == -1) {
+		if (internode.GetHandle() == baseInternodeHandle) {
 			internodeVigorFlow.m_allocatedVigor = 0.0f;
 			internodeVigorFlow.m_subTreeAllocatedVigor = 0.0f;
 			if (m_shootSkeleton.m_data.m_vigorRequirement.m_nodeDevelopmentalVigor != 0.0f) {
@@ -1448,9 +1457,8 @@ void TreeModel::CalculateThicknessAndSagging(NodeHandle internodeHandle,
 	internodeData.m_sagging = shootGrowthParameters.m_sagging(internode);
 }
 
-void TreeModel::CalculateVigorRequirement(const ShootGrowthController& shootGrowthParameters, ShootGrowthRequirement& newTreeGrowthNutrientsRequirement) {
+void TreeModel::CalculateVigorRequirement(const std::vector<NodeHandle>& sortedInternodeList, const ShootGrowthController& shootGrowthParameters, ShootGrowthRequirement& newTreeGrowthNutrientsRequirement) {
 
-	const auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
 	for (const auto& internodeHandle : sortedInternodeList) {
 		auto& internode = m_shootSkeleton.RefNode(internodeHandle);
 		auto& internodeData = internode.m_data;
