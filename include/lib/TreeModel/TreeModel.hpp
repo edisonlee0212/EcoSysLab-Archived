@@ -58,14 +58,14 @@ namespace EcoSysLab {
 
 		void CalculateVigorRequirement(const std::vector<NodeHandle>& sortedInternodeList, const ShootGrowthController& shootGrowthParameters, ShootGrowthRequirement& newTreeGrowthNutrientsRequirement);
 
-		void AllocateShootVigor(float vigor, NodeHandle baseInternodeHandle, const std::vector<NodeHandle>& sortedInternodeList, const ShootGrowthController& shootGrowthParameters);
+		void AllocateShootVigor(float vigor, NodeHandle baseInternodeHandle, const std::vector<NodeHandle>& sortedInternodeList, const ShootGrowthRequirement& shootGrowthRequirement, const ShootGrowthController& shootGrowthParameters);
 
 		bool PruneInternodes(const ShootGrowthController& shootGrowthParameters);
 
 		void CalculateThicknessAndSagging(NodeHandle internodeHandle,
 			const ShootGrowthController& shootGrowthParameters);
 
-		bool GrowInternode(ClimateModel& climateModel, NodeHandle internodeHandle, const ShootGrowthController& shootGrowthParameters);
+		bool GrowInternode(ClimateModel& climateModel, NodeHandle internodeHandle, const ShootGrowthController& shootGrowthParameters, bool seasonality);
 
 		bool ElongateInternode(float extendLength, NodeHandle internodeHandle,
 			const ShootGrowthController& shootGrowthParameters, float& collectedInhibitor);

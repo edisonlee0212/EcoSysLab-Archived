@@ -801,7 +801,7 @@ void TreeVisualizer::Initialize()
 void TreeVisualizer::SyncColors(const ShootSkeleton& shootSkeleton, NodeHandle& selectedNodeHandle) {
 	if (m_randomColors.empty()) {
 		for (int i = 0; i < 1000; i++) {
-			m_randomColors.emplace_back(glm::ballRand(1.0f), 1.0f);
+			m_randomColors.emplace_back(glm::abs(glm::ballRand(1.0f)), 1.0f);
 		}
 	}
 
@@ -838,7 +838,7 @@ void TreeVisualizer::SyncColors(const ShootSkeleton& shootSkeleton, NodeHandle& 
 				break;
 			}
 			matrices[i + 1].m_instanceColor.a = 1.0f;
-			if (selectedNodeHandle != -1) matrices[i + 1].m_instanceColor.a = 0.5f;
+			if (selectedNodeHandle != -1) matrices[i + 1].m_instanceColor.a = 0.75f;
 		}
 		});
 }

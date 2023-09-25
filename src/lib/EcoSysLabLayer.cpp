@@ -1406,6 +1406,7 @@ void EcoSysLabLayer::Simulate(float deltaTime) {
 	const auto scene = GetScene();
 	if(scene->IsEntityValid(m_selectedTree) && m_treeVisualizer.GetSelectedInternodeHandle() >= 0)
 	{
+		float time = Times::Now();
 		const auto climate = m_climateHolder.Get<Climate>();
 		const auto soil = m_soilHolder.Get<Soil>();
 		auto tree = scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock();
@@ -1413,6 +1414,13 @@ void EcoSysLabLayer::Simulate(float deltaTime) {
 		if (!tree->m_climate.Get<Climate>()) tree->m_climate = climate;
 		if (!tree->m_soil.Get<Soil>()) tree->m_soil = soil;
 		tree->TryGrowSubTree(m_treeVisualizer.GetSelectedInternodeHandle(), deltaTime);
+		m_lastUsedTime = Times::Now() - time;
+		m_totalTime += m_lastUsedTime;
+
+		if (scene->IsEntityValid(m_selectedTree)) {
+			m_treeVisualizer.m_needUpdate = true;
+		}
+		m_needFullFlowUpdate = true;
 	}
 	else {
 		const std::vector<Entity>* treeEntities =

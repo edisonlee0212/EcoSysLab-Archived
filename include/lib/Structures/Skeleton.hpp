@@ -394,7 +394,7 @@ namespace EcoSysLab {
 		std::vector<NodeHandle> retVal{};
 		std::queue<NodeHandle> nodeHandles;
 		nodeHandles.push(baseNodeHandle);
-		while(nodeHandles.empty())
+		while(!nodeHandles.empty())
 		{
 			auto nextNodeHandle = nodeHandles.front();
 			retVal.emplace_back(nodeHandles.front());

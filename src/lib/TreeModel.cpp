@@ -213,9 +213,9 @@ bool TreeModel::GrowSubTree(const float deltaTime, const NodeHandle baseInternod
 	vigor += subTreeGrowthRequirement.m_fruitMaintenanceVigor;
 	vigor += subTreeGrowthRequirement.m_fruitDevelopmentalVigor;
 	vigor += subTreeGrowthRequirement.m_nodeDevelopmentalVigor;
-	AllocateShootVigor(vigor, baseInternodeHandle, sortedInternodeList, shootGrowthParameters);
+	AllocateShootVigor(vigor, baseInternodeHandle, sortedInternodeList, subTreeGrowthRequirement, shootGrowthParameters);
 	for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); ++it) {
-		const bool graphChanged = GrowInternode(climateModel, *it, shootGrowthParameters);
+		const bool graphChanged = GrowInternode(climateModel, *it, shootGrowthParameters, false);
 		anyBranchGrown = anyBranchGrown || graphChanged;
 	}
 	if (anyBranchGrown) m_shootSkeleton.SortLists();
@@ -604,9 +604,9 @@ bool TreeModel::GrowShoots(const glm::mat4& globalTransform, ClimateModel& clima
 	bool anyBranchGrown = false;
 	const auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
 	AggregateInternodeVigorRequirement(shootGrowthParameters, 0);
-	AllocateShootVigor(m_shootSkeleton.m_data.m_vigor, 0, sortedInternodeList, shootGrowthParameters);
+	AllocateShootVigor(m_shootSkeleton.m_data.m_vigor, 0, sortedInternodeList, m_shootSkeleton.m_data.m_vigorRequirement, shootGrowthParameters);
 	for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); ++it) {
-		const bool graphChanged = GrowInternode(climateModel, *it, shootGrowthParameters);
+		const bool graphChanged = GrowInternode(climateModel, *it, shootGrowthParameters, true);
 		anyBranchGrown = anyBranchGrown || graphChanged;
 	}
 	if (anyBranchGrown) m_shootSkeleton.SortLists();
@@ -993,7 +993,7 @@ bool TreeModel::GrowRootNode(VoxelSoilModel& soilModel, NodeHandle rootNodeHandl
 	return graphChanged;
 }
 
-bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHandle, const ShootGrowthController& shootGrowthParameters) {
+bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHandle, const ShootGrowthController& shootGrowthParameters, bool seasonality) {
 	bool graphChanged = false;
 	{
 		auto& internode = m_shootSkeleton.RefNode(internodeHandle);
@@ -1009,15 +1009,6 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 		auto& internode = m_shootSkeleton.RefNode(internodeHandle);
 		auto& internodeData = internode.m_data;
 		auto& internodeInfo = internode.m_info;
-
-		/*
-		auto killProbability = shootGrowthParameters.m_growthRate * shootGrowthParameters.m_pro;
-		if (internodeData.m_rootDistance < 1.0f) killProbability = 0.0f;
-		if (bud.m_status == BudStatus::Dormant && killProbability > glm::linearRand(0.0f, 1.0f)) {
-			bud.m_status = BudStatus::Died;
-		}
-		if (bud.m_status == BudStatus::Died) continue;
-		*/
 
 		//Calculate vigor used for maintenance and development.
 		const float desiredMaintenanceVigor = bud.m_vigorSink.GetDesiredMaintenanceVigorRequirement();
@@ -1074,7 +1065,12 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 		}
 		else if (bud.m_type == BudType::Fruit)
 		{
-			if (bud.m_status == BudStatus::Dormant) {
+			if(!seasonality)
+			{
+				const float maxMaturityIncrease = availableDevelopmentVigor / shootGrowthParameters.m_fruitVigorRequirement;
+				const auto developmentVigor = bud.m_vigorSink.SubtractVigor(maxMaturityIncrease * shootGrowthParameters.m_fruitVigorRequirement);
+			}
+			else if (bud.m_status == BudStatus::Dormant) {
 				const float flushProbability = m_currentDeltaTime * shootGrowthParameters.m_fruitBudFlushingProbability(internode);
 				if (flushProbability >= glm::linearRand(0.0f, 1.0f))
 				{
@@ -1117,7 +1113,12 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 		}
 		else if (bud.m_type == BudType::Leaf)
 		{
-			if (bud.m_status == BudStatus::Dormant) {
+			if (!seasonality)
+			{
+				const float maxMaturityIncrease = availableDevelopmentVigor / shootGrowthParameters.m_leafVigorRequirement;
+				const auto developmentVigor = bud.m_vigorSink.SubtractVigor(maxMaturityIncrease * shootGrowthParameters.m_leafVigorRequirement);
+			}
+			else if (bud.m_status == BudStatus::Dormant) {
 				const float flushProbability = m_currentDeltaTime * shootGrowthParameters.m_leafBudFlushingProbability(internode);
 				if (flushProbability >= glm::linearRand(0.0f, 1.0f))
 				{
@@ -1267,39 +1268,39 @@ void TreeModel::AggregateRootVigorRequirement(const RootGrowthController& rootGr
 	}
 }
 
-void TreeModel::AllocateShootVigor(const float vigor, const NodeHandle baseInternodeHandle, const std::vector<NodeHandle>& sortedInternodeList, const ShootGrowthController& shootGrowthParameters)
+void TreeModel::AllocateShootVigor(const float vigor, const NodeHandle baseInternodeHandle, const std::vector<NodeHandle>& sortedInternodeList, const ShootGrowthRequirement& shootGrowthRequirement, const ShootGrowthController& shootGrowthParameters)
 {
 	//Go from rooting point to all end nodes
 	const float apicalControl = shootGrowthParameters.m_apicalControl;
 	float remainingVigor = vigor;
 
-	const float leafMaintenanceVigor = glm::min(remainingVigor, m_shootSkeleton.m_data.m_vigorRequirement.m_leafMaintenanceVigor);
+	const float leafMaintenanceVigor = glm::min(remainingVigor, shootGrowthRequirement.m_leafMaintenanceVigor);
 	remainingVigor -= leafMaintenanceVigor;
 	float leafMaintenanceVigorFillingRate = 0.0f;
-	if (m_shootSkeleton.m_data.m_vigorRequirement.m_leafMaintenanceVigor != 0.0f)
-		leafMaintenanceVigorFillingRate = leafMaintenanceVigor / m_shootSkeleton.m_data.m_vigorRequirement.m_leafMaintenanceVigor;
+	if (shootGrowthRequirement.m_leafMaintenanceVigor != 0.0f)
+		leafMaintenanceVigorFillingRate = leafMaintenanceVigor / shootGrowthRequirement.m_leafMaintenanceVigor;
 
-	const float leafDevelopmentVigor = glm::min(remainingVigor, m_shootSkeleton.m_data.m_vigorRequirement.m_leafDevelopmentalVigor);
+	const float leafDevelopmentVigor = glm::min(remainingVigor, shootGrowthRequirement.m_leafDevelopmentalVigor);
 	remainingVigor -= leafDevelopmentVigor;
 	float leafDevelopmentVigorFillingRate = 0.0f;
-	if (m_shootSkeleton.m_data.m_vigorRequirement.m_leafDevelopmentalVigor != 0.0f)
-		leafDevelopmentVigorFillingRate = leafDevelopmentVigor / m_shootSkeleton.m_data.m_vigorRequirement.m_leafDevelopmentalVigor;
+	if (shootGrowthRequirement.m_leafDevelopmentalVigor != 0.0f)
+		leafDevelopmentVigorFillingRate = leafDevelopmentVigor / shootGrowthRequirement.m_leafDevelopmentalVigor;
 
-	const float fruitMaintenanceVigor = glm::min(remainingVigor, m_shootSkeleton.m_data.m_vigorRequirement.m_fruitMaintenanceVigor);
+	const float fruitMaintenanceVigor = glm::min(remainingVigor, shootGrowthRequirement.m_fruitMaintenanceVigor);
 	remainingVigor -= fruitMaintenanceVigor;
 	float fruitMaintenanceVigorFillingRate = 0.0f;
-	if (m_shootSkeleton.m_data.m_vigorRequirement.m_fruitMaintenanceVigor != 0.0f)
-		fruitMaintenanceVigorFillingRate = fruitMaintenanceVigor / m_shootSkeleton.m_data.m_vigorRequirement.m_fruitMaintenanceVigor;
+	if (shootGrowthRequirement.m_fruitMaintenanceVigor != 0.0f)
+		fruitMaintenanceVigorFillingRate = fruitMaintenanceVigor / shootGrowthRequirement.m_fruitMaintenanceVigor;
 
-	const float fruitDevelopmentVigor = glm::min(remainingVigor, m_shootSkeleton.m_data.m_vigorRequirement.m_fruitDevelopmentalVigor);
+	const float fruitDevelopmentVigor = glm::min(remainingVigor, shootGrowthRequirement.m_fruitDevelopmentalVigor);
 	remainingVigor -= fruitDevelopmentVigor;
 	float fruitDevelopmentVigorFillingRate = 0.0f;
-	if (m_shootSkeleton.m_data.m_vigorRequirement.m_fruitDevelopmentalVigor != 0.0f)
-		fruitDevelopmentVigorFillingRate = fruitDevelopmentVigor / m_shootSkeleton.m_data.m_vigorRequirement.m_fruitDevelopmentalVigor;
+	if (shootGrowthRequirement.m_fruitDevelopmentalVigor != 0.0f)
+		fruitDevelopmentVigorFillingRate = fruitDevelopmentVigor / shootGrowthRequirement.m_fruitDevelopmentalVigor;
 
-	const float nodeDevelopmentVigor = glm::min(remainingVigor, m_shootSkeleton.m_data.m_vigorRequirement.m_nodeDevelopmentalVigor);
-	if (m_shootSkeleton.m_data.m_vigorRequirement.m_nodeDevelopmentalVigor != 0.0f) {
-		m_internodeDevelopmentRate = nodeDevelopmentVigor / m_shootSkeleton.m_data.m_vigorRequirement.m_nodeDevelopmentalVigor;
+	const float nodeDevelopmentVigor = glm::min(remainingVigor, shootGrowthRequirement.m_nodeDevelopmentalVigor);
+	if (shootGrowthRequirement.m_nodeDevelopmentalVigor != 0.0f) {
+		m_internodeDevelopmentRate = nodeDevelopmentVigor / shootGrowthRequirement.m_nodeDevelopmentalVigor;
 	}
 
 	for (const auto& internodeHandle : sortedInternodeList) {
@@ -1329,7 +1330,7 @@ void TreeModel::AllocateShootVigor(const float vigor, const NodeHandle baseInter
 		if (internode.GetHandle() == baseInternodeHandle) {
 			internodeVigorFlow.m_allocatedVigor = 0.0f;
 			internodeVigorFlow.m_subTreeAllocatedVigor = 0.0f;
-			if (m_shootSkeleton.m_data.m_vigorRequirement.m_nodeDevelopmentalVigor != 0.0f) {
+			if (shootGrowthRequirement.m_nodeDevelopmentalVigor != 0.0f) {
 				const float totalRequirement = internodeVigorFlow.m_vigorRequirementWeight + internodeVigorFlow.m_subtreeVigorRequirementWeight;
 				if (totalRequirement != 0.0f) {
 					//The root internode firstly extract it's own resources needed for itself.
@@ -1556,13 +1557,13 @@ bool TreeModel::PruneInternodes(const ShootGrowthController& shootGrowthParamete
 		const auto& internode = m_shootSkeleton.PeekNode(internodeHandle);
 		//Pruning here.
 		bool pruning = false;
+		const float pruningProbability = m_currentDeltaTime * shootGrowthParameters.m_pruningFactor(internode);
+		if (internode.IsEndNode() && pruningProbability >= glm::linearRand(0.0f, 1.0f)) pruning = true;
+		if (internode.m_info.m_globalPosition.y <= 0.5f && internode.m_data.m_order != 0 && glm::linearRand(0.0f, 1.0f) < m_currentDeltaTime * 0.1f) pruning = true;
 		if (maxDistance > 5 && internode.m_data.m_order != 0 &&
 			internode.m_data.m_rootDistance / maxDistance < shootGrowthParameters.m_lowBranchPruning) {
 			pruning = true;
 		}
-		const float pruningProbability = m_currentDeltaTime * shootGrowthParameters.m_pruningFactor(internode);
-		if (pruningProbability >= glm::linearRand(0.0f, 1.0f)) pruning = true;
-		if (internode.m_info.m_globalPosition.y <= 0.5f && internode.m_data.m_order != 0 && glm::linearRand(0.0f, 1.0f) < m_currentDeltaTime * 0.1f) pruning = true;
 		if (pruning)
 		{
 			PruneInternode(internodeHandle);
