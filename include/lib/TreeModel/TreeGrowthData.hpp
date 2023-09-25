@@ -52,12 +52,17 @@ namespace EcoSysLab
 		float m_lightEnergy = 0.0f;
 	};
 
-	struct PlantGrowthRequirement
+	struct ShootGrowthRequirement
 	{
 		float m_leafMaintenanceVigor = 0.0f;
 		float m_leafDevelopmentalVigor = 0.0f;
 		float m_fruitMaintenanceVigor = 0.0f;
 		float m_fruitDevelopmentalVigor = 0.0f;
+		float m_nodeDevelopmentalVigor = 0.0f;
+	};
+
+	struct RootGrowthRequirement
+	{
 		float m_nodeDevelopmentalVigor = 0.0f;
 	};
 
@@ -160,7 +165,7 @@ namespace EcoSysLab
 		Octree<TreeVoxelData> m_octree = {};
 
 		TreeIlluminationEstimator m_treeIlluminationEstimator;
-		PlantGrowthRequirement m_vigorRequirement = {};
+		ShootGrowthRequirement m_vigorRequirement = {};
 		ShootFlux m_shootFlux = {};
 
 		std::vector<ReproductiveModule> m_droppedLeaves;
@@ -171,7 +176,7 @@ namespace EcoSysLab
 
 	struct RootGrowthData {
 		Octree<TreeVoxelData> m_octree = {};
-		PlantGrowthRequirement m_vigorRequirement = {};
+		RootGrowthRequirement m_vigorRequirement = {};
 		RootFlux m_rootFlux = {};
 
 		float m_vigor = 0;
