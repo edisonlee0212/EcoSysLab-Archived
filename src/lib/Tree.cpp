@@ -51,9 +51,9 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 
 		ImGui::DragFloat("Pipe radius", &m_pipeModelParameters.m_profileScale, 0.001f, 0.001f, 1.0f);
 
-		if (ImGui::Button("Build strands"))
+		if (ImGui::Button("Update strands"))
 		{
-			BuildPipeModel();
+			m_treePipeModel.UpdatePipeModels(m_treeModel);
 			InitializeStrandRenderer();
 		}
 
@@ -273,12 +273,6 @@ bool Tree::TryGrowSubTree(NodeHandle internodeHandle, float deltaTime)
 	if (m_enableHistory && m_treeModel.m_iteration % m_historyIteration == 0) m_treeModel.Step();
 }
 
-void Tree::BuildPipeModel()
-{
-	//m_shootPipeModel.InitializePipes(m_treeModel.m_shootSkeleton, m_baseProfile, m_pipeModelParameters);
-	//m_rootPipeModel.InitializePipes(m_treeModel.m_rootSkeleton, m_baseProfile, m_pipeModelParameters);
-}
-
 void Tree::InitializeStrandRenderer() const
 {
 	const auto scene = GetScene();
@@ -292,7 +286,7 @@ void Tree::InitializeStrandRenderer() const
 	const auto strandsAsset = ProjectManager::CreateTemporaryAsset<Strands>();
 	std::vector<glm::uint> strandsList;
 	std::vector<StrandPoint> points;
-	m_shootPipeModel.m_pipeGroup.BuildStrands(strandsList, points);
+	m_treePipeModel.m_shootPipeModel.m_pipeGroup.BuildStrands(strandsList, points);
 	if (!points.empty()) strandsList.emplace_back(points.size());
 	StrandPointAttributes strandPointAttributes{};
 	strandPointAttributes.m_color = true;

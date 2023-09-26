@@ -1734,8 +1734,8 @@ ShootSkeleton& TreeModel::RefShootSkeleton() {
 
 const ShootSkeleton&
 TreeModel::PeekShootSkeleton(const int iteration) const {
-	assert(iteration >= 0 && iteration <= m_history.size());
-	if (iteration == m_history.size()) return m_shootSkeleton;
+	assert(iteration < 0 || iteration <= m_history.size());
+	if (iteration == m_history.size() || iteration < 0) return m_shootSkeleton;
 	return m_history.at(iteration).first;
 }
 
@@ -1745,8 +1745,8 @@ RootSkeleton& TreeModel::RefRootSkeleton() {
 
 const RootSkeleton&
 TreeModel::PeekRootSkeleton(const int iteration) const {
-	assert(iteration >= 0 && iteration <= m_history.size());
-	if (iteration == m_history.size()) return m_rootSkeleton;
+	assert(iteration < 0 || iteration <= m_history.size());
+	if (iteration == m_history.size() || iteration < 0) return m_rootSkeleton;
 	return m_history.at(iteration).second;
 }
 

@@ -206,13 +206,13 @@ namespace EcoSysLab {
 		void SampleSoilDensity(const glm::mat4& globalTransform, VoxelSoilModel& soilModel);
 		[[nodiscard]] ShootSkeleton& RefShootSkeleton();
 
-		[[nodiscard]] const ShootSkeleton& PeekShootSkeleton(int iteration) const;
+		[[nodiscard]] const ShootSkeleton& PeekShootSkeleton(int iteration = -1) const;
 
 		[[nodiscard]] RootSkeleton&
 			RefRootSkeleton();
 
 
-		[[nodiscard]] const RootSkeleton& PeekRootSkeleton(int iteration) const;
+		[[nodiscard]] const RootSkeleton& PeekRootSkeleton(int iteration = -1) const;
 
 		void ClearHistory();
 

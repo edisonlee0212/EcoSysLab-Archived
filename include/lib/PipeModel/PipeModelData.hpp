@@ -46,6 +46,8 @@ namespace EcoSysLab
 		glm::quat m_globalEndRotation = {};
 		glm::quat m_regulatedGlobalEndRotation = {};
 		ProfileHandle m_profileHandle = -1;
+
+		NodeHandle m_treeSkeletonNodeHandle = -1;
 	};
 
 	struct PipeModelFlowData

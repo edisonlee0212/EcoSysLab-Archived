@@ -50,6 +50,53 @@ void PipeModel::MapProfiles(ProfileHandle srcProfileHandle, const std::vector<Pr
 	}
 }
 
+void PipeModel::CalculatePipeSegmentInfos(const PipeModelParameters& pipeModelParameters)
+{
+	auto& baseProfile = m_pipeProfileGroup.RefProfile(m_skeleton.m_data.m_baseProfileHandle);
+	const auto& baseNode = m_skeleton.RefNode(0);
+	for (const auto& readOnlyCell : baseProfile.PeekCells())
+	{
+		if (readOnlyCell.IsRecycled()) continue;
+		auto& cell = baseProfile.RefCell(readOnlyCell.GetHandle());
+		auto& pipe = m_pipeGroup.RefPipe(cell.m_data.m_pipeHandle);
+		const glm::vec3 left = baseNode.m_info.m_regulatedGlobalRotation * glm::vec3(1, 0, 0);
+		const glm::vec3 up = baseNode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
+		const auto localPosition = pipeModelParameters.m_profileScale * cell.m_info.m_offset;
+		pipe.m_info.m_baseInfo.m_globalPosition = baseNode.m_info.m_globalPosition + left * localPosition.x + up * localPosition.y;
+		pipe.m_info.m_baseInfo.m_globalRotation = baseNode.m_info.m_regulatedGlobalRotation;
+		pipe.m_info.m_baseInfo.m_thickness = pipeModelParameters.m_profileScale * cell.m_info.m_radius;
+	}
+	const auto nodeList = m_skeleton.RefSortedNodeList();
+	for (const auto& i : nodeList)
+	{
+		const auto& node = m_skeleton.PeekNode(i);
+		const auto profileHandle = node.m_data.m_profileHandle;
+		auto& profile = m_pipeProfileGroup.RefProfile(profileHandle);
+		for (auto& cell : profile.RefCells())
+		{
+			if (cell.IsRecycled()) continue;
+			if (cell.m_data.m_pipeHandle == -1) continue;
+			auto& pipeSegment = m_pipeGroup.RefPipeSegment(cell.m_data.m_pipeSegmentHandle);
+			pipeSegment.m_data.m_nodeHandle = i;
+			pipeSegment.m_info.m_localPosition = pipeModelParameters.m_profileScale * cell.m_info.m_offset;
+			pipeSegment.m_info.m_thickness = pipeModelParameters.m_profileScale * cell.m_info.m_radius;
+		}
+	}
+
+	for (auto& pipeSegment : m_pipeGroup.RefPipeSegments())
+	{
+		if (pipeSegment.IsRecycled()) continue;
+		const auto& node = m_skeleton.PeekNode(pipeSegment.m_data.m_nodeHandle);
+		const auto& nodeInfo = node.m_info;
+		const auto& nodeData = node.m_data;
+		const glm::vec3 left = nodeData.m_regulatedGlobalEndRotation * glm::vec3(1, 0, 0);
+		const glm::vec3 up = nodeData.m_regulatedGlobalEndRotation * glm::vec3(0, 1, 0);
+		auto& pipeSegmentInfo = pipeSegment.m_info;
+		pipeSegmentInfo.m_globalPosition = nodeInfo.m_globalPosition + nodeInfo.m_globalDirection * nodeInfo.m_length + left * pipeSegmentInfo.m_localPosition.x + up * pipeSegmentInfo.m_localPosition.y;
+		pipeSegmentInfo.m_globalRotation = nodeData.m_regulatedGlobalEndRotation;
+	}
+}
+
 void PipeModel::InitializePipes(const PipeModelParameters& pipeModelParameters)
 {
 	const auto nodeList = m_skeleton.RefSortedNodeList();

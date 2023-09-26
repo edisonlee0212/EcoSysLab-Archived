@@ -24,6 +24,8 @@ namespace EcoSysLab {
 		float m_thickness = 0.1f;
 
 		glm::quat m_regulatedGlobalRotation = glm::vec3(0.0f);
+
+		
 	};
 
 	struct FlowInfo {
@@ -55,6 +57,7 @@ namespace EcoSysLab {
 		NodeHandle m_parentHandle = -1;
 		std::vector<NodeHandle> m_childHandles;
 		bool m_apical = true;
+		int m_index = -1;
 #pragma endregion
 	public:
 		NodeData m_data;
@@ -110,6 +113,8 @@ namespace EcoSysLab {
 		[[nodiscard]] const std::vector<NodeHandle> &RefChildHandles() const;
 		Node();
 		Node(NodeHandle handle);
+
+		[[nodiscard]] int GetIndex() const;
 	};
 
 	template<typename FlowData>
@@ -199,11 +204,13 @@ namespace EcoSysLab {
 		void DetachChildNode(NodeHandle targetHandle, NodeHandle childHandle);
 
 #pragma endregion
+
+		int m_maxIndex = -1;
 	public:
 		template<typename SrcSkeletonData, typename SrcFlowData, typename SrcNodeData>
 		void Clone(const Skeleton<SrcSkeletonData, SrcFlowData, SrcNodeData>& srcSkeleton, const std::function<void(NodeHandle srcNodeHandle, NodeHandle dstNodeHandle)>& postProcess);
 
-
+		[[nodiscard]] int GetMaxIndex() const;
 		SkeletonData m_data;
 
 
@@ -244,7 +251,7 @@ namespace EcoSysLab {
 		[[nodiscard]] const std::vector<NodeHandle> &RefSortedNodeList() const;
 
 		[[nodiscard]] std::vector<NodeHandle> GetSubTree(NodeHandle baseNodeHandle) const;
-
+		[[nodiscard]] std::vector<NodeHandle> GetNodeListBaseIndex(unsigned baseIndex) const;
 		/**
 		 * To retrieve a list of handles of all flows contained within the tree.
 		 * @return The list of handles of flows sorted from root to ends.
@@ -403,6 +410,17 @@ namespace EcoSysLab {
 			{
 				nodeHandles.push(childHandle);
 			}
+		}
+		return retVal;
+	}
+
+	template <typename SkeletonData, typename FlowData, typename NodeData>
+	std::vector<NodeHandle> Skeleton<SkeletonData, FlowData, NodeData>::GetNodeListBaseIndex(unsigned baseIndex) const
+	{
+		std::vector<NodeHandle> retVal{};
+		for(const auto& i : m_sortedNodeList)
+		{
+			if (m_nodes[i].m_index >= baseIndex) retVal.push_back(i);
 		}
 		return retVal;
 	}
@@ -583,6 +601,7 @@ namespace EcoSysLab {
 		m_endNode = true;
 		m_data = {};
 		m_info = {};
+		m_index = -1;
 	}
 
 	template <typename NodeData>
@@ -635,6 +654,13 @@ namespace EcoSysLab {
 		m_endNode = true;
 		m_data = {};
 		m_info = {};
+		m_index = -1;
+	}
+
+	template <typename NodeData>
+	int Node<NodeData>::GetIndex() const
+	{
+		return m_index;
 	}
 
 	template<typename FlowData>
@@ -676,6 +702,7 @@ namespace EcoSysLab {
 
 	template<typename SkeletonData, typename FlowData, typename NodeData>
 	Skeleton<SkeletonData, FlowData, NodeData>::Skeleton() {
+		m_maxIndex = -1;
 		AllocateFlow();
 		AllocateNode();
 		auto &rootBranch = m_flows[0];
@@ -734,6 +761,7 @@ namespace EcoSysLab {
 			if (srcNodeHandle == 0)
 			{
 				m_nodes[0].m_info = srcSkeleton.PeekNode(0).m_info;
+				m_nodes[0].m_index = srcSkeleton.PeekNode(0).m_index;
 				postProcess(0, 0);
 			}
 			else
@@ -742,10 +770,17 @@ namespace EcoSysLab {
 				auto dstNodeHandle = this->Extend(nodeHandleMap.at(srcNode.GetParentHandle()), !srcNode.IsApical(), false);
 				nodeHandleMap[srcNodeHandle] = dstNodeHandle;
 				m_nodes[dstNodeHandle].m_info = srcNode.m_info;
+				m_nodes[dstNodeHandle].m_index = srcNode.m_index;
 				postProcess(srcNodeHandle, dstNodeHandle);
 			}
 		}
 		SortLists();
+	}
+
+	template <typename SkeletonData, typename FlowData, typename NodeData>
+	int Skeleton<SkeletonData, FlowData, NodeData>::GetMaxIndex() const
+	{
+		return m_maxIndex;
 	}
 
 	template<typename SkeletonData, typename FlowData, typename NodeData>
@@ -872,13 +907,17 @@ namespace EcoSysLab {
 
 	template<typename SkeletonData, typename FlowData, typename NodeData>
 	NodeHandle Skeleton<SkeletonData, FlowData, NodeData>::AllocateNode() {
+		m_maxIndex++;
 		if (m_nodePool.empty()) {
-			return m_nodes.emplace_back(m_nodes.size()).m_handle;
+			auto& newNode = m_nodes.emplace_back(m_nodes.size());
+			newNode.m_index = m_maxIndex;
+			return newNode.m_handle;
 		}
 		auto handle = m_nodePool.front();
 		m_nodePool.pop();
 		auto &node = m_nodes[handle];
 		node.m_recycled = false;
+		node.m_index = m_maxIndex;
 		return handle;
 	}
 

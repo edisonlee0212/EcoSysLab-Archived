@@ -679,7 +679,7 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 	if (scene->IsEntityValid(m_selectedTree)) {
 		const auto tree = scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock();
 		m_treeVisualizer.OnInspect(
-			tree->m_treeModel, tree->m_shootPipeModel, scene->GetDataComponent<GlobalTransform>(m_selectedTree));
+			tree->m_treeModel, tree->m_treePipeModel.m_shootPipeModel, scene->GetDataComponent<GlobalTransform>(m_selectedTree));
 	}
 	else {
 		if (ImGui::Begin("Tree Inspector")) {

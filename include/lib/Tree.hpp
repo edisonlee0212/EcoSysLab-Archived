@@ -1,9 +1,8 @@
 #pragma once
 
-#include "TreeModel.hpp"
+#include "TreePipeModel.hpp"
 #include "TreeVisualizer.hpp"
 #include "TreeMeshGenerator.hpp"
-#include "PipeModel.hpp"
 #include "LSystemString.hpp"
 #include "TreeGraph.hpp"
 #include "TreeGrowthParameters.hpp"
@@ -33,13 +32,14 @@ namespace EcoSysLab {
 		void PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescriptor);
 		bool TryGrow(float deltaTime);
 		bool TryGrowSubTree(NodeHandle internodeHandle, float deltaTime);
-		ShootGrowthController m_shootGrowthController;
-		RootGrowthController m_rootGrowthController;
-		FineRootController m_fineRootController;
-		TwigController m_twigController;
+		ShootGrowthController m_shootGrowthController{};
+		RootGrowthController m_rootGrowthController{};
+		FineRootController m_fineRootController{};
+		TwigController m_twigController{};
+
+		
 	public:
-		void BuildPipeModel();
-		PipeModelParameters m_pipeModelParameters;
+		PipeModelParameters m_pipeModelParameters{};
 		
 		void InitializeStrandRenderer() const;
 
@@ -49,7 +49,7 @@ namespace EcoSysLab {
 		float m_leftSideBiomass;
 		float m_rightSideBiomass;
 
-		TreeMeshGeneratorSettings m_meshGeneratorSettings;
+		TreeMeshGeneratorSettings m_meshGeneratorSettings {};
 		int m_temporalProgressionIteration = 0;
 		bool m_temporalProgression = false;
 		void Update() override;
@@ -64,10 +64,9 @@ namespace EcoSysLab {
 		AssetRef m_treeDescriptor;
 		bool m_enableHistory = false;
 		int m_historyIteration = 30;
-		TreeModel m_treeModel;
-		PipeModel m_shootPipeModel;
-		PipeModel m_rootPipeModel;
-		PipeModelPipeProfile m_baseProfile;
+		TreeModel m_treeModel{};
+		TreePipeModel m_treePipeModel{};
+		PipeModelPipeProfile m_baseProfile{};
 
 		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 

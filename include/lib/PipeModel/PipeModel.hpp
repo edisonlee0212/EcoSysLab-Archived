@@ -20,7 +20,7 @@ namespace EcoSysLab
 		PipeModelPipeGroup m_pipeGroup;
 		PipeModelPipeProfileGroup m_pipeProfileGroup;
 		PipeModelSkeleton m_skeleton;
-
+		void CalculatePipeSegmentInfos(const PipeModelParameters& pipeModelParameters);
 		void InitializePipes(const PipeModelParameters& pipeModelParameters);
 	};
 }
