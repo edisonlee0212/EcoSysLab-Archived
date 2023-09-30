@@ -21,6 +21,7 @@
 #include "RadialBoundingVolume.hpp"
 #include "HeightField.hpp"
 #include "ObjectRotator.hpp"
+#include "Physics2DDemo.hpp"
 #include "SinglePipeProfile.hpp"
 #include "SorghumLayer.hpp"
 #include "TreePointCloud.hpp"
@@ -100,7 +101,7 @@ int main() {
 	ClassRegistry::RegisterAsset<NoiseSoilLayerDescriptor>("NoiseSoilLayerDescriptor", { ".nsld" });
 	ClassRegistry::RegisterPrivateComponent<SinglePipeProfile>("SinglePipeProfile");
 	ClassRegistry::RegisterPrivateComponent<PipeModelBase>("PipeModelBase");
-
+	ClassRegistry::RegisterPrivateComponent<Physics2DDemo>("Physics2DDemo");
 	ApplicationInfo applicationConfigs;
 	applicationConfigs.m_applicationName = "EcoSysLab";
 	Application::Initialize(applicationConfigs);
