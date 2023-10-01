@@ -8,17 +8,17 @@ namespace EcoSysLab {
 	{
 		ParticleGrid2D m_particleGrid2D{};
 		std::vector<Particle2D<T>> m_particles2D{};
-		std::vector<Particle2D<T>> m_particles2D2{};
-		bool SolveContact(ParticleHandle p1Handle, ParticleHandle p2Handle);
-		bool DetectContact(ParticleHandle p1Handle, ParticleHandle p2Handle);
-		bool SolveContact2(ParticleHandle p1Handle, ParticleHandle p2Handle);
+		bool DetectCollision(ParticleHandle p1Handle, ParticleHandle p2Handle);
+		void SolveCollision(ParticleHandle p1Handle, ParticleHandle p2Handle);
 		float m_deltaTime = 0.002f;
 		void Update(const std::function<void(Particle2D<T>& particle)>& modifyParticleFunc);
 		void InitializeGrid();
-		void CheckCollisions(std::vector<std::pair<ParticleHandle, ParticleHandle>>& collisions);
+		void CheckCollisions(std::vector<std::pair<ParticleHandle, ParticleHandle>>& detectedCollisions);
 		glm::vec2 m_min, m_max;
 	public:
-		float m_particleRadius = 1.0f;
+		[[nodiscard]] float GetDeltaTime();
+		void Reset(float deltaTime);
+		float m_particleRadius = 0.01f;
 		[[nodiscard]] ParticleHandle AllocateParticle();
 		[[nodiscard]] Particle2D<T>& RefParticle(ParticleHandle handle);
 		void RemoveParticle(ParticleHandle handle);
@@ -27,13 +27,27 @@ namespace EcoSysLab {
 		[[nodiscard]] std::vector<Particle2D<T>>& RefParticles();
 		void Simulate(float time, const std::function<void(Particle2D<T>& particle)>& modifyParticleFunc);
 
-		void OnInspect(const std::function<void(glm::vec2 position)>& func, const std::function<void(ImVec2 origin, float zoomFactor, ImDrawList*)>& drawFunc);
+		void OnInspect(const std::function<void(glm::vec2 position)>& func, const std::function<void(ImVec2 origin, float zoomFactor, ImDrawList*)>& drawFunc, bool showGrid = false);
 	};
 
 	template <typename T>
-	bool ParticlePhysics2D<T>::SolveContact(ParticleHandle p1Handle, ParticleHandle p2Handle)
+	bool ParticlePhysics2D<T>::DetectCollision(ParticleHandle p1Handle, ParticleHandle p2Handle)
 	{
-		if(p1Handle <= p2Handle) return false;
+		auto& p1 = m_particles2D.at(p1Handle);
+		auto& p2 = m_particles2D.at(p2Handle);
+		const auto difference = p1.m_position - p2.m_position;
+		const auto distance = glm::length(difference);
+		const auto minDistance = 2.0f * m_particleRadius;
+		if (distance < minDistance)
+		{
+			return true;
+		}
+		return false;
+	}
+
+	template <typename T>
+	void ParticlePhysics2D<T>::SolveCollision(ParticleHandle p1Handle, ParticleHandle p2Handle)
+	{
 		auto& p1 = m_particles2D.at(p1Handle);
 		auto& p2 = m_particles2D.at(p2Handle);
 		const auto difference = p1.m_position - p2.m_position;
@@ -45,96 +59,32 @@ namespace EcoSysLab {
 			const auto delta = minDistance - distance;
 			p1.m_position += 0.5f * delta * axis;
 			p2.m_position -= 0.5f * delta * axis;
-			return true;
 		}
-		return false;
-	}
-
-	template <typename T>
-	bool ParticlePhysics2D<T>::DetectContact(ParticleHandle p1Handle, ParticleHandle p2Handle)
-	{
-		auto& p1 = m_particles2D2.at(p1Handle);
-		auto& p2 = m_particles2D2.at(p2Handle);
-		const auto difference = p1.m_position - p2.m_position;
-		const auto distance = glm::length(difference);
-		const auto minDistance = 2.0f * m_particleRadius;
-		if (distance < minDistance)
-		{
-			return true;
-		}
-		return false;
-	}
-
-	template <typename T>
-	bool ParticlePhysics2D<T>::SolveContact2(ParticleHandle p1Handle, ParticleHandle p2Handle)
-	{
-		if (p1Handle <= p2Handle) return false;
-		auto& p1 = m_particles2D2.at(p1Handle);
-		auto& p2 = m_particles2D2.at(p2Handle);
-		const auto difference = p1.m_position - p2.m_position;
-		const auto distance = glm::length(difference);
-		const auto minDistance = 2.0f * m_particleRadius;
-		if (distance < minDistance)
-		{
-			const auto axis = distance < glm::epsilon<float>() ? glm::vec2(1, 0) : difference / distance;
-			const auto delta = minDistance - distance;
-			p1.m_position += 0.5f * delta * axis;
-			p2.m_position -= 0.5f * delta * axis;
-			return true;
-		}
-		return false;
 	}
 
 	template <typename T>
 	void ParticlePhysics2D<T>::Update(
 		const std::function<void(Particle2D<T>& collisionParticle)>& modifyParticleFunc)
 	{
-		m_particles2D2 = m_particles2D;
-		std::vector<std::pair<ParticleHandle, ParticleHandle>> particles1Collisions;
-		std::vector<std::pair<ParticleHandle, ParticleHandle>> particles2Collisions;
-		if (!m_particles2D.empty()) {
-			Jobs::ParallelFor(m_particles2D.size(), [&](unsigned i)
-				{
-					modifyParticleFunc(m_particles2D[i]);
-				}
-			);
-			
-			for (size_t i = 0; i < m_particles2D.size(); i++)
-			{
-				for (size_t j = 0; j < m_particles2D.size(); j++)
-				{
-					if (SolveContact(i, j))
-					{
-						particles1Collisions.emplace_back(glm::min(i, j), glm::max(i, j));
-					}
-				}
-			}
-			Jobs::ParallelFor(m_particles2D.size(), [&](unsigned i)
-				{
-					m_particles2D[i].Update(m_deltaTime);
-				}
-			);
-		}
-		
-		if (!m_particles2D2.empty()) {
-			Jobs::ParallelFor(m_particles2D2.size(), [&](unsigned i)
-				{
-					modifyParticleFunc(m_particles2D2[i]);
-				}
-			);
+		if (m_particles2D.empty()) return;
 
-			InitializeGrid();
-			CheckCollisions(particles2Collisions);
-			for(const auto& i : particles2Collisions)
+		Jobs::ParallelFor(m_particles2D.size(), [&](unsigned i)
 			{
-				SolveContact2(i.first, i.second);
+				modifyParticleFunc(m_particles2D[i]);
 			}
-			Jobs::ParallelFor(m_particles2D2.size(), [&](unsigned i)
-				{
-					m_particles2D2[i].Update(m_deltaTime);
-				}
-			);
+		);
+		InitializeGrid();
+		std::vector<std::pair<ParticleHandle, ParticleHandle>> detectedCollisions;
+		CheckCollisions(detectedCollisions);
+		for (const auto& [fst, snd] : detectedCollisions)
+		{
+			SolveCollision(fst, snd);
 		}
+		Jobs::ParallelFor(m_particles2D.size(), [&](unsigned i)
+			{
+				m_particles2D[i].Update(m_deltaTime);
+			}
+		);
 	}
 
 	template <typename T>
@@ -165,7 +115,6 @@ namespace EcoSysLab {
 			m_min = glm::min(mins[i], m_min);
 			m_max = glm::max(maxs[i], m_max);
 		}
-		const auto gridSize = m_max - m_min;
 		const auto cellSize = m_particleRadius * 2.f;
 		m_particleGrid2D.Reset(cellSize, m_min, m_max);
 		for (ParticleHandle i = 0; i < m_particles2D.size(); i++)
@@ -176,36 +125,49 @@ namespace EcoSysLab {
 	}
 
 	template <typename T>
-	void ParticlePhysics2D<T>::CheckCollisions(std::vector<std::pair<ParticleHandle, ParticleHandle>>& collisions)
+	void ParticlePhysics2D<T>::CheckCollisions(std::vector<std::pair<ParticleHandle, ParticleHandle>>& detectedCollisions)
 	{
-		for(int particleHandle = 0; particleHandle < m_particles2D2.size(); particleHandle++)
+		for (int particleHandle = 0; particleHandle < m_particles2D.size(); particleHandle++)
 		{
-			const auto& particle = m_particles2D2[particleHandle];
+			const auto& particle = m_particles2D[particleHandle];
 			const auto& coordinate = m_particleGrid2D.GetCoordinate(particle.m_position);
-			for(int dx = -1; dx <= 1; dx++)
+			for (int dx = -1; dx <= 1; dx++)
 			{
 				for (int dy = -1; dy <= 1; dy++)
 				{
 					const auto x = coordinate.x + dx;
 					const auto y = coordinate.y + dy;
-					if(x < 0) continue;
-					if(y < 0) continue;
-					if(x >= m_particleGrid2D.m_resolution.x) continue;
+					if (x < 0) continue;
+					if (y < 0) continue;
+					if (x >= m_particleGrid2D.m_resolution.x) continue;
 					if (y >= m_particleGrid2D.m_resolution.y) continue;
 					const auto& cell = m_particleGrid2D.RefCell(glm::ivec2(x, y));
-					for(int i = 0; i < cell.m_atomCount; i++)
+					for (int i = 0; i < cell.m_atomCount; i++)
 					{
-						const auto particleHandle2 = cell.m_atomHandles[i];
-						if (particleHandle != particleHandle2) {
-							if (DetectContact(particleHandle, particleHandle2))
+						if (const auto particleHandle2 = cell.m_atomHandles[i]; particleHandle != particleHandle2) {
+							if (DetectCollision(particleHandle, particleHandle2))
 							{
-								collisions.emplace_back(glm::min(particleHandle, particleHandle2), glm::max(particleHandle, particleHandle2));
+								detectedCollisions.emplace_back(particleHandle, particleHandle2);
 							}
 						}
 					}
 				}
 			}
 		}
+	}
+
+	template <typename T>
+	float ParticlePhysics2D<T>::GetDeltaTime()
+	{
+		return m_deltaTime;
+	}
+
+	template <typename T>
+	void ParticlePhysics2D<T>::Reset(float deltaTime)
+	{
+		m_deltaTime = deltaTime;
+		m_particles2D.clear();
+		m_particleGrid2D = {};
 	}
 
 	template <typename T>
@@ -263,15 +225,15 @@ namespace EcoSysLab {
 	}
 
 	template <typename T>
-	void ParticlePhysics2D<T>::OnInspect(const std::function<void(glm::vec2 position)>& func, const std::function<void(ImVec2 origin, float zoomFactor, ImDrawList*)>& drawFunc)
+	void ParticlePhysics2D<T>::OnInspect(const std::function<void(glm::vec2 position)>& func, const std::function<void(ImVec2 origin, float zoomFactor, ImDrawList*)>& drawFunc, bool showGrid)
 	{
 		static auto scrolling = glm::vec2(0.0f);
-		static float zoomFactor = 1.f;
+		static float zoomFactor = 100.f;
 		if (ImGui::Button("Recenter")) {
 			scrolling = glm::vec2(0.0f);
 		}
-		ImGui::DragFloat("Zoom", &zoomFactor, zoomFactor / 100.0f, 0.01f, 50.0f);
-		zoomFactor = glm::clamp(zoomFactor, 0.01f, 50.0f);
+		ImGui::DragFloat("Zoom", &zoomFactor, zoomFactor / 100.0f, 0.1f, 1000.0f);
+		zoomFactor = glm::clamp(zoomFactor, 0.01f, 1000.0f);
 		const ImGuiIO& io = ImGui::GetIO();
 		ImDrawList* drawList = ImGui::GetWindowDrawList();
 
@@ -313,7 +275,7 @@ namespace EcoSysLab {
 
 		// Draw profile + all lines in the canvas
 		drawList->PushClipRect(canvasP0, canvasP1, true);
-		if (isMouseHovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+		if (isMouseHovered && ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
 			func(glm::vec2(mousePosInCanvas.x, mousePosInCanvas.y));
 		}
 		for (const auto& particle : m_particles2D) {
@@ -333,17 +295,19 @@ namespace EcoSysLab {
 			IM_COL32(255,
 				0,
 				0, 255));
-		for (int i = 0; i < m_particleGrid2D.m_resolution.x; i++)
-		{
-			for (int j = 0; j < m_particleGrid2D.m_resolution.y; j++)
+		if (showGrid) {
+			for (int i = 0; i < m_particleGrid2D.m_resolution.x; i++)
 			{
-				ImVec2 min = ImVec2(m_min.x + i * m_particleGrid2D.m_cellSize, m_min.y + j * m_particleGrid2D.m_cellSize);
-				drawList->AddQuad(
-					min * zoomFactor + origin, 
-					ImVec2(min.x + m_particleGrid2D.m_cellSize, min.y) * zoomFactor + origin,
-					ImVec2(min.x + m_particleGrid2D.m_cellSize, min.y + m_particleGrid2D.m_cellSize) * zoomFactor + origin,
-					ImVec2(min.x, min.y + m_particleGrid2D.m_cellSize) * zoomFactor + origin,
-					IM_COL32(0, 255, 0, 255));
+				for (int j = 0; j < m_particleGrid2D.m_resolution.y; j++)
+				{
+					ImVec2 min = ImVec2(m_min.x + i * m_particleGrid2D.m_cellSize, m_min.y + j * m_particleGrid2D.m_cellSize);
+					drawList->AddQuad(
+						min * zoomFactor + origin,
+						ImVec2(min.x + m_particleGrid2D.m_cellSize, min.y) * zoomFactor + origin,
+						ImVec2(min.x + m_particleGrid2D.m_cellSize, min.y + m_particleGrid2D.m_cellSize) * zoomFactor + origin,
+						ImVec2(min.x, min.y + m_particleGrid2D.m_cellSize) * zoomFactor + origin,
+						IM_COL32(0, 255, 0, 255));
+				}
 			}
 		}
 		drawFunc(origin, zoomFactor, drawList);

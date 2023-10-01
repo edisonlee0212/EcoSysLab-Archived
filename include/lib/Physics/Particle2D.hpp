@@ -25,8 +25,8 @@ namespace EcoSysLab {
 
 		void Move(const glm::vec2& position);
 
-		[[nodiscard]] glm::vec2 GetVelocity() const;
-		void SetVelocity(const glm::vec2& velocity);
+		[[nodiscard]] glm::vec2 GetVelocity(float dt) const;
+		void SetVelocity(const glm::vec2& velocity, float dt);
 
 		[[nodiscard]] glm::vec2 GetAcceleration() const;
 		void SetAcceleration(const glm::vec2& acceleration);
@@ -83,15 +83,15 @@ namespace EcoSysLab {
 	}
 
 	template <typename T>
-	glm::vec2 Particle2D<T>::GetVelocity() const
+	glm::vec2 Particle2D<T>::GetVelocity(const float dt) const
 	{
-		return m_position - m_lastPosition;
+		return (m_position - m_lastPosition) / dt;
 	}
 
 	template <typename T>
-	void Particle2D<T>::SetVelocity(const glm::vec2& velocity)
+	void Particle2D<T>::SetVelocity(const glm::vec2& velocity, const float dt)
 	{
-		m_lastPosition = m_position - velocity;
+		m_lastPosition = m_position - velocity * dt;
 	}
 
 	template <typename T>
