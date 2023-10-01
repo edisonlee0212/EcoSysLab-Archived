@@ -33,13 +33,13 @@ namespace EcoSysLab {
 	void ParticlePhysics2D<T>::DetectCollision(ParticleHandle p1Handle, ParticleHandle p2Handle)
 	{
 		auto& p1 = m_particles2D.at(p1Handle);
-		auto& p2 = m_particles2D.at(p2Handle);
+		const auto& p2 = m_particles2D.at(p2Handle);
 		const auto difference = p1.m_position - p2.m_position;
 		const auto distance = glm::length(difference);
 		const auto minDistance = 2.0f * m_particleRadius;
 		if (distance < minDistance)
 		{
-			const auto axis = distance < glm::epsilon<float>() ? glm::vec2(1, 0) : difference / distance;
+			const auto axis = distance < glm::epsilon<float>() ? p1Handle >= p2Handle ? glm::vec2(1, 0) : glm::vec2(0, 1) : difference / distance;
 			const auto delta = minDistance - distance;
 			p1.m_deltaPosition += 0.5f * delta * axis;
 		}
@@ -62,8 +62,9 @@ namespace EcoSysLab {
 		CheckCollisions();
 		Jobs::ParallelFor(m_particles2D.size(), [&](unsigned i)
 			{
-				m_particles2D[i].m_position += m_particles2D[i].m_deltaPosition;
-				m_particles2D[i].Update(m_deltaTime);
+				auto& particle = m_particles2D[i];
+				particle.m_position += particle.m_deltaPosition;
+				particle.Update(m_deltaTime);
 			}
 		);
 	}
