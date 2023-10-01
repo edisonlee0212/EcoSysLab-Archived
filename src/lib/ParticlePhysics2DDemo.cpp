@@ -39,12 +39,33 @@ void ParticlePhysics2DDemo::OnInspect(const std::shared_ptr<EditorLayer>& editor
 				{
 					if (elapsedTime > Times::TimeStep()) {
 						elapsedTime = 0.0f;
-						const auto particleHandle = m_particlePhysics2D.AllocateParticle();
-						auto& particle = m_particlePhysics2D.RefParticle(particleHandle);
-						particle.SetColor(glm::vec4(glm::abs(glm::ballRand(1.0f)), 1.0f));
-						particle.SetPosition(position);
-						particle.SetDamping(targetDamping);
-						particle.SetVelocity(glm::vec2(m_particlePhysics2D.m_particleRadius * 2.0f, 0.0f) / static_cast<float>(Times::TimeStep()), m_particlePhysics2D.GetDeltaTime());
+						const auto particleHandle1 = m_particlePhysics2D.AllocateParticle();
+						auto& particle1 = m_particlePhysics2D.RefParticle(particleHandle1);
+						particle1.SetColor(glm::vec4(glm::abs(glm::ballRand(1.0f)), 1.0f));
+						particle1.SetPosition(position);
+						particle1.SetDamping(targetDamping);
+						particle1.SetVelocity(glm::vec2(m_particlePhysics2D.m_particleRadius * 2.0f, 0.0f) / static_cast<float>(Times::TimeStep()), m_particlePhysics2D.GetDeltaTime());
+
+						const auto particleHandle2 = m_particlePhysics2D.AllocateParticle();
+						auto& particle2 = m_particlePhysics2D.RefParticle(particleHandle2);
+						particle2.SetColor(glm::vec4(glm::abs(glm::ballRand(1.0f)), 1.0f));
+						particle2.SetPosition(position);
+						particle2.SetDamping(targetDamping);
+						particle2.SetVelocity(glm::vec2(-m_particlePhysics2D.m_particleRadius * 2.0f, 0.0f) / static_cast<float>(Times::TimeStep()), m_particlePhysics2D.GetDeltaTime());
+
+						const auto particleHandle3 = m_particlePhysics2D.AllocateParticle();
+						auto& particle3 = m_particlePhysics2D.RefParticle(particleHandle3);
+						particle3.SetColor(glm::vec4(glm::abs(glm::ballRand(1.0f)), 1.0f));
+						particle3.SetPosition(position);
+						particle3.SetDamping(targetDamping);
+						particle3.SetVelocity(glm::vec2(0.0f, m_particlePhysics2D.m_particleRadius * 2.0f) / static_cast<float>(Times::TimeStep()), m_particlePhysics2D.GetDeltaTime());
+
+						const auto particleHandle4 = m_particlePhysics2D.AllocateParticle();
+						auto& particle4 = m_particlePhysics2D.RefParticle(particleHandle4);
+						particle4.SetColor(glm::vec4(glm::abs(glm::ballRand(1.0f)), 1.0f));
+						particle4.SetPosition(position);
+						particle4.SetDamping(targetDamping);
+						particle4.SetVelocity(glm::vec2(0.0f, -m_particlePhysics2D.m_particleRadius * 2.0f) / static_cast<float>(Times::TimeStep()), m_particlePhysics2D.GetDeltaTime());
 					}
 				}, [&](const ImVec2 origin, const float zoomFactor, ImDrawList* drawList)
 					{
@@ -56,7 +77,7 @@ void ParticlePhysics2DDemo::OnInspect(const std::shared_ptr<EditorLayer>& editor
 								0, 255));
 					},
 					showGrid
-				);
+					);
 		}
 		ImGui::End();
 	}

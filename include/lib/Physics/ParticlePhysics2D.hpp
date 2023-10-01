@@ -8,15 +8,14 @@ namespace EcoSysLab {
 	{
 		ParticleGrid2D m_particleGrid2D{};
 		std::vector<Particle2D<T>> m_particles2D{};
-		bool DetectCollision(ParticleHandle p1Handle, ParticleHandle p2Handle);
-		void SolveCollision(ParticleHandle p1Handle, ParticleHandle p2Handle);
+		void DetectCollision(ParticleHandle p1Handle, ParticleHandle p2Handle);
 		float m_deltaTime = 0.002f;
 		void Update(const std::function<void(Particle2D<T>& particle)>& modifyParticleFunc);
 		void InitializeGrid();
-		void CheckCollisions(std::vector<std::pair<ParticleHandle, ParticleHandle>>& detectedCollisions);
+		void CheckCollisions();
 		glm::vec2 m_min, m_max;
 	public:
-		[[nodiscard]] float GetDeltaTime();
+		[[nodiscard]] float GetDeltaTime() const;
 		void Reset(float deltaTime);
 		float m_particleRadius = 0.01f;
 		[[nodiscard]] ParticleHandle AllocateParticle();
@@ -31,22 +30,7 @@ namespace EcoSysLab {
 	};
 
 	template <typename T>
-	bool ParticlePhysics2D<T>::DetectCollision(ParticleHandle p1Handle, ParticleHandle p2Handle)
-	{
-		auto& p1 = m_particles2D.at(p1Handle);
-		auto& p2 = m_particles2D.at(p2Handle);
-		const auto difference = p1.m_position - p2.m_position;
-		const auto distance = glm::length(difference);
-		const auto minDistance = 2.0f * m_particleRadius;
-		if (distance < minDistance)
-		{
-			return true;
-		}
-		return false;
-	}
-
-	template <typename T>
-	void ParticlePhysics2D<T>::SolveCollision(ParticleHandle p1Handle, ParticleHandle p2Handle)
+	void ParticlePhysics2D<T>::DetectCollision(ParticleHandle p1Handle, ParticleHandle p2Handle)
 	{
 		auto& p1 = m_particles2D.at(p1Handle);
 		auto& p2 = m_particles2D.at(p2Handle);
@@ -57,8 +41,7 @@ namespace EcoSysLab {
 		{
 			const auto axis = distance < glm::epsilon<float>() ? glm::vec2(1, 0) : difference / distance;
 			const auto delta = minDistance - distance;
-			p1.m_position += 0.5f * delta * axis;
-			p2.m_position -= 0.5f * delta * axis;
+			p1.m_deltaPosition += 0.5f * delta * axis;
 		}
 	}
 
@@ -70,18 +53,16 @@ namespace EcoSysLab {
 
 		Jobs::ParallelFor(m_particles2D.size(), [&](unsigned i)
 			{
-				modifyParticleFunc(m_particles2D[i]);
+				auto& particle = m_particles2D[i];
+				modifyParticleFunc(particle);
+				particle.m_deltaPosition = glm::vec2(0);
 			}
 		);
 		InitializeGrid();
-		std::vector<std::pair<ParticleHandle, ParticleHandle>> detectedCollisions;
-		CheckCollisions(detectedCollisions);
-		for (const auto& [fst, snd] : detectedCollisions)
-		{
-			SolveCollision(fst, snd);
-		}
+		CheckCollisions();
 		Jobs::ParallelFor(m_particles2D.size(), [&](unsigned i)
 			{
+				m_particles2D[i].m_position += m_particles2D[i].m_deltaPosition;
 				m_particles2D[i].Update(m_deltaTime);
 			}
 		);
@@ -125,10 +106,10 @@ namespace EcoSysLab {
 	}
 
 	template <typename T>
-	void ParticlePhysics2D<T>::CheckCollisions(std::vector<std::pair<ParticleHandle, ParticleHandle>>& detectedCollisions)
+	void ParticlePhysics2D<T>::CheckCollisions()
 	{
-		for (int particleHandle = 0; particleHandle < m_particles2D.size(); particleHandle++)
-		{
+		Jobs::ParallelFor(m_particles2D.size(), [&](unsigned i) {
+			const ParticleHandle particleHandle = i;
 			const auto& particle = m_particles2D[particleHandle];
 			const auto& coordinate = m_particleGrid2D.GetCoordinate(particle.m_position);
 			for (int dx = -1; dx <= 1; dx++)
@@ -145,25 +126,22 @@ namespace EcoSysLab {
 					for (int i = 0; i < cell.m_atomCount; i++)
 					{
 						if (const auto particleHandle2 = cell.m_atomHandles[i]; particleHandle != particleHandle2) {
-							if (DetectCollision(particleHandle, particleHandle2))
-							{
-								detectedCollisions.emplace_back(particleHandle, particleHandle2);
-							}
+							DetectCollision(particleHandle, particleHandle2);
 						}
 					}
 				}
 			}
-		}
+		});
 	}
 
 	template <typename T>
-	float ParticlePhysics2D<T>::GetDeltaTime()
+	float ParticlePhysics2D<T>::GetDeltaTime() const
 	{
 		return m_deltaTime;
 	}
 
 	template <typename T>
-	void ParticlePhysics2D<T>::Reset(float deltaTime)
+	void ParticlePhysics2D<T>::Reset(const float deltaTime)
 	{
 		m_deltaTime = deltaTime;
 		m_particles2D.clear();
