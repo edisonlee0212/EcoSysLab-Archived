@@ -18,6 +18,7 @@ namespace EcoSysLab {
 		glm::vec3 m_position = glm::vec3(0.0f);
 	};
 	struct AllocatedPoint {
+		glm::vec3 m_color;
 		glm::vec3 m_position;
 		PointHandle m_handle = -1;
 		TreePartHandle m_treePartHandle = -1;
@@ -26,6 +27,8 @@ namespace EcoSysLab {
 		int m_skeletonIndex = -1;
 	};
 	struct ScannedBranch {
+		glm::vec3 m_color;
+
 		TreePartHandle m_treePartHandle = -1;
 		BranchHandle m_handle = -1;
 		BezierCurve m_bezierCurve;
@@ -40,6 +43,8 @@ namespace EcoSysLab {
 	};
 
 	struct OperatingBranch {
+		glm::vec3 m_color;
+
 		TreePartHandle m_treePartHandle = -1;
 		BranchHandle m_handle = -1;
 		BezierCurve m_bezierCurve;
@@ -55,6 +60,7 @@ namespace EcoSysLab {
 	};
 
 	struct TreePart {
+		glm::vec3 m_color;
 		TreePartHandle m_handle = -1;
 		std::vector<PointHandle> m_allocatedPoints;
 		std::vector<BranchHandle> m_branchHandles;

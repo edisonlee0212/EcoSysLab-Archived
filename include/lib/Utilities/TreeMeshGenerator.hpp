@@ -233,6 +233,7 @@ namespace EcoSysLab {
 				const float x =
 					p < pStep / 2 ? p * textureXStep : (pStep - p) * textureXStep;
 				archetype.m_texCoord = glm::vec2(x, 0.0f);
+				archetype.m_color = internodeInfo.m_color;
 				vertices.push_back(archetype);
 			}
 			std::vector<float> angles;

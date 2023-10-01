@@ -25,7 +25,7 @@ namespace EcoSysLab {
 
 		glm::quat m_regulatedGlobalRotation = glm::vec3(0.0f);
 
-		
+		glm::vec4 m_color = glm::vec4(1.0f);
 	};
 
 	struct FlowInfo {

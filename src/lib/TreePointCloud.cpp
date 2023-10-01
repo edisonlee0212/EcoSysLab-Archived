@@ -100,11 +100,12 @@ void TreePointCloud::ImportGraph(const std::filesystem::path& path, float scaleF
 			const auto& inTreeParts = treeParts[i];
 			auto& treePart = m_treeParts.emplace_back();
 			treePart.m_handle = m_treeParts.size() - 1;
+			treePart.m_color = inTreeParts["Color"].as<glm::vec3>() / 255.0f;
 			for (const auto& inBranch : inTreeParts["Branches"]) {
 				auto& branch = m_scannedBranches.emplace_back();
 				branch.m_bezierCurve.m_p0 = inBranch["Start Pos"].as<glm::vec3>() * scaleFactor;
 				branch.m_bezierCurve.m_p3 = inBranch["End Pos"].as<glm::vec3>() * scaleFactor;
-
+				branch.m_color = treePart.m_color;
 				auto cPLength = glm::distance(branch.m_bezierCurve.m_p0, branch.m_bezierCurve.m_p3) * 0.3f;
 				branch.m_bezierCurve.m_p1 =
 					glm::normalize(inBranch["Start Dir"].as<glm::vec3>()) * cPLength + branch.m_bezierCurve.m_p0;
@@ -143,6 +144,7 @@ void TreePointCloud::ImportGraph(const std::filesystem::path& path, float scaleF
 			}
 			for (const auto& inAllocatedPoint : inTreeParts["Allocated Points"]) {
 				auto& allocatedPoint = m_allocatedPoints.emplace_back();
+				allocatedPoint.m_color = treePart.m_color;
 				allocatedPoint.m_position = inAllocatedPoint.as<glm::vec3>() * scaleFactor;
 				allocatedPoint.m_handle = m_allocatedPoints.size() - 1;
 				allocatedPoint.m_treePartHandle = treePart.m_handle;
@@ -347,15 +349,13 @@ void TreePointCloud::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 				for (int i = 0; i < m_allocatedPoints.size(); i++) {
 					allocatedPointMatrices[i].m_instanceMatrix.m_value =
 						glm::translate(m_allocatedPoints[i].m_position) * glm::scale(glm::vec3(1.0f));
-					allocatedPointMatrices[i].m_instanceColor = glm::vec4(
-						ecoSysLabLayer->RandomColors()[m_allocatedPoints[i].m_treePartHandle], 1.0f);
+					allocatedPointMatrices[i].m_instanceColor = glm::vec4(m_allocatedPoints[i].m_color, 1.0f);
 				}
 				
 				for (int i = 0; i < m_scannedBranches.size(); i++) {
 					scannedBranchConnectionStarts[i] = m_scannedBranches[i].m_bezierCurve.m_p0;
 					scannedBranchConnectionEnds[i] = m_scannedBranches[i].m_bezierCurve.m_p3;
-					scannedBranchConnectionColors[i] = glm::vec4(
-						ecoSysLabLayer->RandomColors()[m_scannedBranches[i].m_treePartHandle], 1.0f);
+					scannedBranchConnectionColors[i] = glm::vec4(m_scannedBranches[i].m_color, 1.0f);
 				}
 				scannedBranchConnectionInfoList->ApplyConnections(scannedBranchConnectionStarts, scannedBranchConnectionEnds, scannedBranchConnectionColors, scannedBranchWidth);
 				for (const auto& skeleton : m_skeletons) {
@@ -796,6 +796,7 @@ void ApplyCurve(ReconstructionSkeleton& skeleton, OperatingBranch& branch) {
 		node.m_info.m_thickness = glm::mix(branch.m_startThickness, branch.m_endThickness,
 			static_cast<float>(i) / chainAmount);
 		node.m_data.m_branchHandle = branch.m_handle;
+		node.m_info.m_color = glm::vec4(branch.m_color, 1.0f);
 	}
 }
 
@@ -869,6 +870,7 @@ void TreePointCloud::BuildTreeStructure(const ReconstructionSettings& reconstruc
 				auto& processingBranch = operatingBranches[processingBranchHandle];
 				auto& connectionBranch = operatingBranches.back();
 				auto& parentBranch = operatingBranches[processingBranch.m_parentHandle];
+				connectionBranch.m_color = parentBranch.m_color;
 				connectionBranch.m_handle = operatingBranches.size() - 1;
 				connectionBranch.m_bezierCurve.m_p0 = parentBranch.m_bezierCurve.m_p3;
 				connectionBranch.m_bezierCurve.m_p3 = processingBranch.m_bezierCurve.m_p0;
@@ -1092,6 +1094,7 @@ void ConnectivityGraphSettings::OnInspect() {
 }
 
 void OperatingBranch::Apply(const ScannedBranch& target) {
+	m_color = target.m_color;
 	m_treePartHandle = target.m_treePartHandle;
 	m_handle = target.m_handle;
 	m_bezierCurve = target.m_bezierCurve;
