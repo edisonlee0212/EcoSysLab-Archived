@@ -19,16 +19,20 @@ namespace EcoSysLab {
 
 	class ParticleGrid2D
 	{
-		size_t m_width = 0;
-		size_t m_height = 0;
+		glm::vec2 m_minBound = glm::vec2(0.0f);
+		float m_cellSize = 1.0f;
+		glm::ivec2 m_resolution = { 0, 0 };
 		std::vector<ParticleCell> m_cells{};
 		template<typename PD>
 		friend class ParticlePhysics2D;
 	public:
 		ParticleGrid2D() = default;
-		void Reset(size_t width, size_t height);
-		void RegisterParticle(size_t x, size_t y, ParticleHandle handle);
-		ParticleCell& RefCell(size_t x, size_t y);
+		void Reset(float cellSize, const glm::vec2& minBound, const glm::ivec2& resolution);
+		void Reset(float cellSize, const glm::vec2& minBound, const glm::vec2& maxBound);
+		void RegisterParticle(const glm::vec2& position, ParticleHandle handle);
+		[[nodiscard]] glm::ivec2 GetCoordinate(const glm::vec2& position) const;
+		[[nodiscard]] ParticleCell& RefCell(const glm::vec2& position);
+		[[nodiscard]] ParticleCell& RefCell(const glm::ivec2& coordinate);
 		void Clear();
 	};
 }

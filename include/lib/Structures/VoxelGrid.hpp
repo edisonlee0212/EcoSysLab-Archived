@@ -70,9 +70,9 @@ namespace EcoSysLab {
 	{
 		Initialize(voxelSize,
 			glm::ivec3(
-				glm::ceil((maxBound.x - minBound.x) / voxelSize),
-				glm::ceil((maxBound.y - minBound.y) / voxelSize),
-				glm::ceil((maxBound.z - minBound.z) / voxelSize)), minBound, defaultData);
+				glm::ceil((maxBound.x - minBound.x) / voxelSize) + 1,
+				glm::ceil((maxBound.y - minBound.y) / voxelSize) + 1,
+				glm::ceil((maxBound.z - minBound.z) / voxelSize) + 1), minBound, defaultData);
 	}
 
 	template <typename VoxelData>

@@ -25,6 +25,7 @@ namespace EcoSysLab {
 	template <typename T>
 	void Physics2D<T>::SolveContact(RigidBodyHandle p1Handle, RigidBodyHandle p2Handle)
 	{
+		if (p1Handle == p2Handle) return;
 		auto& p1 = m_rigidBodies2D.at(p1Handle);
 		auto& p2 = m_rigidBodies2D.at(p2Handle);
 		const auto difference = p1.m_position - p2.m_position;
