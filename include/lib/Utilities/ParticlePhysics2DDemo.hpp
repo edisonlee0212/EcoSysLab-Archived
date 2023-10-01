@@ -1,16 +1,16 @@
 #pragma once
-#include "Physics2D.hpp"
+#include "ParticlePhysics2D.hpp"
 
 using namespace EvoEngine;
 namespace EcoSysLab
 {
-	struct Physics2DDemoData
+	struct ParticlePhysicsDemoData
 	{
 		glm::vec4 m_color = glm::vec4(1.0f);
 	};
-	class Physics2DDemo : public IPrivateComponent
+	class ParticlePhysics2DDemo : public IPrivateComponent
 	{
-		Physics2D<Physics2DDemoData> m_physics2D;
+		ParticlePhysics2D<ParticlePhysicsDemoData> m_particlePhysics2D;
 	public:
 		glm::vec2 m_worldCenter = glm::vec2(0.0f);
 		float m_worldRadius = 10.0f;

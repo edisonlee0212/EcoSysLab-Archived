@@ -1,37 +1,32 @@
 #pragma once
-#include "Particle2D.hpp"
-#include "ParticleGrid2D.hpp"
+#include "RigidBody2D.hpp"
 using namespace EvoEngine;
 namespace EcoSysLab {
+	typedef int RigidBodyHandle;
 	template<typename T>
 	class Physics2D
 	{
-		ParticleGrid2D m_collisionGrid2D{};
-
-		std::vector<Particle2D<T>> m_particles{};
-
-		void SolveContact(ParticleHandle p1Handle, ParticleHandle p2Handle);
-
+		std::vector<RigidBody2D<T>> m_rigidBodies2D{};
+		void SolveContact(RigidBodyHandle p1Handle, RigidBodyHandle p2Handle);
 		float m_deltaTime = 0.002f;
-		void UpdateSingleThreaded(const std::function<void(Particle2D<T>& collisionParticle)>& modifyParticleFunc);
+		void Update(const std::function<void(RigidBody2D<T>& rigidBody)>& modifyRigidBodyFunc);
 	public:
-		void ResetGrid(size_t width, size_t height);
-		[[nodiscard]] ParticleHandle AllocateParticle();
-		[[nodiscard]] Particle2D<T>& RefParticle(ParticleHandle handle);
-		void RemoveParticle(ParticleHandle handle);
+		[[nodiscard]] RigidBodyHandle AllocateRigidBody();
+		[[nodiscard]] RigidBody2D<T>& RefRigidBody(RigidBodyHandle handle);
+		void RemoveRigidBody(RigidBodyHandle handle);
 		void Shift(const glm::vec2& offset);
-		[[nodiscard]] const std::vector<Particle2D<T>>& PeekParticles() const;
-		[[nodiscard]] std::vector<Particle2D<T>>& RefParticles();
-		void Simulate(float time, const std::function<void(Particle2D<T>& collisionParticle)>& modifyParticleFunc);
+		[[nodiscard]] const std::vector<RigidBody2D<T>>& PeekRigidBodies() const;
+		[[nodiscard]] std::vector<RigidBody2D<T>>& RefRigidBodies();
+		void Simulate(float time, const std::function<void(RigidBody2D<T>& rigidBody)>& modifyRigidBodyFunc);
 
 		void OnInspect(const std::function<void(glm::vec2 position)>& func, const std::function<void(ImVec2 origin, float zoomFactor, ImDrawList*)>& drawFunc);
 	};
 
 	template <typename T>
-	void Physics2D<T>::SolveContact(ParticleHandle p1Handle, ParticleHandle p2Handle)
+	void Physics2D<T>::SolveContact(RigidBodyHandle p1Handle, RigidBodyHandle p2Handle)
 	{
-		auto& p1 = m_particles.at(p1Handle);
-		auto& p2 = m_particles.at(p2Handle);
+		auto& p1 = m_rigidBodies2D.at(p1Handle);
+		auto& p2 = m_rigidBodies2D.at(p2Handle);
 		const auto difference = p1.m_position - p2.m_position;
 		const auto distance = glm::length(difference);
 		const auto minDistance = p1.m_radius + p2.m_radius;
@@ -45,83 +40,79 @@ namespace EcoSysLab {
 	}
 
 	template <typename T>
-	void Physics2D<T>::UpdateSingleThreaded(
-		const std::function<void(Particle2D<T>& collisionParticle)>& modifyParticleFunc)
+	void Physics2D<T>::Update(
+		const std::function<void(RigidBody2D<T>& collisionRigidBody)>& modifyRigidBodyFunc)
 	{
-		for (auto& collisionParticle : m_particles)
+		Jobs::ParallelFor(m_rigidBodies2D.size(), [&](unsigned i)
+			{
+				modifyRigidBodyFunc(m_rigidBodies2D[i]);
+			}
+		);
+		for (size_t i = 0; i < m_rigidBodies2D.size(); i++)
 		{
-			modifyParticleFunc(collisionParticle);
-		}
-		for (size_t i = 0; i < m_particles.size(); i++)
-		{
-			for (size_t j = 0; j < m_particles.size(); j++)
+			for (size_t j = 0; j < m_rigidBodies2D.size(); j++)
 			{
 				SolveContact(i, j);
 			}
 		}
-		for (auto& collisionParticle : m_particles)
-		{
-			collisionParticle.Update(m_deltaTime);
-		}
+		Jobs::ParallelFor(m_rigidBodies2D.size(), [&](unsigned i)
+			{
+				m_rigidBodies2D[i].Update(m_deltaTime);
+			}
+		);
 	}
 
 	template <typename T>
-	void Physics2D<T>::ResetGrid(const size_t width, const size_t height)
+	RigidBodyHandle Physics2D<T>::AllocateRigidBody()
 	{
-		m_collisionGrid2D.Reset(width, height);
+		m_rigidBodies2D.emplace_back();
+		return m_rigidBodies2D.size() - 1;
 	}
 
 	template <typename T>
-	ParticleHandle Physics2D<T>::AllocateParticle()
+	RigidBody2D<T>& Physics2D<T>::RefRigidBody(RigidBodyHandle handle)
 	{
-		m_particles.emplace_back();
-		return m_particles.size() - 1;
+		return m_rigidBodies2D[handle];
 	}
 
 	template <typename T>
-	Particle2D<T>& Physics2D<T>::RefParticle(ParticleHandle handle)
+	void Physics2D<T>::RemoveRigidBody(RigidBodyHandle handle)
 	{
-		return m_particles[handle];
-	}
-
-	template <typename T>
-	void Physics2D<T>::RemoveParticle(ParticleHandle handle)
-	{
-		m_particles[handle] = m_particles.back();
-		m_particles.pop_back();
+		m_rigidBodies2D[handle] = m_rigidBodies2D.back();
+		m_rigidBodies2D.pop_back();
 	}
 
 	template <typename T>
 	void Physics2D<T>::Shift(const glm::vec2& offset)
 	{
-		Jobs::ParallelFor(m_particles.size(), [&](unsigned i)
+		Jobs::ParallelFor(m_rigidBodies2D.size(), [&](unsigned i)
 			{
-				auto& particle = m_particles[i];
+				auto& particle = m_rigidBodies2D[i];
 				particle.SetPosition(particle.m_position + offset);
 			}
 		);
 	}
 
 	template <typename T>
-	const std::vector<Particle2D<T>>& Physics2D<T>::PeekParticles() const
+	const std::vector<RigidBody2D<T>>& Physics2D<T>::PeekRigidBodies() const
 	{
-		return m_particles;
+		return m_rigidBodies2D;
 	}
 
 	template <typename T>
-	std::vector<Particle2D<T>>& Physics2D<T>::RefParticles()
+	std::vector<RigidBody2D<T>>& Physics2D<T>::RefRigidBodies()
 	{
-		return m_particles;
+		return m_rigidBodies2D;
 	}
 
 	template <typename T>
 	void Physics2D<T>::Simulate(float time,
-		const std::function<void(Particle2D<T>& collisionParticle)>& modifyParticleFunc)
+		const std::function<void(RigidBody2D<T>& collisionRigidBody)>& modifyRigidBodyFunc)
 	{
 		const auto count = static_cast<size_t>(glm::round(time / m_deltaTime));
 		for (size_t i{ count }; i--;)
 		{
-			UpdateSingleThreaded(modifyParticleFunc);
+			Update(modifyRigidBodyFunc);
 		}
 	}
 
@@ -179,7 +170,7 @@ namespace EcoSysLab {
 		if (isMouseHovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
 			func(glm::vec2(mousePosInCanvas.x, mousePosInCanvas.y));
 		}
-		for (const auto& particle : m_particles) {
+		for (const auto& particle : m_rigidBodies2D) {
 			const auto& pointPosition = particle.m_position;
 			const auto& pointRadius = particle.m_radius;
 			const auto& pointColor = particle.m_color;

@@ -21,6 +21,7 @@
 #include "RadialBoundingVolume.hpp"
 #include "HeightField.hpp"
 #include "ObjectRotator.hpp"
+#include "ParticlePhysics2DDemo.hpp"
 #include "Physics2DDemo.hpp"
 #include "SinglePipeProfile.hpp"
 #include "SorghumLayer.hpp"
@@ -102,6 +103,7 @@ int main() {
 	ClassRegistry::RegisterPrivateComponent<SinglePipeProfile>("SinglePipeProfile");
 	ClassRegistry::RegisterPrivateComponent<PipeModelBase>("PipeModelBase");
 	ClassRegistry::RegisterPrivateComponent<Physics2DDemo>("Physics2DDemo");
+	ClassRegistry::RegisterPrivateComponent<ParticlePhysics2DDemo>("ParticlePhysics2DDemo");
 	ApplicationInfo applicationConfigs;
 	applicationConfigs.m_applicationName = "EcoSysLab";
 	Application::Initialize(applicationConfigs);

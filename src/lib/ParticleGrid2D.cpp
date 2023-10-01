@@ -41,6 +41,13 @@ void ParticleGrid2D::RegisterParticle(const size_t x, const size_t y, const Part
 	m_cells[cellIndex].RegisterParticle(handle);
 }
 
+ParticleCell& ParticleGrid2D::RefCell(const size_t x, const size_t y)
+{
+	assert(x < m_width && y < m_height);
+	const auto cellIndex = x * m_height + y;
+	return m_cells[cellIndex];
+}
+
 void ParticleGrid2D::Clear()
 {
 	std::memset(m_cells.data(), 0, m_cells.size() * sizeof(ParticleCell));
