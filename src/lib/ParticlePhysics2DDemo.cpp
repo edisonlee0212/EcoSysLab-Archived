@@ -6,18 +6,21 @@ using namespace EcoSysLab;
 void ParticlePhysics2DDemo::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
 	static bool enableRender = true;
+	static float deltaTime = 0.002f;
+	ImGui::DragFloat("Simulation Delta time", &deltaTime, 0.001f, 0.001f, 1.0f);
 	if (ImGui::Button("Reset"))
 	{
-		m_particlePhysics2D = {};
+		m_particlePhysics2D.Reset(deltaTime);
 	}
-
+	ImGui::DragFloat("Particle Radius", &m_particlePhysics2D.m_particleRadius, 0.001f, 0.001f, 1.0f);
+	ImGui::DragFloat("Particle Softness", &m_particlePhysics2D.m_particleSoftness, 0.001f, 0.001f, 1.0f);
 	ImGui::Checkbox("Enable render", &enableRender);
 	ImGui::DragFloat2("World center", &m_worldCenter.x, 0.001f);
-	ImGui::DragFloat("World radius", &m_worldRadius, 0.01f);
+	ImGui::DragFloat("World radius", &m_worldRadius, 0.01f, 0.5f, 10.0f);
 	ImGui::DragFloat("Gravity strength", &m_gravityStrength, 0.01f);
-	ImGui::DragFloat("Friction", &m_friction, 0.01f, 0.0f, 1.0f);
+	ImGui::DragInt("Particle Adding speed", &m_particleAddCount, 1, 1, 1000);
 	static float targetDamping = 0.01f;
-	ImGui::DragFloat("Target damping", &targetDamping, 0.01f);
+	ImGui::DragFloat("Target damping", &targetDamping, 0.01f, 0.0f, 1.0f);
 	if (ImGui::Button("Apply damping"))
 	{
 		for (auto& particle : m_particlePhysics2D.RefParticles())
@@ -27,7 +30,7 @@ void ParticlePhysics2DDemo::OnInspect(const std::shared_ptr<EditorLayer>& editor
 	}
 	static bool showGrid = false;
 	ImGui::Checkbox("Show Grid", &showGrid);
-
+	
 	if (enableRender)
 	{
 		const std::string tag = "ParticlePhysics2D Scene [" + std::to_string(GetOwner().GetIndex()) + "]";
@@ -39,33 +42,15 @@ void ParticlePhysics2DDemo::OnInspect(const std::shared_ptr<EditorLayer>& editor
 				{
 					if (elapsedTime > Times::TimeStep()) {
 						elapsedTime = 0.0f;
-						const auto particleHandle1 = m_particlePhysics2D.AllocateParticle();
-						auto& particle1 = m_particlePhysics2D.RefParticle(particleHandle1);
-						particle1.SetColor(glm::vec4(glm::abs(glm::ballRand(1.0f)), 1.0f));
-						particle1.SetPosition(position);
-						particle1.SetDamping(targetDamping);
-						particle1.SetVelocity(glm::vec2(m_particlePhysics2D.m_particleRadius * 2.0f, 0.0f) / static_cast<float>(Times::TimeStep()), m_particlePhysics2D.GetDeltaTime());
-
-						const auto particleHandle2 = m_particlePhysics2D.AllocateParticle();
-						auto& particle2 = m_particlePhysics2D.RefParticle(particleHandle2);
-						particle2.SetColor(glm::vec4(glm::abs(glm::ballRand(1.0f)), 1.0f));
-						particle2.SetPosition(position);
-						particle2.SetDamping(targetDamping);
-						particle2.SetVelocity(glm::vec2(-m_particlePhysics2D.m_particleRadius * 2.0f, 0.0f) / static_cast<float>(Times::TimeStep()), m_particlePhysics2D.GetDeltaTime());
-
-						const auto particleHandle3 = m_particlePhysics2D.AllocateParticle();
-						auto& particle3 = m_particlePhysics2D.RefParticle(particleHandle3);
-						particle3.SetColor(glm::vec4(glm::abs(glm::ballRand(1.0f)), 1.0f));
-						particle3.SetPosition(position);
-						particle3.SetDamping(targetDamping);
-						particle3.SetVelocity(glm::vec2(0.0f, m_particlePhysics2D.m_particleRadius * 2.0f) / static_cast<float>(Times::TimeStep()), m_particlePhysics2D.GetDeltaTime());
-
-						const auto particleHandle4 = m_particlePhysics2D.AllocateParticle();
-						auto& particle4 = m_particlePhysics2D.RefParticle(particleHandle4);
-						particle4.SetColor(glm::vec4(glm::abs(glm::ballRand(1.0f)), 1.0f));
-						particle4.SetPosition(position);
-						particle4.SetDamping(targetDamping);
-						particle4.SetVelocity(glm::vec2(0.0f, -m_particlePhysics2D.m_particleRadius * 2.0f) / static_cast<float>(Times::TimeStep()), m_particlePhysics2D.GetDeltaTime());
+						for(int i = 0; i < m_particleAddCount; i++)
+						{
+							const auto particleHandle = m_particlePhysics2D.AllocateParticle();
+							auto& particle = m_particlePhysics2D.RefParticle(particleHandle);
+							particle.SetColor(glm::vec4(glm::ballRand(1.0f), 1.0f));
+							particle.SetPosition(position + glm::circularRand(m_particlePhysics2D.m_particleRadius * 4.0f));
+							particle.SetDamping(targetDamping);
+							particle.SetVelocity(glm::vec2(m_particlePhysics2D.m_particleRadius * 2.0f, 0.0f) / static_cast<float>(Times::TimeStep()), m_particlePhysics2D.GetDeltaTime());
+						}
 					}
 				}, [&](const ImVec2 origin, const float zoomFactor, ImDrawList* drawList)
 					{
@@ -85,16 +70,13 @@ void ParticlePhysics2DDemo::OnInspect(const std::shared_ptr<EditorLayer>& editor
 
 void ParticlePhysics2DDemo::FixedUpdate()
 {
-	const auto gravity = m_gravityDirection * m_gravityStrength;
-	m_particlePhysics2D.Simulate(Times::FixedDeltaTime(), [&](auto& particle)
+	m_particlePhysics2D.Simulate(Times::TimeStep() / m_particlePhysics2D.GetDeltaTime(), [&](auto& particle)
 		{
 			//Apply gravity
-			glm::vec2 acceleration = gravity;
-			auto friction = -particle.GetVelocity(m_particlePhysics2D.GetDeltaTime()) * m_friction * m_particlePhysics2D.GetDeltaTime();
-			if (!glm::any(glm::isnan(friction)))
-			{
-				acceleration += friction;
-			}
+			particle.SetPosition(particle.GetPosition() - m_particlePhysics2D.GetMassCenter());
+
+			glm::vec2 acceleration = m_gravityStrength * -glm::normalize(particle.GetPosition());
+			
 			{
 				particle.SetAcceleration(acceleration);
 			}
