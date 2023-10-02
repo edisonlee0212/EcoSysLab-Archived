@@ -41,7 +41,7 @@ namespace EcoSysLab {
 	public:
 		PipeModelParameters m_pipeModelParameters{};
 		
-		void InitializeStrandRenderer() const;
+		void InitializeStrandRenderer();
 
 		void Serialize(YAML::Emitter& out) override;
 		bool m_splitRootTest = true;

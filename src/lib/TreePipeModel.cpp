@@ -93,6 +93,8 @@ void TreePipeModel::UpdatePipeModels(const TreeModel& targetTreeModel)
 				segmentIndex++;
 			}
 
+			auto direction = glm::circularRand(1.0f);
+
 			const auto baseCellHandle = baseProfile.AllocateCell();
 			node.m_data.m_pipeHandle = pipeGroup.AllocatePipe();
 			
@@ -100,7 +102,7 @@ void TreePipeModel::UpdatePipeModels(const TreeModel& targetTreeModel)
 			baseCell.m_data.m_pipeHandle = node.m_data.m_pipeHandle;
 			baseCell.m_data.m_pipeSegmentHandle = -1;
 			baseCell.m_info.m_radius = endNodeThickness;
-			baseCell.m_info.m_offset = baseProfile.FindAvailablePosition(baseProfile.RefCell(pipeGroup.RefPipeSegment(rootToParentNodePipeSegmentChain[0]).m_data.m_cellHandle).m_info.m_offset, glm::circularRand(1.0f), endNodeThickness);
+			baseCell.m_info.m_offset = baseProfile.FindAvailablePosition(baseProfile.RefCell(pipeGroup.RefPipeSegment(rootToParentNodePipeSegmentChain[0]).m_data.m_cellHandle).m_info.m_offset, direction, endNodeThickness);
 			segmentIndex = 0;
 			for (auto it = parentNodeToRootChain.rbegin(); it != parentNodeToRootChain.rend(); it++) {
 				const auto newPipeSegmentHandle = pipeGroup.Extend(node.m_data.m_pipeHandle);
@@ -114,7 +116,7 @@ void TreePipeModel::UpdatePipeModels(const TreeModel& targetTreeModel)
 				newCell.m_data.m_pipeHandle = node.m_data.m_pipeHandle;
 				newCell.m_data.m_pipeSegmentHandle = newPipeSegmentHandle;
 				newCell.m_info.m_radius = endNodeThickness;
-				newCell.m_info.m_offset = profile.FindAvailablePosition(profile.RefCell(pipeGroup.RefPipeSegment(rootToParentNodePipeSegmentChain[segmentIndex]).m_data.m_cellHandle).m_info.m_offset, glm::circularRand(1.0f), endNodeThickness); //glm::ballRand(glm::pow(static_cast<float>(profile.PeekCells().size()), 0.5f)) * endNodeThickness;
+				newCell.m_info.m_offset = profile.FindAvailablePosition(profile.RefCell(pipeGroup.RefPipeSegment(rootToParentNodePipeSegmentChain[segmentIndex]).m_data.m_cellHandle).m_info.m_offset, direction, endNodeThickness); //glm::ballRand(glm::pow(static_cast<float>(profile.PeekCells().size()), 0.5f)) * endNodeThickness;
 
 				newPipeSegment.m_data.m_cellHandle = newCellHandle;
 
@@ -136,5 +138,5 @@ void TreePipeModel::UpdatePipeModels(const TreeModel& targetTreeModel)
 		}
 		
 	}
-	m_shootPipeModel.CalculatePipeSegmentInfos(m_pipeModelParameters);
+	
 }

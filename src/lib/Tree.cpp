@@ -174,10 +174,9 @@ void Tree::Update()
 		}
 	}
 }
+
 void Tree::OnCreate() {
 }
-
-
 
 void Tree::OnDestroy() {
 	m_treeModel.Clear();
@@ -273,7 +272,7 @@ bool Tree::TryGrowSubTree(NodeHandle internodeHandle, float deltaTime)
 	if (m_enableHistory && m_treeModel.m_iteration % m_historyIteration == 0) m_treeModel.Step();
 }
 
-void Tree::InitializeStrandRenderer() const
+void Tree::InitializeStrandRenderer()
 {
 	const auto scene = GetScene();
 	const auto owner = GetOwner();
@@ -284,12 +283,16 @@ void Tree::InitializeStrandRenderer() const
 
 	const auto renderer = scene->GetOrSetPrivateComponent<StrandsRenderer>(strandsEntity).lock();
 	const auto strandsAsset = ProjectManager::CreateTemporaryAsset<Strands>();
+
+	m_treePipeModel.m_shootPipeModel.CalculatePipeSegmentInfos(m_pipeModelParameters);
+
 	std::vector<glm::uint> strandsList;
 	std::vector<StrandPoint> points;
 	m_treePipeModel.m_shootPipeModel.m_pipeGroup.BuildStrands(strandsList, points);
 	if (!points.empty()) strandsList.emplace_back(points.size());
 	StrandPointAttributes strandPointAttributes{};
 	strandPointAttributes.m_color = true;
+	//strandPointAttributes.m_normal = true;
 	strandsAsset->SetStrands(strandPointAttributes, strandsList, points);
 	renderer->m_strands = strandsAsset;
 

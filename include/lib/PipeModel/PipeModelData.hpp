@@ -2,6 +2,8 @@
 #include "Skeleton.hpp"
 #include "PipeGroup.hpp"
 #include "HexagonProfileData.hpp"
+
+#include "ParticlePhysics2D.hpp"
 using namespace EvoEngine;
 namespace EcoSysLab
 {
@@ -28,9 +30,15 @@ namespace EcoSysLab
 		PipeSegmentHandle m_pipeSegmentHandle = -1;
 	};
 
+	struct CellParticlePhysicsData
+	{
+		CellHandle m_cellHandle = -1;
+	};
+
 	struct PipeProfileData
 	{
 		NodeHandle m_nodeHandle = -1;
+		ParticlePhysics2D<CellParticlePhysicsData> m_particlePhysics2D;
 	};
 
 	struct PipeProfileGroupData

@@ -88,12 +88,11 @@ void PipeModel::CalculatePipeSegmentInfos(const PipeModelParameters& pipeModelPa
 		if (pipeSegment.IsRecycled()) continue;
 		const auto& node = m_skeleton.PeekNode(pipeSegment.m_data.m_nodeHandle);
 		const auto& nodeInfo = node.m_info;
-		const auto& nodeData = node.m_data;
-		const glm::vec3 left = nodeData.m_regulatedGlobalEndRotation * glm::vec3(1, 0, 0);
-		const glm::vec3 up = nodeData.m_regulatedGlobalEndRotation * glm::vec3(0, 1, 0);
+		const glm::vec3 left = nodeInfo.m_regulatedGlobalRotation * glm::vec3(1, 0, 0);
+		const glm::vec3 up = nodeInfo.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
 		auto& pipeSegmentInfo = pipeSegment.m_info;
 		pipeSegmentInfo.m_globalPosition = nodeInfo.m_globalPosition + nodeInfo.m_globalDirection * nodeInfo.m_length + left * pipeSegmentInfo.m_localPosition.x + up * pipeSegmentInfo.m_localPosition.y;
-		pipeSegmentInfo.m_globalRotation = nodeData.m_regulatedGlobalEndRotation;
+		pipeSegmentInfo.m_globalRotation = nodeInfo.m_regulatedGlobalRotation;
 	}
 }
 
