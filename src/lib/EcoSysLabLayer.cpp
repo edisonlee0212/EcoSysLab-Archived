@@ -1124,12 +1124,12 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 								if (!isSelected) {
 									fruitMatrices[fruitStartIndex + fruitIndex].m_instanceMatrix.m_value =
 										entityGlobalTransform.m_value * bud.m_reproductiveModule.m_transform;
-									foliageMatrices[fruitStartIndex + fruitIndex].m_instanceColor = glm::vec4(255 / 255.0f, 165 / 255.0f,
+									fruitMatrices[fruitStartIndex + fruitIndex].m_instanceColor = glm::vec4(255 / 255.0f, 165 / 255.0f,
 										0 / 255.0f, 1.0f);
 								}
 								else {
 									fruitMatrices[fruitStartIndex + fruitIndex].m_instanceMatrix.m_value = glm::mat4(0.0f);
-									foliageMatrices[fruitStartIndex + fruitIndex].m_instanceColor = glm::vec4(0.0f);
+									fruitMatrices[fruitStartIndex + fruitIndex].m_instanceColor = glm::vec4(0.0f);
 								}
 								fruitIndex++;
 							}

@@ -72,7 +72,7 @@ namespace EcoSysLab
 		friend class PipeProfileGroup;
 	public:
 		[[nodiscard]] bool OnInspect(bool editable);
-
+		[[nodiscard]] glm::vec2 FindAvailablePosition(const glm::vec2& startPosition, const glm::vec2& direction, float radius);
 		ProfileData m_data = {};
 		ProfileInfo m_info = {};
 		[[nodiscard]] bool IsRecycled() const;
@@ -259,6 +259,28 @@ namespace EcoSysLab
 		drawList->PopClipRect();
 
 		return changed;
+	}
+
+	template <typename ProfileData, typename CellData>
+	glm::vec2 PipeProfile<ProfileData, CellData>::FindAvailablePosition(const glm::vec2& startPosition,
+		const glm::vec2& direction, float radius)
+	{
+		auto retVal = startPosition;
+		bool found = false;
+		while(!found)
+		{
+			found = true;
+			for(const auto& i : m_cells)
+			{
+				if(glm::distance(i.m_info.m_offset, retVal) < i.m_info.m_radius + radius)
+				{
+					found = false;
+					break;
+				}
+			}
+			retVal += direction * 2.0f * radius;
+		}
+		return retVal;
 	}
 
 	template <typename ProfileData, typename CellData>

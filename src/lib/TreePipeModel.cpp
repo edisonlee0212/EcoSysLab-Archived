@@ -38,9 +38,10 @@ void TreePipeModel::UpdatePipeModels(const TreeModel& targetTreeModel)
 				const auto newPipeSegmentHandle = pipeGroup.Extend(newPipeHandle);
 				auto& newPipeSegment = pipeGroup.RefPipeSegment(newPipeSegmentHandle);
 				newPipeSegment.m_data.m_nodeHandle = nodePair.second;
+				
 				auto& baseCell = baseProfile.RefCell(baseCellHandle);
 				baseCell.m_data.m_pipeHandle = newPipeHandle;
-				baseCell.m_data.m_pipeSegmentHandle = newPipeSegmentHandle;
+				baseCell.m_data.m_pipeSegmentHandle = -1;
 				
 				const auto newCellHandle = newProfile.AllocateCell();
 				auto& newCell = newProfile.RefCell(newCellHandle);
@@ -48,6 +49,10 @@ void TreePipeModel::UpdatePipeModels(const TreeModel& targetTreeModel)
 				newCell.m_data.m_pipeSegmentHandle = newPipeSegmentHandle;
 				newCell.m_info.m_offset = glm::vec2(0.0f);
 				newCell.m_info.m_radius = endNodeThickness;
+
+				newPipeSegment.m_data.m_cellHandle = newCellHandle;
+
+				node.m_data.m_pipeHandle = newPipeHandle;
 			}else
 			{
 				const auto& parentNodeProfile = profileGroup.PeekProfile(skeleton.PeekNode(parentNodeHandle).m_data.m_profileHandle);
@@ -63,29 +68,42 @@ void TreePipeModel::UpdatePipeModels(const TreeModel& targetTreeModel)
 					newCell.m_data.m_pipeSegmentHandle = newPipeSegmentHandle;
 					newCell.m_info.m_offset = cell.m_info.m_offset;
 					newCell.m_info.m_radius = endNodeThickness;
+
+					newPipeSegment.m_data.m_cellHandle = newCellHandle;
 				}
+				const auto& parentNode = skeleton.PeekNode(parentNodeHandle);
+				node.m_data.m_pipeHandle = parentNode.m_data.m_pipeHandle;
 			}
 		}else
 		{
 			//If this node is formed from branching, we need to construct new pipe.
 			//First, we need to collect a chain of nodes from current node to the root.
+			const auto& parentNode = skeleton.PeekNode(parentNodeHandle);
+			const auto& parentPipe = pipeGroup.RefPipe(parentNode.m_data.m_pipeHandle);
+			const auto& parentPipeSegments = parentPipe.PeekPipeSegmentHandles();
 			std::vector<NodeHandle> parentNodeToRootChain;
+			std::vector<PipeSegmentHandle> rootToParentNodePipeSegmentChain;
+			int segmentIndex = 0;
 			while(parentNodeHandle != -1)
 			{
 				parentNodeToRootChain.emplace_back(parentNodeHandle);
 				parentNodeHandle = skeleton.PeekNode(parentNodeHandle).GetParentHandle();
-			}
-			const auto baseCellHandle = baseProfile.AllocateCell();
-			const auto newPipeHandle = pipeGroup.AllocatePipe();
-			const auto newBasePipeSegmentHandle = pipeGroup.Extend(newPipeHandle);
-			auto& newBasePipeSegment = pipeGroup.RefPipeSegment(newBasePipeSegmentHandle);
-			newBasePipeSegment.m_data.m_nodeHandle = parentNodeToRootChain.back();
 
+				rootToParentNodePipeSegmentChain.emplace_back(parentPipeSegments[segmentIndex]);
+				segmentIndex++;
+			}
+
+			const auto baseCellHandle = baseProfile.AllocateCell();
+			node.m_data.m_pipeHandle = pipeGroup.AllocatePipe();
+			
 			auto& baseCell = baseProfile.RefCell(baseCellHandle);
-			baseCell.m_data.m_pipeHandle = newPipeHandle;
-			baseCell.m_data.m_pipeSegmentHandle = newBasePipeSegmentHandle;
+			baseCell.m_data.m_pipeHandle = node.m_data.m_pipeHandle;
+			baseCell.m_data.m_pipeSegmentHandle = -1;
+			baseCell.m_info.m_radius = endNodeThickness;
+			baseCell.m_info.m_offset = baseProfile.FindAvailablePosition(baseProfile.RefCell(pipeGroup.RefPipeSegment(rootToParentNodePipeSegmentChain[0]).m_data.m_cellHandle).m_info.m_offset, glm::circularRand(1.0f), endNodeThickness);
+			segmentIndex = 0;
 			for (auto it = parentNodeToRootChain.rbegin(); it != parentNodeToRootChain.rend(); it++) {
-				const auto newPipeSegmentHandle = pipeGroup.Extend(newPipeHandle);
+				const auto newPipeSegmentHandle = pipeGroup.Extend(node.m_data.m_pipeHandle);
 				auto& newPipeSegment = pipeGroup.RefPipeSegment(newPipeSegmentHandle);
 				newPipeSegment.m_data.m_nodeHandle = *it;
 
@@ -93,22 +111,28 @@ void TreePipeModel::UpdatePipeModels(const TreeModel& targetTreeModel)
 				auto& profile = profileGroup.RefProfile(nodeInChain.m_data.m_profileHandle);
 				const auto newCellHandle = profile.AllocateCell();
 				auto& newCell = profile.RefCell(newCellHandle);
-				newCell.m_data.m_pipeHandle = newPipeHandle;
+				newCell.m_data.m_pipeHandle = node.m_data.m_pipeHandle;
 				newCell.m_data.m_pipeSegmentHandle = newPipeSegmentHandle;
 				newCell.m_info.m_radius = endNodeThickness;
-				newCell.m_info.m_offset = glm::ballRand(glm::pow(static_cast<float>(profile.PeekCells().size()), 0.5f)) * endNodeThickness;
+				newCell.m_info.m_offset = profile.FindAvailablePosition(profile.RefCell(pipeGroup.RefPipeSegment(rootToParentNodePipeSegmentChain[segmentIndex]).m_data.m_cellHandle).m_info.m_offset, glm::circularRand(1.0f), endNodeThickness); //glm::ballRand(glm::pow(static_cast<float>(profile.PeekCells().size()), 0.5f)) * endNodeThickness;
+
+				newPipeSegment.m_data.m_cellHandle = newCellHandle;
+
+				segmentIndex++;
 			}
 
-			const auto newPipeSegmentHandle = pipeGroup.Extend(newPipeHandle);
+			const auto newPipeSegmentHandle = pipeGroup.Extend(node.m_data.m_pipeHandle);
 			auto& newPipeSegment = pipeGroup.RefPipeSegment(newPipeSegmentHandle);
 			newPipeSegment.m_data.m_nodeHandle = nodePair.second;
 
 			const auto newCellHandle = newProfile.AllocateCell();
 			auto& newCell = newProfile.RefCell(newCellHandle);
-			newCell.m_data.m_pipeHandle = newPipeHandle;
+			newCell.m_data.m_pipeHandle = node.m_data.m_pipeHandle;
 			newCell.m_data.m_pipeSegmentHandle = newPipeSegmentHandle;
 			newCell.m_info.m_offset = glm::vec2(0.0f);
 			newCell.m_info.m_radius = endNodeThickness;
+
+			newPipeSegment.m_data.m_cellHandle = newCellHandle;
 		}
 		
 	}

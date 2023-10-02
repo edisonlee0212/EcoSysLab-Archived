@@ -16,6 +16,7 @@ namespace EcoSysLab
 	struct PipeModelPipeSegmentData
 	{
 		NodeHandle m_nodeHandle = -1;
+		CellHandle m_cellHandle = -1;
 	};
 
 	typedef PipeGroup<PipeModelPipeGroupData, PipeModelPipeData, PipeModelPipeSegmentData> PipeModelPipeGroup;
@@ -46,7 +47,7 @@ namespace EcoSysLab
 		glm::quat m_globalEndRotation = {};
 		glm::quat m_regulatedGlobalEndRotation = {};
 		ProfileHandle m_profileHandle = -1;
-
+		PipeHandle m_pipeHandle = -1;
 		NodeHandle m_treeSkeletonNodeHandle = -1;
 	};
 
