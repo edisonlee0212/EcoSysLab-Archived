@@ -23,7 +23,7 @@ namespace EcoSysLab {
 		[[nodiscard]] float GetTotalMoveDelta() const;
 		[[nodiscard]] float GetDeltaTime() const;
 		void Reset(float deltaTime);
-		float m_particleRadius = 0.1f;
+		float m_particleRadius = 0.01f;
 		float m_particleSoftness = 0.5f;
 		[[nodiscard]] ParticleHandle AllocateParticle();
 		[[nodiscard]] Particle2D<T>& RefParticle(ParticleHandle handle);
@@ -196,7 +196,7 @@ namespace EcoSysLab {
 		m_massCenter = glm::vec2(0.0f);
 		m_activeness = 0.0f;
 		m_particleSoftness = 0.5f;
-		m_particleRadius = 0.1f;
+		m_particleRadius = 0.01f;
 	}
 
 	template <typename T>
