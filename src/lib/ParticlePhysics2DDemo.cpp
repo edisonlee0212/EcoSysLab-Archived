@@ -30,7 +30,8 @@ void ParticlePhysics2DDemo::OnInspect(const std::shared_ptr<EditorLayer>& editor
 	}
 	static bool showGrid = false;
 	ImGui::Checkbox("Show Grid", &showGrid);
-	
+	static float particleInitialSpeed = 1.0f;
+	ImGui::DragFloat("Particle Initial speed", &particleInitialSpeed, 0.1f, 0.0f, 3.0f);
 	if (enableRender)
 	{
 		const std::string tag = "ParticlePhysics2D Scene [" + std::to_string(GetOwner().GetIndex()) + "]";
@@ -49,7 +50,7 @@ void ParticlePhysics2DDemo::OnInspect(const std::shared_ptr<EditorLayer>& editor
 							particle.SetColor(glm::vec4(glm::ballRand(1.0f), 1.0f));
 							particle.SetPosition(position + glm::circularRand(m_particlePhysics2D.m_particleRadius * 4.0f));
 							particle.SetDamping(targetDamping);
-							particle.SetVelocity(glm::vec2(m_particlePhysics2D.m_particleRadius * 2.0f, 0.0f) / static_cast<float>(Times::TimeStep()), m_particlePhysics2D.GetDeltaTime());
+							particle.SetVelocity(glm::vec2(m_particlePhysics2D.m_particleRadius * particleInitialSpeed, 0.0f) / static_cast<float>(Times::TimeStep()), m_particlePhysics2D.GetDeltaTime());
 						}
 					}
 				}, [&](const ImVec2 origin, const float zoomFactor, ImDrawList* drawList)
