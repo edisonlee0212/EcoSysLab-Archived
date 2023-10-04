@@ -174,7 +174,7 @@ void PipeModelBase::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 	const auto scene = GetScene();
 	const auto owner = GetOwner();
 
-	ImGui::DragFloat("Pipe Model Profile Scale", &m_pipeModelParameters.m_profileScale);
+	ImGui::DragFloat("Default profile cell radius", &m_pipeModelParameters.m_profileDefaultCellRadius);
 
 	ImGui::Checkbox("Show Profile", &m_showProfile);
 

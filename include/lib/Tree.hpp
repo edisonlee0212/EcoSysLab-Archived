@@ -66,7 +66,6 @@ namespace EcoSysLab {
 		int m_historyIteration = 30;
 		TreeModel m_treeModel{};
 		TreePipeModel m_treePipeModel{};
-		PipeModelPipeProfile m_baseProfile{};
 
 		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 

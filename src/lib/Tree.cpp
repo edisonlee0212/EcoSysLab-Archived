@@ -30,101 +30,114 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 		{
 			ImGui::DragInt("History per iteration", &m_historyIteration, 1, 1, 1000);
 		}
-		ImGui::Checkbox("Enable Root", &m_treeModel.m_treeGrowthSettings.m_enableRoot);
-		ImGui::Checkbox("Enable Shoot", &m_treeModel.m_treeGrowthSettings.m_enableShoot);
-		ImGui::DragInt("Flow max node size", &m_treeModel.m_treeGrowthSettings.m_flowNodeLimit, 1, 1, 100);
-		ImGui::Checkbox("Auto balance vigor", &m_treeModel.m_treeGrowthSettings.m_autoBalance);
-		ImGui::Checkbox("Receive light", &m_treeModel.m_treeGrowthSettings.m_collectShootFlux);
-		ImGui::Checkbox("Receive water", &m_treeModel.m_treeGrowthSettings.m_collectRootFlux);
-		ImGui::Checkbox("Receive nitrite", &m_treeModel.m_treeGrowthSettings.m_collectNitrite);
-		ImGui::Checkbox("Enable Branch collision detection", &m_treeModel.m_treeGrowthSettings.m_enableBranchCollisionDetection);
-		ImGui::Checkbox("Enable Root collision detection", &m_treeModel.m_treeGrowthSettings.m_enableRootCollisionDetection);
-		static bool visualizeBaseProfile = false;
-		ImGui::Checkbox("Visualize base profile", &visualizeBaseProfile);
-		if (visualizeBaseProfile)
-		{
-			if (ImGui::Begin("Base Profile")) {
-				modelChanged = m_baseProfile.OnInspect(true) || modelChanged;
-			}
-			ImGui::End();
-		}
+		if (ImGui::TreeNode("Tree Settings")) {
+			ImGui::Checkbox("Enable Root", &m_treeModel.m_treeGrowthSettings.m_enableRoot);
+			ImGui::Checkbox("Enable Shoot", &m_treeModel.m_treeGrowthSettings.m_enableShoot);
+			ImGui::DragInt("Flow max node size", &m_treeModel.m_treeGrowthSettings.m_flowNodeLimit, 1, 1, 100);
+			ImGui::Checkbox("Auto balance vigor", &m_treeModel.m_treeGrowthSettings.m_autoBalance);
+			ImGui::Checkbox("Receive light", &m_treeModel.m_treeGrowthSettings.m_collectShootFlux);
+			ImGui::Checkbox("Receive water", &m_treeModel.m_treeGrowthSettings.m_collectRootFlux);
+			ImGui::Checkbox("Receive nitrite", &m_treeModel.m_treeGrowthSettings.m_collectNitrite);
+			ImGui::Checkbox("Enable Branch collision detection", &m_treeModel.m_treeGrowthSettings.m_enableBranchCollisionDetection);
+			ImGui::Checkbox("Enable Root collision detection", &m_treeModel.m_treeGrowthSettings.m_enableRootCollisionDetection);
 
-		ImGui::DragFloat("Pipe radius", &m_pipeModelParameters.m_profileScale, 0.001f, 0.001f, 1.0f);
-
-		if (ImGui::Button("Update strands"))
-		{
-			m_treePipeModel.UpdatePipeModels(m_treeModel);
-			InitializeStrandRenderer();
-		}
-
-		if (!m_treeModel.m_treeGrowthSettings.m_collectShootFlux && !m_treeModel.m_treeGrowthSettings.m_collectRootFlux)
-		{
-			if (ImGui::TreeNode("Vigor filling rates"))
+			if (!m_treeModel.m_treeGrowthSettings.m_collectShootFlux && !m_treeModel.m_treeGrowthSettings.m_collectRootFlux)
 			{
-				if (ImGui::SliderFloat("Leaf maintenance", &m_treeModel.m_treeGrowthSettings.m_leafMaintenanceVigorFillingRate, 0.0f, 1.0f))
+				if (ImGui::TreeNode("Vigor filling rates"))
 				{
-					if (m_treeModel.m_treeGrowthSettings.m_leafMaintenanceVigorFillingRate != 1.0f)
-					{
-						m_treeModel.m_treeGrowthSettings.m_leafDevelopmentalVigorFillingRate
-							= m_treeModel.m_treeGrowthSettings.m_fruitMaintenanceVigorFillingRate
-							= m_treeModel.m_treeGrowthSettings.m_fruitDevelopmentalVigorFillingRate
-							= m_treeModel.m_treeGrowthSettings.m_nodeDevelopmentalVigorFillingRate = 0.0f;
-					}
-				}
-				if (m_treeModel.m_treeGrowthSettings.m_leafMaintenanceVigorFillingRate == 1.0f)
-				{
-					if (ImGui::SliderFloat("Leaf development", &m_treeModel.m_treeGrowthSettings.m_leafDevelopmentalVigorFillingRate, 0.0f, 1.0f))
+					if (ImGui::SliderFloat("Leaf maintenance", &m_treeModel.m_treeGrowthSettings.m_leafMaintenanceVigorFillingRate, 0.0f, 1.0f))
 					{
 						if (m_treeModel.m_treeGrowthSettings.m_leafMaintenanceVigorFillingRate != 1.0f)
 						{
-							m_treeModel.m_treeGrowthSettings.m_fruitMaintenanceVigorFillingRate
+							m_treeModel.m_treeGrowthSettings.m_leafDevelopmentalVigorFillingRate
+								= m_treeModel.m_treeGrowthSettings.m_fruitMaintenanceVigorFillingRate
 								= m_treeModel.m_treeGrowthSettings.m_fruitDevelopmentalVigorFillingRate
 								= m_treeModel.m_treeGrowthSettings.m_nodeDevelopmentalVigorFillingRate = 0.0f;
 						}
 					}
-				}
-
-				if (m_treeModel.m_treeGrowthSettings.m_leafDevelopmentalVigorFillingRate == 1.0f)
-				{
-					if (ImGui::SliderFloat("Fruit maintenance", &m_treeModel.m_treeGrowthSettings.m_fruitMaintenanceVigorFillingRate, 0.0f, 1.0f))
+					if (m_treeModel.m_treeGrowthSettings.m_leafMaintenanceVigorFillingRate == 1.0f)
 					{
-						if (m_treeModel.m_treeGrowthSettings.m_leafMaintenanceVigorFillingRate != 1.0f)
+						if (ImGui::SliderFloat("Leaf development", &m_treeModel.m_treeGrowthSettings.m_leafDevelopmentalVigorFillingRate, 0.0f, 1.0f))
 						{
-							m_treeModel.m_treeGrowthSettings.m_fruitDevelopmentalVigorFillingRate
-								= m_treeModel.m_treeGrowthSettings.m_nodeDevelopmentalVigorFillingRate = 0.0f;
+							if (m_treeModel.m_treeGrowthSettings.m_leafMaintenanceVigorFillingRate != 1.0f)
+							{
+								m_treeModel.m_treeGrowthSettings.m_fruitMaintenanceVigorFillingRate
+									= m_treeModel.m_treeGrowthSettings.m_fruitDevelopmentalVigorFillingRate
+									= m_treeModel.m_treeGrowthSettings.m_nodeDevelopmentalVigorFillingRate = 0.0f;
+							}
 						}
 					}
-				}
 
-				if (m_treeModel.m_treeGrowthSettings.m_fruitMaintenanceVigorFillingRate == 1.0f)
-				{
-					if (ImGui::SliderFloat("Fruit development", &m_treeModel.m_treeGrowthSettings.m_fruitDevelopmentalVigorFillingRate, 0.0f, 1.0f))
+					if (m_treeModel.m_treeGrowthSettings.m_leafDevelopmentalVigorFillingRate == 1.0f)
 					{
-						if (m_treeModel.m_treeGrowthSettings.m_leafMaintenanceVigorFillingRate != 1.0f)
+						if (ImGui::SliderFloat("Fruit maintenance", &m_treeModel.m_treeGrowthSettings.m_fruitMaintenanceVigorFillingRate, 0.0f, 1.0f))
 						{
-							m_treeModel.m_treeGrowthSettings.m_nodeDevelopmentalVigorFillingRate = 0.0f;
+							if (m_treeModel.m_treeGrowthSettings.m_leafMaintenanceVigorFillingRate != 1.0f)
+							{
+								m_treeModel.m_treeGrowthSettings.m_fruitDevelopmentalVigorFillingRate
+									= m_treeModel.m_treeGrowthSettings.m_nodeDevelopmentalVigorFillingRate = 0.0f;
+							}
 						}
 					}
-				}
 
-				if (m_treeModel.m_treeGrowthSettings.m_fruitDevelopmentalVigorFillingRate == 1.0f)
-				{
-					ImGui::SliderFloat("Node development", &m_treeModel.m_treeGrowthSettings.m_nodeDevelopmentalVigorFillingRate, 0.0f, 1.0f);
-				}
+					if (m_treeModel.m_treeGrowthSettings.m_fruitMaintenanceVigorFillingRate == 1.0f)
+					{
+						if (ImGui::SliderFloat("Fruit development", &m_treeModel.m_treeGrowthSettings.m_fruitDevelopmentalVigorFillingRate, 0.0f, 1.0f))
+						{
+							if (m_treeModel.m_treeGrowthSettings.m_leafMaintenanceVigorFillingRate != 1.0f)
+							{
+								m_treeModel.m_treeGrowthSettings.m_nodeDevelopmentalVigorFillingRate = 0.0f;
+							}
+						}
+					}
 
-				if (ImGui::Button("Reset"))
-				{
-					m_treeModel.m_treeGrowthSettings.m_leafMaintenanceVigorFillingRate
-						= m_treeModel.m_treeGrowthSettings.m_leafDevelopmentalVigorFillingRate
-						= m_treeModel.m_treeGrowthSettings.m_fruitMaintenanceVigorFillingRate
-						= m_treeModel.m_treeGrowthSettings.m_fruitDevelopmentalVigorFillingRate
-						= m_treeModel.m_treeGrowthSettings.m_nodeDevelopmentalVigorFillingRate = 1.0f;
-				}
+					if (m_treeModel.m_treeGrowthSettings.m_fruitDevelopmentalVigorFillingRate == 1.0f)
+					{
+						ImGui::SliderFloat("Node development", &m_treeModel.m_treeGrowthSettings.m_nodeDevelopmentalVigorFillingRate, 0.0f, 1.0f);
+					}
 
-				ImGui::TreePop();
+					if (ImGui::Button("Reset"))
+					{
+						m_treeModel.m_treeGrowthSettings.m_leafMaintenanceVigorFillingRate
+							= m_treeModel.m_treeGrowthSettings.m_leafDevelopmentalVigorFillingRate
+							= m_treeModel.m_treeGrowthSettings.m_fruitMaintenanceVigorFillingRate
+							= m_treeModel.m_treeGrowthSettings.m_fruitDevelopmentalVigorFillingRate
+							= m_treeModel.m_treeGrowthSettings.m_nodeDevelopmentalVigorFillingRate = 1.0f;
+					}
+
+					ImGui::TreePop();
+				}
 			}
-		}
 
+			ImGui::TreePop();
+		}
+		if (ImGui::TreeNode("Pipe Settings")) {
+
+			ImGui::DragFloat("Default profile cell radius", &m_pipeModelParameters.m_profileDefaultCellRadius, 0.001f, 0.001f, 1.0f);
+
+			if (ImGui::Button("Update pipes"))
+			{
+				m_treePipeModel.UpdatePipeModels(m_treeModel, m_pipeModelParameters);
+			}
+			static bool physicsSimulation = false;
+			ImGui::Checkbox("Physics2D simulation", &physicsSimulation);
+			static int iterationsPerFrame = 10;
+			ImGui::DragInt("Iterations per frame", &iterationsPerFrame, 1, 1, 100);
+			iterationsPerFrame = glm::clamp(iterationsPerFrame, 0, 100);
+			if(physicsSimulation)
+			{
+				m_treePipeModel.SimulateAllProfiles(iterationsPerFrame, m_pipeModelParameters);
+			}
+
+			if(ImGui::Button("Initialize strands"))
+			{
+				m_treePipeModel.ApplySimulationResults(m_pipeModelParameters);
+				InitializeStrandRenderer();
+			}
+
+			ImGui::TreePop();
+		}
+		
 		static int iterations = 5;
 		ImGui::DragInt("Iterations", &iterations, 1, 0, m_treeModel.CurrentIteration());
 		iterations = glm::clamp(iterations, 0, m_treeModel.CurrentIteration());

@@ -11,7 +11,6 @@ namespace EcoSysLab
 	struct CellInfo
 	{
 		glm::vec2 m_offset = glm::vec2(0.0f);
-		float m_radius = 0.0f;
 		bool m_boundary = false;
 	};
 
@@ -46,10 +45,8 @@ namespace EcoSysLab
 	{
 		Boundary m_boundary = {};
 		std::vector<Boundary> m_contourLines = {};
-
+		float m_cellRadius = 1.0f;
 		bool m_boundaryValid = false;
-
-
 		void CheckBoundary();
 		[[nodiscard]] static bool IsBoundaryValid(const std::vector<glm::vec2>& points);
 		[[nodiscard]] bool InBoundary(const glm::vec2& point) const;
@@ -72,7 +69,7 @@ namespace EcoSysLab
 		friend class PipeProfileGroup;
 	public:
 		[[nodiscard]] bool OnInspect(bool editable);
-		[[nodiscard]] glm::vec2 FindAvailablePosition(const glm::vec2& startPosition, const glm::vec2& direction, float radius);
+		[[nodiscard]] glm::vec2 FindAvailablePosition(const glm::vec2& startPosition, const glm::vec2& direction);
 		ProfileData m_data = {};
 		ProfileInfo m_info = {};
 		[[nodiscard]] bool IsRecycled() const;
@@ -209,7 +206,7 @@ namespace EcoSysLab
 		for (const auto& cell : m_cells) {
 			if (cell.IsRecycled()) continue;
 			const auto pointPosition = cell.m_info.m_offset;
-			const auto pointRadius = cell.m_info.m_radius;
+			const auto pointRadius = m_info.m_cellRadius;
 			const auto canvasPosition = ImVec2(origin.x + pointPosition.x * zoomFactor,
 				origin.y + pointPosition.y * zoomFactor);
 
@@ -263,7 +260,7 @@ namespace EcoSysLab
 
 	template <typename ProfileData, typename CellData>
 	glm::vec2 PipeProfile<ProfileData, CellData>::FindAvailablePosition(const glm::vec2& startPosition,
-		const glm::vec2& direction, float radius)
+		const glm::vec2& direction)
 	{
 		auto retVal = startPosition;
 		bool found = false;
@@ -272,13 +269,13 @@ namespace EcoSysLab
 			found = true;
 			for(const auto& i : m_cells)
 			{
-				if(glm::distance(i.m_info.m_offset, retVal) < i.m_info.m_radius + radius)
+				if(glm::distance(i.m_info.m_offset, retVal) < 2.0f * m_info.m_cellRadius)
 				{
 					found = false;
 					break;
 				}
 			}
-			retVal += direction * 2.0f * radius;
+			retVal += direction * 2.0f * m_info.m_cellRadius;
 		}
 		return retVal;
 	}
@@ -427,7 +424,6 @@ namespace EcoSysLab
 	{
 		auto min = glm::vec2(FLT_MAX);
 		auto max = glm::vec2(FLT_MIN);
-		float radius = 0.1f;
 		for (const auto& i : m_cells)
 		{
 			if (!i.IsRecycled()) RecycleCell(i.GetHandle());
@@ -438,9 +434,9 @@ namespace EcoSysLab
 			max = glm::max(i, max);
 		}
 
-		for (float i = min.x; i <= max.x; i += radius * 2.0f)
+		for (float i = min.x; i <= max.x; i += m_info.m_cellRadius * 2.0f)
 		{
-			for (float j = min.y; j <= max.y; j += radius * 2.0f)
+			for (float j = min.y; j <= max.y; j += m_info.m_cellRadius * 2.0f)
 			{
 				auto position = glm::vec2(i, j);
 				if (m_info.InBoundary(position))
@@ -448,7 +444,6 @@ namespace EcoSysLab
 					auto newCellHandle = AllocateCell();
 					auto& newCell = RefCell(newCellHandle);
 					newCell.m_info.m_offset = position;
-					newCell.m_info.m_radius = radius;
 					newCell.m_info.m_boundary = false;
 				}
 			}

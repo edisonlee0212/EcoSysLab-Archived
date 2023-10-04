@@ -22,7 +22,7 @@ namespace EcoSysLab {
 	public:
 		[[nodiscard]] float GetTotalMoveDelta() const;
 		[[nodiscard]] float GetDeltaTime() const;
-		void Reset(float deltaTime);
+		void Reset(float deltaTime = 0.002f);
 		
 		float m_particleRadius = 0.01f;
 		float m_particleSoftness = 0.5f;
