@@ -16,7 +16,7 @@ namespace EcoSysLab {
 
 	enum class ShootVisualizerMode {
 		Default,
-		LightIntensity,
+		GrowthPotential,
 		LightDirection,
 		IsMaxChild,
 		AllocatedVigor,

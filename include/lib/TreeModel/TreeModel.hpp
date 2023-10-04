@@ -13,8 +13,9 @@ namespace EcoSysLab {
 		bool m_enableShoot = true;
 
 		bool m_autoBalance = true;
-		bool m_collectLight = true;
-		bool m_collectWater = true;
+		bool m_collectShootFlux = true;
+		bool m_collectRootFlux = true;
+		bool m_useSpaceColonization = false;
 		bool m_collectNitrite = true;
 
 		float m_leafMaintenanceVigorFillingRate = 1.0f;
@@ -51,12 +52,12 @@ namespace EcoSysLab {
 		void SampleNitrite(const glm::mat4& globalTransform, VoxelSoilModel& soilModel);
 
 		void RootGrowthPostProcess(const glm::mat4& globalTransform, VoxelSoilModel& soilModel,
-			const RootGrowthController& rootGrowthParameters, RootGrowthRequirement& newRootGrowthRequirement);
+			const RootGrowthController& rootGrowthParameters);
 #pragma endregion
 #pragma region Tree Growth
 		void AggregateInternodeVigorRequirement(const ShootGrowthController& shootGrowthParameters, NodeHandle baseInternodeHandle);
 
-		void CalculateVigorRequirement(const std::vector<NodeHandle>& sortedInternodeList, const ShootGrowthController& shootGrowthParameters, ShootGrowthRequirement& newTreeGrowthNutrientsRequirement);
+		void CalculateVigorRequirement(const ShootGrowthController& shootGrowthParameters, ShootGrowthRequirement& newTreeGrowthNutrientsRequirement);
 
 		void AllocateShootVigor(float vigor, NodeHandle baseInternodeHandle, const std::vector<NodeHandle>& sortedInternodeList, const ShootGrowthRequirement& shootGrowthRequirement, const ShootGrowthController& shootGrowthParameters);
 
@@ -70,7 +71,7 @@ namespace EcoSysLab {
 		bool ElongateInternode(float extendLength, NodeHandle internodeHandle,
 			const ShootGrowthController& shootGrowthParameters, float& collectedInhibitor);
 
-		void ShootGrowthPostProcess(const glm::mat4& globalTransform, ClimateModel& climateModel, const ShootGrowthController& shootGrowthParameters, ShootGrowthRequirement& newShootGrowthRequirement);
+		void ShootGrowthPostProcess(const glm::mat4& globalTransform, ClimateModel& climateModel, const ShootGrowthController& shootGrowthParameters);
 
 		friend class Tree;
 #pragma endregion
@@ -94,7 +95,7 @@ namespace EcoSysLab {
 		 * @return Whether the growth caused a structural change during the growth.
 		 */
 		bool GrowShoots(const glm::mat4& globalTransform, ClimateModel& climateModel,
-			const ShootGrowthController& shootGrowthParameters, ShootGrowthRequirement& newShootGrowthRequirement);
+			const ShootGrowthController& shootGrowthParameters);
 
 		
 
@@ -107,7 +108,7 @@ namespace EcoSysLab {
 		 * @return Whether the growth caused a structural change during the growth.
 		 */
 		bool GrowRoots(const glm::mat4& globalTransform, VoxelSoilModel& soilModel,
-			const RootGrowthController& rootGrowthParameters, RootGrowthRequirement& newRootGrowthRequirement);
+			const RootGrowthController& rootGrowthParameters);
 
 		void FormFineRoots(const glm::mat4& globalTransform, VoxelSoilModel& soilModel,
 			const RootGrowthController& rootGrowthParameters, const FineRootController& fineRootController);
@@ -164,10 +165,6 @@ namespace EcoSysLab {
 		void CollisionDetection(float minRadius, Octree<TreeVoxelData>& octree, Skeleton<SkeletonData, FlowData, NodeData>& skeleton);
 
 		TreeGrowthSettings m_treeGrowthSettings;
-
-		//TreeSphericalVolume m_shootVolume;
-		//IlluminationEstimationSettings m_illuminationEstimationSettings;
-
 
 		ShootRootVigorRatio m_vigorRatio;
 		glm::vec3 m_currentGravityDirection = glm::vec3(0, -1, 0);

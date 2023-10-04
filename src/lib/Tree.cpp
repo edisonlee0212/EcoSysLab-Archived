@@ -34,8 +34,8 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 		ImGui::Checkbox("Enable Shoot", &m_treeModel.m_treeGrowthSettings.m_enableShoot);
 		ImGui::DragInt("Flow max node size", &m_treeModel.m_treeGrowthSettings.m_flowNodeLimit, 1, 1, 100);
 		ImGui::Checkbox("Auto balance vigor", &m_treeModel.m_treeGrowthSettings.m_autoBalance);
-		ImGui::Checkbox("Receive light", &m_treeModel.m_treeGrowthSettings.m_collectLight);
-		ImGui::Checkbox("Receive water", &m_treeModel.m_treeGrowthSettings.m_collectWater);
+		ImGui::Checkbox("Receive light", &m_treeModel.m_treeGrowthSettings.m_collectShootFlux);
+		ImGui::Checkbox("Receive water", &m_treeModel.m_treeGrowthSettings.m_collectRootFlux);
 		ImGui::Checkbox("Receive nitrite", &m_treeModel.m_treeGrowthSettings.m_collectNitrite);
 		ImGui::Checkbox("Enable Branch collision detection", &m_treeModel.m_treeGrowthSettings.m_enableBranchCollisionDetection);
 		ImGui::Checkbox("Enable Root collision detection", &m_treeModel.m_treeGrowthSettings.m_enableRootCollisionDetection);
@@ -57,7 +57,7 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 			InitializeStrandRenderer();
 		}
 
-		if (!m_treeModel.m_treeGrowthSettings.m_collectLight && !m_treeModel.m_treeGrowthSettings.m_collectWater)
+		if (!m_treeModel.m_treeGrowthSettings.m_collectShootFlux && !m_treeModel.m_treeGrowthSettings.m_collectRootFlux)
 		{
 			if (ImGui::TreeNode("Vigor filling rates"))
 			{
@@ -1329,7 +1329,7 @@ void Tree::PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescrip
 				float flushProbability = glm::mix(probabilityRange.x, probabilityRange.y,
 					glm::clamp((internodeData.m_temperature - probabilityRange.z) / (probabilityRange.w - probabilityRange.z), 0.0f, 1.0f));
 				if (internodeData.m_inhibitor > 0.0f) flushProbability *= glm::exp(-internodeData.m_inhibitor);
-				flushProbability *= glm::pow(internodeData.m_lightIntensity, shootGrowthParameters.m_lateralBudLightingFactor);
+				flushProbability *= glm::pow(internodeData.m_growthPotential, shootGrowthParameters.m_lateralBudLightingFactor);
 				return flushProbability;
 			};
 		m_shootGrowthController.m_leafBudFlushingProbability = [=](const Node<InternodeGrowthData>& internode)
@@ -1339,7 +1339,7 @@ void Tree::PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescrip
 				const auto& probabilityRange = shootGrowthParameters.m_leafBudFlushingProbabilityTemperatureRange;
 				float flushProbability = glm::mix(probabilityRange.x, probabilityRange.y,
 					glm::clamp((internodeData.m_temperature - probabilityRange.z) / (probabilityRange.w - probabilityRange.z), 0.0f, 1.0f));
-				flushProbability *= glm::pow(internodeData.m_lightIntensity, shootGrowthParameters.m_leafBudLightingFactor);
+				flushProbability *= glm::pow(internodeData.m_growthPotential, shootGrowthParameters.m_leafBudLightingFactor);
 				return flushProbability;
 			};
 		m_shootGrowthController.m_fruitBudFlushingProbability = [=](const Node<InternodeGrowthData>& internode)
@@ -1349,7 +1349,7 @@ void Tree::PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescrip
 				const auto& probabilityRange = shootGrowthParameters.m_fruitBudFlushingProbabilityTemperatureRange;
 				float flushProbability = glm::mix(probabilityRange.x, probabilityRange.y,
 					glm::clamp((internodeData.m_temperature - probabilityRange.z) / (probabilityRange.w - probabilityRange.z), 0.0f, 1.0f));
-				flushProbability *= glm::pow(internodeData.m_lightIntensity, shootGrowthParameters.m_fruitBudLightingFactor);
+				flushProbability *= glm::pow(internodeData.m_growthPotential, shootGrowthParameters.m_fruitBudLightingFactor);
 				return flushProbability;
 			};
 		m_shootGrowthController.m_apicalControl =
@@ -1375,7 +1375,7 @@ void Tree::PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescrip
 				const auto& internodeData = internode.m_data;
 				if (internode.IsEndNode())
 				{
-					pruningProbability = (1.0f - internode.m_data.m_lightIntensity) * shootGrowthParameters.m_endNodePruningLightFactor;
+					pruningProbability = (1.0f - internode.m_data.m_growthPotential) * shootGrowthParameters.m_endNodePruningLightFactor;
 				}
 				return pruningProbability;
 			};

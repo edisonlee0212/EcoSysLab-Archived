@@ -45,11 +45,11 @@ namespace EcoSysLab
 
 	struct RootFlux {
 		float m_nitrite = 0.0f;
-		float m_water = 0.0f;
+		float m_totalGrowthPotential = 0.0f;
 	};
 
 	struct ShootFlux {
-		float m_lightEnergy = 0.0f;
+		float m_totalGrowthPotential = 0.0f;
 	};
 
 	struct ShootGrowthRequirement
@@ -103,10 +103,10 @@ namespace EcoSysLab
 
 		float m_temperature = 0.0f;
 
-		glm::vec3 m_lightDirection = glm::vec3(0, 1, 0);
-		float m_lightIntensity = 1.0f;
+		float m_growthPotential = 0.0f;
 
-		float m_lightEnergy = 0.0f;
+		glm::vec3 m_lightDirection = glm::vec3(0, 1, 0);
+		
 		/**
 		 * List of buds, first one will always be the apical bud which points forward.
 		 */
@@ -135,8 +135,9 @@ namespace EcoSysLab
 		float m_rootDistance = 0;
 		int m_order = 0;
 
+		float m_growthPotential = 0.0f;
+
 		float m_nitrite = 1.0f;
-		float m_water = 1.0f;
 
 		float m_inhibitor = 0;
 

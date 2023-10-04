@@ -30,6 +30,9 @@ namespace EcoSysLab {
 	public:
 		void Initialize(float voxelSize, const glm::ivec3& resolution, const glm::vec3& minBound, const VoxelData& defaultData = {});
 		void Initialize(float voxelSize, const glm::vec3& minBound, const glm::vec3& maxBound, const VoxelData& defaultData = {});
+
+		void Resize(const glm::ivec3& diffMin, const glm::ivec3& diffMax);
+
 		[[nodiscard]] size_t GetVoxelSize() const;
 		[[nodiscard]] glm::ivec3 GetResolution() const;
 		[[nodiscard]] glm::vec3 GetMinBound() const;
@@ -73,6 +76,32 @@ namespace EcoSysLab {
 				glm::ceil((maxBound.x - minBound.x) / voxelSize) + 1,
 				glm::ceil((maxBound.y - minBound.y) / voxelSize) + 1,
 				glm::ceil((maxBound.z - minBound.z) / voxelSize) + 1), minBound, defaultData);
+	}
+
+	template <typename VoxelData>
+	void VoxelGrid<VoxelData>::Resize(const glm::ivec3& diffMin, const glm::ivec3& diffMax)
+	{
+		const auto originalVoxelData = m_data;
+		const auto originalResolution = m_resolution;
+		const auto originalMinBound = m_minBound;
+		Initialize(m_voxelSize, m_resolution + diffMin + diffMax, m_minBound - glm::vec3(diffMin) * m_voxelSize, {});
+		Jobs::ParallelFor(originalVoxelData.size(), [&](unsigned i)
+			{
+				const auto originalCoordinate = glm::ivec3(
+					i % originalResolution.x,
+					i % (originalResolution.x * originalResolution.y) / originalResolution.x,
+					i / (originalResolution.x * originalResolution.y));
+				const auto originalPosition = glm::vec3(
+					originalMinBound.x + m_voxelSize / 2.0 + originalCoordinate.x * m_voxelSize,
+					originalMinBound.y + m_voxelSize / 2.0 + originalCoordinate.y * m_voxelSize,
+					originalMinBound.z + m_voxelSize / 2.0 + originalCoordinate.z * m_voxelSize
+				);
+				const auto targetIndex = GetIndex(originalPosition);
+				if (targetIndex > 0 && targetIndex < m_data.size()) {
+					m_data[targetIndex] = originalVoxelData[i];
+				}
+			}
+		);
 	}
 
 	template <typename VoxelData>

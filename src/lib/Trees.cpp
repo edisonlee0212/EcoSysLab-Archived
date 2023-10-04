@@ -54,8 +54,8 @@ void Trees::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
         const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
         ImGui::DragInt("Flow max node size", &m_treeGrowthSettings.m_flowNodeLimit, 1, 1, 100);
         ImGui::Checkbox("Auto balance vigor", &m_treeGrowthSettings.m_autoBalance);
-        ImGui::Checkbox("Receive light", &m_treeGrowthSettings.m_collectLight);
-        ImGui::Checkbox("Receive water", &m_treeGrowthSettings.m_collectWater);
+        ImGui::Checkbox("Receive light", &m_treeGrowthSettings.m_collectShootFlux);
+        ImGui::Checkbox("Receive water", &m_treeGrowthSettings.m_collectRootFlux);
         ImGui::Checkbox("Receive nitrite", &m_treeGrowthSettings.m_collectNitrite);
         ImGui::Checkbox("Enable Branch collision detection", &m_treeGrowthSettings.m_enableBranchCollisionDetection);
         ImGui::Checkbox("Enable Root collision detection", &m_treeGrowthSettings.m_enableRootCollisionDetection);
@@ -96,8 +96,8 @@ void SerializeTreeGrowthSettings(const std::string& name, const TreeGrowthSettin
     out << YAML::Key << name << YAML::BeginMap;
     out << YAML::Key << "m_flowNodeLimit" << YAML::Value << treeGrowthSettings.m_flowNodeLimit;
     out << YAML::Key << "m_autoBalance" << YAML::Value << treeGrowthSettings.m_autoBalance;
-    out << YAML::Key << "m_collectLight" << YAML::Value << treeGrowthSettings.m_collectLight;
-    out << YAML::Key << "m_collectWater" << YAML::Value << treeGrowthSettings.m_collectWater;
+    out << YAML::Key << "m_collectShootFlux" << YAML::Value << treeGrowthSettings.m_collectShootFlux;
+    out << YAML::Key << "m_collectRootFlux" << YAML::Value << treeGrowthSettings.m_collectRootFlux;
     out << YAML::Key << "m_collectNitrite" << YAML::Value << treeGrowthSettings.m_collectNitrite;
     out << YAML::Key << "m_enableRootCollisionDetection" << YAML::Value << treeGrowthSettings.m_enableRootCollisionDetection;
     out << YAML::Key << "m_enableBranchCollisionDetection" << YAML::Value << treeGrowthSettings.m_enableBranchCollisionDetection;
@@ -108,8 +108,8 @@ void DeserializeTreeGrowthSettings(const std::string& name, TreeGrowthSettings& 
         auto& param = in[name];
         if (param["m_flowNodeLimit"]) treeGrowthSettings.m_flowNodeLimit = param["m_flowNodeLimit"].as<int>();
         if (param["m_autoBalance"]) treeGrowthSettings.m_autoBalance = param["m_autoBalance"].as<bool>();
-        if (param["m_collectLight"]) treeGrowthSettings.m_collectLight = param["m_collectLight"].as<bool>();
-        if (param["m_collectWater"]) treeGrowthSettings.m_collectWater = param["m_collectWater"].as<bool>();
+        if (param["m_collectShootFlux"]) treeGrowthSettings.m_collectShootFlux = param["m_collectShootFlux"].as<bool>();
+        if (param["m_collectRootFlux"]) treeGrowthSettings.m_collectRootFlux = param["m_collectRootFlux"].as<bool>();
         if (param["m_collectNitrite"]) treeGrowthSettings.m_collectNitrite = param["m_collectNitrite"].as<bool>();
         if (param["m_enableRootCollisionDetection"]) treeGrowthSettings.m_enableRootCollisionDetection = param["m_enableRootCollisionDetection"].as<bool>();
         if (param["m_enableBranchCollisionDetection"]) treeGrowthSettings.m_enableBranchCollisionDetection = param["m_enableBranchCollisionDetection"].as<bool>();

@@ -66,7 +66,7 @@ TreeVisualizer::OnInspect(
 	bool updated = false;
 	if (ImGui::Begin("Tree Inspector")) {
 		if (ImGui::Combo("Shoot Color mode",
-			{ "Default", "LightIntensity", "LightDirection", "IsMaxChild", "AllocatedVigor" },
+			{ "Default", "GrowthPotential", "LightDirection", "IsMaxChild", "AllocatedVigor" },
 			m_settings.m_shootVisualizationMode)) {
 			m_needShootColorUpdate = true;
 		}
@@ -75,7 +75,7 @@ TreeVisualizer::OnInspect(
 		}
 		if (ImGui::TreeNode("Shoot Color settings")) {
 			switch (static_cast<ShootVisualizerMode>(m_settings.m_shootVisualizationMode)) {
-			case ShootVisualizerMode::LightIntensity:
+			case ShootVisualizerMode::GrowthPotential:
 				ImGui::DragFloat("Light intensity multiplier", &m_settings.m_shootColorMultiplier, 0.001f);
 				m_needShootColorUpdate = true;
 				break;
@@ -431,7 +431,7 @@ TreeVisualizer::InspectInternode(
 			ImGuiInputTextFlags_ReadOnly);
 		ImGui::InputFloat3("Light dir", (float*)&internodeData.m_lightDirection.x, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
-		ImGui::InputFloat("Light intensity", (float*)&internodeData.m_lightIntensity, 1, 100, "%.3f",
+		ImGui::InputFloat("Growth Potential", (float*)&internodeData.m_growthPotential, 1, 100, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
 
 		if (ImGui::DragFloat("Sagging", (float*)&internodeData.m_sagging)) {
@@ -579,7 +579,7 @@ TreeVisualizer::PeekInternode(const ShootSkeleton& shootSkeleton, NodeHandle int
 			ImGuiInputTextFlags_ReadOnly);
 		ImGui::InputFloat3("Light dir", (float*)&internodeData.m_lightDirection.x, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
-		ImGui::InputFloat("Light intensity", (float*)&internodeData.m_lightIntensity, 1, 100, "%.3f",
+		ImGui::InputFloat("Growth Potential", (float*)&internodeData.m_growthPotential, 1, 100, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
 
 		if (ImGui::TreeNodeEx("Buds")) {
@@ -692,7 +692,7 @@ void TreeVisualizer::PeekRootNode(
 		ImGui::InputFloat("Soil Density", (float*)&rootNodeData.m_soilDensity, 1, 100, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
 
-		ImGui::InputFloat("Root flux", (float*)&rootNodeData.m_water, 1, 100, "%.3f",
+		ImGui::InputFloat("Growth Potential", (float*)&rootNodeData.m_growthPotential, 1, 100, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
 		ImGui::InputFloat("Auxin", (float*)&rootNodeData.m_inhibitor, 1, 100, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
@@ -750,7 +750,7 @@ bool TreeVisualizer::InspectRootNode(
 
 		ImGui::InputFloat("Nitrite", (float*)&rootNodeData.m_nitrite, 1, 100, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
-		ImGui::InputFloat("Root flux", (float*)&rootNodeData.m_water, 1, 100, "%.3f",
+		ImGui::InputFloat("Growth Potential", (float*)&rootNodeData.m_growthPotential, 1, 100, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
 
 		if (ImGui::DragFloat("Inhibitor", (float*)&rootNodeData.m_inhibitor)) {
@@ -817,9 +817,9 @@ void TreeVisualizer::SyncColors(const ShootSkeleton& shootSkeleton, NodeHandle& 
 		}
 		else {
 			switch (static_cast<ShootVisualizerMode>(m_settings.m_shootVisualizationMode)) {
-			case ShootVisualizerMode::LightIntensity:
+			case ShootVisualizerMode::GrowthPotential:
 				matrices[i + 1].m_instanceColor = glm::vec4(
-					glm::clamp(node.m_data.m_lightIntensity * m_settings.m_shootColorMultiplier, 0.0f, 1.f));
+					glm::clamp(node.m_data.m_growthPotential * m_settings.m_shootColorMultiplier, 0.0f, 1.f));
 				break;
 			case ShootVisualizerMode::LightDirection:
 				matrices[i + 1].m_instanceColor = glm::vec4(glm::vec3(glm::clamp(node.m_data.m_lightDirection, 0.0f, 1.f)),

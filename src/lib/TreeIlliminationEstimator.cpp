@@ -9,8 +9,11 @@ float TreeIlluminationEstimator::IlluminationEstimation(const glm::vec3& positio
 	{
 		lightDirection = glm::vec3(0.0f);
 	}
-	else
+	else if(data.m_shadowIntensity == 0.0f)
 	{
+		lightDirection = glm::vec3(0.0f, 1.0f, 0.0f);
+	}
+	else{
 		lightDirection = glm::normalize(glm::vec3(0.0f, 1.0f, 0.0f) + glm::normalize(data.m_shadowDirection) * data.m_shadowIntensity);
 	}
 
