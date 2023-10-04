@@ -36,6 +36,8 @@ namespace EcoSysLab {
 	};
 
 	class TreeVisualizer {
+		bool m_initialized = false;
+
 		std::vector<glm::vec4> m_randomColors;
 
 		std::shared_ptr<ParticleInfoList> m_internodeMatrices;
@@ -108,6 +110,8 @@ namespace EcoSysLab {
 				NodeHandle rootNodeHandle);
 
 	public:
+		[[nodiscard]] bool Initialized() const;
+
 		[[nodiscard]] NodeHandle GetSelectedInternodeHandle() const;
 		[[nodiscard]] NodeHandle GetSelectedRootNodeHandle() const;
 		void Initialize();
@@ -130,9 +134,7 @@ namespace EcoSysLab {
 		bool m_needShootColorUpdate = false;
 		bool m_needRootColorUpdate = false;
 
-		bool
-			OnInspect(TreeModel& treeModel, PipeModel& pipeModel,
-				const GlobalTransform& globalTransform);
+		bool OnInspect(TreeModel& treeModel);
 
 		bool Visualize(TreeModel& treeModel,
 			const GlobalTransform& globalTransform);

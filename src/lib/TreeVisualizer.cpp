@@ -60,210 +60,183 @@ bool TreeVisualizer::DrawInternodeInspectionGui(
 
 bool
 TreeVisualizer::OnInspect(
-	TreeModel& treeModel,
-	PipeModel& pipeModel,
-	const GlobalTransform& globalTransform) {
+	TreeModel& treeModel) {
 	bool updated = false;
-	if (ImGui::Begin("Tree Inspector")) {
-		if (ImGui::Combo("Shoot Color mode",
-			{ "Default", "GrowthPotential", "LightDirection", "IsMaxChild", "AllocatedVigor" },
-			m_settings.m_shootVisualizationMode)) {
+	if (ImGui::Combo("Shoot Color mode",
+		{ "Default", "GrowthPotential", "LightDirection", "IsMaxChild", "AllocatedVigor" },
+		m_settings.m_shootVisualizationMode)) {
+		m_needShootColorUpdate = true;
+	}
+	if (ImGui::Combo("Root Color mode", { "Default", "AllocatedVigor" }, m_settings.m_rootVisualizationMode)) {
+		m_needRootColorUpdate = true;
+	}
+	if (ImGui::TreeNode("Shoot Color settings")) {
+		switch (static_cast<ShootVisualizerMode>(m_settings.m_shootVisualizationMode)) {
+		case ShootVisualizerMode::GrowthPotential:
+			ImGui::DragFloat("Light intensity multiplier", &m_settings.m_shootColorMultiplier, 0.001f);
 			m_needShootColorUpdate = true;
+			break;
+		case ShootVisualizerMode::AllocatedVigor:
+			ImGui::DragFloat("Vigor multiplier", &m_settings.m_shootColorMultiplier, 0.001f);
+			m_needShootColorUpdate = true;
+			break;
+		default:
+			break;
 		}
-		if (ImGui::Combo("Root Color mode", { "Default", "AllocatedVigor" }, m_settings.m_rootVisualizationMode)) {
+		ImGui::TreePop();
+	}
+	if (ImGui::TreeNode("Root Color settings")) {
+		switch (static_cast<RootVisualizerMode>(m_settings.m_rootVisualizationMode)) {
+		case RootVisualizerMode::AllocatedVigor:
+			ImGui::DragFloat("Vigor multiplier", &m_settings.m_rootColorMultiplier, 0.001f);
 			m_needRootColorUpdate = true;
+			break;
+		default:
+			break;
 		}
-		if (ImGui::TreeNode("Shoot Color settings")) {
-			switch (static_cast<ShootVisualizerMode>(m_settings.m_shootVisualizationMode)) {
-			case ShootVisualizerMode::GrowthPotential:
-				ImGui::DragFloat("Light intensity multiplier", &m_settings.m_shootColorMultiplier, 0.001f);
-				m_needShootColorUpdate = true;
-				break;
-			case ShootVisualizerMode::AllocatedVigor:
-				ImGui::DragFloat("Vigor multiplier", &m_settings.m_shootColorMultiplier, 0.001f);
-				m_needShootColorUpdate = true;
-				break;
-			default:
-				break;
-			}
-			ImGui::TreePop();
-		}
-		if (ImGui::TreeNode("Root Color settings")) {
-			switch (static_cast<RootVisualizerMode>(m_settings.m_rootVisualizationMode)) {
-			case RootVisualizerMode::AllocatedVigor:
-				ImGui::DragFloat("Vigor multiplier", &m_settings.m_rootColorMultiplier, 0.001f);
-				m_needRootColorUpdate = true;
-				break;
-			default:
-				break;
-			}
-			ImGui::TreePop();
-		}
-		if (treeModel.CurrentIteration() > 0) {
-			if (ImGui::TreeNodeEx("History", ImGuiTreeNodeFlags_DefaultOpen)) {
-				ImGui::DragInt("History Limit", &treeModel.m_historyLimit, 1, -1, 1024);
-				if (ImGui::SliderInt("Iteration", &m_iteration, 0, treeModel.CurrentIteration())) {
-					m_iteration = glm::clamp(m_iteration, 0, treeModel.CurrentIteration());
-					m_selectedInternodeHandle = -1;
-					m_selectedInternodeHierarchyList.clear();
-					m_selectedRootNodeHandle = -1;
-					m_selectedRootNodeHierarchyList.clear();
-					m_needUpdate = true;
-				}
-				if (m_iteration != treeModel.CurrentIteration() && ImGui::Button("Reverse")) {
-					treeModel.Reverse(m_iteration);
-					m_needUpdate = true;
-				}
-				if (ImGui::Button("Clear history")) {
-					m_iteration = 0;
-					treeModel.ClearHistory();
-				}
-				ImGui::TreePop();
-			}
-		}
-
-		if (ImGui::TreeNodeEx("Settings")) {
-			ImGui::Checkbox("Visualization", &m_visualization);
-			ImGui::Checkbox("Hexagon profile", &m_hexagonProfileGui);
-			ImGui::Checkbox("Tree Hierarchy", &m_treeHierarchyGui);
-			ImGui::Checkbox("Root Hierarchy", &m_rootHierarchyGui);
-			ImGui::TreePop();
-		}
-		if (m_selectedInternodeHandle >= 0) {
-			if (m_iteration == treeModel.CurrentIteration()) {
-				InspectInternode(treeModel.RefShootSkeleton(), m_selectedInternodeHandle);
-			}
-			else {
-				PeekInternode(treeModel.PeekShootSkeleton(m_iteration), m_selectedInternodeHandle);
-			}
-		}
-		if (m_selectedRootNodeHandle >= 0) {
-			if (m_iteration == treeModel.CurrentIteration()) {
-				InspectRootNode(treeModel.RefRootSkeleton(), m_selectedRootNodeHandle);
-			}
-			else {
-				PeekRootNode(treeModel.PeekRootSkeleton(m_iteration), m_selectedRootNodeHandle);
-			}
-		}
-
-
-		if (m_visualization) {
-			const auto& treeSkeleton = treeModel.PeekShootSkeleton(m_iteration);
-			const auto& rootSkeleton = treeModel.PeekRootSkeleton(m_iteration);
-			const auto editorLayer = Application::GetLayer<EditorLayer>();
-			const auto& sortedBranchList = treeSkeleton.RefSortedFlowList();
-			const auto& sortedInternodeList = treeSkeleton.RefSortedNodeList();
-			ImGui::Text("Internode count: %d", sortedInternodeList.size());
-			ImGui::Text("Shoot stem count: %d", sortedBranchList.size());
-
-			const auto& sortedRootFlowList = rootSkeleton.RefSortedFlowList();
-			const auto& sortedRootNodeList = rootSkeleton.RefSortedNodeList();
-			ImGui::Text("Root node count: %d", sortedRootNodeList.size());
-			ImGui::Text("Root stem count: %d", sortedRootFlowList.size());
-
-			static bool enableStroke = false;
-			if (ImGui::Checkbox("Enable stroke", &enableStroke)) {
-				if (enableStroke) {
-					m_mode = PruningMode::Stroke;
-				}
-				else {
-					m_mode = PruningMode::Empty;
-				}
-				m_storedMousePositions.clear();
-			}
-		}
-
-		if (m_treeHierarchyGui) {
-			if (ImGui::TreeNodeEx("Tree Hierarchy")) {
-				bool deleted = false;
-				auto tempSelection = m_selectedInternodeHandle;
-				if (m_iteration == treeModel.CurrentIteration()) {
-					if (DrawInternodeInspectionGui(treeModel, 0, deleted, 0)) {
-						m_needUpdate = true;
-						updated = true;
-					}
-				}
-				else
-					PeekNodeInspectionGui(treeModel.PeekShootSkeleton(m_iteration), 0, m_selectedInternodeHandle,
-						m_selectedInternodeHierarchyList, 0);
+		ImGui::TreePop();
+	}
+	if (treeModel.CurrentIteration() > 0) {
+		if (ImGui::TreeNodeEx("History", ImGuiTreeNodeFlags_DefaultOpen)) {
+			ImGui::DragInt("History Limit", &treeModel.m_historyLimit, 1, -1, 1024);
+			if (ImGui::SliderInt("Iteration", &m_iteration, 0, treeModel.CurrentIteration())) {
+				m_iteration = glm::clamp(m_iteration, 0, treeModel.CurrentIteration());
+				m_selectedInternodeHandle = -1;
 				m_selectedInternodeHierarchyList.clear();
-				if (tempSelection != m_selectedInternodeHandle) {
-					m_selectedRootNodeHandle = -1;
-					m_selectedRootNodeHierarchyList.clear();
-				}
-				ImGui::TreePop();
-			}
-
-		}
-		if (m_rootHierarchyGui) {
-			if (ImGui::TreeNodeEx("Root Hierarchy")) {
-				bool deleted = false;
-				const auto tempSelection = m_selectedRootNodeHandle;
-				if (m_iteration == treeModel.CurrentIteration()) {
-					if (DrawRootNodeInspectionGui(treeModel, 0, deleted, 0)) {
-						m_needUpdate = true;
-						updated = true;
-					}
-				}
-				else
-					PeekNodeInspectionGui(treeModel.PeekRootSkeleton(m_iteration), 0, m_selectedRootNodeHandle,
-						m_selectedRootNodeHierarchyList, 0);
+				m_selectedRootNodeHandle = -1;
 				m_selectedRootNodeHierarchyList.clear();
-				if (tempSelection != m_selectedRootNodeHandle) {
-					m_selectedInternodeHandle = -1;
-					m_selectedInternodeHierarchyList.clear();
-				}
-				ImGui::TreePop();
+				m_needUpdate = true;
 			}
-
+			if (m_iteration != treeModel.CurrentIteration() && ImGui::Button("Reverse")) {
+				treeModel.Reverse(m_iteration);
+				m_needUpdate = true;
+			}
+			if (ImGui::Button("Clear history")) {
+				m_iteration = 0;
+				treeModel.ClearHistory();
+			}
+			ImGui::TreePop();
 		}
 	}
-	ImGui::End();
-	/*
-	if (m_hexagonProfileGui) {
-		if (ImGui::Begin("Hexagon Profile")) {
-			
-			if (m_selectedInternodeHandle >= 0 && pipeModel.m_shootSkeleton.RefSortedNodeList().size() > m_selectedInternodeHandle)
-			{
-				auto& shootSkeleton = pipeModel.m_shootSkeleton;
-				//auto& profile = shootSkeleton.m_data.m_hexagonProfileGroup.RefProfile(shootSkeleton.RefNode(pipeModel.m_shootSkeletonLinks[m_selectedInternodeHandle]).m_data.m_profileHandle);
-				//VisualizeProfile(shootSkeleton, profile);
-			}else if (m_selectedRootNodeHandle >= 0 && pipeModel.m_rootSkeleton.RefSortedNodeList().size() > m_selectedRootNodeHandle)
-			{
-				auto& rootSkeleton = pipeModel.m_rootSkeleton;
-				//auto& profile = rootSkeleton.m_data.m_hexagonProfileGroup.RefProfile(rootSkeleton.RefNode(pipeModel.m_rootSkeletonLinks[m_selectedRootNodeHandle]).m_data.m_profileHandle);
-				//VisualizeProfile(rootSkeleton, profile);
+
+	if (ImGui::TreeNodeEx("Settings")) {
+		ImGui::Checkbox("Visualization", &m_visualization);
+		ImGui::Checkbox("Hexagon profile", &m_hexagonProfileGui);
+		ImGui::Checkbox("Tree Hierarchy", &m_treeHierarchyGui);
+		ImGui::Checkbox("Root Hierarchy", &m_rootHierarchyGui);
+		ImGui::TreePop();
+	}
+	if (m_selectedInternodeHandle >= 0) {
+		if (m_iteration == treeModel.CurrentIteration()) {
+			InspectInternode(treeModel.RefShootSkeleton(), m_selectedInternodeHandle);
+		}
+		else {
+			PeekInternode(treeModel.PeekShootSkeleton(m_iteration), m_selectedInternodeHandle);
+		}
+	}
+	if (m_selectedRootNodeHandle >= 0) {
+		if (m_iteration == treeModel.CurrentIteration()) {
+			InspectRootNode(treeModel.RefRootSkeleton(), m_selectedRootNodeHandle);
+		}
+		else {
+			PeekRootNode(treeModel.PeekRootSkeleton(m_iteration), m_selectedRootNodeHandle);
+		}
+	}
+
+
+	if (m_visualization) {
+		const auto& treeSkeleton = treeModel.PeekShootSkeleton(m_iteration);
+		const auto& rootSkeleton = treeModel.PeekRootSkeleton(m_iteration);
+		const auto editorLayer = Application::GetLayer<EditorLayer>();
+		const auto& sortedBranchList = treeSkeleton.RefSortedFlowList();
+		const auto& sortedInternodeList = treeSkeleton.RefSortedNodeList();
+		ImGui::Text("Internode count: %d", sortedInternodeList.size());
+		ImGui::Text("Shoot stem count: %d", sortedBranchList.size());
+
+		const auto& sortedRootFlowList = rootSkeleton.RefSortedFlowList();
+		const auto& sortedRootNodeList = rootSkeleton.RefSortedNodeList();
+		ImGui::Text("Root node count: %d", sortedRootNodeList.size());
+		ImGui::Text("Root stem count: %d", sortedRootFlowList.size());
+
+		static bool enableStroke = false;
+		if (ImGui::Checkbox("Enable stroke", &enableStroke)) {
+			if (enableStroke) {
+				m_mode = PruningMode::Stroke;
+			}
+			else {
+				m_mode = PruningMode::Empty;
+			}
+			m_storedMousePositions.clear();
+		}
+	}
+
+	if (m_treeHierarchyGui) {
+		if (ImGui::TreeNodeEx("Tree Hierarchy")) {
+			bool deleted = false;
+			auto tempSelection = m_selectedInternodeHandle;
+			if (m_iteration == treeModel.CurrentIteration()) {
+				if (DrawInternodeInspectionGui(treeModel, 0, deleted, 0)) {
+					m_needUpdate = true;
+					updated = true;
+				}
 			}
 			else
-			{
-				ImGui::Text("No node selected or pipe model is invalid!");
+				PeekNodeInspectionGui(treeModel.PeekShootSkeleton(m_iteration), 0, m_selectedInternodeHandle,
+					m_selectedInternodeHierarchyList, 0);
+			m_selectedInternodeHierarchyList.clear();
+			if (tempSelection != m_selectedInternodeHandle) {
+				m_selectedRootNodeHandle = -1;
+				m_selectedRootNodeHierarchyList.clear();
 			}
-			
+			ImGui::TreePop();
 		}
-		ImGui::End();
-	}*/
+
+	}
+	if (m_rootHierarchyGui) {
+		if (ImGui::TreeNodeEx("Root Hierarchy")) {
+			bool deleted = false;
+			const auto tempSelection = m_selectedRootNodeHandle;
+			if (m_iteration == treeModel.CurrentIteration()) {
+				if (DrawRootNodeInspectionGui(treeModel, 0, deleted, 0)) {
+					m_needUpdate = true;
+					updated = true;
+				}
+			}
+			else
+				PeekNodeInspectionGui(treeModel.PeekRootSkeleton(m_iteration), 0, m_selectedRootNodeHandle,
+					m_selectedRootNodeHierarchyList, 0);
+			m_selectedRootNodeHierarchyList.clear();
+			if (tempSelection != m_selectedRootNodeHandle) {
+				m_selectedInternodeHandle = -1;
+				m_selectedInternodeHierarchyList.clear();
+			}
+			ImGui::TreePop();
+		}
+
+
+	}
 	return updated;
 }
 
 bool TreeVisualizer::Visualize(TreeModel& treeModel, const GlobalTransform& globalTransform) {
 	bool updated = false;
-	const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
+	//const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
 	const auto& treeSkeleton = treeModel.PeekShootSkeleton(m_iteration);
 	const auto& rootSkeleton = treeModel.PeekRootSkeleton(m_iteration);
 	if (m_visualization) {
 		const auto editorLayer = Application::GetLayer<EditorLayer>();
-		if (ecoSysLabLayer->m_visualizationCameraWindowFocused) {
+		if (editorLayer->SceneCameraWindowFocused()) {
 			switch (m_mode) {
 			case PruningMode::Empty: {
 				if (editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Press) {
-					if (RayCastSelection(ecoSysLabLayer->m_visualizationCamera, ecoSysLabLayer->m_visualizationCameraMousePosition, treeSkeleton, globalTransform, m_selectedInternodeHandle,
+					if (RayCastSelection(editorLayer->GetSceneCamera(), editorLayer->GetMouseSceneCameraPosition(), treeSkeleton, globalTransform, m_selectedInternodeHandle,
 						m_selectedInternodeHierarchyList, m_selectedInternodeLengthFactor)) {
 						m_needUpdate = true;
 						updated = true;
 						m_selectedRootNodeHandle = -1;
 						m_selectedRootNodeHierarchyList.clear();
 					}
-					else if (RayCastSelection(ecoSysLabLayer->m_visualizationCamera, ecoSysLabLayer->m_visualizationCameraMousePosition, rootSkeleton, globalTransform, m_selectedRootNodeHandle,
+					else if (RayCastSelection(editorLayer->GetSceneCamera(), editorLayer->GetMouseSceneCameraPosition(), rootSkeleton, globalTransform, m_selectedRootNodeHandle,
 						m_selectedRootNodeHierarchyList, m_selectedRootNodeLengthFactor)) {
 						m_needUpdate = true;
 						updated = true;
@@ -308,7 +281,7 @@ bool TreeVisualizer::Visualize(TreeModel& treeModel, const GlobalTransform& glob
 					}
 				}
 			}
-								  break;
+								   break;
 			case PruningMode::Stroke: {
 				if (m_iteration == treeModel.CurrentIteration()) {
 					if (editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Hold) {
@@ -376,7 +349,7 @@ bool TreeVisualizer::Visualize(TreeModel& treeModel, const GlobalTransform& glob
 				m_internodeMatrices->m_particleInfos[0].m_instanceColor = glm::vec4(0.0f);
 			}
 			m_internodeMatrices->SetPendingUpdate();
-			editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER"), ecoSysLabLayer->m_visualizationCamera,
+			editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER"), editorLayer->GetSceneCamera(),
 				m_internodeMatrices,
 				globalTransform.m_value, 1.0f, gizmoSettings);
 
@@ -389,7 +362,7 @@ bool TreeVisualizer::Visualize(TreeModel& treeModel, const GlobalTransform& glob
 				m_rootNodeMatrices->m_particleInfos[0].m_instanceColor = glm::vec4(0.0f);
 			}
 			m_rootNodeMatrices->SetPendingUpdate();
-			editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER"), ecoSysLabLayer->m_visualizationCamera,
+			editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER"), editorLayer->GetSceneCamera(),
 				m_rootNodeMatrices,
 				globalTransform.m_value, 1.0f, gizmoSettings);
 		}
@@ -780,6 +753,11 @@ bool TreeVisualizer::InspectRootNode(
 		ImGui::TreePop();
 	}
 	return changed;
+}
+
+bool TreeVisualizer::Initialized() const
+{
+	return m_initialized;
 }
 
 NodeHandle TreeVisualizer::GetSelectedInternodeHandle() const

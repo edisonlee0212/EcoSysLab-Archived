@@ -39,6 +39,13 @@ namespace EcoSysLab {
 
 		
 	public:
+		void GrowSubTree(NodeHandle targetInternodeHandle, float deltaTime);
+
+		void Reset();
+
+		TreeVisualizer m_treeVisualizer {};
+		bool m_enableVisualization = true;
+
 		PipeModelParameters m_pipeModelParameters{};
 		
 		void InitializeStrandRenderer();
@@ -66,7 +73,7 @@ namespace EcoSysLab {
 		int m_historyIteration = 30;
 		TreeModel m_treeModel{};
 		TreePipeModel m_treePipeModel{};
-
+		
 		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 
 		void OnDestroy() override;

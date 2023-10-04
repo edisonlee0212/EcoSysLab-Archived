@@ -45,7 +45,7 @@ namespace EcoSysLab {
 		bool m_enableBranch = true;
 		bool m_enableRoot = true;
 		bool m_enableFineRoot = true;
-		bool m_enableTwig = true;
+		bool m_enableTwig = false;
 		bool m_overridePresentation = false;
 		PresentationOverrideSettings m_presentationOverrideSettings;
 		AssetRef m_foliageTexture;

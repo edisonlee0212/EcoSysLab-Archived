@@ -164,14 +164,18 @@ bool TreeModel::Grow(float deltaTime, const glm::mat4& globalTransform, VoxelSoi
 	}
 	//Collect water from roots.
 	if (m_treeGrowthSettings.m_enableRoot) {
-		CollectRootFlux(globalTransform, soilModel, rootGrowthParameters);
+		m_rootSkeleton.SortLists();
+		const auto& sortedRootNodeList = m_rootSkeleton.RefSortedNodeList();
+		CollectRootFlux(globalTransform, soilModel, sortedRootNodeList, rootGrowthParameters);
 		RootGrowthRequirement newRootGrowthRequirement;
 		CalculateVigorRequirement(rootGrowthParameters, newRootGrowthRequirement);
 		m_rootSkeleton.m_data.m_vigorRequirement = newRootGrowthRequirement;
 	}
 	//Collect light from branches.
 	if (m_treeGrowthSettings.m_enableShoot) {
-		CollectShootFlux(globalTransform, climateModel, shootGrowthParameters);
+		m_shootSkeleton.SortLists();
+		const auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
+		CollectShootFlux(globalTransform, climateModel, sortedInternodeList, shootGrowthParameters);
 		ShootGrowthRequirement newShootGrowthRequirement;
 		CalculateVigorRequirement(shootGrowthParameters, newShootGrowthRequirement);
 		m_shootSkeleton.m_data.m_vigorRequirement = newShootGrowthRequirement;
@@ -212,6 +216,8 @@ bool TreeModel::GrowSubTree(const float deltaTime, const NodeHandle baseInternod
 	m_shootSkeleton.SortLists();
 	bool anyBranchGrown = false;
 	const auto sortedInternodeList = m_shootSkeleton.GetSubTree(baseInternodeHandle);
+
+	CollectShootFlux(globalTransform, climateModel, sortedInternodeList, shootGrowthParameters);
 	ShootGrowthRequirement subTreeGrowthRequirement{};
 	CalculateVigorRequirement(shootGrowthParameters, subTreeGrowthRequirement);
 
@@ -266,11 +272,10 @@ void TreeModel::Initialize(const ShootGrowthController& shootGrowthParameters, c
 	m_initialized = true;
 }
 
-void TreeModel::CollectRootFlux(const glm::mat4& globalTransform, VoxelSoilModel& soilModel, const RootGrowthController& rootGrowthParameters)
+void TreeModel::CollectRootFlux(const glm::mat4& globalTransform, VoxelSoilModel& soilModel, const std::vector<NodeHandle>& sortedSubTreeRootNodeList, const RootGrowthController& rootGrowthParameters)
 {
 	m_rootSkeleton.m_data.m_rootFlux.m_totalGrowthPotential = 0.0f;
-	const auto& sortedRootNodeList = m_rootSkeleton.RefSortedNodeList();
-	for (const auto& rootNodeHandle : sortedRootNodeList) {
+	for (const auto& rootNodeHandle : sortedSubTreeRootNodeList) {
 		auto& rootNode = m_rootSkeleton.RefNode(rootNodeHandle);
 		auto& rootNodeInfo = rootNode.m_info;
 		auto& rootNodeData = rootNode.m_data;
@@ -292,7 +297,7 @@ void TreeModel::CollectRootFlux(const glm::mat4& globalTransform, VoxelSoilModel
 
 }
 
-void TreeModel::CollectShootFlux(const glm::mat4& globalTransform, ClimateModel& climateModel,
+void TreeModel::CollectShootFlux(const glm::mat4& globalTransform, ClimateModel& climateModel, const std::vector<NodeHandle>& sortedSubTreeInternodeList,
 	const ShootGrowthController& shootGrowthParameters)
 {
 	auto& shootData = m_shootSkeleton.m_data;
@@ -328,7 +333,7 @@ void TreeModel::CollectShootFlux(const glm::mat4& globalTransform, ClimateModel&
 			}
 		}
 	}
-	for (const auto& internodeHandle : sortedInternodeList) {
+	for (const auto& internodeHandle : sortedSubTreeInternodeList) {
 		auto& internode = m_shootSkeleton.RefNode(internodeHandle);
 		auto& internodeData = internode.m_data;
 		auto& internodeInfo = internode.m_info;
@@ -1486,7 +1491,7 @@ void TreeModel::CalculateThicknessAndSagging(NodeHandle internodeHandle,
 }
 
 void TreeModel::CalculateVigorRequirement(const ShootGrowthController& shootGrowthParameters, ShootGrowthRequirement& newTreeGrowthNutrientsRequirement) {
-	m_shootSkeleton.SortLists();
+	
 	const auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
 	for (const auto& internodeHandle : sortedInternodeList) {
 		auto& internode = m_shootSkeleton.RefNode(internodeHandle);
@@ -1712,7 +1717,6 @@ void TreeModel::AllocateRootVigor(const RootGrowthController& rootGrowthParamete
 void TreeModel::CalculateVigorRequirement(const RootGrowthController& rootGrowthParameters,
 	RootGrowthRequirement& newRootGrowthNutrientsRequirement)
 {
-	m_rootSkeleton.SortLists();
 	const auto& sortedRootNodeList = m_rootSkeleton.RefSortedNodeList();
 	for (const auto& rootNodeHandle : sortedRootNodeList) {
 		auto& rootNode = m_rootSkeleton.RefNode(rootNodeHandle);

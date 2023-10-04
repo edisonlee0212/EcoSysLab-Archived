@@ -63,7 +63,7 @@ namespace EcoSysLab {
 		int m_shootStemSize = 0;
 		int m_rootNodeSize = 0;
 		int m_rootStemSize = 0;
-		bool m_needFullFlowUpdate = false;
+
 		bool m_needFlowUpdateForSelection = false;
 		int m_lastSelectedTreeIndex = -1;
 		bool m_lockTreeSelection = false;
@@ -112,9 +112,9 @@ namespace EcoSysLab {
 		void OnSoilVisualizationMenu();
 
 
-		void UpdateFlows(const std::vector<Entity> *treeEntities, const std::shared_ptr<Strands> &branchStrands,
-										 const std::shared_ptr<Strands> &rootStrands, const std::shared_ptr<Strands> &fineRootStrands,
-										 int targetTreeIndex = -1);
+		void UpdateFlows(const std::vector<Entity>* treeEntities, const std::shared_ptr<Strands>& branchStrands,
+			const std::shared_ptr<Strands>& rootStrands, const std::shared_ptr<Strands>& fineRootStrands,
+			int targetTreeIndex = -1);
 
 		void ClearGroundFruitAndLeaf();
 
@@ -123,8 +123,8 @@ namespace EcoSysLab {
 		// helper functions to structure code a bit
 		void SoilVisualization();
 
-		void SoilVisualizationScalar(VoxelSoilModel &soilModel); // called during LateUpdate()
-		void SoilVisualizationVector(VoxelSoilModel &soilModel); // called during LateUpdate()
+		void SoilVisualizationScalar(VoxelSoilModel& soilModel); // called during LateUpdate()
+		void SoilVisualizationVector(VoxelSoilModel& soilModel); // called during LateUpdate()
 
 		float m_time;
 		float m_deltaTime = 0.01918f;
@@ -137,10 +137,12 @@ namespace EcoSysLab {
 
 		glm::vec2 m_visualizationCameraMousePosition;
 		bool m_visualizationCameraWindowFocused = false;
-		public:
+	public:
+		bool m_needFullFlowUpdate = false;
+
 		int m_visualizationCameraResolutionX = 1;
 		int m_visualizationCameraResolutionY = 1;
-		
+
 		IlluminationEstimationSettings m_shadowEstimationSettings;
 
 
@@ -154,20 +156,20 @@ namespace EcoSysLab {
 		EntityRef m_fruitHolder;
 		EntityRef m_groundLeavesHolder;
 		EntityRef m_groundFruitsHolder;
-		TreeVisualizer m_treeVisualizer;
+
 
 		PrivateComponentRef m_soilHolder;
 		PrivateComponentRef m_climateHolder;
 
 		void Simulate(float deltaTime);
 
-		void GenerateMeshes(const TreeMeshGeneratorSettings &meshGeneratorSettings) const;
+		void GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings) const;
 
 		void ClearGeometries() const;
 
-		void ResetAllTrees(const std::vector<Entity> *treeEntities);
+		void ResetAllTrees(const std::vector<Entity>* treeEntities);
 
-		const std::vector<glm::vec3> &RandomColors();
+		const std::vector<glm::vec3>& RandomColors();
 	};
 
 

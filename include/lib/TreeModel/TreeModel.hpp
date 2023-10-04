@@ -145,9 +145,9 @@ namespace EcoSysLab {
 		void PruneInternode(NodeHandle internodeHandle);
 		void PruneRootNode(NodeHandle rootNodeHandle);
 
-		void CollectRootFlux(const glm::mat4& globalTransform, VoxelSoilModel& soilModel,
+		void CollectRootFlux(const glm::mat4& globalTransform, VoxelSoilModel& soilModel, const std::vector<NodeHandle>& sortedSubTreeRootNodeList,
 			const RootGrowthController& rootGrowthParameters);
-		void CollectShootFlux(const glm::mat4& globalTransform, ClimateModel& climateModel,
+		void CollectShootFlux(const glm::mat4& globalTransform, ClimateModel& climateModel, const std::vector<NodeHandle>& sortedSubTreeInternodeList,
 			const ShootGrowthController& shootGrowthParameters);
 		void HarvestFruits(const std::function<bool(const ReproductiveModule& fruit)>& harvestFunction);
 

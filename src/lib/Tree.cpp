@@ -18,6 +18,12 @@
 #include "StrandsRenderer.hpp"
 using namespace EcoSysLab;
 
+void Tree::Reset()
+{
+	m_treeModel.Clear();
+	if (const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>()) m_treeModel.RefShootSkeleton().m_data.m_treeIlluminationEstimator.m_settings = ecoSysLabLayer->m_shadowEstimationSettings;
+	m_treeVisualizer.Reset(m_treeModel);
+}
 void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	bool modelChanged = false;
 	if (editorLayer->DragAndDropButton<TreeDescriptor>(m_treeDescriptor, "TreeDescriptor", true)) {
@@ -25,12 +31,13 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 		modelChanged = true;
 	}
 	if (m_treeDescriptor.Get<TreeDescriptor>()) {
-		ImGui::Checkbox("Enable History", &m_enableHistory);
-		if (m_enableHistory)
-		{
-			ImGui::DragInt("History per iteration", &m_historyIteration, 1, 1, 1000);
-		}
+
 		if (ImGui::TreeNode("Tree Settings")) {
+			ImGui::Checkbox("Enable History", &m_enableHistory);
+			if (m_enableHistory)
+			{
+				ImGui::DragInt("History per iteration", &m_historyIteration, 1, 1, 1000);
+			}
 			ImGui::Checkbox("Enable Root", &m_treeModel.m_treeGrowthSettings.m_enableRoot);
 			ImGui::Checkbox("Enable Shoot", &m_treeModel.m_treeGrowthSettings.m_enableShoot);
 			ImGui::DragInt("Flow max node size", &m_treeModel.m_treeGrowthSettings.m_flowNodeLimit, 1, 1, 100);
@@ -124,12 +131,12 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 			static int iterationsPerFrame = 10;
 			ImGui::DragInt("Iterations per frame", &iterationsPerFrame, 1, 1, 100);
 			iterationsPerFrame = glm::clamp(iterationsPerFrame, 0, 100);
-			if(physicsSimulation)
+			if (physicsSimulation)
 			{
 				m_treePipeModel.SimulateAllProfiles(iterationsPerFrame, m_pipeModelParameters);
 			}
 
-			if(ImGui::Button("Initialize strands"))
+			if (ImGui::Button("Initialize strands"))
 			{
 				m_treePipeModel.ApplySimulationResults(m_pipeModelParameters);
 				InitializeStrandRenderer();
@@ -137,12 +144,10 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 
 			ImGui::TreePop();
 		}
-		
-		static int iterations = 5;
-		ImGui::DragInt("Iterations", &iterations, 1, 0, m_treeModel.CurrentIteration());
-		iterations = glm::clamp(iterations, 0, m_treeModel.CurrentIteration());
-
 		if (ImGui::TreeNodeEx("Mesh generation", ImGuiTreeNodeFlags_DefaultOpen)) {
+			static int iterations = 5;
+			ImGui::DragInt("Iterations", &iterations, 1, 0, m_treeModel.CurrentIteration());
+			iterations = glm::clamp(iterations, 0, m_treeModel.CurrentIteration());
 			m_meshGeneratorSettings.OnInspect(editorLayer);
 			if (ImGui::Button("Generate Mesh")) {
 				GenerateMeshes(m_meshGeneratorSettings, iterations);
@@ -153,9 +158,49 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 			}
 			ImGui::TreePop();
 		}
-		if (ImGui::Button("Clear")) {
-			m_treeModel.Clear();
+		if (ImGui::Button("Reset")) {
+			Reset();
 			modelChanged = true;
+		}
+
+		if (ImGui::TreeNode("Tree Inspector"))
+		{
+			ImGui::Checkbox("Enable Visualization", &m_enableVisualization);
+			modelChanged = m_treeVisualizer.OnInspect(m_treeModel) || modelChanged;
+
+			if (m_treeVisualizer.GetSelectedInternodeHandle() >= 0)
+			{
+				static float deltaTime = 0.01918f;
+				static bool autoGrowSubTree = false;
+				ImGui::DragFloat("Delta time", &deltaTime, 0.00001f, 0, 1, "%.5f");
+				if (ImGui::Button("Day")) deltaTime = 0.00274f;
+				ImGui::SameLine();
+				if (ImGui::Button("Week")) deltaTime = 0.01918f;
+				ImGui::SameLine();
+				if (ImGui::Button("Month")) deltaTime = 0.0822f;
+				ImGui::Checkbox("Auto grow subtree", &autoGrowSubTree);
+				if (!autoGrowSubTree) {
+					bool changed = false;
+					if (ImGui::Button("Grow subtree")) {
+						TryGrowSubTree(m_treeVisualizer.GetSelectedInternodeHandle(), deltaTime);
+						changed = true;
+					}
+					static int iterations = 5;
+					ImGui::DragInt("Iterations", &iterations, 1, 1, 100);
+					if (ImGui::Button(("Grow subtree with " + std::to_string(iterations) + " iterations").c_str())) {
+						for (int i = 0; i < iterations; i++) TryGrowSubTree(m_treeVisualizer.GetSelectedInternodeHandle(), deltaTime);
+						changed = true;
+					}
+					if (changed) {
+						m_treeVisualizer.m_iteration = m_treeModel.CurrentIteration();
+						m_treeVisualizer.m_needUpdate = true;
+					}
+				}else
+				{
+					TryGrowSubTree(m_treeVisualizer.GetSelectedInternodeHandle(), deltaTime);
+				}
+			}
+			ImGui::TreePop();
 		}
 
 		if (m_enableHistory)
@@ -172,6 +217,12 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 
 	if (m_splitRootTest) ImGui::Text(("Left/Right side biomass: [" + std::to_string(m_leftSideBiomass) + ", " + std::to_string(m_rightSideBiomass) + "]").c_str());
 
+	if (m_enableVisualization)
+	{
+		const auto scene = GetScene();
+		m_treeVisualizer.Visualize(m_treeModel,
+			scene->GetDataComponent<GlobalTransform>(GetOwner()));
+	}
 }
 void Tree::Update()
 {
@@ -189,6 +240,7 @@ void Tree::Update()
 }
 
 void Tree::OnCreate() {
+	m_treeVisualizer.Initialize();
 }
 
 void Tree::OnDestroy() {
@@ -223,9 +275,9 @@ bool Tree::TryGrow(float deltaTime) {
 	const auto owner = GetOwner();
 
 	PrepareControllers(treeDescriptor);
-	
+
 	const bool grown = m_treeModel.Grow(deltaTime, scene->GetDataComponent<GlobalTransform>(owner).m_value, soil->m_soilModel, climate->m_climateModel,
-	                                    m_rootGrowthController, m_fineRootController, m_shootGrowthController, m_twigController);
+		m_rootGrowthController, m_fineRootController, m_shootGrowthController, m_twigController);
 
 	if (m_enableHistory && m_treeModel.m_iteration % m_historyIteration == 0) m_treeModel.Step();
 
@@ -258,10 +310,16 @@ bool Tree::TryGrow(float deltaTime) {
 	return grown;
 }
 
-bool Tree::TryGrowSubTree(NodeHandle internodeHandle, float deltaTime)
+bool Tree::TryGrowSubTree(const NodeHandle internodeHandle, const float deltaTime)
 {
 	const auto scene = GetScene();
 	const auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
+	const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
+	if (!ecoSysLabLayer) return false;
+	
+	if (!m_climate.Get<Climate>()) m_climate = ecoSysLabLayer->m_climateHolder;
+	if (!m_soil.Get<Soil>()) m_soil = ecoSysLabLayer->m_soilHolder;
+
 	if (!treeDescriptor) {
 		EVOENGINE_ERROR("No tree descriptor!");
 		return false;
@@ -283,7 +341,12 @@ bool Tree::TryGrowSubTree(NodeHandle internodeHandle, float deltaTime)
 	const bool grown = m_treeModel.GrowSubTree(deltaTime, internodeHandle, scene->GetDataComponent<GlobalTransform>(owner).m_value, climate->m_climateModel, m_shootGrowthController, m_twigController);
 
 	if (m_enableHistory && m_treeModel.m_iteration % m_historyIteration == 0) m_treeModel.Step();
+
+	m_treeVisualizer.m_needUpdate = true;
+	ecoSysLabLayer->m_needFullFlowUpdate = true;
 }
+
+
 
 void Tree::InitializeStrandRenderer()
 {
@@ -926,13 +989,13 @@ bool OnInspectFineRootParameters(FineRootParameters& fineRootParameters)
 {
 	bool changed = false;
 	if (ImGui::TreeNodeEx("Fine Root Parameters", ImGuiTreeNodeFlags_DefaultOpen)) {
-			changed = ImGui::DragFloat("Segment length", &fineRootParameters.m_segmentLength, 0.01f) || changed;
-			changed = ImGui::DragFloat("Apical angle variance", &fineRootParameters.m_apicalAngleVariance, 0.01f) || changed;
-			changed = ImGui::DragFloat("Branching angle", &fineRootParameters.m_branchingAngle, 0.01f) || changed;
-			changed = ImGui::DragFloat("Thickness", &fineRootParameters.m_thickness, 0.01f) || changed;
-			changed = ImGui::DragFloat("Min node thickness", &fineRootParameters.m_nodeThicknessRequirement) || changed;
-			changed = ImGui::DragInt("Fine root node count", &fineRootParameters.m_segmentSize) || changed;
-			ImGui::TreePop();
+		changed = ImGui::DragFloat("Segment length", &fineRootParameters.m_segmentLength, 0.01f) || changed;
+		changed = ImGui::DragFloat("Apical angle variance", &fineRootParameters.m_apicalAngleVariance, 0.01f) || changed;
+		changed = ImGui::DragFloat("Branching angle", &fineRootParameters.m_branchingAngle, 0.01f) || changed;
+		changed = ImGui::DragFloat("Thickness", &fineRootParameters.m_thickness, 0.01f) || changed;
+		changed = ImGui::DragFloat("Min node thickness", &fineRootParameters.m_nodeThicknessRequirement) || changed;
+		changed = ImGui::DragInt("Fine root node count", &fineRootParameters.m_segmentSize) || changed;
+		ImGui::TreePop();
 	}
 	return changed;
 }
@@ -941,13 +1004,13 @@ bool OnInspectTwigParameters(TwigParameters& twigParameters)
 {
 	bool changed = false;
 	if (ImGui::TreeNodeEx("Twig Parameters", ImGuiTreeNodeFlags_DefaultOpen)) {
-			changed = ImGui::DragFloat("Segment length", &twigParameters.m_segmentLength, 0.01f) || changed;
-			changed = ImGui::DragFloat("Apical angle variance", &twigParameters.m_apicalAngleVariance, 0.01f) || changed;
-			changed = ImGui::DragFloat("Branching angle", &twigParameters.m_branchingAngle, 0.01f) || changed;
-			changed = ImGui::DragFloat("Thickness", &twigParameters.m_thickness, 0.01f) || changed;
-			changed = ImGui::DragFloat("Min node thickness", &twigParameters.m_nodeThicknessRequirement) || changed;
-			changed = ImGui::DragInt("Fine root node count", &twigParameters.m_segmentSize) || changed;
-			ImGui::TreePop();
+		changed = ImGui::DragFloat("Segment length", &twigParameters.m_segmentLength, 0.01f) || changed;
+		changed = ImGui::DragFloat("Apical angle variance", &twigParameters.m_apicalAngleVariance, 0.01f) || changed;
+		changed = ImGui::DragFloat("Branching angle", &twigParameters.m_branchingAngle, 0.01f) || changed;
+		changed = ImGui::DragFloat("Thickness", &twigParameters.m_thickness, 0.01f) || changed;
+		changed = ImGui::DragFloat("Min node thickness", &twigParameters.m_nodeThicknessRequirement) || changed;
+		changed = ImGui::DragInt("Fine root node count", &twigParameters.m_segmentSize) || changed;
+		ImGui::TreePop();
 	}
 	return changed;
 }
