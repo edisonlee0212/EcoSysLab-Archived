@@ -161,15 +161,15 @@ void TreePipeModel::UpdatePipeModels(const TreeModel& targetTreeModel, const Pip
 	}
 }
 
-void TreePipeModel::SimulateAllProfiles(size_t iteration, const PipeModelParameters& pipeModelParameters)
+void TreePipeModel::SimulateAllProfiles(const size_t minCellCount, const size_t iteration, const PipeModelParameters& pipeModelParameters)
 {
 	auto& profileGroup = m_shootPipeModel.m_pipeProfileGroup;
 	for (auto& profile : profileGroup.RefProfiles())
 	{
 		auto& profileData = profile.m_data;
 		auto& physics2D = profileData.m_particlePhysics2D;
-		if(physics2D.RefParticles().size() <= 4) continue;
-		physics2D.Simulate(1, [&](auto& particle)
+		if(physics2D.RefParticles().size() <= minCellCount) continue;
+		physics2D.Simulate(iteration, [&](auto& particle)
 			{
 				//Apply gravity
 				particle.SetPosition(particle.GetPosition() - physics2D.GetMassCenter());

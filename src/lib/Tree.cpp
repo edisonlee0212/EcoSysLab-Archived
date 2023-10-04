@@ -121,19 +121,22 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 		if (ImGui::TreeNode("Pipe Settings")) {
 
 			ImGui::DragFloat("Default profile cell radius", &m_pipeModelParameters.m_profileDefaultCellRadius, 0.001f, 0.001f, 1.0f);
-
+			ImGui::DragFloat("Cell movement damping", &m_pipeModelParameters.m_damping, 0.001f, 0.000f, 1.0f);
+			ImGui::DragFloat("Cell gravity strength", &m_pipeModelParameters.m_gravityStrength, 0.01f, 0.01f, 10.0f);
 			if (ImGui::Button("Update pipes"))
 			{
 				m_treePipeModel.UpdatePipeModels(m_treeModel, m_pipeModelParameters);
 			}
 			static bool physicsSimulation = false;
 			ImGui::Checkbox("Physics2D simulation", &physicsSimulation);
-			static int iterationsPerFrame = 10;
+			static int minCellCount = 5;
+			static int iterationsPerFrame = 1;
+			ImGui::DragInt("Min Cell Count", &minCellCount, 1, 1, 100);
 			ImGui::DragInt("Iterations per frame", &iterationsPerFrame, 1, 1, 100);
 			iterationsPerFrame = glm::clamp(iterationsPerFrame, 0, 100);
 			if (physicsSimulation)
 			{
-				m_treePipeModel.SimulateAllProfiles(iterationsPerFrame, m_pipeModelParameters);
+				m_treePipeModel.SimulateAllProfiles(minCellCount, iterationsPerFrame, m_pipeModelParameters);
 			}
 
 			if (ImGui::Button("Initialize strands"))
@@ -141,10 +144,34 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 				m_treePipeModel.ApplySimulationResults(m_pipeModelParameters);
 				InitializeStrandRenderer();
 			}
+			static bool displayProfile = true;
 
+			static bool showGrid = false;
+			ImGui::Checkbox("Show Profile", &displayProfile);
+			if (displayProfile) ImGui::Checkbox("Show Grid", &showGrid);
+			if (displayProfile && m_treeVisualizer.GetSelectedInternodeHandle() >= 0)
+			{
+				const auto& skeleton = m_treePipeModel.m_shootPipeModel.m_skeleton;
+				if (skeleton.RefRawNodes().size() > m_treeVisualizer.GetSelectedInternodeHandle())
+				{
+					auto& profileGroup = m_treePipeModel.m_shootPipeModel.m_pipeProfileGroup;
+					const auto targetProfileHandle = m_treePipeModel.m_shootPipeModel.m_skeleton.RefNode(m_treeVisualizer.GetSelectedInternodeHandle()).m_data.m_profileHandle;
+					if (profileGroup.RefProfiles().size() > targetProfileHandle) {
+						const std::string tag = "Profile [" + std::to_string(m_treeVisualizer.GetSelectedInternodeHandle()) + "]";
+						if (ImGui::Begin(tag.c_str()))
+						{
+							profileGroup.RefProfile(targetProfileHandle).m_data.m_particlePhysics2D.OnInspect(
+								[&](const glm::vec2 position) {},
+								[&](const ImVec2 origin, const float zoomFactor, ImDrawList* drawList) {},
+								showGrid);
+						}
+						ImGui::End();
+					}
+				}
+			}
 			ImGui::TreePop();
 		}
-		if (ImGui::TreeNodeEx("Mesh generation", ImGuiTreeNodeFlags_DefaultOpen)) {
+		if (ImGui::TreeNode("Mesh generation")) {
 			static int iterations = 5;
 			ImGui::DragInt("Iterations", &iterations, 1, 0, m_treeModel.CurrentIteration());
 			iterations = glm::clamp(iterations, 0, m_treeModel.CurrentIteration());
@@ -163,7 +190,7 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 			modelChanged = true;
 		}
 
-		if (ImGui::TreeNode("Tree Inspector"))
+		if (ImGui::TreeNodeEx("Tree Inspector", ImGuiTreeNodeFlags_DefaultOpen))
 		{
 			ImGui::Checkbox("Enable Visualization", &m_enableVisualization);
 			modelChanged = m_treeVisualizer.OnInspect(m_treeModel) || modelChanged;
@@ -195,7 +222,8 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 						m_treeVisualizer.m_iteration = m_treeModel.CurrentIteration();
 						m_treeVisualizer.m_needUpdate = true;
 					}
-				}else
+				}
+				else
 				{
 					TryGrowSubTree(m_treeVisualizer.GetSelectedInternodeHandle(), deltaTime);
 				}
@@ -316,7 +344,7 @@ bool Tree::TryGrowSubTree(const NodeHandle internodeHandle, const float deltaTim
 	const auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
 	const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
 	if (!ecoSysLabLayer) return false;
-	
+
 	if (!m_climate.Get<Climate>()) m_climate = ecoSysLabLayer->m_climateHolder;
 	if (!m_soil.Get<Soil>()) m_soil = ecoSysLabLayer->m_soilHolder;
 
