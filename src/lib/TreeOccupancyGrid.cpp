@@ -1,3 +1,7 @@
 #include "TreeOccupancyGrid.hpp"
 
-using namespace EvoEngine;
+using namespace EcoSysLab;
+
+void TreeOccupancyGrid::Initialize()
+{
+}

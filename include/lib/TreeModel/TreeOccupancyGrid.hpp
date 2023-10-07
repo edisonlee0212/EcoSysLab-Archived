@@ -8,9 +8,13 @@ namespace EcoSysLab
 		
 	};
 
+	struct TreeOccupancyGridVoxelData {
+	};
+
 	class TreeOccupancyGrid
 	{
+		VoxelGrid<TreeOccupancyGridVoxelData> m_occupancyGrid {};
 	public:
-		
+		void Initialize();
 	};
 }
