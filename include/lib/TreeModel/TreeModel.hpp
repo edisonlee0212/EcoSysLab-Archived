@@ -9,7 +9,7 @@ namespace EcoSysLab {
 	{
 		int m_flowNodeLimit = 10;
 
-		bool m_enableRoot = true;
+		bool m_enableRoot = false;
 		bool m_enableShoot = true;
 
 		bool m_autoBalance = true;

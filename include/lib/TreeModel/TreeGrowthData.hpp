@@ -177,6 +177,9 @@ namespace EcoSysLab
 		std::vector<ReproductiveModule> m_droppedFruits;
 
 		float m_vigor = 0;
+
+		glm::vec3 m_desiredMin;
+		glm::vec3 m_desiredMax;
 	};
 
 	struct RootGrowthData {

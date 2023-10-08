@@ -309,8 +309,8 @@ void TreeModel::CollectShootFlux(const glm::mat4& globalTransform, ClimateModel&
 	if (m_treeGrowthSettings.m_collectShootFlux) {
 		if(m_treeGrowthSettings.m_useSpaceColonization)
 		{
-			auto minBound = m_shootSkeleton.m_min;
-			auto maxBound = m_shootSkeleton.m_max;
+			auto minBound = m_shootSkeleton.m_data.m_desiredMin;
+			auto maxBound = m_shootSkeleton.m_data.m_desiredMax;
 			const auto originalMin = shootData.m_treeOccupancyGrid.GetMin();
 			const auto originalMax = shootData.m_treeOccupancyGrid.GetMax();
 			const float detectionRange = m_treeGrowthSettings.m_spaceColonizationDetectionDistanceFactor * shootGrowthParameters.m_internodeLength;
@@ -328,13 +328,12 @@ void TreeModel::CollectShootFlux(const glm::mat4& globalTransform, ClimateModel&
 			{
 				const auto& internode = m_shootSkeleton.RefNode(internodeHandle);
 				const auto& internodeData = internode.m_data;
-				const auto& internodeInfo = internode.m_info;
-				voxelGrid.ForEach(internodeInfo.m_globalPosition, m_treeGrowthSettings.m_spaceColonizationRemovalDistanceFactor * shootGrowthParameters.m_internodeLength,
+				voxelGrid.ForEach(internodeData.m_desiredGlobalPosition, m_treeGrowthSettings.m_spaceColonizationRemovalDistanceFactor * shootGrowthParameters.m_internodeLength,
 					[&](TreeOccupancyGridVoxelData& voxelData)
 					{
 						for (auto& marker : voxelData.m_markers)
 						{
-							if(glm::distance(marker.m_position, internodeInfo.m_globalPosition) < m_treeGrowthSettings.m_spaceColonizationRemovalDistanceFactor * shootGrowthParameters.m_internodeLength)
+							if(glm::distance(marker.m_position, internodeData.m_desiredGlobalPosition) < m_treeGrowthSettings.m_spaceColonizationRemovalDistanceFactor * shootGrowthParameters.m_internodeLength)
 							{
 								marker.m_nodeHandle = internodeHandle;
 							}
@@ -708,6 +707,9 @@ void TreeModel::ShootGrowthPostProcess(const glm::mat4& globalTransform, Climate
 	{
 		m_shootSkeleton.m_min = glm::vec3(FLT_MAX);
 		m_shootSkeleton.m_max = glm::vec3(FLT_MIN);
+		m_shootSkeleton.m_data.m_desiredMin = glm::vec3(FLT_MAX);
+		m_shootSkeleton.m_data.m_desiredMax = glm::vec3(FLT_MIN);
+
 		const auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
 		for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); it++) {
 			auto internodeHandle = *it;
@@ -720,9 +722,9 @@ void TreeModel::ShootGrowthPostProcess(const glm::mat4& globalTransform, Climate
 			auto& internodeInfo = internode.m_info;
 
 			if (internode.GetParentHandle() == -1) {
-				internodeInfo.m_globalPosition = glm::vec3(0.0f);
+				internodeInfo.m_globalPosition = internodeData.m_desiredGlobalPosition = glm::vec3(0.0f);
 				internodeData.m_localRotation = glm::vec3(0.0f);
-				internodeInfo.m_globalRotation = internodeInfo.m_regulatedGlobalRotation = glm::vec3(glm::radians(90.0f), 0.0f, 0.0f);
+				internodeInfo.m_globalRotation = internodeInfo.m_regulatedGlobalRotation = internodeData.m_desiredGlobalRotation = glm::vec3(glm::radians(90.0f), 0.0f, 0.0f);
 				internodeInfo.m_globalDirection = glm::normalize(internodeInfo.m_globalRotation * glm::vec3(0, 0, -1));
 				internodeData.m_rootDistance =
 					internodeInfo.m_length / shootGrowthParameters.m_internodeLength;
@@ -733,7 +735,7 @@ void TreeModel::ShootGrowthPostProcess(const glm::mat4& globalTransform, Climate
 					shootGrowthParameters.m_internodeLength;
 				internodeInfo.m_globalRotation =
 					parentInternode.m_info.m_globalRotation * internodeData.m_localRotation;
-
+				
 #pragma region Apply Sagging
 				const auto& parentNode = m_shootSkeleton.RefNode(
 					internode.GetParentHandle());
@@ -755,7 +757,10 @@ void TreeModel::ShootGrowthPostProcess(const glm::mat4& globalTransform, Climate
 					parentInternode.m_info.m_globalPosition
 					+ parentInternode.m_info.m_length * parentInternode.m_info.m_globalDirection;
 
-
+				internodeData.m_desiredGlobalRotation = parentNode.m_data.m_desiredGlobalRotation * internodeData.m_desiredLocalRotation;
+				auto parentDesiredFront = parentNode.m_data.m_desiredGlobalRotation * glm::vec3(0, 0, -1);
+				internodeData.m_desiredGlobalPosition = parentNode.m_data.m_desiredGlobalPosition +
+					parentInternode.m_info.m_length * parentDesiredFront;
 			}
 
 			m_shootSkeleton.m_min = glm::min(m_shootSkeleton.m_min, internodeInfo.m_globalPosition);
@@ -764,6 +769,14 @@ void TreeModel::ShootGrowthPostProcess(const glm::mat4& globalTransform, Climate
 				+ internodeInfo.m_length * internodeInfo.m_globalDirection;
 			m_shootSkeleton.m_min = glm::min(m_shootSkeleton.m_min, endPosition);
 			m_shootSkeleton.m_max = glm::max(m_shootSkeleton.m_max, endPosition);
+
+			m_shootSkeleton.m_data.m_desiredMin = glm::min(m_shootSkeleton.m_data.m_desiredMin, internodeData.m_desiredGlobalPosition);
+			m_shootSkeleton.m_data.m_desiredMax = glm::max(m_shootSkeleton.m_data.m_desiredMax, internodeData.m_desiredGlobalPosition);
+			const auto desiredGlobalDirection = internodeData.m_desiredGlobalRotation * glm::vec3(0, 0, -1);
+			const auto desiredEndPosition = internodeData.m_desiredGlobalPosition
+				+ internodeInfo.m_length * desiredGlobalDirection;
+			m_shootSkeleton.m_data.m_desiredMin = glm::min(m_shootSkeleton.m_data.m_desiredMin, desiredEndPosition);
+			m_shootSkeleton.m_data.m_desiredMax = glm::max(m_shootSkeleton.m_data.m_desiredMax, desiredEndPosition);
 		}
 		SampleTemperature(globalTransform, climateModel);
 		
