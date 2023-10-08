@@ -151,8 +151,8 @@ void TreeModel::ApplyTropism(const glm::vec3& targetDir, float tropism, glm::qua
 }
 
 bool TreeModel::Grow(float deltaTime, const glm::mat4& globalTransform, VoxelSoilModel& soilModel, ClimateModel& climateModel,
-	const RootGrowthController& rootGrowthParameters, const FineRootController& fineRootController,
-	const ShootGrowthController& shootGrowthParameters, const TwigController& twigController)
+	const RootGrowthController& rootGrowthParameters,
+	const ShootGrowthController& shootGrowthParameters)
 {
 	m_currentDeltaTime = deltaTime;
 	bool treeStructureChanged = false;
@@ -187,13 +187,11 @@ bool TreeModel::Grow(float deltaTime, const glm::mat4& globalTransform, VoxelSoi
 	
 	if (m_treeGrowthSettings.m_enableRoot && m_currentDeltaTime != 0.0f
 		&& GrowRoots(globalTransform, soilModel, rootGrowthParameters)) {
-		FormFineRoots(globalTransform, soilModel, rootGrowthParameters, fineRootController);
 		rootStructureChanged = true;
 	}
 	//Grow branches and set up nutrient requirements for next iteration.
 	if (m_treeGrowthSettings.m_enableShoot && m_currentDeltaTime != 0.0f
 		&& GrowShoots(globalTransform, climateModel, shootGrowthParameters)) {
-		FormTwigs(globalTransform, climateModel, shootGrowthParameters, twigController);
 		treeStructureChanged = true;
 	}
 	const int year = climateModel.m_time;
@@ -209,7 +207,7 @@ bool TreeModel::Grow(float deltaTime, const glm::mat4& globalTransform, VoxelSoi
 }
 
 bool TreeModel::GrowSubTree(const float deltaTime, const NodeHandle baseInternodeHandle, const glm::mat4& globalTransform, ClimateModel& climateModel,
-	const ShootGrowthController& shootGrowthParameters, const TwigController& twigController)
+	const ShootGrowthController& shootGrowthParameters)
 {
 	m_currentDeltaTime = deltaTime;
 	bool treeStructureChanged = false;
@@ -236,10 +234,6 @@ bool TreeModel::GrowSubTree(const float deltaTime, const NodeHandle baseInternod
 	if (anyBranchGrown) m_shootSkeleton.SortLists();
 	treeStructureChanged = treeStructureChanged || anyBranchGrown;
 	ShootGrowthPostProcess(globalTransform, climateModel, shootGrowthParameters);
-	if(anyBranchGrown)
-	{
-		FormTwigs(globalTransform, climateModel, shootGrowthParameters, twigController);
-	}
 	m_iteration++;
 	return treeStructureChanged;
 }
@@ -627,82 +621,6 @@ void TreeModel::RootGrowthPostProcess(const glm::mat4& globalTransform, VoxelSoi
 		}
 		m_rootSkeleton.CalculateFlows();
 	};
-}
-
-void TreeModel::FormFineRoots(const glm::mat4& globalTransform, VoxelSoilModel& soilModel,
-	const RootGrowthController& rootGrowthParameters, const FineRootController& fineRootController)
-{
-	m_fineRootCount = 0;
-	const auto& sortedRootNodeList = m_rootSkeleton.RefSortedNodeList();
-	for (const auto& rootNodeHandle : sortedRootNodeList)
-	{
-		auto& rootNode = m_rootSkeleton.RefNode(rootNodeHandle);
-		//Generate fine root here
-		if (rootNode.m_info.m_thickness < fineRootController.m_minNodeThicknessRequirement && rootNodeHandle % fineRootController.m_segmentSize == 0)
-		{
-			m_fineRootCount++;
-			if (rootNode.m_data.m_fineRootAnchors.empty())
-			{
-				rootNode.m_data.m_fineRootAnchors.resize(5);
-				auto desiredGlobalRotation = rootNode.m_info.m_globalRotation * glm::quat(glm::vec3(
-					glm::radians(fineRootController.m_branchingAngle), 0.0f,
-					glm::radians(rootGrowthParameters.m_rollAngle(rootNode))));
-
-				glm::vec3 positionWalker = rootNode.m_info.m_globalPosition;
-				for (int i = 0; i < 5; i++)
-				{
-					auto front = desiredGlobalRotation * glm::vec3(0, 0, -1);
-					positionWalker = positionWalker + front * fineRootController.m_segmentLength;
-					rootNode.m_data.m_fineRootAnchors[i] = glm::vec4(positionWalker, fineRootController.m_thickness);
-					desiredGlobalRotation = rootNode.m_info.m_globalRotation * glm::quat(glm::vec3(
-						glm::radians(glm::gaussRand(0.f, fineRootController.m_apicalAngleVariance) + fineRootController.m_branchingAngle), 0.0f,
-						glm::radians(glm::linearRand(0.0f, 360.0f))));
-				}
-			}
-		}
-		else
-		{
-			rootNode.m_data.m_fineRootAnchors.clear();
-		}
-	}
-}
-
-void TreeModel::FormTwigs(const glm::mat4& globalTransform, ClimateModel& climateModel, 
-	const ShootGrowthController& shootGrowthParameters, const TwigController& twigController)
-{
-	m_twigCount = 0;
-	const auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
-	for (const auto& internodeHandle : sortedInternodeList)
-	{
-		auto& internode = m_shootSkeleton.RefNode(internodeHandle);
-		//Generate fine root here
-		if (internode.m_info.m_thickness < twigController.m_minNodeThicknessRequirement && internodeHandle % twigController.m_segmentSize == 0)
-		{
-			m_twigCount++;
-			if (internode.m_data.m_twigAnchors.empty())
-			{
-				internode.m_data.m_twigAnchors.resize(5);
-				auto desiredGlobalRotation = internode.m_info.m_globalRotation * glm::quat(glm::vec3(
-					glm::radians(twigController.m_branchingAngle), 0.0f,
-					glm::radians(shootGrowthParameters.m_rollAngle(internode))));
-
-				glm::vec3 positionWalker = internode.m_info.m_globalPosition;
-				for (int i = 0; i < 5; i++)
-				{
-					auto front = desiredGlobalRotation * glm::vec3(0, 0, -1);
-					positionWalker = positionWalker + front * twigController.m_segmentLength;
-					internode.m_data.m_twigAnchors[i] = glm::vec4(positionWalker, twigController.m_thickness);
-					desiredGlobalRotation = internode.m_info.m_globalRotation * glm::quat(glm::vec3(
-						glm::radians(glm::gaussRand(0.f, twigController.m_apicalAngleVariance) + twigController.m_branchingAngle), 0.0f,
-						glm::radians(glm::linearRand(0.0f, 360.0f))));
-				}
-			}
-		}
-		else
-		{
-			internode.m_data.m_twigAnchors.clear();
-		}
-	}
 }
 
 bool TreeModel::GrowShoots(const glm::mat4& globalTransform, ClimateModel& climateModel, const ShootGrowthController& shootGrowthParameters) {

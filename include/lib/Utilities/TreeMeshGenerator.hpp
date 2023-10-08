@@ -38,6 +38,32 @@ namespace EcoSysLab {
 		bool m_limitMaxThickness = true;
 	};
 
+	struct TwigParameters
+	{
+		float m_segmentLength = 0.01f;
+		float m_apicalAngleVariance = 3.0f;
+		float m_branchingAngle = 30.f;
+		float m_thickness = 0.002f;
+		float m_minNodeThicknessRequirement = 0.003f;
+		float m_distanceFromRoot = 0.0f;
+		int m_segmentSize = 8;
+		float m_unitDistance = 0.03f;
+	};
+
+	struct FineRootParameters
+	{
+		float m_segmentLength = 0.02f;
+		float m_apicalAngleVariance = 5.0f;
+		float m_branchingAngle = 30.f;
+		float m_thickness = 0.002f;
+		float m_minNodeThicknessRequirement = 0.003f;
+		float m_distanceFromRoot = 0.0f;
+		int m_segmentSize = 8;
+		float m_unitDistance = 0.025f;
+	};
+
+	
+
 	struct TreeMeshGeneratorSettings {
 		bool m_vertexColorOnly = false;
 		bool m_enableFoliage = true;
@@ -78,6 +104,9 @@ namespace EcoSysLab {
 
 		bool m_detailedFoliage = false;
 
+
+		FineRootParameters m_fineRootParameters{};
+		TwigParameters m_twigParameters{};
 		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer);
 
 		void Save(const std::string& name, YAML::Emitter& out);
@@ -85,6 +114,7 @@ namespace EcoSysLab {
 		void Load(const std::string& name, const YAML::Node& in);
 	};
 
+	
 
 	template<typename SkeletonData, typename FlowData, typename NodeData>
 	class CylindricalMeshGenerator {

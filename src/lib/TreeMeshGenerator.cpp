@@ -7,6 +7,100 @@
 
 using namespace EcoSysLab;
 
+void SerializeFineRootParameters(const std::string& name, const FineRootParameters& fineRootParameters, YAML::Emitter& out)
+{
+	out << YAML::Key << name << YAML::BeginMap;
+	out << YAML::Key << "m_segmentLength" << YAML::Value << fineRootParameters.m_segmentLength;
+	out << YAML::Key << "m_apicalAngleVariance" << YAML::Value << fineRootParameters.m_apicalAngleVariance;
+	out << YAML::Key << "m_branchingAngle" << YAML::Value << fineRootParameters.m_branchingAngle;
+	out << YAML::Key << "m_thickness" << YAML::Value << fineRootParameters.m_thickness;
+	out << YAML::Key << "m_minNodeThicknessRequirement" << YAML::Value << fineRootParameters.m_minNodeThicknessRequirement;
+	out << YAML::Key << "m_distanceFromRoot" << YAML::Value << fineRootParameters.m_distanceFromRoot;
+	out << YAML::Key << "m_segmentSize" << YAML::Value << fineRootParameters.m_segmentSize;
+	out << YAML::Key << "m_unitDistance" << YAML::Value << fineRootParameters.m_unitDistance;
+	out << YAML::EndMap;
+}
+
+void SerializeTwigParameters(const std::string& name, const TwigParameters& twigParameters, YAML::Emitter& out)
+{
+	out << YAML::Key << name << YAML::BeginMap;
+	out << YAML::Key << "m_segmentLength" << YAML::Value << twigParameters.m_segmentLength;
+	out << YAML::Key << "m_apicalAngleVariance" << YAML::Value << twigParameters.m_apicalAngleVariance;
+	out << YAML::Key << "m_branchingAngle" << YAML::Value << twigParameters.m_branchingAngle;
+	out << YAML::Key << "m_thickness" << YAML::Value << twigParameters.m_thickness;
+	out << YAML::Key << "m_minNodeThicknessRequirement" << YAML::Value << twigParameters.m_minNodeThicknessRequirement;
+	out << YAML::Key << "m_distanceFromRoot" << YAML::Value << twigParameters.m_distanceFromRoot;
+	out << YAML::Key << "m_segmentSize" << YAML::Value << twigParameters.m_segmentSize;
+	out << YAML::Key << "m_unitDistance" << YAML::Value << twigParameters.m_unitDistance;
+	out << YAML::EndMap;
+}
+void DeserializeFineRootParameters(const std::string& name, FineRootParameters& fineRootParameters, const YAML::Node& in) {
+	if (in[name]) {
+		auto& ms = in[name];
+		if (ms["m_segmentLength"]) fineRootParameters.m_segmentLength = ms["m_segmentLength"].as<float>();
+		if (ms["m_apicalAngleVariance"]) fineRootParameters.m_apicalAngleVariance = ms["m_apicalAngleVariance"].as<float>();
+		if (ms["m_branchingAngle"]) fineRootParameters.m_branchingAngle = ms["m_branchingAngle"].as<float>();
+		if (ms["m_thickness"]) fineRootParameters.m_thickness = ms["m_thickness"].as<float>();
+		if (ms["m_minNodeThicknessRequirement"]) fineRootParameters.m_minNodeThicknessRequirement = ms["m_minNodeThicknessRequirement"].as<float>();
+		if (ms["m_segmentSize"]) fineRootParameters.m_segmentSize = ms["m_segmentSize"].as<int>();
+		if (ms["m_unitDistance"]) fineRootParameters.m_unitDistance = ms["m_unitDistance"].as<float>();
+		if (ms["m_distanceFromRoot"]) fineRootParameters.m_distanceFromRoot = ms["m_distanceFromRoot"].as<float>();
+	}
+}
+
+void DeserializeTwigParameters(const std::string& name, TwigParameters& twigParameters, const YAML::Node& in) {
+	if (in[name]) {
+		auto& ms = in[name];
+
+		if (ms["m_segmentLength"]) twigParameters.m_segmentLength = ms["m_segmentLength"].as<float>();
+		if (ms["m_apicalAngleVariance"]) twigParameters.m_apicalAngleVariance = ms["m_apicalAngleVariance"].as<float>();
+		if (ms["m_branchingAngle"]) twigParameters.m_branchingAngle = ms["m_branchingAngle"].as<float>();
+		if (ms["m_thickness"]) twigParameters.m_thickness = ms["m_thickness"].as<float>();
+		if (ms["m_minNodeThicknessRequirement"]) twigParameters.m_minNodeThicknessRequirement = ms["m_minNodeThicknessRequirement"].as<float>();
+		if (ms["m_segmentSize"]) twigParameters.m_segmentSize = ms["m_segmentSize"].as<int>();
+		if (ms["m_unitDistance"]) twigParameters.m_unitDistance = ms["m_unitDistance"].as<float>();
+		if (ms["m_distanceFromRoot"]) twigParameters.m_distanceFromRoot = ms["m_distanceFromRoot"].as<float>();
+	}
+}
+
+bool OnInspectFineRootParameters(FineRootParameters& fineRootParameters)
+{
+	bool changed = false;
+	if (ImGui::TreeNodeEx("Fine Root Parameters", ImGuiTreeNodeFlags_DefaultOpen)) {
+		changed = ImGui::DragFloat("Segment length", &fineRootParameters.m_segmentLength, 0.001f, 0.0f, 1.0f) || changed;
+		changed = ImGui::DragFloat("Apical angle variance", &fineRootParameters.m_apicalAngleVariance, 0.01f, 0.0f, 10.0f) || changed;
+		changed = ImGui::DragFloat("Branching angle", &fineRootParameters.m_branchingAngle, 0.01f, 0.0f, 180.0f) || changed;
+		changed = ImGui::DragFloat("Twig thickness", &fineRootParameters.m_thickness, 0.001f, 0.0f, 1.0f) || changed;
+		changed = ImGui::DragInt("Segment Size", &fineRootParameters.m_segmentSize, 1, 2, 10) || changed;
+		changed = ImGui::DragFloat("Distance between twigs", &fineRootParameters.m_unitDistance, 0.001f, 0.0f, 1.0f) || changed;
+
+		changed = ImGui::DragFloat("Thickness requirement", &fineRootParameters.m_minNodeThicknessRequirement, 0.001f, 0.0f, 5.0f) || changed;
+		changed = ImGui::DragFloat("Distance from root requirement", &fineRootParameters.m_distanceFromRoot, 0.001f, 0.0f, 1.0f) || changed;
+		ImGui::TreePop();
+	}
+	return changed;
+}
+
+bool OnInspectTwigParameters(TwigParameters& twigParameters)
+{
+	bool changed = false;
+	if (ImGui::TreeNodeEx("Twig settings", ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		changed = ImGui::DragFloat("Segment length", &twigParameters.m_segmentLength, 0.001f, 0.0f, 1.0f) || changed;
+		changed = ImGui::DragFloat("Apical angle variance", &twigParameters.m_apicalAngleVariance, 0.01f, 0.0f, 10.0f) || changed;
+		changed = ImGui::DragFloat("Branching angle", &twigParameters.m_branchingAngle, 0.01f, 0.0f, 180.0f) || changed;
+		changed = ImGui::DragFloat("Twig thickness", &twigParameters.m_thickness, 0.001f, 0.0f, 1.0f) || changed;
+		changed = ImGui::DragInt("Segment Size", &twigParameters.m_segmentSize, 1, 2, 10) || changed;
+		changed = ImGui::DragFloat("Distance between twigs", &twigParameters.m_unitDistance, 0.001f, 0.0f, 1.0f) || changed;
+
+		changed = ImGui::DragFloat("Thickness requirement", &twigParameters.m_minNodeThicknessRequirement, 0.001f, 0.0f, 5.0f) || changed;
+		changed = ImGui::DragFloat("Distance from root requirement", &twigParameters.m_distanceFromRoot, 0.001f, 0.0f, 1.0f) || changed;
+		ImGui::TreePop();
+	}
+	return changed;
+}
+
+
 RingSegment::RingSegment(glm::vec3 startPosition, glm::vec3 endPosition, glm::vec3 startAxis,
 	glm::vec3 endAxis, float startRadius, float endRadius)
 	: m_startPosition(startPosition),
@@ -101,7 +195,13 @@ void TreeMeshGeneratorSettings::Save(const std::string& name, YAML::Emitter& out
 	out << YAML::Key << "m_rootMeshType" << YAML::Value << m_rootMeshType;
 
 	out << YAML::Key << "m_detailedFoliage" << YAML::Value << m_detailedFoliage;
+
+	SerializeFineRootParameters("m_fineRootParameters", m_fineRootParameters, out);
+	SerializeTwigParameters("m_twigParameters", m_twigParameters, out);
+
 	out << YAML::EndMap;
+
+	
 }
 
 void TreeMeshGeneratorSettings::Load(const std::string& name, const YAML::Node& in) {
@@ -140,7 +240,12 @@ void TreeMeshGeneratorSettings::Load(const std::string& name, const YAML::Node& 
 		if (ms["m_rootMeshType"]) m_rootMeshType = ms["m_rootMeshType"].as<unsigned>();
 
 		if (ms["m_detailedFoliage"]) m_detailedFoliage = ms["m_detailedFoliage"].as<bool>();
+
+		DeserializeFineRootParameters("m_fineRootParameters", m_fineRootParameters, ms);
+		DeserializeTwigParameters("m_twigParameters", m_twigParameters, ms);
 	}
+
+	
 }
 
 void TreeMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
@@ -154,6 +259,14 @@ void TreeMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLayer>& ed
 		ImGui::Checkbox("Twig", &m_enableTwig);
 		ImGui::Combo("Branch mesh mode", { "Cylindrical", "Marching cubes" }, m_branchMeshType);
 		ImGui::Combo("Root mesh mode", { "Cylindrical", "Marching cubes" }, m_rootMeshType);
+		if(m_enableTwig)
+		{
+			OnInspectTwigParameters(m_twigParameters);
+		}
+		if (m_enableFineRoot)
+		{
+			OnInspectFineRootParameters(m_fineRootParameters);
+		}
 		if(ImGui::TreeNode("Cylindrical mesh settings"))
 		{
 			ImGui::DragFloat("Resolution", &m_resolution, 0.00001f, 0.00001f, 1.0f, "%.3f");

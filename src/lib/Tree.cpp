@@ -396,7 +396,7 @@ bool Tree::TryGrow(float deltaTime) {
 	PrepareControllers(treeDescriptor);
 
 	const bool grown = m_treeModel.Grow(deltaTime, scene->GetDataComponent<GlobalTransform>(owner).m_value, soil->m_soilModel, climate->m_climateModel,
-		m_rootGrowthController, m_fineRootController, m_shootGrowthController, m_twigController);
+		m_rootGrowthController, m_shootGrowthController);
 
 	if (m_enableHistory && m_treeModel.m_iteration % m_historyIteration == 0) m_treeModel.Step();
 
@@ -457,7 +457,7 @@ bool Tree::TryGrowSubTree(const NodeHandle internodeHandle, const float deltaTim
 
 	PrepareControllers(treeDescriptor);
 
-	const bool grown = m_treeModel.GrowSubTree(deltaTime, internodeHandle, scene->GetDataComponent<GlobalTransform>(owner).m_value, climate->m_climateModel, m_shootGrowthController, m_twigController);
+	const bool grown = m_treeModel.GrowSubTree(deltaTime, internodeHandle, scene->GetDataComponent<GlobalTransform>(owner).m_value, climate->m_climateModel, m_shootGrowthController);
 
 	if (m_enableHistory && m_treeModel.m_iteration % m_historyIteration == 0) m_treeModel.Step();
 
@@ -676,49 +676,80 @@ void Tree::GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings
 		std::vector<StrandPoint> fineRootPoints;
 		const auto& rootSkeleton = m_treeModel.PeekRootSkeleton(actualIteration);
 		const auto& rootNodeList = rootSkeleton.RefSortedNodeList();
-		int fineRootIndex = 0;
 		for (int rootNodeHandle : rootNodeList)
 		{
 			const auto& rootNode = rootSkeleton.PeekNode(rootNodeHandle);
 			const auto& rootNodeData = rootNode.m_data;
 			const auto& rootNodeInfo = rootNode.m_info;
-			if (rootNodeData.m_fineRootAnchors.empty()) continue;
-			fineRootPoints.resize(fineRootPoints.size() + 8);
-			fineRootSegments.resize(fineRootSegments.size() + 5);
-			auto& p0 = fineRootPoints[fineRootIndex * 8];
-			auto& p1 = fineRootPoints[fineRootIndex * 8 + 1];
-			auto& p2 = fineRootPoints[fineRootIndex * 8 + 2];
-			auto& p3 = fineRootPoints[fineRootIndex * 8 + 3];
-			auto& p4 = fineRootPoints[fineRootIndex * 8 + 4];
-			auto& p5 = fineRootPoints[fineRootIndex * 8 + 5];
-			auto& p6 = fineRootPoints[fineRootIndex * 8 + 6];
-			auto& p7 = fineRootPoints[fineRootIndex * 8 + 7];
+			std::vector<std::vector<glm::vec4>> fineRoots{};
+			if (rootNodeInfo.m_thickness < meshGeneratorSettings.m_fineRootParameters.m_minNodeThicknessRequirement && rootNodeData.m_rootDistance > meshGeneratorSettings.m_fineRootParameters.m_distanceFromRoot)
+			{
+				int fineRootCount = rootNodeInfo.m_length / meshGeneratorSettings.m_fineRootParameters.m_unitDistance;
+				fineRoots.resize(fineRootCount);
 
-			p0.m_position = rootNodeInfo.m_globalPosition * 2.0f - glm::vec3(rootNodeData.m_fineRootAnchors[0]);
-			p1.m_position = rootNodeInfo.m_globalPosition;
-			p2.m_position = glm::vec3(rootNodeData.m_fineRootAnchors[0]);
-			p3.m_position = glm::vec3(rootNodeData.m_fineRootAnchors[1]);
-			p4.m_position = glm::vec3(rootNodeData.m_fineRootAnchors[2]);
-			p5.m_position = glm::vec3(rootNodeData.m_fineRootAnchors[3]);
-			p6.m_position = glm::vec3(rootNodeData.m_fineRootAnchors[4]);
-			p7.m_position = glm::vec3(rootNodeData.m_fineRootAnchors[4]) * 2.0f - glm::vec3(rootNodeData.m_fineRootAnchors[3]);
+				auto desiredGlobalRotation = rootNodeInfo.m_regulatedGlobalRotation * glm::quat(glm::vec3(
+					glm::radians(meshGeneratorSettings.m_fineRootParameters.m_branchingAngle), 0.0f,
+					glm::radians(glm::radians(
+						glm::linearRand(0.0f,
+							360.0f)))));
 
-			p0.m_thickness = rootNodeInfo.m_thickness;
-			p1.m_thickness = rootNodeData.m_fineRootAnchors[0].w;
-			p2.m_thickness = rootNodeData.m_fineRootAnchors[0].w;
-			p3.m_thickness = rootNodeData.m_fineRootAnchors[1].w;
-			p4.m_thickness = rootNodeData.m_fineRootAnchors[2].w;
-			p5.m_thickness = rootNodeData.m_fineRootAnchors[3].w;
-			p6.m_thickness = rootNodeData.m_fineRootAnchors[4].w;
-			p7.m_thickness = rootNodeData.m_fineRootAnchors[4].w;
+				glm::vec3 directionStart = rootNodeInfo.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
+				glm::vec3 directionEnd = directionStart;
 
-			fineRootSegments[fineRootIndex * 5] = fineRootIndex * 8;
-			fineRootSegments[fineRootIndex * 5 + 1] = fineRootIndex * 8 + 1;
-			fineRootSegments[fineRootIndex * 5 + 2] = fineRootIndex * 8 + 2;
-			fineRootSegments[fineRootIndex * 5 + 3] = fineRootIndex * 8 + 3;
-			fineRootSegments[fineRootIndex * 5 + 4] = fineRootIndex * 8 + 4;
+				glm::vec3 positionStart = rootNodeInfo.m_globalPosition;
+				glm::vec3 positionEnd =
+					positionStart + rootNodeInfo.m_length * meshGeneratorSettings.m_lineLengthFactor * rootNodeInfo.m_globalDirection;
 
-			fineRootIndex++;
+				BezierCurve curve = BezierCurve(
+					positionStart,
+					positionStart +
+					(meshGeneratorSettings.m_smoothness ? rootNodeInfo.m_length * meshGeneratorSettings.m_baseControlPointRatio : 0.0f) * directionStart,
+					positionEnd -
+					(meshGeneratorSettings.m_smoothness ? rootNodeInfo.m_length * meshGeneratorSettings.m_branchControlPointRatio : 0.0f) * directionEnd,
+					positionEnd);
+
+				for (int fineRootIndex = 0; fineRootIndex < fineRootCount; fineRootIndex++) {
+					glm::vec3 positionWalker = curve.GetPoint(static_cast<float>(fineRootIndex) / fineRootCount);
+					fineRoots[fineRootIndex].resize(meshGeneratorSettings.m_fineRootParameters.m_segmentSize);
+					const float rollAngle = glm::radians(glm::linearRand(0.0f, 360.0f));
+					for (int fineRootPointIndex = 0; fineRootPointIndex < meshGeneratorSettings.m_fineRootParameters.m_segmentSize; fineRootPointIndex++)
+					{
+						fineRoots[fineRootIndex][fineRootPointIndex] = glm::vec4(positionWalker, meshGeneratorSettings.m_fineRootParameters.m_thickness);
+						desiredGlobalRotation = rootNodeInfo.m_regulatedGlobalRotation * glm::quat(glm::vec3(
+							glm::radians(glm::gaussRand(0.f, meshGeneratorSettings.m_fineRootParameters.m_apicalAngleVariance) + meshGeneratorSettings.m_fineRootParameters.m_branchingAngle), 0.0f,
+							rollAngle));
+
+						auto fineRootFront = desiredGlobalRotation * glm::vec3(0, 0, -1);
+						positionWalker = positionWalker + fineRootFront * meshGeneratorSettings.m_fineRootParameters.m_segmentLength;
+					}
+				}
+
+			}
+
+			for (const auto& fineRoot : fineRoots) {
+				const auto fineRootSegmentSize = fineRoot.size();
+				const auto fineRootControlPointSize = fineRoot.size() + 3;
+				const auto totalTwigPointSize = fineRootPoints.size();
+				const auto totalTwigSegmentSize = fineRootSegments.size();
+				fineRootPoints.resize(totalTwigPointSize + fineRootControlPointSize);
+				fineRootSegments.resize(totalTwigSegmentSize + fineRootSegmentSize);
+
+				for (int i = 0; i < fineRootControlPointSize; i++) {
+					auto& p = fineRootPoints[totalTwigPointSize + i];
+					p.m_position = glm::vec3(fineRoot[glm::clamp(i - 2, 0, static_cast<int>(fineRootSegmentSize - 1))]);
+					p.m_thickness = fineRoot[glm::clamp(i - 2, 0, static_cast<int>(fineRootSegmentSize - 1))].w;
+				}
+				fineRootPoints[totalTwigPointSize].m_position = glm::vec3(fineRoot[0]) * 2.0f - glm::vec3(fineRoot[1]);
+				fineRootPoints[totalTwigPointSize].m_thickness = fineRoot[0].w * 2.0f - fineRoot[1].w;
+
+				fineRootPoints[totalTwigPointSize + fineRootControlPointSize - 1].m_position = glm::vec3(fineRoot[fineRootSegmentSize - 1]) * 2.0f - glm::vec3(fineRoot[fineRootSegmentSize - 2]);
+				fineRootPoints[totalTwigPointSize + fineRootControlPointSize - 1].m_thickness = fineRoot[fineRootSegmentSize - 1].w * 2.0f - fineRoot[fineRootSegmentSize - 2].w;
+
+
+				for (int i = 0; i < fineRootSegmentSize; i++) {
+					fineRootSegments[totalTwigSegmentSize + i] = totalTwigPointSize + i;
+				}
+			}
 		}
 
 		auto strands = ProjectManager::CreateTemporaryAsset<Strands>();
@@ -748,49 +779,80 @@ void Tree::GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings
 		std::vector<StrandPoint> twigPoints;
 		const auto& shootSkeleton = m_treeModel.PeekShootSkeleton(actualIteration);
 		const auto& internodeList = shootSkeleton.RefSortedNodeList();
-		int twigIndex = 0;
 		for (int internodeHandle : internodeList)
 		{
 			const auto& internode = shootSkeleton.PeekNode(internodeHandle);
 			const auto& internodeData = internode.m_data;
 			const auto& internodeInfo = internode.m_info;
-			if (internodeData.m_twigAnchors.empty()) continue;
-			twigPoints.resize(twigPoints.size() + 8);
-			twigSegments.resize(twigSegments.size() + 5);
-			auto& p0 = twigPoints[twigIndex * 8];
-			auto& p1 = twigPoints[twigIndex * 8 + 1];
-			auto& p2 = twigPoints[twigIndex * 8 + 2];
-			auto& p3 = twigPoints[twigIndex * 8 + 3];
-			auto& p4 = twigPoints[twigIndex * 8 + 4];
-			auto& p5 = twigPoints[twigIndex * 8 + 5];
-			auto& p6 = twigPoints[twigIndex * 8 + 6];
-			auto& p7 = twigPoints[twigIndex * 8 + 7];
+			std::vector<std::vector<glm::vec4>> twigs{};
+			if (internodeInfo.m_thickness < meshGeneratorSettings.m_twigParameters.m_minNodeThicknessRequirement && internodeData.m_rootDistance > meshGeneratorSettings.m_twigParameters.m_distanceFromRoot)
+			{
+				int twigCount = internodeInfo.m_length / meshGeneratorSettings.m_twigParameters.m_unitDistance;
+				twigs.resize(twigCount);
 
-			p0.m_position = internodeInfo.m_globalPosition * 2.0f - glm::vec3(internodeData.m_twigAnchors[0]);
-			p1.m_position = internodeInfo.m_globalPosition;
-			p2.m_position = glm::vec3(internodeData.m_twigAnchors[0]);
-			p3.m_position = glm::vec3(internodeData.m_twigAnchors[1]);
-			p4.m_position = glm::vec3(internodeData.m_twigAnchors[2]);
-			p5.m_position = glm::vec3(internodeData.m_twigAnchors[3]);
-			p6.m_position = glm::vec3(internodeData.m_twigAnchors[4]);
-			p7.m_position = glm::vec3(internodeData.m_twigAnchors[4]) * 2.0f - glm::vec3(internodeData.m_twigAnchors[3]);
+				auto desiredGlobalRotation = internodeInfo.m_regulatedGlobalRotation * glm::quat(glm::vec3(
+					glm::radians(meshGeneratorSettings.m_twigParameters.m_branchingAngle), 0.0f,
+					glm::radians(glm::radians(
+						glm::linearRand(0.0f,
+							360.0f)))));
 
-			p0.m_thickness = internodeInfo.m_thickness;
-			p1.m_thickness = internodeData.m_twigAnchors[0].w;
-			p2.m_thickness = internodeData.m_twigAnchors[0].w;
-			p3.m_thickness = internodeData.m_twigAnchors[1].w;
-			p4.m_thickness = internodeData.m_twigAnchors[2].w;
-			p5.m_thickness = internodeData.m_twigAnchors[3].w;
-			p6.m_thickness = internodeData.m_twigAnchors[4].w;
-			p7.m_thickness = internodeData.m_twigAnchors[4].w;
+				glm::vec3 directionStart = internodeInfo.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
+				glm::vec3 directionEnd = directionStart;
 
-			twigSegments[twigIndex * 5] = twigIndex * 8;
-			twigSegments[twigIndex * 5 + 1] = twigIndex * 8 + 1;
-			twigSegments[twigIndex * 5 + 2] = twigIndex * 8 + 2;
-			twigSegments[twigIndex * 5 + 3] = twigIndex * 8 + 3;
-			twigSegments[twigIndex * 5 + 4] = twigIndex * 8 + 4;
+				glm::vec3 positionStart = internodeInfo.m_globalPosition;
+				glm::vec3 positionEnd =
+					positionStart + internodeInfo.m_length * meshGeneratorSettings.m_lineLengthFactor * internodeInfo.m_globalDirection;
 
-			twigIndex++;
+				BezierCurve curve = BezierCurve(
+					positionStart,
+					positionStart +
+					(meshGeneratorSettings.m_smoothness ? internodeInfo.m_length * meshGeneratorSettings.m_baseControlPointRatio : 0.0f) * directionStart,
+					positionEnd -
+					(meshGeneratorSettings.m_smoothness ? internodeInfo.m_length * meshGeneratorSettings.m_branchControlPointRatio : 0.0f) * directionEnd,
+					positionEnd);
+
+				for (int twigIndex = 0; twigIndex < twigCount; twigIndex++) {
+					glm::vec3 positionWalker = curve.GetPoint(static_cast<float>(twigIndex) / twigCount);
+					twigs[twigIndex].resize(meshGeneratorSettings.m_twigParameters.m_segmentSize);
+					const float rollAngle = glm::radians(glm::linearRand(0.0f, 360.0f));
+					for (int twigPointIndex = 0; twigPointIndex < meshGeneratorSettings.m_twigParameters.m_segmentSize; twigPointIndex++)
+					{
+						twigs[twigIndex][twigPointIndex] = glm::vec4(positionWalker, meshGeneratorSettings.m_twigParameters.m_thickness);
+						desiredGlobalRotation = internodeInfo.m_regulatedGlobalRotation * glm::quat(glm::vec3(
+							glm::radians(glm::gaussRand(0.f, meshGeneratorSettings.m_twigParameters.m_apicalAngleVariance) + meshGeneratorSettings.m_twigParameters.m_branchingAngle), 0.0f,
+							rollAngle));
+
+						auto twigFront = desiredGlobalRotation * glm::vec3(0, 0, -1);
+						positionWalker = positionWalker + twigFront * meshGeneratorSettings.m_twigParameters.m_segmentLength;
+					}
+				}
+
+			}
+
+			for (const auto& twig : twigs) {
+				const auto twigSegmentSize = twig.size();
+				const auto twigControlPointSize = twig.size() + 3;
+				const auto totalTwigPointSize = twigPoints.size();
+				const auto totalTwigSegmentSize = twigSegments.size();
+				twigPoints.resize(totalTwigPointSize + twigControlPointSize);
+				twigSegments.resize(totalTwigSegmentSize + twigSegmentSize);
+
+				for (int i = 0; i < twigControlPointSize; i++) {
+					auto& p = twigPoints[totalTwigPointSize + i];
+					p.m_position = glm::vec3(twig[glm::clamp(i - 2, 0, static_cast<int>(twigSegmentSize - 1))]);
+					p.m_thickness = twig[glm::clamp(i - 2, 0, static_cast<int>(twigSegmentSize - 1))].w;
+				}
+				twigPoints[totalTwigPointSize].m_position = glm::vec3(twig[0]) * 2.0f - glm::vec3(twig[1]);
+				twigPoints[totalTwigPointSize].m_thickness = twig[0].w * 2.0f - twig[1].w;
+
+				twigPoints[totalTwigPointSize + twigControlPointSize - 1].m_position = glm::vec3(twig[twigSegmentSize - 1]) * 2.0f - glm::vec3(twig[twigSegmentSize - 2]);
+				twigPoints[totalTwigPointSize + twigControlPointSize - 1].m_thickness = twig[twigSegmentSize - 1].w * 2.0f - twig[twigSegmentSize - 2].w;
+
+
+				for (int i = 0; i < twigSegmentSize; i++) {
+					twigSegments[totalTwigSegmentSize + i] = totalTwigPointSize + i;
+				}
+			}
 		}
 
 		auto strands = ProjectManager::CreateTemporaryAsset<Strands>();
@@ -1102,35 +1164,6 @@ bool OnInspectShootGrowthParameters(ShootGrowthParameters& treeGrowthParameters)
 
 	return changed;
 }
-bool OnInspectFineRootParameters(FineRootParameters& fineRootParameters)
-{
-	bool changed = false;
-	if (ImGui::TreeNodeEx("Fine Root Parameters", ImGuiTreeNodeFlags_DefaultOpen)) {
-		changed = ImGui::DragFloat("Segment length", &fineRootParameters.m_segmentLength, 0.01f) || changed;
-		changed = ImGui::DragFloat("Apical angle variance", &fineRootParameters.m_apicalAngleVariance, 0.01f) || changed;
-		changed = ImGui::DragFloat("Branching angle", &fineRootParameters.m_branchingAngle, 0.01f) || changed;
-		changed = ImGui::DragFloat("Thickness", &fineRootParameters.m_thickness, 0.01f) || changed;
-		changed = ImGui::DragFloat("Min node thickness", &fineRootParameters.m_nodeThicknessRequirement) || changed;
-		changed = ImGui::DragInt("Fine root node count", &fineRootParameters.m_segmentSize) || changed;
-		ImGui::TreePop();
-	}
-	return changed;
-}
-
-bool OnInspectTwigParameters(TwigParameters& twigParameters)
-{
-	bool changed = false;
-	if (ImGui::TreeNodeEx("Twig Parameters", ImGuiTreeNodeFlags_DefaultOpen)) {
-		changed = ImGui::DragFloat("Segment length", &twigParameters.m_segmentLength, 0.01f) || changed;
-		changed = ImGui::DragFloat("Apical angle variance", &twigParameters.m_apicalAngleVariance, 0.01f) || changed;
-		changed = ImGui::DragFloat("Branching angle", &twigParameters.m_branchingAngle, 0.01f) || changed;
-		changed = ImGui::DragFloat("Thickness", &twigParameters.m_thickness, 0.01f) || changed;
-		changed = ImGui::DragFloat("Min node thickness", &twigParameters.m_nodeThicknessRequirement) || changed;
-		changed = ImGui::DragInt("Fine root node count", &twigParameters.m_segmentSize) || changed;
-		ImGui::TreePop();
-	}
-	return changed;
-}
 
 bool OnInspectRootGrowthParameters(RootGrowthParameters& rootGrowthParameters) {
 	bool changed = false;
@@ -1194,38 +1227,12 @@ void TreeDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 		ImGui::Text("Attach soil and climate entity to instantiate!");
 	}
 	if (OnInspectShootGrowthParameters(m_shootGrowthParameters)) { changed = true; }
-	if (OnInspectTwigParameters(m_twigParameters)) { changed = true; }
 	if (OnInspectRootGrowthParameters(m_rootGrowthParameters)) { changed = true; }
-	if (OnInspectFineRootParameters(m_fineRootParameters)) { changed = true; }
 	if (changed) m_saved = false;
 }
 
 void TreeDescriptor::CollectAssetRef(std::vector<AssetRef>& list) {
 
-}
-
-void SerializeFineRootParameters(const std::string& name, const FineRootParameters& fineRootParameters, YAML::Emitter& out)
-{
-	out << YAML::Key << name << YAML::BeginMap;
-	out << YAML::Key << "m_segmentSize" << YAML::Value << fineRootParameters.m_segmentSize;
-	out << YAML::Key << "m_segmentLength" << YAML::Value << fineRootParameters.m_segmentLength;
-	out << YAML::Key << "m_apicalAngleVariance" << YAML::Value << fineRootParameters.m_apicalAngleVariance;
-	out << YAML::Key << "m_branchingAngle" << YAML::Value << fineRootParameters.m_branchingAngle;
-	out << YAML::Key << "m_thickness" << YAML::Value << fineRootParameters.m_thickness;
-	out << YAML::Key << "m_nodeThicknessRequirement" << YAML::Value << fineRootParameters.m_nodeThicknessRequirement;
-	out << YAML::EndMap;
-}
-
-void SerializeTwigParameters(const std::string& name, const TwigParameters& twigParameters, YAML::Emitter& out)
-{
-	out << YAML::Key << name << YAML::BeginMap;
-	out << YAML::Key << "m_segmentSize" << YAML::Value << twigParameters.m_segmentSize;
-	out << YAML::Key << "m_segmentLength" << YAML::Value << twigParameters.m_segmentLength;
-	out << YAML::Key << "m_apicalAngleVariance" << YAML::Value << twigParameters.m_apicalAngleVariance;
-	out << YAML::Key << "m_branchingAngle" << YAML::Value << twigParameters.m_branchingAngle;
-	out << YAML::Key << "m_thickness" << YAML::Value << twigParameters.m_thickness;
-	out << YAML::Key << "m_nodeThicknessRequirement" << YAML::Value << twigParameters.m_nodeThicknessRequirement;
-	out << YAML::EndMap;
 }
 
 void SerializeShootGrowthParameters(const std::string& name, const ShootGrowthParameters& treeGrowthParameters, YAML::Emitter& out) {
@@ -1318,36 +1325,8 @@ void TreeDescriptor::Serialize(YAML::Emitter& out) {
 	SerializeShootGrowthParameters("m_shootGrowthParameters", m_shootGrowthParameters, out);
 	SerializeRootGrowthParameters("m_rootGrowthParameters", m_rootGrowthParameters, out);
 
-	SerializeFineRootParameters("m_fineRootParameters", m_fineRootParameters, out);
-	SerializeTwigParameters("m_twigParameters", m_twigParameters, out);
+	
 }
-
-void DeserializeFineRootParameters(const std::string& name, FineRootParameters& fineRootParameters, const YAML::Node& in) {
-	if (in[name]) {
-		auto& param = in[name];
-
-		if (param["m_segmentSize"]) fineRootParameters.m_segmentSize = param["m_segmentSize"].as<int>();
-		if (param["m_segmentLength"]) fineRootParameters.m_segmentLength = param["m_segmentLength"].as<float>();
-		if (param["m_apicalAngleVariance"]) fineRootParameters.m_apicalAngleVariance = param["m_apicalAngleVariance"].as<float>();
-		if (param["m_branchingAngle"]) fineRootParameters.m_branchingAngle = param["m_branchingAngle"].as<float>();
-		if (param["m_thickness"]) fineRootParameters.m_thickness = param["m_thickness"].as<float>();
-		if (param["m_nodeThicknessRequirement"]) fineRootParameters.m_nodeThicknessRequirement = param["m_nodeThicknessRequirement"].as<float>();
-	}
-}
-
-void DeserializeTwigParameters(const std::string& name, TwigParameters& twigParameters, const YAML::Node& in) {
-	if (in[name]) {
-		auto& param = in[name];
-
-		if (param["m_segmentSize"]) twigParameters.m_segmentSize = param["m_segmentSize"].as<int>();
-		if (param["m_segmentLength"]) twigParameters.m_segmentLength = param["m_segmentLength"].as<float>();
-		if (param["m_apicalAngleVariance"]) twigParameters.m_apicalAngleVariance = param["m_apicalAngleVariance"].as<float>();
-		if (param["m_branchingAngle"]) twigParameters.m_branchingAngle = param["m_branchingAngle"].as<float>();
-		if (param["m_thickness"]) twigParameters.m_thickness = param["m_thickness"].as<float>();
-		if (param["m_nodeThicknessRequirement"]) twigParameters.m_nodeThicknessRequirement = param["m_nodeThicknessRequirement"].as<float>();
-	}
-}
-
 
 void DeserializeShootGrowthParameters(const std::string& name, ShootGrowthParameters& treeGrowthParameters, const YAML::Node& in) {
 	if (in[name]) {
@@ -1444,9 +1423,6 @@ void DeserializeRootGrowthParameters(const std::string& name, RootGrowthParamete
 void TreeDescriptor::Deserialize(const YAML::Node& in) {
 	DeserializeShootGrowthParameters("m_shootGrowthParameters", m_shootGrowthParameters, in);
 	DeserializeRootGrowthParameters("m_rootGrowthParameters", m_rootGrowthParameters, in);
-
-	DeserializeFineRootParameters("m_fineRootParameters", m_fineRootParameters, in);
-	DeserializeTwigParameters("m_twigParameters", m_twigParameters, in);
 }
 
 void Tree::PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescriptor)
@@ -1583,12 +1559,7 @@ void Tree::PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescrip
 			{
 				return treeDescriptor->m_shootGrowthParameters.m_fruitFallProbability;
 			};
-		m_twigController.m_segmentLength = treeDescriptor->m_twigParameters.m_segmentLength;
-		m_twigController.m_apicalAngleVariance = treeDescriptor->m_twigParameters.m_apicalAngleVariance;
-		m_twigController.m_branchingAngle = treeDescriptor->m_twigParameters.m_branchingAngle;
-		m_twigController.m_thickness = treeDescriptor->m_twigParameters.m_thickness;
-		m_twigController.m_minNodeThicknessRequirement = treeDescriptor->m_twigParameters.m_nodeThicknessRequirement;
-		m_twigController.m_segmentSize = treeDescriptor->m_twigParameters.m_segmentSize;
+		
 	}
 	{
 		m_rootGrowthController.m_rootNodeGrowthRate = treeDescriptor->m_rootGrowthParameters.m_rootNodeGrowthRate;
@@ -1630,13 +1601,6 @@ void Tree::PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescrip
 			{
 				return treeDescriptor->m_rootGrowthParameters.m_branchingProbability;
 			};
-
-		m_fineRootController.m_segmentLength = treeDescriptor->m_fineRootParameters.m_segmentLength;
-		m_fineRootController.m_apicalAngleVariance = treeDescriptor->m_fineRootParameters.m_apicalAngleVariance;
-		m_fineRootController.m_branchingAngle = treeDescriptor->m_fineRootParameters.m_branchingAngle;
-		m_fineRootController.m_thickness = treeDescriptor->m_fineRootParameters.m_thickness;
-		m_fineRootController.m_minNodeThicknessRequirement = treeDescriptor->m_fineRootParameters.m_nodeThicknessRequirement;
-		m_fineRootController.m_segmentSize = treeDescriptor->m_fineRootParameters.m_segmentSize;
 	}
 
 }

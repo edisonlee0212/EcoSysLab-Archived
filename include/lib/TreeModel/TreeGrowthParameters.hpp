@@ -83,16 +83,6 @@ namespace EcoSysLab
 		
 	};
 
-	struct FineRootParameters
-	{
-		int m_segmentSize = 2;
-		float m_segmentLength = 0.02f;
-		float m_apicalAngleVariance = 2.5f;
-		float m_branchingAngle = 60.f;
-		float m_thickness = 0.002f;
-		float m_nodeThicknessRequirement = 0.05f;
-	};
-
 	struct ShootGrowthParameters {
 		float m_internodeGrowthRate;
 		float m_leafGrowthRate = 0.05f;
@@ -236,13 +226,5 @@ namespace EcoSysLab
 	};
 
 
-	struct TwigParameters
-	{
-		int m_segmentSize = 1;
-		float m_segmentLength = 0.04f;
-		float m_apicalAngleVariance = 0.0f;
-		float m_branchingAngle = 30.f;
-		float m_thickness = 0.002f;
-		float m_nodeThicknessRequirement = 0.05f;
-	};
+	
 }

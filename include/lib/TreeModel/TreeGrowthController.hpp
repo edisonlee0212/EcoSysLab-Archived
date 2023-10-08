@@ -67,19 +67,7 @@ namespace EcoSysLab
 		float m_vigorRequirementAggregateLoss = 1.0f;
 		std::function<float(const Node<RootNodeGrowthData>& rootNode)> m_branchingProbability;
 
-
-
 		void SetTropisms(Node<RootNodeGrowthData>& oldNode, Node<RootNodeGrowthData>& newNode) const;
-	};
-
-	struct FineRootController
-	{
-		float m_segmentLength = 0.02f;
-		float m_apicalAngleVariance = 2.5f;
-		float m_branchingAngle = 60.f;
-		float m_thickness = 0.002f;
-		float m_minNodeThicknessRequirement = 0.05f;
-		int m_segmentSize = 2;
 	};
 
 	struct ShootGrowthController {
@@ -234,15 +222,5 @@ namespace EcoSysLab
 		 */
 		std::function<float(const Node<InternodeGrowthData>& internode)> m_fruitFallProbability;
 #pragma endregion
-	};
-
-	struct TwigController
-	{
-		float m_segmentLength = 0.04f;
-		float m_apicalAngleVariance = 2.5f;
-		float m_branchingAngle = 30.f;
-		float m_thickness = 0.002f;
-		float m_minNodeThicknessRequirement = 0.05f;
-		int m_segmentSize = 1;
 	};
 }

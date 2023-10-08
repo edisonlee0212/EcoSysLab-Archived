@@ -117,8 +117,6 @@ namespace EcoSysLab
 		VigorFlow m_vigorFlow;
 		std::vector<glm::mat4> m_leaves;
 		std::vector<glm::mat4> m_fruits;
-
-		std::vector<glm::vec4> m_twigAnchors;
 	};
 
 	struct RootNodeGrowthData {
@@ -151,8 +149,6 @@ namespace EcoSysLab
 		 * The allocated total resource for maintenance and development of this module.
 		 */
 		VigorSink m_vigorSink;
-
-		std::vector<glm::vec4> m_fineRootAnchors;
 	};
 
 	struct ShootStemGrowthData {

@@ -117,12 +117,6 @@ namespace EcoSysLab {
 		bool GrowRoots(const glm::mat4& globalTransform, VoxelSoilModel& soilModel,
 			const RootGrowthController& rootGrowthParameters);
 
-		void FormFineRoots(const glm::mat4& globalTransform, VoxelSoilModel& soilModel,
-			const RootGrowthController& rootGrowthParameters, const FineRootController& fineRootController);
-
-		void FormTwigs(const glm::mat4& globalTransform, ClimateModel& climateModel,
-			const ShootGrowthController& shootGrowthParameters, const TwigController& twigController);
-
 
 		void PlantVigorAllocation();
 
@@ -197,11 +191,10 @@ namespace EcoSysLab {
 		 * @return Whether the growth caused a structural change during the growth.
 		 */
 		bool Grow(float deltaTime, const glm::mat4& globalTransform, VoxelSoilModel& soilModel, ClimateModel& climateModel,
-			const RootGrowthController& rootGrowthParameters, const FineRootController& fineRootController,
-			const ShootGrowthController& shootGrowthParameters, const TwigController& twigController);
+			const RootGrowthController& rootGrowthParameters, const ShootGrowthController& shootGrowthParameters);
 
 		bool GrowSubTree(float deltaTime, NodeHandle baseInternodeHandle, const glm::mat4& globalTransform, ClimateModel& climateModel,
-			const ShootGrowthController& shootGrowthParameters, const TwigController& twigController);
+			const ShootGrowthController& shootGrowthParameters);
 
 
 		int m_historyLimit = -1;
