@@ -60,6 +60,8 @@ namespace EcoSysLab {
 		void ForEach(const glm::vec3& minBound, const glm::vec3& maxBound, const std::function<void(VoxelData& data)>& func);
 		void ForEach(const glm::vec3& center, float radius, const std::function<void(VoxelData& data)>& func);
 		[[nodiscard]] bool IsValid(const glm::vec3& position) const;
+
+		[[nodiscard]] std::vector<VoxelData>& RefData();
 	};
 
 	template <typename VoxelData>
@@ -268,6 +270,12 @@ namespace EcoSysLab {
 		if (position.x < m_minBound.x || position.y < m_minBound.y || position.z < m_minBound.z
 			|| position.x >= maxBound.x || position.y >= maxBound.y || position.z >= maxBound.z) return false;
 		return true;
+	}
+
+	template <typename VoxelData>
+	std::vector<VoxelData>& VoxelGrid<VoxelData>::RefData()
+	{
+		return m_data;
 	}
 
 	template <typename VoxelData>

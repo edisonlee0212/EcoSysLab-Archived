@@ -63,7 +63,7 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 			ImGui::Checkbox("Receive nitrite", &m_treeModel.m_treeGrowthSettings.m_collectNitrite);
 			ImGui::Checkbox("Enable Branch collision detection", &m_treeModel.m_treeGrowthSettings.m_enableBranchCollisionDetection);
 			ImGui::Checkbox("Enable Root collision detection", &m_treeModel.m_treeGrowthSettings.m_enableRootCollisionDetection);
-
+			
 			if (!m_treeModel.m_treeGrowthSettings.m_collectShootFlux && !m_treeModel.m_treeGrowthSettings.m_collectRootFlux)
 			{
 				if (ImGui::TreeNode("Vigor filling rates"))
@@ -131,7 +131,8 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 					ImGui::TreePop();
 				}
 			}
-
+			ImGui::Checkbox("Enable space colonization", &m_treeModel.m_treeGrowthSettings.m_useSpaceColonization);
+			
 			ImGui::TreePop();
 		}
 		if (ImGui::TreeNode("Pipe settings")) {
@@ -212,21 +213,32 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 			if (ImGui::Button("Update grids")) needGridUpdate = true;
 			ImGui::Checkbox("Show Space Colonization Grid", &showSpaceColonizationGrid);
 			if (showSpaceColonizationGrid && needGridUpdate) {
-				const auto& voxelGrid = m_treeModel.m_shootSkeleton.m_data.m_treeOccupancyGrid.RefGrid();
+				auto& occupancyGrid = m_treeModel.m_shootSkeleton.m_data.m_treeOccupancyGrid;
+				auto& voxelGrid = occupancyGrid.RefGrid();
 				const auto numVoxels = voxelGrid.GetVoxelCount();
 				auto& scalarMatrices = spaceColonizationGridParticleInfoList->m_particleInfos;
+
 				if (scalarMatrices.size() != numVoxels) {
 					scalarMatrices.resize(numVoxels);
 				}
-				Jobs::ParallelFor(numVoxels, [&](unsigned i) {
-					const auto coordinate = voxelGrid.GetCoordinate(i);
-					scalarMatrices[i].m_instanceMatrix.m_value =
-						glm::translate(voxelGrid.GetPosition(coordinate))
-						* glm::mat4_cast(glm::quat(glm::vec3(0.0f)))
-						* glm::scale(glm::vec3(voxelGrid.GetVoxelSize() * 0.8f));
-					scalarMatrices[i].m_instanceColor = glm::vec4(1.0f);
+				
+				if (scalarMatrices.size() != numVoxels) {
+					scalarMatrices.reserve(occupancyGrid.GetMarkersPerVoxel() * numVoxels);
+				}
+				int i = 0;
+				for(const auto& voxel : voxelGrid.RefData())
+				{
+					for (const auto& marker : voxel.m_markers) {
+						scalarMatrices.resize(i + 1);
+						scalarMatrices[i].m_instanceMatrix.m_value =
+							glm::translate(marker.m_position)
+							* glm::mat4_cast(glm::quat(glm::vec3(0.0f)))
+							* glm::scale(glm::vec3(voxelGrid.GetVoxelSize() * 0.05f));
+						scalarMatrices[i].m_instanceColor = glm::vec4(1.0f);
+						i++;
 					}
-				);
+				}
+				
 				spaceColonizationGridParticleInfoList->SetPendingUpdate();
 			}
 			ImGui::Checkbox("Show Shadow Grid", &showShadowGrid);
