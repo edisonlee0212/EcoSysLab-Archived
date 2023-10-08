@@ -1,4 +1,5 @@
 #pragma once
+#include "Skeleton.hpp"
 #include "VoxelGrid.hpp"
 using namespace EvoEngine;
 namespace EcoSysLab
@@ -10,7 +11,8 @@ namespace EcoSysLab
 
 	struct TreeOccupancyGridMarker
 	{
-		glm::vec3 m_position;
+		glm::vec3 m_position = glm::vec3(0.0f);
+		NodeHandle m_nodeHandle = -1;
 	};
 
 	struct TreeOccupancyGridVoxelData {

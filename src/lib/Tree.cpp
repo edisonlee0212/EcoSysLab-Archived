@@ -26,6 +26,7 @@ void Tree::Reset()
 }
 void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	bool modelChanged = false;
+	const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
 	if (editorLayer->DragAndDropButton<TreeDescriptor>(m_treeDescriptor, "TreeDescriptor", true)) {
 		m_treeModel.Clear();
 		modelChanged = true;
@@ -234,7 +235,11 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 							glm::translate(marker.m_position)
 							* glm::mat4_cast(glm::quat(glm::vec3(0.0f)))
 							* glm::scale(glm::vec3(voxelGrid.GetVoxelSize() * 0.05f));
-						scalarMatrices[i].m_instanceColor = glm::vec4(1.0f);
+						if(marker.m_nodeHandle == -1) scalarMatrices[i].m_instanceColor = glm::vec4(1.0f, 1.0f, 1.0f, 0.25f);
+						else
+						{
+							scalarMatrices[i].m_instanceColor = glm::vec4(ecoSysLabLayer->RandomColors()[marker.m_nodeHandle], 1.0f);
+						}
 						i++;
 					}
 				}

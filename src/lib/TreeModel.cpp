@@ -321,11 +321,26 @@ void TreeModel::CollectShootFlux(const glm::mat4& globalTransform, ClimateModel&
 				maxBound.x += m_treeGrowthSettings.m_voxelGridExtendFactor * shootGrowthParameters.m_internodeLength;
 				maxBound.y += m_treeGrowthSettings.m_voxelGridExtendFactor * shootGrowthParameters.m_internodeLength;
 				maxBound.z += m_treeGrowthSettings.m_voxelGridExtendFactor * shootGrowthParameters.m_internodeLength;
-				auto voxelSize = shootData.m_treeOccupancyGrid.RefGrid().GetVoxelSize();
 				shootData.m_treeOccupancyGrid.Resize(minBound, maxBound);
-
 			}
-
+			auto& voxelGrid = shootData.m_treeOccupancyGrid.RefGrid();
+			for (const auto& internodeHandle : sortedInternodeList)
+			{
+				const auto& internode = m_shootSkeleton.RefNode(internodeHandle);
+				const auto& internodeData = internode.m_data;
+				const auto& internodeInfo = internode.m_info;
+				voxelGrid.ForEach(internodeInfo.m_globalPosition, m_treeGrowthSettings.m_spaceColonizationRemovalDistanceFactor * shootGrowthParameters.m_internodeLength,
+					[&](TreeOccupancyGridVoxelData& voxelData)
+					{
+						for (auto& marker : voxelData.m_markers)
+						{
+							if(glm::distance(marker.m_position, internodeInfo.m_globalPosition) < m_treeGrowthSettings.m_spaceColonizationRemovalDistanceFactor * shootGrowthParameters.m_internodeLength)
+							{
+								marker.m_nodeHandle = internodeHandle;
+							}
+						}
+					});
+			}
 		}
 		{
 			auto& estimator = m_shootSkeleton.m_data.m_treeIlluminationEstimator;
