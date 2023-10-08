@@ -145,22 +145,6 @@ namespace EcoSysLab
 		 */
 		glm::vec4 m_fruitBudFlushingProbabilityTemperatureRange;
 		/**
-		 * \brief The lighting factor for apical bud elongation rate.
-		 */
-		float m_apicalBudLightingFactor;
-		/**
-		 * \brief The lighting factor for lateral bud flushing probability.
-		 */
-		float m_lateralBudLightingFactor;
-		/**
-		 * \brief The lighting factor for leaf bud flushing probability.
-		 */
-		float m_leafBudLightingFactor;
-		/**
-		 * \brief The lighting factor for fruit bud flushing probability.
-		 */
-		float m_fruitBudLightingFactor;
-		/**
 		 * \brief Apical control base
 		 */
 		float m_apicalControl;
@@ -180,23 +164,6 @@ namespace EcoSysLab
 		* \brief How much inhibitor will shrink when going through the branch.
 		*/
 		float m_apicalDominanceDistanceFactor;
-		/**
-		* \brief The probability of internode being removed.
-		*/
-		float m_apicalBudExtinctionRate;
-		/**
-		* \brief The probability of internode being removed.
-		*/
-		float m_lateralBudExtinctionRate;
-		/**
-		* \brief The probability of internode being removed.
-		*/
-		float m_leafBudExtinctionRate;
-		/**
-		* \brief The probability of internode being removed.
-		*/
-		float m_fruitBudExtinctionRate;
-
 		/**
 		* \brief Productive resource requirement factor for internode elongation
 		*/

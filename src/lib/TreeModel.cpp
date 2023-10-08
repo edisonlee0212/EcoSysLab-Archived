@@ -326,19 +326,44 @@ void TreeModel::CollectShootFlux(const glm::mat4& globalTransform, ClimateModel&
 			auto& voxelGrid = shootData.m_treeOccupancyGrid.RefGrid();
 			for (const auto& internodeHandle : sortedInternodeList)
 			{
-				const auto& internode = m_shootSkeleton.RefNode(internodeHandle);
-				const auto& internodeData = internode.m_data;
+				auto& internode = m_shootSkeleton.RefNode(internodeHandle);
+				auto& internodeData = internode.m_data;
+				for (auto& bud : internodeData.m_buds)
+				{
+					bud.m_markerSum = glm::vec3(0.0f);
+				}
+				internodeData.m_lightDirection = glm::vec3(0.0f);
+				const auto dotMin = glm::cos(glm::radians(shootData.m_treeOccupancyGrid.GetTheta()));
 				voxelGrid.ForEach(internodeData.m_desiredGlobalPosition, m_treeGrowthSettings.m_spaceColonizationRemovalDistanceFactor * shootGrowthParameters.m_internodeLength,
 					[&](TreeOccupancyGridVoxelData& voxelData)
 					{
 						for (auto& marker : voxelData.m_markers)
 						{
-							if(glm::distance(marker.m_position, internodeData.m_desiredGlobalPosition) < m_treeGrowthSettings.m_spaceColonizationRemovalDistanceFactor * shootGrowthParameters.m_internodeLength)
+							const auto diff = marker.m_position - internodeData.m_desiredGlobalPosition;
+							const auto distance = glm::length(diff);
+							const auto direction = glm::normalize(diff);
+							if (distance < m_treeGrowthSettings.m_spaceColonizationDetectionDistanceFactor * shootGrowthParameters.m_internodeLength)
 							{
-								marker.m_nodeHandle = internodeHandle;
+								if (marker.m_nodeHandle != -1) continue;
+								if (distance < m_treeGrowthSettings.m_spaceColonizationRemovalDistanceFactor * shootGrowthParameters.m_internodeLength)
+								{
+									marker.m_nodeHandle = internodeHandle;
+								}
+								else
+								{
+									for (auto& bud : internodeData.m_buds) {
+										auto budDirection = glm::normalize(internode.m_info.m_globalRotation * bud.m_localRotation * glm::vec3(0, 0, -1));
+										if (glm::dot(direction, budDirection) > dotMin)
+										{
+											bud.m_markerSum += direction;
+										}
+									}
+								}
 							}
+							
 						}
-					});
+					}
+				);
 			}
 		}
 		{

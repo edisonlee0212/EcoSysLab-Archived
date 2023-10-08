@@ -40,7 +40,7 @@ namespace EcoSysLab
 
 		//-1.0 means the no fruit.
 		ReproductiveModule m_reproductiveModule;
-
+		glm::vec3 m_markerSum = glm::vec3(0.0f);
 		float m_shootFlux = 0.0f;
 	};
 
@@ -107,7 +107,7 @@ namespace EcoSysLab
 		float m_temperature = 0.0f;
 
 		float m_growthPotential = 0.0f;
-
+		
 		glm::vec3 m_lightDirection = glm::vec3(0, 1, 0);
 		
 		/**
