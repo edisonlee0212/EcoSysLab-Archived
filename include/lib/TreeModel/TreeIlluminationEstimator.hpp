@@ -11,7 +11,11 @@ namespace EcoSysLab
 		float m_distancePowerFactor = 2.0f;
 		float m_distanceMultiplier = 2.0f;
 
-		float m_shadowIntensityMultiplier = 10.0f;
+		float m_internodeShadowMultiplier = 0.5f;
+		float m_fruitShadowMultiplier = 1.0f;
+		float m_leafShadowMultiplier = 1.0f;
+
+		float m_shadowIntensityMultiplier = 0.02f;
 	};
 	struct ShadowVolume
 	{

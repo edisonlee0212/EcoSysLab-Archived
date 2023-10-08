@@ -2,6 +2,7 @@
 #include "Skeleton.hpp"
 #include "VigorSink.hpp"
 #include "TreeIlluminationEstimator.hpp"
+#include "TreeOccupancyGrid.hpp"
 using namespace EvoEngine;
 namespace EcoSysLab
 {
@@ -166,6 +167,7 @@ namespace EcoSysLab
 		Octree<TreeVoxelData> m_octree = {};
 
 		TreeIlluminationEstimator m_treeIlluminationEstimator;
+		TreeOccupancyGrid m_treeOccupancyGrid;
 		ShootGrowthRequirement m_vigorRequirement = {};
 		ShootFlux m_shootFlux = {};
 

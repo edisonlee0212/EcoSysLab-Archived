@@ -269,6 +269,8 @@ void TreeModel::Initialize(const ShootGrowthController& shootGrowthParameters, c
 		firstRootNode.m_data.m_horizontalTropism = 0;
 		firstRootNode.m_data.m_vigorSink.AddVigor(rootGrowthParameters.m_rootNodeVigorRequirement);
 	}
+	m_shootSkeleton.m_data.m_treeOccupancyGrid.Initialize(glm::vec3(0.0f), glm::vec3(0.0f), shootGrowthParameters.m_internodeLength, 
+		m_treeGrowthSettings.m_spaceColonizationRemovalDistanceFactor, m_treeGrowthSettings.m_spaceColonizationTheta, m_treeGrowthSettings.m_spaceColonizationDetectionDistanceFactor);
 	m_initialized = true;
 }
 
@@ -306,30 +308,60 @@ void TreeModel::CollectShootFlux(const glm::mat4& globalTransform, ClimateModel&
 	if (m_treeGrowthSettings.m_collectShootFlux) {
 		if(m_treeGrowthSettings.m_useSpaceColonization)
 		{
-			
-		}
-		else {
-			shootData.m_treeIlluminationEstimator.m_voxel.Initialize(m_shootSkeleton.m_data.m_treeIlluminationEstimator.m_settings.m_voxelSize, m_shootSkeleton.m_min, m_shootSkeleton.m_max);
+			auto minBound = m_shootSkeleton.m_min;
+			auto maxBound = m_shootSkeleton.m_max;
+			const auto originalMin = shootData.m_treeOccupancyGrid.GetMin();
+			const auto originalMax = shootData.m_treeOccupancyGrid.GetMax();
+			const float detectionRange = m_treeGrowthSettings.m_spaceColonizationDetectionDistanceFactor * shootGrowthParameters.m_internodeLength;
+			if (minBound.x - detectionRange < originalMin.x || minBound.y < originalMin.y || minBound.z - detectionRange < originalMin.z
+				|| maxBound.x + detectionRange > originalMax.x || maxBound.y + detectionRange > originalMax.y || maxBound.z + detectionRange > originalMax.z) {
+				minBound.x -= m_treeGrowthSettings.m_voxelGridExtendFactor * shootGrowthParameters.m_internodeLength;
+				minBound.z -= m_treeGrowthSettings.m_voxelGridExtendFactor * shootGrowthParameters.m_internodeLength;
+				maxBound.x += m_treeGrowthSettings.m_voxelGridExtendFactor * shootGrowthParameters.m_internodeLength;
+				maxBound.y += m_treeGrowthSettings.m_voxelGridExtendFactor * shootGrowthParameters.m_internodeLength;
+				maxBound.z += m_treeGrowthSettings.m_voxelGridExtendFactor * shootGrowthParameters.m_internodeLength;
+				shootData.m_treeOccupancyGrid.Resize(minBound, maxBound);
 
-			const float maxLeafSize = glm::pow((shootGrowthParameters.m_maxLeafSize.x + shootGrowthParameters.m_maxLeafSize.z) / 2.0f, 2.0f);
-			const float maxFruitSize = glm::pow((shootGrowthParameters.m_maxFruitSize.x + shootGrowthParameters.m_maxFruitSize.y + shootGrowthParameters.m_maxFruitSize.z) / 3.0f, 2.0f);
-			for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); it++) {
+			}
+
+		}
+		{
+			auto& estimator = m_shootSkeleton.m_data.m_treeIlluminationEstimator;
+			auto minBound = m_shootSkeleton.m_min;
+			auto maxBound = m_shootSkeleton.m_max;
+			const auto originalMin = estimator.m_voxel.GetMinBound();
+			const auto originalMax = estimator.m_voxel.GetMaxBound();
+			if (minBound.x <= originalMin.x || minBound.y <= originalMin.y || minBound.z <= originalMin.z
+				|| maxBound.x >= originalMax.x || maxBound.y >= originalMax.y || maxBound.z >= originalMax.z) {
+				minBound.x -= m_treeGrowthSettings.m_voxelGridExtendFactor * shootGrowthParameters.m_internodeLength;
+				minBound.y -= m_treeGrowthSettings.m_voxelGridExtendFactor * shootGrowthParameters.m_internodeLength;
+				minBound.z -= m_treeGrowthSettings.m_voxelGridExtendFactor * shootGrowthParameters.m_internodeLength;
+				maxBound.x += m_treeGrowthSettings.m_voxelGridExtendFactor * shootGrowthParameters.m_internodeLength;
+				maxBound.y += m_treeGrowthSettings.m_voxelGridExtendFactor * shootGrowthParameters.m_internodeLength;
+				maxBound.z += m_treeGrowthSettings.m_voxelGridExtendFactor * shootGrowthParameters.m_internodeLength;
+				estimator.m_voxel.Initialize(estimator.m_settings.m_voxelSize, minBound, maxBound);
+			}
+			estimator.m_voxel.Reset();
+			//const float maxLeafSize = shootGrowthParameters.m_maxLeafSize.x * shootGrowthParameters.m_maxLeafSize.z / 2.0f * estimator.m_settings.m_leafShadowMultiplier;
+			//const float fruitRadius = (shootGrowthParameters.m_maxFruitSize.x + shootGrowthParameters.m_maxFruitSize.y + shootGrowthParameters.m_maxFruitSize.z) / 3.0f * estimator.m_settings.m_fruitShadowMultiplier;
+			//const float maxFruitSize = fruitRadius * fruitRadius;
+			for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); ++it) {
 				const auto& internode = m_shootSkeleton.RefNode(*it);
 				const auto& internodeData = internode.m_data;
 				const auto& internodeInfo = internode.m_info;
-				float shadowSize = internodeInfo.m_length * internodeInfo.m_thickness * 2.0f;
+				float shadowSize = internodeInfo.m_length / shootGrowthParameters.m_internodeLength * estimator.m_settings.m_internodeShadowMultiplier;
 				for (const auto& i : internodeData.m_buds)
 				{
 					if (i.m_type == BudType::Leaf && i.m_reproductiveModule.m_maturity > 0.0f)
 					{
-						shadowSize += maxLeafSize * glm::pow(i.m_reproductiveModule.m_maturity, 0.5f);
+						shadowSize += estimator.m_settings.m_leafShadowMultiplier * glm::sqrt(i.m_reproductiveModule.m_maturity);
 					}
 					else if (i.m_type == BudType::Fruit && i.m_reproductiveModule.m_maturity > 0.0f)
 					{
-						shadowSize += maxFruitSize * glm::pow(i.m_reproductiveModule.m_maturity, 1.0f / 3.0f);
+						shadowSize += estimator.m_settings.m_fruitShadowMultiplier * glm::sqrt(i.m_reproductiveModule.m_maturity);
 					}
 				}
-				shootData.m_treeIlluminationEstimator.AddShadowVolume({ internodeInfo.m_globalPosition, shadowSize });
+				estimator.AddShadowVolume({ internodeInfo.m_globalPosition, shadowSize });
 			}
 		}
 	}
@@ -339,18 +371,22 @@ void TreeModel::CollectShootFlux(const glm::mat4& globalTransform, ClimateModel&
 		auto& internodeInfo = internode.m_info;
 		internodeData.m_growthPotential = 0.0f;
 		if (m_treeGrowthSettings.m_collectShootFlux) {
-			if(m_treeGrowthSettings.m_useSpaceColonization)
+			{
+				internodeData.m_growthPotential = m_shootSkeleton.m_data.m_treeIlluminationEstimator.IlluminationEstimation(internodeInfo.m_globalPosition, internodeData.m_lightDirection);
+				m_shootSkeleton.m_data.m_shootFlux.m_totalGrowthPotential += internodeData.m_growthPotential;
+				if(internodeData.m_growthPotential <= glm::epsilon<float>())
+				{
+					internodeData.m_lightDirection = glm::normalize(internodeInfo.m_globalDirection);
+				}
+			}
+			if (m_treeGrowthSettings.m_useSpaceColonization)
 			{
 
 				internodeData.m_lightDirection = glm::vec3(0, 1, 0);
 			}
-			else {
-				internodeData.m_growthPotential = m_shootSkeleton.m_data.m_treeIlluminationEstimator.IlluminationEstimation(internodeInfo.m_globalPosition, internodeData.m_lightDirection);
-				m_shootSkeleton.m_data.m_shootFlux.m_totalGrowthPotential += internodeData.m_growthPotential;
-			}
 		}
 		else {
-			internodeData.m_lightDirection = glm::vec3(0, 1, 0);
+			internodeData.m_lightDirection = glm::normalize(internodeInfo.m_globalDirection);
 			internodeData.m_growthPotential = 1.0f;
 		}
 	}
@@ -1116,7 +1152,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 				const float maturityIncrease = glm::min(maxMaturityIncrease, glm::min(m_currentDeltaTime * shootGrowthParameters.m_fruitGrowthRate, 1.0f - bud.m_reproductiveModule.m_maturity));
 				bud.m_reproductiveModule.m_maturity += maturityIncrease;
 				const auto developmentVigor = bud.m_vigorSink.SubtractVigor(maturityIncrease * shootGrowthParameters.m_fruitVigorRequirement);
-				auto fruitSize = shootGrowthParameters.m_maxFruitSize * glm::pow(bud.m_reproductiveModule.m_maturity, 1.0f / 3.0f);
+				auto fruitSize = shootGrowthParameters.m_maxFruitSize * glm::sqrt(bud.m_reproductiveModule.m_maturity);
 				float angle = glm::radians(glm::linearRand(0.0f, 360.0f));
 				glm::quat rotation = internodeData.m_desiredLocalRotation * bud.m_localRotation;
 				auto up = rotation * glm::vec3(0, 1, 0);
@@ -1164,7 +1200,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 				const float maturityIncrease = glm::min(maxMaturityIncrease, glm::min(m_currentDeltaTime * shootGrowthParameters.m_leafGrowthRate, 1.0f - bud.m_reproductiveModule.m_maturity));
 				bud.m_reproductiveModule.m_maturity += maturityIncrease;
 				const auto developmentVigor = bud.m_vigorSink.SubtractVigor(maturityIncrease * shootGrowthParameters.m_leafVigorRequirement);
-				auto leafSize = shootGrowthParameters.m_maxLeafSize * glm::pow(bud.m_reproductiveModule.m_maturity, 1.0f / 2.0f);
+				auto leafSize = shootGrowthParameters.m_maxLeafSize * glm::sqrt(bud.m_reproductiveModule.m_maturity);
 				glm::quat rotation = internodeData.m_desiredLocalRotation * bud.m_localRotation;
 				auto up = rotation * glm::vec3(0, 1, 0);
 				auto front = rotation * glm::vec3(0, 0, -1);
@@ -1559,8 +1595,7 @@ void TreeModel::Clear() {
 	m_rootSkeleton = {};
 	m_history = {};
 	m_initialized = false;
-	//m_shootVolume.Clear();
-
+	
 	m_age = 0;
 	m_iteration = 0;
 }

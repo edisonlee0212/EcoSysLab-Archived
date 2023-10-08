@@ -30,14 +30,14 @@ void EcoSysLabLayer::OnCreate() {
 	m_rootStemStrands = ProjectManager::CreateTemporaryAsset<Strands>();
 	m_fineRootStrands = ProjectManager::CreateTemporaryAsset<Strands>();
 
-	m_boundingBoxMatrices = std::make_shared<ParticleInfoList>();
-	m_foliageMatrices = std::make_shared<ParticleInfoList>();
-	m_fruitMatrices = std::make_shared<ParticleInfoList>();
+	m_boundingBoxMatrices = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
+	m_foliageMatrices = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
+	m_fruitMatrices = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
 
-	m_groundFruitMatrices = std::make_shared<ParticleInfoList>();
-	m_groundLeafMatrices = std::make_shared<ParticleInfoList>();
-	m_vectorMatrices = std::make_shared<ParticleInfoList>();
-	m_scalarMatrices = std::make_shared<ParticleInfoList>();
+	m_groundFruitMatrices = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
+	m_groundLeafMatrices = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
+	m_vectorMatrices = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
+	m_scalarMatrices = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
 
 #pragma region Internode camera
 	m_visualizationCamera =
@@ -439,6 +439,19 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 				settingsChanged =
 					ImGui::DragFloat("Distance multiplier", &m_shadowEstimationSettings.m_distanceMultiplier, 0.01f,
 						0.0f, 10.0f) || settingsChanged;
+
+				settingsChanged =
+					ImGui::DragFloat("Internode multiplier", &m_shadowEstimationSettings.m_internodeShadowMultiplier, 0.01f,
+						0.0f, 10.0f) || settingsChanged;
+
+				settingsChanged =
+					ImGui::DragFloat("Leaf multiplier", &m_shadowEstimationSettings.m_fruitShadowMultiplier, 0.01f,
+						0.0f, 10.0f) || settingsChanged;
+
+				settingsChanged =
+					ImGui::DragFloat("Fruit multiplier", &m_shadowEstimationSettings.m_leafShadowMultiplier, 0.01f,
+						0.0f, 10.0f) || settingsChanged;
+
 				settingsChanged = ImGui::DragFloat("Shadow intensity multiplier",
 					&m_shadowEstimationSettings.m_shadowIntensityMultiplier, 0.001f,
 					0.0f, 5.0f, "%.4f") || settingsChanged;

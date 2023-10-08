@@ -35,10 +35,13 @@ namespace EcoSysLab {
 
 		void Resize(const glm::ivec3& diffMin, const glm::ivec3& diffMax);
 
-		[[nodiscard]] size_t GetVoxelSize() const;
+		void Reset();
+
+		[[nodiscard]] size_t GetVoxelCount() const;
 		[[nodiscard]] glm::ivec3 GetResolution() const;
 		[[nodiscard]] glm::vec3 GetMinBound() const;
-		[[nodiscard]] float GetVoxelDiameter() const;
+		[[nodiscard]] glm::vec3 GetMaxBound() const;
+		[[nodiscard]] float GetVoxelSize() const;
 
 		[[nodiscard]] VoxelData& Ref(int index);
 		[[nodiscard]] const VoxelData& Peek(int index) const;
@@ -107,7 +110,13 @@ namespace EcoSysLab {
 	}
 
 	template <typename VoxelData>
-	size_t VoxelGrid<VoxelData>::GetVoxelSize() const
+	void VoxelGrid<VoxelData>::Reset()
+	{
+		std::fill(m_data.begin(), m_data.end(), VoxelData());
+	}
+
+	template <typename VoxelData>
+	size_t VoxelGrid<VoxelData>::GetVoxelCount() const
 	{
 		return m_data.size();
 	}
@@ -125,7 +134,13 @@ namespace EcoSysLab {
 	}
 
 	template <typename VoxelData>
-	float VoxelGrid<VoxelData>::GetVoxelDiameter() const
+	glm::vec3 VoxelGrid<VoxelData>::GetMaxBound() const
+	{
+		return m_minBound + glm::vec3(m_resolution) * m_voxelSize;
+	}
+
+	template <typename VoxelData>
+	float VoxelGrid<VoxelData>::GetVoxelSize() const
 	{
 		return m_voxelSize;
 	}
@@ -230,7 +245,7 @@ namespace EcoSysLab {
 	void VoxelGrid<VoxelData>::ForEach(const glm::vec3& center, float radius,
 		const std::function<void(VoxelData& data)>& func)
 	{
-		auto actualCenter = center - m_minBound;
+		const auto actualCenter = center - m_minBound;
 		const auto actualMinBound = actualCenter - glm::vec3(radius);
 		const auto actualMaxBound = actualCenter + glm::vec3(radius);
 		const auto start = glm::ivec3(glm::floor(actualMinBound / glm::vec3(m_voxelSize)));

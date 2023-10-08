@@ -15,7 +15,7 @@ namespace EcoSysLab {
 		bool m_autoBalance = true;
 		bool m_collectShootFlux = true;
 		bool m_collectRootFlux = true;
-		bool m_useSpaceColonization = false;
+		
 		bool m_collectNitrite = true;
 
 		float m_leafMaintenanceVigorFillingRate = 1.0f;
@@ -27,6 +27,13 @@ namespace EcoSysLab {
 
 		bool m_enableRootCollisionDetection = false;
 		bool m_enableBranchCollisionDetection = false;
+
+		bool m_useSpaceColonization = false;
+		float m_spaceColonizationRemovalDistanceFactor = 2;
+		float m_spaceColonizationDetectionDistanceFactor = 4;
+		float m_spaceColonizationTheta = 90.0f;
+		float m_voxelGridExtendFactor = 20.0f;
+
 	};
 
 

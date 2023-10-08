@@ -23,7 +23,7 @@ float TreeIlluminationEstimator::IlluminationEstimation(const glm::vec3& positio
 void TreeIlluminationEstimator::AddShadowVolume(const ShadowVolume& shadowVolume)
 {
 	const auto voxelMinBound = m_voxel.GetMinBound();
-	const auto dx = m_voxel.GetVoxelDiameter();
+	const auto dx = m_voxel.GetVoxelSize();
 	const auto voxelResolution = m_voxel.GetResolution();
 	if (m_settings.m_distanceMultiplier == 0.0f) return;
 	const float maxRadius = glm::pow(shadowVolume.m_size * m_settings.m_shadowIntensityMultiplier / m_settings.m_minShadowIntensity, 1.0f / m_settings.m_distancePowerFactor) / m_settings.m_distanceMultiplier;

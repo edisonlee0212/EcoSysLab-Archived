@@ -30,9 +30,25 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 		m_treeModel.Clear();
 		modelChanged = true;
 	}
-	if (m_treeDescriptor.Get<TreeDescriptor>()) {
+	static bool showSpaceColonizationGrid = false;
+	static bool showShadowGrid = false;
+	static std::shared_ptr<ParticleInfoList> spaceColonizationGridParticleInfoList;
+	if (!spaceColonizationGridParticleInfoList)
+	{
+		spaceColonizationGridParticleInfoList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
+	}
+	static std::shared_ptr<ParticleInfoList> shadowGridParticleInfoList;
+	if (!shadowGridParticleInfoList)
+	{
+		shadowGridParticleInfoList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
+	}
 
-		if (ImGui::TreeNode("Tree Settings")) {
+	if (m_treeDescriptor.Get<TreeDescriptor>()) {
+		if (ImGui::Button("Reset")) {
+			Reset();
+			modelChanged = true;
+		}
+		if (ImGui::TreeNode("Tree settings")) {
 			ImGui::Checkbox("Enable History", &m_enableHistory);
 			if (m_enableHistory)
 			{
@@ -118,7 +134,7 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 
 			ImGui::TreePop();
 		}
-		if (ImGui::TreeNode("Pipe Settings")) {
+		if (ImGui::TreeNode("Pipe settings")) {
 
 			ImGui::DragFloat("Default profile cell radius", &m_pipeModelParameters.m_profileDefaultCellRadius, 0.001f, 0.001f, 1.0f);
 			ImGui::DragFloat("Cell movement damping", &m_pipeModelParameters.m_damping, 0.001f, 0.000f, 1.0f);
@@ -171,7 +187,7 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 			}
 			ImGui::TreePop();
 		}
-		if (ImGui::TreeNode("Mesh generation")) {
+		if (ImGui::TreeNode("Mesh generation settings")) {
 			static int iterations = 5;
 			ImGui::DragInt("Iterations", &iterations, 1, 0, m_treeModel.CurrentIteration());
 			iterations = glm::clamp(iterations, 0, m_treeModel.CurrentIteration());
@@ -185,16 +201,57 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 			}
 			ImGui::TreePop();
 		}
-		if (ImGui::Button("Reset")) {
-			Reset();
-			modelChanged = true;
+
+		ImGui::Checkbox("Enable Visualization", &m_enableVisualization);
+		if (m_enableVisualization) {
+			bool needGridUpdate = false;
+			if (m_treeVisualizer.m_needUpdate)
+			{
+				needGridUpdate = true;
+			}
+			if (ImGui::Button("Update grids")) needGridUpdate = true;
+			ImGui::Checkbox("Show Space Colonization Grid", &showSpaceColonizationGrid);
+			if (showSpaceColonizationGrid && needGridUpdate) {
+				const auto& voxelGrid = m_treeModel.m_shootSkeleton.m_data.m_treeOccupancyGrid.RefGrid();
+				const auto numVoxels = voxelGrid.GetVoxelCount();
+				auto& scalarMatrices = spaceColonizationGridParticleInfoList->m_particleInfos;
+				if (scalarMatrices.size() != numVoxels) {
+					scalarMatrices.resize(numVoxels);
+				}
+				Jobs::ParallelFor(numVoxels, [&](unsigned i) {
+					const auto coordinate = voxelGrid.GetCoordinate(i);
+					scalarMatrices[i].m_instanceMatrix.m_value =
+						glm::translate(voxelGrid.GetPosition(coordinate))
+						* glm::mat4_cast(glm::quat(glm::vec3(0.0f)))
+						* glm::scale(glm::vec3(voxelGrid.GetVoxelSize() * 0.8f));
+					scalarMatrices[i].m_instanceColor = glm::vec4(1.0f);
+					}
+				);
+				spaceColonizationGridParticleInfoList->SetPendingUpdate();
+			}
+			ImGui::Checkbox("Show Shadow Grid", &showShadowGrid);
+			if (showShadowGrid && needGridUpdate) {
+				const auto& voxelGrid = m_treeModel.m_shootSkeleton.m_data.m_treeIlluminationEstimator.m_voxel;
+				const auto numVoxels = voxelGrid.GetVoxelCount();
+				auto& scalarMatrices = shadowGridParticleInfoList->m_particleInfos;
+				if (scalarMatrices.size() != numVoxels) {
+					scalarMatrices.resize(numVoxels);
+				}
+				Jobs::ParallelFor(numVoxels, [&](unsigned i) {
+					const auto coordinate = voxelGrid.GetCoordinate(i);
+					scalarMatrices[i].m_instanceMatrix.m_value =
+						glm::translate(voxelGrid.GetPosition(coordinate))
+						* glm::mat4_cast(glm::quat(glm::vec3(0.0f)))
+						* glm::scale(glm::vec3(0.8f * voxelGrid.GetVoxelSize()));
+					scalarMatrices[i].m_instanceColor = glm::vec4(0.0f, 0.0f, 0.0f, glm::clamp(voxelGrid.Peek(static_cast<int>(i)).m_shadowIntensity, 0.0f, 1.0f));
+					}
+				);
+				shadowGridParticleInfoList->SetPendingUpdate();
+			}
 		}
-
-		if (ImGui::TreeNodeEx("Tree Inspector", ImGuiTreeNodeFlags_DefaultOpen))
+		if (m_enableVisualization && ImGui::TreeNodeEx("Tree Inspector", ImGuiTreeNodeFlags_DefaultOpen))
 		{
-			ImGui::Checkbox("Enable Visualization", &m_enableVisualization);
 			modelChanged = m_treeVisualizer.OnInspect(m_treeModel) || modelChanged;
-
 			if (m_treeVisualizer.GetSelectedInternodeHandle() >= 0)
 			{
 				static float deltaTime = 0.01918f;
@@ -230,7 +287,6 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 			}
 			ImGui::TreePop();
 		}
-
 		if (m_enableHistory)
 		{
 			if (ImGui::Button("Temporal Progression"))
@@ -240,16 +296,34 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 			}
 		}
 	}
+
+	/*
 	ImGui::Checkbox("Split root test", &m_splitRootTest);
 	ImGui::Checkbox("Biomass history", &m_recordBiomassHistory);
 
 	if (m_splitRootTest) ImGui::Text(("Left/Right side biomass: [" + std::to_string(m_leftSideBiomass) + ", " + std::to_string(m_rightSideBiomass) + "]").c_str());
+	*/
+
 
 	if (m_enableVisualization)
 	{
 		const auto scene = GetScene();
 		m_treeVisualizer.Visualize(m_treeModel,
 			scene->GetDataComponent<GlobalTransform>(GetOwner()));
+		GizmoSettings gizmoSettings {};
+		gizmoSettings.m_drawSettings.m_blending = true;
+		if (showSpaceColonizationGrid)
+		{
+			editorLayer->DrawGizmoMeshInstancedColored(
+				Resources::GetResource<Mesh>("PRIMITIVE_CUBE"), spaceColonizationGridParticleInfoList,
+				glm::mat4(1.0f), 1.0f, gizmoSettings);
+		}
+		if(showShadowGrid)
+		{
+			editorLayer->DrawGizmoMeshInstancedColored(
+				Resources::GetResource<Mesh>("PRIMITIVE_CUBE"), shadowGridParticleInfoList,
+				glm::mat4(1.0f), 1.0f, gizmoSettings);
+		}
 	}
 }
 void Tree::Update()
