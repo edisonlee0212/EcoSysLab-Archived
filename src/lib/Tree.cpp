@@ -133,7 +133,10 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 				}
 			}
 			ImGui::Checkbox("Enable space colonization", &m_treeModel.m_treeGrowthSettings.m_useSpaceColonization);
-			
+			if(m_treeModel.m_treeGrowthSettings.m_useSpaceColonization)
+			{
+				ImGui::Checkbox("Space colonization auto resize", &m_treeModel.m_treeGrowthSettings.m_spaceColonizationAutoResize);
+			}
 			ImGui::TreePop();
 		}
 		if (ImGui::TreeNode("Pipe settings")) {
@@ -234,8 +237,8 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 						scalarMatrices[i].m_instanceMatrix.m_value =
 							glm::translate(marker.m_position)
 							* glm::mat4_cast(glm::quat(glm::vec3(0.0f)))
-							* glm::scale(glm::vec3(voxelGrid.GetVoxelSize() * 0.05f));
-						if(marker.m_nodeHandle == -1) scalarMatrices[i].m_instanceColor = glm::vec4(1.0f, 1.0f, 1.0f, 0.25f);
+							* glm::scale(glm::vec3(voxelGrid.GetVoxelSize() * 0.1f));
+						if(marker.m_nodeHandle == -1) scalarMatrices[i].m_instanceColor = glm::vec4(1.0f, 1.0f, 1.0f, 0.2f);
 						else
 						{
 							scalarMatrices[i].m_instanceColor = glm::vec4(ecoSysLabLayer->RandomColors()[marker.m_nodeHandle], 1.0f);
@@ -465,8 +468,6 @@ bool Tree::TryGrowSubTree(const NodeHandle internodeHandle, const float deltaTim
 	ecoSysLabLayer->m_needFullFlowUpdate = true;
 }
 
-
-
 void Tree::InitializeStrandRenderer()
 {
 	const auto scene = GetScene();
@@ -487,7 +488,7 @@ void Tree::InitializeStrandRenderer()
 	if (!points.empty()) strandsList.emplace_back(points.size());
 	StrandPointAttributes strandPointAttributes{};
 	strandPointAttributes.m_color = true;
-	//strandPointAttributes.m_normal = true;
+	strandPointAttributes.m_normal = true;
 	strandsAsset->SetStrands(strandPointAttributes, strandsList, points);
 	renderer->m_strands = strandsAsset;
 

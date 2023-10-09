@@ -40,7 +40,8 @@ namespace EcoSysLab
 
 		//-1.0 means the no fruit.
 		ReproductiveModule m_reproductiveModule;
-		glm::vec3 m_markerSum = glm::vec3(0.0f);
+		glm::vec3 m_markerDirection = glm::vec3(0.0f);
+		size_t m_markerCount = 0;
 		float m_shootFlux = 0.0f;
 	};
 
@@ -164,8 +165,10 @@ namespace EcoSysLab
 	struct ShootGrowthData {
 		Octree<TreeVoxelData> m_octree = {};
 
-		TreeIlluminationEstimator m_treeIlluminationEstimator;
-		TreeOccupancyGrid m_treeOccupancyGrid;
+		TreeIlluminationEstimator m_treeIlluminationEstimator {};
+		TreeOccupancyGrid m_treeOccupancyGrid {};
+		size_t m_maxMarkerCount = 0;
+
 		ShootGrowthRequirement m_vigorRequirement = {};
 		ShootFlux m_shootFlux = {};
 
@@ -174,8 +177,8 @@ namespace EcoSysLab
 
 		float m_vigor = 0;
 
-		glm::vec3 m_desiredMin;
-		glm::vec3 m_desiredMax;
+		glm::vec3 m_desiredMin = glm::vec3(FLT_MAX);
+		glm::vec3 m_desiredMax = glm::vec3(FLT_MIN);
 	};
 
 	struct RootGrowthData {
