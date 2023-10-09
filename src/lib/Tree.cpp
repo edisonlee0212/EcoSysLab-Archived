@@ -491,10 +491,11 @@ void Tree::InitializeStrandRenderer()
 	strandsAsset->SetStrands(strandPointAttributes, strandsList, points);
 	renderer->m_strands = strandsAsset;
 
-	auto material = ProjectManager::CreateTemporaryAsset<Material>();
+	const auto material = ProjectManager::CreateTemporaryAsset<Material>();
+	
 	renderer->m_material = material;
 	material->m_vertexColorOnly = true;
-
+	material->m_materialProperties.m_albedoColor = glm::vec3(0.6f, 0.3f, 0.0f);
 }
 
 void Tree::Serialize(YAML::Emitter& out)

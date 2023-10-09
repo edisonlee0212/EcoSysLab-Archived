@@ -28,6 +28,7 @@ namespace EcoSysLab
 	{
 		PipeHandle m_pipeHandle = -1;
 		PipeSegmentHandle m_pipeSegmentHandle = -1;
+		ParticleHandle m_particleHandle = -1;
 	};
 
 	struct CellParticlePhysicsData
