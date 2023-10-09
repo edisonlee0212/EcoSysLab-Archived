@@ -111,7 +111,7 @@ namespace EcoSysLab {
 
 	public:
 		[[nodiscard]] bool Initialized() const;
-
+		void ClearSelections();
 		[[nodiscard]] NodeHandle GetSelectedInternodeHandle() const;
 		[[nodiscard]] NodeHandle GetSelectedRootNodeHandle() const;
 		void Initialize();

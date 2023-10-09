@@ -1341,8 +1341,6 @@ void EcoSysLabLayer::Simulate(float deltaTime) {
 		m_lastUsedTime = Times::Now() - time;
 		m_totalTime += m_lastUsedTime;
 
-		
-
 		m_needFullFlowUpdate = true;
 	}
 }

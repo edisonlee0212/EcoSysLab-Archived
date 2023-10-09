@@ -395,12 +395,11 @@ bool Tree::TryGrow(float deltaTime) {
 	const auto soil = m_soil.Get<Soil>();
 	const auto climate = m_climate.Get<Climate>();
 	const auto owner = GetOwner();
-
 	PrepareControllers(treeDescriptor);
 
 	const bool grown = m_treeModel.Grow(deltaTime, scene->GetDataComponent<GlobalTransform>(owner).m_value, soil->m_soilModel, climate->m_climateModel,
 		m_rootGrowthController, m_shootGrowthController);
-
+	if (grown) m_treeVisualizer.m_needUpdate = true;
 	if (m_enableHistory && m_treeModel.m_iteration % m_historyIteration == 0) m_treeModel.Step();
 
 	if (m_recordBiomassHistory)
