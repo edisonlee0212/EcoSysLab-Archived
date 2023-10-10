@@ -26,7 +26,6 @@ namespace EcoSysLab {
 		[[nodiscard]] float GetDeltaTime() const;
 		void Reset(float deltaTime = 0.002f);
 		void CalculateMinMax();
-		float m_particleRadius = 0.01f;
 		float m_particleSoftness = 0.5f;
 		[[nodiscard]] ParticleHandle AllocateParticle();
 		[[nodiscard]] Particle2D<T>& RefParticle(ParticleHandle handle);
@@ -47,11 +46,10 @@ namespace EcoSysLab {
 		const auto& p2 = m_particles2D.at(p2Handle);
 		const auto difference = p1.m_position - p2.m_position;
 		const auto distance = glm::length(difference);
-		const auto minDistance = 2.0f * m_particleRadius;
-		if (distance < minDistance)
+		if (distance < 2.0f)
 		{
 			const auto axis = distance < glm::epsilon<float>() ? p1Handle >= p2Handle ? glm::vec2(1, 0) : glm::vec2(0, 1) : difference / distance;
-			const auto delta = minDistance - distance;
+			const auto delta = 2.0f - distance;
 			p1.m_deltaPosition += m_particleSoftness * 0.5f * delta * axis;
 		}
 	}
@@ -144,8 +142,7 @@ namespace EcoSysLab {
 	void ParticlePhysics2D<T>::InitializeGrid()
 	{
 		CalculateMinMax();
-		const auto cellSize = m_particleRadius * 2.f;
-		m_particleGrid2D.Reset(cellSize, m_min, m_max);
+		m_particleGrid2D.Reset(2.0f, m_min, m_max);
 		for (ParticleHandle i = 0; i < m_particles2D.size(); i++)
 		{
 			const auto& particle = m_particles2D[i];
@@ -227,7 +224,6 @@ namespace EcoSysLab {
 		m_massCenter = glm::vec2(0.0f);
 		m_activeness = 0.0f;
 		m_particleSoftness = 0.5f;
-		m_particleRadius = 0.01f;
 	}
 
 
@@ -305,7 +301,7 @@ namespace EcoSysLab {
 	void ParticlePhysics2D<T>::OnInspect(const std::function<void(glm::vec2 position)>& func, const std::function<void(ImVec2 origin, float zoomFactor, ImDrawList*)>& drawFunc, bool showGrid)
 	{
 		static auto scrolling = glm::vec2(0.0f);
-		static float zoomFactor = 100.f;
+		static float zoomFactor = 5.f;
 		ImGui::Text(("Total move delta: " + std::to_string(m_totalMoveDelta) +
 			" | Total activeness: " + std::to_string(m_activeness) +
 			" | Particle count: " + std::to_string(m_particles2D.size()) +
@@ -321,8 +317,8 @@ namespace EcoSysLab {
 
 		const ImVec2 canvasP0 = ImGui::GetCursorScreenPos();      // ImDrawList API uses screen coordinates!
 		ImVec2 canvasSz = ImGui::GetContentRegionAvail();   // Resize canvas to what's available
-		if (canvasSz.x < 50.0f) canvasSz.x = 50.0f;
-		if (canvasSz.y < 50.0f) canvasSz.y = 50.0f;
+		if (canvasSz.x < 300.0f) canvasSz.x = 300.0f;
+		if (canvasSz.y < 300.0f) canvasSz.y = 300.0f;
 		const ImVec2 canvasP1 = ImVec2(canvasP0.x + canvasSz.x, canvasP0.y + canvasSz.y);
 		const ImVec2 origin(canvasP0.x + canvasSz.x / 2.0f + scrolling.x,
 			canvasP0.y + canvasSz.y / 2.0f + scrolling.y); // Lock scrolled origin
@@ -366,13 +362,12 @@ namespace EcoSysLab {
 			index++;
 			if (mod > 1 && index % mod != 0) continue;
 			const auto& pointPosition = particle.m_position;
-			const auto& pointRadius = m_particleRadius;
 			const auto& pointColor = particle.m_color;
 			const auto canvasPosition = ImVec2(origin.x + pointPosition.x * zoomFactor,
 				origin.y + pointPosition.y * zoomFactor);
 
 			drawList->AddCircleFilled(canvasPosition,
-				glm::clamp(zoomFactor * pointRadius, 1.0f, 100.0f),
+				glm::clamp(zoomFactor, 1.0f, 100.0f),
 				IM_COL32(255.0f * pointColor.x, 255.0f * pointColor.y, 255.0f * pointColor.z, 255.0f * pointColor.w));
 		}
 		if (showGrid) {

@@ -23,10 +23,8 @@
 #include "ObjectRotator.hpp"
 #include "ParticlePhysics2DDemo.hpp"
 #include "Physics2DDemo.hpp"
-#include "SinglePipeProfile.hpp"
 #include "SorghumLayer.hpp"
 #include "TreePointCloud.hpp"
-#include "PipeModelBase.hpp"
 #include "SpaceColonizationTree.hpp"
 #include "WindowLayer.hpp"
 #include "SpaceColonizationTree.hpp"
@@ -100,8 +98,6 @@ int main() {
 	ClassRegistry::RegisterAsset<RadialBoundingVolume>("RadialBoundingVolume", { ".rbv" });
 	ClassRegistry::RegisterAsset<HeightField>("HeightField", { ".hf" });
 	ClassRegistry::RegisterAsset<NoiseSoilLayerDescriptor>("NoiseSoilLayerDescriptor", { ".nsld" });
-	ClassRegistry::RegisterPrivateComponent<SinglePipeProfile>("SinglePipeProfile");
-	ClassRegistry::RegisterPrivateComponent<PipeModelBase>("PipeModelBase");
 	ClassRegistry::RegisterPrivateComponent<Physics2DDemo>("Physics2DDemo");
 	ClassRegistry::RegisterPrivateComponent<ParticlePhysics2DDemo>("ParticlePhysics2DDemo");
 	ApplicationInfo applicationConfigs;

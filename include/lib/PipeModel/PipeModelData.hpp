@@ -40,6 +40,7 @@ namespace EcoSysLab
 	{
 		NodeHandle m_nodeHandle = -1;
 		ParticlePhysics2D<CellParticlePhysicsData> m_particlePhysics2D;
+
 	};
 
 	struct PipeProfileGroupData

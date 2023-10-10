@@ -150,7 +150,6 @@ void TreePipeModel::UpdatePipeModels(const TreeModel& targetTreeModel, const Pip
 		auto& profileData = profile.m_data;
 		auto& physics2D = profileData.m_particlePhysics2D;
 		physics2D.Reset(0.002f);
-		physics2D.m_particleRadius = profile.m_info.m_cellRadius;
 		for (auto& cell : profile.RefCells())
 		{
 			auto newParticleHandle = physics2D.AllocateParticle();
@@ -259,7 +258,7 @@ void TreePipeModel::UpdatePipeModels(const TreeModel& targetTreeModel, const Pip
 				auto& childProfile = profileGroup.RefProfile(childNode.m_data.m_profileHandle);
 				auto& childPhysics2D = childProfile.m_data.m_particlePhysics2D;
 				auto offset = glm::normalize(glm::vec2(glm::cos(glm::radians(randAngle + index * 120.0f)), glm::sin(glm::radians(randAngle + index * 120.0f))));
-				offset = (mainChildPhysics2D.GetDistanceToCenter(-offset) + childPhysics2D.GetDistanceToCenter(offset) + 2.0f * childPhysics2D.m_particleRadius) * offset;
+				offset = (mainChildPhysics2D.GetDistanceToCenter(offset) + childPhysics2D.GetDistanceToCenter(-offset) + 2.0f) * offset;
 				for (const auto& childCell : childProfile.RefCells())
 				{
 					const auto& childPipeSegment = pipeGroup.RefPipeSegment(childCell.m_data.m_pipeSegmentHandle);

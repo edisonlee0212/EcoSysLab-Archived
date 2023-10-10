@@ -13,8 +13,6 @@ namespace EcoSysLab {
 		glm::vec2 m_acceleration = glm::vec2(0.0f);
 		float m_damping = 0.0f;
 
-		static constexpr size_t COLLISION_CAPACITY = 6;
-		static constexpr size_t MAX_COLLISION_INDEX = COLLISION_CAPACITY - 1;
 		glm::vec2 m_deltaPosition = glm::vec2(0.0f);
 	public:
 
