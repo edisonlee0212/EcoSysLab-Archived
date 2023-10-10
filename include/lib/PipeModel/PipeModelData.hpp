@@ -68,6 +68,8 @@ namespace EcoSysLab
 	struct PipeModelSkeletonData
 	{
 		ProfileHandle m_baseProfileHandle = -1;
+
+		std::unordered_map<NodeHandle, NodeHandle> m_nodeMap;
 	};
 
 	typedef Skeleton<PipeModelSkeletonData, PipeModelFlowData, PipeModelNodeData> PipeModelSkeleton;

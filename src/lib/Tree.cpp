@@ -141,24 +141,14 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 		if (ImGui::TreeNode("Pipe settings")) {
 
 			ImGui::DragFloat("Default profile cell radius", &m_pipeModelParameters.m_profileDefaultCellRadius, 0.001f, 0.001f, 1.0f);
-			ImGui::DragFloat("Cell movement damping", &m_pipeModelParameters.m_damping, 0.001f, 0.000f, 1.0f);
-			ImGui::DragFloat("Cell gravity strength", &m_pipeModelParameters.m_gravityStrength, 0.01f, 0.01f, 10.0f);
+			ImGui::DragFloat("Physics damping", &m_pipeModelParameters.m_damping, 0.01f, 0.0f, 1.0f);
+			ImGui::DragFloat("Physics attraction strength", &m_pipeModelParameters.m_gravityStrength, 0.01f, 0.0f, 10.0f);
+			ImGui::DragFloat("Physics simulation iteration factor", &m_pipeModelParameters.m_simulationIterationFactor, 0.1f, 0.0f, 50.0f);
 			if (ImGui::Button("Update pipes"))
 			{
 				m_treePipeModel.UpdatePipeModels(m_treeModel, m_pipeModelParameters);
 			}
-			static bool physicsSimulation = false;
-			ImGui::Checkbox("Physics2D simulation", &physicsSimulation);
-			static int minCellCount = 5;
-			static int iterationsPerFrame = 1;
-			ImGui::DragInt("Min Cell Count", &minCellCount, 1, 1, 100);
-			ImGui::DragInt("Iterations per frame", &iterationsPerFrame, 1, 1, 100);
-			iterationsPerFrame = glm::clamp(iterationsPerFrame, 0, 100);
-			if (physicsSimulation)
-			{
-				m_treePipeModel.SimulateAllProfiles(minCellCount, iterationsPerFrame, m_pipeModelParameters);
-			}
-
+			
 			if (ImGui::Button("Initialize strands"))
 			{
 				m_treePipeModel.ApplySimulationResults(m_pipeModelParameters);
@@ -171,11 +161,11 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 			if (displayProfile) ImGui::Checkbox("Show Grid", &showGrid);
 			if (displayProfile && m_treeVisualizer.GetSelectedInternodeHandle() >= 0)
 			{
-				const auto& skeleton = m_treePipeModel.m_shootPipeModel.m_skeleton;
+				auto& skeleton = m_treePipeModel.m_shootPipeModel.m_skeleton;
 				if (skeleton.RefRawNodes().size() > m_treeVisualizer.GetSelectedInternodeHandle())
 				{
 					auto& profileGroup = m_treePipeModel.m_shootPipeModel.m_pipeProfileGroup;
-					const auto targetProfileHandle = m_treePipeModel.m_shootPipeModel.m_skeleton.RefNode(m_treeVisualizer.GetSelectedInternodeHandle()).m_data.m_profileHandle;
+					const auto targetProfileHandle = skeleton.RefNode(skeleton.m_data.m_nodeMap.at(m_treeVisualizer.GetSelectedInternodeHandle())).m_data.m_profileHandle;
 					if (profileGroup.RefProfiles().size() > targetProfileHandle) {
 						const std::string tag = "Profile [" + std::to_string(m_treeVisualizer.GetSelectedInternodeHandle()) + "]";
 						if (ImGui::Begin(tag.c_str()))

@@ -10,8 +10,8 @@ namespace EcoSysLab
 	public:
 		PipeModel m_shootPipeModel{};
 		PipeModel m_rootPipeModel{};
+		
 		void UpdatePipeModels(const TreeModel& targetTreeModel, const PipeModelParameters& pipeModelParameters);
-		void SimulateAllProfiles(size_t minCellCount, size_t iteration, const PipeModelParameters& pipeModelParameters);
 		void ApplySimulationResults(const PipeModelParameters& pipeModelParameters);
 	};
 }

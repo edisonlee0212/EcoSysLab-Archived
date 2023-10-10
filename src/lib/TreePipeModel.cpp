@@ -4,6 +4,7 @@
 
 using namespace EcoSysLab;
 
+
 void TreePipeModel::UpdatePipeModels(const TreeModel& targetTreeModel, const PipeModelParameters& pipeModelParameters)
 {
 	m_shootPipeModel = {};
@@ -13,7 +14,10 @@ void TreePipeModel::UpdatePipeModels(const TreeModel& targetTreeModel, const Pip
 	auto& profileGroup = m_shootPipeModel.m_pipeProfileGroup;
 	auto& pipeGroup = m_shootPipeModel.m_pipeGroup;
 
-	skeleton.Clone(targetTreeModel.PeekShootSkeleton(), [&](NodeHandle srcNodeHandle, NodeHandle dstNodeHandle) {});
+	skeleton.Clone(targetTreeModel.PeekShootSkeleton(), [&](NodeHandle srcNodeHandle, NodeHandle dstNodeHandle)
+	{
+			skeleton.m_data.m_nodeMap[srcNodeHandle] = dstNodeHandle;
+	});
 	skeleton.m_data.m_baseProfileHandle = profileGroup.Allocate();
 	profileGroup.RefProfile(skeleton.m_data.m_baseProfileHandle).m_info.m_cellRadius = pipeModelParameters.m_profileDefaultCellRadius;
 
@@ -97,7 +101,6 @@ void TreePipeModel::UpdatePipeModels(const TreeModel& targetTreeModel, const Pip
 			}
 
 			auto direction = glm::circularRand(1.0f);
-
 			const auto baseCellHandle = baseProfile.AllocateCell();
 			node.m_data.m_pipeHandle = pipeGroup.AllocatePipe();
 
@@ -105,12 +108,10 @@ void TreePipeModel::UpdatePipeModels(const TreeModel& targetTreeModel, const Pip
 			baseCell.m_data.m_pipeHandle = node.m_data.m_pipeHandle;
 			baseCell.m_data.m_pipeSegmentHandle = -1;
 
-			baseCell.m_info.m_offset = baseProfile.FindAvailablePosition(
-				baseProfile.RefCell(pipeGroup.RefPipeSegment(rootToParentNodePipeSegmentChain[0]).m_data.m_cellHandle).m_info.m_offset,
-				direction * pipeModelParameters.m_profileDefaultCellRadius);
-
+			baseCell.m_info.m_offset = glm::vec2(0.0f);
+			baseCell.m_info.m_offset = baseProfile.FindAvailablePosition(baseProfile.RefCell(pipeGroup.RefPipeSegment(rootToParentNodePipeSegmentChain[0]).m_data.m_cellHandle).m_info.m_offset, direction * pipeModelParameters.m_profileDefaultCellRadius);
 			segmentIndex = 0;
-			for (auto it = parentNodeToRootChain.rbegin(); it != parentNodeToRootChain.rend(); it++) {
+			for (auto it = parentNodeToRootChain.rbegin(); it != parentNodeToRootChain.rend(); ++it) {
 				const auto newPipeSegmentHandle = pipeGroup.Extend(node.m_data.m_pipeHandle);
 				auto& newPipeSegment = pipeGroup.RefPipeSegment(newPipeSegmentHandle);
 				newPipeSegment.m_data.m_nodeHandle = *it;
@@ -122,10 +123,8 @@ void TreePipeModel::UpdatePipeModels(const TreeModel& targetTreeModel, const Pip
 				newCell.m_data.m_pipeHandle = node.m_data.m_pipeHandle;
 				newCell.m_data.m_pipeSegmentHandle = newPipeSegmentHandle;
 
-				newCell.m_info.m_offset = profile.FindAvailablePosition(
-					profile.RefCell(pipeGroup.RefPipeSegment(rootToParentNodePipeSegmentChain[segmentIndex]).m_data.m_cellHandle).m_info.m_offset,
-					direction * pipeModelParameters.m_profileDefaultCellRadius);
-
+				newCell.m_info.m_offset = glm::vec2(0.0f);
+				newCell.m_info.m_offset = profile.FindAvailablePosition(profile.RefCell(pipeGroup.RefPipeSegment(rootToParentNodePipeSegmentChain[segmentIndex]).m_data.m_cellHandle).m_info.m_offset, direction * pipeModelParameters.m_profileDefaultCellRadius);
 				newPipeSegment.m_data.m_cellHandle = newCellHandle;
 
 				segmentIndex++;
@@ -140,7 +139,6 @@ void TreePipeModel::UpdatePipeModels(const TreeModel& targetTreeModel, const Pip
 			newCell.m_data.m_pipeHandle = node.m_data.m_pipeHandle;
 			newCell.m_data.m_pipeSegmentHandle = newPipeSegmentHandle;
 			newCell.m_info.m_offset = glm::vec2(0.0f);
-
 			newPipeSegment.m_data.m_cellHandle = newCellHandle;
 		}
 
@@ -157,16 +155,15 @@ void TreePipeModel::UpdatePipeModels(const TreeModel& targetTreeModel, const Pip
 			auto newParticleHandle = physics2D.AllocateParticle();
 			auto& newParticle = physics2D.RefParticle(newParticleHandle);
 			newParticle.m_data.m_cellHandle = cell.GetHandle();
-			newParticle.SetPosition(cell.m_info.m_offset);
 			newParticle.SetDamping(pipeModelParameters.m_damping);
-
+			newParticle.SetPosition(cell.m_info.m_offset);
 			cell.m_data.m_particleHandle = newParticleHandle;
 		}
 	}
 	const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
 	const auto& randomColor = ecoSysLabLayer->RandomColors();
 	const auto& sortedNodeList = skeleton.RefSortedNodeList();
-	for (auto it = sortedNodeList.rbegin(); it != sortedNodeList.rend(); it++) {
+	for (auto it = sortedNodeList.rbegin(); it != sortedNodeList.rend(); ++it) {
 		auto& node = skeleton.RefNode(*it);
 		auto& profile = profileGroup.RefProfile(node.m_data.m_profileHandle);
 		auto& profileData = profile.m_data;
@@ -176,142 +173,44 @@ void TreePipeModel::UpdatePipeModels(const TreeModel& targetTreeModel, const Pip
 			for (auto& particle : physics2D.RefParticles())
 			{
 				particle.SetColor(glm::vec4(1.0f));
+				particle.SetPosition(glm::vec2(0.0f));
 			}
 		}
-		else if (childNodeHandles.size() > 1)
+		else if (childNodeHandles.size() == 1)
 		{
+			auto& childNode = skeleton.RefNode(childNodeHandles[0]);
+			auto& childProfile = profileGroup.RefProfile(childNode.m_data.m_profileHandle);
+			auto& childPhysics2D = childProfile.m_data.m_particlePhysics2D;
+			for (const auto& cell : profile.RefCells())
+			{
+				const auto& pipeSegment = pipeGroup.RefPipeSegment(cell.m_data.m_pipeSegmentHandle);
+				const auto& childPipeSegment = pipeGroup.RefPipeSegment(pipeSegment.GetNextHandle());
+				const auto& childCell = childProfile.PeekCell(childPipeSegment.m_data.m_cellHandle);
+				const auto& childParticle = childPhysics2D.RefParticle(childCell.m_data.m_particleHandle);
+				auto& particle = physics2D.RefParticle(cell.m_data.m_particleHandle);
+				particle.SetColor(childParticle.GetColor());
+				particle.SetPosition(childParticle.GetPosition());
+			}
+		}
+		else {
+#pragma region Color
 			for (auto& particle : physics2D.RefParticles())
 			{
 				const auto cellHandle = particle.m_data.m_cellHandle;
 				const auto pipeSegmentHandle = profile.PeekCell(cellHandle).m_data.m_pipeSegmentHandle;
 				const auto& nextPipeSegment = pipeGroup.PeekPipeSegment(pipeGroup.PeekPipeSegment(pipeSegmentHandle).GetNextHandle());
 				const auto targetChildNodeHandle = nextPipeSegment.m_data.m_nodeHandle;
-				for(int i = 0; i < childNodeHandles.size(); i++)
+				for (int i = 0; i < childNodeHandles.size(); i++)
 				{
-					if(childNodeHandles[i] == targetChildNodeHandle)
+					if (childNodeHandles[i] == targetChildNodeHandle)
 					{
 						particle.SetColor(glm::vec4(randomColor[i], 1.0f));
 					}
 				}
 			}
-		}
-		else {
-			//Copy cell offset from parent.
-			auto& childNode = skeleton.RefNode(childNodeHandles[0]);
-			auto& childProfile = profileGroup.RefProfile(childNode.m_data.m_profileHandle);
-			for (const auto& cell : profile.RefCells())
-			{
-				const auto& pipeSegment = pipeGroup.RefPipeSegment(cell.m_data.m_pipeSegmentHandle);
-				const auto& childPipeSegment = pipeGroup.RefPipeSegment(pipeSegment.GetNextHandle());
-				const auto& childCell = childProfile.PeekCell(childPipeSegment.m_data.m_cellHandle);
-				const auto& childParticle = childProfile.m_data.m_particlePhysics2D.RefParticle(childCell.m_data.m_particleHandle);
-				physics2D.RefParticle(cell.m_data.m_particleHandle).SetColor(childParticle.GetColor());
-			}
-		}
-	}
-}
-
-void TreePipeModel::SimulateAllProfiles(const size_t minCellCount, const size_t iteration, const PipeModelParameters& pipeModelParameters)
-{
-	auto& skeleton = m_shootPipeModel.m_skeleton;
-	auto& profileGroup = m_shootPipeModel.m_pipeProfileGroup;
-
-	const auto& sortedNodeList = skeleton.RefSortedNodeList();
-	for (const auto& nodeHandle : sortedNodeList)
-	{
-		auto& node = skeleton.RefNode(nodeHandle);
-		auto& profile = profileGroup.RefProfile(node.m_data.m_profileHandle);
-		const auto parentNodeHandle = node.GetParentHandle();
-		if (parentNodeHandle == -1)
-		{
-			auto& baseProfile = profileGroup.RefProfile(skeleton.m_data.m_baseProfileHandle);
-			auto& baseProfileData = baseProfile.m_data;
-			auto& basePhysics2D = baseProfileData.m_particlePhysics2D;
-			if (basePhysics2D.RefParticles().size() <= minCellCount) continue;
-			basePhysics2D.Simulate(iteration, [&](auto& particle)
-				{
-					//Apply gravity
-					particle.SetPosition(particle.GetPosition() - basePhysics2D.GetMassCenter());
-					if (glm::length(particle.GetPosition()) > 0.0f) {
-						const glm::vec2 acceleration = pipeModelParameters.m_gravityStrength * -glm::normalize(particle.GetPosition());
-						particle.SetAcceleration(acceleration);
-					}
-				}
-			);
-			/*
-			auto& profileData = profile.m_data;
-			auto& physics2D = profileData.m_particlePhysics2D;
-			//Copy cell offset from parent.
-			for (const auto& baseCell : baseProfile.RefCells())
-			{
-				const auto& pipe = pipeGroup.RefPipe(baseCell.m_data.m_pipeHandle);
-				if (pipe.PeekPipeSegmentHandles().empty()) continue;
-				const auto pipeSegmentHandle = pipe.PeekPipeSegmentHandles().at(0);
-				const auto& pipeSegment = pipeGroup.RefPipeSegment(pipeSegmentHandle);
-				const auto& cell = profile.RefCell(pipeSegment.m_data.m_cellHandle);
-
-				const auto& parentParticle = basePhysics2D.RefParticle(baseCell.m_data.m_particleHandle);
-				physics2D.RefParticle(cell.m_data.m_particleHandle).SetPosition(parentParticle.GetPosition());
-			}*/
-		}
-		else
-		{
-			const auto& parentNode = skeleton.RefNode(parentNodeHandle);
-
-			if (parentNode.RefChildHandles().size() > 1)
-			{
-				auto& profileData = profile.m_data;
-				auto& physics2D = profileData.m_particlePhysics2D;
-				if (physics2D.RefParticles().size() <= minCellCount) continue;
-				physics2D.Simulate(iteration, [&](auto& particle)
-					{
-						//Apply gravity
-						particle.SetPosition(particle.GetPosition() - physics2D.GetMassCenter());
-						if (glm::length(particle.GetPosition()) > 0.0f) {
-							const glm::vec2 acceleration = pipeModelParameters.m_gravityStrength * -glm::normalize(particle.GetPosition());
-							particle.SetAcceleration(acceleration);
-						}
-					}
-				);
-			}
-			/*
-			else
-			{
-				auto& profileData = profile.m_data;
-				auto& physics2D = profileData.m_particlePhysics2D;
-				//Copy cell offset from parent.
-				auto& parentProfile = profileGroup.RefProfile(parentNode.m_data.m_profileHandle);
-				for (const auto& cell : profile.RefCells())
-				{
-					const auto& pipeSegment = pipeGroup.RefPipeSegment(cell.m_data.m_pipeSegmentHandle);
-					const auto& parentPipeSegment = pipeGroup.RefPipeSegment(pipeSegment.GetPrevHandle());
-					const auto& parentCell = parentProfile.PeekCell(parentPipeSegment.m_data.m_cellHandle);
-					const auto& parentParticle = parentProfile.m_data.m_particlePhysics2D.RefParticle(parentCell.m_data.m_particleHandle);
-					physics2D.RefParticle(cell.m_data.m_particleHandle).SetPosition(parentParticle.GetPosition());
-				}
-			}*/
-		}
-	}
-}
-
-void TreePipeModel::ApplySimulationResults(const PipeModelParameters& pipeModelParameters)
-{
-	auto& skeleton = m_shootPipeModel.m_skeleton;
-	auto& profileGroup = m_shootPipeModel.m_pipeProfileGroup;
-	auto& pipeGroup = m_shootPipeModel.m_pipeGroup;
-	//1. For each node with more than 1 child, calculate profile based on their children
-	const auto& sortedNodeList = skeleton.RefSortedNodeList();
-	for (const auto& nodeHandle : sortedNodeList)
-	{
-		auto& node = skeleton.RefNode(nodeHandle);
-		auto& profile = profileGroup.RefProfile(node.m_data.m_profileHandle);
-		auto& profileData = profile.m_data;
-		auto& physics2D = profileData.m_particlePhysics2D;
-		const auto& childHandles = node.RefChildHandles();
-		if (childHandles.size() > 1)
-		{
+#pragma endregion
 			NodeHandle mainChildHandle = -1;
-			for(const auto& childHandle : childHandles)
+			for (const auto& childHandle : childNodeHandles)
 			{
 				auto& childNode = skeleton.RefNode(childHandle);
 				if (childNode.IsApical()) {
@@ -333,7 +232,8 @@ void TreePipeModel::ApplySimulationResults(const PipeModelParameters& pipeModelP
 				physics2D.RefParticle(cell.m_data.m_particleHandle).SetPosition(mainChildParticle.GetPosition());
 			}
 			int index = 0;
-			for (const auto& childHandle : childHandles)
+			float randAngle = glm::linearRand(0.0f, 360.0f);
+			for (const auto& childHandle : childNodeHandles)
 			{
 				auto& childNode = skeleton.RefNode(childHandle);
 				if (childNode.IsApical()) {
@@ -341,8 +241,8 @@ void TreePipeModel::ApplySimulationResults(const PipeModelParameters& pipeModelP
 				}
 				auto& childProfile = profileGroup.RefProfile(childNode.m_data.m_profileHandle);
 				auto& childPhysics2D = childProfile.m_data.m_particlePhysics2D;
-				auto offset = glm::vec2(glm::cos(glm::radians(index * 120.0f)), glm::sin(glm::radians(index * 120.0f)));
-				offset = (mainChildPhysics2D.GetDistanceToCenter(-offset) + childPhysics2D.GetDistanceToCenter(offset)) * offset;
+				auto offset = glm::normalize(glm::vec2(glm::cos(glm::radians(randAngle + index * 120.0f)), glm::sin(glm::radians(randAngle + index * 120.0f))));
+				offset = (mainChildPhysics2D.GetDistanceToCenter(-offset) + childPhysics2D.GetDistanceToCenter(offset) + 2.0f * childPhysics2D.m_particleRadius) * offset;
 				for (const auto& childCell : childProfile.RefCells())
 				{
 					const auto& childPipeSegment = pipeGroup.RefPipeSegment(childCell.m_data.m_pipeSegmentHandle);
@@ -354,13 +254,30 @@ void TreePipeModel::ApplySimulationResults(const PipeModelParameters& pipeModelP
 				}
 				index++;
 			}
+
+			physics2D.Simulate(pipeModelParameters.m_simulationIterationFactor * physics2D.RefParticles().size(), [&](auto& particle)
+				{
+					//Apply gravity
+					particle.SetPosition(particle.GetPosition() - physics2D.GetMassCenter());
+					if (glm::length(particle.GetPosition()) > 0.0f) {
+						const glm::vec2 acceleration = pipeModelParameters.m_gravityStrength * -glm::normalize(particle.GetPosition());
+						particle.SetAcceleration(acceleration);
+					}
+				}
+			);
 		}
 	}
+}
+
+void TreePipeModel::ApplySimulationResults(const PipeModelParameters& pipeModelParameters)
+{
+	auto& skeleton = m_shootPipeModel.m_skeleton;
+	auto& profileGroup = m_shootPipeModel.m_pipeProfileGroup;
 	const auto sortedFlowList = skeleton.RefSortedFlowList();
-	for(const auto flowHandle : sortedFlowList)
+	for (const auto flowHandle : sortedFlowList)
 	{
 		auto& flow = skeleton.RefFlow(flowHandle);
-		const auto& nodeHandles= flow.RefNodeHandles();
+		const auto& nodeHandles = flow.RefNodeHandles();
 		const auto& firstNode = skeleton.RefNode(nodeHandles.front());
 		auto& firstNodeProfile = profileGroup.RefProfile(firstNode.m_data.m_profileHandle);
 		auto& firstNodePhysics2D = firstNodeProfile.m_data.m_particlePhysics2D;
@@ -384,18 +301,18 @@ void TreePipeModel::ApplySimulationResults(const PipeModelParameters& pipeModelP
 			cell.m_info.m_offset = lastNodeParticle.GetPosition();
 			lastNodeMap[cell.m_data.m_pipeHandle] = cellHandle;
 		}
-		if(nodeHandles.size() == 2) continue;
+		if (nodeHandles.size() == 2) continue;
 		const auto nodeSize = nodeHandles.size();
-		for(int i = 1; i < nodeHandles.size() - 1; i++)
+		for (int i = 1; i < nodeHandles.size() - 1; i++)
 		{
-			float a = static_cast<float>(i) / (nodeSize - 1);
-			auto& node = skeleton.RefNode(nodeHandles[i]);
+			const float a = static_cast<float>(i) / (nodeSize - 1);
+			const auto& node = skeleton.RefNode(nodeHandles[i]);
 			auto& profile = profileGroup.RefProfile(node.m_data.m_profileHandle);
-			for(auto& cell : profile.RefCells())
+			for (auto& cell : profile.RefCells())
 			{
 				const auto pipeHandle = cell.m_data.m_pipeHandle;
-				cell.m_info.m_offset = 
-					glm::mix(firstNodeProfile.RefCell(firstNodeMap.at(pipeHandle)).m_info.m_offset, 
+				cell.m_info.m_offset =
+					glm::mix(firstNodeProfile.RefCell(firstNodeMap.at(pipeHandle)).m_info.m_offset,
 						lastNodeProfile.RefCell(lastNodeMap.at(pipeHandle)).m_info.m_offset, a);
 			}
 		}
