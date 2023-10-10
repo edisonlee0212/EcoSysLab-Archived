@@ -195,7 +195,7 @@ namespace EcoSysLab {
 		Jobs::ParallelFor(m_particles2D.size(), [&](const unsigned i, const unsigned threadIndex)
 			{
 				const auto& particle = m_particles2D[i];
-				const auto distance = glm::length(glm::closestPointOnLine(particle.m_position, glm::vec2(0.0f), direction * 10000.0f));
+				const auto distance = glm::length(glm::closestPointOnLine(particle.m_position, glm::vec2(0.0f), direction * 100.0f));
 				maxDistances[threadIndex] = glm::max(maxDistances[threadIndex], distance);
 			});
 		float maxDistance = FLT_MIN;

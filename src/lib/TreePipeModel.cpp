@@ -13,7 +13,7 @@ void TreePipeModel::UpdatePipeModels(const TreeModel& targetTreeModel, const Pip
 	auto& skeleton = m_shootPipeModel.m_skeleton;
 	auto& profileGroup = m_shootPipeModel.m_pipeProfileGroup;
 	auto& pipeGroup = m_shootPipeModel.m_pipeGroup;
-
+	
 	skeleton.Clone(targetTreeModel.PeekShootSkeleton(), [&](NodeHandle srcNodeHandle, NodeHandle dstNodeHandle)
 	{
 			skeleton.m_data.m_nodeMap[srcNodeHandle] = dstNodeHandle;
@@ -26,6 +26,7 @@ void TreePipeModel::UpdatePipeModels(const TreeModel& targetTreeModel, const Pip
 	{
 		shootNewNodeList[i.GetIndex()] = i.GetHandle();
 	}
+	if(shootNewNodeList.empty()) return;
 	for (const auto& nodePair : shootNewNodeList)
 	{
 		auto& node = skeleton.RefNode(nodePair.second);
@@ -191,6 +192,22 @@ void TreePipeModel::UpdatePipeModels(const TreeModel& targetTreeModel, const Pip
 				particle.SetColor(childParticle.GetColor());
 				particle.SetPosition(childParticle.GetPosition());
 			}
+			auto parentNodeHandle = node.GetParentHandle();
+			bool chainStart = false;
+			if (parentNodeHandle == -1 || skeleton.PeekNode(parentNodeHandle).RefChildHandles().size() > 1) chainStart = true;
+			if(chainStart)
+			{
+				physics2D.Simulate(pipeModelParameters.m_simulationIterationFactor * physics2D.RefParticles().size(), [&](auto& particle)
+					{
+						//Apply gravity
+						particle.SetPosition(particle.GetPosition() - physics2D.GetMassCenter());
+						if (glm::length(particle.GetPosition()) > 0.0f) {
+							const glm::vec2 acceleration = pipeModelParameters.m_gravityStrength * -glm::normalize(particle.GetPosition());
+							particle.SetAcceleration(acceleration);
+						}
+					}
+				);
+			}
 		}
 		else {
 #pragma region Color
@@ -254,18 +271,21 @@ void TreePipeModel::UpdatePipeModels(const TreeModel& targetTreeModel, const Pip
 				}
 				index++;
 			}
-
-			physics2D.Simulate(pipeModelParameters.m_simulationIterationFactor * physics2D.RefParticles().size(), [&](auto& particle)
-				{
-					//Apply gravity
-					particle.SetPosition(particle.GetPosition() - physics2D.GetMassCenter());
-					if (glm::length(particle.GetPosition()) > 0.0f) {
-						const glm::vec2 acceleration = pipeModelParameters.m_gravityStrength * -glm::normalize(particle.GetPosition());
-						particle.SetAcceleration(acceleration);
-					}
-				}
-			);
 		}
+	}
+
+	auto& baseProfile = profileGroup.RefProfile(skeleton.m_data.m_baseProfileHandle);
+	auto& basePhysics2D = baseProfile.m_data.m_particlePhysics2D;
+	auto& childProfile = profileGroup.RefProfile(skeleton.RefNode(sortedNodeList[0]).m_data.m_profileHandle);
+
+	for (const auto& cell : baseProfile.RefCells())
+	{
+		const auto& childPipeSegment = pipeGroup.RefPipeSegment(pipeGroup.RefPipe(cell.m_data.m_pipeHandle).PeekPipeSegmentHandles().front());
+		const auto& childCell = childProfile.PeekCell(childPipeSegment.m_data.m_cellHandle);
+		const auto& childParticle = childProfile.m_data.m_particlePhysics2D.RefParticle(childCell.m_data.m_particleHandle);
+		auto& particle = basePhysics2D.RefParticle(cell.m_data.m_particleHandle);
+		particle.SetColor(childParticle.GetColor());
+		particle.SetPosition(childParticle.GetPosition());
 	}
 }
 
@@ -316,5 +336,12 @@ void TreePipeModel::ApplySimulationResults(const PipeModelParameters& pipeModelP
 						lastNodeProfile.RefCell(lastNodeMap.at(pipeHandle)).m_info.m_offset, a);
 			}
 		}
+	}
+	auto& baseProfile = profileGroup.RefProfile(skeleton.m_data.m_baseProfileHandle);
+	auto& basePhysics2D = baseProfile.m_data.m_particlePhysics2D;
+	for (auto& cell : baseProfile.RefCells())
+	{
+		auto& particle = basePhysics2D.RefParticle(cell.m_data.m_particleHandle);
+		cell.m_info.m_offset = particle.GetPosition();
 	}
 }
