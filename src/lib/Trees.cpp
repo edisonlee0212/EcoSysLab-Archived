@@ -52,7 +52,6 @@ void Trees::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
     if (!m_globalTransforms.empty() && m_treeDescriptor.Get<TreeDescriptor>()) {
         auto &parameters = m_treeDescriptor.Get<TreeDescriptor>()->m_shootGrowthParameters;
         const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
-        ImGui::DragInt("Flow max node size", &m_treeGrowthSettings.m_flowNodeLimit, 1, 1, 100);
         ImGui::Checkbox("Auto balance vigor", &m_treeGrowthSettings.m_autoBalance);
         ImGui::Checkbox("Receive light", &m_treeGrowthSettings.m_collectShootFlux);
         ImGui::Checkbox("Receive water", &m_treeGrowthSettings.m_collectRootFlux);
@@ -94,7 +93,6 @@ void Trees::OnCreate() {
 void SerializeTreeGrowthSettings(const std::string& name, const TreeGrowthSettings& treeGrowthSettings, YAML::Emitter& out)
 {
     out << YAML::Key << name << YAML::BeginMap;
-    out << YAML::Key << "m_flowNodeLimit" << YAML::Value << treeGrowthSettings.m_flowNodeLimit;
     out << YAML::Key << "m_autoBalance" << YAML::Value << treeGrowthSettings.m_autoBalance;
     out << YAML::Key << "m_collectShootFlux" << YAML::Value << treeGrowthSettings.m_collectShootFlux;
     out << YAML::Key << "m_collectRootFlux" << YAML::Value << treeGrowthSettings.m_collectRootFlux;
@@ -106,7 +104,6 @@ void SerializeTreeGrowthSettings(const std::string& name, const TreeGrowthSettin
 void DeserializeTreeGrowthSettings(const std::string& name, TreeGrowthSettings& treeGrowthSettings, const YAML::Node& in) {
     if (in[name]) {
         auto& param = in[name];
-        if (param["m_flowNodeLimit"]) treeGrowthSettings.m_flowNodeLimit = param["m_flowNodeLimit"].as<int>();
         if (param["m_autoBalance"]) treeGrowthSettings.m_autoBalance = param["m_autoBalance"].as<bool>();
         if (param["m_collectShootFlux"]) treeGrowthSettings.m_collectShootFlux = param["m_collectShootFlux"].as<bool>();
         if (param["m_collectRootFlux"]) treeGrowthSettings.m_collectRootFlux = param["m_collectRootFlux"].as<bool>();

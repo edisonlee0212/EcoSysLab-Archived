@@ -34,10 +34,7 @@ namespace EcoSysLab {
 		bool TryGrowSubTree(NodeHandle internodeHandle, float deltaTime);
 		ShootGrowthController m_shootGrowthController{};
 		RootGrowthController m_rootGrowthController{};
-		
 	public:
-		void GrowSubTree(NodeHandle targetInternodeHandle, float deltaTime);
-
 		void Reset();
 
 		TreeVisualizer m_treeVisualizer {};

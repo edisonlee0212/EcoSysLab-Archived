@@ -14,16 +14,18 @@ namespace EcoSysLab {
 		void Update(const std::function<void(Particle2D<T>& particle)>& modifyParticleFunc);
 		void InitializeGrid();
 		void CheckCollisions();
-		glm::vec2 m_min, m_max;
+		glm::vec2 m_min = glm::vec2(FLT_MAX);
+		glm::vec2 m_max = glm::vec2(FLT_MIN);
 		glm::vec2 m_massCenter = glm::vec2(0.0f);
 		float m_totalMoveDelta = 0.0f;
 		float m_activeness = 0.0f;
 		float m_simulationTime = 0.0f;
 	public:
+		[[nodiscard]] float GetDistanceToCenter(const glm::vec2& direction);
 		[[nodiscard]] float GetTotalMoveDelta() const;
 		[[nodiscard]] float GetDeltaTime() const;
 		void Reset(float deltaTime = 0.002f);
-		
+		void CalculateMinMax();
 		float m_particleRadius = 0.01f;
 		float m_particleSoftness = 0.5f;
 		[[nodiscard]] ParticleHandle AllocateParticle();
@@ -100,7 +102,7 @@ namespace EcoSysLab {
 	}
 
 	template <typename T>
-	void ParticlePhysics2D<T>::InitializeGrid()
+	void ParticlePhysics2D<T>::CalculateMinMax()
 	{
 		m_min = glm::vec2(FLT_MAX);
 		m_max = glm::vec2(FLT_MIN);
@@ -137,7 +139,11 @@ namespace EcoSysLab {
 			m_massCenter += massCenters[i];
 		}
 		m_massCenter /= m_particles2D.size();
-
+	}
+	template <typename T>
+	void ParticlePhysics2D<T>::InitializeGrid()
+	{
+		CalculateMinMax();
 		const auto cellSize = m_particleRadius * 2.f;
 		m_particleGrid2D.Reset(cellSize, m_min, m_max);
 		for (ParticleHandle i = 0; i < m_particles2D.size(); i++)
@@ -173,7 +179,31 @@ namespace EcoSysLab {
 					}
 				}
 			}
-		});
+			});
+	}
+
+	template <typename T>
+	float ParticlePhysics2D<T>::GetDistanceToCenter(const glm::vec2& direction)
+	{
+		const auto threadCount = Jobs::Workers().Size();
+		std::vector<float> maxDistances;
+		maxDistances.resize(threadCount);
+		for (int i = 0; i < threadCount; i++)
+		{
+			maxDistances[i] = FLT_MIN;
+		}
+		Jobs::ParallelFor(m_particles2D.size(), [&](const unsigned i, const unsigned threadIndex)
+			{
+				const auto& particle = m_particles2D[i];
+				const auto distance = glm::length(glm::closestPointOnLine(particle.m_position, glm::vec2(0.0f), direction * 10000.0f));
+				maxDistances[threadIndex] = glm::max(maxDistances[threadIndex], distance);
+			});
+		float maxDistance = FLT_MIN;
+		for (int i = 0; i < threadCount; i++)
+		{
+			maxDistance = glm::max(maxDistances[i], maxDistance);
+		}
+		return maxDistance;
 	}
 
 	template <typename T>
@@ -199,6 +229,7 @@ namespace EcoSysLab {
 		m_particleSoftness = 0.5f;
 		m_particleRadius = 0.01f;
 	}
+
 
 	template <typename T>
 	ParticleHandle ParticlePhysics2D<T>::AllocateParticle()
@@ -275,8 +306,8 @@ namespace EcoSysLab {
 	{
 		static auto scrolling = glm::vec2(0.0f);
 		static float zoomFactor = 100.f;
-		ImGui::Text(("Total move delta: " + std::to_string(m_totalMoveDelta) + 
-			" | Total activeness: " + std::to_string(m_activeness) + 
+		ImGui::Text(("Total move delta: " + std::to_string(m_totalMoveDelta) +
+			" | Total activeness: " + std::to_string(m_activeness) +
 			" | Particle count: " + std::to_string(m_particles2D.size()) +
 			" | Simulation time: " + std::to_string(m_simulationTime)).c_str());
 		if (ImGui::Button("Recenter")) {
@@ -333,13 +364,13 @@ namespace EcoSysLab {
 		int index = 0;
 		for (const auto& particle : m_particles2D) {
 			index++;
-			if(mod > 1 && index % mod != 0) continue;
+			if (mod > 1 && index % mod != 0) continue;
 			const auto& pointPosition = particle.m_position;
 			const auto& pointRadius = m_particleRadius;
 			const auto& pointColor = particle.m_color;
 			const auto canvasPosition = ImVec2(origin.x + pointPosition.x * zoomFactor,
 				origin.y + pointPosition.y * zoomFactor);
-			
+
 			drawList->AddCircleFilled(canvasPosition,
 				glm::clamp(zoomFactor * pointRadius, 1.0f, 100.0f),
 				IM_COL32(255.0f * pointColor.x, 255.0f * pointColor.y, 255.0f * pointColor.z, 255.0f * pointColor.w));

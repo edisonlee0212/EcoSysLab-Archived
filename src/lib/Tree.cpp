@@ -57,7 +57,6 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 			}
 			ImGui::Checkbox("Enable Root", &m_treeModel.m_treeGrowthSettings.m_enableRoot);
 			ImGui::Checkbox("Enable Shoot", &m_treeModel.m_treeGrowthSettings.m_enableShoot);
-			ImGui::DragInt("Flow max node size", &m_treeModel.m_treeGrowthSettings.m_flowNodeLimit, 1, 1, 100);
 			ImGui::Checkbox("Auto balance vigor", &m_treeModel.m_treeGrowthSettings.m_autoBalance);
 			ImGui::Checkbox("Receive light", &m_treeModel.m_treeGrowthSettings.m_collectShootFlux);
 			ImGui::Checkbox("Receive water", &m_treeModel.m_treeGrowthSettings.m_collectRootFlux);
@@ -399,7 +398,11 @@ bool Tree::TryGrow(float deltaTime) {
 
 	const bool grown = m_treeModel.Grow(deltaTime, scene->GetDataComponent<GlobalTransform>(owner).m_value, soil->m_soilModel, climate->m_climateModel,
 		m_rootGrowthController, m_shootGrowthController);
-	if (grown) m_treeVisualizer.m_needUpdate = true;
+	if (grown)
+	{
+		m_treeVisualizer.ClearSelections();
+		m_treeVisualizer.m_needUpdate = true;
+	}
 	if (m_enableHistory && m_treeModel.m_iteration % m_historyIteration == 0) m_treeModel.Step();
 
 	if (m_recordBiomassHistory)
@@ -460,7 +463,11 @@ bool Tree::TryGrowSubTree(const NodeHandle internodeHandle, const float deltaTim
 	PrepareControllers(treeDescriptor);
 
 	const bool grown = m_treeModel.GrowSubTree(deltaTime, internodeHandle, scene->GetDataComponent<GlobalTransform>(owner).m_value, climate->m_climateModel, m_shootGrowthController);
-
+	if (grown)
+	{
+		m_treeVisualizer.ClearSelections();
+		m_treeVisualizer.m_needUpdate = true;
+	}
 	if (m_enableHistory && m_treeModel.m_iteration % m_historyIteration == 0) m_treeModel.Step();
 
 	m_treeVisualizer.m_needUpdate = true;

@@ -7,8 +7,6 @@ using namespace EvoEngine;
 namespace EcoSysLab {
 	struct TreeGrowthSettings
 	{
-		int m_flowNodeLimit = 10;
-
 		bool m_enableRoot = false;
 		bool m_enableShoot = true;
 

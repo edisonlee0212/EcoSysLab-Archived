@@ -802,7 +802,7 @@ bool TreeModel::ElongateRoot(VoxelSoilModel& soilModel, const float extendLength
 			glm::radians(rootGrowthParameters.m_apicalAngle(rootNode)), 0.0f,
 			glm::radians(rootGrowthParameters.m_rollAngle(rootNode))));
 		//Create new internode
-		auto newRootNodeHandle = m_rootSkeleton.Extend(rootNodeHandle, false, m_rootSkeleton.RefFlow(rootNode.GetFlowHandle()).RefNodeHandles().size() > m_treeGrowthSettings.m_flowNodeLimit);
+		auto newRootNodeHandle = m_rootSkeleton.Extend(rootNodeHandle, false);
 		auto& oldRootNode = m_rootSkeleton.RefNode(rootNodeHandle);
 		auto& newRootNode = m_rootSkeleton.RefNode(newRootNodeHandle);
 		newRootNode.m_data = {};
@@ -923,7 +923,7 @@ bool TreeModel::ElongateInternode(float extendLength, NodeHandle internodeHandle
 			}
 		}
 		//Create new internode
-		const auto newInternodeHandle = m_shootSkeleton.Extend(internodeHandle, false, m_shootSkeleton.RefFlow(internode.GetFlowHandle()).RefNodeHandles().size() > m_treeGrowthSettings.m_flowNodeLimit);
+		const auto newInternodeHandle = m_shootSkeleton.Extend(internodeHandle, false);
 		const auto& oldInternode = m_shootSkeleton.RefNode(internodeHandle);
 		auto& newInternode = m_shootSkeleton.RefNode(newInternodeHandle);
 		newInternode.m_data = {};

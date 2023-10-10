@@ -239,10 +239,9 @@ namespace EcoSysLab {
 		 * Branch/prolong node during growth process. The flow structure will also be updated.
 		 * @param targetHandle The handle of the node to branch/prolong
 		 * @param branching True if branching, false if prolong. During branching, 2 new flows will be generated.
-		 * @param breakFlow Whether we need to create a new flow
 		 * @return The handle of new node.
 		 */
-		[[nodiscard]] NodeHandle Extend(NodeHandle targetHandle, bool branching, bool breakFlow = false);
+		[[nodiscard]] NodeHandle Extend(NodeHandle targetHandle, bool branching);
 
 		/**
 		 * To retrieve a list of handles of all nodes contained within the tree.
@@ -427,7 +426,7 @@ namespace EcoSysLab {
 
 	template<typename SkeletonData, typename FlowData, typename NodeData>
 	NodeHandle
-	Skeleton<SkeletonData, FlowData, NodeData>::Extend(NodeHandle targetHandle, const bool branching, const bool breakFlow) {
+	Skeleton<SkeletonData, FlowData, NodeData>::Extend(NodeHandle targetHandle, const bool branching) {
 		assert(targetHandle < m_nodes.size());
 		auto &targetNode = m_nodes[targetHandle];
 		assert(!targetNode.m_recycled);
@@ -474,19 +473,7 @@ namespace EcoSysLab {
 				SetParentFlow(extendedFlowHandle, originalNode.m_flowHandle);
 			}
 			SetParentFlow(newFlowHandle, originalNode.m_flowHandle);
-		}
-		else if(breakFlow)
-		{
-			auto newFlowHandle = AllocateFlow();
-			auto& newFlow = m_flows[newFlowHandle];
-			newNode.m_flowHandle = newFlowHandle;
-			newNode.m_apical = true;
-			newNode.m_flowStartNode = true;
-			newFlow.m_nodes.emplace_back(newNodeHandle);
-			newFlow.m_apical = true;
-			SetParentFlow(newFlowHandle, originalNode.m_flowHandle);
-		}
-		else {
+		} else {
 			flow.m_nodes.emplace_back(newNodeHandle);
 			newNode.m_flowHandle = originalNode.m_flowHandle;
 			newNode.m_flowStartNode = false;
@@ -767,7 +754,7 @@ namespace EcoSysLab {
 			else
 			{
 				const auto& srcNode = srcSkeleton.PeekNode(srcNodeHandle);
-				auto dstNodeHandle = this->Extend(nodeHandleMap.at(srcNode.GetParentHandle()), !srcNode.IsApical(), false);
+				auto dstNodeHandle = this->Extend(nodeHandleMap.at(srcNode.GetParentHandle()), !srcNode.IsApical());
 				nodeHandleMap[srcNodeHandle] = dstNodeHandle;
 				m_nodes[dstNodeHandle].m_info = srcNode.m_info;
 				m_nodes[dstNodeHandle].m_index = srcNode.m_index;

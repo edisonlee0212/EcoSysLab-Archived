@@ -322,7 +322,6 @@ bool TreeVisualizer::Visualize(TreeModel& treeModel, const GlobalTransform& glob
 		}
 
 		if (m_needUpdate) {
-			ClearSelections();
 			SyncMatrices(treeSkeleton, m_internodeMatrices, m_selectedInternodeHandle,
 				m_selectedInternodeLengthFactor);
 			SyncMatrices(rootSkeleton, m_rootNodeMatrices, m_selectedRootNodeHandle,
