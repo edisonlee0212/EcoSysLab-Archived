@@ -484,7 +484,6 @@ void Tree::InitializeStrandRenderer()
 	if (!points.empty()) strandsList.emplace_back(points.size());
 	StrandPointAttributes strandPointAttributes{};
 	strandPointAttributes.m_color = true;
-	strandPointAttributes.m_normal = true;
 	strandsAsset->SetStrands(strandPointAttributes, strandsList, points);
 	renderer->m_strands = strandsAsset;
 

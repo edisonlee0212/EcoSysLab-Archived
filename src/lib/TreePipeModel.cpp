@@ -110,7 +110,6 @@ void TreePipeModel::UpdatePipeModels(const TreeModel& targetTreeModel, const Pip
 			baseCell.m_data.m_pipeSegmentHandle = -1;
 
 			baseCell.m_info.m_offset = glm::vec2(0.0f);
-			baseCell.m_info.m_offset = baseProfile.FindAvailablePosition(baseProfile.RefCell(pipeGroup.RefPipeSegment(rootToParentNodePipeSegmentChain[0]).m_data.m_cellHandle).m_info.m_offset, direction * pipeModelParameters.m_profileDefaultCellRadius);
 			segmentIndex = 0;
 			for (auto it = parentNodeToRootChain.rbegin(); it != parentNodeToRootChain.rend(); ++it) {
 				const auto newPipeSegmentHandle = pipeGroup.Extend(node.m_data.m_pipeHandle);
@@ -125,7 +124,6 @@ void TreePipeModel::UpdatePipeModels(const TreeModel& targetTreeModel, const Pip
 				newCell.m_data.m_pipeSegmentHandle = newPipeSegmentHandle;
 
 				newCell.m_info.m_offset = glm::vec2(0.0f);
-				newCell.m_info.m_offset = profile.FindAvailablePosition(profile.RefCell(pipeGroup.RefPipeSegment(rootToParentNodePipeSegmentChain[segmentIndex]).m_data.m_cellHandle).m_info.m_offset, direction * pipeModelParameters.m_profileDefaultCellRadius);
 				newPipeSegment.m_data.m_cellHandle = newCellHandle;
 
 				segmentIndex++;
@@ -257,7 +255,8 @@ void TreePipeModel::UpdatePipeModels(const TreeModel& targetTreeModel, const Pip
 				}
 				auto& childProfile = profileGroup.RefProfile(childNode.m_data.m_profileHandle);
 				auto& childPhysics2D = childProfile.m_data.m_particlePhysics2D;
-				auto offset = glm::normalize(glm::vec2(glm::cos(glm::radians(randAngle + index * 120.0f)), glm::sin(glm::radians(randAngle + index * 120.0f))));
+				auto childNodeFront = glm::inverse(node.m_info.m_regulatedGlobalRotation) * childNode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
+				auto offset = glm::normalize(glm::vec2(childNodeFront.x, childNodeFront.y));
 				offset = (mainChildPhysics2D.GetDistanceToCenter(offset) + childPhysics2D.GetDistanceToCenter(-offset) + 2.0f) * offset;
 				for (const auto& childCell : childProfile.RefCells())
 				{
