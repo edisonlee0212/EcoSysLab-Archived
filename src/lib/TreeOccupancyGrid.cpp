@@ -75,6 +75,35 @@ void TreeOccupancyGrid::Resize(const glm::vec3& min, const glm::vec3& max)
 	);
 }
 
+void TreeOccupancyGrid::Initialize(const VoxelGrid<TreeOccupancyGridBasicData>& srcGrid, const glm::vec3& min, const glm::vec3& max, const float internodeLength,
+	const float removalDistanceFactor, const float theta, const float detectionDistanceFactor, const size_t markersPerVoxel)
+{
+	m_removalDistanceFactor = removalDistanceFactor;
+	m_detectionDistanceFactor = detectionDistanceFactor;
+	m_theta = theta;
+	m_internodeLength = internodeLength;
+	m_markersPerVoxel = markersPerVoxel;
+	m_occupancyGrid.Initialize(m_removalDistanceFactor * internodeLength, min, max, {});
+	const auto voxelSize = m_occupancyGrid.GetVoxelSize();
+
+	Jobs::ParallelFor(m_occupancyGrid.GetVoxelCount(), [&](unsigned i)
+		{
+			const glm::vec3 normalizedPosition = glm::vec3(m_occupancyGrid.GetCoordinate(i)) / glm::vec3(m_occupancyGrid.GetResolution());
+			const auto srcGridPosition = normalizedPosition * (srcGrid.GetMaxBound() - srcGrid.GetMinBound());
+			if(srcGrid.Peek(srcGrid.GetIndex(srcGridPosition)).m_occupied || (normalizedPosition.y < 0.2f && glm::length(glm::vec2(normalizedPosition.x - 0.5f, normalizedPosition.z - 0.5f)) < 0.05f))
+			{
+				auto& voxelData = m_occupancyGrid.Ref(static_cast<int>(i));
+				for (int v = 0; v < m_markersPerVoxel; v++)
+				{
+					auto& newMarker = voxelData.m_markers.emplace_back();
+					newMarker.m_position = m_occupancyGrid.GetPosition(i) + glm::linearRand(-glm::vec3(voxelSize * 0.5f), glm::vec3(voxelSize * 0.5f));
+				}
+			}
+		}
+	);
+
+}
+
 VoxelGrid<TreeOccupancyGridVoxelData>& TreeOccupancyGrid::RefGrid()
 {
 	return m_occupancyGrid;

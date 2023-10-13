@@ -25,9 +25,7 @@
 #include "Physics2DDemo.hpp"
 #include "SorghumLayer.hpp"
 #include "TreePointCloud.hpp"
-#include "SpaceColonizationTree.hpp"
 #include "WindowLayer.hpp"
-#include "SpaceColonizationTree.hpp"
 using namespace EcoSysLab;
 
 void EngineSetup();
@@ -86,7 +84,6 @@ int main() {
 	Application::PushLayer<RayTracerLayer>();
 #endif
 	ClassRegistry::RegisterPrivateComponent<Tree>("Tree");
-	ClassRegistry::RegisterPrivateComponent<SpaceColonizationTree>("SpaceColonizationTree");
 	ClassRegistry::RegisterPrivateComponent<TreePointCloud>("TreePointCloud");
 	ClassRegistry::RegisterPrivateComponent<Soil>("Soil");
 	ClassRegistry::RegisterPrivateComponent<Climate>("Climate");

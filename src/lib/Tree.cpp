@@ -18,6 +18,96 @@
 #include "StrandsRenderer.hpp"
 using namespace EcoSysLab;
 
+
+bool Tree::ParseBinvox(const std::filesystem::path& filePath, VoxelGrid<TreeOccupancyGridBasicData>& voxelGrid, float voxelSize)
+{
+	std::ifstream input(filePath, std::ios::in | std::ios::binary);
+	if (!input.is_open()) {
+		std::cout << "Error: could not open file " << filePath << std::endl;
+		return false;
+	}
+
+	// Read header
+	std::string line;
+	input >> line;  // #binvox
+	if (line.compare("#binvox") != 0) {
+		std::cout << "Error: first line reads [" << line << "] instead of [#binvox]" << std::endl;
+		return false;
+	}
+	int version;
+	input >> version;
+	std::cout << "reading binvox version " << version << std::endl;
+
+	int depth, height, width;
+	depth = -1;
+	bool done = false;
+	while (input.good() && !done) {
+		input >> line;
+		if (line.compare("data") == 0) done = true;
+		else if (line.compare("dim") == 0) {
+			input >> depth >> height >> width;
+		}
+		else {
+			std::cout << "  unrecognized keyword [" << line << "], skipping" << std::endl;
+			char c;
+			do {  // skip until end of line
+				c = input.get();
+			} while (input.good() && (c != '\n'));
+		}
+	}
+
+	if (!done) {
+		std::cout << "  error reading header" << std::endl;
+		return false;
+	}
+	if (depth == -1) {
+		std::cout << "  missing dimensions in header" << std::endl;
+		return false;
+	}
+
+	// Initialize the voxel grid based on the dimensions read
+	glm::vec3 minBound(0, 0, 0);  // Assuming starting from origin
+	glm::ivec3 resolution(width, height, depth);
+	voxelGrid.Initialize(voxelSize, resolution, minBound, {});  // Assuming voxelSize is globally defined or passed as an argument
+
+	// Read voxel data
+	byte value;
+	byte count;
+	int index = 0;
+	int end_index = 0;
+	int nr_voxels = 0;
+
+	input.unsetf(std::ios::skipws);  // need to read every byte now (!)
+	input >> value;  // read the linefeed char
+
+	while ((end_index < (width * height * depth)) && input.good()) {
+		input >> value >> count;
+
+		if (input.good()) {
+			end_index = index + count;
+			if (end_index > (width * height * depth)) return false;
+
+			for (int i = index; i < end_index; i++) {
+				// Convert 1D index to 3D coordinates
+				int current_width = i % width;
+				int current_height = (i / width) % height;
+				int current_depth = i / (width * height);
+
+				if (value) {
+					voxelGrid.Ref(glm::ivec3(current_width, current_height, current_depth)).m_occupied = true;
+					nr_voxels++;
+				}
+			}
+
+			index = end_index;
+		}
+	}
+
+	input.close();
+	std::cout << "  read " << nr_voxels << " voxels" << std::endl;
+	return true;
+}
+
 void Tree::Reset()
 {
 	m_treeModel.Clear();
@@ -135,6 +225,27 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 			if(m_treeModel.m_treeGrowthSettings.m_useSpaceColonization)
 			{
 				ImGui::Checkbox("Space colonization auto resize", &m_treeModel.m_treeGrowthSettings.m_spaceColonizationAutoResize);
+				if(!m_treeModel.m_treeGrowthSettings.m_spaceColonizationAutoResize)
+				{
+					static float radius = 2.0f;
+					ImGui::DragFloat("Import radius", &radius, 0.01f, 0.01f, 10.0f);
+					FileUtils::OpenFile("Load Voxel Data", "Binvox", { ".binvox" }, [&](const std::filesystem::path& path) {
+						auto& occupancyGrid = m_treeModel.RefShootSkeleton().m_data.m_treeOccupancyGrid;
+						VoxelGrid<TreeOccupancyGridBasicData> inputGrid {};
+						if(ParseBinvox(path, inputGrid, 1.f))
+						{
+							const auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
+							occupancyGrid.Initialize(inputGrid, 
+								glm::vec3(-radius, 0, -radius), 
+								glm::vec3(radius, 2.0f * radius, radius),
+								treeDescriptor->m_shootGrowthParameters.m_internodeLength, 
+								m_treeModel.m_treeGrowthSettings.m_spaceColonizationRemovalDistanceFactor, 
+								m_treeModel.m_treeGrowthSettings.m_spaceColonizationTheta,
+								m_treeModel.m_treeGrowthSettings.m_spaceColonizationDetectionDistanceFactor);
+						}
+
+						}, false);
+				}
 			}
 			ImGui::TreePop();
 		}
@@ -226,8 +337,8 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 						scalarMatrices[i].m_instanceMatrix.m_value =
 							glm::translate(marker.m_position)
 							* glm::mat4_cast(glm::quat(glm::vec3(0.0f)))
-							* glm::scale(glm::vec3(voxelGrid.GetVoxelSize() * 0.1f));
-						if(marker.m_nodeHandle == -1) scalarMatrices[i].m_instanceColor = glm::vec4(1.0f, 1.0f, 1.0f, 0.2f);
+							* glm::scale(glm::vec3(voxelGrid.GetVoxelSize() * 0.2f));
+						if(marker.m_nodeHandle == -1) scalarMatrices[i].m_instanceColor = glm::vec4(1.0f, 1.0f, 1.0f, 0.75f);
 						else
 						{
 							scalarMatrices[i].m_instanceColor = glm::vec4(ecoSysLabLayer->RandomColors()[marker.m_nodeHandle], 1.0f);

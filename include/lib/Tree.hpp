@@ -35,6 +35,8 @@ namespace EcoSysLab {
 		ShootGrowthController m_shootGrowthController{};
 		RootGrowthController m_rootGrowthController{};
 	public:
+		[[nodiscard]] bool ParseBinvox(const std::filesystem::path& filePath, VoxelGrid<TreeOccupancyGridBasicData>& voxelGrid, float voxelSize = 1.0f);
+
 		void Reset();
 
 		TreeVisualizer m_treeVisualizer {};

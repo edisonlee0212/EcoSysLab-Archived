@@ -22,10 +22,8 @@
 #include "RadialBoundingVolume.hpp"
 #include "HeightField.hpp"
 #include "ObjectRotator.hpp"
-#include "SinglePipeProfile.hpp"
 #include "SorghumLayer.hpp"
 #include "TreePointCloud.hpp"
-#include "PipeModelBase.hpp"
 #include "Scene.hpp"
 #ifdef BUILD_WITH_RAYTRACER
 #include <CUDAModule.hpp>
@@ -50,8 +48,6 @@ void RegisterClasses() {
 	ClassRegistry::RegisterAsset<RadialBoundingVolume>("RadialBoundingVolume", { ".rbv" });
 	ClassRegistry::RegisterAsset<HeightField>("HeightField", { ".hf" });
 	ClassRegistry::RegisterAsset<NoiseSoilLayerDescriptor>("NoiseSoilLayerDescriptor", { ".nsld" });
-	ClassRegistry::RegisterPrivateComponent<SinglePipeProfile>("SinglePipeProfile");
-	ClassRegistry::RegisterPrivateComponent<PipeModelBase>("PipeModelBase");
 }
 
 void PushWindowLayer() {

@@ -19,6 +19,11 @@ namespace EcoSysLab
 		std::vector<TreeOccupancyGridMarker> m_markers;
 	};
 
+	struct TreeOccupancyGridBasicData
+	{
+		bool m_occupied = false;
+	};
+
 	class TreeOccupancyGrid
 	{
 		VoxelGrid<TreeOccupancyGridVoxelData> m_occupancyGrid {};
@@ -37,7 +42,8 @@ namespace EcoSysLab
 		void Initialize(const glm::vec3& min, const glm::vec3& max, float internodeLength,
 		                float removalDistanceFactor = 2.0f, float theta = 90.0f, float detectionDistanceFactor = 4.0f, size_t markersPerVoxel = 1);
 		void Resize(const glm::vec3 &min, const glm::vec3& max);
-
+		void Initialize(const VoxelGrid<TreeOccupancyGridBasicData>& srcGrid, const glm::vec3& min, const glm::vec3& max, float internodeLength,
+			float removalDistanceFactor = 2.0f, float theta = 90.0f, float detectionDistanceFactor = 4.0f, size_t markersPerVoxel = 1);
 		[[nodiscard]] VoxelGrid<TreeOccupancyGridVoxelData>& RefGrid();
 		[[nodiscard]] glm::vec3 GetMin() const;
 		[[nodiscard]] glm::vec3 GetMax() const;
