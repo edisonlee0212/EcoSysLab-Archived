@@ -8,6 +8,7 @@ namespace EcoSysLab
 		float m_profileDefaultCellRadius = 0.005f;
 		float m_damping = 0.01f;
 		float m_gravityStrength = 100.0f;
-		float m_simulationIterationFactor = 50;
+		float m_simulationIterationChainFactor = 1000;
+		float m_simulationIterationCellFactor = 50;
 	};
 }

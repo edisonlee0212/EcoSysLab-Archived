@@ -204,17 +204,17 @@ namespace EcoSysLab
 		strands.emplace_back(points.size());
 		StrandPoint basePoint;
 		basePoint.m_color = glm::vec4(0.6f, 0.3f, 0.0f, 1.0f);
-
+		float controlPointRatio = 0.05f;
 		const auto& secondPipeSegment = PeekPipeSegment(pipeSegmentHandles[0]);
 		auto basePointDistance = glm::distance(baseInfo.m_globalPosition, secondPipeSegment.m_info.m_globalPosition);
-		basePoint.m_normal = glm::normalize(baseInfo.m_globalRotation * glm::vec3(0, 0, -1));
-		basePoint.m_position = baseInfo.m_globalPosition - basePoint.m_normal * basePointDistance * 0.25f;
+		basePoint.m_normal = glm::normalize(secondPipeSegment.m_info.m_globalPosition - baseInfo.m_globalPosition);//glm::normalize(baseInfo.m_globalRotation * glm::vec3(0, 0, -1));
+		basePoint.m_position = baseInfo.m_globalPosition - basePoint.m_normal * basePointDistance * controlPointRatio;
 		basePoint.m_thickness = baseInfo.m_thickness;
 		basePoint.m_color = pipe.m_info.m_color;
 		points.emplace_back(basePoint);
 		basePoint.m_position = baseInfo.m_globalPosition;
 		points.emplace_back(basePoint);
-		basePoint.m_position = baseInfo.m_globalPosition + basePoint.m_normal * basePointDistance * 0.25f;
+		basePoint.m_position = baseInfo.m_globalPosition + basePoint.m_normal * basePointDistance * controlPointRatio;
 		points.emplace_back(basePoint);
 
 		StrandPoint point;
@@ -222,27 +222,44 @@ namespace EcoSysLab
 		{
 			const auto& pipeSegment = PeekPipeSegment(pipeSegmentHandles[0]);
 			auto distance = glm::distance(pipeSegment.m_info.m_globalPosition, baseInfo.m_globalPosition);
-			point.m_normal = glm::normalize(pipeSegment.m_info.m_globalRotation * glm::vec3(0, 0, -1));
-			point.m_position = pipeSegment.m_info.m_globalPosition - point.m_normal * distance * 0.25f;
+			glm::vec3 nextPosition;
+			if (pipeSegmentHandles.size() > 1)
+			{
+				nextPosition = PeekPipeSegment(pipeSegmentHandles[1]).m_info.m_globalPosition;
+			}else
+			{
+				nextPosition = pipeSegment.m_info.m_globalPosition;
+			}
+			point.m_normal = glm::normalize(nextPosition - baseInfo.m_globalPosition);//glm::normalize(pipeSegment.m_info.m_globalRotation * glm::vec3(0, 0, -1));
+			point.m_position = pipeSegment.m_info.m_globalPosition - point.m_normal * distance * controlPointRatio;
 			point.m_thickness = pipeSegment.m_info.m_thickness;
 			points.emplace_back(point);
 			point.m_position = pipeSegment.m_info.m_globalPosition;
 			points.emplace_back(point);
-			point.m_position = pipeSegment.m_info.m_globalPosition + point.m_normal * distance * 0.25f;
+			point.m_position = pipeSegment.m_info.m_globalPosition + point.m_normal * distance * controlPointRatio;
 			points.emplace_back(point);
 		}
 		for (int i = 1; i < pipeSegmentHandles.size(); i++)
 		{
 			const auto& pipeSegment = PeekPipeSegment(pipeSegmentHandles[i]);
 			const auto& prevPipeSegment = PeekPipeSegment(pipeSegmentHandles[i - 1]);
+			glm::vec3 nextPosition;
+			if (pipeSegmentHandles.size() > i + 1)
+			{
+				nextPosition = PeekPipeSegment(pipeSegmentHandles[i + 1]).m_info.m_globalPosition;
+			}
+			else
+			{
+				nextPosition = pipeSegment.m_info.m_globalPosition;
+			}
 			auto distance = glm::distance(pipeSegment.m_info.m_globalPosition, prevPipeSegment.m_info.m_globalPosition);
-			point.m_normal = glm::normalize(pipeSegment.m_info.m_globalRotation * glm::vec3(0, 0, -1));
-			point.m_position = pipeSegment.m_info.m_globalPosition - point.m_normal * distance * 0.25f;
+			point.m_normal = glm::normalize(nextPosition - baseInfo.m_globalPosition);//glm::normalize(pipeSegment.m_info.m_globalRotation * glm::vec3(0, 0, -1));
+			point.m_position = pipeSegment.m_info.m_globalPosition - point.m_normal * distance * controlPointRatio;
 			point.m_thickness = pipeSegment.m_info.m_thickness;
 			points.emplace_back(point);
 			point.m_position = pipeSegment.m_info.m_globalPosition;
 			points.emplace_back(point);
-			point.m_position = pipeSegment.m_info.m_globalPosition + point.m_normal * distance * 0.25f;
+			point.m_position = pipeSegment.m_info.m_globalPosition + point.m_normal * distance * controlPointRatio;
 			points.emplace_back(point);
 		}
 	}

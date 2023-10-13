@@ -196,7 +196,8 @@ void TreePipeModel::UpdatePipeModels(const TreeModel& targetTreeModel, const Pip
 			{
 				const auto flowHandle = node.GetFlowHandle();
 				const auto& flow = skeleton.RefFlow(flowHandle);
-				physics2D.Simulate(pipeModelParameters.m_simulationIterationFactor * flow.RefNodeHandles().size(), [&](auto& particle)
+				const auto iterations = glm::min(pipeModelParameters.m_simulationIterationChainFactor * flow.RefNodeHandles().size(), pipeModelParameters.m_simulationIterationCellFactor * physics2D.RefParticles().size());
+				physics2D.Simulate(iterations, [&](auto& particle)
 					{
 						//Apply gravity
 						particle.SetPosition(particle.GetPosition() - physics2D.GetMassCenter());
