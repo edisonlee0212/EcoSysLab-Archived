@@ -194,7 +194,9 @@ void TreePipeModel::UpdatePipeModels(const TreeModel& targetTreeModel, const Pip
 			if (parentNodeHandle == -1 || skeleton.PeekNode(parentNodeHandle).RefChildHandles().size() > 1) chainStart = true;
 			if(chainStart)
 			{
-				physics2D.Simulate(pipeModelParameters.m_simulationIterationFactor * physics2D.RefParticles().size(), [&](auto& particle)
+				const auto flowHandle = node.GetFlowHandle();
+				const auto& flow = skeleton.RefFlow(flowHandle);
+				physics2D.Simulate(pipeModelParameters.m_simulationIterationFactor * flow.RefNodeHandles().size(), [&](auto& particle)
 					{
 						//Apply gravity
 						particle.SetPosition(particle.GetPosition() - physics2D.GetMassCenter());

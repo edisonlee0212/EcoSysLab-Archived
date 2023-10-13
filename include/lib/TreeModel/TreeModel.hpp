@@ -27,7 +27,7 @@ namespace EcoSysLab {
 		bool m_enableBranchCollisionDetection = false;
 
 		bool m_useSpaceColonization = true;
-		bool m_spaceColonizationAutoResize = true;
+		bool m_spaceColonizationAutoResize = false;
 		float m_spaceColonizationRemovalDistanceFactor = 2;
 		float m_spaceColonizationDetectionDistanceFactor = 4;
 		float m_spaceColonizationTheta = 90.0f;
