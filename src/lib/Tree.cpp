@@ -254,8 +254,9 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 			ImGui::DragFloat("Default profile cell radius", &m_pipeModelParameters.m_profileDefaultCellRadius, 0.001f, 0.001f, 1.0f);
 			ImGui::DragFloat("Physics damping", &m_pipeModelParameters.m_damping, 0.01f, 0.0f, 1.0f);
 			ImGui::DragFloat("Physics attraction strength", &m_pipeModelParameters.m_gravityStrength, 0.01f, 0.0f, 10.0f);
-			ImGui::DragFloat("Physics simulation iteration chain factor", &m_pipeModelParameters.m_simulationIterationChainFactor, 0.1f, 0.0f, 50.0f);
 			ImGui::DragFloat("Physics simulation iteration cell factor", &m_pipeModelParameters.m_simulationIterationCellFactor, 0.1f, 0.0f, 50.0f);
+			ImGui::DragInt("Physics simulation minimum iteration", &m_pipeModelParameters.m_minimumSimulationIteration, 1, 0, 50);
+			ImGui::DragFloat("Physics simulation particle stabilize speed", &m_pipeModelParameters.m_particleStabilizeSpeed, 0.1f, 0.0f, 100.0f);
 			if (ImGui::Button("Update pipes"))
 			{
 				m_treePipeModel.UpdatePipeModels(m_treeModel, m_pipeModelParameters);

@@ -17,12 +17,11 @@ namespace EcoSysLab {
 		glm::vec2 m_min = glm::vec2(FLT_MAX);
 		glm::vec2 m_max = glm::vec2(FLT_MIN);
 		glm::vec2 m_massCenter = glm::vec2(0.0f);
-		float m_totalMoveDelta = 0.0f;
-		float m_activeness = 0.0f;
+		float m_maxParticleVelocity = 0.0f;
 		float m_simulationTime = 0.0f;
 	public:
 		[[nodiscard]] float GetDistanceToCenter(const glm::vec2& direction);
-		[[nodiscard]] float GetTotalMoveDelta() const;
+		[[nodiscard]] float GetMaxParticleVelocity() const;
 		[[nodiscard]] float GetDeltaTime() const;
 		void Reset(float deltaTime = 0.002f);
 		void CalculateMinMax();
@@ -59,7 +58,7 @@ namespace EcoSysLab {
 		const std::function<void(Particle2D<T>& collisionParticle)>& modifyParticleFunc)
 	{
 		if (m_particles2D.empty()) return;
-		auto currentTime = Times::Now();
+		const auto startTime = Times::Now();
 		Jobs::ParallelFor(m_particles2D.size(), [&](unsigned i)
 			{
 				auto& particle = m_particles2D[i];
@@ -71,14 +70,11 @@ namespace EcoSysLab {
 		CheckCollisions();
 
 		const auto threadCount = Jobs::Workers().Size();
-		std::vector<float> moveDelta{};
-		moveDelta.resize(threadCount);
-		std::vector<float> activeness{};
-		activeness.resize(threadCount);
+		std::vector<float> maxVelocities{};
+		maxVelocities.resize(threadCount);
 		for (int i = 0; i < threadCount; i++)
 		{
-			moveDelta[i] = 0.0f;
-			activeness[i] = 0.0f;
+			maxVelocities[i] = 0.0f;
 		}
 
 		Jobs::ParallelFor(m_particles2D.size(), [&](unsigned i, const unsigned threadIndex)
@@ -86,17 +82,14 @@ namespace EcoSysLab {
 				auto& particle = m_particles2D[i];
 				particle.m_position += particle.m_deltaPosition;
 				particle.Update(m_deltaTime);
-				moveDelta[threadIndex] += glm::length(particle.GetVelocity(m_deltaTime));
-				activeness[threadIndex] += moveDelta[threadIndex] * moveDelta[threadIndex];
+				maxVelocities[threadIndex] = glm::max(maxVelocities[threadIndex], glm::length(particle.GetVelocity(m_deltaTime)));
 			}
 		);
 
-		m_simulationTime = Times::Now() - currentTime;
-		m_totalMoveDelta = 0.0f;
-		for (const auto& d : moveDelta) m_totalMoveDelta += d;
-		for (const auto& a : activeness) m_activeness += a;
-		m_totalMoveDelta /= m_particles2D.size();
-		m_activeness /= m_particles2D.size();
+		m_simulationTime = Times::Now() - startTime;
+		m_maxParticleVelocity = 0.0f;
+
+		for (const auto& d : maxVelocities) m_maxParticleVelocity = glm::max(m_maxParticleVelocity, d);
 	}
 
 	template <typename T>
@@ -204,9 +197,9 @@ namespace EcoSysLab {
 	}
 
 	template <typename T>
-	float ParticlePhysics2D<T>::GetTotalMoveDelta() const
+	float ParticlePhysics2D<T>::GetMaxParticleVelocity() const
 	{
-		return m_totalMoveDelta;
+		return m_maxParticleVelocity;
 	}
 
 	template <typename T>
@@ -222,7 +215,6 @@ namespace EcoSysLab {
 		m_particles2D.clear();
 		m_particleGrid2D = {};
 		m_massCenter = glm::vec2(0.0f);
-		m_activeness = 0.0f;
 		m_particleSoftness = 0.5f;
 	}
 
@@ -302,8 +294,7 @@ namespace EcoSysLab {
 	{
 		static auto scrolling = glm::vec2(0.0f);
 		static float zoomFactor = 5.f;
-		ImGui::Text(("Total move delta: " + std::to_string(m_totalMoveDelta) +
-			" | Total activeness: " + std::to_string(m_activeness) +
+		ImGui::Text(("Max particle velocity: " + std::to_string(m_maxParticleVelocity) +
 			" | Particle count: " + std::to_string(m_particles2D.size()) +
 			" | Simulation time: " + std::to_string(m_simulationTime)).c_str());
 		if (ImGui::Button("Recenter")) {

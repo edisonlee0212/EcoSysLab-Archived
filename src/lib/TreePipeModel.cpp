@@ -194,19 +194,23 @@ void TreePipeModel::UpdatePipeModels(const TreeModel& targetTreeModel, const Pip
 			if (parentNodeHandle == -1 || skeleton.PeekNode(parentNodeHandle).RefChildHandles().size() > 1) chainStart = true;
 			if(chainStart)
 			{
-				const auto flowHandle = node.GetFlowHandle();
-				const auto& flow = skeleton.RefFlow(flowHandle);
-				const auto iterations = glm::min(pipeModelParameters.m_simulationIterationChainFactor * flow.RefNodeHandles().size(), pipeModelParameters.m_simulationIterationCellFactor * physics2D.RefParticles().size());
-				physics2D.Simulate(iterations, [&](auto& particle)
-					{
-						//Apply gravity
-						particle.SetPosition(particle.GetPosition() - physics2D.GetMassCenter());
-						if (glm::length(particle.GetPosition()) > 0.0f) {
-							const glm::vec2 acceleration = pipeModelParameters.m_gravityStrength * -glm::normalize(particle.GetPosition());
-							particle.SetAcceleration(acceleration);
+				const auto iterations = pipeModelParameters.m_simulationIterationCellFactor * physics2D.RefParticles().size();
+				for (int i = 0; i < iterations; i++) {
+					physics2D.Simulate(1, [&](auto& particle)
+						{
+							//Apply gravity
+							particle.SetPosition(particle.GetPosition() - physics2D.GetMassCenter());
+							if (glm::length(particle.GetPosition()) > 0.0f) {
+								const glm::vec2 acceleration = pipeModelParameters.m_gravityStrength * -glm::normalize(particle.GetPosition());
+								particle.SetAcceleration(acceleration);
+							}
 						}
+					);
+					if(i > pipeModelParameters.m_minimumSimulationIteration && physics2D.GetMaxParticleVelocity() < pipeModelParameters.m_particleStabilizeSpeed)
+					{
+						break;
 					}
-				);
+				}
 			}
 		}
 		else {
@@ -249,7 +253,6 @@ void TreePipeModel::UpdatePipeModels(const TreeModel& targetTreeModel, const Pip
 				physics2D.RefParticle(cell.m_data.m_particleHandle).SetPosition(mainChildParticle.GetPosition());
 			}
 			int index = 0;
-			float randAngle = glm::linearRand(0.0f, 360.0f);
 			for (const auto& childHandle : childNodeHandles)
 			{
 				auto& childNode = skeleton.RefNode(childHandle);

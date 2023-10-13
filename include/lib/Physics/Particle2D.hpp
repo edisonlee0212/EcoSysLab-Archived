@@ -14,8 +14,8 @@ namespace EcoSysLab {
 		float m_damping = 0.0f;
 
 		glm::vec2 m_deltaPosition = glm::vec2(0.0f);
-	public:
 
+	public:
 		T m_data;
 		void Update(float dt);
 		void Stop();
@@ -37,6 +37,7 @@ namespace EcoSysLab {
 		[[nodiscard]] float GetDamping() const;
 		void SetDamping(float damping);
 	};
+
 
 	template <typename T>
 	void Particle2D<T>::Update(const float dt)
