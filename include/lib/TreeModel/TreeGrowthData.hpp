@@ -165,8 +165,7 @@ namespace EcoSysLab
 	struct ShootGrowthData {
 		Octree<TreeVoxelData> m_octree = {};
 
-		TreeIlluminationEstimator m_treeIlluminationEstimator {};
-		TreeOccupancyGrid m_treeOccupancyGrid {};
+		
 		size_t m_maxMarkerCount = 0;
 
 		ShootGrowthRequirement m_vigorRequirement = {};

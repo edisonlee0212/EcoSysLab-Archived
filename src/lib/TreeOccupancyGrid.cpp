@@ -3,6 +3,20 @@
 using namespace EcoSysLab;
 
 
+void TreeOccupancyGrid::ResetMarkers()
+{
+	Jobs::ParallelFor(m_occupancyGrid.GetVoxelCount(), [&](unsigned i)
+		{
+			auto& voxelData = m_occupancyGrid.Ref(static_cast<int>(i));
+
+			for(auto& marker : voxelData.m_markers)
+			{
+				marker.m_nodeHandle = -1;
+			}
+		}
+	);
+}
+
 float TreeOccupancyGrid::GetRemovalDistanceFactor() const
 {
 	return m_removalDistanceFactor;

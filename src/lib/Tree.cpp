@@ -111,7 +111,7 @@ bool Tree::ParseBinvox(const std::filesystem::path& filePath, VoxelGrid<TreeOccu
 void Tree::Reset()
 {
 	m_treeModel.Clear();
-	if (const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>()) m_treeModel.RefShootSkeleton().m_data.m_treeIlluminationEstimator.m_settings = ecoSysLabLayer->m_shadowEstimationSettings;
+	if (const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>()) m_treeModel.m_treeIlluminationEstimator.m_settings = ecoSysLabLayer->m_shadowEstimationSettings;
 	m_treeVisualizer.Reset(m_treeModel);
 }
 void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
@@ -230,7 +230,7 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 					static float radius = 2.0f;
 					ImGui::DragFloat("Import radius", &radius, 0.01f, 0.01f, 10.0f);
 					FileUtils::OpenFile("Load Voxel Data", "Binvox", { ".binvox" }, [&](const std::filesystem::path& path) {
-						auto& occupancyGrid = m_treeModel.RefShootSkeleton().m_data.m_treeOccupancyGrid;
+						auto& occupancyGrid = m_treeModel.m_treeOccupancyGrid;
 						VoxelGrid<TreeOccupancyGridBasicData> inputGrid {};
 						if(ParseBinvox(path, inputGrid, 1.f))
 						{
@@ -317,7 +317,7 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 			if (ImGui::Button("Update grids")) needGridUpdate = true;
 			ImGui::Checkbox("Show Space Colonization Grid", &showSpaceColonizationGrid);
 			if (showSpaceColonizationGrid && needGridUpdate) {
-				auto& occupancyGrid = m_treeModel.m_shootSkeleton.m_data.m_treeOccupancyGrid;
+				auto& occupancyGrid = m_treeModel.m_treeOccupancyGrid;
 				auto& voxelGrid = occupancyGrid.RefGrid();
 				const auto numVoxels = voxelGrid.GetVoxelCount();
 				auto& scalarMatrices = spaceColonizationGridParticleInfoList->m_particleInfos;
@@ -351,7 +351,7 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 			}
 			ImGui::Checkbox("Show Shadow Grid", &showShadowGrid);
 			if (showShadowGrid && needGridUpdate) {
-				const auto& voxelGrid = m_treeModel.m_shootSkeleton.m_data.m_treeIlluminationEstimator.m_voxel;
+				const auto& voxelGrid = m_treeModel.m_treeIlluminationEstimator.m_voxel;
 				const auto numVoxels = voxelGrid.GetVoxelCount();
 				auto& scalarMatrices = shadowGridParticleInfoList->m_particleInfos;
 				if (scalarMatrices.size() != numVoxels) {
@@ -1327,7 +1327,7 @@ void TreeDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 			globalTransform.SetPosition(glm::vec3(0, height, 0));
 			scene->SetDataComponent(treeEntity, globalTransform);
 			tree->m_treeDescriptor = ProjectManager::GetAsset(GetHandle());
-			tree->m_treeModel.RefShootSkeleton().m_data.m_treeIlluminationEstimator.m_settings = ecoSysLabLayer->m_shadowEstimationSettings;
+			tree->m_treeModel.m_treeIlluminationEstimator.m_settings = ecoSysLabLayer->m_shadowEstimationSettings;
 		}
 	}
 	else

@@ -431,7 +431,7 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 						1.0f);
 					for (const auto& i : *treeEntities) {
 						scene->GetOrSetPrivateComponent<Tree>(
-							i).lock()->m_treeModel.RefShootSkeleton().m_data.m_treeIlluminationEstimator.m_settings = m_shadowEstimationSettings;
+							i).lock()->m_treeModel.m_treeIlluminationEstimator.m_settings = m_shadowEstimationSettings;
 					}
 					if (const auto climate = m_climateHolder.Get<Climate>()) {
 						for (const auto& i : *treeEntities) {

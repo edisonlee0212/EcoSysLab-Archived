@@ -137,6 +137,9 @@ namespace EcoSysLab {
 
 
 	public:
+		TreeIlluminationEstimator m_treeIlluminationEstimator{};
+		TreeOccupancyGrid m_treeOccupancyGrid{};
+
 		void CalculateInternodeTransforms();
 		void CalculateRootNodeTransforms();
 

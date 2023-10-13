@@ -33,6 +33,7 @@ namespace EcoSysLab
 		float m_internodeLength = 1.0f;
 		size_t m_markersPerVoxel = 5;
 	public:
+		void ResetMarkers();
 		[[nodiscard]] float GetRemovalDistanceFactor() const;
 		[[nodiscard]] float GetTheta() const;
 		[[nodiscard]] float GetDetectionDistanceFactor() const;

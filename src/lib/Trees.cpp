@@ -75,7 +75,7 @@ void Trees::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
                 tree->m_treeDescriptor = m_treeDescriptor;
                 tree->m_enableHistory = enableHistory;
                 tree->m_historyIteration = historyIteration;
-                tree->m_treeModel.RefShootSkeleton().m_data.m_treeIlluminationEstimator.m_settings = ecoSysLabLayer->m_shadowEstimationSettings;
+                tree->m_treeModel.m_treeIlluminationEstimator.m_settings = ecoSysLabLayer->m_shadowEstimationSettings;
                 if(setParent) scene->SetParent(treeEntity, parent);
             }
         }
