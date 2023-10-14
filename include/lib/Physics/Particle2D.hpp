@@ -14,12 +14,12 @@ namespace EcoSysLab {
 		float m_damping = 0.0f;
 
 		glm::vec2 m_deltaPosition = glm::vec2(0.0f);
-
+		ParticleHandle m_handle = -1;
 	public:
 		T m_data;
 		void Update(float dt);
 		void Stop();
-
+		[[nodiscard]] ParticleHandle GetHandle() const;
 		[[nodiscard]] glm::vec4 GetColor() const;
 		void SetColor(const glm::vec4& color);
 
@@ -52,6 +52,12 @@ namespace EcoSysLab {
 	void Particle2D<T>::Stop()
 	{
 		m_lastPosition = m_position;
+	}
+
+	template <typename T>
+	ParticleHandle Particle2D<T>::GetHandle() const
+	{
+		return m_handle;
 	}
 
 	template <typename T>

@@ -223,7 +223,9 @@ namespace EcoSysLab {
 	ParticleHandle ParticlePhysics2D<T>::AllocateParticle()
 	{
 		m_particles2D.emplace_back();
-		return m_particles2D.size() - 1;
+		auto& newParticle = m_particles2D.back();
+		newParticle.m_handle = m_particles2D.size() - 1;
+		return newParticle.m_handle;
 	}
 
 	template <typename T>
