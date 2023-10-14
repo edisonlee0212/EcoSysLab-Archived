@@ -71,8 +71,8 @@ bool Tree::ParseBinvox(const std::filesystem::path& filePath, VoxelGrid<TreeOccu
 	voxelGrid.Initialize(voxelSize, resolution, minBound, {});  // Assuming voxelSize is globally defined or passed as an argument
 
 	// Read voxel data
-	byte value;
-	byte count;
+	unsigned char value;
+	unsigned char count;
 	int index = 0;
 	int end_index = 0;
 	int nr_voxels = 0;
