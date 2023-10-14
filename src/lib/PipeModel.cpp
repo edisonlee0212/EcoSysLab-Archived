@@ -31,7 +31,7 @@ void PipeModel::CalculatePipeSegmentInfos(const PipeModelParameters& pipeModelPa
 			if (cell.IsRecycled()) continue;
 			if (cell.m_data.m_pipeHandle == -1) continue;
 			auto& pipeSegment = m_pipeGroup.RefPipeSegment(cell.m_data.m_pipeSegmentHandle);
-			pipeSegment.m_data.m_nodeHandle = i;
+			//pipeSegment.m_data.m_nodeHandle = i;
 			pipeSegment.m_info.m_localPosition = cell.m_info.m_offset * profile.m_info.m_cellRadius;
 			pipeSegment.m_info.m_thickness = profile.m_info.m_cellRadius;
 		}

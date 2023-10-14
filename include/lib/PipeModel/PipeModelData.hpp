@@ -18,6 +18,7 @@ namespace EcoSysLab
 	struct PipeModelPipeSegmentData
 	{
 		NodeHandle m_nodeHandle = -1;
+		FlowHandle m_flowHandle = -1;
 		CellHandle m_cellHandle = -1;
 	};
 
