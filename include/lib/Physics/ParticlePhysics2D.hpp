@@ -363,6 +363,11 @@ namespace EcoSysLab {
 				glm::clamp(zoomFactor, 1.0f, 100.0f),
 				IM_COL32(255.0f * pointColor.x, 255.0f * pointColor.y, 255.0f * pointColor.z, 255.0f * pointColor.w));
 		}
+		drawList->AddCircle(origin,
+			glm::clamp(zoomFactor, 1.0f, 100.0f),
+			IM_COL32(255,
+				0,
+				0, 255));
 		if (showGrid) {
 			for (int i = 0; i < m_particleGrid2D.m_resolution.x; i++)
 			{

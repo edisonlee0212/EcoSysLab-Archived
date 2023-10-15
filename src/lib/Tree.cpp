@@ -280,13 +280,16 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 					auto& profileGroup = m_treePipeModel.m_shootPipeModel.m_pipeProfileGroup;
 					const auto targetProfileHandle = skeleton.RefNode(skeleton.m_data.m_nodeMap.at(m_treeVisualizer.GetSelectedInternodeHandle())).m_data.m_profileHandle;
 					if (profileGroup.RefProfiles().size() > targetProfileHandle) {
+						ImGui::SetNextWindowSize(ImVec2(600, 600), ImGuiCond_Appearing);
 						const std::string tag = "Profile [" + std::to_string(m_treeVisualizer.GetSelectedInternodeHandle()) + "]";
 						if (ImGui::Begin(tag.c_str()))
 						{
+							/*
 							profileGroup.RefProfile(targetProfileHandle).m_data.m_particlePhysics2D.OnInspect(
 								[&](const glm::vec2 position) {},
 								[&](const ImVec2 origin, const float zoomFactor, ImDrawList* drawList) {},
-								showGrid);
+								showGrid);*/
+							bool changed = profileGroup.RefProfile(targetProfileHandle).OnInspect(false);
 						}
 						ImGui::End();
 					}

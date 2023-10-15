@@ -11,6 +11,7 @@ namespace EcoSysLab
 	struct CellInfo
 	{
 		glm::vec2 m_offset = glm::vec2(0.0f);
+		glm::vec4 m_color = glm::vec4(1.0f);
 		bool m_boundary = false;
 	};
 
@@ -151,7 +152,7 @@ namespace EcoSysLab
 		bool changed = false;
 
 		static auto scrolling = glm::vec2(0.0f);
-		static float zoomFactor = 10.0f;
+		static float zoomFactor = 5.0f;
 		if (ImGui::Button("Recenter")) {
 			scrolling = glm::vec2(0.0f);
 		}
@@ -205,18 +206,18 @@ namespace EcoSysLab
 		}
 		for (const auto& cell : m_cells) {
 			if (cell.IsRecycled()) continue;
-			const auto pointPosition = cell.m_info.m_offset;
-			const auto pointRadius = m_info.m_cellRadius;
+			const auto& pointPosition = cell.m_info.m_offset;
+			const auto& pointColor = cell.m_info.m_color;
 			const auto canvasPosition = ImVec2(origin.x + pointPosition.x * zoomFactor,
 				origin.y + pointPosition.y * zoomFactor);
 
 			drawList->AddCircleFilled(canvasPosition,
-				glm::clamp(0.4f * zoomFactor * pointRadius, 1.0f, 100.0f),
-				IM_COL32(255, 255, 255, 255));
+				glm::clamp(zoomFactor, 1.0f, 100.0f),
+				IM_COL32(255.0f * pointColor.x, 255.0f * pointColor.y, 255.0f * pointColor.z, 255.0f * pointColor.w));
 		}
 
 		drawList->AddCircle(origin,
-			glm::clamp(0.5f * zoomFactor, 1.0f, 100.0f),
+			glm::clamp(zoomFactor, 1.0f, 100.0f),
 			IM_COL32(255,
 				0,
 				0, 255));

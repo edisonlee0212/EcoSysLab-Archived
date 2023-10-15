@@ -321,7 +321,7 @@ void TreePipeModel::UpdatePipeModels(const TreeModel& targetTreeModel, const Pip
 		}
 		flowEndPhysics2D.CalculateMinMax();
 		const auto currentCenter = flowEndPhysics2D.GetMassCenter();
-		if (false && flow.GetParentHandle() != -1)
+		if (flow.GetParentHandle() != -1)
 		{
 			//Sqeeze end.
 			const auto iterations = pipeModelParameters.m_simulationIterationCellFactor * flowEndPhysics2D.RefParticles().size();
@@ -378,7 +378,7 @@ void TreePipeModel::ApplySimulationResults(const PipeModelParameters& pipeModelP
 			const auto srcNodeCellHandle = srcNodeParticle.m_data.m_cellHandle;
 			auto& srcNodeCell = srcNodeProfile.RefCell(srcNodeCellHandle);
 			srcNodeMap[srcNodeCell.m_data.m_pipeHandle] = srcNodeCellHandle;
-			if(flow.GetParentHandle() == -1) srcNodeCell.m_info.m_offset = srcNodePhysics2D.RefParticle(srcNodeCell.m_data.m_particleHandle).GetPosition();
+			srcNodeCell.m_info.m_offset = srcNodePhysics2D.RefParticle(srcNodeCell.m_data.m_particleHandle).GetPosition();
 		}
 
 		if (nodeHandles.size() == 1) continue;
@@ -395,7 +395,6 @@ void TreePipeModel::ApplySimulationResults(const PipeModelParameters& pipeModelP
 			{
 				const auto cellHandle = dstNodeParticle.m_data.m_cellHandle;
 				auto& cell = dstNodeProfile.RefCell(cellHandle);
-				cell.m_info.m_offset = dstNodeParticle.GetPosition();
 				dstNodeMap[cell.m_data.m_pipeHandle] = { dstNodeProfileHandle, cellHandle };
 			}
 		}
@@ -409,14 +408,13 @@ void TreePipeModel::ApplySimulationResults(const PipeModelParameters& pipeModelP
 				{
 					const auto cellHandle = dstNodeParticle.m_data.m_cellHandle;
 					auto& cell = dstNodeProfile.RefCell(cellHandle);
-					cell.m_info.m_offset = dstNodeParticle.GetPosition();
 					dstNodeMap[cell.m_data.m_pipeHandle] = { dstNodeProfileHandle, cellHandle };
+					cell.m_info.m_offset = dstNodePhysics2D.RefParticle(cell.m_data.m_particleHandle).GetPosition();
 				}
 			}
 		}
-		if (nodeHandles.size() == 2) continue;
 		const auto nodeSize = nodeHandles.size();
-		for (int i = 1; i < nodeHandles.size() - 1; i++)
+		for (int i = 1; i < nodeHandles.size(); i++)
 		{
 			const float a = static_cast<float>(i) / (nodeSize - 1);
 			const auto& node = skeleton.RefNode(nodeHandles[i]);
@@ -427,6 +425,8 @@ void TreePipeModel::ApplySimulationResults(const PipeModelParameters& pipeModelP
 				cell.m_info.m_offset =
 					glm::mix(srcNodeProfile.RefCell(srcNodeMap.at(pipeHandle)).m_info.m_offset,
 						profileGroup.RefProfile(dstNodeMap.at(pipeHandle).first).RefCell(dstNodeMap.at(pipeHandle).second).m_info.m_offset, a);
+				cell.m_info.m_color = glm::mix(srcNodeProfile.RefCell(srcNodeMap.at(pipeHandle)).m_info.m_color,
+					profileGroup.RefProfile(dstNodeMap.at(pipeHandle).first).RefCell(dstNodeMap.at(pipeHandle).second).m_info.m_color, a);
 			}
 		}
 	}
