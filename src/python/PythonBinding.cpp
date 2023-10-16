@@ -185,7 +185,7 @@ void YamlToMesh(const std::string& yamlPath,
 	treePointCloud->ImportGraph(yamlPath);
 
 	treePointCloud->EstablishConnectivityGraph(connectivityGraphSettings);
-	treePointCloud->BuildTreeStructure(reconstructionSettings);
+	treePointCloud->BuildSkeletons(reconstructionSettings);
 	const auto meshes = treePointCloud->GenerateMeshes(meshGeneratorSettings);
 	if (meshes.size() == 1) {
 		meshes[0]->Export(meshPath);
@@ -216,16 +216,122 @@ void VisualizeYaml(const std::string& yamlPath,
 	treePointCloud->ImportGraph(yamlPath);
 
 	treePointCloud->EstablishConnectivityGraph(connectivityGraphSettings);
-	treePointCloud->BuildTreeStructure(reconstructionSettings);
+	treePointCloud->BuildSkeletons(reconstructionSettings);
 	treePointCloud->FormGeometryEntity(meshGeneratorSettings);
 
 	CaptureScene(posX, posY, posZ, angleX, angleY, angleZ, resolutionX, resolutionY, true, outputPath);
 	scene->DeleteEntity(tempEntity);
 }
+
+void BuildSpaceColonizationTreeOBJ(
+	const float radius,
+	const std::string& binvoxPath,
+	const std::string& treeParametersPath,
+	const std::string& outputPath,
+	const TreeMeshGeneratorSettings& meshGeneratorSettings,
+	const float deltaTime,
+	const int iterations
+	)
+{
+	const auto applicationStatus = Application::GetApplicationStatus();
+	if(applicationStatus == ApplicationStatus::NoProject)
+	{
+		EVOENGINE_ERROR("No project!");
+		return;
+	}
+	if (applicationStatus == ApplicationStatus::OnDestroy)
+	{
+		EVOENGINE_ERROR("Application is destroyed!");
+		return;
+	}
+	if (applicationStatus == ApplicationStatus::Uninitialized)
+	{
+		EVOENGINE_ERROR("Application not uninitialized!");
+		return;
+	}
+	const auto scene = Application::GetActiveScene();
+	auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
+	if(!ecoSysLabLayer)
+	{
+		EVOENGINE_ERROR("Application doesn't contain EcoSysLab layer!");
+		return;
+	}
+	std::shared_ptr<Soil> soil;
+	std::shared_ptr<Climate> climate;
+
+	const std::vector<Entity>* soilEntities =
+		scene->UnsafeGetPrivateComponentOwnersList<Soil>();
+	if (soilEntities && !soilEntities->empty()) {
+		soil = scene->GetOrSetPrivateComponent<Soil>(soilEntities->at(0)).lock();
+	}
+	if(!soil)
+	{
+		EVOENGINE_ERROR("No soil in scene!");
+		return;
+	}
+	const std::vector<Entity>* climateEntities =
+		scene->UnsafeGetPrivateComponentOwnersList<Climate>();
+	if (climateEntities && !climateEntities->empty()) {
+		climate = scene->GetOrSetPrivateComponent<Climate>(climateEntities->at(0)).lock();
+	}
+	if (!climate)
+	{
+		EVOENGINE_ERROR("No climate in scene!");
+		return;
+	}
+	
+	
+	const auto tempEntity = scene->CreateEntity("Temp");
+	const auto tree = scene->GetOrSetPrivateComponent<Tree>(tempEntity).lock();
+	tree->m_soil = soil;
+	tree->m_climate = climate;
+	std::shared_ptr<TreeDescriptor> treeDescriptor;
+	if(ProjectManager::IsInProjectFolder(treeParametersPath))
+	{
+		treeDescriptor = std::dynamic_pointer_cast<TreeDescriptor>(ProjectManager::GetOrCreateAsset(ProjectManager::GetPathRelativeToProject(treeParametersPath)));
+	}
+	else {
+		treeDescriptor = ProjectManager::CreateTemporaryAsset<TreeDescriptor>();
+	}
+	tree->m_treeDescriptor = treeDescriptor;
+	auto& occupancyGrid = tree->m_treeModel.m_treeOccupancyGrid;
+	VoxelGrid<TreeOccupancyGridBasicData> inputGrid{};
+	if (tree->ParseBinvox(binvoxPath, inputGrid, 1.f))
+	{
+		const auto treeDescriptor = tree->m_treeDescriptor.Get<TreeDescriptor>();
+		occupancyGrid.Initialize(inputGrid,
+			glm::vec3(-radius, 0, -radius),
+			glm::vec3(radius, 2.0f * radius, radius),
+			treeDescriptor->m_shootGrowthParameters.m_internodeLength,
+			tree->m_treeModel.m_treeGrowthSettings.m_spaceColonizationRemovalDistanceFactor,
+			tree->m_treeModel.m_treeGrowthSettings.m_spaceColonizationTheta,
+			tree->m_treeModel.m_treeGrowthSettings.m_spaceColonizationDetectionDistanceFactor);
+	}
+	tree->m_treeModel.m_treeGrowthSettings.m_enableShoot = true;
+	tree->m_treeModel.m_treeGrowthSettings.m_enableRoot = false;
+	tree->m_treeModel.m_treeGrowthSettings.m_useSpaceColonization = true;
+	tree->m_treeModel.m_treeGrowthSettings.m_spaceColonizationAutoResize = false;
+	for(int i = 0; i < iterations; i++)
+	{
+		tree->TryGrow(deltaTime);
+	}
+	tree->GenerateMeshes(meshGeneratorSettings);
+	const auto children = scene->GetChildren(tempEntity);
+	for (const auto& child : children) {
+		auto name = scene->GetEntityName(child);
+		if (name == "Branch Mesh") {
+			auto mmr = scene->GetOrSetPrivateComponent<MeshRenderer>(child).lock();
+			mmr->m_mesh.Get<Mesh>()->Export(outputPath);
+		}
+		
+	}
+	scene->DeleteEntity(tempEntity);
+}
+
 PYBIND11_MODULE(pyecosyslab, m) {
 	py::class_<Entity>(m, "Entity")
-		.def("get_index", &Entity::GetIndex)
-		.def("get_version", &Entity::GetVersion);
+		.def("GetIndex", &Entity::GetIndex)
+		.def("GetVersion", &Entity::GetVersion);
 
 	py::class_<ConnectivityGraphSettings>(m, "ConnectivityGraphSettings")
 		.def(py::init<>())
@@ -291,8 +397,8 @@ PYBIND11_MODULE(pyecosyslab, m) {
 		.def_readwrite("m_detailedFoliage", &TreeMeshGeneratorSettings::m_detailedFoliage);
 
 	py::class_<Scene>(m, "Scene")
-		.def("create_entity", static_cast<Entity(Scene::*)(const std::string&)>(&Scene::CreateEntity))
-		.def("delete_entity", static_cast<void(Scene::*)(const Entity&)>(&Scene::DeleteEntity));
+		.def("CreateEntity", static_cast<Entity(Scene::*)(const std::string&)>(&Scene::CreateEntity))
+		.def("DeleteEntity", static_cast<void(Scene::*)(const Entity&)>(&Scene::DeleteEntity));
 
 	py::class_<ApplicationInfo>(m, "ApplicationInfo")
 		.def(py::init<>())
@@ -303,15 +409,15 @@ PYBIND11_MODULE(pyecosyslab, m) {
 		.def_readwrite("m_fullScreen", &ApplicationInfo::m_fullScreen);
 
 	py::class_<Application>(m, "Application")
-		.def_static("initialize", &Application::Initialize)
-		.def_static("start", &Application::Start)
-		.def_static("run", &Application::Run)
-		.def_static("loop", &Application::Loop)
-		.def_static("terminate", &Application::Terminate)
-		.def_static("get_active_scene", &Application::GetActiveScene);
+		.def_static("Initialize", &Application::Initialize)
+		.def_static("Start", &Application::Start)
+		.def_static("Run", &Application::Run)
+		.def_static("Loop", &Application::Loop)
+		.def_static("Terminate", &Application::Terminate)
+		.def_static("GetActiveScene", &Application::GetActiveScene);
 
 	py::class_<ProjectManager>(m, "ProjectManager")
-		.def("GetOrCreateProject", &ProjectManager::GetOrCreateProject);
+		.def_static("GetOrCreateProject", &ProjectManager::GetOrCreateProject);
 
 	m.doc() = "EcoSysLab"; // optional module docstring
 	m.def("register_classes", &RegisterClasses, "RegisterClasses");
@@ -322,4 +428,5 @@ PYBIND11_MODULE(pyecosyslab, m) {
 	m.def("yaml_to_mesh", &YamlToMesh, "YamlToMesh");
 	m.def("capture_scene", &CaptureScene, "CaptureScene");
 	m.def("visualize_yaml", &VisualizeYaml, "VisualizeYaml");
+	m.def("build_space_colonization_tree_obj", &BuildSpaceColonizationTreeOBJ, "BuildSpaceColonizationTreeOBJ");
 }

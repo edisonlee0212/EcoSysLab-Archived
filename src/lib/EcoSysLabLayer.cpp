@@ -476,6 +476,9 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 						tree->m_treeVisualizer.m_iteration = tree->m_treeModel.CurrentIteration();
 						tree->m_treeVisualizer.m_needUpdate = true;
 					}
+					if (m_autoClearFruitAndLeaves) {
+						ClearGroundFruitAndLeaf();
+					}
 				}
 			}
 			ImGui::Checkbox("Auto clear fruit and leaves", &m_autoClearFruitAndLeaves);

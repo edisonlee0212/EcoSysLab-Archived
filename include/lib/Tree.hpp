@@ -30,11 +30,11 @@ namespace EcoSysLab {
 	class Tree : public IPrivateComponent {
 		friend class EcoSysLabLayer;
 		void PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescriptor);
-		bool TryGrow(float deltaTime);
 		bool TryGrowSubTree(NodeHandle internodeHandle, float deltaTime);
 		ShootGrowthController m_shootGrowthController{};
 		RootGrowthController m_rootGrowthController{};
 	public:
+		bool TryGrow(float deltaTime);
 		[[nodiscard]] bool ParseBinvox(const std::filesystem::path& filePath, VoxelGrid<TreeOccupancyGridBasicData>& voxelGrid, float voxelSize = 1.0f);
 
 		void Reset();

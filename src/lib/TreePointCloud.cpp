@@ -278,7 +278,7 @@ void TreePointCloud::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 		}
 		if (ImGui::Button("Build Skeleton")) {
 			EstablishConnectivityGraph(connectivityGraphSettings);
-			BuildTreeStructure(reconstructionSettings);
+			BuildSkeletons(reconstructionSettings);
 			refreshData = true;
 		}
 		static TreeMeshGeneratorSettings meshGeneratorSettings;
@@ -288,7 +288,7 @@ void TreePointCloud::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 				m_skeletons.clear();
 				EstablishConnectivityGraph(connectivityGraphSettings);
 			}
-			if (m_skeletons.empty()) BuildTreeStructure(reconstructionSettings);
+			if (m_skeletons.empty()) BuildSkeletons(reconstructionSettings);
 			FormGeometryEntity(meshGeneratorSettings);
 		}
 		if (ImGui::Button("Refresh Data")) {
@@ -800,7 +800,7 @@ void ApplyCurve(ReconstructionSkeleton& skeleton, OperatingBranch& branch) {
 	}
 }
 
-void TreePointCloud::BuildTreeStructure(const ReconstructionSettings& reconstructionSettings) {
+void TreePointCloud::BuildSkeletons(const ReconstructionSettings& reconstructionSettings) {
 	m_skeletons.clear();
 	std::unordered_set<BranchHandle> allocatedBranchHandles;
 

@@ -158,7 +158,7 @@ namespace EcoSysLab {
 
 		void EstablishConnectivityGraph(const ConnectivityGraphSettings& settings);
 
-		void BuildTreeStructure(const ReconstructionSettings& reconstructionSettings);
+		void BuildSkeletons(const ReconstructionSettings& reconstructionSettings);
 
 		void ClearMeshes() const;
 
