@@ -36,8 +36,9 @@ bool Tree::ParseBinvox(const std::filesystem::path& filePath, VoxelGrid<TreeOccu
 	}
 	int version;
 	input >> version;
+#ifndef NDEBUG
 	std::cout << "reading binvox version " << version << std::endl;
-
+#endif
 	int depth, height, width;
 	depth = -1;
 	bool done = false;
@@ -48,7 +49,9 @@ bool Tree::ParseBinvox(const std::filesystem::path& filePath, VoxelGrid<TreeOccu
 			input >> depth >> height >> width;
 		}
 		else {
+#ifndef NDEBUG
 			std::cout << "  unrecognized keyword [" << line << "], skipping" << std::endl;
+#endif
 			char c;
 			do {  // skip until end of line
 				c = input.get();
@@ -104,7 +107,9 @@ bool Tree::ParseBinvox(const std::filesystem::path& filePath, VoxelGrid<TreeOccu
 	}
 
 	input.close();
+#ifndef NDEBUG
 	std::cout << "  read " << nr_voxels << " voxels" << std::endl;
+#endif
 	return true;
 }
 
