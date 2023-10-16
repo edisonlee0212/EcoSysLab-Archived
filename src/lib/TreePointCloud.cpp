@@ -941,10 +941,21 @@ void TreePointCloud::BuildTreeStructure(const ReconstructionSettings& reconstruc
 		rootNode.m_data.m_localPosition = glm::vec3(0.0f);
 
 		for (const auto& nodeHandle : sortedNodeList) {
-			if (nodeHandle == 0) continue;
 			auto& node = skeleton.RefNode(nodeHandle);
 			auto& nodeInfo = node.m_info;
 			auto& nodeData = node.m_data;
+			if (node.GetParentHandle() == -1) {
+				nodeData.m_rootDistance =
+					nodeInfo.m_length / reconstructionSettings.m_internodeLength;
+			}
+			else
+			{
+				auto& parentInternode = skeleton.RefNode(node.GetParentHandle());
+				nodeData.m_rootDistance = parentInternode.m_data.m_rootDistance + nodeInfo.m_length /
+					reconstructionSettings.m_internodeLength;
+			}
+			if (nodeHandle == 0) continue;
+			
 			auto& parentNode = skeleton.RefNode(node.GetParentHandle());
 			auto front = glm::normalize(nodeData.m_localPosition);
 			nodeData.m_localPosition = glm::vec3(0.0f);
@@ -952,14 +963,37 @@ void TreePointCloud::BuildTreeStructure(const ReconstructionSettings& reconstruc
 			auto regulatedUp = glm::normalize(glm::cross(glm::cross(front, parentUp), front));
 			nodeInfo.m_globalRotation = glm::quatLookAt(front, regulatedUp);
 			nodeData.m_localRotation = glm::inverse(parentNode.m_info.m_globalRotation) * nodeInfo.m_globalRotation;
+			
 		}
-
-		for (auto i = sortedNodeList.rbegin(); i != sortedNodeList.rend(); i++) {
-			auto& node = skeleton.RefNode(*i);
-			auto& nodeInfo = node.m_info;
-			for (const auto& childHandle : node.RefChildHandles()) {
-				const auto& childNode = skeleton.RefNode(childHandle);
-				nodeInfo.m_thickness = glm::max(childNode.m_info.m_thickness, nodeInfo.m_thickness);
+		if (reconstructionSettings.m_overrideThickness) {
+			for (auto i = sortedNodeList.rbegin(); i != sortedNodeList.rend(); i++) {
+				auto& node = skeleton.RefNode(*i);
+				auto& nodeInfo = node.m_info;
+				auto& childHandles = node.RefChildHandles();
+				if(childHandles.empty())
+				{
+					nodeInfo.m_thickness = reconstructionSettings.m_endNodeThickness;
+				}
+				else {
+					float childThicknessCollection = 0.0f;
+					for (const auto& childHandle : childHandles) {
+						const auto& childNode = skeleton.RefNode(childHandle);
+						childThicknessCollection += glm::pow(childNode.m_info.m_thickness + reconstructionSettings.m_thicknessAccumulationFactor,
+							1.0f / reconstructionSettings.m_thicknessSumFactor);
+					}
+					nodeInfo.m_thickness = glm::pow(childThicknessCollection,
+						reconstructionSettings.m_thicknessSumFactor);
+				}
+			}
+		}else if(reconstructionSettings.m_limitParentThickness)
+		{
+			for (auto i = sortedNodeList.rbegin(); i != sortedNodeList.rend(); i++) {
+				auto& node = skeleton.RefNode(*i);
+				auto& nodeInfo = node.m_info;
+				for (const auto& childHandle : node.RefChildHandles()) {
+					const auto& childNode = skeleton.RefNode(childHandle);
+					nodeInfo.m_thickness = glm::max(childNode.m_info.m_thickness, nodeInfo.m_thickness);
+				}
 			}
 		}
 		CalculateNodeTransforms(skeleton);
@@ -1055,6 +1089,108 @@ void TreePointCloud::FormGeometryEntity(const TreeMeshGeneratorSettings& meshGen
 			meshRenderer->m_mesh = mesh;
 			meshRenderer->m_material = material;
 		}
+		if (meshGeneratorSettings.m_enableTwig)
+		{
+			Entity twigEntity;
+			twigEntity = scene->CreateEntity("Twig Mesh");
+			scene->SetParent(twigEntity, self);
+			std::vector<glm::uint> twigSegments;
+			std::vector<StrandPoint> twigPoints;
+			const auto& shootSkeleton = m_skeletons[i];
+			const auto& internodeList = shootSkeleton.RefSortedNodeList();
+			for (int internodeHandle : internodeList)
+			{
+				const auto& internode = shootSkeleton.PeekNode(internodeHandle);
+				const auto& internodeData = internode.m_data;
+				const auto& internodeInfo = internode.m_info;
+				std::vector<std::vector<glm::vec4>> twigs{};
+				if (internodeInfo.m_thickness < meshGeneratorSettings.m_twigParameters.m_minNodeThicknessRequirement && internodeData.m_rootDistance > meshGeneratorSettings.m_twigParameters.m_distanceFromRoot)
+				{
+					int twigCount = internodeInfo.m_length / meshGeneratorSettings.m_twigParameters.m_unitDistance;
+					twigs.resize(twigCount);
+
+					auto desiredGlobalRotation = internodeInfo.m_regulatedGlobalRotation * glm::quat(glm::vec3(
+						glm::radians(meshGeneratorSettings.m_twigParameters.m_branchingAngle), 0.0f,
+						glm::radians(glm::radians(
+							glm::linearRand(0.0f,
+								360.0f)))));
+
+					glm::vec3 directionStart = internodeInfo.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
+					glm::vec3 directionEnd = directionStart;
+
+					glm::vec3 positionStart = internodeInfo.m_globalPosition;
+					glm::vec3 positionEnd =
+						positionStart + internodeInfo.m_length * meshGeneratorSettings.m_lineLengthFactor * internodeInfo.m_globalDirection;
+
+					BezierCurve curve = BezierCurve(
+						positionStart,
+						positionStart +
+						(meshGeneratorSettings.m_smoothness ? internodeInfo.m_length * meshGeneratorSettings.m_baseControlPointRatio : 0.0f) * directionStart,
+						positionEnd -
+						(meshGeneratorSettings.m_smoothness ? internodeInfo.m_length * meshGeneratorSettings.m_branchControlPointRatio : 0.0f) * directionEnd,
+						positionEnd);
+
+					for (int twigIndex = 0; twigIndex < twigCount; twigIndex++) {
+						glm::vec3 positionWalker = curve.GetPoint(static_cast<float>(twigIndex) / twigCount);
+						twigs[twigIndex].resize(meshGeneratorSettings.m_twigParameters.m_segmentSize);
+						const float rollAngle = glm::radians(glm::linearRand(0.0f, 360.0f));
+						for (int twigPointIndex = 0; twigPointIndex < meshGeneratorSettings.m_twigParameters.m_segmentSize; twigPointIndex++)
+						{
+							twigs[twigIndex][twigPointIndex] = glm::vec4(positionWalker, meshGeneratorSettings.m_twigParameters.m_thickness);
+							desiredGlobalRotation = internodeInfo.m_regulatedGlobalRotation * glm::quat(glm::vec3(
+								glm::radians(glm::gaussRand(0.f, meshGeneratorSettings.m_twigParameters.m_apicalAngleVariance) + meshGeneratorSettings.m_twigParameters.m_branchingAngle), 0.0f,
+								rollAngle));
+
+							auto twigFront = desiredGlobalRotation * glm::vec3(0, 0, -1);
+							positionWalker = positionWalker + twigFront * meshGeneratorSettings.m_twigParameters.m_segmentLength;
+						}
+					}
+
+				}
+
+				for (const auto& twig : twigs) {
+					const auto twigSegmentSize = twig.size();
+					const auto twigControlPointSize = twig.size() + 3;
+					const auto totalTwigPointSize = twigPoints.size();
+					const auto totalTwigSegmentSize = twigSegments.size();
+					twigPoints.resize(totalTwigPointSize + twigControlPointSize);
+					twigSegments.resize(totalTwigSegmentSize + twigSegmentSize);
+
+					for (int i = 0; i < twigControlPointSize; i++) {
+						auto& p = twigPoints[totalTwigPointSize + i];
+						p.m_position = glm::vec3(twig[glm::clamp(i - 2, 0, static_cast<int>(twigSegmentSize - 1))]);
+						p.m_thickness = twig[glm::clamp(i - 2, 0, static_cast<int>(twigSegmentSize - 1))].w;
+					}
+					twigPoints[totalTwigPointSize].m_position = glm::vec3(twig[0]) * 2.0f - glm::vec3(twig[1]);
+					twigPoints[totalTwigPointSize].m_thickness = twig[0].w * 2.0f - twig[1].w;
+
+					twigPoints[totalTwigPointSize + twigControlPointSize - 1].m_position = glm::vec3(twig[twigSegmentSize - 1]) * 2.0f - glm::vec3(twig[twigSegmentSize - 2]);
+					twigPoints[totalTwigPointSize + twigControlPointSize - 1].m_thickness = twig[twigSegmentSize - 1].w * 2.0f - twig[twigSegmentSize - 2].w;
+
+
+					for (int i = 0; i < twigSegmentSize; i++) {
+						twigSegments[totalTwigSegmentSize + i] = totalTwigPointSize + i;
+					}
+				}
+			}
+
+			auto strands = ProjectManager::CreateTemporaryAsset<Strands>();
+			auto material = ProjectManager::CreateTemporaryAsset<Material>();
+			if (meshGeneratorSettings.m_overridePresentation)
+			{
+				material->m_materialProperties.m_albedoColor = meshGeneratorSettings.m_presentationOverrideSettings.m_branchOverrideColor;
+			}
+			else {
+				material->m_materialProperties.m_albedoColor = glm::vec3(80, 60, 50) / 255.0f;
+			}
+			material->m_materialProperties.m_roughness = 1.0f;
+			material->m_materialProperties.m_metallic = 0.0f;
+			StrandPointAttributes strandPointAttributes{};
+			strands->SetSegments(strandPointAttributes, twigSegments, twigPoints);
+			auto strandsRenderer = scene->GetOrSetPrivateComponent<StrandsRenderer>(twigEntity).lock();
+			strandsRenderer->m_strands = strands;
+			strandsRenderer->m_material = material;
+		}
 	}
 }
 
@@ -1113,7 +1249,13 @@ void ReconstructionSettings::OnInspect() {
 	ImGui::DragFloat("Branch shortening", &m_branchShortening, 0.01f, 0.01f, 0.5f);
 
 	ImGui::Checkbox("Override thickness", &m_overrideThickness);
-	ImGui::DragFloat("End node thickness", &m_minThickness, 0.001f, 0.001f, 1.0f);
-
+	if (m_overrideThickness) {
+		ImGui::DragFloat("End node thickness", &m_endNodeThickness, 0.001f, 0.001f, 1.0f);
+		ImGui::DragFloat("Thickness sum factor", &m_thicknessSumFactor, 0.01f, 0.0f, 2.0f);
+		ImGui::DragFloat("Thickness accumulation factor", &m_thicknessAccumulationFactor, 0.00001f, 0.0f, 1.0f, "%.5f");
+	}else
+	{
+		ImGui::Checkbox("Limit parent thickness", &m_limitParentThickness);
+	}
 	ImGui::DragInt("Minimum node count", &m_minimumNodeCount, 1, 0, 100);
 }

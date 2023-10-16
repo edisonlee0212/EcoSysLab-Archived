@@ -247,7 +247,7 @@ PYBIND11_MODULE(pyecosyslab, m) {
 		.def_readwrite("m_minHeight", &ReconstructionSettings::m_minHeight)
 		.def_readwrite("m_maxTreeDistance", &ReconstructionSettings::m_maxTreeDistance)
 		.def_readwrite("m_branchShortening", &ReconstructionSettings::m_branchShortening)
-		.def_readwrite("m_minThickness", &ReconstructionSettings::m_minThickness)
+		.def_readwrite("m_endNodeThickness", &ReconstructionSettings::m_endNodeThickness)
 		.def_readwrite("m_overrideThickness", &ReconstructionSettings::m_overrideThickness)
 		.def_readwrite("m_minimumNodeCount", &ReconstructionSettings::m_minimumNodeCount);
 
