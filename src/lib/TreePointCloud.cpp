@@ -1069,8 +1069,25 @@ void TreePointCloud::FormGeometryEntity(const TreeMeshGeneratorSettings& meshGen
 
 			std::vector<Vertex> vertices;
 			std::vector<unsigned int> indices;
-			CylindricalMeshGenerator<ReconstructionSkeletonData, ReconstructionFlowData, ReconstructionNodeData> meshGenerator;
-			meshGenerator.Generate(m_skeletons[i], vertices, indices, meshGeneratorSettings, 999.0f);
+
+			switch (meshGeneratorSettings.m_branchMeshType)
+			{
+			case 0:
+			{
+				CylindricalMeshGenerator<ReconstructionSkeletonData, ReconstructionFlowData, ReconstructionNodeData> meshGenerator;
+				meshGenerator.Generate(m_skeletons[i], vertices, indices, meshGeneratorSettings, 999.0f);
+			}
+			break;
+			case 1:
+			{
+				float minRadius = 0.003f;
+				VoxelMeshGenerator<ReconstructionSkeletonData, ReconstructionFlowData, ReconstructionNodeData> meshGenerator;
+				meshGenerator.Generate(m_skeletons[i], vertices, indices,
+					meshGeneratorSettings, minRadius);
+			}
+			break;
+			default: break;
+			}
 
 			auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
 			auto material = ProjectManager::CreateTemporaryAsset<Material>();

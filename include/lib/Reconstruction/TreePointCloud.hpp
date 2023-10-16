@@ -100,7 +100,7 @@ namespace EcoSysLab {
 
 		float m_endNodeThickness = 0.002f;
 		float m_thicknessSumFactor = 0.4f;
-		float m_thicknessAccumulationFactor = 0.0001f;
+		float m_thicknessAccumulationFactor = 0.00005f;
 		bool m_overrideThickness = false;
 		bool m_limitParentThickness = true;
 		int m_minimumNodeCount = 20;
