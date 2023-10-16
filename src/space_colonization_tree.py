@@ -10,5 +10,8 @@ target_mesh_path = current_directory + "\\out.obj"
 pesl.start_project_windowless(project_path)
 tmgs = pesl.TreeMeshGeneratorSettings()
 
+##NOTE: The above code should only be run once for entire application lifespan. Do not start framework multiple times within single execution.
+
+##NOTE: You may run below line multiple times for exporting multiple OBJs from multiple binvox inputs.
 #Parameters: voxel grid radius, binvox absolute path, tree descriptor absolute path, tmgs, output path, mesh generation settings, delta time, iteration
 pesl.build_space_colonization_tree_obj(2.0, binvox_path, target_descriptor_path, target_mesh_path, tmgs, 0.08220, 250)
