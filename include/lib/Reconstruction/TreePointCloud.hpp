@@ -101,7 +101,7 @@ namespace EcoSysLab {
 		float m_endNodeThickness = 0.002f;
 		float m_thicknessSumFactor = 0.4f;
 		float m_thicknessAccumulationFactor = 0.00005f;
-		bool m_overrideThickness = false;
+		bool m_overrideThickness = true;
 		bool m_limitParentThickness = true;
 		int m_minimumNodeCount = 20;
 		void OnInspect();
@@ -136,7 +136,7 @@ namespace EcoSysLab {
 
 	public:
 		void ImportGraph(const std::filesystem::path& path, float scaleFactor = 0.1f);
-
+		void ExportForestOBJ(const std::filesystem::path& path, const TreeMeshGeneratorSettings& meshGeneratorSettings);
 		glm::vec3 m_min;
 		glm::vec3 m_max;
 		std::vector<ScatteredPoint> m_scatteredPoints;

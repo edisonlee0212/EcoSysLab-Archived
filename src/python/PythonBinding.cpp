@@ -186,20 +186,8 @@ void YamlToMesh(const std::string& yamlPath,
 
 	treePointCloud->EstablishConnectivityGraph(connectivityGraphSettings);
 	treePointCloud->BuildSkeletons(reconstructionSettings);
-	const auto meshes = treePointCloud->GenerateMeshes(meshGeneratorSettings);
-	if (meshes.size() == 1) {
-		meshes[0]->Export(meshPath);
-	}
-	else {
-		int index = 0;
-		for (const auto& i : meshes) {
-			auto savePath = std::filesystem::path(meshPath);
-			savePath.replace_filename(savePath.filename().string() + "_" + std::to_string(index));
-			index++;
-			i->Export(savePath);
-		}
-	}
-	EVOENGINE_LOG("Exported " + std::to_string(meshes.size()) + " meshes");
+	treePointCloud->ExportForestOBJ(meshPath, meshGeneratorSettings);
+	EVOENGINE_LOG("Exported forest as OBJ");
 	scene->DeleteEntity(tempEntity);
 }
 void VisualizeYaml(const std::string& yamlPath,
