@@ -60,7 +60,7 @@ namespace EcoSysLab
 
 		//For shifting.
 		glm::quat m_localRotation = glm::vec3(0.0f);
-		glm::vec3 m_localPosition = glm::vec3(0.0f);
+		glm::vec2 m_offset = glm::vec3(0.0f);
 	};
 
 	struct PipeModelFlowData
@@ -70,8 +70,6 @@ namespace EcoSysLab
 
 		std::unordered_map<PipeHandle, ParticleHandle> m_startParticleMap{};
 		std::unordered_map<PipeHandle, ParticleHandle> m_endParticleMap{};
-
-		glm::vec2 m_offset = glm::vec2(0.0f);
 	};
 
 	struct PipeModelSkeletonData

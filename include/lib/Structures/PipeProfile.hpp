@@ -153,6 +153,8 @@ namespace EcoSysLab
 
 		static auto scrolling = glm::vec2(0.0f);
 		static float zoomFactor = 5.0f;
+		ImGui::Text(("Cell count: " + std::to_string(m_cells.size()) +
+			" | Cell radius: " + std::to_string(m_info.m_cellRadius)).c_str());
 		if (ImGui::Button("Recenter")) {
 			scrolling = glm::vec2(0.0f);
 		}
