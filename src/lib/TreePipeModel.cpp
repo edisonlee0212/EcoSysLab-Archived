@@ -63,12 +63,15 @@ void TreePipeModel::UpdatePipeModels(const TreeModel& targetTreeModel, const Pip
 		auto& newProfile = profileGroup.RefProfile(node.m_data.m_profileHandle);
 		newProfile.m_info.m_cellRadius = pipeModelParameters.m_profileDefaultCellRadius;
 		auto parentNodeHandle = node.GetParentHandle();
+		bool onlyChild = true;
 		if(parentNodeHandle != -1)
 		{
-			node.m_data.m_localRotation = glm::inverse(skeleton.RefNode(parentNodeHandle).m_info.m_globalRotation) * node.m_info.m_globalRotation;
+			const auto& parentNode = skeleton.RefNode(parentNodeHandle);
+			node.m_data.m_localRotation = glm::inverse(parentNode.m_info.m_globalRotation) * node.m_info.m_globalRotation;
+			onlyChild = parentNode.RefChildHandles().size() <= 1;
 		}
-
-		if (node.IsApical())
+		
+		if (node.IsApical() || onlyChild)
 		{
 			//If this node is formed from elongation, we simply extend the pipe.
 			if (parentNodeHandle == -1)
@@ -336,7 +339,7 @@ void TreePipeModel::UpdatePipeModels(const TreeModel& targetTreeModel, const Pip
 	}
 	//2. Shift Skeleton
 	//ShiftSkeleton();
-	skeleton.CalculateFlows();
+	//skeleton.CalculateFlows();
 }
 
 void TreePipeModel::ApplySimulationResults(const PipeModelParameters& pipeModelParameters)
@@ -349,13 +352,13 @@ void TreePipeModel::ApplySimulationResults(const PipeModelParameters& pipeModelP
 		auto& flow = skeleton.RefFlow(flowHandle);
 		std::unordered_map<PipeHandle, ParticleHandle> flowStartParticleMap{};
 		const auto& flowStartPhysics2D = flow.m_data.m_startParticlePhysics2D;
-		const auto& flowEndStartPhysics2D = flow.m_data.m_endParticlePhysics2D;
+		const auto& flowEndPhysics2D = flow.m_data.m_endParticlePhysics2D;
 		for (const auto& particle : flowStartPhysics2D.PeekParticles())
 		{
 			flowStartParticleMap.insert({ particle.m_data.m_pipeHandle, particle.GetHandle() });
 		}
 		std::unordered_map<PipeHandle, ParticleHandle> flowEndParticleMap{};
-		for (const auto& particle : flowEndStartPhysics2D.PeekParticles())
+		for (const auto& particle : flowEndPhysics2D.PeekParticles())
 		{
 			flowEndParticleMap.insert({ particle.m_data.m_pipeHandle, particle.GetHandle() });
 		}
@@ -366,14 +369,18 @@ void TreePipeModel::ApplySimulationResults(const PipeModelParameters& pipeModelP
 			const float a = static_cast<float>(i) / (nodeSize - 1);
 			const auto& node = skeleton.RefNode(nodeHandles[i]);
 			auto& profile = profileGroup.RefProfile(node.m_data.m_profileHandle);
+			if(profile.RefCells().empty())
+			{
+				int a = 0;
+			}
 			for (auto& cell : profile.RefCells())
 			{
 				const auto pipeHandle = cell.m_data.m_pipeHandle;
 				cell.m_info.m_offset =
 					glm::mix(flowStartPhysics2D.PeekParticle(flowStartParticleMap.at(pipeHandle)).GetPosition(),
-						flowEndStartPhysics2D.PeekParticle(flowEndParticleMap.at(pipeHandle)).GetPosition(), a);
+						flowEndPhysics2D.PeekParticle(flowEndParticleMap.at(pipeHandle)).GetPosition(), a);
 				cell.m_info.m_color = glm::mix(flowStartPhysics2D.PeekParticle(flowStartParticleMap.at(pipeHandle)).GetColor(),
-					flowEndStartPhysics2D.PeekParticle(flowEndParticleMap.at(pipeHandle)).GetColor(), a);
+					flowEndPhysics2D.PeekParticle(flowEndParticleMap.at(pipeHandle)).GetColor(), a);
 			}
 		}
 	}
