@@ -262,15 +262,27 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 			ImGui::DragFloat("Physics simulation iteration cell factor", &m_pipeModelParameters.m_simulationIterationCellFactor, 0.1f, 0.0f, 50.0f);
 			ImGui::DragInt("Physics simulation minimum iteration", &m_pipeModelParameters.m_minimumSimulationIteration, 1, 0, 50);
 			ImGui::DragFloat("Physics simulation particle stabilize speed", &m_pipeModelParameters.m_particleStabilizeSpeed, 0.1f, 0.0f, 100.0f);
+			static bool autoGenStrands = true;
+			static int nodeLimit = -1;
 			if (ImGui::Button("Update pipes"))
 			{
 				m_treePipeModel.UpdatePipeModels(m_treeModel, m_pipeModelParameters);
+				if(autoGenStrands)
+				{
+					m_treePipeModel.ApplySimulationResults(m_pipeModelParameters);
+					InitializeStrandRenderer(nodeLimit);
+				}
 			}
-			
-			if (ImGui::Button("Initialize strands"))
+			if(ImGui::DragInt("Strand node limit", &nodeLimit, 1, -1, 999) && autoGenStrands)
 			{
 				m_treePipeModel.ApplySimulationResults(m_pipeModelParameters);
-				InitializeStrandRenderer();
+				InitializeStrandRenderer(nodeLimit);
+			}
+			ImGui::Checkbox("Auto gen strands", &autoGenStrands);
+			if (autoGenStrands && ImGui::Button("Initialize strands"))
+			{
+				m_treePipeModel.ApplySimulationResults(m_pipeModelParameters);
+				InitializeStrandRenderer(nodeLimit);
 			}
 			static bool displayProfile = true;
 
@@ -585,7 +597,7 @@ bool Tree::TryGrowSubTree(const NodeHandle internodeHandle, const float deltaTim
 	ecoSysLabLayer->m_needFullFlowUpdate = true;
 }
 
-void Tree::InitializeStrandRenderer()
+void Tree::InitializeStrandRenderer(const int nodeMaxCount)
 {
 	const auto scene = GetScene();
 	const auto owner = GetOwner();
@@ -601,7 +613,7 @@ void Tree::InitializeStrandRenderer()
 
 	std::vector<glm::uint> strandsList;
 	std::vector<StrandPoint> points;
-	m_treePipeModel.m_shootPipeModel.m_pipeGroup.BuildStrands(strandsList, points);
+	m_treePipeModel.m_shootPipeModel.m_pipeGroup.BuildStrands(strandsList, points, nodeMaxCount);
 	if (!points.empty()) strandsList.emplace_back(points.size());
 	StrandPointAttributes strandPointAttributes{};
 	strandPointAttributes.m_color = true;

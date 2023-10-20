@@ -131,12 +131,12 @@ namespace EcoSysLab
 		std::queue<PipeSegmentHandle> m_pipeSegmentPool;
 
 		int m_version = -1;
-		void BuildStrand(const Pipe<PipeData>& pipe, std::vector<glm::uint>& strands, std::vector<StrandPoint>& points) const;
+		void BuildStrand(const Pipe<PipeData>& pipe, std::vector<glm::uint>& strands, std::vector<StrandPoint>& points, int nodeMaxCount) const;
 
 		[[nodiscard]] PipeSegmentHandle AllocatePipeSegment(PipeHandle pipeHandle, PipeSegmentHandle prevHandle, int index);
 	public:
 
-		void BuildStrands(std::vector<glm::uint>& strands, std::vector<StrandPoint>& points) const;
+		void BuildStrands(std::vector<glm::uint>& strands, std::vector<StrandPoint>& points, int nodeMaxCount = -1) const;
 
 		PipeGroupData m_data;
 
@@ -195,7 +195,7 @@ namespace EcoSysLab
 
 	template <typename PipeGroupData, typename PipeData, typename PipeSegmentData>
 	void PipeGroup<PipeGroupData, PipeData, PipeSegmentData>::BuildStrand(const Pipe<PipeData>& pipe,
-		std::vector<glm::uint>& strands, std::vector<StrandPoint>& points) const
+		std::vector<glm::uint>& strands, std::vector<StrandPoint>& points, int nodeMaxCount) const
 	{
 		const auto& pipeSegmentHandles = pipe.PeekPipeSegmentHandles();
 		if (pipeSegmentHandles.empty())
@@ -239,7 +239,7 @@ namespace EcoSysLab
 			point.m_position = pipeSegment.m_info.m_globalPosition + point.m_normal * distance * controlPointRatio;
 			points.emplace_back(point);
 		}
-		for (int i = 1; i < pipeSegmentHandles.size(); i++)
+		for (int i = 1; i < pipeSegmentHandles.size() && (nodeMaxCount == -1 || i < nodeMaxCount); i++)
 		{
 			const auto& pipeSegment = PeekPipeSegment(pipeSegmentHandles[i]);
 			const auto& prevPipeSegment = PeekPipeSegment(pipeSegmentHandles[i - 1]);
@@ -290,12 +290,12 @@ namespace EcoSysLab
 
 	template <typename PipeGroupData, typename PipeData, typename PipeSegmentData>
 	void PipeGroup<PipeGroupData, PipeData, PipeSegmentData>::BuildStrands(std::vector<glm::uint>& strands,
-		std::vector<StrandPoint>& points) const
+		std::vector<StrandPoint>& points, int nodeMaxCount) const
 	{
 		for (const auto& pipe : m_pipes)
 		{
 			if (pipe.IsRecycled()) continue;
-			BuildStrand(pipe, strands, points);
+			BuildStrand(pipe, strands, points, nodeMaxCount);
 		}
 	}
 
