@@ -187,6 +187,8 @@ void TreePipeModel::UpdatePipeModels(const TreeModel& targetTreeModel, const Pip
 	{
 		auto& flow = skeleton.RefFlow(flowHandle);
 		const auto& nodeHandles = flow.RefNodeHandles();
+		flow.m_data.m_startParticleMap.clear();
+		flow.m_data.m_endParticleMap.clear();
 		if (!nodeHandles.empty()) {
 			auto &startNode = skeleton.RefNode(nodeHandles.front());
 			auto& startProfile = profileGroup.RefProfile(startNode.m_data.m_profileHandle);
@@ -199,6 +201,7 @@ void TreePipeModel::UpdatePipeModels(const TreeModel& targetTreeModel, const Pip
 				newParticle.m_data.m_pipeHandle = cell.m_data.m_pipeHandle;
 				newParticle.SetDamping(pipeModelParameters.m_damping);
 				newParticle.SetPosition(cell.m_info.m_offset);
+				flow.m_data.m_startParticleMap.insert({ cell.m_data.m_pipeHandle, newParticleHandle });
 			}
 			auto& endNode = skeleton.RefNode(nodeHandles.back());
 			auto& endProfile = profileGroup.RefProfile(endNode.m_data.m_profileHandle);
@@ -211,6 +214,7 @@ void TreePipeModel::UpdatePipeModels(const TreeModel& targetTreeModel, const Pip
 				newParticle.m_data.m_pipeHandle = cell.m_data.m_pipeHandle;
 				newParticle.SetDamping(pipeModelParameters.m_damping);
 				newParticle.SetPosition(cell.m_info.m_offset);
+				flow.m_data.m_endParticleMap.insert({ cell.m_data.m_pipeHandle, newParticleHandle });
 			}
 		}
 
@@ -243,23 +247,18 @@ void TreePipeModel::UpdatePipeModels(const TreeModel& targetTreeModel, const Pip
 			//Copy from child flow start to self flow start
 			const auto& childFlow = skeleton.PeekFlow(childFlowHandles.front());
 			const auto& childPhysics2D = childFlow.m_data.m_startParticlePhysics2D;
-			std::unordered_map<PipeHandle, ParticleHandle> particleMap{};
+			assert(flowStartPhysics2D.PeekParticles().size() == childPhysics2D.PeekParticles().size());
+			assert(flowEndPhysics2D.PeekParticles().size() == childPhysics2D.PeekParticles().size());
 			for (const auto& childParticle : childPhysics2D.PeekParticles())
 			{
-				particleMap.insert({ childParticle.m_data.m_pipeHandle, childParticle.GetHandle() });
+				const auto flowStartParticleHandle = flow.m_data.m_startParticleMap.at(childParticle.m_data.m_pipeHandle);
+				const auto flowEndParticleHandle = flow.m_data.m_endParticleMap.at(childParticle.m_data.m_pipeHandle);
+				flowStartPhysics2D.RefParticle(flowStartParticleHandle).SetColor(childParticle.GetColor());
+				flowStartPhysics2D.RefParticle(flowStartParticleHandle).SetPosition(childParticle.GetPosition());
+				flowEndPhysics2D.RefParticle(flowEndParticleHandle).SetColor(childParticle.GetColor());
+				flowEndPhysics2D.RefParticle(flowEndParticleHandle).SetPosition(childParticle.GetPosition());
 			}
-			for (auto& particle : flowStartPhysics2D.RefParticles())
-			{
-				const auto& childParticle = childPhysics2D.PeekParticle(particleMap.at(particle.m_data.m_pipeHandle));
-				particle.SetColor(childParticle.GetColor());
-				particle.SetPosition(childParticle.GetPosition());
-			}
-			for (auto& particle : flowEndPhysics2D.RefParticles())
-			{
-				const auto& childParticle = childPhysics2D.PeekParticle(particleMap.at(particle.m_data.m_pipeHandle));
-				particle.SetColor(childParticle.GetColor());
-				particle.SetPosition(childParticle.GetPosition());
-			}
+
 		}
 		else {
 			//Simulate flow start physics
@@ -276,24 +275,15 @@ void TreePipeModel::UpdatePipeModels(const TreeModel& targetTreeModel, const Pip
 			mainChildFlow.m_data.m_offset = glm::vec2(0.0f);
 			const auto& mainChildPhysics2D = mainChildFlow.m_data.m_startParticlePhysics2D;
 			//Copy cell offset from main child.
-			std::unordered_map<PipeHandle, ParticleHandle> flowStartParticleMap{};
-			std::unordered_map<PipeHandle, ParticleHandle> flowEndParticleMap{};
-			for (const auto& flowStartParticle : flowStartPhysics2D.PeekParticles())
-			{
-				flowStartParticleMap.insert({ flowStartParticle.m_data.m_pipeHandle, flowStartParticle.GetHandle() });
-			}
-			for (const auto& flowEndParticle : flowEndPhysics2D.PeekParticles())
-			{
-				flowEndParticleMap.insert({ flowEndParticle.m_data.m_pipeHandle, flowEndParticle.GetHandle() });
-			}
 			if(mainChildHandle != -1){
 				for (const auto& mainChildParticle : mainChildPhysics2D.PeekParticles())
 				{
-					const auto particleHandle = flowStartParticleMap.at(mainChildParticle.m_data.m_pipeHandle);
-					flowStartPhysics2D.RefParticle(particleHandle).SetColor(mainChildParticle.GetColor());
-					flowStartPhysics2D.RefParticle(particleHandle).SetPosition(mainChildParticle.GetPosition());
-					flowEndPhysics2D.RefParticle(particleHandle).SetColor(mainChildParticle.GetColor());
-					flowEndPhysics2D.RefParticle(particleHandle).SetPosition(mainChildParticle.GetPosition());
+					const auto flowStartParticleHandle = flow.m_data.m_startParticleMap.at(mainChildParticle.m_data.m_pipeHandle);
+					const auto flowEndParticleHandle = flow.m_data.m_endParticleMap.at(mainChildParticle.m_data.m_pipeHandle);
+					flowStartPhysics2D.RefParticle(flowStartParticleHandle).SetColor(mainChildParticle.GetColor());
+					flowStartPhysics2D.RefParticle(flowStartParticleHandle).SetPosition(mainChildParticle.GetPosition());
+					flowEndPhysics2D.RefParticle(flowEndParticleHandle).SetColor(mainChildParticle.GetColor());
+					flowEndPhysics2D.RefParticle(flowEndParticleHandle).SetPosition(mainChildParticle.GetPosition());
 				}
 			}
 			int index = 0;
@@ -310,11 +300,12 @@ void TreePipeModel::UpdatePipeModels(const TreeModel& targetTreeModel, const Pip
 				childFlow.m_data.m_offset = offset;
 				for (const auto& childParticle : childPhysics2D.PeekParticles())
 				{
-					const auto particleHandle = flowStartParticleMap.at(childParticle.m_data.m_pipeHandle);
-					flowStartPhysics2D.RefParticle(particleHandle).SetColor(childParticle.GetColor());
-					flowStartPhysics2D.RefParticle(particleHandle).SetPosition(childParticle.GetPosition() + offset);
-					flowEndPhysics2D.RefParticle(particleHandle).SetColor(childParticle.GetColor());
-					flowEndPhysics2D.RefParticle(particleHandle).SetPosition(childParticle.GetPosition() + offset);
+					const auto flowStartParticleHandle = flow.m_data.m_startParticleMap.at(childParticle.m_data.m_pipeHandle);
+					const auto flowEndParticleHandle = flow.m_data.m_endParticleMap.at(childParticle.m_data.m_pipeHandle);
+					flowStartPhysics2D.RefParticle(flowStartParticleHandle).SetColor(childParticle.GetColor());
+					flowStartPhysics2D.RefParticle(flowStartParticleHandle).SetPosition(childParticle.GetPosition());
+					flowEndPhysics2D.RefParticle(flowEndParticleHandle).SetColor(childParticle.GetColor());
+					flowEndPhysics2D.RefParticle(flowEndParticleHandle).SetPosition(childParticle.GetPosition());
 				}
 				index++;
 			}
@@ -338,8 +329,8 @@ void TreePipeModel::UpdatePipeModels(const TreeModel& targetTreeModel, const Pip
 		}
 	}
 	//2. Shift Skeleton
-	//ShiftSkeleton();
-	//skeleton.CalculateFlows();
+	ShiftSkeleton();
+	skeleton.CalculateFlows();
 }
 
 void TreePipeModel::ApplySimulationResults(const PipeModelParameters& pipeModelParameters)
@@ -350,18 +341,8 @@ void TreePipeModel::ApplySimulationResults(const PipeModelParameters& pipeModelP
 	for (const auto flowHandle : sortedFlowList)
 	{
 		auto& flow = skeleton.RefFlow(flowHandle);
-		std::unordered_map<PipeHandle, ParticleHandle> flowStartParticleMap{};
 		const auto& flowStartPhysics2D = flow.m_data.m_startParticlePhysics2D;
 		const auto& flowEndPhysics2D = flow.m_data.m_endParticlePhysics2D;
-		for (const auto& particle : flowStartPhysics2D.PeekParticles())
-		{
-			flowStartParticleMap.insert({ particle.m_data.m_pipeHandle, particle.GetHandle() });
-		}
-		std::unordered_map<PipeHandle, ParticleHandle> flowEndParticleMap{};
-		for (const auto& particle : flowEndPhysics2D.PeekParticles())
-		{
-			flowEndParticleMap.insert({ particle.m_data.m_pipeHandle, particle.GetHandle() });
-		}
 		const auto& nodeHandles = flow.RefNodeHandles();
 		const auto nodeSize = nodeHandles.size();
 		for (int i = 0; i < nodeHandles.size(); i++)
@@ -369,31 +350,26 @@ void TreePipeModel::ApplySimulationResults(const PipeModelParameters& pipeModelP
 			const float a = static_cast<float>(i) / (nodeSize - 1);
 			const auto& node = skeleton.RefNode(nodeHandles[i]);
 			auto& profile = profileGroup.RefProfile(node.m_data.m_profileHandle);
-			if(profile.RefCells().empty())
-			{
-				int a = 0;
-			}
 			for (auto& cell : profile.RefCells())
 			{
 				const auto pipeHandle = cell.m_data.m_pipeHandle;
+				const auto flowStartParticleHandle = flow.m_data.m_startParticleMap.at(pipeHandle);
+				const auto flowEndParticleHandle = flow.m_data.m_endParticleMap.at(pipeHandle);
 				cell.m_info.m_offset =
-					glm::mix(flowStartPhysics2D.PeekParticle(flowStartParticleMap.at(pipeHandle)).GetPosition(),
-						flowEndPhysics2D.PeekParticle(flowEndParticleMap.at(pipeHandle)).GetPosition(), a);
-				cell.m_info.m_color = glm::mix(flowStartPhysics2D.PeekParticle(flowStartParticleMap.at(pipeHandle)).GetColor(),
-					flowEndPhysics2D.PeekParticle(flowEndParticleMap.at(pipeHandle)).GetColor(), a);
+					glm::mix(flowStartPhysics2D.PeekParticle(flowStartParticleHandle).GetPosition(),
+						flowEndPhysics2D.PeekParticle(flowEndParticleHandle).GetPosition(), a);
+				cell.m_info.m_color = glm::mix(flowStartPhysics2D.PeekParticle(flowStartParticleHandle).GetColor(),
+					flowEndPhysics2D.PeekParticle(flowEndParticleHandle).GetColor(), a);
 			}
 		}
 	}
 	auto& baseProfile = profileGroup.RefProfile(skeleton.m_data.m_baseProfileHandle);
-	auto& basePhysics2D = skeleton.RefFlow(0).m_data.m_startParticlePhysics2D;
-	std::unordered_map<PipeHandle, ParticleHandle> particleMap{};
-	for (const auto& baseParticle : basePhysics2D.PeekParticles())
-	{
-		particleMap.insert({ baseParticle.m_data.m_pipeHandle, baseParticle.GetHandle() });
-	}
+	const auto& baseFlow = skeleton.PeekFlow(0);
+	const auto& basePhysics2D = baseFlow.m_data.m_startParticlePhysics2D;
 	for (auto& cell : baseProfile.RefCells())
 	{
-		auto& particle = basePhysics2D.RefParticle(particleMap.at(cell.m_data.m_pipeHandle));
+		const auto flowStartParticleHandle = baseFlow.m_data.m_startParticleMap.at(cell.m_data.m_pipeHandle);
+		const auto& particle = basePhysics2D.PeekParticle(flowStartParticleHandle);
 		cell.m_info.m_offset = particle.GetPosition();
 	}
 }

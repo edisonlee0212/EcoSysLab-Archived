@@ -67,6 +67,10 @@ namespace EcoSysLab
 	{
 		ParticlePhysics2D<CellParticlePhysicsData> m_startParticlePhysics2D;
 		ParticlePhysics2D<CellParticlePhysicsData> m_endParticlePhysics2D;
+
+		std::unordered_map<PipeHandle, ParticleHandle> m_startParticleMap{};
+		std::unordered_map<PipeHandle, ParticleHandle> m_endParticleMap{};
+
 		glm::vec2 m_offset = glm::vec2(0.0f);
 	};
 
