@@ -76,7 +76,8 @@ namespace EcoSysLab {
 		int m_maxTimeout = 10;
 		float m_forceConnectionAngleLimit = 135.0f;
 		float m_forceConnectionRatio = 0.0f;
-		float m_absoluteAngleLimit = 45.0f;
+		float m_angleLimit = 45.0f;
+		bool m_checkReverse = true;
 		float m_branchShortening = 0.15f;
 
 		void OnInspect();

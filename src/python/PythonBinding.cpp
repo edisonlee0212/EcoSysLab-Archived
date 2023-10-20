@@ -330,7 +330,7 @@ PYBIND11_MODULE(pyecosyslab, m) {
 		.def_readwrite("m_maxTimeout", &ConnectivityGraphSettings::m_maxTimeout)
 		.def_readwrite("m_forceConnectionAngleLimit", &ConnectivityGraphSettings::m_forceConnectionAngleLimit)
 		.def_readwrite("m_forceConnectionRatio", &ConnectivityGraphSettings::m_forceConnectionRatio)
-		.def_readwrite("m_absoluteAngleLimit", &ConnectivityGraphSettings::m_absoluteAngleLimit)
+		.def_readwrite("m_angleLimit", &ConnectivityGraphSettings::m_angleLimit)
 		.def_readwrite("m_branchShortening", &ConnectivityGraphSettings::m_branchShortening);
 
 

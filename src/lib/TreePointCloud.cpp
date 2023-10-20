@@ -712,7 +712,7 @@ void TreePointCloud::EstablishConnectivityGraph(const ConnectivityGraphSettings&
 					if (voxel.m_isP0) return;
 					const auto dotP = glm::dot(glm::normalize(voxel.m_position - shortenedP0),
 						glm::normalize(shortenedP0 - shortenedP3));
-					if (dotP < glm::cos(glm::radians(settings.m_absoluteAngleLimit))) return;
+					if (dotP < glm::cos(glm::radians(settings.m_angleLimit))) return;
 					const auto distance = glm::distance(voxel.m_position, shortenedP0);
 					if (distance >
 						settings.m_forceConnectionRatio * branchLength &&
@@ -748,7 +748,7 @@ void TreePointCloud::EstablishConnectivityGraph(const ConnectivityGraphSettings&
 					if (!voxel.m_isP0) return;
 					const auto dotP = glm::dot(glm::normalize(voxel.m_position - shortenedP3),
 						glm::normalize(shortenedP3 - shortenedP0));
-					if (dotP < glm::cos(glm::radians(settings.m_absoluteAngleLimit)))
+					if (dotP < glm::cos(glm::radians(settings.m_angleLimit)))
 						return;
 					const auto distance = glm::distance(voxel.m_position, shortenedP3);
 					if (glm::distance(voxel.m_position, shortenedP3) >
@@ -811,7 +811,7 @@ void TreePointCloud::EstablishConnectivityGraph(const ConnectivityGraphSettings&
 						1.0f - settings.m_branchShortening);
 					auto dotP = glm::dot(glm::normalize(otherBranchShortenedP3 - shortenedP0),
 						glm::normalize(shortenedP0 - shortenedP3));
-					if (dotP < glm::cos(glm::radians(settings.m_absoluteAngleLimit))) skip = true;
+					if (dotP < glm::cos(glm::radians(settings.m_angleLimit))) skip = true;
 					if (!skip) {
 						float distance = distanceL + branchInfo.first;
 						const auto search = scannedBranch.m_neighborBranchP3.find(branchInfo.second);
@@ -1307,7 +1307,8 @@ void ConnectivityGraphSettings::OnInspect() {
 	ImGui::DragInt("Branch-branch search timeout", &m_maxTimeout, 1, 1, 30);
 	ImGui::DragFloat("Branch-branch search length", &m_edgeLength, 0.01f, 0.01f, 1.0f);
 	ImGui::DragFloat("Branch-branch search step", &m_edgeExtendStep, 0.01f, 0.01f, 1.0f);
-	ImGui::DragFloat("Absolute angle limit", &m_absoluteAngleLimit, 0.01f, 0.0f, 180.0f);
+	ImGui::DragFloat("Angle limit", &m_angleLimit, 0.01f, 0.0f, 180.0f);
+	ImGui::Checkbox("Check reverse", &m_checkReverse);
 	ImGui::DragFloat("Branch shortening", &m_branchShortening, 0.01f, 0.00f, 0.5f);
 	ImGui::DragFloat("Force connection ratio", &m_forceConnectionRatio, 0.01f, 0.01f, 1.0f);
 	if (m_forceConnectionRatio > 0.0f) {

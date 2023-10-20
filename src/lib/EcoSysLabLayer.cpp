@@ -529,120 +529,120 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 	}
 	ImGui::End();
 #pragma region Internode debugging camera
-	ImVec2 viewPortSize;
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{ 0, 0 });
-	ImGui::Begin("Plant Visual");
-	{
-		if (ImGui::BeginChild("InternodeCameraRenderer", ImVec2(0, 0), false)) {
-			viewPortSize = ImGui::GetWindowSize();
-			m_visualizationCameraResolutionX = viewPortSize.x;
-			m_visualizationCameraResolutionY = viewPortSize.y;
-			ImGui::Image(m_visualizationCamera->GetRenderTexture()->GetColorImTextureId(),
-				ImVec2(viewPortSize.x, viewPortSize.y), ImVec2(0, 1), ImVec2(1, 0));
-			m_visualizationCameraMousePosition = glm::vec2(FLT_MAX, FLT_MIN);
-			auto sceneCameraRotation = editorLayer->GetSceneCameraRotation();
-			auto sceneCameraPosition = editorLayer->GetSceneCameraPosition();
-			if (ImGui::IsWindowFocused()) {
-				m_visualizationCameraWindowFocused = true;
-				bool valid = true;
-				auto mp = ImGui::GetMousePos();
-				auto wp = ImGui::GetWindowPos();
-				m_visualizationCameraMousePosition = glm::vec2(mp.x - wp.x, mp.y - wp.y);
-				if (valid) {
-					static bool isDraggingPreviously = false;
-					bool mouseDrag = true;
-					if (m_visualizationCameraMousePosition.x < 0 || m_visualizationCameraMousePosition.y < 0 ||
-						m_visualizationCameraMousePosition.x > viewPortSize.x ||
-						m_visualizationCameraMousePosition.y > viewPortSize.y ||
-						editorLayer->GetKey(GLFW_MOUSE_BUTTON_RIGHT) != KeyActionType::Hold) {
-						mouseDrag = false;
-					}
-					static float prevX = 0;
-					static float prevY = 0;
-					if (mouseDrag && !isDraggingPreviously) {
+	if (m_debugVisualization) {
+		ImVec2 viewPortSize;
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{ 0, 0 });
+		if (ImGui::Begin("Plant Visual")) {
+			if (ImGui::BeginChild("InternodeCameraRenderer", ImVec2(0, 0), false)) {
+				viewPortSize = ImGui::GetWindowSize();
+				m_visualizationCameraResolutionX = viewPortSize.x;
+				m_visualizationCameraResolutionY = viewPortSize.y;
+				ImGui::Image(m_visualizationCamera->GetRenderTexture()->GetColorImTextureId(),
+					ImVec2(viewPortSize.x, viewPortSize.y), ImVec2(0, 1), ImVec2(1, 0));
+				m_visualizationCameraMousePosition = glm::vec2(FLT_MAX, FLT_MIN);
+				auto sceneCameraRotation = editorLayer->GetSceneCameraRotation();
+				auto sceneCameraPosition = editorLayer->GetSceneCameraPosition();
+				if (ImGui::IsWindowFocused()) {
+					m_visualizationCameraWindowFocused = true;
+					bool valid = true;
+					auto mp = ImGui::GetMousePos();
+					auto wp = ImGui::GetWindowPos();
+					m_visualizationCameraMousePosition = glm::vec2(mp.x - wp.x, mp.y - wp.y);
+					if (valid) {
+						static bool isDraggingPreviously = false;
+						bool mouseDrag = true;
+						if (m_visualizationCameraMousePosition.x < 0 || m_visualizationCameraMousePosition.y < 0 ||
+							m_visualizationCameraMousePosition.x > viewPortSize.x ||
+							m_visualizationCameraMousePosition.y > viewPortSize.y ||
+							editorLayer->GetKey(GLFW_MOUSE_BUTTON_RIGHT) != KeyActionType::Hold) {
+							mouseDrag = false;
+						}
+						static float prevX = 0;
+						static float prevY = 0;
+						if (mouseDrag && !isDraggingPreviously) {
+							prevX = m_visualizationCameraMousePosition.x;
+							prevY = m_visualizationCameraMousePosition.y;
+						}
+						const float xOffset = m_visualizationCameraMousePosition.x - prevX;
+						const float yOffset = m_visualizationCameraMousePosition.y - prevY;
 						prevX = m_visualizationCameraMousePosition.x;
 						prevY = m_visualizationCameraMousePosition.y;
-					}
-					const float xOffset = m_visualizationCameraMousePosition.x - prevX;
-					const float yOffset = m_visualizationCameraMousePosition.y - prevY;
-					prevX = m_visualizationCameraMousePosition.x;
-					prevY = m_visualizationCameraMousePosition.y;
-					isDraggingPreviously = mouseDrag;
+						isDraggingPreviously = mouseDrag;
 #pragma region Scene Camera Controller
 
-					if (mouseDrag && !editorLayer->m_lockCamera) {
-						glm::vec3 front = sceneCameraRotation *
-							glm::vec3(0, 0, -1);
-						glm::vec3 right = sceneCameraRotation *
-							glm::vec3(1, 0, 0);
-						if (editorLayer->GetKey(GLFW_KEY_W) == KeyActionType::Hold) {
-							sceneCameraPosition +=
-								front * static_cast<float>(Times::DeltaTime()) *
-								editorLayer->m_velocity;
-						}
-						if (editorLayer->GetKey(GLFW_KEY_S) == KeyActionType::Hold) {
-							sceneCameraPosition -=
-								front * static_cast<float>(Times::DeltaTime()) *
-								editorLayer->m_velocity;
-						}
-						if (editorLayer->GetKey(GLFW_KEY_A) == KeyActionType::Hold) {
-							sceneCameraPosition -=
-								right * static_cast<float>(Times::DeltaTime()) *
-								editorLayer->m_velocity;
-						}
-						if (editorLayer->GetKey(GLFW_KEY_D) == KeyActionType::Hold) {
-							sceneCameraPosition +=
-								right * static_cast<float>(Times::DeltaTime()) *
-								editorLayer->m_velocity;
-						}
-						if (editorLayer->GetKey(GLFW_KEY_LEFT_SHIFT) == KeyActionType::Hold) {
-							sceneCameraPosition.y +=
-								editorLayer->m_velocity *
-								static_cast<float>(Times::DeltaTime());
-						}
-						if (editorLayer->GetKey(GLFW_KEY_LEFT_CONTROL) == KeyActionType::Hold) {
-							sceneCameraPosition.y -=
-								editorLayer->m_velocity *
-								static_cast<float>(Times::DeltaTime());
-						}
-						if (xOffset != 0.0f || yOffset != 0.0f) {
-							editorLayer->m_sceneCameraYawAngle +=
-								xOffset * editorLayer->m_sensitivity;
-							editorLayer->m_sceneCameraPitchAngle -=
-								yOffset * editorLayer->m_sensitivity;
-							if (editorLayer->m_sceneCameraPitchAngle > 89.0f)
-								editorLayer->m_sceneCameraPitchAngle = 89.0f;
-							if (editorLayer->m_sceneCameraPitchAngle < -89.0f)
-								editorLayer->m_sceneCameraPitchAngle = -89.0f;
+						if (mouseDrag && !editorLayer->m_lockCamera) {
+							glm::vec3 front = sceneCameraRotation *
+								glm::vec3(0, 0, -1);
+							glm::vec3 right = sceneCameraRotation *
+								glm::vec3(1, 0, 0);
+							if (editorLayer->GetKey(GLFW_KEY_W) == KeyActionType::Hold) {
+								sceneCameraPosition +=
+									front * static_cast<float>(Times::DeltaTime()) *
+									editorLayer->m_velocity;
+							}
+							if (editorLayer->GetKey(GLFW_KEY_S) == KeyActionType::Hold) {
+								sceneCameraPosition -=
+									front * static_cast<float>(Times::DeltaTime()) *
+									editorLayer->m_velocity;
+							}
+							if (editorLayer->GetKey(GLFW_KEY_A) == KeyActionType::Hold) {
+								sceneCameraPosition -=
+									right * static_cast<float>(Times::DeltaTime()) *
+									editorLayer->m_velocity;
+							}
+							if (editorLayer->GetKey(GLFW_KEY_D) == KeyActionType::Hold) {
+								sceneCameraPosition +=
+									right * static_cast<float>(Times::DeltaTime()) *
+									editorLayer->m_velocity;
+							}
+							if (editorLayer->GetKey(GLFW_KEY_LEFT_SHIFT) == KeyActionType::Hold) {
+								sceneCameraPosition.y +=
+									editorLayer->m_velocity *
+									static_cast<float>(Times::DeltaTime());
+							}
+							if (editorLayer->GetKey(GLFW_KEY_LEFT_CONTROL) == KeyActionType::Hold) {
+								sceneCameraPosition.y -=
+									editorLayer->m_velocity *
+									static_cast<float>(Times::DeltaTime());
+							}
+							if (xOffset != 0.0f || yOffset != 0.0f) {
+								editorLayer->m_sceneCameraYawAngle +=
+									xOffset * editorLayer->m_sensitivity;
+								editorLayer->m_sceneCameraPitchAngle -=
+									yOffset * editorLayer->m_sensitivity;
+								if (editorLayer->m_sceneCameraPitchAngle > 89.0f)
+									editorLayer->m_sceneCameraPitchAngle = 89.0f;
+								if (editorLayer->m_sceneCameraPitchAngle < -89.0f)
+									editorLayer->m_sceneCameraPitchAngle = -89.0f;
 
-							sceneCameraRotation =
-								Camera::ProcessMouseMovement(
-									editorLayer->m_sceneCameraYawAngle,
-									editorLayer->m_sceneCameraPitchAngle,
-									false);
+								sceneCameraRotation =
+									Camera::ProcessMouseMovement(
+										editorLayer->m_sceneCameraYawAngle,
+										editorLayer->m_sceneCameraPitchAngle,
+										false);
+							}
+							editorLayer->SetCameraRotation(editorLayer->GetSceneCamera(), sceneCameraRotation);
+							editorLayer->SetCameraPosition(editorLayer->GetSceneCamera(), sceneCameraPosition);
 						}
-						editorLayer->SetCameraRotation(editorLayer->GetSceneCamera(), sceneCameraRotation);
-						editorLayer->SetCameraPosition(editorLayer->GetSceneCamera(), sceneCameraPosition);
+#pragma endregion
 					}
-#pragma endregion
 				}
+				else {
+					m_visualizationCameraWindowFocused = false;
+				}
+				editorLayer->SetCameraRotation(m_visualizationCamera, sceneCameraRotation);
+				editorLayer->SetCameraPosition(m_visualizationCamera, sceneCameraPosition);
 			}
-			else {
-				m_visualizationCameraWindowFocused = false;
-			}
-			editorLayer->SetCameraRotation(m_visualizationCamera, sceneCameraRotation);
-			editorLayer->SetCameraPosition(m_visualizationCamera, sceneCameraPosition);
+			ImGui::EndChild();
+			auto* window = ImGui::FindWindowByName("Plant Visual");
+			m_visualizationCamera->SetEnabled(
+				!(window->Hidden && !window->Collapsed));
 		}
-		ImGui::EndChild();
-		auto* window = ImGui::FindWindowByName("Plant Visual");
-		m_visualizationCamera->SetEnabled(
-			!(window->Hidden && !window->Collapsed));
+		ImGui::End();
+		ImGui::PopStyleVar();
+		Visualization();
 	}
-	ImGui::End();
-	ImGui::PopStyleVar();
-
 #pragma endregion
-	Visualization();
 }
 
 void EcoSysLabLayer::OnSoilVisualizationMenu() {

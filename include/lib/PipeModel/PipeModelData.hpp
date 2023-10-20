@@ -29,19 +29,16 @@ namespace EcoSysLab
 	{
 		PipeHandle m_pipeHandle = -1;
 		PipeSegmentHandle m_pipeSegmentHandle = -1;
-		ParticleHandle m_particleHandle = -1;
 	};
 
 	struct CellParticlePhysicsData
 	{
-		CellHandle m_cellHandle = -1;
+		PipeHandle m_pipeHandle = -1;
 	};
 
 	struct PipeProfileData
 	{
 		NodeHandle m_nodeHandle = -1;
-		ParticlePhysics2D<CellParticlePhysicsData> m_particlePhysics2D;
-
 	};
 
 	struct PipeProfileGroupData
@@ -60,11 +57,17 @@ namespace EcoSysLab
 		ProfileHandle m_profileHandle = -1;
 		PipeHandle m_pipeHandle = -1;
 		NodeHandle m_treeSkeletonNodeHandle = -1;
+
+		//For shifting.
+		glm::quat m_localRotation = glm::vec3(0.0f);
+		glm::vec3 m_localPosition = glm::vec3(0.0f);
 	};
 
 	struct PipeModelFlowData
 	{
-		
+		ParticlePhysics2D<CellParticlePhysicsData> m_startParticlePhysics2D;
+		ParticlePhysics2D<CellParticlePhysicsData> m_endParticlePhysics2D;
+		glm::vec2 m_offset = glm::vec2(0.0f);
 	};
 
 	struct PipeModelSkeletonData

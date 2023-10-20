@@ -20,7 +20,7 @@ namespace EcoSysLab {
 		float m_maxParticleVelocity = 0.0f;
 		float m_simulationTime = 0.0f;
 	public:
-		[[nodiscard]] float GetDistanceToCenter(const glm::vec2& direction);
+		[[nodiscard]] float GetDistanceToCenter(const glm::vec2& direction) const;
 		[[nodiscard]] float GetMaxParticleVelocity() const;
 		[[nodiscard]] float GetDeltaTime() const;
 		void Reset(float deltaTime = 0.002f);
@@ -28,6 +28,7 @@ namespace EcoSysLab {
 		float m_particleSoftness = 0.5f;
 		[[nodiscard]] ParticleHandle AllocateParticle();
 		[[nodiscard]] Particle2D<T>& RefParticle(ParticleHandle handle);
+		[[nodiscard]] const Particle2D<T>& PeekParticle(ParticleHandle handle) const;
 		void RemoveParticle(ParticleHandle handle);
 		void Shift(const glm::vec2& offset);
 		[[nodiscard]] const std::vector<Particle2D<T>>& PeekParticles() const;
@@ -173,7 +174,7 @@ namespace EcoSysLab {
 	}
 
 	template <typename T>
-	float ParticlePhysics2D<T>::GetDistanceToCenter(const glm::vec2& direction)
+	float ParticlePhysics2D<T>::GetDistanceToCenter(const glm::vec2& direction) const
 	{
 		const auto threadCount = Jobs::Workers().Size();
 		std::vector<float> maxDistances;
@@ -230,6 +231,12 @@ namespace EcoSysLab {
 
 	template <typename T>
 	Particle2D<T>& ParticlePhysics2D<T>::RefParticle(ParticleHandle handle)
+	{
+		return m_particles2D[handle];
+	}
+
+	template <typename T>
+	const Particle2D<T>& ParticlePhysics2D<T>::PeekParticle(ParticleHandle handle) const
 	{
 		return m_particles2D[handle];
 	}
