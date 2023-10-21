@@ -8,7 +8,7 @@ using namespace EcoSysLab;
 void TreePipeModel::ShiftSkeleton()
 {
 	auto& skeleton = m_shootPipeModel.m_skeleton;
-	auto& profileGroup = m_shootPipeModel.m_pipeProfileGroup;
+	const auto& profileGroup = m_shootPipeModel.m_pipeProfileGroup;
 	for (const auto& nodeHandle : skeleton.RefSortedNodeList()) {
 		auto& node = skeleton.RefNode(nodeHandle);
 		auto& nodeInfo = node.m_info;
@@ -19,16 +19,16 @@ void TreePipeModel::ShiftSkeleton()
 			nodeInfo.m_globalRotation =
 				parentInfo.m_globalRotation * nodeData.m_localRotation;
 			nodeInfo.m_globalDirection = glm::normalize(nodeInfo.m_globalRotation * glm::vec3(0, 0, -1));
-
-			const glm::vec3 left = nodeInfo.m_regulatedGlobalRotation * glm::vec3(1, 0, 0);
-			const glm::vec3 up = nodeInfo.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
-
-			nodeInfo.m_globalPosition =
-				parentInfo.m_globalPosition
-				+ parentInfo.m_length * parentInfo.m_globalDirection + left * nodeData.m_offset.x * profile.m_info.m_cellRadius + up * nodeData.m_offset.y * profile.m_info.m_cellRadius;
 			auto parentRegulatedUp = parentInfo.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
 			auto regulatedUp = glm::normalize(glm::cross(glm::cross(nodeInfo.m_globalDirection, parentRegulatedUp), nodeInfo.m_globalDirection));
 			nodeInfo.m_regulatedGlobalRotation = glm::quatLookAt(nodeInfo.m_globalDirection, regulatedUp);
+
+			const glm::vec3 left = nodeInfo.m_regulatedGlobalRotation * glm::vec3(1, 0, 0);
+			const glm::vec3 up = nodeInfo.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
+			nodeInfo.m_globalPosition =
+				parentInfo.m_globalPosition
+				+ parentInfo.m_length * parentInfo.m_globalDirection + left * nodeData.m_offset.x * profile.m_info.m_cellRadius + up * nodeData.m_offset.y * profile.m_info.m_cellRadius;
+
 		}
 		skeleton.m_min = glm::min(skeleton.m_min, nodeInfo.m_globalPosition);
 		skeleton.m_max = glm::max(skeleton.m_max, nodeInfo.m_globalPosition);
