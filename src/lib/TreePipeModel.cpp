@@ -20,15 +20,31 @@ void TreePipeModel::ShiftSkeleton()
 				parentInfo.m_globalRotation * nodeData.m_localRotation;
 			nodeInfo.m_globalDirection = glm::normalize(nodeInfo.m_globalRotation * glm::vec3(0, 0, -1));
 			auto parentRegulatedUp = parentInfo.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
+			auto parentRegulatedFront = parentInfo.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
+			auto parentRegulatedLeft = parentInfo.m_regulatedGlobalRotation * glm::vec3(1, 0, 0);
 			auto regulatedUp = glm::normalize(glm::cross(glm::cross(nodeInfo.m_globalDirection, parentRegulatedUp), nodeInfo.m_globalDirection));
 			nodeInfo.m_regulatedGlobalRotation = glm::quatLookAt(nodeInfo.m_globalDirection, regulatedUp);
 
-			const glm::vec3 left = nodeInfo.m_regulatedGlobalRotation * glm::vec3(1, 0, 0);
-			const glm::vec3 up = nodeInfo.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
-			nodeInfo.m_globalPosition =
-				parentInfo.m_globalPosition
-				+ parentInfo.m_length * parentInfo.m_globalDirection + left * nodeData.m_offset.x * profile.m_info.m_cellRadius + up * nodeData.m_offset.y * profile.m_info.m_cellRadius;
-
+			const glm::vec3 front = nodeInfo.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
+			const float offsetLength = glm::length(nodeData.m_offset);
+			const float cosFront = glm::dot(front, parentRegulatedFront);
+			const float sinFront = glm::sin(glm::acos(cosFront));
+			if (offsetLength > glm::epsilon<float>()) {
+				nodeInfo.m_globalPosition =
+					parentInfo.m_globalPosition
+					+ parentInfo.m_length * parentInfo.m_globalDirection +
+					parentRegulatedLeft * nodeData.m_offset.x * profile.m_info.m_cellRadius +
+					parentRegulatedUp * nodeData.m_offset.y * profile.m_info.m_cellRadius +
+					parentRegulatedFront * offsetLength * sinFront * profile.m_info.m_cellRadius + 
+					parentRegulatedLeft * offsetLength * (1.0f - cosFront) * profile.m_info.m_cellRadius +
+					parentRegulatedUp * offsetLength * (1.0f - cosFront) * profile.m_info.m_cellRadius +
+					0.5f * parentInfo.m_length;
+			}else
+			{
+				nodeInfo.m_globalPosition =
+					parentInfo.m_globalPosition
+					+ parentInfo.m_length * parentInfo.m_globalDirection;
+			}
 		}
 		skeleton.m_min = glm::min(skeleton.m_min, nodeInfo.m_globalPosition);
 		skeleton.m_max = glm::max(skeleton.m_max, nodeInfo.m_globalPosition);
