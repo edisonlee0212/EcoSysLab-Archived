@@ -33,12 +33,9 @@ void TreePipeModel::ShiftSkeleton()
 				nodeInfo.m_globalPosition =
 					parentInfo.m_globalPosition
 					+ parentInfo.m_length * parentInfo.m_globalDirection +
-					parentRegulatedLeft * nodeData.m_offset.x * profile.m_info.m_cellRadius +
-					parentRegulatedUp * nodeData.m_offset.y * profile.m_info.m_cellRadius +
-					parentRegulatedFront * offsetLength * sinFront * profile.m_info.m_cellRadius + 
-					parentRegulatedLeft * offsetLength * (1.0f - cosFront) * profile.m_info.m_cellRadius +
-					parentRegulatedUp * offsetLength * (1.0f - cosFront) * profile.m_info.m_cellRadius +
-					0.5f * parentInfo.m_length;
+					parentRegulatedLeft * (nodeData.m_offset.x + offsetLength * (1.0f - cosFront)) * profile.m_info.m_cellRadius +
+					parentRegulatedUp * (nodeData.m_offset.y + offsetLength * (1.0f - cosFront))* profile.m_info.m_cellRadius +
+					parentRegulatedFront * (offsetLength * sinFront + 0.5f * parentInfo.m_length) * profile.m_info.m_cellRadius;
 			}else
 			{
 				nodeInfo.m_globalPosition =
