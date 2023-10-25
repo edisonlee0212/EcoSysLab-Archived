@@ -100,7 +100,12 @@ void TreePointCloud::ImportGraph(const std::filesystem::path& path, float scaleF
 			const auto& inTreeParts = treeParts[i];
 			auto& treePart = m_treeParts.emplace_back();
 			treePart.m_handle = m_treeParts.size() - 1;
-			treePart.m_color = inTreeParts["Color"].as<glm::vec3>() / 255.0f;
+			try {
+				if (inTreeParts["Color"]) treePart.m_color = inTreeParts["Color"].as<glm::vec3>() / 255.0f;
+			}catch(const std::exception& e)
+			{
+				EVOENGINE_ERROR("Color is wrong at node " + std::to_string(i) + ": " + std::string(e.what()));
+			}
 			for (const auto& inBranch : inTreeParts["Branches"]) {
 				auto& branch = m_scannedBranches.emplace_back();
 				branch.m_bezierCurve.m_p0 = inBranch["Start Pos"].as<glm::vec3>() * scaleFactor;

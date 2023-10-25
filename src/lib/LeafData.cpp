@@ -216,15 +216,26 @@ void LeafData::GenerateLeafGeometry(const SorghumStatePair& sorghumStatePair,
 		}
 		if (i != 0) {
 			for (int j = 0; j < vertsCount - 1; j++) {
-				// Down triangle
-				triangles->emplace_back(vertexIndex + ((i - 1) + 1) * vertsCount + j,
-					vertexIndex + (i - 1) * vertsCount + j + 1,
-					vertexIndex + (i - 1) * vertsCount + j);
-				// Up triangle
-				triangles->emplace_back(vertexIndex + (i - 1) * vertsCount + j + 1,
-					vertexIndex + ((i - 1) + 1) * vertsCount + j,
-					vertexIndex + ((i - 1) + 1) * vertsCount + j +
-					1);
+				if (isBottomFace) {
+					// Down triangle
+					triangles->emplace_back(vertexIndex + i * vertsCount + j,
+						vertexIndex + (i - 1) * vertsCount + j + 1,
+						vertexIndex + (i - 1) * vertsCount + j);
+					// Up triangle
+					triangles->emplace_back(vertexIndex + (i - 1) * vertsCount + j + 1,
+						vertexIndex + i * vertsCount + j,
+						vertexIndex + i * vertsCount + j + 1);
+				}else
+				{
+					// Down triangle
+					triangles->emplace_back(vertexIndex + (i - 1) * vertsCount + j,
+						vertexIndex + (i - 1) * vertsCount + j + 1,
+						vertexIndex + i * vertsCount + j);
+					// Up triangle
+					triangles->emplace_back(vertexIndex + i * vertsCount + j + 1,
+						vertexIndex + i * vertsCount + j,
+						vertexIndex + (i - 1) * vertsCount + j + 1);
+				}
 			}
 		}
 	}

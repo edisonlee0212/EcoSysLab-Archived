@@ -45,7 +45,11 @@ public:
 #pragma endregion
 #endif
 
-  bool m_enableBottomFace = false;
+  bool m_bottomFace = true;
+  bool m_separated = true;
+  bool m_includeStem = true;
+  
+
   bool m_autoRefreshSorghums = true;
   EntityArchetype m_leafArchetype;
   EntityQuery m_leafQuery;
@@ -75,8 +79,8 @@ public:
   AssetRef m_leafNormalTexture;
   AssetRef m_segmentedLeafMaterials[25];
 
-  float m_verticalSubdivisionMaxUnitLength = 0.01f;
-  int m_horizontalSubdivisionStep = 4;
+  float m_verticalSubdivisionMaxUnitLength = 0.1f;
+  int m_horizontalSubdivisionStep = 2;
   float m_skeletonWidth = 0.0025f;
 
   glm::vec3 m_skeletonColor = glm::vec3(0);

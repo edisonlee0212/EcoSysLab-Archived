@@ -23,27 +23,23 @@ void SorghumData::OnCreate() {}
 void SorghumData::OnDestroy() {
 	m_descriptor.Clear();
 	m_meshGenerated = false;
-	m_seperated = true;
-	m_includeStem = true;
-	m_segmentedMask = false;
 }
 
 void SorghumData::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	static const char* SorghumModes[]{ "Procedural Growth", "Sorghum State" };
-	ImGui::Checkbox("Seperated", &m_seperated);
-	ImGui::Checkbox("Include stem", &m_includeStem);
-	ImGui::Checkbox("Mask", &m_segmentedMask);
+	
+	
 	if (ImGui::Checkbox("Skeleton", &m_skeleton)) {
 		FormPlant();
 		ApplyGeometry();
 	}
-
+	ImGui::Checkbox("Mask", &m_segmentedMask);
 	ImGui::Combo("Mode", &m_mode, SorghumModes, IM_ARRAYSIZE(SorghumModes));
 	switch ((SorghumMode)m_mode) {
 	case SorghumMode::ProceduralSorghum: {
 		editorLayer->DragAndDropButton<ProceduralSorghum>(m_descriptor,
 			"Procedural Sorghum");
-		auto descriptor = m_descriptor.Get<ProceduralSorghum>();
+		const auto descriptor = m_descriptor.Get<ProceduralSorghum>();
 		if (descriptor) {
 			if (ImGui::SliderFloat("Time", &m_currentTime, 0.0f,
 				descriptor->GetCurrentEndTime())) {
@@ -113,15 +109,13 @@ void SorghumData::ExportModel(const std::string& filename,
 
 void SorghumData::Serialize(YAML::Emitter& out) {
 	out << YAML::Key << "m_mode" << YAML::Value << m_mode;
+	out << YAML::Key << "m_segmentedMask" << YAML::Value << m_segmentedMask;
 	out << YAML::Key << "m_seed" << YAML::Value << m_seed;
 	out << YAML::Key << "m_skeleton" << YAML::Value << m_skeleton;
 	out << YAML::Key << "m_gravityDirection" << YAML::Value << m_gravityDirection;
 	out << YAML::Key << "m_currentTime" << YAML::Value << m_currentTime;
 	out << YAML::Key << "m_recordedVersion" << YAML::Value << m_recordedVersion;
 	out << YAML::Key << "m_meshGenerated" << YAML::Value << m_meshGenerated;
-	out << YAML::Key << "m_seperated" << YAML::Value << m_seperated;
-	out << YAML::Key << "m_includeStem" << YAML::Value << m_includeStem;
-	out << YAML::Key << "m_segmentedMask" << YAML::Value << m_segmentedMask;
 	out << YAML::Key << "m_descriptor" << YAML::BeginMap;
 	m_descriptor.Serialize(out);
 	out << YAML::EndMap;
@@ -134,19 +128,14 @@ void SorghumData::Deserialize(const YAML::Node& in) {
 
 	if (in["m_gravityDirection"])
 		m_gravityDirection = in["m_gravityDirection"].as<glm::vec3>();
+	if (in["m_segmentedMask"])
+		m_segmentedMask = in["m_segmentedMask"].as<bool>();
 	if (in["m_meshGenerated"])
 		m_meshGenerated = in["m_meshGenerated"].as<bool>();
 	if (in["m_currentTime"])
 		m_currentTime = in["m_currentTime"].as<float>();
 	if (in["m_skeleton"])
 		m_skeleton = in["m_skeleton"].as<bool>();
-	if (in["m_seperated"])
-		m_seperated = in["m_seperated"].as<bool>();
-	if (in["m_includeStem"])
-		m_includeStem = in["m_includeStem"].as<bool>();
-	if (in["m_segmentedMask"])
-		m_segmentedMask = in["m_segmentedMask"].as<bool>();
-
 	if (in["m_recordedVersion"])
 		m_recordedVersion = in["m_recordedVersion"].as<unsigned>();
 	if (in["m_descriptor"])
@@ -193,7 +182,7 @@ void SorghumData::FormPlant() {
 	for (int i = 0; i < leafSize; i++) {
 		Entity leaf = sorghumLayer->CreateSorghumLeaf(GetOwner(), i);
 		auto leafData = scene->GetOrSetPrivateComponent<LeafData>(leaf).lock();
-		leafData->FormLeaf(statePair, m_skeleton, m_bottomFace);
+		leafData->FormLeaf(statePair, m_skeleton, sorghumLayer->m_bottomFace);
 	}
 	auto panicle = sorghumLayer->CreateSorghumPanicle(GetOwner());
 	auto panicleData =
@@ -204,8 +193,8 @@ void SorghumData::ApplyGeometry() {
 	auto scene = GetScene();
 	auto owner = GetOwner();
 	auto sorghumLayer = Application::GetLayer<SorghumLayer>();
-	bool seperated = m_seperated || m_segmentedMask;
-	auto bottomFace = !m_skeleton && !m_segmentedMask && m_bottomFace;
+	bool seperated = sorghumLayer->m_separated || m_segmentedMask;
+	auto bottomFace = !m_skeleton && !m_segmentedMask && sorghumLayer->m_bottomFace;
 #ifdef BUILD_WITH_RAYTRACER
 	auto leafCBTFGroup = sorghumLayer->m_leafCBTFGroup.Get<CBTFGroup>();
 	bool btfAvailable = false;
@@ -222,7 +211,7 @@ void SorghumData::ApplyGeometry() {
 		std::vector<glm::uvec3> triangles;
 
 		scene->ForEachChild(owner, [&](Entity child) {
-			if (m_includeStem && scene->HasDataComponent<StemTag>(child)) {
+			if (sorghumLayer->m_includeStem && scene->HasDataComponent<StemTag>(child)) {
 				auto stemData = scene->GetOrSetPrivateComponent<StemData>(child).lock();
 				vertices.insert(vertices.end(), stemData->m_vertices.begin(),
 					stemData->m_vertices.end());
@@ -380,7 +369,7 @@ void SorghumData::ApplyGeometry() {
 	else {
 		int i = 0;
 		scene->ForEachChild(owner, [&](Entity child) {
-			if (m_includeStem && scene->HasDataComponent<StemTag>(child)) {
+			if (sorghumLayer->m_includeStem && scene->HasDataComponent<StemTag>(child)) {
 				auto stemData = scene->GetOrSetPrivateComponent<StemData>(child).lock();
 				auto stemGeometryEntity = scene->CreateEntity(
 					sorghumLayer->m_stemGeometryArchetype, "Stem Geometry");
@@ -583,12 +572,14 @@ void SorghumData::ApplyGeometry() {
 	m_meshGenerated = true;
 }
 
-void SorghumData::SetTime(float time) {
+void SorghumData::SetTime(const float time) {
 	m_currentTime = time;
 	FormPlant();
 }
-void SorghumData::SetEnableSegmentedMask(bool value) {
-	if (!m_seperated) {
+void SorghumData::SetEnableSegmentedMask(const bool value)
+{
+	const auto sorghumLayer = Application::GetLayer<SorghumLayer>();
+	if (!sorghumLayer->m_separated) {
 		EVOENGINE_ERROR("Leaf not seperated!");
 		return;
 	}
@@ -597,21 +588,20 @@ void SorghumData::SetEnableSegmentedMask(bool value) {
 		return;
 	}
 	m_segmentedMask = value;
-	auto bottomFace = !m_skeleton && !m_segmentedMask && m_bottomFace;
-	auto scene = GetScene();
-	auto owner = GetOwner();
-	auto sorghumLayer = Application::GetLayer<SorghumLayer>();
+	const auto bottomFace = !m_skeleton && !m_segmentedMask && sorghumLayer->m_bottomFace;
+	const auto scene = GetScene();
+	const auto owner = GetOwner();
 	int i = 0;
 	scene->ForEachChild(owner, [&](Entity child) {
-		if (m_includeStem && scene->HasDataComponent<StemTag>(child)) {
-			auto stemData = scene->GetOrSetPrivateComponent<StemData>(child).lock();
-			auto stemGeometryEntity = scene->GetChild(child, 0);
+		if (sorghumLayer->m_includeStem && scene->HasDataComponent<StemTag>(child)) {
+			const auto stemData = scene->GetOrSetPrivateComponent<StemData>(child).lock();
+			const auto stemGeometryEntity = scene->GetChild(child, 0);
 			scene->SetParent(stemGeometryEntity, child);
-			auto meshRenderer =
+			const auto meshRenderer =
 				scene->GetOrSetPrivateComponent<MeshRenderer>(stemGeometryEntity)
 				.lock();
 			if (m_segmentedMask) {
-				auto material = ProjectManager::CreateTemporaryAsset<Material>();
+				const auto material = ProjectManager::CreateTemporaryAsset<Material>();
 				meshRenderer->m_material = material;
 				material->m_drawSettings.m_cullMode = VK_CULL_MODE_NONE;
 				material->m_materialProperties.m_albedoColor = stemData->m_vertexColor;
@@ -619,7 +609,7 @@ void SorghumData::SetEnableSegmentedMask(bool value) {
 				material->m_materialProperties.m_metallic = 0.0f;
 			}
 			else if (m_skeleton) {
-				auto material = ProjectManager::CreateTemporaryAsset<Material>();
+				const auto material = ProjectManager::CreateTemporaryAsset<Material>();
 				meshRenderer->m_material = material;
 				material->m_materialProperties.m_albedoColor =
 					sorghumLayer->m_skeletonColor;
@@ -628,7 +618,7 @@ void SorghumData::SetEnableSegmentedMask(bool value) {
 				meshRenderer->m_material = sorghumLayer->m_leafMaterial;
 			}
 #ifdef BUILD_WITH_RAYTRACER
-			auto btfMeshRenderer =
+			const auto btfMeshRenderer =
 				scene->GetOrSetPrivateComponent<BTFMeshRenderer>(stemGeometryEntity)
 				.lock();
 			if (m_skeleton || m_segmentedMask) {
@@ -642,15 +632,15 @@ void SorghumData::SetEnableSegmentedMask(bool value) {
 #endif
 		}
 		else if (scene->HasDataComponent<LeafTag>(child)) {
-			auto leafData = scene->GetOrSetPrivateComponent<LeafData>(child).lock();
-			auto leafTopFaceGeometryEntity = scene->GetChild(child, 0);
-			auto leafTopFaceMeshRenderer =
+			const auto leafData = scene->GetOrSetPrivateComponent<LeafData>(child).lock();
+			const auto leafTopFaceGeometryEntity = scene->GetChild(child, 0);
+			const auto leafTopFaceMeshRenderer =
 				scene
 				->GetOrSetPrivateComponent<MeshRenderer>(
 					leafTopFaceGeometryEntity)
 				.lock();
 			if (m_segmentedMask) {
-				auto material = ProjectManager::CreateTemporaryAsset<Material>();
+				const auto material = ProjectManager::CreateTemporaryAsset<Material>();
 				leafTopFaceMeshRenderer->m_material = material;
 				material->m_drawSettings.m_cullMode = VK_CULL_MODE_NONE;
 				material->m_materialProperties.m_albedoColor = leafData->m_vertexColor;
@@ -658,7 +648,7 @@ void SorghumData::SetEnableSegmentedMask(bool value) {
 				material->m_materialProperties.m_metallic = 0.0f;
 			}
 			else if (m_skeleton) {
-				auto material = ProjectManager::CreateTemporaryAsset<Material>();
+				const auto material = ProjectManager::CreateTemporaryAsset<Material>();
 				leafTopFaceMeshRenderer->m_material = material;
 				material->m_materialProperties.m_albedoColor =
 					sorghumLayer->m_skeletonColor;
@@ -667,7 +657,7 @@ void SorghumData::SetEnableSegmentedMask(bool value) {
 				leafTopFaceMeshRenderer->m_material = sorghumLayer->m_leafMaterial;
 			}
 #ifdef BUILD_WITH_RAYTRACER
-			auto leafTopFaceBtfMeshRenderer =
+			const auto leafTopFaceBtfMeshRenderer =
 				scene
 				->GetOrSetPrivateComponent<BTFMeshRenderer>(
 					leafTopFaceGeometryEntity)
@@ -683,8 +673,8 @@ void SorghumData::SetEnableSegmentedMask(bool value) {
 					sorghumLayer->m_enableCompressedBTF);
 			}
 #endif
-			auto leafBottomFaceGeometryEntity = scene->GetChild(child, 1);
-			auto leafBottomFaceMeshRenderer =
+			const auto leafBottomFaceGeometryEntity = scene->GetChild(child, 1);
+			const auto leafBottomFaceMeshRenderer =
 				scene
 				->GetOrSetPrivateComponent<MeshRenderer>(
 					leafBottomFaceGeometryEntity)
@@ -692,7 +682,7 @@ void SorghumData::SetEnableSegmentedMask(bool value) {
 			if (bottomFace) {
 				leafBottomFaceMeshRenderer->SetEnabled(true);
 #ifdef BUILD_WITH_RAYTRACER
-				auto leafBottomFaceBtfMeshRenderer =
+				const auto leafBottomFaceBtfMeshRenderer =
 					scene
 					->GetOrSetPrivateComponent<BTFMeshRenderer>(
 						leafBottomFaceGeometryEntity)
@@ -706,7 +696,7 @@ void SorghumData::SetEnableSegmentedMask(bool value) {
 			else {
 				leafBottomFaceMeshRenderer->SetEnabled(false);
 #ifdef BUILD_WITH_RAYTRACER
-				auto leafBottomFaceBtfMeshRenderer =
+				const auto leafBottomFaceBtfMeshRenderer =
 					scene
 					->GetOrSetPrivateComponent<BTFMeshRenderer>(
 						leafBottomFaceGeometryEntity)
@@ -717,15 +707,15 @@ void SorghumData::SetEnableSegmentedMask(bool value) {
 			}
 		}
 		else if (scene->HasDataComponent<PanicleTag>(child)) {
-			auto panicleData =
+			const auto panicleData =
 				scene->GetOrSetPrivateComponent<PanicleData>(child).lock();
-			auto panicleGeometryEntity = scene->GetChild(child, 0);
+			const auto panicleGeometryEntity = scene->GetChild(child, 0);
 			scene->SetParent(panicleGeometryEntity, child);
-			auto meshRenderer =
+			const auto meshRenderer =
 				scene->GetOrSetPrivateComponent<MeshRenderer>(panicleGeometryEntity)
 				.lock();
 			if (m_segmentedMask) {
-				auto material = ProjectManager::CreateTemporaryAsset<Material>();
+				const auto material = ProjectManager::CreateTemporaryAsset<Material>();
 				meshRenderer->m_material = material;
 				material->m_drawSettings.m_cullMode = VK_CULL_MODE_NONE;
 				material->m_materialProperties.m_albedoColor = glm::vec3(0.0f);

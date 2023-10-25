@@ -20,9 +20,7 @@ public:
   AssetRef m_descriptor;
   int m_seed = 0;
   bool m_skeleton = false;
-  bool m_seperated = true;
-  bool m_includeStem = true;
-  bool m_bottomFace = false;
+  
 
   void OnCreate() override;
   void OnDestroy() override;

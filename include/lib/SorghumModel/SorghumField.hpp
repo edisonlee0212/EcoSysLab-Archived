@@ -15,8 +15,6 @@ public:
   friend class SorghumLayer;
 
 public:
-  bool m_seperated = false;
-  bool m_includeStem = true;
 
   int m_sizeLimit = 2000;
   float m_sorghumSize = 1.0f;

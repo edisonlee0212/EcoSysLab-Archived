@@ -33,9 +33,7 @@ void RectangularSorghumFieldPattern::GenerateField(
   }
 }
 void SorghumField::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
-  ImGui::Checkbox("Seperated", &m_seperated);
-  ImGui::Checkbox("Include stem", &m_includeStem);
-
+  
   ImGui::DragInt("Size limit", &m_sizeLimit, 1, 0, 10000);
   ImGui::DragFloat("Sorghum size", &m_sorghumSize, 0.01f, 0, 10);
   if (ImGui::Button("Refresh matrices")) {
@@ -50,9 +48,6 @@ void SorghumField::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 void SorghumField::Serialize(YAML::Emitter &out) {
   out << YAML::Key << "m_sizeLimit" << YAML::Value << m_sizeLimit;
   out << YAML::Key << "m_sorghumSize" << YAML::Value << m_sorghumSize;
-  out << YAML::Key << "m_seperated" << YAML::Value << m_seperated;
-  out << YAML::Key << "m_includeStem" << YAML::Value << m_includeStem;
-
 
   out << YAML::Key << "m_newSorghums" << YAML::Value << YAML::BeginSeq;
   for (auto &i : m_newSorghums) {
@@ -68,11 +63,6 @@ void SorghumField::Deserialize(const YAML::Node &in) {
     m_sizeLimit = in["m_sizeLimit"].as<int>();
   if (in["m_sorghumSize"])
     m_sorghumSize = in["m_sorghumSize"].as<float>();
-
-  if (in["m_seperated"])
-    m_seperated = in["m_seperated"].as<bool>();
-  if (in["m_includeStem"])
-    m_includeStem = in["m_includeStem"].as<bool>();
 
   m_newSorghums.clear();
   if (in["m_newSorghums"]) {
@@ -115,8 +105,6 @@ Entity SorghumField::InstantiateField() {
       sorghumData->m_mode = (int)SorghumMode::SorghumStateGenerator;
       sorghumData->m_descriptor = newSorghum.first;
       sorghumData->m_seed = size;
-      sorghumData->m_seperated = m_seperated;
-      sorghumData->m_includeStem = m_includeStem;
       sorghumData->SetTime(1.0f);
       scene->SetParent(sorghumEntity, field);
       size++;
@@ -321,12 +309,10 @@ PositionsField::InstantiateAroundIndex(unsigned i, float radius, glm::dvec2& off
                                  glm::scale(glm::vec3(m_sorghumSize));
 
       scene->SetDataComponent(sorghumEntity, sorghumTransform);
-      auto sorghumData =
+      const auto sorghumData =
           scene->GetOrSetPrivateComponent<SorghumData>(sorghumEntity).lock();
       sorghumData->m_descriptor = m_sorghumStateGenerator;
       sorghumData->m_mode = 1;
-      sorghumData->m_seperated = m_seperated;
-      sorghumData->m_includeStem = m_includeStem;
       sorghumData->m_seed = glm::linearRand(0, INT_MAX);
       sorghumData->SetTime(1.0f);
       scene->SetParent(sorghumEntity, field);

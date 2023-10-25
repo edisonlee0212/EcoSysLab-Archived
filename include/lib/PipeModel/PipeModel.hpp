@@ -16,9 +16,9 @@ namespace EcoSysLab
 	class PipeModel
 	{
 	public:
-		PipeModelPipeGroup m_pipeGroup;
-		PipeModelPipeProfileGroup m_pipeProfileGroup;
-		PipeModelSkeleton m_skeleton;
+		PipeModelPipeGroup_Old m_pipeGroup;
+		PipeModelPipeProfileGroup_Old m_pipeProfileGroup;
+		PipeModelSkeleton_Old m_skeleton;
 		void CalculatePipeSegmentInfos(const PipeModelParameters& pipeModelParameters);
 	};
 }

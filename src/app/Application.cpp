@@ -24,8 +24,11 @@
 #include "ParticlePhysics2DDemo.hpp"
 #include "Physics2DDemo.hpp"
 #include "SorghumLayer.hpp"
+#include "TreePipeBase.hpp"
 #include "TreePointCloud.hpp"
 #include "WindowLayer.hpp"
+#include "TreePipeNode.hpp"
+#include "TreePipeBase.hpp"
 using namespace EcoSysLab;
 
 void EngineSetup();
@@ -97,6 +100,9 @@ int main() {
 	ClassRegistry::RegisterAsset<NoiseSoilLayerDescriptor>("NoiseSoilLayerDescriptor", { ".nsld" });
 	ClassRegistry::RegisterPrivateComponent<Physics2DDemo>("Physics2DDemo");
 	ClassRegistry::RegisterPrivateComponent<ParticlePhysics2DDemo>("ParticlePhysics2DDemo");
+
+	ClassRegistry::RegisterPrivateComponent<TreePipeBase>("TreePipeBase");
+	ClassRegistry::RegisterPrivateComponent<TreePipeNode>("TreePipeNode");
 	ApplicationInfo applicationConfigs;
 	applicationConfigs.m_applicationName = "EcoSysLab";
 	Application::Initialize(applicationConfigs);

@@ -55,7 +55,6 @@ void TreePipeModel::ShiftSkeleton()
 void TreePipeModel::UpdatePipeModels(const TreeModel& targetTreeModel, const PipeModelParameters& pipeModelParameters)
 {
 	m_shootPipeModel = {};
-	m_rootPipeModel = {};
 
 	auto& skeleton = m_shootPipeModel.m_skeleton;
 	auto& profileGroup = m_shootPipeModel.m_pipeProfileGroup;

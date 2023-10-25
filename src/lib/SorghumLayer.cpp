@@ -128,7 +128,6 @@ void SorghumLayer::OnCreate() {
 		auto material = ProjectManager::CreateTemporaryAsset<Material>();
 		m_leafMaterial = material;
 		material->SetAlbedoTexture(m_leafAlbedoTexture.Get<Texture2D>());
-		material->m_drawSettings.m_cullMode = VK_CULL_MODE_NONE;
 		material->m_materialProperties.m_albedoColor =
 			glm::vec3(113.0f / 255, 169.0f / 255, 44.0f / 255);
 		material->m_materialProperties.m_roughness = 0.8f;
@@ -138,7 +137,7 @@ void SorghumLayer::OnCreate() {
 	if (!m_leafBottomFaceMaterial.Get<Material>()) {
 		auto material = ProjectManager::CreateTemporaryAsset<Material>();
 		m_leafBottomFaceMaterial = material;
-		material->m_drawSettings.m_cullMode = VK_CULL_MODE_NONE;
+		material->SetAlbedoTexture(m_leafAlbedoTexture.Get<Texture2D>());
 		material->m_materialProperties.m_albedoColor =
 			glm::vec3(113.0f / 255, 169.0f / 255, 44.0f / 255);
 		material->m_materialProperties.m_roughness = 0.8f;
@@ -148,7 +147,6 @@ void SorghumLayer::OnCreate() {
 	if (!m_panicleMaterial.Get<Material>()) {
 		auto material = ProjectManager::CreateTemporaryAsset<Material>();
 		m_panicleMaterial = material;
-		material->m_drawSettings.m_cullMode = VK_CULL_MODE_BACK_BIT;
 		material->m_materialProperties.m_albedoColor =
 			glm::vec3(255.0 / 255, 210.0 / 255, 0.0 / 255);
 		material->m_materialProperties.m_roughness = 0.5f;
@@ -159,7 +157,6 @@ void SorghumLayer::OnCreate() {
 		if (!i.Get<Material>()) {
 			auto material = ProjectManager::CreateTemporaryAsset<Material>();
 			i = material;
-			material->m_drawSettings.m_cullMode = VK_CULL_MODE_NONE;
 			material->m_materialProperties.m_albedoColor =
 				glm::linearRand(glm::vec3(0.0f), glm::vec3(1.0f));
 			material->m_materialProperties.m_roughness = 1.0f;
@@ -260,7 +257,10 @@ void SorghumLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 #endif
 		ImGui::Separator();
 		ImGui::Checkbox("Auto regenerate sorghum", &m_autoRefreshSorghums);
-		ImGui::Checkbox("Bottom Face", &m_enableBottomFace);
+		ImGui::Checkbox("Bottom Face", &m_bottomFace);
+		
+		ImGui::Checkbox("Leaf Separated", &m_separated);
+		ImGui::Checkbox("Include stem", &m_includeStem);
 		if (ImGui::Button("Generate mesh for all sorghums")) {
 			GenerateMeshForAllSorghums();
 		}
@@ -562,7 +562,6 @@ Entity SorghumLayer::CreateSorghum(
 		scene->GetOrSetPrivateComponent<SorghumData>(sorghum).lock();
 	sorghumData->m_mode = (int)SorghumMode::SorghumStateGenerator;
 	sorghumData->m_descriptor = descriptor;
-	sorghumData->m_bottomFace = m_enableBottomFace;
 	sorghumData->SetTime(1.0f);
 	sorghumData->FormPlant();
 	sorghumData->ApplyGeometry();
