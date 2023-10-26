@@ -24,13 +24,19 @@ namespace EcoSysLab {
 		[[nodiscard]] glm::vec3 GetPoint(const glm::vec3& normalDir, float angle, bool isStart) const;
 	};
 
-	struct PresentationOverrideSettings
+	struct FoliageOverrideSettings
 	{
-		glm::vec3 m_leafSize = glm::vec3(0.03f, 1.0f, 0.03f);
+		glm::vec3 m_leafSize = glm::vec3(0.02f, 1.0f, 0.02f);
 		int m_leafCountPerInternode = 8;
-		float m_distanceToEndLimit = 2.f;
-		float m_positionVariance = 0.2f;
-		float m_phototropism = 0.9f;
+		float m_positionVariance = 0.1f;
+
+		float m_maxNodeThickness = 0.003f;
+		float m_minRootDistance = 1.75f;
+		float m_maxEndDistance = 0.2f;
+	};
+
+	struct MeshOverrideSettings
+	{
 		glm::vec3 m_rootOverrideColor = glm::vec3(80, 60, 50) / 255.0f;
 		glm::vec3 m_branchOverrideColor = glm::vec3(109, 79, 75) / 255.0f;
 		glm::vec3 m_foliageOverrideColor = glm::vec3(152 / 255.0f, 203 / 255.0f, 0 / 255.0f);
@@ -44,8 +50,9 @@ namespace EcoSysLab {
 		float m_apicalAngleVariance = 3.0f;
 		float m_branchingAngle = 30.f;
 		float m_thickness = 0.002f;
-		float m_minNodeThicknessRequirement = 0.003f;
-		float m_distanceFromRoot = 0.0f;
+		float m_maxNodeThickness = 0.003f;
+		float m_minRootDistance = 1.75f;
+		float m_maxEndDistance = 999.0f;
 		int m_segmentSize = 8;
 		float m_unitDistance = 0.03f;
 	};
@@ -56,8 +63,9 @@ namespace EcoSysLab {
 		float m_apicalAngleVariance = 5.0f;
 		float m_branchingAngle = 30.f;
 		float m_thickness = 0.002f;
-		float m_minNodeThicknessRequirement = 0.003f;
-		float m_distanceFromRoot = 0.0f;
+		float m_maxNodeThickness = 0.003f;
+		float m_minRootDistance = 0.0f;
+		float m_maxEndDistance = 999.0f;
 		int m_segmentSize = 8;
 		float m_unitDistance = 0.025f;
 	};
@@ -72,12 +80,15 @@ namespace EcoSysLab {
 		bool m_enableRoot = true;
 		bool m_enableFineRoot = true;
 		bool m_enableTwig = true;
-		bool m_overridePresentation = false;
-		PresentationOverrideSettings m_presentationOverrideSettings;
+
+		bool m_presentationOverride = false;
+		bool m_foliageOverride = true;
+		FoliageOverrideSettings m_foliageOverrideSettings = {};
+		MeshOverrideSettings m_presentationOverrideSettings = {};
 		AssetRef m_foliageTexture;
 
-		float m_resolution = 0.0002f;
-		float m_subdivision = 3.0f;
+		float m_ringXSubdivision = 0.01f;
+		float m_ringYSubdivision = 0.1f;
 		bool m_overrideRadius = false;
 		float m_radius = 0.01f;
 		bool m_overrideVertexColor = false;
@@ -101,9 +112,6 @@ namespace EcoSysLab {
 
 		unsigned m_branchMeshType = 0;
 		unsigned m_rootMeshType = 0;
-
-		bool m_detailedFoliage = false;
-
 
 		FineRootParameters m_fineRootParameters{};
 		TwigParameters m_twigParameters{};
@@ -132,7 +140,6 @@ namespace EcoSysLab {
 	void CylindricalMeshGenerator<SkeletonData, FlowData, NodeData>::Generate(const 
 		Skeleton<SkeletonData, FlowData, NodeData>& treeSkeleton, std::vector<Vertex>& vertices,
 		std::vector<unsigned int>& indices, const TreeMeshGeneratorSettings& settings, float maxThickness) const {
-		int parentStep = -1;
 		const auto& sortedInternodeList = treeSkeleton.RefSortedNodeList();
 		std::vector<std::vector<RingSegment>> ringsList;
 		std::vector<int> steps;
@@ -169,23 +176,23 @@ namespace EcoSysLab {
 			thicknessEnd = settings.m_radius;
 		}
 
-		if (settings.m_overridePresentation && settings.m_presentationOverrideSettings.m_limitMaxThickness)
+		if (settings.m_presentationOverride && settings.m_presentationOverrideSettings.m_limitMaxThickness)
 		{
 			thicknessStart = glm::min(thicknessStart, maxThickness);
 			thicknessEnd = glm::min(thicknessEnd, maxThickness);
 		}
 
 #pragma region Subdivision internode here.
-		int step = thicknessStart / settings.m_resolution;
+		const auto diameter = glm::max(thicknessStart, thicknessEnd) * 2.0f * glm::pi<float>();
+		int step = diameter / settings.m_ringXSubdivision;
 		if (step < 4)
 			step = 4;
 		if (step % 2 != 0)
-			step++;
+			++step;
 		steps[internodeIndex] = step;
-		int amount = static_cast<int>(0.5f +
-			internodeInfo.m_length * settings.m_subdivision);
+		int amount = glm::max(1, static_cast<int>(internodeInfo.m_length / settings.m_ringYSubdivision));
 		if (amount % 2 != 0)
-			amount++;
+			++amount;
 		BezierCurve curve = BezierCurve(
 			positionStart,
 			positionStart +
@@ -240,28 +247,26 @@ namespace EcoSysLab {
 			if (rings.empty()) {
 				continue;
 			}
-			auto step = steps[internodeIndex];
 			// For stitching
-			const int pStep = parentStep > 0 ? parentStep : step;
-			parentStep = step;
+			const int step = steps[internodeIndex];
 
-			float angleStep = 360.0f / static_cast<float>(pStep);
+			float angleStep = 360.0f / static_cast<float>(step);
 			int vertexIndex = vertices.size();
 			Vertex archetype;
 			if (settings.m_overrideVertexColor) archetype.m_color = glm::vec4(settings.m_branchVertexColor, 1.0f);
 			//else archetype.m_color = branchColors.at(internodeHandle);
 
-			float textureXStep = 1.0f / pStep * 4.0f;
+			float textureXStep = 1.0f / step * 4.0f;
 
 			const auto startPosition = rings.at(0).m_startPosition;
 			const auto endPosition = rings.back().m_endPosition;
-			for (int p = 0; p < pStep; p++) {
+			for (int p = 0; p < step; p++) {
 				archetype.m_position =
 					rings.at(0).GetPoint(up, angleStep * p, true);
 				float distanceToStart = 0;
 				float distanceToEnd = 1;
 				const float x =
-					p < pStep / 2 ? p * textureXStep : (pStep - p) * textureXStep;
+					p < step / 2 ? p * textureXStep : (step - p) * textureXStep;
 				archetype.m_texCoord = glm::vec2(x, 0.0f);
 				archetype.m_color = internodeInfo.m_color;
 				vertices.push_back(archetype);
@@ -269,9 +274,9 @@ namespace EcoSysLab {
 			std::vector<float> angles;
 			angles.resize(step);
 			std::vector<float> pAngles;
-			pAngles.resize(pStep);
+			pAngles.resize(step);
 
-			for (auto p = 0; p < pStep; p++) {
+			for (auto p = 0; p < step; p++) {
 				pAngles[p] = angleStep * p;
 			}
 			angleStep = 360.0f / static_cast<float>(step);
@@ -281,9 +286,9 @@ namespace EcoSysLab {
 
 			std::vector<unsigned> pTarget;
 			std::vector<unsigned> target;
-			pTarget.resize(pStep);
+			pTarget.resize(step);
 			target.resize(step);
-			for (int p = 0; p < pStep; p++) {
+			for (int p = 0; p < step; p++) {
 				// First we allocate nearest vertices for parent.
 				auto minAngleDiff = 360.0f;
 				for (auto j = 0; j < step; j++) {
@@ -297,7 +302,7 @@ namespace EcoSysLab {
 			for (int s = 0; s < step; s++) {
 				// Second we allocate nearest vertices for child
 				float minAngleDiff = 360.0f;
-				for (int j = 0; j < pStep; j++) {
+				for (int j = 0; j < step; j++) {
 					const float diff = glm::abs(angles[s] - pAngles[j]);
 					if (diff < minAngleDiff) {
 						minAngleDiff = diff;
@@ -305,25 +310,25 @@ namespace EcoSysLab {
 					}
 				}
 			}
-			for (int p = 0; p < pStep; p++) {
-				if (pTarget[p] == pTarget[p == pStep - 1 ? 0 : p + 1]) {
+			for (int p = 0; p < step; p++) {
+				if (pTarget[p] == pTarget[p == step - 1 ? 0 : p + 1]) {
 					indices.push_back(vertexIndex + p);
-					indices.push_back(vertexIndex + (p == pStep - 1 ? 0 : p + 1));
-					indices.push_back(vertexIndex + pStep + pTarget[p]);
+					indices.push_back(vertexIndex + (p == step - 1 ? 0 : p + 1));
+					indices.push_back(vertexIndex + step + pTarget[p]);
 				}
 				else {
 					indices.push_back(vertexIndex + p);
-					indices.push_back(vertexIndex + (p == pStep - 1 ? 0 : p + 1));
-					indices.push_back(vertexIndex + pStep + pTarget[p]);
+					indices.push_back(vertexIndex + (p == step - 1 ? 0 : p + 1));
+					indices.push_back(vertexIndex + step + pTarget[p]);
 
-					indices.push_back(vertexIndex + pStep +
-						pTarget[p == pStep - 1 ? 0 : p + 1]);
-					indices.push_back(vertexIndex + pStep + pTarget[p]);
-					indices.push_back(vertexIndex + (p == pStep - 1 ? 0 : p + 1));
+					indices.push_back(vertexIndex + step +
+						pTarget[p == step - 1 ? 0 : p + 1]);
+					indices.push_back(vertexIndex + step + pTarget[p]);
+					indices.push_back(vertexIndex + (p == step - 1 ? 0 : p + 1));
 				}
 			}
 
-			vertexIndex += pStep;
+			vertexIndex += step;
 			textureXStep = 1.0f / step * 4.0f;
 			int ringSize = rings.size();
 			for (auto ringIndex = 0; ringIndex < ringSize; ringIndex++) {

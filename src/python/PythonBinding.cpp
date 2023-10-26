@@ -345,13 +345,13 @@ PYBIND11_MODULE(pyecosyslab, m) {
 		.def_readwrite("m_overrideThickness", &ReconstructionSettings::m_overrideThickness)
 		.def_readwrite("m_minimumNodeCount", &ReconstructionSettings::m_minimumNodeCount);
 
-	py::class_<PresentationOverrideSettings>(m, "PresentationOverrideSettings")
+	py::class_<MeshOverrideSettings>(m, "MeshOverrideSettings")
 		.def(py::init<>())
-		.def_readwrite("m_leafCountPerInternode", &PresentationOverrideSettings::m_leafCountPerInternode)
-		.def_readwrite("m_distanceToEndLimit", &PresentationOverrideSettings::m_distanceToEndLimit)
-		.def_readwrite("m_positionVariance", &PresentationOverrideSettings::m_positionVariance)
-		.def_readwrite("m_phototropism", &PresentationOverrideSettings::m_phototropism)
-		.def_readwrite("m_limitMaxThickness", &PresentationOverrideSettings::m_limitMaxThickness);
+		.def_readwrite("m_leafCountPerInternode", &MeshOverrideSettings::m_leafCountPerInternode)
+		.def_readwrite("m_distanceToEndLimit", &MeshOverrideSettings::m_distanceToEndLimit)
+		.def_readwrite("m_positionVariance", &MeshOverrideSettings::m_positionVariance)
+		.def_readwrite("m_phototropism", &MeshOverrideSettings::m_phototropism)
+		.def_readwrite("m_limitMaxThickness", &MeshOverrideSettings::m_limitMaxThickness);
 
 	py::class_<TreeMeshGeneratorSettings>(m, "TreeMeshGeneratorSettings")
 		.def(py::init<>())
@@ -362,10 +362,10 @@ PYBIND11_MODULE(pyecosyslab, m) {
 		.def_readwrite("m_enableRoot", &TreeMeshGeneratorSettings::m_enableRoot)
 		.def_readwrite("m_enableFineRoot", &TreeMeshGeneratorSettings::m_enableFineRoot)
 		.def_readwrite("m_enableTwig", &TreeMeshGeneratorSettings::m_enableTwig)
-		.def_readwrite("m_overridePresentation", &TreeMeshGeneratorSettings::m_overridePresentation)
+		.def_readwrite("m_foliageOverride", &TreeMeshGeneratorSettings::m_foliageOverride)
 		.def_readwrite("m_presentationOverrideSettings", &TreeMeshGeneratorSettings::m_presentationOverrideSettings)
-		.def_readwrite("m_resolution", &TreeMeshGeneratorSettings::m_resolution)
-		.def_readwrite("m_subdivision", &TreeMeshGeneratorSettings::m_subdivision)
+		.def_readwrite("m_ringXSubdivision", &TreeMeshGeneratorSettings::m_ringXSubdivision)
+		.def_readwrite("m_ringYSubdivision", &TreeMeshGeneratorSettings::m_ringYSubdivision)
 		.def_readwrite("m_overrideRadius", &TreeMeshGeneratorSettings::m_overrideRadius)
 		.def_readwrite("m_radius", &TreeMeshGeneratorSettings::m_radius)
 		.def_readwrite("m_overrideVertexColor", &TreeMeshGeneratorSettings::m_overrideVertexColor)

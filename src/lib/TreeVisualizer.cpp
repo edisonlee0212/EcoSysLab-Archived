@@ -391,7 +391,7 @@ TreeVisualizer::InspectInternode(
 		auto& internodeData = internode.m_data;
 		ImGui::InputFloat("Start Age", (float*)&internodeData.m_startAge, 1, 100, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
-		ImGui::InputFloat("Distance to end", (float*)&internodeData.m_maxDistanceToAnyBranchEnd, 1, 100,
+		ImGui::InputFloat("Distance to end", (float*)&internode.m_info.m_endDistance, 1, 100,
 			"%.3f",
 			ImGuiInputTextFlags_ReadOnly);
 		ImGui::InputFloat("Descendent biomass", (float*)&internodeData.m_descendentTotalBiomass, 1, 100, "%.3f",
@@ -399,7 +399,7 @@ TreeVisualizer::InspectInternode(
 		ImGui::InputFloat("Biomass", (float*)&internodeData.m_biomass, 1, 100, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
 
-		ImGui::InputFloat("Root distance", (float*)&internodeData.m_rootDistance, 1, 100, "%.3f",
+		ImGui::InputFloat("Root distance", (float*)&internode.m_info.m_rootDistance, 1, 100, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
 		ImGui::InputFloat3("Light dir", (float*)&internodeData.m_lightDirection.x, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
@@ -540,14 +540,14 @@ TreeVisualizer::PeekInternode(const ShootSkeleton& shootSkeleton, NodeHandle int
 		ImGui::InputInt("Start Age", (int*)&internodeData.m_startAge, 1, 100, ImGuiInputTextFlags_ReadOnly);
 		ImGui::InputFloat("Sagging", (float*)&internodeData.m_sagging, 1, 100, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
-		ImGui::InputFloat("Distance to end", (float*)&internodeData.m_maxDistanceToAnyBranchEnd, 1, 100,
+		ImGui::InputFloat("Distance to end", (float*)&internode.m_info.m_endDistance, 1, 100,
 			"%.3f",
 			ImGuiInputTextFlags_ReadOnly);
 		ImGui::InputFloat("Descendent biomass", (float*)&internodeData.m_descendentTotalBiomass, 1, 100, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
 		ImGui::InputFloat("Biomass", (float*)&internodeData.m_biomass, 1, 100, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
-		ImGui::InputFloat("Root distance", (float*)&internodeData.m_rootDistance, 1, 100, "%.3f",
+		ImGui::InputFloat("Root distance", (float*)&internode.m_info.m_rootDistance, 1, 100, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
 		ImGui::InputFloat3("Light dir", (float*)&internodeData.m_lightDirection.x, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);

@@ -122,8 +122,6 @@ namespace EcoSysLab {
 		std::vector<PointHandle> m_allocatedPoints;
 		std::vector<PointHandle> m_filteredPoints;
 		BranchHandle m_branchHandle;
-
-		float m_rootDistance = 0.0f;
 	};
 	typedef Skeleton<ReconstructionSkeletonData, ReconstructionFlowData, ReconstructionNodeData> ReconstructionSkeleton;
 
@@ -165,6 +163,7 @@ namespace EcoSysLab {
 
 		void FormGeometryEntity(const TreeMeshGeneratorSettings& meshGeneratorSettings);
 
-		std::vector<std::shared_ptr<Mesh>> GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings);
+		std::vector<std::shared_ptr<Mesh>> GenerateBranchMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings) const;
+		std::vector<std::shared_ptr<Mesh>> GenerateFoliageMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings) const;
 	};
 }

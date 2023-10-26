@@ -98,13 +98,11 @@ namespace EcoSysLab
 		glm::vec3 m_desiredGlobalPosition = glm::vec3(0.0f);
 		float m_sagging = 0;
 
-		float m_maxDistanceToAnyBranchEnd = 0;
 		int m_order = 0;
 		float m_descendentTotalBiomass = 0;
 		float m_biomass = 0;
 		float m_extraMass = 0.0f;
-		float m_rootDistance = 0;
-
+		
 		float m_temperature = 0.0f;
 
 		float m_growthPotential = 0.0f;

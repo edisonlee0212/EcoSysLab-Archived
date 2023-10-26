@@ -679,13 +679,11 @@ void TreeModel::ShootGrowthPostProcess(const glm::mat4& globalTransform, Climate
 				internodeData.m_localRotation = glm::vec3(0.0f);
 				internodeInfo.m_globalRotation = internodeInfo.m_regulatedGlobalRotation = internodeData.m_desiredGlobalRotation = glm::vec3(glm::radians(90.0f), 0.0f, 0.0f);
 				internodeInfo.m_globalDirection = glm::normalize(internodeInfo.m_globalRotation * glm::vec3(0, 0, -1));
-				internodeData.m_rootDistance =
-					internodeInfo.m_length / shootGrowthParameters.m_internodeLength;
+				internodeInfo.m_rootDistance = internodeInfo.m_length;
 			}
 			else {
 				auto& parentInternode = m_shootSkeleton.RefNode(internode.GetParentHandle());
-				internodeData.m_rootDistance = parentInternode.m_data.m_rootDistance + internodeInfo.m_length /
-					shootGrowthParameters.m_internodeLength;
+				internodeInfo.m_rootDistance = parentInternode.m_info.m_rootDistance + internodeInfo.m_length;
 				internodeInfo.m_globalRotation =
 					parentInternode.m_info.m_globalRotation * internodeData.m_localRotation;
 
@@ -1477,15 +1475,15 @@ void TreeModel::CalculateThicknessAndSagging(NodeHandle internodeHandle,
 	internodeData.m_descendentTotalBiomass = internodeData.m_biomass = 0.0f;
 	float maxDistanceToAnyBranchEnd = 0;
 	float childThicknessCollection = 0.0f;
-
+	internodeInfo.m_endDistance = 0.0f;
 	int maxChildHandle = -1;
 	//float maxChildBiomass = 999.f;
 	int minChildOrder = 999;
 	for (const auto& i : internode.RefChildHandles()) {
-		auto& childInternode = m_shootSkeleton.RefNode(i);
+		const auto& childInternode = m_shootSkeleton.PeekNode(i);
 		const float childMaxDistanceToAnyBranchEnd =
-			childInternode.m_data.m_maxDistanceToAnyBranchEnd +
-			childInternode.m_info.m_length / shootGrowthParameters.m_internodeLength;
+			childInternode.m_info.m_endDistance +
+			childInternode.m_info.m_length;
 		maxDistanceToAnyBranchEnd = glm::max(maxDistanceToAnyBranchEnd, childMaxDistanceToAnyBranchEnd);
 
 		childThicknessCollection += glm::pow(childInternode.m_info.m_thickness,
@@ -1500,7 +1498,7 @@ void TreeModel::CalculateThicknessAndSagging(NodeHandle internodeHandle,
 	childThicknessCollection += shootGrowthParameters.m_thicknessAccumulateAgeFactor * shootGrowthParameters.m_endNodeThickness * shootGrowthParameters.m_internodeGrowthRate * (m_age - internodeData.m_startAge);
 
 
-	internodeData.m_maxDistanceToAnyBranchEnd = maxDistanceToAnyBranchEnd;
+	internodeInfo.m_endDistance = maxDistanceToAnyBranchEnd;
 	if (childThicknessCollection != 0.0f) {
 		internodeInfo.m_thickness = glm::max(internodeInfo.m_thickness, glm::pow(childThicknessCollection,
 			shootGrowthParameters.m_thicknessAccumulationFactor));
@@ -1623,7 +1621,7 @@ int TreeModel::GetFineRootCount() const
 
 bool TreeModel::PruneInternodes(const ShootGrowthController& shootGrowthParameters) {
 
-	const auto maxDistance = m_shootSkeleton.RefNode(0).m_data.m_maxDistanceToAnyBranchEnd;
+	const auto maxDistance = m_shootSkeleton.RefNode(0).m_info.m_endDistance;
 	const auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
 	bool anyInternodePruned = false;
 	for (const auto& internodeHandle : sortedInternodeList) {
@@ -1634,8 +1632,8 @@ bool TreeModel::PruneInternodes(const ShootGrowthController& shootGrowthParamete
 		const float pruningProbability = m_currentDeltaTime * shootGrowthParameters.m_pruningFactor(internode);
 		if (internode.IsEndNode() && pruningProbability >= glm::linearRand(0.0f, 1.0f)) pruning = true;
 		if (internode.m_info.m_globalPosition.y <= 0.5f && internode.m_data.m_order != 0 && glm::linearRand(0.0f, 1.0f) < m_currentDeltaTime * 0.1f) pruning = true;
-		if (maxDistance > 5 && internode.m_data.m_order != 0 &&
-			internode.m_data.m_rootDistance / maxDistance < shootGrowthParameters.m_lowBranchPruning) {
+		if (maxDistance > 5.0f * shootGrowthParameters.m_internodeLength && internode.m_data.m_order != 0 &&
+			internode.m_info.m_rootDistance / maxDistance < shootGrowthParameters.m_lowBranchPruning) {
 			pruning = true;
 		}
 		if (pruning)
@@ -1783,7 +1781,7 @@ void TreeModel::CalculateVigorRequirement(const RootGrowthController& rootGrowth
 void TreeModel::SampleTemperature(const glm::mat4& globalTransform, ClimateModel& climateModel)
 {
 	const auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
-	for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); it++) {
+	for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); ++it) {
 		auto& internode = m_shootSkeleton.RefNode(*it);
 		auto& internodeData = internode.m_data;
 		auto& internodeInfo = internode.m_info;
@@ -1794,7 +1792,7 @@ void TreeModel::SampleTemperature(const glm::mat4& globalTransform, ClimateModel
 void TreeModel::SampleSoilDensity(const glm::mat4& globalTransform, VoxelSoilModel& soilModel)
 {
 	const auto& sortedRootNodeList = m_rootSkeleton.RefSortedNodeList();
-	for (auto it = sortedRootNodeList.rbegin(); it != sortedRootNodeList.rend(); it++) {
+	for (auto it = sortedRootNodeList.rbegin(); it != sortedRootNodeList.rend(); ++it) {
 		auto& rootNode = m_rootSkeleton.RefNode(*it);
 		auto& rootNodeData = rootNode.m_data;
 		auto& rootNodeInfo = rootNode.m_info;

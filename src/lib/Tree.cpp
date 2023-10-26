@@ -735,7 +735,7 @@ void Tree::GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings
 		vertexAttributes.m_texCoord = true;
 		mesh->SetVertices(vertexAttributes, vertices, indices);
 		auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(branchEntity).lock();
-		if (meshGeneratorSettings.m_overridePresentation)
+		if (meshGeneratorSettings.m_foliageOverride)
 		{
 			material->m_materialProperties.m_albedoColor = meshGeneratorSettings.m_presentationOverrideSettings.m_branchOverrideColor;
 		}
@@ -781,7 +781,7 @@ void Tree::GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings
 		}
 		auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
 		auto material = ProjectManager::CreateTemporaryAsset<Material>();
-		if (meshGeneratorSettings.m_overridePresentation)
+		if (meshGeneratorSettings.m_foliageOverride)
 		{
 			material->m_materialProperties.m_albedoColor = meshGeneratorSettings.m_presentationOverrideSettings.m_rootOverrideColor;
 		}
@@ -812,7 +812,7 @@ void Tree::GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings
 			const auto& rootNodeData = rootNode.m_data;
 			const auto& rootNodeInfo = rootNode.m_info;
 			std::vector<std::vector<glm::vec4>> fineRoots{};
-			if (rootNodeInfo.m_thickness < meshGeneratorSettings.m_fineRootParameters.m_minNodeThicknessRequirement && rootNodeData.m_rootDistance > meshGeneratorSettings.m_fineRootParameters.m_distanceFromRoot)
+			if (rootNodeInfo.m_thickness < meshGeneratorSettings.m_fineRootParameters.m_maxNodeThickness && rootNodeData.m_rootDistance > meshGeneratorSettings.m_fineRootParameters.m_minRootDistance)
 			{
 				int fineRootCount = rootNodeInfo.m_length / meshGeneratorSettings.m_fineRootParameters.m_unitDistance;
 				fineRoots.resize(fineRootCount);
@@ -884,7 +884,7 @@ void Tree::GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings
 
 		auto strands = ProjectManager::CreateTemporaryAsset<Strands>();
 		auto material = ProjectManager::CreateTemporaryAsset<Material>();
-		if (meshGeneratorSettings.m_overridePresentation)
+		if (meshGeneratorSettings.m_foliageOverride)
 		{
 			material->m_materialProperties.m_albedoColor = meshGeneratorSettings.m_presentationOverrideSettings.m_rootOverrideColor;
 		}
@@ -915,7 +915,9 @@ void Tree::GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings
 			const auto& internodeData = internode.m_data;
 			const auto& internodeInfo = internode.m_info;
 			std::vector<std::vector<glm::vec4>> twigs{};
-			if (internodeInfo.m_thickness < meshGeneratorSettings.m_twigParameters.m_minNodeThicknessRequirement && internodeData.m_rootDistance > meshGeneratorSettings.m_twigParameters.m_distanceFromRoot)
+			if (internodeInfo.m_thickness < meshGeneratorSettings.m_twigParameters.m_maxNodeThickness
+				&& internodeInfo.m_rootDistance > meshGeneratorSettings.m_twigParameters.m_minRootDistance
+				&& internodeInfo.m_endDistance < meshGeneratorSettings.m_twigParameters.m_maxEndDistance)
 			{
 				int twigCount = internodeInfo.m_length / meshGeneratorSettings.m_twigParameters.m_unitDistance;
 				twigs.resize(twigCount);
@@ -987,7 +989,7 @@ void Tree::GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings
 
 		auto strands = ProjectManager::CreateTemporaryAsset<Strands>();
 		auto material = ProjectManager::CreateTemporaryAsset<Material>();
-		if (meshGeneratorSettings.m_overridePresentation)
+		if (meshGeneratorSettings.m_foliageOverride)
 		{
 			material->m_materialProperties.m_albedoColor = meshGeneratorSettings.m_presentationOverrideSettings.m_branchOverrideColor;
 		}
@@ -1007,7 +1009,7 @@ void Tree::GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings
 		Entity foliageEntity;
 		foliageEntity = scene->CreateEntity("Foliage Mesh");
 		scene->SetParent(foliageEntity, self);
-		if (!meshGeneratorSettings.m_detailedFoliage) {
+		
 			std::vector<Vertex> vertices;
 			std::vector<unsigned int> indices;
 			auto quadMesh = Resources::GetResource<Mesh>("PRIMITIVE_QUAD");
@@ -1020,7 +1022,7 @@ void Tree::GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings
 				const auto& internode = m_treeModel.PeekShootSkeleton(actualIteration).PeekNode(internodeHandle);
 				const auto& internodeInfo = internode.m_info;
 				const auto& internodeData = internode.m_data;
-				if (!meshGeneratorSettings.m_overridePresentation) {
+				if (!meshGeneratorSettings.m_foliageOverride) {
 					for (const auto& bud : internodeData.m_buds) {
 						if (bud.m_status != BudStatus::Flushed) continue;
 						if (bud.m_reproductiveModule.m_maturity <= 0.0f) continue;
@@ -1054,15 +1056,16 @@ void Tree::GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings
 				}
 				else
 				{
-					const auto& presentationSettings = meshGeneratorSettings.m_presentationOverrideSettings;
-					if (internodeData.m_maxDistanceToAnyBranchEnd < presentationSettings.m_distanceToEndLimit) {
-						for (int i = 0; i < presentationSettings.m_leafCountPerInternode; i++)
+					const auto& foliageOverrideSettings = meshGeneratorSettings.m_foliageOverrideSettings;
+					if (internodeInfo.m_thickness < foliageOverrideSettings.m_maxNodeThickness
+						&& internodeInfo.m_rootDistance > foliageOverrideSettings.m_minRootDistance
+						&& internodeInfo.m_endDistance < foliageOverrideSettings.m_maxEndDistance) {
+						for (int i = 0; i < foliageOverrideSettings.m_leafCountPerInternode; i++)
 						{
-							auto leafSize = presentationSettings.m_leafSize;
+							auto leafSize = foliageOverrideSettings.m_leafSize;
 							glm::quat rotation = internodeInfo.m_globalDirection * glm::quat(glm::radians(glm::linearRand(glm::vec3(0.0f), glm::vec3(360.0f))));
 							auto front = rotation * glm::vec3(0, 0, -1);
-							TreeModel::ApplyTropism(internodeData.m_lightDirection, presentationSettings.m_phototropism, rotation);
-							auto foliagePosition = internodeInfo.m_globalPosition + front * (leafSize.z * 1.5f);
+							auto foliagePosition = internodeInfo.m_globalPosition + front * (leafSize.z * 1.5f) + glm::sphericalRand(1.0f) * glm::linearRand(0.0f, foliageOverrideSettings.m_positionVariance);
 							auto leafTransform = glm::translate(foliagePosition) * glm::mat4_cast(rotation) * glm::scale(leafSize);
 
 							auto& matrix = leafTransform;
@@ -1098,7 +1101,7 @@ void Tree::GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings
 			VertexAttributes vertexAttributes{};
 			vertexAttributes.m_texCoord = true;
 			mesh->SetVertices(vertexAttributes, vertices, indices);
-			if (meshGeneratorSettings.m_overridePresentation)
+			if (meshGeneratorSettings.m_foliageOverride)
 			{
 				material->m_materialProperties.m_albedoColor = meshGeneratorSettings.m_presentationOverrideSettings.m_foliageOverrideColor;
 			}
@@ -1115,32 +1118,7 @@ void Tree::GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings
 			auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(foliageEntity).lock();
 			meshRenderer->m_mesh = mesh;
 			meshRenderer->m_material = material;
-		}
-		else
-		{
-			for (int i = 0; i < 8; i++)
-			{
-				float maxHealth = i / 8.0f;
-				const auto& nodeList = m_treeModel.PeekShootSkeleton(actualIteration).RefSortedNodeList();
-				for (const auto& internodeHandle : nodeList) {
-					const auto& internode = m_treeModel.PeekShootSkeleton(actualIteration).PeekNode(internodeHandle);
-					const auto& internodeInfo = internode.m_info;
-					const auto& internodeData = internode.m_data;
-					if (!meshGeneratorSettings.m_overridePresentation) {
-						for (const auto& bud : internodeData.m_buds) {
-							if (bud.m_status != BudStatus::Flushed) continue;
-							if (bud.m_reproductiveModule.m_maturity <= 0.0f) continue;
-							if (bud.m_type == BudType::Leaf)
-							{
-								auto matrix = bud.m_reproductiveModule.m_transform;
-								Vertex archetype;
-
-							}
-						}
-					}
-				}
-			}
-		}
+		
 	}
 	if (meshGeneratorSettings.m_enableFruit)
 	{
@@ -1159,7 +1137,7 @@ void Tree::GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings
 			const auto& internode = m_treeModel.PeekShootSkeleton(actualIteration).PeekNode(internodeHandle);
 			const auto& internodeInfo = internode.m_info;
 			const auto& internodeData = internode.m_data;
-			if (!meshGeneratorSettings.m_overridePresentation) {
+			if (!meshGeneratorSettings.m_foliageOverride) {
 				for (const auto& bud : internodeData.m_buds) {
 					if (bud.m_status != BudStatus::Flushed) continue;
 					if (bud.m_reproductiveModule.m_maturity <= 0.0f) continue;
@@ -1198,7 +1176,7 @@ void Tree::GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings
 		VertexAttributes vertexAttributes{};
 		vertexAttributes.m_texCoord = true;
 		mesh->SetVertices(vertexAttributes, vertices, indices);
-		if (meshGeneratorSettings.m_overridePresentation)
+		if (meshGeneratorSettings.m_foliageOverride)
 		{
 			material->m_materialProperties.m_albedoColor = meshGeneratorSettings.m_presentationOverrideSettings.m_foliageOverrideColor;
 		}

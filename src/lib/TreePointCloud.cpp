@@ -1,6 +1,5 @@
 #include "TreePointCloud.hpp"
 #include <unordered_set>
-#include "TreePointCloud.hpp"
 #include "Graphics.hpp"
 #include "EcoSysLabLayer.hpp"
 #include "rapidcsv.h"
@@ -102,7 +101,8 @@ void TreePointCloud::ImportGraph(const std::filesystem::path& path, float scaleF
 			treePart.m_handle = m_treeParts.size() - 1;
 			try {
 				if (inTreeParts["Color"]) treePart.m_color = inTreeParts["Color"].as<glm::vec3>() / 255.0f;
-			}catch(const std::exception& e)
+			}
+			catch (const std::exception& e)
 			{
 				EVOENGINE_ERROR("Color is wrong at node " + std::to_string(i) + ": " + std::string(e.what()));
 			}
@@ -116,7 +116,7 @@ void TreePointCloud::ImportGraph(const std::filesystem::path& path, float scaleF
 					glm::normalize(inBranch["Start Dir"].as<glm::vec3>()) * cPLength + branch.m_bezierCurve.m_p0;
 				branch.m_bezierCurve.m_p2 =
 					branch.m_bezierCurve.m_p3 - glm::normalize(inBranch["End Dir"].as<glm::vec3>()) * cPLength;
-				if(glm::any(glm::isnan(branch.m_bezierCurve.m_p1)))
+				if (glm::any(glm::isnan(branch.m_bezierCurve.m_p1)))
 				{
 					branch.m_bezierCurve.m_p1 = glm::mix(branch.m_bezierCurve.m_p0, branch.m_bezierCurve.m_p3, 0.25f);
 				}
@@ -202,56 +202,109 @@ void TreePointCloud::ExportForestOBJ(const std::filesystem::path& path, const Tr
 			start += "\n";
 			of.write(start.c_str(), start.size());
 			of.flush();
-			auto meshes = GenerateMeshes(meshGeneratorSettings);
-			
-			unsigned treeIndex = 0;
 			unsigned startIndex = 1;
-			for (auto& mesh : meshes) {
+			const auto branchMeshes = GenerateBranchMeshes(meshGeneratorSettings);
+			if(!branchMeshes.empty()){
 				
-				auto& vertices = mesh->UnsafeGetVertices();
-				auto& triangles = mesh->UnsafeGetTriangles();
-				if (!vertices.empty() && !triangles.empty()) {
-					std::string header =
-						"#Vertices: " + std::to_string(vertices.size()) +
-						", tris: " + std::to_string(triangles.size());
-					header += "\n";
-					of.write(header.c_str(), header.size());
-					of.flush();
-					std::stringstream data;
-					data << "o tree " + std::to_string(treeIndex) + "\n";
+				unsigned treeIndex = 0;
+				for (auto& mesh : branchMeshes) {
+					auto& vertices = mesh->UnsafeGetVertices();
+					auto& triangles = mesh->UnsafeGetTriangles();
+					if (!vertices.empty() && !triangles.empty()) {
+						std::string header =
+							"#Vertices: " + std::to_string(vertices.size()) +
+							", tris: " + std::to_string(triangles.size());
+						header += "\n";
+						of.write(header.c_str(), header.size());
+						of.flush();
+						std::stringstream data;
+						data << "o tree " + std::to_string(treeIndex) + "\n";
 #pragma region Data collection
-					for (auto i = 0; i < vertices.size(); i++) {
-						auto& vertexPosition = vertices.at(i).m_position;
-						auto& color = vertices.at(i).m_color;
-						data << "v " + std::to_string(vertexPosition.x) + " " +
-							std::to_string(vertexPosition.y) + " " +
-							std::to_string(vertexPosition.z) + " " +
-							std::to_string(color.x) + " " + std::to_string(color.y) + " " +
-							std::to_string(color.z) + "\n";
-					}
-					for (const auto& vertex : vertices) {
-						data << "vt " + std::to_string(vertex.m_texCoord.x) + " " +
-							std::to_string(vertex.m_texCoord.y) + "\n";
-					}
-					// data += "s off\n";
-					data << "# List of indices for faces vertices, with (x, y, z).\n";
-					for (auto i = 0; i < triangles.size(); i++) {
-						const auto triangle = triangles[i];
-						const auto f1 = triangle.x + startIndex;
-						const auto f2 = triangle.y + startIndex;
-						const auto f3 = triangle.z + startIndex;
-						data << "f " + std::to_string(f1) + "/" + std::to_string(f1) + "/" +
-							std::to_string(f1) + " " + std::to_string(f2) + "/" +
-							std::to_string(f2) + "/" + std::to_string(f2) + " " +
-							std::to_string(f3) + "/" + std::to_string(f3) + "/" +
-							std::to_string(f3) + "\n";
-					}
+						for (auto i = 0; i < vertices.size(); i++) {
+							auto& vertexPosition = vertices.at(i).m_position;
+							auto& color = vertices.at(i).m_color;
+							data << "v " + std::to_string(vertexPosition.x) + " " +
+								std::to_string(vertexPosition.y) + " " +
+								std::to_string(vertexPosition.z) + " " +
+								std::to_string(color.x) + " " + std::to_string(color.y) + " " +
+								std::to_string(color.z) + "\n";
+						}
+						for (const auto& vertex : vertices) {
+							data << "vt " + std::to_string(vertex.m_texCoord.x) + " " +
+								std::to_string(vertex.m_texCoord.y) + "\n";
+						}
+						// data += "s off\n";
+						data << "# List of indices for faces vertices, with (x, y, z).\n";
+						for (auto i = 0; i < triangles.size(); i++) {
+							const auto triangle = triangles[i];
+							const auto f1 = triangle.x + startIndex;
+							const auto f2 = triangle.y + startIndex;
+							const auto f3 = triangle.z + startIndex;
+							data << "f " + std::to_string(f1) + "/" + std::to_string(f1) + "/" +
+								std::to_string(f1) + " " + std::to_string(f2) + "/" +
+								std::to_string(f2) + "/" + std::to_string(f2) + " " +
+								std::to_string(f3) + "/" + std::to_string(f3) + "/" +
+								std::to_string(f3) + "\n";
+						}
 #pragma endregion
-					const auto result = data.str();
-					of.write(result.c_str(), result.size());
-					of.flush();
-					startIndex += vertices.size();
-					treeIndex++;
+						const auto result = data.str();
+						of.write(result.c_str(), result.size());
+						of.flush();
+						startIndex += vertices.size();
+						treeIndex++;
+					}
+				}
+			}
+			const auto foliageMeshes = GenerateFoliageMeshes(meshGeneratorSettings);
+			if(!foliageMeshes.empty()) {
+				
+				unsigned treeIndex = 0;
+				for (auto& mesh : foliageMeshes) {
+					auto& vertices = mesh->UnsafeGetVertices();
+					auto& triangles = mesh->UnsafeGetTriangles();
+					if (!vertices.empty() && !triangles.empty()) {
+						std::string header =
+							"#Vertices: " + std::to_string(vertices.size()) +
+							", tris: " + std::to_string(triangles.size());
+						header += "\n";
+						of.write(header.c_str(), header.size());
+						of.flush();
+						std::stringstream data;
+						data << "o tree " + std::to_string(treeIndex) + "\n";
+#pragma region Data collection
+						for (auto i = 0; i < vertices.size(); i++) {
+							auto& vertexPosition = vertices.at(i).m_position;
+							auto& color = vertices.at(i).m_color;
+							data << "v " + std::to_string(vertexPosition.x) + " " +
+								std::to_string(vertexPosition.y) + " " +
+								std::to_string(vertexPosition.z) + " " +
+								std::to_string(color.x) + " " + std::to_string(color.y) + " " +
+								std::to_string(color.z) + "\n";
+						}
+						for (const auto& vertex : vertices) {
+							data << "vt " + std::to_string(vertex.m_texCoord.x) + " " +
+								std::to_string(vertex.m_texCoord.y) + "\n";
+						}
+						// data += "s off\n";
+						data << "# List of indices for faces vertices, with (x, y, z).\n";
+						for (auto i = 0; i < triangles.size(); i++) {
+							const auto triangle = triangles[i];
+							const auto f1 = triangle.x + startIndex;
+							const auto f2 = triangle.y + startIndex;
+							const auto f3 = triangle.z + startIndex;
+							data << "f " + std::to_string(f1) + "/" + std::to_string(f1) + "/" +
+								std::to_string(f1) + " " + std::to_string(f2) + "/" +
+								std::to_string(f2) + "/" + std::to_string(f2) + " " +
+								std::to_string(f3) + "/" + std::to_string(f3) + "/" +
+								std::to_string(f3) + "\n";
+						}
+#pragma endregion
+						const auto result = data.str();
+						of.write(result.c_str(), result.size());
+						of.flush();
+						startIndex += vertices.size();
+						treeIndex++;
+					}
 				}
 			}
 			of.close();
@@ -264,7 +317,7 @@ void TreePointCloud::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 	static std::shared_ptr<ParticleInfoList> allocatedPointInfoList;
 	static std::shared_ptr<ParticleInfoList> scatterPointInfoList;
 	static std::shared_ptr<ParticleInfoList> nodeInfoList;
-	
+
 	static std::shared_ptr<ParticleInfoList> scatteredPointConnectionInfoList;
 	static std::vector<glm::vec3> scatteredPointConnectionsStarts;
 	static std::vector<glm::vec3> scatteredPointConnectionsEnds;
@@ -425,7 +478,7 @@ void TreePointCloud::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 						glm::translate(m_allocatedPoints[i].m_position) * glm::scale(glm::vec3(1.0f));
 					allocatedPointMatrices[i].m_instanceColor = glm::vec4(m_allocatedPoints[i].m_color, 1.0f);
 				}
-				
+
 				for (int i = 0; i < m_scannedBranches.size(); i++) {
 					scannedBranchConnectionStarts[i] = m_scannedBranches[i].m_bezierCurve.m_p0;
 					scannedBranchConnectionEnds[i] = m_scannedBranches[i].m_bezierCurve.m_p3;
@@ -681,7 +734,7 @@ void TreePointCloud::EstablishConnectivityGraph(const ConnectivityGraphSettings&
 				m_scatterPointsConnections.emplace_back(point.m_position, otherPoint.m_position);
 			});
 	}
-	
+
 	for (auto& branch : m_scannedBranches) {
 		float currentEdgeLength = settings.m_edgeLength;
 		auto shortenedP0 = branch.m_bezierCurve.GetPoint(settings.m_branchShortening);
@@ -729,10 +782,11 @@ void TreePointCloud::EstablishConnectivityGraph(const ConnectivityGraphSettings&
 					findBranchP3 = true;
 					auto& otherBranch = m_scannedBranches[voxel.m_branchHandle];
 					const auto search = branch.m_neighborBranchP3.find(voxel.m_branchHandle);
-					if(search != branch.m_neighborBranchP3.end() && search->second > distance)
+					if (search != branch.m_neighborBranchP3.end() && search->second > distance)
 					{
 						branch.m_neighborBranchP3.at(voxel.m_branchHandle) = distance;
-					}else
+					}
+					else
 					{
 						branch.m_neighborBranchP3[voxel.m_branchHandle] = distance;
 					}
@@ -787,7 +841,7 @@ void TreePointCloud::EstablishConnectivityGraph(const ConnectivityGraphSettings&
 		std::unordered_set<PointHandle> visitedPoints;
 		std::vector<PointHandle> processingPoints;
 		float distanceL = FLT_MAX;
-		for(const auto& i : scannedBranch.m_neighborScatterPointP0)
+		for (const auto& i : scannedBranch.m_neighborScatterPointP0)
 		{
 			processingPoints.emplace_back(i.second);
 			auto distance = glm::distance(scannedBranch.m_bezierCurve.GetPoint(settings.m_branchShortening), m_scatteredPoints[i.second].m_position);
@@ -1018,18 +1072,8 @@ void TreePointCloud::BuildSkeletons(const ReconstructionSettings& reconstruction
 			auto& node = skeleton.RefNode(nodeHandle);
 			auto& nodeInfo = node.m_info;
 			auto& nodeData = node.m_data;
-			if (node.GetParentHandle() == -1) {
-				nodeData.m_rootDistance =
-					nodeInfo.m_length / reconstructionSettings.m_internodeLength;
-			}
-			else
-			{
-				auto& parentInternode = skeleton.RefNode(node.GetParentHandle());
-				nodeData.m_rootDistance = parentInternode.m_data.m_rootDistance + nodeInfo.m_length /
-					reconstructionSettings.m_internodeLength;
-			}
 			if (nodeHandle == 0) continue;
-			
+
 			auto& parentNode = skeleton.RefNode(node.GetParentHandle());
 			auto front = glm::normalize(nodeData.m_localPosition);
 			nodeData.m_localPosition = glm::vec3(0.0f);
@@ -1037,14 +1081,14 @@ void TreePointCloud::BuildSkeletons(const ReconstructionSettings& reconstruction
 			auto regulatedUp = glm::normalize(glm::cross(glm::cross(front, parentUp), front));
 			nodeInfo.m_globalRotation = glm::quatLookAt(front, regulatedUp);
 			nodeData.m_localRotation = glm::inverse(parentNode.m_info.m_globalRotation) * nodeInfo.m_globalRotation;
-			
+
 		}
 		if (reconstructionSettings.m_overrideThickness) {
 			for (auto i = sortedNodeList.rbegin(); i != sortedNodeList.rend(); i++) {
 				auto& node = skeleton.RefNode(*i);
 				auto& nodeInfo = node.m_info;
 				auto& childHandles = node.RefChildHandles();
-				if(childHandles.empty())
+				if (childHandles.empty())
 				{
 					nodeInfo.m_thickness = reconstructionSettings.m_endNodeThickness;
 				}
@@ -1059,7 +1103,8 @@ void TreePointCloud::BuildSkeletons(const ReconstructionSettings& reconstruction
 						reconstructionSettings.m_thicknessSumFactor);
 				}
 			}
-		}else if(reconstructionSettings.m_limitParentThickness)
+		}
+		else if (reconstructionSettings.m_limitParentThickness)
 		{
 			for (auto i = sortedNodeList.rbegin(); i != sortedNodeList.rend(); i++) {
 				auto& node = skeleton.RefNode(*i);
@@ -1072,6 +1117,7 @@ void TreePointCloud::BuildSkeletons(const ReconstructionSettings& reconstruction
 		}
 		CalculateNodeTransforms(skeleton);
 		skeleton.CalculateFlows();
+		skeleton.CalculateDistance();
 	}
 
 
@@ -1169,7 +1215,7 @@ void TreePointCloud::FormGeometryEntity(const TreeMeshGeneratorSettings& meshGen
 			attributes.m_texCoord = true;
 			mesh->SetVertices(attributes, vertices, indices);
 			auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(branchEntity).lock();
-			if (meshGeneratorSettings.m_overridePresentation) {
+			if (meshGeneratorSettings.m_foliageOverride) {
 				material->m_materialProperties.m_albedoColor = meshGeneratorSettings.m_presentationOverrideSettings.m_branchOverrideColor;
 			}
 			else {
@@ -1184,7 +1230,7 @@ void TreePointCloud::FormGeometryEntity(const TreeMeshGeneratorSettings& meshGen
 		{
 			Entity twigEntity;
 			twigEntity = scene->CreateEntity("Twig Mesh");
-			scene->SetParent(twigEntity, self);
+			scene->SetParent(twigEntity, treeEntity);
 			std::vector<glm::uint> twigSegments;
 			std::vector<StrandPoint> twigPoints;
 			const auto& shootSkeleton = m_skeletons[i];
@@ -1195,7 +1241,9 @@ void TreePointCloud::FormGeometryEntity(const TreeMeshGeneratorSettings& meshGen
 				const auto& internodeData = internode.m_data;
 				const auto& internodeInfo = internode.m_info;
 				std::vector<std::vector<glm::vec4>> twigs{};
-				if (internodeInfo.m_thickness < meshGeneratorSettings.m_twigParameters.m_minNodeThicknessRequirement && internodeData.m_rootDistance > meshGeneratorSettings.m_twigParameters.m_distanceFromRoot)
+				if (internodeInfo.m_thickness < meshGeneratorSettings.m_twigParameters.m_maxNodeThickness
+					&& internodeInfo.m_rootDistance > meshGeneratorSettings.m_twigParameters.m_minRootDistance
+					&& internodeInfo.m_endDistance < meshGeneratorSettings.m_twigParameters.m_maxEndDistance)
 				{
 					int twigCount = internodeInfo.m_length / meshGeneratorSettings.m_twigParameters.m_unitDistance;
 					twigs.resize(twigCount);
@@ -1267,7 +1315,7 @@ void TreePointCloud::FormGeometryEntity(const TreeMeshGeneratorSettings& meshGen
 
 			auto strands = ProjectManager::CreateTemporaryAsset<Strands>();
 			auto material = ProjectManager::CreateTemporaryAsset<Material>();
-			if (meshGeneratorSettings.m_overridePresentation)
+			if (meshGeneratorSettings.m_foliageOverride)
 			{
 				material->m_materialProperties.m_albedoColor = meshGeneratorSettings.m_presentationOverrideSettings.m_branchOverrideColor;
 			}
@@ -1282,25 +1330,172 @@ void TreePointCloud::FormGeometryEntity(const TreeMeshGeneratorSettings& meshGen
 			strandsRenderer->m_strands = strands;
 			strandsRenderer->m_material = material;
 		}
+		if (meshGeneratorSettings.m_enableFoliage)
+		{
+			Entity foliageEntity;
+			foliageEntity = scene->CreateEntity("Foliage Mesh");
+			scene->SetParent(foliageEntity, treeEntity);
+			const auto& shootSkeleton = m_skeletons[i];
+			std::vector<Vertex> vertices;
+			std::vector<unsigned int> indices;
+			auto quadMesh = Resources::GetResource<Mesh>("PRIMITIVE_QUAD");
+			auto& quadTriangles = quadMesh->UnsafeGetTriangles();
+			auto quadVerticesSize = quadMesh->GetVerticesAmount();
+			size_t offset = 0;
+
+			const auto& nodeList = shootSkeleton.RefSortedNodeList();
+			for (const auto& internodeHandle : nodeList) {
+				const auto& internode = shootSkeleton.PeekNode(internodeHandle);
+				const auto& internodeInfo = internode.m_info;
+
+				const auto& foliageOverrideSettings = meshGeneratorSettings.m_foliageOverrideSettings;
+				if (internodeInfo.m_thickness < foliageOverrideSettings.m_maxNodeThickness
+					&& internodeInfo.m_rootDistance > foliageOverrideSettings.m_minRootDistance
+					&& internodeInfo.m_endDistance < foliageOverrideSettings.m_maxEndDistance) {
+					for (int i = 0; i < foliageOverrideSettings.m_leafCountPerInternode; i++)
+					{
+						auto leafSize = foliageOverrideSettings.m_leafSize;
+						glm::quat rotation = internodeInfo.m_globalDirection * glm::quat(glm::radians(glm::linearRand(glm::vec3(0.0f), glm::vec3(360.0f))));
+						auto front = rotation * glm::vec3(0, 0, -1);
+						auto foliagePosition = internodeInfo.m_globalPosition + front * (leafSize.z * 1.5f) + glm::sphericalRand(1.0f) * glm::linearRand(0.0f, foliageOverrideSettings.m_positionVariance);
+						auto leafTransform = glm::translate(foliagePosition) * glm::mat4_cast(rotation) * glm::scale(leafSize);
+
+						auto& matrix = leafTransform;
+						Vertex archetype;
+						for (auto i = 0; i < quadMesh->GetVerticesAmount(); i++) {
+							archetype.m_position =
+								matrix * glm::vec4(quadMesh->UnsafeGetVertices()[i].m_position, 1.0f);
+							archetype.m_normal = glm::normalize(glm::vec3(
+								matrix * glm::vec4(quadMesh->UnsafeGetVertices()[i].m_normal, 0.0f)));
+							archetype.m_tangent = glm::normalize(glm::vec3(
+								matrix *
+								glm::vec4(quadMesh->UnsafeGetVertices()[i].m_tangent, 0.0f)));
+							archetype.m_texCoord =
+								quadMesh->UnsafeGetVertices()[i].m_texCoord;
+							vertices.push_back(archetype);
+						}
+						for (auto triangle : quadTriangles) {
+							triangle.x += offset;
+							triangle.y += offset;
+							triangle.z += offset;
+							indices.push_back(triangle.x);
+							indices.push_back(triangle.y);
+							indices.push_back(triangle.z);
+						}
+						offset += quadVerticesSize;
+					}
+				}
+
+			}
+
+			auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
+			auto material = ProjectManager::CreateTemporaryAsset<Material>();
+			VertexAttributes vertexAttributes{};
+			vertexAttributes.m_texCoord = true;
+			mesh->SetVertices(vertexAttributes, vertices, indices);
+			if (meshGeneratorSettings.m_foliageOverride)
+			{
+				material->m_materialProperties.m_albedoColor = meshGeneratorSettings.m_presentationOverrideSettings.m_foliageOverrideColor;
+			}
+			else {
+				material->m_materialProperties.m_albedoColor = glm::vec3(152 / 255.0f, 203 / 255.0f, 0 / 255.0f);
+			}
+			material->m_materialProperties.m_roughness = 0.0f;
+			auto texRef = meshGeneratorSettings.m_foliageTexture;
+			if (texRef.Get<Texture2D>())
+			{
+				material->SetAlbedoTexture(texRef.Get<Texture2D>());
+
+			}
+			auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(foliageEntity).lock();
+			meshRenderer->m_mesh = mesh;
+			meshRenderer->m_material = material;
+
+		}
 	}
 }
 
-std::vector<std::shared_ptr<Mesh>> TreePointCloud::GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings)
+std::vector<std::shared_ptr<Mesh>> TreePointCloud::GenerateBranchMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings) const
 {
 	std::vector<std::shared_ptr<Mesh>> meshes{};
 	for (int i = 0; i < m_skeletons.size(); i++) {
-		if (meshGeneratorSettings.m_enableBranch) {
-			std::vector<Vertex> vertices;
-			std::vector<unsigned int> indices;
-			CylindricalMeshGenerator<ReconstructionSkeletonData, ReconstructionFlowData, ReconstructionNodeData> meshGenerator;
-			meshGenerator.Generate(m_skeletons[i], vertices, indices, meshGeneratorSettings, 999.0f);
+		std::vector<Vertex> vertices;
+		std::vector<unsigned int> indices;
+		CylindricalMeshGenerator<ReconstructionSkeletonData, ReconstructionFlowData, ReconstructionNodeData> meshGenerator;
+		meshGenerator.Generate(m_skeletons[i], vertices, indices, meshGeneratorSettings, 999.0f);
 
-			auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
-			VertexAttributes attributes{};
-			attributes.m_texCoord = true;
-			mesh->SetVertices(attributes, vertices, indices);
-			meshes.emplace_back(mesh);
+		auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
+		VertexAttributes attributes{};
+		attributes.m_texCoord = true;
+		mesh->SetVertices(attributes, vertices, indices);
+		meshes.emplace_back(mesh);
+	}
+	return meshes;
+}
+
+std::vector<std::shared_ptr<Mesh>> TreePointCloud::GenerateFoliageMeshes(
+	const TreeMeshGeneratorSettings& meshGeneratorSettings) const
+{
+	std::vector<std::shared_ptr<Mesh>> meshes{};
+	for (int i = 0; i < m_skeletons.size(); i++) {
+		std::vector<Vertex> vertices;
+		std::vector<unsigned int> indices;
+		
+		auto quadMesh = Resources::GetResource<Mesh>("PRIMITIVE_QUAD");
+		auto& quadTriangles = quadMesh->UnsafeGetTriangles();
+		auto quadVerticesSize = quadMesh->GetVerticesAmount();
+		size_t offset = 0;
+
+		const auto& nodeList = m_skeletons[i].RefSortedNodeList();
+		for (const auto& internodeHandle : nodeList) {
+			const auto& internode = m_skeletons[i].PeekNode(internodeHandle);
+			const auto& internodeInfo = internode.m_info;
+
+			const auto& foliageOverrideSettings = meshGeneratorSettings.m_foliageOverrideSettings;
+			if (internodeInfo.m_thickness < foliageOverrideSettings.m_maxNodeThickness
+				&& internodeInfo.m_rootDistance > foliageOverrideSettings.m_minRootDistance
+				&& internodeInfo.m_endDistance < foliageOverrideSettings.m_maxEndDistance) {
+				for (int i = 0; i < foliageOverrideSettings.m_leafCountPerInternode; i++)
+				{
+					auto leafSize = foliageOverrideSettings.m_leafSize;
+					glm::quat rotation = internodeInfo.m_globalDirection * glm::quat(glm::radians(glm::linearRand(glm::vec3(0.0f), glm::vec3(360.0f))));
+					auto front = rotation * glm::vec3(0, 0, -1);
+					auto foliagePosition = internodeInfo.m_globalPosition + front * (leafSize.z * 1.5f) + glm::sphericalRand(1.0f) * glm::linearRand(0.0f, foliageOverrideSettings.m_positionVariance);
+					auto leafTransform = glm::translate(foliagePosition) * glm::mat4_cast(rotation) * glm::scale(leafSize);
+
+					auto& matrix = leafTransform;
+					Vertex archetype;
+					for (auto i = 0; i < quadMesh->GetVerticesAmount(); i++) {
+						archetype.m_position =
+							matrix * glm::vec4(quadMesh->UnsafeGetVertices()[i].m_position, 1.0f);
+						archetype.m_normal = glm::normalize(glm::vec3(
+							matrix * glm::vec4(quadMesh->UnsafeGetVertices()[i].m_normal, 0.0f)));
+						archetype.m_tangent = glm::normalize(glm::vec3(
+							matrix *
+							glm::vec4(quadMesh->UnsafeGetVertices()[i].m_tangent, 0.0f)));
+						archetype.m_texCoord =
+							quadMesh->UnsafeGetVertices()[i].m_texCoord;
+						vertices.push_back(archetype);
+					}
+					for (auto triangle : quadTriangles) {
+						triangle.x += offset;
+						triangle.y += offset;
+						triangle.z += offset;
+						indices.push_back(triangle.x);
+						indices.push_back(triangle.y);
+						indices.push_back(triangle.z);
+					}
+					offset += quadVerticesSize;
+				}
+			}
+
 		}
+
+		auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
+		VertexAttributes attributes{};
+		attributes.m_texCoord = true;
+		mesh->SetVertices(attributes, vertices, indices);
+		meshes.emplace_back(mesh);
 	}
 	return meshes;
 }
@@ -1345,7 +1540,8 @@ void ReconstructionSettings::OnInspect() {
 		ImGui::DragFloat("End node thickness", &m_endNodeThickness, 0.001f, 0.001f, 1.0f);
 		ImGui::DragFloat("Thickness sum factor", &m_thicknessSumFactor, 0.01f, 0.0f, 2.0f);
 		ImGui::DragFloat("Thickness accumulation factor", &m_thicknessAccumulationFactor, 0.00001f, 0.0f, 1.0f, "%.5f");
-	}else
+	}
+	else
 	{
 		ImGui::Checkbox("Limit parent thickness", &m_limitParentThickness);
 	}

@@ -202,7 +202,7 @@ void EcoSysLabLayer::Visualization() {
 
 					branchStrandsRenderer->m_material = material;
 					material->m_materialProperties.m_albedoColor = glm::vec3(109, 79, 75) / 255.0f;
-					if (m_meshGeneratorSettings.m_overridePresentation) {
+					if (m_meshGeneratorSettings.m_foliageOverride) {
 						material->m_materialProperties.m_albedoColor = m_meshGeneratorSettings.m_presentationOverrideSettings.m_branchOverrideColor;
 					}
 					material->m_materialProperties.m_roughness = 1.0f;
@@ -220,7 +220,7 @@ void EcoSysLabLayer::Visualization() {
 
 					rootStrandsRenderer->m_material = material;
 					material->m_materialProperties.m_albedoColor = glm::vec3(80, 60, 50) / 255.0f;
-					if (m_meshGeneratorSettings.m_overridePresentation) {
+					if (m_meshGeneratorSettings.m_foliageOverride) {
 						material->m_materialProperties.m_albedoColor = m_meshGeneratorSettings.m_presentationOverrideSettings.m_rootOverrideColor;
 					}
 					material->m_materialProperties.m_roughness = 1.0f;
@@ -239,7 +239,7 @@ void EcoSysLabLayer::Visualization() {
 					material = ProjectManager::CreateTemporaryAsset<Material>();
 					foliageRenderer->m_material = material;
 					material->m_materialProperties.m_albedoColor = glm::vec3(80, 60, 50) / 255.0f;
-					if (m_meshGeneratorSettings.m_overridePresentation) {
+					if (m_meshGeneratorSettings.m_foliageOverride) {
 						material->m_materialProperties.m_albedoColor = m_meshGeneratorSettings.m_presentationOverrideSettings.m_foliageOverrideColor;
 					}
 					material->m_materialProperties.m_roughness = 1.0f;
@@ -258,7 +258,7 @@ void EcoSysLabLayer::Visualization() {
 					material = ProjectManager::CreateTemporaryAsset<Material>();
 					fruitRenderer->m_material = material;
 					material->m_materialProperties.m_albedoColor = glm::vec3(80, 60, 50) / 255.0f;
-					if (m_meshGeneratorSettings.m_overridePresentation) {
+					if (m_meshGeneratorSettings.m_foliageOverride) {
 						material->m_materialProperties.m_albedoColor = m_meshGeneratorSettings.m_presentationOverrideSettings.m_foliageOverrideColor;
 					}
 					material->m_materialProperties.m_roughness = 1.0f;
@@ -329,7 +329,7 @@ void EcoSysLabLayer::Visualization() {
 }
 
 void EcoSysLabLayer::ResetAllTrees(const std::vector<Entity>* treeEntities) {
-	auto scene = Application::GetActiveScene();
+	const auto scene = Application::GetActiveScene();
 	m_time = 0;
 	for (const auto& i : *treeEntities) {
 		const auto tree = scene->GetOrSetPrivateComponent<Tree>(i).lock();

@@ -22,6 +22,8 @@ namespace EcoSysLab {
 		glm::vec3 m_globalDirection = glm::vec3(0.0f);
 		float m_length = 0.0f;
 		float m_thickness = 0.1f;
+		float m_rootDistance = 0.0f;
+		float m_endDistance = 0.0f;
 
 		glm::quat m_regulatedGlobalRotation = glm::vec3(0.0f);
 
@@ -213,7 +215,7 @@ namespace EcoSysLab {
 		[[nodiscard]] int GetMaxIndex() const;
 		SkeletonData m_data;
 
-
+		void CalculateDistance();
 		void CalculateRegulatedGlobalRotation();
 		/**
 		 * Recycle (Remove) a node, the descendents of this node will also be recycled. The relevant flow will also be removed/restructured.
@@ -768,6 +770,36 @@ namespace EcoSysLab {
 	int Skeleton<SkeletonData, FlowData, NodeData>::GetMaxIndex() const
 	{
 		return m_maxIndex;
+	}
+
+	template <typename SkeletonData, typename FlowData, typename NodeData>
+	void Skeleton<SkeletonData, FlowData, NodeData>::CalculateDistance()
+	{
+		for (const auto& nodeHandle : m_sortedNodeList) {
+			auto& node = m_nodes[nodeHandle];
+			auto& nodeInfo = node.m_info;
+			if (node.GetParentHandle() == -1) {
+				nodeInfo.m_rootDistance = nodeInfo.m_length;
+			}
+			else {
+				const auto& parentInternode = m_nodes[node.GetParentHandle()];
+				nodeInfo.m_rootDistance = parentInternode.m_info.m_rootDistance + nodeInfo.m_length;
+			}
+		}
+		for (auto it = m_sortedNodeList.rbegin(); it != m_sortedNodeList.rend(); ++it) {
+			auto& node = m_nodes[*it];
+			float maxDistanceToAnyBranchEnd = 0;
+			node.m_info.m_endDistance = 0;
+			for (const auto& i : node.RefChildHandles())
+			{
+				const auto& childNode = m_nodes[i];
+				const float childMaxDistanceToAnyBranchEnd =
+					childNode.m_info.m_endDistance +
+					childNode.m_info.m_length;
+				maxDistanceToAnyBranchEnd = glm::max(maxDistanceToAnyBranchEnd, childMaxDistanceToAnyBranchEnd);
+			}
+			node.m_info.m_endDistance = maxDistanceToAnyBranchEnd;
+		}
 	}
 
 	template<typename SkeletonData, typename FlowData, typename NodeData>
