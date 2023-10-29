@@ -28,7 +28,13 @@ namespace EcoSysLab {
 		glm::quat m_regulatedGlobalRotation = glm::vec3(0.0f);
 
 		glm::vec4 m_color = glm::vec4(1.0f);
+		[[nodiscard]] glm::vec3 GetGlobalEndPosition() const;
 	};
+
+	inline glm::vec3 NodeInfo::GetGlobalEndPosition() const
+	{
+		return m_globalPosition + m_globalDirection * m_length;
+	}
 
 	struct FlowInfo {
 		glm::vec3 m_globalStartPosition = glm::vec3(0.0f);

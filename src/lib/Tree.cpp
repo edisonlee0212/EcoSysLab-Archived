@@ -1207,6 +1207,27 @@ void Tree::FromTreeGraphV2(const std::shared_ptr<TreeGraphV2>& treeGraphV2)
 {
 }
 
+bool Tree::ExportIOTree(const std::filesystem::path& path) const
+{
+	treeio::ArrayTree tree {};
+	m_treeModel.ExportTreeIOSkeleton(tree);
+	return tree.saveTree(path.string());
+}
+
+void Tree::ExportRadialBoundingVolume(const std::shared_ptr<RadialBoundingVolume>& rbv) const
+{
+	const auto& sortedInternodeList = m_treeModel.m_shootSkeleton.RefSortedNodeList();
+	const auto& skeleton = m_treeModel.m_shootSkeleton;
+	std::vector<glm::vec3> points;
+	for(const auto& nodeHandle : sortedInternodeList)
+	{
+		const auto& node = skeleton.PeekNode(nodeHandle);
+		points.emplace_back(node.m_info.m_globalPosition);
+		points.emplace_back(node.m_info.GetGlobalEndPosition());
+	}
+	rbv->CalculateVolume(points);
+}
+
 void TreeDescriptor::OnCreate() {
 
 }

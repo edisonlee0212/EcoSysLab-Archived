@@ -211,14 +211,21 @@ void VisualizeYaml(const std::string& yamlPath,
 	scene->DeleteEntity(tempEntity);
 }
 
-void BuildSpaceColonizationTreeOBJ(
+void BuildSpaceColonizationTreeData(
 	const float radius,
 	const std::string& binvoxPath,
 	const std::string& treeParametersPath,
-	const std::string& outputPath,
-	const TreeMeshGeneratorSettings& meshGeneratorSettings,
 	const float deltaTime,
-	const int iterations
+	const int iterations,
+	const TreeMeshGeneratorSettings& meshGeneratorSettings,
+	bool exportTreeMesh,
+	const std::string& treeMeshOutputPath,
+	bool exportTreeIO,
+	const std::string& treeIOOutputPath,
+	bool exportRadialBoundingVolume,
+	const std::string& radialBoundingVolumeOutputPath,
+	bool exportRadialBoundingVolumeMesh,
+	const std::string& radialBoundingVolumeMeshOutputPath
 	)
 {
 	const auto applicationStatus = Application::GetApplicationStatus();
@@ -267,8 +274,7 @@ void BuildSpaceColonizationTreeOBJ(
 		EVOENGINE_ERROR("No climate in scene!");
 		return;
 	}
-	
-	
+
 	const auto tempEntity = scene->CreateEntity("Temp");
 	const auto tree = scene->GetOrSetPrivateComponent<Tree>(tempEntity).lock();
 	tree->m_soil = soil;
@@ -303,15 +309,35 @@ void BuildSpaceColonizationTreeOBJ(
 	{
 		tree->TryGrow(deltaTime);
 	}
-	tree->GenerateMeshes(meshGeneratorSettings);
-	const auto children = scene->GetChildren(tempEntity);
-	for (const auto& child : children) {
-		auto name = scene->GetEntityName(child);
-		if (name == "Branch Mesh") {
-			auto mmr = scene->GetOrSetPrivateComponent<MeshRenderer>(child).lock();
-			mmr->m_mesh.Get<Mesh>()->Export(outputPath);
+
+	if (exportTreeMesh) {
+		tree->GenerateMeshes(meshGeneratorSettings);
+		const auto children = scene->GetChildren(tempEntity);
+		for (const auto& child : children) {
+			auto name = scene->GetEntityName(child);
+			if (name == "Branch Mesh") {
+				auto mmr = scene->GetOrSetPrivateComponent<MeshRenderer>(child).lock();
+				mmr->m_mesh.Get<Mesh>()->Export(treeMeshOutputPath);
+			}
+
 		}
-		
+	}
+	if(exportTreeIO)
+	{
+		bool succeed = tree->ExportIOTree(treeIOOutputPath);
+	}
+	if(exportRadialBoundingVolume || exportRadialBoundingVolumeMesh)
+	{
+		const auto rbv = ProjectManager::CreateTemporaryAsset<RadialBoundingVolume>();
+		tree->ExportRadialBoundingVolume(rbv);
+		if(exportRadialBoundingVolume)
+		{
+			rbv->Export(radialBoundingVolumeOutputPath);
+		}
+		if(exportRadialBoundingVolumeMesh)
+		{
+			rbv->ExportAsObj(radialBoundingVolumeMeshOutputPath);
+		}
 	}
 	scene->DeleteEntity(tempEntity);
 }
@@ -345,13 +371,21 @@ PYBIND11_MODULE(pyecosyslab, m) {
 		.def_readwrite("m_overrideThickness", &ReconstructionSettings::m_overrideThickness)
 		.def_readwrite("m_minimumNodeCount", &ReconstructionSettings::m_minimumNodeCount);
 
-	py::class_<MeshOverrideSettings>(m, "MeshOverrideSettings")
+	py::class_<PresentationOverrideSettings>(m, "PresentationOverrideSettings")
 		.def(py::init<>())
-		.def_readwrite("m_leafCountPerInternode", &MeshOverrideSettings::m_leafCountPerInternode)
-		.def_readwrite("m_distanceToEndLimit", &MeshOverrideSettings::m_distanceToEndLimit)
-		.def_readwrite("m_positionVariance", &MeshOverrideSettings::m_positionVariance)
-		.def_readwrite("m_phototropism", &MeshOverrideSettings::m_phototropism)
-		.def_readwrite("m_limitMaxThickness", &MeshOverrideSettings::m_limitMaxThickness);
+		.def_readwrite("m_rootOverrideColor", &PresentationOverrideSettings::m_rootOverrideColor)
+		.def_readwrite("m_branchOverrideColor", &PresentationOverrideSettings::m_branchOverrideColor)
+		.def_readwrite("m_foliageOverrideColor", &PresentationOverrideSettings::m_foliageOverrideColor)
+		.def_readwrite("m_limitMaxThickness", &PresentationOverrideSettings::m_limitMaxThickness);
+
+	py::class_<FoliageOverrideSettings>(m, "FoliageOverrideSettings")
+		.def(py::init<>())
+		.def_readwrite("m_leafSize", &FoliageOverrideSettings::m_leafSize)
+		.def_readwrite("m_leafCountPerInternode", &FoliageOverrideSettings::m_leafCountPerInternode)
+		.def_readwrite("m_positionVariance", &FoliageOverrideSettings::m_positionVariance)
+		.def_readwrite("m_maxNodeThickness", &FoliageOverrideSettings::m_maxNodeThickness)
+		.def_readwrite("m_minRootDistance", &FoliageOverrideSettings::m_minRootDistance)
+		.def_readwrite("m_maxEndDistance", &FoliageOverrideSettings::m_maxEndDistance);
 
 	py::class_<TreeMeshGeneratorSettings>(m, "TreeMeshGeneratorSettings")
 		.def(py::init<>())
@@ -363,6 +397,7 @@ PYBIND11_MODULE(pyecosyslab, m) {
 		.def_readwrite("m_enableFineRoot", &TreeMeshGeneratorSettings::m_enableFineRoot)
 		.def_readwrite("m_enableTwig", &TreeMeshGeneratorSettings::m_enableTwig)
 		.def_readwrite("m_foliageOverride", &TreeMeshGeneratorSettings::m_foliageOverride)
+		.def_readwrite("m_foliageOverrideSettings", &TreeMeshGeneratorSettings::m_foliageOverrideSettings)
 		.def_readwrite("m_presentationOverrideSettings", &TreeMeshGeneratorSettings::m_presentationOverrideSettings)
 		.def_readwrite("m_ringXSubdivision", &TreeMeshGeneratorSettings::m_ringXSubdivision)
 		.def_readwrite("m_ringYSubdivision", &TreeMeshGeneratorSettings::m_ringYSubdivision)
@@ -381,8 +416,7 @@ PYBIND11_MODULE(pyecosyslab, m) {
 		.def_readwrite("m_voxelSmoothIteration", &TreeMeshGeneratorSettings::m_voxelSmoothIteration)
 		.def_readwrite("m_removeDuplicate", &TreeMeshGeneratorSettings::m_removeDuplicate)
 		.def_readwrite("m_branchMeshType", &TreeMeshGeneratorSettings::m_branchMeshType)
-		.def_readwrite("m_rootMeshType", &TreeMeshGeneratorSettings::m_rootMeshType)
-		.def_readwrite("m_detailedFoliage", &TreeMeshGeneratorSettings::m_detailedFoliage);
+		.def_readwrite("m_rootMeshType", &TreeMeshGeneratorSettings::m_rootMeshType);
 
 	py::class_<Scene>(m, "Scene")
 		.def("CreateEntity", static_cast<Entity(Scene::*)(const std::string&)>(&Scene::CreateEntity))
@@ -416,5 +450,5 @@ PYBIND11_MODULE(pyecosyslab, m) {
 	m.def("yaml_to_mesh", &YamlToMesh, "YamlToMesh");
 	m.def("capture_scene", &CaptureScene, "CaptureScene");
 	m.def("visualize_yaml", &VisualizeYaml, "VisualizeYaml");
-	m.def("build_space_colonization_tree_obj", &BuildSpaceColonizationTreeOBJ, "BuildSpaceColonizationTreeOBJ");
+	m.def("build_space_colonization_tree_data", &BuildSpaceColonizationTreeData, "BuildSpaceColonizationTreeData");
 }

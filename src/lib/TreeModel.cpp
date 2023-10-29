@@ -1850,6 +1850,34 @@ void TreeModel::Reverse(int iteration) {
 	m_history.erase((m_history.begin() + iteration), m_history.end());
 }
 
+void TreeModel::ExportTreeIOSkeleton(treeio::ArrayTree& arrayTree) const
+{
+	using namespace treeio;
+	const auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
+	if(sortedInternodeList.empty()) return;
+	const auto& rootNode = m_shootSkeleton.PeekNode(0);
+	TreeNodeData rootNodeData;
+	//rootNodeData.direction = rootNode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
+	rootNodeData.thickness = rootNode.m_info.m_thickness;
+	rootNodeData.pos = rootNode.m_info.m_globalPosition;
+
+	auto rootId = arrayTree.addRoot(rootNodeData);
+	std::unordered_map<NodeHandle, size_t> nodeMap;
+	nodeMap[0] = rootId;
+	for(const auto& nodeHandle : sortedInternodeList)
+	{
+		if(nodeHandle == 0) continue;
+		const auto& node = m_shootSkeleton.PeekNode(nodeHandle);
+		TreeNodeData nodeData;
+		//nodeData.direction = node.m_info.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
+		nodeData.thickness = node.m_info.m_thickness;
+		nodeData.pos = node.m_info.m_globalPosition;
+
+		auto currentId = arrayTree.addNodeChild(nodeMap[node.GetParentHandle()], nodeData);
+		nodeMap[nodeHandle] = currentId;
+	}
+}
+
 void RootGrowthController::SetTropisms(Node<RootNodeGrowthData>& oldNode, Node<RootNodeGrowthData>& newNode) const
 {
 	float probability = m_tropismSwitchingProbability *

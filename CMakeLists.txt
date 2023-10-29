@@ -38,7 +38,7 @@ endif ()
 # 3rd Party libraries
 # ------------------------------------------------------------------
 set(EVOENGINE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../EvoEngine)
-
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/3rdParty)
 include_directories(${EVOENGINE_INCLUDES})
 
 if (NOT TARGET evoengine)
@@ -66,9 +66,11 @@ file(GLOB LOCAL_ECOSYSLAB_SOURCES "src/lib/*.cpp")
 
 set(LOCAL_ECOSYSLAB_INCLUDES
 	${EVOENGINE_INCLUDES}
+	${TREEIO_INCLUDES}
 	${CMAKE_CURRENT_BINARY_DIR}
 	${CMAKE_CURRENT_SOURCE_DIR}/include/lib
 	${CMAKE_CURRENT_SOURCE_DIR}/include/lib/Physics
+	${CMAKE_CURRENT_SOURCE_DIR}/include/lib/TreeIO
 	${CMAKE_CURRENT_SOURCE_DIR}/include/lib/SorghumModel
 	${CMAKE_CURRENT_SOURCE_DIR}/include/lib/ClimateModel
 	${CMAKE_CURRENT_SOURCE_DIR}/include/lib/SoilModel
@@ -106,6 +108,9 @@ target_precompile_headers(ecosyslab
 target_link_libraries(ecosyslab
 	PRIVATE
 	evoengine
+	csvpp
+	JSON
+	Base64
 	)
 
 target_compile_definitions(ecosyslab

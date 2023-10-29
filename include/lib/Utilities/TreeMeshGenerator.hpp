@@ -35,7 +35,7 @@ namespace EcoSysLab {
 		float m_maxEndDistance = 0.2f;
 	};
 
-	struct MeshOverrideSettings
+	struct PresentationOverrideSettings
 	{
 		glm::vec3 m_rootOverrideColor = glm::vec3(80, 60, 50) / 255.0f;
 		glm::vec3 m_branchOverrideColor = glm::vec3(109, 79, 75) / 255.0f;
@@ -84,7 +84,7 @@ namespace EcoSysLab {
 		bool m_presentationOverride = false;
 		bool m_foliageOverride = true;
 		FoliageOverrideSettings m_foliageOverrideSettings = {};
-		MeshOverrideSettings m_presentationOverrideSettings = {};
+		PresentationOverrideSettings m_presentationOverrideSettings = {};
 		AssetRef m_foliageTexture;
 
 		float m_ringXSubdivision = 0.01f;

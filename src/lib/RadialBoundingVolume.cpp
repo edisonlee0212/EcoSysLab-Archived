@@ -390,9 +390,7 @@ void RadialBoundingVolume::CalculateVolume(const std::vector<glm::vec3>& points)
     ResizeVolumes();
     m_maxHeight = 0;
     for (const auto& point : points) {
-        if (point.y > m_maxHeight)
-            m_maxHeight = point.y;
-        const float radius = glm::length(glm::vec2(point.x, point.z));
+        if (point.y > m_maxHeight) m_maxHeight = point.y;
     }
     for (const auto& point : points) {
         const auto sliceIndex = SelectSlice(point);

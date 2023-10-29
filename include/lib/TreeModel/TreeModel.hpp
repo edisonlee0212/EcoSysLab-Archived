@@ -3,6 +3,7 @@
 #include "ClimateModel.hpp"
 #include "Octree.hpp"
 #include "TreeGrowthController.hpp"
+#include "TreeIOTree.hpp"
 using namespace EvoEngine;
 namespace EcoSysLab {
 	struct TreeGrowthSettings
@@ -97,7 +98,6 @@ namespace EcoSysLab {
 		 * @param globalTransform The plant's world transform.
 		 * @param climateModel The climate model.
 		 * @param shootGrowthParameters The procedural parameters that guides the growth.
-		 * @param newShootGrowthRequirement Growth requirements from shoots.
 		 * @return Whether the growth caused a structural change during the growth.
 		 */
 		bool GrowShoots(const glm::mat4& globalTransform, ClimateModel& climateModel,
@@ -110,7 +110,6 @@ namespace EcoSysLab {
 		 * @param globalTransform The plant's world transform.
 		 * @param soilModel The soil model
 		 * @param rootGrowthParameters The procedural parameters that guides the growth.
-		 * @param newRootGrowthRequirement Growth requirements from roots.
 		 * @return Whether the growth caused a structural change during the growth.
 		 */
 		bool GrowRoots(const glm::mat4& globalTransform, VoxelSoilModel& soilModel,
@@ -185,9 +184,7 @@ namespace EcoSysLab {
 		 * @param soilModel The soil model
 		 * @param climateModel The climate model
 		 * @param rootGrowthParameters The procedural parameters that guides the growth of the roots.
-		 * @param fineRootController
 		 * @param shootGrowthParameters The procedural parameters that guides the growth of the branches.
-		 * @param twigController
 		 * @return Whether the growth caused a structural change during the growth.
 		 */
 		bool Grow(float deltaTime, const glm::mat4& globalTransform, VoxelSoilModel& soilModel, ClimateModel& climateModel,
@@ -220,6 +217,8 @@ namespace EcoSysLab {
 		[[nodiscard]] int CurrentIteration() const;
 
 		void Reverse(int iteration);
+
+		void ExportTreeIOSkeleton(treeio::ArrayTree& arrayTree) const;
 	};
 
 	template <typename SkeletonData, typename FlowData, typename NodeData>

@@ -4,6 +4,7 @@
 #include "TreeVisualizer.hpp"
 #include "TreeMeshGenerator.hpp"
 #include "LSystemString.hpp"
+#include "RadialBoundingVolume.hpp"
 #include "TreeGraph.hpp"
 #include "TreeGrowthParameters.hpp"
 using namespace EvoEngine;
@@ -83,5 +84,8 @@ namespace EcoSysLab {
 		void FromLSystemString(const std::shared_ptr<LSystemString>& lSystemString);
 		void FromTreeGraph(const std::shared_ptr<TreeGraph>& treeGraph);
 		void FromTreeGraphV2(const std::shared_ptr<TreeGraphV2>& treeGraphV2);
+
+		[[maybe_unused]] bool ExportIOTree(const std::filesystem::path& path) const;
+		void ExportRadialBoundingVolume(const std::shared_ptr<RadialBoundingVolume>& rbv) const;
 	};
 }
