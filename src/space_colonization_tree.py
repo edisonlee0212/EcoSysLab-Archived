@@ -3,6 +3,8 @@ import os
 
 current_directory = os.getcwd()
 
+os.mkdir(current_directory + "\\scd")
+
 project_path = "C:\\Users\\lllll\\Desktop\\EcoSysLabProject\\test.eveproj"
 binvox_path = "C:\\Users\\lllll\\Downloads\\binvox_files\\san_jose_acer_san_jose_9050_0_mesh.binvox"
 target_descriptor_path = "C:\\Users\\lllll\\Desktop\\EcoSysLabProject\\TreeDescriptors\\Butter.td"
