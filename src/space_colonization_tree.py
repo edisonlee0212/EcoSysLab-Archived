@@ -13,7 +13,9 @@ target_voxel_tree_rbv_mesh_path = current_directory + "\\scd\\voxel_rbv.obj"
 
 target_rbv_tree_mesh_path = current_directory + "\\scd\\rbv_tree.obj"
 target_rbv_tree_tree_io_path = current_directory + "\\scd\\rbv_tree.treeio"
-target_rbv_tree_rbv_mesh_path = current_directory + "\\scd\\rbv_rbv.obj"
+target_rbv_tree_rbv_mesh_path = current_directory + "\\scd\\rbv_tree_rbv.obj"
+
+target_rbv_rbv_mesh_path = current_directory + "\\scd\\rbv_rbv.obj"
 
 pesl.start_project_windowless(project_path)
 tmgs = pesl.TreeMeshGeneratorSettings()
@@ -56,3 +58,10 @@ pesl.voxel_space_colonization_tree_data(2.0, binvox_path, target_descriptor_path
 #10.	enable RBV mesh
 #11.	RBV mesh output path
 pesl.rbv_space_colonization_tree_data(target_rbv_path, target_descriptor_path, 0.08220, 250, tmgs, True, target_rbv_tree_mesh_path, True, target_rbv_tree_tree_io_path, True, target_rbv_tree_rbv_mesh_path)
+
+
+##NOTE: You may run below line multiple times for exporting OBJ for given RBV.
+#Parameters: 
+#1.		rbv absolute path
+#2.		RBV mesh output path
+pesl.rbv_to_obj(target_rbv_path, target_rbv_rbv_mesh_path);

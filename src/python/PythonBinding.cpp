@@ -343,6 +343,15 @@ void VoxelSpaceColonizationTreeData(
 	scene->DeleteEntity(tempEntity);
 }
 
+void RBVToObj(
+	const std::string& rbvPath,
+	const std::string& radialBoundingVolumeMeshOutputPath
+)
+{
+	const auto rbv = ProjectManager::CreateTemporaryAsset<RadialBoundingVolume>();
+	rbv->Import(rbvPath);
+	rbv->ExportAsObj(radialBoundingVolumeMeshOutputPath);
+}
 
 void RBVSpaceColonizationTreeData(
 	const std::string& rbvPath,
@@ -572,4 +581,5 @@ PYBIND11_MODULE(pyecosyslab, m) {
 	m.def("visualize_yaml", &VisualizeYaml, "VisualizeYaml");
 	m.def("voxel_space_colonization_tree_data", &VoxelSpaceColonizationTreeData, "VoxelSpaceColonizationTreeData");
 	m.def("rbv_space_colonization_tree_data", &RBVSpaceColonizationTreeData, "RBVSpaceColonizationTreeData");
+	m.def("rbv_to_obj", &RBVToObj, "RBVToObj");
 }
