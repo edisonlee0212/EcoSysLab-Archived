@@ -115,9 +115,9 @@ void CaptureScene(
 		EVOENGINE_ERROR("Resolution error!");
 		return;
 	}
-	
+
 	const auto scene = Application::GetActiveScene();
-	if(!scene)
+	if (!scene)
 	{
 		EVOENGINE_ERROR("No active scene!");
 		return;
@@ -125,13 +125,14 @@ void CaptureScene(
 	auto mainCamera = scene->m_mainCamera.Get<Camera>();
 	Entity mainCameraEntity;
 	bool tempCamera = false;
-	if(!mainCamera)
+	if (!mainCamera)
 	{
 		mainCameraEntity = scene->CreateEntity("Main Camera");
 		mainCamera = scene->GetOrSetPrivateComponent<Camera>(mainCameraEntity).lock();
 		scene->m_mainCamera = mainCamera;
 		tempCamera = true;
-	}else
+	}
+	else
 	{
 		mainCameraEntity = mainCamera->GetOwner();
 	}
@@ -143,17 +144,18 @@ void CaptureScene(
 	mainCamera->Resize({ resolutionX, resolutionY });
 	const auto useClearColor = mainCamera->m_useClearColor;
 	const auto clearColor = mainCamera->m_clearColor;
-	if(whiteBackground)
+	if (whiteBackground)
 	{
 		mainCamera->m_useClearColor = true;
 		mainCamera->m_clearColor = glm::vec3(1, 1, 1);
 	}
 	Application::Loop();
 	mainCamera->GetRenderTexture()->StoreToPng(outputPath);
-	if(tempCamera)
+	if (tempCamera)
 	{
 		scene->DeleteEntity(mainCameraEntity);
-	}else
+	}
+	else
 	{
 		scene->SetDataComponent(mainCameraEntity, originalTransform);
 		if (whiteBackground)
@@ -211,7 +213,7 @@ void VisualizeYaml(const std::string& yamlPath,
 	scene->DeleteEntity(tempEntity);
 }
 
-void BuildSpaceColonizationTreeData(
+void VoxelSpaceColonizationTreeData(
 	const float radius,
 	const std::string& binvoxPath,
 	const std::string& treeParametersPath,
@@ -226,10 +228,10 @@ void BuildSpaceColonizationTreeData(
 	const std::string& radialBoundingVolumeOutputPath,
 	bool exportRadialBoundingVolumeMesh,
 	const std::string& radialBoundingVolumeMeshOutputPath
-	)
+)
 {
 	const auto applicationStatus = Application::GetApplicationStatus();
-	if(applicationStatus == ApplicationStatus::NoProject)
+	if (applicationStatus == ApplicationStatus::NoProject)
 	{
 		EVOENGINE_ERROR("No project!");
 		return;
@@ -245,8 +247,8 @@ void BuildSpaceColonizationTreeData(
 		return;
 	}
 	const auto scene = Application::GetActiveScene();
-	auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
-	if(!ecoSysLabLayer)
+	const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
+	if (!ecoSysLabLayer)
 	{
 		EVOENGINE_ERROR("Application doesn't contain EcoSysLab layer!");
 		return;
@@ -259,7 +261,7 @@ void BuildSpaceColonizationTreeData(
 	if (soilEntities && !soilEntities->empty()) {
 		soil = scene->GetOrSetPrivateComponent<Soil>(soilEntities->at(0)).lock();
 	}
-	if(!soil)
+	if (!soil)
 	{
 		EVOENGINE_ERROR("No soil in scene!");
 		return;
@@ -280,7 +282,7 @@ void BuildSpaceColonizationTreeData(
 	tree->m_soil = soil;
 	tree->m_climate = climate;
 	std::shared_ptr<TreeDescriptor> treeDescriptor;
-	if(ProjectManager::IsInProjectFolder(treeParametersPath))
+	if (ProjectManager::IsInProjectFolder(treeParametersPath))
 	{
 		treeDescriptor = std::dynamic_pointer_cast<TreeDescriptor>(ProjectManager::GetOrCreateAsset(ProjectManager::GetPathRelativeToProject(treeParametersPath)));
 	}
@@ -292,7 +294,6 @@ void BuildSpaceColonizationTreeData(
 	VoxelGrid<TreeOccupancyGridBasicData> inputGrid{};
 	if (tree->ParseBinvox(binvoxPath, inputGrid, 1.f))
 	{
-		const auto treeDescriptor = tree->m_treeDescriptor.Get<TreeDescriptor>();
 		occupancyGrid.Initialize(inputGrid,
 			glm::vec3(-radius, 0, -radius),
 			glm::vec3(radius, 2.0f * radius, radius),
@@ -305,7 +306,7 @@ void BuildSpaceColonizationTreeData(
 	tree->m_treeModel.m_treeGrowthSettings.m_enableRoot = false;
 	tree->m_treeModel.m_treeGrowthSettings.m_useSpaceColonization = true;
 	tree->m_treeModel.m_treeGrowthSettings.m_spaceColonizationAutoResize = false;
-	for(int i = 0; i < iterations; i++)
+	for (int i = 0; i < iterations; i++)
 	{
 		tree->TryGrow(deltaTime);
 	}
@@ -322,22 +323,141 @@ void BuildSpaceColonizationTreeData(
 
 		}
 	}
-	if(exportTreeIO)
+	if (exportTreeIO)
 	{
 		bool succeed = tree->ExportIOTree(treeIOOutputPath);
 	}
-	if(exportRadialBoundingVolume || exportRadialBoundingVolumeMesh)
+	if (exportRadialBoundingVolume || exportRadialBoundingVolumeMesh)
 	{
 		const auto rbv = ProjectManager::CreateTemporaryAsset<RadialBoundingVolume>();
 		tree->ExportRadialBoundingVolume(rbv);
-		if(exportRadialBoundingVolume)
+		if (exportRadialBoundingVolume)
 		{
 			rbv->Export(radialBoundingVolumeOutputPath);
 		}
-		if(exportRadialBoundingVolumeMesh)
+		if (exportRadialBoundingVolumeMesh)
 		{
 			rbv->ExportAsObj(radialBoundingVolumeMeshOutputPath);
 		}
+	}
+	scene->DeleteEntity(tempEntity);
+}
+
+
+void RBVSpaceColonizationTreeData(
+	const std::string& rbvPath,
+	const std::string& treeParametersPath,
+	const float deltaTime,
+	const int iterations,
+	const TreeMeshGeneratorSettings& meshGeneratorSettings,
+	bool exportTreeMesh,
+	const std::string& treeMeshOutputPath,
+	bool exportTreeIO,
+	const std::string& treeIOOutputPath,
+	bool exportRadialBoundingVolumeMesh,
+	const std::string& radialBoundingVolumeMeshOutputPath
+)
+{
+	const auto applicationStatus = Application::GetApplicationStatus();
+	if (applicationStatus == ApplicationStatus::NoProject)
+	{
+		EVOENGINE_ERROR("No project!");
+		return;
+	}
+	if (applicationStatus == ApplicationStatus::OnDestroy)
+	{
+		EVOENGINE_ERROR("Application is destroyed!");
+		return;
+	}
+	if (applicationStatus == ApplicationStatus::Uninitialized)
+	{
+		EVOENGINE_ERROR("Application not uninitialized!");
+		return;
+	}
+	const auto scene = Application::GetActiveScene();
+	const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
+	if (!ecoSysLabLayer)
+	{
+		EVOENGINE_ERROR("Application doesn't contain EcoSysLab layer!");
+		return;
+	}
+	std::shared_ptr<Soil> soil;
+	std::shared_ptr<Climate> climate;
+
+	const std::vector<Entity>* soilEntities =
+		scene->UnsafeGetPrivateComponentOwnersList<Soil>();
+	if (soilEntities && !soilEntities->empty()) {
+		soil = scene->GetOrSetPrivateComponent<Soil>(soilEntities->at(0)).lock();
+	}
+	if (!soil)
+	{
+		EVOENGINE_ERROR("No soil in scene!");
+		return;
+	}
+	const std::vector<Entity>* climateEntities =
+		scene->UnsafeGetPrivateComponentOwnersList<Climate>();
+	if (climateEntities && !climateEntities->empty()) {
+		climate = scene->GetOrSetPrivateComponent<Climate>(climateEntities->at(0)).lock();
+	}
+	if (!climate)
+	{
+		EVOENGINE_ERROR("No climate in scene!");
+		return;
+	}
+
+	const auto tempEntity = scene->CreateEntity("Temp");
+	const auto tree = scene->GetOrSetPrivateComponent<Tree>(tempEntity).lock();
+	tree->m_soil = soil;
+	tree->m_climate = climate;
+	std::shared_ptr<TreeDescriptor> treeDescriptor;
+	if (ProjectManager::IsInProjectFolder(treeParametersPath))
+	{
+		treeDescriptor = std::dynamic_pointer_cast<TreeDescriptor>(ProjectManager::GetOrCreateAsset(ProjectManager::GetPathRelativeToProject(treeParametersPath)));
+	}
+	else {
+		treeDescriptor = ProjectManager::CreateTemporaryAsset<TreeDescriptor>();
+	}
+	tree->m_treeDescriptor = treeDescriptor;
+	auto& occupancyGrid = tree->m_treeModel.m_treeOccupancyGrid;
+	const auto rbv = ProjectManager::CreateTemporaryAsset<RadialBoundingVolume>();
+	rbv->Import(rbvPath);
+
+	occupancyGrid.Initialize(rbv,
+		glm::vec3(-rbv->m_maxRadius, 0, -rbv->m_maxRadius),
+		glm::vec3(rbv->m_maxRadius, 2.0f * rbv->m_maxRadius, rbv->m_maxRadius),
+		treeDescriptor->m_shootGrowthParameters.m_internodeLength,
+		tree->m_treeModel.m_treeGrowthSettings.m_spaceColonizationRemovalDistanceFactor,
+		tree->m_treeModel.m_treeGrowthSettings.m_spaceColonizationTheta,
+		tree->m_treeModel.m_treeGrowthSettings.m_spaceColonizationDetectionDistanceFactor);
+
+	tree->m_treeModel.m_treeGrowthSettings.m_enableShoot = true;
+	tree->m_treeModel.m_treeGrowthSettings.m_enableRoot = false;
+	tree->m_treeModel.m_treeGrowthSettings.m_useSpaceColonization = true;
+	tree->m_treeModel.m_treeGrowthSettings.m_spaceColonizationAutoResize = false;
+	for (int i = 0; i < iterations; i++)
+	{
+		tree->TryGrow(deltaTime);
+	}
+
+	if (exportTreeMesh) {
+		tree->GenerateMeshes(meshGeneratorSettings);
+		const auto children = scene->GetChildren(tempEntity);
+		for (const auto& child : children) {
+			auto name = scene->GetEntityName(child);
+			if (name == "Branch Mesh") {
+				auto mmr = scene->GetOrSetPrivateComponent<MeshRenderer>(child).lock();
+				mmr->m_mesh.Get<Mesh>()->Export(treeMeshOutputPath);
+			}
+
+		}
+	}
+	if (exportTreeIO)
+	{
+		bool succeed = tree->ExportIOTree(treeIOOutputPath);
+	}
+	if (exportRadialBoundingVolumeMesh)
+	{
+		rbv->ExportAsObj(radialBoundingVolumeMeshOutputPath);
 	}
 	scene->DeleteEntity(tempEntity);
 }
@@ -450,5 +570,6 @@ PYBIND11_MODULE(pyecosyslab, m) {
 	m.def("yaml_to_mesh", &YamlToMesh, "YamlToMesh");
 	m.def("capture_scene", &CaptureScene, "CaptureScene");
 	m.def("visualize_yaml", &VisualizeYaml, "VisualizeYaml");
-	m.def("build_space_colonization_tree_data", &BuildSpaceColonizationTreeData, "BuildSpaceColonizationTreeData");
+	m.def("voxel_space_colonization_tree_data", &VoxelSpaceColonizationTreeData, "VoxelSpaceColonizationTreeData");
+	m.def("rbv_space_colonization_tree_data", &RBVSpaceColonizationTreeData, "RBVSpaceColonizationTreeData");
 }

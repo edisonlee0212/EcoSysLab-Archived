@@ -298,7 +298,7 @@ void RadialBoundingVolume::FormEntity() {
     }
 }
 
-std::string RadialBoundingVolume::Save() {
+std::string RadialBoundingVolume::AsString() {
     std::string output;
     output += std::to_string(m_layerAmount) + "\n";
     output += std::to_string(m_sectorAmount) + "\n";
@@ -327,11 +327,30 @@ std::string RadialBoundingVolume::Save() {
     return output;
 }
 
+void RadialBoundingVolume::FromString(const std::string& string)
+{
+    std::stringstream ifs (string);
+   
+        ifs >> m_layerAmount;
+        ifs >> m_sectorAmount;
+        ifs >> m_maxHeight;
+        m_layers.resize(m_layerAmount);
+        for (auto& tier : m_layers) {
+            tier.resize(m_sectorAmount);
+            for (auto& slice : tier) {
+                ifs >> slice.m_maxDistance;
+            }
+        }
+        GenerateMesh();
+    
+}
+
 void RadialBoundingVolume::ExportAsObj(const std::string& filename) {
-    auto& meshes = m_boundMeshes;
+    GenerateMesh();
+    const auto& meshes = m_boundMeshes;
 
     std::ofstream of;
-    of.open((filename + ".obj").c_str(),
+    of.open(filename.c_str(),
         std::ofstream::out | std::ofstream::trunc);
     if (of.is_open()) {
         std::string o = "o ";
@@ -366,31 +385,17 @@ void RadialBoundingVolume::ExportAsObj(const std::string& filename) {
     }
 }
 
-void RadialBoundingVolume::Load(const std::string& path) {
-    std::ifstream ifs;
-    ifs.open(path.c_str());
-    EVOENGINE_LOG("Loading from " + path);
-    if (ifs.is_open()) {
-        ifs >> m_layerAmount;
-        ifs >> m_sectorAmount;
-        ifs >> m_maxHeight;
-        m_layers.resize(m_layerAmount);
-        for (auto& tier : m_layers) {
-            tier.resize(m_sectorAmount);
-            for (auto& slice : tier) {
-                ifs >> slice.m_maxDistance;
-            }
-        }
-        GenerateMesh();
-    }
-}
 
 void RadialBoundingVolume::CalculateVolume(const std::vector<glm::vec3>& points)
 {
     ResizeVolumes();
     m_maxHeight = 0;
+    m_maxRadius = 0;
     for (const auto& point : points) {
         if (point.y > m_maxHeight) m_maxHeight = point.y;
+        const float radius = glm::length(glm::vec2(point.x, point.z));
+        if (radius > m_maxRadius)
+            m_maxRadius = radius;
     }
     for (const auto& point : points) {
         const auto sliceIndex = SelectSlice(point);
@@ -476,7 +481,7 @@ void RadialBoundingVolume::OnInspect(const std::shared_ptr<EditorLayer>& editorL
     }
     FileUtils::SaveFile("Save RBV", "RBV", { ".rbv" },
         [this](const std::filesystem::path& path) {
-            const std::string data = Save();
+            const std::string data = AsString();
     std::ofstream ofs;
     ofs.open(path.string().c_str(),
         std::ofstream::out | std::ofstream::trunc);
@@ -486,7 +491,7 @@ void RadialBoundingVolume::OnInspect(const std::shared_ptr<EditorLayer>& editorL
         });
     FileUtils::OpenFile(
         "Load RBV", "RBV", { ".rbv" },
-        [this](const std::filesystem::path& path) { Load(path.string()); });
+        [this](const std::filesystem::path& path) { FromString(FileUtils::LoadFileAsString(path)); });
     FileUtils::SaveFile("Export RBV as OBJ", "3D Model", { ".obj" },
         [this](const std::filesystem::path& path) {
             ExportAsObj(path.string());
@@ -561,6 +566,7 @@ void RadialBoundingVolume::Deserialize(const YAML::Node& in) {
     m_offset = in["m_offset"].as<float>();
     m_displayColor = in["m_displayColor"].as<glm::vec4>();
     m_maxHeight = in["m_maxHeight"].as<float>();
+    m_maxRadius = in["m_maxRadius"].as<float>();
     m_displayScale = in["m_displayScale"].as<float>();
     m_layerAmount = in["m_layerAmount"].as<int>();
     m_sectorAmount = in["m_sectorAmount"].as<int>();
@@ -577,6 +583,7 @@ void RadialBoundingVolume::Deserialize(const YAML::Node& in) {
             index++;
         }
     }
+    GenerateMesh();
 }
 
 void RadialBoundingVolume::Serialize(YAML::Emitter& out) {
@@ -584,6 +591,7 @@ void RadialBoundingVolume::Serialize(YAML::Emitter& out) {
     out << YAML::Key << "m_offset" << YAML::Value << m_offset;
     out << YAML::Key << "m_displayColor" << YAML::Value << m_displayColor;
     out << YAML::Key << "m_maxHeight" << YAML::Value << m_maxHeight;
+    out << YAML::Key << "m_maxRadius" << YAML::Value << m_maxRadius;
     out << YAML::Key << "m_displayScale" << YAML::Value << m_displayScale;
     out << YAML::Key << "m_layerAmount" << YAML::Value << m_layerAmount;
     out << YAML::Key << "m_sectorAmount" << YAML::Value << m_sectorAmount;

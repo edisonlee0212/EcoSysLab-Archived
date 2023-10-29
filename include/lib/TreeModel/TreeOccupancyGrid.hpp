@@ -4,6 +4,8 @@
 using namespace EvoEngine;
 namespace EcoSysLab
 {
+	class RadialBoundingVolume;
+
 	struct OccupancyGridSettings
 	{
 		
@@ -44,6 +46,8 @@ namespace EcoSysLab
 		                float removalDistanceFactor = 2.0f, float theta = 90.0f, float detectionDistanceFactor = 4.0f, size_t markersPerVoxel = 1);
 		void Resize(const glm::vec3 &min, const glm::vec3& max);
 		void Initialize(const VoxelGrid<TreeOccupancyGridBasicData>& srcGrid, const glm::vec3& min, const glm::vec3& max, float internodeLength,
+			float removalDistanceFactor = 2.0f, float theta = 90.0f, float detectionDistanceFactor = 4.0f, size_t markersPerVoxel = 1);
+		void Initialize(const std::shared_ptr<RadialBoundingVolume>& srcRadialBoundingVolume, const glm::vec3& min, const glm::vec3& max, float internodeLength,
 			float removalDistanceFactor = 2.0f, float theta = 90.0f, float detectionDistanceFactor = 4.0f, size_t markersPerVoxel = 1);
 		[[nodiscard]] VoxelGrid<TreeOccupancyGridVoxelData>& RefGrid();
 		[[nodiscard]] glm::vec3 GetMin() const;

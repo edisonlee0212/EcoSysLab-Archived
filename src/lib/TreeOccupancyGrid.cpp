@@ -1,5 +1,6 @@
 #include "TreeOccupancyGrid.hpp"
 
+#include "RadialBoundingVolume.hpp"
 using namespace EcoSysLab;
 
 
@@ -116,6 +117,33 @@ void TreeOccupancyGrid::Initialize(const VoxelGrid<TreeOccupancyGridBasicData>& 
 		}
 	);
 
+}
+
+void TreeOccupancyGrid::Initialize(const std::shared_ptr<RadialBoundingVolume>& srcRadialBoundingVolume,
+	const glm::vec3& min, const glm::vec3& max, float internodeLength, float removalDistanceFactor, float theta,
+	float detectionDistanceFactor, size_t markersPerVoxel)
+{
+	m_removalDistanceFactor = removalDistanceFactor;
+	m_detectionDistanceFactor = detectionDistanceFactor;
+	m_theta = theta;
+	m_internodeLength = internodeLength;
+	m_markersPerVoxel = markersPerVoxel;
+	m_occupancyGrid.Initialize(m_removalDistanceFactor * internodeLength, min, max, {});
+	const auto voxelSize = m_occupancyGrid.GetVoxelSize();
+
+	Jobs::ParallelFor(m_occupancyGrid.GetVoxelCount(), [&](unsigned i)
+		{
+			if (srcRadialBoundingVolume->InVolume(m_occupancyGrid.GetPosition(i)))
+			{
+				auto& voxelData = m_occupancyGrid.Ref(static_cast<int>(i));
+				for (int v = 0; v < m_markersPerVoxel; v++)
+				{
+					auto& newMarker = voxelData.m_markers.emplace_back();
+					newMarker.m_position = m_occupancyGrid.GetPosition(i) + glm::linearRand(-glm::vec3(voxelSize * 0.5f), glm::vec3(voxelSize * 0.5f));
+				}
+			}
+		}
+	);
 }
 
 VoxelGrid<TreeOccupancyGridVoxelData>& TreeOccupancyGrid::RefGrid()
