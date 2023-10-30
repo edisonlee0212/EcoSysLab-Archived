@@ -401,8 +401,8 @@ void LeafData::LeafStateHelper(ProceduralLeafState& left,
 	ProceduralLeafState& right, float& a,
 	const SorghumStatePair& sorghumStatePair,
 	int leafIndex) {
-	int previousLeafSize = sorghumStatePair.m_left.m_leaves.size();
-	int nextLeafSize = sorghumStatePair.m_right.m_leaves.size();
+	const int previousLeafSize = sorghumStatePair.m_left.m_leaves.size();
+	const int nextLeafSize = sorghumStatePair.m_right.m_leaves.size();
 	if (leafIndex < previousLeafSize) {
 		left = sorghumStatePair.m_left.m_leaves[leafIndex];
 		if (left.m_dead)

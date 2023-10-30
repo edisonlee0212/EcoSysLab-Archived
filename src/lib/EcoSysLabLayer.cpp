@@ -369,6 +369,7 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 
 	auto scene = GetScene();
 	if (ImGui::Begin("EcoSysLab Layer")) {
+		ImGui::Checkbox("Debug Visualization", &m_debugVisualization);
 		ImGui::Checkbox("Lock tree selection", &m_lockTreeSelection);
 		const std::vector<Entity>* treeEntities =
 			scene->UnsafeGetPrivateComponentOwnersList<Tree>();
@@ -503,7 +504,7 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 		else {
 			ImGui::Text("No trees in the scene!");
 		}
-		ImGui::Checkbox("Debug Visualization", &m_debugVisualization);
+		
 		if (m_debugVisualization && ImGui::TreeNodeEx("Debug visualization settings", ImGuiTreeNodeFlags_DefaultOpen)) {
 			if (ImGui::Button("Update")) {
 				m_needFullFlowUpdate = true;
