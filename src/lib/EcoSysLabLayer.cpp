@@ -366,7 +366,6 @@ const std::vector<glm::vec3>& EcoSysLabLayer::RandomColors() {
 }
 
 void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
-
 	auto scene = GetScene();
 	if (ImGui::Begin("EcoSysLab Layer")) {
 		ImGui::Checkbox("Debug Visualization", &m_debugVisualization);
