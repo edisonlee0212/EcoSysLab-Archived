@@ -14,7 +14,7 @@ void TreePipeNode::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 		const std::string startTag = "Start Profile";
 		if (ImGui::Begin(startTag.c_str()))
 		{
-			m_startParticlePhysics2D.OnInspect([&](const glm::vec2 position) {},
+			m_profiles.front().m_particlePhysics2D.OnInspect([&](const glm::vec2 position) {},
 				[&](const ImVec2 origin, const float zoomFactor, ImDrawList* drawList) {},
 				showGrid);
 		}
@@ -22,7 +22,7 @@ void TreePipeNode::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 		const std::string endTag = "End Profile";
 		if (ImGui::Begin(endTag.c_str()))
 		{
-			m_endParticlePhysics2D.OnInspect([&](const glm::vec2 position) {},
+			m_profiles.back().m_particlePhysics2D.OnInspect([&](const glm::vec2 position) {},
 				[&](const ImVec2 origin, const float zoomFactor, ImDrawList* drawList) {},
 				showGrid);
 		}

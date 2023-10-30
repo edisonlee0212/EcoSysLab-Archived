@@ -9,18 +9,17 @@
 using namespace EvoEngine;
 namespace EcoSysLab
 {
-	
+	struct TreePipeProfile
+	{
+		ParticlePhysics2D<CellParticlePhysicsData> m_particlePhysics2D;
+		std::unordered_map<PipeHandle, ParticleHandle> m_particleMap{};
+		Transform m_profileTransform{};
+	};
 	class TreePipeNode : public IPrivateComponent
 	{
 	public:
-		ParticlePhysics2D<CellParticlePhysicsData> m_startParticlePhysics2D;
-		ParticlePhysics2D<CellParticlePhysicsData> m_endParticlePhysics2D;
+		std::list<TreePipeProfile> m_profiles;
 		PipeHandle m_pipeHandle = -1;
-		std::unordered_map<PipeHandle, ParticleHandle> m_startParticleMap{};
-		std::unordered_map<PipeHandle, ParticleHandle> m_endParticleMap{};
-
-		glm::quat m_startRegulatedRotation{};
-		glm::quat m_endRegulatedRotation{};
 
 		float m_centerDirectionRadius = 0.0f;
 		glm::vec2 m_offset = glm::vec2(0.0f);

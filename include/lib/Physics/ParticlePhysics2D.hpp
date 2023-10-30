@@ -4,14 +4,14 @@
 #include "Times.hpp"
 using namespace EvoEngine;
 namespace EcoSysLab {
-	template<typename T>
+	template<typename ParticleData>
 	class ParticlePhysics2D
 	{
 		ParticleGrid2D m_particleGrid2D{};
-		std::vector<Particle2D<T>> m_particles2D{};
+		std::vector<Particle2D<ParticleData>> m_particles2D{};
 		void SolveCollision(ParticleHandle p1Handle, ParticleHandle p2Handle);
 		float m_deltaTime = 0.002f;
-		void Update(const std::function<void(Particle2D<T>& particle)>& modifyParticleFunc);
+		void Update(const std::function<void(Particle2D<ParticleData>& particle)>& modifyParticleFunc);
 		void InitializeGrid();
 		void CheckCollisions();
 		glm::vec2 m_min = glm::vec2(FLT_MAX);
@@ -27,14 +27,14 @@ namespace EcoSysLab {
 		void CalculateMinMax();
 		float m_particleSoftness = 0.5f;
 		[[nodiscard]] ParticleHandle AllocateParticle();
-		[[nodiscard]] Particle2D<T>& RefParticle(ParticleHandle handle);
-		[[nodiscard]] const Particle2D<T>& PeekParticle(ParticleHandle handle) const;
+		[[nodiscard]] Particle2D<ParticleData>& RefParticle(ParticleHandle handle);
+		[[nodiscard]] const Particle2D<ParticleData>& PeekParticle(ParticleHandle handle) const;
 		void RemoveParticle(ParticleHandle handle);
 		void Shift(const glm::vec2& offset);
-		[[nodiscard]] const std::vector<Particle2D<T>>& PeekParticles() const;
-		[[nodiscard]] std::vector<Particle2D<T>>& RefParticles();
-		void SimulateByTime(float time, const std::function<void(Particle2D<T>& particle)>& modifyParticleFunc);
-		void Simulate(size_t iterations, const std::function<void(Particle2D<T>& particle)>& modifyParticleFunc);
+		[[nodiscard]] const std::vector<Particle2D<ParticleData>>& PeekParticles() const;
+		[[nodiscard]] std::vector<Particle2D<ParticleData>>& RefParticles();
+		void SimulateByTime(float time, const std::function<void(Particle2D<ParticleData>& particle)>& modifyParticleFunc);
+		void Simulate(size_t iterations, const std::function<void(Particle2D<ParticleData>& particle)>& modifyParticleFunc);
 		[[nodiscard]] glm::vec2 GetMassCenter() const;
 		void OnInspect(const std::function<void(glm::vec2 position)>& func, const std::function<void(ImVec2 origin, float zoomFactor, ImDrawList*)>& drawFunc, bool showGrid = false);
 	};
