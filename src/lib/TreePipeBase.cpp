@@ -163,7 +163,7 @@ void TreePipeBase::Packing(const PipeModelParameters& pipeModelParameters)
 		}
 		if (!childrenNodes.empty() && !mainChildNode) mainChildNode = childrenNodes.front();
 		const auto node = scene->GetOrSetPrivateComponent<TreePipeNode>(*it).lock();
-		node->m_offset = glm::vec2(0.0f);
+		node->m_profiles.front()->m_offset  = glm::vec2(0.0f);
 		node->m_centerDirectionRadius = 0.0f;
 		if (childrenNodes.empty())
 		{
@@ -211,11 +211,13 @@ void TreePipeBase::Packing(const PipeModelParameters& pipeModelParameters)
 				node->m_profiles.back()->m_particlePhysics2D.RefParticle(nodeEndParticleHandle).SetPosition(mainChildParticle.GetPosition());
 			}
 			int index = 0;
+			const auto nodeGlobalTransform = scene->GetDataComponent<GlobalTransform>(*it);
 			for (const auto& childNode : childrenNodes)
 			{
 				if (childNode == mainChildNode) continue;
 				auto& childPhysics2D = childNode->m_profiles.front()->m_particlePhysics2D;
-				auto childNodeFront = glm::inverse(node->m_profiles.back()->m_profileTransform.GetRotation()) * childNode->m_profiles.front()->m_profileTransform.GetRotation() * glm::vec3(0, 0, -1);
+				auto childNodeGlobalTransform = scene->GetDataComponent<GlobalTransform>(childNode->GetOwner());
+				auto childNodeFront = glm::inverse(nodeGlobalTransform.GetRotation()) * childNodeGlobalTransform.GetRotation() * glm::vec3(0, 0, -1);
 				auto offset = glm::normalize(glm::vec2(childNodeFront.x, childNodeFront.y));
 				if(glm::isnan(offset.x) || glm::isnan(offset.y))
 				{
@@ -223,7 +225,7 @@ void TreePipeBase::Packing(const PipeModelParameters& pipeModelParameters)
 				}
 				childNode->m_centerDirectionRadius = childPhysics2D.GetDistanceToCenter(-offset) + 1.0f;
 				offset = (mainChildPhysics2D.GetDistanceToCenter(offset) + childNode->m_centerDirectionRadius + 1.0f) * offset;
-				childNode->m_offset = offset;
+				childNode->m_profiles.front()->m_offset = offset;
 				for (const auto& childParticle : childPhysics2D.PeekParticles())
 				{
 					const auto nodeStartParticleHandle = node->m_profiles.front()->m_particleMap.at(childParticle.m_data.m_pipeHandle);
@@ -277,11 +279,11 @@ void TreePipeBase::AdjustGraph(const PipeModelParameters& pipeModelParameters)
 		auto globalRotation = globalTransform.GetRotation();
 		const auto front = globalRotation * glm::vec3(0, 0, -1);
 
-		const float offsetLength = glm::length(node->m_offset);
+		const float offsetLength = glm::length(node->m_profiles.front()->m_offset);
 		if (offsetLength > glm::epsilon<float>()) {
 			const float cosFront = glm::dot(front, parentFront); //Horizontal
 			const float sinFront = glm::sin(glm::acos(cosFront)); //Vertical
-			const auto offsetDirection = glm::normalize(node->m_offset);
+			const auto offsetDirection = glm::normalize(node->m_profiles.front()->m_offset);
 			globalPosition += parentUp * offsetDirection.y * (offsetLength + cosFront * node->m_centerDirectionRadius) * m_pipeModelParameters.m_profileDefaultCellRadius;
 			globalPosition += parentLeft * offsetDirection.x * (offsetLength + cosFront * node->m_centerDirectionRadius) * m_pipeModelParameters.m_profileDefaultCellRadius;
 			globalPosition += parentFront * (sinFront * node->m_centerDirectionRadius) * m_pipeModelParameters.m_profileDefaultCellRadius;

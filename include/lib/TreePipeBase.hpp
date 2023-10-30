@@ -59,11 +59,14 @@ namespace EcoSysLab
 			auto tpn = scene->GetOrSetPrivateComponent<TreePipeNode>(newEntity).lock();
 			tpn->m_profiles.emplace_back(std::make_shared<TreePipeProfile>());
 			auto& firstNode = srcSkeleton.PeekNode(flow.RefNodeHandles().front());
-			tpn->m_profiles.back()->m_profileTransform.SetRotation(firstNode.m_info.m_regulatedGlobalRotation);
-
+			//tpn->m_profiles.back()->m_profileTransform.SetRotation(firstNode.m_info.m_regulatedGlobalRotation);
+			tpn->m_profiles.back()->m_a = 0.0f;
+			tpn->m_profiles.back()->m_offset = glm::vec2(0.0f);
 			tpn->m_profiles.emplace_back(std::make_shared<TreePipeProfile>());
 			auto& lastNode = srcSkeleton.PeekNode(flow.RefNodeHandles().back());
-			tpn->m_profiles.back()->m_profileTransform.SetRotation(lastNode.m_info.m_regulatedGlobalRotation);
+			//tpn->m_profiles.back()->m_profileTransform.SetRotation(lastNode.m_info.m_regulatedGlobalRotation);
+			tpn->m_profiles.back()->m_a = 1.0f;
+			tpn->m_profiles.back()->m_offset = glm::vec2(0.0f);
 
 			tpn->m_apical = flow.IsApical();
 			auto mmr = scene->GetOrSetPrivateComponent<MeshRenderer>(newEntity).lock();
@@ -71,7 +74,7 @@ namespace EcoSysLab
 			mmr->m_material = nodeMaterial;
 
 			GlobalTransform globalTransform;
-			const glm::quat rotation = tpn->m_profiles.back()->m_profileTransform.GetRotation();
+			const glm::quat rotation = lastNode.m_info.m_regulatedGlobalRotation;
 			globalTransform.m_value =
 				ownerGlobalTransform.m_value
 				* (glm::translate(flow.m_info.m_globalEndPosition) * glm::mat4_cast(rotation) * glm::scale(glm::vec3(flow.m_info.m_startThickness * 5.0f, flow.m_info.m_startThickness, flow.m_info.m_startThickness * 5.0f)));

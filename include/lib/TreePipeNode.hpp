@@ -13,7 +13,8 @@ namespace EcoSysLab
 	{
 		ParticlePhysics2D<CellParticlePhysicsData> m_particlePhysics2D;
 		std::unordered_map<PipeHandle, ParticleHandle> m_particleMap{};
-		Transform m_profileTransform{};
+		float m_a = 0.0f;
+		glm::vec2 m_offset = glm::vec2(0.0f);
 	};
 	class TreePipeNode : public IPrivateComponent
 	{
@@ -22,9 +23,10 @@ namespace EcoSysLab
 		PipeHandle m_pipeHandle = -1;
 
 		float m_centerDirectionRadius = 0.0f;
-		glm::vec2 m_offset = glm::vec2(0.0f);
-		
+
 		bool m_apical = false;
+
+		void InsertInterpolation(float a);
 
 		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 	};
