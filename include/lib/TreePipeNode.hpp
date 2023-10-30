@@ -18,7 +18,7 @@ namespace EcoSysLab
 	class TreePipeNode : public IPrivateComponent
 	{
 	public:
-		std::list<TreePipeProfile> m_profiles;
+		std::vector<std::shared_ptr<TreePipeProfile>> m_profiles;
 		PipeHandle m_pipeHandle = -1;
 
 		float m_centerDirectionRadius = 0.0f;
