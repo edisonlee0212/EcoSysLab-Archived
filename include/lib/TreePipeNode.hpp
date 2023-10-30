@@ -14,9 +14,16 @@ namespace EcoSysLab
 	public:
 		ParticlePhysics2D<CellParticlePhysicsData> m_startParticlePhysics2D;
 		ParticlePhysics2D<CellParticlePhysicsData> m_endParticlePhysics2D;
-
+		ProfileHandle m_startProfileHandle = -1;
+		ProfileHandle m_endProfileHandle = -1;
+		PipeHandle m_pipeHandle = -1;
 		std::unordered_map<PipeHandle, ParticleHandle> m_startParticleMap{};
 		std::unordered_map<PipeHandle, ParticleHandle> m_endParticleMap{};
+
+		glm::quat m_startRegulatedRotation{};
+		glm::quat m_endRegulatedRotation{};
+
+		glm::vec2 m_offset;
 
 		bool m_apical = false;
 
