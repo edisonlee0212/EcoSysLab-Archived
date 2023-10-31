@@ -131,12 +131,12 @@ namespace EcoSysLab
 		std::queue<PipeSegmentHandle> m_pipeSegmentPool;
 
 		int m_version = -1;
-		void BuildStrand(const Pipe<PipeData>& pipe, std::vector<glm::uint>& strands, std::vector<StrandPoint>& points, int nodeMaxCount) const;
+		void BuildStrand(float controlPointRatio, const Pipe<PipeData>& pipe, std::vector<glm::uint>& strands, std::vector<StrandPoint>& points, int nodeMaxCount) const;
 
 		[[nodiscard]] PipeSegmentHandle AllocatePipeSegment(PipeHandle pipeHandle, PipeSegmentHandle prevHandle, int index);
 	public:
 
-		void BuildStrands(std::vector<glm::uint>& strands, std::vector<StrandPoint>& points, int nodeMaxCount = -1) const;
+		void BuildStrands(float controlPointRatio, std::vector<glm::uint>& strands, std::vector<StrandPoint>& points, int nodeMaxCount = -1) const;
 
 		PipeGroupData m_data;
 
@@ -194,7 +194,7 @@ namespace EcoSysLab
 	};
 
 	template <typename PipeGroupData, typename PipeData, typename PipeSegmentData>
-	void PipeGroup<PipeGroupData, PipeData, PipeSegmentData>::BuildStrand(const Pipe<PipeData>& pipe,
+	void PipeGroup<PipeGroupData, PipeData, PipeSegmentData>::BuildStrand(const float controlPointRatio, const Pipe<PipeData>& pipe,
 		std::vector<glm::uint>& strands, std::vector<StrandPoint>& points, int nodeMaxCount) const
 	{
 		const auto& pipeSegmentHandles = pipe.PeekPipeSegmentHandles();
@@ -204,7 +204,6 @@ namespace EcoSysLab
 		strands.emplace_back(points.size());
 		StrandPoint basePoint;
 		basePoint.m_color = glm::vec4(0.6f, 0.3f, 0.0f, 1.0f);
-		float controlPointRatio = 0.5f;
 		const auto& secondPipeSegment = PeekPipeSegment(pipeSegmentHandles[0]);
 		auto basePointDistance = glm::distance(baseInfo.m_globalPosition, secondPipeSegment.m_info.m_globalPosition);
 		basePoint.m_normal = glm::normalize(baseInfo.m_globalRotation * glm::vec3(0, 0, -1)); //glm::normalize(secondPipeSegment.m_info.m_globalPosition - baseInfo.m_globalPosition);
@@ -287,6 +286,7 @@ namespace EcoSysLab
 			m_pipeSegments[prevHandle].m_endSegment = false;
 			segment.m_prevHandle = prevHandle;
 		}
+		segment.m_nextHandle = -1;
 		segment.m_pipeHandle = pipeHandle;
 		segment.m_index = index;
 		segment.m_recycled = false;
@@ -294,13 +294,13 @@ namespace EcoSysLab
 	}
 
 	template <typename PipeGroupData, typename PipeData, typename PipeSegmentData>
-	void PipeGroup<PipeGroupData, PipeData, PipeSegmentData>::BuildStrands(std::vector<glm::uint>& strands,
+	void PipeGroup<PipeGroupData, PipeData, PipeSegmentData>::BuildStrands(const float controlPointRatio, std::vector<glm::uint>& strands,
 		std::vector<StrandPoint>& points, int nodeMaxCount) const
 	{
 		for (const auto& pipe : m_pipes)
 		{
 			if (pipe.IsRecycled()) continue;
-			BuildStrand(pipe, strands, points, nodeMaxCount);
+			BuildStrand(controlPointRatio, pipe, strands, points, nodeMaxCount);
 		}
 	}
 

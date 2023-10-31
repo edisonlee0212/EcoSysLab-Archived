@@ -4,8 +4,6 @@
 #include "Graphics.hpp"
 #include "EditorLayer.hpp"
 #include "Application.hpp"
-#include "HexagonProfileData.hpp"
-#include "PipeModel.hpp"
 #include "Jobs.hpp"
 using namespace EvoEngine;
 namespace EcoSysLab {

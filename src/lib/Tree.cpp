@@ -254,66 +254,6 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 			}
 			ImGui::TreePop();
 		}
-		if (ImGui::TreeNode("Pipe settings")) {
-
-			ImGui::DragFloat("Default profile cell radius", &m_pipeModelParameters.m_profileDefaultCellRadius, 0.001f, 0.001f, 1.0f);
-			ImGui::DragFloat("Physics damping", &m_pipeModelParameters.m_damping, 0.01f, 0.0f, 1.0f);
-			ImGui::DragFloat("Physics attraction strength", &m_pipeModelParameters.m_gravityStrength, 0.01f, 0.0f, 10.0f);
-			ImGui::DragFloat("Physics simulation iteration cell factor", &m_pipeModelParameters.m_simulationIterationCellFactor, 0.1f, 0.0f, 50.0f);
-			ImGui::DragInt("Physics simulation minimum iteration", &m_pipeModelParameters.m_minimumSimulationIteration, 1, 0, 50);
-			ImGui::DragFloat("Physics simulation particle stabilize speed", &m_pipeModelParameters.m_particleStabilizeSpeed, 0.1f, 0.0f, 100.0f);
-			static bool autoGenStrands = true;
-			static int nodeLimit = -1;
-			if (ImGui::Button("Update pipes"))
-			{
-				m_treePipeModel.UpdatePipeModels(m_treeModel, m_pipeModelParameters);
-				if(autoGenStrands)
-				{
-					m_treePipeModel.ApplySimulationResults(m_pipeModelParameters);
-					InitializeStrandRenderer(nodeLimit);
-				}
-			}
-			if(ImGui::DragInt("Strand node limit", &nodeLimit, 1, -1, 999) && autoGenStrands)
-			{
-				m_treePipeModel.ApplySimulationResults(m_pipeModelParameters);
-				InitializeStrandRenderer(nodeLimit);
-			}
-			ImGui::Checkbox("Auto gen strands", &autoGenStrands);
-			if (autoGenStrands && ImGui::Button("Initialize strands"))
-			{
-				m_treePipeModel.ApplySimulationResults(m_pipeModelParameters);
-				InitializeStrandRenderer(nodeLimit);
-			}
-			static bool displayProfile = true;
-
-			static bool showGrid = false;
-			ImGui::Checkbox("Show Profile", &displayProfile);
-			if (displayProfile) ImGui::Checkbox("Show Grid", &showGrid);
-			if (displayProfile && m_treeVisualizer.GetSelectedInternodeHandle() >= 0)
-			{
-				auto& skeleton = m_treePipeModel.m_shootPipeModel.m_skeleton;
-				if (skeleton.RefRawNodes().size() > m_treeVisualizer.GetSelectedInternodeHandle())
-				{
-					auto& profileGroup = m_treePipeModel.m_shootPipeModel.m_pipeProfileGroup;
-					const auto targetProfileHandle = skeleton.RefNode(skeleton.m_data.m_nodeMap.at(m_treeVisualizer.GetSelectedInternodeHandle())).m_data.m_profileHandle;
-					if (profileGroup.RefProfiles().size() > targetProfileHandle) {
-						ImGui::SetNextWindowSize(ImVec2(600, 600), ImGuiCond_Appearing);
-						const std::string tag = "Profile [" + std::to_string(m_treeVisualizer.GetSelectedInternodeHandle()) + "]";
-						if (ImGui::Begin(tag.c_str()))
-						{
-							/*
-							profileGroup.RefProfile(targetProfileHandle).m_data.m_particlePhysics2D.OnInspect(
-								[&](const glm::vec2 position) {},
-								[&](const ImVec2 origin, const float zoomFactor, ImDrawList* drawList) {},
-								showGrid);*/
-							bool changed = profileGroup.RefProfile(targetProfileHandle).OnInspect(false);
-						}
-						ImGui::End();
-					}
-				}
-			}
-			ImGui::TreePop();
-		}
 		if (ImGui::TreeNode("Mesh generation settings")) {
 			static int iterations = 5;
 			ImGui::DragInt("Iterations", &iterations, 1, 0, m_treeModel.CurrentIteration());
@@ -597,35 +537,6 @@ bool Tree::TryGrowSubTree(const NodeHandle internodeHandle, const float deltaTim
 	ecoSysLabLayer->m_needFullFlowUpdate = true;
 }
 
-void Tree::InitializeStrandRenderer(const int nodeMaxCount)
-{
-	const auto scene = GetScene();
-	const auto owner = GetOwner();
-
-	ClearStrands();
-	const auto strandsEntity = scene->CreateEntity("Branch Strands");
-	scene->SetParent(strandsEntity, owner);
-
-	const auto renderer = scene->GetOrSetPrivateComponent<StrandsRenderer>(strandsEntity).lock();
-	const auto strandsAsset = ProjectManager::CreateTemporaryAsset<Strands>();
-
-	m_treePipeModel.m_shootPipeModel.CalculatePipeSegmentInfos(m_pipeModelParameters);
-
-	std::vector<glm::uint> strandsList;
-	std::vector<StrandPoint> points;
-	m_treePipeModel.m_shootPipeModel.m_pipeGroup.BuildStrands(strandsList, points, nodeMaxCount);
-	if (!points.empty()) strandsList.emplace_back(points.size());
-	StrandPointAttributes strandPointAttributes{};
-	strandPointAttributes.m_color = true;
-	strandsAsset->SetStrands(strandPointAttributes, strandsList, points);
-	renderer->m_strands = strandsAsset;
-
-	const auto material = ProjectManager::CreateTemporaryAsset<Material>();
-	
-	renderer->m_material = material;
-	material->m_vertexColorOnly = true;
-	material->m_materialProperties.m_albedoColor = glm::vec3(0.6f, 0.3f, 0.0f);
-}
 
 void Tree::Serialize(YAML::Emitter& out)
 {

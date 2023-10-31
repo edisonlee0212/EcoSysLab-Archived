@@ -1,12 +1,9 @@
 #pragma once
-
-#include "TreePipeModel.hpp"
+#include "PipeModelData.hpp"
+#include "PipeModelParameters.hpp"
 #include "TreeVisualizer.hpp"
 #include "TreeMeshGenerator.hpp"
 #include "LSystemString.hpp"
-#include "TreeGraph.hpp"
-#include "TreeGrowthParameters.hpp"
-
 #include "TreePipeNode.hpp"
 using namespace EvoEngine;
 namespace EcoSysLab
@@ -22,7 +19,7 @@ namespace EcoSysLab
 		template<typename SkeletonData, typename FlowData, typename NodeData>
 		void InitializeNodesWithSkeleton(const Skeleton<SkeletonData, FlowData, NodeData>& srcSkeleton);
 		void ClearStrands() const;
-		void InitializeStrandRenderer(int nodeMaxCount = -1);
+		void InitializeStrandRenderer(float controlPointRatio, int nodeMaxCount = -1);
 
 		void Packing();
 		void AdjustGraph() const;

@@ -1,9 +1,10 @@
 #pragma once
 
-#include "TreePipeModel.hpp"
 #include "TreeVisualizer.hpp"
 #include "TreeMeshGenerator.hpp"
 #include "LSystemString.hpp"
+#include "ParticlePhysics2D.hpp"
+#include "PipeModelData.hpp"
 #include "TreeGraph.hpp"
 #include "TreeGrowthParameters.hpp"
 using namespace EvoEngine;
@@ -18,7 +19,7 @@ namespace EcoSysLab
 	class TreePipeNode : public IPrivateComponent
 	{
 	public:
-		std::vector<std::shared_ptr<TreePipeProfile>> m_profiles;
+		std::vector<std::shared_ptr<TreePipeProfile>> m_profiles {};
 		PipeHandle m_pipeHandle = -1;
 
 		float m_frontControlPointDistance = 0.0f;
@@ -29,7 +30,7 @@ namespace EcoSysLab
 		bool m_apical = false;
 
 		void InsertInterpolation(float a);
-
+		void OnDestroy() override;
 		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 	};
 }

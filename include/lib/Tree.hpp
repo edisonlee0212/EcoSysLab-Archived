@@ -1,6 +1,4 @@
 #pragma once
-
-#include "TreePipeModel.hpp"
 #include "TreeVisualizer.hpp"
 #include "TreeMeshGenerator.hpp"
 #include "LSystemString.hpp"
@@ -43,10 +41,7 @@ namespace EcoSysLab {
 		TreeVisualizer m_treeVisualizer {};
 		bool m_enableVisualization = true;
 
-		PipeModelParameters m_pipeModelParameters{};
 		
-		void InitializeStrandRenderer(int nodeMaxCount = -1);
-
 		void Serialize(YAML::Emitter& out) override;
 		bool m_splitRootTest = true;
 		bool m_recordBiomassHistory = true;
@@ -69,7 +64,6 @@ namespace EcoSysLab {
 		bool m_enableHistory = false;
 		int m_historyIteration = 30;
 		TreeModel m_treeModel{};
-		TreePipeModel m_treePipeModel{};
 		
 		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 

@@ -40,6 +40,16 @@ void TreePipeNode::InsertInterpolation(const float a)
 	}
 }
 
+void TreePipeNode::OnDestroy()
+{
+	m_profiles.clear();
+	m_pipeHandle = -1;
+	m_frontControlPointDistance = 0.0f;
+	m_backControlPointDistance = 0.0f;
+	m_centerDirectionRadius = 0.0f;
+	m_apical = false;
+}
+
 void TreePipeNode::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
 	static bool displayPhysics = true;

@@ -44,7 +44,7 @@ void TreePipeBase::ClearStrands() const
 	}
 }
 
-void TreePipeBase::InitializeStrandRenderer(int nodeMaxCount)
+void TreePipeBase::InitializeStrandRenderer(const float controlPointRatio, int nodeMaxCount)
 {
 	const auto scene = GetScene();
 	const auto owner = GetOwner();
@@ -60,7 +60,7 @@ void TreePipeBase::InitializeStrandRenderer(int nodeMaxCount)
 
 	std::vector<glm::uint> strandsList;
 	std::vector<StrandPoint> points;
-	m_pipeGroup.BuildStrands(strandsList, points, nodeMaxCount);
+	m_pipeGroup.BuildStrands(controlPointRatio, strandsList, points, nodeMaxCount);
 	if (!points.empty()) strandsList.emplace_back(points.size());
 	StrandPointAttributes strandPointAttributes{};
 	strandPointAttributes.m_color = true;
@@ -80,6 +80,7 @@ void TreePipeBase::Packing()
 	std::vector<Entity> sortedEntityList;
 	GatherChildrenEntities(sortedEntityList);
 	const auto scene = GetScene();
+	m_pipeGroup = {};
 	auto& pipeGroup = m_pipeGroup;
 
 	for (int sortedEntityIndex = 0; sortedEntityIndex < sortedEntityList.size(); sortedEntityIndex++)
@@ -441,8 +442,10 @@ void TreePipeBase::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 	{
 		//AdjustGraph();
 	}
+	static float controlPointRatio = 0.2f;
+	ImGui::DragFloat("Control Point Ratio", &controlPointRatio, 0.01f, 0.01f, 0.5f);
 	if (ImGui::Button("Build Strands"))
 	{
-		InitializeStrandRenderer();
+		InitializeStrandRenderer(controlPointRatio);
 	}
 }
