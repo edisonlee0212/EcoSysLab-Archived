@@ -21,10 +21,12 @@ namespace EcoSysLab
 
 		template<typename SkeletonData, typename FlowData, typename NodeData>
 		void InitializeNodesWithSkeleton(const Skeleton<SkeletonData, FlowData, NodeData>& srcSkeleton);
+		void ClearStrands() const;
+		void InitializeStrandRenderer(int nodeMaxCount = -1);
 
-		void Packing(const PipeModelParameters& pipeModelParameters);
-		void AdjustGraph(const PipeModelParameters& pipeModelParameters);
-		void BuildPipes(const PipeModelParameters& pipeModelParameters);
+		void Packing();
+		void AdjustGraph() const;
+		void BuildPipes();
 		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 	};
 
@@ -61,23 +63,22 @@ namespace EcoSysLab
 			auto& firstNode = srcSkeleton.PeekNode(flow.RefNodeHandles().front());
 			//tpn->m_profiles.back()->m_profileTransform.SetRotation(firstNode.m_info.m_regulatedGlobalRotation);
 			tpn->m_profiles.back()->m_a = 0.0f;
-			tpn->m_profiles.back()->m_offset = glm::vec2(0.0f);
 			tpn->m_profiles.emplace_back(std::make_shared<TreePipeProfile>());
 			auto& lastNode = srcSkeleton.PeekNode(flow.RefNodeHandles().back());
 			//tpn->m_profiles.back()->m_profileTransform.SetRotation(lastNode.m_info.m_regulatedGlobalRotation);
 			tpn->m_profiles.back()->m_a = 1.0f;
-			tpn->m_profiles.back()->m_offset = glm::vec2(0.0f);
 
 			tpn->m_apical = flow.IsApical();
 			auto mmr = scene->GetOrSetPrivateComponent<MeshRenderer>(newEntity).lock();
 			mmr->m_mesh = Resources::GetResource<Mesh>("PRIMITIVE_CUBE");
 			mmr->m_material = nodeMaterial;
+			nodeMaterial->m_materialProperties.m_transmission = 0.5f;
 
 			GlobalTransform globalTransform;
 			const glm::quat rotation = lastNode.m_info.m_regulatedGlobalRotation;
 			globalTransform.m_value =
 				ownerGlobalTransform.m_value
-				* (glm::translate(flow.m_info.m_globalEndPosition) * glm::mat4_cast(rotation) * glm::scale(glm::vec3(flow.m_info.m_startThickness * 5.0f, flow.m_info.m_startThickness, flow.m_info.m_startThickness * 5.0f)));
+				* (glm::translate(flow.m_info.m_globalEndPosition) * glm::mat4_cast(rotation) * glm::scale(glm::vec3(flow.m_info.m_startThickness * 5.0f, flow.m_info.m_startThickness * 5.0f, 0.01f)));
 			scene->SetDataComponent(newEntity, globalTransform);
 		}
 		m_pipeGroup = {};

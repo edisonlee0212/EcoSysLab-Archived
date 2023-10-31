@@ -25,8 +25,6 @@ void TreePipeNode::InsertInterpolation(const float a)
 	const auto nextProfile = m_profiles.at(prev + 2);
 
 	const float actualA = (newProfile->m_a - prevProfile->m_a) / (nextProfile->m_a - prevProfile->m_a);
-	newProfile->m_offset = glm::mix(prevProfile->m_offset, nextProfile->m_offset, actualA);
-	//newProfile->m_profileTransform = glm::mix(prevProfile->m_profileTransform, nextProfile->m_profileTransform, actualA);
 	for(const auto & [pipeHandle, prevParticleHandle] : prevProfile->m_particleMap)
 	{
 		const auto newParticleHandle = newProfile->m_particlePhysics2D.AllocateParticle();

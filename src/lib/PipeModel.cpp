@@ -31,7 +31,7 @@ void PipeModel::CalculatePipeSegmentInfos(const PipeModelParameters& pipeModelPa
 			if (cell.IsRecycled()) continue;
 			if (cell.m_data.m_pipeHandle == -1) continue;
 			auto& pipeSegment = m_pipeGroup.RefPipeSegment(cell.m_data.m_pipeSegmentHandle);
-			pipeSegment.m_info.m_localPosition = cell.m_info.m_offset * profile.m_info.m_cellRadius;
+			pipeSegment.m_data.m_localPosition = cell.m_info.m_offset * profile.m_info.m_cellRadius;
 			pipeSegment.m_info.m_thickness = profile.m_info.m_cellRadius;
 		}
 	}
@@ -44,7 +44,8 @@ void PipeModel::CalculatePipeSegmentInfos(const PipeModelParameters& pipeModelPa
 		const glm::vec3 left = nodeInfo.m_regulatedGlobalRotation * glm::vec3(1, 0, 0);
 		const glm::vec3 up = nodeInfo.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
 		auto& pipeSegmentInfo = pipeSegment.m_info;
-		pipeSegmentInfo.m_globalPosition = nodeInfo.m_globalPosition + nodeInfo.m_globalDirection * nodeInfo.m_length + left * pipeSegmentInfo.m_localPosition.x + up * pipeSegmentInfo.m_localPosition.y;
+		auto& pipeSegmentData = pipeSegment.m_data;
+		pipeSegmentInfo.m_globalPosition = nodeInfo.m_globalPosition + nodeInfo.m_globalDirection * nodeInfo.m_length + left * pipeSegmentData.m_localPosition.x + up * pipeSegmentData.m_localPosition.y;
 		pipeSegmentInfo.m_globalRotation = nodeInfo.m_regulatedGlobalRotation;
 	}
 }

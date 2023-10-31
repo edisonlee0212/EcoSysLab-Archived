@@ -55,7 +55,7 @@ glm::vec3 BezierSpline::EvaluatePointFromCurves(float point) const {
     float integerPart;
     const float fractionalPart = modff(splineU, &integerPart);
 
-    auto curveIndex = int(integerPart);
+    auto curveIndex = static_cast<int>(integerPart);
     auto curveU = fractionalPart;
 
     // If evaluating the very last point on the spline
@@ -135,7 +135,7 @@ glm::vec3 BezierSpline::EvaluateAxisFromCurves(float point) const {
     float integerPart;
     const float fractionalPart = modff(splineU, &integerPart);
 
-    auto curveIndex = int(integerPart);
+    auto curveIndex = static_cast<int>(integerPart);
     auto curveU = fractionalPart;
 
     // If evaluating the very last point on the spline

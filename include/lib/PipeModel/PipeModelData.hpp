@@ -94,6 +94,8 @@ namespace EcoSysLab
 		NodeHandle m_nodeHandle = -1;
 		FlowHandle m_flowHandle = -1;
 		CellHandle m_cellHandle = -1;
+
+		glm::vec2 m_localPosition = glm::vec2(0.0f);
 	};
 
 	typedef PipeGroup<PipeModelPipeGroupData_Old, PipeModelPipeData_Old, PipeModelPipeSegmentData_Old> PipeModelPipeGroup_Old;

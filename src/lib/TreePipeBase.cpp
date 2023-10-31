@@ -31,8 +31,52 @@ void TreePipeBase::GatherChildrenEntities(std::vector<Entity>& list) const
 	}
 }
 
-void TreePipeBase::Packing(const PipeModelParameters& pipeModelParameters)
+void TreePipeBase::ClearStrands() const
 {
+	const auto scene = GetScene();
+	const auto self = GetOwner();
+	const auto children = scene->GetChildren(self);
+	for (const auto& child : children) {
+		auto name = scene->GetEntityName(child);
+		if (name == "Branch Strands") {
+			scene->DeleteEntity(child);
+		}
+	}
+}
+
+void TreePipeBase::InitializeStrandRenderer(int nodeMaxCount)
+{
+	const auto scene = GetScene();
+	const auto owner = GetOwner();
+
+	ClearStrands();
+	const auto strandsEntity = scene->CreateEntity("Branch Strands");
+	scene->SetParent(strandsEntity, owner);
+
+	const auto renderer = scene->GetOrSetPrivateComponent<StrandsRenderer>(strandsEntity).lock();
+	const auto strandsAsset = ProjectManager::CreateTemporaryAsset<Strands>();
+
+	BuildPipes();
+
+	std::vector<glm::uint> strandsList;
+	std::vector<StrandPoint> points;
+	m_pipeGroup.BuildStrands(strandsList, points, nodeMaxCount);
+	if (!points.empty()) strandsList.emplace_back(points.size());
+	StrandPointAttributes strandPointAttributes{};
+	strandPointAttributes.m_color = true;
+	strandsAsset->SetStrands(strandPointAttributes, strandsList, points);
+	renderer->m_strands = strandsAsset;
+
+	const auto material = ProjectManager::CreateTemporaryAsset<Material>();
+
+	renderer->m_material = material;
+	material->m_vertexColorOnly = true;
+	material->m_materialProperties.m_albedoColor = glm::vec3(0.6f, 0.3f, 0.0f);
+}
+
+void TreePipeBase::Packing()
+{
+	auto& pipeModelParameters = m_pipeModelParameters;
 	std::vector<Entity> sortedEntityList;
 	GatherChildrenEntities(sortedEntityList);
 	const auto scene = GetScene();
@@ -68,7 +112,7 @@ void TreePipeBase::Packing(const PipeModelParameters& pipeModelParameters)
 				const auto newStartParticleHandle = node->m_profiles.front()->m_particlePhysics2D.AllocateParticle();
 				auto& newStartParticle = node->m_profiles.front()->m_particlePhysics2D.RefParticle(newStartParticleHandle);
 				newStartParticle.m_data.m_pipeHandle = newPipeHandle;
-				
+
 				const auto newEndParticleHandle = node->m_profiles.back()->m_particlePhysics2D.AllocateParticle();
 				auto& newEndParticle = node->m_profiles.back()->m_particlePhysics2D.RefParticle(newEndParticleHandle);
 				newEndParticle.m_data.m_pipeHandle = newPipeHandle;
@@ -131,14 +175,14 @@ void TreePipeBase::Packing(const PipeModelParameters& pipeModelParameters)
 		node->m_profiles.front()->m_particleMap.clear();
 		node->m_profiles.back()->m_particleMap.clear();
 		auto& startPhysics2D = node->m_profiles.front()->m_particlePhysics2D;
-		
+
 		for (auto& particle : startPhysics2D.RefParticles())
 		{
 			particle.SetDamping(pipeModelParameters.m_damping);
 			node->m_profiles.front()->m_particleMap.insert({ particle.m_data.m_pipeHandle, particle.GetHandle() });
 		}
 		auto& endPhysics2D = node->m_profiles.front()->m_particlePhysics2D;
-		
+
 		for (auto& particle : endPhysics2D.RefParticles())
 		{
 			particle.SetDamping(pipeModelParameters.m_damping);
@@ -146,7 +190,7 @@ void TreePipeBase::Packing(const PipeModelParameters& pipeModelParameters)
 		}
 	}
 
-	
+
 	for (auto it = sortedEntityList.rbegin(); it != sortedEntityList.rend(); ++it)
 	{
 		auto childrenEntities = scene->GetChildren(*it);
@@ -163,7 +207,6 @@ void TreePipeBase::Packing(const PipeModelParameters& pipeModelParameters)
 		}
 		if (!childrenNodes.empty() && !mainChildNode) mainChildNode = childrenNodes.front();
 		const auto node = scene->GetOrSetPrivateComponent<TreePipeNode>(*it).lock();
-		node->m_profiles.front()->m_offset  = glm::vec2(0.0f);
 		node->m_centerDirectionRadius = 0.0f;
 		if (childrenNodes.empty())
 		{
@@ -219,21 +262,21 @@ void TreePipeBase::Packing(const PipeModelParameters& pipeModelParameters)
 				auto childNodeGlobalTransform = scene->GetDataComponent<GlobalTransform>(childNode->GetOwner());
 				auto childNodeFront = glm::inverse(nodeGlobalTransform.GetRotation()) * childNodeGlobalTransform.GetRotation() * glm::vec3(0, 0, -1);
 				auto offset = glm::normalize(glm::vec2(childNodeFront.x, childNodeFront.y));
-				if(glm::isnan(offset.x) || glm::isnan(offset.y))
+				if (glm::isnan(offset.x) || glm::isnan(offset.y))
 				{
 					offset = glm::vec2(1, 0);
 				}
 				childNode->m_centerDirectionRadius = childPhysics2D.GetDistanceToCenter(-offset) + 1.0f;
 				offset = (mainChildPhysics2D.GetDistanceToCenter(offset) + childNode->m_centerDirectionRadius + 1.0f) * offset;
-				childNode->m_profiles.front()->m_offset = offset;
-				for (const auto& childParticle : childPhysics2D.PeekParticles())
+				for (auto& childParticle : childPhysics2D.RefParticles())
 				{
+					childParticle.SetPosition(childParticle.GetPosition() + offset);
 					const auto nodeStartParticleHandle = node->m_profiles.front()->m_particleMap.at(childParticle.m_data.m_pipeHandle);
 					const auto nodeEndParticleHandle = node->m_profiles.back()->m_particleMap.at(childParticle.m_data.m_pipeHandle);
 					node->m_profiles.front()->m_particlePhysics2D.RefParticle(nodeStartParticleHandle).SetColor(childParticle.GetColor());
-					node->m_profiles.front()->m_particlePhysics2D.RefParticle(nodeStartParticleHandle).SetPosition(childParticle.GetPosition() + offset);
+					node->m_profiles.front()->m_particlePhysics2D.RefParticle(nodeStartParticleHandle).SetPosition(childParticle.GetPosition());
 					node->m_profiles.back()->m_particlePhysics2D.RefParticle(nodeEndParticleHandle).SetColor(childParticle.GetColor());
-					node->m_profiles.back()->m_particlePhysics2D.RefParticle(nodeEndParticleHandle).SetPosition(childParticle.GetPosition() + offset);
+					node->m_profiles.back()->m_particlePhysics2D.RefParticle(nodeEndParticleHandle).SetPosition(childParticle.GetPosition());
 				}
 				index++;
 			}
@@ -258,8 +301,9 @@ void TreePipeBase::Packing(const PipeModelParameters& pipeModelParameters)
 	}
 }
 
-void TreePipeBase::AdjustGraph(const PipeModelParameters& pipeModelParameters)
+void TreePipeBase::AdjustGraph() const
 {
+	auto& pipeModelParameters = m_pipeModelParameters;
 	std::vector<Entity> sortedEntityList;
 	GatherChildrenEntities(sortedEntityList);
 	const auto scene = GetScene();
@@ -278,7 +322,7 @@ void TreePipeBase::AdjustGraph(const PipeModelParameters& pipeModelParameters)
 		auto globalPosition = globalTransform.GetPosition();
 		auto globalRotation = globalTransform.GetRotation();
 		const auto front = globalRotation * glm::vec3(0, 0, -1);
-
+		/*
 		const float offsetLength = glm::length(node->m_profiles.front()->m_offset);
 		if (offsetLength > glm::epsilon<float>()) {
 			const float cosFront = glm::dot(front, parentFront); //Horizontal
@@ -287,20 +331,88 @@ void TreePipeBase::AdjustGraph(const PipeModelParameters& pipeModelParameters)
 			globalPosition += parentUp * offsetDirection.y * (offsetLength + cosFront * node->m_centerDirectionRadius) * m_pipeModelParameters.m_profileDefaultCellRadius;
 			globalPosition += parentLeft * offsetDirection.x * (offsetLength + cosFront * node->m_centerDirectionRadius) * m_pipeModelParameters.m_profileDefaultCellRadius;
 			globalPosition += parentFront * (sinFront * node->m_centerDirectionRadius) * m_pipeModelParameters.m_profileDefaultCellRadius;
-		}
+		}*/
 		globalTransform.SetPosition(globalPosition);
 		scene->SetDataComponent(entity, globalTransform);
 	}
 }
 
-void TreePipeBase::BuildPipes(const PipeModelParameters& pipeModelParameters)
+void TreePipeBase::BuildPipes()
 {
-	for(const auto& pipe : m_pipeGroup.RefPipes())
+	auto& pipeModelParameters = m_pipeModelParameters;
+	for (const auto& pipe : m_pipeGroup.RefPipes())
 	{
-		if(!pipe.PeekPipeSegmentHandles().empty()) m_pipeGroup.RecyclePipeSegment(pipe.PeekPipeSegmentHandles().front());
+		if (!pipe.PeekPipeSegmentHandles().empty()) m_pipeGroup.RecyclePipeSegment(pipe.PeekPipeSegmentHandles().front());
 	}
 
+	std::vector<Entity> sortedEntityList;
+	GatherChildrenEntities(sortedEntityList);
+	const auto scene = GetScene();
+	auto& pipeGroup = m_pipeGroup;
+	const auto modelGlobalTransform = scene->GetDataComponent<GlobalTransform>(GetOwner());
+	for (auto entity : sortedEntityList)
+	{
+		auto parent = scene->GetParent(entity);
+		const auto node = scene->GetOrSetPrivateComponent<TreePipeNode>(entity).lock();
+		auto parentGlobalTransform = scene->GetDataComponent<GlobalTransform>(parent);
+		//parentGlobalTransform.m_value = glm::inverse(modelGlobalTransform.m_value) * parentGlobalTransform.m_value;
+		const auto parentGlobalRotation = parentGlobalTransform.GetRotation();
+		const auto parentGlobalPosition = parentGlobalTransform.GetPosition();
+		auto globalTransform = scene->GetDataComponent<GlobalTransform>(entity);
+		//globalTransform.m_value = glm::inverse(modelGlobalTransform.m_value) * globalTransform.m_value;
+		const auto globalPosition = globalTransform.GetPosition();
+		const auto globalRotation = globalTransform.GetRotation();
+		if(entity.GetIndex() == sortedEntityList.front().GetIndex())
+		{
+			auto& profile = node->m_profiles.front();
+			const auto currentUp = parentGlobalRotation * glm::vec3(0, 0, 1);
+			const auto currentLeft = parentGlobalRotation * glm::vec3(1, 0, 0);
+			for (const auto& [pipeHandle, particleHandle] : profile->m_particleMap)
+			{
+				BezierCurve bezierCurve{};
+				bezierCurve.m_p0 = parentGlobalPosition;
+				bezierCurve.m_p3 = globalPosition;
+				float distance = glm::distance(bezierCurve.m_p0, bezierCurve.m_p3);
+				bezierCurve.m_p1 = bezierCurve.m_p0 + distance * 0.25f * (parentGlobalRotation * glm::vec3(0, 0, -1));
+				bezierCurve.m_p2 = bezierCurve.m_p3 - distance * 0.25f * (globalRotation * glm::vec3(0, 0, -1));
 
+				const auto& particle = profile->m_particlePhysics2D.PeekParticle(particleHandle);
+				auto& pipe = pipeGroup.RefPipe(pipeHandle);
+				pipe.m_info.m_baseInfo.m_thickness = pipeModelParameters.m_profileDefaultCellRadius;
+				pipe.m_info.m_baseInfo.m_globalPosition = bezierCurve.GetPoint(profile->m_a)
+					+ pipeModelParameters.m_profileDefaultCellRadius * particle.GetPosition().x * currentLeft
+					+ pipeModelParameters.m_profileDefaultCellRadius * particle.GetPosition().y * currentUp;
+				pipe.m_info.m_baseInfo.m_globalRotation = 
+					glm::quatLookAt(parentGlobalRotation * glm::vec3(0, 1, 0), 
+						parentGlobalRotation * glm::vec3(0, 0, -1));
+			}
+		}
+		for (int i = 1; i < node->m_profiles.size(); i++)
+		{
+			auto& profile = node->m_profiles.at(i);
+			const auto currentRotation = glm::mix(parentGlobalRotation, globalRotation, profile->m_a);
+			const auto currentUp = currentRotation * glm::vec3(0, 1, 0);
+			const auto currentLeft = currentRotation * glm::vec3(1, 0, 0);
+			for (const auto& [pipeHandle, particleHandle] : profile->m_particleMap)
+			{
+				BezierCurve bezierCurve{};
+				bezierCurve.m_p0 = parentGlobalPosition;
+				bezierCurve.m_p3 = globalPosition;
+				float distance = glm::distance(bezierCurve.m_p0, bezierCurve.m_p3);
+				bezierCurve.m_p1 = bezierCurve.m_p0 + distance * 0.25f * (parentGlobalRotation * glm::vec3(0, 0, -1));
+				bezierCurve.m_p2 = bezierCurve.m_p3 - distance * 0.25f * (globalRotation * glm::vec3(0, 0, -1));
+
+				const auto& particle = profile->m_particlePhysics2D.PeekParticle(particleHandle);
+				const auto newPipeSegmentHandle = pipeGroup.Extend(pipeHandle);
+				auto& newPipeSegment = pipeGroup.RefPipeSegment(newPipeSegmentHandle);
+				newPipeSegment.m_info.m_thickness = pipeModelParameters.m_profileDefaultCellRadius;
+				newPipeSegment.m_info.m_globalPosition = bezierCurve.GetPoint(profile->m_a)
+					+ pipeModelParameters.m_profileDefaultCellRadius * particle.GetPosition().x * currentLeft
+					+ pipeModelParameters.m_profileDefaultCellRadius * particle.GetPosition().y * currentUp;
+				newPipeSegment.m_info.m_globalRotation = currentRotation;
+			}
+		}
+	}
 }
 
 void TreePipeBase::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
@@ -321,12 +433,16 @@ void TreePipeBase::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 	ImGui::DragInt("Physics simulation minimum iteration", &m_pipeModelParameters.m_minimumSimulationIteration, 1, 0, 50);
 	ImGui::DragFloat("Physics simulation particle stabilize speed", &m_pipeModelParameters.m_particleStabilizeSpeed, 0.1f, 0.0f, 100.0f);
 
-	if(ImGui::Button("Packing"))
+	if (ImGui::Button("Packing"))
 	{
-		Packing(m_pipeModelParameters);
+		Packing();
 	}
 	if (ImGui::Button("Adjust Graph"))
 	{
-		AdjustGraph(m_pipeModelParameters);
+		//AdjustGraph();
+	}
+	if (ImGui::Button("Build Strands"))
+	{
+		InitializeStrandRenderer();
 	}
 }
