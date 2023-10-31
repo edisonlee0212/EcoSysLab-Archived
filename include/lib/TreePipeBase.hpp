@@ -49,14 +49,6 @@ namespace EcoSysLab
 			const auto& flow = srcSkeleton.PeekFlow(flowHandle);
 			const auto newEntity = scene->CreateEntity("Node " + std::to_string(flowHandle));
 			const auto parentHandle = flow.GetParentHandle();
-			if(parentHandle == -1)
-			{
-				scene->SetParent(newEntity, owner);
-			}else
-			{
-				scene->SetParent(newEntity, flowMap.at(parentHandle));
-			}
-			flowMap.insert({ flowHandle, newEntity });
 			
 			auto tpn = scene->GetOrSetPrivateComponent<TreePipeNode>(newEntity).lock();
 			tpn->m_profiles.emplace_back(std::make_shared<TreePipeProfile>());
@@ -80,6 +72,17 @@ namespace EcoSysLab
 				ownerGlobalTransform.m_value
 				* (glm::translate(flow.m_info.m_globalEndPosition) * glm::mat4_cast(rotation) * glm::scale(glm::vec3(flow.m_info.m_startThickness * 5.0f, flow.m_info.m_startThickness * 5.0f, 0.01f)));
 			scene->SetDataComponent(newEntity, globalTransform);
+
+			if (parentHandle == -1)
+			{
+				scene->SetParent(newEntity, owner);
+			}
+			else
+			{
+				scene->SetParent(newEntity, flowMap.at(parentHandle));
+			}
+			flowMap.insert({ flowHandle, newEntity });
+
 		}
 		m_pipeGroup = {};
 	}
