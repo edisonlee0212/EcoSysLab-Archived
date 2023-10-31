@@ -16,6 +16,7 @@ namespace EcoSysLab {
 		void CheckCollisions();
 		glm::vec2 m_min = glm::vec2(FLT_MAX);
 		glm::vec2 m_max = glm::vec2(FLT_MIN);
+		float m_maxDistanceToCenter = 0.0f;
 		glm::vec2 m_massCenter = glm::vec2(0.0f);
 		float m_maxParticleVelocity = 0.0f;
 		float m_simulationTime = 0.0f;
@@ -36,6 +37,7 @@ namespace EcoSysLab {
 		void SimulateByTime(float time, const std::function<void(Particle2D<ParticleData>& particle)>& modifyParticleFunc);
 		void Simulate(size_t iterations, const std::function<void(Particle2D<ParticleData>& particle)>& modifyParticleFunc);
 		[[nodiscard]] glm::vec2 GetMassCenter() const;
+		[[nodiscard]] float GetMaxDistanceToCenter() const;
 		void OnInspect(const std::function<void(glm::vec2 position)>& func, const std::function<void(ImVec2 origin, float zoomFactor, ImDrawList*)>& drawFunc, bool showGrid = false);
 	};
 
@@ -103,14 +105,17 @@ namespace EcoSysLab {
 		std::vector<glm::vec2> mins{};
 		std::vector<glm::vec2> maxs{};
 		std::vector<glm::vec2> massCenters{};
+		std::vector<float> maxDistances{};
 		mins.resize(threadCount);
 		maxs.resize(threadCount);
 		massCenters.resize(threadCount);
+		maxDistances.resize(threadCount);
 		for (int i = 0; i < threadCount; i++)
 		{
 			mins[i] = glm::vec2(FLT_MAX);
 			maxs[i] = glm::vec2(FLT_MIN);
 			massCenters[i] = glm::vec2(0.0f);
+			maxDistances[i] = 0.0f;
 		}
 		Jobs::ParallelFor(m_particles2D.size(), [&](const unsigned i, const unsigned threadIndex)
 			{
@@ -119,16 +124,19 @@ namespace EcoSysLab {
 				maxs[threadIndex] = glm::max(maxs[threadIndex], particle.m_position);
 
 				massCenters[threadIndex] += particle.m_position;
+				maxDistances[threadIndex] = glm::max(maxDistances[threadIndex], glm::length(particle.m_position));
 			}
 		);
 
 		m_massCenter = glm::vec2(0.0f);
+		m_maxDistanceToCenter = 0.0f;
 		for (int i = 0; i < threadCount; i++)
 		{
 			m_min = glm::min(mins[i], m_min);
 			m_max = glm::max(maxs[i], m_max);
 
 			m_massCenter += massCenters[i];
+			m_maxDistanceToCenter = glm::max(maxDistances[i], m_maxDistanceToCenter);
 		}
 		m_massCenter /= m_particles2D.size();
 	}
@@ -296,6 +304,12 @@ namespace EcoSysLab {
 	glm::vec2 ParticlePhysics2D<T>::GetMassCenter() const
 	{
 		return m_massCenter;
+	}
+
+	template <typename ParticleData>
+	float ParticlePhysics2D<ParticleData>::GetMaxDistanceToCenter() const
+	{
+		return m_maxDistanceToCenter;
 	}
 
 	template <typename T>

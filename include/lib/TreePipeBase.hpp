@@ -19,7 +19,7 @@ namespace EcoSysLab
 		template<typename SkeletonData, typename FlowData, typename NodeData>
 		void InitializeNodesWithSkeleton(const Skeleton<SkeletonData, FlowData, NodeData>& srcSkeleton);
 		void ClearStrands() const;
-		void InitializeStrandRenderer(float controlPointRatio, int nodeMaxCount = -1);
+		void InitializeStrandRenderer(float frontControlPointRatio, float backControlPointRatio, int nodeMaxCount = -1);
 
 		void Packing();
 		void AdjustGraph() const;

@@ -27,6 +27,8 @@ namespace EcoSysLab
 
 		float m_centerDirectionRadius = 0.0f;
 
+		glm::vec2 m_offset = glm::vec2(0.0f);
+
 		bool m_apical = false;
 
 		void InsertInterpolation(float a);
