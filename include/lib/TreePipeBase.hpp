@@ -59,15 +59,16 @@ namespace EcoSysLab
 
 			tpn->m_apical = flow.IsApical();
 			auto mmr = scene->GetOrSetPrivateComponent<MeshRenderer>(newEntity).lock();
-			mmr->m_mesh = Resources::GetResource<Mesh>("PRIMITIVE_CUBE");
+			mmr->m_mesh = Resources::GetResource<Mesh>("PRIMITIVE_SPHERE");
 			mmr->m_material = nodeMaterial;
+			nodeMaterial->m_materialProperties.m_albedoColor = glm::vec3(1, 0, 0);
 			nodeMaterial->m_materialProperties.m_transmission = 0.5f;
 
 			GlobalTransform globalTransform;
 			const glm::quat rotation = lastNode.m_info.m_regulatedGlobalRotation;
 			globalTransform.m_value =
 				ownerGlobalTransform.m_value
-				* (glm::translate(flow.m_info.m_globalEndPosition) * glm::mat4_cast(rotation) * glm::scale(glm::vec3(flow.m_info.m_startThickness * 5.0f, flow.m_info.m_startThickness * 5.0f, 0.01f)));
+				* (glm::translate(flow.m_info.m_globalEndPosition) * glm::mat4_cast(rotation) * glm::scale(glm::vec3(lastNode.m_info.m_thickness * 5.0f)));
 			scene->SetDataComponent(newEntity, globalTransform);
 
 			if (parentHandle == -1)
