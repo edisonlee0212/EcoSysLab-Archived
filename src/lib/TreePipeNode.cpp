@@ -18,18 +18,18 @@ void TreePipeNode::InsertInterpolation(const float a)
 			break;
 		}
 	}
-	m_profiles.insert(m_profiles.begin() + prev + 1, std::make_shared<TreePipeProfile>());
+	
 	const auto prevProfile = m_profiles.at(prev);
-	const auto newProfile = m_profiles.at(prev + 1);
-	newProfile->m_a = a;
+	TreePipeProfile newProfile;
+	newProfile.m_a = a;
 	const auto nextProfile = m_profiles.at(prev + 2);
 
-	const float actualA = (newProfile->m_a - prevProfile->m_a) / (nextProfile->m_a - prevProfile->m_a);
+	const float actualA = (newProfile.m_a - prevProfile->m_a) / (nextProfile->m_a - prevProfile->m_a);
 	for(const auto & [pipeHandle, prevParticleHandle] : prevProfile->m_particleMap)
 	{
-		const auto newParticleHandle = newProfile->m_particlePhysics2D.AllocateParticle();
-		auto& newParticle = newProfile->m_particlePhysics2D.RefParticle(newParticleHandle);
-		newProfile->m_particleMap.insert({ pipeHandle, newParticleHandle });
+		const auto newParticleHandle = newProfile.m_particlePhysics2D.AllocateParticle();
+		auto& newParticle = newProfile.m_particlePhysics2D.RefParticle(newParticleHandle);
+		newProfile.m_particleMap.insert({ pipeHandle, newParticleHandle });
 		
 		newParticle.m_data.m_pipeHandle = pipeHandle;
 		const auto& prevParticle = prevProfile->m_particlePhysics2D.PeekParticle(prevParticleHandle);
@@ -38,6 +38,37 @@ void TreePipeNode::InsertInterpolation(const float a)
 		newParticle.SetColor(glm::mix(prevParticle.GetColor(), nextParticle.GetColor(), actualA));
 		newParticle.SetDamping(glm::mix(prevParticle.GetDamping(), nextParticle.GetDamping(), actualA));
 	}
+	/*
+	auto scene = GetScene();
+	Entity middleEntity = scene->CreateEntity("Profile");
+	auto tpn = scene->GetOrSetPrivateComponent<TreePipeNode>(middleEntity).lock();
+	tpn->m_profiles.emplace_back(std::make_shared<TreePipeProfile>());
+	tpn->m_profiles.back()->m_a = 0.0f;
+	tpn->m_profiles.emplace_back(std::make_shared<TreePipeProfile>());
+	tpn->m_profiles.back()->m_a = 1.0f;
+
+	tpn->m_apical = flow.IsApical();
+	auto mmr = scene->GetOrSetPrivateComponent<MeshRenderer>(newEntity).lock();
+	mmr->m_mesh = Resources::GetResource<Mesh>("PRIMITIVE_SPHERE");
+	mmr->m_material = nodeMaterial;
+	nodeMaterial->m_materialProperties.m_albedoColor = glm::vec3(1, 0, 0);
+	nodeMaterial->m_materialProperties.m_transmission = 0.5f;
+
+	GlobalTransform globalTransform;
+	const glm::quat rotation = lastNode.m_info.m_regulatedGlobalRotation;
+	globalTransform.m_value =
+		ownerGlobalTransform.m_value
+		* (glm::translate(flow.m_info.m_globalEndPosition) * glm::mat4_cast(rotation) * glm::scale(glm::vec3(lastNode.m_info.m_thickness * 5.0f)));
+	scene->SetDataComponent(newEntity, globalTransform);
+
+	if (parentHandle == -1)
+	{
+		scene->SetParent(newEntity, owner);
+	}
+	else
+	{
+		scene->SetParent(newEntity, flowMap.at(parentHandle));
+	}*/
 }
 
 void TreePipeNode::OnDestroy()

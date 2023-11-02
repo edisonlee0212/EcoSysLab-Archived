@@ -75,6 +75,17 @@ void TreePipeBase::InitializeStrandRenderer(const float frontControlPointRatio, 
 	material->m_materialProperties.m_albedoColor = glm::vec3(0.6f, 0.3f, 0.0f);
 }
 
+void TreePipeBase::OnCreate()
+{
+	const auto material = ProjectManager::CreateTemporaryAsset<Material>();
+	m_nodeMaterial = material;
+	material->m_materialProperties.m_albedoColor = glm::vec3(1, 0, 0);
+	material->m_materialProperties.m_transmission = 0.5f;
+	const auto mesh = Resources::GetResource<Mesh>("PRIMITIVE_SPHERE");
+	m_nodeMesh = mesh;
+
+}
+
 void TreePipeBase::Packing()
 {
 	std::vector<Entity> sortedEntityList;
@@ -466,4 +477,7 @@ void TreePipeBase::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 	{
 		InitializeStrandRenderer(frontControlPointRatio, backControlPointRatio);
 	}
+
+	editorLayer->DragAndDropButton(m_nodeMaterial, "Node Material");
+	editorLayer->DragAndDropButton(m_nodeMesh, "Node Mesh");
 }

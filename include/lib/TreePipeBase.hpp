@@ -16,11 +16,13 @@ namespace EcoSysLab
 		PipeModelPipeGroup m_pipeGroup;
 		PipeModelParameters m_pipeModelParameters{};
 
+		AssetRef m_nodeMaterial{};
+		AssetRef m_nodeMesh{};
 		template<typename SkeletonData, typename FlowData, typename NodeData>
 		void InitializeNodesWithSkeleton(const Skeleton<SkeletonData, FlowData, NodeData>& srcSkeleton);
 		void ClearStrands() const;
 		void InitializeStrandRenderer(float frontControlPointRatio, float backControlPointRatio, int nodeMaxCount = -1);
-
+		void OnCreate() override;
 		void Packing();
 		void AdjustGraph() const;
 		void BuildPipes();
@@ -40,14 +42,13 @@ namespace EcoSysLab
 		const auto ownerGlobalTransform = scene->GetDataComponent<GlobalTransform>(owner);
 		const auto& srcSkeletonSortedFlowList = srcSkeleton.RefSortedFlowList();
 		std::unordered_map<FlowHandle, Entity> flowMap{};
-		const auto nodeMaterial = ProjectManager::CreateTemporaryAsset<Material>();
 		for (const auto& flowHandle : srcSkeletonSortedFlowList)
 		{
 			const auto& flow = srcSkeleton.PeekFlow(flowHandle);
-			const auto newEntity = scene->CreateEntity("Node " + std::to_string(flowHandle));
+			const auto newEntity = scene->CreateEntity("Profile");
 			const auto parentHandle = flow.GetParentHandle();
 			
-			auto tpn = scene->GetOrSetPrivateComponent<TreePipeNode>(newEntity).lock();
+			const auto tpn = scene->GetOrSetPrivateComponent<TreePipeNode>(newEntity).lock();
 			tpn->m_profiles.emplace_back(std::make_shared<TreePipeProfile>());
 			auto& firstNode = srcSkeleton.PeekNode(flow.RefNodeHandles().front());
 			//tpn->m_profiles.back()->m_profileTransform.SetRotation(firstNode.m_info.m_regulatedGlobalRotation);
@@ -58,12 +59,10 @@ namespace EcoSysLab
 			tpn->m_profiles.back()->m_a = 1.0f;
 
 			tpn->m_apical = flow.IsApical();
-			auto mmr = scene->GetOrSetPrivateComponent<MeshRenderer>(newEntity).lock();
-			mmr->m_mesh = Resources::GetResource<Mesh>("PRIMITIVE_SPHERE");
-			mmr->m_material = nodeMaterial;
-			nodeMaterial->m_materialProperties.m_albedoColor = glm::vec3(1, 0, 0);
-			nodeMaterial->m_materialProperties.m_transmission = 0.5f;
-
+			const auto mmr = scene->GetOrSetPrivateComponent<MeshRenderer>(newEntity).lock();
+			mmr->m_mesh = m_nodeMesh;
+			mmr->m_material = m_nodeMaterial;
+			
 			GlobalTransform globalTransform;
 			const glm::quat rotation = lastNode.m_info.m_regulatedGlobalRotation;
 			globalTransform.m_value =

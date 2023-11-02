@@ -172,6 +172,7 @@ namespace EcoSysLab
 		float m_thicknessAccumulateAgeFactor;
 
 		float m_lowBranchPruning;
+		float m_lowBranchPruningThicknessFactor;
 		/**
 		 * \brief The The impact of the amount of incoming light on the shedding of end internodes.
 		 */

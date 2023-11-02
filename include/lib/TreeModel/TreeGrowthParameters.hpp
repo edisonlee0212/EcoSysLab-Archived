@@ -193,6 +193,11 @@ namespace EcoSysLab
 		*/
 		float m_lowBranchPruning;
 		/**
+		* \brief The limit of lateral branches being cut off when too close to the
+		* root.
+		*/
+		float m_lowBranchPruningThicknessFactor = 0.0f;
+		/**
 		 * \brief The The impact of the amount of incoming light on the shedding of end internodes.
 		 */
 		float m_endNodePruningLightFactor;
