@@ -1630,7 +1630,7 @@ bool TreeModel::PruneInternodes(const ShootGrowthController& shootGrowthParamete
 		//Pruning here.
 		bool pruning = false;
 		const float pruningProbability = m_currentDeltaTime * shootGrowthParameters.m_pruningFactor(internode);
-		if (pruningProbability >= glm::linearRand(0.0f, 1.0f)) pruning = true;
+		if (pruningProbability > glm::linearRand(0.0f, 1.0f)) pruning = true;
 		if (internode.m_info.m_globalPosition.y <= 0.5f && internode.m_data.m_order != 0 && glm::linearRand(0.0f, 1.0f) < m_currentDeltaTime * 0.1f) pruning = true;
 		if (maxDistance > 5.0f * shootGrowthParameters.m_internodeLength && internode.m_data.m_order == 1 &&
 			(internode.m_info.m_rootDistance / maxDistance) < shootGrowthParameters.m_lowBranchPruning) {
