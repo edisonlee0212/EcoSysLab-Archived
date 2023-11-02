@@ -29,6 +29,7 @@
 #include "WindowLayer.hpp"
 #include "TreePipeNode.hpp"
 #include "TreePipeBase.hpp"
+#include "TreePointCloudScanner.hpp"
 using namespace EcoSysLab;
 
 void EngineSetup();
@@ -103,6 +104,7 @@ int main() {
 
 	ClassRegistry::RegisterPrivateComponent<TreePipeBase>("TreePipeBase");
 	ClassRegistry::RegisterPrivateComponent<TreePipeNode>("TreePipeNode");
+	ClassRegistry::RegisterPrivateComponent<TreePointCloudScanner>("TreePointCloudScanner");
 	ApplicationInfo applicationConfigs;
 	applicationConfigs.m_applicationName = "EcoSysLab";
 	Application::Initialize(applicationConfigs);

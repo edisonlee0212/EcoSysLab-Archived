@@ -1349,7 +1349,7 @@ void EcoSysLabLayer::GenerateMeshes(const TreeMeshGeneratorSettings& meshGenerat
 		auto copiedEntities = *treeEntities;
 		for (auto treeEntity : copiedEntities) {
 			auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
-			tree->GenerateMeshes(meshGeneratorSettings);
+			tree->GenerateGeometry(meshGeneratorSettings);
 		}
 	}
 }

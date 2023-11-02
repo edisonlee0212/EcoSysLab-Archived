@@ -254,8 +254,8 @@ namespace EcoSysLab {
 			int vertexIndex = vertices.size();
 			Vertex archetype;
 			if (settings.m_overrideVertexColor) archetype.m_color = glm::vec4(settings.m_branchVertexColor, 1.0f);
-			//else archetype.m_color = branchColors.at(internodeHandle);
-
+			archetype.m_positionPadding = internodeHandle + 1;
+			archetype.m_normalPadding = internode.GetFlowHandle() + 1;
 			float textureXStep = 1.0f / step * 4.0f;
 
 			const auto startPosition = rings.at(0).m_startPosition;
@@ -263,8 +263,6 @@ namespace EcoSysLab {
 			for (int p = 0; p < step; p++) {
 				archetype.m_position =
 					rings.at(0).GetPoint(up, angleStep * p, true);
-				float distanceToStart = 0;
-				float distanceToEnd = 1;
 				const float x =
 					p < step / 2 ? p * textureXStep : (step - p) * textureXStep;
 				archetype.m_texCoord = glm::vec2(x, 0.0f);

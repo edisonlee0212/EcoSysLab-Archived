@@ -312,7 +312,7 @@ void VoxelSpaceColonizationTreeData(
 	}
 
 	if (exportTreeMesh) {
-		tree->GenerateMeshes(meshGeneratorSettings);
+		tree->GenerateGeometry(meshGeneratorSettings);
 		const auto children = scene->GetChildren(tempEntity);
 		for (const auto& child : children) {
 			auto name = scene->GetEntityName(child);
@@ -449,7 +449,7 @@ void RBVSpaceColonizationTreeData(
 	}
 
 	if (exportTreeMesh) {
-		tree->GenerateMeshes(meshGeneratorSettings);
+		tree->GenerateGeometry(meshGeneratorSettings);
 		const auto children = scene->GetChildren(tempEntity);
 		for (const auto& child : children) {
 			auto name = scene->GetEntityName(child);

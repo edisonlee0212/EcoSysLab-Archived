@@ -260,7 +260,7 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 			iterations = glm::clamp(iterations, 0, m_treeModel.CurrentIteration());
 			m_meshGeneratorSettings.OnInspect(editorLayer);
 			if (ImGui::Button("Generate Mesh")) {
-				GenerateMeshes(m_meshGeneratorSettings, iterations);
+				GenerateGeometry(m_meshGeneratorSettings, iterations);
 			}
 			if (ImGui::Button("Clear Mesh"))
 			{
@@ -408,7 +408,7 @@ void Tree::Update()
 {
 	if (m_temporalProgression) {
 		if (m_temporalProgressionIteration <= m_treeModel.CurrentIteration()) {
-			GenerateMeshes(m_meshGeneratorSettings, m_temporalProgressionIteration);
+			GenerateGeometry(m_meshGeneratorSettings, m_temporalProgressionIteration);
 			m_temporalProgressionIteration++;
 		}
 		else
@@ -567,12 +567,6 @@ void Tree::ClearMeshes() const
 		else if (name == "Fruit Mesh") {
 			scene->DeleteEntity(child);
 		}
-		else if (name == "Fine Root Mesh") {
-			scene->DeleteEntity(child);
-		}
-		else if (name == "Twig Mesh") {
-			scene->DeleteEntity(child);
-		}
 	}
 }
 
@@ -583,22 +577,22 @@ void Tree::ClearStrands() const
 	const auto children = scene->GetChildren(self);
 	for (const auto& child : children) {
 		auto name = scene->GetEntityName(child);
-		if (name == "Branch Strands") {
+		if (name == "Twig Strands") {
 			scene->DeleteEntity(child);
 		}
-		else if (name == "Root Strands") {
+		else if (name == "Fine Root Strands") {
 			scene->DeleteEntity(child);
 		}
 	}
 }
 
-void Tree::GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings, int iteration) {
+void Tree::GenerateGeometry(const TreeMeshGeneratorSettings& meshGeneratorSettings, int iteration) {
 	const auto scene = GetScene();
 	const auto self = GetOwner();
 	const auto children = scene->GetChildren(self);
 
 	ClearMeshes();
-
+	ClearStrands();
 	auto actualIteration = iteration;
 	if (actualIteration < 0 || actualIteration > m_treeModel.CurrentIteration())
 	{
@@ -709,7 +703,7 @@ void Tree::GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings
 	if (meshGeneratorSettings.m_enableFineRoot)
 	{
 		Entity fineRootEntity;
-		fineRootEntity = scene->CreateEntity("Fine Root Mesh");
+		fineRootEntity = scene->CreateEntity("Fine Root Strands");
 		scene->SetParent(fineRootEntity, self);
 		std::vector<glm::uint> fineRootSegments;
 		std::vector<StrandPoint> fineRootPoints;
@@ -812,7 +806,7 @@ void Tree::GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings
 	if (meshGeneratorSettings.m_enableTwig)
 	{
 		Entity twigEntity;
-		twigEntity = scene->CreateEntity("Twig Mesh");
+		twigEntity = scene->CreateEntity("Twig Strands");
 		scene->SetParent(twigEntity, self);
 		std::vector<glm::uint> twigSegments;
 		std::vector<StrandPoint> twigPoints;

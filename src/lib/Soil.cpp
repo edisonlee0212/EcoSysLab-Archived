@@ -819,14 +819,14 @@ Entity Soil::GenerateMesh(float xDepth, float zDepth)
 
 	for (const auto& child : children) {
 		auto name = scene->GetEntityName(child);
-		if (name == "Ground surface") {
+		if (name == "Ground Mesh") {
 			groundSurfaceEntity = child;
 			break;
 		}
 	}
 	if (groundSurfaceEntity.GetIndex() == 0)
 	{
-		groundSurfaceEntity = scene->CreateEntity("Ground surface");
+		groundSurfaceEntity = scene->CreateEntity("Ground Mesh");
 		scene->SetParent(groundSurfaceEntity, self);
 	}
 
