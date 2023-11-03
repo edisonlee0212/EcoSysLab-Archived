@@ -11,7 +11,10 @@ namespace EcoSysLab
 	class TreePipeBase : public IPrivateComponent
 	{
 		void GatherChildrenEntities(std::vector<Entity>& list) const;
-
+		void ExtendPipesWithProfile(
+			const glm::vec3& globalPosition,
+			const glm::quat& globalRotation,
+			const ParticlePhysics2D<CellParticlePhysicsData>& profile, const std::unordered_map<PipeHandle, ParticleHandle>& map);
 	public:
 		PipeModelPipeGroup m_pipeGroup;
 		PipeModelParameters m_pipeModelParameters{};
@@ -35,7 +38,7 @@ namespace EcoSysLab
 		const auto scene = GetScene();
 		const auto owner = GetOwner();
 		const auto children = scene->GetChildren(owner);
-		for(const auto& i : children)
+		for (const auto& i : children)
 		{
 			scene->DeleteEntity(i);
 		}
@@ -47,22 +50,17 @@ namespace EcoSysLab
 			const auto& flow = srcSkeleton.PeekFlow(flowHandle);
 			const auto newEntity = scene->CreateEntity("Profile");
 			const auto parentHandle = flow.GetParentHandle();
-			
+
 			const auto tpn = scene->GetOrSetPrivateComponent<TreePipeNode>(newEntity).lock();
-			tpn->m_profiles.emplace_back(std::make_shared<TreePipeProfile>());
+
 			auto& firstNode = srcSkeleton.PeekNode(flow.RefNodeHandles().front());
-			//tpn->m_profiles.back()->m_profileTransform.SetRotation(firstNode.m_info.m_regulatedGlobalRotation);
-			tpn->m_profiles.back()->m_a = 0.0f;
-			tpn->m_profiles.emplace_back(std::make_shared<TreePipeProfile>());
 			auto& lastNode = srcSkeleton.PeekNode(flow.RefNodeHandles().back());
-			//tpn->m_profiles.back()->m_profileTransform.SetRotation(lastNode.m_info.m_regulatedGlobalRotation);
-			tpn->m_profiles.back()->m_a = 1.0f;
 
 			tpn->m_apical = flow.IsApical();
 			const auto mmr = scene->GetOrSetPrivateComponent<MeshRenderer>(newEntity).lock();
 			mmr->m_mesh = m_nodeMesh;
 			mmr->m_material = m_nodeMaterial;
-			
+
 			GlobalTransform globalTransform;
 			const glm::quat rotation = lastNode.m_info.m_regulatedGlobalRotation;
 			globalTransform.m_value =
