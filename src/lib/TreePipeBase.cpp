@@ -341,6 +341,7 @@ void TreePipeBase::Packing()
 						}
 					}
 				);
+				
 				if (i > m_pipeModelParameters.m_minimumSimulationIteration && frontPhysics2D.GetMaxParticleVelocity() < m_pipeModelParameters.m_particleStabilizeSpeed)
 				{
 					break;

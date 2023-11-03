@@ -65,7 +65,7 @@ namespace EcoSysLab
 			const glm::quat rotation = lastNode.m_info.m_regulatedGlobalRotation;
 			globalTransform.m_value =
 				ownerGlobalTransform.m_value
-				* (glm::translate(flow.m_info.m_globalEndPosition) * glm::mat4_cast(rotation) * glm::scale(glm::vec3(lastNode.m_info.m_thickness * 5.0f)));
+				* (glm::translate(flow.m_info.m_globalEndPosition) * glm::mat4_cast(rotation) * glm::scale(glm::vec3(0.02f)));
 			scene->SetDataComponent(newEntity, globalTransform);
 
 			if (parentHandle == -1)

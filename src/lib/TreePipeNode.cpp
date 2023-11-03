@@ -39,16 +39,18 @@ void TreePipeNode::InsertInterpolation(const float a)
 	}
 
 	const auto ownerGlobalTransform = scene->GetDataComponent<GlobalTransform>(owner);
-	const auto parentGlobalTransform = scene->GetDataComponent<GlobalTransform>(parent);
-
+	auto parentGlobalTransform = scene->GetDataComponent<GlobalTransform>(parent);
+	
 	GlobalTransform globalTransform;
 	globalTransform.SetValue(glm::mix(ownerGlobalTransform.GetPosition(), parentGlobalTransform.GetPosition(), a),
-		glm::mix(ownerGlobalTransform.GetEulerRotation(), parentGlobalTransform.GetEulerRotation(), a),
-		glm::mix(ownerGlobalTransform.GetScale(), parentGlobalTransform.GetScale(), a));
-	scene->SetDataComponent(middleEntity, globalTransform);
+		glm::mix(ownerGlobalTransform.GetEulerRotation(), scene->HasPrivateComponent<TreePipeNode>(parent) ? parentGlobalTransform.GetEulerRotation() : ownerGlobalTransform.GetEulerRotation(), a),
+		glm::vec3(0.02f));
 
 	scene->SetParent(middleEntity, parent);
 	scene->SetParent(owner, middleEntity);
+	scene->SetDataComponent(middleEntity, globalTransform);
+	scene->SetDataComponent(owner, ownerGlobalTransform);
+
 }
 
 void TreePipeNode::OnDestroy()
