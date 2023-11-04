@@ -22,9 +22,9 @@ namespace EcoSysLab {
         int m_pitchAngleStart = -20;
         int m_pitchAngleStep = 20;
         int m_pitchAngleEnd = 60;
-        int m_turnAngleStart = 0.0f;
+        int m_turnAngleStart = 0;
         int m_turnAngleStep = 10;
-        int m_turnAngleEnd = 360.0f;
+        int m_turnAngleEnd = 360;
         float m_distance = 5.0f;
         float m_height = 1.5f;
         float m_fov = 60;
