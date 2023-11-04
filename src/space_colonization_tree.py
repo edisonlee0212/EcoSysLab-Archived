@@ -7,7 +7,7 @@ os.mkdir(current_directory + "\\scd")
 
 project_path = "C:\\Users\\lllll\\Desktop\\EcoSysLabProject\\test.eveproj"
 binvox_path = "C:\\Users\\lllll\\Downloads\\binvox_files\\san_jose_acer_san_jose_9050_0_mesh.binvox"
-target_descriptor_path = "C:\\Users\\lllll\\Desktop\\EcoSysLabProject\\TreeDescriptors\\Butter.td"
+target_descriptor_path = "C:\\Users\\lllll\\Desktop\\EcoSysLabProject\\TreeDescriptors\\Acacia.td"
 target_voxel_tree_mesh_path = current_directory + "\\scd\\voxel_tree.obj"
 target_voxel_tree_tree_io_path = current_directory + "\\scd\\voxel_tree.treeio"
 target_rbv_path = current_directory + "\\scd\\rbv.txt"

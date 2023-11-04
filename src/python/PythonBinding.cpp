@@ -39,6 +39,7 @@ namespace py = pybind11;
 void RegisterClasses() {
 	ClassRegistry::RegisterPrivateComponent<Tree>("Tree");
 	ClassRegistry::RegisterPrivateComponent<TreePointCloud>("TreePointCloud");
+	ClassRegistry::RegisterPrivateComponent<TreePointCloudScanner>("TreePointCloudScanner");
 	ClassRegistry::RegisterPrivateComponent<Soil>("Soil");
 	ClassRegistry::RegisterPrivateComponent<Climate>("Climate");
 	ClassRegistry::RegisterPrivateComponent<ObjectRotator>("ObjectRotator");
@@ -74,6 +75,9 @@ void RegisterLayers(bool enableWindowLayer, bool enableEditorLayer)
 	Application::PushLayer<RenderLayer>();
 	Application::PushLayer<EcoSysLabLayer>();
 	Application::PushLayer<SorghumLayer>();
+#ifdef BUILD_WITH_RAYTRACER
+	Application::PushLayer<RayTracerLayer>();
+#endif
 }
 
 void StartProjectWindowless(const std::filesystem::path& projectPath)
@@ -424,9 +428,10 @@ void GenerateTreePointCloud(
 	{
 		tree->TryGrow(deltaTime);
 	}
+	tree->GenerateGeometry(meshGeneratorSettings);
+	soil->GenerateMesh();
 
 	if (exportTreeMesh) {
-		tree->GenerateGeometry(meshGeneratorSettings);
 		const auto children = scene->GetChildren(treeEntity);
 		for (const auto& child : children) {
 			auto name = scene->GetEntityName(child);
@@ -437,7 +442,8 @@ void GenerateTreePointCloud(
 
 		}
 	}
-
+	
+	Application::Loop();
 	const auto scannerEntity = scene->CreateEntity("Scanner");
 	const auto scanner = scene->GetOrSetPrivateComponent<TreePointCloudScanner>(scannerEntity).lock();
 	scanner->m_tree = tree;
