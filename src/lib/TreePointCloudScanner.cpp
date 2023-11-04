@@ -11,7 +11,7 @@ using namespace tinyply;
 
 using namespace EcoSysLab;
 
-void TreePointCloudScanner::PointCloudPointSettings::OnInspect()
+void PointCloudPointSettings::OnInspect()
 {
 	ImGui::DragFloat("Point variance", &m_variance, 0.01f);
 	ImGui::DragFloat("Point uniform random radius", &m_ballRandRadius, 0.01f);
@@ -22,7 +22,7 @@ void TreePointCloudScanner::PointCloudPointSettings::OnInspect()
 	ImGui::Checkbox("Internode Index", &m_internodeIndex);
 }
 
-void TreePointCloudScanner::PointCloudPointSettings::Serialize(const std::string& name, YAML::Emitter& out) const
+void PointCloudPointSettings::Serialize(const std::string& name, YAML::Emitter& out) const
 {
 	out << YAML::Key << name << YAML::Value << YAML::BeginMap;
 	out << YAML::Key << "m_variance" << YAML::Value << m_variance;
@@ -35,7 +35,7 @@ void TreePointCloudScanner::PointCloudPointSettings::Serialize(const std::string
 	out << YAML::EndMap;
 }
 
-void TreePointCloudScanner::PointCloudPointSettings::Deserialize(const std::string& name, const YAML::Node& in)
+void PointCloudPointSettings::Deserialize(const std::string& name, const YAML::Node& in)
 {
 	if (in[name]) {
 		auto& cd = in[name];
@@ -49,14 +49,10 @@ void TreePointCloudScanner::PointCloudPointSettings::Deserialize(const std::stri
 	}
 }
 
-void TreePointCloudScanner::CameraCaptureSettings::OnInspect()
+void PointCloudCaptureSettings::OnInspect()
 {
-	ImGui::Checkbox("Auto adjust focus point", &m_autoAdjustFocusPoint);
-	if (!m_autoAdjustFocusPoint) {
-		ImGui::Text("Position:");
-		ImGui::DragFloat3("Focus point", &m_focusPoint.x, 0.1f);
-		ImGui::DragFloat("Distance to focus point", &m_distance, 0.1);
-	}
+	ImGui::DragFloat("Distance to focus point", &m_distance, 0.01f);
+	ImGui::DragFloat("Height to ground", &m_height, 0.01f);
 	ImGui::Separator();
 	ImGui::Text("Rotation:");
 	ImGui::DragInt3("Pitch Angle Start/Step/End", &m_pitchAngleStart, 1);
@@ -64,23 +60,15 @@ void TreePointCloudScanner::CameraCaptureSettings::OnInspect()
 	ImGui::Separator();
 	ImGui::Text("Camera Settings:");
 	ImGui::DragFloat("FOV", &m_fov);
-	ImGui::DragInt2("Resolution", &m_resolution.x);
+	ImGui::DragInt("Resolution", &m_resolution);
 	ImGui::DragFloat("Max Depth", &m_cameraDepthMax);
-	ImGui::Checkbox("Use clear color", &m_useClearColor);
-	if (m_useClearColor) ImGui::ColorEdit3("Clear Color", &m_backgroundColor.x);
-
-	ImGui::Separator();
-	ImGui::Text("Ray tracer Settings");
-	ImGui::DragInt("Bounce", &m_rayBounce);
-	ImGui::DragInt("Sample", &m_raySample);
+	
 }
 
-void TreePointCloudScanner::CameraCaptureSettings::Serialize(const std::string& name, YAML::Emitter& out) const
+void PointCloudCaptureSettings::Serialize(const std::string& name, YAML::Emitter& out) const
 {
 	out << YAML::Key << name << YAML::Value << YAML::BeginMap;
-	out << YAML::Key << "m_autoAdjustFocusPoint" << YAML::Value
-		<< m_autoAdjustFocusPoint;
-	out << YAML::Key << "m_focusPoint" << YAML::Value << m_focusPoint;
+	
 	out << YAML::Key << "m_pitchAngleStart" << YAML::Value << m_pitchAngleStart;
 	out << YAML::Key << "m_pitchAngleStep" << YAML::Value << m_pitchAngleStep;
 	out << YAML::Key << "m_pitchAngleEnd" << YAML::Value << m_pitchAngleEnd;
@@ -88,22 +76,18 @@ void TreePointCloudScanner::CameraCaptureSettings::Serialize(const std::string& 
 	out << YAML::Key << "m_turnAngleStep" << YAML::Value << m_turnAngleStep;
 	out << YAML::Key << "m_turnAngleEnd" << YAML::Value << m_turnAngleEnd;
 	out << YAML::Key << "m_distance" << YAML::Value << m_distance;
+	out << YAML::Key << "m_height" << YAML::Value << m_height;
 	out << YAML::Key << "m_fov" << YAML::Value << m_fov;
 	out << YAML::Key << "m_resolution" << YAML::Value << m_resolution;
-	out << YAML::Key << "m_useClearColor" << YAML::Value << m_useClearColor;
-	out << YAML::Key << "m_backgroundColor" << YAML::Value << m_backgroundColor;
 	out << YAML::Key << "m_cameraDepthMax" << YAML::Value << m_cameraDepthMax;
-	out << YAML::Key << "m_rayBounce" << YAML::Value << m_rayBounce;
-	out << YAML::Key << "m_raySample" << YAML::Value << m_raySample;
 	out << YAML::EndMap;
 }
 
-void TreePointCloudScanner::CameraCaptureSettings::Deserialize(const std::string& name, const YAML::Node& in)
+void PointCloudCaptureSettings::Deserialize(const std::string& name, const YAML::Node& in)
 {
 	if (in[name]) {
 		auto& cd = in[name];
-		if (cd["m_autoAdjustFocusPoint"]) m_autoAdjustFocusPoint = cd["m_autoAdjustFocusPoint"].as<bool>();
-		if (cd["m_focusPoint"]) m_focusPoint = cd["m_focusPoint"].as<glm::vec3>();
+		
 		if (cd["m_pitchAngleStart"]) m_pitchAngleStart = cd["m_pitchAngleStart"].as<int>();
 		if (cd["m_pitchAngleStep"]) m_pitchAngleStep = cd["m_pitchAngleStep"].as<int>();
 		if (cd["m_pitchAngleEnd"]) m_pitchAngleEnd = cd["m_pitchAngleEnd"].as<int>();
@@ -111,46 +95,30 @@ void TreePointCloudScanner::CameraCaptureSettings::Deserialize(const std::string
 		if (cd["m_turnAngleStep"]) m_turnAngleStep = cd["m_turnAngleStep"].as<int>();
 		if (cd["m_turnAngleEnd"]) m_turnAngleEnd = cd["m_turnAngleEnd"].as<int>();
 		if (cd["m_distance"]) m_distance = cd["m_distance"].as<float>();
+		if (cd["m_height"]) m_height = cd["m_height"].as<float>();
 		if (cd["m_fov"]) m_fov = cd["m_fov"].as<float>();
-		if (cd["m_resolution"]) m_resolution = cd["m_resolution"].as<glm::ivec2>();
-		if (cd["m_useClearColor"]) m_useClearColor = cd["m_useClearColor"].as<bool>();
-		if (cd["m_backgroundColor"]) m_backgroundColor = cd["m_backgroundColor"].as<glm::vec3>();
+		if (cd["m_resolution"]) m_resolution = cd["m_resolution"].as<int>();
 		if (cd["m_cameraDepthMax"]) m_cameraDepthMax = cd["m_cameraDepthMax"].as<float>();
-		if (cd["m_rayBounce"]) m_rayBounce = cd["m_rayBounce"].as<float>();
-		if (cd["m_raySample"]) m_raySample = cd["m_raySample"].as<float>();
+		
 	}
 }
 
-GlobalTransform TreePointCloudScanner::CameraCaptureSettings::GetTransform(const Bound& bound,
+GlobalTransform PointCloudCaptureSettings::GetTransform(const Bound& bound,
 	const float turnAngle, const float pitchAngle) const
 {
 	GlobalTransform cameraGlobalTransform;
-	float distance = m_distance;
-	glm::vec3 focusPoint = m_focusPoint;
-	if (m_autoAdjustFocusPoint) {
-		focusPoint = (bound.m_min + bound.m_max) / 2.0f;
-		const float halfAngle = (m_fov - 35.0f) / 2.0f;
-		float width = bound.m_max.y - bound.m_min.y;
-		if (width < bound.m_max.x - bound.m_min.x) {
-			width = bound.m_max.x - bound.m_min.x;
-		}
-		if (width < bound.m_max.z - bound.m_min.z) {
-			width = bound.m_max.z - bound.m_min.z;
-		}
-		width /= 2.0f;
-		distance = width / glm::tan(glm::radians(halfAngle));
-	}
-	const auto height = distance * glm::sin(glm::radians((float)pitchAngle));
-	const auto groundDistance =
-		distance * glm::cos(glm::radians((float)pitchAngle));
+	glm::vec3 focusPoint = (bound.m_min + bound.m_max) / 2.0f;
+	focusPoint.y = 0;
 	const glm::vec3 cameraPosition =
-		glm::vec3(glm::sin(glm::radians((float)turnAngle)) * groundDistance,
-			height,
-			glm::cos(glm::radians((float)turnAngle)) * groundDistance);
-
-
+		glm::vec3(glm::sin(glm::radians(turnAngle)) * m_distance,
+			m_height,
+			glm::cos(glm::radians(turnAngle)) * m_distance);
+	const glm::vec3 cameraDirection =
+		glm::vec3(glm::sin(glm::radians(turnAngle)) * m_distance,
+			m_distance * glm::sin(glm::radians(pitchAngle)),
+			glm::cos(glm::radians(turnAngle)) * m_distance);
 	cameraGlobalTransform.SetPosition(cameraPosition + focusPoint);
-	cameraGlobalTransform.SetRotation(glm::quatLookAt(glm::normalize(-cameraPosition), glm::vec3(0, 1, 0)));
+	cameraGlobalTransform.SetRotation(glm::quatLookAt(glm::normalize(-cameraDirection), glm::vec3(0, 1, 0)));
 	return cameraGlobalTransform;
 }
 
@@ -215,30 +183,30 @@ void TreePointCloudScanner::GeneratePointCloud(const std::filesystem::path& save
 	
 	std::vector<PointCloudSample> pcSamples;
 	int counter = 0;
-	for (int turnAngle = m_pointCloudSettings.m_turnAngleStart;
-		turnAngle < m_pointCloudSettings.m_turnAngleEnd; turnAngle += m_pointCloudSettings.m_turnAngleStep) {
-		for (int pitchAngle = m_pointCloudSettings.m_pitchAngleStart;
-			pitchAngle < m_pointCloudSettings.m_pitchAngleEnd; pitchAngle += m_pointCloudSettings.m_pitchAngleStep) {
-			pcSamples.resize((counter + 1) * m_pointCloudSettings.m_resolution.x * m_pointCloudSettings.m_resolution.y);
-			auto scannerGlobalTransform = m_pointCloudSettings.GetTransform(plantBound, turnAngle, pitchAngle);
+	for (int turnAngle = m_captureSettings.m_turnAngleStart;
+		turnAngle < m_captureSettings.m_turnAngleEnd; turnAngle += m_captureSettings.m_turnAngleStep) {
+		for (int pitchAngle = m_captureSettings.m_pitchAngleStart;
+			pitchAngle < m_captureSettings.m_pitchAngleEnd; pitchAngle += m_captureSettings.m_pitchAngleStep) {
+			pcSamples.resize((counter + 1) * m_captureSettings.m_resolution * m_captureSettings.m_resolution);
+			auto scannerGlobalTransform = m_captureSettings.GetTransform(plantBound, turnAngle, pitchAngle);
 			auto front = scannerGlobalTransform.GetRotation() * glm::vec3(0, 0, -1);
 			auto up = scannerGlobalTransform.GetRotation() * glm::vec3(0, 1, 0);
 			auto left = scannerGlobalTransform.GetRotation() * glm::vec3(1, 0, 0);
 			auto position = scannerGlobalTransform.GetPosition();
 			std::vector<std::shared_future<void>> results;
 			Jobs::ParallelFor(
-				m_pointCloudSettings.m_resolution.x * m_pointCloudSettings.m_resolution.y,
-				[&](unsigned i) {
-					unsigned x = i % m_pointCloudSettings.m_resolution.x;
-					unsigned y = i / m_pointCloudSettings.m_resolution.x;
-					const float xAngle = (x - m_pointCloudSettings.m_resolution.x / 2.0f) /
-						(float)m_pointCloudSettings.m_resolution.x * m_pointCloudSettings.m_fov /
+				m_captureSettings.m_resolution * m_captureSettings.m_resolution,
+				[&](const unsigned i) {
+					const float x = i % m_captureSettings.m_resolution;
+					const float y = i / m_captureSettings.m_resolution;
+					const float xAngle = (x - m_captureSettings.m_resolution / 2.0f + glm::linearRand(-0.5f, 0.5f)) /
+						static_cast<float>(m_captureSettings.m_resolution) * m_captureSettings.m_fov /
 						2.0f;
-					const float yAngle = (y - m_pointCloudSettings.m_resolution.y / 2.0f) /
-						(float)m_pointCloudSettings.m_resolution.y * m_pointCloudSettings.m_fov /
+					const float yAngle = (y - m_captureSettings.m_resolution / 2.0f + glm::linearRand(-0.5f, 0.5f)) /
+						static_cast<float>(m_captureSettings.m_resolution) * m_captureSettings.m_fov /
 						2.0f;
 					auto& sample = pcSamples[
-						counter * m_pointCloudSettings.m_resolution.x * m_pointCloudSettings.m_resolution.y +
+						counter * m_captureSettings.m_resolution * m_captureSettings.m_resolution +
 							i];
 					sample.m_direction = glm::normalize(glm::rotate(glm::rotate(front, glm::radians(xAngle), left),
 						glm::radians(yAngle), up));
@@ -267,35 +235,35 @@ void TreePointCloudScanner::GeneratePointCloud(const std::filesystem::path& save
 	for (const auto& sample : pcSamples) {
 		if (!sample.m_hit) continue;
 		auto& position = sample.m_hitInfo.m_position;
-		if (position.x<(plantBound.m_min.x - m_pointCloudPointSettings.m_boundingBoxLimit) ||
-			position.y<(plantBound.m_min.y - m_pointCloudPointSettings.m_boundingBoxLimit) ||
-			position.z<(plantBound.m_min.z - m_pointCloudPointSettings.m_boundingBoxLimit) ||
-			position.x>(plantBound.m_max.x + m_pointCloudPointSettings.m_boundingBoxLimit) ||
-			position.y>(plantBound.m_max.y + m_pointCloudPointSettings.m_boundingBoxLimit) ||
-			position.z>(plantBound.m_max.z + m_pointCloudPointSettings.m_boundingBoxLimit))
+		if (position.x<(plantBound.m_min.x - m_pointSettings.m_boundingBoxLimit) ||
+			position.y<(plantBound.m_min.y - m_pointSettings.m_boundingBoxLimit) ||
+			position.z<(plantBound.m_min.z - m_pointSettings.m_boundingBoxLimit) ||
+			position.x>(plantBound.m_max.x + m_pointSettings.m_boundingBoxLimit) ||
+			position.y>(plantBound.m_max.y + m_pointSettings.m_boundingBoxLimit) ||
+			position.z>(plantBound.m_max.z + m_pointSettings.m_boundingBoxLimit))
 			continue;
 		auto ballRand = glm::vec3(0.0f);
-		if (m_pointCloudPointSettings.m_ballRandRadius > 0.0f) {
-			ballRand = glm::ballRand(m_pointCloudPointSettings.m_ballRandRadius);
+		if (m_pointSettings.m_ballRandRadius > 0.0f) {
+			ballRand = glm::ballRand(m_pointSettings.m_ballRandRadius);
 		}
 		points.emplace_back(
 			sample.m_hitInfo.m_position +
-			glm::vec3(glm::gaussRand(0.0f, m_pointCloudPointSettings.m_variance),
-				glm::gaussRand(0.0f, m_pointCloudPointSettings.m_variance),
-				glm::gaussRand(0.0f, m_pointCloudPointSettings.m_variance))
+			glm::vec3(glm::gaussRand(0.0f, m_pointSettings.m_variance),
+				glm::gaussRand(0.0f, m_pointSettings.m_variance),
+				glm::gaussRand(0.0f, m_pointSettings.m_variance))
 			+ ballRand);
 		
-		if (m_pointCloudPointSettings.m_internodeIndex) {
+		if (m_pointSettings.m_internodeIndex) {
 
 			internodeIndex.emplace_back(static_cast<int>(sample.m_hitInfo.m_data.x + 0.1f));
 		}
-		if (m_pointCloudPointSettings.m_branchIndex)
+		if (m_pointSettings.m_branchIndex)
 		{
 			branchIndex.emplace_back(static_cast<int>(sample.m_hitInfo.m_data.y + 0.1f));
 		}
 		auto branchSearch = branchMeshRendererHandles.find(sample.m_handle);
 		auto foliageSearch = foliageMeshRendererHandles.find(sample.m_handle);
-		if (m_pointCloudPointSettings.m_instanceIndex)
+		if (m_pointSettings.m_instanceIndex)
 		{
 			if (branchSearch != branchMeshRendererHandles.end())
 			{
@@ -310,7 +278,7 @@ void TreePointCloudScanner::GeneratePointCloud(const std::filesystem::path& save
 			}
 		}
 		
-		if (m_pointCloudPointSettings.m_typeIndex) {
+		if (m_pointSettings.m_typeIndex) {
 			if (branchSearch != branchMeshRendererHandles.end())
 			{
 				typeIndex.emplace_back(0);
@@ -344,23 +312,23 @@ void TreePointCloudScanner::GeneratePointCloud(const std::filesystem::path& save
 		"vertex", { "x", "y", "z" }, Type::FLOAT32, points.size(),
 		reinterpret_cast<uint8_t*>(points.data()), Type::INVALID, 0);
 
-	if (m_pointCloudPointSettings.m_typeIndex)
+	if (m_pointSettings.m_typeIndex)
 		cube_file.add_properties_to_element(
 			"type_index", { "type_index" }, Type::INT32, typeIndex.size(),
 			reinterpret_cast<uint8_t*>(typeIndex.data()), Type::INVALID, 0);
 
-	if (m_pointCloudPointSettings.m_instanceIndex) {
+	if (m_pointSettings.m_instanceIndex) {
 		cube_file.add_properties_to_element(
 			"instance_index", { "instance_index" }, Type::INT32, instanceIndex.size(),
 			reinterpret_cast<uint8_t*>(instanceIndex.data()), Type::INVALID, 0);
 	}
-	if (m_pointCloudPointSettings.m_branchIndex)
+	if (m_pointSettings.m_branchIndex)
 	{
 		cube_file.add_properties_to_element(
 			"branch_index", { "branch_index" }, Type::INT32, branchIndex.size(),
 			reinterpret_cast<uint8_t*>(branchIndex.data()), Type::INVALID, 0);
 	}
-	if (m_pointCloudPointSettings.m_internodeIndex)
+	if (m_pointSettings.m_internodeIndex)
 	{
 		cube_file.add_properties_to_element(
 			"internode_index", { "internode_index" }, Type::INT32, internodeIndex.size(),
@@ -376,11 +344,11 @@ void TreePointCloudScanner::OnInspect(const std::shared_ptr<EditorLayer>& editor
 	editorLayer->DragAndDropButton<Tree>(m_tree, "Target tree");
 	editorLayer->DragAndDropButton<Soil>(m_soil, "Target soil");
 	if (ImGui::TreeNodeEx("Point cloud settings")) {
-		m_pointCloudSettings.OnInspect();
+		m_captureSettings.OnInspect();
 		ImGui::TreePop();
 	}
 	if (ImGui::TreeNodeEx("Point settings")) {
-		m_pointCloudPointSettings.OnInspect();
+		m_pointSettings.OnInspect();
 		ImGui::TreePop();
 	}
 
@@ -389,10 +357,18 @@ void TreePointCloudScanner::OnInspect(const std::shared_ptr<EditorLayer>& editor
 		}, false);
 }
 
+void TreePointCloudScanner::OnDestroy()
+{
+	m_pointSettings = {};
+	m_captureSettings = {};
+	m_tree.Clear();
+	m_soil.Clear();
+}
+
 void TreePointCloudScanner::Serialize(YAML::Emitter& out)
 {
-	m_pointCloudPointSettings.Serialize("m_pointCloudPointSettings", out);
-	m_pointCloudSettings.Serialize("m_pointCloudSettings", out);
+	m_pointSettings.Serialize("m_pointSettings", out);
+	m_captureSettings.Serialize("m_captureSettings", out);
 	m_tree.Save("m_tree", out);
 	m_soil.Save("m_soil", out);
 }
@@ -405,8 +381,8 @@ void TreePointCloudScanner::Relink(const std::unordered_map<Handle, Handle>& map
 
 void TreePointCloudScanner::Deserialize(const YAML::Node& in)
 {
-	m_pointCloudPointSettings.Deserialize("m_pointCloudPointSettings", in);
-	m_pointCloudSettings.Deserialize("m_pointCloudSettings", in);
+	m_pointSettings.Deserialize("m_pointSettings", in);
+	m_captureSettings.Deserialize("m_captureSettings", in);
 	m_tree.Load("m_tree", in, GetScene());
 	m_soil.Load("m_soil", in, GetScene());
 }

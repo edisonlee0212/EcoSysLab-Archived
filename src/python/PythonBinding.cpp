@@ -29,6 +29,7 @@
 #include <CUDAModule.hpp>
 #include <RayTracerLayer.hpp>
 #endif
+#include <TreePointCloudScanner.hpp>
 
 using namespace EvoEngine;
 using namespace EcoSysLab;
@@ -343,6 +344,112 @@ void VoxelSpaceColonizationTreeData(
 	scene->DeleteEntity(tempEntity);
 }
 
+
+void GenerateTreePointCloud(
+	const PointCloudPointSettings& pointSettings,
+	const PointCloudCaptureSettings& captureSettings,
+	const std::string& treeParametersPath,
+	const float deltaTime,
+	const int iterations,
+	const TreeMeshGeneratorSettings& meshGeneratorSettings,
+	const std::string& pointCloudOutputPath,
+	bool exportTreeMesh,
+	const std::string& treeMeshOutputPath
+)
+{
+	const auto applicationStatus = Application::GetApplicationStatus();
+	if (applicationStatus == ApplicationStatus::NoProject)
+	{
+		EVOENGINE_ERROR("No project!");
+		return;
+	}
+	if (applicationStatus == ApplicationStatus::OnDestroy)
+	{
+		EVOENGINE_ERROR("Application is destroyed!");
+		return;
+	}
+	if (applicationStatus == ApplicationStatus::Uninitialized)
+	{
+		EVOENGINE_ERROR("Application not uninitialized!");
+		return;
+	}
+	const auto scene = Application::GetActiveScene();
+	const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
+	if (!ecoSysLabLayer)
+	{
+		EVOENGINE_ERROR("Application doesn't contain EcoSysLab layer!");
+		return;
+	}
+	std::shared_ptr<Soil> soil;
+	std::shared_ptr<Climate> climate;
+
+	const std::vector<Entity>* soilEntities =
+		scene->UnsafeGetPrivateComponentOwnersList<Soil>();
+	if (soilEntities && !soilEntities->empty()) {
+		soil = scene->GetOrSetPrivateComponent<Soil>(soilEntities->at(0)).lock();
+	}
+	if (!soil)
+	{
+		EVOENGINE_ERROR("No soil in scene!");
+		return;
+	}
+	const std::vector<Entity>* climateEntities =
+		scene->UnsafeGetPrivateComponentOwnersList<Climate>();
+	if (climateEntities && !climateEntities->empty()) {
+		climate = scene->GetOrSetPrivateComponent<Climate>(climateEntities->at(0)).lock();
+	}
+	if (!climate)
+	{
+		EVOENGINE_ERROR("No climate in scene!");
+		return;
+	}
+
+	const auto treeEntity = scene->CreateEntity("Tree");
+	const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
+	tree->m_soil = soil;
+	tree->m_climate = climate;
+	std::shared_ptr<TreeDescriptor> treeDescriptor;
+	if (ProjectManager::IsInProjectFolder(treeParametersPath))
+	{
+		treeDescriptor = std::dynamic_pointer_cast<TreeDescriptor>(ProjectManager::GetOrCreateAsset(ProjectManager::GetPathRelativeToProject(treeParametersPath)));
+	}
+	else {
+		treeDescriptor = ProjectManager::CreateTemporaryAsset<TreeDescriptor>();
+	}
+	tree->m_treeDescriptor = treeDescriptor;
+	tree->m_treeModel.m_treeGrowthSettings.m_enableShoot = true;
+	tree->m_treeModel.m_treeGrowthSettings.m_enableRoot = false;
+	tree->m_treeModel.m_treeGrowthSettings.m_useSpaceColonization = false;
+	for (int i = 0; i < iterations; i++)
+	{
+		tree->TryGrow(deltaTime);
+	}
+
+	if (exportTreeMesh) {
+		tree->GenerateGeometry(meshGeneratorSettings);
+		const auto children = scene->GetChildren(treeEntity);
+		for (const auto& child : children) {
+			auto name = scene->GetEntityName(child);
+			if (name == "Branch Mesh") {
+				auto mmr = scene->GetOrSetPrivateComponent<MeshRenderer>(child).lock();
+				mmr->m_mesh.Get<Mesh>()->Export(treeMeshOutputPath);
+			}
+
+		}
+	}
+
+	const auto scannerEntity = scene->CreateEntity("Scanner");
+	const auto scanner = scene->GetOrSetPrivateComponent<TreePointCloudScanner>(scannerEntity).lock();
+	scanner->m_tree = tree;
+	scanner->m_soil = soil;
+	scanner->m_captureSettings = captureSettings;
+	scanner->m_pointSettings = pointSettings;
+	scanner->GeneratePointCloud(pointCloudOutputPath);
+
+	scene->DeleteEntity(treeEntity);
+	scene->DeleteEntity(scannerEntity);
+}
+
 void RBVToObj(
 	const std::string& rbvPath,
 	const std::string& radialBoundingVolumeMeshOutputPath
@@ -488,7 +595,30 @@ PYBIND11_MODULE(pyecosyslab, m) {
 		.def_readwrite("m_angleLimit", &ConnectivityGraphSettings::m_angleLimit)
 		.def_readwrite("m_branchShortening", &ConnectivityGraphSettings::m_branchShortening);
 
+	py::class_<PointCloudPointSettings>(m, "PointCloudPointSettings")
+		.def(py::init<>())
+		.def_readwrite("m_variance", &PointCloudPointSettings::m_variance)
+		.def_readwrite("m_ballRandRadius", &PointCloudPointSettings::m_ballRandRadius)
+		.def_readwrite("m_typeIndex", &PointCloudPointSettings::m_typeIndex)
+		.def_readwrite("m_instanceIndex", &PointCloudPointSettings::m_instanceIndex)
+		.def_readwrite("m_branchIndex", &PointCloudPointSettings::m_branchIndex)
+		.def_readwrite("m_internodeIndex", &PointCloudPointSettings::m_internodeIndex)
+		.def_readwrite("m_boundingBoxLimit", &PointCloudPointSettings::m_boundingBoxLimit);
 
+
+	py::class_<PointCloudCaptureSettings>(m, "PointCloudCaptureSettings")
+		.def(py::init<>())
+		.def_readwrite("m_pitchAngleStart", &PointCloudCaptureSettings::m_pitchAngleStart)
+		.def_readwrite("m_pitchAngleStep", &PointCloudCaptureSettings::m_pitchAngleStep)
+		.def_readwrite("m_pitchAngleEnd", &PointCloudCaptureSettings::m_pitchAngleEnd)
+		.def_readwrite("m_turnAngleStart", &PointCloudCaptureSettings::m_turnAngleStart)
+		.def_readwrite("m_turnAngleStep", &PointCloudCaptureSettings::m_turnAngleStep)
+		.def_readwrite("m_turnAngleEnd", &PointCloudCaptureSettings::m_turnAngleEnd)
+		.def_readwrite("m_distance", &PointCloudCaptureSettings::m_distance)
+		.def_readwrite("m_height", &PointCloudCaptureSettings::m_height)
+		.def_readwrite("m_fov", &PointCloudCaptureSettings::m_fov)
+		.def_readwrite("m_resolution", &PointCloudCaptureSettings::m_resolution)
+		.def_readwrite("m_cameraDepthMax", &PointCloudCaptureSettings::m_cameraDepthMax);
 
 	py::class_<ReconstructionSettings>(m, "ReconstructionSettings")
 		.def(py::init<>())
@@ -582,4 +712,5 @@ PYBIND11_MODULE(pyecosyslab, m) {
 	m.def("voxel_space_colonization_tree_data", &VoxelSpaceColonizationTreeData, "VoxelSpaceColonizationTreeData");
 	m.def("rbv_space_colonization_tree_data", &RBVSpaceColonizationTreeData, "RBVSpaceColonizationTreeData");
 	m.def("rbv_to_obj", &RBVToObj, "RBVToObj");
+	m.def("generate_tree_point_cloud", &GenerateTreePointCloud, "GenerateTreePointCloud");
 }
