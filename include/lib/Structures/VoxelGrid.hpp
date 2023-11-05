@@ -36,6 +36,7 @@ namespace EcoSysLab {
 		void Resize(const glm::ivec3& diffMin, const glm::ivec3& diffMax);
 
 		void Reset();
+		void ShiftMinBound(const glm::vec3& offset);
 
 		[[nodiscard]] size_t GetVoxelCount() const;
 		[[nodiscard]] glm::ivec3 GetResolution() const;
@@ -115,6 +116,12 @@ namespace EcoSysLab {
 	void VoxelGrid<VoxelData>::Reset()
 	{
 		std::fill(m_data.begin(), m_data.end(), VoxelData());
+	}
+
+	template <typename VoxelData>
+	void VoxelGrid<VoxelData>::ShiftMinBound(const glm::vec3& offset)
+	{
+		m_minBound += offset;
 	}
 
 	template <typename VoxelData>

@@ -82,8 +82,9 @@ bool Tree::ParseBinvox(const std::filesystem::path& filePath, VoxelGrid<TreeOccu
 
 	input.unsetf(std::ios::skipws);  // need to read every byte now (!)
 	input >> value;  // read the linefeed char
-
-	while ((end_index < (width * height * depth)) && input.good()) {
+	glm::vec3 lowSum = glm::ivec3(0.0f);
+	size_t lowSumCount = 0;
+	while (end_index < width * height * depth && input.good()) {
 		input >> value >> count;
 
 		if (input.good()) {
@@ -92,19 +93,27 @@ bool Tree::ParseBinvox(const std::filesystem::path& filePath, VoxelGrid<TreeOccu
 
 			for (int i = index; i < end_index; i++) {
 				// Convert 1D index to 3D coordinates
-				int current_width = i % width;
-				int current_height = (i / width) % height;
-				int current_depth = i / (width * height);
+				const int x = (i / width) % height;
+				const int y = i % width;
+				const int z = i / (width * height);
 
 				if (value) {
-					voxelGrid.Ref(glm::ivec3(current_width, current_height, current_depth)).m_occupied = true;
+					voxelGrid.Ref(glm::ivec3(x, y, z)).m_occupied = true;
 					nr_voxels++;
+
+					if(y < (height * 0.2f))
+					{
+						lowSum += voxelGrid.GetPosition(glm::ivec3(x, y, z));
+						lowSumCount++;
+					}
 				}
 			}
 
 			index = end_index;
 		}
 	}
+	lowSum /= lowSumCount;
+	voxelGrid.ShiftMinBound(-glm::vec3(lowSum.x, 0, lowSum.z));
 
 	input.close();
 #ifndef NDEBUG
@@ -232,8 +241,10 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 				ImGui::Checkbox("Space colonization auto resize", &m_treeModel.m_treeGrowthSettings.m_spaceColonizationAutoResize);
 				if(!m_treeModel.m_treeGrowthSettings.m_spaceColonizationAutoResize)
 				{
-					static float radius = 2.0f;
+					static float radius = 1.5f;
+					static int markersPerVoxel = 5;
 					ImGui::DragFloat("Import radius", &radius, 0.01f, 0.01f, 10.0f);
+					ImGui::DragInt("Markers per voxel", &markersPerVoxel);
 					FileUtils::OpenFile("Load Voxel Data", "Binvox", { ".binvox" }, [&](const std::filesystem::path& path) {
 						auto& occupancyGrid = m_treeModel.m_treeOccupancyGrid;
 						VoxelGrid<TreeOccupancyGridBasicData> inputGrid {};
@@ -246,7 +257,7 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 								treeDescriptor->m_shootGrowthParameters.m_internodeLength, 
 								m_treeModel.m_treeGrowthSettings.m_spaceColonizationRemovalDistanceFactor, 
 								m_treeModel.m_treeGrowthSettings.m_spaceColonizationTheta,
-								m_treeModel.m_treeGrowthSettings.m_spaceColonizationDetectionDistanceFactor);
+								m_treeModel.m_treeGrowthSettings.m_spaceColonizationDetectionDistanceFactor, markersPerVoxel);
 						}
 
 						}, false);

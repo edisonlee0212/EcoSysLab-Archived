@@ -798,13 +798,13 @@ Entity Soil::GenerateMesh(float xDepth, float zDepth)
 	if (!soilDescriptor)
 	{
 		EVOENGINE_ERROR("No soil descriptor!");
-		return Entity();
+		return {};
 	}
 	const auto heightField = soilDescriptor->m_heightField.Get<HeightField>();
 	if (!heightField)
 	{
 		EVOENGINE_ERROR("No height field!");
-		return Entity();
+		return {};
 	}
 	std::vector<Vertex> vertices;
 	std::vector<glm::uvec3> triangles;

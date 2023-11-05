@@ -103,9 +103,11 @@ void TreeOccupancyGrid::Initialize(const VoxelGrid<TreeOccupancyGridBasicData>& 
 
 	Jobs::ParallelFor(m_occupancyGrid.GetVoxelCount(), [&](unsigned i)
 		{
-			const glm::vec3 normalizedPosition = glm::vec3(m_occupancyGrid.GetCoordinate(i)) / glm::vec3(m_occupancyGrid.GetResolution());
-			const auto srcGridPosition = normalizedPosition * (srcGrid.GetMaxBound() - srcGrid.GetMinBound());
-			if(srcGrid.Peek(srcGrid.GetIndex(srcGridPosition)).m_occupied || (normalizedPosition.y < 0.2f && glm::length(glm::vec2(normalizedPosition.x - 0.5f, normalizedPosition.z - 0.5f)) < 0.05f))
+			const glm::vec3 normalizedPosition = glm::vec3(m_occupancyGrid.GetCoordinate(i)) / glm::vec3(m_occupancyGrid.GetResolution()) - glm::vec3(0.5f, 0.0f, 0.5f);
+			const auto srcGridSize = srcGrid.GetMaxBound() - srcGrid.GetMinBound();
+			const auto srcGridPosition = normalizedPosition * srcGridSize;
+
+			if((srcGrid.IsValid(srcGridPosition) && srcGrid.Peek(srcGrid.GetIndex(srcGridPosition)).m_occupied) || (normalizedPosition.y < 0.8f && glm::length(glm::vec2(normalizedPosition.x, normalizedPosition.z)) < 0.02f))
 			{
 				auto& voxelData = m_occupancyGrid.Ref(static_cast<int>(i));
 				for (int v = 0; v < m_markersPerVoxel; v++)
