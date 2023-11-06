@@ -533,109 +533,104 @@ void Tree::ExportOBJ(const std::filesystem::path& path, const TreeMeshGeneratorS
 			of.write(start.c_str(), start.size());
 			of.flush();
 			unsigned startIndex = 1;
-			const auto branchMesh = GenerateBranchMesh(meshGeneratorSettings);
-			if (branchMesh) {
-
-				unsigned treeIndex = 0;
-
-				auto& vertices = branchMesh->UnsafeGetVertices();
-				auto& triangles = branchMesh->UnsafeGetTriangles();
-				if (!vertices.empty() && !triangles.empty()) {
-					std::string header =
-						"#Vertices: " + std::to_string(vertices.size()) +
-						", tris: " + std::to_string(triangles.size());
-					header += "\n";
-					of.write(header.c_str(), header.size());
-					of.flush();
-					std::stringstream data;
-					data << "o tree " + std::to_string(treeIndex) + "\n";
+			if (meshGeneratorSettings.m_enableBranch) {
+				const auto branchMesh = GenerateBranchMesh(meshGeneratorSettings);
+				if (branchMesh) {
+					auto& vertices = branchMesh->UnsafeGetVertices();
+					auto& triangles = branchMesh->UnsafeGetTriangles();
+					if (!vertices.empty() && !triangles.empty()) {
+						std::string header =
+							"#Vertices: " + std::to_string(vertices.size()) +
+							", tris: " + std::to_string(triangles.size());
+						header += "\n";
+						of.write(header.c_str(), header.size());
+						of.flush();
+						std::stringstream data;
+						data << "o tree " + std::to_string(0) + "\n";
 #pragma region Data collection
-					for (auto i = 0; i < vertices.size(); i++) {
-						auto& vertexPosition = vertices.at(i).m_position;
-						auto& color = vertices.at(i).m_color;
-						data << "v " + std::to_string(vertexPosition.x) + " " +
-							std::to_string(vertexPosition.y) + " " +
-							std::to_string(vertexPosition.z) + " " +
-							std::to_string(color.x) + " " + std::to_string(color.y) + " " +
-							std::to_string(color.z) + "\n";
-					}
-					for (const auto& vertex : vertices) {
-						data << "vt " + std::to_string(vertex.m_texCoord.x) + " " +
-							std::to_string(vertex.m_texCoord.y) + "\n";
-					}
-					// data += "s off\n";
-					data << "# List of indices for faces vertices, with (x, y, z).\n";
-					for (auto i = 0; i < triangles.size(); i++) {
-						const auto triangle = triangles[i];
-						const auto f1 = triangle.x + startIndex;
-						const auto f2 = triangle.y + startIndex;
-						const auto f3 = triangle.z + startIndex;
-						data << "f " + std::to_string(f1) + "/" + std::to_string(f1) + "/" +
-							std::to_string(f1) + " " + std::to_string(f2) + "/" +
-							std::to_string(f2) + "/" + std::to_string(f2) + " " +
-							std::to_string(f3) + "/" + std::to_string(f3) + "/" +
-							std::to_string(f3) + "\n";
-					}
+						for (auto i = 0; i < vertices.size(); i++) {
+							auto& vertexPosition = vertices.at(i).m_position;
+							auto& color = vertices.at(i).m_color;
+							data << "v " + std::to_string(vertexPosition.x) + " " +
+								std::to_string(vertexPosition.y) + " " +
+								std::to_string(vertexPosition.z) + " " +
+								std::to_string(color.x) + " " + std::to_string(color.y) + " " +
+								std::to_string(color.z) + "\n";
+						}
+						for (const auto& vertex : vertices) {
+							data << "vt " + std::to_string(vertex.m_texCoord.x) + " " +
+								std::to_string(vertex.m_texCoord.y) + "\n";
+						}
+						// data += "s off\n";
+						data << "# List of indices for faces vertices, with (x, y, z).\n";
+						for (auto i = 0; i < triangles.size(); i++) {
+							const auto triangle = triangles[i];
+							const auto f1 = triangle.x + startIndex;
+							const auto f2 = triangle.y + startIndex;
+							const auto f3 = triangle.z + startIndex;
+							data << "f " + std::to_string(f1) + "/" + std::to_string(f1) + "/" +
+								std::to_string(f1) + " " + std::to_string(f2) + "/" +
+								std::to_string(f2) + "/" + std::to_string(f2) + " " +
+								std::to_string(f3) + "/" + std::to_string(f3) + "/" +
+								std::to_string(f3) + "\n";
+						}
 #pragma endregion
-					const auto result = data.str();
-					of.write(result.c_str(), result.size());
-					of.flush();
-					startIndex += vertices.size();
-					treeIndex++;
+						const auto result = data.str();
+						of.write(result.c_str(), result.size());
+						of.flush();
+						startIndex += vertices.size();
+					}
 				}
-
 			}
-			const auto foliageMesh = GenerateFoliageMesh(meshGeneratorSettings);
-			if (foliageMesh) {
+			if (meshGeneratorSettings.m_enableFoliage) {
+				const auto foliageMesh = GenerateFoliageMesh(meshGeneratorSettings);
+				if (foliageMesh) {
 
-				unsigned treeIndex = 0;
-
-				auto& vertices = foliageMesh->UnsafeGetVertices();
-				auto& triangles = foliageMesh->UnsafeGetTriangles();
-				if (!vertices.empty() && !triangles.empty()) {
-					std::string header =
-						"#Vertices: " + std::to_string(vertices.size()) +
-						", tris: " + std::to_string(triangles.size());
-					header += "\n";
-					of.write(header.c_str(), header.size());
-					of.flush();
-					std::stringstream data;
-					data << "o tree " + std::to_string(treeIndex) + "\n";
+					auto& vertices = foliageMesh->UnsafeGetVertices();
+					auto& triangles = foliageMesh->UnsafeGetTriangles();
+					if (!vertices.empty() && !triangles.empty()) {
+						std::string header =
+							"#Vertices: " + std::to_string(vertices.size()) +
+							", tris: " + std::to_string(triangles.size());
+						header += "\n";
+						of.write(header.c_str(), header.size());
+						of.flush();
+						std::stringstream data;
+						data << "o tree " + std::to_string(0) + "\n";
 #pragma region Data collection
-					for (auto i = 0; i < vertices.size(); i++) {
-						auto& vertexPosition = vertices.at(i).m_position;
-						auto& color = vertices.at(i).m_color;
-						data << "v " + std::to_string(vertexPosition.x) + " " +
-							std::to_string(vertexPosition.y) + " " +
-							std::to_string(vertexPosition.z) + " " +
-							std::to_string(color.x) + " " + std::to_string(color.y) + " " +
-							std::to_string(color.z) + "\n";
-					}
-					for (const auto& vertex : vertices) {
-						data << "vt " + std::to_string(vertex.m_texCoord.x) + " " +
-							std::to_string(vertex.m_texCoord.y) + "\n";
-					}
-					// data += "s off\n";
-					data << "# List of indices for faces vertices, with (x, y, z).\n";
-					for (auto i = 0; i < triangles.size(); i++) {
-						const auto triangle = triangles[i];
-						const auto f1 = triangle.x + startIndex;
-						const auto f2 = triangle.y + startIndex;
-						const auto f3 = triangle.z + startIndex;
-						data << "f " + std::to_string(f1) + "/" + std::to_string(f1) + "/" +
-							std::to_string(f1) + " " + std::to_string(f2) + "/" +
-							std::to_string(f2) + "/" + std::to_string(f2) + " " +
-							std::to_string(f3) + "/" + std::to_string(f3) + "/" +
-							std::to_string(f3) + "\n";
-					}
+						for (auto i = 0; i < vertices.size(); i++) {
+							auto& vertexPosition = vertices.at(i).m_position;
+							auto& color = vertices.at(i).m_color;
+							data << "v " + std::to_string(vertexPosition.x) + " " +
+								std::to_string(vertexPosition.y) + " " +
+								std::to_string(vertexPosition.z) + " " +
+								std::to_string(color.x) + " " + std::to_string(color.y) + " " +
+								std::to_string(color.z) + "\n";
+						}
+						for (const auto& vertex : vertices) {
+							data << "vt " + std::to_string(vertex.m_texCoord.x) + " " +
+								std::to_string(vertex.m_texCoord.y) + "\n";
+						}
+						// data += "s off\n";
+						data << "# List of indices for faces vertices, with (x, y, z).\n";
+						for (auto i = 0; i < triangles.size(); i++) {
+							const auto triangle = triangles[i];
+							const auto f1 = triangle.x + startIndex;
+							const auto f2 = triangle.y + startIndex;
+							const auto f3 = triangle.z + startIndex;
+							data << "f " + std::to_string(f1) + "/" + std::to_string(f1) + "/" +
+								std::to_string(f1) + " " + std::to_string(f2) + "/" +
+								std::to_string(f2) + "/" + std::to_string(f2) + " " +
+								std::to_string(f3) + "/" + std::to_string(f3) + "/" +
+								std::to_string(f3) + "\n";
+						}
 #pragma endregion
-					const auto result = data.str();
-					of.write(result.c_str(), result.size());
-					of.flush();
-					startIndex += vertices.size();
-					treeIndex++;
+						const auto result = data.str();
+						of.write(result.c_str(), result.size());
+						of.flush();
+						startIndex += vertices.size();
+					}
 				}
-
 			}
 			of.close();
 		}
