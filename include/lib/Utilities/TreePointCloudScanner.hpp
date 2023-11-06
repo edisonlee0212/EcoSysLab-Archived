@@ -1,5 +1,6 @@
 #pragma once
 #include "Tree.hpp"
+#include "Soil.hpp"
 using namespace EvoEngine;
 namespace EcoSysLab {
     struct PointCloudPointSettings {
