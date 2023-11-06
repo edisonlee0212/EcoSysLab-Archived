@@ -33,6 +33,9 @@ namespace EcoSysLab {
 		ShootGrowthController m_shootGrowthController{};
 		RootGrowthController m_rootGrowthController{};
 	public:
+		std::shared_ptr<Mesh> GenerateBranchMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings) const;
+		std::shared_ptr<Mesh> GenerateFoliageMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings) const;
+		void ExportOBJ(const std::filesystem::path& path, const TreeMeshGeneratorSettings& meshGeneratorSettings) const;
 		bool TryGrow(float deltaTime);
 		[[nodiscard]] bool ParseBinvox(const std::filesystem::path& filePath, VoxelGrid<TreeOccupancyGridBasicData>& voxelGrid, float voxelSize = 1.0f);
 

@@ -317,16 +317,7 @@ void VoxelSpaceColonizationTreeData(
 	}
 
 	if (exportTreeMesh) {
-		tree->GenerateGeometry(meshGeneratorSettings);
-		const auto children = scene->GetChildren(tempEntity);
-		for (const auto& child : children) {
-			auto name = scene->GetEntityName(child);
-			if (name == "Branch Mesh") {
-				auto mmr = scene->GetOrSetPrivateComponent<MeshRenderer>(child).lock();
-				mmr->m_mesh.Get<Mesh>()->Export(treeMeshOutputPath);
-			}
-
-		}
+		tree->ExportOBJ(treeMeshOutputPath, meshGeneratorSettings);
 	}
 	if (exportTreeIO)
 	{
@@ -432,15 +423,7 @@ void GenerateTreePointCloud(
 	soil->GenerateMesh();
 
 	if (exportTreeMesh) {
-		const auto children = scene->GetChildren(treeEntity);
-		for (const auto& child : children) {
-			auto name = scene->GetEntityName(child);
-			if (name == "Branch Mesh") {
-				auto mmr = scene->GetOrSetPrivateComponent<MeshRenderer>(child).lock();
-				mmr->m_mesh.Get<Mesh>()->Export(treeMeshOutputPath);
-			}
-
-		}
+		tree->ExportOBJ(treeMeshOutputPath, meshGeneratorSettings);
 	}
 	
 	Application::Loop();
@@ -562,16 +545,7 @@ void RBVSpaceColonizationTreeData(
 	}
 
 	if (exportTreeMesh) {
-		tree->GenerateGeometry(meshGeneratorSettings);
-		const auto children = scene->GetChildren(tempEntity);
-		for (const auto& child : children) {
-			auto name = scene->GetEntityName(child);
-			if (name == "Branch Mesh") {
-				auto mmr = scene->GetOrSetPrivateComponent<MeshRenderer>(child).lock();
-				mmr->m_mesh.Get<Mesh>()->Export(treeMeshOutputPath);
-			}
-
-		}
+		tree->ExportOBJ(treeMeshOutputPath, meshGeneratorSettings);
 	}
 	if (exportTreeIO)
 	{
