@@ -373,7 +373,7 @@ void SorghumLayer::ExportSorghum(const Entity& sorghum, std::ofstream& of,
 		->m_mesh.Get<Mesh>();
 	ObjExportHelper(position, stemMesh, of, startIndex);
 
-	scene->ForEachChild(sorghum, [&](Entity child) {
+	scene->ForEachDescendant(sorghum, [&](Entity child) {
 		if (!scene->HasPrivateComponent<MeshRenderer>(child))
 			return;
 		const auto leafMesh = scene->GetOrSetPrivateComponent<MeshRenderer>(child)
