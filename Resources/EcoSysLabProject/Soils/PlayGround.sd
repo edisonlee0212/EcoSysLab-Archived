@@ -1,0 +1,16 @@
+m_heightField:
+  m_assetHandle: 10229908522578366557
+  m_assetTypeName: HeightField
+m_soilParameters:
+  m_voxelResolution: [64, 64, 64]
+  m_deltaX: 0.100000001
+  m_deltaTime: 0.00100000005
+  m_boundingBoxMin: [-3.20000005, -4.80000019, -3.20000005]
+  m_boundary_x: 3
+  m_boundary_y: 3
+  m_boundary_z: 3
+  m_diffusionForce: 1
+  m_gravityForce: [0, -1, 0]
+m_soilLayerDescriptors:
+  - m_assetHandle: 14755634122304172107
+    m_assetTypeName: SoilLayerDescriptor
