@@ -1370,7 +1370,8 @@ bool OnInspectShootGrowthParameters(ShootGrowthParameters& treeGrowthParameters)
 			changed = ImGui::DragFloat3("Sagging thickness/reduction/max", &treeGrowthParameters.m_saggingFactorThicknessReductionMax.x, 0.01f, 0.0f, 1.0f, "%.5f") || changed;
 			changed = ImGui::DragFloat("Low Branch Pruning", &treeGrowthParameters.m_lowBranchPruning, 0.01f) || changed;
 			changed = ImGui::DragFloat("Low Branch Pruning Thickness factor", &treeGrowthParameters.m_lowBranchPruningThicknessFactor, 0.01f) || changed;
-			changed = ImGui::DragFloat("Light pruning factor", &treeGrowthParameters.m_endNodePruningLightFactor, 0.01f) || changed;
+			changed = ImGui::DragFloat("Apical pruning factor", &treeGrowthParameters.m_apicalPruningFactor, 0.01f) || changed;
+			changed = ImGui::DragFloat("Lateral pruning factor", &treeGrowthParameters.m_lateralPruningFactor, 0.01f) || changed;
 			ImGui::TreePop();
 		}
 
@@ -1509,6 +1510,8 @@ void SerializeShootGrowthParameters(const std::string& name, const ShootGrowthPa
 	//Internode
 	out << YAML::Key << "m_lowBranchPruning" << YAML::Value << treeGrowthParameters.m_lowBranchPruning;
 	out << YAML::Key << "m_lowBranchPruningThicknessFactor" << YAML::Value << treeGrowthParameters.m_lowBranchPruningThicknessFactor;
+	out << YAML::Key << "m_apicalPruningFactor" << YAML::Value << treeGrowthParameters.m_apicalPruningFactor;
+	out << YAML::Key << "m_lateralPruningFactor" << YAML::Value << treeGrowthParameters.m_lateralPruningFactor;
 	out << YAML::Key << "m_saggingFactorThicknessReductionMax" << YAML::Value << treeGrowthParameters.m_saggingFactorThicknessReductionMax;
 
 	//Foliage
@@ -1589,6 +1592,8 @@ void DeserializeShootGrowthParameters(const std::string& name, ShootGrowthParame
 		if (param["m_thicknessAccumulateAgeFactor"]) treeGrowthParameters.m_thicknessAccumulateAgeFactor = param["m_thicknessAccumulateAgeFactor"].as<float>();
 
 		if (param["m_lowBranchPruning"]) treeGrowthParameters.m_lowBranchPruning = param["m_lowBranchPruning"].as<float>();
+		if (param["m_apicalPruningFactor"]) treeGrowthParameters.m_apicalPruningFactor = param["m_apicalPruningFactor"].as<float>();
+		if (param["m_lateralPruningFactor"]) treeGrowthParameters.m_lateralPruningFactor = param["m_lateralPruningFactor"].as<float>();
 		if (param["m_lowBranchPruningThicknessFactor"]) treeGrowthParameters.m_lowBranchPruningThicknessFactor = param["m_lowBranchPruningThicknessFactor"].as<float>();
 		if (param["m_saggingFactorThicknessReductionMax"]) treeGrowthParameters.m_saggingFactorThicknessReductionMax = param["m_saggingFactorThicknessReductionMax"].as<glm::vec3>();
 
@@ -1754,12 +1759,14 @@ void Tree::PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescrip
 		m_shootGrowthController.m_thicknessAccumulationFactor = treeDescriptor->m_shootGrowthParameters.m_thicknessAccumulationFactor;
 		m_shootGrowthController.m_thicknessAccumulateAgeFactor = treeDescriptor->m_shootGrowthParameters.m_thicknessAccumulateAgeFactor;
 		m_shootGrowthController.m_lowBranchPruning = treeDescriptor->m_shootGrowthParameters.m_lowBranchPruning;
-		m_shootGrowthController.m_pruningFactor = [=](const Node<InternodeGrowthData>& internode)
+		m_shootGrowthController.m_pruningFactor = [=](const float deltaTime, const Node<InternodeGrowthData>& internode)
 			{
+				if (internode.GetHandle() == 0) return 0.0f;
 				float pruningProbability = 0.0f;
 				if (internode.IsEndNode())
 				{
-					pruningProbability = (1.0f - internode.m_data.m_growthPotential) * treeDescriptor->m_shootGrowthParameters.m_endNodePruningLightFactor;
+					if (internode.IsApical()) pruningProbability += deltaTime * treeDescriptor->m_shootGrowthParameters.m_apicalPruningFactor;
+					else pruningProbability += deltaTime * treeDescriptor->m_shootGrowthParameters.m_lateralPruningFactor;
 				}
 				return pruningProbability;
 			};

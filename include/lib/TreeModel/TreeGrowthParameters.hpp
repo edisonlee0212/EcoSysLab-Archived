@@ -197,10 +197,8 @@ namespace EcoSysLab
 		* root.
 		*/
 		float m_lowBranchPruningThicknessFactor = 0.0f;
-		/**
-		 * \brief The The impact of the amount of incoming light on the shedding of end internodes.
-		 */
-		float m_endNodePruningLightFactor;
+		float m_apicalPruningFactor = 0.0f;
+		float m_lateralPruningFactor = 0.0f;
 		/**
 		 * \brief The strength of gravity bending.
 		 */
