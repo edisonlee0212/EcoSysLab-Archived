@@ -68,7 +68,7 @@ void SetSoilPhysicalMaterial(Noises3D& c, Noises3D& p, float sandRatio, float si
 	p.m_noiseDescriptors[0].m_offset = sandRatio * sandMaterialProperties.y + siltRatio * siltMaterialProperties.y + clayRatio * clayMaterialProperties.y + airRatio * airMaterialProperties.y;
 }
 
-void NoiseSoilLayerDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
+void SoilLayerDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
 	bool changed = false;
 	if (ImGui::TreeNodeEx("Generate from preset soil ratio")) {
@@ -165,7 +165,7 @@ void NoiseSoilLayerDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& edi
 	if (changed) m_saved = false;
 }
 
-void NoiseSoilLayerDescriptor::Serialize(YAML::Emitter& out)
+void SoilLayerDescriptor::Serialize(YAML::Emitter& out)
 {
 	m_capacity.Save("m_capacity", out);
 	m_permeability.Save("m_permeability", out);
@@ -182,7 +182,7 @@ void NoiseSoilLayerDescriptor::Serialize(YAML::Emitter& out)
 	m_heightTexture.Save("m_heightTexture", out);
 }
 
-void NoiseSoilLayerDescriptor::Deserialize(const YAML::Node& in)
+void SoilLayerDescriptor::Deserialize(const YAML::Node& in)
 {
 	m_capacity.Load("m_capacity", in);
 	m_permeability.Load("m_permeability", in);
@@ -198,7 +198,7 @@ void NoiseSoilLayerDescriptor::Deserialize(const YAML::Node& in)
 	m_heightTexture.Load("m_heightTexture", in);
 }
 
-void NoiseSoilLayerDescriptor::CollectAssetRef(std::vector<AssetRef>& list)
+void SoilLayerDescriptor::CollectAssetRef(std::vector<AssetRef>& list)
 {
 	list.push_back(m_albedoTexture);
 	list.push_back(m_roughnessTexture);
@@ -242,8 +242,8 @@ void SoilDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 		changed = true;
 	}
 	AssetRef tempSoilLayerDescriptorHolder;
-	if (editorLayer->DragAndDropButton<NoiseSoilLayerDescriptor>(tempSoilLayerDescriptorHolder, "Drop new SoilLayerDescriptor here...")) {
-		auto sld = tempSoilLayerDescriptorHolder.Get<NoiseSoilLayerDescriptor>();
+	if (editorLayer->DragAndDropButton<SoilLayerDescriptor>(tempSoilLayerDescriptorHolder, "Drop new SoilLayerDescriptor here...")) {
+		auto sld = tempSoilLayerDescriptorHolder.Get<SoilLayerDescriptor>();
 		if (sld) {
 			m_soilLayerDescriptors.emplace_back(sld);
 			changed = true;
@@ -252,7 +252,7 @@ void SoilDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 	}
 	for (int i = 0; i < m_soilLayerDescriptors.size(); i++)
 	{
-		if (auto soilLayerDescriptor = m_soilLayerDescriptors[i].Get<NoiseSoilLayerDescriptor>())
+		if (auto soilLayerDescriptor = m_soilLayerDescriptors[i].Get<SoilLayerDescriptor>())
 		{
 			if (ImGui::TreeNodeEx(("No." + std::to_string(i + 1)).c_str(), ImGuiTreeNodeFlags_DefaultOpen))
 			{
@@ -575,19 +575,19 @@ void Soil::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 		ImGui::SliderFloat("Irrigation amount", &m_soilModel.m_irrigationAmount, 0.01, 100, "%.2f", ImGuiSliderFlags_Logarithmic);
 		ImGui::Checkbox("apply Irrigation", &m_irrigation);
 
-		ImGui::InputFloat3("Source position", (float*)&m_sourcePositon);
+		ImGui::InputFloat3("Source position", (float*)&m_sourcePosition);
 		ImGui::SliderFloat("Source amount", &m_sourceAmount, 1, 10000, "%.4f", ImGuiSliderFlags_Logarithmic);
 		ImGui::InputFloat("Source width", &m_sourceWidth, 0.1, 100, "%.4f", ImGuiSliderFlags_Logarithmic);
 		if (ImGui::Button("Apply Source"))
 		{
-			m_soilModel.ChangeWater(m_sourcePositon, m_sourceAmount, m_sourceWidth);
+			m_soilModel.ChangeWater(m_sourcePosition, m_sourceAmount, m_sourceWidth);
 		}
 
 
 		
 	}
 }
-Entity Soil::GenerateSurfaceQuadX(float depth, const glm::vec2& minXY, const glm::vec2 maxXY, float waterFactor, float nutrientFactor)
+Entity Soil::GenerateSurfaceQuadX(bool backFacing, float depth, const glm::vec2& minXY, const glm::vec2 maxXY, float waterFactor, float nutrientFactor)
 {
 	auto scene = Application::GetActiveScene();
 	auto quadEntity = scene->CreateEntity("Slice");
@@ -601,7 +601,7 @@ Entity Soil::GenerateSurfaceQuadX(float depth, const glm::vec2& minXY, const glm
 	std::vector<float> metallicData;
 	std::vector<float> roughnessData;
 	glm::ivec2 textureResolution;
-	m_soilModel.GetSoilTextureSlideX(depth, minXY, maxXY, albedoData, normalData, roughnessData, metallicData, textureResolution, waterFactor, nutrientFactor);
+	m_soilModel.GetSoilTextureSlideX(backFacing, depth, minXY, maxXY, albedoData, normalData, roughnessData, metallicData, textureResolution, waterFactor, nutrientFactor);
 	albedoTex->SetRgbaChannelData(albedoData, textureResolution);
 	normalTex->SetRgbChannelData(normalData, textureResolution);
 	metallicTex->SetRedChannelData(metallicData, textureResolution);
@@ -622,7 +622,7 @@ Entity Soil::GenerateSurfaceQuadX(float depth, const glm::vec2& minXY, const glm
 	auto soilModelSize = glm::vec3(m_soilModel.m_resolution) * m_soilModel.m_dx;
 
 	scale = glm::vec3(soilModelSize.z * (maxXY.x - minXY.x), 1.0f, soilModelSize.y * (maxXY.y - minXY.y));
-	rotation = glm::vec3(glm::radians(90.0f), -glm::radians(90.0f), 0.0f);
+	rotation = glm::vec3(glm::radians(90.0f), glm::radians(backFacing ? 90.0f : -90.0f), 0.0f);
 	position = m_soilModel.m_boundingBoxMin + glm::vec3(soilModelSize.x * depth, soilModelSize.y * (minXY.y + maxXY.y) * 0.5f, soilModelSize.z * (minXY.x + maxXY.x) * 0.5f);
 	globalTransform.SetPosition(position);
 	globalTransform.SetEulerRotation(rotation);
@@ -631,7 +631,7 @@ Entity Soil::GenerateSurfaceQuadX(float depth, const glm::vec2& minXY, const glm
 	return quadEntity;
 }
 
-Entity Soil::GenerateSurfaceQuadZ(float depth, const glm::vec2& minXY, const glm::vec2 maxXY, float waterFactor, float nutrientFactor)
+Entity Soil::GenerateSurfaceQuadZ(bool backFacing, float depth, const glm::vec2& minXY, const glm::vec2 maxXY, float waterFactor, float nutrientFactor)
 {
 	auto scene = Application::GetActiveScene();
 	auto quadEntity = scene->CreateEntity("Slice");
@@ -647,7 +647,7 @@ Entity Soil::GenerateSurfaceQuadZ(float depth, const glm::vec2& minXY, const glm
 	std::vector<float> metallicData;
 	std::vector<float> roughnessData;
 	glm::ivec2 textureResolution;
-	m_soilModel.GetSoilTextureSlideZ(depth, minXY, maxXY, albedoData, normalData, roughnessData, metallicData, textureResolution, waterFactor, nutrientFactor);
+	m_soilModel.GetSoilTextureSlideZ(backFacing, depth, minXY, maxXY, albedoData, normalData, roughnessData, metallicData, textureResolution, waterFactor, nutrientFactor);
 	albedoTex->SetRgbaChannelData(albedoData, textureResolution);
 	normalTex->SetRgbChannelData(normalData, textureResolution);
 	metallicTex->SetRedChannelData(metallicData, textureResolution);
@@ -669,7 +669,7 @@ Entity Soil::GenerateSurfaceQuadZ(float depth, const glm::vec2& minXY, const glm
 	auto soilModelSize = glm::vec3(m_soilModel.m_resolution) * m_soilModel.m_dx;
 
 	scale = glm::vec3(soilModelSize.x * (maxXY.x - minXY.x), 1.0f, soilModelSize.y * (maxXY.y - minXY.y));
-	rotation = glm::vec3(glm::radians(90.0f), 0.0f, 0.0f);
+	rotation = glm::vec3(glm::radians(90.0f), glm::radians(backFacing ? 180.0f : 0.0f), 0.0f);
 	position = m_soilModel.m_boundingBoxMin + glm::vec3(soilModelSize.x * (minXY.x + maxXY.x) * 0.5f, soilModelSize.y * (minXY.y + maxXY.y) * 0.5f, soilModelSize.z * depth);
 
 	globalTransform.SetPosition(position);
@@ -685,19 +685,19 @@ Entity Soil::GenerateCutOut(float xDepth, float zDepth, float waterFactor, float
 	auto combinedEntity = scene->CreateEntity("CutOut");
 
 	if (zDepth <= 0.99f) {
-		auto quad1 = GenerateSurfaceQuadX(0, { 0, 0 }, { 1.0 - zDepth , 1 }, waterFactor, nutrientFactor);
+		auto quad1 = GenerateSurfaceQuadX(false, 0, { 0, 0 }, { 1.0 - zDepth , 1 }, waterFactor, nutrientFactor);
 		scene->SetParent(quad1, combinedEntity);
 	}
 	if (zDepth >= 0.01f && xDepth <= 0.99f) {
-		auto quad2 = GenerateSurfaceQuadX(xDepth, { 1.0 - zDepth, 0 }, { 1 , 1 }, waterFactor, nutrientFactor);
+		auto quad2 = GenerateSurfaceQuadX(true, xDepth, { 1.0 - zDepth, 0 }, { 1 , 1 }, waterFactor, nutrientFactor);
 		scene->SetParent(quad2, combinedEntity);
 	}
 	if (xDepth >= 0.01f) {
-		auto quad3 = GenerateSurfaceQuadZ(1.0 - zDepth, { 0, 0 }, { xDepth , 1 }, waterFactor, nutrientFactor);
+		auto quad3 = GenerateSurfaceQuadZ(false, 1.0 - zDepth, { 0, 0 }, { xDepth , 1 }, waterFactor, nutrientFactor);
 		scene->SetParent(quad3, combinedEntity);
 	}
 	if (xDepth <= 0.99f) {
-		auto quad4 = GenerateSurfaceQuadZ(1.0, { xDepth, 0 }, { 1 , 1 }, waterFactor, nutrientFactor);
+		auto quad4 = GenerateSurfaceQuadZ(true, 1.0, { xDepth, 0 }, { 1 , 1 }, waterFactor, nutrientFactor);
 		scene->SetParent(quad4, combinedEntity);
 	}
 	
@@ -712,7 +712,7 @@ Entity Soil::GenerateCutOut(float xDepth, float zDepth, float waterFactor, float
 
 			if (!soilLayerDescriptors.empty())
 			{
-				auto firstDescriptor = soilLayerDescriptors[0].Get<NoiseSoilLayerDescriptor>();
+				auto firstDescriptor = soilLayerDescriptors[0].Get<SoilLayerDescriptor>();
 				if (firstDescriptor)
 				{
 					auto mmr = scene->GetOrSetPrivateComponent<MeshRenderer>(groundSurface).lock();
@@ -734,22 +734,19 @@ Entity Soil::GenerateFullBox(float waterFactor, float nutrientFactor, bool groun
 	auto combinedEntity = scene->CreateEntity("Cube");
 
 	
-	auto quad1 = GenerateSurfaceQuadX(0, { 0, 0 }, { 1 , 1 }, waterFactor, nutrientFactor);
+	auto quad1 = GenerateSurfaceQuadX(false, 0, { 0, 0 }, { 1 , 1 }, waterFactor, nutrientFactor);
 	scene->SetParent(quad1, combinedEntity);
 	
 	
-	auto quad2 = GenerateSurfaceQuadX(1, { 0, 0 }, { 1 , 1 }, waterFactor, nutrientFactor);
+	auto quad2 = GenerateSurfaceQuadX(true, 1, { 0, 0 }, { 1 , 1 }, waterFactor, nutrientFactor);
 	scene->SetParent(quad2, combinedEntity);
 	
 	
-	auto quad3 = GenerateSurfaceQuadZ(0, { 0, 0 }, { 1 , 1 }, waterFactor, nutrientFactor);
+	auto quad3 = GenerateSurfaceQuadZ(true, 0, { 0, 0 }, { 1 , 1 }, waterFactor, nutrientFactor);
 	scene->SetParent(quad3, combinedEntity);
 
-	auto quad4 = GenerateSurfaceQuadZ(1, { 0, 0 }, { 1 , 1 }, waterFactor, nutrientFactor);
+	auto quad4 = GenerateSurfaceQuadZ(false, 1, { 0, 0 }, { 1 , 1 }, waterFactor, nutrientFactor);
 	scene->SetParent(quad4, combinedEntity);
-	
-
-
 
 	if (groundSurface) {
 		auto groundSurface = GenerateMesh(0, 0);
@@ -760,7 +757,7 @@ Entity Soil::GenerateFullBox(float waterFactor, float nutrientFactor, bool groun
 
 			if (!soilLayerDescriptors.empty())
 			{
-				auto firstDescriptor = soilLayerDescriptors[0].Get<NoiseSoilLayerDescriptor>();
+				auto firstDescriptor = soilLayerDescriptors[0].Get<SoilLayerDescriptor>();
 				if (firstDescriptor)
 				{
 					auto mmr = scene->GetOrSetPrivateComponent<MeshRenderer>(groundSurface).lock();
@@ -910,7 +907,7 @@ void Soil::InitializeSoilModel()
 		for (int i = 0; i < soilDescriptor->m_soilLayerDescriptors.size(); i++)
 		{
 
-			if (auto soilLayerDescriptor = soilLayerDescriptors[i].Get<NoiseSoilLayerDescriptor>())
+			if (auto soilLayerDescriptor = soilLayerDescriptors[i].Get<SoilLayerDescriptor>())
 			{
 				soilLayers.emplace_back();
 				auto& soilLayer = soilLayers.back();
@@ -1110,7 +1107,7 @@ void SoilDescriptor::Serialize(YAML::Emitter& out)
 	out << YAML::Key << "m_soilLayerDescriptors" << YAML::Value << YAML::BeginSeq;
 	for (int i = 0; i < m_soilLayerDescriptors.size(); i++)
 	{
-		if (auto soilLayerDescriptor = m_soilLayerDescriptors[i].Get<ISoilLayerDescriptor>())
+		if (auto soilLayerDescriptor = m_soilLayerDescriptors[i].Get<SoilLayerDescriptor>())
 		{
 			out << YAML::BeginMap;
 			m_soilLayerDescriptors[i].Serialize(out);
@@ -1146,7 +1143,7 @@ void SoilDescriptor::CollectAssetRef(std::vector<AssetRef>& list)
 
 	for (int i = 0; i < m_soilLayerDescriptors.size(); i++)
 	{
-		if (auto soilLayerDescriptor = m_soilLayerDescriptors[i].Get<ISoilLayerDescriptor>())
+		if (auto soilLayerDescriptor = m_soilLayerDescriptors[i].Get<SoilLayerDescriptor>())
 		{
 			list.push_back(m_soilLayerDescriptors[i]);
 		}

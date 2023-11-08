@@ -108,7 +108,7 @@ namespace EcoSysLab {
 		[[nodiscard]] bool CoordinateInsideVolume(const glm::ivec3& coordinate) const;
 		[[nodiscard]] bool Initialized() const;
 
-		void GetSoilTextureSlideZ(float z, const glm::vec2 &xyMin, const glm::vec2 &xyMax, 
+		void GetSoilTextureSlideZ(bool backFacing, float z, const glm::vec2 &xyMin, const glm::vec2 &xyMax,
 			std::vector<glm::vec4> &albedoData,
 			std::vector<glm::vec3> &normalData,
 			std::vector<float> &roughnessData,
@@ -116,7 +116,7 @@ namespace EcoSysLab {
 			glm::ivec2& outputResolution
 			, float waterFactor, float nutrientFactor,
 			float blur_width=1); // the output as well as all input textures must have the same resolution!
-		void GetSoilTextureSlideX(float x, const glm::vec2& yzMin, const glm::vec2& yzMax, 
+		void GetSoilTextureSlideX(bool backFacing, float x, const glm::vec2& yzMin, const glm::vec2& yzMax,
 			std::vector<glm::vec4> &albedoData,
 			std::vector<glm::vec3> &normalData,
 			std::vector<float> &roughnessData,

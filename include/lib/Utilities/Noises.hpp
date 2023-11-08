@@ -24,6 +24,9 @@ namespace EcoSysLab
 		float m_min = -10;
 		float m_max = 10;
 		float m_offset = 0.0f;
+		glm::vec3 m_shift = glm::vec3(0.0f);
+		void Serialize(YAML::Emitter& out) const;
+		void Deserialize(const YAML::Node& in);
 	};
 	class Noises2D {
 	public:

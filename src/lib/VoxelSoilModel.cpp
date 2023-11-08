@@ -1171,7 +1171,7 @@ void EcoSysLab::VoxelSoilModel::Source::Apply(Field& target)
 }
 
 
-void VoxelSoilModel::GetSoilTextureSlideZ(float z, const glm::vec2& xyMin, const glm::vec2& xyMax, std::vector<glm::vec4> &albedoData,
+void VoxelSoilModel::GetSoilTextureSlideZ(bool backFacing, float z, const glm::vec2& xyMin, const glm::vec2& xyMax, std::vector<glm::vec4> &albedoData,
 	std::vector<glm::vec3> &normalData,
 	std::vector<float> &roughnessData,
 	std::vector<float> &metallicData,
@@ -1200,7 +1200,7 @@ void VoxelSoilModel::GetSoilTextureSlideZ(float z, const glm::vec2& xyMin, const
 	{
 		for (auto texCoordY = 0; texCoordY < outputResolution.y; ++texCoordY)
 		{
-			auto outputTex_idx = texCoordX + texCoordY * outputResolution.x;
+			auto outputTex_idx = (backFacing ? outputResolution.x - texCoordX - 1 : texCoordX) + texCoordY * outputResolution.x;
 			auto texture_idx = texCoordXStart + texCoordX + (texCoordYStart + texCoordY) * m_materialTextureResolution.x;
 			int gridCoordX = texCoordXStart + texCoordX;
 			int gridCoordY = texCoordYStart + texCoordY;
@@ -1219,6 +1219,7 @@ void VoxelSoilModel::GetSoilTextureSlideZ(float z, const glm::vec2& xyMin, const
 					roughnessData[outputTex_idx],
 					metallicData[outputTex_idx], waterFactor, nutrientFactor
 				);
+				albedoData[outputTex_idx] = glm::vec4(1.0f);
 				if(texel_position.y > m_soilSurface.m_height({ texel_position.x, texel_position.z }) + 0.01f)
 				{
 					albedoData[outputTex_idx].w = 0.0f;
@@ -1229,7 +1230,7 @@ void VoxelSoilModel::GetSoilTextureSlideZ(float z, const glm::vec2& xyMin, const
 }
 
 
-void VoxelSoilModel::GetSoilTextureSlideX(float x, const glm::vec2& yzMin, const glm::vec2& yzMax, std::vector<glm::vec4> &albedoData,
+void VoxelSoilModel::GetSoilTextureSlideX(bool backFacing, float x, const glm::vec2& yzMin, const glm::vec2& yzMax, std::vector<glm::vec4> &albedoData,
 	std::vector<glm::vec3> &normalData,
 	std::vector<float> &roughnessData,
 	std::vector<float> &metallicData,
@@ -1257,7 +1258,7 @@ void VoxelSoilModel::GetSoilTextureSlideX(float x, const glm::vec2& yzMin, const
 	{
 		for (auto texCoordY = 0; texCoordY < outputResolution.y; ++texCoordY)
 		{
-			auto outputTex_idx = texCoordX + texCoordY * outputResolution.x;
+			auto outputTex_idx = (backFacing ? outputResolution.x - texCoordX - 1 : texCoordX) + texCoordY * outputResolution.x;
 			auto texture_idx = texCoordXStart + texCoordX + (texCoordYStart + texCoordY) * m_materialTextureResolution.x;
 			int gridCoordZ = texCoordXStart + texCoordX;
 			int gridCoordY = texCoordYStart + texCoordY;
@@ -1277,6 +1278,7 @@ void VoxelSoilModel::GetSoilTextureSlideX(float x, const glm::vec2& yzMin, const
 					roughnessData[outputTex_idx],
 					metallicData[outputTex_idx], waterFactor, nutrientFactor
 					);
+				albedoData[outputTex_idx] = glm::vec4(1.0f);
 				if (texel_position.y > m_soilSurface.m_height({ texel_position.x, texel_position.z }) + 0.01f)
 				{
 					albedoData[outputTex_idx].w = 0.0f;

@@ -14,9 +14,7 @@ namespace EcoSysLab
 		Air
 	};
 
-	class ISoilLayerDescriptor : public IAsset {};
-
-	class NoiseSoilLayerDescriptor : public ISoilLayerDescriptor
+	class SoilLayerDescriptor : public IAsset
 	{
 	public:
 		AssetRef m_albedoTexture;
@@ -98,8 +96,8 @@ namespace EcoSysLab
 		void SplitRootTestSetup();
 
 		void FixedUpdate() override;
-		Entity GenerateSurfaceQuadX(float depth, const glm::vec2& minXY, const glm::vec2 maxXY, float waterFactor, float nutrientFactor);
-		Entity GenerateSurfaceQuadZ(float depth, const glm::vec2& minXY, const glm::vec2 maxXY, float waterFactor, float nutrientFactor);
+		Entity GenerateSurfaceQuadX(bool backFacing, float depth, const glm::vec2& minXY, const glm::vec2 maxXY, float waterFactor, float nutrientFactor);
+		Entity GenerateSurfaceQuadZ(bool backFacing, float depth, const glm::vec2& minXY, const glm::vec2 maxXY, float waterFactor, float nutrientFactor);
 
 		Entity GenerateCutOut(float xDepth, float zDepth, float waterFactor, float nutrientFactor, bool groundSurface);
 		Entity GenerateFullBox(float waterFactor, float nutrientFactor, bool groundSurface);
@@ -110,7 +108,7 @@ namespace EcoSysLab
 		float m_temporalProgressionProgress = 0;
 		bool m_temporalProgression = false;
 		// for user specified sources:
-		glm::vec3 m_sourcePositon = glm::vec3(0, 0, 0);
+		glm::vec3 m_sourcePosition = glm::vec3(0, 0, 0);
 		float m_sourceAmount = 50.f;
 		float m_sourceWidth = 1.0f;
 	};

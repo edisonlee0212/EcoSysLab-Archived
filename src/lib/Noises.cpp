@@ -3,6 +3,30 @@
 using namespace EcoSysLab;
 
 
+void NoiseDescriptor::Serialize(YAML::Emitter& out) const
+{
+	out << YAML::Key << "m_type" << YAML::Value << m_type;
+	out << YAML::Key << "m_frequency" << YAML::Value << m_frequency;
+	out << YAML::Key << "m_intensity" << YAML::Value << m_intensity;
+	out << YAML::Key << "m_multiplier" << YAML::Value << m_multiplier;
+	out << YAML::Key << "m_min" << YAML::Value << m_min;
+	out << YAML::Key << "m_max" << YAML::Value << m_max;
+	out << YAML::Key << "m_offset" << YAML::Value << m_offset;
+	out << YAML::Key << "m_shift" << YAML::Value << m_shift;
+}
+
+void NoiseDescriptor::Deserialize(const YAML::Node& in)
+{
+	if (in["m_type"]) m_type = in["m_type"].as<unsigned>();
+	if (in["m_frequency"]) m_frequency = in["m_frequency"].as<float>();
+	if (in["m_intensity"]) m_intensity = in["m_intensity"].as<float>();
+	if (in["m_multiplier"]) m_multiplier = in["m_multiplier"].as<float>();
+	if (in["m_min"]) m_min = in["m_min"].as<float>();
+	if (in["m_max"]) m_max = in["m_max"].as<float>();
+	if (in["m_offset"]) m_offset = in["m_offset"].as<float>();
+	if (in["m_shift"]) m_shift = in["m_shift"].as<glm::vec3>();
+}
+
 Noises2D::Noises2D() {
 	m_minMax = glm::vec2(-1000, 1000);
 	m_noiseDescriptors.clear();
@@ -97,11 +121,14 @@ void Noises2D::Save(const std::string& name, YAML::Emitter& out) const
 {
 	out << YAML::Key << name << YAML::Value << YAML::BeginMap;
 	out << YAML::Key << "m_minMax" << YAML::Value << m_minMax;
-	if (!m_noiseDescriptors.empty())
+	out << YAML::Key << "m_noiseDescriptors" << YAML::BeginSeq;
+	for (const auto& i : m_noiseDescriptors)
 	{
-		out << YAML::Key << "m_noiseDescriptors" << YAML::Value
-			<< YAML::Binary((const unsigned char*)m_noiseDescriptors.data(), m_noiseDescriptors.size() * sizeof(NoiseDescriptor));
+		out << YAML::BeginMap;
+		i.Serialize(out);
+		out << YAML::EndMap;
 	}
+	out << YAML::EndSeq;
 	out << YAML::EndMap;
 }
 
@@ -109,16 +136,18 @@ void Noises2D::Load(const std::string& name, const YAML::Node& in)
 {
 	if (in[name])
 	{
-		const auto& n = in[name];
-		if (n["m_minMax"])
-			m_minMax = n["m_minMax"].as<glm::vec2>();
+		const auto& node = in[name];
+		if (node["m_minMax"])
+			m_minMax = node["m_minMax"].as<glm::vec2>();
 
-
-		if (n["m_noiseDescriptors"])
+		if (node["m_noiseDescriptors"])
 		{
-			const auto& ds = n["m_noiseDescriptors"].as<YAML::Binary>();
-			m_noiseDescriptors.resize(ds.size() / sizeof(NoiseDescriptor));
-			std::memcpy(m_noiseDescriptors.data(), ds.data(), ds.size());
+			m_noiseDescriptors.clear();
+			for (const auto& i : node["m_noiseDescriptors"]) {
+				m_noiseDescriptors.emplace_back();
+				auto& back = m_noiseDescriptors.back();
+				back.Deserialize(i);
+			}
 		}
 	}
 }
@@ -126,11 +155,12 @@ void Noises3D::Save(const std::string& name, YAML::Emitter& out) const
 {
 	out << YAML::Key << name << YAML::Value << YAML::BeginMap;
 	out << YAML::Key << "m_minMax" << YAML::Value << m_minMax;
-	if (!m_noiseDescriptors.empty())
+	out << YAML::Key << "m_noiseDescriptors" << YAML::BeginSeq;
+	for (const auto& i : m_noiseDescriptors)
 	{
-		out << YAML::Key << "m_noiseDescriptors" << YAML::Value
-			<< YAML::Binary((const unsigned char*)m_noiseDescriptors.data(), m_noiseDescriptors.size() * sizeof(NoiseDescriptor));
+		i.Serialize(out);
 	}
+	out << YAML::EndSeq;
 	out << YAML::EndMap;
 }
 
@@ -138,14 +168,18 @@ void Noises3D::Load(const std::string& name, const YAML::Node& in)
 {
 	if (in[name])
 	{
-		const auto& n = in[name];
-		if (n["m_minMax"])
-			m_minMax = n["m_minMax"].as<glm::vec2>();
-		if (n["m_noiseDescriptors"])
+		const auto& node = in[name];
+		if (node["m_minMax"])
+			m_minMax = node["m_minMax"].as<glm::vec2>();
+
+		if (node["m_noiseDescriptors"])
 		{
-			const auto& ds = n["m_noiseDescriptors"].as<YAML::Binary>();
-			m_noiseDescriptors.resize(ds.size() / sizeof(NoiseDescriptor));
-			std::memcpy(m_noiseDescriptors.data(), ds.data(), ds.size());
+			m_noiseDescriptors.clear();
+			for (const auto& i : node["m_noiseDescriptors"]) {
+				m_noiseDescriptors.emplace_back();
+				auto& back = m_noiseDescriptors.back();
+				back.Deserialize(i);
+			}
 		}
 	}
 }
@@ -153,18 +187,20 @@ void Noises3D::Load(const std::string& name, const YAML::Node& in)
 float Noises2D::GetValue(const glm::vec2& position) const
 {
 	float retVal = 0;
+
 	for (const auto& noiseDescriptor : m_noiseDescriptors)
 	{
+		const auto actualPosition = position + glm::vec2(noiseDescriptor.m_shift);
 		float noise = 0;
 		switch (static_cast<NoiseType>(noiseDescriptor.m_type))
 		{
 		case NoiseType::Perlin:
-			noise = glm::pow(glm::perlin(noiseDescriptor.m_frequency * position +
+			noise = glm::pow(glm::perlin(noiseDescriptor.m_frequency * actualPosition +
 				glm::vec2(noiseDescriptor.m_offset)), noiseDescriptor.m_intensity) * noiseDescriptor.m_multiplier;
 			noise = glm::clamp(noise, noiseDescriptor.m_min, noiseDescriptor.m_max);
 			break;
 		case NoiseType::Simplex:
-			noise = glm::pow(glm::simplex(noiseDescriptor.m_frequency * position +
+			noise = glm::pow(glm::simplex(noiseDescriptor.m_frequency * actualPosition +
 				glm::vec2(noiseDescriptor.m_offset)), noiseDescriptor.m_intensity) * noiseDescriptor.m_multiplier;
 			noise = glm::clamp(noise, noiseDescriptor.m_min, noiseDescriptor.m_max);
 			break;
@@ -172,7 +208,7 @@ float Noises2D::GetValue(const glm::vec2& position) const
 			noise = noiseDescriptor.m_offset;
 			break;
 		case NoiseType::Linear:
-			noise = noiseDescriptor.m_offset + noiseDescriptor.m_frequency * position.x + noiseDescriptor.m_intensity * position.y;
+			noise = noiseDescriptor.m_offset + noiseDescriptor.m_frequency * actualPosition.x + noiseDescriptor.m_intensity * actualPosition.y;
 			noise = glm::clamp(noise, noiseDescriptor.m_min, noiseDescriptor.m_max);
 			break;
 		}
@@ -218,6 +254,7 @@ bool Noises3D::OnInspect() {
 					m_noiseDescriptors[i].m_max = glm::max(m_noiseDescriptors[i].m_min, m_noiseDescriptors[i].m_max);
 				}
 				changed = ImGui::DragFloat("Offset", &m_noiseDescriptors[i].m_offset, 0.00001f, 0, 0, "%.5f") || changed;
+				changed = ImGui::DragFloat3("Shift", &m_noiseDescriptors[i].m_shift.x, 0.00001f, 0, 0, "%.5f") || changed;
 				break;
 			case NoiseType::Simplex:
 				changed = ImGui::DragFloat("Frequency", &m_noiseDescriptors[i].m_frequency, 0.00001f, 0, 0, "%.5f") || changed;
@@ -234,6 +271,7 @@ bool Noises3D::OnInspect() {
 					m_noiseDescriptors[i].m_max = glm::max(m_noiseDescriptors[i].m_min, m_noiseDescriptors[i].m_max);
 				}
 				changed = ImGui::DragFloat("Offset", &m_noiseDescriptors[i].m_offset, 0.00001f, 0, 0, "%.5f") || changed;
+				changed = ImGui::DragFloat3("Shift", &m_noiseDescriptors[i].m_shift.x, 0.00001f, 0, 0, "%.5f") || changed;
 				break;
 			case NoiseType::Constant:
 				changed = ImGui::DragFloat("Value", &m_noiseDescriptors[i].m_offset, 0.00001f, 0, 0, "%.5f") || changed;
@@ -253,6 +291,7 @@ bool Noises3D::OnInspect() {
 					changed = true;
 					m_noiseDescriptors[i].m_max = glm::max(m_noiseDescriptors[i].m_min, m_noiseDescriptors[i].m_max);
 				}
+				changed = ImGui::DragFloat3("Shift", &m_noiseDescriptors[i].m_shift.x, 0.00001f, 0, 0, "%.5f") || changed;
 				break;
 			}
 			ImGui::TreePop();
@@ -267,16 +306,17 @@ float Noises3D::GetValue(const glm::vec3& position) const
 	float retVal = 0;
 	for (const auto& noiseDescriptor : m_noiseDescriptors)
 	{
+		const auto actualPosition = position + noiseDescriptor.m_shift;
 		float noise = 0;
 		switch (static_cast<NoiseType>(noiseDescriptor.m_type))
 		{
 		case NoiseType::Perlin:
-			noise = glm::pow(glm::perlin(noiseDescriptor.m_frequency * position +
+			noise = glm::pow(glm::perlin(noiseDescriptor.m_frequency * actualPosition +
 				glm::vec3(noiseDescriptor.m_offset)), noiseDescriptor.m_intensity) * noiseDescriptor.m_multiplier;
 			noise = glm::clamp(noise, noiseDescriptor.m_min, noiseDescriptor.m_max);
 			break;
 		case NoiseType::Simplex:
-			noise = glm::pow(glm::simplex(noiseDescriptor.m_frequency * position +
+			noise = glm::pow(glm::simplex(noiseDescriptor.m_frequency * actualPosition +
 				glm::vec3(noiseDescriptor.m_offset)), noiseDescriptor.m_intensity) * noiseDescriptor.m_multiplier;
 			noise = glm::clamp(noise, noiseDescriptor.m_min, noiseDescriptor.m_max);
 			break;
@@ -284,7 +324,7 @@ float Noises3D::GetValue(const glm::vec3& position) const
 			noise = noiseDescriptor.m_offset;
 			break;
 		case NoiseType::Linear:
-			noise = noiseDescriptor.m_offset + noiseDescriptor.m_frequency * position.x + noiseDescriptor.m_intensity * position.y + noiseDescriptor.m_multiplier * position.z;
+			noise = noiseDescriptor.m_offset + noiseDescriptor.m_frequency * actualPosition.x + noiseDescriptor.m_intensity * actualPosition.y + noiseDescriptor.m_multiplier * actualPosition.z;
 			noise = glm::clamp(noise, noiseDescriptor.m_min, noiseDescriptor.m_max);
 			break;
 		}
