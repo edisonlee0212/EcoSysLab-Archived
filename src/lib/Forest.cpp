@@ -36,34 +36,42 @@ void ForestDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer
 	static int historyIteration = 30;
 	ImGui::Checkbox("Enable history", &enableHistory);
 	if (enableHistory) ImGui::DragInt("History iteration", &historyIteration, 1, 1, 999);
-	ImGui::DragInt2("Grid size", &gridSize.x, 1, 0, 100);
-	ImGui::DragFloat2("Grid distance", &gridDistance.x, 0.1f, 0.0f, 100.0f);
-	if (ImGui::Button("Reset Grid")) {
-		m_treeInfos.clear();
-		const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
-		const auto soil = ecoSysLabLayer->m_soilHolder.Get<Soil>();
-		const auto soilDescriptor = soil->m_soilDescriptor.Get<SoilDescriptor>();
-		bool heightSet = false;
-		if (soilDescriptor)
-		{
-			if (const auto heightField = soilDescriptor->m_heightField.Get<HeightField>()) {
-				heightSet = true;
+	if (ImGui::TreeNode("Grid...")) {
+		ImGui::DragInt2("Grid size", &gridSize.x, 1, 0, 100);
+		ImGui::DragFloat2("Grid distance", &gridDistance.x, 0.1f, 0.0f, 100.0f);
+		if (ImGui::Button("Reset Grid")) {
+			m_treeInfos.clear();
+			const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
+			const auto soil = ecoSysLabLayer->m_soilHolder.Get<Soil>();
+			const auto soilDescriptor = soil->m_soilDescriptor.Get<SoilDescriptor>();
+			bool heightSet = false;
+			if (soilDescriptor)
+			{
+				if (const auto heightField = soilDescriptor->m_heightField.Get<HeightField>()) {
+					heightSet = true;
+					for (int i = 0; i < gridSize.x; i++) {
+						for (int j = 0; j < gridSize.y; j++) {
+							m_treeInfos.emplace_back();
+							m_treeInfos.back().m_globalTransform.SetPosition(glm::vec3(i * gridDistance.x, heightField->GetValue({ i * gridDistance.x, j * gridDistance.y }) - 0.05f, j * gridDistance.y));
+						}
+					}
+				}
+			}
+			if (!heightSet) {
 				for (int i = 0; i < gridSize.x; i++) {
 					for (int j = 0; j < gridSize.y; j++) {
 						m_treeInfos.emplace_back();
-						m_treeInfos.back().m_globalTransform.SetPosition(glm::vec3(i * gridDistance.x, heightField->GetValue({ i * gridDistance.x, j * gridDistance.y }) - 0.05f, j * gridDistance.y));
+						m_treeInfos.back().m_globalTransform.SetPosition(glm::vec3(i * gridDistance.x, 0.0f, j * gridDistance.y));
 					}
 				}
 			}
 		}
-		if (!heightSet) {
-			for (int i = 0; i < gridSize.x; i++) {
-				for (int j = 0; j < gridSize.y; j++) {
-					m_treeInfos.emplace_back();
-					m_treeInfos.back().m_globalTransform.SetPosition(glm::vec3(i * gridDistance.x, 0.0f, j * gridDistance.y));
-				}
-			}
-		}
+		ImGui::TreePop();
+	}
+	if (ImGui::TreeNode("Random region..."))
+	{
+
+		ImGui::TreePop();
 	}
 	static AssetRef treeDescriptor;
 	if (editorLayer->DragAndDropButton<TreeDescriptor>(treeDescriptor, "Apply all with treeDescriptor...", true))

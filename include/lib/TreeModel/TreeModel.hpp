@@ -32,8 +32,6 @@ namespace EcoSysLab {
 		float m_spaceColonizationRemovalDistanceFactor = 2;
 		float m_spaceColonizationDetectionDistanceFactor = 4;
 		float m_spaceColonizationTheta = 90.0f;
-		float m_voxelGridExtendFactor = 20.0f;
-
 	};
 
 
@@ -136,7 +134,7 @@ namespace EcoSysLab {
 
 
 	public:
-		TreeIlluminationEstimator m_treeIlluminationEstimator{};
+		void RegisterShadowVolume(const glm::mat4& globalTransform, ClimateModel& climateModel, const ShootGrowthController& shootGrowthParameters);
 		TreeOccupancyGrid m_treeOccupancyGrid{};
 
 		void CalculateInternodeTransforms();

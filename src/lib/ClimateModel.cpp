@@ -1,5 +1,7 @@
 #include "ClimateModel.hpp"
 
+#include "Tree.hpp"
+
 using namespace EcoSysLab;
 
 float ClimateModel::GetTemperature(const glm::vec3& position) const

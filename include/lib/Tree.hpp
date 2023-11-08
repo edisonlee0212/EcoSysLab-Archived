@@ -81,7 +81,7 @@ namespace EcoSysLab {
 		void ClearMeshes() const;
 		void ClearStrands() const;
 		void GenerateGeometry(const TreeMeshGeneratorSettings& meshGeneratorSettings, int iteration = -1);
-
+		void RegisterShadowVolume();
 		void FromLSystemString(const std::shared_ptr<LSystemString>& lSystemString);
 		void FromTreeGraph(const std::shared_ptr<TreeGraph>& treeGraph);
 		void FromTreeGraphV2(const std::shared_ptr<TreeGraphV2>& treeGraphV2);

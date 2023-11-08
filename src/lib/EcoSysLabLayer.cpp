@@ -37,7 +37,7 @@ void EcoSysLabLayer::OnCreate() {
 	ClassRegistry::RegisterPrivateComponent<TreePointCloudScanner>("TreePointCloudScanner");
 
 	if (m_randomColors.empty()) {
-		for (int i = 0; i < 60000; i++) {
+		for (int i = 0; i < 20000; i++) {
 			m_randomColors.emplace_back(glm::linearRand(glm::vec3(0.0f), glm::vec3(1.0f)));
 		}
 	}
@@ -451,10 +451,12 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 				if (settingsChanged) {
 					m_shadowEstimationSettings.m_voxelSize = glm::clamp(m_shadowEstimationSettings.m_voxelSize, 0.05f,
 						1.0f);
+					/*
 					for (const auto& i : *treeEntities) {
 						scene->GetOrSetPrivateComponent<Tree>(
 							i).lock()->m_treeModel.m_treeIlluminationEstimator.m_settings = m_shadowEstimationSettings;
 					}
+					*/
 					if (const auto climate = m_climateHolder.Get<Climate>()) {
 						for (const auto& i : *treeEntities) {
 							const auto tree = scene->GetOrSetPrivateComponent<Tree>(i).lock();
@@ -544,7 +546,43 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 				ImGui::TreePop();
 			}
 			ImGui::Checkbox("Display Bounding Box", &m_displayBoundingBox);
+			/*
+			static bool showShadowGrid = false;
+			static std::shared_ptr<ParticleInfoList> shadowGridParticleInfoList;
+			if (!shadowGridParticleInfoList)
+			{
+				shadowGridParticleInfoList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
+			}
+			bool needGridUpdate = false;
+			ImGui::Checkbox("Show Shadow Grid", &showShadowGrid);
+			auto climate = m_climateHolder.Get<Climate>();
+			if (climate && showShadowGrid && needGridUpdate) {
+				const auto& voxelGrid = climate->m_climateModel.m_treeIlluminationEstimator.m_voxel;
+				const auto numVoxels = voxelGrid.GetVoxelCount();
+				auto& scalarMatrices = shadowGridParticleInfoList->m_particleInfos;
+				if (scalarMatrices.size() != numVoxels) {
+					scalarMatrices.resize(numVoxels);
+				}
+				Jobs::ParallelFor(numVoxels, [&](unsigned i) {
+					const auto coordinate = voxelGrid.GetCoordinate(i);
+					scalarMatrices[i].m_instanceMatrix.m_value =
+						glm::translate(voxelGrid.GetPosition(coordinate))
+						* glm::mat4_cast(glm::quat(glm::vec3(0.0f)))
+						* glm::scale(glm::vec3(0.8f * voxelGrid.GetVoxelSize()));
+					scalarMatrices[i].m_instanceColor = glm::vec4(0.0f, 0.0f, 0.0f, glm::clamp(voxelGrid.Peek(static_cast<int>(i)).m_shadowIntensity, 0.0f, 1.0f));
+					}
+				);
+				shadowGridParticleInfoList->SetPendingUpdate();
+			}
 			ImGui::TreePop();
+			GizmoSettings gizmoSettings{};
+			gizmoSettings.m_drawSettings.m_blending = true;
+			if (showShadowGrid)
+			{
+				editorLayer->DrawGizmoMeshInstancedColored(
+					Resources::GetResource<Mesh>("PRIMITIVE_CUBE"), shadowGridParticleInfoList,
+					glm::mat4(1.0f), 1.0f, gizmoSettings);
+			}*/
 		}
 
 
@@ -1293,20 +1331,47 @@ void EcoSysLabLayer::Simulate(float deltaTime) {
 
 		climate->m_climateModel.m_time = m_time;
 
-
 		if (m_autoGrowWithSoilStep) {
 			soil->m_soilModel.Irrigation();
 			soil->m_soilModel.Step();
 		}
-
+		auto& estimator = climate->m_climateModel.m_treeIlluminationEstimator;
+		estimator.m_settings = m_shadowEstimationSettings;
+		auto minBound = estimator.m_voxel.GetMinBound();
+		auto maxBound = estimator.m_voxel.GetMaxBound();
+		for(const auto& treeEntity : *treeEntities)
+		{
+			if (!scene->IsEntityEnabled(treeEntity)) return;
+			auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
+			if (!tree->IsEnabled()) return;
+			const auto globalTransform = scene->GetDataComponent<GlobalTransform>(treeEntity).m_value;
+			const auto currentMinBound = globalTransform * glm::vec4(tree->m_treeModel.RefShootSkeleton().m_min, 1.0f);
+			const auto currentMaxBound = globalTransform * glm::vec4(tree->m_treeModel.RefShootSkeleton().m_max, 1.0f);
+			
+			if (currentMinBound.x <= minBound.x || currentMinBound.y <= minBound.y || currentMinBound.z <= minBound.z
+				|| currentMaxBound.x >= maxBound.x || currentMaxBound.y >= maxBound.y || currentMaxBound.z >= maxBound.z) {
+				minBound -= glm::vec3(1.0f);
+				maxBound += glm::vec3(1.0f);
+			}
+			if (!tree->m_climate.Get<Climate>()) tree->m_climate = climate;
+			if (!tree->m_soil.Get<Soil>()) tree->m_soil = soil;
+		}
+		estimator.m_voxel.Initialize(estimator.m_settings.m_voxelSize, minBound, maxBound);
+		estimator.m_voxel.Reset();
+		for (const auto& treeEntity : *treeEntities)
+		{
+			if (!scene->IsEntityEnabled(treeEntity)) return;
+			auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
+			if (!tree->IsEnabled()) return;
+			tree->RegisterShadowVolume();
+		}
 		std::vector<std::shared_future<void>> results;
 		Jobs::ParallelFor(treeEntities->size(), [&](unsigned i) {
 			auto treeEntity = treeEntities->at(i);
 			if (!scene->IsEntityEnabled(treeEntity)) return;
 			auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
 			if (!tree->IsEnabled()) return;
-			if (!tree->m_climate.Get<Climate>()) tree->m_climate = climate;
-			if (!tree->m_soil.Get<Soil>()) tree->m_soil = soil;
+			
 			tree->TryGrow(deltaTime);
 			}, results);
 		for (auto& i : results) i.wait();

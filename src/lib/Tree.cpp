@@ -42,7 +42,6 @@ void Tree::SerializeTreeGrowthSettings(const TreeGrowthSettings& treeGrowthSetti
 	out << YAML::Key << "m_spaceColonizationRemovalDistanceFactor" << YAML::Value << treeGrowthSettings.m_spaceColonizationRemovalDistanceFactor;
 	out << YAML::Key << "m_spaceColonizationDetectionDistanceFactor" << YAML::Value << treeGrowthSettings.m_spaceColonizationDetectionDistanceFactor;
 	out << YAML::Key << "m_spaceColonizationTheta" << YAML::Value << treeGrowthSettings.m_spaceColonizationTheta;
-	out << YAML::Key << "m_voxelGridExtendFactor" << YAML::Value << treeGrowthSettings.m_voxelGridExtendFactor;
 }
 void Tree::DeserializeTreeGrowthSettings(TreeGrowthSettings& treeGrowthSettings, const YAML::Node& param) {
 	if (param["m_enableRoot"]) treeGrowthSettings.m_enableRoot = param["m_enableRoot"].as<bool>();
@@ -67,7 +66,6 @@ void Tree::DeserializeTreeGrowthSettings(TreeGrowthSettings& treeGrowthSettings,
 	if (param["m_spaceColonizationRemovalDistanceFactor"]) treeGrowthSettings.m_spaceColonizationRemovalDistanceFactor = param["m_spaceColonizationRemovalDistanceFactor"].as<float>();
 	if (param["m_spaceColonizationDetectionDistanceFactor"]) treeGrowthSettings.m_spaceColonizationDetectionDistanceFactor = param["m_spaceColonizationDetectionDistanceFactor"].as<float>();
 	if (param["m_spaceColonizationTheta"]) treeGrowthSettings.m_spaceColonizationTheta = param["m_spaceColonizationTheta"].as<float>();
-	if (param["m_voxelGridExtendFactor"]) treeGrowthSettings.m_voxelGridExtendFactor = param["m_voxelGridExtendFactor"].as<float>();
 }
 
 bool Tree::ParseBinvox(const std::filesystem::path& filePath, VoxelGrid<TreeOccupancyGridBasicData>& voxelGrid, float voxelSize)
@@ -176,7 +174,6 @@ bool Tree::ParseBinvox(const std::filesystem::path& filePath, VoxelGrid<TreeOccu
 void Tree::Reset()
 {
 	m_treeModel.Clear();
-	if (const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>()) m_treeModel.m_treeIlluminationEstimator.m_settings = ecoSysLabLayer->m_shadowEstimationSettings;
 	m_treeVisualizer.Reset(m_treeModel);
 }
 void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
@@ -187,17 +184,13 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 		modelChanged = true;
 	}
 	static bool showSpaceColonizationGrid = false;
-	static bool showShadowGrid = false;
+	
 	static std::shared_ptr<ParticleInfoList> spaceColonizationGridParticleInfoList;
 	if (!spaceColonizationGridParticleInfoList)
 	{
 		spaceColonizationGridParticleInfoList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
 	}
-	static std::shared_ptr<ParticleInfoList> shadowGridParticleInfoList;
-	if (!shadowGridParticleInfoList)
-	{
-		shadowGridParticleInfoList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
-	}
+	
 
 	if (m_treeDescriptor.Get<TreeDescriptor>()) {
 		if (ImGui::Button("Reset")) {
@@ -295,25 +288,7 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 
 				spaceColonizationGridParticleInfoList->SetPendingUpdate();
 			}
-			ImGui::Checkbox("Show Shadow Grid", &showShadowGrid);
-			if (showShadowGrid && needGridUpdate) {
-				const auto& voxelGrid = m_treeModel.m_treeIlluminationEstimator.m_voxel;
-				const auto numVoxels = voxelGrid.GetVoxelCount();
-				auto& scalarMatrices = shadowGridParticleInfoList->m_particleInfos;
-				if (scalarMatrices.size() != numVoxels) {
-					scalarMatrices.resize(numVoxels);
-				}
-				Jobs::ParallelFor(numVoxels, [&](unsigned i) {
-					const auto coordinate = voxelGrid.GetCoordinate(i);
-					scalarMatrices[i].m_instanceMatrix.m_value =
-						glm::translate(voxelGrid.GetPosition(coordinate))
-						* glm::mat4_cast(glm::quat(glm::vec3(0.0f)))
-						* glm::scale(glm::vec3(0.8f * voxelGrid.GetVoxelSize()));
-					scalarMatrices[i].m_instanceColor = glm::vec4(0.0f, 0.0f, 0.0f, glm::clamp(voxelGrid.Peek(static_cast<int>(i)).m_shadowIntensity, 0.0f, 1.0f));
-					}
-				);
-				shadowGridParticleInfoList->SetPendingUpdate();
-			}
+			
 		}
 		if (m_enableVisualization && ImGui::TreeNodeEx("Tree Inspector", ImGuiTreeNodeFlags_DefaultOpen))
 		{
@@ -380,12 +355,7 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 				Resources::GetResource<Mesh>("PRIMITIVE_CUBE"), spaceColonizationGridParticleInfoList,
 				glm::mat4(1.0f), 1.0f, gizmoSettings);
 		}
-		if (showShadowGrid)
-		{
-			editorLayer->DrawGizmoMeshInstancedColored(
-				Resources::GetResource<Mesh>("PRIMITIVE_CUBE"), shadowGridParticleInfoList,
-				glm::mat4(1.0f), 1.0f, gizmoSettings);
-		}
+		
 	}
 }
 void Tree::Update()
@@ -722,7 +692,6 @@ bool Tree::TryGrow(float deltaTime) {
 	const auto climate = m_climate.Get<Climate>();
 	const auto owner = GetOwner();
 	PrepareControllers(treeDescriptor);
-	m_treeModel.m_treeIlluminationEstimator.m_settings = ecoSysLabLayer->m_shadowEstimationSettings;
 	const bool grown = m_treeModel.Grow(deltaTime, scene->GetDataComponent<GlobalTransform>(owner).m_value, soil->m_soilModel, climate->m_climateModel,
 		m_rootGrowthController, m_shootGrowthController);
 	if (grown)
@@ -788,7 +757,6 @@ bool Tree::TryGrowSubTree(const NodeHandle internodeHandle, const float deltaTim
 	const auto owner = GetOwner();
 
 	PrepareControllers(treeDescriptor);
-	m_treeModel.m_treeIlluminationEstimator.m_settings = ecoSysLabLayer->m_shadowEstimationSettings;
 	const bool grown = m_treeModel.GrowSubTree(deltaTime, internodeHandle, scene->GetDataComponent<GlobalTransform>(owner).m_value, climate->m_climateModel, m_shootGrowthController);
 	if (grown)
 	{
@@ -1364,6 +1332,13 @@ void Tree::GenerateGeometry(const TreeMeshGeneratorSettings& meshGeneratorSettin
 		meshRenderer->m_mesh = mesh;
 		meshRenderer->m_material = material;
 	}
+}
+
+void Tree::RegisterShadowVolume()
+{
+	const auto scene = GetScene();
+	const auto globalTransform = scene->GetDataComponent<GlobalTransform>(GetOwner()).m_value;
+	m_treeModel.RegisterShadowVolume(globalTransform, m_climate.Get<Climate>()->m_climateModel, m_shootGrowthController);
 }
 
 void Tree::FromLSystemString(const std::shared_ptr<LSystemString>& lSystemString)
