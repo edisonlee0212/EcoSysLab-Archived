@@ -17,7 +17,58 @@
 #include "HeightField.hpp"
 #include "StrandsRenderer.hpp"
 using namespace EcoSysLab;
+void Tree::SerializeTreeGrowthSettings(const TreeGrowthSettings& treeGrowthSettings, YAML::Emitter& out)
+{
+	out << YAML::Key << "m_enableRoot" << YAML::Value << treeGrowthSettings.m_enableRoot;
+	out << YAML::Key << "m_enableShoot" << YAML::Value << treeGrowthSettings.m_enableShoot;
 
+	out << YAML::Key << "m_autoBalance" << YAML::Value << treeGrowthSettings.m_autoBalance;
+	out << YAML::Key << "m_collectShootFlux" << YAML::Value << treeGrowthSettings.m_collectShootFlux;
+	out << YAML::Key << "m_collectRootFlux" << YAML::Value << treeGrowthSettings.m_collectRootFlux;
+
+	out << YAML::Key << "m_collectNitrite" << YAML::Value << treeGrowthSettings.m_collectNitrite;
+
+	out << YAML::Key << "m_leafMaintenanceVigorFillingRate" << YAML::Value << treeGrowthSettings.m_leafMaintenanceVigorFillingRate;
+	out << YAML::Key << "m_leafDevelopmentalVigorFillingRate" << YAML::Value << treeGrowthSettings.m_leafDevelopmentalVigorFillingRate;
+	out << YAML::Key << "m_fruitMaintenanceVigorFillingRate" << YAML::Value << treeGrowthSettings.m_fruitMaintenanceVigorFillingRate;
+	out << YAML::Key << "m_fruitDevelopmentalVigorFillingRate" << YAML::Value << treeGrowthSettings.m_fruitDevelopmentalVigorFillingRate;
+	out << YAML::Key << "m_nodeDevelopmentalVigorFillingRate" << YAML::Value << treeGrowthSettings.m_nodeDevelopmentalVigorFillingRate;
+
+	out << YAML::Key << "m_enableRootCollisionDetection" << YAML::Value << treeGrowthSettings.m_enableRootCollisionDetection;
+	out << YAML::Key << "m_enableBranchCollisionDetection" << YAML::Value << treeGrowthSettings.m_enableBranchCollisionDetection;
+
+	out << YAML::Key << "m_useSpaceColonization" << YAML::Value << treeGrowthSettings.m_useSpaceColonization;
+	out << YAML::Key << "m_spaceColonizationAutoResize" << YAML::Value << treeGrowthSettings.m_spaceColonizationAutoResize;
+	out << YAML::Key << "m_spaceColonizationRemovalDistanceFactor" << YAML::Value << treeGrowthSettings.m_spaceColonizationRemovalDistanceFactor;
+	out << YAML::Key << "m_spaceColonizationDetectionDistanceFactor" << YAML::Value << treeGrowthSettings.m_spaceColonizationDetectionDistanceFactor;
+	out << YAML::Key << "m_spaceColonizationTheta" << YAML::Value << treeGrowthSettings.m_spaceColonizationTheta;
+	out << YAML::Key << "m_voxelGridExtendFactor" << YAML::Value << treeGrowthSettings.m_voxelGridExtendFactor;
+}
+void Tree::DeserializeTreeGrowthSettings(TreeGrowthSettings& treeGrowthSettings, const YAML::Node& param) {
+	if (param["m_enableRoot"]) treeGrowthSettings.m_enableRoot = param["m_enableRoot"].as<bool>();
+	if (param["m_enableShoot"]) treeGrowthSettings.m_enableShoot = param["m_enableShoot"].as<bool>();
+
+	if (param["m_autoBalance"]) treeGrowthSettings.m_autoBalance = param["m_autoBalance"].as<bool>();
+	if (param["m_collectShootFlux"]) treeGrowthSettings.m_collectShootFlux = param["m_collectShootFlux"].as<bool>();
+	if (param["m_collectRootFlux"]) treeGrowthSettings.m_collectRootFlux = param["m_collectRootFlux"].as<bool>();
+	if (param["m_collectNitrite"]) treeGrowthSettings.m_collectNitrite = param["m_collectNitrite"].as<bool>();
+
+	if (param["m_leafMaintenanceVigorFillingRate"]) treeGrowthSettings.m_leafMaintenanceVigorFillingRate = param["m_leafMaintenanceVigorFillingRate"].as<float>();
+	if (param["m_leafDevelopmentalVigorFillingRate"]) treeGrowthSettings.m_leafDevelopmentalVigorFillingRate = param["m_leafDevelopmentalVigorFillingRate"].as<float>();
+	if (param["m_fruitMaintenanceVigorFillingRate"]) treeGrowthSettings.m_fruitMaintenanceVigorFillingRate = param["m_fruitMaintenanceVigorFillingRate"].as<float>();
+	if (param["m_fruitDevelopmentalVigorFillingRate"]) treeGrowthSettings.m_fruitDevelopmentalVigorFillingRate = param["m_fruitDevelopmentalVigorFillingRate"].as<float>();
+	if (param["m_nodeDevelopmentalVigorFillingRate"]) treeGrowthSettings.m_nodeDevelopmentalVigorFillingRate = param["m_nodeDevelopmentalVigorFillingRate"].as<float>();
+
+	if (param["m_enableRootCollisionDetection"]) treeGrowthSettings.m_enableRootCollisionDetection = param["m_enableRootCollisionDetection"].as<bool>();
+	if (param["m_enableBranchCollisionDetection"]) treeGrowthSettings.m_enableBranchCollisionDetection = param["m_enableBranchCollisionDetection"].as<bool>();
+
+	if (param["m_useSpaceColonization"]) treeGrowthSettings.m_useSpaceColonization = param["m_useSpaceColonization"].as<bool>();
+	if (param["m_spaceColonizationAutoResize"]) treeGrowthSettings.m_spaceColonizationAutoResize = param["m_spaceColonizationAutoResize"].as<bool>();
+	if (param["m_spaceColonizationRemovalDistanceFactor"]) treeGrowthSettings.m_spaceColonizationRemovalDistanceFactor = param["m_spaceColonizationRemovalDistanceFactor"].as<float>();
+	if (param["m_spaceColonizationDetectionDistanceFactor"]) treeGrowthSettings.m_spaceColonizationDetectionDistanceFactor = param["m_spaceColonizationDetectionDistanceFactor"].as<float>();
+	if (param["m_spaceColonizationTheta"]) treeGrowthSettings.m_spaceColonizationTheta = param["m_spaceColonizationTheta"].as<float>();
+	if (param["m_voxelGridExtendFactor"]) treeGrowthSettings.m_voxelGridExtendFactor = param["m_voxelGridExtendFactor"].as<float>();
+}
 
 bool Tree::ParseBinvox(const std::filesystem::path& filePath, VoxelGrid<TreeOccupancyGridBasicData>& voxelGrid, float voxelSize)
 {
@@ -159,110 +210,32 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 			{
 				ImGui::DragInt("History per iteration", &m_historyIteration, 1, 1, 1000);
 			}
-			ImGui::Checkbox("Enable Root", &m_treeModel.m_treeGrowthSettings.m_enableRoot);
-			ImGui::Checkbox("Enable Shoot", &m_treeModel.m_treeGrowthSettings.m_enableShoot);
-			ImGui::Checkbox("Auto balance vigor", &m_treeModel.m_treeGrowthSettings.m_autoBalance);
-			ImGui::Checkbox("Receive light", &m_treeModel.m_treeGrowthSettings.m_collectShootFlux);
-			ImGui::Checkbox("Receive water", &m_treeModel.m_treeGrowthSettings.m_collectRootFlux);
-			ImGui::Checkbox("Receive nitrite", &m_treeModel.m_treeGrowthSettings.m_collectNitrite);
-			ImGui::Checkbox("Enable Branch collision detection", &m_treeModel.m_treeGrowthSettings.m_enableBranchCollisionDetection);
-			ImGui::Checkbox("Enable Root collision detection", &m_treeModel.m_treeGrowthSettings.m_enableRootCollisionDetection);
+			OnInspectTreeGrowthSettings(m_treeModel.m_treeGrowthSettings);
 
-			if (!m_treeModel.m_treeGrowthSettings.m_collectShootFlux && !m_treeModel.m_treeGrowthSettings.m_collectRootFlux)
+			if (m_treeModel.m_treeGrowthSettings.m_useSpaceColonization && !m_treeModel.m_treeGrowthSettings.m_spaceColonizationAutoResize)
 			{
-				if (ImGui::TreeNode("Vigor filling rates"))
-				{
-					if (ImGui::SliderFloat("Leaf maintenance", &m_treeModel.m_treeGrowthSettings.m_leafMaintenanceVigorFillingRate, 0.0f, 1.0f))
+				static float radius = 1.5f;
+				static int markersPerVoxel = 5;
+				ImGui::DragFloat("Import radius", &radius, 0.01f, 0.01f, 10.0f);
+				ImGui::DragInt("Markers per voxel", &markersPerVoxel);
+				FileUtils::OpenFile("Load Voxel Data", "Binvox", { ".binvox" }, [&](const std::filesystem::path& path) {
+					auto& occupancyGrid = m_treeModel.m_treeOccupancyGrid;
+					VoxelGrid<TreeOccupancyGridBasicData> inputGrid{};
+					if (ParseBinvox(path, inputGrid, 1.f))
 					{
-						if (m_treeModel.m_treeGrowthSettings.m_leafMaintenanceVigorFillingRate != 1.0f)
-						{
-							m_treeModel.m_treeGrowthSettings.m_leafDevelopmentalVigorFillingRate
-								= m_treeModel.m_treeGrowthSettings.m_fruitMaintenanceVigorFillingRate
-								= m_treeModel.m_treeGrowthSettings.m_fruitDevelopmentalVigorFillingRate
-								= m_treeModel.m_treeGrowthSettings.m_nodeDevelopmentalVigorFillingRate = 0.0f;
-						}
-					}
-					if (m_treeModel.m_treeGrowthSettings.m_leafMaintenanceVigorFillingRate == 1.0f)
-					{
-						if (ImGui::SliderFloat("Leaf development", &m_treeModel.m_treeGrowthSettings.m_leafDevelopmentalVigorFillingRate, 0.0f, 1.0f))
-						{
-							if (m_treeModel.m_treeGrowthSettings.m_leafMaintenanceVigorFillingRate != 1.0f)
-							{
-								m_treeModel.m_treeGrowthSettings.m_fruitMaintenanceVigorFillingRate
-									= m_treeModel.m_treeGrowthSettings.m_fruitDevelopmentalVigorFillingRate
-									= m_treeModel.m_treeGrowthSettings.m_nodeDevelopmentalVigorFillingRate = 0.0f;
-							}
-						}
+						const auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
+						occupancyGrid.Initialize(inputGrid,
+							glm::vec3(-radius, 0, -radius),
+							glm::vec3(radius, 2.0f * radius, radius),
+							treeDescriptor->m_shootGrowthParameters.m_internodeLength,
+							m_treeModel.m_treeGrowthSettings.m_spaceColonizationRemovalDistanceFactor,
+							m_treeModel.m_treeGrowthSettings.m_spaceColonizationTheta,
+							m_treeModel.m_treeGrowthSettings.m_spaceColonizationDetectionDistanceFactor, markersPerVoxel);
 					}
 
-					if (m_treeModel.m_treeGrowthSettings.m_leafDevelopmentalVigorFillingRate == 1.0f)
-					{
-						if (ImGui::SliderFloat("Fruit maintenance", &m_treeModel.m_treeGrowthSettings.m_fruitMaintenanceVigorFillingRate, 0.0f, 1.0f))
-						{
-							if (m_treeModel.m_treeGrowthSettings.m_leafMaintenanceVigorFillingRate != 1.0f)
-							{
-								m_treeModel.m_treeGrowthSettings.m_fruitDevelopmentalVigorFillingRate
-									= m_treeModel.m_treeGrowthSettings.m_nodeDevelopmentalVigorFillingRate = 0.0f;
-							}
-						}
-					}
-
-					if (m_treeModel.m_treeGrowthSettings.m_fruitMaintenanceVigorFillingRate == 1.0f)
-					{
-						if (ImGui::SliderFloat("Fruit development", &m_treeModel.m_treeGrowthSettings.m_fruitDevelopmentalVigorFillingRate, 0.0f, 1.0f))
-						{
-							if (m_treeModel.m_treeGrowthSettings.m_leafMaintenanceVigorFillingRate != 1.0f)
-							{
-								m_treeModel.m_treeGrowthSettings.m_nodeDevelopmentalVigorFillingRate = 0.0f;
-							}
-						}
-					}
-
-					if (m_treeModel.m_treeGrowthSettings.m_fruitDevelopmentalVigorFillingRate == 1.0f)
-					{
-						ImGui::SliderFloat("Node development", &m_treeModel.m_treeGrowthSettings.m_nodeDevelopmentalVigorFillingRate, 0.0f, 1.0f);
-					}
-
-					if (ImGui::Button("Reset"))
-					{
-						m_treeModel.m_treeGrowthSettings.m_leafMaintenanceVigorFillingRate
-							= m_treeModel.m_treeGrowthSettings.m_leafDevelopmentalVigorFillingRate
-							= m_treeModel.m_treeGrowthSettings.m_fruitMaintenanceVigorFillingRate
-							= m_treeModel.m_treeGrowthSettings.m_fruitDevelopmentalVigorFillingRate
-							= m_treeModel.m_treeGrowthSettings.m_nodeDevelopmentalVigorFillingRate = 1.0f;
-					}
-
-					ImGui::TreePop();
-				}
+					}, false);
 			}
-			ImGui::Checkbox("Enable space colonization", &m_treeModel.m_treeGrowthSettings.m_useSpaceColonization);
-			if (m_treeModel.m_treeGrowthSettings.m_useSpaceColonization)
-			{
-				ImGui::Checkbox("Space colonization auto resize", &m_treeModel.m_treeGrowthSettings.m_spaceColonizationAutoResize);
-				if (!m_treeModel.m_treeGrowthSettings.m_spaceColonizationAutoResize)
-				{
-					static float radius = 1.5f;
-					static int markersPerVoxel = 5;
-					ImGui::DragFloat("Import radius", &radius, 0.01f, 0.01f, 10.0f);
-					ImGui::DragInt("Markers per voxel", &markersPerVoxel);
-					FileUtils::OpenFile("Load Voxel Data", "Binvox", { ".binvox" }, [&](const std::filesystem::path& path) {
-						auto& occupancyGrid = m_treeModel.m_treeOccupancyGrid;
-						VoxelGrid<TreeOccupancyGridBasicData> inputGrid{};
-						if (ParseBinvox(path, inputGrid, 1.f))
-						{
-							const auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
-							occupancyGrid.Initialize(inputGrid,
-								glm::vec3(-radius, 0, -radius),
-								glm::vec3(radius, 2.0f * radius, radius),
-								treeDescriptor->m_shootGrowthParameters.m_internodeLength,
-								m_treeModel.m_treeGrowthSettings.m_spaceColonizationRemovalDistanceFactor,
-								m_treeModel.m_treeGrowthSettings.m_spaceColonizationTheta,
-								m_treeModel.m_treeGrowthSettings.m_spaceColonizationDetectionDistanceFactor, markersPerVoxel);
-						}
 
-						}, false);
-				}
-			}
 			ImGui::TreePop();
 		}
 		if (ImGui::TreeNode("Mesh generation settings")) {
@@ -444,6 +417,98 @@ void Tree::OnDestroy() {
 	m_leftSideBiomass = m_rightSideBiomass = 0.0f;
 	m_rootBiomassHistory.clear();
 	m_shootBiomassHistory.clear();
+}
+
+bool Tree::OnInspectTreeGrowthSettings(TreeGrowthSettings& treeGrowthSettings)
+{
+	bool changed = false;
+	if (ImGui::Checkbox("Enable Root", &treeGrowthSettings.m_enableRoot)) changed = true;
+	if (ImGui::Checkbox("Enable Shoot", &treeGrowthSettings.m_enableShoot)) changed = true;
+	if (ImGui::Checkbox("Auto balance vigor", &treeGrowthSettings.m_autoBalance)) changed = true;
+	if (ImGui::Checkbox("Receive light", &treeGrowthSettings.m_collectShootFlux)) changed = true;
+	if (ImGui::Checkbox("Receive water", &treeGrowthSettings.m_collectRootFlux)) changed = true;
+	if (ImGui::Checkbox("Receive nitrite", &treeGrowthSettings.m_collectNitrite)) changed = true;
+	if (ImGui::Checkbox("Enable Branch collision detection", &treeGrowthSettings.m_enableBranchCollisionDetection)) changed = true;
+	if (ImGui::Checkbox("Enable Root collision detection", &treeGrowthSettings.m_enableRootCollisionDetection)) changed = true;
+
+	if (!treeGrowthSettings.m_collectShootFlux && !treeGrowthSettings.m_collectRootFlux)
+	{
+		if (ImGui::TreeNode("Vigor filling rates"))
+		{
+			if (ImGui::SliderFloat("Leaf maintenance", &treeGrowthSettings.m_leafMaintenanceVigorFillingRate, 0.0f, 1.0f))
+			{
+				if (treeGrowthSettings.m_leafMaintenanceVigorFillingRate != 1.0f)
+				{
+					treeGrowthSettings.m_leafDevelopmentalVigorFillingRate
+						= treeGrowthSettings.m_fruitMaintenanceVigorFillingRate
+						= treeGrowthSettings.m_fruitDevelopmentalVigorFillingRate
+						= treeGrowthSettings.m_nodeDevelopmentalVigorFillingRate = 0.0f;
+				}
+				changed = true;
+			}
+			if (treeGrowthSettings.m_leafMaintenanceVigorFillingRate == 1.0f)
+			{
+				if (ImGui::SliderFloat("Leaf development", &treeGrowthSettings.m_leafDevelopmentalVigorFillingRate, 0.0f, 1.0f))
+				{
+					if (treeGrowthSettings.m_leafMaintenanceVigorFillingRate != 1.0f)
+					{
+						treeGrowthSettings.m_fruitMaintenanceVigorFillingRate
+							= treeGrowthSettings.m_fruitDevelopmentalVigorFillingRate
+							= treeGrowthSettings.m_nodeDevelopmentalVigorFillingRate = 0.0f;
+					}
+					changed = true;
+				}
+			}
+
+			if (treeGrowthSettings.m_leafDevelopmentalVigorFillingRate == 1.0f)
+			{
+				if (ImGui::SliderFloat("Fruit maintenance", &treeGrowthSettings.m_fruitMaintenanceVigorFillingRate, 0.0f, 1.0f))
+				{
+					if (treeGrowthSettings.m_leafMaintenanceVigorFillingRate != 1.0f)
+					{
+						treeGrowthSettings.m_fruitDevelopmentalVigorFillingRate
+							= treeGrowthSettings.m_nodeDevelopmentalVigorFillingRate = 0.0f;
+					}
+					changed = true;
+				}
+			}
+
+			if (treeGrowthSettings.m_fruitMaintenanceVigorFillingRate == 1.0f)
+			{
+				if (ImGui::SliderFloat("Fruit development", &treeGrowthSettings.m_fruitDevelopmentalVigorFillingRate, 0.0f, 1.0f))
+				{
+					if (treeGrowthSettings.m_leafMaintenanceVigorFillingRate != 1.0f)
+					{
+						treeGrowthSettings.m_nodeDevelopmentalVigorFillingRate = 0.0f;
+					}
+					changed = true;
+				}
+			}
+
+			if (treeGrowthSettings.m_fruitDevelopmentalVigorFillingRate == 1.0f)
+			{
+				if (ImGui::SliderFloat("Node development", &treeGrowthSettings.m_nodeDevelopmentalVigorFillingRate, 0.0f, 1.0f)) changed = true;
+			}
+
+			if (ImGui::Button("Reset"))
+			{
+				treeGrowthSettings.m_leafMaintenanceVigorFillingRate
+					= treeGrowthSettings.m_leafDevelopmentalVigorFillingRate
+					= treeGrowthSettings.m_fruitMaintenanceVigorFillingRate
+					= treeGrowthSettings.m_fruitDevelopmentalVigorFillingRate
+					= treeGrowthSettings.m_nodeDevelopmentalVigorFillingRate = 1.0f;
+				changed = true;
+			}
+
+			ImGui::TreePop();
+		}
+	}
+	if (ImGui::Checkbox("Enable space colonization", &treeGrowthSettings.m_useSpaceColonization))changed = true;
+	if (treeGrowthSettings.m_useSpaceColonization)
+	{
+		if (ImGui::Checkbox("Space colonization auto resize", &treeGrowthSettings.m_spaceColonizationAutoResize))changed = true;
+	}
+	return changed;
 }
 
 std::shared_ptr<Mesh> Tree::GenerateBranchMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings) const
@@ -640,6 +705,7 @@ void Tree::ExportOBJ(const std::filesystem::path& path, const TreeMeshGeneratorS
 bool Tree::TryGrow(float deltaTime) {
 	const auto scene = GetScene();
 	const auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
+	const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
 	if (!treeDescriptor) {
 		EVOENGINE_ERROR("No tree descriptor!");
 		return false;
@@ -656,7 +722,7 @@ bool Tree::TryGrow(float deltaTime) {
 	const auto climate = m_climate.Get<Climate>();
 	const auto owner = GetOwner();
 	PrepareControllers(treeDescriptor);
-
+	m_treeModel.m_treeIlluminationEstimator.m_settings = ecoSysLabLayer->m_shadowEstimationSettings;
 	const bool grown = m_treeModel.Grow(deltaTime, scene->GetDataComponent<GlobalTransform>(owner).m_value, soil->m_soilModel, climate->m_climateModel,
 		m_rootGrowthController, m_shootGrowthController);
 	if (grown)
@@ -722,7 +788,7 @@ bool Tree::TryGrowSubTree(const NodeHandle internodeHandle, const float deltaTim
 	const auto owner = GetOwner();
 
 	PrepareControllers(treeDescriptor);
-
+	m_treeModel.m_treeIlluminationEstimator.m_settings = ecoSysLabLayer->m_shadowEstimationSettings;
 	const bool grown = m_treeModel.GrowSubTree(deltaTime, internodeHandle, scene->GetDataComponent<GlobalTransform>(owner).m_value, climate->m_climateModel, m_shootGrowthController);
 	if (grown)
 	{
@@ -1455,7 +1521,6 @@ void TreeDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 			globalTransform.SetPosition(glm::vec3(0, height, 0));
 			scene->SetDataComponent(treeEntity, globalTransform);
 			tree->m_treeDescriptor = ProjectManager::GetAsset(GetHandle());
-			tree->m_treeModel.m_treeIlluminationEstimator.m_settings = ecoSysLabLayer->m_shadowEstimationSettings;
 		}
 	}
 	else

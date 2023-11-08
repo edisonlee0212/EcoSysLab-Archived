@@ -33,6 +33,10 @@ namespace EcoSysLab {
 		ShootGrowthController m_shootGrowthController{};
 		RootGrowthController m_rootGrowthController{};
 	public:
+		static void SerializeTreeGrowthSettings(const TreeGrowthSettings& treeGrowthSettings, YAML::Emitter& out);
+		static void DeserializeTreeGrowthSettings(TreeGrowthSettings& treeGrowthSettings, const YAML::Node& param);
+		static bool OnInspectTreeGrowthSettings(TreeGrowthSettings& treeGrowthSettings);
+
 		std::shared_ptr<Mesh> GenerateBranchMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings) const;
 		std::shared_ptr<Mesh> GenerateFoliageMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings) const;
 		void ExportOBJ(const std::filesystem::path& path, const TreeMeshGeneratorSettings& meshGeneratorSettings) const;

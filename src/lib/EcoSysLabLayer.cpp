@@ -8,12 +8,34 @@
 
 #include "StrandsRenderer.hpp"
 #include "Climate.hpp"
+#include "Forest.hpp"
 #include "Soil.hpp"
 #include "Tree.hpp"
 #include "RenderLayer.hpp"
+#include "TreePipeBase.hpp"
+#include "TreePipeNode.hpp"
+#include "TreePointCloud.hpp"
+#include "TreePointCloudScanner.hpp"
+#include "ClassRegistry.hpp"
 using namespace EcoSysLab;
 
 void EcoSysLabLayer::OnCreate() {
+	ClassRegistry::RegisterPrivateComponent<Tree>("Tree");
+	ClassRegistry::RegisterPrivateComponent<TreePointCloud>("TreePointCloud");
+	ClassRegistry::RegisterPrivateComponent<Soil>("Soil");
+	ClassRegistry::RegisterPrivateComponent<Climate>("Climate");
+
+	ClassRegistry::RegisterAsset<ForestDescriptor>("ForestDescriptor", { ".fd" });
+	ClassRegistry::RegisterAsset<TreeDescriptor>("TreeDescriptor", { ".td" });
+	ClassRegistry::RegisterAsset<SoilDescriptor>("SoilDescriptor", { ".sd" });
+	ClassRegistry::RegisterAsset<ClimateDescriptor>("ClimateDescriptor", { ".cd" });
+	ClassRegistry::RegisterAsset<RadialBoundingVolume>("RadialBoundingVolume", { ".rbv" });
+	ClassRegistry::RegisterAsset<HeightField>("HeightField", { ".hf" });
+	ClassRegistry::RegisterAsset<SoilLayerDescriptor>("SoilLayerDescriptor", { ".nsld" });
+	ClassRegistry::RegisterPrivateComponent<TreePipeBase>("TreePipeBase");
+	ClassRegistry::RegisterPrivateComponent<TreePipeNode>("TreePipeNode");
+	ClassRegistry::RegisterPrivateComponent<TreePointCloudScanner>("TreePointCloudScanner");
+
 	if (m_randomColors.empty()) {
 		for (int i = 0; i < 60000; i++) {
 			m_randomColors.emplace_back(glm::linearRand(glm::vec3(0.0f), glm::vec3(1.0f)));

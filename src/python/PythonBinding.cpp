@@ -17,7 +17,6 @@
 #include "Tree.hpp"
 #include "Soil.hpp"
 #include "Climate.hpp"
-#include "Trees.hpp"
 #include "EcoSysLabLayer.hpp"
 #include "RadialBoundingVolume.hpp"
 #include "HeightField.hpp"
@@ -31,25 +30,18 @@
 #endif
 #include <TreePointCloudScanner.hpp>
 
+#include "ParticlePhysics2DDemo.hpp"
+#include "Physics2DDemo.hpp"
+
 using namespace EvoEngine;
 using namespace EcoSysLab;
 
 namespace py = pybind11;
 
 void RegisterClasses() {
-	ClassRegistry::RegisterPrivateComponent<Tree>("Tree");
-	ClassRegistry::RegisterPrivateComponent<TreePointCloud>("TreePointCloud");
-	ClassRegistry::RegisterPrivateComponent<TreePointCloudScanner>("TreePointCloudScanner");
-	ClassRegistry::RegisterPrivateComponent<Soil>("Soil");
-	ClassRegistry::RegisterPrivateComponent<Climate>("Climate");
 	ClassRegistry::RegisterPrivateComponent<ObjectRotator>("ObjectRotator");
-	ClassRegistry::RegisterAsset<Trees>("Trees", { ".trees" });
-	ClassRegistry::RegisterAsset<TreeDescriptor>("TreeDescriptor", { ".td" });
-	ClassRegistry::RegisterAsset<SoilDescriptor>("SoilDescriptor", { ".sd" });
-	ClassRegistry::RegisterAsset<ClimateDescriptor>("ClimateDescriptor", { ".cd" });
-	ClassRegistry::RegisterAsset<RadialBoundingVolume>("RadialBoundingVolume", { ".rbv" });
-	ClassRegistry::RegisterAsset<HeightField>("HeightField", { ".hf" });
-	ClassRegistry::RegisterAsset<SoilLayerDescriptor>("SoilLayerDescriptor", { ".nsld" });
+	ClassRegistry::RegisterPrivateComponent<Physics2DDemo>("Physics2DDemo");
+	ClassRegistry::RegisterPrivateComponent<ParticlePhysics2DDemo>("ParticlePhysics2DDemo");
 }
 
 void PushWindowLayer() {

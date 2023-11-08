@@ -16,7 +16,7 @@
 #include "Tree.hpp"
 #include "Soil.hpp"
 #include "Climate.hpp"
-#include "Trees.hpp"
+#include "Forest.hpp"
 #include "EcoSysLabLayer.hpp"
 #include "RadialBoundingVolume.hpp"
 #include "HeightField.hpp"
@@ -87,24 +87,10 @@ int main() {
 #ifdef BUILD_WITH_RAYTRACER
 	Application::PushLayer<RayTracerLayer>();
 #endif
-	ClassRegistry::RegisterPrivateComponent<Tree>("Tree");
-	ClassRegistry::RegisterPrivateComponent<TreePointCloud>("TreePointCloud");
-	ClassRegistry::RegisterPrivateComponent<Soil>("Soil");
-	ClassRegistry::RegisterPrivateComponent<Climate>("Climate");
 	ClassRegistry::RegisterPrivateComponent<ObjectRotator>("ObjectRotator");
-	ClassRegistry::RegisterAsset<Trees>("Trees", { ".trees" });
-	ClassRegistry::RegisterAsset<TreeDescriptor>("TreeDescriptor", { ".td" });
-	ClassRegistry::RegisterAsset<SoilDescriptor>("SoilDescriptor", { ".sd" });
-	ClassRegistry::RegisterAsset<ClimateDescriptor>("ClimateDescriptor", { ".cd" });
-	ClassRegistry::RegisterAsset<RadialBoundingVolume>("RadialBoundingVolume", { ".rbv" });
-	ClassRegistry::RegisterAsset<HeightField>("HeightField", { ".hf" });
-	ClassRegistry::RegisterAsset<SoilLayerDescriptor>("SoilLayerDescriptor", { ".nsld" });
 	ClassRegistry::RegisterPrivateComponent<Physics2DDemo>("Physics2DDemo");
 	ClassRegistry::RegisterPrivateComponent<ParticlePhysics2DDemo>("ParticlePhysics2DDemo");
-
-	ClassRegistry::RegisterPrivateComponent<TreePipeBase>("TreePipeBase");
-	ClassRegistry::RegisterPrivateComponent<TreePipeNode>("TreePipeNode");
-	ClassRegistry::RegisterPrivateComponent<TreePointCloudScanner>("TreePointCloudScanner");
+	
 	ApplicationInfo applicationConfigs;
 	applicationConfigs.m_applicationName = "EcoSysLab";
 	Application::Initialize(applicationConfigs);
