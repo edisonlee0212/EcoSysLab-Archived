@@ -25,6 +25,7 @@ namespace EcoSysLab
 		float m_max = 10;
 		float m_offset = 0.0f;
 		glm::vec3 m_shift = glm::vec3(0.0f);
+		bool m_ridgid = false;
 		void Serialize(YAML::Emitter& out) const;
 		void Deserialize(const YAML::Node& in);
 	};
