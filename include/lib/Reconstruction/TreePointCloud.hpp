@@ -96,7 +96,7 @@ namespace EcoSysLab {
 	struct ReconstructionSettings {
 		float m_internodeLength = 0.03f;
 		float m_minHeight = 0.3f;
-		float m_maxTreeDistance = 0.01f;
+		float m_maxTreeDistance = 0.1f;
 		float m_branchShortening = 0.3f;
 
 		float m_endNodeThickness = 0.002f;
@@ -104,7 +104,7 @@ namespace EcoSysLab {
 		float m_thicknessAccumulationFactor = 0.00005f;
 		bool m_overrideThickness = true;
 		bool m_limitParentThickness = true;
-		int m_minimumNodeCount = 20;
+		int m_minimumNodeCount = 1;
 		void OnInspect();
 	};
 
