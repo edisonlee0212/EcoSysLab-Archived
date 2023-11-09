@@ -960,18 +960,21 @@ void TreePointCloud::BuildSkeletons(const ReconstructionSettings& reconstruction
 					}
 				}
 			}
-			if (add) rootBranchHandles.emplace_back(branch.m_handle);
+			if (add) {
+				branch.m_bezierCurve.m_p0.y = 0.0f;
+				rootBranchHandles.emplace_back(branch.m_handle);
+			}
 		}
 		else {
 			branch.m_bezierCurve.m_p0 = shortenedP0;
 		}
-		branch.m_bezierCurve.m_p1 = shortenedP0 +
+		branch.m_bezierCurve.m_p3 = shortenedP3;
+		branch.m_bezierCurve.m_p1 = branch.m_bezierCurve.m_p0 +
 			branch.m_bezierCurve.GetAxis(reconstructionSettings.m_branchShortening) *
 			shortenedLength * 0.25f;
-		branch.m_bezierCurve.m_p2 = shortenedP3 -
+		branch.m_bezierCurve.m_p2 = branch.m_bezierCurve.m_p3 -
 			branch.m_bezierCurve.GetAxis(1.0f - reconstructionSettings.m_branchShortening) *
 			shortenedLength * 0.25f;
-		branch.m_bezierCurve.m_p3 = shortenedP3;
 	}
 	for (const auto& rootBranchHandle : rootBranchHandles) {
 		allocatedBranchHandles.emplace(rootBranchHandle);
