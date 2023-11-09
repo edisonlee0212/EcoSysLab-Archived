@@ -20,13 +20,13 @@ float TreeIlluminationEstimator::IlluminationEstimation(const glm::vec3& positio
 	return lightIntensity;
 }
 
-void TreeIlluminationEstimator::AddShadowVolume(const ShadowVolume& shadowVolume)
+void TreeIlluminationEstimator::AddShadowVolume(const PositionValue& shadowVolume)
 {
 	const auto voxelMinBound = m_voxel.GetMinBound();
 	const auto dx = m_voxel.GetVoxelSize();
 	const auto voxelResolution = m_voxel.GetResolution();
 	if (m_settings.m_distanceMultiplier == 0.0f) return;
-	const float maxRadius = glm::pow(shadowVolume.m_size * m_settings.m_shadowIntensityMultiplier / m_settings.m_minShadowIntensity, 1.0f / m_settings.m_distancePowerFactor) / m_settings.m_distanceMultiplier;
+	const float maxRadius = glm::pow(shadowVolume.m_value * m_settings.m_shadowIntensityMultiplier / m_settings.m_minShadowIntensity, 1.0f / m_settings.m_distancePowerFactor) / m_settings.m_distanceMultiplier;
 	const int xCenter = (shadowVolume.m_position.x - voxelMinBound.x) / dx;
 	const int yCenter = (shadowVolume.m_position.y - voxelMinBound.y) / dx;
 	const int zCenter = (shadowVolume.m_position.z - voxelMinBound.z) / dx;
@@ -39,7 +39,7 @@ void TreeIlluminationEstimator::AddShadowVolume(const ShadowVolume& shadowVolume
 				const auto positionDiff = m_voxel.GetPosition({ x, y, z }) - shadowVolume.m_position;
 				const auto angle = glm::atan(glm::sqrt(positionDiff.x * positionDiff.x + positionDiff.z * positionDiff.z) / positionDiff.y);
 				const auto distance = glm::length(positionDiff);
-				const float shadowIntensity = glm::cos(angle) * glm::min(m_settings.m_maxShadowIntensity, shadowVolume.m_size * m_settings.m_shadowIntensityMultiplier / glm::pow(glm::max(1.0f, distance * m_settings.m_distanceMultiplier), m_settings.m_distancePowerFactor));
+				const float shadowIntensity = glm::cos(angle) * glm::min(m_settings.m_maxShadowIntensity, shadowVolume.m_value * m_settings.m_shadowIntensityMultiplier / glm::pow(glm::max(1.0f, distance * m_settings.m_distanceMultiplier), m_settings.m_distancePowerFactor));
 				if (shadowIntensity < m_settings.m_minShadowIntensity) continue;
 				const auto direction = glm::normalize(positionDiff);
 				auto& data = m_voxel.Ref(glm::ivec3(x, y, z));
@@ -48,5 +48,11 @@ void TreeIlluminationEstimator::AddShadowVolume(const ShadowVolume& shadowVolume
 			}
 		}
 	}
+}
+
+void TreeIlluminationEstimator::AddBiomass(const PositionValue& positionValue)
+{
+	auto& data = m_voxel.Ref(positionValue.m_position);
+	data.m_totalBiomass += positionValue.m_value;
 }
 

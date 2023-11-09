@@ -23,15 +23,9 @@ void Tree::SerializeTreeGrowthSettings(const TreeGrowthSettings& treeGrowthSetti
 	out << YAML::Key << "m_enableShoot" << YAML::Value << treeGrowthSettings.m_enableShoot;
 
 	out << YAML::Key << "m_autoBalance" << YAML::Value << treeGrowthSettings.m_autoBalance;
-	out << YAML::Key << "m_collectShootFlux" << YAML::Value << treeGrowthSettings.m_collectShootFlux;
 	out << YAML::Key << "m_collectRootFlux" << YAML::Value << treeGrowthSettings.m_collectRootFlux;
 
 	out << YAML::Key << "m_collectNitrite" << YAML::Value << treeGrowthSettings.m_collectNitrite;
-
-	out << YAML::Key << "m_leafMaintenanceVigorFillingRate" << YAML::Value << treeGrowthSettings.m_leafMaintenanceVigorFillingRate;
-	out << YAML::Key << "m_leafDevelopmentalVigorFillingRate" << YAML::Value << treeGrowthSettings.m_leafDevelopmentalVigorFillingRate;
-	out << YAML::Key << "m_fruitMaintenanceVigorFillingRate" << YAML::Value << treeGrowthSettings.m_fruitMaintenanceVigorFillingRate;
-	out << YAML::Key << "m_fruitDevelopmentalVigorFillingRate" << YAML::Value << treeGrowthSettings.m_fruitDevelopmentalVigorFillingRate;
 	out << YAML::Key << "m_nodeDevelopmentalVigorFillingRate" << YAML::Value << treeGrowthSettings.m_nodeDevelopmentalVigorFillingRate;
 
 	out << YAML::Key << "m_enableRootCollisionDetection" << YAML::Value << treeGrowthSettings.m_enableRootCollisionDetection;
@@ -48,14 +42,9 @@ void Tree::DeserializeTreeGrowthSettings(TreeGrowthSettings& treeGrowthSettings,
 	if (param["m_enableShoot"]) treeGrowthSettings.m_enableShoot = param["m_enableShoot"].as<bool>();
 
 	if (param["m_autoBalance"]) treeGrowthSettings.m_autoBalance = param["m_autoBalance"].as<bool>();
-	if (param["m_collectShootFlux"]) treeGrowthSettings.m_collectShootFlux = param["m_collectShootFlux"].as<bool>();
 	if (param["m_collectRootFlux"]) treeGrowthSettings.m_collectRootFlux = param["m_collectRootFlux"].as<bool>();
 	if (param["m_collectNitrite"]) treeGrowthSettings.m_collectNitrite = param["m_collectNitrite"].as<bool>();
 
-	if (param["m_leafMaintenanceVigorFillingRate"]) treeGrowthSettings.m_leafMaintenanceVigorFillingRate = param["m_leafMaintenanceVigorFillingRate"].as<float>();
-	if (param["m_leafDevelopmentalVigorFillingRate"]) treeGrowthSettings.m_leafDevelopmentalVigorFillingRate = param["m_leafDevelopmentalVigorFillingRate"].as<float>();
-	if (param["m_fruitMaintenanceVigorFillingRate"]) treeGrowthSettings.m_fruitMaintenanceVigorFillingRate = param["m_fruitMaintenanceVigorFillingRate"].as<float>();
-	if (param["m_fruitDevelopmentalVigorFillingRate"]) treeGrowthSettings.m_fruitDevelopmentalVigorFillingRate = param["m_fruitDevelopmentalVigorFillingRate"].as<float>();
 	if (param["m_nodeDevelopmentalVigorFillingRate"]) treeGrowthSettings.m_nodeDevelopmentalVigorFillingRate = param["m_nodeDevelopmentalVigorFillingRate"].as<float>();
 
 	if (param["m_enableRootCollisionDetection"]) treeGrowthSettings.m_enableRootCollisionDetection = param["m_enableRootCollisionDetection"].as<bool>();
@@ -395,81 +384,21 @@ bool Tree::OnInspectTreeGrowthSettings(TreeGrowthSettings& treeGrowthSettings)
 	if (ImGui::Checkbox("Enable Root", &treeGrowthSettings.m_enableRoot)) changed = true;
 	if (ImGui::Checkbox("Enable Shoot", &treeGrowthSettings.m_enableShoot)) changed = true;
 	if (ImGui::Checkbox("Auto balance vigor", &treeGrowthSettings.m_autoBalance)) changed = true;
-	if (ImGui::Checkbox("Receive light", &treeGrowthSettings.m_collectShootFlux)) changed = true;
 	if (ImGui::Checkbox("Receive water", &treeGrowthSettings.m_collectRootFlux)) changed = true;
 	if (ImGui::Checkbox("Receive nitrite", &treeGrowthSettings.m_collectNitrite)) changed = true;
 	if (ImGui::Checkbox("Enable Branch collision detection", &treeGrowthSettings.m_enableBranchCollisionDetection)) changed = true;
 	if (ImGui::Checkbox("Enable Root collision detection", &treeGrowthSettings.m_enableRootCollisionDetection)) changed = true;
 
-	if (!treeGrowthSettings.m_collectShootFlux && !treeGrowthSettings.m_collectRootFlux)
+	if (!treeGrowthSettings.m_collectRootFlux)
 	{
 		if (ImGui::TreeNode("Vigor filling rates"))
 		{
-			if (ImGui::SliderFloat("Leaf maintenance", &treeGrowthSettings.m_leafMaintenanceVigorFillingRate, 0.0f, 1.0f))
-			{
-				if (treeGrowthSettings.m_leafMaintenanceVigorFillingRate != 1.0f)
-				{
-					treeGrowthSettings.m_leafDevelopmentalVigorFillingRate
-						= treeGrowthSettings.m_fruitMaintenanceVigorFillingRate
-						= treeGrowthSettings.m_fruitDevelopmentalVigorFillingRate
-						= treeGrowthSettings.m_nodeDevelopmentalVigorFillingRate = 0.0f;
-				}
-				changed = true;
-			}
-			if (treeGrowthSettings.m_leafMaintenanceVigorFillingRate == 1.0f)
-			{
-				if (ImGui::SliderFloat("Leaf development", &treeGrowthSettings.m_leafDevelopmentalVigorFillingRate, 0.0f, 1.0f))
-				{
-					if (treeGrowthSettings.m_leafMaintenanceVigorFillingRate != 1.0f)
-					{
-						treeGrowthSettings.m_fruitMaintenanceVigorFillingRate
-							= treeGrowthSettings.m_fruitDevelopmentalVigorFillingRate
-							= treeGrowthSettings.m_nodeDevelopmentalVigorFillingRate = 0.0f;
-					}
-					changed = true;
-				}
-			}
-
-			if (treeGrowthSettings.m_leafDevelopmentalVigorFillingRate == 1.0f)
-			{
-				if (ImGui::SliderFloat("Fruit maintenance", &treeGrowthSettings.m_fruitMaintenanceVigorFillingRate, 0.0f, 1.0f))
-				{
-					if (treeGrowthSettings.m_leafMaintenanceVigorFillingRate != 1.0f)
-					{
-						treeGrowthSettings.m_fruitDevelopmentalVigorFillingRate
-							= treeGrowthSettings.m_nodeDevelopmentalVigorFillingRate = 0.0f;
-					}
-					changed = true;
-				}
-			}
-
-			if (treeGrowthSettings.m_fruitMaintenanceVigorFillingRate == 1.0f)
-			{
-				if (ImGui::SliderFloat("Fruit development", &treeGrowthSettings.m_fruitDevelopmentalVigorFillingRate, 0.0f, 1.0f))
-				{
-					if (treeGrowthSettings.m_leafMaintenanceVigorFillingRate != 1.0f)
-					{
-						treeGrowthSettings.m_nodeDevelopmentalVigorFillingRate = 0.0f;
-					}
-					changed = true;
-				}
-			}
-
-			if (treeGrowthSettings.m_fruitDevelopmentalVigorFillingRate == 1.0f)
-			{
-				if (ImGui::SliderFloat("Node development", &treeGrowthSettings.m_nodeDevelopmentalVigorFillingRate, 0.0f, 1.0f)) changed = true;
-			}
-
+			if (ImGui::SliderFloat("Node development", &treeGrowthSettings.m_nodeDevelopmentalVigorFillingRate, 0.0f, 1.0f)) changed = true;
 			if (ImGui::Button("Reset"))
 			{
-				treeGrowthSettings.m_leafMaintenanceVigorFillingRate
-					= treeGrowthSettings.m_leafDevelopmentalVigorFillingRate
-					= treeGrowthSettings.m_fruitMaintenanceVigorFillingRate
-					= treeGrowthSettings.m_fruitDevelopmentalVigorFillingRate
-					= treeGrowthSettings.m_nodeDevelopmentalVigorFillingRate = 1.0f;
+				treeGrowthSettings.m_nodeDevelopmentalVigorFillingRate = 1.0f;
 				changed = true;
 			}
-
 			ImGui::TreePop();
 		}
 	}
@@ -1334,7 +1263,7 @@ void Tree::GenerateGeometry(const TreeMeshGeneratorSettings& meshGeneratorSettin
 	}
 }
 
-void Tree::RegisterShadowVolume()
+void Tree::RegisterVoxel()
 {
 	const auto scene = GetScene();
 	const auto globalTransform = scene->GetDataComponent<GlobalTransform>(GetOwner()).m_value;
@@ -1413,6 +1342,9 @@ bool OnInspectShootGrowthParameters(ShootGrowthParameters& treeGrowthParameters)
 			changed = ImGui::DragFloat("Low Branch Pruning Thickness factor", &treeGrowthParameters.m_lowBranchPruningThicknessFactor, 0.01f) || changed;
 			changed = ImGui::DragFloat("Apical pruning factor", &treeGrowthParameters.m_apicalPruningFactor, 0.01f) || changed;
 			changed = ImGui::DragFloat("Lateral pruning factor", &treeGrowthParameters.m_lateralPruningFactor, 0.01f) || changed;
+
+			changed = ImGui::DragFloat("Max Space Occupancy", &treeGrowthParameters.m_maxSpaceOccupancy, 0.001f, 0.0f, 1.0f, "%.3f") || changed;
+
 			ImGui::TreePop();
 		}
 
@@ -1553,6 +1485,7 @@ void SerializeShootGrowthParameters(const std::string& name, const ShootGrowthPa
 	out << YAML::Key << "m_apicalPruningFactor" << YAML::Value << treeGrowthParameters.m_apicalPruningFactor;
 	out << YAML::Key << "m_lateralPruningFactor" << YAML::Value << treeGrowthParameters.m_lateralPruningFactor;
 	out << YAML::Key << "m_saggingFactorThicknessReductionMax" << YAML::Value << treeGrowthParameters.m_saggingFactorThicknessReductionMax;
+	out << YAML::Key << "m_maxSpaceOccupancy" << YAML::Value << treeGrowthParameters.m_maxSpaceOccupancy;
 
 	//Foliage
 	out << YAML::Key << "m_maxLeafSize" << YAML::Value << treeGrowthParameters.m_maxLeafSize;
@@ -1636,6 +1569,7 @@ void DeserializeShootGrowthParameters(const std::string& name, ShootGrowthParame
 		if (param["m_lateralPruningFactor"]) treeGrowthParameters.m_lateralPruningFactor = param["m_lateralPruningFactor"].as<float>();
 		if (param["m_lowBranchPruningThicknessFactor"]) treeGrowthParameters.m_lowBranchPruningThicknessFactor = param["m_lowBranchPruningThicknessFactor"].as<float>();
 		if (param["m_saggingFactorThicknessReductionMax"]) treeGrowthParameters.m_saggingFactorThicknessReductionMax = param["m_saggingFactorThicknessReductionMax"].as<glm::vec3>();
+		if (param["m_maxSpaceOccupancy"]) treeGrowthParameters.m_maxSpaceOccupancy = param["m_maxSpaceOccupancy"].as<float>();
 
 		//Bud fate
 
@@ -1738,6 +1672,7 @@ void Tree::PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescrip
 			{
 				return treeDescriptor->m_shootGrowthParameters.m_phototropism;
 			};
+		m_shootGrowthController.m_maxSpaceOccupancy = treeDescriptor->m_shootGrowthParameters.m_maxSpaceOccupancy;
 		m_shootGrowthController.m_sagging = [=](const Node<InternodeGrowthData>& internode)
 			{
 				const auto& shootGrowthParameters = treeDescriptor->m_shootGrowthParameters;

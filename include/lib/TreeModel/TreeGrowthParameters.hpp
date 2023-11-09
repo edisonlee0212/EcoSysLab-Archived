@@ -204,7 +204,7 @@ namespace EcoSysLab
 		 */
 		glm::vec3 m_saggingFactorThicknessReductionMax = glm::vec3(0.8f, 1.75f, 1.0f);
 
-
+		float m_maxSpaceOccupancy = 1.0f;
 #pragma endregion
 
 #pragma region Leaf

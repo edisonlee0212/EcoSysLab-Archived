@@ -17,16 +17,17 @@ namespace EcoSysLab
 
 		float m_shadowIntensityMultiplier = 0.02f;
 	};
-	struct ShadowVolume
+	struct PositionValue
 	{
 		glm::vec3 m_position;
-		float m_size;
+		float m_value;
 	};
 
 	struct ShadowVoxel
 	{
 		glm::vec3 m_shadowDirection = glm::vec3(0.0f);
 		float m_shadowIntensity = 0.0f;
+		float m_totalBiomass = 0.0f;
 	};
 
 	class TreeIlluminationEstimator
@@ -35,6 +36,7 @@ namespace EcoSysLab
 		IlluminationEstimationSettings m_settings;
 		VoxelGrid<ShadowVoxel> m_voxel;
 		[[nodiscard]] float IlluminationEstimation(const glm::vec3& position, glm::vec3& lightDirection) const;
-		void AddShadowVolume(const ShadowVolume& shadowVolume);
+		void AddShadowVolume(const PositionValue& shadowVolume);
+		void AddBiomass(const PositionValue& positionValue);
 	};
 }

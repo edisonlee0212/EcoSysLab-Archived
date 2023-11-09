@@ -11,6 +11,7 @@ void ReproductiveModule::Reset()
 	m_health = 1.0f;
 	m_transform = glm::mat4(0.0f);
 }
+
 void TreeModel::ResetReproductiveModule()
 {
 	const auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
@@ -40,6 +41,7 @@ void TreeModel::RegisterShadowVolume(const glm::mat4& globalTransform, ClimateMo
 		const auto& internodeData = internode.m_data;
 		const auto& internodeInfo = internode.m_info;
 		float shadowSize = internodeInfo.m_length / shootGrowthParameters.m_internodeLength * estimator.m_settings.m_internodeShadowMultiplier;
+		float biomass = internodeInfo.m_thickness;
 		for (const auto& i : internodeData.m_buds)
 		{
 			if (i.m_type == BudType::Leaf && i.m_reproductiveModule.m_maturity > 0.0f)
@@ -51,8 +53,8 @@ void TreeModel::RegisterShadowVolume(const glm::mat4& globalTransform, ClimateMo
 				shadowSize += estimator.m_settings.m_fruitShadowMultiplier * glm::sqrt(i.m_reproductiveModule.m_maturity);
 			}
 		}
-
 		estimator.AddShadowVolume({ globalTransform * glm::vec4(internodeInfo.m_globalPosition, 1.0f), shadowSize });
+		estimator.AddBiomass({ globalTransform * glm::vec4(internodeInfo.m_globalPosition, 1.0f), biomass });
 	}
 }
 
@@ -125,7 +127,6 @@ void TreeModel::PruneInternode(NodeHandle internodeHandle)
 
 void TreeModel::PruneRootNode(NodeHandle rootNodeHandle)
 {
-
 	m_rootSkeleton.RecycleNode(rootNodeHandle,
 		[&](FlowHandle flowHandle) {},
 		[&](NodeHandle nodeHandle)
@@ -398,66 +399,34 @@ void TreeModel::CollectShootFlux(const glm::mat4& globalTransform, ClimateModel&
 		auto& internodeInfo = internode.m_info;
 		internodeData.m_growthPotential = 0.0f;
 		if (m_treeGrowthSettings.m_useSpaceColonization) {
-			internodeData.m_growthPotential = 1.0f;
-			m_shootSkeleton.m_data.m_shootFlux.m_totalGrowthPotential += internodeData.m_growthPotential;
-			internodeData.m_lightDirection = glm::normalize(internodeInfo.m_globalDirection);
 			for (const auto& bud : internodeData.m_buds)
 			{
 				shootData.m_maxMarkerCount = glm::max(shootData.m_maxMarkerCount, bud.m_markerCount);
 			}
 		}
-		else if (m_treeGrowthSettings.m_collectShootFlux) {
-			internodeData.m_growthPotential = climateModel.m_treeIlluminationEstimator.IlluminationEstimation(globalTransform * glm::vec4(internodeInfo.m_globalPosition, 1.0f), internodeData.m_lightDirection);
-			m_shootSkeleton.m_data.m_shootFlux.m_totalGrowthPotential += internodeData.m_growthPotential;
-			if (internodeData.m_growthPotential <= glm::epsilon<float>())
-			{
-				internodeData.m_lightDirection = glm::normalize(internodeInfo.m_globalDirection);
-			}
-		}
-		else {
+		const glm::vec3 position = globalTransform * glm::vec4(internodeInfo.m_globalPosition, 1.0f);
+		internodeData.m_growthPotential = climateModel.m_treeIlluminationEstimator.IlluminationEstimation(position, internodeData.m_lightDirection);
+		m_shootSkeleton.m_data.m_shootFlux.m_totalGrowthPotential += internodeData.m_growthPotential;
+		if (internodeData.m_growthPotential <= glm::epsilon<float>())
+		{
 			internodeData.m_lightDirection = glm::normalize(internodeInfo.m_globalDirection);
-			internodeData.m_growthPotential = 1.0f;
-			m_shootSkeleton.m_data.m_shootFlux.m_totalGrowthPotential += internodeData.m_growthPotential;
 		}
+		internodeData.m_spaceOccupancy = climateModel.m_treeIlluminationEstimator.m_voxel.Peek(position).m_totalBiomass;
 	}
 }
 
 void TreeModel::PlantVigorAllocation()
 {
 	if (!m_treeGrowthSettings.m_collectRootFlux) {
-		if (!m_treeGrowthSettings.m_collectShootFlux || m_treeGrowthSettings.m_useSpaceColonization) {
-			m_shootSkeleton.m_data.m_shootFlux.m_totalGrowthPotential = m_rootSkeleton.m_data.m_rootFlux.m_totalGrowthPotential =
-				m_shootSkeleton.m_data.m_vigorRequirement.m_leafMaintenanceVigor * m_treeGrowthSettings.m_leafMaintenanceVigorFillingRate
-				+ m_shootSkeleton.m_data.m_vigorRequirement.m_leafDevelopmentalVigor * m_treeGrowthSettings.m_leafDevelopmentalVigorFillingRate
-				+ m_shootSkeleton.m_data.m_vigorRequirement.m_fruitMaintenanceVigor * m_treeGrowthSettings.m_fruitMaintenanceVigorFillingRate
-				+ m_shootSkeleton.m_data.m_vigorRequirement.m_fruitDevelopmentalVigor * m_treeGrowthSettings.m_fruitDevelopmentalVigorFillingRate
-				+ m_shootSkeleton.m_data.m_vigorRequirement.m_nodeDevelopmentalVigor * m_treeGrowthSettings.m_nodeDevelopmentalVigorFillingRate
-
-				+ m_rootSkeleton.m_data.m_vigorRequirement.m_nodeDevelopmentalVigor * m_treeGrowthSettings.m_nodeDevelopmentalVigorFillingRate;
-		}
-		else
-		{
-			m_rootSkeleton.m_data.m_rootFlux.m_totalGrowthPotential =
-				m_shootSkeleton.m_data.m_vigorRequirement.m_leafMaintenanceVigor
-				+ m_shootSkeleton.m_data.m_vigorRequirement.m_leafDevelopmentalVigor
-				+ m_shootSkeleton.m_data.m_vigorRequirement.m_fruitMaintenanceVigor
-				+ m_shootSkeleton.m_data.m_vigorRequirement.m_fruitDevelopmentalVigor
-				+ m_shootSkeleton.m_data.m_vigorRequirement.m_nodeDevelopmentalVigor
-
-				+ m_rootSkeleton.m_data.m_vigorRequirement.m_nodeDevelopmentalVigor;
-		}
-	}
-	else if (!m_treeGrowthSettings.m_collectShootFlux || m_treeGrowthSettings.m_useSpaceColonization)
-	{
-		m_shootSkeleton.m_data.m_shootFlux.m_totalGrowthPotential =
+		m_rootSkeleton.m_data.m_rootFlux.m_totalGrowthPotential =
 			m_shootSkeleton.m_data.m_vigorRequirement.m_leafMaintenanceVigor
 			+ m_shootSkeleton.m_data.m_vigorRequirement.m_leafDevelopmentalVigor
 			+ m_shootSkeleton.m_data.m_vigorRequirement.m_fruitMaintenanceVigor
 			+ m_shootSkeleton.m_data.m_vigorRequirement.m_fruitDevelopmentalVigor
 			+ m_shootSkeleton.m_data.m_vigorRequirement.m_nodeDevelopmentalVigor
-
 			+ m_rootSkeleton.m_data.m_vigorRequirement.m_nodeDevelopmentalVigor;
 	}
+
 	float totalVigor = glm::max(m_rootSkeleton.m_data.m_rootFlux.m_totalGrowthPotential, m_shootSkeleton.m_data.m_shootFlux.m_totalGrowthPotential);
 	if (m_treeGrowthSettings.m_enableShoot && m_treeGrowthSettings.m_enableRoot)
 	{
@@ -714,7 +683,6 @@ void TreeModel::ShootGrowthPostProcess(const glm::mat4& globalTransform, Climate
 			m_shootSkeleton.m_data.m_desiredMax = glm::max(m_shootSkeleton.m_data.m_desiredMax, desiredEndPosition);
 		}
 		SampleTemperature(globalTransform, climateModel);
-
 	};
 
 	if (m_treeGrowthSettings.m_enableBranchCollisionDetection)
@@ -1056,11 +1024,13 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 			const float developmentalVigor = bud.m_vigorSink.SubtractVigor(availableDevelopmentVigor);
 			float elongateLength = 0.0f;
 			if (m_treeGrowthSettings.m_useSpaceColonization) {
-				if(m_shootSkeleton.m_data.m_maxMarkerCount > 0) elongateLength = static_cast<float>(bud.m_markerCount) / m_shootSkeleton.m_data.m_maxMarkerCount * shootGrowthParameters.m_internodeLength;
-			}else
+				if (m_shootSkeleton.m_data.m_maxMarkerCount > 0) elongateLength = static_cast<float>(bud.m_markerCount) / m_shootSkeleton.m_data.m_maxMarkerCount * shootGrowthParameters.m_internodeLength;
+			}
+			else
 			{
 				elongateLength = developmentalVigor / shootGrowthParameters.m_internodeVigorRequirement * shootGrowthParameters.m_internodeLength;
 			}
+			if (internodeData.m_spaceOccupancy > shootGrowthParameters.m_maxSpaceOccupancy) elongateLength = 0.0f;
 			//Use up the vigor stored in this bud.
 			float collectedInhibitor = 0.0f;
 			const auto dd = shootGrowthParameters.m_apicalDominanceDistanceFactor;
@@ -1071,11 +1041,12 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 			float flushProbability = 0.0f;
 			if (m_treeGrowthSettings.m_useSpaceColonization) {
 				if (m_shootSkeleton.m_data.m_maxMarkerCount > 0) flushProbability = static_cast<float>(bud.m_markerCount) / m_shootSkeleton.m_data.m_maxMarkerCount * shootGrowthParameters.m_lateralBudFlushingProbability(internode);
-			}else
+			}
+			else
 			{
 				flushProbability = m_internodeDevelopmentRate * m_currentDeltaTime * shootGrowthParameters.m_internodeGrowthRate * shootGrowthParameters.m_lateralBudFlushingProbability(internode);
 			}
-
+			if (internodeData.m_spaceOccupancy > shootGrowthParameters.m_maxSpaceOccupancy) flushProbability = 0.0f;
 			if (flushProbability >= glm::linearRand(0.0f, 1.0f)) {
 				graphChanged = true;
 				bud.m_status = BudStatus::Flushed;
@@ -1575,10 +1546,11 @@ void TreeModel::Clear() {
 	m_history = {};
 	m_initialized = false;
 
-	if(m_treeGrowthSettings.m_useSpaceColonization && !m_treeGrowthSettings.m_spaceColonizationAutoResize)
+	if (m_treeGrowthSettings.m_useSpaceColonization && !m_treeGrowthSettings.m_spaceColonizationAutoResize)
 	{
 		m_treeOccupancyGrid.ResetMarkers();
-	}else
+	}
+	else
 	{
 		m_treeOccupancyGrid = {};
 	}
@@ -1619,8 +1591,8 @@ bool TreeModel::PruneInternodes(const ShootGrowthController& shootGrowthParamete
 			(internode.m_info.m_rootDistance / maxDistance) < shootGrowthParameters.m_lowBranchPruning) {
 			const auto parentHandle = internode.GetParentHandle();
 			if (parentHandle != -1) {
-				const auto &parent = m_shootSkeleton.PeekNode(parentHandle);
-				if(internode.m_info.m_thickness / parent.m_info.m_thickness < shootGrowthParameters.m_lowBranchPruningThicknessFactor) pruning = true;
+				const auto& parent = m_shootSkeleton.PeekNode(parentHandle);
+				if (internode.m_info.m_thickness / parent.m_info.m_thickness < shootGrowthParameters.m_lowBranchPruningThicknessFactor) pruning = true;
 			}
 		}
 		if (pruning)
@@ -1841,7 +1813,7 @@ void TreeModel::ExportTreeIOSkeleton(treeio::ArrayTree& arrayTree) const
 {
 	using namespace treeio;
 	const auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
-	if(sortedInternodeList.empty()) return;
+	if (sortedInternodeList.empty()) return;
 	const auto& rootNode = m_shootSkeleton.PeekNode(0);
 	TreeNodeData rootNodeData;
 	//rootNodeData.direction = rootNode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
@@ -1851,9 +1823,9 @@ void TreeModel::ExportTreeIOSkeleton(treeio::ArrayTree& arrayTree) const
 	auto rootId = arrayTree.addRoot(rootNodeData);
 	std::unordered_map<NodeHandle, size_t> nodeMap;
 	nodeMap[0] = rootId;
-	for(const auto& nodeHandle : sortedInternodeList)
+	for (const auto& nodeHandle : sortedInternodeList)
 	{
-		if(nodeHandle == 0) continue;
+		if (nodeHandle == 0) continue;
 		const auto& node = m_shootSkeleton.PeekNode(nodeHandle);
 		TreeNodeData nodeData;
 		//nodeData.direction = node.m_info.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);

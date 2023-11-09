@@ -151,6 +151,8 @@ namespace EcoSysLab
 
 		float m_vigorRequirementAggregateLoss = 1.0f;
 
+
+		float m_maxSpaceOccupancy = 1.0f;
 #pragma endregion
 #pragma region Internode
 		/**

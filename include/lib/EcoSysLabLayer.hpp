@@ -92,6 +92,8 @@ namespace EcoSysLab {
 		unsigned m_scalarSoilProperty = 1;
 		std::shared_ptr<ParticleInfoList> m_scalarMatrices;
 
+		bool m_showShadowGrid = false;
+		std::shared_ptr<ParticleInfoList> m_shadowGridParticleInfoList;
 		void UpdateVisualizationCamera();
 		void PreUpdate() override;
 		void Update() override;
