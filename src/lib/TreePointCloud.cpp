@@ -1499,7 +1499,10 @@ std::vector<std::shared_ptr<Mesh>> TreePointCloud::GenerateFoliageMeshes(
 			}
 
 		}
-
+		Jobs::ParallelFor(vertices.size(), [&](unsigned j)
+			{
+				vertices[j].m_position += m_skeletons[i].m_data.m_rootPosition;
+			});
 		auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
 		VertexAttributes attributes{};
 		attributes.m_texCoord = true;
