@@ -1429,9 +1429,9 @@ std::vector<std::shared_ptr<Mesh>> TreePointCloud::GenerateForestBranchMeshes(co
 		std::vector<unsigned int> indices;
 		CylindricalMeshGenerator<ReconstructionSkeletonData, ReconstructionFlowData, ReconstructionNodeData> meshGenerator;
 		meshGenerator.Generate(m_skeletons[i], vertices, indices, meshGeneratorSettings, 999.0f);
-		Jobs::ParallelFor(vertices.size(), [&](unsigned i)
+		Jobs::ParallelFor(vertices.size(), [&](unsigned j)
 			{
-				vertices[i].m_position += m_skeletons[i].m_data.m_rootPosition;
+				vertices[j].m_position += m_skeletons[i].m_data.m_rootPosition;
 			});
 		auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
 		VertexAttributes attributes{};
