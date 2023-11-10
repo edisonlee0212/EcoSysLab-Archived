@@ -164,7 +164,7 @@ namespace EcoSysLab {
 
 		void FormGeometryEntity(const TreeMeshGeneratorSettings& meshGeneratorSettings);
 
-		std::vector<std::shared_ptr<Mesh>> GenerateBranchMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings) const;
+		std::vector<std::shared_ptr<Mesh>> GenerateForestBranchMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings) const;
 		std::vector<std::shared_ptr<Mesh>> GenerateFoliageMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings) const;
 	};
 }

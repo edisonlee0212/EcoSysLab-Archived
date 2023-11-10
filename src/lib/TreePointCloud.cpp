@@ -201,9 +201,8 @@ void TreePointCloud::ExportForestOBJ(const std::filesystem::path& path, const Tr
 			of.write(start.c_str(), start.size());
 			of.flush();
 			unsigned startIndex = 1;
-			const auto branchMeshes = GenerateBranchMeshes(meshGeneratorSettings);
+			const auto branchMeshes = GenerateForestBranchMeshes(meshGeneratorSettings);
 			if(!branchMeshes.empty()){
-				
 				unsigned treeIndex = 0;
 				for (auto& mesh : branchMeshes) {
 					auto& vertices = mesh->UnsafeGetVertices();
@@ -489,7 +488,7 @@ void TreePointCloud::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 					nodeMatrices.resize(startIndex + nodeList.size());
 					for (int i = 0; i < nodeList.size(); i++) {
 						const auto& node = skeleton.PeekNode(nodeList[i]);
-						nodeMatrices[startIndex + i].m_instanceMatrix.m_value = glm::translate(node.m_info.m_globalPosition) *
+						nodeMatrices[startIndex + i].m_instanceMatrix.m_value = glm::translate(node.m_info.m_globalPosition + skeleton.m_data.m_rootPosition) *
 							glm::scale(glm::vec3(node.m_info.m_thickness));
 						nodeMatrices[startIndex + i].m_instanceColor = glm::vec4(1.0f);
 					}
@@ -525,7 +524,7 @@ void TreePointCloud::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 					nodeMatrices.resize(startIndex + nodeList.size());
 					for (int i = 0; i < nodeList.size(); i++) {
 						const auto& node = skeleton.PeekNode(nodeList[i]);
-						nodeMatrices[startIndex + i].m_instanceMatrix.m_value = glm::translate(node.m_info.m_globalPosition) *
+						nodeMatrices[startIndex + i].m_instanceMatrix.m_value = glm::translate(node.m_info.m_globalPosition + skeleton.m_data.m_rootPosition) *
 							glm::scale(glm::vec3(node.m_info.m_thickness));
 						nodeMatrices[startIndex + i].m_instanceColor = glm::vec4(
 							ecoSysLabLayer->RandomColors()[node.m_data.m_branchHandle],
@@ -561,7 +560,7 @@ void TreePointCloud::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 					nodeMatrices.resize(startIndex + nodeList.size());
 					for (int i = 0; i < nodeList.size(); i++) {
 						const auto& node = skeleton.PeekNode(nodeList[i]);
-						nodeMatrices[startIndex + i].m_instanceMatrix.m_value = glm::translate(node.m_info.m_globalPosition) *
+						nodeMatrices[startIndex + i].m_instanceMatrix.m_value = glm::translate(node.m_info.m_globalPosition + skeleton.m_data.m_rootPosition) *
 							glm::scale(glm::vec3(node.m_info.m_thickness));
 						nodeMatrices[startIndex + i].m_instanceColor = glm::vec4(ecoSysLabLayer->RandomColors()[node.GetHandle()],
 							1.0f);
@@ -1044,7 +1043,7 @@ void TreePointCloud::BuildSkeletons(const ReconstructionSettings& reconstruction
 		auto& rootNode = skeleton.RefNode(0);
 		rootNode.m_info.m_globalRotation = rootNode.m_info.m_regulatedGlobalRotation = glm::quatLookAt(
 			glm::vec3(0, 1, 0), glm::vec3(0, 0, -1));
-		rootNode.m_info.m_globalPosition = skeleton.m_data.m_rootPosition;
+		rootNode.m_info.m_globalPosition = glm::vec3(0.0f);
 		for (const auto& nodeHandle : sortedNodeList) {
 			auto& node = skeleton.RefNode(nodeHandle);
 			auto& nodeInfo = node.m_info;
@@ -1186,11 +1185,14 @@ void TreePointCloud::FormGeometryEntity(const TreeMeshGeneratorSettings& meshGen
 		Entity treeEntity;
 		treeEntity = scene->CreateEntity("Tree " + std::to_string(i));
 		scene->SetParent(treeEntity, self);
+		GlobalTransform gt {};
+		gt.SetPosition(m_skeletons[i].m_data.m_rootPosition);
+		scene->SetDataComponent(treeEntity, gt);
+
 		if (meshGeneratorSettings.m_enableBranch) {
 			Entity branchEntity;
 			branchEntity = scene->CreateEntity("Branch Mesh");
 			scene->SetParent(branchEntity, treeEntity);
-
 			std::vector<Vertex> vertices;
 			std::vector<unsigned int> indices;
 
@@ -1419,7 +1421,7 @@ void TreePointCloud::FormGeometryEntity(const TreeMeshGeneratorSettings& meshGen
 	}
 }
 
-std::vector<std::shared_ptr<Mesh>> TreePointCloud::GenerateBranchMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings) const
+std::vector<std::shared_ptr<Mesh>> TreePointCloud::GenerateForestBranchMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings) const
 {
 	std::vector<std::shared_ptr<Mesh>> meshes{};
 	for (int i = 0; i < m_skeletons.size(); i++) {
@@ -1427,7 +1429,10 @@ std::vector<std::shared_ptr<Mesh>> TreePointCloud::GenerateBranchMeshes(const Tr
 		std::vector<unsigned int> indices;
 		CylindricalMeshGenerator<ReconstructionSkeletonData, ReconstructionFlowData, ReconstructionNodeData> meshGenerator;
 		meshGenerator.Generate(m_skeletons[i], vertices, indices, meshGeneratorSettings, 999.0f);
-
+		Jobs::ParallelFor(vertices.size(), [&](unsigned i)
+			{
+				vertices[i].m_position += m_skeletons[i].m_data.m_rootPosition;
+			});
 		auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
 		VertexAttributes attributes{};
 		attributes.m_texCoord = true;
