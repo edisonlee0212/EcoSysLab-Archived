@@ -96,7 +96,7 @@ namespace EcoSysLab {
 	struct ReconstructionSettings {
 		float m_internodeLength = 0.03f;
 		float m_minHeight = 0.3f;
-		float m_maxTreeDistance = 0.01f;
+		float m_minimumTreeDistance = 0.05f;
 		float m_branchShortening = 0.3f;
 
 		float m_endNodeThickness = 0.002f;
@@ -105,18 +105,19 @@ namespace EcoSysLab {
 		bool m_overrideThickness = true;
 		bool m_limitParentThickness = true;
 		int m_minimumNodeCount = 1;
+
+		float m_minimumRootThickness = 0.02f;
 		void OnInspect();
 	};
 
 	struct ReconstructionSkeletonData {
-
+		glm::vec3 m_rootPosition = glm::vec3(0.0f);
 	};
 	struct ReconstructionFlowData {
 
 	};
 	struct ReconstructionNodeData {
-		glm::quat m_localRotation = glm::vec3(0.0f);
-		glm::vec3 m_localPosition = glm::vec3(0.0f);
+		glm::vec3 m_globalEndPosition = glm::vec3(0.0f);
 
 
 		std::vector<PointHandle> m_allocatedPoints;

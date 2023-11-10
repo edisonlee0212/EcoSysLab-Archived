@@ -38,8 +38,6 @@ void TreePointCloud::CalculateNodeTransforms(ReconstructionSkeleton& skeleton)
 		auto& nodeData = node.m_data;
 		if (node.GetParentHandle() != -1) {
 			auto& parentInfo = skeleton.RefNode(node.GetParentHandle()).m_info;
-			nodeInfo.m_globalRotation =
-				parentInfo.m_globalRotation * nodeData.m_localRotation;
 			nodeInfo.m_globalDirection = glm::normalize(nodeInfo.m_globalRotation * glm::vec3(0, 0, -1));
 			nodeInfo.m_globalPosition =
 				parentInfo.m_globalPosition
@@ -487,7 +485,7 @@ void TreePointCloud::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 				scannedBranchConnectionInfoList->ApplyConnections(scannedBranchConnectionStarts, scannedBranchConnectionEnds, scannedBranchConnectionColors, scannedBranchWidth);
 				for (const auto& skeleton : m_skeletons) {
 					const auto& nodeList = skeleton.RefSortedNodeList();
-					auto startIndex = nodeMatrices.size();
+					const auto startIndex = nodeMatrices.size();
 					nodeMatrices.resize(startIndex + nodeList.size());
 					for (int i = 0; i < nodeList.size(); i++) {
 						const auto& node = skeleton.PeekNode(nodeList[i]);
@@ -523,7 +521,7 @@ void TreePointCloud::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 
 				for (const auto& skeleton : m_skeletons) {
 					const auto& nodeList = skeleton.RefSortedNodeList();
-					auto startIndex = nodeMatrices.size();
+					const auto startIndex = nodeMatrices.size();
 					nodeMatrices.resize(startIndex + nodeList.size());
 					for (int i = 0; i < nodeList.size(); i++) {
 						const auto& node = skeleton.PeekNode(nodeList[i]);
@@ -559,7 +557,7 @@ void TreePointCloud::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 				scannedBranchConnectionInfoList->ApplyConnections(scannedBranchConnectionStarts, scannedBranchConnectionEnds, scannedBranchConnectionColors, scannedBranchWidth);
 				for (const auto& skeleton : m_skeletons) {
 					const auto& nodeList = skeleton.RefSortedNodeList();
-					auto startIndex = nodeMatrices.size();
+					const auto startIndex = nodeMatrices.size();
 					nodeMatrices.resize(startIndex + nodeList.size());
 					for (int i = 0; i < nodeList.size(); i++) {
 						const auto& node = skeleton.PeekNode(nodeList[i]);
@@ -913,14 +911,7 @@ void ApplyCurve(ReconstructionSkeleton& skeleton, OperatingBranch& branch) {
 	const auto chainAmount = branch.m_chainNodeHandles.size();
 	for (int i = 0; i < chainAmount; i++) {
 		auto& node = skeleton.RefNode(branch.m_chainNodeHandles[i]);
-		node.m_info.m_globalPosition = branch.m_bezierCurve.GetPoint(
-			static_cast<float>(i) / chainAmount);
-		node.m_info.m_length = glm::distance(
-			branch.m_bezierCurve.GetPoint(static_cast<float>(i) / chainAmount),
-			branch.m_bezierCurve.GetPoint(static_cast<float>(i + 1) / chainAmount));
-		node.m_data.m_localPosition = glm::normalize(
-			branch.m_bezierCurve.GetPoint(static_cast<float>(i + 1) / chainAmount) -
-			branch.m_bezierCurve.GetPoint(static_cast<float>(i) / chainAmount));
+		node.m_data.m_globalEndPosition = branch.m_bezierCurve.GetPoint(static_cast<float>(i + 1) / chainAmount);
 		node.m_info.m_thickness = glm::mix(branch.m_startThickness, branch.m_endThickness,
 			static_cast<float>(i) / chainAmount);
 		node.m_data.m_branchHandle = branch.m_handle;
@@ -938,7 +929,7 @@ void TreePointCloud::BuildSkeletons(const ReconstructionSettings& reconstruction
 	}
 
 	auto& operatingBranches = m_operatingBranches;
-	std::vector<BranchHandle> rootBranchHandles;
+	std::vector<std::pair<glm::vec3, BranchHandle>> rootBranchHandles;
 	for (auto& branch : operatingBranches) {
 		branch.m_chainNodeHandles.clear();
 		const auto branchStart = branch.m_bezierCurve.m_p0;
@@ -947,23 +938,8 @@ void TreePointCloud::BuildSkeletons(const ReconstructionSettings& reconstruction
 		auto shortenedLength = glm::distance(shortenedP0, shortenedP3);
 		if (branchStart.y <= reconstructionSettings.m_minHeight) {
 			bool add = true;
-			for (auto& rootBranchHandle : rootBranchHandles)
-			{
-				const auto& rootBranchStart = operatingBranches[rootBranchHandle].m_bezierCurve.m_p0;
-				if (glm::distance(glm::vec2(rootBranchStart.x, rootBranchStart.z),
-					glm::vec2(branchStart.x, branchStart.z)) < reconstructionSettings.m_maxTreeDistance) {
-					add = false;
-					if (rootBranchStart.y > branchStart.y)
-					{
-						rootBranchHandle = branch.m_handle;
-						break;
-					}
-				}
-			}
-			if (add) {
-				branch.m_bezierCurve.m_p0.y = 0.0f;
-				rootBranchHandles.emplace_back(branch.m_handle);
-			}
+			branch.m_bezierCurve.m_p0.y = 0.0f;
+			rootBranchHandles.emplace_back(branch.m_bezierCurve.m_p0, branch.m_handle);
 		}
 		else {
 			branch.m_bezierCurve.m_p0 = shortenedP0;
@@ -977,12 +953,13 @@ void TreePointCloud::BuildSkeletons(const ReconstructionSettings& reconstruction
 			shortenedLength * 0.25f;
 	}
 	for (const auto& rootBranchHandle : rootBranchHandles) {
-		allocatedBranchHandles.emplace(rootBranchHandle);
+		allocatedBranchHandles.emplace(rootBranchHandle.second);
 	}
 	for (const auto& rootBranchHandle : rootBranchHandles) {
 		auto& skeleton = m_skeletons.emplace_back();
+		skeleton.m_data.m_rootPosition = rootBranchHandle.first;
 		std::queue<BranchHandle> processingBranchHandles;
-		processingBranchHandles.emplace(rootBranchHandle);
+		processingBranchHandles.emplace(rootBranchHandle.second);
 		while (!processingBranchHandles.empty()) {
 			auto processingBranchHandle = processingBranchHandles.front();
 			processingBranchHandles.pop();
@@ -992,7 +969,7 @@ void TreePointCloud::BuildSkeletons(const ReconstructionSettings& reconstruction
 			}
 			bool onlyChild = true;
 			NodeHandle prevNodeHandle = -1;
-			if (operatingBranches[processingBranchHandle].m_handle == rootBranchHandle) {
+			if (operatingBranches[processingBranchHandle].m_handle == rootBranchHandle.second) {
 				prevNodeHandle = 0;
 				operatingBranches[processingBranchHandle].m_chainNodeHandles.emplace_back(0);
 			}
@@ -1061,16 +1038,13 @@ void TreePointCloud::BuildSkeletons(const ReconstructionSettings& reconstruction
 			}
 			//assert(glm::isnan(processingBranch.m_bezierCurve.m_p0.x))
 			ApplyCurve(skeleton, processingBranch);
-
 		}
 		skeleton.SortLists();
 		auto& sortedNodeList = skeleton.RefSortedNodeList();
 		auto& rootNode = skeleton.RefNode(0);
-		rootNode.m_data.m_localRotation = glm::vec3(0.0f);
 		rootNode.m_info.m_globalRotation = rootNode.m_info.m_regulatedGlobalRotation = glm::quatLookAt(
-			rootNode.m_data.m_localPosition, glm::vec3(0, 0, -1));
-		rootNode.m_data.m_localPosition = glm::vec3(0.0f);
-
+			glm::vec3(0, 1, 0), glm::vec3(0, 0, -1));
+		rootNode.m_info.m_globalPosition = skeleton.m_data.m_rootPosition;
 		for (const auto& nodeHandle : sortedNodeList) {
 			auto& node = skeleton.RefNode(nodeHandle);
 			auto& nodeInfo = node.m_info;
@@ -1078,12 +1052,12 @@ void TreePointCloud::BuildSkeletons(const ReconstructionSettings& reconstruction
 			if (nodeHandle == 0) continue;
 
 			auto& parentNode = skeleton.RefNode(node.GetParentHandle());
-			auto front = glm::normalize(nodeData.m_localPosition);
-			nodeData.m_localPosition = glm::vec3(0.0f);
+			auto diff = nodeData.m_globalEndPosition - parentNode.m_data.m_globalEndPosition;
+			auto front = glm::normalize(diff);
 			auto parentUp = parentNode.m_info.m_globalRotation * glm::vec3(0, 1, 0);
 			auto regulatedUp = glm::normalize(glm::cross(glm::cross(front, parentUp), front));
 			nodeInfo.m_globalRotation = glm::quatLookAt(front, regulatedUp);
-			nodeData.m_localRotation = glm::inverse(parentNode.m_info.m_globalRotation) * nodeInfo.m_globalRotation;
+			nodeInfo.m_length = glm::length(diff);
 
 		}
 		if (reconstructionSettings.m_overrideThickness) {
@@ -1104,6 +1078,16 @@ void TreePointCloud::BuildSkeletons(const ReconstructionSettings& reconstruction
 					}
 					nodeInfo.m_thickness = glm::pow(childThicknessCollection,
 						reconstructionSettings.m_thicknessSumFactor);
+				}
+			}
+			const auto rootNodeThickness = skeleton.PeekNode(0).m_info.m_thickness;
+			if(rootNodeThickness < reconstructionSettings.m_minimumRootThickness)
+			{
+				float multiplierFactor = reconstructionSettings.m_minimumRootThickness / rootNodeThickness;
+				for(const auto& handle : sortedNodeList)
+				{
+					auto& nodeInfo = skeleton.RefNode(handle).m_info;
+					nodeInfo.m_thickness *= multiplierFactor;
 				}
 			}
 		}
@@ -1154,7 +1138,24 @@ void TreePointCloud::BuildSkeletons(const ReconstructionSettings& reconstruction
 		for (int i = 0; i < m_skeletons.size(); i++)
 		{
 			auto& skeleton = m_skeletons[i];
+			bool remove = false;
 			if (skeleton.RefSortedNodeList().size() < reconstructionSettings.m_minimumNodeCount)
+			{
+				remove = true;
+			}
+			else {
+				for (int j = 0; j < m_skeletons.size(); j++)
+				{
+					if (j == i) continue;
+					auto& otherSkeleton = m_skeletons[j];
+					if(glm::distance(skeleton.m_data.m_rootPosition, otherSkeleton.m_data.m_rootPosition) < reconstructionSettings.m_minimumTreeDistance)
+					{
+						if (skeleton.RefSortedNodeList().size() < otherSkeleton.RefSortedNodeList().size()) remove = true;
+					}
+				}
+			}
+
+			if(remove)
 			{
 				m_skeletons.erase(m_skeletons.begin() + i);
 				i--;
@@ -1535,7 +1536,7 @@ void OperatingBranch::Apply(const ScannedBranch& target) {
 void ReconstructionSettings::OnInspect() {
 	ImGui::DragFloat("Internode length", &m_internodeLength, 0.01f, 0.01f, 1.0f);
 	ImGui::DragFloat("Root node max height", &m_minHeight, 0.01f, 0.01f, 1.0f);
-	ImGui::DragFloat("Tree distance limit", &m_maxTreeDistance, 0.01f, 0.01f, 1.0f);
+	ImGui::DragFloat("Tree distance limit", &m_minimumTreeDistance, 0.01f, 0.01f, 1.0f);
 	ImGui::DragFloat("Branch shortening", &m_branchShortening, 0.01f, 0.01f, 0.5f);
 
 	ImGui::Checkbox("Override thickness", &m_overrideThickness);
@@ -1543,6 +1544,7 @@ void ReconstructionSettings::OnInspect() {
 		ImGui::DragFloat("End node thickness", &m_endNodeThickness, 0.001f, 0.001f, 1.0f);
 		ImGui::DragFloat("Thickness sum factor", &m_thicknessSumFactor, 0.01f, 0.0f, 2.0f);
 		ImGui::DragFloat("Thickness accumulation factor", &m_thicknessAccumulationFactor, 0.00001f, 0.0f, 1.0f, "%.5f");
+		ImGui::DragFloat("Minimum root thickness", &m_minimumRootThickness, 0.001f, 0.0f, 1.0f, "%.3f");
 	}
 	else
 	{
