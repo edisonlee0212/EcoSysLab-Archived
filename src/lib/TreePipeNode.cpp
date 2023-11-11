@@ -13,7 +13,7 @@ void TreePipeNode::InsertInterpolation(const float a)
 	const auto mmr = scene->GetOrSetPrivateComponent<MeshRenderer>(middleEntity).lock();
 	mmr->m_mesh = Resources::GetResource<Mesh>("PRIMITIVE_SPHERE");
 	mmr->m_material = scene->GetOrSetPrivateComponent<MeshRenderer>(owner).lock()->m_material;
-	
+
 
 	for (const auto& [pipeHandle, prevParticleHandle] : m_frontParticleMap)
 	{
@@ -40,7 +40,7 @@ void TreePipeNode::InsertInterpolation(const float a)
 
 	const auto ownerGlobalTransform = scene->GetDataComponent<GlobalTransform>(owner);
 	auto parentGlobalTransform = scene->GetDataComponent<GlobalTransform>(parent);
-	
+
 	GlobalTransform globalTransform;
 	globalTransform.SetValue(glm::mix(ownerGlobalTransform.GetPosition(), parentGlobalTransform.GetPosition(), a),
 		glm::mix(ownerGlobalTransform.GetEulerRotation(), scene->HasPrivateComponent<TreePipeNode>(parent) ? parentGlobalTransform.GetEulerRotation() : ownerGlobalTransform.GetEulerRotation(), a),
@@ -55,6 +55,8 @@ void TreePipeNode::InsertInterpolation(const float a)
 
 void TreePipeNode::OnDestroy()
 {
+	Wait();
+	m_needPacking = false;
 	m_frontParticlePhysics2D = {};
 	m_frontParticleMap = {};
 	m_backParticlePhysics2D = {};
@@ -98,4 +100,160 @@ void TreePipeNode::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 		}
 		ImGui::End();
 	}
+}
+
+void TreePipeNode::Merge(const PipeModelParameters& pipeModelParameters)
+{
+	m_tasks.emplace_back(Jobs::AddTask([&](unsigned threadIndex) {
+		const auto scene = GetScene();
+		const auto owner = GetOwner();
+		const auto childrenEntities = scene->GetChildren(owner);
+		std::vector<std::shared_ptr<TreePipeNode>> childrenNodes;
+		
+		std::shared_ptr<TreePipeNode> mainChildNode{};
+		for (auto childEntity : childrenEntities)
+		{
+			if (scene->HasPrivateComponent<TreePipeNode>(childEntity))
+			{
+				const auto childNode = scene->GetOrSetPrivateComponent<TreePipeNode>(childEntity).lock();
+				if (childNode->m_apical) mainChildNode = childNode;
+				childrenNodes.push_back(childNode);
+			}
+		}
+		for (const auto& childNode : childrenNodes) childNode->Wait();
+		if (!childrenNodes.empty() && !mainChildNode) mainChildNode = childrenNodes.front();
+		m_centerDirectionRadius = 0.0f;
+		if (childrenNodes.empty())
+		{
+			for (auto& particle : m_frontParticlePhysics2D.RefParticles())
+			{
+				particle.SetColor(glm::vec4(1.0f));
+				particle.SetPosition(glm::vec2(0.0f));
+
+				particle.m_data.m_mainChild = true;
+			}
+			//For flow end, set only particle at the center.
+			for (auto& particle : m_backParticlePhysics2D.RefParticles())
+			{
+				particle.SetColor(glm::vec4(1.0f));
+				particle.SetPosition(glm::vec2(0.0f));
+
+				particle.m_data.m_mainChild = true;
+			}
+			return;
+		}
+		
+		if (childrenNodes.size() == 1)
+		{
+			//Copy from child flow start to self flow start
+			const auto& childNode = childrenNodes.front();
+			const auto& childPhysics2D = childNode->m_frontParticlePhysics2D;
+			assert(m_frontParticlePhysics2D.PeekParticles().size() == childPhysics2D.PeekParticles().size());
+			assert(m_frontParticlePhysics2D.PeekParticles().size() == childPhysics2D.PeekParticles().size());
+			for (const auto& childParticle : childPhysics2D.PeekParticles())
+			{
+				const auto nodeStartParticleHandle = m_frontParticleMap.at(childParticle.m_data.m_pipeHandle);
+				const auto nodeEndParticleHandle = m_backParticleMap.at(childParticle.m_data.m_pipeHandle);
+				auto& nodeStartParticle = m_frontParticlePhysics2D.RefParticle(nodeStartParticleHandle);
+				auto& nodeEndParticle = m_backParticlePhysics2D.RefParticle(nodeEndParticleHandle);
+				nodeStartParticle.SetColor(childParticle.GetColor());
+				nodeStartParticle.SetPosition(childParticle.GetPosition());
+				nodeEndParticle.SetColor(childParticle.GetColor());
+				nodeEndParticle.SetPosition(childParticle.GetPosition());
+
+				nodeStartParticle.m_data.m_mainChild = nodeEndParticle.m_data.m_mainChild = true;
+			}
+			return;
+		}
+		m_needPacking = true;
+		const auto& mainChildPhysics2D = mainChildNode->m_frontParticlePhysics2D;
+		for (const auto& mainChildParticle : mainChildPhysics2D.PeekParticles())
+		{
+			const auto nodeStartParticleHandle = m_frontParticleMap.at(mainChildParticle.m_data.m_pipeHandle);
+			const auto nodeEndParticleHandle = m_backParticleMap.at(mainChildParticle.m_data.m_pipeHandle);
+			auto& nodeStartParticle = m_frontParticlePhysics2D.RefParticle(nodeStartParticleHandle);
+			auto& nodeEndParticle = m_backParticlePhysics2D.RefParticle(nodeEndParticleHandle);
+			nodeStartParticle.SetColor(mainChildParticle.GetColor());
+			nodeStartParticle.SetPosition(mainChildParticle.GetPosition());
+			nodeEndParticle.SetColor(mainChildParticle.GetColor());
+			nodeEndParticle.SetPosition(mainChildParticle.GetPosition());
+
+			nodeStartParticle.m_data.m_mainChild = nodeEndParticle.m_data.m_mainChild = true;
+		}
+		int index = 0;
+		const auto nodeGlobalTransform = scene->GetDataComponent<GlobalTransform>(owner);
+		for (const auto& childNode : childrenNodes)
+		{
+			if (childNode == mainChildNode) continue;
+			auto& childPhysics2D = childNode->m_frontParticlePhysics2D;
+			auto childNodeGlobalTransform = scene->GetDataComponent<GlobalTransform>(childNode->GetOwner());
+			const auto childNodeFront = glm::inverse(nodeGlobalTransform.GetRotation()) * childNodeGlobalTransform.GetRotation() * glm::vec3(0, 0, -1);
+			auto offset = glm::normalize(glm::vec2(childNodeFront.x, childNodeFront.y));
+			if (glm::isnan(offset.x) || glm::isnan(offset.y))
+			{
+				offset = glm::vec2(1, 0);
+			}
+			childNode->m_centerDirectionRadius = childPhysics2D.GetDistanceToCenter(-offset) + 1.0f;
+			offset = (mainChildPhysics2D.GetDistanceToCenter(offset) + childNode->m_centerDirectionRadius + 1.0f) * offset;
+			childNode->m_offset = offset;
+			for (auto& childParticle : childPhysics2D.RefParticles())
+			{
+				childParticle.SetPosition(childParticle.GetPosition() + offset);
+
+				const auto nodeStartParticleHandle = m_frontParticleMap.at(childParticle.m_data.m_pipeHandle);
+				const auto nodeEndParticleHandle = m_backParticleMap.at(childParticle.m_data.m_pipeHandle);
+				auto& nodeStartParticle = m_frontParticlePhysics2D.RefParticle(nodeStartParticleHandle);
+				auto& nodeEndParticle = m_backParticlePhysics2D.RefParticle(nodeEndParticleHandle);
+				nodeStartParticle.SetColor(childParticle.GetColor());
+				nodeStartParticle.SetPosition(childParticle.GetPosition());
+				nodeEndParticle.SetColor(childParticle.GetColor());
+				nodeEndParticle.SetPosition(childParticle.GetPosition());
+
+				nodeStartParticle.m_data.m_mainChild = nodeEndParticle.m_data.m_mainChild = false;
+			}
+			index++;
+		}
+		}
+	)
+	);
+}
+
+void TreePipeNode::Pack(const PipeModelParameters& pipeModelParameters)
+{
+	Wait();
+	if(!m_needPacking) return;
+	m_needPacking = false;
+	if(m_frontParticlePhysics2D.PeekParticles().size() <= 1) return;
+	m_tasks.emplace_back(Jobs::AddTask([&](unsigned threadIndex)
+		{
+			const auto iterations = pipeModelParameters.m_simulationIterationCellFactor * m_frontParticlePhysics2D.RefParticles().size();
+			for (int i = 0; i < iterations; i++) {
+				m_frontParticlePhysics2D.Simulate(1, [&](auto& particle)
+					{
+						//Apply gravity
+						particle.SetPosition(particle.GetPosition() - m_frontParticlePhysics2D.GetMassCenter());
+						if (glm::length(particle.GetPosition()) > 0.0f) {
+							const glm::vec2 acceleration = pipeModelParameters.m_gravityStrength * -glm::normalize(particle.GetPosition());
+							particle.SetAcceleration(acceleration);
+						}
+					}
+				);
+
+				if (i > pipeModelParameters.m_minimumSimulationIteration && m_frontParticlePhysics2D.GetMaxParticleVelocity() < pipeModelParameters.m_particleStabilizeSpeed)
+				{
+					break;
+				}
+			}
+		})
+	);
+}
+
+void TreePipeNode::Wait()
+{
+	if(m_tasks.empty()) return;
+	for (const auto& i : m_tasks)
+	{
+		i.wait();
+	}
+	m_tasks.clear();
 }
