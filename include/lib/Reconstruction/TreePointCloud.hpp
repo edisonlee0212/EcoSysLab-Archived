@@ -37,9 +37,8 @@ namespace EcoSysLab {
 		std::vector<std::pair<float, PointHandle>> m_neighborScatterPointP0;
 
 		std::unordered_map<BranchHandle, float> m_neighborBranchP3;
-		BranchHandle m_parentHandle = -1;
-		std::vector<BranchHandle> m_childHandles;
 
+		std::vector<BranchHandle> m_childHandles;
 	};
 
 	struct OperatingBranch {
@@ -67,13 +66,16 @@ namespace EcoSysLab {
 	};
 
 	struct ConnectivityGraphSettings {
-		float m_pointPointConnectionDetectionRadius = 0.03f;
-		float m_pointBranchConnectionDetectionRange = 1.0f;
-		float m_branchBranchConnectionMaxLengthRange = 3.0f;
-		float m_angleLimit = 45.0f;
+		float m_pointPointConnectionDetectionRadius = 0.05f;
+		float m_pointBranchConnectionDetectionRange = 0.5f;
+		float m_branchBranchConnectionMaxLengthRange = 1.0f;
+		float m_directionConnectionAngleLimit = 30.0f;
+		float m_indirectConnectionAngleLimit = 90.0f;
 		bool m_checkReverse = true;
 		float m_branchShortening = 0.0f;
 		float m_voxelSize = 0.05f;
+
+		int m_maxCandidateSize = 3;
 		void OnInspect();
 	};
 
@@ -102,7 +104,8 @@ namespace EcoSysLab {
 
 		float m_minimumRootThickness = 0.02f;
 
-		float m_angleLimit = 90.0f;
+		
+		//float m_angleLimit = 90.0f;
 		void OnInspect();
 	};
 
