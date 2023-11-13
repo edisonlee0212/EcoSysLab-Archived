@@ -19,7 +19,7 @@ namespace EcoSysLab {
 		float m_maxDistanceToCenter = 0.0f;
 		glm::vec2 m_massCenter = glm::vec2(0.0f);
 		float m_maxParticleVelocity = 0.0f;
-		float m_simulationTime = 0.0f;
+		double m_simulationTime = 0.0f;
 	public:
 		bool m_parallel = false;
 		[[nodiscard]] float GetDistanceToCenter(const glm::vec2& direction) const;
@@ -39,6 +39,8 @@ namespace EcoSysLab {
 		void Simulate(size_t iterations, const std::function<void(Particle2D<ParticleData>& particle)>& modifyParticleFunc);
 		[[nodiscard]] glm::vec2 GetMassCenter() const;
 		[[nodiscard]] float GetMaxDistanceToCenter() const;
+
+		[[nodiscard]] double GetLastSimulationTime() const;
 		void OnInspect(const std::function<void(glm::vec2 position)>& func, const std::function<void(ImVec2 origin, float zoomFactor, ImDrawList*)>& drawFunc, bool showGrid = false);
 	};
 
@@ -375,6 +377,12 @@ namespace EcoSysLab {
 	float ParticlePhysics2D<ParticleData>::GetMaxDistanceToCenter() const
 	{
 		return m_maxDistanceToCenter;
+	}
+
+	template <typename ParticleData>
+	double ParticlePhysics2D<ParticleData>::GetLastSimulationTime() const
+	{
+		return m_simulationTime;
 	}
 
 	template <typename T>

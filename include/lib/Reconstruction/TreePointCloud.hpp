@@ -67,19 +67,13 @@ namespace EcoSysLab {
 	};
 
 	struct ConnectivityGraphSettings {
-		float m_scatterPointsConnectionMaxLength = 0.03f;
-
-		float m_scatterPointBranchConnectionMaxLength = 0.1f;
-
-		float m_edgeExtendStep = 0.05f;
-		float m_edgeLength = 0.05f;
-		int m_maxTimeout = 10;
-		float m_forceConnectionAngleLimit = 135.0f;
-		float m_forceConnectionRatio = 0.0f;
+		float m_pointPointConnectionDetectionRadius = 0.03f;
+		float m_pointBranchConnectionDetectionRange = 1.0f;
+		float m_branchBranchConnectionMaxLengthRange = 3.0f;
 		float m_angleLimit = 45.0f;
 		bool m_checkReverse = true;
-		float m_branchShortening = 0.15f;
-
+		float m_branchShortening = 0.0f;
+		float m_voxelSize = 0.05f;
 		void OnInspect();
 	};
 
@@ -107,6 +101,8 @@ namespace EcoSysLab {
 		int m_minimumNodeCount = 1;
 
 		float m_minimumRootThickness = 0.02f;
+
+		float m_angleLimit = 90.0f;
 		void OnInspect();
 	};
 
@@ -135,6 +131,7 @@ namespace EcoSysLab {
 		void CalculateNodeTransforms(ReconstructionSkeleton& skeleton);
 
 	public:
+		TreeMeshGeneratorSettings m_treeMeshGeneratorSettings {};
 		void ImportGraph(const std::filesystem::path& path, float scaleFactor = 0.1f);
 		void ExportForestOBJ(const std::filesystem::path& path, const TreeMeshGeneratorSettings& meshGeneratorSettings);
 		glm::vec3 m_min;
@@ -161,6 +158,8 @@ namespace EcoSysLab {
 		void BuildSkeletons(const ReconstructionSettings& reconstructionSettings);
 
 		void ClearMeshes() const;
+
+		void OnCreate() override;
 
 		void FormGeometryEntity(const TreeMeshGeneratorSettings& meshGeneratorSettings);
 
