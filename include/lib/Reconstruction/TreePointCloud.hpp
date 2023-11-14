@@ -36,9 +36,8 @@ namespace EcoSysLab {
 		float m_endThickness = 0.0f;
 		std::vector<std::pair<float, PointHandle>> m_neighborScatterPointP0;
 
-		std::unordered_map<BranchHandle, float> m_neighborBranchP3;
+		std::unordered_map<BranchHandle, float> m_neighborBranchP3s;
 
-		std::vector<BranchHandle> m_childHandles;
 	};
 
 	struct OperatingBranch {
@@ -55,6 +54,10 @@ namespace EcoSysLab {
 
 		int m_skeletonIndex = -1;
 		std::vector<NodeHandle> m_chainNodeHandles;
+
+		std::multimap<float, BranchHandle> m_childCandidates;
+		std::multimap<float, BranchHandle> m_parentCandidates;
+		bool m_used = false;
 		void Apply(const ScannedBranch& target);
 	};
 
@@ -75,7 +78,6 @@ namespace EcoSysLab {
 		float m_branchShortening = 0.0f;
 		float m_voxelSize = 0.05f;
 
-		int m_maxCandidateSize = 3;
 		void OnInspect();
 	};
 
@@ -133,10 +135,15 @@ namespace EcoSysLab {
 
 		void CalculateNodeTransforms(ReconstructionSkeleton& skeleton);
 
+		void BuildConnectionBranch(
+			ReconstructionSkeleton& skeleton, const BranchHandle processingBranchHandle, NodeHandle& prevNodeHandle);
+		void AttachBranch();
 	public:
 		TreeMeshGeneratorSettings m_treeMeshGeneratorSettings {};
+		ReconstructionSettings m_reconstructionSettings{};
+		ConnectivityGraphSettings m_connectivityGraphSettings{};
 		void ImportGraph(const std::filesystem::path& path, float scaleFactor = 0.1f);
-		void ExportForestOBJ(const std::filesystem::path& path, const TreeMeshGeneratorSettings& meshGeneratorSettings);
+		void ExportForestOBJ(const std::filesystem::path& path);
 		glm::vec3 m_min;
 		glm::vec3 m_max;
 		std::vector<ScatteredPoint> m_scatteredPoints;
@@ -156,17 +163,17 @@ namespace EcoSysLab {
 		std::vector<std::pair<glm::vec3, glm::vec3>> m_branchConnections;
 		std::vector<std::pair<glm::vec3, glm::vec3>> m_filteredBranchConnections;
 
-		void EstablishConnectivityGraph(const ConnectivityGraphSettings& settings);
+		void EstablishConnectivityGraph();
 
-		void BuildSkeletons(const ReconstructionSettings& reconstructionSettings);
+		void BuildSkeletons();
 
 		void ClearMeshes() const;
 
 		void OnCreate() override;
 
-		void FormGeometryEntity(const TreeMeshGeneratorSettings& meshGeneratorSettings);
+		void FormGeometryEntity() const;
 
-		std::vector<std::shared_ptr<Mesh>> GenerateForestBranchMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings) const;
-		std::vector<std::shared_ptr<Mesh>> GenerateFoliageMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings) const;
+		std::vector<std::shared_ptr<Mesh>> GenerateForestBranchMeshes() const;
+		std::vector<std::shared_ptr<Mesh>> GenerateFoliageMeshes() const;
 	};
 }
