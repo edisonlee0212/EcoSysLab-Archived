@@ -71,13 +71,12 @@ namespace EcoSysLab {
 	struct ConnectivityGraphSettings {
 		float m_pointPointConnectionDetectionRadius = 0.05f;
 		float m_pointBranchConnectionDetectionRange = 0.5f;
-		float m_branchBranchConnectionMaxLengthRange = 1.0f;
-		float m_directionConnectionAngleLimit = 30.0f;
+		float m_branchBranchConnectionMaxLengthRange = 3.0f;
+		float m_directionConnectionAngleLimit = 60.0f;
 		float m_indirectConnectionAngleLimit = 90.0f;
 		bool m_checkReverse = true;
 		float m_branchShortening = 0.0f;
-		float m_voxelSize = 0.05f;
-
+		
 		void OnInspect();
 	};
 
@@ -135,9 +134,9 @@ namespace EcoSysLab {
 
 		void CalculateNodeTransforms(ReconstructionSkeleton& skeleton);
 
-		void BuildConnectionBranch(
-			ReconstructionSkeleton& skeleton, const BranchHandle processingBranchHandle, NodeHandle& prevNodeHandle);
-		void AttachBranch();
+		void BuildConnectionBranch(int skeletonIndex, BranchHandle processingBranchHandle, NodeHandle& prevNodeHandle);
+
+		void ApplyCurve(int skeletonIndex, const OperatingBranch& branch);
 	public:
 		TreeMeshGeneratorSettings m_treeMeshGeneratorSettings {};
 		ReconstructionSettings m_reconstructionSettings{};
