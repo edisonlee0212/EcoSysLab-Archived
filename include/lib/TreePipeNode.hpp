@@ -14,6 +14,9 @@ namespace EcoSysLab
 	class TreePipeNode : public IPrivateComponent
 	{
 	public:
+		GlobalTransform m_desiredGlobalTransform{};
+
+
 		ParticlePhysics2D<CellParticlePhysicsData> m_frontParticlePhysics2D;
 		std::unordered_map<PipeHandle, ParticleHandle> m_frontParticleMap{};
 

@@ -237,6 +237,12 @@ void TreePipeBase::AdjustGraph() const
 	const auto scene = GetScene();
 	for (auto entity : sortedEntityList)
 	{
+		const auto node = scene->GetOrSetPrivateComponent<TreePipeNode>(entity).lock();
+		scene->SetDataComponent(entity, node->m_desiredGlobalTransform);
+	}
+	TransformGraph::CalculateTransformGraphForDescendents(scene, GetOwner());
+	for (auto entity : sortedEntityList)
+	{
 		auto parent = scene->GetParent(entity);
 		const auto node = scene->GetOrSetPrivateComponent<TreePipeNode>(entity).lock();
 		const auto parentGlobalTransform = scene->GetDataComponent<GlobalTransform>(parent);
@@ -258,16 +264,30 @@ void TreePipeBase::AdjustGraph() const
 			const float outerRadius = node->m_frontParticlePhysics2D.GetDistanceToCenter(glm::normalize(node->m_offset));
 			const float innerRadius = node->m_frontParticlePhysics2D.GetDistanceToCenter(-glm::normalize(node->m_offset));
 			const auto offsetDirection = glm::normalize(node->m_offset);
-			const auto newOffset = (offsetLength + innerRadius + outerRadius - outerRadius * cosFront) * offsetDirection;
-			globalPosition += parentUp * newOffset.y * m_pipeModelParameters.m_profileDefaultCellRadius;
-			globalPosition += parentLeft * newOffset.x * m_pipeModelParameters.m_profileDefaultCellRadius;
-			globalPosition += parentFront * (sinFront * outerRadius) * m_pipeModelParameters.m_profileDefaultCellRadius;
+			const auto newOffset = (offsetLength + innerRadius + (outerRadius - outerRadius * cosFront) * m_graphAdjustmentSettings.m_rotationPushRatio) * offsetDirection;
+			globalPosition += parentUp * newOffset.y * m_graphAdjustmentSettings.m_sidePushRatio * m_pipeModelParameters.m_profileDefaultCellRadius;
+			globalPosition += parentLeft * newOffset.x * m_graphAdjustmentSettings.m_sidePushRatio * m_pipeModelParameters.m_profileDefaultCellRadius;
+			globalPosition += parentFront * (sinFront * outerRadius * m_graphAdjustmentSettings.m_rotationPushRatio) * m_pipeModelParameters.m_profileDefaultCellRadius;
 		}
-		globalPosition += parentFront * sinFront * maxDistanceToCenter * m_pipeModelParameters.m_profileDefaultCellRadius;
+		globalPosition += parentFront * sinFront * maxDistanceToCenter * m_graphAdjustmentSettings.m_frontPushRatio * m_pipeModelParameters.m_profileDefaultCellRadius;
 
 		globalTransform.SetPosition(globalPosition);
 		scene->SetDataComponent(entity, globalTransform);
 	}
+	TransformGraph::CalculateTransformGraphForDescendents(scene, GetOwner());
+}
+
+void TreePipeBase::RestoreGraph() const
+{
+	std::vector<Entity> sortedEntityList;
+	GatherChildrenEntities(sortedEntityList);
+	const auto scene = GetScene();
+	for (auto entity : sortedEntityList)
+	{
+		const auto node = scene->GetOrSetPrivateComponent<TreePipeNode>(entity).lock();
+		scene->SetDataComponent(entity, node->m_desiredGlobalTransform);
+	}
+	TransformGraph::CalculateTransformGraphForDescendents(scene, GetOwner());
 }
 
 void TreePipeBase::BuildPipes()
@@ -327,8 +347,6 @@ void TreePipeBase::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 	ImGui::DragFloat("Physics simulation iteration cell factor", &m_pipeModelParameters.m_simulationIterationCellFactor, 0.1f, 0.0f, 50.0f);
 	ImGui::DragInt("Physics simulation minimum iteration", &m_pipeModelParameters.m_minimumSimulationIteration, 1, 0, 50);
 	ImGui::DragFloat("Physics simulation particle stabilize speed", &m_pipeModelParameters.m_particleStabilizeSpeed, 0.1f, 0.0f, 100.0f);
-	static bool adjustGraph = true;
-	ImGui::Checkbox("Adjust graph", &adjustGraph);
 	static PrivateComponentRef tempTree{};
 	if (editorLayer->DragAndDropButton<Tree>(tempTree, "Target tree"))
 	{
@@ -337,10 +355,11 @@ void TreePipeBase::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 			InitializeNodesWithSkeleton(tree->m_treeModel.PeekShootSkeleton());
 			Packing();
 			TransformGraph::CalculateTransformGraphForDescendents(GetScene(), GetOwner());
-			if (adjustGraph) AdjustGraph();
 		}
 		tempTree.Clear();
 	}
+	
+	
 	static float frontControlPointRatio = 0.2f;
 	static float backControlPointRatio = 0.2f;
 	ImGui::DragFloat("Front Control Point Ratio", &frontControlPointRatio, 0.01f, 0.01f, 0.5f);
@@ -349,7 +368,28 @@ void TreePipeBase::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 	{
 		InitializeStrandRenderer(frontControlPointRatio, backControlPointRatio);
 	}
+	if(ImGui::TreeNodeEx("Graph Adjustment settings"))
+	{
+		ImGui::DragFloat("Side push ratio", &m_graphAdjustmentSettings.m_sidePushRatio, 0.01f, 0.0f, 2.0f);
+		ImGui::DragFloat("Front push ratio", &m_graphAdjustmentSettings.m_frontPushRatio, 0.01f, 0.0f, 2.0f);
+		ImGui::DragFloat("Rotation push ratio", &m_graphAdjustmentSettings.m_rotationPushRatio, 0.01f, 0.0f, 2.0f);
+		ImGui::TreePop();
+	}
+	if (ImGui::Button("Adjust graph"))
+	{
+		AdjustGraph();
+		InitializeStrandRenderer(frontControlPointRatio, backControlPointRatio);
+	}
+	if (ImGui::Button("Restore graph"))
+	{
+		RestoreGraph();
+		InitializeStrandRenderer(frontControlPointRatio, backControlPointRatio);
+	}
 
+	if(ImGui::Button("Clear Strands"))
+	{
+		ClearStrands();
+	}
 	editorLayer->DragAndDropButton<Material>(m_nodeMaterial, "Node Material");
 	editorLayer->DragAndDropButton<Mesh>(m_nodeMesh, "Node Mesh");
 }

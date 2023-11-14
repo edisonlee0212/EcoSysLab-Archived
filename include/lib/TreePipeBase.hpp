@@ -8,6 +8,13 @@
 using namespace EvoEngine;
 namespace EcoSysLab
 {
+	struct GraphAdjustmentSettings
+	{
+		float m_sidePushRatio = 1.0f;
+		float m_frontPushRatio = 1.0f;
+		float m_rotationPushRatio = 1.0f;
+	};
+
 	class TreePipeBase : public IPrivateComponent
 	{
 		void GatherChildrenEntities(std::vector<Entity>& list) const;
@@ -18,7 +25,7 @@ namespace EcoSysLab
 	public:
 		PipeModelPipeGroup m_pipeGroup;
 		PipeModelParameters m_pipeModelParameters{};
-
+		GraphAdjustmentSettings m_graphAdjustmentSettings;
 		AssetRef m_nodeMaterial{};
 		AssetRef m_nodeMesh{};
 		template<typename SkeletonData, typename FlowData, typename NodeData>
@@ -28,6 +35,7 @@ namespace EcoSysLab
 		void OnCreate() override;
 		void Packing();
 		void AdjustGraph() const;
+		void RestoreGraph() const;
 		void BuildPipes();
 		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 	};
@@ -67,7 +75,7 @@ namespace EcoSysLab
 				ownerGlobalTransform.m_value
 				* (glm::translate(flow.m_info.m_globalEndPosition) * glm::mat4_cast(rotation) * glm::scale(glm::vec3(0.02f)));
 			scene->SetDataComponent(newEntity, globalTransform);
-
+			tpn->m_desiredGlobalTransform = globalTransform;
 			if (parentHandle == -1)
 			{
 				scene->SetParent(newEntity, owner);
