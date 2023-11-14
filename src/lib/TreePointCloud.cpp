@@ -953,19 +953,15 @@ void TreePointCloud::BuildSkeletons() {
 	for (int i = 0; i < m_scannedBranches.size(); i++) {
 		m_operatingBranches[i].Apply(m_scannedBranches[i]);
 	}
-	for (auto& branch : m_operatingBranches) {
-		for (const auto& branchEndHandle : branch.m_parentCandidates) {
-			auto& candidate = m_operatingBranches[branchEndHandle.first];
-			candidate.m_childCandidates.insert({ branchEndHandle.first, branch.m_handle });
-		}
-	}
+
+	/*
 	for (auto& branch : m_operatingBranches) {
 		if(branch.m_parentCandidates.empty()) continue;
-		auto& candidate = m_operatingBranches[branch.m_parentCandidates.begin()->second];
+		auto& candidate = m_operatingBranches[branch.m_parentCandidates.front()];
 		candidate.m_childHandles.emplace_back(branch.m_handle);
 		m_filteredBranchConnections.emplace_back(branch.m_bezierCurve.m_p0,
 			candidate.m_bezierCurve.m_p3);
-	}
+	}*/
 	std::vector<std::pair<glm::vec3, BranchHandle>> rootBranchHandles;
 	for (auto& branch : m_operatingBranches) {
 		branch.m_chainNodeHandles.clear();
@@ -988,46 +984,66 @@ void TreePointCloud::BuildSkeletons() {
 			branch.m_bezierCurve.GetAxis(1.0f - m_reconstructionSettings.m_branchShortening) *
 			shortenedLength * 0.25f;
 	}
+	//std::unordered_map<BranchHandle, size_t> skeletonIndices{};
 	for (const auto& rootBranchHandle : rootBranchHandles) {
-		allocatedBranchHandles.emplace(rootBranchHandle.second);
+		//allocatedBranchHandles.emplace(rootBranchHandle.second);
+		m_skeletons.emplace_back();
+		m_operatingBranches[rootBranchHandle.second].m_skeletonIndex = m_skeletons.size() - 1;
+		m_operatingBranches[rootBranchHandle.second].m_used = true;
 	}
-	for (const auto& rootBranchHandle : rootBranchHandles) {
-		auto& skeleton = m_skeletons.emplace_back();
-		skeleton.m_data.m_rootPosition = rootBranchHandle.first;
-		std::queue<BranchHandle> processingBranchHandles;
-		processingBranchHandles.emplace(rootBranchHandle.second);
-		while (!processingBranchHandles.empty()) {
-			auto processingBranchHandle = processingBranchHandles.front();
-			processingBranchHandles.pop();
-			for (const auto& childBranchHandle : m_operatingBranches[processingBranchHandle].m_childHandles) {
-				if (allocatedBranchHandles.find(childBranchHandle) != allocatedBranchHandles.end()) continue;
-				allocatedBranchHandles.emplace(childBranchHandle);
-				processingBranchHandles.emplace(childBranchHandle);
-				m_operatingBranches[childBranchHandle].m_parentHandle = processingBranchHandle;
-			}
-			NodeHandle prevNodeHandle = -1;
-			if (m_operatingBranches[processingBranchHandle].m_handle == rootBranchHandle.second) {
-				prevNodeHandle = 0;
-				m_operatingBranches[processingBranchHandle].m_chainNodeHandles.emplace_back(0);
-			}
-			else {
-				BuildConnectionBranch(skeleton, processingBranchHandle, prevNodeHandle);
-			}
+	bool newBranchAllocated = true;
+	const auto operatingBranchSize = m_operatingBranches.size();
+	while (newBranchAllocated)
+	{
+		newBranchAllocated = false;
+		for (int processingBranchHandle = 0; processingBranchHandle < operatingBranchSize; processingBranchHandle++)
+		{
 			auto& processingBranch = m_operatingBranches[processingBranchHandle];
-			processingBranch.m_skeletonIndex = m_skeletons.size() - 1;
-			float chainLength = processingBranch.m_bezierCurve.GetLength();
-			int chainAmount = glm::max(2, (int)(chainLength /
-				m_reconstructionSettings.m_internodeLength));
-			for (int i = 1; i < chainAmount; i++) {
-				auto newNodeHandle = skeleton.Extend(prevNodeHandle, false);
-				processingBranch.m_chainNodeHandles.emplace_back(newNodeHandle);
-				prevNodeHandle = newNodeHandle;
+			if (processingBranch.m_parentCandidates.empty()) continue;
+			const auto bestParentCandidateHandle = processingBranch.m_parentCandidates.back();
+			auto& parentCandidate = m_operatingBranches[bestParentCandidateHandle];
+			if (parentCandidate.m_used)
+			{
+				newBranchAllocated = true;
+				//Remove child and parent candidate.
+				processingBranch.m_parentCandidates.pop_back();
+
+				//Establish relationship
+				//allocatedBranchHandles.emplace(childCandidateHandle);
+				processingBranch.m_parentHandle = bestParentCandidateHandle;
+				processingBranch.m_skeletonIndex = parentCandidate.m_skeletonIndex;
+				parentCandidate.m_childHandles.emplace_back(processingBranchHandle);
+				m_filteredBranchConnections.emplace_back(processingBranch.m_bezierCurve.m_p0,
+					parentCandidate.m_bezierCurve.m_p3);
+
+				//Connect branches.
+				auto& skeleton = m_skeletons[processingBranch.m_skeletonIndex];
+				NodeHandle prevNodeHandle = -1;
+				if (parentCandidate.m_parentHandle == -1) {
+					prevNodeHandle = 0;
+					processingBranch.m_chainNodeHandles.emplace_back(0);
+				}
+				else {
+					BuildConnectionBranch(skeleton, processingBranchHandle, prevNodeHandle);
+				}
+				auto& processingBranch2 = m_operatingBranches[processingBranchHandle];
+				float chainLength = processingBranch2.m_bezierCurve.GetLength();
+				int chainAmount = glm::max(2, (int)(chainLength /
+					m_reconstructionSettings.m_internodeLength));
+				for (int i = 1; i < chainAmount; i++) {
+					auto newNodeHandle = skeleton.Extend(prevNodeHandle, false);
+					processingBranch2.m_chainNodeHandles.emplace_back(newNodeHandle);
+					prevNodeHandle = newNodeHandle;
+				}
+				//assert(glm::isnan(processingBranch.m_bezierCurve.m_p0.x))
+				ApplyCurve(skeleton, processingBranch2);
+
 			}
-			//assert(glm::isnan(processingBranch.m_bezierCurve.m_p0.x))
-			ApplyCurve(skeleton, processingBranch);
 		}
+	}
 
-
+	for (auto& skeleton : m_skeletons)
+	{
 		skeleton.SortLists();
 		auto& sortedNodeList = skeleton.RefSortedNodeList();
 		auto& rootNode = skeleton.RefNode(0);
@@ -1095,7 +1111,6 @@ void TreePointCloud::BuildSkeletons() {
 		skeleton.CalculateFlows();
 		skeleton.CalculateDistance();
 	}
-
 
 	for (auto& allocatedPoint : m_allocatedPoints) {
 		const auto& treePart = m_treeParts[allocatedPoint.m_treePartHandle];
@@ -1530,9 +1545,16 @@ void OperatingBranch::Apply(const ScannedBranch& target) {
 	m_endThickness = target.m_endThickness;
 	m_parentHandle = -1;
 	m_parentCandidates.clear();
+
+	std::multimap<float, BranchHandle> sortedParentCandidates{};
 	for (const auto& data : target.m_neighborBranchP3s)
 	{
-		m_parentCandidates.insert({ data.second, data.first });
+		sortedParentCandidates.insert({ data.second, data.first });
+	}
+	m_parentCandidates.reserve(sortedParentCandidates.size());
+	for (auto it = sortedParentCandidates.begin(); it != sortedParentCandidates.end(); ++it)
+	{
+		m_parentCandidates.emplace_back(it->second);
 	}
 	m_skeletonIndex = -1;
 	m_used = false;

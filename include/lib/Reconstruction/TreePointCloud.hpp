@@ -55,9 +55,9 @@ namespace EcoSysLab {
 		int m_skeletonIndex = -1;
 		std::vector<NodeHandle> m_chainNodeHandles;
 
-		std::multimap<float, BranchHandle> m_childCandidates;
-		std::multimap<float, BranchHandle> m_parentCandidates;
+		std::vector<BranchHandle> m_parentCandidates;
 		bool m_used = false;
+
 		void Apply(const ScannedBranch& target);
 	};
 
