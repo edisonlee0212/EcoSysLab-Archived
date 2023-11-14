@@ -206,7 +206,7 @@ namespace EcoSysLab
 		basePoint.m_color = glm::vec4(0.6f, 0.3f, 0.0f, 1.0f);
 		const auto& secondPipeSegment = PeekPipeSegment(pipeSegmentHandles[0]);
 		auto basePointDistance = glm::distance(baseInfo.m_globalPosition, secondPipeSegment.m_info.m_globalPosition);
-		basePoint.m_normal = glm::normalize(baseInfo.m_globalRotation * glm::vec3(0, 0, -1)); //glm::normalize(secondPipeSegment.m_info.m_globalPosition - baseInfo.m_globalPosition);
+		basePoint.m_normal = glm::normalize(baseInfo.m_globalRotation * glm::vec3(0, 0, -1));
 		basePoint.m_position = baseInfo.m_globalPosition - basePoint.m_normal * basePointDistance * frontControlPointRatio;
 		basePoint.m_thickness = baseInfo.m_thickness;
 		points.emplace_back(basePoint);
@@ -231,7 +231,7 @@ namespace EcoSysLab
 			auto prevDistance = glm::distance(pipeSegment.m_info.m_globalPosition, baseInfo.m_globalPosition);
 			auto nextDistance = glm::distance(pipeSegment.m_info.m_globalPosition, nextPosition);
 			auto distance = glm::min(prevDistance, nextDistance);
-			point.m_normal = glm::normalize(pipeSegment.m_info.m_globalRotation * glm::vec3(0, 0, -1)); //glm::normalize(nextPosition - baseInfo.m_globalPosition);//
+			point.m_normal = glm::normalize(pipeSegment.m_info.m_globalRotation * glm::vec3(0, 0, -1));
 			point.m_position = pipeSegment.m_info.m_globalPosition - point.m_normal * distance * frontControlPointRatio;
 			point.m_thickness = pipeSegment.m_info.m_thickness;
 			points.emplace_back(point);
@@ -257,7 +257,7 @@ namespace EcoSysLab
 			auto nextDistance = glm::distance(pipeSegment.m_info.m_globalPosition, nextPosition);
 			auto distance = glm::min(prevDistance, nextDistance);
 
-			point.m_normal = glm::normalize(pipeSegment.m_info.m_globalRotation * glm::vec3(0, 0, -1)); //glm::normalize(nextPosition - baseInfo.m_globalPosition);//
+			point.m_normal = glm::normalize(pipeSegment.m_info.m_globalRotation * glm::vec3(0, 0, -1));
 			point.m_position = pipeSegment.m_info.m_globalPosition - point.m_normal * distance * frontControlPointRatio;
 			point.m_thickness = pipeSegment.m_info.m_thickness;
 			points.emplace_back(point);

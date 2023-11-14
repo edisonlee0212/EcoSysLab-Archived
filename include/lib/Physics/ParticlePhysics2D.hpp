@@ -11,8 +11,7 @@ namespace EcoSysLab {
 		std::vector<Particle2D<ParticleData>> m_particles2D{};
 		void SolveCollision(ParticleHandle p1Handle, ParticleHandle p2Handle);
 		float m_deltaTime = 0.002f;
-		void Update(const std::function<void(Particle2D<ParticleData>& particle)>& modifyParticleFunc);
-		void InitializeGrid();
+		void UpdateWithGrid(const std::function<void(Particle2D<ParticleData>& particle)>& modifyParticleFunc);
 		void CheckCollisions();
 		glm::vec2 m_min = glm::vec2(FLT_MAX);
 		glm::vec2 m_max = glm::vec2(FLT_MIN);
@@ -21,6 +20,7 @@ namespace EcoSysLab {
 		float m_maxParticleVelocity = 0.0f;
 		double m_simulationTime = 0.0f;
 	public:
+		int m_enableGridOffset = 100;
 		bool m_parallel = false;
 		[[nodiscard]] float GetDistanceToCenter(const glm::vec2& direction) const;
 		[[nodiscard]] float GetMaxParticleVelocity() const;
@@ -60,7 +60,7 @@ namespace EcoSysLab {
 	}
 
 	template <typename T>
-	void ParticlePhysics2D<T>::Update(
+	void ParticlePhysics2D<T>::UpdateWithGrid(
 		const std::function<void(Particle2D<T>& collisionParticle)>& modifyParticleFunc)
 	{
 		if (m_particles2D.empty()) return;
@@ -81,7 +81,7 @@ namespace EcoSysLab {
 				particle.m_deltaPosition = glm::vec2(0);
 			}
 		}
-		InitializeGrid();
+		
 		CheckCollisions();
 
 		m_maxParticleVelocity = 0.0f;
@@ -169,68 +169,93 @@ namespace EcoSysLab {
 			m_massCenter /= m_particles2D.size();
 		}
 	}
-	template <typename T>
-	void ParticlePhysics2D<T>::InitializeGrid()
-	{
-		CalculateMinMax();
-		m_particleGrid2D.Reset(2.0f, m_min, m_max);
-		for (ParticleHandle i = 0; i < m_particles2D.size(); i++)
-		{
-			const auto& particle = m_particles2D[i];
-			m_particleGrid2D.RegisterParticle(particle.m_position, i);
-		}
-	}
 
 	template <typename T>
 	void ParticlePhysics2D<T>::CheckCollisions()
 	{
-		if (m_parallel) {
-			Jobs::ParallelFor(m_particles2D.size(), [&](unsigned i) {
-				const ParticleHandle particleHandle = i;
-				const auto& particle = m_particles2D[particleHandle];
-				const auto& coordinate = m_particleGrid2D.GetCoordinate(particle.m_position);
-				for (int dx = -1; dx <= 1; dx++)
-				{
-					for (int dy = -1; dy <= 1; dy++)
+		CalculateMinMax();
+		if (m_particles2D.size() > m_enableGridOffset) {
+			m_particleGrid2D.Reset(2.0f, m_min, m_max);
+			for (ParticleHandle i = 0; i < m_particles2D.size(); i++)
+			{
+				const auto& particle = m_particles2D[i];
+				m_particleGrid2D.RegisterParticle(particle.m_position, i);
+			}
+			if (m_parallel) {
+				Jobs::ParallelFor(m_particles2D.size(), [&](unsigned i) {
+					const ParticleHandle particleHandle = i;
+					const auto& particle = m_particles2D[particleHandle];
+					const auto& coordinate = m_particleGrid2D.GetCoordinate(particle.m_position);
+					for (int dx = -1; dx <= 1; dx++)
 					{
-						const auto x = coordinate.x + dx;
-						const auto y = coordinate.y + dy;
-						if (x < 0) continue;
-						if (y < 0) continue;
-						if (x >= m_particleGrid2D.m_resolution.x) continue;
-						if (y >= m_particleGrid2D.m_resolution.y) continue;
-						const auto& cell = m_particleGrid2D.RefCell(glm::ivec2(x, y));
-						for (int i = 0; i < cell.m_atomCount; i++)
+						for (int dy = -1; dy <= 1; dy++)
 						{
-							if (const auto particleHandle2 = cell.m_atomHandles[i]; particleHandle != particleHandle2) {
-								SolveCollision(particleHandle, particleHandle2);
+							const auto x = coordinate.x + dx;
+							const auto y = coordinate.y + dy;
+							if (x < 0) continue;
+							if (y < 0) continue;
+							if (x >= m_particleGrid2D.m_resolution.x) continue;
+							if (y >= m_particleGrid2D.m_resolution.y) continue;
+							const auto& cell = m_particleGrid2D.RefCell(glm::ivec2(x, y));
+							for (int i = 0; i < cell.m_atomCount; i++)
+							{
+								if (const auto particleHandle2 = cell.m_atomHandles[i]; particleHandle != particleHandle2) {
+									SolveCollision(particleHandle, particleHandle2);
+								}
+							}
+						}
+					}
+					});
+			}
+			else
+			{
+				for (ParticleHandle particleHandle = 0; particleHandle < m_particles2D.size(); particleHandle++)
+				{
+					const auto& particle = m_particles2D[particleHandle];
+					const auto& coordinate = m_particleGrid2D.GetCoordinate(particle.m_position);
+					for (int dx = -1; dx <= 1; dx++)
+					{
+						for (int dy = -1; dy <= 1; dy++)
+						{
+							const auto x = coordinate.x + dx;
+							const auto y = coordinate.y + dy;
+							if (x < 0) continue;
+							if (y < 0) continue;
+							if (x >= m_particleGrid2D.m_resolution.x) continue;
+							if (y >= m_particleGrid2D.m_resolution.y) continue;
+							const auto& cell = m_particleGrid2D.RefCell(glm::ivec2(x, y));
+							for (int i = 0; i < cell.m_atomCount; i++)
+							{
+								if (const auto particleHandle2 = cell.m_atomHandles[i]; particleHandle != particleHandle2) {
+									SolveCollision(particleHandle, particleHandle2);
+								}
 							}
 						}
 					}
 				}
-				});
+			}
 		}else
 		{
-			for(ParticleHandle particleHandle = 0; particleHandle < m_particles2D.size(); particleHandle++)
+			if(m_parallel)
 			{
-				const auto& particle = m_particles2D[particleHandle];
-				const auto& coordinate = m_particleGrid2D.GetCoordinate(particle.m_position);
-				for (int dx = -1; dx <= 1; dx++)
+				Jobs::ParallelFor(m_particles2D.size(), [&](unsigned i)
 				{
-					for (int dy = -1; dy <= 1; dy++)
-					{
-						const auto x = coordinate.x + dx;
-						const auto y = coordinate.y + dy;
-						if (x < 0) continue;
-						if (y < 0) continue;
-						if (x >= m_particleGrid2D.m_resolution.x) continue;
-						if (y >= m_particleGrid2D.m_resolution.y) continue;
-						const auto& cell = m_particleGrid2D.RefCell(glm::ivec2(x, y));
-						for (int i = 0; i < cell.m_atomCount; i++)
+						const ParticleHandle particleHandle = i;
+						for (ParticleHandle particleHandle2 = 0; particleHandle2 < m_particles2D.size(); particleHandle2++)
 						{
-							if (const auto particleHandle2 = cell.m_atomHandles[i]; particleHandle != particleHandle2) {
+							if (particleHandle != particleHandle2) {
 								SolveCollision(particleHandle, particleHandle2);
 							}
+						}
+				});
+			}else
+			{
+				for (ParticleHandle particleHandle = 0; particleHandle < m_particles2D.size(); particleHandle++)
+				{
+					for (ParticleHandle particleHandle2 = 1; particleHandle2 < m_particles2D.size(); particleHandle2++)
+					{
+						if (particleHandle != particleHandle2) {
+							SolveCollision(particleHandle, particleHandle2);
 						}
 					}
 				}
@@ -353,7 +378,7 @@ namespace EcoSysLab {
 		const auto count = static_cast<size_t>(glm::round(time / m_deltaTime));
 		for (size_t i{ count }; i--;)
 		{
-			Update(modifyParticleFunc);
+			UpdateWithGrid(modifyParticleFunc);
 		}
 	}
 
@@ -363,7 +388,7 @@ namespace EcoSysLab {
 	{
 		for (size_t i{ iterations }; i--;)
 		{
-			Update(modifyParticleFunc);
+			UpdateWithGrid(modifyParticleFunc);
 		}
 	}
 

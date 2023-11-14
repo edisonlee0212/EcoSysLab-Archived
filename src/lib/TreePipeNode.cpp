@@ -224,6 +224,7 @@ void TreePipeNode::Pack(const PipeModelParameters& pipeModelParameters)
 	if(!m_needPacking) return;
 	m_needPacking = false;
 	if(m_frontParticlePhysics2D.PeekParticles().size() <= 1) return;
+
 	m_tasks.emplace_back(Jobs::AddTask([&](unsigned threadIndex)
 		{
 			const auto iterations = pipeModelParameters.m_simulationIterationCellFactor * m_frontParticlePhysics2D.RefParticles().size();

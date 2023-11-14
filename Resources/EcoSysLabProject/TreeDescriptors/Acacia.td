@@ -27,7 +27,11 @@ m_shootGrowthParameters:
   m_internodeVigorRequirement: 1
   m_vigorRequirementAggregateLoss: 0.949999988
   m_lowBranchPruning: 0.100000001
+  m_lowBranchPruningThicknessFactor: 0
+  m_apicalPruningFactor: 0
+  m_lateralPruningFactor: 0
   m_saggingFactorThicknessReductionMax: [0.000500000024, 2, 0.5]
+  m_maxSpaceOccupancy: 1
   m_maxLeafSize: [0.0500000007, 0.5, 0.0500000007]
   m_leafPositionVariance: 0.5
   m_leafRotationVariance: 0

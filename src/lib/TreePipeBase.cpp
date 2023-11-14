@@ -250,16 +250,21 @@ void TreePipeBase::AdjustGraph() const
 		auto globalPosition = globalTransform.GetPosition();
 		auto globalRotation = globalTransform.GetRotation();
 		const auto front = globalRotation * glm::vec3(0, 0, -1);
-		float maxDistanceToCenter = node->m_frontParticlePhysics2D.GetMaxDistanceToCenter();
 		const float offsetLength = glm::length(node->m_offset);
-		if (offsetLength > glm::epsilon<float>()) {
-			const float cosFront = glm::dot(front, parentFront); //Horizontal
-			const float sinFront = glm::sin(glm::acos(cosFront)); //Vertical
+		float maxDistanceToCenter = node->m_frontParticlePhysics2D.GetMaxDistanceToCenter();
+		const float cosFront = glm::dot(front, parentFront); //Horizontal
+		const float sinFront = glm::sin(glm::acos(cosFront)); //Vertical
+		if (!node->m_apical && offsetLength > glm::epsilon<float>()) {
+			const float outerRadius = node->m_frontParticlePhysics2D.GetDistanceToCenter(glm::normalize(node->m_offset));
+			const float innerRadius = node->m_frontParticlePhysics2D.GetDistanceToCenter(-glm::normalize(node->m_offset));
 			const auto offsetDirection = glm::normalize(node->m_offset);
-			globalPosition += parentUp * offsetDirection.y * offsetLength * m_pipeModelParameters.m_profileDefaultCellRadius;
-			globalPosition += parentLeft * offsetDirection.x * offsetLength * m_pipeModelParameters.m_profileDefaultCellRadius;
-			globalPosition += parentFront * (sinFront * node->m_centerDirectionRadius + maxDistanceToCenter) * m_pipeModelParameters.m_profileDefaultCellRadius;
+			const auto newOffset = (offsetLength + innerRadius + outerRadius - outerRadius * cosFront) * offsetDirection;
+			globalPosition += parentUp * newOffset.y * m_pipeModelParameters.m_profileDefaultCellRadius;
+			globalPosition += parentLeft * newOffset.x * m_pipeModelParameters.m_profileDefaultCellRadius;
+			globalPosition += parentFront * (sinFront * outerRadius) * m_pipeModelParameters.m_profileDefaultCellRadius;
 		}
+		globalPosition += parentFront * sinFront * maxDistanceToCenter * m_pipeModelParameters.m_profileDefaultCellRadius;
+
 		globalTransform.SetPosition(globalPosition);
 		scene->SetDataComponent(entity, globalTransform);
 	}
@@ -285,7 +290,7 @@ void TreePipeBase::BuildPipes()
 		bool baseNode = entity.GetIndex() == sortedEntityList.front().GetIndex();
 		//parentGlobalTransform.m_value = glm::inverse(modelGlobalTransform.m_value) * parentGlobalTransform.m_value;
 		auto parentGlobalRotation = parentGlobalTransform.GetRotation();
-		if(baseNode)
+		if (baseNode)
 		{
 			parentGlobalRotation = glm::quatLookAt(parentGlobalRotation * glm::vec3(0, 1, 0),
 				parentGlobalRotation * glm::vec3(0, 0, -1));
@@ -295,7 +300,7 @@ void TreePipeBase::BuildPipes()
 		//globalTransform.m_value = glm::inverse(modelGlobalTransform.m_value) * globalTransform.m_value;
 		const auto globalPosition = globalTransform.GetPosition();
 		const auto globalRotation = globalTransform.GetRotation();
-		if(baseNode)
+		if (baseNode)
 		{
 			const auto currentUp = parentGlobalRotation * glm::vec3(0, -1, 0);
 			const auto currentLeft = parentGlobalRotation * glm::vec3(-1, 0, 0);
@@ -345,6 +350,6 @@ void TreePipeBase::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 		InitializeStrandRenderer(frontControlPointRatio, backControlPointRatio);
 	}
 
-	editorLayer->DragAndDropButton(m_nodeMaterial, "Node Material");
-	editorLayer->DragAndDropButton(m_nodeMesh, "Node Mesh");
+	editorLayer->DragAndDropButton<Material>(m_nodeMaterial, "Node Material");
+	editorLayer->DragAndDropButton<Mesh>(m_nodeMesh, "Node Mesh");
 }
