@@ -20,8 +20,9 @@ namespace EcoSysLab {
 		float m_maxParticleVelocity = 0.0f;
 		double m_simulationTime = 0.0f;
 	public:
-		int m_enableGridOffset = 100;
+		int m_enableGridOffset = 50;
 		bool m_parallel = false;
+		bool m_forceResetGrid = false;
 		[[nodiscard]] float GetDistanceToCenter(const glm::vec2& direction) const;
 		[[nodiscard]] float GetMaxParticleVelocity() const;
 		[[nodiscard]] float GetDeltaTime() const;
@@ -173,9 +174,16 @@ namespace EcoSysLab {
 	template <typename T>
 	void ParticlePhysics2D<T>::CheckCollisions()
 	{
+		const auto originalMin = m_min;
+		const auto originalMax = m_max;
 		CalculateMinMax();
 		if (m_particles2D.size() > m_enableGridOffset) {
-			m_particleGrid2D.Reset(2.0f, m_min, m_max);
+			if (m_min.x < originalMin.x || m_min.y < originalMin.y || m_max.x > originalMax.x || m_max.y > originalMax.y || m_forceResetGrid) {
+				m_particleGrid2D.Reset(2.0f, m_min, m_max);
+			}else
+			{
+				m_particleGrid2D.Clear();
+			}
 			for (ParticleHandle i = 0; i < m_particles2D.size(); i++)
 			{
 				const auto& particle = m_particles2D[i];
