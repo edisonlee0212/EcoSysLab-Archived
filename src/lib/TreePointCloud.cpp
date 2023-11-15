@@ -77,12 +77,7 @@ void TreePointCloud::BuildConnectionBranch(const int skeletonIndex, const Branch
 	auto& parentBranch = m_operatingBranches[processingBranch.m_parentHandle];
 	connectionBranch.m_color = parentBranch.m_color;
 	connectionBranch.m_handle = m_operatingBranches.size() - 1;
-	connectionBranch.m_bezierCurve.m_p0 = parentBranch.m_bezierCurve.m_p3;
-	connectionBranch.m_bezierCurve.m_p3 = processingBranch.m_bezierCurve.m_p0;
-	connectionBranch.m_bezierCurve.m_p1 = glm::mix(connectionBranch.m_bezierCurve.m_p0,
-		connectionBranch.m_bezierCurve.m_p3, 0.25f);
-	connectionBranch.m_bezierCurve.m_p2 = glm::mix(connectionBranch.m_bezierCurve.m_p0,
-		connectionBranch.m_bezierCurve.m_p3, 0.75f);
+	
 	connectionBranch.m_startThickness = parentBranch.m_endThickness;
 	connectionBranch.m_endThickness = processingBranch.m_startThickness;
 	connectionBranch.m_childHandles.emplace_back(processingBranch.m_handle);
@@ -97,7 +92,49 @@ void TreePointCloud::BuildConnectionBranch(const int skeletonIndex, const Branch
 	}
 	bool onlyChild = true;
 	if (parentBranch.m_childHandles.size() > 1) onlyChild = false;
-	prevNodeHandle = parentBranch.m_chainNodeHandles.back();
+
+	NodeHandle bestPrevNodeHandle = parentBranch.m_chainNodeHandles.back();
+	float dotMax = -1.0f;
+	glm::vec3 connectionBranchStartPosition = parentBranch.m_bezierCurve.m_p3;
+	NodeHandle backTrackWalker = bestPrevNodeHandle;
+	int branchBackTrackCount = 0;
+	BranchHandle prevBranchHandle = processingBranch.m_parentHandle;
+	for(int i = 0; i < m_reconstructionSettings.m_nodeBackTrackLimit; i++)
+	{
+		if(backTrackWalker == -1) break;
+		auto& node = skeleton.PeekNode(backTrackWalker);
+		if (node.m_data.m_branchHandle != prevBranchHandle) {
+			branchBackTrackCount++;
+			prevBranchHandle = node.m_data.m_branchHandle;
+		}
+		if(branchBackTrackCount > m_reconstructionSettings.m_branchBackTrackLimit) break;
+		const auto nodeEndPosition = node.m_data.m_globalEndPosition;
+		//fad
+		const auto dotVal = glm::dot(glm::normalize(processingBranch.m_bezierCurve.m_p3 - processingBranch.m_bezierCurve.m_p0),
+			glm::normalize(processingBranch.m_bezierCurve.m_p0 - nodeEndPosition));
+		if(dotVal > dotMax)
+		{
+			dotMax = dotVal;
+			bestPrevNodeHandle = backTrackWalker;
+			connectionBranchStartPosition = nodeEndPosition;
+		}
+		backTrackWalker = node.GetParentHandle();
+	}
+	
+	connectionBranch.m_bezierCurve.m_p0 = connectionBranchStartPosition;
+
+	connectionBranch.m_bezierCurve.m_p3 = processingBranch.m_bezierCurve.m_p0;
+	
+	connectionBranch.m_bezierCurve.m_p1 = glm::mix(connectionBranch.m_bezierCurve.m_p0,
+		connectionBranch.m_bezierCurve.m_p3, 0.25f);
+	/*
+	connectionBranch.m_bezierCurve.m_p2 = glm::mix(connectionBranch.m_bezierCurve.m_p0,
+		connectionBranch.m_bezierCurve.m_p3, 0.75f);
+	*/
+	connectionBranch.m_bezierCurve.m_p2 = connectionBranch.m_bezierCurve.m_p3 * 2.f - processingBranch.m_bezierCurve.m_p2;
+
+	prevNodeHandle = bestPrevNodeHandle;
+
 	auto connectionFirstNodeHandle = skeleton.Extend(prevNodeHandle, !onlyChild);
 	connectionBranch.m_chainNodeHandles.emplace_back(connectionFirstNodeHandle);
 	prevNodeHandle = connectionFirstNodeHandle;
@@ -934,6 +971,7 @@ void TreePointCloud::BuildSkeletons() {
 	}
 
 	std::vector<std::pair<glm::vec3, BranchHandle>> rootBranchHandles;
+	//Branch is shortened after this.
 	for (auto& branch : m_operatingBranches) {
 		branch.m_chainNodeHandles.clear();
 		const auto branchStart = branch.m_bezierCurve.m_p0;
@@ -1578,4 +1616,6 @@ void ReconstructionSettings::OnInspect() {
 		ImGui::Checkbox("Limit parent thickness", &m_limitParentThickness);
 	}
 	ImGui::DragInt("Minimum node count", &m_minimumNodeCount, 1, 0, 100);
+	ImGui::DragInt("Node back track limit", &m_nodeBackTrackLimit, 1, 0, 100);
+	ImGui::DragInt("Branch back track limit", &m_branchBackTrackLimit, 1, 0, 10);
 }

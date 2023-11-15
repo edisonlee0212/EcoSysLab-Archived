@@ -105,7 +105,8 @@ namespace EcoSysLab {
 
 		float m_minimumRootThickness = 0.02f;
 
-		
+		int m_nodeBackTrackLimit = 30;
+		int m_branchBackTrackLimit = 1;
 		//float m_angleLimit = 90.0f;
 		void OnInspect();
 	};
