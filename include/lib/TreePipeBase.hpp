@@ -12,7 +12,7 @@ namespace EcoSysLab
 	{
 		float m_sidePushRatio = 1.0f;
 		float m_frontPushRatio = 1.0f;
-		float m_rotationPushRatio = 0.314f;
+		float m_rotationPushRatio = 0.5f;
 	};
 
 	class TreePipeBase : public IPrivateComponent

@@ -84,7 +84,7 @@ void TreePipeBase::InstantiateExample()
 
 	node1.m_info.m_globalRotation = node1.m_info.m_regulatedGlobalRotation = glm::quatLookAt(glm::vec3(0, 1, 0), glm::vec3(0, 0, 1));
 	node1.m_info.m_globalPosition = glm::vec3(0.0f, 1.f, 0.0f);
-	node1.m_info.m_length = 0.1f;
+	node1.m_info.m_length = 0.5f;
 
 	node2.m_info.m_globalRotation = node2.m_info.m_regulatedGlobalRotation = glm::quatLookAt(glm::vec3(1, 0, 0), glm::vec3(0, 0, 1));
 	node2.m_info.m_globalPosition = glm::vec3(0.0f, 1.f, 0.0f);
