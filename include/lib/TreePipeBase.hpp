@@ -23,6 +23,8 @@ namespace EcoSysLab
 			const glm::quat& globalRotation,
 			const ParticlePhysics2D<CellParticlePhysicsData>& profile, const std::unordered_map<PipeHandle, ParticleHandle>& map);
 	public:
+		bool m_parallelScheduling = true;
+
 		PipeModelPipeGroup m_pipeGroup;
 		PipeModelParameters m_pipeModelParameters{};
 		GraphAdjustmentSettings m_graphAdjustmentSettings;

@@ -13,6 +13,9 @@ namespace EcoSysLab
 {
 	class TreePipeNode : public IPrivateComponent
 	{
+		void PackTask(const PipeModelParameters& pipeModelParameters, bool parallel);
+		void MergeTask(const PipeModelParameters& pipeModelParameters);
+
 	public:
 		GlobalTransform m_desiredGlobalTransform{};
 
@@ -38,8 +41,8 @@ namespace EcoSysLab
 		void OnDestroy() override;
 		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 
-		void Merge(const PipeModelParameters &pipeModelParameters);
-		void Pack(const PipeModelParameters& pipeModelParameters);
+		void Merge(const PipeModelParameters &pipeModelParameters, bool scheduling);
+		void Pack(const PipeModelParameters& pipeModelParameters, bool scheduling);
 		void Wait();
 	};
 }

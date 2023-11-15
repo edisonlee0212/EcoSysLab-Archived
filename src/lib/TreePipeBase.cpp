@@ -220,18 +220,28 @@ void TreePipeBase::Packing()
 			node->m_backParticleMap.insert({ particle.m_data.m_pipeHandle, particle.GetHandle() });
 		}
 	}
-
-	for (auto it = sortedEntityList.rbegin(); it != sortedEntityList.rend(); ++it)
+	if (m_parallelScheduling) {
+		for (auto it = sortedEntityList.rbegin(); it != sortedEntityList.rend(); ++it)
+		{
+			const auto node = scene->GetOrSetPrivateComponent<TreePipeNode>(*it).lock();
+			node->Merge(m_pipeModelParameters, true);
+			node->Pack(m_pipeModelParameters, true);
+		}
+		if (!sortedEntityList.empty())
+		{
+			auto firstEntity = sortedEntityList.front();
+			const auto node = scene->GetOrSetPrivateComponent<TreePipeNode>(firstEntity).lock();
+			node->Wait();
+		}
+	}else
 	{
-		const auto node = scene->GetOrSetPrivateComponent<TreePipeNode>(*it).lock();
-		node->Merge(m_pipeModelParameters);
-		node->Pack(m_pipeModelParameters);
-	}
-	if(!sortedEntityList.empty())
-	{
-		auto firstEntity = sortedEntityList.front();
-		const auto node = scene->GetOrSetPrivateComponent<TreePipeNode>(firstEntity).lock();
-		node->Wait();
+		for (auto it = sortedEntityList.rbegin(); it != sortedEntityList.rend(); ++it)
+		{
+			const auto node = scene->GetOrSetPrivateComponent<TreePipeNode>(*it).lock();
+			node->Merge(m_pipeModelParameters, false);
+			node->Pack(m_pipeModelParameters, false);
+			node->Wait();
+		}
 	}
 }
 
@@ -356,6 +366,9 @@ void TreePipeBase::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 
 	ImGui::DragInt("End node strand count", &m_pipeModelParameters.m_endNodeStrands, 1, 1, 50);
 	static PrivateComponentRef tempTree{};
+
+	ImGui::Checkbox("Parallel Scheduling", &m_parallelScheduling);
+
 	if (editorLayer->DragAndDropButton<Tree>(tempTree, "Target tree"))
 	{
 		if (const auto tree = tempTree.Get<Tree>())
