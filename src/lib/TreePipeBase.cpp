@@ -145,7 +145,6 @@ void TreePipeBase::Packing()
 					const auto newStartParticleHandle = frontPhysics2D.AllocateParticle();
 					auto& newStartParticle = frontPhysics2D.RefParticle(newStartParticleHandle);
 					newStartParticle.m_data.m_pipeHandle = newPipeHandle;
-
 					const auto newEndParticleHandle = backPhysics2D.AllocateParticle();
 					auto& newEndParticle = backPhysics2D.RefParticle(newEndParticleHandle);
 					newEndParticle.m_data.m_pipeHandle = newPipeHandle;
@@ -227,6 +226,12 @@ void TreePipeBase::Packing()
 		const auto node = scene->GetOrSetPrivateComponent<TreePipeNode>(*it).lock();
 		node->Merge(m_pipeModelParameters);
 		node->Pack(m_pipeModelParameters);
+	}
+	if(!sortedEntityList.empty())
+	{
+		auto firstEntity = sortedEntityList.front();
+		const auto node = scene->GetOrSetPrivateComponent<TreePipeNode>(firstEntity).lock();
+		node->Wait();
 	}
 }
 
@@ -344,9 +349,12 @@ void TreePipeBase::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 	ImGui::DragFloat("Default profile cell radius", &m_pipeModelParameters.m_profileDefaultCellRadius, 0.001f, 0.001f, 1.0f);
 	ImGui::DragFloat("Physics damping", &m_pipeModelParameters.m_damping, 0.01f, 0.0f, 1.0f);
 	ImGui::DragFloat("Physics attraction strength", &m_pipeModelParameters.m_gravityStrength, 0.01f, 0.0f, 10.0f);
-	ImGui::DragFloat("Physics simulation iteration cell factor", &m_pipeModelParameters.m_simulationIterationCellFactor, 0.1f, 0.0f, 50.0f);
-	ImGui::DragInt("Physics simulation minimum iteration", &m_pipeModelParameters.m_minimumSimulationIteration, 1, 0, 50);
-	ImGui::DragFloat("Physics simulation particle stabilize speed", &m_pipeModelParameters.m_particleStabilizeSpeed, 0.1f, 0.0f, 100.0f);
+	ImGui::DragInt("Max iteration cell factor", &m_pipeModelParameters.m_maxSimulationIterationCellFactor, 1, 0, 500);
+	ImGui::DragInt("Stabilization check iteration", &m_pipeModelParameters.m_stabilizationCheckIteration, 1, 0, 500);
+	ImGui::DragInt("Simulation timeout", &m_pipeModelParameters.m_timeout, 1, 0, 50000);
+	ImGui::DragFloat("Stabilization movement distance", &m_pipeModelParameters.m_stabilizationMovementDistance, 0.01f, 0.0f, 1.0f);
+
+	ImGui::DragInt("End node strand count", &m_pipeModelParameters.m_endNodeStrands, 1, 1, 50);
 	static PrivateComponentRef tempTree{};
 	if (editorLayer->DragAndDropButton<Tree>(tempTree, "Target tree"))
 	{

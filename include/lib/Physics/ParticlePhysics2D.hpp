@@ -11,21 +11,21 @@ namespace EcoSysLab {
 		std::vector<Particle2D<ParticleData>> m_particles2D{};
 		void SolveCollision(ParticleHandle p1Handle, ParticleHandle p2Handle);
 		float m_deltaTime = 0.002f;
-		void UpdateWithGrid(const std::function<void(Particle2D<ParticleData>& particle)>& modifyParticleFunc);
+		void Update(const std::function<void(Particle2D<ParticleData>& particle)>& modifyParticleFunc);
 		void CheckCollisions();
 		glm::vec2 m_min = glm::vec2(FLT_MAX);
 		glm::vec2 m_max = glm::vec2(FLT_MIN);
 		float m_maxDistanceToCenter = 0.0f;
 		glm::vec2 m_massCenter = glm::vec2(0.0f);
-		float m_maxParticleVelocity = 0.0f;
 		double m_simulationTime = 0.0f;
 	public:
 		int m_enableGridOffset = 50;
 		bool m_parallel = false;
 		bool m_forceResetGrid = false;
 		[[nodiscard]] float GetDistanceToCenter(const glm::vec2& direction) const;
-		[[nodiscard]] float GetMaxParticleVelocity() const;
 		[[nodiscard]] float GetDeltaTime() const;
+		[[nodiscard]] float GetMaxMovementSinceCheckpoint() const;
+
 		void Reset(float deltaTime = 0.002f);
 		void CalculateMinMax();
 		float m_particleSoftness = 0.5f;
@@ -37,10 +37,10 @@ namespace EcoSysLab {
 		[[nodiscard]] const std::vector<Particle2D<ParticleData>>& PeekParticles() const;
 		[[nodiscard]] std::vector<Particle2D<ParticleData>>& RefParticles();
 		void SimulateByTime(float time, const std::function<void(Particle2D<ParticleData>& particle)>& modifyParticleFunc);
-		void Simulate(size_t iterations, const std::function<void(Particle2D<ParticleData>& particle)>& modifyParticleFunc);
+		void Simulate(size_t iterations, const std::function<void(Particle2D<ParticleData>& particle)>& modifyParticleFunc, bool checkpoint = false);
 		[[nodiscard]] glm::vec2 GetMassCenter() const;
 		[[nodiscard]] float GetMaxDistanceToCenter() const;
-
+		[[nodiscard]] glm::vec2 FindAvailablePosition(const glm::vec2& direction);
 		[[nodiscard]] double GetLastSimulationTime() const;
 		void OnInspect(const std::function<void(glm::vec2 position)>& func, const std::function<void(ImVec2 origin, float zoomFactor, ImDrawList*)>& drawFunc, bool showGrid = false);
 	};
@@ -61,7 +61,7 @@ namespace EcoSysLab {
 	}
 
 	template <typename T>
-	void ParticlePhysics2D<T>::UpdateWithGrid(
+	void ParticlePhysics2D<T>::Update(
 		const std::function<void(Particle2D<T>& collisionParticle)>& modifyParticleFunc)
 	{
 		if (m_particles2D.empty()) return;
@@ -85,31 +85,20 @@ namespace EcoSysLab {
 		
 		CheckCollisions();
 
-		m_maxParticleVelocity = 0.0f;
 		if (m_parallel) {
-			const auto threadCount = Jobs::Workers().Size();
-			std::vector<float> maxVelocities{};
-			maxVelocities.resize(threadCount);
-			for (int i = 0; i < threadCount; i++)
-			{
-				maxVelocities[i] = 0.0f;
-			}
-			Jobs::ParallelFor(m_particles2D.size(), [&](unsigned i, const unsigned threadIndex)
+			Jobs::ParallelFor(m_particles2D.size(), [&](unsigned i)
 				{
 					auto& particle = m_particles2D[i];
 					particle.m_position += particle.m_deltaPosition;
 					particle.Update(m_deltaTime);
-					maxVelocities[threadIndex] = glm::max(maxVelocities[threadIndex], glm::length(particle.GetVelocity(m_deltaTime)));
 				}
 			);
-			for (const auto& d : maxVelocities) m_maxParticleVelocity = glm::max(m_maxParticleVelocity, d);
 		}
 		else {
 			for (auto& particle : m_particles2D)
 			{
 				particle.m_position += particle.m_deltaPosition;
 				particle.Update(m_deltaTime);
-				m_maxParticleVelocity = glm::max(m_maxParticleVelocity, glm::length(particle.GetVelocity(m_deltaTime)));
 			}
 		}
 		m_simulationTime = Times::Now() - startTime;
@@ -306,15 +295,21 @@ namespace EcoSysLab {
 	}
 
 	template <typename T>
-	float ParticlePhysics2D<T>::GetMaxParticleVelocity() const
-	{
-		return m_maxParticleVelocity;
-	}
-
-	template <typename T>
 	float ParticlePhysics2D<T>::GetDeltaTime() const
 	{
 		return m_deltaTime;
+	}
+
+	template <typename ParticleData>
+	float ParticlePhysics2D<ParticleData>::GetMaxMovementSinceCheckpoint() const
+	{
+		float maxDistance = 0.0f;
+		for(const auto& particle : m_particles2D)
+		{
+			const auto distance = glm::distance(particle.GetPosition(), particle.GetCheckpointPosition());
+			if (distance > maxDistance) maxDistance = distance;
+		}
+		return maxDistance;
 	}
 
 	template <typename T>
@@ -386,18 +381,19 @@ namespace EcoSysLab {
 		const auto count = static_cast<size_t>(glm::round(time / m_deltaTime));
 		for (size_t i{ count }; i--;)
 		{
-			UpdateWithGrid(modifyParticleFunc);
+			Update(modifyParticleFunc);
 		}
 	}
 
 	template <typename T>
 	void ParticlePhysics2D<T>::Simulate(const size_t iterations,
-		const std::function<void(Particle2D<T>& particle)>& modifyParticleFunc)
+		const std::function<void(Particle2D<T>& particle)>& modifyParticleFunc, const bool checkpoint)
 	{
 		for (size_t i{ iterations }; i--;)
 		{
-			UpdateWithGrid(modifyParticleFunc);
+			Update(modifyParticleFunc);
 		}
+		if(checkpoint) for (auto& particle : m_particles2D) particle.SetCheckpoint();
 	}
 
 	template <typename T>
@@ -413,6 +409,27 @@ namespace EcoSysLab {
 	}
 
 	template <typename ParticleData>
+	glm::vec2 ParticlePhysics2D<ParticleData>::FindAvailablePosition(const glm::vec2& direction)
+	{
+		auto retVal = glm::vec2(0, 0);
+		bool found = false;
+		while (!found)
+		{
+			found = true;
+			for (const auto& i : m_particles2D)
+			{
+				if (glm::distance(i.GetPosition(), retVal) < 2.05f)
+				{
+					found = false;
+					break;
+				}
+			}
+			if (!found) retVal += direction * 0.41f;
+		}
+		return retVal;
+	}
+
+	template <typename ParticleData>
 	double ParticlePhysics2D<ParticleData>::GetLastSimulationTime() const
 	{
 		return m_simulationTime;
@@ -423,8 +440,7 @@ namespace EcoSysLab {
 	{
 		static auto scrolling = glm::vec2(0.0f);
 		static float zoomFactor = 5.f;
-		ImGui::Text(("Max particle velocity: " + std::to_string(m_maxParticleVelocity) +
-			" | Particle count: " + std::to_string(m_particles2D.size()) +
+		ImGui::Text(("Particle count: " + std::to_string(m_particles2D.size()) +
 			" | Simulation time: " + std::to_string(m_simulationTime)).c_str());
 		if (ImGui::Button("Recenter")) {
 			scrolling = glm::vec2(0.0f);

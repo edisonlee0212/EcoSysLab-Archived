@@ -15,6 +15,8 @@ namespace EcoSysLab {
 
 		glm::vec2 m_deltaPosition = glm::vec2(0.0f);
 		ParticleHandle m_handle = -1;
+
+		glm::vec2 m_checkpointPosition = glm::vec2(0.0f);
 	public:
 		T m_data;
 		void Update(float dt);
@@ -36,6 +38,9 @@ namespace EcoSysLab {
 
 		[[nodiscard]] float GetDamping() const;
 		void SetDamping(float damping);
+
+		void SetCheckpoint();
+		[[nodiscard]] glm::vec2 GetCheckpointPosition() const;
 	};
 
 
@@ -82,7 +87,7 @@ namespace EcoSysLab {
 	void Particle2D<T>::SetPosition(const glm::vec2& position)
 	{
 		const auto velocity = m_position - m_lastPosition;
-		m_position = position;
+		m_position = m_checkpointPosition = position;
 		m_lastPosition = m_position - velocity;
 	}
 
@@ -126,5 +131,17 @@ namespace EcoSysLab {
 	void Particle2D<T>::SetDamping(const float damping)
 	{
 		m_damping = glm::clamp(damping, 0.0f, 1.0f);
+	}
+
+	template <typename T>
+	void Particle2D<T>::SetCheckpoint()
+	{
+		m_checkpointPosition = m_position;
+	}
+
+	template <typename T>
+	glm::vec2 Particle2D<T>::GetCheckpointPosition() const
+	{
+		return m_checkpointPosition;
 	}
 }

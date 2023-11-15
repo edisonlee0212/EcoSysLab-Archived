@@ -125,21 +125,15 @@ void TreePipeNode::Merge(const PipeModelParameters& pipeModelParameters)
 		m_centerDirectionRadius = 0.0f;
 		if (childrenNodes.empty())
 		{
-			for (auto& particle : m_frontParticlePhysics2D.RefParticles())
+			for(int i = 0; i < m_frontParticlePhysics2D.RefParticles().size(); i++)
 			{
-				particle.SetColor(glm::vec4(1.0f));
-				particle.SetPosition(glm::vec2(0.0f));
-
-				particle.m_data.m_mainChild = true;
+				const auto nextParticlePosition = m_frontParticlePhysics2D.FindAvailablePosition(glm::circularRand(1.0f));
+				m_frontParticlePhysics2D.RefParticle(i).SetPosition(nextParticlePosition);
+				m_backParticlePhysics2D.RefParticle(i).SetPosition(nextParticlePosition);
+				m_frontParticlePhysics2D.RefParticle(i).SetColor(glm::vec4(1.0f));
+				m_backParticlePhysics2D.RefParticle(i).SetColor(glm::vec4(1.0f));
 			}
-			//For flow end, set only particle at the center.
-			for (auto& particle : m_backParticlePhysics2D.RefParticles())
-			{
-				particle.SetColor(glm::vec4(1.0f));
-				particle.SetPosition(glm::vec2(0.0f));
-
-				particle.m_data.m_mainChild = true;
-			}
+			m_needPacking = true;
 			return;
 		}
 		
@@ -224,11 +218,16 @@ void TreePipeNode::Pack(const PipeModelParameters& pipeModelParameters)
 	if(!m_needPacking) return;
 	m_needPacking = false;
 	if(m_frontParticlePhysics2D.PeekParticles().size() <= 1) return;
-
+	
 	m_tasks.emplace_back(Jobs::AddTask([&](unsigned threadIndex)
 		{
-			const auto iterations = pipeModelParameters.m_simulationIterationCellFactor * m_frontParticlePhysics2D.RefParticles().size();
+			const auto iterations = pipeModelParameters.m_maxSimulationIterationCellFactor * m_frontParticlePhysics2D.RefParticles().size();
 			for (int i = 0; i < iterations; i++) {
+				const auto checkpoint = i > 1 && i % pipeModelParameters.m_stabilizationCheckIteration == 0;
+				if (checkpoint)
+				{
+					if(m_frontParticlePhysics2D.GetMaxMovementSinceCheckpoint() < pipeModelParameters.m_stabilizationMovementDistance) break;
+				}
 				m_frontParticlePhysics2D.Simulate(1, [&](auto& particle)
 					{
 						//Apply gravity
@@ -237,14 +236,11 @@ void TreePipeNode::Pack(const PipeModelParameters& pipeModelParameters)
 							const glm::vec2 acceleration = pipeModelParameters.m_gravityStrength * -glm::normalize(particle.GetPosition());
 							particle.SetAcceleration(acceleration);
 						}
-					}
+					}, checkpoint
 				);
-
-				if (i > pipeModelParameters.m_minimumSimulationIteration && m_frontParticlePhysics2D.GetMaxParticleVelocity() < pipeModelParameters.m_particleStabilizeSpeed)
-				{
-					break;
-				}
+				if(pipeModelParameters.m_timeout > 0 && i > pipeModelParameters.m_timeout) break;
 			}
+			
 		})
 	);
 }
