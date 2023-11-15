@@ -50,6 +50,69 @@ void TreePipeBase::ExtendPipesWithProfile(const glm::vec3& globalPosition,
 	}
 }
 
+void TreePipeBase::InstantiateExample()
+{
+	BaseSkeleton skeleton{};
+
+	const auto trunkHandle = skeleton.Extend(0, false);
+	const auto handle1 = skeleton.Extend(trunkHandle, false);
+	const auto handle2 = skeleton.Extend(trunkHandle, true);
+	const auto handle3 = skeleton.Extend(trunkHandle, true);
+	/*
+	const auto handle4 = skeleton.Extend(handle1, false);
+	const auto handle5 = skeleton.Extend(handle2, true);
+	const auto handle6 = skeleton.Extend(handle3, true);
+	*/
+	//Position, length, globalRotation
+	auto& baseNode = skeleton.RefNode(0);
+	auto& trunkNode = skeleton.RefNode(trunkHandle);
+	auto& node1 = skeleton.RefNode(handle1);
+	auto& node2 = skeleton.RefNode(handle2);
+	auto& node3 = skeleton.RefNode(handle3);
+	/*
+	auto& node4 = skeleton.RefNode(handle4);
+	auto& node5 = skeleton.RefNode(handle5);
+	auto& node6 = skeleton.RefNode(handle6);
+	*/
+	baseNode.m_info.m_globalRotation = baseNode.m_info.m_regulatedGlobalRotation = glm::quatLookAt(glm::vec3(0, 1, 0), glm::vec3(0, 0, 1));
+	baseNode.m_info.m_globalPosition = glm::vec3(0.0f);
+	baseNode.m_info.m_length = 0.5f;
+
+	trunkNode.m_info.m_globalRotation = trunkNode.m_info.m_regulatedGlobalRotation = glm::quatLookAt(glm::vec3(0, 1, 0), glm::vec3(0, 0, 1));
+	trunkNode.m_info.m_globalPosition = glm::vec3(0.0f, 0.5f, 0.0f);
+	trunkNode.m_info.m_length = 0.5f;
+
+	node1.m_info.m_globalRotation = node1.m_info.m_regulatedGlobalRotation = glm::quatLookAt(glm::vec3(0, 1, 0), glm::vec3(0, 0, 1));
+	node1.m_info.m_globalPosition = glm::vec3(0.0f, 1.f, 0.0f);
+	node1.m_info.m_length = 0.1f;
+
+	node2.m_info.m_globalRotation = node2.m_info.m_regulatedGlobalRotation = glm::quatLookAt(glm::vec3(1, 0, 0), glm::vec3(0, 0, 1));
+	node2.m_info.m_globalPosition = glm::vec3(0.0f, 1.f, 0.0f);
+	node2.m_info.m_length = 0.1f;
+
+	node3.m_info.m_globalRotation = node3.m_info.m_regulatedGlobalRotation = glm::quatLookAt(glm::normalize(glm::vec3(-1, 1, 0)), glm::vec3(0, 0, 1));
+	node3.m_info.m_globalPosition = glm::vec3(0.0f, 1.f, 0.0f);
+	node3.m_info.m_length = 0.1f;
+	/*
+	node4.m_info.m_globalRotation = node4.m_info.m_regulatedGlobalRotation = glm::quatLookAt(glm::vec3(0, 1, 0), glm::vec3(0, 0, 1));
+	node4.m_info.m_globalPosition = glm::vec3(0.0f, 1.1f, 0.0f);
+	node4.m_info.m_length = 0.1f;
+
+	node5.m_info.m_globalRotation = node5.m_info.m_regulatedGlobalRotation = glm::quatLookAt(glm::vec3(1, 0, 0), glm::vec3(0, 0, 1));
+	node5.m_info.m_globalPosition = glm::vec3(0.1f, 1.f, 0.0f);
+	node5.m_info.m_length = 0.1f;
+
+	node6.m_info.m_globalRotation = node6.m_info.m_regulatedGlobalRotation = glm::quatLookAt(glm::normalize(glm::vec3(-1, 1, 0)), glm::vec3(0, 0, 1));
+	node6.m_info.m_globalPosition = glm::vec3(0.0f, 1.f, 0.0f) + glm::normalize(glm::vec3(-1, 1, 0)) * 0.1f;
+	node6.m_info.m_length = 0.1f;
+	*/
+	skeleton.SortLists();
+	
+	skeleton.CalculateFlows();
+	InitializeNodesWithSkeleton(skeleton);
+
+}
+
 void TreePipeBase::ClearStrands() const
 {
 	const auto scene = GetScene();
@@ -260,14 +323,16 @@ void TreePipeBase::AdjustGraph() const
 	{
 		auto parent = scene->GetParent(entity);
 		const auto node = scene->GetOrSetPrivateComponent<TreePipeNode>(entity).lock();
-		const auto parentGlobalTransform = scene->GetDataComponent<GlobalTransform>(parent);
+		auto baseProfile = entity == sortedEntityList.front();
+		const auto parentGlobalTransform = baseProfile ? scene->GetDataComponent<GlobalTransform>(entity) : scene->GetDataComponent<GlobalTransform>(parent);
+		auto globalTransform = parentGlobalTransform;
+		if (!baseProfile) globalTransform.m_value *= scene->GetDataComponent<Transform>(entity).m_value;
+
 		const auto parentGlobalRotation = parentGlobalTransform.GetRotation();
 		const auto parentUp = parentGlobalRotation * glm::vec3(0, 1, 0);
 		const auto parentLeft = parentGlobalRotation * glm::vec3(1, 0, 0);
 		const auto parentFront = parentGlobalRotation * glm::vec3(0, 0, -1);
 
-		auto globalTransform = parentGlobalTransform;
-		globalTransform.m_value *= scene->GetDataComponent<Transform>(entity).m_value;
 		auto globalPosition = globalTransform.GetPosition();
 		auto globalRotation = globalTransform.GetRotation();
 		const auto front = globalRotation * glm::vec3(0, 0, -1);
@@ -379,7 +444,13 @@ void TreePipeBase::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 		}
 		tempTree.Clear();
 	}
-	
+
+	if(ImGui::Button("Y Shape Example"))
+	{
+		InstantiateExample();
+		Packing();
+		TransformGraph::CalculateTransformGraphForDescendents(GetScene(), GetOwner());
+	}
 	
 	static float frontControlPointRatio = 0.2f;
 	static float backControlPointRatio = 0.2f;

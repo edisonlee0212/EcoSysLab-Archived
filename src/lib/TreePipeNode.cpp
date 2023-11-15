@@ -23,6 +23,13 @@ void TreePipeNode::PackTask(const PipeModelParameters& pipeModelParameters, bool
 		);
 		if (pipeModelParameters.m_timeout > 0 && i > pipeModelParameters.m_timeout) break;
 	}
+	if(GetScene()->GetChildren(GetOwner()).empty())
+	{
+		for (int i = 0; i < m_frontParticlePhysics2D.RefParticles().size(); i++)
+		{
+			m_backParticlePhysics2D.RefParticle(i).SetPosition(m_frontParticlePhysics2D.RefParticle(i).GetPosition());
+		}
+	}
 }
 
 void TreePipeNode::MergeTask(const PipeModelParameters& pipeModelParameters)

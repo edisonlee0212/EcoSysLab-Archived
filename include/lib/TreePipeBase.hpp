@@ -12,7 +12,7 @@ namespace EcoSysLab
 	{
 		float m_sidePushRatio = 1.0f;
 		float m_frontPushRatio = 1.0f;
-		float m_rotationPushRatio = 1.0f;
+		float m_rotationPushRatio = 0.314f;
 	};
 
 	class TreePipeBase : public IPrivateComponent
@@ -24,7 +24,7 @@ namespace EcoSysLab
 			const ParticlePhysics2D<CellParticlePhysicsData>& profile, const std::unordered_map<PipeHandle, ParticleHandle>& map);
 	public:
 		bool m_parallelScheduling = true;
-
+		void InstantiateExample();
 		PipeModelPipeGroup m_pipeGroup;
 		PipeModelParameters m_pipeModelParameters{};
 		GraphAdjustmentSettings m_graphAdjustmentSettings;
