@@ -181,11 +181,14 @@ void YamlToMesh(const std::string& yamlPath,
 	const auto scene = Application::GetActiveScene();
 	const auto tempEntity = scene->CreateEntity("Temp");
 	const auto treePointCloud = scene->GetOrSetPrivateComponent<TreePointCloud>(tempEntity).lock();
+	
+	treePointCloud->m_connectivityGraphSettings = connectivityGraphSettings;
+	treePointCloud->m_reconstructionSettings = reconstructionSettings;
+	treePointCloud->m_treeMeshGeneratorSettings = meshGeneratorSettings;
 	treePointCloud->ImportGraph(yamlPath);
-
-	treePointCloud->EstablishConnectivityGraph(connectivityGraphSettings);
-	treePointCloud->BuildSkeletons(reconstructionSettings);
-	treePointCloud->ExportForestOBJ(meshPath, meshGeneratorSettings);
+	treePointCloud->EstablishConnectivityGraph();
+	treePointCloud->BuildSkeletons();
+	treePointCloud->ExportForestOBJ(meshPath);
 	EVOENGINE_LOG("Exported forest as OBJ");
 	scene->DeleteEntity(tempEntity);
 }
@@ -200,11 +203,13 @@ void VisualizeYaml(const std::string& yamlPath,
 	const auto scene = Application::GetActiveScene();
 	const auto tempEntity = scene->CreateEntity("Temp");
 	const auto treePointCloud = scene->GetOrSetPrivateComponent<TreePointCloud>(tempEntity).lock();
+	treePointCloud->m_connectivityGraphSettings = connectivityGraphSettings;
+	treePointCloud->m_reconstructionSettings = reconstructionSettings;
+	treePointCloud->m_treeMeshGeneratorSettings = meshGeneratorSettings;
 	treePointCloud->ImportGraph(yamlPath);
-
-	treePointCloud->EstablishConnectivityGraph(connectivityGraphSettings);
-	treePointCloud->BuildSkeletons(reconstructionSettings);
-	treePointCloud->FormGeometryEntity(meshGeneratorSettings);
+	treePointCloud->EstablishConnectivityGraph();
+	treePointCloud->BuildSkeletons();
+	treePointCloud->FormGeometryEntity();
 
 	CaptureScene(posX, posY, posZ, angleX, angleY, angleZ, resolutionX, resolutionY, true, outputPath);
 	scene->DeleteEntity(tempEntity);
@@ -557,15 +562,13 @@ PYBIND11_MODULE(pyecosyslab, m) {
 
 	py::class_<ConnectivityGraphSettings>(m, "ConnectivityGraphSettings")
 		.def(py::init<>())
+		.def_readwrite("m_pointCheckRadius", &ConnectivityGraphSettings::m_pointCheckRadius)
 		.def_readwrite("m_pointPointConnectionDetectionRadius", &ConnectivityGraphSettings::m_pointPointConnectionDetectionRadius)
-		.def_readwrite("m_scatterPointBranchConnectionMaxLength", &ConnectivityGraphSettings::m_scatterPointBranchConnectionMaxLength)
-		.def_readwrite("m_edgeExtendStep", &ConnectivityGraphSettings::m_edgeExtendStep)
-		.def_readwrite("m_edgeLength", &ConnectivityGraphSettings::m_edgeLength)
-		.def_readwrite("m_maxTimeout", &ConnectivityGraphSettings::m_maxTimeout)
-		.def_readwrite("m_forceConnectionAngleLimit", &ConnectivityGraphSettings::m_forceConnectionAngleLimit)
-		.def_readwrite("m_forceConnectionRatio", &ConnectivityGraphSettings::m_forceConnectionRatio)
-		.def_readwrite("m_angleLimit", &ConnectivityGraphSettings::m_angleLimit)
-		.def_readwrite("m_branchShortening", &ConnectivityGraphSettings::m_branchShortening);
+		.def_readwrite("m_pointBranchConnectionDetectionRange", &ConnectivityGraphSettings::m_pointBranchConnectionDetectionRange)
+		.def_readwrite("m_branchBranchConnectionMaxLengthRange", &ConnectivityGraphSettings::m_branchBranchConnectionMaxLengthRange)
+		.def_readwrite("m_directionConnectionAngleLimit", &ConnectivityGraphSettings::m_directionConnectionAngleLimit)
+		.def_readwrite("m_indirectConnectionAngleLimit", &ConnectivityGraphSettings::m_indirectConnectionAngleLimit)
+		;
 
 	py::class_<PointCloudPointSettings>(m, "PointCloudPointSettings")
 		.def(py::init<>())
