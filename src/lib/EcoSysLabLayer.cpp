@@ -17,6 +17,7 @@
 #include "TreePointCloud.hpp"
 #include "TreePointCloudScanner.hpp"
 #include "ClassRegistry.hpp"
+#include "CubeVolume.hpp"
 using namespace EcoSysLab;
 
 void EcoSysLabLayer::OnCreate() {
@@ -30,6 +31,7 @@ void EcoSysLabLayer::OnCreate() {
 	ClassRegistry::RegisterAsset<SoilDescriptor>("SoilDescriptor", { ".sd" });
 	ClassRegistry::RegisterAsset<ClimateDescriptor>("ClimateDescriptor", { ".cd" });
 	ClassRegistry::RegisterAsset<RadialBoundingVolume>("RadialBoundingVolume", { ".rbv" });
+	ClassRegistry::RegisterAsset<CubeVolume>("CubeVolume", { ".cv" });
 	ClassRegistry::RegisterAsset<HeightField>("HeightField", { ".hf" });
 	ClassRegistry::RegisterAsset<SoilLayerDescriptor>("SoilLayerDescriptor", { ".nsld" });
 	ClassRegistry::RegisterPrivateComponent<TreePipeBase>("TreePipeBase");

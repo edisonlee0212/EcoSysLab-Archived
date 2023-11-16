@@ -168,18 +168,19 @@ void Tree::Reset()
 void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	bool modelChanged = false;
 	const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
+	const auto scene = GetScene();
 	if (editorLayer->DragAndDropButton<TreeDescriptor>(m_treeDescriptor, "TreeDescriptor", true)) {
 		m_treeModel.Clear();
 		modelChanged = true;
 	}
 	static bool showSpaceColonizationGrid = false;
-	
+
 	static std::shared_ptr<ParticleInfoList> spaceColonizationGridParticleInfoList;
 	if (!spaceColonizationGridParticleInfoList)
 	{
 		spaceColonizationGridParticleInfoList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
 	}
-	
+
 
 	if (m_treeDescriptor.Get<TreeDescriptor>()) {
 		if (ImGui::Button("Reset")) {
@@ -216,6 +217,21 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 					}
 
 					}, false);
+
+				static PrivateComponentRef privateComponentRef{};
+
+				if (editorLayer->DragAndDropButton<MeshRenderer>(privateComponentRef, "Add Obstacle"))
+				{
+					if (const auto mmr = privateComponentRef.Get<MeshRenderer>())
+					{
+						const auto cubeVolume = ProjectManager::CreateTemporaryAsset<CubeVolume>();
+						cubeVolume->ApplyMeshBounds(mmr->m_mesh.Get<Mesh>());
+						const auto globalTransform = scene->GetDataComponent<GlobalTransform>(mmr->GetOwner());
+						m_treeModel.m_treeOccupancyGrid.InsertObstacle(globalTransform, cubeVolume);
+						privateComponentRef.Clear();
+					}
+
+				}
 			}
 
 			ImGui::TreePop();
@@ -277,7 +293,7 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 
 				spaceColonizationGridParticleInfoList->SetPendingUpdate();
 			}
-			
+
 		}
 		if (m_enableVisualization && ImGui::TreeNodeEx("Tree Inspector", ImGuiTreeNodeFlags_DefaultOpen))
 		{
@@ -333,7 +349,7 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 
 	if (m_enableVisualization)
 	{
-		const auto scene = GetScene();
+
 		m_treeVisualizer.Visualize(m_treeModel,
 			scene->GetDataComponent<GlobalTransform>(GetOwner()));
 		GizmoSettings gizmoSettings{};
@@ -344,7 +360,7 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 				Resources::GetResource<Mesh>("PRIMITIVE_CUBE"), spaceColonizationGridParticleInfoList,
 				glm::mat4(1.0f), 1.0f, gizmoSettings);
 		}
-		
+
 	}
 }
 void Tree::Update()

@@ -31,6 +31,6 @@ bool SphericalVolume::InVolume(
     return false;
 }
 bool SphericalVolume::InVolume(const glm::vec3& position) {
-    auto relativePosition = glm::vec3(position.x / m_radius.x, position.y / m_radius.y, position.z / m_radius.z);
+    const auto relativePosition = glm::vec3(position.x / m_radius.x, position.y / m_radius.y, position.z / m_radius.z);
     return glm::length(relativePosition) <= 1.0f;
 }

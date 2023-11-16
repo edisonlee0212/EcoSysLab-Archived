@@ -162,3 +162,16 @@ glm::vec3 TreeOccupancyGrid::GetMax() const
 {
 	return m_occupancyGrid.GetMaxBound();
 }
+
+void TreeOccupancyGrid::InsertObstacle(const GlobalTransform &globalTransform, const std::shared_ptr<CubeVolume>& cubeVolume)
+{
+	Jobs::ParallelFor(m_occupancyGrid.GetVoxelCount(), [&](unsigned i)
+		{
+			const auto center = m_occupancyGrid.GetPosition(i);
+			if(cubeVolume->InVolume(globalTransform, center))
+			{
+				m_occupancyGrid.Ref(i).m_markers.clear();
+			}
+		}
+	);
+}

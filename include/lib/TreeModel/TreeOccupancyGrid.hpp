@@ -1,4 +1,5 @@
 #pragma once
+#include "CubeVolume.hpp"
 #include "Skeleton.hpp"
 #include "VoxelGrid.hpp"
 using namespace EvoEngine;
@@ -52,5 +53,7 @@ namespace EcoSysLab
 		[[nodiscard]] VoxelGrid<TreeOccupancyGridVoxelData>& RefGrid();
 		[[nodiscard]] glm::vec3 GetMin() const;
 		[[nodiscard]] glm::vec3 GetMax() const;
+
+		void InsertObstacle(const GlobalTransform& globalTransform, const std::shared_ptr<CubeVolume>& cubeVolume);
 	};
 }

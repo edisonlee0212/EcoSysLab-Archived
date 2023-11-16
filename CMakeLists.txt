@@ -71,6 +71,7 @@ set(LOCAL_ECOSYSLAB_INCLUDES
 	${CMAKE_CURRENT_SOURCE_DIR}/include/lib
 	${CMAKE_CURRENT_SOURCE_DIR}/include/lib/Physics
 	${CMAKE_CURRENT_SOURCE_DIR}/include/lib/TreeIO
+	${CMAKE_CURRENT_SOURCE_DIR}/include/lib/Volumes
 	${CMAKE_CURRENT_SOURCE_DIR}/include/lib/SorghumModel
 	${CMAKE_CURRENT_SOURCE_DIR}/include/lib/ClimateModel
 	${CMAKE_CURRENT_SOURCE_DIR}/include/lib/SoilModel
