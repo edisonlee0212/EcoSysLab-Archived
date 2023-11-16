@@ -70,17 +70,19 @@ namespace EcoSysLab {
 	};
 
 	struct ConnectivityGraphSettings {
+		float m_pointCheckRadius = 0.02f;
+
+
 		float m_pointPointConnectionDetectionRadius = 0.05f;
 		float m_pointBranchConnectionDetectionRange = 0.5f;
 		float m_branchBranchConnectionMaxLengthRange = 3.0f;
 		float m_directionConnectionAngleLimit = 60.0f;
 		float m_indirectConnectionAngleLimit = 90.0f;
-		bool m_checkReverse = true;
 		
 		void OnInspect();
 	};
 
-	struct ScatterPointData {
+	struct PointData {
 		glm::vec3 m_position = glm::vec3(0.0f);
 		int m_pointHandle = -1;
 	};
@@ -107,7 +109,8 @@ namespace EcoSysLab {
 
 		int m_nodeBackTrackLimit = 30;
 		int m_branchBackTrackLimit = 1;
-		//float m_angleLimit = 90.0f;
+
+		int m_candidateSearchLimit = 1;
 		void OnInspect();
 	};
 
@@ -128,17 +131,24 @@ namespace EcoSysLab {
 	typedef Skeleton<ReconstructionSkeletonData, ReconstructionFlowData, ReconstructionNodeData> ReconstructionSkeleton;
 
 	class TreePointCloud : public IPrivateComponent {
-		void FindPoints(const glm::vec3& position, VoxelGrid<std::vector<ScatterPointData>>& pointVoxelGrid, float radius,
-			const std::function<void(const ScatterPointData& voxel)>& func) const;
+		void FindPoints(const glm::vec3& position, VoxelGrid<std::vector<PointData>>& pointVoxelGrid, float radius,
+			const std::function<void(const PointData& voxel)>& func) const;
+		bool HasPoints(const glm::vec3& position, VoxelGrid<std::vector<PointData>>& pointVoxelGrid, float radius) const;
 		void ForEachBranchEnd(const glm::vec3& position, VoxelGrid<std::vector<BranchEndData>>& branchEndsVoxelGrid, float radius,
 			const std::function<void(const BranchEndData& voxel)>& func) const;
 
 		void CalculateNodeTransforms(ReconstructionSkeleton& skeleton);
 
 		void BuildConnectionBranch(int skeletonIndex, BranchHandle processingBranchHandle, NodeHandle& prevNodeHandle);
-
+		void Link(BranchHandle childHandle, BranchHandle parentHandle);
 		void ApplyCurve(int skeletonIndex, const OperatingBranch& branch);
+
+		void BuildVoxelGrid();
 	public:
+		VoxelGrid<std::vector<PointData>> m_scatterPointsVoxelGrid;
+		VoxelGrid<std::vector<PointData>> m_allocatedPointsVoxelGrid;
+		VoxelGrid<std::vector<BranchEndData>> m_branchEndsVoxelGrid;
+
 		TreeMeshGeneratorSettings m_treeMeshGeneratorSettings {};
 		ReconstructionSettings m_reconstructionSettings{};
 		ConnectivityGraphSettings m_connectivityGraphSettings{};
