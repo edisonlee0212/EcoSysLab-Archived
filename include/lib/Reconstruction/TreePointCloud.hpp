@@ -55,7 +55,8 @@ namespace EcoSysLab {
 		int m_skeletonIndex = -1;
 		std::vector<NodeHandle> m_chainNodeHandles;
 
-		std::vector<BranchHandle> m_parentCandidates;
+		std::vector<std::pair<BranchHandle, float>> m_childCandidates;
+		std::vector<std::pair<BranchHandle, float>> m_parentCandidates;
 		bool m_used = false;
 
 		void Apply(const ScannedBranch& target);
@@ -75,7 +76,6 @@ namespace EcoSysLab {
 		float m_directionConnectionAngleLimit = 60.0f;
 		float m_indirectConnectionAngleLimit = 90.0f;
 		bool m_checkReverse = true;
-		float m_branchShortening = 0.0f;
 		
 		void OnInspect();
 	};
