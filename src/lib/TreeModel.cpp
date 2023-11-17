@@ -282,17 +282,13 @@ void TreeModel::Initialize(const ShootGrowthController& shootGrowthParameters, c
 		apicalBud.m_type = BudType::Apical;
 		apicalBud.m_status = BudStatus::Dormant;
 		apicalBud.m_vigorSink.AddVigor(shootGrowthParameters.m_internodeVigorRequirement);
-		apicalBud.m_localRotation = glm::vec3(glm::radians(shootGrowthParameters.m_apicalAngle(firstInternode)),
-			0.0f,
-			glm::radians(shootGrowthParameters.m_rollAngle(firstInternode)));
+		apicalBud.m_localRotation = glm::vec3(0.0f);
 	}
 	{
 		auto& firstRootNode = m_rootSkeleton.RefNode(0);
 		firstRootNode.m_info.m_thickness = 0.003f;
 		firstRootNode.m_info.m_length = 0.0f;
-		firstRootNode.m_data.m_localRotation = glm::vec3(glm::radians(rootGrowthParameters.m_apicalAngle(firstRootNode)),
-			0.0f,
-			glm::radians(rootGrowthParameters.m_rollAngle(firstRootNode)));
+		firstRootNode.m_data.m_localRotation = glm::vec3(0.0f);
 		firstRootNode.m_data.m_verticalTropism = rootGrowthParameters.m_tropismIntensity;
 		firstRootNode.m_data.m_horizontalTropism = 0;
 		firstRootNode.m_data.m_vigorSink.AddVigor(rootGrowthParameters.m_rootNodeVigorRequirement);
@@ -836,10 +832,14 @@ bool TreeModel::ElongateInternode(float extendLength, NodeHandle internodeHandle
 		auto desiredGlobalRotation = internodeInfo.m_globalRotation * apicalBud.m_localRotation;
 		auto desiredGlobalFront = desiredGlobalRotation * glm::vec3(0, 0, -1);
 		auto desiredGlobalUp = desiredGlobalRotation * glm::vec3(0, 1, 0);
-		ApplyTropism(-m_currentGravityDirection, shootGrowthController.m_gravitropism(internode), desiredGlobalFront,
-			desiredGlobalUp);
-		ApplyTropism(internodeData.m_lightDirection, shootGrowthController.m_phototropism(internode),
-			desiredGlobalFront, desiredGlobalUp);
+		if (internodeHandle != 0)
+		{
+			ApplyTropism(-m_currentGravityDirection, shootGrowthController.m_gravitropism(internode), desiredGlobalFront,
+				desiredGlobalUp);
+			ApplyTropism(internodeData.m_lightDirection, shootGrowthController.m_phototropism(internode),
+				desiredGlobalFront, desiredGlobalUp);
+		}
+
 		//Allocate Lateral bud for current internode
 		{
 			const auto lateralBudCount = shootGrowthController.m_lateralBudCount;
@@ -1605,7 +1605,7 @@ bool TreeModel::PruneInternodes(const glm::mat4& globalTransform, ClimateModel& 
 			const auto parentHandle = internode.GetParentHandle();
 			if (parentHandle != -1) {
 				const auto& parent = m_shootSkeleton.PeekNode(parentHandle);
-				if (internode.m_info.m_thickness / parent.m_info.m_thickness < shootGrowthParameters.m_lowBranchPruningThicknessFactor) lowBranchPruning = true;
+				if (shootGrowthParameters.m_lowBranchPruningThicknessFactor == 0.0f || internode.m_info.m_thickness / parent.m_info.m_thickness < shootGrowthParameters.m_lowBranchPruningThicknessFactor) lowBranchPruning = true;
 			}
 
 		}

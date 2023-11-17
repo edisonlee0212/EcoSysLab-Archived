@@ -14,7 +14,8 @@ m_shootGrowthParameters:
   m_endNodeThickness: 0.00100000005
   m_thicknessAccumulationFactor: 0.5
   m_thicknessAccumulateAgeFactor: 0
-  m_lateralBudFlushingProbabilityTemperatureRange: [0.0599999987, 0.0599999987, 0, 100]
+  m_apicalInternodeKillProbability: 0
+  m_lateralBudFlushProbability: 0.0599999987
   m_leafBudFlushingProbabilityTemperatureRange: [1, 1, 45, 60]
   m_fruitBudFlushingProbabilityTemperatureRange: [0, 1, 50, 70]
   m_apicalControl: 1
@@ -24,11 +25,12 @@ m_shootGrowthParameters:
   m_apicalDominanceDistanceFactor: 1
   m_leafVigorRequirement: 0.100000001
   m_fruitVigorRequirement: 0.100000001
-  m_internodeVigorRequirement: 0.5
+  m_internodeVigorRequirement: 1
   m_vigorRequirementAggregateLoss: 0.920000017
-  m_lowBranchPruning: 0.129999995
-  m_lowBranchPruningThicknessFactor: 1
+  m_lowBranchPruning: 0.224999994
+  m_lowBranchPruningThicknessFactor: 0
   m_saggingFactorThicknessReductionMax: [9.99999975e-05, 2, 0.300000012]
+  m_maxSpaceOccupancy: 1
   m_maxLeafSize: [0.0500000007, 0.5, 0.0500000007]
   m_leafPositionVariance: 0.5
   m_leafRotationVariance: 0
