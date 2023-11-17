@@ -135,6 +135,7 @@ namespace EcoSysLab {
 		glm::vec2 m_visualizationCameraMousePosition;
 		bool m_visualizationCameraWindowFocused = false;
 	public:
+		float m_crownShynessDistance = 0.2f;
 		bool m_needFullFlowUpdate = false;
 
 		int m_visualizationCameraResolutionX = 1;

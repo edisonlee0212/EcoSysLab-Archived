@@ -66,9 +66,10 @@ void EcoSysLabLayer::OnCreate() {
 #pragma region Internode camera
 	m_visualizationCamera =
 		Serialization::ProduceSerializable<Camera>();
-	m_visualizationCamera->m_useClearColor = true;
-	m_visualizationCamera->m_clearColor = glm::vec3(0.1f);
+	
 	m_visualizationCamera->OnCreate();
+	m_visualizationCamera->m_useClearColor = true;
+	m_visualizationCamera->m_clearColor = glm::vec3(0.5f, 0.5f, 0.5f);
 #pragma endregion
 
 	if (const auto editorLayer = Application::GetLayer<EditorLayer>())
@@ -304,7 +305,7 @@ void EcoSysLabLayer::Visualization() {
 						glm::translate(voxelGrid.GetPosition(coordinate))
 						* glm::mat4_cast(glm::quat(glm::vec3(0.0f)))
 						* glm::scale(glm::vec3(0.1f * voxelGrid.GetVoxelSize()));
-					scalarMatrices[i].m_instanceColor = glm::vec4(0.0f, 0.0f, 0.0f, glm::clamp(voxelGrid.Peek(static_cast<int>(i)).m_shadowIntensity, 0.0f, 1.0f));
+					scalarMatrices[i].m_instanceColor = glm::vec4(0.5f, 0.5f, 0.5f, glm::clamp(voxelGrid.Peek(static_cast<int>(i)).m_shadowIntensity, 0.0f, 1.0f));
 					}
 				);
 				m_shadowGridParticleInfoList->SetPendingUpdate();
@@ -372,7 +373,8 @@ void EcoSysLabLayer::Visualization() {
 		if (m_showShadowGrid)
 		{
 			editorLayer->DrawGizmoMeshInstancedColored(
-				Resources::GetResource<Mesh>("PRIMITIVE_CUBE"), m_shadowGridParticleInfoList,
+				Resources::GetResource<Mesh>("PRIMITIVE_CUBE"), m_visualizationCamera,
+				m_shadowGridParticleInfoList,
 				glm::mat4(1.0f), 1.0f, gizmoSettings);
 		}
 	}
@@ -479,12 +481,6 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 				if (settingsChanged) {
 					m_shadowEstimationSettings.m_voxelSize = glm::clamp(m_shadowEstimationSettings.m_voxelSize, 0.05f,
 						1.0f);
-					/*
-					for (const auto& i : *treeEntities) {
-						scene->GetOrSetPrivateComponent<Tree>(
-							i).lock()->m_treeModel.m_environmentGrid.m_settings = m_shadowEstimationSettings;
-					}
-					*/
 					if (const auto climate = m_climateHolder.Get<Climate>()) {
 						for (const auto& i : *treeEntities) {
 							const auto tree = scene->GetOrSetPrivateComponent<Tree>(i).lock();
@@ -496,7 +492,7 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 				}
 				ImGui::TreePop();
 			}
-
+			ImGui::DragFloat("Crown shyness", &m_crownShynessDistance, 0.01f, 0.0f, 1.0f);
 			if (ImGui::Button("Reset all trees")) {
 				ResetAllTrees(treeEntities);
 				ClearGeometries();
@@ -1324,7 +1320,7 @@ void EcoSysLabLayer::Simulate(float deltaTime) {
 		const auto soil = m_soilHolder.Get<Soil>();
 
 		climate->m_climateModel.m_time = m_time;
-
+		
 		if (m_autoGrowWithSoilStep) {
 			soil->m_soilModel.Irrigation();
 			soil->m_soilModel.Step();
@@ -1351,6 +1347,7 @@ void EcoSysLabLayer::Simulate(float deltaTime) {
 			}
 			if (!tree->m_climate.Get<Climate>()) tree->m_climate = climate;
 			if (!tree->m_soil.Get<Soil>()) tree->m_soil = soil;
+			tree->m_treeModel.m_crownShynessDistance = m_crownShynessDistance;
 		}
 		if(boundChanged) estimator.m_voxel.Initialize(estimator.m_settings.m_voxelSize, minBound, maxBound);
 		estimator.m_voxel.Reset();

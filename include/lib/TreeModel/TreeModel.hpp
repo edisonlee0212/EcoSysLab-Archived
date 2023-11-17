@@ -130,6 +130,7 @@ namespace EcoSysLab {
 
 
 	public:
+		float m_crownShynessDistance = 0.0f;
 		unsigned m_index = 0;
 		void RegisterVoxel(const glm::mat4& globalTransform, ClimateModel& climateModel, const ShootGrowthController& shootGrowthParameters);
 		TreeOccupancyGrid m_treeOccupancyGrid{};

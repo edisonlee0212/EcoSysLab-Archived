@@ -1757,12 +1757,11 @@ void Tree::PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescrip
 		m_shootGrowthController.m_lowBranchPruning = treeDescriptor->m_shootGrowthParameters.m_lowBranchPruning;
 		m_shootGrowthController.m_pruningFactor = [=](const float deltaTime, const Node<InternodeGrowthData>& internode)
 			{
-				if (internode.GetHandle() == 0) return 0.0f;
 				float pruningProbability = 0.0f;
 				if (internode.IsEndNode())
 				{
-					if (internode.IsApical()) pruningProbability += deltaTime * treeDescriptor->m_shootGrowthParameters.m_apicalPruningFactor;
-					else pruningProbability += deltaTime * treeDescriptor->m_shootGrowthParameters.m_lateralPruningFactor;
+					if (internode.IsApical()) pruningProbability += treeDescriptor->m_shootGrowthParameters.m_apicalPruningFactor;
+					else pruningProbability += treeDescriptor->m_shootGrowthParameters.m_lateralPruningFactor;
 				}
 				return pruningProbability;
 			};

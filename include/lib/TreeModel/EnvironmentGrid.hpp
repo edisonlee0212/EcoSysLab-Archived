@@ -32,7 +32,7 @@ namespace EcoSysLab
 		float m_thickness = 0.0f;
 	};
 
-	struct ShadowVoxel
+	struct EnvironmentVoxel
 	{
 		glm::vec3 m_shadowDirection = glm::vec3(0.0f);
 		float m_shadowIntensity = 0.0f;
@@ -45,7 +45,7 @@ namespace EcoSysLab
 	{
 	public:
 		IlluminationEstimationSettings m_settings;
-		VoxelGrid<ShadowVoxel> m_voxel;
+		VoxelGrid<EnvironmentVoxel> m_voxel;
 		[[nodiscard]] float IlluminationEstimation(const glm::vec3& position, glm::vec3& lightDirection) const;
 		void AddShadowVolume(const ShadowVolume& shadowVolume);
 		void AddBiomass(const glm::vec3& position, float value);

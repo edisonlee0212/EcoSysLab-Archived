@@ -9,8 +9,6 @@ namespace EcoSysLab {
 	};
 	class ClimateModel {
 	public:
-		float m_crownShynessDistance = 0.2f;
-
 		float m_monthAvgTemp[12] = { 38, 42, 46, 54, 61, 68, 77, 83, 77, 67, 55, 43 };
 		float m_time = 0.0f;
 		EnvironmentGrid m_environmentGrid{};
