@@ -113,9 +113,13 @@ namespace EcoSysLab
 		 */
 		std::function<float(const Node<InternodeGrowthData>& internode)> m_sagging;
 		/**
+		 * \brief Kill prob of apical bud.
+		 */
+		std::function<float(const Node<InternodeGrowthData>& internode)> m_apicalInternodeKillProbability;
+		/**
 		 * \brief Flushing prob of lateral bud.
 		 */
-		std::function<float(const Node<InternodeGrowthData>& internode)> m_lateralBudFlushingProbability;
+		std::function<float(const Node<InternodeGrowthData>& internode)> m_lateralBudFlushProbability;
 		/**
 		 * \brief Flushing prob of leaf bud.
 		 */

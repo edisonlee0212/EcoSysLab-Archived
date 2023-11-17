@@ -70,7 +70,7 @@ namespace EcoSysLab {
 		bool GrowInternode(ClimateModel& climateModel, NodeHandle internodeHandle, const ShootGrowthController& shootGrowthParameters, bool seasonality);
 
 		bool ElongateInternode(float extendLength, NodeHandle internodeHandle,
-			const ShootGrowthController& shootGrowthParameters, float& collectedInhibitor);
+			const ShootGrowthController& shootGrowthController, float& collectedInhibitor);
 
 		void ShootGrowthPostProcess(const glm::mat4& globalTransform, ClimateModel& climateModel, const ShootGrowthController& shootGrowthParameters);
 

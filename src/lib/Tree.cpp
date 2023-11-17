@@ -1343,8 +1343,8 @@ bool OnInspectShootGrowthParameters(ShootGrowthParameters& treeGrowthParameters)
 			changed = ImGui::DragFloat2("Apical Angle mean/var", &treeGrowthParameters.m_apicalAngleMeanVariance.x, 0.01f, 0.0f, 100.0f) || changed;
 			changed = ImGui::DragFloat("Gravitropism", &treeGrowthParameters.m_gravitropism, 0.01f) || changed;
 			changed = ImGui::DragFloat("Phototropism", &treeGrowthParameters.m_phototropism, 0.01f) || changed;
-
-			changed = ImGui::DragFloat4("Lateral bud flushing prob/temp range", &treeGrowthParameters.m_lateralBudFlushingProbabilityTemperatureRange.x, 0.00001f, 0.0f, 1.0f, "%.5f") || changed;
+			changed = ImGui::DragFloat("Apical bud kill prob", &treeGrowthParameters.m_apicalInternodeKillProbability, 0.00001f, 0.0f, 1.0f, "%.5f") || changed;
+			changed = ImGui::DragFloat("Lateral bud flushing prob", &treeGrowthParameters.m_lateralBudFlushProbability, 0.00001f, 0.0f, 1.0f, "%.5f") || changed;
 			changed = ImGui::DragFloat4("Leaf flushing prob/temp range", &treeGrowthParameters.m_leafBudFlushingProbabilityTemperatureRange.x, 0.00001f, 0.0f, 1.0f, "%.5f") || changed;
 			changed = ImGui::DragFloat4("Fruit flushing prob/temp range", &treeGrowthParameters.m_fruitBudFlushingProbabilityTemperatureRange.x, 0.00001f, 0.0f, 1.0f, "%.5f") || changed;
 			changed = ImGui::DragFloat2("Apical control base/age", &treeGrowthParameters.m_apicalControl, 0.01f) || changed;
@@ -1361,9 +1361,7 @@ bool OnInspectShootGrowthParameters(ShootGrowthParameters& treeGrowthParameters)
 			changed = ImGui::DragFloat3("Sagging thickness/reduction/max", &treeGrowthParameters.m_saggingFactorThicknessReductionMax.x, 0.01f, 0.0f, 1.0f, "%.5f") || changed;
 			changed = ImGui::DragFloat("Low Branch Pruning", &treeGrowthParameters.m_lowBranchPruning, 0.01f) || changed;
 			changed = ImGui::DragFloat("Low Branch Pruning Thickness factor", &treeGrowthParameters.m_lowBranchPruningThicknessFactor, 0.01f) || changed;
-			changed = ImGui::DragFloat("Apical pruning factor", &treeGrowthParameters.m_apicalPruningFactor, 0.01f) || changed;
-			changed = ImGui::DragFloat("Lateral pruning factor", &treeGrowthParameters.m_lateralPruningFactor, 0.01f) || changed;
-
+			
 			changed = ImGui::DragFloat("Max Space Occupancy", &treeGrowthParameters.m_maxSpaceOccupancy, 0.001f, 0.0f, 1.0f, "%.3f") || changed;
 
 			ImGui::TreePop();
@@ -1485,7 +1483,8 @@ void SerializeShootGrowthParameters(const std::string& name, const ShootGrowthPa
 	out << YAML::Key << "m_thicknessAccumulateAgeFactor" << YAML::Value << treeGrowthParameters.m_thicknessAccumulateAgeFactor;
 
 	//Bud
-	out << YAML::Key << "m_lateralBudFlushingProbabilityTemperatureRange" << YAML::Value << treeGrowthParameters.m_lateralBudFlushingProbabilityTemperatureRange;
+	out << YAML::Key << "m_apicalInternodeKillProbability" << YAML::Value << treeGrowthParameters.m_apicalInternodeKillProbability;
+	out << YAML::Key << "m_lateralBudFlushProbability" << YAML::Value << treeGrowthParameters.m_lateralBudFlushProbability;
 	out << YAML::Key << "m_leafBudFlushingProbabilityTemperatureRange" << YAML::Value << treeGrowthParameters.m_leafBudFlushingProbabilityTemperatureRange;
 	out << YAML::Key << "m_fruitBudFlushingProbabilityTemperatureRange" << YAML::Value << treeGrowthParameters.m_fruitBudFlushingProbabilityTemperatureRange;
 
@@ -1503,8 +1502,6 @@ void SerializeShootGrowthParameters(const std::string& name, const ShootGrowthPa
 	//Internode
 	out << YAML::Key << "m_lowBranchPruning" << YAML::Value << treeGrowthParameters.m_lowBranchPruning;
 	out << YAML::Key << "m_lowBranchPruningThicknessFactor" << YAML::Value << treeGrowthParameters.m_lowBranchPruningThicknessFactor;
-	out << YAML::Key << "m_apicalPruningFactor" << YAML::Value << treeGrowthParameters.m_apicalPruningFactor;
-	out << YAML::Key << "m_lateralPruningFactor" << YAML::Value << treeGrowthParameters.m_lateralPruningFactor;
 	out << YAML::Key << "m_saggingFactorThicknessReductionMax" << YAML::Value << treeGrowthParameters.m_saggingFactorThicknessReductionMax;
 	out << YAML::Key << "m_maxSpaceOccupancy" << YAML::Value << treeGrowthParameters.m_maxSpaceOccupancy;
 
@@ -1586,15 +1583,15 @@ void DeserializeShootGrowthParameters(const std::string& name, ShootGrowthParame
 		if (param["m_thicknessAccumulateAgeFactor"]) treeGrowthParameters.m_thicknessAccumulateAgeFactor = param["m_thicknessAccumulateAgeFactor"].as<float>();
 
 		if (param["m_lowBranchPruning"]) treeGrowthParameters.m_lowBranchPruning = param["m_lowBranchPruning"].as<float>();
-		if (param["m_apicalPruningFactor"]) treeGrowthParameters.m_apicalPruningFactor = param["m_apicalPruningFactor"].as<float>();
-		if (param["m_lateralPruningFactor"]) treeGrowthParameters.m_lateralPruningFactor = param["m_lateralPruningFactor"].as<float>();
 		if (param["m_lowBranchPruningThicknessFactor"]) treeGrowthParameters.m_lowBranchPruningThicknessFactor = param["m_lowBranchPruningThicknessFactor"].as<float>();
 		if (param["m_saggingFactorThicknessReductionMax"]) treeGrowthParameters.m_saggingFactorThicknessReductionMax = param["m_saggingFactorThicknessReductionMax"].as<glm::vec3>();
 		if (param["m_maxSpaceOccupancy"]) treeGrowthParameters.m_maxSpaceOccupancy = param["m_maxSpaceOccupancy"].as<float>();
 
 		//Bud fate
 
-		if (param["m_lateralBudFlushingProbabilityTemperatureRange"]) treeGrowthParameters.m_lateralBudFlushingProbabilityTemperatureRange = param["m_lateralBudFlushingProbabilityTemperatureRange"].as<glm::vec4>();
+		if (param["m_lateralBudFlushingProbabilityTemperatureRange"]) treeGrowthParameters.m_lateralBudFlushProbability = param["m_lateralBudFlushingProbabilityTemperatureRange"].as<glm::vec4>().x;
+		if (param["m_apicalInternodeKillProbability"]) treeGrowthParameters.m_apicalInternodeKillProbability = param["m_apicalInternodeKillProbability"].as<float>();
+		if (param["m_lateralBudFlushProbability"]) treeGrowthParameters.m_lateralBudFlushProbability = param["m_lateralBudFlushProbability"].as<float>();
 		if (param["m_leafBudFlushingProbabilityTemperatureRange"]) treeGrowthParameters.m_leafBudFlushingProbabilityTemperatureRange = param["m_leafBudFlushingProbabilityTemperatureRange"].as< glm::vec4>();
 		if (param["m_fruitBudFlushingProbabilityTemperatureRange"]) treeGrowthParameters.m_fruitBudFlushingProbabilityTemperatureRange = param["m_fruitBudFlushingProbabilityTemperatureRange"].as<glm::vec4>();
 
@@ -1707,15 +1704,19 @@ void Tree::PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescrip
 						shootGrowthParameters.m_saggingFactorThicknessReductionMax.y));
 				return glm::max(internode.m_data.m_sagging, newSagging);
 			};
-		m_shootGrowthController.m_lateralBudFlushingProbability = [=](const Node<InternodeGrowthData>& internode)
+		m_shootGrowthController.m_apicalInternodeKillProbability = [=](const Node<InternodeGrowthData>& internode)
 			{
 				const auto& shootGrowthParameters = treeDescriptor->m_shootGrowthParameters;
-				const auto& probabilityRange = shootGrowthParameters.m_lateralBudFlushingProbabilityTemperatureRange;
+				float killProbability = shootGrowthParameters.m_apicalInternodeKillProbability;
+				return killProbability;
+			};
+
+		m_shootGrowthController.m_lateralBudFlushProbability = [=](const Node<InternodeGrowthData>& internode)
+			{
+				const auto& shootGrowthParameters = treeDescriptor->m_shootGrowthParameters;
 				const auto& internodeData = internode.m_data;
-				float flushProbability = glm::mix(probabilityRange.x, probabilityRange.y,
-					glm::clamp((internodeData.m_temperature - probabilityRange.z) / (probabilityRange.w - probabilityRange.z), 0.0f, 1.0f));
+				float flushProbability = shootGrowthParameters.m_lateralBudFlushProbability * internodeData.m_growthPotential;
 				if (internodeData.m_inhibitor > 0.0f) flushProbability *= glm::exp(-internodeData.m_inhibitor);
-				flushProbability *= internodeData.m_growthPotential;
 				return flushProbability;
 			};
 		m_shootGrowthController.m_leafBudFlushingProbability = [=](const Node<InternodeGrowthData>& internode)
@@ -1760,8 +1761,7 @@ void Tree::PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescrip
 				float pruningProbability = 0.0f;
 				if (internode.IsEndNode())
 				{
-					if (internode.IsApical()) pruningProbability += treeDescriptor->m_shootGrowthParameters.m_apicalPruningFactor;
-					else pruningProbability += treeDescriptor->m_shootGrowthParameters.m_lateralPruningFactor;
+					
 				}
 				return pruningProbability;
 			};

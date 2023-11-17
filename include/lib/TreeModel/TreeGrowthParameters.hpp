@@ -122,10 +122,11 @@ namespace EcoSysLab
 		 */
 		float m_phototropism;
 
+		float m_apicalInternodeKillProbability{};
 		/**
 		 * \brief Flushing prob of lateral bud related to the temperature.
 		 */
-		glm::vec4 m_lateralBudFlushingProbabilityTemperatureRange;
+		float m_lateralBudFlushProbability;
 		/**
 		 * \brief Flushing prob of leaf bud related to the temperature.
 		 */
@@ -197,8 +198,7 @@ namespace EcoSysLab
 		* root.
 		*/
 		float m_lowBranchPruningThicknessFactor = 0.0f;
-		float m_apicalPruningFactor = 0.0f;
-		float m_lateralPruningFactor = 0.0f;
+		
 		/**
 		 * \brief The strength of gravity bending.
 		 */
