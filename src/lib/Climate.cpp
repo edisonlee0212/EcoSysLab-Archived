@@ -27,6 +27,7 @@ void ClimateDescriptor::Deserialize(const YAML::Node& in)
 
 void Climate::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
+	bool changed = false;
 	if(editorLayer->DragAndDropButton<ClimateDescriptor>(m_climateDescriptor, "ClimateDescriptor", true))
 	{
 		InitializeClimateModel();
@@ -36,6 +37,13 @@ void Climate::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 	{
 
 	}
+
+	if (ImGui::DragFloat("Crown shyness", &m_climateModel.m_crownShynessDistance, 0.001f, 0.0f, 1.0f))
+	{
+		changed = true;
+	}
+
+	
 }
 
 void Climate::Serialize(YAML::Emitter& out)

@@ -292,7 +292,7 @@ void EcoSysLabLayer::Visualization() {
 				fruitRenderer->m_particleInfoList.Get<ParticleInfoList>()->SetPendingUpdate();
 			}
 			if (auto climate = m_climateHolder.Get<Climate>()) {
-				const auto& voxelGrid = climate->m_climateModel.m_treeIlluminationEstimator.m_voxel;
+				const auto& voxelGrid = climate->m_climateModel.m_environmentGrid.m_voxel;
 				const auto numVoxels = voxelGrid.GetVoxelCount();
 				auto& scalarMatrices = m_shadowGridParticleInfoList->m_particleInfos;
 				if (scalarMatrices.size() != numVoxels) {
@@ -482,7 +482,7 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 					/*
 					for (const auto& i : *treeEntities) {
 						scene->GetOrSetPrivateComponent<Tree>(
-							i).lock()->m_treeModel.m_treeIlluminationEstimator.m_settings = m_shadowEstimationSettings;
+							i).lock()->m_treeModel.m_environmentGrid.m_settings = m_shadowEstimationSettings;
 					}
 					*/
 					if (const auto climate = m_climateHolder.Get<Climate>()) {
@@ -1329,7 +1329,7 @@ void EcoSysLabLayer::Simulate(float deltaTime) {
 			soil->m_soilModel.Irrigation();
 			soil->m_soilModel.Step();
 		}
-		auto& estimator = climate->m_climateModel.m_treeIlluminationEstimator;
+		auto& estimator = climate->m_climateModel.m_environmentGrid;
 		estimator.m_settings = m_shadowEstimationSettings;
 		auto minBound = estimator.m_voxel.GetMinBound();
 		auto maxBound = estimator.m_voxel.GetMaxBound();

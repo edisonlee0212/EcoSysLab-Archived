@@ -26,6 +26,8 @@ namespace EcoSysLab {
 		float m_spaceColonizationRemovalDistanceFactor = 2;
 		float m_spaceColonizationDetectionDistanceFactor = 4;
 		float m_spaceColonizationTheta = 90.0f;
+
+		
 	};
 
 
@@ -60,7 +62,7 @@ namespace EcoSysLab {
 
 		void AllocateShootVigor(float vigor, NodeHandle baseInternodeHandle, const std::vector<NodeHandle>& sortedInternodeList, const ShootGrowthRequirement& shootGrowthRequirement, const ShootGrowthController& shootGrowthParameters);
 
-		bool PruneInternodes(const ShootGrowthController& shootGrowthParameters);
+		bool PruneInternodes(const glm::mat4& globalTransform, ClimateModel& climateModel, const ShootGrowthController& shootGrowthParameters);
 
 		void CalculateThicknessAndSagging(NodeHandle internodeHandle,
 			const ShootGrowthController& shootGrowthParameters);
@@ -128,7 +130,8 @@ namespace EcoSysLab {
 
 
 	public:
-		void RegisterShadowVolume(const glm::mat4& globalTransform, ClimateModel& climateModel, const ShootGrowthController& shootGrowthParameters);
+		unsigned m_index = 0;
+		void RegisterVoxel(const glm::mat4& globalTransform, ClimateModel& climateModel, const ShootGrowthController& shootGrowthParameters);
 		TreeOccupancyGrid m_treeOccupancyGrid{};
 
 		void CalculateInternodeTransforms();

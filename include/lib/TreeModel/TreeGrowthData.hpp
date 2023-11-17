@@ -1,7 +1,7 @@
 #pragma once
 #include "Skeleton.hpp"
 #include "VigorSink.hpp"
-#include "TreeIlluminationEstimator.hpp"
+#include "EnvironmentGrid.hpp"
 #include "TreeOccupancyGrid.hpp"
 using namespace EvoEngine;
 namespace EcoSysLab

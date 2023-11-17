@@ -19,7 +19,7 @@ namespace EcoSysLab
 	public:
 		ClimateModel m_climateModel;
 		AssetRef m_climateDescriptor;
-
+		
 		/**ImGui menu goes to here.Also you can take care you visualization with Gizmos here.
 		 * Note that the visualization will only be activated while you are inspecting the soil private component in the entity inspector.
 		 */

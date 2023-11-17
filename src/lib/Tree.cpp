@@ -163,6 +163,7 @@ bool Tree::ParseBinvox(const std::filesystem::path& filePath, VoxelGrid<TreeOccu
 void Tree::Reset()
 {
 	m_treeModel.Clear();
+	m_treeModel.m_index = GetOwner().GetIndex();
 	m_treeVisualizer.Reset(m_treeModel);
 }
 void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
@@ -423,6 +424,8 @@ bool Tree::OnInspectTreeGrowthSettings(TreeGrowthSettings& treeGrowthSettings)
 	{
 		if (ImGui::Checkbox("Space colonization auto resize", &treeGrowthSettings.m_spaceColonizationAutoResize))changed = true;
 	}
+
+	
 	return changed;
 }
 
@@ -1282,8 +1285,10 @@ void Tree::GenerateGeometry(const TreeMeshGeneratorSettings& meshGeneratorSettin
 void Tree::RegisterVoxel()
 {
 	const auto scene = GetScene();
-	const auto globalTransform = scene->GetDataComponent<GlobalTransform>(GetOwner()).m_value;
-	m_treeModel.RegisterShadowVolume(globalTransform, m_climate.Get<Climate>()->m_climateModel, m_shootGrowthController);
+	const auto owner = GetOwner();
+	const auto globalTransform = scene->GetDataComponent<GlobalTransform>(owner).m_value;
+	m_treeModel.m_index = owner.GetIndex();
+	m_treeModel.RegisterVoxel(globalTransform, m_climate.Get<Climate>()->m_climateModel, m_shootGrowthController);
 }
 
 void Tree::FromLSystemString(const std::shared_ptr<LSystemString>& lSystemString)

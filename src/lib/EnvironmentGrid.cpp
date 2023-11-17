@@ -1,7 +1,7 @@
-#include "TreeIlluminationEstimator.hpp"
+#include "EnvironmentGrid.hpp"
 using namespace EcoSysLab;
 
-float TreeIlluminationEstimator::IlluminationEstimation(const glm::vec3& position, glm::vec3& lightDirection) const
+float EnvironmentGrid::IlluminationEstimation(const glm::vec3& position, glm::vec3& lightDirection) const
 {
 	const auto& data = m_voxel.Peek(position);
 	const float lightIntensity = glm::max(0.0f, 1.0f - data.m_shadowIntensity);
@@ -20,7 +20,7 @@ float TreeIlluminationEstimator::IlluminationEstimation(const glm::vec3& positio
 	return lightIntensity;
 }
 
-void TreeIlluminationEstimator::AddShadowVolume(const PositionValue& shadowVolume)
+void EnvironmentGrid::AddShadowVolume(const ShadowVolume& shadowVolume)
 {
 	const auto voxelMinBound = m_voxel.GetMinBound();
 	const auto dx = m_voxel.GetVoxelSize();
@@ -50,9 +50,15 @@ void TreeIlluminationEstimator::AddShadowVolume(const PositionValue& shadowVolum
 	}
 }
 
-void TreeIlluminationEstimator::AddBiomass(const PositionValue& positionValue)
+void EnvironmentGrid::AddBiomass(const glm::vec3& position, const float value)
 {
-	auto& data = m_voxel.Ref(positionValue.m_position);
-	data.m_totalBiomass += positionValue.m_value;
+	auto& data = m_voxel.Ref(position);
+	data.m_totalBiomass += value;
+}
+
+void EnvironmentGrid::AddNode(const InternodeVoxelRegistration& registration)
+{
+	auto& data = m_voxel.Ref(registration.m_position);
+	data.m_internodeVoxelRegistrations.emplace_back(registration);
 }
 
