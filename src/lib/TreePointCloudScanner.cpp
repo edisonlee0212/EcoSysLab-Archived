@@ -8,7 +8,7 @@
 using namespace tinyply;
 #endif
 
-
+#include "EcoSysLabLayer.hpp"
 using namespace EcoSysLab;
 
 void PointCloudPointSettings::OnInspect()
@@ -125,55 +125,64 @@ GlobalTransform PointCloudCaptureSettings::GetTransform(const Bound& bound,
 void TreePointCloudScanner::GeneratePointCloud(const std::filesystem::path& savePath)
 {
 #ifdef BUILD_WITH_RAYTRACER
-	auto tree = m_tree.Get<Tree>();
-	if (!tree) {
-		EVOENGINE_ERROR("No tree!");
+	
+	const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
+	const auto soil = ecoSysLabLayer->m_soilHolder.Get<Soil>();
+	if(!soil)
+	{
+		EVOENGINE_ERROR("No soil!");
 		return;
 	}
-
 	std::unordered_map<Handle, Handle> branchMeshRendererHandles, foliageMeshRendererHandles;
 	Bound plantBound{};
 	auto scene = GetScene();
-	auto treeOwner = tree->GetOwner();
-	if (scene->IsEntityValid(treeOwner)) {
-		scene->ForEachChild(treeOwner, [&](Entity child) {
-			if (scene->GetEntityName(child) == "Branch Mesh" && scene->HasPrivateComponent<MeshRenderer>(child)) {
-				const auto branchMeshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(child).lock();
-				branchMeshRendererHandles.insert({ branchMeshRenderer->GetHandle(), treeOwner.GetIndex() });
-
-				const auto globalTransform = scene->GetDataComponent<GlobalTransform>(child);
-				const auto mesh = branchMeshRenderer->m_mesh.Get<Mesh>();
-				plantBound.m_min = glm::min(plantBound.m_min, glm::vec3(globalTransform.m_value * glm::vec4(mesh->GetBound().m_min, 1.0f)));
-				plantBound.m_max = glm::max(plantBound.m_max, glm::vec3(globalTransform.m_value * glm::vec4(mesh->GetBound().m_max, 1.0f)));
-			}
-			else if (scene->GetEntityName(child) == "Foliage Mesh" &&
-				scene->HasPrivateComponent<MeshRenderer>(child)) {
-				const auto foliageMeshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(child).lock();
-				foliageMeshRendererHandles.insert({ foliageMeshRenderer->GetHandle(), treeOwner.GetIndex() });
-
-				const auto globalTransform = scene->GetDataComponent<GlobalTransform>(child);
-				const auto mesh = foliageMeshRenderer->m_mesh.Get<Mesh>();
-				plantBound.m_min = glm::min(plantBound.m_min, glm::vec3(globalTransform.m_value * glm::vec4(mesh->GetBound().m_min, 1.0f)));
-				plantBound.m_max = glm::max(plantBound.m_max, glm::vec3(globalTransform.m_value * glm::vec4(mesh->GetBound().m_max, 1.0f)));
-			}
-			else if (scene->GetEntityName(child) == "Twig Strands" &&
-				scene->HasPrivateComponent<StrandsRenderer>(child)) {
-				const auto twigStrandsRenderer = scene->GetOrSetPrivateComponent<StrandsRenderer>(child).lock();
-				branchMeshRendererHandles.insert({ twigStrandsRenderer->GetHandle(), treeOwner.GetIndex() });
-
-				const auto globalTransform = scene->GetDataComponent<GlobalTransform>(child);
-				const auto strands = twigStrandsRenderer->m_strands.Get<Strands>();
-				plantBound.m_min = glm::min(plantBound.m_min, glm::vec3(globalTransform.m_value * glm::vec4(strands->GetBound().m_min, 1.0f)));
-				plantBound.m_max = glm::max(plantBound.m_max, glm::vec3(globalTransform.m_value * glm::vec4(strands->GetBound().m_max, 1.0f)));
-			}
-			});
+	const std::vector<Entity>* treeEntities =
+		scene->UnsafeGetPrivateComponentOwnersList<Tree>();
+	if(treeEntities == nullptr)
+	{
+		EVOENGINE_ERROR("No trees!");
+		return;
 	}
+	for (const auto& treeEntity : *treeEntities) {
+		if (scene->IsEntityValid(treeEntity)) {
+			scene->ForEachChild(treeEntity, [&](Entity child) {
+				if (scene->GetEntityName(child) == "Branch Mesh" && scene->HasPrivateComponent<MeshRenderer>(child)) {
+					const auto branchMeshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(child).lock();
+					branchMeshRendererHandles.insert({ branchMeshRenderer->GetHandle(), treeEntity.GetIndex() });
 
+					const auto globalTransform = scene->GetDataComponent<GlobalTransform>(child);
+					const auto mesh = branchMeshRenderer->m_mesh.Get<Mesh>();
+					plantBound.m_min = glm::min(plantBound.m_min, glm::vec3(globalTransform.m_value * glm::vec4(mesh->GetBound().m_min, 1.0f)));
+					plantBound.m_max = glm::max(plantBound.m_max, glm::vec3(globalTransform.m_value * glm::vec4(mesh->GetBound().m_max, 1.0f)));
+				}
+				else if (scene->GetEntityName(child) == "Foliage Mesh" &&
+					scene->HasPrivateComponent<MeshRenderer>(child)) {
+					const auto foliageMeshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(child).lock();
+					foliageMeshRendererHandles.insert({ foliageMeshRenderer->GetHandle(), treeEntity.GetIndex() });
+
+					const auto globalTransform = scene->GetDataComponent<GlobalTransform>(child);
+					const auto mesh = foliageMeshRenderer->m_mesh.Get<Mesh>();
+					plantBound.m_min = glm::min(plantBound.m_min, glm::vec3(globalTransform.m_value * glm::vec4(mesh->GetBound().m_min, 1.0f)));
+					plantBound.m_max = glm::max(plantBound.m_max, glm::vec3(globalTransform.m_value * glm::vec4(mesh->GetBound().m_max, 1.0f)));
+				}
+				else if (scene->GetEntityName(child) == "Twig Strands" &&
+					scene->HasPrivateComponent<StrandsRenderer>(child)) {
+					const auto twigStrandsRenderer = scene->GetOrSetPrivateComponent<StrandsRenderer>(child).lock();
+					branchMeshRendererHandles.insert({ twigStrandsRenderer->GetHandle(), treeEntity.GetIndex() });
+
+					const auto globalTransform = scene->GetDataComponent<GlobalTransform>(child);
+					const auto strands = twigStrandsRenderer->m_strands.Get<Strands>();
+					plantBound.m_min = glm::min(plantBound.m_min, glm::vec3(globalTransform.m_value * glm::vec4(strands->GetBound().m_min, 1.0f)));
+					plantBound.m_max = glm::max(plantBound.m_max, glm::vec3(globalTransform.m_value * glm::vec4(strands->GetBound().m_max, 1.0f)));
+				}
+				}
+			);
+		}
+	}
 	Handle groundMeshRendererHandle = 0;
-	const auto soil = m_soil.Get<Soil>();
-	auto soilOwner = soil->GetOwner();
-	if (scene->IsEntityValid(soilOwner)) {
-		scene->ForEachChild(soilOwner, [&](Entity child) {
+	auto soilEntity = soil->GetOwner();
+	if (scene->IsEntityValid(soilEntity)) {
+		scene->ForEachChild(soilEntity, [&](Entity child) {
 			if (scene->GetEntityName(child) == "Ground Mesh" && scene->HasPrivateComponent<MeshRenderer>(child)) {
 				groundMeshRendererHandle = scene->GetOrSetPrivateComponent<MeshRenderer>(child).lock()->GetHandle();
 			}
@@ -341,8 +350,6 @@ void TreePointCloudScanner::GeneratePointCloud(const std::filesystem::path& save
 
 void TreePointCloudScanner::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
-	editorLayer->DragAndDropButton<Tree>(m_tree, "Target tree");
-	editorLayer->DragAndDropButton<Soil>(m_soil, "Target soil");
 	if (ImGui::TreeNodeEx("Point cloud settings")) {
 		m_captureSettings.OnInspect();
 		ImGui::TreePop();
@@ -361,28 +368,18 @@ void TreePointCloudScanner::OnDestroy()
 {
 	m_pointSettings = {};
 	m_captureSettings = {};
-	m_tree.Clear();
-	m_soil.Clear();
+	
 }
 
 void TreePointCloudScanner::Serialize(YAML::Emitter& out)
 {
 	m_pointSettings.Serialize("m_pointSettings", out);
 	m_captureSettings.Serialize("m_captureSettings", out);
-	m_tree.Save("m_tree", out);
-	m_soil.Save("m_soil", out);
 }
 
-void TreePointCloudScanner::Relink(const std::unordered_map<Handle, Handle>& map, const std::shared_ptr<Scene>& scene)
-{
-	m_tree.Relink(map, scene);
-	m_soil.Relink(map, scene);
-}
 
 void TreePointCloudScanner::Deserialize(const YAML::Node& in)
 {
 	m_pointSettings.Deserialize("m_pointSettings", in);
 	m_captureSettings.Deserialize("m_captureSettings", in);
-	m_tree.Load("m_tree", in, GetScene());
-	m_soil.Load("m_soil", in, GetScene());
 }

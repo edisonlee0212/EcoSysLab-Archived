@@ -426,8 +426,6 @@ void GenerateTreePointCloud(
 	Application::Loop();
 	const auto scannerEntity = scene->CreateEntity("Scanner");
 	const auto scanner = scene->GetOrSetPrivateComponent<TreePointCloudScanner>(scannerEntity).lock();
-	scanner->m_tree = tree;
-	scanner->m_soil = soil;
 	scanner->m_captureSettings = captureSettings;
 	scanner->m_pointSettings = pointSettings;
 	scanner->GeneratePointCloud(pointCloudOutputPath);

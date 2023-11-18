@@ -45,15 +45,12 @@ namespace EcoSysLab {
         PointCloudPointSettings m_pointSettings;
         PointCloudCaptureSettings m_captureSettings;
 
-        PrivateComponentRef m_tree;
-        PrivateComponentRef m_soil;
         void GeneratePointCloud(const std::filesystem::path& savePath);
         void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 
         void OnDestroy() override;
 
         void Serialize(YAML::Emitter& out) override;
-        void Relink(const std::unordered_map<Handle, Handle>& map, const std::shared_ptr<Scene>& scene) override;
         void Deserialize(const YAML::Node& in) override;
 	};
 }
