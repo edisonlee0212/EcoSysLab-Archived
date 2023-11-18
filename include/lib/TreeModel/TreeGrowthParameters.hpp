@@ -175,7 +175,10 @@ namespace EcoSysLab
 		 * \brief The internode length
 		 */
 		float m_internodeLength;
-
+		/*
+		 * \brief How the thickness of branch effect the length of the actual node.
+		 */
+		float m_internodeLengthThicknessFactor = 0.25f;
 		/**
 		 * \brief Thickness of end internode
 		 */

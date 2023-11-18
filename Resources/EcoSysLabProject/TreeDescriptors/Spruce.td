@@ -11,7 +11,7 @@ m_shootGrowthParameters:
   m_gravitropism: 0.0399999991
   m_phototropism: 0
   m_internodeLength: 0.0299999993
-  m_endNodeThickness: 0.00100000005
+  m_endNodeThickness: 0.00200000009
   m_thicknessAccumulationFactor: 0.5
   m_thicknessAccumulateAgeFactor: 0
   m_apicalInternodeKillProbability: 0
@@ -27,9 +27,9 @@ m_shootGrowthParameters:
   m_fruitVigorRequirement: 0.100000001
   m_internodeVigorRequirement: 1
   m_vigorRequirementAggregateLoss: 0.949999988
-  m_lowBranchPruning: 0.100000001
+  m_lowBranchPruning: 0.200000003
   m_lowBranchPruningThicknessFactor: 0
-  m_saggingFactorThicknessReductionMax: [0.00999999978, 1, 0.25999999]
+  m_saggingFactorThicknessReductionMax: [0.00499999989, 1.5, 0.25999999]
   m_maxSpaceOccupancy: 1
   m_maxLeafSize: [0.0500000007, 0.5, 0.0500000007]
   m_leafPositionVariance: 0.5

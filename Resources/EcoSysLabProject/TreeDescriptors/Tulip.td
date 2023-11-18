@@ -8,8 +8,8 @@ m_shootGrowthParameters:
   m_branchingAngleMeanVariance: [40, 0]
   m_rollAngleMeanVariance: [90, 2]
   m_apicalAngleMeanVariance: [0, 0]
-  m_gravitropism: 0
-  m_phototropism: 0.100000001
+  m_gravitropism: 0.100000001
+  m_phototropism: 0
   m_internodeLength: 0.0299999993
   m_endNodeThickness: 0.00100000005
   m_thicknessAccumulationFactor: 0.5

@@ -87,6 +87,8 @@ namespace EcoSysLab
 #pragma endregion
 
 	struct InternodeGrowthData {
+		float m_internodeLength = 0.0f;
+
 		glm::quat m_localRotation = glm::vec3(0.0f);
 
 		bool m_isMaxChild = false;
