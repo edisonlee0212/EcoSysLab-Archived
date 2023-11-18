@@ -17,6 +17,8 @@ namespace EcoSysLab {
         std::vector<TreeInfo> m_treeInfos;
         TreeGrowthSettings m_treeGrowthSettings;
 
+        void UpdateTreeDescriptors(const std::shared_ptr<TreeDescriptor>& treeDescriptor);
+
         void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 
         void OnCreate() override;

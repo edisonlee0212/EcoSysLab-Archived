@@ -28,9 +28,20 @@ void TreeInfo::CollectAssetRef(std::vector<AssetRef>& list) const
 	list.push_back(m_treeDescriptor);
 }
 
+void ForestDescriptor::UpdateTreeDescriptors(const std::shared_ptr<TreeDescriptor>& treeDescriptor)
+{
+	if (treeDescriptor) {
+		for (auto& i : m_treeInfos)
+		{
+			i.m_treeDescriptor = treeDescriptor;
+		}
+	}
+}
+
 void ForestDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
-	static glm::ivec2 gridSize = { 20, 20 };
-	static glm::vec2 gridDistance = { 5, 5 };
+	static glm::ivec2 gridSize = { 2, 2 };
+	static glm::vec2 gridDistance = { 2, 2 };
+	static float randomShift = 0.25f;
 	static bool setParent = true;
 	static bool enableHistory = false;
 	static int historyIteration = 30;
@@ -39,51 +50,49 @@ void ForestDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer
 	if (ImGui::TreeNode("Grid...")) {
 		ImGui::DragInt2("Grid size", &gridSize.x, 1, 0, 100);
 		ImGui::DragFloat2("Grid distance", &gridDistance.x, 0.1f, 0.0f, 100.0f);
+		ImGui::DragFloat("Random shift", &randomShift, 0.01f, 0.0f, 0.5f);
 		if (ImGui::Button("Reset Grid")) {
 			m_treeInfos.clear();
 			const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
 			const auto soil = ecoSysLabLayer->m_soilHolder.Get<Soil>();
 			const auto soilDescriptor = soil->m_soilDescriptor.Get<SoilDescriptor>();
-			bool heightSet = false;
+			std::shared_ptr<HeightField> heightField{};
 			if (soilDescriptor)
 			{
-				if (const auto heightField = soilDescriptor->m_heightField.Get<HeightField>()) {
-					heightSet = true;
-					for (int i = 0; i < gridSize.x; i++) {
-						for (int j = 0; j < gridSize.y; j++) {
-							m_treeInfos.emplace_back();
-							m_treeInfos.back().m_globalTransform.SetPosition(glm::vec3(i * gridDistance.x, heightField->GetValue({ i * gridDistance.x, j * gridDistance.y }) - 0.05f, j * gridDistance.y));
-						}
-					}
-				}
+				heightField = soilDescriptor->m_heightField.Get<HeightField>();
 			}
-			if (!heightSet) {
-				for (int i = 0; i < gridSize.x; i++) {
-					for (int j = 0; j < gridSize.y; j++) {
-						m_treeInfos.emplace_back();
-						m_treeInfos.back().m_globalTransform.SetPosition(glm::vec3(i * gridDistance.x, 0.0f, j * gridDistance.y));
-					}
+			const glm::vec2 startPoint = glm::vec2((gridSize.x - 1) * gridDistance.x, (gridSize.y - 1) * gridDistance.y) * 0.5f;
+			for (int i = 0; i < gridSize.x; i++) {
+				for (int j = 0; j < gridSize.y; j++) {
+					m_treeInfos.emplace_back();
+					glm::vec3 position = glm::vec3(-startPoint.x + i * gridDistance.x, 0.0f, -startPoint.y + j * gridDistance.y);
+					position.x += glm::linearRand(-gridDistance.x * randomShift, gridDistance.x * randomShift);
+					position.z += glm::linearRand(-gridDistance.y * randomShift, gridDistance.y * randomShift);
+					if (heightField) position.y = heightField->GetValue({ position.x, position.z }) - 0.05f;
+					m_treeInfos.back().m_globalTransform.SetPosition(position);
 				}
 			}
 		}
 		ImGui::TreePop();
 	}
-	if (ImGui::TreeNode("Random region..."))
+	static AssetRef treeDescriptorRef;
+	if (editorLayer->DragAndDropButton<TreeDescriptor>(treeDescriptorRef, "Apply all with treeDescriptor...", true))
 	{
+		if (const auto treeDescriptor = treeDescriptorRef.Get<TreeDescriptor>()) {
+			UpdateTreeDescriptors(treeDescriptor);
+		}
+		treeDescriptorRef.Clear();
+	}
 
-		ImGui::TreePop();
-	}
-	static AssetRef treeDescriptor;
-	if (editorLayer->DragAndDropButton<TreeDescriptor>(treeDescriptor, "Apply all with treeDescriptor...", true))
+	if (ImGui::TreeNode("Tree Instances"))
 	{
-		const auto td = treeDescriptor.Get<TreeDescriptor>();
-		if (td) {
-			for (auto& i : m_treeInfos)
-			{
-				i.m_treeDescriptor = td;
-			}
+		int index = 1;
+		for (auto& i : m_treeInfos)
+		{
+			editorLayer->DragAndDropButton<TreeDescriptor>(i.m_treeDescriptor, "Tree No." + std::to_string(index), true);
+			index++;
 		}
-		treeDescriptor.Clear();
+		ImGui::TreePop();
 	}
 
 	if (ImGui::Button("Instantiate trees")) {

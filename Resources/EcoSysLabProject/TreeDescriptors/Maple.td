@@ -7,7 +7,7 @@ m_shootGrowthParameters:
   m_leafBudCount: 1
   m_branchingAngleMeanVariance: [75, 1]
   m_rollAngleMeanVariance: [30, 2]
-  m_apicalAngleMeanVariance: [0, 1.5]
+  m_apicalAngleMeanVariance: [0, 1]
   m_gravitropism: 0
   m_phototropism: 0.0199999996
   m_internodeLength: 0.0299999993
@@ -27,7 +27,7 @@ m_shootGrowthParameters:
   m_fruitVigorRequirement: 0.100000001
   m_internodeVigorRequirement: 1
   m_vigorRequirementAggregateLoss: 1
-  m_lowBranchPruning: 0.0500000007
+  m_lowBranchPruning: 0.200000003
   m_lowBranchPruningThicknessFactor: 0
   m_saggingFactorThicknessReductionMax: [0.00100000005, 3, 0.300000012]
   m_maxSpaceOccupancy: 1
