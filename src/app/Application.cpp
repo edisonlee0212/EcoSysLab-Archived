@@ -98,9 +98,6 @@ int main() {
 #ifdef BUILD_WITH_RAYTRACER
 
 	auto rayTracerLayer = Application::GetLayer<RayTracerLayer>();
-	rayTracerLayer->m_showCameraWindow = false;
-	rayTracerLayer->m_showSceneWindow = false;
-	rayTracerLayer->m_showRayTracerWindow = false;
 #endif
 
 	// adjust default camera speed
