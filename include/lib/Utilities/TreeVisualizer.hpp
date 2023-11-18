@@ -121,11 +121,11 @@ namespace EcoSysLab {
 
 		template<typename SkeletonData, typename FlowData, typename NodeData>
 		void
-			SyncMatrices(const Skeleton<SkeletonData, FlowData, NodeData>& skeleton, const std::shared_ptr<ParticleInfoList>& particleInfoList, NodeHandle& selectedNodeHandle, float& lengthFactor);
+			SyncMatrices(const Skeleton<SkeletonData, FlowData, NodeData>& skeleton, const std::shared_ptr<ParticleInfoList>& particleInfoList);
 
-		void SyncColors(const ShootSkeleton& shootSkeleton, NodeHandle& selectedNodeHandle);
+		void SyncColors(const ShootSkeleton& shootSkeleton, NodeHandle selectedNodeHandle);
 
-		void SyncColors(const RootSkeleton& rootSkeleton, const NodeHandle& selectedNodeHandle);
+		void SyncColors(const RootSkeleton& rootSkeleton, NodeHandle selectedNodeHandle);
 
 		int m_iteration = 0;
 		bool m_needUpdate = false;
@@ -368,13 +368,12 @@ namespace EcoSysLab {
 	}
 
 	template<typename SkeletonData, typename FlowData, typename NodeData>
-	void TreeVisualizer::SyncMatrices(const Skeleton<SkeletonData, FlowData, NodeData>& skeleton, const std::shared_ptr<ParticleInfoList>& particleInfoList, NodeHandle& selectedNodeHandle,
-		float& lengthFactor) {
+	void TreeVisualizer::SyncMatrices(const Skeleton<SkeletonData, FlowData, NodeData>& skeleton, const std::shared_ptr<ParticleInfoList>& particleInfoList) {
 
 		const auto& sortedNodeList = skeleton.RefSortedNodeList();
 		auto& matrices = particleInfoList->m_particleInfos;
 		particleInfoList->SetPendingUpdate();
-		matrices.resize(sortedNodeList.size() + 1);
+		matrices.resize(sortedNodeList.size());
 		Jobs::ParallelFor(sortedNodeList.size(), [&](unsigned i) {
 			auto nodeHandle = sortedNodeList[i];
 			const auto& node = skeleton.PeekNode(nodeHandle);
@@ -384,24 +383,13 @@ namespace EcoSysLab {
 				direction, glm::vec3(direction.y, direction.z, direction.x));
 			rotation *= glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));
 			const glm::mat4 rotationTransform = glm::mat4_cast(rotation);
-			matrices[i + 1].m_instanceMatrix.m_value =
+			matrices[i].m_instanceMatrix.m_value =
 				glm::translate(position + (node.m_info.m_length / 2.0f) * direction) *
 				rotationTransform *
 				glm::scale(glm::vec3(
 					node.m_info.m_thickness * 2.0f,
 					node.m_info.m_length,
 					node.m_info.m_thickness * 2.0f));
-			if (nodeHandle == selectedNodeHandle) {
-				const glm::vec3 selectedCenter =
-					position + (node.m_info.m_length * lengthFactor) * direction;
-				matrices[0].m_instanceMatrix.m_value = glm::translate(selectedCenter) *
-					rotationTransform *
-					glm::scale(glm::vec3(
-						2.0f * node.m_info.m_thickness + 0.001f,
-						node.m_info.m_length / 5.0f,
-						2.0f * node.m_info.m_thickness + 0.001f));
-				matrices[0].m_instanceColor = glm::vec4(1.0f);
-			}
 			});
 	}
 }

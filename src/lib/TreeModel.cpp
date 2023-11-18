@@ -1639,10 +1639,10 @@ bool TreeModel::PruneInternodes(const glm::mat4& globalTransform, ClimateModel& 
 
 		}
 		bool pruneByCrownShyness = false;
-		if (!pruning && m_crownShynessDistance > 0.f) {
-			const glm::vec3 startPosition = globalTransform * glm::vec4(internode.m_info.m_globalPosition, 1.0f);
+		if (!pruning && m_crownShynessDistance > 0.f && internode.IsEndNode()) {
+			//const glm::vec3 startPosition = globalTransform * glm::vec4(internode.m_info.m_globalPosition, 1.0f);
 			const glm::vec3 endPosition = globalTransform * glm::vec4(internode.m_info.GetGlobalEndPosition(), 1.0f);
-			climateModel.m_environmentGrid.m_voxel.ForEach(endPosition, m_crownShynessDistance, [&](EnvironmentVoxel& data)
+			climateModel.m_environmentGrid.m_voxel.ForEach(endPosition, m_crownShynessDistance * 2.0f, [&](EnvironmentVoxel& data)
 				{
 					if (pruneByCrownShyness) return;
 					for (const auto& i : data.m_internodeVoxelRegistrations)

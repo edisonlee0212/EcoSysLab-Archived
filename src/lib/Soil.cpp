@@ -821,11 +821,9 @@ Entity Soil::GenerateMesh(float xDepth, float zDepth)
 			break;
 		}
 	}
-	if (groundSurfaceEntity.GetIndex() == 0)
-	{
-		groundSurfaceEntity = scene->CreateEntity("Ground Mesh");
-		scene->SetParent(groundSurfaceEntity, self);
-	}
+	if (groundSurfaceEntity.GetIndex() != 0) scene->DeleteEntity(groundSurfaceEntity);
+	groundSurfaceEntity = scene->CreateEntity("Ground Mesh");
+	scene->SetParent(groundSurfaceEntity, self);
 
 	const auto meshRenderer =
 		scene->GetOrSetPrivateComponent<MeshRenderer>(groundSurfaceEntity).lock();

@@ -54,7 +54,28 @@ m_entityMetadataList:
     m_static: false
     Root.Handle: 13990783136456237486
     m_privateComponentElements:
-      []
+      - m_typeName: TreePointCloudScanner
+        m_enabled: true
+        m_pointSettings:
+          m_variance: 0
+          m_ballRandRadius: 0
+          m_typeIndex: true
+          m_instanceIndex: false
+          m_branchIndex: true
+          m_internodeIndex: false
+          m_boundingBoxLimit: 1
+        m_captureSettings:
+          m_pitchAngleStart: -20
+          m_pitchAngleStep: 20
+          m_pitchAngleEnd: 60
+          m_turnAngleStart: 0
+          m_turnAngleStep: 10
+          m_turnAngleEnd: 360
+          m_distance: 5
+          m_height: 1.5
+          m_fov: 60
+          m_resolution: 128
+          m_cameraDepthMax: 10
   - m_name: Elm
     m_handle: 12948785876818235826
     m_enabled: true
@@ -66,12 +87,70 @@ m_entityMetadataList:
         m_treeDescriptor:
           m_assetHandle: 6336190052377248199
           m_assetTypeName: TreeDescriptor
+  - m_name: Ground Mesh
+    m_handle: 9247726572506778062
+    m_enabled: true
+    m_static: false
+    Parent.Handle: 3689751878173549223
+    Root.Handle: 3689751878173549223
+    m_privateComponentElements:
+      - m_typeName: MeshRenderer
+        m_enabled: true
+        m_castShadow: true
+        m_mesh:
+          m_assetHandle: 67
+          m_assetTypeName: Mesh
+        m_material:
+          m_assetHandle: 5765034955834608617
+          m_assetTypeName: Material
 m_systems:
   []
+LocalAssets:
+  - m_typeName: Material
+    m_handle: 5765034955834608617
+    m_albedoTexture:
+      m_assetHandle: 0
+      m_assetTypeName: ""
+    m_normalTexture:
+      m_assetHandle: 0
+      m_assetTypeName: ""
+    m_metallicTexture:
+      m_assetHandle: 0
+      m_assetTypeName: ""
+    m_roughnessTexture:
+      m_assetHandle: 0
+      m_assetTypeName: ""
+    m_aoTexture:
+      m_assetHandle: 0
+      m_assetTypeName: ""
+    m_drawSettings:
+      m_cullMode: 2
+      m_lineWidth: 1
+      m_polygonMode: 0
+      m_blending: false
+      m_blendingSrcFactor: 6
+      m_blendingDstFactor: 7
+    m_materialProperties.m_albedoColor: [1, 1, 1]
+    m_materialProperties.m_subsurfaceColor: [1, 1, 1]
+    m_materialProperties.m_subsurfaceFactor: 0
+    m_materialProperties.m_subsurfaceRadius: [1, 0.200000003, 0.100000001]
+    m_materialProperties.m_metallic: 0.300000012
+    m_materialProperties.m_specular: 0.5
+    m_materialProperties.m_specularTint: 0
+    m_materialProperties.m_roughness: 0.300000012
+    m_materialProperties.m_sheen: 0
+    m_materialProperties.m_sheenTint: 0.5
+    m_materialProperties.m_clearCoat: 0
+    m_materialProperties.m_clearCoatRoughness: 0.0299999993
+    m_materialProperties.m_IOR: 1.45000005
+    m_materialProperties.m_transmission: 0
+    m_materialProperties.m_transmissionRoughness: 0
+    m_materialProperties.m_emission: 0
+    m_vertexColorOnly: false
 m_dataComponentStorages:
   - m_entitySize: 130
     m_chunkCapacity: 126
-    m_entityAliveCount: 6
+    m_entityAliveCount: 7
     m_dataComponentTypes:
       - m_name: Transform
         m_size: 64
@@ -112,4 +191,9 @@ m_dataComponentStorages:
         DataComponents:
           - Data: !!binary "AACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPw=="
           - Data: !!binary "AACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPw=="
+          - Data: !!binary "AAA="
+      - m_handle: 9247726572506778062
+        DataComponents:
+          - Data: !!binary "AAB6RAAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAekQAAAAAAAAAAAAAAAAAAAAAAACAPw=="
+          - Data: !!binary "AAB6RAAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAekQAAAAAAAAAAAAAAAAAAAAAAACAPw=="
           - Data: !!binary "AAA="
