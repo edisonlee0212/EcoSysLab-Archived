@@ -5,8 +5,8 @@
 #include "rapidcsv.h"
 using namespace EcoSysLab;
 
-void TreePointCloud::ApplyCurve(const int skeletonIndex, const OperatingBranch& branch) {
-	auto& skeleton = m_skeletons[skeletonIndex];
+void TreePointCloud::ApplyCurve(const OperatingBranch& branch) {
+	auto& skeleton = m_skeletons[branch.m_skeletonIndex];
 	const auto chainAmount = branch.m_chainNodeHandles.size();
 	for (int i = 0; i < chainAmount; i++) {
 		auto& node = skeleton.RefNode(branch.m_chainNodeHandles[i]);
@@ -91,7 +91,8 @@ bool TreePointCloud::DirectConnectionCheck(const glm::vec3& parentP0, const glm:
 
 void TreePointCloud::FindPoints(const glm::vec3& position, VoxelGrid<std::vector<PointData>>& pointVoxelGrid,
 	float radius,
-	const std::function<void(const PointData& voxel)>& func) const {
+	const std::function<void(const PointData& voxel)>& func)
+{
 	pointVoxelGrid.ForEach(position, radius, [&](const std::vector<PointData>& voxels) {
 		for (const auto& voxel : voxels) {
 			if (glm::distance(position, voxel.m_position) > radius) continue;
@@ -101,7 +102,7 @@ void TreePointCloud::FindPoints(const glm::vec3& position, VoxelGrid<std::vector
 }
 
 bool TreePointCloud::HasPoints(const glm::vec3& position, VoxelGrid<std::vector<PointData>>& pointVoxelGrid,
-	float radius) const
+	float radius)
 {
 	bool retVal = false;
 	pointVoxelGrid.ForEach(position, radius, [&](const std::vector<PointData>& voxels) {
@@ -116,7 +117,8 @@ bool TreePointCloud::HasPoints(const glm::vec3& position, VoxelGrid<std::vector<
 void
 TreePointCloud::ForEachBranchEnd(const glm::vec3& position, VoxelGrid<std::vector<BranchEndData>>& branchEndsVoxelGrid,
 	float radius,
-	const std::function<void(const BranchEndData& voxel)>& func) const {
+	const std::function<void(const BranchEndData& voxel)>& func)
+{
 	branchEndsVoxelGrid.ForEach(position, radius, [&](const std::vector<BranchEndData>& branchEnds) {
 		for (const auto& branchEnd : branchEnds) {
 			if (glm::distance(position, branchEnd.m_position) > radius) continue;
@@ -152,16 +154,16 @@ void TreePointCloud::CalculateNodeTransforms(ReconstructionSkeleton& skeleton)
 	}
 }
 
-void TreePointCloud::BuildConnectionBranch(const int skeletonIndex, const BranchHandle processingBranchHandle, NodeHandle& prevNodeHandle)
+void TreePointCloud::BuildConnectionBranch(const BranchHandle processingBranchHandle, NodeHandle& prevNodeHandle)
 {
 	m_operatingBranches.emplace_back();
-	auto& skeleton = m_skeletons[skeletonIndex];
 	auto& processingBranch = m_operatingBranches[processingBranchHandle];
+	auto& skeleton = m_skeletons[processingBranch.m_skeletonIndex];
 	auto& connectionBranch = m_operatingBranches.back();
 	auto& parentBranch = m_operatingBranches[processingBranch.m_parentHandle];
 	connectionBranch.m_color = parentBranch.m_color;
 	connectionBranch.m_handle = m_operatingBranches.size() - 1;
-
+	connectionBranch.m_skeletonIndex = processingBranch.m_skeletonIndex;
 	connectionBranch.m_startThickness = parentBranch.m_endThickness;
 	connectionBranch.m_endThickness = processingBranch.m_startThickness;
 	connectionBranch.m_childHandles.emplace_back(processingBranch.m_handle);
@@ -174,9 +176,7 @@ void TreePointCloud::BuildConnectionBranch(const int skeletonIndex, const Branch
 			break;
 		}
 	}
-	bool onlyChild = true;
-	if (parentBranch.m_childHandles.size() > 1) onlyChild = false;
-
+	
 	NodeHandle bestPrevNodeHandle = parentBranch.m_chainNodeHandles.back();
 	float dotMax = -1.0f;
 	glm::vec3 connectionBranchStartPosition = parentBranch.m_bezierCurve.m_p3;
@@ -216,7 +216,7 @@ void TreePointCloud::BuildConnectionBranch(const int skeletonIndex, const Branch
 
 	prevNodeHandle = bestPrevNodeHandle;
 
-	auto connectionFirstNodeHandle = skeleton.Extend(prevNodeHandle, !onlyChild);
+	auto connectionFirstNodeHandle = skeleton.Extend(prevNodeHandle, !processingBranch.m_apical);
 	connectionBranch.m_chainNodeHandles.emplace_back(connectionFirstNodeHandle);
 	prevNodeHandle = connectionFirstNodeHandle;
 	const float connectionChainLength = connectionBranch.m_bezierCurve.GetLength();
@@ -227,40 +227,47 @@ void TreePointCloud::BuildConnectionBranch(const int skeletonIndex, const Branch
 		connectionBranch.m_chainNodeHandles.emplace_back(prevNodeHandle);
 
 	}
-	ApplyCurve(skeletonIndex, connectionBranch);
+	ApplyCurve(connectionBranch);
 	prevNodeHandle = skeleton.Extend(prevNodeHandle, false);
 	processingBranch.m_chainNodeHandles.emplace_back(prevNodeHandle);
 }
 
-void TreePointCloud::Link(BranchHandle childHandle, BranchHandle parentHandle)
+void TreePointCloud::Link(const BranchHandle childHandle, const BranchHandle parentHandle)
 {
 	auto& childBranch = m_operatingBranches[childHandle];
 	auto& parentBranch = m_operatingBranches[parentHandle];
 	//Establish relationship
 	childBranch.m_parentHandle = parentHandle;
 	childBranch.m_skeletonIndex = parentBranch.m_skeletonIndex;
+	childBranch.m_used = true;
+	if (parentBranch.m_childHandles.empty()) childBranch.m_apical = true;
 	parentBranch.m_childHandles.emplace_back(childHandle);
 	m_branchConnections.emplace_back(m_scannedBranches[childHandle].m_bezierCurve.m_p0,
 		m_scannedBranches[parentHandle].m_bezierCurve.m_p3);
+}
 
-	//Connect branches.
-
-	NodeHandle prevNodeHandle = -1;
-	BuildConnectionBranch(childBranch.m_skeletonIndex, childHandle, prevNodeHandle);
-
-	auto& processingBranch2 = m_operatingBranches[childHandle];
-	float chainLength = processingBranch2.m_bezierCurve.GetLength();
-	int chainAmount = glm::max(2, static_cast<int>(chainLength /
-		m_reconstructionSettings.m_internodeLength));
-
-	auto& skeleton = m_skeletons[processingBranch2.m_skeletonIndex];
-	for (int i = 1; i < chainAmount; i++) {
-		prevNodeHandle = skeleton.Extend(prevNodeHandle, false);
-		processingBranch2.m_chainNodeHandles.emplace_back(prevNodeHandle);
+void TreePointCloud::BuildSkeleton(BranchHandle branchHandle)
+{
+	const auto childHandles = m_operatingBranches[branchHandle].m_childHandles;
+	for (const auto& childHandle : childHandles) {
+		//Connect branches.
+		NodeHandle prevNodeHandle = -1;
+		BuildConnectionBranch(childHandle, prevNodeHandle);
+		auto& childBranch = m_operatingBranches[childHandle];
+		const float chainLength = childBranch.m_bezierCurve.GetLength();
+		const int chainAmount = glm::max(2, static_cast<int>(chainLength /
+			                                 m_reconstructionSettings.m_internodeLength));
+		auto& skeleton = m_skeletons[childBranch.m_skeletonIndex];
+		for (int i = 1; i < chainAmount; i++) {
+			prevNodeHandle = skeleton.Extend(prevNodeHandle, false);
+			childBranch.m_chainNodeHandles.emplace_back(prevNodeHandle);
+		}
+		ApplyCurve(childBranch);
 	}
-	ApplyCurve(processingBranch2.m_skeletonIndex, processingBranch2);
-
-	processingBranch2.m_used = true;
+	for (const auto& childHandle : childHandles)
+	{
+		BuildSkeleton(childHandle);
+	}
 }
 
 void TreePointCloud::ImportGraph(const std::filesystem::path& path, float scaleFactor) {
@@ -272,7 +279,6 @@ void TreePointCloud::ImportGraph(const std::filesystem::path& path, float scaleF
 		std::ifstream stream(path.string());
 		std::stringstream stringStream;
 		stringStream << stream.rdbuf();
-		//std::string data((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
 		YAML::Node in = YAML::Load(stringStream.str());
 
 		const auto& tree = in["Tree"];
@@ -399,7 +405,7 @@ void TreePointCloud::ImportGraph(const std::filesystem::path& path, float scaleF
 	}
 }
 
-void TreePointCloud::ExportForestOBJ(const std::filesystem::path& path)
+void TreePointCloud::ExportForestOBJ(const std::filesystem::path& path) const
 {
 	if (path.extension() == ".obj") {
 		std::ofstream of;
@@ -1200,7 +1206,7 @@ void TreePointCloud::BuildSkeletons() {
 			prevNodeHandle = skeleton.Extend(prevNodeHandle, false);
 			processingBranch.m_chainNodeHandles.emplace_back(prevNodeHandle);
 		}
-		ApplyCurve(processingBranch.m_skeletonIndex, processingBranch);
+		ApplyCurve(processingBranch);
 	}
 
 	std::multimap<float, BranchHandle> heightSortedBranches{};
@@ -1281,6 +1287,10 @@ void TreePointCloud::BuildSkeletons() {
 			}
 		}
 	}
+	for (const auto& rootBranchHandle : rootBranchHandles)
+	{
+		BuildSkeleton(rootBranchHandle.second);
+	}
 
 	for (auto& skeleton : m_skeletons)
 	{
@@ -1338,7 +1348,7 @@ void TreePointCloud::BuildSkeletons() {
 		}
 		else if (m_reconstructionSettings.m_limitParentThickness)
 		{
-			for (auto i = sortedNodeList.rbegin(); i != sortedNodeList.rend(); i++) {
+			for (auto i = sortedNodeList.rbegin(); i != sortedNodeList.rend(); ++i) {
 				auto& node = skeleton.RefNode(*i);
 				auto& nodeInfo = node.m_info;
 				for (const auto& childHandle : node.RefChildHandles()) {
@@ -1356,7 +1366,7 @@ void TreePointCloud::BuildSkeletons() {
 		const auto& treePart = m_treeParts[allocatedPoint.m_treePartHandle];
 		float minDistance = 999.f;
 		NodeHandle closestNodeHandle = -1;
-		BranchHandle cloeseBranchHandle = -1;
+		BranchHandle closestBranchHandle = -1;
 		int closestSkeletonIndex = -1;
 		for (const auto& branchHandle : treePart.m_branchHandles) {
 			auto& branch = m_operatingBranches[branchHandle];
@@ -1367,12 +1377,12 @@ void TreePointCloud::BuildSkeletons() {
 					minDistance = distance;
 					closestNodeHandle = nodeHandle;
 					closestSkeletonIndex = branch.m_skeletonIndex;
-					cloeseBranchHandle = branchHandle;
+					closestBranchHandle = branchHandle;
 				}
 			}
 		}
 		allocatedPoint.m_nodeHandle = closestNodeHandle;
-		allocatedPoint.m_branchHandle = cloeseBranchHandle;
+		allocatedPoint.m_branchHandle = closestBranchHandle;
 		allocatedPoint.m_skeletonIndex = closestSkeletonIndex;
 		if (allocatedPoint.m_skeletonIndex != -1)
 			m_skeletons[allocatedPoint.m_skeletonIndex].RefNode(
@@ -1784,6 +1794,7 @@ void TreePointCloud::CloneOperatingBranch(OperatingBranch& operatingBranch, cons
 	operatingBranch.m_startThickness = target.m_startThickness;
 	operatingBranch.m_endThickness = target.m_endThickness;
 	operatingBranch.m_parentHandle = -1;
+	operatingBranch.m_childHandles.clear();
 	operatingBranch.m_orphan = false;
 	operatingBranch.m_parentCandidates.clear();
 

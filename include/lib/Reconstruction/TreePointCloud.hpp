@@ -58,6 +58,8 @@ namespace EcoSysLab {
 		std::vector<std::pair<BranchHandle, float>> m_parentCandidates;
 		bool m_used = false;
 		bool m_orphan = false;
+
+		bool m_apical = false;
 	};
 
 	struct TreePart {
@@ -135,21 +137,24 @@ namespace EcoSysLab {
 	class TreePointCloud : public IPrivateComponent {
 		bool DirectConnectionCheck(const glm::vec3& parentP0, const glm::vec3& parentP3, const glm::vec3& childP0, const glm::vec3& childP3);
 
-		void FindPoints(const glm::vec3& position, VoxelGrid<std::vector<PointData>>& pointVoxelGrid, float radius,
-			const std::function<void(const PointData& voxel)>& func) const;
-		bool HasPoints(const glm::vec3& position, VoxelGrid<std::vector<PointData>>& pointVoxelGrid, float radius) const;
-		void ForEachBranchEnd(const glm::vec3& position, VoxelGrid<std::vector<BranchEndData>>& branchEndsVoxelGrid, float radius,
-			const std::function<void(const BranchEndData& voxel)>& func) const;
+		static void FindPoints(const glm::vec3& position, VoxelGrid<std::vector<PointData>>& pointVoxelGrid, float radius,
+		                       const std::function<void(const PointData& voxel)>& func);
+		static bool HasPoints(const glm::vec3& position, VoxelGrid<std::vector<PointData>>& pointVoxelGrid, float radius);
+		static void ForEachBranchEnd(const glm::vec3& position, VoxelGrid<std::vector<BranchEndData>>& branchEndsVoxelGrid, float radius,
+		                             const std::function<void(const BranchEndData& voxel)>& func);
 
 		void CalculateNodeTransforms(ReconstructionSkeleton& skeleton);
 
-		void BuildConnectionBranch(int skeletonIndex, BranchHandle processingBranchHandle, NodeHandle& prevNodeHandle);
+		void BuildConnectionBranch(BranchHandle processingBranchHandle, NodeHandle& prevNodeHandle);
 		void Link(BranchHandle childHandle, BranchHandle parentHandle);
-		void ApplyCurve(int skeletonIndex, const OperatingBranch& branch);
+
+		void BuildSkeleton(BranchHandle branchHandle);
+
+		void ApplyCurve(const OperatingBranch& branch);
 
 		void BuildVoxelGrid();
 
-		void CloneOperatingBranch(OperatingBranch& operatingBranch, const ScannedBranch& target);
+		static void CloneOperatingBranch(OperatingBranch& operatingBranch, const ScannedBranch& target);
 	public:
 		VoxelGrid<std::vector<PointData>> m_scatterPointsVoxelGrid;
 		VoxelGrid<std::vector<PointData>> m_allocatedPointsVoxelGrid;
@@ -159,7 +164,7 @@ namespace EcoSysLab {
 		ReconstructionSettings m_reconstructionSettings{};
 		ConnectivityGraphSettings m_connectivityGraphSettings{};
 		void ImportGraph(const std::filesystem::path& path, float scaleFactor = 0.1f);
-		void ExportForestOBJ(const std::filesystem::path& path);
+		void ExportForestOBJ(const std::filesystem::path& path) const;
 		glm::vec3 m_min;
 		glm::vec3 m_max;
 		std::vector<ScatteredPoint> m_scatteredPoints;
