@@ -63,13 +63,24 @@ bool TreePointCloud::DirectConnectionCheck(const glm::vec3& parentP0, const glm:
 	const auto dotP = glm::dot(glm::normalize(parentP3 - parentP0),
 		glm::normalize(childP3 - childP0));
 	if (dotP < glm::cos(glm::radians(m_connectivityGraphSettings.m_directionConnectionAngleLimit))) return false;
-	const auto dotC0 = glm::dot(glm::normalize(childP3 - childP0), glm::normalize(parentP3 - childP0));
-	const auto dotC3 = glm::dot(glm::normalize(childP0 - childP3), glm::normalize(parentP3 - childP3));
-	if (dotC0 > 0 && dotC3 < 0) return false;
-	const auto dotP3 = glm::dot(glm::normalize(childP0 - parentP3), glm::normalize(parentP0 - parentP3));
-	const auto dotP0 = glm::dot(glm::normalize(childP0 - parentP0), glm::normalize(parentP3 - parentP0));
-	if (dotP3 > 0 && dotP0 < 0) return false;
-
+	if (m_connectivityGraphSettings.m_zigzagCheck) {
+		const auto dotC0 = glm::dot(glm::normalize(childP3 - childP0), glm::normalize(parentP3 - childP0));
+		const auto dotC3 = glm::dot(glm::normalize(childP0 - childP3), glm::normalize(parentP3 - childP3));
+		if (dotC0 > 0 && dotC3 < 0) return false;
+		const auto dotP3 = glm::dot(glm::normalize(childP0 - parentP3), glm::normalize(parentP0 - parentP3));
+		const auto dotP0 = glm::dot(glm::normalize(childP0 - parentP0), glm::normalize(parentP3 - parentP0));
+		if (dotP3 > 0 && dotP0 < 0) return false;
+	}
+	if(m_connectivityGraphSettings.m_parallelShiftCheck)
+	{
+		const auto parentDirection = glm::normalize(parentP0 - parentP3);
+		const auto projectedC0 = glm::closestPointOnLine(childP0, parentP0 + 10.0f * parentDirection, parentP3 - 10.0f * parentDirection);
+		const auto childLength = glm::distance(childP0, childP3);
+		const auto parentLength = glm::distance(parentP0, parentP3);
+		const auto projectedLength = glm::distance(projectedC0, childP0);
+		if (projectedLength > m_connectivityGraphSettings.m_parallelShiftLimitRange * childLength
+			|| projectedLength > m_connectivityGraphSettings.m_parallelShiftLimitRange * parentLength) return false;
+	}
 	if (m_connectivityGraphSettings.m_pointCheckRadius > 0.0f) {
 		const auto middlePoint = (childP0 + parentP3) * 0.5f;
 		if (!HasPoints(middlePoint, m_allocatedPointsVoxelGrid, m_connectivityGraphSettings.m_pointCheckRadius) && !HasPoints(middlePoint, m_scatterPointsVoxelGrid, m_connectivityGraphSettings.m_pointCheckRadius)) return false;
@@ -1151,7 +1162,6 @@ void TreePointCloud::BuildSkeletons() {
 		ApplyCurve(processingBranch.m_skeletonIndex, processingBranch);
 	}
 
-
 	std::multimap<float, BranchHandle> heightSortedBranches{};
 	for (const auto& i : m_operatingBranches)
 	{
@@ -1177,7 +1187,7 @@ void TreePointCloud::BuildSkeletons() {
 			newBranchAllocated = true;
 			Link(branchPair.second, parentHandle);
 		}
-		/*
+		
 		if(!newBranchAllocated)
 		{
 			for (int i = 0; i < m_reconstructionSettings.m_candidateSearchLimit; i++)
@@ -1229,7 +1239,6 @@ void TreePointCloud::BuildSkeletons() {
 				break;
 			}
 		}
-		*/
 	}
 
 	for (auto& skeleton : m_skeletons)
@@ -1720,6 +1729,9 @@ void ConnectivityGraphSettings::OnInspect() {
 	ImGui::DragFloat("Direct connection angle limit", &m_directionConnectionAngleLimit, 0.01f, 0.0f, 180.0f);
 	ImGui::DragFloat("Indirect connection angle limit", &m_indirectConnectionAngleLimit, 0.01f, 0.0f, 180.0f);
 
+	ImGui::Checkbox("Zigzag check", &m_zigzagCheck);
+	ImGui::Checkbox("Parallel shift check", &m_parallelShiftCheck);
+	if (m_parallelShiftCheck) ImGui::DragFloat("Parallel Shift range limit", &m_parallelShiftLimitRange, 0.01f, 0.0f, 1.0f);
 	ImGui::DragFloat("Point existence check radius", &m_pointCheckRadius, 0.01f, 0.0f, 1.0f);
 }
 
@@ -1757,11 +1769,9 @@ void TreePointCloud::CloneOperatingBranch(OperatingBranch& operatingBranch, cons
 
 void ReconstructionSettings::OnInspect() {
 	ImGui::DragFloat("Internode length", &m_internodeLength, 0.01f, 0.01f, 1.0f);
-
 	ImGui::DragFloat("Root node max height", &m_minHeight, 0.01f, 0.01f, 1.0f);
 	ImGui::DragFloat("Tree distance limit", &m_minimumTreeDistance, 0.01f, 0.01f, 1.0f);
 	ImGui::DragFloat("Branch shortening", &m_branchShortening, 0.01f, 0.01f, 0.5f);
-	//ImGui::DragFloat("Branching angle limit", &m_angleLimit, 1.f, 0.0f, 180.0f);
 	ImGui::Checkbox("Override thickness", &m_overrideThickness);
 	if (m_overrideThickness) {
 		ImGui::DragFloat("End node thickness", &m_endNodeThickness, 0.001f, 0.001f, 1.0f);
@@ -1777,4 +1787,5 @@ void ReconstructionSettings::OnInspect() {
 
 	ImGui::DragInt("Node back track limit", &m_nodeBackTrackLimit, 1, 0, 100);
 	ImGui::DragInt("Branch back track limit", &m_branchBackTrackLimit, 1, 0, 10);
+	ImGui::DragInt("Candidate Search limit", &m_candidateSearchLimit, 1, 0, 10);
 }

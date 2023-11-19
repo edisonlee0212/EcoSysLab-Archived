@@ -70,8 +70,9 @@ namespace EcoSysLab {
 
 	struct ConnectivityGraphSettings {
 		float m_pointCheckRadius = 0.02f;
-
-
+		bool m_zigzagCheck = false;
+		bool m_parallelShiftCheck = true;
+		float m_parallelShiftLimitRange = 2.0f;
 		float m_pointPointConnectionDetectionRadius = 0.05f;
 		float m_pointBranchConnectionDetectionRange = 0.5f;
 		float m_branchBranchConnectionMaxLengthRange = 3.0f;
@@ -109,7 +110,7 @@ namespace EcoSysLab {
 
 		int m_nodeBackTrackLimit = 30;
 		int m_branchBackTrackLimit = 1;
-
+		int m_candidateSearchLimit = 1;
 		void OnInspect();
 	};
 
