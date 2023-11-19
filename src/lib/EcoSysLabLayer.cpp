@@ -125,11 +125,11 @@ void EcoSysLabLayer::Visualization() {
 			Entity currentFocusingTree;
 			Jobs::ParallelFor(treeEntities->size(), [&](unsigned i) {
 				const auto treeEntity = treeEntities->at(i);
-				auto globalTransform = scene->GetDataComponent<GlobalTransform>(treeEntity);
-				auto tree = scene->GetOrSetPrivateComponent<Tree>(
+				const auto globalTransform = scene->GetDataComponent<GlobalTransform>(treeEntity);
+				const auto tree = scene->GetOrSetPrivateComponent<Tree>(
 					treeEntity).lock();
-				auto branchSkeleton = tree->m_treeModel.RefShootSkeleton();
-				auto rootSkeleton = tree->m_treeModel.RefShootSkeleton();
+				const auto branchSkeleton = tree->m_treeModel.RefShootSkeleton();
+				const auto rootSkeleton = tree->m_treeModel.RefShootSkeleton();
 				Bound branchSkeletonBound;
 				branchSkeletonBound.m_min = branchSkeleton.m_min;
 				branchSkeletonBound.m_max = branchSkeleton.m_max;
@@ -139,8 +139,8 @@ void EcoSysLabLayer::Visualization() {
 				if (!cameraRay.Intersect(globalTransform.m_value, branchSkeletonBound)
 					&& !cameraRay.Intersect(globalTransform.m_value, rootSkeletonBound))
 					return;
-				auto distance = glm::distance(globalTransform.GetPosition(),
-					glm::vec3(cameraLtw.m_value[3]));
+				const auto distance = glm::distance(globalTransform.GetPosition(),
+				                                    glm::vec3(cameraLtw.m_value[3]));
 				std::lock_guard lock(writeMutex);
 				if (distance < minDistance) {
 					minDistance = distance;
@@ -1083,7 +1083,7 @@ void EcoSysLabLayer::UpdateGroundFruitAndLeaves() const {
 
 
 void EcoSysLabLayer::SoilVisualization() {
-	auto soil = m_soilHolder.Get<Soil>();
+	const auto soil = m_soilHolder.Get<Soil>();
 	if (!soil) {
 		m_soilHolder.Clear();
 		return;
@@ -1133,7 +1133,7 @@ void EcoSysLabLayer::SoilVisualizationScalar(VoxelSoilModel& soilModel) {
 			});
 		auto visualize_vec3 = [&](const Field& x, const Field& y, const Field& z) {
 			Jobs::ParallelFor(numVoxels, [&](unsigned i) {
-				auto value = glm::vec3(x[i], y[i], z[i]);
+				const auto value = glm::vec3(x[i], y[i], z[i]);
 				scalarMatrices[i].m_instanceColor = { glm::normalize(value),
 														 glm::clamp(glm::length(value) * m_scalarMultiplier, m_scalarMinAlpha, 1.0f) };
 				});
@@ -1141,7 +1141,7 @@ void EcoSysLabLayer::SoilVisualizationScalar(VoxelSoilModel& soilModel) {
 
 		auto visualize_float = [&](const Field& v) {
 			Jobs::ParallelFor(numVoxels, [&](unsigned i) {
-				auto value = glm::vec3(v[i]);
+				const auto value = glm::vec3(v[i]);
 				scalarMatrices[i].m_instanceColor = { m_scalarBaseColor,
 														 glm::clamp(glm::length(value) * m_scalarMultiplier, m_scalarMinAlpha, 1.0f) };
 				});
@@ -1169,7 +1169,7 @@ void EcoSysLabLayer::SoilVisualizationScalar(VoxelSoilModel& soilModel) {
 									  break;
 		case SoilProperty::SoilLayer: {
 			Jobs::ParallelFor(numVoxels, [&](unsigned i) {
-				auto layerIndex = soilModel.m_material_id[i];
+				const auto layerIndex = soilModel.m_material_id[i];
 				if (layerIndex == 0) scalarMatrices[i].m_instanceColor = glm::vec4(0.0f);
 				else {
 					scalarMatrices[i].m_instanceColor = m_soilLayerColors[layerIndex - 1];
@@ -1191,7 +1191,7 @@ void EcoSysLabLayer::SoilVisualizationScalar(VoxelSoilModel& soilModel) {
 		}
 	}
 	m_updateScalarMatrices = false;
-	auto editorLayer = Application::GetLayer<EditorLayer>();
+	const auto editorLayer = Application::GetLayer<EditorLayer>();
 	GizmoSettings gizmoSettings;
 	gizmoSettings.m_drawSettings.m_blending = true;
 	gizmoSettings.m_drawSettings.m_blendingSrcFactor = VK_BLEND_FACTOR_SRC_ALPHA;
@@ -1271,7 +1271,7 @@ void EcoSysLab::EcoSysLabLayer::SoilVisualizationVector(VoxelSoilModel& soilMode
 		for (auto& i : results) i.wait();
 	}
 	m_updateVectorMatrices = false;
-	auto editorLayer = Application::GetLayer<EditorLayer>();
+	const auto editorLayer = Application::GetLayer<EditorLayer>();
 	GizmoSettings gizmoSettings;
 	gizmoSettings.m_drawSettings.m_blending = true;
 	gizmoSettings.m_drawSettings.m_blendingSrcFactor = VK_BLEND_FACTOR_SRC_ALPHA;
@@ -1424,26 +1424,26 @@ void EcoSysLabLayer::Simulate(float deltaTime) {
 }
 
 void EcoSysLabLayer::GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings) const {
-	auto scene = GetScene();
+	const auto scene = GetScene();
 	const std::vector<Entity>* treeEntities =
 		scene->UnsafeGetPrivateComponentOwnersList<Tree>();
 	if (treeEntities && !treeEntities->empty()) {
-		auto copiedEntities = *treeEntities;
+		const auto copiedEntities = *treeEntities;
 		for (auto treeEntity : copiedEntities) {
-			auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
+			const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
 			tree->GenerateGeometry(meshGeneratorSettings);
 		}
 	}
 }
 
 void EcoSysLabLayer::ClearGeometries() const {
-	auto scene = GetScene();
+	const auto scene = GetScene();
 	const std::vector<Entity>* treeEntities =
 		scene->UnsafeGetPrivateComponentOwnersList<Tree>();
 	if (treeEntities && !treeEntities->empty()) {
-		auto copiedEntities = *treeEntities;
+		const auto copiedEntities = *treeEntities;
 		for (auto treeEntity : copiedEntities) {
-			auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
+			const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
 			tree->ClearMeshes();
 			tree->ClearStrands();
 		}

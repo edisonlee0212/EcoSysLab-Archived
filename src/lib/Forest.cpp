@@ -106,7 +106,7 @@ void ForestDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer
 			auto treeEntity = scene->CreateEntity("Tree No." + std::to_string(i));
 			i++;
 			scene->SetDataComponent(treeEntity, gt.m_globalTransform);
-			auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
+			const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
 			tree->m_treeModel.m_treeGrowthSettings = m_treeGrowthSettings;
 			tree->m_treeDescriptor = gt.m_treeDescriptor;
 			tree->m_enableHistory = enableHistory;

@@ -15,7 +15,7 @@ void ReproductiveModule::Reset()
 void TreeModel::ResetReproductiveModule()
 {
 	const auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
-	for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); it++) {
+	for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); ++it) {
 		auto& internode = m_shootSkeleton.RefNode(*it);
 		auto& internodeData = internode.m_data;
 		auto& buds = internodeData.m_buds;
@@ -145,7 +145,7 @@ void TreeModel::HarvestFruits(const std::function<bool(const ReproductiveModule&
 	const auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
 	m_fruitCount = 0;
 
-	for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); it++) {
+	for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); ++it) {
 		auto& internode = m_shootSkeleton.RefNode(*it);
 		auto& internodeData = internode.m_data;
 		auto& buds = internodeData.m_buds;
@@ -510,7 +510,7 @@ void TreeModel::RootGrowthPostProcess(const glm::mat4& globalTransform, VoxelSoi
 		m_rootSkeleton.m_min = glm::vec3(FLT_MAX);
 		m_rootSkeleton.m_max = glm::vec3(FLT_MIN);
 		const auto& sortedRootNodeList = m_rootSkeleton.RefSortedNodeList();
-		for (auto it = sortedRootNodeList.rbegin(); it != sortedRootNodeList.rend(); it++) {
+		for (auto it = sortedRootNodeList.rbegin(); it != sortedRootNodeList.rend(); ++it) {
 			CalculateThickness(*it, rootGrowthParameters);
 		}
 		for (const auto& rootNodeHandle : sortedRootNodeList) {
@@ -621,7 +621,7 @@ void TreeModel::ShootGrowthPostProcess(const glm::mat4& globalTransform, Climate
 		m_shootSkeleton.m_data.m_desiredMax = glm::vec3(FLT_MIN);
 
 		const auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
-		for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); it++) {
+		for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); ++it) {
 			auto internodeHandle = *it;
 			CalculateThicknessAndSagging(internodeHandle, shootGrowthParameters);
 		}
@@ -755,12 +755,12 @@ bool TreeModel::ElongateRoot(VoxelSoilModel& soilModel, const float extendLength
 	if (extraLength > 0) {
 		graphChanged = true;
 		rootNodeInfo.m_length = rootNodeLength;
-		auto desiredGlobalRotation = rootNodeInfo.m_globalRotation * glm::quat(glm::vec3(
+		const auto desiredGlobalRotation = rootNodeInfo.m_globalRotation * glm::quat(glm::vec3(
 			glm::radians(rootGrowthParameters.m_apicalAngle(rootNode)), 0.0f,
 			glm::radians(rootGrowthParameters.m_rollAngle(rootNode))));
 		//Create new internode
-		auto newRootNodeHandle = m_rootSkeleton.Extend(rootNodeHandle, false);
-		auto& oldRootNode = m_rootSkeleton.RefNode(rootNodeHandle);
+		const auto newRootNodeHandle = m_rootSkeleton.Extend(rootNodeHandle, false);
+		const auto& oldRootNode = m_rootSkeleton.RefNode(rootNodeHandle);
 		auto& newRootNode = m_rootSkeleton.RefNode(newRootNodeHandle);
 		newRootNode.m_data = {};
 		newRootNode.m_data.m_startAge = m_age;
@@ -822,7 +822,7 @@ bool TreeModel::ElongateInternode(float extendLength, NodeHandle internodeHandle
 	auto& internode = m_shootSkeleton.RefNode(internodeHandle);
 	const auto internodeLength = shootGrowthController.m_internodeLength;
 	auto& internodeData = internode.m_data;
-	auto& internodeInfo = internode.m_info;
+	const auto& internodeInfo = internode.m_info;
 	internodeData.m_internodeLength += extendLength;
 	const float extraLength = internodeData.m_internodeLength - internodeLength;
 	auto& apicalBud = internodeData.m_buds.front();
@@ -831,7 +831,7 @@ bool TreeModel::ElongateInternode(float extendLength, NodeHandle internodeHandle
 		graphChanged = true;
 		apicalBud.m_status = BudStatus::Died;
 		internodeData.m_internodeLength = internodeLength;
-		auto desiredGlobalRotation = internodeInfo.m_globalRotation * apicalBud.m_localRotation;
+		const auto desiredGlobalRotation = internodeInfo.m_globalRotation * apicalBud.m_localRotation;
 		auto desiredGlobalFront = desiredGlobalRotation * glm::vec3(0, 0, -1);
 		auto desiredGlobalUp = desiredGlobalRotation * glm::vec3(0, 1, 0);
 		if (internodeHandle != 0)
@@ -1671,7 +1671,7 @@ void TreeModel::SampleNitrite(const glm::mat4& globalTransform, VoxelSoilModel& 
 		auto& rootNodeInfo = rootNode.m_info;
 		auto worldSpacePosition = globalTransform * glm::translate(rootNodeInfo.m_globalPosition)[3];
 		if (m_treeGrowthSettings.m_collectNitrite) {
-			rootNode.m_data.m_nitrite = soilModel.IntegrateNutrient(worldSpacePosition, 0.2);
+			rootNode.m_data.m_nitrite = soilModel.IntegrateNutrient(worldSpacePosition, 0.2f);
 			m_rootSkeleton.m_data.m_rootFlux.m_nitrite += rootNode.m_data.m_nitrite;
 		}
 		else
@@ -1897,7 +1897,7 @@ void TreeModel::ExportTreeIOSkeleton(treeio::ArrayTree& arrayTree) const
 
 void RootGrowthController::SetTropisms(Node<RootNodeGrowthData>& oldNode, Node<RootNodeGrowthData>& newNode) const
 {
-	float probability = m_tropismSwitchingProbability *
+	const float probability = m_tropismSwitchingProbability *
 		glm::exp(-m_tropismSwitchingProbabilityDistanceFactor * oldNode.m_data.m_rootDistance);
 
 	const bool needSwitch = probability >= glm::linearRand(0.0f, 1.0f);

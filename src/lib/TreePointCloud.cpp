@@ -58,6 +58,23 @@ void TreePointCloud::BuildVoxelGrid()
 	}
 }
 
+bool TreePointCloud::DirectConnectionCheck(const glm::vec3& parentP0, const glm::vec3& parentP3, const glm::vec3& currentP0, const glm::vec3& currentP3)
+{
+	const auto dotP = glm::dot(glm::normalize(parentP3 - parentP0),
+		glm::normalize(currentP3 - currentP0));
+	if (dotP > glm::cos(glm::radians(m_connectivityGraphSettings.m_directionConnectionAngleLimit)))
+		return false;
+	const auto dotP2 = glm::dot(glm::normalize(currentP3 - currentP0), glm::normalize(parentP0 - currentP0));
+	if (dotP2 > 0) return false;
+	
+	if (m_connectivityGraphSettings.m_pointCheckRadius > 0.0f) {
+		const auto middlePoint = (currentP0 + parentP3) * 0.5f;
+		if (!HasPoints(middlePoint, m_allocatedPointsVoxelGrid, m_connectivityGraphSettings.m_pointCheckRadius) && !HasPoints(middlePoint, m_scatterPointsVoxelGrid, m_connectivityGraphSettings.m_pointCheckRadius)) return false;
+	}
+	return true;
+
+}
+
 void TreePointCloud::FindPoints(const glm::vec3& position, VoxelGrid<std::vector<PointData>>& pointVoxelGrid,
                                 float radius,
                                 const std::function<void(const PointData& voxel)>& func) const {
@@ -887,11 +904,11 @@ void TreePointCloud::EstablishConnectivityGraph() {
 	}
 
 	for (auto& branch : m_scannedBranches) {
-		auto currentP0 = branch.m_bezierCurve.m_p0;
-		auto currentP3 = branch.m_bezierCurve.m_p3;
-		float branchLength = glm::distance(currentP0, currentP3);
+		const auto& p0 = branch.m_bezierCurve.m_p0;
+		const auto& p3 = branch.m_bezierCurve.m_p3;
+		float branchLength = glm::distance(p0, p3);
 		//We find scatter points close to the branch p0.
-		FindPoints(currentP0, m_scatterPointsVoxelGrid, branchLength * m_connectivityGraphSettings.m_pointBranchConnectionDetectionRange,
+		FindPoints(p0, m_scatterPointsVoxelGrid, branchLength * m_connectivityGraphSettings.m_pointBranchConnectionDetectionRange,
 			[&](const PointData& voxel) {
 				for (const auto& i : branch.m_neighborScatterPointP0) {
 					if (i.second == voxel.m_pointHandle) return;
@@ -901,7 +918,7 @@ void TreePointCloud::EstablishConnectivityGraph() {
 					voxel.m_position);
 			});
 		//We find branch p3 close to the scatter point.
-		FindPoints(currentP3, m_scatterPointsVoxelGrid, branchLength * m_connectivityGraphSettings.m_pointBranchConnectionDetectionRange,
+		FindPoints(p3, m_scatterPointsVoxelGrid, branchLength * m_connectivityGraphSettings.m_pointBranchConnectionDetectionRange,
 			[&](const PointData& voxel) {
 				auto& otherPoint = m_scatteredPoints[voxel.m_pointHandle];
 				for (const auto& i : otherPoint.m_neighborBranchP3s) {
@@ -912,25 +929,17 @@ void TreePointCloud::EstablishConnectivityGraph() {
 					voxel.m_position);
 			});
 		//Connect P3 from other branch to this branch's P0
-		ForEachBranchEnd(currentP0, m_branchEndsVoxelGrid, branchLength * m_connectivityGraphSettings.m_branchBranchConnectionMaxLengthRange,
+		ForEachBranchEnd(p0, m_branchEndsVoxelGrid, branchLength * m_connectivityGraphSettings.m_branchBranchConnectionMaxLengthRange,
 			[&](const BranchEndData& voxel) {
 				if (voxel.m_isP0) return;
 				auto& parentCandidateBranch = m_scannedBranches[voxel.m_branchHandle];
 				const auto parentCandidateBranchP0 = parentCandidateBranch.m_bezierCurve.m_p0;
 				const auto parentCandidateBranchP3 = parentCandidateBranch.m_bezierCurve.m_p3;
-				const auto dotP = glm::dot(glm::normalize(voxel.m_position - parentCandidateBranchP0),
-					glm::normalize(currentP3 - currentP0));
-				if (dotP > glm::cos(glm::radians(m_connectivityGraphSettings.m_directionConnectionAngleLimit)))
-					return;
-				const auto dotP2 = glm::dot(glm::normalize(currentP3 - currentP0), glm::normalize(parentCandidateBranchP0 - currentP0));
-				if (dotP2 > 0) return;
-				const auto distance = glm::distance(voxel.m_position, currentP0);
-				if (distance > glm::distance(parentCandidateBranchP0, parentCandidateBranchP3) * m_connectivityGraphSettings.m_branchBranchConnectionMaxLengthRange) return;
 
-				if (m_connectivityGraphSettings.m_pointCheckRadius > 0.0f) {
-					const auto middlePoint = (currentP0 + parentCandidateBranchP3) * 0.5f;
-					if (!HasPoints(middlePoint, m_allocatedPointsVoxelGrid, m_connectivityGraphSettings.m_pointCheckRadius) && !HasPoints(middlePoint, m_scatterPointsVoxelGrid, m_connectivityGraphSettings.m_pointCheckRadius)) return;
-				}
+				if (!DirectConnectionCheck(parentCandidateBranchP0, parentCandidateBranchP3, p0, p3)) return;
+
+				const auto distance = glm::distance(parentCandidateBranchP3, p0);
+				if (distance > glm::distance(parentCandidateBranchP0, parentCandidateBranchP3) * m_connectivityGraphSettings.m_branchBranchConnectionMaxLengthRange) return;
 
 				for (const auto& i : branch.m_neighborBranchP3s) {
 					if (i.first == voxel.m_branchHandle) return;
@@ -951,27 +960,17 @@ void TreePointCloud::EstablishConnectivityGraph() {
 		
 
 		//Connect P0 from other branch to this branch's P3		
-		ForEachBranchEnd(currentP3, m_branchEndsVoxelGrid, branchLength * m_connectivityGraphSettings.m_branchBranchConnectionMaxLengthRange,
+		ForEachBranchEnd(p3, m_branchEndsVoxelGrid, branchLength * m_connectivityGraphSettings.m_branchBranchConnectionMaxLengthRange,
 			[&](const BranchEndData& voxel) {
 				if (!voxel.m_isP0) return;
 				auto& childCandidateBranch = m_scannedBranches[voxel.m_branchHandle];
 				const auto childCandidateBranchP0 = childCandidateBranch.m_bezierCurve.m_p0;
 				const auto childCandidateBranchP3 = childCandidateBranch.m_bezierCurve.m_p3;
 
-				const auto dotP = glm::dot(glm::normalize(currentP3 - voxel.m_position),
-					glm::normalize(currentP3 - currentP0));
-				if (dotP > glm::cos(glm::radians(m_connectivityGraphSettings.m_directionConnectionAngleLimit)))
-					return;
-				const auto dotP2 = glm::dot(glm::normalize(childCandidateBranchP3 - childCandidateBranchP0), glm::normalize(currentP0 - childCandidateBranchP0));
-				if (dotP2 > 0) return;
+				if (!DirectConnectionCheck(p0, p3, childCandidateBranchP0, childCandidateBranchP3)) return;
 				
-				const auto distance = glm::distance(voxel.m_position, currentP3);
+				const auto distance = glm::distance(voxel.m_position, p3);
 				if (distance > glm::distance(childCandidateBranchP0, childCandidateBranchP3) * m_connectivityGraphSettings.m_branchBranchConnectionMaxLengthRange) return;
-
-				if (m_connectivityGraphSettings.m_pointCheckRadius > 0.0f) {
-					const auto middlePoint = (currentP3 + childCandidateBranchP0) * 0.5f;
-					if (!HasPoints(middlePoint, m_allocatedPointsVoxelGrid, m_connectivityGraphSettings.m_pointCheckRadius) && !HasPoints(middlePoint, m_scatterPointsVoxelGrid, m_connectivityGraphSettings.m_pointCheckRadius)) return;
-				}
 
 				for (const auto& i : childCandidateBranch.m_neighborBranchP3s) {
 					if (i.first == branch.m_handle) return;

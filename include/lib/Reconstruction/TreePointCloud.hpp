@@ -78,7 +78,8 @@ namespace EcoSysLab {
 		float m_branchBranchConnectionMaxLengthRange = 3.0f;
 		float m_directionConnectionAngleLimit = 60.0f;
 		float m_indirectConnectionAngleLimit = 90.0f;
-		
+
+		float m_connectionRangeLimit = 1.0f;
 		void OnInspect();
 	};
 
@@ -131,6 +132,8 @@ namespace EcoSysLab {
 	typedef Skeleton<ReconstructionSkeletonData, ReconstructionFlowData, ReconstructionNodeData> ReconstructionSkeleton;
 
 	class TreePointCloud : public IPrivateComponent {
+		bool DirectConnectionCheck(const glm::vec3& parentP0, const glm::vec3& parentP3, const glm::vec3& currentP0, const glm::vec3& currentP3);
+
 		void FindPoints(const glm::vec3& position, VoxelGrid<std::vector<PointData>>& pointVoxelGrid, float radius,
 			const std::function<void(const PointData& voxel)>& func) const;
 		bool HasPoints(const glm::vec3& position, VoxelGrid<std::vector<PointData>>& pointVoxelGrid, float radius) const;
