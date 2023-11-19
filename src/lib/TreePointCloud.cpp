@@ -1121,6 +1121,47 @@ void TreePointCloud::BuildSkeletons() {
 	for (int i = 0; i < m_scannedBranches.size(); i++) {
 		CloneOperatingBranch(m_operatingBranches[i], m_scannedBranches[i]);
 	}
+
+	bool branchRemoved = true;
+	while(branchRemoved)
+	{
+		branchRemoved = false;
+		std::vector<BranchHandle> removeList{};
+		for (int i = 0; i < m_operatingBranches.size(); i++)
+		{
+			auto& operatingBranch = m_operatingBranches[i];
+			if(!operatingBranch.m_orphan && operatingBranch.m_parentCandidates.empty())
+			{
+				operatingBranch.m_orphan = true;
+				removeList.emplace_back(i);
+			}
+		}
+		if(!removeList.empty())
+		{
+			branchRemoved = true;
+			for (auto& operatingBranch : m_operatingBranches)
+			{
+				for(int i = 0; i < operatingBranch.m_parentCandidates.size(); i++)
+				{
+					for (const auto& removeHandle : removeList) {
+						if (operatingBranch.m_parentCandidates[i].first == removeHandle)
+						{
+							operatingBranch.m_parentCandidates.erase(operatingBranch.m_parentCandidates.begin() + i);
+							i--;
+							break;
+						}
+					}
+				}
+			}
+		}
+	}
+	for (auto& operatingBranch : m_operatingBranches)
+	{
+		for (const auto& parentCandidate : operatingBranch.m_parentCandidates) {
+			const auto& parentBranch = m_scannedBranches[parentCandidate.first];
+			m_filteredBranchConnections.emplace_back(operatingBranch.m_bezierCurve.m_p0, parentBranch.m_bezierCurve.m_p3);
+		}
+	}
 	std::vector<std::pair<glm::vec3, BranchHandle>> rootBranchHandles;
 	//Branch is shortened after this.
 	for (auto& branch : m_operatingBranches) {
@@ -1175,7 +1216,7 @@ void TreePointCloud::BuildSkeletons() {
 		for (const auto& branchPair : heightSortedBranches)
 		{
 			auto& childBranch = m_operatingBranches[branchPair.second];
-			if (childBranch.m_used || childBranch.m_parentCandidates.empty()) continue;
+			if (childBranch.m_orphan || childBranch.m_used || childBranch.m_parentCandidates.empty()) continue;
 
 			BranchHandle parentHandle = -1;
 			const auto bestParentCandidate = childBranch.m_parentCandidates.back();
@@ -1188,14 +1229,14 @@ void TreePointCloud::BuildSkeletons() {
 			Link(branchPair.second, parentHandle);
 		}
 		
-		if(!newBranchAllocated)
+		if(!newBranchAllocated && m_reconstructionSettings.m_candidateSearch)
 		{
 			for (int i = 0; i < m_reconstructionSettings.m_candidateSearchLimit; i++)
 			{
 				for (const auto& branchPair : heightSortedBranches)
 				{
 					auto& childBranch = m_operatingBranches[branchPair.second];
-					if (childBranch.m_used || childBranch.m_parentCandidates.empty()) continue;
+					if (childBranch.m_orphan || childBranch.m_used || childBranch.m_parentCandidates.empty()) continue;
 					BranchHandle parentHandle = -1;
 					if(static_cast<int>(childBranch.m_parentCandidates.size()) - 2 - i >= 0)
 					{
@@ -1214,12 +1255,12 @@ void TreePointCloud::BuildSkeletons() {
 			}
 		}
 
-		if(!newBranchAllocated)
+		if(!newBranchAllocated && m_reconstructionSettings.m_forceConnectAllBranches)
 		{
 			for (const auto& branchPair : heightSortedBranches)
 			{
 				auto& childBranch = m_operatingBranches[branchPair.second];
-				if (childBranch.m_used || childBranch.m_parentCandidates.empty()) continue;
+				if (childBranch.m_orphan || childBranch.m_used || childBranch.m_parentCandidates.empty()) continue;
 				BranchHandle parentHandle = -1;
 
 				for (int i = childBranch.m_parentCandidates.size() - 1; i >= 0; i--)
@@ -1743,23 +1784,18 @@ void TreePointCloud::CloneOperatingBranch(OperatingBranch& operatingBranch, cons
 	operatingBranch.m_startThickness = target.m_startThickness;
 	operatingBranch.m_endThickness = target.m_endThickness;
 	operatingBranch.m_parentHandle = -1;
+	operatingBranch.m_orphan = false;
 	operatingBranch.m_parentCandidates.clear();
 
 	std::multimap<float, BranchHandle> sortedParentCandidates{};
 	for (const auto& data : target.m_neighborBranchP3s)
 	{
-		if (m_scannedBranches[data.first].m_neighborBranchP3s.empty()) continue;
 		sortedParentCandidates.insert({ data.second, data.first });
 	}
 
 	for (auto it = sortedParentCandidates.rbegin(); it != sortedParentCandidates.rend(); ++it)
 	{
 		operatingBranch.m_parentCandidates.emplace_back(it->second, it->first);
-	}
-
-	for (const auto& i : operatingBranch.m_parentCandidates) {
-		auto& parentBranch = m_scannedBranches[i.first];
-		m_filteredBranchConnections.emplace_back(operatingBranch.m_bezierCurve.m_p0, parentBranch.m_bezierCurve.m_p3);
 	}
 
 	operatingBranch.m_skeletonIndex = -1;
@@ -1787,5 +1823,9 @@ void ReconstructionSettings::OnInspect() {
 
 	ImGui::DragInt("Node back track limit", &m_nodeBackTrackLimit, 1, 0, 100);
 	ImGui::DragInt("Branch back track limit", &m_branchBackTrackLimit, 1, 0, 10);
-	ImGui::DragInt("Candidate Search limit", &m_candidateSearchLimit, 1, 0, 10);
+
+	ImGui::Checkbox("Candidate Search", &m_candidateSearch);
+	if(m_candidateSearch) ImGui::DragInt("Candidate Search limit", &m_candidateSearchLimit, 1, 0, 10);
+	ImGui::Checkbox("Force connect all branches", &m_forceConnectAllBranches);
+
 }

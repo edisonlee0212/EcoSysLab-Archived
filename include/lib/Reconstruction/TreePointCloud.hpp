@@ -57,8 +57,7 @@ namespace EcoSysLab {
 
 		std::vector<std::pair<BranchHandle, float>> m_parentCandidates;
 		bool m_used = false;
-
-		
+		bool m_orphan = false;
 	};
 
 	struct TreePart {
@@ -110,7 +109,10 @@ namespace EcoSysLab {
 
 		int m_nodeBackTrackLimit = 30;
 		int m_branchBackTrackLimit = 1;
+
+		bool m_candidateSearch = true;
 		int m_candidateSearchLimit = 1;
+		bool m_forceConnectAllBranches = true;
 		void OnInspect();
 	};
 
