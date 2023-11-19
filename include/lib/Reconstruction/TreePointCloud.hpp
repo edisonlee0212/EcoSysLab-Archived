@@ -55,11 +55,10 @@ namespace EcoSysLab {
 		int m_skeletonIndex = -1;
 		std::vector<NodeHandle> m_chainNodeHandles;
 
-		std::vector<std::pair<BranchHandle, float>> m_childCandidates;
 		std::vector<std::pair<BranchHandle, float>> m_parentCandidates;
 		bool m_used = false;
 
-		void Apply(const ScannedBranch& target);
+		
 	};
 
 	struct TreePart {
@@ -76,7 +75,7 @@ namespace EcoSysLab {
 		float m_pointPointConnectionDetectionRadius = 0.05f;
 		float m_pointBranchConnectionDetectionRange = 0.5f;
 		float m_branchBranchConnectionMaxLengthRange = 3.0f;
-		float m_directionConnectionAngleLimit = 60.0f;
+		float m_directionConnectionAngleLimit = 90.0f;
 		float m_indirectConnectionAngleLimit = 90.0f;
 
 		float m_connectionRangeLimit = 1.0f;
@@ -111,7 +110,6 @@ namespace EcoSysLab {
 		int m_nodeBackTrackLimit = 30;
 		int m_branchBackTrackLimit = 1;
 
-		int m_candidateSearchLimit = 1;
 		void OnInspect();
 	};
 
@@ -132,7 +130,7 @@ namespace EcoSysLab {
 	typedef Skeleton<ReconstructionSkeletonData, ReconstructionFlowData, ReconstructionNodeData> ReconstructionSkeleton;
 
 	class TreePointCloud : public IPrivateComponent {
-		bool DirectConnectionCheck(const glm::vec3& parentP0, const glm::vec3& parentP3, const glm::vec3& currentP0, const glm::vec3& currentP3);
+		bool DirectConnectionCheck(const glm::vec3& parentP0, const glm::vec3& parentP3, const glm::vec3& childP0, const glm::vec3& childP3);
 
 		void FindPoints(const glm::vec3& position, VoxelGrid<std::vector<PointData>>& pointVoxelGrid, float radius,
 			const std::function<void(const PointData& voxel)>& func) const;
@@ -147,6 +145,8 @@ namespace EcoSysLab {
 		void ApplyCurve(int skeletonIndex, const OperatingBranch& branch);
 
 		void BuildVoxelGrid();
+
+		void CloneOperatingBranch(OperatingBranch& operatingBranch, const ScannedBranch& target);
 	public:
 		VoxelGrid<std::vector<PointData>> m_scatterPointsVoxelGrid;
 		VoxelGrid<std::vector<PointData>> m_allocatedPointsVoxelGrid;
@@ -173,9 +173,9 @@ namespace EcoSysLab {
 		std::vector<std::pair<glm::vec3, glm::vec3>> m_scatterPointToBranchEndConnections;
 		std::vector<std::pair<glm::vec3, glm::vec3>> m_scatterPointToBranchStartConnections;
 		std::vector<std::pair<glm::vec3, glm::vec3>> m_scatterPointsConnections;
-		std::vector<std::pair<glm::vec3, glm::vec3>> m_branchConnections;
+		std::vector<std::pair<glm::vec3, glm::vec3>> m_candidateBranchConnections;
 		std::vector<std::pair<glm::vec3, glm::vec3>> m_filteredBranchConnections;
-
+		std::vector<std::pair<glm::vec3, glm::vec3>> m_branchConnections;
 		void EstablishConnectivityGraph();
 
 		void BuildSkeletons();
