@@ -17,6 +17,12 @@ namespace EcoSysLab {
 
 		FineRootParameters m_fineRootParameters;
 		TwigParameters m_twigParameters;
+
+		AssetRef m_foliageAlbedoTexture;
+		AssetRef m_foliageNormalTexture;
+		AssetRef m_foliageRoughnessTexture;
+		AssetRef m_foliageMetallicTexture;
+
 		void OnCreate() override;
 
 		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;

@@ -85,8 +85,10 @@ namespace EcoSysLab {
 		bool m_foliageOverride = false;
 		FoliageParameters m_foliageOverrideSettings = {};
 		PresentationOverrideSettings m_presentationOverrideSettings = {};
-		AssetRef m_foliageTexture;
-
+		AssetRef m_foliageAlbedoTexture;
+		AssetRef m_foliageNormalTexture;
+		AssetRef m_foliageRoughnessTexture;
+		AssetRef m_foliageMetallicTexture;
 		float m_ringXSubdivision = 0.01f;
 		float m_ringYSubdivision = 0.1f;
 		bool m_overrideRadius = false;

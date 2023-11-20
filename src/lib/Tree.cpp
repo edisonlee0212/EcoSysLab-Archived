@@ -775,7 +775,7 @@ void Tree::GenerateGeometry(const TreeMeshGeneratorSettings& meshGeneratorSettin
 	const auto scene = GetScene();
 	const auto self = GetOwner();
 	const auto children = scene->GetChildren(self);
-
+	auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
 	ClearMeshes();
 	ClearStrands();
 	auto actualIteration = iteration;
@@ -1077,15 +1077,58 @@ void Tree::GenerateGeometry(const TreeMeshGeneratorSettings& meshGeneratorSettin
 		if (meshGeneratorSettings.m_foliageOverride)
 		{
 			material->m_materialProperties.m_albedoColor = meshGeneratorSettings.m_presentationOverrideSettings.m_foliageOverrideColor;
-			auto texRef = meshGeneratorSettings.m_foliageTexture;
+			auto texRef = meshGeneratorSettings.m_foliageAlbedoTexture;
 			if (texRef.Get<Texture2D>())
 			{
 				material->SetAlbedoTexture(texRef.Get<Texture2D>());
 
 			}
+			texRef = meshGeneratorSettings.m_foliageNormalTexture;
+			if (texRef.Get<Texture2D>())
+			{
+				material->SetNormalTexture(texRef.Get<Texture2D>());
+
+			}
+			texRef = meshGeneratorSettings.m_foliageRoughnessTexture;
+			if (texRef.Get<Texture2D>())
+			{
+				material->SetRoughnessTexture(texRef.Get<Texture2D>());
+
+			}
+			texRef = meshGeneratorSettings.m_foliageMetallicTexture;
+			if (texRef.Get<Texture2D>())
+			{
+				material->SetMetallicTexture(texRef.Get<Texture2D>());
+
+			}
 		}
 		else {
 			material->m_materialProperties.m_albedoColor = glm::vec3(152 / 255.0f, 203 / 255.0f, 0 / 255.0f);
+			if (treeDescriptor) {
+				auto texRef = treeDescriptor->m_foliageAlbedoTexture;
+				if (texRef.Get<Texture2D>())
+				{
+					material->SetAlbedoTexture(texRef.Get<Texture2D>());
+
+				}
+				texRef = treeDescriptor->m_foliageNormalTexture;
+				if (texRef.Get<Texture2D>())
+				{
+					material->SetNormalTexture(texRef.Get<Texture2D>());
+
+				}
+				texRef = treeDescriptor->m_foliageRoughnessTexture;
+				if (texRef.Get<Texture2D>())
+				{
+					material->SetRoughnessTexture(texRef.Get<Texture2D>());
+
+				}
+				texRef = treeDescriptor->m_foliageMetallicTexture;
+				if (texRef.Get<Texture2D>())
+				{
+					material->SetMetallicTexture(texRef.Get<Texture2D>());
+				}
+			}
 		}
 		material->m_materialProperties.m_roughness = 0.0f;
 
@@ -1158,11 +1201,7 @@ void Tree::GenerateGeometry(const TreeMeshGeneratorSettings& meshGeneratorSettin
 			material->m_materialProperties.m_albedoColor = glm::vec3(152 / 255.0f, 203 / 255.0f, 0 / 255.0f);
 		}
 		material->m_materialProperties.m_roughness = 0.0f;
-		auto texRef = meshGeneratorSettings.m_foliageTexture;
-		if (texRef.Get<Texture2D>())
-		{
-			material->SetAlbedoTexture(texRef.Get<Texture2D>());
-		}
+		
 		auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(fruitEntity).lock();
 		meshRenderer->m_mesh = mesh;
 		meshRenderer->m_material = material;
@@ -1357,11 +1396,20 @@ void TreeDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 	if (OnInspectShootGrowthParameters(m_shootGrowthParameters)) { changed = true; }
 	if (OnInspectRootGrowthParameters(m_rootGrowthParameters)) { changed = true; }
 	if (OnInspectFoliageParameters(m_foliageParameters)) { changed = true; }
+
+	editorLayer->DragAndDropButton<Texture2D>(m_foliageAlbedoTexture, "Foliage Albedo Texture");
+	editorLayer->DragAndDropButton<Texture2D>(m_foliageNormalTexture, "Foliage Normal Texture");
+	editorLayer->DragAndDropButton<Texture2D>(m_foliageRoughnessTexture, "Foliage Roughness Texture");
+	editorLayer->DragAndDropButton<Texture2D>(m_foliageMetallicTexture, "Foliage Metallic Texture");
+
 	if (changed) m_saved = false;
 }
 
 void TreeDescriptor::CollectAssetRef(std::vector<AssetRef>& list) {
-
+	if (m_foliageAlbedoTexture.Get<Texture2D>()) list.push_back(m_foliageAlbedoTexture);
+	if (m_foliageNormalTexture.Get<Texture2D>()) list.push_back(m_foliageNormalTexture);
+	if (m_foliageRoughnessTexture.Get<Texture2D>()) list.push_back(m_foliageRoughnessTexture);
+	if (m_foliageMetallicTexture.Get<Texture2D>()) list.push_back(m_foliageMetallicTexture);
 }
 void TreeDescriptor::SerializeFoliageParameters(const std::string& name, const FoliageParameters& foliageParameters, YAML::Emitter& out)
 {
@@ -1469,7 +1517,10 @@ void TreeDescriptor::Serialize(YAML::Emitter& out) {
 	SerializeRootGrowthParameters("m_rootGrowthParameters", m_rootGrowthParameters, out);
 	SerializeFoliageParameters("m_foliageParameters", m_foliageParameters, out);
 
-
+	m_foliageAlbedoTexture.Save("m_foliageAlbedoTexture", out);
+	m_foliageNormalTexture.Save("m_foliageNormalTexture", out);
+	m_foliageRoughnessTexture.Save("m_foliageRoughnessTexture", out);
+	m_foliageMetallicTexture.Save("m_foliageMetallicTexture", out);
 }
 void TreeDescriptor::DeserializeFoliageParameters(const std::string& name, FoliageParameters& foliageParameters, const YAML::Node& in) {
 	if (in[name]) {
@@ -1584,6 +1635,11 @@ void TreeDescriptor::Deserialize(const YAML::Node& in) {
 	DeserializeRootGrowthParameters("m_rootGrowthParameters", m_rootGrowthParameters, in);
 
 	DeserializeFoliageParameters("m_foliageParameters", m_foliageParameters, in);
+
+	m_foliageAlbedoTexture.Load("m_foliageAlbedoTexture", in);
+	m_foliageNormalTexture.Load("m_foliageNormalTexture", in);
+	m_foliageRoughnessTexture.Load("m_foliageRoughnessTexture", in);
+	m_foliageMetallicTexture.Load("m_foliageMetallicTexture", in);
 }
 
 void Tree::PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescriptor)
