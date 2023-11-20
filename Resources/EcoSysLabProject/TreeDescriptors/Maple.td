@@ -27,8 +27,9 @@ m_shootGrowthParameters:
   m_fruitVigorRequirement: 0.100000001
   m_internodeVigorRequirement: 1
   m_vigorRequirementAggregateLoss: 1
-  m_lowBranchPruning: 0.349999994
+  m_lowBranchPruning: 0.300000012
   m_lowBranchPruningThicknessFactor: 0
+  m_lightPruningFactor: 1
   m_saggingFactorThicknessReductionMax: [0.00100000005, 3, 0.300000012]
   m_maxSpaceOccupancy: 0.25
   m_maxLeafSize: [0.0500000007, 0.5, 0.0500000007]

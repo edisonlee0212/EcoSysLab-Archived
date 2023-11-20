@@ -1351,7 +1351,6 @@ bool OnInspectShootGrowthParameters(ShootGrowthParameters& treeGrowthParameters)
 			changed = ImGui::DragFloat3("Apical dominance base/age/dist", &treeGrowthParameters.m_apicalDominance, 0.01f) || changed;
 			changed = ImGui::DragFloat3("Vigor requirement shoot/leaf/fruit", &treeGrowthParameters.m_internodeVigorRequirement, 0.01f) || changed;
 			changed = ImGui::DragFloat("Vigor requirement aggregation loss", &treeGrowthParameters.m_vigorRequirementAggregateLoss, 0.001f, 0.0f, 1.0f) || changed;
-
 			ImGui::TreePop();
 		}
 		if (ImGui::TreeNodeEx("Internode", ImGuiTreeNodeFlags_DefaultOpen))
@@ -1362,13 +1361,13 @@ bool OnInspectShootGrowthParameters(ShootGrowthParameters& treeGrowthParameters)
 			changed = ImGui::DragFloat3("Sagging thickness/reduction/max", &treeGrowthParameters.m_saggingFactorThicknessReductionMax.x, 0.01f, 0.0f, 1.0f, "%.5f") || changed;
 			changed = ImGui::DragFloat("Low Branch Pruning", &treeGrowthParameters.m_lowBranchPruning, 0.01f) || changed;
 			changed = ImGui::DragFloat("Low Branch Pruning Thickness factor", &treeGrowthParameters.m_lowBranchPruningThicknessFactor, 0.01f) || changed;
-			
+			changed = ImGui::DragFloat("Light Pruning", &treeGrowthParameters.m_lightPruningFactor, 0.01f) || changed;
 			changed = ImGui::DragFloat("Max Space Occupancy", &treeGrowthParameters.m_maxSpaceOccupancy, 0.001f, 0.0f, 1.0f, "%.3f") || changed;
 
 			ImGui::TreePop();
 		}
 
-		if (ImGui::TreeNodeEx("Leaf", ImGuiTreeNodeFlags_DefaultOpen))
+		if (ImGui::TreeNodeEx("Leaf"))
 		{
 			changed = ImGui::DragFloat3("Size", &treeGrowthParameters.m_maxLeafSize.x, 0.01f) || changed;
 			changed = ImGui::DragFloat("Position Variance", &treeGrowthParameters.m_leafPositionVariance, 0.01f) || changed;
@@ -1379,7 +1378,7 @@ bool OnInspectShootGrowthParameters(ShootGrowthParameters& treeGrowthParameters)
 			changed = ImGui::DragFloat("Distance To End Limit", &treeGrowthParameters.m_leafDistanceToBranchEndLimit, 0.01f) || changed;
 			ImGui::TreePop();
 		}
-		if (ImGui::TreeNodeEx("Fruit", ImGuiTreeNodeFlags_DefaultOpen))
+		if (ImGui::TreeNodeEx("Fruit"))
 		{
 			changed = ImGui::DragFloat3("Size", &treeGrowthParameters.m_maxFruitSize.x, 0.01f) || changed;
 			changed = ImGui::DragFloat("Position Variance", &treeGrowthParameters.m_fruitPositionVariance, 0.01f) || changed;
@@ -1396,7 +1395,7 @@ bool OnInspectShootGrowthParameters(ShootGrowthParameters& treeGrowthParameters)
 
 bool OnInspectRootGrowthParameters(RootGrowthParameters& rootGrowthParameters) {
 	bool changed = false;
-	if (ImGui::TreeNodeEx("Root Growth Parameters", ImGuiTreeNodeFlags_DefaultOpen)) {
+	if (ImGui::TreeNodeEx("Root Growth Parameters")) {
 		if (ImGui::TreeNodeEx("Structure", ImGuiTreeNodeFlags_DefaultOpen)) {
 			changed = ImGui::DragFloat("Root node length", &rootGrowthParameters.m_rootNodeLength, 0.01f) || changed;
 			changed = ImGui::DragFloat("Root node elongation rate", &rootGrowthParameters.m_rootNodeGrowthRate, 0.01f) || changed;
@@ -1503,6 +1502,7 @@ void SerializeShootGrowthParameters(const std::string& name, const ShootGrowthPa
 	//Internode
 	out << YAML::Key << "m_lowBranchPruning" << YAML::Value << treeGrowthParameters.m_lowBranchPruning;
 	out << YAML::Key << "m_lowBranchPruningThicknessFactor" << YAML::Value << treeGrowthParameters.m_lowBranchPruningThicknessFactor;
+	out << YAML::Key << "m_lightPruningFactor" << YAML::Value << treeGrowthParameters.m_lightPruningFactor;
 	out << YAML::Key << "m_saggingFactorThicknessReductionMax" << YAML::Value << treeGrowthParameters.m_saggingFactorThicknessReductionMax;
 	out << YAML::Key << "m_maxSpaceOccupancy" << YAML::Value << treeGrowthParameters.m_maxSpaceOccupancy;
 
@@ -1585,6 +1585,7 @@ void DeserializeShootGrowthParameters(const std::string& name, ShootGrowthParame
 
 		if (param["m_lowBranchPruning"]) treeGrowthParameters.m_lowBranchPruning = param["m_lowBranchPruning"].as<float>();
 		if (param["m_lowBranchPruningThicknessFactor"]) treeGrowthParameters.m_lowBranchPruningThicknessFactor = param["m_lowBranchPruningThicknessFactor"].as<float>();
+		if (param["m_lightPruningFactor"]) treeGrowthParameters.m_lightPruningFactor = param["m_lightPruningFactor"].as<float>();
 		if (param["m_saggingFactorThicknessReductionMax"]) treeGrowthParameters.m_saggingFactorThicknessReductionMax = param["m_saggingFactorThicknessReductionMax"].as<glm::vec3>();
 		if (param["m_maxSpaceOccupancy"]) treeGrowthParameters.m_maxSpaceOccupancy = param["m_maxSpaceOccupancy"].as<float>();
 
@@ -1761,9 +1762,9 @@ void Tree::PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescrip
 		m_shootGrowthController.m_pruningFactor = [=](const float deltaTime, const Node<InternodeGrowthData>& internode)
 			{
 				float pruningProbability = 0.0f;
-				if (internode.IsEndNode())
+				if (internode.IsEndNode() && internode.m_data.m_lightIntensity == 0.0f)
 				{
-					
+					pruningProbability = treeDescriptor->m_shootGrowthParameters.m_lightPruningFactor;
 				}
 				return pruningProbability;
 			};

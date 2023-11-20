@@ -399,7 +399,7 @@ void TreeModel::CollectShootFlux(const glm::mat4& globalTransform, ClimateModel&
 			}
 		}
 		const glm::vec3 position = globalTransform * glm::vec4(internodeInfo.m_globalPosition, 1.0f);
-		internodeData.m_growthPotential = climateModel.m_environmentGrid.IlluminationEstimation(position, internodeData.m_lightDirection);
+		internodeData.m_growthPotential = internodeData.m_lightIntensity = climateModel.m_environmentGrid.IlluminationEstimation(position, internodeData.m_lightDirection);
 		m_shootSkeleton.m_data.m_shootFlux.m_totalGrowthPotential += internodeData.m_growthPotential;
 		if (internodeData.m_growthPotential <= glm::epsilon<float>())
 		{
@@ -1610,13 +1610,14 @@ bool TreeModel::PruneInternodes(const glm::mat4& globalTransform, ClimateModel& 
 
 	if (anyInternodePruned) m_shootSkeleton.SortLists();
 
-	for (const auto& internodeHandle : sortedInternodeList) {
+	for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); ++it) {
+		const auto internodeHandle = *it;
 		if (m_shootSkeleton.PeekNode(internodeHandle).IsRecycled()) continue;
 		if(internodeHandle == 0) continue;
 		const auto& internode = m_shootSkeleton.PeekNode(internodeHandle);
 		//Pruning here.
 		bool pruning = false;
-		const float pruningProbability = m_currentDeltaTime * shootGrowthParameters.m_pruningFactor(m_currentDeltaTime, internode);
+		const float pruningProbability = shootGrowthParameters.m_pruningFactor(m_currentDeltaTime, internode);
 		if (pruningProbability > glm::linearRand(0.0f, 1.0f)) pruning = true;
 		bool lowBranchPruning = false;
 		if (!pruning && maxDistance > 5.0f * shootGrowthParameters.m_internodeLength && internode.m_data.m_order == 1 &&

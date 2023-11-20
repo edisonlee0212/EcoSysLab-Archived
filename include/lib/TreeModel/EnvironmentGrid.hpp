@@ -6,9 +6,9 @@ namespace EcoSysLab
 {
 	struct IlluminationEstimationSettings
 	{
-		float m_distancePowerFactor = 2.0f;
-		float m_distanceMultiplier = 1.0f;//0.5f
-		float m_shadowIntensity = 0.075f;//0.05f
+		float m_distancePowerFactor = 1.8f;
+		float m_shadowIntensity = 0.03f;
+		float m_shadowPropagateLoss = 0.4f;
 	};
 	
 	struct InternodeVoxelRegistration
@@ -36,7 +36,7 @@ namespace EcoSysLab
 		VoxelGrid<EnvironmentVoxel> m_voxel;
 		[[nodiscard]] float IlluminationEstimation(const glm::vec3& position, glm::vec3& lightDirection) const;
 		void AddShadowValue(const glm::vec3& position, float value);
-
+		void ShadowPropagation();
 		void AddBiomass(const glm::vec3& position, float value);
 		void AddNode(const InternodeVoxelRegistration& registration);
 	};

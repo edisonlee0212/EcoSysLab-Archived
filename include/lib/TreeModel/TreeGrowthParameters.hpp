@@ -201,7 +201,10 @@ namespace EcoSysLab
 		* root.
 		*/
 		float m_lowBranchPruningThicknessFactor = 0.0f;
-		
+		/**
+		 * \brief The pruning factor for branch because of absence of light
+		 */
+		float m_lightPruningFactor = 0.0f;
 		/**
 		 * \brief The strength of gravity bending.
 		 */
