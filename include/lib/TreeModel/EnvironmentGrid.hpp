@@ -7,8 +7,8 @@ namespace EcoSysLab
 	struct IlluminationEstimationSettings
 	{
 		float m_distancePowerFactor = 2.0f;
-		float m_distanceMultiplier = 1.0f;
-		float m_shadowIntensity = 0.075f;
+		float m_distanceMultiplier = 1.0f;//0.5f
+		float m_shadowIntensity = 0.075f;//0.05f
 	};
 	
 	struct InternodeVoxelRegistration
