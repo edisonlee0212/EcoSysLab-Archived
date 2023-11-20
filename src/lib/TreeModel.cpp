@@ -38,30 +38,20 @@ void TreeModel::RegisterVoxel(const glm::mat4& globalTransform, ClimateModel& cl
 	auto& environmentGrid = climateModel.m_environmentGrid;
 	for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); ++it) {
 		const auto& internode = m_shootSkeleton.RefNode(*it);
-		const auto& internodeData = internode.m_data;
 		const auto& internodeInfo = internode.m_info;
-		float shadowSize = internodeData.m_internodeLength / shootGrowthParameters.m_internodeLength * environmentGrid.m_settings.m_internodeShadowMultiplier;
-		float biomass = internodeInfo.m_thickness;
-		for (const auto& i : internodeData.m_buds)
-		{
-			if (i.m_type == BudType::Leaf && i.m_reproductiveModule.m_maturity > 0.0f)
-			{
-				shadowSize += environmentGrid.m_settings.m_leafShadowMultiplier * glm::sqrt(i.m_reproductiveModule.m_maturity);
-			}
-			else if (i.m_type == BudType::Fruit && i.m_reproductiveModule.m_maturity > 0.0f)
-			{
-				shadowSize += environmentGrid.m_settings.m_fruitShadowMultiplier * glm::sqrt(i.m_reproductiveModule.m_maturity);
-			}
-		}
+		const float shadowSize = environmentGrid.m_settings.m_shadowIntensity;
+		const float biomass = internodeInfo.m_thickness;
 		const glm::vec3 worldPosition = globalTransform * glm::vec4(internodeInfo.m_globalPosition, 1.0f);
-		environmentGrid.AddShadowVolume({ worldPosition , shadowSize });
+		environmentGrid.AddShadowValue(worldPosition , shadowSize);
 		environmentGrid.AddBiomass(worldPosition, biomass);
-		InternodeVoxelRegistration registration;
-		registration.m_position = worldPosition;
-		registration.m_nodeHandle = *it;
-		registration.m_treeModelIndex = m_index;
-		registration.m_thickness = internodeInfo.m_thickness;
-		environmentGrid.AddNode(registration);
+		if (internode.IsEndNode()) {
+			InternodeVoxelRegistration registration;
+			registration.m_position = worldPosition;
+			registration.m_nodeHandle = *it;
+			registration.m_treeModelIndex = m_index;
+			registration.m_thickness = internodeInfo.m_thickness;
+			environmentGrid.AddNode(registration);
+		}
 	}
 }
 

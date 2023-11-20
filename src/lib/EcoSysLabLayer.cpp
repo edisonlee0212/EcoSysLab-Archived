@@ -453,37 +453,19 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 			if (ImGui::TreeNode("Shadow Estimation Settings")) {
 				bool settingsChanged = false;
 				settingsChanged =
-					ImGui::DragFloat("Voxel size", &m_shadowEstimationSettings.m_voxelSize, 0.01f, 0.01f, 1.0f) ||
-					settingsChanged;
-				settingsChanged = ImGui::DragFloat2("Shadow intensity (Min/Max)",
-					&m_shadowEstimationSettings.m_minShadowIntensity, 0.0001f, 0.0f,
-					1.0f) || settingsChanged;
-				settingsChanged =
-					ImGui::DragFloat("Distance power factor", &m_shadowEstimationSettings.m_distancePowerFactor,
-						0.01f, 1.0f, 5.0f) || settingsChanged;
+					ImGui::DragFloat("Distance power factor", &m_shadowEstimationSettings.m_distancePowerFactor, 0.01f,
+						0.0f, 10.0f) || settingsChanged;
+
 				settingsChanged =
 					ImGui::DragFloat("Distance multiplier", &m_shadowEstimationSettings.m_distanceMultiplier, 0.01f,
 						0.0f, 10.0f) || settingsChanged;
 
 				settingsChanged =
-					ImGui::DragFloat("Internode multiplier", &m_shadowEstimationSettings.m_internodeShadowMultiplier, 0.01f,
-						0.0f, 10.0f) || settingsChanged;
+					ImGui::DragFloat("Shadow intensity", &m_shadowEstimationSettings.m_shadowIntensity, 0.001f,
+						0.0f, 1.0f) || settingsChanged;
 
-				settingsChanged =
-					ImGui::DragFloat("Leaf multiplier", &m_shadowEstimationSettings.m_fruitShadowMultiplier, 0.01f,
-						0.0f, 10.0f) || settingsChanged;
-
-				settingsChanged =
-					ImGui::DragFloat("Fruit multiplier", &m_shadowEstimationSettings.m_leafShadowMultiplier, 0.01f,
-						0.0f, 10.0f) || settingsChanged;
-
-				settingsChanged = ImGui::DragFloat("Shadow intensity multiplier",
-					&m_shadowEstimationSettings.m_shadowIntensityMultiplier, 0.001f,
-					0.0f, 5.0f, "%.4f") || settingsChanged;
 
 				if (settingsChanged) {
-					m_shadowEstimationSettings.m_voxelSize = glm::clamp(m_shadowEstimationSettings.m_voxelSize, 0.05f,
-						1.0f);
 					if (const auto climate = m_climateHolder.Get<Climate>()) {
 						for (const auto& i : *treeEntities) {
 							const auto tree = scene->GetOrSetPrivateComponent<Tree>(i).lock();
@@ -1350,7 +1332,7 @@ void EcoSysLabLayer::Simulate(float deltaTime) {
 			if (!tree->m_soil.Get<Soil>()) tree->m_soil = soil;
 			tree->m_treeModel.m_crownShynessDistance = m_crownShynessDistance;
 		}
-		if (boundChanged) estimator.m_voxel.Initialize(estimator.m_settings.m_voxelSize, minBound, maxBound);
+		if (boundChanged) estimator.m_voxel.Initialize(estimator.m_voxelSize, minBound, maxBound);
 		estimator.m_voxel.Reset();
 		for (const auto& treeEntity : *treeEntities)
 		{
