@@ -429,11 +429,11 @@ bool Tree::OnInspectTreeGrowthSettings(TreeGrowthSettings& treeGrowthSettings)
 	return changed;
 }
 
-std::shared_ptr<Mesh> Tree::GenerateBranchMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings) const
+std::shared_ptr<Mesh> Tree::GenerateBranchMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings)
 {
 	std::vector<Vertex> vertices;
 	std::vector<unsigned int> indices;
-	CylindricalMeshGenerator<ShootGrowthData, ShootStemGrowthData, InternodeGrowthData> meshGenerator;
+	const CylindricalMeshGenerator<ShootGrowthData, ShootStemGrowthData, InternodeGrowthData> meshGenerator{};
 	meshGenerator.Generate(m_treeModel.PeekShootSkeleton(), vertices, indices, meshGeneratorSettings, 999.0f);
 
 	auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
@@ -443,7 +443,7 @@ std::shared_ptr<Mesh> Tree::GenerateBranchMesh(const TreeMeshGeneratorSettings& 
 	return mesh;
 }
 
-std::shared_ptr<Mesh> Tree::GenerateFoliageMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings) const
+std::shared_ptr<Mesh> Tree::GenerateFoliageMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings)
 {
 	std::vector<Vertex> vertices;
 	std::vector<unsigned int> indices;
@@ -452,23 +452,24 @@ std::shared_ptr<Mesh> Tree::GenerateFoliageMesh(const TreeMeshGeneratorSettings&
 	auto& quadTriangles = quadMesh->UnsafeGetTriangles();
 	auto quadVerticesSize = quadMesh->GetVerticesAmount();
 	size_t offset = 0;
-
+	auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
+	const auto& foliageOverrideSettings = (!meshGeneratorSettings.m_foliageOverride && treeDescriptor) ? treeDescriptor->m_foliageParameters : meshGeneratorSettings.m_foliageOverrideSettings;
 	const auto& nodeList = m_treeModel.PeekShootSkeleton().RefSortedNodeList();
 	for (const auto& internodeHandle : nodeList) {
 		const auto& internode = m_treeModel.PeekShootSkeleton().PeekNode(internodeHandle);
 		const auto& internodeInfo = internode.m_info;
 
-		const auto& foliageOverrideSettings = meshGeneratorSettings.m_foliageOverrideSettings;
+		
 		if (internodeInfo.m_thickness < foliageOverrideSettings.m_maxNodeThickness
 			&& internodeInfo.m_rootDistance > foliageOverrideSettings.m_minRootDistance
 			&& internodeInfo.m_endDistance < foliageOverrideSettings.m_maxEndDistance) {
 			for (int i = 0; i < foliageOverrideSettings.m_leafCountPerInternode; i++)
 			{
-				auto leafSize = foliageOverrideSettings.m_leafSize;
+				auto leafSize = foliageOverrideSettings.m_leafSize * internode.m_data.m_lightIntensity;
 				glm::quat rotation = internodeInfo.m_globalDirection * glm::quat(glm::radians(glm::linearRand(glm::vec3(0.0f), glm::vec3(360.0f))));
 				auto front = rotation * glm::vec3(0, 0, -1);
-				auto foliagePosition = internodeInfo.m_globalPosition + front * (leafSize.z * 1.5f) + glm::sphericalRand(1.0f) * glm::linearRand(0.0f, foliageOverrideSettings.m_positionVariance);
-				auto leafTransform = glm::translate(foliagePosition) * glm::mat4_cast(rotation) * glm::scale(leafSize);
+				auto foliagePosition = internodeInfo.m_globalPosition + front * (leafSize.y) + glm::sphericalRand(1.0f) * glm::linearRand(0.0f, foliageOverrideSettings.m_positionVariance);
+				auto leafTransform = glm::translate(foliagePosition) * glm::mat4_cast(rotation) * glm::scale(glm::vec3(leafSize.x, 1.0f, leafSize.y));
 
 				auto& matrix = leafTransform;
 				Vertex archetype;
@@ -505,7 +506,7 @@ std::shared_ptr<Mesh> Tree::GenerateFoliageMesh(const TreeMeshGeneratorSettings&
 	return mesh;
 }
 
-void Tree::ExportOBJ(const std::filesystem::path& path, const TreeMeshGeneratorSettings& meshGeneratorSettings) const
+void Tree::ExportOBJ(const std::filesystem::path& path, const TreeMeshGeneratorSettings& meshGeneratorSettings)
 {
 	if (path.extension() == ".obj") {
 		std::ofstream of;
@@ -787,42 +788,11 @@ void Tree::GenerateGeometry(const TreeMeshGeneratorSettings& meshGeneratorSettin
 		Entity branchEntity;
 		branchEntity = scene->CreateEntity("Branch Mesh");
 		scene->SetParent(branchEntity, self);
-		std::vector<Vertex> vertices;
-		std::vector<unsigned int> indices;
-		switch (meshGeneratorSettings.m_branchMeshType)
-		{
-		case 0:
-		{
-			CylindricalMeshGenerator<ShootGrowthData, ShootStemGrowthData, InternodeGrowthData> meshGenerator;
-			meshGenerator.Generate(m_treeModel.PeekShootSkeleton(actualIteration), vertices, indices,
-				meshGeneratorSettings, glm::min(m_treeModel.PeekShootSkeleton(actualIteration).PeekNode(0).m_info.m_thickness,
-					m_treeModel.PeekRootSkeleton(actualIteration).PeekNode(0).m_info.m_thickness));
-		}
-		break;
-		case 1:
-		{
-			const auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
-			float minRadius = 0.01f;
-			if (treeDescriptor)
-			{
-				minRadius = treeDescriptor->m_shootGrowthParameters.m_endNodeThickness;
-			}
-			VoxelMeshGenerator<ShootGrowthData, ShootStemGrowthData, InternodeGrowthData> meshGenerator;
-			meshGenerator.Generate(m_treeModel.PeekShootSkeleton(actualIteration), vertices, indices,
-				meshGeneratorSettings, minRadius);
-		}
-		break;
-		default: break;
-		}
-
-
-		auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
+		
+		auto mesh = GenerateBranchMesh(meshGeneratorSettings);
 		auto material = ProjectManager::CreateTemporaryAsset<Material>();
-		VertexAttributes vertexAttributes{};
-		vertexAttributes.m_texCoord = true;
-		mesh->SetVertices(vertexAttributes, vertices, indices);
 		auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(branchEntity).lock();
-		if (meshGeneratorSettings.m_foliageOverride)
+		if (meshGeneratorSettings.m_presentationOverride)
 		{
 			material->m_materialProperties.m_albedoColor = meshGeneratorSettings.m_presentationOverrideSettings.m_branchOverrideColor;
 		}
@@ -868,7 +838,7 @@ void Tree::GenerateGeometry(const TreeMeshGeneratorSettings& meshGeneratorSettin
 		}
 		auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
 		auto material = ProjectManager::CreateTemporaryAsset<Material>();
-		if (meshGeneratorSettings.m_foliageOverride)
+		if (meshGeneratorSettings.m_presentationOverride)
 		{
 			material->m_materialProperties.m_albedoColor = meshGeneratorSettings.m_presentationOverrideSettings.m_rootOverrideColor;
 		}
@@ -971,7 +941,7 @@ void Tree::GenerateGeometry(const TreeMeshGeneratorSettings& meshGeneratorSettin
 
 		auto strands = ProjectManager::CreateTemporaryAsset<Strands>();
 		auto material = ProjectManager::CreateTemporaryAsset<Material>();
-		if (meshGeneratorSettings.m_foliageOverride)
+		if (meshGeneratorSettings.m_presentationOverride)
 		{
 			material->m_materialProperties.m_albedoColor = meshGeneratorSettings.m_presentationOverrideSettings.m_rootOverrideColor;
 		}
@@ -1076,7 +1046,7 @@ void Tree::GenerateGeometry(const TreeMeshGeneratorSettings& meshGeneratorSettin
 
 		auto strands = ProjectManager::CreateTemporaryAsset<Strands>();
 		auto material = ProjectManager::CreateTemporaryAsset<Material>();
-		if (meshGeneratorSettings.m_foliageOverride)
+		if (meshGeneratorSettings.m_presentationOverride)
 		{
 			material->m_materialProperties.m_albedoColor = meshGeneratorSettings.m_presentationOverrideSettings.m_branchOverrideColor;
 		}
@@ -1099,91 +1069,7 @@ void Tree::GenerateGeometry(const TreeMeshGeneratorSettings& meshGeneratorSettin
 
 		std::vector<Vertex> vertices;
 		std::vector<unsigned int> indices;
-		auto quadMesh = Resources::GetResource<Mesh>("PRIMITIVE_QUAD");
-		auto& quadTriangles = quadMesh->UnsafeGetTriangles();
-		auto quadVerticesSize = quadMesh->GetVerticesAmount();
-		size_t offset = 0;
-
-		const auto& nodeList = m_treeModel.PeekShootSkeleton(actualIteration).RefSortedNodeList();
-		for (const auto& internodeHandle : nodeList) {
-			const auto& internode = m_treeModel.PeekShootSkeleton(actualIteration).PeekNode(internodeHandle);
-			const auto& internodeInfo = internode.m_info;
-			const auto& internodeData = internode.m_data;
-			if (!meshGeneratorSettings.m_foliageOverride) {
-				for (const auto& bud : internodeData.m_buds) {
-					if (bud.m_status != BudStatus::Flushed) continue;
-					if (bud.m_reproductiveModule.m_maturity <= 0.0f) continue;
-					if (bud.m_type == BudType::Leaf)
-					{
-						auto& matrix = bud.m_reproductiveModule.m_transform;
-						Vertex archetype;
-						for (auto i = 0; i < quadMesh->GetVerticesAmount(); i++) {
-							archetype.m_position =
-								matrix * glm::vec4(quadMesh->UnsafeGetVertices()[i].m_position, 1.0f);
-							archetype.m_normal = glm::normalize(glm::vec3(
-								matrix * glm::vec4(quadMesh->UnsafeGetVertices()[i].m_normal, 0.0f)));
-							archetype.m_tangent = glm::normalize(glm::vec3(
-								matrix *
-								glm::vec4(quadMesh->UnsafeGetVertices()[i].m_tangent, 0.0f)));
-							archetype.m_texCoord =
-								quadMesh->UnsafeGetVertices()[i].m_texCoord;
-							vertices.push_back(archetype);
-						}
-						for (auto triangle : quadTriangles) {
-							triangle.x += offset;
-							triangle.y += offset;
-							triangle.z += offset;
-							indices.push_back(triangle.x);
-							indices.push_back(triangle.y);
-							indices.push_back(triangle.z);
-						}
-						offset += quadVerticesSize;
-					}
-				}
-			}
-			else
-			{
-				const auto& foliageOverrideSettings = meshGeneratorSettings.m_foliageOverrideSettings;
-				if (internodeInfo.m_thickness < foliageOverrideSettings.m_maxNodeThickness
-					&& internodeInfo.m_rootDistance > foliageOverrideSettings.m_minRootDistance
-					&& internodeInfo.m_endDistance < foliageOverrideSettings.m_maxEndDistance) {
-					for (int i = 0; i < foliageOverrideSettings.m_leafCountPerInternode; i++)
-					{
-						auto leafSize = foliageOverrideSettings.m_leafSize;
-						glm::quat rotation = internodeInfo.m_globalDirection * glm::quat(glm::radians(glm::linearRand(glm::vec3(0.0f), glm::vec3(360.0f))));
-						auto front = rotation * glm::vec3(0, 0, -1);
-						auto foliagePosition = internodeInfo.m_globalPosition + front * (leafSize.z * 1.5f) + glm::sphericalRand(1.0f) * glm::linearRand(0.0f, foliageOverrideSettings.m_positionVariance);
-						auto leafTransform = glm::translate(foliagePosition) * glm::mat4_cast(rotation) * glm::scale(leafSize);
-
-						auto& matrix = leafTransform;
-						Vertex archetype;
-						for (auto i = 0; i < quadMesh->GetVerticesAmount(); i++) {
-							archetype.m_position =
-								matrix * glm::vec4(quadMesh->UnsafeGetVertices()[i].m_position, 1.0f);
-							archetype.m_normal = glm::normalize(glm::vec3(
-								matrix * glm::vec4(quadMesh->UnsafeGetVertices()[i].m_normal, 0.0f)));
-							archetype.m_tangent = glm::normalize(glm::vec3(
-								matrix *
-								glm::vec4(quadMesh->UnsafeGetVertices()[i].m_tangent, 0.0f)));
-							archetype.m_texCoord =
-								quadMesh->UnsafeGetVertices()[i].m_texCoord;
-							vertices.push_back(archetype);
-						}
-						for (auto triangle : quadTriangles) {
-							triangle.x += offset;
-							triangle.y += offset;
-							triangle.z += offset;
-							indices.push_back(triangle.x);
-							indices.push_back(triangle.y);
-							indices.push_back(triangle.z);
-						}
-						offset += quadVerticesSize;
-					}
-				}
-			}
-		}
-
-		auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
+		auto mesh = GenerateFoliageMesh(meshGeneratorSettings);
 		auto material = ProjectManager::CreateTemporaryAsset<Material>();
 		VertexAttributes vertexAttributes{};
 		vertexAttributes.m_texCoord = true;
@@ -1191,17 +1077,18 @@ void Tree::GenerateGeometry(const TreeMeshGeneratorSettings& meshGeneratorSettin
 		if (meshGeneratorSettings.m_foliageOverride)
 		{
 			material->m_materialProperties.m_albedoColor = meshGeneratorSettings.m_presentationOverrideSettings.m_foliageOverrideColor;
+			auto texRef = meshGeneratorSettings.m_foliageTexture;
+			if (texRef.Get<Texture2D>())
+			{
+				material->SetAlbedoTexture(texRef.Get<Texture2D>());
+
+			}
 		}
 		else {
 			material->m_materialProperties.m_albedoColor = glm::vec3(152 / 255.0f, 203 / 255.0f, 0 / 255.0f);
 		}
 		material->m_materialProperties.m_roughness = 0.0f;
-		auto texRef = meshGeneratorSettings.m_foliageTexture;
-		if (texRef.Get<Texture2D>())
-		{
-			material->SetAlbedoTexture(texRef.Get<Texture2D>());
 
-		}
 		auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(foliageEntity).lock();
 		meshRenderer->m_mesh = mesh;
 		meshRenderer->m_material = material;
@@ -1327,9 +1214,23 @@ void Tree::ExportRadialBoundingVolume(const std::shared_ptr<RadialBoundingVolume
 void TreeDescriptor::OnCreate() {
 
 }
+bool TreeDescriptor::OnInspectFoliageParameters(FoliageParameters& foliageParameters) {
+	bool changed = false;
+	if (ImGui::TreeNodeEx("Foliage Parameters", ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		if (ImGui::DragFloat3("Leaf size", &foliageParameters.m_leafSize.x, 0.01f, 0.0f, 1.0f)) changed = true;
+		if (ImGui::DragInt("Leaf per node", &foliageParameters.m_leafCountPerInternode, 1, 0, 50)) changed = true;
+		if (ImGui::DragFloat("Position variance", &foliageParameters.m_positionVariance, 0.01f, 0.0f, 1.0f)) changed = true;
 
+		if (ImGui::DragFloat("Max node thickness", &foliageParameters.m_maxNodeThickness, 0.001f, 0.0f, 5.0f)) changed = true;
+		if (ImGui::DragFloat("Min root distance", &foliageParameters.m_minRootDistance, 0.001f, 0.0f, 1.0f)) changed = true;
+		if (ImGui::DragFloat("Max end distance", &foliageParameters.m_maxEndDistance, 0.001f, 0.0f, 1.0f)) changed = true;
+		ImGui::TreePop();
+	}
+	return changed;
+}
 
-bool OnInspectShootGrowthParameters(ShootGrowthParameters& treeGrowthParameters) {
+bool TreeDescriptor::OnInspectShootGrowthParameters(ShootGrowthParameters& treeGrowthParameters) {
 	bool changed = false;
 	if (ImGui::TreeNodeEx("Shoot Parameters", ImGuiTreeNodeFlags_DefaultOpen)) {
 		changed = ImGui::DragFloat("Internode growth rate", &treeGrowthParameters.m_internodeGrowthRate, 0.01f, 0.0f, 1.0f) || changed;
@@ -1393,7 +1294,7 @@ bool OnInspectShootGrowthParameters(ShootGrowthParameters& treeGrowthParameters)
 	return changed;
 }
 
-bool OnInspectRootGrowthParameters(RootGrowthParameters& rootGrowthParameters) {
+bool TreeDescriptor::OnInspectRootGrowthParameters(RootGrowthParameters& rootGrowthParameters) {
 	bool changed = false;
 	if (ImGui::TreeNodeEx("Root Growth Parameters")) {
 		if (ImGui::TreeNodeEx("Structure", ImGuiTreeNodeFlags_DefaultOpen)) {
@@ -1455,14 +1356,25 @@ void TreeDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 	}
 	if (OnInspectShootGrowthParameters(m_shootGrowthParameters)) { changed = true; }
 	if (OnInspectRootGrowthParameters(m_rootGrowthParameters)) { changed = true; }
+	if (OnInspectFoliageParameters(m_foliageParameters)) { changed = true; }
 	if (changed) m_saved = false;
 }
 
 void TreeDescriptor::CollectAssetRef(std::vector<AssetRef>& list) {
 
 }
-
-void SerializeShootGrowthParameters(const std::string& name, const ShootGrowthParameters& treeGrowthParameters, YAML::Emitter& out) {
+void TreeDescriptor::SerializeFoliageParameters(const std::string& name, const FoliageParameters& foliageParameters, YAML::Emitter& out)
+{
+	out << YAML::Key << name << YAML::BeginMap;
+	out << YAML::Key << "m_leafSize" << YAML::Value << foliageParameters.m_leafSize;
+	out << YAML::Key << "m_leafCountPerInternode" << YAML::Value << foliageParameters.m_leafCountPerInternode;
+	out << YAML::Key << "m_positionVariance" << YAML::Value << foliageParameters.m_positionVariance;
+	out << YAML::Key << "m_maxNodeThickness" << YAML::Value << foliageParameters.m_maxNodeThickness;
+	out << YAML::Key << "m_minRootDistance" << YAML::Value << foliageParameters.m_minRootDistance;
+	out << YAML::Key << "m_maxEndDistance" << YAML::Value << foliageParameters.m_maxEndDistance;
+	out << YAML::EndMap;
+}
+void TreeDescriptor::SerializeShootGrowthParameters(const std::string& name, const ShootGrowthParameters& treeGrowthParameters, YAML::Emitter& out) {
 	out << YAML::Key << name << YAML::BeginMap;
 	out << YAML::Key << "m_internodeGrowthRate" << YAML::Value << treeGrowthParameters.m_internodeGrowthRate;
 	out << YAML::Key << "m_leafGrowthRate" << YAML::Value << treeGrowthParameters.m_leafGrowthRate;
@@ -1521,7 +1433,7 @@ void SerializeShootGrowthParameters(const std::string& name, const ShootGrowthPa
 	out << YAML::Key << "m_fruitFallProbability" << YAML::Value << treeGrowthParameters.m_fruitFallProbability;
 	out << YAML::EndMap;
 }
-void SerializeRootGrowthParameters(const std::string& name, const RootGrowthParameters& rootGrowthParameters, YAML::Emitter& out) {
+void TreeDescriptor::SerializeRootGrowthParameters(const std::string& name, const RootGrowthParameters& rootGrowthParameters, YAML::Emitter& out) {
 	out << YAML::Key << name << YAML::BeginMap;
 
 	out << YAML::Key << "m_branchingAngleMeanVariance" << YAML::Value << rootGrowthParameters.m_branchingAngleMeanVariance;
@@ -1555,11 +1467,22 @@ void SerializeRootGrowthParameters(const std::string& name, const RootGrowthPara
 void TreeDescriptor::Serialize(YAML::Emitter& out) {
 	SerializeShootGrowthParameters("m_shootGrowthParameters", m_shootGrowthParameters, out);
 	SerializeRootGrowthParameters("m_rootGrowthParameters", m_rootGrowthParameters, out);
+	SerializeFoliageParameters("m_foliageParameters", m_foliageParameters, out);
 
 
 }
-
-void DeserializeShootGrowthParameters(const std::string& name, ShootGrowthParameters& treeGrowthParameters, const YAML::Node& in) {
+void TreeDescriptor::DeserializeFoliageParameters(const std::string& name, FoliageParameters& foliageParameters, const YAML::Node& in) {
+	if (in[name]) {
+		auto& param = in[name];
+		if (param["m_leafSize"]) foliageParameters.m_leafSize = param["m_leafSize"].as<glm::vec2>();
+		if (param["m_leafCountPerInternode"]) foliageParameters.m_leafCountPerInternode = param["m_leafCountPerInternode"].as<int>();
+		if (param["m_positionVariance"]) foliageParameters.m_positionVariance = param["m_positionVariance"].as<float>();
+		if (param["m_maxNodeThickness"]) foliageParameters.m_maxNodeThickness = param["m_maxNodeThickness"].as<float>();
+		if (param["m_minRootDistance"]) foliageParameters.m_minRootDistance = param["m_minRootDistance"].as<float>();
+		if (param["m_maxEndDistance"]) foliageParameters.m_maxEndDistance = param["m_maxEndDistance"].as<float>();
+	}
+}
+void TreeDescriptor::DeserializeShootGrowthParameters(const std::string& name, ShootGrowthParameters& treeGrowthParameters, const YAML::Node& in) {
 	if (in[name]) {
 		auto& param = in[name];
 
@@ -1624,7 +1547,7 @@ void DeserializeShootGrowthParameters(const std::string& name, ShootGrowthParame
 		if (param["m_fruitFallProbability"]) treeGrowthParameters.m_fruitFallProbability = param["m_fruitFallProbability"].as<float>();
 	}
 }
-void DeserializeRootGrowthParameters(const std::string& name, RootGrowthParameters& rootGrowthParameters, const YAML::Node& in) {
+void TreeDescriptor::DeserializeRootGrowthParameters(const std::string& name, RootGrowthParameters& rootGrowthParameters, const YAML::Node& in) {
 	if (in[name]) {
 		auto& param = in[name];
 		if (param["m_rootNodeLength"]) rootGrowthParameters.m_rootNodeLength = param["m_rootNodeLength"].as<float>();
@@ -1659,6 +1582,8 @@ void DeserializeRootGrowthParameters(const std::string& name, RootGrowthParamete
 void TreeDescriptor::Deserialize(const YAML::Node& in) {
 	DeserializeShootGrowthParameters("m_shootGrowthParameters", m_shootGrowthParameters, in);
 	DeserializeRootGrowthParameters("m_rootGrowthParameters", m_rootGrowthParameters, in);
+
+	DeserializeFoliageParameters("m_foliageParameters", m_foliageParameters, in);
 }
 
 void Tree::PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescriptor)

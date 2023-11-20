@@ -24,15 +24,15 @@ namespace EcoSysLab {
 		[[nodiscard]] glm::vec3 GetPoint(const glm::vec3& normalDir, float angle, bool isStart) const;
 	};
 
-	struct FoliageOverrideSettings
+	struct FoliageParameters
 	{
-		glm::vec3 m_leafSize = glm::vec3(0.02f, 1.0f, 0.02f);
+		glm::vec2 m_leafSize = glm::vec2(0.02f, 0.02f);
 		int m_leafCountPerInternode = 8;
 		float m_positionVariance = 0.1f;
 
-		float m_maxNodeThickness = 0.003f;
-		float m_minRootDistance = 1.75f;
-		float m_maxEndDistance = 0.2f;
+		float m_maxNodeThickness = 1.0f;
+		float m_minRootDistance = 0.0f;
+		float m_maxEndDistance = 10.f;
 	};
 
 	struct PresentationOverrideSettings
@@ -82,8 +82,8 @@ namespace EcoSysLab {
 		bool m_enableTwig = true;
 
 		bool m_presentationOverride = false;
-		bool m_foliageOverride = true;
-		FoliageOverrideSettings m_foliageOverrideSettings = {};
+		bool m_foliageOverride = false;
+		FoliageParameters m_foliageOverrideSettings = {};
 		PresentationOverrideSettings m_presentationOverrideSettings = {};
 		AssetRef m_foliageTexture;
 

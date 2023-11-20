@@ -610,14 +610,14 @@ PYBIND11_MODULE(pyecosyslab, m) {
 		.def_readwrite("m_foliageOverrideColor", &PresentationOverrideSettings::m_foliageOverrideColor)
 		.def_readwrite("m_limitMaxThickness", &PresentationOverrideSettings::m_limitMaxThickness);
 
-	py::class_<FoliageOverrideSettings>(m, "FoliageOverrideSettings")
+	py::class_<FoliageParameters>(m, "FoliageParameters")
 		.def(py::init<>())
-		.def_readwrite("m_leafSize", &FoliageOverrideSettings::m_leafSize)
-		.def_readwrite("m_leafCountPerInternode", &FoliageOverrideSettings::m_leafCountPerInternode)
-		.def_readwrite("m_positionVariance", &FoliageOverrideSettings::m_positionVariance)
-		.def_readwrite("m_maxNodeThickness", &FoliageOverrideSettings::m_maxNodeThickness)
-		.def_readwrite("m_minRootDistance", &FoliageOverrideSettings::m_minRootDistance)
-		.def_readwrite("m_maxEndDistance", &FoliageOverrideSettings::m_maxEndDistance);
+		.def_readwrite("m_leafSize", &FoliageParameters::m_leafSize)
+		.def_readwrite("m_leafCountPerInternode", &FoliageParameters::m_leafCountPerInternode)
+		.def_readwrite("m_positionVariance", &FoliageParameters::m_positionVariance)
+		.def_readwrite("m_maxNodeThickness", &FoliageParameters::m_maxNodeThickness)
+		.def_readwrite("m_minRootDistance", &FoliageParameters::m_minRootDistance)
+		.def_readwrite("m_maxEndDistance", &FoliageParameters::m_maxEndDistance);
 
 	py::class_<TreeMeshGeneratorSettings>(m, "TreeMeshGeneratorSettings")
 		.def(py::init<>())

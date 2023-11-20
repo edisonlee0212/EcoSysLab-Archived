@@ -169,24 +169,10 @@ void EcoSysLabLayer::Visualization() {
 			}
 			m_needFullFlowUpdate = true;
 		}
-		int totalInternodeSize = 0;
-		int totalFlowSize = 0;
-		int totalRootNodeSize = 0;
-		int totalRootFlowSize = 0;
-		int totalLeafSize = 0;
-		int totalFruitSize = 0;
 		for (int i = 0; i < treeEntities->size(); i++) {
 			auto treeEntity = treeEntities->at(i);
 			auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
 			auto& treeModel = tree->m_treeModel;
-			totalInternodeSize += treeModel.RefShootSkeleton().RefSortedNodeList().size();
-			totalFlowSize += treeModel.RefShootSkeleton().RefSortedFlowList().size();
-			totalRootNodeSize += treeModel.RefRootSkeleton().RefSortedNodeList().size();
-			totalRootFlowSize += treeModel.RefRootSkeleton().RefSortedFlowList().size();
-			totalLeafSize += treeModel.GetLeafCount();
-			totalFruitSize += treeModel.GetFruitCount();
-
-			if (m_selectedTree == treeEntity) continue;
 			if (m_shootVersions[i] != treeModel.RefShootSkeleton().GetVersion()) {
 				m_shootVersions[i] = treeModel.RefShootSkeleton().GetVersion();
 				m_needFullFlowUpdate = true;
@@ -196,12 +182,6 @@ void EcoSysLabLayer::Visualization() {
 				m_needFullFlowUpdate = true;
 			}
 		}
-		m_internodeSize = totalInternodeSize;
-		m_shootStemSize = totalFlowSize;
-		m_rootNodeSize = totalRootNodeSize;
-		m_rootStemSize = totalRootFlowSize;
-		m_leafSize = totalLeafSize;
-		m_fruitSize = totalFruitSize;
 		bool flowUpdated = false;
 		if (m_debugVisualization) {
 
@@ -517,12 +497,14 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 				ImGui::TreePop();
 			}
 			ImGui::DragFloat("Crown shyness", &m_crownShynessDistance, 0.01f, 0.0f, 1.0f);
+			static float targetTime = 0.f;
 			if (ImGui::Button("Reset all trees")) {
 				ResetAllTrees(treeEntities);
 				ClearGeometries();
 				ClearGroundFruitAndLeaf();
+				targetTime = 0.0f;
 			}
-			ImGui::DragFloat("Time", &m_time, 1, 0, 9000000);
+			ImGui::Text(("Simulated time: " + std::to_string(m_time) + " years").c_str());
 			ImGui::Checkbox("Auto grow with soil step", &m_autoGrowWithSoilStep);
 			ImGui::DragFloat("Delta time", &m_deltaTime, 0.00001f, 0, 1, "%.5f");
 			if (ImGui::Button("Day")) m_deltaTime = 0.00274f;
@@ -542,6 +524,19 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 				if (ImGui::Button((("Grow all with ") + std::to_string(iterations) + " iterations").c_str())) {
 					for (int i = 0; i < iterations; i++) Simulate(m_deltaTime);
 					changed = true;
+				}
+
+				
+				if (targetTime < m_time) targetTime = m_time;
+				ImGui::DragFloat("Target time", &targetTime, 0.1f, m_time, 999);
+				static bool autoTimeGrow = false;
+				ImGui::Checkbox((("Grow until ") + std::to_string(targetTime) + " years").c_str(), &autoTimeGrow);
+				if(autoTimeGrow && m_time < targetTime){
+					Simulate(m_deltaTime);
+					changed = true;
+				}else
+				{
+					autoTimeGrow = false;
 				}
 				if (changed) {
 					if (scene->IsEntityValid(m_selectedTree)) {
@@ -1444,6 +1439,30 @@ void EcoSysLabLayer::Simulate(float deltaTime) {
 		m_lastUsedTime = Times::Now() - time;
 		m_totalTime += m_lastUsedTime;
 		m_needFullFlowUpdate = true;
+
+		int totalInternodeSize = 0;
+		int totalFlowSize = 0;
+		int totalRootNodeSize = 0;
+		int totalRootFlowSize = 0;
+		int totalLeafSize = 0;
+		int totalFruitSize = 0;
+		for (int i = 0; i < treeEntities->size(); i++) {
+			auto treeEntity = treeEntities->at(i);
+			auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
+			auto& treeModel = tree->m_treeModel;
+			totalInternodeSize += treeModel.RefShootSkeleton().RefSortedNodeList().size();
+			totalFlowSize += treeModel.RefShootSkeleton().RefSortedFlowList().size();
+			totalRootNodeSize += treeModel.RefRootSkeleton().RefSortedNodeList().size();
+			totalRootFlowSize += treeModel.RefRootSkeleton().RefSortedFlowList().size();
+			totalLeafSize += treeModel.GetLeafCount();
+			totalFruitSize += treeModel.GetFruitCount();
+		}
+		m_internodeSize = totalInternodeSize;
+		m_shootStemSize = totalFlowSize;
+		m_rootNodeSize = totalRootNodeSize;
+		m_rootStemSize = totalRootFlowSize;
+		m_leafSize = totalLeafSize;
+		m_fruitSize = totalFruitSize;
 	}
 }
 

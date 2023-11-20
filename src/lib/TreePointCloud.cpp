@@ -1624,8 +1624,8 @@ void TreePointCloud::FormGeometryEntity() const
 						auto leafSize = foliageOverrideSettings.m_leafSize;
 						glm::quat rotation = internodeInfo.m_globalDirection * glm::quat(glm::radians(glm::linearRand(glm::vec3(0.0f), glm::vec3(360.0f))));
 						auto front = rotation * glm::vec3(0, 0, -1);
-						auto foliagePosition = internodeInfo.m_globalPosition + front * (leafSize.z * 1.5f) + glm::sphericalRand(1.0f) * glm::linearRand(0.0f, foliageOverrideSettings.m_positionVariance);
-						auto leafTransform = glm::translate(foliagePosition) * glm::mat4_cast(rotation) * glm::scale(leafSize);
+						auto foliagePosition = internodeInfo.m_globalPosition + front * (leafSize.y * 1.5f) + glm::sphericalRand(1.0f) * glm::linearRand(0.0f, foliageOverrideSettings.m_positionVariance);
+						auto leafTransform = glm::translate(foliagePosition) * glm::mat4_cast(rotation) * glm::scale(glm::vec3(leafSize.x, 1.0f, leafSize.y));
 
 						auto& matrix = leafTransform;
 						Vertex archetype;
@@ -1729,8 +1729,8 @@ std::vector<std::shared_ptr<Mesh>> TreePointCloud::GenerateFoliageMeshes() const
 					auto leafSize = foliageOverrideSettings.m_leafSize;
 					glm::quat rotation = internodeInfo.m_globalDirection * glm::quat(glm::radians(glm::linearRand(glm::vec3(0.0f), glm::vec3(360.0f))));
 					auto front = rotation * glm::vec3(0, 0, -1);
-					auto foliagePosition = internodeInfo.m_globalPosition + front * (leafSize.z * 1.5f) + glm::sphericalRand(1.0f) * glm::linearRand(0.0f, foliageOverrideSettings.m_positionVariance);
-					auto leafTransform = glm::translate(foliagePosition) * glm::mat4_cast(rotation) * glm::scale(leafSize);
+					auto foliagePosition = internodeInfo.m_globalPosition + front * (leafSize.y * 1.5f) + glm::sphericalRand(1.0f) * glm::linearRand(0.0f, foliageOverrideSettings.m_positionVariance);
+					auto leafTransform = glm::translate(foliagePosition) * glm::mat4_cast(rotation) * glm::scale(glm::vec3(leafSize.x, 1.0f, leafSize.y));
 
 					auto& matrix = leafTransform;
 					Vertex archetype;

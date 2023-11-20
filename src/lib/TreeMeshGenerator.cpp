@@ -4,6 +4,7 @@
 
 #include "TreeMeshGenerator.hpp"
 #include "EditorLayer.hpp"
+#include "Tree.hpp"
 
 using namespace EcoSysLab;
 
@@ -335,13 +336,7 @@ void TreeMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLayer>& ed
 		ImGui::Checkbox("Foliage Override", &m_foliageOverride);
 		if(m_foliageOverride && ImGui::TreeNodeEx("Foliage Override settings"))
 		{
-			ImGui::DragFloat3("Leaf size", &m_foliageOverrideSettings.m_leafSize.x, 0.01f);
-			ImGui::DragInt("Leaf per node", &m_foliageOverrideSettings.m_leafCountPerInternode);
-			ImGui::DragFloat("Position variance", &m_foliageOverrideSettings.m_positionVariance, 0.01f);
-
-			ImGui::DragFloat("Max node thickness", &m_foliageOverrideSettings.m_maxNodeThickness, 0.001f, 0.0f, 5.0f);
-			ImGui::DragFloat("Min root distance", &m_foliageOverrideSettings.m_minRootDistance, 0.001f, 0.0f, 1.0f);
-			ImGui::DragFloat("Max end distance", &m_foliageOverrideSettings.m_maxEndDistance, 0.001f, 0.0f, 1.0f);
+			TreeDescriptor::OnInspectFoliageParameters(m_foliageOverrideSettings);
 			ImGui::TreePop();
 		}
 		ImGui::TreePop();

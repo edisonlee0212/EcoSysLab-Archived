@@ -13,6 +13,8 @@ namespace EcoSysLab {
 		ShootGrowthParameters m_shootGrowthParameters;
 		RootGrowthParameters m_rootGrowthParameters;
 
+		FoliageParameters m_foliageParameters;
+
 		FineRootParameters m_fineRootParameters;
 		TwigParameters m_twigParameters;
 		void OnCreate() override;
@@ -24,6 +26,16 @@ namespace EcoSysLab {
 		void Serialize(YAML::Emitter& out) override;
 
 		void Deserialize(const YAML::Node& in) override;
+
+		static bool OnInspectShootGrowthParameters(ShootGrowthParameters& treeGrowthParameters);
+		static bool OnInspectRootGrowthParameters(RootGrowthParameters& rootGrowthParameters);
+		static bool OnInspectFoliageParameters(FoliageParameters& foliageParameters);
+		static void SerializeFoliageParameters(const std::string& name, const FoliageParameters& foliageParameters, YAML::Emitter& out);
+		static void SerializeShootGrowthParameters(const std::string& name, const ShootGrowthParameters& treeGrowthParameters, YAML::Emitter& out);
+		static void SerializeRootGrowthParameters(const std::string& name, const RootGrowthParameters& rootGrowthParameters, YAML::Emitter& out);
+		static void DeserializeFoliageParameters(const std::string& name, FoliageParameters& foliageParameters, const YAML::Node& in);
+		static void DeserializeShootGrowthParameters(const std::string& name, ShootGrowthParameters& treeGrowthParameters, const YAML::Node& in);
+		static void DeserializeRootGrowthParameters(const std::string& name, RootGrowthParameters& rootGrowthParameters, const YAML::Node& in);
 	};
 
 	class Tree : public IPrivateComponent {
@@ -37,9 +49,9 @@ namespace EcoSysLab {
 		static void DeserializeTreeGrowthSettings(TreeGrowthSettings& treeGrowthSettings, const YAML::Node& param);
 		static bool OnInspectTreeGrowthSettings(TreeGrowthSettings& treeGrowthSettings);
 
-		std::shared_ptr<Mesh> GenerateBranchMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings) const;
-		std::shared_ptr<Mesh> GenerateFoliageMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings) const;
-		void ExportOBJ(const std::filesystem::path& path, const TreeMeshGeneratorSettings& meshGeneratorSettings) const;
+		std::shared_ptr<Mesh> GenerateBranchMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings);
+		std::shared_ptr<Mesh> GenerateFoliageMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings);
+		void ExportOBJ(const std::filesystem::path& path, const TreeMeshGeneratorSettings& meshGeneratorSettings);
 		bool TryGrow(float deltaTime);
 		[[nodiscard]] bool ParseBinvox(const std::filesystem::path& filePath, VoxelGrid<TreeOccupancyGridBasicData>& voxelGrid, float voxelSize = 1.0f);
 

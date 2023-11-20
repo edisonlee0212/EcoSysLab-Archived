@@ -1112,7 +1112,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 				auto front = rotation * glm::vec3(0, 0, -1);
 				ApplyTropism(internodeData.m_lightDirection, 0.3f, up, front);
 				rotation = glm::quatLookAt(front, up);
-				auto fruitPosition = internodeInfo.m_globalPosition + front * (fruitSize.z * 1.5f);
+				auto fruitPosition = internodeInfo.m_globalPosition + front * (fruitSize.z * 1.f);
 				bud.m_reproductiveModule.m_transform = glm::translate(fruitPosition) * glm::mat4_cast(glm::quat(glm::vec3(0.0f))) * glm::scale(fruitSize);
 
 				bud.m_reproductiveModule.m_health -= m_currentDeltaTime * shootGrowthParameters.m_fruitDamage(internode);
@@ -1159,7 +1159,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 				auto front = rotation * glm::vec3(0, 0, -1);
 				ApplyTropism(internodeData.m_lightDirection, 0.3f, up, front);
 				rotation = glm::quatLookAt(front, up);
-				auto foliagePosition = internodeInfo.m_globalPosition + front * (leafSize.z * 1.5f);
+				auto foliagePosition = internodeInfo.m_globalPosition + front * (leafSize.z);
 				bud.m_reproductiveModule.m_transform = glm::translate(foliagePosition) * glm::mat4_cast(rotation) * glm::scale(leafSize);
 
 				bud.m_reproductiveModule.m_health -= m_currentDeltaTime * shootGrowthParameters.m_leafDamage(internode);
