@@ -1,5 +1,5 @@
 m_shootGrowthParameters:
-  m_internodeGrowthRate: 10
+  m_internodeGrowthRate: 14
   m_leafGrowthRate: 18
   m_fruitGrowthRate: 18
   m_lateralBudCount: 2
@@ -15,7 +15,7 @@ m_shootGrowthParameters:
   m_thicknessAccumulationFactor: 0.5
   m_thicknessAccumulateAgeFactor: 0
   m_apicalInternodeKillProbability: 0.150000006
-  m_lateralBudFlushProbability: 0.0199999996
+  m_lateralBudFlushProbability: 0.0299999993
   m_leafBudFlushingProbabilityTemperatureRange: [1, 1, 45, 60]
   m_fruitBudFlushingProbabilityTemperatureRange: [0, 1, 50, 70]
   m_apicalControl: 0

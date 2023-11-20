@@ -1,5 +1,5 @@
 m_shootGrowthParameters:
-  m_internodeGrowthRate: 10
+  m_internodeGrowthRate: 8
   m_leafGrowthRate: 18
   m_fruitGrowthRate: 18
   m_lateralBudCount: 2
