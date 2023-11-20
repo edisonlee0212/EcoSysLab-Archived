@@ -1668,7 +1668,7 @@ void TreePointCloud::FormGeometryEntity() const
 				material->m_materialProperties.m_albedoColor = glm::vec3(152 / 255.0f, 203 / 255.0f, 0 / 255.0f);
 			}
 			material->m_materialProperties.m_roughness = 0.0f;
-			auto texRef = meshGeneratorSettings.m_foliageTexture;
+			auto texRef = meshGeneratorSettings.m_foliageAlbedoTexture;
 			if (texRef.Get<Texture2D>())
 			{
 				material->SetAlbedoTexture(texRef.Get<Texture2D>());
