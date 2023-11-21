@@ -12,24 +12,26 @@ namespace EcoSysLab {
 		glm::vec3 m_startAxis, m_endAxis;
 		float m_startRadius, m_endRadius;
 
-		RingSegment() {}
+		RingSegment() = default;
 
 		RingSegment(glm::vec3 startPosition, glm::vec3 endPosition,
-			glm::vec3 startAxis, glm::vec3 endAxis,
-			float startRadius, float endRadius);
+		            glm::vec3 startAxis, glm::vec3 endAxis,
+		            float startRadius, float endRadius);
 
 		void AppendPoints(std::vector<Vertex>& vertices, glm::vec3& normalDir,
 			int step);
 
-		[[nodiscard]] glm::vec3 GetPoint(const glm::vec3& normalDir, float angle, bool isStart) const;
+		[[nodiscard]] glm::vec3 GetPoint(const glm::vec3& normalDir, float angle, bool isStart, float multiplier = 0.0f) const;
 	};
 
 	struct FoliageParameters
 	{
-		glm::vec2 m_leafSize = glm::vec2(0.02f, 0.02f);
-		int m_leafCountPerInternode = 8;
-		float m_positionVariance = 0.1f;
-
+		glm::vec2 m_leafSize = glm::vec2(0.03f, 0.05f);
+		glm::vec3 m_leafColor = glm::vec3(152 / 255.0f, 203 / 255.0f, 0 / 255.0f);
+		int m_leafCountPerInternode = 4;
+		float m_positionVariance = 0.25f;
+		float m_rotationVariance = 1.f;
+		float m_branchingAngle = 30.f;
 		float m_maxNodeThickness = 1.0f;
 		float m_minRootDistance = 0.0f;
 		float m_maxEndDistance = 10.f;
@@ -89,8 +91,8 @@ namespace EcoSysLab {
 		AssetRef m_foliageNormalTexture;
 		AssetRef m_foliageRoughnessTexture;
 		AssetRef m_foliageMetallicTexture;
-		float m_ringXSubdivision = 0.01f;
-		float m_ringYSubdivision = 0.1f;
+		float m_ringXSubdivision = 0.02f;
+		float m_ringYSubdivision = 0.02f;
 		bool m_overrideRadius = false;
 		float m_radius = 0.01f;
 		bool m_overrideVertexColor = false;
@@ -187,8 +189,8 @@ namespace EcoSysLab {
 #pragma region Subdivision internode here.
 		const auto diameter = glm::max(thicknessStart, thicknessEnd) * 2.0f * glm::pi<float>();
 		int step = diameter / settings.m_ringXSubdivision;
-		if (step < 4)
-			step = 4;
+		if (step < 6)
+			step = 6;
 		if (step % 2 != 0)
 			++step;
 		steps[internodeIndex] = step;
@@ -263,8 +265,11 @@ namespace EcoSysLab {
 			const auto startPosition = rings.at(0).m_startPosition;
 			const auto endPosition = rings.back().m_endPosition;
 			for (int p = 0; p < step; p++) {
+				float xFactor = static_cast<float>(p) / step;
+				float yFactor = internodeInfo.m_rootDistance;
+				float offset = 1.0f + glm::sin(yFactor / 0.05f) * 0.05f;
 				archetype.m_position =
-					rings.at(0).GetPoint(up, angleStep * p, true);
+					rings.at(0).GetPoint(up, angleStep * p, true, offset);
 				const float x =
 					p < step / 2 ? p * textureXStep : (step - p) * textureXStep;
 				archetype.m_texCoord = glm::vec2(x, 0.0f);
@@ -333,8 +338,11 @@ namespace EcoSysLab {
 			int ringSize = rings.size();
 			for (auto ringIndex = 0; ringIndex < ringSize; ringIndex++) {
 				for (auto s = 0; s < step; s++) {
+					float xFactor = static_cast<float>(s) / step;
+					float yFactor = internodeInfo.m_rootDistance + (ringIndex + 1) * internodeInfo.m_length / ringSize;
+					float offset = 1.0f + glm::sin(yFactor / 0.05f) * 0.05f;
 					archetype.m_position = rings.at(ringIndex).GetPoint(
-						up, angleStep * s, false);
+						up, angleStep * s, false, offset);
 					float distanceToStart = glm::distance(
 						rings.at(ringIndex).m_endPosition, startPosition);
 					float distanceToEnd = glm::distance(

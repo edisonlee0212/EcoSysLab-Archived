@@ -453,22 +453,22 @@ std::shared_ptr<Mesh> Tree::GenerateFoliageMesh(const TreeMeshGeneratorSettings&
 	auto quadVerticesSize = quadMesh->GetVerticesAmount();
 	size_t offset = 0;
 	auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
-	const auto& foliageOverrideSettings = (!meshGeneratorSettings.m_foliageOverride && treeDescriptor) ? treeDescriptor->m_foliageParameters : meshGeneratorSettings.m_foliageOverrideSettings;
+	const auto& foliageParameters = (!meshGeneratorSettings.m_foliageOverride && treeDescriptor) ? treeDescriptor->m_foliageParameters : meshGeneratorSettings.m_foliageOverrideSettings;
 	const auto& nodeList = m_treeModel.PeekShootSkeleton().RefSortedNodeList();
 	for (const auto& internodeHandle : nodeList) {
 		const auto& internode = m_treeModel.PeekShootSkeleton().PeekNode(internodeHandle);
 		const auto& internodeInfo = internode.m_info;
 
 		
-		if (internodeInfo.m_thickness < foliageOverrideSettings.m_maxNodeThickness
-			&& internodeInfo.m_rootDistance > foliageOverrideSettings.m_minRootDistance
-			&& internodeInfo.m_endDistance < foliageOverrideSettings.m_maxEndDistance) {
-			for (int i = 0; i < foliageOverrideSettings.m_leafCountPerInternode; i++)
+		if (internodeInfo.m_thickness < foliageParameters.m_maxNodeThickness
+			&& internodeInfo.m_rootDistance > foliageParameters.m_minRootDistance
+			&& internodeInfo.m_endDistance < foliageParameters.m_maxEndDistance) {
+			for (int i = 0; i < foliageParameters.m_leafCountPerInternode; i++)
 			{
-				auto leafSize = foliageOverrideSettings.m_leafSize * internode.m_data.m_lightIntensity;
-				glm::quat rotation = internodeInfo.m_globalDirection * glm::quat(glm::radians(glm::linearRand(glm::vec3(0.0f), glm::vec3(360.0f))));
+				auto leafSize = foliageParameters.m_leafSize;
+				glm::quat rotation = internodeInfo.m_globalRotation * glm::quat(glm::radians(glm::vec3(glm::gaussRand(0.0f, foliageParameters.m_rotationVariance), foliageParameters.m_branchingAngle, glm::linearRand(0.0f, 360.0f))));
 				auto front = rotation * glm::vec3(0, 0, -1);
-				auto foliagePosition = internodeInfo.m_globalPosition + front * (leafSize.y) + glm::sphericalRand(1.0f) * glm::linearRand(0.0f, foliageOverrideSettings.m_positionVariance);
+				auto foliagePosition = internodeInfo.m_globalPosition + front * (leafSize.y + glm::gaussRand(0.0f, foliageParameters.m_positionVariance));
 				auto leafTransform = glm::translate(foliagePosition) * glm::mat4_cast(rotation) * glm::scale(glm::vec3(leafSize.x, 1.0f, leafSize.y));
 
 				auto& matrix = leafTransform;
@@ -492,6 +492,30 @@ std::shared_ptr<Mesh> Tree::GenerateFoliageMesh(const TreeMeshGeneratorSettings&
 					indices.push_back(triangle.x);
 					indices.push_back(triangle.y);
 					indices.push_back(triangle.z);
+				}
+				
+				offset += quadVerticesSize;
+
+
+				for (auto i = 0; i < quadMesh->GetVerticesAmount(); i++) {
+					archetype.m_position =
+						matrix * glm::vec4(quadMesh->UnsafeGetVertices()[i].m_position, 1.0f);
+					archetype.m_normal = glm::normalize(glm::vec3(
+						matrix * glm::vec4(quadMesh->UnsafeGetVertices()[i].m_normal, 0.0f)));
+					archetype.m_tangent = glm::normalize(glm::vec3(
+						matrix *
+						glm::vec4(quadMesh->UnsafeGetVertices()[i].m_tangent, 0.0f)));
+					archetype.m_texCoord =
+						quadMesh->UnsafeGetVertices()[i].m_texCoord;
+					vertices.push_back(archetype);
+				}
+				for (auto triangle : quadTriangles) {
+					triangle.x += offset;
+					triangle.y += offset;
+					triangle.z += offset;
+					indices.push_back(triangle.z);
+					indices.push_back(triangle.y);
+					indices.push_back(triangle.x);
 				}
 				offset += quadVerticesSize;
 			}
@@ -1103,7 +1127,7 @@ void Tree::GenerateGeometry(const TreeMeshGeneratorSettings& meshGeneratorSettin
 			}
 		}
 		else {
-			material->m_materialProperties.m_albedoColor = glm::vec3(152 / 255.0f, 203 / 255.0f, 0 / 255.0f);
+			material->m_materialProperties.m_albedoColor = treeDescriptor->m_foliageParameters.m_leafColor;
 			if (treeDescriptor) {
 				auto texRef = treeDescriptor->m_foliageAlbedoTexture;
 				if (texRef.Get<Texture2D>())
@@ -1257,10 +1281,12 @@ bool TreeDescriptor::OnInspectFoliageParameters(FoliageParameters& foliageParame
 	bool changed = false;
 	if (ImGui::TreeNodeEx("Foliage Parameters", ImGuiTreeNodeFlags_DefaultOpen))
 	{
-		if (ImGui::DragFloat3("Leaf size", &foliageParameters.m_leafSize.x, 0.01f, 0.0f, 1.0f)) changed = true;
+		if (ImGui::DragFloat2("Leaf size", &foliageParameters.m_leafSize.x, 0.01f, 0.0f, 1.0f)) changed = true;
+		if (ImGui::ColorEdit3("Leaf color", &foliageParameters.m_leafColor.x)) changed = true;
 		if (ImGui::DragInt("Leaf per node", &foliageParameters.m_leafCountPerInternode, 1, 0, 50)) changed = true;
 		if (ImGui::DragFloat("Position variance", &foliageParameters.m_positionVariance, 0.01f, 0.0f, 1.0f)) changed = true;
-
+		if (ImGui::DragFloat("Rotation variance", &foliageParameters.m_rotationVariance, 0.01f, 0.0f, 1.0f)) changed = true;
+		if (ImGui::DragFloat("Branching angle", &foliageParameters.m_branchingAngle, 0.01f, 0.0f, 1.0f)) changed = true;
 		if (ImGui::DragFloat("Max node thickness", &foliageParameters.m_maxNodeThickness, 0.001f, 0.0f, 5.0f)) changed = true;
 		if (ImGui::DragFloat("Min root distance", &foliageParameters.m_minRootDistance, 0.001f, 0.0f, 1.0f)) changed = true;
 		if (ImGui::DragFloat("Max end distance", &foliageParameters.m_maxEndDistance, 0.001f, 0.0f, 1.0f)) changed = true;
@@ -1396,12 +1422,18 @@ void TreeDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 	if (OnInspectShootGrowthParameters(m_shootGrowthParameters)) { changed = true; }
 	if (OnInspectRootGrowthParameters(m_rootGrowthParameters)) { changed = true; }
 	if (OnInspectFoliageParameters(m_foliageParameters)) { changed = true; }
-
-	editorLayer->DragAndDropButton<Texture2D>(m_foliageAlbedoTexture, "Foliage Albedo Texture");
-	editorLayer->DragAndDropButton<Texture2D>(m_foliageNormalTexture, "Foliage Normal Texture");
-	editorLayer->DragAndDropButton<Texture2D>(m_foliageRoughnessTexture, "Foliage Roughness Texture");
-	editorLayer->DragAndDropButton<Texture2D>(m_foliageMetallicTexture, "Foliage Metallic Texture");
-
+	if (ImGui::TreeNode("Foliage Parameters")) {
+		editorLayer->DragAndDropButton<Texture2D>(m_foliageAlbedoTexture, "Foliage Albedo Texture");
+		editorLayer->DragAndDropButton<Texture2D>(m_foliageNormalTexture, "Foliage Normal Texture");
+		editorLayer->DragAndDropButton<Texture2D>(m_foliageRoughnessTexture, "Foliage Roughness Texture");
+		editorLayer->DragAndDropButton<Texture2D>(m_foliageMetallicTexture, "Foliage Metallic Texture");
+	}
+	if (ImGui::TreeNode("Branch Parameters")) {
+		editorLayer->DragAndDropButton<Texture2D>(m_branchAlbedoTexture, "Branch Albedo Texture");
+		editorLayer->DragAndDropButton<Texture2D>(m_branchNormalTexture, "Branch Normal Texture");
+		editorLayer->DragAndDropButton<Texture2D>(m_branchRoughnessTexture, "Branch Roughness Texture");
+		editorLayer->DragAndDropButton<Texture2D>(m_branchMetallicTexture, "Branch Metallic Texture");
+	}
 	if (changed) m_saved = false;
 }
 
@@ -1410,13 +1442,21 @@ void TreeDescriptor::CollectAssetRef(std::vector<AssetRef>& list) {
 	if (m_foliageNormalTexture.Get<Texture2D>()) list.push_back(m_foliageNormalTexture);
 	if (m_foliageRoughnessTexture.Get<Texture2D>()) list.push_back(m_foliageRoughnessTexture);
 	if (m_foliageMetallicTexture.Get<Texture2D>()) list.push_back(m_foliageMetallicTexture);
+
+	if (m_branchAlbedoTexture.Get<Texture2D>()) list.push_back(m_branchAlbedoTexture);
+	if (m_branchNormalTexture.Get<Texture2D>()) list.push_back(m_branchNormalTexture);
+	if (m_branchRoughnessTexture.Get<Texture2D>()) list.push_back(m_branchRoughnessTexture);
+	if (m_branchMetallicTexture.Get<Texture2D>()) list.push_back(m_branchMetallicTexture);
 }
 void TreeDescriptor::SerializeFoliageParameters(const std::string& name, const FoliageParameters& foliageParameters, YAML::Emitter& out)
 {
 	out << YAML::Key << name << YAML::BeginMap;
 	out << YAML::Key << "m_leafSize" << YAML::Value << foliageParameters.m_leafSize;
+	out << YAML::Key << "m_leafColor" << YAML::Value << foliageParameters.m_leafColor;
 	out << YAML::Key << "m_leafCountPerInternode" << YAML::Value << foliageParameters.m_leafCountPerInternode;
 	out << YAML::Key << "m_positionVariance" << YAML::Value << foliageParameters.m_positionVariance;
+	out << YAML::Key << "m_rotationVariance" << YAML::Value << foliageParameters.m_rotationVariance;
+	out << YAML::Key << "m_branchingAngle" << YAML::Value << foliageParameters.m_branchingAngle;
 	out << YAML::Key << "m_maxNodeThickness" << YAML::Value << foliageParameters.m_maxNodeThickness;
 	out << YAML::Key << "m_minRootDistance" << YAML::Value << foliageParameters.m_minRootDistance;
 	out << YAML::Key << "m_maxEndDistance" << YAML::Value << foliageParameters.m_maxEndDistance;
@@ -1521,13 +1561,21 @@ void TreeDescriptor::Serialize(YAML::Emitter& out) {
 	m_foliageNormalTexture.Save("m_foliageNormalTexture", out);
 	m_foliageRoughnessTexture.Save("m_foliageRoughnessTexture", out);
 	m_foliageMetallicTexture.Save("m_foliageMetallicTexture", out);
+
+	m_branchAlbedoTexture.Save("m_branchAlbedoTexture", out);
+	m_branchNormalTexture.Save("m_branchNormalTexture", out);
+	m_branchRoughnessTexture.Save("m_branchRoughnessTexture", out);
+	m_branchMetallicTexture.Save("m_branchMetallicTexture", out);
 }
 void TreeDescriptor::DeserializeFoliageParameters(const std::string& name, FoliageParameters& foliageParameters, const YAML::Node& in) {
 	if (in[name]) {
 		auto& param = in[name];
 		if (param["m_leafSize"]) foliageParameters.m_leafSize = param["m_leafSize"].as<glm::vec2>();
+		if (param["m_leafColor"]) foliageParameters.m_leafColor = param["m_leafColor"].as<glm::vec3>();
 		if (param["m_leafCountPerInternode"]) foliageParameters.m_leafCountPerInternode = param["m_leafCountPerInternode"].as<int>();
 		if (param["m_positionVariance"]) foliageParameters.m_positionVariance = param["m_positionVariance"].as<float>();
+		if (param["m_rotationVariance"]) foliageParameters.m_rotationVariance = param["m_rotationVariance"].as<float>();
+		if (param["m_branchingAngle"]) foliageParameters.m_branchingAngle = param["m_branchingAngle"].as<float>();
 		if (param["m_maxNodeThickness"]) foliageParameters.m_maxNodeThickness = param["m_maxNodeThickness"].as<float>();
 		if (param["m_minRootDistance"]) foliageParameters.m_minRootDistance = param["m_minRootDistance"].as<float>();
 		if (param["m_maxEndDistance"]) foliageParameters.m_maxEndDistance = param["m_maxEndDistance"].as<float>();
@@ -1640,6 +1688,11 @@ void TreeDescriptor::Deserialize(const YAML::Node& in) {
 	m_foliageNormalTexture.Load("m_foliageNormalTexture", in);
 	m_foliageRoughnessTexture.Load("m_foliageRoughnessTexture", in);
 	m_foliageMetallicTexture.Load("m_foliageMetallicTexture", in);
+
+	m_branchAlbedoTexture.Load("m_branchAlbedoTexture", in);
+	m_branchNormalTexture.Load("m_branchNormalTexture", in);
+	m_branchRoughnessTexture.Load("m_branchRoughnessTexture", in);
+	m_branchMetallicTexture.Load("m_branchMetallicTexture", in);
 }
 
 void Tree::PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescriptor)

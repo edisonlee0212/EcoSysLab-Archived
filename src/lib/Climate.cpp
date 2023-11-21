@@ -8,9 +8,9 @@ using namespace EcoSysLab;
 void ClimateDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
 	if (ImGui::Button("Instantiate")) {
-		auto scene = Application::GetActiveScene();
-		auto climateEntity = scene->CreateEntity(GetTitle());
-		auto climate = scene->GetOrSetPrivateComponent<Climate>(climateEntity).lock();
+		const auto scene = Application::GetActiveScene();
+		const auto climateEntity = scene->CreateEntity(GetTitle());
+		const auto climate = scene->GetOrSetPrivateComponent<Climate>(climateEntity).lock();
 		climate->m_climateDescriptor = ProjectManager::GetAsset(GetHandle());
 	}
 }

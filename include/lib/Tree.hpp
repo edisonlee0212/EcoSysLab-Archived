@@ -23,6 +23,12 @@ namespace EcoSysLab {
 		AssetRef m_foliageRoughnessTexture;
 		AssetRef m_foliageMetallicTexture;
 
+		AssetRef m_branchAlbedoTexture;
+		AssetRef m_branchNormalTexture;
+		AssetRef m_branchRoughnessTexture;
+		AssetRef m_branchMetallicTexture;
+
+
 		void OnCreate() override;
 
 		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;

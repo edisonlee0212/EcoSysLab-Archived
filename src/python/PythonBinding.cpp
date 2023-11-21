@@ -615,6 +615,8 @@ PYBIND11_MODULE(pyecosyslab, m) {
 		.def_readwrite("m_leafSize", &FoliageParameters::m_leafSize)
 		.def_readwrite("m_leafCountPerInternode", &FoliageParameters::m_leafCountPerInternode)
 		.def_readwrite("m_positionVariance", &FoliageParameters::m_positionVariance)
+		.def_readwrite("m_rotationVariance", &FoliageParameters::m_rotationVariance)
+		.def_readwrite("m_branchingAngle", &FoliageParameters::m_branchingAngle)
 		.def_readwrite("m_maxNodeThickness", &FoliageParameters::m_maxNodeThickness)
 		.def_readwrite("m_minRootDistance", &FoliageParameters::m_minRootDistance)
 		.def_readwrite("m_maxEndDistance", &FoliageParameters::m_maxEndDistance);
