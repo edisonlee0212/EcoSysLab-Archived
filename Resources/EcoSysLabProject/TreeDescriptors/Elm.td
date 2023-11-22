@@ -7,20 +7,20 @@ m_shootGrowthParameters:
   m_leafBudCount: 1
   m_branchingAngleMeanVariance: [60, 3]
   m_rollAngleMeanVariance: [30, 2]
-  m_apicalAngleMeanVariance: [5, 2]
+  m_apicalAngleMeanVariance: [5, 3]
   m_gravitropism: 0
-  m_phototropism: 0.00999999978
+  m_phototropism: 0.0199999996
   m_internodeLength: 0.0299999993
   m_endNodeThickness: 0.00200000009
   m_thicknessAccumulationFactor: 0.5
-  m_thicknessAccumulateAgeFactor: 9.99999975e-06
+  m_thicknessAccumulateAgeFactor: 0
   m_apicalInternodeKillProbability: 0
   m_lateralBudFlushProbability: 0.00999999978
   m_leafBudFlushingProbabilityTemperatureRange: [1, 1, 45, 60]
   m_fruitBudFlushingProbabilityTemperatureRange: [0, 1, 50, 70]
-  m_apicalControl: 0
+  m_apicalControl: -0.300000012
   m_apicalControlAgeFactor: 0
-  m_apicalDominance: 0.230000004
+  m_apicalDominance: 0
   m_apicalDominanceAgeFactor: 0
   m_apicalDominanceDistanceFactor: 0.999000013
   m_leafVigorRequirement: 0.100000001
@@ -65,3 +65,37 @@ m_rootGrowthParameters:
   m_tropismSwitchingProbabilityDistanceFactor: 0
   m_tropismIntensity: 0.0500000007
   m_branchingProbability: 0.0700000003
+m_foliageParameters:
+  m_leafSize: [0.0299999993, 0.0500000007]
+  m_leafColor: [0.596078455, 0.796078444, 0]
+  m_leafCountPerInternode: 8
+  m_positionVariance: 0.25
+  m_rotationVariance: 1
+  m_branchingAngle: 30
+  m_maxNodeThickness: 1
+  m_minRootDistance: 0
+  m_maxEndDistance: 10
+m_foliageAlbedoTexture:
+  m_assetHandle: 0
+  m_assetTypeName: ""
+m_foliageNormalTexture:
+  m_assetHandle: 0
+  m_assetTypeName: ""
+m_foliageRoughnessTexture:
+  m_assetHandle: 0
+  m_assetTypeName: ""
+m_foliageMetallicTexture:
+  m_assetHandle: 0
+  m_assetTypeName: ""
+m_branchAlbedoTexture:
+  m_assetHandle: 0
+  m_assetTypeName: ""
+m_branchNormalTexture:
+  m_assetHandle: 0
+  m_assetTypeName: ""
+m_branchRoughnessTexture:
+  m_assetHandle: 0
+  m_assetTypeName: ""
+m_branchMetallicTexture:
+  m_assetHandle: 0
+  m_assetTypeName: ""

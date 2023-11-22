@@ -472,7 +472,7 @@ std::shared_ptr<Mesh> Tree::GenerateFoliageMesh(const TreeMeshGeneratorSettings&
 			&& internodeInfo.m_endDistance < foliageParameters.m_maxEndDistance) {
 			for (int i = 0; i < foliageParameters.m_leafCountPerInternode; i++)
 			{
-				auto leafSize = foliageParameters.m_leafSize;
+				auto leafSize = foliageParameters.m_leafSize * internode.m_data.m_lightIntensity;
 				glm::quat rotation = internodeInfo.m_globalRotation * glm::quat(glm::radians(glm::vec3(glm::gaussRand(0.0f, foliageParameters.m_rotationVariance), foliageParameters.m_branchingAngle, glm::linearRand(0.0f, 360.0f))));
 				auto front = rotation * glm::vec3(0, 0, -1);
 				auto foliagePosition = internodeInfo.m_globalPosition + front * (leafSize.y + glm::gaussRand(0.0f, foliageParameters.m_positionVariance));
