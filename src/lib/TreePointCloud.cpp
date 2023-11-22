@@ -1463,7 +1463,10 @@ void TreePointCloud::FormGeometryEntity() const
 			case 0:
 			{
 				CylindricalMeshGenerator<ReconstructionSkeletonData, ReconstructionFlowData, ReconstructionNodeData> meshGenerator;
-				meshGenerator.Generate(m_skeletons[i], vertices, indices, meshGeneratorSettings, 999.0f);
+				meshGenerator.Generate(m_skeletons[i], vertices, indices, meshGeneratorSettings, [&](float xFactor, float yFactor)
+					{
+						return 1.0f;
+					});
 			}
 			break;
 			case 1:
@@ -1689,7 +1692,10 @@ std::vector<std::shared_ptr<Mesh>> TreePointCloud::GenerateForestBranchMeshes() 
 		std::vector<Vertex> vertices;
 		std::vector<unsigned int> indices;
 		CylindricalMeshGenerator<ReconstructionSkeletonData, ReconstructionFlowData, ReconstructionNodeData> meshGenerator;
-		meshGenerator.Generate(m_skeletons[i], vertices, indices, m_treeMeshGeneratorSettings, 999.0f);
+		meshGenerator.Generate(m_skeletons[i], vertices, indices, m_treeMeshGeneratorSettings, [&](float xFactor, float yFactor)
+			{
+				return 1.0f;
+			});
 		Jobs::ParallelFor(vertices.size(), [&](unsigned j)
 			{
 				vertices[j].m_position += m_skeletons[i].m_data.m_rootPosition;

@@ -124,7 +124,7 @@ namespace EcoSysLab {
 		void SoilVisualizationVector(VoxelSoilModel& soilModel); // called during LateUpdate()
 
 		float m_time;
-		float m_deltaTime = 0.01918f;
+		float m_deltaTime = 0.0822f;
 
 		std::vector<Fruit> m_fruits;
 		std::vector<Leaf> m_leaves;

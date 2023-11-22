@@ -177,6 +177,9 @@ bool TreeModel::Grow(float deltaTime, const glm::mat4& globalTransform, VoxelSoi
 	const RootGrowthController& rootGrowthParameters,
 	const ShootGrowthController& shootGrowthParameters)
 {
+	srand(m_currentSeedValue);
+	//m_currentSeedValue++;
+
 	m_currentDeltaTime = deltaTime;
 	bool treeStructureChanged = false;
 	bool rootStructureChanged = false;
@@ -289,6 +292,8 @@ void TreeModel::Initialize(const ShootGrowthController& shootGrowthParameters, c
 		m_treeOccupancyGrid.Initialize(glm::vec3(-gridRadius, 0.0f, -gridRadius), glm::vec3(gridRadius), shootGrowthParameters.m_internodeLength,
 			m_treeGrowthSettings.m_spaceColonizationRemovalDistanceFactor, m_treeGrowthSettings.m_spaceColonizationTheta, m_treeGrowthSettings.m_spaceColonizationDetectionDistanceFactor);
 	}
+
+	m_currentSeedValue = m_seed;
 	m_initialized = true;
 }
 

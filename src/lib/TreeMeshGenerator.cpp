@@ -160,13 +160,19 @@ void RingSegment::AppendPoints(std::vector<Vertex>& vertices, glm::vec3& normalD
 
 glm::vec3 RingSegment::GetPoint(const glm::vec3& normalDir, const float angle, const bool isStart, const float multiplier) const
 {
-	glm::vec3 direction = glm::cross(normalDir, isStart ? this->m_startAxis : this->m_endAxis);
-	direction = glm::rotate(direction, glm::radians(angle), isStart ? this->m_startAxis : this->m_endAxis);
-	direction = glm::normalize(direction);
+	const auto direction = GetDirection(normalDir, angle, isStart);
 	const auto radius = isStart ? m_startRadius : m_endRadius;
 	const glm::vec3 position = (isStart ? m_startPosition : m_endPosition) + 
 		direction * multiplier * radius;
 	return position;
+}
+
+glm::vec3 RingSegment::GetDirection(const glm::vec3& normalDir, float angle, const bool isStart) const
+{
+	glm::vec3 direction = glm::cross(normalDir, isStart ? this->m_startAxis : this->m_endAxis);
+	direction = glm::rotate(direction, glm::radians(angle), isStart ? this->m_startAxis : this->m_endAxis);
+	direction = glm::normalize(direction);
+	return direction;
 }
 
 void TreeMeshGeneratorSettings::Save(const std::string& name, YAML::Emitter& out) {
@@ -325,7 +331,7 @@ void TreeMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLayer>& ed
 		ImGui::Checkbox("Mesh Override", &m_presentationOverride);
 		if (m_presentationOverride && ImGui::TreeNodeEx("Override settings"))
 		{
-			ImGui::Checkbox("Limit max thickness", &m_presentationOverrideSettings.m_limitMaxThickness);
+			ImGui::DragFloat("Max thickness", &m_presentationOverrideSettings.m_maxThickness, 0.01f, 0.0f, 1.0f);
 			ImGui::ColorEdit3("Root color", &m_presentationOverrideSettings.m_rootOverrideColor.x);
 			ImGui::ColorEdit3("Branch color", &m_presentationOverrideSettings.m_branchOverrideColor.x);
 			ImGui::ColorEdit3("Foliage color", &m_presentationOverrideSettings.m_foliageOverrideColor.x);
