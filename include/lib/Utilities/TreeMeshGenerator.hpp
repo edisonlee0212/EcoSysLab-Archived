@@ -101,8 +101,8 @@ namespace EcoSysLab {
 		float m_junctionLowerRatio = 0.4f;
 		float m_junctionUpperRatio = 0.0f;
 
-		float m_baseControlPointRatio = 0.5f;
-		float m_branchControlPointRatio = 0.5f;
+		float m_baseControlPointRatio = 0.3f;
+		float m_branchControlPointRatio = 0.3f;
 		float m_lineLengthFactor = 1.0f;
 		bool m_smoothness = true;
 

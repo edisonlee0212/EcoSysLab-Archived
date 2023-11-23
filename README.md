@@ -1,8 +1,10 @@
 # EcoSysLab
 
-This is the repository to my vegetation modelling framework. 
+This is the repository to my vegetation modeling framework. 
 
-![BannerImage](/Resources/GitHub/Banner.png?raw=true "BannerImage")
+![Bannere](/Resources/GitHub/Banner.png?raw=true "Banner")
+
+![BigTree](/Resources/GitHub/BigTree.png?raw=true "BigTree")
 
 To be able to compile and run the application, you will also need to clone the EvoEngine
 edisonlee0212/EvoEngine
