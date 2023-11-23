@@ -4,6 +4,7 @@
 
 #include "EcoSysLabLayer.hpp"
 
+#include "BranchShape.hpp"
 #include "Times.hpp"
 
 #include "StrandsRenderer.hpp"
@@ -26,6 +27,7 @@ void EcoSysLabLayer::OnCreate() {
 	ClassRegistry::RegisterPrivateComponent<Soil>("Soil");
 	ClassRegistry::RegisterPrivateComponent<Climate>("Climate");
 
+	ClassRegistry::RegisterAsset<BranchShape>("BranchShape", { ".bs" });
 	ClassRegistry::RegisterAsset<ForestDescriptor>("ForestDescriptor", { ".fd" });
 	ClassRegistry::RegisterAsset<TreeDescriptor>("TreeDescriptor", { ".td" });
 	ClassRegistry::RegisterAsset<SoilDescriptor>("SoilDescriptor", { ".sd" });

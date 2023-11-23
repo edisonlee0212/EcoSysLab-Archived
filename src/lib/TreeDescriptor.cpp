@@ -17,6 +17,8 @@
 #include "HeightField.hpp"
 #include "StrandsRenderer.hpp"
 #include "TreeDescriptor.hpp"
+
+#include "BranchShape.hpp"
 using namespace EcoSysLab;
 
 void TreeDescriptor::OnCreate() {
@@ -179,6 +181,9 @@ void TreeDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 		editorLayer->DragAndDropButton<Texture2D>(m_branchRoughnessTexture, "Branch Roughness Texture");
 		editorLayer->DragAndDropButton<Texture2D>(m_branchMetallicTexture, "Branch Metallic Texture");
 	}
+
+	editorLayer->DragAndDropButton<BranchShape>(m_shootBranchShape, "Shoot Branch Shape");
+	editorLayer->DragAndDropButton<BranchShape>(m_rootBranchShape, "Root Branch Shape");
 	if (changed) m_saved = false;
 }
 
@@ -192,6 +197,9 @@ void TreeDescriptor::CollectAssetRef(std::vector<AssetRef>& list) {
 	if (m_branchNormalTexture.Get<Texture2D>()) list.push_back(m_branchNormalTexture);
 	if (m_branchRoughnessTexture.Get<Texture2D>()) list.push_back(m_branchRoughnessTexture);
 	if (m_branchMetallicTexture.Get<Texture2D>()) list.push_back(m_branchMetallicTexture);
+
+	if (m_shootBranchShape.Get<BranchShape>()) list.push_back(m_shootBranchShape);
+	if (m_rootBranchShape.Get<BranchShape>()) list.push_back(m_rootBranchShape);
 }
 void TreeDescriptor::SerializeFoliageParameters(const std::string& name, const FoliageParameters& foliageParameters, YAML::Emitter& out)
 {
@@ -311,6 +319,9 @@ void TreeDescriptor::Serialize(YAML::Emitter& out) {
 	m_branchNormalTexture.Save("m_branchNormalTexture", out);
 	m_branchRoughnessTexture.Save("m_branchRoughnessTexture", out);
 	m_branchMetallicTexture.Save("m_branchMetallicTexture", out);
+
+	m_shootBranchShape.Save("m_shootBranchShape", out);
+	m_rootBranchShape.Save("m_rootBranchShape", out);
 }
 void TreeDescriptor::DeserializeFoliageParameters(const std::string& name, FoliageParameters& foliageParameters, const YAML::Node& in) {
 	if (in[name]) {
@@ -438,4 +449,7 @@ void TreeDescriptor::Deserialize(const YAML::Node& in) {
 	m_branchNormalTexture.Load("m_branchNormalTexture", in);
 	m_branchRoughnessTexture.Load("m_branchRoughnessTexture", in);
 	m_branchMetallicTexture.Load("m_branchMetallicTexture", in);
+
+	m_shootBranchShape.Load("m_shootBranchShape", in);
+	m_rootBranchShape.Load("m_rootBranchShape", in);
 }

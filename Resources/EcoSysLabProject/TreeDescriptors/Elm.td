@@ -99,3 +99,9 @@ m_branchRoughnessTexture:
 m_branchMetallicTexture:
   m_assetHandle: 0
   m_assetTypeName: ""
+m_shootBranchShape:
+  m_assetHandle: 12028426262144384612
+  m_assetTypeName: BranchShape
+m_rootBranchShape:
+  m_assetHandle: 0
+  m_assetTypeName: ""

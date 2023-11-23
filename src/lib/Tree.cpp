@@ -9,6 +9,7 @@
 #include "Strands.hpp"
 #include "EditorLayer.hpp"
 #include "Application.hpp"
+#include "BranchShape.hpp"
 #include "TreeMeshGenerator.hpp"
 #include "Soil.hpp"
 #include "Climate.hpp"
@@ -167,9 +168,7 @@ void Tree::Reset()
 	m_treeVisualizer.Reset(m_treeModel);
 }
 void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
-	ImGui::DragFloat("XFrequency", &m_xFrequency, 0.1f, 0.0f, 100.0f);
-	ImGui::DragFloat("YFrequency", &m_yFrequency, 0.1f, 0.0f, 100.0f);
-	ImGui::DragFloat("Depth", &m_depth, 0.01f, 0.0f, 1.0f);
+	
 	bool modelChanged = false;
 	const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
 	const auto scene = GetScene();
@@ -438,9 +437,20 @@ std::shared_ptr<Mesh> Tree::GenerateBranchMesh(const TreeMeshGeneratorSettings& 
 	std::vector<Vertex> vertices;
 	std::vector<unsigned int> indices;
 	const CylindricalMeshGenerator<ShootGrowthData, ShootStemGrowthData, InternodeGrowthData> meshGenerator{};
+
+	const auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
+	std::shared_ptr<BranchShape> branchShape{};
+	if(treeDescriptor)
+	{
+		branchShape = treeDescriptor->m_shootBranchShape.Get<BranchShape>();
+	}
 	meshGenerator.Generate(m_treeModel.PeekShootSkeleton(), vertices, indices, meshGeneratorSettings, [&](float xFactor, float distanceToRoot)
 	{
-			return 1.0f + m_depth * glm::perlin(glm::vec3(m_xFrequency * glm::sin(xFactor * 2.0f * glm::pi<float>()), m_xFrequency * glm::cos(xFactor * 2.0f * glm::pi<float>()),  m_yFrequency * distanceToRoot));
+		if(branchShape)
+		{
+			return branchShape->GetValue(xFactor, distanceToRoot);
+		}
+		return 1.0f;
 	});
 
 	auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
@@ -465,8 +475,6 @@ std::shared_ptr<Mesh> Tree::GenerateFoliageMesh(const TreeMeshGeneratorSettings&
 	for (const auto& internodeHandle : nodeList) {
 		const auto& internode = m_treeModel.PeekShootSkeleton().PeekNode(internodeHandle);
 		const auto& internodeInfo = internode.m_info;
-
-		
 		if (internodeInfo.m_thickness < foliageParameters.m_maxNodeThickness
 			&& internodeInfo.m_rootDistance > foliageParameters.m_minRootDistance
 			&& internodeInfo.m_endDistance < foliageParameters.m_maxEndDistance) {
@@ -737,8 +745,7 @@ bool Tree::TryGrowSubTree(const NodeHandle internodeHandle, const float deltaTim
 	const auto owner = GetOwner();
 
 	PrepareControllers(treeDescriptor);
-	const bool grown = m_treeModel.GrowSubTree(deltaTime, internodeHandle, scene->GetDataComponent<GlobalTransform>(owner).m_value, climate->m_climateModel, m_shootGrowthController);
-	if (grown)
+	if (const bool grown = m_treeModel.GrowSubTree(deltaTime, internodeHandle, scene->GetDataComponent<GlobalTransform>(owner).m_value, climate->m_climateModel, m_shootGrowthController))
 	{
 		m_treeVisualizer.ClearSelections();
 		m_treeVisualizer.m_needUpdate = true;

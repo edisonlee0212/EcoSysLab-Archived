@@ -92,7 +92,7 @@ namespace EcoSysLab {
 		AssetRef m_foliageNormalTexture;
 		AssetRef m_foliageRoughnessTexture;
 		AssetRef m_foliageMetallicTexture;
-		float m_ringXSubdivision = 0.02f;
+		float m_ringXSubdivision = 0.01f;
 		float m_ringYSubdivision = 0.02f;
 		bool m_overrideRadius = false;
 		float m_radius = 0.01f;
@@ -127,14 +127,12 @@ namespace EcoSysLab {
 		void Load(const std::string& name, const YAML::Node& in);
 	};
 
-	
-
 	template<typename SkeletonData, typename FlowData, typename NodeData>
 	class CylindricalMeshGenerator {
 	public:
 		void Generate(const Skeleton<SkeletonData, FlowData, NodeData>& treeSkeleton, std::vector<Vertex>& vertices,
 			std::vector<unsigned int>& indices, const TreeMeshGeneratorSettings& settings, 
-			const std::function<float(float xFactor, float yFactor)>& func) const;
+			const std::function<float(float xFactor, float distanceToRoot)>& func) const;
 	};
 	template<typename SkeletonData, typename FlowData, typename NodeData>
 	class VoxelMeshGenerator {
@@ -258,6 +256,8 @@ namespace EcoSysLab {
 			}
 		}
 
+		std::map<NodeHandle, int> vertexLastRingStartVertexIndex{};
+
 		for (int internodeIndex = 0; internodeIndex < sortedInternodeList.size(); internodeIndex++) {
 			auto internodeHandle = sortedInternodeList[internodeIndex];
 			const auto& internode = treeSkeleton.PeekNode(internodeHandle);
@@ -289,21 +289,20 @@ namespace EcoSysLab {
 			archetype.m_positionPadding = internodeHandle + 1;
 			archetype.m_normalPadding = internode.GetFlowHandle() + 1;
 			float textureXStep = 1.0f / pStep * 4.0f;
-
-			const auto startPosition = rings.at(0).m_startPosition;
-			const auto endPosition = rings.back().m_endPosition;
-			for (int p = 0; p < pStep; p++) {
-				float xFactor = static_cast<float>(p) / pStep;
-				float yFactor = internodeInfo.m_rootDistance - internodeInfo.m_length;
-				auto& ring = rings.at(0);
-				auto direction = ring.GetDirection(
-					parentUp, pAngleStep * p, true);
-				archetype.m_position = ring.m_startPosition + direction * ring.m_startRadius * func(xFactor, yFactor);
-				const float x =
-					p < pStep / 2 ? p * textureXStep : (pStep - p) * textureXStep;
-				archetype.m_texCoord = glm::vec2(x, 0.0f);
-				archetype.m_color = internodeInfo.m_color;
-				vertices.push_back(archetype);
+			if (parentInternodeHandle == -1) {
+				for (int p = 0; p < pStep; p++) {
+					float xFactor = static_cast<float>(p) / pStep;
+					float yFactor = internodeInfo.m_rootDistance - internodeInfo.m_length;
+					auto& ring = rings.at(0);
+					auto direction = ring.GetDirection(
+						parentUp, pAngleStep * p, true);
+					archetype.m_position = ring.m_startPosition + direction * ring.m_startRadius * func(xFactor, yFactor);
+					const float x =
+						p < pStep / 2 ? p * textureXStep : (pStep - p) * textureXStep;
+					archetype.m_texCoord = glm::vec2(x, 0.0f);
+					archetype.m_color = internodeInfo.m_color;
+					vertices.push_back(archetype);
+				}
 			}
 			std::vector<float> angles;
 			angles.resize(step);
@@ -311,9 +310,8 @@ namespace EcoSysLab {
 			pAngles.resize(pStep);
 
 			for (auto p = 0; p < pStep; p++) {
-				pAngles[p] = angleStep * p;
+				pAngles[p] = pAngleStep * p;
 			}
-			angleStep = 360.0f / static_cast<float>(step);
 			for (auto s = 0; s < step; s++) {
 				angles[s] = angleStep * s;
 			}
@@ -344,25 +342,7 @@ namespace EcoSysLab {
 					}
 				}
 			}
-			for (int p = 0; p < pStep; p++) {
-				if (pTarget[p] == pTarget[p == pStep - 1 ? 0 : p + 1]) {
-					indices.push_back(vertexIndex + p);
-					indices.push_back(vertexIndex + (p == pStep - 1 ? 0 : p + 1));
-					indices.push_back(vertexIndex + pStep + pTarget[p]);
-				}
-				else {
-					indices.push_back(vertexIndex + p);
-					indices.push_back(vertexIndex + (p == pStep - 1 ? 0 : p + 1));
-					indices.push_back(vertexIndex + pStep + pTarget[p]);
 
-					indices.push_back(vertexIndex + pStep +
-						pTarget[p == pStep - 1 ? 0 : p + 1]);
-					indices.push_back(vertexIndex + pStep + pTarget[p]);
-					indices.push_back(vertexIndex + (p == pStep - 1 ? 0 : p + 1));
-				}
-			}
-
-			vertexIndex += pStep;
 			textureXStep = 1.0f / step * 4.0f;
 			int ringSize = rings.size();
 			for (auto ringIndex = 0; ringIndex < ringSize; ringIndex++) {
@@ -379,27 +359,68 @@ namespace EcoSysLab {
 					archetype.m_texCoord = glm::vec2(x, y);
 					vertices.push_back(archetype);
 				}
-				if (ringIndex != 0) {
+				if (ringIndex == 0)
+				{
+					if (parentInternodeHandle != -1) {
+						int parentLastRingStartVertexIndex = vertexLastRingStartVertexIndex[parentInternodeHandle];
+						for (int p = 0; p < pStep; p++) {
+							if (pTarget[p] == pTarget[p == pStep - 1 ? 0 : p + 1]) {
+								indices.push_back(parentLastRingStartVertexIndex + p);
+								indices.push_back(parentLastRingStartVertexIndex + (p == pStep - 1 ? 0 : p + 1));
+								indices.push_back(vertexIndex + pTarget[p]);
+							}
+							else {
+								indices.push_back(parentLastRingStartVertexIndex + p);
+								indices.push_back(parentLastRingStartVertexIndex + (p == pStep - 1 ? 0 : p + 1));
+								indices.push_back(vertexIndex + pTarget[p]);
+
+								indices.push_back(vertexIndex + pTarget[p == pStep - 1 ? 0 : p + 1]);
+								indices.push_back(vertexIndex + pTarget[p]);
+								indices.push_back(parentLastRingStartVertexIndex + (p == pStep - 1 ? 0 : p + 1));
+							}
+						}
+					}else
+					{
+						for (int p = 0; p < pStep; p++) {
+							if (pTarget[p] == pTarget[p == pStep - 1 ? 0 : p + 1]) {
+								indices.push_back(vertexIndex + p);
+								indices.push_back(vertexIndex + (p == pStep - 1 ? 0 : p + 1));
+								indices.push_back(vertexIndex + pStep + pTarget[p]);
+							}
+							else {
+								indices.push_back(vertexIndex + p);
+								indices.push_back(vertexIndex + (p == pStep - 1 ? 0 : p + 1));
+								indices.push_back(vertexIndex + pStep + pTarget[p]);
+
+								indices.push_back(vertexIndex + pStep + pTarget[p == pStep - 1 ? 0 : p + 1]);
+								indices.push_back(vertexIndex + pStep + pTarget[p]);
+								indices.push_back(vertexIndex + (p == pStep - 1 ? 0 : p + 1));
+							}
+						}
+					}
+					if (parentInternodeHandle == -1) vertexIndex += pStep;
+				}else{
 					for (int s = 0; s < step - 1; s++) {
 						// Down triangle
 						indices.push_back(vertexIndex + (ringIndex - 1) * step + s);
 						indices.push_back(vertexIndex + (ringIndex - 1) * step + s + 1);
-						indices.push_back(vertexIndex + (ringIndex)*step + s);
+						indices.push_back(vertexIndex + ringIndex * step + s);
 						// Up triangle
-						indices.push_back(vertexIndex + (ringIndex)*step + s + 1);
-						indices.push_back(vertexIndex + (ringIndex)*step + s);
+						indices.push_back(vertexIndex + ringIndex * step + s + 1);
+						indices.push_back(vertexIndex + ringIndex * step + s);
 						indices.push_back(vertexIndex + (ringIndex - 1) * step + s + 1);
 					}
 					// Down triangle
 					indices.push_back(vertexIndex + (ringIndex - 1) * step + step - 1);
 					indices.push_back(vertexIndex + (ringIndex - 1) * step);
-					indices.push_back(vertexIndex + (ringIndex)*step + step - 1);
+					indices.push_back(vertexIndex + ringIndex * step + step - 1);
 					// Up triangle
-					indices.push_back(vertexIndex + (ringIndex)*step);
-					indices.push_back(vertexIndex + (ringIndex)*step + step - 1);
+					indices.push_back(vertexIndex + ringIndex * step);
+					indices.push_back(vertexIndex + ringIndex * step + step - 1);
 					indices.push_back(vertexIndex + (ringIndex - 1) * step);
 				}
 			}
+			vertexLastRingStartVertexIndex[internodeHandle] = vertices.size() - step;
 		}
 	}
 

@@ -18,6 +18,9 @@ namespace EcoSysLab {
 		FineRootParameters m_fineRootParameters;
 		TwigParameters m_twigParameters;
 
+		AssetRef m_shootBranchShape;
+		AssetRef m_rootBranchShape;
+
 		AssetRef m_foliageAlbedoTexture;
 		AssetRef m_foliageNormalTexture;
 		AssetRef m_foliageRoughnessTexture;

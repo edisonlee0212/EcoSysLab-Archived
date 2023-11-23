@@ -18,9 +18,7 @@ namespace EcoSysLab {
 		static void SerializeTreeGrowthSettings(const TreeGrowthSettings& treeGrowthSettings, YAML::Emitter& out);
 		static void DeserializeTreeGrowthSettings(TreeGrowthSettings& treeGrowthSettings, const YAML::Node& param);
 		static bool OnInspectTreeGrowthSettings(TreeGrowthSettings& treeGrowthSettings);
-		float m_xFrequency = 5.0f;
-		float m_yFrequency = 5.0f;
-		float m_depth = 0.25f;
+		
 		std::shared_ptr<Mesh> GenerateBranchMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings);
 		std::shared_ptr<Mesh> GenerateFoliageMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings);
 		void ExportOBJ(const std::filesystem::path& path, const TreeMeshGeneratorSettings& meshGeneratorSettings);
