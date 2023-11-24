@@ -7,8 +7,8 @@ m_shootGrowthParameters:
   m_leafBudCount: 1
   m_branchingAngleMeanVariance: [60, 3]
   m_rollAngleMeanVariance: [30, 2]
-  m_apicalAngleMeanVariance: [0, 3]
-  m_gravitropism: 0.0299999993
+  m_apicalAngleMeanVariance: [0, 3.5]
+  m_gravitropism: 0.0399999991
   m_phototropism: 0
   m_internodeLength: 0.0299999993
   m_endNodeThickness: 0.00200000009
