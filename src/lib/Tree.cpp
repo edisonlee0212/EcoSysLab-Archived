@@ -1397,6 +1397,11 @@ void Tree::PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescrip
 				{
 					pruningProbability = treeDescriptor->m_shootGrowthParameters.m_lightPruningFactor;
 				}
+				if(!internode.IsApical() && treeDescriptor->m_shootGrowthParameters.m_thicknessPruningFactor != 0.0f
+					&& internode.m_info.m_thickness / internode.m_info.m_endDistance < treeDescriptor->m_shootGrowthParameters.m_thicknessPruningFactor)
+				{
+					pruningProbability += 1.0f;
+				}
 				return pruningProbability;
 			};
 		m_shootGrowthController.m_maxLeafSize = treeDescriptor->m_shootGrowthParameters.m_maxLeafSize;

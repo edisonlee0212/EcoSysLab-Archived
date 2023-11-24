@@ -5,17 +5,17 @@ m_shootGrowthParameters:
   m_lateralBudCount: 2
   m_fruitBudCount: 1
   m_leafBudCount: 1
-  m_branchingAngleMeanVariance: [15, 1]
+  m_branchingAngleMeanVariance: [10, 1]
   m_rollAngleMeanVariance: [90, 2]
-  m_apicalAngleMeanVariance: [0, 2.5]
+  m_apicalAngleMeanVariance: [0, 2]
   m_gravitropism: -0.0500000007
   m_phototropism: 0
   m_internodeLength: 0.0299999993
-  m_endNodeThickness: 0.00100000005
+  m_endNodeThickness: 0.00200000009
   m_thicknessAccumulationFactor: 0.5
   m_thicknessAccumulateAgeFactor: 0
   m_apicalInternodeKillProbability: 0
-  m_lateralBudFlushProbability: 0.100000001
+  m_lateralBudFlushProbability: 0.0500000007
   m_leafBudFlushingProbabilityTemperatureRange: [1, 1, 45, 60]
   m_fruitBudFlushingProbabilityTemperatureRange: [0, 1, 50, 70]
   m_apicalControl: 0.5
@@ -30,6 +30,7 @@ m_shootGrowthParameters:
   m_lowBranchPruning: 0.100000001
   m_lowBranchPruningThicknessFactor: 1
   m_lightPruningFactor: 0
+  m_thicknessPruningFactor: 0.00499999989
   m_saggingFactorThicknessReductionMax: [0.00999999978, 2, 0.300000012]
   m_maxSpaceOccupancy: 1
   m_maxLeafSize: [0.0500000007, 0.5, 0.0500000007]
@@ -65,3 +66,43 @@ m_rootGrowthParameters:
   m_tropismSwitchingProbabilityDistanceFactor: 0
   m_tropismIntensity: 0.150000006
   m_branchingProbability: 0.0299999993
+m_foliageParameters:
+  m_leafSize: [0.0299999993, 0.0500000007]
+  m_leafColor: [0.596078455, 0.796078444, 0]
+  m_leafCountPerInternode: 4
+  m_positionVariance: 0.25
+  m_rotationVariance: 1
+  m_branchingAngle: 30
+  m_maxNodeThickness: 1
+  m_minRootDistance: 0
+  m_maxEndDistance: 10
+m_foliageAlbedoTexture:
+  m_assetHandle: 0
+  m_assetTypeName: ""
+m_foliageNormalTexture:
+  m_assetHandle: 0
+  m_assetTypeName: ""
+m_foliageRoughnessTexture:
+  m_assetHandle: 0
+  m_assetTypeName: ""
+m_foliageMetallicTexture:
+  m_assetHandle: 0
+  m_assetTypeName: ""
+m_branchAlbedoTexture:
+  m_assetHandle: 0
+  m_assetTypeName: ""
+m_branchNormalTexture:
+  m_assetHandle: 0
+  m_assetTypeName: ""
+m_branchRoughnessTexture:
+  m_assetHandle: 0
+  m_assetTypeName: ""
+m_branchMetallicTexture:
+  m_assetHandle: 0
+  m_assetTypeName: ""
+m_shootBranchShape:
+  m_assetHandle: 0
+  m_assetTypeName: ""
+m_rootBranchShape:
+  m_assetHandle: 0
+  m_assetTypeName: ""

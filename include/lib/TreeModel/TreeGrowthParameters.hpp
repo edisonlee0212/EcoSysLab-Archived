@@ -206,6 +206,11 @@ namespace EcoSysLab
 		 */
 		float m_lightPruningFactor = 0.0f;
 		/**
+		 * \brief The pruning factor for branch because of being too long
+		 */
+		float m_thicknessPruningFactor = 0.005f;
+
+		/**
 		 * \brief The strength of gravity bending.
 		 */
 		glm::vec3 m_saggingFactorThicknessReductionMax = glm::vec3(0.8f, 1.75f, 1.0f);

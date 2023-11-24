@@ -177,7 +177,7 @@ bool TreeModel::Grow(float deltaTime, const glm::mat4& globalTransform, VoxelSoi
 	const RootGrowthController& rootGrowthParameters,
 	const ShootGrowthController& shootGrowthParameters)
 {
-	srand(m_currentSeedValue);
+	//srand(m_currentSeedValue);
 	//m_currentSeedValue++;
 
 	m_currentDeltaTime = deltaTime;

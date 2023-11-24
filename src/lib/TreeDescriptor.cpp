@@ -75,6 +75,7 @@ bool TreeDescriptor::OnInspectShootGrowthParameters(ShootGrowthParameters& treeG
 			changed = ImGui::DragFloat("Low Branch Pruning", &treeGrowthParameters.m_lowBranchPruning, 0.01f) || changed;
 			changed = ImGui::DragFloat("Low Branch Pruning Thickness factor", &treeGrowthParameters.m_lowBranchPruningThicknessFactor, 0.01f) || changed;
 			changed = ImGui::DragFloat("Light Pruning", &treeGrowthParameters.m_lightPruningFactor, 0.01f) || changed;
+			changed = ImGui::DragFloat("Thin branch Pruning", &treeGrowthParameters.m_thicknessPruningFactor, 0.01f, 0.0f) || changed;
 			changed = ImGui::DragFloat("Max Space Occupancy", &treeGrowthParameters.m_maxSpaceOccupancy, 0.001f, 0.0f, 1.0f, "%.3f") || changed;
 
 			ImGui::TreePop();
@@ -256,6 +257,7 @@ void TreeDescriptor::SerializeShootGrowthParameters(const std::string& name, con
 	out << YAML::Key << "m_lowBranchPruning" << YAML::Value << treeGrowthParameters.m_lowBranchPruning;
 	out << YAML::Key << "m_lowBranchPruningThicknessFactor" << YAML::Value << treeGrowthParameters.m_lowBranchPruningThicknessFactor;
 	out << YAML::Key << "m_lightPruningFactor" << YAML::Value << treeGrowthParameters.m_lightPruningFactor;
+	out << YAML::Key << "m_thicknessPruningFactor" << YAML::Value << treeGrowthParameters.m_thicknessPruningFactor;
 	out << YAML::Key << "m_saggingFactorThicknessReductionMax" << YAML::Value << treeGrowthParameters.m_saggingFactorThicknessReductionMax;
 	out << YAML::Key << "m_maxSpaceOccupancy" << YAML::Value << treeGrowthParameters.m_maxSpaceOccupancy;
 
@@ -364,6 +366,7 @@ void TreeDescriptor::DeserializeShootGrowthParameters(const std::string& name, S
 		if (param["m_lowBranchPruning"]) treeGrowthParameters.m_lowBranchPruning = param["m_lowBranchPruning"].as<float>();
 		if (param["m_lowBranchPruningThicknessFactor"]) treeGrowthParameters.m_lowBranchPruningThicknessFactor = param["m_lowBranchPruningThicknessFactor"].as<float>();
 		if (param["m_lightPruningFactor"]) treeGrowthParameters.m_lightPruningFactor = param["m_lightPruningFactor"].as<float>();
+		if (param["m_thicknessPruningFactor"]) treeGrowthParameters.m_thicknessPruningFactor = param["m_thicknessPruningFactor"].as<float>();
 		if (param["m_saggingFactorThicknessReductionMax"]) treeGrowthParameters.m_saggingFactorThicknessReductionMax = param["m_saggingFactorThicknessReductionMax"].as<glm::vec3>();
 		if (param["m_maxSpaceOccupancy"]) treeGrowthParameters.m_maxSpaceOccupancy = param["m_maxSpaceOccupancy"].as<float>();
 
