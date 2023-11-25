@@ -57,7 +57,7 @@ void TreePipeBase::InstantiateExample()
 	const auto trunkHandle = skeleton.Extend(0, false);
 	const auto handle1 = skeleton.Extend(trunkHandle, false);
 	const auto handle2 = skeleton.Extend(trunkHandle, true);
-	const auto handle3 = skeleton.Extend(trunkHandle, true);
+	//const auto handle3 = skeleton.Extend(trunkHandle, true);
 	/*
 	const auto handle4 = skeleton.Extend(handle1, false);
 	const auto handle5 = skeleton.Extend(handle2, true);
@@ -68,7 +68,7 @@ void TreePipeBase::InstantiateExample()
 	auto& trunkNode = skeleton.RefNode(trunkHandle);
 	auto& node1 = skeleton.RefNode(handle1);
 	auto& node2 = skeleton.RefNode(handle2);
-	auto& node3 = skeleton.RefNode(handle3);
+	//auto& node3 = skeleton.RefNode(handle3);
 	/*
 	auto& node4 = skeleton.RefNode(handle4);
 	auto& node5 = skeleton.RefNode(handle5);
@@ -89,10 +89,11 @@ void TreePipeBase::InstantiateExample()
 	node2.m_info.m_globalRotation = node2.m_info.m_regulatedGlobalRotation = glm::quatLookAt(glm::vec3(1, 0, 0), glm::vec3(0, 0, 1));
 	node2.m_info.m_globalPosition = glm::vec3(0.0f, 1.f, 0.0f);
 	node2.m_info.m_length = 0.1f;
-
+	/*
 	node3.m_info.m_globalRotation = node3.m_info.m_regulatedGlobalRotation = glm::quatLookAt(glm::normalize(glm::vec3(-1, 1, 0)), glm::vec3(0, 0, 1));
 	node3.m_info.m_globalPosition = glm::vec3(0.0f, 1.f, 0.0f);
 	node3.m_info.m_length = 0.1f;
+	*/
 	/*
 	node4.m_info.m_globalRotation = node4.m_info.m_regulatedGlobalRotation = glm::quatLookAt(glm::vec3(0, 1, 0), glm::vec3(0, 0, 1));
 	node4.m_info.m_globalPosition = glm::vec3(0.0f, 1.1f, 0.0f);
@@ -339,7 +340,7 @@ void TreePipeBase::AdjustGraph() const
 		const float offsetLength = glm::length(node->m_offset);
 		float maxDistanceToCenter = node->m_frontParticlePhysics2D.GetMaxDistanceToCenter();
 		const float cosFront = glm::dot(front, parentFront); //Horizontal
-		const float sinFront = glm::sin(glm::acos(cosFront)); //Vertical
+		const float sinFront = glm::sin(glm::acos(glm::clamp(cosFront, -1.0f, 1.0f))); //Vertical
 		if (!node->m_apical && offsetLength > glm::epsilon<float>()) {
 			const float outerRadius = node->m_frontParticlePhysics2D.GetDistanceToCenter(glm::normalize(node->m_offset));
 			const float innerRadius = node->m_frontParticlePhysics2D.GetDistanceToCenter(-glm::normalize(node->m_offset));
@@ -349,6 +350,8 @@ void TreePipeBase::AdjustGraph() const
 			globalPosition += parentLeft * newOffset.x * m_graphAdjustmentSettings.m_sidePushRatio * m_pipeModelParameters.m_profileDefaultCellRadius;
 			globalPosition += parentFront * (sinFront * outerRadius * m_graphAdjustmentSettings.m_rotationPushRatio) * m_pipeModelParameters.m_profileDefaultCellRadius;
 		}
+		globalPosition += parentUp * node->m_shift.y * m_graphAdjustmentSettings.m_shiftPushRatio * m_pipeModelParameters.m_profileDefaultCellRadius;
+		globalPosition += parentLeft * node->m_shift.x * m_graphAdjustmentSettings.m_shiftPushRatio * m_pipeModelParameters.m_profileDefaultCellRadius;
 		globalPosition += parentFront * sinFront * maxDistanceToCenter * m_graphAdjustmentSettings.m_frontPushRatio * m_pipeModelParameters.m_profileDefaultCellRadius;
 
 		globalTransform.SetPosition(globalPosition);
@@ -462,6 +465,7 @@ void TreePipeBase::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 	}
 	if(ImGui::TreeNodeEx("Graph Adjustment settings"))
 	{
+		ImGui::DragFloat("Shift push ratio", &m_graphAdjustmentSettings.m_shiftPushRatio, 0.01f, 0.0f, 2.0f);
 		ImGui::DragFloat("Side push ratio", &m_graphAdjustmentSettings.m_sidePushRatio, 0.01f, 0.0f, 2.0f);
 		ImGui::DragFloat("Front push ratio", &m_graphAdjustmentSettings.m_frontPushRatio, 0.01f, 0.0f, 2.0f);
 		ImGui::DragFloat("Rotation push ratio", &m_graphAdjustmentSettings.m_rotationPushRatio, 0.01f, 0.0f, 2.0f);

@@ -15,7 +15,7 @@ namespace EcoSysLab
 	{
 		void PackTask(const PipeModelParameters& pipeModelParameters, bool parallel);
 		void MergeTask(const PipeModelParameters& pipeModelParameters);
-
+		void CalculateShiftTask(const PipeModelParameters& pipeModelParameters);
 	public:
 		GlobalTransform m_desiredGlobalTransform{};
 
@@ -32,6 +32,8 @@ namespace EcoSysLab
 		float m_centerDirectionRadius = 0.0f;
 
 		glm::vec2 m_offset = glm::vec2(0.0f);
+
+		glm::vec2 m_shift = glm::vec2(0.0f);
 		bool m_needPacking = false;
 		bool m_apical = false;
 

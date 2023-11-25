@@ -4,6 +4,8 @@ using namespace EcoSysLab;
 void TreePipeNode::PackTask(const PipeModelParameters& pipeModelParameters, bool parallel)
 {
 	m_frontParticlePhysics2D.m_parallel = parallel;
+	
+
 	const auto iterations = pipeModelParameters.m_maxSimulationIterationCellFactor * m_frontParticlePhysics2D.RefParticles().size();
 	for (int i = 0; i < iterations; i++) {
 		const auto checkpoint = i > 1 && i % pipeModelParameters.m_stabilizationCheckIteration == 0;
@@ -138,6 +140,38 @@ void TreePipeNode::MergeTask(const PipeModelParameters& pipeModelParameters)
 	}
 }
 
+void TreePipeNode::CalculateShiftTask(const PipeModelParameters& pipeModelParameters)
+{
+	const auto scene = GetScene();
+	const auto owner = GetOwner();
+	const auto childrenEntities = scene->GetChildren(owner);
+	std::vector<std::shared_ptr<TreePipeNode>> childrenNodes{};
+	
+	std::shared_ptr<TreePipeNode> mainChildNode{};
+	for (auto childEntity : childrenEntities)
+	{
+		if (scene->HasPrivateComponent<TreePipeNode>(childEntity))
+		{
+			const auto childNode = scene->GetOrSetPrivateComponent<TreePipeNode>(childEntity).lock();
+			if (childNode->m_apical) mainChildNode = childNode;
+			childrenNodes.push_back(childNode);
+		}
+	}
+	if (childrenNodes.size() <= 1) return;
+	if(mainChildNode)
+	{
+		const auto& mainChildPhysics2D = mainChildNode->m_frontParticlePhysics2D;
+		auto sum = glm::vec2(0.0f);
+		for (const auto& mainChildParticle : mainChildPhysics2D.PeekParticles())
+		{
+			const auto nodeStartParticleHandle = m_frontParticleMap.at(mainChildParticle.m_data.m_pipeHandle);
+			auto& nodeStartParticle = m_frontParticlePhysics2D.RefParticle(nodeStartParticleHandle);
+			sum += nodeStartParticle.GetPosition();
+		}
+		m_shift = sum / static_cast<float>(mainChildPhysics2D.PeekParticles().size());
+	}
+}
+
 void TreePipeNode::InsertInterpolation(const float a)
 {
 	const auto scene = GetScene();
@@ -209,6 +243,8 @@ void TreePipeNode::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
 	static bool displayPhysics = true;
 	static bool showGrid = false;
+	ImGui::DragFloat2("Offset", &m_offset.x);
+	ImGui::DragFloat2("Shift", &m_shift.x);
 	ImGui::Checkbox("Show Physics", &displayPhysics);
 	if (displayPhysics) ImGui::Checkbox("Show Grid", &showGrid);
 	if (displayPhysics)
@@ -264,11 +300,13 @@ void TreePipeNode::Pack(const PipeModelParameters& pipeModelParameters, const bo
 		m_tasks.emplace_back(Jobs::AddTask([&](unsigned threadIndex)
 			{
 				PackTask(pipeModelParameters, false);
+				CalculateShiftTask(pipeModelParameters);
 			})
 		);
 	}else
 	{
 		PackTask(pipeModelParameters, true);
+		CalculateShiftTask(pipeModelParameters);
 	}
 }
 
