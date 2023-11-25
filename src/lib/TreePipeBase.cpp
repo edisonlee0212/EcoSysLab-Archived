@@ -455,8 +455,8 @@ void TreePipeBase::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 		TransformGraph::CalculateTransformGraphForDescendents(GetScene(), GetOwner());
 	}
 	
-	static float frontControlPointRatio = 0.2f;
-	static float backControlPointRatio = 0.2f;
+	static float frontControlPointRatio = 0.4f;
+	static float backControlPointRatio = 0.4f;
 	ImGui::DragFloat("Front Control Point Ratio", &frontControlPointRatio, 0.01f, 0.01f, 0.5f);
 	ImGui::DragFloat("Back Control Point Ratio", &backControlPointRatio, 0.01f, 0.01f, 0.5f);
 	if (ImGui::Button("Build Strands"))
