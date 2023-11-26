@@ -770,6 +770,7 @@ namespace EcoSysLab {
 			}
 		}
 		SortLists();
+		CalculateFlows();
 	}
 
 	template <typename SkeletonData, typename FlowData, typename NodeData>

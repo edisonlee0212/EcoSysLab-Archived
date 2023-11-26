@@ -5,7 +5,7 @@ namespace EcoSysLab
 {
 	struct PipeModelParameters
 	{
-		float m_profileDefaultCellRadius = 0.001f;
+		float m_profileDefaultCellRadius = 0.002f;
 		float m_damping = 0.01f;
 		float m_gravityStrength = 400.0f;
 		int m_maxSimulationIterationCellFactor = 100;

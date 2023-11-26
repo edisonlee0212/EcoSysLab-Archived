@@ -52,28 +52,27 @@ void TreePipeBase::ExtendPipesWithProfile(const glm::vec3& globalPosition,
 
 void TreePipeBase::InstantiateExample()
 {
-	BaseSkeleton skeleton{};
-
-	const auto trunkHandle = skeleton.Extend(0, false);
-	const auto handle1 = skeleton.Extend(trunkHandle, false);
-	const auto handle2 = skeleton.Extend(trunkHandle, true);
-	//const auto handle3 = skeleton.Extend(trunkHandle, true);
-	/*
-	const auto handle4 = skeleton.Extend(handle1, false);
-	const auto handle5 = skeleton.Extend(handle2, true);
-	const auto handle6 = skeleton.Extend(handle3, true);
-	*/
+	m_skeleton = {};
+	const auto trunkHandle = m_skeleton.Extend(0, false);
+	const auto handle1 = m_skeleton.Extend(trunkHandle, false);
+	const auto handle2 = m_skeleton.Extend(trunkHandle, true);
+	const auto handle3 = m_skeleton.Extend(trunkHandle, true);
+	
+	const auto handle4 = m_skeleton.Extend(handle1, false);
+	const auto handle5 = m_skeleton.Extend(handle2, true);
+	const auto handle6 = m_skeleton.Extend(handle3, true);
+	
 	//Position, length, globalRotation
-	auto& baseNode = skeleton.RefNode(0);
-	auto& trunkNode = skeleton.RefNode(trunkHandle);
-	auto& node1 = skeleton.RefNode(handle1);
-	auto& node2 = skeleton.RefNode(handle2);
-	//auto& node3 = skeleton.RefNode(handle3);
-	/*
-	auto& node4 = skeleton.RefNode(handle4);
-	auto& node5 = skeleton.RefNode(handle5);
-	auto& node6 = skeleton.RefNode(handle6);
-	*/
+	auto& baseNode = m_skeleton.RefNode(0);
+	auto& trunkNode = m_skeleton.RefNode(trunkHandle);
+	auto& node1 = m_skeleton.RefNode(handle1);
+	auto& node2 = m_skeleton.RefNode(handle2);
+	auto& node3 = m_skeleton.RefNode(handle3);
+	
+	auto& node4 = m_skeleton.RefNode(handle4);
+	auto& node5 = m_skeleton.RefNode(handle5);
+	auto& node6 = m_skeleton.RefNode(handle6);
+	
 	baseNode.m_info.m_globalRotation = baseNode.m_info.m_regulatedGlobalRotation = glm::quatLookAt(glm::vec3(0, 1, 0), glm::vec3(0, 0, 1));
 	baseNode.m_info.m_globalPosition = glm::vec3(0.0f);
 	baseNode.m_info.m_length = 0.5f;
@@ -89,12 +88,12 @@ void TreePipeBase::InstantiateExample()
 	node2.m_info.m_globalRotation = node2.m_info.m_regulatedGlobalRotation = glm::quatLookAt(glm::vec3(1, 0, 0), glm::vec3(0, 0, 1));
 	node2.m_info.m_globalPosition = glm::vec3(0.0f, 1.f, 0.0f);
 	node2.m_info.m_length = 0.1f;
-	/*
+	
 	node3.m_info.m_globalRotation = node3.m_info.m_regulatedGlobalRotation = glm::quatLookAt(glm::normalize(glm::vec3(-1, 1, 0)), glm::vec3(0, 0, 1));
 	node3.m_info.m_globalPosition = glm::vec3(0.0f, 1.f, 0.0f);
 	node3.m_info.m_length = 0.1f;
-	*/
-	/*
+	
+	
 	node4.m_info.m_globalRotation = node4.m_info.m_regulatedGlobalRotation = glm::quatLookAt(glm::vec3(0, 1, 0), glm::vec3(0, 0, 1));
 	node4.m_info.m_globalPosition = glm::vec3(0.0f, 1.1f, 0.0f);
 	node4.m_info.m_length = 0.1f;
@@ -106,12 +105,9 @@ void TreePipeBase::InstantiateExample()
 	node6.m_info.m_globalRotation = node6.m_info.m_regulatedGlobalRotation = glm::quatLookAt(glm::normalize(glm::vec3(-1, 1, 0)), glm::vec3(0, 0, 1));
 	node6.m_info.m_globalPosition = glm::vec3(0.0f, 1.f, 0.0f) + glm::normalize(glm::vec3(-1, 1, 0)) * 0.1f;
 	node6.m_info.m_length = 0.1f;
-	*/
-	skeleton.SortLists();
 	
-	skeleton.CalculateFlows();
-	InitializeNodesWithSkeleton(skeleton);
-
+	m_skeleton.SortLists();
+	m_skeleton.CalculateFlows();
 }
 
 void TreePipeBase::ClearStrands() const
@@ -168,8 +164,9 @@ void TreePipeBase::OnCreate()
 
 }
 
-void TreePipeBase::Packing()
+void TreePipeBase::CalculateProfiles()
 {
+	float time = Times::Now();
 	std::vector<Entity> sortedEntityList;
 	GatherChildrenEntities(sortedEntityList);
 	const auto scene = GetScene();
@@ -284,12 +281,16 @@ void TreePipeBase::Packing()
 			node->m_backParticleMap.insert({ particle.m_data.m_pipeHandle, particle.GetHandle() });
 		}
 	}
+	m_numOfProfiles = 0;
+	m_numOfParticles = 0;
+	m_numOfProfiles = sortedEntityList.size();
 	if (m_parallelScheduling) {
 		for (auto it = sortedEntityList.rbegin(); it != sortedEntityList.rend(); ++it)
 		{
 			const auto node = scene->GetOrSetPrivateComponent<TreePipeNode>(*it).lock();
 			node->Merge(m_pipeModelParameters, true);
 			node->Pack(m_pipeModelParameters, true);
+			m_numOfParticles += node->m_frontParticlePhysics2D.PeekParticles().size();
 		}
 		if (!sortedEntityList.empty())
 		{
@@ -305,8 +306,11 @@ void TreePipeBase::Packing()
 			node->Merge(m_pipeModelParameters, false);
 			node->Pack(m_pipeModelParameters, false);
 			node->Wait();
+			m_numOfParticles += node->m_frontParticlePhysics2D.PeekParticles().size();
 		}
 	}
+
+	m_profileCalculationTime = Times::Now() - time;
 }
 
 void TreePipeBase::AdjustGraph() const
@@ -433,17 +437,15 @@ void TreePipeBase::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 	ImGui::DragFloat("Stabilization movement distance", &m_pipeModelParameters.m_stabilizationMovementDistance, 0.01f, 0.0f, 1.0f);
 
 	ImGui::DragInt("End node strand count", &m_pipeModelParameters.m_endNodeStrands, 1, 1, 50);
+
 	static PrivateComponentRef tempTree{};
-
 	ImGui::Checkbox("Parallel Scheduling", &m_parallelScheduling);
-
 	if (editorLayer->DragAndDropButton<Tree>(tempTree, "Target tree"))
 	{
 		if (const auto tree = tempTree.Get<Tree>())
 		{
-			InitializeNodesWithSkeleton(tree->m_treeModel.PeekShootSkeleton());
-			Packing();
-			TransformGraph::CalculateTransformGraphForDescendents(GetScene(), GetOwner());
+			m_skeleton.Clone(tree->m_treeModel.PeekShootSkeleton(), [&](NodeHandle srcNodeHandle, NodeHandle dstNodeHandle) {});
+			InitializeNodes();
 		}
 		tempTree.Clear();
 	}
@@ -451,19 +453,26 @@ void TreePipeBase::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 	if(ImGui::Button("Y Shape Example"))
 	{
 		InstantiateExample();
-		Packing();
-		TransformGraph::CalculateTransformGraphForDescendents(GetScene(), GetOwner());
+		InitializeNodes();
 	}
-	
+	if (ImGui::Button("Calculate Profiles"))
+	{
+		CalculateProfiles();
+	}
+
+	ImGui::Text(("Last calculation time: " + std::to_string(m_profileCalculationTime)).c_str());
+	ImGui::Text(("Strand count: " + std::to_string(m_pipeGroup.PeekPipes().size())).c_str());
+	ImGui::Text(("Profile count: " + std::to_string(m_numOfProfiles)).c_str());
+	ImGui::Text(("Total particle count: " + std::to_string(m_numOfParticles)).c_str());
+
 	static float frontControlPointRatio = 0.4f;
 	static float backControlPointRatio = 0.4f;
 	ImGui::DragFloat("Front Control Point Ratio", &frontControlPointRatio, 0.01f, 0.01f, 0.5f);
 	ImGui::DragFloat("Back Control Point Ratio", &backControlPointRatio, 0.01f, 0.01f, 0.5f);
-	if (ImGui::Button("Build Strands"))
-	{
-		InitializeStrandRenderer(frontControlPointRatio, backControlPointRatio);
-	}
-	if(ImGui::TreeNodeEx("Graph Adjustment settings"))
+
+	static bool adjustment = true;
+	ImGui::Checkbox("Graph adjustment", &adjustment);
+	if(adjustment && ImGui::TreeNodeEx("Graph Adjustment settings"))
 	{
 		ImGui::DragFloat("Shift push ratio", &m_graphAdjustmentSettings.m_shiftPushRatio, 0.01f, 0.0f, 2.0f);
 		ImGui::DragFloat("Side push ratio", &m_graphAdjustmentSettings.m_sidePushRatio, 0.01f, 0.0f, 2.0f);
@@ -471,14 +480,11 @@ void TreePipeBase::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 		ImGui::DragFloat("Rotation push ratio", &m_graphAdjustmentSettings.m_rotationPushRatio, 0.01f, 0.0f, 2.0f);
 		ImGui::TreePop();
 	}
-	if (ImGui::Button("Adjust graph"))
+
+	if (ImGui::Button("Build Strands"))
 	{
-		AdjustGraph();
-		InitializeStrandRenderer(frontControlPointRatio, backControlPointRatio);
-	}
-	if (ImGui::Button("Restore graph"))
-	{
-		RestoreGraph();
+		if (adjustment) AdjustGraph();
+		else RestoreGraph();
 		InitializeStrandRenderer(frontControlPointRatio, backControlPointRatio);
 	}
 
@@ -486,6 +492,53 @@ void TreePipeBase::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 	{
 		ClearStrands();
 	}
+
 	editorLayer->DragAndDropButton<Material>(m_nodeMaterial, "Node Material");
 	editorLayer->DragAndDropButton<Mesh>(m_nodeMesh, "Node Mesh");
+}
+
+void TreePipeBase::InitializeNodes()
+{
+	const auto scene = GetScene();
+	const auto owner = GetOwner();
+	const auto children = scene->GetChildren(owner);
+	for (const auto& i : children)
+	{
+		scene->DeleteEntity(i);
+	}
+	const auto ownerGlobalTransform = scene->GetDataComponent<GlobalTransform>(owner);
+	const auto& srcSkeletonSortedFlowList = m_skeleton.RefSortedFlowList();
+	std::unordered_map<FlowHandle, Entity> flowMap{};
+	for (const auto& flowHandle : srcSkeletonSortedFlowList)
+	{
+		const auto& flow = m_skeleton.PeekFlow(flowHandle);
+		const auto newEntity = scene->CreateEntity("Profile");
+		const auto parentHandle = flow.GetParentHandle();
+		const auto tpn = scene->GetOrSetPrivateComponent<TreePipeNode>(newEntity).lock();
+		auto& lastNode = m_skeleton.PeekNode(flow.RefNodeHandles().back());
+		tpn->m_apical = flow.IsApical();
+		const auto mmr = scene->GetOrSetPrivateComponent<MeshRenderer>(newEntity).lock();
+		mmr->m_mesh = m_nodeMesh;
+		mmr->m_material = m_nodeMaterial;
+
+		GlobalTransform globalTransform;
+		const glm::quat rotation = lastNode.m_info.m_regulatedGlobalRotation;
+		globalTransform.m_value =
+			ownerGlobalTransform.m_value
+			* (glm::translate(flow.m_info.m_globalEndPosition) * glm::mat4_cast(rotation) * glm::scale(glm::vec3(0.02f)));
+		scene->SetDataComponent(newEntity, globalTransform);
+		tpn->m_desiredGlobalTransform = globalTransform;
+		if (parentHandle == -1)
+		{
+			scene->SetParent(newEntity, owner);
+		}
+		else
+		{
+			scene->SetParent(newEntity, flowMap.at(parentHandle));
+		}
+		flowMap.insert({ flowHandle, newEntity });
+
+	}
+	m_pipeGroup = {};
+	TransformGraph::CalculateTransformGraphForDescendents(scene, owner);
 }

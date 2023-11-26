@@ -104,61 +104,10 @@ void EcoSysLabLayer::Visualization() {
 	const std::vector<Entity>* treeEntities =
 		scene->UnsafeGetPrivateComponentOwnersList<Tree>();
 
-	auto branchStrands = m_shootStemStrands.Get<Strands>();
-	auto rootStrands = m_rootStemStrands.Get<Strands>();
+	const auto branchStrands = m_shootStemStrands.Get<Strands>();
+	const auto rootStrands = m_rootStemStrands.Get<Strands>();
 	if (treeEntities && !treeEntities->empty()) {
 		//Tree selection
-		if (m_visualizationCameraWindowFocused && !m_lockTreeSelection
-			&& editorLayer->GetLockEntitySelection() &&
-			editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Press) {
-#pragma region Ray selection
-			std::mutex writeMutex;
-			float minDistance = FLT_MAX;
-			GlobalTransform cameraLtw;
-			cameraLtw.m_value =
-				glm::translate(
-					editorLayer->GetSceneCameraPosition()) *
-				glm::mat4_cast(
-					editorLayer->GetSceneCameraRotation());
-			const Ray cameraRay = m_visualizationCamera->ScreenPointToRay(
-				cameraLtw, m_visualizationCameraMousePosition);
-			std::vector<std::shared_future<void>> results;
-			bool detected = false;
-			Entity currentFocusingTree;
-			Jobs::ParallelFor(treeEntities->size(), [&](unsigned i) {
-				const auto treeEntity = treeEntities->at(i);
-				const auto globalTransform = scene->GetDataComponent<GlobalTransform>(treeEntity);
-				const auto tree = scene->GetOrSetPrivateComponent<Tree>(
-					treeEntity).lock();
-				const auto branchSkeleton = tree->m_treeModel.RefShootSkeleton();
-				const auto rootSkeleton = tree->m_treeModel.RefShootSkeleton();
-				Bound branchSkeletonBound;
-				branchSkeletonBound.m_min = branchSkeleton.m_min;
-				branchSkeletonBound.m_max = branchSkeleton.m_max;
-				Bound rootSkeletonBound;
-				rootSkeletonBound.m_min = rootSkeleton.m_min;
-				rootSkeletonBound.m_max = rootSkeleton.m_max;
-				if (!cameraRay.Intersect(globalTransform.m_value, branchSkeletonBound)
-					&& !cameraRay.Intersect(globalTransform.m_value, rootSkeletonBound))
-					return;
-				const auto distance = glm::distance(globalTransform.GetPosition(),
-				                                    glm::vec3(cameraLtw.m_value[3]));
-				std::lock_guard lock(writeMutex);
-				if (distance < minDistance) {
-					minDistance = distance;
-					currentFocusingTree = treeEntity;
-					detected = true;
-				}
-				}, results);
-			for (auto& i : results) i.wait();
-			if (detected && currentFocusingTree != m_selectedTree && scene->IsEntityValid(currentFocusingTree)) {
-				editorLayer->SetSelectedEntity(currentFocusingTree);
-				m_selectedTree = currentFocusingTree;
-				m_needFullFlowUpdate = true;
-			}
-#pragma endregion
-
-		}
 		if (m_shootVersions.size() != treeEntities->size() || m_rootVersions.size() != treeEntities->size()) {
 			m_internodeSize = 0;
 			m_rootNodeSize = 0;
@@ -200,7 +149,7 @@ void EcoSysLabLayer::Visualization() {
 			}
 		}
 		if (flowUpdated) {
-			auto strandsHolder = m_shootStemStrandsHolder.Get();
+			const auto strandsHolder = m_shootStemStrandsHolder.Get();
 			if (scene->IsEntityValid(strandsHolder)) {
 				auto branchStrandsRenderer = scene->GetOrSetPrivateComponent<StrandsRenderer>(strandsHolder).lock();
 				branchStrandsRenderer->m_strands = m_shootStemStrands;
@@ -218,7 +167,7 @@ void EcoSysLabLayer::Visualization() {
 				}
 			}
 
-			auto rootsHolder = m_rootStemStrandsHolder.Get();
+			const auto rootsHolder = m_rootStemStrandsHolder.Get();
 			if (scene->IsEntityValid(rootsHolder)) {
 				auto rootStrandsRenderer = scene->GetOrSetPrivateComponent<StrandsRenderer>(rootsHolder).lock();
 				rootStrandsRenderer->m_strands = m_rootStemStrands;
@@ -368,13 +317,13 @@ void EcoSysLabLayer::Visualization() {
 void EcoSysLabLayer::ResetAllTrees(const std::vector<Entity>* treeEntities) {
 	const auto scene = Application::GetActiveScene();
 	m_time = 0;
+	m_iteration = 0;
 	for (const auto& i : *treeEntities) {
 		const auto tree = scene->GetOrSetPrivateComponent<Tree>(i).lock();
 		tree->Reset();
 	}
 	m_needFullFlowUpdate = true;
 	m_totalTime = 0;
-	m_autoGrow = false;
 	m_internodeSize = 0;
 	m_leafSize = 0;
 	m_fruitSize = 0;
@@ -408,98 +357,87 @@ const std::vector<glm::vec3>& EcoSysLabLayer::RandomColors() {
 
 void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	auto scene = GetScene();
+	bool simulate = false;
+	static bool autoTimeGrow = false;
+	static float targetTime = 0.f;
 	if (ImGui::Begin("EcoSysLab Layer")) {
-		ImGui::Checkbox("Debug Visualization", &m_debugVisualization);
-		ImGui::Checkbox("Lock tree selection", &m_lockTreeSelection);
 		const std::vector<Entity>* treeEntities =
 			scene->UnsafeGetPrivateComponentOwnersList<Tree>();
-		if (ImGui::TreeNodeEx("Mesh generation")) {
-			m_meshGeneratorSettings.OnInspect(editorLayer);
-
-			ImGui::TreePop();
-		}
-		if (ImGui::Button("Generate Meshes")) {
-			GenerateMeshes(m_meshGeneratorSettings);
-		}
-		ImGui::SameLine();
-		if (ImGui::Button("Clear Meshes")) {
-			ClearGeometries();
-		}
-		editorLayer->DragAndDropButton(m_shootStemStrandsHolder, "Shoot stem holder");
-		editorLayer->DragAndDropButton(m_rootStemStrandsHolder, "Root stem holder");
-		editorLayer->DragAndDropButton(m_foliageHolder, "Foliage holder");
-		editorLayer->DragAndDropButton(m_fruitHolder, "Fruit holder");
-		editorLayer->DragAndDropButton(m_groundFruitsHolder, "Ground fruit holder");
-		editorLayer->DragAndDropButton(m_groundLeavesHolder, "Ground leaves holder");
-
 		editorLayer->DragAndDropButton<Soil>(m_soilHolder, "Soil");
+		ImGui::SameLine();
 		editorLayer->DragAndDropButton<Climate>(m_climateHolder, "Climate");
-
 		if (treeEntities && !treeEntities->empty()) {
-			if (ImGui::TreeNode("Shadow Estimation Settings")) {
-				bool settingsChanged = false;
-				settingsChanged =
-					ImGui::DragFloat("Distance power factor", &m_shadowEstimationSettings.m_distancePowerFactor, 0.01f,
-						0.0f, 10.0f) || settingsChanged;
+			if (ImGui::TreeNode("Tree Growth Settings")){
+				ImGui::DragFloat("Delta time", &m_deltaTime, 0.00001f, 0, 1, "%.5f");
+				ImGui::Checkbox("Auto clear fruit and leaves", &m_autoClearFruitAndLeaves);
+				ImGui::DragFloat("Crown shyness", &m_crownShynessDistance, 0.01f, 0.0f, 1.0f);
+				ImGui::Checkbox("Simulate soil", &m_soilSimulation);
+				if (ImGui::TreeNode("Shadow Estimation Settings")) {
+					bool settingsChanged = false;
+					settingsChanged =
+						ImGui::DragFloat("Distance power factor", &m_shadowEstimationSettings.m_distancePowerFactor, 0.01f,
+							0.0f, 10.0f) || settingsChanged;
 
-				settingsChanged =
-					ImGui::DragFloat("Shadow intensity", &m_shadowEstimationSettings.m_shadowIntensity, 0.001f,
-						0.0f, 1.0f) || settingsChanged;
+					settingsChanged =
+						ImGui::DragFloat("Shadow intensity", &m_shadowEstimationSettings.m_shadowIntensity, 0.001f,
+							0.0f, 1.0f) || settingsChanged;
 
-				settingsChanged =
-					ImGui::DragFloat("Shadow propagate loss", &m_shadowEstimationSettings.m_shadowPropagateLoss, 0.001f,
-						0.0f, 1.0f) || settingsChanged;
+					settingsChanged =
+						ImGui::DragFloat("Shadow propagate loss", &m_shadowEstimationSettings.m_shadowPropagateLoss, 0.001f,
+							0.0f, 1.0f) || settingsChanged;
 
-				if (settingsChanged) {
-					if (const auto climate = m_climateHolder.Get<Climate>()) {
-						auto& estimator = climate->m_climateModel.m_environmentGrid;
-						estimator.m_settings = m_shadowEstimationSettings;
-						auto minBound = estimator.m_voxel.GetMinBound();
-						auto maxBound = estimator.m_voxel.GetMaxBound();
-						bool boundChanged = false;
-						for (const auto& treeEntity : *treeEntities)
-						{
-							if (!scene->IsEntityEnabled(treeEntity)) return;
-							auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
-							if (!tree->IsEnabled()) return;
-							const auto globalTransform = scene->GetDataComponent<GlobalTransform>(treeEntity).m_value;
-							const glm::vec3 currentMinBound = globalTransform * glm::vec4(tree->m_treeModel.RefShootSkeleton().m_min, 1.0f);
-							const glm::vec3 currentMaxBound = globalTransform * glm::vec4(tree->m_treeModel.RefShootSkeleton().m_max, 1.0f);
-
-							if (currentMinBound.x <= minBound.x || currentMinBound.y <= minBound.y || currentMinBound.z <= minBound.z
-								|| currentMaxBound.x >= maxBound.x || currentMaxBound.y >= maxBound.y || currentMaxBound.z >= maxBound.z) {
-								minBound = glm::min(currentMinBound - glm::vec3(1.0f, 0.1f, 1.0f), minBound);
-								maxBound = glm::max(currentMaxBound + glm::vec3(1.0f), maxBound);
-								boundChanged = true;
-							}
-							if (!tree->m_climate.Get<Climate>()) tree->m_climate = climate;
-							tree->m_treeModel.m_crownShynessDistance = m_crownShynessDistance;
-						}
-						if (boundChanged) estimator.m_voxel.Initialize(estimator.m_voxelSize, minBound, maxBound);
-						estimator.m_voxel.Reset();
-						for (const auto& treeEntity : *treeEntities)
-						{
-							if (!scene->IsEntityEnabled(treeEntity)) return;
-							auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
-							if (!tree->IsEnabled()) return;
-							tree->RegisterVoxel();
-						}
-
-						estimator.ShadowPropagation();
+					if (settingsChanged) {
 						if (const auto climate = m_climateHolder.Get<Climate>()) {
-							for (const auto& i : *treeEntities) {
-								const auto tree = scene->GetOrSetPrivateComponent<Tree>(i).lock();
-								tree->m_treeModel.CollectShootFlux(scene->GetDataComponent<GlobalTransform>(i).m_value,
-									climate->m_climateModel, tree->m_treeModel.RefShootSkeleton().RefSortedNodeList(), tree->m_shootGrowthController);
-								tree->m_treeVisualizer.m_needShootColorUpdate = true;
+							auto& estimator = climate->m_climateModel.m_environmentGrid;
+							estimator.m_settings = m_shadowEstimationSettings;
+							auto minBound = estimator.m_voxel.GetMinBound();
+							auto maxBound = estimator.m_voxel.GetMaxBound();
+							bool boundChanged = false;
+							for (const auto& treeEntity : *treeEntities)
+							{
+								if (!scene->IsEntityEnabled(treeEntity)) return;
+								auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
+								if (!tree->IsEnabled()) return;
+								const auto globalTransform = scene->GetDataComponent<GlobalTransform>(treeEntity).m_value;
+								const glm::vec3 currentMinBound = globalTransform * glm::vec4(tree->m_treeModel.RefShootSkeleton().m_min, 1.0f);
+								const glm::vec3 currentMaxBound = globalTransform * glm::vec4(tree->m_treeModel.RefShootSkeleton().m_max, 1.0f);
+
+								if (currentMinBound.x <= minBound.x || currentMinBound.y <= minBound.y || currentMinBound.z <= minBound.z
+									|| currentMaxBound.x >= maxBound.x || currentMaxBound.y >= maxBound.y || currentMaxBound.z >= maxBound.z) {
+									minBound = glm::min(currentMinBound - glm::vec3(1.0f, 0.1f, 1.0f), minBound);
+									maxBound = glm::max(currentMaxBound + glm::vec3(1.0f), maxBound);
+									boundChanged = true;
+								}
+								if (!tree->m_climate.Get<Climate>()) tree->m_climate = climate;
+								tree->m_treeModel.m_crownShynessDistance = m_crownShynessDistance;
+							}
+							if (boundChanged) estimator.m_voxel.Initialize(estimator.m_voxelSize, minBound, maxBound);
+							estimator.m_voxel.Reset();
+							for (const auto& treeEntity : *treeEntities)
+							{
+								if (!scene->IsEntityEnabled(treeEntity)) return;
+								auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
+								if (!tree->IsEnabled()) return;
+								tree->RegisterVoxel();
+							}
+
+							estimator.ShadowPropagation();
+							if (const auto climate = m_climateHolder.Get<Climate>()) {
+								for (const auto& i : *treeEntities) {
+									const auto tree = scene->GetOrSetPrivateComponent<Tree>(i).lock();
+									tree->m_treeModel.CollectShootFlux(scene->GetDataComponent<GlobalTransform>(i).m_value,
+										climate->m_climateModel, tree->m_treeModel.RefShootSkeleton().RefSortedNodeList(), tree->m_shootGrowthController);
+									tree->m_treeVisualizer.m_needShootColorUpdate = true;
+								}
 							}
 						}
 					}
+					ImGui::TreePop();
 				}
+				
 				ImGui::TreePop();
 			}
-			ImGui::DragFloat("Crown shyness", &m_crownShynessDistance, 0.01f, 0.0f, 1.0f);
-			static float targetTime = 0.f;
+			
 			if (ImGui::Button("Reset all trees")) {
 				ResetAllTrees(treeEntities);
 				ClearGeometries();
@@ -507,73 +445,64 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 				targetTime = 0.0f;
 			}
 			ImGui::Text(("Simulated time: " + std::to_string(m_time) + " years").c_str());
-			ImGui::Checkbox("Auto grow with soil step", &m_autoGrowWithSoilStep);
-			ImGui::DragFloat("Delta time", &m_deltaTime, 0.00001f, 0, 1, "%.5f");
+			ImGui::Text(("Simulated iteration: " + std::to_string(m_iteration)).c_str());
 			if (ImGui::Button("Day")) m_deltaTime = 0.00274f;
 			ImGui::SameLine();
 			if (ImGui::Button("Week")) m_deltaTime = 0.01918f;
 			ImGui::SameLine();
 			if (ImGui::Button("Month")) m_deltaTime = 0.0822f;
-			ImGui::Checkbox("Auto grow", &m_autoGrow);
-			if (!m_autoGrow) {
-				bool changed = false;
-				if (ImGui::Button("Grow all")) {
-					Simulate(m_deltaTime);
-					changed = true;
-				}
-				static int iterations = 5;
-				ImGui::DragInt("Iterations", &iterations, 1, 1, 100);
-				if (ImGui::Button((("Grow all with ") + std::to_string(iterations) + " iterations").c_str())) {
-					for (int i = 0; i < iterations; i++) Simulate(m_deltaTime);
-					changed = true;
-				}
-
-				
-				if (targetTime < m_time) targetTime = m_time;
-				ImGui::DragFloat("Target time", &targetTime, 0.1f, m_time, 999);
-				static bool autoTimeGrow = false;
-				ImGui::Checkbox((("Grow until ") + std::to_string(targetTime) + " years").c_str(), &autoTimeGrow);
-				if(autoTimeGrow && m_time < targetTime){
-					Simulate(m_deltaTime);
-					changed = true;
-				}else
-				{
-					autoTimeGrow = false;
-				}
-				if (changed) {
-					if (scene->IsEntityValid(m_selectedTree)) {
-						auto tree = scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock();
-						tree->m_treeVisualizer.m_iteration = tree->m_treeModel.CurrentIteration();
-						tree->m_treeVisualizer.m_needUpdate = true;
-					}
-					if (m_autoClearFruitAndLeaves) {
-						ClearGroundFruitAndLeaf();
-					}
-				}
+			ImGui::SameLine();
+			
+			
+			if (targetTime < m_time) targetTime = m_time;
+			ImGui::DragFloat("Target time", &targetTime, 0.1f, m_time, 999);
+			
+			if(m_time < targetTime) ImGui::Checkbox(("Grow until " + std::to_string(targetTime) + " years").c_str(), &autoTimeGrow);
+			if (autoTimeGrow && m_time >= targetTime) autoTimeGrow = false;
+			
+			if (!autoTimeGrow && ImGui::Button("Grow 1 iteration")) {
+				simulate = true;
 			}
-			ImGui::Checkbox("Auto clear fruit and leaves", &m_autoClearFruitAndLeaves);
-			if (ImGui::Button("Clear ground leaves and fruits")) {
+			
+
+			
+			if (!m_autoClearFruitAndLeaves && ImGui::Button("Clear ground leaves and fruits")) {
 				ClearGroundFruitAndLeaf();
 			}
-
-
+			if (ImGui::TreeNodeEx("Mesh generation")) {
+				m_meshGeneratorSettings.OnInspect(editorLayer);
+				ImGui::TreePop();
+			}
+			if (ImGui::Button("Generate Meshes")) {
+				GenerateMeshes(m_meshGeneratorSettings);
+			}
+			ImGui::SameLine();
+			if (ImGui::Button("Clear Meshes")) {
+				ClearGeometries();
+			}
 			ImGui::Text("Growth time: %.4f", m_lastUsedTime);
 			ImGui::Text("Total time: %.4f", m_totalTime);
 			ImGui::Text("Tree count: %d", treeEntities->size());
 			ImGui::Text("Total internode size: %d", m_internodeSize);
-			ImGui::Text("Total shoot stem size: %d", m_shootStemSize);
+			ImGui::Text("Total shoot branch size: %d", m_shootStemSize);
 			ImGui::Text("Total fruit size: %d", m_fruitSize);
 			ImGui::Text("Total leaf size: %d", m_leafSize);
 			ImGui::Text("Total root node size: %d", m_rootNodeSize);
-			ImGui::Text("Total root stem size: %d", m_rootStemSize);
-
+			ImGui::Text("Total root branch size: %d", m_rootStemSize);
 			ImGui::Text("Total ground leaf size: %d", m_leaves.size());
 			ImGui::Text("Total ground fruit size: %d", m_fruits.size());
+			
+			editorLayer->DragAndDropButton(m_shootStemStrandsHolder, "Shoot stem holder");
+			editorLayer->DragAndDropButton(m_rootStemStrandsHolder, "Root stem holder");
+			editorLayer->DragAndDropButton(m_foliageHolder, "Foliage holder");
+			editorLayer->DragAndDropButton(m_fruitHolder, "Fruit holder");
+			editorLayer->DragAndDropButton(m_groundFruitsHolder, "Ground fruit holder");
+			editorLayer->DragAndDropButton(m_groundLeavesHolder, "Ground leaves holder");
 		}
 		else {
 			ImGui::Text("No trees in the scene!");
 		}
-
+		ImGui::Checkbox("Debug Visualization", &m_debugVisualization);
 		if (m_debugVisualization && ImGui::TreeNodeEx("Debug visualization settings", ImGuiTreeNodeFlags_DefaultOpen)) {
 			if (ImGui::Button("Update")) {
 				m_needFullFlowUpdate = true;
@@ -597,6 +526,22 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 		}
 	}
 	ImGui::End();
+	if (autoTimeGrow && m_time < targetTime) {
+		simulate = true;
+	}
+	if(simulate)
+	{
+		Simulate(m_deltaTime);
+		if (m_autoClearFruitAndLeaves) {
+			ClearGroundFruitAndLeaf();
+		}
+		if (scene->IsEntityValid(m_selectedTree)) {
+			auto tree = scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock();
+			tree->m_treeVisualizer.m_iteration = tree->m_treeModel.CurrentIteration();
+			tree->m_treeVisualizer.m_needUpdate = true;
+		}
+	}
+
 #pragma region Internode debugging camera
 	if (m_debugVisualization) {
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{ 0, 0 });
@@ -1320,12 +1265,6 @@ void EcoSysLabLayer::Update() {
 			m_climateHolder = scene->GetOrSetPrivateComponent<Climate>(climateEntities->at(0)).lock();
 		}
 	}
-	if (m_autoGrow) {
-		Simulate(m_deltaTime);
-		if (m_autoClearFruitAndLeaves) {
-			ClearGroundFruitAndLeaf();
-		}
-	}
 }
 
 void EcoSysLabLayer::Simulate(float deltaTime) {
@@ -1340,7 +1279,7 @@ void EcoSysLabLayer::Simulate(float deltaTime) {
 
 		climate->m_climateModel.m_time = m_time;
 
-		if (m_autoGrowWithSoilStep) {
+		if (m_soilSimulation) {
 			soil->m_soilModel.Irrigation();
 			soil->m_soilModel.Step();
 		}

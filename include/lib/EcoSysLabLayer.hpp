@@ -61,9 +61,8 @@ namespace EcoSysLab {
 
 		bool m_needFlowUpdateForSelection = false;
 		int m_lastSelectedTreeIndex = -1;
-		bool m_lockTreeSelection = false;
-		bool m_autoGrow = false;
-		bool m_autoGrowWithSoilStep = false;
+		//bool m_autoGrow = false;
+		bool m_soilSimulation = false;
 		bool m_autoClearFruitAndLeaves = true;
 		int m_soilVersion = -1;
 		bool m_vectorEnable = false;
@@ -124,6 +123,7 @@ namespace EcoSysLab {
 		void SoilVisualizationVector(VoxelSoilModel& soilModel); // called during LateUpdate()
 
 		float m_time;
+		int m_iteration = 0;
 		float m_deltaTime = 0.0822f;
 
 		std::vector<Fruit> m_fruits;

@@ -6,7 +6,7 @@ namespace EcoSysLab {
 	{
 	public:
 		float m_barkXFrequency = 3.0f;
-		float m_barkYFrequency = 10.0f;
+		float m_barkYFrequency = 5.0f;
 		float m_barkDepth = 0.25f;
 
 		float m_baseFrequency = 1.0f;
