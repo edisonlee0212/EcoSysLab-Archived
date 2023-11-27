@@ -71,7 +71,7 @@ bool TreePointCloud::DirectConnectionCheck(const glm::vec3& parentP0, const glm:
 		const auto dotP0 = glm::dot(glm::normalize(childP0 - parentP0), glm::normalize(parentP3 - parentP0));
 		if (dotP3 > 0 && dotP0 < 0) return false;
 	}
-	if(m_connectivityGraphSettings.m_parallelShiftCheck)
+	if (m_connectivityGraphSettings.m_parallelShiftCheck)
 	{
 		const auto parentDirection = glm::normalize(parentP0 - parentP3);
 		const auto projectedC0 = glm::closestPointOnLine(childP0, parentP0 + 10.0f * parentDirection, parentP3 - 10.0f * parentDirection);
@@ -176,7 +176,7 @@ void TreePointCloud::BuildConnectionBranch(const BranchHandle processingBranchHa
 			break;
 		}
 	}
-	
+
 	NodeHandle bestPrevNodeHandle = parentBranch.m_chainNodeHandles.back();
 	float dotMax = -1.0f;
 	glm::vec3 connectionBranchStartPosition = parentBranch.m_bezierCurve.m_p3;
@@ -256,7 +256,7 @@ void TreePointCloud::BuildSkeleton(BranchHandle branchHandle)
 		auto& childBranch = m_operatingBranches[childHandle];
 		const float chainLength = childBranch.m_bezierCurve.GetLength();
 		const int chainAmount = glm::max(2, static_cast<int>(chainLength /
-			                                 m_reconstructionSettings.m_internodeLength));
+			m_reconstructionSettings.m_internodeLength));
 		auto& skeleton = m_skeletons[childBranch.m_skeletonIndex];
 		for (int i = 1; i < chainAmount; i++) {
 			prevNodeHandle = skeleton.Extend(prevNodeHandle, false);
@@ -624,6 +624,10 @@ void TreePointCloud::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 			m_reconstructionSettings.OnInspect();
 			ImGui::TreePop();
 		}
+		if (ImGui::Button("Rebuild Voxel Grid"))
+		{
+			BuildVoxelGrid();
+		}
 		if (ImGui::Button("Build Skeleton")) {
 			EstablishConnectivityGraph();
 			BuildSkeletons();
@@ -664,7 +668,7 @@ void TreePointCloud::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 			if (ImGui::Checkbox("Render allocated points", &drawAllocatedPoints)) refreshData = true;
 			if (ImGui::Checkbox("Render scattered points", &drawScatteredPoints)) refreshData = true;
 			if (drawScatteredPoints) {
-				if(ImGui::ColorEdit4("Scatter Point Color", &scatterPointColor.x)) refreshData = true;
+				if (ImGui::ColorEdit4("Scatter Point Color", &scatterPointColor.x)) refreshData = true;
 				if (ImGui::Checkbox("Render Point-Point links", &drawScatteredPointConnections)) refreshData = true;
 				if (ImGui::Checkbox("Render Point-Branch links", &drawScatterPointToBranchConnections)) refreshData = true;
 				if (drawScatteredPointConnections && ImGui::ColorEdit4("Point-Point links Color", &scatteredPointConnectionColor.x)) refreshData = true;
@@ -825,7 +829,7 @@ void TreePointCloud::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 				scatteredPointConnectionsEnds,
 				scatteredPointConnectionColors, connectionWidth
 			);
-			
+
 
 			candidateBranchConnectionStarts.resize(m_candidateBranchConnections.size());
 			candidateBranchConnectionEnds.resize(m_candidateBranchConnections.size());
@@ -951,7 +955,7 @@ void TreePointCloud::EstablishConnectivityGraph() {
 	for (auto& point : m_scatteredPoints) {
 		if (m_scatterPointsConnections.size() > 1000000) {
 			EVOENGINE_ERROR("Too much connections!");
-			return;
+			break;
 		}
 		FindPoints(point.m_position, m_scatterPointsVoxelGrid, m_connectivityGraphSettings.m_pointPointConnectionDetectionRadius,
 			[&](const PointData& voxel) {
@@ -1129,25 +1133,25 @@ void TreePointCloud::BuildSkeletons() {
 	}
 
 	bool branchRemoved = true;
-	while(branchRemoved)
+	while (branchRemoved)
 	{
 		branchRemoved = false;
 		std::vector<BranchHandle> removeList{};
 		for (int i = 0; i < m_operatingBranches.size(); i++)
 		{
 			auto& operatingBranch = m_operatingBranches[i];
-			if(!operatingBranch.m_orphan && operatingBranch.m_parentCandidates.empty())
+			if (!operatingBranch.m_orphan && operatingBranch.m_parentCandidates.empty())
 			{
 				operatingBranch.m_orphan = true;
 				removeList.emplace_back(i);
 			}
 		}
-		if(!removeList.empty())
+		if (!removeList.empty())
 		{
 			branchRemoved = true;
 			for (auto& operatingBranch : m_operatingBranches)
 			{
-				for(int i = 0; i < operatingBranch.m_parentCandidates.size(); i++)
+				for (int i = 0; i < operatingBranch.m_parentCandidates.size(); i++)
 				{
 					for (const auto& removeHandle : removeList) {
 						if (operatingBranch.m_parentCandidates[i].first == removeHandle)
@@ -1234,8 +1238,8 @@ void TreePointCloud::BuildSkeletons() {
 			newBranchAllocated = true;
 			Link(branchPair.second, parentHandle);
 		}
-		
-		if(!newBranchAllocated && m_reconstructionSettings.m_candidateSearch)
+
+		if (!newBranchAllocated && m_reconstructionSettings.m_candidateSearch)
 		{
 			for (int i = 0; i < m_reconstructionSettings.m_candidateSearchLimit; i++)
 			{
@@ -1244,7 +1248,7 @@ void TreePointCloud::BuildSkeletons() {
 					auto& childBranch = m_operatingBranches[branchPair.second];
 					if (childBranch.m_orphan || childBranch.m_used || childBranch.m_parentCandidates.empty()) continue;
 					BranchHandle parentHandle = -1;
-					if(static_cast<int>(childBranch.m_parentCandidates.size()) - 2 - i >= 0)
+					if (static_cast<int>(childBranch.m_parentCandidates.size()) - 2 - i >= 0)
 					{
 						const auto parentCandidateHandle = childBranch.m_parentCandidates[i].first;
 						if (m_operatingBranches[parentCandidateHandle].m_used)
@@ -1261,7 +1265,7 @@ void TreePointCloud::BuildSkeletons() {
 			}
 		}
 
-		if(!newBranchAllocated && m_reconstructionSettings.m_forceConnectAllBranches)
+		if (!newBranchAllocated && m_reconstructionSettings.m_forceConnectAllBranches)
 		{
 			for (const auto& branchPair : heightSortedBranches)
 			{
@@ -1842,7 +1846,7 @@ void ReconstructionSettings::OnInspect() {
 	ImGui::DragInt("Branch back track limit", &m_branchBackTrackLimit, 1, 0, 10);
 
 	ImGui::Checkbox("Candidate Search", &m_candidateSearch);
-	if(m_candidateSearch) ImGui::DragInt("Candidate Search limit", &m_candidateSearchLimit, 1, 0, 10);
+	if (m_candidateSearch) ImGui::DragInt("Candidate Search limit", &m_candidateSearchLimit, 1, 0, 10);
 	ImGui::Checkbox("Force connect all branches", &m_forceConnectAllBranches);
 
 }
