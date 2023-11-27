@@ -334,7 +334,6 @@ void TreeMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLayer>& ed
 			ImGui::DragFloat("Max thickness", &m_presentationOverrideSettings.m_maxThickness, 0.01f, 0.0f, 1.0f);
 			ImGui::ColorEdit3("Root color", &m_presentationOverrideSettings.m_rootOverrideColor.x);
 			ImGui::ColorEdit3("Branch color", &m_presentationOverrideSettings.m_branchOverrideColor.x);
-			ImGui::ColorEdit3("Foliage color", &m_presentationOverrideSettings.m_foliageOverrideColor.x);
 			editorLayer->DragAndDropButton<Texture2D>(m_foliageAlbedoTexture, "Foliage Albedo Texture");
 			editorLayer->DragAndDropButton<Texture2D>(m_foliageNormalTexture, "Foliage Normal Texture");
 			editorLayer->DragAndDropButton<Texture2D>(m_foliageRoughnessTexture, "Foliage Roughness Texture");

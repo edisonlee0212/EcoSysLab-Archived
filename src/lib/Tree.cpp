@@ -1116,7 +1116,7 @@ void Tree::GenerateGeometry(const TreeMeshGeneratorSettings& meshGeneratorSettin
 		mesh->SetVertices(vertexAttributes, vertices, indices);
 		if (meshGeneratorSettings.m_foliageOverride)
 		{
-			material->m_materialProperties.m_albedoColor = meshGeneratorSettings.m_presentationOverrideSettings.m_foliageOverrideColor;
+			material->m_materialProperties.m_albedoColor = meshGeneratorSettings.m_foliageOverrideSettings.m_leafColor;
 			auto texRef = meshGeneratorSettings.m_foliageAlbedoTexture;
 			if (texRef.Get<Texture2D>())
 			{
@@ -1235,7 +1235,7 @@ void Tree::GenerateGeometry(const TreeMeshGeneratorSettings& meshGeneratorSettin
 		mesh->SetVertices(vertexAttributes, vertices, indices);
 		if (meshGeneratorSettings.m_foliageOverride)
 		{
-			material->m_materialProperties.m_albedoColor = meshGeneratorSettings.m_presentationOverrideSettings.m_foliageOverrideColor;
+			material->m_materialProperties.m_albedoColor = meshGeneratorSettings.m_foliageOverrideSettings.m_leafColor;
 		}
 		else {
 			material->m_materialProperties.m_albedoColor = glm::vec3(152 / 255.0f, 203 / 255.0f, 0 / 255.0f);

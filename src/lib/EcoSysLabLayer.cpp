@@ -197,7 +197,7 @@ void EcoSysLabLayer::Visualization() {
 					foliageRenderer->m_material = material;
 					material->m_materialProperties.m_albedoColor = glm::vec3(80, 60, 50) / 255.0f;
 					if (m_meshGeneratorSettings.m_foliageOverride) {
-						material->m_materialProperties.m_albedoColor = m_meshGeneratorSettings.m_presentationOverrideSettings.m_foliageOverrideColor;
+						material->m_materialProperties.m_albedoColor = m_meshGeneratorSettings.m_foliageOverrideSettings.m_leafColor;
 					}
 					material->m_materialProperties.m_roughness = 1.0f;
 					material->m_materialProperties.m_metallic = 0.2f;
@@ -216,7 +216,7 @@ void EcoSysLabLayer::Visualization() {
 					fruitRenderer->m_material = material;
 					material->m_materialProperties.m_albedoColor = glm::vec3(80, 60, 50) / 255.0f;
 					if (m_meshGeneratorSettings.m_foliageOverride) {
-						material->m_materialProperties.m_albedoColor = m_meshGeneratorSettings.m_presentationOverrideSettings.m_foliageOverrideColor;
+						material->m_materialProperties.m_albedoColor = m_meshGeneratorSettings.m_foliageOverrideSettings.m_leafColor;
 					}
 					material->m_materialProperties.m_roughness = 1.0f;
 					material->m_materialProperties.m_metallic = 0.2f;

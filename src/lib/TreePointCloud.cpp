@@ -1505,7 +1505,7 @@ void TreePointCloud::FormGeometryEntity() const
 			mesh->SetVertices(attributes, vertices, indices);
 			auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(branchEntity).lock();
 			if (meshGeneratorSettings.m_foliageOverride) {
-				material->m_materialProperties.m_albedoColor = meshGeneratorSettings.m_presentationOverrideSettings.m_branchOverrideColor;
+				material->m_materialProperties.m_albedoColor = meshGeneratorSettings.m_foliageOverrideSettings.m_leafColor;
 			}
 			else {
 				material->m_materialProperties.m_albedoColor = glm::vec3(109, 79, 75) / 255.0f;
@@ -1683,7 +1683,7 @@ void TreePointCloud::FormGeometryEntity() const
 			mesh->SetVertices(vertexAttributes, vertices, indices);
 			if (meshGeneratorSettings.m_foliageOverride)
 			{
-				material->m_materialProperties.m_albedoColor = meshGeneratorSettings.m_presentationOverrideSettings.m_foliageOverrideColor;
+				material->m_materialProperties.m_albedoColor = meshGeneratorSettings.m_foliageOverrideSettings.m_leafColor;
 			}
 			else {
 				material->m_materialProperties.m_albedoColor = glm::vec3(152 / 255.0f, 203 / 255.0f, 0 / 255.0f);
