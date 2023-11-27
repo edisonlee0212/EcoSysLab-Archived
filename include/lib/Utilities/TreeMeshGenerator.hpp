@@ -365,36 +365,77 @@ namespace EcoSysLab {
 						int parentLastRingStartVertexIndex = vertexLastRingStartVertexIndex[parentInternodeHandle];
 						for (int p = 0; p < pStep; p++) {
 							if (pTarget[p] == pTarget[p == pStep - 1 ? 0 : p + 1]) {
-								indices.push_back(parentLastRingStartVertexIndex + p);
-								indices.push_back(parentLastRingStartVertexIndex + (p == pStep - 1 ? 0 : p + 1));
-								indices.push_back(vertexIndex + pTarget[p]);
+								auto a = parentLastRingStartVertexIndex + p;
+								auto b = parentLastRingStartVertexIndex + (p == pStep - 1 ? 0 : p + 1);
+								auto c = vertexIndex + pTarget[p];
+								if (vertices[a].m_position != vertices[b].m_position
+									&& vertices[b].m_position != vertices[c].m_position
+									&& vertices[a].m_position != vertices[c].m_position) {
+									indices.push_back(a);
+									indices.push_back(b);
+									indices.push_back(c);
+								}
 							}
 							else {
-								indices.push_back(parentLastRingStartVertexIndex + p);
-								indices.push_back(parentLastRingStartVertexIndex + (p == pStep - 1 ? 0 : p + 1));
-								indices.push_back(vertexIndex + pTarget[p]);
-
-								indices.push_back(vertexIndex + pTarget[p == pStep - 1 ? 0 : p + 1]);
-								indices.push_back(vertexIndex + pTarget[p]);
-								indices.push_back(parentLastRingStartVertexIndex + (p == pStep - 1 ? 0 : p + 1));
+								auto a = parentLastRingStartVertexIndex + p;
+								auto b = parentLastRingStartVertexIndex + (p == pStep - 1 ? 0 : p + 1);
+								auto c = vertexIndex + pTarget[p];
+								if (vertices[a].m_position != vertices[b].m_position
+									&& vertices[b].m_position != vertices[c].m_position
+									&& vertices[a].m_position != vertices[c].m_position) {
+									indices.push_back(a);
+									indices.push_back(b);
+									indices.push_back(c);
+								}
+								a = vertexIndex + pTarget[p == pStep - 1 ? 0 : p + 1];
+								b = vertexIndex + pTarget[p];
+								c = parentLastRingStartVertexIndex + (p == pStep - 1 ? 0 : p + 1);
+								if (vertices[a].m_position != vertices[b].m_position
+									&& vertices[b].m_position != vertices[c].m_position
+									&& vertices[a].m_position != vertices[c].m_position) {
+									indices.push_back(a);
+									indices.push_back(b);
+									indices.push_back(c);
+								}
 							}
 						}
 					}else
 					{
 						for (int p = 0; p < pStep; p++) {
 							if (pTarget[p] == pTarget[p == pStep - 1 ? 0 : p + 1]) {
-								indices.push_back(vertexIndex + p);
-								indices.push_back(vertexIndex + (p == pStep - 1 ? 0 : p + 1));
-								indices.push_back(vertexIndex + pStep + pTarget[p]);
+								auto a = vertexIndex + p;
+								auto b = vertexIndex + (p == pStep - 1 ? 0 : p + 1);
+								auto c = vertexIndex + pStep + pTarget[p];
+								if (vertices[a].m_position != vertices[b].m_position
+									&& vertices[b].m_position != vertices[c].m_position
+									&& vertices[a].m_position != vertices[c].m_position) {
+									indices.push_back(a);
+									indices.push_back(b);
+									indices.push_back(c);
+								}
 							}
 							else {
-								indices.push_back(vertexIndex + p);
-								indices.push_back(vertexIndex + (p == pStep - 1 ? 0 : p + 1));
-								indices.push_back(vertexIndex + pStep + pTarget[p]);
+								auto a = vertexIndex + p;
+								auto b = vertexIndex + (p == pStep - 1 ? 0 : p + 1);
+								auto c = vertexIndex + pStep + pTarget[p];
+								if (vertices[a].m_position != vertices[b].m_position
+									&& vertices[b].m_position != vertices[c].m_position
+									&& vertices[a].m_position != vertices[c].m_position) {
+									indices.push_back(a);
+									indices.push_back(b);
+									indices.push_back(c);
+								}
+								a = vertexIndex + pStep + pTarget[p == pStep - 1 ? 0 : p + 1];
+								b = vertexIndex + pStep + pTarget[p];
+								c = vertexIndex + (p == pStep - 1 ? 0 : p + 1);
 
-								indices.push_back(vertexIndex + pStep + pTarget[p == pStep - 1 ? 0 : p + 1]);
-								indices.push_back(vertexIndex + pStep + pTarget[p]);
-								indices.push_back(vertexIndex + (p == pStep - 1 ? 0 : p + 1));
+								if (vertices[a].m_position != vertices[b].m_position
+									&& vertices[b].m_position != vertices[c].m_position
+									&& vertices[a].m_position != vertices[c].m_position) {
+									indices.push_back(a);
+									indices.push_back(b);
+									indices.push_back(c);
+								}
 							}
 						}
 					}
@@ -402,22 +443,52 @@ namespace EcoSysLab {
 				}else{
 					for (int s = 0; s < step - 1; s++) {
 						// Down triangle
-						indices.push_back(vertexIndex + (ringIndex - 1) * step + s);
-						indices.push_back(vertexIndex + (ringIndex - 1) * step + s + 1);
-						indices.push_back(vertexIndex + ringIndex * step + s);
+						auto a = vertexIndex + (ringIndex - 1) * step + s;
+						auto b = vertexIndex + (ringIndex - 1) * step + s + 1;
+						auto c = vertexIndex + ringIndex * step + s;
+						if (vertices[a].m_position != vertices[b].m_position
+							&& vertices[b].m_position != vertices[c].m_position
+							&& vertices[a].m_position != vertices[c].m_position) {
+							indices.push_back(a);
+							indices.push_back(b);
+							indices.push_back(c);
+						}
+
+
 						// Up triangle
-						indices.push_back(vertexIndex + ringIndex * step + s + 1);
-						indices.push_back(vertexIndex + ringIndex * step + s);
-						indices.push_back(vertexIndex + (ringIndex - 1) * step + s + 1);
+						a = vertexIndex + ringIndex * step + s + 1;
+						b = vertexIndex + ringIndex * step + s;
+						c = vertexIndex + (ringIndex - 1) * step + s + 1;
+						if (vertices[a].m_position != vertices[b].m_position
+							&& vertices[b].m_position != vertices[c].m_position
+							&& vertices[a].m_position != vertices[c].m_position) {
+							indices.push_back(a);
+							indices.push_back(b);
+							indices.push_back(c);
+						}
 					}
 					// Down triangle
-					indices.push_back(vertexIndex + (ringIndex - 1) * step + step - 1);
-					indices.push_back(vertexIndex + (ringIndex - 1) * step);
-					indices.push_back(vertexIndex + ringIndex * step + step - 1);
+					auto a = vertexIndex + (ringIndex - 1) * step + step - 1;
+					auto b = vertexIndex + (ringIndex - 1) * step;
+					auto c = vertexIndex + ringIndex * step + step - 1;
+					if (vertices[a].m_position != vertices[b].m_position
+						&& vertices[b].m_position != vertices[c].m_position
+						&& vertices[a].m_position != vertices[c].m_position) {
+						indices.push_back(a);
+						indices.push_back(b);
+						indices.push_back(c);
+					}
 					// Up triangle
-					indices.push_back(vertexIndex + ringIndex * step);
-					indices.push_back(vertexIndex + ringIndex * step + step - 1);
-					indices.push_back(vertexIndex + (ringIndex - 1) * step);
+					a = vertexIndex + ringIndex * step;
+					b = vertexIndex + ringIndex * step + step - 1;
+					c = vertexIndex + (ringIndex - 1) * step;
+					if (vertices[a].m_position != vertices[b].m_position
+						&& vertices[b].m_position != vertices[c].m_position
+						&& vertices[a].m_position != vertices[c].m_position) {
+						indices.push_back(a);
+						indices.push_back(b);
+						indices.push_back(c);
+					}
 				}
 			}
 			vertexLastRingStartVertexIndex[internodeHandle] = vertices.size() - step;
