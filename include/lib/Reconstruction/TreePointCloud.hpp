@@ -72,6 +72,7 @@ namespace EcoSysLab {
 	struct ConnectivityGraphSettings {
 		float m_pointCheckRadius = 0.02f;
 		bool m_zigzagCheck = false;
+		float m_zigzagBranchShortening = 0.1f;
 		bool m_parallelShiftCheck = true;
 		float m_parallelShiftLimitRange = 2.0f;
 		float m_pointPointConnectionDetectionRadius = 0.05f;
@@ -135,7 +136,7 @@ namespace EcoSysLab {
 	typedef Skeleton<ReconstructionSkeletonData, ReconstructionFlowData, ReconstructionNodeData> ReconstructionSkeleton;
 
 	class TreePointCloud : public IPrivateComponent {
-		bool DirectConnectionCheck(const glm::vec3& parentP0, const glm::vec3& parentP3, const glm::vec3& childP0, const glm::vec3& childP3);
+		bool DirectConnectionCheck(const BezierCurve& parentCurve, const BezierCurve& childCurve);
 
 		static void FindPoints(const glm::vec3& position, VoxelGrid<std::vector<PointData>>& pointVoxelGrid, float radius,
 		                       const std::function<void(const PointData& voxel)>& func);
