@@ -1250,7 +1250,7 @@ void TreePointCloud::BuildSkeletons() {
 			newBranchAllocated = true;
 			Link(branchPair.second, parentHandle);
 		}
-
+		/*
 		if (!newBranchAllocated && m_reconstructionSettings.m_candidateSearch)
 		{
 			for (int i = 0; i < m_reconstructionSettings.m_candidateSearchLimit; i++)
@@ -1301,7 +1301,7 @@ void TreePointCloud::BuildSkeletons() {
 				Link(branchPair.second, parentHandle);
 				break;
 			}
-		}
+		}*/
 	}
 	for (const auto& rootBranchHandle : rootBranchHandles)
 	{
