@@ -113,6 +113,9 @@ namespace EcoSysLab {
 		int m_nodeBackTrackLimit = 30;
 		int m_branchBackTrackLimit = 1;
 
+		bool m_candidateSearch = true;
+		int m_candidateSearchLimit = 1;
+		bool m_forceConnectAllBranches = false;
 		void OnInspect();
 	};
 

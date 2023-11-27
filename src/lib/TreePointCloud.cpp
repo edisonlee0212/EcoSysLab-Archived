@@ -1250,7 +1250,7 @@ void TreePointCloud::BuildSkeletons() {
 			newBranchAllocated = true;
 			Link(branchPair.second, parentHandle);
 		}
-		/*
+
 		if (!newBranchAllocated && m_reconstructionSettings.m_candidateSearch)
 		{
 			for (int i = 0; i < m_reconstructionSettings.m_candidateSearchLimit; i++)
@@ -1301,7 +1301,7 @@ void TreePointCloud::BuildSkeletons() {
 				Link(branchPair.second, parentHandle);
 				break;
 			}
-		}*/
+		}
 	}
 	for (const auto& rootBranchHandle : rootBranchHandles)
 	{
@@ -1860,9 +1860,9 @@ void ReconstructionSettings::OnInspect() {
 
 	ImGui::DragInt("Node back track limit", &m_nodeBackTrackLimit, 1, 0, 100);
 	ImGui::DragInt("Branch back track limit", &m_branchBackTrackLimit, 1, 0, 10);
-	/*
+
 	ImGui::Checkbox("Candidate Search", &m_candidateSearch);
 	if (m_candidateSearch) ImGui::DragInt("Candidate Search limit", &m_candidateSearchLimit, 1, 0, 10);
 	ImGui::Checkbox("Force connect all branches", &m_forceConnectAllBranches);
-	*/
+
 }
