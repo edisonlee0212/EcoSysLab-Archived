@@ -75,6 +75,34 @@ void ForestDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer
 		}
 		ImGui::TreePop();
 	}
+
+	FileUtils::OpenFolder("Parameters sample", [&](const std::filesystem::path& path)
+		{
+			int index = 0;
+			const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
+			const auto soil = ecoSysLabLayer->m_soilHolder.Get<Soil>();
+			const auto soilDescriptor = soil->m_soilDescriptor.Get<SoilDescriptor>();
+			std::shared_ptr<HeightField> heightField{};
+			if (soilDescriptor)
+			{
+				heightField = soilDescriptor->m_heightField.Get<HeightField>();
+			}
+			for(const auto& i : std::filesystem::recursive_directory_iterator(path))
+			{
+				if(i.is_regular_file() && i.path().extension().string() == ".td")
+				{
+					const auto treeDescriptor = 
+						std::dynamic_pointer_cast<TreeDescriptor>(ProjectManager::GetOrCreateAsset(ProjectManager::GetPathRelativeToProject(i.path())));
+					m_treeInfos.emplace_back();
+					glm::vec3 position = glm::vec3(10.0f * (index ), 0.0f, index * 10.0f);
+					if (heightField) position.y = heightField->GetValue({ position.x, position.z }) - 0.05f;
+					m_treeInfos.back().m_globalTransform.SetPosition(position);
+					m_treeInfos.back().m_treeDescriptor = treeDescriptor;
+					index++;
+				}
+			}
+		}, false);
+
 	static AssetRef treeDescriptorRef;
 	if (editorLayer->DragAndDropButton<TreeDescriptor>(treeDescriptorRef, "Apply all with treeDescriptor...", true))
 	{

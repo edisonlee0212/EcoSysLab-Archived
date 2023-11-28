@@ -30,6 +30,7 @@ m_shootGrowthParameters:
   m_lowBranchPruning: 0.400000006
   m_lowBranchPruningThicknessFactor: 0
   m_lightPruningFactor: 0
+  m_thicknessPruningFactor: 0.00499999989
   m_saggingFactorThicknessReductionMax: [0.00499999989, 1.5, 0.25999999]
   m_maxSpaceOccupancy: 1
   m_maxLeafSize: [0.0500000007, 0.5, 0.0500000007]
@@ -67,8 +68,11 @@ m_rootGrowthParameters:
   m_branchingProbability: 0.0299999993
 m_foliageParameters:
   m_leafSize: [0.0149999997, 0.100000001]
+  m_leafColor: [0.596078455, 0.796078444, 0]
   m_leafCountPerInternode: 8
   m_positionVariance: 0.100000001
+  m_rotationVariance: 1
+  m_branchingAngle: 30
   m_maxNodeThickness: 1
   m_minRootDistance: 0
   m_maxEndDistance: 10
@@ -82,5 +86,23 @@ m_foliageRoughnessTexture:
   m_assetHandle: 0
   m_assetTypeName: ""
 m_foliageMetallicTexture:
+  m_assetHandle: 0
+  m_assetTypeName: ""
+m_branchAlbedoTexture:
+  m_assetHandle: 0
+  m_assetTypeName: ""
+m_branchNormalTexture:
+  m_assetHandle: 0
+  m_assetTypeName: ""
+m_branchRoughnessTexture:
+  m_assetHandle: 0
+  m_assetTypeName: ""
+m_branchMetallicTexture:
+  m_assetHandle: 0
+  m_assetTypeName: ""
+m_shootBranchShape:
+  m_assetHandle: 12028426262144384612
+  m_assetTypeName: BranchShape
+m_rootBranchShape:
   m_assetHandle: 0
   m_assetTypeName: ""

@@ -15,7 +15,7 @@ m_shootGrowthParameters:
   m_thicknessAccumulationFactor: 0.5
   m_thicknessAccumulateAgeFactor: 0
   m_apicalInternodeKillProbability: 0.00999999978
-  m_lateralBudFlushProbability: 0.0500000007
+  m_lateralBudFlushProbability: 0.0299999993
   m_leafBudFlushingProbabilityTemperatureRange: [1, 1, 45, 60]
   m_fruitBudFlushingProbabilityTemperatureRange: [0, 1, 50, 70]
   m_apicalControl: 0.100000001
@@ -101,8 +101,8 @@ m_branchMetallicTexture:
   m_assetHandle: 0
   m_assetTypeName: ""
 m_shootBranchShape:
-  m_assetHandle: 0
-  m_assetTypeName: ""
+  m_assetHandle: 12028426262144384612
+  m_assetTypeName: BranchShape
 m_rootBranchShape:
   m_assetHandle: 0
   m_assetTypeName: ""

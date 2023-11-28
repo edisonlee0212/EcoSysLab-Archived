@@ -1,5 +1,5 @@
 m_shootGrowthParameters:
-  m_internodeGrowthRate: 10
+  m_internodeGrowthRate: 8
   m_leafGrowthRate: 18
   m_fruitGrowthRate: 18
   m_lateralBudCount: 2
@@ -8,7 +8,7 @@ m_shootGrowthParameters:
   m_branchingAngleMeanVariance: [45, 1]
   m_rollAngleMeanVariance: [90, 2]
   m_apicalAngleMeanVariance: [0, 0]
-  m_gravitropism: 0.159999996
+  m_gravitropism: 0.119999997
   m_phototropism: 0
   m_internodeLength: 0.0299999993
   m_endNodeThickness: 0.00200000009
@@ -18,19 +18,19 @@ m_shootGrowthParameters:
   m_lateralBudFlushProbability: 0.0500000007
   m_leafBudFlushingProbabilityTemperatureRange: [1, 1, 45, 60]
   m_fruitBudFlushingProbabilityTemperatureRange: [0, 1, 50, 70]
-  m_apicalControl: 0.150000006
-  m_apicalControlAgeFactor: 0.119999997
-  m_apicalDominance: 0.0199999996
+  m_apicalControl: 0.100000001
+  m_apicalControlAgeFactor: 0
+  m_apicalDominance: 0.5
   m_apicalDominanceAgeFactor: 0.100000001
   m_apicalDominanceDistanceFactor: 0.920000017
   m_leafVigorRequirement: 0.100000001
   m_fruitVigorRequirement: 0.100000001
   m_internodeVigorRequirement: 1
-  m_vigorRequirementAggregateLoss: 0.995999992
+  m_vigorRequirementAggregateLoss: 1
   m_lowBranchPruning: 0.200000003
   m_lowBranchPruningThicknessFactor: 0
   m_lightPruningFactor: 0
-  m_thicknessPruningFactor: 0.00499999989
+  m_thicknessPruningFactor: 0
   m_saggingFactorThicknessReductionMax: [9.99999975e-05, 2, 0.300000012]
   m_maxSpaceOccupancy: 1
   m_maxLeafSize: [0.0500000007, 0.5, 0.0500000007]
@@ -101,8 +101,8 @@ m_branchMetallicTexture:
   m_assetHandle: 0
   m_assetTypeName: ""
 m_shootBranchShape:
-  m_assetHandle: 0
-  m_assetTypeName: ""
+  m_assetHandle: 12028426262144384612
+  m_assetTypeName: BranchShape
 m_rootBranchShape:
   m_assetHandle: 0
   m_assetTypeName: ""
