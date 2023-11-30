@@ -1439,8 +1439,8 @@ void TreePointCloud::ClearMeshes() const {
 
 void TreePointCloud::OnCreate()
 {
-	m_treeMeshGeneratorSettings.m_enableFoliage = false;
-	m_treeMeshGeneratorSettings.m_enableTwig = false;
+	m_treeMeshGeneratorSettings.m_enableFoliage = true;
+	m_treeMeshGeneratorSettings.m_enableTwig = true;
 	m_treeMeshGeneratorSettings.m_foliageOverrideSettings.m_leafSize = { 0.01f, 0.01f };
 	m_treeMeshGeneratorSettings.m_foliageOverrideSettings.m_positionVariance = 0.04f;
 	m_treeMeshGeneratorSettings.m_foliageOverrideSettings.m_leafCountPerInternode = 20;
