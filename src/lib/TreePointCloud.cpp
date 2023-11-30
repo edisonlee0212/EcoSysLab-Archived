@@ -328,10 +328,6 @@ void TreePointCloud::ImportGraph(const std::filesystem::path& path, float scaleF
 			{
 				EVOENGINE_ERROR("Color is wrong at node " + std::to_string(i) + ": " + std::string(e.what()));
 			}
-			if(inTreeParts["treepart_id"] && inTreeParts["treepart_id"].as<int>() == 84)
-			{
-				int a = 0;
-			}
 			for (const auto& inBranch : inTreeParts["Branches"]) {
 				auto& branch = m_scannedBranches.emplace_back();
 				branch.m_bezierCurve.m_p0 = inBranch["Start Pos"].as<glm::vec3>() * scaleFactor;
@@ -355,17 +351,6 @@ void TreePointCloud::ImportGraph(const std::filesystem::path& path, float scaleF
 				branch.m_handle = m_scannedBranches.size() - 1;
 				treePart.m_branchHandles.emplace_back(branch.m_handle);
 				branch.m_treePartHandle = treePart.m_handle;
-				if (branch.m_bezierCurve.m_p0.y >= branch.m_bezierCurve.m_p3.y) {
-					auto p0 = branch.m_bezierCurve.m_p3;
-					branch.m_bezierCurve.m_p3 = branch.m_bezierCurve.m_p0;
-					branch.m_bezierCurve.m_p0 = p0;
-					auto p1 = branch.m_bezierCurve.m_p2;
-					branch.m_bezierCurve.m_p2 = branch.m_bezierCurve.m_p1;
-					branch.m_bezierCurve.m_p1 = p1;
-					auto startT = branch.m_startThickness;
-					branch.m_startThickness = branch.m_endThickness;
-					branch.m_endThickness = startT;
-				}
 				minHeight = glm::min(minHeight, branch.m_bezierCurve.m_p0.y);
 				minHeight = glm::min(minHeight, branch.m_bezierCurve.m_p3.y);
 			}
