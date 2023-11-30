@@ -328,6 +328,10 @@ void TreePointCloud::ImportGraph(const std::filesystem::path& path, float scaleF
 			{
 				EVOENGINE_ERROR("Color is wrong at node " + std::to_string(i) + ": " + std::string(e.what()));
 			}
+			if(inTreeParts["treepart_id"] && inTreeParts["treepart_id"].as<int>() == 84)
+			{
+				int a = 0;
+			}
 			for (const auto& inBranch : inTreeParts["Branches"]) {
 				auto& branch = m_scannedBranches.emplace_back();
 				branch.m_bezierCurve.m_p0 = inBranch["Start Pos"].as<glm::vec3>() * scaleFactor;
@@ -1504,8 +1508,8 @@ void TreePointCloud::FormGeometryEntity() const
 			attributes.m_texCoord = true;
 			mesh->SetVertices(attributes, vertices, indices);
 			auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(branchEntity).lock();
-			if (meshGeneratorSettings.m_foliageOverride) {
-				material->m_materialProperties.m_albedoColor = meshGeneratorSettings.m_foliageOverrideSettings.m_leafColor;
+			if (meshGeneratorSettings.m_presentationOverride) {
+				material->m_materialProperties.m_albedoColor = meshGeneratorSettings.m_presentationOverrideSettings.m_branchOverrideColor;
 			}
 			else {
 				material->m_materialProperties.m_albedoColor = glm::vec3(109, 79, 75) / 255.0f;
