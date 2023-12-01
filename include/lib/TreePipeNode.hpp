@@ -40,6 +40,7 @@ namespace EcoSysLab
 		std::vector<std::shared_future<void>> m_tasks{};
 
 		void InsertInterpolation(float a);
+		void OnCreate() override;
 		void OnDestroy() override;
 		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 

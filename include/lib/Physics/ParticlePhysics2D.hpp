@@ -320,6 +320,11 @@ namespace EcoSysLab {
 		m_particleGrid2D = {};
 		m_massCenter = glm::vec2(0.0f);
 		m_particleSoftness = 0.5f;
+		m_min = glm::vec2(FLT_MAX);
+		m_max = glm::vec2(FLT_MIN);
+		m_maxDistanceToCenter = 0.0f;
+		m_massCenter = glm::vec2(0.0f);
+		m_simulationTime = 0.0f;
 	}
 
 

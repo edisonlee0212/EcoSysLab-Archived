@@ -4,7 +4,6 @@ using namespace EcoSysLab;
 void TreePipeNode::PackTask(const PipeModelParameters& pipeModelParameters, bool parallel)
 {
 	m_frontParticlePhysics2D.m_parallel = parallel;
-	
 
 	const auto iterations = pipeModelParameters.m_maxSimulationIterationCellFactor * m_frontParticlePhysics2D.RefParticles().size();
 	for (int i = 0; i < iterations; i++) {
@@ -231,6 +230,20 @@ void TreePipeNode::InsertInterpolation(const float a)
 	scene->SetDataComponent(middleEntity, globalTransform);
 	scene->SetDataComponent(owner, ownerGlobalTransform);
 
+}
+
+void TreePipeNode::OnCreate()
+{
+	m_needPacking = false;
+	m_frontParticlePhysics2D = {};
+	m_frontParticleMap = {};
+	m_backParticlePhysics2D = {};
+	m_backParticleMap = {};
+
+	m_frontControlPointDistance = 0.0f;
+	m_backControlPointDistance = 0.0f;
+	m_centerDirectionRadius = 0.0f;
+	m_apical = false;
 }
 
 void TreePipeNode::OnDestroy()
