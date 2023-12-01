@@ -107,19 +107,28 @@ void TreePipeNode::MergeTask(const PipeModelParameters& pipeModelParameters)
 	}
 	int index = 0;
 	const auto nodeGlobalTransform = scene->GetDataComponent<GlobalTransform>(owner);
+	
 	for (const auto& childNode : childrenNodes)
 	{
 		if (childNode == mainChildNode) continue;
 		auto& childPhysics2D = childNode->m_frontParticlePhysics2D;
 		auto childNodeGlobalTransform = scene->GetDataComponent<GlobalTransform>(childNode->GetOwner());
 		const auto childNodeFront = glm::inverse(nodeGlobalTransform.GetRotation()) * childNodeGlobalTransform.GetRotation() * glm::vec3(0, 0, -1);
-		auto offset = glm::normalize(glm::vec2(childNodeFront.x, childNodeFront.y));
-		if (glm::isnan(offset.x) || glm::isnan(offset.y))
+		auto direction = glm::normalize(glm::vec2(childNodeFront.x, childNodeFront.y));
+		if (glm::isnan(direction.x) || glm::isnan(direction.y))
 		{
-			offset = glm::vec2(1, 0);
+			direction = glm::vec2(1, 0);
 		}
-		childNode->m_centerDirectionRadius = childPhysics2D.GetDistanceToCenter(-offset) + 1.0f;
-		offset = (mainChildPhysics2D.GetDistanceToCenter(offset) + childNode->m_centerDirectionRadius + 1.0f) * offset;
+		childNode->m_centerDirectionRadius = childPhysics2D.GetDistanceToCenter(-direction);
+		const auto mainChildRadius = mainChildPhysics2D.GetDistanceToCenter(direction);
+		auto offset = glm::vec2(0.0f);
+		if(childNode->m_centerDirectionRadius > mainChildRadius * pipeModelParameters.m_splitRatioLimit)
+		{
+			offset = (mainChildRadius + childNode->m_centerDirectionRadius + 2.0f) * direction;
+		}else
+		{
+			offset = (mainChildRadius - childNode->m_centerDirectionRadius) * direction;
+		}
 		childNode->m_offset = offset;
 		for (auto& childParticle : childPhysics2D.RefParticles())
 		{

@@ -20,6 +20,9 @@ namespace EcoSysLab {
 	struct AllocatedPoint {
 		glm::vec3 m_color;
 		glm::vec3 m_position;
+
+		glm::vec2 m_planePosition;
+		float m_planeCenterDistance;
 		PointHandle m_handle = -1;
 		TreePartHandle m_treePartHandle = -1;
 		BranchHandle m_branchHandle = -1;
@@ -34,6 +37,10 @@ namespace EcoSysLab {
 		BezierCurve m_bezierCurve;
 		float m_startThickness = 0.0f;
 		float m_endThickness = 0.0f;
+
+		float m_branchThickness = 0.0f;
+		std::vector<PointHandle> m_allocatedPoints;
+
 		std::vector<std::pair<float, PointHandle>> m_neighborScatterPointP0;
 
 		std::unordered_map<BranchHandle, float> m_neighborBranchP3s;
@@ -46,8 +53,7 @@ namespace EcoSysLab {
 		TreePartHandle m_treePartHandle = -1;
 		BranchHandle m_handle = -1;
 		BezierCurve m_bezierCurve;
-		float m_startThickness = 0.0f;
-		float m_endThickness = 0.0f;
+		float m_thickness = 0.0f;
 
 		BranchHandle m_parentHandle = -1;
 		std::vector<BranchHandle> m_childHandles;
@@ -104,8 +110,7 @@ namespace EcoSysLab {
 		float m_endNodeThickness = 0.002f;
 		float m_thicknessSumFactor = 0.4f;
 		float m_thicknessAccumulationFactor = 0.00005f;
-		bool m_overrideThickness = true;
-		bool m_limitParentThickness = true;
+		float m_overrideThicknessRootDistance = 0.0f;
 		int m_minimumNodeCount = 1;
 
 		float m_minimumRootThickness = 0.02f;
@@ -128,7 +133,8 @@ namespace EcoSysLab {
 	struct ReconstructionNodeData {
 		glm::vec3 m_globalEndPosition = glm::vec3(0.0f);
 
-
+		float m_draftThickness = 0.0f;
+		float m_allocatedPointThickness = 0.0f;
 		std::vector<PointHandle> m_allocatedPoints;
 		std::vector<PointHandle> m_filteredPoints;
 		BranchHandle m_branchHandle;

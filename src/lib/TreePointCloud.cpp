@@ -11,8 +11,7 @@ void TreePointCloud::ApplyCurve(const OperatingBranch& branch) {
 	for (int i = 0; i < chainAmount; i++) {
 		auto& node = skeleton.RefNode(branch.m_chainNodeHandles[i]);
 		node.m_data.m_globalEndPosition = branch.m_bezierCurve.GetPoint(static_cast<float>(i + 1) / chainAmount);
-		node.m_info.m_thickness = glm::mix(branch.m_startThickness, branch.m_endThickness,
-			static_cast<float>(i) / chainAmount);
+		node.m_info.m_thickness = branch.m_thickness;
 		node.m_data.m_branchHandle = branch.m_handle;
 		node.m_info.m_color = glm::vec4(branch.m_color, 1.0f);
 	}
@@ -172,8 +171,7 @@ void TreePointCloud::BuildConnectionBranch(const BranchHandle processingBranchHa
 	connectionBranch.m_color = parentBranch.m_color;
 	connectionBranch.m_handle = m_operatingBranches.size() - 1;
 	connectionBranch.m_skeletonIndex = processingBranch.m_skeletonIndex;
-	connectionBranch.m_startThickness = parentBranch.m_endThickness;
-	connectionBranch.m_endThickness = processingBranch.m_startThickness;
+	connectionBranch.m_thickness = (parentBranch.m_thickness + processingBranch.m_thickness) * 0.5f;
 	connectionBranch.m_childHandles.emplace_back(processingBranch.m_handle);
 	connectionBranch.m_parentHandle = processingBranch.m_parentHandle;
 	processingBranch.m_parentHandle = connectionBranch.m_handle;
@@ -371,22 +369,68 @@ void TreePointCloud::ImportGraph(const std::filesystem::path& path, float scaleF
 			m_min = glm::min(m_min, scatterPoint.m_position);
 			m_max = glm::max(m_max, scatterPoint.m_position);
 		}
-		for (auto& allocatedPoint : m_allocatedPoints) {
-			allocatedPoint.m_position.y -= minHeight;
-
-			m_min = glm::min(m_min, allocatedPoint.m_position);
-			m_max = glm::max(m_max, allocatedPoint.m_position);
-		}
 		for (auto& scannedBranch : m_scannedBranches) {
 			scannedBranch.m_bezierCurve.m_p0.y -= minHeight;
 			scannedBranch.m_bezierCurve.m_p1.y -= minHeight;
 			scannedBranch.m_bezierCurve.m_p2.y -= minHeight;
 			scannedBranch.m_bezierCurve.m_p3.y -= minHeight;
+		}
+		for (auto& allocatedPoint : m_allocatedPoints) {
+			allocatedPoint.m_position.y -= minHeight;
 
+			m_min = glm::min(m_min, allocatedPoint.m_position);
+			m_max = glm::max(m_max, allocatedPoint.m_position);
+
+			const auto& treePart = m_treeParts[allocatedPoint.m_treePartHandle];
+			std::map<float, BranchHandle> distances;
+			for(const auto& branchHandle : treePart.m_branchHandles)
+			{
+				const auto& branch = m_scannedBranches[branchHandle];
+				const auto distance0 = glm::distance(allocatedPoint.m_position, branch.m_bezierCurve.m_p0);
+				const auto distance3 = glm::distance(allocatedPoint.m_position, branch.m_bezierCurve.m_p3);
+				distances[distance0] = branchHandle;
+				distances[distance3] = branchHandle;
+			}
+			allocatedPoint.m_branchHandle = distances.begin()->second;
+			m_scannedBranches[allocatedPoint.m_branchHandle].m_allocatedPoints.emplace_back(allocatedPoint.m_handle);
+		}
+		for (auto& scannedBranch : m_scannedBranches) {
 			m_min = glm::min(m_min, scannedBranch.m_bezierCurve.m_p0);
 			m_max = glm::max(m_max, scannedBranch.m_bezierCurve.m_p0);
 			m_min = glm::min(m_min, scannedBranch.m_bezierCurve.m_p3);
 			m_max = glm::max(m_max, scannedBranch.m_bezierCurve.m_p3);
+
+			if (!scannedBranch.m_allocatedPoints.empty()) {
+				const auto& origin = scannedBranch.m_bezierCurve.m_p0;
+				const auto normal = glm::normalize(scannedBranch.m_bezierCurve.m_p3 - origin);
+				const auto xAxis = glm::vec3(normal.y, normal.z, normal.x);
+				const auto yAxis = glm::vec3(normal.z, normal.x, normal.y);
+				auto positionAvg = glm::vec2(0.0f);
+				for (const auto& pointHandle : scannedBranch.m_allocatedPoints)
+				{
+					auto& point = m_allocatedPoints[pointHandle];
+					const auto v = scannedBranch.m_bezierCurve.m_p0 - point.m_position;
+					const auto d = glm::dot(v, normal);
+					const auto p = v + d * normal;
+					const auto x = glm::distance(origin, glm::closestPointOnLine(p, origin, origin + 10.0f * xAxis));
+					const auto y = glm::distance(origin, glm::closestPointOnLine(p, origin, origin + 10.0f * yAxis));
+					point.m_planePosition = glm::vec2(x, y);
+					positionAvg += point.m_planePosition;
+				}
+				positionAvg /= scannedBranch.m_allocatedPoints.size();
+				auto distanceAvg = 0.0f;
+				for (const auto& pointHandle : scannedBranch.m_allocatedPoints)
+				{
+					auto& point = m_allocatedPoints[pointHandle];
+					point.m_planePosition -= positionAvg;
+					distanceAvg += glm::length(point.m_planePosition);
+				}
+				distanceAvg /= scannedBranch.m_allocatedPoints.size();
+				scannedBranch.m_branchThickness = distanceAvg * 2.0f;
+			}else
+			{
+				scannedBranch.m_branchThickness = (scannedBranch.m_startThickness + scannedBranch.m_endThickness) * 0.5f;
+			}
 		}
 
 		auto center = (m_min + m_max) / 2.0f;
@@ -1163,7 +1207,7 @@ void TreePointCloud::BuildSkeletons() {
 		std::vector<BranchHandle> removeList{};
 		for (int i = 0; i < m_operatingBranches.size(); i++)
 		{
-			if(rootBranchHandleSet.find(i) != rootBranchHandleSet.end()) continue;
+			if (rootBranchHandleSet.find(i) != rootBranchHandleSet.end()) continue;
 			auto& operatingBranch = m_operatingBranches[i];
 			if (!operatingBranch.m_orphan && operatingBranch.m_parentCandidates.empty())
 			{
@@ -1197,7 +1241,7 @@ void TreePointCloud::BuildSkeletons() {
 			m_filteredBranchConnections.emplace_back(operatingBranch.m_bezierCurve.m_p0, parentBranch.m_bezierCurve.m_p3);
 		}
 	}
-	
+
 	for (const auto& rootBranchHandle : rootBranchHandles) {
 		auto& skeleton = m_skeletons.emplace_back();
 		skeleton.m_data.m_rootPosition = rootBranchHandle.first;
@@ -1322,51 +1366,58 @@ void TreePointCloud::BuildSkeletons() {
 			nodeInfo.m_length = glm::length(diff);
 
 		}
-		if (m_reconstructionSettings.m_overrideThickness) {
-			for (auto i = sortedNodeList.rbegin(); i != sortedNodeList.rend(); ++i) {
-				auto& node = skeleton.RefNode(*i);
-				auto& nodeInfo = node.m_info;
-				auto& childHandles = node.RefChildHandles();
-				if (childHandles.empty())
-				{
-					nodeInfo.m_thickness = m_reconstructionSettings.m_endNodeThickness;
-				}
-				else {
-					float childThicknessCollection = 0.0f;
-					for (const auto& childHandle : childHandles) {
-						const auto& childNode = skeleton.RefNode(childHandle);
-						childThicknessCollection += glm::pow(childNode.m_info.m_thickness + m_reconstructionSettings.m_thicknessAccumulationFactor,
-							1.0f / m_reconstructionSettings.m_thicknessSumFactor);
-					}
-					nodeInfo.m_thickness = glm::pow(childThicknessCollection,
-						m_reconstructionSettings.m_thicknessSumFactor);
-				}
-			}
-			const auto rootNodeThickness = skeleton.PeekNode(0).m_info.m_thickness;
-			if (rootNodeThickness < m_reconstructionSettings.m_minimumRootThickness)
+
+		for (auto i = sortedNodeList.rbegin(); i != sortedNodeList.rend(); ++i) {
+			auto& node = skeleton.RefNode(*i);
+			auto& nodeData = node.m_data;
+			auto& childHandles = node.RefChildHandles();
+			if (childHandles.empty())
 			{
-				float multiplierFactor = m_reconstructionSettings.m_minimumRootThickness / rootNodeThickness;
-				for (const auto& handle : sortedNodeList)
-				{
-					auto& nodeInfo = skeleton.RefNode(handle).m_info;
-					nodeInfo.m_thickness *= multiplierFactor;
-				}
+				nodeData.m_draftThickness = m_reconstructionSettings.m_endNodeThickness;
 			}
-		}
-		else if (m_reconstructionSettings.m_limitParentThickness)
-		{
-			for (auto i = sortedNodeList.rbegin(); i != sortedNodeList.rend(); ++i) {
-				auto& node = skeleton.RefNode(*i);
-				auto& nodeInfo = node.m_info;
-				for (const auto& childHandle : node.RefChildHandles()) {
+			else {
+				float childThicknessCollection = 0.0f;
+				for (const auto& childHandle : childHandles) {
 					const auto& childNode = skeleton.RefNode(childHandle);
-					nodeInfo.m_thickness = glm::max(childNode.m_info.m_thickness, nodeInfo.m_thickness);
+					childThicknessCollection += glm::pow(childNode.m_data.m_draftThickness + m_reconstructionSettings.m_thicknessAccumulationFactor,
+						1.0f / m_reconstructionSettings.m_thicknessSumFactor);
 				}
+				nodeData.m_draftThickness = glm::pow(childThicknessCollection,
+					m_reconstructionSettings.m_thicknessSumFactor);
 			}
 		}
+		const auto rootNodeThickness = skeleton.PeekNode(0).m_data.m_draftThickness;
+		if (rootNodeThickness < m_reconstructionSettings.m_minimumRootThickness)
+		{
+			float multiplierFactor = m_reconstructionSettings.m_minimumRootThickness / rootNodeThickness;
+			for (const auto& handle : sortedNodeList)
+			{
+				auto& nodeData = skeleton.RefNode(handle).m_data;
+				nodeData.m_draftThickness *= multiplierFactor;
+			}
+		}
+		skeleton.CalculateDistance();
+		for (auto i = sortedNodeList.rbegin(); i != sortedNodeList.rend(); ++i) {
+			auto& node = skeleton.RefNode(*i);
+			auto& nodeData = node.m_data;
+			auto& nodeInfo = node.m_info;
+			if(nodeInfo.m_rootDistance > m_reconstructionSettings.m_overrideThicknessRootDistance)
+			{
+				nodeInfo.m_thickness = nodeData.m_draftThickness;
+			}else
+			{
+				auto& childHandles = node.RefChildHandles();
+				float maxChildThickness = 0.0f;
+				for(const auto& childHandle : childHandles)
+				{
+					maxChildThickness = glm::max(maxChildThickness, skeleton.PeekNode(childHandle).m_info.m_thickness);
+				}
+				nodeInfo.m_thickness = nodeInfo.m_thickness;//glm::max(nodeInfo.m_thickness, maxChildThickness);
+			}
+		}
+
 		CalculateNodeTransforms(skeleton);
 		skeleton.CalculateFlows();
-		skeleton.CalculateDistance();
 	}
 
 	for (auto& allocatedPoint : m_allocatedPoints) {
@@ -1800,7 +1851,7 @@ void ConnectivityGraphSettings::OnInspect() {
 	ImGui::DragFloat("Indirect connection angle limit", &m_indirectConnectionAngleLimit, 0.01f, 0.0f, 180.0f);
 
 	ImGui::Checkbox("Zigzag check", &m_zigzagCheck);
-	if(m_zigzagCheck)
+	if (m_zigzagCheck)
 	{
 		ImGui::DragFloat("Zigzag branch shortening", &m_zigzagBranchShortening, 0.01f, 0.0f, 0.5f);
 	}
@@ -1814,8 +1865,7 @@ void TreePointCloud::CloneOperatingBranch(OperatingBranch& operatingBranch, cons
 	operatingBranch.m_treePartHandle = target.m_treePartHandle;
 	operatingBranch.m_handle = target.m_handle;
 	operatingBranch.m_bezierCurve = target.m_bezierCurve;
-	operatingBranch.m_startThickness = target.m_startThickness;
-	operatingBranch.m_endThickness = target.m_endThickness;
+	operatingBranch.m_thickness = target.m_branchThickness;
 	operatingBranch.m_parentHandle = -1;
 	operatingBranch.m_childHandles.clear();
 	operatingBranch.m_orphan = false;
@@ -1842,17 +1892,12 @@ void ReconstructionSettings::OnInspect() {
 	ImGui::DragFloat("Root node max height", &m_minHeight, 0.01f, 0.01f, 1.0f);
 	ImGui::DragFloat("Tree distance limit", &m_minimumTreeDistance, 0.01f, 0.01f, 1.0f);
 	ImGui::DragFloat("Branch shortening", &m_branchShortening, 0.01f, 0.01f, 0.5f);
-	ImGui::Checkbox("Override thickness", &m_overrideThickness);
-	if (m_overrideThickness) {
-		ImGui::DragFloat("End node thickness", &m_endNodeThickness, 0.001f, 0.001f, 1.0f);
-		ImGui::DragFloat("Thickness sum factor", &m_thicknessSumFactor, 0.01f, 0.0f, 2.0f);
-		ImGui::DragFloat("Thickness accumulation factor", &m_thicknessAccumulationFactor, 0.00001f, 0.0f, 1.0f, "%.5f");
-		ImGui::DragFloat("Minimum root thickness", &m_minimumRootThickness, 0.001f, 0.0f, 1.0f, "%.3f");
-	}
-	else
-	{
-		ImGui::Checkbox("Limit parent thickness", &m_limitParentThickness);
-	}
+	ImGui::DragFloat("Override thickness root distance", &m_overrideThicknessRootDistance, 0.01f, 0.01f, 0.5f);
+
+	ImGui::DragFloat("End node thickness", &m_endNodeThickness, 0.001f, 0.001f, 1.0f);
+	ImGui::DragFloat("Thickness sum factor", &m_thicknessSumFactor, 0.01f, 0.0f, 2.0f);
+	ImGui::DragFloat("Thickness accumulation factor", &m_thicknessAccumulationFactor, 0.00001f, 0.0f, 1.0f, "%.5f");
+	ImGui::DragFloat("Minimum root thickness", &m_minimumRootThickness, 0.001f, 0.0f, 1.0f, "%.3f");
 	ImGui::DragInt("Minimum node count", &m_minimumNodeCount, 1, 0, 100);
 
 	ImGui::DragInt("Node back track limit", &m_nodeBackTrackLimit, 1, 0, 100);
