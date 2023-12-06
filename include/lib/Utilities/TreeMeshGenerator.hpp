@@ -92,11 +92,9 @@ namespace EcoSysLab {
 		AssetRef m_foliageRoughnessTexture;
 		AssetRef m_foliageMetallicTexture;
 
-		float m_xSubdivision = 0.01f;
-		float m_trunkYSubdivision = 0.01f;
-		float m_trunkThickness = 0.5f;
-		float m_mainBranchYSubdivision = 0.05f;
-		float m_mainBranchThickness = 0.1f;
+		float m_xSubdivision = 0.02f;
+		float m_trunkYSubdivision = 0.02f;
+		float m_trunkThickness = 0.1f;
 		float m_branchYSubdivision = 0.1f;
 
 		bool m_overrideRadius = false;
@@ -200,13 +198,13 @@ namespace EcoSysLab {
 #pragma region Subdivision internode here.
 		const auto diameter = glm::max(thicknessStart, thicknessEnd) * 2.0f * glm::pi<float>();
 		int step = diameter / settings.m_xSubdivision;
-		if (step < 6)
-			step = 6;
+		if (step < 4)
+			step = 4;
 		if (step % 2 != 0)
 			++step;
 
 		tempSteps[threadIndex].emplace_back(internodeHandle, step);
-		int amount = glm::max(1, static_cast<int>(internodeInfo.m_length / (internodeInfo.m_thickness >= settings.m_trunkThickness ? settings.m_trunkYSubdivision : internodeInfo.m_thickness >= settings.m_mainBranchThickness ? settings.m_mainBranchYSubdivision : settings.m_branchYSubdivision)));
+		int amount = glm::max(1, static_cast<int>(internodeInfo.m_length / (internodeInfo.m_thickness >= settings.m_trunkThickness ? settings.m_trunkYSubdivision : settings.m_branchYSubdivision)));
 		if (amount % 2 != 0)
 			++amount;
 		BezierCurve curve = BezierCurve(
