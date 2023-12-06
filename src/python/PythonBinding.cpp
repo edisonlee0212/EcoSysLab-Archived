@@ -600,14 +600,12 @@ PYBIND11_MODULE(pyecosyslab, m) {
 		.def_readwrite("m_minimumTreeDistance", &ReconstructionSettings::m_minimumTreeDistance)
 		.def_readwrite("m_branchShortening", &ReconstructionSettings::m_branchShortening)
 		.def_readwrite("m_endNodeThickness", &ReconstructionSettings::m_endNodeThickness)
-		.def_readwrite("m_overrideThickness", &ReconstructionSettings::m_overrideThickness)
 		.def_readwrite("m_minimumNodeCount", &ReconstructionSettings::m_minimumNodeCount);
 
 	py::class_<PresentationOverrideSettings>(m, "PresentationOverrideSettings")
 		.def(py::init<>())
 		.def_readwrite("m_rootOverrideColor", &PresentationOverrideSettings::m_rootOverrideColor)
 		.def_readwrite("m_branchOverrideColor", &PresentationOverrideSettings::m_branchOverrideColor)
-		.def_readwrite("m_foliageOverrideColor", &PresentationOverrideSettings::m_foliageOverrideColor)
 		.def_readwrite("m_maxThickness", &PresentationOverrideSettings::m_maxThickness);
 
 	py::class_<FoliageParameters>(m, "FoliageParameters")

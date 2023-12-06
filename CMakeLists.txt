@@ -17,7 +17,7 @@ if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 			STRING "Choose the type of build." FORCE)
 	# Set the possible values of build type for cmake-gui
 	set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
-			"Debug" "Release")
+			"Debug" "Release" "RelWithDebInfo")
 endif ()
 
 set(CMAKE_CXX_STANDARD 17)
@@ -28,6 +28,8 @@ if (WIN32)
 elseif (UNIX AND NOT APPLE)
 	if (${CMAKE_BUILD_TYPE} STREQUAL Release)
 		set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+	elseif (${CMAKE_BUILD_TYPE} STREQUAL RelWithDebInfo)
+		set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g -DNDEBUG")
 	elseif (${CMAKE_BUILD_TYPE} STREQUAL Debug)
 		set(CMAKE_CXX_FLAGS_DEBUG "-g")
 	endif ()

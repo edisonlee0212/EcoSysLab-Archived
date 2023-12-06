@@ -171,20 +171,22 @@ void TreeDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 	if (OnInspectRootGrowthParameters(m_rootGrowthParameters)) { changed = true; }
 	if (OnInspectFoliageParameters(m_foliageParameters)) { changed = true; }
 	if (ImGui::TreeNode("Foliage Parameters")) {
-		editorLayer->DragAndDropButton<Texture2D>(m_foliageAlbedoTexture, "Foliage Albedo Texture");
-		editorLayer->DragAndDropButton<Texture2D>(m_foliageNormalTexture, "Foliage Normal Texture");
-		editorLayer->DragAndDropButton<Texture2D>(m_foliageRoughnessTexture, "Foliage Roughness Texture");
-		editorLayer->DragAndDropButton<Texture2D>(m_foliageMetallicTexture, "Foliage Metallic Texture");
+		editorLayer->DragAndDropButton<Texture2D>(m_foliageAlbedoTexture, "Foliage Albedo Texture##FFT");
+		editorLayer->DragAndDropButton<Texture2D>(m_foliageNormalTexture, "Foliage Normal Texture##FNT");
+		editorLayer->DragAndDropButton<Texture2D>(m_foliageRoughnessTexture, "Foliage Roughness Texture##FRT");
+		editorLayer->DragAndDropButton<Texture2D>(m_foliageMetallicTexture, "Foliage Metallic Texture##FMT");
+		ImGui::TreePop();
 	}
 	if (ImGui::TreeNode("Branch Parameters")) {
-		editorLayer->DragAndDropButton<Texture2D>(m_branchAlbedoTexture, "Branch Albedo Texture");
-		editorLayer->DragAndDropButton<Texture2D>(m_branchNormalTexture, "Branch Normal Texture");
-		editorLayer->DragAndDropButton<Texture2D>(m_branchRoughnessTexture, "Branch Roughness Texture");
-		editorLayer->DragAndDropButton<Texture2D>(m_branchMetallicTexture, "Branch Metallic Texture");
+		editorLayer->DragAndDropButton<Texture2D>(m_branchAlbedoTexture, "Branch Albedo Texture##BFT");
+		editorLayer->DragAndDropButton<Texture2D>(m_branchNormalTexture, "Branch Normal Texture##BNT");
+		editorLayer->DragAndDropButton<Texture2D>(m_branchRoughnessTexture, "Branch Roughness Texture##BRT");
+		editorLayer->DragAndDropButton<Texture2D>(m_branchMetallicTexture, "Branch Metallic Texture##BMT");
+		ImGui::TreePop();
 	}
 
-	editorLayer->DragAndDropButton<BranchShape>(m_shootBranchShape, "Shoot Branch Shape");
-	editorLayer->DragAndDropButton<BranchShape>(m_rootBranchShape, "Root Branch Shape");
+	editorLayer->DragAndDropButton<BranchShape>(m_shootBranchShape, "Shoot Branch Shape##SBS");
+	editorLayer->DragAndDropButton<BranchShape>(m_rootBranchShape, "Root Branch Shape##RBS");
 	if (changed) m_saved = false;
 }
 
