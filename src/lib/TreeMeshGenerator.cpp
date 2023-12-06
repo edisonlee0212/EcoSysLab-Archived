@@ -177,8 +177,13 @@ glm::vec3 RingSegment::GetDirection(const glm::vec3& normalDir, float angle, con
 
 void TreeMeshGeneratorSettings::Save(const std::string& name, YAML::Emitter& out) {
 	out << YAML::Key << name << YAML::Value << YAML::BeginMap;
-	out << YAML::Key << "m_ringXSubdivision" << YAML::Value << m_ringXSubdivision;
-	out << YAML::Key << "m_ringYSubdivision" << YAML::Value << m_ringYSubdivision;
+	out << YAML::Key << "m_xSubdivision" << YAML::Value << m_xSubdivision;
+	out << YAML::Key << "m_trunkYSubdivision" << YAML::Value << m_trunkYSubdivision;
+	out << YAML::Key << "m_trunkThickness" << YAML::Value << m_trunkThickness;
+	out << YAML::Key << "m_mainBranchYSubdivision" << YAML::Value << m_mainBranchYSubdivision;
+	out << YAML::Key << "m_mainBranchThickness" << YAML::Value << m_mainBranchThickness;
+	out << YAML::Key << "m_branchYSubdivision" << YAML::Value << m_branchYSubdivision;
+
 	out << YAML::Key << "m_vertexColorOnly" << YAML::Value << m_vertexColorOnly;
 	out << YAML::Key << "m_enableFoliage" << YAML::Value << m_enableFoliage;
 	out << YAML::Key << "m_enableBranch" << YAML::Value << m_enableBranch;
@@ -219,8 +224,13 @@ void TreeMeshGeneratorSettings::Save(const std::string& name, YAML::Emitter& out
 void TreeMeshGeneratorSettings::Load(const std::string& name, const YAML::Node& in) {
 	if (in[name]) {
 		const auto& ms = in[name];
-		if (ms["m_ringXSubdivision"]) m_ringXSubdivision = ms["m_ringXSubdivision"].as<float>();
-		if (ms["m_ringYSubdivision"]) m_ringYSubdivision = ms["m_ringYSubdivision"].as<float>();
+		if (ms["m_xSubdivision"]) m_xSubdivision = ms["m_xSubdivision"].as<float>();
+		if (ms["m_trunkYSubdivision"]) m_trunkYSubdivision = ms["m_trunkYSubdivision"].as<float>();
+		if (ms["m_trunkThickness"]) m_trunkThickness = ms["m_trunkThickness"].as<float>();
+		if (ms["m_mainBranchYSubdivision"]) m_mainBranchYSubdivision = ms["m_mainBranchYSubdivision"].as<float>();
+		if (ms["m_mainBranchThickness"]) m_mainBranchThickness = ms["m_mainBranchThickness"].as<float>();
+		if (ms["m_branchYSubdivision"]) m_branchYSubdivision = ms["m_branchYSubdivision"].as<float>();
+
 		if (ms["m_vertexColorOnly"]) m_vertexColorOnly = ms["m_vertexColorOnly"].as<bool>();
 		if (ms["m_enableFoliage"]) m_enableFoliage = ms["m_enableFoliage"].as<bool>();
 		if (ms["m_enableBranch"]) m_enableBranch = ms["m_enableBranch"].as<bool>();
@@ -278,8 +288,13 @@ void TreeMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLayer>& ed
 		}
 		if(ImGui::TreeNode("Cylindrical mesh settings"))
 		{
-			ImGui::DragFloat("Resolution", &m_ringXSubdivision, 0.00001f, 0.00001f, 1.0f, "%.5f");
-			ImGui::DragFloat("Subdivision", &m_ringYSubdivision, 1.0f, 1.0f, 16.0f);
+			ImGui::DragFloat("Trunk Thickness Threshold", &m_trunkThickness, 1.0f, 0.0f, 16.0f);
+			ImGui::DragFloat("X Step", &m_xSubdivision, 0.00001f, 0.00001f, 1.0f, "%.5f");
+			ImGui::DragFloat("Trunk Y Step", &m_trunkYSubdivision, 0.00001f, 0.00001f, 1.0f, "%.5f");
+			ImGui::DragFloat("Main Branch Thickness Threshold", &m_mainBranchThickness, 1.0f, 0.0f, 16.0f);
+			ImGui::DragFloat("Main Branch Y Step", &m_mainBranchYSubdivision, 0.00001f, 0.00001f, 1.0f, "%.5f");
+			ImGui::DragFloat("Branch Y Step", &m_branchYSubdivision, 0.00001f, 0.00001f, 1.0f, "%.5f");
+
 			ImGui::Checkbox("Smoothness", &m_smoothness);
 			if (m_smoothness) {
 				ImGui::DragFloat("Base control point ratio", &m_baseControlPointRatio, 0.001f, 0.0f, 1.0f);

@@ -631,7 +631,7 @@ PYBIND11_MODULE(pyecosyslab, m) {
 		.def_readwrite("m_foliageOverride", &TreeMeshGeneratorSettings::m_foliageOverride)
 		.def_readwrite("m_foliageOverrideSettings", &TreeMeshGeneratorSettings::m_foliageOverrideSettings)
 		.def_readwrite("m_presentationOverrideSettings", &TreeMeshGeneratorSettings::m_presentationOverrideSettings)
-		.def_readwrite("m_ringXSubdivision", &TreeMeshGeneratorSettings::m_ringXSubdivision)
+		.def_readwrite("m_trunkXSubdivision", &TreeMeshGeneratorSettings::m_trunkXSubdivision)
 		.def_readwrite("m_ringYSubdivision", &TreeMeshGeneratorSettings::m_ringYSubdivision)
 		.def_readwrite("m_overrideRadius", &TreeMeshGeneratorSettings::m_overrideRadius)
 		.def_readwrite("m_radius", &TreeMeshGeneratorSettings::m_radius)

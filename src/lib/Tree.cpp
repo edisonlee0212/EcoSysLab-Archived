@@ -841,6 +841,7 @@ void Tree::GenerateGeometry(const TreeMeshGeneratorSettings& meshGeneratorSettin
 		material->m_materialProperties.m_metallic = 0.0f;
 		meshRenderer->m_mesh = mesh;
 		meshRenderer->m_material = material;
+		material->m_drawSettings.m_polygonMode = VK_POLYGON_MODE_LINE;
 	}
 	if (meshGeneratorSettings.m_enableRoot)
 	{
