@@ -255,9 +255,10 @@ void TreePointCloudScanner::GeneratePointCloud(const std::filesystem::path& save
 		if (m_pointSettings.m_ballRandRadius > 0.0f) {
 			ballRand = glm::ballRand(m_pointSettings.m_ballRandRadius);
 		}
+		const auto distance = glm::distance(sample.m_hitInfo.m_position, sample.m_start);
 		points.emplace_back(
 			sample.m_hitInfo.m_position +
-			glm::vec3(glm::gaussRand(0.0f, m_pointSettings.m_variance),
+			distance * glm::vec3(glm::gaussRand(0.0f, m_pointSettings.m_variance),
 				glm::gaussRand(0.0f, m_pointSettings.m_variance),
 				glm::gaussRand(0.0f, m_pointSettings.m_variance))
 			+ ballRand);

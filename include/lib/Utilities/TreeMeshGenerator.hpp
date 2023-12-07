@@ -289,8 +289,8 @@ namespace EcoSysLab {
 			int vertexIndex = vertices.size();
 			Vertex archetype;
 			if (settings.m_overrideVertexColor) archetype.m_color = glm::vec4(settings.m_branchVertexColor, 1.0f);
-			archetype.m_positionPadding = internodeHandle + 1;
-			archetype.m_normalPadding = internode.GetFlowHandle() + 1;
+			archetype.m_vertexInfo1 = internodeHandle + 1;
+			archetype.m_vertexInfo2 = internode.GetFlowHandle() + 1;
 			float textureXStep = 1.0f / pStep * 4.0f;
 			if (parentInternodeHandle == -1) {
 				for (int p = 0; p < pStep; p++) {
