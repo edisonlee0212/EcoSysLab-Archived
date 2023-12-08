@@ -352,7 +352,7 @@ void GenerateTreePointCloud(
 	const std::string& treeJunctionOutputPath
 )
 {
-	EVOENGINE_LOG("Exporting...");
+	
 	const auto applicationStatus = Application::GetApplicationStatus();
 	if (applicationStatus == ApplicationStatus::NoProject)
 	{

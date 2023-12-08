@@ -23,8 +23,8 @@ pccs = pesl.PointCloudCaptureSettings()
 #1.		point cloud point settings
 #2.		point cloud capture settings
 #3.		tree descriptor absolute path
-#4.		growth delta time
-#5.		growth iteration count
+#4.		growth delta time (0.0822 years equal to 1 month)
+#5.		growth iteration count (96 iterations of 1 month is 8 years, which gives you a old tree by default)
 
 #6.		tree mesh generator settings
 #7.		tree point cloud output path
