@@ -7,9 +7,11 @@ namespace EcoSysLab {
         float m_variance = 0.0f;
         float m_ballRandRadius = 0.0f;
         bool m_typeIndex = true;
-        bool m_instanceIndex = false;
-        bool m_branchIndex = true;
+        bool m_instanceIndex = true;
+        bool m_branchIndex = false;
         bool m_internodeIndex = false;
+        bool m_junctionIndex = true;
+
         float m_boundingBoxLimit = 1.f;
 
         void OnInspect();

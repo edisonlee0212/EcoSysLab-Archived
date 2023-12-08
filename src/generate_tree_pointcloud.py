@@ -10,6 +10,7 @@ project_path = "C:\\Users\\lllll\\Desktop\\EcoSysLabProject\\test.eveproj"
 target_descriptor_path = "C:\\Users\\lllll\\Desktop\\EcoSysLabProject\\TreeDescriptors\\Acacia.td"
 target_tree_mesh_path = current_directory + "\\pc\\tree.obj"
 target_tree_pointcloud_path = current_directory + "\\pc\\tree.ply"
+target_tree_junction_path = current_directory + "\\pc\\tree.yml"
 
 pesl.start_project_windowless(project_path)
 tmgs = pesl.TreeMeshGeneratorSettings()
@@ -29,5 +30,6 @@ pccs = pesl.PointCloudCaptureSettings()
 #7.		tree point cloud output path
 #8.		enable tree mesh export
 #9.		tree mesh output path
-
-pesl.generate_tree_point_cloud(pcps, pccs, target_descriptor_path, 0.08220, 150, tmgs, target_tree_pointcloud_path, True, target_tree_mesh_path)
+#10		enable junction export
+#11		junction path
+pesl.generate_tree_point_cloud(pcps, pccs, target_descriptor_path, 0.08220, 96, tmgs, target_tree_pointcloud_path, True, target_tree_mesh_path, True, target_tree_junction_path)

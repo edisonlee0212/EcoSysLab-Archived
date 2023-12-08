@@ -168,7 +168,7 @@ void Tree::Reset()
 	m_treeVisualizer.Reset(m_treeModel);
 }
 void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
-	
+
 	bool modelChanged = false;
 	const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
 	const auto scene = GetScene();
@@ -428,7 +428,7 @@ bool Tree::OnInspectTreeGrowthSettings(TreeGrowthSettings& treeGrowthSettings)
 		if (ImGui::Checkbox("Space colonization auto resize", &treeGrowthSettings.m_spaceColonizationAutoResize))changed = true;
 	}
 
-	
+
 	return changed;
 }
 
@@ -440,18 +440,18 @@ std::shared_ptr<Mesh> Tree::GenerateBranchMesh(const TreeMeshGeneratorSettings& 
 
 	const auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
 	std::shared_ptr<BranchShape> branchShape{};
-	if(treeDescriptor)
+	if (treeDescriptor)
 	{
 		branchShape = treeDescriptor->m_shootBranchShape.Get<BranchShape>();
 	}
 	meshGenerator.Generate(m_treeModel.PeekShootSkeleton(), vertices, indices, meshGeneratorSettings, [&](float xFactor, float distanceToRoot)
-	{
-		if(branchShape)
 		{
-			return branchShape->GetValue(xFactor, distanceToRoot);
-		}
-		return 1.0f;
-	});
+			if (branchShape)
+			{
+				return branchShape->GetValue(xFactor, distanceToRoot);
+			}
+			return 1.0f;
+		});
 
 	auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
 	VertexAttributes attributes{};
@@ -508,7 +508,7 @@ std::shared_ptr<Mesh> Tree::GenerateFoliageMesh(const TreeMeshGeneratorSettings&
 					indices.push_back(triangle.y);
 					indices.push_back(triangle.z);
 				}
-				
+
 				offset += quadVerticesSize;
 
 
@@ -826,7 +826,7 @@ void Tree::GenerateGeometry(const TreeMeshGeneratorSettings& meshGeneratorSettin
 		Entity branchEntity;
 		branchEntity = scene->CreateEntity("Branch Mesh");
 		scene->SetParent(branchEntity, self);
-		
+
 		auto mesh = GenerateBranchMesh(meshGeneratorSettings);
 		auto material = ProjectManager::CreateTemporaryAsset<Material>();
 		auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(branchEntity).lock();
@@ -841,6 +841,7 @@ void Tree::GenerateGeometry(const TreeMeshGeneratorSettings& meshGeneratorSettin
 		material->m_materialProperties.m_metallic = 0.0f;
 		meshRenderer->m_mesh = mesh;
 		meshRenderer->m_material = material;
+		material->m_vertexColorOnly = true;
 	}
 	if (meshGeneratorSettings.m_enableRoot)
 	{
@@ -1241,7 +1242,7 @@ void Tree::GenerateGeometry(const TreeMeshGeneratorSettings& meshGeneratorSettin
 			material->m_materialProperties.m_albedoColor = glm::vec3(152 / 255.0f, 203 / 255.0f, 0 / 255.0f);
 		}
 		material->m_materialProperties.m_roughness = 0.0f;
-		
+
 		auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(fruitEntity).lock();
 		meshRenderer->m_mesh = mesh;
 		meshRenderer->m_material = material;
@@ -1267,6 +1268,121 @@ void Tree::FromTreeGraph(const std::shared_ptr<TreeGraph>& treeGraph)
 
 void Tree::FromTreeGraphV2(const std::shared_ptr<TreeGraphV2>& treeGraphV2)
 {
+}
+
+struct JunctionLine {
+	glm::vec3 m_startPosition;
+	glm::vec3 m_endPosition;
+	float m_startRadius;
+	float m_endRadius;
+};
+
+struct TreePart {
+	int m_junctionIndex;
+	JunctionLine m_baseLine;
+	std::vector<JunctionLine> m_childrenLines;
+};
+
+void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings, const std::filesystem::path& path)
+{
+	try {
+		auto directory = path;
+		directory.remove_filename();
+		std::filesystem::create_directories(directory);
+		YAML::Emitter out;
+		out << YAML::BeginMap;
+		const auto& junctionEndDistance = meshGeneratorSettings.m_junctionEndDistance;
+		const auto& junctionStartDistance = meshGeneratorSettings.m_junctionStartDistance;
+		const auto& skeleton = m_treeModel.RefShootSkeleton();
+		const auto& sortedFlowList = skeleton.RefSortedFlowList();
+		std::vector<TreePart> treeParts{};
+		for(const auto& flowHandle : sortedFlowList)
+		{
+			const auto& flow = skeleton.PeekFlow(flowHandle);
+			const auto& chainHandles = flow.RefNodeHandles();
+			const auto& childHandles = flow.RefChildHandles();
+			const bool hasMultipleChildren = childHandles.size() > 1;
+			const auto chainSize = chainHandles.size();
+
+			if(chainSize > 2 + junctionEndDistance + junctionStartDistance)
+			{
+				//Has I Shape
+				treeParts.emplace_back();
+				auto& treePart = treeParts.back();
+				treePart.m_junctionIndex = flowHandle * 2 + 1;
+				const auto startInternodeHandle = chainHandles[junctionEndDistance];
+				const auto endInternodeHandle = chainHandles[chainHandles.size() - 1 - junctionStartDistance];
+				const auto& startInternode = skeleton.PeekNode(startInternodeHandle);
+				const auto& endInternode = skeleton.PeekNode(endInternodeHandle);
+				treePart.m_baseLine.m_startPosition = startInternode.m_info.m_globalPosition;
+				treePart.m_baseLine.m_startRadius = startInternode.m_info.m_thickness;
+				treePart.m_baseLine.m_endPosition = endInternode.m_info.GetGlobalEndPosition();
+				treePart.m_baseLine.m_endRadius = endInternode.m_info.m_thickness;
+			}
+			if(hasMultipleChildren)
+			{
+				//Has Y Shape
+				treeParts.emplace_back();
+				auto& treePart = treeParts.back();
+				treePart.m_junctionIndex = flowHandle * 2 + 2;
+				const auto startInternodeHandle = chainHandles[chainHandles.size() - 1 - junctionStartDistance];
+				const auto& startInternode = skeleton.PeekNode(startInternodeHandle);
+				const auto centerInternodeHandle = chainHandles.back();
+				const auto& centerInternode = skeleton.PeekNode(centerInternodeHandle);
+				treePart.m_baseLine.m_startPosition = startInternode.m_info.m_globalPosition;
+				treePart.m_baseLine.m_startRadius = startInternode.m_info.m_thickness;
+				treePart.m_baseLine.m_endPosition = centerInternode.m_info.GetGlobalEndPosition();
+				treePart.m_baseLine.m_endRadius = centerInternode.m_info.m_thickness;
+				for(const auto& childFlowHandle : childHandles)
+				{
+					const auto& childFlow = skeleton.PeekFlow(childFlowHandle);
+					const auto& childChainHandles = childFlow.RefNodeHandles();
+					NodeHandle endInternodeHandle;
+					if(childChainHandles.size() > junctionEndDistance)
+					{
+						endInternodeHandle = childChainHandles[junctionEndDistance];
+					}
+					else endInternodeHandle = childChainHandles.back();
+					const auto& endInternode = skeleton.PeekNode(endInternodeHandle);
+					treePart.m_childrenLines.emplace_back();
+					auto& newLine = treePart.m_childrenLines.back();
+					newLine.m_startPosition = centerInternode.m_info.GetGlobalEndPosition();
+					newLine.m_startRadius = centerInternode.m_info.m_thickness;
+					newLine.m_endPosition = endInternode.m_info.GetGlobalEndPosition();
+					newLine.m_endRadius = endInternode.m_info.m_thickness;
+				}
+			}
+		}
+		out << YAML::Key << "TreeParts" << YAML::Value << YAML::BeginSeq;
+		for(const auto& treePart : treeParts)
+		{
+			out << YAML::BeginMap;
+			out << YAML::Key << "I" << YAML::Value << treePart.m_junctionIndex;
+			out << YAML::Key << "BSP" << YAML::Value << treePart.m_baseLine.m_startPosition;
+			out << YAML::Key << "BEP" << YAML::Value << treePart.m_baseLine.m_endPosition;
+			out << YAML::Key << "BSR" << YAML::Value << treePart.m_baseLine.m_startRadius;
+			out << YAML::Key << "BER" << YAML::Value << treePart.m_baseLine.m_endRadius;
+			out << YAML::Key << "C" << YAML::Value << YAML::BeginSeq;
+			for (const auto& childLine : treePart.m_childrenLines) {
+				out << YAML::BeginMap;
+				out << YAML::Key << "SP" << YAML::Value << childLine.m_startPosition;
+				out << YAML::Key << "EP" << YAML::Value << childLine.m_endPosition;
+				out << YAML::Key << "SR" << YAML::Value << childLine.m_startRadius;
+				out << YAML::Key << "ER" << YAML::Value << childLine.m_endRadius;
+				out << YAML::EndMap;
+			}
+			out << YAML::EndSeq;
+			out << YAML::EndMap;
+		}
+		out << YAML::EndSeq;
+		out << YAML::EndMap;
+		std::ofstream fout(path.string());
+		fout << out.c_str();
+		fout.flush();
+	}
+	catch (std::exception e) {
+		EVOENGINE_ERROR("Failed to save!");
+	}
 }
 
 bool Tree::ExportIOTree(const std::filesystem::path& path) const
@@ -1397,7 +1513,7 @@ void Tree::PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescrip
 				{
 					pruningProbability = treeDescriptor->m_shootGrowthParameters.m_lightPruningFactor;
 				}
-				if(!internode.IsApical() && treeDescriptor->m_shootGrowthParameters.m_thicknessPruningFactor != 0.0f
+				if (!internode.IsApical() && treeDescriptor->m_shootGrowthParameters.m_thicknessPruningFactor != 0.0f
 					&& internode.m_info.m_thickness / internode.m_info.m_endDistance < treeDescriptor->m_shootGrowthParameters.m_thicknessPruningFactor)
 				{
 					pruningProbability += 1.0f;

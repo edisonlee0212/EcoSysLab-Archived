@@ -346,7 +346,9 @@ void GenerateTreePointCloud(
 	const TreeMeshGeneratorSettings& meshGeneratorSettings,
 	const std::string& pointCloudOutputPath,
 	bool exportTreeMesh,
-	const std::string& treeMeshOutputPath
+	const std::string& treeMeshOutputPath,
+	bool exportJunction,
+	const std::string& treeJunctionOutputPath
 )
 {
 	const auto applicationStatus = Application::GetApplicationStatus();
@@ -429,6 +431,9 @@ void GenerateTreePointCloud(
 	scanner->m_captureSettings = captureSettings;
 	scanner->m_pointSettings = pointSettings;
 	scanner->GeneratePointCloud(pointCloudOutputPath);
+
+
+	if (exportJunction) tree->ExportJunction(meshGeneratorSettings, treeJunctionOutputPath);
 
 	scene->DeleteEntity(treeEntity);
 	scene->DeleteEntity(scannerEntity);
@@ -631,14 +636,17 @@ PYBIND11_MODULE(pyecosyslab, m) {
 		.def_readwrite("m_foliageOverride", &TreeMeshGeneratorSettings::m_foliageOverride)
 		.def_readwrite("m_foliageOverrideSettings", &TreeMeshGeneratorSettings::m_foliageOverrideSettings)
 		.def_readwrite("m_presentationOverrideSettings", &TreeMeshGeneratorSettings::m_presentationOverrideSettings)
-		.def_readwrite("m_trunkXSubdivision", &TreeMeshGeneratorSettings::m_trunkXSubdivision)
-		.def_readwrite("m_ringYSubdivision", &TreeMeshGeneratorSettings::m_ringYSubdivision)
+		.def_readwrite("m_xSubdivision", &TreeMeshGeneratorSettings::m_xSubdivision)
+		.def_readwrite("m_trunkYSubdivision", &TreeMeshGeneratorSettings::m_trunkYSubdivision)
+		.def_readwrite("m_trunkThickness", &TreeMeshGeneratorSettings::m_trunkThickness)
+		.def_readwrite("m_branchYSubdivision", &TreeMeshGeneratorSettings::m_branchYSubdivision)
+
+
 		.def_readwrite("m_overrideRadius", &TreeMeshGeneratorSettings::m_overrideRadius)
 		.def_readwrite("m_radius", &TreeMeshGeneratorSettings::m_radius)
 		.def_readwrite("m_overrideVertexColor", &TreeMeshGeneratorSettings::m_overrideVertexColor)
-		.def_readwrite("m_markJunctions", &TreeMeshGeneratorSettings::m_markJunctions)
-		.def_readwrite("m_junctionLowerRatio", &TreeMeshGeneratorSettings::m_junctionLowerRatio)
-		.def_readwrite("m_junctionUpperRatio", &TreeMeshGeneratorSettings::m_junctionUpperRatio)
+		.def_readwrite("m_junctionStartDistance", &TreeMeshGeneratorSettings::m_junctionStartDistance)
+		.def_readwrite("m_junctionEndDistance", &TreeMeshGeneratorSettings::m_junctionEndDistance)
 		.def_readwrite("m_baseControlPointRatio", &TreeMeshGeneratorSettings::m_baseControlPointRatio)
 		.def_readwrite("m_branchControlPointRatio", &TreeMeshGeneratorSettings::m_branchControlPointRatio)
 		.def_readwrite("m_lineLengthFactor", &TreeMeshGeneratorSettings::m_lineLengthFactor)

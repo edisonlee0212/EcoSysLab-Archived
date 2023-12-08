@@ -71,7 +71,7 @@ void DeserializeTwigParameters(const std::string& name, TwigParameters& twigPara
 bool OnInspectFineRootParameters(FineRootParameters& fineRootParameters)
 {
 	bool changed = false;
-	if (ImGui::TreeNodeEx("Fine Root Parameters", ImGuiTreeNodeFlags_DefaultOpen)) {
+	if (ImGui::TreeNodeEx("Fine Root Parameters")) {
 		changed = ImGui::DragFloat("Segment length", &fineRootParameters.m_segmentLength, 0.001f, 0.0f, 1.0f) || changed;
 		changed = ImGui::DragFloat("Apical angle variance", &fineRootParameters.m_apicalAngleVariance, 0.01f, 0.0f, 10.0f) || changed;
 		changed = ImGui::DragFloat("Branching angle", &fineRootParameters.m_branchingAngle, 0.01f, 0.0f, 180.0f) || changed;
@@ -90,7 +90,7 @@ bool OnInspectFineRootParameters(FineRootParameters& fineRootParameters)
 bool OnInspectTwigParameters(TwigParameters& twigParameters)
 {
 	bool changed = false;
-	if (ImGui::TreeNodeEx("Twig settings", ImGuiTreeNodeFlags_DefaultOpen))
+	if (ImGui::TreeNodeEx("Twig settings"))
 	{
 		changed = ImGui::DragFloat("Segment length", &twigParameters.m_segmentLength, 0.001f, 0.0f, 1.0f) || changed;
 		changed = ImGui::DragFloat("Apical angle variance", &twigParameters.m_apicalAngleVariance, 0.01f, 0.0f, 10.0f) || changed;
@@ -196,9 +196,8 @@ void TreeMeshGeneratorSettings::Save(const std::string& name, YAML::Emitter& out
 	out << YAML::Key << "m_branchControlPointRatio" << YAML::Value << m_branchControlPointRatio;
 	out << YAML::Key << "m_lineLengthFactor" << YAML::Value << m_lineLengthFactor;
 	out << YAML::Key << "m_overrideVertexColor" << YAML::Value << m_overrideVertexColor;
-	out << YAML::Key << "m_markJunctions" << YAML::Value << m_markJunctions;
-	out << YAML::Key << "m_junctionUpperRatio" << YAML::Value << m_junctionUpperRatio;
-	out << YAML::Key << "m_junctionLowerRatio" << YAML::Value << m_junctionLowerRatio;
+	out << YAML::Key << "m_junctionEndDistance" << YAML::Value << m_junctionEndDistance;
+	out << YAML::Key << "m_junctionStartDistance" << YAML::Value << m_junctionStartDistance;
 	out << YAML::Key << "m_branchVertexColor" << YAML::Value << m_branchVertexColor;
 	out << YAML::Key << "m_foliageVertexColor" << YAML::Value << m_foliageVertexColor;
 
@@ -241,9 +240,8 @@ void TreeMeshGeneratorSettings::Load(const std::string& name, const YAML::Node& 
 		if (ms["m_branchControlPointRatio"]) m_branchControlPointRatio = ms["m_branchControlPointRatio"].as<float>();
 		if (ms["m_lineLengthFactor"]) m_lineLengthFactor = ms["m_lineLengthFactor"].as<float>();
 		if (ms["m_overrideVertexColor"]) m_overrideVertexColor = ms["m_overrideVertexColor"].as<bool>();
-		if (ms["m_markJunctions"]) m_markJunctions = ms["m_markJunctions"].as<bool>();
-		if (ms["m_junctionUpperRatio"]) m_junctionUpperRatio = ms["m_junctionUpperRatio"].as<float>();
-		if (ms["m_junctionLowerRatio"]) m_junctionLowerRatio = ms["m_junctionLowerRatio"].as<float>();
+		if (ms["m_junctionEndDistance"]) m_junctionEndDistance = ms["m_junctionEndDistance"].as<int>();
+		if (ms["m_junctionStartDistance"]) m_junctionStartDistance = ms["m_junctionStartDistance"].as<float>();
 		if (ms["m_branchVertexColor"]) m_branchVertexColor = ms["m_branchVertexColor"].as<glm::vec3>();
 		if (ms["m_foliageVertexColor"]) m_foliageVertexColor = ms["m_foliageVertexColor"].as<glm::vec3>();
 
@@ -300,11 +298,8 @@ void TreeMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLayer>& ed
 			ImGui::Checkbox("Override radius", &m_overrideRadius);
 			if (m_overrideRadius) ImGui::DragFloat("Radius", &m_radius);
 			ImGui::Checkbox("Override vertex color", &m_overrideVertexColor);
-			ImGui::Checkbox("Mark Junctions", &m_markJunctions);
-			if (m_markJunctions) {
-				ImGui::DragFloat("Junction Lower Ratio", &m_junctionLowerRatio, 0.01f, 0.0f, 0.5f);
-				ImGui::DragFloat("Junction Upper Ratio", &m_junctionUpperRatio, 0.01f, 0.0f, 0.5f);
-			}
+			ImGui::DragInt("Junction Start Distance", &m_junctionStartDistance, 1, 0, 10);
+			ImGui::DragInt("Junction End Distance", &m_junctionEndDistance, 1, 0, 10);
 			ImGui::TreePop();
 		}
 		if(ImGui::TreeNode("Marching cubes settings"))

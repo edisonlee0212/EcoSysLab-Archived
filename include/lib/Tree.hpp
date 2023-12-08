@@ -67,7 +67,7 @@ namespace EcoSysLab {
 		void FromLSystemString(const std::shared_ptr<LSystemString>& lSystemString);
 		void FromTreeGraph(const std::shared_ptr<TreeGraph>& treeGraph);
 		void FromTreeGraphV2(const std::shared_ptr<TreeGraphV2>& treeGraphV2);
-
+		void ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings, const std::filesystem::path& path);
 		[[maybe_unused]] bool ExportIOTree(const std::filesystem::path& path) const;
 		void ExportRadialBoundingVolume(const std::shared_ptr<RadialBoundingVolume>& rbv) const;
 	};
