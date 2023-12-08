@@ -4,8 +4,8 @@
 using namespace EvoEngine;
 namespace EcoSysLab {
     struct PointCloudPointSettings {
-        float m_variance = 0.0f;
-        float m_ballRandRadius = 0.0f;
+        float m_variance = 0.01f;
+        float m_ballRandRadius = 0.005f;
         bool m_typeIndex = true;
         bool m_instanceIndex = true;
         bool m_branchIndex = false;
