@@ -308,9 +308,10 @@ void VoxelSpaceColonizationTreeData(
 	tree->m_treeModel.m_treeGrowthSettings.m_enableRoot = false;
 	tree->m_treeModel.m_treeGrowthSettings.m_useSpaceColonization = true;
 	tree->m_treeModel.m_treeGrowthSettings.m_spaceColonizationAutoResize = false;
+	Application::Loop();
 	for (int i = 0; i < iterations; i++)
 	{
-		tree->TryGrow(deltaTime);
+		ecoSysLabLayer->Simulate(deltaTime);
 	}
 
 	if (exportTreeMesh) {
@@ -351,6 +352,7 @@ void GenerateTreePointCloud(
 	const std::string& treeJunctionOutputPath
 )
 {
+	EVOENGINE_LOG("Exporting...");
 	const auto applicationStatus = Application::GetApplicationStatus();
 	if (applicationStatus == ApplicationStatus::NoProject)
 	{
@@ -397,7 +399,6 @@ void GenerateTreePointCloud(
 		EVOENGINE_ERROR("No climate in scene!");
 		return;
 	}
-
 	const auto treeEntity = scene->CreateEntity("Tree");
 	const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
 	tree->m_soil = soil;
@@ -414,27 +415,23 @@ void GenerateTreePointCloud(
 	tree->m_treeModel.m_treeGrowthSettings.m_enableShoot = true;
 	tree->m_treeModel.m_treeGrowthSettings.m_enableRoot = false;
 	tree->m_treeModel.m_treeGrowthSettings.m_useSpaceColonization = false;
+	Application::Loop();
 	for (int i = 0; i < iterations; i++)
 	{
-		tree->TryGrow(deltaTime);
+		ecoSysLabLayer->Simulate(deltaTime);
 	}
 	tree->GenerateGeometry(meshGeneratorSettings);
 	soil->GenerateMesh();
-
 	if (exportTreeMesh) {
 		tree->ExportOBJ(treeMeshOutputPath, meshGeneratorSettings);
 	}
-	
 	Application::Loop();
 	const auto scannerEntity = scene->CreateEntity("Scanner");
 	const auto scanner = scene->GetOrSetPrivateComponent<TreePointCloudScanner>(scannerEntity).lock();
 	scanner->m_captureSettings = captureSettings;
 	scanner->m_pointSettings = pointSettings;
 	scanner->GeneratePointCloud(pointCloudOutputPath);
-
-
 	if (exportJunction) tree->ExportJunction(meshGeneratorSettings, treeJunctionOutputPath);
-
 	scene->DeleteEntity(treeEntity);
 	scene->DeleteEntity(scannerEntity);
 }
@@ -539,9 +536,10 @@ void RBVSpaceColonizationTreeData(
 	tree->m_treeModel.m_treeGrowthSettings.m_enableRoot = false;
 	tree->m_treeModel.m_treeGrowthSettings.m_useSpaceColonization = true;
 	tree->m_treeModel.m_treeGrowthSettings.m_spaceColonizationAutoResize = false;
+	Application::Loop();
 	for (int i = 0; i < iterations; i++)
 	{
-		tree->TryGrow(deltaTime);
+		ecoSysLabLayer->Simulate(deltaTime);
 	}
 
 	if (exportTreeMesh) {
