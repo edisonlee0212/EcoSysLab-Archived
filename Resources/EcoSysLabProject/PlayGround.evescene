@@ -62,6 +62,7 @@ m_entityMetadataList:
           m_typeIndex: true
           m_instanceIndex: false
           m_branchIndex: true
+          m_junctionIndex: true
           m_internodeIndex: false
           m_boundingBoxLimit: 1
         m_captureSettings:
@@ -76,17 +77,6 @@ m_entityMetadataList:
           m_fov: 60
           m_resolution: 128
           m_cameraDepthMax: 10
-  - m_name: Elm
-    m_handle: 12948785876818235826
-    m_enabled: true
-    m_static: false
-    Root.Handle: 12948785876818235826
-    m_privateComponentElements:
-      - m_typeName: Tree
-        m_enabled: true
-        m_treeDescriptor:
-          m_assetHandle: 6336190052377248199
-          m_assetTypeName: TreeDescriptor
   - m_name: Ground Mesh
     m_handle: 9247726572506778062
     m_enabled: true
@@ -150,7 +140,7 @@ LocalAssets:
 m_dataComponentStorages:
   - m_entitySize: 130
     m_chunkCapacity: 126
-    m_entityAliveCount: 7
+    m_entityAliveCount: 6
     m_dataComponentTypes:
       - m_name: Transform
         m_size: 64
@@ -182,18 +172,13 @@ m_dataComponentStorages:
           - Data: !!binary "AACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPw=="
           - Data: !!binary "AACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPw=="
           - Data: !!binary "AAA="
-      - m_handle: 12948785876818235826
+      - m_handle: 9247726572506778062
         DataComponents:
-          - Data: !!binary "AACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAM3MTL0AAAAAAACAPw=="
-          - Data: !!binary "AACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAM3MTL0AAAAAAACAPw=="
+          - Data: !!binary "AAB6RAAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAekQAAAAAAAAAAAAAAAAAAAAAAACAPw=="
+          - Data: !!binary "AAB6RAAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAekQAAAAAAAAAAAAAAAAAAAAAAACAPw=="
           - Data: !!binary "AAA="
       - m_handle: 13990783136456237486
         DataComponents:
           - Data: !!binary "AACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPw=="
           - Data: !!binary "AACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPw=="
-          - Data: !!binary "AAA="
-      - m_handle: 9247726572506778062
-        DataComponents:
-          - Data: !!binary "AAB6RAAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAekQAAAAAAAAAAAAAAAAAAAAAAACAPw=="
-          - Data: !!binary "AAB6RAAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAekQAAAAAAAAAAAAAAAAAAAAAAACAPw=="
           - Data: !!binary "AAA="
