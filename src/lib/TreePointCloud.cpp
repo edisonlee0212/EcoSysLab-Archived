@@ -1401,10 +1401,11 @@ void TreePointCloud::BuildSkeletons() {
 			auto& node = skeleton.RefNode(*i);
 			auto& nodeData = node.m_data;
 			auto& nodeInfo = node.m_info;
-			if(nodeInfo.m_rootDistance > m_reconstructionSettings.m_overrideThicknessRootDistance)
+			if(nodeInfo.m_rootDistance >= m_reconstructionSettings.m_overrideThicknessRootDistance)
 			{
 				nodeInfo.m_thickness = nodeData.m_draftThickness;
-			}else
+			}
+			if(m_reconstructionSettings.m_limitParentThickness)
 			{
 				auto& childHandles = node.RefChildHandles();
 				float maxChildThickness = 0.0f;
@@ -1412,7 +1413,7 @@ void TreePointCloud::BuildSkeletons() {
 				{
 					maxChildThickness = glm::max(maxChildThickness, skeleton.PeekNode(childHandle).m_info.m_thickness);
 				}
-				nodeInfo.m_thickness = nodeInfo.m_thickness;//glm::max(nodeInfo.m_thickness, maxChildThickness);
+				nodeInfo.m_thickness = glm::max(nodeInfo.m_thickness, maxChildThickness);
 			}
 		}
 
@@ -1897,6 +1898,7 @@ void ReconstructionSettings::OnInspect() {
 	ImGui::DragFloat("End node thickness", &m_endNodeThickness, 0.001f, 0.001f, 1.0f);
 	ImGui::DragFloat("Thickness sum factor", &m_thicknessSumFactor, 0.01f, 0.0f, 2.0f);
 	ImGui::DragFloat("Thickness accumulation factor", &m_thicknessAccumulationFactor, 0.00001f, 0.0f, 1.0f, "%.5f");
+	ImGui::Checkbox("Limit parent thickness", &m_limitParentThickness);
 	ImGui::DragFloat("Minimum root thickness", &m_minimumRootThickness, 0.001f, 0.0f, 1.0f, "%.3f");
 	ImGui::DragInt("Minimum node count", &m_minimumNodeCount, 1, 0, 100);
 
