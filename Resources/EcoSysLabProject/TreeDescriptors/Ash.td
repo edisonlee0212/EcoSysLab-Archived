@@ -1,11 +1,11 @@
 m_shootGrowthParameters:
-  m_internodeGrowthRate: 8
+  m_internodeGrowthRate: 10
   m_leafGrowthRate: 18
   m_fruitGrowthRate: 18
   m_lateralBudCount: 2
   m_fruitBudCount: 1
   m_leafBudCount: 1
-  m_branchingAngleMeanVariance: [45, 0]
+  m_branchingAngleMeanVariance: [40, 0]
   m_rollAngleMeanVariance: [90, 2]
   m_apicalAngleMeanVariance: [0, 3]
   m_gravitropism: 0.100000001
@@ -20,7 +20,7 @@ m_shootGrowthParameters:
   m_fruitBudFlushingProbabilityTemperatureRange: [0, 1, 50, 70]
   m_apicalControl: 0.200000003
   m_apicalControlAgeFactor: 0.100000001
-  m_apicalDominance: 0
+  m_apicalDominance: 1
   m_apicalDominanceAgeFactor: 0
   m_apicalDominanceDistanceFactor: 0.899999976
   m_leafVigorRequirement: 0.100000001
@@ -31,7 +31,7 @@ m_shootGrowthParameters:
   m_lowBranchPruningThicknessFactor: 1
   m_lightPruningFactor: 0
   m_thicknessPruningFactor: 0
-  m_saggingFactorThicknessReductionMax: [0.00999999978, 1.75, 0.5]
+  m_saggingFactorThicknessReductionMax: [0.00999999978, 2, 0.5]
   m_maxSpaceOccupancy: 1
   m_maxLeafSize: [0.0500000007, 0.5, 0.0500000007]
   m_leafPositionVariance: 0.5

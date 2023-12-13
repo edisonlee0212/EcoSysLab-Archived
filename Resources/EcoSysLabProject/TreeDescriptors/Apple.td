@@ -20,14 +20,14 @@ m_shootGrowthParameters:
   m_fruitBudFlushingProbabilityTemperatureRange: [0, 0.100000001, 50, 70]
   m_apicalControl: 0.00999999978
   m_apicalControlAgeFactor: 0.0599999987
-  m_apicalDominance: 0.800000012
+  m_apicalDominance: 1
   m_apicalDominanceAgeFactor: 0
   m_apicalDominanceDistanceFactor: 0.989000022
   m_leafVigorRequirement: 0.189999998
   m_fruitVigorRequirement: 0.100000001
   m_internodeVigorRequirement: 1
   m_vigorRequirementAggregateLoss: 1
-  m_lowBranchPruning: 0.0500000007
+  m_lowBranchPruning: 0.150000006
   m_lowBranchPruningThicknessFactor: 0
   m_lightPruningFactor: 1
   m_thicknessPruningFactor: 0.00499999989

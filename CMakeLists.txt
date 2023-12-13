@@ -71,6 +71,7 @@ set(LOCAL_ECOSYSLAB_INCLUDES
 	${TREEIO_INCLUDES}
 	${CMAKE_CURRENT_BINARY_DIR}
 	${CMAKE_CURRENT_SOURCE_DIR}/include/lib
+	${CMAKE_CURRENT_SOURCE_DIR}/include/lib/DataPipeline
 	${CMAKE_CURRENT_SOURCE_DIR}/include/lib/BranchShape
 	${CMAKE_CURRENT_SOURCE_DIR}/include/lib/Physics
 	${CMAKE_CURRENT_SOURCE_DIR}/include/lib/TreeIO
@@ -267,6 +268,59 @@ if (BUILD_WITH_PHYSICS)
 		evoengine-physics
 		)
 	target_compile_definitions(ecosyslab-app
+		PRIVATE
+		BUILD_WITH_PHYSICS
+		)
+endif ()
+
+add_executable(ecosyslab-dataset
+		"src/app/DatasetGeneration.cpp")
+
+target_include_directories(ecosyslab-dataset
+	PRIVATE
+	${LOCAL_ECOSYSLAB_INCLUDES}
+	)
+
+target_precompile_headers(ecosyslab-dataset
+	PRIVATE
+	${LOCAL_ECOSYSLAB_PCH}
+	)
+
+target_link_libraries(ecosyslab-dataset
+	PRIVATE
+	ecosyslab
+	)
+
+target_compile_definitions(ecosyslab-dataset
+	PRIVATE
+	NOMINMAX
+	)
+
+if (BUILD_WITH_RAYTRACER)
+	target_include_directories(ecosyslab-dataset
+		PRIVATE
+		${EVOENGINE_RAYTRACER_INCLUDES}
+	)
+	target_link_libraries(ecosyslab-dataset
+		PRIVATE
+		evoengine-raytracer
+		)
+	target_compile_definitions(ecosyslab-dataset
+		PRIVATE
+		BUILD_WITH_RAYTRACER
+		)
+endif ()
+
+if (BUILD_WITH_PHYSICS)
+	target_include_directories(ecosyslab-dataset
+		PRIVATE
+		${EVOENGINE_PHYSICS_INCLUDES}
+	)
+	target_link_libraries(ecosyslab-dataset
+		PRIVATE
+		evoengine-physics
+		)
+	target_compile_definitions(ecosyslab-dataset
 		PRIVATE
 		BUILD_WITH_PHYSICS
 		)

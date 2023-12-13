@@ -23,7 +23,7 @@ namespace EcoSysLab {
 
     struct PointCloudCaptureSettings {
         int m_pitchAngleStart = -20;
-        int m_pitchAngleStep = 20;
+        int m_pitchAngleStep = 10;
         int m_pitchAngleEnd = 60;
         int m_turnAngleStart = 0;
         int m_turnAngleStep = 10;
@@ -42,6 +42,7 @@ namespace EcoSysLab {
 
         GlobalTransform GetTransform(const Bound& bound, float turnAngle, float pitchAngle) const;
     };
+
 	class TreePointCloudScanner : public IPrivateComponent{
 	public:
         PointCloudPointSettings m_pointSettings;
