@@ -9,8 +9,9 @@ void TreePipeMeshGenerator::Generate(const PipeModelPipeGroup& pipes, std::vecto
 	std::vector<unsigned>& indices, const TreePipeMeshGeneratorSettings& settings)
 {
 	//TODO: Implementation goes here.
-	//See here about using internal marching cube algorithm: https://github.com/edisonlee0212/EcoSysLab/blob/1d52593f157eebe2f7792bb5eea8e8d953b475ac/include/lib/Utilities/TreeMeshGenerator.hpp#L503
+	//See here about using internal marching cube algorithm: /include/lib/Utilities/TreeMeshGenerator.hpp#L503
+	//See here about data structure for pipes (strands): /include/lib/Structures/PipeGroup.hpp#L125
 	//Prepare mesh by adding vertices and indices. For each vertex, you only need to set position, other fields optional.
-
+	//Indices start from 0.
 
 }
