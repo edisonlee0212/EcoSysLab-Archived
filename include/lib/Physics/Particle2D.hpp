@@ -18,6 +18,8 @@ namespace EcoSysLab {
 
 		glm::vec2 m_checkpointPosition = glm::vec2(0.0f);
 	public:
+		bool m_enable = true;
+
 		T m_data;
 		void Update(float dt);
 		void Stop();

@@ -281,6 +281,37 @@ void TreePipeBase::CalculateProfiles()
 			node->m_backParticleMap.insert({ particle.m_data.m_pipeHandle, particle.GetHandle() });
 		}
 	}
+	for (const auto& entity : sortedEntityList)
+	{
+		const auto node = scene->GetOrSetPrivateComponent<TreePipeNode>(entity).lock();
+		const auto childrenEntities = scene->GetChildren(entity);
+		std::vector<std::shared_ptr<TreePipeNode>> childrenNodes;
+
+		std::shared_ptr<TreePipeNode> mainChildNode{};
+		for (auto childEntity : childrenEntities)
+		{
+			if (scene->HasPrivateComponent<TreePipeNode>(childEntity))
+			{
+				const auto childNode = scene->GetOrSetPrivateComponent<TreePipeNode>(childEntity).lock();
+				if (childNode->m_apical) mainChildNode = childNode;
+				childrenNodes.push_back(childNode);
+			}
+		}
+		for (const auto& childNode : childrenNodes)
+		{
+			if (childNode == mainChildNode) childNode->m_split = false;
+			const auto childSize = static_cast<float>(childNode->m_frontParticleMap.size());
+			const auto totalSize = static_cast<float>(node->m_frontParticleMap.size());
+			if (childSize > totalSize * m_pipeModelParameters.m_splitRatioLimit)
+			{
+				childNode->m_split = true;
+			}
+			else
+			{
+				childNode->m_split = false;
+			}
+		}
+	}
 	m_numOfProfiles = 0;
 	m_numOfParticles = 0;
 	m_numOfProfiles = sortedEntityList.size();
@@ -288,8 +319,7 @@ void TreePipeBase::CalculateProfiles()
 		for (auto it = sortedEntityList.rbegin(); it != sortedEntityList.rend(); ++it)
 		{
 			const auto node = scene->GetOrSetPrivateComponent<TreePipeNode>(*it).lock();
-			node->Merge(m_pipeModelParameters, true);
-			node->Pack(m_pipeModelParameters, true);
+			node->CalculateProfile(m_pipeModelParameters, true);
 			m_numOfParticles += node->m_frontParticlePhysics2D.PeekParticles().size();
 		}
 		if (!sortedEntityList.empty())
@@ -303,8 +333,7 @@ void TreePipeBase::CalculateProfiles()
 		for (auto it = sortedEntityList.rbegin(); it != sortedEntityList.rend(); ++it)
 		{
 			const auto node = scene->GetOrSetPrivateComponent<TreePipeNode>(*it).lock();
-			node->Merge(m_pipeModelParameters, false);
-			node->Pack(m_pipeModelParameters, false);
+			node->CalculateProfile(m_pipeModelParameters, false);
 			node->Wait();
 			m_numOfParticles += node->m_frontParticlePhysics2D.PeekParticles().size();
 		}

@@ -15,6 +15,7 @@ namespace EcoSysLab
 	{
 		void PackTask(const PipeModelParameters& pipeModelParameters, bool parallel);
 		void MergeTask(const PipeModelParameters& pipeModelParameters);
+		void CopyFrontToBackTask();
 		void CalculateShiftTask(const PipeModelParameters& pipeModelParameters);
 	public:
 		GlobalTransform m_desiredGlobalTransform{};
@@ -36,7 +37,7 @@ namespace EcoSysLab
 		glm::vec2 m_shift = glm::vec2(0.0f);
 		bool m_needPacking = false;
 		bool m_apical = false;
-
+		bool m_split = false;
 		std::vector<std::shared_future<void>> m_tasks{};
 
 		void InsertInterpolation(float a);
@@ -44,8 +45,7 @@ namespace EcoSysLab
 		void OnDestroy() override;
 		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 
-		void Merge(const PipeModelParameters &pipeModelParameters, bool scheduling);
-		void Pack(const PipeModelParameters& pipeModelParameters, bool scheduling);
+		void CalculateProfile(const PipeModelParameters &pipeModelParameters, bool scheduling);
 		void Wait();
 	};
 }

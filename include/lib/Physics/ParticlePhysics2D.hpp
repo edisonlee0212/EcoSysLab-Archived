@@ -25,7 +25,7 @@ namespace EcoSysLab {
 		[[nodiscard]] float GetDistanceToCenter(const glm::vec2& direction) const;
 		[[nodiscard]] float GetDeltaTime() const;
 		[[nodiscard]] float GetMaxMovementSinceCheckpoint() const;
-
+		void EnableAllParticles();
 		void Reset(float deltaTime = 0.002f);
 		void CalculateMinMax();
 		float m_particleSoftness = 0.5f;
@@ -50,6 +50,9 @@ namespace EcoSysLab {
 	{
 		auto& p1 = m_particles2D.at(p1Handle);
 		const auto& p2 = m_particles2D.at(p2Handle);
+		if (!p1.m_enable) return;
+		if (!p2.m_enable) return;
+
 		const auto difference = p1.m_position - p2.m_position;
 		const auto distance = glm::length(difference);
 		if (distance < 2.0f)
@@ -70,7 +73,7 @@ namespace EcoSysLab {
 			Jobs::ParallelFor(m_particles2D.size(), [&](unsigned i)
 				{
 					auto& particle = m_particles2D[i];
-					modifyParticleFunc(particle);
+					if(particle.m_enable) modifyParticleFunc(particle);
 					particle.m_deltaPosition = glm::vec2(0);
 				}
 			);
@@ -78,7 +81,7 @@ namespace EcoSysLab {
 		{
 			for(auto& particle : m_particles2D)
 			{
-				modifyParticleFunc(particle);
+				if (particle.m_enable) modifyParticleFunc(particle);
 				particle.m_deltaPosition = glm::vec2(0);
 			}
 		}
@@ -89,7 +92,7 @@ namespace EcoSysLab {
 			Jobs::ParallelFor(m_particles2D.size(), [&](unsigned i)
 				{
 					auto& particle = m_particles2D[i];
-					particle.m_position += particle.m_deltaPosition;
+					if (particle.m_enable) particle.m_position += particle.m_deltaPosition;
 					particle.Update(m_deltaTime);
 				}
 			);
@@ -97,7 +100,7 @@ namespace EcoSysLab {
 		else {
 			for (auto& particle : m_particles2D)
 			{
-				particle.m_position += particle.m_deltaPosition;
+				if (particle.m_enable) particle.m_position += particle.m_deltaPosition;
 				particle.Update(m_deltaTime);
 			}
 		}
@@ -117,46 +120,56 @@ namespace EcoSysLab {
 			std::vector<glm::vec2> maxs{};
 			std::vector<glm::vec2> massCenters{};
 			std::vector<float> maxDistances{};
+			std::vector<int> enabledParticleSizes{};
 			mins.resize(threadCount);
 			maxs.resize(threadCount);
 			massCenters.resize(threadCount);
 			maxDistances.resize(threadCount);
+			enabledParticleSizes.resize(threadCount);
 			for (int i = 0; i < threadCount; i++)
 			{
 				mins[i] = glm::vec2(FLT_MAX);
 				maxs[i] = glm::vec2(FLT_MIN);
 				massCenters[i] = glm::vec2(0.0f);
 				maxDistances[i] = 0.0f;
+				enabledParticleSizes[i] = 0;
 			}
 			Jobs::ParallelFor(m_particles2D.size(), [&](const unsigned i, const unsigned threadIndex)
 				{
 					const auto& particle = m_particles2D[i];
 					mins[threadIndex] = glm::min(mins[threadIndex], particle.m_position);
 					maxs[threadIndex] = glm::max(maxs[threadIndex], particle.m_position);
-
-					massCenters[threadIndex] += particle.m_position;
-					maxDistances[threadIndex] = glm::max(maxDistances[threadIndex], glm::length(particle.m_position));
+					if (particle.m_enable) {
+						enabledParticleSizes[threadIndex]++;
+						massCenters[threadIndex] += particle.m_position;
+						maxDistances[threadIndex] = glm::max(maxDistances[threadIndex], glm::length(particle.m_position));
+					}
 				}
 			);
+			int enabledParticleSize = 0;
 			for (int i = 0; i < threadCount; i++)
 			{
 				m_min = glm::min(mins[i], m_min);
 				m_max = glm::max(maxs[i], m_max);
-
+				enabledParticleSize += enabledParticleSizes[i];
 				m_massCenter += massCenters[i];
 				m_maxDistanceToCenter = glm::max(maxDistances[i], m_maxDistanceToCenter);
 			}
-			m_massCenter /= m_particles2D.size();
+			m_massCenter /= enabledParticleSize;
 		}else
 		{
+			int enabledParticleSize = 0;
 			for(const auto& particle : m_particles2D)
 			{
 				m_min = glm::min(particle.m_position, m_min);
 				m_max = glm::max(particle.m_position, m_max);
-				m_massCenter += particle.m_position;
-				m_maxDistanceToCenter = glm::max(m_maxDistanceToCenter, glm::length(particle.m_position));
+				if (particle.m_enable) {
+					enabledParticleSize++;
+					m_massCenter += particle.m_position;
+					m_maxDistanceToCenter = glm::max(m_maxDistanceToCenter, glm::length(particle.m_position));
+				}
 			}
-			m_massCenter /= m_particles2D.size();
+			m_massCenter /= enabledParticleSize;
 		}
 	}
 
@@ -176,12 +189,13 @@ namespace EcoSysLab {
 			for (ParticleHandle i = 0; i < m_particles2D.size(); i++)
 			{
 				const auto& particle = m_particles2D[i];
-				m_particleGrid2D.RegisterParticle(particle.m_position, i);
+				if (particle.m_enable) m_particleGrid2D.RegisterParticle(particle.m_position, i);
 			}
 			if (m_parallel) {
 				Jobs::ParallelFor(m_particles2D.size(), [&](unsigned i) {
 					const ParticleHandle particleHandle = i;
 					const auto& particle = m_particles2D[particleHandle];
+					if (!particle.m_enable) return;
 					const auto& coordinate = m_particleGrid2D.GetCoordinate(particle.m_position);
 					for (int dx = -1; dx <= 1; dx++)
 					{
@@ -209,6 +223,7 @@ namespace EcoSysLab {
 				for (ParticleHandle particleHandle = 0; particleHandle < m_particles2D.size(); particleHandle++)
 				{
 					const auto& particle = m_particles2D[particleHandle];
+					if (!particle.m_enable) continue;
 					const auto& coordinate = m_particleGrid2D.GetCoordinate(particle.m_position);
 					for (int dx = -1; dx <= 1; dx++)
 					{
@@ -275,6 +290,7 @@ namespace EcoSysLab {
 			Jobs::ParallelFor(m_particles2D.size(), [&](const unsigned i, const unsigned threadIndex)
 				{
 					const auto& particle = m_particles2D[i];
+					if (!particle.m_enable) return;
 					const auto distance = glm::length(glm::closestPointOnLine(particle.m_position, glm::vec2(0.0f), direction * 100.0f));
 					maxDistances[threadIndex] = glm::max(maxDistances[threadIndex], distance);
 				});
@@ -310,6 +326,15 @@ namespace EcoSysLab {
 			if (distance > maxDistance) maxDistance = distance;
 		}
 		return maxDistance;
+	}
+
+	template <typename ParticleData>
+	void ParticlePhysics2D<ParticleData>::EnableAllParticles()
+	{
+		for (auto& particle : m_particles2D)
+		{
+			particle.m_enable = true;
+		}
 	}
 
 	template <typename T>
