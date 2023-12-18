@@ -188,16 +188,16 @@ namespace EcoSysLab {
 			}
 
 			if (hasMultipleChildren && distanceToJunctionStart <= settings.m_junctionStartDistance) {
-				junctionTypeList[internodeHandle] = 1;
+				junctionTypeList[internodeIndex] = 1;
 			}else if (!onlyChild && distanceToJunctionEnd <= settings.m_junctionEndDistance)
 			{
-				junctionTypeList[internodeHandle] = 2;
+				junctionTypeList[internodeIndex] = 2;
 			}else
 			{
-				junctionTypeList[internodeHandle] = 0;
+				junctionTypeList[internodeIndex] = 0;
 			}
 
-			auto& rings = ringsList[internodeHandle];
+			auto& rings = ringsList[internodeIndex];
 			rings.clear();
 
 			glm::vec3 directionStart = internodeInfo.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
@@ -308,7 +308,7 @@ namespace EcoSysLab {
 				const auto& parentInternode = treeSkeleton.PeekNode(parentInternodeHandle);
 				parentUp = parentInternode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
 			}
-			auto& rings = ringsList[internodeHandle];
+			auto& rings = ringsList[internodeIndex];
 			if (rings.empty()) {
 				continue;
 			}
@@ -328,7 +328,7 @@ namespace EcoSysLab {
 			archetype.m_vertexInfo1 = internodeHandle + 1;
 			archetype.m_vertexInfo2 = flowHandle + 1;
 
-			const auto junctionType = junctionTypeList[internodeHandle];
+			const auto junctionType = junctionTypeList[internodeIndex];
 			if(junctionType == 0)
 			{
 				archetype.m_vertexInfo3 = flowHandle * 2 + 1;
