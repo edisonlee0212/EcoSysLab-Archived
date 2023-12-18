@@ -33,6 +33,8 @@ pccs.m_height = 3.0
 #11		enable junction export
 #12		junction path
 
+dsg = pesl.DatasetGenerator()
+
 index = 0
 numberPerSpecie = 50
 for x in range(0, numberPerSpecie):
@@ -41,7 +43,7 @@ for x in range(0, numberPerSpecie):
 	target_tree_mesh_path = output_root + name + ".obj"
 	target_tree_pointcloud_path = output_root + name + ".ply"
 	target_tree_junction_path = output_root + name + ".yml"
-	pesl.generate_tree_point_cloud(pcps, pccs, target_descriptor_path, 0.08220, 999, 20000, tmgs, target_tree_pointcloud_path, False, target_tree_mesh_path, False, target_tree_junction_path)
+	dsg.GeneratePointCloudForTree(pcps, pccs, target_descriptor_path, 0.08220, 999, 20000, tmgs, target_tree_pointcloud_path, False, target_tree_mesh_path, False, target_tree_junction_path)
 	index += 1
 
 for x in range(0, numberPerSpecie):
@@ -50,5 +52,5 @@ for x in range(0, numberPerSpecie):
 	target_tree_mesh_path = output_root + name + ".obj"
 	target_tree_pointcloud_path = output_root + name + ".ply"
 	target_tree_junction_path = output_root + name + ".yml"
-	pesl.generate_tree_point_cloud(pcps, pccs, target_descriptor_path, 0.08220, 999, 20000, tmgs, target_tree_pointcloud_path, False, target_tree_mesh_path, False, target_tree_junction_path)
+	dsg.GeneratePointCloudForTree(pcps, pccs, target_descriptor_path, 0.08220, 999, 20000, tmgs, target_tree_pointcloud_path, False, target_tree_mesh_path, False, target_tree_junction_path)
 	index += 1

@@ -82,7 +82,6 @@ void DatasetGenerator::GeneratePointCloudForTree(const PointCloudPointSettings& 
 		}
 	}
 	tree->GenerateGeometry(meshGeneratorSettings);
-	soil->GenerateMesh();
 	Application::Loop();
 	if (exportTreeMesh) {
 		tree->ExportOBJ(treeMeshOutputPath, meshGeneratorSettings);

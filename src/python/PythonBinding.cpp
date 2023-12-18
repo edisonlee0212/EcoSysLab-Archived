@@ -597,6 +597,7 @@ PYBIND11_MODULE(pyecosyslab, m) {
 	
 
 	py::class_<DatasetGenerator>(m, "DatasetGenerator")
+		.def(py::init<>())
 		.def_static("GeneratePointCloudForTree", &DatasetGenerator::GeneratePointCloudForTree);
 
 }
