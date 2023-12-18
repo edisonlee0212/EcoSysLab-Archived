@@ -537,25 +537,24 @@ void TreePipeBase::InitializeNodes()
 		scene->DeleteEntity(i);
 	}
 	const auto ownerGlobalTransform = scene->GetDataComponent<GlobalTransform>(owner);
-	const auto& srcSkeletonSortedFlowList = m_skeleton.RefSortedFlowList();
-	std::unordered_map<FlowHandle, Entity> flowMap{};
-	for (const auto& flowHandle : srcSkeletonSortedFlowList)
+	const auto& srcSkeletonSortedNodeList = m_skeleton.RefSortedNodeList();
+	std::unordered_map<NodeHandle, Entity> nodeMap{};
+	for (const auto& nodeHandle : srcSkeletonSortedNodeList)
 	{
-		const auto& flow = m_skeleton.PeekFlow(flowHandle);
+		const auto& node = m_skeleton.PeekNode(nodeHandle);
 		const auto newEntity = scene->CreateEntity("Profile");
-		const auto parentHandle = flow.GetParentHandle();
+		const auto parentHandle = node.GetParentHandle();
 		const auto tpn = scene->GetOrSetPrivateComponent<TreePipeNode>(newEntity).lock();
-		auto& lastNode = m_skeleton.PeekNode(flow.RefNodeHandles().back());
-		tpn->m_apical = flow.IsApical();
+		tpn->m_apical = node.IsApical();
 		const auto mmr = scene->GetOrSetPrivateComponent<MeshRenderer>(newEntity).lock();
 		mmr->m_mesh = m_nodeMesh;
 		mmr->m_material = m_nodeMaterial;
 
 		GlobalTransform globalTransform;
-		const glm::quat rotation = lastNode.m_info.m_regulatedGlobalRotation;
+		const glm::quat rotation = node.m_info.m_regulatedGlobalRotation;
 		globalTransform.m_value =
 			ownerGlobalTransform.m_value
-			* (glm::translate(flow.m_info.m_globalEndPosition) * glm::mat4_cast(rotation) * glm::scale(glm::vec3(0.02f)));
+			* (glm::translate(node.m_info.GetGlobalEndPosition()) * glm::mat4_cast(rotation) * glm::scale(glm::vec3(0.02f)));
 		scene->SetDataComponent(newEntity, globalTransform);
 		tpn->m_desiredGlobalTransform = globalTransform;
 		if (parentHandle == -1)
@@ -564,9 +563,9 @@ void TreePipeBase::InitializeNodes()
 		}
 		else
 		{
-			scene->SetParent(newEntity, flowMap.at(parentHandle));
+			scene->SetParent(newEntity, nodeMap.at(parentHandle));
 		}
-		flowMap.insert({ flowHandle, newEntity });
+		nodeMap.insert({ nodeHandle, newEntity });
 
 	}
 	m_pipeGroup = {};

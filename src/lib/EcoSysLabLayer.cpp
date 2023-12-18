@@ -317,7 +317,7 @@ void EcoSysLabLayer::Visualization() {
 void EcoSysLabLayer::ResetAllTrees(const std::vector<Entity>* treeEntities) {
 	const auto scene = Application::GetActiveScene();
 	m_time = 0;
-	m_iteration = 0;
+	m_simulationSettings.m_iteration = 0;
 	for (const auto& i : *treeEntities) {
 		const auto tree = scene->GetOrSetPrivateComponent<Tree>(i).lock();
 		tree->Reset();
@@ -368,28 +368,28 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 		editorLayer->DragAndDropButton<Climate>(m_climateHolder, "Climate");
 		if (treeEntities && !treeEntities->empty()) {
 			if (ImGui::TreeNode("Tree Growth Settings")){
-				ImGui::DragFloat("Delta time", &m_deltaTime, 0.00001f, 0, 1, "%.5f");
-				ImGui::Checkbox("Auto clear fruit and leaves", &m_autoClearFruitAndLeaves);
-				ImGui::DragFloat("Crown shyness", &m_crownShynessDistance, 0.01f, 0.0f, 1.0f);
-				ImGui::Checkbox("Simulate soil", &m_soilSimulation);
+				ImGui::DragFloat("Delta time", &m_simulationSettings.m_deltaTime, 0.00001f, 0, 1, "%.5f");
+				ImGui::Checkbox("Auto clear fruit and leaves", &m_simulationSettings.m_autoClearFruitAndLeaves);
+				ImGui::DragFloat("Crown shyness", &m_simulationSettings.m_crownShynessDistance, 0.01f, 0.0f, 1.0f);
+				ImGui::Checkbox("Simulate soil", &m_simulationSettings.m_soilSimulation);
 				if (ImGui::TreeNode("Shadow Estimation Settings")) {
 					bool settingsChanged = false;
 					settingsChanged =
-						ImGui::DragFloat("Distance power factor", &m_shadowEstimationSettings.m_distancePowerFactor, 0.01f,
+						ImGui::DragFloat("Distance power factor", &m_simulationSettings.m_shadowEstimationSettings.m_distancePowerFactor, 0.01f,
 							0.0f, 10.0f) || settingsChanged;
 
 					settingsChanged =
-						ImGui::DragFloat("Shadow intensity", &m_shadowEstimationSettings.m_shadowIntensity, 0.001f,
+						ImGui::DragFloat("Shadow intensity", &m_simulationSettings.m_shadowEstimationSettings.m_shadowIntensity, 0.001f,
 							0.0f, 1.0f) || settingsChanged;
 
 					settingsChanged =
-						ImGui::DragFloat("Shadow propagate loss", &m_shadowEstimationSettings.m_shadowPropagateLoss, 0.001f,
+						ImGui::DragFloat("Shadow propagate loss", &m_simulationSettings.m_shadowEstimationSettings.m_shadowPropagateLoss, 0.001f,
 							0.0f, 1.0f) || settingsChanged;
 
 					if (settingsChanged) {
 						if (const auto climate = m_climateHolder.Get<Climate>()) {
 							auto& estimator = climate->m_climateModel.m_environmentGrid;
-							estimator.m_settings = m_shadowEstimationSettings;
+							estimator.m_settings = m_simulationSettings.m_shadowEstimationSettings;
 							auto minBound = estimator.m_voxel.GetMinBound();
 							auto maxBound = estimator.m_voxel.GetMaxBound();
 							bool boundChanged = false;
@@ -409,7 +409,7 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 									boundChanged = true;
 								}
 								if (!tree->m_climate.Get<Climate>()) tree->m_climate = climate;
-								tree->m_treeModel.m_crownShynessDistance = m_crownShynessDistance;
+								tree->m_treeModel.m_crownShynessDistance = m_simulationSettings.m_crownShynessDistance;
 							}
 							if (boundChanged) estimator.m_voxel.Initialize(estimator.m_voxelSize, minBound, maxBound);
 							estimator.m_voxel.Reset();
@@ -445,12 +445,12 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 				targetTime = 0.0f;
 			}
 			ImGui::Text(("Simulated time: " + std::to_string(m_time) + " years").c_str());
-			ImGui::Text(("Simulated iteration: " + std::to_string(m_iteration)).c_str());
-			if (ImGui::Button("Day")) m_deltaTime = 0.00274f;
+			ImGui::Text(("Simulated iteration: " + std::to_string(m_simulationSettings.m_iteration)).c_str());
+			if (ImGui::Button("Day")) m_simulationSettings.m_deltaTime = 0.00274f;
 			ImGui::SameLine();
-			if (ImGui::Button("Week")) m_deltaTime = 0.01918f;
+			if (ImGui::Button("Week")) m_simulationSettings.m_deltaTime = 0.01918f;
 			ImGui::SameLine();
-			if (ImGui::Button("Month")) m_deltaTime = 0.0822f;
+			if (ImGui::Button("Month")) m_simulationSettings.m_deltaTime = 0.0822f;
 			ImGui::SameLine();
 			
 			
@@ -463,10 +463,10 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 			if (!autoTimeGrow && ImGui::Button("Grow 1 iteration")) {
 				simulate = true;
 			}
-			
+			ImGui::DragInt("Max node limit", &m_simulationSettings.m_maxNodeCount, 1000, 0, INT_MAX);
 
 			
-			if (!m_autoClearFruitAndLeaves && ImGui::Button("Clear ground leaves and fruits")) {
+			if (!m_simulationSettings.m_autoClearFruitAndLeaves && ImGui::Button("Clear ground leaves and fruits")) {
 				ClearGroundFruitAndLeaf();
 			}
 			if (ImGui::TreeNodeEx("Mesh generation")) {
@@ -531,8 +531,8 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 	}
 	if(simulate)
 	{
-		Simulate(m_deltaTime);
-		if (m_autoClearFruitAndLeaves) {
+		Simulate(m_simulationSettings.m_deltaTime);
+		if (m_simulationSettings.m_autoClearFruitAndLeaves) {
 			ClearGroundFruitAndLeaf();
 		}
 		if (scene->IsEntityValid(m_selectedTree)) {
@@ -1279,20 +1279,20 @@ void EcoSysLabLayer::Simulate(float deltaTime) {
 
 		climate->m_climateModel.m_time = m_time;
 
-		if (m_soilSimulation) {
+		if (m_simulationSettings.m_soilSimulation) {
 			soil->m_soilModel.Irrigation();
 			soil->m_soilModel.Step();
 		}
 		auto& estimator = climate->m_climateModel.m_environmentGrid;
-		estimator.m_settings = m_shadowEstimationSettings;
+		estimator.m_settings = m_simulationSettings.m_shadowEstimationSettings;
 		auto minBound = estimator.m_voxel.GetMinBound();
 		auto maxBound = estimator.m_voxel.GetMaxBound();
 		bool boundChanged = false;
 		for (const auto& treeEntity : *treeEntities)
 		{
-			if (!scene->IsEntityEnabled(treeEntity)) return;
+			if (!scene->IsEntityEnabled(treeEntity)) continue;
 			auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
-			if (!tree->IsEnabled()) return;
+			if (!tree->IsEnabled()) continue;
 			const auto globalTransform = scene->GetDataComponent<GlobalTransform>(treeEntity).m_value;
 			const glm::vec3 currentMinBound = globalTransform * glm::vec4(tree->m_treeModel.RefShootSkeleton().m_min, 1.0f);
 			const glm::vec3 currentMaxBound = globalTransform * glm::vec4(tree->m_treeModel.RefShootSkeleton().m_max, 1.0f);
@@ -1305,15 +1305,15 @@ void EcoSysLabLayer::Simulate(float deltaTime) {
 			}
 			if (!tree->m_climate.Get<Climate>()) tree->m_climate = climate;
 			if (!tree->m_soil.Get<Soil>()) tree->m_soil = soil;
-			tree->m_treeModel.m_crownShynessDistance = m_crownShynessDistance;
+			tree->m_treeModel.m_crownShynessDistance = m_simulationSettings.m_crownShynessDistance;
 		}
 		if (boundChanged) estimator.m_voxel.Initialize(estimator.m_voxelSize, minBound, maxBound);
 		estimator.m_voxel.Reset();
 		for (const auto& treeEntity : *treeEntities)
 		{
-			if (!scene->IsEntityEnabled(treeEntity)) return;
+			if (!scene->IsEntityEnabled(treeEntity)) continue;
 			auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
-			if (!tree->IsEnabled()) return;
+			if (!tree->IsEnabled()) continue;
 			tree->RegisterVoxel();
 		}
 
@@ -1325,6 +1325,7 @@ void EcoSysLabLayer::Simulate(float deltaTime) {
 			if (!scene->IsEntityEnabled(treeEntity)) return;
 			const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
 			if (!tree->IsEnabled()) return;
+			if(m_simulationSettings.m_maxNodeCount > 0 && tree->m_treeModel.RefShootSkeleton().RefSortedNodeList().size() >= m_simulationSettings.m_maxNodeCount) return;
 			tree->TryGrow(deltaTime);
 			}, results);
 		for (auto& i : results) i.wait();
@@ -1336,7 +1337,7 @@ void EcoSysLabLayer::Simulate(float deltaTime) {
 			auto treeGlobalTransform = scene->GetDataComponent<GlobalTransform>(treeEntity);
 			if (!tree->IsEnabled()) return;
 			//Collect fruit and leaves here.
-			if (!m_autoClearFruitAndLeaves) {
+			if (!m_simulationSettings.m_autoClearFruitAndLeaves) {
 				for (const auto& fruit : tree->m_treeModel.RefShootSkeleton().m_data.m_droppedFruits) {
 					Fruit newFruit;
 					newFruit.m_globalTransform.m_value = treeGlobalTransform.m_value * fruit.m_transform;

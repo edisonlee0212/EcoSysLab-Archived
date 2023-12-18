@@ -13,7 +13,7 @@ namespace EcoSysLab
 		float m_shiftPushRatio = 1.0f;
 		float m_sidePushRatio = 1.0f;
 		float m_frontPushRatio = 0.0f;
-		float m_rotationPushRatio = 0.31416f;
+		float m_rotationPushRatio = 1.0f;
 	};
 
 	class TreePipeBase : public IPrivateComponent
@@ -45,7 +45,4 @@ namespace EcoSysLab
 		void BuildPipes();
 		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 	};
-
-
-	
 }

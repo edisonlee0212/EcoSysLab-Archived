@@ -18,6 +18,17 @@ namespace EcoSysLab {
 		float m_health = 1.0f;
 	};
 
+	struct SimulationSettings
+	{
+		int m_iteration = 0;
+		float m_deltaTime = 0.0822f;
+		bool m_soilSimulation = false;
+		bool m_autoClearFruitAndLeaves = true;
+		float m_crownShynessDistance = 0.5f;
+		int m_maxNodeCount = 0;
+		IlluminationEstimationSettings m_shadowEstimationSettings;
+	};
+
 	class EcoSysLabLayer : public ILayer {
 		friend class TreeVisualizer;
 		bool m_displayShootStem = true;
@@ -61,9 +72,7 @@ namespace EcoSysLab {
 
 		bool m_needFlowUpdateForSelection = false;
 		int m_lastSelectedTreeIndex = -1;
-		//bool m_autoGrow = false;
-		bool m_soilSimulation = false;
-		bool m_autoClearFruitAndLeaves = true;
+		
 		int m_soilVersion = -1;
 		bool m_vectorEnable = false;
 		bool m_scalarEnable = true;
@@ -123,8 +132,7 @@ namespace EcoSysLab {
 		void SoilVisualizationVector(VoxelSoilModel& soilModel); // called during LateUpdate()
 
 		float m_time;
-		int m_iteration = 0;
-		float m_deltaTime = 0.0822f;
+		
 
 		std::vector<Fruit> m_fruits;
 		std::vector<Leaf> m_leaves;
@@ -135,13 +143,15 @@ namespace EcoSysLab {
 		glm::vec2 m_visualizationCameraMousePosition;
 		bool m_visualizationCameraWindowFocused = false;
 	public:
-		float m_crownShynessDistance = 0.5f;
+		SimulationSettings m_simulationSettings {};
+
+		
 		bool m_needFullFlowUpdate = false;
 
 		int m_visualizationCameraResolutionX = 1;
 		int m_visualizationCameraResolutionY = 1;
 
-		IlluminationEstimationSettings m_shadowEstimationSettings;
+		
 
 
 		TreeMeshGeneratorSettings m_meshGeneratorSettings;
