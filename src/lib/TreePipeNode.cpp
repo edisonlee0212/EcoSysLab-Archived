@@ -99,14 +99,105 @@ void TreePipeNode::MergeTask(const PipeModelParameters& pipeModelParameters)
 		nodeStartParticle.m_data.m_mainChild = nodeEndParticle.m_data.m_mainChild = true;
 	}
 	const auto nodeGlobalTransform = scene->GetDataComponent<GlobalTransform>(owner);
-	bool needSimulation = false;
-	for (const auto& childNode : childrenNodes)
-	{
-		if (childNode == mainChildNode) continue;
-		auto& childPhysics2D = childNode->m_frontParticlePhysics2D;
-		if (!childNode->m_split)
+	if (pipeModelParameters.m_preMerge) {
+		bool needSimulation = false;
+		for (const auto& childNode : childrenNodes)
 		{
-			needSimulation = true;
+			if (childNode == mainChildNode) continue;
+			auto& childPhysics2D = childNode->m_frontParticlePhysics2D;
+			if (!childNode->m_split)
+			{
+				needSimulation = true;
+				auto childNodeGlobalTransform = scene->GetDataComponent<GlobalTransform>(childNode->GetOwner());
+				const auto childNodeFront = glm::inverse(nodeGlobalTransform.GetRotation()) * childNodeGlobalTransform.GetRotation() * glm::vec3(0, 0, -1);
+				auto direction = glm::normalize(glm::vec2(childNodeFront.x, childNodeFront.y));
+				if (glm::isnan(direction.x) || glm::isnan(direction.y))
+				{
+					direction = glm::vec2(1, 0);
+				}
+				childNode->m_centerDirectionRadius = childPhysics2D.GetDistanceToCenter(-direction);
+				const auto mainChildRadius = mainChildPhysics2D.GetDistanceToCenter(direction);
+				auto offset = glm::vec2(0.0f);
+				offset = (mainChildRadius - childNode->m_centerDirectionRadius + 2.0f) * direction;
+				childNode->m_offset = offset;
+				for (auto& childParticle : childPhysics2D.RefParticles())
+				{
+					childParticle.SetPosition(childParticle.GetPosition() + offset);
+
+					const auto nodeStartParticleHandle = m_frontParticleMap.at(childParticle.m_data.m_pipeHandle);
+					const auto nodeEndParticleHandle = m_backParticleMap.at(childParticle.m_data.m_pipeHandle);
+					auto& nodeStartParticle = m_frontParticlePhysics2D.RefParticle(nodeStartParticleHandle);
+					auto& nodeEndParticle = m_backParticlePhysics2D.RefParticle(nodeEndParticleHandle);
+					nodeStartParticle.SetColor(childParticle.GetColor());
+					nodeStartParticle.SetPosition(childParticle.GetPosition());
+					nodeEndParticle.SetColor(childParticle.GetColor());
+					nodeEndParticle.SetPosition(childParticle.GetPosition());
+					nodeStartParticle.m_enable = true;
+					nodeStartParticle.m_data.m_mainChild = nodeEndParticle.m_data.m_mainChild = false;
+				}
+			}
+			else
+			{
+				for (auto& childParticle : childPhysics2D.RefParticles())
+				{
+					const auto nodeStartParticleHandle = m_frontParticleMap.at(childParticle.m_data.m_pipeHandle);
+					const auto nodeEndParticleHandle = m_backParticleMap.at(childParticle.m_data.m_pipeHandle);
+					auto& nodeStartParticle = m_frontParticlePhysics2D.RefParticle(nodeStartParticleHandle);
+					auto& nodeEndParticle = m_backParticlePhysics2D.RefParticle(nodeEndParticleHandle);
+					nodeStartParticle.SetColor(childParticle.GetColor());
+					nodeStartParticle.SetPosition(glm::vec3(0.0f));
+					nodeEndParticle.SetColor(childParticle.GetColor());
+					nodeEndParticle.SetPosition(glm::vec3(0.0f));
+					nodeStartParticle.m_enable = false;
+					nodeStartParticle.m_data.m_mainChild = nodeEndParticle.m_data.m_mainChild = false;
+				}
+			}
+		}
+		if (needSimulation) PackTask(pipeModelParameters, false);
+		for (const auto& childNode : childrenNodes)
+		{
+			if (childNode == mainChildNode) continue;
+			if (childNode->m_split)
+			{
+				auto& childPhysics2D = childNode->m_frontParticlePhysics2D;
+				auto childNodeGlobalTransform = scene->GetDataComponent<GlobalTransform>(childNode->GetOwner());
+				const auto childNodeFront = glm::inverse(nodeGlobalTransform.GetRotation()) * childNodeGlobalTransform.GetRotation() * glm::vec3(0, 0, -1);
+				auto direction = glm::normalize(glm::vec2(childNodeFront.x, childNodeFront.y));
+				if (glm::isnan(direction.x) || glm::isnan(direction.y))
+				{
+					direction = glm::vec2(1, 0);
+				}
+				//TODO: Change this to avoid calculating disabled particles!
+				childNode->m_centerDirectionRadius = childPhysics2D.GetDistanceToCenter(-direction);
+				const auto centerRadius = m_frontParticlePhysics2D.GetDistanceToCenter(direction);
+				auto offset = glm::vec2(0.0f);
+				offset = (centerRadius + childNode->m_centerDirectionRadius + 2.0f) * direction;
+				childNode->m_offset = offset;
+				for (auto& childParticle : childPhysics2D.RefParticles())
+				{
+					childParticle.SetPosition(childParticle.GetPosition() + offset);
+
+					const auto nodeStartParticleHandle = m_frontParticleMap.at(childParticle.m_data.m_pipeHandle);
+					const auto nodeEndParticleHandle = m_backParticleMap.at(childParticle.m_data.m_pipeHandle);
+					auto& nodeStartParticle = m_frontParticlePhysics2D.RefParticle(nodeStartParticleHandle);
+					auto& nodeEndParticle = m_backParticlePhysics2D.RefParticle(nodeEndParticleHandle);
+					nodeStartParticle.SetColor(childParticle.GetColor());
+					nodeStartParticle.SetPosition(childParticle.GetPosition());
+					nodeEndParticle.SetColor(childParticle.GetColor());
+					nodeEndParticle.SetPosition(childParticle.GetPosition());
+
+					nodeStartParticle.m_data.m_mainChild = nodeEndParticle.m_data.m_mainChild = false;
+				}
+			}
+		}
+		CopyFrontToBackTask();
+		m_frontParticlePhysics2D.EnableAllParticles();
+	}
+	else {
+		for (const auto& childNode : childrenNodes)
+		{
+			if (childNode == mainChildNode) continue;
+			auto& childPhysics2D = childNode->m_frontParticlePhysics2D;
 			auto childNodeGlobalTransform = scene->GetDataComponent<GlobalTransform>(childNode->GetOwner());
 			const auto childNodeFront = glm::inverse(nodeGlobalTransform.GetRotation()) * childNodeGlobalTransform.GetRotation() * glm::vec3(0, 0, -1);
 			auto direction = glm::normalize(glm::vec2(childNodeFront.x, childNodeFront.y));
@@ -117,60 +208,14 @@ void TreePipeNode::MergeTask(const PipeModelParameters& pipeModelParameters)
 			childNode->m_centerDirectionRadius = childPhysics2D.GetDistanceToCenter(-direction);
 			const auto mainChildRadius = mainChildPhysics2D.GetDistanceToCenter(direction);
 			auto offset = glm::vec2(0.0f);
-			offset = (mainChildRadius - childNode->m_centerDirectionRadius + 2.0f) * direction;
-			childNode->m_offset = offset;
-			for (auto& childParticle : childPhysics2D.RefParticles())
+			if (childNode->m_split)
 			{
-				childParticle.SetPosition(childParticle.GetPosition() + offset);
-
-				const auto nodeStartParticleHandle = m_frontParticleMap.at(childParticle.m_data.m_pipeHandle);
-				const auto nodeEndParticleHandle = m_backParticleMap.at(childParticle.m_data.m_pipeHandle);
-				auto& nodeStartParticle = m_frontParticlePhysics2D.RefParticle(nodeStartParticleHandle);
-				auto& nodeEndParticle = m_backParticlePhysics2D.RefParticle(nodeEndParticleHandle);
-				nodeStartParticle.SetColor(childParticle.GetColor());
-				nodeStartParticle.SetPosition(childParticle.GetPosition());
-				nodeEndParticle.SetColor(childParticle.GetColor());
-				nodeEndParticle.SetPosition(childParticle.GetPosition());
-				nodeStartParticle.m_enable = true;
-				nodeStartParticle.m_data.m_mainChild = nodeEndParticle.m_data.m_mainChild = false;
+				offset = (mainChildRadius + childNode->m_centerDirectionRadius + 2.0f) * direction;
 			}
-		}
-		else
-		{
-			for (auto& childParticle : childPhysics2D.RefParticles())
+			else
 			{
-				const auto nodeStartParticleHandle = m_frontParticleMap.at(childParticle.m_data.m_pipeHandle);
-				const auto nodeEndParticleHandle = m_backParticleMap.at(childParticle.m_data.m_pipeHandle);
-				auto& nodeStartParticle = m_frontParticlePhysics2D.RefParticle(nodeStartParticleHandle);
-				auto& nodeEndParticle = m_backParticlePhysics2D.RefParticle(nodeEndParticleHandle);
-				nodeStartParticle.SetColor(childParticle.GetColor());
-				nodeStartParticle.SetPosition(glm::vec3(0.0f));
-				nodeEndParticle.SetColor(childParticle.GetColor());
-				nodeEndParticle.SetPosition(glm::vec3(0.0f));
-				nodeStartParticle.m_enable = false;
-				nodeStartParticle.m_data.m_mainChild = nodeEndParticle.m_data.m_mainChild = false;
+				offset = (mainChildRadius - childNode->m_centerDirectionRadius) * direction;
 			}
-		}
-	}
-	if(needSimulation) PackTask(pipeModelParameters, false);
-	for (const auto& childNode : childrenNodes)
-	{
-		if (childNode == mainChildNode) continue;
-		if (childNode->m_split)
-		{
-			auto& childPhysics2D = childNode->m_frontParticlePhysics2D;
-			auto childNodeGlobalTransform = scene->GetDataComponent<GlobalTransform>(childNode->GetOwner());
-			const auto childNodeFront = glm::inverse(nodeGlobalTransform.GetRotation()) * childNodeGlobalTransform.GetRotation() * glm::vec3(0, 0, -1);
-			auto direction = glm::normalize(glm::vec2(childNodeFront.x, childNodeFront.y));
-			if (glm::isnan(direction.x) || glm::isnan(direction.y))
-			{
-				direction = glm::vec2(1, 0);
-			}
-			//TODO: Change this to avoid calculating disabled particles!
-			childNode->m_centerDirectionRadius = childPhysics2D.GetDistanceToCenter(-direction);
-			const auto centerRadius = m_frontParticlePhysics2D.GetDistanceToCenter(direction);
-			auto offset = glm::vec2(0.0f);
-			offset = (centerRadius + childNode->m_centerDirectionRadius + 2.0f) * direction;
 			childNode->m_offset = offset;
 			for (auto& childParticle : childPhysics2D.RefParticles())
 			{
@@ -189,49 +234,6 @@ void TreePipeNode::MergeTask(const PipeModelParameters& pipeModelParameters)
 			}
 		}
 	}
-	CopyFrontToBackTask();
-	m_frontParticlePhysics2D.EnableAllParticles();
-	/*
-	for (const auto& childNode : childrenNodes)
-	{
-		if (childNode == mainChildNode) continue;
-		auto& childPhysics2D = childNode->m_frontParticlePhysics2D;
-		auto childNodeGlobalTransform = scene->GetDataComponent<GlobalTransform>(childNode->GetOwner());
-		const auto childNodeFront = glm::inverse(nodeGlobalTransform.GetRotation()) * childNodeGlobalTransform.GetRotation() * glm::vec3(0, 0, -1);
-		auto direction = glm::normalize(glm::vec2(childNodeFront.x, childNodeFront.y));
-		if (glm::isnan(direction.x) || glm::isnan(direction.y))
-		{
-			direction = glm::vec2(1, 0);
-		}
-		childNode->m_centerDirectionRadius = childPhysics2D.GetDistanceToCenter(-direction);
-		const auto mainChildRadius = mainChildPhysics2D.GetDistanceToCenter(direction);
-		auto offset = glm::vec2(0.0f);
-		if(childNode->m_split)
-		{
-			offset = (mainChildRadius + childNode->m_centerDirectionRadius + 2.0f) * direction;
-		}else
-		{
-			offset = (mainChildRadius - childNode->m_centerDirectionRadius) * direction;
-		}
-		childNode->m_offset = offset;
-		for (auto& childParticle : childPhysics2D.RefParticles())
-		{
-			childParticle.SetPosition(childParticle.GetPosition() + offset);
-
-			const auto nodeStartParticleHandle = m_frontParticleMap.at(childParticle.m_data.m_pipeHandle);
-			const auto nodeEndParticleHandle = m_backParticleMap.at(childParticle.m_data.m_pipeHandle);
-			auto& nodeStartParticle = m_frontParticlePhysics2D.RefParticle(nodeStartParticleHandle);
-			auto& nodeEndParticle = m_backParticlePhysics2D.RefParticle(nodeEndParticleHandle);
-			nodeStartParticle.SetColor(childParticle.GetColor());
-			nodeStartParticle.SetPosition(childParticle.GetPosition());
-			nodeEndParticle.SetColor(childParticle.GetColor());
-			nodeEndParticle.SetPosition(childParticle.GetPosition());
-
-			nodeStartParticle.m_data.m_mainChild = nodeEndParticle.m_data.m_mainChild = false;
-		}
-		index++;
-	}*/
-
 }
 
 void TreePipeNode::CopyFrontToBackTask()

@@ -14,5 +14,7 @@ namespace EcoSysLab
 		float m_stabilizationMovementDistance = 0.05f;
 		float m_splitRatioLimit = 0.5f;
 		int m_endNodeStrands = 3;
+
+		bool m_preMerge = true;
 	};
 }

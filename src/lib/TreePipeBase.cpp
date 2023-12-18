@@ -466,6 +466,7 @@ void TreePipeBase::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 	ImGui::DragFloat("Stabilization movement distance", &m_pipeModelParameters.m_stabilizationMovementDistance, 0.01f, 0.0f, 1.0f);
 	ImGui::DragFloat("Split limit", &m_pipeModelParameters.m_splitRatioLimit, 0.01f, 0.0f, 1.0f);
 	ImGui::DragInt("End node strand count", &m_pipeModelParameters.m_endNodeStrands, 1, 1, 50);
+	ImGui::Checkbox("Pre-merge", &m_pipeModelParameters.m_preMerge);
 
 	static PrivateComponentRef tempTree{};
 	ImGui::Checkbox("Parallel Scheduling", &m_parallelScheduling);
