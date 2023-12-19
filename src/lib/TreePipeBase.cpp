@@ -32,7 +32,7 @@ void TreePipeBase::GatherChildrenEntities(std::vector<Entity>& list) const
 	}
 }
 
-void TreePipeBase::ExtendPipesWithProfile(const glm::vec3& globalPosition,
+void TreePipeBase::ApplyProfile(const glm::vec3& globalPosition,
 	const glm::quat& globalRotation, const ParticlePhysics2D<CellParticlePhysicsData>& profile, const std::unordered_map<PipeHandle, ParticleHandle>& map)
 {
 	const auto currentUp = globalRotation * glm::vec3(0, 1, 0);
@@ -40,8 +40,7 @@ void TreePipeBase::ExtendPipesWithProfile(const glm::vec3& globalPosition,
 	for (const auto& [pipeHandle, particleHandle] : map)
 	{
 		const auto& particle = profile.PeekParticle(particleHandle);
-		const auto newPipeSegmentHandle = m_pipeGroup.Extend(pipeHandle);
-		auto& newPipeSegment = m_pipeGroup.RefPipeSegment(newPipeSegmentHandle);
+		auto& newPipeSegment = m_pipeGroup.RefPipeSegment(particle.m_data.m_pipeSegmentHandle);
 		newPipeSegment.m_info.m_thickness = m_pipeModelParameters.m_profileDefaultCellRadius;
 		newPipeSegment.m_info.m_globalPosition = globalPosition
 			+ m_pipeModelParameters.m_profileDefaultCellRadius * particle.GetPosition().x * currentLeft
@@ -135,7 +134,7 @@ void TreePipeBase::InitializeStrandRenderer(const float frontControlPointRatio, 
 	const auto renderer = scene->GetOrSetPrivateComponent<StrandsRenderer>(strandsEntity).lock();
 	const auto strandsAsset = ProjectManager::CreateTemporaryAsset<Strands>();
 
-	BuildPipes();
+	ApplyProfiles();
 
 	std::vector<glm::uint> strandsList;
 	std::vector<StrandPoint> points;
@@ -159,20 +158,18 @@ void TreePipeBase::OnCreate()
 	m_nodeMaterial = material;
 	material->m_materialProperties.m_albedoColor = glm::vec3(1, 0, 0);
 	material->m_materialProperties.m_transmission = 0.5f;
-	const auto mesh = Resources::GetResource<Mesh>("PRIMITIVE_SPHERE");
+	const auto mesh = Resources::GetResource<Mesh>("PRIMITIVE_CUBE");
 	m_nodeMesh = mesh;
 
 }
 
-void TreePipeBase::CalculateProfiles()
+void TreePipeBase::InitializeProfiles()
 {
-	float time = Times::Now();
 	std::vector<Entity> sortedEntityList;
 	GatherChildrenEntities(sortedEntityList);
 	const auto scene = GetScene();
 	m_pipeGroup = {};
 	auto& pipeGroup = m_pipeGroup;
-
 	for (int sortedEntityIndex = 0; sortedEntityIndex < sortedEntityList.size(); sortedEntityIndex++)
 	{
 		const auto& entity = sortedEntityList[sortedEntityIndex];
@@ -206,13 +203,17 @@ void TreePipeBase::CalculateProfiles()
 			{
 				for (int i = 0; i < m_pipeModelParameters.m_endNodeStrands; i++) {
 					const auto newPipeHandle = pipeGroup.AllocatePipe();
-
+					const auto newPipeSegmentHandle = m_pipeGroup.Extend(newPipeHandle);
 					const auto newStartParticleHandle = frontPhysics2D.AllocateParticle();
 					auto& newStartParticle = frontPhysics2D.RefParticle(newStartParticleHandle);
 					newStartParticle.m_data.m_pipeHandle = newPipeHandle;
+					newStartParticle.m_data.m_pipeSegmentHandle = newPipeSegmentHandle;
+					newStartParticle.m_data.m_base = false;
 					const auto newEndParticleHandle = backPhysics2D.AllocateParticle();
 					auto& newEndParticle = backPhysics2D.RefParticle(newEndParticleHandle);
 					newEndParticle.m_data.m_pipeHandle = newPipeHandle;
+					newEndParticle.m_data.m_pipeSegmentHandle = newPipeSegmentHandle;
+					newEndParticle.m_data.m_base = false;
 				}
 			}
 			else
@@ -220,13 +221,17 @@ void TreePipeBase::CalculateProfiles()
 				const auto parentNode = scene->GetOrSetPrivateComponent<TreePipeNode>(parentEntity).lock();
 				for (const auto& cell : parentNode->m_frontParticlePhysics2D.PeekParticles())
 				{
+					const auto newPipeSegmentHandle = m_pipeGroup.Extend(cell.m_data.m_pipeHandle);
 					const auto newStartParticleHandle = frontPhysics2D.AllocateParticle();
 					auto& newStartParticle = frontPhysics2D.RefParticle(newStartParticleHandle);
 					newStartParticle.m_data.m_pipeHandle = cell.m_data.m_pipeHandle;
-
+					newStartParticle.m_data.m_pipeSegmentHandle = newPipeSegmentHandle;
+					newStartParticle.m_data.m_base = false;
 					const auto newEndParticleHandle = backPhysics2D.AllocateParticle();
 					auto& newEndParticle = backPhysics2D.RefParticle(newEndParticleHandle);
 					newEndParticle.m_data.m_pipeHandle = cell.m_data.m_pipeHandle;
+					newEndParticle.m_data.m_pipeSegmentHandle = newPipeSegmentHandle;
+					newEndParticle.m_data.m_base = false;
 				}
 			}
 		}
@@ -245,26 +250,32 @@ void TreePipeBase::CalculateProfiles()
 			for (int i = 0; i < m_pipeModelParameters.m_endNodeStrands; i++) {
 				const auto pipeHandle = pipeGroup.AllocatePipe();
 				for (auto it = parentNodeToRootChain.rbegin(); it != parentNodeToRootChain.rend(); ++it) {
-
+					const auto newPipeSegmentHandle = m_pipeGroup.Extend(pipeHandle);
 					const auto newStartParticleHandle = (*it)->m_frontParticlePhysics2D.AllocateParticle();
 					auto& newStartParticle = (*it)->m_frontParticlePhysics2D.RefParticle(newStartParticleHandle);
 					newStartParticle.m_data.m_pipeHandle = pipeHandle;
-
+					newStartParticle.m_data.m_pipeSegmentHandle = newPipeSegmentHandle;
+					newStartParticle.m_data.m_base = false;
 					const auto newEndParticleHandle = (*it)->m_backParticlePhysics2D.AllocateParticle();
 					auto& newEndParticle = (*it)->m_backParticlePhysics2D.RefParticle(newEndParticleHandle);
 					newEndParticle.m_data.m_pipeHandle = pipeHandle;
+					newEndParticle.m_data.m_pipeSegmentHandle = newPipeSegmentHandle;
+					newEndParticle.m_data.m_base = false;
 				}
+				const auto newPipeSegmentHandle = m_pipeGroup.Extend(pipeHandle);
 				const auto newStartParticleHandle = frontPhysics2D.AllocateParticle();
 				auto& newStartParticle = frontPhysics2D.RefParticle(newStartParticleHandle);
 				newStartParticle.m_data.m_pipeHandle = pipeHandle;
-
+				newStartParticle.m_data.m_pipeSegmentHandle = newPipeSegmentHandle;
+				newStartParticle.m_data.m_base = true;
 				const auto newEndParticleHandle = backPhysics2D.AllocateParticle();
 				auto& newEndParticle = backPhysics2D.RefParticle(newEndParticleHandle);
 				newEndParticle.m_data.m_pipeHandle = pipeHandle;
+				newEndParticle.m_data.m_pipeSegmentHandle = newPipeSegmentHandle;
+				newEndParticle.m_data.m_base = true;
 			}
 		}
 	}
-
 	for (const auto& entity : sortedEntityList)
 	{
 		const auto node = scene->GetOrSetPrivateComponent<TreePipeNode>(entity).lock();
@@ -283,6 +294,7 @@ void TreePipeBase::CalculateProfiles()
 			node->m_backParticleMap.insert({ particle.m_data.m_pipeHandle, particle.GetHandle() });
 		}
 	}
+	m_numOfParticles = 0;
 	for (const auto& entity : sortedEntityList)
 	{
 		const auto node = scene->GetOrSetPrivateComponent<TreePipeNode>(entity).lock();
@@ -313,10 +325,17 @@ void TreePipeBase::CalculateProfiles()
 				childNode->m_split = false;
 			}
 		}
+		m_numOfParticles += node->m_frontParticlePhysics2D.PeekParticles().size();
 	}
-	m_numOfProfiles = 0;
-	m_numOfParticles = 0;
-	m_numOfProfiles = sortedEntityList.size();
+	m_numOfNodes = sortedEntityList.size();
+}
+
+void TreePipeBase::CalculateProfiles()
+{
+	const float time = Times::Now();
+	std::vector<Entity> sortedEntityList;
+	GatherChildrenEntities(sortedEntityList);
+	const auto scene = GetScene();
 	if (m_parallelScheduling) {
 		for (auto it = sortedEntityList.rbegin(); it != sortedEntityList.rend(); ++it)
 		{
@@ -326,11 +345,12 @@ void TreePipeBase::CalculateProfiles()
 		}
 		if (!sortedEntityList.empty())
 		{
-			auto firstEntity = sortedEntityList.front();
+			const auto firstEntity = sortedEntityList.front();
 			const auto node = scene->GetOrSetPrivateComponent<TreePipeNode>(firstEntity).lock();
 			node->Wait();
 		}
-	}else
+	}
+	else
 	{
 		for (auto it = sortedEntityList.rbegin(); it != sortedEntityList.rend(); ++it)
 		{
@@ -340,7 +360,31 @@ void TreePipeBase::CalculateProfiles()
 			m_numOfParticles += node->m_frontParticlePhysics2D.PeekParticles().size();
 		}
 	}
+	m_profileCalculationTime = Times::Now() - time;
+}
 
+void TreePipeBase::CalculateProfilesV2()
+{
+	const float time = Times::Now();
+	std::vector<Entity> sortedEntityList;
+	GatherChildrenEntities(sortedEntityList);
+	const auto scene = GetScene();
+	//Disable all particles.
+	std::unordered_map<int, Entity> indexNodeMap;
+	for (const auto& entity : sortedEntityList)
+	{
+		const auto node = scene->GetOrSetPrivateComponent<TreePipeNode>(entity).lock();
+		node->m_frontParticlePhysics2D.SetEnableAllParticles(false);
+		node->m_backParticlePhysics2D.SetEnableAllParticles(false);
+		indexNodeMap[node->m_index] = entity;
+	}
+
+	for(int maxIndex = 0; maxIndex < m_skeleton.GetMaxIndex(); maxIndex++)
+	{
+		//Skip if there's no node points to this index.
+		if (indexNodeMap.find(maxIndex) == indexNodeMap.end()) continue;
+
+	}
 	m_profileCalculationTime = Times::Now() - time;
 }
 
@@ -408,13 +452,8 @@ void TreePipeBase::RestoreGraph() const
 	TransformGraph::CalculateTransformGraphForDescendents(scene, GetOwner());
 }
 
-void TreePipeBase::BuildPipes()
+void TreePipeBase::ApplyProfiles()
 {
-	for (const auto& pipe : m_pipeGroup.RefPipes())
-	{
-		if (!pipe.PeekPipeSegmentHandles().empty()) m_pipeGroup.RecyclePipeSegment(pipe.PeekPipeSegmentHandles().front());
-	}
-
 	std::vector<Entity> sortedEntityList;
 	GatherChildrenEntities(sortedEntityList);
 	const auto scene = GetScene();
@@ -453,7 +492,7 @@ void TreePipeBase::BuildPipes()
 				pipe.m_info.m_baseInfo.m_globalRotation = parentGlobalRotation;
 			}
 		}
-		ExtendPipesWithProfile(globalPosition, globalRotation, node->m_backParticlePhysics2D, node->m_backParticleMap);
+		ApplyProfile(globalPosition, globalRotation, node->m_backParticlePhysics2D, node->m_backParticleMap);
 	}
 }
 
@@ -490,14 +529,21 @@ void TreePipeBase::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 		InstantiateExample();
 		InitializeNodes();
 	}
+	if (ImGui::Button("Initialize Profiles"))
+	{
+		InitializeProfiles();
+	}
 	if (ImGui::Button("Calculate Profiles"))
 	{
 		CalculateProfiles();
 	}
-
+	if (ImGui::Button("Calculate Profiles V2"))
+	{
+		CalculateProfilesV2();
+	}
 	ImGui::Text(("Last calculation time: " + std::to_string(m_profileCalculationTime)).c_str());
 	ImGui::Text(("Strand count: " + std::to_string(m_pipeGroup.PeekPipes().size())).c_str());
-	ImGui::Text(("Profile count: " + std::to_string(m_numOfProfiles)).c_str());
+	ImGui::Text(("Node count: " + std::to_string(m_numOfNodes)).c_str());
 	ImGui::Text(("Total particle count: " + std::to_string(m_numOfParticles)).c_str());
 
 	static float frontControlPointRatio = 0.4f;
@@ -528,8 +574,27 @@ void TreePipeBase::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 		ClearStrands();
 	}
 
-	editorLayer->DragAndDropButton<Material>(m_nodeMaterial, "Node Material");
-	editorLayer->DragAndDropButton<Mesh>(m_nodeMesh, "Node Mesh");
+	if(editorLayer->DragAndDropButton<Material>(m_nodeMaterial, "Node Material"))
+	{
+		ApplyNodeMeshMaterial();
+	}
+	if(editorLayer->DragAndDropButton<Mesh>(m_nodeMesh, "Node Mesh"))
+	{
+		ApplyNodeMeshMaterial();
+	}
+}
+
+void TreePipeBase::ApplyNodeMeshMaterial()
+{
+	std::vector<Entity> sortedEntityList;
+	GatherChildrenEntities(sortedEntityList);
+	const auto scene = GetScene();
+	for (const auto& nodeEntity : sortedEntityList)
+	{
+		const auto mmr = scene->GetOrSetPrivateComponent<MeshRenderer>(nodeEntity).lock();
+		mmr->m_mesh = m_nodeMesh;
+		mmr->m_material = m_nodeMaterial;
+	}
 }
 
 void TreePipeBase::InitializeNodes()
@@ -549,8 +614,9 @@ void TreePipeBase::InitializeNodes()
 		const auto& node = m_skeleton.PeekNode(nodeHandle);
 		const auto newEntity = scene->CreateEntity("Profile");
 		const auto parentHandle = node.GetParentHandle();
-		const auto tpn = scene->GetOrSetPrivateComponent<TreePipeNode>(newEntity).lock();
-		tpn->m_apical = node.IsApical();
+		const auto treePipeNode = scene->GetOrSetPrivateComponent<TreePipeNode>(newEntity).lock();
+		treePipeNode->m_apical = node.IsApical();
+		treePipeNode->m_index = node.GetIndex();
 		const auto mmr = scene->GetOrSetPrivateComponent<MeshRenderer>(newEntity).lock();
 		mmr->m_mesh = m_nodeMesh;
 		mmr->m_material = m_nodeMaterial;
@@ -561,7 +627,7 @@ void TreePipeBase::InitializeNodes()
 			ownerGlobalTransform.m_value
 			* (glm::translate(node.m_info.GetGlobalEndPosition()) * glm::mat4_cast(rotation) * glm::scale(glm::vec3(0.02f)));
 		scene->SetDataComponent(newEntity, globalTransform);
-		tpn->m_desiredGlobalTransform = globalTransform;
+		treePipeNode->m_desiredGlobalTransform = globalTransform;
 		if (parentHandle == -1)
 		{
 			scene->SetParent(newEntity, owner);

@@ -32,7 +32,7 @@ namespace EcoSysLab {
 		[[nodiscard]] float GetDistanceToCenter(const glm::vec2& direction) const;
 		[[nodiscard]] float GetDeltaTime() const;
 		[[nodiscard]] float GetMaxMovementSinceCheckpoint() const;
-		void EnableAllParticles();
+		void SetEnableAllParticles(bool value);
 		void Reset(float deltaTime = 0.002f);
 		void CalculateMinMax();
 		ParticlePhysicsSettings m_settings {};
@@ -360,11 +360,11 @@ namespace EcoSysLab {
 	}
 
 	template <typename ParticleData>
-	void ParticlePhysics2D<ParticleData>::EnableAllParticles()
+	void ParticlePhysics2D<ParticleData>::SetEnableAllParticles(const bool value)
 	{
 		for (auto& particle : m_particles2D)
 		{
-			particle.m_enable = true;
+			particle.m_enable = value;
 		}
 	}
 

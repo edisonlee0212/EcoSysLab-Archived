@@ -51,9 +51,9 @@ void TreePipeNode::MergeTask(const PipeModelParameters& pipeModelParameters)
 	{
 		for (int i = 0; i < m_frontParticlePhysics2D.RefParticles().size(); i++)
 		{
-			const auto nextParticlePosition = m_frontParticlePhysics2D.FindAvailablePosition(glm::circularRand(1.0f));
-			m_frontParticlePhysics2D.RefParticle(i).SetPosition(nextParticlePosition);
-			m_backParticlePhysics2D.RefParticle(i).SetPosition(nextParticlePosition);
+			//const auto nextParticlePosition = m_frontParticlePhysics2D.FindAvailablePosition(glm::circularRand(1.0f));
+			m_frontParticlePhysics2D.RefParticle(i).SetPosition(glm::vec2(0.0f));
+			m_backParticlePhysics2D.RefParticle(i).SetPosition(glm::vec2(0.0f));
 			m_frontParticlePhysics2D.RefParticle(i).SetColor(glm::vec4(1.0f));
 			m_backParticlePhysics2D.RefParticle(i).SetColor(glm::vec4(1.0f));
 		}
@@ -191,7 +191,7 @@ void TreePipeNode::MergeTask(const PipeModelParameters& pipeModelParameters)
 			}
 		}
 		CopyFrontToBackTask();
-		m_frontParticlePhysics2D.EnableAllParticles();
+		m_frontParticlePhysics2D.SetEnableAllParticles(true);
 	}
 	else {
 		for (const auto& childNode : childrenNodes)

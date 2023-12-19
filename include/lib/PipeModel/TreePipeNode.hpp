@@ -40,6 +40,8 @@ namespace EcoSysLab
 		bool m_split = false;
 		std::vector<std::shared_future<void>> m_tasks{};
 
+		int m_index = -1;
+
 		void InsertInterpolation(float a);
 		void OnCreate() override;
 		void OnDestroy() override;

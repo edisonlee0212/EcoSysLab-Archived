@@ -19,7 +19,7 @@ namespace EcoSysLab
 	class TreePipeBase : public IPrivateComponent
 	{
 		void GatherChildrenEntities(std::vector<Entity>& list) const;
-		void ExtendPipesWithProfile(
+		void ApplyProfile(
 			const glm::vec3& globalPosition,
 			const glm::quat& globalRotation,
 			const ParticlePhysics2D<CellParticlePhysicsData>& profile, const std::unordered_map<PipeHandle, ParticleHandle>& map);
@@ -33,17 +33,20 @@ namespace EcoSysLab
 		AssetRef m_nodeMaterial{};
 		AssetRef m_nodeMesh{};
 		float m_profileCalculationTime = 0.0f;
-		int m_numOfProfiles = 0;
+		int m_numOfNodes = 0;
 		int m_numOfParticles = 0;
 		BaseSkeleton m_skeleton;
 		void InitializeNodes();
 		void ClearStrands() const;
 		void InitializeStrandRenderer(float frontControlPointRatio, float backControlPointRatio, int nodeMaxCount = -1);
 		void OnCreate() override;
+		void InitializeProfiles();
 		void CalculateProfiles();
+		void CalculateProfilesV2();
 		void AdjustGraph() const;
 		void RestoreGraph() const;
-		void BuildPipes();
+		void ApplyProfiles();
 		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
+		void ApplyNodeMeshMaterial();
 	};
 }
