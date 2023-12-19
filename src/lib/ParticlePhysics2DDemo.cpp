@@ -12,21 +12,14 @@ void ParticlePhysics2DDemo::OnInspect(const std::shared_ptr<EditorLayer>& editor
 	{
 		m_particlePhysics2D.Reset(deltaTime);
 	}
-	ImGui::DragFloat("Particle Softness", &m_particlePhysics2D.m_particleSoftness, 0.001f, 0.001f, 1.0f);
+	ImGui::DragFloat("Particle Softness", &m_particlePhysics2D.m_settings.m_particleSoftness, 0.001f, 0.001f, 1.0f);
 	ImGui::Checkbox("Enable render", &enableRender);
 	ImGui::DragFloat2("World center", &m_worldCenter.x, 0.001f);
 	ImGui::DragFloat("World radius", &m_worldRadius, 1.0f, 1.0f, 1000.0f);
 	ImGui::DragFloat("Gravity strength", &m_gravityStrength, 0.01f);
 	ImGui::DragInt("Particle Adding speed", &m_particleAddCount, 1, 1, 1000);
-	static float targetDamping = 0.01f;
-	ImGui::DragFloat("Target damping", &targetDamping, 0.01f, 0.0f, 1.0f);
-	if (ImGui::Button("Apply damping"))
-	{
-		for (auto& particle : m_particlePhysics2D.RefParticles())
-		{
-			particle.SetDamping(targetDamping);
-		}
-	}
+	ImGui::DragFloat("Target damping", &m_particlePhysics2D.m_settings.m_damping, 0.01f, 0.0f, 1.0f);
+	ImGui::DragFloat("Max Velocity", &m_particlePhysics2D.m_settings.m_maxSpeed, 0.01f, 0.0f, 1.0f);
 	static bool showGrid = false;
 	ImGui::Checkbox("Show Grid", &showGrid);
 	static float particleInitialSpeed = 1.0f;
@@ -49,7 +42,6 @@ void ParticlePhysics2DDemo::OnInspect(const std::shared_ptr<EditorLayer>& editor
 							auto& particle = m_particlePhysics2D.RefParticle(particleHandle);
 							particle.SetColor(glm::vec4(glm::ballRand(1.0f), 1.0f));
 							particle.SetPosition(position + glm::circularRand(4.0f));
-							particle.SetDamping(targetDamping);
 							particle.SetVelocity(glm::vec2(particleInitialSpeed, 0.0f) / static_cast<float>(Times::TimeStep()), m_particlePhysics2D.GetDeltaTime());
 						}
 					}

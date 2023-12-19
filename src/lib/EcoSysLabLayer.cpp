@@ -463,7 +463,7 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 			if (!autoTimeGrow && ImGui::Button("Grow 1 iteration")) {
 				simulate = true;
 			}
-			ImGui::DragInt("Max node limit", &m_simulationSettings.m_maxNodeCount, 1000, 0, INT_MAX);
+			ImGui::DragInt("Max node limit", &m_simulationSettings.m_maxNodeCount, 500, 0, INT_MAX);
 
 			
 			if (!m_simulationSettings.m_autoClearFruitAndLeaves && ImGui::Button("Clear ground leaves and fruits")) {

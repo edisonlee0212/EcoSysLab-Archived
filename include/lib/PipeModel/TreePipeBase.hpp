@@ -26,6 +26,7 @@ namespace EcoSysLab
 	public:
 		bool m_parallelScheduling = true;
 		void InstantiateExample();
+		
 		PipeModelPipeGroup m_pipeGroup;
 		PipeModelParameters m_pipeModelParameters{};
 		GraphAdjustmentSettings m_graphAdjustmentSettings;

@@ -17,7 +17,7 @@ void TreePipeNode::PackTask(const PipeModelParameters& pipeModelParameters, bool
 				//Apply gravity
 				particle.SetPosition(particle.GetPosition() - m_frontParticlePhysics2D.GetMassCenter());
 				if (glm::length(particle.GetPosition()) > 0.0f) {
-					const glm::vec2 acceleration = pipeModelParameters.m_gravityStrength * -glm::normalize(particle.GetPosition());
+					const glm::vec2 acceleration = pipeModelParameters.m_centerAttractionStrength * -glm::normalize(particle.GetPosition());
 					particle.SetAcceleration(acceleration);
 				}
 			}, checkpoint
@@ -301,7 +301,6 @@ void TreePipeNode::InsertInterpolation(const float a)
 		const auto& nextParticle = m_backParticlePhysics2D.PeekParticle(m_backParticleMap.at(pipeHandle));
 		newFrontParticle.SetPosition(glm::mix(prevParticle.GetPosition(), nextParticle.GetPosition(), a));
 		newFrontParticle.SetColor(glm::mix(prevParticle.GetColor(), nextParticle.GetColor(), a));
-		newFrontParticle.SetDamping(glm::mix(prevParticle.GetDamping(), nextParticle.GetDamping(), a));
 
 		const auto newBackParticleHandle = tpn->m_backParticlePhysics2D.AllocateParticle();
 		auto& newBackParticle = tpn->m_backParticlePhysics2D.RefParticle(newBackParticleHandle);
@@ -310,7 +309,6 @@ void TreePipeNode::InsertInterpolation(const float a)
 		newBackParticle.m_data.m_pipeHandle = pipeHandle;
 		newBackParticle.SetPosition(glm::mix(prevParticle.GetPosition(), nextParticle.GetPosition(), a));
 		newBackParticle.SetColor(glm::mix(prevParticle.GetColor(), nextParticle.GetColor(), a));
-		newBackParticle.SetDamping(glm::mix(prevParticle.GetDamping(), nextParticle.GetDamping(), a));
 	}
 
 	const auto ownerGlobalTransform = scene->GetDataComponent<GlobalTransform>(owner);

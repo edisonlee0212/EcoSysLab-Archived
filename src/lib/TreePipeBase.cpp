@@ -179,8 +179,12 @@ void TreePipeBase::CalculateProfiles()
 		const auto node = scene->GetOrSetPrivateComponent<TreePipeNode>(entity).lock();
 		auto& frontPhysics2D = node->m_frontParticlePhysics2D;
 		auto& backPhysics2D = node->m_backParticlePhysics2D;
+		
 		frontPhysics2D.Reset(0.002f);
 		backPhysics2D.Reset(0.002f);
+		frontPhysics2D.m_settings = m_pipeModelParameters.m_particlePhysicsSettings;
+		backPhysics2D.m_settings = m_pipeModelParameters.m_particlePhysicsSettings;
+
 		Entity parentEntity{};
 		bool onlyChild = true;
 		if (sortedEntityIndex != 0)
@@ -270,14 +274,12 @@ void TreePipeBase::CalculateProfiles()
 
 		for (auto& particle : startPhysics2D.RefParticles())
 		{
-			particle.SetDamping(m_pipeModelParameters.m_damping);
 			node->m_frontParticleMap.insert({ particle.m_data.m_pipeHandle, particle.GetHandle() });
 		}
 		auto& endPhysics2D = node->m_backParticlePhysics2D;
 
 		for (auto& particle : endPhysics2D.RefParticles())
 		{
-			particle.SetDamping(m_pipeModelParameters.m_damping);
 			node->m_backParticleMap.insert({ particle.m_data.m_pipeHandle, particle.GetHandle() });
 		}
 	}
@@ -458,8 +460,11 @@ void TreePipeBase::BuildPipes()
 void TreePipeBase::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
 	ImGui::DragFloat("Default profile cell radius", &m_pipeModelParameters.m_profileDefaultCellRadius, 0.001f, 0.001f, 1.0f);
-	ImGui::DragFloat("Physics damping", &m_pipeModelParameters.m_damping, 0.01f, 0.0f, 1.0f);
-	ImGui::DragFloat("Physics attraction strength", &m_pipeModelParameters.m_gravityStrength, 0.01f, 0.0f, 10.0f);
+	ImGui::DragFloat("Physics damping", &m_pipeModelParameters.m_particlePhysicsSettings.m_damping, 0.01f, 0.0f, 1.0f);
+	ImGui::DragFloat("Physics max speed", &m_pipeModelParameters.m_particlePhysicsSettings.m_maxSpeed, 0.01f, 0.0f, 100.0f);
+	ImGui::DragFloat("Physics particle softness", &m_pipeModelParameters.m_particlePhysicsSettings.m_particleSoftness, 0.01f, 0.0f, 1.0f);
+
+	ImGui::DragFloat("Center attraction strength", &m_pipeModelParameters.m_centerAttractionStrength, 0.01f, 0.0f, 10.0f);
 	ImGui::DragInt("Max iteration cell factor", &m_pipeModelParameters.m_maxSimulationIterationCellFactor, 1, 0, 500);
 	ImGui::DragInt("Stabilization check iteration", &m_pipeModelParameters.m_stabilizationCheckIteration, 1, 0, 500);
 	ImGui::DragInt("Simulation timeout", &m_pipeModelParameters.m_timeout, 1, 0, 50000);

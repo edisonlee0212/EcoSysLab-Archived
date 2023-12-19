@@ -2,6 +2,15 @@
 #include "ParticleGrid2D.hpp"
 using namespace EvoEngine;
 namespace EcoSysLab {
+
+	struct UpdateSettings
+	{
+		float m_dt;
+		float m_damping = 0.0f;
+		float m_maxVelocity = 1.0f;
+		bool m_checkpoint = false;
+	};
+
 	template<typename T>
 	class Particle2D
 	{
@@ -21,7 +30,7 @@ namespace EcoSysLab {
 		bool m_enable = true;
 
 		T m_data;
-		void Update(float dt);
+		void Update(const UpdateSettings& updateSettings);
 		void Stop();
 		[[nodiscard]] ParticleHandle GetHandle() const;
 		[[nodiscard]] glm::vec4 GetColor() const;
@@ -38,20 +47,21 @@ namespace EcoSysLab {
 		[[nodiscard]] glm::vec2 GetAcceleration() const;
 		void SetAcceleration(const glm::vec2& acceleration);
 
-		[[nodiscard]] float GetDamping() const;
-		void SetDamping(float damping);
-
-		void SetCheckpoint();
 		[[nodiscard]] glm::vec2 GetCheckpointPosition() const;
 	};
 
 
 	template <typename T>
-	void Particle2D<T>::Update(const float dt)
+	void Particle2D<T>::Update(const UpdateSettings& updateSettings)
 	{
-		const auto velocity = m_position - m_lastPosition - m_damping * (m_position - m_lastPosition);
+		const auto lastV = m_position - m_lastPosition - m_damping * (m_position - m_lastPosition);
 		m_lastPosition = m_position;
-		m_position = m_position + velocity + m_acceleration * dt * dt;
+		auto targetV = lastV + m_acceleration * updateSettings.m_dt * updateSettings.m_dt;
+		const auto speed = glm::length(targetV);
+		if (speed > glm::epsilon<float>()) {
+			targetV = glm::min(updateSettings.m_maxVelocity * updateSettings.m_dt, speed) * glm::normalize(targetV);
+			m_position = m_position + targetV;
+		}
 		m_acceleration = {};
 	}
 
@@ -121,24 +131,6 @@ namespace EcoSysLab {
 	void Particle2D<T>::SetAcceleration(const glm::vec2& acceleration)
 	{
 		m_acceleration = acceleration;
-	}
-
-	template <typename T>
-	float Particle2D<T>::GetDamping() const
-	{
-		return m_damping;
-	}
-
-	template <typename T>
-	void Particle2D<T>::SetDamping(const float damping)
-	{
-		m_damping = glm::clamp(damping, 0.0f, 1.0f);
-	}
-
-	template <typename T>
-	void Particle2D<T>::SetCheckpoint()
-	{
-		m_checkpointPosition = m_position;
 	}
 
 	template <typename T>
