@@ -771,6 +771,7 @@ namespace EcoSysLab {
 		}
 		SortLists();
 		CalculateFlows();
+		m_maxIndex = srcSkeleton.GetMaxIndex();
 	}
 
 	template <typename SkeletonData, typename FlowData, typename NodeData>
