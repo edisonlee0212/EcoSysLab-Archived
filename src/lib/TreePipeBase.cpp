@@ -182,8 +182,8 @@ void TreePipeBase::CalculateProfiles()
 		
 		frontPhysics2D.Reset(0.002f);
 		backPhysics2D.Reset(0.002f);
-		frontPhysics2D.m_settings = m_pipeModelParameters.m_particlePhysicsSettings;
-		backPhysics2D.m_settings = m_pipeModelParameters.m_particlePhysicsSettings;
+		frontPhysics2D.m_settings = m_particlePhysicsSettings;
+		backPhysics2D.m_settings = m_particlePhysicsSettings;
 
 		Entity parentEntity{};
 		bool onlyChild = true;
@@ -460,9 +460,9 @@ void TreePipeBase::BuildPipes()
 void TreePipeBase::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
 	ImGui::DragFloat("Default profile cell radius", &m_pipeModelParameters.m_profileDefaultCellRadius, 0.001f, 0.001f, 1.0f);
-	ImGui::DragFloat("Physics damping", &m_pipeModelParameters.m_particlePhysicsSettings.m_damping, 0.01f, 0.0f, 1.0f);
-	ImGui::DragFloat("Physics max speed", &m_pipeModelParameters.m_particlePhysicsSettings.m_maxSpeed, 0.01f, 0.0f, 100.0f);
-	ImGui::DragFloat("Physics particle softness", &m_pipeModelParameters.m_particlePhysicsSettings.m_particleSoftness, 0.01f, 0.0f, 1.0f);
+	ImGui::DragFloat("Physics damping", &m_particlePhysicsSettings.m_damping, 0.01f, 0.0f, 1.0f);
+	ImGui::DragFloat("Physics max speed", &m_particlePhysicsSettings.m_maxSpeed, 0.01f, 0.0f, 100.0f);
+	ImGui::DragFloat("Physics particle softness", &m_particlePhysicsSettings.m_particleSoftness, 0.01f, 0.0f, 1.0f);
 
 	ImGui::DragFloat("Center attraction strength", &m_pipeModelParameters.m_centerAttractionStrength, 0.01f, 0.0f, 10.0f);
 	ImGui::DragInt("Max iteration cell factor", &m_pipeModelParameters.m_maxSimulationIterationCellFactor, 1, 0, 500);

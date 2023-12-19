@@ -6,7 +6,6 @@ namespace EcoSysLab
 {
 	struct PipeModelParameters
 	{
-		ParticlePhysicsSettings m_particlePhysicsSettings{};
 		float m_centerAttractionStrength = 400;
 		float m_profileDefaultCellRadius = 0.002f;
 		int m_maxSimulationIterationCellFactor = 100;
