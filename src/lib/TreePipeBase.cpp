@@ -49,6 +49,7 @@ void TreePipeBase::ApplyProfile(const glm::vec3& globalPosition,
 	}
 }
 
+
 void TreePipeBase::InstantiateExample()
 {
 	m_skeleton = {};
@@ -214,6 +215,11 @@ void TreePipeBase::InitializeProfiles()
 					newEndParticle.m_data.m_pipeHandle = newPipeHandle;
 					newEndParticle.m_data.m_pipeSegmentHandle = newPipeSegmentHandle;
 					newEndParticle.m_data.m_base = false;
+
+					auto& newSegment = m_pipeGroup.RefPipeSegment(newPipeSegmentHandle);
+					newSegment.m_data.m_entity = entity;
+					newSegment.m_data.m_frontProfileHandle = newStartParticleHandle;
+					newSegment.m_data.m_backParticleHandle = newEndParticleHandle;
 				}
 			}
 			else
@@ -232,6 +238,11 @@ void TreePipeBase::InitializeProfiles()
 					newEndParticle.m_data.m_pipeHandle = cell.m_data.m_pipeHandle;
 					newEndParticle.m_data.m_pipeSegmentHandle = newPipeSegmentHandle;
 					newEndParticle.m_data.m_base = false;
+
+					auto& newSegment = m_pipeGroup.RefPipeSegment(newPipeSegmentHandle);
+					newSegment.m_data.m_entity = entity;
+					newSegment.m_data.m_frontProfileHandle = newStartParticleHandle;
+					newSegment.m_data.m_backParticleHandle = newEndParticleHandle;
 				}
 			}
 		}
@@ -261,6 +272,11 @@ void TreePipeBase::InitializeProfiles()
 					newEndParticle.m_data.m_pipeHandle = pipeHandle;
 					newEndParticle.m_data.m_pipeSegmentHandle = newPipeSegmentHandle;
 					newEndParticle.m_data.m_base = false;
+
+					auto& newSegment = m_pipeGroup.RefPipeSegment(newPipeSegmentHandle);
+					newSegment.m_data.m_entity = (*it)->GetOwner();
+					newSegment.m_data.m_frontProfileHandle = newStartParticleHandle;
+					newSegment.m_data.m_backParticleHandle = newEndParticleHandle;
 				}
 				const auto newPipeSegmentHandle = m_pipeGroup.Extend(pipeHandle);
 				const auto newStartParticleHandle = frontPhysics2D.AllocateParticle();
@@ -273,6 +289,11 @@ void TreePipeBase::InitializeProfiles()
 				newEndParticle.m_data.m_pipeHandle = pipeHandle;
 				newEndParticle.m_data.m_pipeSegmentHandle = newPipeSegmentHandle;
 				newEndParticle.m_data.m_base = true;
+
+				auto& newSegment = m_pipeGroup.RefPipeSegment(newPipeSegmentHandle);
+				newSegment.m_data.m_entity = entity;
+				newSegment.m_data.m_frontProfileHandle = newStartParticleHandle;
+				newSegment.m_data.m_backParticleHandle = newEndParticleHandle;
 			}
 		}
 	}
@@ -336,6 +357,15 @@ void TreePipeBase::CalculateProfiles()
 	std::vector<Entity> sortedEntityList;
 	GatherChildrenEntities(sortedEntityList);
 	const auto scene = GetScene();
+
+	Jobs::ParallelFor(sortedEntityList.size(), [&](unsigned i)
+		{
+			const auto node = scene->GetOrSetPrivateComponent<TreePipeNode>(sortedEntityList.at(i)).lock();
+			for (auto& particle : node->m_backParticlePhysics2D.RefParticles()) particle = {};
+			for (auto& particle : node->m_frontParticlePhysics2D.RefParticles()) particle = {};
+		}
+	);
+
 	if (m_parallelScheduling) {
 		for (auto it = sortedEntityList.rbegin(); it != sortedEntityList.rend(); ++it)
 		{
@@ -369,6 +399,24 @@ void TreePipeBase::CalculateProfilesV2()
 	std::vector<Entity> sortedEntityList;
 	GatherChildrenEntities(sortedEntityList);
 	const auto scene = GetScene();
+
+	Jobs::ParallelFor(sortedEntityList.size(), [&](unsigned i)
+		{
+			const auto node = scene->GetOrSetPrivateComponent<TreePipeNode>(sortedEntityList.at(i)).lock();
+			for (auto& particle : node->m_backParticlePhysics2D.RefParticles()) {
+				particle.SetPosition(glm::vec2(0.0f));
+				particle.SetVelocity(glm::vec2(0.0f), 0.002f);
+				particle.SetAcceleration(glm::vec2(0.0f));
+			}
+			for (auto& particle : node->m_frontParticlePhysics2D.RefParticles())
+			{
+				particle.SetPosition(glm::vec2(0.0f));
+				particle.SetVelocity(glm::vec2(0.0f), 0.002f);
+				particle.SetAcceleration(glm::vec2(0.0f));
+			}
+		}
+	);
+
 	//Disable all particles.
 	std::unordered_map<int, Entity> indexNodeMap;
 	for (const auto& entity : sortedEntityList)
@@ -383,7 +431,55 @@ void TreePipeBase::CalculateProfilesV2()
 	{
 		//Skip if there's no node points to this index.
 		if (indexNodeMap.find(maxIndex) == indexNodeMap.end()) continue;
+		//Enable base particles.
+		for (const auto& entity : sortedEntityList)
+		{
+			if(entity.GetIndex() == maxIndex)
+			{
+				const auto node = scene->GetOrSetPrivateComponent<TreePipeNode>(entity).lock();
+				for (const auto& particle : node->m_backParticlePhysics2D.RefParticles())
+				{
+					if(particle.m_data.m_base)
+					{
+						const auto& pipe = m_pipeGroup.PeekPipe(particle.m_data.m_pipeHandle);
+						for(const auto& pipeSegmentHandle : pipe.PeekPipeSegmentHandles())
+						{
+							const auto& pipeSegment = m_pipeGroup.RefPipeSegment(pipeSegmentHandle);
+							const auto currentNode = scene->GetOrSetPrivateComponent<TreePipeNode>(pipeSegment.m_data.m_entity).lock();
+							currentNode->m_backParticlePhysics2D.RefParticle(pipeSegment.m_data.m_backParticleHandle).m_enable = true;
+							currentNode->m_frontParticlePhysics2D.RefParticle(pipeSegment.m_data.m_frontProfileHandle).m_enable = true;
+						}
+					}
+				}
+			}
+		}
 
+		if (m_parallelScheduling) {
+			for (auto it = sortedEntityList.rbegin(); it != sortedEntityList.rend(); ++it)
+			{
+				const auto node = scene->GetOrSetPrivateComponent<TreePipeNode>(*it).lock();
+				if(node->m_index > maxIndex) continue;
+				node->CalculateProfile(m_pipeModelParameters, true);
+				m_numOfParticles += node->m_frontParticlePhysics2D.PeekParticles().size();
+			}
+			if (!sortedEntityList.empty())
+			{
+				const auto firstEntity = sortedEntityList.front();
+				const auto node = scene->GetOrSetPrivateComponent<TreePipeNode>(firstEntity).lock();
+				node->Wait();
+			}
+		}
+		else
+		{
+			for (auto it = sortedEntityList.rbegin(); it != sortedEntityList.rend(); ++it)
+			{
+				const auto node = scene->GetOrSetPrivateComponent<TreePipeNode>(*it).lock();
+				if (node->m_index > maxIndex) continue;
+				node->CalculateProfile(m_pipeModelParameters, false);
+				node->Wait();
+				m_numOfParticles += node->m_frontParticlePhysics2D.PeekParticles().size();
+			}
+		}
 	}
 	m_profileCalculationTime = Times::Now() - time;
 }

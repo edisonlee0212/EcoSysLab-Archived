@@ -47,16 +47,9 @@ void TreePipeNode::MergeTask(const PipeModelParameters& pipeModelParameters)
 	for (const auto& childNode : childrenNodes) childNode->Wait();
 	if (!childrenNodes.empty() && !mainChildNode) mainChildNode = childrenNodes.front();
 	m_centerDirectionRadius = 0.0f;
+
 	if (childrenNodes.empty())
 	{
-		for (int i = 0; i < m_frontParticlePhysics2D.RefParticles().size(); i++)
-		{
-			//const auto nextParticlePosition = m_frontParticlePhysics2D.FindAvailablePosition(glm::circularRand(1.0f));
-			m_frontParticlePhysics2D.RefParticle(i).SetPosition(glm::vec2(0.0f));
-			m_backParticlePhysics2D.RefParticle(i).SetPosition(glm::vec2(0.0f));
-			m_frontParticlePhysics2D.RefParticle(i).SetColor(glm::vec4(1.0f));
-			m_backParticlePhysics2D.RefParticle(i).SetColor(glm::vec4(1.0f));
-		}
 		m_needPacking = true;
 		return;
 	}

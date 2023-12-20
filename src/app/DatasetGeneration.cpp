@@ -83,84 +83,15 @@ int main() {
 	int index = 0;
 	int numPerSpecie = 50;
 	for (int i = 0; i < numPerSpecie; i++) {
-		std::string specieName = "Elm";
+		std::string specieName = "Forestry";
 		std::filesystem::path target_descriptor_path = "C:\\Users\\lllll\\Documents\\GitHub\\EcoSysLab\\Resources\\EcoSysLabProject\\TreeDescriptors\\" + specieName + ".td";
 		std::string name = specieName + "_" + std::to_string(index);
 		std::filesystem::path target_tree_mesh_path = output_root / (name + ".obj");
 		std::filesystem::path target_tree_pointcloud_path = output_root / (name + ".ply");
 		std::filesystem::path target_tree_junction_path = output_root / (name + ".yml");
-		DatasetGenerator::GeneratePointCloudForTree(pcps, pccs, target_descriptor_path.string(), 0.08220, 999, 20000, tmgs, target_tree_pointcloud_path.string(), false, target_tree_mesh_path.string(), false, target_tree_junction_path.string());
+		DatasetGenerator::GeneratePointCloudForTree(pcps, pccs, target_descriptor_path.string(), 0.08220, 72, 20000, tmgs, target_tree_pointcloud_path.string(), false, target_tree_mesh_path.string(), true, target_tree_junction_path.string());
 		index++;
 	}
-	for (int i = 0; i < numPerSpecie; i++) {
-		std::string specieName = "Maple";
-		std::filesystem::path target_descriptor_path = "C:\\Users\\lllll\\Documents\\GitHub\\EcoSysLab\\Resources\\EcoSysLabProject\\TreeDescriptors\\" + specieName + ".td";
-		std::string name = specieName + "_" + std::to_string(index);
-		std::filesystem::path target_tree_mesh_path = output_root / (name + ".obj");
-		std::filesystem::path target_tree_pointcloud_path = output_root / (name + ".ply");
-		std::filesystem::path target_tree_junction_path = output_root / (name + ".yml");
-		DatasetGenerator::GeneratePointCloudForTree(pcps, pccs, target_descriptor_path.string(), 0.08220, 999, 20000, tmgs, target_tree_pointcloud_path.string(), false, target_tree_mesh_path.string(), false, target_tree_junction_path.string());
-		index++;
-	}
-	for (int i = 0; i < numPerSpecie; i++) {
-		std::string specieName = "Acacia";
-		std::filesystem::path target_descriptor_path = "C:\\Users\\lllll\\Documents\\GitHub\\EcoSysLab\\Resources\\EcoSysLabProject\\TreeDescriptors\\" + specieName + ".td";
-		std::string name = specieName + "_" + std::to_string(index);
-		std::filesystem::path target_tree_mesh_path = output_root / (name + ".obj");
-		std::filesystem::path target_tree_pointcloud_path = output_root / (name + ".ply");
-		std::filesystem::path target_tree_junction_path = output_root / (name + ".yml");
-		DatasetGenerator::GeneratePointCloudForTree(pcps, pccs, target_descriptor_path.string(), 0.08220, 999, 20000, tmgs, target_tree_pointcloud_path.string(), false, target_tree_mesh_path.string(), false, target_tree_junction_path.string());
-		index++;
-	}
-	for (int i = 0; i < numPerSpecie; i++) {
-		std::string specieName = "Apple";
-		std::filesystem::path target_descriptor_path = "C:\\Users\\lllll\\Documents\\GitHub\\EcoSysLab\\Resources\\EcoSysLabProject\\TreeDescriptors\\" + specieName + ".td";
-		std::string name = specieName + "_" + std::to_string(index);
-		std::filesystem::path target_tree_mesh_path = output_root / (name + ".obj");
-		std::filesystem::path target_tree_pointcloud_path = output_root / (name + ".ply");
-		std::filesystem::path target_tree_junction_path = output_root / (name + ".yml");
-		DatasetGenerator::GeneratePointCloudForTree(pcps, pccs, target_descriptor_path.string(), 0.08220, 999, 20000, tmgs, target_tree_pointcloud_path.string(), false, target_tree_mesh_path.string(), false, target_tree_junction_path.string());
-		index++;
-	}
-	for (int i = 0; i < numPerSpecie; i++) {
-		std::string specieName = "Hazel";
-		std::filesystem::path target_descriptor_path = "C:\\Users\\lllll\\Documents\\GitHub\\EcoSysLab\\Resources\\EcoSysLabProject\\TreeDescriptors\\" + specieName + ".td";
-		std::string name = specieName + "_" + std::to_string(index);
-		std::filesystem::path target_tree_mesh_path = output_root / (name + ".obj");
-		std::filesystem::path target_tree_pointcloud_path = output_root / (name + ".ply");
-		std::filesystem::path target_tree_junction_path = output_root / (name + ".yml");
-		DatasetGenerator::GeneratePointCloudForTree(pcps, pccs, target_descriptor_path.string(), 0.08220, 999, 20000, tmgs, target_tree_pointcloud_path.string(), false, target_tree_mesh_path.string(), false, target_tree_junction_path.string());
-		index++;
-	}
-	for (int i = 0; i < numPerSpecie; i++) {
-		std::string specieName = "Spruce";
-		std::filesystem::path target_descriptor_path = "C:\\Users\\lllll\\Documents\\GitHub\\EcoSysLab\\Resources\\EcoSysLabProject\\TreeDescriptors\\" + specieName + ".td";
-		std::string name = specieName + "_" + std::to_string(index);
-		std::filesystem::path target_tree_mesh_path = output_root / (name + ".obj");
-		std::filesystem::path target_tree_pointcloud_path = output_root / (name + ".ply");
-		std::filesystem::path target_tree_junction_path = output_root / (name + ".yml");
-		DatasetGenerator::GeneratePointCloudForTree(pcps, pccs, target_descriptor_path.string(), 0.08220, 999, 20000, tmgs, target_tree_pointcloud_path.string(), false, target_tree_mesh_path.string(), false, target_tree_junction_path.string());
-		index++;
-	}
-	for (int i = 0; i < numPerSpecie; i++) {
-		std::string specieName = "Willow";
-		std::filesystem::path target_descriptor_path = "C:\\Users\\lllll\\Documents\\GitHub\\EcoSysLab\\Resources\\EcoSysLabProject\\TreeDescriptors\\" + specieName + ".td";
-		std::string name = specieName + "_" + std::to_string(index);
-		std::filesystem::path target_tree_mesh_path = output_root / (name + ".obj");
-		std::filesystem::path target_tree_pointcloud_path = output_root / (name + ".ply");
-		std::filesystem::path target_tree_junction_path = output_root / (name + ".yml");
-		DatasetGenerator::GeneratePointCloudForTree(pcps, pccs, target_descriptor_path.string(), 0.08220, 999, 20000, tmgs, target_tree_pointcloud_path.string(), false, target_tree_mesh_path.string(), false, target_tree_junction_path.string());
-		index++;
-	}
-	for (int i = 0; i < numPerSpecie; i++) {
-		std::string specieName = "Ash";
-		std::filesystem::path target_descriptor_path = "C:\\Users\\lllll\\Documents\\GitHub\\EcoSysLab\\Resources\\EcoSysLabProject\\TreeDescriptors\\" + specieName + ".td";
-		std::string name = specieName + "_" + std::to_string(index);
-		std::filesystem::path target_tree_mesh_path = output_root / (name + ".obj");
-		std::filesystem::path target_tree_pointcloud_path = output_root / (name + ".ply");
-		std::filesystem::path target_tree_junction_path = output_root / (name + ".yml");
-		DatasetGenerator::GeneratePointCloudForTree(pcps, pccs, target_descriptor_path.string(), 0.08220, 999, 20000, tmgs, target_tree_pointcloud_path.string(), false, target_tree_mesh_path.string(), false, target_tree_junction_path.string());
-		index++;
-	}
+	
 
 }

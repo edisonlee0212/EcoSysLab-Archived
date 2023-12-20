@@ -7,7 +7,7 @@ m_environment:
     m_assetHandle: 0
     m_assetTypeName: ""
 m_mainCamera:
-  m_entityHandle: 8069136744171340134
+  m_entityHandle: 0
   m_privateComponentTypeName: Camera
 m_entityMetadataList:
   - m_name: PlayGround
@@ -77,33 +77,12 @@ m_entityMetadataList:
           m_fov: 60
           m_resolution: 128
           m_cameraDepthMax: 10
-  - m_name: Main Camera
-    m_handle: 8069136744171340134
-    m_enabled: true
-    m_static: false
-    Root.Handle: 8069136744171340134
-    m_privateComponentElements:
-      - m_typeName: Camera
-        m_enabled: true
-        m_resolutionX: 1
-        m_resolutionY: 1
-        m_useClearColor: false
-        m_clearColor: [0, 0, 0]
-        m_nearDistance: 0.100000001
-        m_farDistance: 500
-        m_fov: 120
-        m_skybox:
-          m_assetHandle: 0
-          m_assetTypeName: ""
-        m_postProcessingStack:
-          m_assetHandle: 0
-          m_assetTypeName: ""
 m_systems:
   []
 m_dataComponentStorages:
   - m_entitySize: 130
     m_chunkCapacity: 126
-    m_entityAliveCount: 6
+    m_entityAliveCount: 5
     m_dataComponentTypes:
       - m_name: Transform
         m_size: 64
@@ -136,11 +115,6 @@ m_dataComponentStorages:
           - Data: !!binary "AACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPw=="
           - Data: !!binary "AAA="
       - m_handle: 13990783136456237486
-        DataComponents:
-          - Data: !!binary "AACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPw=="
-          - Data: !!binary "AACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPw=="
-          - Data: !!binary "AAA="
-      - m_handle: 8069136744171340134
         DataComponents:
           - Data: !!binary "AACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPw=="
           - Data: !!binary "AACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPw=="

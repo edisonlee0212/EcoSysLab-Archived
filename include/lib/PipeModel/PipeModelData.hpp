@@ -16,6 +16,9 @@ namespace EcoSysLab
 
 	struct PipeModelPipeSegmentData
 	{
+		Entity m_entity;
+		ParticleHandle m_frontProfileHandle;
+		ParticleHandle m_backParticleHandle;
 	};
 
 	typedef PipeGroup<PipeModelPipeGroupData, PipeModelPipeData, PipeModelPipeSegmentData> PipeModelPipeGroup;

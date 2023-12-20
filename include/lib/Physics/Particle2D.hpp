@@ -20,7 +20,6 @@ namespace EcoSysLab {
 		glm::vec2 m_position = glm::vec2(0.0f);
 		glm::vec2 m_lastPosition = glm::vec2(0.0f);
 		glm::vec2 m_acceleration = glm::vec2(0.0f);
-		float m_damping = 0.0f;
 
 		glm::vec2 m_deltaPosition = glm::vec2(0.0f);
 		ParticleHandle m_handle = -1;
@@ -54,7 +53,7 @@ namespace EcoSysLab {
 	template <typename T>
 	void Particle2D<T>::Update(const UpdateSettings& updateSettings)
 	{
-		const auto lastV = m_position - m_lastPosition - m_damping * (m_position - m_lastPosition);
+		const auto lastV = m_position - m_lastPosition - updateSettings.m_damping * (m_position - m_lastPosition);
 		m_lastPosition = m_position;
 		auto targetV = lastV + m_acceleration * updateSettings.m_dt * updateSettings.m_dt;
 		const auto speed = glm::length(targetV);

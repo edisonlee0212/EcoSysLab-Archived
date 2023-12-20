@@ -388,6 +388,7 @@ namespace EcoSysLab {
 	{
 		m_particles2D.emplace_back();
 		auto& newParticle = m_particles2D.back();
+		newParticle = {};
 		newParticle.m_handle = m_particles2D.size() - 1;
 		return newParticle.m_handle;
 	}
