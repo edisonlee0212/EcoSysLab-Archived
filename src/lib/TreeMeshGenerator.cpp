@@ -196,8 +196,8 @@ void TreeMeshGeneratorSettings::Save(const std::string& name, YAML::Emitter& out
 	out << YAML::Key << "m_branchControlPointRatio" << YAML::Value << m_branchControlPointRatio;
 	out << YAML::Key << "m_lineLengthFactor" << YAML::Value << m_lineLengthFactor;
 	out << YAML::Key << "m_overrideVertexColor" << YAML::Value << m_overrideVertexColor;
-	out << YAML::Key << "m_junctionEndDistance" << YAML::Value << m_junctionEndDistance;
-	out << YAML::Key << "m_junctionStartDistance" << YAML::Value << m_junctionStartDistance;
+	out << YAML::Key << "m_treePartEndDistance" << YAML::Value << m_treePartEndDistance;
+	out << YAML::Key << "m_treePartBaseDistance" << YAML::Value << m_treePartBaseDistance;
 	out << YAML::Key << "m_branchVertexColor" << YAML::Value << m_branchVertexColor;
 	out << YAML::Key << "m_foliageVertexColor" << YAML::Value << m_foliageVertexColor;
 
@@ -240,8 +240,8 @@ void TreeMeshGeneratorSettings::Load(const std::string& name, const YAML::Node& 
 		if (ms["m_branchControlPointRatio"]) m_branchControlPointRatio = ms["m_branchControlPointRatio"].as<float>();
 		if (ms["m_lineLengthFactor"]) m_lineLengthFactor = ms["m_lineLengthFactor"].as<float>();
 		if (ms["m_overrideVertexColor"]) m_overrideVertexColor = ms["m_overrideVertexColor"].as<bool>();
-		if (ms["m_junctionEndDistance"]) m_junctionEndDistance = ms["m_junctionEndDistance"].as<int>();
-		if (ms["m_junctionStartDistance"]) m_junctionStartDistance = ms["m_junctionStartDistance"].as<float>();
+		if (ms["m_treePartEndDistance"]) m_treePartEndDistance = ms["m_treePartEndDistance"].as<int>();
+		if (ms["m_treePartBaseDistance"]) m_treePartBaseDistance = ms["m_treePartBaseDistance"].as<float>();
 		if (ms["m_branchVertexColor"]) m_branchVertexColor = ms["m_branchVertexColor"].as<glm::vec3>();
 		if (ms["m_foliageVertexColor"]) m_foliageVertexColor = ms["m_foliageVertexColor"].as<glm::vec3>();
 
@@ -298,8 +298,8 @@ void TreeMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLayer>& ed
 			ImGui::Checkbox("Override radius", &m_overrideRadius);
 			if (m_overrideRadius) ImGui::DragFloat("Radius", &m_radius);
 			ImGui::Checkbox("Override vertex color", &m_overrideVertexColor);
-			ImGui::DragInt("Junction Start Distance", &m_junctionStartDistance, 1, 0, 10);
-			ImGui::DragInt("Junction End Distance", &m_junctionEndDistance, 1, 0, 10);
+			ImGui::DragInt("Tree Part Start Distance", &m_treePartBaseDistance, 1, 0, 10);
+			ImGui::DragInt("Tree Part End Distance", &m_treePartEndDistance, 1, 0, 10);
 			ImGui::TreePop();
 		}
 		if(ImGui::TreeNode("Marching cubes settings"))

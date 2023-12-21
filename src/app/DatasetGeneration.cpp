@@ -76,8 +76,10 @@ int main() {
 	PointCloudPointSettings pcps{};
 	PointCloudCaptureSettings pccs{};
 	pcps.m_ballRandRadius = 0.01f;
-	pcps.m_junctionIndex = false;
-		
+	pcps.m_treePartIndex = true;
+	pcps.m_branchIndex = false;
+	pcps.m_instanceIndex = false;
+
 	pccs.m_distance = 4.0f;
 	pccs.m_height = 3.0f;
 	int index = 0;

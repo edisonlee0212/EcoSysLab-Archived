@@ -19,7 +19,7 @@ void PointCloudPointSettings::OnInspect()
 	ImGui::Checkbox("Type Index", &m_typeIndex);
 	ImGui::Checkbox("Instance Index", &m_instanceIndex);
 	ImGui::Checkbox("Branch Index", &m_branchIndex);
-	ImGui::Checkbox("Junction Index", &m_junctionIndex);
+	ImGui::Checkbox("Junction Index", &m_treePartIndex);
 	ImGui::Checkbox("Internode Index", &m_internodeIndex);
 }
 
@@ -31,7 +31,7 @@ void PointCloudPointSettings::Serialize(const std::string& name, YAML::Emitter& 
 	out << YAML::Key << "m_typeIndex" << YAML::Value << m_typeIndex;
 	out << YAML::Key << "m_instanceIndex" << YAML::Value << m_instanceIndex;
 	out << YAML::Key << "m_branchIndex" << YAML::Value << m_branchIndex;
-	out << YAML::Key << "m_junctionIndex" << YAML::Value << m_junctionIndex;
+	out << YAML::Key << "m_treePartIndex" << YAML::Value << m_treePartIndex;
 	out << YAML::Key << "m_internodeIndex" << YAML::Value << m_internodeIndex;
 	out << YAML::Key << "m_boundingBoxLimit" << YAML::Value << m_boundingBoxLimit;
 	out << YAML::EndMap;
@@ -46,7 +46,7 @@ void PointCloudPointSettings::Deserialize(const std::string& name, const YAML::N
 		if (cd["m_typeIndex"]) m_typeIndex = cd["m_typeIndex"].as<bool>();
 		if (cd["m_instanceIndex"]) m_instanceIndex = cd["m_instanceIndex"].as<bool>();
 		if (cd["m_branchIndex"]) m_branchIndex = cd["m_branchIndex"].as<bool>();
-		if (cd["m_junctionIndex"]) m_junctionIndex = cd["m_junctionIndex"].as<bool>();
+		if (cd["m_treePartIndex"]) m_treePartIndex = cd["m_treePartIndex"].as<bool>();
 		if (cd["m_internodeIndex"]) m_internodeIndex = cd["m_internodeIndex"].as<bool>();
 		if (cd["m_boundingBoxLimit"]) m_boundingBoxLimit = cd["m_boundingBoxLimit"].as<float>();
 	}
@@ -280,7 +280,7 @@ void TreePointCloudScanner::GeneratePointCloud(const std::filesystem::path& save
 		{
 			branchIndex.emplace_back(static_cast<int>(sample.m_hitInfo.m_data.y + 0.1f));
 		}
-		if (m_pointSettings.m_junctionIndex)
+		if (m_pointSettings.m_treePartIndex)
 		{
 			junctionIndex.emplace_back(static_cast<int>(sample.m_hitInfo.m_data.z + 0.1f));
 		}
@@ -351,7 +351,7 @@ void TreePointCloudScanner::GeneratePointCloud(const std::filesystem::path& save
 			"branch_index", { "branch_index" }, Type::INT32, branchIndex.size(),
 			reinterpret_cast<uint8_t*>(branchIndex.data()), Type::INVALID, 0);
 	}
-	if (m_pointSettings.m_junctionIndex)
+	if (m_pointSettings.m_treePartIndex)
 	{
 		cube_file.add_properties_to_element(
 			"junction_index", { "junction_index" }, Type::INT32, junctionIndex.size(),

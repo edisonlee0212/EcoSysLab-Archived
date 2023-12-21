@@ -10,7 +10,7 @@ namespace EcoSysLab {
         bool m_instanceIndex = true;
         bool m_branchIndex = false;
         bool m_internodeIndex = false;
-        bool m_junctionIndex = true;
+        bool m_treePartIndex = true;
 
         float m_boundingBoxLimit = 1.f;
 
