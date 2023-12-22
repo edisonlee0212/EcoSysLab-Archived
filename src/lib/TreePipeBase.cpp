@@ -361,8 +361,17 @@ void TreePipeBase::CalculateProfiles()
 	Jobs::ParallelFor(sortedEntityList.size(), [&](unsigned i)
 		{
 			const auto node = scene->GetOrSetPrivateComponent<TreePipeNode>(sortedEntityList.at(i)).lock();
-			for (auto& particle : node->m_backParticlePhysics2D.RefParticles()) particle = {};
-			for (auto& particle : node->m_frontParticlePhysics2D.RefParticles()) particle = {};
+			for (auto& particle : node->m_backParticlePhysics2D.RefParticles()) {
+				particle.SetPosition(glm::vec2(0.0f));
+				particle.SetVelocity(glm::vec2(0.0f), 0.002f);
+				particle.SetAcceleration(glm::vec2(0.0f));
+			}
+			for (auto& particle : node->m_frontParticlePhysics2D.RefParticles())
+			{
+				particle.SetPosition(glm::vec2(0.0f));
+				particle.SetVelocity(glm::vec2(0.0f), 0.002f);
+				particle.SetAcceleration(glm::vec2(0.0f));
+			}
 		}
 	);
 

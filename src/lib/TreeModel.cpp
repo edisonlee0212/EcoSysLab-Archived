@@ -659,7 +659,7 @@ void TreeModel::ShootGrowthPostProcess(const glm::mat4& globalTransform, Climate
 					parentInternode.m_info.m_globalPosition
 					+ parentInternode.m_info.m_length * parentInternode.m_info.m_globalDirection;
 
-				if(!internode.IsApical())
+				if(false && !internode.IsApical())
 				{
 					const auto relativeFront = glm::inverse(parentInternode.m_info.m_globalRotation) * internodeInfo.m_globalRotation * glm::vec3(0, 0, -1);
 					auto parentUp = glm::normalize(parentInternode.m_info.m_globalRotation * glm::vec3(0, 1, 0));
