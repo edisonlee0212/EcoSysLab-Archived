@@ -665,9 +665,11 @@ void TreeModel::ShootGrowthPostProcess(const glm::mat4& globalTransform, Climate
 					auto parentUp = glm::normalize(parentInternode.m_info.m_globalRotation * glm::vec3(0, 1, 0));
 					auto parentLeft = glm::normalize(parentInternode.m_info.m_globalRotation * glm::vec3(1, 0, 0));
 					auto parentFront = glm::normalize(parentInternode.m_info.m_globalRotation * glm::vec3(0, 0, -1));
-					const auto offset = glm::normalize(glm::vec2(relativeFront.x, relativeFront.y)) * glm::sin(glm::acos(glm::dot(parentFront, front)));
+					const auto sinValue = glm::sin(glm::acos(glm::dot(parentFront, front)));
+					const auto offset = glm::normalize(glm::vec2(relativeFront.x, relativeFront.y)) * sinValue;
 					internodeInfo.m_globalPosition += parentLeft * parentInternode.m_info.m_thickness * offset.x;
 					internodeInfo.m_globalPosition += parentUp * parentInternode.m_info.m_thickness * offset.y;
+					internodeInfo.m_globalPosition += parentFront * parentInternode.m_info.m_thickness * sinValue;
 				}
 
 				internodeData.m_desiredGlobalRotation = parentInternode.m_data.m_desiredGlobalRotation * internodeData.m_desiredLocalRotation;

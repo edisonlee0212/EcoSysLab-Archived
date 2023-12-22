@@ -118,7 +118,7 @@ namespace EcoSysLab {
 		unsigned m_rootMeshType = 0;
 
 		int m_treePartBaseDistance = 0;
-		int m_treePartEndDistance = 0;
+		int m_treePartEndDistance = 1;
 		float m_treePartBreakRatio = 4.0f;
 
 
