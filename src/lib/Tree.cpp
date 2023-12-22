@@ -925,7 +925,7 @@ void Tree::GenerateGeometry(const TreeMeshGeneratorSettings& meshGeneratorSettin
 
 				glm::vec3 positionStart = rootNodeInfo.m_globalPosition;
 				glm::vec3 positionEnd =
-					positionStart + rootNodeInfo.m_length * meshGeneratorSettings.m_lineLengthFactor * rootNodeInfo.m_globalDirection;
+					positionStart + rootNodeInfo.m_length * (meshGeneratorSettings.m_smoothness ? 1.0f - meshGeneratorSettings.m_baseControlPointRatio * 0.5f : 1.0f) * rootNodeInfo.m_globalDirection;
 
 				BezierCurve curve = BezierCurve(
 					positionStart,
@@ -1030,7 +1030,7 @@ void Tree::GenerateGeometry(const TreeMeshGeneratorSettings& meshGeneratorSettin
 
 				glm::vec3 positionStart = internodeInfo.m_globalPosition;
 				glm::vec3 positionEnd =
-					positionStart + internodeInfo.m_length * meshGeneratorSettings.m_lineLengthFactor * internodeInfo.m_globalDirection;
+					positionStart + internodeInfo.m_length * (meshGeneratorSettings.m_smoothness ? 1.0f - meshGeneratorSettings.m_baseControlPointRatio * 0.5f : 1.0f) * internodeInfo.m_globalDirection;
 
 				BezierCurve curve = BezierCurve(
 					positionStart,

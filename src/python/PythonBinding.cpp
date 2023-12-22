@@ -550,7 +550,6 @@ PYBIND11_MODULE(pyecosyslab, m) {
 		.def_readwrite("m_junctionEndDistance", &TreeMeshGeneratorSettings::m_treePartEndDistance)
 		.def_readwrite("m_baseControlPointRatio", &TreeMeshGeneratorSettings::m_baseControlPointRatio)
 		.def_readwrite("m_branchControlPointRatio", &TreeMeshGeneratorSettings::m_branchControlPointRatio)
-		.def_readwrite("m_lineLengthFactor", &TreeMeshGeneratorSettings::m_lineLengthFactor)
 		.def_readwrite("m_smoothness", &TreeMeshGeneratorSettings::m_smoothness)
 		.def_readwrite("m_autoLevel", &TreeMeshGeneratorSettings::m_autoLevel)
 		.def_readwrite("m_voxelSubdivisionLevel", &TreeMeshGeneratorSettings::m_voxelSubdivisionLevel)

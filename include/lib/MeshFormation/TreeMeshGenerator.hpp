@@ -103,7 +103,6 @@ namespace EcoSysLab {
 		
 		float m_baseControlPointRatio = 0.3f;
 		float m_branchControlPointRatio = 0.3f;
-		float m_lineLengthFactor = 1.0f;
 		bool m_smoothness = true;
 
 		bool m_autoLevel = true;
@@ -119,7 +118,7 @@ namespace EcoSysLab {
 		unsigned m_rootMeshType = 0;
 
 		int m_treePartBaseDistance = 0;
-		int m_treePartEndDistance = 1;
+		int m_treePartEndDistance = 0;
 		float m_treePartBreakRatio = 4.0f;
 
 
@@ -180,7 +179,7 @@ namespace EcoSysLab {
 
 			glm::vec3 positionStart = internodeInfo.m_globalPosition;
 			glm::vec3 positionEnd =
-				positionStart + internodeInfo.m_length * settings.m_lineLengthFactor * internodeInfo.m_globalDirection;
+				positionStart + internodeInfo.m_length * (settings.m_smoothness ? 1.0f - settings.m_baseControlPointRatio : 1.0f) * internodeInfo.m_globalDirection;
 			float thicknessStart = internodeInfo.m_thickness;
 			float thicknessEnd = internodeInfo.m_thickness;
 
@@ -191,7 +190,7 @@ namespace EcoSysLab {
 					parentInternode.m_info.m_regulatedGlobalRotation *
 					glm::vec3(0, 0, -1);
 				positionStart =
-					parentInternode.m_info.m_globalPosition + parentInternode.m_info.m_length * settings.m_lineLengthFactor * parentInternode.m_info.m_globalDirection;
+					parentInternode.m_info.m_globalPosition + (parentInternode.m_info.m_length * (settings.m_smoothness ? 1.0f - settings.m_baseControlPointRatio : 1.0f)) * parentInternode.m_info.m_globalDirection;
 			}
 
 			if (settings.m_overrideRadius) {
@@ -214,7 +213,7 @@ namespace EcoSysLab {
 				++step;
 
 			tempSteps[threadIndex].emplace_back(internodeHandle, step);
-			int amount = glm::max(1, static_cast<int>(internodeInfo.m_length / (internodeInfo.m_thickness >= settings.m_trunkThickness ? settings.m_trunkYSubdivision : settings.m_branchYSubdivision)));
+			int amount = glm::max(1, static_cast<int>(glm::distance(positionStart, positionEnd) / (internodeInfo.m_thickness >= settings.m_trunkThickness ? settings.m_trunkYSubdivision : settings.m_branchYSubdivision)));
 			if (amount % 2 != 0)
 				++amount;
 			BezierCurve curve = BezierCurve(

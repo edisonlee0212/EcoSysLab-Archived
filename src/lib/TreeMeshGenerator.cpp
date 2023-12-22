@@ -194,7 +194,6 @@ void TreeMeshGeneratorSettings::Save(const std::string& name, YAML::Emitter& out
 	out << YAML::Key << "m_boundaryRadius" << YAML::Value << m_radius;
 	out << YAML::Key << "m_baseControlPointRatio" << YAML::Value << m_baseControlPointRatio;
 	out << YAML::Key << "m_branchControlPointRatio" << YAML::Value << m_branchControlPointRatio;
-	out << YAML::Key << "m_lineLengthFactor" << YAML::Value << m_lineLengthFactor;
 	out << YAML::Key << "m_overrideVertexColor" << YAML::Value << m_overrideVertexColor;
 	out << YAML::Key << "m_treePartEndDistance" << YAML::Value << m_treePartEndDistance;
 	out << YAML::Key << "m_treePartBaseDistance" << YAML::Value << m_treePartBaseDistance;
@@ -238,7 +237,6 @@ void TreeMeshGeneratorSettings::Load(const std::string& name, const YAML::Node& 
 		if (ms["m_boundaryRadius"]) m_radius = ms["m_boundaryRadius"].as<float>();
 		if (ms["m_baseControlPointRatio"]) m_baseControlPointRatio = ms["m_baseControlPointRatio"].as<float>();
 		if (ms["m_branchControlPointRatio"]) m_branchControlPointRatio = ms["m_branchControlPointRatio"].as<float>();
-		if (ms["m_lineLengthFactor"]) m_lineLengthFactor = ms["m_lineLengthFactor"].as<float>();
 		if (ms["m_overrideVertexColor"]) m_overrideVertexColor = ms["m_overrideVertexColor"].as<bool>();
 		if (ms["m_treePartEndDistance"]) m_treePartEndDistance = ms["m_treePartEndDistance"].as<int>();
 		if (ms["m_treePartBaseDistance"]) m_treePartBaseDistance = ms["m_treePartBaseDistance"].as<float>();
@@ -291,9 +289,6 @@ void TreeMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLayer>& ed
 			if (m_smoothness) {
 				ImGui::DragFloat("Base control point ratio", &m_baseControlPointRatio, 0.001f, 0.0f, 1.0f);
 				ImGui::DragFloat("Branch control point ratio", &m_branchControlPointRatio, 0.001f, 0.0f, 1.0f);
-			}
-			else {
-				ImGui::DragFloat("Line length factor", &m_lineLengthFactor, 0.001f, 0.0f, 1.0f);
 			}
 			ImGui::Checkbox("Override radius", &m_overrideRadius);
 			if (m_overrideRadius) ImGui::DragFloat("Radius", &m_radius);
