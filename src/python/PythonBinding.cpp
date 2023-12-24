@@ -485,19 +485,19 @@ PYBIND11_MODULE(pyecosyslab, m) {
 		.def_readwrite("m_boundingBoxLimit", &PointCloudPointSettings::m_boundingBoxLimit);
 
 
-	py::class_<PointCloudCaptureSettings>(m, "PointCloudCaptureSettings")
+	py::class_<PointCloudCircularCaptureSettings>(m, "PointCloudCircularCaptureSettings")
 		.def(py::init<>())
-		.def_readwrite("m_pitchAngleStart", &PointCloudCaptureSettings::m_pitchAngleStart)
-		.def_readwrite("m_pitchAngleStep", &PointCloudCaptureSettings::m_pitchAngleStep)
-		.def_readwrite("m_pitchAngleEnd", &PointCloudCaptureSettings::m_pitchAngleEnd)
-		.def_readwrite("m_turnAngleStart", &PointCloudCaptureSettings::m_turnAngleStart)
-		.def_readwrite("m_turnAngleStep", &PointCloudCaptureSettings::m_turnAngleStep)
-		.def_readwrite("m_turnAngleEnd", &PointCloudCaptureSettings::m_turnAngleEnd)
-		.def_readwrite("m_distance", &PointCloudCaptureSettings::m_distance)
-		.def_readwrite("m_height", &PointCloudCaptureSettings::m_height)
-		.def_readwrite("m_fov", &PointCloudCaptureSettings::m_fov)
-		.def_readwrite("m_resolution", &PointCloudCaptureSettings::m_resolution)
-		.def_readwrite("m_cameraDepthMax", &PointCloudCaptureSettings::m_cameraDepthMax);
+		.def_readwrite("m_pitchAngleStart", &PointCloudCircularCaptureSettings::m_pitchAngleStart)
+		.def_readwrite("m_pitchAngleStep", &PointCloudCircularCaptureSettings::m_pitchAngleStep)
+		.def_readwrite("m_pitchAngleEnd", &PointCloudCircularCaptureSettings::m_pitchAngleEnd)
+		.def_readwrite("m_turnAngleStart", &PointCloudCircularCaptureSettings::m_turnAngleStart)
+		.def_readwrite("m_turnAngleStep", &PointCloudCircularCaptureSettings::m_turnAngleStep)
+		.def_readwrite("m_turnAngleEnd", &PointCloudCircularCaptureSettings::m_turnAngleEnd)
+		.def_readwrite("m_distance", &PointCloudCircularCaptureSettings::m_distance)
+		.def_readwrite("m_height", &PointCloudCircularCaptureSettings::m_height)
+		.def_readwrite("m_fov", &PointCloudCircularCaptureSettings::m_fov)
+		.def_readwrite("m_resolution", &PointCloudCircularCaptureSettings::m_resolution)
+		.def_readwrite("m_cameraDepthMax", &PointCloudCircularCaptureSettings::m_cameraDepthMax);
 
 	py::class_<ReconstructionSettings>(m, "ReconstructionSettings")
 		.def(py::init<>())

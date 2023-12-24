@@ -12,13 +12,14 @@ namespace EcoSysLab {
         void CollectAssetRef(std::vector<AssetRef>& list) const;
     };
 
-    class ForestDescriptor : public IAsset{
+    class ForestPatch : public IAsset{
     public:
         std::vector<TreeInfo> m_treeInfos;
         TreeGrowthSettings m_treeGrowthSettings;
-
-        void UpdateTreeDescriptors(const std::shared_ptr<TreeDescriptor>& treeDescriptor);
-
+        
+        void ApplyTreeDescriptor(const std::shared_ptr<TreeDescriptor>& treeDescriptor);
+        void ApplyTreeDescriptors(const std::vector<std::shared_ptr<TreeDescriptor>>& treeDescriptors);
+        void ApplyTreeDescriptors(const std::filesystem::path& folderPath);
         void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 
         void OnCreate() override;
@@ -28,5 +29,9 @@ namespace EcoSysLab {
         void Serialize(YAML::Emitter &out) override;
 
         void Deserialize(const YAML::Node &in) override;
+
+        void SetupGrid(const glm::ivec2& gridSize, float gridDistance, float randomShift);
+
+        void InstantiatePatch(bool setParent);
     };
 }

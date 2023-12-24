@@ -9,7 +9,7 @@
 
 #include "StrandsRenderer.hpp"
 #include "Climate.hpp"
-#include "Forest.hpp"
+#include "ForestPatch.hpp"
 #include "Soil.hpp"
 #include "Tree.hpp"
 #include "RenderLayer.hpp"
@@ -28,7 +28,7 @@ void EcoSysLabLayer::OnCreate() {
 	ClassRegistry::RegisterPrivateComponent<Climate>("Climate");
 
 	ClassRegistry::RegisterAsset<BranchShape>("BranchShape", { ".bs" });
-	ClassRegistry::RegisterAsset<ForestDescriptor>("ForestDescriptor", { ".fd" });
+	ClassRegistry::RegisterAsset<ForestPatch>("ForestPatch", { ".fp" });
 	ClassRegistry::RegisterAsset<TreeDescriptor>("TreeDescriptor", { ".td" });
 	ClassRegistry::RegisterAsset<SoilDescriptor>("SoilDescriptor", { ".sd" });
 	ClassRegistry::RegisterAsset<ClimateDescriptor>("ClimateDescriptor", { ".cd" });

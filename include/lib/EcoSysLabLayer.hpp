@@ -24,7 +24,7 @@ namespace EcoSysLab {
 		float m_deltaTime = 0.0822f;
 		bool m_soilSimulation = false;
 		bool m_autoClearFruitAndLeaves = true;
-		float m_crownShynessDistance = 0.5f;
+		float m_crownShynessDistance = 0.25f;
 		int m_maxNodeCount = 0;
 		IlluminationEstimationSettings m_shadowEstimationSettings;
 	};

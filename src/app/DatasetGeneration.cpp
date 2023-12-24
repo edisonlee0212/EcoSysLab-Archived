@@ -67,31 +67,42 @@ void StartProjectWindowless(const std::filesystem::path& projectPath)
 	Application::Start();
 }
 int main() {
-	std::filesystem::path project_path = "C:\\Users\\lllll\\Documents\\GitHub\\EcoSysLab\\Resources\\EcoSysLabProject\\test.eveproj";
+	std::filesystem::path project_folder_path = "C:\\Users\\lllll\\Documents\\GitHub\\EcoSysLab\\Resources\\EcoSysLabProject";
+	std::filesystem::path project_path = project_folder_path / "test.eveproj";
 	std::filesystem::path output_root = "D:\\TreePointCloudData\\";
 
 	StartProjectWindowless(project_path);
 
 	TreeMeshGeneratorSettings tmgs{};
 	PointCloudPointSettings pcps{};
-	PointCloudCaptureSettings pccs{};
+	PointCloudCircularCaptureSettings pcccs{};
+	PointCloudGridCaptureSettings pcgcs{};
 	pcps.m_ballRandRadius = 0.01f;
-	pcps.m_treePartIndex = true;
+	pcps.m_treePartIndex = false;
 	pcps.m_branchIndex = false;
-	pcps.m_instanceIndex = false;
+	pcps.m_instanceIndex = true;
 
-	pccs.m_distance = 4.0f;
-	pccs.m_height = 3.0f;
+	pcccs.m_distance = 4.0f;
+	pcccs.m_height = 3.0f;
+
+	int gridSize = 5;
+	float gridDistance = 1.25f;
+	pcgcs.m_gridSize = { gridSize + 1, gridSize  + 1};
+	pcgcs.m_gridDistance = gridDistance;
+
 	int index = 0;
-	int numPerSpecie = 50;
+	int numPerSpecie = 3;
 	for (int i = 0; i < numPerSpecie; i++) {
-		std::string specieName = "Forestry";
-		std::filesystem::path target_descriptor_path = "C:\\Users\\lllll\\Documents\\GitHub\\EcoSysLab\\Resources\\EcoSysLabProject\\TreeDescriptors\\" + specieName + ".td";
+		std::string specieName = "Forestry1";
+		std::filesystem::path target_descriptor_path = project_folder_path / "TreeDescriptors" / (specieName + ".td");
+		std::filesystem::path target_forest_patch_path = project_folder_path / "TreeDescriptors" / "ForestPatch.fp";
 		std::string name = specieName + "_" + std::to_string(index);
 		std::filesystem::path target_tree_mesh_path = output_root / (name + ".obj");
 		std::filesystem::path target_tree_pointcloud_path = output_root / (name + ".ply");
 		std::filesystem::path target_tree_junction_path = output_root / (name + ".yml");
-		DatasetGenerator::GeneratePointCloudForTree(pcps, pccs, target_descriptor_path.string(), 0.08220, 72, 20000, tmgs, target_tree_pointcloud_path.string(), false, target_tree_mesh_path.string(), true, target_tree_junction_path.string());
+		//DatasetGenerator::GeneratePointCloudForTree(pcps, pccs, target_descriptor_path.string(), 0.08220, 72, 20000, tmgs, target_tree_pointcloud_path.string(), false, target_tree_mesh_path.string(), true, target_tree_junction_path.string());
+		
+		DatasetGenerator::GeneratePointCloudForForestPatch(gridSize, gridDistance, gridDistance, pcps, pcgcs, target_descriptor_path.string(), target_forest_patch_path.string(), 0.08220, 96, 10000, tmgs, target_tree_pointcloud_path.string());
 		index++;
 	}
 	

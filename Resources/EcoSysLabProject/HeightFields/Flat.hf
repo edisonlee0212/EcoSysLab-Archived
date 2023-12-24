@@ -5,7 +5,7 @@ m_noises2D:
     - m_type: 2
       m_frequency: 1
       m_intensity: 1
-      m_multiplier: 0.100000001
+      m_multiplier: 0.0199999996
       m_min: -10
       m_max: 10
       m_offset: 0

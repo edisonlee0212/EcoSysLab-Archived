@@ -7,7 +7,7 @@ namespace EcoSysLab {
 	public:
 		static void GeneratePointCloudForTree(
 			const PointCloudPointSettings& pointSettings,
-			const PointCloudCaptureSettings& captureSettings,
+			const PointCloudCircularCaptureSettings& captureSettings,
 			const std::string& treeParametersPath,
 			float deltaTime,
 			int maxIterations,
@@ -18,6 +18,18 @@ namespace EcoSysLab {
 			const std::string& treeMeshOutputPath,
 			bool exportJunction,
 			const std::string& treeJunctionOutputPath
+		);
+		static void GeneratePointCloudForForestPatch(
+			int gridSize, float gridDistance, float randomShift,
+			const PointCloudPointSettings& pointSettings,
+			const PointCloudGridCaptureSettings& captureSettings,
+			const std::string& treeParametersPath,
+			const std::string& forestPatchPath,
+			float deltaTime,
+			int maxIterations,
+			int maxTreeNodeCount,
+			const TreeMeshGeneratorSettings& meshGeneratorSettings,
+			const std::string& pointCloudOutputPath
 		);
 	};
 

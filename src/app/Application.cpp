@@ -16,7 +16,7 @@
 #include "Tree.hpp"
 #include "Soil.hpp"
 #include "Climate.hpp"
-#include "Forest.hpp"
+#include "ForestPatch.hpp"
 #include "EcoSysLabLayer.hpp"
 #include "RadialBoundingVolume.hpp"
 #include "HeightField.hpp"
