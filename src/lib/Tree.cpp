@@ -1415,6 +1415,7 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 			}
 
 			treeParts[currentTreePartIndex].m_nodeHandles.emplace_back(internodeHandle);
+			treeParts[currentTreePartIndex].m_treePartIndex = currentTreePartIndex;
 		}
 		for(auto& treePart : treeParts)
 		{

@@ -91,18 +91,18 @@ int main() {
 	pcgcs.m_gridDistance = gridDistance;
 
 	int index = 0;
-	int numPerSpecie = 2048;
-	for (int i = 1881; i < numPerSpecie; i++) {
-		std::string specieName = "Forestry1";
+	int numPerSpecie = 1;
+	for (int i = 0; i < numPerSpecie; i++) {
+		std::string specieName = "Elm";
 		std::filesystem::path target_descriptor_path = project_folder_path / "TreeDescriptors" / (specieName + ".td");
 		std::filesystem::path target_forest_patch_path = project_folder_path / "TreeDescriptors" / "ForestPatch.fp";
 		std::string name = specieName + "_" + std::to_string(i);
 		std::filesystem::path target_tree_mesh_path = output_root / (name + ".obj");
 		std::filesystem::path target_tree_pointcloud_path = output_root / (name + ".ply");
 		std::filesystem::path target_tree_junction_path = output_root / (name + ".yml");
-		//DatasetGenerator::GeneratePointCloudForTree(pcps, pccs, target_descriptor_path.string(), 0.08220, 72, 20000, tmgs, target_tree_pointcloud_path.string(), false, target_tree_mesh_path.string(), true, target_tree_junction_path.string());
+		DatasetGenerator::GeneratePointCloudForTree(pcps, pcccs, target_descriptor_path.string(), 0.08220, 200, 20000, tmgs, target_tree_pointcloud_path.string(), false, target_tree_mesh_path.string(), true, target_tree_junction_path.string());
 		
-		DatasetGenerator::GeneratePointCloudForForestPatch(gridSize, gridDistance, gridDistance, pcps, pcgcs, target_descriptor_path.string(), target_forest_patch_path.string(), 0.08220, 96, 10000, tmgs, target_tree_pointcloud_path.string());
+		//DatasetGenerator::GeneratePointCloudForForestPatch(gridSize, gridDistance, gridDistance, pcps, pcgcs, target_descriptor_path.string(), target_forest_patch_path.string(), 0.08220, 96, 10000, tmgs, target_tree_pointcloud_path.string());
 		index++;
 	}
 	
