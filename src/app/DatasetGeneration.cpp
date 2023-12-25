@@ -91,12 +91,12 @@ int main() {
 	pcgcs.m_gridDistance = gridDistance;
 
 	int index = 0;
-	int numPerSpecie = 3;
-	for (int i = 0; i < numPerSpecie; i++) {
+	int numPerSpecie = 2048;
+	for (int i = 1881; i < numPerSpecie; i++) {
 		std::string specieName = "Forestry1";
 		std::filesystem::path target_descriptor_path = project_folder_path / "TreeDescriptors" / (specieName + ".td");
 		std::filesystem::path target_forest_patch_path = project_folder_path / "TreeDescriptors" / "ForestPatch.fp";
-		std::string name = specieName + "_" + std::to_string(index);
+		std::string name = specieName + "_" + std::to_string(i);
 		std::filesystem::path target_tree_mesh_path = output_root / (name + ".obj");
 		std::filesystem::path target_tree_pointcloud_path = output_root / (name + ".ply");
 		std::filesystem::path target_tree_junction_path = output_root / (name + ".yml");

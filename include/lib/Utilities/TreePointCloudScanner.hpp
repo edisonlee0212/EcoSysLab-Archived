@@ -70,9 +70,9 @@ namespace EcoSysLab {
         glm::ivec2 m_gridSize = {5, 5};
         float m_gridDistance = 1.25f;
         float m_step = 0.01f;
-    	int m_backpackSample = 1024;
+    	int m_backpackSample = 512;
         float m_backpackHeight = 1.0f;
-        int m_droneSample = 256;
+        int m_droneSample = 128;
         float m_droneHeight = 5.0f;
         void OnInspect() override;
         void GenerateSamples(std::vector<PointCloudSample>& pointCloudSamples) override;

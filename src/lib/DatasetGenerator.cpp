@@ -80,6 +80,7 @@ void DatasetGenerator::GeneratePointCloudForTree(const PointCloudPointSettings& 
 	scanner->m_pointSettings = pointSettings;
 	Application::Loop();
 	scanner->Capture(pointCloudOutputPath, pointCloudCircularCaptureSettings);
+	if (exportJunction) tree->ExportJunction(meshGeneratorSettings, treeJunctionOutputPath);
 	Application::Loop();
 	scene->DeleteEntity(treeEntity);
 	scene->DeleteEntity(scannerEntity);
