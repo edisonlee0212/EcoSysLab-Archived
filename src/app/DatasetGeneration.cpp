@@ -100,9 +100,9 @@ int main() {
 		std::filesystem::path target_tree_mesh_path = output_root / (name + ".obj");
 		std::filesystem::path target_tree_pointcloud_path = output_root / (name + ".ply");
 		std::filesystem::path target_tree_junction_path = output_root / (name + ".yml");
-		DatasetGenerator::GeneratePointCloudForTree(pcps, pcccs, target_descriptor_path.string(), 0.08220, 200, 20000, tmgs, target_tree_pointcloud_path.string(), false, target_tree_mesh_path.string(), true, target_tree_junction_path.string());
+		//DatasetGenerator::GeneratePointCloudForTree(pcps, pcccs, target_descriptor_path.string(), 0.08220, 200, 20000, tmgs, target_tree_pointcloud_path.string(), false, target_tree_mesh_path.string(), true, target_tree_junction_path.string());
 		
-		//DatasetGenerator::GeneratePointCloudForForestPatch(gridSize, gridDistance, gridDistance, pcps, pcgcs, target_descriptor_path.string(), target_forest_patch_path.string(), 0.08220, 96, 10000, tmgs, target_tree_pointcloud_path.string());
+		DatasetGenerator::GeneratePointCloudForForestPatch(gridSize, gridDistance, gridDistance, pcps, pcgcs, target_descriptor_path.string(), target_forest_patch_path.string(), 0.08220, 96, 10000, tmgs, target_tree_pointcloud_path.string());
 		index++;
 	}
 	

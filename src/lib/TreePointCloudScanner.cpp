@@ -364,7 +364,7 @@ void TreePointCloudScanner::Capture(const std::filesystem::path& savePath, const
 
 	std::vector<int> internodeIndex;
 	std::vector<int> branchIndex;
-	std::vector<int> junctionIndex;
+	std::vector<int> treePartIndex;
 	std::vector<int> instanceIndex;
 	std::vector<int> typeIndex;
 
@@ -403,7 +403,7 @@ void TreePointCloudScanner::Capture(const std::filesystem::path& savePath, const
 		}
 		if (m_pointSettings.m_treePartIndex)
 		{
-			junctionIndex.emplace_back(static_cast<int>(sample.m_hitInfo.m_data.z + 0.1f));
+			treePartIndex.emplace_back(static_cast<int>(sample.m_hitInfo.m_data.z + 0.1f));
 		}
 		auto branchSearch = branchMeshRendererHandles.find(sample.m_handle);
 		auto foliageSearch = foliageMeshRendererHandles.find(sample.m_handle);
@@ -475,8 +475,8 @@ void TreePointCloudScanner::Capture(const std::filesystem::path& savePath, const
 	if (m_pointSettings.m_treePartIndex)
 	{
 		cube_file.add_properties_to_element(
-			"junction_index", { "junction_index" }, Type::INT32, junctionIndex.size(),
-			reinterpret_cast<uint8_t*>(junctionIndex.data()), Type::INVALID, 0);
+			"tree_part_index", { "tree_part_index" }, Type::INT32, treePartIndex.size(),
+			reinterpret_cast<uint8_t*>(treePartIndex.data()), Type::INVALID, 0);
 	}
 	if (m_pointSettings.m_internodeIndex)
 	{
