@@ -547,7 +547,7 @@ PYBIND11_MODULE(pyecosyslab, m) {
 		.def_readwrite("m_radius", &TreeMeshGeneratorSettings::m_radius)
 		.def_readwrite("m_overrideVertexColor", &TreeMeshGeneratorSettings::m_overrideVertexColor)
 		.def_readwrite("m_treePartBaseDistance", &TreeMeshGeneratorSettings::m_treePartBaseDistance)
-		.def_readwrite("m_junctionEndDistance", &TreeMeshGeneratorSettings::m_treePartEndDistance)
+		.def_readwrite("m_treePartEndDistance", &TreeMeshGeneratorSettings::m_treePartEndDistance)
 		.def_readwrite("m_baseControlPointRatio", &TreeMeshGeneratorSettings::m_baseControlPointRatio)
 		.def_readwrite("m_branchControlPointRatio", &TreeMeshGeneratorSettings::m_branchControlPointRatio)
 		.def_readwrite("m_smoothness", &TreeMeshGeneratorSettings::m_smoothness)
