@@ -44,6 +44,8 @@ namespace EcoSysLab {
 		glm::vec3 m_globalEndPosition = glm::vec3(0.0f);
 		glm::quat m_globalEndRotation = glm::vec3(0.0f);
 		float m_endThickness = 0.0f;
+
+		float m_flowLength = 0.0f;
 	};
 #pragma endregion
 
@@ -968,6 +970,13 @@ namespace EcoSysLab {
 											  lastNode.m_info.m_length *
 											  (lastNode.m_info.m_globalRotation * glm::vec3(0, 0, -1));
 			flow.m_info.m_globalEndRotation = lastNode.m_info.m_globalRotation;
+
+			flow.m_info.m_flowLength = 0.0f;
+			for(const auto& nodeHandle : flow.m_nodes)
+			{
+				flow.m_info.m_flowLength += m_nodes[flowHandle].m_info.m_length;
+			}
+
 		}
 	}
 

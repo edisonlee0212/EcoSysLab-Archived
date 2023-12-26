@@ -117,8 +117,8 @@ namespace EcoSysLab {
 		unsigned m_branchMeshType = 0;
 		unsigned m_rootMeshType = 0;
 
-		int m_treePartBaseDistance = 0;
-		int m_treePartEndDistance = 1;
+		float m_treePartBaseDistance = 0;
+		float m_treePartEndDistance = 2;
 		float m_treePartBreakRatio = 4.0f;
 
 
@@ -310,28 +310,28 @@ namespace EcoSysLab {
 			const bool hasMultipleChildren = flow.RefChildHandles().size() > 1;
 			bool onlyChild = true;
 			const auto parentFlowHandle = flow.GetParentHandle();
-			int distanceToTreePartEnd = 0;
-			int distanceToTreePartStart = 0;
+			float distanceToChainStart = 0;
+			float distanceToChainEnd = 0;
 			const auto chainSize = chainHandles.size();
 			for (int i = 0; i < chainSize; i++)
 			{
-				if (chainHandles[i] == internodeHandle)
-				{
-					distanceToTreePartEnd = i;
-					distanceToTreePartStart = chainSize - 1 - i;
-					break;
-				}
+				if (chainHandles[i] == internodeHandle) break;
+				distanceToChainStart += treeSkeleton.PeekNode(chainHandles[i]).m_info.m_length;
+				
 			}
+			distanceToChainEnd = flow.m_info.m_flowLength - distanceToChainStart - internode.m_info.m_length;
+			float compareRadius = internode.m_info.m_length;
 			if (parentFlowHandle != -1)
 			{
 				const auto& parentFlow = treeSkeleton.PeekFlow(parentFlowHandle);
 				onlyChild = parentFlow.RefChildHandles().size() <= 1;
+				compareRadius = parentFlow.m_info.m_endThickness;
 			}
 			int treePartType = 0;
-			if (hasMultipleChildren && distanceToTreePartStart <= settings.m_treePartBaseDistance) {
+			if (hasMultipleChildren && distanceToChainEnd <= settings.m_treePartBaseDistance * compareRadius) {
 				treePartType = 1;
 			}
-			else if (!onlyChild && distanceToTreePartEnd <= settings.m_treePartEndDistance)
+			else if (!onlyChild && distanceToChainStart <= settings.m_treePartEndDistance * compareRadius)
 			{
 				treePartType = 2;
 			}
