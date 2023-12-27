@@ -117,7 +117,7 @@ namespace EcoSysLab {
 		unsigned m_branchMeshType = 0;
 		unsigned m_rootMeshType = 0;
 
-		float m_treePartBaseDistance = 0;
+		float m_treePartBaseDistance = 1;
 		float m_treePartEndDistance = 2;
 		float m_treePartBreakRatio = 4.0f;
 
@@ -325,7 +325,7 @@ namespace EcoSysLab {
 			{
 				const auto& parentFlow = treeSkeleton.PeekFlow(parentFlowHandle);
 				onlyChild = parentFlow.RefChildHandles().size() <= 1;
-				compareRadius = parentFlow.m_info.m_endThickness;
+				compareRadius = parentFlow.m_info.m_startThickness;
 			}
 			int treePartType = 0;
 			if (hasMultipleChildren && distanceToChainEnd <= settings.m_treePartBaseDistance * compareRadius) {

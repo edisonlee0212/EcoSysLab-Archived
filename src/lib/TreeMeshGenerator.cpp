@@ -293,7 +293,7 @@ void TreeMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLayer>& ed
 			ImGui::Checkbox("Override radius", &m_overrideRadius);
 			if (m_overrideRadius) ImGui::DragFloat("Radius", &m_radius);
 			ImGui::Checkbox("Override vertex color", &m_overrideVertexColor);
-			ImGui::DragFloat("Tree Part Start Distance", &m_treePartBaseDistance, 1, 0, 10);
+			ImGui::DragFloat("Tree Part Base Distance", &m_treePartBaseDistance, 1, 0, 10);
 			ImGui::DragFloat("Tree Part End Distance", &m_treePartEndDistance, 1, 0, 10);
 			ImGui::TreePop();
 		}
