@@ -325,7 +325,7 @@ namespace EcoSysLab {
 			{
 				const auto& parentFlow = treeSkeleton.PeekFlow(parentFlowHandle);
 				onlyChild = parentFlow.RefChildHandles().size() <= 1;
-				compareRadius = parentFlow.m_info.m_startThickness;
+				compareRadius = parentFlow.m_info.m_endThickness;
 			}
 			int treePartType = 0;
 			if (hasMultipleChildren && distanceToChainEnd <= settings.m_treePartBaseDistance * compareRadius) {
