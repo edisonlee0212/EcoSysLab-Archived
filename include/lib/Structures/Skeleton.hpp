@@ -974,7 +974,7 @@ namespace EcoSysLab {
 			flow.m_info.m_flowLength = 0.0f;
 			for(const auto& nodeHandle : flow.m_nodes)
 			{
-				flow.m_info.m_flowLength += m_nodes[flowHandle].m_info.m_length;
+				flow.m_info.m_flowLength += m_nodes[nodeHandle].m_info.m_length;
 			}
 
 		}

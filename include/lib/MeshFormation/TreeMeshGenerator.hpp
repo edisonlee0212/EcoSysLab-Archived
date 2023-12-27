@@ -320,7 +320,7 @@ namespace EcoSysLab {
 				
 			}
 			distanceToChainEnd = flow.m_info.m_flowLength - distanceToChainStart - internode.m_info.m_length;
-			float compareRadius = internode.m_info.m_length;
+			float compareRadius = internode.m_info.m_thickness;
 			if (parentFlowHandle != -1)
 			{
 				const auto& parentFlow = treeSkeleton.PeekFlow(parentFlowHandle);
