@@ -20,17 +20,7 @@
 using namespace EcoSysLab;
 void Tree::SerializeTreeGrowthSettings(const TreeGrowthSettings& treeGrowthSettings, YAML::Emitter& out)
 {
-	out << YAML::Key << "m_enableRoot" << YAML::Value << treeGrowthSettings.m_enableRoot;
-	out << YAML::Key << "m_enableShoot" << YAML::Value << treeGrowthSettings.m_enableShoot;
-
-	out << YAML::Key << "m_autoBalance" << YAML::Value << treeGrowthSettings.m_autoBalance;
-	out << YAML::Key << "m_collectRootFlux" << YAML::Value << treeGrowthSettings.m_collectRootFlux;
-
-	out << YAML::Key << "m_collectNitrite" << YAML::Value << treeGrowthSettings.m_collectNitrite;
 	out << YAML::Key << "m_nodeDevelopmentalVigorFillingRate" << YAML::Value << treeGrowthSettings.m_nodeDevelopmentalVigorFillingRate;
-
-	out << YAML::Key << "m_enableRootCollisionDetection" << YAML::Value << treeGrowthSettings.m_enableRootCollisionDetection;
-	out << YAML::Key << "m_enableBranchCollisionDetection" << YAML::Value << treeGrowthSettings.m_enableBranchCollisionDetection;
 
 	out << YAML::Key << "m_useSpaceColonization" << YAML::Value << treeGrowthSettings.m_useSpaceColonization;
 	out << YAML::Key << "m_spaceColonizationAutoResize" << YAML::Value << treeGrowthSettings.m_spaceColonizationAutoResize;
@@ -39,18 +29,7 @@ void Tree::SerializeTreeGrowthSettings(const TreeGrowthSettings& treeGrowthSetti
 	out << YAML::Key << "m_spaceColonizationTheta" << YAML::Value << treeGrowthSettings.m_spaceColonizationTheta;
 }
 void Tree::DeserializeTreeGrowthSettings(TreeGrowthSettings& treeGrowthSettings, const YAML::Node& param) {
-	if (param["m_enableRoot"]) treeGrowthSettings.m_enableRoot = param["m_enableRoot"].as<bool>();
-	if (param["m_enableShoot"]) treeGrowthSettings.m_enableShoot = param["m_enableShoot"].as<bool>();
-
-	if (param["m_autoBalance"]) treeGrowthSettings.m_autoBalance = param["m_autoBalance"].as<bool>();
-	if (param["m_collectRootFlux"]) treeGrowthSettings.m_collectRootFlux = param["m_collectRootFlux"].as<bool>();
-	if (param["m_collectNitrite"]) treeGrowthSettings.m_collectNitrite = param["m_collectNitrite"].as<bool>();
-
 	if (param["m_nodeDevelopmentalVigorFillingRate"]) treeGrowthSettings.m_nodeDevelopmentalVigorFillingRate = param["m_nodeDevelopmentalVigorFillingRate"].as<float>();
-
-	if (param["m_enableRootCollisionDetection"]) treeGrowthSettings.m_enableRootCollisionDetection = param["m_enableRootCollisionDetection"].as<bool>();
-	if (param["m_enableBranchCollisionDetection"]) treeGrowthSettings.m_enableBranchCollisionDetection = param["m_enableBranchCollisionDetection"].as<bool>();
-
 	if (param["m_useSpaceColonization"]) treeGrowthSettings.m_useSpaceColonization = param["m_useSpaceColonization"].as<bool>();
 	if (param["m_spaceColonizationAutoResize"]) treeGrowthSettings.m_spaceColonizationAutoResize = param["m_spaceColonizationAutoResize"].as<bool>();
 	if (param["m_spaceColonizationRemovalDistanceFactor"]) treeGrowthSettings.m_spaceColonizationRemovalDistanceFactor = param["m_spaceColonizationRemovalDistanceFactor"].as<float>();
@@ -401,27 +380,6 @@ void Tree::OnDestroy() {
 bool Tree::OnInspectTreeGrowthSettings(TreeGrowthSettings& treeGrowthSettings)
 {
 	bool changed = false;
-	if (ImGui::Checkbox("Enable Root", &treeGrowthSettings.m_enableRoot)) changed = true;
-	if (ImGui::Checkbox("Enable Shoot", &treeGrowthSettings.m_enableShoot)) changed = true;
-	if (ImGui::Checkbox("Auto balance vigor", &treeGrowthSettings.m_autoBalance)) changed = true;
-	if (ImGui::Checkbox("Receive water", &treeGrowthSettings.m_collectRootFlux)) changed = true;
-	if (ImGui::Checkbox("Receive nitrite", &treeGrowthSettings.m_collectNitrite)) changed = true;
-	if (ImGui::Checkbox("Enable Branch collision detection", &treeGrowthSettings.m_enableBranchCollisionDetection)) changed = true;
-	if (ImGui::Checkbox("Enable Root collision detection", &treeGrowthSettings.m_enableRootCollisionDetection)) changed = true;
-
-	if (!treeGrowthSettings.m_collectRootFlux)
-	{
-		if (ImGui::TreeNode("Vigor filling rates"))
-		{
-			if (ImGui::SliderFloat("Node development", &treeGrowthSettings.m_nodeDevelopmentalVigorFillingRate, 0.0f, 1.0f)) changed = true;
-			if (ImGui::Button("Reset"))
-			{
-				treeGrowthSettings.m_nodeDevelopmentalVigorFillingRate = 1.0f;
-				changed = true;
-			}
-			ImGui::TreePop();
-		}
-	}
 	if (ImGui::Checkbox("Enable space colonization", &treeGrowthSettings.m_useSpaceColonization))changed = true;
 	if (treeGrowthSettings.m_useSpaceColonization)
 	{
@@ -680,8 +638,7 @@ bool Tree::TryGrow(float deltaTime) {
 	const auto climate = m_climate.Get<Climate>();
 	const auto owner = GetOwner();
 	PrepareControllers(treeDescriptor);
-	const bool grown = m_treeModel.Grow(deltaTime, scene->GetDataComponent<GlobalTransform>(owner).m_value, soil->m_soilModel, climate->m_climateModel,
-		m_rootGrowthController, m_shootGrowthController);
+	const bool grown = m_treeModel.Grow(deltaTime, scene->GetDataComponent<GlobalTransform>(owner).m_value, climate->m_climateModel, m_shootGrowthController);
 	if (grown)
 	{
 		m_treeVisualizer.ClearSelections();
@@ -691,28 +648,8 @@ bool Tree::TryGrow(float deltaTime) {
 
 	if (m_recordBiomassHistory)
 	{
-		const auto& baseRootNode = m_treeModel.RefRootSkeleton().RefNode(0);
 		const auto& baseShootNode = m_treeModel.RefShootSkeleton().RefNode(0);
-		m_rootBiomassHistory.emplace_back(baseRootNode.m_data.m_biomass + baseRootNode.m_data.m_descendentTotalBiomass);
 		m_shootBiomassHistory.emplace_back(baseShootNode.m_data.m_biomass + baseShootNode.m_data.m_descendentTotalBiomass);
-	}
-
-	if (m_splitRootTest)
-	{
-		const auto& rootNodeList = m_treeModel.RefRootSkeleton().RefSortedNodeList();
-		m_leftSideBiomass = m_rightSideBiomass = 0.0f;
-		for (const auto& rootNodeHandle : rootNodeList)
-		{
-			const auto& rootNode = m_treeModel.RefRootSkeleton().RefNode(rootNodeHandle);
-			if (rootNode.m_info.m_globalPosition.x < 0.0f)
-			{
-				m_leftSideBiomass += rootNode.m_data.m_biomass;
-			}
-			else
-			{
-				m_rightSideBiomass += rootNode.m_data.m_biomass;
-			}
-		}
 	}
 
 	return grown;
@@ -842,161 +779,7 @@ void Tree::GenerateGeometry(const TreeMeshGeneratorSettings& meshGeneratorSettin
 		meshRenderer->m_mesh = mesh;
 		meshRenderer->m_material = material;
 	}
-	if (meshGeneratorSettings.m_enableRoot)
-	{
-		Entity rootEntity;
-		rootEntity = scene->CreateEntity("Root Mesh");
-		scene->SetParent(rootEntity, self);
-		std::vector<Vertex> vertices;
-		std::vector<unsigned int> indices;
-		switch (meshGeneratorSettings.m_rootMeshType)
-		{
-		case 0:
-		{
-			CylindricalMeshGenerator<RootGrowthData, RootStemGrowthData, RootNodeGrowthData> meshGenerator;
-			meshGenerator.Generate(m_treeModel.PeekRootSkeleton(actualIteration), vertices, indices,
-				meshGeneratorSettings, [&](float xFactor, float yFactor)
-				{
-					return 1.0f + glm::sin(yFactor / 0.05f) * 0.05f;
-				});
-		}
-		break;
-		case 1:
-		{
-			const auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
-			float minRadius = 0.01f;
-			if (treeDescriptor)
-			{
-				minRadius = treeDescriptor->m_rootGrowthParameters.m_endNodeThickness;
-			}
-			VoxelMeshGenerator<RootGrowthData, RootStemGrowthData, RootNodeGrowthData> meshGenerator;
-			meshGenerator.Generate(m_treeModel.PeekRootSkeleton(actualIteration), vertices, indices,
-				meshGeneratorSettings, minRadius);
-		}
-		break;
-		default: break;
-		}
-		auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
-		auto material = ProjectManager::CreateTemporaryAsset<Material>();
-		if (meshGeneratorSettings.m_presentationOverride)
-		{
-			material->m_materialProperties.m_albedoColor = meshGeneratorSettings.m_presentationOverrideSettings.m_rootOverrideColor;
-		}
-		else {
-			material->m_materialProperties.m_albedoColor = glm::vec3(80, 60, 50) / 255.0f;
-		}
-		material->m_materialProperties.m_roughness = 1.0f;
-		material->m_materialProperties.m_metallic = 0.0f;
-		VertexAttributes vertexAttributes{};
-		vertexAttributes.m_texCoord = true;
-		mesh->SetVertices(vertexAttributes, vertices, indices);
-		auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(rootEntity).lock();
-		meshRenderer->m_mesh = mesh;
-		meshRenderer->m_material = material;
-	}
-	if (meshGeneratorSettings.m_enableFineRoot)
-	{
-		Entity fineRootEntity;
-		fineRootEntity = scene->CreateEntity("Fine Root Strands");
-		scene->SetParent(fineRootEntity, self);
-		std::vector<glm::uint> fineRootSegments;
-		std::vector<StrandPoint> fineRootPoints;
-		const auto& rootSkeleton = m_treeModel.PeekRootSkeleton(actualIteration);
-		const auto& rootNodeList = rootSkeleton.RefSortedNodeList();
-		for (int rootNodeHandle : rootNodeList)
-		{
-			const auto& rootNode = rootSkeleton.PeekNode(rootNodeHandle);
-			const auto& rootNodeData = rootNode.m_data;
-			const auto& rootNodeInfo = rootNode.m_info;
-			std::vector<std::vector<glm::vec4>> fineRoots{};
-			if (rootNodeInfo.m_thickness < meshGeneratorSettings.m_fineRootParameters.m_maxNodeThickness && rootNodeData.m_rootDistance > meshGeneratorSettings.m_fineRootParameters.m_minRootDistance)
-			{
-				int fineRootCount = rootNodeInfo.m_length / meshGeneratorSettings.m_fineRootParameters.m_unitDistance;
-				fineRoots.resize(fineRootCount);
-
-				auto desiredGlobalRotation = rootNodeInfo.m_regulatedGlobalRotation * glm::quat(glm::vec3(
-					glm::radians(meshGeneratorSettings.m_fineRootParameters.m_branchingAngle), 0.0f,
-					glm::radians(glm::radians(
-						glm::linearRand(0.0f,
-							360.0f)))));
-
-				glm::vec3 directionStart = rootNodeInfo.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
-				glm::vec3 directionEnd = directionStart;
-
-				glm::vec3 positionStart = rootNodeInfo.m_globalPosition;
-				glm::vec3 positionEnd =
-					positionStart + rootNodeInfo.m_length * (meshGeneratorSettings.m_smoothness ? 1.0f - meshGeneratorSettings.m_baseControlPointRatio * 0.5f : 1.0f) * rootNodeInfo.m_globalDirection;
-
-				BezierCurve curve = BezierCurve(
-					positionStart,
-					positionStart +
-					(meshGeneratorSettings.m_smoothness ? rootNodeInfo.m_length * meshGeneratorSettings.m_baseControlPointRatio : 0.0f) * directionStart,
-					positionEnd -
-					(meshGeneratorSettings.m_smoothness ? rootNodeInfo.m_length * meshGeneratorSettings.m_branchControlPointRatio : 0.0f) * directionEnd,
-					positionEnd);
-
-				for (int fineRootIndex = 0; fineRootIndex < fineRootCount; fineRootIndex++) {
-					glm::vec3 positionWalker = curve.GetPoint(static_cast<float>(fineRootIndex) / fineRootCount);
-					fineRoots[fineRootIndex].resize(meshGeneratorSettings.m_fineRootParameters.m_segmentSize);
-					const float rollAngle = glm::radians(glm::linearRand(0.0f, 360.0f));
-					for (int fineRootPointIndex = 0; fineRootPointIndex < meshGeneratorSettings.m_fineRootParameters.m_segmentSize; fineRootPointIndex++)
-					{
-						fineRoots[fineRootIndex][fineRootPointIndex] = glm::vec4(positionWalker, meshGeneratorSettings.m_fineRootParameters.m_thickness);
-						desiredGlobalRotation = rootNodeInfo.m_regulatedGlobalRotation * glm::quat(glm::vec3(
-							glm::radians(glm::gaussRand(0.f, meshGeneratorSettings.m_fineRootParameters.m_apicalAngleVariance) + meshGeneratorSettings.m_fineRootParameters.m_branchingAngle), 0.0f,
-							rollAngle));
-
-						auto fineRootFront = desiredGlobalRotation * glm::vec3(0, 0, -1);
-						positionWalker = positionWalker + fineRootFront * meshGeneratorSettings.m_fineRootParameters.m_segmentLength;
-					}
-				}
-
-			}
-
-			for (const auto& fineRoot : fineRoots) {
-				const auto fineRootSegmentSize = fineRoot.size();
-				const auto fineRootControlPointSize = fineRoot.size() + 3;
-				const auto totalTwigPointSize = fineRootPoints.size();
-				const auto totalTwigSegmentSize = fineRootSegments.size();
-				fineRootPoints.resize(totalTwigPointSize + fineRootControlPointSize);
-				fineRootSegments.resize(totalTwigSegmentSize + fineRootSegmentSize);
-
-				for (int i = 0; i < fineRootControlPointSize; i++) {
-					auto& p = fineRootPoints[totalTwigPointSize + i];
-					p.m_position = glm::vec3(fineRoot[glm::clamp(i - 2, 0, static_cast<int>(fineRootSegmentSize - 1))]);
-					p.m_thickness = fineRoot[glm::clamp(i - 2, 0, static_cast<int>(fineRootSegmentSize - 1))].w;
-				}
-				fineRootPoints[totalTwigPointSize].m_position = glm::vec3(fineRoot[0]) * 2.0f - glm::vec3(fineRoot[1]);
-				fineRootPoints[totalTwigPointSize].m_thickness = fineRoot[0].w * 2.0f - fineRoot[1].w;
-
-				fineRootPoints[totalTwigPointSize + fineRootControlPointSize - 1].m_position = glm::vec3(fineRoot[fineRootSegmentSize - 1]) * 2.0f - glm::vec3(fineRoot[fineRootSegmentSize - 2]);
-				fineRootPoints[totalTwigPointSize + fineRootControlPointSize - 1].m_thickness = fineRoot[fineRootSegmentSize - 1].w * 2.0f - fineRoot[fineRootSegmentSize - 2].w;
-
-
-				for (int i = 0; i < fineRootSegmentSize; i++) {
-					fineRootSegments[totalTwigSegmentSize + i] = totalTwigPointSize + i;
-				}
-			}
-		}
-
-		auto strands = ProjectManager::CreateTemporaryAsset<Strands>();
-		auto material = ProjectManager::CreateTemporaryAsset<Material>();
-		if (meshGeneratorSettings.m_presentationOverride)
-		{
-			material->m_materialProperties.m_albedoColor = meshGeneratorSettings.m_presentationOverrideSettings.m_rootOverrideColor;
-		}
-		else {
-			material->m_materialProperties.m_albedoColor = glm::vec3(80, 60, 50) / 255.0f;
-		}
-		material->m_materialProperties.m_roughness = 1.0f;
-		material->m_materialProperties.m_metallic = 0.0f;
-		StrandPointAttributes strandPointAttributes{};
-		strands->SetSegments(strandPointAttributes, fineRootSegments, fineRootPoints);
-		auto strandsRenderer = scene->GetOrSetPrivateComponent<StrandsRenderer>(fineRootEntity).lock();
-		strandsRenderer->m_strands = strands;
-		strandsRenderer->m_material = material;
-	}
-
+	
 	if (meshGeneratorSettings.m_enableTwig)
 	{
 		Entity twigEntity;
@@ -1684,46 +1467,4 @@ void Tree::PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescrip
 			};
 
 	}
-	{
-		m_rootGrowthController.m_rootNodeGrowthRate = treeDescriptor->m_rootGrowthParameters.m_rootNodeGrowthRate;
-		m_rootGrowthController.m_rootNodeLength = treeDescriptor->m_rootGrowthParameters.m_rootNodeLength;
-		m_rootGrowthController.m_endNodeThickness = treeDescriptor->m_rootGrowthParameters.m_endNodeThickness;
-		m_rootGrowthController.m_thicknessAccumulationFactor = treeDescriptor->m_rootGrowthParameters.m_thicknessAccumulationFactor;
-		m_rootGrowthController.m_thicknessAccumulateAgeFactor = treeDescriptor->m_rootGrowthParameters.m_thicknessAccumulateAgeFactor;
-		m_rootGrowthController.m_branchingAngle = [=](const Node<RootNodeGrowthData>& rootNode)
-			{
-				return glm::gaussRand(treeDescriptor->m_rootGrowthParameters.m_branchingAngleMeanVariance.x, treeDescriptor->m_rootGrowthParameters.m_branchingAngleMeanVariance.y);
-			};
-		m_rootGrowthController.m_rollAngle = [=](const Node<RootNodeGrowthData>& rootNode)
-			{
-				return glm::gaussRand(treeDescriptor->m_rootGrowthParameters.m_rollAngleMeanVariance.x, treeDescriptor->m_rootGrowthParameters.m_rollAngleMeanVariance.y);
-			};
-		m_rootGrowthController.m_apicalAngle = [=](const Node<RootNodeGrowthData>& rootNode)
-			{
-				return glm::gaussRand(treeDescriptor->m_rootGrowthParameters.m_apicalAngleMeanVariance.x, treeDescriptor->m_rootGrowthParameters.m_apicalAngleMeanVariance.y);
-			};
-		m_rootGrowthController.m_environmentalFriction = [=](const Node<RootNodeGrowthData>& rootNode)
-			{
-				const auto& rootNodeData = rootNode.m_data;
-				return 1.0f - glm::pow(1.0f / glm::max(rootNodeData.m_soilDensity * treeDescriptor->m_rootGrowthParameters.m_environmentalFriction, 1.0f), treeDescriptor->m_rootGrowthParameters.m_environmentalFrictionFactor);
-			};
-
-		m_rootGrowthController.m_apicalControl = 1.0f + treeDescriptor->m_rootGrowthParameters.m_apicalControl * glm::exp(-treeDescriptor->m_rootGrowthParameters.m_apicalControlAgeFactor * m_treeModel.m_age);
-		m_rootGrowthController.m_apicalDominance = [=](const Node<RootNodeGrowthData>& rootNode)
-			{
-				return treeDescriptor->m_rootGrowthParameters.m_apicalDominance * glm::exp(-treeDescriptor->m_rootGrowthParameters.m_apicalDominanceAgeFactor * m_treeModel.m_age);
-			};
-		m_rootGrowthController.m_apicalDominanceDistanceFactor = treeDescriptor->m_rootGrowthParameters.m_apicalDominanceDistanceFactor;
-		m_rootGrowthController.m_tropismSwitchingProbability = treeDescriptor->m_rootGrowthParameters.m_tropismSwitchingProbability;
-		m_rootGrowthController.m_tropismSwitchingProbabilityDistanceFactor = treeDescriptor->m_rootGrowthParameters.m_tropismSwitchingProbabilityDistanceFactor;
-		m_rootGrowthController.m_tropismIntensity = treeDescriptor->m_rootGrowthParameters.m_tropismIntensity;
-		m_rootGrowthController.m_rootNodeVigorRequirement = treeDescriptor->m_rootGrowthParameters.m_rootNodeVigorRequirement;
-		m_rootGrowthController.m_vigorRequirementAggregateLoss = treeDescriptor->m_rootGrowthParameters.m_vigorRequirementAggregateLoss;
-
-		m_rootGrowthController.m_branchingProbability = [=](const Node<RootNodeGrowthData>& rootNode)
-			{
-				return treeDescriptor->m_rootGrowthParameters.m_branchingProbability;
-			};
-	}
-
 }

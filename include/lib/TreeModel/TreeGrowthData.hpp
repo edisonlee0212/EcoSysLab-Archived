@@ -45,11 +45,6 @@ namespace EcoSysLab
 		float m_shootFlux = 0.0f;
 	};
 
-	struct RootFlux {
-		float m_nitrite = 0.0f;
-		float m_totalGrowthPotential = 0.0f;
-	};
-
 	struct ShootFlux {
 		float m_totalGrowthPotential = 0.0f;
 	};
@@ -63,10 +58,6 @@ namespace EcoSysLab
 		float m_nodeDevelopmentalVigor = 0.0f;
 	};
 
-	struct RootGrowthRequirement
-	{
-		float m_nodeDevelopmentalVigor = 0.0f;
-	};
 
 	struct TreeVoxelData
 	{
@@ -75,15 +66,6 @@ namespace EcoSysLab
 		unsigned m_referenceCount = 0;
 	};
 
-	struct ShootRootVigorRatio
-	{
-		float m_rootVigorWeight = 1.0f;
-		float m_shootVigorWeight = 1.0f;
-	};
-
-	
-
-	
 #pragma endregion
 
 	struct InternodeGrowthData {
@@ -123,47 +105,9 @@ namespace EcoSysLab
 		std::vector<glm::mat4> m_fruits;
 	};
 
-	struct RootNodeGrowthData {
-		
-		glm::quat m_localRotation = glm::vec3(0.0f);
-		glm::vec3 m_localPosition = glm::vec3(0.0f);
-
-		bool m_isMaxChild = false;
-		bool m_lateral = false;
-		float m_soilDensity = 0.0f;
-		float m_startAge = 0;
-		float m_maxDistanceToAnyBranchEnd = 0;
-		float m_descendentTotalBiomass = 0;
-		float m_biomass = 0;
-		float m_extraMass = 0.0f;
-
-		float m_rootDistance = 0;
-		int m_order = 0;
-
-		float m_growthPotential = 0.0f;
-
-		float m_nitrite = 1.0f;
-
-		float m_inhibitor = 0;
-
-		float m_horizontalTropism = 0.0f;
-		float m_verticalTropism = 0.0f;
-		VigorFlow m_vigorFlow;
-		/*
-		 * The allocated total resource for maintenance and development of this module.
-		 */
-		VigorSink m_vigorSink;
-	};
-
 	struct ShootStemGrowthData {
 		int m_order = 0;
 	};
-
-	struct RootStemGrowthData {
-		int m_order = 0;
-	};
-
-	
 
 	struct ShootGrowthData {
 		Octree<TreeVoxelData> m_octree = {};
@@ -183,14 +127,6 @@ namespace EcoSysLab
 		glm::vec3 m_desiredMax = glm::vec3(FLT_MIN);
 	};
 
-	struct RootGrowthData {
-		Octree<TreeVoxelData> m_octree = {};
-		RootGrowthRequirement m_vigorRequirement = {};
-		RootFlux m_rootFlux = {};
-
-		float m_vigor = 0;
-	};
 
 	typedef Skeleton<ShootGrowthData, ShootStemGrowthData, InternodeGrowthData> ShootSkeleton;
-	typedef Skeleton<RootGrowthData, RootStemGrowthData, RootNodeGrowthData> RootSkeleton;
 }

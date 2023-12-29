@@ -34,7 +34,6 @@ namespace EcoSysLab {
 		bool m_displayShootStem = true;
 		bool m_displayFoliage = true;
 		bool m_displayFruit = true;
-		bool m_displayRootStem = true;
 		bool m_displayBoundingBox = false;
 		bool m_displaySoil = false;
 		bool m_displayGroundFruit = true;
@@ -42,16 +41,12 @@ namespace EcoSysLab {
 
 		bool m_debugVisualization = false;
 		std::vector<int> m_shootVersions;
-		std::vector<int> m_rootVersions;
 		std::vector<glm::vec3> m_randomColors;
 
 		std::vector<glm::uint> m_shootStemSegments;
 		std::vector<StrandPoint> m_shootStemPoints;
-		std::vector<glm::uint> m_rootStemSegments;
-		std::vector<StrandPoint> m_rootStemPoints;
-
+		
 		AssetRef m_shootStemStrands;
-		AssetRef m_rootStemStrands;
 
 		std::shared_ptr<ParticleInfoList> m_boundingBoxMatrices;
 
@@ -118,7 +113,6 @@ namespace EcoSysLab {
 
 
 		void UpdateFlows(const std::vector<Entity>* treeEntities, const std::shared_ptr<Strands>& branchStrands,
-			const std::shared_ptr<Strands>& rootStrands,
 			int targetTreeIndex = -1);
 
 		void ClearGroundFruitAndLeaf();
@@ -158,7 +152,6 @@ namespace EcoSysLab {
 		Entity m_selectedTree = {};
 
 		EntityRef m_shootStemStrandsHolder;
-		EntityRef m_rootStemStrandsHolder;
 		EntityRef m_foliageHolder;
 		EntityRef m_fruitHolder;
 		EntityRef m_groundLeavesHolder;

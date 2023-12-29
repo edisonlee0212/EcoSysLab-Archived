@@ -57,7 +57,10 @@ bool TreeVisualizer::DrawInternodeInspectionGui(
 	}
 	return modified;
 }
-
+void TreeVisualizer::ClearSelections()
+{
+	m_selectedInternodeHandle = -1;
+}
 bool
 TreeVisualizer::OnInspect(
 	TreeModel& treeModel) {
@@ -67,9 +70,7 @@ TreeVisualizer::OnInspect(
 		m_settings.m_shootVisualizationMode)) {
 		m_needShootColorUpdate = true;
 	}
-	if (ImGui::Combo("Root Color mode", { "Default", "AllocatedVigor" }, m_settings.m_rootVisualizationMode)) {
-		m_needRootColorUpdate = true;
-	}
+
 	if (ImGui::TreeNode("Shoot Color settings")) {
 		switch (static_cast<ShootVisualizerMode>(m_settings.m_shootVisualizationMode)) {
 		case ShootVisualizerMode::GrowthPotential:
@@ -85,17 +86,7 @@ TreeVisualizer::OnInspect(
 		}
 		ImGui::TreePop();
 	}
-	if (ImGui::TreeNode("Root Color settings")) {
-		switch (static_cast<RootVisualizerMode>(m_settings.m_rootVisualizationMode)) {
-		case RootVisualizerMode::AllocatedVigor:
-			ImGui::DragFloat("Vigor multiplier", &m_settings.m_rootColorMultiplier, 0.001f);
-			m_needRootColorUpdate = true;
-			break;
-		default:
-			break;
-		}
-		ImGui::TreePop();
-	}
+	
 	if (treeModel.CurrentIteration() > 0) {
 		if (ImGui::TreeNodeEx("History", ImGuiTreeNodeFlags_DefaultOpen)) {
 			ImGui::DragInt("History Limit", &treeModel.m_historyLimit, 1, -1, 1024);
@@ -103,8 +94,6 @@ TreeVisualizer::OnInspect(
 				m_iteration = glm::clamp(m_iteration, 0, treeModel.CurrentIteration());
 				m_selectedInternodeHandle = -1;
 				m_selectedInternodeHierarchyList.clear();
-				m_selectedRootNodeHandle = -1;
-				m_selectedRootNodeHierarchyList.clear();
 				m_needUpdate = true;
 			}
 			if (m_iteration != treeModel.CurrentIteration() && ImGui::Button("Reverse")) {
@@ -123,21 +112,14 @@ TreeVisualizer::OnInspect(
 		ImGui::Checkbox("Visualization", &m_visualization);
 		ImGui::Checkbox("Hexagon profile", &m_hexagonProfileGui);
 		ImGui::Checkbox("Tree Hierarchy", &m_treeHierarchyGui);
-		ImGui::Checkbox("Root Hierarchy", &m_rootHierarchyGui);
 
 		if (m_visualization) {
 			const auto& treeSkeleton = treeModel.PeekShootSkeleton(m_iteration);
-			const auto& rootSkeleton = treeModel.PeekRootSkeleton(m_iteration);
 			const auto editorLayer = Application::GetLayer<EditorLayer>();
 			const auto& sortedBranchList = treeSkeleton.RefSortedFlowList();
 			const auto& sortedInternodeList = treeSkeleton.RefSortedNodeList();
 			ImGui::Text("Internode count: %d", sortedInternodeList.size());
 			ImGui::Text("Shoot stem count: %d", sortedBranchList.size());
-
-			const auto& sortedRootFlowList = rootSkeleton.RefSortedFlowList();
-			const auto& sortedRootNodeList = rootSkeleton.RefSortedNodeList();
-			ImGui::Text("Root node count: %d", sortedRootNodeList.size());
-			ImGui::Text("Root stem count: %d", sortedRootFlowList.size());
 
 			static bool enableStroke = false;
 			if (ImGui::Checkbox("Enable stroke", &enableStroke)) {
@@ -161,15 +143,7 @@ TreeVisualizer::OnInspect(
 			PeekInternode(treeModel.PeekShootSkeleton(m_iteration), m_selectedInternodeHandle);
 		}
 	}
-	if (m_selectedRootNodeHandle >= 0) {
-		if (m_iteration == treeModel.CurrentIteration()) {
-			InspectRootNode(treeModel.RefRootSkeleton(), m_selectedRootNodeHandle);
-		}
-		else {
-			PeekRootNode(treeModel.PeekRootSkeleton(m_iteration), m_selectedRootNodeHandle);
-		}
-	}
-
+	
 	if (m_treeHierarchyGui) {
 		if (ImGui::TreeNodeEx("Tree Hierarchy")) {
 			bool deleted = false;
@@ -184,44 +158,17 @@ TreeVisualizer::OnInspect(
 				PeekNodeInspectionGui(treeModel.PeekShootSkeleton(m_iteration), 0, m_selectedInternodeHandle,
 					m_selectedInternodeHierarchyList, 0);
 			m_selectedInternodeHierarchyList.clear();
-			if (tempSelection != m_selectedInternodeHandle) {
-				m_selectedRootNodeHandle = -1;
-				m_selectedRootNodeHierarchyList.clear();
-			}
 			ImGui::TreePop();
 		}
 
 	}
-	if (m_rootHierarchyGui) {
-		if (ImGui::TreeNodeEx("Root Hierarchy")) {
-			bool deleted = false;
-			const auto tempSelection = m_selectedRootNodeHandle;
-			if (m_iteration == treeModel.CurrentIteration()) {
-				if (DrawRootNodeInspectionGui(treeModel, 0, deleted, 0)) {
-					m_needUpdate = true;
-					updated = true;
-				}
-			}
-			else
-				PeekNodeInspectionGui(treeModel.PeekRootSkeleton(m_iteration), 0, m_selectedRootNodeHandle,
-					m_selectedRootNodeHierarchyList, 0);
-			m_selectedRootNodeHierarchyList.clear();
-			if (tempSelection != m_selectedRootNodeHandle) {
-				m_selectedInternodeHandle = -1;
-				m_selectedInternodeHierarchyList.clear();
-			}
-			ImGui::TreePop();
-		}
-
-
-	}
+	
 	return updated;
 }
 
 bool TreeVisualizer::Visualize(TreeModel& treeModel, const GlobalTransform& globalTransform) {
 	bool updated = false;
 	const auto& treeSkeleton = treeModel.PeekShootSkeleton(m_iteration);
-	const auto& rootSkeleton = treeModel.PeekRootSkeleton(m_iteration);
 	if (m_visualization) {
 		const auto editorLayer = Application::GetLayer<EditorLayer>();
 		if (editorLayer->SceneCameraWindowFocused()) {
@@ -232,15 +179,6 @@ bool TreeVisualizer::Visualize(TreeModel& treeModel, const GlobalTransform& glob
 						m_selectedInternodeHierarchyList, m_selectedInternodeLengthFactor)) {
 						m_needUpdate = true;
 						updated = true;
-						m_selectedRootNodeHandle = -1;
-						m_selectedRootNodeHierarchyList.clear();
-					}
-					else if (RayCastSelection(editorLayer->GetSceneCamera(), editorLayer->GetMouseSceneCameraPosition(), rootSkeleton, globalTransform, m_selectedRootNodeHandle,
-						m_selectedRootNodeHierarchyList, m_selectedRootNodeLengthFactor)) {
-						m_needUpdate = true;
-						updated = true;
-						m_selectedInternodeHandle = -1;
-						m_selectedInternodeHierarchyList.clear();
 					}
 				}
 				if (m_iteration == treeModel.CurrentIteration() &&
@@ -258,21 +196,6 @@ bool TreeVisualizer::Visualize(TreeModel& treeModel, const GlobalTransform& glob
 						for (auto& bud : pruningInternode.m_data.m_buds) {
 							bud.m_status = BudStatus::Died;
 						}
-						skeleton.SortLists();
-						m_iteration = treeModel.CurrentIteration();
-						m_needUpdate = true;
-						updated = true;
-					}
-					if (m_selectedRootNodeHandle > 0) {
-						treeModel.Step();
-						auto& skeleton = treeModel.RefRootSkeleton();
-						auto& pruningRootNode = skeleton.RefNode(m_selectedRootNodeHandle);
-						auto childHandles = pruningRootNode.RefChildHandles();
-						for (const auto& childHandle : childHandles) {
-							treeModel.PruneRootNode(childHandle);
-						}
-						pruningRootNode.m_info.m_length *= m_selectedRootNodeLengthFactor;
-						m_selectedRootNodeLengthFactor = 1.0f;
 						skeleton.SortLists();
 						m_iteration = treeModel.CurrentIteration();
 						m_needUpdate = true;
@@ -323,9 +246,7 @@ bool TreeVisualizer::Visualize(TreeModel& treeModel, const GlobalTransform& glob
 
 		if (m_needUpdate) {
 			SyncMatrices(treeSkeleton, m_internodeMatrices);
-			SyncMatrices(rootSkeleton, m_rootNodeMatrices);
 			SyncColors(treeSkeleton, m_selectedInternodeHandle);
-			SyncColors(rootSkeleton, m_selectedRootNodeHandle);
 			m_needUpdate = false;
 		}
 		else {
@@ -333,17 +254,13 @@ bool TreeVisualizer::Visualize(TreeModel& treeModel, const GlobalTransform& glob
 				SyncColors(treeSkeleton, m_selectedInternodeHandle);
 				m_needShootColorUpdate = false;
 			}
-			if (m_needRootColorUpdate) {
-				SyncColors(rootSkeleton, m_selectedRootNodeHandle);
-				m_needRootColorUpdate = false;
-			}
 		}
 		GizmoSettings gizmoSettings;
 		gizmoSettings.m_drawSettings.m_blending = true;
 		gizmoSettings.m_depthTest = true;
 		gizmoSettings.m_depthWrite = true;
 		if (!m_internodeMatrices->m_particleInfos.empty()) {
-			
+
 			editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER"), editorLayer->GetSceneCamera(),
 				m_internodeMatrices,
 				globalTransform.m_value, 1.0f, gizmoSettings);
@@ -358,31 +275,6 @@ bool TreeVisualizer::Visualize(TreeModel& treeModel, const GlobalTransform& glob
 				const glm::mat4 rotationTransform = glm::mat4_cast(rotation);
 				const glm::vec3 selectedCenter =
 					position + node.m_info.m_length * m_selectedInternodeLengthFactor * direction;
-				auto matrix = globalTransform.m_value * glm::translate(selectedCenter) *
-					rotationTransform *
-					glm::scale(glm::vec3(
-						2.0f * node.m_info.m_thickness + 0.01f,
-						node.m_info.m_length / 5.0f,
-						2.0f * node.m_info.m_thickness + 0.01f));
-				auto color = glm::vec4(1.0f);
-				editorLayer->DrawGizmoCylinder(color, matrix, 1, gizmoSettings);
-			}
-		}
-		if (!m_rootNodeMatrices->m_particleInfos.empty()) {
-			editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER"), editorLayer->GetSceneCamera(),
-				m_rootNodeMatrices,
-				globalTransform.m_value, 1.0f, gizmoSettings);
-			if (m_selectedRootNodeHandle != -1)
-			{
-				const auto& node = rootSkeleton.PeekNode(m_selectedRootNodeHandle);
-				glm::vec3 position = node.m_info.m_globalPosition;
-				const auto direction = node.m_info.m_globalDirection;
-				auto rotation = glm::quatLookAt(
-					direction, glm::vec3(direction.y, direction.z, direction.x));
-				rotation *= glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));
-				const glm::mat4 rotationTransform = glm::mat4_cast(rotation);
-				const glm::vec3 selectedCenter =
-					position + node.m_info.m_length * m_selectedRootNodeLengthFactor * direction;
 				auto matrix = globalTransform.m_value * glm::translate(selectedCenter) *
 					rotationTransform *
 					glm::scale(glm::vec3(
@@ -503,52 +395,6 @@ TreeVisualizer::InspectInternode(
 	return changed;
 }
 
-bool TreeVisualizer::DrawRootNodeInspectionGui(TreeModel& treeModel, NodeHandle rootNodeHandle, bool& deleted,
-	const unsigned& hierarchyLevel) {
-	auto& rootSkeleton = treeModel.RefRootSkeleton();
-	const int index = m_selectedRootNodeHierarchyList.size() - hierarchyLevel - 1;
-	if (!m_selectedRootNodeHierarchyList.empty() && index >= 0 &&
-		index < m_selectedRootNodeHierarchyList.size() &&
-		m_selectedRootNodeHierarchyList[index] == rootNodeHandle) {
-		ImGui::SetNextItemOpen(true);
-	}
-	const bool opened = ImGui::TreeNodeEx(("Handle: " + std::to_string(rootNodeHandle)).c_str(),
-		ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_OpenOnArrow |
-		ImGuiTreeNodeFlags_NoAutoOpenOnLog |
-		(m_selectedRootNodeHandle == rootNodeHandle ? ImGuiTreeNodeFlags_Framed
-			: ImGuiTreeNodeFlags_FramePadding));
-	if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0)) {
-		SetSelectedNode(rootSkeleton, rootNodeHandle, m_selectedRootNodeHandle, m_selectedRootNodeHierarchyList);
-	}
-
-	if (ImGui::BeginPopupContextItem(std::to_string(rootNodeHandle).c_str())) {
-		ImGui::Text(("Handle: " + std::to_string(rootNodeHandle)).c_str());
-		if (ImGui::Button("Delete")) {
-			deleted = true;
-		}
-		ImGui::EndPopup();
-	}
-	bool modified = deleted;
-	if (opened && !deleted) {
-		ImGui::TreePush(std::to_string(rootNodeHandle).c_str());
-		const auto& rootNodeChildren = rootSkeleton.RefNode(rootNodeHandle).RefChildHandles();
-		for (const auto& child : rootNodeChildren) {
-			bool childDeleted = false;
-			DrawRootNodeInspectionGui(treeModel, child, childDeleted, hierarchyLevel + 1);
-			if (childDeleted) {
-				treeModel.Step();
-				treeModel.PruneRootNode(child);
-				rootSkeleton.SortLists();
-				m_iteration = treeModel.CurrentIteration();
-				modified = true;
-				break;
-			}
-		}
-		ImGui::TreePop();
-	}
-	return modified;
-}
-
 void
 TreeVisualizer::PeekInternode(const ShootSkeleton& shootSkeleton, NodeHandle internodeHandle) const {
 	const auto& internode = shootSkeleton.PeekNode(internodeHandle);
@@ -646,140 +492,18 @@ void TreeVisualizer::Reset(
 	TreeModel& treeModel) {
 	m_selectedInternodeHandle = -1;
 	m_selectedInternodeHierarchyList.clear();
-	m_selectedRootNodeHandle = -1;
-	m_selectedRootNodeHierarchyList.clear();
 	m_iteration = treeModel.CurrentIteration();
 	m_internodeMatrices->m_particleInfos.clear();
 	m_internodeMatrices->SetPendingUpdate();
-	m_rootNodeMatrices->m_particleInfos.clear();
-	m_rootNodeMatrices->SetPendingUpdate();
 	m_needUpdate = true;
 }
 
 void TreeVisualizer::Clear() {
 	m_selectedInternodeHandle = -1;
 	m_selectedInternodeHierarchyList.clear();
-	m_selectedRootNodeHandle = -1;
-	m_selectedRootNodeHierarchyList.clear();
 	m_iteration = 0;
 	m_internodeMatrices->m_particleInfos.clear();
 	m_internodeMatrices->SetPendingUpdate();
-	m_rootNodeMatrices->m_particleInfos.clear();
-	m_rootNodeMatrices->SetPendingUpdate();
-}
-
-
-void TreeVisualizer::PeekRootNode(
-	const RootSkeleton& rootSkeleton,
-	NodeHandle rootNodeHandle) const {
-
-	const auto& rootNode = rootSkeleton.PeekNode(rootNodeHandle);
-	if (ImGui::TreeNode("Root node info")) {
-		ImGui::Checkbox("Is max child", (bool*)&rootNode.m_data.m_isMaxChild);
-		ImGui::Text("Thickness: %.3f", rootNode.m_info.m_thickness);
-		ImGui::Text("Length: %.3f", rootNode.m_info.m_length);
-		ImGui::InputFloat3("Position", (float*)&rootNode.m_info.m_globalPosition.x, "%.3f",
-			ImGuiInputTextFlags_ReadOnly);
-		auto globalRotationAngle = glm::eulerAngles(rootNode.m_info.m_globalRotation);
-		ImGui::InputFloat3("Global rotation", (float*)&globalRotationAngle.x, "%.3f",
-			ImGuiInputTextFlags_ReadOnly);
-		auto localRotationAngle = glm::eulerAngles(rootNode.m_data.m_localRotation);
-		ImGui::InputFloat3("Local rotation", (float*)&localRotationAngle.x, "%.3f",
-			ImGuiInputTextFlags_ReadOnly);
-		auto& rootNodeData = rootNode.m_data;
-		ImGui::InputFloat("Nitrite", (float*)&rootNodeData.m_nitrite, 1, 100, "%.3f",
-			ImGuiInputTextFlags_ReadOnly);
-		ImGui::InputFloat("Soil Density", (float*)&rootNodeData.m_soilDensity, 1, 100, "%.3f",
-			ImGuiInputTextFlags_ReadOnly);
-
-		ImGui::InputFloat("Growth Potential", (float*)&rootNodeData.m_growthPotential, 1, 100, "%.3f",
-			ImGuiInputTextFlags_ReadOnly);
-		ImGui::InputFloat("Auxin", (float*)&rootNodeData.m_inhibitor, 1, 100, "%.3f",
-			ImGuiInputTextFlags_ReadOnly);
-
-		ImGui::InputFloat("Horizontal tropism", (float*)&rootNodeData.m_horizontalTropism, 1, 100,
-			"%.3f",
-			ImGuiInputTextFlags_ReadOnly);
-
-		ImGui::InputFloat("Vertical tropism", (float*)&rootNodeData.m_verticalTropism, 1, 100,
-			"%.3f",
-			ImGuiInputTextFlags_ReadOnly);
-		ImGui::TreePop();
-	}
-	if (ImGui::TreeNodeEx("Stem info", ImGuiTreeNodeFlags_DefaultOpen)) {
-		const auto& flow = rootSkeleton.PeekFlow(rootNode.GetFlowHandle());
-		ImGui::Text("Child stem size: %d", flow.RefChildHandles().size());
-		ImGui::Text("Root node size: %d", flow.RefNodeHandles().size());
-		if (ImGui::TreeNode("Root nodes")) {
-			int i = 0;
-			for (const auto& chainedInternodeHandle : flow.RefNodeHandles()) {
-				ImGui::Text("No.%d: Handle: %d", i, chainedInternodeHandle);
-				i++;
-			}
-			ImGui::TreePop();
-		}
-		ImGui::TreePop();
-	}
-}
-
-bool TreeVisualizer::InspectRootNode(
-	RootSkeleton& rootSkeleton,
-	NodeHandle rootNodeHandle) {
-	bool changed = false;
-
-	const auto& rootNode = rootSkeleton.RefNode(rootNodeHandle);
-	if (ImGui::TreeNode("Root node info")) {
-		ImGui::Checkbox("Is max child", (bool*)&rootNode.m_data.m_isMaxChild);
-		ImGui::Text("Thickness: %.3f", rootNode.m_info.m_thickness);
-		ImGui::Text("Length: %.3f", rootNode.m_info.m_length);
-		ImGui::InputFloat3("Position", (float*)&rootNode.m_info.m_globalPosition.x, "%.3f",
-			ImGuiInputTextFlags_ReadOnly);
-		auto globalRotationAngle = glm::eulerAngles(rootNode.m_info.m_globalRotation);
-		ImGui::InputFloat3("Global rotation", (float*)&globalRotationAngle.x, "%.3f",
-			ImGuiInputTextFlags_ReadOnly);
-		auto localRotationAngle = glm::eulerAngles(rootNode.m_data.m_localRotation);
-		ImGui::InputFloat3("Local rotation", (float*)&localRotationAngle.x, "%.3f",
-			ImGuiInputTextFlags_ReadOnly);
-		auto& rootNodeData = rootNode.m_data;
-
-		ImGui::InputFloat("Root distance", (float*)&rootNodeData.m_rootDistance, 1, 100, "%.3f",
-			ImGuiInputTextFlags_ReadOnly);
-		ImGui::InputFloat("Soil density", (float*)&rootNodeData.m_soilDensity, 1, 100, "%.3f",
-			ImGuiInputTextFlags_ReadOnly);
-
-
-		ImGui::InputFloat("Nitrite", (float*)&rootNodeData.m_nitrite, 1, 100, "%.3f",
-			ImGuiInputTextFlags_ReadOnly);
-		ImGui::InputFloat("Growth Potential", (float*)&rootNodeData.m_growthPotential, 1, 100, "%.3f",
-			ImGuiInputTextFlags_ReadOnly);
-
-		if (ImGui::DragFloat("Inhibitor", (float*)&rootNodeData.m_inhibitor)) {
-			changed = true;
-		}
-		ImGui::InputFloat("Horizontal tropism", (float*)&rootNodeData.m_horizontalTropism, 1, 100,
-			"%.3f",
-			ImGuiInputTextFlags_ReadOnly);
-
-		ImGui::InputFloat("Vertical tropism", (float*)&rootNodeData.m_verticalTropism, 1, 100,
-			"%.3f",
-			ImGuiInputTextFlags_ReadOnly);
-		ImGui::TreePop();
-	}
-	if (ImGui::TreeNodeEx("Flow info", ImGuiTreeNodeFlags_DefaultOpen)) {
-		const auto& flow = rootSkeleton.PeekFlow(rootNode.GetFlowHandle());
-		ImGui::Text("Child flow size: %d", flow.RefChildHandles().size());
-		ImGui::Text("Root node size: %d", flow.RefNodeHandles().size());
-		if (ImGui::TreeNode("Root nodes")) {
-			int i = 0;
-			for (const auto& chainedInternodeHandle : flow.RefNodeHandles()) {
-				ImGui::Text("No.%d: Handle: %d", i, chainedInternodeHandle);
-				i++;
-			}
-			ImGui::TreePop();
-		}
-		ImGui::TreePop();
-	}
-	return changed;
 }
 
 bool TreeVisualizer::Initialized() const
@@ -787,25 +511,14 @@ bool TreeVisualizer::Initialized() const
 	return m_initialized;
 }
 
-void TreeVisualizer::ClearSelections()
-{
-	m_selectedInternodeHandle = m_selectedRootNodeHandle = -1;
-}
-
 NodeHandle TreeVisualizer::GetSelectedInternodeHandle() const
 {
 	return m_selectedInternodeHandle;
 }
 
-NodeHandle TreeVisualizer::GetSelectedRootNodeHandle() const
-{
-	return m_selectedRootNodeHandle;
-}
-
 void TreeVisualizer::Initialize()
 {
 	m_internodeMatrices = std::make_shared<ParticleInfoList>();
-	m_rootNodeMatrices = std::make_shared<ParticleInfoList>();
 }
 
 void TreeVisualizer::SyncColors(const ShootSkeleton& shootSkeleton, const NodeHandle selectedNodeHandle) {
@@ -847,33 +560,4 @@ void TreeVisualizer::SyncColors(const ShootSkeleton& shootSkeleton, const NodeHa
 		if (selectedNodeHandle != -1) matrices[i].m_instanceColor.a = 0.75f;
 		}
 	);
-}
-
-void TreeVisualizer::SyncColors(const RootSkeleton& rootSkeleton, const NodeHandle selectedNodeHandle) {
-	if (m_randomColors.empty()) {
-		for (int i = 0; i < 1000; i++) {
-			m_randomColors.emplace_back(glm::ballRand(1.0f), 1.0f);
-		}
-	}
-
-	const auto& sortedNodeList = rootSkeleton.RefSortedNodeList();
-	auto& matrices = m_rootNodeMatrices->m_particleInfos;
-	m_rootNodeMatrices->SetPendingUpdate();
-	matrices.resize(sortedNodeList.size());
-	Jobs::ParallelFor(sortedNodeList.size(), [&](unsigned i) {
-		const auto nodeHandle = sortedNodeList[i];
-		const auto& node = rootSkeleton.PeekNode(nodeHandle);
-		switch (static_cast<RootVisualizerMode>(m_settings.m_rootVisualizationMode)) {
-		case RootVisualizerMode::AllocatedVigor:
-			matrices[i + 1].m_instanceColor = glm::vec4(
-				glm::clamp(glm::vec3(node.m_data.m_vigorSink.GetVigor() * m_settings.m_rootColorMultiplier),
-					0.0f, 1.f), 1.0f);
-			break;
-		default:
-			matrices[i + 1].m_instanceColor = m_randomColors[node.m_data.m_order];
-			break;
-		}
-		matrices[i + 1].m_instanceColor.a = 1.0f;
-		if (selectedNodeHandle != -1) matrices[i + 1].m_instanceColor.a = 0.3f;
-		});
 }

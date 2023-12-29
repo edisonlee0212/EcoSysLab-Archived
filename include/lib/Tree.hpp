@@ -13,7 +13,6 @@ namespace EcoSysLab {
 		void PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescriptor);
 		bool TryGrowSubTree(NodeHandle internodeHandle, float deltaTime);
 		ShootGrowthController m_shootGrowthController{};
-		RootGrowthController m_rootGrowthController{};
 	public:
 		static void SerializeTreeGrowthSettings(const TreeGrowthSettings& treeGrowthSettings, YAML::Emitter& out);
 		static void DeserializeTreeGrowthSettings(TreeGrowthSettings& treeGrowthSettings, const YAML::Node& param);

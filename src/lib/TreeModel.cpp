@@ -42,7 +42,7 @@ void TreeModel::RegisterVoxel(const glm::mat4& globalTransform, ClimateModel& cl
 		const float shadowSize = environmentGrid.m_settings.m_shadowIntensity;
 		const float biomass = internodeInfo.m_thickness;
 		const glm::vec3 worldPosition = globalTransform * glm::vec4(internodeInfo.m_globalPosition, 1.0f);
-		environmentGrid.AddShadowValue(worldPosition , shadowSize);
+		environmentGrid.AddShadowValue(worldPosition, shadowSize);
 		environmentGrid.AddBiomass(worldPosition, biomass);
 		if (internode.IsEndNode()) {
 			InternodeVoxelRegistration registration;
@@ -84,47 +84,9 @@ void TreeModel::CalculateInternodeTransforms()
 	}
 }
 
-void TreeModel::CalculateRootNodeTransforms()
-{
-	m_rootSkeleton.m_min = glm::vec3(FLT_MAX);
-	m_rootSkeleton.m_max = glm::vec3(FLT_MIN);
-	for (const auto& nodeHandle : m_rootSkeleton.RefSortedNodeList()) {
-		auto& node = m_rootSkeleton.RefNode(nodeHandle);
-		auto& nodeInfo = node.m_info;
-		auto& nodeData = node.m_data;
-		if (node.GetParentHandle() != -1) {
-			auto& parentInfo = m_rootSkeleton.RefNode(node.GetParentHandle()).m_info;
-			nodeInfo.m_globalRotation =
-				parentInfo.m_globalRotation * nodeData.m_localRotation;
-			nodeInfo.m_globalDirection = glm::normalize(nodeInfo.m_globalRotation * glm::vec3(0, 0, -1));
-			nodeInfo.m_globalPosition =
-				parentInfo.m_globalPosition
-				+ parentInfo.m_length * parentInfo.m_globalDirection
-				+ nodeData.m_localPosition;
-			auto parentRegulatedUp = parentInfo.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
-			auto regulatedUp = glm::normalize(glm::cross(glm::cross(nodeInfo.m_globalDirection, parentRegulatedUp), nodeInfo.m_globalDirection));
-			nodeInfo.m_regulatedGlobalRotation = glm::quatLookAt(nodeInfo.m_globalDirection, regulatedUp);
-		}
-		m_rootSkeleton.m_min = glm::min(m_rootSkeleton.m_min, nodeInfo.m_globalPosition);
-		m_rootSkeleton.m_max = glm::max(m_rootSkeleton.m_max, nodeInfo.m_globalPosition);
-		const auto endPosition = nodeInfo.m_globalPosition
-			+ nodeInfo.m_length * nodeInfo.m_globalDirection;
-		m_rootSkeleton.m_min = glm::min(m_rootSkeleton.m_min, endPosition);
-		m_rootSkeleton.m_max = glm::max(m_rootSkeleton.m_max, endPosition);
-	}
-}
-
 void TreeModel::PruneInternode(NodeHandle internodeHandle)
 {
 	m_shootSkeleton.RecycleNode(internodeHandle,
-		[&](FlowHandle flowHandle) {},
-		[&](NodeHandle nodeHandle)
-		{});
-}
-
-void TreeModel::PruneRootNode(NodeHandle rootNodeHandle)
-{
-	m_rootSkeleton.RecycleNode(rootNodeHandle,
 		[&](FlowHandle flowHandle) {},
 		[&](NodeHandle nodeHandle)
 		{});
@@ -173,8 +135,7 @@ void TreeModel::ApplyTropism(const glm::vec3& targetDir, float tropism, glm::qua
 	rotation = glm::quatLookAt(front, up);
 }
 
-bool TreeModel::Grow(float deltaTime, const glm::mat4& globalTransform, VoxelSoilModel& soilModel, ClimateModel& climateModel,
-	const RootGrowthController& rootGrowthParameters,
+bool TreeModel::Grow(float deltaTime, const glm::mat4& globalTransform, ClimateModel& climateModel,
 	const ShootGrowthController& shootGrowthParameters)
 {
 	//srand(m_currentSeedValue);
@@ -184,39 +145,25 @@ bool TreeModel::Grow(float deltaTime, const glm::mat4& globalTransform, VoxelSoi
 	bool treeStructureChanged = false;
 	bool rootStructureChanged = false;
 	if (!m_initialized) {
-		Initialize(shootGrowthParameters, rootGrowthParameters);
+		Initialize(shootGrowthParameters);
 		treeStructureChanged = true;
 		rootStructureChanged = true;
 	}
-	//Collect water from roots.
-	if (m_treeGrowthSettings.m_enableRoot) {
-		m_rootSkeleton.SortLists();
-		const auto& sortedRootNodeList = m_rootSkeleton.RefSortedNodeList();
-		CollectRootFlux(globalTransform, soilModel, sortedRootNodeList, rootGrowthParameters);
-		RootGrowthRequirement newRootGrowthRequirement;
-		CalculateVigorRequirement(rootGrowthParameters, newRootGrowthRequirement);
-		m_rootSkeleton.m_data.m_vigorRequirement = newRootGrowthRequirement;
-	}
 	//Collect light from branches.
-	if (m_treeGrowthSettings.m_enableShoot) {
-		m_shootSkeleton.SortLists();
-		const auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
-		CollectShootFlux(globalTransform, climateModel, sortedInternodeList, shootGrowthParameters);
-		ShootGrowthRequirement newShootGrowthRequirement;
-		CalculateVigorRequirement(shootGrowthParameters, newShootGrowthRequirement);
-		m_shootSkeleton.m_data.m_vigorRequirement = newShootGrowthRequirement;
-	}
+
+	m_shootSkeleton.SortLists();
+	const auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
+	CollectShootFlux(globalTransform, climateModel, sortedInternodeList, shootGrowthParameters);
+	ShootGrowthRequirement newShootGrowthRequirement;
+	CalculateVigorRequirement(shootGrowthParameters, newShootGrowthRequirement);
+	m_shootSkeleton.m_data.m_vigorRequirement = newShootGrowthRequirement;
+
 
 	//Perform photosynthesis.
 	PlantVigorAllocation();
-	//Grow roots and set up nutrient requirements for next iteration.
 
-	if (m_treeGrowthSettings.m_enableRoot && m_currentDeltaTime != 0.0f
-		&& GrowRoots(globalTransform, soilModel, rootGrowthParameters)) {
-		rootStructureChanged = true;
-	}
 	//Grow branches and set up nutrient requirements for next iteration.
-	if (m_treeGrowthSettings.m_enableShoot && m_currentDeltaTime != 0.0f
+	if (m_currentDeltaTime != 0.0f
 		&& GrowShoots(globalTransform, climateModel, shootGrowthParameters)) {
 		treeStructureChanged = true;
 	}
@@ -265,7 +212,7 @@ bool TreeModel::GrowSubTree(const float deltaTime, const NodeHandle baseInternod
 	return treeStructureChanged;
 }
 
-void TreeModel::Initialize(const ShootGrowthController& shootGrowthParameters, const RootGrowthController& rootGrowthParameters) {
+void TreeModel::Initialize(const ShootGrowthController& shootGrowthParameters) {
 	if (m_initialized) Clear();
 	{
 		auto& firstInternode = m_shootSkeleton.RefNode(0);
@@ -278,15 +225,7 @@ void TreeModel::Initialize(const ShootGrowthController& shootGrowthParameters, c
 		apicalBud.m_vigorSink.AddVigor(shootGrowthParameters.m_internodeVigorRequirement);
 		apicalBud.m_localRotation = glm::vec3(0.0f);
 	}
-	{
-		auto& firstRootNode = m_rootSkeleton.RefNode(0);
-		firstRootNode.m_info.m_thickness = 0.003f;
-		firstRootNode.m_info.m_length = 0.0f;
-		firstRootNode.m_data.m_localRotation = glm::vec3(0.0f);
-		firstRootNode.m_data.m_verticalTropism = rootGrowthParameters.m_tropismIntensity;
-		firstRootNode.m_data.m_horizontalTropism = 0;
-		firstRootNode.m_data.m_vigorSink.AddVigor(rootGrowthParameters.m_rootNodeVigorRequirement);
-	}
+
 	if (m_treeGrowthSettings.m_useSpaceColonization && m_treeGrowthSettings.m_spaceColonizationAutoResize) {
 		const auto gridRadius = m_treeGrowthSettings.m_spaceColonizationDetectionDistanceFactor * shootGrowthParameters.m_internodeLength;
 		m_treeOccupancyGrid.Initialize(glm::vec3(-gridRadius, 0.0f, -gridRadius), glm::vec3(gridRadius), shootGrowthParameters.m_internodeLength,
@@ -295,34 +234,6 @@ void TreeModel::Initialize(const ShootGrowthController& shootGrowthParameters, c
 
 	m_currentSeedValue = m_seed;
 	m_initialized = true;
-}
-
-void TreeModel::CollectRootFlux(const glm::mat4& globalTransform, VoxelSoilModel& soilModel, const std::vector<NodeHandle>& sortedSubTreeRootNodeList, const RootGrowthController& rootGrowthParameters)
-{
-	m_rootSkeleton.m_data.m_rootFlux.m_totalGrowthPotential = 0.0f;
-	for (const auto& rootNodeHandle : sortedSubTreeRootNodeList) {
-		auto& rootNode = m_rootSkeleton.RefNode(rootNodeHandle);
-		auto& rootNodeInfo = rootNode.m_info;
-		auto& rootNodeData = rootNode.m_data;
-		rootNodeData.m_growthPotential = 0.0f;
-		auto worldSpacePosition = globalTransform * glm::translate(rootNodeInfo.m_globalPosition)[3];
-		if (m_treeGrowthSettings.m_collectRootFlux) {
-			if (m_treeGrowthSettings.m_useSpaceColonization) {
-				rootNodeData.m_growthPotential = soilModel.IntegrateWater(worldSpacePosition, 0.2f);
-				m_rootSkeleton.m_data.m_rootFlux.m_totalGrowthPotential += rootNodeData.m_growthPotential;
-			}
-			else {
-				rootNodeData.m_growthPotential = soilModel.IntegrateWater(worldSpacePosition, 0.2f);
-				m_rootSkeleton.m_data.m_rootFlux.m_totalGrowthPotential += rootNodeData.m_growthPotential;
-			}
-		}
-		else
-		{
-			rootNodeData.m_growthPotential = 1.0f;
-			m_rootSkeleton.m_data.m_rootFlux.m_totalGrowthPotential += rootNodeData.m_growthPotential;
-		}
-	}
-
 }
 
 void TreeModel::CollectShootFlux(const glm::mat4& globalTransform, ClimateModel& climateModel, const std::vector<NodeHandle>& sortedSubTreeInternodeList,
@@ -416,33 +327,20 @@ void TreeModel::CollectShootFlux(const glm::mat4& globalTransform, ClimateModel&
 
 void TreeModel::PlantVigorAllocation()
 {
-	if (!m_treeGrowthSettings.m_collectRootFlux) {
-		m_rootSkeleton.m_data.m_rootFlux.m_totalGrowthPotential =
-			m_shootSkeleton.m_data.m_vigorRequirement.m_leafMaintenanceVigor
-			+ m_shootSkeleton.m_data.m_vigorRequirement.m_leafDevelopmentalVigor
-			+ m_shootSkeleton.m_data.m_vigorRequirement.m_fruitMaintenanceVigor
-			+ m_shootSkeleton.m_data.m_vigorRequirement.m_fruitDevelopmentalVigor
-			+ m_shootSkeleton.m_data.m_vigorRequirement.m_nodeDevelopmentalVigor
-			+ m_rootSkeleton.m_data.m_vigorRequirement.m_nodeDevelopmentalVigor;
-	}
+	float totalVigor = m_shootSkeleton.m_data.m_shootFlux.m_totalGrowthPotential;
 
-	float totalVigor = glm::max(m_rootSkeleton.m_data.m_rootFlux.m_totalGrowthPotential, m_shootSkeleton.m_data.m_shootFlux.m_totalGrowthPotential);
-	if (m_treeGrowthSettings.m_enableShoot && m_treeGrowthSettings.m_enableRoot)
-	{
-		totalVigor = glm::min(m_rootSkeleton.m_data.m_rootFlux.m_totalGrowthPotential, m_shootSkeleton.m_data.m_shootFlux.m_totalGrowthPotential);
-	}
 	const float totalLeafMaintenanceVigorRequirement = m_shootSkeleton.m_data.m_vigorRequirement.m_leafMaintenanceVigor;
 	const float totalLeafDevelopmentVigorRequirement = m_shootSkeleton.m_data.m_vigorRequirement.m_leafDevelopmentalVigor;
 	const float totalFruitMaintenanceVigorRequirement = m_shootSkeleton.m_data.m_vigorRequirement.m_fruitMaintenanceVigor;
 	const float totalFruitDevelopmentVigorRequirement = m_shootSkeleton.m_data.m_vigorRequirement.m_fruitDevelopmentalVigor;
-	const float totalNodeDevelopmentalVigorRequirement = m_shootSkeleton.m_data.m_vigorRequirement.m_nodeDevelopmentalVigor + m_rootSkeleton.m_data.m_vigorRequirement.m_nodeDevelopmentalVigor;
+	const float totalNodeDevelopmentalVigorRequirement = m_shootSkeleton.m_data.m_vigorRequirement.m_nodeDevelopmentalVigor;
 
 	const float leafMaintenanceVigor = glm::min(totalVigor, totalLeafMaintenanceVigorRequirement);
 	const float leafDevelopmentVigor = glm::min(totalVigor - totalLeafMaintenanceVigorRequirement, totalLeafDevelopmentVigorRequirement);
 	const float fruitMaintenanceVigor = glm::min(totalVigor - totalLeafMaintenanceVigorRequirement - leafDevelopmentVigor, totalFruitMaintenanceVigorRequirement);
 	const float fruitDevelopmentVigor = glm::min(totalVigor - totalLeafMaintenanceVigorRequirement - leafDevelopmentVigor - fruitMaintenanceVigor, totalFruitDevelopmentVigorRequirement);
 	const float nodeDevelopmentVigor = glm::min(totalVigor - totalLeafMaintenanceVigorRequirement - leafDevelopmentVigor - fruitMaintenanceVigor - fruitDevelopmentVigor, totalNodeDevelopmentalVigorRequirement);
-	m_rootSkeleton.m_data.m_vigor = m_shootSkeleton.m_data.m_vigor = 0.0f;
+	m_shootSkeleton.m_data.m_vigor = 0.0f;
 	if (totalLeafMaintenanceVigorRequirement != 0.0f) {
 		m_shootSkeleton.m_data.m_vigor += leafMaintenanceVigor * m_shootSkeleton.m_data.m_vigorRequirement.m_leafMaintenanceVigor
 			/ totalLeafMaintenanceVigorRequirement;
@@ -459,128 +357,7 @@ void TreeModel::PlantVigorAllocation()
 		m_shootSkeleton.m_data.m_vigor += fruitDevelopmentVigor * m_shootSkeleton.m_data.m_vigorRequirement.m_fruitDevelopmentalVigor
 			/ totalFruitDevelopmentVigorRequirement;
 	}
-
-
-	if (m_treeGrowthSettings.m_autoBalance && m_treeGrowthSettings.m_enableRoot && m_treeGrowthSettings.m_enableShoot) {
-		m_vigorRatio.m_shootVigorWeight = m_rootSkeleton.RefSortedNodeList().size() * m_shootSkeleton.m_data.m_vigorRequirement.m_nodeDevelopmentalVigor;
-		m_vigorRatio.m_rootVigorWeight = m_shootSkeleton.RefSortedNodeList().size() * m_rootSkeleton.m_data.m_vigorRequirement.m_nodeDevelopmentalVigor;
-	}
-	else {
-		m_vigorRatio.m_rootVigorWeight = m_rootSkeleton.m_data.m_vigorRequirement.m_nodeDevelopmentalVigor / totalNodeDevelopmentalVigorRequirement;
-		m_vigorRatio.m_shootVigorWeight = m_shootSkeleton.m_data.m_vigorRequirement.m_nodeDevelopmentalVigor / totalNodeDevelopmentalVigorRequirement;
-	}
-
-	if (m_vigorRatio.m_shootVigorWeight + m_vigorRatio.m_rootVigorWeight != 0.0f) {
-		m_rootSkeleton.m_data.m_vigor += nodeDevelopmentVigor * m_vigorRatio.m_rootVigorWeight / (m_vigorRatio.m_shootVigorWeight + m_vigorRatio.m_rootVigorWeight);
-		m_shootSkeleton.m_data.m_vigor += nodeDevelopmentVigor * m_vigorRatio.m_shootVigorWeight / (m_vigorRatio.m_shootVigorWeight + m_vigorRatio.m_rootVigorWeight);
-	}
-}
-
-bool TreeModel::GrowRoots(const glm::mat4& globalTransform, VoxelSoilModel& soilModel, const RootGrowthController& rootGrowthParameters)
-{
-	bool rootStructureChanged = false;
-	m_rootSkeleton.SortLists();
-	const bool anyRootPruned = PruneRootNodes(rootGrowthParameters);
-	if (anyRootPruned) m_rootSkeleton.SortLists();
-	rootStructureChanged = rootStructureChanged || anyRootPruned;
-
-	bool anyRootGrown = false;
-	const auto& sortedRootNodeList = m_rootSkeleton.RefSortedNodeList();
-	AggregateRootVigorRequirement(rootGrowthParameters, 0);
-	AllocateRootVigor(rootGrowthParameters);
-	for (auto it = sortedRootNodeList.rbegin(); it != sortedRootNodeList.rend(); it++) {
-		const bool graphChanged = GrowRootNode(soilModel, *it, rootGrowthParameters);
-		anyRootGrown = anyRootGrown || graphChanged;
-	}
-	if (anyRootGrown) m_rootSkeleton.SortLists();
-	rootStructureChanged = rootStructureChanged || anyRootGrown;
-
-	RootGrowthPostProcess(globalTransform, soilModel, rootGrowthParameters);
-	return rootStructureChanged;
-}
-
-void TreeModel::RootGrowthPostProcess(const glm::mat4& globalTransform, VoxelSoilModel& soilModel, const RootGrowthController& rootGrowthParameters)
-{
-	{
-		m_rootSkeleton.m_min = glm::vec3(FLT_MAX);
-		m_rootSkeleton.m_max = glm::vec3(FLT_MIN);
-		const auto& sortedRootNodeList = m_rootSkeleton.RefSortedNodeList();
-		for (auto it = sortedRootNodeList.rbegin(); it != sortedRootNodeList.rend(); ++it) {
-			CalculateThickness(*it, rootGrowthParameters);
-		}
-		for (const auto& rootNodeHandle : sortedRootNodeList) {
-			auto& rootNode = m_rootSkeleton.RefNode(rootNodeHandle);
-			auto& rootNodeData = rootNode.m_data;
-			auto& rootNodeInfo = rootNode.m_info;
-
-			if (rootNode.GetParentHandle() == -1) {
-				rootNodeInfo.m_globalPosition = glm::vec3(0.0f);
-				rootNodeData.m_localRotation = glm::vec3(0.0f);
-				rootNodeInfo.m_globalRotation = rootNodeInfo.m_regulatedGlobalRotation = glm::vec3(glm::radians(-90.0f), 0.0f, 0.0f);
-				rootNodeInfo.m_globalDirection = glm::normalize(rootNodeInfo.m_globalRotation * glm::vec3(0, 0, -1));
-				rootNodeData.m_rootDistance = rootNodeInfo.m_length / rootGrowthParameters.m_rootNodeLength;
-			}
-			else {
-				auto& parentRootNode = m_rootSkeleton.RefNode(rootNode.GetParentHandle());
-				rootNodeData.m_rootDistance = parentRootNode.m_data.m_rootDistance + rootNodeInfo.m_length / rootGrowthParameters.m_rootNodeLength;
-				rootNodeInfo.m_globalRotation =
-					parentRootNode.m_info.m_globalRotation * rootNodeData.m_localRotation;
-				rootNodeInfo.m_globalDirection = glm::normalize(rootNodeInfo.m_globalRotation * glm::vec3(0, 0, -1));
-				rootNodeInfo.m_globalPosition =
-					parentRootNode.m_info.m_globalPosition
-					+ parentRootNode.m_info.m_length * parentRootNode.m_info.m_globalDirection;
-
-
-				auto parentRegulatedUp = parentRootNode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
-				auto regulatedUp = glm::normalize(glm::cross(glm::cross(rootNodeInfo.m_globalDirection, parentRegulatedUp), rootNodeInfo.m_globalDirection));
-				rootNodeInfo.m_regulatedGlobalRotation = glm::quatLookAt(rootNodeInfo.m_globalDirection, regulatedUp);
-
-			}
-			m_rootSkeleton.m_min = glm::min(m_rootSkeleton.m_min, rootNodeInfo.m_globalPosition);
-			m_rootSkeleton.m_max = glm::max(m_rootSkeleton.m_max, rootNodeInfo.m_globalPosition);
-			const auto endPosition = rootNodeInfo.m_globalPosition
-				+ rootNodeInfo.m_length * rootNodeInfo.m_globalDirection;
-			m_rootSkeleton.m_min = glm::min(m_rootSkeleton.m_min, endPosition);
-			m_rootSkeleton.m_max = glm::max(m_rootSkeleton.m_max, endPosition);
-		}
-	};
-	SampleSoilDensity(globalTransform, soilModel);
-	SampleNitrite(globalTransform, soilModel);
-
-	if (m_treeGrowthSettings.m_enableRootCollisionDetection)
-	{
-		const float minRadius = rootGrowthParameters.m_endNodeThickness * 4.0f;
-		CollisionDetection(minRadius, m_rootSkeleton.m_data.m_octree, m_rootSkeleton);
-	}
-	m_rootNodeOrderCounts.clear();
-	{
-		int maxOrder = 0;
-		const auto& sortedFlowList = m_rootSkeleton.RefSortedFlowList();
-		for (const auto& flowHandle : sortedFlowList) {
-			auto& flow = m_rootSkeleton.RefFlow(flowHandle);
-			auto& flowData = flow.m_data;
-			if (flow.GetParentHandle() == -1) {
-				flowData.m_order = 0;
-			}
-			else {
-				auto& parentFlow = m_rootSkeleton.RefFlow(flow.GetParentHandle());
-				if (flow.IsApical()) flowData.m_order = parentFlow.m_data.m_order;
-				else flowData.m_order = parentFlow.m_data.m_order + 1;
-			}
-			maxOrder = glm::max(maxOrder, flowData.m_order);
-		}
-		m_rootNodeOrderCounts.resize(maxOrder + 1);
-		std::fill(m_rootNodeOrderCounts.begin(), m_rootNodeOrderCounts.end(), 0);
-		const auto& sortedRootNodeList = m_rootSkeleton.RefSortedNodeList();
-		for (const auto& rootNodeHandle : sortedRootNodeList)
-		{
-			auto& rootNode = m_rootSkeleton.RefNode(rootNodeHandle);
-			const auto order = m_rootSkeleton.RefFlow(rootNode.GetFlowHandle()).m_data.m_order;
-			rootNode.m_data.m_order = order;
-			m_rootNodeOrderCounts[order]++;
-		}
-		m_rootSkeleton.CalculateFlows();
-	};
+	m_shootSkeleton.m_data.m_vigor = m_shootSkeleton.m_data.m_shootFlux.m_totalGrowthPotential;
 }
 
 bool TreeModel::GrowShoots(const glm::mat4& globalTransform, ClimateModel& climateModel, const ShootGrowthController& shootGrowthParameters) {
@@ -659,7 +436,7 @@ void TreeModel::ShootGrowthPostProcess(const glm::mat4& globalTransform, Climate
 					parentInternode.m_info.m_globalPosition
 					+ parentInternode.m_info.m_length * parentInternode.m_info.m_globalDirection;
 
-				if(false && !internode.IsApical())
+				if (false && !internode.IsApical())
 				{
 					const auto relativeFront = glm::inverse(parentInternode.m_info.m_globalRotation) * internodeInfo.m_globalRotation * glm::vec3(0, 0, -1);
 					auto parentUp = glm::normalize(parentInternode.m_info.m_globalRotation * glm::vec3(0, 1, 0));
@@ -696,11 +473,6 @@ void TreeModel::ShootGrowthPostProcess(const glm::mat4& globalTransform, Climate
 		SampleTemperature(globalTransform, climateModel);
 	};
 
-	if (m_treeGrowthSettings.m_enableBranchCollisionDetection)
-	{
-		const float minRadius = shootGrowthParameters.m_endNodeThickness * 4.0f;
-		CollisionDetection(minRadius, m_shootSkeleton.m_data.m_octree, m_shootSkeleton);
-	}
 	m_internodeOrderCounts.clear();
 	m_fruitCount = m_leafCount = 0;
 	{
@@ -745,81 +517,6 @@ void TreeModel::ShootGrowthPostProcess(const glm::mat4& globalTransform, Climate
 		}
 		m_shootSkeleton.CalculateFlows();
 	}
-}
-
-
-bool TreeModel::ElongateRoot(VoxelSoilModel& soilModel, const float extendLength, NodeHandle rootNodeHandle, const RootGrowthController& rootGrowthParameters,
-	float& collectedAuxin) {
-	bool graphChanged = false;
-	auto& rootNode = m_rootSkeleton.RefNode(rootNodeHandle);
-	const auto rootNodeLength = rootGrowthParameters.m_rootNodeLength;
-	auto& rootNodeData = rootNode.m_data;
-	auto& rootNodeInfo = rootNode.m_info;
-	rootNodeInfo.m_length += extendLength;
-	float extraLength = rootNodeInfo.m_length - rootNodeLength;
-	//If we need to add a new end node
-	if (extraLength > 0) {
-		graphChanged = true;
-		rootNodeInfo.m_length = rootNodeLength;
-		const auto desiredGlobalRotation = rootNodeInfo.m_globalRotation * glm::quat(glm::vec3(
-			glm::radians(rootGrowthParameters.m_apicalAngle(rootNode)), 0.0f,
-			glm::radians(rootGrowthParameters.m_rollAngle(rootNode))));
-		//Create new internode
-		const auto newRootNodeHandle = m_rootSkeleton.Extend(rootNodeHandle, false);
-		const auto& oldRootNode = m_rootSkeleton.RefNode(rootNodeHandle);
-		auto& newRootNode = m_rootSkeleton.RefNode(newRootNodeHandle);
-		newRootNode.m_data = {};
-		newRootNode.m_data.m_startAge = m_age;
-		newRootNode.m_data.m_order = oldRootNode.m_data.m_order;
-		newRootNode.m_data.m_lateral = false;
-		//Set and apply tropisms
-		auto desiredGlobalFront = desiredGlobalRotation * glm::vec3(0, 0, -1);
-		auto desiredGlobalUp = desiredGlobalRotation * glm::vec3(0, 1, 0);
-		newRootNode.m_data.m_verticalTropism = oldRootNode.m_data.m_verticalTropism;
-		newRootNode.m_data.m_horizontalTropism = oldRootNode.m_data.m_horizontalTropism;
-		auto horizontalDirection = desiredGlobalFront;
-		horizontalDirection.y = 0;
-		if (glm::length(horizontalDirection) == 0) {
-			auto x = glm::linearRand(0.0f, 1.0f);
-			horizontalDirection = glm::vec3(x, 0, 1.0f - x);
-		}
-		horizontalDirection = glm::normalize(horizontalDirection);
-		ApplyTropism(horizontalDirection, newRootNode.m_data.m_horizontalTropism, desiredGlobalFront,
-			desiredGlobalUp);
-		ApplyTropism(m_currentGravityDirection, newRootNode.m_data.m_verticalTropism,
-			desiredGlobalFront, desiredGlobalUp);
-		if (oldRootNode.m_data.m_soilDensity == 0.0f) {
-			ApplyTropism(m_currentGravityDirection, 0.1f, desiredGlobalFront,
-				desiredGlobalUp);
-		}
-		newRootNode.m_data.m_vigorFlow.m_vigorRequirementWeight = oldRootNode.m_data.m_vigorFlow.m_vigorRequirementWeight;
-
-		newRootNode.m_data.m_inhibitor = 0.0f;
-		newRootNode.m_info.m_length = glm::clamp(extendLength, 0.0f, rootNodeLength);
-		newRootNode.m_data.m_rootDistance = oldRootNode.m_data.m_rootDistance + newRootNode.m_info.m_length / rootGrowthParameters.m_rootNodeLength;
-		newRootNode.m_info.m_thickness = rootGrowthParameters.m_endNodeThickness;
-		newRootNode.m_info.m_globalRotation = glm::quatLookAt(desiredGlobalFront, desiredGlobalUp);
-		newRootNode.m_data.m_localRotation =
-			glm::inverse(oldRootNode.m_info.m_globalRotation) *
-			newRootNode.m_info.m_globalRotation;
-
-		if (extraLength > rootNodeLength) {
-			float childAuxin = 0.0f;
-			ElongateRoot(soilModel, extraLength - rootNodeLength, newRootNodeHandle, rootGrowthParameters, childAuxin);
-			childAuxin *= rootGrowthParameters.m_apicalDominanceDistanceFactor;
-			collectedAuxin += childAuxin;
-			m_rootSkeleton.RefNode(newRootNodeHandle).m_data.m_inhibitor = childAuxin;
-		}
-		else {
-			newRootNode.m_data.m_inhibitor = rootGrowthParameters.m_apicalDominance(newRootNode);
-			collectedAuxin += newRootNode.m_data.m_inhibitor *= rootGrowthParameters.m_apicalDominanceDistanceFactor;
-		}
-	}
-	else {
-		//Otherwise, we add the inhibitor.
-		collectedAuxin += rootGrowthParameters.m_apicalDominance(rootNode);
-	}
-	return graphChanged;
 }
 
 bool TreeModel::ElongateInternode(float extendLength, NodeHandle internodeHandle,
@@ -912,7 +609,7 @@ bool TreeModel::ElongateInternode(float extendLength, NodeHandle internodeHandle
 		newApicalBud.m_localRotation = glm::vec3(
 			glm::radians(shootGrowthController.m_apicalAngle(newInternode)), 0.0f,
 			glm::radians(shootGrowthController.m_rollAngle(newInternode)));
-		if(internodeHandle != 0 && shootGrowthController.m_apicalInternodeKillProbability(newInternode) > glm::linearRand(0.0f, 1.0f))
+		if (internodeHandle != 0 && shootGrowthController.m_apicalInternodeKillProbability(newInternode) > glm::linearRand(0.0f, 1.0f))
 		{
 			newApicalBud.m_status = BudStatus::Removed;
 		}
@@ -931,84 +628,6 @@ bool TreeModel::ElongateInternode(float extendLength, NodeHandle internodeHandle
 	else {
 		//Otherwise, we add the inhibitor.
 		collectedInhibitor += shootGrowthController.m_apicalDominance(internode);
-	}
-	return graphChanged;
-}
-
-
-bool TreeModel::GrowRootNode(VoxelSoilModel& soilModel, NodeHandle rootNodeHandle, const RootGrowthController& rootGrowthParameters)
-{
-	bool graphChanged = false;
-	{
-		auto& rootNode = m_rootSkeleton.RefNode(rootNodeHandle);
-		auto& rootNodeData = rootNode.m_data;
-		rootNodeData.m_inhibitor = 0;
-		for (const auto& childHandle : rootNode.RefChildHandles()) {
-			rootNodeData.m_inhibitor += m_rootSkeleton.RefNode(childHandle).m_data.m_inhibitor *
-				rootGrowthParameters.m_apicalDominanceDistanceFactor;
-		}
-	}
-
-	{
-
-		auto& rootNode = m_rootSkeleton.RefNode(rootNodeHandle);
-		//1. Elongate current node.
-		const float availableMaintenanceVigor = rootNode.m_data.m_vigorSink.GetAvailableMaintenanceVigor();
-		float availableDevelopmentalVigor = rootNode.m_data.m_vigorSink.GetAvailableDevelopmentalVigor();
-		const float developmentVigor = rootNode.m_data.m_vigorSink.SubtractAllDevelopmentalVigor();
-
-		if (rootNode.RefChildHandles().empty())
-		{
-			const float extendLength = developmentVigor / rootGrowthParameters.m_rootNodeVigorRequirement * rootGrowthParameters.m_rootNodeLength;
-			//Remove development vigor from sink since it's used for elongation
-			float collectedAuxin = 0.0f;
-			const auto dd = rootGrowthParameters.m_apicalDominanceDistanceFactor;
-			graphChanged = ElongateRoot(soilModel, extendLength, rootNodeHandle, rootGrowthParameters, collectedAuxin) || graphChanged;
-			m_rootSkeleton.RefNode(rootNodeHandle).m_data.m_inhibitor += collectedAuxin * dd;
-
-			const float maintenanceVigor = m_rootSkeleton.RefNode(rootNodeHandle).m_data.m_vigorSink.SubtractVigor(availableMaintenanceVigor);
-		}
-		else
-		{
-			//2. Form new shoot if necessary
-			float branchingProb = m_rootNodeDevelopmentRate * m_currentDeltaTime * rootGrowthParameters.m_rootNodeGrowthRate * rootGrowthParameters.m_branchingProbability(rootNode);
-			if (rootNode.m_data.m_inhibitor > 0.0f) branchingProb *= glm::exp(-rootNode.m_data.m_inhibitor);
-			//More nitrite, more likely to form new shoot.
-			if (branchingProb >= glm::linearRand(0.0f, 1.0f)) {
-				const auto newRootNodeHandle = m_rootSkeleton.Extend(rootNodeHandle, true);
-				auto& oldRootNode = m_rootSkeleton.RefNode(rootNodeHandle);
-				auto& newRootNode = m_rootSkeleton.RefNode(newRootNodeHandle);
-				newRootNode.m_data = {};
-				newRootNode.m_data.m_startAge = m_age;
-				newRootNode.m_data.m_order = oldRootNode.m_data.m_order + 1;
-				newRootNode.m_data.m_lateral = true;
-				//Assign new tropism for new shoot based on parent node. The tropism switching happens here.
-				rootGrowthParameters.SetTropisms(oldRootNode, newRootNode);
-				newRootNode.m_info.m_length = 0.0f;
-				newRootNode.m_info.m_thickness = rootGrowthParameters.m_endNodeThickness;
-				newRootNode.m_data.m_localRotation =
-					glm::quat(glm::vec3(
-						glm::radians(rootGrowthParameters.m_branchingAngle(newRootNode)),
-						glm::radians(glm::linearRand(0.0f, 360.0f)), 0.0f));
-				auto globalRotation = oldRootNode.m_info.m_globalRotation * newRootNode.m_data.m_localRotation;
-				auto front = globalRotation * glm::vec3(0, 0, -1);
-				auto up = globalRotation * glm::vec3(0, 1, 0);
-				auto angleTowardsUp = glm::degrees(glm::acos(glm::dot(front, glm::vec3(0, 1, 0))));
-				const float maxAngle = 60.0f;
-				if (angleTowardsUp < maxAngle) {
-					const glm::vec3 left = glm::cross(front, glm::vec3(0, -1, 0));
-					front = glm::rotate(front, glm::radians(maxAngle - angleTowardsUp), left);
-
-					up = glm::normalize(glm::cross(glm::cross(front, up), front));
-					globalRotation = glm::quatLookAt(front, up);
-					newRootNode.m_data.m_localRotation = glm::inverse(oldRootNode.m_info.m_globalRotation) * globalRotation;
-					front = globalRotation * glm::vec3(0, 0, -1);
-				}
-				const float maintenanceVigor = m_rootSkeleton.RefNode(rootNodeHandle).m_data.m_vigorSink.SubtractVigor(availableMaintenanceVigor);
-			}
-		}
-
-
 	}
 	return graphChanged;
 }
@@ -1198,72 +817,6 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 	return graphChanged;
 }
 
-void TreeModel::CalculateThickness(NodeHandle rootNodeHandle, const RootGrowthController& rootGrowthParameters)
-{
-	auto& rootNode = m_rootSkeleton.RefNode(rootNodeHandle);
-	auto& rootNodeData = rootNode.m_data;
-	auto& rootNodeInfo = rootNode.m_info;
-	rootNodeData.m_descendentTotalBiomass = 0;
-	float maxDistanceToAnyBranchEnd = 0;
-	float childThicknessCollection = 0.0f;
-	//std::set<float> thicknessCollection;
-	int maxChildHandle = -1;
-	//float maxChildBiomass = 999.f;
-	int minChildOrder = 999;
-	for (const auto& i : rootNode.RefChildHandles()) {
-		const auto& childRootNode = m_rootSkeleton.RefNode(i);
-		const float childMaxDistanceToAnyBranchEnd =
-			childRootNode.m_data.m_maxDistanceToAnyBranchEnd +
-			childRootNode.m_info.m_length / rootGrowthParameters.m_rootNodeLength;
-		maxDistanceToAnyBranchEnd = glm::max(maxDistanceToAnyBranchEnd, childMaxDistanceToAnyBranchEnd);
-		childThicknessCollection += glm::pow(childRootNode.m_info.m_thickness,
-			1.0f / rootGrowthParameters.m_thicknessAccumulationFactor);
-		//thicknessCollection.emplace();
-		if (childRootNode.m_data.m_order > minChildOrder)
-		{
-			minChildOrder = childRootNode.m_data.m_order;
-			maxChildHandle = i;
-		}
-	}
-
-	//int addedIndex = 0;
-	//for (auto i = thicknessCollection.begin(); i != thicknessCollection.end(); ++i)
-	//{
-	//	childThicknessCollection += *i;
-	//	addedIndex++;
-		//if (addedIndex > 1) break;
-	//}
-
-	childThicknessCollection += rootGrowthParameters.m_thicknessAccumulateAgeFactor * rootGrowthParameters.m_endNodeThickness * rootGrowthParameters.m_rootNodeGrowthRate * (m_age - rootNodeData.m_startAge);
-
-	rootNodeData.m_maxDistanceToAnyBranchEnd = maxDistanceToAnyBranchEnd;
-	if (childThicknessCollection != 0.0f) {
-		const auto newThickness = glm::pow(childThicknessCollection,
-			rootGrowthParameters.m_thicknessAccumulationFactor);
-		rootNodeInfo.m_thickness = glm::max(rootNodeInfo.m_thickness, newThickness);
-	}
-	else
-	{
-		rootNodeInfo.m_thickness = glm::max(rootNodeInfo.m_thickness, rootGrowthParameters.m_endNodeThickness);
-	}
-
-	rootNodeData.m_biomass =
-		rootNodeInfo.m_thickness / rootGrowthParameters.m_endNodeThickness * rootNodeInfo.m_length /
-		rootGrowthParameters.m_rootNodeLength;
-	for (const auto& i : rootNode.RefChildHandles()) {
-		auto& childRootNode = m_rootSkeleton.RefNode(i);
-		rootNodeData.m_descendentTotalBiomass +=
-			childRootNode.m_data.m_descendentTotalBiomass +
-			childRootNode.m_data.m_biomass;
-		childRootNode.m_data.m_isMaxChild = i == maxChildHandle;
-	}
-}
-
-bool TreeModel::PruneRootNodes(const RootGrowthController& rootGrowthParameters)
-{
-	return false;
-}
-
 void TreeModel::AggregateInternodeVigorRequirement(const ShootGrowthController& shootGrowthParameters, NodeHandle baseInternodeHandle)
 {
 	const auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
@@ -1281,27 +834,6 @@ void TreeModel::AggregateInternodeVigorRequirement(const ShootGrowthController& 
 			}
 		}
 		if (*it == baseInternodeHandle) return;
-	}
-}
-
-void TreeModel::AggregateRootVigorRequirement(const RootGrowthController& rootGrowthParameters, NodeHandle baseRootNodeHandle)
-{
-	const auto& sortedRootNodeList = m_rootSkeleton.RefSortedNodeList();
-
-	for (auto it = sortedRootNodeList.rbegin(); it != sortedRootNodeList.rend(); ++it) {
-		auto& rootNode = m_rootSkeleton.RefNode(*it);
-		auto& rootNodeData = rootNode.m_data;
-		rootNodeData.m_vigorFlow.m_subtreeVigorRequirementWeight = 0.0f;
-		if (!rootNode.IsEndNode()) {
-			//If current node is not end node
-			for (const auto& i : rootNode.RefChildHandles()) {
-				const auto& childInternode = m_rootSkeleton.RefNode(i);
-				rootNodeData.m_vigorFlow.m_subtreeVigorRequirementWeight +=
-					rootGrowthParameters.m_vigorRequirementAggregateLoss *
-					(childInternode.m_data.m_vigorFlow.m_vigorRequirementWeight + childInternode.m_data.m_vigorFlow.m_subtreeVigorRequirementWeight);
-			}
-		}
-		if (*it == baseRootNodeHandle) return;
 	}
 }
 
@@ -1561,7 +1093,6 @@ void TreeModel::CalculateVigorRequirement(const ShootGrowthController& shootGrow
 
 void TreeModel::Clear() {
 	m_shootSkeleton = {};
-	m_rootSkeleton = {};
 	m_history = {};
 	m_initialized = false;
 
@@ -1588,11 +1119,6 @@ int TreeModel::GetFruitCount() const
 	return m_fruitCount;
 }
 
-int TreeModel::GetFineRootCount() const
-{
-	return m_fineRootCount;
-}
-
 bool TreeModel::PruneInternodes(const glm::mat4& globalTransform, ClimateModel& climateModel, const ShootGrowthController& shootGrowthParameters) {
 
 	const auto maxDistance = m_shootSkeleton.PeekNode(0).m_info.m_endDistance;
@@ -1608,14 +1134,14 @@ bool TreeModel::PruneInternodes(const glm::mat4& globalTransform, ClimateModel& 
 		{
 			auto handleWalker = internodeHandle;
 			int i = 0;
-			while(i < 4 && handleWalker != -1 && m_shootSkeleton.PeekNode(handleWalker).IsApical())
+			while (i < 4 && handleWalker != -1 && m_shootSkeleton.PeekNode(handleWalker).IsApical())
 			{
 				handleWalker = m_shootSkeleton.PeekNode(handleWalker).GetParentHandle();
 				i++;
 			}
 			if (handleWalker != -1) {
 				auto& targetInternode = m_shootSkeleton.PeekNode(handleWalker);
-				if(targetInternode.m_data.m_order != 0)
+				if (targetInternode.m_data.m_order != 0)
 				{
 					PruneInternode(handleWalker);
 					anyInternodePruned = true;
@@ -1629,7 +1155,7 @@ bool TreeModel::PruneInternodes(const glm::mat4& globalTransform, ClimateModel& 
 	for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); ++it) {
 		const auto internodeHandle = *it;
 		if (m_shootSkeleton.PeekNode(internodeHandle).IsRecycled()) continue;
-		if(internodeHandle == 0) continue;
+		if (internodeHandle == 0) continue;
 		const auto& internode = m_shootSkeleton.PeekNode(internodeHandle);
 		//Pruning here.
 		bool pruning = false;
@@ -1669,139 +1195,6 @@ bool TreeModel::PruneInternodes(const glm::mat4& globalTransform, ClimateModel& 
 	return anyInternodePruned;
 }
 
-void TreeModel::SampleNitrite(const glm::mat4& globalTransform, VoxelSoilModel& soilModel)
-{
-	m_rootSkeleton.m_data.m_rootFlux.m_nitrite = 0.0f;
-	const auto& sortedRootNodeList = m_rootSkeleton.RefSortedNodeList();
-	for (const auto& rootNodeHandle : sortedRootNodeList) {
-		auto& rootNode = m_rootSkeleton.RefNode(rootNodeHandle);
-		auto& rootNodeInfo = rootNode.m_info;
-		auto worldSpacePosition = globalTransform * glm::translate(rootNodeInfo.m_globalPosition)[3];
-		if (m_treeGrowthSettings.m_collectNitrite) {
-			rootNode.m_data.m_nitrite = soilModel.IntegrateNutrient(worldSpacePosition, 0.2f);
-			m_rootSkeleton.m_data.m_rootFlux.m_nitrite += rootNode.m_data.m_nitrite;
-		}
-		else
-		{
-			m_rootSkeleton.m_data.m_rootFlux.m_nitrite += 1.0f;
-		}
-	}
-}
-
-
-
-void TreeModel::AllocateRootVigor(const RootGrowthController& rootGrowthParameters)
-{
-	//For how this works, refer to AllocateShootVigor().
-	const auto& sortedRootNodeList = m_rootSkeleton.RefSortedNodeList();
-	const float apicalControl = rootGrowthParameters.m_apicalControl;
-
-	const float rootMaintenanceVigor = glm::min(m_rootSkeleton.m_data.m_vigor, 0.0f);
-	float rootMaintenanceVigorFillingRate = 0.0f;
-	const float rootDevelopmentVigor = m_rootSkeleton.m_data.m_vigor - rootMaintenanceVigor;
-	if (m_rootSkeleton.m_data.m_vigorRequirement.m_nodeDevelopmentalVigor != 0.0f) {
-		m_rootNodeDevelopmentRate = rootDevelopmentVigor / m_rootSkeleton.m_data.m_vigorRequirement.m_nodeDevelopmentalVigor;
-	}
-
-	for (const auto& rootNodeHandle : sortedRootNodeList) {
-		auto& rootNode = m_rootSkeleton.RefNode(rootNodeHandle);
-		auto& rootNodeData = rootNode.m_data;
-		auto& rootNodeVigorFlow = rootNodeData.m_vigorFlow;
-
-		rootNodeData.m_vigorSink.AddVigor(rootMaintenanceVigorFillingRate * rootNodeData.m_vigorSink.GetMaintenanceVigorRequirement());
-
-		if (rootNode.GetParentHandle() == -1) {
-			if (m_rootSkeleton.m_data.m_vigorRequirement.m_nodeDevelopmentalVigor != 0.0f) {
-				const float totalRequirement = rootNodeVigorFlow.m_vigorRequirementWeight + rootNodeVigorFlow.m_subtreeVigorRequirementWeight;
-				if (totalRequirement != 0.0f) {
-					rootNodeVigorFlow.m_allocatedVigor = rootDevelopmentVigor * rootNodeVigorFlow.m_vigorRequirementWeight / totalRequirement;
-				}
-				rootNodeData.m_vigorSink.AddVigor(rootNodeVigorFlow.m_allocatedVigor);
-				rootNodeVigorFlow.m_subTreeAllocatedVigor = rootDevelopmentVigor - rootNodeVigorFlow.m_allocatedVigor;
-			}
-		}
-		rootNodeData.m_vigorSink.AddVigor(rootNodeVigorFlow.m_allocatedVigor);
-
-		if (rootNodeVigorFlow.m_subTreeAllocatedVigor != 0.0f) {
-			float childDevelopmentalVigorRequirementWeightSum = 0.0f;
-			for (const auto& i : rootNode.RefChildHandles()) {
-				const auto& childRootNode = m_rootSkeleton.RefNode(i);
-				const auto& childRootNodeData = childRootNode.m_data;
-				const auto& childRootNodeVigorFlow = childRootNodeData.m_vigorFlow;
-				float childDevelopmentalVigorRequirementWeight = 0.0f;
-				if (rootNodeVigorFlow.m_subtreeVigorRequirementWeight != 0.0f) {
-					childDevelopmentalVigorRequirementWeight =
-						(childRootNodeVigorFlow.m_vigorRequirementWeight + childRootNodeVigorFlow.m_subtreeVigorRequirementWeight)
-						/ rootNodeVigorFlow.m_subtreeVigorRequirementWeight;
-				}
-				//Perform Apical control here.
-				if (rootNodeData.m_isMaxChild) childDevelopmentalVigorRequirementWeight *= apicalControl;
-				childDevelopmentalVigorRequirementWeightSum += childDevelopmentalVigorRequirementWeight;
-			}
-			for (const auto& i : rootNode.RefChildHandles()) {
-				auto& childRootNode = m_rootSkeleton.RefNode(i);
-				auto& childRootNodeData = childRootNode.m_data;
-				auto& childRootNodeVigorFlow = childRootNodeData.m_vigorFlow;
-				float childDevelopmentalVigorRequirementWeight = 0.0f;
-				if (rootNodeVigorFlow.m_subtreeVigorRequirementWeight != 0.0f)
-					childDevelopmentalVigorRequirementWeight = (childRootNodeVigorFlow.m_vigorRequirementWeight + childRootNodeVigorFlow.m_subtreeVigorRequirementWeight)
-					/ rootNodeVigorFlow.m_subtreeVigorRequirementWeight;
-
-				//Perform Apical control here.
-				if (rootNodeData.m_isMaxChild) childDevelopmentalVigorRequirementWeight *= apicalControl;
-
-				//Then calculate total amount of development vigor belongs to this child from internode received vigor for its children.
-				float childTotalAllocatedDevelopmentVigor = 0.0f;
-				if (childDevelopmentalVigorRequirementWeightSum != 0.0f) childTotalAllocatedDevelopmentVigor = rootNodeVigorFlow.m_subTreeAllocatedVigor *
-					childDevelopmentalVigorRequirementWeight / childDevelopmentalVigorRequirementWeightSum;
-
-				childRootNodeVigorFlow.m_allocatedVigor = 0.0f;
-				if (childRootNodeVigorFlow.m_vigorRequirementWeight + childRootNodeVigorFlow.m_subtreeVigorRequirementWeight != 0.0f) {
-					childRootNodeVigorFlow.m_allocatedVigor += childTotalAllocatedDevelopmentVigor *
-						childRootNodeVigorFlow.m_vigorRequirementWeight
-						/ (childRootNodeVigorFlow.m_vigorRequirementWeight + childRootNodeVigorFlow.m_subtreeVigorRequirementWeight);
-				}
-				childRootNodeVigorFlow.m_subTreeAllocatedVigor = childTotalAllocatedDevelopmentVigor - childRootNodeVigorFlow.m_allocatedVigor;
-			}
-		}
-		else
-		{
-			for (const auto& i : rootNode.RefChildHandles())
-			{
-				auto& childRootNode = m_rootSkeleton.RefNode(i);
-				auto& childRootNodeData = childRootNode.m_data;
-				auto& childRootNodeVigorFlow = childRootNodeData.m_vigorFlow;
-				childRootNodeVigorFlow.m_allocatedVigor = childRootNodeVigorFlow.m_subTreeAllocatedVigor = 0.0f;
-			}
-		}
-	}
-}
-
-void TreeModel::CalculateVigorRequirement(const RootGrowthController& rootGrowthParameters,
-	RootGrowthRequirement& newRootGrowthNutrientsRequirement)
-{
-	const auto& sortedRootNodeList = m_rootSkeleton.RefSortedNodeList();
-	for (const auto& rootNodeHandle : sortedRootNodeList) {
-		auto& rootNode = m_rootSkeleton.RefNode(rootNodeHandle);
-		auto& rootNodeData = rootNode.m_data;
-		auto& rootNodeVigorFlow = rootNodeData.m_vigorFlow;
-		//This one has 0 always but we will put value in it in future.
-		rootNodeVigorFlow.m_vigorRequirementWeight = 0.0f;
-		float growthPotential = 0.0f;
-		if (rootNode.RefChildHandles().empty())
-		{
-			growthPotential = m_currentDeltaTime * rootGrowthParameters.m_rootNodeGrowthRate * rootGrowthParameters.m_rootNodeVigorRequirement;
-			rootNodeVigorFlow.m_vigorRequirementWeight =
-				rootNodeData.m_nitrite * growthPotential * (1.0f - rootGrowthParameters.m_environmentalFriction(rootNode));
-		}
-		rootNodeData.m_vigorSink.SetDesiredMaintenanceVigorRequirement(0.0f);
-		rootNodeData.m_vigorSink.SetDesiredDevelopmentalVigorRequirement(rootNodeVigorFlow.m_vigorRequirementWeight);
-		//We sum the vigor requirement with the developmentalVigorRequirement,
-		//so the overall nitrite will not affect the root growth. Thus we will have same growth rate for low/high nitrite density.
-		newRootGrowthNutrientsRequirement.m_nodeDevelopmentalVigor += growthPotential;
-	}
-}
-
 void TreeModel::SampleTemperature(const glm::mat4& globalTransform, ClimateModel& climateModel)
 {
 	const auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
@@ -1813,17 +1206,6 @@ void TreeModel::SampleTemperature(const glm::mat4& globalTransform, ClimateModel
 	}
 }
 
-void TreeModel::SampleSoilDensity(const glm::mat4& globalTransform, VoxelSoilModel& soilModel)
-{
-	const auto& sortedRootNodeList = m_rootSkeleton.RefSortedNodeList();
-	for (auto it = sortedRootNodeList.rbegin(); it != sortedRootNodeList.rend(); ++it) {
-		auto& rootNode = m_rootSkeleton.RefNode(*it);
-		auto& rootNodeData = rootNode.m_data;
-		auto& rootNodeInfo = rootNode.m_info;
-		rootNodeData.m_soilDensity = soilModel.GetDensity(globalTransform * glm::translate(rootNodeInfo.m_globalPosition)[3]);
-	}
-}
-
 ShootSkeleton& TreeModel::RefShootSkeleton() {
 	return m_shootSkeleton;
 }
@@ -1832,18 +1214,7 @@ const ShootSkeleton&
 TreeModel::PeekShootSkeleton(const int iteration) const {
 	assert(iteration < 0 || iteration <= m_history.size());
 	if (iteration == m_history.size() || iteration < 0) return m_shootSkeleton;
-	return m_history.at(iteration).first;
-}
-
-RootSkeleton& TreeModel::RefRootSkeleton() {
-	return m_rootSkeleton;
-}
-
-const RootSkeleton&
-TreeModel::PeekRootSkeleton(const int iteration) const {
-	assert(iteration < 0 || iteration <= m_history.size());
-	if (iteration == m_history.size() || iteration < 0) return m_rootSkeleton;
-	return m_history.at(iteration).second;
+	return m_history.at(iteration);
 }
 
 void TreeModel::ClearHistory() {
@@ -1851,7 +1222,7 @@ void TreeModel::ClearHistory() {
 }
 
 void TreeModel::Step() {
-	m_history.emplace_back(m_shootSkeleton, m_rootSkeleton);
+	m_history.emplace_back(m_shootSkeleton);
 	if (m_historyLimit > 0) {
 		while (m_history.size() > m_historyLimit) {
 			m_history.pop_front();
@@ -1869,8 +1240,7 @@ int TreeModel::CurrentIteration() const {
 
 void TreeModel::Reverse(int iteration) {
 	assert(iteration >= 0 && iteration < m_history.size());
-	m_shootSkeleton = m_history[iteration].first;
-	m_rootSkeleton = m_history[iteration].second;
+	m_shootSkeleton = m_history[iteration];
 	m_history.erase((m_history.begin() + iteration), m_history.end());
 }
 
@@ -1900,15 +1270,5 @@ void TreeModel::ExportTreeIOSkeleton(treeio::ArrayTree& arrayTree) const
 		auto currentId = arrayTree.addNodeChild(nodeMap[node.GetParentHandle()], nodeData);
 		nodeMap[nodeHandle] = currentId;
 	}
-}
-
-void RootGrowthController::SetTropisms(Node<RootNodeGrowthData>& oldNode, Node<RootNodeGrowthData>& newNode) const
-{
-	const float probability = m_tropismSwitchingProbability *
-		glm::exp(-m_tropismSwitchingProbabilityDistanceFactor * oldNode.m_data.m_rootDistance);
-
-	const bool needSwitch = probability >= glm::linearRand(0.0f, 1.0f);
-	newNode.m_data.m_horizontalTropism = needSwitch ? oldNode.m_data.m_verticalTropism : oldNode.m_data.m_horizontalTropism;
-	newNode.m_data.m_verticalTropism = needSwitch ? oldNode.m_data.m_horizontalTropism : oldNode.m_data.m_verticalTropism;
 }
 #pragma endregion

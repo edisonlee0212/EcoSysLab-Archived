@@ -40,7 +40,6 @@ namespace EcoSysLab {
 
 	struct PresentationOverrideSettings
 	{
-		glm::vec3 m_rootOverrideColor = glm::vec3(80, 60, 50) / 255.0f;
 		glm::vec3 m_branchOverrideColor = glm::vec3(109, 79, 75) / 255.0f;
 
 		float m_maxThickness = 0.0f;
@@ -59,28 +58,12 @@ namespace EcoSysLab {
 		float m_unitDistance = 0.03f;
 	};
 
-	struct FineRootParameters
-	{
-		float m_segmentLength = 0.02f;
-		float m_apicalAngleVariance = 5.0f;
-		float m_branchingAngle = 30.f;
-		float m_thickness = 0.002f;
-		float m_maxNodeThickness = 0.003f;
-		float m_minRootDistance = 0.0f;
-		float m_maxEndDistance = 999.0f;
-		int m_segmentSize = 8;
-		float m_unitDistance = 0.025f;
-	};
-
-
-
+	
 	struct TreeMeshGeneratorSettings {
 		bool m_vertexColorOnly = false;
 		bool m_enableFoliage = true;
 		bool m_enableFruit = true;
 		bool m_enableBranch = true;
-		bool m_enableRoot = true;
-		bool m_enableFineRoot = true;
 		bool m_enableTwig = true;
 
 		bool m_presentationOverride = false;
@@ -112,17 +95,14 @@ namespace EcoSysLab {
 
 		glm::vec3 m_branchVertexColor = glm::vec3(1.0f);
 		glm::vec3 m_foliageVertexColor = glm::vec3(1.0f);
-		glm::vec3 m_rootVertexColor = glm::vec3(1.0f);
 
 		unsigned m_branchMeshType = 0;
-		unsigned m_rootMeshType = 0;
 
 		float m_treePartBaseDistance = 1;
 		float m_treePartEndDistance = 2;
 		float m_treePartBreakRatio = 4.0f;
 
 
-		FineRootParameters m_fineRootParameters{};
 		TwigParameters m_twigParameters{};
 		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer);
 
@@ -635,7 +615,7 @@ namespace EcoSysLab {
 				subdivisionLevel++;
 				testRadius *= 2.f;
 			}
-			EVOENGINE_LOG("Root mesh formation: Auto set level to " + std::to_string(subdivisionLevel))
+			EVOENGINE_LOG("Mesh formation: Auto set level to " + std::to_string(subdivisionLevel))
 
 				octree.Reset(maxRadius, subdivisionLevel, (treeSkeleton.m_min + treeSkeleton.m_max) * 0.5f);
 		}

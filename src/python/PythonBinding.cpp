@@ -305,8 +305,6 @@ void VoxelSpaceColonizationTreeData(
 			tree->m_treeModel.m_treeGrowthSettings.m_spaceColonizationTheta,
 			tree->m_treeModel.m_treeGrowthSettings.m_spaceColonizationDetectionDistanceFactor);
 	}
-	tree->m_treeModel.m_treeGrowthSettings.m_enableShoot = true;
-	tree->m_treeModel.m_treeGrowthSettings.m_enableRoot = false;
 	tree->m_treeModel.m_treeGrowthSettings.m_useSpaceColonization = true;
 	tree->m_treeModel.m_treeGrowthSettings.m_spaceColonizationAutoResize = false;
 	Application::Loop();
@@ -434,8 +432,6 @@ void RBVSpaceColonizationTreeData(
 		tree->m_treeModel.m_treeGrowthSettings.m_spaceColonizationTheta,
 		tree->m_treeModel.m_treeGrowthSettings.m_spaceColonizationDetectionDistanceFactor);
 
-	tree->m_treeModel.m_treeGrowthSettings.m_enableShoot = true;
-	tree->m_treeModel.m_treeGrowthSettings.m_enableRoot = false;
 	tree->m_treeModel.m_treeGrowthSettings.m_useSpaceColonization = true;
 	tree->m_treeModel.m_treeGrowthSettings.m_spaceColonizationAutoResize = false;
 	Application::Loop();
@@ -510,7 +506,6 @@ PYBIND11_MODULE(pyecosyslab, m) {
 
 	py::class_<PresentationOverrideSettings>(m, "PresentationOverrideSettings")
 		.def(py::init<>())
-		.def_readwrite("m_rootOverrideColor", &PresentationOverrideSettings::m_rootOverrideColor)
 		.def_readwrite("m_branchOverrideColor", &PresentationOverrideSettings::m_branchOverrideColor)
 		.def_readwrite("m_maxThickness", &PresentationOverrideSettings::m_maxThickness);
 
@@ -531,8 +526,6 @@ PYBIND11_MODULE(pyecosyslab, m) {
 		.def_readwrite("m_enableFoliage", &TreeMeshGeneratorSettings::m_enableFoliage)
 		.def_readwrite("m_enableFruit", &TreeMeshGeneratorSettings::m_enableFruit)
 		.def_readwrite("m_enableBranch", &TreeMeshGeneratorSettings::m_enableBranch)
-		.def_readwrite("m_enableRoot", &TreeMeshGeneratorSettings::m_enableRoot)
-		.def_readwrite("m_enableFineRoot", &TreeMeshGeneratorSettings::m_enableFineRoot)
 		.def_readwrite("m_enableTwig", &TreeMeshGeneratorSettings::m_enableTwig)
 		.def_readwrite("m_foliageOverride", &TreeMeshGeneratorSettings::m_foliageOverride)
 		.def_readwrite("m_foliageOverrideSettings", &TreeMeshGeneratorSettings::m_foliageOverrideSettings)
@@ -555,8 +548,7 @@ PYBIND11_MODULE(pyecosyslab, m) {
 		.def_readwrite("m_voxelSubdivisionLevel", &TreeMeshGeneratorSettings::m_voxelSubdivisionLevel)
 		.def_readwrite("m_voxelSmoothIteration", &TreeMeshGeneratorSettings::m_voxelSmoothIteration)
 		.def_readwrite("m_removeDuplicate", &TreeMeshGeneratorSettings::m_removeDuplicate)
-		.def_readwrite("m_branchMeshType", &TreeMeshGeneratorSettings::m_branchMeshType)
-		.def_readwrite("m_rootMeshType", &TreeMeshGeneratorSettings::m_rootMeshType);
+		.def_readwrite("m_branchMeshType", &TreeMeshGeneratorSettings::m_branchMeshType);
 
 	py::class_<Scene>(m, "Scene")
 		.def("CreateEntity", static_cast<Entity(Scene::*)(const std::string&)>(&Scene::CreateEntity))

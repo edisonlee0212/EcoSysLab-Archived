@@ -28,9 +28,7 @@ namespace EcoSysLab {
 
 	struct TreeVisualizerColorSettings {
 		int m_shootVisualizationMode = static_cast<int>(ShootVisualizerMode::Default);
-		int m_rootVisualizationMode = static_cast<int>(RootVisualizerMode::Default);
 		float m_shootColorMultiplier = 1.0f;
-		float m_rootColorMultiplier = 1.0f;
 	};
 
 	class TreeVisualizer {
@@ -39,24 +37,18 @@ namespace EcoSysLab {
 		std::vector<glm::vec4> m_randomColors;
 
 		std::shared_ptr<ParticleInfoList> m_internodeMatrices;
-		std::shared_ptr<ParticleInfoList> m_rootNodeMatrices;
 
 		std::vector<glm::vec2> m_storedMousePositions;
 		bool m_visualization = true;
 
 		bool m_hexagonProfileGui = true;
 		bool m_treeHierarchyGui = false;
-		bool m_rootHierarchyGui = false;
 
 		TreeVisualizerColorSettings m_settings;
 
 		NodeHandle m_selectedInternodeHandle = -1;
 		float m_selectedInternodeLengthFactor = 0.0f;
 		std::vector<NodeHandle> m_selectedInternodeHierarchyList;
-
-		NodeHandle m_selectedRootNodeHandle = -1;
-		float m_selectedRootNodeLengthFactor = 0.0f;
-		std::vector<NodeHandle> m_selectedRootNodeHierarchyList;
 
 		PruningMode m_mode = PruningMode::Empty;
 
@@ -85,11 +77,6 @@ namespace EcoSysLab {
 			NodeHandle nodeHandle, NodeHandle& selectedNodeHandle, std::vector<NodeHandle>& hierarchyList,
 			const unsigned& hierarchyLevel);
 
-		bool DrawRootNodeInspectionGui(
-			TreeModel& treeModel,
-			NodeHandle rootNodeHandle, bool& deleted,
-			const unsigned& hierarchyLevel);
-
 		void
 			PeekInternode(const ShootSkeleton& shootSkeleton,
 				NodeHandle internodeHandle) const;
@@ -98,20 +85,10 @@ namespace EcoSysLab {
 			InspectInternode(ShootSkeleton& shootSkeleton,
 				NodeHandle internodeHandle);
 
-		void
-			PeekRootNode(
-				const RootSkeleton& rootSkeleton,
-				NodeHandle rootNodeHandle) const;
-
-		bool
-			InspectRootNode(RootSkeleton& rootSkeleton,
-				NodeHandle rootNodeHandle);
-
 	public:
 		[[nodiscard]] bool Initialized() const;
 		void ClearSelections();
 		[[nodiscard]] NodeHandle GetSelectedInternodeHandle() const;
-		[[nodiscard]] NodeHandle GetSelectedRootNodeHandle() const;
 		void Initialize();
 
 		template<typename SkeletonData, typename FlowData, typename NodeData>
@@ -125,12 +102,9 @@ namespace EcoSysLab {
 
 		void SyncColors(const ShootSkeleton& shootSkeleton, NodeHandle selectedNodeHandle);
 
-		void SyncColors(const RootSkeleton& rootSkeleton, NodeHandle selectedNodeHandle);
-
 		int m_iteration = 0;
 		bool m_needUpdate = false;
 		bool m_needShootColorUpdate = false;
-		bool m_needRootColorUpdate = false;
 
 		bool OnInspect(TreeModel& treeModel);
 

@@ -8,20 +8,6 @@
 
 using namespace EcoSysLab;
 
-void SerializeFineRootParameters(const std::string& name, const FineRootParameters& fineRootParameters, YAML::Emitter& out)
-{
-	out << YAML::Key << name << YAML::BeginMap;
-	out << YAML::Key << "m_segmentLength" << YAML::Value << fineRootParameters.m_segmentLength;
-	out << YAML::Key << "m_apicalAngleVariance" << YAML::Value << fineRootParameters.m_apicalAngleVariance;
-	out << YAML::Key << "m_branchingAngle" << YAML::Value << fineRootParameters.m_branchingAngle;
-	out << YAML::Key << "m_thickness" << YAML::Value << fineRootParameters.m_thickness;
-	out << YAML::Key << "m_maxNodeThickness" << YAML::Value << fineRootParameters.m_maxNodeThickness;
-	out << YAML::Key << "m_minRootDistance" << YAML::Value << fineRootParameters.m_minRootDistance;
-	out << YAML::Key << "m_maxEndDistance" << YAML::Value << fineRootParameters.m_maxEndDistance;
-	out << YAML::Key << "m_segmentSize" << YAML::Value << fineRootParameters.m_segmentSize;
-	out << YAML::Key << "m_unitDistance" << YAML::Value << fineRootParameters.m_unitDistance;
-	out << YAML::EndMap;
-}
 
 void SerializeTwigParameters(const std::string& name, const TwigParameters& twigParameters, YAML::Emitter& out)
 {
@@ -37,20 +23,7 @@ void SerializeTwigParameters(const std::string& name, const TwigParameters& twig
 	out << YAML::Key << "m_unitDistance" << YAML::Value << twigParameters.m_unitDistance;
 	out << YAML::EndMap;
 }
-void DeserializeFineRootParameters(const std::string& name, FineRootParameters& fineRootParameters, const YAML::Node& in) {
-	if (in[name]) {
-		auto& ms = in[name];
-		if (ms["m_segmentLength"]) fineRootParameters.m_segmentLength = ms["m_segmentLength"].as<float>();
-		if (ms["m_apicalAngleVariance"]) fineRootParameters.m_apicalAngleVariance = ms["m_apicalAngleVariance"].as<float>();
-		if (ms["m_branchingAngle"]) fineRootParameters.m_branchingAngle = ms["m_branchingAngle"].as<float>();
-		if (ms["m_thickness"]) fineRootParameters.m_thickness = ms["m_thickness"].as<float>();
-		if (ms["m_maxNodeThickness"]) fineRootParameters.m_maxNodeThickness = ms["m_maxNodeThickness"].as<float>();
-		if (ms["m_maxEndDistance"]) fineRootParameters.m_maxEndDistance = ms["m_maxEndDistance"].as<float>();
-		if (ms["m_segmentSize"]) fineRootParameters.m_segmentSize = ms["m_segmentSize"].as<int>();
-		if (ms["m_unitDistance"]) fineRootParameters.m_unitDistance = ms["m_unitDistance"].as<float>();
-		if (ms["m_minRootDistance"]) fineRootParameters.m_minRootDistance = ms["m_minRootDistance"].as<float>();
-	}
-}
+
 
 void DeserializeTwigParameters(const std::string& name, TwigParameters& twigParameters, const YAML::Node& in) {
 	if (in[name]) {
@@ -68,24 +41,6 @@ void DeserializeTwigParameters(const std::string& name, TwigParameters& twigPara
 	}
 }
 
-bool OnInspectFineRootParameters(FineRootParameters& fineRootParameters)
-{
-	bool changed = false;
-	if (ImGui::TreeNodeEx("Fine Root Parameters")) {
-		changed = ImGui::DragFloat("Segment length", &fineRootParameters.m_segmentLength, 0.001f, 0.0f, 1.0f) || changed;
-		changed = ImGui::DragFloat("Apical angle variance", &fineRootParameters.m_apicalAngleVariance, 0.01f, 0.0f, 10.0f) || changed;
-		changed = ImGui::DragFloat("Branching angle", &fineRootParameters.m_branchingAngle, 0.01f, 0.0f, 180.0f) || changed;
-		changed = ImGui::DragFloat("Twig thickness", &fineRootParameters.m_thickness, 0.001f, 0.0f, 1.0f) || changed;
-		changed = ImGui::DragInt("Segment Size", &fineRootParameters.m_segmentSize, 1, 2, 10) || changed;
-		changed = ImGui::DragFloat("Distance between twigs", &fineRootParameters.m_unitDistance, 0.001f, 0.0f, 1.0f) || changed;
-
-		changed = ImGui::DragFloat("Max node thickness", &fineRootParameters.m_maxNodeThickness, 0.001f, 0.0f, 5.0f) || changed;
-		changed = ImGui::DragFloat("Min root distance", &fineRootParameters.m_minRootDistance, 0.001f, 0.0f, 1.0f) || changed;
-		changed = ImGui::DragFloat("Max end distance", &fineRootParameters.m_maxEndDistance, 0.001f, 0.0f, 1.0f) || changed;
-		ImGui::TreePop();
-	}
-	return changed;
-}
 
 bool OnInspectTwigParameters(TwigParameters& twigParameters)
 {
@@ -186,7 +141,6 @@ void TreeMeshGeneratorSettings::Save(const std::string& name, YAML::Emitter& out
 	out << YAML::Key << "m_enableFoliage" << YAML::Value << m_enableFoliage;
 	out << YAML::Key << "m_enableBranch" << YAML::Value << m_enableBranch;
 	out << YAML::Key << "m_enableFruit" << YAML::Value << m_enableFruit;
-	out << YAML::Key << "m_enableFineRoot" << YAML::Value << m_enableFineRoot;
 	out << YAML::Key << "m_enableTwig" << YAML::Value << m_enableTwig;
 
 	out << YAML::Key << "m_smoothness" << YAML::Value << m_smoothness;
@@ -204,12 +158,9 @@ void TreeMeshGeneratorSettings::Save(const std::string& name, YAML::Emitter& out
 	out << YAML::Key << "m_voxelSubdivisionLevel" << YAML::Value << m_voxelSubdivisionLevel;
 	out << YAML::Key << "m_voxelSmoothIteration" << YAML::Value << m_voxelSmoothIteration;
 	out << YAML::Key << "m_removeDuplicate" << YAML::Value << m_removeDuplicate;
-	out << YAML::Key << "m_rootVertexColor" << YAML::Value << m_rootVertexColor;
 
 	out << YAML::Key << "m_branchMeshType" << YAML::Value << m_branchMeshType;
-	out << YAML::Key << "m_rootMeshType" << YAML::Value << m_rootMeshType;
 
-	SerializeFineRootParameters("m_fineRootParameters", m_fineRootParameters, out);
 	SerializeTwigParameters("m_twigParameters", m_twigParameters, out);
 
 	out << YAML::EndMap;
@@ -229,7 +180,6 @@ void TreeMeshGeneratorSettings::Load(const std::string& name, const YAML::Node& 
 		if (ms["m_enableFoliage"]) m_enableFoliage = ms["m_enableFoliage"].as<bool>();
 		if (ms["m_enableBranch"]) m_enableBranch = ms["m_enableBranch"].as<bool>();
 		if (ms["m_enableFruit"]) m_enableFruit = ms["m_enableFruit"].as<bool>();
-		if (ms["m_enableFineRoot"]) m_enableFineRoot = ms["m_enableFineRoot"].as<bool>();
 		if (ms["m_enableTwig"]) m_enableTwig = ms["m_enableTwig"].as<bool>();
 
 		if (ms["m_smoothness"]) m_smoothness = ms["m_smoothness"].as<bool>();
@@ -248,11 +198,8 @@ void TreeMeshGeneratorSettings::Load(const std::string& name, const YAML::Node& 
 		if (ms["m_voxelSubdivisionLevel"]) m_voxelSubdivisionLevel = ms["m_voxelSubdivisionLevel"].as<int>();
 		if (ms["m_voxelSmoothIteration"]) m_voxelSmoothIteration = ms["m_voxelSmoothIteration"].as<int>();
 		if (ms["m_removeDuplicate"]) m_removeDuplicate = ms["m_removeDuplicate"].as<bool>();
-		if (ms["m_rootVertexColor"]) m_rootVertexColor = ms["m_rootVertexColor"].as<glm::vec3>();
 
 		if (ms["m_branchMeshType"]) m_branchMeshType = ms["m_branchMeshType"].as<unsigned>();
-		if (ms["m_rootMeshType"]) m_rootMeshType = ms["m_rootMeshType"].as<unsigned>();
-		DeserializeFineRootParameters("m_fineRootParameters", m_fineRootParameters, ms);
 		DeserializeTwigParameters("m_twigParameters", m_twigParameters, ms);
 	}
 
@@ -265,19 +212,13 @@ void TreeMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLayer>& ed
 		ImGui::Checkbox("Branch", &m_enableBranch);
 		ImGui::Checkbox("Fruit", &m_enableFruit);
 		ImGui::Checkbox("Foliage", &m_enableFoliage);
-		ImGui::Checkbox("Root", &m_enableRoot);
-		ImGui::Checkbox("Fine Root", &m_enableFineRoot);
 		ImGui::Checkbox("Twig", &m_enableTwig);
 		ImGui::Combo("Branch mesh mode", { "Cylindrical", "Marching cubes" }, m_branchMeshType);
-		ImGui::Combo("Root mesh mode", { "Cylindrical", "Marching cubes" }, m_rootMeshType);
 		if(m_enableTwig)
 		{
 			OnInspectTwigParameters(m_twigParameters);
 		}
-		if (m_enableFineRoot)
-		{
-			OnInspectFineRootParameters(m_fineRootParameters);
-		}
+		
 		if(ImGui::TreeNode("Cylindrical mesh settings"))
 		{
 			ImGui::DragFloat("Trunk Thickness Threshold", &m_trunkThickness, 1.0f, 0.0f, 16.0f);
@@ -320,18 +261,11 @@ void TreeMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLayer>& ed
 			}
 			ImGui::TreePop();
 		}
-		if (m_enableRoot && ImGui::TreeNode("Root settings"))
-		{
-			if (m_overrideVertexColor) {
-				ImGui::ColorEdit3("Root vertex color", &m_rootVertexColor.x);
-			}
-			ImGui::TreePop();
-		}
+		
 		ImGui::Checkbox("Mesh Override", &m_presentationOverride);
 		if (m_presentationOverride && ImGui::TreeNodeEx("Override settings"))
 		{
 			ImGui::DragFloat("Max thickness", &m_presentationOverrideSettings.m_maxThickness, 0.01f, 0.0f, 1.0f);
-			ImGui::ColorEdit3("Root color", &m_presentationOverrideSettings.m_rootOverrideColor.x);
 			ImGui::ColorEdit3("Branch color", &m_presentationOverrideSettings.m_branchOverrideColor.x);
 			editorLayer->DragAndDropButton<Texture2D>(m_foliageAlbedoTexture, "Foliage Albedo Texture");
 			editorLayer->DragAndDropButton<Texture2D>(m_foliageNormalTexture, "Foliage Normal Texture");

@@ -56,8 +56,6 @@ void DatasetGenerator::GeneratePointCloudForTree(const PointCloudPointSettings& 
 	const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
 	
 	tree->m_treeDescriptor = treeDescriptor;
-	tree->m_treeModel.m_treeGrowthSettings.m_enableShoot = true;
-	tree->m_treeModel.m_treeGrowthSettings.m_enableRoot = false;
 	tree->m_treeModel.m_treeGrowthSettings.m_useSpaceColonization = false;
 	Application::Loop();
 	for (int i = 0; i < maxIterations; i++)
@@ -157,8 +155,6 @@ void DatasetGenerator::GeneratePointCloudForForestPatch(
 			scene->DeleteEntity(treeEntity);
 		}
 	}
-	forestPatch->m_treeGrowthSettings.m_enableShoot = true;
-	forestPatch->m_treeGrowthSettings.m_enableRoot = false;
 	forestPatch->m_treeGrowthSettings.m_useSpaceColonization = false;
 
 	Application::Loop();
