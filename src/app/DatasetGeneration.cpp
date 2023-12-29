@@ -78,9 +78,9 @@ int main() {
 	PointCloudCircularCaptureSettings pcccs{};
 	PointCloudGridCaptureSettings pcgcs{};
 	pcps.m_ballRandRadius = 0.01f;
-	pcps.m_treePartIndex = false;
+	pcps.m_treePartIndex = true;
 	pcps.m_branchIndex = false;
-	pcps.m_instanceIndex = true;
+	pcps.m_instanceIndex = false;
 
 	pcccs.m_distance = 4.0f;
 	pcccs.m_height = 3.0f;
@@ -91,7 +91,7 @@ int main() {
 	pcgcs.m_gridDistance = gridDistance;
 
 	int index = 0;
-	int numPerSpecie = 1;
+	int numPerSpecie = 10;
 	for (int i = 0; i < numPerSpecie; i++) {
 		std::string specieName = "Elm";
 		std::filesystem::path target_descriptor_path = project_folder_path / "TreeDescriptors" / (specieName + ".td");
@@ -100,9 +100,9 @@ int main() {
 		std::filesystem::path target_tree_mesh_path = output_root / (name + ".obj");
 		std::filesystem::path target_tree_pointcloud_path = output_root / (name + ".ply");
 		std::filesystem::path target_tree_junction_path = output_root / (name + ".yml");
-		//DatasetGenerator::GeneratePointCloudForTree(pcps, pcccs, target_descriptor_path.string(), 0.08220, 200, 20000, tmgs, target_tree_pointcloud_path.string(), false, target_tree_mesh_path.string(), true, target_tree_junction_path.string());
+		DatasetGenerator::GeneratePointCloudForTree(pcps, pcccs, target_descriptor_path.string(), 0.08220, 200, 20000, tmgs, target_tree_pointcloud_path.string(), false, target_tree_mesh_path.string(), true, target_tree_junction_path.string());
 		
-		DatasetGenerator::GeneratePointCloudForForestPatch(gridSize, gridDistance, gridDistance, pcps, pcgcs, target_descriptor_path.string(), target_forest_patch_path.string(), 0.08220, 96, 10000, tmgs, target_tree_pointcloud_path.string());
+		//DatasetGenerator::GeneratePointCloudForForestPatch(gridSize, gridDistance, gridDistance, pcps, pcgcs, target_descriptor_path.string(), target_forest_patch_path.string(), 0.08220, 96, 10000, tmgs, target_tree_pointcloud_path.string());
 		index++;
 	}
 	

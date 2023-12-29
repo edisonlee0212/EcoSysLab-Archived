@@ -387,7 +387,7 @@ namespace EcoSysLab {
 			}else if(treePartType == 2)
 			{
 				//Branch of Y Shape
-				if (parentInternodeHandle == -1 || treePartInfos[parentInternodeHandle].m_treePartType == 0)
+				if (parentInternodeHandle == -1 || !treePartInfos[parentInternodeHandle].m_treePartType == 2)
 				{
 					TreePartInfo treePartInfo;
 					treePartInfo.m_treePartType = 2;
@@ -406,7 +406,7 @@ namespace EcoSysLab {
 				}
 				archetype.m_color = glm::vec4(1, 0, 0, 1);
 			}
-			archetype.m_vertexInfo3 = currentTreePartIndex;
+			archetype.m_vertexInfo3 = currentTreePartIndex + 1;
 #pragma endregion
 
 			float textureXStep = 1.0f / pStep * 4.0f;

@@ -1285,6 +1285,7 @@ struct TreePart {
 	std::vector<JunctionLine> m_childrenLines;
 	bool m_isJunction = false;
 	std::vector<NodeHandle> m_nodeHandles;
+	std::vector<bool> m_isEnd;
 };
 
 void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings, const std::filesystem::path& path)
@@ -1342,7 +1343,7 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 			{
 				//IShape
 				//If root or parent is Y Shape or length exceeds limit, create a new IShape from this node.
-				bool restartIShape = parentInternodeHandle == -1 || treePartInfos[parentInternodeHandle].m_treePartType > 0;
+				bool restartIShape = parentInternodeHandle == -1 || treePartInfos[parentInternodeHandle].m_treePartType != 0;
 				if (!restartIShape)
 				{
 					const auto& parentJunctionInfo = treePartInfos[parentInternodeHandle];
@@ -1357,7 +1358,9 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 					treePartInfos[internodeHandle] = junctionInfo;
 					currentTreePartIndex = nextTreePartIndex;
 					treeParts.emplace_back();
-					treeParts.back().m_isJunction = false;
+					auto& treePart = treeParts.back();
+					treePart.m_isJunction = false;
+					treePart.m_treePartIndex = currentTreePartIndex;
 					nextTreePartIndex++;
 				}
 				else
@@ -1371,7 +1374,7 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 			else if (treePartNodeType == 1)
 			{
 				//Base of Y Shape
-				if (parentInternodeHandle == -1 || !treePartInfos[parentInternodeHandle].m_treePartType == 1)
+				if (parentInternodeHandle == -1 || treePartInfos[parentInternodeHandle].m_treePartType != 1)
 				{
 					TreePartInfo junctionInfo;
 					junctionInfo.m_treePartType = 1;
@@ -1380,7 +1383,9 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 					treePartInfos[internodeHandle] = junctionInfo;
 					currentTreePartIndex = nextTreePartIndex;
 					treeParts.emplace_back();
-					treeParts.back().m_isJunction = true;
+					auto& treePart = treeParts.back();
+					treePart.m_isJunction = true;
+					treePart.m_treePartIndex = currentTreePartIndex;
 					nextTreePartIndex++;
 				}
 				else
@@ -1393,7 +1398,7 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 			else if (treePartNodeType == 2)
 			{
 				//Branch of Y Shape
-				if (parentInternodeHandle == -1 || treePartInfos[parentInternodeHandle].m_treePartType == 0)
+				if (parentInternodeHandle == -1 || treePartInfos[parentInternodeHandle].m_treePartType != 2)
 				{
 					TreePartInfo junctionInfo;
 					junctionInfo.m_treePartType = 2;
@@ -1402,7 +1407,9 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 					treePartInfos[internodeHandle] = junctionInfo;
 					currentTreePartIndex = nextTreePartIndex;
 					treeParts.emplace_back();
-					treeParts.back().m_isJunction = true;
+					auto& treePart = treeParts.back();
+					treePart.m_isJunction = true;
+					treePart.m_treePartIndex = currentTreePartIndex;
 					nextTreePartIndex++;
 				}
 				else
@@ -1413,9 +1420,17 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 					currentTreePartIndex = currentJunctionInfo.m_treePartIndex;
 				}
 			}
-
-			treeParts[currentTreePartIndex].m_nodeHandles.emplace_back(internodeHandle);
-			treeParts[currentTreePartIndex].m_treePartIndex = currentTreePartIndex;
+			auto& treePart = treeParts[currentTreePartIndex];
+			treePart.m_nodeHandles.emplace_back(internodeHandle);
+			treePart.m_isEnd.emplace_back(true);
+			for(int i = 0; i < treePart.m_nodeHandles.size(); i++)
+			{
+				if(treePart.m_nodeHandles[i] == parentInternodeHandle)
+				{
+					treePart.m_isEnd[i] = false;
+					break;
+				}
+			}
 		}
 		for(auto& treePart : treeParts)
 		{
@@ -1434,27 +1449,22 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 
 				treePart.m_baseLine.m_startDirection = startInternode.m_info.m_globalDirection;
 				treePart.m_baseLine.m_endDirection = centerInternode.m_info.m_globalDirection;
-				const auto& childHandles = flow.RefChildHandles();
-				for (const auto& childFlowHandle : childHandles)
+				
+				for (int i = 0; i < treePart.m_nodeHandles.size(); i++)
 				{
-					const auto& childFlow = skeleton.PeekFlow(childFlowHandle);
-					const auto& childChainHandles = childFlow.RefNodeHandles();
-					NodeHandle endInternodeHandle;
-					if (childChainHandles.size() > meshGeneratorSettings.m_treePartEndDistance)
+					if(treePart.m_isEnd[i])
 					{
-						endInternodeHandle = childChainHandles[meshGeneratorSettings.m_treePartEndDistance];
-					}
-					else endInternodeHandle = childChainHandles.back();
-					const auto& endInternode = skeleton.PeekNode(endInternodeHandle);
-					treePart.m_childrenLines.emplace_back();
-					auto& newLine = treePart.m_childrenLines.back();
-					newLine.m_startPosition = centerInternode.m_info.GetGlobalEndPosition();
-					newLine.m_startRadius = centerInternode.m_info.m_thickness;
-					newLine.m_endPosition = endInternode.m_info.GetGlobalEndPosition();
-					newLine.m_endRadius = endInternode.m_info.m_thickness;
+						const auto& endInternode = skeleton.PeekNode(treePart.m_nodeHandles[i]);
+						treePart.m_childrenLines.emplace_back();
+						auto& newLine = treePart.m_childrenLines.back();
+						newLine.m_startPosition = centerInternode.m_info.GetGlobalEndPosition();
+						newLine.m_startRadius = centerInternode.m_info.m_thickness;
+						newLine.m_endPosition = endInternode.m_info.GetGlobalEndPosition();
+						newLine.m_endRadius = endInternode.m_info.m_thickness;
 
-					newLine.m_startDirection = centerInternode.m_info.m_globalDirection;
-					newLine.m_endDirection = endInternode.m_info.m_globalDirection;
+						newLine.m_startDirection = centerInternode.m_info.m_globalDirection;
+						newLine.m_endDirection = endInternode.m_info.m_globalDirection;
+					}
 				}
 			}else
 			{
@@ -1473,7 +1483,7 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 		for(const auto& treePart : treeParts)
 		{
 			out << YAML::BeginMap;
-			out << YAML::Key << "I" << YAML::Value << treePart.m_treePartIndex;
+			out << YAML::Key << "I" << YAML::Value << treePart.m_treePartIndex + 1;
 			out << YAML::Key << "BSP" << YAML::Value << treePart.m_baseLine.m_startPosition;
 			out << YAML::Key << "BEP" << YAML::Value << treePart.m_baseLine.m_endPosition;
 			out << YAML::Key << "BSR" << YAML::Value << treePart.m_baseLine.m_startRadius;
