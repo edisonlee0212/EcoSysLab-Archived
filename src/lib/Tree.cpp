@@ -1067,7 +1067,6 @@ struct TreePart {
 	int m_treePartIndex;
 	JunctionLine m_baseLine;
 	std::vector<JunctionLine> m_childrenLines;
-	bool m_isJunction = false;
 	std::vector<NodeHandle> m_nodeHandles;
 	std::vector<bool> m_isEnd;
 	std::vector<int> m_lineIndex;
@@ -1144,7 +1143,6 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 					treePartInfos[internodeHandle] = treePartInfo;
 					treeParts.emplace_back();
 					auto& treePart = treeParts.back();
-					treePart.m_isJunction = false;
 					currentTreePartIndex = treePart.m_treePartIndex = treePartInfo.m_treePartIndex;
 
 					currentLineIndex = nextLineIndex;
@@ -1175,7 +1173,6 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 					treePartInfos[internodeHandle] = treePartInfo;
 					treeParts.emplace_back();
 					auto& treePart = treeParts.back();
-					treePart.m_isJunction = true;
 					currentTreePartIndex = treePart.m_treePartIndex = treePartInfo.m_treePartIndex;
 
 					currentLineIndex = nextLineIndex;
@@ -1229,7 +1226,15 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 		for(auto& treePart : treeParts)
 		{
 			const auto& startInternode = skeleton.PeekNode(treePart.m_nodeHandles.front());
-			if(treePart.m_isJunction && treePart.m_nodeHandles.size() > 1)
+			int endCount = 0;
+			for (int i = 0; i < treePart.m_nodeHandles.size(); i++)
+			{
+				if (treePart.m_isEnd[i])
+				{
+					endCount++;
+				}
+			}
+			if(endCount > 1)
 			{
 				const auto& baseNode = skeleton.PeekNode(treePart.m_nodeHandles.front());
 				const auto& flow = skeleton.PeekFlow(baseNode.GetFlowHandle());
