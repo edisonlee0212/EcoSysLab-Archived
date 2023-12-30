@@ -476,6 +476,7 @@ PYBIND11_MODULE(pyecosyslab, m) {
 		.def_readwrite("m_typeIndex", &PointCloudPointSettings::m_typeIndex)
 		.def_readwrite("m_instanceIndex", &PointCloudPointSettings::m_instanceIndex)
 		.def_readwrite("m_treePartIndex", &PointCloudPointSettings::m_treePartIndex)
+		.def_readwrite("m_lineIndex", &PointCloudPointSettings::m_lineIndex)
 		.def_readwrite("m_branchIndex", &PointCloudPointSettings::m_branchIndex)
 		.def_readwrite("m_internodeIndex", &PointCloudPointSettings::m_internodeIndex)
 		.def_readwrite("m_boundingBoxLimit", &PointCloudPointSettings::m_boundingBoxLimit);
