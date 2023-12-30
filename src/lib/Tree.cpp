@@ -1082,10 +1082,7 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 		const auto& skeleton = m_treeModel.RefShootSkeleton();
 		const auto& sortedInternodeList = skeleton.RefSortedNodeList();
 		std::vector<TreePart> treeParts{};
-		
-		int nextTreePartIndex = 0;
 		std::unordered_map<NodeHandle, TreePartInfo> treePartInfos{};
-
 		for (int internodeHandle : sortedInternodeList)
 		{
 			const auto& internode = skeleton.PeekNode(internodeHandle);
@@ -1126,7 +1123,7 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 			{
 				//IShape
 				//If root or parent is Y Shape or length exceeds limit, create a new IShape from this node.
-				bool restartIShape = parentInternodeHandle == -1 || treePartInfos[parentInternodeHandle].m_treePartType != 0;
+				bool restartIShape = parentInternodeHandle == -1 || !treePartInfos[parentInternodeHandle].m_isJunction;
 				if (!restartIShape)
 				{
 					const auto& parentJunctionInfo = treePartInfos[parentInternodeHandle];
@@ -1134,73 +1131,64 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 				}
 				if (restartIShape)
 				{
-					TreePartInfo junctionInfo;
-					junctionInfo.m_treePartType = 0;
-					junctionInfo.m_treePartIndex = nextTreePartIndex;
-					junctionInfo.m_distanceToStart = 0.0f;
-					treePartInfos[internodeHandle] = junctionInfo;
-					currentTreePartIndex = nextTreePartIndex;
+					TreePartInfo treePartInfo;
+					treePartInfo.m_isJunction = false;
+					treePartInfo.m_treePartIndex = treeParts.size();
+					treePartInfo.m_distanceToStart = 0.0f;
+					treePartInfos[internodeHandle] = treePartInfo;
 					treeParts.emplace_back();
 					auto& treePart = treeParts.back();
 					treePart.m_isJunction = false;
-					treePart.m_treePartIndex = currentTreePartIndex;
-					nextTreePartIndex++;
+					currentTreePartIndex = treePart.m_treePartIndex = treePartInfo.m_treePartIndex;
 				}
 				else
 				{
-					auto& currentJunctionInfo = treePartInfos[internodeHandle];
-					currentJunctionInfo = treePartInfos[parentInternodeHandle];
-					currentJunctionInfo.m_distanceToStart += internodeInfo.m_length;
-					currentTreePartIndex = currentJunctionInfo.m_treePartIndex;
+					auto& currentTreePartInfo = treePartInfos[internodeHandle];
+					currentTreePartInfo = treePartInfos[parentInternodeHandle];
+					currentTreePartInfo.m_distanceToStart += internodeInfo.m_length;
+					currentTreePartIndex = currentTreePartInfo.m_treePartIndex;
 				}
-			}
-			else if (treePartNodeType == 1)
+			}else if (treePartNodeType == 1)
 			{
 				//Base of Y Shape
-				if (parentInternodeHandle == -1 || treePartInfos[parentInternodeHandle].m_treePartType != 1)
+				if (parentInternodeHandle == -1 || !treePartInfos[parentInternodeHandle].m_isJunction)
 				{
-					TreePartInfo junctionInfo;
-					junctionInfo.m_treePartType = 1;
-					junctionInfo.m_treePartIndex = nextTreePartIndex;
-					junctionInfo.m_distanceToStart = 0.0f;
-					treePartInfos[internodeHandle] = junctionInfo;
-					currentTreePartIndex = nextTreePartIndex;
+					TreePartInfo treePartInfo;
+					treePartInfo.m_isJunction = true;
+					treePartInfo.m_treePartIndex = treeParts.size();
+					treePartInfo.m_distanceToStart = 0.0f;
+					treePartInfos[internodeHandle] = treePartInfo;
 					treeParts.emplace_back();
 					auto& treePart = treeParts.back();
 					treePart.m_isJunction = true;
-					treePart.m_treePartIndex = currentTreePartIndex;
-					nextTreePartIndex++;
+					currentTreePartIndex = treePart.m_treePartIndex = treePartInfo.m_treePartIndex;
 				}
 				else
 				{
-					auto& currentJunctionInfo = treePartInfos[internodeHandle];
-					currentJunctionInfo = treePartInfos[parentInternodeHandle];
-					currentTreePartIndex = currentJunctionInfo.m_treePartIndex;
+					auto& currentTreePartInfo = treePartInfos[internodeHandle];
+					currentTreePartInfo = treePartInfos[parentInternodeHandle];
+					currentTreePartIndex = currentTreePartInfo.m_treePartIndex;
 				}
-			}
-			else if (treePartNodeType == 2)
+			}else if (treePartNodeType == 2)
 			{
 				//Branch of Y Shape
-				if (parentInternodeHandle == -1 || treePartInfos[parentInternodeHandle].m_treePartType != 2)
+				if (parentInternodeHandle == -1 || !treePartInfos[parentInternodeHandle].m_isJunction)
 				{
-					TreePartInfo junctionInfo;
-					junctionInfo.m_treePartType = 2;
-					junctionInfo.m_treePartIndex = nextTreePartIndex;
-					junctionInfo.m_distanceToStart = 0.0f;
-					treePartInfos[internodeHandle] = junctionInfo;
-					currentTreePartIndex = nextTreePartIndex;
+					TreePartInfo treePartInfo;
+					treePartInfo.m_isJunction = true;
+					treePartInfo.m_treePartIndex = treeParts.size();
+					treePartInfo.m_distanceToStart = 0.0f;
+					treePartInfos[internodeHandle] = treePartInfo;
 					treeParts.emplace_back();
 					auto& treePart = treeParts.back();
 					treePart.m_isJunction = true;
-					treePart.m_treePartIndex = currentTreePartIndex;
-					nextTreePartIndex++;
+					currentTreePartIndex = treePart.m_treePartIndex = treePartInfo.m_treePartIndex;
 				}
 				else
 				{
-					auto& currentJunctionInfo = treePartInfos[internodeHandle];
-					currentJunctionInfo = treePartInfos[parentInternodeHandle];
-					currentJunctionInfo.m_treePartType = 2;
-					currentTreePartIndex = currentJunctionInfo.m_treePartIndex;
+					auto& currentTreePartInfo = treePartInfos[internodeHandle];
+					currentTreePartInfo = treePartInfos[parentInternodeHandle];
+					currentTreePartIndex = currentTreePartInfo.m_treePartIndex;
 				}
 			}
 			auto& treePart = treeParts[currentTreePartIndex];

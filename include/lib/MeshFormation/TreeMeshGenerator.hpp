@@ -128,7 +128,7 @@ namespace EcoSysLab {
 	struct TreePartInfo
 	{
 		int m_treePartIndex = -1;
-		int m_treePartType = 0;
+		bool m_isJunction = false;
 		float m_distanceToStart = 0.0f;
 	};
 
@@ -320,7 +320,7 @@ namespace EcoSysLab {
 			{
 				//IShape
 				//If root or parent is Y Shape or length exceeds limit, create a new IShape from this node.
-				bool restartIShape = parentInternodeHandle == -1 || treePartInfos[parentInternodeHandle].m_treePartType > 0;
+				bool restartIShape = parentInternodeHandle == -1 || !treePartInfos[parentInternodeHandle].m_isJunction;
 				if(!restartIShape)
 				{
 					const auto& parentTreePartInfo = treePartInfos[parentInternodeHandle];
@@ -329,7 +329,7 @@ namespace EcoSysLab {
 				if (restartIShape)
 				{
 					TreePartInfo treePartInfo;
-					treePartInfo.m_treePartType = 0;
+					treePartInfo.m_isJunction = false;
 					treePartInfo.m_treePartIndex = nextTreePartIndex;
 					treePartInfo.m_distanceToStart = 0.0f;
 					treePartInfos[internodeHandle] = treePartInfo;
@@ -347,10 +347,10 @@ namespace EcoSysLab {
 			}else if(treePartType == 1)
 			{
 				//Base of Y Shape
-				if (parentInternodeHandle == -1 || !treePartInfos[parentInternodeHandle].m_treePartType == 1)
+				if (parentInternodeHandle == -1 || !treePartInfos[parentInternodeHandle].m_isJunction)
 				{
 					TreePartInfo treePartInfo;
-					treePartInfo.m_treePartType = 1;
+					treePartInfo.m_isJunction = true;
 					treePartInfo.m_treePartIndex = nextTreePartIndex;
 					treePartInfo.m_distanceToStart = 0.0f;
 					treePartInfos[internodeHandle] = treePartInfo;
@@ -367,10 +367,10 @@ namespace EcoSysLab {
 			}else if(treePartType == 2)
 			{
 				//Branch of Y Shape
-				if (parentInternodeHandle == -1 || !treePartInfos[parentInternodeHandle].m_treePartType == 2)
+				if (parentInternodeHandle == -1 || !treePartInfos[parentInternodeHandle].m_isJunction)
 				{
 					TreePartInfo treePartInfo;
-					treePartInfo.m_treePartType = 2;
+					treePartInfo.m_isJunction = true;
 					treePartInfo.m_treePartIndex = nextTreePartIndex;
 					treePartInfo.m_distanceToStart = 0.0f;
 					treePartInfos[internodeHandle] = treePartInfo;
@@ -381,7 +381,6 @@ namespace EcoSysLab {
 				{
 					auto& currentTreePartInfo = treePartInfos[internodeHandle];
 					currentTreePartInfo = treePartInfos[parentInternodeHandle];
-					currentTreePartInfo.m_treePartType = 2;
 					currentTreePartIndex = currentTreePartInfo.m_treePartIndex;
 				}
 				archetype.m_color = glm::vec4(1, 0, 0, 1);
