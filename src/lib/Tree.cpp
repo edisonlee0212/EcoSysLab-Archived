@@ -1065,6 +1065,7 @@ struct JunctionLine {
 
 struct TreePart {
 	int m_treePartIndex;
+	bool m_isJunction = false;
 	JunctionLine m_baseLine;
 	std::vector<JunctionLine> m_childrenLines;
 	std::vector<NodeHandle> m_nodeHandles;
@@ -1140,11 +1141,10 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 					treePartInfo.m_treePartIndex = treeParts.size();
 					treePartInfo.m_lineIndex = nextLineIndex;
 					treePartInfo.m_distanceToStart = 0.0f;
-					treePartInfo.m_baseFlowHandle = flowHandle;
-					treePartInfo.m_baseNodeHandle = internodeHandle;
 					treePartInfos[internodeHandle] = treePartInfo;
 					treeParts.emplace_back();
 					auto& treePart = treeParts.back();
+					treePart.m_isJunction = false;
 					currentTreePartIndex = treePart.m_treePartIndex = treePartInfo.m_treePartIndex;
 
 					currentLineIndex = nextLineIndex;
@@ -1172,10 +1172,10 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 					treePartInfo.m_lineIndex = nextLineIndex;
 					treePartInfo.m_distanceToStart = 0.0f;
 					treePartInfo.m_baseFlowHandle = flowHandle;
-					treePartInfo.m_baseNodeHandle = internodeHandle;
 					treePartInfos[internodeHandle] = treePartInfo;
 					treeParts.emplace_back();
 					auto& treePart = treeParts.back();
+					treePart.m_isJunction = true;
 					currentTreePartIndex = treePart.m_treePartIndex = treePartInfo.m_treePartIndex;
 
 					currentLineIndex = nextLineIndex;
@@ -1216,15 +1216,7 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 			auto& treePart = treeParts[currentTreePartIndex];
 			treePart.m_nodeHandles.emplace_back(internodeHandle);
 			treePart.m_isEnd.emplace_back(true);
-			//treePart.m_lineIndex.emplace_back(currentLineIndex);
-			if (treePartType == 2)
-			{
-				treePart.m_lineIndex.emplace_back(flow.RefNodeHandles().front());
-			}
-			else
-			{
-				treePart.m_lineIndex.emplace_back(treePartInfos[internodeHandle].m_baseNodeHandle);
-			}
+			treePart.m_lineIndex.emplace_back(currentLineIndex);
 			for(int i = 0; i < treePart.m_nodeHandles.size(); i++)
 			{
 				if(treePart.m_nodeHandles[i] == parentInternodeHandle)
@@ -1237,15 +1229,7 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 		for(auto& treePart : treeParts)
 		{
 			const auto& startInternode = skeleton.PeekNode(treePart.m_nodeHandles.front());
-			int endCount = 0;
-			for (int i = 0; i < treePart.m_nodeHandles.size(); i++)
-			{
-				if (treePart.m_isEnd[i])
-				{
-					endCount++;
-				}
-			}
-			if(endCount > 1)
+			if(treePart.m_isJunction)
 			{
 				const auto& baseNode = skeleton.PeekNode(treePart.m_nodeHandles.front());
 				const auto& flow = skeleton.PeekFlow(baseNode.GetFlowHandle());
@@ -1261,7 +1245,7 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 				treePart.m_baseLine.m_endDirection = centerInternode.m_info.m_globalDirection;
 
 				treePart.m_baseLine.m_lineIndex = treePart.m_lineIndex.front();
-				for (int i = 0; i < treePart.m_nodeHandles.size(); i++)
+				for (int i = 1; i < treePart.m_nodeHandles.size(); i++)
 				{
 					if(treePart.m_isEnd[i])
 					{
