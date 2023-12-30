@@ -132,6 +132,7 @@ namespace EcoSysLab {
 		int m_treePartType = 0;
 		float m_distanceToStart = 0.0f;
 		FlowHandle m_baseFlowHandle = -1;
+		NodeHandle m_baseNodeHandle = -1;
 	};
 
 	template<typename SkeletonData, typename FlowData, typename NodeData>
@@ -337,6 +338,8 @@ namespace EcoSysLab {
 					treePartInfo.m_treePartIndex = nextTreePartIndex;
 					treePartInfo.m_lineIndex = nextLineIndex;
 					treePartInfo.m_distanceToStart = 0.0f;
+					treePartInfo.m_baseFlowHandle = flowHandle;
+					treePartInfo.m_baseNodeHandle = internodeHandle;
 					treePartInfos[internodeHandle] = treePartInfo;
 					currentTreePartIndex = nextTreePartIndex;
 					nextTreePartIndex++;
@@ -367,6 +370,7 @@ namespace EcoSysLab {
 					treePartInfo.m_lineIndex = nextLineIndex;
 					treePartInfo.m_distanceToStart = 0.0f;
 					treePartInfo.m_baseFlowHandle = flowHandle;
+					treePartInfo.m_baseNodeHandle = internodeHandle;
 					treePartInfos[internodeHandle] = treePartInfo;
 					currentTreePartIndex = nextTreePartIndex;
 					nextTreePartIndex++;
@@ -408,7 +412,14 @@ namespace EcoSysLab {
 				}
 				archetype.m_color = glm::vec4(1, 0, 0, 1);
 			}
-			archetype.m_vertexInfo3 = currentLineIndex + 1;
+			//archetype.m_vertexInfo3 = currentLineIndex + 1;
+			if(treePartType == 2)
+			{
+				archetype.m_vertexInfo3 = flow.RefNodeHandles().front() + 1;
+			}else
+			{
+				archetype.m_vertexInfo3 = treePartInfos[internodeHandle].m_baseNodeHandle + 1;
+			}
 			archetype.m_vertexInfo4.x = currentTreePartIndex + 1;
 #pragma endregion
 

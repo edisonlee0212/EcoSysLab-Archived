@@ -1140,6 +1140,8 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 					treePartInfo.m_treePartIndex = treeParts.size();
 					treePartInfo.m_lineIndex = nextLineIndex;
 					treePartInfo.m_distanceToStart = 0.0f;
+					treePartInfo.m_baseFlowHandle = flowHandle;
+					treePartInfo.m_baseNodeHandle = internodeHandle;
 					treePartInfos[internodeHandle] = treePartInfo;
 					treeParts.emplace_back();
 					auto& treePart = treeParts.back();
@@ -1170,6 +1172,7 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 					treePartInfo.m_lineIndex = nextLineIndex;
 					treePartInfo.m_distanceToStart = 0.0f;
 					treePartInfo.m_baseFlowHandle = flowHandle;
+					treePartInfo.m_baseNodeHandle = internodeHandle;
 					treePartInfos[internodeHandle] = treePartInfo;
 					treeParts.emplace_back();
 					auto& treePart = treeParts.back();
@@ -1213,7 +1216,15 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 			auto& treePart = treeParts[currentTreePartIndex];
 			treePart.m_nodeHandles.emplace_back(internodeHandle);
 			treePart.m_isEnd.emplace_back(true);
-			treePart.m_lineIndex.emplace_back(currentLineIndex);
+			//treePart.m_lineIndex.emplace_back(currentLineIndex);
+			if (treePartType == 2)
+			{
+				treePart.m_lineIndex.emplace_back(flow.RefNodeHandles().front());
+			}
+			else
+			{
+				treePart.m_lineIndex.emplace_back(treePartInfos[internodeHandle].m_baseNodeHandle);
+			}
 			for(int i = 0; i < treePart.m_nodeHandles.size(); i++)
 			{
 				if(treePart.m_nodeHandles[i] == parentInternodeHandle)
