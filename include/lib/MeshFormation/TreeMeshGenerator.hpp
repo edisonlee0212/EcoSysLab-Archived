@@ -98,8 +98,8 @@ namespace EcoSysLab {
 
 		unsigned m_branchMeshType = 0;
 
-		float m_treePartBaseDistance = 1;
-		float m_treePartEndDistance = 2;
+		float m_treePartBaseDistance = 0.5f;
+		float m_treePartEndDistance = 2.f;
 		float m_treePartBreakRatio = 4.0f;
 
 
@@ -128,7 +128,7 @@ namespace EcoSysLab {
 	struct TreePartInfo
 	{
 		int m_treePartIndex = -1;
-		bool m_isJunction = false;
+		int m_treePartType = 0;
 		float m_distanceToStart = 0.0f;
 	};
 
@@ -320,7 +320,7 @@ namespace EcoSysLab {
 			{
 				//IShape
 				//If root or parent is Y Shape or length exceeds limit, create a new IShape from this node.
-				bool restartIShape = parentInternodeHandle == -1 || !treePartInfos[parentInternodeHandle].m_isJunction;
+				bool restartIShape = parentInternodeHandle == -1 || treePartInfos[parentInternodeHandle].m_treePartType != 0;
 				if(!restartIShape)
 				{
 					const auto& parentTreePartInfo = treePartInfos[parentInternodeHandle];
@@ -329,7 +329,7 @@ namespace EcoSysLab {
 				if (restartIShape)
 				{
 					TreePartInfo treePartInfo;
-					treePartInfo.m_isJunction = false;
+					treePartInfo.m_treePartType = 0;
 					treePartInfo.m_treePartIndex = nextTreePartIndex;
 					treePartInfo.m_distanceToStart = 0.0f;
 					treePartInfos[internodeHandle] = treePartInfo;
@@ -341,16 +341,17 @@ namespace EcoSysLab {
 					auto& currentTreePartInfo = treePartInfos[internodeHandle];
 					currentTreePartInfo = treePartInfos[parentInternodeHandle];
 					currentTreePartInfo.m_distanceToStart += internodeInfo.m_length;
+					currentTreePartInfo.m_treePartType = 0;
 					currentTreePartIndex = currentTreePartInfo.m_treePartIndex;
 				}
 				archetype.m_color = glm::vec4(1, 1, 1, 1);
 			}else if(treePartType == 1)
 			{
 				//Base of Y Shape
-				if (parentInternodeHandle == -1 || !treePartInfos[parentInternodeHandle].m_isJunction)
+				if (parentInternodeHandle == -1 || treePartInfos[parentInternodeHandle].m_treePartType != 1)
 				{
 					TreePartInfo treePartInfo;
-					treePartInfo.m_isJunction = true;
+					treePartInfo.m_treePartType = 1;
 					treePartInfo.m_treePartIndex = nextTreePartIndex;
 					treePartInfo.m_distanceToStart = 0.0f;
 					treePartInfos[internodeHandle] = treePartInfo;
@@ -361,16 +362,17 @@ namespace EcoSysLab {
 				{
 					auto& currentTreePartInfo = treePartInfos[internodeHandle];
 					currentTreePartInfo = treePartInfos[parentInternodeHandle];
+					currentTreePartInfo.m_treePartType = 1;
 					currentTreePartIndex = currentTreePartInfo.m_treePartIndex;
 				}
 				archetype.m_color = glm::vec4(1, 0, 0, 1);
 			}else if(treePartType == 2)
 			{
 				//Branch of Y Shape
-				if (parentInternodeHandle == -1 || !treePartInfos[parentInternodeHandle].m_isJunction)
+				if (parentInternodeHandle == -1 || treePartInfos[parentInternodeHandle].m_treePartType == 0)
 				{
 					TreePartInfo treePartInfo;
-					treePartInfo.m_isJunction = true;
+					treePartInfo.m_treePartType = 2;
 					treePartInfo.m_treePartIndex = nextTreePartIndex;
 					treePartInfo.m_distanceToStart = 0.0f;
 					treePartInfos[internodeHandle] = treePartInfo;
@@ -381,6 +383,7 @@ namespace EcoSysLab {
 				{
 					auto& currentTreePartInfo = treePartInfos[internodeHandle];
 					currentTreePartInfo = treePartInfos[parentInternodeHandle];
+					currentTreePartInfo.m_treePartType = 2;
 					currentTreePartIndex = currentTreePartInfo.m_treePartIndex;
 				}
 				archetype.m_color = glm::vec4(1, 0, 0, 1);
