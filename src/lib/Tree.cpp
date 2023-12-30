@@ -1282,6 +1282,7 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 		for(const auto& treePart : treeParts)
 		{
 			out << YAML::BeginMap;
+			out << YAML::Key << "J" << YAML::Value << (treePart.m_isJunction ? 1 : 0);
 			out << YAML::Key << "I" << YAML::Value << treePart.m_treePartIndex + 1;
 			out << YAML::Key << "LI" << YAML::Value << treePart.m_baseLine.m_lineIndex + 1;
 			if(lineIndexCheck.find(treePart.m_baseLine.m_lineIndex) != lineIndexCheck.end())
