@@ -128,8 +128,10 @@ namespace EcoSysLab {
 	struct TreePartInfo
 	{
 		int m_treePartIndex = -1;
+		int m_lineIndex = -1;
 		int m_treePartType = 0;
 		float m_distanceToStart = 0.0f;
+		FlowHandle m_baseFlowHandle = -1;
 	};
 
 	template<typename SkeletonData, typename FlowData, typename NodeData>
@@ -251,6 +253,7 @@ namespace EcoSysLab {
 		std::map<NodeHandle, int> vertexLastRingStartVertexIndex{};
 
 		int nextTreePartIndex = 0;
+		int nextLineIndex = 0;
 		std::unordered_map<NodeHandle, TreePartInfo> treePartInfos{};
 
 		for (int internodeIndex = 0; internodeIndex < sortedInternodeList.size(); internodeIndex++) {
@@ -316,6 +319,7 @@ namespace EcoSysLab {
 				treePartType = 2;
 			}
 			int currentTreePartIndex = -1;
+			int currentLineIndex = -1;
 			if(treePartType == 0)
 			{
 				//IShape
@@ -331,10 +335,14 @@ namespace EcoSysLab {
 					TreePartInfo treePartInfo;
 					treePartInfo.m_treePartType = 0;
 					treePartInfo.m_treePartIndex = nextTreePartIndex;
+					treePartInfo.m_lineIndex = nextLineIndex;
 					treePartInfo.m_distanceToStart = 0.0f;
 					treePartInfos[internodeHandle] = treePartInfo;
 					currentTreePartIndex = nextTreePartIndex;
 					nextTreePartIndex++;
+
+					currentLineIndex = nextLineIndex;
+					nextLineIndex++;
 				}
 				else
 				{
@@ -343,20 +351,28 @@ namespace EcoSysLab {
 					currentTreePartInfo.m_distanceToStart += internodeInfo.m_length;
 					currentTreePartInfo.m_treePartType = 0;
 					currentTreePartIndex = currentTreePartInfo.m_treePartIndex;
+
+					currentLineIndex = currentTreePartInfo.m_lineIndex;
 				}
 				archetype.m_color = glm::vec4(1, 1, 1, 1);
 			}else if(treePartType == 1)
 			{
 				//Base of Y Shape
-				if (parentInternodeHandle == -1 || treePartInfos[parentInternodeHandle].m_treePartType != 1)
+				if (parentInternodeHandle == -1 || treePartInfos[parentInternodeHandle].m_treePartType != 1
+					|| treePartInfos[parentInternodeHandle].m_baseFlowHandle != flowHandle)
 				{
 					TreePartInfo treePartInfo;
 					treePartInfo.m_treePartType = 1;
 					treePartInfo.m_treePartIndex = nextTreePartIndex;
+					treePartInfo.m_lineIndex = nextLineIndex;
 					treePartInfo.m_distanceToStart = 0.0f;
+					treePartInfo.m_baseFlowHandle = flowHandle;
 					treePartInfos[internodeHandle] = treePartInfo;
 					currentTreePartIndex = nextTreePartIndex;
 					nextTreePartIndex++;
+
+					currentLineIndex = nextLineIndex;
+					nextLineIndex++;
 				}
 				else
 				{
@@ -364,31 +380,36 @@ namespace EcoSysLab {
 					currentTreePartInfo = treePartInfos[parentInternodeHandle];
 					currentTreePartInfo.m_treePartType = 1;
 					currentTreePartIndex = currentTreePartInfo.m_treePartIndex;
+
+					currentLineIndex = currentTreePartInfo.m_lineIndex;
 				}
 				archetype.m_color = glm::vec4(1, 0, 0, 1);
 			}else if(treePartType == 2)
 			{
 				//Branch of Y Shape
-				if (parentInternodeHandle == -1 || treePartInfos[parentInternodeHandle].m_treePartType == 0)
+				if (parentInternodeHandle == -1 || treePartInfos[parentInternodeHandle].m_treePartType == 0
+					|| treePartInfos[parentInternodeHandle].m_baseFlowHandle != parentFlowHandle)
 				{
-					TreePartInfo treePartInfo;
-					treePartInfo.m_treePartType = 2;
-					treePartInfo.m_treePartIndex = nextTreePartIndex;
-					treePartInfo.m_distanceToStart = 0.0f;
-					treePartInfos[internodeHandle] = treePartInfo;
-					currentTreePartIndex = nextTreePartIndex;
-					nextTreePartIndex++;
+					EVOENGINE_ERROR("Error!");
 				}
 				else
 				{
 					auto& currentTreePartInfo = treePartInfos[internodeHandle];
 					currentTreePartInfo = treePartInfos[parentInternodeHandle];
+					if(currentTreePartInfo.m_treePartType != 2)
+					{
+						currentTreePartInfo.m_lineIndex = nextLineIndex;
+						nextLineIndex++;
+					}
 					currentTreePartInfo.m_treePartType = 2;
 					currentTreePartIndex = currentTreePartInfo.m_treePartIndex;
+
+					currentLineIndex = currentTreePartInfo.m_lineIndex;
 				}
 				archetype.m_color = glm::vec4(1, 0, 0, 1);
 			}
-			archetype.m_vertexInfo3 = currentTreePartIndex + 1;
+			archetype.m_vertexInfo3 = currentLineIndex + 1;
+			archetype.m_vertexInfo4.x = currentTreePartIndex + 1;
 #pragma endregion
 
 			float textureXStep = 1.0f / pStep * 4.0f;

@@ -1053,6 +1053,7 @@ void Tree::FromTreeGraphV2(const std::shared_ptr<TreeGraphV2>& treeGraphV2)
 }
 
 struct JunctionLine {
+	int m_lineIndex = -1;
 	glm::vec3 m_startPosition;
 	glm::vec3 m_endPosition;
 	float m_startRadius;
@@ -1069,6 +1070,7 @@ struct TreePart {
 	bool m_isJunction = false;
 	std::vector<NodeHandle> m_nodeHandles;
 	std::vector<bool> m_isEnd;
+	std::vector<int> m_lineIndex;
 };
 
 void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings, const std::filesystem::path& path)
@@ -1083,12 +1085,14 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 		const auto& sortedInternodeList = skeleton.RefSortedNodeList();
 		std::vector<TreePart> treeParts{};
 		std::unordered_map<NodeHandle, TreePartInfo> treePartInfos{};
+		int nextLineIndex = 0;
 		for (int internodeHandle : sortedInternodeList)
 		{
 			const auto& internode = skeleton.PeekNode(internodeHandle);
 			const auto& internodeInfo = internode.m_info;
 			auto parentInternodeHandle = internode.GetParentHandle();
-			const auto& flow = skeleton.PeekFlow(internode.GetFlowHandle());
+			const auto flowHandle = internode.GetFlowHandle();
+			const auto& flow = skeleton.PeekFlow(flowHandle);
 			const auto& chainHandles = flow.RefNodeHandles();
 			const bool hasMultipleChildren = flow.RefChildHandles().size() > 1;
 			bool onlyChild = true;
@@ -1110,16 +1114,17 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 				onlyChild = parentFlow.RefChildHandles().size() <= 1;
 				compareRadius = parentFlow.m_info.m_endThickness;
 			}
-			int treePartNodeType = 0;
+			int treePartType = 0;
 			if (hasMultipleChildren && distanceToChainEnd <= meshGeneratorSettings.m_treePartBaseDistance * compareRadius) {
-				treePartNodeType = 1;
+				treePartType = 1;
 			}
 			else if (!onlyChild && distanceToChainStart <= meshGeneratorSettings.m_treePartEndDistance * compareRadius)
 			{
-				treePartNodeType = 2;
+				treePartType = 2;
 			}
 			int currentTreePartIndex = -1;
-			if (treePartNodeType == 0)
+			int currentLineIndex = -1;
+			if (treePartType == 0)
 			{
 				//IShape
 				//If root or parent is Y Shape or length exceeds limit, create a new IShape from this node.
@@ -1134,12 +1139,16 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 					TreePartInfo treePartInfo;
 					treePartInfo.m_treePartType = 0;
 					treePartInfo.m_treePartIndex = treeParts.size();
+					treePartInfo.m_lineIndex = nextLineIndex;
 					treePartInfo.m_distanceToStart = 0.0f;
 					treePartInfos[internodeHandle] = treePartInfo;
 					treeParts.emplace_back();
 					auto& treePart = treeParts.back();
 					treePart.m_isJunction = false;
 					currentTreePartIndex = treePart.m_treePartIndex = treePartInfo.m_treePartIndex;
+
+					currentLineIndex = nextLineIndex;
+					nextLineIndex++;
 				}
 				else
 				{
@@ -1148,21 +1157,29 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 					currentTreePartInfo.m_distanceToStart += internodeInfo.m_length;
 					currentTreePartInfo.m_treePartType = 0;
 					currentTreePartIndex = currentTreePartInfo.m_treePartIndex;
+
+					currentLineIndex = currentTreePartInfo.m_lineIndex;
 				}
-			}else if (treePartNodeType == 1)
+			}else if (treePartType == 1)
 			{
 				//Base of Y Shape
-				if (parentInternodeHandle == -1 || treePartInfos[parentInternodeHandle].m_treePartType != 1)
+				if (parentInternodeHandle == -1 || treePartInfos[parentInternodeHandle].m_treePartType != 1
+					|| treePartInfos[parentInternodeHandle].m_baseFlowHandle != flowHandle)
 				{
 					TreePartInfo treePartInfo;
 					treePartInfo.m_treePartType = 1;
 					treePartInfo.m_treePartIndex = treeParts.size();
+					treePartInfo.m_lineIndex = nextLineIndex;
 					treePartInfo.m_distanceToStart = 0.0f;
+					treePartInfo.m_baseFlowHandle = flowHandle;
 					treePartInfos[internodeHandle] = treePartInfo;
 					treeParts.emplace_back();
 					auto& treePart = treeParts.back();
 					treePart.m_isJunction = true;
 					currentTreePartIndex = treePart.m_treePartIndex = treePartInfo.m_treePartIndex;
+
+					currentLineIndex = nextLineIndex;
+					nextLineIndex++;
 				}
 				else
 				{
@@ -1170,33 +1187,36 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 					currentTreePartInfo = treePartInfos[parentInternodeHandle];
 					currentTreePartInfo.m_treePartType = 1;
 					currentTreePartIndex = currentTreePartInfo.m_treePartIndex;
+
+					currentLineIndex = currentTreePartInfo.m_lineIndex;
 				}
-			}else if (treePartNodeType == 2)
+			}else if (treePartType == 2)
 			{
 				//Branch of Y Shape
-				if (parentInternodeHandle == -1 || treePartInfos[parentInternodeHandle].m_treePartType == 0)
+				if (parentInternodeHandle == -1 || treePartInfos[parentInternodeHandle].m_treePartType == 0
+					|| treePartInfos[parentInternodeHandle].m_baseFlowHandle != parentFlowHandle)
 				{
-					TreePartInfo treePartInfo;
-					treePartInfo.m_treePartType = 2;
-					treePartInfo.m_treePartIndex = treeParts.size();
-					treePartInfo.m_distanceToStart = 0.0f;
-					treePartInfos[internodeHandle] = treePartInfo;
-					treeParts.emplace_back();
-					auto& treePart = treeParts.back();
-					treePart.m_isJunction = true;
-					currentTreePartIndex = treePart.m_treePartIndex = treePartInfo.m_treePartIndex;
+					EVOENGINE_ERROR("Error!");
 				}
 				else
 				{
 					auto& currentTreePartInfo = treePartInfos[internodeHandle];
 					currentTreePartInfo = treePartInfos[parentInternodeHandle];
+					if (currentTreePartInfo.m_treePartType != 2)
+					{
+						currentTreePartInfo.m_lineIndex = nextLineIndex;
+						nextLineIndex++;
+					}
 					currentTreePartInfo.m_treePartType = 2;
 					currentTreePartIndex = currentTreePartInfo.m_treePartIndex;
+
+					currentLineIndex = currentTreePartInfo.m_lineIndex;
 				}
 			}
 			auto& treePart = treeParts[currentTreePartIndex];
 			treePart.m_nodeHandles.emplace_back(internodeHandle);
 			treePart.m_isEnd.emplace_back(true);
+			treePart.m_lineIndex.emplace_back(currentLineIndex);
 			for(int i = 0; i < treePart.m_nodeHandles.size(); i++)
 			{
 				if(treePart.m_nodeHandles[i] == parentInternodeHandle)
@@ -1209,7 +1229,7 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 		for(auto& treePart : treeParts)
 		{
 			const auto& startInternode = skeleton.PeekNode(treePart.m_nodeHandles.front());
-			if(treePart.m_isJunction)
+			if(treePart.m_isJunction && treePart.m_nodeHandles.size() > 1)
 			{
 				const auto& baseNode = skeleton.PeekNode(treePart.m_nodeHandles.front());
 				const auto& flow = skeleton.PeekFlow(baseNode.GetFlowHandle());
@@ -1223,7 +1243,8 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 
 				treePart.m_baseLine.m_startDirection = startInternode.m_info.m_globalDirection;
 				treePart.m_baseLine.m_endDirection = centerInternode.m_info.m_globalDirection;
-				
+
+				treePart.m_baseLine.m_lineIndex = treePart.m_lineIndex.front();
 				for (int i = 0; i < treePart.m_nodeHandles.size(); i++)
 				{
 					if(treePart.m_isEnd[i])
@@ -1238,6 +1259,8 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 
 						newLine.m_startDirection = centerInternode.m_info.m_globalDirection;
 						newLine.m_endDirection = endInternode.m_info.m_globalDirection;
+
+						newLine.m_lineIndex = treePart.m_lineIndex[i];
 					}
 				}
 			}else
@@ -1250,14 +1273,22 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 
 				treePart.m_baseLine.m_startDirection = startInternode.m_info.m_globalDirection;
 				treePart.m_baseLine.m_endDirection = endInternode.m_info.m_globalDirection;
+
+				treePart.m_baseLine.m_lineIndex = treePart.m_lineIndex.front();
 			}
 		}
-
+		std::unordered_set<int> lineIndexCheck{};
 		out << YAML::Key << "TreeParts" << YAML::Value << YAML::BeginSeq;
 		for(const auto& treePart : treeParts)
 		{
 			out << YAML::BeginMap;
 			out << YAML::Key << "I" << YAML::Value << treePart.m_treePartIndex + 1;
+			out << YAML::Key << "LI" << YAML::Value << treePart.m_baseLine.m_lineIndex + 1;
+			if(lineIndexCheck.find(treePart.m_baseLine.m_lineIndex) != lineIndexCheck.end())
+			{
+				EVOENGINE_ERROR("Duplicate!");
+			}
+			lineIndexCheck.emplace(treePart.m_baseLine.m_lineIndex);
 			out << YAML::Key << "BSP" << YAML::Value << treePart.m_baseLine.m_startPosition;
 			out << YAML::Key << "BEP" << YAML::Value << treePart.m_baseLine.m_endPosition;
 			out << YAML::Key << "BSR" << YAML::Value << treePart.m_baseLine.m_startRadius;
@@ -1265,8 +1296,18 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 			out << YAML::Key << "BSD" << YAML::Value << treePart.m_baseLine.m_startDirection;
 			out << YAML::Key << "BED" << YAML::Value << treePart.m_baseLine.m_endDirection;
 			out << YAML::Key << "C" << YAML::Value << YAML::BeginSeq;
+			if (treePart.m_childrenLines.size() > 3)
+			{
+				EVOENGINE_ERROR("Too many child!");
+			}
 			for (const auto& childLine : treePart.m_childrenLines) {
 				out << YAML::BeginMap;
+				out << YAML::Key << "LI" << YAML::Value << childLine.m_lineIndex + 1;
+				if (lineIndexCheck.find(childLine.m_lineIndex) != lineIndexCheck.end())
+				{
+					EVOENGINE_ERROR("Duplicate!");
+				}
+				lineIndexCheck.emplace(childLine.m_lineIndex);
 				out << YAML::Key << "SP" << YAML::Value << childLine.m_startPosition;
 				out << YAML::Key << "EP" << YAML::Value << childLine.m_endPosition;
 				out << YAML::Key << "SR" << YAML::Value << childLine.m_startRadius;

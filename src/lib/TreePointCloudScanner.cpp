@@ -33,7 +33,8 @@ void PointCloudPointSettings::OnInspect()
 	ImGui::Checkbox("Type Index", &m_typeIndex);
 	ImGui::Checkbox("Instance Index", &m_instanceIndex);
 	ImGui::Checkbox("Branch Index", &m_branchIndex);
-	ImGui::Checkbox("Junction Index", &m_treePartIndex);
+	ImGui::Checkbox("Tree Part Index", &m_treePartIndex);
+	ImGui::Checkbox("Line Index", &m_lineIndex);
 	ImGui::Checkbox("Internode Index", &m_internodeIndex);
 }
 
@@ -46,6 +47,7 @@ void PointCloudPointSettings::Serialize(const std::string& name, YAML::Emitter& 
 	out << YAML::Key << "m_instanceIndex" << YAML::Value << m_instanceIndex;
 	out << YAML::Key << "m_branchIndex" << YAML::Value << m_branchIndex;
 	out << YAML::Key << "m_treePartIndex" << YAML::Value << m_treePartIndex;
+	out << YAML::Key << "m_lineIndex" << YAML::Value << m_lineIndex;
 	out << YAML::Key << "m_internodeIndex" << YAML::Value << m_internodeIndex;
 	out << YAML::Key << "m_boundingBoxLimit" << YAML::Value << m_boundingBoxLimit;
 	out << YAML::EndMap;
@@ -61,6 +63,7 @@ void PointCloudPointSettings::Deserialize(const std::string& name, const YAML::N
 		if (cd["m_instanceIndex"]) m_instanceIndex = cd["m_instanceIndex"].as<bool>();
 		if (cd["m_branchIndex"]) m_branchIndex = cd["m_branchIndex"].as<bool>();
 		if (cd["m_treePartIndex"]) m_treePartIndex = cd["m_treePartIndex"].as<bool>();
+		if (cd["m_lineIndex"]) m_lineIndex = cd["m_lineIndex"].as<bool>();
 		if (cd["m_internodeIndex"]) m_internodeIndex = cd["m_internodeIndex"].as<bool>();
 		if (cd["m_boundingBoxLimit"]) m_boundingBoxLimit = cd["m_boundingBoxLimit"].as<float>();
 	}
@@ -365,6 +368,7 @@ void TreePointCloudScanner::Capture(const std::filesystem::path& savePath, const
 	std::vector<int> internodeIndex;
 	std::vector<int> branchIndex;
 	std::vector<int> treePartIndex;
+	std::vector<int> lineIndex;
 	std::vector<int> instanceIndex;
 	std::vector<int> typeIndex;
 
@@ -401,10 +405,15 @@ void TreePointCloudScanner::Capture(const std::filesystem::path& savePath, const
 		{
 			branchIndex.emplace_back(static_cast<int>(sample.m_hitInfo.m_data.y + 0.1f));
 		}
+		if (m_pointSettings.m_lineIndex)
+		{
+			lineIndex.emplace_back(static_cast<int>(sample.m_hitInfo.m_data.z + 0.1f));
+		}
 		if (m_pointSettings.m_treePartIndex)
 		{
-			treePartIndex.emplace_back(static_cast<int>(sample.m_hitInfo.m_data.z + 0.1f));
+			treePartIndex.emplace_back(static_cast<int>(sample.m_hitInfo.m_data2.x + 0.1f));
 		}
+		
 		auto branchSearch = branchMeshRendererHandles.find(sample.m_handle);
 		auto foliageSearch = foliageMeshRendererHandles.find(sample.m_handle);
 		if (m_pointSettings.m_instanceIndex)
@@ -477,6 +486,12 @@ void TreePointCloudScanner::Capture(const std::filesystem::path& savePath, const
 		cube_file.add_properties_to_element(
 			"tree_part_index", { "tree_part_index" }, Type::INT32, treePartIndex.size(),
 			reinterpret_cast<uint8_t*>(treePartIndex.data()), Type::INVALID, 0);
+	}
+	if (m_pointSettings.m_lineIndex)
+	{
+		cube_file.add_properties_to_element(
+			"line_index", { "line_index" }, Type::INT32, lineIndex.size(),
+			reinterpret_cast<uint8_t*>(lineIndex.data()), Type::INVALID, 0);
 	}
 	if (m_pointSettings.m_internodeIndex)
 	{

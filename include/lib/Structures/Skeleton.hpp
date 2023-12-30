@@ -59,7 +59,6 @@ namespace EcoSysLab {
 		template<typename SD, typename FD, typename ID>
 		friend class Skeleton;
 
-		bool m_flowStartNode = true;
 		bool m_endNode = true;
 		bool m_recycled = false;
 		NodeHandle m_handle = -1;
@@ -456,7 +455,6 @@ namespace EcoSysLab {
 			newNode.m_apical = false;
 			newFlow.m_nodes.emplace_back(newNodeHandle);
 			newFlow.m_apical = false;
-			newNode.m_flowStartNode = true;
 			if (targetHandle != m_flows[originalNode.m_flowHandle].m_nodes.back()) {
 				auto extendedFlowHandle = AllocateFlow();
 				auto &extendedFlow = m_flows[extendedFlowHandle];
@@ -486,7 +484,6 @@ namespace EcoSysLab {
 		} else {
 			flow.m_nodes.emplace_back(newNodeHandle);
 			newNode.m_flowHandle = originalNode.m_flowHandle;
-			newNode.m_flowStartNode = false;
 			newNode.m_apical = true;
 		}
 		m_newVersion++;
@@ -599,12 +596,6 @@ namespace EcoSysLab {
 		m_data = {};
 		m_info = {};
 		m_index = -1;
-	}
-
-	template <typename NodeData>
-	bool Node<NodeData>::IsFlowStartNode() const
-	{
-		return m_flowStartNode;
 	}
 
 	template<typename NodeData>
