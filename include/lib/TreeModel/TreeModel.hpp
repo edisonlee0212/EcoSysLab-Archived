@@ -20,18 +20,15 @@ namespace EcoSysLab {
 
 	class TreeModel {
 #pragma region Tree Growth
-		void AggregateInternodeVigorRequirement(const ShootGrowthController& shootGrowthParameters, NodeHandle baseInternodeHandle);
-
-		void CalculateVigorRequirement(const ShootGrowthController& shootGrowthParameters, ShootGrowthRequirement& newTreeGrowthNutrientsRequirement);
-
-		void AllocateShootVigor(float vigor, NodeHandle baseInternodeHandle, const std::vector<NodeHandle>& sortedInternodeList, const ShootGrowthRequirement& shootGrowthRequirement, const ShootGrowthController& shootGrowthParameters);
+		void CalculateGrowthPotential(const std::vector<NodeHandle>& sortedInternodeList, const ShootGrowthController& shootGrowthParameters);
+		void AllocateShootVigor(float vigor, const std::vector<NodeHandle>& sortedInternodeList, const ShootGrowthController& shootGrowthParameters);
 
 		bool PruneInternodes(const glm::mat4& globalTransform, ClimateModel& climateModel, const ShootGrowthController& shootGrowthParameters);
 
 		void CalculateThicknessAndSagging(NodeHandle internodeHandle,
 			const ShootGrowthController& shootGrowthParameters);
 
-		bool GrowInternode(ClimateModel& climateModel, NodeHandle internodeHandle, const ShootGrowthController& shootGrowthParameters, bool seasonality);
+		bool GrowInternode(ClimateModel& climateModel, NodeHandle internodeHandle, const ShootGrowthController& shootGrowthParameters);
 
 		bool ElongateInternode(float extendLength, NodeHandle internodeHandle,
 			const ShootGrowthController& shootGrowthController, float& collectedInhibitor);
@@ -58,8 +55,6 @@ namespace EcoSysLab {
 		 */
 		bool GrowShoots(const glm::mat4& globalTransform, ClimateModel& climateModel,
 			const ShootGrowthController& shootGrowthParameters);
-
-		void PlantVigorAllocation();
 
 		int m_leafCount = 0;
 		int m_fruitCount = 0;
@@ -129,7 +124,6 @@ namespace EcoSysLab {
 		int m_historyLimit = -1;
 
 		void SampleTemperature(const glm::mat4& globalTransform, ClimateModel& climateModel);
-		void SampleSoilDensity(const glm::mat4& globalTransform, VoxelSoilModel& soilModel);
 		[[nodiscard]] ShootSkeleton& RefShootSkeleton();
 
 		[[nodiscard]] const ShootSkeleton& PeekShootSkeleton(int iteration = -1) const;

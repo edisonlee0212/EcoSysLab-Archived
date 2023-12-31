@@ -75,10 +75,6 @@ namespace EcoSysLab
 		*/
 		float m_apicalDominanceDistanceFactor;
 		/**
-		* \brief Productive resource requirement factor for internode elongation
-		*/
-		float m_internodeVigorRequirement;
-		/**
 		* \brief Base resource requirement factor for leaf
 		*/
 		float m_leafVigorRequirement;
@@ -86,9 +82,6 @@ namespace EcoSysLab
 		* \brief Base resource requirement factor for fruit
 		*/
 		float m_fruitVigorRequirement;
-
-		float m_vigorRequirementAggregateLoss = 1.0f;
-
 
 		float m_maxSpaceOccupancy = 1.0f;
 #pragma endregion

@@ -323,7 +323,7 @@ TreeVisualizer::InspectInternode(
 			ImGuiInputTextFlags_ReadOnly);
 		ImGui::InputFloat3("Light dir", (float*)&internodeData.m_lightDirection.x, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
-		ImGui::InputFloat("Growth Potential", (float*)&internodeData.m_growthPotential, 1, 100, "%.3f",
+		ImGui::InputFloat("Growth Potential", (float*)&internodeData.m_lightIntensity, 1, 100, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
 
 		if (ImGui::DragFloat("Sagging", (float*)&internodeData.m_sagging)) {
@@ -425,7 +425,7 @@ TreeVisualizer::PeekInternode(const ShootSkeleton& shootSkeleton, NodeHandle int
 			ImGuiInputTextFlags_ReadOnly);
 		ImGui::InputFloat3("Light dir", (float*)&internodeData.m_lightDirection.x, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
-		ImGui::InputFloat("Growth Potential", (float*)&internodeData.m_growthPotential, 1, 100, "%.3f",
+		ImGui::InputFloat("Growth Potential", (float*)&internodeData.m_lightIntensity, 1, 100, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
 
 		if (ImGui::TreeNodeEx("Buds")) {
@@ -538,7 +538,7 @@ void TreeVisualizer::SyncColors(const ShootSkeleton& shootSkeleton, const NodeHa
 		switch (static_cast<ShootVisualizerMode>(m_settings.m_shootVisualizationMode)) {
 		case ShootVisualizerMode::GrowthPotential:
 			matrices[i].m_instanceColor = glm::vec4(
-				glm::clamp(node.m_data.m_growthPotential * m_settings.m_shootColorMultiplier, 0.0f, 1.f));
+				glm::clamp(node.m_data.m_lightIntensity * m_settings.m_shootColorMultiplier, 0.0f, 1.f));
 			break;
 		case ShootVisualizerMode::LightDirection:
 			matrices[i].m_instanceColor = glm::vec4(glm::vec3(glm::clamp(node.m_data.m_lightDirection, 0.0f, 1.f)),
@@ -548,9 +548,6 @@ void TreeVisualizer::SyncColors(const ShootSkeleton& shootSkeleton, const NodeHa
 			matrices[i].m_instanceColor = glm::vec4(glm::vec3(node.m_data.m_isMaxChild ? 1.0f : 0.0f), 1.0f);
 			break;
 		case ShootVisualizerMode::AllocatedVigor:
-			matrices[i].m_instanceColor = glm::vec4(glm::clamp(
-				glm::vec3(node.m_data.m_vigorFlow.m_allocatedVigor * m_settings.m_shootColorMultiplier), 0.0f,
-				1.f), 1.0f);
 			break;
 		default:
 			matrices[i].m_instanceColor = m_randomColors[node.m_data.m_order];

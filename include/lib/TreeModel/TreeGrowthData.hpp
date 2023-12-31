@@ -1,6 +1,5 @@
 #pragma once
 #include "Skeleton.hpp"
-#include "VigorSink.hpp"
 #include "EnvironmentGrid.hpp"
 #include "TreeOccupancyGrid.hpp"
 using namespace EvoEngine;
@@ -34,8 +33,6 @@ namespace EcoSysLab
 		BudType m_type = BudType::Apical;
 		BudStatus m_status = BudStatus::Dormant;
 
-		VigorSink m_vigorSink;
-
 		glm::quat m_localRotation = glm::vec3(0.0f);
 
 		//-1.0 means the no fruit.
@@ -46,18 +43,8 @@ namespace EcoSysLab
 	};
 
 	struct ShootFlux {
-		float m_totalGrowthPotential = 0.0f;
+		float m_value = 0.0f;
 	};
-
-	struct ShootGrowthRequirement
-	{
-		float m_leafMaintenanceVigor = 0.0f;
-		float m_leafDevelopmentalVigor = 0.0f;
-		float m_fruitMaintenanceVigor = 0.0f;
-		float m_fruitDevelopmentalVigor = 0.0f;
-		float m_nodeDevelopmentalVigor = 0.0f;
-	};
-
 
 	struct TreeVoxelData
 	{
@@ -88,11 +75,10 @@ namespace EcoSysLab
 		float m_extraMass = 0.0f;
 		
 		float m_temperature = 0.0f;
-
 		float m_growthPotential = 0.0f;
-
-		float m_lightIntensity = 0.0f;
-
+		float m_pipeResistance = 0.0f;
+		float m_lightIntensity = 1.0f;
+		float m_vigor = 0.0f;
 		float m_spaceOccupancy = 0.0f;
 		glm::vec3 m_lightDirection = glm::vec3(0, 1, 0);
 		
@@ -100,7 +86,6 @@ namespace EcoSysLab
 		 * List of buds, first one will always be the apical bud which points forward.
 		 */
 		std::vector<Bud> m_buds;
-		VigorFlow m_vigorFlow;
 		std::vector<glm::mat4> m_leaves;
 		std::vector<glm::mat4> m_fruits;
 	};
@@ -112,10 +97,8 @@ namespace EcoSysLab
 	struct ShootGrowthData {
 		Octree<TreeVoxelData> m_octree = {};
 
-		
 		size_t m_maxMarkerCount = 0;
 
-		ShootGrowthRequirement m_vigorRequirement = {};
 		ShootFlux m_shootFlux = {};
 
 		std::vector<ReproductiveModule> m_droppedLeaves;
