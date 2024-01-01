@@ -68,7 +68,7 @@ namespace EcoSysLab
 		/**
 		 * \brief The probability of death of lateral bud each year.
 		 */
-		float m_lateralBudFlushingRate = 0.0f;
+		float m_lateralBudFlushingRate = 1.0f;
 		/**
 		 * \brief Flushing prob of apical bud related to the light intensity.
 		 */
