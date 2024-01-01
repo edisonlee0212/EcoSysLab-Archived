@@ -356,9 +356,7 @@ TreeVisualizer::InspectInternode(
 					case BudStatus::Dormant:
 						ImGui::Text("Dormant");
 						break;
-					case BudStatus::Flushed:
-						ImGui::Text("Flushed");
-						break;
+ 
 					case BudStatus::Died:
 						ImGui::Text("Died");
 						break;
@@ -450,9 +448,7 @@ TreeVisualizer::PeekInternode(const ShootSkeleton& shootSkeleton, NodeHandle int
 					case BudStatus::Dormant:
 						ImGui::Text("Dormant");
 						break;
-					case BudStatus::Flushed:
-						ImGui::Text("Flushed");
-						break;
+ 
 					case BudStatus::Died:
 						ImGui::Text("Died");
 						break;

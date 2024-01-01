@@ -15,7 +15,6 @@ namespace EcoSysLab
 
 	enum class BudStatus {
 		Dormant,
-		Flushed,
 		Died,
 		Removed
 	};
@@ -30,6 +29,9 @@ namespace EcoSysLab
 
 	class Bud {
 	public:
+		float m_flushingRate;
+		float m_extinctionRate;
+
 		BudType m_type = BudType::Apical;
 		BudStatus m_status = BudStatus::Dormant;
 

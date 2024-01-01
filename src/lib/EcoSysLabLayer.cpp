@@ -857,7 +857,7 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 
 						for (const auto& bud : internodeData.m_buds) {
 
-							if (bud.m_status != BudStatus::Flushed) continue;
+							if (bud.m_status != BudStatus::Died) continue;
 							if (bud.m_reproductiveModule.m_maturity <= 0.0f) continue;
 
 

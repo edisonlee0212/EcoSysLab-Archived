@@ -5,23 +5,12 @@ using namespace EvoEngine;
 namespace EcoSysLab
 {
 	struct ShootGrowthParameters {
+		
+#pragma region Internode
+		/**
+		 * \brief The expected elongation length for an internode for one year.
+		 */
 		float m_internodeGrowthRate;
-		float m_leafGrowthRate = 0.05f;
-		float m_fruitGrowthRate = 0.05f;
-
-#pragma region Bud
-		/**
-		 * \brief The number of lateral buds an internode contains
-		 */
-		int m_lateralBudCount;
-		/**
-		 * \brief The number of fruit buds an internode contains
-		 */
-		int m_fruitBudCount;
-		/**
-		 * \brief The number of leaf buds an internode contains
-		 */
-		int m_leafBudCount;
 		/**
 		* \brief The mean and variance of the angle between the direction of a lateral bud and its parent shoot.
 		*/
@@ -31,9 +20,9 @@ namespace EcoSysLab
 		*/
 		glm::vec2 m_rollAngleMeanVariance{};
 		/**
-		* \brief The mean and variance of the angular difference between the growth direction and the direction of the apical bud
+		* \brief The variance of the angular difference between the growth direction and the direction of the apical bud
 		*/
-		glm::vec2 m_apicalAngleMeanVariance{};
+		float m_apicalAngleVariance{};
 		/**
 		 * \brief The gravitropism.
 		 */
@@ -42,42 +31,10 @@ namespace EcoSysLab
 		 * \brief The phototropism
 		 */
 		float m_phototropism;
-
-		float m_apicalInternodeKillProbability{};
 		/**
-		 * \brief Flushing prob of lateral bud related to the temperature.
+		 * \brief The strength of gravity bending.
 		 */
-		float m_lateralBudFlushProbability;
-		/**
-		 * \brief Flushing prob of leaf bud related to the temperature.
-		 */
-		glm::vec4 m_leafBudFlushingProbabilityTemperatureRange;
-		/**
-		 * \brief Flushing prob of fruit bud related to the temperature.
-		 */
-		glm::vec4 m_fruitBudFlushingProbabilityTemperatureRange;
-		/**
-		 * \brief Apical control base
-		 */
-		float m_apicalControl;
-		/**
-		* \brief How much inhibitor will an internode generate.
-		*/
-		float m_apicalDominance;
-		/**
-		* \brief How much inhibitor will shrink when going through the branch.
-		*/
-		float m_apicalDominanceDistanceFactor;
-		/**
-		* \brief Base resource requirement factor for leaf
-		*/
-		float m_leafVigorRequirement;
-		/**
-		* \brief Base resource requirement factor for fruit
-		*/
-		float m_fruitVigorRequirement;
-#pragma endregion
-#pragma region Internode
+		glm::vec3 m_saggingFactorThicknessReductionMax = glm::vec3(0.8f, 1.75f, 1.0f);
 		/**
 		 * \brief The internode length
 		 */
@@ -98,6 +55,52 @@ namespace EcoSysLab
 		 * \brief The extra thickness gained from node length.
 		 */
 		float m_thicknessAccumulateAgeFactor;
+
+#pragma endregion
+#pragma region Bud fate
+		/**
+		 * \brief The number of lateral buds an internode contains
+		 */
+		int m_lateralBudCount;
+		/**
+		 * \brief The probability of death of apical bud each year.
+		 */
+		float m_apicalBudExtinctionRate{};
+		/**
+		 * \brief The probability of death of lateral bud each year.
+		 */
+		float m_lateralBudFlushingRate{};
+		/**
+		 * \brief Flushing prob of apical bud related to the light intensity.
+		 */
+		float m_apicalBudLightingFactor;
+		/**
+		 * \brief Flushing prob of lateral bud related to the light intensity.
+		 */
+		float m_lateralBudLightingFactor;
+		/**
+		 * \brief Flushing prob of apical bud related to the space availability.
+		 */
+		float m_apicalBudSpaceFactor = 1.0f;
+		/**
+		 * \brief Flushing prob of lateral bud related to the space availability.
+		 */
+		float m_lateralBudSpaceFactor = 1.0f;
+		/**
+		 * \brief Apical control base
+		 */
+		float m_apicalControl;
+		/**
+		* \brief How much inhibitor will an internode generate.
+		*/
+		float m_apicalDominance;
+		/**
+		* \brief How much inhibitor will shrink when going through the branch.
+		*/
+		float m_apicalDominanceDistanceFactor;
+
+#pragma endregion
+#pragma region Pruning
 		/**
 		* \brief The limit of lateral branches being cut off when too close to the
 		* root.
@@ -116,17 +119,22 @@ namespace EcoSysLab
 		 * \brief The pruning factor for branch because of being too long
 		 */
 		float m_thicknessPruningFactor = 0.005f;
-
-		/**
-		 * \brief The strength of gravity bending.
-		 */
-		glm::vec3 m_saggingFactorThicknessReductionMax = glm::vec3(0.8f, 1.75f, 1.0f);
-
-		float m_maxSpaceOccupancy = 1.0f;
 #pragma endregion
-
 #pragma region Leaf
-
+		/**
+		 * \brief The number of leaf buds an internode contains
+		 */
+		int m_leafBudCount;
+		float m_leafGrowthRate = 0.05f;
+		/**
+		 * \brief Flushing prob of leaf bud related to the temperature.
+		 */
+		glm::vec4 m_leafBudFlushingProbabilityTemperatureRange;
+		/**
+		* \brief Base resource requirement factor for leaf
+		*/
+		float m_leafVigorRequirement;
+		
 		glm::vec3 m_maxLeafSize;
 		float m_leafPositionVariance;
 		float m_leafRotationVariance;
@@ -137,6 +145,20 @@ namespace EcoSysLab
 		float m_leafDistanceToBranchEndLimit;
 #pragma endregion
 #pragma region Fruit
+		/**
+		 * \brief The number of fruit buds an internode contains
+		 */
+		int m_fruitBudCount;
+		float m_fruitGrowthRate = 0.05f;
+		/**
+		 * \brief Flushing prob of fruit bud related to the temperature.
+		 */
+		glm::vec4 m_fruitBudFlushingProbabilityTemperatureRange;
+
+		/**
+		* \brief Base resource requirement factor for fruit
+		*/
+		float m_fruitVigorRequirement;
 
 		glm::vec3 m_maxFruitSize;
 		float m_fruitPositionVariance;

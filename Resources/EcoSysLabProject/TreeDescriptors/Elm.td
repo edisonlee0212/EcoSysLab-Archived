@@ -1,38 +1,34 @@
 m_shootGrowthParameters:
   m_internodeGrowthRate: 10
-  m_leafGrowthRate: 18
-  m_fruitGrowthRate: 18
-  m_lateralBudCount: 2
-  m_fruitBudCount: 0
-  m_leafBudCount: 1
   m_branchingAngleMeanVariance: [60, 3]
   m_rollAngleMeanVariance: [30, 2]
-  m_apicalAngleMeanVariance: [0, 3.5]
+  m_apicalAngleVariance: 0
   m_gravitropism: 0.0399999991
   m_phototropism: 0
+  m_saggingFactorThicknessReductionMax: [0.00100000005, 2, 0.100000001]
   m_internodeLength: 0.0299999993
+  m_internodeLengthThicknessFactor: 0.25
   m_endNodeThickness: 0.00200000009
   m_thicknessAccumulationFactor: 0.5
   m_thicknessAccumulateAgeFactor: 0
-  m_apicalInternodeKillProbability: 0
-  m_lateralBudFlushProbability: 0.0500000007
-  m_leafBudFlushingProbabilityTemperatureRange: [1, 1, 45, 60]
-  m_fruitBudFlushingProbabilityTemperatureRange: [0, 1, 50, 70]
+  m_lateralBudCount: 2
+  m_apicalBudExtinctionRate: 0
+  m_lateralBudFlushingRate: 1
+  m_apicalBudLightingFactor: 0
+  m_lateralBudLightingFactor: 0
+  m_apicalBudSpaceFactor: 1
+  m_lateralBudSpaceFactor: 1
   m_apicalControl: -0.100000001
-  m_apicalControlAgeFactor: 0
   m_apicalDominance: 1.5
-  m_apicalDominanceAgeFactor: 0.00999999978
   m_apicalDominanceDistanceFactor: 0.970000029
-  m_leafVigorRequirement: 0.100000001
-  m_fruitVigorRequirement: 0.100000001
-  m_internodeVigorRequirement: 1
-  m_vigorRequirementAggregateLoss: 1
   m_lowBranchPruning: 0.0500000007
   m_lowBranchPruningThicknessFactor: 0
   m_lightPruningFactor: 1
   m_thicknessPruningFactor: 0.00499999989
-  m_saggingFactorThicknessReductionMax: [0.00100000005, 2, 0.100000001]
-  m_maxSpaceOccupancy: 1
+  m_leafBudCount: 1
+  m_leafGrowthRate: 18
+  m_leafBudFlushingProbabilityTemperatureRange: [1, 1, 45, 60]
+  m_leafVigorRequirement: 0.100000001
   m_maxLeafSize: [0.0500000007, 0.5, 0.0500000007]
   m_leafPositionVariance: 0.5
   m_leafRotationVariance: 0
@@ -40,32 +36,14 @@ m_shootGrowthParameters:
   m_leafChlorophyllSynthesisFactorTemperature: 65
   m_leafFallProbability: 3
   m_leafDistanceToBranchEndLimit: 10
+  m_fruitBudCount: 0
+  m_fruitGrowthRate: 18
+  m_fruitBudFlushingProbabilityTemperatureRange: [0, 1, 50, 70]
+  m_fruitVigorRequirement: 0.100000001
   m_maxFruitSize: [0.0350000001, 0.0350000001, 0.0350000001]
   m_fruitPositionVariance: 0.5
   m_fruitRotationVariance: 0
   m_fruitFallProbability: 3
-m_rootGrowthParameters:
-  m_branchingAngleMeanVariance: [30, 2]
-  m_rollAngleMeanVariance: [120, 2]
-  m_apicalAngleMeanVariance: [0, 3]
-  m_rootNodeLength: 0.0299999993
-  m_rootNodeGrowthRate: 10
-  m_endNodeThickness: 0.00200000009
-  m_thicknessAccumulationFactor: 0.5
-  m_thicknessAccumulateAgeFactor: 0
-  m_rootNodeVigorRequirement: 1
-  m_vigorRequirementAggregateLoss: 1
-  m_environmentalFriction: 0.5
-  m_environmentalFrictionFactor: 1
-  m_apicalControl: 0
-  m_apicalControlAgeFactor: 0
-  m_apicalDominance: 3
-  m_apicalDominanceAgeFactor: 0
-  m_apicalDominanceDistanceFactor: 0.970000029
-  m_tropismSwitchingProbability: 1
-  m_tropismSwitchingProbabilityDistanceFactor: 0
-  m_tropismIntensity: 0.0500000007
-  m_branchingProbability: 0.0700000003
 m_foliageParameters:
   m_leafSize: [0.0299999993, 0.0500000007]
   m_leafColor: [0.596078455, 0.796078444, 0]

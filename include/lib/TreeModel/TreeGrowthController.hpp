@@ -5,23 +5,12 @@ using namespace EvoEngine;
 namespace EcoSysLab
 {
 	struct ShootGrowthController {
-		float m_internodeGrowthRate;
-		float m_leafGrowthRate = 0.05f;
-		float m_fruitGrowthRate = 0.05f;
+#pragma region Internode
 
-#pragma region Bud
 		/**
-		 * \brief The number of lateral buds an internode contains
+		 * \brief The expected elongation length for an internode for one year.
 		 */
-		int m_lateralBudCount;
-		/**
-		 * \brief The number of fruit buds an internode contains
-		 */
-		int m_fruitBudCount;
-		/**
-		 * \brief The number of leaf buds an internode contains
-		 */
-		int m_leafBudCount;
+		float m_internodeGrowthRate;
 		/**
 		* \brief The mean and variance of the angle between the direction of a lateral bud and its parent shoot.
 		*/
@@ -46,46 +35,7 @@ namespace EcoSysLab
 		 * \brief The strength of gravity bending.
 		 */
 		std::function<float(const Node<InternodeGrowthData>& internode)> m_sagging;
-		/**
-		 * \brief Kill prob of apical bud.
-		 */
-		std::function<float(const Node<InternodeGrowthData>& internode)> m_apicalInternodeKillProbability;
-		/**
-		 * \brief Flushing prob of lateral bud.
-		 */
-		std::function<float(const Node<InternodeGrowthData>& internode)> m_lateralBudFlushProbability;
-		/**
-		 * \brief Flushing prob of leaf bud.
-		 */
-		std::function<float(const Node<InternodeGrowthData>& internode)> m_leafBudFlushingProbability;
-		/**
-		 * \brief Flushing prob of fruit bud.
-		 */
-		std::function<float(const Node<InternodeGrowthData>& internode)> m_fruitBudFlushingProbability;
-		/**
-		 * \brief Apical control base
-		 */
-		float m_apicalControl;
-		/**
-		* \brief How much inhibitor will an internode generate.
-		*/
-		std::function<float(const Node<InternodeGrowthData>& internode)> m_apicalDominance;
-		/**
-		* \brief How much inhibitor will shrink when going through the branch.
-		*/
-		float m_apicalDominanceDistanceFactor;
-		/**
-		* \brief Base resource requirement factor for leaf
-		*/
-		float m_leafVigorRequirement;
-		/**
-		* \brief Base resource requirement factor for fruit
-		*/
-		float m_fruitVigorRequirement;
 
-		float m_maxSpaceOccupancy = 1.0f;
-#pragma endregion
-#pragma region Internode
 		/**
 		 * \brief The internode length
 		 */
@@ -107,15 +57,70 @@ namespace EcoSysLab
 		 */
 		float m_thicknessAccumulateAgeFactor;
 
+#pragma endregion
+#pragma region Bud
+		/**
+		 * \brief The number of lateral buds an internode contains
+		 */
+		int m_lateralBudCount;
+		/**
+		 * \brief Extinction rate of apical bud.
+		 */
+		std::function<void(const Node<InternodeGrowthData>& internode, Bud& targetBud)> m_budExtinctionRate;
+
+		/**
+		 * \brief Flushing rate of a bud.
+		 */
+		std::function<void(const Node<InternodeGrowthData>& internode, Bud& targetBud)> m_budFlushingRate;
+				
+		/**
+		 * \brief Apical control base
+		 */
+		float m_apicalControl;
+		/**
+		* \brief How much inhibitor will an internode generate.
+		*/
+		std::function<float(const Node<InternodeGrowthData>& internode)> m_apicalDominance;
+		/**
+		* \brief How much inhibitor will shrink when going through the branch.
+		*/
+		float m_apicalDominanceDistanceFactor;
+		
+#pragma endregion
+#pragma region Pruning
+		/**
+		* \brief The limit of lateral branches being cut off when too close to the
+		* root.
+		*/
 		float m_lowBranchPruning;
+		/**
+		* \brief The limit of lateral branches being cut off when too close to the
+		* root.
+		*/
 		float m_lowBranchPruningThicknessFactor;
 		/**
 		 * \brief The The impact of the amount of incoming light on the shedding of end internodes.
 		 */
 		std::function<float(float deltaTime, const Node<InternodeGrowthData>& internode)> m_pruningFactor;
 #pragma endregion
-
 #pragma region Leaf
+		/**
+		* \brief Base resource requirement factor for leaf
+		*/
+		float m_leafVigorRequirement;
+		
+		/**
+		 * \brief Flushing prob of leaf bud.
+		 */
+		std::function<float(const Node<InternodeGrowthData>& internode)> m_leafBudFlushingProbability;
+		
+		/**
+		 * \brief The number of leaf buds an internode contains
+		 */
+		int m_leafBudCount;
+
+		float m_leafGrowthRate = 0.05f;
+		
 		/**
 		 * \brief The size of the leaf when it reaches full maturity.
 		 */
@@ -138,6 +143,20 @@ namespace EcoSysLab
 		std::function<float(const Node<InternodeGrowthData>& internode)> m_leafFallProbability;
 #pragma endregion
 #pragma region Fruit
+		/**
+		* \brief Base resource requirement factor for fruit
+		*/
+		float m_fruitVigorRequirement;
+		/**
+		 * \brief Flushing prob of fruit bud.
+		 */
+		std::function<float(const Node<InternodeGrowthData>& internode)> m_fruitBudFlushingProbability;
+		/**
+		 * \brief The number of fruit buds an internode contains
+		 */
+		int m_fruitBudCount;
+
+		float m_fruitGrowthRate = 0.05f;
 		/**
 		 * \brief The size of the fruit when it reaches full maturity.
 		 */
