@@ -54,7 +54,10 @@ namespace EcoSysLab
 		 * \brief The extra thickness gained from node length.
 		 */
 		float m_thicknessAccumulateAgeFactor;
-
+		/**
+		 * \brief The shadow volume factor of the internode.
+		 */
+		float m_internodeShadowFactor = 1.f;
 #pragma endregion
 #pragma region Bud fate
 		/**
@@ -85,6 +88,10 @@ namespace EcoSysLab
 		 * \brief Flushing prob of lateral bud related to the space availability.
 		 */
 		float m_lateralBudSpaceFactor = 1.0f;
+		/**
+		 * \brief To prevent over growth.
+		 */
+		float m_pipeResistance;
 		/**
 		 * \brief Apical control base
 		 */

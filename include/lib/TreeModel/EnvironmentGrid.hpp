@@ -6,8 +6,7 @@ namespace EcoSysLab
 {
 	struct IlluminationEstimationSettings
 	{
-		float m_distancePowerFactor = 1.8f;
-		float m_shadowIntensity = 0.03f;
+		float m_distancePowerFactor = 2.0f;
 		float m_shadowPropagateLoss = 0.4f;
 	};
 	

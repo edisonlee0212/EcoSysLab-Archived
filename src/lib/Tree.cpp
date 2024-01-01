@@ -1399,6 +1399,7 @@ void Tree::PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescrip
 		m_shootGrowthController.m_endNodeThickness = treeDescriptor->m_shootGrowthParameters.m_endNodeThickness;
 		m_shootGrowthController.m_thicknessAccumulationFactor = treeDescriptor->m_shootGrowthParameters.m_thicknessAccumulationFactor;
 		m_shootGrowthController.m_thicknessAccumulateAgeFactor = treeDescriptor->m_shootGrowthParameters.m_thicknessAccumulateAgeFactor;
+		m_shootGrowthController.m_internodeShadowFactor = treeDescriptor->m_shootGrowthParameters.m_internodeShadowFactor;
 
 		m_shootGrowthController.m_lateralBudCount = treeDescriptor->m_shootGrowthParameters.m_lateralBudCount;
 		m_shootGrowthController.m_budExtinctionRate = [=](const Node<InternodeGrowthData>& internode, Bud& bud)
@@ -1428,6 +1429,7 @@ void Tree::PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescrip
 					if (internode.m_data.m_inhibitorSink > 0.0f) bud.m_flushingRate *= glm::exp(-internode.m_data.m_inhibitorSink);
 				}
 			};
+		m_shootGrowthController.m_pipeResistance = treeDescriptor->m_shootGrowthParameters.m_pipeResistance;
 		m_shootGrowthController.m_apicalControl = treeDescriptor->m_shootGrowthParameters.m_apicalControl;
 		m_shootGrowthController.m_apicalDominance = [=](const Node<InternodeGrowthData>& internode)
 			{

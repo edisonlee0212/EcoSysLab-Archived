@@ -66,14 +66,14 @@ TreeVisualizer::OnInspect(
 	TreeModel& treeModel) {
 	bool updated = false;
 	if (ImGui::Combo("Shoot Color mode",
-		{ "Default", "GrowthPotential", "LightDirection", "IsMaxChild", "AllocatedVigor" },
+		{ "Order", "Level", "Light Intensity", "Light Direction", "Growth Potential", "Apical control", "Desired growth rate", "IsMaxChild", "AllocatedVigor" },
 		m_settings.m_shootVisualizationMode)) {
 		m_needShootColorUpdate = true;
 	}
 
 	if (ImGui::TreeNode("Shoot Color settings")) {
 		switch (static_cast<ShootVisualizerMode>(m_settings.m_shootVisualizationMode)) {
-		case ShootVisualizerMode::GrowthPotential:
+		case ShootVisualizerMode::LightIntensity:
 			ImGui::DragFloat("Light intensity multiplier", &m_settings.m_shootColorMultiplier, 0.001f);
 			m_needShootColorUpdate = true;
 			break;
@@ -297,7 +297,7 @@ TreeVisualizer::InspectInternode(
 
 	const auto& internode = shootSkeleton.RefNode(internodeHandle);
 	if (ImGui::TreeNode("Internode info")) {
-		ImGui::Checkbox("Is max child", (bool*)&internode.m_data.m_isMaxChild);
+		ImGui::Checkbox("Is max child", (bool*)&internode.m_data.m_maxChild);
 		ImGui::Text("Thickness: %.3f", internode.m_info.m_thickness);
 		ImGui::Text("Length: %.3f", internode.m_info.m_length);
 		ImGui::InputFloat3("Position", (float*)&internode.m_info.m_globalPosition.x, "%.3f",
@@ -319,17 +319,23 @@ TreeVisualizer::InspectInternode(
 		ImGui::InputFloat("Biomass", (float*)&internodeData.m_biomass, 1, 100, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
 
-		ImGui::InputFloat("Root Direction", (float*)&internode.m_info.m_rootDistance, 1, 100, "%.3f",
+		ImGui::InputFloat("Root distance", (float*)&internode.m_info.m_rootDistance, 1, 100, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
-		ImGui::InputFloat3("Light dir", (float*)&internodeData.m_lightDirection.x, "%.3f",
-			ImGuiInputTextFlags_ReadOnly);
+
 		ImGui::InputFloat("Light Intensity", (float*)&internodeData.m_lightIntensity, 1, 100, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
-		ImGui::InputFloat("Pipe Resistance", (float*)&internodeData.m_pipeResistance, 1, 100, "%.3f",
+		ImGui::InputFloat3("Light direction", (float*)&internodeData.m_lightDirection.x, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
-		ImGui::InputFloat("Desired Growth Potential", (float*)&internodeData.m_desiredGrowthPotential, 1, 100, "%.3f",
+		ImGui::InputFloat("Pipe resistance", (float*)&internodeData.m_pipeResistance, 1, 100, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
-		ImGui::InputFloat("Actual Growth Potential", (float*)&internodeData.m_actualGrowthPotential, 1, 100, "%.3f",
+
+		ImGui::InputFloat("Growth potential", (float*)&internodeData.m_growthPotential, 1, 100, "%.3f",
+			ImGuiInputTextFlags_ReadOnly);
+		ImGui::InputFloat("Apical control", (float*)&internodeData.m_apicalControl, 1, 100, "%.3f",
+			ImGuiInputTextFlags_ReadOnly);
+		ImGui::InputFloat("Desired growth rate", (float*)&internodeData.m_desiredGrowthRate, 1, 100, "%.3f",
+			ImGuiInputTextFlags_ReadOnly);
+		ImGui::InputFloat("Growth rate", (float*)&internodeData.m_growthRate, 1, 100, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
 
 		if (ImGui::DragFloat("Sagging", (float*)&internodeData.m_sagging)) {
@@ -403,7 +409,7 @@ void
 TreeVisualizer::PeekInternode(const ShootSkeleton& shootSkeleton, NodeHandle internodeHandle) const {
 	const auto& internode = shootSkeleton.PeekNode(internodeHandle);
 	if (ImGui::TreeNode("Internode info")) {
-		ImGui::Checkbox("Is max child", (bool*)&internode.m_data.m_isMaxChild);
+		ImGui::Checkbox("Is max child", (bool*)&internode.m_data.m_maxChild);
 		ImGui::Text("Thickness: %.3f", internode.m_info.m_thickness);
 		ImGui::Text("Length: %.3f", internode.m_info.m_length);
 		ImGui::InputFloat3("Position", (float*)&internode.m_info.m_globalPosition.x, "%.3f",
@@ -538,18 +544,34 @@ void TreeVisualizer::SyncColors(const ShootSkeleton& shootSkeleton, const NodeHa
 		const auto nodeHandle = sortedNodeList[i];
 		const auto& node = shootSkeleton.PeekNode(nodeHandle);
 		switch (static_cast<ShootVisualizerMode>(m_settings.m_shootVisualizationMode)) {
-		case ShootVisualizerMode::GrowthPotential:
+		case ShootVisualizerMode::Order:
+			matrices[i].m_instanceColor = m_randomColors[node.m_data.m_order];
+			break;
+		case ShootVisualizerMode::Level:
+			matrices[i].m_instanceColor = m_randomColors[node.m_data.m_level];
+			break;
+		case ShootVisualizerMode::LightIntensity:
 			matrices[i].m_instanceColor = glm::vec4(
-				glm::clamp(node.m_data.m_lightIntensity * m_settings.m_shootColorMultiplier, 0.0f, 1.f));
+				glm::clamp(glm::pow(node.m_data.m_lightIntensity, m_settings.m_shootColorMultiplier), 0.0f, 1.f));
 			break;
 		case ShootVisualizerMode::LightDirection:
 			matrices[i].m_instanceColor = glm::vec4(glm::vec3(glm::clamp(node.m_data.m_lightDirection, 0.0f, 1.f)),
 				1.0f);
 			break;
 		case ShootVisualizerMode::IsMaxChild:
-			matrices[i].m_instanceColor = glm::vec4(glm::vec3(node.m_data.m_isMaxChild ? 1.0f : 0.0f), 1.0f);
+			matrices[i].m_instanceColor = glm::vec4(glm::vec3(node.m_data.m_maxChild ? 1.0f : 0.0f), 1.0f);
 			break;
-		case ShootVisualizerMode::AllocatedVigor:
+		case ShootVisualizerMode::GrowthPotential:
+			matrices[i].m_instanceColor = glm::vec4(
+				glm::clamp(glm::pow(node.m_data.m_growthPotential, m_settings.m_shootColorMultiplier), 0.0f, 1.f));
+			break;
+		case ShootVisualizerMode::ApicalControl:
+			matrices[i].m_instanceColor = glm::vec4(
+				glm::clamp(glm::pow(node.m_data.m_apicalControl, m_settings.m_shootColorMultiplier), 0.0f, 1.f));
+			break;
+		case ShootVisualizerMode::DesiredGrowthRate:
+			matrices[i].m_instanceColor = glm::vec4(
+				glm::clamp(glm::pow(node.m_data.m_desiredGrowthRate, m_settings.m_shootColorMultiplier), 0.0f, 1.f));
 			break;
 		default:
 			matrices[i].m_instanceColor = m_randomColors[node.m_data.m_order];

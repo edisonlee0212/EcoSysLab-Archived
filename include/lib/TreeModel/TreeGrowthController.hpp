@@ -6,7 +6,6 @@ namespace EcoSysLab
 {
 	struct ShootGrowthController {
 #pragma region Internode
-
 		/**
 		 * \brief The expected elongation length for an internode for one year.
 		 */
@@ -56,7 +55,10 @@ namespace EcoSysLab
 		 * \brief The extra thickness gained from node length.
 		 */
 		float m_thicknessAccumulateAgeFactor;
-
+		/**
+		 * \brief The shadow volume factor of the internode.
+		 */
+		float m_internodeShadowFactor = 1.f;
 #pragma endregion
 #pragma region Bud
 		/**
@@ -72,7 +74,10 @@ namespace EcoSysLab
 		 * \brief Flushing rate of a bud.
 		 */
 		std::function<void(const Node<InternodeGrowthData>& internode, Bud& targetBud)> m_budFlushingRate;
-				
+		/**
+		 * \brief To prevent over growth.
+		 */
+		float m_pipeResistance;
 		/**
 		 * \brief Apical control base
 		 */
@@ -141,6 +146,7 @@ namespace EcoSysLab
 		 * \brief The probability of leaf falling after health return to 0.0
 		 */
 		std::function<float(const Node<InternodeGrowthData>& internode)> m_leafFallProbability;
+		float m_leafShadowVolume = 0.05f;
 #pragma endregion
 #pragma region Fruit
 		/**

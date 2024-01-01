@@ -20,24 +20,30 @@ namespace EcoSysLab {
 
 	class TreeModel {
 #pragma region Tree Growth
-		void AllocateShootVigor(float shootFlux, const std::vector<NodeHandle>& sortedInternodeList, const ShootGrowthController& shootGrowthParameters);
+		
+		void AllocateShootVigor(float shootFlux, const std::vector<NodeHandle>& sortedInternodeList, const ShootGrowthController& shootGrowthController);
 
-		bool PruneInternodes(const glm::mat4& globalTransform, ClimateModel& climateModel, const ShootGrowthController& shootGrowthParameters);
+		bool PruneInternodes(const glm::mat4& globalTransform, ClimateModel& climateModel, const ShootGrowthController& shootGrowthController);
 
-		void CalculateThicknessAndSagging(NodeHandle internodeHandle,
-			const ShootGrowthController& shootGrowthParameters);
+		void CalculateDistances();
 
-		bool GrowInternode(ClimateModel& climateModel, NodeHandle internodeHandle, const ShootGrowthController& shootGrowthParameters);
+		void CalculateThickness(const ShootGrowthController& shootGrowthController);
+
+		void CalculateBiomass(const ShootGrowthController& shootGrowthController);
+
+		void CalculateLevel();
+
+		bool GrowInternode(ClimateModel& climateModel, NodeHandle internodeHandle, const ShootGrowthController& shootGrowthController);
 
 		bool ElongateInternode(float extendLength, NodeHandle internodeHandle,
 			const ShootGrowthController& shootGrowthController, float& collectedInhibitor);
 
-		void ShootGrowthPostProcess(const glm::mat4& globalTransform, ClimateModel& climateModel, const ShootGrowthController& shootGrowthParameters);
+		void ShootGrowthPostProcess(const glm::mat4& globalTransform, ClimateModel& climateModel, const ShootGrowthController& shootGrowthController);
 
 		friend class Tree;
 #pragma endregion
 
-		void Initialize(const ShootGrowthController& shootGrowthParameters);
+		void Initialize(const ShootGrowthController& shootGrowthController);
 
 		bool m_initialized = false;
 
@@ -49,11 +55,11 @@ namespace EcoSysLab {
 		 * Grow one iteration of the branches, given the climate model and the procedural parameters.
 		 * @param globalTransform The plant's world transform.
 		 * @param climateModel The climate model.
-		 * @param shootGrowthParameters The procedural parameters that guides the growth.
+		 * @param shootGrowthController The procedural parameters that guides the growth.
 		 * @return Whether the growth caused a structural change during the growth.
 		 */
 		bool GrowShoots(const glm::mat4& globalTransform, ClimateModel& climateModel,
-			const ShootGrowthController& shootGrowthParameters);
+			const ShootGrowthController& shootGrowthController);
 
 		int m_leafCount = 0;
 		int m_fruitCount = 0;
@@ -75,7 +81,7 @@ namespace EcoSysLab {
 
 		float m_crownShynessDistance = 0.0f;
 		unsigned m_index = 0;
-		void RegisterVoxel(const glm::mat4& globalTransform, ClimateModel& climateModel, const ShootGrowthController& shootGrowthParameters);
+		void RegisterVoxel(const glm::mat4& globalTransform, ClimateModel& climateModel, const ShootGrowthController& shootGrowthController);
 		TreeOccupancyGrid m_treeOccupancyGrid{};
 
 		void CalculateInternodeTransforms();
@@ -83,7 +89,7 @@ namespace EcoSysLab {
 		void PruneInternode(NodeHandle internodeHandle);
 
 		void CollectShootFlux(const glm::mat4& globalTransform, ClimateModel& climateModel, const std::vector<NodeHandle>& sortedSubTreeInternodeList,
-			const ShootGrowthController& shootGrowthParameters);
+			const ShootGrowthController& shootGrowthController);
 		void HarvestFruits(const std::function<bool(const ReproductiveModule& fruit)>& harvestFunction);
 
 		int m_iteration = 0;
@@ -111,13 +117,13 @@ namespace EcoSysLab {
 		 * @param deltaTime The real world time for this iteration
 		 * @param globalTransform The global transform of tree in world space.
 		 * @param climateModel The climate model
-		 * @param shootGrowthParameters The procedural parameters that guides the growth of the branches.
+		 * @param shootGrowthController The procedural parameters that guides the growth of the branches.
 		 * @return Whether the growth caused a structural change during the growth.
 		 */
-		bool Grow(float deltaTime, const glm::mat4& globalTransform, ClimateModel& climateModel, const ShootGrowthController& shootGrowthParameters);
+		bool Grow(float deltaTime, const glm::mat4& globalTransform, ClimateModel& climateModel, const ShootGrowthController& shootGrowthController);
 
 		bool GrowSubTree(float deltaTime, NodeHandle baseInternodeHandle, const glm::mat4& globalTransform, ClimateModel& climateModel,
-			const ShootGrowthController& shootGrowthParameters);
+			const ShootGrowthController& shootGrowthController);
 
 		int m_historyLimit = -1;
 

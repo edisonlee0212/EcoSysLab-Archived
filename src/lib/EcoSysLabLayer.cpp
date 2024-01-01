@@ -345,10 +345,6 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 							0.0f, 10.0f) || settingsChanged;
 
 					settingsChanged =
-						ImGui::DragFloat("Shadow intensity", &m_simulationSettings.m_shadowEstimationSettings.m_shadowIntensity, 0.001f,
-							0.0f, 1.0f) || settingsChanged;
-
-					settingsChanged =
 						ImGui::DragFloat("Shadow propagate loss", &m_simulationSettings.m_shadowEstimationSettings.m_shadowPropagateLoss, 0.001f,
 							0.0f, 1.0f) || settingsChanged;
 

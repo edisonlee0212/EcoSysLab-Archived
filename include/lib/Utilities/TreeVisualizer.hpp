@@ -13,9 +13,15 @@ namespace EcoSysLab {
 	};
 
 	enum class ShootVisualizerMode {
-		Default,
-		GrowthPotential,
+		Order,
+		Level,
+		LightIntensity,
 		LightDirection,
+
+		GrowthPotential,
+		ApicalControl,
+		DesiredGrowthRate,
+
 		IsMaxChild,
 		AllocatedVigor,
 
@@ -27,7 +33,7 @@ namespace EcoSysLab {
 	};
 
 	struct TreeVisualizerColorSettings {
-		int m_shootVisualizationMode = static_cast<int>(ShootVisualizerMode::Default);
+		int m_shootVisualizationMode = static_cast<int>(ShootVisualizerMode::DesiredGrowthRate);
 		float m_shootColorMultiplier = 1.0f;
 	};
 

@@ -62,7 +62,7 @@ namespace EcoSysLab
 
 		glm::quat m_localRotation = glm::vec3(0.0f);
 
-		bool m_isMaxChild = false;
+		bool m_maxChild = false;
 		bool m_lateral = false;
 		float m_startAge = 0;
 		float m_inhibitorSink = 0;
@@ -72,18 +72,23 @@ namespace EcoSysLab
 		float m_sagging = 0;
 
 		int m_order = 0;
+		int m_level = 0;
 		float m_descendentTotalBiomass = 0;
 		float m_biomass = 0;
 		float m_extraMass = 0.0f;
-		
 		float m_temperature = 0.0f;
-		float m_desiredGrowthPotential = 0.0f;
-		float m_pipeResistance = 0.0f;
+
 		float m_lightIntensity = 1.0f;
-		float m_actualGrowthPotential = 0.0f;
-		float m_vigor = 0.0f;
-		float m_spaceOccupancy = 0.0f;
 		glm::vec3 m_lightDirection = glm::vec3(0, 1, 0);
+		float m_pipeResistance = 0.0f;
+
+		float m_growthPotential = 0.0f;
+		float m_apicalControl = 0.0f;
+		float m_desiredGrowthRate = 0.0f;
+		float m_growthRate = 0.0f;
+
+		float m_spaceOccupancy = 0.0f;
+		
 		
 		/**
 		 * List of buds, first one will always be the apical bud which points forward.
@@ -109,6 +114,8 @@ namespace EcoSysLab
 
 		glm::vec3 m_desiredMin = glm::vec3(FLT_MAX);
 		glm::vec3 m_desiredMax = glm::vec3(FLT_MIN);
+
+		int m_maxLevel = 0;
 	};
 
 
