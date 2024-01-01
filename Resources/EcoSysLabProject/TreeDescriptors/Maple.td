@@ -23,7 +23,7 @@ m_shootGrowthParameters:
   m_apicalDominanceLoss: 0.109999999
   m_lowBranchPruning: 0.200000003
   m_lowBranchPruningThicknessFactor: 0.5
-  m_lightPruningFactor: 0
+  m_lightPruningFactor: 12
   m_thicknessPruningFactor: 0.00200000009
   m_leafBudCount: 1
   m_leafGrowthRate: 18
