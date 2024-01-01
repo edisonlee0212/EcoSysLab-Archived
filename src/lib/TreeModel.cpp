@@ -154,11 +154,6 @@ bool TreeModel::Grow(float deltaTime, const glm::mat4& globalTransform, ClimateM
 	const auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
 	CollectShootFlux(globalTransform, climateModel, sortedInternodeList, shootGrowthParameters);
 
-	//Perform photosynthesis.
-	m_shootSkeleton.m_data.m_vigor = m_shootSkeleton.m_data.m_shootFlux.m_value;
-
-	CalculateGrowthPotential(sortedInternodeList, shootGrowthParameters);
-
 	//Grow branches and set up nutrient requirements for next iteration.
 	if (m_currentDeltaTime != 0.0f
 		&& GrowShoots(globalTransform, climateModel, shootGrowthParameters)) {
@@ -186,8 +181,6 @@ bool TreeModel::GrowSubTree(const float deltaTime, const NodeHandle baseInternod
 	const auto sortedInternodeList = m_shootSkeleton.GetSubTree(baseInternodeHandle);
 
 	CollectShootFlux(globalTransform, climateModel, sortedInternodeList, shootGrowthParameters);
-
-	CalculateGrowthPotential(sortedInternodeList, shootGrowthParameters);
 
 	if (!m_treeGrowthSettings.m_useSpaceColonization) {
 		float vigor = 0.0f;
@@ -325,7 +318,7 @@ bool TreeModel::GrowShoots(const glm::mat4& globalTransform, ClimateModel& clima
 	bool anyBranchGrown = false;
 	const auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
 	if (!m_treeGrowthSettings.m_useSpaceColonization) {
-		AllocateShootVigor(m_shootSkeleton.m_data.m_vigor, sortedInternodeList, shootGrowthParameters);
+		AllocateShootVigor(m_shootSkeleton.m_data.m_shootFlux.m_value, sortedInternodeList, shootGrowthParameters);
 	}
 	for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); ++it) {
 		const bool graphChanged = GrowInternode(climateModel, *it, shootGrowthParameters);
@@ -590,7 +583,7 @@ bool TreeModel::ElongateInternode(float extendLength, NodeHandle internodeHandle
 			float childInhibitor = 0.0f;
 			ElongateInternode(extraLength - internodeLength, newInternodeHandle, shootGrowthController, childInhibitor);
 			auto& currentNewInternode = m_shootSkeleton.RefNode(newInternodeHandle);
-			currentNewInternode.m_data.m_inhibitorSink += glm::max(0.0f, childInhibitor * shootGrowthController.m_apicalDominanceLoss);
+			currentNewInternode.m_data.m_inhibitorSink += glm::max(0.0f, childInhibitor * glm::clamp(1.0f - shootGrowthController.m_apicalDominanceLoss, 0.0f, 1.0f));
 			collectedInhibitor += currentNewInternode.m_data.m_inhibitorSink + shootGrowthController.m_apicalDominance(currentNewInternode);
 		}
 		else {
@@ -609,7 +602,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 		for (const auto& childHandle : internode.RefChildHandles()) {
 			auto& childNode = m_shootSkeleton.RefNode(childHandle);
 			internodeData.m_inhibitorSink += glm::max(0.0f, (shootGrowthParameters.m_apicalDominance(childNode) + childNode.m_data.m_inhibitorSink) *
-				shootGrowthParameters.m_apicalDominanceLoss);
+				glm::clamp(1.0f - shootGrowthParameters.m_apicalDominanceLoss, 0.0f, 1.0f));
 		}
 	}
 	auto& buds = m_shootSkeleton.RefNode(internodeHandle).m_data.m_buds;
@@ -633,12 +626,12 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 			}
 			else
 			{
-				elongateLength = internodeData.m_vigor * shootGrowthParameters.m_internodeLength;
+				elongateLength = internodeData.m_actualGrowthPotential * m_currentDeltaTime * shootGrowthParameters.m_internodeLength * shootGrowthParameters.m_internodeGrowthRate;
 			}
 			//Use up the vigor stored in this bud.
 			float collectedInhibitor = 0.0f;
 			graphChanged = ElongateInternode(elongateLength, internodeHandle, shootGrowthParameters, collectedInhibitor) || graphChanged;
-			m_shootSkeleton.RefNode(internodeHandle).m_data.m_inhibitorSink += glm::max(0.0f, collectedInhibitor * shootGrowthParameters.m_apicalDominanceLoss);
+			m_shootSkeleton.RefNode(internodeHandle).m_data.m_inhibitorSink += glm::max(0.0f, collectedInhibitor * glm::clamp(1.0f - shootGrowthParameters.m_apicalDominanceLoss, 0.0f, 1.0f));
 		}
 		if (bud.m_type == BudType::Lateral && bud.m_status == BudStatus::Dormant) {
 			float flushProbability = bud.m_flushingRate;
@@ -647,7 +640,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 			}
 			else
 			{
-				flushProbability *= m_internodeDevelopmentRate * m_currentDeltaTime * shootGrowthParameters.m_internodeGrowthRate;
+				flushProbability *= internodeData.m_actualGrowthPotential * m_currentDeltaTime * shootGrowthParameters.m_internodeGrowthRate;
 			}
 			if (flushProbability >= glm::linearRand(0.0f, 1.0f)) {
 				graphChanged = true;
@@ -777,40 +770,36 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 	return graphChanged;
 }
 
-void TreeModel::CalculateGrowthPotential(const std::vector<NodeHandle>& sortedInternodeList, const ShootGrowthController& shootGrowthParameters)
+void TreeModel::AllocateShootVigor(const float shootFlux, const std::vector<NodeHandle>& sortedInternodeList, const ShootGrowthController& shootGrowthParameters)
 {
 	for (const auto& internodeHandle : sortedInternodeList)
 	{
 		auto& node = m_shootSkeleton.RefNode(internodeHandle);
-		node.m_data.m_growthPotential = 0.0f;
-		node.m_data.m_growthPotential += node.m_data.m_lightIntensity * m_currentDeltaTime * shootGrowthParameters.m_internodeGrowthRate;
+		node.m_data.m_desiredGrowthPotential = 0.0f;
+		node.m_data.m_desiredGrowthPotential += node.m_data.m_lightIntensity;
 	}
-}
 
-void TreeModel::AllocateShootVigor(const float vigor, const std::vector<NodeHandle>& sortedInternodeList, const ShootGrowthController& shootGrowthParameters)
-{
-	//Go from rooting point to all end nodes
 	const float apicalControl = shootGrowthParameters.m_apicalControl;
-	float minDistance = 0.0f;
+	float minDistance = FLT_MAX;
 	for (const auto& internodeHandle : sortedInternodeList)
 	{
 		const auto& node = m_shootSkeleton.PeekNode(internodeHandle);
 		minDistance = glm::min(minDistance, node.m_info.m_rootDistance);
 	}
 	if (minDistance == 0.0f) minDistance = 1.0f;
-	float totalPotential = 0.0f;
+	float totalResistance = 0.0f;
 	for (const auto& internodeHandle : sortedInternodeList)
 	{
 		auto& node = m_shootSkeleton.RefNode(internodeHandle);
 		node.m_data.m_pipeResistance = glm::pow(glm::max(1.0f, node.m_info.m_rootDistance / minDistance), apicalControl);
-		totalPotential += node.m_data.m_growthPotential / node.m_data.m_pipeResistance;
+		totalResistance += node.m_data.m_desiredGrowthPotential / node.m_data.m_pipeResistance;
 	}
-	const float pressure = vigor / totalPotential;
+	const float pressure = shootFlux / totalResistance;
 	for (const auto& internodeHandle : sortedInternodeList)
 	{
 		auto& node = m_shootSkeleton.RefNode(internodeHandle);
 		//You cannot give more than enough resources.
-		node.m_data.m_vigor += glm::min(pressure * node.m_data.m_pipeResistance, node.m_data.m_growthPotential);
+		node.m_data.m_actualGrowthPotential = glm::min(pressure * node.m_data.m_desiredGrowthPotential / node.m_data.m_pipeResistance, node.m_data.m_desiredGrowthPotential);
 	}
 }
 

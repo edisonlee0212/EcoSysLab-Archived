@@ -8,7 +8,7 @@ namespace EcoSysLab
 		/**
 		 * \brief The expected height gain for the tree for one year (max root distance).
 		 */
-		float m_growthRate;
+		float m_growthRate = 0.3;
 #pragma region Internode
 		/**
 		* \brief The mean and variance of the angle between the direction of a lateral bud and its parent shoot.
@@ -60,23 +60,23 @@ namespace EcoSysLab
 		/**
 		 * \brief The number of lateral buds an internode contains
 		 */
-		int m_lateralBudCount;
+		int m_lateralBudCount = 1;
 		/**
 		 * \brief The probability of death of apical bud each year.
 		 */
-		float m_apicalBudExtinctionRate{};
+		float m_apicalBudExtinctionRate = 0.0f;
 		/**
 		 * \brief The probability of death of lateral bud each year.
 		 */
-		float m_lateralBudFlushingRate{};
+		float m_lateralBudFlushingRate = 0.0f;
 		/**
 		 * \brief Flushing prob of apical bud related to the light intensity.
 		 */
-		float m_apicalBudLightingFactor;
+		float m_apicalBudLightingFactor = 1.0f;
 		/**
 		 * \brief Flushing prob of lateral bud related to the light intensity.
 		 */
-		float m_lateralBudLightingFactor;
+		float m_lateralBudLightingFactor = 1.0f;
 		/**
 		 * \brief Flushing prob of apical bud related to the space availability.
 		 */

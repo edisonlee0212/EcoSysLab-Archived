@@ -20,8 +20,7 @@ namespace EcoSysLab {
 
 	class TreeModel {
 #pragma region Tree Growth
-		void CalculateGrowthPotential(const std::vector<NodeHandle>& sortedInternodeList, const ShootGrowthController& shootGrowthParameters);
-		void AllocateShootVigor(float vigor, const std::vector<NodeHandle>& sortedInternodeList, const ShootGrowthController& shootGrowthParameters);
+		void AllocateShootVigor(float shootFlux, const std::vector<NodeHandle>& sortedInternodeList, const ShootGrowthController& shootGrowthParameters);
 
 		bool PruneInternodes(const glm::mat4& globalTransform, ClimateModel& climateModel, const ShootGrowthController& shootGrowthParameters);
 
@@ -62,7 +61,6 @@ namespace EcoSysLab {
 
 		float m_age = 0;
 		int m_ageInYear = 0;
-		float m_internodeDevelopmentRate = 1.0f;
 		float m_currentDeltaTime = 1.0f;
 
 		bool m_enableShoot = true;

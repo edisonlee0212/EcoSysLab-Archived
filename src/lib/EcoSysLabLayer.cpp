@@ -325,7 +325,7 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 	auto scene = GetScene();
 	bool simulate = false;
 	static bool autoTimeGrow = false;
-	static float targetTime = 0.f;
+	static float targetTime = 10.f;
 	if (ImGui::Begin("EcoSysLab Layer")) {
 		const std::vector<Entity>* treeEntities =
 			scene->UnsafeGetPrivateComponentOwnersList<Tree>();
@@ -408,7 +408,7 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 				ResetAllTrees(treeEntities);
 				ClearGeometries();
 				ClearGroundFruitAndLeaf();
-				targetTime = 0.0f;
+				targetTime = 10.0f;
 			}
 			ImGui::Text(("Simulated time: " + std::to_string(m_time) + " years").c_str());
 			ImGui::Text(("Simulated iteration: " + std::to_string(m_simulationSettings.m_iteration)).c_str());
@@ -418,13 +418,13 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 			ImGui::SameLine();
 			if (ImGui::Button("Month")) m_simulationSettings.m_deltaTime = 0.0822f;
 			ImGui::SameLine();
-			
+			ImGui::DragFloat("Delta time", &m_simulationSettings.m_deltaTime, 0.1f, m_time, 999);
 			
 			if (targetTime < m_time) targetTime = m_time;
-			ImGui::DragFloat("Target time", &targetTime, 0.1f, m_time, 999);
-			
-			if(m_time < targetTime) ImGui::Checkbox(("Grow until " + std::to_string(targetTime) + " years").c_str(), &autoTimeGrow);
 			if (autoTimeGrow && m_time >= targetTime) autoTimeGrow = false;
+			if(m_time < targetTime) ImGui::Checkbox("Grow", &autoTimeGrow);
+			ImGui::SameLine();
+			ImGui::DragFloat("years", &targetTime, 0.1f, m_time, 999);
 			
 			if (!autoTimeGrow && ImGui::Button("Grow 1 iteration")) {
 				simulate = true;

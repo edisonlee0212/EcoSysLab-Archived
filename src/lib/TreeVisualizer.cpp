@@ -319,11 +319,17 @@ TreeVisualizer::InspectInternode(
 		ImGui::InputFloat("Biomass", (float*)&internodeData.m_biomass, 1, 100, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
 
-		ImGui::InputFloat("Root distance", (float*)&internode.m_info.m_rootDistance, 1, 100, "%.3f",
+		ImGui::InputFloat("Root Direction", (float*)&internode.m_info.m_rootDistance, 1, 100, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
 		ImGui::InputFloat3("Light dir", (float*)&internodeData.m_lightDirection.x, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
-		ImGui::InputFloat("Growth Potential", (float*)&internodeData.m_lightIntensity, 1, 100, "%.3f",
+		ImGui::InputFloat("Light Intensity", (float*)&internodeData.m_lightIntensity, 1, 100, "%.3f",
+			ImGuiInputTextFlags_ReadOnly);
+		ImGui::InputFloat("Pipe Resistance", (float*)&internodeData.m_pipeResistance, 1, 100, "%.3f",
+			ImGuiInputTextFlags_ReadOnly);
+		ImGui::InputFloat("Desired Growth Potential", (float*)&internodeData.m_desiredGrowthPotential, 1, 100, "%.3f",
+			ImGuiInputTextFlags_ReadOnly);
+		ImGui::InputFloat("Actual Growth Potential", (float*)&internodeData.m_actualGrowthPotential, 1, 100, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
 
 		if (ImGui::DragFloat("Sagging", (float*)&internodeData.m_sagging)) {

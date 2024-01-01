@@ -1449,7 +1449,7 @@ void Tree::PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescrip
 				{
 					pruningProbability += 1.0f;
 				}
-				return pruningProbability;
+				return pruningProbability * deltaTime;
 			};
 
 

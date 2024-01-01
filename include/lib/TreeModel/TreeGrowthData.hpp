@@ -77,9 +77,10 @@ namespace EcoSysLab
 		float m_extraMass = 0.0f;
 		
 		float m_temperature = 0.0f;
-		float m_growthPotential = 0.0f;
+		float m_desiredGrowthPotential = 0.0f;
 		float m_pipeResistance = 0.0f;
 		float m_lightIntensity = 1.0f;
+		float m_actualGrowthPotential = 0.0f;
 		float m_vigor = 0.0f;
 		float m_spaceOccupancy = 0.0f;
 		glm::vec3 m_lightDirection = glm::vec3(0, 1, 0);
@@ -105,8 +106,6 @@ namespace EcoSysLab
 
 		std::vector<ReproductiveModule> m_droppedLeaves;
 		std::vector<ReproductiveModule> m_droppedFruits;
-
-		float m_vigor = 0;
 
 		glm::vec3 m_desiredMin = glm::vec3(FLT_MAX);
 		glm::vec3 m_desiredMax = glm::vec3(FLT_MIN);

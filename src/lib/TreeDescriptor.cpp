@@ -80,6 +80,7 @@ bool TreeDescriptor::OnInspectShootGrowthParameters(ShootGrowthParameters& treeG
 			if(treeGrowthParameters.m_lowBranchPruning > 0.0f) changed = ImGui::DragFloat("Low branch pruning thickness factor", &treeGrowthParameters.m_lowBranchPruningThicknessFactor, 0.01f) || changed;
 			changed = ImGui::DragFloat("Light pruning", &treeGrowthParameters.m_lightPruningFactor, 0.01f) || changed;
 			changed = ImGui::DragFloat("Thin branch pruning", &treeGrowthParameters.m_thicknessPruningFactor, 0.01f, 0.0f) || changed;
+			ImGui::TreePop();
 		}
 		changed = ImGui::DragInt("Leaf bud count", &treeGrowthParameters.m_leafBudCount, 1, 0, 3) || changed;
 		if (treeGrowthParameters.m_leafBudCount > 0 && ImGui::TreeNodeEx("Leaf"))
