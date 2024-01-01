@@ -84,7 +84,7 @@ namespace EcoSysLab
 		/**
 		* \brief How much inhibitor will shrink when going through the branch.
 		*/
-		float m_apicalDominanceDistanceFactor;
+		float m_apicalDominanceLoss;
 		
 #pragma endregion
 #pragma region Pruning

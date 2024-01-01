@@ -5,12 +5,11 @@ using namespace EvoEngine;
 namespace EcoSysLab
 {
 	struct ShootGrowthParameters {
-		
-#pragma region Internode
 		/**
-		 * \brief The expected elongation length for an internode for one year.
+		 * \brief The expected height gain for the tree for one year (max root distance).
 		 */
-		float m_internodeGrowthRate;
+		float m_growthRate;
+#pragma region Internode
 		/**
 		* \brief The mean and variance of the angle between the direction of a lateral bud and its parent shoot.
 		*/
@@ -97,7 +96,7 @@ namespace EcoSysLab
 		/**
 		* \brief How much inhibitor will shrink when going through the branch.
 		*/
-		float m_apicalDominanceDistanceFactor;
+		float m_apicalDominanceLoss;
 
 #pragma endregion
 #pragma region Pruning

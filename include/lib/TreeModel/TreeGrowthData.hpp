@@ -65,7 +65,7 @@ namespace EcoSysLab
 		bool m_isMaxChild = false;
 		bool m_lateral = false;
 		float m_startAge = 0;
-		float m_inhibitor = 0;
+		float m_inhibitorSink = 0;
 		glm::quat m_desiredLocalRotation = glm::vec3(0.0f);
 		glm::quat m_desiredGlobalRotation = glm::vec3(0.0f);
 		glm::vec3 m_desiredGlobalPosition = glm::vec3(0.0f);

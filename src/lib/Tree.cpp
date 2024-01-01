@@ -1359,7 +1359,7 @@ void Tree::PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescrip
 	const auto soil = m_soil.Get<Soil>();
 	const auto climate = m_climate.Get<Climate>();
 	{
-		m_shootGrowthController.m_internodeGrowthRate = treeDescriptor->m_shootGrowthParameters.m_internodeGrowthRate;
+		m_shootGrowthController.m_internodeGrowthRate = treeDescriptor->m_shootGrowthParameters.m_growthRate / treeDescriptor->m_shootGrowthParameters.m_internodeLength;
 		
 		m_shootGrowthController.m_branchingAngle = [=](const Node<InternodeGrowthData>& internode)
 			{
@@ -1425,7 +1425,7 @@ void Tree::PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescrip
 				{
 					bud.m_flushingRate = shootGrowthParameters.m_lateralBudFlushingRate;
 					bud.m_flushingRate *= glm::pow(internode.m_data.m_lightIntensity, shootGrowthParameters.m_lateralBudLightingFactor);
-					if (internode.m_data.m_inhibitor > 0.0f) bud.m_flushingRate *= glm::exp(-internode.m_data.m_inhibitor);
+					if (internode.m_data.m_inhibitorSink > 0.0f) bud.m_flushingRate *= glm::exp(-internode.m_data.m_inhibitorSink);
 				}
 			};
 		m_shootGrowthController.m_apicalControl = treeDescriptor->m_shootGrowthParameters.m_apicalControl;
@@ -1433,7 +1433,7 @@ void Tree::PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescrip
 			{
 				return treeDescriptor->m_shootGrowthParameters.m_apicalDominance * internode.m_data.m_lightIntensity;
 			};
-		m_shootGrowthController.m_apicalDominanceDistanceFactor = treeDescriptor->m_shootGrowthParameters.m_apicalDominanceDistanceFactor;
+		m_shootGrowthController.m_apicalDominanceLoss = treeDescriptor->m_shootGrowthParameters.m_apicalDominanceLoss;
 
 		m_shootGrowthController.m_lowBranchPruning = treeDescriptor->m_shootGrowthParameters.m_lowBranchPruning;
 		m_shootGrowthController.m_lowBranchPruningThicknessFactor = treeDescriptor->m_shootGrowthParameters.m_lowBranchPruningThicknessFactor;
