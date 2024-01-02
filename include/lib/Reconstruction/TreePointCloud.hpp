@@ -13,8 +13,10 @@ namespace EcoSysLab {
 	struct ScatteredPoint {
 		PointHandle m_handle = -1;
 		std::vector<PointHandle> m_neighborScatterPoints;
+		std::vector<std::pair<float, BranchHandle>> m_p3;
 
-		std::vector<std::pair<float, BranchHandle>> m_neighborBranchP3s;
+		//For reversed branch
+		std::vector<std::pair<float, BranchHandle>> m_p0;
 		glm::vec3 m_position = glm::vec3(0.0f);
 	};
 	struct AllocatedPoint {
@@ -41,10 +43,14 @@ namespace EcoSysLab {
 		float m_branchThickness = 0.0f;
 		std::vector<PointHandle> m_allocatedPoints;
 
-		std::vector<std::pair<float, PointHandle>> m_neighborScatterPointP0;
+		std::vector<std::pair<float, PointHandle>> m_pointsToP3;
+		std::unordered_map<BranchHandle, float> m_p3ToP0;
 
-		std::unordered_map<BranchHandle, float> m_neighborBranchP3s;
-
+		//For reversed branch
+		std::vector<std::pair<float, PointHandle>> m_pointsToP0;
+		std::unordered_map<BranchHandle, float> m_p3ToP3;
+		std::unordered_map<BranchHandle, float> m_p0ToP0;
+		std::unordered_map<BranchHandle, float> m_p0ToP3;
 	};
 
 	struct OperatingBranch {
@@ -52,6 +58,9 @@ namespace EcoSysLab {
 
 		TreePartHandle m_treePartHandle = -1;
 		BranchHandle m_handle = -1;
+
+		BranchHandle m_reversedBranchHandle = -1;
+
 		BezierCurve m_bezierCurve;
 		float m_thickness = 0.0f;
 
@@ -76,6 +85,8 @@ namespace EcoSysLab {
 	};
 
 	struct ConnectivityGraphSettings {
+		bool m_reverseConnection = false;
+
 		float m_pointCheckRadius = 0.02f;
 		bool m_zigzagCheck = true;
 		float m_zigzagBranchShortening = 0.1f;
@@ -102,6 +113,8 @@ namespace EcoSysLab {
 	};
 
 	struct ReconstructionSettings {
+		
+
 		float m_internodeLength = 0.03f;
 		float m_minHeight = 0.3f;
 		float m_minimumTreeDistance = 0.1f;
@@ -142,7 +155,7 @@ namespace EcoSysLab {
 	typedef Skeleton<ReconstructionSkeletonData, ReconstructionFlowData, ReconstructionNodeData> ReconstructionSkeleton;
 
 	class TreePointCloud : public IPrivateComponent {
-		bool DirectConnectionCheck(const BezierCurve& parentCurve, const BezierCurve& childCurve);
+		bool DirectConnectionCheck(const BezierCurve& parentCurve, const BezierCurve& childCurve, bool reverse);
 
 		static void FindPoints(const glm::vec3& position, VoxelGrid<std::vector<PointData>>& pointVoxelGrid, float radius,
 		                       const std::function<void(const PointData& voxel)>& func);
@@ -189,6 +202,7 @@ namespace EcoSysLab {
 		std::vector<std::pair<glm::vec3, glm::vec3>> m_scatterPointToBranchStartConnections;
 		std::vector<std::pair<glm::vec3, glm::vec3>> m_scatterPointsConnections;
 		std::vector<std::pair<glm::vec3, glm::vec3>> m_candidateBranchConnections;
+		std::vector<std::pair<glm::vec3, glm::vec3>> m_reversedCandidateBranchConnections;
 		std::vector<std::pair<glm::vec3, glm::vec3>> m_filteredBranchConnections;
 		std::vector<std::pair<glm::vec3, glm::vec3>> m_branchConnections;
 		void EstablishConnectivityGraph();
