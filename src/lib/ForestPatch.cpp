@@ -71,7 +71,7 @@ void ForestPatch::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	static int historyIteration = 30;
 	ImGui::Checkbox("Enable history", &enableHistory);
 	if (enableHistory) ImGui::DragInt("History iteration", &historyIteration, 1, 1, 999);
-	if (ImGui::TreeNode("Grid...")) {
+	if (ImGui::TreeNodeEx("Grid...", ImGuiTreeNodeFlags_DefaultOpen)) {
 		ImGui::DragInt2("Grid size", &gridSize.x, 1, 0, 100);
 		ImGui::DragFloat("Grid distance", &gridDistance, 0.1f, 0.0f, 100.0f);
 		ImGui::DragFloat("Random shift", &randomShift, 0.01f, 0.0f, 0.5f);
@@ -80,7 +80,7 @@ void ForestPatch::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 		}
 		ImGui::TreePop();
 	}
-	/*
+	
 	FileUtils::OpenFolder("Parameters sample", [&](const std::filesystem::path& path)
 		{
 			int index = 0;
@@ -94,7 +94,7 @@ void ForestPatch::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 			}
 			for(const auto& i : std::filesystem::recursive_directory_iterator(path))
 			{
-				if(i.is_regular_file() && i.path().extension().string() == ".fp")
+				if(i.is_regular_file() && i.path().extension().string() == ".td")
 				{
 					const auto treeDescriptor = 
 						std::dynamic_pointer_cast<TreeDescriptor>(ProjectManager::GetOrCreateAsset(ProjectManager::GetPathRelativeToProject(i.path())));
@@ -107,13 +107,13 @@ void ForestPatch::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 				}
 			}
 		}, false);
-	*/
-	FileUtils::OpenFolder("Assign Tree Descriptors", [&](const std::filesystem::path& path)
+	
+	FileUtils::OpenFolder("Randomly assign tree descriptors", [&](const std::filesystem::path& path)
 		{
 			ApplyTreeDescriptors(path);
 		}, false);
 	static AssetRef treeDescriptorRef;
-	if (editorLayer->DragAndDropButton<TreeDescriptor>(treeDescriptorRef, "Apply all with treeDescriptor...", true))
+	if (editorLayer->DragAndDropButton<TreeDescriptor>(treeDescriptorRef, "Apply all with tree descriptor...", true))
 	{
 		if (const auto treeDescriptor = treeDescriptorRef.Get<TreeDescriptor>()) {
 			ApplyTreeDescriptor(treeDescriptor);

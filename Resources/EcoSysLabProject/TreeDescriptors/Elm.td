@@ -1,11 +1,11 @@
 m_shootGrowthParameters:
-  m_growthRate: 0.230000004
+  m_growthRate: 0.200000003
   m_branchingAngleMeanVariance: [30, 2]
   m_rollAngleMeanVariance: [30, 2]
   m_apicalAngleVariance: 2
   m_gravitropism: 0.0350000001
   m_phototropism: 0
-  m_saggingFactorThicknessReductionMax: [0.00249999994, 2, 0.100000001]
+  m_saggingFactorThicknessReductionMax: [0.00200000009, 2, 0.100000001]
   m_internodeLength: 0.0299999993
   m_internodeLengthThicknessFactor: 0.150000006
   m_endNodeThickness: 0.00200000009

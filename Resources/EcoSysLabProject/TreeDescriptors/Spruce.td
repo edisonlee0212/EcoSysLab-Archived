@@ -9,7 +9,7 @@ m_shootGrowthParameters:
   m_internodeLength: 0.0299999993
   m_internodeLengthThicknessFactor: 0.150000006
   m_endNodeThickness: 0.00200000009
-  m_thicknessAccumulationFactor: 0.449999988
+  m_thicknessAccumulationFactor: 0.400000006
   m_thicknessAccumulateAgeFactor: 0
   m_internodeShadowFactor: 0.0299999993
   m_lateralBudCount: 2
