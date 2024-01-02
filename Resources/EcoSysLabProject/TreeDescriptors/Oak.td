@@ -1,30 +1,32 @@
 m_shootGrowthParameters:
   m_growthRate: 0.25
-  m_branchingAngleMeanVariance: [60, 1]
+  m_branchingAngleMeanVariance: [45, 3]
   m_rollAngleMeanVariance: [30, 2]
-  m_apicalAngleVariance: 2
-  m_gravitropism: 0.0500000007
+  m_apicalAngleVariance: 4
+  m_gravitropism: 0.0450000018
   m_phototropism: 0
-  m_saggingFactorThicknessReductionMax: [0.00100000005, 3, 0.300000012]
+  m_saggingFactorThicknessReductionMax: [0.000600000028, 2, 0.100000001]
   m_internodeLength: 0.0299999993
   m_internodeLengthThicknessFactor: 0.150000006
   m_endNodeThickness: 0.00200000009
   m_thicknessAccumulationFactor: 0.449999988
   m_thicknessAccumulateAgeFactor: 0
+  m_internodeShadowFactor: 0.0299999993
   m_lateralBudCount: 1
   m_apicalBudExtinctionRate: 0
-  m_lateralBudFlushingRate: 0.0500000007
+  m_lateralBudFlushingRate: 0.5
   m_apicalBudLightingFactor: 1
-  m_lateralBudLightingFactor: 0
+  m_lateralBudLightingFactor: 1
   m_apicalBudSpaceFactor: 1
   m_lateralBudSpaceFactor: 1
-  m_apicalControl: 0.200000003
-  m_apicalDominance: 0
-  m_apicalDominanceLoss: 0.109999999
-  m_lowBranchPruning: 0.200000003
+  m_pipeResistance: 0
+  m_apicalControl: 1.25
+  m_apicalDominance: 0.25
+  m_apicalDominanceLoss: 0.0799999982
+  m_lowBranchPruning: 0.100000001
   m_lowBranchPruningThicknessFactor: 0.5
-  m_lightPruningFactor: 12
-  m_thicknessPruningFactor: 0.00200000009
+  m_lightPruningFactor: 1
+  m_thicknessPruningFactor: 0
   m_leafBudCount: 1
   m_leafGrowthRate: 18
   m_leafBudFlushingProbabilityTemperatureRange: [1, 1, 45, 60]
@@ -47,7 +49,7 @@ m_shootGrowthParameters:
 m_foliageParameters:
   m_leafSize: [0.0299999993, 0.0500000007]
   m_leafColor: [0.596078455, 0.796078444, 0]
-  m_leafCountPerInternode: 4
+  m_leafCountPerInternode: 8
   m_positionVariance: 0.25
   m_rotationVariance: 1
   m_branchingAngle: 30

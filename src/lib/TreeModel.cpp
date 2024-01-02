@@ -874,7 +874,8 @@ void TreeModel::AllocateShootVigor(const float shootFlux, const std::vector<Node
 		totalDesiredGrowthRate += node.m_data.m_desiredGrowthRate;
 	}
 
-	const float pressure = glm::max(1.0f, shootFlux / totalDesiredGrowthRate);
+	float pressure = glm::min(1.0f, shootFlux / totalDesiredGrowthRate);
+	pressure = 1.0f;
 	for (const auto& internodeHandle : sortedInternodeList)
 	{
 		auto& node = m_shootSkeleton.RefNode(internodeHandle);
