@@ -6,7 +6,7 @@ m_shootGrowthParameters:
   m_gravitropism: 0.00999999978
   m_phototropism: 0.00499999989
   m_saggingFactorThicknessReductionMax: [0.000500000024, 2, 0.5]
-  m_internodeLength: 0.0199999996
+  m_internodeLength: 0.0299999993
   m_internodeLengthThicknessFactor: 0.150000006
   m_endNodeThickness: 0.00200000009
   m_thicknessAccumulationFactor: 0.449999988
@@ -20,7 +20,7 @@ m_shootGrowthParameters:
   m_apicalBudSpaceFactor: 1
   m_lateralBudSpaceFactor: 1
   m_pipeResistance: 0
-  m_apicalControl: 1.05999994
+  m_apicalControl: 0.970000029
   m_apicalDominance: 0.5
   m_apicalDominanceLoss: 0.0199999996
   m_lowBranchPruning: 0.100000001

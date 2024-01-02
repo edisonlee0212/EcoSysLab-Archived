@@ -99,7 +99,7 @@ void ForestPatch::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 					const auto treeDescriptor = 
 						std::dynamic_pointer_cast<TreeDescriptor>(ProjectManager::GetOrCreateAsset(ProjectManager::GetPathRelativeToProject(i.path())));
 					m_treeInfos.emplace_back();
-					glm::vec3 position = glm::vec3(5.0f * (index ), 0.0f, index * 5.0f);
+					glm::vec3 position = glm::vec3(5.f * index, 0.0f, 0.0f);
 					if (heightField) position.y = heightField->GetValue({ position.x, position.z }) - 0.05f;
 					m_treeInfos.back().m_globalTransform.SetPosition(position);
 					m_treeInfos.back().m_treeDescriptor = treeDescriptor;
