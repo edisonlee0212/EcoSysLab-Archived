@@ -334,6 +334,10 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 		editorLayer->DragAndDropButton<Climate>(m_climateHolder, "Climate");
 		if (treeEntities && !treeEntities->empty()) {
 			if (ImGui::TreeNode("Tree Growth Settings")){
+				if (ImGui::Button("Grow weekly")) m_simulationSettings.m_deltaTime = 0.01918f;
+				ImGui::SameLine();
+				if (ImGui::Button("Grow monthly")) m_simulationSettings.m_deltaTime = 0.0822f;
+				ImGui::SameLine();
 				ImGui::DragFloat("Delta time", &m_simulationSettings.m_deltaTime, 0.00001f, 0, 1, "%.5f");
 				ImGui::Checkbox("Auto clear fruit and leaves", &m_simulationSettings.m_autoClearFruitAndLeaves);
 				ImGui::DragFloat("Crown shyness", &m_simulationSettings.m_crownShynessDistance, 0.01f, 0.0f, 1.0f);
@@ -408,26 +412,18 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 			}
 			ImGui::Text(("Simulated time: " + std::to_string(m_time) + " years").c_str());
 			ImGui::Text(("Simulated iteration: " + std::to_string(m_simulationSettings.m_iteration)).c_str());
-			if (ImGui::Button("Day")) m_simulationSettings.m_deltaTime = 0.00274f;
-			ImGui::SameLine();
-			if (ImGui::Button("Week")) m_simulationSettings.m_deltaTime = 0.01918f;
-			ImGui::SameLine();
-			if (ImGui::Button("Month")) m_simulationSettings.m_deltaTime = 0.0822f;
-			ImGui::SameLine();
-			ImGui::DragFloat("Delta time", &m_simulationSettings.m_deltaTime, 0.1f, m_time, 999);
+			
 			
 			if (targetTime < m_time) targetTime = m_time;
 			if (autoTimeGrow && m_time >= targetTime) autoTimeGrow = false;
-			if(m_time < targetTime) ImGui::Checkbox("Grow", &autoTimeGrow);
-			ImGui::SameLine();
-			ImGui::DragFloat("years", &targetTime, 0.1f, m_time, 999);
-			
-			if (!autoTimeGrow && ImGui::Button("Grow 1 iteration")) {
+
+			ImGui::DragInt("target nodes", &m_simulationSettings.m_maxNodeCount, 500, 0, INT_MAX);
+			ImGui::DragFloat("target years", &targetTime, 0.1f, m_time, 999);
+			ImGui::Checkbox("Grow", &autoTimeGrow);
+			if (ImGui::Button("Grow 1 iteration")) {
 				simulate = true;
 			}
-			ImGui::DragInt("Max node limit", &m_simulationSettings.m_maxNodeCount, 500, 0, INT_MAX);
 
-			
 			if (!m_simulationSettings.m_autoClearFruitAndLeaves && ImGui::Button("Clear ground leaves and fruits")) {
 				ClearGroundFruitAndLeaf();
 			}
