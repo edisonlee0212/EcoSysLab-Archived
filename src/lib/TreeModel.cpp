@@ -133,7 +133,7 @@ void TreeModel::ApplyTropism(const glm::vec3& targetDir, float tropism, glm::qua
 	ApplyTropism(targetDir, tropism, front, up);
 	rotation = glm::quatLookAt(front, up);
 }
-
+/*
 bool TreeModel::Grow(float deltaTime, const glm::mat4& globalTransform, ClimateModel& climateModel,
 	const ShootGrowthController& shootGrowthController)
 {
@@ -142,17 +142,14 @@ bool TreeModel::Grow(float deltaTime, const glm::mat4& globalTransform, ClimateM
 
 	m_currentDeltaTime = deltaTime;
 	bool treeStructureChanged = false;
-	bool rootStructureChanged = false;
 	if (!m_initialized) {
 		Initialize(shootGrowthController);
 		treeStructureChanged = true;
-		rootStructureChanged = true;
 	}
 	//Collect light from branches.
 
 	m_shootSkeleton.SortLists();
-	const auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
-	CollectShootFlux(globalTransform, climateModel, sortedInternodeList, shootGrowthController);
+	CalculateShootFlux(globalTransform, climateModel, shootGrowthController);
 
 	//Grow branches and set up nutrient requirements for next iteration.
 	if (m_currentDeltaTime != 0.0f
@@ -168,32 +165,54 @@ bool TreeModel::Grow(float deltaTime, const glm::mat4& globalTransform, ClimateM
 
 	m_iteration++;
 	m_age += m_currentDeltaTime;
-	return treeStructureChanged || rootStructureChanged;
+	return treeStructureChanged;
 }
-
+*/
 bool TreeModel::GrowSubTree(const float deltaTime, const NodeHandle baseInternodeHandle, const glm::mat4& globalTransform, ClimateModel& climateModel,
-	const ShootGrowthController& shootGrowthController)
+	const ShootGrowthController& shootGrowthController, 
+	const bool pruning, const float overrideGrowthRate)
 {
 	m_currentDeltaTime = deltaTime;
 	bool treeStructureChanged = false;
-	m_shootSkeleton.SortLists();
-	bool anyBranchGrown = false;
-	const auto sortedInternodeList = m_shootSkeleton.GetSubTree(baseInternodeHandle);
+	if (!m_initialized) {
+		Initialize(shootGrowthController);
+		treeStructureChanged = true;
+	}
+	if (m_shootSkeleton.RefRawNodes().size() <= baseInternodeHandle) return false;
 
-	CollectShootFlux(globalTransform, climateModel, sortedInternodeList, shootGrowthController);
+	m_shootSkeleton.SortLists();
+	CalculateShootFlux(globalTransform, climateModel, shootGrowthController);
+	if (pruning) {
+		const bool anyBranchPruned = PruneInternodes(globalTransform, climateModel, shootGrowthController);
+		if (anyBranchPruned) m_shootSkeleton.SortLists();
+		treeStructureChanged = treeStructureChanged || anyBranchPruned;
+	}
+	bool anyBranchGrown = false;
+	const auto sortedSubTreeInternodeList = m_shootSkeleton.GetSubTree(baseInternodeHandle);
 
 	if (!m_treeGrowthSettings.m_useSpaceColonization) {
-		float vigor = 0.0f;
-		AllocateShootVigor(vigor, sortedInternodeList, shootGrowthController);
+		const auto totalShootFlux = CollectShootFlux(sortedSubTreeInternodeList);
+		const float requiredVigor = CalculateDesiredGrowthRate(sortedSubTreeInternodeList, shootGrowthController);
+		float growthRate = totalShootFlux.m_value / requiredVigor;
+		if (overrideGrowthRate > 0.0f) growthRate = overrideGrowthRate;
+		AdjustGrowthRate(sortedSubTreeInternodeList, growthRate);
 	}
-	for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); ++it) {
+	for (auto it = sortedSubTreeInternodeList.rbegin(); it != sortedSubTreeInternodeList.rend(); ++it) {
 		const bool graphChanged = GrowInternode(climateModel, *it, shootGrowthController);
 		anyBranchGrown = anyBranchGrown || graphChanged;
 	}
 	if (anyBranchGrown) m_shootSkeleton.SortLists();
 	treeStructureChanged = treeStructureChanged || anyBranchGrown;
 	ShootGrowthPostProcess(globalTransform, climateModel, shootGrowthController);
+
+	const int year = climateModel.m_time;
+	if (year != m_ageInYear)
+	{
+		ResetReproductiveModule();
+		m_ageInYear = year;
+	}
 	m_iteration++;
+	m_age += m_currentDeltaTime;
 	return treeStructureChanged;
 }
 
@@ -220,11 +239,9 @@ void TreeModel::Initialize(const ShootGrowthController& shootGrowthController) {
 	m_initialized = true;
 }
 
-void TreeModel::CollectShootFlux(const glm::mat4& globalTransform, ClimateModel& climateModel, const std::vector<NodeHandle>& sortedSubTreeInternodeList,
-	const ShootGrowthController& shootGrowthController)
+void TreeModel::CalculateShootFlux(const glm::mat4& globalTransform, ClimateModel& climateModel, const ShootGrowthController& shootGrowthController)
 {
 	auto& shootData = m_shootSkeleton.m_data;
-	shootData.m_shootFlux.m_value = 0.0f;
 	shootData.m_maxMarkerCount = 0;
 	const auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
 	if (m_treeGrowthSettings.m_useSpaceColonization)
@@ -287,7 +304,7 @@ void TreeModel::CollectShootFlux(const glm::mat4& globalTransform, ClimateModel&
 			);
 		}
 	}
-	for (const auto& internodeHandle : sortedSubTreeInternodeList) {
+	for (const auto& internodeHandle : sortedInternodeList) {
 		auto& internode = m_shootSkeleton.RefNode(internodeHandle);
 		auto& internodeData = internode.m_data;
 		auto& internodeInfo = internode.m_info;
@@ -300,13 +317,23 @@ void TreeModel::CollectShootFlux(const glm::mat4& globalTransform, ClimateModel&
 		}
 		const glm::vec3 position = globalTransform * glm::vec4(internodeInfo.m_globalPosition, 1.0f);
 		internodeData.m_lightIntensity = climateModel.m_environmentGrid.IlluminationEstimation(position, internodeData.m_lightDirection);
-		m_shootSkeleton.m_data.m_shootFlux.m_value += internodeData.m_lightIntensity;
 		if (internodeData.m_lightIntensity <= glm::epsilon<float>())
 		{
 			internodeData.m_lightDirection = glm::normalize(internodeInfo.m_globalDirection);
 		}
 		internodeData.m_spaceOccupancy = climateModel.m_environmentGrid.m_voxel.Peek(position).m_totalBiomass;
 	}
+}
+ShootFlux TreeModel::CollectShootFlux(const std::vector<NodeHandle>& sortedInternodeList)
+{
+	ShootFlux totalShootFlux;
+	totalShootFlux.m_value = 0.0f;
+	for (const auto& internodeHandle : sortedInternodeList) {
+		auto& internode = m_shootSkeleton.PeekNode(internodeHandle);
+		const auto& internodeData = internode.m_data;
+		totalShootFlux.m_value += internodeData.m_lightIntensity;
+	}
+	return totalShootFlux;
 }
 
 bool TreeModel::GrowShoots(const glm::mat4& globalTransform, ClimateModel& climateModel, const ShootGrowthController& shootGrowthController) {
@@ -318,7 +345,10 @@ bool TreeModel::GrowShoots(const glm::mat4& globalTransform, ClimateModel& clima
 	bool anyBranchGrown = false;
 	const auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
 	if (!m_treeGrowthSettings.m_useSpaceColonization) {
-		AllocateShootVigor(m_shootSkeleton.m_data.m_shootFlux.m_value, sortedInternodeList, shootGrowthController);
+		const auto totalShootFlux = CollectShootFlux(sortedInternodeList);
+		const float requiredVigor = CalculateDesiredGrowthRate(sortedInternodeList, shootGrowthController);
+		float growthRate = totalShootFlux.m_value / requiredVigor;
+		AdjustGrowthRate(sortedInternodeList, growthRate);
 	}
 	for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); ++it) {
 		const bool graphChanged = GrowInternode(climateModel, *it, shootGrowthController);
@@ -814,7 +844,19 @@ void TreeModel::CalculateLevel()
 	}
 }
 
-void TreeModel::AllocateShootVigor(const float shootFlux, const std::vector<NodeHandle>& sortedInternodeList, const ShootGrowthController& shootGrowthController)
+
+void TreeModel::AdjustGrowthRate(const std::vector<NodeHandle>& sortedInternodeList, float factor)
+{
+	const float clampedFactor = glm::clamp(factor, 0.0f, 1.0f);
+	for (const auto& internodeHandle : sortedInternodeList)
+	{
+		auto& node = m_shootSkeleton.RefNode(internodeHandle);
+		//You cannot give more than enough resources.
+		node.m_data.m_growthRate = clampedFactor * node.m_data.m_desiredGrowthRate;
+	}
+}
+
+float TreeModel::CalculateDesiredGrowthRate(const std::vector<NodeHandle>& sortedInternodeList, const ShootGrowthController& shootGrowthController)
 {
 	const float apicalControl = shootGrowthController.m_apicalControl;
 	const float pipeResistanceFactor = shootGrowthController.m_pipeResistance;
@@ -871,15 +913,8 @@ void TreeModel::AllocateShootVigor(const float shootFlux, const std::vector<Node
 		node.m_data.m_desiredGrowthRate /= maximumGrowthRate;
 		totalDesiredGrowthRate += node.m_data.m_desiredGrowthRate;
 	}
-
-	float pressure = glm::min(1.0f, shootFlux / totalDesiredGrowthRate);
-	pressure = 1.0f;
-	for (const auto& internodeHandle : sortedInternodeList)
-	{
-		auto& node = m_shootSkeleton.RefNode(internodeHandle);
-		//You cannot give more than enough resources.
-		node.m_data.m_growthRate = pressure * node.m_data.m_desiredGrowthRate;
-	}
+	return totalDesiredGrowthRate;
+	
 }
 
 void TreeModel::CalculateThickness(const ShootGrowthController& shootGrowthController) {

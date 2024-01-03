@@ -11,7 +11,6 @@ namespace EcoSysLab {
 	class Tree : public IPrivateComponent {
 		friend class EcoSysLabLayer;
 		void PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescriptor);
-		bool TryGrowSubTree(NodeHandle internodeHandle, float deltaTime);
 		ShootGrowthController m_shootGrowthController{};
 	public:
 		static void SerializeTreeGrowthSettings(const TreeGrowthSettings& treeGrowthSettings, YAML::Emitter& out);
@@ -21,7 +20,7 @@ namespace EcoSysLab {
 		std::shared_ptr<Mesh> GenerateBranchMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings);
 		std::shared_ptr<Mesh> GenerateFoliageMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings);
 		void ExportOBJ(const std::filesystem::path& path, const TreeMeshGeneratorSettings& meshGeneratorSettings);
-		bool TryGrow(float deltaTime);
+		bool TryGrow(float deltaTime, NodeHandle baseInternodeHandle, bool pruning, float overrideGrowthRate);
 		[[nodiscard]] bool ParseBinvox(const std::filesystem::path& filePath, VoxelGrid<TreeOccupancyGridBasicData>& voxelGrid, float voxelSize = 1.0f);
 
 		void Reset();

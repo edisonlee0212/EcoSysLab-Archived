@@ -387,8 +387,8 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 							if (const auto climate = m_climateHolder.Get<Climate>()) {
 								for (const auto& i : *treeEntities) {
 									const auto tree = scene->GetOrSetPrivateComponent<Tree>(i).lock();
-									tree->m_treeModel.CollectShootFlux(scene->GetDataComponent<GlobalTransform>(i).m_value,
-										climate->m_climateModel, tree->m_treeModel.RefShootSkeleton().RefSortedNodeList(), tree->m_shootGrowthController);
+									tree->m_treeModel.CalculateShootFlux(scene->GetDataComponent<GlobalTransform>(i).m_value,
+										climate->m_climateModel, tree->m_shootGrowthController);
 									tree->m_treeVisualizer.m_needShootColorUpdate = true;
 								}
 							}
@@ -497,7 +497,7 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 		}
 		if (scene->IsEntityValid(m_selectedTree)) {
 			auto tree = scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock();
-			tree->m_treeVisualizer.m_iteration = tree->m_treeModel.CurrentIteration();
+			tree->m_treeVisualizer.m_checkpointIteration = tree->m_treeModel.CurrentIteration();
 			tree->m_treeVisualizer.m_needUpdate = true;
 		}
 	}
@@ -1154,50 +1154,18 @@ void EcoSysLabLayer::Simulate(float deltaTime) {
 			soil->m_soilModel.Irrigation();
 			soil->m_soilModel.Step();
 		}
-		auto& estimator = climate->m_climateModel.m_environmentGrid;
-		estimator.m_settings = m_simulationSettings.m_shadowEstimationSettings;
-		auto minBound = estimator.m_voxel.GetMinBound();
-		auto maxBound = estimator.m_voxel.GetMaxBound();
-		bool boundChanged = false;
-		for (const auto& treeEntity : *treeEntities)
-		{
-			if (!scene->IsEntityEnabled(treeEntity)) continue;
-			auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
-			if (!tree->IsEnabled()) continue;
-			const auto globalTransform = scene->GetDataComponent<GlobalTransform>(treeEntity).m_value;
-			const glm::vec3 currentMinBound = globalTransform * glm::vec4(tree->m_treeModel.RefShootSkeleton().m_min, 1.0f);
-			const glm::vec3 currentMaxBound = globalTransform * glm::vec4(tree->m_treeModel.RefShootSkeleton().m_max, 1.0f);
 
-			if (currentMinBound.x <= minBound.x || currentMinBound.y <= minBound.y || currentMinBound.z <= minBound.z
-				|| currentMaxBound.x >= maxBound.x || currentMaxBound.y >= maxBound.y || currentMaxBound.z >= maxBound.z) {
-				minBound = glm::min(currentMinBound - glm::vec3(1.0f, 0.1f, 1.0f), minBound);
-				maxBound = glm::max(currentMaxBound + glm::vec3(1.0f), maxBound);
-				boundChanged = true;
-			}
-			if (!tree->m_climate.Get<Climate>()) tree->m_climate = climate;
-			if (!tree->m_soil.Get<Soil>()) tree->m_soil = soil;
-			tree->m_treeModel.m_crownShynessDistance = m_simulationSettings.m_crownShynessDistance;
-		}
-		if (boundChanged) estimator.m_voxel.Initialize(estimator.m_voxelSize, minBound, maxBound);
-		estimator.m_voxel.Reset();
-		for (const auto& treeEntity : *treeEntities)
-		{
-			if (!scene->IsEntityEnabled(treeEntity)) continue;
-			auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
-			if (!tree->IsEnabled()) continue;
-			tree->RegisterVoxel();
-		}
-
-		estimator.ShadowPropagation();
-
+		climate->PrepareForGrowth();
+		std::vector<bool> grownStat{};
+		grownStat.resize(Jobs::Workers().Size());
 		std::vector<std::shared_future<void>> results;
-		Jobs::ParallelFor(treeEntities->size(), [&](unsigned i) {
+		Jobs::ParallelFor(treeEntities->size(), [&](unsigned i, unsigned threadIndex) {
 			const auto treeEntity = treeEntities->at(i);
 			if (!scene->IsEntityEnabled(treeEntity)) return;
 			const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
 			if (!tree->IsEnabled()) return;
 			if(m_simulationSettings.m_maxNodeCount > 0 && tree->m_treeModel.RefShootSkeleton().RefSortedNodeList().size() >= m_simulationSettings.m_maxNodeCount) return;
-			tree->TryGrow(deltaTime);
+			grownStat[threadIndex] = tree->TryGrow(deltaTime, 0, true, -1);
 			}, results);
 		for (auto& i : results) i.wait();
 
@@ -1251,29 +1219,36 @@ void EcoSysLabLayer::Simulate(float deltaTime) {
 		}
 		m_lastUsedTime = Times::Now() - time;
 		m_totalTime += m_lastUsedTime;
-		m_needFullFlowUpdate = true;
 
-		int totalInternodeSize = 0;
-		int totalFlowSize = 0;
-		int totalRootNodeSize = 0;
-		int totalRootFlowSize = 0;
-		int totalLeafSize = 0;
-		int totalFruitSize = 0;
-		for (int i = 0; i < treeEntities->size(); i++) {
-			auto treeEntity = treeEntities->at(i);
-			auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
-			auto& treeModel = tree->m_treeModel;
-			totalInternodeSize += treeModel.RefShootSkeleton().RefSortedNodeList().size();
-			totalFlowSize += treeModel.RefShootSkeleton().RefSortedFlowList().size();
-			totalLeafSize += treeModel.GetLeafCount();
-			totalFruitSize += treeModel.GetFruitCount();
+		for(int i = 0; i < grownStat.size(); i++)
+		{
+			if(grownStat[i])
+			{
+				m_needFullFlowUpdate = true;
+
+				int totalInternodeSize = 0;
+				int totalFlowSize = 0;
+				int totalRootNodeSize = 0;
+				int totalRootFlowSize = 0;
+				int totalLeafSize = 0;
+				int totalFruitSize = 0;
+				for (int i = 0; i < treeEntities->size(); i++) {
+					auto treeEntity = treeEntities->at(i);
+					auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
+					auto& treeModel = tree->m_treeModel;
+					totalInternodeSize += treeModel.RefShootSkeleton().RefSortedNodeList().size();
+					totalFlowSize += treeModel.RefShootSkeleton().RefSortedFlowList().size();
+					totalLeafSize += treeModel.GetLeafCount();
+					totalFruitSize += treeModel.GetFruitCount();
+				}
+				m_internodeSize = totalInternodeSize;
+				m_shootStemSize = totalFlowSize;
+				m_rootNodeSize = totalRootNodeSize;
+				m_rootStemSize = totalRootFlowSize;
+				m_leafSize = totalLeafSize;
+				m_fruitSize = totalFruitSize;
+			}
 		}
-		m_internodeSize = totalInternodeSize;
-		m_shootStemSize = totalFlowSize;
-		m_rootNodeSize = totalRootNodeSize;
-		m_rootStemSize = totalRootFlowSize;
-		m_leafSize = totalLeafSize;
-		m_fruitSize = totalFruitSize;
 	}
 }
 

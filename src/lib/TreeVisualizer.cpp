@@ -48,7 +48,7 @@ bool TreeVisualizer::DrawInternodeInspectionGui(
 				treeModel.PruneInternode(child);
 
 				treeSkeleton.SortLists();
-				m_iteration = treeModel.CurrentIteration();
+				m_checkpointIteration = treeModel.CurrentIteration();
 				modified = true;
 				break;
 			}
@@ -65,56 +65,55 @@ bool
 TreeVisualizer::OnInspect(
 	TreeModel& treeModel) {
 	bool updated = false;
+	if (ImGui::SliderInt("Checkpoints", &m_checkpointIteration, 0, treeModel.CurrentIteration())) {
+		m_checkpointIteration = glm::clamp(m_checkpointIteration, 0, treeModel.CurrentIteration());
+		m_selectedInternodeHandle = -1;
+		m_selectedInternodeHierarchyList.clear();
+		m_needUpdate = true;
+	}
+	if (m_checkpointIteration != treeModel.CurrentIteration() && ImGui::Button("Reverse")) {
+		treeModel.Reverse(m_checkpointIteration);
+		m_needUpdate = true;
+	}
+	if (ImGui::Button("Clear checkpoints")) {
+		m_checkpointIteration = 0;
+		treeModel.ClearHistory();
+	}
 	if (ImGui::Combo("Shoot Color mode",
 		{ "Order", "Level", "Light Intensity", "Light Direction", "Growth Potential", "Apical control", "Desired growth rate", "IsMaxChild", "AllocatedVigor" },
 		m_settings.m_shootVisualizationMode)) {
 		m_needShootColorUpdate = true;
 	}
 
-	if (ImGui::TreeNode("Shoot Color settings")) {
-		switch (static_cast<ShootVisualizerMode>(m_settings.m_shootVisualizationMode)) {
-		case ShootVisualizerMode::LightIntensity:
-			ImGui::DragFloat("Light intensity multiplier", &m_settings.m_shootColorMultiplier, 0.001f);
-			m_needShootColorUpdate = true;
-			break;
-		case ShootVisualizerMode::AllocatedVigor:
-			ImGui::DragFloat("Vigor multiplier", &m_settings.m_shootColorMultiplier, 0.001f);
-			m_needShootColorUpdate = true;
-			break;
-		default:
-			break;
-		}
-		ImGui::TreePop();
-	}
-	
-	if (treeModel.CurrentIteration() > 0) {
-		if (ImGui::TreeNodeEx("History", ImGuiTreeNodeFlags_DefaultOpen)) {
-			ImGui::DragInt("History Limit", &treeModel.m_historyLimit, 1, -1, 1024);
-			if (ImGui::SliderInt("Iteration", &m_iteration, 0, treeModel.CurrentIteration())) {
-				m_iteration = glm::clamp(m_iteration, 0, treeModel.CurrentIteration());
-				m_selectedInternodeHandle = -1;
-				m_selectedInternodeHierarchyList.clear();
-				m_needUpdate = true;
-			}
-			if (m_iteration != treeModel.CurrentIteration() && ImGui::Button("Reverse")) {
-				treeModel.Reverse(m_iteration);
-				m_needUpdate = true;
-			}
-			if (ImGui::Button("Clear history")) {
-				m_iteration = 0;
-				treeModel.ClearHistory();
+
+
+
+	if (ImGui::TreeNodeEx("Settings")) {
+		ImGui::DragInt("History Limit", &treeModel.m_historyLimit, 1, -1, 1024);
+
+
+		if (ImGui::TreeNode("Shoot Color settings")) {
+			switch (static_cast<ShootVisualizerMode>(m_settings.m_shootVisualizationMode)) {
+			case ShootVisualizerMode::LightIntensity:
+				ImGui::DragFloat("Light intensity multiplier", &m_settings.m_shootColorMultiplier, 0.001f);
+				m_needShootColorUpdate = true;
+				break;
+			case ShootVisualizerMode::AllocatedVigor:
+				ImGui::DragFloat("Vigor multiplier", &m_settings.m_shootColorMultiplier, 0.001f);
+				m_needShootColorUpdate = true;
+				break;
+			default:
+				break;
 			}
 			ImGui::TreePop();
 		}
-	}
 
-	if (ImGui::TreeNodeEx("Settings")) {
 		ImGui::Checkbox("Visualization", &m_visualization);
 		ImGui::Checkbox("Hexagon profile", &m_hexagonProfileGui);
 		ImGui::Checkbox("Tree Hierarchy", &m_treeHierarchyGui);
 
 		if (m_visualization) {
-			const auto& treeSkeleton = treeModel.PeekShootSkeleton(m_iteration);
+			const auto& treeSkeleton = treeModel.PeekShootSkeleton(m_checkpointIteration);
 			const auto editorLayer = Application::GetLayer<EditorLayer>();
 			const auto& sortedBranchList = treeSkeleton.RefSortedFlowList();
 			const auto& sortedInternodeList = treeSkeleton.RefSortedNodeList();
@@ -136,39 +135,39 @@ TreeVisualizer::OnInspect(
 		ImGui::TreePop();
 	}
 	if (m_selectedInternodeHandle >= 0) {
-		if (m_iteration == treeModel.CurrentIteration()) {
+		if (m_checkpointIteration == treeModel.CurrentIteration()) {
 			InspectInternode(treeModel.RefShootSkeleton(), m_selectedInternodeHandle);
 		}
 		else {
-			PeekInternode(treeModel.PeekShootSkeleton(m_iteration), m_selectedInternodeHandle);
+			PeekInternode(treeModel.PeekShootSkeleton(m_checkpointIteration), m_selectedInternodeHandle);
 		}
 	}
-	
+
 	if (m_treeHierarchyGui) {
 		if (ImGui::TreeNodeEx("Tree Hierarchy")) {
 			bool deleted = false;
 			auto tempSelection = m_selectedInternodeHandle;
-			if (m_iteration == treeModel.CurrentIteration()) {
+			if (m_checkpointIteration == treeModel.CurrentIteration()) {
 				if (DrawInternodeInspectionGui(treeModel, 0, deleted, 0)) {
 					m_needUpdate = true;
 					updated = true;
 				}
 			}
 			else
-				PeekNodeInspectionGui(treeModel.PeekShootSkeleton(m_iteration), 0, m_selectedInternodeHandle,
+				PeekNodeInspectionGui(treeModel.PeekShootSkeleton(m_checkpointIteration), 0, m_selectedInternodeHandle,
 					m_selectedInternodeHierarchyList, 0);
 			m_selectedInternodeHierarchyList.clear();
 			ImGui::TreePop();
 		}
 
 	}
-	
+
 	return updated;
 }
 
 bool TreeVisualizer::Visualize(TreeModel& treeModel, const GlobalTransform& globalTransform) {
 	bool updated = false;
-	const auto& treeSkeleton = treeModel.PeekShootSkeleton(m_iteration);
+	const auto& treeSkeleton = treeModel.PeekShootSkeleton(m_checkpointIteration);
 	if (m_visualization) {
 		const auto editorLayer = Application::GetLayer<EditorLayer>();
 		if (editorLayer->SceneCameraWindowFocused()) {
@@ -181,7 +180,7 @@ bool TreeVisualizer::Visualize(TreeModel& treeModel, const GlobalTransform& glob
 						updated = true;
 					}
 				}
-				if (m_iteration == treeModel.CurrentIteration() &&
+				if (m_checkpointIteration == treeModel.CurrentIteration() &&
 					editorLayer->GetKey(GLFW_KEY_DELETE) == KeyActionType::Press) {
 					if (m_selectedInternodeHandle > 0) {
 						treeModel.Step();
@@ -197,7 +196,7 @@ bool TreeVisualizer::Visualize(TreeModel& treeModel, const GlobalTransform& glob
 							bud.m_status = BudStatus::Died;
 						}
 						skeleton.SortLists();
-						m_iteration = treeModel.CurrentIteration();
+						m_checkpointIteration = treeModel.CurrentIteration();
 						m_needUpdate = true;
 						updated = true;
 					}
@@ -205,7 +204,7 @@ bool TreeVisualizer::Visualize(TreeModel& treeModel, const GlobalTransform& glob
 			}
 								   break;
 			case PruningMode::Stroke: {
-				if (m_iteration == treeModel.CurrentIteration()) {
+				if (m_checkpointIteration == treeModel.CurrentIteration()) {
 					if (editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Hold) {
 						glm::vec2 mousePosition = editorLayer->GetMouseSceneCameraPosition();
 						const float halfX = editorLayer->GetSceneCamera()->GetSize().x / 2.0f;
@@ -228,7 +227,7 @@ bool TreeVisualizer::Visualize(TreeModel& treeModel, const GlobalTransform& glob
 								globalTransform, m_selectedInternodeHandle, m_selectedInternodeHierarchyList);
 							if (changed) {
 								skeleton.SortLists();
-								m_iteration = treeModel.CurrentIteration();
+								m_checkpointIteration = treeModel.CurrentIteration();
 								m_needUpdate = true;
 								updated = true;
 							}
@@ -368,7 +367,7 @@ TreeVisualizer::InspectInternode(
 					case BudStatus::Dormant:
 						ImGui::Text("Dormant");
 						break;
- 
+
 					case BudStatus::Died:
 						ImGui::Text("Died");
 						break;
@@ -460,7 +459,7 @@ TreeVisualizer::PeekInternode(const ShootSkeleton& shootSkeleton, NodeHandle int
 					case BudStatus::Dormant:
 						ImGui::Text("Dormant");
 						break;
- 
+
 					case BudStatus::Died:
 						ImGui::Text("Died");
 						break;
@@ -500,7 +499,7 @@ void TreeVisualizer::Reset(
 	TreeModel& treeModel) {
 	m_selectedInternodeHandle = -1;
 	m_selectedInternodeHierarchyList.clear();
-	m_iteration = treeModel.CurrentIteration();
+	m_checkpointIteration = treeModel.CurrentIteration();
 	m_internodeMatrices->m_particleInfos.clear();
 	m_internodeMatrices->SetPendingUpdate();
 	m_needUpdate = true;
@@ -509,7 +508,7 @@ void TreeVisualizer::Reset(
 void TreeVisualizer::Clear() {
 	m_selectedInternodeHandle = -1;
 	m_selectedInternodeHierarchyList.clear();
-	m_iteration = 0;
+	m_checkpointIteration = 0;
 	m_internodeMatrices->m_particleInfos.clear();
 	m_internodeMatrices->SetPendingUpdate();
 }
@@ -517,11 +516,6 @@ void TreeVisualizer::Clear() {
 bool TreeVisualizer::Initialized() const
 {
 	return m_initialized;
-}
-
-NodeHandle TreeVisualizer::GetSelectedInternodeHandle() const
-{
-	return m_selectedInternodeHandle;
 }
 
 void TreeVisualizer::Initialize()

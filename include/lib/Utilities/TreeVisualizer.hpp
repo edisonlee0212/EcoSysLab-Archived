@@ -52,7 +52,7 @@ namespace EcoSysLab {
 
 		TreeVisualizerColorSettings m_settings;
 
-		NodeHandle m_selectedInternodeHandle = -1;
+		
 		float m_selectedInternodeLengthFactor = 0.0f;
 		std::vector<NodeHandle> m_selectedInternodeHierarchyList;
 
@@ -94,7 +94,7 @@ namespace EcoSysLab {
 	public:
 		[[nodiscard]] bool Initialized() const;
 		void ClearSelections();
-		[[nodiscard]] NodeHandle GetSelectedInternodeHandle() const;
+		NodeHandle m_selectedInternodeHandle = -1;
 		void Initialize();
 
 		template<typename SkeletonData, typename FlowData, typename NodeData>
@@ -108,7 +108,7 @@ namespace EcoSysLab {
 
 		void SyncColors(const ShootSkeleton& shootSkeleton, NodeHandle selectedNodeHandle);
 
-		int m_iteration = 0;
+		int m_checkpointIteration = 0;
 		bool m_needUpdate = false;
 		bool m_needShootColorUpdate = false;
 

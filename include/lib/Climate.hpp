@@ -4,6 +4,8 @@
 using namespace EvoEngine;
 namespace EcoSysLab
 {
+	struct SimulationSettings;
+
 	class ClimateDescriptor : public IAsset {
 	public:
 		ClimateParameters m_climateParameters;
@@ -31,5 +33,7 @@ namespace EcoSysLab
 		void CollectAssetRef(std::vector<AssetRef>& list) override;
 
 		void InitializeClimateModel();
+
+		void PrepareForGrowth();
 	};
 }

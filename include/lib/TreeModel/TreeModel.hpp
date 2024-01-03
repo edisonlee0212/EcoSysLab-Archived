@@ -20,8 +20,11 @@ namespace EcoSysLab {
 
 	class TreeModel {
 #pragma region Tree Growth
-		
-		void AllocateShootVigor(float shootFlux, const std::vector<NodeHandle>& sortedInternodeList, const ShootGrowthController& shootGrowthController);
+		ShootFlux CollectShootFlux(const std::vector<NodeHandle>& sortedInternodeList);
+
+		void AdjustGrowthRate(const std::vector<NodeHandle>& sortedInternodeList, float factor);
+
+		float CalculateDesiredGrowthRate(const std::vector<NodeHandle>& sortedInternodeList, const ShootGrowthController& shootGrowthController);
 
 		bool PruneInternodes(const glm::mat4& globalTransform, ClimateModel& climateModel, const ShootGrowthController& shootGrowthController);
 
@@ -86,8 +89,9 @@ namespace EcoSysLab {
 
 		void PruneInternode(NodeHandle internodeHandle);
 
-		void CollectShootFlux(const glm::mat4& globalTransform, ClimateModel& climateModel, const std::vector<NodeHandle>& sortedSubTreeInternodeList,
-			const ShootGrowthController& shootGrowthController);
+		void CalculateShootFlux(const glm::mat4& globalTransform, ClimateModel& climateModel, const ShootGrowthController& shootGrowthController);
+		
+
 		void HarvestFruits(const std::function<bool(const ReproductiveModule& fruit)>& harvestFunction);
 
 		int m_iteration = 0;
@@ -118,10 +122,10 @@ namespace EcoSysLab {
 		 * @param shootGrowthController The procedural parameters that guides the growth of the branches.
 		 * @return Whether the growth caused a structural change during the growth.
 		 */
-		bool Grow(float deltaTime, const glm::mat4& globalTransform, ClimateModel& climateModel, const ShootGrowthController& shootGrowthController);
+		//bool Grow(float deltaTime, const glm::mat4& globalTransform, ClimateModel& climateModel, const ShootGrowthController& shootGrowthController);
 
 		bool GrowSubTree(float deltaTime, NodeHandle baseInternodeHandle, const glm::mat4& globalTransform, ClimateModel& climateModel,
-			const ShootGrowthController& shootGrowthController);
+			const ShootGrowthController& shootGrowthController, bool pruning = true, float overrideGrowthRate = -1);
 
 		int m_historyLimit = -1;
 

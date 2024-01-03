@@ -278,38 +278,54 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 			}
 
 		}
+		if (ImGui::Button("Add Checkpoint"))
+		{
+			m_treeModel.Step();
+			m_treeVisualizer.m_checkpointIteration = m_treeModel.CurrentIteration();
+		}
 		if (m_enableVisualization && ImGui::TreeNodeEx("Tree Inspector", ImGuiTreeNodeFlags_DefaultOpen))
 		{
-			modelChanged = m_treeVisualizer.OnInspect(m_treeModel) || modelChanged;
-			if (m_treeVisualizer.GetSelectedInternodeHandle() >= 0)
+			static NodeHandle lastSelectedInternodeHandle = -1;
+			static bool autoGrowSubTree = false;
+			static float overrideGrowthRate = 0.5f;
+			ImGui::DragFloat("Override growth rate", &overrideGrowthRate, 0.01f, 0.01f, 1.0f);
+			ImGui::Checkbox("Auto grow subtree", &autoGrowSubTree);
+			if (lastSelectedInternodeHandle >= 0)
 			{
-				static float deltaTime = 0.01918f;
-				static bool autoGrowSubTree = false;
-				ImGui::DragFloat("Delta time", &deltaTime, 0.00001f, 0, 1, "%.5f");
-				if (ImGui::Button("Day")) deltaTime = 0.00274f;
-				ImGui::SameLine();
-				if (ImGui::Button("Week")) deltaTime = 0.01918f;
-				ImGui::SameLine();
-				if (ImGui::Button("Month")) deltaTime = 0.0822f;
-				ImGui::Checkbox("Auto grow subtree", &autoGrowSubTree);
 				if (!autoGrowSubTree) {
-					bool changed = false;
 					if (ImGui::Button("Grow subtree")) {
-						TryGrowSubTree(m_treeVisualizer.GetSelectedInternodeHandle(), deltaTime);
-						changed = true;
+						if (const auto climate = ecoSysLabLayer->m_climateHolder.Get<Climate>()) {
+							climate->PrepareForGrowth();
+							modelChanged = modelChanged || TryGrow(ecoSysLabLayer->m_simulationSettings.m_deltaTime, lastSelectedInternodeHandle, false, overrideGrowthRate);
+						}
 					}
 					static int iterations = 5;
 					ImGui::DragInt("Iterations", &iterations, 1, 1, 100);
 					if (ImGui::Button(("Grow subtree with " + std::to_string(iterations) + " iterations").c_str())) {
-						for (int i = 0; i < iterations; i++) TryGrowSubTree(m_treeVisualizer.GetSelectedInternodeHandle(), deltaTime);
-						changed = true;
+						for (int i = 0; i < iterations; i++)
+						{
+							if (const auto climate = ecoSysLabLayer->m_climateHolder.Get<Climate>()) {
+								climate->PrepareForGrowth();
+								modelChanged = modelChanged || TryGrow(ecoSysLabLayer->m_simulationSettings.m_deltaTime, lastSelectedInternodeHandle, false, overrideGrowthRate);
+							}
+						}
 					}
 				}
-				else
+				else if (autoGrowSubTree && lastSelectedInternodeHandle == m_treeVisualizer.m_selectedInternodeHandle)
 				{
-					TryGrowSubTree(m_treeVisualizer.GetSelectedInternodeHandle(), deltaTime);
+					if (const auto climate = ecoSysLabLayer->m_climateHolder.Get<Climate>()) {
+						climate->PrepareForGrowth();
+						modelChanged = modelChanged || TryGrow(ecoSysLabLayer->m_simulationSettings.m_deltaTime, lastSelectedInternodeHandle, false, overrideGrowthRate);
+					}
 				}
 			}
+			if (lastSelectedInternodeHandle != m_treeVisualizer.m_selectedInternodeHandle) {
+				lastSelectedInternodeHandle = m_treeVisualizer.m_selectedInternodeHandle;
+				autoGrowSubTree = false;
+			}
+
+			modelChanged = m_treeVisualizer.OnInspect(m_treeModel) || modelChanged;
+
 			ImGui::TreePop();
 		}
 		if (m_enableHistory)
@@ -618,10 +634,12 @@ void Tree::ExportOBJ(const std::filesystem::path& path, const TreeMeshGeneratorS
 	}
 }
 
-bool Tree::TryGrow(float deltaTime) {
+bool Tree::TryGrow(const float deltaTime, const NodeHandle baseInternodeHandle, const bool pruning, const float overrideGrowthRate) {
 	const auto scene = GetScene();
 	const auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
 	const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
+	if (!m_climate.Get<Climate>()) m_climate = ecoSysLabLayer->m_climateHolder;
+	if (!m_soil.Get<Soil>()) m_soil = ecoSysLabLayer->m_soilHolder;
 	if (!treeDescriptor) {
 		EVOENGINE_ERROR("No tree descriptor!");
 		return false;
@@ -638,10 +656,10 @@ bool Tree::TryGrow(float deltaTime) {
 	const auto climate = m_climate.Get<Climate>();
 	const auto owner = GetOwner();
 	PrepareControllers(treeDescriptor);
-	const bool grown = m_treeModel.Grow(deltaTime, scene->GetDataComponent<GlobalTransform>(owner).m_value, climate->m_climateModel, m_shootGrowthController);
+	const bool grown = m_treeModel.GrowSubTree(deltaTime, baseInternodeHandle, scene->GetDataComponent<GlobalTransform>(owner).m_value, climate->m_climateModel, m_shootGrowthController, pruning, overrideGrowthRate);
 	if (grown)
 	{
-		m_treeVisualizer.ClearSelections();
+		if (pruning) m_treeVisualizer.ClearSelections();
 		m_treeVisualizer.m_needUpdate = true;
 	}
 	if (m_enableHistory && m_treeModel.m_iteration % m_historyIteration == 0) m_treeModel.Step();
@@ -653,46 +671,6 @@ bool Tree::TryGrow(float deltaTime) {
 	}
 
 	return grown;
-}
-
-bool Tree::TryGrowSubTree(const NodeHandle internodeHandle, const float deltaTime)
-{
-	const auto scene = GetScene();
-	const auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
-	const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
-	if (!ecoSysLabLayer) return false;
-
-	if (!m_climate.Get<Climate>()) m_climate = ecoSysLabLayer->m_climateHolder;
-	if (!m_soil.Get<Soil>()) m_soil = ecoSysLabLayer->m_soilHolder;
-
-	if (!treeDescriptor) {
-		EVOENGINE_ERROR("No tree descriptor!");
-		return false;
-	}
-	if (!m_soil.Get<Soil>()) {
-		EVOENGINE_ERROR("No soil model!");
-		return false;
-	}
-	if (!m_climate.Get<Climate>()) {
-		EVOENGINE_ERROR("No climate model!");
-		return false;
-	}
-	const auto soil = m_soil.Get<Soil>();
-	const auto climate = m_climate.Get<Climate>();
-	const auto owner = GetOwner();
-
-	PrepareControllers(treeDescriptor);
-	if (const bool grown = m_treeModel.GrowSubTree(deltaTime, internodeHandle, scene->GetDataComponent<GlobalTransform>(owner).m_value, climate->m_climateModel, m_shootGrowthController))
-	{
-		m_treeVisualizer.ClearSelections();
-		m_treeVisualizer.m_needUpdate = true;
-	}
-	if (m_enableHistory && m_treeModel.m_iteration % m_historyIteration == 0) m_treeModel.Step();
-
-	m_treeVisualizer.m_needUpdate = true;
-	m_treeVisualizer.m_iteration = m_treeModel.CurrentIteration();
-	ecoSysLabLayer->m_needFullFlowUpdate = true;
-
 }
 
 
@@ -779,7 +757,7 @@ void Tree::GenerateGeometry(const TreeMeshGeneratorSettings& meshGeneratorSettin
 		meshRenderer->m_mesh = mesh;
 		meshRenderer->m_material = material;
 	}
-	
+
 	if (meshGeneratorSettings.m_enableTwig)
 	{
 		Entity twigEntity;
@@ -1160,7 +1138,8 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 
 					currentLineIndex = currentTreePartInfo.m_lineIndex;
 				}
-			}else if (treePartType == 1)
+			}
+			else if (treePartType == 1)
 			{
 				//Base of Y Shape
 				if (parentInternodeHandle == -1 || treePartInfos[parentInternodeHandle].m_treePartType != 1
@@ -1190,7 +1169,8 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 
 					currentLineIndex = currentTreePartInfo.m_lineIndex;
 				}
-			}else if (treePartType == 2)
+			}
+			else if (treePartType == 2)
 			{
 				//Branch of Y Shape
 				if (parentInternodeHandle == -1 || treePartInfos[parentInternodeHandle].m_treePartType == 0
@@ -1217,19 +1197,19 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 			treePart.m_nodeHandles.emplace_back(internodeHandle);
 			treePart.m_isEnd.emplace_back(true);
 			treePart.m_lineIndex.emplace_back(currentLineIndex);
-			for(int i = 0; i < treePart.m_nodeHandles.size(); i++)
+			for (int i = 0; i < treePart.m_nodeHandles.size(); i++)
 			{
-				if(treePart.m_nodeHandles[i] == parentInternodeHandle)
+				if (treePart.m_nodeHandles[i] == parentInternodeHandle)
 				{
 					treePart.m_isEnd[i] = false;
 					break;
 				}
 			}
 		}
-		for(auto& treePart : treeParts)
+		for (auto& treePart : treeParts)
 		{
 			const auto& startInternode = skeleton.PeekNode(treePart.m_nodeHandles.front());
-			if(treePart.m_isJunction)
+			if (treePart.m_isJunction)
 			{
 				const auto& baseNode = skeleton.PeekNode(treePart.m_nodeHandles.front());
 				const auto& flow = skeleton.PeekFlow(baseNode.GetFlowHandle());
@@ -1247,7 +1227,7 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 				treePart.m_baseLine.m_lineIndex = treePart.m_lineIndex.front();
 				for (int i = 1; i < treePart.m_nodeHandles.size(); i++)
 				{
-					if(treePart.m_isEnd[i])
+					if (treePart.m_isEnd[i])
 					{
 						const auto& endInternode = skeleton.PeekNode(treePart.m_nodeHandles[i]);
 						treePart.m_childrenLines.emplace_back();
@@ -1263,7 +1243,8 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 						newLine.m_lineIndex = treePart.m_lineIndex[i];
 					}
 				}
-			}else
+			}
+			else
 			{
 				const auto& endInternode = skeleton.PeekNode(treePart.m_nodeHandles.back());
 				treePart.m_baseLine.m_startPosition = startInternode.m_info.m_globalPosition;
@@ -1279,13 +1260,13 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 		}
 		std::unordered_set<int> lineIndexCheck{};
 		out << YAML::Key << "TreeParts" << YAML::Value << YAML::BeginSeq;
-		for(const auto& treePart : treeParts)
+		for (const auto& treePart : treeParts)
 		{
 			out << YAML::BeginMap;
 			out << YAML::Key << "J" << YAML::Value << (treePart.m_isJunction ? 1 : 0);
 			out << YAML::Key << "I" << YAML::Value << treePart.m_treePartIndex + 1;
 			out << YAML::Key << "LI" << YAML::Value << treePart.m_baseLine.m_lineIndex + 1;
-			if(lineIndexCheck.find(treePart.m_baseLine.m_lineIndex) != lineIndexCheck.end())
+			if (lineIndexCheck.find(treePart.m_baseLine.m_lineIndex) != lineIndexCheck.end())
 			{
 				EVOENGINE_ERROR("Duplicate!");
 			}
@@ -1360,7 +1341,7 @@ void Tree::PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescrip
 	const auto climate = m_climate.Get<Climate>();
 	{
 		m_shootGrowthController.m_internodeGrowthRate = treeDescriptor->m_shootGrowthParameters.m_growthRate / treeDescriptor->m_shootGrowthParameters.m_internodeLength;
-		
+
 		m_shootGrowthController.m_branchingAngle = [=](const Node<InternodeGrowthData>& internode)
 			{
 				return glm::gaussRand(treeDescriptor->m_shootGrowthParameters.m_branchingAngleMeanVariance.x, treeDescriptor->m_shootGrowthParameters.m_branchingAngleMeanVariance.y);
@@ -1408,7 +1389,8 @@ void Tree::PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescrip
 				bud.m_extinctionRate = 0.0f;
 				if (bud.m_type == BudType::Apical) {
 					bud.m_extinctionRate = shootGrowthParameters.m_apicalBudExtinctionRate;
-				}else
+				}
+				else
 				{
 					bud.m_extinctionRate = 0.0f;
 				}
@@ -1457,7 +1439,7 @@ void Tree::PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescrip
 
 		m_shootGrowthController.m_leafGrowthRate = treeDescriptor->m_shootGrowthParameters.m_leafGrowthRate;
 		m_shootGrowthController.m_fruitGrowthRate = treeDescriptor->m_shootGrowthParameters.m_fruitGrowthRate;
-		
+
 		m_shootGrowthController.m_fruitBudCount = treeDescriptor->m_shootGrowthParameters.m_fruitBudCount;
 		m_shootGrowthController.m_leafBudCount = treeDescriptor->m_shootGrowthParameters.m_leafBudCount;
 
@@ -1481,12 +1463,12 @@ void Tree::PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescrip
 				flushProbability *= internodeData.m_lightIntensity;
 				return flushProbability;
 			};
-		
+
 		m_shootGrowthController.m_leafVigorRequirement = treeDescriptor->m_shootGrowthParameters.m_leafVigorRequirement;
 		m_shootGrowthController.m_fruitVigorRequirement = treeDescriptor->m_shootGrowthParameters.m_fruitVigorRequirement;
-		
-		
-		
+
+
+
 		m_shootGrowthController.m_maxLeafSize = treeDescriptor->m_shootGrowthParameters.m_maxLeafSize;
 		m_shootGrowthController.m_leafPositionVariance = treeDescriptor->m_shootGrowthParameters.m_leafPositionVariance;
 		m_shootGrowthController.m_leafRotationVariance = treeDescriptor->m_shootGrowthParameters.m_leafRotationVariance;

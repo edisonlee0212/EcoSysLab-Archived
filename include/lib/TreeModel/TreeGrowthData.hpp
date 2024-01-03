@@ -107,7 +107,7 @@ namespace EcoSysLab
 
 		size_t m_maxMarkerCount = 0;
 
-		ShootFlux m_shootFlux = {};
+		//ShootFlux m_shootFlux = {};
 
 		std::vector<ReproductiveModule> m_droppedLeaves;
 		std::vector<ReproductiveModule> m_droppedFruits;
