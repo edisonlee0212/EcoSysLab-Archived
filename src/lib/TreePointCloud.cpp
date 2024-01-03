@@ -1503,7 +1503,7 @@ void TreePointCloud::BuildSkeletons() {
 			newBranchAllocated = true;
 			Link(branchPair.second, parentHandle);
 		}
-
+		/*
 		if (!newBranchAllocated && m_reconstructionSettings.m_candidateSearch)
 		{
 			for (int i = 0; i < m_reconstructionSettings.m_candidateSearchLimit; i++)
@@ -1554,7 +1554,7 @@ void TreePointCloud::BuildSkeletons() {
 				Link(branchPair.second, parentHandle);
 				break;
 			}
-		}
+		}*/
 	}
 	for (const auto& rootBranchHandle : rootBranchHandles)
 	{
@@ -2261,9 +2261,9 @@ void ConnectivityGraphSettings::OnInspect() {
 	{
 		m_pointPointConnectionDetectionRadius = 0.05f;
 		m_pointBranchConnectionDetectionRange = 0.5f;
-		m_branchBranchConnectionMaxLengthRange = 3.0f;
-		m_directionConnectionAngleLimit = 70.0f;
-		m_indirectConnectionAngleLimit = 70.0f;
+		m_branchBranchConnectionMaxLengthRange = 10.0f;
+		m_directionConnectionAngleLimit = 45.0f;
+		m_indirectConnectionAngleLimit = 45.0f;
 	}
 	ImGui::DragFloat("Point-point detection radius", &m_pointPointConnectionDetectionRadius, 0.01f, 0.01f, 1.0f);
 	ImGui::DragFloat("Point-branch detection range", &m_pointBranchConnectionDetectionRange, 0.01f, 0.01f, 2.0f);
@@ -2333,9 +2333,9 @@ void ReconstructionSettings::OnInspect() {
 
 	ImGui::DragInt("Node back track limit", &m_nodeBackTrackLimit, 1, 0, 100);
 	ImGui::DragInt("Branch back track limit", &m_branchBackTrackLimit, 1, 0, 10);
-
+	/*
 	ImGui::Checkbox("Candidate Search", &m_candidateSearch);
 	if (m_candidateSearch) ImGui::DragInt("Candidate Search limit", &m_candidateSearchLimit, 1, 0, 10);
 	ImGui::Checkbox("Force connect all branches", &m_forceConnectAllBranches);
-
+	*/
 }

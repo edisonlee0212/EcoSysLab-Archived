@@ -95,9 +95,9 @@ namespace EcoSysLab {
 		float m_parallelShiftLimitRange = 2.0f;
 		float m_pointPointConnectionDetectionRadius = 0.05f;
 		float m_pointBranchConnectionDetectionRange = 0.5f;
-		float m_branchBranchConnectionMaxLengthRange = 15.0f;
-		float m_directionConnectionAngleLimit = 30.0f;
-		float m_indirectConnectionAngleLimit = 15.0f;
+		float m_branchBranchConnectionMaxLengthRange = 10.0f;
+		float m_directionConnectionAngleLimit = 45.0f;
+		float m_indirectConnectionAngleLimit = 45.0f;
 
 		float m_connectionRangeLimit = 1.0f;
 		void OnInspect();
@@ -140,11 +140,12 @@ namespace EcoSysLab {
 		int m_nodeBackTrackLimit = 30;
 		int m_branchBackTrackLimit = 1;
 
+		/*
 		bool m_candidateSearch = true;
 		int m_candidateSearchLimit = 1;
 		bool m_forceConnectAllBranches = false;
-
-
+		*/
+		bool m_chooseShortestDistanceFirst = true;
 		
 		void OnInspect();
 	};
