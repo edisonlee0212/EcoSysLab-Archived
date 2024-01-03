@@ -390,7 +390,6 @@ namespace EcoSysLab {
 				if (parentInternodeHandle == -1 || treePartInfos[parentInternodeHandle].m_treePartType == 0
 					|| treePartInfos[parentInternodeHandle].m_baseFlowHandle != parentFlowHandle)
 				{
-					EVOENGINE_ERROR("Error!");
 				}
 				else
 				{
