@@ -1863,11 +1863,11 @@ void TreePointCloud::OnCreate()
 {
 	m_treeMeshGeneratorSettings.m_enableFoliage = true;
 	m_treeMeshGeneratorSettings.m_enableTwig = true;
-	m_treeMeshGeneratorSettings.m_foliageOverrideSettings.m_leafSize = { 0.01f, 0.01f };
-	m_treeMeshGeneratorSettings.m_foliageOverrideSettings.m_positionVariance = 0.04f;
-	m_treeMeshGeneratorSettings.m_foliageOverrideSettings.m_leafCountPerInternode = 20;
+	m_treeMeshGeneratorSettings.m_foliageOverrideSettings.m_leafSize = { 0.0125f, 0.0125f };
+	m_treeMeshGeneratorSettings.m_foliageOverrideSettings.m_positionVariance = 0.06f;
+	m_treeMeshGeneratorSettings.m_foliageOverrideSettings.m_leafCountPerInternode = 15;
 	m_treeMeshGeneratorSettings.m_foliageOverrideSettings.m_rotationVariance = 1.0f;
-	m_treeMeshGeneratorSettings.m_foliageOverrideSettings.m_minRootDistance = 1.5f;
+	m_treeMeshGeneratorSettings.m_foliageOverrideSettings.m_minRootDistance = 1.15f;
 	m_treeMeshGeneratorSettings.m_foliageOverrideSettings.m_maxEndDistance = 0.1f;
 }
 
