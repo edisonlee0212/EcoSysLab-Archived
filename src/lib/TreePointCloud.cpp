@@ -1397,6 +1397,7 @@ void TreePointCloud::BuildSkeletons() {
 	//Branch is shortened after this.
 	for (auto& branch : m_operatingBranches) {
 		branch.m_chainNodeHandles.clear();
+		branch.m_rootDistance = 0.0f;
 		const auto branchStart = branch.m_bezierCurve.m_p0;
 		auto shortenedP0 = branch.m_bezierCurve.GetPoint(m_reconstructionSettings.m_branchShortening);
 		auto shortenedP3 = branch.m_bezierCurve.GetPoint(1.0f - m_reconstructionSettings.m_branchShortening);
@@ -1492,69 +1493,35 @@ void TreePointCloud::BuildSkeletons() {
 		{
 			auto& childBranch = m_operatingBranches[branchPair.second];
 			if (childBranch.m_orphan || childBranch.m_used || childBranch.m_parentCandidates.empty()) continue;
-
-			BranchHandle parentHandle = -1;
-			const auto bestParentCandidate = childBranch.m_parentCandidates.back();
-			if (m_operatingBranches[bestParentCandidate.first].m_used) {
-				parentHandle = bestParentCandidate.first;
+			BranchHandle bestParentHandle = -1;
+			float bestRootDistance = FLT_MAX;
+			int maxIndex = -1;
+			for(int i = 0; i < childBranch.m_parentCandidates.size(); i++)
+			{
+				const auto& parentCandidate = childBranch.m_parentCandidates[i];
+				const auto& parent = m_operatingBranches[parentCandidate.first];
+				if(!parent.m_used) continue;
+				float distance = parentCandidate.second;
+				if(m_reconstructionSettings.m_useRootDistance)
+				{
+					distance += parent.m_rootDistance + glm::distance(childBranch.m_bezierCurve.m_p0, childBranch.m_bezierCurve.m_p3);
+				}
+				if(distance < bestRootDistance)
+				{
+					bestParentHandle = parentCandidate.first;
+					bestRootDistance = distance;
+					maxIndex = i;
+				}
+			}
+			if(maxIndex != -1)
+			{
+				childBranch.m_parentCandidates[maxIndex] = childBranch.m_parentCandidates.back();
 				childBranch.m_parentCandidates.pop_back();
-			}
-			if (parentHandle == -1) continue;
-			newBranchAllocated = true;
-			Link(branchPair.second, parentHandle);
-		}
-		/*
-		if (!newBranchAllocated && m_reconstructionSettings.m_candidateSearch)
-		{
-			for (int i = 0; i < m_reconstructionSettings.m_candidateSearchLimit; i++)
-			{
-				for (const auto& branchPair : heightSortedBranches)
-				{
-					auto& childBranch = m_operatingBranches[branchPair.second];
-					if (childBranch.m_orphan || childBranch.m_used || childBranch.m_parentCandidates.empty()) continue;
-					BranchHandle parentHandle = -1;
-					if (static_cast<int>(childBranch.m_parentCandidates.size()) - 2 - i >= 0)
-					{
-						const auto parentCandidateHandle = childBranch.m_parentCandidates[i].first;
-						if (m_operatingBranches[parentCandidateHandle].m_used)
-						{
-							parentHandle = parentCandidateHandle;
-							childBranch.m_parentCandidates.erase(childBranch.m_parentCandidates.begin() + i);
-							break;
-						}
-					}
-					if (parentHandle == -1) continue;
-					newBranchAllocated = true;
-					Link(branchPair.second, parentHandle);
-				}
-			}
-		}
-
-		if (!newBranchAllocated && m_reconstructionSettings.m_forceConnectAllBranches)
-		{
-			for (const auto& branchPair : heightSortedBranches)
-			{
-				auto& childBranch = m_operatingBranches[branchPair.second];
-				if (childBranch.m_orphan || childBranch.m_used || childBranch.m_parentCandidates.empty()) continue;
-				BranchHandle parentHandle = -1;
-
-				for (int i = childBranch.m_parentCandidates.size() - 1; i >= 0; i--)
-				{
-					const auto parentCandidateHandle = childBranch.m_parentCandidates[i].first;
-					if (m_operatingBranches[parentCandidateHandle].m_used)
-					{
-						parentHandle = parentCandidateHandle;
-						childBranch.m_parentCandidates.erase(childBranch.m_parentCandidates.begin() + i);
-						break;
-					}
-				}
-
-				if (parentHandle == -1) continue;
 				newBranchAllocated = true;
-				Link(branchPair.second, parentHandle);
-				break;
+				Link(branchPair.second, bestParentHandle);
+				childBranch.m_rootDistance = bestRootDistance;
 			}
-		}*/
+		}
 	}
 	for (const auto& rootBranchHandle : rootBranchHandles)
 	{
@@ -2261,7 +2228,7 @@ void ConnectivityGraphSettings::OnInspect() {
 	{
 		m_pointPointConnectionDetectionRadius = 0.05f;
 		m_pointBranchConnectionDetectionRange = 0.5f;
-		m_branchBranchConnectionMaxLengthRange = 10.0f;
+		m_branchBranchConnectionMaxLengthRange = 5.0f;
 		m_directionConnectionAngleLimit = 45.0f;
 		m_indirectConnectionAngleLimit = 45.0f;
 	}
@@ -2292,15 +2259,9 @@ void TreePointCloud::CloneOperatingBranch(OperatingBranch& operatingBranch, cons
 	operatingBranch.m_orphan = false;
 	operatingBranch.m_parentCandidates.clear();
 
-	std::multimap<float, BranchHandle> sortedParentCandidates{};
 	for (const auto& data : target.m_p3ToP0)
 	{
-		sortedParentCandidates.insert({ data.second, data.first });
-	}
-
-	for (auto it = sortedParentCandidates.rbegin(); it != sortedParentCandidates.rend(); ++it)
-	{
-		operatingBranch.m_parentCandidates.emplace_back(it->second, it->first);
+		operatingBranch.m_parentCandidates.emplace_back(data.first, data.second);
 	}
 
 	operatingBranch.m_skeletonIndex = -1;
@@ -2333,6 +2294,8 @@ void ReconstructionSettings::OnInspect() {
 
 	ImGui::DragInt("Node back track limit", &m_nodeBackTrackLimit, 1, 0, 100);
 	ImGui::DragInt("Branch back track limit", &m_branchBackTrackLimit, 1, 0, 10);
+
+	ImGui::Checkbox("Use root distance", &m_useRootDistance);
 	/*
 	ImGui::Checkbox("Candidate Search", &m_candidateSearch);
 	if (m_candidateSearch) ImGui::DragInt("Candidate Search limit", &m_candidateSearchLimit, 1, 0, 10);

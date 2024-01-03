@@ -75,6 +75,8 @@ namespace EcoSysLab {
 		bool m_orphan = false;
 
 		bool m_apical = false;
+
+		float m_rootDistance = 0.0f;
 	};
 
 	struct TreePart {
@@ -95,7 +97,7 @@ namespace EcoSysLab {
 		float m_parallelShiftLimitRange = 2.0f;
 		float m_pointPointConnectionDetectionRadius = 0.05f;
 		float m_pointBranchConnectionDetectionRange = 0.5f;
-		float m_branchBranchConnectionMaxLengthRange = 10.0f;
+		float m_branchBranchConnectionMaxLengthRange = 5.0f;
 		float m_directionConnectionAngleLimit = 45.0f;
 		float m_indirectConnectionAngleLimit = 45.0f;
 
@@ -128,7 +130,7 @@ namespace EcoSysLab {
 		float m_overrideThicknessRootDistance = 0.0f;
 
 		int m_spaceColonizationTimeout = 10;
-		float m_spaceColonizationFactor = 0.3f;
+		float m_spaceColonizationFactor = 0.0f;
 		float m_spaceColonizationRemovalDistanceFactor = 2;
 		float m_spaceColonizationDetectionDistanceFactor = 4;
 		float m_spaceColonizationTheta = 20.0f;
@@ -145,7 +147,7 @@ namespace EcoSysLab {
 		int m_candidateSearchLimit = 1;
 		bool m_forceConnectAllBranches = false;
 		*/
-		bool m_chooseShortestDistanceFirst = true;
+		bool m_useRootDistance = true;
 		
 		void OnInspect();
 	};
