@@ -21,6 +21,7 @@ void TreePointCloud::BuildVoxelGrid()
 {
 	m_scatterPointsVoxelGrid.Initialize(2.0f * m_connectivityGraphSettings.m_pointPointConnectionDetectionRadius, m_min, m_max);
 	m_allocatedPointsVoxelGrid.Initialize(2.0f * m_connectivityGraphSettings.m_pointPointConnectionDetectionRadius, m_min, m_max);
+	
 	m_branchEndsVoxelGrid.Initialize(2.0f * m_connectivityGraphSettings.m_pointPointConnectionDetectionRadius, m_min, m_max);
 	for (auto& point : m_allocatedPoints) {
 		point.m_branchHandle = point.m_nodeHandle = point.m_skeletonIndex = -1;
@@ -30,13 +31,13 @@ void TreePointCloud::BuildVoxelGrid()
 		point.m_p3.clear();
 		point.m_p0.clear();
 		PointData voxel;
-		voxel.m_pointHandle = point.m_handle;
+		voxel.m_handle = point.m_handle;
 		voxel.m_position = point.m_position;
 		m_scatterPointsVoxelGrid.Ref(point.m_position).emplace_back(voxel);
 	}
 	for (auto& point : m_allocatedPoints) {
 		PointData voxel;
-		voxel.m_pointHandle = point.m_handle;
+		voxel.m_handle = point.m_handle;
 		voxel.m_position = point.m_position;
 		m_allocatedPointsVoxelGrid.Ref(point.m_position).emplace_back(voxel);
 	}
@@ -255,7 +256,7 @@ void TreePointCloud::Link(const BranchHandle childHandle, const BranchHandle par
 		m_scannedBranches[parentHandle].m_bezierCurve.m_p3);
 }
 
-void TreePointCloud::BuildSkeleton(BranchHandle branchHandle)
+void TreePointCloud::ConnectBranches(const BranchHandle branchHandle)
 {
 	const auto childHandles = m_operatingBranches[branchHandle].m_childHandles;
 	for (const auto& childHandle : childHandles) {
@@ -275,7 +276,7 @@ void TreePointCloud::BuildSkeleton(BranchHandle branchHandle)
 	}
 	for (const auto& childHandle : childHandles)
 	{
-		BuildSkeleton(childHandle);
+		ConnectBranches(childHandle);
 	}
 }
 
@@ -1044,12 +1045,12 @@ void TreePointCloud::EstablishConnectivityGraph() {
 		}
 		FindPoints(point.m_position, m_scatterPointsVoxelGrid, m_connectivityGraphSettings.m_pointPointConnectionDetectionRadius,
 			[&](const PointData& voxel) {
-				if (voxel.m_pointHandle == point.m_handle) return;
+				if (voxel.m_handle == point.m_handle) return;
 				for (const auto& neighbor : point.m_neighborScatterPoints) {
-					if (voxel.m_pointHandle == neighbor) return;
+					if (voxel.m_handle == neighbor) return;
 				}
-				auto& otherPoint = m_scatteredPoints[voxel.m_pointHandle];
-				point.m_neighborScatterPoints.emplace_back(voxel.m_pointHandle);
+				auto& otherPoint = m_scatteredPoints[voxel.m_handle];
+				point.m_neighborScatterPoints.emplace_back(voxel.m_handle);
 				otherPoint.m_neighborScatterPoints.emplace_back(point.m_handle);
 				m_scatterPointsConnections.emplace_back(point.m_position, otherPoint.m_position);
 			});
@@ -1063,7 +1064,7 @@ void TreePointCloud::EstablishConnectivityGraph() {
 		FindPoints(p0, m_scatterPointsVoxelGrid, branchLength * m_connectivityGraphSettings.m_pointBranchConnectionDetectionRange,
 			[&](const PointData& voxel) {
 				{
-					auto& otherPoint = m_scatteredPoints[voxel.m_pointHandle];
+					auto& otherPoint = m_scatteredPoints[voxel.m_handle];
 					bool duplicate = false;
 					for (const auto& i : otherPoint.m_p0) {
 						if (i.second == branch.m_handle){
@@ -1077,12 +1078,12 @@ void TreePointCloud::EstablishConnectivityGraph() {
 				{
 					bool duplicate = false;
 					for (const auto& i : branch.m_pointsToP0) {
-						if (i.second == voxel.m_pointHandle) {
+						if (i.second == voxel.m_handle) {
 							duplicate = true;
 							break;
 						}
 					}
-					if (!duplicate) branch.m_pointsToP0.emplace_back(glm::distance(branch.m_bezierCurve.m_p0, voxel.m_position), voxel.m_pointHandle);
+					if (!duplicate) branch.m_pointsToP0.emplace_back(glm::distance(branch.m_bezierCurve.m_p0, voxel.m_position), voxel.m_handle);
 				}
 				m_scatterPointToBranchStartConnections.emplace_back(branch.m_bezierCurve.m_p0,
 					voxel.m_position);
@@ -1090,16 +1091,16 @@ void TreePointCloud::EstablishConnectivityGraph() {
 		//We find branch p3 close to the scatter point.
 		FindPoints(p3, m_scatterPointsVoxelGrid, branchLength * m_connectivityGraphSettings.m_pointBranchConnectionDetectionRange,
 			[&](const PointData& voxel) {
-				auto& otherPoint = m_scatteredPoints[voxel.m_pointHandle];
+				auto& otherPoint = m_scatteredPoints[voxel.m_handle];
 				{
 					bool duplicate = false;
 					for (const auto& i : branch.m_pointsToP3) {
-						if (i.second == voxel.m_pointHandle) {
+						if (i.second == voxel.m_handle) {
 							duplicate = true;
 							break;
 						}
 					}
-					if (!duplicate) branch.m_pointsToP3.emplace_back(glm::distance(branch.m_bezierCurve.m_p3, voxel.m_position), voxel.m_pointHandle);
+					if (!duplicate) branch.m_pointsToP3.emplace_back(glm::distance(branch.m_bezierCurve.m_p3, voxel.m_position), voxel.m_handle);
 				}
 				if (m_connectivityGraphSettings.m_reverseConnection)
 				{
@@ -1382,8 +1383,6 @@ void TreePointCloud::EstablishConnectivityGraph() {
 	}
 }
 
-
-
 void TreePointCloud::BuildSkeletons() {
 	m_skeletons.clear();
 	std::unordered_set<BranchHandle> allocatedBranchHandles;
@@ -1559,9 +1558,249 @@ void TreePointCloud::BuildSkeletons() {
 	}
 	for (const auto& rootBranchHandle : rootBranchHandles)
 	{
-		BuildSkeleton(rootBranchHandle.second);
+		ConnectBranches(rootBranchHandle.second);
 	}
 
+	CalculateSkeletonGraphs();
+
+	for (auto& allocatedPoint : m_allocatedPoints) {
+		const auto& treePart = m_treeParts[allocatedPoint.m_treePartHandle];
+		float minDistance = 999.f;
+		NodeHandle closestNodeHandle = -1;
+		BranchHandle closestBranchHandle = -1;
+		int closestSkeletonIndex = -1;
+		for (const auto& branchHandle : treePart.m_branchHandles) {
+			auto& branch = m_operatingBranches[branchHandle];
+			for (const auto& nodeHandle : branch.m_chainNodeHandles) {
+				auto& node = m_skeletons[branch.m_skeletonIndex].RefNode(nodeHandle);
+				auto distance = glm::distance(node.m_info.m_globalPosition, allocatedPoint.m_position);
+				if (distance < minDistance) {
+					minDistance = distance;
+					closestNodeHandle = nodeHandle;
+					closestSkeletonIndex = branch.m_skeletonIndex;
+					closestBranchHandle = branchHandle;
+				}
+			}
+		}
+		allocatedPoint.m_nodeHandle = closestNodeHandle;
+		allocatedPoint.m_branchHandle = closestBranchHandle;
+		allocatedPoint.m_skeletonIndex = closestSkeletonIndex;
+		if (allocatedPoint.m_skeletonIndex != -1)
+			m_skeletons[allocatedPoint.m_skeletonIndex].RefNode(
+				closestNodeHandle).m_data.m_allocatedPoints.emplace_back(allocatedPoint.m_handle);
+	}
+	if (m_skeletons.size() > 1) {
+		for (int i = 0; i < m_skeletons.size(); i++)
+		{
+			auto& skeleton = m_skeletons[i];
+			bool remove = false;
+			if (skeleton.RefSortedNodeList().size() < m_reconstructionSettings.m_minimumNodeCount)
+			{
+				remove = true;
+			}
+			else {
+				for (int j = 0; j < m_skeletons.size(); j++)
+				{
+					if (j == i) continue;
+					auto& otherSkeleton = m_skeletons[j];
+					if (glm::distance(skeleton.m_data.m_rootPosition, otherSkeleton.m_data.m_rootPosition) < m_reconstructionSettings.m_minimumTreeDistance)
+					{
+						if (skeleton.RefSortedNodeList().size() < otherSkeleton.RefSortedNodeList().size()) remove = true;
+					}
+				}
+			}
+
+			if (remove)
+			{
+				m_skeletons.erase(m_skeletons.begin() + i);
+				i--;
+			}
+		}
+	}
+
+	SpaceColonization();
+}
+
+void TreePointCloud::SpaceColonization()
+{
+	if (m_reconstructionSettings.m_spaceColonizationFactor == 0.0f) return;
+
+	Jobs::ParallelFor(m_skeletons.size(), [&](unsigned i)
+		{
+			auto& skeleton = m_skeletons[i];
+			const auto& sortedInternodeList = skeleton.RefSortedNodeList();
+			float maxEndDistance = 0.0f;
+			for (const auto& internodeHandle : sortedInternodeList)
+			{
+				auto& internode = skeleton.RefNode(internodeHandle);
+				const auto distance = internode.m_info.m_endDistance + internode.m_info.m_length;
+				if (internode.GetParentHandle() == -1)
+				{
+					skeleton.m_data.m_maxEndDistance = distance;
+					maxEndDistance = distance * m_reconstructionSettings.m_spaceColonizationFactor;
+				}
+				internode.m_data.m_regrowth = distance <= maxEndDistance;
+			}
+		}
+	);
+
+	//Register voxel grid.
+	const float removalDistance = m_reconstructionSettings.m_spaceColonizationRemovalDistanceFactor * m_reconstructionSettings.m_internodeLength;
+	const float detectionDistance = m_reconstructionSettings.m_spaceColonizationDetectionDistanceFactor * m_reconstructionSettings.m_internodeLength;
+
+	m_spaceColonizationVoxelGrid.Initialize(removalDistance, m_min, m_max);
+	for (auto& point : m_scatteredPoints) {
+		PointData voxel;
+		voxel.m_handle = -1;
+		voxel.m_position = point.m_position;
+		m_spaceColonizationVoxelGrid.Ref(voxel.m_position).emplace_back(voxel);
+	}
+	for (auto& point : m_allocatedPoints) {
+		PointData voxel;
+		voxel.m_handle = -1;
+		voxel.m_position = point.m_position;
+		m_spaceColonizationVoxelGrid.Ref(voxel.m_position).emplace_back(voxel);
+	}
+
+	VoxelGrid<std::vector<PointData>> internodeEndGrid{};
+	internodeEndGrid.Initialize(detectionDistance, m_min, m_max);
+	for (int skeletonIndex = 0; skeletonIndex < m_skeletons.size(); skeletonIndex++)
+	{
+		auto& skeleton = m_skeletons[skeletonIndex];
+		const auto& sortedInternodeList = skeleton.RefSortedNodeList();
+		for (const auto& internodeHandle : sortedInternodeList)
+		{
+			auto& internode = skeleton.PeekNode(internodeHandle);
+			if (!internode.m_data.m_regrowth) continue;
+			PointData voxel;
+			voxel.m_handle = internodeHandle;
+			voxel.m_index = skeletonIndex;
+			voxel.m_position = internode.m_data.m_globalEndPosition;
+			voxel.m_direction = internode.m_info.m_globalDirection;
+			internodeEndGrid.Ref(voxel.m_position).emplace_back(voxel);
+		}
+	}
+
+	const auto dotMin = glm::cos(glm::radians(m_reconstructionSettings.m_spaceColonizationTheta));
+	bool newBranchGrown = true;
+	int timeout = 0;
+	while(newBranchGrown && timeout < m_reconstructionSettings.m_spaceColonizationTimeout)
+	{
+		newBranchGrown = false;
+		timeout++;
+		//1. Remove markers with occupancy zone.
+		for (auto& skeleton : m_skeletons)
+		{
+			const auto& sortedInternodeList = skeleton.RefSortedNodeList();
+			for (const auto& internodeHandle : sortedInternodeList)
+			{
+				auto& internode = skeleton.RefNode(internodeHandle);
+				internode.m_data.m_markerSize = 0;
+				internode.m_data.m_regrowDirection = glm::vec3(0.0f);
+				const auto internodeEndPosition = internode.m_data.m_globalEndPosition;
+				m_spaceColonizationVoxelGrid.ForEach(internodeEndPosition, removalDistance,
+					[&](std::vector<PointData>& voxels)
+					{
+						for(int i = 0; i < voxels.size(); i++)
+						{
+							auto& marker = voxels[i];
+							const auto diff = marker.m_position - internodeEndPosition;
+							const auto distance = glm::length(diff);
+							if(distance < removalDistance)
+							{
+								voxels[i] = voxels.back();
+								voxels.pop_back();
+								i--;
+							}
+						}
+					}
+				);
+			}
+		}
+
+		//2. Allocate markers to node with perception volume.
+		for(auto& voxel : m_spaceColonizationVoxelGrid.RefData())
+		{
+			for (auto& point : voxel)
+			{
+				point.m_minDistance = FLT_MAX;
+				point.m_handle = -1;
+				point.m_index = -1;
+				point.m_direction = glm::vec3(0.0f);
+				internodeEndGrid.ForEach(point.m_position, detectionDistance,
+					[&](const std::vector<PointData>& voxels)
+					{
+						for (const auto& internodeEnd : voxels)
+						{
+							const auto diff = point.m_position - internodeEnd.m_position;
+							const auto distance = glm::length(diff);
+							const auto direction = glm::normalize(diff);
+							if (distance < detectionDistance 
+								&& glm::dot(direction, internodeEnd.m_direction) > dotMin
+								&& distance < point.m_minDistance)
+							{
+								point.m_minDistance = distance;
+								point.m_handle = internodeEnd.m_handle;
+								point.m_index = internodeEnd.m_index;
+								point.m_direction = diff;
+							}
+						}
+					}
+				);
+			}
+		}
+
+		//3. Calculate new direction for each internode.
+		for (auto& voxel : m_spaceColonizationVoxelGrid.RefData())
+		{
+			for (auto& point : voxel)
+			{
+				if(point.m_handle != -1)
+				{
+					auto& internode = m_skeletons[point.m_index].RefNode(point.m_handle);
+					internode.m_data.m_markerSize++;
+					internode.m_data.m_regrowDirection += point.m_direction;
+				}
+			}
+		}
+
+		//4. Grow and add new internodes to the internodeEndGrid.
+		for (int skeletonIndex = 0; skeletonIndex < m_skeletons.size(); skeletonIndex++)
+		{
+			auto& skeleton = m_skeletons[skeletonIndex];
+			const auto& sortedInternodeList = skeleton.RefSortedNodeList();
+			for (const auto& internodeHandle : sortedInternodeList)
+			{
+				auto& internode = skeleton.PeekNode(internodeHandle);
+				if (!internode.m_data.m_regrowth || internode.m_data.m_markerSize == 0) continue;
+				if(internode.m_info.m_rootDistance > skeleton.m_data.m_maxEndDistance) continue;
+				newBranchGrown = true;
+				const auto newInternodeHandle = skeleton.Extend(internodeHandle, !internode.RefChildHandles().empty());
+				auto& oldInternode = skeleton.RefNode(internodeHandle);
+				auto& newInternode = skeleton.RefNode(newInternodeHandle);
+				newInternode.m_info.m_globalPosition = oldInternode.m_info.GetGlobalEndPosition();
+				newInternode.m_info.m_length = m_reconstructionSettings.m_internodeLength;
+				newInternode.m_info.m_globalDirection = glm::normalize(oldInternode.m_data.m_regrowDirection);
+				newInternode.m_data.m_globalEndPosition = oldInternode.m_data.m_globalEndPosition + newInternode.m_info.m_length * newInternode.m_info.m_globalDirection;
+				newInternode.m_data.m_regrowth = true;
+				PointData voxel;
+				voxel.m_handle = newInternodeHandle;
+				voxel.m_index = skeletonIndex;
+				voxel.m_position = newInternode.m_data.m_globalEndPosition;
+				voxel.m_direction = newInternode.m_info.m_globalDirection;
+				internodeEndGrid.Ref(voxel.m_position).emplace_back(voxel);
+			}
+		}
+		for (auto& skeleton : m_skeletons) {
+			skeleton.SortLists();
+			skeleton.CalculateDistance();
+		}
+	}
+	CalculateSkeletonGraphs();
+}
+
+void TreePointCloud::CalculateSkeletonGraphs()
+{
 	for (auto& skeleton : m_skeletons)
 	{
 		skeleton.SortLists();
@@ -1638,61 +1877,6 @@ void TreePointCloud::BuildSkeletons() {
 
 		CalculateNodeTransforms(skeleton);
 		skeleton.CalculateFlows();
-	}
-
-	for (auto& allocatedPoint : m_allocatedPoints) {
-		const auto& treePart = m_treeParts[allocatedPoint.m_treePartHandle];
-		float minDistance = 999.f;
-		NodeHandle closestNodeHandle = -1;
-		BranchHandle closestBranchHandle = -1;
-		int closestSkeletonIndex = -1;
-		for (const auto& branchHandle : treePart.m_branchHandles) {
-			auto& branch = m_operatingBranches[branchHandle];
-			for (const auto& nodeHandle : branch.m_chainNodeHandles) {
-				auto& node = m_skeletons[branch.m_skeletonIndex].RefNode(nodeHandle);
-				auto distance = glm::distance(node.m_info.m_globalPosition, allocatedPoint.m_position);
-				if (distance < minDistance) {
-					minDistance = distance;
-					closestNodeHandle = nodeHandle;
-					closestSkeletonIndex = branch.m_skeletonIndex;
-					closestBranchHandle = branchHandle;
-				}
-			}
-		}
-		allocatedPoint.m_nodeHandle = closestNodeHandle;
-		allocatedPoint.m_branchHandle = closestBranchHandle;
-		allocatedPoint.m_skeletonIndex = closestSkeletonIndex;
-		if (allocatedPoint.m_skeletonIndex != -1)
-			m_skeletons[allocatedPoint.m_skeletonIndex].RefNode(
-				closestNodeHandle).m_data.m_allocatedPoints.emplace_back(allocatedPoint.m_handle);
-	}
-	if (m_skeletons.size() > 1) {
-		for (int i = 0; i < m_skeletons.size(); i++)
-		{
-			auto& skeleton = m_skeletons[i];
-			bool remove = false;
-			if (skeleton.RefSortedNodeList().size() < m_reconstructionSettings.m_minimumNodeCount)
-			{
-				remove = true;
-			}
-			else {
-				for (int j = 0; j < m_skeletons.size(); j++)
-				{
-					if (j == i) continue;
-					auto& otherSkeleton = m_skeletons[j];
-					if (glm::distance(skeleton.m_data.m_rootPosition, otherSkeleton.m_data.m_rootPosition) < m_reconstructionSettings.m_minimumTreeDistance)
-					{
-						if (skeleton.RefSortedNodeList().size() < otherSkeleton.RefSortedNodeList().size()) remove = true;
-					}
-				}
-			}
-
-			if (remove)
-			{
-				m_skeletons.erase(m_skeletons.begin() + i);
-				i--;
-			}
-		}
 	}
 }
 
@@ -2064,8 +2248,23 @@ std::vector<std::shared_ptr<Mesh>> TreePointCloud::GenerateFoliageMeshes() const
 
 
 void ConnectivityGraphSettings::OnInspect() {
-	ImGui::Checkbox("Allow Reverse connections", &m_reverseConnection);
-
+	//ImGui::Checkbox("Allow Reverse connections", &m_reverseConnection);
+	if(ImGui::Button("Load reduced connection settings"))
+	{
+		m_pointPointConnectionDetectionRadius = 0.05f;
+		m_pointBranchConnectionDetectionRange = 0.5f;
+		m_branchBranchConnectionMaxLengthRange = 15.0f;
+		m_directionConnectionAngleLimit = 30.0f;
+		m_indirectConnectionAngleLimit = 15.0f;
+	}
+	if (ImGui::Button("Load max connection settings"))
+	{
+		m_pointPointConnectionDetectionRadius = 0.05f;
+		m_pointBranchConnectionDetectionRange = 0.5f;
+		m_branchBranchConnectionMaxLengthRange = 3.0f;
+		m_directionConnectionAngleLimit = 70.0f;
+		m_indirectConnectionAngleLimit = 70.0f;
+	}
 	ImGui::DragFloat("Point-point detection radius", &m_pointPointConnectionDetectionRadius, 0.01f, 0.01f, 1.0f);
 	ImGui::DragFloat("Point-branch detection range", &m_pointBranchConnectionDetectionRange, 0.01f, 0.01f, 2.0f);
 	ImGui::DragFloat("Branch-branch detection range", &m_branchBranchConnectionMaxLengthRange, 0.01f, 0.01f, 2.0f);
@@ -2109,13 +2308,22 @@ void TreePointCloud::CloneOperatingBranch(OperatingBranch& operatingBranch, cons
 	operatingBranch.m_chainNodeHandles.clear();
 }
 
+
+
 void ReconstructionSettings::OnInspect() {
 	ImGui::DragFloat("Internode length", &m_internodeLength, 0.01f, 0.01f, 1.0f);
 	ImGui::DragFloat("Root node max height", &m_minHeight, 0.01f, 0.01f, 1.0f);
 	ImGui::DragFloat("Tree distance limit", &m_minimumTreeDistance, 0.01f, 0.01f, 1.0f);
 	ImGui::DragFloat("Branch shortening", &m_branchShortening, 0.01f, 0.01f, 0.5f);
 	ImGui::DragFloat("Override thickness root distance", &m_overrideThicknessRootDistance, 0.01f, 0.01f, 0.5f);
-
+	ImGui::DragFloat("Space colonization factor", &m_spaceColonizationFactor, 0.01f, 0.f, 1.0f);
+	if(m_spaceColonizationFactor > 0.0f)
+	{
+		ImGui::DragInt("Space colonization timeout", &m_spaceColonizationTimeout, 1, 0, 500);
+		ImGui::DragFloat("Space colonization removal distance", &m_spaceColonizationRemovalDistanceFactor, 0.1f, 0.f, 10.0f);
+		ImGui::DragFloat("Space colonization detection distance", &m_spaceColonizationDetectionDistanceFactor, 0.1f, 0.f, 20.0f);
+		ImGui::DragFloat("Space colonization perception theta", &m_spaceColonizationTheta, 0.1f, 0.f, 90.0f);
+	}
 	ImGui::DragFloat("End node thickness", &m_endNodeThickness, 0.001f, 0.001f, 1.0f);
 	ImGui::DragFloat("Thickness sum factor", &m_thicknessSumFactor, 0.01f, 0.0f, 2.0f);
 	ImGui::DragFloat("Thickness accumulation factor", &m_thicknessAccumulationFactor, 0.00001f, 0.0f, 1.0f, "%.5f");

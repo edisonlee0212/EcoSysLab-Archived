@@ -35,8 +35,8 @@ bool TreeDescriptor::OnInspectFoliageParameters(FoliageParameters& foliageParame
 		if (ImGui::DragFloat("Rotation variance", &foliageParameters.m_rotationVariance, 0.01f, 0.0f, 1.0f)) changed = true;
 		if (ImGui::DragFloat("Branching angle", &foliageParameters.m_branchingAngle, 0.01f, 0.0f, 1.0f)) changed = true;
 		if (ImGui::DragFloat("Max node thickness", &foliageParameters.m_maxNodeThickness, 0.001f, 0.0f, 5.0f)) changed = true;
-		if (ImGui::DragFloat("Min root distance", &foliageParameters.m_minRootDistance, 0.001f, 0.0f, 1.0f)) changed = true;
-		if (ImGui::DragFloat("Max end distance", &foliageParameters.m_maxEndDistance, 0.001f, 0.0f, 1.0f)) changed = true;
+		if (ImGui::DragFloat("Min root distance", &foliageParameters.m_minRootDistance, 0.01f, 0.0f, 10.0f)) changed = true;
+		if (ImGui::DragFloat("Max end distance", &foliageParameters.m_maxEndDistance, 0.01f, 0.0f, 10.0f)) changed = true;
 		ImGui::TreePop();
 	}
 	return changed;

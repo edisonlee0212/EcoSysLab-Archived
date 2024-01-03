@@ -340,7 +340,7 @@ void TreeModel::ShootGrowthPostProcess(const glm::mat4& globalTransform, Climate
 		m_shootSkeleton.m_data.m_desiredMin = glm::vec3(FLT_MAX);
 		m_shootSkeleton.m_data.m_desiredMax = glm::vec3(FLT_MIN);
 
-		CalculateDistances();
+		m_shootSkeleton.CalculateDistance();
 		CalculateThickness(shootGrowthController);
 		CalculateBiomass(shootGrowthController);
 		CalculateLevel();
@@ -358,11 +358,9 @@ void TreeModel::ShootGrowthPostProcess(const glm::mat4& globalTransform, Climate
 				internodeData.m_localRotation = glm::vec3(0.0f);
 				internodeInfo.m_globalRotation = internodeInfo.m_regulatedGlobalRotation = internodeData.m_desiredGlobalRotation = glm::vec3(glm::radians(90.0f), 0.0f, 0.0f);
 				internodeInfo.m_globalDirection = glm::normalize(internodeInfo.m_globalRotation * glm::vec3(0, 0, -1));
-				internodeInfo.m_rootDistance = internodeInfo.m_length;
 			}
 			else {
 				auto& parentInternode = m_shootSkeleton.RefNode(internode.GetParentHandle());
-				internodeInfo.m_rootDistance = parentInternode.m_info.m_rootDistance + internodeInfo.m_length;
 				internodeInfo.m_globalRotation =
 					parentInternode.m_info.m_globalRotation * internodeData.m_localRotation;
 
@@ -883,25 +881,6 @@ void TreeModel::AllocateShootVigor(const float shootFlux, const std::vector<Node
 		node.m_data.m_growthRate = pressure * node.m_data.m_desiredGrowthRate;
 	}
 }
-void TreeModel::CalculateDistances()
-{
-	auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
-	for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); ++it) {
-		const auto internodeHandle = *it;
-		auto& internode = m_shootSkeleton.RefNode(internodeHandle);
-		auto& internodeInfo = internode.m_info;
-		float maxDistanceToAnyBranchEnd = 0;
-		internodeInfo.m_endDistance = 0.0f;
-		for (const auto& i : internode.RefChildHandles()) {
-			const auto& childInternode = m_shootSkeleton.PeekNode(i);
-			const float childMaxDistanceToAnyBranchEnd =
-				childInternode.m_info.m_endDistance +
-				childInternode.m_data.m_internodeLength;
-			maxDistanceToAnyBranchEnd = glm::max(maxDistanceToAnyBranchEnd, childMaxDistanceToAnyBranchEnd);
-		}
-		internodeInfo.m_endDistance = maxDistanceToAnyBranchEnd;
-	}
-}
 
 void TreeModel::CalculateThickness(const ShootGrowthController& shootGrowthController) {
 	auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
@@ -1048,7 +1027,7 @@ bool TreeModel::PruneInternodes(const glm::mat4& globalTransform, ClimateModel& 
 			anyInternodePruned = true;
 		}
 	}
-	CalculateDistances();
+	m_shootSkeleton.CalculateDistance();
 	CalculateLevel();
 	return anyInternodePruned;
 }

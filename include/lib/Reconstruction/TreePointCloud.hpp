@@ -79,6 +79,7 @@ namespace EcoSysLab {
 
 	struct TreePart {
 		glm::vec3 m_color;
+
 		TreePartHandle m_handle = -1;
 		std::vector<PointHandle> m_allocatedPoints;
 		std::vector<BranchHandle> m_branchHandles;
@@ -94,9 +95,9 @@ namespace EcoSysLab {
 		float m_parallelShiftLimitRange = 2.0f;
 		float m_pointPointConnectionDetectionRadius = 0.05f;
 		float m_pointBranchConnectionDetectionRange = 0.5f;
-		float m_branchBranchConnectionMaxLengthRange = 3.0f;
-		float m_directionConnectionAngleLimit = 90.0f;
-		float m_indirectConnectionAngleLimit = 90.0f;
+		float m_branchBranchConnectionMaxLengthRange = 15.0f;
+		float m_directionConnectionAngleLimit = 30.0f;
+		float m_indirectConnectionAngleLimit = 15.0f;
 
 		float m_connectionRangeLimit = 1.0f;
 		void OnInspect();
@@ -104,7 +105,10 @@ namespace EcoSysLab {
 
 	struct PointData {
 		glm::vec3 m_position = glm::vec3(0.0f);
-		int m_pointHandle = -1;
+		glm::vec3 m_direction = glm::vec3(0.0f);
+		int m_handle = -1;
+		int m_index = -1;
+		float m_minDistance = FLT_MAX;
 	};
 	struct BranchEndData {
 		bool m_isP0 = true;
@@ -113,8 +117,6 @@ namespace EcoSysLab {
 	};
 
 	struct ReconstructionSettings {
-		
-
 		float m_internodeLength = 0.03f;
 		float m_minHeight = 0.3f;
 		float m_minimumTreeDistance = 0.1f;
@@ -124,6 +126,13 @@ namespace EcoSysLab {
 		float m_thicknessSumFactor = 0.4f;
 		float m_thicknessAccumulationFactor = 0.00005f;
 		float m_overrideThicknessRootDistance = 0.0f;
+
+		int m_spaceColonizationTimeout = 10;
+		float m_spaceColonizationFactor = 0.3f;
+		float m_spaceColonizationRemovalDistanceFactor = 2;
+		float m_spaceColonizationDetectionDistanceFactor = 4;
+		float m_spaceColonizationTheta = 20.0f;
+
 		int m_minimumNodeCount = 1;
 		bool m_limitParentThickness = true;
 		float m_minimumRootThickness = 0.02f;
@@ -134,11 +143,15 @@ namespace EcoSysLab {
 		bool m_candidateSearch = true;
 		int m_candidateSearchLimit = 1;
 		bool m_forceConnectAllBranches = false;
+
+
+		
 		void OnInspect();
 	};
 
 	struct ReconstructionSkeletonData {
 		glm::vec3 m_rootPosition = glm::vec3(0.0f);
+		float m_maxEndDistance = 0.0f;
 	};
 	struct ReconstructionFlowData {
 
@@ -151,6 +164,11 @@ namespace EcoSysLab {
 		std::vector<PointHandle> m_allocatedPoints;
 		std::vector<PointHandle> m_filteredPoints;
 		BranchHandle m_branchHandle;
+
+		bool m_regrowth = false;
+		int m_markerSize = 0;
+		glm::vec3 m_regrowDirection = glm::vec3(0.0f);
+		
 	};
 	typedef Skeleton<ReconstructionSkeletonData, ReconstructionFlowData, ReconstructionNodeData> ReconstructionSkeleton;
 
@@ -168,16 +186,21 @@ namespace EcoSysLab {
 		void BuildConnectionBranch(BranchHandle processingBranchHandle, NodeHandle& prevNodeHandle);
 		void Link(BranchHandle childHandle, BranchHandle parentHandle);
 
-		void BuildSkeleton(BranchHandle branchHandle);
+		void ConnectBranches(BranchHandle branchHandle);
 
 		void ApplyCurve(const OperatingBranch& branch);
 
 		void BuildVoxelGrid();
 
 		static void CloneOperatingBranch(OperatingBranch& operatingBranch, const ScannedBranch& target);
+
+		void SpaceColonization();
+
+		void CalculateSkeletonGraphs();
 	public:
 		VoxelGrid<std::vector<PointData>> m_scatterPointsVoxelGrid;
 		VoxelGrid<std::vector<PointData>> m_allocatedPointsVoxelGrid;
+		VoxelGrid<std::vector<PointData>> m_spaceColonizationVoxelGrid;
 		VoxelGrid<std::vector<BranchEndData>> m_branchEndsVoxelGrid;
 
 		TreeMeshGeneratorSettings m_treeMeshGeneratorSettings {};
@@ -185,6 +208,7 @@ namespace EcoSysLab {
 		ConnectivityGraphSettings m_connectivityGraphSettings{};
 		void ImportGraph(const std::filesystem::path& path, float scaleFactor = 0.1f);
 		void ExportForestOBJ(const std::filesystem::path& path) const;
+
 		glm::vec3 m_min;
 		glm::vec3 m_max;
 		std::vector<ScatteredPoint> m_scatteredPoints;

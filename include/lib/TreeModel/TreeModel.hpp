@@ -25,8 +25,6 @@ namespace EcoSysLab {
 
 		bool PruneInternodes(const glm::mat4& globalTransform, ClimateModel& climateModel, const ShootGrowthController& shootGrowthController);
 
-		void CalculateDistances();
-
 		void CalculateThickness(const ShootGrowthController& shootGrowthController);
 
 		void CalculateBiomass(const ShootGrowthController& shootGrowthController);
