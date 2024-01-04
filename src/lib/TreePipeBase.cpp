@@ -123,7 +123,7 @@ void TreePipeBase::ClearStrands() const
 	}
 }
 
-void TreePipeBase::InitializeStrandRenderer(const float frontControlPointRatio, const float backControlPointRatio, int nodeMaxCount)
+void TreePipeBase::InitializeStrandRenderer(const float frontControlPointRatio, const float backControlPointRatio, bool triplePoints, int nodeMaxCount)
 {
 	const auto scene = GetScene();
 	const auto owner = GetOwner();
@@ -139,7 +139,7 @@ void TreePipeBase::InitializeStrandRenderer(const float frontControlPointRatio, 
 
 	std::vector<glm::uint> strandsList;
 	std::vector<StrandPoint> points;
-	m_pipeGroup.BuildStrands(frontControlPointRatio, backControlPointRatio, strandsList, points, nodeMaxCount);
+	m_pipeGroup.BuildStrands(frontControlPointRatio, backControlPointRatio, strandsList, points, triplePoints, nodeMaxCount);
 	if (!points.empty()) strandsList.emplace_back(points.size());
 	StrandPointAttributes strandPointAttributes{};
 	strandPointAttributes.m_color = true;
@@ -666,12 +666,13 @@ void TreePipeBase::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 		ImGui::DragFloat("Rotation push ratio", &m_graphAdjustmentSettings.m_rotationPushRatio, 0.01f, 0.0f, 2.0f);
 		ImGui::TreePop();
 	}
-
+	static bool triplePoints = false;
+	ImGui::Checkbox("Triple points", &triplePoints);
 	if (ImGui::Button("Build Strands"))
 	{
 		if (adjustment) AdjustGraph();
 		else RestoreGraph();
-		InitializeStrandRenderer(frontControlPointRatio, backControlPointRatio);
+		InitializeStrandRenderer(frontControlPointRatio, backControlPointRatio, triplePoints);
 	}
 
 	if(ImGui::Button("Clear Strands"))

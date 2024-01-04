@@ -154,12 +154,12 @@ namespace EcoSysLab
 		std::queue<PipeSegmentHandle> m_pipeSegmentPool;
 
 		int m_version = -1;
-		void BuildStrand(float frontControlPointRatio, float backControlPointRatio, const Pipe<PipeData>& pipe, std::vector<glm::uint>& strands, std::vector<StrandPoint>& points, int nodeMaxCount) const;
+		void BuildStrand(float frontControlPointRatio, float backControlPointRatio, const Pipe<PipeData>& pipe, std::vector<glm::uint>& strands, std::vector<StrandPoint>& points, bool triplePoints, int nodeMaxCount) const;
 
 		[[nodiscard]] PipeSegmentHandle AllocatePipeSegment(PipeHandle pipeHandle, PipeSegmentHandle prevHandle, int index);
 	public:
 
-		void BuildStrands(float frontControlPointRatio, float backControlPointRatio, std::vector<glm::uint>& strands, std::vector<StrandPoint>& points, int nodeMaxCount = -1) const;
+		void BuildStrands(float frontControlPointRatio, float backControlPointRatio, std::vector<glm::uint>& strands, std::vector<StrandPoint>& points, bool triplePoints, int nodeMaxCount) const;
 
 		PipeGroupData m_data;
 
@@ -246,11 +246,12 @@ namespace EcoSysLab
 
 	template <typename PipeGroupData, typename PipeData, typename PipeSegmentData>
 	void PipeGroup<PipeGroupData, PipeData, PipeSegmentData>::BuildStrand(const float frontControlPointRatio, const float backControlPointRatio, const Pipe<PipeData>& pipe,
-		std::vector<glm::uint>& strands, std::vector<StrandPoint>& points, int nodeMaxCount) const
+		std::vector<glm::uint>& strands, std::vector<StrandPoint>& points, bool triplePoints, int nodeMaxCount) const
 	{
 		const auto& pipeSegmentHandles = pipe.PeekPipeSegmentHandles();
 		if (pipeSegmentHandles.empty())
 			return;
+
 		auto& baseInfo = pipe.m_info.m_baseInfo;
 		strands.emplace_back(points.size());
 		StrandPoint basePoint;
@@ -281,20 +282,20 @@ namespace EcoSysLab
 			}
 			auto prevDistance = glm::distance(pipeSegment.m_info.m_globalPosition, baseInfo.m_globalPosition);
 			auto nextDistance = glm::distance(pipeSegment.m_info.m_globalPosition, nextPosition);
-			auto distance = glm::min(prevDistance, nextDistance);
+			//auto distance = glm::min(prevDistance, nextDistance);
 
 			point.m_normal = glm::normalize(pipeSegment.m_info.m_globalPosition - baseInfo.m_globalPosition); //glm::normalize(pipeSegment.m_info.m_globalRotation * glm::vec3(0, 0, -1));
-			point.m_position = pipeSegment.m_info.m_globalPosition - point.m_normal * distance * frontControlPointRatio;
+			point.m_position = pipeSegment.m_info.m_globalPosition - point.m_normal * prevDistance * frontControlPointRatio;
 			point.m_thickness = pipeSegment.m_info.m_thickness;
-			points.emplace_back(point);
+			if(triplePoints) points.emplace_back(point);
 
 			point.m_normal = glm::normalize(pipeSegment.m_info.m_globalRotation * glm::vec3(0, 0, -1));
 			point.m_position = pipeSegment.m_info.m_globalPosition;
 			points.emplace_back(point);
 
 			point.m_normal = glm::normalize(nextPosition - pipeSegment.m_info.m_globalPosition); //glm::normalize(pipeSegment.m_info.m_globalRotation * glm::vec3(0, 0, -1));
-			point.m_position = pipeSegment.m_info.m_globalPosition + point.m_normal * distance * backControlPointRatio;
-			points.emplace_back(point);
+			point.m_position = pipeSegment.m_info.m_globalPosition + point.m_normal * nextDistance * backControlPointRatio;
+			if (triplePoints) points.emplace_back(point);
 		}
 		for (int i = 1; i < pipeSegmentHandles.size() && (nodeMaxCount == -1 || i < nodeMaxCount); i++)
 		{
@@ -311,21 +312,22 @@ namespace EcoSysLab
 			}
 			auto prevDistance = glm::distance(pipeSegment.m_info.m_globalPosition, prevPipeSegment.m_info.m_globalPosition);
 			auto nextDistance = glm::distance(pipeSegment.m_info.m_globalPosition, nextPosition);
-			auto distance = glm::min(prevDistance, nextDistance);
+			//auto distance = glm::min(prevDistance, nextDistance);
 
 			point.m_normal = glm::normalize(pipeSegment.m_info.m_globalPosition - prevPipeSegment.m_info.m_globalPosition); //glm::normalize(pipeSegment.m_info.m_globalRotation * glm::vec3(0, 0, -1));
-			point.m_position = pipeSegment.m_info.m_globalPosition - point.m_normal * distance * frontControlPointRatio;
+			point.m_position = pipeSegment.m_info.m_globalPosition - point.m_normal * prevDistance * frontControlPointRatio;
 			point.m_thickness = pipeSegment.m_info.m_thickness;
-			points.emplace_back(point);
+			if (triplePoints || i + 1 == pipeSegmentHandles.size()) points.emplace_back(point);
 
 			point.m_normal = glm::normalize(pipeSegment.m_info.m_globalRotation * glm::vec3(0, 0, -1));
 			point.m_position = pipeSegment.m_info.m_globalPosition;
 			points.emplace_back(point);
 
 			point.m_normal = glm::normalize(nextPosition - pipeSegment.m_info.m_globalPosition); //glm::normalize(pipeSegment.m_info.m_globalRotation * glm::vec3(0, 0, -1));
-			point.m_position = pipeSegment.m_info.m_globalPosition + point.m_normal * distance * backControlPointRatio;
-			points.emplace_back(point);
+			point.m_position = pipeSegment.m_info.m_globalPosition + point.m_normal * nextDistance * backControlPointRatio;
+			if (triplePoints || i + 1 == pipeSegmentHandles.size()) points.emplace_back(point);
 		}
+		
 	}
 
 	template <typename PipeGroupData, typename PipeData, typename PipeSegmentData>
@@ -355,12 +357,12 @@ namespace EcoSysLab
 
 	template <typename PipeGroupData, typename PipeData, typename PipeSegmentData>
 	void PipeGroup<PipeGroupData, PipeData, PipeSegmentData>::BuildStrands(const float frontControlPointRatio, const float backControlPointRatio, std::vector<glm::uint>& strands,
-		std::vector<StrandPoint>& points, int nodeMaxCount) const
+		std::vector<StrandPoint>& points, bool triplePoints, int nodeMaxCount) const
 	{
 		for (const auto& pipe : m_pipes)
 		{
 			if (pipe.IsRecycled()) continue;
-			BuildStrand(frontControlPointRatio, backControlPointRatio, pipe, strands, points, nodeMaxCount);
+			BuildStrand(frontControlPointRatio, backControlPointRatio, pipe, strands, points, triplePoints, nodeMaxCount);
 		}
 	}
 

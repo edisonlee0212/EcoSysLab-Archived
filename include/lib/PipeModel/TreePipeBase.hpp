@@ -12,8 +12,8 @@ namespace EcoSysLab
 	{
 		float m_shiftPushRatio = 1.0f;
 		float m_sidePushRatio = 1.0f;
-		float m_frontPushRatio = 0.0f;
-		float m_rotationPushRatio = 1.0f;
+		float m_frontPushRatio = 1.0f;
+		float m_rotationPushRatio = 0.5f;
 	};
 
 	class TreePipeBase : public IPrivateComponent
@@ -38,7 +38,7 @@ namespace EcoSysLab
 		BaseSkeleton m_skeleton;
 		void InitializeNodes();
 		void ClearStrands() const;
-		void InitializeStrandRenderer(float frontControlPointRatio, float backControlPointRatio, int nodeMaxCount = -1);
+		void InitializeStrandRenderer(float frontControlPointRatio, float backControlPointRatio, bool triplePoints, int nodeMaxCount = -1);
 		void OnCreate() override;
 		void InitializeProfiles();
 		void CalculateProfiles();
