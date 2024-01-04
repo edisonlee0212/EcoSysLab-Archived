@@ -16,6 +16,9 @@ namespace EcoSysLab
 
 	struct PipeModelPipeSegmentData
 	{
+		/**
+		 * \brief The entity this pipe segment belongs to. Pipe -> PipeSegment <-> Cell <- Profile <- Entity
+		 */
 		Entity m_entity;
 		ParticleHandle m_frontProfileHandle;
 		ParticleHandle m_backParticleHandle;

@@ -11,21 +11,34 @@ namespace EcoSysLab
 
 	struct PipeSegmentInfo
 	{
+		/**
+		 * \brief The position of the end of current pipe segment.
+		 */
 		glm::vec3 m_globalPosition = glm::vec3(0.0f);
+		/**
+		 * \brief The rotation of the end of current pipe segment.
+		 */
 		glm::quat m_globalRotation = glm::vec3(0.0f);
-
-		
-
+		/**
+		 * \brief The thickness of the end of current pipe segment.
+		 */
 		float m_thickness = 0.0f;
-		
 	};
 
 	struct PipeInfo
 	{
 		glm::vec4 m_color = glm::vec4(1.0f);
+
+		/**
+		 * \brief The info of the start of the first pipe segment in this pipe.
+		 */
 		PipeSegmentInfo m_baseInfo;
 	};
 
+	/**
+	 * \brief The data structure that holds a pipe segment.
+	 * \tparam PipeSegmentData The customizable data for each pipe segment.
+	 */
 	template<typename PipeSegmentData>
 	class PipeSegment
 	{
@@ -37,7 +50,7 @@ namespace EcoSysLab
 		PipeSegmentHandle m_prevHandle = -1;
 		PipeSegmentHandle m_handle = -1;
 		PipeSegmentHandle m_nextHandle = -1;
-		
+
 		PipeHandle m_pipeHandle = -1;
 
 		int m_index = -1;
@@ -85,6 +98,10 @@ namespace EcoSysLab
 		explicit PipeSegment(PipeHandle pipeHandle, PipeSegmentHandle handle, PipeSegmentHandle prevHandle);
 	};
 
+	/**
+	 * \brief The data structure that holds a pipe.
+	 * \tparam PipeData The customizable data for each pipe.
+	 */
 	template<typename PipeData>
 	class Pipe
 	{
@@ -121,6 +138,12 @@ namespace EcoSysLab
 		explicit Pipe(PipeHandle handle);
 	};
 
+	/**
+	 * \brief The data structure that holds a collection of pipes.
+	 * \tparam PipeGroupData The customizable data for entire pipe group.
+	 * \tparam PipeData The customizable data for each pipe.
+	 * \tparam PipeSegmentData The customizable data for each pipe segment.
+	 */
 	template<typename PipeGroupData, typename PipeData, typename PipeSegmentData>
 	class PipeGroup {
 
@@ -169,21 +192,49 @@ namespace EcoSysLab
 		 */
 		void RecyclePipe(PipeHandle handle);
 
-
+		/**
+		 * \brief Get a unmodifiable reference to all pipes.
+		 * \return A constant reference to all pipes.
+		 */
 		[[nodiscard]] const std::vector<Pipe<PipeData>>& PeekPipes() const;
-
+		/**
+		 * \brief Get a unmodifiable reference to all pipe segments.
+		 * \return A constant reference to all pipe segments.
+		 */
 		[[nodiscard]] const std::vector<PipeSegment<PipeSegmentData>>& PeekPipeSegments() const;
-
+		/**
+		 * \brief Get a reference to all pipes.
+		 * \return A reference to all pipes.
+		 */
 		[[nodiscard]] std::vector<Pipe<PipeData>>& RefPipes();
-
+		/**
+		 * \brief Get a reference to all pipe segments.
+		 * \return A reference to all pipe segments.
+		 */
 		[[nodiscard]] std::vector<PipeSegment<PipeSegmentData>>& RefPipeSegments();
-
+		/**
+		 * \brief Get a reference to a specific pipe.
+		 * \param handle The handle of the pipe.
+		 * \return A reference to the target pipe.
+		 */
 		[[nodiscard]] Pipe<PipeData>& RefPipe(PipeHandle handle);
-
+		/**
+		 * \brief Get a reference to a specific pipe segment.
+		 * \param handle The handle of the pipe segment.
+		 * \return A reference to the target pipe segment.
+		 */
 		[[nodiscard]] PipeSegment<PipeSegmentData>& RefPipeSegment(PipeSegmentHandle handle);
-
+		/**
+		 * \brief Get a unmodifiable reference to a specific pipe.
+		 * \param handle The handle of the pipe.
+		 * \return A unmodifiable reference to the target pipe.
+		 */
 		[[nodiscard]] const Pipe<PipeData>& PeekPipe(PipeHandle handle) const;
-
+		/**
+		 * \brief Get a unmodifiable reference to a specific pipe.
+		 * \param handle The handle of the pipe.
+		 * \return A unmodifiable reference to the target pipe.
+		 */
 		[[nodiscard]] const PipeSegment<PipeSegmentData>& PeekPipeSegment(PipeSegmentHandle handle) const;
 
 		/**
