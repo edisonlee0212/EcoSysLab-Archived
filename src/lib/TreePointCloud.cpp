@@ -1622,6 +1622,7 @@ void TreePointCloud::BuildSkeletons() {
 		}
 		iteration++;
 	}
+	CalculateBranchRootDistance(rootBranchHandles);
 
 	for(const auto& operatingBranch : m_operatingBranches)
 	{
