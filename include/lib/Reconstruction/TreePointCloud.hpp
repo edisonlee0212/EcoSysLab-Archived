@@ -31,7 +31,7 @@ namespace EcoSysLab {
 		NodeHandle m_nodeHandle = -1;
 		int m_skeletonIndex = -1;
 	};
-	struct ScannedBranch {
+	struct PredictedBranch {
 		glm::vec3 m_color;
 
 		TreePartHandle m_treePartHandle = -1;
@@ -53,7 +53,7 @@ namespace EcoSysLab {
 		std::unordered_map<BranchHandle, float> m_p0ToP3;
 	};
 
-	struct OperatingBranch {
+	struct OperatorBranch {
 		glm::vec3 m_color;
 
 		TreePartHandle m_treePartHandle = -1;
@@ -70,13 +70,18 @@ namespace EcoSysLab {
 		int m_skeletonIndex = -1;
 		std::vector<NodeHandle> m_chainNodeHandles;
 
+		float m_bestDistance = FLT_MAX;
+
 		std::vector<std::pair<BranchHandle, float>> m_parentCandidates;
 		bool m_used = false;
 		bool m_orphan = false;
 
 		bool m_apical = false;
 
+		float m_distanceToParentBranch = 0.0f;
 		float m_rootDistance = 0.0f;
+
+		int m_descendentSize = 0;
 	};
 
 	struct TreePart {
@@ -147,8 +152,8 @@ namespace EcoSysLab {
 		int m_candidateSearchLimit = 1;
 		bool m_forceConnectAllBranches = false;
 		*/
-		bool m_useRootDistance = true;
-		
+		bool m_useRootDistance = false;
+		int m_optimizationTimeout = 999;
 		void OnInspect();
 	};
 
@@ -187,17 +192,23 @@ namespace EcoSysLab {
 		void CalculateNodeTransforms(ReconstructionSkeleton& skeleton);
 
 		void BuildConnectionBranch(BranchHandle processingBranchHandle, NodeHandle& prevNodeHandle);
+
+		void Unlink(BranchHandle childHandle, BranchHandle parentHandle);
 		void Link(BranchHandle childHandle, BranchHandle parentHandle);
+
+		void GetSortedBranchList(BranchHandle branchHandle, std::vector<BranchHandle>& list);
 
 		void ConnectBranches(BranchHandle branchHandle);
 
-		void ApplyCurve(const OperatingBranch& branch);
+		void ApplyCurve(const OperatorBranch& branch);
 
 		void BuildVoxelGrid();
 
-		static void CloneOperatingBranch(OperatingBranch& operatingBranch, const ScannedBranch& target);
+		static void CloneOperatingBranch(OperatorBranch& operatorBranch, const PredictedBranch& target);
 
 		void SpaceColonization();
+
+		void CalculateBranchRootDistance(const std::vector<std::pair<glm::vec3, BranchHandle>>& rootBranchHandles);
 
 		void CalculateSkeletonGraphs();
 	public:
@@ -216,9 +227,9 @@ namespace EcoSysLab {
 		glm::vec3 m_max;
 		std::vector<ScatteredPoint> m_scatteredPoints;
 		std::vector<AllocatedPoint> m_allocatedPoints;
-		std::vector<ScannedBranch> m_scannedBranches;
+		std::vector<PredictedBranch> m_predictedBranches;
 
-		std::vector<OperatingBranch> m_operatingBranches;
+		std::vector<OperatorBranch> m_operatingBranches;
 		std::vector<TreePart> m_treeParts;
 
 		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;

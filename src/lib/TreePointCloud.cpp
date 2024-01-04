@@ -5,7 +5,7 @@
 #include "rapidcsv.h"
 using namespace EcoSysLab;
 
-void TreePointCloud::ApplyCurve(const OperatingBranch& branch) {
+void TreePointCloud::ApplyCurve(const OperatorBranch& branch) {
 	auto& skeleton = m_skeletons[branch.m_skeletonIndex];
 	const auto chainAmount = branch.m_chainNodeHandles.size();
 	for (int i = 0; i < chainAmount; i++) {
@@ -41,23 +41,23 @@ void TreePointCloud::BuildVoxelGrid()
 		voxel.m_position = point.m_position;
 		m_allocatedPointsVoxelGrid.Ref(point.m_position).emplace_back(voxel);
 	}
-	for (auto& scannedBranch : m_scannedBranches) {
-		scannedBranch.m_pointsToP3.clear();
-		scannedBranch.m_p3ToP0.clear();
+	for (auto& predictedBranch : m_predictedBranches) {
+		predictedBranch.m_pointsToP3.clear();
+		predictedBranch.m_p3ToP0.clear();
 
-		scannedBranch.m_pointsToP0.clear();
-		scannedBranch.m_p3ToP3.clear();
-		scannedBranch.m_p0ToP0.clear();
-		scannedBranch.m_p0ToP3.clear();
+		predictedBranch.m_pointsToP0.clear();
+		predictedBranch.m_p3ToP3.clear();
+		predictedBranch.m_p0ToP0.clear();
+		predictedBranch.m_p0ToP3.clear();
 
 		BranchEndData voxel;
-		voxel.m_branchHandle = scannedBranch.m_handle;
-		voxel.m_position = scannedBranch.m_bezierCurve.m_p0;
+		voxel.m_branchHandle = predictedBranch.m_handle;
+		voxel.m_position = predictedBranch.m_bezierCurve.m_p0;
 		voxel.m_isP0 = true;
-		m_branchEndsVoxelGrid.Ref(scannedBranch.m_bezierCurve.m_p0).emplace_back(voxel);
-		voxel.m_position = scannedBranch.m_bezierCurve.m_p3;
+		m_branchEndsVoxelGrid.Ref(predictedBranch.m_bezierCurve.m_p0).emplace_back(voxel);
+		voxel.m_position = predictedBranch.m_bezierCurve.m_p3;
 		voxel.m_isP0 = false;
-		m_branchEndsVoxelGrid.Ref(scannedBranch.m_bezierCurve.m_p3).emplace_back(voxel);
+		m_branchEndsVoxelGrid.Ref(predictedBranch.m_bezierCurve.m_p3).emplace_back(voxel);
 	}
 }
 
@@ -172,6 +172,7 @@ void TreePointCloud::BuildConnectionBranch(const BranchHandle processingBranchHa
 	auto& skeleton = m_skeletons[processingBranch.m_skeletonIndex];
 	auto& connectionBranch = m_operatingBranches.back();
 	auto& parentBranch = m_operatingBranches[processingBranch.m_parentHandle];
+	assert(parentBranch.m_skeletonIndex == processingBranch.m_skeletonIndex);
 	connectionBranch.m_color = parentBranch.m_color;
 	connectionBranch.m_handle = m_operatingBranches.size() - 1;
 	connectionBranch.m_skeletonIndex = processingBranch.m_skeletonIndex;
@@ -242,18 +243,43 @@ void TreePointCloud::BuildConnectionBranch(const BranchHandle processingBranchHa
 	processingBranch.m_chainNodeHandles.emplace_back(prevNodeHandle);
 }
 
+void TreePointCloud::Unlink(const BranchHandle childHandle, const BranchHandle parentHandle)
+{
+	auto& childBranch = m_operatingBranches[childHandle];
+	auto& parentBranch = m_operatingBranches[parentHandle];
+	//Establish relationship
+	childBranch.m_parentHandle = -1;
+	childBranch.m_used = false;
+
+	for(int i = 0; i < parentBranch.m_childHandles.size(); i++)
+	{
+		if(childHandle == parentBranch.m_childHandles[i])
+		{
+			parentBranch.m_childHandles[i] = parentBranch.m_childHandles.back();
+			parentBranch.m_childHandles.pop_back();
+			break;
+		}
+	}
+}
+
 void TreePointCloud::Link(const BranchHandle childHandle, const BranchHandle parentHandle)
 {
 	auto& childBranch = m_operatingBranches[childHandle];
 	auto& parentBranch = m_operatingBranches[parentHandle];
 	//Establish relationship
 	childBranch.m_parentHandle = parentHandle;
-	childBranch.m_skeletonIndex = parentBranch.m_skeletonIndex;
 	childBranch.m_used = true;
-	if (parentBranch.m_childHandles.empty()) childBranch.m_apical = true;
 	parentBranch.m_childHandles.emplace_back(childHandle);
-	m_branchConnections.emplace_back(m_scannedBranches[childHandle].m_bezierCurve.m_p0,
-		m_scannedBranches[parentHandle].m_bezierCurve.m_p3);
+}
+
+void TreePointCloud::GetSortedBranchList(BranchHandle branchHandle, std::vector<BranchHandle>& list)
+{
+	const auto childHandles = m_operatingBranches[branchHandle].m_childHandles;
+	list.push_back(branchHandle);
+	for (const auto& childHandle : childHandles)
+	{
+		GetSortedBranchList(childHandle, list);
+	}
 }
 
 void TreePointCloud::ConnectBranches(const BranchHandle branchHandle)
@@ -305,7 +331,7 @@ void TreePointCloud::ImportGraph(const std::filesystem::path& path, float scaleF
 			point.m_neighborScatterPoints.clear();
 		}
 
-		m_scannedBranches.clear();
+		m_predictedBranches.clear();
 		m_operatingBranches.clear();
 		m_treeParts.clear();
 		m_allocatedPoints.clear();
@@ -332,7 +358,7 @@ void TreePointCloud::ImportGraph(const std::filesystem::path& path, float scaleF
 				EVOENGINE_ERROR("Color is wrong at node " + std::to_string(i) + ": " + std::string(e.what()));
 			}
 			for (const auto& inBranch : inTreeParts["Branches"]) {
-				auto& branch = m_scannedBranches.emplace_back();
+				auto& branch = m_predictedBranches.emplace_back();
 				branch.m_bezierCurve.m_p0 = inBranch["Start Pos"].as<glm::vec3>() * scaleFactor;
 				branch.m_bezierCurve.m_p3 = inBranch["End Pos"].as<glm::vec3>() * scaleFactor;
 				branch.m_color = treePart.m_color;
@@ -351,7 +377,7 @@ void TreePointCloud::ImportGraph(const std::filesystem::path& path, float scaleF
 				}
 				branch.m_startThickness = inBranch["Start Radius"].as<float>() * scaleFactor;
 				branch.m_endThickness = inBranch["End Radius"].as<float>() * scaleFactor;
-				branch.m_handle = m_scannedBranches.size() - 1;
+				branch.m_handle = m_predictedBranches.size() - 1;
 				treePart.m_branchHandles.emplace_back(branch.m_handle);
 				branch.m_treePartHandle = treePart.m_handle;
 				minHeight = glm::min(minHeight, branch.m_bezierCurve.m_p0.y);
@@ -374,11 +400,11 @@ void TreePointCloud::ImportGraph(const std::filesystem::path& path, float scaleF
 			m_min = glm::min(m_min, scatterPoint.m_position);
 			m_max = glm::max(m_max, scatterPoint.m_position);
 		}
-		for (auto& scannedBranch : m_scannedBranches) {
-			scannedBranch.m_bezierCurve.m_p0.y -= minHeight;
-			scannedBranch.m_bezierCurve.m_p1.y -= minHeight;
-			scannedBranch.m_bezierCurve.m_p2.y -= minHeight;
-			scannedBranch.m_bezierCurve.m_p3.y -= minHeight;
+		for (auto& predictedBranch : m_predictedBranches) {
+			predictedBranch.m_bezierCurve.m_p0.y -= minHeight;
+			predictedBranch.m_bezierCurve.m_p1.y -= minHeight;
+			predictedBranch.m_bezierCurve.m_p2.y -= minHeight;
+			predictedBranch.m_bezierCurve.m_p3.y -= minHeight;
 		}
 		for (auto& allocatedPoint : m_allocatedPoints) {
 			allocatedPoint.m_position.y -= minHeight;
@@ -390,31 +416,31 @@ void TreePointCloud::ImportGraph(const std::filesystem::path& path, float scaleF
 			std::map<float, BranchHandle> distances;
 			for (const auto& branchHandle : treePart.m_branchHandles)
 			{
-				const auto& branch = m_scannedBranches[branchHandle];
+				const auto& branch = m_predictedBranches[branchHandle];
 				const auto distance0 = glm::distance(allocatedPoint.m_position, branch.m_bezierCurve.m_p0);
 				const auto distance3 = glm::distance(allocatedPoint.m_position, branch.m_bezierCurve.m_p3);
 				distances[distance0] = branchHandle;
 				distances[distance3] = branchHandle;
 			}
 			allocatedPoint.m_branchHandle = distances.begin()->second;
-			m_scannedBranches[allocatedPoint.m_branchHandle].m_allocatedPoints.emplace_back(allocatedPoint.m_handle);
+			m_predictedBranches[allocatedPoint.m_branchHandle].m_allocatedPoints.emplace_back(allocatedPoint.m_handle);
 		}
-		for (auto& scannedBranch : m_scannedBranches) {
-			m_min = glm::min(m_min, scannedBranch.m_bezierCurve.m_p0);
-			m_max = glm::max(m_max, scannedBranch.m_bezierCurve.m_p0);
-			m_min = glm::min(m_min, scannedBranch.m_bezierCurve.m_p3);
-			m_max = glm::max(m_max, scannedBranch.m_bezierCurve.m_p3);
+		for (auto& predictedBranch : m_predictedBranches) {
+			m_min = glm::min(m_min, predictedBranch.m_bezierCurve.m_p0);
+			m_max = glm::max(m_max, predictedBranch.m_bezierCurve.m_p0);
+			m_min = glm::min(m_min, predictedBranch.m_bezierCurve.m_p3);
+			m_max = glm::max(m_max, predictedBranch.m_bezierCurve.m_p3);
 
-			if (!scannedBranch.m_allocatedPoints.empty()) {
-				const auto& origin = scannedBranch.m_bezierCurve.m_p0;
-				const auto normal = glm::normalize(scannedBranch.m_bezierCurve.m_p3 - origin);
+			if (!predictedBranch.m_allocatedPoints.empty()) {
+				const auto& origin = predictedBranch.m_bezierCurve.m_p0;
+				const auto normal = glm::normalize(predictedBranch.m_bezierCurve.m_p3 - origin);
 				const auto xAxis = glm::vec3(normal.y, normal.z, normal.x);
 				const auto yAxis = glm::vec3(normal.z, normal.x, normal.y);
 				auto positionAvg = glm::vec2(0.0f);
-				for (const auto& pointHandle : scannedBranch.m_allocatedPoints)
+				for (const auto& pointHandle : predictedBranch.m_allocatedPoints)
 				{
 					auto& point = m_allocatedPoints[pointHandle];
-					const auto v = scannedBranch.m_bezierCurve.m_p0 - point.m_position;
+					const auto v = predictedBranch.m_bezierCurve.m_p0 - point.m_position;
 					const auto d = glm::dot(v, normal);
 					const auto p = v + d * normal;
 					const auto x = glm::distance(origin, glm::closestPointOnLine(p, origin, origin + 10.0f * xAxis));
@@ -422,20 +448,20 @@ void TreePointCloud::ImportGraph(const std::filesystem::path& path, float scaleF
 					point.m_planePosition = glm::vec2(x, y);
 					positionAvg += point.m_planePosition;
 				}
-				positionAvg /= scannedBranch.m_allocatedPoints.size();
+				positionAvg /= predictedBranch.m_allocatedPoints.size();
 				auto distanceAvg = 0.0f;
-				for (const auto& pointHandle : scannedBranch.m_allocatedPoints)
+				for (const auto& pointHandle : predictedBranch.m_allocatedPoints)
 				{
 					auto& point = m_allocatedPoints[pointHandle];
 					point.m_planePosition -= positionAvg;
 					distanceAvg += glm::length(point.m_planePosition);
 				}
-				distanceAvg /= scannedBranch.m_allocatedPoints.size();
-				scannedBranch.m_branchThickness = distanceAvg * 2.0f;
+				distanceAvg /= predictedBranch.m_allocatedPoints.size();
+				predictedBranch.m_branchThickness = distanceAvg * 2.0f;
 			}
 			else
 			{
-				scannedBranch.m_branchThickness = (scannedBranch.m_startThickness + scannedBranch.m_endThickness) * 0.5f;
+				predictedBranch.m_branchThickness = (predictedBranch.m_startThickness + predictedBranch.m_endThickness) * 0.5f;
 			}
 		}
 
@@ -609,10 +635,10 @@ void TreePointCloud::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 	static std::vector<glm::vec3> scatterPointToBranchConnectionEnds;
 	static std::vector<glm::vec4> scatterPointToBranchConnectionColors;
 
-	static std::shared_ptr<ParticleInfoList> scannedBranchConnectionInfoList;
-	static std::vector<glm::vec3> scannedBranchConnectionStarts;
-	static std::vector<glm::vec3> scannedBranchConnectionEnds;
-	static std::vector<glm::vec4> scannedBranchConnectionColors;
+	static std::shared_ptr<ParticleInfoList> predictedBranchConnectionInfoList;
+	static std::vector<glm::vec3> predictedBranchConnectionStarts;
+	static std::vector<glm::vec3> predictedBranchConnectionEnds;
+	static std::vector<glm::vec4> predictedBranchConnectionColors;
 
 
 	if (!allocatedPointInfoList) allocatedPointInfoList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
@@ -626,7 +652,7 @@ void TreePointCloud::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 	if (!branchConnectionInfoList) branchConnectionInfoList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
 
 	if (!scatterPointToBranchConnectionInfoList) scatterPointToBranchConnectionInfoList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
-	if (!scannedBranchConnectionInfoList) scannedBranchConnectionInfoList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
+	if (!predictedBranchConnectionInfoList) predictedBranchConnectionInfoList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
 
 	auto& allocatedPointMatrices = allocatedPointInfoList->m_particleInfos;
 	auto& scatterPointMatrices = scatterPointInfoList->m_particleInfos;
@@ -635,7 +661,7 @@ void TreePointCloud::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 	static bool enableDebugRendering = true;
 
 	static bool drawAllocatedPoints = true;
-	static bool drawScannedBranches = true;
+	static bool drawpredictedBranches = true;
 	static bool drawScatteredPoints = true;
 	static bool drawScatteredPointConnections = false;
 
@@ -646,7 +672,7 @@ void TreePointCloud::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 
 	static bool drawScatterPointToBranchConnections = false;
 	static bool drawNode = true;
-	static float scannedBranchWidth = 0.005f;
+	static float predictedBranchWidth = 0.005f;
 	static float connectionWidth = 0.001f;
 	static float pointSize = 0.002f;
 
@@ -716,12 +742,12 @@ void TreePointCloud::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 		GizmoSettings gizmoSettings;
 		if (ImGui::Combo("Color mode", { "TreePart", "Branch", "Node" }, colorMode)) refreshData = true;
 		if (ImGui::TreeNode("Render settings")) {
-			if (ImGui::DragFloat("Branch width", &scannedBranchWidth, 0.0001f, 0.0001f, 1.0f, "%.4f")) refreshData = true;
+			if (ImGui::DragFloat("Branch width", &predictedBranchWidth, 0.0001f, 0.0001f, 1.0f, "%.4f")) refreshData = true;
 			if (ImGui::DragFloat("Connection width", &connectionWidth, 0.0001f, 0.0001f, 1.0f, "%.4f")) refreshData = true;
 			if (ImGui::DragFloat("Point size", &pointSize, 0.0001f, 0.0001f, 1.0f, "%.4f")) refreshData = true;
 			if (ImGui::DragFloat("Node size", &nodeSize, 0.01f, 0.1f, 10.0f)) refreshData = true;
 
-			if (ImGui::Checkbox("Render branches", &drawScannedBranches)) refreshData = true;
+			if (ImGui::Checkbox("Render branches", &drawpredictedBranches)) refreshData = true;
 			if (ImGui::Checkbox("Render allocated points", &drawAllocatedPoints)) refreshData = true;
 			if (ImGui::Checkbox("Render scattered points", &drawScatteredPoints)) refreshData = true;
 			if (drawScatteredPoints) {
@@ -758,9 +784,9 @@ void TreePointCloud::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 
 			allocatedPointMatrices.resize(m_allocatedPoints.size());
 
-			scannedBranchConnectionStarts.resize(m_scannedBranches.size());
-			scannedBranchConnectionEnds.resize(m_scannedBranches.size());
-			scannedBranchConnectionColors.resize(m_scannedBranches.size());
+			predictedBranchConnectionStarts.resize(m_predictedBranches.size());
+			predictedBranchConnectionEnds.resize(m_predictedBranches.size());
+			predictedBranchConnectionColors.resize(m_predictedBranches.size());
 
 			allocatedPointInfoList->SetPendingUpdate();
 			scatterPointInfoList->SetPendingUpdate();
@@ -776,12 +802,12 @@ void TreePointCloud::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 					allocatedPointMatrices[i].m_instanceColor = glm::vec4(m_allocatedPoints[i].m_color, 1.0f);
 				}
 
-				for (int i = 0; i < m_scannedBranches.size(); i++) {
-					scannedBranchConnectionStarts[i] = m_scannedBranches[i].m_bezierCurve.m_p0;
-					scannedBranchConnectionEnds[i] = m_scannedBranches[i].m_bezierCurve.m_p3;
-					scannedBranchConnectionColors[i] = glm::vec4(m_scannedBranches[i].m_color, 1.0f);
+				for (int i = 0; i < m_predictedBranches.size(); i++) {
+					predictedBranchConnectionStarts[i] = m_predictedBranches[i].m_bezierCurve.m_p0;
+					predictedBranchConnectionEnds[i] = m_predictedBranches[i].m_bezierCurve.m_p3;
+					predictedBranchConnectionColors[i] = glm::vec4(m_predictedBranches[i].m_color, 1.0f);
 				}
-				scannedBranchConnectionInfoList->ApplyConnections(scannedBranchConnectionStarts, scannedBranchConnectionEnds, scannedBranchConnectionColors, scannedBranchWidth);
+				predictedBranchConnectionInfoList->ApplyConnections(predictedBranchConnectionStarts, predictedBranchConnectionEnds, predictedBranchConnectionColors, predictedBranchWidth);
 				for (const auto& skeleton : m_skeletons) {
 					const auto& nodeList = skeleton.RefSortedNodeList();
 					const auto startIndex = nodeMatrices.size();
@@ -810,13 +836,13 @@ void TreePointCloud::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 					}
 				}
 
-				for (int i = 0; i < m_scannedBranches.size(); i++) {
-					scannedBranchConnectionStarts[i] = m_scannedBranches[i].m_bezierCurve.m_p0;
-					scannedBranchConnectionEnds[i] = m_scannedBranches[i].m_bezierCurve.m_p3;
-					scannedBranchConnectionColors[i] = glm::vec4(
-						ecoSysLabLayer->RandomColors()[m_scannedBranches[i].m_handle], 1.0f);
+				for (int i = 0; i < m_predictedBranches.size(); i++) {
+					predictedBranchConnectionStarts[i] = m_predictedBranches[i].m_bezierCurve.m_p0;
+					predictedBranchConnectionEnds[i] = m_predictedBranches[i].m_bezierCurve.m_p3;
+					predictedBranchConnectionColors[i] = glm::vec4(
+						ecoSysLabLayer->RandomColors()[m_predictedBranches[i].m_handle], 1.0f);
 				}
-				scannedBranchConnectionInfoList->ApplyConnections(scannedBranchConnectionStarts, scannedBranchConnectionEnds, scannedBranchConnectionColors, scannedBranchWidth);
+				predictedBranchConnectionInfoList->ApplyConnections(predictedBranchConnectionStarts, predictedBranchConnectionEnds, predictedBranchConnectionColors, predictedBranchWidth);
 
 				for (const auto& skeleton : m_skeletons) {
 					const auto& nodeList = skeleton.RefSortedNodeList();
@@ -848,12 +874,12 @@ void TreePointCloud::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 					}
 				}
 
-				for (int i = 0; i < m_scannedBranches.size(); i++) {
-					scannedBranchConnectionStarts[i] = m_scannedBranches[i].m_bezierCurve.m_p0;
-					scannedBranchConnectionEnds[i] = m_scannedBranches[i].m_bezierCurve.m_p3;
-					scannedBranchConnectionColors[i] = glm::vec4(1.0f);
+				for (int i = 0; i < m_predictedBranches.size(); i++) {
+					predictedBranchConnectionStarts[i] = m_predictedBranches[i].m_bezierCurve.m_p0;
+					predictedBranchConnectionEnds[i] = m_predictedBranches[i].m_bezierCurve.m_p3;
+					predictedBranchConnectionColors[i] = glm::vec4(1.0f);
 				}
-				scannedBranchConnectionInfoList->ApplyConnections(scannedBranchConnectionStarts, scannedBranchConnectionEnds, scannedBranchConnectionColors, scannedBranchWidth);
+				predictedBranchConnectionInfoList->ApplyConnections(predictedBranchConnectionStarts, predictedBranchConnectionEnds, predictedBranchConnectionColors, predictedBranchWidth);
 				for (const auto& skeleton : m_skeletons) {
 					const auto& nodeList = skeleton.RefSortedNodeList();
 					const auto startIndex = nodeMatrices.size();
@@ -986,8 +1012,8 @@ void TreePointCloud::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 					glm::mat4(1.0f),
 					pointSize, gizmoSettings);
 			}
-			if (drawScannedBranches)
-				editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CONE"), scannedBranchConnectionInfoList, glm::mat4(1.0f), 1.0f, gizmoSettings);
+			if (drawpredictedBranches)
+				editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CONE"), predictedBranchConnectionInfoList, glm::mat4(1.0f), 1.0f, gizmoSettings);
 			if (drawScatteredPointConnections)
 				editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER"), scatteredPointConnectionInfoList, glm::mat4(1.0f), 1.0f, gizmoSettings);
 
@@ -1027,14 +1053,14 @@ void TreePointCloud::EstablishConnectivityGraph() {
 		point.m_p0.clear();
 	}
 
-	for (auto& scannedBranch : m_scannedBranches) {
-		scannedBranch.m_pointsToP3.clear();
-		scannedBranch.m_p3ToP0.clear();
+	for (auto& predictedBranch : m_predictedBranches) {
+		predictedBranch.m_pointsToP3.clear();
+		predictedBranch.m_p3ToP0.clear();
 
-		scannedBranch.m_pointsToP0.clear();
-		scannedBranch.m_p3ToP3.clear();
-		scannedBranch.m_p0ToP0.clear();
-		scannedBranch.m_p0ToP3.clear();
+		predictedBranch.m_pointsToP0.clear();
+		predictedBranch.m_p3ToP3.clear();
+		predictedBranch.m_p0ToP0.clear();
+		predictedBranch.m_p0ToP3.clear();
 	}
 
 	//We establish connection between any 2 scatter points.
@@ -1056,7 +1082,7 @@ void TreePointCloud::EstablishConnectivityGraph() {
 			});
 	}
 
-	for (auto& branch : m_scannedBranches) {
+	for (auto& branch : m_predictedBranches) {
 		const auto& p0 = branch.m_bezierCurve.m_p0;
 		const auto& p3 = branch.m_bezierCurve.m_p3;
 		float branchLength = glm::distance(p0, p3);
@@ -1120,7 +1146,7 @@ void TreePointCloud::EstablishConnectivityGraph() {
 		ForEachBranchEnd(p0, m_branchEndsVoxelGrid, branchLength * m_connectivityGraphSettings.m_branchBranchConnectionMaxLengthRange,
 			[&](const BranchEndData& voxel) {
 				if (voxel.m_branchHandle == branch.m_handle) return;
-				auto& otherBranch = m_scannedBranches[voxel.m_branchHandle];
+				auto& otherBranch = m_predictedBranches[voxel.m_branchHandle];
 				if (!voxel.m_isP0) {
 					const auto otherBranchP0 = otherBranch.m_bezierCurve.m_p0;
 					const auto otherBranchP3 = otherBranch.m_bezierCurve.m_p3;
@@ -1163,7 +1189,7 @@ void TreePointCloud::EstablishConnectivityGraph() {
 		ForEachBranchEnd(p3, m_branchEndsVoxelGrid, branchLength * m_connectivityGraphSettings.m_branchBranchConnectionMaxLengthRange,
 			[&](const BranchEndData& voxel) {
 				if (voxel.m_branchHandle == branch.m_handle) return;
-				auto& otherBranch = m_scannedBranches[voxel.m_branchHandle];
+				auto& otherBranch = m_predictedBranches[voxel.m_branchHandle];
 				if (voxel.m_isP0) {
 					const auto otherBranchP0 = otherBranch.m_bezierCurve.m_p0;
 					const auto otherBranchP3 = otherBranch.m_bezierCurve.m_p3;
@@ -1205,14 +1231,14 @@ void TreePointCloud::EstablishConnectivityGraph() {
 
 	}
 	//We search branch connections via scatter points start from p0.
-	for (auto& scannedBranch : m_scannedBranches) {
+	for (auto& predictedBranch : m_predictedBranches) {
 		std::unordered_set<PointHandle> visitedPoints;
 		std::vector<PointHandle> processingPoints;
 		float distanceL = FLT_MAX;
-		for (const auto& i : scannedBranch.m_pointsToP3)
+		for (const auto& i : predictedBranch.m_pointsToP3)
 		{
 			processingPoints.emplace_back(i.second);
-			auto distance = glm::distance(scannedBranch.m_bezierCurve.m_p3, m_scatteredPoints[i.second].m_position);
+			auto distance = glm::distance(predictedBranch.m_bezierCurve.m_p3, m_scatteredPoints[i.second].m_position);
 			if (distance < distanceL) distanceL = distance;
 		}
 		for (const auto& i : processingPoints) {
@@ -1228,18 +1254,18 @@ void TreePointCloud::EstablishConnectivityGraph() {
 				auto& neighbor = m_scatteredPoints[neighborHandle];
 				//We stop search if the point is junction point.
 				for (const auto& branchInfo : neighbor.m_p0) {
-					if (scannedBranch.m_handle == branchInfo.second) continue;
+					if (predictedBranch.m_handle == branchInfo.second) continue;
 					bool skip = false;
-					for (const auto& i : scannedBranch.m_p3ToP0) {
+					for (const auto& i : predictedBranch.m_p3ToP0) {
 						if (branchInfo.second == i.first) {
 							skip = true;
 							break;
 						}
 					}
 					if (skip) continue;
-					auto& otherBranch = m_scannedBranches[branchInfo.second];
-					auto pA = scannedBranch.m_bezierCurve.m_p3;
-					auto pB = scannedBranch.m_bezierCurve.m_p0;
+					auto& otherBranch = m_predictedBranches[branchInfo.second];
+					auto pA = predictedBranch.m_bezierCurve.m_p3;
+					auto pB = predictedBranch.m_bezierCurve.m_p0;
 					auto otherPA = otherBranch.m_bezierCurve.m_p3;
 					auto otherPB = otherBranch.m_bezierCurve.m_p0;
 					const auto dotP = glm::dot(glm::normalize(otherPB - otherPA),
@@ -1248,28 +1274,28 @@ void TreePointCloud::EstablishConnectivityGraph() {
 					const auto dotP2 = glm::dot(glm::normalize(pB - pA), glm::normalize(otherPA - pA));
 					if (dotP2 > 3) continue;
 					float distance = distanceL + branchInfo.first;
-					const auto search = scannedBranch.m_p3ToP0.find(branchInfo.second);
-					if (search == scannedBranch.m_p3ToP0.end() || search->second > distance)
+					const auto search = predictedBranch.m_p3ToP0.find(branchInfo.second);
+					if (search == predictedBranch.m_p3ToP0.end() || search->second > distance)
 					{
-						scannedBranch.m_p3ToP0[branchInfo.second] = distance;
+						predictedBranch.m_p3ToP0[branchInfo.second] = distance;
 						m_candidateBranchConnections.emplace_back(pA, otherPB);
 					}
 				}
 				if (m_connectivityGraphSettings.m_reverseConnection)
 				{
 					for (const auto& branchInfo : neighbor.m_p3) {
-						if (scannedBranch.m_handle == branchInfo.second) continue;
+						if (predictedBranch.m_handle == branchInfo.second) continue;
 						bool skip = false;
-						for (const auto& i : scannedBranch.m_p3ToP3) {
+						for (const auto& i : predictedBranch.m_p3ToP3) {
 							if (branchInfo.second == i.first) {
 								skip = true;
 								break;
 							}
 						}
 						if (skip) continue;
-						auto& otherBranch = m_scannedBranches[branchInfo.second];
-						auto pA = scannedBranch.m_bezierCurve.m_p3;
-						auto pB = scannedBranch.m_bezierCurve.m_p0;
+						auto& otherBranch = m_predictedBranches[branchInfo.second];
+						auto pA = predictedBranch.m_bezierCurve.m_p3;
+						auto pB = predictedBranch.m_bezierCurve.m_p0;
 						auto otherPA = otherBranch.m_bezierCurve.m_p0;
 						auto otherPB = otherBranch.m_bezierCurve.m_p3;
 						const auto dotP = glm::dot(glm::normalize(otherPB - otherPA),
@@ -1279,10 +1305,10 @@ void TreePointCloud::EstablishConnectivityGraph() {
 						if (dotP2 > 3) continue;
 
 						float distance = distanceL + branchInfo.first;
-						const auto search = scannedBranch.m_p3ToP3.find(branchInfo.second);
-						if (search == scannedBranch.m_p3ToP3.end() || search->second > distance)
+						const auto search = predictedBranch.m_p3ToP3.find(branchInfo.second);
+						if (search == predictedBranch.m_p3ToP3.end() || search->second > distance)
 						{
-							scannedBranch.m_p3ToP3[branchInfo.second] = distance;
+							predictedBranch.m_p3ToP3[branchInfo.second] = distance;
 							m_reversedCandidateBranchConnections.emplace_back(pA, otherPB);
 						}
 					}
@@ -1294,14 +1320,14 @@ void TreePointCloud::EstablishConnectivityGraph() {
 	
 	if (m_connectivityGraphSettings.m_reverseConnection)
 	{
-		for (auto& scannedBranch : m_scannedBranches) {
+		for (auto& predictedBranch : m_predictedBranches) {
 			std::unordered_set<PointHandle> visitedPoints;
 			std::vector<PointHandle> processingPoints;
 			float distanceL = FLT_MAX;
-			for (const auto& i : scannedBranch.m_pointsToP0)
+			for (const auto& i : predictedBranch.m_pointsToP0)
 			{
 				processingPoints.emplace_back(i.second);
-				auto distance = glm::distance(scannedBranch.m_bezierCurve.m_p0, m_scatteredPoints[i.second].m_position);
+				auto distance = glm::distance(predictedBranch.m_bezierCurve.m_p0, m_scatteredPoints[i.second].m_position);
 				if (distance < distanceL) distanceL = distance;
 			}
 			for (const auto& i : processingPoints) {
@@ -1317,18 +1343,18 @@ void TreePointCloud::EstablishConnectivityGraph() {
 					auto& neighbor = m_scatteredPoints[neighborHandle];
 					//We stop search if the point is junction point.
 					for (const auto& branchInfo : neighbor.m_p3) {
-						if (scannedBranch.m_handle == branchInfo.second) continue;
+						if (predictedBranch.m_handle == branchInfo.second) continue;
 						bool skip = false;
-						for (const auto& i : scannedBranch.m_p0ToP3) {
+						for (const auto& i : predictedBranch.m_p0ToP3) {
 							if (branchInfo.second == i.first) {
 								skip = true;
 								break;
 							}
 						}
 						if (skip) continue;
-						auto& parentCandidateBranch = m_scannedBranches[branchInfo.second];
-						auto pA = scannedBranch.m_bezierCurve.m_p0;
-						auto pB = scannedBranch.m_bezierCurve.m_p3;
+						auto& parentCandidateBranch = m_predictedBranches[branchInfo.second];
+						auto pA = predictedBranch.m_bezierCurve.m_p0;
+						auto pB = predictedBranch.m_bezierCurve.m_p3;
 						auto otherPA = parentCandidateBranch.m_bezierCurve.m_p0;
 						auto otherPB = parentCandidateBranch.m_bezierCurve.m_p3;
 						const auto dotP = glm::dot(glm::normalize(otherPB - otherPA),
@@ -1338,28 +1364,28 @@ void TreePointCloud::EstablishConnectivityGraph() {
 						if (dotP2 > 0) continue;
 
 						float distance = distanceL + branchInfo.first;
-						const auto search = scannedBranch.m_p0ToP3.find(branchInfo.second);
-						if (search == scannedBranch.m_p0ToP3.end() || search->second > distance)
+						const auto search = predictedBranch.m_p0ToP3.find(branchInfo.second);
+						if (search == predictedBranch.m_p0ToP3.end() || search->second > distance)
 						{
-							scannedBranch.m_p0ToP3[branchInfo.second] = distance;
+							predictedBranch.m_p0ToP3[branchInfo.second] = distance;
 							m_candidateBranchConnections.emplace_back(pA, otherPB);
 						}
 					}
 					if (m_connectivityGraphSettings.m_reverseConnection)
 					{
 						for (const auto& branchInfo : neighbor.m_p0) {
-							if (scannedBranch.m_handle == branchInfo.second) continue;
+							if (predictedBranch.m_handle == branchInfo.second) continue;
 							bool skip = false;
-							for (const auto& i : scannedBranch.m_p0ToP0) {
+							for (const auto& i : predictedBranch.m_p0ToP0) {
 								if (branchInfo.second == i.first) {
 									skip = true;
 									break;
 								}
 							}
 							if (skip) continue;
-							auto& parentCandidateBranch = m_scannedBranches[branchInfo.second];
-							auto pA = scannedBranch.m_bezierCurve.m_p0;
-							auto pB = scannedBranch.m_bezierCurve.m_p3;
+							auto& parentCandidateBranch = m_predictedBranches[branchInfo.second];
+							auto pA = predictedBranch.m_bezierCurve.m_p0;
+							auto pB = predictedBranch.m_bezierCurve.m_p3;
 							auto otherPA = parentCandidateBranch.m_bezierCurve.m_p3;
 							auto otherPB = parentCandidateBranch.m_bezierCurve.m_p0;
 							const auto dotP = glm::dot(glm::normalize(otherPB - otherPA),
@@ -1368,10 +1394,10 @@ void TreePointCloud::EstablishConnectivityGraph() {
 							const auto dotP2 = glm::dot(glm::normalize(pB - pA), glm::normalize(otherPA - pA));
 							if (dotP2 > 0) continue;
 							float distance = distanceL + branchInfo.first;
-							const auto search = scannedBranch.m_p0ToP0.find(branchInfo.second);
-							if (search == scannedBranch.m_p0ToP0.end() || search->second > distance)
+							const auto search = predictedBranch.m_p0ToP0.find(branchInfo.second);
+							if (search == predictedBranch.m_p0ToP0.end() || search->second > distance)
 							{
-								scannedBranch.m_p0ToP0[branchInfo.second] = distance;
+								predictedBranch.m_p0ToP0[branchInfo.second] = distance;
 								m_reversedCandidateBranchConnections.emplace_back(pA, otherPB);
 							}
 						}
@@ -1388,9 +1414,9 @@ void TreePointCloud::BuildSkeletons() {
 	std::unordered_set<BranchHandle> allocatedBranchHandles;
 	m_filteredBranchConnections.clear();
 	m_branchConnections.clear();
-	m_operatingBranches.resize(m_scannedBranches.size());
-	for (int i = 0; i < m_scannedBranches.size(); i++) {
-		CloneOperatingBranch(m_operatingBranches[i], m_scannedBranches[i]);
+	m_operatingBranches.resize(m_predictedBranches.size());
+	for (int i = 0; i < m_predictedBranches.size(); i++) {
+		CloneOperatingBranch(m_operatingBranches[i], m_predictedBranches[i]);
 	}
 	std::vector<std::pair<glm::vec3, BranchHandle>> rootBranchHandles{};
 	std::unordered_set<BranchHandle> rootBranchHandleSet{};
@@ -1398,6 +1424,8 @@ void TreePointCloud::BuildSkeletons() {
 	for (auto& branch : m_operatingBranches) {
 		branch.m_chainNodeHandles.clear();
 		branch.m_rootDistance = 0.0f;
+		branch.m_distanceToParentBranch = 0.0f;
+		branch.m_bestDistance = FLT_MAX;
 		const auto branchStart = branch.m_bezierCurve.m_p0;
 		auto shortenedP0 = branch.m_bezierCurve.GetPoint(m_reconstructionSettings.m_branchShortening);
 		auto shortenedP3 = branch.m_bezierCurve.GetPoint(1.0f - m_reconstructionSettings.m_branchShortening);
@@ -1456,7 +1484,7 @@ void TreePointCloud::BuildSkeletons() {
 	for (auto& operatingBranch : m_operatingBranches)
 	{
 		for (const auto& parentCandidate : operatingBranch.m_parentCandidates) {
-			const auto& parentBranch = m_scannedBranches[parentCandidate.first];
+			const auto& parentBranch = m_predictedBranches[parentCandidate.first];
 			m_filteredBranchConnections.emplace_back(operatingBranch.m_bezierCurve.m_p0, parentBranch.m_bezierCurve.m_p3);
 		}
 	}
@@ -1494,23 +1522,28 @@ void TreePointCloud::BuildSkeletons() {
 			auto& childBranch = m_operatingBranches[branchPair.second];
 			if (childBranch.m_orphan || childBranch.m_used || childBranch.m_parentCandidates.empty()) continue;
 			BranchHandle bestParentHandle = -1;
+			float bestDistance = FLT_MAX;
+			float bestParentDistance = FLT_MAX;
 			float bestRootDistance = FLT_MAX;
 			int maxIndex = -1;
 			for(int i = 0; i < childBranch.m_parentCandidates.size(); i++)
 			{
 				const auto& parentCandidate = childBranch.m_parentCandidates[i];
-				const auto& parent = m_operatingBranches[parentCandidate.first];
-				if(!parent.m_used) continue;
+				const auto& parentBranch = m_operatingBranches[parentCandidate.first];
+				if(!parentBranch.m_used) continue;
 				float distance = parentCandidate.second;
+				float rootDistance = parentBranch.m_rootDistance + glm::distance(parentBranch.m_bezierCurve.m_p0, parentBranch.m_bezierCurve.m_p3) + distance;
 				if(m_reconstructionSettings.m_useRootDistance)
 				{
-					distance += parent.m_rootDistance + glm::distance(childBranch.m_bezierCurve.m_p0, childBranch.m_bezierCurve.m_p3);
+					distance = rootDistance;
 				}
-				if(distance < bestRootDistance)
+				if(distance < bestDistance)
 				{
 					bestParentHandle = parentCandidate.first;
-					bestRootDistance = distance;
+					bestRootDistance = rootDistance;
+					bestParentDistance = parentCandidate.second;
 					maxIndex = i;
+					bestDistance = distance;
 				}
 			}
 			if(maxIndex != -1)
@@ -1520,9 +1553,118 @@ void TreePointCloud::BuildSkeletons() {
 				newBranchAllocated = true;
 				Link(branchPair.second, bestParentHandle);
 				childBranch.m_rootDistance = bestRootDistance;
+				childBranch.m_bestDistance = bestDistance;
+				childBranch.m_distanceToParentBranch = bestParentDistance;
 			}
 		}
 	}
+	bool optimized = true;
+	int iteration = 0;
+	while(optimized && iteration < m_reconstructionSettings.m_optimizationTimeout)
+	{
+		optimized = false;
+		for (auto& childBranch : m_operatingBranches)
+		{
+			if (childBranch.m_orphan || childBranch.m_parentHandle == -1 || childBranch.m_parentCandidates.empty()) continue;
+			BranchHandle bestParentHandle = -1;
+			float bestDistance = childBranch.m_bestDistance;
+			float bestParentDistance = FLT_MAX;
+			float bestRootDistance = childBranch.m_rootDistance;
+			int maxIndex = -1;
+			for (int i = 0; i < childBranch.m_parentCandidates.size(); i++)
+			{
+				const auto& parentCandidate = childBranch.m_parentCandidates[i];
+				const auto& parentBranch = m_operatingBranches[parentCandidate.first];
+				if (!parentBranch.m_used) continue;
+				float distance = parentCandidate.second;
+				float rootDistance = parentBranch.m_rootDistance + glm::distance(parentBranch.m_bezierCurve.m_p0, parentBranch.m_bezierCurve.m_p3) + distance;
+				if (m_reconstructionSettings.m_useRootDistance)
+				{
+					distance = rootDistance;
+				}
+				if (distance < bestDistance)
+				{
+					bestParentHandle = parentCandidate.first;
+					bestRootDistance = rootDistance;
+					bestParentDistance = parentCandidate.second;
+					maxIndex = i;
+					bestDistance = distance;
+				}
+			}
+			std::vector<BranchHandle> subTreeBranchList{};
+			GetSortedBranchList(childBranch.m_handle, subTreeBranchList);
+			if(maxIndex != -1)
+			{
+				for(const auto& branchHandle : subTreeBranchList)
+				{
+					if (branchHandle == bestParentHandle) {
+						maxIndex = -1;
+						break;
+					}
+				}
+			}
+			if (maxIndex != -1)
+			{
+				childBranch.m_parentCandidates[maxIndex] = childBranch.m_parentCandidates.back();
+				childBranch.m_parentCandidates.pop_back();
+				newBranchAllocated = true;
+				Unlink(childBranch.m_handle, childBranch.m_parentHandle);
+				Link(childBranch.m_handle, bestParentHandle);
+				childBranch.m_rootDistance = bestRootDistance;
+				childBranch.m_bestDistance = bestDistance;
+				childBranch.m_distanceToParentBranch = bestParentDistance;
+				optimized = true;
+			}
+		}
+		if(optimized)
+		{
+			CalculateBranchRootDistance(rootBranchHandles);
+		}
+		iteration++;
+	}
+
+	for(const auto& operatingBranch : m_operatingBranches)
+	{
+		if (operatingBranch.m_parentHandle != -1) {
+			m_branchConnections.emplace_back(m_predictedBranches[operatingBranch.m_handle].m_bezierCurve.m_p0,
+				m_predictedBranches[operatingBranch.m_parentHandle].m_bezierCurve.m_p3);
+		}
+	}
+
+	//Assign apical branch.
+	for (const auto& rootBranchHandle : rootBranchHandles)
+	{
+		std::vector<BranchHandle> sortedBranchList{};
+		GetSortedBranchList(rootBranchHandle.second, sortedBranchList);
+		for (auto it = sortedBranchList.rbegin(); it != sortedBranchList.rend(); ++it)
+		{
+			auto& operatingBranch = m_operatingBranches[*it];
+			int maxDescendentSize = -1;
+			BranchHandle largestChildHandle = -1;
+			for(const auto& childHandle : operatingBranch.m_childHandles)
+			{
+				auto& childBranch = m_operatingBranches[childHandle];
+				operatingBranch.m_descendentSize += childBranch.m_descendentSize + 1;
+				if(childBranch.m_descendentSize >= maxDescendentSize)
+				{
+					maxDescendentSize = childBranch.m_descendentSize;
+					largestChildHandle = childHandle;
+				}
+			}
+			for (const auto& childHandle : operatingBranch.m_childHandles)
+			{
+				auto& childBranch = m_operatingBranches[childHandle];
+				if(childHandle == largestChildHandle)
+				{
+					childBranch.m_apical = true;
+				}else
+				{
+					childBranch.m_apical = false;
+				}
+			}
+		}
+	}
+
 	for (const auto& rootBranchHandle : rootBranchHandles)
 	{
 		ConnectBranches(rootBranchHandle.second);
@@ -1764,6 +1906,29 @@ void TreePointCloud::SpaceColonization()
 		}
 	}
 	CalculateSkeletonGraphs();
+}
+
+void TreePointCloud::CalculateBranchRootDistance(
+	const std::vector<std::pair<glm::vec3, BranchHandle>>& rootBranchHandles)
+{
+	for (const auto& rootBranchHandle : rootBranchHandles)
+	{
+		std::vector<BranchHandle> sortedBranchList{};
+		GetSortedBranchList(rootBranchHandle.second, sortedBranchList);
+		for(const auto branchHandle : sortedBranchList)
+		{
+			auto& branch = m_operatingBranches[branchHandle];
+			if(branch.m_parentHandle == -1)
+			{
+				branch.m_rootDistance = 0.0f;
+			}else
+			{
+				const auto& parentBranch = m_operatingBranches[branch.m_parentHandle];
+				branch.m_rootDistance = parentBranch.m_rootDistance + glm::distance(parentBranch.m_bezierCurve.m_p0, parentBranch.m_bezierCurve.m_p3) + branch.m_distanceToParentBranch;
+				branch.m_skeletonIndex = parentBranch.m_skeletonIndex;
+			}
+		}
+	}
 }
 
 void TreePointCloud::CalculateSkeletonGraphs()
@@ -2248,25 +2413,28 @@ void ConnectivityGraphSettings::OnInspect() {
 	ImGui::DragFloat("Point existence check radius", &m_pointCheckRadius, 0.01f, 0.0f, 1.0f);
 }
 
-void TreePointCloud::CloneOperatingBranch(OperatingBranch& operatingBranch, const ScannedBranch& target) {
-	operatingBranch.m_color = target.m_color;
-	operatingBranch.m_treePartHandle = target.m_treePartHandle;
-	operatingBranch.m_handle = target.m_handle;
-	operatingBranch.m_bezierCurve = target.m_bezierCurve;
-	operatingBranch.m_thickness = target.m_branchThickness;
-	operatingBranch.m_parentHandle = -1;
-	operatingBranch.m_childHandles.clear();
-	operatingBranch.m_orphan = false;
-	operatingBranch.m_parentCandidates.clear();
+void TreePointCloud::CloneOperatingBranch(OperatorBranch& operatorBranch, const PredictedBranch& target) {
+	operatorBranch.m_color = target.m_color;
+	operatorBranch.m_treePartHandle = target.m_treePartHandle;
+	operatorBranch.m_handle = target.m_handle;
+	operatorBranch.m_bezierCurve = target.m_bezierCurve;
+	operatorBranch.m_thickness = target.m_branchThickness;
+	operatorBranch.m_parentHandle = -1;
+	operatorBranch.m_childHandles.clear();
+	operatorBranch.m_orphan = false;
+	operatorBranch.m_parentCandidates.clear();
 
 	for (const auto& data : target.m_p3ToP0)
 	{
-		operatingBranch.m_parentCandidates.emplace_back(data.first, data.second);
+		operatorBranch.m_parentCandidates.emplace_back(data.first, data.second);
 	}
-
-	operatingBranch.m_skeletonIndex = -1;
-	operatingBranch.m_used = false;
-	operatingBranch.m_chainNodeHandles.clear();
+	operatorBranch.m_distanceToParentBranch = 0.0f;
+	operatorBranch.m_bestDistance = FLT_MAX;
+	operatorBranch.m_rootDistance = 0.0f;
+	operatorBranch.m_descendentSize = 0;
+	operatorBranch.m_skeletonIndex = -1;
+	operatorBranch.m_used = false;
+	operatorBranch.m_chainNodeHandles.clear();
 }
 
 
@@ -2296,6 +2464,8 @@ void ReconstructionSettings::OnInspect() {
 	ImGui::DragInt("Branch back track limit", &m_branchBackTrackLimit, 1, 0, 10);
 
 	ImGui::Checkbox("Use root distance", &m_useRootDistance);
+
+	ImGui::DragInt("Optimization iteration", &m_optimizationTimeout, 1, 0, 100);
 	/*
 	ImGui::Checkbox("Candidate Search", &m_candidateSearch);
 	if (m_candidateSearch) ImGui::DragInt("Candidate Search limit", &m_candidateSearchLimit, 1, 0, 10);
