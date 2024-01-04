@@ -628,7 +628,7 @@ void TreePipeBase::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 		}
 		tempTree.Clear();
 	}
-
+	ImGui::Separator();
 	if(ImGui::Button("Y Shape Example"))
 	{
 		InstantiateExample();
@@ -647,11 +647,12 @@ void TreePipeBase::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 	{
 		CalculateProfilesV2();
 	}
+	ImGui::Separator();
 	ImGui::Text(("Last calculation time: " + std::to_string(m_profileCalculationTime)).c_str());
 	ImGui::Text(("Strand count: " + std::to_string(m_pipeGroup.PeekPipes().size())).c_str());
 	ImGui::Text(("Node count: " + std::to_string(m_numOfNodes)).c_str());
 	ImGui::Text(("Total particle count: " + std::to_string(m_numOfParticles)).c_str());
-
+	ImGui::Separator();
 	static float frontControlPointRatio = 0.4f;
 	static float backControlPointRatio = 0.4f;
 	ImGui::DragFloat("Front Control Point Ratio", &frontControlPointRatio, 0.01f, 0.01f, 0.5f);
@@ -680,10 +681,7 @@ void TreePipeBase::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 	{
 		ClearStrands();
 	}
-	if (ImGui::Button("Build Mesh"))
-	{
-		ClearStrands();
-	}
+	ImGui::Separator();
 	if (ImGui::TreeNodeEx("Tree Pipe Mesh Generator Settings", ImGuiTreeNodeFlags_DefaultOpen)) {
 		m_treePipeMeshGeneratorSettings.OnInspect(editorLayer);
 		ImGui::TreePop();
@@ -695,7 +693,7 @@ void TreePipeBase::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 	{
 		ClearGeometry();
 	}
-
+	ImGui::Separator();
 	if(editorLayer->DragAndDropButton<Material>(m_nodeMaterial, "Node Material"))
 	{
 		ApplyNodeMeshMaterial();
