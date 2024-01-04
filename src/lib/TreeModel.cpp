@@ -133,41 +133,7 @@ void TreeModel::ApplyTropism(const glm::vec3& targetDir, float tropism, glm::qua
 	ApplyTropism(targetDir, tropism, front, up);
 	rotation = glm::quatLookAt(front, up);
 }
-/*
-bool TreeModel::Grow(float deltaTime, const glm::mat4& globalTransform, ClimateModel& climateModel,
-	const ShootGrowthController& shootGrowthController)
-{
-	//srand(m_currentSeedValue);
-	//m_currentSeedValue++;
 
-	m_currentDeltaTime = deltaTime;
-	bool treeStructureChanged = false;
-	if (!m_initialized) {
-		Initialize(shootGrowthController);
-		treeStructureChanged = true;
-	}
-	//Collect light from branches.
-
-	m_shootSkeleton.SortLists();
-	CalculateShootFlux(globalTransform, climateModel, shootGrowthController);
-
-	//Grow branches and set up nutrient requirements for next iteration.
-	if (m_currentDeltaTime != 0.0f
-		&& GrowShoots(globalTransform, climateModel, shootGrowthController)) {
-		treeStructureChanged = true;
-	}
-	const int year = climateModel.m_time;
-	if (year != m_ageInYear)
-	{
-		ResetReproductiveModule();
-		m_ageInYear = year;
-	}
-
-	m_iteration++;
-	m_age += m_currentDeltaTime;
-	return treeStructureChanged;
-}
-*/
 bool TreeModel::GrowSubTree(const float deltaTime, const NodeHandle baseInternodeHandle, const glm::mat4& globalTransform, ClimateModel& climateModel,
 	const ShootGrowthController& shootGrowthController, 
 	const bool pruning, const float overrideGrowthRate)
@@ -414,7 +380,7 @@ void TreeModel::ShootGrowthPostProcess(const glm::mat4& globalTransform, Climate
 					parentInternode.m_info.m_globalPosition
 					+ parentInternode.m_info.m_length * parentInternode.m_info.m_globalDirection;
 
-				if (false && !internode.IsApical())
+				if (!internode.IsApical())
 				{
 					const auto relativeFront = glm::inverse(parentInternode.m_info.m_globalRotation) * internodeInfo.m_globalRotation * glm::vec3(0, 0, -1);
 					auto parentUp = glm::normalize(parentInternode.m_info.m_globalRotation * glm::vec3(0, 1, 0));
