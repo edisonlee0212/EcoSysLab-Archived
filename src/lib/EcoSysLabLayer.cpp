@@ -1269,7 +1269,7 @@ void EcoSysLabLayer::ClearGeometries() const {
 		const auto copiedEntities = *treeEntities;
 		for (auto treeEntity : copiedEntities) {
 			const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
-			tree->ClearMeshes();
+			tree->ClearGeometry();
 			tree->ClearStrands();
 		}
 	}

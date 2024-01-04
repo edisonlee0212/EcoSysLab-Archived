@@ -642,6 +642,7 @@ void TreePipeBase::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 	{
 		CalculateProfiles();
 	}
+	
 	if (ImGui::Button("Calculate Profiles V2"))
 	{
 		CalculateProfilesV2();
@@ -679,6 +680,21 @@ void TreePipeBase::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 	{
 		ClearStrands();
 	}
+	if (ImGui::Button("Build Mesh"))
+	{
+		ClearStrands();
+	}
+	if (ImGui::TreeNodeEx("Tree Pipe Mesh Generator Settings", ImGuiTreeNodeFlags_DefaultOpen)) {
+		m_treePipeMeshGeneratorSettings.OnInspect(editorLayer);
+		ImGui::TreePop();
+	}
+	if (ImGui::Button("Generate Mesh")) {
+		GenerateGeometry(m_treePipeMeshGeneratorSettings);
+	}
+	if (ImGui::Button("Clear Mesh"))
+	{
+		ClearGeometry();
+	}
 
 	if(editorLayer->DragAndDropButton<Material>(m_nodeMaterial, "Node Material"))
 	{
@@ -700,6 +716,55 @@ void TreePipeBase::ApplyNodeMeshMaterial()
 		const auto mmr = scene->GetOrSetPrivateComponent<MeshRenderer>(nodeEntity).lock();
 		mmr->m_mesh = m_nodeMesh;
 		mmr->m_material = m_nodeMaterial;
+	}
+}
+
+std::shared_ptr<Mesh> TreePipeBase::GenerateMesh(const TreePipeMeshGeneratorSettings& treePipeMeshGeneratorSettings)
+{
+	std::vector<Vertex> vertices;
+	std::vector<unsigned int> indices;
+	const TreePipeMeshGenerator meshGenerator{};
+
+	meshGenerator.Generate(m_pipeGroup, vertices, indices, treePipeMeshGeneratorSettings);
+
+	auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
+	VertexAttributes attributes{};
+	attributes.m_texCoord = true;
+	mesh->SetVertices(attributes, vertices, indices);
+	return mesh;
+}
+
+void TreePipeBase::GenerateGeometry(const TreePipeMeshGeneratorSettings& treePipeMeshGeneratorSettings)
+{
+	ClearGeometry();
+	const auto scene = GetScene();
+	const auto self = GetOwner();
+	Entity branchEntity;
+	branchEntity = scene->CreateEntity("Pipe Mesh");
+	scene->SetParent(branchEntity, self);
+
+	auto mesh = GenerateMesh(treePipeMeshGeneratorSettings);
+	auto material = ProjectManager::CreateTemporaryAsset<Material>();
+	auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(branchEntity).lock();
+	
+	material->m_materialProperties.m_albedoColor = glm::vec3(109, 79, 75) / 255.0f;
+	
+	material->m_materialProperties.m_roughness = 1.0f;
+	material->m_materialProperties.m_metallic = 0.0f;
+	meshRenderer->m_mesh = mesh;
+	meshRenderer->m_material = material;
+}
+
+void TreePipeBase::ClearGeometry() const
+{
+	const auto scene = GetScene();
+	const auto self = GetOwner();
+	const auto children = scene->GetChildren(self);
+	for (const auto& child : children) {
+		auto name = scene->GetEntityName(child);
+		if (name == "Pipe Mesh") {
+			scene->DeleteEntity(child);
+		}
 	}
 }
 

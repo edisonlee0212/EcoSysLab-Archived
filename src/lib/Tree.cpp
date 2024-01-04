@@ -229,7 +229,7 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 			}
 			if (ImGui::Button("Clear Mesh"))
 			{
-				ClearMeshes();
+				ClearGeometry();
 			}
 			ImGui::TreePop();
 		}
@@ -686,7 +686,7 @@ void Tree::Deserialize(const YAML::Node& in)
 	m_treeDescriptor.Load("m_treeDescriptor", in);
 }
 
-void Tree::ClearMeshes() const
+void Tree::ClearGeometry() const
 {
 	const auto scene = GetScene();
 	const auto self = GetOwner();
@@ -729,7 +729,7 @@ void Tree::GenerateGeometry(const TreeMeshGeneratorSettings& meshGeneratorSettin
 	const auto self = GetOwner();
 	const auto children = scene->GetChildren(self);
 	auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
-	ClearMeshes();
+	ClearGeometry();
 	ClearStrands();
 	auto actualIteration = iteration;
 	if (actualIteration < 0 || actualIteration > m_treeModel.CurrentIteration())

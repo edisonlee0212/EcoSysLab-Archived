@@ -8,6 +8,8 @@ namespace EcoSysLab {
 	struct TreePipeMeshGeneratorSettings
 	{
 		//TODO: Add parameters here.
+
+		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer);
 	};
 	class TreePipeMeshGenerator
 	{

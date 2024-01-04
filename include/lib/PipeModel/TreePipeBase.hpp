@@ -4,6 +4,7 @@
 #include "TreeVisualizer.hpp"
 #include "TreeMeshGenerator.hpp"
 #include "LSystemString.hpp"
+#include "TreePipeMeshGenerator.hpp"
 #include "TreePipeNode.hpp"
 using namespace EvoEngine;
 namespace EcoSysLab
@@ -36,6 +37,7 @@ namespace EcoSysLab
 		int m_numOfNodes = 0;
 		int m_numOfParticles = 0;
 		BaseSkeleton m_skeleton;
+		TreePipeMeshGeneratorSettings m_treePipeMeshGeneratorSettings{};
 		void InitializeNodes();
 		void ClearStrands() const;
 		void InitializeStrandRenderer(float frontControlPointRatio, float backControlPointRatio, bool triplePoints, int nodeMaxCount = -1);
@@ -48,5 +50,9 @@ namespace EcoSysLab
 		void ApplyProfiles();
 		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 		void ApplyNodeMeshMaterial();
+
+		std::shared_ptr<Mesh> GenerateMesh(const TreePipeMeshGeneratorSettings& treePipeMeshGeneratorSettings);
+		void GenerateGeometry(const TreePipeMeshGeneratorSettings& treePipeMeshGeneratorSettings);
+		void ClearGeometry() const;
 	};
 }

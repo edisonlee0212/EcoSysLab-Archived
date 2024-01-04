@@ -58,7 +58,7 @@ namespace EcoSysLab {
 
 		void OnCreate() override;
 
-		void ClearMeshes() const;
+		void ClearGeometry() const;
 		void ClearStrands() const;
 		void GenerateGeometry(const TreeMeshGeneratorSettings& meshGeneratorSettings, int iteration = -1);
 		void RegisterVoxel();
