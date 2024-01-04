@@ -2388,14 +2388,25 @@ void ConnectivityGraphSettings::OnInspect() {
 		m_branchBranchConnectionMaxLengthRange = 15.0f;
 		m_directionConnectionAngleLimit = 30.0f;
 		m_indirectConnectionAngleLimit = 15.0f;
+		m_parallelShiftCheck = true;
 	}
-	if (ImGui::Button("Load max connection settings"))
+	if (ImGui::Button("Load default connection settings"))
 	{
 		m_pointPointConnectionDetectionRadius = 0.05f;
 		m_pointBranchConnectionDetectionRange = 0.5f;
 		m_branchBranchConnectionMaxLengthRange = 5.0f;
 		m_directionConnectionAngleLimit = 45.0f;
 		m_indirectConnectionAngleLimit = 45.0f;
+		m_parallelShiftCheck = true;
+	}
+	if (ImGui::Button("Load max connection settings"))
+	{
+		m_pointPointConnectionDetectionRadius = 0.05f;
+		m_pointBranchConnectionDetectionRange = 0.5f;
+		m_branchBranchConnectionMaxLengthRange = 10.0f;
+		m_directionConnectionAngleLimit = 90.0f;
+		m_indirectConnectionAngleLimit = 90.0f;
+		m_parallelShiftCheck = false;
 	}
 	ImGui::DragFloat("Point-point detection radius", &m_pointPointConnectionDetectionRadius, 0.01f, 0.01f, 1.0f);
 	ImGui::DragFloat("Point-branch detection range", &m_pointBranchConnectionDetectionRange, 0.01f, 0.01f, 2.0f);
