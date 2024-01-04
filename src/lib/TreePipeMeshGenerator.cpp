@@ -8,6 +8,7 @@ using namespace EcoSysLab;
 void TreePipeMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
 	//TODO: You can add ImGui settings here.
+	ImGui::ColorEdit3("Vertex color", &m_vertexColor.x);
 }
 
 void TreePipeMeshGenerator::Generate(const PipeModelPipeGroup& pipes, std::vector<Vertex>& vertices,

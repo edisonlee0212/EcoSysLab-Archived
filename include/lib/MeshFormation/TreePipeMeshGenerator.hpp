@@ -8,7 +8,7 @@ namespace EcoSysLab {
 	struct TreePipeMeshGeneratorSettings
 	{
 		//TODO: Add parameters here.
-
+		glm::vec3 m_vertexColor = glm::vec3(1.0f);
 		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer);
 	};
 	class TreePipeMeshGenerator
