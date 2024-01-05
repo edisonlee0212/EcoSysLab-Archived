@@ -141,64 +141,9 @@ void EcoSysLabLayer::Visualization() {
 			}
 		}
 		if (flowUpdated) {
-			const auto strandsHolder = m_shootStemStrandsHolder.Get();
-			if (scene->IsEntityValid(strandsHolder)) {
-				auto branchStrandsRenderer = scene->GetOrSetPrivateComponent<StrandsRenderer>(strandsHolder).lock();
-				branchStrandsRenderer->m_strands = m_shootStemStrands;
-				auto material = branchStrandsRenderer->m_material.Get<Material>();
-				if (!material) {
-					material = ProjectManager::CreateTemporaryAsset<Material>();
-
-					branchStrandsRenderer->m_material = material;
-					material->m_materialProperties.m_albedoColor = glm::vec3(109, 79, 75) / 255.0f;
-					if (m_meshGeneratorSettings.m_foliageOverride) {
-						material->m_materialProperties.m_albedoColor = m_meshGeneratorSettings.m_presentationOverrideSettings.m_branchOverrideColor;
-					}
-					material->m_materialProperties.m_roughness = 1.0f;
-					material->m_materialProperties.m_metallic = 0.0f;
-				}
-			}
-
-
-			auto foliageHolder = m_foliageHolder.Get();
-			if (scene->IsEntityValid(foliageHolder)) {
-				auto foliageRenderer = scene->GetOrSetPrivateComponent<Particles>(foliageHolder).lock();
-				auto mesh = foliageRenderer->m_mesh.Get<Mesh>();
-				if (!mesh) foliageRenderer->m_mesh = Resources::GetResource<Mesh>("PRIMITIVE_QUAD");;
-				foliageRenderer->m_particleInfoList = m_foliageMatrices;
-				auto material = foliageRenderer->m_material.Get<Material>();
-				if (!material) {
-					material = ProjectManager::CreateTemporaryAsset<Material>();
-					foliageRenderer->m_material = material;
-					material->m_materialProperties.m_albedoColor = glm::vec3(80, 60, 50) / 255.0f;
-					if (m_meshGeneratorSettings.m_foliageOverride) {
-						material->m_materialProperties.m_albedoColor = m_meshGeneratorSettings.m_foliageOverrideSettings.m_leafColor;
-					}
-					material->m_materialProperties.m_roughness = 1.0f;
-					material->m_materialProperties.m_metallic = 0.2f;
-				}
-				foliageRenderer->m_particleInfoList.Get<ParticleInfoList>()->SetPendingUpdate();
-			}
-			auto fruitHolder = m_fruitHolder.Get();
-			if (scene->IsEntityValid(fruitHolder)) {
-				auto fruitRenderer = scene->GetOrSetPrivateComponent<Particles>(fruitHolder).lock();
-				auto mesh = fruitRenderer->m_mesh.Get<Mesh>();
-				if (!mesh) fruitRenderer->m_mesh = Resources::GetResource<Mesh>("PRIMITIVE_SPHERE");;
-				fruitRenderer->m_particleInfoList = m_fruitMatrices;
-				auto material = fruitRenderer->m_material.Get<Material>();
-				if (!material) {
-					material = ProjectManager::CreateTemporaryAsset<Material>();
-					fruitRenderer->m_material = material;
-					material->m_materialProperties.m_albedoColor = glm::vec3(80, 60, 50) / 255.0f;
-					if (m_meshGeneratorSettings.m_foliageOverride) {
-						material->m_materialProperties.m_albedoColor = m_meshGeneratorSettings.m_foliageOverrideSettings.m_leafColor;
-					}
-					material->m_materialProperties.m_roughness = 1.0f;
-					material->m_materialProperties.m_metallic = 0.2f;
-				}
-				fruitRenderer->m_particleInfoList.Get<ParticleInfoList>()->SetPendingUpdate();
-			}
-			if (auto climate = m_climateHolder.Get<Climate>()) {
+			const auto climateCandidate = FindClimate();
+			if (!climateCandidate.expired()) {
+				const auto climate = climateCandidate.lock();
 				const auto& voxelGrid = climate->m_climateModel.m_environmentGrid.m_voxel;
 				const auto numVoxels = voxelGrid.GetVoxelCount();
 				auto& scalarMatrices = m_shadowGridParticleInfoList->m_particleInfos;
@@ -312,9 +257,33 @@ void EcoSysLabLayer::ResetAllTrees(const std::vector<Entity>* treeEntities) {
 	m_fruitMatrices->m_particleInfos.clear();
 	m_fruitMatrices->SetPendingUpdate();
 
-	if (const auto climate = m_climateHolder.Get<Climate>()) {
+	const auto climateCandidate = FindClimate();
+	if (!climateCandidate.expired()) {
+		const auto climate = climateCandidate.lock();
 		climate->m_climateModel.m_environmentGrid = {};
 	}
+}
+
+std::weak_ptr<Climate> EcoSysLabLayer::FindClimate()
+{
+	const auto scene = Application::GetActiveScene();
+	const std::vector<Entity>* climateEntities =
+		scene->UnsafeGetPrivateComponentOwnersList<Climate>();
+	if (climateEntities && !climateEntities->empty()) {
+		return scene->GetOrSetPrivateComponent<Climate>(climateEntities->at(0));
+	}
+	return {};
+}
+
+std::weak_ptr<Soil> EcoSysLabLayer::FindSoil()
+{
+	const auto scene = Application::GetActiveScene();
+	const std::vector<Entity>* soilEntities =
+		scene->UnsafeGetPrivateComponentOwnersList<Soil>();
+	if (soilEntities && !soilEntities->empty()) {
+		return scene->GetOrSetPrivateComponent<Soil>(soilEntities->at(0));
+	}
+	return {};
 }
 
 const std::vector<glm::vec3>& EcoSysLabLayer::RandomColors() {
@@ -329,9 +298,6 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 	if (ImGui::Begin("EcoSysLab Layer")) {
 		const std::vector<Entity>* treeEntities =
 			scene->UnsafeGetPrivateComponentOwnersList<Tree>();
-		editorLayer->DragAndDropButton<Soil>(m_soilHolder, "Soil");
-		ImGui::SameLine();
-		editorLayer->DragAndDropButton<Climate>(m_climateHolder, "Climate");
 		if (treeEntities && !treeEntities->empty()) {
 			if (ImGui::TreeNode("Tree Growth Settings")){
 				if (ImGui::Button("Grow weekly")) m_simulationSettings.m_deltaTime = 0.01918f;
@@ -353,48 +319,14 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 							0.0f, 1.0f) || settingsChanged;
 
 					if (settingsChanged) {
-						if (const auto climate = m_climateHolder.Get<Climate>()) {
-							auto& estimator = climate->m_climateModel.m_environmentGrid;
-							estimator.m_settings = m_simulationSettings.m_shadowEstimationSettings;
-							auto minBound = estimator.m_voxel.GetMinBound();
-							auto maxBound = estimator.m_voxel.GetMaxBound();
-							bool boundChanged = false;
-							for (const auto& treeEntity : *treeEntities)
-							{
-								if (!scene->IsEntityEnabled(treeEntity)) return;
-								auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
-								if (!tree->IsEnabled()) return;
-								const auto globalTransform = scene->GetDataComponent<GlobalTransform>(treeEntity).m_value;
-								const glm::vec3 currentMinBound = globalTransform * glm::vec4(tree->m_treeModel.RefShootSkeleton().m_min, 1.0f);
-								const glm::vec3 currentMaxBound = globalTransform * glm::vec4(tree->m_treeModel.RefShootSkeleton().m_max, 1.0f);
-
-								if (currentMinBound.x <= minBound.x || currentMinBound.y <= minBound.y || currentMinBound.z <= minBound.z
-									|| currentMaxBound.x >= maxBound.x || currentMaxBound.y >= maxBound.y || currentMaxBound.z >= maxBound.z) {
-									minBound = glm::min(currentMinBound - glm::vec3(1.0f, 0.1f, 1.0f), minBound);
-									maxBound = glm::max(currentMaxBound + glm::vec3(1.0f), maxBound);
-									boundChanged = true;
-								}
-								if (!tree->m_climate.Get<Climate>()) tree->m_climate = climate;
-								tree->m_treeModel.m_crownShynessDistance = m_simulationSettings.m_crownShynessDistance;
-							}
-							if (boundChanged) estimator.m_voxel.Initialize(estimator.m_voxelSize, minBound, maxBound);
-							estimator.m_voxel.Reset();
-							for (const auto& treeEntity : *treeEntities)
-							{
-								if (!scene->IsEntityEnabled(treeEntity)) return;
-								auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
-								if (!tree->IsEnabled()) return;
-								tree->RegisterVoxel();
-							}
-
-							estimator.ShadowPropagation();
-							if (const auto climate = m_climateHolder.Get<Climate>()) {
-								for (const auto& i : *treeEntities) {
-									const auto tree = scene->GetOrSetPrivateComponent<Tree>(i).lock();
-									tree->m_treeModel.CalculateShootFlux(scene->GetDataComponent<GlobalTransform>(i).m_value,
-										climate->m_climateModel, tree->m_shootGrowthController);
-									tree->m_treeVisualizer.m_needShootColorUpdate = true;
-								}
+						const auto climateCandidate = FindClimate();
+						if (!climateCandidate.expired()) {
+							const auto climate = climateCandidate.lock();
+							climate->PrepareForGrowth();
+							for (const auto& i : *treeEntities) {
+								const auto tree = scene->GetOrSetPrivateComponent<Tree>(i).lock();
+								tree->m_treeModel.CalculateShootFlux(scene->GetDataComponent<GlobalTransform>(i).m_value, climate->m_climateModel, tree->m_shootGrowthController);
+								tree->m_treeVisualizer.m_needShootColorUpdate = true;
 							}
 						}
 					}
@@ -450,11 +382,6 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 			ImGui::Text("Total ground leaf size: %d", m_leaves.size());
 			ImGui::Text("Total ground fruit size: %d", m_fruits.size());
 			
-			editorLayer->DragAndDropButton(m_shootStemStrandsHolder, "Shoot stem holder");
-			editorLayer->DragAndDropButton(m_foliageHolder, "Foliage holder");
-			editorLayer->DragAndDropButton(m_fruitHolder, "Fruit holder");
-			editorLayer->DragAndDropButton(m_groundFruitsHolder, "Ground fruit holder");
-			editorLayer->DragAndDropButton(m_groundLeavesHolder, "Ground leaves holder");
 		}
 		else {
 			ImGui::Text("No trees in the scene!");
@@ -913,11 +840,11 @@ void EcoSysLabLayer::UpdateGroundFruitAndLeaves() const {
 
 
 void EcoSysLabLayer::SoilVisualization() {
-	const auto soil = m_soilHolder.Get<Soil>();
-	if (!soil) {
-		m_soilHolder.Clear();
-		return;
-	}
+	std::shared_ptr<Soil> soil;
+	const auto soilCandidate = FindSoil();
+	if (!soilCandidate.expired()) soil = soilCandidate.lock();
+
+	if(!soil) return;
 
 	auto& soilModel = soil->m_soilModel;
 	if (m_soilVersion != soilModel.m_version) {
@@ -1034,7 +961,7 @@ void EcoSysLabLayer::SoilVisualizationScalar(VoxelSoilModel& soilModel) {
 }
 
 
-void EcoSysLab::EcoSysLabLayer::SoilVisualizationVector(VoxelSoilModel& soilModel) {
+void EcoSysLabLayer::SoilVisualizationVector(VoxelSoilModel& soilModel) {
 	const auto numVoxels = soilModel.m_resolution.x * soilModel.m_resolution.y * soilModel.m_resolution.z;
 	auto& vectorMatrices = m_groundFruitMatrices->m_particleInfos;
 	if (vectorMatrices.size() != numVoxels) {
@@ -1111,29 +1038,6 @@ void EcoSysLab::EcoSysLabLayer::SoilVisualizationVector(VoxelSoilModel& soilMode
 	editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER"), m_vectorMatrices, glm::mat4(1.0f), 1.0f, gizmoSettings);
 }
 
-void EcoSysLabLayer::Update() {
-
-	const auto scene = Application::GetActiveScene();
-	const auto soilEntity = scene->GetEntity(m_soilHolder.GetEntityHandle());
-	if (!scene->IsEntityValid(soilEntity) || !scene->HasPrivateComponent<Soil>(soilEntity)) {
-		m_soilHolder.Clear();
-		const std::vector<Entity>* soilEntities =
-			scene->UnsafeGetPrivateComponentOwnersList<Soil>();
-		if (soilEntities && !soilEntities->empty()) {
-			m_soilHolder = scene->GetOrSetPrivateComponent<Soil>(soilEntities->at(0)).lock();
-		}
-	}
-	const auto climateEntity = scene->GetEntity(m_climateHolder.GetEntityHandle());
-	if (!scene->IsEntityValid(climateEntity) || !scene->HasPrivateComponent<Climate>(climateEntity)) {
-		m_climateHolder.Clear();
-		const std::vector<Entity>* climateEntities =
-			scene->UnsafeGetPrivateComponentOwnersList<Climate>();
-		if (climateEntities && !climateEntities->empty()) {
-			m_climateHolder = scene->GetOrSetPrivateComponent<Climate>(climateEntities->at(0)).lock();
-		}
-	}
-}
-
 void EcoSysLabLayer::Simulate(float deltaTime) {
 	const auto scene = GetScene();
 	const std::vector<Entity>* treeEntities =
@@ -1141,9 +1045,21 @@ void EcoSysLabLayer::Simulate(float deltaTime) {
 	m_time += deltaTime;
 	if (treeEntities && !treeEntities->empty()) {
 		float time = Times::Now();
-		const auto climate = m_climateHolder.Get<Climate>();
-		const auto soil = m_soilHolder.Get<Soil>();
 
+		std::shared_ptr<Climate> climate;
+		std::shared_ptr<Soil> soil;
+		const auto climateCandidate = FindClimate();
+		if (!climateCandidate.expired()) climate = climateCandidate.lock();
+		const auto soilCandidate = FindSoil();
+		if (!soilCandidate.expired()) soil = soilCandidate.lock();
+		if (!soil) {
+			EVOENGINE_ERROR("Simulation Failed! No soil in scene!");
+			return;
+		}
+		if (!climate) {
+			EVOENGINE_ERROR("Simulation Failed! No climate in scene!");
+			return;
+		}
 		climate->m_climateModel.m_time = m_time;
 
 		if (m_simulationSettings.m_soilSimulation) {

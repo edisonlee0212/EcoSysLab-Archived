@@ -99,7 +99,6 @@ namespace EcoSysLab {
 		std::shared_ptr<ParticleInfoList> m_shadowGridParticleInfoList;
 		void UpdateVisualizationCamera();
 		void PreUpdate() override;
-		void Update() override;
 
 		void OnCreate() override;
 
@@ -139,27 +138,13 @@ namespace EcoSysLab {
 	public:
 		SimulationSettings m_simulationSettings {};
 
-		
 		bool m_needFullFlowUpdate = false;
 
 		int m_visualizationCameraResolutionX = 1;
 		int m_visualizationCameraResolutionY = 1;
 
-		
-
-
 		TreeMeshGeneratorSettings m_meshGeneratorSettings;
 		Entity m_selectedTree = {};
-
-		EntityRef m_shootStemStrandsHolder;
-		EntityRef m_foliageHolder;
-		EntityRef m_fruitHolder;
-		EntityRef m_groundLeavesHolder;
-		EntityRef m_groundFruitsHolder;
-
-
-		PrivateComponentRef m_soilHolder;
-		PrivateComponentRef m_climateHolder;
 
 		void Simulate(float deltaTime);
 
@@ -168,6 +153,9 @@ namespace EcoSysLab {
 		void ClearGeometries() const;
 
 		void ResetAllTrees(const std::vector<Entity>* treeEntities);
+
+		static std::weak_ptr<Climate> FindClimate();
+		static std::weak_ptr<Soil> FindSoil();
 
 		const std::vector<glm::vec3>& RandomColors();
 	};

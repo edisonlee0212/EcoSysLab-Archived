@@ -298,7 +298,9 @@ void TreePointCloudScanner::Capture(const std::filesystem::path& savePath, const
 #ifdef BUILD_WITH_RAYTRACER
 	
 	const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
-	const auto soil = ecoSysLabLayer->m_soilHolder.Get<Soil>();
+	std::shared_ptr<Soil> soil;
+	const auto soilCandidate = EcoSysLabLayer::FindSoil();
+	if (!soilCandidate.expired()) soil = soilCandidate.lock();
 	if(!soil)
 	{
 		EVOENGINE_ERROR("No soil!");

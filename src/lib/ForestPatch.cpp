@@ -85,8 +85,13 @@ void ForestPatch::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 		{
 			int index = 0;
 			const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
-			const auto soil = ecoSysLabLayer->m_soilHolder.Get<Soil>();
-			const auto soilDescriptor = soil->m_soilDescriptor.Get<SoilDescriptor>();
+			std::shared_ptr<Soil> soil;
+			const auto soilCandidate = EcoSysLabLayer::FindSoil();
+			if (!soilCandidate.expired()) soil = soilCandidate.lock();
+			std::shared_ptr<SoilDescriptor> soilDescriptor;
+			if (soil) {
+				soilDescriptor = soil->m_soilDescriptor.Get<SoilDescriptor>();
+			}
 			std::shared_ptr<HeightField> heightField{};
 			if (soilDescriptor)
 			{
@@ -186,8 +191,13 @@ void ForestPatch::SetupGrid(const glm::ivec2& gridSize, float gridDistance, floa
 {
 	m_treeInfos.clear();
 	const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
-	const auto soil = ecoSysLabLayer->m_soilHolder.Get<Soil>();
-	const auto soilDescriptor = soil->m_soilDescriptor.Get<SoilDescriptor>();
+	std::shared_ptr<Soil> soil;
+	const auto soilCandidate = EcoSysLabLayer::FindSoil();
+	if (!soilCandidate.expired()) soil = soilCandidate.lock();
+	std::shared_ptr<SoilDescriptor> soilDescriptor;
+	if (soil) {
+		soilDescriptor = soil->m_soilDescriptor.Get<SoilDescriptor>();
+	}
 	std::shared_ptr<HeightField> heightField{};
 	if (soilDescriptor)
 	{

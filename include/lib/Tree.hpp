@@ -50,6 +50,8 @@ namespace EcoSysLab {
 		AssetRef m_treeDescriptor;
 		bool m_enableHistory = false;
 		int m_historyIteration = 30;
+		float m_overrideGrowRate = 0.0f;
+
 		TreeModel m_treeModel{};
 		
 		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;

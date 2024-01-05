@@ -77,9 +77,7 @@ void Climate::PrepareForGrowth()
 	bool boundChanged = false;
 	for (const auto& treeEntity : *treeEntities)
 	{
-		if (!scene->IsEntityEnabled(treeEntity)) continue;
-		auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
-		if (!tree->IsEnabled()) continue;
+		const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
 		const auto globalTransform = scene->GetDataComponent<GlobalTransform>(treeEntity).m_value;
 		const glm::vec3 currentMinBound = globalTransform * glm::vec4(tree->m_treeModel.RefShootSkeleton().m_min, 1.0f);
 		const glm::vec3 currentMaxBound = globalTransform * glm::vec4(tree->m_treeModel.RefShootSkeleton().m_max, 1.0f);
@@ -89,6 +87,7 @@ void Climate::PrepareForGrowth()
 			minBound = glm::min(currentMinBound - glm::vec3(1.0f, 0.1f, 1.0f), minBound);
 			maxBound = glm::max(currentMaxBound + glm::vec3(1.0f), maxBound);
 			boundChanged = true;
+			EVOENGINE_LOG("Shadow grid resized!");
 		}
 		tree->m_treeModel.m_crownShynessDistance = ecoSysLabLayer->m_simulationSettings.m_crownShynessDistance;
 	}
@@ -96,9 +95,7 @@ void Climate::PrepareForGrowth()
 	estimator.m_voxel.Reset();
 	for (const auto& treeEntity : *treeEntities)
 	{
-		if (!scene->IsEntityEnabled(treeEntity)) continue;
 		const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
-		if (!tree->IsEnabled()) continue;
 		tree->RegisterVoxel();
 	}
 

@@ -121,8 +121,12 @@ bool TreeDescriptor::OnInspectShootGrowthParameters(ShootGrowthParameters& treeG
 void TreeDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	bool changed = false;
 	const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
-	const auto soil = ecoSysLabLayer->m_soilHolder.Get<Soil>();
-	const auto climate = ecoSysLabLayer->m_climateHolder.Get<Climate>();
+	std::shared_ptr<Climate> climate;
+	std::shared_ptr<Soil> soil;
+	const auto climateCandidate = EcoSysLabLayer::FindClimate();
+	if (!climateCandidate.expired()) climate = climateCandidate.lock();
+	const auto soilCandidate = EcoSysLabLayer::FindSoil();
+	if (!soilCandidate.expired()) soil = soilCandidate.lock();
 	if (soil && climate) {
 		if (ImGui::Button("Instantiate")) {
 			const auto scene = Application::GetActiveScene();
