@@ -110,9 +110,7 @@ namespace EcoSysLab {
 
 		void OnSoilVisualizationMenu();
 
-
-		void UpdateFlows(const std::vector<Entity>* treeEntities, const std::shared_ptr<Strands>& branchStrands,
-			int targetTreeIndex = -1);
+		void UpdateFlows(const std::vector<Entity>* treeEntities, const std::shared_ptr<Strands>& branchStrands);
 
 		void ClearGroundFruitAndLeaf();
 

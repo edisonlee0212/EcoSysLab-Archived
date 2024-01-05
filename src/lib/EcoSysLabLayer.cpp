@@ -85,10 +85,10 @@ void EcoSysLabLayer::OnDestroy() {
 
 
 void EcoSysLabLayer::Visualization() {
-	auto scene = GetScene();
-	auto editorLayer = Application::GetLayer<EditorLayer>();
+	const auto scene = GetScene();
+	const auto editorLayer = Application::GetLayer<EditorLayer>();
 
-	auto selectedEntity = editorLayer->GetSelectedEntity();
+	const auto selectedEntity = editorLayer->GetSelectedEntity();
 	if (selectedEntity != m_selectedTree) {
 		if (scene->IsEntityValid(selectedEntity) && scene->HasPrivateComponent<Tree>(selectedEntity)) {
 			m_selectedTree = selectedEntity;
@@ -127,15 +127,14 @@ void EcoSysLabLayer::Visualization() {
 		}
 		bool flowUpdated = false;
 		if (m_debugVisualization) {
-
 			if (m_needFullFlowUpdate) {
-				UpdateFlows(treeEntities, branchStrands, -1);
+				UpdateFlows(treeEntities, branchStrands);
 				UpdateGroundFruitAndLeaves();
 				m_needFullFlowUpdate = false;
 				flowUpdated = true;
 			}
 			if (m_needFlowUpdateForSelection) {
-				UpdateFlows(treeEntities, branchStrands, m_lastSelectedTreeIndex);
+				UpdateFlows(treeEntities, branchStrands);
 				m_needFlowUpdateForSelection = false;
 				flowUpdated = true;
 			}
@@ -629,7 +628,7 @@ void EcoSysLabLayer::OnSoilVisualizationMenu() {
 	}
 }
 
-void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const std::shared_ptr<Strands>& branchStrands, int targetTreeIndex) {
+void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const std::shared_ptr<Strands>& branchStrands) {
 		{
 			const auto scene = Application::GetActiveScene();
 
@@ -660,7 +659,7 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 
 			for (int listIndex = 0; listIndex < treeEntities->size(); listIndex++) {
 				auto treeEntity = treeEntities->at(listIndex);
-				auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
+				const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
 				auto& treeModel = tree->m_treeModel;
 				const auto& branchSkeleton = treeModel.RefShootSkeleton();
 				const auto& branchList = branchSkeleton.RefSortedFlowList();
@@ -672,15 +671,21 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 						(branchSkeleton.m_max + branchSkeleton.m_min) / 2.0f) *
 						glm::scale(branchSkeleton.m_max - branchSkeleton.m_min));
 				instanceColor = glm::vec4(m_randomColors[listIndex], 0.05f);
-				branchLastStartIndex += branchList.size();
-				branchStartIndices.emplace_back(branchLastStartIndex);
+				if (treeEntity != m_selectedTree) {
+					branchLastStartIndex += branchList.size();
+					branchStartIndices.emplace_back(branchLastStartIndex);
 
-				fruitLastStartIndex += treeModel.GetFruitCount();
-				fruitStartIndices.emplace_back(fruitLastStartIndex);
+					fruitLastStartIndex += treeModel.GetFruitCount();
+					fruitStartIndices.emplace_back(fruitLastStartIndex);
 
-				leafLastStartIndex += treeModel.GetLeafCount();
-				leafStartIndices.emplace_back(leafLastStartIndex);
-
+					leafLastStartIndex += treeModel.GetLeafCount();
+					leafStartIndices.emplace_back(leafLastStartIndex);
+				}else
+				{
+					branchStartIndices.emplace_back(branchLastStartIndex);
+					fruitStartIndices.emplace_back(fruitLastStartIndex);
+					leafStartIndices.emplace_back(leafLastStartIndex);
+				}
 			}
 			m_shootStemSegments.resize(branchLastStartIndex * 3);
 			m_shootStemPoints.resize(branchLastStartIndex * 6);
@@ -694,7 +699,7 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 				auto& fruitMatrices = m_fruitMatrices->m_particleInfos;
 				Jobs::ParallelFor(treeEntities->size(), [&](unsigned treeIndex) {
 					auto treeEntity = treeEntities->at(treeIndex);
-					if (targetTreeIndex != -1 && treeEntity.GetIndex() != targetTreeIndex) return;
+					if (treeEntity == m_selectedTree) return;
 					auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
 					auto& treeModel = tree->m_treeModel;
 					const auto& branchSkeleton = treeModel.RefShootSkeleton();
