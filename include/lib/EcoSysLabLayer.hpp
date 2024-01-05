@@ -12,6 +12,12 @@ namespace EcoSysLab {
 		float m_health = 1.0f;
 	};
 
+	enum class OperatorMode {
+		Select,
+		Prune,
+		Invigorate
+	};
+
 	struct Leaf {
 		GlobalTransform m_globalTransform;
 		float m_maturity = 0.0f;
@@ -30,7 +36,11 @@ namespace EcoSysLab {
 	};
 
 	class EcoSysLabLayer : public ILayer {
+		unsigned m_operatorMode = static_cast<unsigned>(OperatorMode::Select);
+		float m_overrideGrowRate = 0.0f;
+
 		friend class TreeVisualizer;
+		friend class Tree;
 		bool m_displayShootStem = true;
 		bool m_displayFoliage = true;
 		bool m_displayFruit = true;
@@ -39,7 +49,7 @@ namespace EcoSysLab {
 		bool m_displayGroundFruit = true;
 		bool m_displayGroundLeaves = true;
 
-		bool m_debugVisualization = false;
+		bool m_visualization = true;
 		std::vector<int> m_shootVersions;
 		std::vector<glm::vec3> m_randomColors;
 
@@ -133,6 +143,8 @@ namespace EcoSysLab {
 
 		glm::vec2 m_visualizationCameraMousePosition;
 		bool m_visualizationCameraWindowFocused = false;
+
+
 	public:
 		SimulationSettings m_simulationSettings {};
 
@@ -143,6 +155,8 @@ namespace EcoSysLab {
 
 		TreeMeshGeneratorSettings m_meshGeneratorSettings;
 		Entity m_selectedTree = {};
+
+		glm::vec2 GetMouseSceneCameraPosition() const;
 
 		void Simulate(float deltaTime);
 

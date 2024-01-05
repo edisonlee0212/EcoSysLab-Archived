@@ -305,16 +305,7 @@ bool
 TreeVisualizer::OnInspect(
 	TreeModel& treeModel) {
 	bool updated = false;
-	if (ImGui::Combo("Shoot Color mode",
-		{ "Order", "Level", "Light Intensity", "Light Direction", "Growth Potential", "Apical control", "Desired growth rate", "IsMaxChild", "AllocatedVigor" },
-		m_settings.m_shootVisualizationMode)) {
-		m_needShootColorUpdate = true;
-	}
-	if(ImGui::Combo("Operator mode", { "Select", "Stroke", "Regrowth" }, m_operatorMode))
-	{
-		m_selectedInternodeHandle = -1;
-		m_selectedInternodeHierarchyList.clear();
-	}
+	
 
 	if (ImGui::SliderInt("Checkpoints", &m_checkpointIteration, 0, treeModel.CurrentIteration())) {
 		m_checkpointIteration = glm::clamp(m_checkpointIteration, 0, treeModel.CurrentIteration());
@@ -331,10 +322,13 @@ TreeVisualizer::OnInspect(
 		treeModel.ClearHistory();
 	}
 
-
-	if (ImGui::TreeNodeEx("Settings")) {
+	if (ImGui::TreeNodeEx("Visualizer Settings")) {
+		if (ImGui::Combo("Shoot Color mode",
+			{ "Order", "Level", "Light Intensity", "Light Direction", "Growth Potential", "Apical control", "Desired growth rate", "IsMaxChild", "AllocatedVigor" },
+			m_settings.m_shootVisualizationMode)) {
+			m_needShootColorUpdate = true;
+		}
 		ImGui::DragInt("History Limit", &treeModel.m_historyLimit, 1, -1, 1024);
-
 
 		if (ImGui::TreeNode("Shoot Color settings")) {
 			switch (static_cast<ShootVisualizerMode>(m_settings.m_shootVisualizationMode)) {
@@ -367,33 +361,34 @@ TreeVisualizer::OnInspect(
 
 		ImGui::TreePop();
 	}
-	if (m_selectedInternodeHandle >= 0) {
-		if (m_checkpointIteration == treeModel.CurrentIteration()) {
-			InspectInternode(treeModel.RefShootSkeleton(), m_selectedInternodeHandle);
-		}
-		else {
-			PeekInternode(treeModel.PeekShootSkeleton(m_checkpointIteration), m_selectedInternodeHandle);
-		}
-	}
-
-	if (m_treeHierarchyGui) {
-		if (ImGui::TreeNodeEx("Tree Hierarchy")) {
-			bool deleted = false;
-			auto tempSelection = m_selectedInternodeHandle;
+	if (ImGui::TreeNodeEx("Inspection")) {
+		if (m_selectedInternodeHandle >= 0) {
 			if (m_checkpointIteration == treeModel.CurrentIteration()) {
-				if (DrawInternodeInspectionGui(treeModel, 0, deleted, 0)) {
-					m_needUpdate = true;
-					updated = true;
-				}
+				InspectInternode(treeModel.RefShootSkeleton(), m_selectedInternodeHandle);
 			}
-			else
-				PeekNodeInspectionGui(treeModel.PeekShootSkeleton(m_checkpointIteration), 0, 0);
-			m_selectedInternodeHierarchyList.clear();
-			ImGui::TreePop();
+			else {
+				PeekInternode(treeModel.PeekShootSkeleton(m_checkpointIteration), m_selectedInternodeHandle);
+			}
 		}
 
+		if (m_treeHierarchyGui) {
+			if (ImGui::TreeNodeEx("Tree Hierarchy")) {
+				bool deleted = false;
+				auto tempSelection = m_selectedInternodeHandle;
+				if (m_checkpointIteration == treeModel.CurrentIteration()) {
+					if (DrawInternodeInspectionGui(treeModel, 0, deleted, 0)) {
+						m_needUpdate = true;
+						updated = true;
+					}
+				}
+				else
+					PeekNodeInspectionGui(treeModel.PeekShootSkeleton(m_checkpointIteration), 0, 0);
+				m_selectedInternodeHierarchyList.clear();
+				ImGui::TreePop();
+			}
+		}
+		ImGui::TreePop();
 	}
-
 	return updated;
 }
 
@@ -401,6 +396,7 @@ void TreeVisualizer::Visualize(const TreeModel& treeModel, const GlobalTransform
 	const auto& treeSkeleton = treeModel.PeekShootSkeleton(m_checkpointIteration);
 	if (m_visualization) {
 		const auto editorLayer = Application::GetLayer<EditorLayer>();
+		const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
 		if (m_needUpdate) {
 			SyncMatrices(treeSkeleton, m_internodeMatrices);
 			SyncColors(treeSkeleton, m_selectedInternodeHandle);
@@ -418,7 +414,7 @@ void TreeVisualizer::Visualize(const TreeModel& treeModel, const GlobalTransform
 		gizmoSettings.m_depthWrite = true;
 		if (!m_internodeMatrices->m_particleInfos.empty()) {
 
-			editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER"), editorLayer->GetSceneCamera(),
+			editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER"), ecoSysLabLayer->m_visualizationCamera,
 				m_internodeMatrices,
 				globalTransform.m_value, 1.0f, gizmoSettings);
 			if (m_selectedInternodeHandle != -1)
@@ -439,7 +435,7 @@ void TreeVisualizer::Visualize(const TreeModel& treeModel, const GlobalTransform
 						node.m_info.m_length / 5.0f,
 						2.0f * node.m_info.m_thickness + 0.01f));
 				const auto color = glm::vec4(1.0f);
-				editorLayer->DrawGizmoCylinder(color, matrix, 1, gizmoSettings);
+				editorLayer->DrawGizmoMesh(Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER"), ecoSysLabLayer->m_visualizationCamera, color, matrix, 1, gizmoSettings);
 			}
 		}
 	}
