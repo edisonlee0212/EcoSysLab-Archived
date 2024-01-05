@@ -32,7 +32,7 @@ m_entityMetadataList:
         m_climateDescriptor:
           m_assetHandle: 13551659426509046730
           m_assetTypeName: ClimateDescriptor
-  - m_name: TreePointCloud
+  - m_name: PointCloudReconstruction
     m_handle: 13346047876621397828
     m_enabled: true
     m_static: false
@@ -48,29 +48,19 @@ m_entityMetadataList:
     m_privateComponentElements:
       - m_typeName: TreePipeBase
         m_enabled: true
-  - m_name: TreePointCloudScanner
-    m_handle: 13990783136456237486
+  - m_name: Markers
+    m_handle: 8350535051805926162
     m_enabled: true
     m_static: false
-    Root.Handle: 13990783136456237486
+    Root.Handle: 8350535051805926162
     m_privateComponentElements:
-      - m_typeName: TreePointCloudScanner
-        m_enabled: true
-        m_pointSettings:
-          m_variance: 0
-          m_ballRandRadius: 0
-          m_typeIndex: true
-          m_instanceIndex: false
-          m_branchIndex: true
-          m_treePartIndex: true
-          m_lineIndex: true
-          m_internodeIndex: false
-          m_boundingBoxLimit: 1
+      []
   - m_name: 1m
     m_handle: 9136711617226957804
     m_enabled: true
     m_static: false
-    Root.Handle: 9136711617226957804
+    Parent.Handle: 8350535051805926162
+    Root.Handle: 8350535051805926162
     m_privateComponentElements:
       - m_typeName: MeshRenderer
         m_enabled: true
@@ -85,7 +75,8 @@ m_entityMetadataList:
     m_handle: 7615092489464422978
     m_enabled: true
     m_static: false
-    Root.Handle: 7615092489464422978
+    Parent.Handle: 8350535051805926162
+    Root.Handle: 8350535051805926162
     m_privateComponentElements:
       - m_typeName: MeshRenderer
         m_enabled: true
@@ -100,7 +91,8 @@ m_entityMetadataList:
     m_handle: 9421797382896254679
     m_enabled: true
     m_static: false
-    Root.Handle: 9421797382896254679
+    Parent.Handle: 8350535051805926162
+    Root.Handle: 8350535051805926162
     m_privateComponentElements:
       - m_typeName: MeshRenderer
         m_enabled: true
@@ -272,23 +264,23 @@ m_dataComponentStorages:
           - Data: !!binary "AACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPw=="
           - Data: !!binary "AACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPw=="
           - Data: !!binary "AAA="
-      - m_handle: 13990783136456237486
+      - m_handle: 7615092489464422978
         DataComponents:
-          - Data: !!binary "AACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPw=="
-          - Data: !!binary "AACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPw=="
+          - Data: !!binary "zczMPQAAAAAAAAAAAAAAAAAAAAAAAEBAAAAAAAAAAAAAAAAAAAAAAM3MzD0AAAAAAAAgwAAAwD8AAAAAAACAPw=="
+          - Data: !!binary "zczMPQAAAAAAAAAAAAAAAAAAAAAAAEBAAAAAAAAAAAAAAAAAAAAAAM3MzD0AAAAAAAAgwAAAwD8AAAAAAACAPw=="
           - Data: !!binary "AAA="
       - m_handle: 9136711617226957804
         DataComponents:
           - Data: !!binary "zczMPQAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAM3MzD0AAAAAAABgwAAAAD8AAAAAAACAPw=="
           - Data: !!binary "zczMPQAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAM3MzD0AAAAAAABgwAAAAD8AAAAAAACAPw=="
-          - Data: !!binary "AAE="
+          - Data: !!binary "AAA="
       - m_handle: 9421797382896254679
         DataComponents:
           - Data: !!binary "zczMPQAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAM3MzD0AAAAAAABAwAAAgD8AAAAAAACAPw=="
           - Data: !!binary "zczMPQAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAM3MzD0AAAAAAABAwAAAgD8AAAAAAACAPw=="
-          - Data: !!binary "AAE="
-      - m_handle: 7615092489464422978
+          - Data: !!binary "AAA="
+      - m_handle: 8350535051805926162
         DataComponents:
-          - Data: !!binary "zczMPQAAAAAAAAAAAAAAAAAAAAAAAEBAAAAAAAAAAAAAAAAAAAAAAM3MzD0AAAAAAAAgwAAAwD8AAAAAAACAPw=="
-          - Data: !!binary "zczMPQAAAAAAAAAAAAAAAAAAAAAAAEBAAAAAAAAAAAAAAAAAAAAAAM3MzD0AAAAAAAAgwAAAwD8AAAAAAACAPw=="
+          - Data: !!binary "AACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPw=="
+          - Data: !!binary "AACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPw=="
           - Data: !!binary "AAA="

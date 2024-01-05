@@ -223,7 +223,8 @@ void TreePointCloud::BuildConnectionBranch(const BranchHandle processingBranchHa
 	connectionBranch.m_bezierCurve.m_p1 = glm::mix(connectionBranch.m_bezierCurve.m_p0,
 		connectionBranch.m_bezierCurve.m_p3, 0.25f);
 
-	connectionBranch.m_bezierCurve.m_p2 = connectionBranch.m_bezierCurve.m_p3 * 2.f - processingBranch.m_bezierCurve.m_p2;
+	connectionBranch.m_bezierCurve.m_p2 = glm::mix(connectionBranch.m_bezierCurve.m_p0,
+		connectionBranch.m_bezierCurve.m_p3, 0.75f);
 
 	prevNodeHandle = bestPrevNodeHandle;
 
@@ -2455,7 +2456,7 @@ void ReconstructionSettings::OnInspect() {
 	ImGui::DragFloat("Internode length", &m_internodeLength, 0.01f, 0.01f, 1.0f);
 	ImGui::DragFloat("Root node max height", &m_minHeight, 0.01f, 0.01f, 1.0f);
 	ImGui::DragFloat("Tree distance limit", &m_minimumTreeDistance, 0.01f, 0.01f, 1.0f);
-	ImGui::DragFloat("Branch shortening", &m_branchShortening, 0.01f, 0.01f, 0.5f);
+	ImGui::DragFloat("Branch shortening", &m_branchShortening, 0.01f, 0.01f, 0.4f);
 	ImGui::DragFloat("Override thickness root distance", &m_overrideThicknessRootDistance, 0.01f, 0.01f, 0.5f);
 	ImGui::DragFloat("Space colonization factor", &m_spaceColonizationFactor, 0.01f, 0.f, 1.0f);
 	if(m_spaceColonizationFactor > 0.0f)
