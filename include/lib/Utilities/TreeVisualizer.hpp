@@ -7,11 +7,7 @@
 #include "Jobs.hpp"
 using namespace EvoEngine;
 namespace EcoSysLab {
-	enum class OperatorMode {
-		Select,
-		Stroke,
-		Regrowth
-	};
+	
 
 	enum class ShootVisualizerMode {
 		Order,
@@ -34,7 +30,7 @@ namespace EcoSysLab {
 	};
 
 	struct TreeVisualizerColorSettings {
-		int m_shootVisualizationMode = static_cast<int>(ShootVisualizerMode::DesiredGrowthRate);
+		int m_shootVisualizationMode = static_cast<int>(ShootVisualizerMode::Level);
 		float m_shootColorMultiplier = 1.0f;
 	};
 
@@ -45,7 +41,7 @@ namespace EcoSysLab {
 
 		std::shared_ptr<ParticleInfoList> m_internodeMatrices;
 
-		std::vector<NodeHandle> m_selectedInternodeHierarchyList;
+		
 		
 		bool DrawInternodeInspectionGui(TreeModel& treeModel, NodeHandle internodeHandle, bool& deleted, const unsigned& hierarchyLevel);
 
@@ -60,10 +56,11 @@ namespace EcoSysLab {
 
 		bool ScreenCurvePruning(const std::function<void(NodeHandle)>& handler, std::vector<glm::vec2>& mousePositions, ShootSkeleton& skeleton, const GlobalTransform& globalTransform);
 
+		std::vector<NodeHandle> m_selectedInternodeHierarchyList;
 		NodeHandle m_selectedInternodeHandle = -1;
 		bool m_visualization = true;
 		TreeVisualizerColorSettings m_settings;
-		unsigned m_operatorMode = static_cast<unsigned>(OperatorMode::Select);
+		
 		bool m_profileGui = true;
 		bool m_treeHierarchyGui = false;
 		float m_selectedInternodeLengthFactor = 0.0f;

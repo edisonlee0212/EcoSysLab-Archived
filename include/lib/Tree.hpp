@@ -26,8 +26,6 @@ namespace EcoSysLab {
 		void Reset();
 
 		TreeVisualizer m_treeVisualizer {};
-		bool m_enableVisualization = true;
-
 		
 		void Serialize(YAML::Emitter& out) override;
 		bool m_splitRootTest = true;
@@ -50,7 +48,7 @@ namespace EcoSysLab {
 		AssetRef m_treeDescriptor;
 		bool m_enableHistory = false;
 		int m_historyIteration = 30;
-		float m_overrideGrowRate = 0.0f;
+		
 
 		TreeModel m_treeModel{};
 		

@@ -85,15 +85,16 @@ void EcoSysLabLayer::OnDestroy() {
 
 
 void EcoSysLabLayer::Visualization() {
-	auto scene = GetScene();
-	auto editorLayer = Application::GetLayer<EditorLayer>();
+	const auto scene = GetScene();
+	const auto editorLayer = Application::GetLayer<EditorLayer>();
 
-	auto selectedEntity = editorLayer->GetSelectedEntity();
+	const auto selectedEntity = editorLayer->GetSelectedEntity();
 	if (selectedEntity != m_selectedTree) {
 		if (scene->IsEntityValid(selectedEntity) && scene->HasPrivateComponent<Tree>(selectedEntity)) {
 			m_selectedTree = selectedEntity;
 			m_lastSelectedTreeIndex = m_selectedTree.GetIndex();
 			m_needFlowUpdateForSelection = true;
+			m_operatorMode = static_cast<unsigned>(OperatorMode::Select);
 		}
 		else {
 			m_selectedTree = Entity();
@@ -126,16 +127,15 @@ void EcoSysLabLayer::Visualization() {
 			}
 		}
 		bool flowUpdated = false;
-		if (m_debugVisualization) {
-
+		if (m_visualization) {
 			if (m_needFullFlowUpdate) {
-				UpdateFlows(treeEntities, branchStrands, -1);
+				UpdateFlows(treeEntities, branchStrands);
 				UpdateGroundFruitAndLeaves();
 				m_needFullFlowUpdate = false;
 				flowUpdated = true;
 			}
 			if (m_needFlowUpdateForSelection) {
-				UpdateFlows(treeEntities, branchStrands, m_lastSelectedTreeIndex);
+				UpdateFlows(treeEntities, branchStrands);
 				m_needFlowUpdateForSelection = false;
 				flowUpdated = true;
 			}
@@ -163,13 +163,132 @@ void EcoSysLabLayer::Visualization() {
 			}
 		}
 	}
-	if (m_debugVisualization) {
+	if (m_visualization) {
 		GizmoSettings gizmoSettings;
 		gizmoSettings.m_drawSettings.m_blending = true;
-		
+
 		gizmoSettings.m_drawSettings.m_blendingSrcFactor = VK_BLEND_FACTOR_SRC_ALPHA;
 		gizmoSettings.m_drawSettings.m_blendingDstFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
 		gizmoSettings.m_drawSettings.m_cullMode = VK_CULL_MODE_BACK_BIT;
+
+		if (editorLayer && scene->IsEntityValid(m_selectedTree))
+		{
+			const auto& tree = scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock();
+			auto& treeModel = tree->m_treeModel;
+			auto& treeVisualizer = tree->m_treeVisualizer;
+			const auto globalTransform = scene->GetDataComponent<GlobalTransform>(m_selectedTree);
+			if (m_visualizationCameraWindowFocused)
+			{
+				static std::vector<glm::vec2> mousePositions{};
+				const auto& treeSkeleton = tree->m_treeModel.PeekShootSkeleton(tree->m_treeVisualizer.m_checkpointIteration);
+				switch (m_operatorMode)
+				{
+				case OperatorMode::Select: {
+					if (editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Press) {
+						if (treeVisualizer.RayCastSelection(m_visualizationCamera, m_visualizationCameraMousePosition, treeSkeleton, globalTransform)) {
+							treeVisualizer.m_needUpdate = true;
+						}
+					}
+					if (treeVisualizer.m_checkpointIteration == treeModel.CurrentIteration() &&
+						editorLayer->GetKey(GLFW_KEY_R) == KeyActionType::Press) {
+						if (treeVisualizer.m_selectedInternodeHandle > 0) {
+							treeModel.Step();
+							auto& skeleton = treeModel.RefShootSkeleton();
+							auto& pruningInternode = skeleton.RefNode(treeVisualizer.m_selectedInternodeHandle);
+							const auto childHandles = pruningInternode.RefChildHandles();
+							for (const auto& childHandle : childHandles) {
+								treeModel.PruneInternode(childHandle);
+							}
+							pruningInternode.m_info.m_length *= treeVisualizer.m_selectedInternodeLengthFactor;
+							treeVisualizer.m_selectedInternodeLengthFactor = 1.0f;
+							for (auto& bud : pruningInternode.m_data.m_buds) {
+								bud.m_status = BudStatus::Died;
+							}
+							skeleton.SortLists();
+							treeVisualizer.m_checkpointIteration = treeModel.CurrentIteration();
+							treeVisualizer.m_needUpdate = true;
+						}
+					}
+				}
+										 break;
+				case OperatorMode::Prune:
+				{
+					if (treeVisualizer.m_checkpointIteration == treeModel.CurrentIteration()) {
+						if (editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Press)
+						{
+							mousePositions.clear();
+							glm::vec2 mousePosition = m_visualizationCameraMousePosition;
+							const float halfX = m_visualizationCamera->GetSize().x / 2.0f;
+							const float halfY = m_visualizationCamera->GetSize().y / 2.0f;
+							mousePosition = { -1.0f * (mousePosition.x - halfX) / halfX,
+															 -1.0f * (mousePosition.y - halfY) / halfY };
+							if (mousePosition.x > -1.0f && mousePosition.x < 1.0f && mousePosition.y > -1.0f && mousePosition.y < 1.0f) {
+								mousePositions.emplace_back(mousePosition);
+							}
+						}
+						else if (editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Hold) {
+							glm::vec2 mousePosition = m_visualizationCameraMousePosition;
+							const float halfX = m_visualizationCamera->GetSize().x / 2.0f;
+							const float halfY = m_visualizationCamera->GetSize().y / 2.0f;
+							mousePosition = { -1.0f * (mousePosition.x - halfX) / halfX,
+															 -1.0f * (mousePosition.y - halfY) / halfY };
+							if (mousePosition.x > -1.0f && mousePosition.x < 1.0f && mousePosition.y > -1.0f && mousePosition.y < 1.0f &&
+								(mousePositions.empty() || mousePosition != mousePositions.back())) {
+								mousePositions.emplace_back(mousePosition);
+							}
+						}
+						else {
+							//Once released, check if empty.
+							if (!mousePositions.empty()) {
+								treeModel.Step();
+								auto& skeleton = treeModel.RefShootSkeleton();
+								if (treeVisualizer.ScreenCurvePruning(
+									[&](const NodeHandle nodeHandle) { treeModel.PruneInternode(nodeHandle); }, mousePositions, skeleton, globalTransform)) {
+									skeleton.SortLists();
+									treeVisualizer.m_checkpointIteration = treeModel.CurrentIteration();
+									treeVisualizer.m_needUpdate = true;
+								}
+								else {
+									treeModel.Pop();
+								}
+								mousePositions.clear();
+							}
+						}
+					}
+				}
+				break;
+				case OperatorMode::Invigorate:
+				{
+					if (editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Press)
+					{
+						if (treeVisualizer.RayCastSelection(m_visualizationCamera, m_visualizationCameraMousePosition, treeSkeleton, globalTransform)) {
+							if (!tree->m_enableHistory) treeModel.Step();
+							treeVisualizer.m_checkpointIteration = treeModel.CurrentIteration();
+							treeVisualizer.m_needUpdate = true;
+						}
+					}
+					else if (treeVisualizer.m_selectedInternodeHandle >= 0 && editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Hold)
+					{
+						const auto climateCandidate = EcoSysLabLayer::FindClimate();
+						if (!climateCandidate.expired()) {
+							climateCandidate.lock()->PrepareForGrowth();
+							if (tree->TryGrow(m_simulationSettings.m_deltaTime, treeVisualizer.m_selectedInternodeHandle, false, m_overrideGrowRate))
+							{
+								treeVisualizer.m_needUpdate = true;
+							}
+						}
+					}
+					else if (editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Release)
+					{
+						treeVisualizer.SetSelectedNode(treeSkeleton, -1);
+					}
+				}
+				break;
+				}
+			}
+			treeVisualizer.Visualize(treeModel, globalTransform);
+		}
+
 
 		if (m_showShadowGrid)
 		{
@@ -223,8 +342,8 @@ void EcoSysLabLayer::Visualization() {
 		if (m_displaySoil) {
 			SoilVisualization();
 		}
-		
-		
+
+
 	}
 }
 
@@ -247,9 +366,9 @@ void EcoSysLabLayer::ResetAllTrees(const std::vector<Entity>* treeEntities) {
 
 	m_shootStemSegments.clear();
 	m_shootStemPoints.clear();
-	
+
 	m_shootStemStrands = ProjectManager::CreateTemporaryAsset<Strands>();
-	
+
 	m_boundingBoxMatrices->m_particleInfos.clear();
 	m_boundingBoxMatrices->SetPendingUpdate();
 	m_foliageMatrices->m_particleInfos.clear();
@@ -294,12 +413,66 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 	auto scene = GetScene();
 	bool simulate = false;
 	static bool autoTimeGrow = false;
-	static float targetTime = 10.f;
+	static float targetTime = 0.0f;
+	static float extraTime = 4.f;
 	if (ImGui::Begin("EcoSysLab Layer")) {
 		const std::vector<Entity>* treeEntities =
 			scene->UnsafeGetPrivateComponentOwnersList<Tree>();
 		if (treeEntities && !treeEntities->empty()) {
-			if (ImGui::TreeNode("Tree Growth Settings")){
+			if (m_visualization && scene->IsEntityValid(m_selectedTree)) {
+				const auto& tree = scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock();
+				auto& treeVisualizer = tree->m_treeVisualizer;
+				ImGui::Text("Editing");
+				if (ImGui::Combo("Operator mode", { "Select", "Prune", "Invigorate" }, m_operatorMode))
+				{
+					treeVisualizer.m_selectedInternodeHandle = -1;
+					treeVisualizer.m_selectedInternodeHierarchyList.clear();
+				}
+				if(m_operatorMode == static_cast<unsigned>(OperatorMode::Invigorate))
+				{
+					ImGui::DragFloat("Invigorate speed", &m_overrideGrowRate, 0.01f, 0.01f, 1.0f);
+				}
+				treeVisualizer.OnInspect(tree->m_treeModel);
+			}
+			ImGui::Separator();
+			ImGui::Text("Simulation");
+			if (ImGui::Button("Reset all trees")) {
+				ResetAllTrees(treeEntities);
+				ClearGeometries();
+				ClearGroundFruitAndLeaf();
+				targetTime = 0.0f;
+			}
+			ImGui::Text(("Simulated time: " + std::to_string(m_time) + " years").c_str());
+
+			if (targetTime <= m_time && autoTimeGrow) {
+				autoTimeGrow = false;
+			}
+
+			ImGui::DragInt("target nodes", &m_simulationSettings.m_maxNodeCount, 500, 0, INT_MAX);
+			ImGui::DragFloat("target years", &extraTime, 0.1f, m_time, 999);
+			if(ImGui::Button(("Grow " + std::to_string(extraTime) + " years").c_str())){
+				autoTimeGrow = true;
+				targetTime += extraTime;
+			}
+			if (ImGui::Button("Grow 1 iteration")) {
+				simulate = true;
+			}
+
+			if (!m_simulationSettings.m_autoClearFruitAndLeaves && ImGui::Button("Clear ground leaves and fruits")) {
+				ClearGroundFruitAndLeaf();
+			}
+			if (ImGui::TreeNodeEx("Mesh generation")) {
+				m_meshGeneratorSettings.OnInspect(editorLayer);
+				ImGui::TreePop();
+			}
+			if (ImGui::Button("Generate Meshes")) {
+				GenerateMeshes(m_meshGeneratorSettings);
+			}
+			ImGui::SameLine();
+			if (ImGui::Button("Clear Meshes")) {
+				ClearGeometries();
+			}
+			if (ImGui::TreeNode("Tree Growth Settings")) {
 				if (ImGui::Button("Grow weekly")) m_simulationSettings.m_deltaTime = 0.01918f;
 				ImGui::SameLine();
 				if (ImGui::Button("Grow monthly")) m_simulationSettings.m_deltaTime = 0.0822f;
@@ -332,65 +505,34 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 					}
 					ImGui::TreePop();
 				}
-				
+
 				ImGui::TreePop();
 			}
-			
-			if (ImGui::Button("Reset all trees")) {
-				ResetAllTrees(treeEntities);
-				ClearGeometries();
-				ClearGroundFruitAndLeaf();
-				targetTime = 10.0f;
-			}
-			ImGui::Text(("Simulated time: " + std::to_string(m_time) + " years").c_str());
-			ImGui::Text(("Simulated iteration: " + std::to_string(m_simulationSettings.m_iteration)).c_str());
-			
-			
-			if (targetTime < m_time) targetTime = m_time;
-			if (autoTimeGrow && m_time >= targetTime) autoTimeGrow = false;
-
-			ImGui::DragInt("target nodes", &m_simulationSettings.m_maxNodeCount, 500, 0, INT_MAX);
-			ImGui::DragFloat("target years", &targetTime, 0.1f, m_time, 999);
-			ImGui::Checkbox("Grow", &autoTimeGrow);
-			if (ImGui::Button("Grow 1 iteration")) {
-				simulate = true;
-			}
-
-			if (!m_simulationSettings.m_autoClearFruitAndLeaves && ImGui::Button("Clear ground leaves and fruits")) {
-				ClearGroundFruitAndLeaf();
-			}
-			if (ImGui::TreeNodeEx("Mesh generation")) {
-				m_meshGeneratorSettings.OnInspect(editorLayer);
+			if (ImGui::TreeNodeEx("Stats")) {
+				ImGui::Text(("Simulated iteration: " + std::to_string(m_simulationSettings.m_iteration)).c_str());
+				ImGui::Text("Growth time: %.4f", m_lastUsedTime);
+				ImGui::Text("Total time: %.4f", m_totalTime);
+				ImGui::Text("Tree count: %d", treeEntities->size());
+				ImGui::Text("Total internode size: %d", m_internodeSize);
+				ImGui::Text("Total shoot branch size: %d", m_shootStemSize);
+				ImGui::Text("Total fruit size: %d", m_fruitSize);
+				ImGui::Text("Total leaf size: %d", m_leafSize);
+				ImGui::Text("Total root node size: %d", m_rootNodeSize);
+				ImGui::Text("Total root branch size: %d", m_rootStemSize);
+				ImGui::Text("Total ground leaf size: %d", m_leaves.size());
+				ImGui::Text("Total ground fruit size: %d", m_fruits.size());
 				ImGui::TreePop();
 			}
-			if (ImGui::Button("Generate Meshes")) {
-				GenerateMeshes(m_meshGeneratorSettings);
-			}
-			ImGui::SameLine();
-			if (ImGui::Button("Clear Meshes")) {
-				ClearGeometries();
-			}
-			ImGui::Text("Growth time: %.4f", m_lastUsedTime);
-			ImGui::Text("Total time: %.4f", m_totalTime);
-			ImGui::Text("Tree count: %d", treeEntities->size());
-			ImGui::Text("Total internode size: %d", m_internodeSize);
-			ImGui::Text("Total shoot branch size: %d", m_shootStemSize);
-			ImGui::Text("Total fruit size: %d", m_fruitSize);
-			ImGui::Text("Total leaf size: %d", m_leafSize);
-			ImGui::Text("Total root node size: %d", m_rootNodeSize);
-			ImGui::Text("Total root branch size: %d", m_rootStemSize);
-			ImGui::Text("Total ground leaf size: %d", m_leaves.size());
-			ImGui::Text("Total ground fruit size: %d", m_fruits.size());
-			
 		}
 		else {
 			ImGui::Text("No trees in the scene!");
 		}
-		ImGui::Checkbox("Debug Visualization", &m_debugVisualization);
-		if (m_debugVisualization && ImGui::TreeNodeEx("Debug visualization settings", ImGuiTreeNodeFlags_DefaultOpen)) {
+		ImGui::Checkbox("Visualization", &m_visualization);
+		if (m_visualization && ImGui::TreeNodeEx("Visualization settings")) {
 			if (ImGui::Button("Update")) {
 				m_needFullFlowUpdate = true;
 			}
+			
 			ImGui::Checkbox("Display shoot stem", &m_displayShootStem);
 			ImGui::Checkbox("Display fruits", &m_displayFruit);
 			ImGui::Checkbox("Display foliage", &m_displayFoliage);
@@ -409,10 +551,7 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 		}
 	}
 	ImGui::End();
-	if (autoTimeGrow && m_time < targetTime) {
-		simulate = true;
-	}
-	if(simulate)
+	if (simulate || autoTimeGrow)
 	{
 		Simulate(m_simulationSettings.m_deltaTime);
 		if (m_simulationSettings.m_autoClearFruitAndLeaves) {
@@ -426,7 +565,7 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 	}
 
 #pragma region Internode debugging camera
-	if (m_debugVisualization) {
+	if (m_visualization) {
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{ 0, 0 });
 		if (ImGui::Begin("Plant Visual")) {
 			if (ImGui::BeginChild("InternodeCameraRenderer", ImVec2(0, 0), false)) {
@@ -629,49 +768,50 @@ void EcoSysLabLayer::OnSoilVisualizationMenu() {
 	}
 }
 
-void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const std::shared_ptr<Strands>& branchStrands, int targetTreeIndex) {
-		{
-			const auto scene = Application::GetActiveScene();
+void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const std::shared_ptr<Strands>& branchStrands) {
+	{
+		const auto scene = Application::GetActiveScene();
 
-			m_boundingBoxMatrices->m_particleInfos.clear();
-			m_boundingBoxMatrices->SetPendingUpdate();
+		m_boundingBoxMatrices->m_particleInfos.clear();
+		m_boundingBoxMatrices->SetPendingUpdate();
 
-			std::vector<int> branchStartIndices;
-			int branchLastStartIndex = 0;
-			branchStartIndices.emplace_back(branchLastStartIndex);
+		std::vector<int> branchStartIndices;
+		int branchLastStartIndex = 0;
+		branchStartIndices.emplace_back(branchLastStartIndex);
 
-			std::vector<int> fruitStartIndices;
-			int fruitLastStartIndex = 0;
-			fruitStartIndices.emplace_back(fruitLastStartIndex);
+		std::vector<int> fruitStartIndices;
+		int fruitLastStartIndex = 0;
+		fruitStartIndices.emplace_back(fruitLastStartIndex);
 
-			std::vector<int> leafStartIndices;
-			int leafLastStartIndex = 0;
-			leafStartIndices.emplace_back(leafLastStartIndex);
+		std::vector<int> leafStartIndices;
+		int leafLastStartIndex = 0;
+		leafStartIndices.emplace_back(leafLastStartIndex);
 
-			if (treeEntities->empty()) {
-				m_shootStemSegments.clear();
-				m_shootStemPoints.clear();
+		if (treeEntities->empty()) {
+			m_shootStemSegments.clear();
+			m_shootStemPoints.clear();
 
-				m_foliageMatrices->m_particleInfos.clear();
-				m_foliageMatrices->SetPendingUpdate();
-				m_fruitMatrices->m_particleInfos.clear();
-				m_fruitMatrices->SetPendingUpdate();
-			}
+			m_foliageMatrices->m_particleInfos.clear();
+			m_foliageMatrices->SetPendingUpdate();
+			m_fruitMatrices->m_particleInfos.clear();
+			m_fruitMatrices->SetPendingUpdate();
+		}
 
-			for (int listIndex = 0; listIndex < treeEntities->size(); listIndex++) {
-				auto treeEntity = treeEntities->at(listIndex);
-				auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
-				auto& treeModel = tree->m_treeModel;
-				const auto& branchSkeleton = treeModel.RefShootSkeleton();
-				const auto& branchList = branchSkeleton.RefSortedFlowList();
+		for (int listIndex = 0; listIndex < treeEntities->size(); listIndex++) {
+			auto treeEntity = treeEntities->at(listIndex);
+			const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
+			auto& treeModel = tree->m_treeModel;
+			const auto& branchSkeleton = treeModel.RefShootSkeleton();
+			const auto& branchList = branchSkeleton.RefSortedFlowList();
 
-				auto entityGlobalTransform = scene->GetDataComponent<GlobalTransform>(treeEntity);
-				auto& [instanceMatrix, instanceColor] = m_boundingBoxMatrices->m_particleInfos.emplace_back();
-				instanceMatrix.m_value = entityGlobalTransform.m_value *
-					(glm::translate(
-						(branchSkeleton.m_max + branchSkeleton.m_min) / 2.0f) *
-						glm::scale(branchSkeleton.m_max - branchSkeleton.m_min));
-				instanceColor = glm::vec4(m_randomColors[listIndex], 0.05f);
+			auto entityGlobalTransform = scene->GetDataComponent<GlobalTransform>(treeEntity);
+			auto& [instanceMatrix, instanceColor] = m_boundingBoxMatrices->m_particleInfos.emplace_back();
+			instanceMatrix.m_value = entityGlobalTransform.m_value *
+				(glm::translate(
+					(branchSkeleton.m_max + branchSkeleton.m_min) / 2.0f) *
+					glm::scale(branchSkeleton.m_max - branchSkeleton.m_min));
+			instanceColor = glm::vec4(m_randomColors[listIndex], 0.05f);
+			if (treeEntity != m_selectedTree) {
 				branchLastStartIndex += branchList.size();
 				branchStartIndices.emplace_back(branchLastStartIndex);
 
@@ -680,136 +820,142 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 
 				leafLastStartIndex += treeModel.GetLeafCount();
 				leafStartIndices.emplace_back(leafLastStartIndex);
-
 			}
-			m_shootStemSegments.resize(branchLastStartIndex * 3);
-			m_shootStemPoints.resize(branchLastStartIndex * 6);
-
-			m_foliageMatrices->m_particleInfos.resize(leafLastStartIndex);
-			m_foliageMatrices->SetPendingUpdate();
-			m_fruitMatrices->m_particleInfos.resize(fruitLastStartIndex);
-			m_fruitMatrices->SetPendingUpdate();
+			else
 			{
-				auto& foliageMatrices = m_foliageMatrices->m_particleInfos;
-				auto& fruitMatrices = m_fruitMatrices->m_particleInfos;
-				Jobs::ParallelFor(treeEntities->size(), [&](unsigned treeIndex) {
-					auto treeEntity = treeEntities->at(treeIndex);
-					if (targetTreeIndex != -1 && treeEntity.GetIndex() != targetTreeIndex) return;
-					auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
-					auto& treeModel = tree->m_treeModel;
-					const auto& branchSkeleton = treeModel.RefShootSkeleton();
-					const auto& branchFlowList = branchSkeleton.RefSortedFlowList();
-					const auto& internodeList = branchSkeleton.RefSortedNodeList();
-					auto entityGlobalTransform = scene->GetDataComponent<GlobalTransform>(treeEntity);
-					auto branchStartIndex = branchStartIndices[treeIndex];
-					for (int i = 0; i < branchFlowList.size(); i++) {
-						auto& flow = branchSkeleton.PeekFlow(branchFlowList[i]);
-						auto cp1 = flow.m_info.m_globalStartPosition;
-						auto cp4 = flow.m_info.m_globalEndPosition;
-						float distance = glm::distance(cp1, cp4);
-						glm::vec3 cp0, cp2;
-						if (flow.GetParentHandle() > 0) {
-							cp0 = cp1 + branchSkeleton.PeekFlow(flow.GetParentHandle()).m_info.m_globalEndRotation *
-								glm::vec3(0, 0, 1) * distance / 3.0f;
-							cp2 = cp1 + branchSkeleton.PeekFlow(flow.GetParentHandle()).m_info.m_globalEndRotation *
-								glm::vec3(0, 0, -1) * distance / 3.0f;
-						}
-						else {
-							cp0 = cp1 + flow.m_info.m_globalStartRotation * glm::vec3(0, 0, 1) * distance / 3.0f;
-							cp2 = cp1 + flow.m_info.m_globalStartRotation * glm::vec3(0, 0, -1) * distance / 3.0f;
-						}
-						auto cp3 = cp4 + flow.m_info.m_globalEndRotation * glm::vec3(0, 0, 1) * distance / 3.0f;
-						auto cp5 = cp4 + flow.m_info.m_globalEndRotation * glm::vec3(0, 0, -1) * distance / 3.0f;
-
-						auto& p0 = m_shootStemPoints[branchStartIndex * 6 + i * 6];
-						auto& p1 = m_shootStemPoints[branchStartIndex * 6 + i * 6 + 1];
-						auto& p2 = m_shootStemPoints[branchStartIndex * 6 + i * 6 + 2];
-						auto& p3 = m_shootStemPoints[branchStartIndex * 6 + i * 6 + 3];
-						auto& p4 = m_shootStemPoints[branchStartIndex * 6 + i * 6 + 4];
-						auto& p5 = m_shootStemPoints[branchStartIndex * 6 + i * 6 + 5];
-						p0.m_position = (entityGlobalTransform.m_value *
-							glm::translate(cp0))[3];
-						p1.m_position = (entityGlobalTransform.m_value *
-							glm::translate(cp1))[3];
-						p2.m_position = (entityGlobalTransform.m_value *
-							glm::translate(cp2))[3];
-						p3.m_position = (entityGlobalTransform.m_value *
-							glm::translate(cp3))[3];
-						p4.m_position = (entityGlobalTransform.m_value *
-							glm::translate(cp4))[3];
-						p5.m_position = (entityGlobalTransform.m_value *
-							glm::translate(cp5))[3];
-						if (flow.GetParentHandle() > 0) {
-							p1.m_thickness = branchSkeleton.PeekFlow(flow.GetParentHandle()).m_info.m_endThickness;
-						}
-						else {
-							p1.m_thickness = flow.m_info.m_startThickness;
-						}
-						p4.m_thickness = flow.m_info.m_endThickness;
-
-
-						p2.m_thickness = p3.m_thickness = (p1.m_thickness + p4.m_thickness) / 2.0f;
-						p0.m_thickness = 2.0f * p1.m_thickness - p2.m_thickness;
-						p5.m_thickness = 2.0f * p4.m_thickness - p3.m_thickness;
-
-
-						p0.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
-						p1.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
-						p2.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
-						p3.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
-						p4.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
-						p5.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
-
-						m_shootStemSegments[branchStartIndex * 3 + i * 3] = branchStartIndex * 6 + i * 6;
-						m_shootStemSegments[branchStartIndex * 3 + i * 3 + 1] = branchStartIndex * 6 + i * 6 + 1;
-						m_shootStemSegments[branchStartIndex * 3 + i * 3 + 2] = branchStartIndex * 6 + i * 6 + 2;
-					}
-					auto leafStartIndex = leafStartIndices[treeIndex];
-					auto fruitStartIndex = fruitStartIndices[treeIndex];
-					
-					int leafIndex = 0;
-					int fruitIndex = 0;
-
-					for (const auto& internodeHandle : internodeList) {
-						const auto& internode = branchSkeleton.PeekNode(internodeHandle);
-						const auto& internodeData = internode.m_data;
-
-						for (const auto& bud : internodeData.m_buds) {
-
-							if (bud.m_status != BudStatus::Died) continue;
-							if (bud.m_reproductiveModule.m_maturity <= 0.0f) continue;
-
-
-							if (bud.m_type == BudType::Leaf) {
-
-								foliageMatrices[leafStartIndex + leafIndex].m_instanceMatrix.m_value =
-									entityGlobalTransform.m_value * bud.m_reproductiveModule.m_transform;
-								foliageMatrices[leafStartIndex + leafIndex].m_instanceColor = glm::vec4(
-									glm::mix(glm::vec3(152 / 255.0f, 203 / 255.0f, 0 / 255.0f),
-										glm::vec3(159 / 255.0f, 100 / 255.0f, 66 / 255.0f),
-										1.0f - bud.m_reproductiveModule.m_health), 1.0f);
-
-								leafIndex++;
-							}
-							else if (bud.m_type == BudType::Fruit) {
-
-								fruitMatrices[fruitStartIndex + fruitIndex].m_instanceMatrix.m_value =
-									entityGlobalTransform.m_value * bud.m_reproductiveModule.m_transform;
-								fruitMatrices[fruitStartIndex + fruitIndex].m_instanceColor = glm::vec4(255 / 255.0f, 165 / 255.0f,
-									0 / 255.0f, 1.0f);
-
-								fruitIndex++;
-							}
-						}
-					}
-					});
-				StrandPointAttributes strandPointAttributes{};
-				strandPointAttributes.m_normal = false;
-				branchStrands->SetSegments(strandPointAttributes, m_shootStemSegments, m_shootStemPoints);
-				m_foliageMatrices->SetPendingUpdate();
-				m_fruitMatrices->SetPendingUpdate();
+				branchStartIndices.emplace_back(branchLastStartIndex);
+				fruitStartIndices.emplace_back(fruitLastStartIndex);
+				leafStartIndices.emplace_back(leafLastStartIndex);
 			}
 		}
+		m_shootStemSegments.resize(branchLastStartIndex * 3);
+		m_shootStemPoints.resize(branchLastStartIndex * 6);
+
+		m_foliageMatrices->m_particleInfos.resize(leafLastStartIndex);
+		m_foliageMatrices->SetPendingUpdate();
+		m_fruitMatrices->m_particleInfos.resize(fruitLastStartIndex);
+		m_fruitMatrices->SetPendingUpdate();
+		{
+			auto& foliageMatrices = m_foliageMatrices->m_particleInfos;
+			auto& fruitMatrices = m_fruitMatrices->m_particleInfos;
+			Jobs::ParallelFor(treeEntities->size(), [&](unsigned treeIndex) {
+				auto treeEntity = treeEntities->at(treeIndex);
+				if (treeEntity == m_selectedTree) return;
+				auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
+				auto& treeModel = tree->m_treeModel;
+				const auto& branchSkeleton = treeModel.RefShootSkeleton();
+				const auto& branchFlowList = branchSkeleton.RefSortedFlowList();
+				const auto& internodeList = branchSkeleton.RefSortedNodeList();
+				auto entityGlobalTransform = scene->GetDataComponent<GlobalTransform>(treeEntity);
+				auto branchStartIndex = branchStartIndices[treeIndex];
+				for (int i = 0; i < branchFlowList.size(); i++) {
+					auto& flow = branchSkeleton.PeekFlow(branchFlowList[i]);
+					auto cp1 = flow.m_info.m_globalStartPosition;
+					auto cp4 = flow.m_info.m_globalEndPosition;
+					float distance = glm::distance(cp1, cp4);
+					glm::vec3 cp0, cp2;
+					if (flow.GetParentHandle() > 0) {
+						cp0 = cp1 + branchSkeleton.PeekFlow(flow.GetParentHandle()).m_info.m_globalEndRotation *
+							glm::vec3(0, 0, 1) * distance / 3.0f;
+						cp2 = cp1 + branchSkeleton.PeekFlow(flow.GetParentHandle()).m_info.m_globalEndRotation *
+							glm::vec3(0, 0, -1) * distance / 3.0f;
+					}
+					else {
+						cp0 = cp1 + flow.m_info.m_globalStartRotation * glm::vec3(0, 0, 1) * distance / 3.0f;
+						cp2 = cp1 + flow.m_info.m_globalStartRotation * glm::vec3(0, 0, -1) * distance / 3.0f;
+					}
+					auto cp3 = cp4 + flow.m_info.m_globalEndRotation * glm::vec3(0, 0, 1) * distance / 3.0f;
+					auto cp5 = cp4 + flow.m_info.m_globalEndRotation * glm::vec3(0, 0, -1) * distance / 3.0f;
+
+					auto& p0 = m_shootStemPoints[branchStartIndex * 6 + i * 6];
+					auto& p1 = m_shootStemPoints[branchStartIndex * 6 + i * 6 + 1];
+					auto& p2 = m_shootStemPoints[branchStartIndex * 6 + i * 6 + 2];
+					auto& p3 = m_shootStemPoints[branchStartIndex * 6 + i * 6 + 3];
+					auto& p4 = m_shootStemPoints[branchStartIndex * 6 + i * 6 + 4];
+					auto& p5 = m_shootStemPoints[branchStartIndex * 6 + i * 6 + 5];
+					p0.m_position = (entityGlobalTransform.m_value *
+						glm::translate(cp0))[3];
+					p1.m_position = (entityGlobalTransform.m_value *
+						glm::translate(cp1))[3];
+					p2.m_position = (entityGlobalTransform.m_value *
+						glm::translate(cp2))[3];
+					p3.m_position = (entityGlobalTransform.m_value *
+						glm::translate(cp3))[3];
+					p4.m_position = (entityGlobalTransform.m_value *
+						glm::translate(cp4))[3];
+					p5.m_position = (entityGlobalTransform.m_value *
+						glm::translate(cp5))[3];
+					if (flow.GetParentHandle() > 0) {
+						p1.m_thickness = branchSkeleton.PeekFlow(flow.GetParentHandle()).m_info.m_endThickness;
+					}
+					else {
+						p1.m_thickness = flow.m_info.m_startThickness;
+					}
+					p4.m_thickness = flow.m_info.m_endThickness;
+
+
+					p2.m_thickness = p3.m_thickness = (p1.m_thickness + p4.m_thickness) / 2.0f;
+					p0.m_thickness = 2.0f * p1.m_thickness - p2.m_thickness;
+					p5.m_thickness = 2.0f * p4.m_thickness - p3.m_thickness;
+
+
+					p0.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
+					p1.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
+					p2.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
+					p3.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
+					p4.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
+					p5.m_color = glm::vec4(m_randomColors[flow.m_data.m_order], 1.0f);
+
+					m_shootStemSegments[branchStartIndex * 3 + i * 3] = branchStartIndex * 6 + i * 6;
+					m_shootStemSegments[branchStartIndex * 3 + i * 3 + 1] = branchStartIndex * 6 + i * 6 + 1;
+					m_shootStemSegments[branchStartIndex * 3 + i * 3 + 2] = branchStartIndex * 6 + i * 6 + 2;
+				}
+				auto leafStartIndex = leafStartIndices[treeIndex];
+				auto fruitStartIndex = fruitStartIndices[treeIndex];
+
+				int leafIndex = 0;
+				int fruitIndex = 0;
+
+				for (const auto& internodeHandle : internodeList) {
+					const auto& internode = branchSkeleton.PeekNode(internodeHandle);
+					const auto& internodeData = internode.m_data;
+
+					for (const auto& bud : internodeData.m_buds) {
+
+						if (bud.m_status != BudStatus::Died) continue;
+						if (bud.m_reproductiveModule.m_maturity <= 0.0f) continue;
+
+
+						if (bud.m_type == BudType::Leaf) {
+
+							foliageMatrices[leafStartIndex + leafIndex].m_instanceMatrix.m_value =
+								entityGlobalTransform.m_value * bud.m_reproductiveModule.m_transform;
+							foliageMatrices[leafStartIndex + leafIndex].m_instanceColor = glm::vec4(
+								glm::mix(glm::vec3(152 / 255.0f, 203 / 255.0f, 0 / 255.0f),
+									glm::vec3(159 / 255.0f, 100 / 255.0f, 66 / 255.0f),
+									1.0f - bud.m_reproductiveModule.m_health), 1.0f);
+
+							leafIndex++;
+						}
+						else if (bud.m_type == BudType::Fruit) {
+
+							fruitMatrices[fruitStartIndex + fruitIndex].m_instanceMatrix.m_value =
+								entityGlobalTransform.m_value * bud.m_reproductiveModule.m_transform;
+							fruitMatrices[fruitStartIndex + fruitIndex].m_instanceColor = glm::vec4(255 / 255.0f, 165 / 255.0f,
+								0 / 255.0f, 1.0f);
+
+							fruitIndex++;
+						}
+					}
+				}
+				});
+			StrandPointAttributes strandPointAttributes{};
+			strandPointAttributes.m_normal = false;
+			branchStrands->SetSegments(strandPointAttributes, m_shootStemSegments, m_shootStemPoints);
+			m_foliageMatrices->SetPendingUpdate();
+			m_fruitMatrices->SetPendingUpdate();
+		}
+	}
 }
 
 void EcoSysLabLayer::ClearGroundFruitAndLeaf() {
@@ -844,7 +990,7 @@ void EcoSysLabLayer::SoilVisualization() {
 	const auto soilCandidate = FindSoil();
 	if (!soilCandidate.expired()) soil = soilCandidate.lock();
 
-	if(!soil) return;
+	if (!soil) return;
 
 	auto& soilModel = soil->m_soilModel;
 	if (m_soilVersion != soilModel.m_version) {
@@ -1038,6 +1184,11 @@ void EcoSysLabLayer::SoilVisualizationVector(VoxelSoilModel& soilModel) {
 	editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER"), m_vectorMatrices, glm::mat4(1.0f), 1.0f, gizmoSettings);
 }
 
+glm::vec2 EcoSysLabLayer::GetMouseSceneCameraPosition() const
+{
+	return m_visualizationCameraMousePosition;
+}
+
 void EcoSysLabLayer::Simulate(float deltaTime) {
 	const auto scene = GetScene();
 	const std::vector<Entity>* treeEntities =
@@ -1076,7 +1227,7 @@ void EcoSysLabLayer::Simulate(float deltaTime) {
 			if (!scene->IsEntityEnabled(treeEntity)) return;
 			const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
 			if (!tree->IsEnabled()) return;
-			if(m_simulationSettings.m_maxNodeCount > 0 && tree->m_treeModel.RefShootSkeleton().RefSortedNodeList().size() >= m_simulationSettings.m_maxNodeCount) return;
+			if (m_simulationSettings.m_maxNodeCount > 0 && tree->m_treeModel.RefShootSkeleton().RefSortedNodeList().size() >= m_simulationSettings.m_maxNodeCount) return;
 			grownStat[threadIndex] = tree->TryGrow(deltaTime, 0, true, -1);
 			}, results);
 		for (auto& i : results) i.wait();
@@ -1132,9 +1283,9 @@ void EcoSysLabLayer::Simulate(float deltaTime) {
 		m_lastUsedTime = Times::Now() - time;
 		m_totalTime += m_lastUsedTime;
 
-		for(int i = 0; i < grownStat.size(); i++)
+		for (int i = 0; i < grownStat.size(); i++)
 		{
-			if(grownStat[i])
+			if (grownStat[i])
 			{
 				m_needFullFlowUpdate = true;
 
