@@ -1642,7 +1642,7 @@ void TreePointCloud::BuildSkeletons() {
 		{
 			auto& operatingBranch = m_operatingBranches[*it];
 			int maxDescendentSize = -1;
-			BranchHandle largestChildHandle = -1;
+			operatingBranch.m_largestChildHandle = -1;
 			for(const auto& childHandle : operatingBranch.m_childHandles)
 			{
 				auto& childBranch = m_operatingBranches[childHandle];
@@ -1650,13 +1650,13 @@ void TreePointCloud::BuildSkeletons() {
 				if(childBranch.m_descendentSize >= maxDescendentSize)
 				{
 					maxDescendentSize = childBranch.m_descendentSize;
-					largestChildHandle = childHandle;
+					operatingBranch.m_largestChildHandle = childHandle;
 				}
 			}
 			for (const auto& childHandle : operatingBranch.m_childHandles)
 			{
 				auto& childBranch = m_operatingBranches[childHandle];
-				if(childHandle == largestChildHandle)
+				if(childHandle == operatingBranch.m_largestChildHandle)
 				{
 					childBranch.m_apical = true;
 				}else
@@ -1667,6 +1667,64 @@ void TreePointCloud::BuildSkeletons() {
 		}
 	}
 
+	//Smoothing
+	for (int i = 0; i < m_reconstructionSettings.m_smoothIteration; i++) {
+		for (const auto& rootBranchHandle : rootBranchHandles)
+		{
+			std::vector<BranchHandle> sortedBranchList{};
+			GetSortedBranchList(rootBranchHandle.second, sortedBranchList);
+			for (const auto& branchHandle : sortedBranchList)
+			{
+				auto& branch = m_operatingBranches[branchHandle];
+				if (branch.m_parentHandle != -1 && branch.m_largestChildHandle != -1)
+				{
+					const auto& parentBranch = m_operatingBranches[branch.m_parentHandle];
+					if(parentBranch.m_largestChildHandle != branchHandle) continue;
+					const auto& childBranch = m_operatingBranches[branch.m_largestChildHandle];
+					const auto parentCenter = (parentBranch.m_bezierCurve.m_p0 + parentBranch.m_bezierCurve.m_p3) * 0.5f;
+					const auto childCenter = (childBranch.m_bezierCurve.m_p0 + childBranch.m_bezierCurve.m_p3) * 0.5f;
+					const auto center = (branch.m_bezierCurve.m_p0 + branch.m_bezierCurve.m_p3) * 0.5f;
+					const auto desiredCenter = (parentCenter + childCenter) * 0.5f;
+					auto diff = (desiredCenter - center);
+					branch.m_bezierCurve.m_p0 = branch.m_bezierCurve.m_p0 + diff * m_reconstructionSettings.m_positionSmoothing;
+					branch.m_bezierCurve.m_p1 = branch.m_bezierCurve.m_p1 + diff * m_reconstructionSettings.m_positionSmoothing;
+					branch.m_bezierCurve.m_p2 = branch.m_bezierCurve.m_p2 + diff * m_reconstructionSettings.m_positionSmoothing;
+					branch.m_bezierCurve.m_p3 = branch.m_bezierCurve.m_p3 + diff * m_reconstructionSettings.m_positionSmoothing;
+				}
+			}
+		}
+		for (const auto& rootBranchHandle : rootBranchHandles)
+		{
+			std::vector<BranchHandle> sortedBranchList{};
+			GetSortedBranchList(rootBranchHandle.second, sortedBranchList);
+			for (const auto& branchHandle : sortedBranchList)
+			{
+				auto& branch = m_operatingBranches[branchHandle];
+				if (branch.m_parentHandle != -1 && branch.m_largestChildHandle != -1)
+				{
+					const auto& parentBranch = m_operatingBranches[branch.m_parentHandle];
+					const auto& childBranch = m_operatingBranches[branch.m_largestChildHandle];
+					const auto parentCenter = (parentBranch.m_bezierCurve.m_p0 + parentBranch.m_bezierCurve.m_p3) * 0.5f;
+					const auto childCenter = (childBranch.m_bezierCurve.m_p0 + childBranch.m_bezierCurve.m_p3) * 0.5f;
+					const auto center = (branch.m_bezierCurve.m_p0 + branch.m_bezierCurve.m_p3) * 0.5f;
+					const auto length = glm::distance(branch.m_bezierCurve.m_p0, branch.m_bezierCurve.m_p3);
+					//const auto currentDirection = glm::normalize(branch.m_bezierCurve.m_p3 - branch.m_bezierCurve.m_p0);
+
+					const auto desiredDirection = glm::normalize(parentCenter - childCenter);
+
+					const auto desiredP0 = center + desiredDirection * length * 0.5f;
+					const auto desiredP3 = center - desiredDirection * length * 0.5f;
+					const auto desiredP1 = glm::mix(desiredP0, desiredP3, 0.25f);
+					const auto desiredP2 = glm::mix(desiredP0, desiredP3, 0.75f);
+
+					branch.m_bezierCurve.m_p0 = glm::mix(branch.m_bezierCurve.m_p0, desiredP0, m_reconstructionSettings.m_directionSmoothing);
+					branch.m_bezierCurve.m_p1 = glm::mix(branch.m_bezierCurve.m_p1, desiredP1, m_reconstructionSettings.m_directionSmoothing);
+					branch.m_bezierCurve.m_p2 = glm::mix(branch.m_bezierCurve.m_p2, desiredP2, m_reconstructionSettings.m_directionSmoothing);
+					branch.m_bezierCurve.m_p3 = glm::mix(branch.m_bezierCurve.m_p3, desiredP3, m_reconstructionSettings.m_directionSmoothing);
+				}
+			}
+		}
+	}
 	for (const auto& rootBranchHandle : rootBranchHandles)
 	{
 		ConnectBranches(rootBranchHandle.second);
@@ -2478,7 +2536,11 @@ void ReconstructionSettings::OnInspect() {
 
 	ImGui::Checkbox("Use root distance", &m_useRootDistance);
 
-	ImGui::DragInt("Optimization iteration", &m_optimizationTimeout, 1, 0, 100);
+	ImGui::DragInt("Optimization timeout", &m_optimizationTimeout, 1, 0, 100);
+
+	ImGui::DragFloat("Direction smoothing", &m_directionSmoothing, 0.01f, 0.0f, 1.0f);
+	ImGui::DragFloat("Position smoothing", &m_positionSmoothing, 0.01f, 0.0f, 1.0f);
+	ImGui::DragInt("Smoothing iteration", &m_smoothIteration, 1, 0, 100);
 	/*
 	ImGui::Checkbox("Candidate Search", &m_candidateSearch);
 	if (m_candidateSearch) ImGui::DragInt("Candidate Search limit", &m_candidateSearchLimit, 1, 0, 10);

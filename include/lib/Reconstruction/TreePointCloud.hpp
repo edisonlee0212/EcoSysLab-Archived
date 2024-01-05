@@ -66,7 +66,7 @@ namespace EcoSysLab {
 
 		BranchHandle m_parentHandle = -1;
 		std::vector<BranchHandle> m_childHandles;
-
+		BranchHandle m_largestChildHandle = -1;
 		int m_skeletonIndex = -1;
 		std::vector<NodeHandle> m_chainNodeHandles;
 
@@ -154,6 +154,10 @@ namespace EcoSysLab {
 		*/
 		bool m_useRootDistance = false;
 		int m_optimizationTimeout = 999;
+
+		float m_directionSmoothing = 0.1f;
+		float m_positionSmoothing = 0.1f;
+		int m_smoothIteration = 10;
 		void OnInspect();
 	};
 
