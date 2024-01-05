@@ -485,23 +485,35 @@ std::shared_ptr<Mesh> Tree::GenerateBranchMesh(const TreeMeshGeneratorSettings& 
 {
 	std::vector<Vertex> vertices;
 	std::vector<unsigned int> indices;
-	const CylindricalMeshGenerator<ShootGrowthData, ShootStemGrowthData, InternodeGrowthData> meshGenerator{};
+	if (meshGeneratorSettings.m_branchMeshType == 0) {
+		const CylindricalMeshGenerator<ShootGrowthData, ShootStemGrowthData, InternodeGrowthData> meshGenerator{};
 
-	const auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
-	std::shared_ptr<BranchShape> branchShape{};
-	if (treeDescriptor)
-	{
-		branchShape = treeDescriptor->m_shootBranchShape.Get<BranchShape>();
-	}
-	meshGenerator.Generate(m_treeModel.PeekShootSkeleton(), vertices, indices, meshGeneratorSettings, [&](float xFactor, float distanceToRoot)
+		const auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
+		std::shared_ptr<BranchShape> branchShape{};
+		if (treeDescriptor)
 		{
-			if (branchShape)
+			branchShape = treeDescriptor->m_shootBranchShape.Get<BranchShape>();
+		}
+		meshGenerator.Generate(m_treeModel.PeekShootSkeleton(), vertices, indices, meshGeneratorSettings, [&](float xFactor, float distanceToRoot)
 			{
-				return branchShape->GetValue(xFactor, distanceToRoot);
-			}
-			return 1.0f;
-		});
+				if (branchShape)
+				{
+					return branchShape->GetValue(xFactor, distanceToRoot);
+				}
+				return 1.0f;
+			});
+	}else
+	{
+			const VoxelMeshGenerator<ShootGrowthData, ShootStemGrowthData, InternodeGrowthData> meshGenerator{};
 
+			const auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
+			std::shared_ptr<BranchShape> branchShape{};
+			if (treeDescriptor)
+			{
+				branchShape = treeDescriptor->m_shootBranchShape.Get<BranchShape>();
+			}
+			meshGenerator.Generate(m_treeModel.PeekShootSkeleton(), vertices, indices, meshGeneratorSettings);
+	}
 	auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
 	VertexAttributes attributes{};
 	attributes.m_texCoord = true;

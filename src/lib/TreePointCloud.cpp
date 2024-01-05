@@ -2131,10 +2131,10 @@ void TreePointCloud::FormGeometryEntity() const
 			break;
 			case 1:
 			{
-				float minRadius = 0.003f;
+				 
 				VoxelMeshGenerator<ReconstructionSkeletonData, ReconstructionFlowData, ReconstructionNodeData> meshGenerator;
 				meshGenerator.Generate(m_skeletons[i], vertices, indices,
-					meshGeneratorSettings, minRadius);
+					meshGeneratorSettings );
 			}
 			break;
 			default: break;

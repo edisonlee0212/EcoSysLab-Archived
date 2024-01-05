@@ -102,6 +102,7 @@ namespace EcoSysLab {
 		float m_treePartEndDistance = 2.f;
 		float m_treePartBreakRatio = 4.0f;
 
+		float m_marchingCubeRadius = 0.01f;
 
 		TwigParameters m_twigParameters{};
 		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer);
@@ -122,7 +123,7 @@ namespace EcoSysLab {
 	class VoxelMeshGenerator {
 	public:
 		void Generate(const Skeleton<SkeletonData, FlowData, NodeData>& treeSkeleton, std::vector<Vertex>& vertices,
-			std::vector<unsigned int>& indices, const TreeMeshGeneratorSettings& settings, float minRadius) const;
+			std::vector<unsigned int>& indices, const TreeMeshGeneratorSettings& settings) const;
 	};
 
 	struct TreePartInfo
@@ -623,15 +624,15 @@ namespace EcoSysLab {
 	template <typename SkeletonData, typename FlowData, typename NodeData>
 	void VoxelMeshGenerator<SkeletonData, FlowData, NodeData>::Generate(const
 		Skeleton<SkeletonData, FlowData, NodeData>& treeSkeleton, std::vector<Vertex>& vertices,
-		std::vector<unsigned>& indices, const TreeMeshGeneratorSettings& settings, float minRadius) const
+		std::vector<unsigned>& indices, const TreeMeshGeneratorSettings& settings) const
 	{
 		const auto boxSize = treeSkeleton.m_max - treeSkeleton.m_min;
 		Octree<bool> octree;
 		if (settings.m_autoLevel)
 		{
-			const float maxRadius = glm::max(glm::max(boxSize.x, boxSize.y), boxSize.z) * 0.5f + 2.0f * minRadius;
+			const float maxRadius = glm::max(glm::max(boxSize.x, boxSize.y), boxSize.z) * 0.5f + 2.0f * settings.m_marchingCubeRadius;
 			int subdivisionLevel = -1;
-			float testRadius = minRadius;
+			float testRadius = settings.m_marchingCubeRadius;
 			while (testRadius <= maxRadius)
 			{
 				subdivisionLevel++;
