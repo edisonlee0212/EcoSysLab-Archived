@@ -55,35 +55,6 @@ void TreeModel::RegisterVoxel(const glm::mat4& globalTransform, ClimateModel& cl
 	}
 }
 
-void TreeModel::CalculateInternodeTransforms()
-{
-	m_shootSkeleton.m_min = glm::vec3(FLT_MAX);
-	m_shootSkeleton.m_max = glm::vec3(FLT_MIN);
-	for (const auto& nodeHandle : m_shootSkeleton.RefSortedNodeList()) {
-		auto& node = m_shootSkeleton.RefNode(nodeHandle);
-		auto& nodeInfo = node.m_info;
-		auto& nodeData = node.m_data;
-		if (node.GetParentHandle() != -1) {
-			auto& parentInfo = m_shootSkeleton.RefNode(node.GetParentHandle()).m_info;
-			nodeInfo.m_globalRotation =
-				parentInfo.m_globalRotation * nodeData.m_localRotation;
-			nodeInfo.m_globalDirection = glm::normalize(nodeInfo.m_globalRotation * glm::vec3(0, 0, -1));
-			nodeInfo.m_globalPosition =
-				parentInfo.m_globalPosition
-				+ parentInfo.m_length * parentInfo.m_globalDirection;
-			auto parentRegulatedUp = parentInfo.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
-			auto regulatedUp = glm::normalize(glm::cross(glm::cross(nodeInfo.m_globalDirection, parentRegulatedUp), nodeInfo.m_globalDirection));
-			nodeInfo.m_regulatedGlobalRotation = glm::quatLookAt(nodeInfo.m_globalDirection, regulatedUp);
-		}
-		m_shootSkeleton.m_min = glm::min(m_shootSkeleton.m_min, nodeInfo.m_globalPosition);
-		m_shootSkeleton.m_max = glm::max(m_shootSkeleton.m_max, nodeInfo.m_globalPosition);
-		const auto endPosition = nodeInfo.m_globalPosition
-			+ nodeInfo.m_length * nodeInfo.m_globalDirection;
-		m_shootSkeleton.m_min = glm::min(m_shootSkeleton.m_min, endPosition);
-		m_shootSkeleton.m_max = glm::max(m_shootSkeleton.m_max, endPosition);
-	}
-}
-
 void TreeModel::PruneInternode(NodeHandle internodeHandle)
 {
 	m_shootSkeleton.RecycleNode(internodeHandle,
@@ -340,80 +311,7 @@ void TreeModel::ShootGrowthPostProcess(const glm::mat4& globalTransform, Climate
 		CalculateThickness(shootGrowthController);
 		CalculateBiomass(shootGrowthController);
 		CalculateLevel();
-
-		const auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
-		for (const auto& internodeHandle : sortedInternodeList) {
-			auto& internode = m_shootSkeleton.RefNode(internodeHandle);
-			auto& internodeData = internode.m_data;
-			auto& internodeInfo = internode.m_info;
-			
-			internodeInfo.m_length = internodeData.m_internodeLength * glm::pow(internodeInfo.m_thickness / shootGrowthController.m_endNodeThickness, shootGrowthController.m_internodeLengthThicknessFactor);
-
-			if (internode.GetParentHandle() == -1) {
-				internodeInfo.m_globalPosition = internodeData.m_desiredGlobalPosition = glm::vec3(0.0f);
-				internodeData.m_localRotation = glm::vec3(0.0f);
-				internodeInfo.m_globalRotation = internodeInfo.m_regulatedGlobalRotation = internodeData.m_desiredGlobalRotation = glm::vec3(glm::radians(90.0f), 0.0f, 0.0f);
-				internodeInfo.m_globalDirection = glm::normalize(internodeInfo.m_globalRotation * glm::vec3(0, 0, -1));
-			}
-			else {
-				auto& parentInternode = m_shootSkeleton.RefNode(internode.GetParentHandle());
-				internodeInfo.m_globalRotation =
-					parentInternode.m_info.m_globalRotation * internodeData.m_localRotation;
-
-#pragma region Apply Sagging
-				internodeData.m_sagging = shootGrowthController.m_sagging(internode);
-				auto parentGlobalRotation = parentInternode.m_info.m_globalRotation;
-				internodeInfo.m_globalRotation = parentGlobalRotation * internodeData.m_desiredLocalRotation;
-				auto front = glm::normalize(internodeInfo.m_globalRotation * glm::vec3(0, 0, -1));
-				auto up = glm::normalize(internodeInfo.m_globalRotation * glm::vec3(0, 1, 0));
-				float dotP = glm::abs(glm::dot(front, m_currentGravityDirection));
-				ApplyTropism(m_currentGravityDirection, internodeData.m_sagging * (1.0f - dotP), front, up);
-				internodeInfo.m_globalRotation = glm::quatLookAt(front, up);
-				internodeData.m_localRotation = glm::inverse(parentGlobalRotation) * internodeInfo.m_globalRotation;
-
-				auto parentRegulatedUp = parentInternode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
-				auto regulatedUp = glm::normalize(glm::cross(glm::cross(front, parentRegulatedUp), front));
-				internodeInfo.m_regulatedGlobalRotation = glm::quatLookAt(front, regulatedUp);
-#pragma endregion
-				internodeInfo.m_globalDirection = glm::normalize(internodeInfo.m_globalRotation * glm::vec3(0, 0, -1));
-				internodeInfo.m_globalPosition =
-					parentInternode.m_info.m_globalPosition
-					+ parentInternode.m_info.m_length * parentInternode.m_info.m_globalDirection;
-
-				if (!internode.IsApical())
-				{
-					const auto relativeFront = glm::inverse(parentInternode.m_info.m_globalRotation) * internodeInfo.m_globalRotation * glm::vec3(0, 0, -1);
-					auto parentUp = glm::normalize(parentInternode.m_info.m_globalRotation * glm::vec3(0, 1, 0));
-					auto parentLeft = glm::normalize(parentInternode.m_info.m_globalRotation * glm::vec3(1, 0, 0));
-					auto parentFront = glm::normalize(parentInternode.m_info.m_globalRotation * glm::vec3(0, 0, -1));
-					const auto sinValue = glm::sin(glm::acos(glm::dot(parentFront, front)));
-					const auto offset = glm::normalize(glm::vec2(relativeFront.x, relativeFront.y)) * sinValue;
-					internodeInfo.m_globalPosition += parentLeft * parentInternode.m_info.m_thickness * offset.x;
-					internodeInfo.m_globalPosition += parentUp * parentInternode.m_info.m_thickness * offset.y;
-					internodeInfo.m_globalPosition += parentFront * parentInternode.m_info.m_thickness * sinValue;
-				}
-
-				internodeData.m_desiredGlobalRotation = parentInternode.m_data.m_desiredGlobalRotation * internodeData.m_desiredLocalRotation;
-				auto parentDesiredFront = parentInternode.m_data.m_desiredGlobalRotation * glm::vec3(0, 0, -1);
-				internodeData.m_desiredGlobalPosition = parentInternode.m_data.m_desiredGlobalPosition +
-					parentInternode.m_info.m_length * parentDesiredFront;
-			}
-
-			m_shootSkeleton.m_min = glm::min(m_shootSkeleton.m_min, internodeInfo.m_globalPosition);
-			m_shootSkeleton.m_max = glm::max(m_shootSkeleton.m_max, internodeInfo.m_globalPosition);
-			const auto endPosition = internodeInfo.m_globalPosition
-				+ internodeInfo.m_length * internodeInfo.m_globalDirection;
-			m_shootSkeleton.m_min = glm::min(m_shootSkeleton.m_min, endPosition);
-			m_shootSkeleton.m_max = glm::max(m_shootSkeleton.m_max, endPosition);
-
-			m_shootSkeleton.m_data.m_desiredMin = glm::min(m_shootSkeleton.m_data.m_desiredMin, internodeData.m_desiredGlobalPosition);
-			m_shootSkeleton.m_data.m_desiredMax = glm::max(m_shootSkeleton.m_data.m_desiredMax, internodeData.m_desiredGlobalPosition);
-			const auto desiredGlobalDirection = internodeData.m_desiredGlobalRotation * glm::vec3(0, 0, -1);
-			const auto desiredEndPosition = internodeData.m_desiredGlobalPosition
-				+ internodeInfo.m_length * desiredGlobalDirection;
-			m_shootSkeleton.m_data.m_desiredMin = glm::min(m_shootSkeleton.m_data.m_desiredMin, desiredEndPosition);
-			m_shootSkeleton.m_data.m_desiredMax = glm::max(m_shootSkeleton.m_data.m_desiredMax, desiredEndPosition);
-		}
+		CalculateTransform(shootGrowthController, true);		
 		SampleTemperature(globalTransform, climateModel);
 	};
 
@@ -463,8 +361,81 @@ void TreeModel::ShootGrowthPostProcess(const glm::mat4& globalTransform, Climate
 	}
 }
 
+void TreeModel::CalculateTransform(const ShootGrowthController& shootGrowthController, bool sagging)
+{
+	const auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
+	for (const auto& internodeHandle : sortedInternodeList) {
+		auto& internode = m_shootSkeleton.RefNode(internodeHandle);
+		auto& internodeData = internode.m_data;
+		auto& internodeInfo = internode.m_info;
+
+		internodeInfo.m_length = internodeData.m_internodeLength * glm::pow(internodeInfo.m_thickness / shootGrowthController.m_endNodeThickness, shootGrowthController.m_internodeLengthThicknessFactor);
+
+		if (internode.GetParentHandle() == -1) {
+			internodeInfo.m_globalPosition = internodeData.m_desiredGlobalPosition = glm::vec3(0.0f);
+			internodeData.m_desiredLocalRotation = glm::vec3(0.0f);
+			internodeInfo.m_globalRotation = internodeInfo.m_regulatedGlobalRotation = internodeData.m_desiredGlobalRotation = glm::vec3(glm::radians(90.0f), 0.0f, 0.0f);
+			internodeInfo.m_globalDirection = glm::normalize(internodeInfo.m_globalRotation * glm::vec3(0, 0, -1));
+		}
+		else {
+			auto& parentInternode = m_shootSkeleton.RefNode(internode.GetParentHandle());
+			internodeData.m_sagging = shootGrowthController.m_sagging(internode);
+			auto parentGlobalRotation = parentInternode.m_info.m_globalRotation;
+			internodeInfo.m_globalRotation = parentGlobalRotation * internodeData.m_desiredLocalRotation;
+			auto front = glm::normalize(internodeInfo.m_globalRotation * glm::vec3(0, 0, -1));
+			auto up = glm::normalize(internodeInfo.m_globalRotation * glm::vec3(0, 1, 0));
+			if (sagging) {
+				float dotP = glm::abs(glm::dot(front, m_currentGravityDirection));
+				ApplyTropism(m_currentGravityDirection, internodeData.m_sagging * (1.0f - dotP), front, up);
+				internodeInfo.m_globalRotation = glm::quatLookAt(front, up);
+			}
+			auto parentRegulatedUp = parentInternode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
+			auto regulatedUp = glm::normalize(glm::cross(glm::cross(front, parentRegulatedUp), front));
+			internodeInfo.m_regulatedGlobalRotation = glm::quatLookAt(front, regulatedUp);
+
+			internodeInfo.m_globalDirection = glm::normalize(internodeInfo.m_globalRotation * glm::vec3(0, 0, -1));
+			internodeInfo.m_globalPosition =
+				parentInternode.m_info.m_globalPosition
+				+ parentInternode.m_info.m_length * parentInternode.m_info.m_globalDirection;
+
+			if (!internode.IsApical())
+			{
+				const auto relativeFront = glm::inverse(parentInternode.m_info.m_globalRotation) * internodeInfo.m_globalRotation * glm::vec3(0, 0, -1);
+				auto parentUp = glm::normalize(parentInternode.m_info.m_globalRotation * glm::vec3(0, 1, 0));
+				auto parentLeft = glm::normalize(parentInternode.m_info.m_globalRotation * glm::vec3(1, 0, 0));
+				auto parentFront = glm::normalize(parentInternode.m_info.m_globalRotation * glm::vec3(0, 0, -1));
+				const auto sinValue = glm::sin(glm::acos(glm::dot(parentFront, front)));
+				const auto offset = glm::normalize(glm::vec2(relativeFront.x, relativeFront.y)) * sinValue;
+				internodeInfo.m_globalPosition += parentLeft * parentInternode.m_info.m_thickness * offset.x;
+				internodeInfo.m_globalPosition += parentUp * parentInternode.m_info.m_thickness * offset.y;
+				internodeInfo.m_globalPosition += parentFront * parentInternode.m_info.m_thickness * sinValue;
+			}
+
+			internodeData.m_desiredGlobalRotation = parentInternode.m_data.m_desiredGlobalRotation * internodeData.m_desiredLocalRotation;
+			auto parentDesiredFront = parentInternode.m_data.m_desiredGlobalRotation * glm::vec3(0, 0, -1);
+			internodeData.m_desiredGlobalPosition = parentInternode.m_data.m_desiredGlobalPosition +
+				parentInternode.m_info.m_length * parentDesiredFront;
+		}
+
+		m_shootSkeleton.m_min = glm::min(m_shootSkeleton.m_min, internodeInfo.m_globalPosition);
+		m_shootSkeleton.m_max = glm::max(m_shootSkeleton.m_max, internodeInfo.m_globalPosition);
+		const auto endPosition = internodeInfo.m_globalPosition
+			+ internodeInfo.m_length * internodeInfo.m_globalDirection;
+		m_shootSkeleton.m_min = glm::min(m_shootSkeleton.m_min, endPosition);
+		m_shootSkeleton.m_max = glm::max(m_shootSkeleton.m_max, endPosition);
+
+		m_shootSkeleton.m_data.m_desiredMin = glm::min(m_shootSkeleton.m_data.m_desiredMin, internodeData.m_desiredGlobalPosition);
+		m_shootSkeleton.m_data.m_desiredMax = glm::max(m_shootSkeleton.m_data.m_desiredMax, internodeData.m_desiredGlobalPosition);
+		const auto desiredGlobalDirection = internodeData.m_desiredGlobalRotation * glm::vec3(0, 0, -1);
+		const auto desiredEndPosition = internodeData.m_desiredGlobalPosition
+			+ internodeInfo.m_length * desiredGlobalDirection;
+		m_shootSkeleton.m_data.m_desiredMin = glm::min(m_shootSkeleton.m_data.m_desiredMin, desiredEndPosition);
+		m_shootSkeleton.m_data.m_desiredMax = glm::max(m_shootSkeleton.m_data.m_desiredMax, desiredEndPosition);
+	}
+}
+
 bool TreeModel::ElongateInternode(float extendLength, NodeHandle internodeHandle,
-	const ShootGrowthController& shootGrowthController, float& collectedInhibitor) {
+                                  const ShootGrowthController& shootGrowthController, float& collectedInhibitor) {
 	bool graphChanged = false;
 	auto& internode = m_shootSkeleton.RefNode(internodeHandle);
 	const auto internodeLength = shootGrowthController.m_internodeLength;
@@ -558,7 +529,7 @@ bool TreeModel::ElongateInternode(float extendLength, NodeHandle internodeHandle
 		newInternode.m_data.m_internodeLength = glm::clamp(extendLength, 0.0f, internodeLength);
 		newInternode.m_info.m_thickness = shootGrowthController.m_endNodeThickness;
 		newInternode.m_info.m_globalRotation = glm::quatLookAt(desiredGlobalFront, desiredGlobalUp);
-		newInternode.m_data.m_localRotation = newInternode.m_data.m_desiredLocalRotation =
+		newInternode.m_data.m_desiredLocalRotation =
 			glm::inverse(oldInternode.m_info.m_globalRotation) *
 			newInternode.m_info.m_globalRotation;
 		//Allocate apical bud for new internode
@@ -659,7 +630,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 				newInternode.m_data.m_lateral = true;
 				newInternode.m_data.m_internodeLength = 0.0f;
 				newInternode.m_info.m_thickness = shootGrowthController.m_endNodeThickness;
-				newInternode.m_data.m_localRotation = newInternode.m_data.m_desiredLocalRotation =
+				newInternode.m_data.m_desiredLocalRotation =
 					glm::inverse(oldInternode.m_info.m_globalRotation) *
 					glm::quatLookAt(desiredGlobalFront, desiredGlobalUp);
 				//Allocate apical bud
