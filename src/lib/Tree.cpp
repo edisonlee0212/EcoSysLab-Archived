@@ -226,11 +226,11 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 			iterations = glm::clamp(iterations, 0, m_treeModel.CurrentIteration());
 			m_meshGeneratorSettings.OnInspect(editorLayer);
 			if (ImGui::Button("Generate Mesh")) {
-				GenerateGeometry(m_meshGeneratorSettings, iterations);
+				GenerateMeshes(m_meshGeneratorSettings, iterations);
 			}
 			if (ImGui::Button("Clear Mesh"))
 			{
-				ClearGeometry();
+				ClearMeshes();
 			}
 			ImGui::TreePop();
 		}
@@ -312,12 +312,52 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 		}
 	}
 	*/
+
+
+	if (ImGui::Button("Initialize Profiles"))
+	{
+		m_treeModel.InitializeProfiles();
+	}
+	if (ImGui::Button("Calculate Profiles"))
+	{
+		m_treeModel.CalculateProfiles();
+	}
+
+	static float frontControlPointRatio = 0.4f;
+	static float backControlPointRatio = 0.4f;
+	ImGui::DragFloat("Front Control Point Ratio", &frontControlPointRatio, 0.01f, 0.01f, 0.5f);
+	ImGui::DragFloat("Back Control Point Ratio", &backControlPointRatio, 0.01f, 0.01f, 0.5f);
+
+	static bool adjustment = true;
+	ImGui::Checkbox("Graph adjustment", &adjustment);
+	if (adjustment && ImGui::TreeNodeEx("Graph Adjustment settings"))
+	{
+		auto& adjustmentSettings = m_treeModel.RefShootSkeleton().m_data.m_graphAdjustmentSettings;
+		ImGui::DragFloat("Shift push ratio", &adjustmentSettings.m_shiftPushRatio, 0.01f, 0.0f, 2.0f);
+		ImGui::DragFloat("Side push ratio", &adjustmentSettings.m_sidePushRatio, 0.01f, 0.0f, 2.0f);
+		ImGui::DragFloat("Front push ratio", &adjustmentSettings.m_frontPushRatio, 0.01f, 0.0f, 2.0f);
+		ImGui::DragFloat("Rotation push ratio", &adjustmentSettings.m_rotationPushRatio, 0.01f, 0.0f, 2.0f);
+		ImGui::TreePop();
+	}
+	static bool triplePoints = false;
+	ImGui::Checkbox("Triple points", &triplePoints);
+
+	if (ImGui::Button("Build Strands"))
+	{
+		m_treeModel.CalculatePipeProfileAdjustedTransforms();
+		GenerateStrands(frontControlPointRatio, backControlPointRatio, triplePoints);
+	}
+
+	if (ImGui::Button("Clear Strands"))
+	{
+		ClearStrands();
+	}
 }
 void Tree::Update()
 {
 	if (m_temporalProgression) {
 		if (m_temporalProgressionIteration <= m_treeModel.CurrentIteration()) {
-			GenerateGeometry(m_meshGeneratorSettings, m_temporalProgressionIteration);
+			GenerateMeshes(m_meshGeneratorSettings, m_temporalProgressionIteration);
 			m_temporalProgressionIteration++;
 		}
 		else
@@ -663,7 +703,7 @@ void Tree::Deserialize(const YAML::Node& in)
 	m_treeDescriptor.Load("m_treeDescriptor", in);
 }
 
-void Tree::ClearGeometry() const
+void Tree::ClearMeshes() const
 {
 	const auto scene = GetScene();
 	const auto self = GetOwner();
@@ -685,7 +725,7 @@ void Tree::ClearGeometry() const
 	}
 }
 
-void Tree::ClearStrands() const
+void Tree::ClearTwigsStrands() const
 {
 	const auto scene = GetScene();
 	const auto self = GetOwner();
@@ -701,13 +741,26 @@ void Tree::ClearStrands() const
 	}
 }
 
-void Tree::GenerateGeometry(const TreeMeshGeneratorSettings& meshGeneratorSettings, int iteration) {
+void Tree::ClearStrands() const
+{
+	const auto scene = GetScene();
+	const auto self = GetOwner();
+	const auto children = scene->GetChildren(self);
+	for (const auto& child : children) {
+		auto name = scene->GetEntityName(child);
+		if (name == "Branch Strands") {
+			scene->DeleteEntity(child);
+		}
+	}
+}
+
+void Tree::GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings, int iteration) {
 	const auto scene = GetScene();
 	const auto self = GetOwner();
 	const auto children = scene->GetChildren(self);
 	auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
-	ClearGeometry();
-	ClearStrands();
+	ClearMeshes();
+	ClearTwigsStrands();
 	auto actualIteration = iteration;
 	if (actualIteration < 0 || actualIteration > m_treeModel.CurrentIteration())
 	{
@@ -1480,4 +1533,34 @@ void Tree::PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescrip
 			};
 
 	}
+}
+
+void Tree::GenerateStrands(const float frontControlPointRatio, const float backControlPointRatio, bool triplePoints, int nodeMaxCount)
+{
+	const auto scene = GetScene();
+	const auto owner = GetOwner();
+
+	ClearStrands();
+	const auto strandsEntity = scene->CreateEntity("Branch Strands");
+	scene->SetParent(strandsEntity, owner);
+
+	const auto renderer = scene->GetOrSetPrivateComponent<StrandsRenderer>(strandsEntity).lock();
+	const auto strandsAsset = ProjectManager::CreateTemporaryAsset<Strands>();
+
+	m_treeModel.ApplyProfiles();
+
+	std::vector<glm::uint> strandsList;
+	std::vector<StrandPoint> points;
+	m_treeModel.RefShootSkeleton().m_data.m_pipeGroup.BuildStrands(frontControlPointRatio, backControlPointRatio, strandsList, points, triplePoints, nodeMaxCount);
+	if (!points.empty()) strandsList.emplace_back(points.size());
+	StrandPointAttributes strandPointAttributes{};
+	strandPointAttributes.m_color = true;
+	strandsAsset->SetStrands(strandPointAttributes, strandsList, points);
+	renderer->m_strands = strandsAsset;
+
+	const auto material = ProjectManager::CreateTemporaryAsset<Material>();
+
+	renderer->m_material = material;
+	material->m_vertexColorOnly = true;
+	material->m_materialProperties.m_albedoColor = glm::vec3(0.6f, 0.3f, 0.0f);
 }

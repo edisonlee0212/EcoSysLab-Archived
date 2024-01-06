@@ -9,14 +9,6 @@
 using namespace EvoEngine;
 namespace EcoSysLab
 {
-	struct GraphAdjustmentSettings
-	{
-		float m_shiftPushRatio = 1.0f;
-		float m_sidePushRatio = 1.0f;
-		float m_frontPushRatio = 1.0f;
-		float m_rotationPushRatio = 0.5f;
-	};
-
 	class TreePipeBase : public IPrivateComponent
 	{
 		void GatherChildrenEntities(std::vector<Entity>& list) const;

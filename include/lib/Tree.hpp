@@ -6,6 +6,7 @@
 #include "TreeDescriptor.hpp"
 #include "TreeGraph.hpp"
 #include "TreeGrowthParameters.hpp"
+#include "TreePipeMeshGenerator.hpp"
 using namespace EvoEngine;
 namespace EcoSysLab {
 	class Tree : public IPrivateComponent {
@@ -58,9 +59,12 @@ namespace EcoSysLab {
 
 		void OnCreate() override;
 
-		void ClearGeometry() const;
-		void ClearStrands() const;
-		void GenerateGeometry(const TreeMeshGeneratorSettings& meshGeneratorSettings, int iteration = -1);
+		void ClearMeshes() const;
+		void ClearTwigsStrands() const;
+		void ClearStrands() const ;
+		void GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings, int iteration = -1);
+		void GenerateStrands(float frontControlPointRatio, float backControlPointRatio, bool triplePoints, int nodeMaxCount = -1);
+
 		void RegisterVoxel();
 		void FromLSystemString(const std::shared_ptr<LSystemString>& lSystemString);
 		void FromTreeGraph(const std::shared_ptr<TreeGraph>& treeGraph);

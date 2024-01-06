@@ -106,7 +106,7 @@ void TreeModel::ApplyTropism(const glm::vec3& targetDir, float tropism, glm::qua
 }
 
 bool TreeModel::GrowSubTree(const float deltaTime, const NodeHandle baseInternodeHandle, const glm::mat4& globalTransform, ClimateModel& climateModel,
-	const ShootGrowthController& shootGrowthController, 
+	const ShootGrowthController& shootGrowthController,
 	const bool pruning, const float overrideGrowthRate)
 {
 	m_currentDeltaTime = deltaTime;
@@ -311,7 +311,7 @@ void TreeModel::ShootGrowthPostProcess(const glm::mat4& globalTransform, Climate
 		CalculateThickness(shootGrowthController);
 		CalculateBiomass(shootGrowthController);
 		CalculateLevel();
-		CalculateTransform(shootGrowthController, true);		
+		CalculateTransform(shootGrowthController, true);
 		SampleTemperature(globalTransform, climateModel);
 	};
 
@@ -435,7 +435,7 @@ void TreeModel::CalculateTransform(const ShootGrowthController& shootGrowthContr
 }
 
 bool TreeModel::ElongateInternode(float extendLength, NodeHandle internodeHandle,
-                                  const ShootGrowthController& shootGrowthController, float& collectedInhibitor) {
+	const ShootGrowthController& shootGrowthController, float& collectedInhibitor) {
 	bool graphChanged = false;
 	auto& internode = m_shootSkeleton.RefNode(internodeHandle);
 	const auto internodeLength = shootGrowthController.m_internodeLength;
@@ -540,7 +540,7 @@ bool TreeModel::ElongateInternode(float extendLength, NodeHandle internodeHandle
 		newApicalBud.m_localRotation = glm::vec3(
 			glm::radians(shootGrowthController.m_apicalAngle(newInternode)), 0.0f,
 			glm::radians(shootGrowthController.m_rollAngle(newInternode)));
-		
+
 		shootGrowthController.m_budExtinctionRate(newInternode, newApicalBud);
 		if (internodeHandle != 0 && newApicalBud.m_extinctionRate > glm::linearRand(0.0f, 1.0f))
 		{
@@ -810,7 +810,7 @@ float TreeModel::CalculateDesiredGrowthRate(const std::vector<NodeHandle>& sorte
 	apicalControlValues.resize(m_shootSkeleton.m_data.m_maxLevel + 1);
 	apicalControlValues[0] = 1.0f;
 
-	for(int i = 1; i < m_shootSkeleton.m_data.m_maxLevel + 1; i++)
+	for (int i = 1; i < m_shootSkeleton.m_data.m_maxLevel + 1; i++)
 	{
 		apicalControlValues[i] = apicalControlValues[i - 1] * apicalControl;
 	}
@@ -820,13 +820,15 @@ float TreeModel::CalculateDesiredGrowthRate(const std::vector<NodeHandle>& sorte
 		auto& node = m_shootSkeleton.RefNode(internodeHandle);
 		node.m_data.m_pipeResistance = glm::pow(glm::max(1.0f, node.m_info.m_rootDistance / minDistance), pipeResistanceFactor);
 		node.m_data.m_growthPotential = node.m_data.m_lightIntensity / node.m_data.m_pipeResistance;
-		if(apicalControl > 1.0f)
+		if (apicalControl > 1.0f)
 		{
 			node.m_data.m_apicalControl = 1.0f / apicalControlValues[node.m_data.m_level];
-		}else if(apicalControl < 1.0f)
+		}
+		else if (apicalControl < 1.0f)
 		{
 			node.m_data.m_apicalControl = apicalControlValues[m_shootSkeleton.m_data.m_maxLevel - node.m_data.m_level];
-		}else
+		}
+		else
 		{
 			node.m_data.m_apicalControl = 1.0f;
 		}
@@ -851,7 +853,7 @@ float TreeModel::CalculateDesiredGrowthRate(const std::vector<NodeHandle>& sorte
 		totalDesiredGrowthRate += node.m_data.m_desiredGrowthRate;
 	}
 	return totalDesiredGrowthRate;
-	
+
 }
 
 void TreeModel::CalculateThickness(const ShootGrowthController& shootGrowthController) {
@@ -875,7 +877,7 @@ void TreeModel::CalculateThickness(const ShootGrowthController& shootGrowthContr
 		else
 		{
 			internodeInfo.m_thickness = glm::max(internodeInfo.m_thickness, shootGrowthController.m_endNodeThickness);
-		}		
+		}
 	}
 }
 void TreeModel::CalculateBiomass(const ShootGrowthController& shootGrowthController)
@@ -1081,6 +1083,619 @@ void TreeModel::ExportTreeIOSkeleton(treeio::ArrayTree& arrayTree) const
 
 		auto currentId = arrayTree.addNodeChild(nodeMap[node.GetParentHandle()], nodeData);
 		nodeMap[nodeHandle] = currentId;
+	}
+}
+
+void TreeModel::InitializeProfiles()
+{
+	m_shootSkeleton.m_data.m_pipeGroup = {};
+	auto& pipeGroup = m_shootSkeleton.m_data.m_pipeGroup;
+	const auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
+	for (const auto& internodeHandle : sortedInternodeList)
+	{
+		auto& internode = m_shootSkeleton.RefNode(internodeHandle);
+		auto& frontPhysics2D = internode.m_data.m_frontParticlePhysics2D;
+		auto& backPhysics2D = internode.m_data.m_backParticlePhysics2D;
+
+		frontPhysics2D.Reset(0.002f);
+		backPhysics2D.Reset(0.002f);
+		frontPhysics2D.m_settings = m_shootSkeleton.m_data.m_particlePhysicsSettings;
+		backPhysics2D.m_settings = m_shootSkeleton.m_data.m_particlePhysicsSettings;
+
+		bool onlyChild = true;
+		if (internode.GetParentHandle() != -1)
+		{
+			auto& parentInternode = m_shootSkeleton.RefNode(internode.GetParentHandle());
+			onlyChild = parentInternode.RefChildHandles().size() == -1;
+		}
+		if (internode.IsApical() || onlyChild)
+		{
+			if (internode.GetParentHandle() == -1)
+			{
+				for (int i = 0; i < m_shootSkeleton.m_data.m_pipeModelParameters.m_endNodeStrands; i++) {
+					const auto newPipeHandle = pipeGroup.AllocatePipe();
+					const auto newPipeSegmentHandle = pipeGroup.Extend(newPipeHandle);
+					const auto newStartParticleHandle = frontPhysics2D.AllocateParticle();
+					auto& newStartParticle = frontPhysics2D.RefParticle(newStartParticleHandle);
+					newStartParticle.m_data.m_pipeHandle = newPipeHandle;
+					newStartParticle.m_data.m_pipeSegmentHandle = newPipeSegmentHandle;
+					newStartParticle.m_data.m_base = false;
+					const auto newEndParticleHandle = backPhysics2D.AllocateParticle();
+					auto& newEndParticle = backPhysics2D.RefParticle(newEndParticleHandle);
+					newEndParticle.m_data.m_pipeHandle = newPipeHandle;
+					newEndParticle.m_data.m_pipeSegmentHandle = newPipeSegmentHandle;
+					newEndParticle.m_data.m_base = false;
+
+					auto& newSegment = pipeGroup.RefPipeSegment(newPipeSegmentHandle);
+					newSegment.m_data.m_nodeHandle = internodeHandle;
+					newSegment.m_data.m_frontProfileHandle = newStartParticleHandle;
+					newSegment.m_data.m_backParticleHandle = newEndParticleHandle;
+				}
+			}
+			else
+			{
+				auto& parentInternode = m_shootSkeleton.RefNode(internode.GetParentHandle());
+				for (const auto& cell : parentInternode.m_data.m_frontParticlePhysics2D.PeekParticles())
+				{
+					const auto newPipeSegmentHandle = m_shootSkeleton.m_data.m_pipeGroup.Extend(cell.m_data.m_pipeHandle);
+					const auto newStartParticleHandle = frontPhysics2D.AllocateParticle();
+					auto& newStartParticle = frontPhysics2D.RefParticle(newStartParticleHandle);
+					newStartParticle.m_data.m_pipeHandle = cell.m_data.m_pipeHandle;
+					newStartParticle.m_data.m_pipeSegmentHandle = newPipeSegmentHandle;
+					newStartParticle.m_data.m_base = false;
+					const auto newEndParticleHandle = backPhysics2D.AllocateParticle();
+					auto& newEndParticle = backPhysics2D.RefParticle(newEndParticleHandle);
+					newEndParticle.m_data.m_pipeHandle = cell.m_data.m_pipeHandle;
+					newEndParticle.m_data.m_pipeSegmentHandle = newPipeSegmentHandle;
+					newEndParticle.m_data.m_base = false;
+
+					auto& newSegment = pipeGroup.RefPipeSegment(newPipeSegmentHandle);
+					newSegment.m_data.m_nodeHandle = internodeHandle;
+					newSegment.m_data.m_frontProfileHandle = newStartParticleHandle;
+					newSegment.m_data.m_backParticleHandle = newEndParticleHandle;
+				}
+			}
+		}
+		else if (internode.GetParentHandle() != -1)
+		{
+			//If this node is formed from branching, we need to construct new pipe.
+			//First, we need to collect a chain of nodes from current node to the root.
+			std::vector<NodeHandle> parentNodeToRootChain;
+			NodeHandle walker = internode.GetParentHandle();
+			while (walker >= 0)
+			{
+				parentNodeToRootChain.emplace_back(walker);
+				walker = m_shootSkeleton.PeekNode(walker).GetParentHandle();
+			}
+			for (int i = 0; i < m_shootSkeleton.m_data.m_pipeModelParameters.m_endNodeStrands; i++) {
+				const auto pipeHandle = pipeGroup.AllocatePipe();
+				for (auto it = parentNodeToRootChain.rbegin(); it != parentNodeToRootChain.rend(); ++it) {
+					const auto newPipeSegmentHandle = pipeGroup.Extend(pipeHandle);
+					auto& internode = m_shootSkeleton.RefNode(*it);
+					const auto newStartParticleHandle = internode.m_data.m_frontParticlePhysics2D.AllocateParticle();
+					auto& newStartParticle = internode.m_data.m_frontParticlePhysics2D.RefParticle(newStartParticleHandle);
+					newStartParticle.m_data.m_pipeHandle = pipeHandle;
+					newStartParticle.m_data.m_pipeSegmentHandle = newPipeSegmentHandle;
+					newStartParticle.m_data.m_base = false;
+					const auto newEndParticleHandle = internode.m_data.m_backParticlePhysics2D.AllocateParticle();
+					auto& newEndParticle = internode.m_data.m_backParticlePhysics2D.RefParticle(newEndParticleHandle);
+					newEndParticle.m_data.m_pipeHandle = pipeHandle;
+					newEndParticle.m_data.m_pipeSegmentHandle = newPipeSegmentHandle;
+					newEndParticle.m_data.m_base = false;
+
+					auto& newSegment = pipeGroup.RefPipeSegment(newPipeSegmentHandle);
+					newSegment.m_data.m_nodeHandle = *it;
+					newSegment.m_data.m_frontProfileHandle = newStartParticleHandle;
+					newSegment.m_data.m_backParticleHandle = newEndParticleHandle;
+				}
+				const auto newPipeSegmentHandle = pipeGroup.Extend(pipeHandle);
+				const auto newStartParticleHandle = frontPhysics2D.AllocateParticle();
+				auto& newStartParticle = frontPhysics2D.RefParticle(newStartParticleHandle);
+				newStartParticle.m_data.m_pipeHandle = pipeHandle;
+				newStartParticle.m_data.m_pipeSegmentHandle = newPipeSegmentHandle;
+				newStartParticle.m_data.m_base = true;
+				const auto newEndParticleHandle = backPhysics2D.AllocateParticle();
+				auto& newEndParticle = backPhysics2D.RefParticle(newEndParticleHandle);
+				newEndParticle.m_data.m_pipeHandle = pipeHandle;
+				newEndParticle.m_data.m_pipeSegmentHandle = newPipeSegmentHandle;
+				newEndParticle.m_data.m_base = true;
+
+				auto& newSegment = pipeGroup.RefPipeSegment(newPipeSegmentHandle);
+				newSegment.m_data.m_nodeHandle = internodeHandle;
+				newSegment.m_data.m_frontProfileHandle = newStartParticleHandle;
+				newSegment.m_data.m_backParticleHandle = newEndParticleHandle;
+			}
+		}
+	}
+	for (const auto& internodeHandle : sortedInternodeList)
+	{
+		auto& internode = m_shootSkeleton.RefNode(internodeHandle);
+		internode.m_data.m_frontParticleMap.clear();
+		internode.m_data.m_backParticleMap.clear();
+		auto& startPhysics2D = internode.m_data.m_frontParticlePhysics2D;
+
+		for (auto& particle : startPhysics2D.RefParticles())
+		{
+			internode.m_data.m_frontParticleMap.insert({ particle.m_data.m_pipeHandle, particle.GetHandle() });
+		}
+		auto& endPhysics2D = internode.m_data.m_backParticlePhysics2D;
+
+		for (auto& particle : endPhysics2D.RefParticles())
+		{
+			internode.m_data.m_backParticleMap.insert({ particle.m_data.m_pipeHandle, particle.GetHandle() });
+		}
+	}
+	m_shootSkeleton.m_data.m_numOfParticles = 0;
+	for (const auto& internodeHandle : sortedInternodeList)
+	{
+		auto& internode = m_shootSkeleton.RefNode(internodeHandle);
+		for (const auto& childHandle : internode.RefChildHandles())
+		{
+			auto& childInternode = m_shootSkeleton.RefNode(childHandle);
+			if (childInternode.m_data.m_maxChild) childInternode.m_data.m_split = false;
+			const auto childSize = static_cast<float>(childInternode.m_data.m_frontParticleMap.size());
+			const auto totalSize = static_cast<float>(internode.m_data.m_frontParticleMap.size());
+			if (childSize > totalSize * m_shootSkeleton.m_data.m_pipeModelParameters.m_splitRatioLimit)
+			{
+				childInternode.m_data.m_split = true;
+			}
+			else
+			{
+				childInternode.m_data.m_split = false;
+			}
+		}
+		m_shootSkeleton.m_data.m_numOfParticles += internode.m_data.m_frontParticlePhysics2D.PeekParticles().size();
+	}
+}
+
+void TreeModel::CalculateProfiles()
+{
+	const float time = Times::Now();
+	const auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
+
+	Jobs::ParallelFor(sortedInternodeList.size(), [&](unsigned i)
+		{
+			auto& internode = m_shootSkeleton.RefNode(sortedInternodeList[i]);
+			for (auto& particle : internode.m_data.m_backParticlePhysics2D.RefParticles()) {
+				particle.SetPosition(glm::vec2(0.0f));
+				particle.SetVelocity(glm::vec2(0.0f), 0.002f);
+				particle.SetAcceleration(glm::vec2(0.0f));
+			}
+			for (auto& particle : internode.m_data.m_frontParticlePhysics2D.RefParticles())
+			{
+				particle.SetPosition(glm::vec2(0.0f));
+				particle.SetVelocity(glm::vec2(0.0f), 0.002f);
+				particle.SetAcceleration(glm::vec2(0.0f));
+			}
+		}
+	);
+
+	if (m_shootSkeleton.m_data.m_parallelScheduling) {
+		for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); ++it)
+		{
+			CalculateProfile(*it, m_shootSkeleton.m_data.m_pipeModelParameters, true);
+			m_shootSkeleton.m_data.m_numOfParticles += m_shootSkeleton.RefNode(*it).m_data.m_frontParticlePhysics2D.PeekParticles().size();
+		}
+		if (!sortedInternodeList.empty())
+		{
+			Wait(sortedInternodeList.front());
+		}
+	}
+	else
+	{
+		for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); ++it)
+		{
+			CalculateProfile(*it, m_shootSkeleton.m_data.m_pipeModelParameters, false);
+			Wait(*it);
+			m_shootSkeleton.m_data.m_numOfParticles += m_shootSkeleton.RefNode(*it).m_data.m_frontParticlePhysics2D.PeekParticles().size();
+		}
+	}
+	m_shootSkeleton.m_data.m_profileCalculationTime = Times::Now() - time;
+}
+
+void TreeModel::CalculateProfile(const NodeHandle nodeHandle, const PipeModelParameters& pipeModelParameters, bool scheduling)
+{
+	if (scheduling) {
+		m_shootSkeleton.RefNode(nodeHandle).m_data.m_tasks.emplace_back(Jobs::AddTask([&, nodeHandle, scheduling](unsigned threadIndex) {
+			MergeTask(nodeHandle, pipeModelParameters);
+			auto& internode = m_shootSkeleton.RefNode(nodeHandle);
+			if (!internode.m_data.m_needPacking) return;
+			internode.m_data.m_needPacking = false;
+			if (internode.m_data.m_frontParticlePhysics2D.PeekParticles().size() <= 1) return;
+			PackTask(nodeHandle, pipeModelParameters, !scheduling);
+			if (internode.RefChildHandles().empty()) CopyFrontToBackTask(nodeHandle);
+			CalculateShiftTask(nodeHandle, pipeModelParameters);
+			}
+		)
+		);
+	}
+	else
+	{
+		MergeTask(nodeHandle, pipeModelParameters);
+		PackTask(nodeHandle, pipeModelParameters, !scheduling);
+		const auto& internode = m_shootSkeleton.RefNode(nodeHandle);
+		if (internode.RefChildHandles().empty()) CopyFrontToBackTask(nodeHandle);
+		CalculateShiftTask(nodeHandle, pipeModelParameters);
+	}
+}
+
+void TreeModel::Wait(const NodeHandle nodeHandle)
+{
+	auto& internode = m_shootSkeleton.RefNode(nodeHandle);
+	if (internode.m_data.m_tasks.empty()) return;
+	for (const auto& i : internode.m_data.m_tasks)
+	{
+		i.wait();
+	}
+	internode.m_data.m_tasks.clear();
+}
+
+void TreeModel::PackTask(NodeHandle nodeHandle, const PipeModelParameters& pipeModelParameters, bool parallel)
+{
+	auto& internode = m_shootSkeleton.RefNode(nodeHandle);
+	auto& internodeData = internode.m_data;
+	internodeData.m_frontParticlePhysics2D.m_parallel = parallel;
+
+	const auto iterations = pipeModelParameters.m_maxSimulationIterationCellFactor * internodeData.m_frontParticlePhysics2D.RefParticles().size();
+	for (int i = 0; i < iterations; i++) {
+		const auto checkpoint = i > 1 && i % pipeModelParameters.m_stabilizationCheckIteration == 0;
+		if (checkpoint)
+		{
+			if (internodeData.m_frontParticlePhysics2D.GetMaxMovementSinceCheckpoint() < pipeModelParameters.m_stabilizationMovementDistance) break;
+		}
+		internodeData.m_frontParticlePhysics2D.Simulate(1, [&](auto& particle)
+			{
+				//Apply gravity
+				particle.SetPosition(particle.GetPosition() - internodeData.m_frontParticlePhysics2D.GetMassCenter());
+				if (glm::length(particle.GetPosition()) > 0.0f) {
+					const glm::vec2 acceleration = pipeModelParameters.m_centerAttractionStrength * -glm::normalize(particle.GetPosition());
+					particle.SetAcceleration(acceleration);
+				}
+			}, checkpoint
+		);
+		if (pipeModelParameters.m_timeout > 0 && i > pipeModelParameters.m_timeout) break;
+	}
+}
+
+void TreeModel::MergeTask(NodeHandle nodeHandle, const PipeModelParameters& pipeModelParameters)
+{
+	auto& internode = m_shootSkeleton.RefNode(nodeHandle);
+	auto& internodeData = internode.m_data;
+	const auto& childHandles = internode.RefChildHandles();
+	NodeHandle mainChildHandle = -1;
+	for (const auto& childHandle : childHandles) {
+		Wait(childHandle);
+		if (m_shootSkeleton.PeekNode(childHandle).m_data.m_maxChild) mainChildHandle = childHandle;
+	}
+	internodeData.m_centerDirectionRadius = 0.0f;
+
+	if (childHandles.empty())
+	{
+		internode.m_data.m_needPacking = true;
+		return;
+	}
+	if (mainChildHandle == -1) mainChildHandle = childHandles.front();
+	auto& mainChildNode = m_shootSkeleton.RefNode(mainChildHandle);
+	if (childHandles.size() == 1)
+	{
+		//Copy from child flow start to self flow start
+		const auto& childNode = m_shootSkeleton.RefNode(childHandles.front());
+		const auto& childPhysics2D = childNode.m_data.m_frontParticlePhysics2D;
+		assert(internodeData.m_frontParticlePhysics2D.PeekParticles().size() == childPhysics2D.PeekParticles().size());
+		assert(internodeData.m_frontParticlePhysics2D.PeekParticles().size() == childPhysics2D.PeekParticles().size());
+		for (const auto& childParticle : childPhysics2D.PeekParticles())
+		{
+			const auto nodeStartParticleHandle = internodeData.m_frontParticleMap.at(childParticle.m_data.m_pipeHandle);
+			const auto nodeEndParticleHandle = internodeData.m_backParticleMap.at(childParticle.m_data.m_pipeHandle);
+			auto& nodeStartParticle = internodeData.m_frontParticlePhysics2D.RefParticle(nodeStartParticleHandle);
+			auto& nodeEndParticle = internodeData.m_backParticlePhysics2D.RefParticle(nodeEndParticleHandle);
+			nodeStartParticle.SetColor(childParticle.GetColor());
+			nodeStartParticle.SetPosition(childParticle.GetPosition());
+			nodeEndParticle.SetColor(childParticle.GetColor());
+			nodeEndParticle.SetPosition(childParticle.GetPosition());
+
+			nodeStartParticle.m_data.m_mainChild = nodeEndParticle.m_data.m_mainChild = true;
+		}
+		return;
+	}
+	internodeData.m_needPacking = true;
+	const auto& mainChildPhysics2D = mainChildNode.m_data.m_frontParticlePhysics2D;
+	for (const auto& mainChildParticle : mainChildPhysics2D.PeekParticles())
+	{
+		const auto nodeStartParticleHandle = internodeData.m_frontParticleMap.at(mainChildParticle.m_data.m_pipeHandle);
+		const auto nodeEndParticleHandle = internodeData.m_backParticleMap.at(mainChildParticle.m_data.m_pipeHandle);
+		auto& nodeStartParticle = internodeData.m_frontParticlePhysics2D.RefParticle(nodeStartParticleHandle);
+		auto& nodeEndParticle = internodeData.m_backParticlePhysics2D.RefParticle(nodeEndParticleHandle);
+		nodeStartParticle.SetColor(mainChildParticle.GetColor());
+		nodeStartParticle.SetPosition(mainChildParticle.GetPosition());
+		nodeEndParticle.SetColor(mainChildParticle.GetColor());
+		nodeEndParticle.SetPosition(mainChildParticle.GetPosition());
+
+		nodeStartParticle.m_data.m_mainChild = nodeEndParticle.m_data.m_mainChild = true;
+	}
+	//const auto nodeGlobalRotation = scene->GetDataComponent<GlobalTransform>(owner);
+	if (pipeModelParameters.m_preMerge) {
+		bool needSimulation = false;
+		for (const auto& childHandle : childHandles)
+		{
+			if (childHandle == mainChildHandle) continue;
+			auto& childNode = m_shootSkeleton.RefNode(childHandle);
+			auto& childPhysics2D = childNode.m_data.m_frontParticlePhysics2D;
+			if (!childNode.m_data.m_split)
+			{
+				needSimulation = true;
+				const auto childNodeFront = glm::inverse(internode.m_info.m_regulatedGlobalRotation) * childNode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
+				auto direction = glm::normalize(glm::vec2(childNodeFront.x, childNodeFront.y));
+				if (glm::isnan(direction.x) || glm::isnan(direction.y))
+				{
+					direction = glm::vec2(1, 0);
+				}
+				childNode.m_data.m_centerDirectionRadius = childPhysics2D.GetDistanceToCenter(-direction);
+				const auto mainChildRadius = mainChildPhysics2D.GetDistanceToCenter(direction);
+				auto offset = glm::vec2(0.0f);
+				offset = (mainChildRadius - childNode.m_data.m_centerDirectionRadius + 2.0f) * direction;
+				childNode.m_data.m_offset = offset;
+				for (auto& childParticle : childPhysics2D.RefParticles())
+				{
+					childParticle.SetPosition(childParticle.GetPosition() + offset);
+
+					const auto nodeStartParticleHandle = internodeData.m_frontParticleMap.at(childParticle.m_data.m_pipeHandle);
+					const auto nodeEndParticleHandle = internodeData.m_backParticleMap.at(childParticle.m_data.m_pipeHandle);
+					auto& nodeStartParticle = internodeData.m_frontParticlePhysics2D.RefParticle(nodeStartParticleHandle);
+					auto& nodeEndParticle = internodeData.m_backParticlePhysics2D.RefParticle(nodeEndParticleHandle);
+					nodeStartParticle.SetColor(childParticle.GetColor());
+					nodeStartParticle.SetPosition(childParticle.GetPosition());
+					nodeEndParticle.SetColor(childParticle.GetColor());
+					nodeEndParticle.SetPosition(childParticle.GetPosition());
+					nodeStartParticle.m_enable = true;
+					nodeStartParticle.m_data.m_mainChild = nodeEndParticle.m_data.m_mainChild = false;
+				}
+			}
+			else
+			{
+				for (auto& childParticle : childPhysics2D.RefParticles())
+				{
+					const auto nodeStartParticleHandle = internodeData.m_frontParticleMap.at(childParticle.m_data.m_pipeHandle);
+					const auto nodeEndParticleHandle = internodeData.m_backParticleMap.at(childParticle.m_data.m_pipeHandle);
+					auto& nodeStartParticle = internodeData.m_frontParticlePhysics2D.RefParticle(nodeStartParticleHandle);
+					auto& nodeEndParticle = internodeData.m_backParticlePhysics2D.RefParticle(nodeEndParticleHandle);
+					nodeStartParticle.SetColor(childParticle.GetColor());
+					nodeStartParticle.SetPosition(glm::vec3(0.0f));
+					nodeEndParticle.SetColor(childParticle.GetColor());
+					nodeEndParticle.SetPosition(glm::vec3(0.0f));
+					nodeStartParticle.m_enable = false;
+					nodeStartParticle.m_data.m_mainChild = nodeEndParticle.m_data.m_mainChild = false;
+				}
+			}
+		}
+		if (needSimulation) PackTask(nodeHandle, pipeModelParameters, false);
+		for (const auto& childHandle : childHandles)
+		{
+			if (childHandle == mainChildHandle) continue;
+			auto& childNode = m_shootSkeleton.RefNode(childHandle);
+			if (childNode.m_data.m_split)
+			{
+				auto& childPhysics2D = childNode.m_data.m_frontParticlePhysics2D;
+				const auto childNodeFront = glm::inverse(internode.m_info.m_regulatedGlobalRotation) * childNode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
+				auto direction = glm::normalize(glm::vec2(childNodeFront.x, childNodeFront.y));
+				if (glm::isnan(direction.x) || glm::isnan(direction.y))
+				{
+					direction = glm::vec2(1, 0);
+				}
+				//TODO: Change this to avoid calculating disabled particles!
+				childNode.m_data.m_centerDirectionRadius = childPhysics2D.GetDistanceToCenter(-direction);
+				const auto centerRadius = internodeData.m_frontParticlePhysics2D.GetDistanceToCenter(direction);
+				auto offset = glm::vec2(0.0f);
+				offset = (centerRadius + childNode.m_data.m_centerDirectionRadius + 2.0f) * direction;
+				childNode.m_data.m_offset = offset;
+				for (auto& childParticle : childPhysics2D.RefParticles())
+				{
+					childParticle.SetPosition(childParticle.GetPosition() + offset);
+
+					const auto nodeStartParticleHandle = internodeData.m_frontParticleMap.at(childParticle.m_data.m_pipeHandle);
+					const auto nodeEndParticleHandle = internodeData.m_backParticleMap.at(childParticle.m_data.m_pipeHandle);
+					auto& nodeStartParticle = internodeData.m_frontParticlePhysics2D.RefParticle(nodeStartParticleHandle);
+					auto& nodeEndParticle = internodeData.m_backParticlePhysics2D.RefParticle(nodeEndParticleHandle);
+					nodeStartParticle.SetColor(childParticle.GetColor());
+					nodeStartParticle.SetPosition(childParticle.GetPosition());
+					nodeEndParticle.SetColor(childParticle.GetColor());
+					nodeEndParticle.SetPosition(childParticle.GetPosition());
+
+					nodeStartParticle.m_data.m_mainChild = nodeEndParticle.m_data.m_mainChild = false;
+				}
+			}
+		}
+		CopyFrontToBackTask(nodeHandle);
+		internodeData.m_frontParticlePhysics2D.SetEnableAllParticles(true);
+	}
+	else {
+		for (const auto& childHandle : childHandles)
+		{
+			if (childHandle == mainChildHandle) continue;
+			auto& childNode = m_shootSkeleton.RefNode(childHandle);
+			auto& childPhysics2D = childNode.m_data.m_frontParticlePhysics2D;
+			const auto childNodeFront = glm::inverse(internode.m_info.m_regulatedGlobalRotation) * childNode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
+			auto direction = glm::normalize(glm::vec2(childNodeFront.x, childNodeFront.y));
+			if (glm::isnan(direction.x) || glm::isnan(direction.y))
+			{
+				direction = glm::vec2(1, 0);
+			}
+			childNode.m_data.m_centerDirectionRadius = childPhysics2D.GetDistanceToCenter(-direction);
+			const auto mainChildRadius = mainChildPhysics2D.GetDistanceToCenter(direction);
+			auto offset = glm::vec2(0.0f);
+			if (childNode.m_data.m_split)
+			{
+				offset = (mainChildRadius + childNode.m_data.m_centerDirectionRadius + 2.0f) * direction;
+			}
+			else
+			{
+				offset = (mainChildRadius - childNode.m_data.m_centerDirectionRadius) * direction;
+			}
+			childNode.m_data.m_offset = offset;
+			for (auto& childParticle : childPhysics2D.RefParticles())
+			{
+				childParticle.SetPosition(childParticle.GetPosition() + offset);
+
+				const auto nodeStartParticleHandle = internodeData.m_frontParticleMap.at(childParticle.m_data.m_pipeHandle);
+				const auto nodeEndParticleHandle = internodeData.m_backParticleMap.at(childParticle.m_data.m_pipeHandle);
+				auto& nodeStartParticle = internodeData.m_frontParticlePhysics2D.RefParticle(nodeStartParticleHandle);
+				auto& nodeEndParticle = internodeData.m_backParticlePhysics2D.RefParticle(nodeEndParticleHandle);
+				nodeStartParticle.SetColor(childParticle.GetColor());
+				nodeStartParticle.SetPosition(childParticle.GetPosition());
+				nodeEndParticle.SetColor(childParticle.GetColor());
+				nodeEndParticle.SetPosition(childParticle.GetPosition());
+
+				nodeStartParticle.m_data.m_mainChild = nodeEndParticle.m_data.m_mainChild = false;
+			}
+		}
+	}
+}
+
+void TreeModel::CopyFrontToBackTask(NodeHandle nodeHandle)
+{
+	auto& internode = m_shootSkeleton.RefNode(nodeHandle);
+	auto& internodeData = internode.m_data;
+	for (int i = 0; i < internodeData.m_frontParticlePhysics2D.RefParticles().size(); i++)
+	{
+		internodeData.m_backParticlePhysics2D.RefParticle(i).SetPosition(internodeData.m_frontParticlePhysics2D.RefParticle(i).GetPosition());
+	}
+}
+
+void TreeModel::CalculateShiftTask(NodeHandle nodeHandle, const PipeModelParameters& pipeModelParameters)
+{
+	auto& internode = m_shootSkeleton.RefNode(nodeHandle);
+	auto& internodeData = internode.m_data;
+	const auto& childHandles = internode.RefChildHandles();
+	NodeHandle mainChildHandle = -1;
+	for (const auto& childHandle : childHandles) {
+		Wait(childHandle);
+		if (m_shootSkeleton.PeekNode(childHandle).m_data.m_maxChild) mainChildHandle = childHandle;
+	}
+	internodeData.m_centerDirectionRadius = 0.0f;
+	if (childHandles.empty())
+	{
+		internode.m_data.m_needPacking = true;
+		return;
+	}
+	if (mainChildHandle == -1) mainChildHandle = childHandles.front();
+	const auto& mainChildNode = m_shootSkeleton.RefNode(mainChildHandle);
+	const auto& mainChildPhysics2D = mainChildNode.m_data.m_frontParticlePhysics2D;
+	auto sum = glm::vec2(0.0f);
+	for (const auto& mainChildParticle : mainChildPhysics2D.PeekParticles())
+	{
+		const auto nodeStartParticleHandle = internodeData.m_frontParticleMap.at(mainChildParticle.m_data.m_pipeHandle);
+		auto& nodeStartParticle = internodeData.m_frontParticlePhysics2D.RefParticle(nodeStartParticleHandle);
+		sum += nodeStartParticle.GetPosition();
+	}
+	internodeData.m_shift = sum / static_cast<float>(mainChildPhysics2D.PeekParticles().size());
+}
+
+void TreeModel::ApplyProfile(const glm::vec3& globalPosition, const glm::quat& globalRotation,
+	const ParticlePhysics2D<CellParticlePhysicsData>& profile,
+	const std::unordered_map<PipeHandle, ParticleHandle>& map)
+{
+	const auto currentUp = globalRotation * glm::vec3(0, 1, 0);
+	const auto currentLeft = globalRotation * glm::vec3(1, 0, 0);
+	for (const auto& [pipeHandle, particleHandle] : map)
+	{
+		const auto& particle = profile.PeekParticle(particleHandle);
+		auto& newPipeSegment = m_shootSkeleton.m_data.m_pipeGroup.RefPipeSegment(particle.m_data.m_pipeSegmentHandle);
+		newPipeSegment.m_info.m_thickness = m_shootSkeleton.m_data.m_pipeModelParameters.m_profileDefaultCellRadius;
+		newPipeSegment.m_info.m_globalPosition = globalPosition
+			+ m_shootSkeleton.m_data.m_pipeModelParameters.m_profileDefaultCellRadius * particle.GetPosition().x * currentLeft
+			+ m_shootSkeleton.m_data.m_pipeModelParameters.m_profileDefaultCellRadius * particle.GetPosition().y * currentUp;
+		newPipeSegment.m_info.m_globalRotation = globalRotation;
+	}
+}
+
+void TreeModel::ApplyProfiles()
+{
+	auto& pipeGroup = m_shootSkeleton.m_data.m_pipeGroup;
+	const auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
+	for (const auto& nodeHandle : sortedInternodeList)
+	{
+		const auto& node = m_shootSkeleton.RefNode(nodeHandle);
+		//parentGlobalTransform.m_value = glm::inverse(modelGlobalTransform.m_value) * parentGlobalTransform.m_value;
+		glm::quat parentGlobalRotation;
+		glm::vec3 parentGlobalPosition;
+		if (node.GetParentHandle() == -1)
+		{
+			parentGlobalRotation = glm::quatLookAt(parentGlobalRotation * glm::vec3(0, 1, 0),
+				parentGlobalRotation * glm::vec3(0, 0, -1));
+			parentGlobalPosition = glm::vec3(0.0f);
+		}
+		else {
+			const auto& parent = m_shootSkeleton.RefNode(node.GetParentHandle());
+			parentGlobalRotation = parent.m_data.m_adjustedGlobalRotation;
+			parentGlobalPosition = parent.m_data.m_adjustedGlobalPosition;
+		}
+		//globalTransform.m_value = glm::inverse(modelGlobalTransform.m_value) * globalTransform.m_value;
+		if (node.GetParentHandle() == -1)
+		{
+			const auto currentUp = parentGlobalRotation * glm::vec3(0, -1, 0);
+			const auto currentLeft = parentGlobalRotation * glm::vec3(-1, 0, 0);
+			for (const auto& [pipeHandle, particleHandle] : node.m_data.m_frontParticleMap)
+			{
+				const auto& particle = node.m_data.m_frontParticlePhysics2D.PeekParticle(particleHandle);
+				auto& pipe = pipeGroup.RefPipe(pipeHandle);
+				pipe.m_info.m_baseInfo.m_thickness = m_shootSkeleton.m_data.m_pipeModelParameters.m_profileDefaultCellRadius;
+				pipe.m_info.m_baseInfo.m_globalPosition = parentGlobalPosition
+					+ m_shootSkeleton.m_data.m_pipeModelParameters.m_profileDefaultCellRadius * particle.GetPosition().x * currentLeft
+					+ m_shootSkeleton.m_data.m_pipeModelParameters.m_profileDefaultCellRadius * particle.GetPosition().y * currentUp;
+				pipe.m_info.m_baseInfo.m_globalRotation = parentGlobalRotation;
+			}
+		}
+		ApplyProfile(node.m_data.m_adjustedGlobalPosition, node.m_data.m_adjustedGlobalRotation, node.m_data.m_backParticlePhysics2D, node.m_data.m_backParticleMap);
+	}
+}
+
+void TreeModel::CalculatePipeProfileAdjustedTransforms()
+{
+	const auto& graphAdjustmentSettings = m_shootSkeleton.m_data.m_graphAdjustmentSettings;
+	const auto& pipeModelParameters = m_shootSkeleton.m_data.m_pipeModelParameters;
+	const auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
+	for (const auto& nodeHandle : sortedInternodeList)
+	{
+		auto& node = m_shootSkeleton.RefNode(nodeHandle);
+		glm::vec3 parentGlobalPosition = node.m_info.m_globalPosition;
+		glm::quat parentGlobalRotation = node.m_info.m_regulatedGlobalRotation;
+		const auto parentHandle = node.GetParentHandle();
+		if(parentHandle == -1)
+		{
+			node.m_data.m_adjustedGlobalPosition = node.m_info.m_globalPosition;
+			node.m_data.m_adjustedGlobalRotation = node.m_info.m_regulatedGlobalRotation;
+			continue;
+		}
+		const auto& parentNode = m_shootSkeleton.PeekNode(parentHandle);
+		parentGlobalPosition = parentNode.m_data.m_adjustedGlobalPosition;
+		parentGlobalRotation = parentNode.m_data.m_adjustedGlobalRotation;
+
+		node.m_data.m_adjustedGlobalPosition = parentGlobalPosition + node.m_info.m_globalPosition - parentNode.m_info.m_globalPosition;
+		node.m_data.m_adjustedGlobalRotation = parentGlobalRotation * (glm::inverse(parentNode.m_info.m_regulatedGlobalRotation) * node.m_info.m_regulatedGlobalRotation);
+
+		const auto parentUp = parentGlobalRotation * glm::vec3(0, 1, 0);
+		const auto parentLeft = parentGlobalRotation * glm::vec3(1, 0, 0);
+		const auto parentFront = parentGlobalRotation * glm::vec3(0, 0, -1);
+
+		
+		const auto front = node.m_data.m_adjustedGlobalRotation * glm::vec3(0, 0, -1);
+		const float offsetLength = glm::length(node.m_data.m_offset);
+		float maxDistanceToCenter = node.m_data.m_frontParticlePhysics2D.GetMaxDistanceToCenter();
+		const float cosFront = glm::dot(front, parentFront); //Horizontal
+		const float sinFront = glm::sin(glm::acos(glm::clamp(cosFront, -1.0f, 1.0f))); //Vertical
+		if (!node.m_data.m_apical && offsetLength > glm::epsilon<float>()) {
+			const float outerRadius = node.m_data.m_frontParticlePhysics2D.GetDistanceToCenter(glm::normalize(node.m_data.m_offset));
+			const float innerRadius = node.m_data.m_frontParticlePhysics2D.GetDistanceToCenter(-glm::normalize(node.m_data.m_offset));
+			const auto offsetDirection = glm::normalize(node.m_data.m_offset);
+			const auto newOffset = (offsetLength + innerRadius + (outerRadius - outerRadius * cosFront) * graphAdjustmentSettings.m_rotationPushRatio) * offsetDirection;
+			node.m_data.m_adjustedGlobalPosition += parentUp * newOffset.y * graphAdjustmentSettings.m_sidePushRatio * pipeModelParameters.m_profileDefaultCellRadius;
+			node.m_data.m_adjustedGlobalPosition += parentLeft * newOffset.x * graphAdjustmentSettings.m_sidePushRatio * pipeModelParameters.m_profileDefaultCellRadius;
+			node.m_data.m_adjustedGlobalPosition += parentFront * (sinFront * outerRadius * graphAdjustmentSettings.m_rotationPushRatio) * pipeModelParameters.m_profileDefaultCellRadius;
+		}
+		node.m_data.m_adjustedGlobalPosition += parentUp * node.m_data.m_shift.y * graphAdjustmentSettings.m_shiftPushRatio * pipeModelParameters.m_profileDefaultCellRadius;
+		node.m_data.m_adjustedGlobalPosition += parentLeft * node.m_data.m_shift.x * graphAdjustmentSettings.m_shiftPushRatio * pipeModelParameters.m_profileDefaultCellRadius;
+		node.m_data.m_adjustedGlobalPosition += parentFront * sinFront * maxDistanceToCenter * graphAdjustmentSettings.m_frontPushRatio * pipeModelParameters.m_profileDefaultCellRadius;
+
 	}
 }
 #pragma endregion

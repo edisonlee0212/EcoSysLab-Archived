@@ -143,6 +143,7 @@ void TreeDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 			globalTransform.SetPosition(glm::vec3(0, height, 0));
 			scene->SetDataComponent(treeEntity, globalTransform);
 			tree->m_treeDescriptor = ProjectManager::GetAsset(GetHandle());
+			editorLayer->SetSelectedEntity(treeEntity);
 		}
 	}
 	else

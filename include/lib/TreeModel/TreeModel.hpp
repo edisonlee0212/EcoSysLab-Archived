@@ -144,5 +144,24 @@ namespace EcoSysLab {
 		void Reverse(int iteration);
 
 		void ExportTreeIOSkeleton(treeio::ArrayTree& arrayTree) const;
+
+
+#pragma region Pipe model
+		void InitializeProfiles();
+		void CalculateProfiles();
+		void CalculateProfile(NodeHandle nodeHandle, const PipeModelParameters& pipeModelParameters, bool scheduling);
+		void Wait(NodeHandle nodeHandle);
+
+		void PackTask(NodeHandle nodeHandle, const PipeModelParameters& pipeModelParameters, bool parallel);
+		void MergeTask(NodeHandle nodeHandle, const PipeModelParameters& pipeModelParameters);
+		void CopyFrontToBackTask(NodeHandle nodeHandle);
+		void CalculateShiftTask(NodeHandle nodeHandle, const PipeModelParameters& pipeModelParameters);
+		void ApplyProfile(
+			const glm::vec3& globalPosition,
+			const glm::quat& globalRotation,
+			const ParticlePhysics2D<CellParticlePhysicsData>& profile, const std::unordered_map<PipeHandle, ParticleHandle>& map);
+		void ApplyProfiles();
+		void CalculatePipeProfileAdjustedTransforms();
+#pragma endregion
 	};
 }
