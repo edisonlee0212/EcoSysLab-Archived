@@ -77,6 +77,7 @@ namespace EcoSysLab {
 		int m_currentSeedValue = 0;
 
 	public:
+		void CalculateTransform(const ShootGrowthController& shootGrowthController, bool sagging);
 
 		int m_seed = 0;
 
@@ -84,8 +85,6 @@ namespace EcoSysLab {
 		unsigned m_index = 0;
 		void RegisterVoxel(const glm::mat4& globalTransform, ClimateModel& climateModel, const ShootGrowthController& shootGrowthController);
 		TreeOccupancyGrid m_treeOccupancyGrid{};
-
-		void CalculateInternodeTransforms();
 
 		void PruneInternode(NodeHandle internodeHandle);
 

@@ -38,6 +38,8 @@ namespace EcoSysLab {
 	class EcoSysLabLayer : public ILayer {
 		unsigned m_operatorMode = static_cast<unsigned>(OperatorMode::Select);
 		float m_overrideGrowRate = 0.0f;
+		bool m_autoGenerateGeometryAfterEditing = false;
+
 
 		friend class TreeVisualizer;
 		friend class Tree;
@@ -108,11 +110,10 @@ namespace EcoSysLab {
 		bool m_showShadowGrid = false;
 		std::shared_ptr<ParticleInfoList> m_shadowGridParticleInfoList;
 		void UpdateVisualizationCamera();
+
 		void PreUpdate() override;
 
 		void OnCreate() override;
-
-		void OnDestroy() override;
 
 		void Visualization();
 

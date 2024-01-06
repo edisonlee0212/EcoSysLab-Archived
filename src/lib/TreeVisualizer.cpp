@@ -305,23 +305,28 @@ bool
 TreeVisualizer::OnInspect(
 	TreeModel& treeModel) {
 	bool updated = false;
-	
-
-	if (ImGui::SliderInt("Checkpoints", &m_checkpointIteration, 0, treeModel.CurrentIteration())) {
-		m_checkpointIteration = glm::clamp(m_checkpointIteration, 0, treeModel.CurrentIteration());
-		m_selectedInternodeHandle = -1;
-		m_selectedInternodeHierarchyList.clear();
-		m_needUpdate = true;
+	if (ImGui::TreeNodeEx("Checkpoints")) {
+		if (ImGui::Button("Push Checkpoint"))
+		{
+			treeModel.Step();
+			m_checkpointIteration = treeModel.CurrentIteration();
+		}
+		if (ImGui::SliderInt("Current checkpoint", &m_checkpointIteration, 0, treeModel.CurrentIteration())) {
+			m_checkpointIteration = glm::clamp(m_checkpointIteration, 0, treeModel.CurrentIteration());
+			m_selectedInternodeHandle = -1;
+			m_selectedInternodeHierarchyList.clear();
+			m_needUpdate = true;
+		}
+		if (m_checkpointIteration != treeModel.CurrentIteration() && ImGui::Button("Reverse")) {
+			treeModel.Reverse(m_checkpointIteration);
+			m_needUpdate = true;
+		}
+		if (ImGui::Button("Clear checkpoints")) {
+			m_checkpointIteration = 0;
+			treeModel.ClearHistory();
+		}
+		ImGui::TreePop();
 	}
-	if (m_checkpointIteration != treeModel.CurrentIteration() && ImGui::Button("Reverse")) {
-		treeModel.Reverse(m_checkpointIteration);
-		m_needUpdate = true;
-	}
-	if (ImGui::Button("Clear checkpoints")) {
-		m_checkpointIteration = 0;
-		treeModel.ClearHistory();
-	}
-
 	if (ImGui::TreeNodeEx("Visualizer Settings")) {
 		if (ImGui::Combo("Shoot Color mode",
 			{ "Order", "Level", "Light Intensity", "Light Direction", "Growth Potential", "Apical control", "Desired growth rate", "IsMaxChild", "AllocatedVigor" },
@@ -457,7 +462,7 @@ TreeVisualizer::InspectInternode(
 		auto globalRotationAngle = glm::eulerAngles(internode.m_info.m_globalRotation);
 		ImGui::InputFloat3("Global rotation", (float*)&globalRotationAngle.x, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
-		auto localRotationAngle = glm::eulerAngles(internode.m_data.m_localRotation);
+		auto localRotationAngle = glm::eulerAngles(internode.m_data.m_desiredLocalRotation);
 		ImGui::InputFloat3("Local rotation", (float*)&localRotationAngle.x, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
 		auto& internodeData = internode.m_data;
@@ -569,7 +574,7 @@ TreeVisualizer::PeekInternode(const ShootSkeleton& shootSkeleton, NodeHandle int
 		auto globalRotationAngle = glm::eulerAngles(internode.m_info.m_globalRotation);
 		ImGui::InputFloat3("Global rotation", (float*)&globalRotationAngle.x, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
-		auto localRotationAngle = glm::eulerAngles(internode.m_data.m_localRotation);
+		auto localRotationAngle = glm::eulerAngles(internode.m_data.m_desiredLocalRotation);
 		ImGui::InputFloat3("Local rotation", (float*)&localRotationAngle.x, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
 		auto& internodeData = internode.m_data;
@@ -724,7 +729,7 @@ void TreeVisualizer::SyncColors(const ShootSkeleton& shootSkeleton, const NodeHa
 			break;
 		}
 		matrices[i].m_instanceColor.a = 1.0f;
-		if (selectedNodeHandle != -1) matrices[i].m_instanceColor.a = 0.75f;
+		if (selectedNodeHandle != -1) matrices[i].m_instanceColor.a = 1.0f;
 		}
 	);
 }

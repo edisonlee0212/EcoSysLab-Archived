@@ -79,11 +79,6 @@ void EcoSysLabLayer::OnCreate() {
 	}
 }
 
-void EcoSysLabLayer::OnDestroy() {
-
-}
-
-
 void EcoSysLabLayer::Visualization() {
 	const auto scene = GetScene();
 	const auto editorLayer = Application::GetLayer<EditorLayer>();
@@ -99,6 +94,13 @@ void EcoSysLabLayer::Visualization() {
 		else {
 			m_selectedTree = Entity();
 			m_needFlowUpdateForSelection = true;
+		}
+		if (scene->IsEntityValid(m_selectedTree)) {
+			const auto& tree = scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock();
+			auto& treeVisualizer = tree->m_treeVisualizer;
+			treeVisualizer.m_selectedInternodeHandle = -1;
+			treeVisualizer.m_selectedInternodeHierarchyList.clear();
+			m_operatorMode = static_cast<unsigned>(OperatorMode::Select);
 		}
 	}
 	const std::vector<Entity>* treeEntities =
@@ -177,20 +179,83 @@ void EcoSysLabLayer::Visualization() {
 			auto& treeModel = tree->m_treeModel;
 			auto& treeVisualizer = tree->m_treeVisualizer;
 			const auto globalTransform = scene->GetDataComponent<GlobalTransform>(m_selectedTree);
-			if (m_visualizationCameraWindowFocused)
+			if (m_visualizationCameraWindowFocused
+				&& editorLayer->GetKey(GLFW_MOUSE_BUTTON_RIGHT) == KeyActionType::Release
+				&& treeVisualizer.m_checkpointIteration == treeModel.CurrentIteration())
 			{
+				bool treeModelModified = false;
 				static std::vector<glm::vec2> mousePositions{};
 				const auto& treeSkeleton = tree->m_treeModel.PeekShootSkeleton(tree->m_treeVisualizer.m_checkpointIteration);
 				switch (m_operatorMode)
 				{
 				case OperatorMode::Select: {
+
+					if (treeVisualizer.m_selectedInternodeHandle > 0)
+					{
+						ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{ 0, 0 });
+						if (ImGui::Begin("Plant Visual")) {
+							if (ImGui::BeginChild("InternodeCameraRenderer", ImVec2(0, 0), false)) {
+								ImGuizmo::SetOrthographic(false);
+								ImGuizmo::SetDrawlist();
+								ImGuizmo::SetRect(ImGui::GetWindowPos().x, ImGui::GetWindowPos().y, m_visualizationCameraResolutionX,
+									m_visualizationCameraResolutionY);
+								glm::mat4 cameraView =
+									glm::inverse(glm::translate(editorLayer->GetSceneCameraPosition()) * glm::mat4_cast(editorLayer->GetSceneCameraRotation()));
+								glm::mat4 cameraProjection = m_visualizationCamera->GetProjection();
+								const auto op = ImGuizmo::OPERATION::ROTATE;
+								auto& currentSkeleton = tree->m_treeModel.RefShootSkeleton();
+								auto& internode = currentSkeleton.RefNode(treeVisualizer.m_selectedInternodeHandle);
+
+								auto transform = glm::translate(internode.m_info.m_globalPosition) * glm::mat4_cast(internode.m_info.m_globalRotation) * glm::scale(glm::vec3(1.0f));
+								const auto treeGlobalTransform = scene->GetDataComponent<GlobalTransform>(m_selectedTree);
+								auto internodeGlobalTransform = treeGlobalTransform.m_value * transform;
+								ImGuizmo::Manipulate(
+									glm::value_ptr(cameraView),
+									glm::value_ptr(cameraProjection),
+									op,
+									ImGuizmo::LOCAL,
+									glm::value_ptr(internodeGlobalTransform));
+								static bool lastGizmosUsed = false;
+								if (ImGuizmo::IsUsing()) {
+									if (!lastGizmosUsed)
+									{
+										treeModel.Step();
+										treeVisualizer.m_checkpointIteration = treeModel.CurrentIteration();
+									}
+									treeVisualizer.m_needUpdate = true;
+									Transform newInternodeTransform{};
+									newInternodeTransform.m_value = glm::inverse(treeGlobalTransform.m_value) * internodeGlobalTransform;
+									auto scaleHolder = glm::vec3(1.0f);
+									newInternodeTransform.Decompose(
+										internode.m_info.m_globalPosition, internode.m_info.m_globalRotation, scaleHolder);
+									auto parentHandle = internode.GetParentHandle();
+									if (parentHandle != -1) {
+										internode.m_data.m_desiredLocalRotation = glm::inverse(currentSkeleton.PeekNode(parentHandle).m_info.m_globalRotation) * internode.m_info.m_globalRotation;
+									}
+									treeModel.CalculateTransform(tree->m_shootGrowthController, false);
+									lastGizmosUsed = true;
+								}
+								else if (lastGizmosUsed)
+								{
+									treeModel.CalculateTransform(tree->m_shootGrowthController, true);
+									treeModelModified = true;
+									lastGizmosUsed = false;
+									treeVisualizer.m_needUpdate = true;
+								}
+							}
+							ImGui::EndChild();
+						}
+						ImGui::End();
+						ImGui::PopStyleVar();
+					}
 					if (editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Press) {
-						if (treeVisualizer.RayCastSelection(m_visualizationCamera, m_visualizationCameraMousePosition, treeSkeleton, globalTransform)) {
-							treeVisualizer.m_needUpdate = true;
+						if (treeVisualizer.m_selectedInternodeHandle <= 0) {
+							if (treeVisualizer.RayCastSelection(m_visualizationCamera, m_visualizationCameraMousePosition, treeSkeleton, globalTransform)) {
+								treeVisualizer.m_needUpdate = true;
+							}
 						}
 					}
-					if (treeVisualizer.m_checkpointIteration == treeModel.CurrentIteration() &&
-						editorLayer->GetKey(GLFW_KEY_R) == KeyActionType::Press) {
+					else if (editorLayer->GetKey(GLFW_KEY_R) == KeyActionType::Press) {
 						if (treeVisualizer.m_selectedInternodeHandle > 0) {
 							treeModel.Step();
 							auto& skeleton = treeModel.RefShootSkeleton();
@@ -209,56 +274,61 @@ void EcoSysLabLayer::Visualization() {
 							treeVisualizer.m_needUpdate = true;
 						}
 					}
+					else if (editorLayer->GetKey(GLFW_KEY_ESCAPE) == KeyActionType::Press)
+					{
+						treeVisualizer.SetSelectedNode(treeSkeleton, -1);
+					}
+
 				}
 										 break;
 				case OperatorMode::Prune:
 				{
-					if (treeVisualizer.m_checkpointIteration == treeModel.CurrentIteration()) {
-						if (editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Press)
-						{
+					if (editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Press)
+					{
+						mousePositions.clear();
+						glm::vec2 mousePosition = m_visualizationCameraMousePosition;
+						const float halfX = m_visualizationCamera->GetSize().x / 2.0f;
+						const float halfY = m_visualizationCamera->GetSize().y / 2.0f;
+						mousePosition = { -1.0f * (mousePosition.x - halfX) / halfX,
+														 -1.0f * (mousePosition.y - halfY) / halfY };
+						if (mousePosition.x > -1.0f && mousePosition.x < 1.0f && mousePosition.y > -1.0f && mousePosition.y < 1.0f) {
+							mousePositions.emplace_back(mousePosition);
+						}
+					}
+					else if (editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Hold) {
+						glm::vec2 mousePosition = m_visualizationCameraMousePosition;
+						const float halfX = m_visualizationCamera->GetSize().x / 2.0f;
+						const float halfY = m_visualizationCamera->GetSize().y / 2.0f;
+						mousePosition = { -1.0f * (mousePosition.x - halfX) / halfX,
+														 -1.0f * (mousePosition.y - halfY) / halfY };
+						if (mousePosition.x > -1.0f && mousePosition.x < 1.0f && mousePosition.y > -1.0f && mousePosition.y < 1.0f &&
+							mousePosition != mousePositions.back()) {
+							mousePositions.emplace_back(mousePosition);
+						}
+					}
+					else if (editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Release) {
+						//Once released, check if empty.
+						if (!mousePositions.empty()) {
+							treeModel.Step();
+							auto& skeleton = treeModel.RefShootSkeleton();
+							if (treeVisualizer.ScreenCurvePruning(
+								[&](const NodeHandle nodeHandle) { treeModel.PruneInternode(nodeHandle); }, mousePositions, skeleton, globalTransform)) {
+								skeleton.SortLists();
+								treeVisualizer.m_checkpointIteration = treeModel.CurrentIteration();
+								treeVisualizer.m_needUpdate = true;
+							}
+							else {
+								treeModel.Pop();
+							}
 							mousePositions.clear();
-							glm::vec2 mousePosition = m_visualizationCameraMousePosition;
-							const float halfX = m_visualizationCamera->GetSize().x / 2.0f;
-							const float halfY = m_visualizationCamera->GetSize().y / 2.0f;
-							mousePosition = { -1.0f * (mousePosition.x - halfX) / halfX,
-															 -1.0f * (mousePosition.y - halfY) / halfY };
-							if (mousePosition.x > -1.0f && mousePosition.x < 1.0f && mousePosition.y > -1.0f && mousePosition.y < 1.0f) {
-								mousePositions.emplace_back(mousePosition);
-							}
-						}
-						else if (editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Hold) {
-							glm::vec2 mousePosition = m_visualizationCameraMousePosition;
-							const float halfX = m_visualizationCamera->GetSize().x / 2.0f;
-							const float halfY = m_visualizationCamera->GetSize().y / 2.0f;
-							mousePosition = { -1.0f * (mousePosition.x - halfX) / halfX,
-															 -1.0f * (mousePosition.y - halfY) / halfY };
-							if (mousePosition.x > -1.0f && mousePosition.x < 1.0f && mousePosition.y > -1.0f && mousePosition.y < 1.0f &&
-								(mousePositions.empty() || mousePosition != mousePositions.back())) {
-								mousePositions.emplace_back(mousePosition);
-							}
-						}
-						else {
-							//Once released, check if empty.
-							if (!mousePositions.empty()) {
-								treeModel.Step();
-								auto& skeleton = treeModel.RefShootSkeleton();
-								if (treeVisualizer.ScreenCurvePruning(
-									[&](const NodeHandle nodeHandle) { treeModel.PruneInternode(nodeHandle); }, mousePositions, skeleton, globalTransform)) {
-									skeleton.SortLists();
-									treeVisualizer.m_checkpointIteration = treeModel.CurrentIteration();
-									treeVisualizer.m_needUpdate = true;
-								}
-								else {
-									treeModel.Pop();
-								}
-								mousePositions.clear();
-							}
+							treeModelModified = true;
 						}
 					}
 				}
 				break;
 				case OperatorMode::Invigorate:
 				{
+					static bool lastFrameInvigorate = false;
 					if (editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Press)
 					{
 						if (treeVisualizer.RayCastSelection(m_visualizationCamera, m_visualizationCameraMousePosition, treeSkeleton, globalTransform)) {
@@ -269,7 +339,7 @@ void EcoSysLabLayer::Visualization() {
 					}
 					else if (treeVisualizer.m_selectedInternodeHandle >= 0 && editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Hold)
 					{
-						const auto climateCandidate = EcoSysLabLayer::FindClimate();
+						const auto climateCandidate = FindClimate();
 						if (!climateCandidate.expired()) {
 							climateCandidate.lock()->PrepareForGrowth();
 							if (tree->TryGrow(m_simulationSettings.m_deltaTime, treeVisualizer.m_selectedInternodeHandle, false, m_overrideGrowRate))
@@ -277,18 +347,30 @@ void EcoSysLabLayer::Visualization() {
 								treeVisualizer.m_needUpdate = true;
 							}
 						}
+						lastFrameInvigorate = true;
 					}
-					else if (editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Release)
+					else if (lastFrameInvigorate && editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Release)
 					{
+						if (treeVisualizer.m_selectedInternodeHandle != -1)
+						{
+							treeModelModified = true;
+						}
 						treeVisualizer.SetSelectedNode(treeSkeleton, -1);
+						lastFrameInvigorate = false;
 					}
 				}
 				break;
 				}
+				if (treeModelModified)
+				{
+					if (m_autoGenerateGeometryAfterEditing)
+					{
+						tree->GenerateGeometry(m_meshGeneratorSettings, -1);
+					}
+				}
 			}
 			treeVisualizer.Visualize(treeModel, globalTransform);
 		}
-
 
 		if (m_showShadowGrid)
 		{
@@ -419,20 +501,33 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 		const std::vector<Entity>* treeEntities =
 			scene->UnsafeGetPrivateComponentOwnersList<Tree>();
 		if (treeEntities && !treeEntities->empty()) {
-			if (m_visualization && scene->IsEntityValid(m_selectedTree)) {
+			ImGui::Text("Editing");
+			if (scene->IsEntityValid(m_selectedTree)) {
 				const auto& tree = scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock();
 				auto& treeVisualizer = tree->m_treeVisualizer;
-				ImGui::Text("Editing");
-				if (ImGui::Combo("Operator mode", { "Select", "Prune", "Invigorate" }, m_operatorMode))
+				if (treeVisualizer.m_checkpointIteration == tree->m_treeModel.CurrentIteration()) {
+					if (ImGui::TreeNodeEx("Operator", ImGuiTreeNodeFlags_DefaultOpen)) {
+						if (ImGui::Combo("Mode", { "Select", "Prune", "Invigorate" }, m_operatorMode))
+						{
+							treeVisualizer.m_selectedInternodeHandle = -1;
+							treeVisualizer.m_selectedInternodeHierarchyList.clear();
+						}
+						if (m_operatorMode == static_cast<unsigned>(OperatorMode::Invigorate))
+						{
+							ImGui::DragFloat("Invigorate speed", &m_overrideGrowRate, 0.01f, 0.01f, 1.0f);
+						}
+						ImGui::Checkbox("Auto generate geometry", &m_autoGenerateGeometryAfterEditing);
+						ImGui::TreePop();
+					}
+				}else
 				{
-					treeVisualizer.m_selectedInternodeHandle = -1;
-					treeVisualizer.m_selectedInternodeHierarchyList.clear();
+					ImGui::Text("Go to current skeleton to enable operator!");
 				}
-				if(m_operatorMode == static_cast<unsigned>(OperatorMode::Invigorate))
-				{
-					ImGui::DragFloat("Invigorate speed", &m_overrideGrowRate, 0.01f, 0.01f, 1.0f);
-				}
+				
 				treeVisualizer.OnInspect(tree->m_treeModel);
+			}else
+			{
+				ImGui::Text("Select a tree entity to enable editing!");
 			}
 			ImGui::Separator();
 			ImGui::Text("Simulation");
@@ -450,9 +545,19 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 
 			ImGui::DragInt("target nodes", &m_simulationSettings.m_maxNodeCount, 500, 0, INT_MAX);
 			ImGui::DragFloat("target years", &extraTime, 0.1f, m_time, 999);
-			if(ImGui::Button(("Grow " + std::to_string(extraTime) + " years").c_str())){
-				autoTimeGrow = true;
-				targetTime += extraTime;
+			if (autoTimeGrow)
+			{
+				if (ImGui::Button("Force stop"))
+				{
+					autoTimeGrow = false;
+					targetTime = m_time;
+				}
+			}
+			else {
+				if (ImGui::Button(("Grow " + std::to_string(extraTime) + " years").c_str())) {
+					autoTimeGrow = true;
+					targetTime += extraTime;
+				}
 			}
 			if (ImGui::Button("Grow 1 iteration")) {
 				simulate = true;
@@ -532,7 +637,7 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 			if (ImGui::Button("Update")) {
 				m_needFullFlowUpdate = true;
 			}
-			
+
 			ImGui::Checkbox("Display shoot stem", &m_displayShootStem);
 			ImGui::Checkbox("Display fruits", &m_displayFruit);
 			ImGui::Checkbox("Display foliage", &m_displayFoliage);
