@@ -107,6 +107,7 @@ void EcoSysLabLayer::Visualization() {
 		scene->UnsafeGetPrivateComponentOwnersList<Tree>();
 
 	const auto branchStrands = m_shootStemStrands.Get<Strands>();
+	bool flowUpdated = false;
 	if (treeEntities && !treeEntities->empty()) {
 		//Tree selection
 		if (m_shootVersions.size() != treeEntities->size()) {
@@ -128,7 +129,7 @@ void EcoSysLabLayer::Visualization() {
 				m_needFullFlowUpdate = true;
 			}
 		}
-		bool flowUpdated = false;
+
 		if (m_visualization) {
 			if (m_needFullFlowUpdate) {
 				UpdateFlows(treeEntities, branchStrands);
@@ -302,7 +303,7 @@ void EcoSysLabLayer::Visualization() {
 						mousePosition = { -1.0f * (mousePosition.x - halfX) / halfX,
 														 -1.0f * (mousePosition.y - halfY) / halfY };
 						if (mousePosition.x > -1.0f && mousePosition.x < 1.0f && mousePosition.y > -1.0f && mousePosition.y < 1.0f &&
-							mousePosition != mousePositions.back()) {
+							(!mousePositions.empty() && mousePosition != mousePositions.back())) {
 							mousePositions.emplace_back(mousePosition);
 						}
 					}
@@ -519,13 +520,15 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 						ImGui::Checkbox("Auto generate geometry", &m_autoGenerateGeometryAfterEditing);
 						ImGui::TreePop();
 					}
-				}else
+				}
+				else
 				{
 					ImGui::Text("Go to current skeleton to enable operator!");
 				}
-				
+
 				treeVisualizer.OnInspect(tree->m_treeModel);
-			}else
+			}
+			else
 			{
 				ImGui::Text("Select a tree entity to enable editing!");
 			}
@@ -935,11 +938,8 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 		}
 		m_shootStemSegments.resize(branchLastStartIndex * 3);
 		m_shootStemPoints.resize(branchLastStartIndex * 6);
-
 		m_foliageMatrices->m_particleInfos.resize(leafLastStartIndex);
-		m_foliageMatrices->SetPendingUpdate();
 		m_fruitMatrices->m_particleInfos.resize(fruitLastStartIndex);
-		m_fruitMatrices->SetPendingUpdate();
 		{
 			auto& foliageMatrices = m_foliageMatrices->m_particleInfos;
 			auto& fruitMatrices = m_fruitMatrices->m_particleInfos;

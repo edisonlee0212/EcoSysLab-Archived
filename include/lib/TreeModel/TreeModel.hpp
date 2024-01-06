@@ -161,8 +161,7 @@ namespace EcoSysLab {
 			const glm::quat& globalRotation,
 			const ParticlePhysics2D<CellParticlePhysicsData>& profile, const std::unordered_map<PipeHandle, ParticleHandle>& map);
 		void ApplyProfiles();
-
-		void AdjustGraph();
+		void CalculatePipeProfileAdjustedTransforms();
 #pragma endregion
 	};
 }

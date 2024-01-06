@@ -1162,7 +1162,7 @@ void TreeModel::InitializeProfiles()
 			//First, we need to collect a chain of nodes from current node to the root.
 			std::vector<NodeHandle> parentNodeToRootChain;
 			NodeHandle walker = internode.GetParentHandle();
-			while (walker)
+			while (walker >= 0)
 			{
 				parentNodeToRootChain.emplace_back(walker);
 				walker = m_shootSkeleton.PeekNode(walker).GetParentHandle();
@@ -1295,10 +1295,10 @@ void TreeModel::CalculateProfiles()
 
 void TreeModel::CalculateProfile(const NodeHandle nodeHandle, const PipeModelParameters& pipeModelParameters, bool scheduling)
 {
-	auto& internode = m_shootSkeleton.RefNode(nodeHandle);
 	if (scheduling) {
-		internode.m_data.m_tasks.emplace_back(Jobs::AddTask([&](unsigned threadIndex) {
+		m_shootSkeleton.RefNode(nodeHandle).m_data.m_tasks.emplace_back(Jobs::AddTask([&, nodeHandle, scheduling](unsigned threadIndex) {
 			MergeTask(nodeHandle, pipeModelParameters);
+			auto& internode = m_shootSkeleton.RefNode(nodeHandle);
 			if (!internode.m_data.m_needPacking) return;
 			internode.m_data.m_needPacking = false;
 			if (internode.m_data.m_frontParticlePhysics2D.PeekParticles().size() <= 1) return;
@@ -1313,6 +1313,7 @@ void TreeModel::CalculateProfile(const NodeHandle nodeHandle, const PipeModelPar
 	{
 		MergeTask(nodeHandle, pipeModelParameters);
 		PackTask(nodeHandle, pipeModelParameters, !scheduling);
+		const auto& internode = m_shootSkeleton.RefNode(nodeHandle);
 		if (internode.RefChildHandles().empty()) CopyFrontToBackTask(nodeHandle);
 		CalculateShiftTask(nodeHandle, pipeModelParameters);
 	}
@@ -1648,49 +1649,53 @@ void TreeModel::ApplyProfiles()
 	}
 }
 
-void TreeModel::AdjustGraph()
+void TreeModel::CalculatePipeProfileAdjustedTransforms()
 {
-	/*
 	const auto& graphAdjustmentSettings = m_shootSkeleton.m_data.m_graphAdjustmentSettings;
 	const auto& pipeModelParameters = m_shootSkeleton.m_data.m_pipeModelParameters;
 	const auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
 	for (const auto& nodeHandle : sortedInternodeList)
 	{
-		auto parent = scene->GetParent(entity);
-		const auto node = scene->GetOrSetPrivateComponent<TreePipeNode>(entity).lock();
-		auto baseProfile = entity == sortedEntityList.front();
-		const auto parentGlobalTransform = baseProfile ? scene->GetDataComponent<GlobalTransform>(entity) : scene->GetDataComponent<GlobalTransform>(parent);
-		auto globalTransform = parentGlobalTransform;
-		if (!baseProfile) globalTransform.m_value *= scene->GetDataComponent<Transform>(entity).m_value;
+		auto& node = m_shootSkeleton.RefNode(nodeHandle);
+		glm::vec3 parentGlobalPosition = node.m_info.m_globalPosition;
+		glm::quat parentGlobalRotation = node.m_info.m_regulatedGlobalRotation;
+		const auto parentHandle = node.GetParentHandle();
+		if(parentHandle == -1)
+		{
+			node.m_data.m_adjustedGlobalPosition = node.m_info.m_globalPosition;
+			node.m_data.m_adjustedGlobalRotation = node.m_info.m_regulatedGlobalRotation;
+			continue;
+		}
+		const auto& parentNode = m_shootSkeleton.PeekNode(parentHandle);
+		parentGlobalPosition = parentNode.m_data.m_adjustedGlobalPosition;
+		parentGlobalRotation = parentNode.m_data.m_adjustedGlobalRotation;
 
-		const auto parentGlobalRotation = parentGlobalTransform.GetRotation();
+		node.m_data.m_adjustedGlobalPosition = parentGlobalPosition + node.m_info.m_globalPosition - parentNode.m_info.m_globalPosition;
+		node.m_data.m_adjustedGlobalRotation = parentGlobalRotation * (glm::inverse(parentNode.m_info.m_regulatedGlobalRotation) * node.m_info.m_regulatedGlobalRotation);
+
 		const auto parentUp = parentGlobalRotation * glm::vec3(0, 1, 0);
 		const auto parentLeft = parentGlobalRotation * glm::vec3(1, 0, 0);
 		const auto parentFront = parentGlobalRotation * glm::vec3(0, 0, -1);
 
-		auto globalPosition = globalTransform.GetPosition();
-		auto globalRotation = globalTransform.GetRotation();
-		const auto front = globalRotation * glm::vec3(0, 0, -1);
-		const float offsetLength = glm::length(node->m_offset);
-		float maxDistanceToCenter = node->m_frontParticlePhysics2D.GetMaxDistanceToCenter();
+		
+		const auto front = node.m_data.m_adjustedGlobalRotation * glm::vec3(0, 0, -1);
+		const float offsetLength = glm::length(node.m_data.m_offset);
+		float maxDistanceToCenter = node.m_data.m_frontParticlePhysics2D.GetMaxDistanceToCenter();
 		const float cosFront = glm::dot(front, parentFront); //Horizontal
 		const float sinFront = glm::sin(glm::acos(glm::clamp(cosFront, -1.0f, 1.0f))); //Vertical
-		if (!node->m_apical && offsetLength > glm::epsilon<float>()) {
-			const float outerRadius = node->m_frontParticlePhysics2D.GetDistanceToCenter(glm::normalize(node->m_offset));
-			const float innerRadius = node->m_frontParticlePhysics2D.GetDistanceToCenter(-glm::normalize(node->m_offset));
-			const auto offsetDirection = glm::normalize(node->m_offset);
+		if (!node.m_data.m_apical && offsetLength > glm::epsilon<float>()) {
+			const float outerRadius = node.m_data.m_frontParticlePhysics2D.GetDistanceToCenter(glm::normalize(node.m_data.m_offset));
+			const float innerRadius = node.m_data.m_frontParticlePhysics2D.GetDistanceToCenter(-glm::normalize(node.m_data.m_offset));
+			const auto offsetDirection = glm::normalize(node.m_data.m_offset);
 			const auto newOffset = (offsetLength + innerRadius + (outerRadius - outerRadius * cosFront) * graphAdjustmentSettings.m_rotationPushRatio) * offsetDirection;
-			globalPosition += parentUp * newOffset.y * graphAdjustmentSettings.m_sidePushRatio * pipeModelParameters.m_profileDefaultCellRadius;
-			globalPosition += parentLeft * newOffset.x * graphAdjustmentSettings.m_sidePushRatio * pipeModelParameters.m_profileDefaultCellRadius;
-			globalPosition += parentFront * (sinFront * outerRadius * graphAdjustmentSettings.m_rotationPushRatio) * pipeModelParameters.m_profileDefaultCellRadius;
+			node.m_data.m_adjustedGlobalPosition += parentUp * newOffset.y * graphAdjustmentSettings.m_sidePushRatio * pipeModelParameters.m_profileDefaultCellRadius;
+			node.m_data.m_adjustedGlobalPosition += parentLeft * newOffset.x * graphAdjustmentSettings.m_sidePushRatio * pipeModelParameters.m_profileDefaultCellRadius;
+			node.m_data.m_adjustedGlobalPosition += parentFront * (sinFront * outerRadius * graphAdjustmentSettings.m_rotationPushRatio) * pipeModelParameters.m_profileDefaultCellRadius;
 		}
-		globalPosition += parentUp * node->m_shift.y * graphAdjustmentSettings.m_shiftPushRatio * pipeModelParameters.m_profileDefaultCellRadius;
-		globalPosition += parentLeft * node->m_shift.x * graphAdjustmentSettings.m_shiftPushRatio * pipeModelParameters.m_profileDefaultCellRadius;
-		globalPosition += parentFront * sinFront * maxDistanceToCenter * graphAdjustmentSettings.m_frontPushRatio * pipeModelParameters.m_profileDefaultCellRadius;
+		node.m_data.m_adjustedGlobalPosition += parentUp * node.m_data.m_shift.y * graphAdjustmentSettings.m_shiftPushRatio * pipeModelParameters.m_profileDefaultCellRadius;
+		node.m_data.m_adjustedGlobalPosition += parentLeft * node.m_data.m_shift.x * graphAdjustmentSettings.m_shiftPushRatio * pipeModelParameters.m_profileDefaultCellRadius;
+		node.m_data.m_adjustedGlobalPosition += parentFront * sinFront * maxDistanceToCenter * graphAdjustmentSettings.m_frontPushRatio * pipeModelParameters.m_profileDefaultCellRadius;
 
-		globalTransform.SetPosition(globalPosition);
-		scene->SetDataComponent(entity, globalTransform);
 	}
-	TransformGraph::CalculateTransformGraphForDescendents(scene, GetOwner());*/
 }
 #pragma endregion

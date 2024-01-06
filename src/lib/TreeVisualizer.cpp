@@ -444,24 +444,38 @@ void TreeVisualizer::Visualize(TreeModel& treeModel, const GlobalTransform& glob
 			}
 		}
 
-		if(m_checkpointIteration == treeModel.CurrentIteration() && m_selectedInternodeHandle != -1)
+		if(m_checkpointIteration == treeModel.CurrentIteration())
 		{
-			auto& node = treeModel.RefShootSkeleton().RefNode(m_selectedInternodeHandle);
+			
 			const std::string frontTag = "Front Profile";
 			if (ImGui::Begin(frontTag.c_str()))
 			{
-				node.m_data.m_frontParticlePhysics2D.OnInspect([&](const glm::vec2 position) {},
-					[&](const ImVec2 origin, const float zoomFactor, ImDrawList* drawList) {},
-					false);
+				if (m_selectedInternodeHandle != -1) {
+					auto& node = treeModel.RefShootSkeleton().RefNode(m_selectedInternodeHandle);
+					node.m_data.m_frontParticlePhysics2D.OnInspect([&](const glm::vec2 position) {},
+						[&](const ImVec2 origin, const float zoomFactor, ImDrawList* drawList) {},
+						false);
+				}else
+				{
+					ImGui::Text("Select an internode to show its profile!");
+				}
 			}
 			ImGui::End();
 			const std::string backTag = "Back Profile";
 			if (ImGui::Begin(backTag.c_str()))
 			{
+				if (m_selectedInternodeHandle != -1) {
+				auto& node = treeModel.RefShootSkeleton().RefNode(m_selectedInternodeHandle);
 				node.m_data.m_backParticlePhysics2D.OnInspect([&](const glm::vec2 position) {},
 					[&](const ImVec2 origin, const float zoomFactor, ImDrawList* drawList) {},
 					false);
+				}
+				else
+				{
+					ImGui::Text("Select an internode to show its profile!");
+				}
 			}
+			ImGui::End();
 		}
 	}
 }

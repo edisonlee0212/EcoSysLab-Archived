@@ -148,7 +148,7 @@ namespace EcoSysLab
 		int m_maxLevel = 0;
 
 #pragma region Pipe Model
-		bool m_parallelScheduling = false;
+		bool m_parallelScheduling = true;
 		ParticlePhysicsSettings m_particlePhysicsSettings{};
 		PipeModelPipeGroup m_pipeGroup;
 		PipeModelParameters m_pipeModelParameters{};

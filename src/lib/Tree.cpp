@@ -344,8 +344,7 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 
 	if (ImGui::Button("Build Strands"))
 	{
-		//if (adjustment) m_treeModel.AdjustGraph();
-		//else RestoreGraph();
+		m_treeModel.CalculatePipeProfileAdjustedTransforms();
 		GenerateStrands(frontControlPointRatio, backControlPointRatio, triplePoints);
 	}
 
