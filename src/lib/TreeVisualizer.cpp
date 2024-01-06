@@ -305,8 +305,6 @@ bool
 TreeVisualizer::OnInspect(
 	TreeModel& treeModel) {
 	bool updated = false;
-	
-
 	if (ImGui::SliderInt("Checkpoints", &m_checkpointIteration, 0, treeModel.CurrentIteration())) {
 		m_checkpointIteration = glm::clamp(m_checkpointIteration, 0, treeModel.CurrentIteration());
 		m_selectedInternodeHandle = -1;

@@ -100,6 +100,11 @@ void EcoSysLabLayer::Visualization() {
 			m_selectedTree = Entity();
 			m_needFlowUpdateForSelection = true;
 		}
+		const auto& tree = scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock();
+		auto& treeVisualizer = tree->m_treeVisualizer;
+		treeVisualizer.m_selectedInternodeHandle = -1;
+		treeVisualizer.m_selectedInternodeHierarchyList.clear();
+		m_operatorMode = static_cast<unsigned>(OperatorMode::Select);
 	}
 	const std::vector<Entity>* treeEntities =
 		scene->UnsafeGetPrivateComponentOwnersList<Tree>();
@@ -177,7 +182,7 @@ void EcoSysLabLayer::Visualization() {
 			auto& treeModel = tree->m_treeModel;
 			auto& treeVisualizer = tree->m_treeVisualizer;
 			const auto globalTransform = scene->GetDataComponent<GlobalTransform>(m_selectedTree);
-			if (m_visualizationCameraWindowFocused)
+			if (m_visualizationCameraWindowFocused && editorLayer->GetKey(GLFW_MOUSE_BUTTON_RIGHT) == KeyActionType::Release)
 			{
 				static std::vector<glm::vec2> mousePositions{};
 				const auto& treeSkeleton = tree->m_treeModel.PeekShootSkeleton(tree->m_treeVisualizer.m_checkpointIteration);
@@ -210,7 +215,7 @@ void EcoSysLabLayer::Visualization() {
 						}
 					}
 				}
-										 break;
+				break;
 				case OperatorMode::Prune:
 				{
 					if (treeVisualizer.m_checkpointIteration == treeModel.CurrentIteration()) {
@@ -237,7 +242,7 @@ void EcoSysLabLayer::Visualization() {
 								mousePositions.emplace_back(mousePosition);
 							}
 						}
-						else {
+						else if (editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Release) {
 							//Once released, check if empty.
 							if (!mousePositions.empty()) {
 								treeModel.Step();
@@ -252,6 +257,10 @@ void EcoSysLabLayer::Visualization() {
 									treeModel.Pop();
 								}
 								mousePositions.clear();
+								if (m_autoGenerateGeometryAfterEditing)
+								{
+									tree->GenerateGeometry(m_meshGeneratorSettings, -1);
+								}
 							}
 						}
 					}
@@ -269,7 +278,7 @@ void EcoSysLabLayer::Visualization() {
 					}
 					else if (treeVisualizer.m_selectedInternodeHandle >= 0 && editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Hold)
 					{
-						const auto climateCandidate = EcoSysLabLayer::FindClimate();
+						const auto climateCandidate = FindClimate();
 						if (!climateCandidate.expired()) {
 							climateCandidate.lock()->PrepareForGrowth();
 							if (tree->TryGrow(m_simulationSettings.m_deltaTime, treeVisualizer.m_selectedInternodeHandle, false, m_overrideGrowRate))
@@ -280,6 +289,10 @@ void EcoSysLabLayer::Visualization() {
 					}
 					else if (editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Release)
 					{
+						if (m_autoGenerateGeometryAfterEditing && treeVisualizer.m_selectedInternodeHandle != -1)
+						{
+							tree->GenerateGeometry(m_meshGeneratorSettings, -1);
+						}
 						treeVisualizer.SetSelectedNode(treeSkeleton, -1);
 					}
 				}
@@ -288,7 +301,6 @@ void EcoSysLabLayer::Visualization() {
 			}
 			treeVisualizer.Visualize(treeModel, globalTransform);
 		}
-
 
 		if (m_showShadowGrid)
 		{
@@ -419,10 +431,10 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 		const std::vector<Entity>* treeEntities =
 			scene->UnsafeGetPrivateComponentOwnersList<Tree>();
 		if (treeEntities && !treeEntities->empty()) {
-			if (m_visualization && scene->IsEntityValid(m_selectedTree)) {
+			ImGui::Text("Editing");
+			if (scene->IsEntityValid(m_selectedTree)) {
 				const auto& tree = scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock();
 				auto& treeVisualizer = tree->m_treeVisualizer;
-				ImGui::Text("Editing");
 				if (ImGui::Combo("Operator mode", { "Select", "Prune", "Invigorate" }, m_operatorMode))
 				{
 					treeVisualizer.m_selectedInternodeHandle = -1;
@@ -431,6 +443,12 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 				if(m_operatorMode == static_cast<unsigned>(OperatorMode::Invigorate))
 				{
 					ImGui::DragFloat("Invigorate speed", &m_overrideGrowRate, 0.01f, 0.01f, 1.0f);
+				}
+				ImGui::Checkbox("Auto generate geometry", &m_autoGenerateGeometryAfterEditing);
+				if (ImGui::Button("Add Checkpoint"))
+				{
+					tree->m_treeModel.Step();
+					treeVisualizer.m_checkpointIteration = tree->m_treeModel.CurrentIteration();
 				}
 				treeVisualizer.OnInspect(tree->m_treeModel);
 			}
