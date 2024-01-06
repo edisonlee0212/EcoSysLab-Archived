@@ -110,11 +110,10 @@ namespace EcoSysLab {
 		bool m_showShadowGrid = false;
 		std::shared_ptr<ParticleInfoList> m_shadowGridParticleInfoList;
 		void UpdateVisualizationCamera();
+
 		void PreUpdate() override;
 
 		void OnCreate() override;
-
-		void OnDestroy() override;
 
 		void Visualization();
 

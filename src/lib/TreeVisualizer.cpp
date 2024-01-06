@@ -729,7 +729,7 @@ void TreeVisualizer::SyncColors(const ShootSkeleton& shootSkeleton, const NodeHa
 			break;
 		}
 		matrices[i].m_instanceColor.a = 1.0f;
-		if (selectedNodeHandle != -1) matrices[i].m_instanceColor.a = 0.75f;
+		if (selectedNodeHandle != -1) matrices[i].m_instanceColor.a = 1.0f;
 		}
 	);
 }

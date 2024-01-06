@@ -79,11 +79,6 @@ void EcoSysLabLayer::OnCreate() {
 	}
 }
 
-void EcoSysLabLayer::OnDestroy() {
-
-}
-
-
 void EcoSysLabLayer::Visualization() {
 	const auto scene = GetScene();
 	const auto editorLayer = Application::GetLayer<EditorLayer>();
@@ -242,8 +237,10 @@ void EcoSysLabLayer::Visualization() {
 								}
 								else if (lastGizmosUsed)
 								{
+									treeModel.CalculateTransform(tree->m_shootGrowthController, true);
 									treeModelModified = true;
 									lastGizmosUsed = false;
+									treeVisualizer.m_needUpdate = true;
 								}
 							}
 							ImGui::EndChild();
