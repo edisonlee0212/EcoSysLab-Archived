@@ -397,7 +397,7 @@ TreeVisualizer::OnInspect(
 	return updated;
 }
 
-void TreeVisualizer::Visualize(const TreeModel& treeModel, const GlobalTransform& globalTransform) {
+void TreeVisualizer::Visualize(TreeModel& treeModel, const GlobalTransform& globalTransform) {
 	const auto& treeSkeleton = treeModel.PeekShootSkeleton(m_checkpointIteration);
 	if (m_visualization) {
 		const auto editorLayer = Application::GetLayer<EditorLayer>();
@@ -441,6 +441,26 @@ void TreeVisualizer::Visualize(const TreeModel& treeModel, const GlobalTransform
 						2.0f * node.m_info.m_thickness + 0.01f));
 				const auto color = glm::vec4(1.0f);
 				editorLayer->DrawGizmoMesh(Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER"), ecoSysLabLayer->m_visualizationCamera, color, matrix, 1, gizmoSettings);
+			}
+		}
+
+		if(m_checkpointIteration == treeModel.CurrentIteration() && m_selectedInternodeHandle != -1)
+		{
+			auto& node = treeModel.RefShootSkeleton().RefNode(m_selectedInternodeHandle);
+			const std::string frontTag = "Front Profile";
+			if (ImGui::Begin(frontTag.c_str()))
+			{
+				node.m_data.m_frontParticlePhysics2D.OnInspect([&](const glm::vec2 position) {},
+					[&](const ImVec2 origin, const float zoomFactor, ImDrawList* drawList) {},
+					false);
+			}
+			ImGui::End();
+			const std::string backTag = "Back Profile";
+			if (ImGui::Begin(backTag.c_str()))
+			{
+				node.m_data.m_backParticlePhysics2D.OnInspect([&](const glm::vec2 position) {},
+					[&](const ImVec2 origin, const float zoomFactor, ImDrawList* drawList) {},
+					false);
 			}
 		}
 	}

@@ -186,7 +186,7 @@ void EcoSysLabLayer::Visualization() {
 				bool treeModelModified = false;
 				static std::vector<glm::vec2> mousePositions{};
 				const auto& treeSkeleton = tree->m_treeModel.PeekShootSkeleton(tree->m_treeVisualizer.m_checkpointIteration);
-				switch (m_operatorMode)
+				switch (static_cast<OperatorMode>(m_operatorMode))
 				{
 				case OperatorMode::Select: {
 
@@ -365,7 +365,7 @@ void EcoSysLabLayer::Visualization() {
 				{
 					if (m_autoGenerateGeometryAfterEditing)
 					{
-						tree->GenerateGeometry(m_meshGeneratorSettings, -1);
+						tree->GenerateMeshes(m_meshGeneratorSettings, -1);
 					}
 				}
 			}
@@ -1428,7 +1428,7 @@ void EcoSysLabLayer::GenerateMeshes(const TreeMeshGeneratorSettings& meshGenerat
 		const auto copiedEntities = *treeEntities;
 		for (auto treeEntity : copiedEntities) {
 			const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
-			tree->GenerateGeometry(meshGeneratorSettings);
+			tree->GenerateMeshes(meshGeneratorSettings);
 		}
 	}
 }
@@ -1441,8 +1441,8 @@ void EcoSysLabLayer::ClearGeometries() const {
 		const auto copiedEntities = *treeEntities;
 		for (auto treeEntity : copiedEntities) {
 			const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
-			tree->ClearGeometry();
-			tree->ClearStrands();
+			tree->ClearMeshes();
+			tree->ClearTwigsStrands();
 		}
 	}
 }

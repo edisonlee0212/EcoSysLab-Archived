@@ -82,7 +82,7 @@ namespace EcoSysLab {
 
 		bool OnInspect(TreeModel& treeModel);
 
-		void Visualize(const TreeModel& treeModel, const GlobalTransform& globalTransform);
+		void Visualize(TreeModel& treeModel, const GlobalTransform& globalTransform);
 
 		void Reset(TreeModel& treeModel);
 

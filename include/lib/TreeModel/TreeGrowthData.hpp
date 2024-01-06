@@ -1,6 +1,7 @@
 #pragma once
 #include "Skeleton.hpp"
 #include "EnvironmentGrid.hpp"
+#include "PipeModelParameters.hpp"
 #include "TreeOccupancyGrid.hpp"
 using namespace EvoEngine;
 namespace EcoSysLab
@@ -56,6 +57,13 @@ namespace EcoSysLab
 	};
 
 #pragma endregion
+	struct GraphAdjustmentSettings
+	{
+		float m_shiftPushRatio = 1.0f;
+		float m_sidePushRatio = 1.0f;
+		float m_frontPushRatio = 1.0f;
+		float m_rotationPushRatio = 0.5f;
+	};
 
 	struct InternodeGrowthData {
 		float m_internodeLength = 0.0f;
@@ -94,6 +102,30 @@ namespace EcoSysLab
 		std::vector<Bud> m_buds;
 		std::vector<glm::mat4> m_leaves;
 		std::vector<glm::mat4> m_fruits;
+
+#pragma region Pipe Model
+		ParticlePhysics2D<CellParticlePhysicsData> m_frontParticlePhysics2D;
+		std::unordered_map<PipeHandle, ParticleHandle> m_frontParticleMap{};
+
+		ParticlePhysics2D<CellParticlePhysicsData> m_backParticlePhysics2D;
+		std::unordered_map<PipeHandle, ParticleHandle> m_backParticleMap{};
+
+		float m_frontControlPointDistance = 0.0f;
+		float m_backControlPointDistance = 0.0f;
+
+		float m_centerDirectionRadius = 0.0f;
+
+		glm::vec2 m_offset = glm::vec2(0.0f);
+
+		glm::vec2 m_shift = glm::vec2(0.0f);
+		bool m_needPacking = false;
+		bool m_apical = false;
+		bool m_split = false;
+		std::vector<std::shared_future<void>> m_tasks{};
+
+		glm::vec3 m_adjustedGlobalPosition;
+		glm::quat m_adjustedGlobalRotation;
+#pragma endregion
 	};
 
 	struct ShootStemGrowthData {
@@ -114,6 +146,16 @@ namespace EcoSysLab
 		glm::vec3 m_desiredMax = glm::vec3(FLT_MIN);
 
 		int m_maxLevel = 0;
+
+#pragma region Pipe Model
+		bool m_parallelScheduling = false;
+		ParticlePhysicsSettings m_particlePhysicsSettings{};
+		PipeModelPipeGroup m_pipeGroup;
+		PipeModelParameters m_pipeModelParameters{};
+		GraphAdjustmentSettings m_graphAdjustmentSettings;
+		float m_profileCalculationTime = 0.0f;
+		int m_numOfParticles = 0;
+#pragma endregion
 	};
 
 

@@ -20,6 +20,7 @@ namespace EcoSysLab
 		 * \brief The entity this pipe segment belongs to. Pipe -> PipeSegment <-> Cell <- Profile <- Entity
 		 */
 		Entity m_entity;
+		NodeHandle m_nodeHandle = -1;
 		ParticleHandle m_frontProfileHandle;
 		ParticleHandle m_backParticleHandle;
 	};
