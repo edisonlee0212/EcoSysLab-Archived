@@ -38,8 +38,9 @@ namespace EcoSysLab {
 	class EcoSysLabLayer : public ILayer {
 		unsigned m_operatorMode = static_cast<unsigned>(OperatorMode::Select);
 		float m_overrideGrowRate = 0.0f;
-		bool m_autoGenerateGeometryAfterEditing = false;
-
+		bool m_autoGenerateMeshAfterEditing = false;
+		bool m_autoGenerateStrandsAfterEditing = false;
+		bool m_autoGenerateStrandMeshAfterEditing = false;
 
 		friend class TreeVisualizer;
 		friend class Tree;
@@ -155,6 +156,7 @@ namespace EcoSysLab {
 		int m_visualizationCameraResolutionY = 1;
 
 		TreeMeshGeneratorSettings m_meshGeneratorSettings;
+		TreePipeMeshGeneratorSettings m_pipeMeshGeneratorSettings{};
 		Entity m_selectedTree = {};
 
 		glm::vec2 GetMouseSceneCameraPosition() const;

@@ -226,11 +226,11 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 			iterations = glm::clamp(iterations, 0, m_treeModel.CurrentIteration());
 			m_meshGeneratorSettings.OnInspect(editorLayer);
 			if (ImGui::Button("Generate Mesh")) {
-				GenerateMeshes(m_meshGeneratorSettings, iterations);
+				InitializeMeshRenderer(m_meshGeneratorSettings, iterations);
 			}
 			if (ImGui::Button("Clear Mesh"))
 			{
-				ClearMeshes();
+				ClearMeshRenderer();
 			}
 			ImGui::TreePop();
 		}
@@ -314,23 +314,26 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	*/
 
 
-	if (ImGui::Button("Initialize Profiles"))
-	{
-		m_treeModel.InitializeProfiles();
-	}
-	if (ImGui::Button("Calculate Profiles"))
-	{
-		m_treeModel.CalculateProfiles();
-	}
+	auto& pipeModelParameters = m_treeModel.RefShootSkeleton().m_data.m_pipeModelParameters;
+	auto& physicsSettings = m_treeModel.RefShootSkeleton().m_data.m_particlePhysicsSettings;
+	ImGui::DragFloat("Default profile cell radius", &pipeModelParameters.m_profileDefaultCellRadius, 0.001f, 0.001f, 1.0f);
+	ImGui::DragFloat("Physics damping", &physicsSettings.m_damping, 0.01f, 0.0f, 1.0f);
+	ImGui::DragFloat("Physics max speed", &physicsSettings.m_maxSpeed, 0.01f, 0.0f, 100.0f);
+	ImGui::DragFloat("Physics particle softness", &physicsSettings.m_particleSoftness, 0.01f, 0.0f, 1.0f);
 
-	static float frontControlPointRatio = 0.4f;
-	static float backControlPointRatio = 0.4f;
-	ImGui::DragFloat("Front Control Point Ratio", &frontControlPointRatio, 0.01f, 0.01f, 0.5f);
-	ImGui::DragFloat("Back Control Point Ratio", &backControlPointRatio, 0.01f, 0.01f, 0.5f);
+	ImGui::DragFloat("Center attraction strength", &pipeModelParameters.m_centerAttractionStrength, 0.01f, 0.0f, 10.0f);
+	ImGui::DragInt("Max iteration cell factor", &pipeModelParameters.m_maxSimulationIterationCellFactor, 1, 0, 500);
+	ImGui::DragInt("Stabilization check iteration", &pipeModelParameters.m_stabilizationCheckIteration, 1, 0, 500);
+	ImGui::DragInt("Simulation timeout", &pipeModelParameters.m_timeout, 1, 0, 50000);
+	ImGui::DragFloat("Stabilization movement distance", &pipeModelParameters.m_stabilizationMovementDistance, 0.01f, 0.0f, 1.0f);
+	ImGui::DragFloat("Split limit", &pipeModelParameters.m_splitRatioLimit, 0.01f, 0.0f, 1.0f);
+	ImGui::DragInt("End node strand count", &pipeModelParameters.m_endNodeStrands, 1, 1, 50);
+	ImGui::Checkbox("Pre-merge", &pipeModelParameters.m_preMerge);
 
-	static bool adjustment = true;
-	ImGui::Checkbox("Graph adjustment", &adjustment);
-	if (adjustment && ImGui::TreeNodeEx("Graph Adjustment settings"))
+	ImGui::DragFloat("Front Control Point Ratio", &pipeModelParameters.m_frontControlPointRatio, 0.01f, 0.01f, 0.5f);
+	ImGui::DragFloat("Back Control Point Ratio", &pipeModelParameters.m_backControlPointRatio, 0.01f, 0.01f, 0.5f);
+
+	if (ImGui::TreeNodeEx("Graph Adjustment settings"))
 	{
 		auto& adjustmentSettings = m_treeModel.RefShootSkeleton().m_data.m_graphAdjustmentSettings;
 		ImGui::DragFloat("Shift push ratio", &adjustmentSettings.m_shiftPushRatio, 0.01f, 0.0f, 2.0f);
@@ -339,25 +342,25 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 		ImGui::DragFloat("Rotation push ratio", &adjustmentSettings.m_rotationPushRatio, 0.01f, 0.0f, 2.0f);
 		ImGui::TreePop();
 	}
-	static bool triplePoints = false;
-	ImGui::Checkbox("Triple points", &triplePoints);
+	ImGui::Checkbox("Triple points", &pipeModelParameters.m_triplePoints);
 
 	if (ImGui::Button("Build Strands"))
 	{
-		m_treeModel.CalculatePipeProfileAdjustedTransforms();
-		GenerateStrands(frontControlPointRatio, backControlPointRatio, triplePoints);
+		m_treeModel.InitializeProfiles();
+		m_treeModel.CalculateProfiles();
+		InitializeStrandRenderer();
 	}
 
 	if (ImGui::Button("Clear Strands"))
 	{
-		ClearStrands();
+		ClearStrandRenderer();
 	}
 }
 void Tree::Update()
 {
 	if (m_temporalProgression) {
 		if (m_temporalProgressionIteration <= m_treeModel.CurrentIteration()) {
-			GenerateMeshes(m_meshGeneratorSettings, m_temporalProgressionIteration);
+			InitializeMeshRenderer(m_meshGeneratorSettings, m_temporalProgressionIteration);
 			m_temporalProgressionIteration++;
 		}
 		else
@@ -517,6 +520,21 @@ std::shared_ptr<Mesh> Tree::GenerateFoliageMesh(const TreeMeshGeneratorSettings&
 		}
 
 	}
+
+	auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
+	VertexAttributes attributes{};
+	attributes.m_texCoord = true;
+	mesh->SetVertices(attributes, vertices, indices);
+	return mesh;
+}
+
+std::shared_ptr<Mesh> Tree::GeneratePipeMesh(const TreePipeMeshGeneratorSettings& treePipeMeshGeneratorSettings)
+{
+	std::vector<Vertex> vertices;
+	std::vector<unsigned int> indices;
+	const TreePipeMeshGenerator meshGenerator{};
+
+	meshGenerator.Generate(m_treeModel.m_shootSkeleton.m_data.m_pipeGroup, vertices, indices, treePipeMeshGeneratorSettings);
 
 	auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
 	VertexAttributes attributes{};
@@ -703,7 +721,7 @@ void Tree::Deserialize(const YAML::Node& in)
 	m_treeDescriptor.Load("m_treeDescriptor", in);
 }
 
-void Tree::ClearMeshes() const
+void Tree::ClearMeshRenderer() const
 {
 	const auto scene = GetScene();
 	const auto self = GetOwner();
@@ -725,7 +743,7 @@ void Tree::ClearMeshes() const
 	}
 }
 
-void Tree::ClearTwigsStrands() const
+void Tree::ClearTwigsStrandRenderer() const
 {
 	const auto scene = GetScene();
 	const auto self = GetOwner();
@@ -741,7 +759,7 @@ void Tree::ClearTwigsStrands() const
 	}
 }
 
-void Tree::ClearStrands() const
+void Tree::ClearStrandRenderer() const
 {
 	const auto scene = GetScene();
 	const auto self = GetOwner();
@@ -754,13 +772,13 @@ void Tree::ClearStrands() const
 	}
 }
 
-void Tree::GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings, int iteration) {
+void Tree::InitializeMeshRenderer(const TreeMeshGeneratorSettings& meshGeneratorSettings, int iteration) {
 	const auto scene = GetScene();
 	const auto self = GetOwner();
 	const auto children = scene->GetChildren(self);
 	auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
-	ClearMeshes();
-	ClearTwigsStrands();
+	ClearMeshRenderer();
+	ClearTwigsStrandRenderer();
 	auto actualIteration = iteration;
 	if (actualIteration < 0 || actualIteration > m_treeModel.CurrentIteration())
 	{
@@ -1535,23 +1553,24 @@ void Tree::PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescrip
 	}
 }
 
-void Tree::GenerateStrands(const float frontControlPointRatio, const float backControlPointRatio, bool triplePoints, int nodeMaxCount)
+void Tree::InitializeStrandRenderer()
 {
 	const auto scene = GetScene();
 	const auto owner = GetOwner();
 
-	ClearStrands();
+	ClearStrandRenderer();
 	const auto strandsEntity = scene->CreateEntity("Branch Strands");
 	scene->SetParent(strandsEntity, owner);
 
 	const auto renderer = scene->GetOrSetPrivateComponent<StrandsRenderer>(strandsEntity).lock();
 	const auto strandsAsset = ProjectManager::CreateTemporaryAsset<Strands>();
 
+	m_treeModel.CalculatePipeProfileAdjustedTransforms();
 	m_treeModel.ApplyProfiles();
-
+	const auto& parameters = m_treeModel.RefShootSkeleton().m_data.m_pipeModelParameters;
 	std::vector<glm::uint> strandsList;
 	std::vector<StrandPoint> points;
-	m_treeModel.RefShootSkeleton().m_data.m_pipeGroup.BuildStrands(frontControlPointRatio, backControlPointRatio, strandsList, points, triplePoints, nodeMaxCount);
+	m_treeModel.RefShootSkeleton().m_data.m_pipeGroup.BuildStrands(parameters.m_frontControlPointRatio, parameters.m_backControlPointRatio, strandsList, points, parameters.m_triplePoints, parameters.m_nodeMaxCount);
 	if (!points.empty()) strandsList.emplace_back(points.size());
 	StrandPointAttributes strandPointAttributes{};
 	strandPointAttributes.m_color = true;
@@ -1563,4 +1582,38 @@ void Tree::GenerateStrands(const float frontControlPointRatio, const float backC
 	renderer->m_material = material;
 	material->m_vertexColorOnly = true;
 	material->m_materialProperties.m_albedoColor = glm::vec3(0.6f, 0.3f, 0.0f);
+}
+
+void Tree::InitializeMeshRendererPipe(const TreePipeMeshGeneratorSettings& treePipeMeshGeneratorSettings)
+{
+	ClearMeshRendererPipe();
+	const auto scene = GetScene();
+	const auto self = GetOwner();
+	Entity branchEntity;
+	branchEntity = scene->CreateEntity("Pipe Mesh");
+	scene->SetParent(branchEntity, self);
+
+	auto mesh = GeneratePipeMesh(treePipeMeshGeneratorSettings);
+	auto material = ProjectManager::CreateTemporaryAsset<Material>();
+	auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(branchEntity).lock();
+
+	material->m_materialProperties.m_albedoColor = glm::vec3(109, 79, 75) / 255.0f;
+
+	material->m_materialProperties.m_roughness = 1.0f;
+	material->m_materialProperties.m_metallic = 0.0f;
+	meshRenderer->m_mesh = mesh;
+	meshRenderer->m_material = material;
+}
+
+void Tree::ClearMeshRendererPipe()
+{
+	const auto scene = GetScene();
+	const auto self = GetOwner();
+	const auto children = scene->GetChildren(self);
+	for (const auto& child : children) {
+		auto name = scene->GetEntityName(child);
+		if (name == "Pipe Mesh") {
+			scene->DeleteEntity(child);
+		}
+	}
 }

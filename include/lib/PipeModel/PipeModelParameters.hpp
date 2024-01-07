@@ -16,5 +16,10 @@ namespace EcoSysLab
 		int m_endNodeStrands = 1;
 
 		bool m_preMerge = true;
+
+		float m_frontControlPointRatio = 0.3f;
+		float m_backControlPointRatio = 0.3f;
+		bool m_triplePoints = false;
+		float m_nodeMaxCount = -1;
 	};
 }
