@@ -8,6 +8,54 @@
 #include "EcoSysLabLayer.hpp"
 using namespace EcoSysLab;
 
+bool onSegment(const glm::vec2& p, const glm::vec2& q, const glm::vec2& r)
+{
+	if (q.x <= glm::max(p.x, r.x) && q.x >= glm::min(p.x, r.x) &&
+		q.y <= glm::max(p.y, r.y) && q.y >= glm::min(p.y, r.y))
+		return true;
+
+	return false;
+}
+int orientation(const glm::vec2& p, const glm::vec2& q, const glm::vec2& r)
+{
+	// See https://www.geeksforgeeks.org/orientation-3-ordered-points/ 
+	// for details of below formula. 
+	int val = (q.y - p.y) * (r.x - q.x) -
+		(q.x - p.x) * (r.y - q.y);
+
+	if (val == 0) return 0;  // collinear 
+
+	return (val > 0) ? 1 : 2; // clock or counterclock wise 
+}
+
+bool intersect(const glm::vec2& p1, const glm::vec2& q1, const glm::vec2& p2, const glm::vec2& q2)
+{
+	// Find the four orientations needed for general and 
+	// special cases 
+	const int o1 = orientation(p1, q1, p2);
+	const int o2 = orientation(p1, q1, q2);
+	const int o3 = orientation(p2, q2, p1);
+	const int o4 = orientation(p2, q2, q1);
+	// General case 
+	if (o1 != o2 && o3 != o4)
+		return true;
+
+	// Special Cases 
+	// p1, q1 and p2 are collinear and p2 lies on segment p1q1 
+	//if (o1 == 0 && onSegment(p1, p2, q1)) return true;
+
+	// p1, q1 and q2 are collinear and q2 lies on segment p1q1 
+	//if (o2 == 0 && onSegment(p1, q2, q1)) return true;
+
+	// p2, q2 and p1 are collinear and p1 lies on segment p2q2 
+	//if (o3 == 0 && onSegment(p2, p1, q2)) return true;
+
+	// p2, q2 and q1 are collinear and q1 lies on segment p2q2 
+	//if (o4 == 0 && onSegment(p2, q1, q2)) return true;
+
+	return false; // Doesn't fall in any of the above cases 
+}
+
 bool TreeVisualizer::ScreenCurvePruning(const std::function<void(NodeHandle)>& handler, std::vector<glm::vec2>& mousePositions,
 	ShootSkeleton& skeleton, const GlobalTransform& globalTransform) {
 	auto editorLayer = Application::GetLayer<EditorLayer>();
@@ -352,7 +400,8 @@ TreeVisualizer::OnInspect(
 		}
 
 		ImGui::Checkbox("Visualization", &m_visualization);
-		ImGui::Checkbox("Profile", &m_profileGui);
+		ImGui::Checkbox("Front Profile", &m_frontProfileGui);
+		ImGui::Checkbox("Back Profile", &m_backProfileGui);
 		ImGui::Checkbox("Tree Hierarchy", &m_treeHierarchyGui);
 
 		if (m_visualization) {
@@ -446,36 +495,118 @@ void TreeVisualizer::Visualize(TreeModel& treeModel, const GlobalTransform& glob
 
 		if(m_checkpointIteration == treeModel.CurrentIteration())
 		{
-			
-			const std::string frontTag = "Front Profile";
-			if (ImGui::Begin(frontTag.c_str()))
-			{
-				if (m_selectedInternodeHandle != -1) {
-					auto& node = treeModel.RefShootSkeleton().RefNode(m_selectedInternodeHandle);
-					node.m_data.m_frontParticlePhysics2D.OnInspect([&](const glm::vec2 position) {},
-						[&](const ImVec2 origin, const float zoomFactor, ImDrawList* drawList) {},
-						false);
-				}else
+			if (m_frontProfileGui) {
+				const std::string frontTag = "Front Profile";
+				if (ImGui::Begin(frontTag.c_str()))
 				{
-					ImGui::Text("Select an internode to show its profile!");
+					if (m_selectedInternodeHandle != -1) {
+						auto& node = treeModel.RefShootSkeleton().RefNode(m_selectedInternodeHandle);
+						node.m_data.m_frontParticlePhysics2D.OnInspect([&](const glm::vec2 position) {},
+							[&](const ImVec2 origin, const float zoomFactor, ImDrawList* drawList) {},
+							false);
+					}
+					else
+					{
+						ImGui::Text("Select an internode to show its front profile!");
+					}
 				}
+				ImGui::End();
 			}
-			ImGui::End();
-			const std::string backTag = "Back Profile";
-			if (ImGui::Begin(backTag.c_str()))
-			{
-				if (m_selectedInternodeHandle != -1) {
-				auto& node = treeModel.RefShootSkeleton().RefNode(m_selectedInternodeHandle);
-				node.m_data.m_backParticlePhysics2D.OnInspect([&](const glm::vec2 position) {},
-					[&](const ImVec2 origin, const float zoomFactor, ImDrawList* drawList) {},
-					false);
-				}
-				else
+			if (m_backProfileGui) {
+				const std::string backTag = "Back Profile";
+				if (ImGui::Begin(backTag.c_str()))
 				{
-					ImGui::Text("Select an internode to show its profile!");
+					if (m_selectedInternodeHandle != -1) {
+						auto& node = treeModel.RefShootSkeleton().RefNode(m_selectedInternodeHandle);
+
+						glm::vec2 mousePosition{};
+						static bool lastFrameClicked = false;
+						bool mouseDown = false;
+						if(ImGui::Button("Clear stroke"))
+						{
+							node.m_data.m_userBoundaries.clear();
+						}
+						node.m_data.m_backParticlePhysics2D.OnInspect([&](const glm::vec2 position)
+						{
+								mouseDown = true;
+								mousePosition = position;
+						},
+							[&](const ImVec2 origin, const float zoomFactor, ImDrawList* drawList)
+							{
+								for(const auto& userBoundary : node.m_data.m_userBoundaries)
+								{
+									if (userBoundary.size() > 2) {
+										for (int pointIndex = 0; pointIndex < userBoundary.size() - 1; pointIndex++)
+										{
+											const auto& p1 = userBoundary[pointIndex];
+											const auto& p2 = userBoundary[pointIndex + 1];
+											drawList->AddLine(ImVec2(origin.x + p1.x * zoomFactor,
+												origin.y + p1.y * zoomFactor), ImVec2(origin.x + p2.x * zoomFactor,
+													origin.y + p2.y * zoomFactor), IM_COL32(255.0f, 255.0f, 255.0f, 255.0f));
+										}
+
+										const auto& p1 = userBoundary.back();
+										const auto& p2 = userBoundary[0];
+										drawList->AddLine(ImVec2(origin.x + p1.x * zoomFactor,
+											origin.y + p1.y * zoomFactor), ImVec2(origin.x + p2.x * zoomFactor,
+												origin.y + p2.y * zoomFactor), IM_COL32(255.0f, 255.0f, 255.0f, 255.0f));
+									}
+								}
+							},
+							false);
+						if(lastFrameClicked)
+						{
+							if(mouseDown)
+							{
+								//Continue recording.
+								node.m_data.m_userBoundaries.back().push_back(mousePosition);
+							}else
+							{
+								//Stop and check boundary.
+								bool valid = true;
+								auto& userBoundary = node.m_data.m_userBoundaries.back();
+								if (userBoundary.size() <= 3) valid = false;
+								if(valid)
+								{
+									for (int lineIndex = 0; lineIndex < userBoundary.size(); lineIndex++)
+									{
+										const auto& p1 = userBoundary[lineIndex];
+										const auto& p2 = userBoundary[(lineIndex + 1) % userBoundary.size()];
+										for (int lineIndex2 = 0; lineIndex2 < userBoundary.size(); lineIndex2++)
+										{
+											if(lineIndex == lineIndex2) continue;
+											if ((lineIndex + 1) % userBoundary.size() == lineIndex2) continue;
+											if ((lineIndex2 + 1) % userBoundary.size() == lineIndex) continue;
+											const auto& p3 = userBoundary[lineIndex2];
+											const auto& p4 = userBoundary[(lineIndex2 + 1) % userBoundary.size()];
+											if(intersect(p1, p2, p3, p4))
+											{
+												//valid = false;
+												//break;
+											}
+										}
+										if (!valid)break;
+									}
+								}
+								if(!valid)
+								{
+									node.m_data.m_userBoundaries.pop_back();
+								}
+							}
+						}else if (mouseDown){
+							//Start recording.
+							node.m_data.m_userBoundaries.emplace_back();
+							node.m_data.m_userBoundaries.back().push_back(mousePosition);
+						}
+						lastFrameClicked = mouseDown;
+					}
+					else
+					{
+						ImGui::Text("Select an internode to show its back profile!");
+					}
 				}
+				ImGui::End();
 			}
-			ImGui::End();
 		}
 	}
 }

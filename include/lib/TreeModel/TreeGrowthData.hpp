@@ -109,6 +109,7 @@ namespace EcoSysLab
 
 		ParticlePhysics2D<CellParticlePhysicsData> m_backParticlePhysics2D{};
 		std::unordered_map<PipeHandle, ParticleHandle> m_backParticleMap{};
+		std::vector<std::vector<glm::vec2>> m_userBoundaries;
 
 		float m_frontControlPointDistance = 0.0f;
 		float m_backControlPointDistance = 0.0f;
