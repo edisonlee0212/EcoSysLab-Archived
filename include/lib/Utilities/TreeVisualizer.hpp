@@ -61,7 +61,8 @@ namespace EcoSysLab {
 		bool m_visualization = true;
 		TreeVisualizerColorSettings m_settings;
 		
-		bool m_profileGui = true;
+		bool m_frontProfileGui = false;
+		bool m_backProfileGui = true;
 		bool m_treeHierarchyGui = false;
 		float m_selectedInternodeLengthFactor = 0.0f;
 		int m_checkpointIteration = 0;

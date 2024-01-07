@@ -34,5 +34,8 @@ namespace EcoSysLab
 		PipeSegmentHandle m_pipeSegmentHandle = -1;
 		bool m_mainChild = false;
 		bool m_base = false;
+
+
+		
 	};
 }

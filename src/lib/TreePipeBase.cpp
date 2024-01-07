@@ -721,10 +721,7 @@ std::shared_ptr<Mesh> TreePipeBase::GenerateMesh(const TreePipeMeshGeneratorSett
 {
 	std::vector<Vertex> vertices;
 	std::vector<unsigned int> indices;
-	const TreePipeMeshGenerator meshGenerator{};
-
-	meshGenerator.Generate(m_pipeGroup, vertices, indices, treePipeMeshGeneratorSettings);
-
+	TreePipeMeshGenerator::Generate(m_pipeGroup, vertices, indices, treePipeMeshGeneratorSettings);
 	auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
 	VertexAttributes attributes{};
 	attributes.m_texCoord = true;
@@ -737,13 +734,12 @@ void TreePipeBase::GenerateGeometry(const TreePipeMeshGeneratorSettings& treePip
 	ClearGeometry();
 	const auto scene = GetScene();
 	const auto self = GetOwner();
-	Entity branchEntity;
-	branchEntity = scene->CreateEntity("Pipe Mesh");
+	const auto branchEntity = scene->CreateEntity("Pipe Mesh");
 	scene->SetParent(branchEntity, self);
 
-	auto mesh = GenerateMesh(treePipeMeshGeneratorSettings);
-	auto material = ProjectManager::CreateTemporaryAsset<Material>();
-	auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(branchEntity).lock();
+	const auto mesh = GenerateMesh(treePipeMeshGeneratorSettings);
+	const auto material = ProjectManager::CreateTemporaryAsset<Material>();
+	const auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(branchEntity).lock();
 	
 	material->m_materialProperties.m_albedoColor = glm::vec3(109, 79, 75) / 255.0f;
 	
