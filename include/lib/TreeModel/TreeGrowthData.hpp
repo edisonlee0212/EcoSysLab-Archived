@@ -104,10 +104,10 @@ namespace EcoSysLab
 		std::vector<glm::mat4> m_fruits;
 
 #pragma region Pipe Model
-		ParticlePhysics2D<CellParticlePhysicsData> m_frontParticlePhysics2D;
+		ParticlePhysics2D<CellParticlePhysicsData> m_frontParticlePhysics2D{};
 		std::unordered_map<PipeHandle, ParticleHandle> m_frontParticleMap{};
 
-		ParticlePhysics2D<CellParticlePhysicsData> m_backParticlePhysics2D;
+		ParticlePhysics2D<CellParticlePhysicsData> m_backParticlePhysics2D{};
 		std::unordered_map<PipeHandle, ParticleHandle> m_backParticleMap{};
 
 		float m_frontControlPointDistance = 0.0f;
@@ -123,8 +123,10 @@ namespace EcoSysLab
 		bool m_split = false;
 		std::vector<std::shared_future<void>> m_tasks{};
 
-		glm::vec3 m_adjustedGlobalPosition;
-		glm::quat m_adjustedGlobalRotation;
+		glm::vec3 m_adjustedGlobalPosition{};
+		glm::quat m_adjustedGlobalRotation{};
+
+		int m_cellCount = 0;
 #pragma endregion
 	};
 
