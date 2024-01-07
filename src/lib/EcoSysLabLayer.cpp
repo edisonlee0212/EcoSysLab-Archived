@@ -366,13 +366,17 @@ void EcoSysLabLayer::Visualization() {
 				{
 					if (m_autoGenerateMeshAfterEditing)
 					{
-						tree->GenerateMeshes(m_meshGeneratorSettings, -1);
+						tree->InitializeMeshRenderer(m_meshGeneratorSettings, -1);
 					}
-					if(m_autoGenerateStrandsAfterEditing)
+					if(m_autoGenerateStrandsAfterEditing || m_autoGenerateStrandMeshAfterEditing)
 					{
 						tree->m_treeModel.InitializeProfiles();
 						tree->m_treeModel.CalculateProfiles();
-						tree->GenerateStrands();
+						tree->InitializeStrandRenderer();
+					}
+					if(m_autoGenerateStrandMeshAfterEditing)
+					{
+						tree->InitializeMeshRendererPipe(m_pipeMeshGeneratorSettings);
 					}
 				}
 			}
@@ -431,8 +435,6 @@ void EcoSysLabLayer::Visualization() {
 		if (m_displaySoil) {
 			SoilVisualization();
 		}
-
-
 	}
 }
 
@@ -525,6 +527,7 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 						}
 						ImGui::Checkbox("Auto generate mesh", &m_autoGenerateMeshAfterEditing);
 						ImGui::Checkbox("Auto generate strands", &m_autoGenerateStrandsAfterEditing);
+						ImGui::Checkbox("Auto generate strands mesh", &m_autoGenerateStrandMeshAfterEditing);
 						ImGui::TreePop();
 					}
 				}
@@ -578,6 +581,10 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 			}
 			if (ImGui::TreeNodeEx("Mesh generation")) {
 				m_meshGeneratorSettings.OnInspect(editorLayer);
+				ImGui::TreePop();
+			}
+			if (ImGui::TreeNodeEx("Pipe Mesh generation")) {
+				m_pipeMeshGeneratorSettings.OnInspect(editorLayer);
 				ImGui::TreePop();
 			}
 			if (ImGui::Button("Generate Meshes")) {
@@ -1435,7 +1442,7 @@ void EcoSysLabLayer::GenerateMeshes(const TreeMeshGeneratorSettings& meshGenerat
 		const auto copiedEntities = *treeEntities;
 		for (auto treeEntity : copiedEntities) {
 			const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
-			tree->GenerateMeshes(meshGeneratorSettings);
+			tree->InitializeMeshRenderer(meshGeneratorSettings);
 		}
 	}
 }
@@ -1448,8 +1455,8 @@ void EcoSysLabLayer::ClearGeometries() const {
 		const auto copiedEntities = *treeEntities;
 		for (auto treeEntity : copiedEntities) {
 			const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
-			tree->ClearMeshes();
-			tree->ClearTwigsStrands();
+			tree->ClearMeshRenderer();
+			tree->ClearTwigsStrandRenderer();
 		}
 	}
 }

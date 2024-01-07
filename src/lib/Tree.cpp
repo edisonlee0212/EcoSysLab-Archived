@@ -226,11 +226,11 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 			iterations = glm::clamp(iterations, 0, m_treeModel.CurrentIteration());
 			m_meshGeneratorSettings.OnInspect(editorLayer);
 			if (ImGui::Button("Generate Mesh")) {
-				GenerateMeshes(m_meshGeneratorSettings, iterations);
+				InitializeMeshRenderer(m_meshGeneratorSettings, iterations);
 			}
 			if (ImGui::Button("Clear Mesh"))
 			{
-				ClearMeshes();
+				ClearMeshRenderer();
 			}
 			ImGui::TreePop();
 		}
@@ -348,19 +348,19 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	{
 		m_treeModel.InitializeProfiles();
 		m_treeModel.CalculateProfiles();
-		GenerateStrands();
+		InitializeStrandRenderer();
 	}
 
 	if (ImGui::Button("Clear Strands"))
 	{
-		ClearStrands();
+		ClearStrandRenderer();
 	}
 }
 void Tree::Update()
 {
 	if (m_temporalProgression) {
 		if (m_temporalProgressionIteration <= m_treeModel.CurrentIteration()) {
-			GenerateMeshes(m_meshGeneratorSettings, m_temporalProgressionIteration);
+			InitializeMeshRenderer(m_meshGeneratorSettings, m_temporalProgressionIteration);
 			m_temporalProgressionIteration++;
 		}
 		else
@@ -508,6 +508,21 @@ std::shared_ptr<Mesh> Tree::GenerateFoliageMesh(const TreeMeshGeneratorSettings&
 		}
 
 	}
+
+	auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
+	VertexAttributes attributes{};
+	attributes.m_texCoord = true;
+	mesh->SetVertices(attributes, vertices, indices);
+	return mesh;
+}
+
+std::shared_ptr<Mesh> Tree::GeneratePipeMesh(const TreePipeMeshGeneratorSettings& treePipeMeshGeneratorSettings)
+{
+	std::vector<Vertex> vertices;
+	std::vector<unsigned int> indices;
+	const TreePipeMeshGenerator meshGenerator{};
+
+	meshGenerator.Generate(m_treeModel.m_shootSkeleton.m_data.m_pipeGroup, vertices, indices, treePipeMeshGeneratorSettings);
 
 	auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
 	VertexAttributes attributes{};
@@ -694,7 +709,7 @@ void Tree::Deserialize(const YAML::Node& in)
 	m_treeDescriptor.Load("m_treeDescriptor", in);
 }
 
-void Tree::ClearMeshes() const
+void Tree::ClearMeshRenderer() const
 {
 	const auto scene = GetScene();
 	const auto self = GetOwner();
@@ -716,7 +731,7 @@ void Tree::ClearMeshes() const
 	}
 }
 
-void Tree::ClearTwigsStrands() const
+void Tree::ClearTwigsStrandRenderer() const
 {
 	const auto scene = GetScene();
 	const auto self = GetOwner();
@@ -732,7 +747,7 @@ void Tree::ClearTwigsStrands() const
 	}
 }
 
-void Tree::ClearStrands() const
+void Tree::ClearStrandRenderer() const
 {
 	const auto scene = GetScene();
 	const auto self = GetOwner();
@@ -745,13 +760,13 @@ void Tree::ClearStrands() const
 	}
 }
 
-void Tree::GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings, int iteration) {
+void Tree::InitializeMeshRenderer(const TreeMeshGeneratorSettings& meshGeneratorSettings, int iteration) {
 	const auto scene = GetScene();
 	const auto self = GetOwner();
 	const auto children = scene->GetChildren(self);
 	auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
-	ClearMeshes();
-	ClearTwigsStrands();
+	ClearMeshRenderer();
+	ClearTwigsStrandRenderer();
 	auto actualIteration = iteration;
 	if (actualIteration < 0 || actualIteration > m_treeModel.CurrentIteration())
 	{
@@ -1526,12 +1541,12 @@ void Tree::PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescrip
 	}
 }
 
-void Tree::GenerateStrands()
+void Tree::InitializeStrandRenderer()
 {
 	const auto scene = GetScene();
 	const auto owner = GetOwner();
 
-	ClearStrands();
+	ClearStrandRenderer();
 	const auto strandsEntity = scene->CreateEntity("Branch Strands");
 	scene->SetParent(strandsEntity, owner);
 
@@ -1555,4 +1570,38 @@ void Tree::GenerateStrands()
 	renderer->m_material = material;
 	material->m_vertexColorOnly = true;
 	material->m_materialProperties.m_albedoColor = glm::vec3(0.6f, 0.3f, 0.0f);
+}
+
+void Tree::InitializeMeshRendererPipe(const TreePipeMeshGeneratorSettings& treePipeMeshGeneratorSettings)
+{
+	ClearMeshRendererPipe();
+	const auto scene = GetScene();
+	const auto self = GetOwner();
+	Entity branchEntity;
+	branchEntity = scene->CreateEntity("Pipe Mesh");
+	scene->SetParent(branchEntity, self);
+
+	auto mesh = GeneratePipeMesh(treePipeMeshGeneratorSettings);
+	auto material = ProjectManager::CreateTemporaryAsset<Material>();
+	auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(branchEntity).lock();
+
+	material->m_materialProperties.m_albedoColor = glm::vec3(109, 79, 75) / 255.0f;
+
+	material->m_materialProperties.m_roughness = 1.0f;
+	material->m_materialProperties.m_metallic = 0.0f;
+	meshRenderer->m_mesh = mesh;
+	meshRenderer->m_material = material;
+}
+
+void Tree::ClearMeshRendererPipe()
+{
+	const auto scene = GetScene();
+	const auto self = GetOwner();
+	const auto children = scene->GetChildren(self);
+	for (const auto& child : children) {
+		auto name = scene->GetEntityName(child);
+		if (name == "Pipe Mesh") {
+			scene->DeleteEntity(child);
+		}
+	}
 }
