@@ -355,6 +355,20 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	{
 		ClearStrandRenderer();
 	}
+
+	if (ImGui::TreeNodeEx("Tree Pipe Mesh Generator Settings", ImGuiTreeNodeFlags_DefaultOpen)) {
+		m_treePipeMeshGeneratorSettings.OnInspect(editorLayer);
+		ImGui::TreePop();
+	}
+	if (ImGui::Button("Build Pipe Mesh"))
+	{
+		InitializeMeshRendererPipe(m_treePipeMeshGeneratorSettings);
+	}
+
+	if(ImGui::Button("Clear Pipe Mesh"))
+	{
+		ClearMeshRendererPipe();
+	}
 }
 void Tree::Update()
 {
