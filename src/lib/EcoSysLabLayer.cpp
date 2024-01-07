@@ -364,9 +364,15 @@ void EcoSysLabLayer::Visualization() {
 				}
 				if (treeModelModified)
 				{
-					if (m_autoGenerateGeometryAfterEditing)
+					if (m_autoGenerateMeshAfterEditing)
 					{
 						tree->GenerateMeshes(m_meshGeneratorSettings, -1);
+					}
+					if(m_autoGenerateStrandsAfterEditing)
+					{
+						tree->m_treeModel.InitializeProfiles();
+						tree->m_treeModel.CalculateProfiles();
+						tree->GenerateStrands();
 					}
 				}
 			}
@@ -517,7 +523,8 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 						{
 							ImGui::DragFloat("Invigorate speed", &m_overrideGrowRate, 0.01f, 0.01f, 1.0f);
 						}
-						ImGui::Checkbox("Auto generate geometry", &m_autoGenerateGeometryAfterEditing);
+						ImGui::Checkbox("Auto generate mesh", &m_autoGenerateMeshAfterEditing);
+						ImGui::Checkbox("Auto generate strands", &m_autoGenerateStrandsAfterEditing);
 						ImGui::TreePop();
 					}
 				}

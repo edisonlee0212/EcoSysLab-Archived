@@ -63,7 +63,7 @@ namespace EcoSysLab {
 		void ClearTwigsStrands() const;
 		void ClearStrands() const ;
 		void GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings, int iteration = -1);
-		void GenerateStrands(float frontControlPointRatio, float backControlPointRatio, bool triplePoints, int nodeMaxCount = -1);
+		void GenerateStrands();
 
 		void RegisterVoxel();
 		void FromLSystemString(const std::shared_ptr<LSystemString>& lSystemString);

@@ -16,8 +16,6 @@ namespace EcoSysLab {
 		float m_spaceColonizationTheta = 90.0f;
 	};
 
-
-
 	class TreeModel {
 #pragma region Tree Growth
 		ShootFlux CollectShootFlux(const std::vector<NodeHandle>& sortedInternodeList);

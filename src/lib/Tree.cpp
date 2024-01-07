@@ -314,23 +314,26 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	*/
 
 
-	if (ImGui::Button("Initialize Profiles"))
-	{
-		m_treeModel.InitializeProfiles();
-	}
-	if (ImGui::Button("Calculate Profiles"))
-	{
-		m_treeModel.CalculateProfiles();
-	}
+	auto& pipeModelParameters = m_treeModel.RefShootSkeleton().m_data.m_pipeModelParameters;
+	auto& physicsSettings = m_treeModel.RefShootSkeleton().m_data.m_particlePhysicsSettings;
+	ImGui::DragFloat("Default profile cell radius", &pipeModelParameters.m_profileDefaultCellRadius, 0.001f, 0.001f, 1.0f);
+	ImGui::DragFloat("Physics damping", &physicsSettings.m_damping, 0.01f, 0.0f, 1.0f);
+	ImGui::DragFloat("Physics max speed", &physicsSettings.m_maxSpeed, 0.01f, 0.0f, 100.0f);
+	ImGui::DragFloat("Physics particle softness", &physicsSettings.m_particleSoftness, 0.01f, 0.0f, 1.0f);
 
-	static float frontControlPointRatio = 0.4f;
-	static float backControlPointRatio = 0.4f;
-	ImGui::DragFloat("Front Control Point Ratio", &frontControlPointRatio, 0.01f, 0.01f, 0.5f);
-	ImGui::DragFloat("Back Control Point Ratio", &backControlPointRatio, 0.01f, 0.01f, 0.5f);
+	ImGui::DragFloat("Center attraction strength", &pipeModelParameters.m_centerAttractionStrength, 0.01f, 0.0f, 10.0f);
+	ImGui::DragInt("Max iteration cell factor", &pipeModelParameters.m_maxSimulationIterationCellFactor, 1, 0, 500);
+	ImGui::DragInt("Stabilization check iteration", &pipeModelParameters.m_stabilizationCheckIteration, 1, 0, 500);
+	ImGui::DragInt("Simulation timeout", &pipeModelParameters.m_timeout, 1, 0, 50000);
+	ImGui::DragFloat("Stabilization movement distance", &pipeModelParameters.m_stabilizationMovementDistance, 0.01f, 0.0f, 1.0f);
+	ImGui::DragFloat("Split limit", &pipeModelParameters.m_splitRatioLimit, 0.01f, 0.0f, 1.0f);
+	ImGui::DragInt("End node strand count", &pipeModelParameters.m_endNodeStrands, 1, 1, 50);
+	ImGui::Checkbox("Pre-merge", &pipeModelParameters.m_preMerge);
 
-	static bool adjustment = true;
-	ImGui::Checkbox("Graph adjustment", &adjustment);
-	if (adjustment && ImGui::TreeNodeEx("Graph Adjustment settings"))
+	ImGui::DragFloat("Front Control Point Ratio", &pipeModelParameters.m_frontControlPointRatio, 0.01f, 0.01f, 0.5f);
+	ImGui::DragFloat("Back Control Point Ratio", &pipeModelParameters.m_backControlPointRatio, 0.01f, 0.01f, 0.5f);
+
+	if (ImGui::TreeNodeEx("Graph Adjustment settings"))
 	{
 		auto& adjustmentSettings = m_treeModel.RefShootSkeleton().m_data.m_graphAdjustmentSettings;
 		ImGui::DragFloat("Shift push ratio", &adjustmentSettings.m_shiftPushRatio, 0.01f, 0.0f, 2.0f);
@@ -339,13 +342,13 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 		ImGui::DragFloat("Rotation push ratio", &adjustmentSettings.m_rotationPushRatio, 0.01f, 0.0f, 2.0f);
 		ImGui::TreePop();
 	}
-	static bool triplePoints = false;
-	ImGui::Checkbox("Triple points", &triplePoints);
+	ImGui::Checkbox("Triple points", &pipeModelParameters.m_triplePoints);
 
 	if (ImGui::Button("Build Strands"))
 	{
-		m_treeModel.CalculatePipeProfileAdjustedTransforms();
-		GenerateStrands(frontControlPointRatio, backControlPointRatio, triplePoints);
+		m_treeModel.InitializeProfiles();
+		m_treeModel.CalculateProfiles();
+		GenerateStrands();
 	}
 
 	if (ImGui::Button("Clear Strands"))
@@ -1523,7 +1526,7 @@ void Tree::PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescrip
 	}
 }
 
-void Tree::GenerateStrands(const float frontControlPointRatio, const float backControlPointRatio, bool triplePoints, int nodeMaxCount)
+void Tree::GenerateStrands()
 {
 	const auto scene = GetScene();
 	const auto owner = GetOwner();
@@ -1535,11 +1538,12 @@ void Tree::GenerateStrands(const float frontControlPointRatio, const float backC
 	const auto renderer = scene->GetOrSetPrivateComponent<StrandsRenderer>(strandsEntity).lock();
 	const auto strandsAsset = ProjectManager::CreateTemporaryAsset<Strands>();
 
+	m_treeModel.CalculatePipeProfileAdjustedTransforms();
 	m_treeModel.ApplyProfiles();
-
+	const auto& parameters = m_treeModel.RefShootSkeleton().m_data.m_pipeModelParameters;
 	std::vector<glm::uint> strandsList;
 	std::vector<StrandPoint> points;
-	m_treeModel.RefShootSkeleton().m_data.m_pipeGroup.BuildStrands(frontControlPointRatio, backControlPointRatio, strandsList, points, triplePoints, nodeMaxCount);
+	m_treeModel.RefShootSkeleton().m_data.m_pipeGroup.BuildStrands(parameters.m_frontControlPointRatio, parameters.m_backControlPointRatio, strandsList, points, parameters.m_triplePoints, parameters.m_nodeMaxCount);
 	if (!points.empty()) strandsList.emplace_back(points.size());
 	StrandPointAttributes strandPointAttributes{};
 	strandPointAttributes.m_color = true;
