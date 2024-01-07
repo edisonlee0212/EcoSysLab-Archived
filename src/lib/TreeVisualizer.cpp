@@ -20,10 +20,10 @@ int orientation(const glm::vec2& p, const glm::vec2& q, const glm::vec2& r)
 {
 	// See https://www.geeksforgeeks.org/orientation-3-ordered-points/ 
 	// for details of below formula. 
-	int val = (q.y - p.y) * (r.x - q.x) -
+	const float val = (q.y - p.y) * (r.x - q.x) -
 		(q.x - p.x) * (r.y - q.y);
 
-	if (val == 0) return 0;  // collinear 
+	if (val == 0.0f) return 0;  // collinear 
 
 	return (val > 0) ? 1 : 2; // clock or counterclock wise 
 }
@@ -42,16 +42,16 @@ bool intersect(const glm::vec2& p1, const glm::vec2& q1, const glm::vec2& p2, co
 
 	// Special Cases 
 	// p1, q1 and p2 are collinear and p2 lies on segment p1q1 
-	//if (o1 == 0 && onSegment(p1, p2, q1)) return true;
+	if (o1 == 0 && onSegment(p1, p2, q1)) return true;
 
 	// p1, q1 and q2 are collinear and q2 lies on segment p1q1 
-	//if (o2 == 0 && onSegment(p1, q2, q1)) return true;
+	if (o2 == 0 && onSegment(p1, q2, q1)) return true;
 
 	// p2, q2 and p1 are collinear and p1 lies on segment p2q2 
-	//if (o3 == 0 && onSegment(p2, p1, q2)) return true;
+	if (o3 == 0 && onSegment(p2, p1, q2)) return true;
 
 	// p2, q2 and q1 are collinear and q1 lies on segment p2q2 
-	//if (o4 == 0 && onSegment(p2, q1, q2)) return true;
+	if (o4 == 0 && onSegment(p2, q1, q2)) return true;
 
 	return false; // Doesn't fall in any of the above cases 
 }
@@ -559,7 +559,7 @@ void TreeVisualizer::Visualize(TreeModel& treeModel, const GlobalTransform& glob
 							if(mouseDown)
 							{
 								//Continue recording.
-								node.m_data.m_userBoundaries.back().push_back(mousePosition);
+								if(mousePosition != node.m_data.m_userBoundaries.back().back()) node.m_data.m_userBoundaries.back().emplace_back(mousePosition);
 							}else
 							{
 								//Stop and check boundary.
@@ -575,14 +575,14 @@ void TreeVisualizer::Visualize(TreeModel& treeModel, const GlobalTransform& glob
 										for (int lineIndex2 = 0; lineIndex2 < userBoundary.size(); lineIndex2++)
 										{
 											if(lineIndex == lineIndex2) continue;
-											if ((lineIndex + 1) % userBoundary.size() == lineIndex2) continue;
-											if ((lineIndex2 + 1) % userBoundary.size() == lineIndex) continue;
+											if ((lineIndex + 1) % userBoundary.size() == lineIndex2
+												 || (lineIndex2 + 1) % userBoundary.size() == lineIndex) continue;
 											const auto& p3 = userBoundary[lineIndex2];
 											const auto& p4 = userBoundary[(lineIndex2 + 1) % userBoundary.size()];
 											if(intersect(p1, p2, p3, p4))
 											{
-												//valid = false;
-												//break;
+												valid = false;
+												break;
 											}
 										}
 										if (!valid)break;
