@@ -12,7 +12,10 @@ void TreePipeNode::PackTask(const PipeModelParameters& pipeModelParameters, bool
 		{
 			if (m_frontParticlePhysics2D.GetMaxMovementSinceCheckpoint() < pipeModelParameters.m_stabilizationMovementDistance) break;
 		}
-		m_frontParticlePhysics2D.Simulate(1, [&](auto& particle)
+		m_frontParticlePhysics2D.Simulate(1, 
+			[&](auto& grid, bool gridResized)
+			{},
+			[&](auto& particle)
 			{
 				//Apply gravity
 				particle.SetPosition(particle.GetPosition() - m_frontParticlePhysics2D.GetMassCenter());

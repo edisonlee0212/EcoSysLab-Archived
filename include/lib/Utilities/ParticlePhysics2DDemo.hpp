@@ -11,6 +11,7 @@ namespace EcoSysLab
 	class ParticlePhysics2DDemo : public IPrivateComponent
 	{
 		ParticlePhysics2D<ParticlePhysicsDemoData> m_particlePhysics2D;
+		std::vector<std::vector<glm::vec2>> m_userBoundaries;
 	public:
 		glm::vec2 m_worldCenter = glm::vec2(0.0f);
 		float m_worldRadius = 100.0f;
