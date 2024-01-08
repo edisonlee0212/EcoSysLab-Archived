@@ -407,6 +407,7 @@ void EcoSysLabLayer::Visualization() {
 					}
 				}
 			}
+			//TODO: Reset all trees.
 			treeVisualizer.Visualize(treeModel, globalTransform);
 		}
 

@@ -399,6 +399,8 @@ void Tree::OnDestroy() {
 	m_climate.Clear();
 	m_enableHistory = false;
 
+	m_treeVisualizer.Clear();
+
 	m_leftSideBiomass = m_rightSideBiomass = 0.0f;
 	m_rootBiomassHistory.clear();
 	m_shootBiomassHistory.clear();
