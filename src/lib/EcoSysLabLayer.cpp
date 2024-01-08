@@ -397,17 +397,17 @@ void EcoSysLabLayer::Visualization() {
 					}
 					if(m_autoGenerateStrandsAfterEditing || m_autoGenerateStrandMeshAfterEditing)
 					{
-						tree->m_treeModel.InitializeProfiles();
-						tree->m_treeModel.CalculateProfiles();
-						tree->InitializeStrandRenderer();
-					}
-					if(m_autoGenerateStrandMeshAfterEditing)
-					{
-						tree->InitializeMeshRendererPipe(m_pipeMeshGeneratorSettings);
+						auto strands = tree->GenerateStrands();
+						if (m_autoGenerateStrandsAfterEditing) {
+							tree->InitializeStrandRenderer(strands);
+						}
+						if(m_autoGenerateStrandMeshAfterEditing)
+						{
+							tree->InitializeMeshRendererPipe(m_pipeMeshGeneratorSettings);
+						}
 					}
 				}
 			}
-			//TODO: Reset all trees.
 			treeVisualizer.Visualize(treeModel, globalTransform);
 		}
 

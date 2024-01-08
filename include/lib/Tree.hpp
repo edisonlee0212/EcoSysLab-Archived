@@ -17,7 +17,10 @@ namespace EcoSysLab {
 		static void SerializeTreeGrowthSettings(const TreeGrowthSettings& treeGrowthSettings, YAML::Emitter& out);
 		static void DeserializeTreeGrowthSettings(TreeGrowthSettings& treeGrowthSettings, const YAML::Node& param);
 		static bool OnInspectTreeGrowthSettings(TreeGrowthSettings& treeGrowthSettings);
-		
+
+
+		std::shared_ptr<Strands> GenerateStrands();
+
 		std::shared_ptr<Mesh> GenerateBranchMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings);
 		std::shared_ptr<Mesh> GenerateFoliageMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings);
 		std::shared_ptr<Mesh> GeneratePipeMesh(const TreePipeMeshGeneratorSettings& treePipeMeshGeneratorSettings);
@@ -68,9 +71,11 @@ namespace EcoSysLab {
 
 
 		void InitializeStrandRenderer();
+		void InitializeStrandRenderer(const std::shared_ptr<Strands>& strands) const;
 		void ClearStrandRenderer() const;
 
 		void InitializeMeshRendererPipe(const TreePipeMeshGeneratorSettings& treePipeMeshGeneratorSettings);
+
 		void ClearMeshRendererPipe();
 
 		void RegisterVoxel();

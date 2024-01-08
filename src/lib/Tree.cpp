@@ -419,6 +419,25 @@ bool Tree::OnInspectTreeGrowthSettings(TreeGrowthSettings& treeGrowthSettings)
 	return changed;
 }
 
+std::shared_ptr<Strands> Tree::GenerateStrands()
+{
+	m_treeModel.InitializeProfiles();
+	m_treeModel.CalculateProfiles();
+	const auto strandsAsset = ProjectManager::CreateTemporaryAsset<Strands>();
+
+	m_treeModel.CalculatePipeProfileAdjustedTransforms();
+	m_treeModel.ApplyProfiles();
+	const auto& parameters = m_treeModel.RefShootSkeleton().m_data.m_pipeModelParameters;
+	std::vector<glm::uint> strandsList;
+	std::vector<StrandPoint> points;
+	m_treeModel.RefShootSkeleton().m_data.m_pipeGroup.BuildStrands(parameters.m_frontControlPointRatio, parameters.m_backControlPointRatio, strandsList, points, parameters.m_triplePoints, parameters.m_nodeMaxCount);
+	if (!points.empty()) strandsList.emplace_back(points.size());
+	StrandPointAttributes strandPointAttributes{};
+	strandPointAttributes.m_color = true;
+	strandsAsset->SetStrands(strandPointAttributes, strandsList, points);
+	return strandsAsset;
+}
+
 std::shared_ptr<Mesh> Tree::GenerateBranchMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings)
 {
 	std::vector<Vertex> vertices;
@@ -1579,19 +1598,28 @@ void Tree::InitializeStrandRenderer()
 	scene->SetParent(strandsEntity, owner);
 
 	const auto renderer = scene->GetOrSetPrivateComponent<StrandsRenderer>(strandsEntity).lock();
-	const auto strandsAsset = ProjectManager::CreateTemporaryAsset<Strands>();
+	
+	renderer->m_strands = GenerateStrands();
 
-	m_treeModel.CalculatePipeProfileAdjustedTransforms();
-	m_treeModel.ApplyProfiles();
-	const auto& parameters = m_treeModel.RefShootSkeleton().m_data.m_pipeModelParameters;
-	std::vector<glm::uint> strandsList;
-	std::vector<StrandPoint> points;
-	m_treeModel.RefShootSkeleton().m_data.m_pipeGroup.BuildStrands(parameters.m_frontControlPointRatio, parameters.m_backControlPointRatio, strandsList, points, parameters.m_triplePoints, parameters.m_nodeMaxCount);
-	if (!points.empty()) strandsList.emplace_back(points.size());
-	StrandPointAttributes strandPointAttributes{};
-	strandPointAttributes.m_color = true;
-	strandsAsset->SetStrands(strandPointAttributes, strandsList, points);
-	renderer->m_strands = strandsAsset;
+	const auto material = ProjectManager::CreateTemporaryAsset<Material>();
+
+	renderer->m_material = material;
+	material->m_vertexColorOnly = true;
+	material->m_materialProperties.m_albedoColor = glm::vec3(0.6f, 0.3f, 0.0f);
+}
+
+void Tree::InitializeStrandRenderer(const std::shared_ptr<Strands>& strands) const
+{
+	const auto scene = GetScene();
+	const auto owner = GetOwner();
+
+	ClearStrandRenderer();
+	const auto strandsEntity = scene->CreateEntity("Branch Strands");
+	scene->SetParent(strandsEntity, owner);
+
+	const auto renderer = scene->GetOrSetPrivateComponent<StrandsRenderer>(strandsEntity).lock();
+
+	renderer->m_strands = strands;
 
 	const auto material = ProjectManager::CreateTemporaryAsset<Material>();
 
