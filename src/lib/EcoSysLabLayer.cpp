@@ -207,7 +207,7 @@ void EcoSysLabLayer::Visualization() {
 								auto& currentSkeleton = tree->m_treeModel.RefShootSkeleton();
 								auto& internode = currentSkeleton.RefNode(treeVisualizer.m_selectedInternodeHandle);
 
-								auto transform = glm::translate(internode.m_info.m_globalPosition) * glm::mat4_cast(internode.m_info.m_globalRotation) * glm::scale(glm::vec3(1.0f));
+								auto transform = glm::translate(internode.m_info.m_globalPosition) * glm::mat4_cast(internode.m_data.m_desiredGlobalRotation) * glm::scale(glm::vec3(1.0f));
 								const auto treeGlobalTransform = scene->GetDataComponent<GlobalTransform>(m_selectedTree);
 								auto internodeGlobalTransform = treeGlobalTransform.m_value * transform;
 								ImGuizmo::Manipulate(
@@ -228,12 +228,12 @@ void EcoSysLabLayer::Visualization() {
 									newInternodeTransform.m_value = glm::inverse(treeGlobalTransform.m_value) * internodeGlobalTransform;
 									auto scaleHolder = glm::vec3(1.0f);
 									newInternodeTransform.Decompose(
-										internode.m_info.m_globalPosition, internode.m_info.m_globalRotation, scaleHolder);
+										internode.m_info.m_globalPosition, internode.m_data.m_desiredGlobalRotation, scaleHolder);
 									auto parentHandle = internode.GetParentHandle();
 									if (parentHandle != -1) {
-										internode.m_data.m_desiredLocalRotation = glm::inverse(currentSkeleton.PeekNode(parentHandle).m_info.m_globalRotation) * internode.m_info.m_globalRotation;
+										internode.m_data.m_desiredLocalRotation = glm::inverse(currentSkeleton.PeekNode(parentHandle).m_data.m_desiredGlobalRotation) * internode.m_data.m_desiredGlobalRotation;
 									}
-									treeModel.CalculateTransform(tree->m_shootGrowthController, false);
+									treeModel.CalculateTransform(tree->m_shootGrowthController, true);
 									lastGizmosUsed = true;
 								}
 								else if (lastGizmosUsed)

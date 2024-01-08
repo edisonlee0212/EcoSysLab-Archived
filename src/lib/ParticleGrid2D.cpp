@@ -144,7 +144,6 @@ ParticleCell& ParticleGrid2D::RefCell(const glm::vec2& position)
 
 ParticleCell& ParticleGrid2D::RefCell(const glm::ivec2& coordinate)
 {
-	assert(coordinate.x < m_resolution.x && coordinate.y < m_resolution.y);
 	const auto cellIndex = coordinate.x + coordinate.y * m_resolution.x;
 	return m_cells[cellIndex];
 }
