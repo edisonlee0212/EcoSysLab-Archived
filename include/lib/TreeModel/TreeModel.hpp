@@ -75,6 +75,8 @@ namespace EcoSysLab {
 		int m_currentSeedValue = 0;
 
 	public:
+		bool Reduce(const ShootGrowthController& shootGrowthController, NodeHandle baseInternodeHandle, float reduceRate);
+
 		void CalculateTransform(const ShootGrowthController& shootGrowthController, bool sagging);
 
 		int m_seed = 0;

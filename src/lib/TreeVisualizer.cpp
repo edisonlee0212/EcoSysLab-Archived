@@ -58,11 +58,12 @@ bool TreeVisualizer::intersect(const glm::vec2& p1, const glm::vec2& q1, const g
 bool TreeVisualizer::ScreenCurvePruning(const std::function<void(NodeHandle)>& handler, std::vector<glm::vec2>& mousePositions,
 	ShootSkeleton& skeleton, const GlobalTransform& globalTransform) {
 	auto editorLayer = Application::GetLayer<EditorLayer>();
+	auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
 	const auto cameraRotation = editorLayer->GetSceneCameraRotation();
 	const auto cameraPosition = editorLayer->GetSceneCameraPosition();
 	const glm::vec3 cameraFront = cameraRotation * glm::vec3(0, 0, -1);
 	const glm::vec3 cameraUp = cameraRotation * glm::vec3(0, 1, 0);
-	glm::mat4 projectionView = editorLayer->GetSceneCamera()->GetProjection() *
+	glm::mat4 projectionView = ecoSysLabLayer->m_visualizationCamera->GetProjection() *
 		glm::lookAt(cameraPosition, cameraPosition + cameraFront, cameraUp);
 
 	const auto& sortedInternodeList = skeleton.RefSortedNodeList();

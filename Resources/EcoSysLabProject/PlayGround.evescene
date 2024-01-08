@@ -40,14 +40,6 @@ m_entityMetadataList:
     m_privateComponentElements:
       - m_typeName: TreePointCloud
         m_enabled: true
-  - m_name: TreePipeBase
-    m_handle: 14822417288765032582
-    m_enabled: true
-    m_static: false
-    Root.Handle: 14822417288765032582
-    m_privateComponentElements:
-      - m_typeName: TreePipeBase
-        m_enabled: true
   - m_name: Markers
     m_handle: 8350535051805926162
     m_enabled: true
@@ -232,7 +224,7 @@ LocalAssets:
 m_dataComponentStorages:
   - m_entitySize: 130
     m_chunkCapacity: 126
-    m_entityAliveCount: 8
+    m_entityAliveCount: 7
     m_dataComponentTypes:
       - m_name: Transform
         m_size: 64
@@ -259,7 +251,7 @@ m_dataComponentStorages:
           - Data: !!binary "AACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPw=="
           - Data: !!binary "AACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPw=="
           - Data: !!binary "AAA="
-      - m_handle: 14822417288765032582
+      - m_handle: 8350535051805926162
         DataComponents:
           - Data: !!binary "AACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPw=="
           - Data: !!binary "AACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPw=="
@@ -278,9 +270,4 @@ m_dataComponentStorages:
         DataComponents:
           - Data: !!binary "zczMPQAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAM3MzD0AAAAAAABAwAAAgD8AAAAAAACAPw=="
           - Data: !!binary "zczMPQAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAM3MzD0AAAAAAABAwAAAgD8AAAAAAACAPw=="
-          - Data: !!binary "AAA="
-      - m_handle: 8350535051805926162
-        DataComponents:
-          - Data: !!binary "AACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPw=="
-          - Data: !!binary "AACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPw=="
           - Data: !!binary "AAA="

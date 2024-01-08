@@ -57,6 +57,15 @@ void TreeModel::RegisterVoxel(const glm::mat4& globalTransform, ClimateModel& cl
 
 void TreeModel::PruneInternode(NodeHandle internodeHandle)
 {
+	auto& internode = m_shootSkeleton.RefNode(internodeHandle);
+	internode.m_data.m_frontParticlePhysics2D = {};
+	internode.m_data.m_backParticlePhysics2D = {};
+	internode.m_data.m_frontParticleMap = {};
+	internode.m_data.m_backParticleMap = {};
+	internode.m_data.m_userBoundaries = {};
+
+	internode.m_data.m_cellCount = 0;
+
 	m_shootSkeleton.RecycleNode(internodeHandle,
 		[&](FlowHandle flowHandle) {},
 		[&](NodeHandle nodeHandle)
@@ -361,6 +370,27 @@ void TreeModel::ShootGrowthPostProcess(const glm::mat4& globalTransform, Climate
 	}
 }
 
+bool TreeModel::Reduce(const ShootGrowthController& shootGrowthController, const NodeHandle baseInternodeHandle, float reduceRate)
+{
+	const auto sortedSubTreeInternodeList = m_shootSkeleton.GetSubTree(baseInternodeHandle);
+	if (sortedSubTreeInternodeList.size() == 1 || reduceRate == 0.0f) return false;
+	float remainingRate = reduceRate;
+	for (auto it = sortedSubTreeInternodeList.rbegin(); it != sortedSubTreeInternodeList.rend(); ++it) {
+		auto& internode = m_shootSkeleton.RefNode(*it);
+		if(remainingRate >= internode.m_data.m_internodeLength)
+		{
+			remainingRate -= internode.m_data.m_internodeLength;
+			PruneInternode(*it);
+		}else
+		{
+			internode.m_data.m_internodeLength -= remainingRate;
+			break;
+		}
+	}
+	CalculateTransform(shootGrowthController, true);
+	return true;
+}
+
 void TreeModel::CalculateTransform(const ShootGrowthController& shootGrowthController, bool sagging)
 {
 	const auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
@@ -520,6 +550,13 @@ bool TreeModel::ElongateInternode(float extendLength, NodeHandle internodeHandle
 		const auto& oldInternode = m_shootSkeleton.RefNode(internodeHandle);
 		auto& newInternode = m_shootSkeleton.RefNode(newInternodeHandle);
 		newInternode.m_data = {};
+		newInternode.m_data.m_frontParticlePhysics2D = {};
+		newInternode.m_data.m_backParticlePhysics2D = {};
+		newInternode.m_data.m_frontParticleMap = {};
+		newInternode.m_data.m_backParticleMap = {};
+		newInternode.m_data.m_userBoundaries = {};
+		
+		newInternode.m_data.m_cellCount = 0;
 		newInternode.m_data.m_lightIntensity = oldInternode.m_data.m_lightIntensity;
 		newInternode.m_data.m_lightDirection = oldInternode.m_data.m_lightDirection;
 		newInternode.m_data.m_startAge = m_age;
@@ -1095,7 +1132,7 @@ void TreeModel::InitializeProfiles()
 	for (const auto& internodeHandle : sortedInternodeList)
 	{
 		auto& internode = m_shootSkeleton.RefNode(internodeHandle);
-		internode.m_data.m_cellCount = internode.m_data.m_frontParticlePhysics2D.RefParticles().size();
+		//internode.m_data.m_cellCount = internode.m_data.m_frontParticlePhysics2D.RefParticles().size();
 		internode.m_data.m_cellCount = glm::max(m_shootSkeleton.m_data.m_pipeModelParameters.m_endNodeStrands, internode.m_data.m_cellCount);
 	}
 	for (const auto& internodeHandle : sortedInternodeList)
