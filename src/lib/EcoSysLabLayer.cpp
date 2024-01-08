@@ -12,9 +12,7 @@
 #include "ForestPatch.hpp"
 #include "Soil.hpp"
 #include "Tree.hpp"
-#include "RenderLayer.hpp"
-#include "TreePipeBase.hpp"
-#include "TreePipeNode.hpp"
+#include "RenderLayer.hpp" 
 #include "TreePointCloud.hpp"
 #include "TreePointCloudScanner.hpp"
 #include "ClassRegistry.hpp"
@@ -35,9 +33,7 @@ void EcoSysLabLayer::OnCreate() {
 	ClassRegistry::RegisterAsset<RadialBoundingVolume>("RadialBoundingVolume", { ".rbv" });
 	ClassRegistry::RegisterAsset<CubeVolume>("CubeVolume", { ".cv" });
 	ClassRegistry::RegisterAsset<HeightField>("HeightField", { ".hf" });
-	ClassRegistry::RegisterAsset<SoilLayerDescriptor>("SoilLayerDescriptor", { ".nsld" });
-	ClassRegistry::RegisterPrivateComponent<TreePipeBase>("TreePipeBase");
-	ClassRegistry::RegisterPrivateComponent<TreePipeNode>("TreePipeNode");
+	ClassRegistry::RegisterAsset<SoilLayerDescriptor>("SoilLayerDescriptor", { ".nsld" }); 
 	ClassRegistry::RegisterPrivateComponent<TreePointCloudScanner>("TreePointCloudScanner");
 
 	if (m_randomColors.empty()) {
@@ -361,7 +357,37 @@ void EcoSysLabLayer::Visualization() {
 					}
 				}
 				break;
+				case OperatorMode::Reduce:
+				{
+					static bool lastFrameReduce = false;
+					if (editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Press)
+					{
+						if (treeVisualizer.RayCastSelection(m_visualizationCamera, m_visualizationCameraMousePosition, treeSkeleton, globalTransform)) {
+							if (!tree->m_enableHistory) treeModel.Step();
+							treeVisualizer.m_checkpointIteration = treeModel.CurrentIteration();
+							treeVisualizer.m_needUpdate = true;
+						}
+					}
+					else if (treeVisualizer.m_selectedInternodeHandle >= 0 && editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Hold)
+					{
+						if(tree->m_treeModel.Reduce(tree->m_shootGrowthController, treeVisualizer.m_selectedInternodeHandle, m_reduceRate))
+						{
+							treeVisualizer.m_needUpdate = true;
+						}
+						lastFrameReduce = true;
+					}
+					else if (lastFrameReduce && editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Release)
+					{
+						if (treeVisualizer.m_selectedInternodeHandle != -1)
+						{
+							treeModelModified = true;
+						}
+						treeVisualizer.SetSelectedNode(treeSkeleton, -1);
+						lastFrameReduce = false;
+					}
+				}break;
 				}
+				
 				if (treeModelModified)
 				{
 					if (m_autoGenerateMeshAfterEditing)
@@ -516,7 +542,7 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 				auto& treeVisualizer = tree->m_treeVisualizer;
 				if (treeVisualizer.m_checkpointIteration == tree->m_treeModel.CurrentIteration()) {
 					if (ImGui::TreeNodeEx("Operator", ImGuiTreeNodeFlags_DefaultOpen)) {
-						if (ImGui::Combo("Mode", { "Select", "Prune", "Invigorate" }, m_operatorMode))
+						if (ImGui::Combo("Mode", { "Select", "Prune", "Invigorate", "Reduce" }, m_operatorMode))
 						{
 							treeVisualizer.m_selectedInternodeHandle = -1;
 							treeVisualizer.m_selectedInternodeHierarchyList.clear();
@@ -524,6 +550,9 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 						if (m_operatorMode == static_cast<unsigned>(OperatorMode::Invigorate))
 						{
 							ImGui::DragFloat("Invigorate speed", &m_overrideGrowRate, 0.01f, 0.01f, 1.0f);
+						}if(m_operatorMode == static_cast<unsigned>(OperatorMode::Reduce))
+						{
+							ImGui::DragFloat("Reduce speed", &m_reduceRate, 0.001f, 0.001f, 1.0f);
 						}
 						ImGui::Checkbox("Auto generate mesh", &m_autoGenerateMeshAfterEditing);
 						ImGui::Checkbox("Auto generate strands", &m_autoGenerateStrandsAfterEditing);
