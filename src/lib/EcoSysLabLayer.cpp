@@ -582,29 +582,6 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 				targetTime = 0.0f;
 			}
 			ImGui::Text(("Simulated time: " + std::to_string(m_time) + " years").c_str());
-
-			if (targetTime <= m_time && autoTimeGrow) {
-				autoTimeGrow = false;
-				for (const auto& treeEntity : *treeEntities) {
-					auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
-					if (m_autoGenerateMeshAfterEditing)
-					{
-						tree->InitializeMeshRenderer(m_meshGeneratorSettings, -1);
-					}
-					if (m_autoGenerateStrandsAfterEditing || m_autoGenerateStrandMeshAfterEditing)
-					{
-						auto strands = tree->GenerateStrands();
-						if (m_autoGenerateStrandsAfterEditing) {
-							tree->InitializeStrandRenderer(strands);
-						}
-						if (m_autoGenerateStrandMeshAfterEditing)
-						{
-							tree->InitializeMeshRendererPipe(m_pipeMeshGeneratorSettings);
-						}
-					}
-				}
-			}
-
 			ImGui::DragInt("target nodes", &m_simulationSettings.m_maxNodeCount, 500, 0, INT_MAX);
 			ImGui::DragFloat("target years", &extraTime, 0.1f, m_time, 999);
 			if (autoTimeGrow)
@@ -614,24 +591,6 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 					autoTimeGrow = false;
 					targetTime = m_time;
 
-					for (const auto& treeEntity : *treeEntities) {
-						auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
-						if (m_autoGenerateMeshAfterEditing)
-						{
-							tree->InitializeMeshRenderer(m_meshGeneratorSettings, -1);
-						}
-						if (m_autoGenerateStrandsAfterEditing || m_autoGenerateStrandMeshAfterEditing)
-						{
-							auto strands = tree->GenerateStrands();
-							if (m_autoGenerateStrandsAfterEditing) {
-								tree->InitializeStrandRenderer(strands);
-							}
-							if (m_autoGenerateStrandMeshAfterEditing)
-							{
-								tree->InitializeMeshRendererPipe(m_pipeMeshGeneratorSettings);
-							}
-						}
-					}
 				}
 			}
 			else {
@@ -753,7 +712,31 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 			tree->m_treeVisualizer.m_needUpdate = true;
 		}
 	}
-
+	const std::vector<Entity>* treeEntities =
+		scene->UnsafeGetPrivateComponentOwnersList<Tree>();
+	if (treeEntities && !treeEntities->empty()) {
+		if (targetTime <= m_time && autoTimeGrow) {
+			autoTimeGrow = false;
+			for (const auto& treeEntity : *treeEntities) {
+				auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
+				if (m_autoGenerateMeshAfterEditing)
+				{
+					tree->InitializeMeshRenderer(m_meshGeneratorSettings, -1);
+				}
+				if (m_autoGenerateStrandsAfterEditing || m_autoGenerateStrandMeshAfterEditing)
+				{
+					auto strands = tree->GenerateStrands();
+					if (m_autoGenerateStrandsAfterEditing) {
+						tree->InitializeStrandRenderer(strands);
+					}
+					if (m_autoGenerateStrandMeshAfterEditing)
+					{
+						tree->InitializeMeshRendererPipe(m_pipeMeshGeneratorSettings);
+					}
+				}
+			}
+		}
+	}
 #pragma region Internode debugging camera
 	if (m_visualization) {
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{ 0, 0 });
@@ -1525,6 +1508,8 @@ void EcoSysLabLayer::ClearGeometries() const {
 			const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
 			tree->ClearMeshRenderer();
 			tree->ClearTwigsStrandRenderer();
+			tree->ClearStrandRenderer();
+			tree->ClearMeshRendererPipe();
 		}
 	}
 }
