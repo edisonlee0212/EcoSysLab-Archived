@@ -7,9 +7,7 @@ using namespace EvoEngine;
 namespace EcoSysLab {
 	struct TreePipeMeshGeneratorSettings
 	{
-		//TODO: Add parameters here.
 		glm::vec3 m_vertexColor = glm::vec3(1.0f);
-		//float m_voxelSidelength = 0.1f;
 		bool m_removeDuplicate = true;
 		bool m_voxelSmoothIteration = true;
 		bool m_autoLevel = true;
