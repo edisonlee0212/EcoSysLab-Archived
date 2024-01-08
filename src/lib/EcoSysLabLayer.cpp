@@ -238,6 +238,7 @@ void EcoSysLabLayer::Visualization() {
 									treeModelModified = true;
 									lastGizmosUsed = false;
 									treeVisualizer.m_needUpdate = true;
+									treeModel.RefShootSkeleton().CalculateRegulatedGlobalRotation();
 								}
 							}
 							ImGui::EndChild();
