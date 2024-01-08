@@ -27,8 +27,7 @@ int orientation(const glm::vec2& p, const glm::vec2& q, const glm::vec2& r)
 
 	return (val > 0) ? 1 : 2; // clock or counterclock wise 
 }
-
-bool intersect(const glm::vec2& p1, const glm::vec2& q1, const glm::vec2& p2, const glm::vec2& q2)
+bool TreeVisualizer::intersect(const glm::vec2& p1, const glm::vec2& q1, const glm::vec2& p2, const glm::vec2& q2)
 {
 	// Find the four orientations needed for general and 
 	// special cases 
@@ -834,6 +833,8 @@ void TreeVisualizer::Clear() {
 	m_internodeMatrices->m_particleInfos.clear();
 	m_internodeMatrices->SetPendingUpdate();
 }
+
+
 
 bool TreeVisualizer::Initialized() const
 {

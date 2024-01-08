@@ -88,5 +88,8 @@ namespace EcoSysLab {
 		void Reset(TreeModel& treeModel);
 
 		void Clear();
+
+
+		static bool intersect(const glm::vec2& p1, const glm::vec2& q1, const glm::vec2& p2, const glm::vec2& q2);
 	};
 }
