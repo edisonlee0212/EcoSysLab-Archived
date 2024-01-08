@@ -8,41 +8,8 @@ using namespace EcoSysLab;
 
 void TreePipeMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
-	//TODO: You can add ImGui settings here.
 	ImGui::ColorEdit3("Vertex color", &m_vertexColor.x);
 	ImGui::DragFloat("Marching Cube Radius", &m_marchingCubeRadius, 0.0001f, 0.0001f, 2.0f);
-}
-
-// use this to visualize voxel before marching cubes for debugging purposes
-void insertCube(std::vector<Vertex>& vertices, std::vector<unsigned>& indices, glm::vec3 center, float sidelength)
-{
-	size_t indexOffset = vertices.size();
-
-	vertices.push_back(Vertex{ center + glm::vec3(1.0, 1.0, 1.0) * sidelength / 2.0f });
-	vertices.push_back(Vertex{ center + glm::vec3(-1.0, 1.0, 1.0) * sidelength / 2.0f });
-	vertices.push_back(Vertex{ center + glm::vec3(-1.0, -1.0, 1.0) * sidelength / 2.0f });
-	vertices.push_back(Vertex{ center + glm::vec3(1.0, -1.0, 1.0) * sidelength / 2.0f });
-
-	vertices.push_back(Vertex{ center + glm::vec3(1.0, -1.0, -1.0) * sidelength / 2.0f });
-	vertices.push_back(Vertex{ center + glm::vec3(-1.0, -1.0, -1.0) * sidelength / 2.0f });
-	vertices.push_back(Vertex{ center + glm::vec3(-1.0, 1.0, -1.0) * sidelength / 2.0f });
-	vertices.push_back(Vertex{ center + glm::vec3(1.0, 1.0, -1.0) * sidelength / 2.0f });
-
-	std::vector<unsigned> cubeIndices;
-
-	cubeIndices.insert(cubeIndices.end(), { 0, 1, 2, 0, 2, 3 }); // front
-	cubeIndices.insert(cubeIndices.end(), { 2, 4, 3, 4, 2, 5 }); // bottom
-	cubeIndices.insert(cubeIndices.end(), { 4, 5, 6, 4, 6, 7 }); // back
-	cubeIndices.insert(cubeIndices.end(), { 0, 6, 1, 6, 0, 7 }); // top
-	cubeIndices.insert(cubeIndices.end(), { 0, 3, 4, 0, 4, 7 }); // right
-	cubeIndices.insert(cubeIndices.end(), { 1, 2, 5, 1, 5, 6 }); // left
-
-	for (unsigned& index : cubeIndices)
-	{
-		index += indexOffset;
-	}
-
-	indices.insert(indices.end(), cubeIndices.begin(), cubeIndices.end());
 }
 
 int roundInDir(float val, int dir)
@@ -104,23 +71,22 @@ std::vector<glm::ivec3> voxelizeLineSeg(glm::vec3 start, glm::vec3 end, float vo
 
 		// update tMax and determine next voxel;
 		voxel[minIndex] += step[minIndex];
-		retVal.push_back(voxel);
-
-		tMax[minIndex] += tDelta[minIndex];
+		
 
 		// check that we do not run out of range
+		// This can happen due to numerical inaccuracies when adding tDelta
 		for (size_t dim = 0; dim < 3; dim++)
 		{
 			if (!(minVoxel[dim] <= voxel[dim] && voxel[dim] <= maxVoxel[dim]))
 			{
-				std::cerr << "voxel out of range! \n";
-				std::cerr << "start voxel: " << startVoxel << "\n";
-				std::cerr << "end voxel: " << endVoxel << "\n";
-				std::cerr << "current voxel: " << voxel << "\n";
-				std::cerr << "Aborting..." << std::endl;
+				retVal.push_back(endVoxel);
 				return retVal;
 			}
 		}
+
+		retVal.push_back(voxel);
+		tMax[minIndex] += tDelta[minIndex];
+
 	}
 
 	return retVal;
