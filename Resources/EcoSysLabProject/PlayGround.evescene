@@ -95,6 +95,36 @@ m_entityMetadataList:
         m_material:
           m_assetHandle: 2148205339428634797
           m_assetTypeName: Material
+  - m_name: PointCloudScanner
+    m_handle: 16719549946296499484
+    m_enabled: true
+    m_static: false
+    Root.Handle: 16719549946296499484
+    m_privateComponentElements:
+      - m_typeName: PointCloudScanner
+        m_enabled: true
+        m_pointSettings:
+          m_variance: 0.0149999997
+          m_ballRandRadius: 0.00499999989
+          m_typeIndex: true
+          m_instanceIndex: true
+          m_branchIndex: false
+          m_treePartIndex: true
+          m_lineIndex: true
+          m_internodeIndex: false
+          m_boundingBoxLimit: 1
+      - m_typeName: TreePointCloudScanner
+        m_enabled: true
+        m_pointSettings:
+          m_variance: 0.0149999997
+          m_ballRandRadius: 0.00499999989
+          m_typeIndex: true
+          m_instanceIndex: true
+          m_branchIndex: false
+          m_treePartIndex: true
+          m_lineIndex: true
+          m_internodeIndex: false
+          m_boundingBoxLimit: 1
 m_systems:
   []
 LocalAssets:
@@ -224,7 +254,7 @@ LocalAssets:
 m_dataComponentStorages:
   - m_entitySize: 130
     m_chunkCapacity: 126
-    m_entityAliveCount: 7
+    m_entityAliveCount: 8
     m_dataComponentTypes:
       - m_name: Transform
         m_size: 64
@@ -270,4 +300,9 @@ m_dataComponentStorages:
         DataComponents:
           - Data: !!binary "zczMPQAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAM3MzD0AAAAAAABAwAAAgD8AAAAAAACAPw=="
           - Data: !!binary "zczMPQAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAM3MzD0AAAAAAABAwAAAgD8AAAAAAACAPw=="
+          - Data: !!binary "AAA="
+      - m_handle: 16719549946296499484
+        DataComponents:
+          - Data: !!binary "AACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPw=="
+          - Data: !!binary "AACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPw=="
           - Data: !!binary "AAA="
