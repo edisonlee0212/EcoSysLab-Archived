@@ -37,7 +37,7 @@ namespace EcoSysLab {
 		bool ElongateInternode(float extendLength, NodeHandle internodeHandle,
 			const ShootGrowthController& shootGrowthController, float& collectedInhibitor);
 
-		void ShootGrowthPostProcess(const glm::mat4& globalTransform, ClimateModel& climateModel, const ShootGrowthController& shootGrowthController);
+		void ShootGrowthPostProcess(const ShootGrowthController& shootGrowthController);
 
 		friend class Tree;
 #pragma endregion
@@ -49,16 +49,6 @@ namespace EcoSysLab {
 		ShootSkeleton m_shootSkeleton;
 
 		std::deque<ShootSkeleton> m_history;
-
-		/**
-		 * Grow one iteration of the branches, given the climate model and the procedural parameters.
-		 * @param globalTransform The plant's world transform.
-		 * @param climateModel The climate model.
-		 * @param shootGrowthController The procedural parameters that guides the growth.
-		 * @return Whether the growth caused a structural change during the growth.
-		 */
-		bool GrowShoots(const glm::mat4& globalTransform, ClimateModel& climateModel,
-			const ShootGrowthController& shootGrowthController);
 
 		int m_leafCount = 0;
 		int m_fruitCount = 0;
@@ -75,7 +65,8 @@ namespace EcoSysLab {
 		int m_currentSeedValue = 0;
 
 	public:
-		bool Reduce(const ShootGrowthController& shootGrowthController, NodeHandle baseInternodeHandle, float reduceRate);
+		float GetSubTreeMaxAge(NodeHandle baseInternodeHandle) const;
+		bool Reduce(const ShootGrowthController& shootGrowthController, NodeHandle baseInternodeHandle, float targetAge);
 
 		void CalculateTransform(const ShootGrowthController& shootGrowthController, bool sagging);
 

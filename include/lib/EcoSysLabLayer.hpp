@@ -38,8 +38,8 @@ namespace EcoSysLab {
 
 	class EcoSysLabLayer : public ILayer {
 		unsigned m_operatorMode = static_cast<unsigned>(OperatorMode::Select);
-		float m_overrideGrowRate = 0.0f;
-		float m_reduceRate = 0.01f;
+		float m_overrideGrowRate = 0.1f;
+		float m_reduceRate = 0.1f;
 		bool m_autoGenerateMeshAfterEditing = false;
 		bool m_autoGenerateStrandsAfterEditing = false;
 		bool m_autoGenerateStrandMeshAfterEditing = false;

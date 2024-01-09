@@ -355,26 +355,33 @@ void EcoSysLabLayer::Visualization() {
 						}
 						treeVisualizer.SetSelectedNode(treeSkeleton, -1);
 						lastFrameInvigorate = false;
+						treeVisualizer.m_needUpdate = true;
 					}
 				}
 				break;
 				case OperatorMode::Reduce:
 				{
 					static bool lastFrameReduce = false;
+					static float targetAge = 0.0f;
 					if (editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Press)
 					{
 						if (treeVisualizer.RayCastSelection(m_visualizationCamera, m_visualizationCameraMousePosition, treeSkeleton, globalTransform)) {
 							if (!tree->m_enableHistory) treeModel.Step();
 							treeVisualizer.m_checkpointIteration = treeModel.CurrentIteration();
 							treeVisualizer.m_needUpdate = true;
+							if(treeVisualizer.m_selectedInternodeHandle >= 0)
+							{
+								targetAge = tree->m_treeModel.GetSubTreeMaxAge(treeVisualizer.m_selectedInternodeHandle);
+							}
 						}
 					}
 					else if (treeVisualizer.m_selectedInternodeHandle >= 0 && editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Hold)
 					{
-						if(tree->m_treeModel.Reduce(tree->m_shootGrowthController, treeVisualizer.m_selectedInternodeHandle, m_reduceRate))
+						if (tree->m_treeModel.Reduce(tree->m_shootGrowthController, treeVisualizer.m_selectedInternodeHandle, targetAge))
 						{
 							treeVisualizer.m_needUpdate = true;
 						}
+						targetAge -= m_reduceRate;
 						lastFrameReduce = true;
 					}
 					else if (lastFrameReduce && editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Release)
@@ -385,6 +392,7 @@ void EcoSysLabLayer::Visualization() {
 						}
 						treeVisualizer.SetSelectedNode(treeSkeleton, -1);
 						lastFrameReduce = false;
+						treeVisualizer.m_needUpdate = true;
 					}
 				}break;
 				}

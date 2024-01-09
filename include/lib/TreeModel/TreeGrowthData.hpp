@@ -67,10 +67,11 @@ namespace EcoSysLab
 
 	struct InternodeGrowthData {
 		float m_internodeLength = 0.0f;
-
+		int m_indexOfParentBud = 0;
 		bool m_maxChild = false;
 		bool m_lateral = false;
 		float m_startAge = 0;
+		float m_finishAge = 0.0f;
 		float m_inhibitorSink = 0;
 		glm::quat m_desiredLocalRotation = glm::vec3(0.0f);
 		glm::quat m_desiredGlobalRotation = glm::vec3(0.0f);
