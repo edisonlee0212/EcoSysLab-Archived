@@ -191,8 +191,8 @@ namespace EcoSysLab {
 			int enabledParticleSize = 0;
 			for (int i = 0; i < threadCount; i++)
 			{
-				m_min = glm::min(mins[i], m_min);
-				m_max = glm::max(maxs[i], m_max);
+				m_min = glm::min(mins[i] - glm::vec2(5.0f), m_min);
+				m_max = glm::max(maxs[i] + glm::vec2(5.0f), m_max);
 				enabledParticleSize += enabledParticleSizes[i];
 				m_massCenter += massCenters[i];
 				m_maxDistanceToCenter = glm::max(maxDistances[i], m_maxDistanceToCenter);
@@ -204,8 +204,8 @@ namespace EcoSysLab {
 			int enabledParticleSize = 0;
 			for (const auto& particle : m_particles2D)
 			{
-				m_min = glm::min(particle.m_position, m_min);
-				m_max = glm::max(particle.m_position, m_max);
+				m_min = glm::min(particle.m_position - glm::vec2(5.0f), m_min);
+				m_max = glm::max(particle.m_position + glm::vec2(5.0f), m_max);
 				if (particle.m_enable) {
 					enabledParticleSize++;
 					m_massCenter += particle.m_position;
