@@ -106,15 +106,16 @@ namespace EcoSysLab {
 		[[nodiscard]] int GetFruitCount() const;
 		/**
 		 * Grow one iteration of the tree, given the nutrients and the procedural parameters.
-		 * @param deltaTime The real world time for this iteration
+		 * @param deltaTime The real world time for this iteration.
+		 * @param baseInternodeHandle The base internode of the subtree to grow. If set to 0 or -1, this equals with growing full tree.
 		 * @param globalTransform The global transform of tree in world space.
-		 * @param climateModel The climate model
+		 * @param climateModel The climate model.
 		 * @param shootGrowthController The procedural parameters that guides the growth of the branches.
+		 * @param pruning If we want auto pruning to be enabled.
+		 * @param overrideGrowthRate If positive (clamped to below 1), the growth rate will be overwritten instead of calculating by available resources.
 		 * @return Whether the growth caused a structural change during the growth.
 		 */
-		//bool Grow(float deltaTime, const glm::mat4& globalTransform, ClimateModel& climateModel, const ShootGrowthController& shootGrowthController);
-
-		bool GrowSubTree(float deltaTime, NodeHandle baseInternodeHandle, const glm::mat4& globalTransform, ClimateModel& climateModel,
+		bool Grow(float deltaTime, NodeHandle baseInternodeHandle, const glm::mat4& globalTransform, ClimateModel& climateModel,
 			const ShootGrowthController& shootGrowthController, bool pruning = true, float overrideGrowthRate = -1);
 
 		int m_historyLimit = -1;

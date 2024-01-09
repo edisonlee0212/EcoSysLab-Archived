@@ -114,7 +114,7 @@ void TreeModel::ApplyTropism(const glm::vec3& targetDir, float tropism, glm::qua
 	rotation = glm::quatLookAt(front, up);
 }
 
-bool TreeModel::GrowSubTree(const float deltaTime, const NodeHandle baseInternodeHandle, const glm::mat4& globalTransform, ClimateModel& climateModel,
+bool TreeModel::Grow(const float deltaTime, const NodeHandle baseInternodeHandle, const glm::mat4& globalTransform, ClimateModel& climateModel,
 	const ShootGrowthController& shootGrowthController,
 	const bool pruning, const float overrideGrowthRate)
 {

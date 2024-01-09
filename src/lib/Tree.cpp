@@ -728,7 +728,7 @@ bool Tree::TryGrow(const float deltaTime, const NodeHandle baseInternodeHandle, 
 	
 	const auto owner = GetOwner();
 	PrepareControllers(treeDescriptor);
-	const bool grown = m_treeModel.GrowSubTree(deltaTime, baseInternodeHandle, scene->GetDataComponent<GlobalTransform>(owner).m_value, climate->m_climateModel, m_shootGrowthController, pruning, overrideGrowthRate);
+	const bool grown = m_treeModel.Grow(deltaTime, baseInternodeHandle, scene->GetDataComponent<GlobalTransform>(owner).m_value, climate->m_climateModel, m_shootGrowthController, pruning, overrideGrowthRate);
 	if (grown)
 	{
 		if (pruning) m_treeVisualizer.ClearSelections();
