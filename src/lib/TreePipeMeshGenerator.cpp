@@ -7,8 +7,19 @@ using namespace EcoSysLab;
 
 void TreePipeMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
+	if (ImGui::TreeNode("Marching cubes settings"))
+	{
+		ImGui::Checkbox("Auto set level", &m_autoLevel);
+		if (!m_autoLevel) ImGui::DragInt("Voxel subdivision level", &m_voxelSubdivisionLevel, 1, 5, 16);
+		else ImGui::DragFloat("Min Cube size", &m_marchingCubeRadius, 0.0001, 0.001f, 1.0f);
+		ImGui::DragInt("Smooth iteration", &m_voxelSmoothIteration, 0, 0, 10);
+		if (m_voxelSmoothIteration == 0) ImGui::Checkbox("Remove duplicate", &m_removeDuplicate);
+		ImGui::DragFloat("Marching Cube Radius", &m_marchingCubeRadius, 0.0001f, 0.0001f, 2.0f);
+		ImGui::TreePop();
+	}
+
 	ImGui::ColorEdit3("Vertex color", &m_vertexColor.x);
-	ImGui::DragFloat("Marching Cube Radius", &m_marchingCubeRadius, 0.0001f, 0.0001f, 2.0f);
+	
 }
 
 int roundInDir(float val, int dir)
