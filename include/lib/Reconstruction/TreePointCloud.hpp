@@ -98,6 +98,7 @@ namespace EcoSysLab {
 		float m_pointCheckRadius = 0.05f;
 		bool m_zigzagCheck = true;
 		float m_zigzagBranchShortening = 0.1f;
+		float m_parallelShiftCheckHeightLimit = 1.5f;
 		bool m_parallelShiftCheck = true;
 		float m_parallelShiftLimitRange = 2.0f;
 		float m_pointPointConnectionDetectionRadius = 0.05f;

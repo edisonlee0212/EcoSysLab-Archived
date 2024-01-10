@@ -82,7 +82,9 @@ bool TreePointCloud::DirectConnectionCheck(const BezierCurve& parentCurve, const
 		//const auto dotP0 = glm::dot(glm::normalize(shortenedChildP0 - shortenedParentP0), glm::normalize(shortenedParentP3 - shortenedParentP0));
 		if (dotC0 > 0 || dotP3 > 0/* && dotP0 < 0*/) return false;
 	}
-	if (m_connectivityGraphSettings.m_parallelShiftCheck)
+	if (m_connectivityGraphSettings.m_parallelShiftCheck 
+		&& parentPB.y > m_connectivityGraphSettings.m_parallelShiftCheckHeightLimit
+		&& childPA.y > m_connectivityGraphSettings.m_parallelShiftCheckHeightLimit)
 	{
 		const auto parentDirection = glm::normalize(parentPA - parentPB);
 		const auto projectedC0 = glm::closestPointOnLine(childPA, parentPA + 10.0f * parentDirection, parentPB - 10.0f * parentDirection);
