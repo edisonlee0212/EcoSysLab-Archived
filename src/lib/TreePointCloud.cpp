@@ -1089,61 +1089,65 @@ void TreePointCloud::EstablishConnectivityGraph() {
 		const auto& p3 = branch.m_bezierCurve.m_p3;
 		float branchLength = glm::distance(p0, p3);
 		//We find scatter points close to the branch p0.
-		FindPoints(p0, m_scatterPointsVoxelGrid, branchLength * m_connectivityGraphSettings.m_pointBranchConnectionDetectionRange,
-			[&](const PointData& voxel) {
-				{
+		if (p0.y <= m_connectivityGraphSettings.m_maxScatterPointConnectionHeight) {
+			FindPoints(p0, m_scatterPointsVoxelGrid, m_connectivityGraphSettings.m_pointBranchConnectionDetectionRadius,
+				[&](const PointData& voxel) {
+					{
+						auto& otherPoint = m_scatteredPoints[voxel.m_handle];
+						bool duplicate = false;
+						for (const auto& i : otherPoint.m_p0) {
+							if (i.second == branch.m_handle) {
+								duplicate = true;
+								break;
+							}
+						}
+						if (!duplicate) otherPoint.m_p0.emplace_back(glm::distance(branch.m_bezierCurve.m_p0, voxel.m_position), branch.m_handle);
+					}
+					if (m_connectivityGraphSettings.m_reverseConnection)
+					{
+						bool duplicate = false;
+						for (const auto& i : branch.m_pointsToP0) {
+							if (i.second == voxel.m_handle) {
+								duplicate = true;
+								break;
+							}
+						}
+						if (!duplicate) branch.m_pointsToP0.emplace_back(glm::distance(branch.m_bezierCurve.m_p0, voxel.m_position), voxel.m_handle);
+					}
+					m_scatterPointToBranchStartConnections.emplace_back(branch.m_bezierCurve.m_p0,
+						voxel.m_position);
+				});
+		}
+		if (p3.y <= m_connectivityGraphSettings.m_maxScatterPointConnectionHeight) {
+			//We find branch p3 close to the scatter point.
+			FindPoints(p3, m_scatterPointsVoxelGrid, m_connectivityGraphSettings.m_pointBranchConnectionDetectionRadius,
+				[&](const PointData& voxel) {
 					auto& otherPoint = m_scatteredPoints[voxel.m_handle];
-					bool duplicate = false;
-					for (const auto& i : otherPoint.m_p0) {
-						if (i.second == branch.m_handle){
-							duplicate = true;
-							break;
+					{
+						bool duplicate = false;
+						for (const auto& i : branch.m_pointsToP3) {
+							if (i.second == voxel.m_handle) {
+								duplicate = true;
+								break;
+							}
 						}
+						if (!duplicate) branch.m_pointsToP3.emplace_back(glm::distance(branch.m_bezierCurve.m_p3, voxel.m_position), voxel.m_handle);
 					}
-					if (!duplicate) otherPoint.m_p0.emplace_back(glm::distance(branch.m_bezierCurve.m_p0, voxel.m_position), branch.m_handle);
-				}
-				if (m_connectivityGraphSettings.m_reverseConnection)
-				{
-					bool duplicate = false;
-					for (const auto& i : branch.m_pointsToP0) {
-						if (i.second == voxel.m_handle) {
-							duplicate = true;
-							break;
+					if (m_connectivityGraphSettings.m_reverseConnection)
+					{
+						bool duplicate = false;
+						for (const auto& i : otherPoint.m_p3) {
+							if (i.second == branch.m_handle) {
+								duplicate = true;
+								break;
+							}
 						}
+						if (!duplicate) otherPoint.m_p3.emplace_back(glm::distance(branch.m_bezierCurve.m_p3, voxel.m_position), branch.m_handle);
 					}
-					if (!duplicate) branch.m_pointsToP0.emplace_back(glm::distance(branch.m_bezierCurve.m_p0, voxel.m_position), voxel.m_handle);
-				}
-				m_scatterPointToBranchStartConnections.emplace_back(branch.m_bezierCurve.m_p0,
-					voxel.m_position);
-			});
-		//We find branch p3 close to the scatter point.
-		FindPoints(p3, m_scatterPointsVoxelGrid, branchLength * m_connectivityGraphSettings.m_pointBranchConnectionDetectionRange,
-			[&](const PointData& voxel) {
-				auto& otherPoint = m_scatteredPoints[voxel.m_handle];
-				{
-					bool duplicate = false;
-					for (const auto& i : branch.m_pointsToP3) {
-						if (i.second == voxel.m_handle) {
-							duplicate = true;
-							break;
-						}
-					}
-					if (!duplicate) branch.m_pointsToP3.emplace_back(glm::distance(branch.m_bezierCurve.m_p3, voxel.m_position), voxel.m_handle);
-				}
-				if (m_connectivityGraphSettings.m_reverseConnection)
-				{
-					bool duplicate = false;
-					for (const auto& i : otherPoint.m_p3) {
-						if (i.second == branch.m_handle) {
-							duplicate = true;
-							break;
-						}
-					}
-					if (!duplicate) otherPoint.m_p3.emplace_back(glm::distance(branch.m_bezierCurve.m_p3, voxel.m_position), branch.m_handle);
-				}
-				m_scatterPointToBranchEndConnections.emplace_back(branch.m_bezierCurve.m_p3,
-					voxel.m_position);
-			});
+					m_scatterPointToBranchEndConnections.emplace_back(branch.m_bezierCurve.m_p3,
+						voxel.m_position);
+				});
+		}
 		//Connect P3 from other branch to this branch's P0
 		ForEachBranchEnd(p0, m_branchEndsVoxelGrid, branchLength * m_connectivityGraphSettings.m_branchBranchConnectionMaxLengthRange,
 			[&](const BranchEndData& voxel) {
@@ -1251,41 +1255,36 @@ void TreePointCloud::EstablishConnectivityGraph() {
 			visitedPoints.emplace(currentPointHandle);
 			processingPoints.pop_back();
 			auto& currentPoint = m_scatteredPoints[currentPointHandle];
-			for (const auto& neighborHandle : currentPoint.m_neighborScatterPoints) {
-				if (visitedPoints.find(neighborHandle) != visitedPoints.end()) continue;
-				auto& neighbor = m_scatteredPoints[neighborHandle];
-				//We stop search if the point is junction point.
-				for (const auto& branchInfo : neighbor.m_p0) {
-					if (predictedBranch.m_handle == branchInfo.second) continue;
-					bool skip = false;
-					for (const auto& i : predictedBranch.m_p3ToP0) {
-						if (branchInfo.second == i.first) {
-							skip = true;
-							break;
-						}
-					}
-					if (skip) continue;
-					auto& otherBranch = m_predictedBranches[branchInfo.second];
-					auto pA = predictedBranch.m_bezierCurve.m_p3;
-					auto pB = predictedBranch.m_bezierCurve.m_p0;
-					auto otherPA = otherBranch.m_bezierCurve.m_p3;
-					auto otherPB = otherBranch.m_bezierCurve.m_p0;
-					const auto dotP = glm::dot(glm::normalize(otherPB - otherPA),
-						glm::normalize(pB - pA));
-					if (dotP > glm::cos(glm::radians(m_connectivityGraphSettings.m_indirectConnectionAngleLimit))) continue;
-					const auto dotP2 = glm::dot(glm::normalize(pB - pA), glm::normalize(otherPA - pA));
-					if (dotP2 > 3) continue;
-					float distance = distanceL + branchInfo.first;
-					const auto search = predictedBranch.m_p3ToP0.find(branchInfo.second);
-					if (search == predictedBranch.m_p3ToP0.end() || search->second > distance)
-					{
-						predictedBranch.m_p3ToP0[branchInfo.second] = distance;
-						m_candidateBranchConnections.emplace_back(pA, otherPB);
+			for (const auto& branchInfo : currentPoint.m_p0) {
+				if (predictedBranch.m_handle == branchInfo.second) continue;
+				bool skip = false;
+				for (const auto& i : predictedBranch.m_p3ToP0) {
+					if (branchInfo.second == i.first) {
+						skip = true;
+						break;
 					}
 				}
+				if (skip) continue;
+				auto& otherBranch = m_predictedBranches[branchInfo.second];
+				auto pA = predictedBranch.m_bezierCurve.m_p3;
+				auto pB = predictedBranch.m_bezierCurve.m_p0;
+				auto otherPA = otherBranch.m_bezierCurve.m_p3;
+				auto otherPB = otherBranch.m_bezierCurve.m_p0;
+				const auto dotP = glm::dot(glm::normalize(otherPB - otherPA),
+					glm::normalize(pB - pA));
+				if (dotP < glm::cos(glm::radians(m_connectivityGraphSettings.m_indirectConnectionAngleLimit))) continue;
+				float distance = distanceL + branchInfo.first;
+				const auto search = predictedBranch.m_p3ToP0.find(branchInfo.second);
+				if (search == predictedBranch.m_p3ToP0.end() || search->second > distance)
+				{
+					predictedBranch.m_p3ToP0[branchInfo.second] = distance;
+					m_candidateBranchConnections.emplace_back(pA, otherPB);
+				}
+			}
+			/*
 				if (m_connectivityGraphSettings.m_reverseConnection)
 				{
-					for (const auto& branchInfo : neighbor.m_p3) {
+					for (const auto& branchInfo : currentPoint.m_p3) {
 						if (predictedBranch.m_handle == branchInfo.second) continue;
 						bool skip = false;
 						for (const auto& i : predictedBranch.m_p3ToP3) {
@@ -1315,11 +1314,13 @@ void TreePointCloud::EstablishConnectivityGraph() {
 						}
 					}
 				}
-				processingPoints.emplace_back(neighborHandle);
+				*/
+			for (const auto& neighborHandle : currentPoint.m_neighborScatterPoints) {
+				if (visitedPoints.find(neighborHandle) == visitedPoints.end()) processingPoints.emplace_back(neighborHandle);
 			}
 		}
 	}
-	
+	/*
 	if (m_connectivityGraphSettings.m_reverseConnection)
 	{
 		for (auto& predictedBranch : m_predictedBranches) {
@@ -1409,6 +1410,8 @@ void TreePointCloud::EstablishConnectivityGraph() {
 			}
 		}
 	}
+
+	*/
 }
 
 void TreePointCloud::BuildSkeletons() {
@@ -2445,7 +2448,7 @@ void ConnectivityGraphSettings::OnInspect() {
 	if(ImGui::Button("Load reduced connection settings"))
 	{
 		m_pointPointConnectionDetectionRadius = 0.05f;
-		m_pointBranchConnectionDetectionRange = 0.5f;
+		m_pointBranchConnectionDetectionRadius = 0.1f;
 		m_branchBranchConnectionMaxLengthRange = 15.0f;
 		m_directionConnectionAngleLimit = 30.0f;
 		m_indirectConnectionAngleLimit = 15.0f;
@@ -2455,7 +2458,7 @@ void ConnectivityGraphSettings::OnInspect() {
 	if (ImGui::Button("Load default connection settings"))
 	{
 		m_pointPointConnectionDetectionRadius = 0.05f;
-		m_pointBranchConnectionDetectionRange = 0.5f;
+		m_pointBranchConnectionDetectionRadius = 0.1f;
 		m_branchBranchConnectionMaxLengthRange = 5.0f;
 		m_directionConnectionAngleLimit = 65.0f;
 		m_indirectConnectionAngleLimit = 65.0f;
@@ -2465,16 +2468,17 @@ void ConnectivityGraphSettings::OnInspect() {
 	if (ImGui::Button("Load max connection settings"))
 	{
 		m_pointPointConnectionDetectionRadius = 0.05f;
-		m_pointBranchConnectionDetectionRange = 0.5f;
+		m_pointBranchConnectionDetectionRadius = 0.1f;
 		m_branchBranchConnectionMaxLengthRange = 10.0f;
 		m_directionConnectionAngleLimit = 90.0f;
 		m_indirectConnectionAngleLimit = 90.0f;
 		m_maxScatterPointConnectionHeight = 10.f;
 		m_parallelShiftCheck = false;
 	}
-	ImGui::DragFloat("Point-point detection radius", &m_pointPointConnectionDetectionRadius, 0.01f, 0.01f, 1.0f);
+
 	ImGui::DragFloat("Point-point connection max height", &m_maxScatterPointConnectionHeight, 0.01f, 0.01f, 3.0f);
-	ImGui::DragFloat("Point-branch detection range", &m_pointBranchConnectionDetectionRange, 0.01f, 0.01f, 2.0f);
+	ImGui::DragFloat("Point-point detection radius", &m_pointPointConnectionDetectionRadius, 0.01f, 0.01f, 1.0f);
+	ImGui::DragFloat("Point-branch detection radius", &m_pointBranchConnectionDetectionRadius, 0.01f, 0.01f, 2.0f);
 	ImGui::DragFloat("Branch-branch detection range", &m_branchBranchConnectionMaxLengthRange, 0.01f, 0.01f, 2.0f);
 	ImGui::DragFloat("Direct connection angle limit", &m_directionConnectionAngleLimit, 0.01f, 0.0f, 180.0f);
 	ImGui::DragFloat("Indirect connection angle limit", &m_indirectConnectionAngleLimit, 0.01f, 0.0f, 180.0f);
