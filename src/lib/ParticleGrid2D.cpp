@@ -33,13 +33,13 @@ void ParticleGrid2D::ApplyBoundaries(const ProfileBoundaries& profileBoundaries)
 	auto& cells = m_cells;
 	if (profileBoundaries.m_boundaries.empty())
 	{
-		for (int cellIndex = 0; cellIndex < m_cellSize; cellIndex++) {
+		for (int cellIndex = 0; cellIndex < m_cells.size(); cellIndex++) {
 			auto& cell = cells[cellIndex];
 			cell.m_boundaryIndex = -1;
 		}
 	}
 	else {
-		for (int cellIndex = 0; cellIndex < m_cellSize; cellIndex++) {
+		for (int cellIndex = 0; cellIndex < m_cells.size(); cellIndex++) {
 			auto& cell = cells[cellIndex];
 			const auto cellPosition = GetPosition(cellIndex);
 			cell.m_boundaryIndex = profileBoundaries.InBoundaries(cellPosition, cell.m_closestPoint);

@@ -331,7 +331,7 @@ TreeVisualizer::OnInspect(
 	}
 	if (ImGui::TreeNodeEx("Visualizer Settings")) {
 		if (ImGui::Combo("Shoot Color mode",
-			{ "Order", "Level", "Light Intensity", "Light Direction", "Growth Potential", "Apical control", "Desired growth rate", "IsMaxChild", "AllocatedVigor" },
+			{ "Default", "Order", "Level", "Light Intensity", "Light Direction", "Growth Potential", "Apical control", "Desired growth rate", "IsMaxChild", "AllocatedVigor" },
 			m_settings.m_shootVisualizationMode)) {
 			m_needShootColorUpdate = true;
 		}
@@ -447,74 +447,71 @@ void TreeVisualizer::Visualize(TreeModel& treeModel, const GlobalTransform& glob
 			}
 		}
 
-		if(m_checkpointIteration == treeModel.CurrentIteration())
+		if (m_checkpointIteration == treeModel.CurrentIteration())
 		{
+			static bool showGrid = true;
 			if (m_frontProfileGui) {
 				const std::string frontTag = "Front Profile";
 				if (ImGui::Begin(frontTag.c_str()))
 				{
 					if (m_selectedInternodeHandle != -1) {
 						auto& node = treeModel.RefShootSkeleton().RefNode(m_selectedInternodeHandle);
-						node.m_data.m_frontParticlePhysics2D.OnInspect([&](const glm::vec2 position) {},
-							[&](const ImVec2 origin, const float zoomFactor, ImDrawList* drawList) {},
-							false);
-					}
-					else
-					{
-						ImGui::Text("Select an internode to show its front profile!");
-					}
-				}
-				ImGui::End();
-			}
-			if (m_backProfileGui) {
-				const std::string backTag = "Back Profile";
-				if (ImGui::Begin(backTag.c_str()))
-				{
-					if (m_selectedInternodeHandle != -1) {
-						auto& node = treeModel.RefShootSkeleton().RefNode(m_selectedInternodeHandle);
 
 						glm::vec2 mousePosition{};
 						static bool lastFrameClicked = false;
+
 						bool mouseDown = false;
-						if(ImGui::Button("Clear stroke"))
+						if (ImGui::Button("Clear stroke"))
 						{
 							node.m_data.m_profileBoundaries.m_boundaries.clear();
 						}
-						node.m_data.m_backParticlePhysics2D.OnInspect([&](const glm::vec2 position)
+						ImGui::SameLine();
+						ImGui::Checkbox("Show Grid", &showGrid);
+						if (node.GetParentHandle() != -1)
 						{
+							const auto& parentNode = treeModel.RefShootSkeleton().RefNode(node.GetParentHandle());
+							if (!parentNode.m_data.m_profileBoundaries.m_boundaries.empty())
+							{
+								ImGui::SameLine();
+								if (ImGui::Button("Copy parent boundaries"))
+								{
+									node.m_data.m_profileBoundaries = parentNode.m_data.m_profileBoundaries;
+									node.m_data.m_boundariesUpdated = true;
+								}
+							}
+						}
+						node.m_data.m_frontParticlePhysics2D.OnInspect([&](const glm::vec2 position)
+							{
 								mouseDown = true;
 								mousePosition = position;
-						},
-							[&](const ImVec2 origin, const float zoomFactor, ImDrawList* drawList)
-							{
-								for(const auto& boundary : node.m_data.m_profileBoundaries.m_boundaries)
+							},
+							[&](const ImVec2 origin, const float zoomFactor, ImDrawList* drawList) {
+								if (node.GetParentHandle() != -1)
 								{
-									if (boundary.m_points.size() > 2) {
-										for (int pointIndex = 0; pointIndex < boundary.m_points.size() - 1; pointIndex++)
+									const auto& parentNode = treeModel.RefShootSkeleton().RefNode(node.GetParentHandle());
+									if (!parentNode.m_data.m_profileBoundaries.m_boundaries.empty())
+									{
+										for (const auto& parentBoundary : parentNode.m_data.m_profileBoundaries.m_boundaries)
 										{
-											const auto& p1 = boundary.m_points[pointIndex];
-											const auto& p2 = boundary.m_points[pointIndex + 1];
-											drawList->AddLine(ImVec2(origin.x + p1.x * zoomFactor,
-												origin.y + p1.y * zoomFactor), ImVec2(origin.x + p2.x * zoomFactor,
-													origin.y + p2.y * zoomFactor), IM_COL32(255.0f, 255.0f, 255.0f, 255.0f));
+											parentBoundary.Render(origin, zoomFactor, drawList, IM_COL32(128.0f, 0.0f, 0, 128.0f), 4.0f);
 										}
-
-										const auto& p1 = boundary.m_points.back();
-										const auto& p2 = boundary.m_points[0];
-										drawList->AddLine(ImVec2(origin.x + p1.x * zoomFactor,
-											origin.y + p1.y * zoomFactor), ImVec2(origin.x + p2.x * zoomFactor,
-												origin.y + p2.y * zoomFactor), IM_COL32(255.0f, 255.0f, 255.0f, 255.0f));
 									}
 								}
-							},
-							false);
-						if(lastFrameClicked)
+
+								for (const auto& boundary : node.m_data.m_profileBoundaries.m_boundaries)
+								{
+									boundary.Render(origin, zoomFactor, drawList, IM_COL32(255.0f, 0.0f, 0, 255.0f), 2.0f);
+								}},
+							showGrid);
+
+						if (lastFrameClicked)
 						{
-							if(mouseDown)
+							if (mouseDown)
 							{
 								//Continue recording.
-								if(mousePosition != node.m_data.m_profileBoundaries.m_boundaries.back().m_points.back()) node.m_data.m_profileBoundaries.m_boundaries.back().m_points.emplace_back(mousePosition);
-							}else
+								if (mousePosition != node.m_data.m_profileBoundaries.m_boundaries.back().m_points.back()) node.m_data.m_profileBoundaries.m_boundaries.back().m_points.emplace_back(mousePosition);
+							}
+							else
 							{
 								//Stop and check boundary.
 								bool valid = true;
@@ -533,7 +530,7 @@ void TreeVisualizer::Visualize(TreeModel& treeModel, const GlobalTransform& glob
 											{
 												const auto& p3 = testBoundary.m_points[testPointIndex];
 												const auto& p4 = testBoundary.m_points[(testPointIndex + 1) % testBoundary.m_points.size()];
-												if(ProfileBoundary::Intersect(p1, p2, p3, p4))
+												if (ProfileBoundary::Intersect(p1, p2, p3, p4))
 												{
 													valid = false;
 													break;
@@ -544,14 +541,14 @@ void TreeVisualizer::Visualize(TreeModel& treeModel, const GlobalTransform& glob
 										if (!valid) break;
 									}
 								}
-								if(valid)
+								if (valid)
 								{
 									for (int testBoundaryIndex = 0; testBoundaryIndex < boundaries.size() - 1; testBoundaryIndex++) {
 										const auto& testBoundary = boundaries.at(testBoundaryIndex);
-										for(const auto& newPoint : newBoundary.m_points)
+										for (const auto& newPoint : newBoundary.m_points)
 										{
-											glm::vec2 temp {};
-											if(testBoundary.InBoundary(newPoint, temp))
+											glm::vec2 temp{};
+											if (testBoundary.InBoundary(newPoint, temp))
 											{
 												valid = false;
 												break;
@@ -560,16 +557,151 @@ void TreeVisualizer::Visualize(TreeModel& treeModel, const GlobalTransform& glob
 										if (!valid) break;
 									}
 								}
-								if(!valid)
+								if (!valid)
 								{
 									boundaries.pop_back();
-								}else
+								}
+								else
 								{
 									boundaries.back().CalculateCenter();
 									node.m_data.m_boundariesUpdated = true;
 								}
 							}
-						}else if (mouseDown){
+						}
+						else if (mouseDown) {
+							//Start recording.
+							node.m_data.m_profileBoundaries.m_boundaries.emplace_back();
+							node.m_data.m_profileBoundaries.m_boundaries.back().m_points.push_back(mousePosition);
+						}
+						lastFrameClicked = mouseDown;
+					}
+					else
+					{
+						ImGui::Text("Select an internode to show its front profile!");
+					}
+				}
+				ImGui::End();
+			}
+			if (m_backProfileGui) {
+				const std::string backTag = "Back Profile";
+				if (ImGui::Begin(backTag.c_str()))
+				{
+					if (m_selectedInternodeHandle != -1) {
+						auto& node = treeModel.RefShootSkeleton().RefNode(m_selectedInternodeHandle);
+
+						glm::vec2 mousePosition{};
+						static bool lastFrameClicked = false;
+
+						bool mouseDown = false;
+						if (ImGui::Button("Clear stroke"))
+						{
+							node.m_data.m_profileBoundaries.m_boundaries.clear();
+						}
+						ImGui::SameLine();
+						ImGui::Checkbox("Show Grid", &showGrid);
+						if (node.GetParentHandle() != -1)
+						{
+							const auto& parentNode = treeModel.RefShootSkeleton().RefNode(node.GetParentHandle());
+							if (!parentNode.m_data.m_profileBoundaries.m_boundaries.empty())
+							{
+								ImGui::SameLine();
+								if (ImGui::Button("Copy parent boundaries"))
+								{
+									node.m_data.m_profileBoundaries = parentNode.m_data.m_profileBoundaries;
+									node.m_data.m_boundariesUpdated = true;
+								}
+							}
+						}
+						node.m_data.m_backParticlePhysics2D.OnInspect([&](const glm::vec2 position)
+							{
+								mouseDown = true;
+								mousePosition = position;
+							},
+							[&](const ImVec2 origin, const float zoomFactor, ImDrawList* drawList)
+							{
+								if (node.GetParentHandle() != -1)
+								{
+									const auto& parentNode = treeModel.RefShootSkeleton().RefNode(node.GetParentHandle());
+									if (!parentNode.m_data.m_profileBoundaries.m_boundaries.empty())
+									{
+										for (const auto& parentBoundary : parentNode.m_data.m_profileBoundaries.m_boundaries)
+										{
+											parentBoundary.Render(origin, zoomFactor, drawList, IM_COL32(128.0f, 0.0f, 0, 128.0f), 4.0f);
+										}
+									}
+								}
+
+								for (const auto& boundary : node.m_data.m_profileBoundaries.m_boundaries)
+								{
+									boundary.Render(origin, zoomFactor, drawList, IM_COL32(255.0f, 0.0f, 0, 255.0f), 2.0f);
+								}
+							},
+							showGrid);
+						if (lastFrameClicked)
+						{
+							if (mouseDown)
+							{
+								//Continue recording.
+								if (mousePosition != node.m_data.m_profileBoundaries.m_boundaries.back().m_points.back()) node.m_data.m_profileBoundaries.m_boundaries.back().m_points.emplace_back(mousePosition);
+							}
+							else
+							{
+								//Stop and check boundary.
+								bool valid = true;
+								auto& boundaries = node.m_data.m_profileBoundaries.m_boundaries;
+								auto& newBoundary = boundaries.back();
+								if (newBoundary.m_points.size() <= 3) valid = false;
+								valid = !(!valid || !newBoundary.Valid());
+								if (valid) {
+									for (int testBoundaryIndex = 0; testBoundaryIndex < boundaries.size() - 1; testBoundaryIndex++) {
+										const auto& testBoundary = boundaries.at(testBoundaryIndex);
+										for (int newPointIndex = 0; newPointIndex < newBoundary.m_points.size(); newPointIndex++)
+										{
+											const auto& p1 = newBoundary.m_points[newPointIndex];
+											const auto& p2 = newBoundary.m_points[(newPointIndex + 1) % newBoundary.m_points.size()];
+											for (int testPointIndex = 0; testPointIndex < testBoundary.m_points.size(); testPointIndex++)
+											{
+												const auto& p3 = testBoundary.m_points[testPointIndex];
+												const auto& p4 = testBoundary.m_points[(testPointIndex + 1) % testBoundary.m_points.size()];
+												if (ProfileBoundary::Intersect(p1, p2, p3, p4))
+												{
+													valid = false;
+													break;
+												}
+											}
+											if (!valid) break;
+										}
+										if (!valid) break;
+									}
+								}
+								if (valid)
+								{
+									for (int testBoundaryIndex = 0; testBoundaryIndex < boundaries.size() - 1; testBoundaryIndex++) {
+										const auto& testBoundary = boundaries.at(testBoundaryIndex);
+										for (const auto& newPoint : newBoundary.m_points)
+										{
+											glm::vec2 temp{};
+											if (testBoundary.InBoundary(newPoint, temp))
+											{
+												valid = false;
+												break;
+											}
+										}
+										if (!valid) break;
+									}
+								}
+								if (!valid)
+								{
+									boundaries.pop_back();
+								}
+								else
+								{
+									boundaries.back().CalculateCenter();
+									node.m_data.m_boundariesUpdated = true;
+								}
+							}
+						}
+						else if (mouseDown) {
 							//Start recording.
 							node.m_data.m_profileBoundaries.m_boundaries.emplace_back();
 							node.m_data.m_profileBoundaries.m_boundaries.back().m_points.push_back(mousePosition);
@@ -838,6 +970,9 @@ void TreeVisualizer::SyncColors(const ShootSkeleton& shootSkeleton, const NodeHa
 		const auto nodeHandle = sortedNodeList[i];
 		const auto& node = shootSkeleton.PeekNode(nodeHandle);
 		switch (static_cast<ShootVisualizerMode>(m_settings.m_shootVisualizationMode)) {
+		case ShootVisualizerMode::Default:
+			matrices[i].m_instanceColor = m_randomColors[nodeHandle % m_randomColors.size()];
+			break;
 		case ShootVisualizerMode::Order:
 			matrices[i].m_instanceColor = m_randomColors[node.m_data.m_order];
 			break;

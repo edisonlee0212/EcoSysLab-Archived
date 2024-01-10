@@ -320,10 +320,11 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	ImGui::DragFloat("Physics damping", &physicsSettings.m_damping, 0.01f, 0.0f, 1.0f);
 	ImGui::DragFloat("Physics max speed", &physicsSettings.m_maxSpeed, 0.01f, 0.0f, 100.0f);
 	ImGui::DragFloat("Physics particle softness", &physicsSettings.m_particleSoftness, 0.01f, 0.0f, 1.0f);
-
-	ImGui::DragFloat("Center attraction strength", &pipeModelParameters.m_centerAttractionStrength, 0.01f, 0.0f, 10.0f);
+	ImGui::DragFloat("Boundary strength", &pipeModelParameters.m_boundaryStrength, 1000.f, 0.0f, 100000.0f);
+	ImGui::DragFloat("Center attraction strength", &pipeModelParameters.m_centerAttractionStrength, 100.f, 0.0f, 10000.0f);
 	ImGui::DragInt("Max iteration cell factor", &pipeModelParameters.m_maxSimulationIterationCellFactor, 1, 0, 500);
-	ImGui::DragInt("Simulation timeout", &pipeModelParameters.m_timeout, 1, 0, 50000);
+	ImGui::DragInt("Timeout", &pipeModelParameters.m_timeout, 100, 200, 10000);
+	ImGui::DragInt("Timeout with boundaries)", &pipeModelParameters.m_timeoutWithBoundaries, 100, 200, 10000);
 	ImGui::DragFloat("Split limit", &pipeModelParameters.m_splitRatioLimit, 0.01f, 0.0f, 1.0f);
 	ImGui::DragInt("End node strand count", &pipeModelParameters.m_endNodeStrands, 1, 1, 50);
 	ImGui::Checkbox("Pre-merge", &pipeModelParameters.m_preMerge);
@@ -364,11 +365,13 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	}
 	if (ImGui::Button("Build Pipe Mesh"))
 	{
+		GenerateStrands();
 		InitializeMeshRendererPipe(m_treePipeMeshGeneratorSettings);
 	}
 
 	if(ImGui::Button("Clear Pipe Mesh"))
 	{
+		
 		ClearMeshRendererPipe();
 	}
 }

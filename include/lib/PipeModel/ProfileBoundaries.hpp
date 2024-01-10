@@ -10,7 +10,7 @@ namespace EcoSysLab
 		glm::vec2 m_center = glm::vec2(0.0f);
 
 		void CalculateCenter();
-
+		void Render(ImVec2 origin, float zoomFactor, ImDrawList* drawList, ImU32 color, float thickness) const;
 		[[nodiscard]] bool Valid() const;
 
 		[[nodiscard]] bool InBoundary(const glm::vec2& position, glm::vec2& closestPoint) const;

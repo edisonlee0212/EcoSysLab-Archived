@@ -10,6 +10,7 @@ namespace EcoSysLab {
 	
 
 	enum class ShootVisualizerMode {
+		Default,
 		Order,
 		Level,
 		LightIntensity,
@@ -30,7 +31,7 @@ namespace EcoSysLab {
 	};
 
 	struct TreeVisualizerColorSettings {
-		int m_shootVisualizationMode = static_cast<int>(ShootVisualizerMode::Level);
+		int m_shootVisualizationMode = static_cast<int>(ShootVisualizerMode::Default);
 		float m_shootColorMultiplier = 1.0f;
 	};
 
@@ -61,8 +62,8 @@ namespace EcoSysLab {
 		bool m_visualization = true;
 		TreeVisualizerColorSettings m_settings;
 		
-		bool m_frontProfileGui = false;
-		bool m_backProfileGui = true;
+		bool m_frontProfileGui = true;
+		bool m_backProfileGui = false;
 		bool m_treeHierarchyGui = false;
 		float m_selectedInternodeLengthFactor = 0.0f;
 		int m_checkpointIteration = 0;

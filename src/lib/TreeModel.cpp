@@ -1389,6 +1389,9 @@ void TreeModel::PackTask(NodeHandle nodeHandle, const PipeModelParameters& pipeM
 	internodeData.m_frontParticlePhysics2D.m_parallel = parallel;
 
 	const auto iterations = pipeModelParameters.m_maxSimulationIterationCellFactor * internodeData.m_frontParticlePhysics2D.RefParticles().size();
+
+	int timeout = pipeModelParameters.m_timeout;
+	if (!internodeData.m_profileBoundaries.m_boundaries.empty()) timeout = pipeModelParameters.m_timeoutWithBoundaries;
 	for (int i = 0; i < iterations; i++) {
 		internodeData.m_frontParticlePhysics2D.Simulate(1,
 			[&](auto& grid, bool gridResized)
@@ -1426,7 +1429,7 @@ void TreeModel::PackTask(NodeHandle nodeHandle, const PipeModelParameters& pipeM
 				particle.SetAcceleration(acceleration);
 			}
 		);
-		if (pipeModelParameters.m_timeout > 0 && i > pipeModelParameters.m_timeout) break;
+		if (timeout > 0 && i > timeout) break;
 	}
 }
 
@@ -1446,6 +1449,10 @@ void TreeModel::MergeTask(NodeHandle nodeHandle, const PipeModelParameters& pipe
 	{
 		internode.m_data.m_needPacking = true;
 		return;
+	}
+	if (!internode.m_data.m_profileBoundaries.m_boundaries.empty())
+	{
+		internode.m_data.m_needPacking = true;
 	}
 	if (mainChildHandle == -1) mainChildHandle = childHandles.front();
 	auto& mainChildNode = m_shootSkeleton.RefNode(mainChildHandle);
@@ -1469,6 +1476,7 @@ void TreeModel::MergeTask(NodeHandle nodeHandle, const PipeModelParameters& pipe
 
 			nodeStartParticle.m_data.m_mainChild = nodeEndParticle.m_data.m_mainChild = true;
 		}
+		
 		return;
 	}
 	internodeData.m_needPacking = true;
@@ -1693,8 +1701,7 @@ void TreeModel::ApplyProfiles()
 		glm::vec3 parentGlobalPosition;
 		if (node.GetParentHandle() == -1)
 		{
-			parentGlobalRotation = glm::quatLookAt(parentGlobalRotation * glm::vec3(0, 1, 0),
-				parentGlobalRotation * glm::vec3(0, 0, -1));
+			parentGlobalRotation = node.m_data.m_adjustedGlobalRotation;
 			parentGlobalPosition = glm::vec3(0.0f);
 		}
 		else {
@@ -1705,11 +1712,11 @@ void TreeModel::ApplyProfiles()
 		//globalTransform.m_value = glm::inverse(modelGlobalTransform.m_value) * globalTransform.m_value;
 		if (node.GetParentHandle() == -1)
 		{
-			const auto currentUp = parentGlobalRotation * glm::vec3(0, -1, 0);
-			const auto currentLeft = parentGlobalRotation * glm::vec3(-1, 0, 0);
-			for (const auto& [pipeHandle, particleHandle] : node.m_data.m_frontParticleMap)
+			const auto currentUp = parentGlobalRotation * glm::vec3(0, 1, 0);
+			const auto currentLeft = parentGlobalRotation * glm::vec3(1, 0, 0);
+			for (const auto& [pipeHandle, particleHandle] : node.m_data.m_backParticleMap)
 			{
-				const auto& particle = node.m_data.m_frontParticlePhysics2D.PeekParticle(particleHandle);
+				const auto& particle = node.m_data.m_backParticlePhysics2D.PeekParticle(particleHandle);
 				auto& pipe = pipeGroup.RefPipe(pipeHandle);
 				pipe.m_info.m_baseInfo.m_thickness = m_shootSkeleton.m_data.m_pipeModelParameters.m_profileDefaultCellRadius;
 				pipe.m_info.m_baseInfo.m_globalPosition = parentGlobalPosition

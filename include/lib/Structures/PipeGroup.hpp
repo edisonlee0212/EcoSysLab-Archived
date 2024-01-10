@@ -32,7 +32,7 @@ namespace EcoSysLab
 		/**
 		 * \brief The info of the start of the first pipe segment in this pipe.
 		 */
-		PipeSegmentInfo m_baseInfo;
+		PipeSegmentInfo m_baseInfo {};
 	};
 
 	/**
@@ -55,8 +55,8 @@ namespace EcoSysLab
 
 		int m_index = -1;
 	public:
-		PipeSegmentData m_data;
-		PipeSegmentInfo m_info;
+		PipeSegmentData m_data {};
+		PipeSegmentInfo m_info {};
 
 		/**
 		 * Whether this segment is the end segment.
@@ -287,7 +287,7 @@ namespace EcoSysLab
 			point.m_normal = glm::normalize(pipeSegment.m_info.m_globalPosition - baseInfo.m_globalPosition); //glm::normalize(pipeSegment.m_info.m_globalRotation * glm::vec3(0, 0, -1));
 			point.m_position = pipeSegment.m_info.m_globalPosition - point.m_normal * prevDistance * frontControlPointRatio;
 			point.m_thickness = pipeSegment.m_info.m_thickness;
-			if(triplePoints) points.emplace_back(point);
+			points.emplace_back(point);
 
 			point.m_normal = glm::normalize(pipeSegment.m_info.m_globalRotation * glm::vec3(0, 0, -1));
 			point.m_position = pipeSegment.m_info.m_globalPosition;
@@ -295,7 +295,7 @@ namespace EcoSysLab
 
 			point.m_normal = glm::normalize(nextPosition - pipeSegment.m_info.m_globalPosition); //glm::normalize(pipeSegment.m_info.m_globalRotation * glm::vec3(0, 0, -1));
 			point.m_position = pipeSegment.m_info.m_globalPosition + point.m_normal * nextDistance * backControlPointRatio;
-			if (triplePoints) points.emplace_back(point);
+			points.emplace_back(point);
 		}
 		for (int i = 1; i < pipeSegmentHandles.size() && (nodeMaxCount == -1 || i < nodeMaxCount); i++)
 		{

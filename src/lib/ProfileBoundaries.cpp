@@ -38,6 +38,26 @@ void ProfileBoundary::CalculateCenter()
 	m_center /= sum;
 }
 
+void ProfileBoundary::Render(const ImVec2 origin, const float zoomFactor, ImDrawList* drawList, ImU32 color, float thickness) const
+{
+	if (m_points.size() > 2) {
+		for (int pointIndex = 0; pointIndex < m_points.size() - 1; pointIndex++)
+		{
+			const auto& p1 = m_points[pointIndex];
+			const auto& p2 = m_points[pointIndex + 1];
+			drawList->AddLine(ImVec2(origin.x + p1.x * zoomFactor,
+				origin.y + p1.y * zoomFactor), ImVec2(origin.x + p2.x * zoomFactor,
+					origin.y + p2.y * zoomFactor), color, thickness);
+		}
+
+		const auto& p1 = m_points.back();
+		const auto& p2 = m_points[0];
+		drawList->AddLine(ImVec2(origin.x + p1.x * zoomFactor,
+			origin.y + p1.y * zoomFactor), ImVec2(origin.x + p2.x * zoomFactor,
+				origin.y + p2.y * zoomFactor), color, thickness);
+	}
+}
+
 bool ProfileBoundary::Valid() const
 {
 	for (int lineIndex = 0; lineIndex < m_points.size(); lineIndex++)

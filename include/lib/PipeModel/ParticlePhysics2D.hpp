@@ -6,7 +6,7 @@ using namespace EvoEngine;
 namespace EcoSysLab {
 	struct ParticlePhysicsSettings
 	{
-		float m_particleSoftness = 0.3f;
+		float m_particleSoftness = 0.1f;
 		float m_damping = 0.02f;
 		float m_maxSpeed = 30.0f;
 	};
