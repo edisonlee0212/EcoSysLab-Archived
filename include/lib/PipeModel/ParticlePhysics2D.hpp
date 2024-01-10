@@ -6,9 +6,9 @@ using namespace EvoEngine;
 namespace EcoSysLab {
 	struct ParticlePhysicsSettings
 	{
-		float m_particleSoftness = 0.0f;
-		float m_damping = 0.0f;
-		float m_maxSpeed = 5.0f;
+		float m_particleSoftness = 0.3f;
+		float m_damping = 0.02f;
+		float m_maxSpeed = 30.0f;
 	};
 
 	template<typename ParticleData>
@@ -20,7 +20,7 @@ namespace EcoSysLab {
 		float m_deltaTime = 0.002f;
 		void Update(
 			const std::function<void(ParticleGrid2D& grid, bool gridResized)>& modifyGridFunc,
-			const std::function<void(Particle2D<ParticleData>& particle)>& modifyParticleFunc, bool checkpoint);
+			const std::function<void(Particle2D<ParticleData>& particle)>& modifyParticleFunc);
 		void CheckCollisions(
 			const std::function<void(ParticleGrid2D& grid, bool gridResized)>& modifyGridFunc);
 		glm::vec2 m_min = glm::vec2(FLT_MAX);
@@ -34,7 +34,6 @@ namespace EcoSysLab {
 		bool m_forceResetGrid = false;
 		[[nodiscard]] float GetDistanceToCenter(const glm::vec2& direction) const;
 		[[nodiscard]] float GetDeltaTime() const;
-		[[nodiscard]] float GetMaxMovementSinceCheckpoint() const;
 		void SetEnableAllParticles(bool value);
 		void Reset(float deltaTime = 0.002f);
 		void CalculateMinMax();
@@ -51,7 +50,7 @@ namespace EcoSysLab {
 			const std::function<void(Particle2D<ParticleData>& particle)>& modifyParticleFunc);
 		void Simulate(size_t iterations,
 			const std::function<void(ParticleGrid2D& grid, bool gridResized)>& modifyGridFunc,
-			const std::function<void(Particle2D<ParticleData>& particle)>& modifyParticleFunc, bool checkpoint = false);
+			const std::function<void(Particle2D<ParticleData>& particle)>& modifyParticleFunc);
 		[[nodiscard]] glm::vec2 GetMassCenter() const;
 		[[nodiscard]] float GetMaxDistanceToCenter() const;
 		[[nodiscard]] glm::vec2 FindAvailablePosition(const glm::vec2& direction);
@@ -96,7 +95,7 @@ namespace EcoSysLab {
 	template <typename T>
 	void ParticlePhysics2D<T>::Update(
 		const std::function<void(ParticleGrid2D& grid, bool gridResized)>& modifyGridFunc,
-		const std::function<void(Particle2D<T>& collisionParticle)>& modifyParticleFunc, bool checkpoint)
+		const std::function<void(Particle2D<T>& collisionParticle)>& modifyParticleFunc)
 	{
 		if (m_particles2D.empty()) return;
 		const auto startTime = Times::Now();
@@ -127,7 +126,6 @@ namespace EcoSysLab {
 					if (particle.m_enable) particle.m_position += particle.m_deltaPosition;
 					UpdateSettings updateSettings;
 					updateSettings.m_dt = m_deltaTime;
-					updateSettings.m_checkpoint = checkpoint;
 					updateSettings.m_maxVelocity = m_settings.m_maxSpeed;
 					updateSettings.m_damping = m_settings.m_damping;
 					particle.Update(updateSettings);
@@ -140,7 +138,6 @@ namespace EcoSysLab {
 				if (particle.m_enable) particle.m_position += particle.m_deltaPosition;
 				UpdateSettings updateSettings{};
 				updateSettings.m_dt = m_deltaTime;
-				updateSettings.m_checkpoint = checkpoint;
 				updateSettings.m_maxVelocity = m_settings.m_maxSpeed;
 				updateSettings.m_damping = m_settings.m_damping;
 				particle.Update(updateSettings);
@@ -223,7 +220,7 @@ namespace EcoSysLab {
 		CalculateMinMax();
 
 		if (m_min.x < m_particleGrid2D.m_minBound.x || m_min.y < m_particleGrid2D.m_minBound.y || m_max.x > m_particleGrid2D.m_maxBound.x || m_max.y > m_particleGrid2D.m_maxBound.y || m_forceResetGrid) {
-			m_particleGrid2D.Reset(2.0f, m_min, m_max);
+			m_particleGrid2D.Reset(2.0f, m_min - glm::vec2(2.0f), m_max + glm::vec2(2.0f));
 			modifyGridFunc(m_particleGrid2D, true);
 		}
 		else
@@ -336,18 +333,6 @@ namespace EcoSysLab {
 	}
 
 	template <typename ParticleData>
-	float ParticlePhysics2D<ParticleData>::GetMaxMovementSinceCheckpoint() const
-	{
-		float maxDistance = 0.0f;
-		for (const auto& particle : m_particles2D)
-		{
-			const auto distance = glm::distance(particle.GetPosition(), particle.GetCheckpointPosition());
-			if (distance > maxDistance) maxDistance = distance;
-		}
-		return maxDistance;
-	}
-
-	template <typename ParticleData>
 	void ParticlePhysics2D<ParticleData>::SetEnableAllParticles(const bool value)
 	{
 		for (auto& particle : m_particles2D)
@@ -431,18 +416,18 @@ namespace EcoSysLab {
 		const auto count = static_cast<size_t>(glm::round(time / m_deltaTime));
 		for (int i = 0; i < count; i++)
 		{
-			Update(modifyGridFunc, modifyParticleFunc, i == count - 1);
+			Update(modifyGridFunc, modifyParticleFunc);
 		}
 	}
 
 	template <typename T>
 	void ParticlePhysics2D<T>::Simulate(const size_t iterations,
 		const std::function<void(ParticleGrid2D& grid, bool gridResized)>& modifyGridFunc,
-		const std::function<void(Particle2D<T>& particle)>& modifyParticleFunc, const bool checkpoint)
+		const std::function<void(Particle2D<T>& particle)>& modifyParticleFunc)
 	{
 		for (int i = 0; i < iterations; i++)
 		{
-			Update(modifyGridFunc, modifyParticleFunc, i == iterations - 1);
+			Update(modifyGridFunc, modifyParticleFunc);
 		}
 	}
 

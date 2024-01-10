@@ -103,8 +103,8 @@ void EcoSysLabLayer::Visualization() {
 		scene->UnsafeGetPrivateComponentOwnersList<Tree>();
 
 	const auto branchStrands = m_shootStemStrands.Get<Strands>();
-	bool flowUpdated = false;
 	if (treeEntities && !treeEntities->empty()) {
+		bool flowUpdated = false;
 		//Tree selection
 		if (m_shootVersions.size() != treeEntities->size()) {
 			m_internodeSize = 0;

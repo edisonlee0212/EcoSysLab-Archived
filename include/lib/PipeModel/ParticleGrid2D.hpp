@@ -8,7 +8,7 @@ namespace EcoSysLab {
 		template<typename PD>
 		friend class ParticlePhysics2D;
 		friend class ParticleGrid2D;
-		static constexpr size_t CELL_CAPACITY = 6;
+		static constexpr size_t CELL_CAPACITY = 4;
 		static constexpr size_t MAX_CELL_INDEX = CELL_CAPACITY - 1;
 		size_t m_atomCount = 0;
 		ParticleHandle m_atomHandles[CELL_CAPACITY] = {};

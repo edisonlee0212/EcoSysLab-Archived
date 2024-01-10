@@ -323,12 +323,14 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 
 	ImGui::DragFloat("Center attraction strength", &pipeModelParameters.m_centerAttractionStrength, 0.01f, 0.0f, 10.0f);
 	ImGui::DragInt("Max iteration cell factor", &pipeModelParameters.m_maxSimulationIterationCellFactor, 1, 0, 500);
-	ImGui::DragInt("Stabilization check iteration", &pipeModelParameters.m_stabilizationCheckIteration, 1, 0, 500);
 	ImGui::DragInt("Simulation timeout", &pipeModelParameters.m_timeout, 1, 0, 50000);
-	ImGui::DragFloat("Stabilization movement distance", &pipeModelParameters.m_stabilizationMovementDistance, 0.01f, 0.0f, 1.0f);
 	ImGui::DragFloat("Split limit", &pipeModelParameters.m_splitRatioLimit, 0.01f, 0.0f, 1.0f);
 	ImGui::DragInt("End node strand count", &pipeModelParameters.m_endNodeStrands, 1, 1, 50);
 	ImGui::Checkbox("Pre-merge", &pipeModelParameters.m_preMerge);
+
+	ImGui::Text(("Last calculation time: " + std::to_string(m_treeModel.PeekShootSkeleton().m_data.m_profileCalculationTime)).c_str());
+	ImGui::Text(("Strand count: " + std::to_string(m_treeModel.PeekShootSkeleton().m_data.m_pipeGroup.PeekPipes().size())).c_str());
+	ImGui::Text(("Total particle count: " + std::to_string(m_treeModel.PeekShootSkeleton().m_data.m_numOfParticles)).c_str());
 
 	ImGui::DragFloat("Front Control Point Ratio", &pipeModelParameters.m_frontControlPointRatio, 0.01f, 0.01f, 0.5f);
 	ImGui::DragFloat("Back Control Point Ratio", &pipeModelParameters.m_backControlPointRatio, 0.01f, 0.01f, 0.5f);

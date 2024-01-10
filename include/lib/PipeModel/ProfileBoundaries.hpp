@@ -6,8 +6,8 @@ namespace EcoSysLab
 	class ProfileBoundary
 	{
 	public:
-		std::vector<glm::vec2> m_points;
-		glm::vec2 m_center;
+		std::vector<glm::vec2> m_points {};
+		glm::vec2 m_center = glm::vec2(0.0f);
 
 		void CalculateCenter();
 
@@ -20,7 +20,7 @@ namespace EcoSysLab
 	class ProfileBoundaries
 	{
 	public:
-		std::vector<ProfileBoundary> m_boundaries;
+		std::vector<ProfileBoundary> m_boundaries {};
 		[[nodiscard]] int InBoundaries(const glm::vec2& position, glm::vec2& closestPoint) const;
 	};
 }

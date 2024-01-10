@@ -518,11 +518,55 @@ void TreeVisualizer::Visualize(TreeModel& treeModel, const GlobalTransform& glob
 							{
 								//Stop and check boundary.
 								bool valid = true;
-								auto& boundary = node.m_data.m_profileBoundaries.m_boundaries.back();
-								if (boundary.m_points.size() <= 3) valid = false;
-								if(!valid || !boundary.Valid())
+								auto& boundaries = node.m_data.m_profileBoundaries.m_boundaries;
+								auto& newBoundary = boundaries.back();
+								if (newBoundary.m_points.size() <= 3) valid = false;
+								valid = !(!valid || !newBoundary.Valid());
+								if (valid) {
+									for (int testBoundaryIndex = 0; testBoundaryIndex < boundaries.size() - 1; testBoundaryIndex++) {
+										const auto& testBoundary = boundaries.at(testBoundaryIndex);
+										for (int newPointIndex = 0; newPointIndex < newBoundary.m_points.size(); newPointIndex++)
+										{
+											const auto& p1 = newBoundary.m_points[newPointIndex];
+											const auto& p2 = newBoundary.m_points[(newPointIndex + 1) % newBoundary.m_points.size()];
+											for (int testPointIndex = 0; testPointIndex < testBoundary.m_points.size(); testPointIndex++)
+											{
+												const auto& p3 = testBoundary.m_points[testPointIndex];
+												const auto& p4 = testBoundary.m_points[(testPointIndex + 1) % testBoundary.m_points.size()];
+												if(ProfileBoundary::Intersect(p1, p2, p3, p4))
+												{
+													valid = false;
+													break;
+												}
+											}
+											if (!valid) break;
+										}
+										if (!valid) break;
+									}
+								}
+								if(valid)
 								{
-									node.m_data.m_profileBoundaries.m_boundaries.pop_back();
+									for (int testBoundaryIndex = 0; testBoundaryIndex < boundaries.size() - 1; testBoundaryIndex++) {
+										const auto& testBoundary = boundaries.at(testBoundaryIndex);
+										for(const auto& newPoint : newBoundary.m_points)
+										{
+											glm::vec2 temp {};
+											if(testBoundary.InBoundary(newPoint, temp))
+											{
+												valid = false;
+												break;
+											}
+										}
+										if (!valid) break;
+									}
+								}
+								if(!valid)
+								{
+									boundaries.pop_back();
+								}else
+								{
+									boundaries.back().CalculateCenter();
+									node.m_data.m_boundariesUpdated = true;
 								}
 							}
 						}else if (mouseDown){

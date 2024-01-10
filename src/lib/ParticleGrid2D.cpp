@@ -7,7 +7,7 @@ using namespace EcoSysLab;
 void ParticleCell::RegisterParticle(ParticleHandle handle)
 {
 	m_atomHandles[m_atomCount] = handle;
-	m_atomCount += m_atomCount < ParticleCell::MAX_CELL_INDEX;
+	m_atomCount += m_atomCount < MAX_CELL_INDEX;
 }
 
 void ParticleCell::Clear()
@@ -33,20 +33,17 @@ void ParticleGrid2D::ApplyBoundaries(const ProfileBoundaries& profileBoundaries)
 	auto& cells = m_cells;
 	if (profileBoundaries.m_boundaries.empty())
 	{
-		Jobs::ParallelFor(cells.size(), [&](unsigned cellIndex)
-			{
-				auto& cell = cells[cellIndex];
-				cell.m_boundaryIndex = -1;
-			});
+		for (int cellIndex = 0; cellIndex < m_cellSize; cellIndex++) {
+			auto& cell = cells[cellIndex];
+			cell.m_boundaryIndex = -1;
+		}
 	}
 	else {
-		Jobs::ParallelFor(cells.size(), [&](unsigned cellIndex)
-			{
-				auto& cell = cells[cellIndex];
-				const auto cellPosition = GetPosition(cellIndex);
-				cell.m_boundaryIndex = profileBoundaries.InBoundaries(cellPosition, cell.m_closestPoint);
-			}
-		);
+		for (int cellIndex = 0; cellIndex < m_cellSize; cellIndex++) {
+			auto& cell = cells[cellIndex];
+			const auto cellPosition = GetPosition(cellIndex);
+			cell.m_boundaryIndex = profileBoundaries.InBoundaries(cellPosition, cell.m_closestPoint);
+		}
 	}
 }
 
@@ -125,7 +122,7 @@ glm::vec2 ParticleGrid2D::GetPosition(const unsigned index) const
 
 void ParticleGrid2D::Clear()
 {
-	for(auto& cell : m_cells)
+	for (auto& cell : m_cells)
 	{
 		cell.m_atomCount = 0;
 	}

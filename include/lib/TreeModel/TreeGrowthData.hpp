@@ -109,10 +109,10 @@ namespace EcoSysLab
 #pragma region Pipe Model
 		ParticlePhysics2D<CellParticlePhysicsData> m_frontParticlePhysics2D{};
 		std::unordered_map<PipeHandle, ParticleHandle> m_frontParticleMap{};
-
+		bool m_boundariesUpdated = false;
 		ParticlePhysics2D<CellParticlePhysicsData> m_backParticlePhysics2D{};
 		std::unordered_map<PipeHandle, ParticleHandle> m_backParticleMap{};
-		ProfileBoundaries m_profileBoundaries;
+		ProfileBoundaries m_profileBoundaries {};
 
 		float m_frontControlPointDistance = 0.0f;
 		float m_backControlPointDistance = 0.0f;
