@@ -103,10 +103,12 @@ namespace EcoSysLab {
 		float m_pointPointConnectionDetectionRadius = 0.05f;
 		float m_pointBranchConnectionDetectionRange = 0.5f;
 		float m_branchBranchConnectionMaxLengthRange = 5.0f;
-		float m_directionConnectionAngleLimit = 45.0f;
-		float m_indirectConnectionAngleLimit = 45.0f;
+		float m_directionConnectionAngleLimit = 65.0f;
+		float m_indirectConnectionAngleLimit = 65.0f;
 
 		float m_connectionRangeLimit = 1.0f;
+
+		float m_maxScatterPointConnectionHeight = 1.5f;
 		void OnInspect();
 	};
 
@@ -128,6 +130,8 @@ namespace EcoSysLab {
 		float m_minHeight = 0.3f;
 		float m_minimumTreeDistance = 0.1f;
 		float m_branchShortening = 0.3f;
+		int m_maxParentCandidateSize = 100;
+		int m_maxChildSize = 10;
 
 		float m_endNodeThickness = 0.002f;
 		float m_thicknessSumFactor = 0.4f;
@@ -152,12 +156,14 @@ namespace EcoSysLab {
 		int m_candidateSearchLimit = 1;
 		bool m_forceConnectAllBranches = false;
 		*/
-		bool m_useRootDistance = false;
+		bool m_useRootDistance = true;
 		int m_optimizationTimeout = 999;
 
 		float m_directionSmoothing = 0.1f;
 		float m_positionSmoothing = 0.1f;
 		int m_smoothIteration = 10;
+
+		
 		void OnInspect();
 	};
 
@@ -208,7 +214,7 @@ namespace EcoSysLab {
 
 		void BuildVoxelGrid();
 
-		static void CloneOperatingBranch(OperatorBranch& operatorBranch, const PredictedBranch& target);
+		static void CloneOperatingBranch(const ReconstructionSettings& reconstructionSettings, OperatorBranch& operatorBranch, const PredictedBranch& target);
 
 		void SpaceColonization();
 

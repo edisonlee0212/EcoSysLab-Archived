@@ -1070,6 +1070,7 @@ void TreePointCloud::EstablishConnectivityGraph() {
 			EVOENGINE_ERROR("Too much connections!");
 			break;
 		}
+		if (point.m_position.y > m_connectivityGraphSettings.m_maxScatterPointConnectionHeight) continue;
 		FindPoints(point.m_position, m_scatterPointsVoxelGrid, m_connectivityGraphSettings.m_pointPointConnectionDetectionRadius,
 			[&](const PointData& voxel) {
 				if (voxel.m_handle == point.m_handle) return;
@@ -1417,7 +1418,7 @@ void TreePointCloud::BuildSkeletons() {
 	m_branchConnections.clear();
 	m_operatingBranches.resize(m_predictedBranches.size());
 	for (int i = 0; i < m_predictedBranches.size(); i++) {
-		CloneOperatingBranch(m_operatingBranches[i], m_predictedBranches[i]);
+		CloneOperatingBranch(m_reconstructionSettings, m_operatingBranches[i], m_predictedBranches[i]);
 	}
 	std::vector<std::pair<glm::vec3, BranchHandle>> rootBranchHandles{};
 	std::unordered_set<BranchHandle> rootBranchHandleSet{};
@@ -1531,7 +1532,7 @@ void TreePointCloud::BuildSkeletons() {
 			{
 				const auto& parentCandidate = childBranch.m_parentCandidates[i];
 				const auto& parentBranch = m_operatingBranches[parentCandidate.first];
-				if(!parentBranch.m_used) continue;
+				if(!parentBranch.m_used || parentBranch.m_childHandles.size() >= m_reconstructionSettings.m_maxChildSize) continue;
 				float distance = parentCandidate.second;
 				float rootDistance = parentBranch.m_rootDistance + glm::distance(parentBranch.m_bezierCurve.m_p0, parentBranch.m_bezierCurve.m_p3) + distance;
 				if(m_reconstructionSettings.m_useRootDistance)
@@ -1576,7 +1577,7 @@ void TreePointCloud::BuildSkeletons() {
 			{
 				const auto& parentCandidate = childBranch.m_parentCandidates[i];
 				const auto& parentBranch = m_operatingBranches[parentCandidate.first];
-				if (!parentBranch.m_used) continue;
+				if (!parentBranch.m_used || parentBranch.m_childHandles.size() >= m_reconstructionSettings.m_maxChildSize) continue;
 				float distance = parentCandidate.second;
 				float rootDistance = parentBranch.m_rootDistance + glm::distance(parentBranch.m_bezierCurve.m_p0, parentBranch.m_bezierCurve.m_p3) + distance;
 				if (m_reconstructionSettings.m_useRootDistance)
@@ -2448,6 +2449,7 @@ void ConnectivityGraphSettings::OnInspect() {
 		m_branchBranchConnectionMaxLengthRange = 15.0f;
 		m_directionConnectionAngleLimit = 30.0f;
 		m_indirectConnectionAngleLimit = 15.0f;
+		m_maxScatterPointConnectionHeight = 1.5f;
 		m_parallelShiftCheck = true;
 	}
 	if (ImGui::Button("Load default connection settings"))
@@ -2455,8 +2457,9 @@ void ConnectivityGraphSettings::OnInspect() {
 		m_pointPointConnectionDetectionRadius = 0.05f;
 		m_pointBranchConnectionDetectionRange = 0.5f;
 		m_branchBranchConnectionMaxLengthRange = 5.0f;
-		m_directionConnectionAngleLimit = 45.0f;
-		m_indirectConnectionAngleLimit = 45.0f;
+		m_directionConnectionAngleLimit = 65.0f;
+		m_indirectConnectionAngleLimit = 65.0f;
+		m_maxScatterPointConnectionHeight = 1.5f;
 		m_parallelShiftCheck = true;
 	}
 	if (ImGui::Button("Load max connection settings"))
@@ -2466,9 +2469,11 @@ void ConnectivityGraphSettings::OnInspect() {
 		m_branchBranchConnectionMaxLengthRange = 10.0f;
 		m_directionConnectionAngleLimit = 90.0f;
 		m_indirectConnectionAngleLimit = 90.0f;
+		m_maxScatterPointConnectionHeight = 10.f;
 		m_parallelShiftCheck = false;
 	}
 	ImGui::DragFloat("Point-point detection radius", &m_pointPointConnectionDetectionRadius, 0.01f, 0.01f, 1.0f);
+	ImGui::DragFloat("Point-point connection max height", &m_maxScatterPointConnectionHeight, 0.01f, 0.01f, 3.0f);
 	ImGui::DragFloat("Point-branch detection range", &m_pointBranchConnectionDetectionRange, 0.01f, 0.01f, 2.0f);
 	ImGui::DragFloat("Branch-branch detection range", &m_branchBranchConnectionMaxLengthRange, 0.01f, 0.01f, 2.0f);
 	ImGui::DragFloat("Direct connection angle limit", &m_directionConnectionAngleLimit, 0.01f, 0.0f, 180.0f);
@@ -2484,7 +2489,7 @@ void ConnectivityGraphSettings::OnInspect() {
 	ImGui::DragFloat("Point existence check radius", &m_pointCheckRadius, 0.01f, 0.0f, 1.0f);
 }
 
-void TreePointCloud::CloneOperatingBranch(OperatorBranch& operatorBranch, const PredictedBranch& target) {
+void TreePointCloud::CloneOperatingBranch(const ReconstructionSettings& reconstructionSettings, OperatorBranch& operatorBranch, const PredictedBranch& target) {
 	operatorBranch.m_color = target.m_color;
 	operatorBranch.m_treePartHandle = target.m_treePartHandle;
 	operatorBranch.m_handle = target.m_handle;
@@ -2494,10 +2499,12 @@ void TreePointCloud::CloneOperatingBranch(OperatorBranch& operatorBranch, const 
 	operatorBranch.m_childHandles.clear();
 	operatorBranch.m_orphan = false;
 	operatorBranch.m_parentCandidates.clear();
-
+	int count = 0;
 	for (const auto& data : target.m_p3ToP0)
 	{
 		operatorBranch.m_parentCandidates.emplace_back(data.first, data.second);
+		count++;
+		if(count > reconstructionSettings.m_maxParentCandidateSize) break;
 	}
 	operatorBranch.m_distanceToParentBranch = 0.0f;
 	operatorBranch.m_bestDistance = FLT_MAX;
@@ -2515,6 +2522,9 @@ void ReconstructionSettings::OnInspect() {
 	ImGui::DragFloat("Root node max height", &m_minHeight, 0.01f, 0.01f, 1.0f);
 	ImGui::DragFloat("Tree distance limit", &m_minimumTreeDistance, 0.01f, 0.01f, 1.0f);
 	ImGui::DragFloat("Branch shortening", &m_branchShortening, 0.01f, 0.01f, 0.4f);
+	ImGui::DragInt("Max parent candidate size", &m_maxParentCandidateSize, 1, 2, 10);
+	ImGui::DragInt("Max child size", &m_maxChildSize, 1, 2, 10);
+
 	ImGui::DragFloat("Override thickness root distance", &m_overrideThicknessRootDistance, 0.01f, 0.01f, 0.5f);
 	ImGui::DragFloat("Space colonization factor", &m_spaceColonizationFactor, 0.01f, 0.f, 1.0f);
 	if(m_spaceColonizationFactor > 0.0f)

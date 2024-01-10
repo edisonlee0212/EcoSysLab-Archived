@@ -541,6 +541,10 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 		const std::vector<Entity>* treeEntities =
 			scene->UnsafeGetPrivateComponentOwnersList<Tree>();
 		if (treeEntities && !treeEntities->empty()) {
+			ImGui::Checkbox("Auto generate mesh", &m_autoGenerateMeshAfterEditing);
+			ImGui::Checkbox("Auto generate strands", &m_autoGenerateStrandsAfterEditing);
+			ImGui::Checkbox("Auto generate strands mesh", &m_autoGenerateStrandMeshAfterEditing);
+			ImGui::Separator();
 			ImGui::Text("Editing");
 			if (scene->IsEntityValid(m_selectedTree)) {
 				const auto& tree = scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock();
@@ -559,9 +563,7 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 						{
 							ImGui::DragFloat("Reduce speed", &m_reduceRate, 0.001f, 0.001f, 1.0f);
 						}
-						ImGui::Checkbox("Auto generate mesh", &m_autoGenerateMeshAfterEditing);
-						ImGui::Checkbox("Auto generate strands", &m_autoGenerateStrandsAfterEditing);
-						ImGui::Checkbox("Auto generate strands mesh", &m_autoGenerateStrandMeshAfterEditing);
+						
 						ImGui::TreePop();
 					}
 				}
