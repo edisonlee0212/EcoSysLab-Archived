@@ -191,8 +191,8 @@ namespace EcoSysLab {
 			int enabledParticleSize = 0;
 			for (int i = 0; i < threadCount; i++)
 			{
-				m_min = glm::min(mins[i] - glm::vec2(5.0f), m_min);
-				m_max = glm::max(maxs[i] + glm::vec2(5.0f), m_max);
+				m_min = glm::min(mins[i], m_min);
+				m_max = glm::max(maxs[i], m_max);
 				enabledParticleSize += enabledParticleSizes[i];
 				m_massCenter += massCenters[i];
 				m_maxDistanceToCenter = glm::max(maxDistances[i], m_maxDistanceToCenter);
@@ -204,8 +204,8 @@ namespace EcoSysLab {
 			int enabledParticleSize = 0;
 			for (const auto& particle : m_particles2D)
 			{
-				m_min = glm::min(particle.m_position - glm::vec2(5.0f), m_min);
-				m_max = glm::max(particle.m_position + glm::vec2(5.0f), m_max);
+				m_min = glm::min(particle.m_position, m_min);
+				m_max = glm::max(particle.m_position, m_max);
 				if (particle.m_enable) {
 					enabledParticleSize++;
 					m_massCenter += particle.m_position;
@@ -220,11 +220,9 @@ namespace EcoSysLab {
 	void ParticlePhysics2D<T>::CheckCollisions(
 		const std::function<void(ParticleGrid2D& grid, bool gridResized)>& modifyGridFunc)
 	{
-		const auto originalMin = m_min;
-		const auto originalMax = m_max;
 		CalculateMinMax();
 
-		if (m_min.x < originalMin.x || m_min.y < originalMin.y || m_max.x > originalMax.x || m_max.y > originalMax.y || m_forceResetGrid) {
+		if (m_min.x < m_particleGrid2D.m_minBound.x || m_min.y < m_particleGrid2D.m_minBound.y || m_max.x > m_particleGrid2D.m_maxBound.x || m_max.y > m_particleGrid2D.m_maxBound.y || m_forceResetGrid) {
 			m_particleGrid2D.Reset(2.0f, m_min, m_max);
 			modifyGridFunc(m_particleGrid2D, true);
 		}
@@ -571,32 +569,25 @@ namespace EcoSysLab {
 					const auto& cell = m_particleGrid2D.RefCell(glm::ivec2(i, j));
 					const auto cellCenter = m_particleGrid2D.GetPosition(glm::ivec2(i, j));
 					const auto min = ImVec2(cellCenter.x - m_particleGrid2D.m_cellSize * 0.5f, cellCenter.y - m_particleGrid2D.m_cellSize * 0.5f);
-					if (cell.m_inBoundary) {
+					if (cell.m_boundaryIndex != -1) {
 						drawList->AddQuad(
 							min * zoomFactor + origin,
 							ImVec2(min.x + m_particleGrid2D.m_cellSize, min.y) * zoomFactor + origin,
 							ImVec2(min.x + m_particleGrid2D.m_cellSize, min.y + m_particleGrid2D.m_cellSize) * zoomFactor + origin,
 							ImVec2(min.x, min.y + m_particleGrid2D.m_cellSize) * zoomFactor + origin,
-							IM_COL32(0, 255, 0, 255));
+							IM_COL32(0, 255, 0, 128));
 					}
 					else
 					{
-						drawList->AddQuadFilled(
+						drawList->AddQuad(
 							min * zoomFactor + origin,
 							ImVec2(min.x + m_particleGrid2D.m_cellSize, min.y) * zoomFactor + origin,
 							ImVec2(min.x + m_particleGrid2D.m_cellSize, min.y + m_particleGrid2D.m_cellSize) * zoomFactor + origin,
 							ImVec2(min.x, min.y + m_particleGrid2D.m_cellSize) * zoomFactor + origin,
-							IM_COL32(0, 255, 0, 255));
+							IM_COL32(0, 0, 255, 128));
 					}
-				}
-			}
-			for (int i = 0; i < m_particleGrid2D.m_resolution.x; i++)
-			{
-				for (int j = 0; j < m_particleGrid2D.m_resolution.y; j++)
-				{
-					const auto& cell = m_particleGrid2D.RefCell(glm::ivec2(i, j));
-					const auto cellCenter = m_particleGrid2D.GetPosition(glm::ivec2(i, j));
-					if (!cell.m_inBoundary) drawList->AddLine(ImVec2(cellCenter.x, cellCenter.y) * zoomFactor + origin, ImVec2(cell.m_closestPoint.x, cell.m_closestPoint.y) * zoomFactor + origin, IM_COL32(255, 0, 0, 255));
+					drawList->AddLine(ImVec2(cellCenter.x, cellCenter.y) * zoomFactor + origin, ImVec2(cell.m_closestPoint.x, cell.m_closestPoint.y) * zoomFactor + origin, IM_COL32(255, 0, 0, 128));
+
 				}
 			}
 		}

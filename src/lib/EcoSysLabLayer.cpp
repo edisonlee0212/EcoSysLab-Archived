@@ -180,7 +180,7 @@ void EcoSysLabLayer::Visualization() {
 				&& editorLayer->GetKey(GLFW_MOUSE_BUTTON_RIGHT) == KeyActionType::Release
 				&& treeVisualizer.m_checkpointIteration == treeModel.CurrentIteration())
 			{
-				bool treeModelModified = false;
+				static bool mayNeedGeometryGeneration = false;
 				static std::vector<glm::vec2> mousePositions{};
 				const auto& treeSkeleton = tree->m_treeModel.PeekShootSkeleton(tree->m_treeVisualizer.m_checkpointIteration);
 				switch (static_cast<OperatorMode>(m_operatorMode))
@@ -235,7 +235,7 @@ void EcoSysLabLayer::Visualization() {
 								else if (lastGizmosUsed)
 								{
 									treeModel.CalculateTransform(tree->m_shootGrowthController, true);
-									treeModelModified = true;
+									mayNeedGeometryGeneration = true;
 									lastGizmosUsed = false;
 									treeVisualizer.m_needUpdate = true;
 									treeModel.RefShootSkeleton().CalculateRegulatedGlobalRotation();
@@ -314,12 +314,12 @@ void EcoSysLabLayer::Visualization() {
 								skeleton.SortLists();
 								treeVisualizer.m_checkpointIteration = treeModel.CurrentIteration();
 								treeVisualizer.m_needUpdate = true;
+								mayNeedGeometryGeneration = true;
 							}
 							else {
 								treeModel.Pop();
 							}
 							mousePositions.clear();
-							treeModelModified = true;
 						}
 					}
 				}
@@ -343,16 +343,13 @@ void EcoSysLabLayer::Visualization() {
 							if (tree->TryGrow(m_simulationSettings.m_deltaTime, treeVisualizer.m_selectedInternodeHandle, false, m_overrideGrowRate))
 							{
 								treeVisualizer.m_needUpdate = true;
+								mayNeedGeometryGeneration = true;
 							}
 						}
 						lastFrameInvigorate = true;
 					}
 					else if (lastFrameInvigorate && editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Release)
 					{
-						if (treeVisualizer.m_selectedInternodeHandle != -1)
-						{
-							treeModelModified = true;
-						}
 						treeVisualizer.SetSelectedNode(treeSkeleton, -1);
 						lastFrameInvigorate = false;
 						treeVisualizer.m_needUpdate = true;
@@ -380,16 +377,13 @@ void EcoSysLabLayer::Visualization() {
 						if (tree->m_treeModel.Reduce(tree->m_shootGrowthController, treeVisualizer.m_selectedInternodeHandle, targetAge))
 						{
 							treeVisualizer.m_needUpdate = true;
+							mayNeedGeometryGeneration = true;
 						}
 						targetAge -= m_reduceRate;
 						lastFrameReduce = true;
 					}
 					else if (lastFrameReduce && editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Release)
 					{
-						if (treeVisualizer.m_selectedInternodeHandle != -1)
-						{
-							treeModelModified = true;
-						}
 						treeVisualizer.SetSelectedNode(treeSkeleton, -1);
 						lastFrameReduce = false;
 						treeVisualizer.m_needUpdate = true;
@@ -397,7 +391,7 @@ void EcoSysLabLayer::Visualization() {
 				}break;
 				}
 				
-				if (treeModelModified)
+				if (editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Release && mayNeedGeometryGeneration)
 				{
 					if (m_autoGenerateMeshAfterEditing)
 					{
@@ -415,6 +409,7 @@ void EcoSysLabLayer::Visualization() {
 						}
 					}
 				}
+				mayNeedGeometryGeneration = false;
 			}
 			treeVisualizer.Visualize(treeModel, globalTransform);
 		}

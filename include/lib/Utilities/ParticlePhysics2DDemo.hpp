@@ -1,6 +1,6 @@
 #pragma once
 #include "ParticlePhysics2D.hpp"
-
+#include "ProfileBoundaries.hpp"
 using namespace EvoEngine;
 namespace EcoSysLab
 {
@@ -11,7 +11,8 @@ namespace EcoSysLab
 	class ParticlePhysics2DDemo : public IPrivateComponent
 	{
 		ParticlePhysics2D<ParticlePhysicsDemoData> m_particlePhysics2D;
-		std::vector<std::vector<glm::vec2>> m_userBoundaries;
+		ProfileBoundaries m_profileBoundaries;
+		bool m_boundariesUpdated = false;
 	public:
 		glm::vec2 m_worldCenter = glm::vec2(0.0f);
 		float m_worldRadius = 100.0f;

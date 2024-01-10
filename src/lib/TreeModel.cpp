@@ -62,7 +62,7 @@ void TreeModel::PruneInternode(NodeHandle internodeHandle)
 	internode.m_data.m_backParticlePhysics2D = {};
 	internode.m_data.m_frontParticleMap = {};
 	internode.m_data.m_backParticleMap = {};
-	internode.m_data.m_userBoundaries = {};
+	internode.m_data.m_profileBoundaries = {};
 
 	internode.m_data.m_cellCount = 0;
 
@@ -548,7 +548,7 @@ bool TreeModel::ElongateInternode(float extendLength, NodeHandle internodeHandle
 		newInternode.m_data.m_backParticlePhysics2D = {};
 		newInternode.m_data.m_frontParticleMap = {};
 		newInternode.m_data.m_backParticleMap = {};
-		newInternode.m_data.m_userBoundaries = {};
+		newInternode.m_data.m_profileBoundaries = {};
 		newInternode.m_data.m_indexOfParentBud = 0;
 		newInternode.m_data.m_cellCount = 0;
 		newInternode.m_data.m_lightIntensity = oldInternode.m_data.m_lightIntensity;

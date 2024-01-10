@@ -28,65 +28,23 @@ void ParticleCell::UnregisterParticle(ParticleHandle handle)
 	}
 }
 
-void ParticleGrid2D::TestBoundaries(const std::vector<std::vector<glm::vec2>>& boundaries)
+void ParticleGrid2D::ApplyBoundaries(const ProfileBoundaries& profileBoundaries)
 {
 	auto& cells = m_cells;
-	if (boundaries.empty())
+	if (profileBoundaries.m_boundaries.empty())
 	{
 		Jobs::ParallelFor(cells.size(), [&](unsigned cellIndex)
 			{
 				auto& cell = cells[cellIndex];
-				cell.m_inBoundary = true;
+				cell.m_boundaryIndex = -1;
 			});
 	}
 	else {
 		Jobs::ParallelFor(cells.size(), [&](unsigned cellIndex)
 			{
 				auto& cell = cells[cellIndex];
-				cell.m_inBoundary = false;
 				const auto cellPosition = GetPosition(cellIndex);
-				auto closestPoint = glm::vec2(0.0f);
-				auto distance = FLT_MAX;
-				for (const auto& boundary : boundaries) {
-					int intersectCount1 = 0;
-					int intersectCount2 = 0;
-					int intersectCount3 = 0;
-					int intersectCount4 = 0;
-					for (int lineIndex = 0; lineIndex < boundary.size(); lineIndex++) {
-						const auto& p1 = boundary[lineIndex];
-						const auto& p2 = boundary[(lineIndex + 1) % boundary.size()];
-						const auto p3 = cellPosition;
-						const auto p41 = cellPosition + glm::vec2(1000.0f, 0.0f);
-						const auto p42 = cellPosition + glm::vec2(-1000.0f, 0.0f);
-						const auto p43 = cellPosition + glm::vec2(0.0f, 1000.0f);
-						const auto p44 = cellPosition + glm::vec2(0.0f, -1000.0f);
-						if (TreeVisualizer::intersect(p1, p2, p3, p41)) {
-							intersectCount1++;
-						}
-						if (TreeVisualizer::intersect(p1, p2, p3, p42)) {
-							intersectCount2++;
-						}
-						if (TreeVisualizer::intersect(p1, p2, p3, p43)) {
-							intersectCount3++;
-						}
-						if (TreeVisualizer::intersect(p1, p2, p3, p44)) {
-							intersectCount4++;
-						}
-						const auto testPoint = glm::closestPointOnLine(cellPosition, p1, p2);
-						const auto newDistance = glm::distance(testPoint, cellPosition);
-						if (distance > newDistance)
-						{
-							closestPoint = testPoint;
-							distance = newDistance;
-						}
-					}
-					cell.m_inBoundary = cell.m_inBoundary ||
-						(intersectCount1 % 2 != 0
-							&& intersectCount2 % 2 != 0
-							&& intersectCount3 % 2 != 0
-							&& intersectCount4 % 2 != 0);
-				}
-				cell.m_closestPoint = closestPoint;
+				cell.m_boundaryIndex = profileBoundaries.InBoundaries(cellPosition, cell.m_closestPoint);
 			}
 		);
 	}
@@ -98,6 +56,7 @@ void ParticleGrid2D::Reset(float cellSize, const glm::vec2& minBound, const glm:
 	m_resolution = resolution;
 	m_cellSize = cellSize;
 	m_minBound = minBound;
+	m_maxBound = minBound + cellSize * glm::vec2(resolution);
 	m_cells.resize(resolution.x * resolution.y);
 	Clear();
 }
@@ -166,5 +125,8 @@ glm::vec2 ParticleGrid2D::GetPosition(const unsigned index) const
 
 void ParticleGrid2D::Clear()
 {
-	std::memset(m_cells.data(), 0, m_cells.size() * sizeof(ParticleCell));
+	for(auto& cell : m_cells)
+	{
+		cell.m_atomCount = 0;
+	}
 }
