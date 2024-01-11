@@ -22,9 +22,11 @@ namespace EcoSysLab {
 
 		glm::vec2 m_deltaPosition = glm::vec2(0.0f);
 		ParticleHandle m_handle = -1;
+
+		bool m_boundary = false;
 	public:
 		bool m_enable = true;
-
+		[[nodiscard]] bool IsBoundary() const;
 		T m_data;
 		void Update(const UpdateSettings& updateSettings);
 		void Stop();
@@ -44,6 +46,12 @@ namespace EcoSysLab {
 		void SetAcceleration(const glm::vec2& acceleration);
 	};
 
+
+	template <typename T>
+	bool Particle2D<T>::IsBoundary() const
+	{
+		return m_boundary;
+	}
 
 	template <typename T>
 	void Particle2D<T>::Update(const UpdateSettings& updateSettings)

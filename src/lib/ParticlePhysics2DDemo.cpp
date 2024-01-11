@@ -39,6 +39,7 @@ void ParticlePhysics2DDemo::OnInspect(const std::shared_ptr<EditorLayer>& editor
 			static bool addAttractor = false;
 			ImGui::Checkbox("Force resize grid", &m_particlePhysics2D.m_forceResetGrid);
 			ImGui::Checkbox("Attractor", &addAttractor);
+			ImGui::SameLine();
 			if (ImGui::Button("Clear boundaries"))
 			{
 				m_profileBoundaries.m_boundaries.clear();
@@ -50,7 +51,15 @@ void ParticlePhysics2DDemo::OnInspect(const std::shared_ptr<EditorLayer>& editor
 				m_profileBoundaries.m_attractors.clear();
 				m_boundariesUpdated = true;
 			}
-
+			ImGui::SameLine();
+			static float edgeLengthLimit = 5;
+			static bool calculateEdges = false;
+			ImGui::Checkbox("Calculate edges", &calculateEdges);
+			if(calculateEdges)
+			{
+				m_particlePhysics2D.CalculateBoundaries(edgeLengthLimit);
+			}
+			ImGui::DragFloat("Edge length limit", &edgeLengthLimit);
 			static float elapsedTime = 0.0f;
 			elapsedTime += Times::DeltaTime();
 			m_particlePhysics2D.OnInspect([&](const glm::vec2 position)
@@ -81,14 +90,15 @@ void ParticlePhysics2DDemo::OnInspect(const std::shared_ptr<EditorLayer>& editor
 							IM_COL32(255,
 								0,
 								0, 255));
-
+						m_particlePhysics2D.RenderEdges(origin, zoomFactor, drawList, IM_COL32(0.0f, 0.0f, 128.0f, 128.0f), 1.0f);
+						m_particlePhysics2D.RenderBoundary(origin, zoomFactor, drawList, IM_COL32(255.f, 255.f, 255.0f, 255.0f), 4.0f);
 						for (const auto& boundary : m_profileBoundaries.m_boundaries)
 						{
-							boundary.RenderBoundary(origin, zoomFactor, drawList, IM_COL32(255.0f, 0.0f, 0, 255.0f), 2.0f);
+							boundary.RenderBoundary(origin, zoomFactor, drawList, IM_COL32(255.0f, 0.0f, 0.0f, 255.0f), 2.0f);
 						}
 					for(const auto& attractor : m_profileBoundaries.m_attractors)
 					{
-						attractor.RenderAttractor(origin, zoomFactor, drawList, IM_COL32(0.0f, 255.0f, 0, 255.0f), 2.0f);
+						attractor.RenderAttractor(origin, zoomFactor, drawList, IM_COL32(0.0f, 255.0f, 0.0f, 255.0f), 2.0f);
 					}
 					}, showGrid
 					);

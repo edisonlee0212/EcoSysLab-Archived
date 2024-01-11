@@ -2,6 +2,7 @@
 #include "Particle2D.hpp"
 #include "ParticleGrid2D.hpp"
 #include "Times.hpp"
+#include "Delaunator2D.hpp"
 using namespace EvoEngine;
 namespace EcoSysLab {
 	struct ParticlePhysicsSettings
@@ -14,7 +15,6 @@ namespace EcoSysLab {
 	template<typename ParticleData>
 	class ParticlePhysics2D
 	{
-
 		std::vector<Particle2D<ParticleData>> m_particles2D{};
 		void SolveCollision(ParticleHandle p1Handle, ParticleHandle p2Handle);
 		float m_deltaTime = 0.002f;
@@ -28,7 +28,13 @@ namespace EcoSysLab {
 		float m_maxDistanceToCenter = 0.0f;
 		glm::vec2 m_massCenter = glm::vec2(0.0f);
 		double m_simulationTime = 0.0f;
+
+		std::vector<std::pair<int, int>> m_edges;
+		std::vector<std::pair<int, int>> m_boundaryEdges;
 	public:
+		void RenderEdges(ImVec2 origin, float zoomFactor, ImDrawList* drawList, ImU32 color, float thickness);
+		void RenderBoundary(ImVec2 origin, float zoomFactor, ImDrawList* drawList, ImU32 color, float thickness);
+		void CalculateBoundaries(float removalLength = 5);
 		ParticleGrid2D m_particleGrid2D{};
 		bool m_parallel = false;
 		bool m_forceResetGrid = false;
@@ -287,6 +293,71 @@ namespace EcoSysLab {
 					}
 				}
 			}
+		}
+	}
+
+	template <typename ParticleData>
+	void ParticlePhysics2D<ParticleData>::RenderEdges(ImVec2 origin, float zoomFactor, ImDrawList* drawList,
+		ImU32 color, float thickness)
+	{
+		if (m_edges.empty()) return;
+		for (const auto& edge : m_edges)
+		{
+			const auto& p1 = m_particles2D[edge.first].m_position;
+			const auto& p2 = m_particles2D[edge.second].m_position;
+			drawList->AddLine(ImVec2(origin.x + p1.x * zoomFactor,
+				origin.y + p1.y * zoomFactor), ImVec2(origin.x + p2.x * zoomFactor,
+					origin.y + p2.y * zoomFactor), color, thickness);
+		}
+	}
+
+	template <typename ParticleData>
+	void ParticlePhysics2D<ParticleData>::RenderBoundary(ImVec2 origin, float zoomFactor, ImDrawList* drawList,
+		ImU32 color, float thickness)
+	{
+		if (m_boundaryEdges.empty()) return;
+		for (const auto& edge : m_boundaryEdges)
+		{
+			const auto& p1 = m_particles2D[edge.first].m_position;
+			const auto& p2 = m_particles2D[edge.second].m_position;
+			drawList->AddLine(ImVec2(origin.x + p1.x * zoomFactor,
+				origin.y + p1.y * zoomFactor), ImVec2(origin.x + p2.x * zoomFactor,
+					origin.y + p2.y * zoomFactor), color, thickness);
+		}
+	}
+
+	template <typename ParticleData>
+	void ParticlePhysics2D<ParticleData>::CalculateBoundaries(float removalLength)
+	{
+		m_edges.clear();
+		m_boundaryEdges.clear();
+		if(m_particles2D.empty()) return;
+		std::vector<float> positions(m_particles2D.size() * 2);
+		for (int i = 0; i < m_particles2D.size(); i++)
+		{
+			positions[2 * i] = m_particles2D[i].m_position.x;
+			positions[2 * i + 1] = m_particles2D[i].m_position.y;
+		}
+		Delaunator::Delaunator2D d(positions);
+		std::map<std::pair<int, int>, int> edges;
+		for (std::size_t i = 0; i < d.triangles.size(); i += 3) {
+			const auto& v0 = d.triangles[i];
+			const auto& v1 = d.triangles[i + 1];
+			const auto& v2 = d.triangles[i + 2];
+			if (glm::distance(m_particles2D[v0].m_position, m_particles2D[v1].m_position) > removalLength
+				|| glm::distance(m_particles2D[v1].m_position, m_particles2D[v2].m_position) > removalLength
+				|| glm::distance(m_particles2D[v0].m_position, m_particles2D[v2].m_position) > removalLength) continue;
+			++edges[std::make_pair(glm::min(v0, v1), glm::max(v0, v1))];
+			++edges[std::make_pair(glm::min(v1, v2), glm::max(v1, v2))];
+			++edges[std::make_pair(glm::min(v0, v2), glm::max(v0, v2))];
+		}
+		for (const auto& edge : edges)
+		{
+			if (edge.second == 1)
+			{
+				m_boundaryEdges.emplace_back(edge.first);
+			}
+			m_edges.emplace_back(edge.first);
 		}
 	}
 
