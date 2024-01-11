@@ -36,11 +36,19 @@ void ParticlePhysics2DDemo::OnInspect(const std::shared_ptr<EditorLayer>& editor
 			glm::vec2 mousePosition{};
 			static bool lastFrameClicked = false;
 			bool mouseDown = false;
-
+			static bool addAttractor = false;
 			ImGui::Checkbox("Force resize grid", &m_particlePhysics2D.m_forceResetGrid);
-			if (ImGui::Button("Clear stroke"))
+			ImGui::Checkbox("Attractor", &addAttractor);
+			if (ImGui::Button("Clear boundaries"))
 			{
 				m_profileBoundaries.m_boundaries.clear();
+				m_boundariesUpdated = true;
+			}
+			ImGui::SameLine();
+			if (ImGui::Button("Clear attractors"))
+			{
+				m_profileBoundaries.m_attractors.clear();
+				m_boundariesUpdated = true;
 			}
 
 			static float elapsedTime = 0.0f;
@@ -76,93 +84,72 @@ void ParticlePhysics2DDemo::OnInspect(const std::shared_ptr<EditorLayer>& editor
 
 						for (const auto& boundary : m_profileBoundaries.m_boundaries)
 						{
-							if (boundary.m_points.size() > 2) {
-								for (int pointIndex = 0; pointIndex < boundary.m_points.size() - 1; pointIndex++)
-								{
-									const auto& p1 = boundary.m_points[pointIndex];
-									const auto& p2 = boundary.m_points[pointIndex + 1];
-									drawList->AddLine(ImVec2(origin.x + p1.x * zoomFactor,
-										origin.y + p1.y * zoomFactor), ImVec2(origin.x + p2.x * zoomFactor,
-											origin.y + p2.y * zoomFactor), IM_COL32(255.0f, 255.0f, 255.0f, 255.0f));
-								}
-
-								const auto& p1 = boundary.m_points.back();
-								const auto& p2 = boundary.m_points[0];
-								drawList->AddLine(ImVec2(origin.x + p1.x * zoomFactor,
-									origin.y + p1.y * zoomFactor), ImVec2(origin.x + p2.x * zoomFactor,
-										origin.y + p2.y * zoomFactor), IM_COL32(255.0f, 255.0f, 255.0f, 255.0f));
-							}
+							boundary.RenderBoundary(origin, zoomFactor, drawList, IM_COL32(255.0f, 0.0f, 0, 255.0f), 2.0f);
 						}
+					for(const auto& attractor : m_profileBoundaries.m_attractors)
+					{
+						attractor.RenderAttractor(origin, zoomFactor, drawList, IM_COL32(0.0f, 255.0f, 0, 255.0f), 2.0f);
+					}
 					}, showGrid
 					);
+			static glm::vec2 attractorStartMousePosition;
 			if (lastFrameClicked)
 			{
 				if (mouseDown)
 				{
-					//Continue recording.
-					if (mousePosition != m_profileBoundaries.m_boundaries.back().m_points.back()) m_profileBoundaries.m_boundaries.back().m_points.emplace_back(mousePosition);
-				}
-				else
-				{
-					//Stop and check boundary.
-					bool valid = true;
-					auto& boundaries = m_profileBoundaries.m_boundaries;
-					auto& newBoundary = boundaries.back();
-					if (newBoundary.m_points.size() <= 3) valid = false;
-					valid = !(!valid || !newBoundary.Valid());
-					if (valid) {
-						for (int testBoundaryIndex = 0; testBoundaryIndex < boundaries.size() - 1; testBoundaryIndex++) {
-							const auto& testBoundary = boundaries.at(testBoundaryIndex);
-							for (int newPointIndex = 0; newPointIndex < newBoundary.m_points.size(); newPointIndex++)
-							{
-								const auto& p1 = newBoundary.m_points[newPointIndex];
-								const auto& p2 = newBoundary.m_points[(newPointIndex + 1) % newBoundary.m_points.size()];
-								for (int testPointIndex = 0; testPointIndex < testBoundary.m_points.size(); testPointIndex++)
-								{
-									const auto& p3 = testBoundary.m_points[testPointIndex];
-									const auto& p4 = testBoundary.m_points[(testPointIndex + 1) % testBoundary.m_points.size()];
-									if (ProfileBoundary::Intersect(p1, p2, p3, p4))
-									{
-										valid = false;
-										break;
-									}
-								}
-								if (!valid) break;
-							}
-							if (!valid) break;
-						}
-					}
-					if (valid)
-					{
-						for (int testBoundaryIndex = 0; testBoundaryIndex < boundaries.size() - 1; testBoundaryIndex++) {
-							const auto& testBoundary = boundaries.at(testBoundaryIndex);
-							for (const auto& newPoint : newBoundary.m_points)
-							{
-								glm::vec2 temp{};
-								if (testBoundary.InBoundary(newPoint, temp))
-								{
-									valid = false;
-									break;
-								}
-							}
-							if (!valid) break;
-						}
-					}
-					if (!valid)
-					{
-						boundaries.pop_back();
+					if (!addAttractor) {
+						//Continue recording.
+						if (glm::distance(mousePosition, m_profileBoundaries.m_boundaries.back().m_points.back()) > 1.0f) m_profileBoundaries.m_boundaries.back().m_points.emplace_back(mousePosition);
 					}
 					else
 					{
-						boundaries.back().CalculateCenter();
+						auto& attractorPoints = m_profileBoundaries.m_attractors.back().m_attractorPoints;
+						if (attractorPoints.empty())
+						{
+							if (glm::distance(attractorStartMousePosition, mousePosition) > 1.0f)
+							{
+								attractorPoints.emplace_back(attractorStartMousePosition, mousePosition);
+							}
+						}
+						else if (glm::distance(mousePosition, attractorPoints.back().second) > 1.0f)
+						{
+							attractorPoints.emplace_back(attractorPoints.back().second, mousePosition);
+						}
+					}
+				}
+				else if (!m_profileBoundaries.m_boundaries.empty())
+				{
+					if (!addAttractor)
+					{
+						//Stop and check boundary.
+						if (!m_profileBoundaries.Valid(m_profileBoundaries.m_boundaries.size() - 1))
+						{
+							m_profileBoundaries.m_boundaries.pop_back();
+						}
+						else
+						{
+							m_profileBoundaries.m_boundaries.back().CalculateCenter();
+							m_boundariesUpdated = true;
+						}
+					}
+					else
+					{
+						//Stop and check attractors.
 						m_boundariesUpdated = true;
 					}
 				}
 			}
 			else if (mouseDown) {
 				//Start recording.
-				m_profileBoundaries.m_boundaries.emplace_back();
-				m_profileBoundaries.m_boundaries.back().m_points.push_back(mousePosition);
+				if (!addAttractor) {
+					m_profileBoundaries.m_boundaries.emplace_back();
+					m_profileBoundaries.m_boundaries.back().m_points.push_back(mousePosition);
+				}
+				else
+				{
+					m_profileBoundaries.m_attractors.emplace_back();
+					attractorStartMousePosition = mousePosition;
+				}
 			}
 			lastFrameClicked = mouseDown;
 		}
@@ -175,7 +162,7 @@ void ParticlePhysics2DDemo::FixedUpdate()
 	m_particlePhysics2D.Simulate(Times::TimeStep() / m_particlePhysics2D.GetDeltaTime(),
 		[&](auto& grid, bool gridResized)
 		{
-			if(gridResized || m_boundariesUpdated) grid.ApplyBoundaries(m_profileBoundaries);
+			if (gridResized || m_boundariesUpdated) grid.ApplyBoundaries(m_profileBoundaries);
 			m_boundariesUpdated = false;
 		},
 		[&](auto& particle)
@@ -183,36 +170,9 @@ void ParticlePhysics2DDemo::FixedUpdate()
 			//Apply constraints
 			auto acceleration = glm::vec2(0.f);
 			if (!m_particlePhysics2D.m_particleGrid2D.PeekCells().empty()) {
-				if(m_profileBoundaries.m_boundaries.empty())
-				{
-					particle.SetPosition(particle.GetPosition() - m_particlePhysics2D.GetMassCenter());
-					const auto toCenter = particle.GetPosition() - m_worldCenter;
-					const auto distance = glm::length(toCenter);
-					if (distance > m_worldRadius - 1.0f)
-					{
-						const auto n = toCenter / distance;
-						particle.Move(m_worldCenter + n * (m_worldRadius - 1.0f));
-					}
-					if (glm::length(particle.GetPosition()) > 0.0f) {
-						acceleration = m_gravityStrength * -glm::normalize(particle.GetPosition());
-					}
-				}
-				else {
-					const auto& cell = m_particlePhysics2D.m_particleGrid2D.RefCell(particle.GetPosition());
-					if (cell.m_boundaryIndex == -1)
-					{
-						const auto toClosestPoint = cell.m_closestPoint - particle.GetPosition();
-						if (glm::length(toClosestPoint) > glm::epsilon<float>()) {
-							acceleration += m_gravityStrength * 10.0f * glm::normalize(toClosestPoint);
-						}
-					}
-					else
-					{
-						const auto toCenter = m_profileBoundaries.m_boundaries.at(cell.m_boundaryIndex).m_center - particle.GetPosition();
-						if (glm::length(toCenter) > glm::epsilon<float>()) {
-							acceleration += m_gravityStrength * glm::normalize(toCenter);
-						}
-					}
+				const auto& cell = m_particlePhysics2D.m_particleGrid2D.RefCell(particle.GetPosition());
+				if (glm::length(cell.m_target) > glm::epsilon<float>()) {
+					acceleration += m_gravityStrength * 10.0f * glm::normalize(cell.m_target);
 				}
 			}
 			particle.SetAcceleration(acceleration);

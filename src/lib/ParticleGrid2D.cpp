@@ -28,21 +28,21 @@ void ParticleCell::UnregisterParticle(ParticleHandle handle)
 	}
 }
 
-void ParticleGrid2D::ApplyBoundaries(const ProfileBoundaries& profileBoundaries)
+void ParticleGrid2D::ApplyBoundaries(const ProfileConstraints& profileBoundaries)
 {
 	auto& cells = m_cells;
-	if (profileBoundaries.m_boundaries.empty())
+	if (profileBoundaries.m_boundaries.empty() && profileBoundaries.m_attractors.empty())
 	{
 		for (int cellIndex = 0; cellIndex < m_cells.size(); cellIndex++) {
 			auto& cell = cells[cellIndex];
-			cell.m_boundaryIndex = -1;
+			cell.m_target = -GetPosition(cellIndex);
 		}
 	}
 	else {
 		for (int cellIndex = 0; cellIndex < m_cells.size(); cellIndex++) {
 			auto& cell = cells[cellIndex];
 			const auto cellPosition = GetPosition(cellIndex);
-			cell.m_boundaryIndex = profileBoundaries.InBoundaries(cellPosition, cell.m_closestPoint);
+			cell.m_target = profileBoundaries.GetTarget(cellPosition);
 		}
 	}
 }

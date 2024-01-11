@@ -1,5 +1,5 @@
 #pragma once
-#include "ProfileBoundaries.hpp"
+#include "ProfileConstraints.hpp"
 using namespace EvoEngine;
 namespace EcoSysLab {
 	typedef int ParticleHandle;
@@ -13,8 +13,7 @@ namespace EcoSysLab {
 		size_t m_atomCount = 0;
 		ParticleHandle m_atomHandles[CELL_CAPACITY] = {};
 	public:
-		int m_boundaryIndex = -1;
-		glm::vec2 m_closestPoint = glm::vec2(0.0f);
+		glm::vec2 m_target = glm::vec2(0.0f);
 		void RegisterParticle(ParticleHandle handle);
 		void Clear();
 		void UnregisterParticle(ParticleHandle handle);
@@ -31,7 +30,7 @@ namespace EcoSysLab {
 		template<typename PD>
 		friend class ParticlePhysics2D;
 	public:
-		void ApplyBoundaries(const ProfileBoundaries& profileBoundaries);
+		void ApplyBoundaries(const ProfileConstraints& profileBoundaries);
 		ParticleGrid2D() = default;
 		void Reset(float cellSize, const glm::vec2& minBound, const glm::ivec2& resolution);
 		void Reset(float cellSize, const glm::vec2& minBound, const glm::vec2& maxBound);

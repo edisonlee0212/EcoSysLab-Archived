@@ -46,7 +46,8 @@ m_entityMetadataList:
     m_static: false
     Root.Handle: 8350535051805926162
     m_privateComponentElements:
-      []
+      - m_typeName: ParticlePhysics2DDemo
+        m_enabled: true
   - m_name: 1m
     m_handle: 9136711617226957804
     m_enabled: true

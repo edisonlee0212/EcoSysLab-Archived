@@ -1402,28 +1402,10 @@ void TreeModel::PackTask(NodeHandle nodeHandle, const PipeModelParameters& pipeM
 			[&](auto& particle)
 			{
 				auto acceleration = glm::vec2(0.f);
-				if (internodeData.m_profileBoundaries.m_boundaries.empty())
-				{
-					particle.SetPosition(particle.GetPosition() - internodeData.m_frontParticlePhysics2D.GetMassCenter());
-					if (glm::length(particle.GetPosition()) > 0.0f) {
-						acceleration = pipeModelParameters.m_centerAttractionStrength * -glm::normalize(particle.GetPosition());
-					}
-				}
-				else if (!internodeData.m_frontParticlePhysics2D.m_particleGrid2D.PeekCells().empty()) {
+				if (!internodeData.m_frontParticlePhysics2D.m_particleGrid2D.PeekCells().empty()) {
 					const auto& cell = internodeData.m_frontParticlePhysics2D.m_particleGrid2D.RefCell(particle.GetPosition());
-					if (cell.m_boundaryIndex == -1)
-					{
-						const auto toClosestPoint = cell.m_closestPoint - particle.GetPosition();
-						if (glm::length(toClosestPoint) > glm::epsilon<float>()) {
-							acceleration += pipeModelParameters.m_boundaryStrength * glm::normalize(toClosestPoint);
-						}
-					}
-					else
-					{
-						const auto toCenter = internodeData.m_profileBoundaries.m_boundaries.at(cell.m_boundaryIndex).m_center - particle.GetPosition();
-						if (glm::length(toCenter) > glm::epsilon<float>()) {
-							acceleration += pipeModelParameters.m_boundaryStrength * glm::normalize(toCenter);
-						}
+					if (glm::length(cell.m_target) > glm::epsilon<float>()) {
+						acceleration += pipeModelParameters.m_centerAttractionStrength * glm::normalize(cell.m_target);
 					}
 				}
 				particle.SetAcceleration(acceleration);

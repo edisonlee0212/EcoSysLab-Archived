@@ -554,24 +554,15 @@ namespace EcoSysLab {
 					const auto& cell = m_particleGrid2D.RefCell(glm::ivec2(i, j));
 					const auto cellCenter = m_particleGrid2D.GetPosition(glm::ivec2(i, j));
 					const auto min = ImVec2(cellCenter.x - m_particleGrid2D.m_cellSize * 0.5f, cellCenter.y - m_particleGrid2D.m_cellSize * 0.5f);
-					if (cell.m_boundaryIndex != -1) {
-						drawList->AddQuad(
-							min * zoomFactor + origin,
-							ImVec2(min.x + m_particleGrid2D.m_cellSize, min.y) * zoomFactor + origin,
-							ImVec2(min.x + m_particleGrid2D.m_cellSize, min.y + m_particleGrid2D.m_cellSize) * zoomFactor + origin,
-							ImVec2(min.x, min.y + m_particleGrid2D.m_cellSize) * zoomFactor + origin,
-							IM_COL32(0, 255, 0, 128));
-					}
-					else
-					{
-						drawList->AddQuad(
-							min * zoomFactor + origin,
-							ImVec2(min.x + m_particleGrid2D.m_cellSize, min.y) * zoomFactor + origin,
-							ImVec2(min.x + m_particleGrid2D.m_cellSize, min.y + m_particleGrid2D.m_cellSize) * zoomFactor + origin,
-							ImVec2(min.x, min.y + m_particleGrid2D.m_cellSize) * zoomFactor + origin,
-							IM_COL32(0, 0, 255, 128));
-					}
-					drawList->AddLine(ImVec2(cellCenter.x, cellCenter.y) * zoomFactor + origin, ImVec2(cell.m_closestPoint.x, cell.m_closestPoint.y) * zoomFactor + origin, IM_COL32(255, 0, 0, 128));
+
+					drawList->AddQuad(
+						min * zoomFactor + origin,
+						ImVec2(min.x + m_particleGrid2D.m_cellSize, min.y) * zoomFactor + origin,
+						ImVec2(min.x + m_particleGrid2D.m_cellSize, min.y + m_particleGrid2D.m_cellSize) * zoomFactor + origin,
+						ImVec2(min.x, min.y + m_particleGrid2D.m_cellSize) * zoomFactor + origin,
+						IM_COL32(0, 0, 255, 128));
+					const auto cellTarget = cellCenter + cell.m_target;
+					drawList->AddLine(ImVec2(cellCenter.x, cellCenter.y) * zoomFactor + origin, ImVec2(cellTarget.x, cellTarget.y) * zoomFactor + origin, IM_COL32(255, 0, 0, 128));
 
 				}
 			}

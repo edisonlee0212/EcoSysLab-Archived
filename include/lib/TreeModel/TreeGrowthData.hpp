@@ -2,7 +2,7 @@
 #include "Skeleton.hpp"
 #include "EnvironmentGrid.hpp"
 #include "PipeModelParameters.hpp"
-#include "ProfileBoundaries.hpp"
+#include "ProfileConstraints.hpp"
 #include "TreeOccupancyGrid.hpp"
 using namespace EvoEngine;
 namespace EcoSysLab
@@ -112,7 +112,7 @@ namespace EcoSysLab
 		bool m_boundariesUpdated = false;
 		ParticlePhysics2D<CellParticlePhysicsData> m_backParticlePhysics2D{};
 		std::unordered_map<PipeHandle, ParticleHandle> m_backParticleMap{};
-		ProfileBoundaries m_profileBoundaries {};
+		ProfileConstraints m_profileBoundaries {};
 
 		float m_frontControlPointDistance = 0.0f;
 		float m_backControlPointDistance = 0.0f;
