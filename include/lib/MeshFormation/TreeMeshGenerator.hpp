@@ -75,6 +75,11 @@ namespace EcoSysLab {
 		AssetRef m_foliageRoughnessTexture;
 		AssetRef m_foliageMetallicTexture;
 
+		AssetRef m_branchAlbedoTexture;
+		AssetRef m_branchNormalTexture;
+		AssetRef m_branchRoughnessTexture;
+		AssetRef m_branchMetallicTexture;
+
 		float m_trunkThickness = 0.1f;
 		float m_xSubdivision = 0.03f;
 		float m_trunkYSubdivision = 0.03f;

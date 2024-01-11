@@ -171,7 +171,7 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 			modelChanged = true;
 		}
 		if (ImGui::TreeNode("Tree settings")) {
-			
+
 			ImGui::Checkbox("Enable History", &m_enableHistory);
 			if (m_enableHistory)
 			{
@@ -369,9 +369,9 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 		InitializeMeshRendererPipe(m_treePipeMeshGeneratorSettings);
 	}
 
-	if(ImGui::Button("Clear Pipe Mesh"))
+	if (ImGui::Button("Clear Pipe Mesh"))
 	{
-		
+
 		ClearMeshRendererPipe();
 	}
 }
@@ -390,7 +390,7 @@ void Tree::Update()
 	}
 	const auto editorLayer = Application::GetLayer<EditorLayer>();
 	const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
-	
+
 }
 
 void Tree::OnCreate() {
@@ -464,17 +464,18 @@ std::shared_ptr<Mesh> Tree::GenerateBranchMesh(const TreeMeshGeneratorSettings& 
 				}
 				return 1.0f;
 			});
-	}else
+	}
+	else
 	{
-			const VoxelMeshGenerator<ShootGrowthData, ShootStemGrowthData, InternodeGrowthData> meshGenerator{};
+		const VoxelMeshGenerator<ShootGrowthData, ShootStemGrowthData, InternodeGrowthData> meshGenerator{};
 
-			const auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
-			std::shared_ptr<BranchShape> branchShape{};
-			if (treeDescriptor)
-			{
-				branchShape = treeDescriptor->m_shootBranchShape.Get<BranchShape>();
-			}
-			meshGenerator.Generate(m_treeModel.PeekShootSkeleton(), vertices, indices, meshGeneratorSettings);
+		const auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
+		std::shared_ptr<BranchShape> branchShape{};
+		if (treeDescriptor)
+		{
+			branchShape = treeDescriptor->m_shootBranchShape.Get<BranchShape>();
+		}
+		meshGenerator.Generate(m_treeModel.PeekShootSkeleton(), vertices, indices, meshGeneratorSettings);
 	}
 	auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
 	VertexAttributes attributes{};
@@ -702,7 +703,7 @@ bool Tree::TryGrow(const float deltaTime, const NodeHandle baseInternodeHandle, 
 	const auto scene = GetScene();
 	const auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
 	const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
-	
+
 	const auto climateCandidate = EcoSysLabLayer::FindClimate();
 	if (!climateCandidate.expired()) m_climate = climateCandidate.lock();
 	const auto soilCandidate = EcoSysLabLayer::FindSoil();
@@ -730,7 +731,7 @@ bool Tree::TryGrow(const float deltaTime, const NodeHandle baseInternodeHandle, 
 		EVOENGINE_ERROR("No climate model!");
 		return false;
 	}
-	
+
 	const auto owner = GetOwner();
 	PrepareControllers(treeDescriptor);
 	const bool grown = m_treeModel.Grow(deltaTime, baseInternodeHandle, scene->GetDataComponent<GlobalTransform>(owner).m_value, climate->m_climateModel, m_shootGrowthController, pruning, overrideGrowthRate);
@@ -833,12 +834,61 @@ void Tree::InitializeMeshRenderer(const TreeMeshGeneratorSettings& meshGenerator
 		auto mesh = GenerateBranchMesh(meshGeneratorSettings);
 		auto material = ProjectManager::CreateTemporaryAsset<Material>();
 		auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(branchEntity).lock();
+
+		if (treeDescriptor) {
+			auto texRef = treeDescriptor->m_branchAlbedoTexture;
+			if (texRef.Get<Texture2D>())
+			{
+				material->SetAlbedoTexture(texRef.Get<Texture2D>());
+
+			}
+			texRef = treeDescriptor->m_branchNormalTexture;
+			if (texRef.Get<Texture2D>())
+			{
+				material->SetNormalTexture(texRef.Get<Texture2D>());
+
+			}
+			texRef = treeDescriptor->m_branchRoughnessTexture;
+			if (texRef.Get<Texture2D>())
+			{
+				material->SetRoughnessTexture(texRef.Get<Texture2D>());
+
+			}
+			texRef = treeDescriptor->m_branchMetallicTexture;
+			if (texRef.Get<Texture2D>())
+			{
+				material->SetMetallicTexture(texRef.Get<Texture2D>());
+			}
+		}
 		if (meshGeneratorSettings.m_presentationOverride)
 		{
 			material->m_materialProperties.m_albedoColor = meshGeneratorSettings.m_presentationOverrideSettings.m_branchOverrideColor;
+			auto texRef = meshGeneratorSettings.m_branchAlbedoTexture;
+			if (texRef.Get<Texture2D>())
+			{
+				material->SetAlbedoTexture(texRef.Get<Texture2D>());
+
+			}
+			texRef = meshGeneratorSettings.m_branchNormalTexture;
+			if (texRef.Get<Texture2D>())
+			{
+				material->SetNormalTexture(texRef.Get<Texture2D>());
+
+			}
+			texRef = meshGeneratorSettings.m_branchRoughnessTexture;
+			if (texRef.Get<Texture2D>())
+			{
+				material->SetRoughnessTexture(texRef.Get<Texture2D>());
+			}
+			texRef = meshGeneratorSettings.m_branchMetallicTexture;
+			if (texRef.Get<Texture2D>())
+			{
+				material->SetMetallicTexture(texRef.Get<Texture2D>());
+			}
 		}
 		else {
 			material->m_materialProperties.m_albedoColor = glm::vec3(109, 79, 75) / 255.0f;
+
 		}
 		material->m_materialProperties.m_roughness = 1.0f;
 		material->m_materialProperties.m_metallic = 0.0f;
@@ -963,6 +1013,32 @@ void Tree::InitializeMeshRenderer(const TreeMeshGeneratorSettings& meshGenerator
 		VertexAttributes vertexAttributes{};
 		vertexAttributes.m_texCoord = true;
 		mesh->SetVertices(vertexAttributes, vertices, indices);
+		if (treeDescriptor) {
+			auto texRef = treeDescriptor->m_foliageAlbedoTexture;
+			if (texRef.Get<Texture2D>())
+			{
+				material->SetAlbedoTexture(texRef.Get<Texture2D>());
+
+			}
+			texRef = treeDescriptor->m_foliageNormalTexture;
+			if (texRef.Get<Texture2D>())
+			{
+				material->SetNormalTexture(texRef.Get<Texture2D>());
+
+			}
+			texRef = treeDescriptor->m_foliageRoughnessTexture;
+			if (texRef.Get<Texture2D>())
+			{
+				material->SetRoughnessTexture(texRef.Get<Texture2D>());
+
+			}
+			texRef = treeDescriptor->m_foliageMetallicTexture;
+			if (texRef.Get<Texture2D>())
+			{
+				material->SetMetallicTexture(texRef.Get<Texture2D>());
+			}
+		}
+
 		if (meshGeneratorSettings.m_foliageOverride)
 		{
 			material->m_materialProperties.m_albedoColor = meshGeneratorSettings.m_foliageOverrideSettings.m_leafColor;
@@ -988,36 +1064,10 @@ void Tree::InitializeMeshRenderer(const TreeMeshGeneratorSettings& meshGenerator
 			if (texRef.Get<Texture2D>())
 			{
 				material->SetMetallicTexture(texRef.Get<Texture2D>());
-
 			}
 		}
 		else {
 			material->m_materialProperties.m_albedoColor = treeDescriptor->m_foliageParameters.m_leafColor;
-			if (treeDescriptor) {
-				auto texRef = treeDescriptor->m_foliageAlbedoTexture;
-				if (texRef.Get<Texture2D>())
-				{
-					material->SetAlbedoTexture(texRef.Get<Texture2D>());
-
-				}
-				texRef = treeDescriptor->m_foliageNormalTexture;
-				if (texRef.Get<Texture2D>())
-				{
-					material->SetNormalTexture(texRef.Get<Texture2D>());
-
-				}
-				texRef = treeDescriptor->m_foliageRoughnessTexture;
-				if (texRef.Get<Texture2D>())
-				{
-					material->SetRoughnessTexture(texRef.Get<Texture2D>());
-
-				}
-				texRef = treeDescriptor->m_foliageMetallicTexture;
-				if (texRef.Get<Texture2D>())
-				{
-					material->SetMetallicTexture(texRef.Get<Texture2D>());
-				}
-			}
 		}
 		material->m_materialProperties.m_roughness = 1.0f;
 		material->m_materialProperties.m_metallic = 0.0f;
@@ -1603,7 +1653,7 @@ void Tree::InitializeStrandRenderer()
 	scene->SetParent(strandsEntity, owner);
 
 	const auto renderer = scene->GetOrSetPrivateComponent<StrandsRenderer>(strandsEntity).lock();
-	
+
 	renderer->m_strands = GenerateStrands();
 
 	const auto material = ProjectManager::CreateTemporaryAsset<Material>();

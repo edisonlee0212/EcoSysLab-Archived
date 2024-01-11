@@ -2094,8 +2094,8 @@ void TreePointCloud::OnCreate()
 {
 	m_treeMeshGeneratorSettings.m_enableFoliage = true;
 	m_treeMeshGeneratorSettings.m_enableTwig = true;
-	m_treeMeshGeneratorSettings.m_foliageOverrideSettings.m_leafSize = { 0.0125f, 0.0125f };
-	m_treeMeshGeneratorSettings.m_foliageOverrideSettings.m_positionVariance = 0.06f;
+	m_treeMeshGeneratorSettings.m_foliageOverrideSettings.m_leafSize = { 0.015f, 0.015f };
+	m_treeMeshGeneratorSettings.m_foliageOverrideSettings.m_positionVariance = 0.03f;
 	m_treeMeshGeneratorSettings.m_foliageOverrideSettings.m_leafCountPerInternode = 15;
 	m_treeMeshGeneratorSettings.m_foliageOverrideSettings.m_rotationVariance = 1.0f;
 	m_treeMeshGeneratorSettings.m_foliageOverrideSettings.m_minRootDistance = 1.15f;
@@ -2157,6 +2157,30 @@ void TreePointCloud::FormGeometryEntity() const
 			}
 			else {
 				material->m_materialProperties.m_albedoColor = glm::vec3(109, 79, 75) / 255.0f;
+			}
+
+			auto texRef = meshGeneratorSettings.m_branchAlbedoTexture;
+			if (texRef.Get<Texture2D>())
+			{
+				material->SetAlbedoTexture(texRef.Get<Texture2D>());
+
+			}
+			texRef = meshGeneratorSettings.m_branchNormalTexture;
+			if (texRef.Get<Texture2D>())
+			{
+				material->SetNormalTexture(texRef.Get<Texture2D>());
+
+			}
+			texRef = meshGeneratorSettings.m_branchRoughnessTexture;
+			if (texRef.Get<Texture2D>())
+			{
+				material->SetRoughnessTexture(texRef.Get<Texture2D>());
+
+			}
+			texRef = meshGeneratorSettings.m_branchMetallicTexture;
+			if (texRef.Get<Texture2D>())
+			{
+				material->SetMetallicTexture(texRef.Get<Texture2D>());
 			}
 			material->m_materialProperties.m_roughness = 1.0f;
 			material->m_materialProperties.m_metallic = 0.0f;
@@ -2329,6 +2353,30 @@ void TreePointCloud::FormGeometryEntity() const
 			VertexAttributes vertexAttributes{};
 			vertexAttributes.m_texCoord = true;
 			mesh->SetVertices(vertexAttributes, vertices, indices);
+
+			auto texRef = meshGeneratorSettings.m_foliageAlbedoTexture;
+			if (texRef.Get<Texture2D>())
+			{
+				material->SetAlbedoTexture(texRef.Get<Texture2D>());
+
+			}
+			texRef = meshGeneratorSettings.m_foliageNormalTexture;
+			if (texRef.Get<Texture2D>())
+			{
+				material->SetNormalTexture(texRef.Get<Texture2D>());
+
+			}
+			texRef = meshGeneratorSettings.m_foliageRoughnessTexture;
+			if (texRef.Get<Texture2D>())
+			{
+				material->SetRoughnessTexture(texRef.Get<Texture2D>());
+
+			}
+			texRef = meshGeneratorSettings.m_foliageMetallicTexture;
+			if (texRef.Get<Texture2D>())
+			{
+				material->SetMetallicTexture(texRef.Get<Texture2D>());
+			}
 			if (meshGeneratorSettings.m_foliageOverride)
 			{
 				material->m_materialProperties.m_albedoColor = meshGeneratorSettings.m_foliageOverrideSettings.m_leafColor;
@@ -2337,12 +2385,6 @@ void TreePointCloud::FormGeometryEntity() const
 				material->m_materialProperties.m_albedoColor = glm::vec3(152 / 255.0f, 203 / 255.0f, 0 / 255.0f);
 			}
 			material->m_materialProperties.m_roughness = 0.0f;
-			auto texRef = meshGeneratorSettings.m_foliageAlbedoTexture;
-			if (texRef.Get<Texture2D>())
-			{
-				material->SetAlbedoTexture(texRef.Get<Texture2D>());
-
-			}
 			auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(foliageEntity).lock();
 			meshRenderer->m_mesh = mesh;
 			meshRenderer->m_material = material;

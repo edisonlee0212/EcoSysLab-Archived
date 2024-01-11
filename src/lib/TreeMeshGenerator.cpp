@@ -273,6 +273,12 @@ void TreeMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLayer>& ed
 			editorLayer->DragAndDropButton<Texture2D>(m_foliageRoughnessTexture, "Foliage Roughness Texture");
 			editorLayer->DragAndDropButton<Texture2D>(m_foliageMetallicTexture, "Foliage Metallic Texture");
 
+
+			editorLayer->DragAndDropButton<Texture2D>(m_branchAlbedoTexture, "Branch Albedo Texture");
+			editorLayer->DragAndDropButton<Texture2D>(m_branchNormalTexture, "Branch Normal Texture");
+			editorLayer->DragAndDropButton<Texture2D>(m_branchRoughnessTexture, "Branch Roughness Texture");
+			editorLayer->DragAndDropButton<Texture2D>(m_branchMetallicTexture, "Branch Metallic Texture");
+
 			ImGui::TreePop();
 		}
 		ImGui::Checkbox("Foliage Override", &m_foliageOverride);
