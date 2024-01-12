@@ -413,8 +413,9 @@ void EcoSysLabLayer::Visualization() {
 					}
 					if (m_autoGenerateStrandsAfterEditing || m_autoGenerateStrandMeshAfterEditing)
 					{
-						auto strands = tree->GenerateStrands();
+						tree->PrepareProfiles();
 						if (m_autoGenerateStrandsAfterEditing) {
+							auto strands = tree->GenerateStrands();
 							tree->InitializeStrandRenderer(strands);
 						}
 						if (m_autoGenerateStrandMeshAfterEditing)
@@ -744,8 +745,9 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 				}
 				if (m_autoGenerateStrandsAfterEditing || m_autoGenerateStrandMeshAfterEditing)
 				{
-					auto strands = tree->GenerateStrands();
+					tree->PrepareProfiles();
 					if (m_autoGenerateStrandsAfterEditing) {
+						auto strands = tree->GenerateStrands();
 						tree->InitializeStrandRenderer(strands);
 					}
 					if (m_autoGenerateStrandMeshAfterEditing)

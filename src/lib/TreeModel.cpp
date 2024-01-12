@@ -1454,8 +1454,6 @@ void TreeModel::MergeTask(NodeHandle nodeHandle, const PipeModelParameters& pipe
 		//Copy from child flow start to self flow start
 		const auto& childNode = m_shootSkeleton.RefNode(childHandles.front());
 		const auto& childPhysics2D = childNode.m_data.m_frontParticlePhysics2D;
-		assert(internodeData.m_frontParticlePhysics2D.PeekParticles().size() == childPhysics2D.PeekParticles().size());
-		assert(internodeData.m_frontParticlePhysics2D.PeekParticles().size() == childPhysics2D.PeekParticles().size());
 		for (const auto& childParticle : childPhysics2D.PeekParticles())
 		{
 			const auto nodeStartParticleHandle = internodeData.m_frontParticleMap.at(childParticle.m_data.m_pipeHandle);
@@ -1469,7 +1467,11 @@ void TreeModel::MergeTask(NodeHandle nodeHandle, const PipeModelParameters& pipe
 
 			nodeStartParticle.m_data.m_mainChild = nodeEndParticle.m_data.m_mainChild = true;
 		}
-		
+		//If the only child is not apical child. We still need to perform packing.
+		if(internodeData.m_frontParticlePhysics2D.PeekParticles().size() != childPhysics2D.PeekParticles().size())
+		{
+			internode.m_data.m_needPacking = true;
+		}
 		return;
 	}
 	internodeData.m_needPacking = true;

@@ -18,7 +18,7 @@ namespace EcoSysLab {
 		static void DeserializeTreeGrowthSettings(TreeGrowthSettings& treeGrowthSettings, const YAML::Node& param);
 		static bool OnInspectTreeGrowthSettings(TreeGrowthSettings& treeGrowthSettings);
 
-
+		void PrepareProfiles();
 		std::shared_ptr<Strands> GenerateStrands();
 
 		std::shared_ptr<Mesh> GenerateBranchMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings);

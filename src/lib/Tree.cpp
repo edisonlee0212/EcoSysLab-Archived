@@ -347,14 +347,15 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	}
 	ImGui::Checkbox("Triple points", &pipeModelParameters.m_triplePoints);
 
-	if (ImGui::Button("Build Strands"))
+	if (ImGui::Button("Prepare profiles"))
 	{
-		m_treeModel.InitializeProfiles();
-		m_treeModel.CalculateProfiles();
+		PrepareProfiles();
+	}
+	if (ImGui::Button("Create StrandsRenderer"))
+	{
 		InitializeStrandRenderer();
 	}
-
-	if (ImGui::Button("Clear Strands"))
+	if (ImGui::Button("Clear StrandsRenderer"))
 	{
 		ClearStrandRenderer();
 	}
@@ -365,7 +366,6 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	}
 	if (ImGui::Button("Build Pipe Mesh"))
 	{
-		GenerateStrands();
 		InitializeMeshRendererPipe(m_treePipeMeshGeneratorSettings);
 	}
 
@@ -424,12 +424,15 @@ bool Tree::OnInspectTreeGrowthSettings(TreeGrowthSettings& treeGrowthSettings)
 	return changed;
 }
 
-std::shared_ptr<Strands> Tree::GenerateStrands()
+void Tree::PrepareProfiles()
 {
 	m_treeModel.InitializeProfiles();
 	m_treeModel.CalculateProfiles();
-	const auto strandsAsset = ProjectManager::CreateTemporaryAsset<Strands>();
+}
 
+std::shared_ptr<Strands> Tree::GenerateStrands()
+{
+	const auto strandsAsset = ProjectManager::CreateTemporaryAsset<Strands>();
 	m_treeModel.CalculatePipeProfileAdjustedTransforms();
 	m_treeModel.ApplyProfiles();
 	const auto& parameters = m_treeModel.RefShootSkeleton().m_data.m_pipeModelParameters;
@@ -571,6 +574,13 @@ std::shared_ptr<Mesh> Tree::GenerateFoliageMesh(const TreeMeshGeneratorSettings&
 
 std::shared_ptr<Mesh> Tree::GeneratePipeMesh(const TreePipeMeshGeneratorSettings& treePipeMeshGeneratorSettings)
 {
+	m_treeModel.CalculatePipeProfileAdjustedTransforms();
+	m_treeModel.ApplyProfiles();
+	const auto& parameters = m_treeModel.RefShootSkeleton().m_data.m_pipeModelParameters;
+	std::vector<glm::uint> strandsList;
+	std::vector<StrandPoint> points;
+	m_treeModel.RefShootSkeleton().m_data.m_pipeGroup.BuildStrands(parameters.m_frontControlPointRatio, parameters.m_backControlPointRatio, strandsList, points, parameters.m_triplePoints, parameters.m_nodeMaxCount);
+
 	std::vector<Vertex> vertices;
 	std::vector<unsigned int> indices;
 	const TreePipeMeshGenerator meshGenerator{};
