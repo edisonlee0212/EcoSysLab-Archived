@@ -464,13 +464,13 @@ void TreeVisualizer::Visualize(TreeModel& treeModel, const GlobalTransform& glob
 						ImGui::Checkbox("Attractor", &addAttractor);
 						if (ImGui::Button("Clear boundaries"))
 						{
-							node.m_data.m_profileBoundaries.m_boundaries.clear();
+							node.m_data.m_profileConstraints.m_boundaries.clear();
 							node.m_data.m_boundariesUpdated = true;
 						}
 						ImGui::SameLine();
 						if (ImGui::Button("Clear attractors"))
 						{
-							node.m_data.m_profileBoundaries.m_attractors.clear();
+							node.m_data.m_profileConstraints.m_attractors.clear();
 							node.m_data.m_boundariesUpdated = true;
 						}
 						ImGui::SameLine();
@@ -478,53 +478,53 @@ void TreeVisualizer::Visualize(TreeModel& treeModel, const GlobalTransform& glob
 						if (node.GetParentHandle() != -1)
 						{
 							const auto& parentNode = treeModel.RefShootSkeleton().RefNode(node.GetParentHandle());
-							if (!parentNode.m_data.m_profileBoundaries.m_boundaries.empty())
+							if (!parentNode.m_data.m_profileConstraints.m_boundaries.empty())
 							{
 								ImGui::SameLine();
 								if (ImGui::Button("Copy parent boundaries"))
 								{
-									node.m_data.m_profileBoundaries = parentNode.m_data.m_profileBoundaries;
+									node.m_data.m_profileConstraints = parentNode.m_data.m_profileConstraints;
 									node.m_data.m_boundariesUpdated = true;
 								}
 							}
 						}
-						node.m_data.m_frontParticlePhysics2D.OnInspect([&](const glm::vec2 position)
+						node.m_data.m_frontProfile.OnInspect([&](const glm::vec2 position)
 							{
 								mouseDown = true;
 								mousePosition = position;
 							},
 							[&](const ImVec2 origin, const float zoomFactor, ImDrawList* drawList) {
-								node.m_data.m_frontParticlePhysics2D.RenderEdges(origin, zoomFactor, drawList, IM_COL32(0.0f, 0.0f, 128.0f, 128.0f), 1.0f);
-								node.m_data.m_frontParticlePhysics2D.RenderBoundary(origin, zoomFactor, drawList, IM_COL32(255.f, 255.f, 255.0f, 255.0f), 4.0f);
+								node.m_data.m_frontProfile.RenderEdges(origin, zoomFactor, drawList, IM_COL32(0.0f, 0.0f, 128.0f, 128.0f), 1.0f);
+								node.m_data.m_frontProfile.RenderBoundary(origin, zoomFactor, drawList, IM_COL32(255.f, 255.f, 255.0f, 255.0f), 4.0f);
 
 								if (node.GetParentHandle() != -1)
 								{
 									const auto& parentNode = treeModel.RefShootSkeleton().RefNode(node.GetParentHandle());
-									if (!parentNode.m_data.m_profileBoundaries.m_boundaries.empty())
+									if (!parentNode.m_data.m_profileConstraints.m_boundaries.empty())
 									{
-										for (const auto& parentBoundary : parentNode.m_data.m_profileBoundaries.m_boundaries)
+										for (const auto& parentBoundary : parentNode.m_data.m_profileConstraints.m_boundaries)
 										{
 											parentBoundary.RenderBoundary(origin, zoomFactor, drawList, IM_COL32(128.0f, 0.0f, 0, 128.0f), 4.0f);
 										}
-										for (const auto& parentAttractor : parentNode.m_data.m_profileBoundaries.m_attractors)
+										for (const auto& parentAttractor : parentNode.m_data.m_profileConstraints.m_attractors)
 										{
 											parentAttractor.RenderAttractor(origin, zoomFactor, drawList, IM_COL32(0.0f, 128.0f, 0, 128.0f), 4.0f);
 										}
 									}
 									
 								}
-								for (const auto& boundary : node.m_data.m_profileBoundaries.m_boundaries)
+								for (const auto& boundary : node.m_data.m_profileConstraints.m_boundaries)
 								{
 									boundary.RenderBoundary(origin, zoomFactor, drawList, IM_COL32(255.0f, 0.0f, 0, 255.0f), 2.0f);
 								}
 
-								for (const auto& attractor : node.m_data.m_profileBoundaries.m_attractors)
+								for (const auto& attractor : node.m_data.m_profileConstraints.m_attractors)
 								{
 									attractor.RenderAttractor(origin, zoomFactor, drawList, IM_COL32(0.0f, 255.0f, 0, 255.0f), 2.0f);
 								}
 						},
 							showGrid);
-						auto& profileBoundaries = node.m_data.m_profileBoundaries;
+						auto& profileBoundaries = node.m_data.m_profileConstraints;
 						static glm::vec2 attractorStartMousePosition;
 						if (lastFrameClicked)
 						{
@@ -574,12 +574,12 @@ void TreeVisualizer::Visualize(TreeModel& treeModel, const GlobalTransform& glob
 						else if (mouseDown) {
 							//Start recording.
 							if (!addAttractor) {
-								node.m_data.m_profileBoundaries.m_boundaries.emplace_back();
-								node.m_data.m_profileBoundaries.m_boundaries.back().m_points.push_back(mousePosition);
+								node.m_data.m_profileConstraints.m_boundaries.emplace_back();
+								node.m_data.m_profileConstraints.m_boundaries.back().m_points.push_back(mousePosition);
 							}
 							else
 							{
-								node.m_data.m_profileBoundaries.m_attractors.emplace_back();
+								node.m_data.m_profileConstraints.m_attractors.emplace_back();
 								attractorStartMousePosition = mousePosition;
 							}
 						}
@@ -602,46 +602,46 @@ void TreeVisualizer::Visualize(TreeModel& treeModel, const GlobalTransform& glob
 						if (node.GetParentHandle() != -1)
 						{
 							const auto& parentNode = treeModel.RefShootSkeleton().RefNode(node.GetParentHandle());
-							if (!parentNode.m_data.m_profileBoundaries.m_boundaries.empty())
+							if (!parentNode.m_data.m_profileConstraints.m_boundaries.empty())
 							{
 								ImGui::SameLine();
 								if (ImGui::Button("Copy parent boundaries"))
 								{
-									node.m_data.m_profileBoundaries = parentNode.m_data.m_profileBoundaries;
+									node.m_data.m_profileConstraints = parentNode.m_data.m_profileConstraints;
 									node.m_data.m_boundariesUpdated = true;
 								}
 							}
 						}
-						node.m_data.m_backParticlePhysics2D.OnInspect([&](const glm::vec2 position)
+						node.m_data.m_backProfile.OnInspect([&](const glm::vec2 position)
 							{},
 							[&](const ImVec2 origin, const float zoomFactor, ImDrawList* drawList)
 							{
-								node.m_data.m_backParticlePhysics2D.RenderEdges(origin, zoomFactor, drawList, IM_COL32(0.0f, 0.0f, 128.0f, 128.0f), 1.0f);
-								node.m_data.m_backParticlePhysics2D.RenderBoundary(origin, zoomFactor, drawList, IM_COL32(255.f, 255.f, 255.0f, 255.0f), 4.0f);
+								node.m_data.m_backProfile.RenderEdges(origin, zoomFactor, drawList, IM_COL32(0.0f, 0.0f, 128.0f, 128.0f), 1.0f);
+								node.m_data.m_backProfile.RenderBoundary(origin, zoomFactor, drawList, IM_COL32(255.f, 255.f, 255.0f, 255.0f), 4.0f);
 
 
 								if (node.GetParentHandle() != -1)
 								{
 									const auto& parentNode = treeModel.RefShootSkeleton().RefNode(node.GetParentHandle());
-									if (!parentNode.m_data.m_profileBoundaries.m_boundaries.empty())
+									if (!parentNode.m_data.m_profileConstraints.m_boundaries.empty())
 									{
-										for (const auto& parentBoundary : parentNode.m_data.m_profileBoundaries.m_boundaries)
+										for (const auto& parentBoundary : parentNode.m_data.m_profileConstraints.m_boundaries)
 										{
 											parentBoundary.RenderBoundary(origin, zoomFactor, drawList, IM_COL32(128.0f, 0.0f, 0, 128.0f), 4.0f);
 										}
-										for (const auto& parentAttractor : parentNode.m_data.m_profileBoundaries.m_attractors)
+										for (const auto& parentAttractor : parentNode.m_data.m_profileConstraints.m_attractors)
 										{
 											parentAttractor.RenderAttractor(origin, zoomFactor, drawList, IM_COL32(0.0f, 128.0f, 0, 128.0f), 4.0f);
 										}
 									}
 
 								}
-								for (const auto& boundary : node.m_data.m_profileBoundaries.m_boundaries)
+								for (const auto& boundary : node.m_data.m_profileConstraints.m_boundaries)
 								{
 									boundary.RenderBoundary(origin, zoomFactor, drawList, IM_COL32(255.0f, 0.0f, 0, 255.0f), 2.0f);
 								}
 
-								for (const auto& attractor : node.m_data.m_profileBoundaries.m_attractors)
+								for (const auto& attractor : node.m_data.m_profileConstraints.m_attractors)
 								{
 									attractor.RenderAttractor(origin, zoomFactor, drawList, IM_COL32(0.0f, 255.0f, 0, 255.0f), 2.0f);
 								}

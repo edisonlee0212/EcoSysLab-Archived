@@ -589,9 +589,7 @@ std::shared_ptr<Mesh> Tree::GeneratePipeMesh(const TreePipeMeshGeneratorSettings
 
 	std::vector<Vertex> vertices;
 	std::vector<unsigned int> indices;
-	const TreePipeMeshGenerator meshGenerator{};
-
-	meshGenerator.Generate(m_treeModel.m_shootSkeleton.m_data.m_pipeGroup, vertices, indices, treePipeMeshGeneratorSettings);
+	TreePipeMeshGenerator::Generate(m_treeModel, vertices, indices, treePipeMeshGeneratorSettings);
 
 	auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
 	VertexAttributes attributes{};

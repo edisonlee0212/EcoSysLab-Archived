@@ -104,20 +104,91 @@ std::vector<glm::ivec3> voxelizeLineSeg(glm::vec3 start, glm::vec3 end, float vo
 	return retVal;
 }
 
-void TreePipeMeshGenerator::Generate(const PipeModelPipeGroup& pipes, std::vector<Vertex>& vertices,
+void TreePipeMeshGenerator::Generate(
+	const TreeModel& treeModel, std::vector<Vertex>& vertices,
                                      std::vector<unsigned>& indices, const TreePipeMeshGeneratorSettings& settings)
 {
+	const auto& skeleton = treeModel.PeekShootSkeleton();
+	const auto& pipeGroup = skeleton.m_data.m_pipeGroup;
+
+	for(const auto& pipe : pipeGroup.PeekPipes())
+	{
+		for(const auto& pipeSegmentHandle : pipe.PeekPipeSegmentHandles())
+		{
+			const auto& pipeSegment = pipeGroup.PeekPipeSegment(pipeSegmentHandle);
+			const auto& node = skeleton.PeekNode(pipeSegment.m_data.m_nodeHandle);
+			//To access the user's defined constraints (attractors, etc.)
+			const auto& profileConstraints = node.m_data.m_profileConstraints;
+
+			//To access the position of the start of the pipe segment within a profile:
+			const auto parentHandle = node.GetParentHandle();
+			if(parentHandle == -1)
+			{
+				//If the node is the first node, the corresponding pipe segment will also be the first one in the pipe.
+				assert(pipeSegmentHandle == pipe.PeekPipeSegmentHandles().front());
+				//If current node is the first node of the tree, it's front profile will be used to calculate the start position of the first segment of the pipe.
+				const auto& startProfile = node.m_data.m_frontProfile;
+
+				//To get the particle that belongs to this pipe segment:
+				const auto& startParticle = startProfile.PeekParticle(pipeSegment.m_data.m_frontProfileParticleHandle);
+
+				//To access the boundary of the profile:
+				const auto& startProfileBoundaryEdges = startProfile.PeekBoundaryEdges();
+				for (const auto& startProfileBoundaryEdgeParticleHandles : startProfileBoundaryEdges)
+				{
+					const auto& particle1 = startProfile.PeekParticle(startProfileBoundaryEdgeParticleHandles.first);
+					const auto& particle2 = startProfile.PeekParticle(startProfileBoundaryEdgeParticleHandles.second);
+					const auto particle1Position = particle1.GetPosition();
+					const auto particle2Position = particle2.GetPosition();
+				}
+			}else
+			{
+				//For other nodes, it's parent's back profile will be used to calculate the end position of the segment.
+				const auto& startProfile = skeleton.PeekNode(parentHandle).m_data.m_backProfile;
+
+				//You will also need to access the prev segment in order to retrieve the particle:
+				const auto& prevPipeSegment = pipeGroup.PeekPipeSegment(pipeSegment.GetPrevHandle());
+				const auto& startParticle = startProfile.PeekParticle(prevPipeSegment.m_data.m_backProfileParticleHandle);
+
+				//To access the boundary of the profile:
+				const auto& startProfileBoundaryEdges = startProfile.PeekBoundaryEdges();
+				for (const auto& startProfileBoundaryEdgeParticleHandles : startProfileBoundaryEdges)
+				{
+					const auto& particle1 = startProfile.PeekParticle(startProfileBoundaryEdgeParticleHandles.first);
+					const auto& particle2 = startProfile.PeekParticle(startProfileBoundaryEdgeParticleHandles.second);
+					const auto particle1Position = particle1.GetPosition();
+					const auto particle2Position = particle2.GetPosition();
+				}
+			}
+
+			const auto& endProfile = node.m_data.m_backProfile;
+			const auto& endProfileBoundaryEdges = endProfile.PeekBoundaryEdges();
+
+			//The position of the back particle corresponds to the end of the pipe segment.
+			const auto& endParticle = endProfile.PeekParticle(pipeSegment.m_data.m_backProfileParticleHandle);
+
+			//To iterate through all boundary edges of the back profile:
+			for (const auto& endProfileBoundaryEdgeParticleHandles : endProfileBoundaryEdges)
+			{
+				const auto& particle1 = endProfile.PeekParticle(endProfileBoundaryEdgeParticleHandles.first);
+				const auto& particle2 = endProfile.PeekParticle(endProfileBoundaryEdgeParticleHandles.second);
+				const auto particle1Position = particle1.GetPosition();
+				const auto particle2Position = particle2.GetPosition();
+			}
+		}
+	}
+
 	// first compute extreme points
 	glm::vec3 min = glm::vec3(std::numeric_limits<float>::infinity());
 	glm::vec3 max = glm::vec3(-std::numeric_limits<float>::infinity());
 
-	for (auto& seg : pipes.PeekPipeSegments())
+	for (auto& seg : pipeGroup.PeekPipeSegments())
 	{
 		min = glm::min(seg.m_info.m_globalPosition, min);
 		max = glm::max(seg.m_info.m_globalPosition, max);
 	}
 
-	for (auto& pipe : pipes.PeekPipes())
+	for (auto& pipe : pipeGroup.PeekPipes())
 	{
 		min = glm::min(pipe.m_info.m_baseInfo.m_globalPosition, min);
 		max = glm::max(pipe.m_info.m_baseInfo.m_globalPosition, max);
@@ -147,13 +218,13 @@ void TreePipeMeshGenerator::Generate(const PipeModelPipeGroup& pipes, std::vecto
 	std::cout << "voxel size: " << settings.m_marchingCubeRadius << std::endl;
 
 	// loop over each strand in the pipe group
-	for (auto& pipe : pipes.PeekPipes())
+	for (auto& pipe : pipeGroup.PeekPipes())
 	{
 		glm::vec3 segStart = pipe.m_info.m_baseInfo.m_globalPosition;
 
 		for (auto& segHandle : pipe.PeekPipeSegmentHandles())
 		{
-			auto& seg = pipes.PeekPipeSegment(segHandle);
+			auto& seg = pipeGroup.PeekPipeSegment(segHandle);
 			glm::vec3 segEnd = seg.m_info.m_globalPosition;
 
 			std::vector<glm::ivec3> pipeVoxels =  voxelizeLineSeg(segStart, segEnd, settings.m_marchingCubeRadius);

@@ -2,6 +2,7 @@
 
 #include "Vertex.hpp"
 #include "PipeModelData.hpp"
+#include "TreeModel.hpp"
 
 using namespace EvoEngine;
 namespace EcoSysLab {
@@ -19,8 +20,8 @@ namespace EcoSysLab {
 	class TreePipeMeshGenerator
 	{
 	public:
-		static void Generate(const
-			PipeModelPipeGroup& pipes, std::vector<Vertex>& vertices,
+		static void Generate(
+			const TreeModel& treeModel, std::vector<Vertex>& vertices,
 			std::vector<unsigned int>& indices, const TreePipeMeshGeneratorSettings& settings);
 	};
 }

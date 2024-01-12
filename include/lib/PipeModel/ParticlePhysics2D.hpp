@@ -32,6 +32,8 @@ namespace EcoSysLab {
 		std::vector<std::pair<int, int>> m_edges{};
 		std::vector<std::pair<int, int>> m_boundaryEdges{};
 	public:
+		[[nodiscard]] const std::vector<std::pair<int, int>>& PeekBoundaryEdges() const;
+
 		void RenderEdges(ImVec2 origin, float zoomFactor, ImDrawList* drawList, ImU32 color, float thickness);
 		void RenderBoundary(ImVec2 origin, float zoomFactor, ImDrawList* drawList, ImU32 color, float thickness);
 		void CalculateBoundaries(float removalLength = 8);
@@ -294,6 +296,12 @@ namespace EcoSysLab {
 				}
 			}
 		}
+	}
+
+	template <typename ParticleData>
+	const std::vector<std::pair<int, int>>& ParticlePhysics2D<ParticleData>::PeekBoundaryEdges() const
+	{
+		return m_boundaryEdges;
 	}
 
 	template <typename ParticleData>
