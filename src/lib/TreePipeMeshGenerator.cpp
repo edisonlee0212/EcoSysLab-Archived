@@ -60,9 +60,9 @@ std::vector<glm::ivec3> voxelizeLineSeg(glm::vec3 start, glm::vec3 end, float vo
 	glm::ivec3 nextBorder = roundInDir(posInVoxels, step);
 	glm::vec3 distToNextBorder = glm::vec3(nextBorder) - posInVoxels;
 	glm::vec3 tMax = glm::abs(distToNextBorder / dirInVoxels);
-	if (distToNextBorder.x <= glm::epsilon<float>())tMax.x = 0.0f;
-	if (distToNextBorder.y <= glm::epsilon<float>())tMax.y = 0.0f;
-	if (distToNextBorder.z <= glm::epsilon<float>())tMax.z = 0.0f;
+	if (dirInVoxels.x <= glm::epsilon<float>())tMax.x = 0.0f;
+	if (dirInVoxels.y <= glm::epsilon<float>())tMax.y = 0.0f;
+	if (dirInVoxels.z <= glm::epsilon<float>())tMax.z = 0.0f;
 	// min and max for debug assert
 	glm::vec3 minVoxel = glm::min(startVoxel, endVoxel);
 	glm::vec3 maxVoxel = glm::max(startVoxel, endVoxel);
