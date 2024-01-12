@@ -22,7 +22,6 @@ namespace EcoSysLab
 		NodeHandle m_nodeHandle = -1;
 		ParticleHandle m_frontProfileHandle;
 		ParticleHandle m_backParticleHandle;
-		bool m_isBoundary = false;
 	};
 
 	typedef PipeGroup<PipeModelPipeGroupData, PipeModelPipeData, PipeModelPipeSegmentData> PipeModelPipeGroup;

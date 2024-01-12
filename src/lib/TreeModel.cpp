@@ -1684,7 +1684,7 @@ void TreeModel::ApplyProfile(const glm::vec3& globalPosition, const glm::quat& g
 			+ parameters.m_profileDefaultCellRadius * particle.GetPosition().y * currentUp;
 		newPipeSegment.m_info.m_globalRotation = globalRotation;
 		newPipeSegment.m_info.m_color = particle.IsBoundary() ? parameters.m_boundaryPointColor : parameters.m_contentPointColor;
-		newPipeSegment.m_data.m_isBoundary = particle.IsBoundary();
+		newPipeSegment.m_info.m_isBoundary = particle.IsBoundary();
 	}
 }
 
@@ -1723,7 +1723,7 @@ void TreeModel::ApplyProfiles()
 					+ parameters.m_profileDefaultCellRadius * particle.GetPosition().x * currentLeft
 					+ parameters.m_profileDefaultCellRadius * particle.GetPosition().y * currentUp;
 				pipe.m_info.m_baseInfo.m_globalRotation = parentGlobalRotation;
-
+				pipe.m_info.m_baseInfo.m_isBoundary = particle.IsBoundary();
 				pipe.m_info.m_baseInfo.m_color = particle.IsBoundary() ? parameters.m_boundaryPointColor : parameters.m_contentPointColor;
 			}
 		}

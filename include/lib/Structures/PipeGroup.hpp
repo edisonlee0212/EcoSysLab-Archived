@@ -24,6 +24,7 @@ namespace EcoSysLab
 		 */
 		float m_thickness = 0.0f;
 		glm::vec4 m_color = glm::vec4(1.0f);
+		bool m_isBoundary = false;
 	};
 
 	struct PipeInfo
