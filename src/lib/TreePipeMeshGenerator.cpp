@@ -2,7 +2,8 @@
 #include "Curve.hpp"
 #include "Octree.hpp"
 #include "Jobs.hpp"
-
+#include "opensubdiv/bfr/faceSurface.h"
+#include "regression/bfr_evaluate/bfrSurfaceEvaluator.h"
 using namespace EcoSysLab;
 
 void TreePipeMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
@@ -177,6 +178,9 @@ void TreePipeMeshGenerator::Generate(
 			}
 		}
 	}
+
+	//OpenSubdiv
+	Bfr::Surface<float> surface{};
 
 	// first compute extreme points
 	glm::vec3 min = glm::vec3(std::numeric_limits<float>::infinity());
