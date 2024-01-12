@@ -316,15 +316,19 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 
 	auto& pipeModelParameters = m_treeModel.RefShootSkeleton().m_data.m_pipeModelParameters;
 	auto& physicsSettings = m_treeModel.RefShootSkeleton().m_data.m_particlePhysicsSettings;
-	ImGui::DragFloat("Default profile cell radius", &pipeModelParameters.m_profileDefaultCellRadius, 0.001f, 0.001f, 1.0f);
-	ImGui::DragFloat("Physics damping", &physicsSettings.m_damping, 0.01f, 0.0f, 1.0f);
-	ImGui::DragFloat("Physics max speed", &physicsSettings.m_maxSpeed, 0.01f, 0.0f, 100.0f);
-	ImGui::DragFloat("Physics particle softness", &physicsSettings.m_particleSoftness, 0.01f, 0.0f, 1.0f);
-	ImGui::DragFloat("Boundary strength", &pipeModelParameters.m_boundaryStrength, 1000.f, 0.0f, 100000.0f);
-	ImGui::DragFloat("Center attraction strength", &pipeModelParameters.m_centerAttractionStrength, 100.f, 0.0f, 10000.0f);
-	ImGui::DragInt("Max iteration cell factor", &pipeModelParameters.m_maxSimulationIterationCellFactor, 1, 0, 500);
-	ImGui::DragInt("Timeout", &pipeModelParameters.m_timeout, 100, 200, 10000);
-	ImGui::DragInt("Timeout with boundaries)", &pipeModelParameters.m_timeoutWithBoundaries, 100, 200, 10000);
+	if (ImGui::TreeNodeEx("Physics settings", ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		ImGui::DragFloat("Default profile cell radius", &pipeModelParameters.m_profileDefaultCellRadius, 0.001f, 0.001f, 1.0f);
+		ImGui::DragFloat("Physics damping", &physicsSettings.m_damping, 0.01f, 0.0f, 1.0f);
+		ImGui::DragFloat("Physics max speed", &physicsSettings.m_maxSpeed, 0.01f, 0.0f, 100.0f);
+		ImGui::DragFloat("Physics particle softness", &physicsSettings.m_particleSoftness, 0.01f, 0.0f, 1.0f);
+		ImGui::DragFloat("Boundary strength", &pipeModelParameters.m_boundaryStrength, 1000.f, 0.0f, 100000.0f);
+		ImGui::DragFloat("Center attraction strength", &pipeModelParameters.m_centerAttractionStrength, 100.f, 0.0f, 10000.0f);
+		ImGui::DragInt("Max iteration cell factor", &pipeModelParameters.m_maxSimulationIterationCellFactor, 1, 0, 500);
+		ImGui::DragInt("Timeout", &pipeModelParameters.m_timeout, 100, 200, 10000);
+		ImGui::DragInt("Timeout with boundaries)", &pipeModelParameters.m_timeoutWithBoundaries, 100, 200, 10000);
+		ImGui::TreePop();
+	}
 	ImGui::DragFloat("Split limit", &pipeModelParameters.m_splitRatioLimit, 0.01f, 0.0f, 1.0f);
 	ImGui::DragInt("End node strand count", &pipeModelParameters.m_endNodeStrands, 1, 1, 50);
 	ImGui::Checkbox("Pre-merge", &pipeModelParameters.m_preMerge);
@@ -338,15 +342,17 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 
 	if (ImGui::TreeNodeEx("Graph Adjustment settings"))
 	{
-		auto& adjustmentSettings = m_treeModel.RefShootSkeleton().m_data.m_graphAdjustmentSettings;
-		ImGui::DragFloat("Shift push ratio", &adjustmentSettings.m_shiftPushRatio, 0.01f, 0.0f, 2.0f);
-		ImGui::DragFloat("Side push ratio", &adjustmentSettings.m_sidePushRatio, 0.01f, 0.0f, 2.0f);
-		ImGui::DragFloat("Front push ratio", &adjustmentSettings.m_frontPushRatio, 0.01f, 0.0f, 2.0f);
-		ImGui::DragFloat("Rotation push ratio", &adjustmentSettings.m_rotationPushRatio, 0.01f, 0.0f, 2.0f);
+		ImGui::DragFloat("Shift push ratio", &pipeModelParameters.m_shiftPushRatio, 0.01f, 0.0f, 2.0f);
+		ImGui::DragFloat("Side push ratio", &pipeModelParameters.m_sidePushRatio, 0.01f, 0.0f, 2.0f);
+		ImGui::DragFloat("Front push ratio", &pipeModelParameters.m_frontPushRatio, 0.01f, 0.0f, 2.0f);
+		ImGui::DragFloat("Rotation push ratio", &pipeModelParameters.m_rotationPushRatio, 0.01f, 0.0f, 2.0f);
 		ImGui::TreePop();
 	}
 	ImGui::Checkbox("Triple points", &pipeModelParameters.m_triplePoints);
-
+	ImGui::DragInt("Max node count", &pipeModelParameters.m_nodeMaxCount, 1, -1, 999);
+	ImGui::DragInt("Boundary point distance", &pipeModelParameters.m_boundaryPointDistance, 1, 3, 30);
+	ImGui::ColorEdit4("Boundary color", &pipeModelParameters.m_boundaryPointColor.x);
+	ImGui::ColorEdit4("Content color", &pipeModelParameters.m_contentPointColor.x);
 	if (ImGui::Button("Prepare profiles"))
 	{
 		PrepareProfiles();

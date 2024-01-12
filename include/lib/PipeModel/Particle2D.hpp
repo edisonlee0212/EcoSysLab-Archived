@@ -15,7 +15,7 @@ namespace EcoSysLab {
 	{
 		template<typename PD>
 		friend class ParticlePhysics2D;
-		glm::vec4 m_color = glm::vec4(1.0f);
+		glm::vec3 m_color = glm::vec3(1.0f);
 		glm::vec2 m_position = glm::vec2(0.0f);
 		glm::vec2 m_lastPosition = glm::vec2(0.0f);
 		glm::vec2 m_acceleration = glm::vec2(0.0f);
@@ -31,8 +31,8 @@ namespace EcoSysLab {
 		void Update(const UpdateSettings& updateSettings);
 		void Stop();
 		[[nodiscard]] ParticleHandle GetHandle() const;
-		[[nodiscard]] glm::vec4 GetColor() const;
-		void SetColor(const glm::vec4& color);
+		[[nodiscard]] glm::vec3 GetColor() const;
+		void SetColor(const glm::vec3& color);
 
 		[[nodiscard]] glm::vec2 GetPosition() const;
 		void SetPosition(const glm::vec2& position);
@@ -80,13 +80,13 @@ namespace EcoSysLab {
 	}
 
 	template <typename T>
-	glm::vec4 Particle2D<T>::GetColor() const
+	glm::vec3 Particle2D<T>::GetColor() const
 	{
 		return m_color;
 	}
 
 	template <typename T>
-	void Particle2D<T>::SetColor(const glm::vec4& color)
+	void Particle2D<T>::SetColor(const glm::vec3& color)
 	{
 		m_color = color;
 	}

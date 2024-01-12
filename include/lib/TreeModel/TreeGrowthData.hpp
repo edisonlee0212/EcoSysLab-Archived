@@ -58,13 +58,6 @@ namespace EcoSysLab
 	};
 
 #pragma endregion
-	struct GraphAdjustmentSettings
-	{
-		float m_shiftPushRatio = 1.0f;
-		float m_sidePushRatio = 1.0f;
-		float m_frontPushRatio = 1.0f;
-		float m_rotationPushRatio = 0.5f;
-	};
 
 	struct InternodeGrowthData {
 		float m_internodeLength = 0.0f;
@@ -158,7 +151,6 @@ namespace EcoSysLab
 		ParticlePhysicsSettings m_particlePhysicsSettings{};
 		PipeModelPipeGroup m_pipeGroup {};
 		PipeModelParameters m_pipeModelParameters{};
-		GraphAdjustmentSettings m_graphAdjustmentSettings {};
 		float m_profileCalculationTime = 0.0f;
 		int m_numOfParticles = 0;
 #pragma endregion

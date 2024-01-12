@@ -23,6 +23,7 @@ namespace EcoSysLab
 		 * \brief The thickness of the end of current pipe segment.
 		 */
 		float m_thickness = 0.0f;
+		glm::vec4 m_color = glm::vec4(1.0f);
 	};
 
 	struct PipeInfo
@@ -283,7 +284,7 @@ namespace EcoSysLab
 			auto prevDistance = glm::distance(pipeSegment.m_info.m_globalPosition, baseInfo.m_globalPosition);
 			auto nextDistance = glm::distance(pipeSegment.m_info.m_globalPosition, nextPosition);
 			//auto distance = glm::min(prevDistance, nextDistance);
-
+			point.m_color = pipeSegment.m_info.m_color;
 			point.m_normal = glm::normalize(pipeSegment.m_info.m_globalPosition - baseInfo.m_globalPosition); //glm::normalize(pipeSegment.m_info.m_globalRotation * glm::vec3(0, 0, -1));
 			point.m_position = pipeSegment.m_info.m_globalPosition - point.m_normal * prevDistance * frontControlPointRatio;
 			point.m_thickness = pipeSegment.m_info.m_thickness;
@@ -313,7 +314,7 @@ namespace EcoSysLab
 			auto prevDistance = glm::distance(pipeSegment.m_info.m_globalPosition, prevPipeSegment.m_info.m_globalPosition);
 			auto nextDistance = glm::distance(pipeSegment.m_info.m_globalPosition, nextPosition);
 			//auto distance = glm::min(prevDistance, nextDistance);
-
+			point.m_color = pipeSegment.m_info.m_color;
 			point.m_normal = glm::normalize(pipeSegment.m_info.m_globalPosition - prevPipeSegment.m_info.m_globalPosition); //glm::normalize(pipeSegment.m_info.m_globalRotation * glm::vec3(0, 0, -1));
 			point.m_position = pipeSegment.m_info.m_globalPosition - point.m_normal * prevDistance * frontControlPointRatio;
 			point.m_thickness = pipeSegment.m_info.m_thickness;

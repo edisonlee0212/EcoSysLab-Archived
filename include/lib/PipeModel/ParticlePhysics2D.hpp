@@ -337,6 +337,7 @@ namespace EcoSysLab {
 		{
 			positions[2 * i] = m_particles2D[i].m_position.x;
 			positions[2 * i + 1] = m_particles2D[i].m_position.y;
+			m_particles2D[i].m_boundary = false;
 		}
 		Delaunator::Delaunator2D d(positions);
 		std::map<std::pair<int, int>, int> edges;
@@ -356,6 +357,8 @@ namespace EcoSysLab {
 			if (edge.second == 1)
 			{
 				m_boundaryEdges.emplace_back(edge.first);
+				m_particles2D[edge.first.first].m_boundary = true;
+				m_particles2D[edge.first.second].m_boundary = true;
 			}
 			m_edges.emplace_back(edge.first);
 		}
@@ -610,7 +613,7 @@ namespace EcoSysLab {
 
 			drawList->AddCircleFilled(canvasPosition,
 				glm::clamp(zoomFactor, 1.0f, 100.0f),
-				IM_COL32(255.0f * pointColor.x, 255.0f * pointColor.y, 255.0f * pointColor.z, 255.0f * pointColor.w));
+				IM_COL32(255.0f * pointColor.x, 255.0f * pointColor.y, 255.0f * pointColor.z, particle.IsBoundary() ? 255.0f : 128.0f));
 		}
 		drawList->AddCircle(origin,
 			glm::clamp(zoomFactor, 1.0f, 100.0f),

@@ -13,13 +13,23 @@ namespace EcoSysLab
 		int m_timeout = 500;
 		int m_timeoutWithBoundaries = 1500;
 		float m_splitRatioLimit = 0.1f;
-		int m_endNodeStrands = 1;
+		int m_endNodeStrands = 3;
 
 		bool m_preMerge = true;
 
 		float m_frontControlPointRatio = 0.3f;
 		float m_backControlPointRatio = 0.3f;
 		bool m_triplePoints = false;
-		float m_nodeMaxCount = -1;
+		int m_nodeMaxCount = -1;
+
+		int m_boundaryPointDistance = 6;
+
+		glm::vec4 m_boundaryPointColor = glm::vec4(0.6f, 0.3f, 0, 1);
+		glm::vec4 m_contentPointColor = glm::vec4(0, 0.3, 0.0f, 1);
+
+		float m_shiftPushRatio = 0.0f;
+		float m_sidePushRatio = 1.0f;
+		float m_frontPushRatio = 1.0f;
+		float m_rotationPushRatio = 0.5f;
 	};
 }
