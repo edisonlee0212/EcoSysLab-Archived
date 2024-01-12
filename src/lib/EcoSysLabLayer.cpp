@@ -33,7 +33,7 @@ void EcoSysLabLayer::OnCreate() {
 	ClassRegistry::RegisterAsset<RadialBoundingVolume>("RadialBoundingVolume", { ".rbv" });
 	ClassRegistry::RegisterAsset<CubeVolume>("CubeVolume", { ".cv" });
 	ClassRegistry::RegisterAsset<HeightField>("HeightField", { ".hf" });
-	ClassRegistry::RegisterAsset<SoilLayerDescriptor>("SoilLayerDescriptor", { ".nsld" }); 
+	ClassRegistry::RegisterAsset<SoilLayerDescriptor>("SoilLayerDescriptor", { ".nsld" });
 	ClassRegistry::RegisterPrivateComponent<TreePointCloudScanner>("TreePointCloudScanner");
 	ClassRegistry::RegisterPrivateComponent<PointCloudScanner>("PointCloudScanner");
 	if (m_randomColors.empty()) {
@@ -185,7 +185,40 @@ void EcoSysLabLayer::Visualization() {
 				const auto& treeSkeleton = tree->m_treeModel.PeekShootSkeleton(tree->m_treeVisualizer.m_checkpointIteration);
 				switch (static_cast<OperatorMode>(m_operatorMode))
 				{
+
 				case OperatorMode::Select: {
+					if (editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Press) {
+						if (treeVisualizer.RayCastSelection(m_visualizationCamera, m_visualizationCameraMousePosition, treeSkeleton, globalTransform)) {
+							treeVisualizer.m_needUpdate = true;
+						}
+					}
+					else if (editorLayer->GetKey(GLFW_KEY_R) == KeyActionType::Press) {
+						if (treeVisualizer.m_selectedInternodeHandle > 0) {
+							treeModel.Step();
+							auto& skeleton = treeModel.RefShootSkeleton();
+							auto& pruningInternode = skeleton.RefNode(treeVisualizer.m_selectedInternodeHandle);
+							const auto childHandles = pruningInternode.RefChildHandles();
+							for (const auto& childHandle : childHandles) {
+								treeModel.PruneInternode(childHandle);
+							}
+							pruningInternode.m_info.m_length *= treeVisualizer.m_selectedInternodeLengthFactor;
+							treeVisualizer.m_selectedInternodeLengthFactor = 1.0f;
+							for (auto& bud : pruningInternode.m_data.m_buds) {
+								bud.m_status = BudStatus::Died;
+							}
+							skeleton.SortLists();
+							treeVisualizer.m_checkpointIteration = treeModel.CurrentIteration();
+							treeVisualizer.m_needUpdate = true;
+						}
+					}
+					else if (editorLayer->GetKey(GLFW_KEY_ESCAPE) == KeyActionType::Press)
+					{
+						treeVisualizer.SetSelectedNode(treeSkeleton, -1);
+					}
+
+				}
+										 break;
+				case OperatorMode::Rotate: {
 
 					if (treeVisualizer.m_selectedInternodeHandle > 0)
 					{
@@ -251,25 +284,6 @@ void EcoSysLabLayer::Visualization() {
 							if (treeVisualizer.RayCastSelection(m_visualizationCamera, m_visualizationCameraMousePosition, treeSkeleton, globalTransform)) {
 								treeVisualizer.m_needUpdate = true;
 							}
-						}
-					}
-					else if (editorLayer->GetKey(GLFW_KEY_R) == KeyActionType::Press) {
-						if (treeVisualizer.m_selectedInternodeHandle > 0) {
-							treeModel.Step();
-							auto& skeleton = treeModel.RefShootSkeleton();
-							auto& pruningInternode = skeleton.RefNode(treeVisualizer.m_selectedInternodeHandle);
-							const auto childHandles = pruningInternode.RefChildHandles();
-							for (const auto& childHandle : childHandles) {
-								treeModel.PruneInternode(childHandle);
-							}
-							pruningInternode.m_info.m_length *= treeVisualizer.m_selectedInternodeLengthFactor;
-							treeVisualizer.m_selectedInternodeLengthFactor = 1.0f;
-							for (auto& bud : pruningInternode.m_data.m_buds) {
-								bud.m_status = BudStatus::Died;
-							}
-							skeleton.SortLists();
-							treeVisualizer.m_checkpointIteration = treeModel.CurrentIteration();
-							treeVisualizer.m_needUpdate = true;
 						}
 					}
 					else if (editorLayer->GetKey(GLFW_KEY_ESCAPE) == KeyActionType::Press)
@@ -366,7 +380,7 @@ void EcoSysLabLayer::Visualization() {
 							if (!tree->m_enableHistory) treeModel.Step();
 							treeVisualizer.m_checkpointIteration = treeModel.CurrentIteration();
 							treeVisualizer.m_needUpdate = true;
-							if(treeVisualizer.m_selectedInternodeHandle >= 0)
+							if (treeVisualizer.m_selectedInternodeHandle >= 0)
 							{
 								targetAge = tree->m_treeModel.GetSubTreeMaxAge(treeVisualizer.m_selectedInternodeHandle);
 							}
@@ -390,20 +404,20 @@ void EcoSysLabLayer::Visualization() {
 					}
 				}break;
 				}
-				
+
 				if (editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Release && mayNeedGeometryGeneration)
 				{
 					if (m_autoGenerateMeshAfterEditing)
 					{
 						tree->InitializeMeshRenderer(m_meshGeneratorSettings, -1);
 					}
-					if(m_autoGenerateStrandsAfterEditing || m_autoGenerateStrandMeshAfterEditing)
+					if (m_autoGenerateStrandsAfterEditing || m_autoGenerateStrandMeshAfterEditing)
 					{
 						auto strands = tree->GenerateStrands();
 						if (m_autoGenerateStrandsAfterEditing) {
 							tree->InitializeStrandRenderer(strands);
 						}
-						if(m_autoGenerateStrandMeshAfterEditing)
+						if (m_autoGenerateStrandMeshAfterEditing)
 						{
 							tree->InitializeMeshRendererPipe(m_pipeMeshGeneratorSettings);
 						}
@@ -551,7 +565,7 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 				auto& treeVisualizer = tree->m_treeVisualizer;
 				if (treeVisualizer.m_checkpointIteration == tree->m_treeModel.CurrentIteration()) {
 					if (ImGui::TreeNodeEx("Operator", ImGuiTreeNodeFlags_DefaultOpen)) {
-						if (ImGui::Combo("Mode", { "Select", "Prune", "Invigorate", "Reduce" }, m_operatorMode))
+						if (ImGui::Combo("Mode", { "Select", "Rotate", "Prune", "Invigorate", "Reduce" }, m_operatorMode))
 						{
 							treeVisualizer.m_selectedInternodeHandle = -1;
 							treeVisualizer.m_selectedInternodeHierarchyList.clear();
@@ -559,11 +573,11 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 						if (m_operatorMode == static_cast<unsigned>(OperatorMode::Invigorate))
 						{
 							ImGui::DragFloat("Invigorate speed", &m_overrideGrowRate, 0.01f, 0.01f, 1.0f);
-						}if(m_operatorMode == static_cast<unsigned>(OperatorMode::Reduce))
+						}if (m_operatorMode == static_cast<unsigned>(OperatorMode::Reduce))
 						{
 							ImGui::DragFloat("Reduce speed", &m_reduceRate, 0.001f, 0.001f, 1.0f);
 						}
-						
+
 						ImGui::TreePop();
 					}
 				}

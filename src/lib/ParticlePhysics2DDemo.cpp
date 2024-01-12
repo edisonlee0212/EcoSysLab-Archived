@@ -52,7 +52,7 @@ void ParticlePhysics2DDemo::OnInspect(const std::shared_ptr<EditorLayer>& editor
 				m_boundariesUpdated = true;
 			}
 			ImGui::SameLine();
-			static float edgeLengthLimit = 5;
+			static float edgeLengthLimit = 8;
 			static bool calculateEdges = false;
 			ImGui::Checkbox("Calculate edges", &calculateEdges);
 			if(calculateEdges)

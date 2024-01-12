@@ -14,6 +14,7 @@ namespace EcoSysLab {
 
 	enum class OperatorMode {
 		Select,
+		Rotate,
 		Prune,
 		Invigorate,
 		Reduce

@@ -29,12 +29,12 @@ namespace EcoSysLab {
 		glm::vec2 m_massCenter = glm::vec2(0.0f);
 		double m_simulationTime = 0.0f;
 
-		std::vector<std::pair<int, int>> m_edges;
-		std::vector<std::pair<int, int>> m_boundaryEdges;
+		std::vector<std::pair<int, int>> m_edges{};
+		std::vector<std::pair<int, int>> m_boundaryEdges{};
 	public:
 		void RenderEdges(ImVec2 origin, float zoomFactor, ImDrawList* drawList, ImU32 color, float thickness);
 		void RenderBoundary(ImVec2 origin, float zoomFactor, ImDrawList* drawList, ImU32 color, float thickness);
-		void CalculateBoundaries(float removalLength = 5);
+		void CalculateBoundaries(float removalLength = 8);
 		ParticleGrid2D m_particleGrid2D{};
 		bool m_parallel = false;
 		bool m_forceResetGrid = false;
@@ -331,7 +331,7 @@ namespace EcoSysLab {
 	{
 		m_edges.clear();
 		m_boundaryEdges.clear();
-		if(m_particles2D.empty()) return;
+		if(m_particles2D.size() < 3) return;
 		std::vector<float> positions(m_particles2D.size() * 2);
 		for (int i = 0; i < m_particles2D.size(); i++)
 		{

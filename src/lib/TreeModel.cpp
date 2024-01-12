@@ -1351,12 +1351,16 @@ void TreeModel::CalculateProfile(const NodeHandle nodeHandle, const PipeModelPar
 		m_shootSkeleton.RefNode(nodeHandle).m_data.m_tasks.emplace_back(Jobs::AddTask([&, nodeHandle, scheduling](unsigned threadIndex) {
 			MergeTask(nodeHandle, pipeModelParameters);
 			auto& internode = m_shootSkeleton.RefNode(nodeHandle);
-			if (!internode.m_data.m_needPacking) return;
-			internode.m_data.m_needPacking = false;
-			if (internode.m_data.m_frontParticlePhysics2D.PeekParticles().size() <= 1) return;
-			PackTask(nodeHandle, pipeModelParameters, !scheduling);
-			if (internode.RefChildHandles().empty()) CopyFrontToBackTask(nodeHandle);
-			CalculateShiftTask(nodeHandle, pipeModelParameters);
+			if (internode.m_data.m_needPacking) {
+				internode.m_data.m_needPacking = false;
+				if (internode.m_data.m_frontParticlePhysics2D.PeekParticles().size() > 1) {
+					PackTask(nodeHandle, pipeModelParameters, !scheduling);
+					if (internode.RefChildHandles().empty()) CopyFrontToBackTask(nodeHandle);
+					CalculateShiftTask(nodeHandle, pipeModelParameters);
+				}
+			}
+			internode.m_data.m_frontParticlePhysics2D.CalculateBoundaries(8);
+			internode.m_data.m_backParticlePhysics2D.CalculateBoundaries(8);
 			}
 		)
 		);
@@ -1364,10 +1368,17 @@ void TreeModel::CalculateProfile(const NodeHandle nodeHandle, const PipeModelPar
 	else
 	{
 		MergeTask(nodeHandle, pipeModelParameters);
-		PackTask(nodeHandle, pipeModelParameters, !scheduling);
-		const auto& internode = m_shootSkeleton.RefNode(nodeHandle);
-		if (internode.RefChildHandles().empty()) CopyFrontToBackTask(nodeHandle);
-		CalculateShiftTask(nodeHandle, pipeModelParameters);
+		auto& internode = m_shootSkeleton.RefNode(nodeHandle);
+		if (internode.m_data.m_needPacking) {
+			internode.m_data.m_needPacking = false;
+			if (internode.m_data.m_frontParticlePhysics2D.PeekParticles().size() > 1) {
+				PackTask(nodeHandle, pipeModelParameters, !scheduling);
+				if (internode.RefChildHandles().empty()) CopyFrontToBackTask(nodeHandle);
+				CalculateShiftTask(nodeHandle, pipeModelParameters);
+			}
+		}
+		internode.m_data.m_frontParticlePhysics2D.CalculateBoundaries(8);
+		internode.m_data.m_backParticlePhysics2D.CalculateBoundaries(8);
 	}
 }
 
@@ -1651,6 +1662,7 @@ void TreeModel::CalculateShiftTask(NodeHandle nodeHandle, const PipeModelParamet
 		sum += nodeStartParticle.GetPosition();
 	}
 	internodeData.m_shift = sum / static_cast<float>(mainChildPhysics2D.PeekParticles().size());
+	
 }
 
 void TreeModel::ApplyProfile(const glm::vec3& globalPosition, const glm::quat& globalRotation,

@@ -494,6 +494,9 @@ void TreeVisualizer::Visualize(TreeModel& treeModel, const GlobalTransform& glob
 								mousePosition = position;
 							},
 							[&](const ImVec2 origin, const float zoomFactor, ImDrawList* drawList) {
+								node.m_data.m_frontParticlePhysics2D.RenderEdges(origin, zoomFactor, drawList, IM_COL32(0.0f, 0.0f, 128.0f, 128.0f), 1.0f);
+								node.m_data.m_frontParticlePhysics2D.RenderBoundary(origin, zoomFactor, drawList, IM_COL32(255.f, 255.f, 255.0f, 255.0f), 4.0f);
+
 								if (node.GetParentHandle() != -1)
 								{
 									const auto& parentNode = treeModel.RefShootSkeleton().RefNode(node.GetParentHandle());
@@ -613,6 +616,10 @@ void TreeVisualizer::Visualize(TreeModel& treeModel, const GlobalTransform& glob
 							{},
 							[&](const ImVec2 origin, const float zoomFactor, ImDrawList* drawList)
 							{
+								node.m_data.m_backParticlePhysics2D.RenderEdges(origin, zoomFactor, drawList, IM_COL32(0.0f, 0.0f, 128.0f, 128.0f), 1.0f);
+								node.m_data.m_backParticlePhysics2D.RenderBoundary(origin, zoomFactor, drawList, IM_COL32(255.f, 255.f, 255.0f, 255.0f), 4.0f);
+
+
 								if (node.GetParentHandle() != -1)
 								{
 									const auto& parentNode = treeModel.RefShootSkeleton().RefNode(node.GetParentHandle());
