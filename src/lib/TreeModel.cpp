@@ -1138,8 +1138,8 @@ void TreeModel::InitializeProfiles()
 		auto& frontPhysics2D = internode.m_data.m_frontProfile;
 		auto& backPhysics2D = internode.m_data.m_backProfile;
 
-		frontPhysics2D.Reset(0.002f);
-		backPhysics2D.Reset(0.002f);
+		frontPhysics2D.Reset(0.001f);
+		backPhysics2D.Reset(0.001f);
 		frontPhysics2D.m_settings = m_shootSkeleton.m_data.m_particlePhysicsSettings;
 		backPhysics2D.m_settings = m_shootSkeleton.m_data.m_particlePhysicsSettings;
 
@@ -1706,7 +1706,6 @@ void TreeModel::ApplyProfiles()
 	for (const auto& nodeHandle : sortedInternodeList)
 	{
 		const auto& node = m_shootSkeleton.RefNode(nodeHandle);
-		//parentGlobalTransform.m_value = glm::inverse(modelGlobalTransform.m_value) * parentGlobalTransform.m_value;
 		glm::quat parentGlobalRotation;
 		glm::vec3 parentGlobalPosition;
 		if (node.GetParentHandle() == -1)
@@ -1719,7 +1718,6 @@ void TreeModel::ApplyProfiles()
 			parentGlobalRotation = parent.m_data.m_adjustedGlobalRotation;
 			parentGlobalPosition = parent.m_data.m_adjustedGlobalPosition;
 		}
-		//globalTransform.m_value = glm::inverse(modelGlobalTransform.m_value) * globalTransform.m_value;
 		if (node.GetParentHandle() == -1)
 		{
 			const auto currentUp = parentGlobalRotation * glm::vec3(0, 1, 0);

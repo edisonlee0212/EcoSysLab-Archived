@@ -9,7 +9,7 @@ namespace EcoSysLab {
 	{
 		float m_particleSoftness = 0.1f;
 		float m_damping = 0.02f;
-		float m_maxSpeed = 30.0f;
+		float m_maxSpeed = 60.0f;
 	};
 
 	template<typename ParticleData>
@@ -609,7 +609,7 @@ namespace EcoSysLab {
 		if (isMouseHovered && ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
 			func(glm::vec2(mousePosInCanvas.x, mousePosInCanvas.y));
 		}
-		const size_t mod = m_particles2D.size() / 5000;
+		const size_t mod = m_particles2D.size() / 15000;
 		int index = 0;
 		for (const auto& particle : m_particles2D) {
 			index++;

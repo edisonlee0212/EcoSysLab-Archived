@@ -6,8 +6,8 @@ namespace EcoSysLab
 {
 	struct PipeModelParameters
 	{
-		float m_boundaryStrength = 10000;
-		float m_centerAttractionStrength = 1000;
+		float m_boundaryStrength = 40000;
+		float m_centerAttractionStrength = 4000;
 		float m_profileDefaultCellRadius = 0.002f;
 		int m_maxSimulationIterationCellFactor = 5;
 		int m_timeout = 500;

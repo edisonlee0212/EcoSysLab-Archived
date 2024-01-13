@@ -258,7 +258,6 @@ namespace EcoSysLab
 			auto& baseInfo = pipe.m_info.m_baseInfo;
 			strands.emplace_back(points.size());
 			StrandPoint basePoint;
-			basePoint.m_color = glm::vec4(0.6f, 0.3f, 0.0f, 1.0f);
 			const auto& secondPipeSegment = PeekPipeSegment(pipeSegmentHandles[0]);
 			auto basePointDistance = glm::distance(baseInfo.m_globalPosition, secondPipeSegment.m_info.m_globalPosition);
 			const auto baseTangent = glm::normalize(baseInfo.m_globalRotation * glm::vec3(0, 0, -1));
