@@ -1142,7 +1142,7 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 				});
 			StrandPointAttributes strandPointAttributes{};
 			strandPointAttributes.m_normal = false;
-			branchStrands->SetSegments(strandPointAttributes, m_shootStemSegments, m_shootStemPoints);
+			//branchStrands->SetStrands(strandPointAttributes, m_shootStemSegments, m_shootStemPoints);
 			m_foliageMatrices->SetPendingUpdate();
 			m_fruitMatrices->SetPendingUpdate();
 		}

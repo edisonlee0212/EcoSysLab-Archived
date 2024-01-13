@@ -3,7 +3,7 @@
 //
 
 #include "TreeModel.hpp"
-
+#include "Splines.hpp"
 using namespace EcoSysLab;
 void ReproductiveModule::Reset()
 {
@@ -1779,40 +1779,62 @@ void TreeModel::CalculatePipeProfileAdjustedTransforms()
 	}
 }
 
-glm::vec3 TreeModel::InterpolatePipeSegmentPosition(PipeSegmentHandle pipeSegmentHandle, float a) const
+void CubicInterpolation(const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2, const glm::vec3& v3, glm::vec3& result, glm::vec3& tangent, const float t)
 {
-	assert(pipeSegmentHandle >= 0);
-	assert(a >= 0.f && a <= 1.f);
-	const auto& pipeGroup = m_shootSkeleton.m_data.m_pipeGroup;
-	assert(pipeGroup.PeekPipeSegments().size() > pipeSegmentHandle);
-	const auto& pipeSegment = pipeGroup.PeekPipeSegment(pipeSegmentHandle);
-	const auto& pipe = pipeGroup.PeekPipe(pipeSegment.GetPipeHandle());
+	float t2 = t * t;
 
-	if(pipeSegmentHandle == pipe.PeekPipeSegmentHandles().front())
-	{
-		return glm::mix(pipe.m_info.m_baseInfo.m_globalPosition, pipeSegment.m_info.m_globalPosition, a);
-	}
+	glm::vec3 a0 = -0.5f * v0 + 1.5f * v1 - 1.5f * v2 + 0.5f * v3;
+	glm::vec3 a1 = v0 - 2.5f * v1 + 2.0f * v2 - 0.5f * v3;
+	glm::vec3 a2 = -0.5f * v0 + 0.5f * v2;
+	glm::vec3 a3 = v1;
 
-	const auto& prevPipeSegment = pipeGroup.PeekPipeSegment(pipeSegment.GetPrevHandle());
-	return glm::mix(prevPipeSegment.m_info.m_globalPosition, pipeSegment.m_info.m_globalPosition, a);
-	
+	result = glm::vec3(a0 * t * t2 + a1 * t2 + a2 * t + a3);
+	tangent = normalize(glm::vec3(3.0f * a0 * t2 + 2.0f * a1 * t + a2));
 }
 
-glm::vec3 TreeModel::InterpolatePipeSegmentAxis(PipeSegmentHandle pipeSegmentHandle, float a) const
+glm::vec3 TreeModel::InterpolatePipeSegmentPosition(PipeSegmentHandle pipeSegmentHandle, const float u) const
 {
 	assert(pipeSegmentHandle >= 0);
-	assert(a >= 0.f && a <= 1.f);
+	assert(u >= 0.f && u <= 1.f);
 	const auto& pipeGroup = m_shootSkeleton.m_data.m_pipeGroup;
 	assert(pipeGroup.PeekPipeSegments().size() > pipeSegmentHandle);
 	const auto& pipeSegment = pipeGroup.PeekPipeSegment(pipeSegmentHandle);
 	const auto& pipe = pipeGroup.PeekPipe(pipeSegment.GetPipeHandle());
+	const auto& prevPipeSegmentInfo = pipeSegmentHandle == pipe.PeekPipeSegmentHandles().front() ? pipe.m_info.m_baseInfo : pipeGroup.PeekPipeSegment(pipeSegment.GetPrevHandle()).m_info;
+	const auto& pipeSegmentInfo = pipeSegment.m_info;
+	const auto& position0 = prevPipeSegmentInfo.m_globalPosition;
+	const auto& position3 = pipeSegmentInfo.m_globalPosition;
+	const auto prevDirection = prevPipeSegmentInfo.m_globalRotation * glm::vec3(0, 0, -1);
+	const auto direction = pipeSegmentInfo.m_globalRotation * glm::vec3(0, 0, -1);
+	const auto distance = glm::distance(position0, position3);
 
-	if (pipeSegmentHandle == pipe.PeekPipeSegmentHandles().front())
-	{
-		return glm::mix(pipe.m_info.m_baseInfo.m_globalRotation * glm::vec3(0, 0, -1), pipeSegment.m_info.m_globalRotation * glm::vec3(0, 0, -1), a);
-	}
+	const auto position1 = position0 + prevDirection * distance * m_shootSkeleton.m_data.m_pipeModelParameters.m_frontControlPointRatio;
+	const auto position2 = position3 - direction * distance * (1.0f - m_shootSkeleton.m_data.m_pipeModelParameters.m_backControlPointRatio);
+	glm::vec3 result, tangent;
+	Strands::CubicInterpolation(position0, position1, position2, position3, result, tangent, u);
+	return result;
+}
 
-	const auto& prevPipeSegment = pipeGroup.PeekPipeSegment(pipeSegment.GetPrevHandle());
-	return glm::mix(prevPipeSegment.m_info.m_globalRotation * glm::vec3(0, 0, -1), pipeSegment.m_info.m_globalRotation * glm::vec3(0, 0, -1), a);
+glm::vec3 TreeModel::InterpolatePipeSegmentAxis(const PipeSegmentHandle pipeSegmentHandle, const float u) const
+{
+	assert(pipeSegmentHandle >= 0);
+	assert(u >= 0.f && u <= 1.f);
+	const auto& pipeGroup = m_shootSkeleton.m_data.m_pipeGroup;
+	assert(pipeGroup.PeekPipeSegments().size() > pipeSegmentHandle);
+	const auto& pipeSegment = pipeGroup.PeekPipeSegment(pipeSegmentHandle);
+	const auto& pipe = pipeGroup.PeekPipe(pipeSegment.GetPipeHandle());
+	const auto& prevPipeSegmentInfo = pipeSegmentHandle == pipe.PeekPipeSegmentHandles().front() ? pipe.m_info.m_baseInfo : pipeGroup.PeekPipeSegment(pipeSegment.GetPrevHandle()).m_info;
+	const auto& pipeSegmentInfo = pipeSegment.m_info;
+	const auto& position0 = prevPipeSegmentInfo.m_globalPosition;
+	const auto& position3 = pipeSegmentInfo.m_globalPosition;
+	const auto prevDirection = prevPipeSegmentInfo.m_globalRotation * glm::vec3(0, 0, -1);
+	const auto direction = pipeSegmentInfo.m_globalRotation * glm::vec3(0, 0, -1);
+	const auto distance = glm::distance(position0, position3);
+
+	const auto position1 = position0 + prevDirection * distance * m_shootSkeleton.m_data.m_pipeModelParameters.m_frontControlPointRatio;
+	const auto position2 = position3 - direction * distance * (1.0f - m_shootSkeleton.m_data.m_pipeModelParameters.m_backControlPointRatio);
+	glm::vec3 result, tangent;
+	Strands::CubicInterpolation(position0, position1, position2, position3, result, tangent, u);
+	return tangent;
 }
 #pragma endregion

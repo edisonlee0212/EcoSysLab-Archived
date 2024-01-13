@@ -154,7 +154,8 @@ namespace EcoSysLab {
 			const ParticlePhysics2D<CellParticlePhysicsData>& profile, const std::unordered_map<PipeHandle, ParticleHandle>& map);
 		void ApplyProfiles();
 		void CalculatePipeProfileAdjustedTransforms();
-		glm::vec3 InterpolatePipeSegmentPosition(PipeSegmentHandle pipeSegmentHandle, float a) const;
+		glm::vec3 InterpolatePipeSegmentPosition(PipeSegmentHandle pipeSegmentHandle, float u) const;
+		glm::vec3 InterpolatePipeSegmentAxis(PipeSegmentHandle pipeSegmentHandle, float u) const;
 #pragma endregion
 	};
 }
