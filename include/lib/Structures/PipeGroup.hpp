@@ -255,81 +255,42 @@ namespace EcoSysLab
 			return;
 
 		auto& baseInfo = pipe.m_info.m_baseInfo;
-		strands.emplace_back(points.size());
+		const auto startIndex = points.size();
+		strands.emplace_back(startIndex);
 		StrandPoint basePoint;
 		basePoint.m_color = glm::vec4(0.6f, 0.3f, 0.0f, 1.0f);
 		const auto& secondPipeSegment = PeekPipeSegment(pipeSegmentHandles[0]);
 		auto basePointDistance = glm::distance(baseInfo.m_globalPosition, secondPipeSegment.m_info.m_globalPosition);
-		basePoint.m_normal = glm::normalize(baseInfo.m_globalRotation * glm::vec3(0, 0, -1));
-		basePoint.m_position = baseInfo.m_globalPosition - basePoint.m_normal * basePointDistance * frontControlPointRatio;
 		basePoint.m_thickness = baseInfo.m_thickness;
-		points.emplace_back(basePoint);
 		basePoint.m_position = baseInfo.m_globalPosition;
+		
 		points.emplace_back(basePoint);
-		basePoint.m_position = baseInfo.m_globalPosition + basePoint.m_normal * basePointDistance * backControlPointRatio;
 		points.emplace_back(basePoint);
 
 		StrandPoint point;
-		point.m_color = glm::vec4(0.6f, 0.3f, 0.0f, 1.0f);
-		{
-			const auto& pipeSegment = PeekPipeSegment(pipeSegmentHandles[0]);
-			
-			glm::vec3 nextPosition;
-			if (pipeSegmentHandles.size() > 1)
-			{
-				nextPosition = PeekPipeSegment(pipeSegmentHandles[1]).m_info.m_globalPosition;
-			}else
-			{
-				nextPosition = pipeSegment.m_info.m_globalPosition;
-			}
-			auto prevDistance = glm::distance(pipeSegment.m_info.m_globalPosition, baseInfo.m_globalPosition);
-			auto nextDistance = glm::distance(pipeSegment.m_info.m_globalPosition, nextPosition);
-			//auto distance = glm::min(prevDistance, nextDistance);
-			point.m_color = pipeSegment.m_info.m_color;
-			point.m_normal = glm::normalize(pipeSegment.m_info.m_globalPosition - baseInfo.m_globalPosition); //glm::normalize(pipeSegment.m_info.m_globalRotation * glm::vec3(0, 0, -1));
-			point.m_position = pipeSegment.m_info.m_globalPosition - point.m_normal * prevDistance * frontControlPointRatio;
-			point.m_thickness = pipeSegment.m_info.m_thickness;
-			points.emplace_back(point);
-
-			point.m_normal = glm::normalize(pipeSegment.m_info.m_globalRotation * glm::vec3(0, 0, -1));
-			point.m_position = pipeSegment.m_info.m_globalPosition;
-			points.emplace_back(point);
-
-			point.m_normal = glm::normalize(nextPosition - pipeSegment.m_info.m_globalPosition); //glm::normalize(pipeSegment.m_info.m_globalRotation * glm::vec3(0, 0, -1));
-			point.m_position = pipeSegment.m_info.m_globalPosition + point.m_normal * nextDistance * backControlPointRatio;
-			points.emplace_back(point);
-		}
-		for (int i = 1; i < pipeSegmentHandles.size() && (nodeMaxCount == -1 || i < nodeMaxCount); i++)
+		for (int i = 0; i < pipeSegmentHandles.size() && (nodeMaxCount == -1 || i < nodeMaxCount); i++)
 		{
 			const auto& pipeSegment = PeekPipeSegment(pipeSegmentHandles[i]);
-			const auto& prevPipeSegment = PeekPipeSegment(pipeSegmentHandles[i - 1]);
-			glm::vec3 nextPosition;
-			if (pipeSegmentHandles.size() > i + 1)
-			{
-				nextPosition = PeekPipeSegment(pipeSegmentHandles[i + 1]).m_info.m_globalPosition;
-			}
-			else
-			{
-				nextPosition = pipeSegment.m_info.m_globalPosition;
-			}
-			auto prevDistance = glm::distance(pipeSegment.m_info.m_globalPosition, prevPipeSegment.m_info.m_globalPosition);
-			auto nextDistance = glm::distance(pipeSegment.m_info.m_globalPosition, nextPosition);
 			//auto distance = glm::min(prevDistance, nextDistance);
 			point.m_color = pipeSegment.m_info.m_color;
-			point.m_normal = glm::normalize(pipeSegment.m_info.m_globalPosition - prevPipeSegment.m_info.m_globalPosition); //glm::normalize(pipeSegment.m_info.m_globalRotation * glm::vec3(0, 0, -1));
-			point.m_position = pipeSegment.m_info.m_globalPosition - point.m_normal * prevDistance * frontControlPointRatio;
 			point.m_thickness = pipeSegment.m_info.m_thickness;
-			if (triplePoints || i + 1 == pipeSegmentHandles.size()) points.emplace_back(point);
-
-			point.m_normal = glm::normalize(pipeSegment.m_info.m_globalRotation * glm::vec3(0, 0, -1));
 			point.m_position = pipeSegment.m_info.m_globalPosition;
 			points.emplace_back(point);
-
-			point.m_normal = glm::normalize(nextPosition - pipeSegment.m_info.m_globalPosition); //glm::normalize(pipeSegment.m_info.m_globalRotation * glm::vec3(0, 0, -1));
-			point.m_position = pipeSegment.m_info.m_globalPosition + point.m_normal * nextDistance * backControlPointRatio;
-			if (triplePoints || i + 1 == pipeSegmentHandles.size()) points.emplace_back(point);
 		}
-		
+		auto& backPoint = points.at(points.size() - 2);
+		auto& lastPoint = points.at(points.size() - 1);
+
+		point.m_color = 2.0f * lastPoint.m_color - backPoint.m_color;
+		point.m_thickness = 2.0f * lastPoint.m_thickness - backPoint.m_thickness;
+		point.m_position = 2.0f * lastPoint.m_position - backPoint.m_position;
+		points.emplace_back(point);
+
+		auto& firstPoint = points.at(startIndex);
+		auto& secondPoint = points.at(startIndex + 1);
+		auto& thirdPoint = points.at(startIndex + 2);
+		firstPoint.m_color = 2.0f * secondPoint.m_color - thirdPoint.m_color;
+		firstPoint.m_thickness = 2.0f * secondPoint.m_thickness - thirdPoint.m_thickness;
+		firstPoint.m_position = 2.0f * secondPoint.m_position - thirdPoint.m_position;
 	}
 
 	template <typename PipeGroupData, typename PipeData, typename PipeSegmentData>
