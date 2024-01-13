@@ -117,6 +117,12 @@ void TreePipeMeshGenerator::Generate(
 		for(const auto& pipeSegmentHandle : pipe.PeekPipeSegmentHandles())
 		{
 			const auto& pipeSegment = pipeGroup.PeekPipeSegment(pipeSegmentHandle);
+			//Get interpolated position on pipe segment. Example to get middle point here:
+			const auto middlePoint = treeModel.InterpolatePipeSegmentPosition(pipeSegmentHandle, 0.5f);
+			//Get interpolated direction on pipe segment. The axis is a normalized vector that points from the point close to root to end (Bottom up)
+			const auto middleAxis = treeModel.InterpolatePipeSegmentAxis(pipeSegmentHandle, 0.5f);
+
+
 			const auto& node = skeleton.PeekNode(pipeSegment.m_data.m_nodeHandle);
 			//To access the user's defined constraints (attractors, etc.)
 			const auto& profileConstraints = node.m_data.m_profileConstraints;

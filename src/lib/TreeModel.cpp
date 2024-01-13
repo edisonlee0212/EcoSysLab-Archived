@@ -1778,4 +1778,41 @@ void TreeModel::CalculatePipeProfileAdjustedTransforms()
 		node.m_data.m_adjustedGlobalPosition += parentFront * sinFront * maxDistanceToCenter * pipeModelParameters.m_frontPushRatio * pipeModelParameters.m_profileDefaultCellRadius;
 	}
 }
+
+glm::vec3 TreeModel::InterpolatePipeSegmentPosition(PipeSegmentHandle pipeSegmentHandle, float a) const
+{
+	assert(pipeSegmentHandle >= 0);
+	assert(a >= 0.f && a <= 1.f);
+	const auto& pipeGroup = m_shootSkeleton.m_data.m_pipeGroup;
+	assert(pipeGroup.PeekPipeSegments().size() > pipeSegmentHandle);
+	const auto& pipeSegment = pipeGroup.PeekPipeSegment(pipeSegmentHandle);
+	const auto& pipe = pipeGroup.PeekPipe(pipeSegment.GetPipeHandle());
+
+	if(pipeSegmentHandle == pipe.PeekPipeSegmentHandles().front())
+	{
+		return glm::mix(pipe.m_info.m_baseInfo.m_globalPosition, pipeSegment.m_info.m_globalPosition, a);
+	}
+
+	const auto& prevPipeSegment = pipeGroup.PeekPipeSegment(pipeSegment.GetPrevHandle());
+	return glm::mix(prevPipeSegment.m_info.m_globalPosition, pipeSegment.m_info.m_globalPosition, a);
+	
+}
+
+glm::vec3 TreeModel::InterpolatePipeSegmentAxis(PipeSegmentHandle pipeSegmentHandle, float a) const
+{
+	assert(pipeSegmentHandle >= 0);
+	assert(a >= 0.f && a <= 1.f);
+	const auto& pipeGroup = m_shootSkeleton.m_data.m_pipeGroup;
+	assert(pipeGroup.PeekPipeSegments().size() > pipeSegmentHandle);
+	const auto& pipeSegment = pipeGroup.PeekPipeSegment(pipeSegmentHandle);
+	const auto& pipe = pipeGroup.PeekPipe(pipeSegment.GetPipeHandle());
+
+	if (pipeSegmentHandle == pipe.PeekPipeSegmentHandles().front())
+	{
+		return glm::mix(pipe.m_info.m_baseInfo.m_globalRotation * glm::vec3(0, 0, -1), pipeSegment.m_info.m_globalRotation * glm::vec3(0, 0, -1), a);
+	}
+
+	const auto& prevPipeSegment = pipeGroup.PeekPipeSegment(pipeSegment.GetPrevHandle());
+	return glm::mix(prevPipeSegment.m_info.m_globalRotation * glm::vec3(0, 0, -1), pipeSegment.m_info.m_globalRotation * glm::vec3(0, 0, -1), a);
+}
 #pragma endregion
