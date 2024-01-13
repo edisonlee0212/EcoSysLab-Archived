@@ -155,6 +155,7 @@ namespace EcoSysLab {
 		void ApplyProfiles();
 		void CalculatePipeProfileAdjustedTransforms();
 		glm::vec3 InterpolatePipeSegmentPosition(PipeSegmentHandle pipeSegmentHandle, float a) const;
+		glm::vec3 InterpolatePipeSegmentAxis(PipeSegmentHandle pipeSegmentHandle, float a) const;
 #pragma endregion
 	};
 }
