@@ -1748,20 +1748,18 @@ void TreeModel::CalculatePipeProfileAdjustedTransforms()
 	for (const auto& nodeHandle : sortedInternodeList)
 	{
 		auto& node = m_shootSkeleton.RefNode(nodeHandle);
-		glm::vec3 parentGlobalPosition = node.m_info.m_globalPosition;
-		glm::quat parentGlobalRotation = node.m_info.m_regulatedGlobalRotation;
 		const auto parentHandle = node.GetParentHandle();
 		if(parentHandle == -1)
 		{
-			node.m_data.m_adjustedGlobalPosition = node.m_info.m_globalPosition;
+			node.m_data.m_adjustedGlobalPosition = node.m_info.GetGlobalEndPosition();
 			node.m_data.m_adjustedGlobalRotation = node.m_info.m_regulatedGlobalRotation;
 			continue;
 		}
 		const auto& parentNode = m_shootSkeleton.PeekNode(parentHandle);
-		parentGlobalPosition = parentNode.m_data.m_adjustedGlobalPosition;
-		parentGlobalRotation = parentNode.m_data.m_adjustedGlobalRotation;
+		glm::vec3 parentGlobalPosition = parentNode.m_data.m_adjustedGlobalPosition;
+		glm::quat parentGlobalRotation = parentNode.m_data.m_adjustedGlobalRotation;
 
-		node.m_data.m_adjustedGlobalPosition = parentGlobalPosition + node.m_info.m_globalPosition - parentNode.m_info.m_globalPosition;
+		node.m_data.m_adjustedGlobalPosition = parentGlobalPosition + node.m_info.GetGlobalEndPosition() - parentNode.m_info.GetGlobalEndPosition();
 		node.m_data.m_adjustedGlobalRotation = parentGlobalRotation * (glm::inverse(parentNode.m_info.m_regulatedGlobalRotation) * node.m_info.m_regulatedGlobalRotation);
 
 		const auto parentUp = parentGlobalRotation * glm::vec3(0, 1, 0);
