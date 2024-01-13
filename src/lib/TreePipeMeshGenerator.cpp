@@ -259,7 +259,6 @@ void reconstructSkeleton(const PipeModelPipeGroup& pipes, float maxDist)
 
 	for (auto& pipe : pipes.PeekPipes())
 	{
-		glm::vec3 segStart = pipe.m_info.m_baseInfo.m_globalPosition;
 		segGroup.push_back(pipe.PeekPipeSegmentHandles()[0]);
 	}
 
@@ -320,7 +319,6 @@ void reconstructSkeleton(const PipeModelPipeGroup& pipes, float maxDist)
 
 }
 
-void TreePipeMeshGenerator::Generate(const PipeModelPipeGroup& pipes, std::vector<Vertex>& vertices,
 void TreePipeMeshGenerator::Generate(
 	const TreeModel& treeModel, std::vector<Vertex>& vertices,
                                      std::vector<unsigned>& indices, const TreePipeMeshGeneratorSettings& settings)
@@ -416,25 +414,9 @@ void TreePipeMeshGenerator::Generate(
 
 	for (auto& pipe : pipeGroup.PeekPipes())
 	{
-		min = glm::min(pipe.m_info.m_baseInfo.m_globalPosition, min);
-		max = glm::max(pipe.m_info.m_baseInfo.m_globalPosition, max);
-	}
+		PipeSegmentHandle segHandle = pipe.PeekPipeSegmentHandles()[0];
 
-	const auto boxSize = max - min;
-	Octree<bool> octree;
-	if (settings.m_autoLevel)
-	{
-		const float maxRadius = glm::max(glm::max(boxSize.x, boxSize.y), boxSize.z) * 0.5f + 2.0f * settings.m_marchingCubeRadius;
-		int subdivisionLevel = -1;
-		float testRadius = settings.m_marchingCubeRadius;
-		while (testRadius <= maxRadius)
-		{
-			subdivisionLevel++;
-			testRadius *= 2.f;
-		}
-		EVOENGINE_LOG("Mesh formation: Auto set level to " + std::to_string(subdivisionLevel))
-
-			octree.Reset(maxRadius, subdivisionLevel, (min + max) * 0.5f);
+		if (pipes.PeekPipeSegment(segHandle).m_info.m_isBoundary);
 	}
 	else {
 		octree.Reset(glm::max((boxSize.x, boxSize.y), glm::max(boxSize.y, boxSize.z)) * 0.5f,
