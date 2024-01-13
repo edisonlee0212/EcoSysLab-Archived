@@ -329,7 +329,7 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 		ImGui::DragInt("Timeout with boundaries)", &pipeModelParameters.m_timeoutWithBoundaries, 100, 200, 10000);
 		ImGui::TreePop();
 	}
-	ImGui::DragFloat("Split limit", &pipeModelParameters.m_splitRatioLimit, 0.01f, 0.0f, 1.0f);
+	ImGui::DragFloat("Overlap threshold", &pipeModelParameters.m_overlapThreshold, 0.01f, 0.0f, 1.0f);
 	ImGui::DragInt("End node strand count", &pipeModelParameters.m_endNodeStrands, 1, 1, 50);
 	ImGui::Checkbox("Pre-merge", &pipeModelParameters.m_preMerge);
 
@@ -337,9 +337,7 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	ImGui::Text(("Strand count: " + std::to_string(m_treeModel.PeekShootSkeleton().m_data.m_pipeGroup.PeekPipes().size())).c_str());
 	ImGui::Text(("Total particle count: " + std::to_string(m_treeModel.PeekShootSkeleton().m_data.m_numOfParticles)).c_str());
 
-	ImGui::DragFloat("Front Control Point Ratio", &pipeModelParameters.m_frontControlPointRatio, 0.01f, 0.01f, 0.5f);
-	ImGui::DragFloat("Back Control Point Ratio", &pipeModelParameters.m_backControlPointRatio, 0.01f, 0.01f, 0.5f);
-
+	
 	if (ImGui::TreeNodeEx("Graph Adjustment settings"))
 	{
 		ImGui::DragFloat("Shift push ratio", &pipeModelParameters.m_shiftPushRatio, 0.01f, 0.0f, 2.0f);
@@ -349,6 +347,7 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 		ImGui::TreePop();
 	}
 	ImGui::Checkbox("Triple points", &pipeModelParameters.m_triplePoints);
+	if (pipeModelParameters.m_triplePoints) ImGui::DragFloat("Control Point Ratio", &pipeModelParameters.m_controlPointRatio, 0.01f, 0.01f, 0.5f);
 	ImGui::DragInt("Max node count", &pipeModelParameters.m_nodeMaxCount, 1, -1, 999);
 	ImGui::DragInt("Boundary point distance", &pipeModelParameters.m_boundaryPointDistance, 1, 3, 30);
 	ImGui::ColorEdit4("Boundary color", &pipeModelParameters.m_boundaryPointColor.x);
@@ -444,7 +443,7 @@ std::shared_ptr<Strands> Tree::GenerateStrands()
 	const auto& parameters = m_treeModel.RefShootSkeleton().m_data.m_pipeModelParameters;
 	std::vector<glm::uint> strandsList;
 	std::vector<StrandPoint> points;
-	m_treeModel.RefShootSkeleton().m_data.m_pipeGroup.BuildStrands(parameters.m_frontControlPointRatio, parameters.m_backControlPointRatio, strandsList, points, parameters.m_triplePoints, parameters.m_nodeMaxCount);
+	m_treeModel.RefShootSkeleton().m_data.m_pipeGroup.BuildStrands(parameters.m_controlPointRatio, strandsList, points, parameters.m_triplePoints, parameters.m_nodeMaxCount);
 	if (!points.empty()) strandsList.emplace_back(points.size());
 	StrandPointAttributes strandPointAttributes{};
 	strandPointAttributes.m_color = true;
@@ -585,7 +584,7 @@ std::shared_ptr<Mesh> Tree::GeneratePipeMesh(const TreePipeMeshGeneratorSettings
 	const auto& parameters = m_treeModel.RefShootSkeleton().m_data.m_pipeModelParameters;
 	std::vector<glm::uint> strandsList;
 	std::vector<StrandPoint> points;
-	m_treeModel.RefShootSkeleton().m_data.m_pipeGroup.BuildStrands(parameters.m_frontControlPointRatio, parameters.m_backControlPointRatio, strandsList, points, parameters.m_triplePoints, parameters.m_nodeMaxCount);
+	m_treeModel.RefShootSkeleton().m_data.m_pipeGroup.BuildStrands(parameters.m_controlPointRatio, strandsList, points, parameters.m_triplePoints, parameters.m_nodeMaxCount);
 
 	std::vector<Vertex> vertices;
 	std::vector<unsigned int> indices;

@@ -156,12 +156,12 @@ namespace EcoSysLab
 		std::queue<PipeSegmentHandle> m_pipeSegmentPool;
 
 		int m_version = -1;
-		void BuildStrand(float frontControlPointRatio, float backControlPointRatio, const Pipe<PipeData>& pipe, std::vector<glm::uint>& strands, std::vector<StrandPoint>& points, bool triplePoints, int nodeMaxCount) const;
+		void BuildStrand(float controlPointRatio, const Pipe<PipeData>& pipe, std::vector<glm::uint>& strands, std::vector<StrandPoint>& points, bool triplePoints, int nodeMaxCount) const;
 
 		[[nodiscard]] PipeSegmentHandle AllocatePipeSegment(PipeHandle pipeHandle, PipeSegmentHandle prevHandle, int index);
 	public:
 
-		void BuildStrands(float frontControlPointRatio, float backControlPointRatio, std::vector<glm::uint>& strands, std::vector<StrandPoint>& points, bool triplePoints, int nodeMaxCount) const;
+		void BuildStrands(float controlPointRatio, std::vector<glm::uint>& strands, std::vector<StrandPoint>& points, bool triplePoints, int nodeMaxCount) const;
 
 		PipeGroupData m_data;
 
@@ -247,50 +247,105 @@ namespace EcoSysLab
 	};
 
 	template <typename PipeGroupData, typename PipeData, typename PipeSegmentData>
-	void PipeGroup<PipeGroupData, PipeData, PipeSegmentData>::BuildStrand(const float frontControlPointRatio, const float backControlPointRatio, const Pipe<PipeData>& pipe,
+	void PipeGroup<PipeGroupData, PipeData, PipeSegmentData>::BuildStrand(const float controlPointRatio, const Pipe<PipeData>& pipe,
 		std::vector<glm::uint>& strands, std::vector<StrandPoint>& points, bool triplePoints, int nodeMaxCount) const
 	{
 		const auto& pipeSegmentHandles = pipe.PeekPipeSegmentHandles();
 		if (pipeSegmentHandles.empty())
 			return;
-
-		auto& baseInfo = pipe.m_info.m_baseInfo;
-		const auto startIndex = points.size();
-		strands.emplace_back(startIndex);
-		StrandPoint basePoint;
-		basePoint.m_color = glm::vec4(0.6f, 0.3f, 0.0f, 1.0f);
-		const auto& secondPipeSegment = PeekPipeSegment(pipeSegmentHandles[0]);
-		auto basePointDistance = glm::distance(baseInfo.m_globalPosition, secondPipeSegment.m_info.m_globalPosition);
-		basePoint.m_thickness = baseInfo.m_thickness;
-		basePoint.m_position = baseInfo.m_globalPosition;
-		
-		points.emplace_back(basePoint);
-		points.emplace_back(basePoint);
-
-		StrandPoint point;
-		for (int i = 0; i < pipeSegmentHandles.size() && (nodeMaxCount == -1 || i < nodeMaxCount); i++)
+		if(triplePoints)
 		{
-			const auto& pipeSegment = PeekPipeSegment(pipeSegmentHandles[i]);
-			//auto distance = glm::min(prevDistance, nextDistance);
-			point.m_color = pipeSegment.m_info.m_color;
-			point.m_thickness = pipeSegment.m_info.m_thickness;
-			point.m_position = pipeSegment.m_info.m_globalPosition;
-			points.emplace_back(point);
+			auto& baseInfo = pipe.m_info.m_baseInfo;
+			strands.emplace_back(points.size());
+			StrandPoint basePoint;
+			basePoint.m_color = glm::vec4(0.6f, 0.3f, 0.0f, 1.0f);
+			const auto& secondPipeSegment = PeekPipeSegment(pipeSegmentHandles[0]);
+			auto basePointDistance = glm::distance(baseInfo.m_globalPosition, secondPipeSegment.m_info.m_globalPosition);
+			const auto baseTangent = glm::normalize(baseInfo.m_globalRotation * glm::vec3(0, 0, -1));
+			basePoint.m_position = baseInfo.m_globalPosition - baseTangent * basePointDistance * controlPointRatio;
+			basePoint.m_thickness = baseInfo.m_thickness;
+			points.emplace_back(basePoint);
+			basePoint.m_position = baseInfo.m_globalPosition;
+			points.emplace_back(basePoint);
+			basePoint.m_position = baseInfo.m_globalPosition + baseTangent * basePointDistance * controlPointRatio;
+			points.emplace_back(basePoint);
+
+			StrandPoint point;
+			for (int i = 0; i < pipeSegmentHandles.size() && (nodeMaxCount == -1 || i < nodeMaxCount); i++)
+			{
+				const auto& pipeSegment = PeekPipeSegment(pipeSegmentHandles[i]);
+				glm::vec3 prevPosition;
+				glm::vec3 nextPosition;
+				glm::vec3 tangent;
+				if (i == 0)
+				{
+					prevPosition = baseInfo.m_globalPosition;
+				}
+				else {
+					prevPosition = PeekPipeSegment(pipeSegmentHandles[i - 1]).m_info.m_globalPosition;
+				}
+
+				if(i == pipeSegmentHandles.size() - 1)
+				{
+					nextPosition = 2.0f * pipeSegment.m_info.m_globalPosition - prevPosition;
+				}else
+				{
+					nextPosition = PeekPipeSegment(pipeSegmentHandles[i + 1]).m_info.m_globalPosition;
+				}
+				tangent = glm::normalize(nextPosition - prevPosition);
+				auto prevDistance = glm::distance(pipeSegment.m_info.m_globalPosition, prevPosition);
+				auto nextDistance = glm::distance(pipeSegment.m_info.m_globalPosition, nextPosition);
+				auto distance = glm::min(prevDistance, nextDistance);
+				point.m_color = pipeSegment.m_info.m_color;
+				point.m_position = pipeSegment.m_info.m_globalPosition - tangent * distance * controlPointRatio;
+				point.m_thickness = pipeSegment.m_info.m_thickness;
+				points.emplace_back(point);
+
+				point.m_position = pipeSegment.m_info.m_globalPosition;
+				points.emplace_back(point);
+
+				point.m_position = pipeSegment.m_info.m_globalPosition + tangent * distance * controlPointRatio;
+				points.emplace_back(point);
+			}
+
 		}
-		auto& backPoint = points.at(points.size() - 2);
-		auto& lastPoint = points.at(points.size() - 1);
+		else {
+			auto& baseInfo = pipe.m_info.m_baseInfo;
+			const auto startIndex = points.size();
+			strands.emplace_back(startIndex);
+			StrandPoint basePoint;
+			basePoint.m_color = glm::vec4(0.6f, 0.3f, 0.0f, 1.0f);
+			basePoint.m_thickness = baseInfo.m_thickness;
+			basePoint.m_position = baseInfo.m_globalPosition;
 
-		point.m_color = 2.0f * lastPoint.m_color - backPoint.m_color;
-		point.m_thickness = 2.0f * lastPoint.m_thickness - backPoint.m_thickness;
-		point.m_position = 2.0f * lastPoint.m_position - backPoint.m_position;
-		points.emplace_back(point);
+			points.emplace_back(basePoint);
+			points.emplace_back(basePoint);
 
-		auto& firstPoint = points.at(startIndex);
-		auto& secondPoint = points.at(startIndex + 1);
-		auto& thirdPoint = points.at(startIndex + 2);
-		firstPoint.m_color = 2.0f * secondPoint.m_color - thirdPoint.m_color;
-		firstPoint.m_thickness = 2.0f * secondPoint.m_thickness - thirdPoint.m_thickness;
-		firstPoint.m_position = 2.0f * secondPoint.m_position - thirdPoint.m_position;
+			StrandPoint point;
+			for (int i = 0; i < pipeSegmentHandles.size() && (nodeMaxCount == -1 || i < nodeMaxCount); i++)
+			{
+				const auto& pipeSegment = PeekPipeSegment(pipeSegmentHandles[i]);
+				//auto distance = glm::min(prevDistance, nextDistance);
+				point.m_color = pipeSegment.m_info.m_color;
+				point.m_thickness = pipeSegment.m_info.m_thickness;
+				point.m_position = pipeSegment.m_info.m_globalPosition;
+				points.emplace_back(point);
+			}
+			auto& backPoint = points.at(points.size() - 2);
+			auto& lastPoint = points.at(points.size() - 1);
+
+			point.m_color = 2.0f * lastPoint.m_color - backPoint.m_color;
+			point.m_thickness = 2.0f * lastPoint.m_thickness - backPoint.m_thickness;
+			point.m_position = 2.0f * lastPoint.m_position - backPoint.m_position;
+			points.emplace_back(point);
+
+			auto& firstPoint = points.at(startIndex);
+			auto& secondPoint = points.at(startIndex + 1);
+			auto& thirdPoint = points.at(startIndex + 2);
+			firstPoint.m_color = 2.0f * secondPoint.m_color - thirdPoint.m_color;
+			firstPoint.m_thickness = 2.0f * secondPoint.m_thickness - thirdPoint.m_thickness;
+			firstPoint.m_position = 2.0f * secondPoint.m_position - thirdPoint.m_position;
+		}
 	}
 
 	template <typename PipeGroupData, typename PipeData, typename PipeSegmentData>
@@ -319,13 +374,13 @@ namespace EcoSysLab
 	}
 
 	template <typename PipeGroupData, typename PipeData, typename PipeSegmentData>
-	void PipeGroup<PipeGroupData, PipeData, PipeSegmentData>::BuildStrands(const float frontControlPointRatio, const float backControlPointRatio, std::vector<glm::uint>& strands,
+	void PipeGroup<PipeGroupData, PipeData, PipeSegmentData>::BuildStrands(const float controlPointRatio, std::vector<glm::uint>& strands,
 		std::vector<StrandPoint>& points, bool triplePoints, int nodeMaxCount) const
 	{
 		for (const auto& pipe : m_pipes)
 		{
 			if (pipe.IsRecycled()) continue;
-			BuildStrand(frontControlPointRatio, backControlPointRatio, pipe, strands, points, triplePoints, nodeMaxCount);
+			BuildStrand(controlPointRatio, pipe, strands, points, triplePoints, nodeMaxCount);
 		}
 	}
 

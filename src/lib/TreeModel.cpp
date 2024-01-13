@@ -1258,6 +1258,7 @@ void TreeModel::InitializeProfiles()
 			}
 		}
 	}
+
 	for (const auto& internodeHandle : sortedInternodeList)
 	{
 		auto& internode = m_shootSkeleton.RefNode(internodeHandle);
@@ -1281,13 +1282,22 @@ void TreeModel::InitializeProfiles()
 	for (const auto& internodeHandle : sortedInternodeList)
 	{
 		auto& internode = m_shootSkeleton.RefNode(internodeHandle);
+		int maxChildSize = 0;
+		for (const auto& childHandle : internode.RefChildHandles())
+		{
+			auto& childInternode = m_shootSkeleton.RefNode(childHandle);
+			const auto childSize = static_cast<float>(childInternode.m_data.m_frontParticleMap.size());
+			if (childSize > maxChildSize)
+			{
+				maxChildSize = childSize;
+			}
+		}
 		for (const auto& childHandle : internode.RefChildHandles())
 		{
 			auto& childInternode = m_shootSkeleton.RefNode(childHandle);
 			if (childInternode.m_data.m_maxChild) childInternode.m_data.m_split = false;
 			const auto childSize = static_cast<float>(childInternode.m_data.m_frontParticleMap.size());
-			const auto totalSize = static_cast<float>(internode.m_data.m_frontParticleMap.size());
-			if (childSize > totalSize * m_shootSkeleton.m_data.m_pipeModelParameters.m_splitRatioLimit)
+			if (childSize > maxChildSize * m_shootSkeleton.m_data.m_pipeModelParameters.m_overlapThreshold)
 			{
 				childInternode.m_data.m_split = true;
 			}
@@ -1821,7 +1831,7 @@ operator-(const EvoEngine::StrandPoint& lhs, const EvoEngine::StrandPoint& rhs) 
 struct CubicBSplineInterpolation {
 	CubicBSplineInterpolation() {}
 
-	CubicBSplineInterpolation(const EvoEngine::StrandPoint q[4]) {
+	CubicBSplineInterpolation(const StrandPoint q[4]) {
 		// pre-transform control points for fast evaluation
 		m_p[0] = (q[2] + q[0]) / 6 + q[1] * (4.0f / 6.0f);
 		m_p[1] = q[2] - q[0];
@@ -1936,7 +1946,7 @@ struct CubicBSplineInterpolation {
 };
 
 
-glm::vec3 TreeModel::InterpolatePipeSegmentPosition(PipeSegmentHandle pipeSegmentHandle, float a) const
+glm::vec3 TreeModel::InterpolatePipeSegmentPosition(const PipeSegmentHandle pipeSegmentHandle, const float a) const
 {
 	assert(pipeSegmentHandle >= 0);
 	assert(a >= 0.f && a <= 1.f);
@@ -1944,15 +1954,38 @@ glm::vec3 TreeModel::InterpolatePipeSegmentPosition(PipeSegmentHandle pipeSegmen
 	assert(pipeGroup.PeekPipeSegments().size() > pipeSegmentHandle);
 	const auto& pipeSegment = pipeGroup.PeekPipeSegment(pipeSegmentHandle);
 	const auto& pipe = pipeGroup.PeekPipe(pipeSegment.GetPipeHandle());
+	auto& baseInfo = pipe.m_info.m_baseInfo;
+	StrandPoint q[4] {};
+	const auto& pipeSegmentHandles = pipe.PeekPipeSegmentHandles();
 
-	if(pipeSegmentHandle == pipe.PeekPipeSegmentHandles().front())
+	q[2].m_thickness = pipeSegment.m_info.m_thickness;
+	q[2].m_position = pipeSegment.m_info.m_globalPosition;
+	if(pipeSegmentHandle == pipeSegmentHandles.front())
 	{
-		return glm::mix(pipe.m_info.m_baseInfo.m_globalPosition, pipeSegment.m_info.m_globalPosition, a);
+		q[1].m_position = baseInfo.m_globalPosition;
+		q[0] = q[1] * 2.0f - q[2];
+	}else if(pipeSegmentHandle == pipeSegmentHandles.at(1))
+	{
+		q[0].m_position = baseInfo.m_globalPosition;
+		q[1].m_position = pipeGroup.PeekPipeSegment(pipeSegmentHandles.front()).m_info.m_globalPosition;
+	}else
+	{
+		const auto& prevSegment = pipeGroup.PeekPipeSegment(pipeSegment.GetPrevHandle());
+		q[1].m_position = prevSegment.m_info.m_globalPosition;
+		const auto& prevPrevSegment = pipeGroup.PeekPipeSegment(prevSegment.GetPrevHandle());
+		q[0].m_position = prevPrevSegment.m_info.m_globalPosition;
+	}
+	if(pipeSegmentHandle == pipeSegmentHandles.back())
+	{
+		q[3] = q[2] * 2.0f - q[1];
+	}else
+	{
+		const auto& nextSegment = pipeGroup.PeekPipeSegment(pipeSegment.GetNextHandle());
+		q[3].m_position = nextSegment.m_info.m_globalPosition;
 	}
 
-	const auto& prevPipeSegment = pipeGroup.PeekPipeSegment(pipeSegment.GetPrevHandle());
-	return glm::mix(prevPipeSegment.m_info.m_globalPosition, pipeSegment.m_info.m_globalPosition, a);
-	
+	const CubicBSplineInterpolation interpolation(q);
+	return interpolation.position(a);
 }
 
 glm::vec3 TreeModel::InterpolatePipeSegmentAxis(PipeSegmentHandle pipeSegmentHandle, float a) const
@@ -1963,13 +1996,40 @@ glm::vec3 TreeModel::InterpolatePipeSegmentAxis(PipeSegmentHandle pipeSegmentHan
 	assert(pipeGroup.PeekPipeSegments().size() > pipeSegmentHandle);
 	const auto& pipeSegment = pipeGroup.PeekPipeSegment(pipeSegmentHandle);
 	const auto& pipe = pipeGroup.PeekPipe(pipeSegment.GetPipeHandle());
+	auto& baseInfo = pipe.m_info.m_baseInfo;
+	StrandPoint q[4]{};
+	const auto& pipeSegmentHandles = pipe.PeekPipeSegmentHandles();
 
-	if (pipeSegmentHandle == pipe.PeekPipeSegmentHandles().front())
+	q[2].m_thickness = pipeSegment.m_info.m_thickness;
+	q[2].m_position = pipeSegment.m_info.m_globalPosition;
+	if (pipeSegmentHandle == pipeSegmentHandles.front())
 	{
-		return glm::mix(pipe.m_info.m_baseInfo.m_globalRotation * glm::vec3(0, 0, -1), pipeSegment.m_info.m_globalRotation * glm::vec3(0, 0, -1), a);
+		q[1].m_position = baseInfo.m_globalPosition;
+		q[0] = q[1] * 2.0f - q[2];
+	}
+	else if (pipeSegmentHandle == pipeSegmentHandles.at(1))
+	{
+		q[0].m_position = baseInfo.m_globalPosition;
+		q[1].m_position = pipeGroup.PeekPipeSegment(pipeSegmentHandles.front()).m_info.m_globalPosition;
+	}
+	else
+	{
+		const auto& prevSegment = pipeGroup.PeekPipeSegment(pipeSegment.GetPrevHandle());
+		q[1].m_position = prevSegment.m_info.m_globalPosition;
+		const auto& prevPrevSegment = pipeGroup.PeekPipeSegment(prevSegment.GetPrevHandle());
+		q[0].m_position = prevPrevSegment.m_info.m_globalPosition;
+	}
+	if (pipeSegmentHandle == pipeSegmentHandles.back())
+	{
+		q[3] = q[2] * 2.0f - q[1];
+	}
+	else
+	{
+		const auto& nextSegment = pipeGroup.PeekPipeSegment(pipeSegment.GetNextHandle());
+		q[3].m_position = nextSegment.m_info.m_globalPosition;
 	}
 
-	const auto& prevPipeSegment = pipeGroup.PeekPipeSegment(pipeSegment.GetPrevHandle());
-	return glm::mix(prevPipeSegment.m_info.m_globalRotation * glm::vec3(0, 0, -1), pipeSegment.m_info.m_globalRotation * glm::vec3(0, 0, -1), a);
+	const CubicBSplineInterpolation interpolation(q);
+	return glm::normalize(interpolation.velocity(a));
 }
 #pragma endregion

@@ -12,13 +12,12 @@ namespace EcoSysLab
 		int m_maxSimulationIterationCellFactor = 5;
 		int m_timeout = 500;
 		int m_timeoutWithBoundaries = 1500;
-		float m_splitRatioLimit = 0.1f;
+		float m_overlapThreshold = 0.1f;
 		int m_endNodeStrands = 3;
 
 		bool m_preMerge = true;
 
-		float m_frontControlPointRatio = 0.3f;
-		float m_backControlPointRatio = 0.3f;
+		float m_controlPointRatio = 0.3f;
 		bool m_triplePoints = false;
 		int m_nodeMaxCount = -1;
 
