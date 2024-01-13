@@ -244,7 +244,6 @@ void reconstructSkeleton(const PipeModelPipeGroup& pipes, float maxDist)
 
 	for (auto& pipe : pipes.PeekPipes())
 	{
-		glm::vec3 segStart = pipe.m_info.m_baseInfo.m_globalPosition;
 		segGroup.push_back(pipe.PeekPipeSegmentHandles()[0]);
 	}
 
@@ -308,73 +307,13 @@ void reconstructSkeleton(const PipeModelPipeGroup& pipes, float maxDist)
 void TreePipeMeshGenerator::Generate(const PipeModelPipeGroup& pipes, std::vector<Vertex>& vertices,
                                      std::vector<unsigned>& indices, const TreePipeMeshGeneratorSettings& settings)
 {
-	// first compute extreme points
-	/*glm::vec3 min = glm::vec3(std::numeric_limits<float>::infinity());
-	glm::vec3 max = glm::vec3(-std::numeric_limits<float>::infinity());
+	// first let's try to just do the first segments
 
-	for (auto& seg : pipes.PeekPipeSegments())
-	{
-		min = glm::min(seg.m_info.m_globalPosition, min);
-		max = glm::max(seg.m_info.m_globalPosition, max);
-	}
-
+	// find a boundary pipe
 	for (auto& pipe : pipes.PeekPipes())
 	{
-		min = glm::min(pipe.m_info.m_baseInfo.m_globalPosition, min);
-		max = glm::max(pipe.m_info.m_baseInfo.m_globalPosition, max);
+		PipeSegmentHandle segHandle = pipe.PeekPipeSegmentHandles()[0];
+
+		if (pipes.PeekPipeSegment(segHandle).m_info.m_isBoundary);
 	}
-
-	const auto boxSize = max - min;
-	Octree<bool> octree;
-	if (settings.m_autoLevel)
-	{
-		const float maxRadius = glm::max(glm::max(boxSize.x, boxSize.y), boxSize.z) * 0.5f + 2.0f * settings.m_marchingCubeRadius;
-		int subdivisionLevel = -1;
-		float testRadius = settings.m_marchingCubeRadius;
-		while (testRadius <= maxRadius)
-		{
-			subdivisionLevel++;
-			testRadius *= 2.f;
-		}
-		EVOENGINE_LOG("Mesh formation: Auto set level to " + std::to_string(subdivisionLevel))
-
-			octree.Reset(maxRadius, subdivisionLevel, (min + max) * 0.5f);
-	}
-	else {
-		octree.Reset(glm::max((boxSize.x, boxSize.y), glm::max(boxSize.y, boxSize.z)) * 0.5f,
-			glm::clamp(settings.m_voxelSubdivisionLevel, 4, 16), (min + max) / 2.0f);
-	}
-
-	std::cout << "voxel size: " << settings.m_marchingCubeRadius << std::endl;
-
-	// loop over each strand in the pipe group
-	for (auto& pipe : pipes.PeekPipes())
-	{
-		glm::vec3 segStart = pipe.m_info.m_baseInfo.m_globalPosition;
-
-		for (auto& segHandle : pipe.PeekPipeSegmentHandles())
-		{
-			auto& seg = pipes.PeekPipeSegment(segHandle);
-			glm::vec3 segEnd = seg.m_info.m_globalPosition;
-
-			std::vector<glm::ivec3> pipeVoxels =  voxelizeLineSeg(segStart, segEnd, settings.m_marchingCubeRadius);
-
-			// insert each voxel from the segment into the octree
-			for (auto& voxel : pipeVoxels)
-			{
-				octree.Occupy((glm::vec3(voxel) + glm::vec3(0.5f))* settings.m_marchingCubeRadius, [](OctreeNode&) {});
-			}
-
-			segStart = segEnd;
-		}
-		
-	}
-
-	octree.TriangulateField(vertices, indices, settings.m_removeDuplicate, settings.m_voxelSmoothIteration);
-	
-	// finally set vertex colors (does not work yet)
-	for (Vertex& v : vertices)
-	{
-		v.m_color = glm::vec4(settings.m_vertexColor, 1.0f);
-	}*/
 }
