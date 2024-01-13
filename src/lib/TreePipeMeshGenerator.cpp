@@ -2,6 +2,7 @@
 #include "Curve.hpp"
 #include "Octree.hpp"
 #include "Jobs.hpp"
+#include <gtx/io.hpp>
 
 using namespace EcoSysLab;
 
