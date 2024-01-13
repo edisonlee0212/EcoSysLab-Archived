@@ -2285,7 +2285,7 @@ void TreePointCloud::FormGeometryEntity() const
 			material->m_materialProperties.m_roughness = 1.0f;
 			material->m_materialProperties.m_metallic = 0.0f;
 			StrandPointAttributes strandPointAttributes{};
-			//strands->SetSegments(strandPointAttributes, twigSegments, twigPoints);
+			strands->SetSegments(strandPointAttributes, twigSegments, twigPoints);
 			auto strandsRenderer = scene->GetOrSetPrivateComponent<StrandsRenderer>(twigEntity).lock();
 			strandsRenderer->m_strands = strands;
 			strandsRenderer->m_material = material;

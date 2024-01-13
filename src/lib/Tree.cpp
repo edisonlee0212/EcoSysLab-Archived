@@ -442,9 +442,10 @@ std::shared_ptr<Strands> Tree::GenerateStrands()
 	m_treeModel.CalculatePipeProfileAdjustedTransforms();
 	m_treeModel.ApplyProfiles();
 	const auto& parameters = m_treeModel.RefShootSkeleton().m_data.m_pipeModelParameters;
-	std::vector<glm::uvec4> strandsList;
+	std::vector<glm::uint> strandsList;
 	std::vector<StrandPoint> points;
 	m_treeModel.RefShootSkeleton().m_data.m_pipeGroup.BuildStrands(parameters.m_frontControlPointRatio, parameters.m_backControlPointRatio, strandsList, points, parameters.m_triplePoints, parameters.m_nodeMaxCount);
+	if (!points.empty()) strandsList.emplace_back(points.size());
 	StrandPointAttributes strandPointAttributes{};
 	strandPointAttributes.m_color = true;
 	strandsAsset->SetStrands(strandPointAttributes, strandsList, points);
@@ -582,7 +583,7 @@ std::shared_ptr<Mesh> Tree::GeneratePipeMesh(const TreePipeMeshGeneratorSettings
 	m_treeModel.CalculatePipeProfileAdjustedTransforms();
 	m_treeModel.ApplyProfiles();
 	const auto& parameters = m_treeModel.RefShootSkeleton().m_data.m_pipeModelParameters;
-	std::vector<glm::uvec4> strandsList;
+	std::vector<glm::uint> strandsList;
 	std::vector<StrandPoint> points;
 	m_treeModel.RefShootSkeleton().m_data.m_pipeGroup.BuildStrands(parameters.m_frontControlPointRatio, parameters.m_backControlPointRatio, strandsList, points, parameters.m_triplePoints, parameters.m_nodeMaxCount);
 
@@ -1008,7 +1009,7 @@ void Tree::InitializeMeshRenderer(const TreeMeshGeneratorSettings& meshGenerator
 		material->m_materialProperties.m_roughness = 1.0f;
 		material->m_materialProperties.m_metallic = 0.0f;
 		StrandPointAttributes strandPointAttributes{};
-		//strands->SetSegments(strandPointAttributes, twigSegments, twigPoints);
+		strands->SetSegments(strandPointAttributes, twigSegments, twigPoints);
 		auto strandsRenderer = scene->GetOrSetPrivateComponent<StrandsRenderer>(twigEntity).lock();
 		strandsRenderer->m_strands = strands;
 		strandsRenderer->m_material = material;
