@@ -123,7 +123,7 @@ namespace EcoSysLab
 		glm::vec3 m_adjustedGlobalPosition{};
 		glm::quat m_adjustedGlobalRotation{};
 		float m_pipeCellRadius = 0.002f;
-		int m_cellCount = 0;
+		int m_pipeSize = 0;
 #pragma endregion
 	};
 

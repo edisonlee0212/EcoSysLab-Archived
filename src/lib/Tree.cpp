@@ -376,7 +376,6 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 
 	if (ImGui::Button("Clear Pipe Mesh"))
 	{
-
 		ClearMeshRendererPipe();
 	}
 }

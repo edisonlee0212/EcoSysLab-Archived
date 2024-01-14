@@ -64,12 +64,19 @@ void TreeModel::PruneInternode(NodeHandle internodeHandle)
 	internode.m_data.m_backParticleMap = {};
 	internode.m_data.m_profileConstraints = {};
 
-	internode.m_data.m_cellCount = 0;
+	internode.m_data.m_pipeSize = 0;
 
 	m_shootSkeleton.RecycleNode(internodeHandle,
 		[&](FlowHandle flowHandle) {},
 		[&](NodeHandle nodeHandle)
-		{});
+		{
+			const auto& node = m_shootSkeleton.RefNode(nodeHandle);
+			const auto& physics2D = node.m_data.m_frontProfile;
+			for(const auto& particle : physics2D.PeekParticles())
+			{
+				m_shootSkeleton.m_data.m_pipeGroup.RecyclePipeSegment(particle.m_data.m_pipeSegmentHandle);
+			}
+		});
 }
 
 void TreeModel::HarvestFruits(const std::function<bool(const ReproductiveModule& fruit)>& harvestFunction)
@@ -550,7 +557,7 @@ bool TreeModel::ElongateInternode(float extendLength, NodeHandle internodeHandle
 		newInternode.m_data.m_backParticleMap = {};
 		newInternode.m_data.m_profileConstraints = {};
 		newInternode.m_data.m_indexOfParentBud = 0;
-		newInternode.m_data.m_cellCount = 0;
+		newInternode.m_data.m_pipeSize = 0;
 		newInternode.m_data.m_lightIntensity = oldInternode.m_data.m_lightIntensity;
 		newInternode.m_data.m_lightDirection = oldInternode.m_data.m_lightDirection;
 		oldInternode.m_data.m_finishAge = newInternode.m_data.m_startAge = m_age;
@@ -1130,11 +1137,6 @@ void TreeModel::InitializeProfiles()
 	for (const auto& internodeHandle : sortedInternodeList)
 	{
 		auto& internode = m_shootSkeleton.RefNode(internodeHandle);
-		internode.m_data.m_cellCount = glm::max(m_shootSkeleton.m_data.m_pipeModelParameters.m_endNodeStrands, internode.m_data.m_cellCount);
-	}
-	for (const auto& internodeHandle : sortedInternodeList)
-	{
-		auto& internode = m_shootSkeleton.RefNode(internodeHandle);
 		auto& frontPhysics2D = internode.m_data.m_frontProfile;
 		auto& backPhysics2D = internode.m_data.m_backProfile;
 
@@ -1153,12 +1155,7 @@ void TreeModel::InitializeProfiles()
 		{
 			if (internode.GetParentHandle() == -1)
 			{
-				auto strandCount = m_shootSkeleton.m_data.m_pipeModelParameters.m_endNodeStrands;
-				if(internode.RefChildHandles().empty())
-				{
-					strandCount = glm::max(m_shootSkeleton.m_data.m_pipeModelParameters.m_endNodeStrands, internode.m_data.m_cellCount);
-				}
-				for (int i = 0; i < strandCount; i++) {
+				for (int i = 0; i < m_shootSkeleton.m_data.m_pipeModelParameters.m_endNodeStrands; i++) {
 					const auto newPipeHandle = pipeGroup.AllocatePipe();
 					const auto newPipeSegmentHandle = pipeGroup.Extend(newPipeHandle);
 					const auto newStartParticleHandle = frontPhysics2D.AllocateParticle();
@@ -1213,12 +1210,7 @@ void TreeModel::InitializeProfiles()
 				parentNodeToRootChain.emplace_back(walker);
 				walker = m_shootSkeleton.PeekNode(walker).GetParentHandle();
 			}
-			auto strandCount = m_shootSkeleton.m_data.m_pipeModelParameters.m_endNodeStrands;
-			if (internode.RefChildHandles().empty())
-			{
-				strandCount = glm::max(m_shootSkeleton.m_data.m_pipeModelParameters.m_endNodeStrands, internode.m_data.m_cellCount);
-			}
-			for (int i = 0; i < strandCount; i++) {
+			for (int i = 0; i < m_shootSkeleton.m_data.m_pipeModelParameters.m_endNodeStrands; i++) {
 				const auto pipeHandle = pipeGroup.AllocatePipe();
 				for (auto it = parentNodeToRootChain.rbegin(); it != parentNodeToRootChain.rend(); ++it) {
 					const auto newPipeSegmentHandle = pipeGroup.Extend(pipeHandle);
@@ -1258,7 +1250,61 @@ void TreeModel::InitializeProfiles()
 			}
 		}
 	}
+	
+	for (const auto& internodeHandle : sortedInternodeList)
+	{
+		auto& internode = m_shootSkeleton.RefNode(internodeHandle);
+		auto& frontPhysics2D = internode.m_data.m_frontProfile;
+		auto& backPhysics2D = internode.m_data.m_backProfile;
+		if(!internode.RefChildHandles().empty()) continue;
+		if(internode.m_data.m_pipeSize <= frontPhysics2D.RefParticles().size()) continue;
+		const auto extraStrands = internode.m_data.m_pipeSize - frontPhysics2D.RefParticles().size();
+		std::vector<NodeHandle> parentNodeToRootChain;
+		NodeHandle walker = internode.GetParentHandle();
+		while (walker >= 0)
+		{
+			parentNodeToRootChain.emplace_back(walker);
+			walker = m_shootSkeleton.PeekNode(walker).GetParentHandle();
+		}
+		for (int i = 0; i < extraStrands; i++) {
+			const auto pipeHandle = pipeGroup.AllocatePipe();
+			for (auto it = parentNodeToRootChain.rbegin(); it != parentNodeToRootChain.rend(); ++it) {
+				const auto newPipeSegmentHandle = pipeGroup.Extend(pipeHandle);
+				auto& nodeOnChain = m_shootSkeleton.RefNode(*it);
+				const auto newStartParticleHandle = nodeOnChain.m_data.m_frontProfile.AllocateParticle();
+				auto& newStartParticle = nodeOnChain.m_data.m_frontProfile.RefParticle(newStartParticleHandle);
+				newStartParticle.m_data.m_pipeHandle = pipeHandle;
+				newStartParticle.m_data.m_pipeSegmentHandle = newPipeSegmentHandle;
+				newStartParticle.m_data.m_base = false;
+				const auto newEndParticleHandle = nodeOnChain.m_data.m_backProfile.AllocateParticle();
+				auto& newEndParticle = nodeOnChain.m_data.m_backProfile.RefParticle(newEndParticleHandle);
+				newEndParticle.m_data.m_pipeHandle = pipeHandle;
+				newEndParticle.m_data.m_pipeSegmentHandle = newPipeSegmentHandle;
+				newEndParticle.m_data.m_base = false;
 
+				auto& newSegment = pipeGroup.RefPipeSegment(newPipeSegmentHandle);
+				newSegment.m_data.m_nodeHandle = *it;
+				newSegment.m_data.m_frontProfileParticleHandle = newStartParticleHandle;
+				newSegment.m_data.m_backProfileParticleHandle = newEndParticleHandle;
+			}
+			const auto newPipeSegmentHandle = pipeGroup.Extend(pipeHandle);
+			const auto newStartParticleHandle = frontPhysics2D.AllocateParticle();
+			auto& newStartParticle = frontPhysics2D.RefParticle(newStartParticleHandle);
+			newStartParticle.m_data.m_pipeHandle = pipeHandle;
+			newStartParticle.m_data.m_pipeSegmentHandle = newPipeSegmentHandle;
+			newStartParticle.m_data.m_base = true;
+			const auto newEndParticleHandle = backPhysics2D.AllocateParticle();
+			auto& newEndParticle = backPhysics2D.RefParticle(newEndParticleHandle);
+			newEndParticle.m_data.m_pipeHandle = pipeHandle;
+			newEndParticle.m_data.m_pipeSegmentHandle = newPipeSegmentHandle;
+			newEndParticle.m_data.m_base = true;
+
+			auto& newSegment = pipeGroup.RefPipeSegment(newPipeSegmentHandle);
+			newSegment.m_data.m_nodeHandle = internodeHandle;
+			newSegment.m_data.m_frontProfileParticleHandle = newStartParticleHandle;
+			newSegment.m_data.m_backProfileParticleHandle = newEndParticleHandle;
+		}
+	}
 	for (const auto& internodeHandle : sortedInternodeList)
 	{
 		auto& internode = m_shootSkeleton.RefNode(internodeHandle);
@@ -1276,7 +1322,7 @@ void TreeModel::InitializeProfiles()
 		{
 			internode.m_data.m_backParticleMap.insert({ particle.m_data.m_pipeHandle, particle.GetHandle() });
 		}
-		internode.m_data.m_cellCount = internode.m_data.m_frontProfile.RefParticles().size();
+		internode.m_data.m_pipeSize = startPhysics2D.RefParticles().size();
 	}
 	m_shootSkeleton.m_data.m_numOfParticles = 0;
 	for (const auto& internodeHandle : sortedInternodeList)

@@ -185,7 +185,6 @@ void EcoSysLabLayer::Visualization() {
 				const auto& treeSkeleton = tree->m_treeModel.PeekShootSkeleton(tree->m_treeVisualizer.m_checkpointIteration);
 				switch (static_cast<OperatorMode>(m_operatorMode))
 				{
-
 				case OperatorMode::Select: {
 					if (editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Press) {
 						if (treeVisualizer.RayCastSelection(m_visualizationCamera, m_visualizationCameraMousePosition, treeSkeleton, globalTransform)) {
@@ -204,11 +203,26 @@ void EcoSysLabLayer::Visualization() {
 							pruningInternode.m_info.m_length *= treeVisualizer.m_selectedInternodeLengthFactor;
 							treeVisualizer.m_selectedInternodeLengthFactor = 1.0f;
 							for (auto& bud : pruningInternode.m_data.m_buds) {
-								bud.m_status = BudStatus::Died;
+								bud.m_status = BudStatus::Removed;
 							}
 							skeleton.SortLists();
 							treeVisualizer.m_checkpointIteration = treeModel.CurrentIteration();
 							treeVisualizer.m_needUpdate = true;
+							if (m_autoGenerateMeshAfterEditing)
+							{
+								tree->InitializeMeshRenderer(m_meshGeneratorSettings, -1);
+							}
+							if (m_autoGenerateStrandsAfterEditing || m_autoGenerateStrandMeshAfterEditing)
+							{
+								if (m_autoGenerateStrandsAfterEditing) {
+									auto strands = tree->GenerateStrands();
+									tree->InitializeStrandRenderer(strands);
+								}
+								if (m_autoGenerateStrandMeshAfterEditing)
+								{
+									tree->InitializeMeshRendererPipe(m_pipeMeshGeneratorSettings);
+								}
+							}
 						}
 					}
 					else if (editorLayer->GetKey(GLFW_KEY_ESCAPE) == KeyActionType::Press)
