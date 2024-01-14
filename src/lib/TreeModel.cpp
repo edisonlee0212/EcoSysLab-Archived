@@ -1870,124 +1870,6 @@ operator-(const EvoEngine::StrandPoint& lhs, const EvoEngine::StrandPoint& rhs) 
 	return retVal;
 }
 
-struct CubicBSplineInterpolation {
-	CubicBSplineInterpolation() {}
-
-	CubicBSplineInterpolation(const StrandPoint q[4]) {
-		// pre-transform control points for fast evaluation
-		m_p[0] = (q[2] + q[0]) / 6 + q[1] * (4.0f / 6.0f);
-		m_p[1] = q[2] - q[0];
-		m_p[2] = q[2] - q[1];
-		m_p[3] = q[3] - q[1];
-	}
-
-	static glm::vec3 terms(float u) {
-		float uu = u * u;
-		float u3 = (1.0f / 6.0f) * uu * u;
-		return { u3 + 0.5f * (u - uu), uu - 4 * u3, u3 };
-	}
-
-	glm::vec4 color(float u) const {
-		glm::vec3 q = terms(u);
-		return m_p[0].m_color + q.x * m_p[1].m_color + q.y * m_p[2].m_color + q.z * m_p[3].m_color;
-	}
-
-	glm::vec2 texCoord(float u) const {
-		glm::vec3 q = terms(u);
-		return glm::vec2(m_p[0].m_texCoord + q.x * m_p[1].m_texCoord + q.y * m_p[2].m_texCoord + q.z * m_p[3].m_texCoord, 0.0f);
-	}
-
-	glm::vec3 position(float u) const {
-		glm::vec3 q = terms(u);
-		return m_p[0].m_position + q.x * m_p[1].m_position + q.y * m_p[2].m_position + q.z * m_p[3].m_position;
-	}
-
-	float radius(float u) const {
-		return m_p[0].m_thickness +
-			u * (m_p[1].m_thickness / 2.0f +
-				u * ((m_p[2].m_thickness - m_p[1].m_thickness / 2.0f) +
-					u * (m_p[1].m_thickness - 4.0f * m_p[2].m_thickness + m_p[3].m_thickness) / 6.0f));
-	}
-
-	float min_radius(float u1, float u2) const {
-		// a + 2 b u - c u^2
-		float a = m_p[1].m_thickness;
-		float b = 2.0f * m_p[2].m_thickness - m_p[1].m_thickness;
-		float c = 4.0f * m_p[2].m_thickness - m_p[1].m_thickness - m_p[3].m_thickness;
-		float rmin = fminf(radius(u1), radius(u2));
-		if (fabsf(c) < 1e-5f) {
-			float root1 = glm::clamp(-0.5f * a / b, u1, u2);
-			return fminf(rmin, radius(root1));
-		}
-		else {
-			float det = b * b + a * c;
-			det = det <= 0.0f ? 0.0f : sqrt(det);
-			float root1 = glm::clamp((b + det) / c, u1, u2);
-			float root2 = glm::clamp((b - det) / c, u1, u2);
-			return fminf(rmin, fminf(radius(root1), radius(root2)));
-		}
-	}
-
-	float max_radius(float u1, float u2) const {
-		if (!m_p[1].m_thickness && !m_p[2].m_thickness && !m_p[3].m_thickness)
-			return m_p[0].m_thickness;  // a quick bypass for constant width
-		// a + 2 b u - c u^2
-		float a = m_p[1].m_thickness;
-		float b = 2 * m_p[2].m_thickness - m_p[1].m_thickness;
-		float c = 4 * m_p[2].m_thickness - m_p[1].m_thickness - m_p[3].m_thickness;
-		float rmax = fmaxf(radius(u1), radius(u2));
-		if (fabsf(c) < 1e-5f) {
-			float root1 = glm::clamp(-0.5f * a / b, u1, u2);
-			return fmaxf(rmax, radius(root1));
-		}
-		else {
-			float det = b * b + a * c;
-			det = det <= 0.0f ? 0.0f : sqrt(det);
-			float root1 = glm::clamp((b + det) / c, u1, u2);
-			float root2 = glm::clamp((b - det) / c, u1, u2);
-			return fmaxf(rmax, fmaxf(radius(root1), radius(root2)));
-		}
-	}
-
-	glm::vec3 velocity(float u) const {
-		// adjust u to avoid problems with tripple knots.
-		if (u == 0)
-			u = 0.000001f;
-		if (u == 1)
-			u = 0.999999f;
-		float v = 1 - u;
-		return 0.5f * v * v * m_p[1].m_position + 2.0f * v * u * m_p[2].m_position + 0.5f * u * u * m_p[3].m_position;
-	}
-
-	float velocity_radius(float u) const {
-		// adjust u to avoid problems with tripple knots.
-		if (u == 0)
-			u = 0.000001f;
-		if (u == 1)
-			u = 0.999999f;
-		float v = 1.0f - u;
-		return 0.5f * v * v * m_p[1].m_thickness + 2.0f * v * u * m_p[2].m_thickness + 0.5f * u * u * m_p[3].m_thickness;
-	}
-
-	glm::vec3 acceleration(float u) const {
-		return 2.0f * m_p[2].m_position - m_p[1].m_position +
-			(m_p[1].m_position - 4.0f * m_p[2].m_position + m_p[3].m_position) * u;
-	}
-
-	float acceleration_radius(float u) const {
-		return 2.0f * m_p[2].m_thickness - m_p[1].m_thickness +
-			(m_p[1].m_thickness - 4.0f * m_p[2].m_thickness + m_p[3].m_thickness) * u;
-	}
-
-	float derivative_of_radius(float u) const {
-		float v = 1.0f - u;
-		return 0.5f * v * v * m_p[1].m_thickness + 2.0f * v * u * m_p[2].m_thickness + 0.5f * u * u * m_p[3].m_thickness;
-	}
-
-	StrandPoint m_p[4];  // pre-transformed "control points" for fast evaluation
-};
-
-
 glm::vec3 TreeModel::InterpolatePipeSegmentPosition(const PipeSegmentHandle pipeSegmentHandle, const float a) const
 {
 	assert(pipeSegmentHandle >= 0);
@@ -1997,37 +1879,38 @@ glm::vec3 TreeModel::InterpolatePipeSegmentPosition(const PipeSegmentHandle pipe
 	const auto& pipeSegment = pipeGroup.PeekPipeSegment(pipeSegmentHandle);
 	const auto& pipe = pipeGroup.PeekPipe(pipeSegment.GetPipeHandle());
 	auto& baseInfo = pipe.m_info.m_baseInfo;
-	StrandPoint q[4] {};
+
 	const auto& pipeSegmentHandles = pipe.PeekPipeSegmentHandles();
 
-	q[2].m_thickness = pipeSegment.m_info.m_thickness;
-	q[2].m_position = pipeSegment.m_info.m_globalPosition;
+	glm::vec3 p[4];
+	
+	p[2] = pipeSegment.m_info.m_globalPosition;
 	if(pipeSegmentHandle == pipeSegmentHandles.front())
 	{
-		q[1].m_position = baseInfo.m_globalPosition;
-		q[0] = q[1] * 2.0f - q[2];
+		p[1] = baseInfo.m_globalPosition;
+		p[0] = p[1] * 2.0f - p[2];
 	}else if(pipeSegmentHandle == pipeSegmentHandles.at(1))
 	{
-		q[0].m_position = baseInfo.m_globalPosition;
-		q[1].m_position = pipeGroup.PeekPipeSegment(pipeSegmentHandles.front()).m_info.m_globalPosition;
+		p[0] = baseInfo.m_globalPosition;
+		p[1] = pipeGroup.PeekPipeSegment(pipeSegmentHandles.front()).m_info.m_globalPosition;
 	}else
 	{
 		const auto& prevSegment = pipeGroup.PeekPipeSegment(pipeSegment.GetPrevHandle());
-		q[1].m_position = prevSegment.m_info.m_globalPosition;
+		p[1] = prevSegment.m_info.m_globalPosition;
 		const auto& prevPrevSegment = pipeGroup.PeekPipeSegment(prevSegment.GetPrevHandle());
-		q[0].m_position = prevPrevSegment.m_info.m_globalPosition;
+		p[0] = prevPrevSegment.m_info.m_globalPosition;
 	}
 	if(pipeSegmentHandle == pipeSegmentHandles.back())
 	{
-		q[3] = q[2] * 2.0f - q[1];
+		p[3] = p[2] * 2.0f - p[1];
 	}else
 	{
 		const auto& nextSegment = pipeGroup.PeekPipeSegment(pipeSegment.GetNextHandle());
-		q[3].m_position = nextSegment.m_info.m_globalPosition;
+		p[3] = nextSegment.m_info.m_globalPosition;
 	}
-
-	const CubicBSplineInterpolation interpolation(q);
-	return interpolation.position(a);
+	glm::vec3 position, tangent;
+	Strands::CubicInterpolation(p[0], p[1], p[2], p[3], position, tangent, a);
+	return position;
 }
 
 glm::vec3 TreeModel::InterpolatePipeSegmentAxis(PipeSegmentHandle pipeSegmentHandle, float a) const
@@ -2039,39 +1922,40 @@ glm::vec3 TreeModel::InterpolatePipeSegmentAxis(PipeSegmentHandle pipeSegmentHan
 	const auto& pipeSegment = pipeGroup.PeekPipeSegment(pipeSegmentHandle);
 	const auto& pipe = pipeGroup.PeekPipe(pipeSegment.GetPipeHandle());
 	auto& baseInfo = pipe.m_info.m_baseInfo;
-	StrandPoint q[4]{};
+
 	const auto& pipeSegmentHandles = pipe.PeekPipeSegmentHandles();
 
-	q[2].m_thickness = pipeSegment.m_info.m_thickness;
-	q[2].m_position = pipeSegment.m_info.m_globalPosition;
+	glm::vec3 p[4];
+
+	p[2] = pipeSegment.m_info.m_globalPosition;
 	if (pipeSegmentHandle == pipeSegmentHandles.front())
 	{
-		q[1].m_position = baseInfo.m_globalPosition;
-		q[0] = q[1] * 2.0f - q[2];
+		p[1] = baseInfo.m_globalPosition;
+		p[0] = p[1] * 2.0f - p[2];
 	}
 	else if (pipeSegmentHandle == pipeSegmentHandles.at(1))
 	{
-		q[0].m_position = baseInfo.m_globalPosition;
-		q[1].m_position = pipeGroup.PeekPipeSegment(pipeSegmentHandles.front()).m_info.m_globalPosition;
+		p[0] = baseInfo.m_globalPosition;
+		p[1] = pipeGroup.PeekPipeSegment(pipeSegmentHandles.front()).m_info.m_globalPosition;
 	}
 	else
 	{
 		const auto& prevSegment = pipeGroup.PeekPipeSegment(pipeSegment.GetPrevHandle());
-		q[1].m_position = prevSegment.m_info.m_globalPosition;
+		p[1] = prevSegment.m_info.m_globalPosition;
 		const auto& prevPrevSegment = pipeGroup.PeekPipeSegment(prevSegment.GetPrevHandle());
-		q[0].m_position = prevPrevSegment.m_info.m_globalPosition;
+		p[0] = prevPrevSegment.m_info.m_globalPosition;
 	}
 	if (pipeSegmentHandle == pipeSegmentHandles.back())
 	{
-		q[3] = q[2] * 2.0f - q[1];
+		p[3] = p[2] * 2.0f - p[1];
 	}
 	else
 	{
 		const auto& nextSegment = pipeGroup.PeekPipeSegment(pipeSegment.GetNextHandle());
-		q[3].m_position = nextSegment.m_info.m_globalPosition;
+		p[3] = nextSegment.m_info.m_globalPosition;
 	}
-
-	const CubicBSplineInterpolation interpolation(q);
-	return glm::normalize(interpolation.velocity(a));
+	glm::vec3 position, tangent;
+	Strands::CubicInterpolation(p[0], p[1], p[2], p[3], position, tangent, a);
+	return tangent;
 }
 #pragma endregion
