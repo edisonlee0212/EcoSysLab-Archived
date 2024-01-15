@@ -148,9 +148,9 @@ namespace EcoSysLab
 
 #pragma region Pipe Model
 		bool m_parallelScheduling = true;
-		ParticlePhysicsSettings m_particlePhysicsSettings{};
+		
 		PipeModelPipeGroup m_pipeGroup {};
-		PipeModelParameters m_pipeModelParameters{};
+		
 		float m_profileCalculationTime = 0.0f;
 		int m_numOfParticles = 0;
 #pragma endregion

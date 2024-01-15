@@ -139,8 +139,8 @@ namespace EcoSysLab {
 
 
 #pragma region Pipe model
-		void InitializeProfiles();
-		void CalculateProfiles();
+		void InitializeProfiles(const PipeModelParameters& pipeModelParameters);
+		void CalculateProfiles(const PipeModelParameters& pipeModelParameters);
 		void CalculateProfile(NodeHandle nodeHandle, const PipeModelParameters& pipeModelParameters, bool scheduling);
 		void Wait(NodeHandle nodeHandle);
 
@@ -148,12 +148,14 @@ namespace EcoSysLab {
 		void MergeTask(NodeHandle nodeHandle, const PipeModelParameters& pipeModelParameters);
 		void CopyFrontToBackTask(NodeHandle nodeHandle);
 		void CalculateShiftTask(NodeHandle nodeHandle, const PipeModelParameters& pipeModelParameters);
-		void ApplyProfile(
+		void ApplyProfile(const PipeModelParameters& pipeModelParameters,
 			const glm::vec3& globalPosition,
 			const glm::quat& globalRotation,
-			const PipeProfile<CellParticlePhysicsData>& profile, const std::unordered_map<PipeHandle, ParticleHandle>& map);
-		void ApplyProfiles();
-		void CalculatePipeProfileAdjustedTransforms();
+			const PipeProfile<CellParticlePhysicsData>& profile, 
+			const std::unordered_map<PipeHandle, ParticleHandle>& map, 
+			float pipeRadius);
+		void ApplyProfiles(const PipeModelParameters& pipeModelParameters);
+		void CalculatePipeProfileAdjustedTransforms(const PipeModelParameters& pipeModelParameters);
 		glm::vec3 InterpolatePipeSegmentPosition(PipeSegmentHandle pipeSegmentHandle, float a) const;
 		glm::vec3 InterpolatePipeSegmentAxis(PipeSegmentHandle pipeSegmentHandle, float a) const;
 		

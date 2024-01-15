@@ -1121,7 +1121,7 @@ void TreeModel::ExportTreeIOSkeleton(treeio::ArrayTree& arrayTree) const
 	}
 }
 
-void TreeModel::InitializeProfiles()
+void TreeModel::InitializeProfiles(const PipeModelParameters& pipeModelParameters)
 {
 	m_shootSkeleton.m_data.m_pipeGroup = {};
 	auto& pipeGroup = m_shootSkeleton.m_data.m_pipeGroup;
@@ -1135,8 +1135,8 @@ void TreeModel::InitializeProfiles()
 
 		frontPhysics2D.Reset(0.001f);
 		backPhysics2D.Reset(0.001f);
-		frontPhysics2D.m_settings = m_shootSkeleton.m_data.m_particlePhysicsSettings;
-		backPhysics2D.m_settings = m_shootSkeleton.m_data.m_particlePhysicsSettings;
+		frontPhysics2D.m_settings = pipeModelParameters.m_profilePhysicsSettings;
+		backPhysics2D.m_settings = pipeModelParameters.m_profilePhysicsSettings;
 
 		bool onlyChild = true;
 		if (internode.GetParentHandle() != -1)
@@ -1148,7 +1148,7 @@ void TreeModel::InitializeProfiles()
 		{
 			if (internode.GetParentHandle() == -1)
 			{
-				for (int i = 0; i < m_shootSkeleton.m_data.m_pipeModelParameters.m_endNodeStrands; i++) {
+				for (int i = 0; i < pipeModelParameters.m_endNodeStrands; i++) {
 					const auto newPipeHandle = pipeGroup.AllocatePipe();
 					const auto newPipeSegmentHandle = pipeGroup.Extend(newPipeHandle);
 					const auto newStartParticleHandle = frontPhysics2D.AllocateParticle();
@@ -1203,7 +1203,7 @@ void TreeModel::InitializeProfiles()
 				parentNodeToRootChain.emplace_back(walker);
 				walker = m_shootSkeleton.PeekNode(walker).GetParentHandle();
 			}
-			for (int i = 0; i < m_shootSkeleton.m_data.m_pipeModelParameters.m_endNodeStrands; i++) {
+			for (int i = 0; i < pipeModelParameters.m_endNodeStrands; i++) {
 				const auto pipeHandle = pipeGroup.AllocatePipe();
 				for (auto it = parentNodeToRootChain.rbegin(); it != parentNodeToRootChain.rend(); ++it) {
 					const auto newPipeSegmentHandle = pipeGroup.Extend(pipeHandle);
@@ -1336,7 +1336,7 @@ void TreeModel::InitializeProfiles()
 			auto& childInternode = m_shootSkeleton.RefNode(childHandle);
 			if (childInternode.m_data.m_maxChild) childInternode.m_data.m_split = false;
 			const auto childSize = static_cast<float>(childInternode.m_data.m_frontParticleMap.size());
-			if (childSize > maxChildSize * m_shootSkeleton.m_data.m_pipeModelParameters.m_overlapThreshold)
+			if (childSize > maxChildSize * pipeModelParameters.m_overlapThreshold)
 			{
 				childInternode.m_data.m_split = true;
 			}
@@ -1349,7 +1349,7 @@ void TreeModel::InitializeProfiles()
 	}
 }
 
-void TreeModel::CalculateProfiles()
+void TreeModel::CalculateProfiles(const PipeModelParameters& pipeModelParameters)
 {
 	const float time = Times::Now();
 	const auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
@@ -1374,7 +1374,7 @@ void TreeModel::CalculateProfiles()
 	if (m_shootSkeleton.m_data.m_parallelScheduling) {
 		for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); ++it)
 		{
-			CalculateProfile(*it, m_shootSkeleton.m_data.m_pipeModelParameters, true);
+			CalculateProfile(*it, pipeModelParameters, true);
 			m_shootSkeleton.m_data.m_numOfParticles += m_shootSkeleton.RefNode(*it).m_data.m_frontProfile.PeekParticles().size();
 		}
 		if (!sortedInternodeList.empty())
@@ -1386,7 +1386,7 @@ void TreeModel::CalculateProfiles()
 	{
 		for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); ++it)
 		{
-			CalculateProfile(*it, m_shootSkeleton.m_data.m_pipeModelParameters, false);
+			CalculateProfile(*it, pipeModelParameters, false);
 			Wait(*it);
 			m_shootSkeleton.m_data.m_numOfParticles += m_shootSkeleton.RefNode(*it).m_data.m_frontProfile.PeekParticles().size();
 		}
@@ -1528,7 +1528,7 @@ void TreeModel::MergeTask(NodeHandle nodeHandle, const PipeModelParameters& pipe
 			nodeStartParticle.SetColor(childParticle.GetColor());
 			nodeEndParticle.SetColor(childParticle.GetColor());
 			auto polarPosition = childParticle.GetPolarPosition();
-			polarPosition.y += glm::radians(m_shootSkeleton.m_data.m_pipeModelParameters.m_branchTwistAngle);
+			polarPosition.y += glm::radians(pipeModelParameters.m_branchTwistAngle);
 			nodeStartParticle.SetPolarPosition(polarPosition);
 			nodeEndParticle.SetPolarPosition(polarPosition);
 
@@ -1552,7 +1552,7 @@ void TreeModel::MergeTask(NodeHandle nodeHandle, const PipeModelParameters& pipe
 		nodeStartParticle.SetColor(mainChildParticle.GetColor());
 		nodeEndParticle.SetColor(mainChildParticle.GetColor());
 		auto polarPosition = mainChildParticle.GetPolarPosition();
-		polarPosition.y += glm::radians(m_shootSkeleton.m_data.m_pipeModelParameters.m_junctionTwistAngle);
+		polarPosition.y += glm::radians(pipeModelParameters.m_junctionTwistAngle);
 		nodeStartParticle.SetPolarPosition(polarPosition);
 		nodeEndParticle.SetPolarPosition(polarPosition);
 
@@ -1591,7 +1591,7 @@ void TreeModel::MergeTask(NodeHandle nodeHandle, const PipeModelParameters& pipe
 					nodeStartParticle.SetColor(childParticle.GetColor());
 					nodeEndParticle.SetColor(childParticle.GetColor());
 					auto polarPosition = childParticle.GetPolarPosition();
-					polarPosition.y += glm::radians(m_shootSkeleton.m_data.m_pipeModelParameters.m_junctionTwistAngle);
+					polarPosition.y += glm::radians(pipeModelParameters.m_junctionTwistAngle);
 					nodeStartParticle.SetPolarPosition(polarPosition);
 					nodeEndParticle.SetPolarPosition(polarPosition);
 					nodeStartParticle.m_enable = true;
@@ -1609,7 +1609,7 @@ void TreeModel::MergeTask(NodeHandle nodeHandle, const PipeModelParameters& pipe
 					nodeStartParticle.SetColor(childParticle.GetColor());
 					nodeEndParticle.SetColor(childParticle.GetColor());
 					auto polarPosition = childParticle.GetPolarPosition();
-					polarPosition.y += glm::radians(m_shootSkeleton.m_data.m_pipeModelParameters.m_junctionTwistAngle);
+					polarPosition.y += glm::radians(pipeModelParameters.m_junctionTwistAngle);
 					nodeStartParticle.SetPolarPosition(polarPosition);
 					nodeEndParticle.SetPolarPosition(polarPosition);
 					nodeStartParticle.m_enable = false;
@@ -1631,7 +1631,6 @@ void TreeModel::MergeTask(NodeHandle nodeHandle, const PipeModelParameters& pipe
 				{
 					direction = glm::vec2(1, 0);
 				}
-				//TODO: Change this to avoid calculating disabled particles!
 				childNode.m_data.m_centerDirectionRadius = childPhysics2D.GetDistanceToCenter(-direction);
 				const auto centerRadius = internodeData.m_frontProfile.GetDistanceToCenter(direction);
 				auto offset = glm::vec2(0.0f);
@@ -1639,6 +1638,9 @@ void TreeModel::MergeTask(NodeHandle nodeHandle, const PipeModelParameters& pipe
 				childNode.m_data.m_offset = offset;
 				for (auto& childParticle : childPhysics2D.RefParticles())
 				{
+					auto polarPosition = childParticle.GetPolarPosition();
+					polarPosition.y += glm::radians(pipeModelParameters.m_junctionTwistAngle);
+					childParticle.SetPolarPosition(polarPosition);
 					childParticle.SetPosition(childParticle.GetPosition() + offset);
 
 					const auto nodeStartParticleHandle = internodeData.m_frontParticleMap.at(childParticle.m_data.m_pipeHandle);
@@ -1647,10 +1649,8 @@ void TreeModel::MergeTask(NodeHandle nodeHandle, const PipeModelParameters& pipe
 					auto& nodeEndParticle = internodeData.m_backProfile.RefParticle(nodeEndParticleHandle);
 					nodeStartParticle.SetColor(childParticle.GetColor());
 					nodeEndParticle.SetColor(childParticle.GetColor());
-					auto polarPosition = childParticle.GetPolarPosition();
-					polarPosition.y += glm::radians(m_shootSkeleton.m_data.m_pipeModelParameters.m_junctionTwistAngle);
-					nodeStartParticle.SetPolarPosition(polarPosition);
-					nodeEndParticle.SetPolarPosition(polarPosition);
+					nodeStartParticle.SetPosition(childParticle.GetPosition());
+					nodeEndParticle.SetPosition(childParticle.GetPosition());
 
 					nodeStartParticle.m_data.m_mainChild = nodeEndParticle.m_data.m_mainChild = false;
 				}
@@ -1694,7 +1694,7 @@ void TreeModel::MergeTask(NodeHandle nodeHandle, const PipeModelParameters& pipe
 				nodeStartParticle.SetColor(childParticle.GetColor());
 				nodeEndParticle.SetColor(childParticle.GetColor());
 				auto polarPosition = childParticle.GetPolarPosition();
-				polarPosition.y += glm::radians(m_shootSkeleton.m_data.m_pipeModelParameters.m_junctionTwistAngle);
+				polarPosition.y += glm::radians(pipeModelParameters.m_junctionTwistAngle);
 				nodeStartParticle.SetPolarPosition(polarPosition);
 				nodeEndParticle.SetPolarPosition(polarPosition);
 
@@ -1744,32 +1744,32 @@ void TreeModel::CalculateShiftTask(NodeHandle nodeHandle, const PipeModelParamet
 	
 }
 
-void TreeModel::ApplyProfile(const glm::vec3& globalPosition, const glm::quat& globalRotation,
+void TreeModel::ApplyProfile(const PipeModelParameters& pipeModelParameters, 
+	const glm::vec3& globalPosition, const glm::quat& globalRotation,
 	const PipeProfile<CellParticlePhysicsData>& profile,
-	const std::unordered_map<PipeHandle, ParticleHandle>& map)
+	const std::unordered_map<PipeHandle, ParticleHandle>& map, float pipeRadius)
 {
 	const auto currentUp = globalRotation * glm::vec3(0, 1, 0);
 	const auto currentLeft = globalRotation * glm::vec3(1, 0, 0);
-	const auto& parameters = m_shootSkeleton.m_data.m_pipeModelParameters;
+	const auto& parameters = pipeModelParameters;
 	for (const auto& [pipeHandle, particleHandle] : map)
 	{
 		const auto& particle = profile.PeekParticle(particleHandle);
 		auto& newPipeSegment = m_shootSkeleton.m_data.m_pipeGroup.RefPipeSegment(particle.m_data.m_pipeSegmentHandle);
-		newPipeSegment.m_info.m_thickness = parameters.m_profileDefaultCellRadius;
+		newPipeSegment.m_info.m_thickness = pipeRadius;
 		newPipeSegment.m_info.m_globalPosition = globalPosition
-			+ parameters.m_profileDefaultCellRadius * particle.GetPosition().x * currentLeft
-			+ parameters.m_profileDefaultCellRadius * particle.GetPosition().y * currentUp;
+			+ pipeRadius * particle.GetPosition().x * currentLeft
+			+ pipeRadius * particle.GetPosition().y * currentUp;
 		newPipeSegment.m_info.m_globalRotation = globalRotation;
 		newPipeSegment.m_info.m_color = particle.IsBoundary() ? parameters.m_boundaryPointColor : parameters.m_contentPointColor;
 		newPipeSegment.m_info.m_isBoundary = particle.IsBoundary();
 	}
 }
 
-void TreeModel::ApplyProfiles()
+void TreeModel::ApplyProfiles(const PipeModelParameters& pipeModelParameters)
 {
 	auto& pipeGroup = m_shootSkeleton.m_data.m_pipeGroup;
 	const auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
-	const auto& parameters = m_shootSkeleton.m_data.m_pipeModelParameters;
 	for (const auto& nodeHandle : sortedInternodeList)
 	{
 		const auto& node = m_shootSkeleton.RefNode(nodeHandle);
@@ -1789,27 +1789,28 @@ void TreeModel::ApplyProfiles()
 		{
 			const auto currentUp = parentGlobalRotation * glm::vec3(0, 1, 0);
 			const auto currentLeft = parentGlobalRotation * glm::vec3(1, 0, 0);
+			const auto baseRadius = pipeModelParameters.m_pipeRadiusDistribution.GetValue(0.0f);
 			for (const auto& [pipeHandle, particleHandle] : node.m_data.m_frontParticleMap)
 			{
 				const auto& particle = node.m_data.m_frontProfile.PeekParticle(particleHandle);
 				auto& pipe = pipeGroup.RefPipe(pipeHandle);
-				pipe.m_info.m_baseInfo.m_thickness = parameters.m_profileDefaultCellRadius;
+				pipe.m_info.m_baseInfo.m_thickness = baseRadius;
 				pipe.m_info.m_baseInfo.m_globalPosition = parentGlobalPosition
-					+ parameters.m_profileDefaultCellRadius * particle.GetPosition().x * currentLeft
-					+ parameters.m_profileDefaultCellRadius * particle.GetPosition().y * currentUp;
+					+ pipe.m_info.m_baseInfo.m_thickness * particle.GetPosition().x * currentLeft
+					+ pipe.m_info.m_baseInfo.m_thickness * particle.GetPosition().y * currentUp;
 				pipe.m_info.m_baseInfo.m_globalRotation = parentGlobalRotation;
 				pipe.m_info.m_baseInfo.m_isBoundary = particle.IsBoundary();
-				pipe.m_info.m_baseInfo.m_color = particle.IsBoundary() ? parameters.m_boundaryPointColor : parameters.m_contentPointColor;
+				pipe.m_info.m_baseInfo.m_color = particle.IsBoundary() ? pipeModelParameters.m_boundaryPointColor : pipeModelParameters.m_contentPointColor;
 			}
 		}
-		ApplyProfile(node.m_data.m_adjustedGlobalPosition, node.m_data.m_adjustedGlobalRotation, node.m_data.m_backProfile, node.m_data.m_backParticleMap);
+		ApplyProfile(pipeModelParameters, node.m_data.m_adjustedGlobalPosition, node.m_data.m_adjustedGlobalRotation, node.m_data.m_backProfile, node.m_data.m_backParticleMap, node.m_data.m_pipeCellRadius);
 	}
 }
 
-void TreeModel::CalculatePipeProfileAdjustedTransforms()
+void TreeModel::CalculatePipeProfileAdjustedTransforms(const PipeModelParameters& pipeModelParameters)
 {
-	const auto& pipeModelParameters = m_shootSkeleton.m_data.m_pipeModelParameters;
 	const auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
+	float maxRootDistance = 0.0f;
 	for (const auto& nodeHandle : sortedInternodeList)
 	{
 		auto& node = m_shootSkeleton.RefNode(nodeHandle);
@@ -1818,12 +1819,15 @@ void TreeModel::CalculatePipeProfileAdjustedTransforms()
 		{
 			node.m_data.m_adjustedGlobalPosition = node.m_info.GetGlobalEndPosition();
 			node.m_data.m_adjustedGlobalRotation = node.m_info.m_regulatedGlobalRotation;
+			maxRootDistance = node.m_info.m_endDistance + node.m_info.m_length;
+
+			node.m_data.m_pipeCellRadius = pipeModelParameters.m_pipeRadiusDistribution.GetValue(node.m_info.m_rootDistance / maxRootDistance);
 			continue;
 		}
 		const auto& parentNode = m_shootSkeleton.PeekNode(parentHandle);
 		glm::vec3 parentGlobalPosition = parentNode.m_data.m_adjustedGlobalPosition;
 		glm::quat parentGlobalRotation = parentNode.m_data.m_adjustedGlobalRotation;
-
+		node.m_data.m_pipeCellRadius = pipeModelParameters.m_pipeRadiusDistribution.GetValue(node.m_info.m_rootDistance / maxRootDistance);
 		node.m_data.m_adjustedGlobalPosition = parentGlobalPosition + node.m_info.GetGlobalEndPosition() - parentNode.m_info.GetGlobalEndPosition();
 		node.m_data.m_adjustedGlobalRotation = parentGlobalRotation * (glm::inverse(parentNode.m_info.m_regulatedGlobalRotation) * node.m_info.m_regulatedGlobalRotation);
 
@@ -1842,13 +1846,13 @@ void TreeModel::CalculatePipeProfileAdjustedTransforms()
 			const float innerRadius = node.m_data.m_frontProfile.GetDistanceToCenter(-glm::normalize(node.m_data.m_offset));
 			const auto offsetDirection = glm::normalize(node.m_data.m_offset);
 			const auto newOffset = (offsetLength + innerRadius + (outerRadius - outerRadius * cosFront) * pipeModelParameters.m_rotationPushRatio) * offsetDirection;
-			node.m_data.m_adjustedGlobalPosition += parentUp * newOffset.y * pipeModelParameters.m_sidePushRatio * pipeModelParameters.m_profileDefaultCellRadius;
-			node.m_data.m_adjustedGlobalPosition += parentLeft * newOffset.x * pipeModelParameters.m_sidePushRatio * pipeModelParameters.m_profileDefaultCellRadius;
-			node.m_data.m_adjustedGlobalPosition += parentFront * (sinFront * outerRadius * pipeModelParameters.m_rotationPushRatio) * pipeModelParameters.m_profileDefaultCellRadius;
+			node.m_data.m_adjustedGlobalPosition += parentUp * newOffset.y * pipeModelParameters.m_sidePushRatio * node.m_data.m_pipeCellRadius;
+			node.m_data.m_adjustedGlobalPosition += parentLeft * newOffset.x * pipeModelParameters.m_sidePushRatio * node.m_data.m_pipeCellRadius;
+			node.m_data.m_adjustedGlobalPosition += parentFront * (sinFront * outerRadius * pipeModelParameters.m_rotationPushRatio) * node.m_data.m_pipeCellRadius;
 		}
-		node.m_data.m_adjustedGlobalPosition += parentUp * node.m_data.m_shift.y * pipeModelParameters.m_shiftPushRatio * pipeModelParameters.m_profileDefaultCellRadius;
-		node.m_data.m_adjustedGlobalPosition += parentLeft * node.m_data.m_shift.x * pipeModelParameters.m_shiftPushRatio * pipeModelParameters.m_profileDefaultCellRadius;
-		node.m_data.m_adjustedGlobalPosition += parentFront * sinFront * maxDistanceToCenter * pipeModelParameters.m_frontPushRatio * pipeModelParameters.m_profileDefaultCellRadius;
+		node.m_data.m_adjustedGlobalPosition += parentUp * node.m_data.m_shift.y * pipeModelParameters.m_shiftPushRatio * node.m_data.m_pipeCellRadius;
+		node.m_data.m_adjustedGlobalPosition += parentLeft * node.m_data.m_shift.x * pipeModelParameters.m_shiftPushRatio * node.m_data.m_pipeCellRadius;
+		node.m_data.m_adjustedGlobalPosition += parentFront * sinFront * maxDistanceToCenter * pipeModelParameters.m_frontPushRatio * node.m_data.m_pipeCellRadius;
 	}
 }
 

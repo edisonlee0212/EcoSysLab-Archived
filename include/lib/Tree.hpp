@@ -14,6 +14,8 @@ namespace EcoSysLab {
 		void PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescriptor);
 		ShootGrowthController m_shootGrowthController{};
 	public:
+		PipeModelParameters m_pipeModelParameters{};
+
 		static void SerializeTreeGrowthSettings(const TreeGrowthSettings& treeGrowthSettings, YAML::Emitter& out);
 		static void DeserializeTreeGrowthSettings(TreeGrowthSettings& treeGrowthSettings, const YAML::Node& param);
 		static bool OnInspectTreeGrowthSettings(TreeGrowthSettings& treeGrowthSettings);

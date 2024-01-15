@@ -1,4 +1,6 @@
 #pragma once
+#include <Plot2D.hpp>
+
 #include "PipeModelData.hpp"
 #include "PipeProfile.hpp"
 using namespace EvoEngine;
@@ -8,7 +10,6 @@ namespace EcoSysLab
 	{
 		float m_boundaryStrength = 40000;
 		float m_centerAttractionStrength = 4000;
-		float m_profileDefaultCellRadius = 0.002f;
 		int m_maxSimulationIterationCellFactor = 5;
 		int m_timeout = 500;
 		int m_timeoutWithBoundaries = 1500;
@@ -32,6 +33,8 @@ namespace EcoSysLab
 		float m_frontPushRatio = 1.0f;
 		float m_rotationPushRatio = 0.5f;
 
-		
+		PlottedDistribution<float> m_pipeRadiusDistribution {};
+
+		ParticlePhysicsSettings m_profilePhysicsSettings{};
 	};
 }

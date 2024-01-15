@@ -314,14 +314,16 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	*/
 
 
-	auto& pipeModelParameters = m_treeModel.RefShootSkeleton().m_data.m_pipeModelParameters;
-	auto& physicsSettings = m_treeModel.RefShootSkeleton().m_data.m_particlePhysicsSettings;
-	if (ImGui::TreeNodeEx("Physics settings", ImGuiTreeNodeFlags_DefaultOpen))
+	auto& pipeModelParameters = m_pipeModelParameters;
+	if (ImGui::TreeNodeEx("Profile settings", ImGuiTreeNodeFlags_DefaultOpen))
 	{
-		ImGui::DragFloat("Default profile cell radius", &pipeModelParameters.m_profileDefaultCellRadius, 0.001f, 0.001f, 1.0f);
-		ImGui::DragFloat("Physics damping", &physicsSettings.m_damping, 0.01f, 0.0f, 1.0f);
-		ImGui::DragFloat("Physics max speed", &physicsSettings.m_maxSpeed, 0.01f, 0.0f, 100.0f);
-		ImGui::DragFloat("Physics particle softness", &physicsSettings.m_particleSoftness, 0.01f, 0.0f, 1.0f);
+		if(ImGui::TreeNode("Physics settings"))
+		{
+			ImGui::DragFloat("Physics damping", &pipeModelParameters.m_profilePhysicsSettings.m_damping, 0.01f, 0.0f, 1.0f);
+			ImGui::DragFloat("Physics max speed", &pipeModelParameters.m_profilePhysicsSettings.m_maxSpeed, 0.01f, 0.0f, 100.0f);
+			ImGui::DragFloat("Physics particle softness", &pipeModelParameters.m_profilePhysicsSettings.m_particleSoftness, 0.01f, 0.0f, 1.0f);
+			ImGui::TreePop();
+		}
 		ImGui::DragFloat("Boundary strength", &pipeModelParameters.m_boundaryStrength, 1000.f, 0.0f, 100000.0f);
 		ImGui::DragFloat("Center attraction strength", &pipeModelParameters.m_centerAttractionStrength, 100.f, 0.0f, 10000.0f);
 		ImGui::DragInt("Max iteration cell factor", &pipeModelParameters.m_maxSimulationIterationCellFactor, 1, 0, 500);
@@ -334,6 +336,12 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	ImGui::DragFloat("Branch Twist Angle", &pipeModelParameters.m_branchTwistAngle, 0.1f, 0.0f, 360.0f);
 	ImGui::DragFloat("Junction Twist Angle", &pipeModelParameters.m_junctionTwistAngle, 0.1f, 0.0f, 360.0f);
 	ImGui::Checkbox("Pre-merge", &pipeModelParameters.m_preMerge);
+
+	static PlottedDistributionSettings strandThickness = { 0.001f,
+													{0.001f, true, true, ""},
+													{0.001f, true, true, ""},
+													"" };
+	m_pipeModelParameters.m_pipeRadiusDistribution.OnInspect("Strand Thickness", strandThickness);
 
 	ImGui::Text(("Last calculation time: " + std::to_string(m_treeModel.PeekShootSkeleton().m_data.m_profileCalculationTime)).c_str());
 	ImGui::Text(("Strand count: " + std::to_string(m_treeModel.PeekShootSkeleton().m_data.m_pipeGroup.PeekPipes().size())).c_str());
@@ -401,6 +409,11 @@ void Tree::Update()
 
 void Tree::OnCreate() {
 	m_treeVisualizer.Initialize();
+
+	m_pipeModelParameters.m_pipeRadiusDistribution.m_mean = { 0.0f, 0.002f,
+								Curve2D(0.5f, 0.5f, {0, 0}, {1, 1}) };
+	m_pipeModelParameters.m_pipeRadiusDistribution.m_deviation = {
+		0.0f, 1.0f, Curve2D(0.0f, 0.0f, {0, 0}, {1, 1}) };
 }
 
 void Tree::OnDestroy() {
@@ -432,16 +445,16 @@ bool Tree::OnInspectTreeGrowthSettings(TreeGrowthSettings& treeGrowthSettings)
 
 void Tree::PrepareProfiles()
 {
-	m_treeModel.InitializeProfiles();
-	m_treeModel.CalculateProfiles();
+	m_treeModel.InitializeProfiles(m_pipeModelParameters);
+	m_treeModel.CalculateProfiles(m_pipeModelParameters);
 }
 
 std::shared_ptr<Strands> Tree::GenerateStrands()
 {
 	const auto strandsAsset = ProjectManager::CreateTemporaryAsset<Strands>();
-	m_treeModel.CalculatePipeProfileAdjustedTransforms();
-	m_treeModel.ApplyProfiles();
-	const auto& parameters = m_treeModel.RefShootSkeleton().m_data.m_pipeModelParameters;
+	m_treeModel.CalculatePipeProfileAdjustedTransforms(m_pipeModelParameters);
+	m_treeModel.ApplyProfiles(m_pipeModelParameters);
+	const auto& parameters = m_pipeModelParameters;
 	std::vector<glm::uint> strandsList;
 	std::vector<StrandPoint> points;
 	m_treeModel.RefShootSkeleton().m_data.m_pipeGroup.BuildStrands(parameters.m_controlPointRatio, strandsList, points, parameters.m_triplePoints, parameters.m_nodeMaxCount);
@@ -580,9 +593,9 @@ std::shared_ptr<Mesh> Tree::GenerateFoliageMesh(const TreeMeshGeneratorSettings&
 
 std::shared_ptr<Mesh> Tree::GeneratePipeMesh(const TreePipeMeshGeneratorSettings& treePipeMeshGeneratorSettings)
 {
-	m_treeModel.CalculatePipeProfileAdjustedTransforms();
-	m_treeModel.ApplyProfiles();
-	const auto& parameters = m_treeModel.RefShootSkeleton().m_data.m_pipeModelParameters;
+	m_treeModel.CalculatePipeProfileAdjustedTransforms(m_pipeModelParameters);
+	m_treeModel.ApplyProfiles(m_pipeModelParameters);
+	const auto& parameters = m_pipeModelParameters;
 	std::vector<glm::uint> strandsList;
 	std::vector<StrandPoint> points;
 	m_treeModel.RefShootSkeleton().m_data.m_pipeGroup.BuildStrands(parameters.m_controlPointRatio, strandsList, points, parameters.m_triplePoints, parameters.m_nodeMaxCount);
