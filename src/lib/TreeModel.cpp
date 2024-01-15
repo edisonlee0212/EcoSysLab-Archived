@@ -1497,7 +1497,8 @@ void TreeModel::MergeTask(NodeHandle nodeHandle, const PipeModelParameters& pipe
 			const auto nodeEndParticleHandle = internodeData.m_backParticleMap.at(particle.m_data.m_pipeHandle);
 			auto& nodeStartParticle = internodeData.m_frontProfile.RefParticle(nodeStartParticleHandle);
 			auto& nodeEndParticle = internodeData.m_backProfile.RefParticle(nodeEndParticleHandle);
-			const auto position = internodeData.m_frontProfile.CircularFindPosition(particleIndex);
+
+			const auto position = glm::diskRand(glm::sqrt(static_cast<float>(internodeData.m_frontProfile.RefParticles().size()))); //internodeData.m_frontProfile.CircularFindPosition(particleIndex);
 			particleIndex++;
 			nodeStartParticle.SetColor(particle.GetColor());
 			nodeStartParticle.SetPosition(position);
@@ -1982,5 +1983,51 @@ glm::vec3 TreeModel::InterpolatePipeSegmentAxis(PipeSegmentHandle pipeSegmentHan
 	glm::vec3 position, tangent;
 	Strands::CubicInterpolation(p[0], p[1], p[2], p[3], position, tangent, a);
 	return tangent;
+}
+
+float TreeModel::InterpolatePipeSegmentRadius(PipeSegmentHandle pipeSegmentHandle, float a) const
+{
+	assert(pipeSegmentHandle >= 0);
+	assert(a >= 0.f && a <= 1.f);
+	const auto& pipeGroup = m_shootSkeleton.m_data.m_pipeGroup;
+	assert(pipeGroup.PeekPipeSegments().size() > pipeSegmentHandle);
+	const auto& pipeSegment = pipeGroup.PeekPipeSegment(pipeSegmentHandle);
+	const auto& pipe = pipeGroup.PeekPipe(pipeSegment.GetPipeHandle());
+	auto& baseInfo = pipe.m_info.m_baseInfo;
+
+	const auto& pipeSegmentHandles = pipe.PeekPipeSegmentHandles();
+
+	float p[4];
+
+	p[2] = pipeSegment.m_info.m_thickness;
+	if (pipeSegmentHandle == pipeSegmentHandles.front())
+	{
+		p[1] = baseInfo.m_thickness;
+		p[0] = p[1] * 2.0f - p[2];
+	}
+	else if (pipeSegmentHandle == pipeSegmentHandles.at(1))
+	{
+		p[0] = baseInfo.m_thickness;
+		p[1] = pipeGroup.PeekPipeSegment(pipeSegmentHandles.front()).m_info.m_thickness;
+	}
+	else
+	{
+		const auto& prevSegment = pipeGroup.PeekPipeSegment(pipeSegment.GetPrevHandle());
+		p[1] = prevSegment.m_info.m_thickness;
+		const auto& prevPrevSegment = pipeGroup.PeekPipeSegment(prevSegment.GetPrevHandle());
+		p[0] = prevPrevSegment.m_info.m_thickness;
+	}
+	if (pipeSegmentHandle == pipeSegmentHandles.back())
+	{
+		p[3] = p[2] * 2.0f - p[1];
+	}
+	else
+	{
+		const auto& nextSegment = pipeGroup.PeekPipeSegment(pipeSegment.GetNextHandle());
+		p[3] = nextSegment.m_info.m_thickness;
+	}
+	float radius, tangent;
+	Strands::CubicInterpolation(p[0], p[1], p[2], p[3], radius, tangent, a);
+	return radius;
 }
 #pragma endregion
