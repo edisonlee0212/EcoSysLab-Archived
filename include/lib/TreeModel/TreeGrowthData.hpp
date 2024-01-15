@@ -100,10 +100,10 @@ namespace EcoSysLab
 		std::vector<glm::mat4> m_fruits;
 
 #pragma region Pipe Model
-		ParticlePhysics2D<CellParticlePhysicsData> m_frontProfile{};
+		PipeProfile<CellParticlePhysicsData> m_frontProfile{};
 		std::unordered_map<PipeHandle, ParticleHandle> m_frontParticleMap{};
 		bool m_boundariesUpdated = false;
-		ParticlePhysics2D<CellParticlePhysicsData> m_backProfile{};
+		PipeProfile<CellParticlePhysicsData> m_backProfile{};
 		std::unordered_map<PipeHandle, ParticleHandle> m_backParticleMap{};
 		ProfileConstraints m_profileConstraints {};
 

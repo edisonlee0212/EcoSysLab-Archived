@@ -2,7 +2,7 @@
 #include "Skeleton.hpp"
 #include "PipeGroup.hpp"
 
-#include "ParticlePhysics2D.hpp"
+#include "PipeProfile.hpp"
 using namespace EvoEngine;
 namespace EcoSysLab
 {

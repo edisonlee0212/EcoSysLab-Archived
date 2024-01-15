@@ -1,6 +1,6 @@
 #pragma once
 #include "PipeModelData.hpp"
-#include "ParticlePhysics2D.hpp"
+#include "PipeProfile.hpp"
 using namespace EvoEngine;
 namespace EcoSysLab
 {
@@ -14,7 +14,8 @@ namespace EcoSysLab
 		int m_timeoutWithBoundaries = 1500;
 		float m_overlapThreshold = 0.1f;
 		int m_endNodeStrands = 3;
-
+		float m_branchTwistAngle = 0.0f;
+		float m_junctionTwistAngle = 0.0f;
 		bool m_preMerge = true;
 
 		float m_controlPointRatio = 0.3f;
@@ -30,5 +31,7 @@ namespace EcoSysLab
 		float m_sidePushRatio = 1.0f;
 		float m_frontPushRatio = 1.0f;
 		float m_rotationPushRatio = 0.5f;
+
+		
 	};
 }

@@ -14,7 +14,7 @@ namespace EcoSysLab {
 	class Particle2D
 	{
 		template<typename PD>
-		friend class ParticlePhysics2D;
+		friend class PipeProfile;
 		glm::vec3 m_color = glm::vec3(1.0f);
 		glm::vec2 m_position = glm::vec2(0.0f);
 		glm::vec2 m_lastPosition = glm::vec2(0.0f);
@@ -44,6 +44,9 @@ namespace EcoSysLab {
 
 		[[nodiscard]] glm::vec2 GetAcceleration() const;
 		void SetAcceleration(const glm::vec2& acceleration);
+
+		[[nodiscard]] glm::vec2 GetPolarPosition() const;
+		void SetPolarPosition(const glm::vec2& position);
 	};
 
 
@@ -133,5 +136,23 @@ namespace EcoSysLab {
 	void Particle2D<T>::SetAcceleration(const glm::vec2& acceleration)
 	{
 		m_acceleration = acceleration;
+	}
+
+	template <typename T>
+	glm::vec2 Particle2D<T>::GetPolarPosition() const
+	{
+		const auto r = glm::length(m_position);
+		if(r <= glm::epsilon<float>())
+		{
+			return { 0, 0 };
+		}
+		if (m_position.y >= 0) return { r, glm::acos(m_position.x / r) };
+		return { r, -glm::acos(m_position.x / r) };
+	}
+
+	template <typename T>
+	void Particle2D<T>::SetPolarPosition(const glm::vec2& position)
+	{
+		SetPosition(glm::vec2(glm::cos(position.y) * position.x, glm::sin(position.y) * position.x));
 	}
 }

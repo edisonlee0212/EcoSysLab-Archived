@@ -13,7 +13,7 @@ namespace EcoSysLab {
 	};
 
 	template<typename ParticleData>
-	class ParticlePhysics2D
+	class PipeProfile
 	{
 		std::vector<Particle2D<ParticleData>> m_particles2D{};
 		void SolveCollision(ParticleHandle p1Handle, ParticleHandle p2Handle);
@@ -33,7 +33,7 @@ namespace EcoSysLab {
 		std::vector<std::pair<int, int>> m_boundaryEdges{};
 	public:
 		[[nodiscard]] const std::vector<std::pair<int, int>>& PeekBoundaryEdges() const;
-
+		
 		void RenderEdges(ImVec2 origin, float zoomFactor, ImDrawList* drawList, ImU32 color, float thickness);
 		void RenderBoundary(ImVec2 origin, float zoomFactor, ImDrawList* drawList, ImU32 color, float thickness);
 		void CalculateBoundaries(float removalLength = 8);
@@ -68,7 +68,7 @@ namespace EcoSysLab {
 	};
 
 	template <typename T>
-	void ParticlePhysics2D<T>::SolveCollision(ParticleHandle p1Handle, ParticleHandle p2Handle)
+	void PipeProfile<T>::SolveCollision(ParticleHandle p1Handle, ParticleHandle p2Handle)
 	{
 		auto& p1 = m_particles2D.at(p1Handle);
 		const auto& p2 = m_particles2D.at(p2Handle);
@@ -102,7 +102,7 @@ namespace EcoSysLab {
 	}
 
 	template <typename T>
-	void ParticlePhysics2D<T>::Update(
+	void PipeProfile<T>::Update(
 		const std::function<void(ParticleGrid2D& grid, bool gridResized)>& modifyGridFunc,
 		const std::function<void(Particle2D<T>& collisionParticle)>& modifyParticleFunc)
 	{
@@ -156,7 +156,7 @@ namespace EcoSysLab {
 	}
 
 	template <typename T>
-	void ParticlePhysics2D<T>::CalculateMinMax()
+	void PipeProfile<T>::CalculateMinMax()
 	{
 		m_min = glm::vec2(FLT_MAX);
 		m_max = glm::vec2(FLT_MIN);
@@ -223,7 +223,7 @@ namespace EcoSysLab {
 	}
 
 	template <typename T>
-	void ParticlePhysics2D<T>::CheckCollisions(
+	void PipeProfile<T>::CheckCollisions(
 		const std::function<void(ParticleGrid2D& grid, bool gridResized)>& modifyGridFunc)
 	{
 		CalculateMinMax();
@@ -300,13 +300,13 @@ namespace EcoSysLab {
 	}
 
 	template <typename ParticleData>
-	const std::vector<std::pair<int, int>>& ParticlePhysics2D<ParticleData>::PeekBoundaryEdges() const
+	const std::vector<std::pair<int, int>>& PipeProfile<ParticleData>::PeekBoundaryEdges() const
 	{
 		return m_boundaryEdges;
 	}
 
 	template <typename ParticleData>
-	void ParticlePhysics2D<ParticleData>::RenderEdges(ImVec2 origin, float zoomFactor, ImDrawList* drawList,
+	void PipeProfile<ParticleData>::RenderEdges(ImVec2 origin, float zoomFactor, ImDrawList* drawList,
 		ImU32 color, float thickness)
 	{
 		if (m_edges.empty()) return;
@@ -321,7 +321,7 @@ namespace EcoSysLab {
 	}
 
 	template <typename ParticleData>
-	void ParticlePhysics2D<ParticleData>::RenderBoundary(ImVec2 origin, float zoomFactor, ImDrawList* drawList,
+	void PipeProfile<ParticleData>::RenderBoundary(ImVec2 origin, float zoomFactor, ImDrawList* drawList,
 		ImU32 color, float thickness)
 	{
 		if (m_boundaryEdges.empty()) return;
@@ -336,7 +336,7 @@ namespace EcoSysLab {
 	}
 
 	template <typename ParticleData>
-	void ParticlePhysics2D<ParticleData>::CalculateBoundaries(float removalLength)
+	void PipeProfile<ParticleData>::CalculateBoundaries(float removalLength)
 	{
 		m_edges.clear();
 		m_boundaryEdges.clear();
@@ -374,7 +374,7 @@ namespace EcoSysLab {
 	}
 
 	template <typename T>
-	float ParticlePhysics2D<T>::GetDistanceToCenter(const glm::vec2& direction) const
+	float PipeProfile<T>::GetDistanceToCenter(const glm::vec2& direction) const
 	{
 		float maxDistance = FLT_MIN;
 		if (m_parallel) {
@@ -410,13 +410,13 @@ namespace EcoSysLab {
 	}
 
 	template <typename T>
-	float ParticlePhysics2D<T>::GetDeltaTime() const
+	float PipeProfile<T>::GetDeltaTime() const
 	{
 		return m_deltaTime;
 	}
 
 	template <typename ParticleData>
-	void ParticlePhysics2D<ParticleData>::SetEnableAllParticles(const bool value)
+	void PipeProfile<ParticleData>::SetEnableAllParticles(const bool value)
 	{
 		for (auto& particle : m_particles2D)
 		{
@@ -425,7 +425,7 @@ namespace EcoSysLab {
 	}
 
 	template <typename T>
-	void ParticlePhysics2D<T>::Reset(const float deltaTime)
+	void PipeProfile<T>::Reset(const float deltaTime)
 	{
 		m_deltaTime = deltaTime;
 		m_particles2D.clear();
@@ -440,7 +440,7 @@ namespace EcoSysLab {
 
 
 	template <typename T>
-	ParticleHandle ParticlePhysics2D<T>::AllocateParticle()
+	ParticleHandle PipeProfile<T>::AllocateParticle()
 	{
 		m_particles2D.emplace_back();
 		auto& newParticle = m_particles2D.back();
@@ -450,26 +450,26 @@ namespace EcoSysLab {
 	}
 
 	template <typename T>
-	Particle2D<T>& ParticlePhysics2D<T>::RefParticle(ParticleHandle handle)
+	Particle2D<T>& PipeProfile<T>::RefParticle(ParticleHandle handle)
 	{
 		return m_particles2D[handle];
 	}
 
 	template <typename T>
-	const Particle2D<T>& ParticlePhysics2D<T>::PeekParticle(ParticleHandle handle) const
+	const Particle2D<T>& PipeProfile<T>::PeekParticle(ParticleHandle handle) const
 	{
 		return m_particles2D[handle];
 	}
 
 	template <typename T>
-	void ParticlePhysics2D<T>::RemoveParticle(ParticleHandle handle)
+	void PipeProfile<T>::RemoveParticle(ParticleHandle handle)
 	{
 		m_particles2D[handle] = m_particles2D.back();
 		m_particles2D.pop_back();
 	}
 
 	template <typename T>
-	void ParticlePhysics2D<T>::Shift(const glm::vec2& offset)
+	void PipeProfile<T>::Shift(const glm::vec2& offset)
 	{
 		Jobs::ParallelFor(m_particles2D.size(), [&](unsigned i)
 			{
@@ -480,19 +480,19 @@ namespace EcoSysLab {
 	}
 
 	template <typename T>
-	const std::vector<Particle2D<T>>& ParticlePhysics2D<T>::PeekParticles() const
+	const std::vector<Particle2D<T>>& PipeProfile<T>::PeekParticles() const
 	{
 		return m_particles2D;
 	}
 
 	template <typename T>
-	std::vector<Particle2D<T>>& ParticlePhysics2D<T>::RefParticles()
+	std::vector<Particle2D<T>>& PipeProfile<T>::RefParticles()
 	{
 		return m_particles2D;
 	}
 
 	template <typename T>
-	void ParticlePhysics2D<T>::SimulateByTime(float time,
+	void PipeProfile<T>::SimulateByTime(float time,
 		const std::function<void(ParticleGrid2D& grid, bool gridResized)>& modifyGridFunc,
 		const std::function<void(Particle2D<T>& collisionParticle)>& modifyParticleFunc)
 	{
@@ -504,7 +504,7 @@ namespace EcoSysLab {
 	}
 
 	template <typename T>
-	void ParticlePhysics2D<T>::Simulate(const size_t iterations,
+	void PipeProfile<T>::Simulate(const size_t iterations,
 		const std::function<void(ParticleGrid2D& grid, bool gridResized)>& modifyGridFunc,
 		const std::function<void(Particle2D<T>& particle)>& modifyParticleFunc)
 	{
@@ -515,19 +515,19 @@ namespace EcoSysLab {
 	}
 
 	template <typename T>
-	glm::vec2 ParticlePhysics2D<T>::GetMassCenter() const
+	glm::vec2 PipeProfile<T>::GetMassCenter() const
 	{
 		return m_massCenter;
 	}
 
 	template <typename ParticleData>
-	float ParticlePhysics2D<ParticleData>::GetMaxDistanceToCenter() const
+	float PipeProfile<ParticleData>::GetMaxDistanceToCenter() const
 	{
 		return m_maxDistanceToCenter;
 	}
 
 	template <typename ParticleData>
-	glm::vec2 ParticlePhysics2D<ParticleData>::FindAvailablePosition(const glm::vec2& direction)
+	glm::vec2 PipeProfile<ParticleData>::FindAvailablePosition(const glm::vec2& direction)
 	{
 		auto retVal = glm::vec2(0, 0);
 		bool found = false;
@@ -548,7 +548,7 @@ namespace EcoSysLab {
 	}
 
 	template <typename ParticleData>
-	glm::vec2 ParticlePhysics2D<ParticleData>::CircularFindPosition(int index) const
+	glm::vec2 PipeProfile<ParticleData>::CircularFindPosition(int index) const
 	{
 		if (index == 0) return glm::vec2(0.0f);
 		int layer = 0;
@@ -567,13 +567,13 @@ namespace EcoSysLab {
 	}
 
 	template <typename ParticleData>
-	double ParticlePhysics2D<ParticleData>::GetLastSimulationTime() const
+	double PipeProfile<ParticleData>::GetLastSimulationTime() const
 	{
 		return m_simulationTime;
 	}
 
 	template <typename T>
-	void ParticlePhysics2D<T>::OnInspect(const std::function<void(glm::vec2 position)>& func, const std::function<void(ImVec2 origin, float zoomFactor, ImDrawList*)>& drawFunc, bool showGrid)
+	void PipeProfile<T>::OnInspect(const std::function<void(glm::vec2 position)>& func, const std::function<void(ImVec2 origin, float zoomFactor, ImDrawList*)>& drawFunc, bool showGrid)
 	{
 		static auto scrolling = glm::vec2(0.0f);
 		static float zoomFactor = 5.f;

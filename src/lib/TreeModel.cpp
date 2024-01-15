@@ -1526,9 +1526,11 @@ void TreeModel::MergeTask(NodeHandle nodeHandle, const PipeModelParameters& pipe
 			auto& nodeStartParticle = internodeData.m_frontProfile.RefParticle(nodeStartParticleHandle);
 			auto& nodeEndParticle = internodeData.m_backProfile.RefParticle(nodeEndParticleHandle);
 			nodeStartParticle.SetColor(childParticle.GetColor());
-			nodeStartParticle.SetPosition(childParticle.GetPosition());
 			nodeEndParticle.SetColor(childParticle.GetColor());
-			nodeEndParticle.SetPosition(childParticle.GetPosition());
+			auto polarPosition = childParticle.GetPolarPosition();
+			polarPosition.y += glm::radians(m_shootSkeleton.m_data.m_pipeModelParameters.m_branchTwistAngle);
+			nodeStartParticle.SetPolarPosition(polarPosition);
+			nodeEndParticle.SetPolarPosition(polarPosition);
 
 			nodeStartParticle.m_data.m_mainChild = nodeEndParticle.m_data.m_mainChild = true;
 		}
@@ -1548,9 +1550,11 @@ void TreeModel::MergeTask(NodeHandle nodeHandle, const PipeModelParameters& pipe
 		auto& nodeStartParticle = internodeData.m_frontProfile.RefParticle(nodeStartParticleHandle);
 		auto& nodeEndParticle = internodeData.m_backProfile.RefParticle(nodeEndParticleHandle);
 		nodeStartParticle.SetColor(mainChildParticle.GetColor());
-		nodeStartParticle.SetPosition(mainChildParticle.GetPosition());
 		nodeEndParticle.SetColor(mainChildParticle.GetColor());
-		nodeEndParticle.SetPosition(mainChildParticle.GetPosition());
+		auto polarPosition = mainChildParticle.GetPolarPosition();
+		polarPosition.y += glm::radians(m_shootSkeleton.m_data.m_pipeModelParameters.m_junctionTwistAngle);
+		nodeStartParticle.SetPolarPosition(polarPosition);
+		nodeEndParticle.SetPolarPosition(polarPosition);
 
 		nodeStartParticle.m_data.m_mainChild = nodeEndParticle.m_data.m_mainChild = true;
 	}
@@ -1585,9 +1589,11 @@ void TreeModel::MergeTask(NodeHandle nodeHandle, const PipeModelParameters& pipe
 					auto& nodeStartParticle = internodeData.m_frontProfile.RefParticle(nodeStartParticleHandle);
 					auto& nodeEndParticle = internodeData.m_backProfile.RefParticle(nodeEndParticleHandle);
 					nodeStartParticle.SetColor(childParticle.GetColor());
-					nodeStartParticle.SetPosition(childParticle.GetPosition());
 					nodeEndParticle.SetColor(childParticle.GetColor());
-					nodeEndParticle.SetPosition(childParticle.GetPosition());
+					auto polarPosition = childParticle.GetPolarPosition();
+					polarPosition.y += glm::radians(m_shootSkeleton.m_data.m_pipeModelParameters.m_junctionTwistAngle);
+					nodeStartParticle.SetPolarPosition(polarPosition);
+					nodeEndParticle.SetPolarPosition(polarPosition);
 					nodeStartParticle.m_enable = true;
 					nodeStartParticle.m_data.m_mainChild = nodeEndParticle.m_data.m_mainChild = false;
 				}
@@ -1601,9 +1607,11 @@ void TreeModel::MergeTask(NodeHandle nodeHandle, const PipeModelParameters& pipe
 					auto& nodeStartParticle = internodeData.m_frontProfile.RefParticle(nodeStartParticleHandle);
 					auto& nodeEndParticle = internodeData.m_backProfile.RefParticle(nodeEndParticleHandle);
 					nodeStartParticle.SetColor(childParticle.GetColor());
-					nodeStartParticle.SetPosition(glm::vec3(0.0f));
 					nodeEndParticle.SetColor(childParticle.GetColor());
-					nodeEndParticle.SetPosition(glm::vec3(0.0f));
+					auto polarPosition = childParticle.GetPolarPosition();
+					polarPosition.y += glm::radians(m_shootSkeleton.m_data.m_pipeModelParameters.m_junctionTwistAngle);
+					nodeStartParticle.SetPolarPosition(polarPosition);
+					nodeEndParticle.SetPolarPosition(polarPosition);
 					nodeStartParticle.m_enable = false;
 					nodeStartParticle.m_data.m_mainChild = nodeEndParticle.m_data.m_mainChild = false;
 				}
@@ -1638,9 +1646,11 @@ void TreeModel::MergeTask(NodeHandle nodeHandle, const PipeModelParameters& pipe
 					auto& nodeStartParticle = internodeData.m_frontProfile.RefParticle(nodeStartParticleHandle);
 					auto& nodeEndParticle = internodeData.m_backProfile.RefParticle(nodeEndParticleHandle);
 					nodeStartParticle.SetColor(childParticle.GetColor());
-					nodeStartParticle.SetPosition(childParticle.GetPosition());
 					nodeEndParticle.SetColor(childParticle.GetColor());
-					nodeEndParticle.SetPosition(childParticle.GetPosition());
+					auto polarPosition = childParticle.GetPolarPosition();
+					polarPosition.y += glm::radians(m_shootSkeleton.m_data.m_pipeModelParameters.m_junctionTwistAngle);
+					nodeStartParticle.SetPolarPosition(polarPosition);
+					nodeEndParticle.SetPolarPosition(polarPosition);
 
 					nodeStartParticle.m_data.m_mainChild = nodeEndParticle.m_data.m_mainChild = false;
 				}
@@ -1682,9 +1692,11 @@ void TreeModel::MergeTask(NodeHandle nodeHandle, const PipeModelParameters& pipe
 				auto& nodeStartParticle = internodeData.m_frontProfile.RefParticle(nodeStartParticleHandle);
 				auto& nodeEndParticle = internodeData.m_backProfile.RefParticle(nodeEndParticleHandle);
 				nodeStartParticle.SetColor(childParticle.GetColor());
-				nodeStartParticle.SetPosition(childParticle.GetPosition());
 				nodeEndParticle.SetColor(childParticle.GetColor());
-				nodeEndParticle.SetPosition(childParticle.GetPosition());
+				auto polarPosition = childParticle.GetPolarPosition();
+				polarPosition.y += glm::radians(m_shootSkeleton.m_data.m_pipeModelParameters.m_junctionTwistAngle);
+				nodeStartParticle.SetPolarPosition(polarPosition);
+				nodeEndParticle.SetPolarPosition(polarPosition);
 
 				nodeStartParticle.m_data.m_mainChild = nodeEndParticle.m_data.m_mainChild = false;
 			}
@@ -1733,7 +1745,7 @@ void TreeModel::CalculateShiftTask(NodeHandle nodeHandle, const PipeModelParamet
 }
 
 void TreeModel::ApplyProfile(const glm::vec3& globalPosition, const glm::quat& globalRotation,
-	const ParticlePhysics2D<CellParticlePhysicsData>& profile,
+	const PipeProfile<CellParticlePhysicsData>& profile,
 	const std::unordered_map<PipeHandle, ParticleHandle>& map)
 {
 	const auto currentUp = globalRotation * glm::vec3(0, 1, 0);

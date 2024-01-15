@@ -331,6 +331,8 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	}
 	ImGui::DragFloat("Overlap threshold", &pipeModelParameters.m_overlapThreshold, 0.01f, 0.0f, 1.0f);
 	ImGui::DragInt("End node strand count", &pipeModelParameters.m_endNodeStrands, 1, 1, 50);
+	ImGui::DragFloat("Branch Twist Angle", &pipeModelParameters.m_branchTwistAngle, 0.1f, 0.0f, 360.0f);
+	ImGui::DragFloat("Junction Twist Angle", &pipeModelParameters.m_junctionTwistAngle, 0.1f, 0.0f, 360.0f);
 	ImGui::Checkbox("Pre-merge", &pipeModelParameters.m_preMerge);
 
 	ImGui::Text(("Last calculation time: " + std::to_string(m_treeModel.PeekShootSkeleton().m_data.m_profileCalculationTime)).c_str());
