@@ -232,9 +232,9 @@ void TreeVisualizer::SyncMatrices(const ShootSkeleton& skeleton, const std::shar
 	particleInfoList->SetPendingUpdate();
 	matrices.resize(sortedNodeList.size());
 	Jobs::ParallelFor(sortedNodeList.size(), [&](unsigned i) {
-		auto nodeHandle = sortedNodeList[i];
+		const auto nodeHandle = sortedNodeList[i];
 		const auto& node = skeleton.PeekNode(nodeHandle);
-		glm::vec3 position = node.m_info.m_globalPosition;
+		const glm::vec3 position = node.m_info.m_globalPosition;
 		const auto direction = node.m_info.m_globalDirection;
 		auto rotation = glm::quatLookAt(
 			direction, glm::vec3(direction.y, direction.z, direction.x));

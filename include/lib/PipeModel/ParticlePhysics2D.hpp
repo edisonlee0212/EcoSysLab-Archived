@@ -62,6 +62,7 @@ namespace EcoSysLab {
 		[[nodiscard]] glm::vec2 GetMassCenter() const;
 		[[nodiscard]] float GetMaxDistanceToCenter() const;
 		[[nodiscard]] glm::vec2 FindAvailablePosition(const glm::vec2& direction);
+		[[nodiscard]] glm::vec2 CircularFindPosition(int index) const;
 		[[nodiscard]] double GetLastSimulationTime() const;
 		void OnInspect(const std::function<void(glm::vec2 position)>& func, const std::function<void(ImVec2 origin, float zoomFactor, ImDrawList*)>& drawFunc, bool showGrid = false);
 	};
@@ -544,6 +545,25 @@ namespace EcoSysLab {
 			if (!found) retVal += direction * 0.41f;
 		}
 		return retVal;
+	}
+
+	template <typename ParticleData>
+	glm::vec2 ParticlePhysics2D<ParticleData>::CircularFindPosition(int index) const
+	{
+		if (index == 0) return glm::vec2(0.0f);
+		int layer = 0;
+		while(3 * layer * (layer + 1) <= index)
+		{
+			layer++;
+		}
+		const int edgeSize = layer;
+		const int layerIndex = (index - 1) - 3 * (layer - 1) * layer;
+		const int edgeIndex = layerIndex / edgeSize;
+		const int indexInEdge = layerIndex % edgeSize;
+		const glm::vec2 edgeDirection = glm::vec2(glm::cos(glm::radians(edgeIndex * 60.0f)), glm::sin(glm::radians(edgeIndex * 60.0f)));
+		const glm::vec2 walkerDirection = glm::vec2(glm::cos(glm::radians((edgeIndex + 2) * 60.0f)), glm::sin(glm::radians((edgeIndex + 2) * 60.0f)));
+
+		return edgeDirection * static_cast<float>(layer) * 2.0f + walkerDirection * static_cast<float>(indexInEdge) * 2.0f;
 	}
 
 	template <typename ParticleData>

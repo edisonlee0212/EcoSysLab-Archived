@@ -58,14 +58,7 @@ void TreeModel::RegisterVoxel(const glm::mat4& globalTransform, ClimateModel& cl
 void TreeModel::PruneInternode(NodeHandle internodeHandle)
 {
 	auto& internode = m_shootSkeleton.RefNode(internodeHandle);
-	internode.m_data.m_frontProfile = {};
-	internode.m_data.m_backProfile = {};
-	internode.m_data.m_frontParticleMap = {};
-	internode.m_data.m_backParticleMap = {};
-	internode.m_data.m_profileConstraints = {};
-
-	internode.m_data.m_pipeSize = 0;
-
+	
 	m_shootSkeleton.RecycleNode(internodeHandle,
 		[&](FlowHandle flowHandle) {},
 		[&](NodeHandle nodeHandle)
@@ -74,7 +67,7 @@ void TreeModel::PruneInternode(NodeHandle internodeHandle)
 			const auto& physics2D = node.m_data.m_frontProfile;
 			for(const auto& particle : physics2D.PeekParticles())
 			{
-				m_shootSkeleton.m_data.m_pipeGroup.RecyclePipeSegment(particle.m_data.m_pipeSegmentHandle);
+				if(!m_shootSkeleton.m_data.m_pipeGroup.PeekPipeSegment(particle.m_data.m_pipeSegmentHandle).IsRecycled()) m_shootSkeleton.m_data.m_pipeGroup.RecyclePipeSegment(particle.m_data.m_pipeSegmentHandle);
 			}
 		});
 }
@@ -1497,6 +1490,22 @@ void TreeModel::MergeTask(NodeHandle nodeHandle, const PipeModelParameters& pipe
 	if (childHandles.empty())
 	{
 		internode.m_data.m_needPacking = true;
+		int particleIndex = 0;
+		for (const auto& particle : internodeData.m_frontProfile.RefParticles())
+		{
+			const auto nodeStartParticleHandle = internodeData.m_frontParticleMap.at(particle.m_data.m_pipeHandle);
+			const auto nodeEndParticleHandle = internodeData.m_backParticleMap.at(particle.m_data.m_pipeHandle);
+			auto& nodeStartParticle = internodeData.m_frontProfile.RefParticle(nodeStartParticleHandle);
+			auto& nodeEndParticle = internodeData.m_backProfile.RefParticle(nodeEndParticleHandle);
+			const auto position = internodeData.m_frontProfile.CircularFindPosition(particleIndex);
+			particleIndex++;
+			nodeStartParticle.SetColor(particle.GetColor());
+			nodeStartParticle.SetPosition(position);
+			nodeEndParticle.SetColor(particle.GetColor());
+			nodeEndParticle.SetPosition(position);
+
+			nodeStartParticle.m_data.m_mainChild = nodeEndParticle.m_data.m_mainChild = true;
+		}
 		return;
 	}
 	if (!internode.m_data.m_profileConstraints.m_boundaries.empty())

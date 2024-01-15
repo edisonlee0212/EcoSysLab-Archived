@@ -200,7 +200,8 @@ void EcoSysLabLayer::Visualization() {
 							for (const auto& childHandle : childHandles) {
 								treeModel.PruneInternode(childHandle);
 							}
-							pruningInternode.m_info.m_length *= treeVisualizer.m_selectedInternodeLengthFactor;
+							pruningInternode.m_data.m_internodeLength *= treeVisualizer.m_selectedInternodeLengthFactor;
+							treeModel.CalculateTransform(tree->m_shootGrowthController, true);
 							treeVisualizer.m_selectedInternodeLengthFactor = 1.0f;
 							for (auto& bud : pruningInternode.m_data.m_buds) {
 								bud.m_status = BudStatus::Removed;
@@ -215,8 +216,7 @@ void EcoSysLabLayer::Visualization() {
 							if (m_autoGenerateStrandsAfterEditing || m_autoGenerateStrandMeshAfterEditing)
 							{
 								if (m_autoGenerateStrandsAfterEditing) {
-									auto strands = tree->GenerateStrands();
-									tree->InitializeStrandRenderer(strands);
+									tree->InitializeStrandRenderer();
 								}
 								if (m_autoGenerateStrandMeshAfterEditing)
 								{
