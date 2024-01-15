@@ -10,9 +10,12 @@ namespace EcoSysLab
 	{
 		float m_boundaryStrength = 40000;
 		float m_centerAttractionStrength = 4000;
+
 		int m_maxSimulationIterationCellFactor = 5;
-		int m_timeout = 500;
-		int m_timeoutWithBoundaries = 1500;
+		int m_branchProfilePackingMaxIteration = 50;
+		int m_junctionProfilePackingMaxIteration = 500;
+		int m_modifiedProfilePackingMaxIteration = 1500;
+
 		float m_overlapThreshold = 0.1f;
 		int m_endNodeStrands = 3;
 		float m_branchTwistAngle = 0.0f;

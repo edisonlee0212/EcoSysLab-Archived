@@ -58,16 +58,16 @@ void TreeModel::RegisterVoxel(const glm::mat4& globalTransform, ClimateModel& cl
 void TreeModel::PruneInternode(NodeHandle internodeHandle)
 {
 	auto& internode = m_shootSkeleton.RefNode(internodeHandle);
-	
+
 	m_shootSkeleton.RecycleNode(internodeHandle,
 		[&](FlowHandle flowHandle) {},
 		[&](NodeHandle nodeHandle)
 		{
 			const auto& node = m_shootSkeleton.RefNode(nodeHandle);
 			const auto& physics2D = node.m_data.m_frontProfile;
-			for(const auto& particle : physics2D.PeekParticles())
+			for (const auto& particle : physics2D.PeekParticles())
 			{
-				if(!m_shootSkeleton.m_data.m_pipeGroup.PeekPipeSegment(particle.m_data.m_pipeSegmentHandle).IsRecycled()) m_shootSkeleton.m_data.m_pipeGroup.RecyclePipeSegment(particle.m_data.m_pipeSegmentHandle);
+				if (!m_shootSkeleton.m_data.m_pipeGroup.PeekPipeSegment(particle.m_data.m_pipeSegmentHandle).IsRecycled()) m_shootSkeleton.m_data.m_pipeGroup.RecyclePipeSegment(particle.m_data.m_pipeSegmentHandle);
 			}
 		});
 }
@@ -160,7 +160,7 @@ bool TreeModel::Grow(const float deltaTime, const NodeHandle baseInternodeHandle
 		m_ageInYear = year;
 	}
 	m_iteration++;
-	
+
 	return treeStructureChanged;
 }
 
@@ -297,7 +297,7 @@ void TreeModel::ShootGrowthPostProcess(const ShootGrowthController& shootGrowthC
 		CalculateBiomass(shootGrowthController);
 		CalculateLevel();
 		CalculateTransform(shootGrowthController, true);
-		
+
 	};
 
 	m_internodeOrderCounts.clear();
@@ -351,7 +351,7 @@ float TreeModel::GetSubTreeMaxAge(const NodeHandle baseInternodeHandle) const
 	const auto sortedSubTreeInternodeList = m_shootSkeleton.GetSubTree(baseInternodeHandle);
 	float maxAge = 0.0f;
 
-	for(const auto& internodeHandle : sortedSubTreeInternodeList)
+	for (const auto& internodeHandle : sortedSubTreeInternodeList)
 	{
 		const auto age = m_shootSkeleton.PeekNode(internodeHandle).m_data.m_startAge;
 		maxAge = glm::max(age, maxAge);
@@ -366,10 +366,10 @@ bool TreeModel::Reduce(const ShootGrowthController& shootGrowthController, const
 	bool reduced = false;
 	for (auto it = sortedSubTreeInternodeList.rbegin(); it != sortedSubTreeInternodeList.rend(); ++it) {
 		auto& internode = m_shootSkeleton.RefNode(*it);
-		if(internode.m_data.m_startAge > targetAge)
+		if (internode.m_data.m_startAge > targetAge)
 		{
 			const auto parentHandle = internode.GetParentHandle();
-			if(parentHandle != -1)
+			if (parentHandle != -1)
 			{
 				auto& parent = m_shootSkeleton.RefNode(parentHandle);
 				parent.m_info.m_thickness = shootGrowthController.m_endNodeThickness;
@@ -379,7 +379,7 @@ bool TreeModel::Reduce(const ShootGrowthController& shootGrowthController, const
 			reduced = true;
 		}
 	}
-	
+
 	if (reduced) m_shootSkeleton.SortLists();
 	ShootGrowthPostProcess(shootGrowthController);
 	return reduced;
@@ -1243,14 +1243,14 @@ void TreeModel::InitializeProfiles(const PipeModelParameters& pipeModelParameter
 			}
 		}
 	}
-	
+
 	for (const auto& internodeHandle : sortedInternodeList)
 	{
 		auto& internode = m_shootSkeleton.RefNode(internodeHandle);
 		auto& frontPhysics2D = internode.m_data.m_frontProfile;
 		auto& backPhysics2D = internode.m_data.m_backProfile;
-		if(!internode.RefChildHandles().empty()) continue;
-		if(internode.m_data.m_pipeSize <= frontPhysics2D.RefParticles().size()) continue;
+		if (!internode.RefChildHandles().empty()) continue;
+		if (internode.m_data.m_pipeSize <= frontPhysics2D.RefParticles().size()) continue;
 		const auto extraStrands = internode.m_data.m_pipeSize - frontPhysics2D.RefParticles().size();
 		std::vector<NodeHandle> parentNodeToRootChain;
 		NodeHandle walker = internode.GetParentHandle();
@@ -1400,13 +1400,10 @@ void TreeModel::CalculateProfile(const NodeHandle nodeHandle, const PipeModelPar
 		m_shootSkeleton.RefNode(nodeHandle).m_data.m_tasks.emplace_back(Jobs::AddTask([&, nodeHandle, scheduling](unsigned threadIndex) {
 			MergeTask(nodeHandle, pipeModelParameters);
 			auto& internode = m_shootSkeleton.RefNode(nodeHandle);
-			if (internode.m_data.m_needPacking) {
-				internode.m_data.m_needPacking = false;
-				if (internode.m_data.m_frontProfile.PeekParticles().size() > 1) {
-					PackTask(nodeHandle, pipeModelParameters, !scheduling);
-					if (internode.RefChildHandles().empty()) CopyFrontToBackTask(nodeHandle);
-					CalculateShiftTask(nodeHandle, pipeModelParameters);
-				}
+			if (internode.m_data.m_frontProfile.PeekParticles().size() > 1) {
+				PackTask(nodeHandle, pipeModelParameters, !scheduling);
+				if (internode.RefChildHandles().empty()) CopyFrontToBackTask(nodeHandle);
+				CalculateShiftTask(nodeHandle, pipeModelParameters);
 			}
 			internode.m_data.m_frontProfile.CalculateBoundaries(pipeModelParameters.m_boundaryPointDistance);
 			internode.m_data.m_backProfile.CalculateBoundaries(pipeModelParameters.m_boundaryPointDistance);
@@ -1418,13 +1415,10 @@ void TreeModel::CalculateProfile(const NodeHandle nodeHandle, const PipeModelPar
 	{
 		MergeTask(nodeHandle, pipeModelParameters);
 		auto& internode = m_shootSkeleton.RefNode(nodeHandle);
-		if (internode.m_data.m_needPacking) {
-			internode.m_data.m_needPacking = false;
-			if (internode.m_data.m_frontProfile.PeekParticles().size() > 1) {
-				PackTask(nodeHandle, pipeModelParameters, !scheduling);
-				if (internode.RefChildHandles().empty()) CopyFrontToBackTask(nodeHandle);
-				CalculateShiftTask(nodeHandle, pipeModelParameters);
-			}
+		if (internode.m_data.m_frontProfile.PeekParticles().size() > 1) {
+			PackTask(nodeHandle, pipeModelParameters, !scheduling);
+			if (internode.RefChildHandles().empty()) CopyFrontToBackTask(nodeHandle);
+			CalculateShiftTask(nodeHandle, pipeModelParameters);
 		}
 		internode.m_data.m_frontProfile.CalculateBoundaries(pipeModelParameters.m_boundaryPointDistance);
 		internode.m_data.m_backProfile.CalculateBoundaries(pipeModelParameters.m_boundaryPointDistance);
@@ -1448,10 +1442,10 @@ void TreeModel::PackTask(NodeHandle nodeHandle, const PipeModelParameters& pipeM
 	auto& internodeData = internode.m_data;
 	internodeData.m_frontProfile.m_parallel = parallel;
 
-	const auto iterations = pipeModelParameters.m_maxSimulationIterationCellFactor * internodeData.m_frontProfile.RefParticles().size();
+	const auto iterations = internodeData.m_packingIteration;
 
-	int timeout = pipeModelParameters.m_timeout;
-	if (!internodeData.m_profileConstraints.m_boundaries.empty()) timeout = pipeModelParameters.m_timeoutWithBoundaries;
+	int timeout = pipeModelParameters.m_junctionProfilePackingMaxIteration;
+	if (!internodeData.m_profileConstraints.m_boundaries.empty()) timeout = pipeModelParameters.m_modifiedProfilePackingMaxIteration;
 	for (int i = 0; i < iterations; i++) {
 		internodeData.m_frontProfile.Simulate(1,
 			[&](auto& grid, bool gridResized)
@@ -1489,7 +1483,7 @@ void TreeModel::MergeTask(NodeHandle nodeHandle, const PipeModelParameters& pipe
 
 	if (childHandles.empty())
 	{
-		internode.m_data.m_needPacking = true;
+		internode.m_data.m_packingIteration = glm::min(pipeModelParameters.m_junctionProfilePackingMaxIteration, static_cast<int>(internodeData.m_frontProfile.RefParticles().size()) * pipeModelParameters.m_maxSimulationIterationCellFactor);
 		int particleIndex = 0;
 		for (const auto& particle : internodeData.m_frontProfile.RefParticles())
 		{
@@ -1511,7 +1505,7 @@ void TreeModel::MergeTask(NodeHandle nodeHandle, const PipeModelParameters& pipe
 	}
 	if (!internode.m_data.m_profileConstraints.m_boundaries.empty())
 	{
-		internode.m_data.m_needPacking = true;
+		internode.m_data.m_packingIteration = glm::min(pipeModelParameters.m_modifiedProfilePackingMaxIteration, static_cast<int>(internodeData.m_frontProfile.RefParticles().size()) * pipeModelParameters.m_maxSimulationIterationCellFactor);
 	}
 	if (mainChildHandle == -1) mainChildHandle = childHandles.front();
 	auto& mainChildNode = m_shootSkeleton.RefNode(mainChildHandle);
@@ -1535,14 +1529,10 @@ void TreeModel::MergeTask(NodeHandle nodeHandle, const PipeModelParameters& pipe
 
 			nodeStartParticle.m_data.m_mainChild = nodeEndParticle.m_data.m_mainChild = true;
 		}
-		//If the only child is not apical child. We still need to perform packing.
-		if(internodeData.m_frontProfile.PeekParticles().size() != childPhysics2D.PeekParticles().size())
-		{
-			internode.m_data.m_needPacking = true;
-		}
+		internode.m_data.m_packingIteration = glm::min(pipeModelParameters.m_branchProfilePackingMaxIteration, static_cast<int>(internodeData.m_frontProfile.RefParticles().size()) * pipeModelParameters.m_maxSimulationIterationCellFactor);
 		return;
 	}
-	internodeData.m_needPacking = true;
+	internode.m_data.m_packingIteration = glm::min(pipeModelParameters.m_junctionProfilePackingMaxIteration, static_cast<int>(internodeData.m_frontProfile.RefParticles().size()) * pipeModelParameters.m_maxSimulationIterationCellFactor);
 	const auto& mainChildPhysics2D = mainChildNode.m_data.m_frontProfile;
 	for (const auto& mainChildParticle : mainChildPhysics2D.PeekParticles())
 	{
@@ -1728,7 +1718,7 @@ void TreeModel::CalculateShiftTask(NodeHandle nodeHandle, const PipeModelParamet
 	internodeData.m_centerDirectionRadius = 0.0f;
 	if (childHandles.empty())
 	{
-		internode.m_data.m_needPacking = true;
+		internode.m_data.m_packingIteration = glm::min(pipeModelParameters.m_junctionProfilePackingMaxIteration, static_cast<int>(internodeData.m_frontProfile.RefParticles().size()) * pipeModelParameters.m_maxSimulationIterationCellFactor);
 		return;
 	}
 	if (mainChildHandle == -1) mainChildHandle = childHandles.front();
@@ -1742,10 +1732,10 @@ void TreeModel::CalculateShiftTask(NodeHandle nodeHandle, const PipeModelParamet
 		sum += nodeStartParticle.GetPosition();
 	}
 	internodeData.m_shift = sum / static_cast<float>(mainChildPhysics2D.PeekParticles().size());
-	
+
 }
 
-void TreeModel::ApplyProfile(const PipeModelParameters& pipeModelParameters, 
+void TreeModel::ApplyProfile(const PipeModelParameters& pipeModelParameters,
 	const glm::vec3& globalPosition, const glm::quat& globalRotation,
 	const PipeProfile<CellParticlePhysicsData>& profile,
 	const std::unordered_map<PipeHandle, ParticleHandle>& map, float pipeRadius)
@@ -1816,7 +1806,7 @@ void TreeModel::CalculatePipeProfileAdjustedTransforms(const PipeModelParameters
 	{
 		auto& node = m_shootSkeleton.RefNode(nodeHandle);
 		const auto parentHandle = node.GetParentHandle();
-		if(parentHandle == -1)
+		if (parentHandle == -1)
 		{
 			node.m_data.m_adjustedGlobalPosition = node.m_info.GetGlobalEndPosition();
 			node.m_data.m_adjustedGlobalRotation = node.m_info.m_regulatedGlobalRotation;
@@ -1836,7 +1826,7 @@ void TreeModel::CalculatePipeProfileAdjustedTransforms(const PipeModelParameters
 		const auto parentLeft = parentGlobalRotation * glm::vec3(1, 0, 0);
 		const auto parentFront = parentGlobalRotation * glm::vec3(0, 0, -1);
 
-		
+
 		const auto front = node.m_data.m_adjustedGlobalRotation * glm::vec3(0, 0, -1);
 		const float offsetLength = glm::length(node.m_data.m_offset);
 		float maxDistanceToCenter = node.m_data.m_frontProfile.GetMaxDistanceToCenter();
@@ -1909,27 +1899,30 @@ glm::vec3 TreeModel::InterpolatePipeSegmentPosition(const PipeSegmentHandle pipe
 	const auto& pipeSegmentHandles = pipe.PeekPipeSegmentHandles();
 
 	glm::vec3 p[4];
-	
+
 	p[2] = pipeSegment.m_info.m_globalPosition;
-	if(pipeSegmentHandle == pipeSegmentHandles.front())
+	if (pipeSegmentHandle == pipeSegmentHandles.front())
 	{
 		p[1] = baseInfo.m_globalPosition;
 		p[0] = p[1] * 2.0f - p[2];
-	}else if(pipeSegmentHandle == pipeSegmentHandles.at(1))
+	}
+	else if (pipeSegmentHandle == pipeSegmentHandles.at(1))
 	{
 		p[0] = baseInfo.m_globalPosition;
 		p[1] = pipeGroup.PeekPipeSegment(pipeSegmentHandles.front()).m_info.m_globalPosition;
-	}else
+	}
+	else
 	{
 		const auto& prevSegment = pipeGroup.PeekPipeSegment(pipeSegment.GetPrevHandle());
 		p[1] = prevSegment.m_info.m_globalPosition;
 		const auto& prevPrevSegment = pipeGroup.PeekPipeSegment(prevSegment.GetPrevHandle());
 		p[0] = prevPrevSegment.m_info.m_globalPosition;
 	}
-	if(pipeSegmentHandle == pipeSegmentHandles.back())
+	if (pipeSegmentHandle == pipeSegmentHandles.back())
 	{
 		p[3] = p[2] * 2.0f - p[1];
-	}else
+	}
+	else
 	{
 		const auto& nextSegment = pipeGroup.PeekPipeSegment(pipeSegment.GetNextHandle());
 		p[3] = nextSegment.m_info.m_globalPosition;

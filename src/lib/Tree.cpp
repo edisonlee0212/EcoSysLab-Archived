@@ -327,8 +327,10 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 		ImGui::DragFloat("Boundary strength", &pipeModelParameters.m_boundaryStrength, 1000.f, 0.0f, 100000.0f);
 		ImGui::DragFloat("Center attraction strength", &pipeModelParameters.m_centerAttractionStrength, 100.f, 0.0f, 10000.0f);
 		ImGui::DragInt("Max iteration cell factor", &pipeModelParameters.m_maxSimulationIterationCellFactor, 1, 0, 500);
-		ImGui::DragInt("Timeout", &pipeModelParameters.m_timeout, 100, 200, 10000);
-		ImGui::DragInt("Timeout with boundaries)", &pipeModelParameters.m_timeoutWithBoundaries, 100, 200, 10000);
+		ImGui::DragInt("Branch Packing Timeout", &pipeModelParameters.m_branchProfilePackingMaxIteration, 1, 0, 10000);
+		ImGui::DragInt("Junction Packing Timeout", &pipeModelParameters.m_junctionProfilePackingMaxIteration, 1, 20, 10000);
+		ImGui::DragInt("Modified Packing Timeout", &pipeModelParameters.m_modifiedProfilePackingMaxIteration, 1, 20, 10000);
+		ImGui::DragInt("Timeout with boundaries)", &pipeModelParameters.m_modifiedProfilePackingMaxIteration, 1, 20, 10000);
 		ImGui::TreePop();
 	}
 	ImGui::DragFloat("Overlap threshold", &pipeModelParameters.m_overlapThreshold, 0.01f, 0.0f, 1.0f);
