@@ -17,7 +17,7 @@ namespace EcoSysLab {
 	{
 		std::vector<Particle2D<ParticleData>> m_particles2D{};
 		void SolveCollision(ParticleHandle p1Handle, ParticleHandle p2Handle);
-		float m_deltaTime = 0.002f;
+		float m_deltaTime = 0.001f;
 		void Update(
 			const std::function<void(ParticleGrid2D& grid, bool gridResized)>& modifyGridFunc,
 			const std::function<void(Particle2D<ParticleData>& particle)>& modifyParticleFunc);

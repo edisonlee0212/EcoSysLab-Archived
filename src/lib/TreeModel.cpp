@@ -545,7 +545,9 @@ bool TreeModel::ElongateInternode(float extendLength, NodeHandle internodeHandle
 		auto& newInternode = m_shootSkeleton.RefNode(newInternodeHandle);
 		newInternode.m_data = {};
 		newInternode.m_data.m_frontProfile = {};
+		newInternode.m_data.m_frontProfile.Reset(0.001f);
 		newInternode.m_data.m_backProfile = {};
+		newInternode.m_data.m_backProfile.Reset(0.001f);
 		newInternode.m_data.m_frontParticleMap = {};
 		newInternode.m_data.m_backParticleMap = {};
 		newInternode.m_data.m_profileConstraints = {};
@@ -659,7 +661,16 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 				auto& oldInternode = m_shootSkeleton.RefNode(internodeHandle);
 				auto& newInternode = m_shootSkeleton.RefNode(newInternodeHandle);
 				newInternode.m_data = {};
-				newInternode.m_data.m_indexOfParentBud = budIndex;
+				newInternode.m_data.m_frontProfile = {};
+				newInternode.m_data.m_frontProfile.Reset(0.001f);
+				newInternode.m_data.m_backProfile = {};
+				newInternode.m_data.m_backProfile.Reset(0.001f);
+				newInternode.m_data.m_frontParticleMap = {};
+				newInternode.m_data.m_backParticleMap = {};
+				newInternode.m_data.m_profileConstraints = {};
+				newInternode.m_data.m_indexOfParentBud = 0;
+				newInternode.m_data.m_pipeSize = 0;
+
 				newInternode.m_data.m_startAge = m_age;
 				newInternode.m_data.m_finishAge = 0.0f;
 				newInternode.m_data.m_order = oldInternode.m_data.m_order + 1;
