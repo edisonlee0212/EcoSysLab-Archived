@@ -141,11 +141,11 @@ namespace EcoSysLab {
 #pragma region Pipe model
 		void InitializeProfiles(const PipeModelParameters& pipeModelParameters);
 		void CalculateProfiles(const PipeModelParameters& pipeModelParameters);
-		void CalculateProfile(NodeHandle nodeHandle, const PipeModelParameters& pipeModelParameters, bool scheduling);
+		void CalculateProfile(float maxRootDistance, NodeHandle nodeHandle, const PipeModelParameters& pipeModelParameters, bool scheduling);
 		void Wait(NodeHandle nodeHandle);
 
 		void PackTask(NodeHandle nodeHandle, const PipeModelParameters& pipeModelParameters, bool parallel);
-		void MergeTask(NodeHandle nodeHandle, const PipeModelParameters& pipeModelParameters);
+		void MergeTask(float maxRootDistance, NodeHandle nodeHandle, const PipeModelParameters& pipeModelParameters);
 		void CopyFrontToBackTask(NodeHandle nodeHandle);
 		void CalculateShiftTask(NodeHandle nodeHandle, const PipeModelParameters& pipeModelParameters);
 		void ApplyProfile(const PipeModelParameters& pipeModelParameters,

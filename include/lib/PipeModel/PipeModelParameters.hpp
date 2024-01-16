@@ -18,8 +18,6 @@ namespace EcoSysLab
 
 		float m_overlapThreshold = 0.1f;
 		int m_endNodeStrands = 3;
-		float m_branchTwistAngle = 0.0f;
-		float m_junctionTwistAngle = 0.0f;
 		bool m_preMerge = true;
 
 		float m_controlPointRatio = 0.3f;
@@ -36,7 +34,12 @@ namespace EcoSysLab
 		float m_frontPushRatio = 1.0f;
 		float m_rotationPushRatio = 0.5f;
 
+
+		PlottedDistribution<float> m_branchTwistDistribution{};
+		PlottedDistribution<float> m_junctionTwistDistribution{};
 		PlottedDistribution<float> m_pipeRadiusDistribution {};
+		float m_cladoptosisRange = 10.0f;
+		PlottedDistribution<float> m_cladoptosisDistribution{};
 
 		ParticlePhysicsSettings m_profilePhysicsSettings{};
 	};

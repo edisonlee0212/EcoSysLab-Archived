@@ -335,16 +335,19 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	}
 	ImGui::DragFloat("Overlap threshold", &pipeModelParameters.m_overlapThreshold, 0.01f, 0.0f, 1.0f);
 	ImGui::DragInt("End node strand count", &pipeModelParameters.m_endNodeStrands, 1, 1, 50);
-	ImGui::DragFloat("Branch Twist Angle", &pipeModelParameters.m_branchTwistAngle, 0.1f, 0.0f, 360.0f);
-	ImGui::DragFloat("Junction Twist Angle", &pipeModelParameters.m_junctionTwistAngle, 0.1f, 0.0f, 360.0f);
+	
 	ImGui::Checkbox("Pre-merge", &pipeModelParameters.m_preMerge);
 
-	static PlottedDistributionSettings strandThickness = { 0.001f,
+	static PlottedDistributionSettings plottedDistributionSettings = { 0.001f,
 													{0.001f, true, true, ""},
 													{0.001f, true, true, ""},
 													"" };
-	m_pipeModelParameters.m_pipeRadiusDistribution.OnInspect("Strand Thickness", strandThickness);
+	m_pipeModelParameters.m_branchTwistDistribution.OnInspect("Branch Twist", plottedDistributionSettings);
+	m_pipeModelParameters.m_junctionTwistDistribution.OnInspect("Junction Twist", plottedDistributionSettings);
+	m_pipeModelParameters.m_pipeRadiusDistribution.OnInspect("Strand Thickness", plottedDistributionSettings);
 
+	ImGui::DragFloat("Cladoptosis Range", &pipeModelParameters.m_cladoptosisRange, 0.01f, 0.0f, 50.f);
+	m_pipeModelParameters.m_cladoptosisDistribution.OnInspect("Cladoptosis", plottedDistributionSettings);
 	ImGui::Text(("Last calculation time: " + std::to_string(m_treeModel.PeekShootSkeleton().m_data.m_profileCalculationTime)).c_str());
 	ImGui::Text(("Strand count: " + std::to_string(m_treeModel.PeekShootSkeleton().m_data.m_pipeGroup.PeekPipes().size())).c_str());
 	ImGui::Text(("Total particle count: " + std::to_string(m_treeModel.PeekShootSkeleton().m_data.m_numOfParticles)).c_str());
@@ -412,10 +415,17 @@ void Tree::Update()
 void Tree::OnCreate() {
 	m_treeVisualizer.Initialize();
 
-	m_pipeModelParameters.m_pipeRadiusDistribution.m_mean = { 0.0f, 0.002f,
-								Curve2D(0.5f, 0.5f, {0, 0}, {1, 1}) };
-	m_pipeModelParameters.m_pipeRadiusDistribution.m_deviation = {
-		0.0f, 1.0f, Curve2D(0.0f, 0.0f, {0, 0}, {1, 1}) };
+	m_pipeModelParameters.m_branchTwistDistribution.m_mean = { -60.0f, 60.0f};
+	m_pipeModelParameters.m_branchTwistDistribution.m_deviation = { 0.0f, 1.0f, {0, 0} };
+
+	m_pipeModelParameters.m_junctionTwistDistribution.m_mean = { -60.0f, 60.0f};
+	m_pipeModelParameters.m_junctionTwistDistribution.m_deviation = { 0.0f, 1.0f, {0, 0} };
+
+	m_pipeModelParameters.m_pipeRadiusDistribution.m_mean = { 0.0f, 0.002f};
+	m_pipeModelParameters.m_pipeRadiusDistribution.m_deviation = {0.0f, 1.0f, {0, 0}};
+
+	m_pipeModelParameters.m_cladoptosisDistribution.m_mean = { 0.0f, 0.02f};
+	m_pipeModelParameters.m_cladoptosisDistribution.m_deviation = { 0.0f, 1.0f, {0, 0} };
 }
 
 void Tree::OnDestroy() {

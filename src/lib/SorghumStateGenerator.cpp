@@ -310,7 +310,7 @@ SorghumState SorghumStateGenerator::Generate(unsigned int seed) {
     auto curling =
         glm::clamp(m_leafCurling.GetValue(step), 0.0f, 90.0f) / 90.0f;
     leafState.m_curlingAlongLeaf = {
-        0.0f, 90.0f, {curling, curling, {0, 0}, {1, 1}}};
+        0.0f, 90.0f, {curling, curling}};
     leafState.m_branchingAngle = m_leafBranchingAngle.GetValue(step);
     leafState.m_rollAngle = (i % 2) * 180.0f + m_leafRollAngle.GetValue(step);
 
@@ -319,7 +319,7 @@ SorghumState SorghumStateGenerator::Generate(unsigned int seed) {
     auto bendingAcceleration = m_leafBendingAcceleration.GetValue(step);
     auto bendingSmoothness = m_leafBendingSmoothness.GetValue(step);
     leafState.m_bendingAlongLeaf = {
-        -180.0f, 180.0f, {0.5f, bending, {0, 0}, {1, 1}}};
+        -180.0f, 180.0f, {0.5f, bending}};
 
     glm::vec2 middle = glm::mix(glm::vec2(0, bending), glm::vec2(1, 0.5f),
                                 bendingAcceleration);
@@ -359,57 +359,57 @@ void SorghumStateGenerator::OnCreate() {
   m_leafAmount.m_deviation = 1.0f;
 
   m_leafStartingPoint.m_mean = {0.0f, 1.0f,
-                                Curve2D(0.1f, 1.0f, {0, 0}, {1, 1})};
+                                Curve2D(0.1f, 1.0f)};
   m_leafStartingPoint.m_deviation = {
-      0.0f, 1.0f, Curve2D(0.0f, 0.0f, {0, 0}, {1, 1})};
+      0.0f, 1.0f, Curve2D(0.0f, 0.0f)};
 
   m_leafCurling.m_mean = {0.0f, 90.0f,
-                          Curve2D(0.3f, 0.7f, {0, 0}, {1, 1})};
+                          Curve2D(0.3f, 0.7f)};
   m_leafCurling.m_deviation = {0.0f, 1.0f,
-                               Curve2D(0.0f, 0.0f, {0, 0}, {1, 1})};
+                               Curve2D(0.0f, 0.0f)};
   m_leafRollAngle.m_mean = {-1.0f, 1.0f,
-                            Curve2D(0.5f, 0.5f, {0, 0}, {1, 1})};
+                            Curve2D(0.5f, 0.5f)};
   m_leafRollAngle.m_deviation = {0.0f, 6.0f,
-                                 Curve2D(0.3f, 1.0f, {0, 0}, {1, 1})};
+                                 Curve2D(0.3f, 1.0f)};
 
   m_leafBranchingAngle.m_mean = {0.0f, 55.0f,
-                                 Curve2D(0.5f, 0.2f, {0, 0}, {1, 1})};
+                                 Curve2D(0.5f, 0.2f)};
   m_leafBranchingAngle.m_deviation = {
-      0.0f, 3.0f, Curve2D(0.67f, 0.225f, {0, 0}, {1, 1})};
+      0.0f, 3.0f, Curve2D(0.67f, 0.225f)};
 
   m_leafBending.m_mean = {-180.0f, 180.0f,
-                          Curve2D(0.5f, 0.5f, {0, 0}, {1, 1})};
+                          Curve2D(0.5f, 0.5f)};
   m_leafBending.m_deviation = {0.0f, 0.0f,
-                               Curve2D(0.5f, 0.5f, {0, 0}, {1, 1})};
+                               Curve2D(0.5f, 0.5f)};
 
   m_leafBendingAcceleration.m_mean = {
-      0.0f, 1.0f, Curve2D(0.5f, 0.5f, {0, 0}, {1, 1})};
+      0.0f, 1.0f, Curve2D(0.5f, 0.5f)};
   m_leafBendingSmoothness.m_mean = {
-      0.0f, 1.0f, Curve2D(0.5f, 0.5f, {0, 0}, {1, 1})};
+      0.0f, 1.0f, Curve2D(0.5f, 0.5f)};
   m_leafBendingAcceleration.m_deviation = {
-      0.0f, 0.0f, Curve2D(0.5f, 0.5f, {0, 0}, {1, 1})};
+      0.0f, 0.0f, Curve2D(0.5f, 0.5f)};
 
   m_leafWaviness.m_mean = {0.0f, 20.0f,
-                           Curve2D(0.5f, 0.5f, {0, 0}, {1, 1})};
+                           Curve2D(0.5f, 0.5f)};
   m_leafWaviness.m_deviation = {0.0f, 0.0f,
-                                Curve2D(0.5f, 0.5f, {0, 0}, {1, 1})};
+                                Curve2D(0.5f, 0.5f)};
 
   m_leafWavinessFrequency.m_mean = {
-      0.0f, 1.0f, Curve2D(0.5f, 0.5f, {0, 0}, {1, 1})};
+      0.0f, 1.0f, Curve2D(0.5f, 0.5f)};
   m_leafWavinessFrequency.m_deviation = {
-      0.0f, 0.0f, Curve2D(0.5f, 0.5f, {0, 0}, {1, 1})};
+      0.0f, 0.0f, Curve2D(0.5f, 0.5f)};
 
   m_leafLength.m_mean = {0.0f, 2.5f,
-                         Curve2D(0.165, 0.247, {0, 0}, {1, 1})};
+                         Curve2D(0.165, 0.247)};
   m_leafLength.m_deviation = {0.0f, 0.0f,
-                              Curve2D(0.5f, 0.5f, {0, 0}, {1, 1})};
+                              Curve2D(0.5f, 0.5f)};
 
   m_leafWidth.m_mean = {0.0f, 0.075f,
-                        Curve2D(0.5f, 0.5f, {0, 0}, {1, 1})};
+                        Curve2D(0.5f, 0.5f)};
   m_leafWidth.m_deviation = {0.0f, 0.0f,
-                             Curve2D(0.5f, 0.5f, {0, 0}, {1, 1})};
+                             Curve2D(0.5f, 0.5f)};
 
-  m_widthAlongStem = Curve2D(1.0f, 0.1f, {0, 0}, {1, 1});
-  m_widthAlongLeaf = Curve2D(0.5f, 0.1f, {0, 0}, {1, 1});
-  m_wavinessAlongLeaf = Curve2D(0.0f, 0.5f, {0, 0}, {1, 1});
+  m_widthAlongStem = Curve2D(1.0f, 0.1f);
+  m_widthAlongLeaf = Curve2D(0.5f, 0.1f);
+  m_wavinessAlongLeaf = Curve2D(0.0f, 0.5f);
 }
