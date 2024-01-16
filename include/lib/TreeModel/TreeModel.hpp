@@ -149,11 +149,7 @@ namespace EcoSysLab {
 		void CopyFrontToBackTask(NodeHandle nodeHandle);
 		void CalculateShiftTask(NodeHandle nodeHandle, const PipeModelParameters& pipeModelParameters);
 		void ApplyProfile(const PipeModelParameters& pipeModelParameters,
-			const glm::vec3& globalPosition,
-			const glm::quat& globalRotation,
-			const PipeProfile<CellParticlePhysicsData>& profile, 
-			const std::unordered_map<PipeHandle, ParticleHandle>& map, 
-			float pipeRadius);
+			NodeHandle nodeHandle);
 		void ApplyProfiles(const PipeModelParameters& pipeModelParameters);
 		void CalculatePipeProfileAdjustedTransforms(const PipeModelParameters& pipeModelParameters);
 		glm::vec3 InterpolatePipeSegmentPosition(PipeSegmentHandle pipeSegmentHandle, float a) const;

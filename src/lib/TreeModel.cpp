@@ -1354,8 +1354,8 @@ void TreeModel::CalculateProfile(const NodeHandle nodeHandle, const PipeModelPar
 				if (internode.RefChildHandles().empty()) CopyFrontToBackTask(nodeHandle);
 				CalculateShiftTask(nodeHandle, pipeModelParameters);
 			}
-			internode.m_data.m_frontProfile.CalculateBoundaries(pipeModelParameters.m_boundaryPointDistance);
-			internode.m_data.m_backProfile.CalculateBoundaries(pipeModelParameters.m_boundaryPointDistance);
+			internode.m_data.m_frontProfile.CalculateBoundaries(internode.IsEndNode(), pipeModelParameters.m_boundaryPointDistance);
+			internode.m_data.m_backProfile.CalculateBoundaries(internode.IsEndNode(), pipeModelParameters.m_boundaryPointDistance);
 			}
 		)
 		);
@@ -1369,8 +1369,8 @@ void TreeModel::CalculateProfile(const NodeHandle nodeHandle, const PipeModelPar
 			if (internode.RefChildHandles().empty()) CopyFrontToBackTask(nodeHandle);
 			CalculateShiftTask(nodeHandle, pipeModelParameters);
 		}
-		internode.m_data.m_frontProfile.CalculateBoundaries(pipeModelParameters.m_boundaryPointDistance);
-		internode.m_data.m_backProfile.CalculateBoundaries(pipeModelParameters.m_boundaryPointDistance);
+		internode.m_data.m_frontProfile.CalculateBoundaries(internode.IsEndNode(), pipeModelParameters.m_boundaryPointDistance);
+		internode.m_data.m_backProfile.CalculateBoundaries(internode.IsEndNode(), pipeModelParameters.m_boundaryPointDistance);
 	}
 }
 
@@ -1680,22 +1680,28 @@ void TreeModel::CalculateShiftTask(NodeHandle nodeHandle, const PipeModelParamet
 }
 
 void TreeModel::ApplyProfile(const PipeModelParameters& pipeModelParameters,
-	const glm::vec3& globalPosition, const glm::quat& globalRotation,
-	const PipeProfile<CellParticlePhysicsData>& profile,
-	const std::unordered_map<PipeHandle, ParticleHandle>& map, float pipeRadius)
+	NodeHandle nodeHandle)
 {
-	const auto currentUp = globalRotation * glm::vec3(0, 1, 0);
-	const auto currentLeft = globalRotation * glm::vec3(1, 0, 0);
+	const auto& node = m_shootSkeleton.RefNode(nodeHandle);
+	const auto currentFront = node.m_data.m_adjustedGlobalRotation * glm::vec3(0, 0, -1);
+	const auto currentUp = node.m_data.m_adjustedGlobalRotation * glm::vec3(0, 1, 0);
+	const auto currentLeft = node.m_data.m_adjustedGlobalRotation * glm::vec3(1, 0, 0);
 	const auto& parameters = pipeModelParameters;
-	for (const auto& [pipeHandle, particleHandle] : map)
+	bool wound = node.IsEndNode();
+	for (const auto& [pipeHandle, particleHandle] : node.m_data.m_backParticleMap)
 	{
-		const auto& particle = profile.PeekParticle(particleHandle);
+		const auto& particle = node.m_data.m_backProfile.PeekParticle(particleHandle);
 		auto& newPipeSegment = m_shootSkeleton.m_data.m_pipeGroup.RefPipeSegment(particle.m_data.m_pipeSegmentHandle);
-		newPipeSegment.m_info.m_thickness = pipeRadius;
-		newPipeSegment.m_info.m_globalPosition = globalPosition
-			+ pipeRadius * particle.GetPosition().x * currentLeft
-			+ pipeRadius * particle.GetPosition().y * currentUp;
-		newPipeSegment.m_info.m_globalRotation = globalRotation;
+		newPipeSegment.m_info.m_thickness = node.m_data.m_pipeCellRadius;
+		newPipeSegment.m_info.m_globalPosition = node.m_data.m_adjustedGlobalPosition
+			+ node.m_data.m_pipeCellRadius * particle.GetPosition().x * currentLeft
+			+ node.m_data.m_pipeCellRadius * particle.GetPosition().y * currentUp;
+		if(wound)
+		{
+			newPipeSegment.m_info.m_globalPosition += currentFront * glm::max(0.0f, (10.0f - particle.GetDistanceToBoundary()) * node.m_info.m_length * 0.1f);
+		}
+
+		newPipeSegment.m_info.m_globalRotation = node.m_data.m_adjustedGlobalRotation;
 		newPipeSegment.m_info.m_color = particle.IsBoundary() ? parameters.m_boundaryPointColor : parameters.m_contentPointColor;
 		newPipeSegment.m_info.m_isBoundary = particle.IsBoundary();
 	}
@@ -1738,7 +1744,7 @@ void TreeModel::ApplyProfiles(const PipeModelParameters& pipeModelParameters)
 				pipe.m_info.m_baseInfo.m_color = particle.IsBoundary() ? pipeModelParameters.m_boundaryPointColor : pipeModelParameters.m_contentPointColor;
 			}
 		}
-		ApplyProfile(pipeModelParameters, node.m_data.m_adjustedGlobalPosition, node.m_data.m_adjustedGlobalRotation, node.m_data.m_backProfile, node.m_data.m_backParticleMap, node.m_data.m_pipeCellRadius);
+		ApplyProfile(pipeModelParameters, nodeHandle);
 	}
 }
 

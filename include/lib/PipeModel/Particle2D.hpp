@@ -24,7 +24,9 @@ namespace EcoSysLab {
 		ParticleHandle m_handle = -1;
 
 		bool m_boundary = false;
+		float m_distanceToBoundary = 0.0f;
 	public:
+		[[nodiscard]] float GetDistanceToBoundary() const;
 		bool m_enable = true;
 		[[nodiscard]] bool IsBoundary() const;
 		T m_data;
@@ -49,6 +51,12 @@ namespace EcoSysLab {
 		void SetPolarPosition(const glm::vec2& position);
 	};
 
+
+	template <typename T>
+	float Particle2D<T>::GetDistanceToBoundary() const
+	{
+		return m_distanceToBoundary;
+	}
 
 	template <typename T>
 	bool Particle2D<T>::IsBoundary() const

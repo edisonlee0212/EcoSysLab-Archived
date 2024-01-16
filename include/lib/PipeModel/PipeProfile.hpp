@@ -36,7 +36,7 @@ namespace EcoSysLab {
 		
 		void RenderEdges(ImVec2 origin, float zoomFactor, ImDrawList* drawList, ImU32 color, float thickness);
 		void RenderBoundary(ImVec2 origin, float zoomFactor, ImDrawList* drawList, ImU32 color, float thickness);
-		void CalculateBoundaries(float removalLength = 8);
+		void CalculateBoundaries(bool calculateBoundaryDistance, float removalLength = 8);
 		ParticleGrid2D m_particleGrid2D{};
 		bool m_parallel = false;
 		bool m_forceResetGrid = false;
@@ -336,7 +336,7 @@ namespace EcoSysLab {
 	}
 
 	template <typename ParticleData>
-	void PipeProfile<ParticleData>::CalculateBoundaries(float removalLength)
+	void PipeProfile<ParticleData>::CalculateBoundaries(const bool calculateBoundaryDistance, const float removalLength)
 	{
 		m_edges.clear();
 		m_boundaryEdges.clear();
@@ -361,6 +361,7 @@ namespace EcoSysLab {
 			++edges[std::make_pair(glm::min(v1, v2), glm::max(v1, v2))];
 			++edges[std::make_pair(glm::min(v0, v2), glm::max(v0, v2))];
 		}
+		std::set<int> boundaryVertices;
 		for (const auto& edge : edges)
 		{
 			if (edge.second == 1)
@@ -368,8 +369,32 @@ namespace EcoSysLab {
 				m_boundaryEdges.emplace_back(edge.first);
 				m_particles2D[edge.first.first].m_boundary = true;
 				m_particles2D[edge.first.second].m_boundary = true;
+				boundaryVertices.emplace(edge.first.first);
+				boundaryVertices.emplace(edge.first.second);
 			}
 			m_edges.emplace_back(edge.first);
+		}
+
+		if(calculateBoundaryDistance)
+		{
+			for (auto& particle : m_particles2D) {
+				if(particle.m_boundary || boundaryVertices.empty())
+				{
+					particle.m_distanceToBoundary = 0.0f;
+					continue;
+				}
+				particle.m_distanceToBoundary = FLT_MAX;
+				const auto position = particle.GetPosition();
+				for (const auto& boundaryParticleHandle : boundaryVertices)
+				{
+					const auto& boundaryParticle = m_particles2D[boundaryParticleHandle];
+					const auto currentDistance = glm::distance(position, boundaryParticle.GetPosition());
+					if(particle.m_distanceToBoundary > currentDistance)
+					{
+						particle.m_distanceToBoundary = currentDistance;
+					}
+				}
+			}
 		}
 	}
 
