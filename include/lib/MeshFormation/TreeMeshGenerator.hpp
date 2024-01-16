@@ -87,8 +87,7 @@ namespace EcoSysLab {
 
 		bool m_overrideRadius = false;
 		float m_radius = 0.01f;
-		bool m_overrideVertexColor = false;
-		
+		bool m_junctionColor = false;
 		float m_baseControlPointRatio = 0.3f;
 		float m_branchControlPointRatio = 0.3f;
 		bool m_smoothness = true;
@@ -97,9 +96,6 @@ namespace EcoSysLab {
 		int m_voxelSubdivisionLevel = 10;
 		int m_voxelSmoothIteration = 5;
 		bool m_removeDuplicate = true;
-
-		glm::vec3 m_branchVertexColor = glm::vec3(1.0f);
-		glm::vec3 m_foliageVertexColor = glm::vec3(1.0f);
 
 		unsigned m_branchMeshType = 0;
 
@@ -289,7 +285,6 @@ namespace EcoSysLab {
 			float pAngleStep = 360.0f / static_cast<float>(pStep);
 			int vertexIndex = vertices.size();
 			Vertex archetype;
-			if (settings.m_overrideVertexColor) archetype.m_color = glm::vec4(settings.m_branchVertexColor, 1.0f);
 			const auto flowHandle = internode.GetFlowHandle();
 			archetype.m_vertexInfo1 = internodeHandle + 1;
 			archetype.m_vertexInfo2 = flowHandle + 1;
@@ -360,7 +355,7 @@ namespace EcoSysLab {
 
 					currentLineIndex = currentTreePartInfo.m_lineIndex;
 				}
-				archetype.m_color = glm::vec4(1, 1, 1, 1);
+				//archetype.m_color = glm::vec4(1, 1, 1, 1);
 			}else if(treePartType == 1)
 			{
 				//Base of Y Shape
@@ -389,7 +384,7 @@ namespace EcoSysLab {
 
 					currentLineIndex = currentTreePartInfo.m_lineIndex;
 				}
-				archetype.m_color = glm::vec4(1, 0, 0, 1);
+				//archetype.m_color = glm::vec4(1, 0, 0, 1);
 			}else if(treePartType == 2)
 			{
 				//Branch of Y Shape
@@ -411,7 +406,7 @@ namespace EcoSysLab {
 
 					currentLineIndex = currentTreePartInfo.m_lineIndex;
 				}
-				archetype.m_color = glm::vec4(1, 0, 0, 1);
+				//archetype.m_color = glm::vec4(1, 0, 0, 1);
 			}
 			archetype.m_vertexInfo3 = currentLineIndex + 1;
 			archetype.m_vertexInfo4.x = currentTreePartIndex + 1;
@@ -486,6 +481,7 @@ namespace EcoSysLab {
 						s < (step / 2) ? s * textureXStep : (step - s) * textureXStep;
 					const auto y = ringIndex % 2 == 0 ? 1.0f : 0.0f;
 					archetype.m_texCoord = glm::vec2(x, y);
+					archetype.m_color = internodeInfo.m_color;
 					vertices.push_back(archetype);
 				}
 				if (ringIndex == 0)

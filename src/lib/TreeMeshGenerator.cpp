@@ -148,12 +148,9 @@ void TreeMeshGeneratorSettings::Save(const std::string& name, YAML::Emitter& out
 	out << YAML::Key << "m_boundaryRadius" << YAML::Value << m_radius;
 	out << YAML::Key << "m_baseControlPointRatio" << YAML::Value << m_baseControlPointRatio;
 	out << YAML::Key << "m_branchControlPointRatio" << YAML::Value << m_branchControlPointRatio;
-	out << YAML::Key << "m_overrideVertexColor" << YAML::Value << m_overrideVertexColor;
 	out << YAML::Key << "m_treePartEndDistance" << YAML::Value << m_treePartEndDistance;
 	out << YAML::Key << "m_treePartBaseDistance" << YAML::Value << m_treePartBaseDistance;
-	out << YAML::Key << "m_branchVertexColor" << YAML::Value << m_branchVertexColor;
-	out << YAML::Key << "m_foliageVertexColor" << YAML::Value << m_foliageVertexColor;
-
+	
 	out << YAML::Key << "m_autoLevel" << YAML::Value << m_autoLevel;
 	out << YAML::Key << "m_voxelSubdivisionLevel" << YAML::Value << m_voxelSubdivisionLevel;
 	out << YAML::Key << "m_voxelSmoothIteration" << YAML::Value << m_voxelSmoothIteration;
@@ -187,12 +184,8 @@ void TreeMeshGeneratorSettings::Load(const std::string& name, const YAML::Node& 
 		if (ms["m_boundaryRadius"]) m_radius = ms["m_boundaryRadius"].as<float>();
 		if (ms["m_baseControlPointRatio"]) m_baseControlPointRatio = ms["m_baseControlPointRatio"].as<float>();
 		if (ms["m_branchControlPointRatio"]) m_branchControlPointRatio = ms["m_branchControlPointRatio"].as<float>();
-		if (ms["m_overrideVertexColor"]) m_overrideVertexColor = ms["m_overrideVertexColor"].as<bool>();
 		if (ms["m_treePartEndDistance"]) m_treePartEndDistance = ms["m_treePartEndDistance"].as<float>();
 		if (ms["m_treePartBaseDistance"]) m_treePartBaseDistance = ms["m_treePartBaseDistance"].as<float>();
-		if (ms["m_branchVertexColor"]) m_branchVertexColor = ms["m_branchVertexColor"].as<glm::vec3>();
-		if (ms["m_foliageVertexColor"]) m_foliageVertexColor = ms["m_foliageVertexColor"].as<glm::vec3>();
-
 
 		if (ms["m_autoLevel"]) m_autoLevel = ms["m_autoLevel"].as<bool>();
 		if (ms["m_voxelSubdivisionLevel"]) m_voxelSubdivisionLevel = ms["m_voxelSubdivisionLevel"].as<int>();
@@ -233,7 +226,6 @@ void TreeMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLayer>& ed
 			}
 			ImGui::Checkbox("Override radius", &m_overrideRadius);
 			if (m_overrideRadius) ImGui::DragFloat("Radius", &m_radius);
-			ImGui::Checkbox("Override vertex color", &m_overrideVertexColor);
 			ImGui::DragFloat("Tree Part Base Distance", &m_treePartBaseDistance, 1, 0, 10);
 			ImGui::DragFloat("Tree Part End Distance", &m_treePartEndDistance, 1, 0, 10);
 			ImGui::TreePop();
@@ -248,18 +240,12 @@ void TreeMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLayer>& ed
 			ImGui::TreePop();
 		}
 		if (m_enableBranch && ImGui::TreeNode("Branch settings")) {
-			
-			if (m_overrideVertexColor) {
-				ImGui::ColorEdit3("Branch vertex color", &m_branchVertexColor.x);
-			}
-			
+			ImGui::Checkbox("Junction Color", &m_junctionColor);
 			ImGui::TreePop();
 		}
 		if (m_enableFoliage && ImGui::TreeNode("Foliage settings"))
 		{
-			if (m_overrideVertexColor) {
-				ImGui::ColorEdit3("Foliage vertex color", &m_foliageVertexColor.x);
-			}
+
 			ImGui::TreePop();
 		}
 		
