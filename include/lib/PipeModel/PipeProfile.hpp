@@ -31,9 +31,11 @@ namespace EcoSysLab {
 
 		std::vector<std::pair<int, int>> m_edges{};
 		std::vector<std::pair<int, int>> m_boundaryEdges{};
+		std::vector<glm::ivec3> m_triangles{};
 	public:
 		[[nodiscard]] const std::vector<std::pair<int, int>>& PeekBoundaryEdges() const;
-		
+		[[nodiscard]] const std::vector<glm::ivec3>& PeekTriangles() const;
+		[[nodiscard]] const std::vector<std::pair<int, int>>& PeekEdges() const;
 		void RenderEdges(ImVec2 origin, float zoomFactor, ImDrawList* drawList, ImU32 color, float thickness);
 		void RenderBoundary(ImVec2 origin, float zoomFactor, ImDrawList* drawList, ImU32 color, float thickness);
 		void CalculateBoundaries(bool calculateBoundaryDistance, float removalLength = 8);
@@ -306,6 +308,18 @@ namespace EcoSysLab {
 	}
 
 	template <typename ParticleData>
+	const std::vector<glm::ivec3>& PipeProfile<ParticleData>::PeekTriangles() const
+	{
+		return m_triangles;
+	}
+
+	template <typename ParticleData>
+	const std::vector<std::pair<int, int>>& PipeProfile<ParticleData>::PeekEdges() const
+	{
+		return m_edges;
+	}
+
+	template <typename ParticleData>
 	void PipeProfile<ParticleData>::RenderEdges(ImVec2 origin, float zoomFactor, ImDrawList* drawList,
 		ImU32 color, float thickness)
 	{
@@ -340,15 +354,26 @@ namespace EcoSysLab {
 	{
 		m_edges.clear();
 		m_boundaryEdges.clear();
-		if(m_particles2D.size() < 3) return;
+		m_triangles.clear();
+
+		if(m_particles2D.size() < 3)
+		{
+			for (int i = 0; i < m_particles2D.size(); i++)
+			{
+				m_particles2D[i].m_boundary = true;
+				m_particles2D[i].m_distanceToBoundary = 0;
+			}
+			return;
+		}
 		std::vector<float> positions(m_particles2D.size() * 2);
 		for (int i = 0; i < m_particles2D.size(); i++)
 		{
 			positions[2 * i] = m_particles2D[i].m_position.x;
 			positions[2 * i + 1] = m_particles2D[i].m_position.y;
 			m_particles2D[i].m_boundary = false;
+			m_particles2D[i].m_distanceToBoundary = 0;
 		}
-		Delaunator::Delaunator2D d(positions);
+		const Delaunator::Delaunator2D d(positions);
 		std::map<std::pair<int, int>, int> edges;
 		for (std::size_t i = 0; i < d.triangles.size(); i += 3) {
 			const auto& v0 = d.triangles[i];
@@ -360,6 +385,7 @@ namespace EcoSysLab {
 			++edges[std::make_pair(glm::min(v0, v1), glm::max(v0, v1))];
 			++edges[std::make_pair(glm::min(v1, v2), glm::max(v1, v2))];
 			++edges[std::make_pair(glm::min(v0, v2), glm::max(v0, v2))];
+			m_triangles.emplace_back(glm::ivec3( v0, v1, v2 ));
 		}
 		std::set<int> boundaryVertices;
 		for (const auto& edge : edges)
