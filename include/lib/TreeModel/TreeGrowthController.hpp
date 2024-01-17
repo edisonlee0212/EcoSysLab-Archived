@@ -5,6 +5,7 @@ using namespace EvoEngine;
 namespace EcoSysLab
 {
 	struct ShootGrowthController {
+		bool m_branchPush = false;
 #pragma region Internode
 		/**
 		 * \brief The expected elongation length for an internode for one year.

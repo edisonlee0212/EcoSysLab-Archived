@@ -422,7 +422,7 @@ void TreeModel::CalculateTransform(const ShootGrowthController& shootGrowthContr
 				parentInternode.m_info.m_globalPosition
 				+ parentInternode.m_info.m_length * parentInternode.m_info.m_globalDirection;
 
-			if (!internode.IsApical())
+			if (shootGrowthController.m_branchPush && !internode.IsApical())
 			{
 				const auto relativeFront = glm::inverse(parentInternode.m_info.m_globalRotation) * internodeInfo.m_globalRotation * glm::vec3(0, 0, -1);
 				auto parentUp = glm::normalize(parentInternode.m_info.m_globalRotation * glm::vec3(0, 1, 0));
@@ -1356,8 +1356,8 @@ void TreeModel::CalculateProfile(const float maxRootDistance, const NodeHandle n
 				if (internode.RefChildHandles().empty()) CopyFrontToBackTask(nodeHandle);
 				CalculateShiftTask(nodeHandle, pipeModelParameters);
 			}
-			internode.m_data.m_frontProfile.CalculateBoundaries(internode.IsEndNode(), pipeModelParameters.m_boundaryPointDistance);
-			internode.m_data.m_backProfile.CalculateBoundaries(internode.IsEndNode(), pipeModelParameters.m_boundaryPointDistance);
+			internode.m_data.m_frontProfile.CalculateBoundaries(true, pipeModelParameters.m_boundaryPointDistance);
+			internode.m_data.m_backProfile.CalculateBoundaries(true, pipeModelParameters.m_boundaryPointDistance);
 			}
 		)
 		);
@@ -1371,8 +1371,8 @@ void TreeModel::CalculateProfile(const float maxRootDistance, const NodeHandle n
 			if (internode.RefChildHandles().empty()) CopyFrontToBackTask(nodeHandle);
 			CalculateShiftTask(nodeHandle, pipeModelParameters);
 		}
-		internode.m_data.m_frontProfile.CalculateBoundaries(internode.IsEndNode(), pipeModelParameters.m_boundaryPointDistance);
-		internode.m_data.m_backProfile.CalculateBoundaries(internode.IsEndNode(), pipeModelParameters.m_boundaryPointDistance);
+		internode.m_data.m_frontProfile.CalculateBoundaries(true, pipeModelParameters.m_boundaryPointDistance);
+		internode.m_data.m_backProfile.CalculateBoundaries(true, pipeModelParameters.m_boundaryPointDistance);
 	}
 }
 
@@ -1431,7 +1431,7 @@ void TreeModel::MergeTask(float maxRootDistance, NodeHandle nodeHandle, const Pi
 		if (m_shootSkeleton.PeekNode(childHandle).m_data.m_maxChild) mainChildHandle = childHandle;
 	}
 	internodeData.m_centerDirectionRadius = 0.0f;
-
+	
 	if (childHandles.empty())
 	{
 		internode.m_data.m_packingIteration = glm::min(pipeModelParameters.m_junctionProfilePackingMaxIteration, static_cast<int>(internodeData.m_frontProfile.RefParticles().size()) * pipeModelParameters.m_maxSimulationIterationCellFactor);
@@ -1455,6 +1455,8 @@ void TreeModel::MergeTask(float maxRootDistance, NodeHandle nodeHandle, const Pi
 	}
 	if (mainChildHandle == -1) mainChildHandle = childHandles.front();
 	auto& mainChildNode = m_shootSkeleton.RefNode(mainChildHandle);
+	const auto branchTwistAngle = pipeModelParameters.m_branchTwistDistribution.GetValue(internode.m_info.m_rootDistance / maxRootDistance);
+	const auto junctionTwistAngle = pipeModelParameters.m_junctionTwistDistribution.GetValue(internode.m_info.m_rootDistance / maxRootDistance);
 	if (childHandles.size() == 1)
 	{
 		//Copy from child flow start to self flow start
@@ -1469,7 +1471,7 @@ void TreeModel::MergeTask(float maxRootDistance, NodeHandle nodeHandle, const Pi
 			nodeStartParticle.SetColor(childParticle.GetColor());
 			nodeEndParticle.SetColor(childParticle.GetColor());
 			auto polarPosition = childParticle.GetPolarPosition();
-			polarPosition.y += glm::radians(pipeModelParameters.m_branchTwistDistribution.GetValue(internode.m_info.m_rootDistance / maxRootDistance));
+			polarPosition.y += glm::radians(branchTwistAngle);
 			nodeStartParticle.SetPolarPosition(polarPosition);
 			nodeEndParticle.SetPolarPosition(polarPosition);
 
@@ -1489,7 +1491,7 @@ void TreeModel::MergeTask(float maxRootDistance, NodeHandle nodeHandle, const Pi
 		nodeStartParticle.SetColor(mainChildParticle.GetColor());
 		nodeEndParticle.SetColor(mainChildParticle.GetColor());
 		auto polarPosition = mainChildParticle.GetPolarPosition();
-		polarPosition.y += glm::radians(pipeModelParameters.m_junctionTwistDistribution.GetValue(internode.m_info.m_rootDistance / maxRootDistance));
+		polarPosition.y += glm::radians(junctionTwistAngle);
 		nodeStartParticle.SetPolarPosition(polarPosition);
 		nodeEndParticle.SetPolarPosition(polarPosition);
 
@@ -1528,7 +1530,7 @@ void TreeModel::MergeTask(float maxRootDistance, NodeHandle nodeHandle, const Pi
 					nodeStartParticle.SetColor(childParticle.GetColor());
 					nodeEndParticle.SetColor(childParticle.GetColor());
 					auto polarPosition = childParticle.GetPolarPosition();
-					polarPosition.y += glm::radians(pipeModelParameters.m_junctionTwistDistribution.GetValue(internode.m_info.m_rootDistance / maxRootDistance));
+					polarPosition.y += glm::radians(junctionTwistAngle);
 					nodeStartParticle.SetPolarPosition(polarPosition);
 					nodeEndParticle.SetPolarPosition(polarPosition);
 					nodeStartParticle.m_enable = true;
@@ -1546,7 +1548,7 @@ void TreeModel::MergeTask(float maxRootDistance, NodeHandle nodeHandle, const Pi
 					nodeStartParticle.SetColor(childParticle.GetColor());
 					nodeEndParticle.SetColor(childParticle.GetColor());
 					auto polarPosition = childParticle.GetPolarPosition();
-					polarPosition.y += glm::radians(pipeModelParameters.m_junctionTwistDistribution.GetValue(internode.m_info.m_rootDistance / maxRootDistance));
+					polarPosition.y += glm::radians(junctionTwistAngle);
 					nodeStartParticle.SetPolarPosition(polarPosition);
 					nodeEndParticle.SetPolarPosition(polarPosition);
 					nodeStartParticle.m_enable = false;
@@ -1576,7 +1578,7 @@ void TreeModel::MergeTask(float maxRootDistance, NodeHandle nodeHandle, const Pi
 				for (auto& childParticle : childPhysics2D.RefParticles())
 				{
 					auto polarPosition = childParticle.GetPolarPosition();
-					polarPosition.y += glm::radians(pipeModelParameters.m_junctionTwistDistribution.GetValue(internode.m_info.m_rootDistance / maxRootDistance));
+					polarPosition.y += glm::radians(junctionTwistAngle);
 					childParticle.SetPolarPosition(polarPosition);
 					childParticle.SetPosition(childParticle.GetPosition() + offset);
 
@@ -1700,7 +1702,7 @@ void TreeModel::ApplyProfile(const PipeModelParameters& pipeModelParameters,
 			+ node.m_data.m_pipeCellRadius * particle.GetPosition().y * currentUp;
 		if(wound)
 		{
-			newPipeSegment.m_info.m_globalPosition += currentFront * glm::max(0.0f, pipeModelParameters.m_cladoptosisDistribution.GetValue(glm::max(0.0f, pipeModelParameters.m_cladoptosisRange - particle.GetDistanceToBoundary())));
+			newPipeSegment.m_info.m_globalPosition += currentFront * glm::max(0.0f, pipeModelParameters.m_cladoptosisDistribution.GetValue(glm::max(0.0f, (pipeModelParameters.m_cladoptosisRange - particle.GetDistanceToBoundary()) / pipeModelParameters.m_cladoptosisRange)));
 		}
 		newPipeSegment.m_info.m_globalRotation = node.m_data.m_adjustedGlobalRotation;
 		newPipeSegment.m_info.m_color = particle.IsBoundary() ? parameters.m_boundaryPointColor : parameters.m_contentPointColor;

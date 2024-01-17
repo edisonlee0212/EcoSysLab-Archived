@@ -507,7 +507,6 @@ PYBIND11_MODULE(pyecosyslab, m) {
 
 	py::class_<PresentationOverrideSettings>(m, "PresentationOverrideSettings")
 		.def(py::init<>())
-		.def_readwrite("m_branchOverrideColor", &PresentationOverrideSettings::m_branchOverrideColor)
 		.def_readwrite("m_maxThickness", &PresentationOverrideSettings::m_maxThickness);
 
 	py::class_<FoliageParameters>(m, "FoliageParameters")

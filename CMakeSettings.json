@@ -15,6 +15,11 @@
           "name": "BUILD_WITH_RAYTRACER",
           "value": "True",
           "type": "BOOL"
+        },
+        {
+          "name": "NO_DX",
+          "value": "True",
+          "type": "BOOL"
         }
       ]
     },
@@ -31,6 +36,11 @@
       "variables": [
         {
           "name": "BUILD_WITH_RAYTRACER",
+          "value": "True",
+          "type": "BOOL"
+        },
+        {
+          "name": "NO_DX",
           "value": "True",
           "type": "BOOL"
         }
