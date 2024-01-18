@@ -48,16 +48,6 @@ set(EVOENGINE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../EvoEngine)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/3rdParty)
 include_directories(${EVOENGINE_INCLUDES})
 
-# Boost
-IF (WIN32)
-	set(BOOST_ROOT ${_VCPKG_INSTALLED_DIR})
-	set(Boost_DIR ${_VCPKG_INSTALLED_DIR})
-	set(Boost_NO_SYSTEM_PATHS ON)
-ENDIF()
-find_package(Boost REQUIRED COMPONENTS graph)
-include_directories(${Boost_INCLUDE_DIRS})
-link_directories(${Boost_LIBRARY_DIRS})
-
 if (NOT TARGET evoengine)
 	if (NOT TARGET evoengine)
 		add_subdirectory(${EVOENGINE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/EvoEngine)
