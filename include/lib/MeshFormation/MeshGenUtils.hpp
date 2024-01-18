@@ -139,10 +139,10 @@ private:
 					continue;
 				}
 
-				std::cout << "comparing vertex " << u << " to " << v << " with distance " << std::sqrt(glm::distance2(g[u], g[v])) << std::endl;
+				//std::cout << "comparing vertex " << u << " to " << v << " with distance " << std::sqrt(glm::distance2(g[u], g[v])) << std::endl;
 				if (glm::distance2(g[u], g[v]) < maxDistanceSqr)
 				{
-					std::cout << "adding edge " << u << " to " << v << std::endl;
+					//std::cout << "adding edge " << u << " to " << v << std::endl;
 					g.addEdge(u, v);
 				}
 			}
@@ -152,7 +152,7 @@ private:
 public:
 	Grid2D(float rasterSize, glm::vec2 min, glm::vec2 max) : m_rasterSize(rasterSize)
 	{
-		std::cout << "setting up grid with raster size: " << rasterSize << ", min: " << min << ", max: " << max << std::endl;
+		//std::cout << "setting up grid with raster size: " << rasterSize << ", min: " << min << ", max: " << max << std::endl;
 		m_minIndex = glm::floor(min / rasterSize);
 		glm::ivec2 maxIndex = glm::floor(max / rasterSize);
 
@@ -180,7 +180,7 @@ public:
 	void connectNeighbors(Graph& g, float maxDistance) const
 	{
 		float maxDistanceSqr = maxDistance * maxDistance;
-		std::cout << "max distance: " << maxDistance << std::endl;
+		//std::cout << "max distance: " << maxDistance << std::endl;
 
 		// simply check all points against each other in neighboring cells (including diagonal)
 		for (size_t i = 0; i < m_gridCells.size() - 1; i++)

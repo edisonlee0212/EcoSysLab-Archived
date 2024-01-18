@@ -404,7 +404,7 @@ std::pair<Slice, PipeCluster> computeSlice(const TreeModel& treeModel, const Pip
 	grid.connectNeighbors(strandGraph, maxDist);
 
 	std::cout << "outputting graph" << std::endl;
-	outputGraph(strandGraph, "strandGraph_" + std::to_string(t), pipesInPrevious);
+	outputGraph(strandGraph, "strandGraph_" + std::to_string(pipesInPrevious[index]) + "_" + std::to_string(t), pipesInPrevious);
 
 	// TODO:: maybe also use visited here
 	std::cout << "collecting component" << std::endl;
@@ -417,6 +417,7 @@ std::pair<Slice, PipeCluster> computeSlice(const TreeModel& treeModel, const Pip
 	for (size_t indexInComponent : cluster)
 	{
 		visited[indexInComponent] = true;
+		std::cout << "Marking strand no. " << indexInComponent << " with handle " << pipesInPrevious[indexInComponent] << " as visited." << std::endl;
 		pipesInComponent.push_back(pipesInPrevious[indexInComponent]);
 	}
 
@@ -470,7 +471,7 @@ std::pair<Slice, PipeCluster> computeSlice(const TreeModel& treeModel, const Pip
 			break;
 		}
 
-		std::cout << "cur: " << cur << std::endl;
+		//std::cout << "cur: " << cur << std::endl;
 		profile.push_back(cur);
 
 		next = getNextOnBoundary(strandGraph, cur, prev, prevAngle);
@@ -509,10 +510,12 @@ std::vector<std::pair<Slice, PipeCluster> > computeSlices(const TreeModel& treeM
 	{
 		if (visited[i])
 		{
+			std::cout << "skipping already visited pipe no. " << i << " with handle " << pipesInPrevious[i];
 			continue;
 		}
 
 		// if not visited, determine connected component around this
+		std::cout << "computing slice containing pipe no. " << i << " with handle " << pipesInPrevious[i];
 		auto slice = computeSlice(treeModel, pipesInPrevious, i, visited, t, maxDist);
 		slices.push_back(slice);
 	}
@@ -790,7 +793,7 @@ void connectSlices(const PipeModelPipeGroup& pipes, Slice& bottomSlice, std::vec
 	{
 		for (size_t i = 0; i < topSlices[s].size(); i++)
 		{
-			std::cout << "inserting pipe handle no. " << topSlices[s][i].first << std::endl;
+			//std::cout << "inserting pipe handle no. " << topSlices[s][i].first << std::endl;
 			pipeHandleIndexMap[topSlices[s][i].first] = std::make_pair<>(s, i);
 		}
 	}
@@ -840,7 +843,7 @@ void connectSlices(const PipeModelPipeGroup& pipes, Slice& bottomSlice, std::vec
 		}
 		else
 		{
-			std::cout << "Multiple branches not implemented yet!";
+			std::cout << "Multiple branches not implemented yet!" << std::endl;
 			// TODO
 		}
 
@@ -867,17 +870,17 @@ void sliceRecursively(const TreeModel& treeModel, std::pair < Slice, PipeCluster
 	}
 	connectSlices(pipeGroup, prevSlice.first, topSlices, vertices, indices);
 
+	std::cout << "--- Done with slice at t = " << t << " ---" << std::endl;
 	// recursive call
 	t += stepSize;
 	for (auto& s : slicesAndClusters)
 	{
 		if (s.first.size() != 0)
 		{
+			std::cout << "___ Slice at t = " << t << " ___" << std::endl;
 			sliceRecursively(treeModel, s, t, stepSize, maxParam, maxDist, vertices, indices);
 		}
 	}
-	
-	prevSlice = slicesAndClusters[0];
 }
 
 void TreePipeMeshGenerator::Generate(
