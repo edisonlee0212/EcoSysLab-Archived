@@ -1132,6 +1132,23 @@ void TreeModel::ExportTreeIOSkeleton(treeio::ArrayTree& arrayTree) const
 	}
 }
 
+void TreeModel::ResetAllProfiles(const PipeModelParameters& pipeModelParameters)
+{
+	m_shootSkeleton.m_data.m_pipeGroup = {};
+	auto& pipeGroup = m_shootSkeleton.m_data.m_pipeGroup;
+	const auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
+	for (const auto& internodeHandle : sortedInternodeList)
+	{
+		auto& internode = m_shootSkeleton.RefNode(internodeHandle);
+		auto& frontPhysics2D = internode.m_data.m_frontProfile;
+		auto& backPhysics2D = internode.m_data.m_backProfile;
+		frontPhysics2D.m_settings = pipeModelParameters.m_profilePhysicsSettings;
+		backPhysics2D.m_settings = pipeModelParameters.m_profilePhysicsSettings;
+		frontPhysics2D.Reset(0.001f);
+		backPhysics2D.Reset(0.001f);
+	}
+}
+
 void TreeModel::InitializeProfiles(const PipeModelParameters& pipeModelParameters)
 {
 	m_shootSkeleton.m_data.m_pipeGroup = {};

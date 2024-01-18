@@ -139,6 +139,7 @@ namespace EcoSysLab {
 
 
 #pragma region Pipe model
+		void ResetAllProfiles(const PipeModelParameters& pipeModelParameters);
 		void InitializeProfiles(const PipeModelParameters& pipeModelParameters);
 		void CalculateProfiles(const PipeModelParameters& pipeModelParameters);
 		void CalculateProfile(float maxRootDistance, NodeHandle nodeHandle, const PipeModelParameters& pipeModelParameters, bool scheduling);

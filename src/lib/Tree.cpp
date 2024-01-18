@@ -367,6 +367,11 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	ImGui::DragInt("Boundary point distance", &pipeModelParameters.m_boundaryPointDistance, 1, 3, 30);
 	ImGui::ColorEdit4("Boundary color", &pipeModelParameters.m_boundaryPointColor.x);
 	ImGui::ColorEdit4("Content color", &pipeModelParameters.m_contentPointColor.x);
+
+	if (ImGui::Button("Reset profiles"))
+	{
+		m_treeModel.ResetAllProfiles(m_pipeModelParameters);
+	}
 	if (ImGui::Button("Prepare profiles"))
 	{
 		PrepareProfiles();
