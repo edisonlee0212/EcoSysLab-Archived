@@ -1,9 +1,5 @@
 cmake_minimum_required(VERSION 3.17)
 
-IF (WIN32)
-	add_definitions("-DCMAKE_TOOLCHAIN_FILE=C:/src/vcpkg/scripts/buildsystems/vcpkg.cmake")
-ENDIF()
-
 project(
 		EcoSysLab
 		VERSION 0.1
@@ -47,16 +43,6 @@ endif ()
 set(EVOENGINE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../EvoEngine)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/3rdParty)
 include_directories(${EVOENGINE_INCLUDES})
-
-# Boost
-IF (WIN32)
-	set(BOOST_ROOT ${_VCPKG_INSTALLED_DIR})
-	set(Boost_DIR ${_VCPKG_INSTALLED_DIR})
-	set(Boost_NO_SYSTEM_PATHS ON)
-ENDIF()
-find_package(Boost REQUIRED COMPONENTS graph)
-include_directories(${Boost_INCLUDE_DIRS})
-link_directories(${Boost_LIBRARY_DIRS})
 
 if (NOT TARGET evoengine)
 	if (NOT TARGET evoengine)
