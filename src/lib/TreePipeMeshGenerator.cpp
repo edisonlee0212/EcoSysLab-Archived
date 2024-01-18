@@ -6,17 +6,12 @@
 #include "regression/bfr_evaluate/bfrSurfaceEvaluator.h"
 #include <glm/gtx/intersect.hpp>
 #include <glm/gtx/io.hpp>
-#include <boost/graph/adjacency_list.hpp>
-#include <boost/graph/breadth_first_search.hpp>
+#include "MeshGenUtils.hpp"
 
 using namespace EcoSysLab;
 
-typedef boost::adjacency_list<boost::vecS,
-	boost::vecS,
-	boost::undirectedS,
-	glm::vec2
-> Graph;
-typedef boost::graph_traits<Graph>::adjacency_iterator AdjacencyIterator;
+typedef std::vector<std::pair<PipeHandle, glm::vec3> > Slice;
+typedef std::vector<PipeHandle> PipeCluster;
 
 void TreePipeMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
@@ -32,6 +27,11 @@ void TreePipeMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLayer>
 	}
 
 	ImGui::ColorEdit3("Vertex color", &m_vertexColor.x);
+
+	ImGui::Checkbox("[DEBUG] Limit Profile Iterations", &m_limitProfileIterations);
+	ImGui::DragInt("[DEBUG] Limit", &m_maxProfileIterations);
+
+	ImGui::DragFloat("[DEBUG] MaxParam", &m_maxParam);
 	
 }
 
@@ -133,124 +133,46 @@ std::vector<PipeSegmentHandle> getNextSegGroup(const PipeModelPipeGroup& pipes, 
 	return nextSegGroup;
 }
 
-glm::vec3 getSegDir(const PipeModelPipeGroup& pipes, PipeSegmentHandle segHandle)
+glm::vec3 getSegDir(const TreeModel& treeModel, const PipeSegmentHandle segHandle, float t = 1.0f)
 {
-	auto& seg = pipes.PeekPipeSegment(segHandle);
-	PipeSegmentHandle prevSegHandle = seg.GetPrevHandle();
-
-	// handle the case that this is the first segment of the pipe
-	if (prevSegHandle != -1)
-	{
-		auto& prevSeg = pipes.PeekPipeSegment(prevSegHandle);
-		std::cout << "Segment going from " << prevSeg.m_info.m_globalPosition << " to " << seg.m_info.m_globalPosition << std::endl;
-		return seg.m_info.m_globalPosition - prevSeg.m_info.m_globalPosition;
-	}
-	else
-	{
-		/*glm::vec3 prevPos = pipes.PeekPipe(seg.GetPipeHandle()).m_info.m_baseInfo.m_globalPosition;
-		std::cout << "start of pipe at " << prevPos << " with segment going to " << seg.m_info.m_globalPosition << std::endl;
-		return seg.m_info.m_globalPosition - prevPos;*/
-
-		// TODO: This is not accurate, but will do for now
-		return getSegDir(pipes, seg.GetNextHandle());
-	}
+	return treeModel.InterpolatePipeSegmentAxis(segHandle, t);
 }
 
-class Grid2D
+glm::vec3 getSegPos(const TreeModel& treeModel, const PipeSegmentHandle segHandle, float t = 1.0f)
 {
-private:
-	float m_rasterSize = 0.0f;
-	glm::ivec2 m_minIndex;
-	std::vector<std::vector<std::vector<size_t> > > m_gridCells;
+	return treeModel.InterpolatePipeSegmentPosition(segHandle, t);
+}
 
-	void handleCells(Graph& g, float maxDistanceSqr, const std::vector<size_t>& cell0, const std::vector<size_t>& cell1) const
-	{
-		for (size_t u : cell0)
-		{
-			for (size_t v : cell1)
-			{
-				//std::cout << "comparing vertex " << u << " to " << v << std::endl;
-				if (glm::distance2(g[u], g[v]) < maxDistanceSqr)
-				{
-					std::cout << "adding edge " << u << " to " << v << std::endl;
-					boost::add_edge(u, v, g);
-				}
-			}
-		}
-	}
+bool isValidPipeParam(const TreeModel& treeModel, const PipeHandle& pipeHandle, float t)
+{
+	const auto& pipe = treeModel.PeekShootSkeleton().m_data.m_pipeGroup.PeekPipe(pipeHandle);
+	return pipe.PeekPipeSegmentHandles().size() > glm::floor(t);
+}
 
-public:
-	Grid2D(float rasterSize, glm::vec2 min, glm::vec2 max) : m_rasterSize(rasterSize)
-	{
-		m_minIndex = glm::floor(min / rasterSize);
-		glm::ivec2 maxIndex = glm::floor(max / rasterSize);
+glm::vec3 getPipeDir(const TreeModel& treeModel, const PipeHandle& pipeHandle, float t)
+{
+	const auto& pipe = treeModel.PeekShootSkeleton().m_data.m_pipeGroup.PeekPipe(pipeHandle);
+	auto segHandle = pipe.PeekPipeSegmentHandles()[t];
+	return getSegDir(treeModel, segHandle, fmod(t, 1.0));
+}
 
-		// TODO: this can probably be done more efficiently
-		m_gridCells = std::vector<std::vector<std::vector<size_t> > >(maxIndex[0] - m_minIndex[0] + 1);
-		for (auto& vec : m_gridCells)
-		{
-			vec = std::vector<std::vector<size_t> >(maxIndex[1] - m_minIndex[1] + 1);
-		}
-	}
-	~Grid2D() {}
-
-	void insert(const Graph& g, size_t vertexIndex)
-	{
-		const glm::vec2& pos = g[vertexIndex];
-		glm::ivec2 index = glm::ivec2(glm::floor(pos / m_rasterSize)) - m_minIndex;
-
-		std::cout << "inserting vertex " << vertexIndex << " into grid cell " << index << std::endl;
-
-		m_gridCells[index[0]][index[1]].push_back(vertexIndex);
-	}
-
-	void connectNeighbors(Graph& g, float maxDistance) const
-	{
-		float maxDistanceSqr = maxDistance * maxDistance;
-
-		// simply check all points against each other in neighboring cells (including diagonal)
-		for (size_t i = 0; i < m_gridCells.size() - 1; i++)
-		{
-			for (size_t j = 0; j < m_gridCells[i].size() - 1; j++)
-			{
-				handleCells(g, maxDistanceSqr, m_gridCells[i][j], m_gridCells[i][j]);
-				handleCells(g, maxDistanceSqr, m_gridCells[i][j], m_gridCells[i][j + 1]);
-				handleCells(g, maxDistanceSqr, m_gridCells[i][j], m_gridCells[i + 1][j]);
-				handleCells(g, maxDistanceSqr, m_gridCells[i][j], m_gridCells[i + 1][j + 1]);
-				handleCells(g, maxDistanceSqr, m_gridCells[i + 1][j], m_gridCells[i][j + 1]);
-			}
-		}
-
-		// handle last row and column
-		for (size_t i = 0; i < m_gridCells.size() - 1; i++)
-		{
-			handleCells(g, maxDistanceSqr, m_gridCells[i].back(), m_gridCells[i].back());
-			handleCells(g, maxDistanceSqr, m_gridCells[i].back(), m_gridCells[i + 1].back());
-		}
-
-		for (size_t j = 0; j < m_gridCells.back().size() - 1; j++)
-		{
-			handleCells(g, maxDistanceSqr, m_gridCells.back()[j], m_gridCells.back()[j]);
-			handleCells(g, maxDistanceSqr, m_gridCells.back()[j], m_gridCells.back()[j + 1]);
-		}
-
-		handleCells(g, maxDistanceSqr, m_gridCells.back().back(), m_gridCells.back().back());
-	}
-};
+glm::vec3 getPipePos(const TreeModel& treeModel, const PipeHandle& pipeHandle, float t)
+{
+	const auto& pipe = treeModel.PeekShootSkeleton().m_data.m_pipeGroup.PeekPipe(pipeHandle);
+	auto segHandle = pipe.PeekPipeSegmentHandles()[t];
+	return getSegPos(treeModel, segHandle, fmod(t, 1.0));
+}
 
 void dfs(const Graph& g, size_t v, std::vector<size_t>& componentMembers, std::vector<bool>& visited)
 {
 	visited[v] = true;
 	componentMembers.push_back(v);
 
-	AdjacencyIterator ai, a_end;
-	boost::tie(ai, a_end) = boost::adjacent_vertices(v, g);
-
-	for (; ai != a_end; ai++)
+	for (size_t av : g.adjacentVertices(v))
 	{
-		if (!visited[*ai])
+		if (!visited[av])
 		{
-			dfs(g, *ai, componentMembers, visited);
+			dfs(g, av, componentMembers, visited);
 		}
 	}
 }
@@ -337,22 +259,22 @@ size_t getNextOnBoundary(Graph& g, size_t cur, size_t prev, float& prevAngle)
 	{
 		prevAngle -= glm::pi<float>();
 	}
+	//std::cout << "Flipped angle to " << prevAngle << std::endl;
 
-	AdjacencyIterator ai, a_end;
-	boost::tie(ai, a_end) = boost::adjacent_vertices(cur, g);
 	size_t next = -1;
 	float nextAngle = std::numeric_limits<float>::infinity();
 
 	// The next angle must either be the smallest that is larger than the current one or if such an angle does not exist the smallest overall
-	for (; ai != a_end; ai++)
+	for (size_t av : g.adjacentVertices(cur))
 	{
-		if (*ai == prev)
+		if (av == prev)
 		{
 			continue;
 		}
 
-		glm::vec2 dir = g[*ai] - g[cur];
+		glm::vec2 dir = g[av] - g[cur];
 		float angle = atan2f(dir.y, dir.x);
+		//std::cout << " checking neighbor " << av << " with angle " << angle << std::endl;
 		
 		// remap such that all angles are larger than the previous
 		float testAngle = angle;
@@ -363,23 +285,49 @@ size_t getNextOnBoundary(Graph& g, size_t cur, size_t prev, float& prevAngle)
 
 		if (testAngle < nextAngle)
 		{
-			nextAngle = angle;
-			next = *ai;
+			nextAngle = testAngle;
+			next = av;
 		}
 	}
 
-	// TODO: could we have a situation where we reach a leave?
+	// confine to range
+	if (nextAngle > glm::pi<float>())
+	{
+		nextAngle -= 2 * glm::pi<float>();
+	}
+
+	//std::cout << "Selected neighbor " << next << " with angle " << nextAngle << std::endl;
+
+	// TODO: could we have a situation where we reach a leaf?
 	prevAngle = nextAngle;
 	return next;
 }
 
-std::vector<size_t> obtainProfile(const PipeModelPipeGroup& pipes, std::vector<PipeSegmentHandle>& segGroup, float maxDist)
+Slice profileToSlice(const TreeModel& treeModel, std::vector<size_t>& profile, const PipeCluster& pipeCluster, float t)
 {
+	Slice slice;
+
+	for (size_t i = 0; i < profile.size(); i++)
+	{
+		PipeHandle pipeHandle = pipeCluster[profile[i]];
+		slice.push_back(std::pair<PipeHandle, glm::vec3>(pipeHandle, getPipePos(treeModel, pipeHandle, t)));
+	}
+
+	return slice;
+}
+
+std::pair<Slice, PipeCluster> computeSlice(const TreeModel& treeModel, const PipeCluster& pipesInPrevious, size_t index, std::vector<bool>& visited, float t, float maxDist)
+{
+	const PipeModelPipeGroup& pipes = treeModel.PeekShootSkeleton().m_data.m_pipeGroup;
+
+	if (!isValidPipeParam(treeModel, pipesInPrevious[index], t))
+	{
+		return std::make_pair<Slice, PipeCluster>(Slice(), PipeCluster());
+	}
 	// sweep over tree from root to leaves to reconstruct a skeleton with bark outlines
-	std::cout << "obtaining profile of segGroup with " << segGroup.size() << " segments" << std::endl;
-	auto& seg = pipes.PeekPipeSegment(segGroup[0]);
-	glm::vec3 planePos = seg.m_info.m_globalPosition;
-	glm::vec3 planeNorm = glm::normalize(getSegDir(pipes, segGroup[0]));
+	std::cout << "obtaining profile of segGroup with " << pipesInPrevious.size() << " segments" << std::endl;
+	glm::vec3 planePos = getPipePos(treeModel, pipesInPrevious[index], t);
+	glm::vec3 planeNorm = glm::normalize(getPipeDir(treeModel, pipesInPrevious[index], t));
 
 	// first we need to transform into a basis in the cross section plane. This will reduce the problem to 2D
 	// To do so, first find suitable orthogonal vectors to the plane's normal vector
@@ -392,7 +340,207 @@ std::vector<size_t> obtainProfile(const PipeModelPipeGroup& pipes, std::vector<P
 			minDim = i;
 		}
 	}
+	glm::vec3 e(0, 0, 0);
+	e[minDim] = 1.0f;
 
+	glm::vec3 basis[3];
+
+	basis[2] = planeNorm;
+	basis[0] = glm::normalize(glm::cross(planeNorm, e));
+	basis[1] = glm::cross(basis[0], basis[2]);
+
+	std::cout << "new basis vectors: " << std::endl;
+
+	for (size_t i = 0; i < 3; i++)
+	{
+		std::cout << "basis vector " << i << ": " << basis[i] << std::endl;
+	}
+
+	glm::mat3x3 basisTrans =
+	{
+		{basis[0][0], basis[1][0], basis[2][0]},
+		{basis[0][1], basis[1][1], basis[2][1]},
+		{basis[0][2], basis[1][2], basis[2][2]}
+	};
+
+	// TODO: could we do this more efficiently? E.g. the Intel Embree library provides efficent ray casts and allows for ray bundling
+	// now project all of them onto plane
+	std::cout << "building strand graph" << std::endl;
+	Graph strandGraph;
+	glm::vec3 min(std::numeric_limits<float>::infinity());
+	glm::vec3 max(-std::numeric_limits<float>::infinity());
+
+	for (auto& pipeAndPos : pipesInPrevious)
+	{
+		//std::cout << "processing seg with handle no. " << segHandle << std::endl;
+		glm::vec3 segPos = getPipePos(treeModel, pipeAndPos, t);
+		glm::vec3 segDir = glm::normalize(getPipeDir(treeModel, pipeAndPos, t));
+
+		float param;
+
+		glm::intersectRayPlane(segPos, segDir, planePos, planeNorm, param);
+		//std::cout << "line: " << segPos << " + t * " << segDir << " intersects plane " << planeNorm << " * (p - " << planePos << ") = 0 at t = " << param << std::endl;
+		// store the intersection point in a graph
+		size_t vIndex = strandGraph.addVertex();
+		glm::vec3 pos = basisTrans * (segPos + segDir * param);
+		//std::cout << "mapped point " << (segPos + segDir * param) << " to " << pos << std::endl;
+		strandGraph[vIndex] = pos;
+
+		min = glm::min(min, pos);
+		max = glm::max(max, pos);
+	}
+	std::cout << "built graph of size " << strandGraph.m_vertices.size() << std::endl;
+
+	// TODO: we should check that maxDist is at least as large as the thickest strand
+	// now cluster anything below maxDist
+	std::cout << "inserting points into grid" << std::endl;
+	Grid2D grid(maxDist, min, max);
+	for (size_t i = 0; i < strandGraph.m_vertices.size(); i++)
+	{
+		grid.insert(strandGraph, i);
+	}
+
+	std::cout << "connecting neighbors" << std::endl;
+	grid.connectNeighbors(strandGraph, maxDist);
+
+	std::cout << "outputting graph" << std::endl;
+	outputGraph(strandGraph, "strandGraph_" + std::to_string(t), pipesInPrevious);
+
+	// TODO:: maybe also use visited here
+	std::cout << "collecting component" << std::endl;
+	std::vector<size_t> cluster = collectComponent(strandGraph, index);
+	std::cout << "collected component of size " << cluster.size() << std::endl;
+
+	// write cluster to previous
+	PipeCluster pipesInComponent;
+
+	for (size_t indexInComponent : cluster)
+	{
+		visited[indexInComponent] = true;
+		pipesInComponent.push_back(pipesInPrevious[indexInComponent]);
+	}
+
+	// Now find an extreme point in the cluster. It must lie on the boundary. From here we can start traversing the boundary
+	size_t leftmostIndex = 0;
+	float leftmostCoord = std::numeric_limits<float>::infinity();
+
+	for (size_t index : cluster)
+	{
+		if (strandGraph[index].x < leftmostCoord)
+		{
+			leftmostCoord = strandGraph[index].x;
+			leftmostIndex = index;
+		}
+	}
+
+	// traverse the boundary using the angles to its neighbors
+	// Note: because the strands cannot overlap and there is a maximum distance between graph vertices, the graph's maximum degree is of constant size.
+	std::cout << "traversing boundary" << std::endl;
+	std::cout << "starting at index: " << leftmostIndex << std::endl;
+	std::vector<size_t> profile{ leftmostIndex };
+
+	// going counterclockwise from here, the next point must be the one with the smallest angle
+	size_t next = -1;
+	float minAngle = glm::pi<float>();
+
+	for (size_t av : strandGraph.adjacentVertices(leftmostIndex))
+	{
+		glm::vec2 dir = strandGraph[av] - strandGraph[leftmostIndex];
+		float angle = atan2f(dir.y, dir.x);
+		//std::cout << "checking neighbor " << *ai << " with angle " << angle << std::endl;
+		if (angle < minAngle)
+		{
+			minAngle = angle;
+			next = av;
+		}
+	}
+
+	// from now on we will have to find the closest neighboring edge in counter-clockwise order for each step until we reach the first index again
+	size_t prev = leftmostIndex;
+	size_t cur = next;
+	float prevAngle = minAngle;
+
+	size_t debugCounter = 0;
+	while (next != leftmostIndex && debugCounter < 100)
+	{
+		//std::cout << " Iteration no. " << debugCounter << std::endl;
+		if (cur == -1)
+		{
+			std::cerr << "Error: cur is -1" << std::endl;
+			break;
+		}
+
+		std::cout << "cur: " << cur << std::endl;
+		profile.push_back(cur);
+
+		next = getNextOnBoundary(strandGraph, cur, prev, prevAngle);
+		prev = cur;
+		cur = next;
+
+		debugCounter++;
+	}
+
+	std::cout << "Extracted profile: ";
+	for (auto& e : profile)
+	{
+		std::cout << e << ", ";
+	}
+	std::cout << std::endl;
+
+	Slice slice = profileToSlice(treeModel, profile, pipesInPrevious, t);
+
+	std::cout << "Extracted slice: ";
+	for (auto& e : slice)
+	{
+		std::cout << e.first << ", ";
+	}
+	std::cout << std::endl;
+
+	return std::make_pair<>(slice, pipesInComponent);
+}
+
+std::vector<std::pair<Slice, PipeCluster> > computeSlices(const TreeModel& treeModel, const PipeCluster& pipesInPrevious, float t, float maxDist)
+{
+	std::vector<std::pair<Slice, PipeCluster> > slices;
+
+	std::vector<bool> visited(pipesInPrevious.size(), false);
+
+	for (std::size_t i = 0; i < pipesInPrevious.size(); i++)
+	{
+		if (visited[i])
+		{
+			continue;
+		}
+
+		// if not visited, determine connected component around this
+		auto slice = computeSlice(treeModel, pipesInPrevious, i, visited, t, maxDist);
+		slices.push_back(slice);
+	}
+
+	return slices;
+}
+
+/*
+std::vector<size_t> obtainProfile(const TreeModel& treeModel, const std::vector<PipeSegmentHandle>& segGroup, float maxDist, size_t maxIterations = std::numeric_limits<size_t>::max())
+{
+	const PipeModelPipeGroup& pipes = treeModel.PeekShootSkeleton().m_data.m_pipeGroup;
+	// sweep over tree from root to leaves to reconstruct a skeleton with bark outlines
+	std::cout << "obtaining profile of segGroup with " << segGroup.size() << " segments" << std::endl;
+	auto& seg = pipes.PeekPipeSegment(segGroup[0]);
+	glm::vec3 planePos = getSegPos(treeModel, segGroup[0], 0.0);
+	glm::vec3 planeNorm = glm::normalize(getSegDir(treeModel, segGroup[0], 0.0));
+
+	// first we need to transform into a basis in the cross section plane. This will reduce the problem to 2D
+	// To do so, first find suitable orthogonal vectors to the plane's normal vector
+	size_t minDim = 0;
+
+	for (size_t i = 1; i < 3; i++)
+	{
+		if (planeNorm[i] < planeNorm[minDim])
+		{
+			minDim = i;
+		}
+	}
 	glm::vec3 e(0, 0, 0);
 	e[minDim] = 1.0f;
 
@@ -425,10 +573,10 @@ std::vector<size_t> obtainProfile(const PipeModelPipeGroup& pipes, std::vector<P
 
 	for (auto& segHandle : segGroup)
 	{
-		std::cout << "processing seg with handle no. " << segHandle << std::endl;
+		//std::cout << "processing seg with handle no. " << segHandle << std::endl;
 		auto& seg = pipes.PeekPipeSegment(segHandle);
-		glm::vec3 segPos = seg.m_info.m_globalPosition;
-		glm::vec3 segDir = glm::normalize(getSegDir(pipes, segGroup[0]));
+		glm::vec3 segPos = getSegPos(treeModel, segHandle, 0.0);
+		glm::vec3 segDir = glm::normalize(getSegDir(treeModel, segHandle, 0.0));
 
 		float param;
 
@@ -456,6 +604,8 @@ std::vector<size_t> obtainProfile(const PipeModelPipeGroup& pipes, std::vector<P
 
 	std::cout << "connecting neighbors" << std::endl;
 	grid.connectNeighbors(strandGraph, maxDist);
+
+	outputGraph(strandGraph, "strandGraph" + std::to_string(segGroup[0]));
 
 	std::cout << "collecting component" << std::endl;
 	std::vector<size_t> cluster = collectComponent(strandGraph, 0);
@@ -487,10 +637,10 @@ std::vector<size_t> obtainProfile(const PipeModelPipeGroup& pipes, std::vector<P
 	float minAngle = glm::pi<float>();
 
 	for (; ai != a_end; ai++)
-	{
-		std::cout << "checking neighbor " << *ai << std::endl;
+	{		
 		glm::vec2 dir = strandGraph[*ai] - strandGraph[leftmostIndex];
 		float angle = atan2f(dir.y, dir.x);
+		std::cout << "checking neighbor " << *ai << " with angle " << angle << std::endl;
 		if (angle < minAngle)
 		{
 			minAngle = angle;
@@ -503,8 +653,10 @@ std::vector<size_t> obtainProfile(const PipeModelPipeGroup& pipes, std::vector<P
 	size_t cur = next;
 	float prevAngle = minAngle;
 
-	while (next != leftmostIndex)
+	size_t debugCounter = 0;
+	while (next != leftmostIndex && debugCounter < maxIterations)
 	{
+		std::cout << " Iteration no. " << debugCounter << std::endl;
 		if (cur == -1)
 		{
 			std::cerr << "Error: cur is -1" << std::endl;
@@ -517,10 +669,13 @@ std::vector<size_t> obtainProfile(const PipeModelPipeGroup& pipes, std::vector<P
 		next = getNextOnBoundary(strandGraph, cur, prev, prevAngle);
 		prev = cur;
 		cur = next;
+
+		debugCounter++;
 	}
 
 	return profile;
 }
+*/
 
 void forEachSegment(const PipeModelPipeGroup& pipes, std::vector<PipeSegmentHandle>& segGroup, std::function<void(const PipeSegment<PipeModelPipeSegmentData>&)> func)
 {
@@ -531,6 +686,200 @@ void forEachSegment(const PipeModelPipeGroup& pipes, std::vector<PipeSegmentHand
 	}
 }
 
+bool needToReorder(std::vector<size_t>& permutation)
+{
+	size_t firstIndex;
+	for (size_t index : permutation)
+	{
+		if (index != -1)
+		{
+			firstIndex = index;
+			break;
+		}
+	}
+
+	size_t maxIndex = firstIndex;
+
+	for (size_t index : permutation)
+	{
+		if (index == -1)
+		{
+			continue;
+		}
+
+		if (index < maxIndex && index > firstIndex)
+		{
+			return true;
+		}
+		// TODO: wrap-around
+	}
+}
+
+void connect(std::vector<std::pair<PipeHandle, glm::vec3> >& slice0, size_t i0, size_t j0,
+	std::vector<std::pair<PipeHandle, glm::vec3> >& slice1, size_t i1, size_t j1,
+	std::vector<Vertex>& vertices, std::vector<unsigned>& indices)
+{
+	std::cout << "connecting " << i0 << ", " << j0 << " to " << i1 << ", " << j1 << std::endl;
+	size_t vertBetween0 = (j0 + slice0.size() - i0) % slice0.size();
+	size_t vertBetween1 = (j1 + slice1.size() - i1) % slice1.size();
+	std::cout << vertBetween0 << " and " << vertBetween1 << " steps, respectively " << std::endl;
+	size_t offset = vertices.size();
+
+	// create vertices
+	std::cout << "creating vertices" << std::endl;
+	for (size_t k = 0; k <= vertBetween0; k++)
+	{
+		Vertex v;
+		v.m_position = slice0[(i0 + k) % slice0.size()].second;
+		vertices.push_back(v);
+	}
+	for (size_t k = 0; k <= vertBetween1; k++)
+	{
+		Vertex v;
+		v.m_position = slice1[(i1 + k) % slice1.size()].second;
+		vertices.push_back(v);
+	}
+
+	// merge the two
+	std::cout << "connecting slices with triangles" << std::endl;
+	size_t k0 = 0;
+	size_t k1 = 0;
+
+	while (k0 < vertBetween0 || k1 < vertBetween1)
+	{
+		if (k0 / double(vertBetween0) < k1 / double(vertBetween1))
+		{
+			// make triangle consisting of k0, k0 + 1 and k1
+			indices.push_back(k0 + offset);
+			indices.push_back(k0 + 1 + offset);
+			indices.push_back(vertBetween0 + 1 + k1 + offset);
+			k0++;
+			std::cout << "increased k0 to " << k0 << std::endl;
+		}
+		else
+		{
+			// make triangle consisting of k1, k1 + 1 and k0
+			indices.push_back(vertBetween0 + 1 + k1 + 1 + offset);
+			indices.push_back(vertBetween0 + 1 + k1 + offset);
+			indices.push_back(k0 + offset);
+			k1++;
+			std::cout << "increased k1 to " << k1 << std::endl;
+		}
+	}
+}
+
+void connectSlices(const PipeModelPipeGroup& pipes, Slice& bottomSlice, std::vector<Slice>& topSlices,
+	std::vector<Vertex>& vertices, std::vector<unsigned>& indices)
+{
+	// TODO: support branches
+
+	std::cout << "slice0: ";
+	for (auto& e : bottomSlice)
+	{
+		std::cout << e.first << ", ";
+	}
+	std::cout << std::endl;
+
+	// compute (incomplete) permutation that turns 0 into 1
+	std::cout << "computing permutations for " << pipes.PeekPipes().size() << "pipes..." << std::endl;
+	std::vector<std::pair<size_t, size_t> > pipeHandleIndexMap(pipes.PeekPipes().size(), std::make_pair<>(-1,-1));
+
+	//std::cout << "size of pipeHandleIndexMap: " << pipeHandleIndexMap.size() << std::endl;
+
+	for (size_t s = 0; s < topSlices.size(); s++)
+	{
+		for (size_t i = 0; i < topSlices[s].size(); i++)
+		{
+			std::cout << "inserting pipe handle no. " << topSlices[s][i].first << std::endl;
+			pipeHandleIndexMap[topSlices[s][i].first] = std::make_pair<>(s, i);
+		}
+	}
+
+	std::vector<std::pair<size_t, size_t> > permutation(bottomSlice.size(), std::make_pair<>(-1, -1));
+
+	std::cout << "mapping back to permutation vector..." << std::endl;
+	for (size_t i = 0; i < permutation.size(); i++)
+	{
+		permutation[i] = pipeHandleIndexMap[bottomSlice[i].first];
+	}
+
+	std::cout << "permutation: ";
+	for (auto& e : permutation)
+	{
+		std::cout << "(" << e.first << ", " << e.second << "), ";
+	}
+	std::cout << std::endl;
+
+	// now we can more or less just connect them, except that we need to figure out the correct alignment and also get rid of inversions
+
+	// TODO: for now just assume that this does not happen
+	size_t prevI = -1;
+	std::cout << "Finding first index..." << std::endl;
+	for (size_t i = permutation.size(); i > 0; i--)
+	{
+		if (permutation[i - 1].second != -1)
+		{
+			prevI = i - 1;
+			break;
+		}
+	}
+
+	std::cout << "Found first index " << prevI << std::endl;
+	for (size_t i = 0; i < permutation.size(); i++)
+	{
+		if (permutation[i].second == -1)
+		{
+			std::cout << "No correspondence at index " << i << std::endl;
+			continue;
+		}
+
+		if (permutation[prevI].first == permutation[i].first)
+		{
+			std::cout << "Connecting at index " << i << std::endl;
+			connect(bottomSlice, prevI, i, topSlices[permutation[i].first], permutation[prevI].second, permutation[i].second, vertices, indices);
+		}
+		else
+		{
+			std::cout << "Multiple branches not implemented yet!";
+			// TODO
+		}
+
+		prevI = i;
+	}
+}
+
+void sliceRecursively(const TreeModel& treeModel, std::pair < Slice, PipeCluster>& prevSlice, float t, float stepSize, float maxParam, float maxDist,
+	std::vector<Vertex>& vertices, std::vector<unsigned>& indices)
+{
+	if (t > maxParam)
+	{
+		return;
+	}
+
+	const auto& skeleton = treeModel.PeekShootSkeleton();
+	const auto& pipeGroup = skeleton.m_data.m_pipeGroup;
+
+	auto slicesAndClusters = computeSlices(treeModel, prevSlice.second, t, maxDist);
+	std::vector<Slice> topSlices;
+	for (auto& s : slicesAndClusters)
+	{
+		topSlices.push_back(s.first);
+	}
+	connectSlices(pipeGroup, prevSlice.first, topSlices, vertices, indices);
+
+	// recursive call
+	t += stepSize;
+	for (auto& s : slicesAndClusters)
+	{
+		if (s.first.size() != 0)
+		{
+			sliceRecursively(treeModel, s, t, stepSize, maxParam, maxDist, vertices, indices);
+		}
+	}
+	
+	prevSlice = slicesAndClusters[0];
+}
+
 void TreePipeMeshGenerator::Generate(
 	const TreeModel& treeModel, std::vector<Vertex>& vertices,
                                      std::vector<unsigned>& indices, const TreePipeMeshGeneratorSettings& settings)
@@ -538,56 +887,57 @@ void TreePipeMeshGenerator::Generate(
 	const auto& skeleton = treeModel.PeekShootSkeleton();
 	const auto& pipeGroup = skeleton.m_data.m_pipeGroup;
 
+	if (pipeGroup.PeekPipes().size() == 0)
+	{
+		return;
+	}
+
 	std::cout << "getting first seg group" << std::endl;
-	std::vector<PipeSegmentHandle> firstSegGroup = getSegGroup(pipeGroup, 0);
+	std::vector<PipeSegmentHandle> segGroup0 = getSegGroup(pipeGroup, 0);
 
 	std::cout << "determining max thickness" << std::endl;
 	float maxThickness = 0.0f;
-	forEachSegment(pipeGroup, firstSegGroup,
+	forEachSegment(pipeGroup, segGroup0,
 		[&](const PipeSegment<PipeModelPipeSegmentData>& seg)
 		{
-			if (seg.m_info.m_thickness < maxThickness)
+			if (seg.m_info.m_thickness > maxThickness)
 			{
 				maxThickness = seg.m_info.m_thickness;
 			}
 		}
 	);
 
-	std::cout << "obtaining profile" << std::endl;
-	std::vector<size_t> profile = obtainProfile(pipeGroup, firstSegGroup, maxThickness * 1.5f);
+	size_t maxIterations = settings.m_limitProfileIterations ? settings.m_maxProfileIterations : std::numeric_limits<size_t>::max();
+	float maxDist = 2 * maxThickness * sqrt(2) * 1.01f;
+	// initial slice at root:
+	std::vector<bool> visited(pipeGroup.PeekPipes().size(), false);
 
-	// let's just create a test mesh to see if this is reasonable
-	std::cout << "creating test mesh" << std::endl;
-	for (size_t i = 0; i < profile.size(); i++)
+	// prepare initial pipe cluster:
+	PipeCluster pipeCluster;
+
+	for (size_t i = 0; i < pipeGroup.PeekPipes().size(); i++)
 	{
-		auto& pipe = pipeGroup.PeekPipes()[i];
-		auto& segHandle = pipe.PeekPipeSegmentHandles()[0];
-		auto& seg = pipeGroup.PeekPipeSegment(segHandle);
-
-		Vertex v0;
-		v0.m_position = seg.m_info.m_globalPosition;
-		vertices.push_back(v0);
-
-		// just offset by 1
-		Vertex v1;
-		v1.m_position = seg.m_info.m_globalPosition + glm::vec3(0.0, 1.0, 0.0);
-		vertices.push_back(v1);
+		pipeCluster.push_back(pipeGroup.PeekPipes()[i].GetHandle());
 	}
 
-	// create faces
-	for (size_t i = 0; i < profile.size(); i++)
+	float stepSize = 0.5f;
+	float max = settings.m_maxParam;
+
+	auto prevSlice = computeSlice(treeModel, pipeCluster, 0, visited, 0.0, maxDist);
+
+	// for now just do a second one and that's it
+	/*for (float t = stepSize; t <= max; t += stepSize)
 	{
-		indices.push_back(2 * i);
-		indices.push_back(2 * i + 1);
-		indices.push_back((2 * i + 2) % (2 * profile.size()));
-
-		indices.push_back(2 * i + 1);
-		indices.push_back((2 * i + 2) % (2 * profile.size()));
-		indices.push_back((2 * i + 3) % (2 * profile.size()));
-	}
-
-	/*
-	
+		auto slicesAndClusters = computeSlices(treeModel, prevSlice.second, t, maxDist);
+		std::vector<Slice> topSlices;
+		for (auto& s : slicesAndClusters)
+		{
+			topSlices.push_back(s.first);
+		}
+		connectSlices(pipeGroup, prevSlice.first, topSlices, vertices, indices);
+		prevSlice = slicesAndClusters[0];
+	}*/
+	sliceRecursively(treeModel, prevSlice, stepSize, stepSize, max, maxDist, vertices, indices);
 
 	for(const auto& pipe : pipeGroup.PeekPipes())
 	{
@@ -664,5 +1014,4 @@ void TreePipeMeshGenerator::Generate(
 
 	//OpenSubdiv
 	Bfr::Surface<float> surface{};
-	*/
 }
