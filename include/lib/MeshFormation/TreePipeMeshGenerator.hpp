@@ -23,6 +23,14 @@ namespace EcoSysLab {
 		float m_xSubdivision = 0.03f;
 		float m_trunkYSubdivision = 0.03f;
 		float m_branchYSubdivision = 0.03f;
+		float m_marchingCubeRadius = 0.01f;
+		int m_stepsPerSegment = 2;
+
+		// this is for debugging purposes only and should not be used to obtain a proper mesh
+		//bool m_limitProfileIterations = false;
+		//int m_maxProfileIterations = 20;
+		//float m_maxParam = 1.0f;
+		bool m_branchConnections = true;
 
 		float m_branchThicknessFactor = 0.001f;
 		glm::vec4 m_marchingCubeColor = glm::vec4(0.6, 0.3, 0.0f, 1.0f);

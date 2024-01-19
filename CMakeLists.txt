@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.17)
+
 project(
 		EcoSysLab
 		VERSION 0.1
