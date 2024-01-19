@@ -14,11 +14,13 @@ namespace EcoSysLab {
 		bool m_autoLevel = true;
 		int m_voxelSubdivisionLevel = 10;
 		float m_marchingCubeRadius = 0.01f;
+		int m_stepsPerSegment = 2;
 
 		// this is for debugging purposes only and should not be used to obtain a proper mesh
-		bool m_limitProfileIterations = false;
-		int m_maxProfileIterations = 20;
-		float m_maxParam = 1.0f;
+		//bool m_limitProfileIterations = false;
+		//int m_maxProfileIterations = 20;
+		//float m_maxParam = 1.0f;
+		bool m_branchConnections = true;
 
 		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer);
 	};

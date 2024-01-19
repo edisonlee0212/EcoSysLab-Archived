@@ -61,6 +61,12 @@ public:
 		m_outEdges[v].push_back(u);
 	}
 
+	void clearEdges()
+	{
+		m_edges.clear();
+		m_outEdges = std::vector<std::vector<size_t> >(m_vertices.size());
+	}
+
 	const std::vector<size_t>& adjacentVertices(size_t v) const
 	{
 		return m_outEdges[v];
@@ -156,12 +162,7 @@ public:
 		m_minIndex = glm::floor(min / rasterSize);
 		glm::ivec2 maxIndex = glm::floor(max / rasterSize);
 
-		// TODO: this can probably be done more efficiently
-		m_gridCells = std::vector<std::vector<std::vector<size_t> > >(maxIndex[0] - m_minIndex[0] + 1);
-		for (auto& vec : m_gridCells)
-		{
-			vec = std::vector<std::vector<size_t> >(maxIndex[1] - m_minIndex[1] + 1);
-		}
+		m_gridCells = std::vector<std::vector<std::vector<size_t> > >(maxIndex[0] - m_minIndex[0] + 1, std::vector<std::vector<size_t> >(maxIndex[1] - m_minIndex[1] + 1));
 
 		//std::cout << "maxIndex: " << maxIndex << ", minIndex: " << m_minIndex << std::endl;
 	}
