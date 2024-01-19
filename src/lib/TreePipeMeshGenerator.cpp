@@ -19,26 +19,51 @@ typedef std::vector<PipeHandle> PipeCluster;
 
 void TreePipeMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
+	ImGui::Combo("Mode", { "Recursive Slicing", "Hybrid Marching Cube" }, m_generatorType);
+	if (m_generatorType == 0 && ImGui::TreeNode("Recursive Slicing settings"))
+	{
+		ImGui::DragInt("Steps per segment", &m_stepsPerSegment, 1.0f, 1, 99);
 
-	ImGui::Checkbox("Auto set level", &m_autoLevel);
-	if (!m_autoLevel) ImGui::DragInt("Voxel subdivision level", &m_voxelSubdivisionLevel, 1, 5, 16);
-	else ImGui::DragFloat("Min Cube size", &m_marchingCubeRadius, 0.0001, 0.001f, 1.0f);
-	ImGui::DragInt("Smooth iteration", &m_voxelSmoothIteration, 0, 0, 10);
-	if (m_voxelSmoothIteration == 0) ImGui::Checkbox("Remove duplicate", &m_removeDuplicate);
+		//ImGui::Checkbox("[DEBUG] Limit Profile Iterations", &m_limitProfileIterations);
+		//ImGui::DragInt("[DEBUG] Limit", &m_maxProfileIterations);
 
-	ImGui::DragInt("Marching cube min cell size", &m_minimumParticleSizeForMarchingCube, 1, 0, 1000);
-	ImGui::DragInt("Cylindrical max cell size", &m_maximumParticleSizeForCylindrical, 1, 0, 1000);
+		//ImGui::DragFloat("[DEBUG] MaxParam", &m_maxParam);
+		ImGui::Checkbox("Compute branch joints", &m_branchConnections);
+	}
 
-	ImGui::ColorEdit4("Marching cube color", &m_marchingCubeColor.x);
-	ImGui::ColorEdit4("Cylindrical color", &m_cylindricalColor.x);
-	ImGui::ColorEdit3("Vertex color", &m_vertexColor.x);
-	ImGui::DragInt("Steps per segment", &m_stepsPerSegment, 1.0f, 1, 99);
+	if(m_generatorType == 1 && ImGui::TreeNode("Hybrid Marching Cube settings"))
+	{
+		ImGui::Checkbox("Auto set level", &m_autoLevel);
+		if (!m_autoLevel) ImGui::DragInt("Voxel subdivision level", &m_voxelSubdivisionLevel, 1, 5, 16);
+		else ImGui::DragFloat("Min Cube size", &m_marchingCubeRadius, 0.0001, 0.001f, 1.0f);
+		ImGui::DragInt("Smooth iteration", &m_voxelSmoothIteration, 0, 0, 10);
+		if (m_voxelSmoothIteration == 0) ImGui::Checkbox("Remove duplicate", &m_removeDuplicate);
+		ImGui::DragInt("Marching cube min cell size", &m_minimumParticleSizeForMarchingCube, 1, 0, 1000);
+		ImGui::DragInt("Cylindrical max cell size", &m_maximumParticleSizeForCylindrical, 1, 0, 1000);
+		ImGui::ColorEdit4("Marching cube color", &m_marchingCubeColor.x);
+		ImGui::ColorEdit4("Cylindrical color", &m_cylindricalColor.x);
 
-	//ImGui::Checkbox("[DEBUG] Limit Profile Iterations", &m_limitProfileIterations);
-	//ImGui::DragInt("[DEBUG] Limit", &m_maxProfileIterations);
+		ImGui::TreePop();
+	}
+}
 
-	//ImGui::DragFloat("[DEBUG] MaxParam", &m_maxParam);
-	ImGui::Checkbox("Compute branch joints", &m_branchConnections);
+void TreePipeMeshGenerator::Generate(const TreeModel& treeModel, std::vector<Vertex>& vertices,
+	std::vector<unsigned>& indices, const TreePipeMeshGeneratorSettings& settings)
+{
+	const float time = Times::Now();
+	switch (settings.m_generatorType)
+	{
+	case TreePipeMeshGeneratorType::RecursiveSlicing:
+	{
+		RecursiveSlicing(treeModel, vertices, indices, settings);
+	}break;
+	case TreePipeMeshGeneratorType::HybridMarchingCube:
+	{
+		HybridMarchingCube(treeModel, vertices, indices, settings);
+	}break;
+	}
+	const float usedTime = Times::Now() - time;
+	EVOENGINE_LOG("Mesh formation time: " + std::to_string(usedTime));
 }
 
 int roundInDir(float val, int dir)
@@ -972,7 +997,7 @@ void sliceRecursively(const TreeModel& treeModel, std::pair < Slice, PipeCluster
 	}
 }
 
-void TreePipeMeshGenerator::Generate(
+void TreePipeMeshGenerator::RecursiveSlicing(
 	const TreeModel& treeModel, std::vector<Vertex>& vertices,
 	std::vector<unsigned>& indices, const TreePipeMeshGeneratorSettings& settings)
 {
@@ -1105,7 +1130,7 @@ void TreePipeMeshGenerator::Generate(
 	Bfr::Surface<float> surface{};
 }
 
-void TreePipeMeshGenerator::Generate2(const TreeModel& treeModel, std::vector<Vertex>& vertices,
+void TreePipeMeshGenerator::HybridMarchingCube(const TreeModel& treeModel, std::vector<Vertex>& vertices,
 	std::vector<unsigned>& indices, const TreePipeMeshGeneratorSettings& settings)
 {
 	const auto& skeleton = treeModel.PeekShootSkeleton();
@@ -1260,7 +1285,7 @@ void TreePipeMeshGenerator::Generate2(const TreeModel& treeModel, std::vector<Ve
 			++step;
 
 		tempSteps[threadIndex].emplace_back(internodeHandle, step);
-		int amount = glm::max(4.0f, internodeInfo.m_length / (internodeInfo.m_thickness >= settings.m_trunkThickness ? settings.m_trunkYSubdivision : settings.m_branchYSubdivision));
+		int amount = glm::max(4.0f, internodeInfo.m_length / (internodeInfo.m_thickness >= settings.m_ySubdivision));
 		if (amount % 2 != 0)
 			++amount;
 
