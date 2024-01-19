@@ -348,6 +348,7 @@ void MarchingCubes::TriangulateField(const glm::vec3& center, const std::functio
 	float isovalue, const float cellSize, const std::vector<glm::vec3>& testingCells, std::vector<Vertex>& vertices,
 	std::vector<unsigned>& indices, bool removeDuplicate, int smoothMeshIteration)
 {
+
 	std::unordered_map<glm::ivec3, MarchingCubeCell> testedCells;
 	std::vector<Vertex> outVertices;
 	auto cellRadius = cellSize / 2.0f;
