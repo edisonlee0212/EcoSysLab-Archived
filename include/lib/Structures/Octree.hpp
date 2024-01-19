@@ -307,11 +307,12 @@ namespace EcoSysLab
 	template <typename NodeData>
 	void Octree<NodeData>::TriangulateField(std::vector<Vertex>& vertices, std::vector<unsigned>& indices, const bool removeDuplicate, const int smoothMeshIteration) const
 	{
-		std::vector<glm::vec3> testingCells;
-		std::vector<glm::vec3> validateCells;
+		std::vector<TestingCell> testingCells;
 		IterateLeaves([&](const OctreeNode& octreeNode)
 			{
-				testingCells.push_back(octreeNode.m_center);
+				TestingCell testingCell{};
+				testingCell.m_position = octreeNode.m_center;
+				testingCells.push_back(testingCell);
 			});
 
 		MarchingCubes::TriangulateField(m_center, [&](const glm::vec3& samplePoint)

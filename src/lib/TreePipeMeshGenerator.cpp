@@ -270,6 +270,7 @@ void TreePipeMeshGenerator::Generate2(const TreeModel& treeModel, std::vector<Ve
 	// first compute extreme points
 	auto min = glm::vec3(std::numeric_limits<float>::infinity());
 	auto max = glm::vec3(-std::numeric_limits<float>::infinity());
+
 	for (const auto& pipeSegment : pipeGroup.PeekPipeSegments())
 	{
 		const auto& node = skeleton.PeekNode(pipeSegment.m_data.m_nodeHandle);
@@ -310,14 +311,18 @@ void TreePipeMeshGenerator::Generate2(const TreeModel& treeModel, std::vector<Ve
 		const auto endPosition = treeModel.InterpolatePipeSegmentPosition(pipeSegment.GetHandle(), 1.0f);
 		const auto distance = glm::distance(startPosition, endPosition);
 		const auto stepSize = glm::max(1, static_cast<int>(distance / subdivisionLength));
+		const auto polarY = profile.PeekParticle(pipeSegment.m_data.m_backProfileParticleHandle).GetPolarPosition().y / glm::radians(360.0f);
+		
 		for (int step = 0; step < stepSize; step++)
 		{
-			const auto a = treeModel.InterpolatePipeSegmentPosition(pipeSegment.GetHandle(), static_cast<float>(step) / stepSize);
-			octree.Occupy(a, [](OctreeNode&) {});
+			const auto a = static_cast<float>(step) / stepSize;
+			const auto position = treeModel.InterpolatePipeSegmentPosition(pipeSegment.GetHandle(), a);
+			octree.Occupy(position, [&](OctreeNode& octreeNode)
+			{
+			});
 		}
 	}
 	octree.TriangulateField(vertices, indices, settings.m_removeDuplicate, settings.m_voxelSmoothIteration);
-	for(auto& i : vertices) i.m_color = settings.m_marchingCubeColor;
 
 	const auto& sortedInternodeList = skeleton.RefSortedNodeList();
 	std::vector<std::vector<RingSegment>> ringsList;

@@ -11,6 +11,11 @@
 using namespace EvoEngine;
 namespace EcoSysLab
 {
+    struct TestingCell
+    {
+        glm::vec3 m_position;
+    };
+
     struct MarchingCubeCell
     {
         glm::vec3 m_vertex[8];
@@ -35,7 +40,7 @@ namespace EcoSysLab
         static void TriangulateCell(MarchingCubeCell& cell, float isovalue, std::vector<Vertex>& vertices);
         
         /// Triangulate a scalar field represented by `scalarFunction`. `isovalue` should be used for isovalue computation
-        static void TriangulateField(const glm::vec3 &center, const std::function<float(const glm::vec3 &samplePoint)>& sampleFunction, float isovalue, float cellSize, const std::vector<glm::vec3>& testingCells, 
+        static void TriangulateField(const glm::vec3 &center, const std::function<float(const glm::vec3 &samplePoint)>& sampleFunction, float isovalue, float cellSize, const std::vector<TestingCell>& testingCells,
             std::vector<Vertex>& vertices, std::vector<unsigned>& indices, bool removeDuplicate, int smoothMeshIteration);
     };
 }
