@@ -30,8 +30,6 @@ void PipeModelMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLayer
 
 		//ImGui::DragFloat("[DEBUG] MaxParam", &m_maxParam);
 		//ImGui::Checkbox("Compute branch joints", &m_branchConnections);
-		ImGui::DragInt("Minimum strand count", &m_minStrandCount, 1.0f, 3, 100);
-		ImGui::DragInt("Smooth iteration", &m_recursiveSlicingSmoothIteration, 0, 0, 10);
 		ImGui::TreePop();
 	}
 
@@ -40,16 +38,17 @@ void PipeModelMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLayer
 		ImGui::Checkbox("Auto set level", &m_autoLevel);
 		if (!m_autoLevel) ImGui::DragInt("Voxel subdivision level", &m_voxelSubdivisionLevel, 1, 5, 16);
 		else ImGui::DragFloat("Min Cube size", &m_marchingCubeRadius, 0.0001, 0.001f, 1.0f);
-		ImGui::DragInt("Smooth iteration", &m_marchingCubeSmoothIteration, 0, 0, 10);
-		if (m_marchingCubeSmoothIteration == 0) ImGui::Checkbox("Remove duplicate", &m_removeDuplicate);
-		ImGui::DragInt("Marching cube min cell size", &m_minimumParticleSizeForMarchingCube, 1, 0, 1000);
-		ImGui::DragInt("Cylindrical max cell size", &m_maximumParticleSizeForCylindrical, 1, 0, 1000);
+		if (m_smoothIteration == 0) ImGui::Checkbox("Remove duplicate", &m_removeDuplicate);
 		ImGui::ColorEdit4("Marching cube color", &m_marchingCubeColor.x);
 		ImGui::ColorEdit4("Cylindrical color", &m_cylindricalColor.x);
 		ImGui::DragFloat("TexCoords multiplier", &m_texCoordsMultiplier);
 		ImGui::TreePop();
 	}
 
+	ImGui::DragInt("Major branch cell min", &m_minCellCountForMajorBranches, 1, 0, 1000);
+	ImGui::DragInt("Minor branch cell max", &m_maxCellCountForMinorBranches, 1, 0, 1000);
+
+	ImGui::DragInt("Smooth iteration", &m_smoothIteration, 0, 0, 10);
 	ImGui::Checkbox("Branch", &m_enableBranch);
 	ImGui::Checkbox("Foliage", &m_enableFoliage);
 
@@ -69,18 +68,17 @@ void TreePipeMeshGenerator::Generate(const TreeModel& treeModel, std::vector<Ver
 	case TreePipeMeshGeneratorType::RecursiveSlicing:
 	{
 		RecursiveSlicing(treeModel, vertices, indices, settings);
-		for (int i = 0; i < settings.m_recursiveSlicingSmoothIteration; i++)
-		{
-			MeshSmoothing(vertices, indices);
-		}
 	}break;
 	case TreePipeMeshGeneratorType::HybridMarchingCube:
 	{
-		HybridMarchingCube(treeModel, vertices, indices, settings);
-
+		MarchingCube(treeModel, vertices, indices, settings);
 	}break;
 	}
-
+	for (int i = 0; i < settings.m_smoothIteration; i++)
+	{
+		MeshSmoothing(vertices, indices);
+	}
+	CylindricalMeshing(treeModel, vertices, indices, settings);
 
 	const float usedTime = Times::Now() - time;
 	EVOENGINE_LOG("Mesh formation time: " + std::to_string(usedTime));
@@ -1212,11 +1210,11 @@ void TreePipeMeshGenerator::RecursiveSlicing(
 		vertices.push_back(v);
 	}
 
-	sliceRecursively(treeModel, firstSlice, 0, stepSize, stepSize, maxDist, vertices, indices, settings.m_branchConnections, settings.m_minStrandCount);
+	sliceRecursively(treeModel, firstSlice, 0, stepSize, stepSize, maxDist, vertices, indices, settings.m_branchConnections, settings.m_minCellCountForMajorBranches);
 
 }
 
-void TreePipeMeshGenerator::HybridMarchingCube(const TreeModel& treeModel, std::vector<Vertex>& vertices,
+void TreePipeMeshGenerator::MarchingCube(const TreeModel& treeModel, std::vector<Vertex>& vertices,
 	std::vector<unsigned>& indices, const PipeModelMeshGeneratorSettings& settings)
 {
 	const auto& skeleton = treeModel.PeekShootSkeleton();
@@ -1229,7 +1227,7 @@ void TreePipeMeshGenerator::HybridMarchingCube(const TreeModel& treeModel, std::
 	{
 		const auto& node = skeleton.PeekNode(pipeSegment.m_data.m_nodeHandle);
 		const auto& profile = node.m_data.m_backProfile;
-		if (profile.PeekParticles().size() < settings.m_minimumParticleSizeForMarchingCube) continue;
+		if (profile.PeekParticles().size() < settings.m_minCellCountForMajorBranches) continue;
 		needTriangulation = true;
 		min = glm::min(pipeSegment.m_info.m_globalPosition, min);
 		max = glm::max(pipeSegment.m_info.m_globalPosition, max);
@@ -1262,7 +1260,7 @@ void TreePipeMeshGenerator::HybridMarchingCube(const TreeModel& treeModel, std::
 		{
 			const auto& node = skeleton.PeekNode(pipeSegment.m_data.m_nodeHandle);
 			const auto& profile = node.m_data.m_backProfile;
-			if (profile.PeekParticles().size() < settings.m_minimumParticleSizeForMarchingCube) continue;
+			if (profile.PeekParticles().size() < settings.m_minCellCountForMajorBranches) continue;
 
 			//Get interpolated position on pipe segment. Example to get middle point here:
 			const auto startPosition = treeModel.InterpolatePipeSegmentPosition(pipeSegment.GetHandle(), 0.0f);
@@ -1283,11 +1281,17 @@ void TreePipeMeshGenerator::HybridMarchingCube(const TreeModel& treeModel, std::
 			}
 		}
 		octree.TriangulateField(vertices, indices, settings.m_removeDuplicate);
-		for (int i = 0; i < settings.m_marchingCubeSmoothIteration; i++)
-		{
-			MeshSmoothing(vertices, indices);
-		}
+		
 	}
+	CalculateNormal(vertices, indices);
+	CalculateUV(vertices, settings.m_texCoordsMultiplier);
+}
+
+void TreePipeMeshGenerator::CylindricalMeshing(const TreeModel& treeModel, std::vector<Vertex>& vertices,
+	std::vector<unsigned>& indices, const PipeModelMeshGeneratorSettings& settings)
+{
+	const auto& skeleton = treeModel.PeekShootSkeleton();
+	const auto& pipeGroup = skeleton.m_data.m_pipeGroup;
 	const auto& sortedInternodeList = skeleton.RefSortedNodeList();
 	std::vector<std::vector<RingSegment>> ringsList;
 	std::map<NodeHandle, int> steps{};
@@ -1295,7 +1299,6 @@ void TreePipeMeshGenerator::HybridMarchingCube(const TreeModel& treeModel, std::
 	std::vector<std::shared_future<void>> results;
 	std::vector<std::vector<std::pair<NodeHandle, int>>> tempSteps{};
 	tempSteps.resize(Jobs::Workers().Size());
-
 	Jobs::ParallelFor(sortedInternodeList.size(), [&](unsigned internodeIndex, unsigned threadIndex) {
 		auto internodeHandle = sortedInternodeList[internodeIndex];
 		const auto& internode = skeleton.PeekNode(internodeHandle);
@@ -1305,8 +1308,8 @@ void TreePipeMeshGenerator::HybridMarchingCube(const TreeModel& treeModel, std::
 		rings.clear();
 		if (internode.GetParentHandle() == -1) return;
 		int particleSize = internode.m_data.m_backProfile.PeekParticles().size();
-		if (particleSize > settings.m_maximumParticleSizeForCylindrical) return;
-		particleSize = glm::min(particleSize, settings.m_maximumParticleSizeForCylindrical);
+		if (particleSize > settings.m_maxCellCountForMinorBranches) return;
+		particleSize = glm::min(particleSize, settings.m_maxCellCountForMinorBranches);
 		glm::vec3 p[4];
 		glm::vec3 f[4];
 
@@ -1346,8 +1349,8 @@ void TreePipeMeshGenerator::HybridMarchingCube(const TreeModel& treeModel, std::
 
 			int prevParticleSize = skeleton.PeekNode(internode.GetParentHandle()).m_data.m_backProfile.PeekParticles().size();
 			int prevPrevParticleSize = skeleton.PeekNode(skeleton.PeekNode(internode.GetParentHandle()).GetParentHandle()).m_data.m_backProfile.PeekParticles().size();
-			t[1] = glm::sqrt(static_cast<float>(glm::min(prevParticleSize, settings.m_maximumParticleSizeForCylindrical))) * internode.m_data.m_pipeCellRadius;
-			t[0] = glm::sqrt(static_cast<float>(glm::min(prevPrevParticleSize, settings.m_maximumParticleSizeForCylindrical))) * internode.m_data.m_pipeCellRadius;
+			t[1] = glm::sqrt(static_cast<float>(glm::min(prevParticleSize, settings.m_maxCellCountForMinorBranches))) * internode.m_data.m_pipeCellRadius;
+			t[0] = glm::sqrt(static_cast<float>(glm::min(prevPrevParticleSize, settings.m_maxCellCountForMinorBranches))) * internode.m_data.m_pipeCellRadius;
 		}
 		if (internode.IsEndNode())
 		{
@@ -1420,7 +1423,7 @@ void TreePipeMeshGenerator::HybridMarchingCube(const TreeModel& treeModel, std::
 		auto internodeHandle = sortedInternodeList[internodeIndex];
 		const auto& internode = skeleton.PeekNode(internodeHandle);
 		if (internode.GetParentHandle() == -1) continue;
-		if (internode.m_data.m_backProfile.PeekParticles().size() > settings.m_maximumParticleSizeForCylindrical) continue;
+		if (internode.m_data.m_backProfile.PeekParticles().size() > settings.m_maxCellCountForMinorBranches) continue;
 		const auto& internodeInfo = internode.m_info;
 		auto parentInternodeHandle = internode.GetParentHandle();
 		bool continuous = false;
@@ -1430,7 +1433,7 @@ void TreePipeMeshGenerator::HybridMarchingCube(const TreeModel& treeModel, std::
 		{
 			const auto& parentInternode = skeleton.PeekNode(parentInternodeHandle);
 			parentUp = parentInternode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
-			if (parentInternode.m_data.m_backProfile.PeekParticles().size() <= settings.m_maximumParticleSizeForCylindrical) continuous = true;
+			if (parentInternode.m_data.m_backProfile.PeekParticles().size() <= settings.m_maxCellCountForMinorBranches) continuous = true;
 		}
 		auto& rings = ringsList[internodeIndex];
 		if (rings.empty()) {
@@ -1654,8 +1657,6 @@ void TreePipeMeshGenerator::HybridMarchingCube(const TreeModel& treeModel, std::
 		}
 		vertexLastRingStartVertexIndex[internodeHandle] = vertices.size() - step;
 	}
-	CalculateNormal(vertices, indices);
-	CalculateUV(vertices, settings.m_texCoordsMultiplier);
 }
 
 void TreePipeMeshGenerator::MeshSmoothing(std::vector<Vertex>& vertices, std::vector<unsigned>& indices)
