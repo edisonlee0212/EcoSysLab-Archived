@@ -288,130 +288,133 @@ namespace EcoSysLab {
 			const auto flowHandle = internode.GetFlowHandle();
 			archetype.m_vertexInfo1 = internodeHandle + 1;
 			archetype.m_vertexInfo2 = flowHandle + 1;
+			if (settings.m_junctionColor) {
 #pragma region TreePart
-			const auto& flow = treeSkeleton.PeekFlow(internode.GetFlowHandle());
-			const auto& chainHandles = flow.RefNodeHandles();
-			const bool hasMultipleChildren = flow.RefChildHandles().size() > 1;
-			bool onlyChild = true;
-			const auto parentFlowHandle = flow.GetParentHandle();
-			float distanceToChainStart = 0;
-			float distanceToChainEnd = 0;
-			const auto chainSize = chainHandles.size();
-			for (int i = 0; i < chainSize; i++)
-			{
-				if (chainHandles[i] == internodeHandle) break;
-				distanceToChainStart += treeSkeleton.PeekNode(chainHandles[i]).m_info.m_length;
-				
-			}
-			distanceToChainEnd = flow.m_info.m_flowLength - distanceToChainStart - internode.m_info.m_length;
-			float compareRadius = internode.m_info.m_thickness;
-			if (parentFlowHandle != -1)
-			{
-				const auto& parentFlow = treeSkeleton.PeekFlow(parentFlowHandle);
-				onlyChild = parentFlow.RefChildHandles().size() <= 1;
-				compareRadius = parentFlow.m_info.m_endThickness;
-			}
-			int treePartType = 0;
-			if (hasMultipleChildren && distanceToChainEnd <= settings.m_treePartBaseDistance * compareRadius) {
-				treePartType = 1;
-			}
-			else if (!onlyChild && distanceToChainStart <= settings.m_treePartEndDistance * compareRadius)
-			{
-				treePartType = 2;
-			}
-			int currentTreePartIndex = -1;
-			int currentLineIndex = -1;
-			if(treePartType == 0)
-			{
-				//IShape
-				//If root or parent is Y Shape or length exceeds limit, create a new IShape from this node.
-				bool restartIShape = parentInternodeHandle == -1 || treePartInfos[parentInternodeHandle].m_treePartType != 0;
-				if(!restartIShape)
+				const auto& flow = treeSkeleton.PeekFlow(internode.GetFlowHandle());
+				const auto& chainHandles = flow.RefNodeHandles();
+				const bool hasMultipleChildren = flow.RefChildHandles().size() > 1;
+				bool onlyChild = true;
+				const auto parentFlowHandle = flow.GetParentHandle();
+				float distanceToChainStart = 0;
+				float distanceToChainEnd = 0;
+				const auto chainSize = chainHandles.size();
+				for (int i = 0; i < chainSize; i++)
 				{
-					const auto& parentTreePartInfo = treePartInfos[parentInternodeHandle];
-					if (parentTreePartInfo.m_distanceToStart / internodeInfo.m_thickness > settings.m_treePartBreakRatio) restartIShape = true;
-				}
-				if (restartIShape)
-				{
-					TreePartInfo treePartInfo;
-					treePartInfo.m_treePartType = 0;
-					treePartInfo.m_treePartIndex = nextTreePartIndex;
-					treePartInfo.m_lineIndex = nextLineIndex;
-					treePartInfo.m_distanceToStart = 0.0f;
-					treePartInfos[internodeHandle] = treePartInfo;
-					currentTreePartIndex = nextTreePartIndex;
-					nextTreePartIndex++;
+					if (chainHandles[i] == internodeHandle) break;
+					distanceToChainStart += treeSkeleton.PeekNode(chainHandles[i]).m_info.m_length;
 
-					currentLineIndex = nextLineIndex;
-					nextLineIndex++;
 				}
-				else
+				distanceToChainEnd = flow.m_info.m_flowLength - distanceToChainStart - internode.m_info.m_length;
+				float compareRadius = internode.m_info.m_thickness;
+				if (parentFlowHandle != -1)
 				{
-					auto& currentTreePartInfo = treePartInfos[internodeHandle];
-					currentTreePartInfo = treePartInfos[parentInternodeHandle];
-					currentTreePartInfo.m_distanceToStart += internodeInfo.m_length;
-					currentTreePartInfo.m_treePartType = 0;
-					currentTreePartIndex = currentTreePartInfo.m_treePartIndex;
-
-					currentLineIndex = currentTreePartInfo.m_lineIndex;
+					const auto& parentFlow = treeSkeleton.PeekFlow(parentFlowHandle);
+					onlyChild = parentFlow.RefChildHandles().size() <= 1;
+					compareRadius = parentFlow.m_info.m_endThickness;
 				}
-				//archetype.m_color = glm::vec4(1, 1, 1, 1);
-			}else if(treePartType == 1)
-			{
-				//Base of Y Shape
-				if (parentInternodeHandle == -1 || treePartInfos[parentInternodeHandle].m_treePartType != 1
-					|| treePartInfos[parentInternodeHandle].m_baseFlowHandle != flowHandle)
-				{
-					TreePartInfo treePartInfo;
-					treePartInfo.m_treePartType = 1;
-					treePartInfo.m_treePartIndex = nextTreePartIndex;
-					treePartInfo.m_lineIndex = nextLineIndex;
-					treePartInfo.m_distanceToStart = 0.0f;
-					treePartInfo.m_baseFlowHandle = flowHandle;
-					treePartInfos[internodeHandle] = treePartInfo;
-					currentTreePartIndex = nextTreePartIndex;
-					nextTreePartIndex++;
-
-					currentLineIndex = nextLineIndex;
-					nextLineIndex++;
+				int treePartType = 0;
+				if (hasMultipleChildren && distanceToChainEnd <= settings.m_treePartBaseDistance * compareRadius) {
+					treePartType = 1;
 				}
-				else
+				else if (!onlyChild && distanceToChainStart <= settings.m_treePartEndDistance * compareRadius)
 				{
-					auto& currentTreePartInfo = treePartInfos[internodeHandle];
-					currentTreePartInfo = treePartInfos[parentInternodeHandle];
-					currentTreePartInfo.m_treePartType = 1;
-					currentTreePartIndex = currentTreePartInfo.m_treePartIndex;
-
-					currentLineIndex = currentTreePartInfo.m_lineIndex;
+					treePartType = 2;
 				}
-				//archetype.m_color = glm::vec4(1, 0, 0, 1);
-			}else if(treePartType == 2)
-			{
-				//Branch of Y Shape
-				if (parentInternodeHandle == -1 || treePartInfos[parentInternodeHandle].m_treePartType == 0
-					|| treePartInfos[parentInternodeHandle].m_baseFlowHandle != parentFlowHandle)
+				int currentTreePartIndex = -1;
+				int currentLineIndex = -1;
+				if (treePartType == 0)
 				{
-				}
-				else
-				{
-					auto& currentTreePartInfo = treePartInfos[internodeHandle];
-					currentTreePartInfo = treePartInfos[parentInternodeHandle];
-					if(currentTreePartInfo.m_treePartType != 2)
+					//IShape
+					//If root or parent is Y Shape or length exceeds limit, create a new IShape from this node.
+					bool restartIShape = parentInternodeHandle == -1 || treePartInfos[parentInternodeHandle].m_treePartType != 0;
+					if (!restartIShape)
 					{
-						currentTreePartInfo.m_lineIndex = nextLineIndex;
+						const auto& parentTreePartInfo = treePartInfos[parentInternodeHandle];
+						if (parentTreePartInfo.m_distanceToStart / internodeInfo.m_thickness > settings.m_treePartBreakRatio) restartIShape = true;
+					}
+					if (restartIShape)
+					{
+						TreePartInfo treePartInfo;
+						treePartInfo.m_treePartType = 0;
+						treePartInfo.m_treePartIndex = nextTreePartIndex;
+						treePartInfo.m_lineIndex = nextLineIndex;
+						treePartInfo.m_distanceToStart = 0.0f;
+						treePartInfos[internodeHandle] = treePartInfo;
+						currentTreePartIndex = nextTreePartIndex;
+						nextTreePartIndex++;
+
+						currentLineIndex = nextLineIndex;
 						nextLineIndex++;
 					}
-					currentTreePartInfo.m_treePartType = 2;
-					currentTreePartIndex = currentTreePartInfo.m_treePartIndex;
+					else
+					{
+						auto& currentTreePartInfo = treePartInfos[internodeHandle];
+						currentTreePartInfo = treePartInfos[parentInternodeHandle];
+						currentTreePartInfo.m_distanceToStart += internodeInfo.m_length;
+						currentTreePartInfo.m_treePartType = 0;
+						currentTreePartIndex = currentTreePartInfo.m_treePartIndex;
 
-					currentLineIndex = currentTreePartInfo.m_lineIndex;
+						currentLineIndex = currentTreePartInfo.m_lineIndex;
+					}
+					//archetype.m_color = glm::vec4(1, 1, 1, 1);
 				}
-				//archetype.m_color = glm::vec4(1, 0, 0, 1);
-			}
-			archetype.m_vertexInfo3 = currentLineIndex + 1;
-			archetype.m_vertexInfo4.x = currentTreePartIndex + 1;
-#pragma endregion
+				else if (treePartType == 1)
+				{
+					//Base of Y Shape
+					if (parentInternodeHandle == -1 || treePartInfos[parentInternodeHandle].m_treePartType != 1
+						|| treePartInfos[parentInternodeHandle].m_baseFlowHandle != flowHandle)
+					{
+						TreePartInfo treePartInfo;
+						treePartInfo.m_treePartType = 1;
+						treePartInfo.m_treePartIndex = nextTreePartIndex;
+						treePartInfo.m_lineIndex = nextLineIndex;
+						treePartInfo.m_distanceToStart = 0.0f;
+						treePartInfo.m_baseFlowHandle = flowHandle;
+						treePartInfos[internodeHandle] = treePartInfo;
+						currentTreePartIndex = nextTreePartIndex;
+						nextTreePartIndex++;
 
+						currentLineIndex = nextLineIndex;
+						nextLineIndex++;
+					}
+					else
+					{
+						auto& currentTreePartInfo = treePartInfos[internodeHandle];
+						currentTreePartInfo = treePartInfos[parentInternodeHandle];
+						currentTreePartInfo.m_treePartType = 1;
+						currentTreePartIndex = currentTreePartInfo.m_treePartIndex;
+
+						currentLineIndex = currentTreePartInfo.m_lineIndex;
+					}
+					//archetype.m_color = glm::vec4(1, 0, 0, 1);
+				}
+				else if (treePartType == 2)
+				{
+					//Branch of Y Shape
+					if (parentInternodeHandle == -1 || treePartInfos[parentInternodeHandle].m_treePartType == 0
+						|| treePartInfos[parentInternodeHandle].m_baseFlowHandle != parentFlowHandle)
+					{
+					}
+					else
+					{
+						auto& currentTreePartInfo = treePartInfos[internodeHandle];
+						currentTreePartInfo = treePartInfos[parentInternodeHandle];
+						if (currentTreePartInfo.m_treePartType != 2)
+						{
+							currentTreePartInfo.m_lineIndex = nextLineIndex;
+							nextLineIndex++;
+						}
+						currentTreePartInfo.m_treePartType = 2;
+						currentTreePartIndex = currentTreePartInfo.m_treePartIndex;
+
+						currentLineIndex = currentTreePartInfo.m_lineIndex;
+					}
+					//archetype.m_color = glm::vec4(1, 0, 0, 1);
+				}
+				archetype.m_vertexInfo3 = currentLineIndex + 1;
+				archetype.m_vertexInfo4.x = currentTreePartIndex + 1;
+#pragma endregion
+			}
 			float textureXStep = 1.0f / pStep * 4.0f;
 			if (parentInternodeHandle == -1) {
 				for (int p = 0; p < pStep; p++) {
@@ -424,7 +427,7 @@ namespace EcoSysLab {
 					const float x =
 						p < pStep / 2 ? p * textureXStep : (pStep - p) * textureXStep;
 					archetype.m_texCoord = glm::vec2(x, 0.0f);
-					archetype.m_color = internodeInfo.m_color;
+					if (!settings.m_junctionColor) archetype.m_color = internodeInfo.m_color;
 					vertices.push_back(archetype);
 				}
 			}
@@ -481,7 +484,7 @@ namespace EcoSysLab {
 						s < (step / 2) ? s * textureXStep : (step - s) * textureXStep;
 					const auto y = ringIndex % 2 == 0 ? 1.0f : 0.0f;
 					archetype.m_texCoord = glm::vec2(x, y);
-					archetype.m_color = internodeInfo.m_color;
+					if (!settings.m_junctionColor) archetype.m_color = internodeInfo.m_color;
 					vertices.push_back(archetype);
 				}
 				if (ringIndex == 0)
