@@ -2,6 +2,7 @@
 
 #include "Vertex.hpp"
 #include "PipeModelData.hpp"
+#include "TreeMeshGenerator.hpp"
 #include "TreeModel.hpp"
 
 using namespace EvoEngine;
@@ -12,9 +13,9 @@ namespace EcoSysLab {
 		HybridMarchingCube
 	};
 
-	struct TreePipeMeshGeneratorSettings
+	struct PipeModelMeshGeneratorSettings
 	{
-		unsigned m_generatorType = static_cast<unsigned>(TreePipeMeshGeneratorType::RecursiveSlicing);
+		unsigned m_generatorType = static_cast<unsigned>(TreePipeMeshGeneratorType::HybridMarchingCube);
 #pragma region Recursive Slicing
 		int m_stepsPerSegment = 2;
 		// this is for debugging purposes only and should not be used to obtain a proper mesh
@@ -38,19 +39,23 @@ namespace EcoSysLab {
 		glm::vec4 m_cylindricalColor = glm::vec4(0.1, 0.9, 0.0f, 1.0f);
 #pragma endregion
 
+		bool m_enableBranch = true;
+		bool m_enableFoliage = true;
+
+		FoliageParameters m_foliageSettings = {};
 		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer);
 	};
 	class TreePipeMeshGenerator
 	{
 		static void RecursiveSlicing(
 			const TreeModel& treeModel, std::vector<Vertex>& vertices,
-			std::vector<unsigned int>& indices, const TreePipeMeshGeneratorSettings& settings);
+			std::vector<unsigned int>& indices, const PipeModelMeshGeneratorSettings& settings);
 		static void HybridMarchingCube(
 			const TreeModel& treeModel, std::vector<Vertex>& vertices,
-			std::vector<unsigned int>& indices, const TreePipeMeshGeneratorSettings& settings);
+			std::vector<unsigned int>& indices, const PipeModelMeshGeneratorSettings& settings);
 	public:
 		static void Generate(
 			const TreeModel& treeModel, std::vector<Vertex>& vertices,
-			std::vector<unsigned int>& indices, const TreePipeMeshGeneratorSettings& settings);
+			std::vector<unsigned int>& indices, const PipeModelMeshGeneratorSettings& settings);
 	};
 }

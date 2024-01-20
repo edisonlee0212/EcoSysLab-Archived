@@ -391,12 +391,12 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	}
 	if (ImGui::Button("Build Pipe Mesh"))
 	{
-		InitializeMeshRendererPipe(m_treePipeMeshGeneratorSettings);
+		InitializePipeModelMeshRenderer(m_treePipeMeshGeneratorSettings);
 	}
 
 	if (ImGui::Button("Clear Pipe Mesh"))
 	{
-		ClearMeshRendererPipe();
+		ClearPipeModelMeshRenderer();
 	}
 }
 void Tree::Update()
@@ -546,7 +546,7 @@ std::shared_ptr<Mesh> Tree::GenerateFoliageMesh(const TreeMeshGeneratorSettings&
 				auto leafSize = foliageParameters.m_leafSize * internode.m_data.m_lightIntensity;
 				glm::quat rotation = internodeInfo.m_globalRotation * glm::quat(glm::radians(glm::vec3(glm::gaussRand(0.0f, foliageParameters.m_rotationVariance), foliageParameters.m_branchingAngle, glm::linearRand(0.0f, 360.0f))));
 				auto front = rotation * glm::vec3(0, 0, -1);
-				auto foliagePosition = internodeInfo.m_globalPosition + front * (leafSize.y + glm::gaussRand(0.0f, foliageParameters.m_positionVariance));
+				auto foliagePosition = internodeInfo.GetGlobalEndPosition() + front * (leafSize.y + glm::gaussRand(0.0f, foliageParameters.m_positionVariance));
 				auto leafTransform = glm::translate(foliagePosition) * glm::mat4_cast(rotation) * glm::scale(glm::vec3(leafSize.x, 1.0f, leafSize.y));
 
 				auto& matrix = leafTransform;
@@ -608,7 +608,93 @@ std::shared_ptr<Mesh> Tree::GenerateFoliageMesh(const TreeMeshGeneratorSettings&
 	return mesh;
 }
 
-std::shared_ptr<Mesh> Tree::GeneratePipeMesh(const TreePipeMeshGeneratorSettings& treePipeMeshGeneratorSettings)
+std::shared_ptr<Mesh> Tree::GeneratePipeModelFoliageMesh(
+	const PipeModelMeshGeneratorSettings& pipeModelMeshGeneratorSettings)
+{
+	std::vector<Vertex> vertices;
+	std::vector<unsigned int> indices;
+
+	auto quadMesh = Resources::GetResource<Mesh>("PRIMITIVE_QUAD");
+	auto& quadTriangles = quadMesh->UnsafeGetTriangles();
+	auto quadVerticesSize = quadMesh->GetVerticesAmount();
+	size_t offset = 0;
+	auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
+	const auto& foliageParameters = pipeModelMeshGeneratorSettings.m_foliageSettings;
+	const auto& nodeList = m_treeModel.PeekShootSkeleton().RefSortedNodeList();
+	for (const auto& internodeHandle : nodeList) {
+		const auto& internode = m_treeModel.PeekShootSkeleton().PeekNode(internodeHandle);
+		const auto& internodeInfo = internode.m_info;
+		if (internodeInfo.m_thickness < foliageParameters.m_maxNodeThickness
+			&& internodeInfo.m_rootDistance > foliageParameters.m_minRootDistance
+			&& internodeInfo.m_endDistance < foliageParameters.m_maxEndDistance) {
+			for (int i = 0; i < foliageParameters.m_leafCountPerInternode; i++)
+			{
+				auto leafSize = foliageParameters.m_leafSize * internode.m_data.m_lightIntensity;
+				glm::quat rotation = internode.m_data.m_adjustedGlobalRotation * glm::quat(glm::radians(glm::vec3(glm::gaussRand(0.0f, foliageParameters.m_rotationVariance), foliageParameters.m_branchingAngle, glm::linearRand(0.0f, 360.0f))));
+				auto front = rotation * glm::vec3(0, 0, -1);
+				auto foliagePosition = internode.m_data.m_adjustedGlobalPosition + front * (leafSize.y + glm::gaussRand(0.0f, foliageParameters.m_positionVariance));
+				auto leafTransform = glm::translate(foliagePosition) * glm::mat4_cast(rotation) * glm::scale(glm::vec3(leafSize.x, 1.0f, leafSize.y));
+
+				auto& matrix = leafTransform;
+				Vertex archetype;
+				for (auto i = 0; i < quadMesh->GetVerticesAmount(); i++) {
+					archetype.m_position =
+						matrix * glm::vec4(quadMesh->UnsafeGetVertices()[i].m_position, 1.0f);
+					archetype.m_normal = glm::normalize(glm::vec3(
+						matrix * glm::vec4(quadMesh->UnsafeGetVertices()[i].m_normal, 0.0f)));
+					archetype.m_tangent = glm::normalize(glm::vec3(
+						matrix *
+						glm::vec4(quadMesh->UnsafeGetVertices()[i].m_tangent, 0.0f)));
+					archetype.m_texCoord =
+						quadMesh->UnsafeGetVertices()[i].m_texCoord;
+					vertices.push_back(archetype);
+				}
+				for (auto triangle : quadTriangles) {
+					triangle.x += offset;
+					triangle.y += offset;
+					triangle.z += offset;
+					indices.push_back(triangle.x);
+					indices.push_back(triangle.y);
+					indices.push_back(triangle.z);
+				}
+
+				offset += quadVerticesSize;
+
+
+				for (auto i = 0; i < quadMesh->GetVerticesAmount(); i++) {
+					archetype.m_position =
+						matrix * glm::vec4(quadMesh->UnsafeGetVertices()[i].m_position, 1.0f);
+					archetype.m_normal = glm::normalize(glm::vec3(
+						matrix * glm::vec4(quadMesh->UnsafeGetVertices()[i].m_normal, 0.0f)));
+					archetype.m_tangent = glm::normalize(glm::vec3(
+						matrix *
+						glm::vec4(quadMesh->UnsafeGetVertices()[i].m_tangent, 0.0f)));
+					archetype.m_texCoord =
+						quadMesh->UnsafeGetVertices()[i].m_texCoord;
+					vertices.push_back(archetype);
+				}
+				for (auto triangle : quadTriangles) {
+					triangle.x += offset;
+					triangle.y += offset;
+					triangle.z += offset;
+					indices.push_back(triangle.z);
+					indices.push_back(triangle.y);
+					indices.push_back(triangle.x);
+				}
+				offset += quadVerticesSize;
+			}
+		}
+
+	}
+
+	auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
+	VertexAttributes attributes{};
+	attributes.m_texCoord = true;
+	mesh->SetVertices(attributes, vertices, indices);
+	return mesh;
+}
+
+std::shared_ptr<Mesh> Tree::GeneratePipeModelBranchMesh(const PipeModelMeshGeneratorSettings& treePipeMeshGeneratorSettings)
 {
 	m_treeModel.CalculatePipeProfileAdjustedTransforms(m_pipeModelParameters);
 	m_treeModel.ApplyProfiles(m_pipeModelParameters);
@@ -627,6 +713,8 @@ std::shared_ptr<Mesh> Tree::GeneratePipeMesh(const TreePipeMeshGeneratorSettings
 	mesh->SetVertices(attributes, vertices, indices);
 	return mesh;
 }
+
+
 
 void Tree::ExportOBJ(const std::filesystem::path& path, const TreeMeshGeneratorSettings& meshGeneratorSettings)
 {
@@ -1050,13 +1138,10 @@ void Tree::InitializeMeshRenderer(const TreeMeshGeneratorSettings& meshGenerator
 		foliageEntity = scene->CreateEntity("Foliage Mesh");
 		scene->SetParent(foliageEntity, self);
 
-		std::vector<Vertex> vertices;
-		std::vector<unsigned int> indices;
 		auto mesh = GenerateFoliageMesh(meshGeneratorSettings);
 		auto material = ProjectManager::CreateTemporaryAsset<Material>();
 		VertexAttributes vertexAttributes{};
 		vertexAttributes.m_texCoord = true;
-		mesh->SetVertices(vertexAttributes, vertices, indices);
 		if (treeDescriptor) {
 			auto texRef = treeDescriptor->m_foliageAlbedoTexture;
 			if (texRef.Get<Texture2D>())
@@ -1176,13 +1261,7 @@ void Tree::InitializeMeshRenderer(const TreeMeshGeneratorSettings& meshGenerator
 		VertexAttributes vertexAttributes{};
 		vertexAttributes.m_texCoord = true;
 		mesh->SetVertices(vertexAttributes, vertices, indices);
-		if (meshGeneratorSettings.m_foliageOverride)
-		{
-			material->m_materialProperties.m_albedoColor = meshGeneratorSettings.m_foliageOverrideSettings.m_leafColor;
-		}
-		else {
-			material->m_materialProperties.m_albedoColor = glm::vec3(152 / 255.0f, 203 / 255.0f, 0 / 255.0f);
-		}
+		material->m_materialProperties.m_albedoColor = glm::vec3(152 / 255.0f, 203 / 255.0f, 0 / 255.0f);
 		material->m_materialProperties.m_roughness = 0.0f;
 
 		auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(fruitEntity).lock();
@@ -1727,35 +1806,55 @@ void Tree::InitializeStrandRenderer(const std::shared_ptr<Strands>& strands) con
 	material->m_materialProperties.m_albedoColor = glm::vec3(0.6f, 0.3f, 0.0f);
 }
 
-void Tree::InitializeMeshRendererPipe(const TreePipeMeshGeneratorSettings& treePipeMeshGeneratorSettings)
+void Tree::InitializePipeModelMeshRenderer(const PipeModelMeshGeneratorSettings& pipeModelMeshGeneratorSettings)
 {
-	ClearMeshRendererPipe();
+	ClearPipeModelMeshRenderer();
 	const auto scene = GetScene();
 	const auto self = GetOwner();
-	Entity branchEntity;
-	branchEntity = scene->CreateEntity("Pipe Mesh");
-	scene->SetParent(branchEntity, self);
+	if (pipeModelMeshGeneratorSettings.m_enableBranch)
+	{
+		Entity foliageEntity = scene->CreateEntity("Pipe Model Branch Mesh");
+		scene->SetParent(foliageEntity, self);
 
-	auto mesh = GeneratePipeMesh(treePipeMeshGeneratorSettings);
-	auto material = ProjectManager::CreateTemporaryAsset<Material>();
-	auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(branchEntity).lock();
+		const auto mesh = GeneratePipeModelBranchMesh(pipeModelMeshGeneratorSettings);
+		const auto material = ProjectManager::CreateTemporaryAsset<Material>();
+		const auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(foliageEntity).lock();
 
-	material->m_materialProperties.m_albedoColor = glm::vec3(109, 79, 75) / 255.0f;
+		material->m_materialProperties.m_albedoColor = glm::vec3(109, 79, 75) / 255.0f;
 
-	material->m_materialProperties.m_roughness = 1.0f;
-	material->m_materialProperties.m_metallic = 0.0f;
-	meshRenderer->m_mesh = mesh;
-	meshRenderer->m_material = material;
+		material->m_materialProperties.m_roughness = 1.0f;
+		material->m_materialProperties.m_metallic = 0.0f;
+		meshRenderer->m_mesh = mesh;
+		meshRenderer->m_material = material;
+	}
+	if(pipeModelMeshGeneratorSettings.m_enableFoliage)
+	{
+		const Entity foliageEntity = scene->CreateEntity("Pipe Model Foliage Mesh");
+		scene->SetParent(foliageEntity, self);
+
+		const auto mesh = GeneratePipeModelFoliageMesh(pipeModelMeshGeneratorSettings);
+		const auto material = ProjectManager::CreateTemporaryAsset<Material>();
+		
+		material->m_materialProperties.m_roughness = 1.0f;
+		material->m_materialProperties.m_metallic = 0.0f;
+		material->m_materialProperties.m_albedoColor = pipeModelMeshGeneratorSettings.m_foliageSettings.m_leafColor;
+		const auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(foliageEntity).lock();
+		meshRenderer->m_mesh = mesh;
+		meshRenderer->m_material = material;
+
+	}
 }
 
-void Tree::ClearMeshRendererPipe()
+void Tree::ClearPipeModelMeshRenderer()
 {
 	const auto scene = GetScene();
 	const auto self = GetOwner();
 	const auto children = scene->GetChildren(self);
 	for (const auto& child : children) {
 		auto name = scene->GetEntityName(child);
-		if (name == "Pipe Mesh") {
+		if (name == "Pipe Model Branch Mesh") {
+			scene->DeleteEntity(child);
+		}else if (name == "Pipe Model Foliage Mesh") {
 			scene->DeleteEntity(child);
 		}
 	}

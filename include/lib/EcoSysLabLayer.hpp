@@ -159,7 +159,7 @@ namespace EcoSysLab {
 		int m_visualizationCameraResolutionY = 1;
 
 		TreeMeshGeneratorSettings m_meshGeneratorSettings;
-		TreePipeMeshGeneratorSettings m_pipeMeshGeneratorSettings{};
+		PipeModelMeshGeneratorSettings m_pipeMeshGeneratorSettings{};
 		Entity m_selectedTree = {};
 
 		glm::vec2 GetMouseSceneCameraPosition() const;

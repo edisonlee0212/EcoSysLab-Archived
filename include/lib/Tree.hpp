@@ -25,8 +25,8 @@ namespace EcoSysLab {
 
 		std::shared_ptr<Mesh> GenerateBranchMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings);
 		std::shared_ptr<Mesh> GenerateFoliageMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings);
-		std::shared_ptr<Mesh> GeneratePipeMesh(const TreePipeMeshGeneratorSettings& treePipeMeshGeneratorSettings);
-
+		std::shared_ptr<Mesh> GeneratePipeModelBranchMesh(const PipeModelMeshGeneratorSettings& treePipeMeshGeneratorSettings);
+		std::shared_ptr<Mesh> GeneratePipeModelFoliageMesh(const PipeModelMeshGeneratorSettings& pipeModelMeshGeneratorSettings);
 		void ExportOBJ(const std::filesystem::path& path, const TreeMeshGeneratorSettings& meshGeneratorSettings);
 		bool TryGrow(float deltaTime, NodeHandle baseInternodeHandle, bool pruning, float overrideGrowthRate);
 		[[nodiscard]] bool ParseBinvox(const std::filesystem::path& filePath, VoxelGrid<TreeOccupancyGridBasicData>& voxelGrid, float voxelSize = 1.0f);
@@ -42,7 +42,7 @@ namespace EcoSysLab {
 		float m_rightSideBiomass;
 
 		TreeMeshGeneratorSettings m_meshGeneratorSettings {};
-		TreePipeMeshGeneratorSettings m_treePipeMeshGeneratorSettings{};
+		PipeModelMeshGeneratorSettings m_treePipeMeshGeneratorSettings{};
 		int m_temporalProgressionIteration = 0;
 		bool m_temporalProgression = false;
 		void Update() override;
@@ -76,9 +76,9 @@ namespace EcoSysLab {
 		void InitializeStrandRenderer(const std::shared_ptr<Strands>& strands) const;
 		void ClearStrandRenderer() const;
 
-		void InitializeMeshRendererPipe(const TreePipeMeshGeneratorSettings& treePipeMeshGeneratorSettings);
+		void InitializePipeModelMeshRenderer(const PipeModelMeshGeneratorSettings& pipeModelMeshGeneratorSettings);
 
-		void ClearMeshRendererPipe();
+		void ClearPipeModelMeshRenderer();
 
 		void RegisterVoxel();
 		void FromLSystemString(const std::shared_ptr<LSystemString>& lSystemString);

@@ -220,7 +220,7 @@ void EcoSysLabLayer::Visualization() {
 								}
 								if (m_autoGenerateStrandMeshAfterEditing)
 								{
-									tree->InitializeMeshRendererPipe(m_pipeMeshGeneratorSettings);
+									tree->InitializePipeModelMeshRenderer(m_pipeMeshGeneratorSettings);
 								}
 							}
 						}
@@ -434,7 +434,7 @@ void EcoSysLabLayer::Visualization() {
 						}
 						if (m_autoGenerateStrandMeshAfterEditing)
 						{
-							tree->InitializeMeshRendererPipe(m_pipeMeshGeneratorSettings);
+							tree->InitializePipeModelMeshRenderer(m_pipeMeshGeneratorSettings);
 						}
 					}
 				}
@@ -766,7 +766,7 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 					}
 					if (m_autoGenerateStrandMeshAfterEditing)
 					{
-						tree->InitializeMeshRendererPipe(m_pipeMeshGeneratorSettings);
+						tree->InitializePipeModelMeshRenderer(m_pipeMeshGeneratorSettings);
 					}
 				}
 			}
@@ -1544,7 +1544,7 @@ void EcoSysLabLayer::ClearGeometries() const {
 			tree->ClearMeshRenderer();
 			tree->ClearTwigsStrandRenderer();
 			tree->ClearStrandRenderer();
-			tree->ClearMeshRendererPipe();
+			tree->ClearPipeModelMeshRenderer();
 		}
 	}
 }

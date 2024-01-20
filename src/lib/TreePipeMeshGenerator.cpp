@@ -9,6 +9,7 @@
 #include <glm/gtx/io.hpp>
 #include "MeshGenUtils.hpp"
 #include "Delaunator2D.hpp"
+#include "TreeDescriptor.hpp"
 
 #define DEBUG_OUTPUT false
 
@@ -17,7 +18,7 @@ using namespace EcoSysLab;
 typedef std::vector<std::pair<PipeHandle, glm::vec3> > Slice;
 typedef std::vector<PipeHandle> PipeCluster;
 
-void TreePipeMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
+void PipeModelMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
 	ImGui::Combo("Mode", { "Recursive Slicing", "Hybrid Marching Cube" }, m_generatorType);
 	if (m_generatorType == 0 && ImGui::TreeNode("Recursive Slicing settings"))
@@ -45,10 +46,19 @@ void TreePipeMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLayer>
 
 		ImGui::TreePop();
 	}
+
+	ImGui::Checkbox("Branch", &m_enableBranch);
+	ImGui::Checkbox("Foliage", &m_enableFoliage);
+
+	if (ImGui::TreeNodeEx("Foliage settings"))
+	{
+		TreeDescriptor::OnInspectFoliageParameters(m_foliageSettings);
+		ImGui::TreePop();
+	}
 }
 
 void TreePipeMeshGenerator::Generate(const TreeModel& treeModel, std::vector<Vertex>& vertices,
-	std::vector<unsigned>& indices, const TreePipeMeshGeneratorSettings& settings)
+	std::vector<unsigned>& indices, const PipeModelMeshGeneratorSettings& settings)
 {
 	const float time = Times::Now();
 	switch (settings.m_generatorType)
@@ -752,7 +762,7 @@ void connectSlices(const PipeModelPipeGroup& pipes, Slice& bottomSlice, size_t b
 	// TODO: support branches
 	if (topSlices.size() > 1)
 	{
-		std::cout << "connecting " << topSlices.size() << " top slices to bottom slice" << std::endl;
+		if (DEBUG_OUTPUT) std::cout << "connecting " << topSlices.size() << " top slices to bottom slice" << std::endl;
 	}
 
 	//if(DEBUG_OUTPUT) std::cout << "slice0: ";
@@ -829,9 +839,9 @@ void connectSlices(const PipeModelPipeGroup& pipes, Slice& bottomSlice, size_t b
 
 			if (topSlices.size() > 1)
 			{
-				std::cout << "connecting top slice no. " << bottomPermutation[prevI].first << " to bottom slice" << std::endl;
-				std::cout << "Bottom indices " << prevI << " to " << i << std::endl;
-				std::cout << "Top indices " << bottomPermutation[prevI].second << " to " << bottomPermutation[i].second << std::endl;
+				if(DEBUG_OUTPUT) std::cout << "connecting top slice no. " << bottomPermutation[prevI].first << " to bottom slice" << std::endl;
+				if (DEBUG_OUTPUT) std::cout << "Bottom indices " << prevI << " to " << i << std::endl;
+				if (DEBUG_OUTPUT) std::cout << "Top indices " << bottomPermutation[prevI].second << " to " << bottomPermutation[i].second << std::endl;
 			}
 
 			connect(bottomSlice, prevI, i, bottomOffset,
@@ -991,7 +1001,7 @@ void sliceRecursively(const TreeModel& treeModel, std::pair < Slice, PipeCluster
 	{
 		if (slicesAndClusters[i].first.size() != 0)
 		{
-			std::cout << "___ Slice at t = " << t << " ___" << std::endl;
+			if (DEBUG_OUTPUT) std::cout << "___ Slice at t = " << t << " ___" << std::endl;
 			sliceRecursively(treeModel, slicesAndClusters[i], offsets[i], t, stepSize, maxDist, vertices, indices, branchConnections);
 		}
 	}
@@ -999,7 +1009,7 @@ void sliceRecursively(const TreeModel& treeModel, std::pair < Slice, PipeCluster
 
 void TreePipeMeshGenerator::RecursiveSlicing(
 	const TreeModel& treeModel, std::vector<Vertex>& vertices,
-	std::vector<unsigned>& indices, const TreePipeMeshGeneratorSettings& settings)
+	std::vector<unsigned>& indices, const PipeModelMeshGeneratorSettings& settings)
 {
 	const auto& skeleton = treeModel.PeekShootSkeleton();
 	const auto& pipeGroup = skeleton.m_data.m_pipeGroup;
@@ -1131,7 +1141,7 @@ void TreePipeMeshGenerator::RecursiveSlicing(
 }
 
 void TreePipeMeshGenerator::HybridMarchingCube(const TreeModel& treeModel, std::vector<Vertex>& vertices,
-	std::vector<unsigned>& indices, const TreePipeMeshGeneratorSettings& settings)
+	std::vector<unsigned>& indices, const PipeModelMeshGeneratorSettings& settings)
 {
 	const auto& skeleton = treeModel.PeekShootSkeleton();
 	const auto& pipeGroup = skeleton.m_data.m_pipeGroup;
@@ -1285,7 +1295,7 @@ void TreePipeMeshGenerator::HybridMarchingCube(const TreeModel& treeModel, std::
 			++step;
 
 		tempSteps[threadIndex].emplace_back(internodeHandle, step);
-		int amount = glm::max(4.0f, internodeInfo.m_length / (internodeInfo.m_thickness >= settings.m_ySubdivision));
+		int amount = glm::max(4.0f, internodeInfo.m_length / settings.m_ySubdivision);
 		if (amount % 2 != 0)
 			++amount;
 

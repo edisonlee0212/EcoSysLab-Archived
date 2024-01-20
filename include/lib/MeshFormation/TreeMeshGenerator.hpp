@@ -27,15 +27,15 @@ namespace EcoSysLab {
 
 	struct FoliageParameters
 	{
-		glm::vec2 m_leafSize = glm::vec2(0.03f, 0.05f);
+		glm::vec2 m_leafSize = glm::vec2(0.02f, 0.02f);
 		glm::vec3 m_leafColor = glm::vec3(152 / 255.0f, 203 / 255.0f, 0 / 255.0f);
-		int m_leafCountPerInternode = 4;
-		float m_positionVariance = 0.25f;
+		int m_leafCountPerInternode = 20;
+		float m_positionVariance = 0.175f;
 		float m_rotationVariance = 1.f;
 		float m_branchingAngle = 30.f;
 		float m_maxNodeThickness = 1.0f;
 		float m_minRootDistance = 0.0f;
-		float m_maxEndDistance = 10.f;
+		float m_maxEndDistance = 0.2f;
 	};
 
 	struct PresentationOverrideSettings
