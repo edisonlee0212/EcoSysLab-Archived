@@ -437,9 +437,11 @@ void EcoSysLabLayer::Visualization() {
 							tree->InitializePipeModelMeshRenderer(m_pipeMeshGeneratorSettings);
 						}
 					}
-				}else if(treeVisualizer.m_needUpdate && m_autoGenerateMeshAfterEditing && m_autoGenerateMeshEveryFrame)
+				}else if(treeVisualizer.m_needUpdate && m_autoGenerateSkeletalGraphEveryFrame)
 				{
-					tree->InitializeMeshRenderer(m_meshGeneratorSettings, -1);
+					tree->InitializeSkeletalGraph(
+						Resources::GetResource<Mesh>("PRIMITIVE_SPHERE"),
+						Resources::GetResource<Mesh>("PRIMITIVE_CUBE"), tree->m_skeletalGraphSettings);
 				}
 				mayNeedGeometryGeneration = false;
 			}
@@ -574,10 +576,7 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 			scene->UnsafeGetPrivateComponentOwnersList<Tree>();
 		if (treeEntities && !treeEntities->empty()) {
 			ImGui::Checkbox("Auto generate mesh", &m_autoGenerateMeshAfterEditing);
-			if(m_autoGenerateMeshAfterEditing)
-			{
-				ImGui::Checkbox("Auto generate mesh Per Frame", &m_autoGenerateMeshEveryFrame);
-			}
+			ImGui::Checkbox("Auto generate Skeletal Graph Per Frame", &m_autoGenerateSkeletalGraphEveryFrame);
 			ImGui::Checkbox("Auto generate strands", &m_autoGenerateStrandsAfterEditing);
 			ImGui::Checkbox("Auto generate strands mesh", &m_autoGenerateStrandMeshAfterEditing);
 			ImGui::Separator();
@@ -762,10 +761,12 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 			auto tree = scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock();
 			tree->m_treeVisualizer.m_checkpointIteration = tree->m_treeModel.CurrentIteration();
 			tree->m_treeVisualizer.m_needUpdate = true;
-		}
-		if(m_autoGenerateMeshAfterEditing && m_autoGenerateMeshEveryFrame)
-		{
-			GenerateMeshes(m_meshGeneratorSettings);
+			if (m_autoGenerateSkeletalGraphEveryFrame)
+			{
+				tree->InitializeSkeletalGraph(
+					Resources::GetResource<Mesh>("PRIMITIVE_SPHERE"),
+					Resources::GetResource<Mesh>("PRIMITIVE_CUBE"), tree->m_skeletalGraphSettings);
+			}
 		}
 	}
 	const std::vector<Entity>* treeEntities =

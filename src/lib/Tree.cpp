@@ -488,19 +488,18 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	{
 		ClearPipeModelMeshRenderer();
 	}
-	static SkeletalGraphSettings skeletalGraphSettings {};
-	ImGui::DragFloat("Line thickness", &skeletalGraphSettings.m_lineThickness);
-	ImGui::DragFloat("Branch point size", &skeletalGraphSettings.m_branchPointSize);
-	ImGui::DragFloat("Junction point size", &skeletalGraphSettings.m_junctionPointSize);
+	ImGui::DragFloat("Line thickness", &m_skeletalGraphSettings.m_lineThickness);
+	ImGui::DragFloat("Branch point size", &m_skeletalGraphSettings.m_branchPointSize);
+	ImGui::DragFloat("Junction point size", &m_skeletalGraphSettings.m_junctionPointSize);
 
-	ImGui::ColorEdit4("Line color", &skeletalGraphSettings.m_lineColor.x);
-	ImGui::ColorEdit4("Branch point color", &skeletalGraphSettings.m_branchPointColor.x);
-	ImGui::ColorEdit4("Junction point color", &skeletalGraphSettings.m_junctionPointColor.x);
+	ImGui::ColorEdit4("Line color", &m_skeletalGraphSettings.m_lineColor.x);
+	ImGui::ColorEdit4("Branch point color", &m_skeletalGraphSettings.m_branchPointColor.x);
+	ImGui::ColorEdit4("Junction point color", &m_skeletalGraphSettings.m_junctionPointColor.x);
 	if(ImGui::Button("Build Skeletal Graph"))
 	{
 		InitializeSkeletalGraph(
 			Resources::GetResource<Mesh>("PRIMITIVE_SPHERE"),
-			Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER"), skeletalGraphSettings);
+			Resources::GetResource<Mesh>("PRIMITIVE_CUBE"), m_skeletalGraphSettings);
 	}
 }
 void Tree::Update()

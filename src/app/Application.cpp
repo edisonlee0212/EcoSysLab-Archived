@@ -98,7 +98,7 @@ int main() {
 #endif
 
 	// adjust default camera speed
-	auto editorLayer = Application::GetLayer<EditorLayer>();
+	const auto editorLayer = Application::GetLayer<EditorLayer>();
 	editorLayer->m_velocity = 2.f;
 	editorLayer->m_defaultSceneCameraPosition = glm::vec3(1.124, 0.218, 14.089);
 	// override default scene camera position etc.
@@ -106,7 +106,8 @@ int main() {
 	editorLayer->m_showSceneWindow = true;
 	editorLayer->m_showEntityExplorerWindow = true;
 	editorLayer->m_showEntityInspectorWindow = true;
-
+	const auto renderLayer = Application::GetLayer<RenderLayer>();
+	renderLayer->m_enableParticles = false;
 #pragma region Engine Loop
 	Application::Start();
 	Application::Run();

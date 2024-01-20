@@ -51,7 +51,7 @@ namespace EcoSysLab {
 		bool m_recordBiomassHistory = true;
 		float m_leftSideBiomass;
 		float m_rightSideBiomass;
-
+		SkeletalGraphSettings m_skeletalGraphSettings{};
 		TreeMeshGeneratorSettings m_meshGeneratorSettings {};
 		PipeModelMeshGeneratorSettings m_treePipeMeshGeneratorSettings{};
 		int m_temporalProgressionIteration = 0;

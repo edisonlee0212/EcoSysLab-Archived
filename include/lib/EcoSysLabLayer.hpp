@@ -42,7 +42,7 @@ namespace EcoSysLab {
 		float m_overrideGrowRate = 0.1f;
 		float m_reduceRate = 0.1f;
 		bool m_autoGenerateMeshAfterEditing = false;
-		bool m_autoGenerateMeshEveryFrame = false;
+		bool m_autoGenerateSkeletalGraphEveryFrame = false;
 		bool m_autoGenerateStrandsAfterEditing = false;
 		bool m_autoGenerateStrandMeshAfterEditing = false;
 
