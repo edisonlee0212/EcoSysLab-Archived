@@ -146,6 +146,96 @@ void Tree::Reset()
 	m_treeModel.m_index = GetOwner().GetIndex();
 	m_treeVisualizer.Reset(m_treeModel);
 }
+
+void Tree::InitializeSkeletalGraph(
+	const std::shared_ptr<Mesh>& pointMeshSample,
+	const std::shared_ptr<Mesh>& lineMeshSample, 
+	const SkeletalGraphSettings& skeletalGraphSettings)
+{
+	const auto scene = GetScene();
+	const auto self = GetOwner();
+	const auto children = scene->GetChildren(self);
+	for (const auto& child : children) {
+		auto name = scene->GetEntityName(child);
+		if (name == "Skeletal Graph Lines") {
+			scene->DeleteEntity(child);
+		}
+		else if (name == "Skeletal Graph Points") {
+			scene->DeleteEntity(child);
+		}
+	}
+
+	const auto lineEntity = scene->CreateEntity("Skeletal Graph Lines");
+	scene->SetParent(lineEntity, self);
+
+	const auto pointEntity = scene->CreateEntity("Skeletal Graph Points");
+	scene->SetParent(pointEntity, self);
+	const auto& skeleton = m_treeModel.PeekShootSkeleton();
+	const auto& sortedInternodeList = skeleton.RefSortedNodeList();
+
+	
+	
+		const auto lineList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
+		const auto lineMaterial = ProjectManager::CreateTemporaryAsset<Material>();
+		const auto lineParticles = scene->GetOrSetPrivateComponent<Particles>(lineEntity).lock();
+		lineParticles->m_mesh = lineMeshSample;
+		lineParticles->m_material = lineMaterial;
+		lineParticles->m_particleInfoList = lineList;
+		lineMaterial->m_vertexColorOnly = true;
+		const auto pointList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
+		const auto pointMaterial = ProjectManager::CreateTemporaryAsset<Material>();
+		const auto pointParticles = scene->GetOrSetPrivateComponent<Particles>(pointEntity).lock();
+		pointParticles->m_mesh = pointMeshSample;
+		pointParticles->m_material = pointMaterial;
+		pointParticles->m_particleInfoList = pointList;
+		pointMaterial->m_vertexColorOnly = true;
+		lineList->m_particleInfos.resize(sortedInternodeList.size());
+		pointList->m_particleInfos.resize(sortedInternodeList.size());
+		Jobs::ParallelFor(sortedInternodeList.size(), [&](unsigned internodeIndex)
+		{
+				const auto internodeHandle = sortedInternodeList[internodeIndex];
+				const auto& node = skeleton.PeekNode(internodeHandle);
+				{
+					const glm::vec3 position = node.m_info.m_globalPosition;
+					const auto direction = node.m_info.m_globalDirection;
+					auto rotation = glm::quatLookAt(
+						direction, glm::vec3(direction.y, direction.z, direction.x));
+					rotation *= glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));
+					const glm::mat4 rotationTransform = glm::mat4_cast(rotation);
+					lineList->m_particleInfos[internodeIndex].m_instanceMatrix.m_value =
+						glm::translate(position + (node.m_info.m_length / 2.0f) * direction) *
+						rotationTransform *
+						glm::scale(glm::vec3(
+							skeletalGraphSettings.m_lineThickness,
+							node.m_info.m_length,
+							skeletalGraphSettings.m_lineThickness));
+					lineList->m_particleInfos[internodeIndex].m_instanceColor = skeletalGraphSettings.m_lineColor;
+				}
+				{
+					const glm::vec3 position = node.m_info.m_globalPosition;
+					const auto direction = node.m_info.m_globalDirection;
+					auto rotation = glm::quatLookAt(
+						direction, glm::vec3(direction.y, direction.z, direction.x));
+					rotation *= glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));
+					const glm::mat4 rotationTransform = glm::mat4_cast(rotation);
+					auto scale = glm::vec3(skeletalGraphSettings.m_branchPointSize * node.m_info.m_thickness);
+					pointList->m_particleInfos[internodeIndex].m_instanceColor = skeletalGraphSettings.m_branchPointColor;
+					if(internodeIndex == 0 || node.RefChildHandles().size() > 1)
+					{
+						scale = glm::vec3(skeletalGraphSettings.m_junctionPointSize * node.m_info.m_thickness);
+						pointList->m_particleInfos[internodeIndex].m_instanceColor = skeletalGraphSettings.m_junctionPointColor;
+					}
+					pointList->m_particleInfos[internodeIndex].m_instanceMatrix.m_value =
+						glm::translate(position) *
+						rotationTransform *
+						glm::scale(scale);
+				}
+		});
+
+		lineList->SetPendingUpdate();
+		pointList->SetPendingUpdate();	
+}
+
 void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 
 	bool modelChanged = false;
@@ -397,6 +487,20 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	if (ImGui::Button("Clear Pipe Mesh"))
 	{
 		ClearPipeModelMeshRenderer();
+	}
+	static SkeletalGraphSettings skeletalGraphSettings {};
+	ImGui::DragFloat("Line thickness", &skeletalGraphSettings.m_lineThickness);
+	ImGui::DragFloat("Branch point size", &skeletalGraphSettings.m_branchPointSize);
+	ImGui::DragFloat("Junction point size", &skeletalGraphSettings.m_junctionPointSize);
+
+	ImGui::ColorEdit4("Line color", &skeletalGraphSettings.m_lineColor.x);
+	ImGui::ColorEdit4("Branch point color", &skeletalGraphSettings.m_branchPointColor.x);
+	ImGui::ColorEdit4("Junction point color", &skeletalGraphSettings.m_junctionPointColor.x);
+	if(ImGui::Button("Build Skeletal Graph"))
+	{
+		InitializeSkeletalGraph(
+			Resources::GetResource<Mesh>("PRIMITIVE_SPHERE"),
+			Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER"), skeletalGraphSettings);
 	}
 }
 void Tree::Update()
