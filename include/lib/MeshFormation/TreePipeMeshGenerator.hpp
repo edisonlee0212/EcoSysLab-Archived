@@ -23,6 +23,7 @@ namespace EcoSysLab {
 		//int m_maxProfileIterations = 20;
 		//float m_maxParam = 1.0f;
 		bool m_branchConnections = true;
+		int m_minStrandCount = 6;
 #pragma endregion
 		int m_recursiveSlicingSmoothIteration = 0;
 
