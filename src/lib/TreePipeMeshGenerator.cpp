@@ -29,7 +29,8 @@ void PipeModelMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLayer
 		//ImGui::DragInt("[DEBUG] Limit", &m_maxProfileIterations);
 
 		//ImGui::DragFloat("[DEBUG] MaxParam", &m_maxParam);
-		ImGui::Checkbox("Compute branch joints", &m_branchConnections);
+		//ImGui::Checkbox("Compute branch joints", &m_branchConnections);
+		ImGui::DragInt("Minimum strand count", &m_minStrandCount, 1.0f, 3, 100);
 		ImGui::DragInt("Smooth iteration", &m_recursiveSlicingSmoothIteration, 0, 0, 10);
 		ImGui::TreePop();
 	}
@@ -679,7 +680,7 @@ std::pair<Slice, PipeCluster> computeSlice(const TreeModel& treeModel, const Pip
 	return std::make_pair<>(slice, pipesInComponent);
 }
 
-std::pair< std::vector<Graph>, std::vector<std::vector<size_t> > > computeClusters(const TreeModel& treeModel, const PipeCluster& pipesInPrevious, float t, float maxDist)
+std::pair< std::vector<Graph>, std::vector<std::vector<size_t> > > computeClusters(const TreeModel& treeModel, const PipeCluster& pipesInPrevious, float t, float maxDist, size_t minStrandCount)
 {
 	const auto& skeleton = treeModel.PeekShootSkeleton();
 	const auto& pipeGroup = skeleton.m_data.m_pipeGroup;
@@ -700,7 +701,7 @@ std::pair< std::vector<Graph>, std::vector<std::vector<size_t> > > computeCluste
 
 		auto graphAndCluster = computeCluster(treeModel, pipesInPrevious, i, visited, t, maxDist);
 
-		if (graphAndCluster.second.size() >= 3)
+		if (graphAndCluster.second.size() >= minStrandCount)
 		{
 			graphs.push_back(graphAndCluster.first);
 			clusters.push_back(graphAndCluster.second);
@@ -829,11 +830,11 @@ std::pair< std::vector<Graph>, std::vector<std::vector<size_t> > > computeCluste
 	return std::pair< std::vector<Graph>, std::vector<std::vector<size_t> > >(graphs, clusters);
 }
 
-std::vector<std::pair<Slice, PipeCluster> > computeSlices(const TreeModel& treeModel, const PipeCluster& pipesInPrevious, float t, float maxDist)
+std::vector<std::pair<Slice, PipeCluster> > computeSlices(const TreeModel& treeModel, const PipeCluster& pipesInPrevious, float t, float maxDist, size_t minStrandCount)
 {
 
 	// compute clusters
-	auto graphsAndClusters = computeClusters(treeModel, pipesInPrevious, t, maxDist);
+	auto graphsAndClusters = computeClusters(treeModel, pipesInPrevious, t, maxDist, minStrandCount);
 
 	// then loop over the clusters to compute slices
 	std::vector<std::pair<Slice, PipeCluster> > slices;
@@ -1069,7 +1070,12 @@ void createTwigTip(const TreeModel& treeModel, std::pair < Slice, PipeCluster>& 
 
 	for (auto& el : prevSlice.second)
 	{
-		pos += getPipePos(treeModel, el, t - 0.01);
+		if (!isValidPipeParam(treeModel, el, t))
+		{
+			t -= 0.01;
+		}
+
+		pos += getPipePos(treeModel, el, t);
 	}
 
 	Vertex v;
@@ -1087,7 +1093,7 @@ void createTwigTip(const TreeModel& treeModel, std::pair < Slice, PipeCluster>& 
 }
 
 void sliceRecursively(const TreeModel& treeModel, std::pair < Slice, PipeCluster>& prevSlice, size_t prevOffset, float t, float stepSize, float maxDist,
-	std::vector<Vertex>& vertices, std::vector<unsigned>& indices, bool branchConnections)
+	std::vector<Vertex>& vertices, std::vector<unsigned>& indices, bool branchConnections, size_t minStrandCount)
 {
 	const auto& skeleton = treeModel.PeekShootSkeleton();
 	const auto& pipeGroup = skeleton.m_data.m_pipeGroup;
@@ -1098,7 +1104,7 @@ void sliceRecursively(const TreeModel& treeModel, std::pair < Slice, PipeCluster
 		t = glm::ceil(t);
 	}
 
-	auto slicesAndClusters = computeSlices(treeModel, prevSlice.second, t, maxDist);
+	auto slicesAndClusters = computeSlices(treeModel, prevSlice.second, t, maxDist, minStrandCount);
 	std::vector<Slice> topSlices;
 
 	bool allEmpty = true;
@@ -1117,7 +1123,7 @@ void sliceRecursively(const TreeModel& treeModel, std::pair < Slice, PipeCluster
 	{
 		if (DEBUG_OUTPUT) std::cout << "=== Ending recursion at t = " << t << " ===" << std::endl;
 
-		createTwigTip(treeModel, prevSlice, prevOffset, t, vertices, indices);
+		//createTwigTip(treeModel, prevSlice, prevOffset, t - stepSize, vertices, indices);
 
 		return;
 	}
@@ -1148,7 +1154,7 @@ void sliceRecursively(const TreeModel& treeModel, std::pair < Slice, PipeCluster
 		if (slicesAndClusters[i].first.size() != 0)
 		{
 			if (DEBUG_OUTPUT) std::cout << "___ Slice at t = " << t << " ___" << std::endl;
-			sliceRecursively(treeModel, slicesAndClusters[i], offsets[i], t, stepSize, maxDist, vertices, indices, branchConnections);
+			sliceRecursively(treeModel, slicesAndClusters[i], offsets[i], t, stepSize, maxDist, vertices, indices, branchConnections, minStrandCount);
 		}
 	}
 }
@@ -1206,7 +1212,7 @@ void TreePipeMeshGenerator::RecursiveSlicing(
 		vertices.push_back(v);
 	}
 
-	sliceRecursively(treeModel, firstSlice, 0, stepSize, stepSize, maxDist, vertices, indices, settings.m_branchConnections);
+	sliceRecursively(treeModel, firstSlice, 0, stepSize, stepSize, maxDist, vertices, indices, settings.m_branchConnections, settings.m_minStrandCount);
 
 }
 
