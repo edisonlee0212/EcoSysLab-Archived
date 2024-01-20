@@ -270,7 +270,8 @@ void delaunay(Graph& g, float removalLength, std::vector<size_t>& candidates, co
 		const auto& v2 = candidates[d.triangles[i + 2]];
 
 		// make an exception if the three indices belong to the same skeleton part
-		PipeHandle p0 = prevPipes[v0];
+		// does not work properly, just creates artefacts
+		/*PipeHandle p0 = prevPipes[v0];
 		PipeHandle p1 = prevPipes[v1];
 		PipeHandle p2 = prevPipes[v2];
 
@@ -285,7 +286,7 @@ void delaunay(Graph& g, float removalLength, std::vector<size_t>& candidates, co
 			g.addEdge(v2, v0);
 
 			continue; // Don't add twice
-		}
+		}*/
 
 		if (glm::distance(g[v0], g[v1]) > removalLength
 			|| glm::distance(g[v1], g[v2]) > removalLength
@@ -524,13 +525,6 @@ std::pair<Graph, std::vector<size_t> > computeCluster(const TreeModel& treeModel
 
 	for (auto& pipeHandle : pipesInPrevious)
 	{
-		/*if (!isValidPipeParam(treeModel, pipeHandle, t))
-		{
-			// discard this element
-			size_t vIndex = strandGraph.addVertex();
-			visited[vIndex] = true;
-			continue;
-		}*/
 
 		//if(DEBUG_OUTPUT) std::cout << "processing pipe with handle no. " << pipeHandle << std::endl;
 		glm::vec3 segPos = getPipePos(treeModel, pipeHandle, t);
@@ -568,7 +562,7 @@ std::pair<Graph, std::vector<size_t> > computeCluster(const TreeModel& treeModel
 
 	if (candidates.size() < 3)
 	{
-		std::cout << "Cluster is too small, will be discarded" << std::endl;
+		//std::cout << "Cluster is too small, will be discarded" << std::endl;
 	}
 	else if (candidates.size() == 3)
 	{
@@ -1185,7 +1179,7 @@ void TreePipeMeshGenerator::RecursiveSlicing(
 		}
 	);
 
-	float maxDist = 2 * maxThickness * sqrt(2) * 1.5f;
+	float maxDist = 2 * maxThickness * sqrt(2) * 2.5f;
 	// initial slice at root:
 	std::vector<bool> visited(pipeGroup.PeekPipes().size(), false);
 
