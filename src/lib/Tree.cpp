@@ -147,10 +147,7 @@ void Tree::Reset()
 	m_treeVisualizer.Reset(m_treeModel);
 }
 
-void Tree::InitializeSkeletalGraph(
-	const std::shared_ptr<Mesh>& pointMeshSample,
-	const std::shared_ptr<Mesh>& lineMeshSample, 
-	const SkeletalGraphSettings& skeletalGraphSettings)
+void Tree::ClearSkeletalGraph() const
 {
 	const auto scene = GetScene();
 	const auto self = GetOwner();
@@ -165,6 +162,17 @@ void Tree::InitializeSkeletalGraph(
 		}
 	}
 
+}
+
+void Tree::InitializeSkeletalGraph(
+	const std::shared_ptr<Mesh>& pointMeshSample,
+	const std::shared_ptr<Mesh>& lineMeshSample,
+	const SkeletalGraphSettings& skeletalGraphSettings)
+{
+	const auto scene = GetScene();
+	const auto self = GetOwner();
+	ClearSkeletalGraph();
+
 	const auto lineEntity = scene->CreateEntity("Skeletal Graph Lines");
 	scene->SetParent(lineEntity, self);
 
@@ -173,67 +181,69 @@ void Tree::InitializeSkeletalGraph(
 	const auto& skeleton = m_treeModel.PeekShootSkeleton();
 	const auto& sortedInternodeList = skeleton.RefSortedNodeList();
 
-	
-	
-		const auto lineList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
-		const auto lineMaterial = ProjectManager::CreateTemporaryAsset<Material>();
-		const auto lineParticles = scene->GetOrSetPrivateComponent<Particles>(lineEntity).lock();
-		lineParticles->m_mesh = lineMeshSample;
-		lineParticles->m_material = lineMaterial;
-		lineParticles->m_particleInfoList = lineList;
-		lineMaterial->m_vertexColorOnly = true;
-		const auto pointList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
-		const auto pointMaterial = ProjectManager::CreateTemporaryAsset<Material>();
-		const auto pointParticles = scene->GetOrSetPrivateComponent<Particles>(pointEntity).lock();
-		pointParticles->m_mesh = pointMeshSample;
-		pointParticles->m_material = pointMaterial;
-		pointParticles->m_particleInfoList = pointList;
-		pointMaterial->m_vertexColorOnly = true;
-		lineList->m_particleInfos.resize(sortedInternodeList.size());
-		pointList->m_particleInfos.resize(sortedInternodeList.size());
-		Jobs::ParallelFor(sortedInternodeList.size(), [&](unsigned internodeIndex)
+
+
+	const auto lineList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
+	const auto lineMaterial = ProjectManager::CreateTemporaryAsset<Material>();
+	const auto lineParticles = scene->GetOrSetPrivateComponent<Particles>(lineEntity).lock();
+	lineParticles->m_mesh = lineMeshSample;
+	lineParticles->m_material = lineMaterial;
+	lineParticles->m_particleInfoList = lineList;
+	lineMaterial->m_vertexColorOnly = true;
+	const auto pointList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
+	const auto pointMaterial = ProjectManager::CreateTemporaryAsset<Material>();
+	const auto pointParticles = scene->GetOrSetPrivateComponent<Particles>(pointEntity).lock();
+	pointParticles->m_mesh = pointMeshSample;
+	pointParticles->m_material = pointMaterial;
+	pointParticles->m_particleInfoList = pointList;
+	pointMaterial->m_vertexColorOnly = true;
+	lineList->m_particleInfos.resize(sortedInternodeList.size());
+	pointList->m_particleInfos.resize(sortedInternodeList.size());
+	Jobs::ParallelFor(sortedInternodeList.size(), [&](unsigned internodeIndex)
 		{
-				const auto internodeHandle = sortedInternodeList[internodeIndex];
-				const auto& node = skeleton.PeekNode(internodeHandle);
+			const auto internodeHandle = sortedInternodeList[internodeIndex];
+			const auto& node = skeleton.PeekNode(internodeHandle);
+			{
+				const glm::vec3 position = node.m_info.m_globalPosition;
+				const auto direction = node.m_info.m_globalDirection;
+				auto rotation = glm::quatLookAt(
+					direction, glm::vec3(direction.y, direction.z, direction.x));
+				rotation *= glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));
+				const glm::mat4 rotationTransform = glm::mat4_cast(rotation);
+				lineList->m_particleInfos[internodeIndex].m_instanceMatrix.m_value =
+					glm::translate(position + (node.m_info.m_length / 2.0f) * direction) *
+					rotationTransform *
+					glm::scale(glm::vec3(
+						skeletalGraphSettings.m_lineThickness,
+						node.m_info.m_length,
+						skeletalGraphSettings.m_lineThickness));
+				lineList->m_particleInfos[internodeIndex].m_instanceColor = skeletalGraphSettings.m_lineColor;
+			}
+			{
+				const glm::vec3 position = node.m_info.m_globalPosition;
+				const auto direction = node.m_info.m_globalDirection;
+				auto rotation = glm::quatLookAt(
+					direction, glm::vec3(direction.y, direction.z, direction.x));
+				rotation *= glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));
+				const glm::mat4 rotationTransform = glm::mat4_cast(rotation);
+				float thicknessFactor = node.m_info.m_thickness;
+				if (skeletalGraphSettings.m_fixedPointSize) thicknessFactor = skeletalGraphSettings.m_fixedPointSizeFactor;
+				auto scale = glm::vec3(skeletalGraphSettings.m_branchPointSize * thicknessFactor);
+				pointList->m_particleInfos[internodeIndex].m_instanceColor = skeletalGraphSettings.m_branchPointColor;
+				if (internodeIndex == 0 || node.RefChildHandles().size() > 1)
 				{
-					const glm::vec3 position = node.m_info.m_globalPosition;
-					const auto direction = node.m_info.m_globalDirection;
-					auto rotation = glm::quatLookAt(
-						direction, glm::vec3(direction.y, direction.z, direction.x));
-					rotation *= glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));
-					const glm::mat4 rotationTransform = glm::mat4_cast(rotation);
-					lineList->m_particleInfos[internodeIndex].m_instanceMatrix.m_value =
-						glm::translate(position + (node.m_info.m_length / 2.0f) * direction) *
-						rotationTransform *
-						glm::scale(glm::vec3(
-							skeletalGraphSettings.m_lineThickness,
-							node.m_info.m_length,
-							skeletalGraphSettings.m_lineThickness));
-					lineList->m_particleInfos[internodeIndex].m_instanceColor = skeletalGraphSettings.m_lineColor;
+					scale = glm::vec3(skeletalGraphSettings.m_junctionPointSize * thicknessFactor);
+					pointList->m_particleInfos[internodeIndex].m_instanceColor = skeletalGraphSettings.m_junctionPointColor;
 				}
-				{
-					const glm::vec3 position = node.m_info.m_globalPosition;
-					const auto direction = node.m_info.m_globalDirection;
-					auto rotation = glm::quatLookAt(
-						direction, glm::vec3(direction.y, direction.z, direction.x));
-					rotation *= glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));
-					const glm::mat4 rotationTransform = glm::mat4_cast(rotation);
-					auto scale = glm::vec3(skeletalGraphSettings.m_branchPointSize * node.m_info.m_thickness);
-					pointList->m_particleInfos[internodeIndex].m_instanceColor = skeletalGraphSettings.m_branchPointColor;
-					if(internodeIndex == 0 || node.RefChildHandles().size() > 1)
-					{
-						scale = glm::vec3(skeletalGraphSettings.m_junctionPointSize * node.m_info.m_thickness);
-						pointList->m_particleInfos[internodeIndex].m_instanceColor = skeletalGraphSettings.m_junctionPointColor;
-					}
-					pointList->m_particleInfos[internodeIndex].m_instanceMatrix.m_value =
-						glm::translate(position) *
-						rotationTransform *
-						glm::scale(scale);
-				}
+				pointList->m_particleInfos[internodeIndex].m_instanceMatrix.m_value =
+					glm::translate(position) *
+					rotationTransform *
+					glm::scale(scale);
+			}
 		});
 
-		lineList->SetPendingUpdate();
-		pointList->SetPendingUpdate();	
+	lineList->SetPendingUpdate();
+	pointList->SetPendingUpdate();
 }
 
 void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
@@ -407,7 +417,7 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	auto& pipeModelParameters = m_pipeModelParameters;
 	if (ImGui::TreeNodeEx("Profile settings", ImGuiTreeNodeFlags_DefaultOpen))
 	{
-		if(ImGui::TreeNode("Physics settings"))
+		if (ImGui::TreeNode("Physics settings"))
 		{
 			ImGui::DragFloat("Physics damping", &pipeModelParameters.m_profilePhysicsSettings.m_damping, 0.01f, 0.0f, 1.0f);
 			ImGui::DragFloat("Physics max speed", &pipeModelParameters.m_profilePhysicsSettings.m_maxSpeed, 0.01f, 0.0f, 100.0f);
@@ -425,7 +435,7 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	}
 	ImGui::DragFloat("Overlap threshold", &pipeModelParameters.m_overlapThreshold, 0.01f, 0.0f, 1.0f);
 	ImGui::DragInt("End node strand count", &pipeModelParameters.m_endNodeStrands, 1, 1, 50);
-	
+
 	ImGui::Checkbox("Pre-merge", &pipeModelParameters.m_preMerge);
 
 	static PlottedDistributionSettings plottedDistributionSettings = { 0.001f,
@@ -442,7 +452,7 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	ImGui::Text(("Strand count: " + std::to_string(m_treeModel.PeekShootSkeleton().m_data.m_pipeGroup.PeekPipes().size())).c_str());
 	ImGui::Text(("Total particle count: " + std::to_string(m_treeModel.PeekShootSkeleton().m_data.m_numOfParticles)).c_str());
 
-	
+
 	if (ImGui::TreeNodeEx("Graph Adjustment settings"))
 	{
 		ImGui::DragFloat("Shift push ratio", &pipeModelParameters.m_shiftPushRatio, 0.01f, 0.0f, 2.0f);
@@ -488,18 +498,16 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	{
 		ClearPipeModelMeshRenderer();
 	}
-	ImGui::DragFloat("Line thickness", &m_skeletalGraphSettings.m_lineThickness);
-	ImGui::DragFloat("Branch point size", &m_skeletalGraphSettings.m_branchPointSize);
-	ImGui::DragFloat("Junction point size", &m_skeletalGraphSettings.m_junctionPointSize);
-
-	ImGui::ColorEdit4("Line color", &m_skeletalGraphSettings.m_lineColor.x);
-	ImGui::ColorEdit4("Branch point color", &m_skeletalGraphSettings.m_branchPointColor.x);
-	ImGui::ColorEdit4("Junction point color", &m_skeletalGraphSettings.m_junctionPointColor.x);
-	if(ImGui::Button("Build Skeletal Graph"))
+	m_skeletalGraphSettings.OnInspect();
+	if (ImGui::Button("Build Skeletal Graph"))
 	{
 		InitializeSkeletalGraph(
 			Resources::GetResource<Mesh>("PRIMITIVE_SPHERE"),
 			Resources::GetResource<Mesh>("PRIMITIVE_CUBE"), m_skeletalGraphSettings);
+	}
+	if (ImGui::Button("Clear Skeletal Graph"))
+	{
+		ClearSkeletalGraph();
 	}
 }
 void Tree::Update()
@@ -523,16 +531,16 @@ void Tree::Update()
 void Tree::OnCreate() {
 	m_treeVisualizer.Initialize();
 
-	m_pipeModelParameters.m_branchTwistDistribution.m_mean = { -60.0f, 60.0f};
+	m_pipeModelParameters.m_branchTwistDistribution.m_mean = { -60.0f, 60.0f };
 	m_pipeModelParameters.m_branchTwistDistribution.m_deviation = { 0.0f, 1.0f, {0, 0} };
 
-	m_pipeModelParameters.m_junctionTwistDistribution.m_mean = { -60.0f, 60.0f};
+	m_pipeModelParameters.m_junctionTwistDistribution.m_mean = { -60.0f, 60.0f };
 	m_pipeModelParameters.m_junctionTwistDistribution.m_deviation = { 0.0f, 1.0f, {0, 0} };
 
-	m_pipeModelParameters.m_pipeRadiusDistribution.m_mean = { 0.0f, 0.002f};
-	m_pipeModelParameters.m_pipeRadiusDistribution.m_deviation = {0.0f, 1.0f, {0, 0}};
+	m_pipeModelParameters.m_pipeRadiusDistribution.m_mean = { 0.0f, 0.002f };
+	m_pipeModelParameters.m_pipeRadiusDistribution.m_deviation = { 0.0f, 1.0f, {0, 0} };
 
-	m_pipeModelParameters.m_cladoptosisDistribution.m_mean = { 0.0f, 0.02f};
+	m_pipeModelParameters.m_cladoptosisDistribution.m_mean = { 0.0f, 0.02f };
 	m_pipeModelParameters.m_cladoptosisDistribution.m_deviation = { 0.0f, 1.0f, {0, 0} };
 }
 
@@ -1698,6 +1706,21 @@ void Tree::ExportRadialBoundingVolume(const std::shared_ptr<RadialBoundingVolume
 }
 
 
+void SkeletalGraphSettings::OnInspect()
+{
+	ImGui::DragFloat("Line thickness", &m_lineThickness, 0.001f, 0.0f, 1.0f);
+	ImGui::DragFloat("Branch point size", &m_branchPointSize, 0.01f, 0.0f, 1.0f);
+	ImGui::DragFloat("Junction point size", &m_junctionPointSize, 0.01f, 0.0f, 1.0f);
+
+	ImGui::Checkbox("Fixed point size", &m_fixedPointSize);
+	if(m_fixedPointSize){
+		ImGui::DragFloat("Fixed point size multiplier", &m_fixedPointSizeFactor, 0.001f, 0.0f, 1.0f);
+	}
+
+	ImGui::ColorEdit4("Line color", &m_lineColor.x);
+	ImGui::ColorEdit4("Branch point color", &m_branchPointColor.x);
+	ImGui::ColorEdit4("Junction point color", &m_junctionPointColor.x);
+}
 
 void Tree::PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescriptor)
 {
@@ -1930,14 +1953,14 @@ void Tree::InitializePipeModelMeshRenderer(const PipeModelMeshGeneratorSettings&
 		meshRenderer->m_mesh = mesh;
 		meshRenderer->m_material = material;
 	}
-	if(pipeModelMeshGeneratorSettings.m_enableFoliage)
+	if (pipeModelMeshGeneratorSettings.m_enableFoliage)
 	{
 		const Entity foliageEntity = scene->CreateEntity("Pipe Model Foliage Mesh");
 		scene->SetParent(foliageEntity, self);
 
 		const auto mesh = GeneratePipeModelFoliageMesh(pipeModelMeshGeneratorSettings);
 		const auto material = ProjectManager::CreateTemporaryAsset<Material>();
-		
+
 		material->m_materialProperties.m_roughness = 1.0f;
 		material->m_materialProperties.m_metallic = 0.0f;
 		material->m_materialProperties.m_albedoColor = pipeModelMeshGeneratorSettings.m_foliageSettings.m_leafColor;
@@ -1957,7 +1980,8 @@ void Tree::ClearPipeModelMeshRenderer()
 		auto name = scene->GetEntityName(child);
 		if (name == "Pipe Model Branch Mesh") {
 			scene->DeleteEntity(child);
-		}else if (name == "Pipe Model Foliage Mesh") {
+		}
+		else if (name == "Pipe Model Foliage Mesh") {
 			scene->DeleteEntity(child);
 		}
 	}

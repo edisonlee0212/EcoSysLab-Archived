@@ -15,9 +15,13 @@ namespace EcoSysLab {
 		float m_lineThickness = 0.005f;
 		float m_branchPointSize = 1.0f;
 		float m_junctionPointSize = 1.75f;
+
+		bool m_fixedPointSize = false;
+		float m_fixedPointSizeFactor = 0.01f;
 		glm::vec4 m_lineColor = glm::vec4(1.f, .5f, 0.5f, 1.0f);
 		glm::vec4 m_branchPointColor = glm::vec4(1.f, 1.f, 0.f, 1.f);
 		glm::vec4 m_junctionPointColor = glm::vec4(0.f, .7f, 1.f, 1.f);
+		void OnInspect();
 	};
 
 	class Tree : public IPrivateComponent {
@@ -68,7 +72,7 @@ namespace EcoSysLab {
 		AssetRef m_treeDescriptor;
 		bool m_enableHistory = false;
 		int m_historyIteration = 30;
-
+		void ClearSkeletalGraph() const;
 		void InitializeSkeletalGraph(const std::shared_ptr<Mesh> &pointMeshSample, const std::shared_ptr<Mesh>& lineMeshSample, const SkeletalGraphSettings& skeletalGraphSettings);
 
 		TreeModel m_treeModel{};

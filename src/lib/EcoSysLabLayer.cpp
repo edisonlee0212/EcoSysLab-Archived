@@ -1610,6 +1610,7 @@ void EcoSysLabLayer::ClearMeshes() const {
 			const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
 			tree->ClearMeshRenderer();
 			tree->ClearTwigsStrandRenderer();
+			tree->ClearSkeletalGraph();
 		}
 	}
 }
