@@ -31,6 +31,7 @@ void PipeModelMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLayer
 		//ImGui::DragFloat("[DEBUG] MaxParam", &m_maxParam);
 		ImGui::Checkbox("Compute branch joints", &m_branchConnections);
 		ImGui::DragInt("Smooth iteration", &m_recursiveSlicingSmoothIteration, 0, 0, 10);
+		ImGui::TreePop();
 	}
 
 	if (m_generatorType == 1 && ImGui::TreeNode("Hybrid Marching Cube settings"))
