@@ -70,7 +70,7 @@ namespace EcoSysLab
 		[[nodiscard]] NodeData& RefNodeData(const OctreeNode& octreeNode);
 		[[nodiscard]] const NodeData& PeekNodeData(const OctreeNode& octreeNode) const;
 		void GetVoxels(std::vector<glm::mat4>& voxels) const;
-		void TriangulateField(std::vector<Vertex>& vertices, std::vector<unsigned>& indices, bool removeDuplicate, int smoothMeshIteration) const;
+		void TriangulateField(std::vector<Vertex>& vertices, std::vector<unsigned>& indices, bool removeDuplicate) const;
 	};
 
 	template <typename NodeData>
@@ -305,7 +305,7 @@ namespace EcoSysLab
 			});
 	}
 	template <typename NodeData>
-	void Octree<NodeData>::TriangulateField(std::vector<Vertex>& vertices, std::vector<unsigned>& indices, const bool removeDuplicate, const int smoothMeshIteration) const
+	void Octree<NodeData>::TriangulateField(std::vector<Vertex>& vertices, std::vector<unsigned>& indices, const bool removeDuplicate) const
 	{
 		std::vector<TestingCell> testingCells;
 		IterateLeaves([&](const OctreeNode& octreeNode)
@@ -318,7 +318,7 @@ namespace EcoSysLab
 		MarchingCubes::TriangulateField(m_center, [&](const glm::vec3& samplePoint)
 			{
 				return Occupied(samplePoint) ? 1.0f : 0.0f;
-			}, 0.5f, m_minimumNodeRadius, testingCells, vertices, indices, removeDuplicate, smoothMeshIteration);
+			}, 0.5f, m_minimumNodeRadius, testingCells, vertices, indices, removeDuplicate);
 	}
 
 

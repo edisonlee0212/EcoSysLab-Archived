@@ -41,6 +41,6 @@ namespace EcoSysLab
         
         /// Triangulate a scalar field represented by `scalarFunction`. `isovalue` should be used for isovalue computation
         static void TriangulateField(const glm::vec3 &center, const std::function<float(const glm::vec3 &samplePoint)>& sampleFunction, float isovalue, float cellSize, const std::vector<TestingCell>& testingCells,
-            std::vector<Vertex>& vertices, std::vector<unsigned>& indices, bool removeDuplicate, int smoothMeshIteration);
+            std::vector<Vertex>& vertices, std::vector<unsigned>& indices, bool removeDuplicate);
     };
 }

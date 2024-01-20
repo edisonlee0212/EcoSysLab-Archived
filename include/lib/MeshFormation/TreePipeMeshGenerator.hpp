@@ -24,10 +24,11 @@ namespace EcoSysLab {
 		//float m_maxParam = 1.0f;
 		bool m_branchConnections = true;
 #pragma endregion
+		int m_recursiveSlicingSmoothIteration = 0;
 
 #pragma region Hybrid MarchingCube
 		bool m_removeDuplicate = true;
-		int m_voxelSmoothIteration = 15;
+		int m_marchingCubeSmoothIteration = 15;
 		bool m_autoLevel = true;
 		int m_voxelSubdivisionLevel = 10;
 		float m_marchingCubeRadius = 0.003f;
@@ -53,6 +54,9 @@ namespace EcoSysLab {
 		static void HybridMarchingCube(
 			const TreeModel& treeModel, std::vector<Vertex>& vertices,
 			std::vector<unsigned int>& indices, const PipeModelMeshGeneratorSettings& settings);
+
+		static void MeshSmoothing(std::vector<Vertex>& vertices,
+			std::vector<unsigned int>& indices);
 	public:
 		static void Generate(
 			const TreeModel& treeModel, std::vector<Vertex>& vertices,

@@ -30,15 +30,16 @@ void PipeModelMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLayer
 
 		//ImGui::DragFloat("[DEBUG] MaxParam", &m_maxParam);
 		ImGui::Checkbox("Compute branch joints", &m_branchConnections);
+		ImGui::DragInt("Smooth iteration", &m_recursiveSlicingSmoothIteration, 0, 0, 10);
 	}
 
-	if(m_generatorType == 1 && ImGui::TreeNode("Hybrid Marching Cube settings"))
+	if (m_generatorType == 1 && ImGui::TreeNode("Hybrid Marching Cube settings"))
 	{
 		ImGui::Checkbox("Auto set level", &m_autoLevel);
 		if (!m_autoLevel) ImGui::DragInt("Voxel subdivision level", &m_voxelSubdivisionLevel, 1, 5, 16);
 		else ImGui::DragFloat("Min Cube size", &m_marchingCubeRadius, 0.0001, 0.001f, 1.0f);
-		ImGui::DragInt("Smooth iteration", &m_voxelSmoothIteration, 0, 0, 10);
-		if (m_voxelSmoothIteration == 0) ImGui::Checkbox("Remove duplicate", &m_removeDuplicate);
+		ImGui::DragInt("Smooth iteration", &m_marchingCubeSmoothIteration, 0, 0, 10);
+		if (m_marchingCubeSmoothIteration == 0) ImGui::Checkbox("Remove duplicate", &m_removeDuplicate);
 		ImGui::DragInt("Marching cube min cell size", &m_minimumParticleSizeForMarchingCube, 1, 0, 1000);
 		ImGui::DragInt("Cylindrical max cell size", &m_maximumParticleSizeForCylindrical, 1, 0, 1000);
 		ImGui::ColorEdit4("Marching cube color", &m_marchingCubeColor.x);
@@ -66,12 +67,19 @@ void TreePipeMeshGenerator::Generate(const TreeModel& treeModel, std::vector<Ver
 	case TreePipeMeshGeneratorType::RecursiveSlicing:
 	{
 		RecursiveSlicing(treeModel, vertices, indices, settings);
+		for (int i = 0; i < settings.m_recursiveSlicingSmoothIteration; i++)
+		{
+			MeshSmoothing(vertices, indices);
+		}
 	}break;
 	case TreePipeMeshGeneratorType::HybridMarchingCube:
 	{
 		HybridMarchingCube(treeModel, vertices, indices, settings);
+
 	}break;
 	}
+
+
 	const float usedTime = Times::Now() - time;
 	EVOENGINE_LOG("Mesh formation time: " + std::to_string(usedTime));
 }
@@ -294,7 +302,7 @@ void obtainProfiles(const PipeModelPipeGroup& pipes, std::vector<PipeSegmentHand
 		auto& seg = pipes.PeekPipeSegment(segHandle);
 		PipeHandle pipeHandle = seg.GetPipeHandle();
 
-		if (seg.m_info.m_isBoundary  && !visited[pipeHandle])
+		if (seg.m_info.m_isBoundary && !visited[pipeHandle])
 		{
 			// traverse boundary
 			std::vector<PipeSegmentHandle> profile;
@@ -345,7 +353,7 @@ size_t getNextOnBoundary(Graph& g, size_t cur, size_t prev, float& prevAngle)
 		glm::vec2 dir = g[av] - g[cur];
 		float angle = atan2f(dir.y, dir.x);
 		//if(DEBUG_OUTPUT) std::cout << " checking neighbor " << av << " with angle " << angle << std::endl;
-		
+
 		// remap such that all angles are larger than the previous
 		float testAngle = angle;
 		if (testAngle < prevAngle)
@@ -524,7 +532,7 @@ std::pair<Slice, PipeCluster> computeSlice(const TreeModel& treeModel, const Pip
 	}
 	else
 	{
-		if(DEBUG_OUTPUT) std::cout << "computing cluster..." << std::endl;
+		if (DEBUG_OUTPUT) std::cout << "computing cluster..." << std::endl;
 		//cluster = computeCluster(strandGraph, min, max, maxDist * 2, pipesInPrevious, index, t, visited);
 
 		//if(DEBUG_OUTPUT) std::cout << "executing delaunay..." << std::endl;
@@ -553,7 +561,7 @@ std::pair<Slice, PipeCluster> computeSlice(const TreeModel& treeModel, const Pip
 		pipesInComponent.push_back(pipesInPrevious[indexInComponent]);
 	}
 
-	if(DEBUG_OUTPUT) std::cout << "finding leftmost" << std::endl;
+	if (DEBUG_OUTPUT) std::cout << "finding leftmost" << std::endl;
 	// Now find an extreme point in the cluster. It must lie on the boundary. From here we can start traversing the boundary
 	size_t leftmostIndex = 0;
 	float leftmostCoord = std::numeric_limits<float>::infinity();
@@ -568,7 +576,7 @@ std::pair<Slice, PipeCluster> computeSlice(const TreeModel& treeModel, const Pip
 	}
 
 	// traverse the boundary using the angles to its neighbors
-	if(DEBUG_OUTPUT) std::cout << "traversing boundary" << std::endl;
+	if (DEBUG_OUTPUT) std::cout << "traversing boundary" << std::endl;
 	//if(DEBUG_OUTPUT) std::cout << "starting at index: " << leftmostIndex << std::endl;
 	std::vector<size_t> profile{ leftmostIndex };
 
@@ -719,7 +727,7 @@ void connect(std::vector<std::pair<PipeHandle, glm::vec3> >& slice0, size_t i0, 
 			indices.push_back(offset1 + (i1 + k1) % slice1.size());
 
 			testEqual(slice0[(i0 + k0 + 1) % slice0.size()].second, vertices[offset0 + (i0 + k0 + 1) % slice0.size()].m_position);
-			testEqual(slice0[(i0 + k0 ) % slice0.size()].second, vertices[offset0 + (i0 + k0 ) % slice0.size()].m_position);
+			testEqual(slice0[(i0 + k0) % slice0.size()].second, vertices[offset0 + (i0 + k0) % slice0.size()].m_position);
 			testEqual(slice1[(i1 + k1) % slice1.size()].second, vertices[offset1 + (i1 + k1) % slice1.size()].m_position);
 
 			k0++;
@@ -732,7 +740,7 @@ void connect(std::vector<std::pair<PipeHandle, glm::vec3> >& slice0, size_t i0, 
 			indices.push_back(offset1 + (i1 + k1 + 1) % slice1.size());
 			indices.push_back(offset0 + (i0 + k0) % slice0.size());
 
-			
+
 			testEqual(slice1[(i1 + k1) % slice1.size()].second, vertices[offset1 + (i1 + k1) % slice1.size()].m_position);
 			testEqual(slice1[(i1 + k1 + 1) % slice1.size()].second, vertices[offset1 + (i1 + k1 + 1) % slice1.size()].m_position);
 			testEqual(slice0[(i0 + k0) % slice0.size()].second, vertices[offset0 + (i0 + k0) % slice0.size()].m_position);
@@ -770,11 +778,11 @@ void connectSlices(const PipeModelPipeGroup& pipes, Slice& bottomSlice, size_t b
 	{
 		//if(DEBUG_OUTPUT) std::cout << e.first << ", ";
 	}
-	if(DEBUG_OUTPUT) std::cout << std::endl;
+	if (DEBUG_OUTPUT) std::cout << std::endl;
 
 	// compute (incomplete) permutation that turns 0 into 1
 	//if(DEBUG_OUTPUT) std::cout << "computing permutations for " << pipes.PeekPipes().size() << "pipes..." << std::endl;
-	std::vector<std::pair<size_t, size_t> > topPipeHandleIndexMap(pipes.PeekPipes().size(), std::make_pair<>(-1,-1));
+	std::vector<std::pair<size_t, size_t> > topPipeHandleIndexMap(pipes.PeekPipes().size(), std::make_pair<>(-1, -1));
 	std::vector<size_t> bottomPipeHandleIndexMap(pipes.PeekPipes().size(), -1);
 	//if(DEBUG_OUTPUT) std::cout << "size of pipeHandleIndexMap: " << pipeHandleIndexMap.size() << std::endl;
 
@@ -839,7 +847,7 @@ void connectSlices(const PipeModelPipeGroup& pipes, Slice& bottomSlice, size_t b
 
 			if (topSlices.size() > 1)
 			{
-				if(DEBUG_OUTPUT) std::cout << "connecting top slice no. " << bottomPermutation[prevI].first << " to bottom slice" << std::endl;
+				if (DEBUG_OUTPUT) std::cout << "connecting top slice no. " << bottomPermutation[prevI].first << " to bottom slice" << std::endl;
 				if (DEBUG_OUTPUT) std::cout << "Bottom indices " << prevI << " to " << i << std::endl;
 				if (DEBUG_OUTPUT) std::cout << "Top indices " << bottomPermutation[prevI].second << " to " << bottomPermutation[i].second << std::endl;
 			}
@@ -969,7 +977,7 @@ void sliceRecursively(const TreeModel& treeModel, std::pair < Slice, PipeCluster
 
 	if (allEmpty)
 	{
-		if(DEBUG_OUTPUT) std::cout << "=== Ending recursion at t = " << t << " ===" << std::endl;
+		if (DEBUG_OUTPUT) std::cout << "=== Ending recursion at t = " << t << " ===" << std::endl;
 
 		createTwigTip(treeModel, prevSlice, prevOffset, t, vertices, indices);
 
@@ -991,7 +999,7 @@ void sliceRecursively(const TreeModel& treeModel, std::pair < Slice, PipeCluster
 			vertices.push_back(v);
 		}
 	}
-	
+
 	connectSlices(pipeGroup, prevSlice.first, prevOffset, topSlices, offsets, vertices, indices, branchConnections);
 
 	if (DEBUG_OUTPUT) std::cout << "--- Done with slice at t = " << t << " ---" << std::endl;
@@ -1019,10 +1027,10 @@ void TreePipeMeshGenerator::RecursiveSlicing(
 		return;
 	}
 
-	if(DEBUG_OUTPUT) std::cout << "getting first seg group" << std::endl;
+	if (DEBUG_OUTPUT) std::cout << "getting first seg group" << std::endl;
 	std::vector<PipeSegmentHandle> segGroup0 = getSegGroup(pipeGroup, 0);
 
-	if(DEBUG_OUTPUT) std::cout << "determining max thickness" << std::endl;
+	if (DEBUG_OUTPUT) std::cout << "determining max thickness" << std::endl;
 	float maxThickness = 0.0f;
 	forEachSegment(pipeGroup, segGroup0,
 		[&](const PipeSegment<PipeModelPipeSegmentData>& seg)
@@ -1062,7 +1070,7 @@ void TreePipeMeshGenerator::RecursiveSlicing(
 
 	sliceRecursively(treeModel, firstSlice, 0, stepSize, stepSize, maxDist, vertices, indices, settings.m_branchConnections);
 
-	for(const auto& pipe : pipeGroup.PeekPipes())
+	for (const auto& pipe : pipeGroup.PeekPipes())
 	{
 		for (const auto& pipeSegmentHandle : pipe.PeekPipeSegmentHandles())
 		{
@@ -1148,60 +1156,66 @@ void TreePipeMeshGenerator::HybridMarchingCube(const TreeModel& treeModel, std::
 	// first compute extreme points
 	auto min = glm::vec3(std::numeric_limits<float>::infinity());
 	auto max = glm::vec3(-std::numeric_limits<float>::infinity());
-
+	bool needTriangulation = false;
 	for (const auto& pipeSegment : pipeGroup.PeekPipeSegments())
 	{
 		const auto& node = skeleton.PeekNode(pipeSegment.m_data.m_nodeHandle);
 		const auto& profile = node.m_data.m_backProfile;
 		if (profile.PeekParticles().size() < settings.m_minimumParticleSizeForMarchingCube) continue;
+		needTriangulation = true;
 		min = glm::min(pipeSegment.m_info.m_globalPosition, min);
 		max = glm::max(pipeSegment.m_info.m_globalPosition, max);
 	}
-	min -= glm::vec3(0.1f);
-	max += glm::vec3(0.1f);
-	const auto boxSize = max - min;
-	Octree<bool> octree;
-	if (settings.m_autoLevel)
-	{
-		const float maxRadius = glm::max(glm::max(boxSize.x, boxSize.y), boxSize.z) * 0.5f + 2.0f * settings.m_marchingCubeRadius;
-		int subdivisionLevel = -1;
-		float testRadius = settings.m_marchingCubeRadius;
-		while (testRadius <= maxRadius)
+	if (needTriangulation) {
+		min -= glm::vec3(0.1f);
+		max += glm::vec3(0.1f);
+		const auto boxSize = max - min;
+		Octree<bool> octree;
+		if (settings.m_autoLevel)
 		{
-			subdivisionLevel++;
-			testRadius *= 2.f;
-		}
-		EVOENGINE_LOG("Mesh formation: Auto set level to " + std::to_string(subdivisionLevel))
-			octree.Reset(maxRadius, subdivisionLevel, (min + max) * 0.5f);
-	}
-	else {
-		octree.Reset(glm::max((boxSize.x, boxSize.y), glm::max(boxSize.y, boxSize.z)) * 0.5f,
-			glm::clamp(settings.m_voxelSubdivisionLevel, 4, 16), (min + max) / 2.0f);
-	}
-	float subdivisionLength = settings.m_marchingCubeRadius * 0.5f;
-	for (const auto& pipeSegment : pipeGroup.PeekPipeSegments())
-	{
-		const auto& node = skeleton.PeekNode(pipeSegment.m_data.m_nodeHandle);
-		const auto& profile = node.m_data.m_backProfile;
-		if (profile.PeekParticles().size() < settings.m_minimumParticleSizeForMarchingCube) continue;
-		//Get interpolated position on pipe segment. Example to get middle point here:
-		const auto startPosition = treeModel.InterpolatePipeSegmentPosition(pipeSegment.GetHandle(), 0.0f);
-		const auto endPosition = treeModel.InterpolatePipeSegmentPosition(pipeSegment.GetHandle(), 1.0f);
-		const auto distance = glm::distance(startPosition, endPosition);
-		const auto stepSize = glm::max(1, static_cast<int>(distance / subdivisionLength));
-		const auto polarY = profile.PeekParticle(pipeSegment.m_data.m_backProfileParticleHandle).GetPolarPosition().y / glm::radians(360.0f);
-		
-		for (int step = 0; step < stepSize; step++)
-		{
-			const auto a = static_cast<float>(step) / stepSize;
-			const auto position = treeModel.InterpolatePipeSegmentPosition(pipeSegment.GetHandle(), a);
-			octree.Occupy(position, [&](OctreeNode& octreeNode)
+			const float maxRadius = glm::max(glm::max(boxSize.x, boxSize.y), boxSize.z) * 0.5f + 2.0f * settings.m_marchingCubeRadius;
+			int subdivisionLevel = -1;
+			float testRadius = settings.m_marchingCubeRadius;
+			while (testRadius <= maxRadius)
 			{
-			});
+				subdivisionLevel++;
+				testRadius *= 2.f;
+			}
+			EVOENGINE_LOG("Mesh formation: Auto set level to " + std::to_string(subdivisionLevel))
+				octree.Reset(maxRadius, subdivisionLevel, (min + max) * 0.5f);
+		}
+		else {
+			octree.Reset(glm::max((boxSize.x, boxSize.y), glm::max(boxSize.y, boxSize.z)) * 0.5f,
+				glm::clamp(settings.m_voxelSubdivisionLevel, 4, 16), (min + max) / 2.0f);
+		}
+		float subdivisionLength = settings.m_marchingCubeRadius * 0.5f;
+
+		for (const auto& pipeSegment : pipeGroup.PeekPipeSegments())
+		{
+			const auto& node = skeleton.PeekNode(pipeSegment.m_data.m_nodeHandle);
+			const auto& profile = node.m_data.m_backProfile;
+			if (profile.PeekParticles().size() < settings.m_minimumParticleSizeForMarchingCube) continue;
+
+			//Get interpolated position on pipe segment. Example to get middle point here:
+			const auto startPosition = treeModel.InterpolatePipeSegmentPosition(pipeSegment.GetHandle(), 0.0f);
+			const auto endPosition = treeModel.InterpolatePipeSegmentPosition(pipeSegment.GetHandle(), 1.0f);
+			const auto distance = glm::distance(startPosition, endPosition);
+			const auto stepSize = glm::max(1, static_cast<int>(distance / subdivisionLength));
+			for (int step = 0; step < stepSize; step++)
+			{
+				const auto a = static_cast<float>(step) / stepSize;
+				const auto position = treeModel.InterpolatePipeSegmentPosition(pipeSegment.GetHandle(), a);
+				octree.Occupy(position, [&](OctreeNode& octreeNode)
+					{
+					});
+			}
+		}
+		octree.TriangulateField(vertices, indices, settings.m_removeDuplicate);
+		for (int i = 0; i < settings.m_marchingCubeSmoothIteration; i++)
+		{
+			MeshSmoothing(vertices, indices);
 		}
 	}
-	octree.TriangulateField(vertices, indices, settings.m_removeDuplicate, settings.m_voxelSmoothIteration);
-
 	const auto& sortedInternodeList = skeleton.RefSortedNodeList();
 	std::vector<std::vector<RingSegment>> ringsList;
 	std::map<NodeHandle, int> steps{};
@@ -1217,16 +1231,17 @@ void TreePipeMeshGenerator::HybridMarchingCube(const TreeModel& treeModel, std::
 
 		auto& rings = ringsList[internodeIndex];
 		rings.clear();
-
-		if (internode.m_data.m_backProfile.PeekParticles().size() > settings.m_maximumParticleSizeForCylindrical) return;
-
+		if (internode.GetParentHandle() == -1) return;
+		int particleSize = internode.m_data.m_backProfile.PeekParticles().size();
+		if (particleSize > settings.m_maximumParticleSizeForCylindrical) return;
+		particleSize = glm::min(particleSize, settings.m_maximumParticleSizeForCylindrical);
 		glm::vec3 p[4];
 		glm::vec3 f[4];
 
 		float t[4];
 		p[2] = internode.m_data.m_adjustedGlobalPosition;
 		f[2] = internode.m_data.m_adjustedGlobalRotation * glm::vec3(0, 0, -1);
-		t[2] = glm::sqrt(static_cast<float>(internode.m_data.m_backProfile.PeekParticles().size())) * internode.m_data.m_pipeCellRadius;
+		t[2] = glm::sqrt(static_cast<float>(particleSize)) * internode.m_data.m_pipeCellRadius;
 		if (internode.GetParentHandle() == -1)
 		{
 			p[1] = internode.m_info.m_globalPosition;
@@ -1235,7 +1250,7 @@ void TreePipeMeshGenerator::HybridMarchingCube(const TreeModel& treeModel, std::
 			f[1] = internode.m_info.m_globalRotation * glm::vec3(0, 0, -1);
 			f[0] = f[1] * 2.0f - f[2];
 
-			t[2] = glm::sqrt(static_cast<float>(internode.m_data.m_backProfile.PeekParticles().size())) * internode.m_data.m_pipeCellRadius;
+			t[2] = glm::sqrt(static_cast<float>(particleSize)) * internode.m_data.m_pipeCellRadius;
 			t[0] = t[1] * 2.0f - t[2];
 		}
 		else if (internode.GetParentHandle() == 0)
@@ -1246,7 +1261,7 @@ void TreePipeMeshGenerator::HybridMarchingCube(const TreeModel& treeModel, std::
 			f[0] = internode.m_info.m_globalRotation * glm::vec3(0, 0, -1);
 			f[1] = skeleton.PeekNode(0).m_data.m_adjustedGlobalRotation * glm::vec3(0, 0, -1);
 
-			t[0] = glm::sqrt(static_cast<float>(internode.m_data.m_backProfile.PeekParticles().size())) * internode.m_data.m_pipeCellRadius;
+			t[0] = glm::sqrt(static_cast<float>(particleSize)) * internode.m_data.m_pipeCellRadius;
 			t[1] = glm::sqrt(static_cast<float>(skeleton.PeekNode(0).m_data.m_backProfile.PeekParticles().size())) * internode.m_data.m_pipeCellRadius;
 		}
 		else
@@ -1257,8 +1272,10 @@ void TreePipeMeshGenerator::HybridMarchingCube(const TreeModel& treeModel, std::
 			f[1] = skeleton.PeekNode(internode.GetParentHandle()).m_data.m_adjustedGlobalRotation * glm::vec3(0, 0, -1);
 			f[0] = skeleton.PeekNode(skeleton.PeekNode(internode.GetParentHandle()).GetParentHandle()).m_data.m_adjustedGlobalRotation * glm::vec3(0, 0, -1);
 
-			t[1] = glm::sqrt(static_cast<float>(skeleton.PeekNode(internode.GetParentHandle()).m_data.m_backProfile.PeekParticles().size())) * internode.m_data.m_pipeCellRadius;
-			t[0] = glm::sqrt(static_cast<float>(skeleton.PeekNode(skeleton.PeekNode(internode.GetParentHandle()).GetParentHandle()).m_data.m_backProfile.PeekParticles().size())) * internode.m_data.m_pipeCellRadius;
+			int prevParticleSize = skeleton.PeekNode(internode.GetParentHandle()).m_data.m_backProfile.PeekParticles().size();
+			int prevPrevParticleSize = skeleton.PeekNode(skeleton.PeekNode(internode.GetParentHandle()).GetParentHandle()).m_data.m_backProfile.PeekParticles().size();
+			t[1] = glm::sqrt(static_cast<float>(glm::min(prevParticleSize, settings.m_maximumParticleSizeForCylindrical))) * internode.m_data.m_pipeCellRadius;
+			t[0] = glm::sqrt(static_cast<float>(glm::min(prevPrevParticleSize, settings.m_maximumParticleSizeForCylindrical))) * internode.m_data.m_pipeCellRadius;
 		}
 		if (internode.IsEndNode())
 		{
@@ -1330,6 +1347,7 @@ void TreePipeMeshGenerator::HybridMarchingCube(const TreeModel& treeModel, std::
 	for (int internodeIndex = 0; internodeIndex < sortedInternodeList.size(); internodeIndex++) {
 		auto internodeHandle = sortedInternodeList[internodeIndex];
 		const auto& internode = skeleton.PeekNode(internodeHandle);
+		if (internode.GetParentHandle() == -1) continue;
 		if (internode.m_data.m_backProfile.PeekParticles().size() > settings.m_maximumParticleSizeForCylindrical) continue;
 		const auto& internodeInfo = internode.m_info;
 		auto parentInternodeHandle = internode.GetParentHandle();
@@ -1563,5 +1581,85 @@ void TreePipeMeshGenerator::HybridMarchingCube(const TreeModel& treeModel, std::
 			}
 		}
 		vertexLastRingStartVertexIndex[internodeHandle] = vertices.size() - step;
+	}
+}
+
+void TreePipeMeshGenerator::MeshSmoothing(std::vector<Vertex>& vertices, std::vector<unsigned>& indices)
+{
+	std::vector<std::vector<unsigned>> connectivity;
+	connectivity.resize(vertices.size());
+	for (int i = 0; i < indices.size() / 3; i++)
+	{
+		auto a = indices[3 * i];
+		auto b = indices[3 * i + 1];
+		auto c = indices[3 * i + 2];
+		//a
+		{
+			bool found1 = false;
+			bool found2 = false;
+			for (const auto& index : connectivity.at(a))
+			{
+				if (b == index) found1 = true;
+				if (c == index) found2 = true;
+			}
+			if (!found1)
+			{
+				connectivity.at(a).emplace_back(b);
+			}
+			if (!found2)
+			{
+				connectivity.at(a).emplace_back(c);
+			}
+		}
+		//b
+		{
+			bool found1 = false;
+			bool found2 = false;
+			for (const auto& index : connectivity.at(b))
+			{
+				if (a == index) found1 = true;
+				if (c == index) found2 = true;
+			}
+			if (!found1)
+			{
+				connectivity.at(b).emplace_back(a);
+			}
+			if (!found2)
+			{
+				connectivity.at(b).emplace_back(c);
+			}
+		}
+		//c
+		{
+			bool found1 = false;
+			bool found2 = false;
+			for (const auto& index : connectivity.at(c))
+			{
+				if (a == index) found1 = true;
+				if (b == index) found2 = true;
+			}
+			if (!found1)
+			{
+				connectivity.at(c).emplace_back(a);
+			}
+			if (!found2)
+			{
+				connectivity.at(c).emplace_back(b);
+			}
+		}
+	}
+	std::vector<glm::vec3> newPositions;
+	for (int i = 0; i < vertices.size(); i++)
+	{
+		auto position = glm::vec3(0.0f);
+		for (const auto& index : connectivity.at(i))
+		{
+			position += vertices.at(index).m_position;
+		}
+		newPositions.push_back(position / static_cast<float>(connectivity.at(i).size()));
+	}
+	for (int i = 0; i < vertices.size(); i++)
+	{
+		vertices[i].m_position = newPositions[i];
 	}
 }

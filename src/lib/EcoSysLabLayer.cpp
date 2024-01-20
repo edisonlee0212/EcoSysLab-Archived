@@ -611,7 +611,7 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 			ImGui::Text("Simulation");
 			if (ImGui::Button("Reset all trees")) {
 				ResetAllTrees(treeEntities);
-				ClearGeometries();
+				ClearMeshes();
 				ClearGroundFruitAndLeaf();
 				targetTime = 0.0f;
 			}
@@ -644,16 +644,27 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 				m_meshGeneratorSettings.OnInspect(editorLayer);
 				ImGui::TreePop();
 			}
-			if (ImGui::TreeNodeEx("Pipe Mesh generation")) {
-				m_pipeMeshGeneratorSettings.OnInspect(editorLayer);
-				ImGui::TreePop();
-			}
 			if (ImGui::Button("Generate Meshes")) {
 				GenerateMeshes(m_meshGeneratorSettings);
 			}
 			ImGui::SameLine();
 			if (ImGui::Button("Clear Meshes")) {
-				ClearGeometries();
+				ClearMeshes();
+			}
+			if (ImGui::TreeNodeEx("Pipe Mesh generation")) {
+				m_pipeMeshGeneratorSettings.OnInspect(editorLayer);
+				ImGui::TreePop();
+			}
+			if (ImGui::Button("Build Profiles")) {
+				GeneratePipeModelProfiles();
+			}
+			ImGui::SameLine();
+			if (ImGui::Button("Generate Meshes (Strands)")) {
+				GeneratePipeModelMeshes(m_pipeMeshGeneratorSettings);
+			}
+			ImGui::SameLine();
+			if (ImGui::Button("Clear Meshes (Strands)")) {
+				ClearPipeModelMeshes();
 			}
 			if (ImGui::TreeNode("Tree Growth Settings")) {
 				if (ImGui::Button("Grow weekly")) m_simulationSettings.m_deltaTime = 0.01918f;
@@ -1533,7 +1544,51 @@ void EcoSysLabLayer::GenerateMeshes(const TreeMeshGeneratorSettings& meshGenerat
 	}
 }
 
-void EcoSysLabLayer::ClearGeometries() const {
+void EcoSysLabLayer::GeneratePipeModelProfiles() const
+{
+	const auto scene = GetScene();
+	const std::vector<Entity>* treeEntities =
+		scene->UnsafeGetPrivateComponentOwnersList<Tree>();
+	if (treeEntities && !treeEntities->empty()) {
+		const auto copiedEntities = *treeEntities;
+		for (auto treeEntity : copiedEntities) {
+			const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
+			tree->PrepareProfiles();
+		}
+	}
+}
+
+
+void EcoSysLabLayer::GeneratePipeModelMeshes(const PipeModelMeshGeneratorSettings& pipeModelMeshGeneratorSettings) const
+{
+	const auto scene = GetScene();
+	const std::vector<Entity>* treeEntities =
+		scene->UnsafeGetPrivateComponentOwnersList<Tree>();
+	if (treeEntities && !treeEntities->empty()) {
+		const auto copiedEntities = *treeEntities;
+		for (auto treeEntity : copiedEntities) {
+			const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
+			tree->InitializePipeModelMeshRenderer(pipeModelMeshGeneratorSettings);
+		}
+	}
+}
+
+void EcoSysLabLayer::ClearPipeModelMeshes() const
+{
+	const auto scene = GetScene();
+	const std::vector<Entity>* treeEntities =
+		scene->UnsafeGetPrivateComponentOwnersList<Tree>();
+	if (treeEntities && !treeEntities->empty()) {
+		const auto copiedEntities = *treeEntities;
+		for (auto treeEntity : copiedEntities) {
+			const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
+			tree->ClearStrandRenderer();
+			tree->ClearPipeModelMeshRenderer();
+		}
+	}
+}
+
+void EcoSysLabLayer::ClearMeshes() const {
 	const auto scene = GetScene();
 	const std::vector<Entity>* treeEntities =
 		scene->UnsafeGetPrivateComponentOwnersList<Tree>();
@@ -1543,11 +1598,11 @@ void EcoSysLabLayer::ClearGeometries() const {
 			const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
 			tree->ClearMeshRenderer();
 			tree->ClearTwigsStrandRenderer();
-			tree->ClearStrandRenderer();
-			tree->ClearPipeModelMeshRenderer();
 		}
 	}
 }
+
+
 
 void EcoSysLabLayer::UpdateVisualizationCamera() {
 	if (const auto editorLayer = Application::GetLayer<EditorLayer>(); !editorLayer) return;

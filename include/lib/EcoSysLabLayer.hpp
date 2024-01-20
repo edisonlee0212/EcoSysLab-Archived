@@ -168,7 +168,12 @@ namespace EcoSysLab {
 
 		void GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings) const;
 
-		void ClearGeometries() const;
+		void ClearMeshes() const;
+
+		void GeneratePipeModelProfiles() const;
+		void GeneratePipeModelMeshes(const PipeModelMeshGeneratorSettings& pipeModelMeshGeneratorSettings) const;
+
+		void ClearPipeModelMeshes() const;
 
 		void ResetAllTrees(const std::vector<Entity>* treeEntities);
 
