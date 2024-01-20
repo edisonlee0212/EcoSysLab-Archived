@@ -3,7 +3,6 @@
 #include "Octree.hpp"
 #include "Jobs.hpp"
 #include "TreeMeshGenerator.hpp"
-#include "opensubdiv/bfr/faceSurface.h"
 #include "regression/bfr_evaluate/bfrSurfaceEvaluator.h"
 #include <glm/gtx/intersect.hpp>
 #include <glm/gtx/io.hpp>
@@ -221,6 +220,53 @@ glm::vec3 getPipePos(const TreeModel& treeModel, const PipeHandle& pipeHandle, f
 	const auto& pipe = treeModel.PeekShootSkeleton().m_data.m_pipeGroup.PeekPipe(pipeHandle);
 	auto segHandle = pipe.PeekPipeSegmentHandles()[t];
 	return getSegPos(treeModel, segHandle, fmod(t, 1.0));
+}
+
+const Particle2D<CellParticlePhysicsData>& getParticle(const TreeModel& treeModel, const PipeHandle& pipeHandle, size_t index)
+{
+	const auto& skeleton = treeModel.PeekShootSkeleton();
+	const auto& pipe = skeleton.m_data.m_pipeGroup.PeekPipe(pipeHandle);
+	auto segHandle = pipe.PeekPipeSegmentHandles()[index];
+	auto& pipeSegment = skeleton.m_data.m_pipeGroup.PeekPipeSegment(segHandle);
+
+	const auto& node = skeleton.PeekNode(pipeSegment.m_data.m_nodeHandle);
+	const auto& startProfile = node.m_data.m_frontProfile;
+	//To access the user's defined constraints (attractors, etc.)
+	const auto& profileConstraints = node.m_data.m_profileConstraints;
+
+	//To access the position of the start of the pipe segment within a profile:
+	const auto parentHandle = node.GetParentHandle();
+	const auto& startParticle = startProfile.PeekParticle(pipeSegment.m_data.m_frontProfileParticleHandle);
+
+	// TODO: interpolate inbetween
+	return startParticle;
+}
+
+float getPipePolar(const TreeModel& treeModel, const PipeHandle& pipeHandle, float t)
+{
+	// cheap interpolation, maybe improve this later ?
+	const auto& p0 = getParticle(treeModel, pipeHandle, std::floor(t));
+	const auto& p1 = getParticle(treeModel, pipeHandle, std::ceil(t));
+	float a0 = p0.GetPolarPosition().y;
+	float a1 = p1.GetPolarPosition().y;
+
+	// we will just assume that the difference cannot exceed 180 degrees
+	if (a1 < a0)
+	{
+		std::swap(a0, a1);
+	}
+
+	float interpolationParam = fmod(t, 1.0f);
+
+	if (a1 - a0 > glm::pi<float>())
+	{
+		// rotation wraps around
+		return fmod((a0 + 2 * glm::pi<float>()) * interpolationParam + a1 * (1 - interpolationParam) , 2 * glm::pi<float>());
+	}
+	else
+	{
+		return a0 * interpolationParam + a1 * (1 - interpolationParam);
+	}
 }
 
 void dfs(const Graph& g, size_t v, std::vector<size_t>& componentMembers, std::vector<bool>& visited)
@@ -913,24 +959,9 @@ void connectSlices(const PipeModelPipeGroup& pipes, Slice& bottomSlice, size_t b
 	std::vector<Slice>& topSlices, std::vector<size_t> topOffsets,
 	std::vector<Vertex>& vertices, std::vector<unsigned>& indices, bool branchConnections)
 {
-	// TODO: support branches
-	if (topSlices.size() > 1)
-	{
-		if (DEBUG_OUTPUT) std::cout << "connecting " << topSlices.size() << " top slices to bottom slice" << std::endl;
-	}
-
-	//if(DEBUG_OUTPUT) std::cout << "slice0: ";
-	for (auto& e : bottomSlice)
-	{
-		//if(DEBUG_OUTPUT) std::cout << e.first << ", ";
-	}
-	if (DEBUG_OUTPUT) std::cout << std::endl;
-
 	// compute (incomplete) permutation that turns 0 into 1
-	//if(DEBUG_OUTPUT) std::cout << "computing permutations for " << pipes.PeekPipes().size() << "pipes..." << std::endl;
 	std::vector<std::pair<size_t, size_t> > topPipeHandleIndexMap(pipes.PeekPipes().size(), std::make_pair<>(-1, -1));
 	std::vector<size_t> bottomPipeHandleIndexMap(pipes.PeekPipes().size(), -1);
-	//if(DEBUG_OUTPUT) std::cout << "size of pipeHandleIndexMap: " << pipeHandleIndexMap.size() << std::endl;
 
 	for (size_t s = 0; s < topSlices.size(); s++)
 	{
@@ -1140,6 +1171,8 @@ void sliceRecursively(const TreeModel& treeModel, std::pair < Slice, PipeCluster
 		{
 			Vertex v;
 			v.m_position = el.second;
+			v.m_texCoord.y = t;
+			v.m_texCoord.x = getPipePolar(treeModel, el.first, t) / (2 * glm::pi<float>());
 			vertices.push_back(v);
 		}
 	}
@@ -1209,6 +1242,8 @@ void TreePipeMeshGenerator::RecursiveSlicing(
 	{
 		Vertex v;
 		v.m_position = el.second;
+		v.m_texCoord.y = 0.0;
+		v.m_texCoord.x = getPipePolar(treeModel, el.first, 0.0) / (2 * glm::pi<float>());
 		vertices.push_back(v);
 	}
 
