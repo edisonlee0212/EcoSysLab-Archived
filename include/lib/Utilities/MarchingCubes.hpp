@@ -14,12 +14,15 @@ namespace EcoSysLab
     struct TestingCell
     {
         glm::vec3 m_position;
+        glm::vec2 m_texCoords{};
     };
 
     struct MarchingCubeCell
     {
         glm::vec3 m_vertex[8];
         float m_value[8];
+
+        glm::vec2 m_texCoords{};
     };
 
     class MarchingCubes

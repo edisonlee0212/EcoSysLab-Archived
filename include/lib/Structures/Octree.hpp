@@ -18,6 +18,7 @@ namespace EcoSysLab
 		friend class Octree;
 		bool m_recycled = true;
 	public:
+		glm::vec2 m_texCoords {};
 		[[nodiscard]] float GetRadius() const { return m_radius; }
 		[[nodiscard]] unsigned GetLevel() const { return m_level; }
 		[[nodiscard]] glm::vec3 GetCenter() const { return m_center; }
@@ -310,8 +311,9 @@ namespace EcoSysLab
 		std::vector<TestingCell> testingCells;
 		IterateLeaves([&](const OctreeNode& octreeNode)
 			{
-				TestingCell testingCell{};
+				TestingCell testingCell;
 				testingCell.m_position = octreeNode.m_center;
+				testingCell.m_texCoords = octreeNode.m_texCoords;
 				testingCells.push_back(testingCell);
 			});
 

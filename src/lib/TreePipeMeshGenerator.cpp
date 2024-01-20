@@ -44,7 +44,7 @@ void PipeModelMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLayer
 		ImGui::DragInt("Cylindrical max cell size", &m_maximumParticleSizeForCylindrical, 1, 0, 1000);
 		ImGui::ColorEdit4("Marching cube color", &m_marchingCubeColor.x);
 		ImGui::ColorEdit4("Cylindrical color", &m_cylindricalColor.x);
-
+		ImGui::DragFloat("TexCoords multiplier", &m_texCoordsMultiplier);
 		ImGui::TreePop();
 	}
 
@@ -1201,12 +1201,16 @@ void TreePipeMeshGenerator::HybridMarchingCube(const TreeModel& treeModel, std::
 			const auto endPosition = treeModel.InterpolatePipeSegmentPosition(pipeSegment.GetHandle(), 1.0f);
 			const auto distance = glm::distance(startPosition, endPosition);
 			const auto stepSize = glm::max(1, static_cast<int>(distance / subdivisionLength));
+
+			const auto polarX = profile.PeekParticle(pipeSegment.m_data.m_backProfileParticleHandle).GetPolarPosition().y / glm::radians(360.0f);
 			for (int step = 0; step < stepSize; step++)
 			{
 				const auto a = static_cast<float>(step) / stepSize;
 				const auto position = treeModel.InterpolatePipeSegmentPosition(pipeSegment.GetHandle(), a);
+				
 				octree.Occupy(position, [&](OctreeNode& octreeNode)
 					{
+						octreeNode.m_texCoords = glm::vec2(glm::mod(settings.m_texCoordsMultiplier * a, 1.0f), 0.05f);
 					});
 			}
 		}
@@ -1582,6 +1586,8 @@ void TreePipeMeshGenerator::HybridMarchingCube(const TreeModel& treeModel, std::
 		}
 		vertexLastRingStartVertexIndex[internodeHandle] = vertices.size() - step;
 	}
+	CalculateNormal(vertices, indices);
+	CalculateUV(vertices, settings.m_texCoordsMultiplier);
 }
 
 void TreePipeMeshGenerator::MeshSmoothing(std::vector<Vertex>& vertices, std::vector<unsigned>& indices)
@@ -1661,5 +1667,56 @@ void TreePipeMeshGenerator::MeshSmoothing(std::vector<Vertex>& vertices, std::ve
 	for (int i = 0; i < vertices.size(); i++)
 	{
 		vertices[i].m_position = newPositions[i];
+	}
+}
+
+void TreePipeMeshGenerator::CalculateNormal(std::vector<Vertex>& vertices, const std::vector<unsigned>& indices)
+{
+	auto normalLists = std::vector<std::vector<glm::vec3>>();
+	const auto size = vertices.size();
+	for (auto i = 0; i < size; i++)
+	{
+		normalLists.emplace_back();
+	}
+	for (int i = 0; i < indices.size() / 3; i++)
+	{
+		const auto i1 = indices.at(i * 3);
+		const auto i2 = indices.at(i * 3 + 1);
+		const auto i3 = indices.at(i * 3 + 2);
+		auto v1 = vertices[i1].m_position;
+		auto v2 = vertices[i2].m_position;
+		auto v3 = vertices[i3].m_position;
+		auto normal = glm::normalize(glm::cross(v1 - v2, v1 - v3));
+		normalLists[i1].push_back(normal);
+		normalLists[i2].push_back(normal);
+		normalLists[i3].push_back(normal);
+	}
+	for (auto i = 0; i < size; i++)
+	{
+		auto normal = glm::vec3(0.0f);
+		for (const auto j : normalLists[i])
+		{
+			normal += j;
+		}
+		vertices[i].m_normal = glm::normalize(normal);
+	}
+}
+
+void TreePipeMeshGenerator::CalculateUV(std::vector<Vertex>& vertices, float factor)
+{
+	for (auto& vertex : vertices)
+	{
+		if (glm::abs(vertex.m_normal.x) >= glm::abs(vertex.m_normal.z) && glm::abs(vertex.m_normal.x) >= glm::abs(vertex.m_normal.y))
+		{
+			vertex.m_texCoord = glm::vec2(glm::mod(vertex.m_position.z * factor, 1.0f), glm::mod(vertex.m_position.y * factor, 1.0f));
+		}
+		else if (glm::abs(vertex.m_normal.z) >= glm::abs(vertex.m_normal.x) && glm::abs(vertex.m_normal.z) >= glm::abs(vertex.m_normal.y))
+		{
+			vertex.m_texCoord = glm::vec2(glm::mod(vertex.m_position.x * factor, 1.0f), glm::mod(vertex.m_position.y * factor, 1.0f));
+		}
+		else
+		{
+			vertex.m_texCoord = glm::vec2(glm::mod(vertex.m_position.x * factor, 1.0f), glm::mod(vertex.m_position.z * factor, 1.0f));
+		}
 	}
 }

@@ -339,6 +339,7 @@ void MarchingCubes::TriangulateCell(MarchingCubeCell& cell, float isovalue, std:
 		for (int j = 2; j >= 0; j--) {
 
 			archetype.m_position = intersections[m_triangleTable[cubeIndex][i + j]];
+			archetype.m_texCoord = cell.m_texCoords;
 			vertices.push_back(archetype);
 		}
 	}
@@ -374,7 +375,7 @@ void MarchingCubes::TriangulateField(const glm::vec3& center, const std::functio
 							sampleFunction({adjCenter.x + cellRadius, adjCenter.y - cellRadius, adjCenter.z + cellRadius}), sampleFunction({adjCenter.x - cellRadius, adjCenter.y - cellRadius, adjCenter.z + cellRadius}),
 							sampleFunction({adjCenter.x - cellRadius, adjCenter.y + cellRadius, adjCenter.z - cellRadius}), sampleFunction({adjCenter.x + cellRadius, adjCenter.y + cellRadius, adjCenter.z - cellRadius}),
 							sampleFunction({adjCenter.x + cellRadius, adjCenter.y + cellRadius, adjCenter.z + cellRadius}), sampleFunction({adjCenter.x - cellRadius, adjCenter.y + cellRadius, adjCenter.z + cellRadius})
-						}
+						}, cell.m_texCoords
 						};
 						TriangulateCell(testingCell, isovalue, outVertices);
 						testedCells[glm::ivec3(glm::round((adjCenter - center) / cellRadius))] = testingCell;
@@ -386,22 +387,38 @@ void MarchingCubes::TriangulateField(const glm::vec3& center, const std::functio
 
 	if (removeDuplicate) {
 		std::vector<unsigned> outIndices;
-		std::unordered_map<glm::ivec3, unsigned> verticesList;
+		std::unordered_map<glm::ivec3, std::pair<unsigned, std::vector<glm::vec2>>> verticesList;
 		//Fold vertices
 		for (const auto& vertex : outVertices)
 		{
-			auto search = verticesList.find(glm::ivec3(glm::round((vertex.m_position - center) / cellRadius)));
+			const auto key = glm::ivec3(glm::round((vertex.m_position - center) / cellRadius));
+			auto search = verticesList.find(key);
 			if (search == verticesList.end())
 			{
 				auto index = vertices.size();
 				outIndices.emplace_back(index);
-				verticesList[glm::ivec3(glm::round((vertex.m_position - center) / cellRadius))] = index;
+				std::vector<glm::vec2> texList{};
+				texList.emplace_back(vertex.m_texCoord);
+				verticesList[glm::ivec3(glm::round((vertex.m_position - center) / cellRadius))] = std::make_pair(index, texList);
 				vertices.push_back(vertex);
 			}
 			else
 			{
-				outIndices.emplace_back(search->second);
+				search->second.second.emplace_back(vertex.m_texCoord);
+				outIndices.emplace_back(search->second.first);
 			}
+		}
+
+		for(const auto& element : verticesList)
+		{
+			size_t count = 0;
+			glm::vec2 sum = glm::vec2(0.f);
+			for(const auto& tex : element.second.second)
+			{
+				sum += tex;
+				count++;
+			}
+			vertices[element.second.first].m_texCoord = sum / static_cast<float>(count);
 		}
 
 		//Fold triangles

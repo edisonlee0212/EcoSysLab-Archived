@@ -38,7 +38,10 @@ namespace EcoSysLab {
 		float m_ySubdivision = 0.03f;
 		glm::vec4 m_marchingCubeColor = glm::vec4(0.6, 0.3, 0.0f, 1.0f);
 		glm::vec4 m_cylindricalColor = glm::vec4(0.1, 0.9, 0.0f, 1.0f);
+		float m_texCoordsMultiplier = 10.0f;
 #pragma endregion
+
+		
 
 		bool m_enableBranch = true;
 		bool m_enableFoliage = true;
@@ -57,6 +60,11 @@ namespace EcoSysLab {
 
 		static void MeshSmoothing(std::vector<Vertex>& vertices,
 			std::vector<unsigned int>& indices);
+
+		static void CalculateNormal(std::vector<Vertex>& vertices,
+			const std::vector<unsigned int>& indices);
+
+		static void CalculateUV(std::vector<Vertex>& vertices, float factor = 1.0f);
 	public:
 		static void Generate(
 			const TreeModel& treeModel, std::vector<Vertex>& vertices,
