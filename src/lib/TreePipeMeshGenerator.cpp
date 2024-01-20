@@ -192,6 +192,15 @@ glm::vec3 getSegPos(const TreeModel& treeModel, const PipeSegmentHandle segHandl
 	return treeModel.InterpolatePipeSegmentPosition(segHandle, t);
 }
 
+NodeHandle getNodeHandle(const PipeModelPipeGroup& pipeGroup, const PipeHandle& pipeHandle, float t)
+{
+	size_t lookupIndex = glm::round(t) < pipeGroup.PeekPipe(pipeHandle).PeekPipeSegmentHandles().size() ? glm::round(t) : (pipeGroup.PeekPipe(pipeHandle).PeekPipeSegmentHandles().size() - 1);
+	auto& pipeSegmentHandle = pipeGroup.PeekPipe(pipeHandle).PeekPipeSegmentHandles()[lookupIndex];
+	auto& pipeSegment = pipeGroup.PeekPipeSegment(pipeSegmentHandle);
+
+	return pipeSegment.m_data.m_nodeHandle;
+}
+
 bool isValidPipeParam(const TreeModel& treeModel, const PipeHandle& pipeHandle, float t)
 {
 	const auto& pipe = treeModel.PeekShootSkeleton().m_data.m_pipeGroup.PeekPipe(pipeHandle);
@@ -214,19 +223,34 @@ glm::vec3 getPipePos(const TreeModel& treeModel, const PipeHandle& pipeHandle, f
 
 void dfs(const Graph& g, size_t v, std::vector<size_t>& componentMembers, std::vector<bool>& visited)
 {
-	visited[v] = true;
-	componentMembers.push_back(v);
 
-	for (size_t av : g.adjacentVertices(v))
+	std::vector<size_t> stack;
+
+	stack.push_back(v);
+
+	while (!stack.empty())
 	{
-		if (!visited[av])
+		size_t u = stack.back();
+		stack.pop_back();
+
+		if (!visited[u])
 		{
-			dfs(g, av, componentMembers, visited);
+			componentMembers.push_back(u);
+			visited[u] = true;
 		}
+
+		for (size_t av : g.adjacentVertices(u))
+		{
+			if (!visited[av])
+			{
+				stack.push_back(av);
+			}
+		}
+
 	}
 }
 
-void delaunay(Graph& g, float removalLength, std::vector<size_t>& candidates)
+void delaunay(Graph& g, float removalLength, std::vector<size_t>& candidates, const PipeModelPipeGroup& pipeGroup, const PipeCluster& prevPipes, float t)
 {
 	std::vector<float> positions;
 
@@ -244,6 +268,25 @@ void delaunay(Graph& g, float removalLength, std::vector<size_t>& candidates)
 		const auto& v0 = candidates[d.triangles[i]];
 		const auto& v1 = candidates[d.triangles[i + 1]];
 		const auto& v2 = candidates[d.triangles[i + 2]];
+
+		// make an exception if the three indices belong to the same skeleton part
+		PipeHandle p0 = prevPipes[v0];
+		PipeHandle p1 = prevPipes[v1];
+		PipeHandle p2 = prevPipes[v2];
+
+		NodeHandle n0 = getNodeHandle(pipeGroup, p0, t);
+		NodeHandle n1 = getNodeHandle(pipeGroup, p1, t);
+		NodeHandle n2 = getNodeHandle(pipeGroup, p2, t);
+		
+		if (n0 == n1 && n1 == n2)
+		{
+			g.addEdge(v0, v1);
+			g.addEdge(v1, v2);
+			g.addEdge(v2, v0);
+
+			continue; // Don't add twice
+		}
+
 		if (glm::distance(g[v0], g[v1]) > removalLength
 			|| glm::distance(g[v1], g[v2]) > removalLength
 			|| glm::distance(g[v0], g[v2]) > removalLength) continue;
@@ -401,7 +444,7 @@ Slice profileToSlice(const TreeModel& treeModel, std::vector<size_t>& profile, c
 	return slice;
 }
 
-std::vector<size_t> computeCluster(Graph& strandGraph, glm::vec3 min, glm::vec3 max, float maxDist, const PipeCluster& pipesInPrevious, size_t index, float t, std::vector<bool>& visited)
+std::vector<size_t> computeComponent(Graph& strandGraph, glm::vec3 min, glm::vec3 max, float maxDist, const PipeCluster& pipesInPrevious, size_t index, float t, std::vector<bool>& visited)
 {
 	Grid2D grid(maxDist, min, max);
 
@@ -418,20 +461,18 @@ std::vector<size_t> computeCluster(Graph& strandGraph, glm::vec3 min, glm::vec3 
 	grid.connectNeighbors(strandGraph, maxDist);
 
 	//if(DEBUG_OUTPUT) std::cout << "outputting graph" << std::endl;
-	outputGraph(strandGraph, "strandGraph_" + std::to_string(pipesInPrevious[index]) + "_" + std::to_string(t), pipesInPrevious);
+	//outputGraph(strandGraph, "strandGraph_" + std::to_string(pipesInPrevious[index]) + "_" + std::to_string(t), pipesInPrevious);
 
 	// TODO:: maybe also use visited here
 	//if(DEBUG_OUTPUT) std::cout << "collecting component" << std::endl;
 	return collectComponent(strandGraph, index, visited);
 }
 
-std::pair<Slice, PipeCluster> computeSlice(const TreeModel& treeModel, const PipeCluster& pipesInPrevious, size_t index, std::vector<bool>& visited, float t, float maxDist)
+std::pair<Graph, std::vector<size_t> > computeCluster(const TreeModel& treeModel, const PipeCluster& pipesInPrevious, size_t index, std::vector<bool>& visited, float t, float maxDist)
 {
-	const PipeModelPipeGroup& pipes = treeModel.PeekShootSkeleton().m_data.m_pipeGroup;
-
 	if (!isValidPipeParam(treeModel, pipesInPrevious[index], t))
 	{
-		return std::make_pair<Slice, PipeCluster>(Slice(), PipeCluster());
+		return std::make_pair<>(Graph(), std::vector<size_t>());
 	}
 	// sweep over tree from root to leaves to reconstruct a skeleton with bark outlines
 	//if(DEBUG_OUTPUT) std::cout << "obtaining profile of segGroup with " << pipesInPrevious.size() << " segments" << std::endl;
@@ -483,6 +524,14 @@ std::pair<Slice, PipeCluster> computeSlice(const TreeModel& treeModel, const Pip
 
 	for (auto& pipeHandle : pipesInPrevious)
 	{
+		/*if (!isValidPipeParam(treeModel, pipeHandle, t))
+		{
+			// discard this element
+			size_t vIndex = strandGraph.addVertex();
+			visited[vIndex] = true;
+			continue;
+		}*/
+
 		//if(DEBUG_OUTPUT) std::cout << "processing pipe with handle no. " << pipeHandle << std::endl;
 		glm::vec3 segPos = getPipePos(treeModel, pipeHandle, t);
 		glm::vec3 segDir = glm::normalize(getPipeDir(treeModel, pipeHandle, t));
@@ -519,7 +568,7 @@ std::pair<Slice, PipeCluster> computeSlice(const TreeModel& treeModel, const Pip
 
 	if (candidates.size() < 3)
 	{
-		std::cerr << "Error: cluster is too small" << std::endl;
+		std::cout << "Cluster is too small, will be discarded" << std::endl;
 	}
 	else if (candidates.size() == 3)
 	{
@@ -533,21 +582,13 @@ std::pair<Slice, PipeCluster> computeSlice(const TreeModel& treeModel, const Pip
 	else
 	{
 		if (DEBUG_OUTPUT) std::cout << "computing cluster..." << std::endl;
-		//cluster = computeCluster(strandGraph, min, max, maxDist * 2, pipesInPrevious, index, t, visited);
-
-		//if(DEBUG_OUTPUT) std::cout << "executing delaunay..." << std::endl;
-
-		delaunay(strandGraph, maxDist * 2, candidates);
+		delaunay(strandGraph, maxDist, candidates, treeModel.PeekShootSkeleton().m_data.m_pipeGroup, pipesInPrevious, t);
 
 		cluster = collectComponent(strandGraph, index, visited);
 
-		//if(DEBUG_OUTPUT) std::cout << "done with delaunay..." << std::endl;
-		outputGraph(strandGraph, "strandGraph_" + std::to_string(pipesInPrevious[index]) + "_" + std::to_string(t) + "_del", pipesInPrevious);
 
 	}
 	// write cluster
-	//if(DEBUG_OUTPUT) std::cout << "collecting pipe handles in cluster.." << std::endl;
-	PipeCluster pipesInComponent;
 
 	for (size_t indexInComponent : cluster)
 	{
@@ -557,7 +598,19 @@ std::pair<Slice, PipeCluster> computeSlice(const TreeModel& treeModel, const Pip
 		}
 
 		visited[indexInComponent] = true;
-		//if(DEBUG_OUTPUT) std::cout << "Marking strand no. " << indexInComponent << " with handle " << pipesInPrevious[indexInComponent] << " as visited." << std::endl;
+	}
+
+	return std::make_pair<>(strandGraph, cluster);
+}
+
+std::pair<Slice, PipeCluster> computeSlice(const TreeModel& treeModel, const PipeCluster& pipesInPrevious, Graph& strandGraph, std::vector<size_t>& cluster, float t, float maxDist)
+{
+	const PipeModelPipeGroup& pipes = treeModel.PeekShootSkeleton().m_data.m_pipeGroup;
+
+	PipeCluster pipesInComponent;
+
+	for (size_t indexInComponent : cluster)
+	{
 		pipesInComponent.push_back(pipesInPrevious[indexInComponent]);
 	}
 
@@ -631,23 +684,171 @@ std::pair<Slice, PipeCluster> computeSlice(const TreeModel& treeModel, const Pip
 	return std::make_pair<>(slice, pipesInComponent);
 }
 
-std::vector<std::pair<Slice, PipeCluster> > computeSlices(const TreeModel& treeModel, const PipeCluster& pipesInPrevious, float t, float maxDist)
+std::pair< std::vector<Graph>, std::vector<std::vector<size_t> > > computeClusters(const TreeModel& treeModel, const PipeCluster& pipesInPrevious, float t, float maxDist)
 {
-	std::vector<std::pair<Slice, PipeCluster> > slices;
+	const auto& skeleton = treeModel.PeekShootSkeleton();
+	const auto& pipeGroup = skeleton.m_data.m_pipeGroup;
 
 	std::vector<bool> visited(pipesInPrevious.size(), false);
+	std::vector<std::vector<size_t> > clusters;
+	std::vector<Graph> graphs;
+
+	std::vector<std::vector<size_t> > tooSmallClusters;
+	std::vector<Graph> tooSmallGraphs;
 
 	for (std::size_t i = 0; i < pipesInPrevious.size(); i++)
 	{
 		if (visited[i])
 		{
-			//std::cout << "skipping already visited pipe no. " << i << " with handle " << pipesInPrevious[i] << std::endl;
 			continue;
 		}
 
+		auto graphAndCluster = computeCluster(treeModel, pipesInPrevious, i, visited, t, maxDist);
+
+		if (graphAndCluster.second.size() >= 3)
+		{
+			graphs.push_back(graphAndCluster.first);
+			clusters.push_back(graphAndCluster.second);
+		}
+		else if (graphAndCluster.second.size() != 0)
+		{
+			tooSmallGraphs.push_back(graphAndCluster.first);
+			tooSmallClusters.push_back(graphAndCluster.second);
+		}
+
+	}
+
+	// fix clusters that are too small
+
+	/*if (tooSmallClusters.size() > 1)
+	{
+		// try to merge with each other by using skeleton nodes
+
+		std::cerr << "Not implemented yet: More than one cluster is too small" << std::endl;
+		for (size_t i = 0; i < tooSmallClusters.size(); i++)
+		{
+			for (size_t j = 0; j < tooSmallClusters[i].size(); j++)
+			{
+				for (size_t k = i; k < tooSmallClusters.size(); k++)
+				{
+					for (size_t l = j + 1; l < tooSmallClusters[k].size(); l++)
+					{
+						// TODO
+					}
+				}
+			}
+		}
+	}
+
+	// merge with the other clusters
+	for (auto& smallCluster : tooSmallClusters)
+	{
+		std::cerr << "Trying to merge cluster of size " << smallCluster.size() << std::endl;;
+
+		for (size_t smallIndex : smallCluster)
+		{
+			NodeHandle nh0 = getNodeHandle(pipeGroup, pipesInPrevious[smallIndex], t);
+
+			std::vector<std::pair<size_t, Graph::Edge> > mergeIntoClusters;
+
+			// search for Node handle
+			for (size_t i = 0; i < clusters.size(); i++)
+			{
+				for (size_t index : clusters[i])
+				{
+					NodeHandle nh1 = getNodeHandle(pipeGroup, pipesInPrevious[index], t);
+
+					if (nh0 == nh1)
+					{
+						mergeIntoClusters.push_back(std::pair<size_t, Graph::Edge>(i, Graph::Edge{index, smallIndex}));
+
+						//graphs[i].addEdge(index, smallIndex);
+					}
+				}
+			}
+
+			if (mergeIntoClusters.size() == 0)
+			{
+				std::cerr << "could not merge small cluster!" << std::endl;
+			}
+			else if (mergeIntoClusters.size() == 1)
+			{
+				std::cerr << "could not merge small cluster!" << std::endl;
+			}
+			else if (mergeIntoClusters.size() == 2)
+			{
+				if (mergeIntoClusters[0].first == mergeIntoClusters[1].first)
+				{
+					clusters[mergeIntoClusters[0].first].push_back(smallIndex);
+					graphs[mergeIntoClusters[0].first].addEdge(mergeIntoClusters[0].second.m_source, mergeIntoClusters[0].second.m_target);
+					graphs[mergeIntoClusters[1].first].addEdge(mergeIntoClusters[1].second.m_source, mergeIntoClusters[1].second.m_target);
+					std::cerr << "Merged into one cluster, this is good!" << std::endl;
+				}
+				else
+				{
+					std::cerr << "Merged into different clusters, this will not work!" << std::endl;
+				}
+			}
+		}
+	}*/
+
+	/*if (clusters.size() > 1)
+	{
+		clusters.clear();
+		graphs.clear();
+		visited = std::vector<bool>(pipesInPrevious.size(), false);
+
+		for (std::size_t i = 0; i < pipesInPrevious.size(); i++)
+		{
+			if (visited[i])
+			{
+				//std::cout << "skipping already visited pipe no. " << i << " with handle " << pipesInPrevious[i] << std::endl;
+				continue;
+			}
+
+			auto graphAndCluster = computeCluster(treeModel, pipesInPrevious, i, visited, t, maxDist);
+
+			graphs.push_back(graphAndCluster.first);
+			clusters.push_back(graphAndCluster.second);
+
+		}
+
+		std::cerr << "Partitioning into " << clusters.size() << " clusters at t = " << t << std::endl;
+
+		for (size_t i = 0; i < clusters.size(); i++)
+		{
+			std::cerr << "cluster " << i << std::endl;
+
+			for (size_t j : clusters[i])
+			{
+				PipeHandle pipeHandle = pipesInPrevious[j];
+								
+
+				std::cerr << "Pipe no. " << j << " with handle " << pipeHandle << " belonging to node with handle " << pipeSegment.m_data.m_nodeHandle << std::endl;
+			}
+
+			outputGraph(graphs[i], "t_" + std::to_string(t) + "_cluster_" + std::to_string(i), pipesInPrevious);
+		}
+	}*/
+
+	return std::pair< std::vector<Graph>, std::vector<std::vector<size_t> > >(graphs, clusters);
+}
+
+std::vector<std::pair<Slice, PipeCluster> > computeSlices(const TreeModel& treeModel, const PipeCluster& pipesInPrevious, float t, float maxDist)
+{
+
+	// compute clusters
+	auto graphsAndClusters = computeClusters(treeModel, pipesInPrevious, t, maxDist);
+
+	// then loop over the clusters to compute slices
+	std::vector<std::pair<Slice, PipeCluster> > slices;
+
+
+	for (std::size_t i = 0; i < graphsAndClusters.first.size(); i++)
+	{
 		// if not visited, determine connected component around this
 		//std::cout << "computing slice containing pipe no. " << i << " with handle " << pipesInPrevious[i] << " at t = " << t << std::endl;
-		auto slice = computeSlice(treeModel, pipesInPrevious, i, visited, t, maxDist);
+		auto slice = computeSlice(treeModel, pipesInPrevious, graphsAndClusters.first[i], graphsAndClusters.second[i], t, maxDist);
 		slices.push_back(slice);
 	}
 
@@ -660,45 +861,6 @@ void forEachSegment(const PipeModelPipeGroup& pipes, std::vector<PipeSegmentHand
 	{
 		auto& seg = pipes.PeekPipeSegment(segHandle);
 		func(seg);
-	}
-}
-
-bool needToReorder(std::vector<size_t>& permutation)
-{
-	size_t firstIndex;
-	for (size_t index : permutation)
-	{
-		if (index != -1)
-		{
-			firstIndex = index;
-			break;
-		}
-	}
-
-	size_t maxIndex = firstIndex;
-
-	for (size_t index : permutation)
-	{
-		if (index == -1)
-		{
-			continue;
-		}
-
-		if (index < maxIndex && index > firstIndex)
-		{
-			return true;
-		}
-		// TODO: wrap-around
-	}
-}
-
-void testEqual(glm::vec3 a, glm::vec3 b)
-{
-	if (a != b)
-	{
-		std::stringstream errorMessage;
-		errorMessage << "Error: Vectors are not equal! a = " << a << ", b = " << b;
-		throw std::runtime_error(errorMessage.str());
 	}
 }
 
@@ -726,27 +888,15 @@ void connect(std::vector<std::pair<PipeHandle, glm::vec3> >& slice0, size_t i0, 
 			indices.push_back(offset0 + (i0 + k0) % slice0.size());
 			indices.push_back(offset1 + (i1 + k1) % slice1.size());
 
-			testEqual(slice0[(i0 + k0 + 1) % slice0.size()].second, vertices[offset0 + (i0 + k0 + 1) % slice0.size()].m_position);
-			testEqual(slice0[(i0 + k0) % slice0.size()].second, vertices[offset0 + (i0 + k0) % slice0.size()].m_position);
-			testEqual(slice1[(i1 + k1) % slice1.size()].second, vertices[offset1 + (i1 + k1) % slice1.size()].m_position);
-
 			k0++;
-			//if(DEBUG_OUTPUT) std::cout << "increased k0 to " << k0 << std::endl;
 		}
 		else
 		{
-			// make triangle consisting of k1, k1 + 1 and k0
 			indices.push_back(offset1 + (i1 + k1) % slice1.size());
 			indices.push_back(offset1 + (i1 + k1 + 1) % slice1.size());
 			indices.push_back(offset0 + (i0 + k0) % slice0.size());
 
-
-			testEqual(slice1[(i1 + k1) % slice1.size()].second, vertices[offset1 + (i1 + k1) % slice1.size()].m_position);
-			testEqual(slice1[(i1 + k1 + 1) % slice1.size()].second, vertices[offset1 + (i1 + k1 + 1) % slice1.size()].m_position);
-			testEqual(slice0[(i0 + k0) % slice0.size()].second, vertices[offset0 + (i0 + k0) % slice0.size()].m_position);
-
 			k1++;
-			//if(DEBUG_OUTPUT) std::cout << "increased k1 to " << k1 << std::endl;
 		}
 	}
 }
@@ -844,13 +994,6 @@ void connectSlices(const PipeModelPipeGroup& pipes, Slice& bottomSlice, size_t b
 		if (bottomPermutation[prevI].first == bottomPermutation[i].first)
 		{
 			//if(DEBUG_OUTPUT) std::cout << "Connecting at index " << i << std::endl;
-
-			if (topSlices.size() > 1)
-			{
-				if (DEBUG_OUTPUT) std::cout << "connecting top slice no. " << bottomPermutation[prevI].first << " to bottom slice" << std::endl;
-				if (DEBUG_OUTPUT) std::cout << "Bottom indices " << prevI << " to " << i << std::endl;
-				if (DEBUG_OUTPUT) std::cout << "Top indices " << bottomPermutation[prevI].second << " to " << bottomPermutation[i].second << std::endl;
-			}
 
 			connect(bottomSlice, prevI, i, bottomOffset,
 				topSlices[bottomPermutation[i].first], bottomPermutation[prevI].second, bottomPermutation[i].second, topOffsets[bottomPermutation[i].first],
@@ -1042,8 +1185,7 @@ void TreePipeMeshGenerator::RecursiveSlicing(
 		}
 	);
 
-	//size_t maxIterations = settings.m_limitProfileIterations ? settings.m_maxProfileIterations : std::numeric_limits<size_t>::max();
-	float maxDist = 2 * maxThickness * sqrt(2) * 1.01f;
+	float maxDist = 2 * maxThickness * sqrt(2) * 1.5f;
 	// initial slice at root:
 	std::vector<bool> visited(pipeGroup.PeekPipes().size(), false);
 
@@ -1058,7 +1200,8 @@ void TreePipeMeshGenerator::RecursiveSlicing(
 	float stepSize = 1.0f / settings.m_stepsPerSegment;
 	//float max = settings.m_maxParam;
 
-	auto firstSlice = computeSlice(treeModel, pipeCluster, 0, visited, 0.0, maxDist);
+	auto firstCluster = computeCluster(treeModel, pipeCluster, 0, visited, 0.0, maxDist);
+	auto firstSlice = computeSlice(treeModel, pipeCluster, firstCluster.first, firstCluster.second, 0.0, maxDist);
 
 	// create initial vertices
 	for (auto& el : firstSlice.first)
@@ -1070,82 +1213,6 @@ void TreePipeMeshGenerator::RecursiveSlicing(
 
 	sliceRecursively(treeModel, firstSlice, 0, stepSize, stepSize, maxDist, vertices, indices, settings.m_branchConnections);
 
-	for (const auto& pipe : pipeGroup.PeekPipes())
-	{
-		for (const auto& pipeSegmentHandle : pipe.PeekPipeSegmentHandles())
-		{
-			const auto& pipeSegment = pipeGroup.PeekPipeSegment(pipeSegmentHandle);
-			//Get interpolated position on pipe segment. Example to get middle point here:
-			const auto middlePoint = treeModel.InterpolatePipeSegmentPosition(pipeSegmentHandle, 0.5f);
-			//Get interpolated direction on pipe segment. The axis is a normalized vector that points from the point close to root to end (Bottom up)
-			const auto middleAxis = treeModel.InterpolatePipeSegmentAxis(pipeSegmentHandle, 0.5f);
-
-
-			const auto& node = skeleton.PeekNode(pipeSegment.m_data.m_nodeHandle);
-			//To access the user's defined constraints (attractors, etc.)
-			const auto& profileConstraints = node.m_data.m_profileConstraints;
-
-			//To access the position of the start of the pipe segment within a profile:
-			const auto parentHandle = node.GetParentHandle();
-			if (parentHandle == -1)
-			{
-				//If the node is the first node, the corresponding pipe segment will also be the first one in the pipe.
-				assert(pipeSegmentHandle == pipe.PeekPipeSegmentHandles().front());
-				//If current node is the first node of the tree, it's front profile will be used to calculate the start position of the first segment of the pipe.
-				const auto& startProfile = node.m_data.m_frontProfile;
-
-				//To get the particle that belongs to this pipe segment:
-				const auto& startParticle = startProfile.PeekParticle(pipeSegment.m_data.m_frontProfileParticleHandle);
-
-				//To access the boundary of the profile:
-				const auto& startProfileBoundaryEdges = startProfile.PeekBoundaryEdges();
-				for (const auto& startProfileBoundaryEdgeParticleHandles : startProfileBoundaryEdges)
-				{
-					const auto& particle1 = startProfile.PeekParticle(startProfileBoundaryEdgeParticleHandles.first);
-					const auto& particle2 = startProfile.PeekParticle(startProfileBoundaryEdgeParticleHandles.second);
-					const auto particle1Position = particle1.GetPosition();
-					const auto particle2Position = particle2.GetPosition();
-				}
-			}
-			else
-			{
-				//For other nodes, it's parent's back profile will be used to calculate the end position of the segment.
-				const auto& startProfile = skeleton.PeekNode(parentHandle).m_data.m_backProfile;
-
-				//You will also need to access the prev segment in order to retrieve the particle:
-				const auto& prevPipeSegment = pipeGroup.PeekPipeSegment(pipeSegment.GetPrevHandle());
-				const auto& startParticle = startProfile.PeekParticle(prevPipeSegment.m_data.m_backProfileParticleHandle);
-
-				//To access the boundary of the profile:
-				const auto& startProfileBoundaryEdges = startProfile.PeekBoundaryEdges();
-				for (const auto& startProfileBoundaryEdgeParticleHandles : startProfileBoundaryEdges)
-				{
-					const auto& particle1 = startProfile.PeekParticle(startProfileBoundaryEdgeParticleHandles.first);
-					const auto& particle2 = startProfile.PeekParticle(startProfileBoundaryEdgeParticleHandles.second);
-					const auto particle1Position = particle1.GetPosition();
-					const auto particle2Position = particle2.GetPosition();
-				}
-			}
-
-			const auto& endProfile = node.m_data.m_backProfile;
-			const auto& endProfileBoundaryEdges = endProfile.PeekBoundaryEdges();
-
-			//The position of the back particle corresponds to the end of the pipe segment.
-			const auto& endParticle = endProfile.PeekParticle(pipeSegment.m_data.m_backProfileParticleHandle);
-
-			//To iterate through all boundary edges of the back profile:
-			for (const auto& endProfileBoundaryEdgeParticleHandles : endProfileBoundaryEdges)
-			{
-				const auto& particle1 = endProfile.PeekParticle(endProfileBoundaryEdgeParticleHandles.first);
-				const auto& particle2 = endProfile.PeekParticle(endProfileBoundaryEdgeParticleHandles.second);
-				const auto particle1Position = particle1.GetPosition();
-				const auto particle2Position = particle2.GetPosition();
-			}
-		}
-	}
-
-	//OpenSubdiv
-	Bfr::Surface<float> surface{};
 }
 
 void TreePipeMeshGenerator::HybridMarchingCube(const TreeModel& treeModel, std::vector<Vertex>& vertices,

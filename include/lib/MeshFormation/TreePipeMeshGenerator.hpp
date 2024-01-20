@@ -17,7 +17,7 @@ namespace EcoSysLab {
 	{
 		unsigned m_generatorType = static_cast<unsigned>(TreePipeMeshGeneratorType::HybridMarchingCube);
 #pragma region Recursive Slicing
-		int m_stepsPerSegment = 2;
+		int m_stepsPerSegment = 4;
 		// this is for debugging purposes only and should not be used to obtain a proper mesh
 		//bool m_limitProfileIterations = false;
 		//int m_maxProfileIterations = 20;
