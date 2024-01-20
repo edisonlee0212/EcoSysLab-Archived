@@ -4,6 +4,7 @@
 #include "Skeleton.hpp"
 #include "TreeMeshGenerator.hpp"
 #include "Curve.hpp"
+#include "Tree.hpp"
 
 using namespace EvoEngine;
 namespace EcoSysLab {
@@ -223,6 +224,10 @@ namespace EcoSysLab {
 
 		void CalculateSkeletonGraphs();
 	public:
+		SkeletalGraphSettings m_skeletalGraphSettings{};
+		void ClearSkeletalGraph() const;
+		void InitializeSkeletalGraph(const std::shared_ptr<Mesh>& pointMeshSample, const std::shared_ptr<Mesh>& lineMeshSample, const SkeletalGraphSettings& skeletalGraphSettings);
+
 		VoxelGrid<std::vector<PointData>> m_scatterPointsVoxelGrid;
 		VoxelGrid<std::vector<PointData>> m_allocatedPointsVoxelGrid;
 		VoxelGrid<std::vector<PointData>> m_spaceColonizationVoxelGrid;
