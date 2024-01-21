@@ -102,6 +102,18 @@ glm::ivec3 roundInDir(glm::vec3 val, glm::ivec3 dir)
 	return glm::ivec3(roundInDir(val[0], dir[0]), roundInDir(val[1], dir[1]), roundInDir(val[2], dir[2]));
 }
 
+void verifyMesh(std::vector<Vertex>& vertices, std::vector<unsigned>& indices)
+{
+	std::cerr << "checking indices for " << vertices.size() << " vertices..." << std::endl;
+	for (size_t index : indices)
+	{
+		if (index >= vertices.size())
+		{
+			std::cerr << "index " << index << " is out of range" << std::endl;
+		}
+	}
+}
+
 std::vector<glm::ivec3> voxelizeLineSeg(glm::vec3 start, glm::vec3 end, float voxelSideLength)
 {
 	// Based on Amanatides, J., & Woo, A. (1987, August). A fast voxel traversal algorithm for ray tracing. In Eurographics (Vol. 87, No. 3, pp. 3-10).
@@ -190,7 +202,20 @@ glm::vec3 getSegDir(const TreeModel& treeModel, const PipeSegmentHandle segHandl
 
 glm::vec3 getSegPos(const TreeModel& treeModel, const PipeSegmentHandle segHandle, float t = 1.0f)
 {
-	return treeModel.InterpolatePipeSegmentPosition(segHandle, t);
+	auto retVal = treeModel.InterpolatePipeSegmentPosition(segHandle, t);
+	for (size_t i = 0; i < 3; i++)
+	{
+		if (std::isinf(retVal[i]))
+		{
+			std::cerr << "Error: Interpolated segment position is infinity" << std::endl;
+		}
+
+		if (std::isnan(retVal[i]))
+		{
+			std::cerr << "Error: Interpolated segment position is not a number" << std::endl;
+		}
+	}
+	return retVal;
 }
 
 NodeHandle getNodeHandle(const PipeModelPipeGroup& pipeGroup, const PipeHandle& pipeHandle, float t)
@@ -222,8 +247,37 @@ glm::vec3 getPipePos(const TreeModel& treeModel, const PipeHandle& pipeHandle, f
 	return getSegPos(treeModel, segHandle, fmod(t, 1.0));
 }
 
-const Particle2D<CellParticlePhysicsData>& getParticle(const TreeModel& treeModel, const PipeHandle& pipeHandle, size_t index)
+const Particle2D<CellParticlePhysicsData>& getEndParticle(const TreeModel& treeModel, const PipeHandle& pipeHandle, size_t index)
 {
+	if (!isValidPipeParam(treeModel, pipeHandle, index))
+	{
+		std::cerr << "Error: Pipe " << pipeHandle << " does not exist at " << index << std::endl;
+	}
+
+	const auto& skeleton = treeModel.PeekShootSkeleton();
+	const auto& pipe = skeleton.m_data.m_pipeGroup.PeekPipe(pipeHandle);
+	auto segHandle = pipe.PeekPipeSegmentHandles()[index];
+	auto& pipeSegment = skeleton.m_data.m_pipeGroup.PeekPipeSegment(segHandle);
+
+	const auto& node = skeleton.PeekNode(pipeSegment.m_data.m_nodeHandle);
+	const auto& startProfile = node.m_data.m_frontProfile;
+	//To access the user's defined constraints (attractors, etc.)
+	const auto& profileConstraints = node.m_data.m_profileConstraints;
+
+	//To access the position of the start of the pipe segment within a profile:
+	const auto parentHandle = node.GetParentHandle();
+	const auto& endParticle = startProfile.PeekParticle(pipeSegment.m_data.m_backProfileParticleHandle);
+
+	return endParticle;
+}
+
+const Particle2D<CellParticlePhysicsData>& getStartParticle(const TreeModel& treeModel, const PipeHandle& pipeHandle, size_t index)
+{
+	if (!isValidPipeParam(treeModel, pipeHandle, index))
+	{
+		std::cerr << "Error: Pipe " << pipeHandle << " does not exist at " << index << std::endl;
+	}
+
 	const auto& skeleton = treeModel.PeekShootSkeleton();
 	const auto& pipe = skeleton.m_data.m_pipeGroup.PeekPipe(pipeHandle);
 	auto segHandle = pipe.PeekPipeSegmentHandles()[index];
@@ -238,15 +292,14 @@ const Particle2D<CellParticlePhysicsData>& getParticle(const TreeModel& treeMode
 	const auto parentHandle = node.GetParentHandle();
 	const auto& startParticle = startProfile.PeekParticle(pipeSegment.m_data.m_frontProfileParticleHandle);
 
-	// TODO: interpolate inbetween
 	return startParticle;
 }
 
 float getPipePolar(const TreeModel& treeModel, const PipeHandle& pipeHandle, float t)
 {
 	// cheap interpolation, maybe improve this later ?
-	const auto& p0 = getParticle(treeModel, pipeHandle, std::floor(t));
-	const auto& p1 = getParticle(treeModel, pipeHandle, std::ceil(t));
+	const auto& p0 = getStartParticle(treeModel, pipeHandle, std::floor(t));
+	const auto& p1 = getEndParticle(treeModel, pipeHandle, std::floor(t));
 	float a0 = p0.GetPolarPosition().y;
 	float a1 = p1.GetPolarPosition().y;
 
@@ -1171,8 +1224,8 @@ void sliceRecursively(const TreeModel& treeModel, std::pair < Slice, PipeCluster
 		{
 			Vertex v;
 			v.m_position = el.second;
-			v.m_texCoord.y = glm::mod(t * settings.m_vMultiplier, 1.0f);
-			v.m_texCoord.x = glm::mod(getPipePolar(treeModel, el.first, t) / (2 * glm::pi<float>()) * settings.m_uMultiplier, 1.0f);
+			v.m_texCoord.y = t * settings.m_vMultiplier;
+			v.m_texCoord.x = getPipePolar(treeModel, el.first, t) / (2 * glm::pi<float>()) * settings.m_uMultiplier;
 			vertices.push_back(v);
 		}
 	}
@@ -1243,12 +1296,11 @@ void TreePipeMeshGenerator::RecursiveSlicing(
 		Vertex v;
 		v.m_position = el.second;
 		v.m_texCoord.y = 0.0;
-		v.m_texCoord.x = glm::mod(getPipePolar(treeModel, el.first, 0.0) / (2 * glm::pi<float>()) * settings.m_uMultiplier, 1.0f);
+		v.m_texCoord.x = getPipePolar(treeModel, el.first, 0.0) / (2 * glm::pi<float>()) * settings.m_uMultiplier;
 		vertices.push_back(v);
 	}
 
 	sliceRecursively(treeModel, firstSlice, 0, stepSize, stepSize, maxDist, vertices, indices, settings);
-
 }
 
 void TreePipeMeshGenerator::MarchingCube(const TreeModel& treeModel, std::vector<Vertex>& vertices,
