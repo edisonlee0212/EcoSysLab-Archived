@@ -628,6 +628,14 @@ std::pair<Graph, std::vector<size_t> > computeCluster(const TreeModel& treeModel
 	{
 
 		//if(DEBUG_OUTPUT) std::cout << "processing pipe with handle no. " << pipeHandle << std::endl;
+		if (!isValidPipeParam(treeModel, pipeHandle, t))
+		{
+			// discard this pipe
+			size_t vIndex = strandGraph.addVertex();
+			visited[vIndex] = true;
+			continue;
+		}
+
 		glm::vec3 segPos = getPipePos(treeModel, pipeHandle, t);
 		glm::vec3 segDir = glm::normalize(getPipeDir(treeModel, pipeHandle, t));
 
