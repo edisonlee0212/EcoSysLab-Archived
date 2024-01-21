@@ -437,9 +437,10 @@ void EcoSysLabLayer::Visualization() {
 							tree->InitializePipeModelMeshRenderer(m_pipeMeshGeneratorSettings);
 						}
 					}
-				}else if(treeVisualizer.m_needUpdate && m_autoGenerateSkeletalGraphEveryFrame)
+				}
+				else if (treeVisualizer.m_needUpdate && m_autoGenerateSkeletalGraphEveryFrame)
 				{
-					tree->InitializeSkeletalGraph(
+					tree->InitializeSkeletalGraph(treeVisualizer.m_selectedInternodeHandle,
 						Resources::GetResource<Mesh>("PRIMITIVE_SPHERE"),
 						Resources::GetResource<Mesh>("PRIMITIVE_CUBE"), tree->m_skeletalGraphSettings);
 				}
@@ -575,6 +576,10 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 		const std::vector<Entity>* treeEntities =
 			scene->UnsafeGetPrivateComponentOwnersList<Tree>();
 		if (treeEntities && !treeEntities->empty()) {
+			FileUtils::SaveFile("Export all trees as OBJ", "OBJ", { ".obj" }, [&](const std::filesystem::path& path) {
+				ExportAllTrees(path);
+				}, false);
+
 			ImGui::Checkbox("Auto generate mesh", &m_autoGenerateMeshAfterEditing);
 			ImGui::Checkbox("Auto generate Skeletal Graph Per Frame", &m_autoGenerateSkeletalGraphEveryFrame);
 			ImGui::Checkbox("Auto generate strands", &m_autoGenerateStrandsAfterEditing);
@@ -763,7 +768,7 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 			tree->m_treeVisualizer.m_needUpdate = true;
 			if (m_autoGenerateSkeletalGraphEveryFrame)
 			{
-				tree->InitializeSkeletalGraph(
+				tree->InitializeSkeletalGraph(-1,
 					Resources::GetResource<Mesh>("PRIMITIVE_SPHERE"),
 					Resources::GetResource<Mesh>("PRIMITIVE_CUBE"), tree->m_skeletalGraphSettings);
 			}
@@ -1410,6 +1415,137 @@ void EcoSysLabLayer::SoilVisualizationVector(VoxelSoilModel& soilModel) {
 	gizmoSettings.m_drawSettings.m_cullMode = VK_CULL_MODE_BACK_BIT;
 
 	editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER"), m_vectorMatrices, glm::mat4(1.0f), 1.0f, gizmoSettings);
+}
+
+void EcoSysLabLayer::ExportAllTrees(const std::filesystem::path& path) const
+{
+	const auto scene = GetScene();
+	const std::vector<Entity>* treeEntities =
+		scene->UnsafeGetPrivateComponentOwnersList<Tree>();
+	if (treeEntities && !treeEntities->empty())
+	{
+		if (path.extension() == ".obj") {
+			std::ofstream of;
+			of.open(path.string(), std::ofstream::out | std::ofstream::trunc);
+			if (of.is_open()) {
+				std::string start = "#Forest OBJ exporter, by Bosheng Li";
+				start += "\n";
+				of.write(start.c_str(), start.size());
+				of.flush();
+				unsigned startIndex = 1;
+				if (m_meshGeneratorSettings.m_enableBranch) {
+					unsigned treeIndex = 0;
+					for (const auto& entity : *treeEntities) {
+						const auto tree = scene->GetOrSetPrivateComponent<Tree>(entity).lock();
+						const auto mesh = tree->GenerateBranchMesh(m_meshGeneratorSettings);
+						auto& vertices = mesh->UnsafeGetVertices();
+						auto& triangles = mesh->UnsafeGetTriangles();
+						const auto gt = scene->GetDataComponent<GlobalTransform>(entity);
+						if (!vertices.empty() && !triangles.empty()) {
+							std::string header =
+								"#Vertices: " + std::to_string(vertices.size()) +
+								", tris: " + std::to_string(triangles.size());
+							header += "\n";
+							of.write(header.c_str(), header.size());
+							of.flush();
+							std::stringstream data;
+							data << "o tree " + std::to_string(treeIndex) + "\n";
+#pragma region Data collection
+							for (auto i = 0; i < vertices.size(); i++) {
+								auto vertexPosition = glm::vec4(vertices.at(i).m_position, 1.0f);
+								vertexPosition = gt.m_value * vertexPosition;
+								auto& color = vertices.at(i).m_color;
+								data << "v " + std::to_string(vertexPosition.x) + " " +
+									std::to_string(vertexPosition.y) + " " +
+									std::to_string(vertexPosition.z) + " " +
+									std::to_string(color.x) + " " + std::to_string(color.y) + " " +
+									std::to_string(color.z) + "\n";
+							}
+							for (const auto& vertex : vertices) {
+								data << "vt " + std::to_string(vertex.m_texCoord.x) + " " +
+									std::to_string(vertex.m_texCoord.y) + "\n";
+							}
+							// data += "s off\n";
+							data << "# List of indices for faces vertices, with (x, y, z).\n";
+							for (auto i = 0; i < triangles.size(); i++) {
+								const auto triangle = triangles[i];
+								const auto f1 = triangle.x + startIndex;
+								const auto f2 = triangle.y + startIndex;
+								const auto f3 = triangle.z + startIndex;
+								data << "f " + std::to_string(f1) + "/" + std::to_string(f1) + "/" +
+									std::to_string(f1) + " " + std::to_string(f2) + "/" +
+									std::to_string(f2) + "/" + std::to_string(f2) + " " +
+									std::to_string(f3) + "/" + std::to_string(f3) + "/" +
+									std::to_string(f3) + "\n";
+							}
+#pragma endregion
+							const auto result = data.str();
+							of.write(result.c_str(), result.size());
+							of.flush();
+							startIndex += vertices.size();
+						}
+						treeIndex++;
+					}
+				}
+				if (m_meshGeneratorSettings.m_enableFoliage) {
+					unsigned treeIndex = 0;
+					for (const auto& entity : *treeEntities) {
+						const auto tree = scene->GetOrSetPrivateComponent<Tree>(entity).lock();
+						const auto mesh = tree->GenerateFoliageMesh(m_meshGeneratorSettings);
+						auto& vertices = mesh->UnsafeGetVertices();
+						auto& triangles = mesh->UnsafeGetTriangles();
+						const auto gt = scene->GetDataComponent<GlobalTransform>(entity);
+						if (!vertices.empty() && !triangles.empty()) {
+							std::string header =
+								"#Vertices: " + std::to_string(vertices.size()) +
+								", tris: " + std::to_string(triangles.size());
+							header += "\n";
+							of.write(header.c_str(), header.size());
+							of.flush();
+							std::stringstream data;
+							data << "o tree " + std::to_string(treeIndex) + "\n";
+#pragma region Data collection
+							for (auto i = 0; i < vertices.size(); i++) {
+								auto vertexPosition = glm::vec4(vertices.at(i).m_position, 1.0f);
+								vertexPosition = gt.m_value * vertexPosition;
+								auto& color = vertices.at(i).m_color;
+								data << "v " + std::to_string(vertexPosition.x) + " " +
+									std::to_string(vertexPosition.y) + " " +
+									std::to_string(vertexPosition.z) + " " +
+									std::to_string(color.x) + " " + std::to_string(color.y) + " " +
+									std::to_string(color.z) + "\n";
+							}
+							for (const auto& vertex : vertices) {
+								data << "vt " + std::to_string(vertex.m_texCoord.x) + " " +
+									std::to_string(vertex.m_texCoord.y) + "\n";
+							}
+							// data += "s off\n";
+							data << "# List of indices for faces vertices, with (x, y, z).\n";
+							for (auto i = 0; i < triangles.size(); i++) {
+								const auto triangle = triangles[i];
+								const auto f1 = triangle.x + startIndex;
+								const auto f2 = triangle.y + startIndex;
+								const auto f3 = triangle.z + startIndex;
+								data << "f " + std::to_string(f1) + "/" + std::to_string(f1) + "/" +
+									std::to_string(f1) + " " + std::to_string(f2) + "/" +
+									std::to_string(f2) + "/" + std::to_string(f2) + " " +
+									std::to_string(f3) + "/" + std::to_string(f3) + "/" +
+									std::to_string(f3) + "\n";
+							}
+#pragma endregion
+							const auto result = data.str();
+							of.write(result.c_str(), result.size());
+							of.flush();
+							startIndex += vertices.size();
+
+						}
+						treeIndex++;
+					}
+				}
+				of.close();
+			}
+		}
+	}
 }
 
 glm::vec2 EcoSysLabLayer::GetMouseSceneCameraPosition() const

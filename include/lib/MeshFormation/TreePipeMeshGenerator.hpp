@@ -15,7 +15,7 @@ namespace EcoSysLab {
 
 	struct PipeModelMeshGeneratorSettings
 	{
-		unsigned m_generatorType = static_cast<unsigned>(TreePipeMeshGeneratorType::RecursiveSlicing);
+		unsigned m_generatorType = static_cast<unsigned>(TreePipeMeshGeneratorType::HybridMarchingCube);
 #pragma region Recursive Slicing
 		int m_stepsPerSegment = 4;
 		// this is for debugging purposes only and should not be used to obtain a proper mesh
@@ -39,7 +39,7 @@ namespace EcoSysLab {
 		glm::vec4 m_cylindricalColor = glm::vec4(0.1, 0.9, 0.0f, 1.0f);
 		float m_texCoordsMultiplier = 10.0f;
 #pragma endregion
-		int m_smoothIteration = 0;
+		int m_smoothIteration = 15;
 		int m_minCellCountForMajorBranches = 50;
 		int m_maxCellCountForMinorBranches = 200;
 		bool m_enableBranch = true;

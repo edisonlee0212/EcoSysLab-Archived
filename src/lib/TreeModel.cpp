@@ -1448,10 +1448,13 @@ void TreeModel::MergeTask(float maxRootDistance, NodeHandle nodeHandle, const Pi
 		if (m_shootSkeleton.PeekNode(childHandle).m_data.m_maxChild) mainChildHandle = childHandle;
 	}
 	internodeData.m_centerDirectionRadius = 0.0f;
-	
+	if (!internodeData.m_profileConstraints.m_boundaries.empty())
+	{
+		internodeData.m_packingIteration = glm::min(pipeModelParameters.m_modifiedProfilePackingMaxIteration, static_cast<int>(internodeData.m_frontProfile.RefParticles().size()) * pipeModelParameters.m_maxSimulationIterationCellFactor);
+	}
 	if (childHandles.empty())
 	{
-		internode.m_data.m_packingIteration = glm::min(pipeModelParameters.m_junctionProfilePackingMaxIteration, static_cast<int>(internodeData.m_frontProfile.RefParticles().size()) * pipeModelParameters.m_maxSimulationIterationCellFactor);
+		if (internodeData.m_profileConstraints.m_boundaries.empty()) internode.m_data.m_packingIteration = glm::min(pipeModelParameters.m_junctionProfilePackingMaxIteration, static_cast<int>(internodeData.m_frontProfile.RefParticles().size()) * pipeModelParameters.m_maxSimulationIterationCellFactor);
 		int particleIndex = 0;
 		for (const auto& particle : internodeData.m_frontProfile.RefParticles())
 		{
@@ -1466,10 +1469,7 @@ void TreeModel::MergeTask(float maxRootDistance, NodeHandle nodeHandle, const Pi
 		}
 		return;
 	}
-	if (!internode.m_data.m_profileConstraints.m_boundaries.empty())
-	{
-		internode.m_data.m_packingIteration = glm::min(pipeModelParameters.m_modifiedProfilePackingMaxIteration, static_cast<int>(internodeData.m_frontProfile.RefParticles().size()) * pipeModelParameters.m_maxSimulationIterationCellFactor);
-	}
+	
 	if (mainChildHandle == -1) mainChildHandle = childHandles.front();
 	auto& mainChildNode = m_shootSkeleton.RefNode(mainChildHandle);
 	const auto branchTwistAngle = pipeModelParameters.m_branchTwistDistribution.GetValue(internode.m_info.m_rootDistance / maxRootDistance);
@@ -1494,10 +1494,10 @@ void TreeModel::MergeTask(float maxRootDistance, NodeHandle nodeHandle, const Pi
 
 			nodeStartParticle.m_data.m_mainChild = nodeEndParticle.m_data.m_mainChild = true;
 		}
-		internode.m_data.m_packingIteration = glm::min(pipeModelParameters.m_branchProfilePackingMaxIteration, static_cast<int>(internodeData.m_frontProfile.RefParticles().size()) * pipeModelParameters.m_maxSimulationIterationCellFactor);
+		if (internodeData.m_profileConstraints.m_boundaries.empty()) internode.m_data.m_packingIteration = glm::min(pipeModelParameters.m_branchProfilePackingMaxIteration, static_cast<int>(internodeData.m_frontProfile.RefParticles().size()) * pipeModelParameters.m_maxSimulationIterationCellFactor);
 		return;
 	}
-	internode.m_data.m_packingIteration = glm::min(pipeModelParameters.m_junctionProfilePackingMaxIteration, static_cast<int>(internodeData.m_frontProfile.RefParticles().size()) * pipeModelParameters.m_maxSimulationIterationCellFactor);
+	if (internodeData.m_profileConstraints.m_boundaries.empty()) internode.m_data.m_packingIteration = glm::min(pipeModelParameters.m_junctionProfilePackingMaxIteration, static_cast<int>(internodeData.m_frontProfile.RefParticles().size()) * pipeModelParameters.m_maxSimulationIterationCellFactor);
 	const auto& mainChildPhysics2D = mainChildNode.m_data.m_frontProfile;
 	for (const auto& mainChildParticle : mainChildPhysics2D.PeekParticles())
 	{

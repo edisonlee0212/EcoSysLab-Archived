@@ -164,10 +164,10 @@ void Tree::ClearSkeletalGraph() const
 
 }
 
-void Tree::InitializeSkeletalGraph(
+void Tree::InitializeSkeletalGraph(NodeHandle baseNodeHandle,
 	const std::shared_ptr<Mesh>& pointMeshSample,
 	const std::shared_ptr<Mesh>& lineMeshSample,
-	const SkeletalGraphSettings& skeletalGraphSettings)
+	const SkeletalGraphSettings& skeletalGraphSettings) const
 {
 	const auto scene = GetScene();
 	const auto self = GetOwner();
@@ -203,6 +203,20 @@ void Tree::InitializeSkeletalGraph(
 		{
 			const auto internodeHandle = sortedInternodeList[internodeIndex];
 			const auto& node = skeleton.PeekNode(internodeHandle);
+			bool subTree = false;
+			NodeHandle walker = internodeHandle;
+
+				while (walker != -1)
+				{
+					if(walker == baseNodeHandle)
+					{
+						subTree = true;
+						break;
+					}
+					walker = skeleton.PeekNode(walker).GetParentHandle();
+				}
+
+			
 			{
 				const glm::vec3 position = node.m_info.m_globalPosition;
 				const auto direction = node.m_info.m_globalDirection;
@@ -214,10 +228,17 @@ void Tree::InitializeSkeletalGraph(
 					glm::translate(position + (node.m_info.m_length / 2.0f) * direction) *
 					rotationTransform *
 					glm::scale(glm::vec3(
-						skeletalGraphSettings.m_lineThickness,
+						skeletalGraphSettings.m_lineThickness * (subTree ? 1.25f : 1.0f),
 						node.m_info.m_length,
-						skeletalGraphSettings.m_lineThickness));
-				lineList->m_particleInfos[internodeIndex].m_instanceColor = skeletalGraphSettings.m_lineColor;
+						skeletalGraphSettings.m_lineThickness * (subTree ? 1.25f : 1.0f)));
+
+				if (subTree)
+				{
+					lineList->m_particleInfos[internodeIndex].m_instanceColor = skeletalGraphSettings.m_lineFocusColor;
+				}
+				else {
+					lineList->m_particleInfos[internodeIndex].m_instanceColor = skeletalGraphSettings.m_lineColor;
+				}
 			}
 			{
 				const glm::vec3 position = node.m_info.m_globalPosition;
@@ -238,7 +259,11 @@ void Tree::InitializeSkeletalGraph(
 				pointList->m_particleInfos[internodeIndex].m_instanceMatrix.m_value =
 					glm::translate(position) *
 					rotationTransform *
-					glm::scale(scale);
+					glm::scale(scale * (subTree ? 1.25f : 1.0f));
+				if(subTree)
+				{
+					pointList->m_particleInfos[internodeIndex].m_instanceColor = skeletalGraphSettings.m_branchFocusColor;
+				}
 			}
 		});
 
@@ -424,7 +449,6 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 			ImGui::DragFloat("Physics particle softness", &pipeModelParameters.m_profilePhysicsSettings.m_particleSoftness, 0.01f, 0.0f, 1.0f);
 			ImGui::TreePop();
 		}
-		ImGui::DragFloat("Boundary strength", &pipeModelParameters.m_boundaryStrength, 1000.f, 0.0f, 100000.0f);
 		ImGui::DragFloat("Center attraction strength", &pipeModelParameters.m_centerAttractionStrength, 100.f, 0.0f, 10000.0f);
 		ImGui::DragInt("Max iteration cell factor", &pipeModelParameters.m_maxSimulationIterationCellFactor, 1, 0, 500);
 		ImGui::DragInt("Branch Packing Timeout", &pipeModelParameters.m_branchProfilePackingMaxIteration, 1, 0, 10000);
@@ -501,7 +525,7 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	m_skeletalGraphSettings.OnInspect();
 	if (ImGui::Button("Build Skeletal Graph"))
 	{
-		InitializeSkeletalGraph(
+		InitializeSkeletalGraph(-1, 
 			Resources::GetResource<Mesh>("PRIMITIVE_SPHERE"),
 			Resources::GetResource<Mesh>("PRIMITIVE_CUBE"), m_skeletalGraphSettings);
 	}

@@ -152,6 +152,9 @@ namespace EcoSysLab {
 
 
 	public:
+
+		void ExportAllTrees(const std::filesystem::path& path) const;
+
 		SimulationSettings m_simulationSettings {};
 
 		bool m_needFullFlowUpdate = false;

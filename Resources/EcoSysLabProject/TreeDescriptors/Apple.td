@@ -47,10 +47,10 @@ m_shootGrowthParameters:
   m_fruitRotationVariance: 0
   m_fruitFallProbability: 3
 m_foliageParameters:
-  m_leafSize: [0.0299999993, 0.0500000007]
+  m_leafSize: [0.0299999993, 0.0299999993]
   m_leafColor: [0.596078455, 0.796078444, 0]
-  m_leafCountPerInternode: 4
-  m_positionVariance: 0.25
+  m_leafCountPerInternode: 20
+  m_positionVariance: 0.174999997
   m_rotationVariance: 1
   m_branchingAngle: 30
   m_maxNodeThickness: 1
