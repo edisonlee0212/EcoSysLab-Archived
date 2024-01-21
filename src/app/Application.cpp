@@ -79,11 +79,11 @@ int main() {
 	Application::PushLayer<WindowLayer>();
 	Application::PushLayer<EditorLayer>();
 	Application::PushLayer<RenderLayer>();
-	Application::PushLayer<EcoSysLabLayer>();
-	Application::PushLayer<SorghumLayer>();
 #ifdef BUILD_WITH_RAYTRACER
 	Application::PushLayer<RayTracerLayer>();
 #endif
+	Application::PushLayer<EcoSysLabLayer>();
+	Application::PushLayer<SorghumLayer>();
 	ClassRegistry::RegisterPrivateComponent<ObjectRotator>("ObjectRotator");
 	ClassRegistry::RegisterPrivateComponent<Physics2DDemo>("Physics2DDemo");
 	ClassRegistry::RegisterPrivateComponent<ParticlePhysics2DDemo>("ParticlePhysics2DDemo");

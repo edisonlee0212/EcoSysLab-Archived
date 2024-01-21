@@ -4,6 +4,8 @@
 
 #include "EcoSysLabLayer.hpp"
 
+#include <RayTracerLayer.hpp>
+
 #include "BranchShape.hpp"
 #include "Times.hpp"
 
@@ -176,8 +178,9 @@ void EcoSysLabLayer::Visualization() {
 			auto& treeModel = tree->m_treeModel;
 			auto& treeVisualizer = tree->m_treeVisualizer;
 			const auto globalTransform = scene->GetDataComponent<GlobalTransform>(m_selectedTree);
-			if (m_visualizationCameraWindowFocused
-				&& editorLayer->GetKey(GLFW_MOUSE_BUTTON_RIGHT) == KeyActionType::Release
+			const auto rayTracerLayer = Application::GetLayer<RayTracerLayer>();
+			if (//m_visualizationCameraWindowFocused &&
+				editorLayer->GetKey(GLFW_MOUSE_BUTTON_RIGHT) == KeyActionType::Release
 				&& treeVisualizer.m_checkpointIteration == treeModel.CurrentIteration())
 			{
 				static bool mayNeedGeometryGeneration = false;
@@ -186,235 +189,302 @@ void EcoSysLabLayer::Visualization() {
 				switch (static_cast<OperatorMode>(m_operatorMode))
 				{
 				case OperatorMode::Select: {
-					if (editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Press) {
-						if (treeVisualizer.RayCastSelection(m_visualizationCamera, m_visualizationCameraMousePosition, treeSkeleton, globalTransform)) {
-							treeVisualizer.m_needUpdate = true;
-						}
-					}
-					else if (editorLayer->GetKey(GLFW_KEY_R) == KeyActionType::Press) {
-						if (treeVisualizer.m_selectedInternodeHandle > 0) {
-							treeModel.Step();
-							auto& skeleton = treeModel.RefShootSkeleton();
-							auto& pruningInternode = skeleton.RefNode(treeVisualizer.m_selectedInternodeHandle);
-							const auto childHandles = pruningInternode.RefChildHandles();
-							for (const auto& childHandle : childHandles) {
-								treeModel.PruneInternode(childHandle);
-							}
-							pruningInternode.m_data.m_internodeLength *= treeVisualizer.m_selectedInternodeLengthFactor;
-							treeModel.CalculateTransform(tree->m_shootGrowthController, true);
-							treeVisualizer.m_selectedInternodeLengthFactor = 1.0f;
-							for (auto& bud : pruningInternode.m_data.m_buds) {
-								bud.m_status = BudStatus::Removed;
-							}
-							skeleton.SortLists();
-							treeVisualizer.m_checkpointIteration = treeModel.CurrentIteration();
-							treeVisualizer.m_needUpdate = true;
-							if (m_autoGenerateMeshAfterEditing)
-							{
-								tree->InitializeMeshRenderer(m_meshGeneratorSettings, -1);
-							}
-							if (m_autoGenerateStrandsAfterEditing || m_autoGenerateStrandMeshAfterEditing)
-							{
-								if (m_autoGenerateStrandsAfterEditing) {
-									tree->InitializeStrandRenderer();
-								}
-								if (m_autoGenerateStrandMeshAfterEditing)
-								{
-									tree->InitializePipeModelMeshRenderer(m_pipeMeshGeneratorSettings);
-								}
-							}
-						}
-					}
-					else if (editorLayer->GetKey(GLFW_KEY_ESCAPE) == KeyActionType::Press)
-					{
-						treeVisualizer.SetSelectedNode(treeSkeleton, -1);
-					}
-
-				}
-										 break;
-				case OperatorMode::Rotate: {
-
-					if (treeVisualizer.m_selectedInternodeHandle > 0)
-					{
-						ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{ 0, 0 });
-						if (ImGui::Begin("Plant Visual")) {
-							if (ImGui::BeginChild("InternodeCameraRenderer", ImVec2(0, 0), false)) {
-								ImGuizmo::SetOrthographic(false);
-								ImGuizmo::SetDrawlist();
-								ImGuizmo::SetRect(ImGui::GetWindowPos().x, ImGui::GetWindowPos().y, m_visualizationCameraResolutionX,
-									m_visualizationCameraResolutionY);
-								glm::mat4 cameraView =
-									glm::inverse(glm::translate(editorLayer->GetSceneCameraPosition()) * glm::mat4_cast(editorLayer->GetSceneCameraRotation()));
-								glm::mat4 cameraProjection = m_visualizationCamera->GetProjection();
-								const auto op = ImGuizmo::OPERATION::ROTATE;
-								auto& currentSkeleton = tree->m_treeModel.RefShootSkeleton();
-								auto& internode = currentSkeleton.RefNode(treeVisualizer.m_selectedInternodeHandle);
-
-								auto transform = glm::translate(internode.m_info.m_globalPosition) * glm::mat4_cast(internode.m_data.m_desiredGlobalRotation) * glm::scale(glm::vec3(1.0f));
-								const auto treeGlobalTransform = scene->GetDataComponent<GlobalTransform>(m_selectedTree);
-								auto internodeGlobalTransform = treeGlobalTransform.m_value * transform;
-								ImGuizmo::Manipulate(
-									glm::value_ptr(cameraView),
-									glm::value_ptr(cameraProjection),
-									op,
-									ImGuizmo::LOCAL,
-									glm::value_ptr(internodeGlobalTransform));
-								static bool lastGizmosUsed = false;
-								if (ImGuizmo::IsUsing()) {
-									if (!lastGizmosUsed)
-									{
-										treeModel.Step();
-										treeVisualizer.m_checkpointIteration = treeModel.CurrentIteration();
-									}
-									treeVisualizer.m_needUpdate = true;
-									Transform newInternodeTransform{};
-									newInternodeTransform.m_value = glm::inverse(treeGlobalTransform.m_value) * internodeGlobalTransform;
-									auto scaleHolder = glm::vec3(1.0f);
-									newInternodeTransform.Decompose(
-										internode.m_info.m_globalPosition, internode.m_data.m_desiredGlobalRotation, scaleHolder);
-									auto parentHandle = internode.GetParentHandle();
-									if (parentHandle != -1) {
-										internode.m_data.m_desiredLocalRotation = glm::inverse(currentSkeleton.PeekNode(parentHandle).m_data.m_desiredGlobalRotation) * internode.m_data.m_desiredGlobalRotation;
-									}
-									treeModel.CalculateTransform(tree->m_shootGrowthController, true);
-									lastGizmosUsed = true;
-								}
-								else if (lastGizmosUsed)
-								{
-									treeModel.CalculateTransform(tree->m_shootGrowthController, true);
-									mayNeedGeometryGeneration = true;
-									lastGizmosUsed = false;
-									treeVisualizer.m_needUpdate = true;
-									treeModel.RefShootSkeleton().CalculateRegulatedGlobalRotation();
-								}
-							}
-							ImGui::EndChild();
-						}
-						ImGui::End();
-						ImGui::PopStyleVar();
-					}
-					if (editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Press) {
-						if (treeVisualizer.m_selectedInternodeHandle <= 0) {
+					if (m_visualizationCameraWindowFocused) {
+						if (editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Press) {
 							if (treeVisualizer.RayCastSelection(m_visualizationCamera, m_visualizationCameraMousePosition, treeSkeleton, globalTransform)) {
 								treeVisualizer.m_needUpdate = true;
 							}
 						}
+						else if (editorLayer->GetKey(GLFW_KEY_R) == KeyActionType::Press) {
+							if (treeVisualizer.m_selectedInternodeHandle > 0) {
+								treeModel.Step();
+								auto& skeleton = treeModel.RefShootSkeleton();
+								auto& pruningInternode = skeleton.RefNode(treeVisualizer.m_selectedInternodeHandle);
+								const auto childHandles = pruningInternode.RefChildHandles();
+								for (const auto& childHandle : childHandles) {
+									treeModel.PruneInternode(childHandle);
+								}
+								pruningInternode.m_data.m_internodeLength *= treeVisualizer.m_selectedInternodeLengthFactor;
+								treeModel.CalculateTransform(tree->m_shootGrowthController, true);
+								treeVisualizer.m_selectedInternodeLengthFactor = 1.0f;
+								for (auto& bud : pruningInternode.m_data.m_buds) {
+									bud.m_status = BudStatus::Removed;
+								}
+								skeleton.SortLists();
+								treeVisualizer.m_checkpointIteration = treeModel.CurrentIteration();
+								treeVisualizer.m_needUpdate = true;
+								if (m_autoGenerateMeshAfterEditing)
+								{
+									tree->InitializeMeshRenderer(m_meshGeneratorSettings, -1);
+								}
+								if (m_autoGenerateStrandsAfterEditing || m_autoGenerateStrandMeshAfterEditing)
+								{
+									if (m_autoGenerateStrandsAfterEditing) {
+										tree->InitializeStrandRenderer();
+									}
+									if (m_autoGenerateStrandMeshAfterEditing)
+									{
+										tree->InitializePipeModelMeshRenderer(m_pipeMeshGeneratorSettings);
+									}
+								}
+							}
+						}
+						else if (editorLayer->GetKey(GLFW_KEY_ESCAPE) == KeyActionType::Press)
+						{
+							treeVisualizer.SetSelectedNode(treeSkeleton, -1);
+						}
 					}
-					else if (editorLayer->GetKey(GLFW_KEY_ESCAPE) == KeyActionType::Press)
+				}
+										 break;
+				case OperatorMode::Rotate: {
+					if (treeVisualizer.m_selectedInternodeHandle > 0)
 					{
-						treeVisualizer.SetSelectedNode(treeSkeleton, -1);
-					}
+						if (m_visualizationCameraWindowFocused) {
+							ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{ 0, 0 });
+							if (ImGui::Begin("Plant Visual")) {
+								if (ImGui::BeginChild("InternodeCameraRenderer", ImVec2(0, 0), false)) {
+									ImGuizmo::SetOrthographic(false);
+									ImGuizmo::SetDrawlist();
+									ImGuizmo::SetRect(ImGui::GetWindowPos().x, ImGui::GetWindowPos().y, m_visualizationCameraResolutionX,
+										m_visualizationCameraResolutionY);
+									glm::mat4 cameraView =
+										glm::inverse(glm::translate(editorLayer->GetSceneCameraPosition()) * glm::mat4_cast(editorLayer->GetSceneCameraRotation()));
+									glm::mat4 cameraProjection = m_visualizationCamera->GetProjection();
+									const auto op = ImGuizmo::OPERATION::ROTATE;
+									auto& currentSkeleton = tree->m_treeModel.RefShootSkeleton();
+									auto& internode = currentSkeleton.RefNode(treeVisualizer.m_selectedInternodeHandle);
 
+									auto transform = glm::translate(internode.m_info.m_globalPosition) * glm::mat4_cast(internode.m_data.m_desiredGlobalRotation) * glm::scale(glm::vec3(1.0f));
+									const auto treeGlobalTransform = scene->GetDataComponent<GlobalTransform>(m_selectedTree);
+									auto internodeGlobalTransform = treeGlobalTransform.m_value * transform;
+									ImGuizmo::Manipulate(
+										glm::value_ptr(cameraView),
+										glm::value_ptr(cameraProjection),
+										op,
+										ImGuizmo::LOCAL,
+										glm::value_ptr(internodeGlobalTransform));
+									static bool lastGizmosUsed = false;
+									if (ImGuizmo::IsUsing()) {
+										if (!lastGizmosUsed)
+										{
+											treeModel.Step();
+											treeVisualizer.m_checkpointIteration = treeModel.CurrentIteration();
+										}
+										treeVisualizer.m_needUpdate = true;
+										Transform newInternodeTransform{};
+										newInternodeTransform.m_value = glm::inverse(treeGlobalTransform.m_value) * internodeGlobalTransform;
+										auto scaleHolder = glm::vec3(1.0f);
+										newInternodeTransform.Decompose(
+											internode.m_info.m_globalPosition, internode.m_data.m_desiredGlobalRotation, scaleHolder);
+										auto parentHandle = internode.GetParentHandle();
+										if (parentHandle != -1) {
+											internode.m_data.m_desiredLocalRotation = glm::inverse(currentSkeleton.PeekNode(parentHandle).m_data.m_desiredGlobalRotation) * internode.m_data.m_desiredGlobalRotation;
+										}
+										treeModel.CalculateTransform(tree->m_shootGrowthController, true);
+										lastGizmosUsed = true;
+									}
+									else if (lastGizmosUsed)
+									{
+										treeModel.CalculateTransform(tree->m_shootGrowthController, true);
+										mayNeedGeometryGeneration = true;
+										lastGizmosUsed = false;
+										treeVisualizer.m_needUpdate = true;
+										treeModel.RefShootSkeleton().CalculateRegulatedGlobalRotation();
+									}
+								}
+								ImGui::EndChild();
+							}
+							ImGui::End();
+							ImGui::PopStyleVar();
+						}
+						else if(rayTracerLayer){
+							ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{ 0, 0 });
+							if (ImGui::Begin("Scene (RT)")) {
+								if (ImGui::BeginChild("RaySceneRenderer", ImVec2(0, 0), false)) {
+									ImGuizmo::SetOrthographic(false);
+									ImGuizmo::SetDrawlist();
+									ImGuizmo::SetRect(ImGui::GetWindowPos().x, ImGui::GetWindowPos().y, rayTracerLayer->GetSceneCameraResolution().x,
+										rayTracerLayer->GetSceneCameraResolution().y);
+									glm::mat4 cameraView =
+										glm::inverse(glm::translate(editorLayer->GetSceneCameraPosition()) * glm::mat4_cast(editorLayer->GetSceneCameraRotation()));
+									glm::mat4 cameraProjection = m_visualizationCamera->GetProjection();
+									const auto op = ImGuizmo::OPERATION::ROTATE;
+									auto& currentSkeleton = tree->m_treeModel.RefShootSkeleton();
+									auto& internode = currentSkeleton.RefNode(treeVisualizer.m_selectedInternodeHandle);
+
+									auto transform = glm::translate(internode.m_info.m_globalPosition) * glm::mat4_cast(internode.m_data.m_desiredGlobalRotation) * glm::scale(glm::vec3(1.0f));
+									const auto treeGlobalTransform = scene->GetDataComponent<GlobalTransform>(m_selectedTree);
+									auto internodeGlobalTransform = treeGlobalTransform.m_value * transform;
+									ImGuizmo::Manipulate(
+										glm::value_ptr(cameraView),
+										glm::value_ptr(cameraProjection),
+										op,
+										ImGuizmo::LOCAL,
+										glm::value_ptr(internodeGlobalTransform));
+									static bool lastGizmosUsed = false;
+									if (ImGuizmo::IsUsing()) {
+										if (!lastGizmosUsed)
+										{
+											treeModel.Step();
+											treeVisualizer.m_checkpointIteration = treeModel.CurrentIteration();
+										}
+										treeVisualizer.m_needUpdate = true;
+										Transform newInternodeTransform{};
+										newInternodeTransform.m_value = glm::inverse(treeGlobalTransform.m_value) * internodeGlobalTransform;
+										auto scaleHolder = glm::vec3(1.0f);
+										newInternodeTransform.Decompose(
+											internode.m_info.m_globalPosition, internode.m_data.m_desiredGlobalRotation, scaleHolder);
+										auto parentHandle = internode.GetParentHandle();
+										if (parentHandle != -1) {
+											internode.m_data.m_desiredLocalRotation = glm::inverse(currentSkeleton.PeekNode(parentHandle).m_data.m_desiredGlobalRotation) * internode.m_data.m_desiredGlobalRotation;
+										}
+										treeModel.CalculateTransform(tree->m_shootGrowthController, true);
+										lastGizmosUsed = true;
+									}
+									else if (lastGizmosUsed)
+									{
+										treeModel.CalculateTransform(tree->m_shootGrowthController, true);
+										mayNeedGeometryGeneration = true;
+										lastGizmosUsed = false;
+										treeVisualizer.m_needUpdate = true;
+										treeModel.RefShootSkeleton().CalculateRegulatedGlobalRotation();
+									}
+								}
+								ImGui::EndChild();
+							}
+							ImGui::End();
+							ImGui::PopStyleVar();
+						}
+					}
+					if (m_visualizationCameraWindowFocused) {
+						if (editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Press) {
+							if (treeVisualizer.m_selectedInternodeHandle <= 0) {
+								if (treeVisualizer.RayCastSelection(m_visualizationCamera, m_visualizationCameraMousePosition, treeSkeleton, globalTransform)) {
+									treeVisualizer.m_needUpdate = true;
+								}
+							}
+						}
+						else if (editorLayer->GetKey(GLFW_KEY_ESCAPE) == KeyActionType::Press)
+						{
+							treeVisualizer.SetSelectedNode(treeSkeleton, -1);
+						}
+					}
 				}
 										 break;
 				case OperatorMode::Prune:
 				{
-					if (editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Press)
-					{
-						mousePositions.clear();
-						glm::vec2 mousePosition = m_visualizationCameraMousePosition;
-						const float halfX = m_visualizationCamera->GetSize().x / 2.0f;
-						const float halfY = m_visualizationCamera->GetSize().y / 2.0f;
-						mousePosition = { -1.0f * (mousePosition.x - halfX) / halfX,
-														 -1.0f * (mousePosition.y - halfY) / halfY };
-						if (mousePosition.x > -1.0f && mousePosition.x < 1.0f && mousePosition.y > -1.0f && mousePosition.y < 1.0f) {
-							mousePositions.emplace_back(mousePosition);
-						}
-					}
-					else if (editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Hold) {
-						glm::vec2 mousePosition = m_visualizationCameraMousePosition;
-						const float halfX = m_visualizationCamera->GetSize().x / 2.0f;
-						const float halfY = m_visualizationCamera->GetSize().y / 2.0f;
-						mousePosition = { -1.0f * (mousePosition.x - halfX) / halfX,
-														 -1.0f * (mousePosition.y - halfY) / halfY };
-						if (mousePosition.x > -1.0f && mousePosition.x < 1.0f && mousePosition.y > -1.0f && mousePosition.y < 1.0f &&
-							(!mousePositions.empty() && mousePosition != mousePositions.back())) {
-							mousePositions.emplace_back(mousePosition);
-						}
-					}
-					else if (editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Release) {
-						//Once released, check if empty.
-						if (!mousePositions.empty()) {
-							treeModel.Step();
-							auto& skeleton = treeModel.RefShootSkeleton();
-							if (treeVisualizer.ScreenCurvePruning(
-								[&](const NodeHandle nodeHandle) { treeModel.PruneInternode(nodeHandle); }, mousePositions, skeleton, globalTransform)) {
-								skeleton.SortLists();
-								treeVisualizer.m_checkpointIteration = treeModel.CurrentIteration();
-								treeVisualizer.m_needUpdate = true;
-								mayNeedGeometryGeneration = true;
-							}
-							else {
-								treeModel.Pop();
-							}
+					if (m_visualizationCameraWindowFocused) {
+						if (editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Press)
+						{
 							mousePositions.clear();
+							glm::vec2 mousePosition = m_visualizationCameraMousePosition;
+							const float halfX = m_visualizationCamera->GetSize().x / 2.0f;
+							const float halfY = m_visualizationCamera->GetSize().y / 2.0f;
+							mousePosition = { -1.0f * (mousePosition.x - halfX) / halfX,
+															 -1.0f * (mousePosition.y - halfY) / halfY };
+							if (mousePosition.x > -1.0f && mousePosition.x < 1.0f && mousePosition.y > -1.0f && mousePosition.y < 1.0f) {
+								mousePositions.emplace_back(mousePosition);
+							}
+						}
+						else if (editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Hold) {
+							glm::vec2 mousePosition = m_visualizationCameraMousePosition;
+							const float halfX = m_visualizationCamera->GetSize().x / 2.0f;
+							const float halfY = m_visualizationCamera->GetSize().y / 2.0f;
+							mousePosition = { -1.0f * (mousePosition.x - halfX) / halfX,
+															 -1.0f * (mousePosition.y - halfY) / halfY };
+							if (mousePosition.x > -1.0f && mousePosition.x < 1.0f && mousePosition.y > -1.0f && mousePosition.y < 1.0f &&
+								(!mousePositions.empty() && mousePosition != mousePositions.back())) {
+								mousePositions.emplace_back(mousePosition);
+							}
+						}
+						else if (editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Release) {
+							//Once released, check if empty.
+							if (!mousePositions.empty()) {
+								treeModel.Step();
+								auto& skeleton = treeModel.RefShootSkeleton();
+								if (treeVisualizer.ScreenCurvePruning(
+									[&](const NodeHandle nodeHandle) { treeModel.PruneInternode(nodeHandle); }, mousePositions, skeleton, globalTransform)) {
+									skeleton.SortLists();
+									treeVisualizer.m_checkpointIteration = treeModel.CurrentIteration();
+									treeVisualizer.m_needUpdate = true;
+									mayNeedGeometryGeneration = true;
+								}
+								else {
+									treeModel.Pop();
+								}
+								mousePositions.clear();
+							}
 						}
 					}
 				}
 				break;
 				case OperatorMode::Invigorate:
 				{
-					static bool lastFrameInvigorate = false;
-					if (editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Press)
-					{
-						if (treeVisualizer.RayCastSelection(m_visualizationCamera, m_visualizationCameraMousePosition, treeSkeleton, globalTransform)) {
-							if (!tree->m_enableHistory) treeModel.Step();
-							treeVisualizer.m_checkpointIteration = treeModel.CurrentIteration();
-							treeVisualizer.m_needUpdate = true;
-						}
-					}
-					else if (treeVisualizer.m_selectedInternodeHandle >= 0 && editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Hold)
-					{
-						const auto climateCandidate = FindClimate();
-						if (!climateCandidate.expired()) {
-							climateCandidate.lock()->PrepareForGrowth();
-							if (tree->TryGrow(m_simulationSettings.m_deltaTime, treeVisualizer.m_selectedInternodeHandle, false, m_overrideGrowRate))
-							{
+					if (m_visualizationCameraWindowFocused) {
+						static bool lastFrameInvigorate = false;
+						if (editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Press)
+						{
+							if (treeVisualizer.RayCastSelection(m_visualizationCamera, m_visualizationCameraMousePosition, treeSkeleton, globalTransform)) {
+								if (!tree->m_enableHistory) treeModel.Step();
+								treeVisualizer.m_checkpointIteration = treeModel.CurrentIteration();
 								treeVisualizer.m_needUpdate = true;
-								mayNeedGeometryGeneration = true;
 							}
 						}
-						lastFrameInvigorate = true;
-					}
-					else if (lastFrameInvigorate && editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Release)
-					{
-						treeVisualizer.SetSelectedNode(treeSkeleton, -1);
-						lastFrameInvigorate = false;
-						treeVisualizer.m_needUpdate = true;
+						else if (treeVisualizer.m_selectedInternodeHandle >= 0 && editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Hold)
+						{
+							const auto climateCandidate = FindClimate();
+							if (!climateCandidate.expired()) {
+								climateCandidate.lock()->PrepareForGrowth();
+								if (tree->TryGrow(m_simulationSettings.m_deltaTime, treeVisualizer.m_selectedInternodeHandle, false, m_overrideGrowRate))
+								{
+									treeVisualizer.m_needUpdate = true;
+									mayNeedGeometryGeneration = true;
+								}
+							}
+							lastFrameInvigorate = true;
+						}
+						else if (lastFrameInvigorate && editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Release)
+						{
+							treeVisualizer.SetSelectedNode(treeSkeleton, -1);
+							lastFrameInvigorate = false;
+							treeVisualizer.m_needUpdate = true;
+						}
 					}
 				}
 				break;
 				case OperatorMode::Reduce:
 				{
-					static bool lastFrameReduce = false;
-					static float targetAge = 0.0f;
-					if (editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Press)
-					{
-						if (treeVisualizer.RayCastSelection(m_visualizationCamera, m_visualizationCameraMousePosition, treeSkeleton, globalTransform)) {
-							if (!tree->m_enableHistory) treeModel.Step();
-							treeVisualizer.m_checkpointIteration = treeModel.CurrentIteration();
-							treeVisualizer.m_needUpdate = true;
-							if (treeVisualizer.m_selectedInternodeHandle >= 0)
-							{
-								targetAge = tree->m_treeModel.GetSubTreeMaxAge(treeVisualizer.m_selectedInternodeHandle);
+					if (m_visualizationCameraWindowFocused) {
+						static bool lastFrameReduce = false;
+						static float targetAge = 0.0f;
+						if (editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Press)
+						{
+							if (treeVisualizer.RayCastSelection(m_visualizationCamera, m_visualizationCameraMousePosition, treeSkeleton, globalTransform)) {
+								if (!tree->m_enableHistory) treeModel.Step();
+								treeVisualizer.m_checkpointIteration = treeModel.CurrentIteration();
+								treeVisualizer.m_needUpdate = true;
+								if (treeVisualizer.m_selectedInternodeHandle >= 0)
+								{
+									targetAge = tree->m_treeModel.GetSubTreeMaxAge(treeVisualizer.m_selectedInternodeHandle);
+								}
 							}
 						}
-					}
-					else if (treeVisualizer.m_selectedInternodeHandle >= 0 && editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Hold)
-					{
-						if (tree->m_treeModel.Reduce(tree->m_shootGrowthController, treeVisualizer.m_selectedInternodeHandle, targetAge))
+						else if (treeVisualizer.m_selectedInternodeHandle >= 0 && editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Hold)
 						{
-							treeVisualizer.m_needUpdate = true;
-							mayNeedGeometryGeneration = true;
+							if (tree->m_treeModel.Reduce(tree->m_shootGrowthController, treeVisualizer.m_selectedInternodeHandle, targetAge))
+							{
+								treeVisualizer.m_needUpdate = true;
+								mayNeedGeometryGeneration = true;
+							}
+							targetAge -= m_reduceRate;
+							lastFrameReduce = true;
 						}
-						targetAge -= m_reduceRate;
-						lastFrameReduce = true;
-					}
-					else if (lastFrameReduce && editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Release)
-					{
-						treeVisualizer.SetSelectedNode(treeSkeleton, -1);
-						lastFrameReduce = false;
-						treeVisualizer.m_needUpdate = true;
+						else if (lastFrameReduce && editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Release)
+						{
+							treeVisualizer.SetSelectedNode(treeSkeleton, -1);
+							lastFrameReduce = false;
+							treeVisualizer.m_needUpdate = true;
+						}
 					}
 				}break;
 				}
