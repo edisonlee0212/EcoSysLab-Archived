@@ -23,8 +23,8 @@ namespace EcoSysLab {
 		//int m_maxProfileIterations = 20;
 		//float m_maxParam = 1.0f;
 		bool m_branchConnections = true;
-		int m_uMultiplier = 1;
-		float m_vMultiplier = 1.0;
+		int m_uMultiplier = 2;
+		float m_vMultiplier = 0.25;
 #pragma endregion
 
 #pragma region Hybrid MarchingCube
