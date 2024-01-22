@@ -31,6 +31,7 @@ void PipeModelMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLayer
 		//ImGui::Checkbox("Compute branch joints", &m_branchConnections);
 		ImGui::DragInt("uCoord multiplier", &m_uMultiplier, 1, 1);
 		ImGui::DragFloat("vCoord multiplier", &m_vMultiplier, 0.1f);
+		ImGui::DragFloat("cluster distance factor", &m_clusterDistance, 0.1f, 1.0f, 10.0f);
 		ImGui::TreePop();
 	}
 
@@ -1302,7 +1303,7 @@ void TreePipeMeshGenerator::RecursiveSlicing(
 		}
 	);
 
-	float maxDist = 2 * maxThickness * sqrt(2) * 2.5f;
+	float maxDist = 2 * maxThickness * sqrt(2) * 2.5f * settings.m_clusterDistance;
 	// initial slice at root:
 	std::vector<bool> visited(pipeGroup.PeekPipes().size(), false);
 

@@ -25,6 +25,7 @@ namespace EcoSysLab {
 		bool m_branchConnections = true;
 		int m_uMultiplier = 2;
 		float m_vMultiplier = 0.25;
+		float m_clusterDistance = 1.0f;
 #pragma endregion
 
 #pragma region Hybrid MarchingCube
