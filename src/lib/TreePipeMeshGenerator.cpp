@@ -1208,7 +1208,7 @@ void createTwigTip(const TreeModel& treeModel, std::pair < Slice, PipeCluster>& 
 }
 
 void sliceRecursively(const TreeModel& treeModel, std::pair < Slice, PipeCluster>& prevSlice, size_t prevOffset, float t, float stepSize, float maxDist,
-	std::vector<Vertex>& vertices, std::vector<unsigned>& indices, const PipeModelMeshGeneratorSettings& settings)
+	std::vector<Vertex>& vertices, std::vector<unsigned>& indices, const PipeModelMeshGeneratorSettings& settings, float accumulatedAngle = 0.0f)
 {
 	const auto& skeleton = treeModel.PeekShootSkeleton();
 	const auto& pipeGroup = skeleton.m_data.m_pipeGroup;
@@ -1256,7 +1256,16 @@ void sliceRecursively(const TreeModel& treeModel, std::pair < Slice, PipeCluster
 			Vertex v;
 			v.m_position = el.second;
 			v.m_texCoord.y = t * settings.m_vMultiplier;
-			v.m_texCoord.x = getPipePolar(treeModel, el.first, t) / (2 * glm::pi<float>()) * settings.m_uMultiplier;
+			v.m_texCoord.x = getPipePolar(treeModel, el.first, t) / (2 * glm::pi<float>()) * settings.m_uMultiplier + accumulatedAngle / 360.0f;
+
+			// add twisting to uv-Coordinates
+			auto nodeHandle = getNodeHandle(pipeGroup, el.first, t);
+			const auto& node = skeleton.PeekNode(nodeHandle);
+
+			float frac = fmod(t, 1.0);
+
+			v.m_texCoord.x += frac * node.m_data.m_twistAngle / 360.0f;
+
 			vertices.push_back(v);
 		}
 	}
@@ -1271,7 +1280,18 @@ void sliceRecursively(const TreeModel& treeModel, std::pair < Slice, PipeCluster
 		if (slicesAndClusters[i].first.size() != 0)
 		{
 			if (DEBUG_OUTPUT) std::cout << "___ Slice at t = " << t << " ___" << std::endl;
-			sliceRecursively(treeModel, slicesAndClusters[i], offsets[i], t, stepSize, maxDist, vertices, indices, settings);
+
+			float newAccumulatedAngle = accumulatedAngle;
+
+			if (std::floor(t - stepSize) < std::floor(t))
+			{
+				// need to compute new accumulated angle
+				auto nodeHandle = getNodeHandle(pipeGroup, slicesAndClusters[i].second[0], t);
+				const auto& node = skeleton.PeekNode(nodeHandle);
+				newAccumulatedAngle += node.m_data.m_twistAngle;
+			}
+
+			sliceRecursively(treeModel, slicesAndClusters[i], offsets[i], t, stepSize, maxDist, vertices, indices, settings, newAccumulatedAngle);
 		}
 	}
 }
