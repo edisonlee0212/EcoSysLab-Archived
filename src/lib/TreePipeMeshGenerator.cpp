@@ -31,6 +31,7 @@ void PipeModelMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLayer
 		//ImGui::Checkbox("Compute branch joints", &m_branchConnections);
 		ImGui::DragInt("uCoord multiplier", &m_uMultiplier, 1, 1);
 		ImGui::DragFloat("vCoord multiplier", &m_vMultiplier, 0.1f);
+		ImGui::DragFloat("cluster distance factor", &m_clusterDistance, 0.1f, 1.0f, 10.0f);
 		ImGui::TreePop();
 	}
 
@@ -300,8 +301,17 @@ float getPipePolar(const TreeModel& treeModel, const PipeHandle& pipeHandle, flo
 	// cheap interpolation, maybe improve this later ?
 	const auto& p0 = getStartParticle(treeModel, pipeHandle, std::floor(t));
 	const auto& p1 = getEndParticle(treeModel, pipeHandle, std::floor(t));
-	float a0 = p0.GetPolarPosition().y;
 	float a1 = p1.GetPolarPosition().y;
+
+	if (isValidPipeParam(treeModel, pipeHandle, std::ceil(t)))
+	{
+		const auto& p1 = getStartParticle(treeModel, pipeHandle, std::ceil(t));
+		a1 = p1.GetPolarPosition().y;
+	}
+
+	
+	float a0 = p0.GetPolarPosition().y;
+	
 
 	// we will just assume that the difference cannot exceed 180 degrees
 	if (a1 < a0)
@@ -310,16 +320,29 @@ float getPipePolar(const TreeModel& treeModel, const PipeHandle& pipeHandle, flo
 	}
 
 	float interpolationParam = fmod(t, 1.0f);
+	float angle;
 
 	if (a1 - a0 > glm::pi<float>())
 	{
 		// rotation wraps around
-		return fmod((a0 + 2 * glm::pi<float>()) * interpolationParam + a1 * (1 - interpolationParam) , 2 * glm::pi<float>());
+		angle = fmod((a0 + 2 * glm::pi<float>()) * interpolationParam + a1 * (1 - interpolationParam) , 2 * glm::pi<float>());
+
+		if (angle > glm::pi<float>())
+		{
+			angle -= 2 * glm::pi<float>();
+		}
 	}
 	else
 	{
-		return a0 * interpolationParam + a1 * (1 - interpolationParam);
+		angle = a0 * interpolationParam + a1 * (1 - interpolationParam);
+
+		if (angle > glm::pi<float>())
+		{
+			angle -= 2 * glm::pi<float>();
+		}
 	}
+
+	return angle;
 }
 
 void dfs(const Graph& g, size_t v, std::vector<size_t>& componentMembers, std::vector<bool>& visited)
@@ -1280,7 +1303,7 @@ void TreePipeMeshGenerator::RecursiveSlicing(
 		}
 	);
 
-	float maxDist = 2 * maxThickness * sqrt(2) * 2.5f;
+	float maxDist = 2 * maxThickness * sqrt(2) * 2.5f * settings.m_clusterDistance;
 	// initial slice at root:
 	std::vector<bool> visited(pipeGroup.PeekPipes().size(), false);
 
