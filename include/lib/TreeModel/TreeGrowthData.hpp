@@ -113,7 +113,7 @@ namespace EcoSysLab
 		float m_centerDirectionRadius = 0.0f;
 
 		glm::vec2 m_offset = glm::vec2(0.0f);
-
+		float m_twistAngle = 0.0f;
 		glm::vec2 m_shift = glm::vec2(0.0f);
 		int m_packingIteration = 0;
 		bool m_apical = false;

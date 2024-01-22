@@ -1441,6 +1441,7 @@ void TreeModel::MergeTask(float maxRootDistance, NodeHandle nodeHandle, const Pi
 {
 	auto& internode = m_shootSkeleton.RefNode(nodeHandle);
 	auto& internodeData = internode.m_data;
+	internodeData.m_twistAngle = 0.0f;
 	const auto& childHandles = internode.RefChildHandles();
 	NodeHandle mainChildHandle = -1;
 	for (const auto& childHandle : childHandles) {
@@ -1477,8 +1478,10 @@ void TreeModel::MergeTask(float maxRootDistance, NodeHandle nodeHandle, const Pi
 	if (childHandles.size() == 1)
 	{
 		//Copy from child flow start to self flow start
-		const auto& childNode = m_shootSkeleton.RefNode(childHandles.front());
+		auto& childNode = m_shootSkeleton.RefNode(childHandles.front());
 		const auto& childPhysics2D = childNode.m_data.m_frontProfile;
+		childNode.m_data.m_twistAngle = branchTwistAngle;
+
 		for (const auto& childParticle : childPhysics2D.PeekParticles())
 		{
 			const auto nodeStartParticleHandle = internodeData.m_frontParticleMap.at(childParticle.m_data.m_pipeHandle);
@@ -1499,6 +1502,7 @@ void TreeModel::MergeTask(float maxRootDistance, NodeHandle nodeHandle, const Pi
 	}
 	if (internodeData.m_profileConstraints.m_boundaries.empty()) internode.m_data.m_packingIteration = glm::min(pipeModelParameters.m_junctionProfilePackingMaxIteration, static_cast<int>(internodeData.m_frontProfile.RefParticles().size()) * pipeModelParameters.m_maxSimulationIterationCellFactor);
 	const auto& mainChildPhysics2D = mainChildNode.m_data.m_frontProfile;
+	mainChildNode.m_data.m_twistAngle = junctionTwistAngle;
 	for (const auto& mainChildParticle : mainChildPhysics2D.PeekParticles())
 	{
 		const auto nodeStartParticleHandle = internodeData.m_frontParticleMap.at(mainChildParticle.m_data.m_pipeHandle);
@@ -1620,6 +1624,7 @@ void TreeModel::MergeTask(float maxRootDistance, NodeHandle nodeHandle, const Pi
 		{
 			if (childHandle == mainChildHandle) continue;
 			auto& childNode = m_shootSkeleton.RefNode(childHandle);
+			childNode.m_data.m_twistAngle = junctionTwistAngle;
 			auto& childPhysics2D = childNode.m_data.m_frontProfile;
 			const auto childNodeFront = glm::inverse(internode.m_info.m_regulatedGlobalRotation) * childNode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
 			auto direction = glm::normalize(glm::vec2(childNodeFront.x, childNodeFront.y));

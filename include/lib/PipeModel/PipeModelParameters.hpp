@@ -12,7 +12,7 @@ namespace EcoSysLab
 
 		int m_maxSimulationIterationCellFactor = 5;
 		int m_branchProfilePackingMaxIteration = 200;
-		int m_junctionProfilePackingMaxIteration = 700;
+		int m_junctionProfilePackingMaxIteration = 500;
 		int m_modifiedProfilePackingMaxIteration = 1500;
 
 		float m_overlapThreshold = 0.1f;
