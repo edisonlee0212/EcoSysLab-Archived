@@ -10,22 +10,7 @@
 using namespace EvoEngine;
 namespace EcoSysLab {
 
-	struct SkeletalGraphSettings
-	{
-		float m_lineThickness = 0.005f;
-		float m_branchPointSize = 1.0f;
-		float m_junctionPointSize = 1.75f;
-
-		bool m_fixedPointSize = false;
-		float m_fixedPointSizeFactor = 0.01f;
-		glm::vec4 m_lineColor = glm::vec4(1.f, .5f, 0.5f, 1.0f);
-		glm::vec4 m_branchPointColor = glm::vec4(1.f, 1.f, 0.f, 1.f);
-		glm::vec4 m_junctionPointColor = glm::vec4(0.f, .7f, 1.f, 1.f);
-
-		glm::vec4 m_lineFocusColor = glm::vec4(1.f, 0.f, 0.f, 1.f);
-		glm::vec4 m_branchFocusColor = glm::vec4(1.f, 0.f, 0.f, 1.f);
-		void OnInspect();
-	};
+	
 
 	class Tree : public IPrivateComponent {
 		friend class EcoSysLabLayer;
@@ -58,7 +43,6 @@ namespace EcoSysLab {
 		bool m_recordBiomassHistory = true;
 		float m_leftSideBiomass;
 		float m_rightSideBiomass;
-		SkeletalGraphSettings m_skeletalGraphSettings{};
 		TreeMeshGeneratorSettings m_meshGeneratorSettings {};
 		PipeModelMeshGeneratorSettings m_treePipeMeshGeneratorSettings{};
 		int m_temporalProgressionIteration = 0;
@@ -76,7 +60,7 @@ namespace EcoSysLab {
 		bool m_enableHistory = false;
 		int m_historyIteration = 30;
 		void ClearSkeletalGraph() const;
-		void InitializeSkeletalGraph(NodeHandle baseNodeHandle, const std::shared_ptr<Mesh> &pointMeshSample, const std::shared_ptr<Mesh>& lineMeshSample, const SkeletalGraphSettings& skeletalGraphSettings) const;
+		void InitializeSkeletalGraph(NodeHandle baseNodeHandle, const std::shared_ptr<Mesh> &pointMeshSample, const std::shared_ptr<Mesh>& lineMeshSample) const;
 
 		TreeModel m_treeModel{};
 		

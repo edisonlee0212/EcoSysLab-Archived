@@ -166,8 +166,7 @@ void Tree::ClearSkeletalGraph() const
 
 void Tree::InitializeSkeletalGraph(NodeHandle baseNodeHandle,
 	const std::shared_ptr<Mesh>& pointMeshSample,
-	const std::shared_ptr<Mesh>& lineMeshSample,
-	const SkeletalGraphSettings& skeletalGraphSettings) const
+	const std::shared_ptr<Mesh>& lineMeshSample) const
 {
 	const auto scene = GetScene();
 	const auto self = GetOwner();
@@ -228,16 +227,16 @@ void Tree::InitializeSkeletalGraph(NodeHandle baseNodeHandle,
 					glm::translate(position + (node.m_info.m_length / 2.0f) * direction) *
 					rotationTransform *
 					glm::scale(glm::vec3(
-						skeletalGraphSettings.m_lineThickness * (subTree ? 1.25f : 1.0f),
+						m_treeVisualizer.m_skeletalGraphSettings.m_lineThickness * (subTree ? 1.25f : 1.0f),
 						node.m_info.m_length,
-						skeletalGraphSettings.m_lineThickness * (subTree ? 1.25f : 1.0f)));
+						m_treeVisualizer.m_skeletalGraphSettings.m_lineThickness * (subTree ? 1.25f : 1.0f)));
 
 				if (subTree)
 				{
-					lineList->m_particleInfos[internodeIndex].m_instanceColor = skeletalGraphSettings.m_lineFocusColor;
+					lineList->m_particleInfos[internodeIndex].m_instanceColor = m_treeVisualizer.m_skeletalGraphSettings.m_lineFocusColor;
 				}
 				else {
-					lineList->m_particleInfos[internodeIndex].m_instanceColor = skeletalGraphSettings.m_lineColor;
+					lineList->m_particleInfos[internodeIndex].m_instanceColor = m_treeVisualizer.m_skeletalGraphSettings.m_lineColor;
 				}
 			}
 			{
@@ -248,13 +247,13 @@ void Tree::InitializeSkeletalGraph(NodeHandle baseNodeHandle,
 				rotation *= glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));
 				const glm::mat4 rotationTransform = glm::mat4_cast(rotation);
 				float thicknessFactor = node.m_info.m_thickness;
-				if (skeletalGraphSettings.m_fixedPointSize) thicknessFactor = skeletalGraphSettings.m_fixedPointSizeFactor;
-				auto scale = glm::vec3(skeletalGraphSettings.m_branchPointSize * thicknessFactor);
-				pointList->m_particleInfos[internodeIndex].m_instanceColor = skeletalGraphSettings.m_branchPointColor;
+				if (m_treeVisualizer.m_skeletalGraphSettings.m_fixedPointSize) thicknessFactor = m_treeVisualizer.m_skeletalGraphSettings.m_fixedPointSizeFactor;
+				auto scale = glm::vec3(m_treeVisualizer.m_skeletalGraphSettings.m_branchPointSize * thicknessFactor);
+				pointList->m_particleInfos[internodeIndex].m_instanceColor = m_treeVisualizer.m_skeletalGraphSettings.m_branchPointColor;
 				if (internodeIndex == 0 || node.RefChildHandles().size() > 1)
 				{
-					scale = glm::vec3(skeletalGraphSettings.m_junctionPointSize * thicknessFactor);
-					pointList->m_particleInfos[internodeIndex].m_instanceColor = skeletalGraphSettings.m_junctionPointColor;
+					scale = glm::vec3(m_treeVisualizer.m_skeletalGraphSettings.m_junctionPointSize * thicknessFactor);
+					pointList->m_particleInfos[internodeIndex].m_instanceColor = m_treeVisualizer.m_skeletalGraphSettings.m_junctionPointColor;
 				}
 				pointList->m_particleInfos[internodeIndex].m_instanceMatrix.m_value =
 					glm::translate(position) *
@@ -262,7 +261,7 @@ void Tree::InitializeSkeletalGraph(NodeHandle baseNodeHandle,
 					glm::scale(scale * (subTree ? 1.25f : 1.0f));
 				if(subTree)
 				{
-					pointList->m_particleInfos[internodeIndex].m_instanceColor = skeletalGraphSettings.m_branchFocusColor;
+					pointList->m_particleInfos[internodeIndex].m_instanceColor = m_treeVisualizer.m_skeletalGraphSettings.m_branchFocusColor;
 				}
 			}
 		});
@@ -458,7 +457,8 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 		ImGui::TreePop();
 	}
 	ImGui::DragFloat("Overlap threshold", &pipeModelParameters.m_overlapThreshold, 0.01f, 0.0f, 1.0f);
-	ImGui::DragInt("End node strand count", &pipeModelParameters.m_endNodeStrands, 1, 1, 50);
+	ImGui::DragInt("Initial branch strand count", &pipeModelParameters.m_strandsAlongBranch, 1, 1, 50);
+	ImGui::DragInt("Initial end node strand count", &pipeModelParameters.m_endNodeStrands, 1, 1, 50);
 
 	ImGui::Checkbox("Pre-merge", &pipeModelParameters.m_preMerge);
 
@@ -522,12 +522,12 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	{
 		ClearPipeModelMeshRenderer();
 	}
-	m_skeletalGraphSettings.OnInspect();
+	m_treeVisualizer.m_skeletalGraphSettings.OnInspect();
 	if (ImGui::Button("Build Skeletal Graph"))
 	{
 		InitializeSkeletalGraph(-1, 
 			Resources::GetResource<Mesh>("PRIMITIVE_SPHERE"),
-			Resources::GetResource<Mesh>("PRIMITIVE_CUBE"), m_skeletalGraphSettings);
+			Resources::GetResource<Mesh>("PRIMITIVE_CUBE"));
 	}
 	if (ImGui::Button("Clear Skeletal Graph"))
 	{

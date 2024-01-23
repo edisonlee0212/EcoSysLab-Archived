@@ -229,6 +229,30 @@ void EcoSysLabLayer::Visualization() {
 								}
 							}
 						}
+						else if (editorLayer->GetKey(GLFW_KEY_T) == KeyActionType::Press) {
+							if (treeVisualizer.m_selectedInternodeHandle > 0) {
+								treeModel.Step();
+								treeModel.PruneInternode(treeVisualizer.m_selectedInternodeHandle);
+								treeVisualizer.m_selectedInternodeHandle = -1;
+								treeModel.RefShootSkeleton().SortLists();
+								treeVisualizer.m_checkpointIteration = treeModel.CurrentIteration();
+								treeVisualizer.m_needUpdate = true;
+								if (m_autoGenerateMeshAfterEditing)
+								{
+									tree->InitializeMeshRenderer(m_meshGeneratorSettings, -1);
+								}
+								if (m_autoGenerateStrandsAfterEditing || m_autoGenerateStrandMeshAfterEditing)
+								{
+									if (m_autoGenerateStrandsAfterEditing) {
+										tree->InitializeStrandRenderer();
+									}
+									if (m_autoGenerateStrandMeshAfterEditing)
+									{
+										tree->InitializePipeModelMeshRenderer(m_pipeMeshGeneratorSettings);
+									}
+								}
+							}
+						}
 						else if (editorLayer->GetKey(GLFW_KEY_ESCAPE) == KeyActionType::Press)
 						{
 							treeVisualizer.SetSelectedNode(treeSkeleton, -1);
@@ -361,6 +385,30 @@ void EcoSysLabLayer::Visualization() {
 							if (treeVisualizer.m_selectedInternodeHandle <= 0) {
 								if (treeVisualizer.RayCastSelection(m_visualizationCamera, m_visualizationCameraMousePosition, treeSkeleton, globalTransform)) {
 									treeVisualizer.m_needUpdate = true;
+								}
+							}
+						}
+						else if (editorLayer->GetKey(GLFW_KEY_T) == KeyActionType::Press) {
+							if (treeVisualizer.m_selectedInternodeHandle > 0) {
+								treeModel.Step();
+								treeModel.PruneInternode(treeVisualizer.m_selectedInternodeHandle);
+								treeVisualizer.m_selectedInternodeHandle = -1;
+								treeModel.RefShootSkeleton().SortLists();
+								treeVisualizer.m_checkpointIteration = treeModel.CurrentIteration();
+								treeVisualizer.m_needUpdate = true;
+								if (m_autoGenerateMeshAfterEditing)
+								{
+									tree->InitializeMeshRenderer(m_meshGeneratorSettings, -1);
+								}
+								if (m_autoGenerateStrandsAfterEditing || m_autoGenerateStrandMeshAfterEditing)
+								{
+									if (m_autoGenerateStrandsAfterEditing) {
+										tree->InitializeStrandRenderer();
+									}
+									if (m_autoGenerateStrandMeshAfterEditing)
+									{
+										tree->InitializePipeModelMeshRenderer(m_pipeMeshGeneratorSettings);
+									}
 								}
 							}
 						}
@@ -512,7 +560,7 @@ void EcoSysLabLayer::Visualization() {
 				{
 					tree->InitializeSkeletalGraph(treeVisualizer.m_selectedInternodeHandle,
 						Resources::GetResource<Mesh>("PRIMITIVE_SPHERE"),
-						Resources::GetResource<Mesh>("PRIMITIVE_CUBE"), tree->m_skeletalGraphSettings);
+						Resources::GetResource<Mesh>("PRIMITIVE_CUBE"));
 				}
 				mayNeedGeometryGeneration = false;
 			}
@@ -840,7 +888,7 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 			{
 				tree->InitializeSkeletalGraph(-1,
 					Resources::GetResource<Mesh>("PRIMITIVE_SPHERE"),
-					Resources::GetResource<Mesh>("PRIMITIVE_CUBE"), tree->m_skeletalGraphSettings);
+					Resources::GetResource<Mesh>("PRIMITIVE_CUBE"));
 			}
 		}
 	}

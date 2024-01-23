@@ -1172,7 +1172,7 @@ void TreeModel::InitializeProfiles(const PipeModelParameters& pipeModelParameter
 		auto& internode = m_shootSkeleton.RefNode(internodeHandle);
 		auto& frontPhysics2D = internode.m_data.m_frontProfile;
 		auto& backPhysics2D = internode.m_data.m_backProfile;
-		if (!internode.IsEndNode()) continue;
+		
 		std::vector<NodeHandle> parentNodeToRootChain;
 		NodeHandle walker = internode.GetParentHandle();
 		while (walker >= 0)
@@ -1180,8 +1180,9 @@ void TreeModel::InitializeProfiles(const PipeModelParameters& pipeModelParameter
 			parentNodeToRootChain.emplace_back(walker);
 			walker = m_shootSkeleton.PeekNode(walker).GetParentHandle();
 		}
-		if (frontPhysics2D.RefParticles().empty()) {
-			for (int i = 0; i < pipeModelParameters.m_endNodeStrands; i++) {
+		if (!internode.IsEndNode())
+		{
+			for (int i = 0; i < pipeModelParameters.m_strandsAlongBranch; i++) {
 				const auto pipeHandle = pipeGroup.AllocatePipe();
 				for (auto it = parentNodeToRootChain.rbegin(); it != parentNodeToRootChain.rend(); ++it) {
 					const auto newPipeSegmentHandle = pipeGroup.Extend(pipeHandle);
@@ -1202,7 +1203,7 @@ void TreeModel::InitializeProfiles(const PipeModelParameters& pipeModelParameter
 					newSegment.m_data.m_frontProfileParticleHandle = newStartParticleHandle;
 					newSegment.m_data.m_backProfileParticleHandle = newEndParticleHandle;
 				}
-				const auto position = glm::diskRand(glm::sqrt(static_cast<float>(pipeModelParameters.m_endNodeStrands)));
+				const auto position = glm::vec3(0.0f);
 				const auto newPipeSegmentHandle = pipeGroup.Extend(pipeHandle);
 				const auto newStartParticleHandle = frontPhysics2D.AllocateParticle();
 				auto& newStartParticle = frontPhysics2D.RefParticle(newStartParticleHandle);
@@ -1222,44 +1223,88 @@ void TreeModel::InitializeProfiles(const PipeModelParameters& pipeModelParameter
 				newSegment.m_data.m_backProfileParticleHandle = newEndParticleHandle;
 			}
 		}
-		else
-		{
-			for (ParticleHandle particleHandle = 0; particleHandle < frontPhysics2D.RefParticles().size(); particleHandle++)
-			{
-				const auto pipeHandle = pipeGroup.AllocatePipe();
-				for (auto it = parentNodeToRootChain.rbegin(); it != parentNodeToRootChain.rend(); ++it) {
+		else {
+			if (frontPhysics2D.RefParticles().empty()) {
+				for (int i = 0; i < pipeModelParameters.m_endNodeStrands; i++) {
+					const auto pipeHandle = pipeGroup.AllocatePipe();
+					for (auto it = parentNodeToRootChain.rbegin(); it != parentNodeToRootChain.rend(); ++it) {
+						const auto newPipeSegmentHandle = pipeGroup.Extend(pipeHandle);
+						auto& nodeOnChain = m_shootSkeleton.RefNode(*it);
+						const auto newStartParticleHandle = nodeOnChain.m_data.m_frontProfile.AllocateParticle();
+						auto& newStartParticle = nodeOnChain.m_data.m_frontProfile.RefParticle(newStartParticleHandle);
+						newStartParticle.m_data.m_pipeHandle = pipeHandle;
+						newStartParticle.m_data.m_pipeSegmentHandle = newPipeSegmentHandle;
+						newStartParticle.m_data.m_base = false;
+						const auto newEndParticleHandle = nodeOnChain.m_data.m_backProfile.AllocateParticle();
+						auto& newEndParticle = nodeOnChain.m_data.m_backProfile.RefParticle(newEndParticleHandle);
+						newEndParticle.m_data.m_pipeHandle = pipeHandle;
+						newEndParticle.m_data.m_pipeSegmentHandle = newPipeSegmentHandle;
+						newEndParticle.m_data.m_base = false;
+
+						auto& newSegment = pipeGroup.RefPipeSegment(newPipeSegmentHandle);
+						newSegment.m_data.m_nodeHandle = *it;
+						newSegment.m_data.m_frontProfileParticleHandle = newStartParticleHandle;
+						newSegment.m_data.m_backProfileParticleHandle = newEndParticleHandle;
+					}
+					const auto position = glm::diskRand(glm::sqrt(static_cast<float>(pipeModelParameters.m_endNodeStrands)));
 					const auto newPipeSegmentHandle = pipeGroup.Extend(pipeHandle);
-					auto& nodeOnChain = m_shootSkeleton.RefNode(*it);
-					const auto newStartParticleHandle = nodeOnChain.m_data.m_frontProfile.AllocateParticle();
-					auto& newStartParticle = nodeOnChain.m_data.m_frontProfile.RefParticle(newStartParticleHandle);
+					const auto newStartParticleHandle = frontPhysics2D.AllocateParticle();
+					auto& newStartParticle = frontPhysics2D.RefParticle(newStartParticleHandle);
 					newStartParticle.m_data.m_pipeHandle = pipeHandle;
 					newStartParticle.m_data.m_pipeSegmentHandle = newPipeSegmentHandle;
-					newStartParticle.m_data.m_base = false;
-					const auto newEndParticleHandle = nodeOnChain.m_data.m_backProfile.AllocateParticle();
-					auto& newEndParticle = nodeOnChain.m_data.m_backProfile.RefParticle(newEndParticleHandle);
+					newStartParticle.m_data.m_base = true;
+					newStartParticle.SetPosition(position);
+					const auto newEndParticleHandle = backPhysics2D.AllocateParticle();
+					auto& newEndParticle = backPhysics2D.RefParticle(newEndParticleHandle);
 					newEndParticle.m_data.m_pipeHandle = pipeHandle;
 					newEndParticle.m_data.m_pipeSegmentHandle = newPipeSegmentHandle;
-					newEndParticle.m_data.m_base = false;
-
+					newEndParticle.m_data.m_base = true;
+					newStartParticle.SetPosition(position);
 					auto& newSegment = pipeGroup.RefPipeSegment(newPipeSegmentHandle);
-					newSegment.m_data.m_nodeHandle = *it;
+					newSegment.m_data.m_nodeHandle = internodeHandle;
 					newSegment.m_data.m_frontProfileParticleHandle = newStartParticleHandle;
 					newSegment.m_data.m_backProfileParticleHandle = newEndParticleHandle;
 				}
-				const auto newPipeSegmentHandle = pipeGroup.Extend(pipeHandle);
-				auto& frontParticle = frontPhysics2D.RefParticle(particleHandle);
-				frontParticle.m_data.m_pipeHandle = pipeHandle;
-				frontParticle.m_data.m_pipeSegmentHandle = newPipeSegmentHandle;
-				frontParticle.m_data.m_base = true;
-				auto& backParticle = backPhysics2D.RefParticle(particleHandle);
-				backParticle.m_data.m_pipeHandle = pipeHandle;
-				backParticle.m_data.m_pipeSegmentHandle = newPipeSegmentHandle;
-				backParticle.m_data.m_base = true;
-				frontParticle.SetPosition(backParticle.GetPosition());
-				auto& newSegment = pipeGroup.RefPipeSegment(newPipeSegmentHandle);
-				newSegment.m_data.m_nodeHandle = internodeHandle;
-				newSegment.m_data.m_frontProfileParticleHandle = particleHandle;
-				newSegment.m_data.m_backProfileParticleHandle = particleHandle;
+			}
+			else
+			{
+				for (ParticleHandle particleHandle = 0; particleHandle < frontPhysics2D.RefParticles().size(); particleHandle++)
+				{
+					const auto pipeHandle = pipeGroup.AllocatePipe();
+					for (auto it = parentNodeToRootChain.rbegin(); it != parentNodeToRootChain.rend(); ++it) {
+						const auto newPipeSegmentHandle = pipeGroup.Extend(pipeHandle);
+						auto& nodeOnChain = m_shootSkeleton.RefNode(*it);
+						const auto newStartParticleHandle = nodeOnChain.m_data.m_frontProfile.AllocateParticle();
+						auto& newStartParticle = nodeOnChain.m_data.m_frontProfile.RefParticle(newStartParticleHandle);
+						newStartParticle.m_data.m_pipeHandle = pipeHandle;
+						newStartParticle.m_data.m_pipeSegmentHandle = newPipeSegmentHandle;
+						newStartParticle.m_data.m_base = false;
+						const auto newEndParticleHandle = nodeOnChain.m_data.m_backProfile.AllocateParticle();
+						auto& newEndParticle = nodeOnChain.m_data.m_backProfile.RefParticle(newEndParticleHandle);
+						newEndParticle.m_data.m_pipeHandle = pipeHandle;
+						newEndParticle.m_data.m_pipeSegmentHandle = newPipeSegmentHandle;
+						newEndParticle.m_data.m_base = false;
+
+						auto& newSegment = pipeGroup.RefPipeSegment(newPipeSegmentHandle);
+						newSegment.m_data.m_nodeHandle = *it;
+						newSegment.m_data.m_frontProfileParticleHandle = newStartParticleHandle;
+						newSegment.m_data.m_backProfileParticleHandle = newEndParticleHandle;
+					}
+					const auto newPipeSegmentHandle = pipeGroup.Extend(pipeHandle);
+					auto& frontParticle = frontPhysics2D.RefParticle(particleHandle);
+					frontParticle.m_data.m_pipeHandle = pipeHandle;
+					frontParticle.m_data.m_pipeSegmentHandle = newPipeSegmentHandle;
+					frontParticle.m_data.m_base = true;
+					auto& backParticle = backPhysics2D.RefParticle(particleHandle);
+					backParticle.m_data.m_pipeHandle = pipeHandle;
+					backParticle.m_data.m_pipeSegmentHandle = newPipeSegmentHandle;
+					backParticle.m_data.m_base = true;
+					frontParticle.SetPosition(backParticle.GetPosition());
+					auto& newSegment = pipeGroup.RefPipeSegment(newPipeSegmentHandle);
+					newSegment.m_data.m_nodeHandle = internodeHandle;
+					newSegment.m_data.m_frontProfileParticleHandle = particleHandle;
+					newSegment.m_data.m_backProfileParticleHandle = particleHandle;
+				}
 			}
 		}
 	}

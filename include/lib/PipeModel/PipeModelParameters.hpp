@@ -17,6 +17,7 @@ namespace EcoSysLab
 
 		float m_overlapThreshold = 0.1f;
 		int m_endNodeStrands = 3;
+		int m_strandsAlongBranch = 0;
 		bool m_preMerge = true;
 
 		float m_controlPointRatio = 0.3f;

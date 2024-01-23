@@ -111,7 +111,19 @@ bool TreeVisualizer::RayCastSelection(const std::shared_ptr<Camera>& cameraCompo
 	const auto& sortedNodeList = skeleton.RefSortedNodeList();
 	std::vector<std::shared_future<void>> results;
 	Jobs::ParallelFor(sortedNodeList.size(), [&](unsigned i) {
-		const auto& node = skeleton.PeekNode(sortedNodeList[i]);
+		const auto nodeHandle = sortedNodeList[i];
+		NodeHandle walker = nodeHandle;
+		bool subTree = false;
+		while (walker != -1)
+		{
+			if (walker == m_selectedInternodeHandle)
+			{
+				subTree = true;
+				break;
+			}
+			walker = skeleton.PeekNode(walker).GetParentHandle();
+		}
+		const auto& node = skeleton.PeekNode(nodeHandle);
 		auto rotation = globalTransform.GetRotation() * node.m_info.m_globalRotation;
 		glm::vec3 position = (globalTransform.m_value *
 			glm::translate(node.m_info.m_globalPosition))[3];
@@ -121,6 +133,10 @@ bool TreeVisualizer::RayCastSelection(const std::shared_ptr<Camera>& cameraCompo
 		const auto center =
 			(position + position2) / 2.0f;
 		auto radius = node.m_info.m_thickness;
+		if(m_skeletalGraphSettings.m_lineThickness != 0.0f)
+		{
+			radius = m_skeletalGraphSettings.m_lineThickness * (subTree ? 0.625f : 0.5f);
+		}
 		const auto height = glm::distance(position2,
 			position);
 		radius *= height / node.m_info.m_length;
@@ -234,20 +250,42 @@ void TreeVisualizer::SyncMatrices(const ShootSkeleton& skeleton, const std::shar
 	Jobs::ParallelFor(sortedNodeList.size(), [&](unsigned i) {
 		const auto nodeHandle = sortedNodeList[i];
 		const auto& node = skeleton.PeekNode(nodeHandle);
+		bool subTree = false;
+		NodeHandle walker = nodeHandle;
+		while (walker != -1)
+		{
+			if (walker == m_selectedInternodeHandle)
+			{
+				subTree = true;
+				break;
+			}
+			walker = skeleton.PeekNode(walker).GetParentHandle();
+		}
 		const glm::vec3 position = node.m_info.m_globalPosition;
 		const auto direction = node.m_info.m_globalDirection;
 		auto rotation = glm::quatLookAt(
 			direction, glm::vec3(direction.y, direction.z, direction.x));
 		rotation *= glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));
 		const glm::mat4 rotationTransform = glm::mat4_cast(rotation);
-		matrices[i].m_instanceMatrix.m_value =
-			glm::translate(position + (node.m_info.m_length / 2.0f) * direction) *
-			rotationTransform *
-			glm::scale(glm::vec3(
-				node.m_info.m_thickness * 2.0f,
-				node.m_info.m_length,
-				node.m_info.m_thickness * 2.0f));
-		});
+		if (m_skeletalGraphSettings.m_lineThickness != 0.0f) {
+			matrices[i].m_instanceMatrix.m_value = glm::translate(position + (node.m_info.m_length / 2.0f) * direction) *
+				rotationTransform *
+				glm::scale(glm::vec3(
+					m_skeletalGraphSettings.m_lineThickness * (subTree ? 1.25f : 1.0f),
+					node.m_info.m_length,
+					m_skeletalGraphSettings.m_lineThickness * (subTree ? 1.25f : 1.0f)));
+		}else
+		{
+			matrices[i].m_instanceMatrix.m_value =
+				glm::translate(position + (node.m_info.m_length / 2.0f) * direction) *
+				rotationTransform *
+				glm::scale(glm::vec3(
+					node.m_info.m_thickness * 2.0f,
+					node.m_info.m_length,
+					node.m_info.m_thickness * 2.0f));
+		}
+		}
+	);
 }
 
 bool TreeVisualizer::DrawInternodeInspectionGui(
