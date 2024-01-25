@@ -493,7 +493,8 @@ void TreeVisualizer::Visualize(TreeModel& treeModel, const GlobalTransform& glob
 				if (ImGui::Begin(frontTag.c_str()))
 				{
 					if (m_selectedInternodeHandle != -1) {
-						auto& node = treeModel.RefShootSkeleton().RefNode(m_selectedInternodeHandle);
+						auto& skeleton = treeModel.RefShootSkeleton();
+						auto& node = skeleton.RefNode(m_selectedInternodeHandle);
 
 						glm::vec2 mousePosition{};
 						static bool lastFrameClicked = false;
@@ -515,11 +516,29 @@ void TreeVisualizer::Visualize(TreeModel& treeModel, const GlobalTransform& glob
 						ImGui::Checkbox("Show Grid", &showGrid);
 						if (node.GetParentHandle() != -1)
 						{
+							if (ImGui::Button("Copy from root"))
+							{
+								std::vector<NodeHandle> parentNodeToRootChain;
+								parentNodeToRootChain.emplace_back(m_selectedInternodeHandle);
+								NodeHandle walker = node.GetParentHandle();
+								while (walker != -1)
+								{
+									parentNodeToRootChain.emplace_back(walker);
+									walker = skeleton.PeekNode(walker).GetParentHandle();
+								}
+								for (auto it = parentNodeToRootChain.rbegin() + 1; it != parentNodeToRootChain.rend(); ++it)
+								{
+									const auto& fromNode = skeleton.PeekNode(*(it - 1));
+									auto& toNode = skeleton.RefNode(*it);
+									toNode.m_data.m_profileConstraints = fromNode.m_data.m_profileConstraints;
+									toNode.m_data.m_boundariesUpdated = true;
+								}
+							}
 							const auto& parentNode = treeModel.RefShootSkeleton().RefNode(node.GetParentHandle());
-							if (!parentNode.m_data.m_profileConstraints.m_boundaries.empty())
+							if (!parentNode.m_data.m_profileConstraints.m_boundaries.empty() || !parentNode.m_data.m_profileConstraints.m_attractors.empty())
 							{
 								ImGui::SameLine();
-								if (ImGui::Button("Copy parent boundaries"))
+								if (ImGui::Button("Copy parent settings"))
 								{
 									node.m_data.m_profileConstraints = parentNode.m_data.m_profileConstraints;
 									node.m_data.m_boundariesUpdated = true;
@@ -635,15 +654,34 @@ void TreeVisualizer::Visualize(TreeModel& treeModel, const GlobalTransform& glob
 				if (ImGui::Begin(backTag.c_str()))
 				{
 					if (m_selectedInternodeHandle != -1) {
-						auto& node = treeModel.RefShootSkeleton().RefNode(m_selectedInternodeHandle);
+						auto& skeleton = treeModel.RefShootSkeleton();
+						auto& node = skeleton.RefNode(m_selectedInternodeHandle);
 						ImGui::Checkbox("Show Grid", &showGrid);
 						if (node.GetParentHandle() != -1)
 						{
+							if(ImGui::Button("Copy from root"))
+							{
+								std::vector<NodeHandle> parentNodeToRootChain;
+								parentNodeToRootChain.emplace_back(m_selectedInternodeHandle);
+								NodeHandle walker = node.GetParentHandle();
+								while (walker != -1)
+								{
+									parentNodeToRootChain.emplace_back(walker);
+									walker = skeleton.PeekNode(walker).GetParentHandle();
+								}
+								for(auto it = parentNodeToRootChain.rbegin() + 1; it != parentNodeToRootChain.rend(); ++it)
+								{
+									const auto& fromNode = skeleton.PeekNode(*(it - 1));
+									auto& toNode = skeleton.RefNode(*it);
+									toNode.m_data.m_profileConstraints = fromNode.m_data.m_profileConstraints;
+									toNode.m_data.m_boundariesUpdated = true;
+								}
+							}
 							const auto& parentNode = treeModel.RefShootSkeleton().RefNode(node.GetParentHandle());
-							if (!parentNode.m_data.m_profileConstraints.m_boundaries.empty())
+							if (!parentNode.m_data.m_profileConstraints.m_boundaries.empty() || !parentNode.m_data.m_profileConstraints.m_attractors.empty())
 							{
 								ImGui::SameLine();
-								if (ImGui::Button("Copy parent boundaries"))
+								if (ImGui::Button("Copy parent settings"))
 								{
 									node.m_data.m_profileConstraints = parentNode.m_data.m_profileConstraints;
 									node.m_data.m_boundariesUpdated = true;

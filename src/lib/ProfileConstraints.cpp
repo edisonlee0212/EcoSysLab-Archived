@@ -323,6 +323,19 @@ glm::vec2 ProfileConstraints::GetTarget(const glm::vec2& position) const
 				}
 			}
 		}
+	}else if(m_boundaries.empty() && !m_attractors.empty())
+	{
+		auto distanceToAttractor = FLT_MAX;
+		for (const auto& attractor : m_attractors)
+		{
+			const auto currentClosestPoint = attractor.FindClosestPoint(position);
+			const float currentDistanceToAttractor = glm::distance(currentClosestPoint, position);
+			if (currentDistanceToAttractor < distanceToAttractor)
+			{
+				distanceToAttractor = currentDistanceToAttractor;
+				closestPoint = currentClosestPoint;
+			}
+		}
 	}
 	return closestPoint - position;
 }

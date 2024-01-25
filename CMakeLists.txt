@@ -118,8 +118,6 @@ target_link_libraries(ecosyslab
 	csvpp
 	JSON
 	Base64
-	${CMAKE_CURRENT_BINARY_DIR}/3rdParty/OpenSubdiv/opensubdiv/osdCPU.lib
-	${CMAKE_CURRENT_BINARY_DIR}/3rdParty/OpenSubdiv/opensubdiv/osdGPU.lib
 	)
 
 target_compile_definitions(ecosyslab

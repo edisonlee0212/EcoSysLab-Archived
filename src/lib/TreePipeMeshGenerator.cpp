@@ -3,7 +3,6 @@
 #include "Octree.hpp"
 #include "Jobs.hpp"
 #include "TreeMeshGenerator.hpp"
-#include "regression/bfr_evaluate/bfrSurfaceEvaluator.h"
 #include <glm/gtx/intersect.hpp>
 #include <glm/gtx/io.hpp>
 #include "MeshGenUtils.hpp"
