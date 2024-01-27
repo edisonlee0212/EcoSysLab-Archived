@@ -31,8 +31,8 @@ namespace EcoSysLab
 
 		float m_shiftPushRatio = 0.0f;
 		float m_sidePushRatio = 1.0f;
-		float m_frontPushRatio = 1.0f;
-		float m_rotationPushRatio = 0.5f;
+		float m_frontPushRatio = 0.0f;
+		float m_rotationPushRatio = 1.f;
 
 
 		PlottedDistribution<float> m_branchTwistDistribution{};

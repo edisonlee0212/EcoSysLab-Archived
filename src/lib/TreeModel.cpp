@@ -1860,10 +1860,14 @@ void TreeModel::CalculatePipeProfileAdjustedTransforms(const PipeModelParameters
 			node.m_data.m_adjustedGlobalPosition += parentUp * newOffset.y * pipeModelParameters.m_sidePushRatio * node.m_data.m_pipeCellRadius;
 			node.m_data.m_adjustedGlobalPosition += parentLeft * newOffset.x * pipeModelParameters.m_sidePushRatio * node.m_data.m_pipeCellRadius;
 			node.m_data.m_adjustedGlobalPosition += parentFront * (sinFront * outerRadius * pipeModelParameters.m_rotationPushRatio) * node.m_data.m_pipeCellRadius;
+		}else if(node.m_data.m_apical)
+		{
+			//This part needs improvement.
+			node.m_data.m_adjustedGlobalPosition += parentFront * sinFront * maxDistanceToCenter * pipeModelParameters.m_frontPushRatio * node.m_data.m_pipeCellRadius;
 		}
 		node.m_data.m_adjustedGlobalPosition += parentUp * node.m_data.m_shift.y * pipeModelParameters.m_shiftPushRatio * node.m_data.m_pipeCellRadius;
 		node.m_data.m_adjustedGlobalPosition += parentLeft * node.m_data.m_shift.x * pipeModelParameters.m_shiftPushRatio * node.m_data.m_pipeCellRadius;
-		node.m_data.m_adjustedGlobalPosition += parentFront * sinFront * maxDistanceToCenter * pipeModelParameters.m_frontPushRatio * node.m_data.m_pipeCellRadius;
+		
 	}
 }
 
