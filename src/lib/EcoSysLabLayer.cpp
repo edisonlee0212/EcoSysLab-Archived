@@ -179,8 +179,7 @@ void EcoSysLabLayer::Visualization() {
 			auto& treeVisualizer = tree->m_treeVisualizer;
 			const auto globalTransform = scene->GetDataComponent<GlobalTransform>(m_selectedTree);
 			const auto rayTracerLayer = Application::GetLayer<RayTracerLayer>();
-			if (//m_visualizationCameraWindowFocused &&
-				editorLayer->GetKey(GLFW_MOUSE_BUTTON_RIGHT) == KeyActionType::Release
+			if (editorLayer->GetKey(GLFW_MOUSE_BUTTON_RIGHT) == KeyActionType::Release
 				&& treeVisualizer.m_checkpointIteration == treeModel.CurrentIteration())
 			{
 				static bool mayNeedGeometryGeneration = false;
@@ -224,7 +223,7 @@ void EcoSysLabLayer::Visualization() {
 									}
 									if (m_autoGenerateStrandMeshAfterEditing)
 									{
-										tree->InitializePipeModelMeshRenderer(m_pipeMeshGeneratorSettings);
+										tree->InitializeStrandModelMeshRenderer(m_strandMeshGeneratorSettings);
 									}
 								}
 							}
@@ -248,7 +247,7 @@ void EcoSysLabLayer::Visualization() {
 									}
 									if (m_autoGenerateStrandMeshAfterEditing)
 									{
-										tree->InitializePipeModelMeshRenderer(m_pipeMeshGeneratorSettings);
+										tree->InitializeStrandModelMeshRenderer(m_strandMeshGeneratorSettings);
 									}
 								}
 							}
@@ -407,7 +406,7 @@ void EcoSysLabLayer::Visualization() {
 									}
 									if (m_autoGenerateStrandMeshAfterEditing)
 									{
-										tree->InitializePipeModelMeshRenderer(m_pipeMeshGeneratorSettings);
+										tree->InitializeStrandModelMeshRenderer(m_strandMeshGeneratorSettings);
 									}
 								}
 							}
@@ -552,7 +551,7 @@ void EcoSysLabLayer::Visualization() {
 						}
 						if (m_autoGenerateStrandMeshAfterEditing)
 						{
-							tree->InitializePipeModelMeshRenderer(m_pipeMeshGeneratorSettings);
+							tree->InitializeStrandModelMeshRenderer(m_strandMeshGeneratorSettings);
 						}
 					}
 				}
@@ -780,20 +779,20 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 			if (ImGui::Button("Clear Meshes")) {
 				ClearMeshes();
 			}
-			if (ImGui::TreeNodeEx("Pipe Mesh generation")) {
-				m_pipeMeshGeneratorSettings.OnInspect(editorLayer);
+			if (ImGui::TreeNodeEx("Strand Model Mesh generation")) {
+				m_strandMeshGeneratorSettings.OnInspect(editorLayer);
 				ImGui::TreePop();
 			}
 			if (ImGui::Button("Build Profiles")) {
-				GeneratePipeModelProfiles();
+				GenerateStrandModelProfiles();
 			}
 			ImGui::SameLine();
-			if (ImGui::Button("Generate Meshes (Strands)")) {
-				GeneratePipeModelMeshes(m_pipeMeshGeneratorSettings);
+			if (ImGui::Button("Generate Strand Model Meshes")) {
+				GenerateStrandModelMeshes(m_strandMeshGeneratorSettings);
 			}
 			ImGui::SameLine();
-			if (ImGui::Button("Clear Meshes (Strands)")) {
-				ClearPipeModelMeshes();
+			if (ImGui::Button("Clear Strand Model Meshes")) {
+				ClearStrandModelMeshes();
 			}
 			if (ImGui::TreeNode("Tree Growth Settings")) {
 				if (ImGui::Button("Grow weekly")) m_simulationSettings.m_deltaTime = 0.01918f;
@@ -912,7 +911,7 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 					}
 					if (m_autoGenerateStrandMeshAfterEditing)
 					{
-						tree->InitializePipeModelMeshRenderer(m_pipeMeshGeneratorSettings);
+						tree->InitializeStrandModelMeshRenderer(m_strandMeshGeneratorSettings);
 					}
 				}
 			}
@@ -1810,7 +1809,7 @@ void EcoSysLabLayer::GenerateMeshes(const TreeMeshGeneratorSettings& meshGenerat
 	}
 }
 
-void EcoSysLabLayer::GeneratePipeModelProfiles() const
+void EcoSysLabLayer::GenerateStrandModelProfiles() const
 {
 	const auto scene = GetScene();
 	const std::vector<Entity>* treeEntities =
@@ -1825,7 +1824,7 @@ void EcoSysLabLayer::GeneratePipeModelProfiles() const
 }
 
 
-void EcoSysLabLayer::GeneratePipeModelMeshes(const PipeModelMeshGeneratorSettings& pipeModelMeshGeneratorSettings) const
+void EcoSysLabLayer::GenerateStrandModelMeshes(const StrandModelMeshGeneratorSettings& strandModelMeshGeneratorSettings) const
 {
 	const auto scene = GetScene();
 	const std::vector<Entity>* treeEntities =
@@ -1834,12 +1833,12 @@ void EcoSysLabLayer::GeneratePipeModelMeshes(const PipeModelMeshGeneratorSetting
 		const auto copiedEntities = *treeEntities;
 		for (auto treeEntity : copiedEntities) {
 			const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
-			tree->InitializePipeModelMeshRenderer(pipeModelMeshGeneratorSettings);
+			tree->InitializeStrandModelMeshRenderer(strandModelMeshGeneratorSettings);
 		}
 	}
 }
 
-void EcoSysLabLayer::ClearPipeModelMeshes() const
+void EcoSysLabLayer::ClearStrandModelMeshes() const
 {
 	const auto scene = GetScene();
 	const std::vector<Entity>* treeEntities =
@@ -1849,7 +1848,7 @@ void EcoSysLabLayer::ClearPipeModelMeshes() const
 		for (auto treeEntity : copiedEntities) {
 			const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
 			tree->ClearStrandRenderer();
-			tree->ClearPipeModelMeshRenderer();
+			tree->ClearStrandModelMeshRenderer();
 		}
 	}
 }

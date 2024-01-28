@@ -1,7 +1,7 @@
 #pragma once
 #include "Skeleton.hpp"
 #include "EnvironmentGrid.hpp"
-#include "PipeModelParameters.hpp"
+#include "StrandModelParameters.hpp"
 #include "ProfileConstraints.hpp"
 #include "TreeOccupancyGrid.hpp"
 using namespace EvoEngine;
@@ -99,12 +99,12 @@ namespace EcoSysLab
 		std::vector<glm::mat4> m_leaves;
 		std::vector<glm::mat4> m_fruits;
 
-#pragma region Pipe Model
-		PipeProfile<CellParticlePhysicsData> m_frontProfile{};
-		std::unordered_map<PipeHandle, ParticleHandle> m_frontParticleMap{};
+#pragma region Strand Model
+		StrandModelProfile<CellParticlePhysicsData> m_frontProfile{};
+		std::unordered_map<StrandHandle, ParticleHandle> m_frontParticleMap{};
 		bool m_boundariesUpdated = false;
-		PipeProfile<CellParticlePhysicsData> m_backProfile{};
-		std::unordered_map<PipeHandle, ParticleHandle> m_backParticleMap{};
+		StrandModelProfile<CellParticlePhysicsData> m_backProfile{};
+		std::unordered_map<StrandHandle, ParticleHandle> m_backParticleMap{};
 		ProfileConstraints m_profileConstraints {};
 
 		float m_frontControlPointDistance = 0.0f;
@@ -122,8 +122,8 @@ namespace EcoSysLab
 
 		glm::vec3 m_adjustedGlobalPosition{};
 		glm::quat m_adjustedGlobalRotation{};
-		float m_pipeCellRadius = 0.002f;
-		int m_pipeSize = 0;
+		float m_strandRadius = 0.002f;
+		int m_strandCount = 0;
 #pragma endregion
 	};
 
@@ -146,10 +146,10 @@ namespace EcoSysLab
 
 		int m_maxLevel = 0;
 
-#pragma region Pipe Model
+#pragma region Strand Model
 		bool m_parallelScheduling = true;
 		
-		PipeModelPipeGroup m_pipeGroup {};
+		StrandModelStrandGroup m_strandGroup {};
 		
 		float m_profileCalculationTime = 0.0f;
 		int m_numOfParticles = 0;

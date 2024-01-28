@@ -163,10 +163,10 @@ namespace EcoSysLab {
 		int m_visualizationCameraResolutionY = 1;
 
 		TreeMeshGeneratorSettings m_meshGeneratorSettings;
-		PipeModelMeshGeneratorSettings m_pipeMeshGeneratorSettings{};
+		StrandModelMeshGeneratorSettings m_strandMeshGeneratorSettings{};
 		Entity m_selectedTree = {};
 
-		glm::vec2 GetMouseSceneCameraPosition() const;
+		[[nodiscard]] glm::vec2 GetMouseSceneCameraPosition() const;
 
 		void Simulate(float deltaTime);
 
@@ -174,10 +174,10 @@ namespace EcoSysLab {
 
 		void ClearMeshes() const;
 
-		void GeneratePipeModelProfiles() const;
-		void GeneratePipeModelMeshes(const PipeModelMeshGeneratorSettings& pipeModelMeshGeneratorSettings) const;
+		void GenerateStrandModelProfiles() const;
+		void GenerateStrandModelMeshes(const StrandModelMeshGeneratorSettings& strandModelMeshGeneratorSettings) const;
 
-		void ClearPipeModelMeshes() const;
+		void ClearStrandModelMeshes() const;
 
 		void ResetAllTrees(const std::vector<Entity>* treeEntities);
 

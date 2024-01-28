@@ -116,15 +116,15 @@ namespace EcoSysLab {
 	template<typename SkeletonData, typename FlowData, typename NodeData>
 	class CylindricalMeshGenerator {
 	public:
-		void Generate(const Skeleton<SkeletonData, FlowData, NodeData>& treeSkeleton, std::vector<Vertex>& vertices,
+		static void Generate(const Skeleton<SkeletonData, FlowData, NodeData>& treeSkeleton, std::vector<Vertex>& vertices,
 			std::vector<unsigned int>& indices, const TreeMeshGeneratorSettings& settings,
-			const std::function<float(float xFactor, float distanceToRoot)>& func) const;
+			const std::function<float(float xFactor, float distanceToRoot)>& func);
 	};
 	template<typename SkeletonData, typename FlowData, typename NodeData>
 	class VoxelMeshGenerator {
 	public:
-		void Generate(const Skeleton<SkeletonData, FlowData, NodeData>& treeSkeleton, std::vector<Vertex>& vertices,
-			std::vector<unsigned int>& indices, const TreeMeshGeneratorSettings& settings) const;
+		static void Generate(const Skeleton<SkeletonData, FlowData, NodeData>& treeSkeleton, std::vector<Vertex>& vertices,
+			std::vector<unsigned int>& indices, const TreeMeshGeneratorSettings& settings);
 	};
 
 	struct TreePartInfo
@@ -140,7 +140,7 @@ namespace EcoSysLab {
 	void CylindricalMeshGenerator<SkeletonData, FlowData, NodeData>::Generate(const
 		Skeleton<SkeletonData, FlowData, NodeData>& treeSkeleton, std::vector<Vertex>& vertices,
 		std::vector<unsigned int>& indices, const TreeMeshGeneratorSettings& settings,
-		const std::function<float(float xFactor, float distanceToRoot)>& func) const {
+		const std::function<float(float xFactor, float distanceToRoot)>& func) {
 		const auto& sortedInternodeList = treeSkeleton.RefSortedNodeList();
 		std::vector<std::vector<RingSegment>> ringsList;
 		std::map<NodeHandle, int> steps{};
@@ -628,7 +628,7 @@ namespace EcoSysLab {
 	template <typename SkeletonData, typename FlowData, typename NodeData>
 	void VoxelMeshGenerator<SkeletonData, FlowData, NodeData>::Generate(const
 		Skeleton<SkeletonData, FlowData, NodeData>& treeSkeleton, std::vector<Vertex>& vertices,
-		std::vector<unsigned>& indices, const TreeMeshGeneratorSettings& settings) const
+		std::vector<unsigned>& indices, const TreeMeshGeneratorSettings& settings)
 	{
 		const auto boxSize = treeSkeleton.m_max - treeSkeleton.m_min;
 		Octree<bool> octree;

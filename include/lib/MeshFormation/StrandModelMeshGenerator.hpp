@@ -1,21 +1,21 @@
 #pragma once
 
 #include "Vertex.hpp"
-#include "PipeModelData.hpp"
+#include "StrandModelData.hpp"
 #include "TreeMeshGenerator.hpp"
 #include "TreeModel.hpp"
 
 using namespace EvoEngine;
 namespace EcoSysLab {
-	enum class TreePipeMeshGeneratorType
+	enum class StrandModelMeshGeneratorType
 	{
 		RecursiveSlicing,
 		HybridMarchingCube
 	};
 
-	struct PipeModelMeshGeneratorSettings
+	struct StrandModelMeshGeneratorSettings
 	{
-		unsigned m_generatorType = static_cast<unsigned>(TreePipeMeshGeneratorType::HybridMarchingCube);
+		unsigned m_generatorType = static_cast<unsigned>(StrandModelMeshGeneratorType::HybridMarchingCube);
 #pragma region Recursive Slicing
 		int m_stepsPerSegment = 4;
 		// this is for debugging purposes only and should not be used to obtain a proper mesh
@@ -49,17 +49,17 @@ namespace EcoSysLab {
 		FoliageParameters m_foliageSettings = {};
 		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer);
 	};
-	class TreePipeMeshGenerator
+	class StrandModelMeshGenerator
 	{
 		static void RecursiveSlicing(
 			const TreeModel& treeModel, std::vector<Vertex>& vertices,
-			std::vector<unsigned int>& indices, const PipeModelMeshGeneratorSettings& settings);
+			std::vector<unsigned int>& indices, const StrandModelMeshGeneratorSettings& settings);
 		static void MarchingCube(
 			const TreeModel& treeModel, std::vector<Vertex>& vertices,
-			std::vector<unsigned int>& indices, const PipeModelMeshGeneratorSettings& settings);
+			std::vector<unsigned int>& indices, const StrandModelMeshGeneratorSettings& settings);
 
 		static void CylindricalMeshing(const TreeModel& treeModel, std::vector<Vertex>& vertices,
-			std::vector<unsigned int>& indices, const PipeModelMeshGeneratorSettings& settings);
+			std::vector<unsigned int>& indices, const StrandModelMeshGeneratorSettings& settings);
 
 		static void MeshSmoothing(std::vector<Vertex>& vertices,
 			std::vector<unsigned int>& indices);
@@ -71,6 +71,6 @@ namespace EcoSysLab {
 	public:
 		static void Generate(
 			const TreeModel& treeModel, std::vector<Vertex>& vertices,
-			std::vector<unsigned int>& indices, const PipeModelMeshGeneratorSettings& settings);
+			std::vector<unsigned int>& indices, const StrandModelMeshGeneratorSettings& settings);
 	};
 }

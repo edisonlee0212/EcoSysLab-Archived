@@ -1,20 +1,20 @@
 #pragma once
 #include "Skeleton.hpp"
-#include "PipeGroup.hpp"
+#include "StrandGroup.hpp"
 
-#include "PipeProfile.hpp"
+#include "StrandModelProfile.hpp"
 using namespace EvoEngine;
 namespace EcoSysLab
 {
-	struct PipeModelPipeGroupData
+	struct StrandModelStrandGroupData
 	{
 	};
 
-	struct PipeModelPipeData
+	struct StrandModelStrandData
 	{
 	};
 
-	struct PipeModelPipeSegmentData
+	struct StrandModelStrandSegmentData
 	{
 		/**
 		 * \brief The handle of the internode this pipe segment belongs to. Pipe -> PipeSegment <-> Cell <- Profile <- Internode
@@ -24,13 +24,13 @@ namespace EcoSysLab
 		ParticleHandle m_backProfileParticleHandle = -1;
 	};
 
-	typedef PipeGroup<PipeModelPipeGroupData, PipeModelPipeData, PipeModelPipeSegmentData> PipeModelPipeGroup;
+	typedef StrandGroup<StrandModelStrandGroupData, StrandModelStrandData, StrandModelStrandSegmentData> StrandModelStrandGroup;
 
 
 	struct CellParticlePhysicsData
 	{
-		PipeHandle m_pipeHandle = -1;
-		PipeSegmentHandle m_pipeSegmentHandle = -1;
+		StrandHandle m_strandHandle = -1;
+		StrandSegmentHandle m_strandSegmentHandle = -1;
 		bool m_mainChild = false;
 		bool m_base = false;
 	};

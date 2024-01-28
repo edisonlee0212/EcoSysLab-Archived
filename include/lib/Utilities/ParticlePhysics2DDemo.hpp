@@ -1,5 +1,5 @@
 #pragma once
-#include "PipeProfile.hpp"
+#include "StrandModelProfile.hpp"
 #include "ProfileConstraints.hpp"
 using namespace EvoEngine;
 namespace EcoSysLab
@@ -10,7 +10,7 @@ namespace EcoSysLab
 	};
 	class ParticlePhysics2DDemo : public IPrivateComponent
 	{
-		PipeProfile<ParticlePhysicsDemoData> m_particlePhysics2D;
+		StrandModelProfile<ParticlePhysicsDemoData> m_particlePhysics2D;
 		ProfileConstraints m_profileBoundaries;
 		bool m_boundariesUpdated = false;
 	public:

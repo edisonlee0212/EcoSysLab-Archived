@@ -1,4 +1,4 @@
-#include "TreePipeMeshGenerator.hpp"
+#include "StrandModelMeshGenerator.hpp"
 #include "Curve.hpp"
 #include "Octree.hpp"
 #include "Jobs.hpp"
@@ -13,10 +13,10 @@
 
 using namespace EcoSysLab;
 
-typedef std::vector<std::pair<PipeHandle, glm::vec3> > Slice;
-typedef std::vector<PipeHandle> PipeCluster;
+typedef std::vector<std::pair<StrandHandle, glm::vec3> > Slice;
+typedef std::vector<StrandHandle> PipeCluster;
 
-void PipeModelMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
+void StrandModelMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
 	ImGui::Combo("Mode", { "Recursive Slicing", "Hybrid Marching Cube" }, m_generatorType);
 	if (m_generatorType == 0 && ImGui::TreeNode("Recursive Slicing settings"))
@@ -60,17 +60,17 @@ void PipeModelMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLayer
 	}
 }
 
-void TreePipeMeshGenerator::Generate(const TreeModel& treeModel, std::vector<Vertex>& vertices,
-	std::vector<unsigned>& indices, const PipeModelMeshGeneratorSettings& settings)
+void StrandModelMeshGenerator::Generate(const TreeModel& treeModel, std::vector<Vertex>& vertices,
+	std::vector<unsigned>& indices, const StrandModelMeshGeneratorSettings& settings)
 {
 	const float time = Times::Now();
 	switch (settings.m_generatorType)
 	{
-	case TreePipeMeshGeneratorType::RecursiveSlicing:
+	case StrandModelMeshGeneratorType::RecursiveSlicing:
 	{
 		RecursiveSlicing(treeModel, vertices, indices, settings);
 	}break;
-	case TreePipeMeshGeneratorType::HybridMarchingCube:
+	case StrandModelMeshGeneratorType::HybridMarchingCube:
 	{
 		MarchingCube(treeModel, vertices, indices, settings);
 	}break;
@@ -179,14 +179,14 @@ std::vector<glm::ivec3> voxelizeLineSeg(glm::vec3 start, glm::vec3 end, float vo
 	return retVal;
 }
 
-std::vector<PipeSegmentHandle> getNextSegGroup(const PipeModelPipeGroup& pipes, const std::vector<PipeSegmentHandle>& segGroup)
+std::vector<StrandSegmentHandle> getNextSegGroup(const StrandModelStrandGroup& pipes, const std::vector<StrandSegmentHandle>& segGroup)
 {
-	std::vector<PipeSegmentHandle> nextSegGroup;
+	std::vector<StrandSegmentHandle> nextSegGroup;
 
-	for (const PipeSegmentHandle& segHandle : segGroup)
+	for (const StrandSegmentHandle& segHandle : segGroup)
 	{
-		auto& seg = pipes.PeekPipeSegment(segHandle);
-		if (!seg.IsEndPipeSegment())
+		auto& seg = pipes.PeekStrandSegment(segHandle);
+		if (!seg.IsEnd())
 		{
 			nextSegGroup.push_back(seg.GetNextHandle());
 		}
@@ -195,14 +195,14 @@ std::vector<PipeSegmentHandle> getNextSegGroup(const PipeModelPipeGroup& pipes, 
 	return nextSegGroup;
 }
 
-glm::vec3 getSegDir(const TreeModel& treeModel, const PipeSegmentHandle segHandle, float t = 1.0f)
+glm::vec3 getSegDir(const TreeModel& treeModel, const StrandSegmentHandle segHandle, float t = 1.0f)
 {
-	return treeModel.InterpolatePipeSegmentAxis(segHandle, t);
+	return treeModel.InterpolateStrandSegmentAxis(segHandle, t);
 }
 
-glm::vec3 getSegPos(const TreeModel& treeModel, const PipeSegmentHandle segHandle, float t = 1.0f)
+glm::vec3 getSegPos(const TreeModel& treeModel, const StrandSegmentHandle segHandle, float t = 1.0f)
 {
-	auto retVal = treeModel.InterpolatePipeSegmentPosition(segHandle, t);
+	auto retVal = treeModel.InterpolateStrandSegmentPosition(segHandle, t);
 	for (size_t i = 0; i < 3; i++)
 	{
 		if (std::isinf(retVal[i]))
@@ -218,46 +218,46 @@ glm::vec3 getSegPos(const TreeModel& treeModel, const PipeSegmentHandle segHandl
 	return retVal;
 }
 
-NodeHandle getNodeHandle(const PipeModelPipeGroup& pipeGroup, const PipeHandle& pipeHandle, float t)
+NodeHandle getNodeHandle(const StrandModelStrandGroup& pipeGroup, const StrandHandle& pipeHandle, float t)
 {
-	size_t lookupIndex = glm::round(t) < pipeGroup.PeekPipe(pipeHandle).PeekPipeSegmentHandles().size() ? glm::round(t) : (pipeGroup.PeekPipe(pipeHandle).PeekPipeSegmentHandles().size() - 1);
-	auto& pipeSegmentHandle = pipeGroup.PeekPipe(pipeHandle).PeekPipeSegmentHandles()[lookupIndex];
-	auto& pipeSegment = pipeGroup.PeekPipeSegment(pipeSegmentHandle);
+	size_t lookupIndex = glm::round(t) < pipeGroup.PeekStrand(pipeHandle).PeekStrandSegmentHandles().size() ? glm::round(t) : (pipeGroup.PeekStrand(pipeHandle).PeekStrandSegmentHandles().size() - 1);
+	auto& pipeSegmentHandle = pipeGroup.PeekStrand(pipeHandle).PeekStrandSegmentHandles()[lookupIndex];
+	auto& pipeSegment = pipeGroup.PeekStrandSegment(pipeSegmentHandle);
 
 	return pipeSegment.m_data.m_nodeHandle;
 }
 
-bool isValidPipeParam(const TreeModel& treeModel, const PipeHandle& pipeHandle, float t)
+bool isValidPipeParam(const TreeModel& treeModel, const StrandHandle& pipeHandle, float t)
 {
-	const auto& pipe = treeModel.PeekShootSkeleton().m_data.m_pipeGroup.PeekPipe(pipeHandle);
-	return pipe.PeekPipeSegmentHandles().size() > glm::floor(t);
+	const auto& pipe = treeModel.PeekShootSkeleton().m_data.m_strandGroup.PeekStrand(pipeHandle);
+	return pipe.PeekStrandSegmentHandles().size() > glm::floor(t);
 }
 
-glm::vec3 getPipeDir(const TreeModel& treeModel, const PipeHandle& pipeHandle, float t)
+glm::vec3 getPipeDir(const TreeModel& treeModel, const StrandHandle& pipeHandle, float t)
 {
-	const auto& pipe = treeModel.PeekShootSkeleton().m_data.m_pipeGroup.PeekPipe(pipeHandle);
-	auto segHandle = pipe.PeekPipeSegmentHandles()[t];
+	const auto& pipe = treeModel.PeekShootSkeleton().m_data.m_strandGroup.PeekStrand(pipeHandle);
+	auto segHandle = pipe.PeekStrandSegmentHandles()[t];
 	return getSegDir(treeModel, segHandle, fmod(t, 1.0));
 }
 
-glm::vec3 getPipePos(const TreeModel& treeModel, const PipeHandle& pipeHandle, float t)
+glm::vec3 getPipePos(const TreeModel& treeModel, const StrandHandle& pipeHandle, float t)
 {
-	const auto& pipe = treeModel.PeekShootSkeleton().m_data.m_pipeGroup.PeekPipe(pipeHandle);
-	auto segHandle = pipe.PeekPipeSegmentHandles()[t];
+	const auto& pipe = treeModel.PeekShootSkeleton().m_data.m_strandGroup.PeekStrand(pipeHandle);
+	auto segHandle = pipe.PeekStrandSegmentHandles()[t];
 	return getSegPos(treeModel, segHandle, fmod(t, 1.0));
 }
 
-const Particle2D<CellParticlePhysicsData>& getEndParticle(const TreeModel& treeModel, const PipeHandle& pipeHandle, size_t index)
+const Particle2D<CellParticlePhysicsData>& getEndParticle(const TreeModel& treeModel, const StrandHandle& pipeHandle, size_t index)
 {
 	if (!isValidPipeParam(treeModel, pipeHandle, index))
 	{
-		std::cerr << "Error: Pipe " << pipeHandle << " does not exist at " << index << std::endl;
+		std::cerr << "Error: Strand " << pipeHandle << " does not exist at " << index << std::endl;
 	}
 
 	const auto& skeleton = treeModel.PeekShootSkeleton();
-	const auto& pipe = skeleton.m_data.m_pipeGroup.PeekPipe(pipeHandle);
-	auto segHandle = pipe.PeekPipeSegmentHandles()[index];
-	auto& pipeSegment = skeleton.m_data.m_pipeGroup.PeekPipeSegment(segHandle);
+	const auto& pipe = skeleton.m_data.m_strandGroup.PeekStrand(pipeHandle);
+	auto segHandle = pipe.PeekStrandSegmentHandles()[index];
+	auto& pipeSegment = skeleton.m_data.m_strandGroup.PeekStrandSegment(segHandle);
 
 	const auto& node = skeleton.PeekNode(pipeSegment.m_data.m_nodeHandle);
 	const auto& startProfile = node.m_data.m_frontProfile;
@@ -271,17 +271,17 @@ const Particle2D<CellParticlePhysicsData>& getEndParticle(const TreeModel& treeM
 	return endParticle;
 }
 
-const Particle2D<CellParticlePhysicsData>& getStartParticle(const TreeModel& treeModel, const PipeHandle& pipeHandle, size_t index)
+const Particle2D<CellParticlePhysicsData>& getStartParticle(const TreeModel& treeModel, const StrandHandle& pipeHandle, size_t index)
 {
 	if (!isValidPipeParam(treeModel, pipeHandle, index))
 	{
-		std::cerr << "Error: Pipe " << pipeHandle << " does not exist at " << index << std::endl;
+		std::cerr << "Error: Strand " << pipeHandle << " does not exist at " << index << std::endl;
 	}
 
 	const auto& skeleton = treeModel.PeekShootSkeleton();
-	const auto& pipe = skeleton.m_data.m_pipeGroup.PeekPipe(pipeHandle);
-	auto segHandle = pipe.PeekPipeSegmentHandles()[index];
-	auto& pipeSegment = skeleton.m_data.m_pipeGroup.PeekPipeSegment(segHandle);
+	const auto& pipe = skeleton.m_data.m_strandGroup.PeekStrand(pipeHandle);
+	auto segHandle = pipe.PeekStrandSegmentHandles()[index];
+	auto& pipeSegment = skeleton.m_data.m_strandGroup.PeekStrandSegment(segHandle);
 
 	const auto& node = skeleton.PeekNode(pipeSegment.m_data.m_nodeHandle);
 	const auto& startProfile = node.m_data.m_frontProfile;
@@ -295,7 +295,7 @@ const Particle2D<CellParticlePhysicsData>& getStartParticle(const TreeModel& tre
 	return startParticle;
 }
 
-float getPipePolar(const TreeModel& treeModel, const PipeHandle& pipeHandle, float t)
+float getPipePolar(const TreeModel& treeModel, const StrandHandle& pipeHandle, float t)
 {
 	// cheap interpolation, maybe improve this later ?
 	const auto& p0 = getStartParticle(treeModel, pipeHandle, std::floor(t));
@@ -373,7 +373,7 @@ void dfs(const Graph& g, size_t v, std::vector<size_t>& componentMembers, std::v
 	}
 }
 
-void delaunay(Graph& g, float removalLength, std::vector<size_t>& candidates, const PipeModelPipeGroup& pipeGroup, const PipeCluster& prevPipes, float t)
+void delaunay(Graph& g, float removalLength, std::vector<size_t>& candidates, const StrandModelStrandGroup& pipeGroup, const PipeCluster& prevPipes, float t)
 {
 	std::vector<float> positions;
 
@@ -394,9 +394,9 @@ void delaunay(Graph& g, float removalLength, std::vector<size_t>& candidates, co
 
 		// make an exception if the three indices belong to the same skeleton part
 		// does not work properly, just creates artefacts
-		/*PipeHandle p0 = prevPipes[v0];
-		PipeHandle p1 = prevPipes[v1];
-		PipeHandle p2 = prevPipes[v2];
+		/*StrandHandle p0 = prevPipes[v0];
+		StrandHandle p1 = prevPipes[v1];
+		StrandHandle p2 = prevPipes[v2];
 
 		NodeHandle n0 = getNodeHandle(pipeGroup, p0, t);
 		NodeHandle n1 = getNodeHandle(pipeGroup, p1, t);
@@ -433,15 +433,15 @@ std::vector<size_t> collectComponent(const Graph& g, size_t startIndex, std::vec
 	return componentMembers;
 }
 
-std::vector<PipeSegmentHandle> getSegGroup(const PipeModelPipeGroup& pipes, size_t index)
+std::vector<StrandSegmentHandle> getSegGroup(const StrandModelStrandGroup& pipes, size_t index)
 {
-	std::vector<PipeSegmentHandle> segGroup;
+	std::vector<StrandSegmentHandle> segGroup;
 
-	for (auto& pipe : pipes.PeekPipes())
+	for (auto& pipe : pipes.PeekStrands())
 	{
-		if (pipe.PeekPipeSegmentHandles().size() > index)
+		if (pipe.PeekStrandSegmentHandles().size() > index)
 		{
-			segGroup.push_back(pipe.PeekPipeSegmentHandles()[index]);
+			segGroup.push_back(pipe.PeekStrandSegmentHandles()[index]);
 		}
 		else
 		{
@@ -453,11 +453,11 @@ std::vector<PipeSegmentHandle> getSegGroup(const PipeModelPipeGroup& pipes, size
 }
 
 
-void obtainProfiles(const PipeModelPipeGroup& pipes, std::vector<PipeSegmentHandle> segGroup, float maxDist)
+void obtainProfiles(const StrandModelStrandGroup& pipes, std::vector<StrandSegmentHandle> segGroup, float maxDist)
 {
 	std::vector<bool> visited(segGroup.size(), false);
 
-	std::vector<std::vector<PipeSegmentHandle> > profiles;
+	std::vector<std::vector<StrandSegmentHandle> > profiles;
 
 	for (auto& segHandle : segGroup)
 	{
@@ -466,19 +466,19 @@ void obtainProfiles(const PipeModelPipeGroup& pipes, std::vector<PipeSegmentHand
 			continue;
 		}
 
-		auto& seg = pipes.PeekPipeSegment(segHandle);
-		PipeHandle pipeHandle = seg.GetPipeHandle();
+		auto& seg = pipes.PeekStrandSegment(segHandle);
+		StrandHandle pipeHandle = seg.GetStrandHandle();
 
 		if (seg.m_info.m_isBoundary && !visited[pipeHandle])
 		{
 			// traverse boundary
-			std::vector<PipeSegmentHandle> profile;
+			std::vector<StrandSegmentHandle> profile;
 			auto handle = segHandle;
 			do
 			{
 				profile.push_back(handle);
-				auto& seg = pipes.PeekPipeSegment(handle);
-				PipeHandle pipeHandle = seg.GetPipeHandle();
+				auto& seg = pipes.PeekStrandSegment(handle);
+				StrandHandle pipeHandle = seg.GetStrandHandle();
 				visited[pipeHandle] = true;
 
 				// get next
@@ -561,8 +561,8 @@ Slice profileToSlice(const TreeModel& treeModel, std::vector<size_t>& profile, c
 
 	for (size_t i = 0; i < profile.size(); i++)
 	{
-		PipeHandle pipeHandle = pipeCluster[profile[i]];
-		slice.push_back(std::pair<PipeHandle, glm::vec3>(pipeHandle, getPipePos(treeModel, pipeHandle, t)));
+		StrandHandle pipeHandle = pipeCluster[profile[i]];
+		slice.push_back(std::pair<StrandHandle, glm::vec3>(pipeHandle, getPipePos(treeModel, pipeHandle, t)));
 	}
 
 	return slice;
@@ -707,7 +707,7 @@ std::pair<Graph, std::vector<size_t> > computeCluster(const TreeModel& treeModel
 	else
 	{
 		if (DEBUG_OUTPUT) std::cout << "computing cluster..." << std::endl;
-		delaunay(strandGraph, maxDist, candidates, treeModel.PeekShootSkeleton().m_data.m_pipeGroup, pipesInPrevious, t);
+		delaunay(strandGraph, maxDist, candidates, treeModel.PeekShootSkeleton().m_data.m_strandGroup, pipesInPrevious, t);
 
 		cluster = collectComponent(strandGraph, index, visited);
 
@@ -730,7 +730,7 @@ std::pair<Graph, std::vector<size_t> > computeCluster(const TreeModel& treeModel
 
 std::pair<Slice, PipeCluster> computeSlice(const TreeModel& treeModel, const PipeCluster& pipesInPrevious, Graph& strandGraph, std::vector<size_t>& cluster, float t, float maxDist)
 {
-	const PipeModelPipeGroup& pipes = treeModel.PeekShootSkeleton().m_data.m_pipeGroup;
+	const StrandModelStrandGroup& pipes = treeModel.PeekShootSkeleton().m_data.m_strandGroup;
 
 	PipeCluster pipesInComponent;
 
@@ -812,7 +812,7 @@ std::pair<Slice, PipeCluster> computeSlice(const TreeModel& treeModel, const Pip
 std::pair< std::vector<Graph>, std::vector<std::vector<size_t> > > computeClusters(const TreeModel& treeModel, const PipeCluster& pipesInPrevious, float t, float maxDist, size_t minStrandCount)
 {
 	const auto& skeleton = treeModel.PeekShootSkeleton();
-	const auto& pipeGroup = skeleton.m_data.m_pipeGroup;
+	const auto& pipeGroup = skeleton.m_data.m_strandGroup;
 
 	std::vector<bool> visited(pipesInPrevious.size(), false);
 	std::vector<std::vector<size_t> > clusters;
@@ -946,10 +946,10 @@ std::pair< std::vector<Graph>, std::vector<std::vector<size_t> > > computeCluste
 
 			for (size_t j : clusters[i])
 			{
-				PipeHandle pipeHandle = pipesInPrevious[j];
+				StrandHandle pipeHandle = pipesInPrevious[j];
 								
 
-				std::cerr << "Pipe no. " << j << " with handle " << pipeHandle << " belonging to node with handle " << pipeSegment.m_data.m_nodeHandle << std::endl;
+				std::cerr << "Strand no. " << j << " with handle " << pipeHandle << " belonging to node with handle " << pipeSegment.m_data.m_nodeHandle << std::endl;
 			}
 
 			outputGraph(graphs[i], "t_" + std::to_string(t) + "_cluster_" + std::to_string(i), pipesInPrevious);
@@ -980,17 +980,17 @@ std::vector<std::pair<Slice, PipeCluster> > computeSlices(const TreeModel& treeM
 	return slices;
 }
 
-void forEachSegment(const PipeModelPipeGroup& pipes, std::vector<PipeSegmentHandle>& segGroup, std::function<void(const PipeSegment<PipeModelPipeSegmentData>&)> func)
+void forEachSegment(const StrandModelStrandGroup& pipes, std::vector<StrandSegmentHandle>& segGroup, std::function<void(const StrandSegment<StrandModelStrandSegmentData>&)> func)
 {
 	for (auto& segHandle : segGroup)
 	{
-		auto& seg = pipes.PeekPipeSegment(segHandle);
+		auto& seg = pipes.PeekStrandSegment(segHandle);
 		func(seg);
 	}
 }
 
-void connect(std::vector<std::pair<PipeHandle, glm::vec3> >& slice0, size_t i0, size_t j0, size_t offset0,
-	std::vector<std::pair<PipeHandle, glm::vec3> >& slice1, size_t i1, size_t j1, size_t offset1,
+void connect(std::vector<std::pair<StrandHandle, glm::vec3> >& slice0, size_t i0, size_t j0, size_t offset0,
+	std::vector<std::pair<StrandHandle, glm::vec3> >& slice1, size_t i1, size_t j1, size_t offset1,
 	std::vector<Vertex>& vertices, std::vector<unsigned>& indices)
 {
 	//if(DEBUG_OUTPUT) std::cout << "connecting " << i0 << ", " << j0 << " to " << i1 << ", " << j1 << std::endl;
@@ -1038,13 +1038,13 @@ size_t midIndex(size_t a, size_t b, size_t size)
 	return (a + mid / 2) % size;
 }
 
-void connectSlices(const PipeModelPipeGroup& pipes, Slice& bottomSlice, size_t bottomOffset,
+void connectSlices(const StrandModelStrandGroup& pipes, Slice& bottomSlice, size_t bottomOffset,
 	std::vector<Slice>& topSlices, std::vector<size_t> topOffsets,
 	std::vector<Vertex>& vertices, std::vector<unsigned>& indices, bool branchConnections)
 {
 	// compute (incomplete) permutation that turns 0 into 1
-	std::vector<std::pair<size_t, size_t> > topPipeHandleIndexMap(pipes.PeekPipes().size(), std::make_pair<>(-1, -1));
-	std::vector<size_t> bottomPipeHandleIndexMap(pipes.PeekPipes().size(), -1);
+	std::vector<std::pair<size_t, size_t> > topPipeHandleIndexMap(pipes.PeekStrands().size(), std::make_pair<>(-1, -1));
+	std::vector<size_t> bottomPipeHandleIndexMap(pipes.PeekStrands().size(), -1);
 
 	for (size_t s = 0; s < topSlices.size(); s++)
 	{
@@ -1207,10 +1207,10 @@ void createTwigTip(const TreeModel& treeModel, std::pair < Slice, PipeCluster>& 
 }
 
 void sliceRecursively(const TreeModel& treeModel, std::pair < Slice, PipeCluster>& prevSlice, size_t prevOffset, float t, float stepSize, float maxDist,
-	std::vector<Vertex>& vertices, std::vector<unsigned>& indices, const PipeModelMeshGeneratorSettings& settings, float accumulatedAngle = 0.0f)
+	std::vector<Vertex>& vertices, std::vector<unsigned>& indices, const StrandModelMeshGeneratorSettings& settings, float accumulatedAngle = 0.0f)
 {
 	const auto& skeleton = treeModel.PeekShootSkeleton();
-	const auto& pipeGroup = skeleton.m_data.m_pipeGroup;
+	const auto& pipeGroup = skeleton.m_data.m_strandGroup;
 
 	// prevent problems with floating point arithmetics
 	if (t + 0.01 > glm::ceil(t))
@@ -1295,43 +1295,43 @@ void sliceRecursively(const TreeModel& treeModel, std::pair < Slice, PipeCluster
 	}
 }
 
-void TreePipeMeshGenerator::RecursiveSlicing(
+void StrandModelMeshGenerator::RecursiveSlicing(
 	const TreeModel& treeModel, std::vector<Vertex>& vertices,
-	std::vector<unsigned>& indices, const PipeModelMeshGeneratorSettings& settings)
+	std::vector<unsigned>& indices, const StrandModelMeshGeneratorSettings& settings)
 {
 	const auto& skeleton = treeModel.PeekShootSkeleton();
-	const auto& pipeGroup = skeleton.m_data.m_pipeGroup;
+	const auto& pipeGroup = skeleton.m_data.m_strandGroup;
 
-	if (pipeGroup.PeekPipes().size() == 0)
+	if (pipeGroup.PeekStrands().size() == 0)
 	{
 		return;
 	}
 
 	if (DEBUG_OUTPUT) std::cout << "getting first seg group" << std::endl;
-	std::vector<PipeSegmentHandle> segGroup0 = getSegGroup(pipeGroup, 0);
+	std::vector<StrandSegmentHandle> segGroup0 = getSegGroup(pipeGroup, 0);
 
 	if (DEBUG_OUTPUT) std::cout << "determining max thickness" << std::endl;
 	float maxThickness = 0.0f;
 	forEachSegment(pipeGroup, segGroup0,
-		[&](const PipeSegment<PipeModelPipeSegmentData>& seg)
+		[&](const StrandSegment<StrandModelStrandSegmentData>& seg)
 		{
-			if (seg.m_info.m_thickness > maxThickness)
+			if (seg.m_info.m_radius > maxThickness)
 			{
-				maxThickness = seg.m_info.m_thickness;
+				maxThickness = seg.m_info.m_radius;
 			}
 		}
 	);
 
 	float maxDist = 2 * maxThickness * sqrt(2) * 2.5f * settings.m_clusterDistance;
 	// initial slice at root:
-	std::vector<bool> visited(pipeGroup.PeekPipes().size(), false);
+	std::vector<bool> visited(pipeGroup.PeekStrands().size(), false);
 
 	// prepare initial pipe cluster:
 	PipeCluster pipeCluster;
 
-	for (size_t i = 0; i < pipeGroup.PeekPipes().size(); i++)
+	for (size_t i = 0; i < pipeGroup.PeekStrands().size(); i++)
 	{
-		pipeCluster.push_back(pipeGroup.PeekPipes()[i].GetHandle());
+		pipeCluster.push_back(pipeGroup.PeekStrands()[i].GetHandle());
 	}
 
 	float stepSize = 1.0f / settings.m_stepsPerSegment;
@@ -1353,16 +1353,16 @@ void TreePipeMeshGenerator::RecursiveSlicing(
 	sliceRecursively(treeModel, firstSlice, 0, stepSize, stepSize, maxDist, vertices, indices, settings);
 }
 
-void TreePipeMeshGenerator::MarchingCube(const TreeModel& treeModel, std::vector<Vertex>& vertices,
-	std::vector<unsigned>& indices, const PipeModelMeshGeneratorSettings& settings)
+void StrandModelMeshGenerator::MarchingCube(const TreeModel& treeModel, std::vector<Vertex>& vertices,
+	std::vector<unsigned>& indices, const StrandModelMeshGeneratorSettings& settings)
 {
 	const auto& skeleton = treeModel.PeekShootSkeleton();
-	const auto& pipeGroup = skeleton.m_data.m_pipeGroup;
+	const auto& pipeGroup = skeleton.m_data.m_strandGroup;
 	// first compute extreme points
 	auto min = glm::vec3(std::numeric_limits<float>::infinity());
 	auto max = glm::vec3(-std::numeric_limits<float>::infinity());
 	bool needTriangulation = false;
-	for (const auto& pipeSegment : pipeGroup.PeekPipeSegments())
+	for (const auto& pipeSegment : pipeGroup.PeekStrandSegments())
 	{
 		const auto& node = skeleton.PeekNode(pipeSegment.m_data.m_nodeHandle);
 		const auto& profile = node.m_data.m_backProfile;
@@ -1395,15 +1395,15 @@ void TreePipeMeshGenerator::MarchingCube(const TreeModel& treeModel, std::vector
 		}
 		float subdivisionLength = settings.m_marchingCubeRadius * 0.5f;
 
-		for (const auto& pipeSegment : pipeGroup.PeekPipeSegments())
+		for (const auto& pipeSegment : pipeGroup.PeekStrandSegments())
 		{
 			const auto& node = skeleton.PeekNode(pipeSegment.m_data.m_nodeHandle);
 			const auto& profile = node.m_data.m_backProfile;
 			if (profile.PeekParticles().size() < settings.m_minCellCountForMajorBranches) continue;
 
 			//Get interpolated position on pipe segment. Example to get middle point here:
-			const auto startPosition = treeModel.InterpolatePipeSegmentPosition(pipeSegment.GetHandle(), 0.0f);
-			const auto endPosition = treeModel.InterpolatePipeSegmentPosition(pipeSegment.GetHandle(), 1.0f);
+			const auto startPosition = treeModel.InterpolateStrandSegmentPosition(pipeSegment.GetHandle(), 0.0f);
+			const auto endPosition = treeModel.InterpolateStrandSegmentPosition(pipeSegment.GetHandle(), 1.0f);
 			const auto distance = glm::distance(startPosition, endPosition);
 			const auto stepSize = glm::max(1, static_cast<int>(distance / subdivisionLength));
 
@@ -1411,7 +1411,7 @@ void TreePipeMeshGenerator::MarchingCube(const TreeModel& treeModel, std::vector
 			for (int step = 0; step < stepSize; step++)
 			{
 				const auto a = static_cast<float>(step) / stepSize;
-				const auto position = treeModel.InterpolatePipeSegmentPosition(pipeSegment.GetHandle(), a);
+				const auto position = treeModel.InterpolateStrandSegmentPosition(pipeSegment.GetHandle(), a);
 				
 				octree.Occupy(position, [&](OctreeNode& octreeNode)
 					{
@@ -1426,11 +1426,11 @@ void TreePipeMeshGenerator::MarchingCube(const TreeModel& treeModel, std::vector
 	CalculateUV(vertices, settings.m_texCoordsMultiplier);
 }
 
-void TreePipeMeshGenerator::CylindricalMeshing(const TreeModel& treeModel, std::vector<Vertex>& vertices,
-	std::vector<unsigned>& indices, const PipeModelMeshGeneratorSettings& settings)
+void StrandModelMeshGenerator::CylindricalMeshing(const TreeModel& treeModel, std::vector<Vertex>& vertices,
+	std::vector<unsigned>& indices, const StrandModelMeshGeneratorSettings& settings)
 {
 	const auto& skeleton = treeModel.PeekShootSkeleton();
-	const auto& pipeGroup = skeleton.m_data.m_pipeGroup;
+	const auto& pipeGroup = skeleton.m_data.m_strandGroup;
 	const auto& sortedInternodeList = skeleton.RefSortedNodeList();
 	std::vector<std::vector<RingSegment>> ringsList;
 	std::map<NodeHandle, int> steps{};
@@ -1455,7 +1455,7 @@ void TreePipeMeshGenerator::CylindricalMeshing(const TreeModel& treeModel, std::
 		float t[4];
 		p[2] = internode.m_data.m_adjustedGlobalPosition;
 		f[2] = internode.m_data.m_adjustedGlobalRotation * glm::vec3(0, 0, -1);
-		t[2] = glm::sqrt(static_cast<float>(particleSize)) * internode.m_data.m_pipeCellRadius;
+		t[2] = glm::sqrt(static_cast<float>(particleSize)) * internode.m_data.m_strandRadius;
 		if (internode.GetParentHandle() == -1)
 		{
 			p[1] = internode.m_info.m_globalPosition;
@@ -1464,7 +1464,7 @@ void TreePipeMeshGenerator::CylindricalMeshing(const TreeModel& treeModel, std::
 			f[1] = internode.m_info.m_globalRotation * glm::vec3(0, 0, -1);
 			f[0] = f[1] * 2.0f - f[2];
 
-			t[2] = glm::sqrt(static_cast<float>(particleSize)) * internode.m_data.m_pipeCellRadius;
+			t[2] = glm::sqrt(static_cast<float>(particleSize)) * internode.m_data.m_strandRadius;
 			t[0] = t[1] * 2.0f - t[2];
 		}
 		else if (internode.GetParentHandle() == 0)
@@ -1475,8 +1475,8 @@ void TreePipeMeshGenerator::CylindricalMeshing(const TreeModel& treeModel, std::
 			f[0] = internode.m_info.m_globalRotation * glm::vec3(0, 0, -1);
 			f[1] = skeleton.PeekNode(0).m_data.m_adjustedGlobalRotation * glm::vec3(0, 0, -1);
 
-			t[0] = glm::sqrt(static_cast<float>(particleSize)) * internode.m_data.m_pipeCellRadius;
-			t[1] = glm::sqrt(static_cast<float>(skeleton.PeekNode(0).m_data.m_backProfile.PeekParticles().size())) * internode.m_data.m_pipeCellRadius;
+			t[0] = glm::sqrt(static_cast<float>(particleSize)) * internode.m_data.m_strandRadius;
+			t[1] = glm::sqrt(static_cast<float>(skeleton.PeekNode(0).m_data.m_backProfile.PeekParticles().size())) * internode.m_data.m_strandRadius;
 		}
 		else
 		{
@@ -1488,8 +1488,8 @@ void TreePipeMeshGenerator::CylindricalMeshing(const TreeModel& treeModel, std::
 
 			int prevParticleSize = skeleton.PeekNode(internode.GetParentHandle()).m_data.m_backProfile.PeekParticles().size();
 			int prevPrevParticleSize = skeleton.PeekNode(skeleton.PeekNode(internode.GetParentHandle()).GetParentHandle()).m_data.m_backProfile.PeekParticles().size();
-			t[1] = glm::sqrt(static_cast<float>(glm::min(prevParticleSize, settings.m_maxCellCountForMinorBranches))) * internode.m_data.m_pipeCellRadius;
-			t[0] = glm::sqrt(static_cast<float>(glm::min(prevPrevParticleSize, settings.m_maxCellCountForMinorBranches))) * internode.m_data.m_pipeCellRadius;
+			t[1] = glm::sqrt(static_cast<float>(glm::min(prevParticleSize, settings.m_maxCellCountForMinorBranches))) * internode.m_data.m_strandRadius;
+			t[0] = glm::sqrt(static_cast<float>(glm::min(prevPrevParticleSize, settings.m_maxCellCountForMinorBranches))) * internode.m_data.m_strandRadius;
 		}
 		if (internode.IsEndNode())
 		{
@@ -1510,7 +1510,7 @@ void TreePipeMeshGenerator::CylindricalMeshing(const TreeModel& treeModel, std::
 
 					f[3] = childInternode.m_data.m_adjustedGlobalRotation * glm::vec3(0, 0, -1);
 
-					t[3] = glm::sqrt(static_cast<float>(childInternode.m_data.m_backProfile.PeekParticles().size())) * internode.m_data.m_pipeCellRadius;
+					t[3] = glm::sqrt(static_cast<float>(childInternode.m_data.m_backProfile.PeekParticles().size())) * internode.m_data.m_strandRadius;
 				}
 			}
 		}
@@ -1798,7 +1798,7 @@ void TreePipeMeshGenerator::CylindricalMeshing(const TreeModel& treeModel, std::
 	}
 }
 
-void TreePipeMeshGenerator::MeshSmoothing(std::vector<Vertex>& vertices, std::vector<unsigned>& indices)
+void StrandModelMeshGenerator::MeshSmoothing(std::vector<Vertex>& vertices, std::vector<unsigned>& indices)
 {
 	std::vector<std::vector<unsigned>> connectivity;
 	connectivity.resize(vertices.size());
@@ -1878,7 +1878,7 @@ void TreePipeMeshGenerator::MeshSmoothing(std::vector<Vertex>& vertices, std::ve
 	}
 }
 
-void TreePipeMeshGenerator::CalculateNormal(std::vector<Vertex>& vertices, const std::vector<unsigned>& indices)
+void StrandModelMeshGenerator::CalculateNormal(std::vector<Vertex>& vertices, const std::vector<unsigned>& indices)
 {
 	auto normalLists = std::vector<std::vector<glm::vec3>>();
 	const auto size = vertices.size();
@@ -1910,7 +1910,7 @@ void TreePipeMeshGenerator::CalculateNormal(std::vector<Vertex>& vertices, const
 	}
 }
 
-void TreePipeMeshGenerator::CalculateUV(std::vector<Vertex>& vertices, float factor)
+void StrandModelMeshGenerator::CalculateUV(std::vector<Vertex>& vertices, float factor)
 {
 	for (auto& vertex : vertices)
 	{

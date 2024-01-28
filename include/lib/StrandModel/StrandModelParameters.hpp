@@ -1,12 +1,12 @@
 #pragma once
 #include <Plot2D.hpp>
 
-#include "PipeModelData.hpp"
-#include "PipeProfile.hpp"
+#include "StrandModelData.hpp"
+#include "StrandModelProfile.hpp"
 using namespace EvoEngine;
 namespace EcoSysLab
 {
-	struct PipeModelParameters
+	struct StrandModelParameters
 	{
 		float m_centerAttractionStrength = 40000;
 
@@ -37,7 +37,7 @@ namespace EcoSysLab
 
 		PlottedDistribution<float> m_branchTwistDistribution{};
 		PlottedDistribution<float> m_junctionTwistDistribution{};
-		PlottedDistribution<float> m_pipeRadiusDistribution {};
+		PlottedDistribution<float> m_strandRadiusDistribution {};
 		float m_cladoptosisRange = 10.0f;
 		PlottedDistribution<float> m_cladoptosisDistribution{};
 

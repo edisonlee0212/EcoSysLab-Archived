@@ -138,24 +138,24 @@ namespace EcoSysLab {
 		void ExportTreeIOSkeleton(treeio::ArrayTree& arrayTree) const;
 
 
-#pragma region Pipe model
-		void ResetAllProfiles(const PipeModelParameters& pipeModelParameters);
-		void InitializeProfiles(const PipeModelParameters& pipeModelParameters);
-		void CalculateProfiles(const PipeModelParameters& pipeModelParameters);
-		void CalculateProfile(float maxRootDistance, NodeHandle nodeHandle, const PipeModelParameters& pipeModelParameters, bool scheduling);
+#pragma region Strand model
+		void ResetAllProfiles(const StrandModelParameters& strandModelParameters);
+		void InitializeProfiles(const StrandModelParameters& strandModelParameters);
+		void CalculateProfiles(const StrandModelParameters& strandModelParameters);
+		void CalculateProfile(float maxRootDistance, NodeHandle nodeHandle, const StrandModelParameters& strandModelParameters, bool scheduling);
 		void Wait(NodeHandle nodeHandle);
 
-		void PackTask(NodeHandle nodeHandle, const PipeModelParameters& pipeModelParameters, bool parallel);
-		void MergeTask(float maxRootDistance, NodeHandle nodeHandle, const PipeModelParameters& pipeModelParameters);
+		void PackTask(NodeHandle nodeHandle, const StrandModelParameters& strandModelParameters, bool parallel);
+		void MergeTask(float maxRootDistance, NodeHandle nodeHandle, const StrandModelParameters& strandModelParameters);
 		void CopyFrontToBackTask(NodeHandle nodeHandle);
-		void CalculateShiftTask(NodeHandle nodeHandle, const PipeModelParameters& pipeModelParameters);
-		void ApplyProfile(const PipeModelParameters& pipeModelParameters,
+		void CalculateShiftTask(NodeHandle nodeHandle, const StrandModelParameters& strandModelParameters);
+		void ApplyProfile(const StrandModelParameters& strandModelParameters,
 			NodeHandle nodeHandle);
-		void ApplyProfiles(const PipeModelParameters& pipeModelParameters);
-		void CalculatePipeProfileAdjustedTransforms(const PipeModelParameters& pipeModelParameters);
-		glm::vec3 InterpolatePipeSegmentPosition(PipeSegmentHandle pipeSegmentHandle, float a) const;
-		glm::vec3 InterpolatePipeSegmentAxis(PipeSegmentHandle pipeSegmentHandle, float a) const;
-		float InterpolatePipeSegmentRadius(PipeSegmentHandle pipeSegmentHandle, float a) const;
+		void ApplyProfiles(const StrandModelParameters& strandModelParameters);
+		void CalculateStrandProfileAdjustedTransforms(const StrandModelParameters& strandModelParameters);
+		glm::vec3 InterpolateStrandSegmentPosition(StrandSegmentHandle pipeSegmentHandle, float a) const;
+		glm::vec3 InterpolateStrandSegmentAxis(StrandSegmentHandle pipeSegmentHandle, float a) const;
+		float InterpolateStrandSegmentRadius(StrandSegmentHandle pipeSegmentHandle, float a) const;
 		
 #pragma endregion
 	};

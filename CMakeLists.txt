@@ -81,7 +81,7 @@ set(LOCAL_ECOSYSLAB_INCLUDES
 	${CMAKE_CURRENT_SOURCE_DIR}/include/lib/SorghumModel
 	${CMAKE_CURRENT_SOURCE_DIR}/include/lib/ClimateModel
 	${CMAKE_CURRENT_SOURCE_DIR}/include/lib/SoilModel
-	${CMAKE_CURRENT_SOURCE_DIR}/include/lib/PipeModel
+	${CMAKE_CURRENT_SOURCE_DIR}/include/lib/StrandModel
 	${CMAKE_CURRENT_SOURCE_DIR}/include/lib/TreeModel
 	${CMAKE_CURRENT_SOURCE_DIR}/include/lib/SpaceColonizationTreeModel
 	${CMAKE_CURRENT_SOURCE_DIR}/include/lib/Utilities

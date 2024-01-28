@@ -1,4 +1,4 @@
-#include "PipeProfile.hpp"
+#include "StrandModelProfile.hpp"
 
 using namespace EcoSysLab;
 

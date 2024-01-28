@@ -6,7 +6,7 @@ namespace EcoSysLab {
 	class ParticleCell
 	{
 		template<typename PD>
-		friend class PipeProfile;
+		friend class StrandModelProfile;
 		friend class ParticleGrid2D;
 		static constexpr size_t CELL_CAPACITY = 4;
 		static constexpr size_t MAX_CELL_INDEX = CELL_CAPACITY - 1;
@@ -28,7 +28,7 @@ namespace EcoSysLab {
 		glm::ivec2 m_resolution = { 0, 0 };
 		std::vector<ParticleCell> m_cells{};
 		template<typename PD>
-		friend class PipeProfile;
+		friend class StrandModelProfile;
 	public:
 		void ApplyBoundaries(const ProfileConstraints& profileBoundaries);
 		ParticleGrid2D() = default;
