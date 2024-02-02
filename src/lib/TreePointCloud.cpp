@@ -11,7 +11,7 @@ void TreePointCloud::ApplyCurve(const OperatorBranch& branch) {
 	for (int i = 0; i < chainAmount; i++) {
 		auto& node = skeleton.RefNode(branch.m_chainNodeHandles[i]);
 		node.m_data.m_globalEndPosition = branch.m_bezierCurve.GetPoint(static_cast<float>(i + 1) / chainAmount);
-		node.m_info.m_thickness = branch.m_thickness;
+		node.m_info.m_radius = branch.m_thickness;
 		node.m_data.m_branchHandle = branch.m_handle;
 		node.m_info.m_color = glm::vec4(branch.m_color, 1.0f);
 	}
@@ -831,7 +831,7 @@ void TreePointCloud::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 					for (int i = 0; i < nodeList.size(); i++) {
 						const auto& node = skeleton.PeekNode(nodeList[i]);
 						nodeMatrices[startIndex + i].m_instanceMatrix.m_value = glm::translate(node.m_info.m_globalPosition + skeleton.m_data.m_rootPosition) *
-							glm::scale(glm::vec3(node.m_info.m_thickness));
+							glm::scale(glm::vec3(node.m_info.m_radius));
 						nodeMatrices[startIndex + i].m_instanceColor = glm::vec4(1.0f);
 					}
 				}
@@ -867,7 +867,7 @@ void TreePointCloud::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 					for (int i = 0; i < nodeList.size(); i++) {
 						const auto& node = skeleton.PeekNode(nodeList[i]);
 						nodeMatrices[startIndex + i].m_instanceMatrix.m_value = glm::translate(node.m_info.m_globalPosition + skeleton.m_data.m_rootPosition) *
-							glm::scale(glm::vec3(node.m_info.m_thickness));
+							glm::scale(glm::vec3(node.m_info.m_radius));
 						nodeMatrices[startIndex + i].m_instanceColor = glm::vec4(
 							ecoSysLabLayer->RandomColors()[node.m_data.m_branchHandle],
 							1.0f);
@@ -903,7 +903,7 @@ void TreePointCloud::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 					for (int i = 0; i < nodeList.size(); i++) {
 						const auto& node = skeleton.PeekNode(nodeList[i]);
 						nodeMatrices[startIndex + i].m_instanceMatrix.m_value = glm::translate(node.m_info.m_globalPosition + skeleton.m_data.m_rootPosition) *
-							glm::scale(glm::vec3(node.m_info.m_thickness));
+							glm::scale(glm::vec3(node.m_info.m_radius));
 						nodeMatrices[startIndex + i].m_instanceColor = glm::vec4(ecoSysLabLayer->RandomColors()[node.GetHandle()],
 							1.0f);
 					}
@@ -2072,7 +2072,7 @@ void TreePointCloud::CalculateSkeletonGraphs()
 			auto& nodeInfo = node.m_info;
 			if (nodeInfo.m_rootDistance >= m_reconstructionSettings.m_overrideThicknessRootDistance)
 			{
-				nodeInfo.m_thickness = nodeData.m_draftThickness;
+				nodeInfo.m_radius = nodeData.m_draftThickness;
 			}
 			if (m_reconstructionSettings.m_limitParentThickness)
 			{
@@ -2080,9 +2080,9 @@ void TreePointCloud::CalculateSkeletonGraphs()
 				float maxChildThickness = 0.0f;
 				for (const auto& childHandle : childHandles)
 				{
-					maxChildThickness = glm::max(maxChildThickness, skeleton.PeekNode(childHandle).m_info.m_thickness);
+					maxChildThickness = glm::max(maxChildThickness, skeleton.PeekNode(childHandle).m_info.m_radius);
 				}
-				nodeInfo.m_thickness = glm::max(nodeInfo.m_thickness, maxChildThickness);
+				nodeInfo.m_radius = glm::max(nodeInfo.m_radius, maxChildThickness);
 			}
 		}
 
@@ -2166,7 +2166,7 @@ void TreePointCloud::InitializeSkeletalGraph(const std::shared_ptr<Mesh>& pointM
 						direction, glm::vec3(direction.y, direction.z, direction.x));
 					rotation *= glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));
 					const glm::mat4 rotationTransform = glm::mat4_cast(rotation);
-					float thicknessFactor = node.m_info.m_thickness;
+					float thicknessFactor = node.m_info.m_radius;
 					if (skeletalGraphSettings.m_fixedPointSize) thicknessFactor = skeletalGraphSettings.m_fixedPointSizeFactor;
 					auto scale = glm::vec3(skeletalGraphSettings.m_branchPointSize * thicknessFactor);
 					pointList->m_particleInfos[internodeIndex + prevInternodeSize].m_instanceColor = skeletalGraphSettings.m_branchPointColor;
@@ -2310,7 +2310,7 @@ void TreePointCloud::FormGeometryEntity() const
 				const auto& internode = shootSkeleton.PeekNode(internodeHandle);
 				const auto& internodeInfo = internode.m_info;
 				std::vector<std::vector<glm::vec4>> twigs{};
-				if (internodeInfo.m_thickness < meshGeneratorSettings.m_twigParameters.m_maxNodeThickness
+				if (internodeInfo.m_radius < meshGeneratorSettings.m_twigParameters.m_maxNodeThickness
 					&& internodeInfo.m_rootDistance > meshGeneratorSettings.m_twigParameters.m_minRootDistance
 					&& internodeInfo.m_endDistance < meshGeneratorSettings.m_twigParameters.m_maxEndDistance)
 				{
@@ -2418,7 +2418,7 @@ void TreePointCloud::FormGeometryEntity() const
 				const auto& internodeInfo = internode.m_info;
 
 				const auto& foliageOverrideSettings = meshGeneratorSettings.m_foliageOverrideSettings;
-				if (internodeInfo.m_thickness < foliageOverrideSettings.m_maxNodeThickness
+				if (internodeInfo.m_radius < foliageOverrideSettings.m_maxNodeThickness
 					&& internodeInfo.m_rootDistance > foliageOverrideSettings.m_minRootDistance
 					&& internodeInfo.m_endDistance < foliageOverrideSettings.m_maxEndDistance) {
 					for (int i = 0; i < foliageOverrideSettings.m_leafCountPerInternode; i++)
@@ -2544,7 +2544,7 @@ std::vector<std::shared_ptr<Mesh>> TreePointCloud::GenerateFoliageMeshes() const
 			const auto& internodeInfo = internode.m_info;
 
 			const auto& foliageOverrideSettings = m_treeMeshGeneratorSettings.m_foliageOverrideSettings;
-			if (internodeInfo.m_thickness < foliageOverrideSettings.m_maxNodeThickness
+			if (internodeInfo.m_radius < foliageOverrideSettings.m_maxNodeThickness
 				&& internodeInfo.m_rootDistance > foliageOverrideSettings.m_minRootDistance
 				&& internodeInfo.m_endDistance < foliageOverrideSettings.m_maxEndDistance) {
 				for (int i = 0; i < foliageOverrideSettings.m_leafCountPerInternode; i++)

@@ -246,7 +246,7 @@ void Tree::InitializeSkeletalGraph(NodeHandle baseNodeHandle,
 					direction, glm::vec3(direction.y, direction.z, direction.x));
 				rotation *= glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));
 				const glm::mat4 rotationTransform = glm::mat4_cast(rotation);
-				float thicknessFactor = node.m_info.m_thickness;
+				float thicknessFactor = node.m_info.m_radius;
 				if (m_treeVisualizer.m_skeletalGraphSettings.m_fixedPointSize) thicknessFactor = m_treeVisualizer.m_skeletalGraphSettings.m_fixedPointSizeFactor;
 				auto scale = glm::vec3(m_treeVisualizer.m_skeletalGraphSettings.m_branchPointSize * thicknessFactor);
 				pointList->m_particleInfos[internodeIndex].m_instanceColor = m_treeVisualizer.m_skeletalGraphSettings.m_branchPointColor;
@@ -664,7 +664,7 @@ std::shared_ptr<Mesh> Tree::GenerateFoliageMesh(const TreeMeshGeneratorSettings&
 	for (const auto& internodeHandle : nodeList) {
 		const auto& internode = m_treeModel.PeekShootSkeleton().PeekNode(internodeHandle);
 		const auto& internodeInfo = internode.m_info;
-		if (internodeInfo.m_thickness < foliageParameters.m_maxNodeThickness
+		if (internodeInfo.m_radius < foliageParameters.m_maxNodeThickness
 			&& internodeInfo.m_rootDistance > foliageParameters.m_minRootDistance
 			&& internodeInfo.m_endDistance < foliageParameters.m_maxEndDistance) {
 			for (int i = 0; i < foliageParameters.m_leafCountPerInternode; i++)
@@ -750,7 +750,7 @@ std::shared_ptr<Mesh> Tree::GenerateStrandModelFoliageMesh(
 	for (const auto& internodeHandle : nodeList) {
 		const auto& internode = m_treeModel.PeekShootSkeleton().PeekNode(internodeHandle);
 		const auto& internodeInfo = internode.m_info;
-		if (internodeInfo.m_thickness < foliageParameters.m_maxNodeThickness
+		if (internodeInfo.m_radius < foliageParameters.m_maxNodeThickness
 			&& internodeInfo.m_rootDistance > foliageParameters.m_minRootDistance
 			&& internodeInfo.m_endDistance < foliageParameters.m_maxEndDistance) {
 			for (int i = 0; i < foliageParameters.m_leafCountPerInternode; i++)
@@ -1169,7 +1169,7 @@ void Tree::InitializeMeshRenderer(const TreeMeshGeneratorSettings& meshGenerator
 			const auto& internodeData = internode.m_data;
 			const auto& internodeInfo = internode.m_info;
 			std::vector<std::vector<glm::vec4>> twigs{};
-			if (internodeInfo.m_thickness < meshGeneratorSettings.m_twigParameters.m_maxNodeThickness
+			if (internodeInfo.m_radius < meshGeneratorSettings.m_twigParameters.m_maxNodeThickness
 				&& internodeInfo.m_rootDistance > meshGeneratorSettings.m_twigParameters.m_minRootDistance
 				&& internodeInfo.m_endDistance < meshGeneratorSettings.m_twigParameters.m_maxEndDistance)
 			{
@@ -1472,7 +1472,7 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 
 			}
 			distanceToChainEnd = flow.m_info.m_flowLength - distanceToChainStart - internode.m_info.m_length;
-			float compareRadius = internode.m_info.m_thickness;
+			float compareRadius = internode.m_info.m_radius;
 			if (parentFlowHandle != -1)
 			{
 				const auto& parentFlow = skeleton.PeekFlow(parentFlowHandle);
@@ -1497,7 +1497,7 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 				if (!restartIShape)
 				{
 					const auto& parentJunctionInfo = treePartInfos[parentInternodeHandle];
-					if (parentJunctionInfo.m_distanceToStart / internodeInfo.m_thickness > meshGeneratorSettings.m_treePartBreakRatio) restartIShape = true;
+					if (parentJunctionInfo.m_distanceToStart / internodeInfo.m_radius > meshGeneratorSettings.m_treePartBreakRatio) restartIShape = true;
 				}
 				if (restartIShape)
 				{
@@ -1604,9 +1604,9 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 				const auto centerInternodeHandle = chainHandles.back();
 				const auto& centerInternode = skeleton.PeekNode(centerInternodeHandle);
 				treePart.m_baseLine.m_startPosition = startInternode.m_info.m_globalPosition;
-				treePart.m_baseLine.m_startRadius = startInternode.m_info.m_thickness;
+				treePart.m_baseLine.m_startRadius = startInternode.m_info.m_radius;
 				treePart.m_baseLine.m_endPosition = centerInternode.m_info.GetGlobalEndPosition();
-				treePart.m_baseLine.m_endRadius = centerInternode.m_info.m_thickness;
+				treePart.m_baseLine.m_endRadius = centerInternode.m_info.m_radius;
 
 				treePart.m_baseLine.m_startDirection = startInternode.m_info.m_globalDirection;
 				treePart.m_baseLine.m_endDirection = centerInternode.m_info.m_globalDirection;
@@ -1620,9 +1620,9 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 						treePart.m_childrenLines.emplace_back();
 						auto& newLine = treePart.m_childrenLines.back();
 						newLine.m_startPosition = centerInternode.m_info.GetGlobalEndPosition();
-						newLine.m_startRadius = centerInternode.m_info.m_thickness;
+						newLine.m_startRadius = centerInternode.m_info.m_radius;
 						newLine.m_endPosition = endInternode.m_info.GetGlobalEndPosition();
-						newLine.m_endRadius = endInternode.m_info.m_thickness;
+						newLine.m_endRadius = endInternode.m_info.m_radius;
 
 						newLine.m_startDirection = centerInternode.m_info.m_globalDirection;
 						newLine.m_endDirection = endInternode.m_info.m_globalDirection;
@@ -1635,9 +1635,9 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 			{
 				const auto& endInternode = skeleton.PeekNode(treePart.m_nodeHandles.back());
 				treePart.m_baseLine.m_startPosition = startInternode.m_info.m_globalPosition;
-				treePart.m_baseLine.m_startRadius = startInternode.m_info.m_thickness;
+				treePart.m_baseLine.m_startRadius = startInternode.m_info.m_radius;
 				treePart.m_baseLine.m_endPosition = endInternode.m_info.GetGlobalEndPosition();
-				treePart.m_baseLine.m_endRadius = endInternode.m_info.m_thickness;
+				treePart.m_baseLine.m_endRadius = endInternode.m_info.m_radius;
 
 				treePart.m_baseLine.m_startDirection = startInternode.m_info.m_globalDirection;
 				treePart.m_baseLine.m_endDirection = endInternode.m_info.m_globalDirection;
@@ -1772,7 +1772,7 @@ void Tree::PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescrip
 					shootGrowthParameters.m_saggingFactorThicknessReductionMax.x *
 					(internode.m_data.m_descendentTotalBiomass + internode.m_data.m_extraMass) /
 					glm::pow(
-						internode.m_info.m_thickness /
+						internode.m_info.m_radius /
 						shootGrowthParameters.m_endNodeThickness,
 						shootGrowthParameters.m_saggingFactorThicknessReductionMax.y));
 				return glm::max(internode.m_data.m_sagging, newSagging);
@@ -1831,7 +1831,7 @@ void Tree::PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescrip
 					pruningProbability = treeDescriptor->m_shootGrowthParameters.m_lightPruningFactor;
 				}
 				if (!internode.IsApical() && treeDescriptor->m_shootGrowthParameters.m_thicknessPruningFactor != 0.0f
-					&& internode.m_info.m_thickness / internode.m_info.m_endDistance < treeDescriptor->m_shootGrowthParameters.m_thicknessPruningFactor)
+					&& internode.m_info.m_radius / internode.m_info.m_endDistance < treeDescriptor->m_shootGrowthParameters.m_thicknessPruningFactor)
 				{
 					pruningProbability += 1.0f;
 				}

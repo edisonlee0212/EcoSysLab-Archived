@@ -164,12 +164,12 @@ namespace EcoSysLab {
 			glm::vec3 positionStart = internodeInfo.m_globalPosition;
 			glm::vec3 positionEnd =
 				positionStart + internodeInfo.m_length * (settings.m_smoothness ? 1.0f - settings.m_baseControlPointRatio : 1.0f) * internodeInfo.m_globalDirection;
-			float thicknessStart = internodeInfo.m_thickness;
-			float thicknessEnd = internodeInfo.m_thickness;
+			float thicknessStart = internodeInfo.m_radius;
+			float thicknessEnd = internodeInfo.m_radius;
 
 			if (internode.GetParentHandle() != -1) {
 				const auto& parentInternode = treeSkeleton.PeekNode(internode.GetParentHandle());
-				thicknessStart = parentInternode.m_info.m_thickness;
+				thicknessStart = parentInternode.m_info.m_radius;
 				directionStart =
 					parentInternode.m_info.m_regulatedGlobalRotation *
 					glm::vec3(0, 0, -1);
@@ -197,7 +197,7 @@ namespace EcoSysLab {
 				++step;
 
 			tempSteps[threadIndex].emplace_back(internodeHandle, step);
-			int amount = glm::max(1, static_cast<int>(glm::distance(positionStart, positionEnd) / (internodeInfo.m_thickness >= settings.m_trunkThickness ? settings.m_trunkYSubdivision : settings.m_branchYSubdivision)));
+			int amount = glm::max(1, static_cast<int>(glm::distance(positionStart, positionEnd) / (internodeInfo.m_radius >= settings.m_trunkThickness ? settings.m_trunkYSubdivision : settings.m_branchYSubdivision)));
 			if (amount % 2 != 0)
 				++amount;
 			BezierCurve curve = BezierCurve(
@@ -305,7 +305,7 @@ namespace EcoSysLab {
 
 				}
 				distanceToChainEnd = flow.m_info.m_flowLength - distanceToChainStart - internode.m_info.m_length;
-				float compareRadius = internode.m_info.m_thickness;
+				float compareRadius = internode.m_info.m_radius;
 				if (parentFlowHandle != -1)
 				{
 					const auto& parentFlow = treeSkeleton.PeekFlow(parentFlowHandle);
@@ -330,7 +330,7 @@ namespace EcoSysLab {
 					if (!restartIShape)
 					{
 						const auto& parentTreePartInfo = treePartInfos[parentInternodeHandle];
-						if (parentTreePartInfo.m_distanceToStart / internodeInfo.m_thickness > settings.m_treePartBreakRatio) restartIShape = true;
+						if (parentTreePartInfo.m_distanceToStart / internodeInfo.m_radius > settings.m_treePartBreakRatio) restartIShape = true;
 					}
 					if (restartIShape)
 					{
@@ -655,10 +655,10 @@ namespace EcoSysLab {
 		{
 			const auto& node = treeSkeleton.PeekNode(nodeIndex);
 			const auto& info = node.m_info;
-			auto thickness = info.m_thickness;
+			auto thickness = info.m_radius;
 			if (node.GetParentHandle() > 0)
 			{
-				thickness = (thickness + treeSkeleton.PeekNode(node.GetParentHandle()).m_info.m_thickness) / 2.0f;
+				thickness = (thickness + treeSkeleton.PeekNode(node.GetParentHandle()).m_info.m_radius) / 2.0f;
 			}
 			octree.Occupy(info.m_globalPosition, info.m_globalRotation, info.m_length, thickness, [](OctreeNode&) {});
 		}

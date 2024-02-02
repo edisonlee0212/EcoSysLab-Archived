@@ -40,7 +40,7 @@ void TreeModel::RegisterVoxel(const glm::mat4& globalTransform, ClimateModel& cl
 		const auto& internode = m_shootSkeleton.RefNode(*it);
 		const auto& internodeInfo = internode.m_info;
 		const float shadowSize = shootGrowthController.m_internodeShadowFactor;
-		const float biomass = internodeInfo.m_thickness;
+		const float biomass = internodeInfo.m_radius;
 		const glm::vec3 worldPosition = globalTransform * glm::vec4(internodeInfo.m_globalPosition, 1.0f);
 		environmentGrid.AddShadowValue(worldPosition, shadowSize);
 		environmentGrid.AddBiomass(worldPosition, biomass);
@@ -49,7 +49,7 @@ void TreeModel::RegisterVoxel(const glm::mat4& globalTransform, ClimateModel& cl
 			registration.m_position = worldPosition;
 			registration.m_nodeHandle = *it;
 			registration.m_treeModelIndex = m_index;
-			registration.m_thickness = internodeInfo.m_thickness;
+			registration.m_thickness = internodeInfo.m_radius;
 			environmentGrid.AddNode(registration);
 		}
 	}
@@ -168,7 +168,7 @@ void TreeModel::Initialize(const ShootGrowthController& shootGrowthController) {
 	if (m_initialized) Clear();
 	{
 		auto& firstInternode = m_shootSkeleton.RefNode(0);
-		firstInternode.m_info.m_thickness = shootGrowthController.m_endNodeThickness;
+		firstInternode.m_info.m_radius = shootGrowthController.m_endNodeThickness;
 		firstInternode.m_data.m_internodeLength = 0.0f;
 		firstInternode.m_data.m_buds.emplace_back();
 		auto& apicalBud = firstInternode.m_data.m_buds.back();
@@ -372,7 +372,7 @@ bool TreeModel::Reduce(const ShootGrowthController& shootGrowthController, const
 			if (parentHandle != -1)
 			{
 				auto& parent = m_shootSkeleton.RefNode(parentHandle);
-				parent.m_info.m_thickness = shootGrowthController.m_endNodeThickness;
+				parent.m_info.m_radius = shootGrowthController.m_endNodeThickness;
 				parent.m_data.m_buds[internode.m_data.m_indexOfParentBud].m_status = BudStatus::Dormant;
 			}
 			PruneInternode(*it);
@@ -393,7 +393,7 @@ void TreeModel::CalculateTransform(const ShootGrowthController& shootGrowthContr
 		auto& internodeData = internode.m_data;
 		auto& internodeInfo = internode.m_info;
 
-		internodeInfo.m_length = internodeData.m_internodeLength * glm::pow(internodeInfo.m_thickness / shootGrowthController.m_endNodeThickness, shootGrowthController.m_internodeLengthThicknessFactor);
+		internodeInfo.m_length = internodeData.m_internodeLength * glm::pow(internodeInfo.m_radius / shootGrowthController.m_endNodeThickness, shootGrowthController.m_internodeLengthThicknessFactor);
 
 		if (internode.GetParentHandle() == -1) {
 			internodeInfo.m_globalPosition = internodeData.m_desiredGlobalPosition = glm::vec3(0.0f);
@@ -430,9 +430,9 @@ void TreeModel::CalculateTransform(const ShootGrowthController& shootGrowthContr
 				auto parentFront = glm::normalize(parentInternode.m_info.m_globalRotation * glm::vec3(0, 0, -1));
 				const auto sinValue = glm::sin(glm::acos(glm::dot(parentFront, front)));
 				const auto offset = glm::normalize(glm::vec2(relativeFront.x, relativeFront.y)) * sinValue;
-				internodeInfo.m_globalPosition += parentLeft * parentInternode.m_info.m_thickness * offset.x;
-				internodeInfo.m_globalPosition += parentUp * parentInternode.m_info.m_thickness * offset.y;
-				internodeInfo.m_globalPosition += parentFront * parentInternode.m_info.m_thickness * sinValue;
+				internodeInfo.m_globalPosition += parentLeft * parentInternode.m_info.m_radius * offset.x;
+				internodeInfo.m_globalPosition += parentUp * parentInternode.m_info.m_radius * offset.y;
+				internodeInfo.m_globalPosition += parentFront * parentInternode.m_info.m_radius * sinValue;
 			}
 
 			internodeData.m_desiredGlobalRotation = parentInternode.m_data.m_desiredGlobalRotation * internodeData.m_desiredLocalRotation;
@@ -561,7 +561,7 @@ bool TreeModel::ElongateInternode(float extendLength, NodeHandle internodeHandle
 		newInternode.m_data.m_lateral = false;
 		newInternode.m_data.m_inhibitorSink = 0.0f;
 		newInternode.m_data.m_internodeLength = glm::clamp(extendLength, 0.0f, internodeLength);
-		newInternode.m_info.m_thickness = shootGrowthController.m_endNodeThickness;
+		newInternode.m_info.m_radius = shootGrowthController.m_endNodeThickness;
 		newInternode.m_info.m_globalRotation = glm::quatLookAt(desiredGlobalFront, desiredGlobalUp);
 		newInternode.m_data.m_desiredLocalRotation =
 			glm::inverse(oldInternode.m_info.m_globalRotation) *
@@ -676,7 +676,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 				newInternode.m_data.m_order = oldInternode.m_data.m_order + 1;
 				newInternode.m_data.m_lateral = true;
 				newInternode.m_data.m_internodeLength = 0.0f;
-				newInternode.m_info.m_thickness = shootGrowthController.m_endNodeThickness;
+				newInternode.m_info.m_radius = shootGrowthController.m_endNodeThickness;
 				newInternode.m_data.m_desiredLocalRotation =
 					glm::inverse(oldInternode.m_info.m_globalRotation) *
 					glm::quatLookAt(desiredGlobalFront, desiredGlobalUp);
@@ -913,16 +913,16 @@ void TreeModel::CalculateThickness(const ShootGrowthController& shootGrowthContr
 		float childThicknessCollection = 0.0f;
 		for (const auto& i : internode.RefChildHandles()) {
 			const auto& childInternode = m_shootSkeleton.PeekNode(i);
-			childThicknessCollection += glm::pow(childInternode.m_info.m_thickness,
+			childThicknessCollection += glm::pow(childInternode.m_info.m_radius,
 				1.0f / shootGrowthController.m_thicknessAccumulationFactor);
 		}
 		childThicknessCollection += shootGrowthController.m_thicknessAccumulateAgeFactor * shootGrowthController.m_endNodeThickness * shootGrowthController.m_internodeGrowthRate * (m_age - internodeData.m_startAge);
 		if (childThicknessCollection != 0.0f) {
-			internodeInfo.m_thickness = glm::pow(childThicknessCollection, shootGrowthController.m_thicknessAccumulationFactor);
+			internodeInfo.m_radius = glm::pow(childThicknessCollection, shootGrowthController.m_thicknessAccumulationFactor);
 		}
 		else
 		{
-			internodeInfo.m_thickness = glm::max(internodeInfo.m_thickness, shootGrowthController.m_endNodeThickness);
+			internodeInfo.m_radius = glm::max(internodeInfo.m_radius, shootGrowthController.m_endNodeThickness);
 		}
 	}
 }
@@ -936,7 +936,7 @@ void TreeModel::CalculateBiomass(const ShootGrowthController& shootGrowthControl
 		auto& internodeInfo = internode.m_info;
 		internodeData.m_descendentTotalBiomass = internodeData.m_biomass = 0.0f;
 		internodeData.m_biomass =
-			internodeInfo.m_thickness / shootGrowthController.m_endNodeThickness * internodeData.m_internodeLength /
+			internodeInfo.m_radius / shootGrowthController.m_endNodeThickness * internodeData.m_internodeLength /
 			shootGrowthController.m_internodeLength;
 		for (const auto& i : internode.RefChildHandles()) {
 			const auto& childInternode = m_shootSkeleton.RefNode(i);
@@ -1022,7 +1022,7 @@ bool TreeModel::PruneInternodes(const glm::mat4& globalTransform, ClimateModel& 
 			const auto parentHandle = internode.GetParentHandle();
 			if (parentHandle != -1) {
 				const auto& parent = m_shootSkeleton.PeekNode(parentHandle);
-				if (shootGrowthController.m_lowBranchPruningThicknessFactor == 0.0f || internode.m_info.m_thickness / parent.m_info.m_thickness < shootGrowthController.m_lowBranchPruningThicknessFactor) lowBranchPruning = true;
+				if (shootGrowthController.m_lowBranchPruningThicknessFactor == 0.0f || internode.m_info.m_radius / parent.m_info.m_radius < shootGrowthController.m_lowBranchPruningThicknessFactor) lowBranchPruning = true;
 			}
 
 		}
@@ -1112,7 +1112,7 @@ void TreeModel::ExportTreeIOSkeleton(treeio::ArrayTree& arrayTree) const
 	const auto& rootNode = m_shootSkeleton.PeekNode(0);
 	TreeNodeData rootNodeData;
 	//rootNodeData.direction = rootNode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
-	rootNodeData.thickness = rootNode.m_info.m_thickness;
+	rootNodeData.thickness = rootNode.m_info.m_radius;
 	rootNodeData.pos = rootNode.m_info.m_globalPosition;
 
 	auto rootId = arrayTree.addRoot(rootNodeData);
@@ -1124,7 +1124,7 @@ void TreeModel::ExportTreeIOSkeleton(treeio::ArrayTree& arrayTree) const
 		const auto& node = m_shootSkeleton.PeekNode(nodeHandle);
 		TreeNodeData nodeData;
 		//nodeData.direction = node.m_info.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
-		nodeData.thickness = node.m_info.m_thickness;
+		nodeData.thickness = node.m_info.m_radius;
 		nodeData.pos = node.m_info.m_globalPosition;
 
 		auto currentId = arrayTree.addNodeChild(nodeMap[node.GetParentHandle()], nodeData);

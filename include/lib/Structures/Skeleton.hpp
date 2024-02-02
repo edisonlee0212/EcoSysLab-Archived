@@ -21,7 +21,7 @@ namespace EcoSysLab {
 		 */
 		glm::vec3 m_globalDirection = glm::vec3(0.0f);
 		float m_length = 0.0f;
-		float m_thickness = 0.1f;
+		float m_radius = 0.1f;
 		float m_rootDistance = 0.0f;
 		float m_endDistance = 0.0f;
 
@@ -952,11 +952,11 @@ namespace EcoSysLab {
 			auto &flow = m_flows[flowHandle];
 			auto &firstNode = m_nodes[flow.m_nodes.front()];
 			auto &lastNode = m_nodes[flow.m_nodes.back()];
-			flow.m_info.m_startThickness = firstNode.m_info.m_thickness;
+			flow.m_info.m_startThickness = firstNode.m_info.m_radius;
 			flow.m_info.m_globalStartPosition = firstNode.m_info.m_globalPosition;
 			flow.m_info.m_globalStartRotation = firstNode.m_info.m_globalRotation;
 
-			flow.m_info.m_endThickness = lastNode.m_info.m_thickness;
+			flow.m_info.m_endThickness = lastNode.m_info.m_radius;
 			flow.m_info.m_globalEndPosition = lastNode.m_info.m_globalPosition +
 											  lastNode.m_info.m_length *
 											  (lastNode.m_info.m_globalRotation * glm::vec3(0, 0, -1));

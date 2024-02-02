@@ -132,7 +132,7 @@ bool TreeVisualizer::RayCastSelection(const std::shared_ptr<Camera>& cameraCompo
 			position + node.m_info.m_length * direction;
 		const auto center =
 			(position + position2) / 2.0f;
-		auto radius = node.m_info.m_thickness;
+		auto radius = node.m_info.m_radius;
 		if(m_skeletalGraphSettings.m_lineThickness != 0.0f)
 		{
 			radius = m_skeletalGraphSettings.m_lineThickness * (subTree ? 0.625f : 0.5f);
@@ -280,9 +280,9 @@ void TreeVisualizer::SyncMatrices(const ShootSkeleton& skeleton, const std::shar
 				glm::translate(position + (node.m_info.m_length / 2.0f) * direction) *
 				rotationTransform *
 				glm::scale(glm::vec3(
-					node.m_info.m_thickness * 2.0f,
+					node.m_info.m_radius * 2.0f,
 					node.m_info.m_length,
-					node.m_info.m_thickness * 2.0f));
+					node.m_info.m_radius * 2.0f));
 		}
 		}
 	);
@@ -477,9 +477,9 @@ void TreeVisualizer::Visualize(TreeModel& treeModel, const GlobalTransform& glob
 				const auto matrix = globalTransform.m_value * glm::translate(selectedCenter) *
 					rotationTransform *
 					glm::scale(glm::vec3(
-						2.0f * node.m_info.m_thickness + 0.01f,
+						2.0f * node.m_info.m_radius + 0.01f,
 						node.m_info.m_length / 5.0f,
-						2.0f * node.m_info.m_thickness + 0.01f));
+						2.0f * node.m_info.m_radius + 0.01f));
 				const auto color = glm::vec4(1.0f);
 				editorLayer->DrawGizmoMesh(Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER"), ecoSysLabLayer->m_visualizationCamera, color, matrix, 1, gizmoSettings);
 			}
@@ -744,7 +744,7 @@ TreeVisualizer::InspectInternode(
 	const auto& internode = shootSkeleton.RefNode(internodeHandle);
 	if (ImGui::TreeNode("Internode info")) {
 		ImGui::Checkbox("Is max child", (bool*)&internode.m_data.m_maxChild);
-		ImGui::Text("Thickness: %.3f", internode.m_info.m_thickness);
+		ImGui::Text("Thickness: %.3f", internode.m_info.m_radius);
 		ImGui::Text("Length: %.3f", internode.m_info.m_length);
 		ImGui::InputFloat3("Position", (float*)&internode.m_info.m_globalPosition.x, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
@@ -856,7 +856,7 @@ TreeVisualizer::PeekInternode(const ShootSkeleton& shootSkeleton, NodeHandle int
 	const auto& internode = shootSkeleton.PeekNode(internodeHandle);
 	if (ImGui::TreeNode("Internode info")) {
 		ImGui::Checkbox("Is max child", (bool*)&internode.m_data.m_maxChild);
-		ImGui::Text("Thickness: %.3f", internode.m_info.m_thickness);
+		ImGui::Text("Thickness: %.3f", internode.m_info.m_radius);
 		ImGui::Text("Length: %.3f", internode.m_info.m_length);
 		ImGui::InputFloat3("Position", (float*)&internode.m_info.m_globalPosition.x, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
