@@ -153,9 +153,9 @@ namespace EcoSysLab {
 			NodeHandle nodeHandle);
 		void ApplyProfiles(const StrandModelParameters& strandModelParameters);
 		void CalculateStrandProfileAdjustedTransforms(const StrandModelParameters& strandModelParameters);
-		glm::vec3 InterpolateStrandSegmentPosition(StrandSegmentHandle pipeSegmentHandle, float a) const;
-		glm::vec3 InterpolateStrandSegmentAxis(StrandSegmentHandle pipeSegmentHandle, float a) const;
-		float InterpolateStrandSegmentRadius(StrandSegmentHandle pipeSegmentHandle, float a) const;
+		[[nodiscard]] glm::vec3 InterpolateStrandSegmentPosition(StrandSegmentHandle strandSegmentHandle, float a) const;
+		[[nodiscard]] glm::vec3 InterpolateStrandSegmentAxis(StrandSegmentHandle strandSegmentHandle, float a) const;
+		[[nodiscard]] float InterpolateStrandSegmentRadius(StrandSegmentHandle strandSegmentHandle, float a) const;
 		
 #pragma endregion
 	};

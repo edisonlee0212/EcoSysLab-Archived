@@ -1833,7 +1833,7 @@ void Tree::PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescrip
 				if (!internode.IsApical() && treeDescriptor->m_shootGrowthParameters.m_thicknessPruningFactor != 0.0f
 					&& internode.m_info.m_radius / internode.m_info.m_endDistance < treeDescriptor->m_shootGrowthParameters.m_thicknessPruningFactor)
 				{
-					pruningProbability += 1.0f;
+					pruningProbability += 999.0f;
 				}
 				return pruningProbability * deltaTime;
 			};
