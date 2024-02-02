@@ -120,7 +120,7 @@ namespace EcoSysLab {
 		 * @return The list of handles.
 		 */
 		[[nodiscard]] const std::vector<NodeHandle> &RefChildHandles() const;
-		Node();
+		Node() = default;
 		Node(NodeHandle handle);
 
 		[[nodiscard]] int GetIndex() const;
@@ -179,13 +179,14 @@ namespace EcoSysLab {
 		 * @return The list of handles.
 		 */
 		[[nodiscard]] const std::vector<NodeHandle> &RefNodeHandles() const;
-
+		Flow() = default;
 		explicit Flow(FlowHandle handle);
 	};
 
 	template<typename SkeletonData, typename FlowData, typename NodeData>
 	class Skeleton {
-#pragma region Private
+		template<typename SD, typename FD, typename ID>
+		friend class Skeleton;
 		std::vector<Flow<FlowData>> m_flows;
 		std::vector<Node<NodeData>> m_nodes;
 		std::queue<NodeHandle> m_nodePool;
@@ -212,12 +213,10 @@ namespace EcoSysLab {
 
 		void DetachChildNode(NodeHandle targetHandle, NodeHandle childHandle);
 
-#pragma endregion
-
 		int m_maxIndex = -1;
 	public:
 		template<typename SrcSkeletonData, typename SrcFlowData, typename SrcNodeData>
-		void Clone(const Skeleton<SrcSkeletonData, SrcFlowData, SrcNodeData>& srcSkeleton, const std::function<void(NodeHandle srcNodeHandle, NodeHandle dstNodeHandle)>& postProcess);
+		void Clone(const Skeleton<SrcSkeletonData, SrcFlowData, SrcNodeData>& srcSkeleton);
 
 		[[nodiscard]] int GetMaxIndex() const;
 		SkeletonData m_data;
@@ -635,17 +634,6 @@ namespace EcoSysLab {
 	}
 
 	template <typename NodeData>
-	Node<NodeData>::Node()
-	{
-		m_handle = -1;
-		m_recycled = false;
-		m_endNode = true;
-		m_data = {};
-		m_info = {};
-		m_index = -1;
-	}
-
-	template <typename NodeData>
 	int Node<NodeData>::GetIndex() const
 	{
 		return m_index;
@@ -723,48 +711,45 @@ namespace EcoSysLab {
 	template <typename SkeletonData, typename FlowData, typename NodeData>
 	template <typename SrcSkeletonData, typename SrcFlowData, typename SrcNodeData>
 	void Skeleton<SkeletonData, FlowData, NodeData>::Clone(
-		const Skeleton<SrcSkeletonData, SrcFlowData, SrcNodeData>& srcSkeleton, const std::function<void(NodeHandle srcNodeHandle, NodeHandle dstNodeHandle)>& postProcess)
+		const Skeleton<SrcSkeletonData, SrcFlowData, SrcNodeData>& srcSkeleton)
 	{
-		
 		m_data = {};
-		m_nodes.clear();
-		m_flows.clear();
-		m_flowPool = {};
-		m_nodePool = {};
-		m_sortedNodeList.clear();
-		m_sortedFlowList.clear();
+		m_flowPool = srcSkeleton.m_flowPool;
+		m_nodePool = srcSkeleton.m_nodePool;
+		m_sortedNodeList = srcSkeleton.m_sortedNodeList;
+		m_sortedFlowList = srcSkeleton.m_sortedFlowList;
 
-		AllocateFlow();
-		auto firstNodeHandle = AllocateNode();
-		auto& rootBranch = m_flows[0];
-		auto& rootNode = m_nodes[firstNodeHandle];
-		rootNode.m_flowHandle = 0;
-		rootBranch.m_nodes.emplace_back(0);
-
-		const auto& sortedSrcNodeList = srcSkeleton.RefSortedNodeList();
-		std::unordered_map<NodeHandle, NodeHandle> nodeHandleMap;
-		nodeHandleMap[0] = 0;
-		for (const auto& srcNodeHandle : sortedSrcNodeList)
+		m_nodes.resize(srcSkeleton.m_nodes.size());
+		for(int i = 0; i < srcSkeleton.m_nodes.size(); i++)
 		{
-			if (srcNodeHandle == 0)
-			{
-				m_nodes[0].m_info = srcSkeleton.PeekNode(0).m_info;
-				m_nodes[0].m_index = srcSkeleton.PeekNode(0).m_index;
-				postProcess(0, 0);
-			}
-			else
-			{
-				const auto& srcNode = srcSkeleton.PeekNode(srcNodeHandle);
-				auto dstNodeHandle = this->Extend(nodeHandleMap.at(srcNode.GetParentHandle()), !srcNode.IsApical());
-				nodeHandleMap[srcNodeHandle] = dstNodeHandle;
-				m_nodes[dstNodeHandle].m_info = srcNode.m_info;
-				m_nodes[dstNodeHandle].m_index = srcNode.m_index;
-				postProcess(srcNodeHandle, dstNodeHandle);
-			}
+			m_nodes[i].m_info = srcSkeleton.m_nodes[i].m_info;
+			
+			m_nodes[i].m_endNode = srcSkeleton.m_nodes[i].m_endNode;
+			m_nodes[i].m_recycled = srcSkeleton.m_nodes[i].m_recycled;
+			m_nodes[i].m_handle = srcSkeleton.m_nodes[i].m_handle;
+			m_nodes[i].m_flowHandle = srcSkeleton.m_nodes[i].m_flowHandle;
+			m_nodes[i].m_parentHandle = srcSkeleton.m_nodes[i].m_parentHandle;
+			m_nodes[i].m_childHandles = srcSkeleton.m_nodes[i].m_childHandles;
+			m_nodes[i].m_apical = srcSkeleton.m_nodes[i].m_apical;
+			m_nodes[i].m_index = srcSkeleton.m_nodes[i].m_index;
 		}
-		SortLists();
-		CalculateFlows();
-		m_maxIndex = srcSkeleton.GetMaxIndex();
+
+		m_flows.resize(srcSkeleton.m_flows.size());
+		for (int i = 0; i < srcSkeleton.m_flows.size(); i++)
+		{
+			m_flows[i].m_info = srcSkeleton.m_flows[i].m_info;
+
+			m_flows[i].m_recycled = srcSkeleton.m_flows[i].m_recycled;
+			m_flows[i].m_handle = srcSkeleton.m_flows[i].m_handle;
+			m_flows[i].m_nodes = srcSkeleton.m_flows[i].m_nodes;
+			m_flows[i].m_parentHandle = srcSkeleton.m_flows[i].m_parentHandle;
+			m_flows[i].m_apical = srcSkeleton.m_flows[i].m_apical;
+		}
+		m_maxIndex = srcSkeleton.m_maxIndex;
+		m_newVersion = srcSkeleton.m_newVersion;
+		m_version = srcSkeleton.m_version;
+		m_min = srcSkeleton.m_min;
+		m_max = srcSkeleton.m_max;
 	}
 
 	template <typename SkeletonData, typename FlowData, typename NodeData>

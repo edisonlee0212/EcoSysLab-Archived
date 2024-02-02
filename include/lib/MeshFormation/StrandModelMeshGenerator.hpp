@@ -3,7 +3,7 @@
 #include "Vertex.hpp"
 #include "StrandModelData.hpp"
 #include "TreeMeshGenerator.hpp"
-#include "TreeModel.hpp"
+#include "StrandModel.hpp"
 
 using namespace EvoEngine;
 namespace EcoSysLab {
@@ -52,13 +52,13 @@ namespace EcoSysLab {
 	class StrandModelMeshGenerator
 	{
 		static void RecursiveSlicing(
-			const TreeModel& treeModel, std::vector<Vertex>& vertices,
+			const StrandModel& strandModel, std::vector<Vertex>& vertices,
 			std::vector<unsigned int>& indices, const StrandModelMeshGeneratorSettings& settings);
 		static void MarchingCube(
-			const TreeModel& treeModel, std::vector<Vertex>& vertices,
+			const StrandModel& strandModel, std::vector<Vertex>& vertices,
 			std::vector<unsigned int>& indices, const StrandModelMeshGeneratorSettings& settings);
 
-		static void CylindricalMeshing(const TreeModel& treeModel, std::vector<Vertex>& vertices,
+		static void CylindricalMeshing(const StrandModel& strandModel, std::vector<Vertex>& vertices,
 			std::vector<unsigned int>& indices, const StrandModelMeshGeneratorSettings& settings);
 
 		static void MeshSmoothing(std::vector<Vertex>& vertices,
@@ -70,7 +70,7 @@ namespace EcoSysLab {
 		static void CalculateUV(std::vector<Vertex>& vertices, float factor = 1.0f);
 	public:
 		static void Generate(
-			const TreeModel& treeModel, std::vector<Vertex>& vertices,
+			const StrandModel& strandModel, std::vector<Vertex>& vertices,
 			std::vector<unsigned int>& indices, const StrandModelMeshGeneratorSettings& settings);
 	};
 }

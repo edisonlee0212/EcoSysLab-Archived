@@ -133,7 +133,7 @@ bool TreeVisualizer::RayCastSelection(const std::shared_ptr<Camera>& cameraCompo
 		const auto center =
 			(position + position2) / 2.0f;
 		auto radius = node.m_info.m_radius;
-		if(m_skeletalGraphSettings.m_lineThickness != 0.0f)
+		if (m_skeletalGraphSettings.m_lineThickness != 0.0f)
 		{
 			radius = m_skeletalGraphSettings.m_lineThickness * (subTree ? 0.625f : 0.5f);
 		}
@@ -274,7 +274,8 @@ void TreeVisualizer::SyncMatrices(const ShootSkeleton& skeleton, const std::shar
 					m_skeletalGraphSettings.m_lineThickness * (subTree ? 1.25f : 1.0f),
 					node.m_info.m_length,
 					m_skeletalGraphSettings.m_lineThickness * (subTree ? 1.25f : 1.0f)));
-		}else
+		}
+		else
 		{
 			matrices[i].m_instanceMatrix.m_value =
 				glm::translate(position + (node.m_info.m_length / 2.0f) * direction) *
@@ -485,252 +486,256 @@ void TreeVisualizer::Visualize(TreeModel& treeModel, const GlobalTransform& glob
 			}
 		}
 
-		if (m_checkpointIteration == treeModel.CurrentIteration())
-		{
-			static bool showGrid = false;
-			if (m_frontProfileGui) {
-				const std::string frontTag = "Front Profile";
-				if (ImGui::Begin(frontTag.c_str()))
-				{
-					if (m_selectedInternodeHandle != -1) {
-						auto& skeleton = treeModel.RefShootSkeleton();
-						auto& node = skeleton.RefNode(m_selectedInternodeHandle);
 
-						glm::vec2 mousePosition{};
-						static bool lastFrameClicked = false;
-						bool mouseDown = false;
-						static bool addAttractor = false;
-						ImGui::Checkbox("Attractor", &addAttractor);
-						if (ImGui::Button("Clear boundaries"))
+	}
+}
+
+void TreeVisualizer::Visualize(StrandModel& strandModel, const GlobalTransform& globalTransform)
+{
+	if (m_visualization)
+	{
+		auto& skeleton = strandModel.m_strandModelSkeleton;
+		static bool showGrid = false;
+		if (m_frontProfileGui) {
+			const std::string frontTag = "Front Profile";
+			if (ImGui::Begin(frontTag.c_str()))
+			{
+				if (m_selectedInternodeHandle != -1) {
+					auto& node = skeleton.RefNode(m_selectedInternodeHandle);
+					glm::vec2 mousePosition{};
+					static bool lastFrameClicked = false;
+					bool mouseDown = false;
+					static bool addAttractor = false;
+					ImGui::Checkbox("Attractor", &addAttractor);
+					if (ImGui::Button("Clear boundaries"))
+					{
+						node.m_data.m_profileConstraints.m_boundaries.clear();
+						node.m_data.m_boundariesUpdated = true;
+					}
+					ImGui::SameLine();
+					if (ImGui::Button("Clear attractors"))
+					{
+						node.m_data.m_profileConstraints.m_attractors.clear();
+						node.m_data.m_boundariesUpdated = true;
+					}
+					ImGui::SameLine();
+					ImGui::Checkbox("Show Grid", &showGrid);
+					if (node.GetParentHandle() != -1)
+					{
+						if (ImGui::Button("Copy from root"))
 						{
-							node.m_data.m_profileConstraints.m_boundaries.clear();
-							node.m_data.m_boundariesUpdated = true;
-						}
-						ImGui::SameLine();
-						if (ImGui::Button("Clear attractors"))
-						{
-							node.m_data.m_profileConstraints.m_attractors.clear();
-							node.m_data.m_boundariesUpdated = true;
-						}
-						ImGui::SameLine();
-						ImGui::Checkbox("Show Grid", &showGrid);
-						if (node.GetParentHandle() != -1)
-						{
-							if (ImGui::Button("Copy from root"))
+							std::vector<NodeHandle> parentNodeToRootChain;
+							parentNodeToRootChain.emplace_back(m_selectedInternodeHandle);
+							NodeHandle walker = node.GetParentHandle();
+							while (walker != -1)
 							{
-								std::vector<NodeHandle> parentNodeToRootChain;
-								parentNodeToRootChain.emplace_back(m_selectedInternodeHandle);
-								NodeHandle walker = node.GetParentHandle();
-								while (walker != -1)
-								{
-									parentNodeToRootChain.emplace_back(walker);
-									walker = skeleton.PeekNode(walker).GetParentHandle();
-								}
-								for (auto it = parentNodeToRootChain.rbegin() + 1; it != parentNodeToRootChain.rend(); ++it)
-								{
-									const auto& fromNode = skeleton.PeekNode(*(it - 1));
-									auto& toNode = skeleton.RefNode(*it);
-									toNode.m_data.m_profileConstraints = fromNode.m_data.m_profileConstraints;
-									toNode.m_data.m_boundariesUpdated = true;
-								}
+								parentNodeToRootChain.emplace_back(walker);
+								walker = skeleton.PeekNode(walker).GetParentHandle();
 							}
-							const auto& parentNode = treeModel.RefShootSkeleton().RefNode(node.GetParentHandle());
-							if (!parentNode.m_data.m_profileConstraints.m_boundaries.empty() || !parentNode.m_data.m_profileConstraints.m_attractors.empty())
+							for (auto it = parentNodeToRootChain.rbegin() + 1; it != parentNodeToRootChain.rend(); ++it)
 							{
-								ImGui::SameLine();
-								if (ImGui::Button("Copy parent settings"))
-								{
-									node.m_data.m_profileConstraints = parentNode.m_data.m_profileConstraints;
-									node.m_data.m_boundariesUpdated = true;
-								}
+								const auto& fromNode = skeleton.PeekNode(*(it - 1));
+								auto& toNode = skeleton.RefNode(*it);
+								toNode.m_data.m_profileConstraints = fromNode.m_data.m_profileConstraints;
+								toNode.m_data.m_boundariesUpdated = true;
 							}
 						}
-						node.m_data.m_frontProfile.OnInspect([&](const glm::vec2 position)
+						const auto& parentNode = skeleton.RefNode(node.GetParentHandle());
+						if (!parentNode.m_data.m_profileConstraints.m_boundaries.empty() || !parentNode.m_data.m_profileConstraints.m_attractors.empty())
+						{
+							ImGui::SameLine();
+							if (ImGui::Button("Copy parent settings"))
 							{
-								mouseDown = true;
-								mousePosition = position;
-							},
-							[&](const ImVec2 origin, const float zoomFactor, ImDrawList* drawList) {
-								node.m_data.m_frontProfile.RenderEdges(origin, zoomFactor, drawList, IM_COL32(0.0f, 0.0f, 128.0f, 128.0f), 1.0f);
-								node.m_data.m_frontProfile.RenderBoundary(origin, zoomFactor, drawList, IM_COL32(255.f, 255.f, 255.0f, 255.0f), 4.0f);
-
-								if (node.GetParentHandle() != -1)
-								{
-									const auto& parentNode = treeModel.RefShootSkeleton().RefNode(node.GetParentHandle());
-									if (!parentNode.m_data.m_profileConstraints.m_boundaries.empty())
-									{
-										for (const auto& parentBoundary : parentNode.m_data.m_profileConstraints.m_boundaries)
-										{
-											parentBoundary.RenderBoundary(origin, zoomFactor, drawList, IM_COL32(128.0f, 0.0f, 0, 128.0f), 4.0f);
-										}
-										for (const auto& parentAttractor : parentNode.m_data.m_profileConstraints.m_attractors)
-										{
-											parentAttractor.RenderAttractor(origin, zoomFactor, drawList, IM_COL32(0.0f, 128.0f, 0, 128.0f), 4.0f);
-										}
-									}
-									
-								}
-								for (const auto& boundary : node.m_data.m_profileConstraints.m_boundaries)
-								{
-									boundary.RenderBoundary(origin, zoomFactor, drawList, IM_COL32(255.0f, 0.0f, 0, 255.0f), 2.0f);
-								}
-
-								for (const auto& attractor : node.m_data.m_profileConstraints.m_attractors)
-								{
-									attractor.RenderAttractor(origin, zoomFactor, drawList, IM_COL32(0.0f, 255.0f, 0, 255.0f), 2.0f);
-								}
+								node.m_data.m_profileConstraints = parentNode.m_data.m_profileConstraints;
+								node.m_data.m_boundariesUpdated = true;
+							}
+						}
+					}
+					node.m_data.m_frontProfile.OnInspect([&](const glm::vec2 position)
+						{
+							mouseDown = true;
+							mousePosition = position;
 						},
-							showGrid);
-						auto& profileBoundaries = node.m_data.m_profileConstraints;
-						static glm::vec2 attractorStartMousePosition;
-						if (lastFrameClicked)
+						[&](const ImVec2 origin, const float zoomFactor, ImDrawList* drawList) {
+							node.m_data.m_frontProfile.RenderEdges(origin, zoomFactor, drawList, IM_COL32(0.0f, 0.0f, 128.0f, 128.0f), 1.0f);
+							node.m_data.m_frontProfile.RenderBoundary(origin, zoomFactor, drawList, IM_COL32(255.f, 255.f, 255.0f, 255.0f), 4.0f);
+
+							if (node.GetParentHandle() != -1)
+							{
+								const auto& parentNode = skeleton.RefNode(node.GetParentHandle());
+								if (!parentNode.m_data.m_profileConstraints.m_boundaries.empty())
+								{
+									for (const auto& parentBoundary : parentNode.m_data.m_profileConstraints.m_boundaries)
+									{
+										parentBoundary.RenderBoundary(origin, zoomFactor, drawList, IM_COL32(128.0f, 0.0f, 0, 128.0f), 4.0f);
+									}
+									for (const auto& parentAttractor : parentNode.m_data.m_profileConstraints.m_attractors)
+									{
+										parentAttractor.RenderAttractor(origin, zoomFactor, drawList, IM_COL32(0.0f, 128.0f, 0, 128.0f), 4.0f);
+									}
+								}
+
+							}
+							for (const auto& boundary : node.m_data.m_profileConstraints.m_boundaries)
+							{
+								boundary.RenderBoundary(origin, zoomFactor, drawList, IM_COL32(255.0f, 0.0f, 0, 255.0f), 2.0f);
+							}
+
+							for (const auto& attractor : node.m_data.m_profileConstraints.m_attractors)
+							{
+								attractor.RenderAttractor(origin, zoomFactor, drawList, IM_COL32(0.0f, 255.0f, 0, 255.0f), 2.0f);
+							}
+						},
+						showGrid);
+					auto& profileBoundaries = node.m_data.m_profileConstraints;
+					static glm::vec2 attractorStartMousePosition;
+					if (lastFrameClicked)
+					{
+						if (mouseDown)
 						{
-							if (mouseDown)
-							{
-								if (!addAttractor) {
-									//Continue recording.
-									if (glm::distance(mousePosition, profileBoundaries.m_boundaries.back().m_points.back()) > 1.0f) profileBoundaries.m_boundaries.back().m_points.emplace_back(mousePosition);
-								}
-								else
-								{
-									auto& attractorPoints = profileBoundaries.m_attractors.back().m_attractorPoints;
-									if(attractorPoints.empty())
-									{
-										if(glm::distance(attractorStartMousePosition, mousePosition) > 1.0f)
-										{
-											attractorPoints.emplace_back(attractorStartMousePosition, mousePosition);
-										}
-									}else if(glm::distance(mousePosition, attractorPoints.back().second) > 1.0f)
-									{
-										attractorPoints.emplace_back(attractorPoints.back().second, mousePosition);
-									}
-								}
-							}
-							else if (!profileBoundaries.m_boundaries.empty())
-							{
-								if (!addAttractor)
-								{
-									//Stop and check boundary.
-									if (!profileBoundaries.Valid(profileBoundaries.m_boundaries.size() - 1))
-									{
-										profileBoundaries.m_boundaries.pop_back();
-									}
-									else
-									{
-										profileBoundaries.m_boundaries.back().CalculateCenter();
-										node.m_data.m_boundariesUpdated = true;
-									}
-								}
-								else
-								{
-									//Stop and check attractors.
-									node.m_data.m_boundariesUpdated = true;
-								}
-							}
-						}
-						else if (mouseDown) {
-							//Start recording.
 							if (!addAttractor) {
-								node.m_data.m_profileConstraints.m_boundaries.emplace_back();
-								node.m_data.m_profileConstraints.m_boundaries.back().m_points.push_back(mousePosition);
+								//Continue recording.
+								if (glm::distance(mousePosition, profileBoundaries.m_boundaries.back().m_points.back()) > 1.0f) profileBoundaries.m_boundaries.back().m_points.emplace_back(mousePosition);
 							}
 							else
 							{
-								node.m_data.m_profileConstraints.m_attractors.emplace_back();
-								attractorStartMousePosition = mousePosition;
+								auto& attractorPoints = profileBoundaries.m_attractors.back().m_attractorPoints;
+								if (attractorPoints.empty())
+								{
+									if (glm::distance(attractorStartMousePosition, mousePosition) > 1.0f)
+									{
+										attractorPoints.emplace_back(attractorStartMousePosition, mousePosition);
+									}
+								}
+								else if (glm::distance(mousePosition, attractorPoints.back().second) > 1.0f)
+								{
+									attractorPoints.emplace_back(attractorPoints.back().second, mousePosition);
+								}
 							}
 						}
-						lastFrameClicked = mouseDown;
-					}
-					else
-					{
-						ImGui::Text("Select an internode to show its front profile!");
-					}
-				}
-				ImGui::End();
-			}
-			if (m_backProfileGui) {
-				const std::string backTag = "Back Profile";
-				if (ImGui::Begin(backTag.c_str()))
-				{
-					if (m_selectedInternodeHandle != -1) {
-						auto& skeleton = treeModel.RefShootSkeleton();
-						auto& node = skeleton.RefNode(m_selectedInternodeHandle);
-						ImGui::Checkbox("Show Grid", &showGrid);
-						if (node.GetParentHandle() != -1)
+						else if (!profileBoundaries.m_boundaries.empty())
 						{
-							if(ImGui::Button("Copy from root"))
+							if (!addAttractor)
 							{
-								std::vector<NodeHandle> parentNodeToRootChain;
-								parentNodeToRootChain.emplace_back(m_selectedInternodeHandle);
-								NodeHandle walker = node.GetParentHandle();
-								while (walker != -1)
+								//Stop and check boundary.
+								if (!profileBoundaries.Valid(profileBoundaries.m_boundaries.size() - 1))
 								{
-									parentNodeToRootChain.emplace_back(walker);
-									walker = skeleton.PeekNode(walker).GetParentHandle();
+									profileBoundaries.m_boundaries.pop_back();
 								}
-								for(auto it = parentNodeToRootChain.rbegin() + 1; it != parentNodeToRootChain.rend(); ++it)
+								else
 								{
-									const auto& fromNode = skeleton.PeekNode(*(it - 1));
-									auto& toNode = skeleton.RefNode(*it);
-									toNode.m_data.m_profileConstraints = fromNode.m_data.m_profileConstraints;
-									toNode.m_data.m_boundariesUpdated = true;
-								}
-							}
-							const auto& parentNode = treeModel.RefShootSkeleton().RefNode(node.GetParentHandle());
-							if (!parentNode.m_data.m_profileConstraints.m_boundaries.empty() || !parentNode.m_data.m_profileConstraints.m_attractors.empty())
-							{
-								ImGui::SameLine();
-								if (ImGui::Button("Copy parent settings"))
-								{
-									node.m_data.m_profileConstraints = parentNode.m_data.m_profileConstraints;
+									profileBoundaries.m_boundaries.back().CalculateCenter();
 									node.m_data.m_boundariesUpdated = true;
 								}
 							}
-						}
-						node.m_data.m_backProfile.OnInspect([&](const glm::vec2 position)
-							{},
-							[&](const ImVec2 origin, const float zoomFactor, ImDrawList* drawList)
+							else
 							{
-								node.m_data.m_backProfile.RenderEdges(origin, zoomFactor, drawList, IM_COL32(0.0f, 0.0f, 128.0f, 128.0f), 1.0f);
-								node.m_data.m_backProfile.RenderBoundary(origin, zoomFactor, drawList, IM_COL32(255.f, 255.f, 255.0f, 255.0f), 4.0f);
-
-
-								if (node.GetParentHandle() != -1)
-								{
-									const auto& parentNode = treeModel.RefShootSkeleton().RefNode(node.GetParentHandle());
-									if (!parentNode.m_data.m_profileConstraints.m_boundaries.empty())
-									{
-										for (const auto& parentBoundary : parentNode.m_data.m_profileConstraints.m_boundaries)
-										{
-											parentBoundary.RenderBoundary(origin, zoomFactor, drawList, IM_COL32(128.0f, 0.0f, 0, 128.0f), 4.0f);
-										}
-										for (const auto& parentAttractor : parentNode.m_data.m_profileConstraints.m_attractors)
-										{
-											parentAttractor.RenderAttractor(origin, zoomFactor, drawList, IM_COL32(0.0f, 128.0f, 0, 128.0f), 4.0f);
-										}
-									}
-
-								}
-								for (const auto& boundary : node.m_data.m_profileConstraints.m_boundaries)
-								{
-									boundary.RenderBoundary(origin, zoomFactor, drawList, IM_COL32(255.0f, 0.0f, 0, 255.0f), 2.0f);
-								}
-
-								for (const auto& attractor : node.m_data.m_profileConstraints.m_attractors)
-								{
-									attractor.RenderAttractor(origin, zoomFactor, drawList, IM_COL32(0.0f, 255.0f, 0, 255.0f), 2.0f);
-								}
-							},
-							showGrid);
+								//Stop and check attractors.
+								node.m_data.m_boundariesUpdated = true;
+							}
+						}
 					}
-					else
-					{
-						ImGui::Text("Select an internode to show its back profile!");
+					else if (mouseDown) {
+						//Start recording.
+						if (!addAttractor) {
+							node.m_data.m_profileConstraints.m_boundaries.emplace_back();
+							node.m_data.m_profileConstraints.m_boundaries.back().m_points.push_back(mousePosition);
+						}
+						else
+						{
+							node.m_data.m_profileConstraints.m_attractors.emplace_back();
+							attractorStartMousePosition = mousePosition;
+						}
 					}
+					lastFrameClicked = mouseDown;
 				}
-				ImGui::End();
+				else
+				{
+					ImGui::Text("Select an internode to show its front profile!");
+				}
 			}
+			ImGui::End();
+		}
+		if (m_backProfileGui) {
+			const std::string backTag = "Back Profile";
+			if (ImGui::Begin(backTag.c_str()))
+			{
+				if (m_selectedInternodeHandle != -1) {
+					auto& node = skeleton.RefNode(m_selectedInternodeHandle);
+					ImGui::Checkbox("Show Grid", &showGrid);
+					if (node.GetParentHandle() != -1)
+					{
+						if (ImGui::Button("Copy from root"))
+						{
+							std::vector<NodeHandle> parentNodeToRootChain;
+							parentNodeToRootChain.emplace_back(m_selectedInternodeHandle);
+							NodeHandle walker = node.GetParentHandle();
+							while (walker != -1)
+							{
+								parentNodeToRootChain.emplace_back(walker);
+								walker = skeleton.PeekNode(walker).GetParentHandle();
+							}
+							for (auto it = parentNodeToRootChain.rbegin() + 1; it != parentNodeToRootChain.rend(); ++it)
+							{
+								const auto& fromNode = skeleton.PeekNode(*(it - 1));
+								auto& toNode = skeleton.RefNode(*it);
+								toNode.m_data.m_profileConstraints = fromNode.m_data.m_profileConstraints;
+								toNode.m_data.m_boundariesUpdated = true;
+							}
+						}
+						const auto& parentNode = skeleton.RefNode(node.GetParentHandle());
+						if (!parentNode.m_data.m_profileConstraints.m_boundaries.empty() || !parentNode.m_data.m_profileConstraints.m_attractors.empty())
+						{
+							ImGui::SameLine();
+							if (ImGui::Button("Copy parent settings"))
+							{
+								node.m_data.m_profileConstraints = parentNode.m_data.m_profileConstraints;
+								node.m_data.m_boundariesUpdated = true;
+							}
+						}
+					}
+					node.m_data.m_backProfile.OnInspect([&](const glm::vec2 position)
+						{},
+						[&](const ImVec2 origin, const float zoomFactor, ImDrawList* drawList)
+						{
+							node.m_data.m_backProfile.RenderEdges(origin, zoomFactor, drawList, IM_COL32(0.0f, 0.0f, 128.0f, 128.0f), 1.0f);
+							node.m_data.m_backProfile.RenderBoundary(origin, zoomFactor, drawList, IM_COL32(255.f, 255.f, 255.0f, 255.0f), 4.0f);
+
+
+							if (node.GetParentHandle() != -1)
+							{
+								const auto& parentNode = skeleton.RefNode(node.GetParentHandle());
+								if (!parentNode.m_data.m_profileConstraints.m_boundaries.empty())
+								{
+									for (const auto& parentBoundary : parentNode.m_data.m_profileConstraints.m_boundaries)
+									{
+										parentBoundary.RenderBoundary(origin, zoomFactor, drawList, IM_COL32(128.0f, 0.0f, 0, 128.0f), 4.0f);
+									}
+									for (const auto& parentAttractor : parentNode.m_data.m_profileConstraints.m_attractors)
+									{
+										parentAttractor.RenderAttractor(origin, zoomFactor, drawList, IM_COL32(0.0f, 128.0f, 0, 128.0f), 4.0f);
+									}
+								}
+
+							}
+							for (const auto& boundary : node.m_data.m_profileConstraints.m_boundaries)
+							{
+								boundary.RenderBoundary(origin, zoomFactor, drawList, IM_COL32(255.0f, 0.0f, 0, 255.0f), 2.0f);
+							}
+
+							for (const auto& attractor : node.m_data.m_profileConstraints.m_attractors)
+							{
+								attractor.RenderAttractor(origin, zoomFactor, drawList, IM_COL32(0.0f, 255.0f, 0, 255.0f), 2.0f);
+							}
+						},
+						showGrid);
+				}
+				else
+				{
+					ImGui::Text("Select an internode to show its back profile!");
+				}
+			}
+			ImGui::End();
 		}
 	}
 }

@@ -5,6 +5,7 @@
 #include "EditorLayer.hpp"
 #include "Application.hpp"
 #include "Jobs.hpp"
+#include "StrandModel.hpp"
 using namespace EvoEngine;
 namespace EcoSysLab {
 	
@@ -101,7 +102,7 @@ namespace EcoSysLab {
 		bool OnInspect(TreeModel& treeModel);
 
 		void Visualize(TreeModel& treeModel, const GlobalTransform& globalTransform);
-
+		void Visualize(StrandModel& strandModel, const GlobalTransform& globalTransform);
 		void Reset(TreeModel& treeModel);
 
 		void Clear();

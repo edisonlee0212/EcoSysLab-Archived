@@ -472,9 +472,9 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 
 	ImGui::DragFloat("Cladoptosis Range", &strandModelParameters.m_cladoptosisRange, 0.01f, 0.0f, 50.f);
 	m_strandModelParameters.m_cladoptosisDistribution.OnInspect("Cladoptosis", plottedDistributionSettings);
-	ImGui::Text(("Last calculation time: " + std::to_string(m_treeModel.PeekShootSkeleton().m_data.m_profileCalculationTime)).c_str());
-	ImGui::Text(("Strand count: " + std::to_string(m_treeModel.PeekShootSkeleton().m_data.m_strandGroup.PeekStrands().size())).c_str());
-	ImGui::Text(("Total particle count: " + std::to_string(m_treeModel.PeekShootSkeleton().m_data.m_numOfParticles)).c_str());
+	ImGui::Text(("Last calculation time: " + std::to_string(m_strandModel.m_strandModelSkeleton.m_data.m_profileCalculationTime)).c_str());
+	ImGui::Text(("Strand count: " + std::to_string(m_strandModel.m_strandModelSkeleton.m_data.m_strandGroup.PeekStrands().size())).c_str());
+	ImGui::Text(("Total particle count: " + std::to_string(m_strandModel.m_strandModelSkeleton.m_data.m_numOfParticles)).c_str());
 
 
 	if (ImGui::TreeNodeEx("Graph Adjustment settings"))
@@ -494,7 +494,7 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 
 	if (ImGui::Button("Reset profiles"))
 	{
-		m_treeModel.ResetAllProfiles(m_strandModelParameters);
+		m_strandModel.ResetAllProfiles(m_strandModelParameters);
 	}
 	if (ImGui::Button("Prepare profiles"))
 	{
@@ -597,19 +597,21 @@ bool Tree::OnInspectTreeGrowthSettings(TreeGrowthSettings& treeGrowthSettings)
 
 void Tree::PrepareProfiles()
 {
-	m_treeModel.InitializeProfiles(m_strandModelParameters);
-	m_treeModel.CalculateProfiles(m_strandModelParameters);
+	m_strandModel.m_strandModelSkeleton.Clone(m_treeModel.RefShootSkeleton());
+
+	m_strandModel.InitializeProfiles(m_strandModelParameters);
+	m_strandModel.CalculateProfiles(m_strandModelParameters);
 }
 
 std::shared_ptr<Strands> Tree::GenerateStrands()
 {
 	const auto strandsAsset = ProjectManager::CreateTemporaryAsset<Strands>();
-	m_treeModel.CalculateStrandProfileAdjustedTransforms(m_strandModelParameters);
-	m_treeModel.ApplyProfiles(m_strandModelParameters);
+	m_strandModel.CalculateStrandProfileAdjustedTransforms(m_strandModelParameters);
+	m_strandModel.ApplyProfiles(m_strandModelParameters);
 	const auto& parameters = m_strandModelParameters;
 	std::vector<glm::uint> strandsList;
 	std::vector<StrandPoint> points;
-	m_treeModel.RefShootSkeleton().m_data.m_strandGroup.BuildStrands(parameters.m_controlPointRatio, strandsList, points, parameters.m_triplePoints, parameters.m_nodeMaxCount);
+	m_strandModel.m_strandModelSkeleton.m_data.m_strandGroup.BuildStrands(parameters.m_controlPointRatio, strandsList, points, parameters.m_triplePoints, parameters.m_nodeMaxCount);
 	if (!points.empty()) strandsList.emplace_back(points.size());
 	StrandPointAttributes strandPointAttributes{};
 	strandPointAttributes.m_color = true;
@@ -749,6 +751,7 @@ std::shared_ptr<Mesh> Tree::GenerateStrandModelFoliageMesh(
 	const auto& nodeList = m_treeModel.PeekShootSkeleton().RefSortedNodeList();
 	for (const auto& internodeHandle : nodeList) {
 		const auto& internode = m_treeModel.PeekShootSkeleton().PeekNode(internodeHandle);
+		const auto& strandModelNode = m_strandModel.m_strandModelSkeleton.PeekNode(internodeHandle);
 		const auto& internodeInfo = internode.m_info;
 		if (internodeInfo.m_radius < foliageParameters.m_maxNodeThickness
 			&& internodeInfo.m_rootDistance > foliageParameters.m_minRootDistance
@@ -756,9 +759,9 @@ std::shared_ptr<Mesh> Tree::GenerateStrandModelFoliageMesh(
 			for (int i = 0; i < foliageParameters.m_leafCountPerInternode; i++)
 			{
 				auto leafSize = foliageParameters.m_leafSize * internode.m_data.m_lightIntensity;
-				glm::quat rotation = internode.m_data.m_adjustedGlobalRotation * glm::quat(glm::radians(glm::vec3(glm::gaussRand(0.0f, foliageParameters.m_rotationVariance), foliageParameters.m_branchingAngle, glm::linearRand(0.0f, 360.0f))));
+				glm::quat rotation = strandModelNode.m_data.m_adjustedGlobalRotation * glm::quat(glm::radians(glm::vec3(glm::gaussRand(0.0f, foliageParameters.m_rotationVariance), foliageParameters.m_branchingAngle, glm::linearRand(0.0f, 360.0f))));
 				auto front = rotation * glm::vec3(0, 0, -1);
-				auto foliagePosition = internode.m_data.m_adjustedGlobalPosition + front * (leafSize.y + glm::gaussRand(0.0f, foliageParameters.m_positionVariance));
+				auto foliagePosition = strandModelNode.m_data.m_adjustedGlobalPosition + front * (leafSize.y + glm::gaussRand(0.0f, foliageParameters.m_positionVariance));
 				auto leafTransform = glm::translate(foliagePosition) * glm::mat4_cast(rotation) * glm::scale(glm::vec3(leafSize.x, 1.0f, leafSize.y));
 
 				auto& matrix = leafTransform;
@@ -822,16 +825,16 @@ std::shared_ptr<Mesh> Tree::GenerateStrandModelFoliageMesh(
 
 std::shared_ptr<Mesh> Tree::GenerateStrandModelBranchMesh(const StrandModelMeshGeneratorSettings& strandModelMeshGeneratorSettings)
 {
-	m_treeModel.CalculateStrandProfileAdjustedTransforms(m_strandModelParameters);
-	m_treeModel.ApplyProfiles(m_strandModelParameters);
+	m_strandModel.CalculateStrandProfileAdjustedTransforms(m_strandModelParameters);
+	m_strandModel.ApplyProfiles(m_strandModelParameters);
 	const auto& parameters = m_strandModelParameters;
 	std::vector<glm::uint> strandsList;
 	std::vector<StrandPoint> points;
-	m_treeModel.RefShootSkeleton().m_data.m_strandGroup.BuildStrands(parameters.m_controlPointRatio, strandsList, points, parameters.m_triplePoints, parameters.m_nodeMaxCount);
+	m_strandModel.m_strandModelSkeleton.m_data.m_strandGroup.BuildStrands(parameters.m_controlPointRatio, strandsList, points, parameters.m_triplePoints, parameters.m_nodeMaxCount);
 
 	std::vector<Vertex> vertices;
 	std::vector<unsigned int> indices;
-	StrandModelMeshGenerator::Generate(m_treeModel, vertices, indices, strandModelMeshGeneratorSettings);
+	StrandModelMeshGenerator::Generate(m_strandModel, vertices, indices, strandModelMeshGeneratorSettings);
 
 	auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
 	VertexAttributes attributes{};

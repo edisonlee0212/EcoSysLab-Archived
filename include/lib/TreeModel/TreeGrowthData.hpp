@@ -4,6 +4,7 @@
 #include "StrandModelParameters.hpp"
 #include "ProfileConstraints.hpp"
 #include "TreeOccupancyGrid.hpp"
+#include "Octree.hpp"
 using namespace EvoEngine;
 namespace EcoSysLab
 {
@@ -98,14 +99,37 @@ namespace EcoSysLab
 		std::vector<Bud> m_buds;
 		std::vector<glm::mat4> m_leaves;
 		std::vector<glm::mat4> m_fruits;
+	};
 
-#pragma region Strand Model
+	struct ShootStemGrowthData {
+		int m_order = 0;
+	};
+
+	struct ShootGrowthData {
+		Octree<TreeVoxelData> m_octree = {};
+
+		size_t m_maxMarkerCount = 0;
+
+		std::vector<ReproductiveModule> m_droppedLeaves;
+		std::vector<ReproductiveModule> m_droppedFruits;
+
+		glm::vec3 m_desiredMin = glm::vec3(FLT_MAX);
+		glm::vec3 m_desiredMax = glm::vec3(FLT_MIN);
+
+		int m_maxLevel = 0;
+	};
+
+
+	typedef Skeleton<ShootGrowthData, ShootStemGrowthData, InternodeGrowthData> ShootSkeleton;
+
+	struct StrandModelNodeData
+	{
 		StrandModelProfile<CellParticlePhysicsData> m_frontProfile{};
 		std::unordered_map<StrandHandle, ParticleHandle> m_frontParticleMap{};
 		bool m_boundariesUpdated = false;
 		StrandModelProfile<CellParticlePhysicsData> m_backProfile{};
 		std::unordered_map<StrandHandle, ParticleHandle> m_backParticleMap{};
-		ProfileConstraints m_profileConstraints {};
+		ProfileConstraints m_profileConstraints{};
 
 		float m_frontControlPointDistance = 0.0f;
 		float m_backControlPointDistance = 0.0f;
@@ -124,38 +148,22 @@ namespace EcoSysLab
 		glm::quat m_adjustedGlobalRotation{};
 		float m_strandRadius = 0.002f;
 		int m_strandCount = 0;
-#pragma endregion
 	};
 
-	struct ShootStemGrowthData {
-		int m_order = 0;
+	struct StrandModelFlowData
+	{
+
 	};
 
-	struct ShootGrowthData {
-		Octree<TreeVoxelData> m_octree = {};
-
-		size_t m_maxMarkerCount = 0;
-
-		//ShootFlux m_shootFlux = {};
-
-		std::vector<ReproductiveModule> m_droppedLeaves;
-		std::vector<ReproductiveModule> m_droppedFruits;
-
-		glm::vec3 m_desiredMin = glm::vec3(FLT_MAX);
-		glm::vec3 m_desiredMax = glm::vec3(FLT_MIN);
-
-		int m_maxLevel = 0;
-
-#pragma region Strand Model
+	struct StrandModelSkeletonData
+	{
 		bool m_parallelScheduling = true;
-		
-		StrandModelStrandGroup m_strandGroup {};
-		
+
+		StrandModelStrandGroup m_strandGroup{};
+
 		float m_profileCalculationTime = 0.0f;
 		int m_numOfParticles = 0;
-#pragma endregion
 	};
 
-
-	typedef Skeleton<ShootGrowthData, ShootStemGrowthData, InternodeGrowthData> ShootSkeleton;
+	typedef Skeleton<StrandModelSkeletonData, StrandModelFlowData, StrandModelNodeData> StrandModelSkeleton;
 }

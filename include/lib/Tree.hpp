@@ -60,7 +60,7 @@ namespace EcoSysLab {
 		void InitializeSkeletalGraph(NodeHandle baseNodeHandle, const std::shared_ptr<Mesh> &pointMeshSample, const std::shared_ptr<Mesh>& lineMeshSample) const;
 
 		TreeModel m_treeModel{};
-		
+		StrandModel m_strandModel{};
 		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 
 		void OnDestroy() override;
