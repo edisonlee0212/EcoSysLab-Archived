@@ -649,7 +649,7 @@ void StrandModel::ApplyProfile(const StrandModelParameters& strandModelParameter
 	{
 		const auto& particle = node.m_data.m_backProfile.PeekParticle(particleHandle);
 		auto& newstrandSegment = m_strandModelSkeleton.m_data.m_strandGroup.RefStrandSegment(particle.m_data.m_strandSegmentHandle);
-		newstrandSegment.m_info.m_radius = node.m_data.m_strandRadius;
+		newstrandSegment.m_info.m_thickness = node.m_data.m_strandRadius;
 		newstrandSegment.m_info.m_globalPosition = node.m_data.m_adjustedGlobalPosition
 			+ node.m_data.m_strandRadius * particle.GetPosition().x * currentLeft
 			+ node.m_data.m_strandRadius * particle.GetPosition().y * currentUp;
@@ -691,10 +691,10 @@ void StrandModel::ApplyProfiles(const StrandModelParameters& strandModelParamete
 			{
 				const auto& particle = node.m_data.m_frontProfile.PeekParticle(particleHandle);
 				auto& strand = strandGroup.RefStrand(strandHandle);
-				strand.m_info.m_baseInfo.m_radius = baseRadius;
+				strand.m_info.m_baseInfo.m_thickness = baseRadius;
 				strand.m_info.m_baseInfo.m_globalPosition = parentGlobalPosition
-					+ strand.m_info.m_baseInfo.m_radius * particle.GetPosition().x * currentLeft
-					+ strand.m_info.m_baseInfo.m_radius * particle.GetPosition().y * currentUp;
+					+ strand.m_info.m_baseInfo.m_thickness * particle.GetPosition().x * currentLeft
+					+ strand.m_info.m_baseInfo.m_thickness * particle.GetPosition().y * currentUp;
 				strand.m_info.m_baseInfo.m_globalRotation = parentGlobalRotation;
 				strand.m_info.m_baseInfo.m_isBoundary = particle.IsBoundary();
 				strand.m_info.m_baseInfo.m_color = particle.IsBoundary() ? strandModelParameters.m_boundaryPointColor : strandModelParameters.m_contentPointColor;
@@ -903,23 +903,23 @@ float StrandModel::InterpolateStrandSegmentRadius(StrandSegmentHandle strandSegm
 
 	float p[4];
 
-	p[2] = strandSegment.m_info.m_radius;
+	p[2] = strandSegment.m_info.m_thickness;
 	if (strandSegmentHandle == strandSegmentHandles.front())
 	{
-		p[1] = baseInfo.m_radius;
+		p[1] = baseInfo.m_thickness;
 		p[0] = p[1] * 2.0f - p[2];
 	}
 	else if (strandSegmentHandle == strandSegmentHandles.at(1))
 	{
-		p[0] = baseInfo.m_radius;
-		p[1] = strandGroup.PeekStrandSegment(strandSegmentHandles.front()).m_info.m_radius;
+		p[0] = baseInfo.m_thickness;
+		p[1] = strandGroup.PeekStrandSegment(strandSegmentHandles.front()).m_info.m_thickness;
 	}
 	else
 	{
 		const auto& prevSegment = strandGroup.PeekStrandSegment(strandSegment.GetPrevHandle());
-		p[1] = prevSegment.m_info.m_radius;
+		p[1] = prevSegment.m_info.m_thickness;
 		const auto& prevPrevSegment = strandGroup.PeekStrandSegment(prevSegment.GetPrevHandle());
-		p[0] = prevPrevSegment.m_info.m_radius;
+		p[0] = prevPrevSegment.m_info.m_thickness;
 	}
 	if (strandSegmentHandle == strandSegmentHandles.back())
 	{
@@ -928,7 +928,7 @@ float StrandModel::InterpolateStrandSegmentRadius(StrandSegmentHandle strandSegm
 	else
 	{
 		const auto& nextSegment = strandGroup.PeekStrandSegment(strandSegment.GetNextHandle());
-		p[3] = nextSegment.m_info.m_radius;
+		p[3] = nextSegment.m_info.m_thickness;
 	}
 	float radius, tangent;
 	Strands::CubicInterpolation(p[0], p[1], p[2], p[3], radius, tangent, a);

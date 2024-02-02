@@ -8,7 +8,7 @@ m_shootGrowthParameters:
   m_saggingFactorThicknessReductionMax: [0.00260000001, 1.5, 0.300000012]
   m_internodeLength: 0.0299999993
   m_internodeLengthThicknessFactor: 0.150000006
-  m_endNodeThickness: 0.00200000009
+  m_endNodeThickness: 0.00400000019
   m_thicknessAccumulationFactor: 0.400000006
   m_thicknessAccumulateAgeFactor: 0
   m_internodeShadowFactor: 0.0299999993
@@ -23,7 +23,7 @@ m_shootGrowthParameters:
   m_apicalControl: 1.14999998
   m_apicalDominance: 0.469999999
   m_apicalDominanceLoss: 0.0599999987
-  m_lowBranchPruning: 0.125
+  m_lowBranchPruning: 0.100000001
   m_lowBranchPruningThicknessFactor: 0
   m_lightPruningFactor: 1
   m_thicknessPruningFactor: 0.00499999989

@@ -30,7 +30,7 @@ namespace EcoSysLab {
 		auto& p2 = m_rigidBodies2D.at(p2Handle);
 		const auto difference = p1.m_position - p2.m_position;
 		const auto distance = glm::length(difference);
-		const auto minDistance = p1.m_radius + p2.m_radius;
+		const auto minDistance = p1.m_thickness + p2.m_thickness;
 		if (distance < minDistance)
 		{
 			const auto axis = distance < glm::epsilon<float>() ? glm::vec2(1, 0) : difference / distance;
@@ -173,7 +173,7 @@ namespace EcoSysLab {
 		}
 		for (const auto& particle : m_rigidBodies2D) {
 			const auto& pointPosition = particle.m_position;
-			const auto& pointRadius = particle.m_radius;
+			const auto& pointRadius = particle.m_thickness;
 			const auto& pointColor = particle.m_color;
 			const auto canvasPosition = ImVec2(origin.x + pointPosition.x * zoomFactor,
 				origin.y + pointPosition.y * zoomFactor);

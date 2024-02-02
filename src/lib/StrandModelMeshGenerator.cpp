@@ -1315,9 +1315,9 @@ void StrandModelMeshGenerator::RecursiveSlicing(
 	forEachSegment(pipeGroup, segGroup0,
 		[&](const StrandSegment<StrandModelStrandSegmentData>& seg)
 		{
-			if (seg.m_info.m_radius > maxThickness)
+			if (seg.m_info.m_thickness > maxThickness)
 			{
-				maxThickness = seg.m_info.m_radius;
+				maxThickness = seg.m_info.m_thickness;
 			}
 		}
 	);

@@ -164,12 +164,12 @@ namespace EcoSysLab {
 			glm::vec3 positionStart = internodeInfo.m_globalPosition;
 			glm::vec3 positionEnd =
 				positionStart + internodeInfo.m_length * (settings.m_smoothness ? 1.0f - settings.m_baseControlPointRatio : 1.0f) * internodeInfo.m_globalDirection;
-			float thicknessStart = internodeInfo.m_radius;
-			float thicknessEnd = internodeInfo.m_radius;
+			float thicknessStart = internodeInfo.m_thickness;
+			float thicknessEnd = internodeInfo.m_thickness;
 
 			if (internode.GetParentHandle() != -1) {
 				const auto& parentInternode = treeSkeleton.PeekNode(internode.GetParentHandle());
-				thicknessStart = parentInternode.m_info.m_radius;
+				thicknessStart = parentInternode.m_info.m_thickness;
 				directionStart =
 					parentInternode.m_info.m_regulatedGlobalRotation *
 					glm::vec3(0, 0, -1);
@@ -189,15 +189,15 @@ namespace EcoSysLab {
 			}
 
 #pragma region Subdivision internode here.
-			const auto diameter = glm::max(thicknessStart, thicknessEnd) * 2.0f * glm::pi<float>();
-			int step = diameter / settings.m_xSubdivision;
+			const auto boundaryLength = glm::max(thicknessStart, thicknessEnd) * glm::pi<float>();
+			int step = boundaryLength / settings.m_xSubdivision;
 			if (step < 4)
 				step = 4;
 			if (step % 2 != 0)
 				++step;
 
 			tempSteps[threadIndex].emplace_back(internodeHandle, step);
-			int amount = glm::max(1, static_cast<int>(glm::distance(positionStart, positionEnd) / (internodeInfo.m_radius >= settings.m_trunkThickness ? settings.m_trunkYSubdivision : settings.m_branchYSubdivision)));
+			int amount = glm::max(1, static_cast<int>(glm::distance(positionStart, positionEnd) / (internodeInfo.m_thickness >= settings.m_trunkThickness ? settings.m_trunkYSubdivision : settings.m_branchYSubdivision)));
 			if (amount % 2 != 0)
 				++amount;
 			BezierCurve curve = BezierCurve(
@@ -209,37 +209,37 @@ namespace EcoSysLab {
 				positionEnd);
 			float posStep = 1.0f / static_cast<float>(amount);
 			glm::vec3 dirStep = (directionEnd - directionStart) / static_cast<float>(amount);
-			float radiusStep = (thicknessEnd - thicknessStart) /
+			float thicknessStep = (thicknessEnd - thicknessStart) /
 				static_cast<float>(amount);
 
 			for (int ringIndex = 1; ringIndex < amount; ringIndex++) {
-				float startThickness = static_cast<float>(ringIndex - 1) * radiusStep;
-				float endThickness = static_cast<float>(ringIndex) * radiusStep;
+				float frontThickness = static_cast<float>(ringIndex - 1) * thicknessStep;
+				float endThickness = static_cast<float>(ringIndex) * thicknessStep;
 				if (settings.m_smoothness) {
 					rings.emplace_back(
 						curve.GetPoint(posStep * (ringIndex - 1)), curve.GetPoint(posStep * ringIndex),
 						directionStart + static_cast<float>(ringIndex - 1) * dirStep,
 						directionStart + static_cast<float>(ringIndex) * dirStep,
-						thicknessStart + startThickness, thicknessStart + endThickness);
+						(thicknessStart + frontThickness) * 0.5f, (thicknessStart + endThickness) * 0.5f);
 				}
 				else {
 					rings.emplace_back(
 						curve.GetPoint(posStep * (ringIndex - 1)), curve.GetPoint(posStep * ringIndex),
 						directionEnd,
 						directionEnd,
-						thicknessStart + startThickness, thicknessStart + endThickness);
+						(thicknessStart + frontThickness) * 0.5f, (thicknessStart + endThickness) * 0.5f);
 				}
 			}
 			if (amount > 1)
 				rings.emplace_back(
 					curve.GetPoint(1.0f - posStep), positionEnd, directionEnd - dirStep,
 					directionEnd,
-					thicknessEnd - radiusStep,
-					thicknessEnd);
+					(thicknessEnd - thicknessStep) * 0.5f,
+					thicknessEnd * 0.5f);
 			else
 				rings.emplace_back(positionStart, positionEnd,
-					directionStart, directionEnd, thicknessStart,
-					thicknessEnd);
+					directionStart, directionEnd, thicknessStart * 0.5f,
+					thicknessEnd * 0.5f);
 #pragma endregion
 			}, results);
 		for (auto& i : results) i.wait();
@@ -305,7 +305,7 @@ namespace EcoSysLab {
 
 				}
 				distanceToChainEnd = flow.m_info.m_flowLength - distanceToChainStart - internode.m_info.m_length;
-				float compareRadius = internode.m_info.m_radius;
+				float compareRadius = internode.m_info.m_thickness;
 				if (parentFlowHandle != -1)
 				{
 					const auto& parentFlow = treeSkeleton.PeekFlow(parentFlowHandle);
@@ -330,7 +330,7 @@ namespace EcoSysLab {
 					if (!restartIShape)
 					{
 						const auto& parentTreePartInfo = treePartInfos[parentInternodeHandle];
-						if (parentTreePartInfo.m_distanceToStart / internodeInfo.m_radius > settings.m_treePartBreakRatio) restartIShape = true;
+						if (parentTreePartInfo.m_distanceToStart / internodeInfo.m_thickness > settings.m_treePartBreakRatio) restartIShape = true;
 					}
 					if (restartIShape)
 					{
@@ -655,10 +655,10 @@ namespace EcoSysLab {
 		{
 			const auto& node = treeSkeleton.PeekNode(nodeIndex);
 			const auto& info = node.m_info;
-			auto thickness = info.m_radius;
+			auto thickness = info.m_thickness;
 			if (node.GetParentHandle() > 0)
 			{
-				thickness = (thickness + treeSkeleton.PeekNode(node.GetParentHandle()).m_info.m_radius) / 2.0f;
+				thickness = (thickness + treeSkeleton.PeekNode(node.GetParentHandle()).m_info.m_thickness) / 2.0f;
 			}
 			octree.Occupy(info.m_globalPosition, info.m_globalRotation, info.m_length, thickness, [](OctreeNode&) {});
 		}

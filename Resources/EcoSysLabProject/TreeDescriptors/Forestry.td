@@ -8,7 +8,7 @@ m_shootGrowthParameters:
   m_saggingFactorThicknessReductionMax: [0.00100000005, 2, 0.100000001]
   m_internodeLength: 0.0299999993
   m_internodeLengthThicknessFactor: 0.150000006
-  m_endNodeThickness: 0.00200000009
+  m_endNodeThickness: 0.00400000019
   m_thicknessAccumulationFactor: 0.449999988
   m_thicknessAccumulateAgeFactor: 0
   m_internodeShadowFactor: 0.0399999991

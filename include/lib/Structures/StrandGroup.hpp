@@ -22,7 +22,7 @@ namespace EcoSysLab
 		/**
 		 * \brief The thickness of the end of current strand segment.
 		 */
-		float m_radius = 0.0f;
+		float m_thickness = 0.0f;
 		glm::vec4 m_color = glm::vec4(1.0f);
 		bool m_isBoundary = false;
 	};
@@ -263,7 +263,7 @@ namespace EcoSysLab
 			const auto baseTangent = glm::normalize(baseInfo.m_globalRotation * glm::vec3(0, 0, -1));
 			basePoint.m_color = baseInfo.m_color;
 			basePoint.m_position = baseInfo.m_globalPosition - baseTangent * basePointDistance * controlPointRatio;
-			basePoint.m_thickness = baseInfo.m_radius;
+			basePoint.m_thickness = baseInfo.m_thickness;
 			points.emplace_back(basePoint);
 			basePoint.m_position = baseInfo.m_globalPosition;
 			points.emplace_back(basePoint);
@@ -298,7 +298,7 @@ namespace EcoSysLab
 				auto distance = glm::min(prevDistance, nextDistance);
 				point.m_color = strandSegment.m_info.m_color;
 				point.m_position = strandSegment.m_info.m_globalPosition - tangent * distance * controlPointRatio;
-				point.m_thickness = strandSegment.m_info.m_radius;
+				point.m_thickness = strandSegment.m_info.m_thickness;
 				points.emplace_back(point);
 
 				point.m_position = strandSegment.m_info.m_globalPosition;
@@ -315,7 +315,7 @@ namespace EcoSysLab
 			strands.emplace_back(startIndex);
 			StrandPoint basePoint;
 			basePoint.m_color = baseInfo.m_color;
-			basePoint.m_thickness = baseInfo.m_radius;
+			basePoint.m_thickness = baseInfo.m_thickness;
 			basePoint.m_position = baseInfo.m_globalPosition;
 
 			points.emplace_back(basePoint);
@@ -327,7 +327,7 @@ namespace EcoSysLab
 				const auto& strandSegment = PeekStrandSegment(strandSegmentHandles[i]);
 				//auto distance = glm::min(prevDistance, nextDistance);
 				point.m_color = strandSegment.m_info.m_color;
-				point.m_thickness = strandSegment.m_info.m_radius;
+				point.m_thickness = strandSegment.m_info.m_thickness;
 				point.m_position = strandSegment.m_info.m_globalPosition;
 				points.emplace_back(point);
 			}

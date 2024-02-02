@@ -11,7 +11,7 @@ namespace EcoSysLab {
 		glm::vec2 m_position = glm::vec2(0.0f);
 		glm::vec2 m_lastPosition = glm::vec2(0.0f);
 		glm::vec2 m_acceleration = glm::vec2(0.0f);
-		float m_radius = 1.0f;
+		float m_thickness = 1.0f;
 		float m_damping = 0.0f;
 	public:
 		T m_data;
@@ -125,12 +125,12 @@ namespace EcoSysLab {
 	template <typename T>
 	float RigidBody2D<T>::GetRadius() const
 	{
-		return m_radius;
+		return m_thickness;
 	}
 
 	template <typename T>
 	void RigidBody2D<T>::SetRadius(const float radius)
 	{
-		m_radius = radius;
+		m_thickness = radius;
 	}
 }

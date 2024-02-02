@@ -537,7 +537,7 @@ PYBIND11_MODULE(pyecosyslab, m) {
 
 
 		.def_readwrite("m_overrideRadius", &TreeMeshGeneratorSettings::m_overrideRadius)
-		.def_readwrite("m_radius", &TreeMeshGeneratorSettings::m_radius)
+		.def_readwrite("m_thickness", &TreeMeshGeneratorSettings::m_radius)
 		.def_readwrite("m_treePartBaseDistance", &TreeMeshGeneratorSettings::m_treePartBaseDistance)
 		.def_readwrite("m_treePartEndDistance", &TreeMeshGeneratorSettings::m_treePartEndDistance)
 		.def_readwrite("m_baseControlPointRatio", &TreeMeshGeneratorSettings::m_baseControlPointRatio)
