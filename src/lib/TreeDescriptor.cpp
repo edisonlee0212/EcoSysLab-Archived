@@ -70,7 +70,7 @@ bool TreeDescriptor::OnInspectShootGrowthParameters(ShootGrowthParameters& treeG
 			changed = ImGui::DragFloat2("Lighting factor apical/lateral", &treeGrowthParameters.m_apicalBudLightingFactor, 0.00001f, 0.0f, 1.0f, "%.5f") || changed;
 			changed = ImGui::DragFloat2("Space factor apical/lateral", &treeGrowthParameters.m_apicalBudSpaceFactor, 0.001f, 0.0f, 1.0f, "%.3f") || changed;
 
-			changed = ImGui::DragFloat("Pipe resistance", &treeGrowthParameters.m_pipeResistance, 0.01f) || changed;
+			changed = ImGui::DragFloat("Pipe resistance factor", &treeGrowthParameters.m_pipeResistanceFactor, 0.01f) || changed;
 			changed = ImGui::DragFloat("Apical control", &treeGrowthParameters.m_apicalControl, 0.01f) || changed;
 			changed = ImGui::DragFloat2("Inhibitor val/loss", &treeGrowthParameters.m_apicalDominance, 0.01f) || changed;
 			ImGui::TreePop();
@@ -223,7 +223,7 @@ void TreeDescriptor::SerializeShootGrowthParameters(const std::string& name, con
 	out << YAML::Key << "m_lateralBudLightingFactor" << YAML::Value << treeGrowthParameters.m_lateralBudLightingFactor;
 	out << YAML::Key << "m_apicalBudSpaceFactor" << YAML::Value << treeGrowthParameters.m_apicalBudSpaceFactor;
 	out << YAML::Key << "m_lateralBudSpaceFactor" << YAML::Value << treeGrowthParameters.m_lateralBudSpaceFactor;
-	out << YAML::Key << "m_pipeResistance" << YAML::Value << treeGrowthParameters.m_pipeResistance;
+	out << YAML::Key << "m_pipeResistanceFactor" << YAML::Value << treeGrowthParameters.m_pipeResistanceFactor;
 	out << YAML::Key << "m_apicalControl" << YAML::Value << treeGrowthParameters.m_apicalControl;
 	out << YAML::Key << "m_apicalDominance" << YAML::Value << treeGrowthParameters.m_apicalDominance;
 	out << YAML::Key << "m_apicalDominanceLoss" << YAML::Value << treeGrowthParameters.m_apicalDominanceLoss;
@@ -313,7 +313,7 @@ void TreeDescriptor::DeserializeShootGrowthParameters(const std::string& name, S
 		if (param["m_lateralBudLightingFactor"]) treeGrowthParameters.m_lateralBudLightingFactor = param["m_lateralBudLightingFactor"].as<float>();
 		if (param["m_apicalBudSpaceFactor"]) treeGrowthParameters.m_apicalBudSpaceFactor = param["m_apicalBudSpaceFactor"].as<float>();
 		if (param["m_lateralBudSpaceFactor"]) treeGrowthParameters.m_lateralBudSpaceFactor = param["m_lateralBudSpaceFactor"].as<float>();
-		if (param["m_pipeResistance"]) treeGrowthParameters.m_pipeResistance = param["m_pipeResistance"].as<float>();
+		if (param["m_pipeResistanceFactor"]) treeGrowthParameters.m_pipeResistanceFactor = param["m_pipeResistanceFactor"].as<float>();
 		if (param["m_apicalControl"]) treeGrowthParameters.m_apicalControl = param["m_apicalControl"].as<float>();
 		if (param["m_apicalDominance"]) treeGrowthParameters.m_apicalDominance = param["m_apicalDominance"].as<float>();
 		if (param["m_apicalDominanceLoss"]) treeGrowthParameters.m_apicalDominanceLoss = param["m_apicalDominanceLoss"].as<float>();

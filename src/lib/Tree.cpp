@@ -436,96 +436,101 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 		}
 	}
 	*/
+	if (ImGui::TreeNode("Strand Model")) {
 
-
-	auto& strandModelParameters = m_strandModelParameters;
-	if (ImGui::TreeNodeEx("Profile settings", ImGuiTreeNodeFlags_DefaultOpen))
-	{
-		if (ImGui::TreeNode("Physics settings"))
+		auto& strandModelParameters = m_strandModelParameters;
+		if (ImGui::TreeNodeEx("Profile settings", ImGuiTreeNodeFlags_DefaultOpen))
 		{
-			ImGui::DragFloat("Physics damping", &strandModelParameters.m_profilePhysicsSettings.m_damping, 0.01f, 0.0f, 1.0f);
-			ImGui::DragFloat("Physics max speed", &strandModelParameters.m_profilePhysicsSettings.m_maxSpeed, 0.01f, 0.0f, 100.0f);
-			ImGui::DragFloat("Physics particle softness", &strandModelParameters.m_profilePhysicsSettings.m_particleSoftness, 0.01f, 0.0f, 1.0f);
+			if (ImGui::TreeNode("Physics settings"))
+			{
+				ImGui::DragFloat("Physics damping", &strandModelParameters.m_profilePhysicsSettings.m_damping, 0.01f, 0.0f, 1.0f);
+				ImGui::DragFloat("Physics max speed", &strandModelParameters.m_profilePhysicsSettings.m_maxSpeed, 0.01f, 0.0f, 100.0f);
+				ImGui::DragFloat("Physics particle softness", &strandModelParameters.m_profilePhysicsSettings.m_particleSoftness, 0.01f, 0.0f, 1.0f);
+				ImGui::TreePop();
+			}
+			ImGui::DragFloat("Center attraction strength", &strandModelParameters.m_centerAttractionStrength, 100.f, 0.0f, 10000.0f);
+			ImGui::DragInt("Max iteration cell factor", &strandModelParameters.m_maxSimulationIterationCellFactor, 1, 0, 500);
+			ImGui::DragInt("Branch Packing Timeout", &strandModelParameters.m_branchProfilePackingMaxIteration, 1, 0, 10000);
+			ImGui::DragInt("Junction Packing Timeout", &strandModelParameters.m_junctionProfilePackingMaxIteration, 1, 20, 10000);
+			ImGui::DragInt("Modified Packing Timeout", &strandModelParameters.m_modifiedProfilePackingMaxIteration, 1, 20, 10000);
+			ImGui::DragInt("Timeout with boundaries)", &strandModelParameters.m_modifiedProfilePackingMaxIteration, 1, 20, 10000);
 			ImGui::TreePop();
 		}
-		ImGui::DragFloat("Center attraction strength", &strandModelParameters.m_centerAttractionStrength, 100.f, 0.0f, 10000.0f);
-		ImGui::DragInt("Max iteration cell factor", &strandModelParameters.m_maxSimulationIterationCellFactor, 1, 0, 500);
-		ImGui::DragInt("Branch Packing Timeout", &strandModelParameters.m_branchProfilePackingMaxIteration, 1, 0, 10000);
-		ImGui::DragInt("Junction Packing Timeout", &strandModelParameters.m_junctionProfilePackingMaxIteration, 1, 20, 10000);
-		ImGui::DragInt("Modified Packing Timeout", &strandModelParameters.m_modifiedProfilePackingMaxIteration, 1, 20, 10000);
-		ImGui::DragInt("Timeout with boundaries)", &strandModelParameters.m_modifiedProfilePackingMaxIteration, 1, 20, 10000);
+		ImGui::DragFloat("Overlap threshold", &strandModelParameters.m_overlapThreshold, 0.01f, 0.0f, 1.0f);
+		ImGui::DragInt("Initial branch strand count", &strandModelParameters.m_strandsAlongBranch, 1, 1, 50);
+		ImGui::DragInt("Initial end node strand count", &strandModelParameters.m_endNodeStrands, 1, 1, 50);
+
+		ImGui::Checkbox("Pre-merge", &strandModelParameters.m_preMerge);
+
+		static PlottedDistributionSettings plottedDistributionSettings = { 0.001f,
+														{0.001f, true, true, ""},
+														{0.001f, true, true, ""},
+														"" };
+		m_strandModelParameters.m_branchTwistDistribution.OnInspect("Branch Twist", plottedDistributionSettings);
+		m_strandModelParameters.m_junctionTwistDistribution.OnInspect("Junction Twist", plottedDistributionSettings);
+		m_strandModelParameters.m_strandRadiusDistribution.OnInspect("Strand Thickness", plottedDistributionSettings);
+
+		ImGui::DragFloat("Cladoptosis Range", &strandModelParameters.m_cladoptosisRange, 0.01f, 0.0f, 50.f);
+		m_strandModelParameters.m_cladoptosisDistribution.OnInspect("Cladoptosis", plottedDistributionSettings);
+		ImGui::Text(("Last calculation time: " + std::to_string(m_strandModel.m_strandModelSkeleton.m_data.m_profileCalculationTime)).c_str());
+		ImGui::Text(("Strand count: " + std::to_string(m_strandModel.m_strandModelSkeleton.m_data.m_strandGroup.PeekStrands().size())).c_str());
+		ImGui::Text(("Total particle count: " + std::to_string(m_strandModel.m_strandModelSkeleton.m_data.m_numOfParticles)).c_str());
+
+
+		if (ImGui::TreeNodeEx("Graph Adjustment settings"))
+		{
+			ImGui::DragFloat("Shift push ratio", &strandModelParameters.m_shiftPushRatio, 0.01f, 0.0f, 2.0f);
+			ImGui::DragFloat("Side push ratio", &strandModelParameters.m_sidePushRatio, 0.01f, 0.0f, 2.0f);
+			ImGui::DragFloat("Front push ratio", &strandModelParameters.m_frontPushRatio, 0.01f, 0.0f, 2.0f);
+			ImGui::DragFloat("Rotation push ratio", &strandModelParameters.m_rotationPushRatio, 0.01f, 0.0f, 2.0f);
+			ImGui::TreePop();
+		}
+		ImGui::Checkbox("Triple points", &strandModelParameters.m_triplePoints);
+		if (strandModelParameters.m_triplePoints) ImGui::DragFloat("Control Point Ratio", &strandModelParameters.m_controlPointRatio, 0.01f, 0.01f, 0.5f);
+		ImGui::DragInt("Max node count", &strandModelParameters.m_nodeMaxCount, 1, -1, 999);
+		ImGui::DragInt("Boundary point distance", &strandModelParameters.m_boundaryPointDistance, 1, 3, 30);
+		ImGui::ColorEdit4("Boundary color", &strandModelParameters.m_boundaryPointColor.x);
+		ImGui::ColorEdit4("Content color", &strandModelParameters.m_contentPointColor.x);
+
+		if (ImGui::Button("Reset profiles"))
+		{
+			m_strandModel.ResetAllProfiles(m_strandModelParameters);
+		}
+		if (ImGui::Button("Prepare profiles"))
+		{
+			PrepareProfiles();
+		}
+		if (ImGui::Button("Create StrandsRenderer"))
+		{
+			InitializeStrandRenderer();
+		}
+		if (ImGui::Button("Clear StrandsRenderer"))
+		{
+			ClearStrandRenderer();
+		}
+
+		if (ImGui::TreeNodeEx("Strand Model Mesh Generator Settings", ImGuiTreeNodeFlags_DefaultOpen)) {
+			m_strandModelMeshGeneratorSettings.OnInspect(editorLayer);
+			ImGui::TreePop();
+		}
+		if (ImGui::Button("Build Strand Model Mesh"))
+		{
+			InitializeStrandModelMeshRenderer(m_strandModelMeshGeneratorSettings);
+		}
+
+		if (ImGui::Button("Clear Strand Model Mesh"))
+		{
+			ClearStrandModelMeshRenderer();
+		}
+		
 		ImGui::TreePop();
 	}
-	ImGui::DragFloat("Overlap threshold", &strandModelParameters.m_overlapThreshold, 0.01f, 0.0f, 1.0f);
-	ImGui::DragInt("Initial branch strand count", &strandModelParameters.m_strandsAlongBranch, 1, 1, 50);
-	ImGui::DragInt("Initial end node strand count", &strandModelParameters.m_endNodeStrands, 1, 1, 50);
+	m_treeVisualizer.OnInspect(m_treeModel);
 
-	ImGui::Checkbox("Pre-merge", &strandModelParameters.m_preMerge);
-
-	static PlottedDistributionSettings plottedDistributionSettings = { 0.001f,
-													{0.001f, true, true, ""},
-													{0.001f, true, true, ""},
-													"" };
-	m_strandModelParameters.m_branchTwistDistribution.OnInspect("Branch Twist", plottedDistributionSettings);
-	m_strandModelParameters.m_junctionTwistDistribution.OnInspect("Junction Twist", plottedDistributionSettings);
-	m_strandModelParameters.m_strandRadiusDistribution.OnInspect("Strand Thickness", plottedDistributionSettings);
-
-	ImGui::DragFloat("Cladoptosis Range", &strandModelParameters.m_cladoptosisRange, 0.01f, 0.0f, 50.f);
-	m_strandModelParameters.m_cladoptosisDistribution.OnInspect("Cladoptosis", plottedDistributionSettings);
-	ImGui::Text(("Last calculation time: " + std::to_string(m_strandModel.m_strandModelSkeleton.m_data.m_profileCalculationTime)).c_str());
-	ImGui::Text(("Strand count: " + std::to_string(m_strandModel.m_strandModelSkeleton.m_data.m_strandGroup.PeekStrands().size())).c_str());
-	ImGui::Text(("Total particle count: " + std::to_string(m_strandModel.m_strandModelSkeleton.m_data.m_numOfParticles)).c_str());
-
-
-	if (ImGui::TreeNodeEx("Graph Adjustment settings"))
-	{
-		ImGui::DragFloat("Shift push ratio", &strandModelParameters.m_shiftPushRatio, 0.01f, 0.0f, 2.0f);
-		ImGui::DragFloat("Side push ratio", &strandModelParameters.m_sidePushRatio, 0.01f, 0.0f, 2.0f);
-		ImGui::DragFloat("Front push ratio", &strandModelParameters.m_frontPushRatio, 0.01f, 0.0f, 2.0f);
-		ImGui::DragFloat("Rotation push ratio", &strandModelParameters.m_rotationPushRatio, 0.01f, 0.0f, 2.0f);
-		ImGui::TreePop();
-	}
-	ImGui::Checkbox("Triple points", &strandModelParameters.m_triplePoints);
-	if (strandModelParameters.m_triplePoints) ImGui::DragFloat("Control Point Ratio", &strandModelParameters.m_controlPointRatio, 0.01f, 0.01f, 0.5f);
-	ImGui::DragInt("Max node count", &strandModelParameters.m_nodeMaxCount, 1, -1, 999);
-	ImGui::DragInt("Boundary point distance", &strandModelParameters.m_boundaryPointDistance, 1, 3, 30);
-	ImGui::ColorEdit4("Boundary color", &strandModelParameters.m_boundaryPointColor.x);
-	ImGui::ColorEdit4("Content color", &strandModelParameters.m_contentPointColor.x);
-
-	if (ImGui::Button("Reset profiles"))
-	{
-		m_strandModel.ResetAllProfiles(m_strandModelParameters);
-	}
-	if (ImGui::Button("Prepare profiles"))
-	{
-		PrepareProfiles();
-	}
-	if (ImGui::Button("Create StrandsRenderer"))
-	{
-		InitializeStrandRenderer();
-	}
-	if (ImGui::Button("Clear StrandsRenderer"))
-	{
-		ClearStrandRenderer();
-	}
-
-	if (ImGui::TreeNodeEx("Strand Model Mesh Generator Settings", ImGuiTreeNodeFlags_DefaultOpen)) {
-		m_strandModelMeshGeneratorSettings.OnInspect(editorLayer);
-		ImGui::TreePop();
-	}
-	if (ImGui::Button("Build Strand Model Mesh"))
-	{
-		InitializeStrandModelMeshRenderer(m_strandModelMeshGeneratorSettings);
-	}
-
-	if (ImGui::Button("Clear Strand Model Mesh"))
-	{
-		ClearStrandModelMeshRenderer();
-	}
 	m_treeVisualizer.m_skeletalGraphSettings.OnInspect();
 	if (ImGui::Button("Build Skeletal Graph"))
 	{
-		InitializeSkeletalGraph(-1, 
+		InitializeSkeletalGraph(-1,
 			Resources::GetResource<Mesh>("PRIMITIVE_SPHERE"),
 			Resources::GetResource<Mesh>("PRIMITIVE_CUBE"));
 	}
@@ -1816,7 +1821,7 @@ void Tree::PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescrip
 					if (internode.m_data.m_inhibitorSink > 0.0f) bud.m_flushingRate *= glm::exp(-internode.m_data.m_inhibitorSink);
 				}
 			};
-		m_shootGrowthController.m_pipeResistance = treeDescriptor->m_shootGrowthParameters.m_pipeResistance;
+		m_shootGrowthController.m_pipeResistanceFactor = treeDescriptor->m_shootGrowthParameters.m_pipeResistanceFactor;
 		m_shootGrowthController.m_apicalControl = treeDescriptor->m_shootGrowthParameters.m_apicalControl;
 		m_shootGrowthController.m_apicalDominance = [=](const Node<InternodeGrowthData>& internode)
 			{

@@ -370,7 +370,7 @@ TreeVisualizer::OnInspect(
 	}
 	if (ImGui::TreeNodeEx("Visualizer Settings")) {
 		if (ImGui::Combo("Shoot Color mode",
-			{ "Default", "Order", "Level", "Light Intensity", "Light Direction", "Growth Potential", "Apical control", "Desired growth rate", "IsMaxChild", "AllocatedVigor" },
+			{ "Default", "Order", "Level", "Light Intensity", "Light Direction", "Growth Potential", "Apical control", "Desired growth rate", "Pipe Resistance", "IsMaxChild", "AllocatedVigor" },
 			m_settings.m_shootVisualizationMode)) {
 			m_needShootColorUpdate = true;
 		}
@@ -1001,7 +1001,7 @@ void TreeVisualizer::SyncColors(const ShootSkeleton& shootSkeleton, const NodeHa
 			matrices[i].m_instanceColor = m_randomColors[node.m_data.m_level];
 			break;
 		case ShootVisualizerMode::LightIntensity:
-			matrices[i].m_instanceColor = glm::vec4(
+			matrices[i].m_instanceColor = glm::mix(glm::vec4(0, 1, 0, 1), glm::vec4(1, 0, 0, 1),
 				glm::clamp(glm::pow(node.m_data.m_lightIntensity, m_settings.m_shootColorMultiplier), 0.0f, 1.f));
 			break;
 		case ShootVisualizerMode::LightDirection:
@@ -1012,8 +1012,10 @@ void TreeVisualizer::SyncColors(const ShootSkeleton& shootSkeleton, const NodeHa
 			matrices[i].m_instanceColor = glm::vec4(glm::vec3(node.m_data.m_maxChild ? 1.0f : 0.0f), 1.0f);
 			break;
 		case ShootVisualizerMode::GrowthPotential:
-			matrices[i].m_instanceColor = glm::vec4(
-				glm::clamp(glm::pow(node.m_data.m_growthPotential, m_settings.m_shootColorMultiplier), 0.0f, 1.f));
+			matrices[i].m_instanceColor = glm::mix(glm::vec4(0, 1, 0, 1), glm::vec4(1, 0, 0, 1), glm::clamp(glm::pow(node.m_data.m_growthPotential, m_settings.m_shootColorMultiplier), 0.0f, 1.f));
+			break;
+		case ShootVisualizerMode::PipeResistance:
+			matrices[i].m_instanceColor = glm::mix(glm::vec4(0, 1, 0, 1), glm::vec4(1, 0, 0, 1), glm::clamp(glm::pow(node.m_data.m_pipeResistance, m_settings.m_shootColorMultiplier), 0.0f, 1.f));
 			break;
 		case ShootVisualizerMode::ApicalControl:
 			matrices[i].m_instanceColor = glm::vec4(

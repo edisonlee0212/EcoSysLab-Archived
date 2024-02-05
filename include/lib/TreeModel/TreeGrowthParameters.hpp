@@ -91,7 +91,7 @@ namespace EcoSysLab
 		/**
 		 * \brief To prevent over growth.
 		 */
-		float m_pipeResistance;
+		float m_pipeResistanceFactor = 2.0f;
 		/**
 		 * \brief Apical control base
 		 */
