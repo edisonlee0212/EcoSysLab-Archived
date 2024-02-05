@@ -678,8 +678,6 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, const NodeHandle inter
 				apicalBud.m_localRotation = glm::vec3(
 					glm::radians(shootGrowthController.m_apicalAngle(newInternode)), 0.0f,
 					glm::radians(shootGrowthController.m_rollAngle(newInternode)));
-				break;
-
 				float elongateLength = 0.0f;
 				if (m_treeGrowthSettings.m_useSpaceColonization) {
 					if (m_shootSkeleton.m_data.m_maxMarkerCount > 0) elongateLength = static_cast<float>(bud.m_markerCount) / m_shootSkeleton.m_data.m_maxMarkerCount * shootGrowthController.m_internodeLength;
