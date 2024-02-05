@@ -875,15 +875,6 @@ float TreeModel::CalculateDesiredGrowthRate(const std::vector<NodeHandle>& sorte
 	{
 		auto& node = m_shootSkeleton.RefNode(internodeHandle);
 		minDistance = glm::min(minDistance, node.m_info.m_rootDistance);
-		const float thicknessMultiplier = node.m_info.m_thickness / shootGrowthController.m_endNodeThickness;
-		node.m_data.m_pipeResistance = 1.0f / glm::pow(thicknessMultiplier, shootGrowthController.m_pipeResistanceFactor);
-		const auto parentHandle = node.GetParentHandle();
-		if (parentHandle != -1)
-		{
-			const auto parent = m_shootSkeleton.PeekNode(parentHandle);
-			node.m_data.m_pipeResistance += parent.m_data.m_pipeResistance;
-		}
-		if (node.IsEndNode()) maxResistance = glm::max(maxResistance, node.m_data.m_pipeResistance);
 	}
 	float maximumDesiredGrowthPotential = 0.0f;
 	float maximumApicalControl = 0.0f;
@@ -898,7 +889,6 @@ float TreeModel::CalculateDesiredGrowthRate(const std::vector<NodeHandle>& sorte
 	for (const auto& internodeHandle : sortedInternodeList)
 	{
 		auto& node = m_shootSkeleton.RefNode(internodeHandle);
-		node.m_data.m_pipeResistance = glm::min(1.0f, node.m_data.m_pipeResistance / maxResistance);
 		node.m_data.m_growthPotential = node.m_data.m_lightIntensity;
 		if (apicalControl > 1.0f)
 		{
@@ -921,7 +911,7 @@ float TreeModel::CalculateDesiredGrowthRate(const std::vector<NodeHandle>& sorte
 		auto& node = m_shootSkeleton.RefNode(internodeHandle);
 		node.m_data.m_growthPotential /= maximumDesiredGrowthPotential;
 		node.m_data.m_apicalControl /= maximumApicalControl;
-		node.m_data.m_desiredGrowthRate = node.m_data.m_growthPotential * node.m_data.m_apicalControl / node.m_data.m_pipeResistance;
+		node.m_data.m_desiredGrowthRate = node.m_data.m_growthPotential * node.m_data.m_apicalControl;
 		if (node.IsEndNode()) maximumGrowthRate = glm::max(maximumGrowthRate, node.m_data.m_desiredGrowthRate);
 	}
 

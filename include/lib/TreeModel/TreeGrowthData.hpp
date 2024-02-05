@@ -83,7 +83,6 @@ namespace EcoSysLab
 
 		float m_lightIntensity = 1.0f;
 		glm::vec3 m_lightDirection = glm::vec3(0, 1, 0);
-		float m_pipeResistance = 0.0f;
 
 		float m_growthPotential = 0.0f;
 		float m_apicalControl = 0.0f;

@@ -19,7 +19,6 @@ m_shootGrowthParameters:
   m_lateralBudLightingFactor: 1
   m_apicalBudSpaceFactor: 1
   m_lateralBudSpaceFactor: 1
-  m_pipeResistanceFactor: 2
   m_apicalControl: 1.25
   m_apicalDominance: 0.25
   m_apicalDominanceLoss: 0.0799999982

@@ -23,7 +23,7 @@ namespace EcoSysLab {
 			int gridSize, float gridDistance, float randomShift,
 			const PointCloudPointSettings& pointSettings,
 			const PointCloudGridCaptureSettings& captureSettings,
-			const std::string& treeParametersPath,
+			const std::string& treeParametersFolderPath,
 			const std::string& forestPatchPath,
 			float deltaTime,
 			int maxIterations,

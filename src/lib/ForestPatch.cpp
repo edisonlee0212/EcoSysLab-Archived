@@ -52,7 +52,7 @@ void ForestPatch::ApplyTreeDescriptors(const std::filesystem::path& folderPath)
 	std::vector<std::shared_ptr<TreeDescriptor>> collectedTreeDescriptors{};
 	for (const auto& i : std::filesystem::recursive_directory_iterator(folderPath))
 	{
-		if (i.is_regular_file() && i.path().extension().string() == ".fp")
+		if (i.is_regular_file() && i.path().extension().string() == ".td")
 		{
 			const auto treeDescriptor =
 				std::dynamic_pointer_cast<TreeDescriptor>(ProjectManager::GetOrCreateAsset(ProjectManager::GetPathRelativeToProject(i.path())));

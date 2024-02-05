@@ -287,8 +287,8 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 		spaceColonizationGridParticleInfoList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
 	}
 
-
-	if (m_treeDescriptor.Get<TreeDescriptor>()) {
+	const auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
+	if (treeDescriptor) {
 		ImGui::DragInt("Seed", &m_treeModel.m_seed, 1, 0);
 		if (ImGui::Button("Reset")) {
 			Reset();
@@ -358,7 +358,44 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 			}
 			ImGui::TreePop();
 		}
-
+		if(ImGui::TreeNode("Sagging"))
+		{
+			bool changed = false;
+			changed = ImGui::DragFloat("Sagging strength", &treeDescriptor->m_shootGrowthParameters.m_saggingFactorThicknessReductionMax.x, 0.0001f, 0.0f, 10.0f, "%.5f") || changed;
+			changed = ImGui::DragFloat("Sagging thickness factor", &treeDescriptor->m_shootGrowthParameters.m_saggingFactorThicknessReductionMax.y, 0.01f, 0.0f, 10.0f, "%.5f") || changed;
+			changed = ImGui::DragFloat("Sagging max", &treeDescriptor->m_shootGrowthParameters.m_saggingFactorThicknessReductionMax.z, 0.001f, 0.0f, 1.0f, "%.5f") || changed;
+			if(changed)
+			{
+				m_shootGrowthController.m_sagging = [=](const Node<InternodeGrowthData>& internode)
+					{
+						const auto& shootGrowthParameters = treeDescriptor->m_shootGrowthParameters;
+						const auto newSagging = glm::min(
+							shootGrowthParameters.m_saggingFactorThicknessReductionMax.z,
+							shootGrowthParameters.m_saggingFactorThicknessReductionMax.x *
+							(internode.m_data.m_descendentTotalBiomass + internode.m_data.m_extraMass) /
+							glm::pow(
+								internode.m_info.m_thickness /
+								shootGrowthParameters.m_endNodeThickness,
+								shootGrowthParameters.m_saggingFactorThicknessReductionMax.y));
+						return newSagging;
+					};
+				m_treeModel.CalculateTransform(m_shootGrowthController, true);
+				m_shootGrowthController.m_sagging = [=](const Node<InternodeGrowthData>& internode)
+					{
+						const auto& shootGrowthParameters = treeDescriptor->m_shootGrowthParameters;
+						const auto newSagging = glm::min(
+							shootGrowthParameters.m_saggingFactorThicknessReductionMax.z,
+							shootGrowthParameters.m_saggingFactorThicknessReductionMax.x *
+							(internode.m_data.m_descendentTotalBiomass + internode.m_data.m_extraMass) /
+							glm::pow(
+								internode.m_info.m_thickness /
+								shootGrowthParameters.m_endNodeThickness,
+								shootGrowthParameters.m_saggingFactorThicknessReductionMax.y));
+						return glm::max(internode.m_data.m_sagging, newSagging);
+					};
+				m_treeVisualizer.m_needUpdate = true;
+			}
+		}
 		/*
 		if (m_enableVisualization) {
 			bool needGridUpdate = false;
@@ -525,6 +562,9 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 		
 		ImGui::TreePop();
 	}
+
+
+
 	m_treeVisualizer.OnInspect(m_treeModel);
 
 	m_treeVisualizer.m_skeletalGraphSettings.OnInspect();
@@ -574,7 +614,9 @@ void Tree::OnCreate() {
 }
 
 void Tree::OnDestroy() {
-	m_treeModel.Clear();
+	m_treeModel = {};
+	m_strandModel = {};
+	
 	m_treeDescriptor.Clear();
 	m_soil.Clear();
 	m_climate.Clear();
@@ -1821,7 +1863,6 @@ void Tree::PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescrip
 					if (internode.m_data.m_inhibitorSink > 0.0f) bud.m_flushingRate *= glm::exp(-internode.m_data.m_inhibitorSink);
 				}
 			};
-		m_shootGrowthController.m_pipeResistanceFactor = treeDescriptor->m_shootGrowthParameters.m_pipeResistanceFactor;
 		m_shootGrowthController.m_apicalControl = treeDescriptor->m_shootGrowthParameters.m_apicalControl;
 		m_shootGrowthController.m_apicalDominance = [=](const Node<InternodeGrowthData>& internode)
 			{
@@ -1838,7 +1879,7 @@ void Tree::PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescrip
 				{
 					pruningProbability = treeDescriptor->m_shootGrowthParameters.m_lightPruningFactor;
 				}
-				if (!internode.IsApical() && treeDescriptor->m_shootGrowthParameters.m_thicknessPruningFactor != 0.0f
+				if (internode.m_data.m_level != 0 && treeDescriptor->m_shootGrowthParameters.m_thicknessPruningFactor != 0.0f
 					&& internode.m_info.m_thickness / internode.m_info.m_endDistance < treeDescriptor->m_shootGrowthParameters.m_thicknessPruningFactor)
 				{
 					pruningProbability += 999.0f;

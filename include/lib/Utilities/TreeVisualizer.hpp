@@ -36,7 +36,7 @@ namespace EcoSysLab {
 		GrowthPotential,
 		ApicalControl,
 		DesiredGrowthRate,
-		PipeResistance,
+		GrowthRate,
 
 		IsMaxChild,
 		AllocatedVigor,
