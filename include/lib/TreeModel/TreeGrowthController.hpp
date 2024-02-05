@@ -6,7 +6,7 @@ namespace EcoSysLab
 {
 	struct ShootGrowthController {
 		bool m_branchPush = false;
-		bool m_useLevelForApicalControl = false;
+		bool m_useLevelForApicalControl = true;
 #pragma region Internode
 		/**
 		 * \brief The expected elongation length for an internode for one year.
