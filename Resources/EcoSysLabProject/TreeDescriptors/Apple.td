@@ -14,12 +14,12 @@ m_shootGrowthParameters:
   m_internodeShadowFactor: 0.0199999996
   m_lateralBudCount: 1
   m_apicalBudExtinctionRate: 0
-  m_lateralBudFlushingRate: 0.300000012
+  m_lateralBudFlushingRate: 0.100000001
   m_apicalBudLightingFactor: 1
   m_lateralBudLightingFactor: 1
   m_apicalBudSpaceFactor: 1
   m_lateralBudSpaceFactor: 1
-  m_pipeResistance: 0
+  m_pipeResistanceFactor: 2
   m_apicalControl: 0.970000029
   m_apicalDominance: 0.5
   m_apicalDominanceLoss: 0.0199999996

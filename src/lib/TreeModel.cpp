@@ -137,7 +137,7 @@ bool TreeModel::Grow(const float deltaTime, const NodeHandle baseInternodeHandle
 		treeStructureChanged = treeStructureChanged || anyBranchPruned;
 	}
 	bool anyBranchGrown = false;
-	const auto sortedSubTreeInternodeList = m_shootSkeleton.GetSubTree(baseInternodeHandle);
+	auto sortedSubTreeInternodeList = m_shootSkeleton.GetSubTree(baseInternodeHandle);
 
 	if (!m_treeGrowthSettings.m_useSpaceColonization) {
 		const auto totalShootFlux = CollectShootFlux(sortedSubTreeInternodeList);
@@ -150,7 +150,14 @@ bool TreeModel::Grow(const float deltaTime, const NodeHandle baseInternodeHandle
 		const bool graphChanged = GrowInternode(climateModel, *it, shootGrowthController);
 		anyBranchGrown = anyBranchGrown || graphChanged;
 	}
-	if (anyBranchGrown) m_shootSkeleton.SortLists();
+	if (anyBranchGrown) {
+		m_shootSkeleton.SortLists();
+		sortedSubTreeInternodeList = m_shootSkeleton.GetSubTree(baseInternodeHandle);
+	}
+	for (auto it = sortedSubTreeInternodeList.rbegin(); it != sortedSubTreeInternodeList.rend(); ++it) {
+		const bool reproductiveModuleChanged = GrowReproductiveModules(climateModel, *it, shootGrowthController);
+		anyBranchGrown = anyBranchGrown || reproductiveModuleChanged;
+	}
 	treeStructureChanged = treeStructureChanged || anyBranchGrown;
 	ShootGrowthPostProcess(shootGrowthController);
 
@@ -546,17 +553,6 @@ bool TreeModel::ElongateInternode(float extendLength, NodeHandle internodeHandle
 		auto& newInternode = m_shootSkeleton.RefNode(newInternodeHandle);
 		newInternode.m_data = {};
 		newInternode.m_data.m_indexOfParentBud = 0;
-
-		/*
-		newInternode.m_data.m_frontProfile = {};
-		newInternode.m_data.m_frontProfile.Reset(0.001f);
-		newInternode.m_data.m_backProfile = {};
-		newInternode.m_data.m_backProfile.Reset(0.001f);
-		newInternode.m_data.m_frontParticleMap = {};
-		newInternode.m_data.m_backParticleMap = {};
-		newInternode.m_data.m_profileConstraints = {};
-		newInternode.m_data.m_strandCount = 0;
-		*/
 		newInternode.m_data.m_lightIntensity = oldInternode.m_data.m_lightIntensity;
 		newInternode.m_data.m_lightDirection = oldInternode.m_data.m_lightDirection;
 		oldInternode.m_data.m_finishAge = newInternode.m_data.m_startAge = m_age;
@@ -598,7 +594,7 @@ bool TreeModel::ElongateInternode(float extendLength, NodeHandle internodeHandle
 	return graphChanged;
 }
 
-bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHandle, const ShootGrowthController& shootGrowthController) {
+bool TreeModel::GrowInternode(ClimateModel& climateModel, const NodeHandle internodeHandle, const ShootGrowthController& shootGrowthController) {
 	bool graphChanged = false;
 	{
 		auto& internode = m_shootSkeleton.RefNode(internodeHandle);
@@ -614,8 +610,8 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 	for (int budIndex = 0; budIndex < budSize; budIndex++) {
 		auto& internode = m_shootSkeleton.RefNode(internodeHandle);
 		auto& bud = internode.m_data.m_buds[budIndex];
-		auto& internodeData = internode.m_data;
-		auto& internodeInfo = internode.m_info;
+		const auto& internodeData = internode.m_data;
+		const auto& internodeInfo = internode.m_info;
 		shootGrowthController.m_budFlushingRate(internode, bud);
 		shootGrowthController.m_budExtinctionRate(internode, bud);
 		if (bud.m_status == BudStatus::Removed) continue;
@@ -624,7 +620,6 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 			bud.m_status = BudStatus::Removed;
 			continue;
 		}
-		//Calculate vigor used for maintenance and development.
 		if (bud.m_type == BudType::Apical) {
 			float elongateLength = 0.0f;
 			if (m_treeGrowthSettings.m_useSpaceColonization) {
@@ -653,7 +648,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 				graphChanged = true;
 				bud.m_status = BudStatus::Removed;
 				//Prepare information for new internode
-				auto desiredGlobalRotation = internodeInfo.m_globalRotation * bud.m_localRotation;
+				const auto desiredGlobalRotation = internodeInfo.m_globalRotation * bud.m_localRotation;
 				auto desiredGlobalFront = desiredGlobalRotation * glm::vec3(0, 0, -1);
 				auto desiredGlobalUp = desiredGlobalRotation * glm::vec3(0, 1, 0);
 				ApplyTropism(-m_currentGravityDirection, shootGrowthController.m_gravitropism(internode), desiredGlobalFront,
@@ -662,21 +657,10 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 					desiredGlobalFront, desiredGlobalUp);
 				//Create new internode
 				const auto newInternodeHandle = m_shootSkeleton.Extend(internodeHandle, true);
-				auto& oldInternode = m_shootSkeleton.RefNode(internodeHandle);
+				const auto& oldInternode = m_shootSkeleton.PeekNode(internodeHandle);
 				auto& newInternode = m_shootSkeleton.RefNode(newInternodeHandle);
 				newInternode.m_data = {};
 				newInternode.m_data.m_indexOfParentBud = 0;
-				/*
-				newInternode.m_data.m_frontProfile = {};
-				newInternode.m_data.m_frontProfile.Reset(0.001f);
-				newInternode.m_data.m_backProfile = {};
-				newInternode.m_data.m_backProfile.Reset(0.001f);
-				newInternode.m_data.m_frontParticleMap = {};
-				newInternode.m_data.m_backParticleMap = {};
-				newInternode.m_data.m_profileConstraints = {};
-				
-				newInternode.m_data.m_strandCount = 0;
-				*/
 				newInternode.m_data.m_startAge = m_age;
 				newInternode.m_data.m_finishAge = 0.0f;
 				newInternode.m_data.m_order = oldInternode.m_data.m_order + 1;
@@ -694,9 +678,46 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 				apicalBud.m_localRotation = glm::vec3(
 					glm::radians(shootGrowthController.m_apicalAngle(newInternode)), 0.0f,
 					glm::radians(shootGrowthController.m_rollAngle(newInternode)));
+				break;
+
+				float elongateLength = 0.0f;
+				if (m_treeGrowthSettings.m_useSpaceColonization) {
+					if (m_shootSkeleton.m_data.m_maxMarkerCount > 0) elongateLength = static_cast<float>(bud.m_markerCount) / m_shootSkeleton.m_data.m_maxMarkerCount * shootGrowthController.m_internodeLength;
+				}
+				else
+				{
+					elongateLength = oldInternode.m_data.m_growthRate * m_currentDeltaTime * shootGrowthController.m_internodeLength * shootGrowthController.m_internodeGrowthRate;
+				}
+				float collectedInhibitor = 0.0f;
+				graphChanged = ElongateInternode(elongateLength, newInternodeHandle, shootGrowthController, collectedInhibitor) || graphChanged;
+				m_shootSkeleton.RefNode(newInternodeHandle).m_data.m_inhibitorSink += glm::max(0.0f, collectedInhibitor * glm::clamp(1.0f - shootGrowthController.m_apicalDominanceLoss, 0.0f, 1.0f));
+				
 			}
 		}
-		else if (bud.m_type == BudType::Fruit)
+	}
+	return graphChanged;
+}
+
+bool TreeModel::GrowReproductiveModules(ClimateModel& climateModel, const NodeHandle internodeHandle,
+	const ShootGrowthController& shootGrowthController)
+{
+	bool statusChanged = false;
+	const auto budSize = m_shootSkeleton.RefNode(internodeHandle).m_data.m_buds.size();
+	for (int budIndex = 0; budIndex < budSize; budIndex++) {
+		auto& internode = m_shootSkeleton.RefNode(internodeHandle);
+		auto& bud = internode.m_data.m_buds[budIndex];
+		auto& internodeData = internode.m_data;
+		auto& internodeInfo = internode.m_info;
+		shootGrowthController.m_budFlushingRate(internode, bud);
+		shootGrowthController.m_budExtinctionRate(internode, bud);
+		if (bud.m_status == BudStatus::Removed) continue;
+		if (bud.m_extinctionRate >= glm::linearRand(0.0f, 1.0f))
+		{
+			bud.m_status = BudStatus::Removed;
+			continue;
+		}
+		//Calculate vigor used for maintenance and development.
+		if (bud.m_type == BudType::Fruit)
 		{
 			/*
 			if (!seasonality)
@@ -787,7 +808,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, NodeHandle internodeHa
 			}
 		}
 	}
-	return graphChanged;
+	return statusChanged;
 }
 
 void TreeModel::CalculateLevel()
@@ -831,6 +852,7 @@ void TreeModel::CalculateLevel()
 			}
 		}
 		m_shootSkeleton.m_data.m_maxLevel = glm::max(m_shootSkeleton.m_data.m_maxLevel, node.m_data.m_level);
+		m_shootSkeleton.m_data.m_maxOrder = glm::max(m_shootSkeleton.m_data.m_maxOrder, node.m_data.m_order);
 	}
 }
 
@@ -858,28 +880,27 @@ float TreeModel::CalculateDesiredGrowthRate(const std::vector<NodeHandle>& sorte
 		const float thicknessMultiplier = node.m_info.m_thickness / shootGrowthController.m_endNodeThickness;
 		node.m_data.m_pipeResistance = 1.0f / glm::pow(thicknessMultiplier, shootGrowthController.m_pipeResistanceFactor);
 		const auto parentHandle = node.GetParentHandle();
-		if(parentHandle != -1)
+		if (parentHandle != -1)
 		{
 			const auto parent = m_shootSkeleton.PeekNode(parentHandle);
 			node.m_data.m_pipeResistance += parent.m_data.m_pipeResistance;
 		}
-		if(node.IsEndNode()) maxResistance = glm::max(maxResistance, node.m_data.m_pipeResistance);
+		if (node.IsEndNode()) maxResistance = glm::max(maxResistance, node.m_data.m_pipeResistance);
 	}
 	float maximumDesiredGrowthPotential = 0.0f;
 	float maximumApicalControl = 0.0f;
 	std::vector<float> apicalControlValues{};
-	apicalControlValues.resize(m_shootSkeleton.m_data.m_maxLevel + 1);
+	apicalControlValues.resize(shootGrowthController.m_useLevelForApicalControl ? m_shootSkeleton.m_data.m_maxLevel + 1 : m_shootSkeleton.m_data.m_maxOrder + 1);
 	apicalControlValues[0] = 1.0f;
-
-	for (int i = 1; i < m_shootSkeleton.m_data.m_maxLevel + 1; i++)
+	for (int i = 1; i < (shootGrowthController.m_useLevelForApicalControl ? m_shootSkeleton.m_data.m_maxLevel + 1 : m_shootSkeleton.m_data.m_maxOrder + 1); i++)
 	{
 		apicalControlValues[i] = apicalControlValues[i - 1] * apicalControl;
 	}
-
+	
 	for (const auto& internodeHandle : sortedInternodeList)
 	{
 		auto& node = m_shootSkeleton.RefNode(internodeHandle);
-		node.m_data.m_pipeResistance /= maxResistance;
+		node.m_data.m_pipeResistance = glm::min(1.0f, node.m_data.m_pipeResistance / maxResistance);
 		node.m_data.m_growthPotential = node.m_data.m_lightIntensity;
 		if (apicalControl > 1.0f)
 		{
@@ -887,7 +908,7 @@ float TreeModel::CalculateDesiredGrowthRate(const std::vector<NodeHandle>& sorte
 		}
 		else if (apicalControl < 1.0f)
 		{
-			node.m_data.m_apicalControl = apicalControlValues[m_shootSkeleton.m_data.m_maxLevel - node.m_data.m_level];
+			node.m_data.m_apicalControl = apicalControlValues[m_shootSkeleton.m_data.m_maxLevel - (shootGrowthController.m_useLevelForApicalControl ? node.m_data.m_level : node.m_data.m_order)];
 		}
 		else
 		{

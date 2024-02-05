@@ -281,9 +281,9 @@ void TreeVisualizer::SyncMatrices(const ShootSkeleton& skeleton, const std::shar
 				glm::translate(position + (node.m_info.m_length / 2.0f) * direction) *
 				rotationTransform *
 				glm::scale(glm::vec3(
-					node.m_info.m_thickness * 2.0f,
+					node.m_info.m_thickness,
 					node.m_info.m_length,
-					node.m_info.m_thickness * 2.0f));
+					node.m_info.m_thickness));
 		}
 		}
 	);
@@ -1018,11 +1018,11 @@ void TreeVisualizer::SyncColors(const ShootSkeleton& shootSkeleton, const NodeHa
 			matrices[i].m_instanceColor = glm::mix(glm::vec4(0, 1, 0, 1), glm::vec4(1, 0, 0, 1), glm::clamp(glm::pow(node.m_data.m_pipeResistance, m_settings.m_shootColorMultiplier), 0.0f, 1.f));
 			break;
 		case ShootVisualizerMode::ApicalControl:
-			matrices[i].m_instanceColor = glm::vec4(
+			matrices[i].m_instanceColor = glm::mix(glm::vec4(0, 1, 0, 1), glm::vec4(1, 0, 0, 1),
 				glm::clamp(glm::pow(node.m_data.m_apicalControl, m_settings.m_shootColorMultiplier), 0.0f, 1.f));
 			break;
 		case ShootVisualizerMode::DesiredGrowthRate:
-			matrices[i].m_instanceColor = glm::vec4(
+			matrices[i].m_instanceColor = glm::mix(glm::vec4(0, 1, 0, 1), glm::vec4(1, 0, 0, 1),
 				glm::clamp(glm::pow(node.m_data.m_desiredGrowthRate, m_settings.m_shootColorMultiplier), 0.0f, 1.f));
 			break;
 		default:

@@ -117,6 +117,7 @@ namespace EcoSysLab
 		glm::vec3 m_desiredMax = glm::vec3(FLT_MIN);
 
 		int m_maxLevel = 0;
+		int m_maxOrder = 0;
 	};
 
 

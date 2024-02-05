@@ -1236,15 +1236,15 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 					p5.m_position = (entityGlobalTransform.m_value *
 						glm::translate(cp5))[3];
 					if (flow.GetParentHandle() > 0) {
-						p1.m_thickness = branchSkeleton.PeekFlow(flow.GetParentHandle()).m_info.m_endThickness;
+						p1.m_thickness = branchSkeleton.PeekFlow(flow.GetParentHandle()).m_info.m_endThickness * 0.5f;
 					}
 					else {
-						p1.m_thickness = flow.m_info.m_startThickness;
+						p1.m_thickness = flow.m_info.m_startThickness * 0.5f;
 					}
-					p4.m_thickness = flow.m_info.m_endThickness;
+					p4.m_thickness = flow.m_info.m_endThickness * 0.5f;
 
 
-					p2.m_thickness = p3.m_thickness = (p1.m_thickness + p4.m_thickness) / 2.0f;
+					p2.m_thickness = p3.m_thickness = (p1.m_thickness + p4.m_thickness) * 0.25f;
 					p0.m_thickness = 2.0f * p1.m_thickness - p2.m_thickness;
 					p5.m_thickness = 2.0f * p4.m_thickness - p3.m_thickness;
 

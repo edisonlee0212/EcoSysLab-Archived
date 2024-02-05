@@ -11,7 +11,7 @@ namespace EcoSysLab {
 	
 	struct SkeletalGraphSettings
 	{
-		float m_lineThickness = 0.005f;
+		float m_lineThickness = 0.0f;
 		float m_branchPointSize = 1.0f;
 		float m_junctionPointSize = 1.75f;
 
@@ -49,7 +49,7 @@ namespace EcoSysLab {
 	};
 
 	struct TreeVisualizerColorSettings {
-		int m_shootVisualizationMode = static_cast<int>(ShootVisualizerMode::Default);
+		int m_shootVisualizationMode = static_cast<int>(ShootVisualizerMode::DesiredGrowthRate);
 		float m_shootColorMultiplier = 1.0f;
 	};
 

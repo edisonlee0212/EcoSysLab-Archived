@@ -16,6 +16,9 @@ void StrandModel::ResetAllProfiles(const StrandModelParameters& strandModelParam
 		backPhysics2D.m_settings = strandModelParameters.m_profilePhysicsSettings;
 		frontPhysics2D.Reset(0.001f);
 		backPhysics2D.Reset(0.001f);
+		internode.m_data.m_frontParticleMap.clear();
+		internode.m_data.m_backParticleMap.clear();
+		internode.m_data.m_strandCount = 0;
 	}
 }
 

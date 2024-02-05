@@ -34,6 +34,9 @@ namespace EcoSysLab {
 
 		bool GrowInternode(ClimateModel& climateModel, NodeHandle internodeHandle, const ShootGrowthController& shootGrowthController);
 
+		bool GrowReproductiveModules(ClimateModel& climateModel, NodeHandle internodeHandle, const ShootGrowthController& shootGrowthController);
+
+
 		bool ElongateInternode(float extendLength, NodeHandle internodeHandle,
 			const ShootGrowthController& shootGrowthController, float& collectedInhibitor);
 

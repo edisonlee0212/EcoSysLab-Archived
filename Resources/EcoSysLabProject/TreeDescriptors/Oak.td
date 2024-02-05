@@ -19,13 +19,13 @@ m_shootGrowthParameters:
   m_lateralBudLightingFactor: 1
   m_apicalBudSpaceFactor: 1
   m_lateralBudSpaceFactor: 1
-  m_pipeResistance: 0
+  m_pipeResistanceFactor: 2
   m_apicalControl: 1.25
   m_apicalDominance: 0.25
   m_apicalDominanceLoss: 0.0799999982
   m_lowBranchPruning: 0.100000001
   m_lowBranchPruningThicknessFactor: 0.5
-  m_lightPruningFactor: 1
+  m_lightPruningFactor: 1000
   m_thicknessPruningFactor: 0
   m_leafBudCount: 1
   m_leafGrowthRate: 18
