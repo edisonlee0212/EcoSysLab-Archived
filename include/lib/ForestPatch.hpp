@@ -20,6 +20,8 @@ namespace EcoSysLab {
         void ApplyTreeDescriptor(const std::shared_ptr<TreeDescriptor>& treeDescriptor);
         void ApplyTreeDescriptors(const std::vector<std::shared_ptr<TreeDescriptor>>& treeDescriptors);
         void ApplyTreeDescriptors(const std::filesystem::path& folderPath);
+        void ApplyTreeDescriptors(const std::vector<std::shared_ptr<TreeDescriptor>>& treeDescriptors, const std::vector<float>& ratios);
+        void ApplyTreeDescriptors(const std::filesystem::path& folderPath, const std::vector<float>& ratios);
         void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 
         void OnCreate() override;

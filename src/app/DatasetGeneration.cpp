@@ -90,13 +90,14 @@ int main() {
 	pcccs.m_distance = 4.0f;
 	pcccs.m_height = 3.0f;
 
-	int gridSize = 5;
-	float gridDistance = 1.5f;
+	int gridSize = 4;
+	float gridDistance = 1.0f;
+	float randomShift = 0.5f;
 	pcgcs.m_gridSize = { gridSize + 1, gridSize  + 1};
 	pcgcs.m_gridDistance = gridDistance;
 
 	int index = 0;
-	for (int i = 0; i < 10; i++) {
+	for (int i = 0; i < 40; i++) {
 		std::filesystem::path target_descriptor_folder_path = project_folder_path / "TreeDescriptors";
 		std::filesystem::path target_forest_patch_path = project_folder_path / "Digital Forestry" / "4x4.fp";
 		std::string name = "Forest_" + std::to_string(i);
@@ -105,7 +106,7 @@ int main() {
 		std::filesystem::path target_tree_junction_path = output_root / (name + ".yml");
 		//DatasetGenerator::GeneratePointCloudForTree(pcps, pcccs, target_descriptor_folder_path.string(), 0.08220, 200, 20000, tmgs, target_tree_pointcloud_path.string(), false, target_tree_mesh_path.string(), true, target_tree_junction_path.string());
 		
-		DatasetGenerator::GeneratePointCloudForForestPatch(gridSize, gridDistance, gridDistance, pcps, pcgcs, target_descriptor_folder_path.string(), target_forest_patch_path.string(), 0.08220, 120, 30000, tmgs, target_tree_pointcloud_path.string());
+		DatasetGenerator::GeneratePointCloudForForestPatch(gridSize, gridDistance, randomShift, pcps, pcgcs, target_descriptor_folder_path.string(), target_forest_patch_path.string(), 0.08220, 120, 30000, tmgs, target_tree_pointcloud_path.string());
 		index++;
 	}
 	

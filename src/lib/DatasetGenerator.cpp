@@ -151,7 +151,7 @@ void DatasetGenerator::GeneratePointCloudForForestPatch(
 
 	Application::Loop();
 	forestPatch->SetupGrid({ gridSize, gridSize }, gridDistance, randomShift);
-	forestPatch->ApplyTreeDescriptors(treeParametersFolderPath);
+	forestPatch->ApplyTreeDescriptors(treeParametersFolderPath, {0.7f, 0.2f, 0.1f});
 	forestPatch->InstantiatePatch(false);
 	
 	ecoSysLabLayer->m_simulationSettings.m_maxNodeCount = maxTreeNodeCount;
