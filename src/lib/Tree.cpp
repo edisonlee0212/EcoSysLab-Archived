@@ -1174,6 +1174,7 @@ void Tree::Deserialize(const YAML::Node& in)
 					if (skeletonIn["m_desiredMax"]) skeletonData.m_desiredMax = skeletonIn["m_desiredMax"].as<glm::vec3>();
 				}
 			);
+			m_treeModel.m_initialized = true;
 		}
 	}
 }

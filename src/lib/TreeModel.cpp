@@ -633,7 +633,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, const NodeHandle inter
 			float collectedInhibitor = 0.0f;
 			graphChanged = ElongateInternode(elongateLength, internodeHandle, shootGrowthController, collectedInhibitor) || graphChanged;
 			m_shootSkeleton.RefNode(internodeHandle).m_data.m_inhibitorSink += glm::max(0.0f, collectedInhibitor * glm::clamp(1.0f - shootGrowthController.m_apicalDominanceLoss, 0.0f, 1.0f));
-            return true;
+            return graphChanged;
 		}
 		if (bud.m_type == BudType::Lateral && bud.m_status == BudStatus::Dormant) {
 			float flushProbability = bud.m_flushingRate;
@@ -656,6 +656,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, const NodeHandle inter
 				ApplyTropism(internodeData.m_lightDirection, shootGrowthController.m_phototropism(internode),
 					desiredGlobalFront, desiredGlobalUp);
 				//Create new internode
+				
 				const auto newInternodeHandle = m_shootSkeleton.Extend(internodeHandle, true);
 				const auto& oldInternode = m_shootSkeleton.PeekNode(internodeHandle);
 				auto& newInternode = m_shootSkeleton.RefNode(newInternodeHandle);
@@ -678,19 +679,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, const NodeHandle inter
 				apicalBud.m_localRotation = glm::vec3(
 					glm::radians(shootGrowthController.m_apicalAngle(newInternode)), 0.0f,
 					glm::radians(shootGrowthController.m_rollAngle(newInternode)));
-                return true;
-				float elongateLength = 0.0f;
-				if (m_treeGrowthSettings.m_useSpaceColonization) {
-					if (m_shootSkeleton.m_data.m_maxMarkerCount > 0) elongateLength = static_cast<float>(bud.m_markerCount) / m_shootSkeleton.m_data.m_maxMarkerCount * shootGrowthController.m_internodeLength;
-				}
-				else
-				{
-					elongateLength = oldInternode.m_data.m_growthRate * m_currentDeltaTime * shootGrowthController.m_internodeLength * shootGrowthController.m_internodeGrowthRate;
-				}
-				float collectedInhibitor = 0.0f;
-				graphChanged = ElongateInternode(elongateLength, newInternodeHandle, shootGrowthController, collectedInhibitor) || graphChanged;
-				m_shootSkeleton.RefNode(newInternodeHandle).m_data.m_inhibitorSink += glm::max(0.0f, collectedInhibitor * glm::clamp(1.0f - shootGrowthController.m_apicalDominanceLoss, 0.0f, 1.0f));
-				
+                return graphChanged;
 			}
 		}
 	}
@@ -796,7 +785,7 @@ bool TreeModel::GrowReproductiveModules(ClimateModel& climateModel, const NodeHa
 				//Handle leaf drop here.
 				if (bud.m_reproductiveModule.m_health <= 0.05f)
 				{
-					auto dropProbability = m_currentDeltaTime * shootGrowthController.m_leafFallProbability(internode);
+					const auto dropProbability = m_currentDeltaTime * shootGrowthController.m_leafFallProbability(internode);
 					if (dropProbability >= glm::linearRand(0.0f, 1.0f))
 					{
 						bud.m_status = BudStatus::Died;
