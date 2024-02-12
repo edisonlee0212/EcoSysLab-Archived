@@ -828,7 +828,7 @@ void TreeModel::CalculateLevel()
 			for (const auto& childHandle : node.RefChildHandles())
 			{
 				auto& childNode = m_shootSkeleton.PeekNode(childHandle);
-				const auto childBiomass = childNode.m_data.m_descendentTotalBiomass + childNode.m_data.m_biomass;
+				const auto childBiomass = childNode.m_data.m_descendantTotalBiomass + childNode.m_data.m_biomass;
 				if (childBiomass > maxBiomass)
 				{
 					maxBiomass = childBiomass;
@@ -871,7 +871,6 @@ float TreeModel::CalculateDesiredGrowthRate(const std::vector<NodeHandle>& sorte
 {
 	const float apicalControl = shootGrowthController.m_apicalControl;
 	float minDistance = FLT_MAX;
-	float maxResistance = FLT_MIN;
 	for (const auto& internodeHandle : sortedInternodeList)
 	{
 		auto& node = m_shootSkeleton.RefNode(internodeHandle);
@@ -957,15 +956,15 @@ void TreeModel::CalculateBiomass(const ShootGrowthController& shootGrowthControl
 		const auto internodeHandle = *it;
 		auto& internode = m_shootSkeleton.RefNode(internodeHandle);
 		auto& internodeData = internode.m_data;
-		auto& internodeInfo = internode.m_info;
-		internodeData.m_descendentTotalBiomass = internodeData.m_biomass = 0.0f;
+		const auto& internodeInfo = internode.m_info;
+		internodeData.m_descendantTotalBiomass = internodeData.m_biomass = 0.0f;
 		internodeData.m_biomass =
 			internodeInfo.m_thickness / shootGrowthController.m_endNodeThickness * internodeData.m_internodeLength /
 			shootGrowthController.m_internodeLength;
 		for (const auto& i : internode.RefChildHandles()) {
 			const auto& childInternode = m_shootSkeleton.RefNode(i);
-			internodeData.m_descendentTotalBiomass +=
-				childInternode.m_data.m_descendentTotalBiomass +
+			internodeData.m_descendantTotalBiomass +=
+				childInternode.m_data.m_descendantTotalBiomass +
 				childInternode.m_data.m_biomass;
 		}
 	}
@@ -1127,32 +1126,3 @@ void TreeModel::Reverse(int iteration) {
 	m_shootSkeleton = m_history[iteration];
 	m_history.erase((m_history.begin() + iteration), m_history.end());
 }
-
-void TreeModel::ExportTreeIOSkeleton(treeio::ArrayTree& arrayTree) const
-{
-	using namespace treeio;
-	const auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
-	if (sortedInternodeList.empty()) return;
-	const auto& rootNode = m_shootSkeleton.PeekNode(0);
-	TreeNodeData rootNodeData;
-	//rootNodeData.direction = rootNode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
-	rootNodeData.thickness = rootNode.m_info.m_thickness;
-	rootNodeData.pos = rootNode.m_info.m_globalPosition;
-
-	auto rootId = arrayTree.addRoot(rootNodeData);
-	std::unordered_map<NodeHandle, size_t> nodeMap;
-	nodeMap[0] = rootId;
-	for (const auto& nodeHandle : sortedInternodeList)
-	{
-		if (nodeHandle == 0) continue;
-		const auto& node = m_shootSkeleton.PeekNode(nodeHandle);
-		TreeNodeData nodeData;
-		//nodeData.direction = node.m_info.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
-		nodeData.thickness = node.m_info.m_thickness;
-		nodeData.pos = node.m_info.m_globalPosition;
-
-		auto currentId = arrayTree.addNodeChild(nodeMap[node.GetParentHandle()], nodeData);
-		nodeMap[nodeHandle] = currentId;
-	}
-}
-

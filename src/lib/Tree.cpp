@@ -3,7 +3,7 @@
 //
 
 #include "Tree.hpp"
-
+#include "SkeletonSerializer.hpp"
 #include <Material.hpp>
 #include <Mesh.hpp>
 #include "Strands.hpp"
@@ -205,17 +205,17 @@ void Tree::InitializeSkeletalGraph(NodeHandle baseNodeHandle,
 			bool subTree = false;
 			NodeHandle walker = internodeHandle;
 
-				while (walker != -1)
+			while (walker != -1)
+			{
+				if (walker == baseNodeHandle)
 				{
-					if(walker == baseNodeHandle)
-					{
-						subTree = true;
-						break;
-					}
-					walker = skeleton.PeekNode(walker).GetParentHandle();
+					subTree = true;
+					break;
 				}
+				walker = skeleton.PeekNode(walker).GetParentHandle();
+			}
 
-			
+
 			{
 				const glm::vec3 position = node.m_info.m_globalPosition;
 				const auto direction = node.m_info.m_globalDirection;
@@ -259,7 +259,7 @@ void Tree::InitializeSkeletalGraph(NodeHandle baseNodeHandle,
 					glm::translate(position) *
 					rotationTransform *
 					glm::scale(scale * (subTree ? 1.25f : 1.0f));
-				if(subTree)
+				if (subTree)
 				{
 					pointList->m_particleInfos[internodeIndex].m_instanceColor = m_treeVisualizer.m_skeletalGraphSettings.m_branchFocusColor;
 				}
@@ -358,13 +358,13 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 			}
 			ImGui::TreePop();
 		}
-		if(ImGui::TreeNode("Sagging"))
+		if (ImGui::TreeNode("Sagging"))
 		{
 			bool changed = false;
 			changed = ImGui::DragFloat("Sagging strength", &treeDescriptor->m_shootGrowthParameters.m_saggingFactorThicknessReductionMax.x, 0.0001f, 0.0f, 10.0f, "%.5f") || changed;
 			changed = ImGui::DragFloat("Sagging thickness factor", &treeDescriptor->m_shootGrowthParameters.m_saggingFactorThicknessReductionMax.y, 0.01f, 0.0f, 10.0f, "%.5f") || changed;
 			changed = ImGui::DragFloat("Sagging max", &treeDescriptor->m_shootGrowthParameters.m_saggingFactorThicknessReductionMax.z, 0.001f, 0.0f, 1.0f, "%.5f") || changed;
-			if(changed)
+			if (changed)
 			{
 				m_shootGrowthController.m_sagging = [=](const Node<InternodeGrowthData>& internode)
 					{
@@ -372,7 +372,7 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 						const auto newSagging = glm::min(
 							shootGrowthParameters.m_saggingFactorThicknessReductionMax.z,
 							shootGrowthParameters.m_saggingFactorThicknessReductionMax.x *
-							(internode.m_data.m_descendentTotalBiomass + internode.m_data.m_extraMass) /
+							(internode.m_data.m_descendantTotalBiomass + internode.m_data.m_extraMass) /
 							glm::pow(
 								internode.m_info.m_thickness /
 								shootGrowthParameters.m_endNodeThickness,
@@ -386,7 +386,7 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 						const auto newSagging = glm::min(
 							shootGrowthParameters.m_saggingFactorThicknessReductionMax.z,
 							shootGrowthParameters.m_saggingFactorThicknessReductionMax.x *
-							(internode.m_data.m_descendentTotalBiomass + internode.m_data.m_extraMass) /
+							(internode.m_data.m_descendantTotalBiomass + internode.m_data.m_extraMass) /
 							glm::pow(
 								internode.m_info.m_thickness /
 								shootGrowthParameters.m_endNodeThickness,
@@ -559,7 +559,7 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 		{
 			ClearStrandModelMeshRenderer();
 		}
-		
+
 		ImGui::TreePop();
 	}
 
@@ -616,7 +616,7 @@ void Tree::OnCreate() {
 void Tree::OnDestroy() {
 	m_treeModel = {};
 	m_strandModel = {};
-	
+
 	m_treeDescriptor.Clear();
 	m_soil.Clear();
 	m_climate.Clear();
@@ -1052,7 +1052,7 @@ bool Tree::TryGrow(const float deltaTime, const NodeHandle baseInternodeHandle, 
 	if (m_recordBiomassHistory)
 	{
 		const auto& baseShootNode = m_treeModel.RefShootSkeleton().RefNode(0);
-		m_shootBiomassHistory.emplace_back(baseShootNode.m_data.m_biomass + baseShootNode.m_data.m_descendentTotalBiomass);
+		m_shootBiomassHistory.emplace_back(baseShootNode.m_data.m_biomass + baseShootNode.m_data.m_descendantTotalBiomass);
 	}
 	return grown;
 }
@@ -1061,6 +1061,60 @@ bool Tree::TryGrow(const float deltaTime, const NodeHandle baseInternodeHandle, 
 void Tree::Serialize(YAML::Emitter& out)
 {
 	m_treeDescriptor.Save("m_treeDescriptor", out);
+
+	out << YAML::Key << "m_treeModel" << YAML::Value << YAML::BeginMap;
+	{
+		out << YAML::Key << "m_shootSkeleton" << YAML::Value << YAML::BeginMap;
+		{
+			SkeletonSerializer<ShootGrowthData, ShootStemGrowthData, InternodeGrowthData>::Serialize(out, m_treeModel.RefShootSkeleton(),
+				[&](YAML::Emitter& nodeOut, const InternodeGrowthData& nodeData)
+				{
+					nodeOut << YAML::Key << "m_internodeLength" << YAML::Value << nodeData.m_internodeLength;
+					nodeOut << YAML::Key << "m_indexOfParentBud" << YAML::Value << nodeData.m_indexOfParentBud;
+					nodeOut << YAML::Key << "m_lateral" << YAML::Value << nodeData.m_lateral;
+					nodeOut << YAML::Key << "m_startAge" << YAML::Value << nodeData.m_startAge;
+					nodeOut << YAML::Key << "m_finishAge" << YAML::Value << nodeData.m_finishAge;
+					nodeOut << YAML::Key << "m_desiredLocalRotation" << YAML::Value << nodeData.m_desiredLocalRotation;
+					nodeOut << YAML::Key << "m_desiredGlobalRotation" << YAML::Value << nodeData.m_desiredGlobalRotation;
+					nodeOut << YAML::Key << "m_desiredGlobalPosition" << YAML::Value << nodeData.m_desiredGlobalPosition;
+					nodeOut << YAML::Key << "m_sagging" << YAML::Value << nodeData.m_sagging;
+					nodeOut << YAML::Key << "m_order" << YAML::Value << nodeData.m_order;
+					nodeOut << YAML::Key << "m_extraMass" << YAML::Value << nodeData.m_extraMass;
+
+					nodeOut << YAML::Key << "m_buds" << YAML::Value << YAML::BeginSeq;
+					for (const auto& bud : nodeData.m_buds)
+					{
+						nodeOut << YAML::BeginMap;
+						{
+							nodeOut << YAML::Key << "m_type" << YAML::Value << static_cast<unsigned>(bud.m_type);
+							nodeOut << YAML::Key << "m_status" << YAML::Value << static_cast<unsigned>(bud.m_status);
+							nodeOut << YAML::Key << "m_localRotation" << YAML::Value << bud.m_localRotation;
+							nodeOut << YAML::Key << "m_reproductiveModule" << YAML::Value << YAML::BeginMap;
+							{
+								nodeOut << YAML::Key << "m_maturity" << YAML::Value << bud.m_reproductiveModule.m_maturity;
+								nodeOut << YAML::Key << "m_health" << YAML::Value << bud.m_reproductiveModule.m_health;
+								nodeOut << YAML::Key << "m_transform" << YAML::Value << bud.m_reproductiveModule.m_transform;
+							}
+							nodeOut << YAML::EndMap;
+						}
+						nodeOut << YAML::EndMap;
+					}
+					nodeOut << YAML::EndSeq;
+				},
+				[&](YAML::Emitter& flowOut, const ShootStemGrowthData& flowData)
+				{
+					flowOut << YAML::Key << "m_order" << YAML::Value << flowData.m_order;
+				},
+				[&](YAML::Emitter& skeletonOut, const ShootGrowthData& skeletonData)
+				{
+					skeletonOut << YAML::Key << "m_desiredMin" << YAML::Value << skeletonData.m_desiredMin;
+					skeletonOut << YAML::Key << "m_desiredMax" << YAML::Value << skeletonData.m_desiredMax;
+				}
+			);
+		}
+		out << YAML::EndMap;
+	}
+	out << YAML::EndMap;
 }
 
 
@@ -1068,6 +1122,60 @@ void Tree::Serialize(YAML::Emitter& out)
 void Tree::Deserialize(const YAML::Node& in)
 {
 	m_treeDescriptor.Load("m_treeDescriptor", in);
+
+	if(in["m_treeModel"])
+	{
+		const auto& inTreeModel = in["m_treeModel"];
+		if (inTreeModel["m_shootSkeleton"])
+		{
+			const auto& inShootSkeleton = in["m_shootSkeleton"];
+			SkeletonSerializer<ShootGrowthData, ShootStemGrowthData, InternodeGrowthData>::Deserialize(inShootSkeleton, m_treeModel.RefShootSkeleton(),
+				[&](const YAML::Node& nodeIn, InternodeGrowthData& nodeData)
+				{
+					if (nodeIn["m_internodeLength"]) nodeData.m_internodeLength = nodeIn["m_internodeLength"].as<float>();
+					if (nodeIn["m_indexOfParentBud"]) nodeData.m_indexOfParentBud = nodeIn["m_indexOfParentBud"].as<int>();
+					if (nodeIn["m_lateral"]) nodeData.m_lateral = nodeIn["m_lateral"].as<bool>();
+					if (nodeIn["m_startAge"]) nodeData.m_startAge = nodeIn["m_startAge"].as<float>();
+					if (nodeIn["m_finishAge"]) nodeData.m_finishAge = nodeIn["m_finishAge"].as<float>();
+					if (nodeIn["m_desiredLocalRotation"]) nodeData.m_desiredLocalRotation = nodeIn["m_desiredLocalRotation"].as<glm::quat>();
+					if (nodeIn["m_desiredGlobalRotation"]) nodeData.m_desiredGlobalRotation = nodeIn["m_desiredGlobalRotation"].as<glm::quat>();
+					if (nodeIn["m_desiredGlobalPosition"]) nodeData.m_desiredGlobalPosition = nodeIn["m_desiredGlobalPosition"].as<glm::vec3>();
+					if (nodeIn["m_sagging"]) nodeData.m_sagging = nodeIn["m_sagging"].as<float>();
+					if (nodeIn["m_order"]) nodeData.m_order = nodeIn["m_order"].as<int>();
+					if (nodeIn["m_extraMass"]) nodeData.m_extraMass = nodeIn["m_extraMass"].as<float>();
+					nodeData.m_buds.clear();
+					if(nodeIn["m_buds"])
+					{
+						const auto& inBuds = nodeIn["m_buds"];
+						for(const auto& inBud : inBuds)
+						{
+							nodeData.m_buds.emplace_back();
+							auto& bud = nodeData.m_buds.back();
+							if (inBud["m_type"]) bud.m_type = static_cast<BudType>(inBud["m_type"].as<unsigned>());
+							if (inBud["m_status"]) bud.m_status = static_cast<BudStatus>(inBud["m_status"].as<unsigned>());
+							if (inBud["m_localRotation"]) bud.m_localRotation = inBud["m_localRotation"].as<glm::quat>();
+							if(inBud["m_reproductiveModule"])
+							{
+								const auto& inReproductiveModule = inBud["m_reproductiveModule"];
+								if (inReproductiveModule["m_maturity"]) bud.m_reproductiveModule.m_maturity = inReproductiveModule["m_maturity"].as<float>();
+								if (inReproductiveModule["m_health"]) bud.m_reproductiveModule.m_health = inReproductiveModule["m_health"].as<float>();
+								if (inReproductiveModule["m_transform"]) bud.m_reproductiveModule.m_transform = inReproductiveModule["m_transform"].as<glm::mat4>();
+							}
+						}
+					}
+				},
+				[&](const YAML::Node& flowIn, ShootStemGrowthData& flowData)
+				{
+					if (flowIn["m_order"]) flowData.m_order = flowIn["m_order"].as<int>();
+				},
+				[&](const YAML::Node& skeletonIn, ShootGrowthData& skeletonData)
+				{
+					if (skeletonIn["m_desiredMin"]) skeletonData.m_desiredMin = skeletonIn["m_desiredMin"].as<glm::vec3>();
+					if (skeletonIn["m_desiredMax"]) skeletonData.m_desiredMax = skeletonIn["m_desiredMax"].as<glm::vec3>();
+				}
+			);
+		}
+	}
 }
 
 void Tree::ClearMeshRenderer() const
@@ -1752,7 +1860,31 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 bool Tree::ExportIOTree(const std::filesystem::path& path) const
 {
 	treeio::ArrayTree tree{};
-	m_treeModel.ExportTreeIOSkeleton(tree);
+	using namespace treeio;
+	const auto& shootSkeleton = m_treeModel.PeekShootSkeleton();
+	const auto& sortedInternodeList = shootSkeleton.RefSortedNodeList();
+	if (sortedInternodeList.empty()) return false;
+	const auto& rootNode = shootSkeleton.PeekNode(0);
+	TreeNodeData rootNodeData;
+	//rootNodeData.direction = rootNode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
+	rootNodeData.thickness = rootNode.m_info.m_thickness;
+	rootNodeData.pos = rootNode.m_info.m_globalPosition;
+
+	auto rootId = tree.addRoot(rootNodeData);
+	std::unordered_map<NodeHandle, size_t> nodeMap;
+	nodeMap[0] = rootId;
+	for (const auto& nodeHandle : sortedInternodeList)
+	{
+		if (nodeHandle == 0) continue;
+		const auto& node = shootSkeleton.PeekNode(nodeHandle);
+		TreeNodeData nodeData;
+		//nodeData.direction = node.m_info.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
+		nodeData.thickness = node.m_info.m_thickness;
+		nodeData.pos = node.m_info.m_globalPosition;
+
+		auto currentId = tree.addNodeChild(nodeMap[node.GetParentHandle()], nodeData);
+		nodeMap[nodeHandle] = currentId;
+	}
 	return tree.saveTree(path.string());
 }
 
@@ -1778,7 +1910,7 @@ void SkeletalGraphSettings::OnInspect()
 	ImGui::DragFloat("Junction point size", &m_junctionPointSize, 0.01f, 0.0f, 1.0f);
 
 	ImGui::Checkbox("Fixed point size", &m_fixedPointSize);
-	if(m_fixedPointSize){
+	if (m_fixedPointSize) {
 		ImGui::DragFloat("Fixed point size multiplier", &m_fixedPointSizeFactor, 0.001f, 0.0f, 1.0f);
 	}
 
@@ -1820,7 +1952,7 @@ void Tree::PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescrip
 				const auto newSagging = glm::min(
 					shootGrowthParameters.m_saggingFactorThicknessReductionMax.z,
 					shootGrowthParameters.m_saggingFactorThicknessReductionMax.x *
-					(internode.m_data.m_descendentTotalBiomass + internode.m_data.m_extraMass) /
+					(internode.m_data.m_descendantTotalBiomass + internode.m_data.m_extraMass) /
 					glm::pow(
 						internode.m_info.m_thickness /
 						shootGrowthParameters.m_endNodeThickness,

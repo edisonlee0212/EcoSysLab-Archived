@@ -765,7 +765,7 @@ TreeVisualizer::InspectInternode(
 		ImGui::InputFloat("Distance to end", (float*)&internode.m_info.m_endDistance, 1, 100,
 			"%.3f",
 			ImGuiInputTextFlags_ReadOnly);
-		ImGui::InputFloat("Descendent biomass", (float*)&internodeData.m_descendentTotalBiomass, 1, 100, "%.3f",
+		ImGui::InputFloat("Descendent biomass", (float*)&internodeData.m_descendantTotalBiomass, 1, 100, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
 		ImGui::InputFloat("Biomass", (float*)&internodeData.m_biomass, 1, 100, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
@@ -876,7 +876,7 @@ TreeVisualizer::PeekInternode(const ShootSkeleton& shootSkeleton, NodeHandle int
 		ImGui::InputFloat("Distance to end", (float*)&internode.m_info.m_endDistance, 1, 100,
 			"%.3f",
 			ImGuiInputTextFlags_ReadOnly);
-		ImGui::InputFloat("Descendent biomass", (float*)&internodeData.m_descendentTotalBiomass, 1, 100, "%.3f",
+		ImGui::InputFloat("Descendent biomass", (float*)&internodeData.m_descendantTotalBiomass, 1, 100, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
 		ImGui::InputFloat("Biomass", (float*)&internodeData.m_biomass, 1, 100, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);

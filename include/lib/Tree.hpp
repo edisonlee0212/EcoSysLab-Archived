@@ -7,6 +7,7 @@
 #include "TreeGraph.hpp"
 #include "TreeGrowthParameters.hpp"
 #include "StrandModelMeshGenerator.hpp"
+#include "TreeIOTree.hpp"
 using namespace EvoEngine;
 namespace EcoSysLab {
 	class Tree : public IPrivateComponent {
@@ -46,7 +47,7 @@ namespace EcoSysLab {
 		bool m_temporalProgression = false;
 		void Update() override;
 
-		void Deserialize(const YAML::Node& in) override;
+		
 
 		std::vector<float> m_rootBiomassHistory;
 		std::vector<float> m_shootBiomassHistory;
@@ -87,5 +88,9 @@ namespace EcoSysLab {
 		void ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings, const std::filesystem::path& path);
 		[[maybe_unused]] bool ExportIOTree(const std::filesystem::path& path) const;
 		void ExportRadialBoundingVolume(const std::shared_ptr<RadialBoundingVolume>& rbv) const;
+
+		void Deserialize(const YAML::Node& in) override;
+
+
 	};
 }
