@@ -89,7 +89,7 @@ void EcoSysLabLayer::Visualization() {
 			m_needFlowUpdateForSelection = true;
 			m_operatorMode = static_cast<unsigned>(OperatorMode::Select);
 		}
-		else {
+		else if(m_selectedTree.GetIndex() != 0){
 			m_selectedTree = Entity();
 			m_needFlowUpdateForSelection = true;
 		}
