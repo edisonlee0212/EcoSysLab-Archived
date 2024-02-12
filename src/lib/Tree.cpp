@@ -1128,7 +1128,7 @@ void Tree::Deserialize(const YAML::Node& in)
 		const auto& inTreeModel = in["m_treeModel"];
 		if (inTreeModel["m_shootSkeleton"])
 		{
-			const auto& inShootSkeleton = in["m_shootSkeleton"];
+			const auto& inShootSkeleton = inTreeModel["m_shootSkeleton"];
 			SkeletonSerializer<ShootGrowthData, ShootStemGrowthData, InternodeGrowthData>::Deserialize(inShootSkeleton, m_treeModel.RefShootSkeleton(),
 				[&](const YAML::Node& nodeIn, InternodeGrowthData& nodeData)
 				{

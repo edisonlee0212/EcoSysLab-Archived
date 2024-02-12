@@ -27,7 +27,6 @@ namespace EcoSysLab {
 		out << YAML::Key << "m_maxNodeIndex" << YAML::Value << skeleton.m_maxNodeIndex;
 		out << YAML::Key << "m_maxFlowIndex" << YAML::Value << skeleton.m_maxFlowIndex;
 		out << YAML::Key << "m_newVersion" << YAML::Value << skeleton.m_newVersion;
-		out << YAML::Key << "m_version" << YAML::Value << skeleton.m_version;
 		out << YAML::Key << "m_min" << YAML::Value << skeleton.m_min;
 		out << YAML::Key << "m_max" << YAML::Value << skeleton.m_max;
 
@@ -46,6 +45,13 @@ namespace EcoSysLab {
 				out << YAML::Key << "m_parentHandle" << YAML::Value << node.m_parentHandle;
 				out << YAML::Key << "m_apical" << YAML::Value << node.m_apical;
 				out << YAML::Key << "m_index" << YAML::Value << node.m_index;
+
+				out << YAML::Key << "m_childHandles" << YAML::Value << YAML::BeginSeq;
+				for (const auto& nodeHandle : node.m_childHandles)
+				{
+					out << nodeHandle;
+				}
+				out << YAML::EndSeq;
 
 				out << YAML::Key << "m_info" << YAML::Value << YAML::BeginMap;
 				{
@@ -72,14 +78,30 @@ namespace EcoSysLab {
 		{
 			const auto& flow = skeleton.m_flows[flowIndex];
 			out << YAML::BeginMap;
-			out << YAML::Key << "m_recycled" << YAML::Value << flow.m_recycled;
-			out << YAML::Key << "m_parentHandle" << YAML::Value << flow.m_parentHandle;
-			out << YAML::Key << "m_apical" << YAML::Value << flow.m_apical;
-			out << YAML::Key << "m_index" << YAML::Value << flow.m_index;
-
-			out << YAML::Key << "m_data" << YAML::Value << YAML::BeginMap;
 			{
-				flowFunc(out, flow.m_data);
+				out << YAML::Key << "m_recycled" << YAML::Value << flow.m_recycled;
+				out << YAML::Key << "m_parentHandle" << YAML::Value << flow.m_parentHandle;
+				out << YAML::Key << "m_apical" << YAML::Value << flow.m_apical;
+				out << YAML::Key << "m_index" << YAML::Value << flow.m_index;
+				out << YAML::Key << "m_nodes" << YAML::Value << YAML::BeginSeq;
+				for(const auto& nodeHandle : flow.m_nodes)
+				{
+					out << nodeHandle;
+				}
+				out << YAML::EndSeq;
+
+				out << YAML::Key << "m_childHandles" << YAML::Value << YAML::BeginSeq;
+				for (const auto& flowHandle : flow.m_childHandles)
+				{
+					out << flowHandle;
+				}
+				out << YAML::EndSeq;
+
+				out << YAML::Key << "m_data" << YAML::Value << YAML::BeginMap;
+				{
+					flowFunc(out, flow.m_data);
+				}
+				out << YAML::EndMap;
 			}
 			out << YAML::EndMap;
 		}
@@ -96,12 +118,12 @@ namespace EcoSysLab {
 		if (in["m_maxNodeIndex"]) skeleton.m_maxNodeIndex = in["m_maxNodeIndex"].as<int>();
 		if (in["m_maxFlowIndex"]) skeleton.m_maxFlowIndex = in["m_maxFlowIndex"].as<int>();
 		if (in["m_newVersion"]) skeleton.m_newVersion = in["m_newVersion"].as<int>();
-		if (in["m_version"]) skeleton.m_version = in["m_version"].as<int>();
+		skeleton.m_version = -1;
 		if (in["m_min"]) skeleton.m_min = in["m_min"].as<glm::vec3>();
 		if (in["m_max"]) skeleton.m_max = in["m_max"].as<glm::vec3>();
 
 		if(in["m_data"]) skeletonFunc(in["m_data"], skeleton.m_data);
-		std::map<int, NodeHandle> sortedNodes;
+		std::multimap<int, NodeHandle> sortedNodes;
 		if (in["m_nodes"]) {
 			skeleton.m_nodes.clear();
 			const auto& inNodes = in["m_nodes"];
@@ -115,7 +137,7 @@ namespace EcoSysLab {
 				if (inNode["m_flowHandle"]) node.m_flowHandle = inNode["m_flowHandle"].as<FlowHandle>();
 				if (inNode["m_parentHandle"]) node.m_parentHandle = inNode["m_parentHandle"].as<NodeHandle>();
 				if (inNode["m_index"]) node.m_index = inNode["m_index"].as<int>();
-				sortedNodes[node.m_index] = nodeHandle;
+				sortedNodes.insert({ node.m_index, nodeHandle });
 				if (inNode["m_apical"]) node.m_apical = inNode["m_apical"].as<bool>();
 				if (inNode["m_info"])
 				{
@@ -127,6 +149,14 @@ namespace EcoSysLab {
 					if (inNodeInfo["m_thickness"]) node.m_info.m_thickness = inNodeInfo["m_thickness"].as<float>();
 					if (inNodeInfo["m_color"]) node.m_info.m_color = inNodeInfo["m_color"].as<glm::vec4>();
 				}
+				if (inNode["m_childHandles"])
+				{
+					const auto& inNodeChildHandles = inNode["m_childHandles"];
+					for (const auto& inNodeNode : inNodeChildHandles)
+					{
+						node.m_childHandles.emplace_back(inNodeNode.as<NodeHandle>());
+					}
+				}
 				if(inNode["m_data"])
 				{
 					const auto& inNodeData = inNode["m_data"];
@@ -135,7 +165,7 @@ namespace EcoSysLab {
 				nodeHandle++;
 			}
 		}
-		std::map<int, FlowHandle> sortedFlows;
+		std::multimap<int, FlowHandle> sortedFlows;
 		if (in["m_flows"]) {
 			skeleton.m_flows.clear();
 			const auto& inFlows = in["m_flows"];
@@ -147,8 +177,25 @@ namespace EcoSysLab {
 				if (inFlow["m_recycled"]) flow.m_recycled = inFlow["m_recycled"].as<bool>();
 				if (inFlow["m_parentHandle"]) flow.m_parentHandle = inFlow["m_parentHandle"].as<FlowHandle>();
 				if (inFlow["m_index"]) flow.m_index = inFlow["m_index"].as<int>();
-				sortedFlows[flow.m_index] = flowHandle;
+				sortedFlows.insert({ flow.m_index, flowHandle });
 				if (inFlow["m_apical"]) flow.m_apical = inFlow["m_apical"].as<bool>();
+				if (inFlow["m_nodes"])
+				{
+					const auto& inFlowNodes= inFlow["m_nodes"];
+					for (const auto& inFlowNode : inFlowNodes)
+					{
+						flow.m_nodes.emplace_back(inFlowNode.as<NodeHandle>());
+					}
+				}
+
+				if (inFlow["m_childHandles"])
+				{
+					const auto& inFlowChildHandles = inFlow["m_childHandles"];
+					for (const auto& inFlowNode : inFlowChildHandles)
+					{
+						flow.m_childHandles.emplace_back(inFlowNode.as<FlowHandle>());
+					}
+				}
 				if (inFlow["m_data"])
 				{
 					const auto& inFlowData = inFlow["m_data"];
@@ -161,14 +208,21 @@ namespace EcoSysLab {
 		for(const auto& pair : sortedNodes)
 		{
 			const auto& node = skeleton.m_nodes[pair.second];
-			skeleton.m_nodes[node.m_parentHandle].m_childHandles.emplace_back(node.m_handle);
-			skeleton.m_flows[node.m_flowHandle].m_nodes.emplace_back(node.m_handle);
+			if(node.m_recycled)
+			{
+				skeleton.m_nodePool.emplace(pair.second);
+			}
+			
 		}
 		for (const auto& pair : sortedFlows)
 		{
 			const auto& flow = skeleton.m_flows[pair.second];
-			skeleton.m_flows[flow.m_parentHandle].m_childHandles.emplace_back(flow.m_handle);
+			if (flow.m_recycled)
+			{
+				skeleton.m_flowPool.emplace(pair.second);
+			}
 		}
+		skeleton.SortLists();
 		skeleton.CalculateDistance();
 		skeleton.CalculateFlows();
 		skeleton.CalculateRegulatedGlobalRotation();

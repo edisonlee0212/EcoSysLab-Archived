@@ -383,6 +383,7 @@ namespace EcoSysLab {
 			m_sortedFlowList.emplace_back(flowWaitList.front());
 			flowWaitList.pop();
 			for (const auto &i: m_flows[m_sortedFlowList.back()].m_childHandles) {
+				assert(!m_flows[i].m_recycled);
 				flowWaitList.push(i);
 			}
 
@@ -395,6 +396,7 @@ namespace EcoSysLab {
 			m_sortedNodeList.emplace_back(nodeWaitList.front());
 			nodeWaitList.pop();
 			for (const auto &i: m_nodes[m_sortedNodeList.back()].m_childHandles) {
+				assert(!m_nodes[i].m_recycled);
 				nodeWaitList.push(i);
 			}
 		}
