@@ -9,6 +9,12 @@ void LogGrader::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 		ImGui::DragFloat("Height", &m_proceduralLogParameters.m_height);
 		ImGui::DragFloat("Start radius", &m_proceduralLogParameters.m_startRadius);
 		ImGui::DragFloat("End radius", &m_proceduralLogParameters.m_endRadius);
+		static PlottedDistributionSettings plottedDistributionSettings = { 0.001f,
+														{0.001f, true, false, ""},
+														{0.001f, true, false, ""},
+														"" };
+		m_proceduralLogParameters.m_sweep.OnInspect("Sweep", plottedDistributionSettings);
+		m_proceduralLogParameters.m_sweepDirectionAngle.OnInspect("Sweep Direction Angle", plottedDistributionSettings);
 		ImGui::TreePop();
 	}
 	editorLayer->DragAndDropButton<BranchShape>(m_branchShape, "Branch Shape", true);
@@ -30,11 +36,15 @@ void LogGrader::InitializeLogRandomly(const ProceduralLogParameters& proceduralL
 {
 	m_logWood.m_intersections.clear();
 	m_logWood.m_intersections.resize(glm::max(2.0f, proceduralLogParameters.m_height / m_logWood.m_heightStep));
+	
 	for(int intersectionIndex = 0; intersectionIndex < m_logWood.m_intersections.size(); intersectionIndex++)
 	{
 		const float a = static_cast<float>(intersectionIndex) / (m_logWood.m_intersections.size() - 1);
 		const float radius = glm::mix(proceduralLogParameters.m_startRadius, proceduralLogParameters.m_endRadius, a);
 		auto& intersection = m_logWood.m_intersections[intersectionIndex];
+		glm::vec2 sweepDirection = glm::vec2(glm::cos(glm::radians(proceduralLogParameters.m_sweepDirectionAngle.GetValue(a))), glm::sin(glm::radians(proceduralLogParameters.m_sweepDirectionAngle.GetValue(a))));
+		intersection.m_center = sweepDirection * proceduralLogParameters.m_sweep.GetValue(a);
+
 		intersection.m_boundary.resize(360);
 		for(int boundaryPointIndex = 0; boundaryPointIndex < 360; boundaryPointIndex++)
 		{
@@ -99,6 +109,14 @@ std::shared_ptr<Mesh> LogGrader::GenerateSurfaceMesh(const LogWoodMeshGeneration
 	attributes.m_texCoord = true;
 	retVal->SetVertices(attributes, vertices, indices);
 	return retVal;
+}
+
+void LogGrader::OnCreate()
+{
+	m_proceduralLogParameters.m_sweep.m_mean = { -1.0f, 1.0f };
+	m_proceduralLogParameters.m_sweep.m_deviation = { 0.0f, 1.0f, {0, 0} };
+	m_proceduralLogParameters.m_sweepDirectionAngle.m_mean = { -180, 180.0f };
+	m_proceduralLogParameters.m_sweepDirectionAngle.m_deviation = { 0.0f, 1.0f, {0, 0} };
 }
 
 void LogGrader::InitializeMeshRenderer(const LogWoodMeshGenerationSettings& meshGeneratorSettings) const

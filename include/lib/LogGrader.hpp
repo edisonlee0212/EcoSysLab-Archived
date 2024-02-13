@@ -1,4 +1,6 @@
 #pragma once
+#include <Plot2D.hpp>
+
 #include "BranchShape.hpp"
 #include "LogWood.hpp"
 #include "Noises.hpp"
@@ -14,10 +16,10 @@ namespace EcoSysLab
 	struct ProceduralLogParameters
 	{
 		float m_height = 4.0f;
-		NoiseDescriptor m_startSurfaceNoiseDescriptor{};
-		NoiseDescriptor m_endSurfaceNoiseDescriptor{};
-		float m_startRadius = 0.35f;
-		float m_endRadius = 0.3f;
+		float m_startRadius = 0.4f;
+		float m_endRadius = 0.35f;
+		PlottedDistribution<float> m_sweep{};
+		PlottedDistribution<float> m_sweepDirectionAngle{};
 	};
 
 	class LogGrader : public IPrivateComponent
@@ -30,7 +32,7 @@ namespace EcoSysLab
 		LogWoodMeshGenerationSettings m_logWoodMeshGenerationSettings{};
 		LogWood m_logWood {};
 		[[nodiscard]] std::shared_ptr<Mesh> GenerateSurfaceMesh(const LogWoodMeshGenerationSettings& meshGeneratorSettings) const;
-
+		void OnCreate() override;
 		void InitializeMeshRenderer(const LogWoodMeshGenerationSettings& meshGeneratorSettings) const;
 		void ClearMeshRenderer() const;
 	};
