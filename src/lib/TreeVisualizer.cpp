@@ -370,7 +370,7 @@ TreeVisualizer::OnInspect(
 	}
 	if (ImGui::TreeNodeEx("Visualizer Settings")) {
 		if (ImGui::Combo("Shoot Color mode",
-			{ "Default", "Order", "Level", "Light Intensity", "Light Direction", "Growth Potential", "Apical control", "Desired growth rate", "Pipe Resistance", "IsMaxChild", "AllocatedVigor" },
+			{ "Default", "Order", "Level", "Light Intensity", "Light Direction", "Growth Potential", "Apical control", "Desired growth rate", "Growth Rate", "IsMaxChild", "AllocatedVigor" },
 			m_settings.m_shootVisualizationMode)) {
 			m_needShootColorUpdate = true;
 		}
@@ -765,7 +765,7 @@ TreeVisualizer::InspectInternode(
 		ImGui::InputFloat("Distance to end", (float*)&internode.m_info.m_endDistance, 1, 100,
 			"%.3f",
 			ImGuiInputTextFlags_ReadOnly);
-		ImGui::InputFloat("Descendent biomass", (float*)&internodeData.m_descendentTotalBiomass, 1, 100, "%.3f",
+		ImGui::InputFloat("Descendent biomass", (float*)&internodeData.m_descendantTotalBiomass, 1, 100, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
 		ImGui::InputFloat("Biomass", (float*)&internodeData.m_biomass, 1, 100, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
@@ -776,8 +776,6 @@ TreeVisualizer::InspectInternode(
 		ImGui::InputFloat("Light Intensity", (float*)&internodeData.m_lightIntensity, 1, 100, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
 		ImGui::InputFloat3("Light direction", (float*)&internodeData.m_lightDirection.x, "%.3f",
-			ImGuiInputTextFlags_ReadOnly);
-		ImGui::InputFloat("Pipe resistance", (float*)&internodeData.m_pipeResistance, 1, 100, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
 
 		ImGui::InputFloat("Growth potential", (float*)&internodeData.m_growthPotential, 1, 100, "%.3f",
@@ -878,7 +876,7 @@ TreeVisualizer::PeekInternode(const ShootSkeleton& shootSkeleton, NodeHandle int
 		ImGui::InputFloat("Distance to end", (float*)&internode.m_info.m_endDistance, 1, 100,
 			"%.3f",
 			ImGuiInputTextFlags_ReadOnly);
-		ImGui::InputFloat("Descendent biomass", (float*)&internodeData.m_descendentTotalBiomass, 1, 100, "%.3f",
+		ImGui::InputFloat("Descendent biomass", (float*)&internodeData.m_descendantTotalBiomass, 1, 100, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
 		ImGui::InputFloat("Biomass", (float*)&internodeData.m_biomass, 1, 100, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
@@ -1014,8 +1012,8 @@ void TreeVisualizer::SyncColors(const ShootSkeleton& shootSkeleton, const NodeHa
 		case ShootVisualizerMode::GrowthPotential:
 			matrices[i].m_instanceColor = glm::mix(glm::vec4(0, 1, 0, 1), glm::vec4(1, 0, 0, 1), glm::clamp(glm::pow(node.m_data.m_growthPotential, m_settings.m_shootColorMultiplier), 0.0f, 1.f));
 			break;
-		case ShootVisualizerMode::PipeResistance:
-			matrices[i].m_instanceColor = glm::mix(glm::vec4(0, 1, 0, 1), glm::vec4(1, 0, 0, 1), glm::clamp(glm::pow(node.m_data.m_pipeResistance, m_settings.m_shootColorMultiplier), 0.0f, 1.f));
+		case ShootVisualizerMode::GrowthRate:
+			matrices[i].m_instanceColor = glm::mix(glm::vec4(0, 1, 0, 1), glm::vec4(1, 0, 0, 1), glm::clamp(glm::pow(node.m_data.m_growthRate, m_settings.m_shootColorMultiplier), 0.0f, 1.f));
 			break;
 		case ShootVisualizerMode::ApicalControl:
 			matrices[i].m_instanceColor = glm::mix(glm::vec4(0, 1, 0, 1), glm::vec4(1, 0, 0, 1),

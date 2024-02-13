@@ -19,6 +19,7 @@
 #include "TreePointCloudScanner.hpp"
 #include "ClassRegistry.hpp"
 #include "CubeVolume.hpp"
+#include "LogGrader.hpp"
 using namespace EcoSysLab;
 
 void EcoSysLabLayer::OnCreate() {
@@ -26,6 +27,7 @@ void EcoSysLabLayer::OnCreate() {
 	ClassRegistry::RegisterPrivateComponent<TreePointCloud>("TreePointCloud");
 	ClassRegistry::RegisterPrivateComponent<Soil>("Soil");
 	ClassRegistry::RegisterPrivateComponent<Climate>("Climate");
+	ClassRegistry::RegisterPrivateComponent<LogGrader>("LogGrader");
 
 	ClassRegistry::RegisterAsset<BranchShape>("BranchShape", { ".bs" });
 	ClassRegistry::RegisterAsset<ForestPatch>("ForestPatch", { ".fp" });
@@ -89,7 +91,7 @@ void EcoSysLabLayer::Visualization() {
 			m_needFlowUpdateForSelection = true;
 			m_operatorMode = static_cast<unsigned>(OperatorMode::Select);
 		}
-		else {
+		else if(m_selectedTree.GetIndex() != 0){
 			m_selectedTree = Entity();
 			m_needFlowUpdateForSelection = true;
 		}
@@ -1698,7 +1700,12 @@ void EcoSysLabLayer::Simulate(float deltaTime) {
 			soil->m_soilModel.Irrigation();
 			soil->m_soilModel.Step();
 		}
-
+		for (const auto& treeEntity : *treeEntities) {
+			if (!scene->IsEntityEnabled(treeEntity)) return;
+			auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
+			tree->m_climate = climate;
+			tree->m_soil = soil;
+		}
 		climate->PrepareForGrowth();
 		std::vector<bool> grownStat{};
 		grownStat.resize(Jobs::Workers().Size());
@@ -1715,10 +1722,10 @@ void EcoSysLabLayer::Simulate(float deltaTime) {
 
 		auto heightField = soil->m_soilDescriptor.Get<SoilDescriptor>()->m_heightField.Get<HeightField>();
 		for (const auto& treeEntity : *treeEntities) {
-			if (!scene->IsEntityEnabled(treeEntity)) return;
+			if (!scene->IsEntityEnabled(treeEntity)) continue;
 			auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
 			auto treeGlobalTransform = scene->GetDataComponent<GlobalTransform>(treeEntity);
-			if (!tree->IsEnabled()) return;
+			if (!tree->IsEnabled()) continue;
 			//Collect fruit and leaves here.
 			if (!m_simulationSettings.m_autoClearFruitAndLeaves) {
 				for (const auto& fruit : tree->m_treeModel.RefShootSkeleton().m_data.m_droppedFruits) {

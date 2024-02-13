@@ -39,8 +39,8 @@ namespace EcoSysLab {
         bool m_instanceIndex = true;
         bool m_branchIndex = false;
         bool m_internodeIndex = false;
-        bool m_lineIndex = true;
-        bool m_treePartIndex = true;
+        bool m_lineIndex = false;
+        bool m_treePartIndex = false;
 
         float m_boundingBoxLimit = 1.f;
 
@@ -94,7 +94,7 @@ namespace EcoSysLab {
         glm::ivec2 m_gridSize = { 5, 5 };
         float m_gridDistance = 1.25f;
         float m_step = 0.01f;
-        int m_backpackSample = 512;
+        int m_backpackSample = 2048;
         float m_backpackHeight = 1.0f;
         int m_droneSample = 128;
         float m_droneHeight = 5.0f;

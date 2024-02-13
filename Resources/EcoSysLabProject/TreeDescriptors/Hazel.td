@@ -1,9 +1,9 @@
 m_shootGrowthParameters:
   m_growthRate: 0.200000003
-  m_branchingAngleMeanVariance: [45, 2]
+  m_branchingAngleMeanVariance: [25, 2]
   m_rollAngleMeanVariance: [90, 2]
-  m_apicalAngleVariance: 3
-  m_gravitropism: 0.0599999987
+  m_apicalAngleVariance: 2.5
+  m_gravitropism: 0.0299999993
   m_phototropism: 0
   m_saggingFactorThicknessReductionMax: [9.99999975e-05, 2, 0.300000012]
   m_internodeLength: 0.0199999996
@@ -14,19 +14,18 @@ m_shootGrowthParameters:
   m_internodeShadowFactor: 0.0199999996
   m_lateralBudCount: 1
   m_apicalBudExtinctionRate: 0
-  m_lateralBudFlushingRate: 0.200000003
+  m_lateralBudFlushingRate: 0.300000012
   m_apicalBudLightingFactor: 1
   m_lateralBudLightingFactor: 1
   m_apicalBudSpaceFactor: 1
   m_lateralBudSpaceFactor: 1
-  m_pipeResistanceFactor: 2
   m_apicalControl: 1
   m_apicalDominance: 1
-  m_apicalDominanceLoss: 0.0900000036
+  m_apicalDominanceLoss: 0.200000003
   m_lowBranchPruning: 0
   m_lowBranchPruningThicknessFactor: 0
   m_lightPruningFactor: 0
-  m_thicknessPruningFactor: 0
+  m_thicknessPruningFactor: 0.00499999989
   m_leafBudCount: 1
   m_leafGrowthRate: 18
   m_leafBudFlushingProbabilityTemperatureRange: [1, 1, 45, 60]

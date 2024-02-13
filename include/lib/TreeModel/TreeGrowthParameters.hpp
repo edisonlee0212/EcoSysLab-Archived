@@ -89,10 +89,6 @@ namespace EcoSysLab
 		 */
 		float m_lateralBudSpaceFactor = 1.0f;
 		/**
-		 * \brief To prevent over growth.
-		 */
-		float m_pipeResistanceFactor = 2.0f;
-		/**
 		 * \brief Apical control base
 		 */
 		float m_apicalControl;

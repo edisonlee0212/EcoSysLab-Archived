@@ -1,5 +1,5 @@
 m_shootGrowthParameters:
-  m_growthRate: 0.150000006
+  m_growthRate: 0.224999994
   m_branchingAngleMeanVariance: [65, 3]
   m_rollAngleMeanVariance: [90, 2]
   m_apicalAngleVariance: 3.5
@@ -14,12 +14,11 @@ m_shootGrowthParameters:
   m_internodeShadowFactor: 0.0299999993
   m_lateralBudCount: 1
   m_apicalBudExtinctionRate: 0
-  m_lateralBudFlushingRate: 0.5
+  m_lateralBudFlushingRate: 0.400000006
   m_apicalBudLightingFactor: 1
   m_lateralBudLightingFactor: 1
   m_apicalBudSpaceFactor: 1
   m_lateralBudSpaceFactor: 1
-  m_pipeResistanceFactor: 2
   m_apicalControl: 0.899999976
   m_apicalDominance: 0.5
   m_apicalDominanceLoss: 0.0199999996

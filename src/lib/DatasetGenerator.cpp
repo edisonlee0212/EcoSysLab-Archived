@@ -88,7 +88,7 @@ void DatasetGenerator::GeneratePointCloudForTree(const PointCloudPointSettings& 
 void DatasetGenerator::GeneratePointCloudForForestPatch(
 	const int gridSize, const float gridDistance, const float randomShift, 
 	const PointCloudPointSettings& pointSettings,
-	const PointCloudGridCaptureSettings& captureSettings, const std::string& treeParametersPath,
+	const PointCloudGridCaptureSettings& captureSettings, const std::string& treeParametersFolderPath,
 	const std::string& forestPatchPath, float deltaTime, int maxIterations, int maxTreeNodeCount,
 	const TreeMeshGeneratorSettings& meshGeneratorSettings, const std::string& pointCloudOutputPath)
 {
@@ -124,15 +124,7 @@ void DatasetGenerator::GeneratePointCloudForForestPatch(
 		EVOENGINE_ERROR("Forest patch doesn't exist!");
 		return;
 	}
-	std::shared_ptr<TreeDescriptor> treeDescriptor;
-	if (ProjectManager::IsInProjectFolder(treeParametersPath))
-	{
-		treeDescriptor = std::dynamic_pointer_cast<TreeDescriptor>(ProjectManager::GetOrCreateAsset(ProjectManager::GetPathRelativeToProject(treeParametersPath)));
-	}
-	else {
-		EVOENGINE_ERROR("Tree Descriptor doesn't exist!");
-		return;
-	}
+	
 
 	std::shared_ptr<Soil> soil;
 
@@ -159,7 +151,7 @@ void DatasetGenerator::GeneratePointCloudForForestPatch(
 
 	Application::Loop();
 	forestPatch->SetupGrid({ gridSize, gridSize }, gridDistance, randomShift);
-	forestPatch->ApplyTreeDescriptors({ treeDescriptor });
+	forestPatch->ApplyTreeDescriptors(treeParametersFolderPath, {0.7f, 0.2f, 0.1f});
 	forestPatch->InstantiatePatch(false);
 	
 	ecoSysLabLayer->m_simulationSettings.m_maxNodeCount = maxTreeNodeCount;

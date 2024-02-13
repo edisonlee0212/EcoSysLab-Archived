@@ -633,7 +633,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, const NodeHandle inter
 			float collectedInhibitor = 0.0f;
 			graphChanged = ElongateInternode(elongateLength, internodeHandle, shootGrowthController, collectedInhibitor) || graphChanged;
 			m_shootSkeleton.RefNode(internodeHandle).m_data.m_inhibitorSink += glm::max(0.0f, collectedInhibitor * glm::clamp(1.0f - shootGrowthController.m_apicalDominanceLoss, 0.0f, 1.0f));
-			break;
+            return graphChanged;
 		}
 		if (bud.m_type == BudType::Lateral && bud.m_status == BudStatus::Dormant) {
 			float flushProbability = bud.m_flushingRate;
@@ -656,6 +656,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, const NodeHandle inter
 				ApplyTropism(internodeData.m_lightDirection, shootGrowthController.m_phototropism(internode),
 					desiredGlobalFront, desiredGlobalUp);
 				//Create new internode
+				
 				const auto newInternodeHandle = m_shootSkeleton.Extend(internodeHandle, true);
 				const auto& oldInternode = m_shootSkeleton.PeekNode(internodeHandle);
 				auto& newInternode = m_shootSkeleton.RefNode(newInternodeHandle);
@@ -678,18 +679,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, const NodeHandle inter
 				apicalBud.m_localRotation = glm::vec3(
 					glm::radians(shootGrowthController.m_apicalAngle(newInternode)), 0.0f,
 					glm::radians(shootGrowthController.m_rollAngle(newInternode)));
-				float elongateLength = 0.0f;
-				if (m_treeGrowthSettings.m_useSpaceColonization) {
-					if (m_shootSkeleton.m_data.m_maxMarkerCount > 0) elongateLength = static_cast<float>(bud.m_markerCount) / m_shootSkeleton.m_data.m_maxMarkerCount * shootGrowthController.m_internodeLength;
-				}
-				else
-				{
-					elongateLength = oldInternode.m_data.m_growthRate * m_currentDeltaTime * shootGrowthController.m_internodeLength * shootGrowthController.m_internodeGrowthRate;
-				}
-				float collectedInhibitor = 0.0f;
-				graphChanged = ElongateInternode(elongateLength, newInternodeHandle, shootGrowthController, collectedInhibitor) || graphChanged;
-				m_shootSkeleton.RefNode(newInternodeHandle).m_data.m_inhibitorSink += glm::max(0.0f, collectedInhibitor * glm::clamp(1.0f - shootGrowthController.m_apicalDominanceLoss, 0.0f, 1.0f));
-				
+                return graphChanged;
 			}
 		}
 	}
@@ -795,7 +785,7 @@ bool TreeModel::GrowReproductiveModules(ClimateModel& climateModel, const NodeHa
 				//Handle leaf drop here.
 				if (bud.m_reproductiveModule.m_health <= 0.05f)
 				{
-					auto dropProbability = m_currentDeltaTime * shootGrowthController.m_leafFallProbability(internode);
+					const auto dropProbability = m_currentDeltaTime * shootGrowthController.m_leafFallProbability(internode);
 					if (dropProbability >= glm::linearRand(0.0f, 1.0f))
 					{
 						bud.m_status = BudStatus::Died;
@@ -827,7 +817,7 @@ void TreeModel::CalculateLevel()
 			for (const auto& childHandle : node.RefChildHandles())
 			{
 				auto& childNode = m_shootSkeleton.PeekNode(childHandle);
-				const auto childBiomass = childNode.m_data.m_descendentTotalBiomass + childNode.m_data.m_biomass;
+				const auto childBiomass = childNode.m_data.m_descendantTotalBiomass + childNode.m_data.m_biomass;
 				if (childBiomass > maxBiomass)
 				{
 					maxBiomass = childBiomass;
@@ -869,22 +859,6 @@ void TreeModel::AdjustGrowthRate(const std::vector<NodeHandle>& sortedInternodeL
 float TreeModel::CalculateDesiredGrowthRate(const std::vector<NodeHandle>& sortedInternodeList, const ShootGrowthController& shootGrowthController)
 {
 	const float apicalControl = shootGrowthController.m_apicalControl;
-	float minDistance = FLT_MAX;
-	float maxResistance = FLT_MIN;
-	for (const auto& internodeHandle : sortedInternodeList)
-	{
-		auto& node = m_shootSkeleton.RefNode(internodeHandle);
-		minDistance = glm::min(minDistance, node.m_info.m_rootDistance);
-		const float thicknessMultiplier = node.m_info.m_thickness / shootGrowthController.m_endNodeThickness;
-		node.m_data.m_pipeResistance = 1.0f / glm::pow(thicknessMultiplier, shootGrowthController.m_pipeResistanceFactor);
-		const auto parentHandle = node.GetParentHandle();
-		if (parentHandle != -1)
-		{
-			const auto parent = m_shootSkeleton.PeekNode(parentHandle);
-			node.m_data.m_pipeResistance += parent.m_data.m_pipeResistance;
-		}
-		if (node.IsEndNode()) maxResistance = glm::max(maxResistance, node.m_data.m_pipeResistance);
-	}
 	float maximumDesiredGrowthPotential = 0.0f;
 	float maximumApicalControl = 0.0f;
 	std::vector<float> apicalControlValues{};
@@ -898,7 +872,6 @@ float TreeModel::CalculateDesiredGrowthRate(const std::vector<NodeHandle>& sorte
 	for (const auto& internodeHandle : sortedInternodeList)
 	{
 		auto& node = m_shootSkeleton.RefNode(internodeHandle);
-		node.m_data.m_pipeResistance = glm::min(1.0f, node.m_data.m_pipeResistance / maxResistance);
 		node.m_data.m_growthPotential = node.m_data.m_lightIntensity;
 		if (apicalControl > 1.0f)
 		{
@@ -919,9 +892,9 @@ float TreeModel::CalculateDesiredGrowthRate(const std::vector<NodeHandle>& sorte
 	for (const auto& internodeHandle : sortedInternodeList)
 	{
 		auto& node = m_shootSkeleton.RefNode(internodeHandle);
-		node.m_data.m_growthPotential /= maximumDesiredGrowthPotential;
-		node.m_data.m_apicalControl /= maximumApicalControl;
-		node.m_data.m_desiredGrowthRate = node.m_data.m_growthPotential * node.m_data.m_apicalControl / node.m_data.m_pipeResistance;
+		if(maximumDesiredGrowthPotential > 0.0f) node.m_data.m_growthPotential /= maximumDesiredGrowthPotential;
+		if (maximumApicalControl > 0.0f) node.m_data.m_apicalControl /= maximumApicalControl;
+		node.m_data.m_desiredGrowthRate = node.m_data.m_growthPotential * node.m_data.m_apicalControl;
 		if (node.IsEndNode()) maximumGrowthRate = glm::max(maximumGrowthRate, node.m_data.m_desiredGrowthRate);
 	}
 
@@ -929,7 +902,7 @@ float TreeModel::CalculateDesiredGrowthRate(const std::vector<NodeHandle>& sorte
 	for (const auto& internodeHandle : sortedInternodeList)
 	{
 		auto& node = m_shootSkeleton.RefNode(internodeHandle);
-		node.m_data.m_desiredGrowthRate /= maximumGrowthRate;
+		if (maximumGrowthRate > 0.0f) node.m_data.m_desiredGrowthRate /= maximumGrowthRate;
 		totalDesiredGrowthRate += node.m_data.m_desiredGrowthRate;
 	}
 	return totalDesiredGrowthRate;
@@ -966,15 +939,15 @@ void TreeModel::CalculateBiomass(const ShootGrowthController& shootGrowthControl
 		const auto internodeHandle = *it;
 		auto& internode = m_shootSkeleton.RefNode(internodeHandle);
 		auto& internodeData = internode.m_data;
-		auto& internodeInfo = internode.m_info;
-		internodeData.m_descendentTotalBiomass = internodeData.m_biomass = 0.0f;
+		const auto& internodeInfo = internode.m_info;
+		internodeData.m_descendantTotalBiomass = internodeData.m_biomass = 0.0f;
 		internodeData.m_biomass =
 			internodeInfo.m_thickness / shootGrowthController.m_endNodeThickness * internodeData.m_internodeLength /
 			shootGrowthController.m_internodeLength;
 		for (const auto& i : internode.RefChildHandles()) {
 			const auto& childInternode = m_shootSkeleton.RefNode(i);
-			internodeData.m_descendentTotalBiomass +=
-				childInternode.m_data.m_descendentTotalBiomass +
+			internodeData.m_descendantTotalBiomass +=
+				childInternode.m_data.m_descendantTotalBiomass +
 				childInternode.m_data.m_biomass;
 		}
 	}
@@ -1136,32 +1109,3 @@ void TreeModel::Reverse(int iteration) {
 	m_shootSkeleton = m_history[iteration];
 	m_history.erase((m_history.begin() + iteration), m_history.end());
 }
-
-void TreeModel::ExportTreeIOSkeleton(treeio::ArrayTree& arrayTree) const
-{
-	using namespace treeio;
-	const auto& sortedInternodeList = m_shootSkeleton.RefSortedNodeList();
-	if (sortedInternodeList.empty()) return;
-	const auto& rootNode = m_shootSkeleton.PeekNode(0);
-	TreeNodeData rootNodeData;
-	//rootNodeData.direction = rootNode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
-	rootNodeData.thickness = rootNode.m_info.m_thickness;
-	rootNodeData.pos = rootNode.m_info.m_globalPosition;
-
-	auto rootId = arrayTree.addRoot(rootNodeData);
-	std::unordered_map<NodeHandle, size_t> nodeMap;
-	nodeMap[0] = rootId;
-	for (const auto& nodeHandle : sortedInternodeList)
-	{
-		if (nodeHandle == 0) continue;
-		const auto& node = m_shootSkeleton.PeekNode(nodeHandle);
-		TreeNodeData nodeData;
-		//nodeData.direction = node.m_info.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
-		nodeData.thickness = node.m_info.m_thickness;
-		nodeData.pos = node.m_info.m_globalPosition;
-
-		auto currentId = arrayTree.addNodeChild(nodeMap[node.GetParentHandle()], nodeData);
-		nodeMap[nodeHandle] = currentId;
-	}
-}
-

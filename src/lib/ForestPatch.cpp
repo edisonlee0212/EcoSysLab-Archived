@@ -40,8 +40,8 @@ void ForestPatch::ApplyTreeDescriptor(const std::shared_ptr<TreeDescriptor>& tre
 
 void ForestPatch::ApplyTreeDescriptors(const std::vector<std::shared_ptr<TreeDescriptor>>& treeDescriptors)
 {
-	if(treeDescriptors.empty()) return;
-	for(auto& i : m_treeInfos)
+	if (treeDescriptors.empty()) return;
+	for (auto& i : m_treeInfos)
 	{
 		i.m_treeDescriptor = treeDescriptors.at(glm::linearRand(0, static_cast<int>(treeDescriptors.size()) - 1));
 	}
@@ -52,7 +52,7 @@ void ForestPatch::ApplyTreeDescriptors(const std::filesystem::path& folderPath)
 	std::vector<std::shared_ptr<TreeDescriptor>> collectedTreeDescriptors{};
 	for (const auto& i : std::filesystem::recursive_directory_iterator(folderPath))
 	{
-		if (i.is_regular_file() && i.path().extension().string() == ".fp")
+		if (i.is_regular_file() && i.path().extension().string() == ".td")
 		{
 			const auto treeDescriptor =
 				std::dynamic_pointer_cast<TreeDescriptor>(ProjectManager::GetOrCreateAsset(ProjectManager::GetPathRelativeToProject(i.path())));
@@ -60,6 +60,49 @@ void ForestPatch::ApplyTreeDescriptors(const std::filesystem::path& folderPath)
 		}
 	}
 	ApplyTreeDescriptors(collectedTreeDescriptors);
+}
+
+void ForestPatch::ApplyTreeDescriptors(const std::vector<std::shared_ptr<TreeDescriptor>>& treeDescriptors,
+	const std::vector<float>& ratios)
+{
+	if (treeDescriptors.empty()) return;
+	for (auto& i : m_treeInfos)
+	{
+		i.m_treeDescriptor = treeDescriptors.at(glm::linearRand(0, static_cast<int>(treeDescriptors.size()) - 1));
+	}
+
+	std::random_device rd;
+	std::mt19937 g(rd());
+	auto copiedDescriptors = treeDescriptors;
+	std::shuffle(copiedDescriptors.begin(), copiedDescriptors.end(), g);
+	std::vector<std::shared_ptr<TreeDescriptor>> appliedTreeDescriptors;
+	int count = 0;
+	for(int i = 0; i < ratios.size(); i++)
+	{
+		if(count >= m_treeInfos.size()) break;
+		const int localSize = m_treeInfos.size() * ratios[i];
+		for(int j = 0; j < localSize; j++)
+		{
+			if (count >= m_treeInfos.size()) break;
+			m_treeInfos[count].m_treeDescriptor = copiedDescriptors[i];
+			count++;
+		}
+	}
+}
+
+void ForestPatch::ApplyTreeDescriptors(const std::filesystem::path& folderPath, const std::vector<float>& ratios)
+{
+	std::vector<std::shared_ptr<TreeDescriptor>> collectedTreeDescriptors{};
+	for (const auto& i : std::filesystem::recursive_directory_iterator(folderPath))
+	{
+		if (i.is_regular_file() && i.path().extension().string() == ".td")
+		{
+			const auto treeDescriptor =
+				std::dynamic_pointer_cast<TreeDescriptor>(ProjectManager::GetOrCreateAsset(ProjectManager::GetPathRelativeToProject(i.path())));
+			collectedTreeDescriptors.emplace_back(treeDescriptor);
+		}
+	}
+	ApplyTreeDescriptors(collectedTreeDescriptors, ratios);
 }
 
 void ForestPatch::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
@@ -80,7 +123,7 @@ void ForestPatch::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 		}
 		ImGui::TreePop();
 	}
-	
+
 	FileUtils::OpenFolder("Parameters sample", [&](const std::filesystem::path& path)
 		{
 			int index = 0;
@@ -97,11 +140,11 @@ void ForestPatch::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 			{
 				heightField = soilDescriptor->m_heightField.Get<HeightField>();
 			}
-			for(const auto& i : std::filesystem::recursive_directory_iterator(path))
+			for (const auto& i : std::filesystem::recursive_directory_iterator(path))
 			{
-				if(i.is_regular_file() && i.path().extension().string() == ".td")
+				if (i.is_regular_file() && i.path().extension().string() == ".td")
 				{
-					const auto treeDescriptor = 
+					const auto treeDescriptor =
 						std::dynamic_pointer_cast<TreeDescriptor>(ProjectManager::GetOrCreateAsset(ProjectManager::GetPathRelativeToProject(i.path())));
 					m_treeInfos.emplace_back();
 					glm::vec3 position = glm::vec3(5.f * index, 0.0f, 0.0f);
@@ -112,7 +155,7 @@ void ForestPatch::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 				}
 			}
 		}, false);
-	
+
 	FileUtils::OpenFolder("Randomly assign tree descriptors", [&](const std::filesystem::path& path)
 		{
 			ApplyTreeDescriptors(path);

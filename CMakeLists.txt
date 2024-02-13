@@ -73,6 +73,7 @@ set(LOCAL_ECOSYSLAB_INCLUDES
 	${CMAKE_CURRENT_BINARY_DIR}
 	${CMAKE_CURRENT_SOURCE_DIR}/include/lib
 	${CMAKE_CURRENT_SOURCE_DIR}/include/lib/MeshFormation
+	${CMAKE_CURRENT_SOURCE_DIR}/include/lib/LogGrading
 	${CMAKE_CURRENT_SOURCE_DIR}/include/lib/DataPipeline
 	${CMAKE_CURRENT_SOURCE_DIR}/include/lib/BranchShape
 	${CMAKE_CURRENT_SOURCE_DIR}/include/lib/Physics

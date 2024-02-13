@@ -77,10 +77,6 @@ namespace EcoSysLab
 		 */
 		std::function<void(const Node<InternodeGrowthData>& internode, Bud& targetBud)> m_budFlushingRate;
 		/**
-		 * \brief To prevent over growth.
-		 */
-		float m_pipeResistanceFactor;
-		/**
 		 * \brief Apical control base
 		 */
 		float m_apicalControl;

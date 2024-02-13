@@ -1,9 +1,9 @@
 #pragma once
-#include "VoxelSoilModel.hpp"
+//#include "VoxelSoilModel.hpp"
 #include "ClimateModel.hpp"
 #include "Octree.hpp"
 #include "TreeGrowthController.hpp"
-#include "TreeIOTree.hpp"
+
 using namespace EvoEngine;
 namespace EcoSysLab {
 	struct TreeGrowthSettings
@@ -137,10 +137,5 @@ namespace EcoSysLab {
 		[[nodiscard]] int CurrentIteration() const;
 
 		void Reverse(int iteration);
-
-		void ExportTreeIOSkeleton(treeio::ArrayTree& arrayTree) const;
-
-
-
 	};
 }

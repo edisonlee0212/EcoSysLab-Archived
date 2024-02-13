@@ -51,13 +51,14 @@ namespace EcoSysLab {
 
 	template<typename NodeData>
 	class Node {
-#pragma region Private
-
 		template<typename FD>
 		friend class Flow;
 
 		template<typename SD, typename FD, typename ID>
 		friend class Skeleton;
+
+		template<typename SD, typename FD, typename ID>
+		friend class SkeletonSerializer;
 
 		bool m_endNode = true;
 		bool m_recycled = false;
@@ -67,7 +68,6 @@ namespace EcoSysLab {
 		std::vector<NodeHandle> m_childHandles;
 		bool m_apical = true;
 		int m_index = -1;
-#pragma endregion
 	public:
 		NodeData m_data;
 		/**
@@ -128,10 +128,11 @@ namespace EcoSysLab {
 
 	template<typename FlowData>
 	class Flow {
-#pragma region Private
-
 		template<typename SD, typename FD, typename ID>
 		friend class Skeleton;
+
+		template<typename SD, typename FD, typename ID>
+		friend class SkeletonSerializer;
 
 		bool m_recycled = false;
 		FlowHandle m_handle = -1;
@@ -139,7 +140,7 @@ namespace EcoSysLab {
 		FlowHandle m_parentHandle = -1;
 		std::vector<FlowHandle> m_childHandles;
 		bool m_apical = false;
-#pragma endregion
+		int m_index = -1;
 	public:
 		FlowData m_data;
 		FlowInfo m_info;
@@ -181,12 +182,18 @@ namespace EcoSysLab {
 		[[nodiscard]] const std::vector<NodeHandle> &RefNodeHandles() const;
 		Flow() = default;
 		explicit Flow(FlowHandle handle);
+
+		[[nodiscard]] int GetIndex() const;
 	};
 
 	template<typename SkeletonData, typename FlowData, typename NodeData>
 	class Skeleton {
 		template<typename SD, typename FD, typename ID>
 		friend class Skeleton;
+
+		template<typename SD, typename FD, typename ID>
+		friend class SkeletonSerializer;
+
 		std::vector<Flow<FlowData>> m_flows;
 		std::vector<Node<NodeData>> m_nodes;
 		std::queue<NodeHandle> m_nodePool;
@@ -213,12 +220,14 @@ namespace EcoSysLab {
 
 		void DetachChildNode(NodeHandle targetHandle, NodeHandle childHandle);
 
-		int m_maxIndex = -1;
+		int m_maxNodeIndex = -1;
+		int m_maxFlowIndex = -1;
 	public:
 		template<typename SrcSkeletonData, typename SrcFlowData, typename SrcNodeData>
 		void Clone(const Skeleton<SrcSkeletonData, SrcFlowData, SrcNodeData>& srcSkeleton);
 
-		[[nodiscard]] int GetMaxIndex() const;
+		[[nodiscard]] int GetMaxNodeIndex() const;
+		[[nodiscard]] int GetMaxFlowIndex() const;
 		SkeletonData m_data;
 
 		void CalculateDistance();
@@ -374,6 +383,7 @@ namespace EcoSysLab {
 			m_sortedFlowList.emplace_back(flowWaitList.front());
 			flowWaitList.pop();
 			for (const auto &i: m_flows[m_sortedFlowList.back()].m_childHandles) {
+				assert(!m_flows[i].m_recycled);
 				flowWaitList.push(i);
 			}
 
@@ -386,6 +396,7 @@ namespace EcoSysLab {
 			m_sortedNodeList.emplace_back(nodeWaitList.front());
 			nodeWaitList.pop();
 			for (const auto &i: m_nodes[m_sortedNodeList.back()].m_childHandles) {
+				assert(!m_nodes[i].m_recycled);
 				nodeWaitList.push(i);
 			}
 		}
@@ -646,6 +657,13 @@ namespace EcoSysLab {
 		m_data = {};
 		m_info = {};
 		m_apical = false;
+		m_index = -1;
+	}
+
+	template <typename FlowData>
+	int Flow<FlowData>::GetIndex() const
+	{
+		return m_index;
 	}
 
 	template<typename FlowData>
@@ -678,7 +696,8 @@ namespace EcoSysLab {
 
 	template<typename SkeletonData, typename FlowData, typename NodeData>
 	Skeleton<SkeletonData, FlowData, NodeData>::Skeleton() {
-		m_maxIndex = -1;
+		m_maxNodeIndex = -1;
+		m_maxFlowIndex = -1;
 		AllocateFlow();
 		AllocateNode();
 		auto &rootBranch = m_flows[0];
@@ -745,7 +764,8 @@ namespace EcoSysLab {
 			m_flows[i].m_parentHandle = srcSkeleton.m_flows[i].m_parentHandle;
 			m_flows[i].m_apical = srcSkeleton.m_flows[i].m_apical;
 		}
-		m_maxIndex = srcSkeleton.m_maxIndex;
+		m_maxNodeIndex = srcSkeleton.m_maxNodeIndex;
+		m_maxFlowIndex = srcSkeleton.m_maxFlowIndex;
 		m_newVersion = srcSkeleton.m_newVersion;
 		m_version = srcSkeleton.m_version;
 		m_min = srcSkeleton.m_min;
@@ -753,9 +773,15 @@ namespace EcoSysLab {
 	}
 
 	template <typename SkeletonData, typename FlowData, typename NodeData>
-	int Skeleton<SkeletonData, FlowData, NodeData>::GetMaxIndex() const
+	int Skeleton<SkeletonData, FlowData, NodeData>::GetMaxNodeIndex() const
 	{
-		return m_maxIndex;
+		return m_maxNodeIndex;
+	}
+
+	template <typename SkeletonData, typename FlowData, typename NodeData>
+	int Skeleton<SkeletonData, FlowData, NodeData>::GetMaxFlowIndex() const
+	{
+		return m_maxFlowIndex;
 	}
 
 	template <typename SkeletonData, typename FlowData, typename NodeData>
@@ -863,18 +889,7 @@ namespace EcoSysLab {
 		parentBranch.m_childHandles.emplace_back(targetHandle);
 	}
 
-	template<typename SkeletonData, typename FlowData, typename NodeData>
-	FlowHandle Skeleton<SkeletonData, FlowData, NodeData>::AllocateFlow() {
-		if (m_flowPool.empty()) {
-			auto newBranch = m_flows.emplace_back(m_flows.size());
-			return newBranch.m_handle;
-		}
-		auto handle = m_flowPool.front();
-		m_flowPool.pop();
-		auto &flow = m_flows[handle];
-		flow.m_recycled = false;
-		return handle;
-	}
+	
 
 	template<typename SkeletonData, typename FlowData, typename NodeData>
 	void Skeleton<SkeletonData, FlowData, NodeData>::RecycleFlowSingle(FlowHandle handle, const std::function<void(FlowHandle)>& flowHandler) {
@@ -911,18 +926,34 @@ namespace EcoSysLab {
 	}
 
 	template<typename SkeletonData, typename FlowData, typename NodeData>
+	FlowHandle Skeleton<SkeletonData, FlowData, NodeData>::AllocateFlow() {
+		m_maxFlowIndex++;
+		if (m_flowPool.empty()) {
+			m_flows.emplace_back(m_flows.size());
+			m_flows.back().m_index = m_maxFlowIndex;
+			return m_flows.back().m_handle;
+		}
+		auto handle = m_flowPool.front();
+		m_flowPool.pop();
+		auto& flow = m_flows[handle];
+		flow.m_recycled = false;
+		flow.m_index = m_maxFlowIndex;
+		return handle;
+	}
+
+	template<typename SkeletonData, typename FlowData, typename NodeData>
 	NodeHandle Skeleton<SkeletonData, FlowData, NodeData>::AllocateNode() {
-		m_maxIndex++;
+		m_maxNodeIndex++;
 		if (m_nodePool.empty()) {
-			auto& newNode = m_nodes.emplace_back(m_nodes.size());
-			newNode.m_index = m_maxIndex;
-			return newNode.m_handle;
+			m_nodes.emplace_back(m_nodes.size());
+			m_nodes.back().m_index = m_maxNodeIndex;
+			return m_nodes.back().m_handle;
 		}
 		auto handle = m_nodePool.front();
 		m_nodePool.pop();
 		auto &node = m_nodes[handle];
 		node.m_recycled = false;
-		node.m_index = m_maxIndex;
+		node.m_index = m_maxNodeIndex;
 		return handle;
 	}
 
