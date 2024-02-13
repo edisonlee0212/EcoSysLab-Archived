@@ -3,14 +3,13 @@
 
 #include "BranchShape.hpp"
 #include "LogWood.hpp"
-#include "Noises.hpp"
 using namespace EvoEngine;
 namespace EcoSysLab
 {
 	struct LogWoodMeshGenerationSettings
 	{
-		float m_xSubdivision = 1.0f;
-		float m_ySubdivision = 0.01f;
+		float m_xSubdivision = 2.0f;
+		float m_ySubdivision = 0.02f;
 	};
 	
 	struct ProceduralLogParameters
@@ -35,5 +34,7 @@ namespace EcoSysLab
 		void OnCreate() override;
 		void InitializeMeshRenderer(const LogWoodMeshGenerationSettings& meshGeneratorSettings) const;
 		void ClearMeshRenderer() const;
+
+
 	};
 }

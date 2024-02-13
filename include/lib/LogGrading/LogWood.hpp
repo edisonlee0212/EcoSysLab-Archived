@@ -23,5 +23,14 @@ namespace EcoSysLab
 		std::vector<LogWoodIntersection> m_intersections;
 		[[nodiscard]] glm::vec2 GetSurfacePoint(float height, float angle) const;
 		[[nodiscard]] float GetDefectStatus(float height, float angle) const;
+
+		[[nodiscard]] LogWoodIntersectionBoundaryPoint& GetBoundaryPoint(float height, float angle);
+
+		void MarkDefectRegion(float height, float angle, float heightRange, float angleRange);
+
+		void ClearDefects();
+		bool RayCastSelection(
+			const glm::mat4 &transform,
+			float pointDistanceThreshold, const Ray& ray, float &height, float &angle) const;
 	};
 }

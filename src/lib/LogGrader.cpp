@@ -29,7 +29,48 @@ void LogGrader::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 		}
 		InitializeLogRandomly(m_proceduralLogParameters, branchShape);
 	}
+	if (ImGui::TreeNode("Log Mesh Generation Settings"))
+	{
+		ImGui::DragFloat("X Subdivision", &m_logWoodMeshGenerationSettings.m_xSubdivision, 1.f, 1.f, 10.0f);
+		ImGui::DragFloat("Y Subdivision", &m_logWoodMeshGenerationSettings.m_ySubdivision, 0.01f, 0.01f, 0.5f);
+		ImGui::TreePop();
+	}
 	if (ImGui::Button("Initialize Mesh Renderer")) InitializeMeshRenderer(m_logWoodMeshGenerationSettings);
+	static bool enableDefectSelection = true;
+	static bool eraseMode = false;
+	ImGui::Checkbox("Enable Defect Marker", &enableDefectSelection);
+	ImGui::Checkbox("Erase mode", &eraseMode);
+	if (enableDefectSelection) {
+		static float defectHeightRange = 0.1f;
+		static int defectAngleRange = 10.0f;
+		ImGui::DragFloat("Defect Marker Y", &defectHeightRange, 0.01f, 0.03f, 1.0f);
+		ImGui::DragInt("Defect Marker X", &defectAngleRange, 1, 3, 30);
+		GlobalTransform cameraLtw;
+		cameraLtw.m_value =
+			glm::translate(
+				editorLayer->GetSceneCameraPosition()) *
+			glm::mat4_cast(
+				editorLayer->GetSceneCameraRotation());
+		const Ray cameraRay = editorLayer->GetSceneCamera()->ScreenPointToRay(
+			cameraLtw, editorLayer->GetMouseSceneCameraPosition());
+		if(editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Press && editorLayer->GetLockEntitySelection() && editorLayer->GetSelectedEntity() == GetOwner())
+		{
+			const auto scene = GetScene();
+			float height, angle;
+			if(m_logWood.RayCastSelection(scene->GetDataComponent<GlobalTransform>(GetOwner()).m_value, 0.02f, cameraRay, height, angle))
+			{
+				EVOENGINE_LOG("Defect marked!");
+				if(!eraseMode) m_logWood.MarkDefectRegion(height, angle, defectHeightRange, defectAngleRange);
+				else m_logWood.EraseDefectRegion(height, angle, defectHeightRange, defectAngleRange);
+				InitializeMeshRenderer(m_logWoodMeshGenerationSettings);
+			}
+		}
+	}
+	if(ImGui::Button("Clear Defects"))
+	{
+		m_logWood.ClearDefects();
+		InitializeMeshRenderer(m_logWoodMeshGenerationSettings);
+	}
 }
 
 void LogGrader::InitializeLogRandomly(const ProceduralLogParameters& proceduralLogParameters, const std::shared_ptr<BranchShape>& branchShape)
@@ -63,34 +104,79 @@ std::shared_ptr<Mesh> LogGrader::GenerateSurfaceMesh(const LogWoodMeshGeneration
 	const float logLength = (m_logWood.m_intersections.size() - 1) * m_logWood.m_heightStep;
 	const int yStepSize = logLength / meshGeneratorSettings.m_ySubdivision;
 	const float yStep = logLength / yStepSize;
-	Vertex archetype{};
+	
 
 	std::vector<Vertex> vertices{};
 	std::vector<unsigned int> indices{};
+	
+	vertices.resize((yStepSize + 1) * xStepSize);
+	indices.resize(yStepSize * xStepSize * 6);
+
+	Jobs::ParallelFor(yStepSize + 1, [&](unsigned yIndex)
+		{
+			Vertex archetype{};
+			const float y = yStep * static_cast<float>(yIndex);
+			for (int xIndex = 0; xIndex < xStepSize; xIndex++)
+			{
+				const float x = xStep * static_cast<float>(xIndex);
+				const glm::vec2 boundaryPoint = m_logWood.GetSurfacePoint(y, x);
+				archetype.m_position = glm::vec3(boundaryPoint.x, y, boundaryPoint.y);
+				const float defectStatus = m_logWood.GetDefectStatus(y, x);
+				archetype.m_color = glm::mix(glm::vec4(0, 1, 0, 1), glm::vec4(1, 0, 0, 1), defectStatus);
+				archetype.m_texCoord = { x, y };
+				vertices[yIndex * xStepSize + xIndex] = archetype;
+			}
+		}
+	);
+	Jobs::ParallelFor(yStepSize, [&](unsigned yIndex)
+		{
+			for (int yIndex = 0; yIndex < yStepSize; yIndex++)
+			{
+				const auto vertexStartIndex = yIndex * xStepSize;
+				for (int xIndex = 0; xIndex < xStepSize; xIndex++)
+				{
+					auto a = vertexStartIndex + xIndex;
+					auto b = vertexStartIndex + (xIndex == xStepSize - 1 ? 0 : xIndex + 1);
+					auto c = vertexStartIndex + xStepSize + xIndex;
+					indices.at((yIndex * xStepSize + xIndex) * 6) = c;
+					indices.at((yIndex * xStepSize + xIndex) * 6 + 1) = b;
+					indices.at((yIndex * xStepSize + xIndex) * 6 + 2) = a;
+					a = vertexStartIndex + xStepSize + (xIndex == xStepSize - 1 ? 0 : xIndex + 1);
+					b = vertexStartIndex + xStepSize + xIndex;
+					c = vertexStartIndex + (xIndex == xStepSize - 1 ? 0 : xIndex + 1);
+					indices.at((yIndex * xStepSize + xIndex) * 6 + 3) = c;
+					indices.at((yIndex * xStepSize + xIndex) * 6 + 4) = b;
+					indices.at((yIndex * xStepSize + xIndex) * 6 + 5) = a;
+				}
+			}
+		}
+	);
+	/*
 	for(int yIndex = 0; yIndex <= yStepSize; yIndex++)
 	{
 		const float y = yStep * static_cast<float>(yIndex);
 		
 		if(yIndex < yStepSize)
 		{
-			const auto vertexIndex = vertices.size();
+			const auto vertexStartIndex = yIndex * xStepSize;
 			for (int xIndex = 0; xIndex < xStepSize; xIndex++)
 			{
-				auto a = vertexIndex + xIndex;
-				auto b = vertexIndex + (xIndex == xStepSize - 1 ? 0 : xIndex + 1);
-				auto c = vertexIndex + xStepSize + xIndex;
-				indices.push_back(c);
-				indices.push_back(b);
-				indices.push_back(a);
-				a = vertexIndex + xStepSize + (xIndex == xStepSize - 1 ? 0 : xIndex + 1);
-				b = vertexIndex + xStepSize + xIndex;
-				c = vertexIndex + (xIndex == xStepSize - 1 ? 0 : xIndex + 1);
-				indices.push_back(c);
-				indices.push_back(b);
-				indices.push_back(a);
+				auto a = vertexStartIndex + xIndex;
+					auto b = vertexStartIndex + (xIndex == xStepSize - 1 ? 0 : xIndex + 1);
+					auto c = vertexStartIndex + xStepSize + xIndex;
+					indices.at((yIndex * xStepSize + xIndex) * 6) = c;
+					indices.at((yIndex * xStepSize + xIndex) * 6 + 1) = b;
+					indices.at((yIndex * xStepSize + xIndex) * 6 + 2) = a;
+					a = vertexStartIndex + xStepSize + (xIndex == xStepSize - 1 ? 0 : xIndex + 1);
+					b = vertexStartIndex + xStepSize + xIndex;
+					c = vertexStartIndex + (xIndex == xStepSize - 1 ? 0 : xIndex + 1);
+					indices.at((yIndex * xStepSize + xIndex) * 6 + 3) = c;
+					indices.at((yIndex * xStepSize + xIndex) * 6 + 4) = b;
+					indices.at((yIndex * xStepSize + xIndex) * 6 + 5) = a;
 			}
 		}
-
+		
+		Vertex archetype{};
 		for (int xIndex = 0; xIndex < xStepSize; xIndex++)
 		{
 			const float x = xStep * static_cast<float>(xIndex);
@@ -103,7 +189,7 @@ std::shared_ptr<Mesh> LogGrader::GenerateSurfaceMesh(const LogWoodMeshGeneration
 			vertices.emplace_back(archetype);
 		}
 	}
-
+	*/
 	const auto retVal = ProjectManager::CreateTemporaryAsset<Mesh>();
 	VertexAttributes attributes{};
 	attributes.m_texCoord = true;
@@ -132,8 +218,10 @@ void LogGrader::InitializeMeshRenderer(const LogWoodMeshGenerationSettings& mesh
 	const auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(branchEntity).lock();
 	material->m_materialProperties.m_roughness = 1.0f;
 	material->m_materialProperties.m_metallic = 0.0f;
+	material->m_vertexColorOnly = true;
 	meshRenderer->m_mesh = mesh;
 	meshRenderer->m_material = material;
+
 }
 
 void LogGrader::ClearMeshRenderer() const
