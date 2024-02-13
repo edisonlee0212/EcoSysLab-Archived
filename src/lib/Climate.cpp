@@ -87,7 +87,7 @@ void Climate::PrepareForGrowth()
 			minBound = glm::min(currentMinBound - glm::vec3(1.0f, 0.1f, 1.0f), minBound);
 			maxBound = glm::max(currentMaxBound + glm::vec3(1.0f), maxBound);
 			boundChanged = true;
-			EVOENGINE_LOG("Shadow grid resized!");
+			//EVOENGINE_LOG("Shadow grid resized!");
 		}
 		tree->m_treeModel.m_crownShynessDistance = ecoSysLabLayer->m_simulationSettings.m_crownShynessDistance;
 	}
