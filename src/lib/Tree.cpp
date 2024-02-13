@@ -783,6 +783,38 @@ std::shared_ptr<Mesh> Tree::GenerateFoliageMesh(const TreeMeshGeneratorSettings&
 	return mesh;
 }
 
+std::shared_ptr<ParticleInfoList> Tree::GenerateFoliageParticleInfoList(
+	const TreeMeshGeneratorSettings& meshGeneratorSettings)
+{
+	const auto retVal = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
+	const auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
+	const auto& foliageParameters = (!meshGeneratorSettings.m_foliageOverride && treeDescriptor) ? treeDescriptor->m_foliageParameters : meshGeneratorSettings.m_foliageOverrideSettings;
+	const auto& nodeList = m_treeModel.PeekShootSkeleton().RefSortedNodeList();
+	for (const auto& internodeHandle : nodeList) {
+		const auto& internode = m_treeModel.PeekShootSkeleton().PeekNode(internodeHandle);
+		const auto& internodeInfo = internode.m_info;
+		if (internodeInfo.m_thickness < foliageParameters.m_maxNodeThickness
+			&& internodeInfo.m_rootDistance > foliageParameters.m_minRootDistance
+			&& internodeInfo.m_endDistance < foliageParameters.m_maxEndDistance) {
+			for (int i = 0; i < foliageParameters.m_leafCountPerInternode; i++)
+			{
+				const auto leafSize = foliageParameters.m_leafSize * internode.m_data.m_lightIntensity;
+				glm::quat rotation = internodeInfo.m_globalRotation * glm::quat(glm::radians(glm::vec3(glm::gaussRand(0.0f, foliageParameters.m_rotationVariance), foliageParameters.m_branchingAngle, glm::linearRand(0.0f, 360.0f))));
+				auto front = rotation * glm::vec3(0, 0, -1);
+				auto foliagePosition = internodeInfo.GetGlobalEndPosition() + front * (leafSize.y + glm::gaussRand(0.0f, foliageParameters.m_positionVariance));
+				const auto leafTransform = glm::translate(foliagePosition) * glm::mat4_cast(rotation) * glm::scale(glm::vec3(leafSize.x, 1.0f, leafSize.y));
+
+				ParticleInfo particleInfo{};
+				particleInfo.m_instanceMatrix.m_value = leafTransform;
+				particleInfo.m_instanceColor = glm::vec4(0, 1, 0, 1);
+				retVal->m_particleInfos.emplace_back(particleInfo);
+			}
+		}
+
+	}
+	return retVal;
+}
+
 std::shared_ptr<Mesh> Tree::GenerateStrandModelFoliageMesh(
 	const StrandModelMeshGeneratorSettings& strandModelMeshGeneratorSettings)
 {
@@ -1423,7 +1455,8 @@ void Tree::InitializeMeshRenderer(const TreeMeshGeneratorSettings& meshGenerator
 		foliageEntity = scene->CreateEntity("Foliage Mesh");
 		scene->SetParent(foliageEntity, self);
 
-		auto mesh = GenerateFoliageMesh(meshGeneratorSettings);
+		auto mesh = Resources::GetResource<Mesh>("PRIMITIVE_QUAD");
+		auto particleInfoList = GenerateFoliageParticleInfoList(meshGeneratorSettings);
 		auto material = ProjectManager::CreateTemporaryAsset<Material>();
 		VertexAttributes vertexAttributes{};
 		vertexAttributes.m_texCoord = true;
@@ -1485,9 +1518,11 @@ void Tree::InitializeMeshRenderer(const TreeMeshGeneratorSettings& meshGenerator
 		}
 		material->m_materialProperties.m_roughness = 1.0f;
 		material->m_materialProperties.m_metallic = 0.0f;
-		auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(foliageEntity).lock();
-		meshRenderer->m_mesh = mesh;
-		meshRenderer->m_material = material;
+		auto particles = scene->GetOrSetPrivateComponent<Particles>(foliageEntity).lock();
+		particles->m_mesh = mesh;
+		particles->m_material = material;
+		particles->m_particleInfoList = particleInfoList;
+		particleInfoList->SetPendingUpdate();
 
 	}
 	if (meshGeneratorSettings.m_enableFruit)

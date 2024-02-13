@@ -90,7 +90,7 @@ int main() {
 	pcccs.m_distance = 4.0f;
 	pcccs.m_height = 3.0f;
 
-	int gridSize = 4;
+	int gridSize = 6;
 	float gridDistance = 1.0f;
 	float randomShift = 0.5f;
 	pcgcs.m_gridSize = { gridSize + 1, gridSize  + 1};
