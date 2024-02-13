@@ -27,7 +27,7 @@ namespace EcoSysLab
 		[[nodiscard]] LogWoodIntersectionBoundaryPoint& GetBoundaryPoint(float height, float angle);
 
 		void MarkDefectRegion(float height, float angle, float heightRange, float angleRange);
-
+		void EraseDefectRegion(float height, float angle, float heightRange, float angleRange);
 		void ClearDefects();
 		bool RayCastSelection(
 			const glm::mat4 &transform,
