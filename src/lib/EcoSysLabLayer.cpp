@@ -19,6 +19,7 @@
 #include "TreePointCloudScanner.hpp"
 #include "ClassRegistry.hpp"
 #include "CubeVolume.hpp"
+#include "LogGrader.hpp"
 using namespace EcoSysLab;
 
 void EcoSysLabLayer::OnCreate() {
@@ -26,6 +27,7 @@ void EcoSysLabLayer::OnCreate() {
 	ClassRegistry::RegisterPrivateComponent<TreePointCloud>("TreePointCloud");
 	ClassRegistry::RegisterPrivateComponent<Soil>("Soil");
 	ClassRegistry::RegisterPrivateComponent<Climate>("Climate");
+	ClassRegistry::RegisterPrivateComponent<LogGrader>("LogGrader");
 
 	ClassRegistry::RegisterAsset<BranchShape>("BranchShape", { ".bs" });
 	ClassRegistry::RegisterAsset<ForestPatch>("ForestPatch", { ".fp" });
