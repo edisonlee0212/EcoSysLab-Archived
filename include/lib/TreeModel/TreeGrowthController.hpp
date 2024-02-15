@@ -56,7 +56,7 @@ namespace EcoSysLab
 		/**
 		 * \brief The extra thickness gained from node length.
 		 */
-		float m_thicknessAccumulateAgeFactor;
+		float m_thicknessAgeFactor;
 		/**
 		 * \brief The shadow volume factor of the internode.
 		 */

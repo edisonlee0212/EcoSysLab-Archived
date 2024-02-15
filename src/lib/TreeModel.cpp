@@ -922,7 +922,7 @@ void TreeModel::CalculateThickness(const ShootGrowthController& shootGrowthContr
 			childThicknessCollection += glm::pow(childInternode.m_info.m_thickness,
 				1.0f / shootGrowthController.m_thicknessAccumulationFactor);
 		}
-		childThicknessCollection += shootGrowthController.m_thicknessAccumulateAgeFactor * shootGrowthController.m_endNodeThickness * shootGrowthController.m_internodeGrowthRate * (m_age - internodeData.m_startAge);
+		childThicknessCollection += shootGrowthController.m_thicknessAgeFactor * shootGrowthController.m_endNodeThickness * shootGrowthController.m_internodeGrowthRate * (m_age - internodeData.m_startAge);
 		if (childThicknessCollection != 0.0f) {
 			internodeInfo.m_thickness = glm::pow(childThicknessCollection, shootGrowthController.m_thicknessAccumulationFactor);
 		}

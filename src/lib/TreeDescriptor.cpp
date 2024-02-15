@@ -70,7 +70,6 @@ bool TreeDescriptor::OnInspectShootGrowthParameters(ShootGrowthParameters& treeG
 			changed = ImGui::DragFloat("Apical bud extinction rate", &treeGrowthParameters.m_apicalBudExtinctionRate, 0.00001f, 0.0f, 1.0f, "%.5f") || changed;
 			changed = ImGui::DragFloat("Lateral bud flushing rate", &treeGrowthParameters.m_lateralBudFlushingRate, 0.00001f, 0.0f, 1.0f, "%.5f") || changed;
 			changed = ImGui::DragFloat2("Lighting factor apical/lateral", &treeGrowthParameters.m_apicalBudLightingFactor, 0.00001f, 0.0f, 1.0f, "%.5f") || changed;
-			changed = ImGui::DragFloat2("Space factor apical/lateral", &treeGrowthParameters.m_apicalBudSpaceFactor, 0.001f, 0.0f, 1.0f, "%.3f") || changed;
 
 			changed = ImGui::DragFloat("Apical control", &treeGrowthParameters.m_apicalControl, 0.01f) || changed;
 			changed = ImGui::DragFloat2("Inhibitor val/loss", &treeGrowthParameters.m_apicalDominance, 0.01f) || changed;
@@ -114,7 +113,152 @@ bool TreeDescriptor::OnInspectShootGrowthParameters(ShootGrowthParameters& treeG
 		}
 		ImGui::TreePop();
 	}
+	return changed;
+}
 
+void TreeDescriptor::ApplyOffsets(ShootGrowthParameters& treeGrowthParameters, const std::vector<ShootGrowthParameterOffset>& offsets)
+{
+	for (const auto& i : offsets)
+	{
+		switch (i.m_type)
+		{
+		case static_cast<unsigned>(ShootGrowthParameterType::GrowthRate):
+		{
+			treeGrowthParameters.m_growthRate += glm::mix(i.m_range.x, i.m_range.y, i.m_offset.GetValue(glm::linearRand(0.0f, 1.0f))); break;
+		}
+		case static_cast<unsigned>(ShootGrowthParameterType::BranchingAngleMean):
+		{
+			treeGrowthParameters.m_branchingAngleMeanVariance.x += glm::mix(i.m_range.x, i.m_range.y, i.m_offset.GetValue(glm::linearRand(0.0f, 1.0f))); break;
+		}
+		case static_cast<unsigned>(ShootGrowthParameterType::BranchingAngleVariance):
+		{
+			treeGrowthParameters.m_branchingAngleMeanVariance.y += glm::mix(i.m_range.x, i.m_range.y, i.m_offset.GetValue(glm::linearRand(0.0f, 1.0f))); break;
+		}
+		case static_cast<unsigned>(ShootGrowthParameterType::RollAngleMean):
+		{
+			treeGrowthParameters.m_rollAngleMeanVariance.x += glm::mix(i.m_range.x, i.m_range.y, i.m_offset.GetValue(glm::linearRand(0.0f, 1.0f))); break;
+		}
+		case static_cast<unsigned>(ShootGrowthParameterType::RollAngleVariance):
+		{
+			treeGrowthParameters.m_rollAngleMeanVariance.y += glm::mix(i.m_range.x, i.m_range.y, i.m_offset.GetValue(glm::linearRand(0.0f, 1.0f))); break;
+		}
+		case static_cast<unsigned>(ShootGrowthParameterType::ApicalAngleVariance):
+		{
+			treeGrowthParameters.m_apicalAngleVariance += glm::mix(i.m_range.x, i.m_range.y, i.m_offset.GetValue(glm::linearRand(0.0f, 1.0f))); break;
+		}
+		case static_cast<unsigned>(ShootGrowthParameterType::Gravitropism):
+		{
+			treeGrowthParameters.m_gravitropism += glm::mix(i.m_range.x, i.m_range.y, i.m_offset.GetValue(glm::linearRand(0.0f, 1.0f))); break;
+		}
+		case static_cast<unsigned>(ShootGrowthParameterType::Phototropism):
+		{
+			treeGrowthParameters.m_phototropism += glm::mix(i.m_range.x, i.m_range.y, i.m_offset.GetValue(glm::linearRand(0.0f, 1.0f))); break;
+		}
+		case static_cast<unsigned>(ShootGrowthParameterType::Sagging):
+		{
+			treeGrowthParameters.m_saggingFactorThicknessReductionMax.x += glm::mix(i.m_range.x, i.m_range.y, i.m_offset.GetValue(glm::linearRand(0.0f, 1.0f))); break;
+		}
+		case static_cast<unsigned>(ShootGrowthParameterType::SaggingThicknessFactor):
+		{
+			treeGrowthParameters.m_saggingFactorThicknessReductionMax.y += glm::mix(i.m_range.x, i.m_range.y, i.m_offset.GetValue(glm::linearRand(0.0f, 1.0f))); break;
+		}
+		case static_cast<unsigned>(ShootGrowthParameterType::MaxSagging):
+		{
+			treeGrowthParameters.m_saggingFactorThicknessReductionMax.z += glm::mix(i.m_range.x, i.m_range.y, i.m_offset.GetValue(glm::linearRand(0.0f, 1.0f))); break;
+		}
+		case static_cast<unsigned>(ShootGrowthParameterType::InternodeLength):
+		{
+			treeGrowthParameters.m_internodeLength += glm::mix(i.m_range.x, i.m_range.y, i.m_offset.GetValue(glm::linearRand(0.0f, 1.0f))); break;
+		}
+		case static_cast<unsigned>(ShootGrowthParameterType::InternodeLengthThicknessFactor):
+		{
+			treeGrowthParameters.m_internodeLengthThicknessFactor += glm::mix(i.m_range.x, i.m_range.y, i.m_offset.GetValue(glm::linearRand(0.0f, 1.0f))); break;
+		}
+		case static_cast<unsigned>(ShootGrowthParameterType::EndNodeThickness):
+		{
+			treeGrowthParameters.m_endNodeThickness += glm::mix(i.m_range.x, i.m_range.y, i.m_offset.GetValue(glm::linearRand(0.0f, 1.0f))); break;
+		}
+		case static_cast<unsigned>(ShootGrowthParameterType::ThicknessAccumulationFactor):
+		{
+			treeGrowthParameters.m_thicknessAccumulationFactor += glm::mix(i.m_range.x, i.m_range.y, i.m_offset.GetValue(glm::linearRand(0.0f, 1.0f))); break;
+		}
+		case static_cast<unsigned>(ShootGrowthParameterType::ThicknessAgeFactor):
+		{
+			treeGrowthParameters.m_thicknessAgeFactor += glm::mix(i.m_range.x, i.m_range.y, i.m_offset.GetValue(glm::linearRand(0.0f, 1.0f))); break;
+		}
+		case static_cast<unsigned>(ShootGrowthParameterType::ShadowFactor):
+		{
+			treeGrowthParameters.m_internodeShadowFactor += glm::mix(i.m_range.x, i.m_range.y, i.m_offset.GetValue(glm::linearRand(0.0f, 1.0f))); break;
+		}
+		case static_cast<unsigned>(ShootGrowthParameterType::ApicalBudExtinctionRate):
+		{
+			treeGrowthParameters.m_apicalBudExtinctionRate += glm::mix(i.m_range.x, i.m_range.y, i.m_offset.GetValue(glm::linearRand(0.0f, 1.0f))); break;
+		}
+		case static_cast<unsigned>(ShootGrowthParameterType::ApicalBudLightingFactor):
+		{
+			treeGrowthParameters.m_apicalBudLightingFactor += glm::mix(i.m_range.x, i.m_range.y, i.m_offset.GetValue(glm::linearRand(0.0f, 1.0f))); break;
+		}
+		case static_cast<unsigned>(ShootGrowthParameterType::LateralBudLightingFactor):
+		{
+			treeGrowthParameters.m_lateralBudLightingFactor += glm::mix(i.m_range.x, i.m_range.y, i.m_offset.GetValue(glm::linearRand(0.0f, 1.0f))); break;
+		}
+		case static_cast<unsigned>(ShootGrowthParameterType::ApicalControl):
+		{
+			treeGrowthParameters.m_apicalControl += glm::mix(i.m_range.x, i.m_range.y, i.m_offset.GetValue(glm::linearRand(0.0f, 1.0f))); break;
+		}
+		case static_cast<unsigned>(ShootGrowthParameterType::ApicalDominance):
+		{
+			treeGrowthParameters.m_apicalDominance += glm::mix(i.m_range.x, i.m_range.y, i.m_offset.GetValue(glm::linearRand(0.0f, 1.0f))); break;
+		}
+		case static_cast<unsigned>(ShootGrowthParameterType::ApicalDominanceLoss):
+		{
+			treeGrowthParameters.m_apicalDominanceLoss += glm::mix(i.m_range.x, i.m_range.y, i.m_offset.GetValue(glm::linearRand(0.0f, 1.0f))); break;
+		}
+		default:break;
+		}
+	}
+}
+
+bool TreeDescriptor::OnInspectShootGrowthParametersOffset(
+	std::vector<ShootGrowthParameterOffset>& shootGrowthParameterOffsets)
+{
+	bool changed = false;
+	if (ImGui::TreeNodeEx("Shoot Parameter Offsets", ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		if(ImGui::Button("New..."))
+		{
+			shootGrowthParameterOffsets.emplace_back();
+			shootGrowthParameterOffsets.back().m_offset.SetStart(0.0f);
+			shootGrowthParameterOffsets.back().m_offset.SetEnd(1.0f);
+			changed = true;
+		}
+		for (int offsetIndex = 0; offsetIndex < shootGrowthParameterOffsets.size(); offsetIndex++)
+		{
+			auto& offset = shootGrowthParameterOffsets.at(offsetIndex);
+			std::string tag = "Offset " + std::to_string(offsetIndex + 1);
+			if (ImGui::TreeNode(tag.c_str())) {
+				if (ImGui::Button("Remove"))
+				{
+					shootGrowthParameterOffsets.erase(shootGrowthParameterOffsets.begin() + offsetIndex);
+					offsetIndex--;
+					ImGui::TreePop();
+					continue;
+				}
+				ImGui::SameLine();
+				if (ImGui::Combo("Type", { "GrowthRate", "BranchingAngleMean", "BranchingAngleVariance",
+					"RollAngleMean", "RollAngleVariance", "ApicalAngleVariance", "Gravitropism", "Phototropism", "Sagging", "SaggingThicknessFactor",
+					"MaxSagging", "InternodeLength", "InternodeLengthThicknessFactor", "EndNodeThickness", "ThicknessAccumulationFactor", "ThicknessAgeFactor", "ShadowFactor",
+					"ApicalBudExtinctionRate", "LateralBudExtinctionRate", "ApicalBudLightingFactor",
+					"LateralBudLightingFactor", "ApicalControl", "ApicalDominance", "ApicalDominanceLoss" }, offset.m_type)) {
+					changed = true;
+				}
+				ImGui::DragFloat2("Range", &offset.m_range.x, 0.01f);
+				if (offset.m_offset.OnInspect(tag, ImVec2(-1, -1), static_cast<unsigned>(CurveEditorFlags::ALLOW_RESIZE) | static_cast<unsigned>(CurveEditorFlags::SHOW_GRID) | static_cast<unsigned>(CurveEditorFlags::DISABLE_START_END_Y))) changed = true;
+				ImGui::TreePop();
+			}
+		}
+		ImGui::TreePop();
+	}
 	return changed;
 }
 
@@ -149,9 +293,10 @@ void TreeDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 	}
 	else
 	{
-		ImGui::Text("Attach soil and climate entity to instantiate!");
+		ImGui::Text("Create soil and climate entity to instantiate!");
 	}
 	if (OnInspectShootGrowthParameters(m_shootGrowthParameters)) { changed = true; }
+	if (OnInspectShootGrowthParametersOffset(m_shootGrowthParameterOffsets)) { changed = true; }
 	if (OnInspectFoliageParameters(m_foliageParameters)) { changed = true; }
 	if (ImGui::TreeNode("Foliage Parameters")) {
 		editorLayer->DragAndDropButton<Texture2D>(m_foliageAlbedoTexture, "Foliage Albedo Texture##FFT");
@@ -214,7 +359,7 @@ void TreeDescriptor::SerializeShootGrowthParameters(const std::string& name, con
 	out << YAML::Key << "m_internodeLengthThicknessFactor" << YAML::Value << treeGrowthParameters.m_internodeLengthThicknessFactor;
 	out << YAML::Key << "m_endNodeThickness" << YAML::Value << treeGrowthParameters.m_endNodeThickness;
 	out << YAML::Key << "m_thicknessAccumulationFactor" << YAML::Value << treeGrowthParameters.m_thicknessAccumulationFactor;
-	out << YAML::Key << "m_thicknessAccumulateAgeFactor" << YAML::Value << treeGrowthParameters.m_thicknessAccumulateAgeFactor;
+	out << YAML::Key << "m_thicknessAgeFactor" << YAML::Value << treeGrowthParameters.m_thicknessAgeFactor;
 	out << YAML::Key << "m_internodeShadowFactor" << YAML::Value << treeGrowthParameters.m_internodeShadowFactor;
 
 	out << YAML::Key << "m_lateralBudCount" << YAML::Value << treeGrowthParameters.m_lateralBudCount;
@@ -222,8 +367,6 @@ void TreeDescriptor::SerializeShootGrowthParameters(const std::string& name, con
 	out << YAML::Key << "m_lateralBudFlushingRate" << YAML::Value << treeGrowthParameters.m_lateralBudFlushingRate;
 	out << YAML::Key << "m_apicalBudLightingFactor" << YAML::Value << treeGrowthParameters.m_apicalBudLightingFactor;
 	out << YAML::Key << "m_lateralBudLightingFactor" << YAML::Value << treeGrowthParameters.m_lateralBudLightingFactor;
-	out << YAML::Key << "m_apicalBudSpaceFactor" << YAML::Value << treeGrowthParameters.m_apicalBudSpaceFactor;
-	out << YAML::Key << "m_lateralBudSpaceFactor" << YAML::Value << treeGrowthParameters.m_lateralBudSpaceFactor;
 	out << YAML::Key << "m_apicalControl" << YAML::Value << treeGrowthParameters.m_apicalControl;
 	out << YAML::Key << "m_apicalDominance" << YAML::Value << treeGrowthParameters.m_apicalDominance;
 	out << YAML::Key << "m_apicalDominanceLoss" << YAML::Value << treeGrowthParameters.m_apicalDominanceLoss;
@@ -272,6 +415,20 @@ void TreeDescriptor::Serialize(YAML::Emitter& out) {
 
 	m_shootBranchShape.Save("m_shootBranchShape", out);
 	m_rootBranchShape.Save("m_rootBranchShape", out);
+
+	if(!m_shootGrowthParameterOffsets.empty())
+	{
+		out << YAML::Key << "m_shootGrowthParameterOffsets" << YAML::BeginSeq;
+		for(const auto& i : m_shootGrowthParameterOffsets)
+		{
+			out << YAML::BeginMap;
+			out << YAML::Key << "m_type" << YAML::Value << i.m_type;
+			out << YAML::Key << "m_range" << YAML::Value << i.m_range;
+			i.m_offset.Save("m_offset", out);
+			out << YAML::EndMap;
+		}
+		out << YAML::EndSeq;
+	}
 }
 void TreeDescriptor::DeserializeFoliageParameters(const std::string& name, FoliageParameters& foliageParameters, const YAML::Node& in) {
 	if (in[name]) {
@@ -302,7 +459,7 @@ void TreeDescriptor::DeserializeShootGrowthParameters(const std::string& name, S
 		if (param["m_internodeLengthThicknessFactor"]) treeGrowthParameters.m_internodeLengthThicknessFactor = param["m_internodeLengthThicknessFactor"].as<float>();
 		if (param["m_endNodeThickness"]) treeGrowthParameters.m_endNodeThickness = param["m_endNodeThickness"].as<float>();
 		if (param["m_thicknessAccumulationFactor"]) treeGrowthParameters.m_thicknessAccumulationFactor = param["m_thicknessAccumulationFactor"].as<float>();
-		if (param["m_thicknessAccumulateAgeFactor"]) treeGrowthParameters.m_thicknessAccumulateAgeFactor = param["m_thicknessAccumulateAgeFactor"].as<float>();
+		if (param["m_thicknessAgeFactor"]) treeGrowthParameters.m_thicknessAgeFactor = param["m_thicknessAgeFactor"].as<float>();
 		if (param["m_internodeShadowFactor"]) treeGrowthParameters.m_internodeShadowFactor = param["m_internodeShadowFactor"].as<float>();
 
 
@@ -311,8 +468,6 @@ void TreeDescriptor::DeserializeShootGrowthParameters(const std::string& name, S
 		if (param["m_lateralBudFlushingRate"]) treeGrowthParameters.m_lateralBudFlushingRate = param["m_lateralBudFlushingRate"].as<float>();
 		if (param["m_apicalBudLightingFactor"]) treeGrowthParameters.m_apicalBudLightingFactor = param["m_apicalBudLightingFactor"].as<float>();
 		if (param["m_lateralBudLightingFactor"]) treeGrowthParameters.m_lateralBudLightingFactor = param["m_lateralBudLightingFactor"].as<float>();
-		if (param["m_apicalBudSpaceFactor"]) treeGrowthParameters.m_apicalBudSpaceFactor = param["m_apicalBudSpaceFactor"].as<float>();
-		if (param["m_lateralBudSpaceFactor"]) treeGrowthParameters.m_lateralBudSpaceFactor = param["m_lateralBudSpaceFactor"].as<float>();
 		if (param["m_apicalControl"]) treeGrowthParameters.m_apicalControl = param["m_apicalControl"].as<float>();
 		if (param["m_apicalDominance"]) treeGrowthParameters.m_apicalDominance = param["m_apicalDominance"].as<float>();
 		if (param["m_apicalDominanceLoss"]) treeGrowthParameters.m_apicalDominanceLoss = param["m_apicalDominanceLoss"].as<float>();
@@ -361,4 +516,19 @@ void TreeDescriptor::Deserialize(const YAML::Node& in) {
 
 	m_shootBranchShape.Load("m_shootBranchShape", in);
 	m_rootBranchShape.Load("m_rootBranchShape", in);
+
+	
+	if(in["m_shootGrowthParameterOffsets"])
+	{
+		m_shootGrowthParameterOffsets.clear();
+		const auto& inShootGrowthParametersOffsets = in["m_shootGrowthParameterOffsets"];
+		for(const auto& inShootGrowthParametersOffset : inShootGrowthParametersOffsets)
+		{
+			m_shootGrowthParameterOffsets.emplace_back();
+			auto& shootGrowthParameterOffsets = m_shootGrowthParameterOffsets.back();
+			shootGrowthParameterOffsets.m_type = inShootGrowthParametersOffset["m_type"].as<unsigned>();
+			shootGrowthParameterOffsets.m_range = inShootGrowthParametersOffset["m_range"].as<glm::vec2>();
+			shootGrowthParameterOffsets.m_offset.Load("m_offset", inShootGrowthParametersOffset);
+		}
+	}
 }

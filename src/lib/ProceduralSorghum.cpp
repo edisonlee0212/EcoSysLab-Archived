@@ -89,7 +89,7 @@ ProceduralPanicleState::ProceduralPanicleState() {
 }
 void ProceduralStemState::Serialize(YAML::Emitter &out) {
   out << YAML::Key << "m_direction" << YAML::Value << m_direction;
-  m_widthAlongStem.Serialize("m_widthAlongStem", out);
+  m_widthAlongStem.Save("m_widthAlongStem", out);
   out << YAML::Key << "m_length" << YAML::Value << m_length;
   out << YAML::Key << "m_spline" << YAML::Value << YAML::BeginMap;
   m_spline.Serialize(out);
@@ -106,7 +106,7 @@ void ProceduralStemState::Deserialize(const YAML::Node &in) {
     m_direction = in["m_direction"].as<glm::vec3>();
   if (in["m_length"])
     m_length = in["m_length"].as<float>();
-  m_widthAlongStem.Deserialize("m_widthAlongStem", in);
+  m_widthAlongStem.Load("m_widthAlongStem", in);
 
   m_saved = true;
 }
@@ -213,12 +213,12 @@ void ProceduralLeafState::Serialize(YAML::Emitter &out) {
 
     out << YAML::Key << "m_startingPoint" << YAML::Value << m_startingPoint;
     out << YAML::Key << "m_length" << YAML::Value << m_length;
-    m_curlingAlongLeaf.Serialize("m_curlingAlongLeaf", out);
-    m_widthAlongLeaf.Serialize("m_widthAlongLeaf", out);
+    m_curlingAlongLeaf.Save("m_curlingAlongLeaf", out);
+    m_widthAlongLeaf.Save("m_widthAlongLeaf", out);
     out << YAML::Key << "m_rollAngle" << YAML::Value << m_rollAngle;
     out << YAML::Key << "m_branchingAngle" << YAML::Value << m_branchingAngle;
-    m_bendingAlongLeaf.Serialize("m_bendingAlongLeaf", out);
-    m_wavinessAlongLeaf.Serialize("m_wavinessAlongLeaf", out);
+    m_bendingAlongLeaf.Save("m_bendingAlongLeaf", out);
+    m_wavinessAlongLeaf.Save("m_wavinessAlongLeaf", out);
     out << YAML::Key << "m_wavinessFrequency" << YAML::Value
         << m_wavinessFrequency;
     out << YAML::Key << "m_wavinessPeriodStart" << YAML::Value
@@ -250,10 +250,10 @@ void ProceduralLeafState::Deserialize(const YAML::Node &in) {
     if (in["m_wavinessPeriodStart"])
       m_wavinessPeriodStart = in["m_wavinessPeriodStart"].as<glm::vec2>();
 
-    m_curlingAlongLeaf.Deserialize("m_curlingAlongLeaf", in);
-    m_bendingAlongLeaf.Deserialize("m_bendingAlongLeaf", in);
-    m_widthAlongLeaf.Deserialize("m_widthAlongLeaf", in);
-    m_wavinessAlongLeaf.Deserialize("m_wavinessAlongLeaf", in);
+    m_curlingAlongLeaf.Load("m_curlingAlongLeaf", in);
+    m_bendingAlongLeaf.Load("m_bendingAlongLeaf", in);
+    m_widthAlongLeaf.Load("m_widthAlongLeaf", in);
+    m_wavinessAlongLeaf.Load("m_wavinessAlongLeaf", in);
   }
 
   m_saved = true;
