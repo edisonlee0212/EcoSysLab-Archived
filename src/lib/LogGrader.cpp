@@ -31,9 +31,15 @@ void LogGrader::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 	}
 	if (ImGui::TreeNode("Log Mesh Generation Settings"))
 	{
-		ImGui::DragFloat("X Subdivision", &m_logWoodMeshGenerationSettings.m_xSubdivision, 1.f, 1.f, 10.0f);
 		ImGui::DragFloat("Y Subdivision", &m_logWoodMeshGenerationSettings.m_ySubdivision, 0.01f, 0.01f, 0.5f);
 		ImGui::TreePop();
+	}
+	static int rotateDegrees = 10;
+	ImGui::DragInt("Degrees", &rotateDegrees, 1, 1, 360);
+	if(ImGui::Button(("Rotate " + std::to_string(rotateDegrees) + " degrees").c_str()))
+	{
+		m_logWood.Rotate(rotateDegrees);
+		InitializeMeshRenderer(m_logWoodMeshGenerationSettings);
 	}
 	if (ImGui::Button("Initialize Mesh Renderer")) InitializeMeshRenderer(m_logWoodMeshGenerationSettings);
 	static bool enableDefectSelection = true;
@@ -96,11 +102,9 @@ void LogGrader::InitializeLogRandomly(const ProceduralLogParameters& proceduralL
 	}
 }
 
-std::shared_ptr<Mesh> LogGrader::GenerateSurfaceMesh(const LogWoodMeshGenerationSettings& meshGeneratorSettings) const
+std::shared_ptr<Mesh> LogGrader::GenerateCylinderMesh(const LogWoodMeshGenerationSettings& meshGeneratorSettings) const
 {
 	if (m_logWood.m_intersections.size() < 2) return {};
-	const int xStepSize = 360.0f / meshGeneratorSettings.m_xSubdivision;
-	const float xStep = 360.0f / xStepSize;
 	const float logLength = (m_logWood.m_intersections.size() - 1) * m_logWood.m_heightStep;
 	const int yStepSize = logLength / meshGeneratorSettings.m_ySubdivision;
 	const float yStep = logLength / yStepSize;
@@ -109,22 +113,22 @@ std::shared_ptr<Mesh> LogGrader::GenerateSurfaceMesh(const LogWoodMeshGeneration
 	std::vector<Vertex> vertices{};
 	std::vector<unsigned int> indices{};
 	
-	vertices.resize((yStepSize + 1) * xStepSize);
-	indices.resize(yStepSize * xStepSize * 6);
+	vertices.resize((yStepSize + 1) * 360);
+	indices.resize(yStepSize * 360 * 6);
 
 	Jobs::ParallelFor(yStepSize + 1, [&](unsigned yIndex)
 		{
 			Vertex archetype{};
 			const float y = yStep * static_cast<float>(yIndex);
-			for (int xIndex = 0; xIndex < xStepSize; xIndex++)
+			for (int xIndex = 0; xIndex < 360; xIndex++)
 			{
-				const float x = xStep * static_cast<float>(xIndex);
+				const float x = static_cast<float>(xIndex);
 				const glm::vec2 boundaryPoint = m_logWood.GetSurfacePoint(y, x);
 				archetype.m_position = glm::vec3(boundaryPoint.x, y, boundaryPoint.y);
 				const float defectStatus = m_logWood.GetDefectStatus(y, x);
-				archetype.m_color = glm::mix(glm::vec4(0, 1, 0, 1), glm::vec4(1, 0, 0, 1), defectStatus);
+				archetype.m_color = glm::mix(meshGeneratorSettings.m_baseColor, meshGeneratorSettings.m_defectColor, defectStatus);
 				archetype.m_texCoord = { x, y };
-				vertices[yIndex * xStepSize + xIndex] = archetype;
+				vertices[yIndex * 360 + xIndex] = archetype;
 			}
 		}
 	);
@@ -132,64 +136,94 @@ std::shared_ptr<Mesh> LogGrader::GenerateSurfaceMesh(const LogWoodMeshGeneration
 		{
 			for (int yIndex = 0; yIndex < yStepSize; yIndex++)
 			{
-				const auto vertexStartIndex = yIndex * xStepSize;
-				for (int xIndex = 0; xIndex < xStepSize; xIndex++)
+				const auto vertexStartIndex = yIndex * 360;
+				for (int xIndex = 0; xIndex < 360; xIndex++)
 				{
 					auto a = vertexStartIndex + xIndex;
-					auto b = vertexStartIndex + (xIndex == xStepSize - 1 ? 0 : xIndex + 1);
-					auto c = vertexStartIndex + xStepSize + xIndex;
-					indices.at((yIndex * xStepSize + xIndex) * 6) = c;
-					indices.at((yIndex * xStepSize + xIndex) * 6 + 1) = b;
-					indices.at((yIndex * xStepSize + xIndex) * 6 + 2) = a;
-					a = vertexStartIndex + xStepSize + (xIndex == xStepSize - 1 ? 0 : xIndex + 1);
-					b = vertexStartIndex + xStepSize + xIndex;
-					c = vertexStartIndex + (xIndex == xStepSize - 1 ? 0 : xIndex + 1);
-					indices.at((yIndex * xStepSize + xIndex) * 6 + 3) = c;
-					indices.at((yIndex * xStepSize + xIndex) * 6 + 4) = b;
-					indices.at((yIndex * xStepSize + xIndex) * 6 + 5) = a;
+					auto b = vertexStartIndex + (xIndex == 360 - 1 ? 0 : xIndex + 1);
+					auto c = vertexStartIndex + 360 + xIndex;
+					indices.at((yIndex * 360 + xIndex) * 6) = c;
+					indices.at((yIndex * 360 + xIndex) * 6 + 1) = b;
+					indices.at((yIndex * 360 + xIndex) * 6 + 2) = a;
+					a = vertexStartIndex + 360 + (xIndex == 360 - 1 ? 0 : xIndex + 1);
+					b = vertexStartIndex + 360 + xIndex;
+					c = vertexStartIndex + (xIndex == 360 - 1 ? 0 : xIndex + 1);
+					indices.at((yIndex * 360 + xIndex) * 6 + 3) = c;
+					indices.at((yIndex * 360 + xIndex) * 6 + 4) = b;
+					indices.at((yIndex * 360 + xIndex) * 6 + 5) = a;
 				}
 			}
 		}
 	);
-	/*
-	for(int yIndex = 0; yIndex <= yStepSize; yIndex++)
-	{
-		const float y = yStep * static_cast<float>(yIndex);
-		
-		if(yIndex < yStepSize)
+	
+	const auto retVal = ProjectManager::CreateTemporaryAsset<Mesh>();
+	VertexAttributes attributes{};
+	attributes.m_texCoord = true;
+	retVal->SetVertices(attributes, vertices, indices);
+	return retVal;
+}
+
+std::shared_ptr<Mesh> LogGrader::GenerateFlatMesh(const LogWoodMeshGenerationSettings& meshGeneratorSettings, int startX, int endX) const
+{
+	if (m_logWood.m_intersections.size() < 2) return {};
+	
+	const float avgDistance = m_logWood.GetAverageDistance();
+	const float circleLength = 2.0f * glm::pi<float>() * avgDistance;
+	const float flatXStep = circleLength / 360;
+	const float logLength = (m_logWood.m_intersections.size() - 1) * m_logWood.m_heightStep;
+	const int yStepSize = logLength / meshGeneratorSettings.m_ySubdivision;
+	const float yStep = logLength / yStepSize;
+
+
+	std::vector<Vertex> vertices{};
+	std::vector<unsigned int> indices{};
+
+	const int span = endX - startX;
+
+	vertices.resize((yStepSize + 1) * (span + 1));
+	indices.resize(yStepSize * span * 6);
+
+	Jobs::ParallelFor(yStepSize + 1, [&](unsigned yIndex)
 		{
-			const auto vertexStartIndex = yIndex * xStepSize;
-			for (int xIndex = 0; xIndex < xStepSize; xIndex++)
+			Vertex archetype{};
+			const float y = yStep * static_cast<float>(yIndex);
+			const float intersectionAvgDistance = m_logWood.GetAverageDistance(y);
+			for (int xIndex = 0; xIndex <= span; xIndex++)
 			{
-				auto a = vertexStartIndex + xIndex;
-					auto b = vertexStartIndex + (xIndex == xStepSize - 1 ? 0 : xIndex + 1);
-					auto c = vertexStartIndex + xStepSize + xIndex;
-					indices.at((yIndex * xStepSize + xIndex) * 6) = c;
-					indices.at((yIndex * xStepSize + xIndex) * 6 + 1) = b;
-					indices.at((yIndex * xStepSize + xIndex) * 6 + 2) = a;
-					a = vertexStartIndex + xStepSize + (xIndex == xStepSize - 1 ? 0 : xIndex + 1);
-					b = vertexStartIndex + xStepSize + xIndex;
-					c = vertexStartIndex + (xIndex == xStepSize - 1 ? 0 : xIndex + 1);
-					indices.at((yIndex * xStepSize + xIndex) * 6 + 3) = c;
-					indices.at((yIndex * xStepSize + xIndex) * 6 + 4) = b;
-					indices.at((yIndex * xStepSize + xIndex) * 6 + 5) = a;
+				const float x = static_cast<float>(xIndex);
+				const float centerDistance = m_logWood.GetCenterDistance(y, x);
+				archetype.m_position = glm::vec3(flatXStep * static_cast<float>(xIndex - span), y, centerDistance - intersectionAvgDistance);
+				const float defectStatus = m_logWood.GetDefectStatus(y, x + startX);
+				archetype.m_color = glm::mix(meshGeneratorSettings.m_baseColor, meshGeneratorSettings.m_defectColor, defectStatus);
+				archetype.m_texCoord = { x, y };
+				vertices[yIndex * (span + 1) + xIndex] = archetype;
 			}
 		}
-		
-		Vertex archetype{};
-		for (int xIndex = 0; xIndex < xStepSize; xIndex++)
+	);
+	Jobs::ParallelFor(yStepSize, [&](unsigned yIndex)
 		{
-			const float x = xStep * static_cast<float>(xIndex);
-			glm::vec2 boundaryPoint = m_logWood.GetSurfacePoint(y, x);
-			archetype.m_position = glm::vec3(boundaryPoint.x, y, boundaryPoint.y);
-			float defectStatus = m_logWood.GetDefectStatus(y, x);
-			archetype.m_color = glm::mix(glm::vec4(0, 1, 0, 1), glm::vec4(1, 0, 0, 1), defectStatus);
-			archetype.m_texCoord = { x, y };
-
-			vertices.emplace_back(archetype);
+			for (int yIndex = 0; yIndex < yStepSize; yIndex++)
+			{
+				const auto vertexStartIndex = yIndex * (span + 1);
+				for (int xIndex = 0; xIndex < span; xIndex++)
+				{
+					auto a = vertexStartIndex + xIndex;
+					auto b = vertexStartIndex + xIndex + 1;
+					auto c = vertexStartIndex + (span + 1) + xIndex;
+					indices.at((yIndex * span + xIndex) * 6) = c;
+					indices.at((yIndex * span + xIndex) * 6 + 1) = b;
+					indices.at((yIndex * span + xIndex) * 6 + 2) = a;
+					a = vertexStartIndex + (span + 1) + xIndex + 1;
+					b = vertexStartIndex + (span + 1) + xIndex;
+					c = vertexStartIndex + xIndex + 1;
+					indices.at((yIndex * span + xIndex) * 6 + 3) = c;
+					indices.at((yIndex * span + xIndex) * 6 + 4) = b;
+					indices.at((yIndex * span + xIndex) * 6 + 5) = a;
+				}
+			}
 		}
-	}
-	*/
+	);
+
 	const auto retVal = ProjectManager::CreateTemporaryAsset<Mesh>();
 	VertexAttributes attributes{};
 	attributes.m_texCoord = true;
@@ -210,18 +244,89 @@ void LogGrader::InitializeMeshRenderer(const LogWoodMeshGenerationSettings& mesh
 	ClearMeshRenderer();
 	const auto scene = GetScene();
 	const auto self = GetOwner();
-	const auto branchEntity = scene->CreateEntity("Log Wood Mesh");
-	scene->SetParent(branchEntity, self);
-
-	const auto mesh = GenerateSurfaceMesh(meshGeneratorSettings);
-	const auto material = ProjectManager::CreateTemporaryAsset<Material>();
-	const auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(branchEntity).lock();
-	material->m_materialProperties.m_roughness = 1.0f;
-	material->m_materialProperties.m_metallic = 0.0f;
-	material->m_vertexColorOnly = true;
-	meshRenderer->m_mesh = mesh;
-	meshRenderer->m_material = material;
-
+	const auto cylinderEntity = scene->CreateEntity("Log Wood Cylinder Mesh");
+	if(scene->IsEntityValid(cylinderEntity)){
+		scene->SetParent(cylinderEntity, self);
+		const auto mesh = GenerateCylinderMesh(meshGeneratorSettings);
+		const auto material = ProjectManager::CreateTemporaryAsset<Material>();
+		const auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(cylinderEntity).lock();
+		material->m_materialProperties.m_roughness = 1.0f;
+		material->m_materialProperties.m_metallic = 0.0f;
+		material->m_vertexColorOnly = true;
+		meshRenderer->m_mesh = mesh;
+		meshRenderer->m_material = material;
+	}
+	
+	const float avgDistance = m_logWood.GetMaxAverageDistance();
+	const float circleLength = 2.0f * glm::pi<float>() * avgDistance;
+	float xOffset = avgDistance * 1.5f;
+	const auto flatEntity1 = scene->CreateEntity("Log Wood Flat Mesh 1");
+	if (scene->IsEntityValid(flatEntity1)) {
+		scene->SetParent(flatEntity1, self);
+		Transform transform{};
+		transform.SetPosition({ xOffset , 0, 0 });
+		transform.SetEulerRotation(glm::radians(glm::vec3(0, 180, 0)));
+		scene->SetDataComponent(flatEntity1, transform);
+		const auto mesh = GenerateFlatMesh(meshGeneratorSettings, 90, 180);
+		const auto material = ProjectManager::CreateTemporaryAsset<Material>();
+		const auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(flatEntity1).lock();
+		material->m_materialProperties.m_roughness = 1.0f;
+		material->m_materialProperties.m_metallic = 0.0f;
+		material->m_vertexColorOnly = true;
+		meshRenderer->m_mesh = mesh;
+		meshRenderer->m_material = material;
+	}
+	xOffset += circleLength / 4.0f + 0.2f;
+	const auto flatEntity2 = scene->CreateEntity("Log Wood Flat Mesh 2");
+	if (scene->IsEntityValid(flatEntity2)) {
+		scene->SetParent(flatEntity2, self);
+		Transform transform{};
+		transform.SetPosition({ xOffset, 0, 0 });
+		transform.SetEulerRotation(glm::radians(glm::vec3(0, 180, 0)));
+		scene->SetDataComponent(flatEntity2, transform);
+		const auto mesh = GenerateFlatMesh(meshGeneratorSettings, 0, 90);
+		const auto material = ProjectManager::CreateTemporaryAsset<Material>();
+		const auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(flatEntity2).lock();
+		material->m_materialProperties.m_roughness = 1.0f;
+		material->m_materialProperties.m_metallic = 0.0f;
+		material->m_vertexColorOnly = true;
+		meshRenderer->m_mesh = mesh;
+		meshRenderer->m_material = material;
+	}
+	xOffset += circleLength / 4.0f + 0.2f;
+	const auto flatEntity3 = scene->CreateEntity("Log Wood Flat Mesh 3");
+	if (scene->IsEntityValid(flatEntity3)) {
+		scene->SetParent(flatEntity3, self);
+		Transform transform{};
+		transform.SetPosition({ xOffset, 0, 0 });
+		transform.SetEulerRotation(glm::radians(glm::vec3(0, 180, 0)));
+		scene->SetDataComponent(flatEntity3, transform);
+		const auto mesh = GenerateFlatMesh(meshGeneratorSettings, 270, 360);
+		const auto material = ProjectManager::CreateTemporaryAsset<Material>();
+		const auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(flatEntity3).lock();
+		material->m_materialProperties.m_roughness = 1.0f;
+		material->m_materialProperties.m_metallic = 0.0f;
+		material->m_vertexColorOnly = true;
+		meshRenderer->m_mesh = mesh;
+		meshRenderer->m_material = material;
+	}
+	xOffset += circleLength / 4.0f + 0.2f;
+	const auto flatEntity4 = scene->CreateEntity("Log Wood Flat Mesh 4");
+	if (scene->IsEntityValid(flatEntity4)) {
+		scene->SetParent(flatEntity4, self);
+		Transform transform{};
+		transform.SetPosition({ xOffset, 0, 0 });
+		transform.SetEulerRotation(glm::radians(glm::vec3(0, 180, 0)));
+		scene->SetDataComponent(flatEntity4, transform);
+		const auto mesh = GenerateFlatMesh(meshGeneratorSettings, 180, 270);
+		const auto material = ProjectManager::CreateTemporaryAsset<Material>();
+		const auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(flatEntity4).lock();
+		material->m_materialProperties.m_roughness = 1.0f;
+		material->m_materialProperties.m_metallic = 0.0f;
+		material->m_vertexColorOnly = true;
+		meshRenderer->m_mesh = mesh;
+		meshRenderer->m_material = material;
+	}
 }
 
 void LogGrader::ClearMeshRenderer() const
@@ -231,7 +336,19 @@ void LogGrader::ClearMeshRenderer() const
 	const auto children = scene->GetChildren(self);
 	for (const auto& child : children) {
 		auto name = scene->GetEntityName(child);
-		if (name == "Log Wood Mesh") {
+		if (name == "Log Wood Cylinder Mesh") {
+			scene->DeleteEntity(child);
+		}
+		else if (name == "Log Wood Flat Mesh 1") {
+			scene->DeleteEntity(child);
+		}
+		else if (name == "Log Wood Flat Mesh 2") {
+			scene->DeleteEntity(child);
+		}
+		else if (name == "Log Wood Flat Mesh 3") {
+			scene->DeleteEntity(child);
+		}
+		else if (name == "Log Wood Flat Mesh 4") {
 			scene->DeleteEntity(child);
 		}
 	}
