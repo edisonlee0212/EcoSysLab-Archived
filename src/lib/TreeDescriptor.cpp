@@ -120,99 +120,117 @@ void TreeDescriptor::ApplyOffsets(ShootGrowthParameters& treeGrowthParameters, c
 {
 	for (const auto& i : offsets)
 	{
+		float a = i.m_offset.GetValue(glm::linearRand(0.0f, 1.0f));
+
 		switch (i.m_type)
 		{
 		case static_cast<unsigned>(ShootGrowthParameterType::GrowthRate):
 		{
-			treeGrowthParameters.m_growthRate += glm::mix(i.m_range.x, i.m_range.y, i.m_offset.GetValue(glm::linearRand(0.0f, 1.0f))); break;
+			treeGrowthParameters.m_growthRate += glm::mix(i.m_range.x, i.m_range.y, a); break;
 		}
 		case static_cast<unsigned>(ShootGrowthParameterType::BranchingAngleMean):
 		{
-			treeGrowthParameters.m_branchingAngleMeanVariance.x += glm::mix(i.m_range.x, i.m_range.y, i.m_offset.GetValue(glm::linearRand(0.0f, 1.0f))); break;
+			treeGrowthParameters.m_branchingAngleMeanVariance.x += glm::mix(i.m_range.x, i.m_range.y, a); break;
 		}
 		case static_cast<unsigned>(ShootGrowthParameterType::BranchingAngleVariance):
 		{
-			treeGrowthParameters.m_branchingAngleMeanVariance.y += glm::mix(i.m_range.x, i.m_range.y, i.m_offset.GetValue(glm::linearRand(0.0f, 1.0f))); break;
+			treeGrowthParameters.m_branchingAngleMeanVariance.y += glm::mix(i.m_range.x, i.m_range.y, a); break;
 		}
 		case static_cast<unsigned>(ShootGrowthParameterType::RollAngleMean):
 		{
-			treeGrowthParameters.m_rollAngleMeanVariance.x += glm::mix(i.m_range.x, i.m_range.y, i.m_offset.GetValue(glm::linearRand(0.0f, 1.0f))); break;
+			treeGrowthParameters.m_rollAngleMeanVariance.x += glm::mix(i.m_range.x, i.m_range.y, a); break;
 		}
 		case static_cast<unsigned>(ShootGrowthParameterType::RollAngleVariance):
 		{
-			treeGrowthParameters.m_rollAngleMeanVariance.y += glm::mix(i.m_range.x, i.m_range.y, i.m_offset.GetValue(glm::linearRand(0.0f, 1.0f))); break;
+			treeGrowthParameters.m_rollAngleMeanVariance.y += glm::mix(i.m_range.x, i.m_range.y, a); break;
 		}
 		case static_cast<unsigned>(ShootGrowthParameterType::ApicalAngleVariance):
 		{
-			treeGrowthParameters.m_apicalAngleVariance += glm::mix(i.m_range.x, i.m_range.y, i.m_offset.GetValue(glm::linearRand(0.0f, 1.0f))); break;
+			treeGrowthParameters.m_apicalAngleVariance += glm::mix(i.m_range.x, i.m_range.y, a); break;
 		}
 		case static_cast<unsigned>(ShootGrowthParameterType::Gravitropism):
 		{
-			treeGrowthParameters.m_gravitropism += glm::mix(i.m_range.x, i.m_range.y, i.m_offset.GetValue(glm::linearRand(0.0f, 1.0f))); break;
+			treeGrowthParameters.m_gravitropism += glm::mix(i.m_range.x, i.m_range.y, a); break;
 		}
 		case static_cast<unsigned>(ShootGrowthParameterType::Phototropism):
 		{
-			treeGrowthParameters.m_phototropism += glm::mix(i.m_range.x, i.m_range.y, i.m_offset.GetValue(glm::linearRand(0.0f, 1.0f))); break;
+			treeGrowthParameters.m_phototropism += glm::mix(i.m_range.x, i.m_range.y, a); break;
 		}
 		case static_cast<unsigned>(ShootGrowthParameterType::Sagging):
 		{
-			treeGrowthParameters.m_saggingFactorThicknessReductionMax.x += glm::mix(i.m_range.x, i.m_range.y, i.m_offset.GetValue(glm::linearRand(0.0f, 1.0f))); break;
+			treeGrowthParameters.m_saggingFactorThicknessReductionMax.x += glm::mix(i.m_range.x, i.m_range.y, a); break;
 		}
 		case static_cast<unsigned>(ShootGrowthParameterType::SaggingThicknessFactor):
 		{
-			treeGrowthParameters.m_saggingFactorThicknessReductionMax.y += glm::mix(i.m_range.x, i.m_range.y, i.m_offset.GetValue(glm::linearRand(0.0f, 1.0f))); break;
+			treeGrowthParameters.m_saggingFactorThicknessReductionMax.y += glm::mix(i.m_range.x, i.m_range.y, a); break;
 		}
 		case static_cast<unsigned>(ShootGrowthParameterType::MaxSagging):
 		{
-			treeGrowthParameters.m_saggingFactorThicknessReductionMax.z += glm::mix(i.m_range.x, i.m_range.y, i.m_offset.GetValue(glm::linearRand(0.0f, 1.0f))); break;
+			treeGrowthParameters.m_saggingFactorThicknessReductionMax.z += glm::mix(i.m_range.x, i.m_range.y, a); break;
 		}
 		case static_cast<unsigned>(ShootGrowthParameterType::InternodeLength):
 		{
-			treeGrowthParameters.m_internodeLength += glm::mix(i.m_range.x, i.m_range.y, i.m_offset.GetValue(glm::linearRand(0.0f, 1.0f))); break;
+			treeGrowthParameters.m_internodeLength += glm::mix(i.m_range.x, i.m_range.y, a); break;
 		}
 		case static_cast<unsigned>(ShootGrowthParameterType::InternodeLengthThicknessFactor):
 		{
-			treeGrowthParameters.m_internodeLengthThicknessFactor += glm::mix(i.m_range.x, i.m_range.y, i.m_offset.GetValue(glm::linearRand(0.0f, 1.0f))); break;
+			treeGrowthParameters.m_internodeLengthThicknessFactor += glm::mix(i.m_range.x, i.m_range.y, a); break;
 		}
 		case static_cast<unsigned>(ShootGrowthParameterType::EndNodeThickness):
 		{
-			treeGrowthParameters.m_endNodeThickness += glm::mix(i.m_range.x, i.m_range.y, i.m_offset.GetValue(glm::linearRand(0.0f, 1.0f))); break;
+			treeGrowthParameters.m_endNodeThickness += glm::mix(i.m_range.x, i.m_range.y, a); break;
 		}
 		case static_cast<unsigned>(ShootGrowthParameterType::ThicknessAccumulationFactor):
 		{
-			treeGrowthParameters.m_thicknessAccumulationFactor += glm::mix(i.m_range.x, i.m_range.y, i.m_offset.GetValue(glm::linearRand(0.0f, 1.0f))); break;
+			treeGrowthParameters.m_thicknessAccumulationFactor += glm::mix(i.m_range.x, i.m_range.y, a); break;
 		}
 		case static_cast<unsigned>(ShootGrowthParameterType::ThicknessAgeFactor):
 		{
-			treeGrowthParameters.m_thicknessAgeFactor += glm::mix(i.m_range.x, i.m_range.y, i.m_offset.GetValue(glm::linearRand(0.0f, 1.0f))); break;
+			treeGrowthParameters.m_thicknessAgeFactor += glm::mix(i.m_range.x, i.m_range.y, a); break;
 		}
 		case static_cast<unsigned>(ShootGrowthParameterType::ShadowFactor):
 		{
-			treeGrowthParameters.m_internodeShadowFactor += glm::mix(i.m_range.x, i.m_range.y, i.m_offset.GetValue(glm::linearRand(0.0f, 1.0f))); break;
+			treeGrowthParameters.m_internodeShadowFactor += glm::mix(i.m_range.x, i.m_range.y, a); break;
 		}
 		case static_cast<unsigned>(ShootGrowthParameterType::ApicalBudExtinctionRate):
 		{
-			treeGrowthParameters.m_apicalBudExtinctionRate += glm::mix(i.m_range.x, i.m_range.y, i.m_offset.GetValue(glm::linearRand(0.0f, 1.0f))); break;
+			treeGrowthParameters.m_apicalBudExtinctionRate += glm::mix(i.m_range.x, i.m_range.y, a); break;
 		}
 		case static_cast<unsigned>(ShootGrowthParameterType::ApicalBudLightingFactor):
 		{
-			treeGrowthParameters.m_apicalBudLightingFactor += glm::mix(i.m_range.x, i.m_range.y, i.m_offset.GetValue(glm::linearRand(0.0f, 1.0f))); break;
+			treeGrowthParameters.m_apicalBudLightingFactor += glm::mix(i.m_range.x, i.m_range.y, a); break;
 		}
 		case static_cast<unsigned>(ShootGrowthParameterType::LateralBudLightingFactor):
 		{
-			treeGrowthParameters.m_lateralBudLightingFactor += glm::mix(i.m_range.x, i.m_range.y, i.m_offset.GetValue(glm::linearRand(0.0f, 1.0f))); break;
+			treeGrowthParameters.m_lateralBudLightingFactor += glm::mix(i.m_range.x, i.m_range.y, a); break;
 		}
 		case static_cast<unsigned>(ShootGrowthParameterType::ApicalControl):
 		{
-			treeGrowthParameters.m_apicalControl += glm::mix(i.m_range.x, i.m_range.y, i.m_offset.GetValue(glm::linearRand(0.0f, 1.0f))); break;
+			treeGrowthParameters.m_apicalControl += glm::mix(i.m_range.x, i.m_range.y, a); break;
 		}
 		case static_cast<unsigned>(ShootGrowthParameterType::ApicalDominance):
 		{
-			treeGrowthParameters.m_apicalDominance += glm::mix(i.m_range.x, i.m_range.y, i.m_offset.GetValue(glm::linearRand(0.0f, 1.0f))); break;
+			treeGrowthParameters.m_apicalDominance += glm::mix(i.m_range.x, i.m_range.y, a); break;
 		}
 		case static_cast<unsigned>(ShootGrowthParameterType::ApicalDominanceLoss):
 		{
-			treeGrowthParameters.m_apicalDominanceLoss += glm::mix(i.m_range.x, i.m_range.y, i.m_offset.GetValue(glm::linearRand(0.0f, 1.0f))); break;
+			treeGrowthParameters.m_apicalDominanceLoss += glm::mix(i.m_range.x, i.m_range.y, a); break;
+		}
+		case static_cast<unsigned>(ShootGrowthParameterType::LowBranchPruning):
+		{
+			treeGrowthParameters.m_lowBranchPruning += glm::mix(i.m_range.x, i.m_range.y, a); break;
+		}
+		case static_cast<unsigned>(ShootGrowthParameterType::LowBranchPruningThicknessFactor):
+		{
+			treeGrowthParameters.m_lowBranchPruningThicknessFactor += glm::mix(i.m_range.x, i.m_range.y, a); break;
+		}
+		case static_cast<unsigned>(ShootGrowthParameterType::LightPruningFactor):
+		{
+			treeGrowthParameters.m_lightPruningFactor += glm::mix(i.m_range.x, i.m_range.y, a); break;
+		}
+		case static_cast<unsigned>(ShootGrowthParameterType::ThicknessPruningFactor):
+		{
+			treeGrowthParameters.m_thicknessPruningFactor += glm::mix(i.m_range.x, i.m_range.y, a); break;
 		}
 		default:break;
 		}
@@ -249,7 +267,8 @@ bool TreeDescriptor::OnInspectShootGrowthParametersOffset(
 					"RollAngleMean", "RollAngleVariance", "ApicalAngleVariance", "Gravitropism", "Phototropism", "Sagging", "SaggingThicknessFactor",
 					"MaxSagging", "InternodeLength", "InternodeLengthThicknessFactor", "EndNodeThickness", "ThicknessAccumulationFactor", "ThicknessAgeFactor", "ShadowFactor",
 					"ApicalBudExtinctionRate", "LateralBudExtinctionRate", "ApicalBudLightingFactor",
-					"LateralBudLightingFactor", "ApicalControl", "ApicalDominance", "ApicalDominanceLoss" }, offset.m_type)) {
+					"LateralBudLightingFactor", "ApicalControl", "ApicalDominance", "ApicalDominanceLoss",
+					"LowBranchPruning", "LowBranchPruningThicknessFactor", "LightPruningFactor", "ThicknessPruningFactor"}, offset.m_type)) {
 					changed = true;
 				}
 				ImGui::DragFloat2("Range", &offset.m_range.x, 0.01f);

@@ -35,6 +35,11 @@ namespace EcoSysLab {
 		ApicalDominance,
 		ApicalDominanceLoss,
 		
+		LowBranchPruning,
+		LowBranchPruningThicknessFactor,
+		LightPruningFactor,
+		ThicknessPruningFactor
+
 	};
 
 	struct ShootGrowthParameterOffset

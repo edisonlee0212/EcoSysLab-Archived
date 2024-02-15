@@ -11,16 +11,16 @@ m_shootGrowthParameters:
   m_endNodeThickness: 0.00400000019
   m_thicknessAccumulationFactor: 0.449999988
   m_thicknessAgeFactor: 0
-  m_internodeShadowFactor: 0.100000001
-  m_lateralBudCount: 1
+  m_internodeShadowFactor: 0.0500000007
+  m_lateralBudCount: 2
   m_apicalBudExtinctionRate: 0
   m_lateralBudFlushingRate: 0.5
   m_apicalBudLightingFactor: 1
   m_lateralBudLightingFactor: 1
   m_apicalControl: 0.99000001
-  m_apicalDominance: 0.180000007
+  m_apicalDominance: 0.100000001
   m_apicalDominanceLoss: 0
-  m_lowBranchPruning: 0.100000001
+  m_lowBranchPruning: 0.449999988
   m_lowBranchPruningThicknessFactor: 0.720000029
   m_lightPruningFactor: 1000
   m_thicknessPruningFactor: 0.00499999989
@@ -44,15 +44,15 @@ m_shootGrowthParameters:
   m_fruitRotationVariance: 0
   m_fruitFallProbability: 3
 m_foliageParameters:
-  m_leafSize: [0.0299999993, 0.0500000007]
+  m_leafSize: [0.0250000004, 0.0199999996]
   m_leafColor: [0.596078455, 0.796078444, 0]
-  m_leafCountPerInternode: 8
-  m_positionVariance: 0.25
+  m_leafCountPerInternode: 20
+  m_positionVariance: 0.174999997
   m_rotationVariance: 1
   m_branchingAngle: 30
   m_maxNodeThickness: 1
   m_minRootDistance: 0
-  m_maxEndDistance: 10
+  m_maxEndDistance: 0.200000003
 m_foliageAlbedoTexture:
   m_assetHandle: 0
   m_assetTypeName: ""
@@ -93,7 +93,20 @@ m_shootGrowthParameterOffsets:
       m_values:
         - [-0.100000001, 0]
         - [0, 0]
-        - [0.379968196, 0.0985691547]
-        - [-0.381558031, -0.0922098532]
+        - [0.100000001, 0]
+        - [-0.100000001, 0]
+        - [1, 1]
+        - [0.100000001, 0]
+  - m_type: 24
+    m_range: [-0.100000001, 0.100000001]
+    m_offset:
+      m_tangent: true
+      m_min: [0, 0]
+      m_max: [1, 1]
+      m_values:
+        - [-0.100000001, 0]
+        - [0, 0]
+        - [0.100000001, 0]
+        - [-0.100000001, 0]
         - [1, 1]
         - [0.100000001, 0]

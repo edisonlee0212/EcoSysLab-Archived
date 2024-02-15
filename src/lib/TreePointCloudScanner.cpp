@@ -52,8 +52,8 @@ void TreePointCloudScanner::Capture(const std::filesystem::path& savePath, const
 					plantBound.m_max = glm::max(plantBound.m_max, glm::vec3(globalTransform.m_value * glm::vec4(mesh->GetBound().m_max, 1.0f)));
 				}
 				else if (scene->GetEntityName(child) == "Foliage Mesh" &&
-					scene->HasPrivateComponent<MeshRenderer>(child)) {
-					const auto foliageMeshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(child).lock();
+					scene->HasPrivateComponent<Particles>(child)) {
+					const auto foliageMeshRenderer = scene->GetOrSetPrivateComponent<Particles>(child).lock();
 					foliageMeshRendererHandles.insert({ foliageMeshRenderer->GetHandle(), treeEntity.GetIndex() });
 
 					const auto globalTransform = scene->GetDataComponent<GlobalTransform>(child);
