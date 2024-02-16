@@ -4,7 +4,7 @@ using namespace EcoSysLab;
 
 void LogGrader::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
-	if(ImGui::TreeNode("Procedural Log Parameters"))
+	if (ImGui::TreeNode("Procedural Log Parameters"))
 	{
 		ImGui::DragFloat("Height", &m_proceduralLogParameters.m_height);
 		ImGui::DragFloat("Start radius", &m_proceduralLogParameters.m_startRadius);
@@ -21,7 +21,7 @@ void LogGrader::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 	if (ImGui::Button("Initialize Log"))
 	{
 		auto branchShape = m_branchShape.Get<BranchShape>();
-		if(!branchShape)
+		if (!branchShape)
 		{
 			branchShape = ProjectManager::CreateTemporaryAsset<BranchShape>();
 			m_branchShape = branchShape;
@@ -36,7 +36,7 @@ void LogGrader::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 	}
 	static int rotateDegrees = 10;
 	ImGui::DragInt("Degrees", &rotateDegrees, 1, 1, 360);
-	if(ImGui::Button(("Rotate " + std::to_string(rotateDegrees) + " degrees").c_str()))
+	if (ImGui::Button(("Rotate " + std::to_string(rotateDegrees) + " degrees").c_str()))
 	{
 		m_logWood.Rotate(rotateDegrees);
 		InitializeMeshRenderer(m_logWoodMeshGenerationSettings);
@@ -57,22 +57,34 @@ void LogGrader::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 				editorLayer->GetSceneCameraPosition()) *
 			glm::mat4_cast(
 				editorLayer->GetSceneCameraRotation());
-		const Ray cameraRay = editorLayer->GetSceneCamera()->ScreenPointToRay(
-			cameraLtw, editorLayer->GetMouseSceneCameraPosition());
-		if(editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Press && editorLayer->GetLockEntitySelection() && editorLayer->GetSelectedEntity() == GetOwner())
-		{
-			const auto scene = GetScene();
-			float height, angle;
-			if(m_logWood.RayCastSelection(scene->GetDataComponent<GlobalTransform>(GetOwner()).m_value, 0.02f, cameraRay, height, angle))
+		
+		if (editorLayer->GetLockEntitySelection() && editorLayer->GetSelectedEntity() == GetOwner()) {
+			static std::vector<glm::vec2> mousePositions{};
+			if (editorLayer->GetKey(GLFW_MOUSE_BUTTON_RIGHT) == KeyActionType::Press)
 			{
-				EVOENGINE_LOG("Defect marked!");
-				if(!eraseMode) m_logWood.MarkDefectRegion(height, angle, defectHeightRange, defectAngleRange);
-				else m_logWood.EraseDefectRegion(height, angle, defectHeightRange, defectAngleRange);
+				mousePositions.clear();
+			}else if (editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Hold)
+			{
+				mousePositions.emplace_back(editorLayer->GetMouseSceneCameraPosition());
+			}else if(editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Release && !mousePositions.empty())
+			{
+				const auto scene = GetScene();
+				for (const auto& position : mousePositions) {
+					const Ray cameraRay = editorLayer->GetSceneCamera()->ScreenPointToRay(
+						cameraLtw, position);
+					float height, angle;
+					if (m_logWood.RayCastSelection(scene->GetDataComponent<GlobalTransform>(GetOwner()).m_value, 0.02f, cameraRay, height, angle))
+					{
+						if (!eraseMode) m_logWood.MarkDefectRegion(height, angle, defectHeightRange, defectAngleRange);
+						else m_logWood.EraseDefectRegion(height, angle, defectHeightRange, defectAngleRange);
+					}
+				}
+				mousePositions.clear();
 				InitializeMeshRenderer(m_logWoodMeshGenerationSettings);
 			}
 		}
 	}
-	if(ImGui::Button("Clear Defects"))
+	if (ImGui::Button("Clear Defects"))
 	{
 		m_logWood.ClearDefects();
 		InitializeMeshRenderer(m_logWoodMeshGenerationSettings);
@@ -83,8 +95,8 @@ void LogGrader::InitializeLogRandomly(const ProceduralLogParameters& proceduralL
 {
 	m_logWood.m_intersections.clear();
 	m_logWood.m_intersections.resize(glm::max(2.0f, proceduralLogParameters.m_height / m_logWood.m_heightStep));
-	
-	for(int intersectionIndex = 0; intersectionIndex < m_logWood.m_intersections.size(); intersectionIndex++)
+
+	for (int intersectionIndex = 0; intersectionIndex < m_logWood.m_intersections.size(); intersectionIndex++)
 	{
 		const float a = static_cast<float>(intersectionIndex) / (m_logWood.m_intersections.size() - 1);
 		const float radius = glm::mix(proceduralLogParameters.m_startRadius, proceduralLogParameters.m_endRadius, a);
@@ -93,7 +105,7 @@ void LogGrader::InitializeLogRandomly(const ProceduralLogParameters& proceduralL
 		intersection.m_center = sweepDirection * proceduralLogParameters.m_sweep.GetValue(a);
 
 		intersection.m_boundary.resize(360);
-		for(int boundaryPointIndex = 0; boundaryPointIndex < 360; boundaryPointIndex++)
+		for (int boundaryPointIndex = 0; boundaryPointIndex < 360; boundaryPointIndex++)
 		{
 			auto& boundaryPoint = intersection.m_boundary.at(boundaryPointIndex);
 			boundaryPoint.m_centerDistance = radius * branchShape->GetValue(static_cast<float>(boundaryPointIndex) / 360.0f, intersectionIndex * m_logWood.m_heightStep);
@@ -108,15 +120,14 @@ std::shared_ptr<Mesh> LogGrader::GenerateCylinderMesh(const LogWoodMeshGeneratio
 	const float logLength = (m_logWood.m_intersections.size() - 1) * m_logWood.m_heightStep;
 	const int yStepSize = logLength / meshGeneratorSettings.m_ySubdivision;
 	const float yStep = logLength / yStepSize;
-	
 
 	std::vector<Vertex> vertices{};
 	std::vector<unsigned int> indices{};
-	
+
 	vertices.resize((yStepSize + 1) * 360);
 	indices.resize(yStepSize * 360 * 6);
 
-	Jobs::ParallelFor(yStepSize + 1, [&](unsigned yIndex)
+	Jobs::ParallelFor(yStepSize + 1, [&](const unsigned yIndex)
 		{
 			Vertex archetype{};
 			const float y = yStep * static_cast<float>(yIndex);
@@ -132,30 +143,27 @@ std::shared_ptr<Mesh> LogGrader::GenerateCylinderMesh(const LogWoodMeshGeneratio
 			}
 		}
 	);
-	Jobs::ParallelFor(yStepSize, [&](unsigned yIndex)
+	Jobs::ParallelFor(yStepSize, [&](const unsigned yIndex)
 		{
-			for (int yIndex = 0; yIndex < yStepSize; yIndex++)
+			const auto vertexStartIndex = yIndex * 360;
+			for (int xIndex = 0; xIndex < 360; xIndex++)
 			{
-				const auto vertexStartIndex = yIndex * 360;
-				for (int xIndex = 0; xIndex < 360; xIndex++)
-				{
-					auto a = vertexStartIndex + xIndex;
-					auto b = vertexStartIndex + (xIndex == 360 - 1 ? 0 : xIndex + 1);
-					auto c = vertexStartIndex + 360 + xIndex;
-					indices.at((yIndex * 360 + xIndex) * 6) = c;
-					indices.at((yIndex * 360 + xIndex) * 6 + 1) = b;
-					indices.at((yIndex * 360 + xIndex) * 6 + 2) = a;
-					a = vertexStartIndex + 360 + (xIndex == 360 - 1 ? 0 : xIndex + 1);
-					b = vertexStartIndex + 360 + xIndex;
-					c = vertexStartIndex + (xIndex == 360 - 1 ? 0 : xIndex + 1);
-					indices.at((yIndex * 360 + xIndex) * 6 + 3) = c;
-					indices.at((yIndex * 360 + xIndex) * 6 + 4) = b;
-					indices.at((yIndex * 360 + xIndex) * 6 + 5) = a;
-				}
+				auto a = vertexStartIndex + xIndex;
+				auto b = vertexStartIndex + (xIndex == 360 - 1 ? 0 : xIndex + 1);
+				auto c = vertexStartIndex + 360 + xIndex;
+				indices.at((yIndex * 360 + xIndex) * 6) = c;
+				indices.at((yIndex * 360 + xIndex) * 6 + 1) = b;
+				indices.at((yIndex * 360 + xIndex) * 6 + 2) = a;
+				a = vertexStartIndex + 360 + (xIndex == 360 - 1 ? 0 : xIndex + 1);
+				b = vertexStartIndex + 360 + xIndex;
+				c = vertexStartIndex + (xIndex == 360 - 1 ? 0 : xIndex + 1);
+				indices.at((yIndex * 360 + xIndex) * 6 + 3) = c;
+				indices.at((yIndex * 360 + xIndex) * 6 + 4) = b;
+				indices.at((yIndex * 360 + xIndex) * 6 + 5) = a;
 			}
 		}
 	);
-	
+
 	const auto retVal = ProjectManager::CreateTemporaryAsset<Mesh>();
 	VertexAttributes attributes{};
 	attributes.m_texCoord = true;
@@ -163,10 +171,10 @@ std::shared_ptr<Mesh> LogGrader::GenerateCylinderMesh(const LogWoodMeshGeneratio
 	return retVal;
 }
 
-std::shared_ptr<Mesh> LogGrader::GenerateFlatMesh(const LogWoodMeshGenerationSettings& meshGeneratorSettings, int startX, int endX) const
+std::shared_ptr<Mesh> LogGrader::GenerateFlatMesh(const LogWoodMeshGenerationSettings& meshGeneratorSettings, const int startX, const int endX) const
 {
 	if (m_logWood.m_intersections.size() < 2) return {};
-	
+
 	const float avgDistance = m_logWood.GetAverageDistance();
 	const float circleLength = 2.0f * glm::pi<float>() * avgDistance;
 	const float flatXStep = circleLength / 360;
@@ -183,7 +191,7 @@ std::shared_ptr<Mesh> LogGrader::GenerateFlatMesh(const LogWoodMeshGenerationSet
 	vertices.resize((yStepSize + 1) * (span + 1));
 	indices.resize(yStepSize * span * 6);
 
-	Jobs::ParallelFor(yStepSize + 1, [&](unsigned yIndex)
+	Jobs::ParallelFor(yStepSize + 1, [&](const unsigned yIndex)
 		{
 			Vertex archetype{};
 			const float y = yStep * static_cast<float>(yIndex);
@@ -200,26 +208,23 @@ std::shared_ptr<Mesh> LogGrader::GenerateFlatMesh(const LogWoodMeshGenerationSet
 			}
 		}
 	);
-	Jobs::ParallelFor(yStepSize, [&](unsigned yIndex)
+	Jobs::ParallelFor(yStepSize, [&](const unsigned yIndex)
 		{
-			for (int yIndex = 0; yIndex < yStepSize; yIndex++)
+			const auto vertexStartIndex = yIndex * (span + 1);
+			for (int xIndex = 0; xIndex < span; xIndex++)
 			{
-				const auto vertexStartIndex = yIndex * (span + 1);
-				for (int xIndex = 0; xIndex < span; xIndex++)
-				{
-					auto a = vertexStartIndex + xIndex;
-					auto b = vertexStartIndex + xIndex + 1;
-					auto c = vertexStartIndex + (span + 1) + xIndex;
-					indices.at((yIndex * span + xIndex) * 6) = c;
-					indices.at((yIndex * span + xIndex) * 6 + 1) = b;
-					indices.at((yIndex * span + xIndex) * 6 + 2) = a;
-					a = vertexStartIndex + (span + 1) + xIndex + 1;
-					b = vertexStartIndex + (span + 1) + xIndex;
-					c = vertexStartIndex + xIndex + 1;
-					indices.at((yIndex * span + xIndex) * 6 + 3) = c;
-					indices.at((yIndex * span + xIndex) * 6 + 4) = b;
-					indices.at((yIndex * span + xIndex) * 6 + 5) = a;
-				}
+				auto a = vertexStartIndex + xIndex;
+				auto b = vertexStartIndex + xIndex + 1;
+				auto c = vertexStartIndex + (span + 1) + xIndex;
+				indices.at((yIndex * span + xIndex) * 6) = c;
+				indices.at((yIndex * span + xIndex) * 6 + 1) = b;
+				indices.at((yIndex * span + xIndex) * 6 + 2) = a;
+				a = vertexStartIndex + (span + 1) + xIndex + 1;
+				b = vertexStartIndex + (span + 1) + xIndex;
+				c = vertexStartIndex + xIndex + 1;
+				indices.at((yIndex * span + xIndex) * 6 + 3) = c;
+				indices.at((yIndex * span + xIndex) * 6 + 4) = b;
+				indices.at((yIndex * span + xIndex) * 6 + 5) = a;
 			}
 		}
 	);
@@ -245,7 +250,7 @@ void LogGrader::InitializeMeshRenderer(const LogWoodMeshGenerationSettings& mesh
 	const auto scene = GetScene();
 	const auto self = GetOwner();
 	const auto cylinderEntity = scene->CreateEntity("Log Wood Cylinder Mesh");
-	if(scene->IsEntityValid(cylinderEntity)){
+	if (scene->IsEntityValid(cylinderEntity)) {
 		scene->SetParent(cylinderEntity, self);
 		const auto mesh = GenerateCylinderMesh(meshGeneratorSettings);
 		const auto material = ProjectManager::CreateTemporaryAsset<Material>();
@@ -256,7 +261,7 @@ void LogGrader::InitializeMeshRenderer(const LogWoodMeshGenerationSettings& mesh
 		meshRenderer->m_mesh = mesh;
 		meshRenderer->m_material = material;
 	}
-	
+
 	const float avgDistance = m_logWood.GetMaxAverageDistance();
 	const float circleLength = 2.0f * glm::pi<float>() * avgDistance;
 	float xOffset = avgDistance * 1.5f;
