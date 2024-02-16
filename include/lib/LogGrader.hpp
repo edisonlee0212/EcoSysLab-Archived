@@ -9,15 +9,16 @@ namespace EcoSysLab
 	struct LogWoodMeshGenerationSettings
 	{
 		float m_ySubdivision = 0.02f;
-		glm::vec4 m_defectColor = glm::vec4(0, 0, 1, 1);
-		glm::vec4 m_baseColor = glm::vec4(0.6, 0.3, 0.0, 1.0);
 	};
 	
 	struct ProceduralLogParameters
 	{
-		float m_height = 4.0f;
-		float m_startRadius = 0.4f;
-		float m_endRadius = 0.35f;
+		bool m_bottom = true;
+
+		float m_lengthWithoutTrim = 4.0f;
+		float m_lengthStep = 0.02f;
+		float m_largeEndDiameter = 0.8f;
+		float m_smallEndDiameter = 0.7f;
 		PlottedDistribution<float> m_sweep{};
 		PlottedDistribution<float> m_sweepDirectionAngle{};
 	};

@@ -6,9 +6,9 @@ void LogGrader::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
 	if (ImGui::TreeNode("Procedural Log Parameters"))
 	{
-		ImGui::DragFloat("Height", &m_proceduralLogParameters.m_height);
-		ImGui::DragFloat("Start radius", &m_proceduralLogParameters.m_startRadius);
-		ImGui::DragFloat("End radius", &m_proceduralLogParameters.m_endRadius);
+		ImGui::DragFloat("Height", &m_proceduralLogParameters.m_lengthWithoutTrim);
+		ImGui::DragFloat("Start radius", &m_proceduralLogParameters.m_largeEndDiameter);
+		ImGui::DragFloat("End radius", &m_proceduralLogParameters.m_smallEndDiameter);
 		static PlottedDistributionSettings plottedDistributionSettings = { 0.001f,
 														{0.001f, true, false, ""},
 														{0.001f, true, false, ""},
@@ -39,6 +39,8 @@ void LogGrader::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 	if (ImGui::Button(("Rotate " + std::to_string(rotateDegrees) + " degrees").c_str()))
 	{
 		m_logWood.Rotate(rotateDegrees);
+		const auto gradeData = m_logWood.CalculateGradingData(0);
+		m_logWood.ColorBasedOnGrading(gradeData);
 		InitializeMeshRenderer(m_logWoodMeshGenerationSettings);
 	}
 	if (ImGui::Button("Initialize Mesh Renderer")) InitializeMeshRenderer(m_logWoodMeshGenerationSettings);
@@ -51,14 +53,7 @@ void LogGrader::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 		static int defectAngleRange = 10.0f;
 		ImGui::DragFloat("Defect Marker Y", &defectHeightRange, 0.01f, 0.03f, 1.0f);
 		ImGui::DragInt("Defect Marker X", &defectAngleRange, 1, 3, 30);
-		GlobalTransform cameraLtw;
-		cameraLtw.m_value =
-			glm::translate(
-				editorLayer->GetSceneCameraPosition()) *
-			glm::mat4_cast(
-				editorLayer->GetSceneCameraRotation());
-		
-		if (editorLayer->GetLockEntitySelection() && editorLayer->GetSelectedEntity() == GetOwner()) {
+		if (editorLayer->SceneCameraWindowFocused() && editorLayer->GetLockEntitySelection() && editorLayer->GetSelectedEntity() == GetOwner()) {
 			static std::vector<glm::vec2> mousePositions{};
 			if (editorLayer->GetKey(GLFW_MOUSE_BUTTON_RIGHT) == KeyActionType::Press)
 			{
@@ -69,6 +64,12 @@ void LogGrader::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 			}else if(editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Release && !mousePositions.empty())
 			{
 				const auto scene = GetScene();
+				GlobalTransform cameraLtw;
+				cameraLtw.m_value =
+					glm::translate(
+						editorLayer->GetSceneCameraPosition()) *
+					glm::mat4_cast(
+						editorLayer->GetSceneCameraRotation());
 				for (const auto& position : mousePositions) {
 					const Ray cameraRay = editorLayer->GetSceneCamera()->ScreenPointToRay(
 						cameraLtw, position);
@@ -80,6 +81,8 @@ void LogGrader::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 					}
 				}
 				mousePositions.clear();
+				const auto gradeData = m_logWood.CalculateGradingData(0);
+				m_logWood.ColorBasedOnGrading(gradeData);
 				InitializeMeshRenderer(m_logWoodMeshGenerationSettings);
 			}
 		}
@@ -94,12 +97,13 @@ void LogGrader::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 void LogGrader::InitializeLogRandomly(const ProceduralLogParameters& proceduralLogParameters, const std::shared_ptr<BranchShape>& branchShape)
 {
 	m_logWood.m_intersections.clear();
-	m_logWood.m_intersections.resize(glm::max(2.0f, proceduralLogParameters.m_height / m_logWood.m_heightStep));
+	m_logWood.m_lengthWithoutTrim = proceduralLogParameters.m_lengthWithoutTrim;
+	m_logWood.m_intersections.resize(glm::max(1.0f, proceduralLogParameters.m_lengthWithoutTrim / proceduralLogParameters.m_lengthStep));
 
 	for (int intersectionIndex = 0; intersectionIndex < m_logWood.m_intersections.size(); intersectionIndex++)
 	{
 		const float a = static_cast<float>(intersectionIndex) / (m_logWood.m_intersections.size() - 1);
-		const float radius = glm::mix(proceduralLogParameters.m_startRadius, proceduralLogParameters.m_endRadius, a);
+		const float radius = glm::mix(proceduralLogParameters.m_largeEndDiameter * 0.5f, proceduralLogParameters.m_smallEndDiameter * 0.5f, a);
 		auto& intersection = m_logWood.m_intersections[intersectionIndex];
 		glm::vec2 sweepDirection = glm::vec2(glm::cos(glm::radians(proceduralLogParameters.m_sweepDirectionAngle.GetValue(a))), glm::sin(glm::radians(proceduralLogParameters.m_sweepDirectionAngle.GetValue(a))));
 		intersection.m_center = sweepDirection * proceduralLogParameters.m_sweep.GetValue(a);
@@ -108,7 +112,7 @@ void LogGrader::InitializeLogRandomly(const ProceduralLogParameters& proceduralL
 		for (int boundaryPointIndex = 0; boundaryPointIndex < 360; boundaryPointIndex++)
 		{
 			auto& boundaryPoint = intersection.m_boundary.at(boundaryPointIndex);
-			boundaryPoint.m_centerDistance = radius * branchShape->GetValue(static_cast<float>(boundaryPointIndex) / 360.0f, intersectionIndex * m_logWood.m_heightStep);
+			boundaryPoint.m_centerDistance = radius * branchShape->GetValue(static_cast<float>(boundaryPointIndex) / 360.0f, intersectionIndex * proceduralLogParameters.m_lengthStep);
 			boundaryPoint.m_defectStatus = 0.0f;
 		}
 	}
@@ -117,7 +121,7 @@ void LogGrader::InitializeLogRandomly(const ProceduralLogParameters& proceduralL
 std::shared_ptr<Mesh> LogGrader::GenerateCylinderMesh(const LogWoodMeshGenerationSettings& meshGeneratorSettings) const
 {
 	if (m_logWood.m_intersections.size() < 2) return {};
-	const float logLength = (m_logWood.m_intersections.size() - 1) * m_logWood.m_heightStep;
+	const float logLength = m_logWood.m_lengthWithoutTrim;
 	const int yStepSize = logLength / meshGeneratorSettings.m_ySubdivision;
 	const float yStep = logLength / yStepSize;
 
@@ -136,8 +140,7 @@ std::shared_ptr<Mesh> LogGrader::GenerateCylinderMesh(const LogWoodMeshGeneratio
 				const float x = static_cast<float>(xIndex);
 				const glm::vec2 boundaryPoint = m_logWood.GetSurfacePoint(y, x);
 				archetype.m_position = glm::vec3(boundaryPoint.x, y, boundaryPoint.y);
-				const float defectStatus = m_logWood.GetDefectStatus(y, x);
-				archetype.m_color = glm::mix(meshGeneratorSettings.m_baseColor, meshGeneratorSettings.m_defectColor, defectStatus);
+				archetype.m_color = m_logWood.GetColor(y, x);
 				archetype.m_texCoord = { x, y };
 				vertices[yIndex * 360 + xIndex] = archetype;
 			}
@@ -178,7 +181,7 @@ std::shared_ptr<Mesh> LogGrader::GenerateFlatMesh(const LogWoodMeshGenerationSet
 	const float avgDistance = m_logWood.GetAverageDistance();
 	const float circleLength = 2.0f * glm::pi<float>() * avgDistance;
 	const float flatXStep = circleLength / 360;
-	const float logLength = (m_logWood.m_intersections.size() - 1) * m_logWood.m_heightStep;
+	const float logLength = m_logWood.m_lengthWithoutTrim;
 	const int yStepSize = logLength / meshGeneratorSettings.m_ySubdivision;
 	const float yStep = logLength / yStepSize;
 
@@ -201,8 +204,7 @@ std::shared_ptr<Mesh> LogGrader::GenerateFlatMesh(const LogWoodMeshGenerationSet
 				const float x = static_cast<float>(xIndex);
 				const float centerDistance = m_logWood.GetCenterDistance(y, x);
 				archetype.m_position = glm::vec3(flatXStep * static_cast<float>(xIndex - span), y, centerDistance - intersectionAvgDistance);
-				const float defectStatus = m_logWood.GetDefectStatus(y, x + startX);
-				archetype.m_color = glm::mix(meshGeneratorSettings.m_baseColor, meshGeneratorSettings.m_defectColor, defectStatus);
+				archetype.m_color = m_logWood.GetColor(y, x + startX);
 				archetype.m_texCoord = { x, y };
 				vertices[yIndex * (span + 1) + xIndex] = archetype;
 			}
