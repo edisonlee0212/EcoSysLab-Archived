@@ -11,8 +11,9 @@ namespace EcoSysLab
 		float m_ySubdivision = 0.02f;
 	};
 	
-	struct ProceduralLogParameters
+	class ProceduralLogParameters
 	{
+	public:
 		bool m_bottom = true;
 
 		float m_lengthWithoutTrim = 4.0f;
@@ -21,6 +22,7 @@ namespace EcoSysLab
 		float m_smallEndDiameter = 0.7f;
 		PlottedDistribution<float> m_sweep{};
 		PlottedDistribution<float> m_sweepDirectionAngle{};
+		bool OnInspect();
 	};
 
 	class LogGrader : public IPrivateComponent

@@ -2,21 +2,29 @@
 
 using namespace EcoSysLab;
 
-void LogGrader::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
+bool ProceduralLogParameters::OnInspect()
 {
+	bool changed = false;
 	if (ImGui::TreeNode("Procedural Log Parameters"))
 	{
-		ImGui::DragFloat("Height", &m_proceduralLogParameters.m_lengthWithoutTrim);
-		ImGui::DragFloat("Start radius", &m_proceduralLogParameters.m_largeEndDiameter);
-		ImGui::DragFloat("End radius", &m_proceduralLogParameters.m_smallEndDiameter);
+		if (ImGui::Checkbox("Butt only", &m_bottom)) changed = true;
+		if (ImGui::DragFloat("Length without trim", &m_lengthWithoutTrim)) changed = true;
+		if (ImGui::DragFloat("Large End Diameter (LED)", &m_largeEndDiameter)) changed = true;
+		if (ImGui::DragFloat("Small End Diameter (LED)", &m_smallEndDiameter)) changed = true;
 		static PlottedDistributionSettings plottedDistributionSettings = { 0.001f,
 														{0.001f, true, false, ""},
 														{0.001f, true, false, ""},
 														"" };
-		m_proceduralLogParameters.m_sweep.OnInspect("Sweep", plottedDistributionSettings);
-		m_proceduralLogParameters.m_sweepDirectionAngle.OnInspect("Sweep Direction Angle", plottedDistributionSettings);
+		if (m_sweep.OnInspect("Sweep", plottedDistributionSettings)) changed = true;
+		if (m_sweepDirectionAngle.OnInspect("Sweep Direction Angle", plottedDistributionSettings))changed = true;
 		ImGui::TreePop();
 	}
+	return changed;
+}
+
+void LogGrader::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
+{
+	m_proceduralLogParameters.OnInspect();
 	editorLayer->DragAndDropButton<BranchShape>(m_branchShape, "Branch Shape", true);
 	if (ImGui::Button("Initialize Log"))
 	{

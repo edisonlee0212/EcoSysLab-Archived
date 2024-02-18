@@ -136,14 +136,17 @@ LogWoodIntersectionBoundaryPoint& LogWood::GetBoundaryPoint(const float height, 
 
 void LogWood::Rotate(int degrees)
 {
-	while (degrees < 0.0f) degrees += 360.0f;
+	while (degrees < 0.) degrees += 360;
 	degrees = degrees % 360;
 	if (degrees == 0) return;
 	for (auto& intersection : m_intersections)
 	{
 		intersection.m_center = glm::rotate(intersection.m_center, glm::radians(static_cast<float>(degrees)));
-		intersection.m_boundary.insert(intersection.m_boundary.begin(), intersection.m_boundary.end() - degrees, intersection.m_boundary.end());
-		intersection.m_boundary.resize(360);
+		const std::vector<LogWoodIntersectionBoundaryPoint> last = { intersection.m_boundary.end() - degrees , intersection.m_boundary.end() };
+		std::copy(intersection.m_boundary.begin(), intersection.m_boundary.end() - degrees, intersection.m_boundary.begin() + degrees);
+		std::copy(last.begin(), last.end(),intersection.m_boundary.begin());
+		//intersection.m_boundary.insert(intersection.m_boundary.begin(), intersection.m_boundary.end() - degrees, intersection.m_boundary.end());
+		//intersection.m_boundary.resize(360);
 	}
 }
 
