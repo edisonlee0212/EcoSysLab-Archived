@@ -8,15 +8,19 @@ float SpatialPlant::Overlap(const SpatialPlant& otherPlant) const
 	const auto& r1 = otherPlant.m_radius;
 	const auto& x0 = m_position.x;
 	const auto& x1 = otherPlant.m_position.x;
+
 	const auto& y0 = m_position.y;
 	const auto& y1 = otherPlant.m_position.y;
+	const auto distance = glm::distance(m_position, otherPlant.m_position);
+	if (distance >= m_radius + otherPlant.m_radius) return 0.0f;
+
 	const float rr0 = r0 * r0;
 	const float rr1 = r1 * r1;
 	const float c = glm::sqrt((x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0));
-	const float phi = (glm::acos((rr0 + (c * c) - rr1) / (2 * r0 * c))) * 2;
-	const float theta = (glm::acos((rr1 + (c * c) - rr0) / (2 * r1 * c))) * 2;
-	const float area1 = 0.5 * theta * rr1 - 0.5 * rr1 * glm::sin(theta);
-	const float area2 = 0.5 * phi * rr0 - 0.5 * rr0 * glm::sin(phi);
+	const float phi = (glm::acos((rr0 + (c * c) - rr1) / (2.f * r0 * c))) * 2.f;
+	const float theta = (glm::acos((rr1 + (c * c) - rr0) / (2.f * r1 * c))) * 2.f;
+	const float area1 = 0.5f * theta * rr1 - 0.5f * rr1 * glm::sin(theta);
+	const float area2 = 0.5f * phi * rr0 - 0.5f * rr0 * glm::sin(phi);
 	return area1 + area2;
 }
 
@@ -58,6 +62,7 @@ float SpatialPlantDistribution::CalculateGrowth(
 	const auto& plantParameter = m_spatialPlantParameters[plant.m_parameterHandle];
 	const float area = plant.GetArea();
 	assert(area > 0.0f);
+	if (area >= plantParameter.m_w) return 0.0f;
 	const auto f = glm::pow(area, richardGrowthModelParameters.m_a);
 
 	float areaReduction = 0.0f;
@@ -65,42 +70,25 @@ float SpatialPlantDistribution::CalculateGrowth(
 	{
 		const auto& otherPlant = m_plants[neighborPlantHandle];
 		assert(!otherPlant.m_recycled);
-		areaReduction += otherPlant.AsymmetricalCompetition(plant, richardGrowthModelParameters.m_p);
+		areaReduction += otherPlant.GetArea() * otherPlant.AsymmetricalCompetition(plant, richardGrowthModelParameters.m_p);
 	}
 
 	const float kf = plantParameter.m_k * f;
-	const float remainingArea = glm::max(0.0f, area - areaReduction);
-	if(richardGrowthModelParameters.m_delta != 1.f)
+	const float remainingArea = glm::max(0.0f, area + areaReduction);
+	if (richardGrowthModelParameters.m_delta != 1.f)
 	{
 		const float growthRateWithoutCompetition = 1.f / (richardGrowthModelParameters.m_delta - 1.f);
 		const float growthFactor = 1.f - glm::pow(remainingArea / plantParameter.m_w, richardGrowthModelParameters.m_delta - 1.f);
 		const auto retVal = kf * growthRateWithoutCompetition * growthFactor;
-		if(area > plantParameter.m_w && retVal > 0)
-		{
-			EVOENGINE_ERROR("Over Growth!");
-		}
-		return retVal;
+		return m_spatialPlantGlobalParameters.m_simulationRate * glm::max(0.0f, retVal);
 	}
-	return kf * (glm::log(plantParameter.m_w) - glm::log(remainingArea));
+	return m_spatialPlantGlobalParameters.m_simulationRate * glm::max(0.0f, kf * (glm::log(plantParameter.m_w) - glm::log(remainingArea)));
 }
 
 void SpatialPlantDistribution::Simulate()
 {
-	std::vector<int> plantSizes;
-	std::vector<float> inverseStatisticalDistributions;
-	plantSizes.resize(m_spatialPlantParameters.size());
-	inverseStatisticalDistributions.resize(m_spatialPlantParameters.size());
-	for (auto& plantSize : plantSizes) plantSize = 0;
-	for(const auto& plant : m_plants)
-	{
-		if (plant.m_recycled) continue;
-		plantSizes[plant.m_parameterHandle]++;
-	}
-	for(int i = 0; i < inverseStatisticalDistributions.size(); i++)
-	{
-		inverseStatisticalDistributions[i] = 1.f - static_cast<float>(plantSizes[i]) / static_cast<float>(m_plants.size() - m_recycledPlants.size());
-	}
-	for(auto& plant : m_plants)
+	
+	for (auto& plant : m_plants)
 	{
 		if (plant.m_recycled) continue;
 		std::vector<SpatialPlantHandle> neighbors{};
@@ -109,7 +97,7 @@ void SpatialPlantDistribution::Simulate()
 		Jobs::ParallelFor(m_plants.size(), [&](unsigned otherPlantHandle, const unsigned threadIndex)
 			{
 				const auto& otherPlant = m_plants[otherPlantHandle];
-				if (!otherPlant.m_recycled && glm::distance(otherPlant.m_position, plant.m_position) < otherPlant.m_radius + plant.m_radius) {
+				if (otherPlantHandle != plant.m_handle && !otherPlant.m_recycled && glm::distance(otherPlant.m_position, plant.m_position) < otherPlant.m_radius + plant.m_radius) {
 					threadedNeighbors[threadIndex].emplace_back(otherPlantHandle);
 				}
 			}
@@ -118,79 +106,95 @@ void SpatialPlantDistribution::Simulate()
 		const auto growSize = CalculateGrowth(m_spatialPlantGlobalParameters, plant.m_handle, neighbors);
 		plant.Grow(growSize);
 	}
-	for(int i = 0; i < m_plants.size(); i++)
+	
+	std::vector<SpatialPlantHandle> oldPlants;
+	for (const auto& plant : m_plants)
+	{
+		if (!plant.m_recycled) oldPlants.emplace_back(plant.m_handle);
+	}
+	for (const auto& plantHandle : oldPlants)
+	{
+		const auto& parameter = m_spatialPlantParameters[m_plants[plantHandle].m_parameterHandle];
+		if (m_spatialPlantGlobalParameters.m_simulationRate * parameter.m_seedingPossibility * m_plants[plantHandle].GetArea() > glm::linearRand(0.0f, 1.0f)) {
+			auto direction = glm::circularRand(1.0f);
+			AddPlant(m_plants[plantHandle].m_parameterHandle, parameter.m_seedInitialRadius, m_plants[plantHandle].m_position + direction * (glm::linearRand(m_spatialPlantGlobalParameters.m_seedingRadiusMin, m_spatialPlantGlobalParameters.m_seedingRadiusMax) * m_plants[plantHandle].m_radius + parameter.m_seedInitialRadius));
+		}
+	}
+	for (const auto& plant : m_plants)
+	{
+		if(plant.m_recycled) continue;
+		if (glm::abs(plant.m_position.x) > m_spatialPlantGlobalParameters.m_maxRadius
+			|| glm::abs(plant.m_position.y) > m_spatialPlantGlobalParameters.m_maxRadius) RecyclePlant(plant.m_handle);
+	}
+
+	std::vector<int> plantSizes;
+	std::vector<float> inverseStatisticalDistributions;
+	plantSizes.resize(m_spatialPlantParameters.size());
+	inverseStatisticalDistributions.resize(m_spatialPlantParameters.size());
+	for (auto& plantSize : plantSizes) plantSize = 0;
+	for (const auto& plant : m_plants)
+	{
+		if (plant.m_recycled) continue;
+		plantSizes[plant.m_parameterHandle]++;
+	}
+	for (int i = 0; i < inverseStatisticalDistributions.size(); i++)
+	{
+		inverseStatisticalDistributions[i] = 1.f - static_cast<float>(plantSizes[i]) / static_cast<float>(m_plants.size() - m_recycledPlants.size());
+	}
+	for (int i = 0; i < m_plants.size(); i++)
 	{
 		auto& plantI = m_plants[i];
 		if (plantI.m_recycled) continue;
 		for (int j = i + 1; j < m_plants.size(); j++)
 		{
 			auto& plantJ = m_plants[j];
-			if(plantJ.m_recycled) continue;
-			if(glm::distance(plantI.m_position, plantJ.m_position) < plantI.m_radius + plantJ.m_radius)
+			if (plantJ.m_recycled) continue;
+			if (glm::distance(plantI.m_position, plantJ.m_position) < plantI.m_radius + plantJ.m_radius)
 			{
 				const float relativeSizeI = plantI.GetArea() / m_spatialPlantParameters[plantI.m_parameterHandle].m_w;
 				const float relativeSizeJ = plantJ.GetArea() / m_spatialPlantParameters[plantJ.m_parameterHandle].m_w;
-				const float vi = inverseStatisticalDistributions[plantI.m_parameterHandle] * (relativeSizeI > m_spatialPlantGlobalParameters.m_spawnProtectionFactor ? 1.f : relativeSizeI);
-				const float vj = inverseStatisticalDistributions[plantJ.m_parameterHandle] * (relativeSizeJ > m_spatialPlantGlobalParameters.m_spawnProtectionFactor ? 1.f : relativeSizeJ);
-				if(vi > vj)
+				const float vi = 1.0f / m_spatialPlantGlobalParameters.m_simulationRate * inverseStatisticalDistributions[plantI.m_parameterHandle] * (relativeSizeI > m_spatialPlantGlobalParameters.m_spawnProtectionFactor ? 1.f : relativeSizeI);
+				const float vj = 1.0f / m_spatialPlantGlobalParameters.m_simulationRate * inverseStatisticalDistributions[plantJ.m_parameterHandle] * (relativeSizeJ > m_spatialPlantGlobalParameters.m_spawnProtectionFactor ? 1.f : relativeSizeJ);
+				const bool equalFirst = glm::linearRand(0.0f, 1.0f) > 0.5f;
+
+				if (vi > vj || (vi == vj && equalFirst))
 				{
-					RecyclePlant(j);
-					/*
-					if(vj < glm::linearRand(0.0f, 1.0f))
+					if (m_spatialPlantGlobalParameters.m_forceRemoveOverlap)
 					{
 						RecyclePlant(j);
-					}else if(vi < glm::linearRand(0.0f, 1.0f))
-					{
-						RecyclePlant(i);
-					}*/
-				}else if(vi < vj)
+					}
+					else {
+						if (vj < glm::linearRand(0.0f, 1.0f))
+						{
+							RecyclePlant(j);
+						}
+						else if (vi < glm::linearRand(0.0f, 1.0f))
+						{
+							RecyclePlant(i);
+						}
+					}
+				}
+				else if (vi < vj || (vi == vj && !equalFirst))
 				{
-					RecyclePlant(i);
-					/*
-					if (vi < glm::linearRand(0.0f, 1.0f))
+					if (m_spatialPlantGlobalParameters.m_forceRemoveOverlap)
 					{
 						RecyclePlant(i);
 					}
-					else if (vj < glm::linearRand(0.0f, 1.0f))
-					{
-						RecyclePlant(j);
-					}*/
-				}else
-				{
-					if(glm::linearRand(0.0f, 1.0f) > 0.5f)
-					{
-						RecyclePlant(j);
-					}else
-					{
-						RecyclePlant(i);
+					else {
+						if (vi < glm::linearRand(0.0f, 1.0f))
+						{
+							RecyclePlant(i);
+						}
+						else if (vj < glm::linearRand(0.0f, 1.0f))
+						{
+							RecyclePlant(j);
+						}
 					}
-					/*
-					if (vi < glm::linearRand(0.0f, 1.0f))
-					{
-						RecyclePlant(i);
-					}
-					if (vj < glm::linearRand(0.0f, 1.0f))
-					{
-						RecyclePlant(j);
-					}*/
 				}
 			}
 			if (plantI.m_recycled) break;
 		}
 	}
-	std::vector<SpatialPlantHandle> oldPlants;
-		for(const auto& plant : m_plants)
-		{
-			if (!plant.m_recycled) oldPlants.emplace_back(plant.m_handle);
-		}
-		for (const auto& plantHandle : oldPlants)
-		{
-			const auto& parameter = m_spatialPlantParameters[m_plants[plantHandle].m_parameterHandle];
-			if (parameter.m_seedingPossibility > glm::linearRand(0.0f, 1.0f)) {
-				auto direction = glm::circularRand(1.0f);
-				AddPlant(m_plants[plantHandle].m_parameterHandle, parameter.m_seedInitialRadius, m_plants[plantHandle].m_position + direction * (glm::linearRand(m_spatialPlantGlobalParameters.m_seedingRadiusMin, m_spatialPlantGlobalParameters.m_seedingRadiusMax) * m_plants[plantHandle].m_radius + parameter.m_seedInitialRadius));
-			}
-		}
 	m_simulationTime++;
 }
 
@@ -198,11 +202,12 @@ SpatialPlantHandle SpatialPlantDistribution::AddPlant(const SpatialPlantParamete
 {
 	assert(spatialPlantParameterHandle >= 0 && spatialPlantParameterHandle < m_spatialPlantParameters.size());
 	SpatialPlantHandle newPlantHandle;
-	if(m_recycledPlants.empty())
+	if (m_recycledPlants.empty())
 	{
 		newPlantHandle = m_plants.size();
 		m_plants.emplace_back();
-	}else
+	}
+	else
 	{
 		newPlantHandle = m_recycledPlants.front();
 		m_recycledPlants.pop();

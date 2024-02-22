@@ -9,19 +9,19 @@ namespace EcoSysLab
 		/**
 		 * \brief Final size of plant
 		 */
-		float m_w = 10.f;
+		float m_w = 50.f;
 		/**
 		 * \brief Growth Rate
 		 */
-		float m_k = 0.01f;
+		float m_k = 0.05f;
 
 		float m_seedingSizeFactor = .2f;
 		float m_seedInitialRadius = 1.f;
-		float m_seedingPossibility = 0.01f;
+		float m_seedingPossibility = 0.001f;
 		/**
 		 * \brief The represented color of the plant.
 		 */
-		glm::vec4 m_color = glm::vec4(1.0f);
+		glm::vec4 m_color = glm::vec4(0.6f, 0.3f, 0.0f, 1.0f);
 	};
 
 	struct SpatialPlant {
@@ -58,21 +58,16 @@ namespace EcoSysLab
 		 * \brief Plant size factor.
 		 */
 		float m_a = 1.f;
-
-		/**
-		 * \brief Plant variety regulator
-		 */
-		float m_viabilityStrength = 1.0f;
-
+		float m_simulationRate = 5.f;
 		float m_spawnProtectionFactor = 0.5f;
 
-		float m_maxRadius = 1000.0f;
+		float m_maxRadius = 50.0f;
 
 		float m_seedingRadiusMin = 2.0f;
 
 		float m_seedingRadiusMax = 3.0f;
 
-		
+		bool m_forceRemoveOverlap = true;
 	};
 
 	class SpatialPlantDistribution {

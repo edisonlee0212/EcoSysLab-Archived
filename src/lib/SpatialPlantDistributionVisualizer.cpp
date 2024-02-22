@@ -70,7 +70,7 @@ void SpatialPlantDistributionVisualizer::OnInspectSpatialPlantDistributionFuncti
 		const auto& pointColor = spatialPlantDistribution.m_spatialPlantParameters[plant.m_parameterHandle].m_color;
 		const auto canvasPosition = 
 			ImVec2(origin.x + pointPosition.x * zoomFactor, origin.y + pointPosition.y * zoomFactor);
-		drawList->AddCircle(canvasPosition, zoomFactor * plant.m_radius,
+		drawList->AddCircleFilled(canvasPosition, zoomFactor * plant.m_radius,
 			IM_COL32(255.0f * pointColor.x, 255.0f * pointColor.y, 255.0f * pointColor.z, 255.0f));
 	}
 	drawList->AddCircle(origin,
@@ -84,6 +84,21 @@ void SpatialPlantDistributionVisualizer::OnInspectSpatialPlantDistributionFuncti
 
 void SpatialPlantDistributionVisualizer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
+	if (ImGui::TreeNode("Global Parameters"))
+	{
+		ImGui::DragFloat("Weighting Factor", &m_distribution.m_spatialPlantGlobalParameters.m_p, 0.01f, 0.0f, 1.0f);
+		ImGui::DragFloat("Delta", &m_distribution.m_spatialPlantGlobalParameters.m_p, 1.f, 1.0f, 3.0f);
+		ImGui::DragFloat("Simulation Rate", &m_distribution.m_spatialPlantGlobalParameters.m_simulationRate, 0.01f, 0.0f, 10.0f);
+		ImGui::DragFloat("Spawn Protection Factor", &m_distribution.m_spatialPlantGlobalParameters.m_spawnProtectionFactor, 0.01f, 0.0f, 1.0f);
+		ImGui::DragFloat("Max Radius", &m_distribution.m_spatialPlantGlobalParameters.m_maxRadius, 1.f, 10.0f, 10000.0f);
+
+		ImGui::DragFloat("Seeding Min Radius", &m_distribution.m_spatialPlantGlobalParameters.m_seedingRadiusMin, 1.f, 2.0f, m_distribution.m_spatialPlantGlobalParameters.m_seedingRadiusMax);
+		ImGui::DragFloat("Seeding Max Radius", &m_distribution.m_spatialPlantGlobalParameters.m_seedingRadiusMax, 1.f, m_distribution.m_spatialPlantGlobalParameters.m_seedingRadiusMin, 10.0f);
+
+		ImGui::Checkbox("Force remove all overlap", &m_distribution.m_spatialPlantGlobalParameters.m_forceRemoveOverlap);
+		ImGui::TreePop();
+	}
+
 	if(ImGui::TreeNode("Parameters"))
 	{
 		static SpatialPlantParameter temp{};
@@ -97,9 +112,12 @@ void SpatialPlantDistributionVisualizer::OnInspect(const std::shared_ptr<EditorL
 		int index = 0;
 		for(const auto& parameter : m_distribution.m_spatialPlantParameters)
 		{
-			ImGui::ColorButton(("No. " + std::to_string(index) 
+			const auto color = ImVec4(parameter.m_color.x, parameter.m_color.y, parameter.m_color.z, parameter.m_color.w);
+			ImGui::PushStyleColor(ImGuiCol_Button, color);
+			ImGui::Button(("No. " + std::to_string(index) 
 				+ ", FS[" + std::to_string(parameter.m_w) + "]"
-				+ ", GR[" + std::to_string(parameter.m_k) + "]").c_str(), ImVec4(parameter.m_color.x, parameter.m_color.y, parameter.m_color.z, parameter.m_color.w));
+				+ ", GR[" + std::to_string(parameter.m_k) + "]").c_str());
+			ImGui::PopStyleColor();
 			index++;
 		}
 		ImGui::TreePop();
