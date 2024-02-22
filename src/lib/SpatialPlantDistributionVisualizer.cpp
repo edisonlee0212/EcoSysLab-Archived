@@ -7,7 +7,7 @@ void SpatialPlantDistributionVisualizer::OnInspectSpatialPlantDistributionFuncti
 	const std::function<void(glm::vec2 position)>& func, const std::function<void(ImVec2 origin, float zoomFactor, ImDrawList*)>& drawFunc)
 {
 	static auto scrolling = glm::vec2(0.0f);
-	static float zoomFactor = 0.1f;
+	static float zoomFactor = 2.f;
 	ImGui::Text(("Plant count: " + std::to_string(spatialPlantDistribution.m_plants.size() - spatialPlantDistribution.m_recycledPlants.size()) +
 		" | Simulation time: " + std::to_string(spatialPlantDistribution.m_simulationTime)).c_str());
 	if (ImGui::Button("Recenter")) {
@@ -101,24 +101,27 @@ void SpatialPlantDistributionVisualizer::OnInspect(const std::shared_ptr<EditorL
 
 	if(ImGui::TreeNode("Parameters"))
 	{
-		static SpatialPlantParameter temp{};
-		ImGui::DragFloat("Final size", &temp.m_w, 1.0f, 1.0f, 100.0f);
-		ImGui::DragFloat("Growth rate", &temp.m_k, 0.01f, 0.01f, 1.0f);
-		ImGui::ColorEdit4("Color", &temp.m_color.x);
 		if(ImGui::Button("Push"))
 		{
-			m_distribution.m_spatialPlantParameters.emplace_back(temp);
+			m_distribution.m_spatialPlantParameters.emplace_back();
 		}
-		int index = 0;
-		for(const auto& parameter : m_distribution.m_spatialPlantParameters)
+		for(int parameterIndex = 0; parameterIndex < m_distribution.m_spatialPlantParameters.size(); parameterIndex++)
 		{
-			const auto color = ImVec4(parameter.m_color.x, parameter.m_color.y, parameter.m_color.z, parameter.m_color.w);
-			ImGui::PushStyleColor(ImGuiCol_Button, color);
-			ImGui::Button(("No. " + std::to_string(index) 
-				+ ", FS[" + std::to_string(parameter.m_w) + "]"
-				+ ", GR[" + std::to_string(parameter.m_k) + "]").c_str());
-			ImGui::PopStyleColor();
-			index++;
+			if(ImGui::TreeNode(("No. " + std::to_string(parameterIndex)).c_str()))
+			{
+				auto& parameter = m_distribution.m_spatialPlantParameters.at(parameterIndex);
+				ImGui::DragFloat("Final size", &parameter.m_w, 1.0f, 1.0f, 100.0f);
+				ImGui::DragFloat("Growth rate", &parameter.m_k, 0.01f, 0.01f, 1.0f);
+				ImGui::ColorEdit4("Color", &parameter.m_color.x);
+				if (ImGui::Button((std::string("Clear No. ") + std::to_string(parameterIndex)).c_str()))
+				{
+					for (const auto& plant : m_distribution.m_plants)
+					{
+						if (!plant.m_recycled && plant.m_parameterHandle == parameterIndex) m_distribution.RecyclePlant(plant.m_handle);
+					}
+				}
+				ImGui::TreePop();
+			}
 		}
 		ImGui::TreePop();
 	}

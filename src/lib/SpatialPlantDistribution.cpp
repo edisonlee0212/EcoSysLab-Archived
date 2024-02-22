@@ -127,19 +127,22 @@ void SpatialPlantDistribution::Simulate()
 			|| glm::abs(plant.m_position.y) > m_spatialPlantGlobalParameters.m_maxRadius) RecyclePlant(plant.m_handle);
 	}
 
-	std::vector<int> plantSizes;
+	std::vector<float> plantSizes;
 	std::vector<float> inverseStatisticalDistributions;
 	plantSizes.resize(m_spatialPlantParameters.size());
 	inverseStatisticalDistributions.resize(m_spatialPlantParameters.size());
 	for (auto& plantSize : plantSizes) plantSize = 0;
+	float totalSize = 0.0f;
 	for (const auto& plant : m_plants)
 	{
 		if (plant.m_recycled) continue;
-		plantSizes[plant.m_parameterHandle]++;
+		const auto area = plant.GetArea();
+		plantSizes[plant.m_parameterHandle] += area;
+		totalSize += area;
 	}
 	for (int i = 0; i < inverseStatisticalDistributions.size(); i++)
 	{
-		inverseStatisticalDistributions[i] = 1.f - static_cast<float>(plantSizes[i]) / static_cast<float>(m_plants.size() - m_recycledPlants.size());
+		inverseStatisticalDistributions[i] = 1.f - plantSizes[i] / totalSize;
 	}
 	for (int i = 0; i < m_plants.size(); i++)
 	{
