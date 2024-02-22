@@ -96,6 +96,7 @@ void SpatialPlantDistributionVisualizer::OnInspect(const std::shared_ptr<EditorL
 		ImGui::DragFloat("Seeding Max Radius", &m_distribution.m_spatialPlantGlobalParameters.m_seedingRadiusMax, 1.f, m_distribution.m_spatialPlantGlobalParameters.m_seedingRadiusMin, 10.0f);
 
 		ImGui::Checkbox("Force remove all overlap", &m_distribution.m_spatialPlantGlobalParameters.m_forceRemoveOverlap);
+		ImGui::DragFloat("Dynamic balance factor", &m_distribution.m_spatialPlantGlobalParameters.m_dynamicBalanceFactor, 0.1f, 0.0f, 3.0f);
 		ImGui::TreePop();
 	}
 
@@ -130,17 +131,15 @@ void SpatialPlantDistributionVisualizer::OnInspect(const std::shared_ptr<EditorL
 	{
 		static int plantSize = 10;
 		static float initialRadius = 1.f;
-		static float diskSize = 5.0f;
 		static int parameterHandle = 0;
 		ImGui::DragInt("Plant size", &plantSize, 10, 10, 1000);
 		ImGui::DragFloat("Initial radius", &initialRadius, 1.f, 1.f, 10.f);
-		ImGui::DragFloat("Disk size", &diskSize, 1.f, 1.f, 1000.f);
 		ImGui::DragInt("Parameter Index", &parameterHandle, 1, 0, static_cast<int>(m_distribution.m_spatialPlantParameters.size()) - 1);
 		parameterHandle = glm::clamp(parameterHandle, 0, static_cast<int>(m_distribution.m_spatialPlantParameters.size()) - 1);
 		if (ImGui::Button("Generate")) {
 			for (int i = 0; i < plantSize; i++)
 			{
-				m_distribution.AddPlant(parameterHandle, initialRadius, glm::diskRand(diskSize));
+				m_distribution.AddPlant(parameterHandle, initialRadius, glm::linearRand(glm::vec2(-m_distribution.m_spatialPlantGlobalParameters.m_maxRadius), glm::vec2(m_distribution.m_spatialPlantGlobalParameters.m_maxRadius)));
 			}
 		}
 		ImGui::TreePop();

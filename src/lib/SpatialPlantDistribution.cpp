@@ -142,7 +142,7 @@ void SpatialPlantDistribution::Simulate()
 	}
 	for (int i = 0; i < inverseStatisticalDistributions.size(); i++)
 	{
-		inverseStatisticalDistributions[i] = 1.f - plantSizes[i] / totalSize;
+		inverseStatisticalDistributions[i] = glm::pow(1.f - plantSizes[i] / totalSize,  m_spatialPlantGlobalParameters.m_dynamicBalanceFactor);
 	}
 	for (int i = 0; i < m_plants.size(); i++)
 	{

@@ -61,13 +61,16 @@ namespace EcoSysLab
 		float m_simulationRate = 5.f;
 		float m_spawnProtectionFactor = 0.5f;
 
-		float m_maxRadius = 50.0f;
+		float m_maxRadius = 100.0f;
 
 		float m_seedingRadiusMin = 2.0f;
 
 		float m_seedingRadiusMax = 3.0f;
 
 		bool m_forceRemoveOverlap = true;
+
+		float m_dynamicBalanceFactor = 3.0f;
+
 	};
 
 	class SpatialPlantDistribution {
