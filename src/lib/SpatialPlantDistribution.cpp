@@ -74,7 +74,12 @@ float SpatialPlantDistribution::CalculateGrowth(
 	{
 		const float growthRateWithoutCompetition = 1.f / (richardGrowthModelParameters.m_delta - 1.f);
 		const float growthFactor = 1.f - glm::pow(remainingArea / plantParameter.m_w, richardGrowthModelParameters.m_delta - 1.f);
-		return kf * growthRateWithoutCompetition * growthFactor;
+		const auto retVal = kf * growthRateWithoutCompetition * growthFactor;
+		if(area > plantParameter.m_w && retVal > 0)
+		{
+			EVOENGINE_ERROR("Over Growth!");
+		}
+		return retVal;
 	}
 	return kf * (glm::log(plantParameter.m_w) - glm::log(remainingArea));
 }
@@ -82,7 +87,7 @@ float SpatialPlantDistribution::CalculateGrowth(
 void SpatialPlantDistribution::Simulate()
 {
 	std::vector<int> plantSizes;
-	std::vector<int> inverseStatisticalDistributions;
+	std::vector<float> inverseStatisticalDistributions;
 	plantSizes.resize(m_spatialPlantParameters.size());
 	inverseStatisticalDistributions.resize(m_spatialPlantParameters.size());
 	for (auto& plantSize : plantSizes) plantSize = 0;
@@ -93,7 +98,7 @@ void SpatialPlantDistribution::Simulate()
 	}
 	for(int i = 0; i < inverseStatisticalDistributions.size(); i++)
 	{
-		inverseStatisticalDistributions[i] = 1.f - static_cast<float>(plantSizes[i]) / m_plants.size();
+		inverseStatisticalDistributions[i] = 1.f - static_cast<float>(plantSizes[i]) / static_cast<float>(m_plants.size() - m_recycledPlants.size());
 	}
 	for(auto& plant : m_plants)
 	{
@@ -125,19 +130,23 @@ void SpatialPlantDistribution::Simulate()
 			{
 				const float relativeSizeI = plantI.GetArea() / m_spatialPlantParameters[plantI.m_parameterHandle].m_w;
 				const float relativeSizeJ = plantJ.GetArea() / m_spatialPlantParameters[plantJ.m_parameterHandle].m_w;
-				const float vi = static_cast<float>(inverseStatisticalDistributions[plantI.m_parameterHandle]) * (relativeSizeI > m_spatialPlantGlobalParameters.m_spawnProtectionFactor ? 1.f : relativeSizeI);
-				const float vj = static_cast<float>(inverseStatisticalDistributions[plantJ.m_parameterHandle]) * (relativeSizeJ > m_spatialPlantGlobalParameters.m_spawnProtectionFactor ? 1.f : relativeSizeJ);
+				const float vi = inverseStatisticalDistributions[plantI.m_parameterHandle] * (relativeSizeI > m_spatialPlantGlobalParameters.m_spawnProtectionFactor ? 1.f : relativeSizeI);
+				const float vj = inverseStatisticalDistributions[plantJ.m_parameterHandle] * (relativeSizeJ > m_spatialPlantGlobalParameters.m_spawnProtectionFactor ? 1.f : relativeSizeJ);
 				if(vi > vj)
 				{
+					RecyclePlant(j);
+					/*
 					if(vj < glm::linearRand(0.0f, 1.0f))
 					{
 						RecyclePlant(j);
 					}else if(vi < glm::linearRand(0.0f, 1.0f))
 					{
 						RecyclePlant(i);
-					}
+					}*/
 				}else if(vi < vj)
 				{
+					RecyclePlant(i);
+					/*
 					if (vi < glm::linearRand(0.0f, 1.0f))
 					{
 						RecyclePlant(i);
@@ -145,9 +154,17 @@ void SpatialPlantDistribution::Simulate()
 					else if (vj < glm::linearRand(0.0f, 1.0f))
 					{
 						RecyclePlant(j);
-					}
+					}*/
 				}else
 				{
+					if(glm::linearRand(0.0f, 1.0f) > 0.5f)
+					{
+						RecyclePlant(j);
+					}else
+					{
+						RecyclePlant(i);
+					}
+					/*
 					if (vi < glm::linearRand(0.0f, 1.0f))
 					{
 						RecyclePlant(i);
@@ -155,14 +172,13 @@ void SpatialPlantDistribution::Simulate()
 					if (vj < glm::linearRand(0.0f, 1.0f))
 					{
 						RecyclePlant(j);
-					}
+					}*/
 				}
 			}
 			if (plantI.m_recycled) break;
 		}
 	}
-	if (m_simulationTime % m_spatialPlantGlobalParameters.m_seedingIteration == 0) {
-		std::vector<SpatialPlantHandle> oldPlants;
+	std::vector<SpatialPlantHandle> oldPlants;
 		for(const auto& plant : m_plants)
 		{
 			if (!plant.m_recycled) oldPlants.emplace_back(plant.m_handle);
@@ -170,15 +186,11 @@ void SpatialPlantDistribution::Simulate()
 		for (const auto& plantHandle : oldPlants)
 		{
 			const auto& parameter = m_spatialPlantParameters[m_plants[plantHandle].m_parameterHandle];
-			const int seedingSize = m_plants[plantHandle].GetArea() * parameter.m_seedingSizeFactor;
-			for(int i = 0; i < seedingSize; i++)
-			{
-				auto relativePosition = glm::diskRand(m_plants[plantHandle].m_radius * (m_spatialPlantGlobalParameters.m_seedingRadiusMax - m_spatialPlantGlobalParameters.m_seedingRadiusMin));
-				if(glm::length(relativePosition) > glm::epsilon<float>()) relativePosition += m_plants[plantHandle].m_radius * m_spatialPlantGlobalParameters.m_seedingRadiusMin * glm::normalize(relativePosition);
-				AddPlant(m_plants[plantHandle].m_parameterHandle, parameter.m_seedInitialRadius, relativePosition + m_plants[plantHandle].m_position);
+			if (parameter.m_seedingPossibility > glm::linearRand(0.0f, 1.0f)) {
+				auto direction = glm::circularRand(1.0f);
+				AddPlant(m_plants[plantHandle].m_parameterHandle, parameter.m_seedInitialRadius, m_plants[plantHandle].m_position + direction * (glm::linearRand(m_spatialPlantGlobalParameters.m_seedingRadiusMin, m_spatialPlantGlobalParameters.m_seedingRadiusMax) * m_plants[plantHandle].m_radius + parameter.m_seedInitialRadius));
 			}
 		}
-	}
 	m_simulationTime++;
 }
 

@@ -16,8 +16,8 @@ namespace EcoSysLab
 		float m_k = 0.01f;
 
 		float m_seedingSizeFactor = .2f;
-
 		float m_seedInitialRadius = 1.f;
+		float m_seedingPossibility = 0.01f;
 		/**
 		 * \brief The represented color of the plant.
 		 */
@@ -72,7 +72,7 @@ namespace EcoSysLab
 
 		float m_seedingRadiusMax = 3.0f;
 
-		int m_seedingIteration = 100;
+		
 	};
 
 	class SpatialPlantDistribution {
