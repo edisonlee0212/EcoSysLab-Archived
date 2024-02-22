@@ -145,8 +145,6 @@ void LogWood::Rotate(int degrees)
 		const std::vector<LogWoodIntersectionBoundaryPoint> last = { intersection.m_boundary.end() - degrees , intersection.m_boundary.end() };
 		std::copy(intersection.m_boundary.begin(), intersection.m_boundary.end() - degrees, intersection.m_boundary.begin() + degrees);
 		std::copy(last.begin(), last.end(),intersection.m_boundary.begin());
-		//intersection.m_boundary.insert(intersection.m_boundary.begin(), intersection.m_boundary.end() - degrees, intersection.m_boundary.end());
-		//intersection.m_boundary.resize(360);
 	}
 }
 
