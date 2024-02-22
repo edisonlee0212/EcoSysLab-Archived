@@ -52,6 +52,67 @@ void SpatialPlant::Grow(const float size)
 	m_radius = glm::sqrt(newArea * 0.5f / glm::pi<float>());
 }
 
+void SpatialPlantGridCell::RegisterParticle(const SpatialPlantHandle handle)
+{
+	m_plantHandles.emplace_back(handle);
+}
+
+void SpatialPlantGridCell::UnregisterParticle(const SpatialPlantHandle handle)
+{
+	for(int i = 0; i < m_plantHandles.size(); i++)
+	{
+		if (m_plantHandles.at(i) == handle) {
+			m_plantHandles.at(i) = m_plantHandles.back();
+			m_plantHandles.pop_back();
+			return;
+		}
+	}
+}
+
+unsigned SpatialPlantGrid::RegisterPlant(const glm::vec2& position, const SpatialPlantHandle handle)
+{
+	const auto minBound = GetMinBound();
+	const auto coordinate = glm::ivec2(
+		floor((position.x - minBound.x) / GetCellSize()),
+		floor((position.y - minBound.y) / GetCellSize()));
+	const auto resolution = GetResolution();
+	assert(coordinate.x < resolution.x && coordinate.y < resolution.y);
+	const auto cellIndex = coordinate.x + coordinate.y * resolution.x;
+	RefCell(cellIndex).RegisterParticle(handle);
+	return cellIndex;
+}
+
+void SpatialPlantGrid::UnregisterPlant(const unsigned cellIndex, const SpatialPlantHandle handle)
+{
+	RefCell(cellIndex).UnregisterParticle(handle);
+}
+
+void SpatialPlantGrid::Clear()
+{
+	for (auto& cell : RefCells())
+	{
+		cell.m_plantHandles.clear();
+	}
+}
+
+void SpatialPlantGrid::ForEachPlant(const glm::vec2& position, const float radius,
+	const std::function<void(SpatialPlantHandle plantHandle)>& func)
+{
+	ForEach(position, radius, [&](const SpatialPlantGridCell& cell)
+		{
+			for(const auto& plantHandle : cell.m_plantHandles)
+			{
+				func(plantHandle);
+			}
+		}
+	);
+}
+
+SpatialPlantDistribution::SpatialPlantDistribution()
+{
+	m_plantGrid.Reset(10.f, glm::vec2(-m_spatialPlantGlobalParameters.m_maxRadius), glm::vec2(m_spatialPlantGlobalParameters.m_maxRadius));
+}
+
 float SpatialPlantDistribution::CalculateGrowth(
 	const SpatialPlantGlobalParameters& richardGrowthModelParameters,
 	const SpatialPlantHandle plantHandle,
@@ -62,7 +123,9 @@ float SpatialPlantDistribution::CalculateGrowth(
 	const auto& plantParameter = m_spatialPlantParameters[plant.m_parameterHandle];
 	const float area = plant.GetArea();
 	assert(area > 0.0f);
-	if (area >= plantParameter.m_w) return 0.0f;
+
+	const auto w = 2.f * glm::pi<float>() * plantParameter.m_finalRadius * plantParameter.m_finalRadius;
+	if (area >= w) return 0.0f;
 	const auto f = glm::pow(area, richardGrowthModelParameters.m_a);
 
 	float areaReduction = 0.0f;
@@ -78,35 +141,53 @@ float SpatialPlantDistribution::CalculateGrowth(
 	if (richardGrowthModelParameters.m_delta != 1.f)
 	{
 		const float growthRateWithoutCompetition = 1.f / (richardGrowthModelParameters.m_delta - 1.f);
-		const float growthFactor = 1.f - glm::pow(remainingArea / plantParameter.m_w, richardGrowthModelParameters.m_delta - 1.f);
+		const float growthFactor = 1.f - glm::pow(remainingArea / w, richardGrowthModelParameters.m_delta - 1.f);
 		const auto retVal = kf * growthRateWithoutCompetition * growthFactor;
 		return m_spatialPlantGlobalParameters.m_simulationRate * glm::max(0.0f, retVal);
 	}
-	return m_spatialPlantGlobalParameters.m_simulationRate * glm::max(0.0f, kf * (glm::log(plantParameter.m_w) - glm::log(remainingArea)));
+	return m_spatialPlantGlobalParameters.m_simulationRate * glm::max(0.0f, kf * (glm::log(w) - glm::log(remainingArea)));
 }
 
 void SpatialPlantDistribution::Simulate()
 {
-	
-	for (auto& plant : m_plants)
-	{
-		if (plant.m_recycled) continue;
-		std::vector<SpatialPlantHandle> neighbors{};
-		std::vector<std::vector<SpatialPlantHandle>> threadedNeighbors{};
-		threadedNeighbors.resize(Jobs::Workers().Size());
-		Jobs::ParallelFor(m_plants.size(), [&](unsigned otherPlantHandle, const unsigned threadIndex)
+	const auto newMin = glm::vec2(-m_spatialPlantGlobalParameters.m_maxRadius);
+	const auto newMax = glm::vec2(m_spatialPlantGlobalParameters.m_maxRadius);
+	if (m_plantGrid.GetMinBound() != newMin || m_plantGrid.GetMaxBound() != newMax) {
+		m_plantGrid.Reset(10.f, newMin, newMax);
+		for (auto& plant : m_plants)
+		{
+			if (glm::abs(plant.m_position.x) >= m_spatialPlantGlobalParameters.m_maxRadius && glm::abs(plant.m_position.y) >= m_spatialPlantGlobalParameters.m_maxRadius)
 			{
-				const auto& otherPlant = m_plants[otherPlantHandle];
-				if (otherPlantHandle != plant.m_handle && !otherPlant.m_recycled && glm::distance(otherPlant.m_position, plant.m_position) < otherPlant.m_radius + plant.m_radius) {
-					threadedNeighbors[threadIndex].emplace_back(otherPlantHandle);
-				}
+				RecyclePlant(plant.m_handle, false);
 			}
-		);
-		for (const auto& i : threadedNeighbors) neighbors.insert(neighbors.end(), i.begin(), i.end());
-		const auto growSize = CalculateGrowth(m_spatialPlantGlobalParameters, plant.m_handle, neighbors);
-		plant.Grow(growSize);
+			else {
+				plant.m_gridCellIndex = m_plantGrid.RegisterPlant(plant.m_position, plant.m_handle);
+			}
+		}
 	}
-	
+	float maxRadius = 0.0f;
+	for(const auto& parameter : m_spatialPlantParameters)
+	{
+		maxRadius = glm::max(maxRadius, parameter.m_finalRadius);
+	}
+	Jobs::ParallelFor(m_plants.size(), [&](unsigned plantIndex)
+		{
+			auto& plant = m_plants[plantIndex];
+			if (plant.m_recycled) return;
+			std::vector<SpatialPlantHandle> neighbors{};
+			m_plantGrid.ForEachPlant(plant.m_position, 2.f * maxRadius + plant.m_radius, [&](SpatialPlantHandle otherPlantHandle)
+				{
+					const auto& otherPlant = m_plants[otherPlantHandle];
+					if (otherPlantHandle != plant.m_handle && !otherPlant.m_recycled && glm::distance(otherPlant.m_position, plant.m_position) < otherPlant.m_radius + plant.m_radius) {
+						neighbors.emplace_back(otherPlantHandle);
+					}
+				}
+			);
+			const auto growSize = CalculateGrowth(m_spatialPlantGlobalParameters, plant.m_handle, neighbors);
+			plant.Grow(growSize);
+		}
+	);
+
 	std::vector<SpatialPlantHandle> oldPlants;
 	for (const auto& plant : m_plants)
 	{
@@ -117,7 +198,10 @@ void SpatialPlantDistribution::Simulate()
 		const auto& parameter = m_spatialPlantParameters[m_plants[plantHandle].m_parameterHandle];
 		if (m_spatialPlantGlobalParameters.m_simulationRate * parameter.m_seedingPossibility * m_plants[plantHandle].GetArea() > glm::linearRand(0.0f, 1.0f)) {
 			auto direction = glm::circularRand(1.0f);
-			AddPlant(m_plants[plantHandle].m_parameterHandle, parameter.m_seedInitialRadius, m_plants[plantHandle].m_position + direction * (glm::linearRand(m_spatialPlantGlobalParameters.m_seedingRadiusMin, m_spatialPlantGlobalParameters.m_seedingRadiusMax) * m_plants[plantHandle].m_radius + parameter.m_seedInitialRadius));
+			const auto position = m_plants[plantHandle].m_position + direction * (glm::linearRand(parameter.m_seedingRangeMin, parameter.m_seedingRangeMax) * m_plants[plantHandle].m_radius + parameter.m_seedInitialRadius);
+			if (glm::abs(position.x) < m_spatialPlantGlobalParameters.m_maxRadius && glm::abs(position.y) < m_spatialPlantGlobalParameters.m_maxRadius) {
+				AddPlant(m_plants[plantHandle].m_parameterHandle, parameter.m_seedInitialRadius, position);
+			}
 		}
 	}
 	for (const auto& plant : m_plants)
@@ -148,14 +232,23 @@ void SpatialPlantDistribution::Simulate()
 	{
 		auto& plantI = m_plants[i];
 		if (plantI.m_recycled) continue;
-		for (int j = i + 1; j < m_plants.size(); j++)
+		std::vector<SpatialPlantHandle> neighbors{};
+		m_plantGrid.ForEachPlant(plantI.m_position, 2.f * maxRadius + plantI.m_radius, [&](SpatialPlantHandle otherPlantHandle)
+			{
+				const auto& otherPlant = m_plants[otherPlantHandle];
+				if (otherPlantHandle != plantI.m_handle && !otherPlant.m_recycled && glm::distance(otherPlant.m_position, plantI.m_position) < otherPlant.m_radius + plantI.m_radius) {
+					neighbors.emplace_back(otherPlantHandle);
+				}
+			}
+		);
+		for(const auto& j : neighbors)
 		{
 			auto& plantJ = m_plants[j];
 			if (plantJ.m_recycled) continue;
 			if (glm::distance(plantI.m_position, plantJ.m_position) < plantI.m_radius + plantJ.m_radius)
 			{
-				const float relativeSizeI = plantI.GetArea() / m_spatialPlantParameters[plantI.m_parameterHandle].m_w;
-				const float relativeSizeJ = plantJ.GetArea() / m_spatialPlantParameters[plantJ.m_parameterHandle].m_w;
+				const float relativeSizeI = plantI.m_radius / m_spatialPlantParameters[plantI.m_parameterHandle].m_finalRadius;
+				const float relativeSizeJ = plantJ.m_radius / m_spatialPlantParameters[plantJ.m_parameterHandle].m_finalRadius;
 				const float vi = 1.0f / m_spatialPlantGlobalParameters.m_simulationRate * inverseStatisticalDistributions[plantI.m_parameterHandle] * (relativeSizeI > m_spatialPlantGlobalParameters.m_spawnProtectionFactor ? 1.f : relativeSizeI);
 				const float vj = 1.0f / m_spatialPlantGlobalParameters.m_simulationRate * inverseStatisticalDistributions[plantJ.m_parameterHandle] * (relativeSizeJ > m_spatialPlantGlobalParameters.m_spawnProtectionFactor ? 1.f : relativeSizeJ);
 				const bool equalFirst = glm::linearRand(0.0f, 1.0f) > 0.5f;
@@ -221,14 +314,18 @@ SpatialPlantHandle SpatialPlantDistribution::AddPlant(const SpatialPlantParamete
 	newPlant.m_radius = radius;
 	newPlant.m_position = position;
 	newPlant.m_recycled = false;
+	newPlant.m_gridCellIndex = m_plantGrid.RegisterPlant(position, newPlantHandle);
 	return newPlant.m_handle;
 }
 
-void SpatialPlantDistribution::RecyclePlant(SpatialPlantHandle plantHandle)
+void SpatialPlantDistribution::RecyclePlant(SpatialPlantHandle plantHandle, bool removeFromGrid)
 {
 	assert(m_plants.size() > plantHandle && plantHandle >= 0);
-	m_recycledPlants.emplace(plantHandle);
 	auto& plant = m_plants[plantHandle];
+	if(plant.m_recycled) return;
+	m_recycledPlants.emplace(plantHandle);
 	plant.m_recycled = true;
 	plant.m_radius = 0.0f;
+	if(removeFromGrid) m_plantGrid.UnregisterPlant(plant.m_gridCellIndex, plant.m_handle);
+	plant.m_gridCellIndex = INT_MAX;
 }

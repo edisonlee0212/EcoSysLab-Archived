@@ -1,5 +1,6 @@
 #pragma once
 #include "ProfileConstraints.hpp"
+#include "CellGrid.hpp"
 using namespace EvoEngine;
 namespace EcoSysLab {
 	typedef int ParticleHandle;

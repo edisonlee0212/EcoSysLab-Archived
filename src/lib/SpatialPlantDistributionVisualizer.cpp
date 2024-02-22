@@ -91,10 +91,6 @@ void SpatialPlantDistributionVisualizer::OnInspect(const std::shared_ptr<EditorL
 		ImGui::DragFloat("Simulation Rate", &m_distribution.m_spatialPlantGlobalParameters.m_simulationRate, 0.01f, 0.0f, 10.0f);
 		ImGui::DragFloat("Spawn Protection Factor", &m_distribution.m_spatialPlantGlobalParameters.m_spawnProtectionFactor, 0.01f, 0.0f, 1.0f);
 		ImGui::DragFloat("Max Radius", &m_distribution.m_spatialPlantGlobalParameters.m_maxRadius, 1.f, 10.0f, 10000.0f);
-
-		ImGui::DragFloat("Seeding Min Radius", &m_distribution.m_spatialPlantGlobalParameters.m_seedingRadiusMin, 1.f, 2.0f, m_distribution.m_spatialPlantGlobalParameters.m_seedingRadiusMax);
-		ImGui::DragFloat("Seeding Max Radius", &m_distribution.m_spatialPlantGlobalParameters.m_seedingRadiusMax, 1.f, m_distribution.m_spatialPlantGlobalParameters.m_seedingRadiusMin, 10.0f);
-
 		ImGui::Checkbox("Force remove all overlap", &m_distribution.m_spatialPlantGlobalParameters.m_forceRemoveOverlap);
 		ImGui::DragFloat("Dynamic balance factor", &m_distribution.m_spatialPlantGlobalParameters.m_dynamicBalanceFactor, 0.1f, 0.0f, 3.0f);
 		ImGui::TreePop();
@@ -105,14 +101,18 @@ void SpatialPlantDistributionVisualizer::OnInspect(const std::shared_ptr<EditorL
 		if(ImGui::Button("Push"))
 		{
 			m_distribution.m_spatialPlantParameters.emplace_back();
+			m_distribution.m_spatialPlantParameters.back().m_color = glm::vec4(glm::sphericalRand(1.f), 1.f);
 		}
 		for(int parameterIndex = 0; parameterIndex < m_distribution.m_spatialPlantParameters.size(); parameterIndex++)
 		{
 			if(ImGui::TreeNode(("No. " + std::to_string(parameterIndex)).c_str()))
 			{
 				auto& parameter = m_distribution.m_spatialPlantParameters.at(parameterIndex);
-				ImGui::DragFloat("Final size", &parameter.m_w, 1.0f, 1.0f, 100.0f);
+				ImGui::DragFloat("Final radius", &parameter.m_finalRadius, 1.0f, 1.0f, 100.0f);
 				ImGui::DragFloat("Growth rate", &parameter.m_k, 0.01f, 0.01f, 1.0f);
+				ImGui::DragFloat("Seeding Range Min", &parameter.m_seedingRangeMin, 1.f, 2.0f, parameter.m_seedingRangeMax);
+				ImGui::DragFloat("Seeding Range Max", &parameter.m_seedingRangeMax, 1.f, parameter.m_seedingRangeMin, 10.0f);
+
 				ImGui::ColorEdit4("Color", &parameter.m_color.x);
 				if (ImGui::Button((std::string("Clear No. ") + std::to_string(parameterIndex)).c_str()))
 				{

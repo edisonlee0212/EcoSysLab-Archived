@@ -1,4 +1,5 @@
 #pragma once
+#include "CellGrid.hpp"
 using namespace EvoEngine;
 namespace EcoSysLab
 {
@@ -9,12 +10,14 @@ namespace EcoSysLab
 		/**
 		 * \brief Final size of plant
 		 */
-		float m_w = 50.f;
+		float m_finalRadius = 5.f;
 		/**
 		 * \brief Growth Rate
 		 */
 		float m_k = 0.05f;
 
+		float m_seedingRangeMin = 2.0f;
+		float m_seedingRangeMax = 3.0f;
 		float m_seedingSizeFactor = .2f;
 		float m_seedInitialRadius = 1.f;
 		float m_seedingPossibility = 0.001f;
@@ -25,6 +28,7 @@ namespace EcoSysLab
 	};
 
 	struct SpatialPlant {
+		unsigned m_gridCellIndex = 0;
 		bool m_recycled = false;
 		SpatialPlantParameterHandle m_parameterHandle = 0;
 		SpatialPlantHandle m_handle;
@@ -61,11 +65,9 @@ namespace EcoSysLab
 		float m_simulationRate = 5.f;
 		float m_spawnProtectionFactor = 0.5f;
 
-		float m_maxRadius = 100.0f;
+		float m_maxRadius = 300.0f;
 
-		float m_seedingRadiusMin = 2.0f;
-
-		float m_seedingRadiusMax = 3.0f;
+		
 
 		bool m_forceRemoveOverlap = true;
 
@@ -73,8 +75,27 @@ namespace EcoSysLab
 
 	};
 
-	class SpatialPlantDistribution {
+	struct SpatialPlantGridCell
+	{
+		std::vector<SpatialPlantHandle> m_plantHandles;
+		void RegisterParticle(SpatialPlantHandle handle);
+		void UnregisterParticle(SpatialPlantHandle handle);
+	};
+
+
+	class SpatialPlantGrid : public CellGrid<SpatialPlantGridCell>
+	{
 	public:
+		[[nodiscard]] unsigned RegisterPlant(const glm::vec2& position, SpatialPlantHandle handle);
+		void UnregisterPlant(unsigned cellIndex, SpatialPlantHandle handle);
+		void Clear() override;
+		void ForEachPlant(const glm::vec2& position, float radius, const std::function<void(SpatialPlantHandle plantHandle)>& func);
+	};
+
+	class SpatialPlantDistribution {
+		SpatialPlantGrid m_plantGrid;
+	public:
+		SpatialPlantDistribution();
 		int m_simulationTime = 0;
 		std::vector<SpatialPlantParameter> m_spatialPlantParameters {};
 		std::vector<SpatialPlant> m_plants {};
@@ -84,6 +105,6 @@ namespace EcoSysLab
 		void Simulate();
 
 		SpatialPlantHandle AddPlant(SpatialPlantParameterHandle spatialPlantParameterHandle, float radius, const glm::vec2 &position);
-		void RecyclePlant(SpatialPlantHandle plantHandle);
+		void RecyclePlant(SpatialPlantHandle plantHandle, bool removeFromGrid = true);
 	};
 }
