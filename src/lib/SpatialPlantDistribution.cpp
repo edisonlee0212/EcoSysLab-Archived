@@ -150,13 +150,18 @@ float SpatialPlantDistribution::CalculateGrowth(
 
 void SpatialPlantDistribution::Simulate()
 {
+	const auto cellSize = 10.f;
 	const auto newMin = glm::vec2(-m_spatialPlantGlobalParameters.m_maxRadius);
 	const auto newMax = glm::vec2(m_spatialPlantGlobalParameters.m_maxRadius);
-	if (m_plantGrid.GetMinBound() != newMin || m_plantGrid.GetMaxBound() != newMax) {
-		m_plantGrid.Reset(10.f, newMin, newMax);
+	const auto newResolution = glm::ivec2(glm::ceil((newMax.x - newMin.x) / cellSize) + 1,
+		glm::ceil((newMax.y - newMin.y) / cellSize) + 1);
+	const auto maxBound = newMin + cellSize * glm::vec2(newResolution);
+	if (m_plantGrid.GetMinBound() != newMin || m_plantGrid.GetMaxBound() != maxBound) {
+		m_plantGrid.Reset(cellSize, newMin, newMax);
 		for (auto& plant : m_plants)
 		{
-			if (glm::abs(plant.m_position.x) >= m_spatialPlantGlobalParameters.m_maxRadius && glm::abs(plant.m_position.y) >= m_spatialPlantGlobalParameters.m_maxRadius)
+			if(plant.m_recycled) continue;
+			if (glm::abs(plant.m_position.x) >= m_spatialPlantGlobalParameters.m_maxRadius || glm::abs(plant.m_position.y) >= m_spatialPlantGlobalParameters.m_maxRadius)
 			{
 				RecyclePlant(plant.m_handle, false);
 			}
@@ -318,7 +323,7 @@ SpatialPlantHandle SpatialPlantDistribution::AddPlant(const SpatialPlantParamete
 	return newPlant.m_handle;
 }
 
-void SpatialPlantDistribution::RecyclePlant(SpatialPlantHandle plantHandle, bool removeFromGrid)
+void SpatialPlantDistribution::RecyclePlant(SpatialPlantHandle plantHandle, const bool removeFromGrid)
 {
 	assert(m_plants.size() > plantHandle && plantHandle >= 0);
 	auto& plant = m_plants[plantHandle];

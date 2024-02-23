@@ -16,8 +16,8 @@ namespace EcoSysLab
 		 */
 		float m_k = 0.05f;
 
-		float m_seedingRangeMin = 2.0f;
-		float m_seedingRangeMax = 3.0f;
+		float m_seedingRangeMin = 3.0f;
+		float m_seedingRangeMax = 8.0f;
 		float m_seedingSizeFactor = .2f;
 		float m_seedInitialRadius = 1.f;
 		float m_seedingPossibility = 0.001f;
