@@ -10,7 +10,7 @@ namespace EcoSysLab
 	{
 		float m_ySubdivision = 0.02f;
 	};
-	
+
 	class ProceduralLogParameters
 	{
 	public:
@@ -27,19 +27,23 @@ namespace EcoSysLab
 
 	class LogGrader : public IPrivateComponent
 	{
+		std::shared_ptr<Mesh> m_tempCylinderMesh{};
+		std::shared_ptr<Mesh> m_tempFlatMesh1{};
+		std::shared_ptr<Mesh> m_tempFlatMesh2{};
+		std::shared_ptr<Mesh> m_tempFlatMesh3{};
+		std::shared_ptr<Mesh> m_tempFlatMesh4{};
+		void RefreshMesh();
 	public:
 		ProceduralLogParameters m_proceduralLogParameters;
 		AssetRef m_branchShape{};
 		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 		void InitializeLogRandomly(const ProceduralLogParameters& proceduralLogParameters, const std::shared_ptr<BranchShape>& branchShape);
 		LogWoodMeshGenerationSettings m_logWoodMeshGenerationSettings{};
-		LogWood m_logWood {};
+		LogWood m_logWood{};
 		[[nodiscard]] std::shared_ptr<Mesh> GenerateCylinderMesh(const LogWoodMeshGenerationSettings& meshGeneratorSettings) const;
 		[[nodiscard]] std::shared_ptr<Mesh> GenerateFlatMesh(const LogWoodMeshGenerationSettings& meshGeneratorSettings, int startX, int endX) const;
 		void OnCreate() override;
 		void InitializeMeshRenderer(const LogWoodMeshGenerationSettings& meshGeneratorSettings) const;
 		void ClearMeshRenderer() const;
-
-
 	};
 }

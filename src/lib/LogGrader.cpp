@@ -22,6 +22,15 @@ bool ProceduralLogParameters::OnInspect()
 	return changed;
 }
 
+void LogGrader::RefreshMesh()
+{
+	m_tempCylinderMesh =GenerateCylinderMesh(m_logWoodMeshGenerationSettings);
+	m_tempFlatMesh1 = GenerateFlatMesh(m_logWoodMeshGenerationSettings, 90, 180);
+	m_tempFlatMesh2 = GenerateFlatMesh(m_logWoodMeshGenerationSettings, 0, 90);
+	m_tempFlatMesh3 = GenerateFlatMesh(m_logWoodMeshGenerationSettings, 270, 360);
+	m_tempFlatMesh4 = GenerateFlatMesh(m_logWoodMeshGenerationSettings, 180, 270);
+}
+
 void LogGrader::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
 	m_proceduralLogParameters.OnInspect();
@@ -36,6 +45,9 @@ void LogGrader::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 			branchShape->m_barkDepth = branchShape->m_baseDepth = 0.1f;
 		}
 		InitializeLogRandomly(m_proceduralLogParameters, branchShape);
+		const auto gradeData = m_logWood.CalculateGradingData(0);
+		m_logWood.ColorBasedOnGrading(gradeData);
+		RefreshMesh();
 	}
 	if (ImGui::TreeNode("Log Mesh Generation Settings"))
 	{
@@ -49,56 +61,90 @@ void LogGrader::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 		m_logWood.Rotate(rotateDegrees);
 		const auto gradeData = m_logWood.CalculateGradingData(0);
 		m_logWood.ColorBasedOnGrading(gradeData);
-		InitializeMeshRenderer(m_logWoodMeshGenerationSettings);
+		RefreshMesh();
 	}
+
 	if (ImGui::Button("Initialize Mesh Renderer")) InitializeMeshRenderer(m_logWoodMeshGenerationSettings);
-	static bool enableDefectSelection = true;
-	static bool eraseMode = false;
-	ImGui::Checkbox("Enable Defect Marker", &enableDefectSelection);
-	ImGui::Checkbox("Erase mode", &eraseMode);
-	if (enableDefectSelection) {
-		static float defectHeightRange = 0.1f;
-		static int defectAngleRange = 10.0f;
-		ImGui::DragFloat("Defect Marker Y", &defectHeightRange, 0.01f, 0.03f, 1.0f);
-		ImGui::DragInt("Defect Marker X", &defectAngleRange, 1, 3, 30);
-		if (editorLayer->SceneCameraWindowFocused() && editorLayer->GetLockEntitySelection() && editorLayer->GetSelectedEntity() == GetOwner()) {
-			static std::vector<glm::vec2> mousePositions{};
-			if (editorLayer->GetKey(GLFW_MOUSE_BUTTON_RIGHT) == KeyActionType::Press)
-			{
-				mousePositions.clear();
-			}else if (editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Hold)
-			{
-				mousePositions.emplace_back(editorLayer->GetMouseSceneCameraPosition());
-			}else if(editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Release && !mousePositions.empty())
-			{
-				const auto scene = GetScene();
-				GlobalTransform cameraLtw;
-				cameraLtw.m_value =
-					glm::translate(
-						editorLayer->GetSceneCameraPosition()) *
-					glm::mat4_cast(
-						editorLayer->GetSceneCameraRotation());
-				for (const auto& position : mousePositions) {
-					const Ray cameraRay = editorLayer->GetSceneCamera()->ScreenPointToRay(
-						cameraLtw, position);
-					float height, angle;
-					if (m_logWood.RayCastSelection(scene->GetDataComponent<GlobalTransform>(GetOwner()).m_value, 0.02f, cameraRay, height, angle))
-					{
-						if (!eraseMode) m_logWood.MarkDefectRegion(height, angle, defectHeightRange, defectAngleRange);
-						else m_logWood.EraseDefectRegion(height, angle, defectHeightRange, defectAngleRange);
-					}
-				}
-				mousePositions.clear();
-				const auto gradeData = m_logWood.CalculateGradingData(0);
-				m_logWood.ColorBasedOnGrading(gradeData);
-				InitializeMeshRenderer(m_logWoodMeshGenerationSettings);
-			}
-		}
-	}
+	
 	if (ImGui::Button("Clear Defects"))
 	{
 		m_logWood.ClearDefects();
 		InitializeMeshRenderer(m_logWoodMeshGenerationSettings);
+	}
+
+	static bool debugVisualization = true;
+	ImGui::Checkbox("Visualization", &debugVisualization);
+	static int rotationAngle = 0;
+	if(debugVisualization)
+	{
+		static bool enableDefectSelection = true;
+		static bool eraseMode = false;
+		ImGui::Checkbox("Enable Defect Marker", &enableDefectSelection);
+		ImGui::Checkbox("Erase mode", &eraseMode);
+		Transform transform{};
+		transform.SetEulerRotation(glm::radians(glm::vec3(0, rotationAngle, 0)));
+		if (enableDefectSelection) {
+			static float defectHeightRange = 0.1f;
+			static int defectAngleRange = 10.0f;
+			ImGui::DragFloat("Defect Marker Y", &defectHeightRange, 0.01f, 0.03f, 1.0f);
+			ImGui::DragInt("Defect Marker X", &defectAngleRange, 1, 3, 30);
+			if (editorLayer->SceneCameraWindowFocused() && editorLayer->GetLockEntitySelection() && editorLayer->GetSelectedEntity() == GetOwner()) {
+				static std::vector<glm::vec2> mousePositions{};
+				if (editorLayer->GetKey(GLFW_MOUSE_BUTTON_RIGHT) == KeyActionType::Press)
+				{
+					mousePositions.clear();
+				}
+				else if (editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Hold)
+				{
+					mousePositions.emplace_back(editorLayer->GetMouseSceneCameraPosition());
+				}
+				else if (editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Release && !mousePositions.empty())
+				{
+					const auto scene = GetScene();
+					GlobalTransform cameraLtw;
+					cameraLtw.m_value =
+						glm::translate(
+							editorLayer->GetSceneCameraPosition()) *
+						glm::mat4_cast(
+							editorLayer->GetSceneCameraRotation());
+					for (const auto& position : mousePositions) {
+						const Ray cameraRay = editorLayer->GetSceneCamera()->ScreenPointToRay(
+							cameraLtw, position);
+						float height, angle;
+						if (m_logWood.RayCastSelection(transform.m_value, 0.02f, cameraRay, height, angle))
+						{
+							if (!eraseMode) m_logWood.MarkDefectRegion(height, angle, defectHeightRange, defectAngleRange);
+							else m_logWood.EraseDefectRegion(height, angle, defectHeightRange, defectAngleRange);
+						}
+					}
+					mousePositions.clear();
+					const auto gradeData = m_logWood.CalculateGradingData(0);
+					m_logWood.ColorBasedOnGrading(gradeData);
+					RefreshMesh();
+				}
+			}
+		}
+		ImGui::DragInt("Rotation angle", &rotationAngle, 1, 0, 360);
+		GizmoSettings gizmoSettings{};
+		gizmoSettings.m_colorMode = GizmoSettings::ColorMode::VertexColor;
+		const float avgDistance = m_logWood.GetMaxAverageDistance();
+		const float circleLength = 2.0f * glm::pi<float>() * avgDistance;
+		float xOffset = avgDistance * 1.5f;
+		
+		if(m_tempCylinderMesh) editorLayer->DrawGizmoMesh(m_tempCylinderMesh, glm::vec4(1.0f), transform.m_value, 1.f, gizmoSettings);
+		
+		transform.SetPosition({ xOffset , 0, 0 });
+		transform.SetEulerRotation(glm::radians(glm::vec3(0, 180, 0)));
+		if (m_tempFlatMesh1) editorLayer->DrawGizmoMesh(m_tempFlatMesh1, glm::vec4(1.0f), transform.m_value, 1.f, gizmoSettings);
+		xOffset += circleLength / 4.0f + 0.2f;
+		transform.SetPosition({ xOffset , 0, 0 });
+		if (m_tempFlatMesh2) editorLayer->DrawGizmoMesh(m_tempFlatMesh2, glm::vec4(1.0f), transform.m_value, 1.f, gizmoSettings);
+		xOffset += circleLength / 4.0f + 0.2f;
+		transform.SetPosition({ xOffset , 0, 0 });
+		if (m_tempFlatMesh3) editorLayer->DrawGizmoMesh(m_tempFlatMesh3, glm::vec4(1.0f), transform.m_value, 1.f, gizmoSettings);
+		xOffset += circleLength / 4.0f + 0.2f;
+		transform.SetPosition({ xOffset , 0, 0 });
+		if (m_tempFlatMesh4) editorLayer->DrawGizmoMesh(m_tempFlatMesh4, glm::vec4(1.0f), transform.m_value, 1.f, gizmoSettings);
 	}
 }
 
@@ -252,6 +298,17 @@ void LogGrader::OnCreate()
 	m_proceduralLogParameters.m_sweep.m_deviation = { 0.0f, 1.0f, {0, 0} };
 	m_proceduralLogParameters.m_sweepDirectionAngle.m_mean = { -180, 180.0f };
 	m_proceduralLogParameters.m_sweepDirectionAngle.m_deviation = { 0.0f, 1.0f, {0, 0} };
+	auto branchShape = m_branchShape.Get<BranchShape>();
+	if (!branchShape)
+	{
+		branchShape = ProjectManager::CreateTemporaryAsset<BranchShape>();
+		m_branchShape = branchShape;
+		branchShape->m_barkDepth = branchShape->m_baseDepth = 0.1f;
+	}
+	InitializeLogRandomly(m_proceduralLogParameters, branchShape);
+	const auto gradeData = m_logWood.CalculateGradingData(0);
+	m_logWood.ColorBasedOnGrading(gradeData);
+	RefreshMesh();
 }
 
 void LogGrader::InitializeMeshRenderer(const LogWoodMeshGenerationSettings& meshGeneratorSettings) const
