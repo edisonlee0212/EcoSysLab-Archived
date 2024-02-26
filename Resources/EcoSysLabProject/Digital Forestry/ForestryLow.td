@@ -20,7 +20,7 @@ m_shootGrowthParameters:
   m_apicalControl: 1
   m_apicalDominance: 0.100000001
   m_apicalDominanceLoss: 0
-  m_lowBranchPruning: 0.150000006
+  m_lowBranchPruning: 0.200000003
   m_lowBranchPruningThicknessFactor: 0.720000029
   m_lightPruningFactor: 1000
   m_thicknessPruningFactor: 0.00499999989
@@ -44,15 +44,15 @@ m_shootGrowthParameters:
   m_fruitRotationVariance: 0
   m_fruitFallProbability: 3
 m_foliageParameters:
-  m_leafSize: [0.0250000004, 0.0199999996]
+  m_leafSize: [0.0299999993, 0.0299999993]
   m_leafColor: [0.596078455, 0.796078444, 0]
   m_leafCountPerInternode: 20
   m_positionVariance: 0.174999997
   m_rotationVariance: 1
   m_branchingAngle: 30
   m_maxNodeThickness: 1
-  m_minRootDistance: 0
-  m_maxEndDistance: 0.200000003
+  m_minRootDistance: 1.5
+  m_maxEndDistance: 0.300000012
 m_foliageAlbedoTexture:
   m_assetHandle: 0
   m_assetTypeName: ""
