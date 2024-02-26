@@ -54,7 +54,8 @@ void StartProjectWindowless(const std::filesystem::path& projectPath)
 	Application::Start();
 }
 int main() {
-	std::filesystem::path project_folder_path = "C:\\Users\\62469\\Work\\TreeEngine\\EcoSysLab\\Resources\\EcoSysLabProject";
+	//std::filesystem::path project_folder_path = "C:\\Users\\62469\\Work\\TreeEngine\\EcoSysLab\\Resources\\EcoSysLabProject";
+	std::filesystem::path project_folder_path = "C:\\Users\\lllll\\Documents\\GitHub\\EcoSysLab\\Resources\\EcoSysLabProject";
 	std::filesystem::path project_path = project_folder_path / "test.eveproj";
 	std::filesystem::path output_root = "D:\\ForestPointCloudData\\";
 

@@ -14,13 +14,13 @@ m_shootGrowthParameters:
   m_internodeShadowFactor: 0.0500000007
   m_lateralBudCount: 2
   m_apicalBudExtinctionRate: 0
-  m_lateralBudFlushingRate: 0.5
+  m_lateralBudFlushingRate: 1
   m_apicalBudLightingFactor: 1
   m_lateralBudLightingFactor: 1
   m_apicalControl: 1
   m_apicalDominance: 0.100000001
   m_apicalDominanceLoss: 0
-  m_lowBranchPruning: 0.200000003
+  m_lowBranchPruning: 0.150000006
   m_lowBranchPruningThicknessFactor: 0.720000029
   m_lightPruningFactor: 1000
   m_thicknessPruningFactor: 0.00499999989
@@ -85,7 +85,7 @@ m_rootBranchShape:
   m_assetTypeName: ""
 m_shootGrowthParameterOffsets:
   - m_type: 5
-    m_range: [0, 3.5]
+    m_range: [0.5, 3]
     m_offset:
       m_tangent: true
       m_min: [0, 0]
@@ -98,7 +98,7 @@ m_shootGrowthParameterOffsets:
         - [1, 1]
         - [0.100000001, 0]
   - m_type: 24
-    m_range: [0, 0.400000006]
+    m_range: [0, 0.300000012]
     m_offset:
       m_tangent: true
       m_min: [0, 0]
@@ -145,7 +145,7 @@ m_shootGrowthParameterOffsets:
       m_values:
         - [-0.100000001, 0]
         - [0, 0]
-        - [0.100000001, 0]
-        - [-0.100000001, 0]
+        - [0.0104895104, 0.46853146]
+        - [-0.00709219836, -0.494089842]
         - [1, 1]
         - [0.100000001, 0]

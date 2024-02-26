@@ -124,7 +124,6 @@ void DatasetGenerator::GeneratePointCloudForForestPatch(
 		EVOENGINE_ERROR("Forest patch doesn't exist!");
 		return;
 	}
-	
 
 	std::shared_ptr<Soil> soil;
 
