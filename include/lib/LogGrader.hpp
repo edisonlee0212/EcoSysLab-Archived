@@ -20,8 +20,12 @@ namespace EcoSysLab
 		float m_lengthStep = 0.02f;
 		float m_largeEndDiameter = 0.8f;
 		float m_smallEndDiameter = 0.7f;
-		PlottedDistribution<float> m_sweep{};
-		PlottedDistribution<float> m_sweepDirectionAngle{};
+
+		unsigned m_mode = 0;
+		float m_span = 0.0f;
+		float m_angle = 0.0f;
+		float m_crookRatio = 2.0f;
+		
 		bool OnInspect();
 	};
 

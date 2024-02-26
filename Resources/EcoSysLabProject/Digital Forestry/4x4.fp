@@ -1,128 +1,83 @@
 m_treeInfos:
   - m_globalTransform
-  - [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [-1.93573451, -0.0563715696, -1.87377644, 1]]
+  - [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [-2.91014147, -0.0497394651, -2.87146902, 1]]
   - m_treeDescriptor
-  - m_assetHandle: 7443233740778623356
+  - m_assetHandle: 16706185986566795364
     m_assetTypeName: TreeDescriptor
   - m_globalTransform
-  - [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [-1.81278598, -0.0633904561, -1.05244076, 1]]
+  - [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [-2.74755287, -0.0603559837, -0.625571907, 1]]
   - m_treeDescriptor
-  - m_assetHandle: 2882257391969701368
+  - m_assetHandle: 16706185986566795364
     m_assetTypeName: TreeDescriptor
   - m_globalTransform
-  - [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [-2.18981957, -0.0646672696, 0.120935351, 1]]
+  - [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [-3.10488153, -0.0488979258, 0.620360732, 1]]
   - m_treeDescriptor
-  - m_assetHandle: 2166672951840541169
+  - m_assetHandle: 16706185986566795364
     m_assetTypeName: TreeDescriptor
   - m_globalTransform
-  - [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [-1.87752509, -0.0466450825, 0.756628096, 1]]
+  - [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [-2.75812936, -0.0515660048, 3.24494982, 1]]
   - m_treeDescriptor
-  - m_assetHandle: 17215253604761784549
+  - m_assetHandle: 16706185986566795364
     m_assetTypeName: TreeDescriptor
   - m_globalTransform
-  - [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [-1.7614547, -0.0543281585, 1.86659086, 1]]
+  - [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [-1.48674381, -0.0502996147, -2.5229094, 1]]
   - m_treeDescriptor
-  - m_assetHandle: 628834348584842653
+  - m_assetHandle: 16706185986566795364
     m_assetTypeName: TreeDescriptor
   - m_globalTransform
-  - [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [-0.892474771, -0.0585587844, -2.1953485, 1]]
+  - [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [-1.26681828, -0.0501161702, -0.784949541, 1]]
   - m_treeDescriptor
-  - m_assetHandle: 16307902571039859608
+  - m_assetHandle: 16706185986566795364
     m_assetTypeName: TreeDescriptor
   - m_globalTransform
-  - [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [-1.0393573, -0.0569785461, -0.777992964, 1]]
+  - [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [-1.39069688, -0.0660399795, 0.921285272, 1]]
   - m_treeDescriptor
-  - m_assetHandle: 9429921959557570740
+  - m_assetHandle: 16706185986566795364
     m_assetTypeName: TreeDescriptor
   - m_globalTransform
-  - [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [-0.956709623, -0.0493281558, -0.166257456, 1]]
+  - [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [-0.555985928, -0.0492873006, 3.08658075, 1]]
   - m_treeDescriptor
-  - m_assetHandle: 628834348584842653
+  - m_assetHandle: 16706185986566795364
     m_assetTypeName: TreeDescriptor
   - m_globalTransform
-  - [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [-1.10731399, -0.0617685169, 1.16956162, 1]]
+  - [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0.667485118, -0.0645947978, -3.21462798, 1]]
   - m_treeDescriptor
-  - m_assetHandle: 2166672951840541169
+  - m_assetHandle: 16706185986566795364
     m_assetTypeName: TreeDescriptor
   - m_globalTransform
-  - [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [-1.13776374, -0.0649637133, 1.91082478, 1]]
+  - [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [1.33912325, -0.0642077923, -1.27552748, 1]]
   - m_treeDescriptor
-  - m_assetHandle: 7443233740778623356
+  - m_assetHandle: 16706185986566795364
     m_assetTypeName: TreeDescriptor
   - m_globalTransform
-  - [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [-0.0448822826, -0.065668501, -1.78723216, 1]]
+  - [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0.821649492, -0.0586956292, 0.910235405, 1]]
   - m_treeDescriptor
-  - m_assetHandle: 16307902571039859608
+  - m_assetHandle: 16706185986566795364
     m_assetTypeName: TreeDescriptor
   - m_globalTransform
-  - [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [-0.068170473, -0.0637402534, -0.914142966, 1]]
+  - [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [1.42553568, -0.0423158817, 2.86365914, 1]]
   - m_treeDescriptor
-  - m_assetHandle: 16307902571039859608
+  - m_assetHandle: 16706185986566795364
     m_assetTypeName: TreeDescriptor
   - m_globalTransform
-  - [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [-0.0502828658, -0.0577960983, 0.0384810865, 1]]
+  - [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [3.17171407, -0.0485267565, -3.10056567, 1]]
   - m_treeDescriptor
-  - m_assetHandle: 7443233740778623356
+  - m_assetHandle: 16706185986566795364
     m_assetTypeName: TreeDescriptor
   - m_globalTransform
-  - [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0.219640434, -0.0535514392, 1.02882147, 1]]
+  - [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [3.07696223, -0.0545423515, -0.560719132, 1]]
   - m_treeDescriptor
-  - m_assetHandle: 2882257391969701368
+  - m_assetHandle: 16706185986566795364
     m_assetTypeName: TreeDescriptor
   - m_globalTransform
-  - [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0.227686018, -0.0551681444, 1.91450727, 1]]
+  - [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [3.05764294, -0.0514874943, 1.4553721, 1]]
   - m_treeDescriptor
-  - m_assetHandle: 9429921959557570740
+  - m_assetHandle: 16706185986566795364
     m_assetTypeName: TreeDescriptor
   - m_globalTransform
-  - [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [1.19293046, -0.0463058092, -1.79157829, 1]]
+  - [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [2.82901454, -0.0698676556, 3.38586092, 1]]
   - m_treeDescriptor
-  - m_assetHandle: 2166672951840541169
-    m_assetTypeName: TreeDescriptor
-  - m_globalTransform
-  - [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [1.09601152, -0.051224377, -0.895244956, 1]]
-  - m_treeDescriptor
-  - m_assetHandle: 2166672951840541169
-    m_assetTypeName: TreeDescriptor
-  - m_globalTransform
-  - [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0.969152391, -0.05478324, 0.0387752056, 1]]
-  - m_treeDescriptor
-  - m_assetHandle: 628834348584842653
-    m_assetTypeName: TreeDescriptor
-  - m_globalTransform
-  - [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [1.21895409, -0.0531355739, 0.773672104, 1]]
-  - m_treeDescriptor
-  - m_assetHandle: 628834348584842653
-    m_assetTypeName: TreeDescriptor
-  - m_globalTransform
-  - [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0.986942708, -0.0588951409, 2.02793384, 1]]
-  - m_treeDescriptor
-  - m_assetHandle: 9429921959557570740
-    m_assetTypeName: TreeDescriptor
-  - m_globalTransform
-  - [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [2.02832055, -0.0534313619, -2.11331177, 1]]
-  - m_treeDescriptor
-  - m_assetHandle: 17215253604761784549
-    m_assetTypeName: TreeDescriptor
-  - m_globalTransform
-  - [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [1.89790845, -0.0577082634, -1.04232001, 1]]
-  - m_treeDescriptor
-  - m_assetHandle: 16307902571039859608
-    m_assetTypeName: TreeDescriptor
-  - m_globalTransform
-  - [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [2.12696624, -0.0535280667, 0.11963734, 1]]
-  - m_treeDescriptor
-  - m_assetHandle: 7443233740778623356
-    m_assetTypeName: TreeDescriptor
-  - m_globalTransform
-  - [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [2.23072672, -0.0588343479, 1.00674438, 1]]
-  - m_treeDescriptor
-  - m_assetHandle: 628834348584842653
-    m_assetTypeName: TreeDescriptor
-  - m_globalTransform
-  - [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [2.2009027, -0.0646648258, 2.02772427, 1]]
-  - m_treeDescriptor
-  - m_assetHandle: 9429921959557570740
+  - m_assetHandle: 16706185986566795364
     m_assetTypeName: TreeDescriptor
 m_treeGrowthSettings:
   m_nodeDevelopmentalVigorFillingRate: 1

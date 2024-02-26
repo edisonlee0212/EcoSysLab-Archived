@@ -11,12 +11,17 @@ bool ProceduralLogParameters::OnInspect()
 		if (ImGui::DragFloat("Length without trim", &m_lengthWithoutTrim)) changed = true;
 		if (ImGui::DragFloat("Large End Diameter (LED)", &m_largeEndDiameter)) changed = true;
 		if (ImGui::DragFloat("Small End Diameter (LED)", &m_smallEndDiameter)) changed = true;
-		static PlottedDistributionSettings plottedDistributionSettings = { 0.001f,
-														{0.001f, true, false, ""},
-														{0.001f, true, false, ""},
-														"" };
-		if (m_sweep.OnInspect("Sweep", plottedDistributionSettings)) changed = true;
-		if (m_sweepDirectionAngle.OnInspect("Sweep Direction Angle", plottedDistributionSettings))changed = true;
+		ImGui::Combo("Mode", { "Sweep", "Crook" }, m_mode);
+		if (m_mode == 0) {
+			ImGui::DragFloat("Sweep", &m_span, 0.01f, .0f, 3.f);
+			ImGui::DragFloat("Sweep Angle", &m_angle, 1.f, .0f, 360.f);
+		}
+		else {
+			ImGui::DragFloat("Crook", &m_span, 0.01f, .0f, 3.f);
+			ImGui::DragFloat("Crook Angle", &m_angle, 1.f, .0f, 360.f);
+			ImGui::DragFloat("Crook Height", &m_crookRatio, 0.01f, .0f, 1.f);
+		}
+
 		ImGui::TreePop();
 	}
 	return changed;
@@ -24,7 +29,7 @@ bool ProceduralLogParameters::OnInspect()
 
 void LogGrader::RefreshMesh()
 {
-	m_tempCylinderMesh =GenerateCylinderMesh(m_logWoodMeshGenerationSettings);
+	m_tempCylinderMesh = GenerateCylinderMesh(m_logWoodMeshGenerationSettings);
 	m_tempFlatMesh1 = GenerateFlatMesh(m_logWoodMeshGenerationSettings, 90, 180);
 	m_tempFlatMesh2 = GenerateFlatMesh(m_logWoodMeshGenerationSettings, 0, 90);
 	m_tempFlatMesh3 = GenerateFlatMesh(m_logWoodMeshGenerationSettings, 270, 360);
@@ -65,7 +70,7 @@ void LogGrader::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 	}
 
 	if (ImGui::Button("Initialize Mesh Renderer")) InitializeMeshRenderer(m_logWoodMeshGenerationSettings);
-	
+
 	if (ImGui::Button("Clear Defects"))
 	{
 		m_logWood.ClearDefects();
@@ -75,7 +80,7 @@ void LogGrader::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 	static bool debugVisualization = true;
 	ImGui::Checkbox("Visualization", &debugVisualization);
 	static int rotationAngle = 0;
-	if(debugVisualization)
+	if (debugVisualization)
 	{
 		static bool enableDefectSelection = true;
 		static bool eraseMode = false;
@@ -130,9 +135,9 @@ void LogGrader::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 		const float avgDistance = m_logWood.GetMaxAverageDistance();
 		const float circleLength = 2.0f * glm::pi<float>() * avgDistance;
 		float xOffset = avgDistance * 1.5f;
-		
-		if(m_tempCylinderMesh) editorLayer->DrawGizmoMesh(m_tempCylinderMesh, glm::vec4(1.0f), transform.m_value, 1.f, gizmoSettings);
-		
+
+		if (m_tempCylinderMesh) editorLayer->DrawGizmoMesh(m_tempCylinderMesh, glm::vec4(1.0f), transform.m_value, 1.f, gizmoSettings);
+
 		transform.SetPosition({ xOffset , 0, 0 });
 		transform.SetEulerRotation(glm::radians(glm::vec3(0, 180, 0)));
 		if (m_tempFlatMesh1) editorLayer->DrawGizmoMesh(m_tempFlatMesh1, glm::vec4(1.0f), transform.m_value, 1.f, gizmoSettings);
@@ -159,9 +164,19 @@ void LogGrader::InitializeLogRandomly(const ProceduralLogParameters& proceduralL
 		const float a = static_cast<float>(intersectionIndex) / (m_logWood.m_intersections.size() - 1);
 		const float radius = glm::mix(proceduralLogParameters.m_largeEndDiameter * 0.5f, proceduralLogParameters.m_smallEndDiameter * 0.5f, a);
 		auto& intersection = m_logWood.m_intersections[intersectionIndex];
-		glm::vec2 sweepDirection = glm::vec2(glm::cos(glm::radians(proceduralLogParameters.m_sweepDirectionAngle.GetValue(a))), glm::sin(glm::radians(proceduralLogParameters.m_sweepDirectionAngle.GetValue(a))));
-		intersection.m_center = sweepDirection * proceduralLogParameters.m_sweep.GetValue(a);
-
+		if (proceduralLogParameters.m_span != 0.f) {
+			if (proceduralLogParameters.m_mode == 0) {
+				const glm::vec2 sweepDirection = glm::vec2(glm::cos(glm::radians(proceduralLogParameters.m_angle)), glm::sin(glm::radians(proceduralLogParameters.m_angle)));
+				const float actualA = 1.f - glm::abs(1.f - 2.f * a);
+				intersection.m_center = sweepDirection * glm::pow(actualA, 0.3f) * proceduralLogParameters.m_span;
+			}
+			else if (a > proceduralLogParameters.m_crookRatio)
+			{
+				const glm::vec2 crookDirection = glm::vec2(glm::cos(glm::radians(proceduralLogParameters.m_angle)), glm::sin(glm::radians(proceduralLogParameters.m_angle)));
+				const float actualA = (a - proceduralLogParameters.m_crookRatio) / (1.f - proceduralLogParameters.m_crookRatio);
+				intersection.m_center = crookDirection * actualA * proceduralLogParameters.m_span;
+			}
+		}
 		intersection.m_boundary.resize(360);
 		for (int boundaryPointIndex = 0; boundaryPointIndex < 360; boundaryPointIndex++)
 		{
@@ -294,10 +309,6 @@ std::shared_ptr<Mesh> LogGrader::GenerateFlatMesh(const LogWoodMeshGenerationSet
 
 void LogGrader::OnCreate()
 {
-	m_proceduralLogParameters.m_sweep.m_mean = { -1.0f, 1.0f };
-	m_proceduralLogParameters.m_sweep.m_deviation = { 0.0f, 1.0f, {0, 0} };
-	m_proceduralLogParameters.m_sweepDirectionAngle.m_mean = { -180, 180.0f };
-	m_proceduralLogParameters.m_sweepDirectionAngle.m_deviation = { 0.0f, 1.0f, {0, 0} };
 	auto branchShape = m_branchShape.Get<BranchShape>();
 	if (!branchShape)
 	{
