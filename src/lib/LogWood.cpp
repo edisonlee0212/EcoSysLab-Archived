@@ -365,6 +365,18 @@ void LogWood::CalculateGradingData(std::vector<LogGrading>& logGrading) const
 			tempLogGrading.m_startHeightInMeters = startIntersectionIndex * intersectionLength;
 			tempLogGrading.m_startIntersectionIndex = startIntersectionIndex;
 			tempLogGrading.m_lengthWithoutTrimInMeters = gradingSectionIntersectionCount * intersectionLength;
+
+			if(tempLogGrading.m_lengthWithoutTrimInMeters < FeetToMeter(10))
+			{
+				tempLogGrading.m_sweepDeduction = glm::max(0.0f, (m_sweepInInches - 1.f) / MetersToInches(tempLogGrading.m_scalingDiameterInMeters));
+			}else if(tempLogGrading.m_lengthWithoutTrimInMeters < FeetToMeter(14))
+			{
+				tempLogGrading.m_sweepDeduction = glm::max(0.0f, (m_sweepInInches - 1.5f) / MetersToInches(tempLogGrading.m_scalingDiameterInMeters));
+			}else
+			{
+				tempLogGrading.m_sweepDeduction = glm::max(0.0f, (m_sweepInInches - 2.f) / MetersToInches(tempLogGrading.m_scalingDiameterInMeters));
+			}
+			tempLogGrading.m_crookDeduction = (m_crookCInInches / MetersToInches(tempLogGrading.m_scalingDiameterInMeters)) * (m_crookCLInFeet / MetersToFeet(tempLogGrading.m_lengthWithoutTrimInMeters));
 			for (int faceIndex = 0; faceIndex < 4; faceIndex++)
 			{
 				auto& face = tempLogGrading.m_faces[faceIndex];

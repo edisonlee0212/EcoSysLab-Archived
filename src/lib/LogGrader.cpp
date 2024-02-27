@@ -13,13 +13,14 @@ bool ProceduralLogParameters::OnInspect()
 		if (ImGui::DragFloat("Small End Diameter (Inch)", &m_smallEndDiameterInInches)) changed = true;
 		ImGui::Combo("Mode", { "Sweep", "Crook" }, m_mode);
 		if (m_mode == 0) {
-			ImGui::DragFloat("Sweep", &m_span, 0.01f, .0f, 3.f);
+			ImGui::DragFloat("Sweep (Inch)", &m_spanInInches, 0.1f, .0f, 100.f);
 			ImGui::DragFloat("Sweep Angle", &m_angle, 1.f, .0f, 360.f);
 		}
 		else {
-			ImGui::DragFloat("Crook", &m_span, 0.01f, .0f, 3.f);
+			ImGui::DragFloat("Crook (Inch)", &m_spanInInches, 0.1f, .0f, 100.f);
 			ImGui::DragFloat("Crook Angle", &m_angle, 1.f, .0f, 360.f);
-			ImGui::DragFloat("Crook Height", &m_crookRatio, 0.01f, .0f, 1.f);
+			ImGui::SliderFloat("Crook Ratio", &m_crookRatio, 0.f, 1.f);
+			ImGui::Text(("CL: " + std::to_string(m_lengthWithoutTrimInFeet * (1.f - m_crookRatio)) + " feet.").c_str());
 		}
 
 		ImGui::TreePop();
@@ -194,6 +195,9 @@ void LogGrader::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 		}
 
 		const auto& currentBestGrading = m_availableBestGrading[m_bestGradingIndex];
+		ImGui::Text(("Crook Deduction: " + std::to_string(currentBestGrading.m_crookDeduction)).c_str());
+		ImGui::Text(("Sweep Deduction: " + std::to_string(currentBestGrading.m_sweepDeduction)).c_str());
+
 		ImGui::Text(("Scaling diameter (Inch): " + std::to_string(currentBestGrading.m_scalingDiameterInMeters)).c_str());
 		ImGui::Text(("Grade determine face index: " + std::to_string(currentBestGrading.m_gradeDetermineFaceIndex)).c_str());
 		if (ImGui::TreeNode("Grading details"))
@@ -243,22 +247,33 @@ void LogGrader::InitializeLogRandomly(const ProceduralLogParameters& proceduralL
 	const auto lengthStepInMeters = LogWood::InchesToMeters(proceduralLogParameters.m_lengthStepInInches);
 	m_logWood.m_intersections.resize(glm::max(1.0f, m_logWood.m_length / lengthStepInMeters));
 
+	m_logWood.m_sweepInInches = 0.0f;
+	m_logWood.m_crookCInInches = 0.0f;
+	m_logWood.m_crookCLInFeet = 0.0f;
+
+	if (proceduralLogParameters.m_mode == 0) {
+		m_logWood.m_sweepInInches = proceduralLogParameters.m_spanInInches;
+	}else
+	{
+		m_logWood.m_crookCInInches = proceduralLogParameters.m_spanInInches;
+		m_logWood.m_crookCLInFeet = proceduralLogParameters.m_lengthWithoutTrimInFeet * (1.f - proceduralLogParameters.m_crookRatio);
+	}
 	for (int intersectionIndex = 0; intersectionIndex < m_logWood.m_intersections.size(); intersectionIndex++)
 	{
 		const float a = static_cast<float>(intersectionIndex) / (m_logWood.m_intersections.size() - 1);
 		const float radius = glm::mix(LogWood::InchesToMeters(proceduralLogParameters.m_largeEndDiameterInInches) * 0.5f, LogWood::InchesToMeters(proceduralLogParameters.m_smallEndDiameterInInches) * 0.5f, a);
 		auto& intersection = m_logWood.m_intersections[intersectionIndex];
-		if (proceduralLogParameters.m_span != 0.f) {
+		if (proceduralLogParameters.m_spanInInches != 0.f) {
 			if (proceduralLogParameters.m_mode == 0) {
 				const glm::vec2 sweepDirection = glm::vec2(glm::cos(glm::radians(proceduralLogParameters.m_angle)), glm::sin(glm::radians(proceduralLogParameters.m_angle)));
 				const float actualA = 1.f - glm::abs(1.f - 2.f * a);
-				intersection.m_center = sweepDirection * glm::pow(actualA, 0.3f) * proceduralLogParameters.m_span;
+				intersection.m_center = sweepDirection * glm::pow(actualA, 0.3f) * LogWood::InchesToMeters(proceduralLogParameters.m_spanInInches);
 			}
 			else if (a > proceduralLogParameters.m_crookRatio)
 			{
 				const glm::vec2 crookDirection = glm::vec2(glm::cos(glm::radians(proceduralLogParameters.m_angle)), glm::sin(glm::radians(proceduralLogParameters.m_angle)));
 				const float actualA = (a - proceduralLogParameters.m_crookRatio) / (1.f - proceduralLogParameters.m_crookRatio);
-				intersection.m_center = crookDirection * actualA * proceduralLogParameters.m_span;
+				intersection.m_center = crookDirection * actualA * LogWood::InchesToMeters(proceduralLogParameters.m_spanInInches);
 			}
 		}
 		intersection.m_boundary.resize(360);

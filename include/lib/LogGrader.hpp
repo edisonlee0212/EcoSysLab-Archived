@@ -22,9 +22,9 @@ namespace EcoSysLab
 		float m_smallEndDiameterInInches = 20.f;
 
 		unsigned m_mode = 0;
-		float m_span = 0.0f;
-		float m_angle = 0.0f;
-		float m_crookRatio = 2.0f;
+		float m_spanInInches = 0.0f;
+		float m_angle = 180.0f;
+		float m_crookRatio = 0.7f;
 		
 		bool OnInspect();
 	};

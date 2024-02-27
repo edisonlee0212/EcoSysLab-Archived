@@ -41,6 +41,8 @@ namespace EcoSysLab
 
 	struct LogGrading
 	{
+		float m_crookDeduction = 0.0f;
+		float m_sweepDeduction = 0.0f;
 		int m_angleOffset = 0;
 		float m_lengthWithoutTrimInMeters = 0.0f;
 		float m_scalingDiameterInMeters = 0;
@@ -60,6 +62,9 @@ namespace EcoSysLab
 		static float MetersToFeet(float meters);
 		bool m_butt = true;
 		float m_length = 0.0f;
+		float m_sweepInInches = 0.0f;
+		float m_crookCInInches = 0.0f;
+		float m_crookCLInFeet = 0.0f;
 		std::vector<LogWoodIntersection> m_intersections;
 		[[nodiscard]] glm::vec2 GetSurfacePoint(float height, float angle) const;
 		[[nodiscard]] float GetCenterDistance(float height, float angle) const;
