@@ -16,10 +16,10 @@ namespace EcoSysLab
 	public:
 		bool m_bottom = true;
 
-		float m_lengthWithoutTrim = 4.0f;
-		float m_lengthStep = 0.02f;
-		float m_largeEndDiameter = 0.8f;
-		float m_smallEndDiameter = 0.7f;
+		float m_lengthWithoutTrimInFeet = 16.0f;
+		float m_lengthStepInInches = 1.f;
+		float m_largeEndDiameterInInches = 25.f;
+		float m_smallEndDiameterInInches = 20.f;
 
 		unsigned m_mode = 0;
 		float m_span = 0.0f;
@@ -36,8 +36,10 @@ namespace EcoSysLab
 		std::shared_ptr<Mesh> m_tempFlatMesh2{};
 		std::shared_ptr<Mesh> m_tempFlatMesh3{};
 		std::shared_ptr<Mesh> m_tempFlatMesh4{};
-		void RefreshMesh();
+		void RefreshMesh(const LogGrading& logGrading);
 	public:
+		int m_bestGradingIndex = 0;
+		std::vector<LogGrading> m_availableBestGrading{};
 		ProceduralLogParameters m_proceduralLogParameters;
 		AssetRef m_branchShape{};
 		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;

@@ -8,9 +8,9 @@ bool ProceduralLogParameters::OnInspect()
 	if (ImGui::TreeNode("Procedural Log Parameters"))
 	{
 		if (ImGui::Checkbox("Butt only", &m_bottom)) changed = true;
-		if (ImGui::DragFloat("Length without trim", &m_lengthWithoutTrim)) changed = true;
-		if (ImGui::DragFloat("Large End Diameter (LED)", &m_largeEndDiameter)) changed = true;
-		if (ImGui::DragFloat("Small End Diameter (LED)", &m_smallEndDiameter)) changed = true;
+		if (ImGui::DragFloat("Length without trim (Feet)", &m_lengthWithoutTrimInFeet)) changed = true;
+		if (ImGui::DragFloat("Large End Diameter (Inch)", &m_largeEndDiameterInInches)) changed = true;
+		if (ImGui::DragFloat("Small End Diameter (Inch)", &m_smallEndDiameterInInches)) changed = true;
 		ImGui::Combo("Mode", { "Sweep", "Crook" }, m_mode);
 		if (m_mode == 0) {
 			ImGui::DragFloat("Sweep", &m_span, 0.01f, .0f, 3.f);
@@ -27,13 +27,13 @@ bool ProceduralLogParameters::OnInspect()
 	return changed;
 }
 
-void LogGrader::RefreshMesh()
+void LogGrader::RefreshMesh(const LogGrading& logGrading)
 {
 	m_tempCylinderMesh = GenerateCylinderMesh(m_logWoodMeshGenerationSettings);
-	m_tempFlatMesh1 = GenerateFlatMesh(m_logWoodMeshGenerationSettings, 90, 180);
-	m_tempFlatMesh2 = GenerateFlatMesh(m_logWoodMeshGenerationSettings, 0, 90);
-	m_tempFlatMesh3 = GenerateFlatMesh(m_logWoodMeshGenerationSettings, 270, 360);
-	m_tempFlatMesh4 = GenerateFlatMesh(m_logWoodMeshGenerationSettings, 180, 270);
+	m_tempFlatMesh1 = GenerateFlatMesh(m_logWoodMeshGenerationSettings, 90 + logGrading.m_angleOffset, 180 + logGrading.m_angleOffset);
+	m_tempFlatMesh2 = GenerateFlatMesh(m_logWoodMeshGenerationSettings, 0 + logGrading.m_angleOffset, 90 + logGrading.m_angleOffset);
+	m_tempFlatMesh3 = GenerateFlatMesh(m_logWoodMeshGenerationSettings, 270 + logGrading.m_angleOffset, 360 + logGrading.m_angleOffset);
+	m_tempFlatMesh4 = GenerateFlatMesh(m_logWoodMeshGenerationSettings, 180 + logGrading.m_angleOffset, 270 + logGrading.m_angleOffset);
 }
 
 void LogGrader::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
@@ -50,13 +50,15 @@ void LogGrader::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 			branchShape->m_barkDepth = branchShape->m_baseDepth = 0.1f;
 		}
 		InitializeLogRandomly(m_proceduralLogParameters, branchShape);
-		const auto gradeData = m_logWood.CalculateGradingData(0);
-		m_logWood.ColorBasedOnGrading(gradeData);
-		RefreshMesh();
+		m_bestGradingIndex = 0;
+		m_logWood.CalculateGradingData(m_availableBestGrading);
+		m_logWood.ColorBasedOnGrading(m_availableBestGrading[m_bestGradingIndex]);
+		RefreshMesh(m_availableBestGrading[m_bestGradingIndex]);
 	}
-	if (ImGui::TreeNode("Log Mesh Generation Settings"))
+	if (ImGui::TreeNode("Log Mesh Generation"))
 	{
 		ImGui::DragFloat("Y Subdivision", &m_logWoodMeshGenerationSettings.m_ySubdivision, 0.01f, 0.01f, 0.5f);
+		if (ImGui::Button("Initialize Mesh Renderer")) InitializeMeshRenderer(m_logWoodMeshGenerationSettings);
 		ImGui::TreePop();
 	}
 	static int rotateDegrees = 10;
@@ -64,17 +66,19 @@ void LogGrader::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 	if (ImGui::Button(("Rotate " + std::to_string(rotateDegrees) + " degrees").c_str()))
 	{
 		m_logWood.Rotate(rotateDegrees);
-		const auto gradeData = m_logWood.CalculateGradingData(0);
-		m_logWood.ColorBasedOnGrading(gradeData);
-		RefreshMesh();
+		m_bestGradingIndex = 0;
+		m_logWood.CalculateGradingData(m_availableBestGrading);
+		m_logWood.ColorBasedOnGrading(m_availableBestGrading[m_bestGradingIndex]);
+		RefreshMesh(m_availableBestGrading[m_bestGradingIndex]);
 	}
 
-	if (ImGui::Button("Initialize Mesh Renderer")) InitializeMeshRenderer(m_logWoodMeshGenerationSettings);
-
+	
 	if (ImGui::Button("Clear Defects"))
 	{
-		m_logWood.ClearDefects();
-		InitializeMeshRenderer(m_logWoodMeshGenerationSettings);
+		m_bestGradingIndex = 0;
+		m_logWood.CalculateGradingData(m_availableBestGrading);
+		m_logWood.ColorBasedOnGrading(m_availableBestGrading[m_bestGradingIndex]);
+		RefreshMesh(m_availableBestGrading[m_bestGradingIndex]);
 	}
 
 	static bool debugVisualization = true;
@@ -123,9 +127,10 @@ void LogGrader::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 						}
 					}
 					mousePositions.clear();
-					const auto gradeData = m_logWood.CalculateGradingData(0);
-					m_logWood.ColorBasedOnGrading(gradeData);
-					RefreshMesh();
+					m_bestGradingIndex = 0;
+					m_logWood.CalculateGradingData(m_availableBestGrading);
+					m_logWood.ColorBasedOnGrading(m_availableBestGrading[m_bestGradingIndex]);
+					RefreshMesh(m_availableBestGrading[m_bestGradingIndex]);
 				}
 			}
 		}
@@ -151,18 +156,89 @@ void LogGrader::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 		transform.SetPosition({ xOffset , 0, 0 });
 		if (m_tempFlatMesh4) editorLayer->DrawGizmoMesh(m_tempFlatMesh4, glm::vec4(1.0f), transform.m_value, 1.f, gizmoSettings);
 	}
+
+	
+
+	if (!m_availableBestGrading.empty()) {
+		std::string grading = "Current grading: ";
+		if (m_availableBestGrading.front().m_grade <= 3)
+		{
+			grading.append("F1");
+		}
+		else if (m_availableBestGrading.front().m_grade <= 7)
+		{
+			grading.append("F2");
+		}
+		else if (m_availableBestGrading.front().m_grade <= 8)
+		{
+			grading.append("F3");
+		}
+		else
+		{
+			grading.append("N/A");
+		}
+		ImGui::Text(grading.c_str());
+		if (ImGui::SliderInt("Grading index", &m_bestGradingIndex, 0, m_availableBestGrading.size()))
+		{
+			m_bestGradingIndex = glm::clamp(m_bestGradingIndex, 0, static_cast<int>(m_availableBestGrading.size()));
+			m_logWood.ColorBasedOnGrading(m_availableBestGrading[m_bestGradingIndex]);
+			RefreshMesh(m_availableBestGrading[m_bestGradingIndex]);
+		}
+
+		const auto& currentBestGrading = m_availableBestGrading[m_bestGradingIndex];
+		ImGui::Text(("Scaling diameter (Inch): " + std::to_string(currentBestGrading.m_scalingDiameterInMeters)).c_str());
+		ImGui::Text(("Grade determine face index: " + std::to_string(currentBestGrading.m_gradeDetermineFaceIndex)).c_str());
+		if (ImGui::TreeNode("Grading details"))
+		{
+			ImGui::Text(("Angle offset: " + std::to_string(currentBestGrading.m_angleOffset)).c_str());
+			for (int gradingFaceIndex = 0; gradingFaceIndex < 4; gradingFaceIndex++)
+			{
+				const auto& face = currentBestGrading.m_faces[gradingFaceIndex];
+				if (ImGui::TreeNodeEx(("Face " + std::to_string(gradingFaceIndex)).c_str(), ImGuiTreeNodeFlags_DefaultOpen))
+				{
+					ImGui::Text(("Start angle: " + std::to_string(face.m_startAngle)).c_str());
+					ImGui::Text(("End angle: " + std::to_string(face.m_endAngle)).c_str());
+					ImGui::Text(("Face Grade Index: " + std::to_string(face.m_faceGrade)).c_str());
+					std::string faceGrading = "Face grading: ";
+					if (face.m_faceGrade <= 3)
+					{
+						grading.append("F1");
+					}
+					else if (face.m_faceGrade <= 7)
+					{
+						grading.append("F2");
+					}
+					else if (face.m_faceGrade <= 8)
+					{
+						grading.append("F3");
+					}
+					else
+					{
+						grading.append("N/A");
+					}
+					ImGui::Text(faceGrading.c_str());
+					ImGui::Text(("Clear Cuttings Count: " + std::to_string(face.m_clearCuttings.size())).c_str());
+					ImGui::Text(("Clear Cuttings Min Length: " + std::to_string(face.m_clearCuttingMinLengthInMeters)).c_str());
+					ImGui::Text(("Clear Cuttings Min Proportion: " + std::to_string(face.m_clearCuttingMinProportion)).c_str());
+					ImGui::TreePop();
+				}
+			}
+			ImGui::TreePop();
+		}
+	}
 }
 
 void LogGrader::InitializeLogRandomly(const ProceduralLogParameters& proceduralLogParameters, const std::shared_ptr<BranchShape>& branchShape)
 {
 	m_logWood.m_intersections.clear();
-	m_logWood.m_lengthWithoutTrim = proceduralLogParameters.m_lengthWithoutTrim;
-	m_logWood.m_intersections.resize(glm::max(1.0f, proceduralLogParameters.m_lengthWithoutTrim / proceduralLogParameters.m_lengthStep));
+	m_logWood.m_lengthWithoutTrimInMeters = LogWood::FeetToMeter(proceduralLogParameters.m_lengthWithoutTrimInFeet);
+	const auto lengthStepInMeters = LogWood::InchesToMeters(proceduralLogParameters.m_lengthStepInInches);
+	m_logWood.m_intersections.resize(glm::max(1.0f, m_logWood.m_lengthWithoutTrimInMeters / lengthStepInMeters));
 
 	for (int intersectionIndex = 0; intersectionIndex < m_logWood.m_intersections.size(); intersectionIndex++)
 	{
 		const float a = static_cast<float>(intersectionIndex) / (m_logWood.m_intersections.size() - 1);
-		const float radius = glm::mix(proceduralLogParameters.m_largeEndDiameter * 0.5f, proceduralLogParameters.m_smallEndDiameter * 0.5f, a);
+		const float radius = glm::mix(LogWood::InchesToMeters(proceduralLogParameters.m_largeEndDiameterInInches) * 0.5f, LogWood::InchesToMeters(proceduralLogParameters.m_smallEndDiameterInInches) * 0.5f, a);
 		auto& intersection = m_logWood.m_intersections[intersectionIndex];
 		if (proceduralLogParameters.m_span != 0.f) {
 			if (proceduralLogParameters.m_mode == 0) {
@@ -181,7 +257,7 @@ void LogGrader::InitializeLogRandomly(const ProceduralLogParameters& proceduralL
 		for (int boundaryPointIndex = 0; boundaryPointIndex < 360; boundaryPointIndex++)
 		{
 			auto& boundaryPoint = intersection.m_boundary.at(boundaryPointIndex);
-			boundaryPoint.m_centerDistance = radius * branchShape->GetValue(static_cast<float>(boundaryPointIndex) / 360.0f, intersectionIndex * proceduralLogParameters.m_lengthStep);
+			boundaryPoint.m_centerDistance = radius * branchShape->GetValue(static_cast<float>(boundaryPointIndex) / 360.0f, intersectionIndex * proceduralLogParameters.m_lengthStepInInches);
 			boundaryPoint.m_defectStatus = 0.0f;
 		}
 	}
@@ -190,7 +266,7 @@ void LogGrader::InitializeLogRandomly(const ProceduralLogParameters& proceduralL
 std::shared_ptr<Mesh> LogGrader::GenerateCylinderMesh(const LogWoodMeshGenerationSettings& meshGeneratorSettings) const
 {
 	if (m_logWood.m_intersections.size() < 2) return {};
-	const float logLength = m_logWood.m_lengthWithoutTrim;
+	const float logLength = m_logWood.m_lengthWithoutTrimInMeters;
 	const int yStepSize = logLength / meshGeneratorSettings.m_ySubdivision;
 	const float yStep = logLength / yStepSize;
 
@@ -250,7 +326,7 @@ std::shared_ptr<Mesh> LogGrader::GenerateFlatMesh(const LogWoodMeshGenerationSet
 	const float avgDistance = m_logWood.GetAverageDistance();
 	const float circleLength = 2.0f * glm::pi<float>() * avgDistance;
 	const float flatXStep = circleLength / 360;
-	const float logLength = m_logWood.m_lengthWithoutTrim;
+	const float logLength = m_logWood.m_lengthWithoutTrimInMeters;
 	const int yStepSize = logLength / meshGeneratorSettings.m_ySubdivision;
 	const float yStep = logLength / yStepSize;
 
@@ -317,9 +393,10 @@ void LogGrader::OnCreate()
 		branchShape->m_barkDepth = branchShape->m_baseDepth = 0.1f;
 	}
 	InitializeLogRandomly(m_proceduralLogParameters, branchShape);
-	const auto gradeData = m_logWood.CalculateGradingData(0);
-	m_logWood.ColorBasedOnGrading(gradeData);
-	RefreshMesh();
+	m_bestGradingIndex = 0;
+	m_logWood.CalculateGradingData(m_availableBestGrading);
+	m_logWood.ColorBasedOnGrading(m_availableBestGrading[m_bestGradingIndex]);
+	RefreshMesh(m_availableBestGrading[m_bestGradingIndex]);
 }
 
 void LogGrader::InitializeMeshRenderer(const LogWoodMeshGenerationSettings& meshGeneratorSettings) const

@@ -12,7 +12,7 @@ namespace EcoSysLab
 	{
 	public:
 		glm::vec2 m_center = glm::vec2(0.0f);
-		std::vector<LogWoodIntersectionBoundaryPoint> m_boundary {};
+		std::vector<LogWoodIntersectionBoundaryPoint> m_boundary{};
 		[[nodiscard]] float GetCenterDistance(float angle) const;
 		[[nodiscard]] glm::vec2 GetBoundaryPoint(float angle) const;
 		[[nodiscard]] float GetDefectStatus(float angle) const;
@@ -24,8 +24,8 @@ namespace EcoSysLab
 
 	struct LogGradeFaceCutting
 	{
-		float m_start = 0;
-		float m_end = 0;
+		float m_startInMeters = 0;
+		float m_endInMeters = 0;
 	};
 
 	struct LogGradingFace
@@ -34,23 +34,30 @@ namespace EcoSysLab
 		int m_startAngle = 0;
 		int m_endAngle = 0;
 		int m_faceGrade = 0;
-		std::vector<LogGradeFaceCutting> m_cuttings{};
-		float m_clearCuttingMinLength = 0;
+		std::vector<LogGradeFaceCutting> m_clearCuttings{};
+		float m_clearCuttingMinLengthInMeters = 0;
 		float m_clearCuttingMinProportion = 0;
 	};
 
 	struct LogGrading
 	{
 		int m_angleOffset = 0;
-		float m_scalingDiameter = 0;
-		LogGradingFace m_faces[4] {};
+		float m_gradingSectionInFeet = 12.f;
+		float m_scalingDiameterInMeters = 0;
+		int m_gradeDetermineFaceIndex = 0;
+		int m_grade = 0;
+		LogGradingFace m_faces[4]{};
 	};
 
 	class LogWood
 	{
 	public:
+		static float InchesToMeters(float inches);
+		static float FeetToMeter(float feet);
+		static float MetersToInches(float meters);
+		static float MetersToFeet(float meters);
 		bool m_butt = true;
-		float m_lengthWithoutTrim = 0.0f;
+		float m_lengthWithoutTrimInMeters = 0.0f;
 		std::vector<LogWoodIntersection> m_intersections;
 		[[nodiscard]] glm::vec2 GetSurfacePoint(float height, float angle) const;
 		[[nodiscard]] float GetCenterDistance(float height, float angle) const;
@@ -69,10 +76,10 @@ namespace EcoSysLab
 		void EraseDefectRegion(float height, float angle, float heightRange, float angleRange);
 		void ClearDefects();
 		[[nodiscard]] bool RayCastSelection(
-			const glm::mat4 &transform,
-			float pointDistanceThreshold, const Ray& ray, float &height, float &angle) const;
+			const glm::mat4& transform,
+			float pointDistanceThreshold, const Ray& ray, float& height, float& angle) const;
 
-		[[nodiscard]] LogGrading CalculateGradingData(int angleOffset) const;
+		void CalculateGradingData(std::vector<LogGrading>& logGrading) const;
 		void ColorBasedOnGrading(const LogGrading& logGradingData);
 	};
 }

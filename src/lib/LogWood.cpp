@@ -63,7 +63,7 @@ float LogWoodIntersection::GetMinDistance() const
 
 glm::vec2 LogWood::GetSurfacePoint(const float height, const float angle) const
 {
-	const float heightStep = m_lengthWithoutTrim / m_intersections.size();
+	const float heightStep = m_lengthWithoutTrimInMeters / m_intersections.size();
 	const int index = height / heightStep;
 	const float a = (height - heightStep * index) / heightStep;
 	const auto actualAngle = glm::mod(angle, 360.0f);
@@ -77,7 +77,7 @@ glm::vec2 LogWood::GetSurfacePoint(const float height, const float angle) const
 
 float LogWood::GetCenterDistance(const float height, const float angle) const
 {
-	const float heightStep = m_lengthWithoutTrim / m_intersections.size();
+	const float heightStep = m_lengthWithoutTrimInMeters / m_intersections.size();
 	const int index = height / heightStep;
 	const float a = (height - heightStep * index) / heightStep;
 	const auto actualAngle = glm::mod(angle, 360.0f);
@@ -91,7 +91,7 @@ float LogWood::GetCenterDistance(const float height, const float angle) const
 
 float LogWood::GetDefectStatus(const float height, const float angle) const
 {
-	const float heightStep = m_lengthWithoutTrim / m_intersections.size();
+	const float heightStep = m_lengthWithoutTrimInMeters / m_intersections.size();
 	const int index = height / heightStep;
 	const float a = (height - heightStep * index) / heightStep;
 	const auto actualAngle = glm::mod(angle, 360.0f);
@@ -105,7 +105,7 @@ float LogWood::GetDefectStatus(const float height, const float angle) const
 
 glm::vec4 LogWood::GetColor(const float height, const float angle) const
 {
-	const float heightStep = m_lengthWithoutTrim / m_intersections.size();
+	const float heightStep = m_lengthWithoutTrimInMeters / m_intersections.size();
 	const int index = height / heightStep;
 	const float a = (height - heightStep * index) / heightStep;
 	const auto actualAngle = glm::mod(angle, 360.0f);
@@ -119,7 +119,7 @@ glm::vec4 LogWood::GetColor(const float height, const float angle) const
 
 LogWoodIntersectionBoundaryPoint& LogWood::GetBoundaryPoint(const float height, const float angle)
 {
-	const float heightStep = m_lengthWithoutTrim / m_intersections.size();
+	const float heightStep = m_lengthWithoutTrimInMeters / m_intersections.size();
 	const int index = height / heightStep;
 	const float a = (height - heightStep * index) / heightStep;
 	const auto actualAngle = glm::mod(angle, 360.0f);
@@ -150,7 +150,7 @@ void LogWood::Rotate(int degrees)
 
 float LogWood::GetAverageDistance(const float height) const
 {
-	const float heightStep = m_lengthWithoutTrim / m_intersections.size();
+	const float heightStep = m_lengthWithoutTrimInMeters / m_intersections.size();
 	const int index = height / heightStep;
 	const float a = (height - heightStep * index) / heightStep;
 	if (index < m_intersections.size() - 1)
@@ -212,7 +212,7 @@ float LogWood::GetMinDistance() const
 
 void LogWood::MarkDefectRegion(const float height, const float angle, const float heightRange, const float angleRange)
 {
-	const float heightStep = m_lengthWithoutTrim / m_intersections.size();
+	const float heightStep = m_lengthWithoutTrimInMeters / m_intersections.size();
 	const int heightStepSize = heightRange / heightStep;
 	for (int yIndex = -heightStepSize; yIndex <= heightStepSize; yIndex++)
 	{
@@ -232,7 +232,7 @@ void LogWood::MarkDefectRegion(const float height, const float angle, const floa
 
 void LogWood::EraseDefectRegion(const float height, const float angle, const float heightRange, const float angleRange)
 {
-	const float heightStep = m_lengthWithoutTrim / m_intersections.size();
+	const float heightStep = m_lengthWithoutTrimInMeters / m_intersections.size();
 	const int heightStepSize = heightRange / heightStep;
 	for (int yIndex = -heightStepSize; yIndex <= heightStepSize; yIndex++)
 	{
@@ -266,7 +266,7 @@ bool LogWood::RayCastSelection(const glm::mat4& transform, const float pointDist
 {
 	float minDistance = FLT_MAX;
 	bool found = false;
-	const float heightStep = m_lengthWithoutTrim / m_intersections.size();
+	const float heightStep = m_lengthWithoutTrimInMeters / m_intersections.size();
 	for (int yIndex = 0; yIndex < m_intersections.size(); yIndex++)
 	{
 		const auto testHeight = yIndex * heightStep;
@@ -300,8 +300,8 @@ std::vector<LogGradeFaceCutting> CalculateCuttings(const std::vector<bool>& defe
 			if(heightStep * (intersectionIndex - lastDefectIndex) >= minDistance)
 			{
 				LogGradeFaceCutting cutting;
-				cutting.m_start = heightStep * lastDefectIndex;
-				cutting.m_end = heightStep * intersectionIndex;
+				cutting.m_startInMeters = heightStep * lastDefectIndex;
+				cutting.m_endInMeters = heightStep * intersectionIndex;
 				cuttings.emplace_back(cutting);
 			}
 			lastDefectIndex = intersectionIndex;
@@ -317,7 +317,7 @@ bool TestCutting(const std::vector<LogGradeFaceCutting>& cuttings, const int max
 	minCuttingLength = FLT_MAX;
 	for (const auto& cutting : cuttings)
 	{
-		const float length = cutting.m_end - cutting.m_start;
+		const float length = cutting.m_endInMeters - cutting.m_startInMeters;
 		cuttingSumLength += length;
 		minCuttingLength = glm::min(minCuttingLength, length);
 	}
@@ -329,180 +329,241 @@ bool TestCutting(const std::vector<LogGradeFaceCutting>& cuttings, const int max
 	return false;
 }
 
-LogGrading LogWood::CalculateGradingData(const int angleOffset) const
+float LogWood::InchesToMeters(const float inches)
 {
-	LogGrading logGradingData{};
-	logGradingData.m_angleOffset = angleOffset;
-	logGradingData.m_scalingDiameter = GetMinAverageDistance();
-	const float heightStep = m_lengthWithoutTrim / m_intersections.size();
-	for(int faceIndex = 0; faceIndex < 4; faceIndex++)
-	{
-		auto& face = logGradingData.m_faces[faceIndex];
-		face.m_startAngle = (angleOffset + faceIndex * 90) % 360;
-		face.m_endAngle = (angleOffset + faceIndex * 90 + 90) % 360;
-		std::vector<bool> defectMarks;
-		defectMarks.resize(m_intersections.size());
-		for(int intersectionIndex = 0; intersectionIndex < m_intersections.size(); intersectionIndex++)
-		{
-			const auto& intersection = m_intersections[intersectionIndex];
-			for(int angle = 0; angle < 90; angle++)
+	return inches * 0.0254f;
+}
+
+float LogWood::FeetToMeter(const float feet)
+{
+	return feet * 0.3048f;
+}
+
+float LogWood::MetersToInches(const float meters)
+{
+	return meters * 39.3701f;
+}
+
+float LogWood::MetersToFeet(const float meters)
+{
+	return meters * 3.28084f;
+}
+
+void LogWood::CalculateGradingData(std::vector<LogGrading>& logGrading) const
+{
+	if(m_lengthWithoutTrimInMeters < FeetToMeter(12)) return;
+	std::vector<LogGrading> results{};
+
+	float intersectionLength = m_lengthWithoutTrimInMeters / m_intersections.size();
+	int gradingSectionIntersectionCount = glm::ceil(FeetToMeter(12) / intersectionLength);
+	for (int startIntersectionIndex = 0; startIntersectionIndex < m_intersections.size() - gradingSectionIntersectionCount; startIntersectionIndex++) {
+		for (int angleOffset = 0; angleOffset < 90; angleOffset++) {
+			results.emplace_back();
+			auto& tempLogGrading = results.back();
+			tempLogGrading.m_angleOffset = angleOffset;
+			tempLogGrading.m_scalingDiameterInMeters = GetMinAverageDistance() * 2.f;
+			const float heightStep = m_lengthWithoutTrimInMeters / m_intersections.size();
+			for (int faceIndex = 0; faceIndex < 4; faceIndex++)
 			{
-				const int actualAngle = (face.m_startAngle + angle) % 360;
-				if(intersection.m_boundary[actualAngle].m_defectStatus != 0.0f)
+				auto& face = tempLogGrading.m_faces[faceIndex];
+				face.m_startAngle = (angleOffset + faceIndex * 90) % 360;
+				face.m_endAngle = (angleOffset + faceIndex * 90 + 90) % 360;
+				std::vector<bool> defectMarks;
+				defectMarks.resize(m_intersections.size());
+				for (int intersectionIndex = 0; intersectionIndex < m_intersections.size(); intersectionIndex++)
 				{
-					defectMarks[intersectionIndex] = true;
-					break;
+					const auto& intersection = m_intersections[intersectionIndex];
+					for (int angle = 0; angle < 90; angle++)
+					{
+						const int actualAngle = (face.m_startAngle + angle) % 360;
+						if (intersection.m_boundary[actualAngle].m_defectStatus != 0.0f)
+						{
+							defectMarks[intersectionIndex] = true;
+							break;
+						}
+					}
+				}
+				bool succeed = false;
+				if (m_butt
+					&& tempLogGrading.m_scalingDiameterInMeters >= InchesToMeters(13) && tempLogGrading.m_scalingDiameterInMeters <= InchesToMeters(16)
+					&& m_lengthWithoutTrimInMeters >= FeetToMeter(10))
+				{
+					//F1: Butt, Scaling diameter 13-15(16), Length 10+
+					const auto cuttings7 = CalculateCuttings(defectMarks, heightStep, FeetToMeter(7));
+					float minCuttingLength = 0.0f;
+					float proportion = 0.0f;
+					succeed = TestCutting(cuttings7, 2, 5.0f / 6.0f, m_lengthWithoutTrimInMeters, minCuttingLength, proportion);
+					if (succeed)
+					{
+						face.m_faceGrade = 1;
+						face.m_clearCuttings = cuttings7;
+						face.m_clearCuttingMinLengthInMeters = minCuttingLength;
+						face.m_clearCuttingMinProportion = proportion;
+					}
+				}
+				if (!succeed && tempLogGrading.m_scalingDiameterInMeters > InchesToMeters(16) && tempLogGrading.m_scalingDiameterInMeters <= InchesToMeters(20)
+					&& m_lengthWithoutTrimInMeters >= FeetToMeter(10))
+				{
+					//F1: Butt & uppers, Scaling diameter 16-19(20), Length 10+
+					const auto cuttings5 = CalculateCuttings(defectMarks, heightStep, FeetToMeter(5));
+					float minCuttingLength = 0.0f;
+					float proportion = 0.0f;
+					succeed = TestCutting(cuttings5, 2, 5.0f / 6.0f, m_lengthWithoutTrimInMeters, minCuttingLength, proportion);
+					if (succeed)
+					{
+						face.m_faceGrade = 2;
+						face.m_clearCuttings = cuttings5;
+						face.m_clearCuttingMinLengthInMeters = minCuttingLength;
+						face.m_clearCuttingMinProportion = proportion;
+					}
+				}
+				const auto cuttings3 = CalculateCuttings(defectMarks, heightStep, FeetToMeter(3));
+				if (!succeed && tempLogGrading.m_scalingDiameterInMeters > InchesToMeters(20)
+					&& m_lengthWithoutTrimInMeters >= FeetToMeter(10))
+				{
+					//F1: Butt & uppers, Scaling diameter 20+, Length 10+
+					//const auto cuttings3 = CalculateCuttings(defectMarks, heightStep, FeetToMeter(3));
+					float minCuttingLength = 0.0f;
+					float proportion = 0.0f;
+					succeed = TestCutting(cuttings3, 2, 5.0f / 6.0f, m_lengthWithoutTrimInMeters, minCuttingLength, proportion);
+					if (succeed)
+					{
+						face.m_faceGrade = 3;
+						face.m_clearCuttings = cuttings3;
+						face.m_clearCuttingMinLengthInMeters = minCuttingLength;
+						face.m_clearCuttingMinProportion = proportion;
+					}
+				}
+
+				if (!succeed && tempLogGrading.m_scalingDiameterInMeters > InchesToMeters(11)
+					&& m_lengthWithoutTrimInMeters >= FeetToMeter(10))
+				{
+					//F2: Butt & uppers, Scaling diameter 11+, Length 10+
+					float minCuttingLength = 0.0f;
+					float proportion = 0.0f;
+					succeed = TestCutting(cuttings3, 2, 2.0f / 3.0f, m_lengthWithoutTrimInMeters, minCuttingLength, proportion);
+					if (succeed)
+					{
+						face.m_faceGrade = 4;
+						face.m_clearCuttings = cuttings3;
+						face.m_clearCuttingMinLengthInMeters = minCuttingLength;
+						face.m_clearCuttingMinProportion = proportion;
+					}
+				}
+				if (!succeed && tempLogGrading.m_scalingDiameterInMeters > InchesToMeters(12)
+					&& m_lengthWithoutTrimInMeters > FeetToMeter(8) && m_lengthWithoutTrimInMeters <= FeetToMeter(10))
+				{
+					//F2: Butt & uppers, Scaling diameter 12+, Length 8-9(10)
+					float minCuttingLength = 0.0f;
+					float proportion = 0.0f;
+					succeed = TestCutting(cuttings3, 2, 3.0f / 4.0f, m_lengthWithoutTrimInMeters, minCuttingLength, proportion);
+					if (succeed)
+					{
+						face.m_faceGrade = 5;
+						face.m_clearCuttings = cuttings3;
+						face.m_clearCuttingMinLengthInMeters = minCuttingLength;
+						face.m_clearCuttingMinProportion = proportion;
+					}
+				}
+				if (!succeed && tempLogGrading.m_scalingDiameterInMeters > InchesToMeters(12)
+					&& m_lengthWithoutTrimInMeters > FeetToMeter(10) && m_lengthWithoutTrimInMeters <= FeetToMeter(12))
+				{
+					//F2: Butt & uppers, Scaling diameter 12+, Length 10-11(12)
+					float minCuttingLength = 0.0f;
+					float proportion = 0.0f;
+					succeed = TestCutting(cuttings3, 2, 2.0f / 3.0f, m_lengthWithoutTrimInMeters, minCuttingLength, proportion);
+					if (succeed)
+					{
+						face.m_faceGrade = 6;
+						face.m_clearCuttings = cuttings3;
+						face.m_clearCuttingMinLengthInMeters = minCuttingLength;
+						face.m_clearCuttingMinProportion = proportion;
+					}
+				}
+				if (!succeed && tempLogGrading.m_scalingDiameterInMeters > InchesToMeters(12)
+					&& m_lengthWithoutTrimInMeters > FeetToMeter(12))
+				{
+					//F2: Butt & uppers, Scaling diameter 12+, Length 12+
+					float minCuttingLength = 0.0f;
+					float proportion = 0.0f;
+					succeed = TestCutting(cuttings3, 3, 2.0f / 3.0f, m_lengthWithoutTrimInMeters, minCuttingLength, proportion);
+					if (succeed)
+					{
+						face.m_faceGrade = 7;
+						face.m_clearCuttings = cuttings3;
+						face.m_clearCuttingMinLengthInMeters = minCuttingLength;
+						face.m_clearCuttingMinProportion = proportion;
+					}
+				}
+				const auto cuttings2 = CalculateCuttings(defectMarks, heightStep, FeetToMeter(2));
+				if (!succeed && tempLogGrading.m_scalingDiameterInMeters > InchesToMeters(8)
+					&& m_lengthWithoutTrimInMeters > FeetToMeter(8))
+				{
+					//F3: Butt & uppers, Scaling diameter 8+, Length 8+
+					float minCuttingLength = 0.0f;
+					float proportion = 0.0f;
+					succeed = TestCutting(cuttings2, 999, 1.0f / 2.0f, m_lengthWithoutTrimInMeters, minCuttingLength, proportion);
+					if (succeed)
+					{
+						face.m_faceGrade = 8;
+						face.m_clearCuttings = cuttings2;
+						face.m_clearCuttingMinLengthInMeters = minCuttingLength;
+						face.m_clearCuttingMinProportion = proportion;
+					}
+				}
+				if (!succeed)
+				{
+					float minCuttingLength = 0.0f;
+					float proportion = 0.0f;
+					succeed = TestCutting(cuttings2, 999, 0.f, m_lengthWithoutTrimInMeters, minCuttingLength, proportion);
+					face.m_faceGrade = 9;
+					face.m_clearCuttings = cuttings2;
+					face.m_clearCuttingMinLengthInMeters = minCuttingLength;
+					face.m_clearCuttingMinProportion = proportion;
 				}
 			}
-		}
-		bool succeed = false;
-		if(m_butt 
-			&& logGradingData.m_scalingDiameter >= 0.3302f && logGradingData.m_scalingDiameter <= 0.4064f
-			&& m_lengthWithoutTrim >= 3.048f)
-		{
-			//F1: Butt, Scaling diameter 13-15(16), Length 10+
-			const auto cuttings7 = CalculateCuttings(defectMarks, heightStep, 2.1336f);
-			float minCuttingLength = 0.0f;
-			float proportion = 0.0f;
-			succeed = TestCutting(cuttings7, 2, 5.0f / 6.0f, m_lengthWithoutTrim, minCuttingLength, proportion);
-			if(succeed)
+			int worstGradeIndex = -1;
+			int worstGrade = 0;
+			for (int i = 0; i < 4; i++)
 			{
-				face.m_faceGrade = 1;
-				face.m_cuttings = cuttings7;
-				face.m_clearCuttingMinLength = minCuttingLength;
-				face.m_clearCuttingMinProportion = proportion;
+				if (tempLogGrading.m_faces[i].m_faceGrade > worstGrade)
+				{
+					worstGradeIndex = i;
+					worstGrade = tempLogGrading.m_faces[i].m_faceGrade;
+				}
 			}
-		}
-		if(!succeed && logGradingData.m_scalingDiameter > 0.4064f && logGradingData.m_scalingDiameter <= 0.508f
-			&& m_lengthWithoutTrim >= 3.048f)
-		{
-			//F1: Butt & uppers, Scaling diameter 16-19(20), Length 10+
-			const auto cuttings5 = CalculateCuttings(defectMarks, heightStep, 1.524f);
-			float minCuttingLength = 0.0f;
-			float proportion = 0.0f;
-			succeed = TestCutting(cuttings5, 2, 5.0f / 6.0f, m_lengthWithoutTrim, minCuttingLength, proportion);
-			if (succeed)
+			int secondWorstGradeIndex = -1;
+			worstGrade = 0;
+			for (int i = 0; i < 4; i++)
 			{
-				face.m_faceGrade = 2;
-				face.m_cuttings = cuttings5;
-				face.m_clearCuttingMinLength = minCuttingLength;
-				face.m_clearCuttingMinProportion = proportion;
+				if (i != worstGradeIndex && tempLogGrading.m_faces[i].m_faceGrade > worstGrade)
+				{
+					secondWorstGradeIndex = i;
+					worstGrade = tempLogGrading.m_faces[i].m_faceGrade;
+				}
 			}
+			tempLogGrading.m_gradeDetermineFaceIndex = secondWorstGradeIndex;
+			tempLogGrading.m_grade = worstGrade;
 		}
-		
-		if(!succeed && logGradingData.m_scalingDiameter > 0.508f
-			&& m_lengthWithoutTrim >= 3.048f)
-		{
-			//F1: Butt & uppers, Scaling diameter 20+, Length 10+
-			const auto cuttings3 = CalculateCuttings(defectMarks, heightStep, 0.9144f);
-			float minCuttingLength = 0.0f;
-			float proportion = 0.0f;
-			succeed = TestCutting(cuttings3, 2, 5.0f / 6.0f, m_lengthWithoutTrim, minCuttingLength, proportion);
-			if (succeed)
-			{
-				face.m_faceGrade = 3;
-				face.m_cuttings = cuttings3;
-				face.m_clearCuttingMinLength = minCuttingLength;
-				face.m_clearCuttingMinProportion = proportion;
-			}
-		}
-
-		const auto cuttings3 = CalculateCuttings(defectMarks, heightStep, 0.9144f);
-		if (!succeed && logGradingData.m_scalingDiameter > 0.2794f
-			&& m_lengthWithoutTrim >= 3.048f)
-		{
-			//F2: Butt & uppers, Scaling diameter 11+, Length 10+
-			float minCuttingLength = 0.0f;
-			float proportion = 0.0f;
-			succeed = TestCutting(cuttings3, 2, 2.0f / 3.0f, m_lengthWithoutTrim, minCuttingLength, proportion);
-			if (succeed)
-			{
-				face.m_faceGrade = 4;
-				face.m_cuttings = cuttings3;
-				face.m_clearCuttingMinLength = minCuttingLength;
-				face.m_clearCuttingMinProportion = proportion;
-			}
-		}
-		if (!succeed && logGradingData.m_scalingDiameter > 0.3048f
-			&& m_lengthWithoutTrim > 2.4384f && m_lengthWithoutTrim <= 3.048f)
-		{
-			//F2: Butt & uppers, Scaling diameter 12+, Length 8-9(10)
-			float minCuttingLength = 0.0f;
-			float proportion = 0.0f;
-			succeed = TestCutting(cuttings3, 2, 3.0f / 4.0f, m_lengthWithoutTrim, minCuttingLength, proportion);
-			if (succeed)
-			{
-				face.m_faceGrade = 5;
-				face.m_cuttings = cuttings3;
-				face.m_clearCuttingMinLength = minCuttingLength;
-				face.m_clearCuttingMinProportion = proportion;
-			}
-		}
-		if (!succeed && logGradingData.m_scalingDiameter > 0.3048f
-			&& m_lengthWithoutTrim > 3.048f && m_lengthWithoutTrim <= 3.6576f)
-		{
-			//F2: Butt & uppers, Scaling diameter 12+, Length 10-11(12)
-			float minCuttingLength = 0.0f;
-			float proportion = 0.0f;
-			succeed = TestCutting(cuttings3, 2, 2.0f / 3.0f, m_lengthWithoutTrim, minCuttingLength, proportion);
-			if (succeed)
-			{
-				face.m_faceGrade = 6;
-				face.m_cuttings = cuttings3;
-				face.m_clearCuttingMinLength = minCuttingLength;
-				face.m_clearCuttingMinProportion = proportion;
-			}
-		}
-		if (!succeed && logGradingData.m_scalingDiameter > 0.3048f
-			&& m_lengthWithoutTrim > 3.6576f)
-		{
-			//F2: Butt & uppers, Scaling diameter 12+, Length 12+
-			float minCuttingLength = 0.0f;
-			float proportion = 0.0f;
-			succeed = TestCutting(cuttings3, 3, 2.0f / 3.0f, m_lengthWithoutTrim, minCuttingLength, proportion);
-			if (succeed)
-			{
-				face.m_faceGrade = 7;
-				face.m_cuttings = cuttings3;
-				face.m_clearCuttingMinLength = minCuttingLength;
-				face.m_clearCuttingMinProportion = proportion;
-			}
-		}
-		const auto cuttings2 = CalculateCuttings(defectMarks, heightStep, 0.6096f);
-		if (!succeed && logGradingData.m_scalingDiameter > 0.2032f
-			&& m_lengthWithoutTrim > 2.4384f)
-		{
-			//F3: Butt & uppers, Scaling diameter 12+, Length 12+
-			float minCuttingLength = 0.0f;
-			float proportion = 0.0f;
-			succeed = TestCutting(cuttings2, 999, 1.0f / 2.0f, m_lengthWithoutTrim, minCuttingLength, proportion);
-			if (succeed)
-			{
-				face.m_faceGrade = 8;
-				face.m_cuttings = cuttings2;
-				face.m_clearCuttingMinLength = minCuttingLength;
-				face.m_clearCuttingMinProportion = proportion;
-			}
-		}
-		if(!succeed)
-		{
-			float minCuttingLength = 0.0f;
-			float proportion = 0.0f;
-			succeed = TestCutting(cuttings2, 999, 0.f, m_lengthWithoutTrim, minCuttingLength, proportion);
-			face.m_faceGrade = 9;
-			face.m_cuttings = cuttings2;
-			face.m_clearCuttingMinLength = minCuttingLength;
-			face.m_clearCuttingMinProportion = proportion;
-		}
-
-		
 	}
-	return logGradingData;
+	int bestGrade = INT_MAX;
+	for(const auto& result : results)
+	{
+		if(result.m_grade < bestGrade)
+		{
+			bestGrade = result.m_grade;
+			logGrading.clear();
+			logGrading.emplace_back(result);
+		}else if(result.m_grade == bestGrade)
+		{
+			logGrading.emplace_back(result);
+		}
+	}
 }
 
 void LogWood::ColorBasedOnGrading(const LogGrading& logGradingData)
 {
-	const float heightStep = m_lengthWithoutTrim / m_intersections.size();
+	const float heightStep = m_lengthWithoutTrimInMeters / m_intersections.size();
 	for (const auto& face : logGradingData.m_faces)
 	{
 		for (int intersectionIndex = 0; intersectionIndex < m_intersections.size(); intersectionIndex++)
@@ -519,9 +580,9 @@ void LogWood::ColorBasedOnGrading(const LogGrading& logGradingData)
 				}
 				const float height = heightStep * intersectionIndex;
 				bool isCutting = false;
-				for(const auto& cutting : face.m_cuttings)
+				for(const auto& cutting : face.m_clearCuttings)
 				{
-					if(height >= cutting.m_start && height <= cutting.m_end)
+					if(height >= cutting.m_startInMeters && height <= cutting.m_endInMeters)
 					{
 						if(face.m_faceGrade <= 3)
 						{
