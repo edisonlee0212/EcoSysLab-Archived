@@ -117,7 +117,7 @@ int main() {
 }
 
 void EngineSetup() {
-	ProjectManager::SetScenePostLoadActions([=](const std::shared_ptr<Scene>& scene) {
+	ProjectManager::SetActionAfterNewScene([=](const std::shared_ptr<Scene>& scene) {
 #pragma region Engine Setup
 		Transform transform;
 		transform.SetEulerRotation(glm::radians(glm::vec3(150, 30, 0)));

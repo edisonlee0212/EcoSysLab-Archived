@@ -91,6 +91,9 @@ void LogGrader::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 		static bool enableDefectSelection = true;
 		static bool eraseMode = false;
 		ImGui::Checkbox("Enable Defect Marker", &enableDefectSelection);
+		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 0, 0, 1));
+		ImGui::Text("Press F for marking");
+		ImGui::PopStyleColor();
 		ImGui::Checkbox("Erase mode", &eraseMode);
 		Transform transform{};
 		transform.SetEulerRotation(glm::radians(glm::vec3(0, rotationAngle, 0)));
@@ -99,17 +102,17 @@ void LogGrader::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 			static int defectAngleRange = 10.0f;
 			ImGui::DragFloat("Defect Marker Y", &defectHeightRange, 0.01f, 0.03f, 1.0f);
 			ImGui::DragInt("Defect Marker X", &defectAngleRange, 1, 3, 30);
+			static std::vector<glm::vec2> mousePositions{};
 			if (editorLayer->SceneCameraWindowFocused() && editorLayer->GetLockEntitySelection() && editorLayer->GetSelectedEntity() == GetOwner()) {
-				static std::vector<glm::vec2> mousePositions{};
 				if (editorLayer->GetKey(GLFW_MOUSE_BUTTON_RIGHT) == KeyActionType::Press)
 				{
 					mousePositions.clear();
 				}
-				else if (editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Hold)
+				else if (editorLayer->GetKey(GLFW_KEY_F) == KeyActionType::Hold)
 				{
 					mousePositions.emplace_back(editorLayer->GetMouseSceneCameraPosition());
 				}
-				else if (editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Release && !mousePositions.empty())
+				else if (editorLayer->GetKey(GLFW_KEY_F) == KeyActionType::Release && !mousePositions.empty())
 				{
 					const auto scene = GetScene();
 					GlobalTransform cameraLtw;
@@ -134,6 +137,9 @@ void LogGrader::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 					m_logWood.ColorBasedOnGrading(m_availableBestGrading[m_bestGradingIndex]);
 					RefreshMesh(m_availableBestGrading[m_bestGradingIndex]);
 				}
+			}else
+			{
+				mousePositions.clear();
 			}
 		}
 		ImGui::DragInt("Rotation angle", &rotationAngle, 1, 0, 360);
