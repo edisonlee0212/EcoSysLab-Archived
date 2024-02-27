@@ -3,30 +3,15 @@
 //
 #include <Application.hpp>
 
-#ifdef BUILD_WITH_RAYTRACER
-#include <CUDAModule.hpp>
-#include <RayTracerLayer.hpp>
-#endif
-
 #include "Times.hpp"
 
 #include "ProjectManager.hpp"
 #include "ClassRegistry.hpp"
-#include "TreeModel.hpp"
 #include "Tree.hpp"
-#include "Soil.hpp"
-#include "Climate.hpp"
-#include "ForestPatch.hpp"
-#include "EcoSysLabLayer.hpp"
-#include "RadialBoundingVolume.hpp"
 #include "HeightField.hpp"
+#include "LogGrader.hpp"
 #include "ObjectRotator.hpp"
-#include "ParticlePhysics2DDemo.hpp"
-#include "Physics2DDemo.hpp"
-#include "SorghumLayer.hpp"
-#include "TreePointCloud.hpp"
 #include "WindowLayer.hpp"
-#include "TreePointCloudScanner.hpp"
 using namespace EcoSysLab;
 
 void EngineSetup();
@@ -79,24 +64,14 @@ int main() {
 	Application::PushLayer<WindowLayer>();
 	Application::PushLayer<EditorLayer>();
 	Application::PushLayer<RenderLayer>();
-#ifdef BUILD_WITH_RAYTRACER
-	Application::PushLayer<RayTracerLayer>();
-#endif
-	Application::PushLayer<EcoSysLabLayer>();
-	Application::PushLayer<SorghumLayer>();
-	ClassRegistry::RegisterPrivateComponent<ObjectRotator>("ObjectRotator");
-	ClassRegistry::RegisterPrivateComponent<Physics2DDemo>("Physics2DDemo");
-	ClassRegistry::RegisterPrivateComponent<ParticlePhysics2DDemo>("ParticlePhysics2DDemo");
-	
+
+	ClassRegistry::RegisterPrivateComponent<LogGrader>("LogGrader");
+	ClassRegistry::RegisterAsset<BranchShape>("BranchShape", { ".bs" });
+
 	ApplicationInfo applicationConfigs;
-	applicationConfigs.m_applicationName = "EcoSysLab";
-	applicationConfigs.m_projectPath = std::filesystem::absolute(resourceFolderPath / "EcoSysLabProject" / "test.eveproj");
+	applicationConfigs.m_applicationName = "Log Grader";
+	applicationConfigs.m_projectPath = std::filesystem::absolute(resourceFolderPath / "LogGraderProject" / "Default.eveproj");
 	Application::Initialize(applicationConfigs);
-
-#ifdef BUILD_WITH_RAYTRACER
-
-	auto rayTracerLayer = Application::GetLayer<RayTracerLayer>();
-#endif
 
 	// adjust default camera speed
 	const auto editorLayer = Application::GetLayer<EditorLayer>();
@@ -105,8 +80,10 @@ int main() {
 	// override default scene camera position etc.
 	editorLayer->m_showCameraWindow = false;
 	editorLayer->m_showSceneWindow = true;
-	editorLayer->m_showEntityExplorerWindow = true;
+	editorLayer->m_showEntityExplorerWindow = false;
 	editorLayer->m_showEntityInspectorWindow = true;
+	editorLayer->GetSceneCamera()->m_useClearColor = true;
+	editorLayer->GetSceneCamera()->m_clearColor = glm::vec3(1.f);
 	const auto renderLayer = Application::GetLayer<RenderLayer>();
 	renderLayer->m_enableParticles = false;
 #pragma region Engine Loop
@@ -126,7 +103,7 @@ void EngineSetup() {
 		transform = Transform();
 		transform.SetPosition(glm::vec3(0, 2, 35));
 		transform.SetEulerRotation(glm::radians(glm::vec3(15, 0, 0)));
-		auto mainCamera = Application::GetActiveScene()->m_mainCamera.Get<EvoEngine::Camera>();
+		auto mainCamera = scene->m_mainCamera.Get<EvoEngine::Camera>();
 		if (mainCamera) {
 
 			scene->SetDataComponent(mainCamera->GetOwner(), transform);
@@ -135,6 +112,17 @@ void EngineSetup() {
 		}
 #pragma endregion
 #pragma endregion
-
+		std::vector<Entity> entities;
+		scene->GetAllEntities(entities);
+		for(const auto& entity : entities)
+		{
+			if(scene->HasPrivateComponent<LogGrader>(entity))
+			{
+				const auto editorLayer = Application::GetLayer<EditorLayer>();
+				editorLayer->SetSelectedEntity(entity);
+				editorLayer->SetLockEntitySelection(true);
+				break;
+			}
+		}
 		});
 }

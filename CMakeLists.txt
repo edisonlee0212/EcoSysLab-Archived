@@ -277,6 +277,29 @@ if (BUILD_WITH_PHYSICS)
 		)
 endif ()
 
+add_executable(loggrader-app
+		"src/app/LogGraderApplication.cpp")
+
+target_include_directories(loggrader-app
+	PRIVATE
+	${LOCAL_ECOSYSLAB_INCLUDES}
+	)
+
+target_precompile_headers(loggrader-app
+	PRIVATE
+	${LOCAL_ECOSYSLAB_PCH}
+	)
+
+target_link_libraries(loggrader-app
+	PRIVATE
+	ecosyslab
+	)
+
+target_compile_definitions(loggrader-app
+	PRIVATE
+	NOMINMAX
+	)
+
 add_executable(ecosyslab-dataset
 		"src/app/DatasetGeneration.cpp")
 

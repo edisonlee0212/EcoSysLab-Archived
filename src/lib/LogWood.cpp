@@ -63,7 +63,7 @@ float LogWoodIntersection::GetMinDistance() const
 
 glm::vec2 LogWood::GetSurfacePoint(const float height, const float angle) const
 {
-	const float heightStep = m_lengthWithoutTrimInMeters / m_intersections.size();
+	const float heightStep = m_length / m_intersections.size();
 	const int index = height / heightStep;
 	const float a = (height - heightStep * index) / heightStep;
 	const auto actualAngle = glm::mod(angle, 360.0f);
@@ -77,7 +77,7 @@ glm::vec2 LogWood::GetSurfacePoint(const float height, const float angle) const
 
 float LogWood::GetCenterDistance(const float height, const float angle) const
 {
-	const float heightStep = m_lengthWithoutTrimInMeters / m_intersections.size();
+	const float heightStep = m_length / m_intersections.size();
 	const int index = height / heightStep;
 	const float a = (height - heightStep * index) / heightStep;
 	const auto actualAngle = glm::mod(angle, 360.0f);
@@ -91,7 +91,7 @@ float LogWood::GetCenterDistance(const float height, const float angle) const
 
 float LogWood::GetDefectStatus(const float height, const float angle) const
 {
-	const float heightStep = m_lengthWithoutTrimInMeters / m_intersections.size();
+	const float heightStep = m_length / m_intersections.size();
 	const int index = height / heightStep;
 	const float a = (height - heightStep * index) / heightStep;
 	const auto actualAngle = glm::mod(angle, 360.0f);
@@ -105,7 +105,7 @@ float LogWood::GetDefectStatus(const float height, const float angle) const
 
 glm::vec4 LogWood::GetColor(const float height, const float angle) const
 {
-	const float heightStep = m_lengthWithoutTrimInMeters / m_intersections.size();
+	const float heightStep = m_length / m_intersections.size();
 	const int index = height / heightStep;
 	const float a = (height - heightStep * index) / heightStep;
 	const auto actualAngle = glm::mod(angle, 360.0f);
@@ -119,7 +119,7 @@ glm::vec4 LogWood::GetColor(const float height, const float angle) const
 
 LogWoodIntersectionBoundaryPoint& LogWood::GetBoundaryPoint(const float height, const float angle)
 {
-	const float heightStep = m_lengthWithoutTrimInMeters / m_intersections.size();
+	const float heightStep = m_length / m_intersections.size();
 	const int index = height / heightStep;
 	const float a = (height - heightStep * index) / heightStep;
 	const auto actualAngle = glm::mod(angle, 360.0f);
@@ -150,7 +150,7 @@ void LogWood::Rotate(int degrees)
 
 float LogWood::GetAverageDistance(const float height) const
 {
-	const float heightStep = m_lengthWithoutTrimInMeters / m_intersections.size();
+	const float heightStep = m_length / m_intersections.size();
 	const int index = height / heightStep;
 	const float a = (height - heightStep * index) / heightStep;
 	if (index < m_intersections.size() - 1)
@@ -212,7 +212,7 @@ float LogWood::GetMinDistance() const
 
 void LogWood::MarkDefectRegion(const float height, const float angle, const float heightRange, const float angleRange)
 {
-	const float heightStep = m_lengthWithoutTrimInMeters / m_intersections.size();
+	const float heightStep = m_length / m_intersections.size();
 	const int heightStepSize = heightRange / heightStep;
 	for (int yIndex = -heightStepSize; yIndex <= heightStepSize; yIndex++)
 	{
@@ -232,7 +232,7 @@ void LogWood::MarkDefectRegion(const float height, const float angle, const floa
 
 void LogWood::EraseDefectRegion(const float height, const float angle, const float heightRange, const float angleRange)
 {
-	const float heightStep = m_lengthWithoutTrimInMeters / m_intersections.size();
+	const float heightStep = m_length / m_intersections.size();
 	const int heightStepSize = heightRange / heightStep;
 	for (int yIndex = -heightStepSize; yIndex <= heightStepSize; yIndex++)
 	{
@@ -266,7 +266,7 @@ bool LogWood::RayCastSelection(const glm::mat4& transform, const float pointDist
 {
 	float minDistance = FLT_MAX;
 	bool found = false;
-	const float heightStep = m_lengthWithoutTrimInMeters / m_intersections.size();
+	const float heightStep = m_length / m_intersections.size();
 	for (int yIndex = 0; yIndex < m_intersections.size(); yIndex++)
 	{
 		const auto testHeight = yIndex * heightStep;
@@ -289,7 +289,7 @@ bool LogWood::RayCastSelection(const glm::mat4& transform, const float pointDist
 	return found;
 }
 
-std::vector<LogGradeFaceCutting> CalculateCuttings(const std::vector<bool>& defectMarks, const float heightStep, const float minDistance)
+std::vector<LogGradeFaceCutting> CalculateCuttings(const std::vector<bool>& defectMarks, const float heightStep, const float minDistance, const float startHeight)
 {
 	int lastDefectIndex = 0.0f;
 	std::vector<LogGradeFaceCutting> cuttings{};
@@ -300,8 +300,8 @@ std::vector<LogGradeFaceCutting> CalculateCuttings(const std::vector<bool>& defe
 			if(heightStep * (intersectionIndex - lastDefectIndex) >= minDistance)
 			{
 				LogGradeFaceCutting cutting;
-				cutting.m_startInMeters = heightStep * lastDefectIndex;
-				cutting.m_endInMeters = heightStep * intersectionIndex;
+				cutting.m_startInMeters = heightStep * lastDefectIndex + startHeight;
+				cutting.m_endInMeters = heightStep * intersectionIndex + startHeight;
 				cuttings.emplace_back(cutting);
 			}
 			lastDefectIndex = intersectionIndex;
@@ -313,6 +313,7 @@ std::vector<LogGradeFaceCutting> CalculateCuttings(const std::vector<bool>& defe
 bool TestCutting(const std::vector<LogGradeFaceCutting>& cuttings, const int maxNumber, const float minProportion, const float logLength, float& minCuttingLength, float& proportion)
 {
 	const auto cuttingNumber = cuttings.size();
+	if (cuttingNumber == 0) return false;
 	float cuttingSumLength = 0.0f;
 	minCuttingLength = FLT_MAX;
 	for (const auto& cutting : cuttings)
@@ -351,26 +352,27 @@ float LogWood::MetersToFeet(const float meters)
 
 void LogWood::CalculateGradingData(std::vector<LogGrading>& logGrading) const
 {
-	if(m_lengthWithoutTrimInMeters < FeetToMeter(12)) return;
 	std::vector<LogGrading> results{};
-
-	float intersectionLength = m_lengthWithoutTrimInMeters / m_intersections.size();
-	int gradingSectionIntersectionCount = glm::ceil(FeetToMeter(12) / intersectionLength);
+	const float intersectionLength = m_length / m_intersections.size();
+	const int gradingSectionIntersectionCount = glm::min(glm::ceil(FeetToMeter(12) / intersectionLength), static_cast<float>(m_intersections.size()) - 1);
 	for (int startIntersectionIndex = 0; startIntersectionIndex < m_intersections.size() - gradingSectionIntersectionCount; startIntersectionIndex++) {
 		for (int angleOffset = 0; angleOffset < 90; angleOffset++) {
 			results.emplace_back();
 			auto& tempLogGrading = results.back();
 			tempLogGrading.m_angleOffset = angleOffset;
+			//TODO: Calculate Scaling Diameter correctly.
 			tempLogGrading.m_scalingDiameterInMeters = GetMinAverageDistance() * 2.f;
-			const float heightStep = m_lengthWithoutTrimInMeters / m_intersections.size();
+			tempLogGrading.m_startHeightInMeters = startIntersectionIndex * intersectionLength;
+			tempLogGrading.m_startIntersectionIndex = startIntersectionIndex;
+			tempLogGrading.m_lengthWithoutTrimInMeters = gradingSectionIntersectionCount * intersectionLength;
 			for (int faceIndex = 0; faceIndex < 4; faceIndex++)
 			{
 				auto& face = tempLogGrading.m_faces[faceIndex];
 				face.m_startAngle = (angleOffset + faceIndex * 90) % 360;
 				face.m_endAngle = (angleOffset + faceIndex * 90 + 90) % 360;
 				std::vector<bool> defectMarks;
-				defectMarks.resize(m_intersections.size());
-				for (int intersectionIndex = 0; intersectionIndex < m_intersections.size(); intersectionIndex++)
+				defectMarks.resize(gradingSectionIntersectionCount);
+				for (int intersectionIndex = startIntersectionIndex; intersectionIndex < gradingSectionIntersectionCount; intersectionIndex++)
 				{
 					const auto& intersection = m_intersections[intersectionIndex];
 					for (int angle = 0; angle < 90; angle++)
@@ -386,13 +388,13 @@ void LogWood::CalculateGradingData(std::vector<LogGrading>& logGrading) const
 				bool succeed = false;
 				if (m_butt
 					&& tempLogGrading.m_scalingDiameterInMeters >= InchesToMeters(13) && tempLogGrading.m_scalingDiameterInMeters <= InchesToMeters(16)
-					&& m_lengthWithoutTrimInMeters >= FeetToMeter(10))
+					&& tempLogGrading.m_lengthWithoutTrimInMeters >= FeetToMeter(10))
 				{
 					//F1: Butt, Scaling diameter 13-15(16), Length 10+
-					const auto cuttings7 = CalculateCuttings(defectMarks, heightStep, FeetToMeter(7));
+					const auto cuttings7 = CalculateCuttings(defectMarks, intersectionLength, FeetToMeter(7), tempLogGrading.m_startHeightInMeters);
 					float minCuttingLength = 0.0f;
 					float proportion = 0.0f;
-					succeed = TestCutting(cuttings7, 2, 5.0f / 6.0f, m_lengthWithoutTrimInMeters, minCuttingLength, proportion);
+					succeed = TestCutting(cuttings7, 2, 5.0f / 6.0f, tempLogGrading.m_lengthWithoutTrimInMeters, minCuttingLength, proportion);
 					if (succeed)
 					{
 						face.m_faceGrade = 1;
@@ -402,13 +404,13 @@ void LogWood::CalculateGradingData(std::vector<LogGrading>& logGrading) const
 					}
 				}
 				if (!succeed && tempLogGrading.m_scalingDiameterInMeters > InchesToMeters(16) && tempLogGrading.m_scalingDiameterInMeters <= InchesToMeters(20)
-					&& m_lengthWithoutTrimInMeters >= FeetToMeter(10))
+					&& tempLogGrading.m_lengthWithoutTrimInMeters >= FeetToMeter(10))
 				{
 					//F1: Butt & uppers, Scaling diameter 16-19(20), Length 10+
-					const auto cuttings5 = CalculateCuttings(defectMarks, heightStep, FeetToMeter(5));
+					const auto cuttings5 = CalculateCuttings(defectMarks, intersectionLength, FeetToMeter(5), tempLogGrading.m_startHeightInMeters);
 					float minCuttingLength = 0.0f;
 					float proportion = 0.0f;
-					succeed = TestCutting(cuttings5, 2, 5.0f / 6.0f, m_lengthWithoutTrimInMeters, minCuttingLength, proportion);
+					succeed = TestCutting(cuttings5, 2, 5.0f / 6.0f, tempLogGrading.m_lengthWithoutTrimInMeters, minCuttingLength, proportion);
 					if (succeed)
 					{
 						face.m_faceGrade = 2;
@@ -417,15 +419,15 @@ void LogWood::CalculateGradingData(std::vector<LogGrading>& logGrading) const
 						face.m_clearCuttingMinProportion = proportion;
 					}
 				}
-				const auto cuttings3 = CalculateCuttings(defectMarks, heightStep, FeetToMeter(3));
+				const auto cuttings3 = CalculateCuttings(defectMarks, intersectionLength, FeetToMeter(3), tempLogGrading.m_startHeightInMeters);
 				if (!succeed && tempLogGrading.m_scalingDiameterInMeters > InchesToMeters(20)
-					&& m_lengthWithoutTrimInMeters >= FeetToMeter(10))
+					&& tempLogGrading.m_lengthWithoutTrimInMeters >= FeetToMeter(10))
 				{
 					//F1: Butt & uppers, Scaling diameter 20+, Length 10+
 					//const auto cuttings3 = CalculateCuttings(defectMarks, heightStep, FeetToMeter(3));
 					float minCuttingLength = 0.0f;
 					float proportion = 0.0f;
-					succeed = TestCutting(cuttings3, 2, 5.0f / 6.0f, m_lengthWithoutTrimInMeters, minCuttingLength, proportion);
+					succeed = TestCutting(cuttings3, 2, 5.0f / 6.0f, tempLogGrading.m_lengthWithoutTrimInMeters, minCuttingLength, proportion);
 					if (succeed)
 					{
 						face.m_faceGrade = 3;
@@ -436,12 +438,12 @@ void LogWood::CalculateGradingData(std::vector<LogGrading>& logGrading) const
 				}
 
 				if (!succeed && tempLogGrading.m_scalingDiameterInMeters > InchesToMeters(11)
-					&& m_lengthWithoutTrimInMeters >= FeetToMeter(10))
+					&& tempLogGrading.m_lengthWithoutTrimInMeters >= FeetToMeter(10))
 				{
 					//F2: Butt & uppers, Scaling diameter 11+, Length 10+
 					float minCuttingLength = 0.0f;
 					float proportion = 0.0f;
-					succeed = TestCutting(cuttings3, 2, 2.0f / 3.0f, m_lengthWithoutTrimInMeters, minCuttingLength, proportion);
+					succeed = TestCutting(cuttings3, 2, 2.0f / 3.0f, tempLogGrading.m_lengthWithoutTrimInMeters, minCuttingLength, proportion);
 					if (succeed)
 					{
 						face.m_faceGrade = 4;
@@ -451,12 +453,12 @@ void LogWood::CalculateGradingData(std::vector<LogGrading>& logGrading) const
 					}
 				}
 				if (!succeed && tempLogGrading.m_scalingDiameterInMeters > InchesToMeters(12)
-					&& m_lengthWithoutTrimInMeters > FeetToMeter(8) && m_lengthWithoutTrimInMeters <= FeetToMeter(10))
+					&& tempLogGrading.m_lengthWithoutTrimInMeters > FeetToMeter(8) && tempLogGrading.m_lengthWithoutTrimInMeters <= FeetToMeter(10))
 				{
 					//F2: Butt & uppers, Scaling diameter 12+, Length 8-9(10)
 					float minCuttingLength = 0.0f;
 					float proportion = 0.0f;
-					succeed = TestCutting(cuttings3, 2, 3.0f / 4.0f, m_lengthWithoutTrimInMeters, minCuttingLength, proportion);
+					succeed = TestCutting(cuttings3, 2, 3.0f / 4.0f, tempLogGrading.m_lengthWithoutTrimInMeters, minCuttingLength, proportion);
 					if (succeed)
 					{
 						face.m_faceGrade = 5;
@@ -466,12 +468,12 @@ void LogWood::CalculateGradingData(std::vector<LogGrading>& logGrading) const
 					}
 				}
 				if (!succeed && tempLogGrading.m_scalingDiameterInMeters > InchesToMeters(12)
-					&& m_lengthWithoutTrimInMeters > FeetToMeter(10) && m_lengthWithoutTrimInMeters <= FeetToMeter(12))
+					&& tempLogGrading.m_lengthWithoutTrimInMeters > FeetToMeter(10) && tempLogGrading.m_lengthWithoutTrimInMeters <= FeetToMeter(12))
 				{
 					//F2: Butt & uppers, Scaling diameter 12+, Length 10-11(12)
 					float minCuttingLength = 0.0f;
 					float proportion = 0.0f;
-					succeed = TestCutting(cuttings3, 2, 2.0f / 3.0f, m_lengthWithoutTrimInMeters, minCuttingLength, proportion);
+					succeed = TestCutting(cuttings3, 2, 2.0f / 3.0f, tempLogGrading.m_lengthWithoutTrimInMeters, minCuttingLength, proportion);
 					if (succeed)
 					{
 						face.m_faceGrade = 6;
@@ -481,12 +483,12 @@ void LogWood::CalculateGradingData(std::vector<LogGrading>& logGrading) const
 					}
 				}
 				if (!succeed && tempLogGrading.m_scalingDiameterInMeters > InchesToMeters(12)
-					&& m_lengthWithoutTrimInMeters > FeetToMeter(12))
+					&& tempLogGrading.m_lengthWithoutTrimInMeters > FeetToMeter(12))
 				{
 					//F2: Butt & uppers, Scaling diameter 12+, Length 12+
 					float minCuttingLength = 0.0f;
 					float proportion = 0.0f;
-					succeed = TestCutting(cuttings3, 3, 2.0f / 3.0f, m_lengthWithoutTrimInMeters, minCuttingLength, proportion);
+					succeed = TestCutting(cuttings3, 3, 2.0f / 3.0f, tempLogGrading.m_lengthWithoutTrimInMeters, minCuttingLength, proportion);
 					if (succeed)
 					{
 						face.m_faceGrade = 7;
@@ -495,14 +497,14 @@ void LogWood::CalculateGradingData(std::vector<LogGrading>& logGrading) const
 						face.m_clearCuttingMinProportion = proportion;
 					}
 				}
-				const auto cuttings2 = CalculateCuttings(defectMarks, heightStep, FeetToMeter(2));
+				const auto cuttings2 = CalculateCuttings(defectMarks, intersectionLength, FeetToMeter(2), tempLogGrading.m_startHeightInMeters);
 				if (!succeed && tempLogGrading.m_scalingDiameterInMeters > InchesToMeters(8)
-					&& m_lengthWithoutTrimInMeters > FeetToMeter(8))
+					&& tempLogGrading.m_lengthWithoutTrimInMeters > FeetToMeter(8))
 				{
 					//F3: Butt & uppers, Scaling diameter 8+, Length 8+
 					float minCuttingLength = 0.0f;
 					float proportion = 0.0f;
-					succeed = TestCutting(cuttings2, 999, 1.0f / 2.0f, m_lengthWithoutTrimInMeters, minCuttingLength, proportion);
+					succeed = TestCutting(cuttings2, 999, 1.0f / 2.0f, tempLogGrading.m_lengthWithoutTrimInMeters, minCuttingLength, proportion);
 					if (succeed)
 					{
 						face.m_faceGrade = 8;
@@ -515,7 +517,7 @@ void LogWood::CalculateGradingData(std::vector<LogGrading>& logGrading) const
 				{
 					float minCuttingLength = 0.0f;
 					float proportion = 0.0f;
-					succeed = TestCutting(cuttings2, 999, 0.f, m_lengthWithoutTrimInMeters, minCuttingLength, proportion);
+					succeed = TestCutting(cuttings2, 999, 0.f, tempLogGrading.m_lengthWithoutTrimInMeters, minCuttingLength, proportion);
 					face.m_faceGrade = 9;
 					face.m_clearCuttings = cuttings2;
 					face.m_clearCuttingMinLengthInMeters = minCuttingLength;
@@ -563,7 +565,8 @@ void LogWood::CalculateGradingData(std::vector<LogGrading>& logGrading) const
 
 void LogWood::ColorBasedOnGrading(const LogGrading& logGradingData)
 {
-	const float heightStep = m_lengthWithoutTrimInMeters / m_intersections.size();
+	const float intersectionLength = m_length / m_intersections.size();
+	const int gradingSectionIntersectionCount = glm::ceil(FeetToMeter(12) / intersectionLength);
 	for (const auto& face : logGradingData.m_faces)
 	{
 		for (int intersectionIndex = 0; intersectionIndex < m_intersections.size(); intersectionIndex++)
@@ -573,12 +576,17 @@ void LogWood::ColorBasedOnGrading(const LogGrading& logGradingData)
 			{
 				const int actualAngle = (face.m_startAngle + angle) % 360;
 				auto& point = intersection.m_boundary[actualAngle];
+				if(intersectionIndex < logGradingData.m_startIntersectionIndex || intersectionIndex > logGradingData.m_startIntersectionIndex + gradingSectionIntersectionCount)
+				{
+					point.m_color = glm::vec4(0, 0, 0, 1);
+					continue;
+				}
 				if (point.m_defectStatus != 0.0f)
 				{
 					point.m_color = glm::vec4(1, 0, 0, 1);
 					continue;
 				}
-				const float height = heightStep * intersectionIndex;
+				const float height = intersectionLength * intersectionIndex;
 				bool isCutting = false;
 				for(const auto& cutting : face.m_clearCuttings)
 				{

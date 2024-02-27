@@ -8,7 +8,7 @@ bool ProceduralLogParameters::OnInspect()
 	if (ImGui::TreeNode("Procedural Log Parameters"))
 	{
 		if (ImGui::Checkbox("Butt only", &m_bottom)) changed = true;
-		if (ImGui::DragFloat("Length without trim (Feet)", &m_lengthWithoutTrimInFeet)) changed = true;
+		if (ImGui::DragFloat("Height (Feet)", &m_lengthWithoutTrimInFeet)) changed = true;
 		if (ImGui::DragFloat("Large End Diameter (Inch)", &m_largeEndDiameterInInches)) changed = true;
 		if (ImGui::DragFloat("Small End Diameter (Inch)", &m_smallEndDiameterInInches)) changed = true;
 		ImGui::Combo("Mode", { "Sweep", "Crook" }, m_mode);
@@ -58,24 +58,26 @@ void LogGrader::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 	if (ImGui::TreeNode("Log Mesh Generation"))
 	{
 		ImGui::DragFloat("Y Subdivision", &m_logWoodMeshGenerationSettings.m_ySubdivision, 0.01f, 0.01f, 0.5f);
+		static int rotateDegrees = 10;
+		ImGui::DragInt("Degrees", &rotateDegrees, 1, 1, 360);
+		if (ImGui::Button(("Rotate " + std::to_string(rotateDegrees) + " degrees").c_str()))
+		{
+			m_logWood.Rotate(rotateDegrees);
+			m_bestGradingIndex = 0;
+			m_logWood.CalculateGradingData(m_availableBestGrading);
+			m_logWood.ColorBasedOnGrading(m_availableBestGrading[m_bestGradingIndex]);
+			RefreshMesh(m_availableBestGrading[m_bestGradingIndex]);
+		}
+
 		if (ImGui::Button("Initialize Mesh Renderer")) InitializeMeshRenderer(m_logWoodMeshGenerationSettings);
 		ImGui::TreePop();
 	}
-	static int rotateDegrees = 10;
-	ImGui::DragInt("Degrees", &rotateDegrees, 1, 1, 360);
-	if (ImGui::Button(("Rotate " + std::to_string(rotateDegrees) + " degrees").c_str()))
-	{
-		m_logWood.Rotate(rotateDegrees);
-		m_bestGradingIndex = 0;
-		m_logWood.CalculateGradingData(m_availableBestGrading);
-		m_logWood.ColorBasedOnGrading(m_availableBestGrading[m_bestGradingIndex]);
-		RefreshMesh(m_availableBestGrading[m_bestGradingIndex]);
-	}
-
+	
 	
 	if (ImGui::Button("Clear Defects"))
 	{
 		m_bestGradingIndex = 0;
+		m_logWood.ClearDefects();
 		m_logWood.CalculateGradingData(m_availableBestGrading);
 		m_logWood.ColorBasedOnGrading(m_availableBestGrading[m_bestGradingIndex]);
 		RefreshMesh(m_availableBestGrading[m_bestGradingIndex]);
@@ -231,9 +233,9 @@ void LogGrader::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 void LogGrader::InitializeLogRandomly(const ProceduralLogParameters& proceduralLogParameters, const std::shared_ptr<BranchShape>& branchShape)
 {
 	m_logWood.m_intersections.clear();
-	m_logWood.m_lengthWithoutTrimInMeters = LogWood::FeetToMeter(proceduralLogParameters.m_lengthWithoutTrimInFeet);
+	m_logWood.m_length = LogWood::FeetToMeter(proceduralLogParameters.m_lengthWithoutTrimInFeet);
 	const auto lengthStepInMeters = LogWood::InchesToMeters(proceduralLogParameters.m_lengthStepInInches);
-	m_logWood.m_intersections.resize(glm::max(1.0f, m_logWood.m_lengthWithoutTrimInMeters / lengthStepInMeters));
+	m_logWood.m_intersections.resize(glm::max(1.0f, m_logWood.m_length / lengthStepInMeters));
 
 	for (int intersectionIndex = 0; intersectionIndex < m_logWood.m_intersections.size(); intersectionIndex++)
 	{
@@ -266,7 +268,7 @@ void LogGrader::InitializeLogRandomly(const ProceduralLogParameters& proceduralL
 std::shared_ptr<Mesh> LogGrader::GenerateCylinderMesh(const LogWoodMeshGenerationSettings& meshGeneratorSettings) const
 {
 	if (m_logWood.m_intersections.size() < 2) return {};
-	const float logLength = m_logWood.m_lengthWithoutTrimInMeters;
+	const float logLength = m_logWood.m_length;
 	const int yStepSize = logLength / meshGeneratorSettings.m_ySubdivision;
 	const float yStep = logLength / yStepSize;
 
@@ -326,7 +328,7 @@ std::shared_ptr<Mesh> LogGrader::GenerateFlatMesh(const LogWoodMeshGenerationSet
 	const float avgDistance = m_logWood.GetAverageDistance();
 	const float circleLength = 2.0f * glm::pi<float>() * avgDistance;
 	const float flatXStep = circleLength / 360;
-	const float logLength = m_logWood.m_lengthWithoutTrimInMeters;
+	const float logLength = m_logWood.m_length;
 	const int yStepSize = logLength / meshGeneratorSettings.m_ySubdivision;
 	const float yStep = logLength / yStepSize;
 

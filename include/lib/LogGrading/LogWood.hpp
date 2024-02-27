@@ -42,10 +42,12 @@ namespace EcoSysLab
 	struct LogGrading
 	{
 		int m_angleOffset = 0;
-		float m_gradingSectionInFeet = 12.f;
+		float m_lengthWithoutTrimInMeters = 0.0f;
 		float m_scalingDiameterInMeters = 0;
 		int m_gradeDetermineFaceIndex = 0;
 		int m_grade = 0;
+		int m_startIntersectionIndex = 0;
+		float m_startHeightInMeters = 0.0f;
 		LogGradingFace m_faces[4]{};
 	};
 
@@ -57,7 +59,7 @@ namespace EcoSysLab
 		static float MetersToInches(float meters);
 		static float MetersToFeet(float meters);
 		bool m_butt = true;
-		float m_lengthWithoutTrimInMeters = 0.0f;
+		float m_length = 0.0f;
 		std::vector<LogWoodIntersection> m_intersections;
 		[[nodiscard]] glm::vec2 GetSurfacePoint(float height, float angle) const;
 		[[nodiscard]] float GetCenterDistance(float height, float angle) const;
