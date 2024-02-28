@@ -15,7 +15,7 @@ namespace EcoSysLab
 	{
 	public:
 		bool m_bottom = true;
-
+		bool m_soundDefect = false;
 		float m_lengthWithoutTrimInFeet = 16.0f;
 		float m_lengthStepInInches = 1.f;
 		float m_largeEndDiameterInInches = 25.f;

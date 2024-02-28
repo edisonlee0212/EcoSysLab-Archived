@@ -5,21 +5,22 @@ using namespace EcoSysLab;
 bool ProceduralLogParameters::OnInspect()
 {
 	bool changed = false;
-	if (ImGui::TreeNode("Procedural Log Parameters"))
+	if (ImGui::TreeNodeEx("Log Parameters", ImGuiTreeNodeFlags_DefaultOpen))
 	{
 		if (ImGui::Checkbox("Butt only", &m_bottom)) changed = true;
 		if (ImGui::DragFloat("Height (Feet)", &m_lengthWithoutTrimInFeet)) changed = true;
 		if (ImGui::DragFloat("Large End Diameter (Inch)", &m_largeEndDiameterInInches)) changed = true;
 		if (ImGui::DragFloat("Small End Diameter (Inch)", &m_smallEndDiameterInInches)) changed = true;
-		ImGui::Combo("Mode", { "Sweep", "Crook" }, m_mode);
+		if (ImGui::Checkbox("Less than 1/4 sound defects", &m_soundDefect)) changed = true;
+		if (ImGui::Combo("Mode", { "Sweep", "Crook" }, m_mode)) changed = true;
 		if (m_mode == 0) {
-			ImGui::DragFloat("Sweep (Inch)", &m_spanInInches, 0.1f, .0f, 100.f);
-			ImGui::DragFloat("Sweep Angle", &m_angle, 1.f, .0f, 360.f);
+			if (ImGui::DragFloat("Sweep (Inch)", &m_spanInInches, 0.1f, .0f, 100.f)) changed = true;
+			if (ImGui::DragFloat("Sweep Angle", &m_angle, 1.f, .0f, 360.f)) changed = true;
 		}
 		else {
-			ImGui::DragFloat("Crook (Inch)", &m_spanInInches, 0.1f, .0f, 100.f);
-			ImGui::DragFloat("Crook Angle", &m_angle, 1.f, .0f, 360.f);
-			ImGui::SliderFloat("Crook Ratio", &m_crookRatio, 0.f, 1.f);
+			if (ImGui::DragFloat("Crook (Inch)", &m_spanInInches, 0.1f, .0f, 100.f)) changed = true;
+			if (ImGui::DragFloat("Crook Angle", &m_angle, 1.f, .0f, 360.f)) changed = true;
+			if (ImGui::SliderFloat("Crook Ratio", &m_crookRatio, 0.f, 1.f)) changed = true;
 			ImGui::Text(("CL: " + std::to_string(m_lengthWithoutTrimInFeet * (1.f - m_crookRatio)) + " feet.").c_str());
 		}
 
@@ -40,7 +41,7 @@ void LogGrader::RefreshMesh(const LogGrading& logGrading)
 void LogGrader::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
 	m_proceduralLogParameters.OnInspect();
-	editorLayer->DragAndDropButton<BranchShape>(m_branchShape, "Branch Shape", true);
+	
 	if (ImGui::Button("Initialize Log"))
 	{
 		auto branchShape = m_branchShape.Get<BranchShape>();
@@ -58,6 +59,7 @@ void LogGrader::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 	}
 	if (ImGui::TreeNode("Log Mesh Generation"))
 	{
+		//editorLayer->DragAndDropButton<BranchShape>(m_branchShape, "Branch Shape", true);
 		ImGui::DragFloat("Y Subdivision", &m_logWoodMeshGenerationSettings.m_ySubdivision, 0.01f, 0.01f, 0.5f);
 		static int rotateDegrees = 10;
 		ImGui::DragInt("Degrees", &rotateDegrees, 1, 1, 360);
@@ -73,8 +75,8 @@ void LogGrader::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 		if (ImGui::Button("Initialize Mesh Renderer")) InitializeMeshRenderer(m_logWoodMeshGenerationSettings);
 		ImGui::TreePop();
 	}
-	
-	
+
+
 	if (ImGui::Button("Clear Defects"))
 	{
 		m_bestGradingIndex = 0;
@@ -85,24 +87,28 @@ void LogGrader::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 	}
 
 	static bool debugVisualization = true;
-	ImGui::Checkbox("Visualization", &debugVisualization);
+	
 	static int rotationAngle = 0;
 	if (debugVisualization)
 	{
 		static bool enableDefectSelection = true;
 		static bool eraseMode = false;
-		ImGui::Checkbox("Enable Defect Marker", &enableDefectSelection);
+		ImGui::Checkbox("Defect Marker", &enableDefectSelection);
+		static float defectHeightRange = 0.1f;
+		static int defectAngleRange = 10.0f;
+		if(ImGui::TreeNode("Marker Settings"))
+		{
+			ImGui::Checkbox("Erase mode", &eraseMode);
+			ImGui::DragFloat("Defect Marker Y", &defectHeightRange, 0.01f, 0.03f, 1.0f);
+			ImGui::DragInt("Defect Marker X", &defectAngleRange, 1, 3, 30);
+		}
 		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 0, 0, 1));
 		ImGui::Text("Press F for marking");
 		ImGui::PopStyleColor();
-		ImGui::Checkbox("Erase mode", &eraseMode);
+		
 		Transform transform{};
 		transform.SetEulerRotation(glm::radians(glm::vec3(0, rotationAngle, 0)));
 		if (enableDefectSelection) {
-			static float defectHeightRange = 0.1f;
-			static int defectAngleRange = 10.0f;
-			ImGui::DragFloat("Defect Marker Y", &defectHeightRange, 0.01f, 0.03f, 1.0f);
-			ImGui::DragInt("Defect Marker X", &defectAngleRange, 1, 3, 30);
 			static std::vector<glm::vec2> mousePositions{};
 			if (editorLayer->SceneCameraWindowFocused() && editorLayer->GetLockEntitySelection() && editorLayer->GetSelectedEntity() == GetOwner()) {
 				if (editorLayer->GetKey(GLFW_MOUSE_BUTTON_RIGHT) == KeyActionType::Press)
@@ -138,35 +144,36 @@ void LogGrader::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 					m_logWood.ColorBasedOnGrading(m_availableBestGrading[m_bestGradingIndex]);
 					RefreshMesh(m_availableBestGrading[m_bestGradingIndex]);
 				}
-			}else
+			}
+			else
 			{
 				mousePositions.clear();
 			}
 		}
-		ImGui::DragInt("Rotation angle", &rotationAngle, 1, 0, 360);
+		ImGui::SliderInt("Rotation angle", &rotationAngle, 0, 360);
 		GizmoSettings gizmoSettings{};
 		gizmoSettings.m_colorMode = GizmoSettings::ColorMode::VertexColor;
 		const float avgDistance = m_logWood.GetMaxAverageDistance();
 		const float circleLength = 2.0f * glm::pi<float>() * avgDistance;
-		float xOffset = avgDistance * 1.5f;
+		
 
 		if (m_tempCylinderMesh) editorLayer->DrawGizmoMesh(m_tempCylinderMesh, glm::vec4(1.0f), transform.m_value, 1.f, gizmoSettings);
 
-		transform.SetPosition({ xOffset , 0, 0 });
+		float xLeftOffset = -avgDistance * 1.5f - circleLength / 4.0f;
+		transform.SetPosition({ xLeftOffset , 0, 0 });
 		transform.SetEulerRotation(glm::radians(glm::vec3(0, 180, 0)));
 		if (m_tempFlatMesh1) editorLayer->DrawGizmoMesh(m_tempFlatMesh1, glm::vec4(1.0f), transform.m_value, 1.f, gizmoSettings);
-		xOffset += circleLength / 4.0f + 0.2f;
-		transform.SetPosition({ xOffset , 0, 0 });
+		xLeftOffset -= circleLength / 4.0f + 0.2f;
+		transform.SetPosition({ xLeftOffset , 0, 0 });
 		if (m_tempFlatMesh2) editorLayer->DrawGizmoMesh(m_tempFlatMesh2, glm::vec4(1.0f), transform.m_value, 1.f, gizmoSettings);
-		xOffset += circleLength / 4.0f + 0.2f;
-		transform.SetPosition({ xOffset , 0, 0 });
+
+		float xRightOffset = avgDistance * 1.5f;
+		transform.SetPosition({ xRightOffset , 0, 0 });
 		if (m_tempFlatMesh3) editorLayer->DrawGizmoMesh(m_tempFlatMesh3, glm::vec4(1.0f), transform.m_value, 1.f, gizmoSettings);
-		xOffset += circleLength / 4.0f + 0.2f;
-		transform.SetPosition({ xOffset , 0, 0 });
+		xRightOffset += circleLength / 4.0f + 0.2f;
+		transform.SetPosition({ xRightOffset , 0, 0 });
 		if (m_tempFlatMesh4) editorLayer->DrawGizmoMesh(m_tempFlatMesh4, glm::vec4(1.0f), transform.m_value, 1.f, gizmoSettings);
 	}
-
-	
 
 	if (!m_availableBestGrading.empty()) {
 		std::string grading = "Current grading: ";
@@ -195,10 +202,17 @@ void LogGrader::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 		}
 
 		const auto& currentBestGrading = m_availableBestGrading[m_bestGradingIndex];
+		ImGui::Text(("Scaling diameter (Inch): " + std::to_string(LogWood::MetersToInches(currentBestGrading.m_scalingDiameterInMeters))).c_str());
+		ImGui::Text(("Length without trim (Feet): " + std::to_string(LogWood::MetersToFeet(currentBestGrading.m_lengthWithoutTrimInMeters))).c_str());
+		ImGui::Separator();
 		ImGui::Text(("Crook Deduction: " + std::to_string(currentBestGrading.m_crookDeduction)).c_str());
 		ImGui::Text(("Sweep Deduction: " + std::to_string(currentBestGrading.m_sweepDeduction)).c_str());
+		ImGui::Separator();
+		ImGui::Text(("Doyle Rule: " + std::to_string(currentBestGrading.m_doyleRuleScale)).c_str());
+		ImGui::Text(("Scribner Rule: " + std::to_string(currentBestGrading.m_scribnerRuleScale)).c_str());
+		ImGui::Text(("International Rule: " + std::to_string(currentBestGrading.m_internationalRuleScale)).c_str());
 
-		ImGui::Text(("Scaling diameter (Inch): " + std::to_string(currentBestGrading.m_scalingDiameterInMeters)).c_str());
+		
 		ImGui::Text(("Grade determine face index: " + std::to_string(currentBestGrading.m_gradeDetermineFaceIndex)).c_str());
 		if (ImGui::TreeNode("Grading details"))
 		{
@@ -238,6 +252,8 @@ void LogGrader::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 			ImGui::TreePop();
 		}
 	}
+
+	ImGui::Checkbox("Visualization", &debugVisualization);
 }
 
 void LogGrader::InitializeLogRandomly(const ProceduralLogParameters& proceduralLogParameters, const std::shared_ptr<BranchShape>& branchShape)
@@ -251,12 +267,22 @@ void LogGrader::InitializeLogRandomly(const ProceduralLogParameters& proceduralL
 	m_logWood.m_crookCInInches = 0.0f;
 	m_logWood.m_crookCLInFeet = 0.0f;
 
+	m_logWood.m_soundDefect = proceduralLogParameters.m_soundDefect;
+
 	if (proceduralLogParameters.m_mode == 0) {
 		m_logWood.m_sweepInInches = proceduralLogParameters.m_spanInInches;
-	}else
+	}
+	else
 	{
 		m_logWood.m_crookCInInches = proceduralLogParameters.m_spanInInches;
 		m_logWood.m_crookCLInFeet = proceduralLogParameters.m_lengthWithoutTrimInFeet * (1.f - proceduralLogParameters.m_crookRatio);
+	}
+	float theta = 0.0f;
+	float r = 0.0f;
+	if (proceduralLogParameters.m_mode == 0)
+	{
+		theta = 2.f * glm::atan(LogWood::InchesToMeters(proceduralLogParameters.m_spanInInches) / (m_logWood.m_length / 2.0f));
+		r = m_logWood.m_length / 2.0f / glm::sin(theta);
 	}
 	for (int intersectionIndex = 0; intersectionIndex < m_logWood.m_intersections.size(); intersectionIndex++)
 	{
@@ -266,8 +292,9 @@ void LogGrader::InitializeLogRandomly(const ProceduralLogParameters& proceduralL
 		if (proceduralLogParameters.m_spanInInches != 0.f) {
 			if (proceduralLogParameters.m_mode == 0) {
 				const glm::vec2 sweepDirection = glm::vec2(glm::cos(glm::radians(proceduralLogParameters.m_angle)), glm::sin(glm::radians(proceduralLogParameters.m_angle)));
-				const float actualA = 1.f - glm::abs(1.f - 2.f * a);
-				intersection.m_center = sweepDirection * glm::pow(actualA, 0.3f) * LogWood::InchesToMeters(proceduralLogParameters.m_spanInInches);
+				const float height = glm::abs(0.5f - a) * m_logWood.m_length;
+				const float actualSpan = glm::sqrt(r * r - height * height) - glm::cos(theta) * r;
+				intersection.m_center = sweepDirection * actualSpan;
 			}
 			else if (a > proceduralLogParameters.m_crookRatio)
 			{
@@ -280,7 +307,7 @@ void LogGrader::InitializeLogRandomly(const ProceduralLogParameters& proceduralL
 		for (int boundaryPointIndex = 0; boundaryPointIndex < 360; boundaryPointIndex++)
 		{
 			auto& boundaryPoint = intersection.m_boundary.at(boundaryPointIndex);
-			boundaryPoint.m_centerDistance = radius * branchShape->GetValue(static_cast<float>(boundaryPointIndex) / 360.0f, intersectionIndex * proceduralLogParameters.m_lengthStepInInches);
+			boundaryPoint.m_centerDistance = radius;// *branchShape->GetValue(static_cast<float>(boundaryPointIndex) / 360.0f, intersectionIndex * proceduralLogParameters.m_lengthStepInInches);
 			boundaryPoint.m_defectStatus = 0.0f;
 		}
 	}

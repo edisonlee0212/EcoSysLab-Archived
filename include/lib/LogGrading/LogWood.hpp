@@ -41,6 +41,10 @@ namespace EcoSysLab
 
 	struct LogGrading
 	{
+		float m_doyleRuleScale = 0.0f;
+		float m_scribnerRuleScale = 0.0f;
+		float m_internationalRuleScale = 0.0f;
+
 		float m_crookDeduction = 0.0f;
 		float m_sweepDeduction = 0.0f;
 		int m_angleOffset = 0;
@@ -65,6 +69,7 @@ namespace EcoSysLab
 		float m_sweepInInches = 0.0f;
 		float m_crookCInInches = 0.0f;
 		float m_crookCLInFeet = 0.0f;
+		bool m_soundDefect = false;
 		std::vector<LogWoodIntersection> m_intersections;
 		[[nodiscard]] glm::vec2 GetSurfacePoint(float height, float angle) const;
 		[[nodiscard]] float GetCenterDistance(float height, float angle) const;

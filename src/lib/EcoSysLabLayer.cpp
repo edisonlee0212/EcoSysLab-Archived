@@ -3,9 +3,9 @@
 //
 
 #include "EcoSysLabLayer.hpp"
-
+#ifdef BUILD_WITH_RAYTRACER
 #include <RayTracerLayer.hpp>
-
+#endif
 #include "BranchShape.hpp"
 #include "Times.hpp"
 
@@ -182,7 +182,9 @@ void EcoSysLabLayer::Visualization() {
 			auto& treeModel = tree->m_treeModel;
 			auto& treeVisualizer = tree->m_treeVisualizer;
 			const auto globalTransform = scene->GetDataComponent<GlobalTransform>(m_selectedTree);
+#ifdef BUILD_WITH_RAYTRACER
 			const auto rayTracerLayer = Application::GetLayer<RayTracerLayer>();
+#endif
 			if (editorLayer->GetKey(GLFW_MOUSE_BUTTON_RIGHT) == KeyActionType::Release
 				&& treeVisualizer.m_checkpointIteration == treeModel.CurrentIteration())
 			{
@@ -324,6 +326,7 @@ void EcoSysLabLayer::Visualization() {
 							ImGui::End();
 							ImGui::PopStyleVar();
 						}
+#ifdef BUILD_WITH_RAYTRACER
 						else if(rayTracerLayer){
 							ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{ 0, 0 });
 							if (ImGui::Begin("Scene (RT)")) {
@@ -382,6 +385,7 @@ void EcoSysLabLayer::Visualization() {
 							ImGui::End();
 							ImGui::PopStyleVar();
 						}
+#endif
 					}
 					if (m_visualizationCameraWindowFocused) {
 						if (editorLayer->GetKey(GLFW_MOUSE_BUTTON_LEFT) == KeyActionType::Press) {
