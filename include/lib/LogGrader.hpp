@@ -32,11 +32,17 @@ namespace EcoSysLab
 	class LogGrader : public IPrivateComponent
 	{
 		std::shared_ptr<Mesh> m_tempCylinderMesh{};
+
+		std::shared_ptr<ParticleInfoList> m_surface1;
+		std::shared_ptr<ParticleInfoList> m_surface2;
+		std::shared_ptr<ParticleInfoList> m_surface3;
+		std::shared_ptr<ParticleInfoList> m_surface4;
+
 		std::shared_ptr<Mesh> m_tempFlatMesh1{};
 		std::shared_ptr<Mesh> m_tempFlatMesh2{};
 		std::shared_ptr<Mesh> m_tempFlatMesh3{};
 		std::shared_ptr<Mesh> m_tempFlatMesh4{};
-		void RefreshMesh(const LogGrading& logGrading);
+		void RefreshMesh(const LogGrading& logGrading) const;
 	public:
 		int m_bestGradingIndex = 0;
 		std::vector<LogGrading> m_availableBestGrading{};
@@ -46,8 +52,9 @@ namespace EcoSysLab
 		void InitializeLogRandomly(const ProceduralLogParameters& proceduralLogParameters, const std::shared_ptr<BranchShape>& branchShape);
 		LogWoodMeshGenerationSettings m_logWoodMeshGenerationSettings{};
 		LogWood m_logWood{};
-		[[nodiscard]] std::shared_ptr<Mesh> GenerateCylinderMesh(const LogWoodMeshGenerationSettings& meshGeneratorSettings) const;
-		[[nodiscard]] std::shared_ptr<Mesh> GenerateFlatMesh(const LogWoodMeshGenerationSettings& meshGeneratorSettings, int startX, int endX) const;
+		void GenerateCylinderMesh(const std::shared_ptr<Mesh>& mesh, const LogWoodMeshGenerationSettings& meshGeneratorSettings) const;
+		void GenerateFlatMesh(const std::shared_ptr<Mesh>& mesh, const LogWoodMeshGenerationSettings& meshGeneratorSettings, int startX, int endX) const;
+		void GenerateSurface(const std::shared_ptr<ParticleInfoList>& surface, const LogWoodMeshGenerationSettings& meshGeneratorSettings, int startX, int endX) const;
 		void OnCreate() override;
 		void InitializeMeshRenderer(const LogWoodMeshGenerationSettings& meshGeneratorSettings) const;
 		void ClearMeshRenderer() const;

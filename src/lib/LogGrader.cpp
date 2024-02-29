@@ -23,19 +23,38 @@ bool ProceduralLogParameters::OnInspect()
 			if (ImGui::SliderFloat("Crook Ratio", &m_crookRatio, 0.f, 1.f)) changed = true;
 			ImGui::Text(("CL: " + std::to_string(m_lengthWithoutTrimInFeet * (1.f - m_crookRatio)) + " feet.").c_str());
 		}
+		if(ImGui::Button("Reset"))
+		{
+			m_bottom = true;
+			m_soundDefect = false;
+			m_lengthWithoutTrimInFeet = 16.0f;
+			m_lengthStepInInches = 1.f;
+			m_largeEndDiameterInInches = 25.f;
+			m_smallEndDiameterInInches = 20.f;
 
+			m_mode = 0;
+			m_spanInInches = 0.0f;
+			m_angle = 180.0f;
+			m_crookRatio = 0.7f;
+			changed = true;
+		}
 		ImGui::TreePop();
 	}
 	return changed;
 }
 
-void LogGrader::RefreshMesh(const LogGrading& logGrading)
+void LogGrader::RefreshMesh(const LogGrading& logGrading) const
 {
-	m_tempCylinderMesh = GenerateCylinderMesh(m_logWoodMeshGenerationSettings);
-	m_tempFlatMesh1 = GenerateFlatMesh(m_logWoodMeshGenerationSettings, 90 + logGrading.m_angleOffset, 180 + logGrading.m_angleOffset);
-	m_tempFlatMesh2 = GenerateFlatMesh(m_logWoodMeshGenerationSettings, 0 + logGrading.m_angleOffset, 90 + logGrading.m_angleOffset);
-	m_tempFlatMesh3 = GenerateFlatMesh(m_logWoodMeshGenerationSettings, 270 + logGrading.m_angleOffset, 360 + logGrading.m_angleOffset);
-	m_tempFlatMesh4 = GenerateFlatMesh(m_logWoodMeshGenerationSettings, 180 + logGrading.m_angleOffset, 270 + logGrading.m_angleOffset);
+	GenerateCylinderMesh(m_tempCylinderMesh, m_logWoodMeshGenerationSettings);
+	
+	GenerateSurface(m_surface4, m_logWoodMeshGenerationSettings, 270 + logGrading.m_angleOffset, 360 + logGrading.m_angleOffset);
+	GenerateSurface(m_surface3, m_logWoodMeshGenerationSettings, 0 + logGrading.m_angleOffset, 90 + logGrading.m_angleOffset);
+	GenerateSurface(m_surface2, m_logWoodMeshGenerationSettings, 180 + logGrading.m_angleOffset, 270 + logGrading.m_angleOffset);
+	GenerateSurface(m_surface1, m_logWoodMeshGenerationSettings, 90 + logGrading.m_angleOffset, 180 + logGrading.m_angleOffset);
+	//GenerateFlatMesh(m_tempFlatMesh1, m_logWoodMeshGenerationSettings, 90 + logGrading.m_angleOffset, 180 + logGrading.m_angleOffset);
+	//GenerateFlatMesh(m_tempFlatMesh2, m_logWoodMeshGenerationSettings, 0 + logGrading.m_angleOffset, 90 + logGrading.m_angleOffset);
+	//GenerateFlatMesh(m_tempFlatMesh3, m_logWoodMeshGenerationSettings, 270 + logGrading.m_angleOffset, 360 + logGrading.m_angleOffset);
+	//GenerateFlatMesh(m_tempFlatMesh4, m_logWoodMeshGenerationSettings, 180 + logGrading.m_angleOffset, 270 + logGrading.m_angleOffset);
 }
 
 void LogGrader::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
@@ -89,6 +108,87 @@ void LogGrader::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 	static bool debugVisualization = true;
 	
 	static int rotationAngle = 0;
+	
+
+	if (!m_availableBestGrading.empty()) {
+		
+		std::string grading = "Current grading: ";
+		if (m_availableBestGrading.front().m_grade <= 3)
+		{
+			grading.append("F1");
+		}
+		else if (m_availableBestGrading.front().m_grade <= 7)
+		{
+			grading.append("F2");
+		}
+		else if (m_availableBestGrading.front().m_grade <= 8)
+		{
+			grading.append("F3");
+		}
+		else
+		{
+			grading.append("N/A");
+		}
+		ImGui::Text(grading.c_str());
+
+		const auto& currentBestGrading = m_availableBestGrading[m_bestGradingIndex];
+		ImGui::Text(("Scaling diameter (Inch): " + std::to_string(LogWood::MetersToInches(currentBestGrading.m_scalingDiameterInMeters))).c_str());
+		ImGui::Text(("Length without trim (Feet): " + std::to_string(LogWood::MetersToFeet(currentBestGrading.m_lengthWithoutTrimInMeters))).c_str());
+		ImGui::Separator();
+		ImGui::Text(("Crook Deduction: " + std::to_string(currentBestGrading.m_crookDeduction)).c_str());
+		ImGui::Text(("Sweep Deduction: " + std::to_string(currentBestGrading.m_sweepDeduction)).c_str());
+		ImGui::Separator();
+		ImGui::Text(("Doyle Rule: " + std::to_string(currentBestGrading.m_doyleRuleScale)).c_str());
+		ImGui::Text(("Scribner Rule: " + std::to_string(currentBestGrading.m_scribnerRuleScale)).c_str());
+		ImGui::Text(("International Rule: " + std::to_string(currentBestGrading.m_internationalRuleScale)).c_str());
+		
+		if (ImGui::TreeNode("Grading details"))
+		{
+			if (ImGui::SliderInt("Grading index", &m_bestGradingIndex, 0, m_availableBestGrading.size()))
+			{
+				m_bestGradingIndex = glm::clamp(m_bestGradingIndex, 0, static_cast<int>(m_availableBestGrading.size()));
+				m_logWood.ColorBasedOnGrading(m_availableBestGrading[m_bestGradingIndex]);
+				RefreshMesh(m_availableBestGrading[m_bestGradingIndex]);
+			}
+			ImGui::Text(("Grade determine face index: " + std::to_string(currentBestGrading.m_gradeDetermineFaceIndex)).c_str());
+			ImGui::Text(("Angle offset: " + std::to_string(currentBestGrading.m_angleOffset)).c_str());
+			for (int gradingFaceIndex = 0; gradingFaceIndex < 4; gradingFaceIndex++)
+			{
+				const auto& face = currentBestGrading.m_faces[gradingFaceIndex];
+				if (ImGui::TreeNodeEx(("Face " + std::to_string(gradingFaceIndex)).c_str(), ImGuiTreeNodeFlags_DefaultOpen))
+				{
+					ImGui::Text(("Start angle: " + std::to_string(face.m_startAngle)).c_str());
+					ImGui::Text(("End angle: " + std::to_string(face.m_endAngle)).c_str());
+					ImGui::Text(("Face Grade Index: " + std::to_string(face.m_faceGrade)).c_str());
+					std::string faceGrading = "Face grading: ";
+					if (face.m_faceGrade <= 3)
+					{
+						grading.append("F1");
+					}
+					else if (face.m_faceGrade <= 7)
+					{
+						grading.append("F2");
+					}
+					else if (face.m_faceGrade <= 8)
+					{
+						grading.append("F3");
+					}
+					else
+					{
+						grading.append("N/A");
+					}
+					ImGui::Text(faceGrading.c_str());
+					ImGui::Text(("Clear Cuttings Count: " + std::to_string(face.m_clearCuttings.size())).c_str());
+					ImGui::Text(("Clear Cuttings Min Length: " + std::to_string(face.m_clearCuttingMinLengthInMeters)).c_str());
+					ImGui::Text(("Clear Cuttings Min Proportion: " + std::to_string(face.m_clearCuttingMinProportion)).c_str());
+					ImGui::TreePop();
+				}
+			}
+			ImGui::TreePop();
+		}
+	}
+
+	ImGui::Checkbox("Visualization", &debugVisualization);
 	if (debugVisualization)
 	{
 		static bool enableDefectSelection = true;
@@ -96,16 +196,20 @@ void LogGrader::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 		ImGui::Checkbox("Defect Marker", &enableDefectSelection);
 		static float defectHeightRange = 0.1f;
 		static int defectAngleRange = 10.0f;
-		if(ImGui::TreeNode("Marker Settings"))
+		if (ImGui::TreeNode("Marker Settings"))
 		{
 			ImGui::Checkbox("Erase mode", &eraseMode);
 			ImGui::DragFloat("Defect Marker Y", &defectHeightRange, 0.01f, 0.03f, 1.0f);
 			ImGui::DragInt("Defect Marker X", &defectAngleRange, 1, 3, 30);
 		}
 		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 0, 0, 1));
+		if (!editorLayer->SceneCameraWindowFocused() && editorLayer->GetKey(GLFW_KEY_F) == KeyActionType::Press)
+		{
+			EVOENGINE_WARNING("Select Scene Window FIRST!");
+		}
 		ImGui::Text("Press F for marking");
 		ImGui::PopStyleColor();
-		
+
 		Transform transform{};
 		transform.SetEulerRotation(glm::radians(glm::vec3(0, rotationAngle, 0)));
 		if (enableDefectSelection) {
@@ -155,105 +259,30 @@ void LogGrader::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 		gizmoSettings.m_colorMode = GizmoSettings::ColorMode::VertexColor;
 		const float avgDistance = m_logWood.GetMaxAverageDistance();
 		const float circleLength = 2.0f * glm::pi<float>() * avgDistance;
-		
+
 
 		if (m_tempCylinderMesh) editorLayer->DrawGizmoMesh(m_tempCylinderMesh, glm::vec4(1.0f), transform.m_value, 1.f, gizmoSettings);
 
-		float xLeftOffset = -avgDistance * 1.5f - circleLength / 4.0f;
+		float xLeftOffset = -avgDistance * 3.f - circleLength / 4.0f;
 		transform.SetPosition({ xLeftOffset , 0, 0 });
 		transform.SetEulerRotation(glm::radians(glm::vec3(0, 180, 0)));
-		if (m_tempFlatMesh1) editorLayer->DrawGizmoMesh(m_tempFlatMesh1, glm::vec4(1.0f), transform.m_value, 1.f, gizmoSettings);
+		//if (m_tempFlatMesh1) editorLayer->DrawGizmoMesh(m_tempFlatMesh1, glm::vec4(1.0f), transform.m_value, 1.f, gizmoSettings);
+		if (m_surface1) editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_QUAD"), m_surface1, transform.m_value, 1, gizmoSettings);
 		xLeftOffset -= circleLength / 4.0f + 0.2f;
 		transform.SetPosition({ xLeftOffset , 0, 0 });
-		if (m_tempFlatMesh2) editorLayer->DrawGizmoMesh(m_tempFlatMesh2, glm::vec4(1.0f), transform.m_value, 1.f, gizmoSettings);
+		//if (m_tempFlatMesh2) editorLayer->DrawGizmoMesh(m_tempFlatMesh2, glm::vec4(1.0f), transform.m_value, 1.f, gizmoSettings);
+		if (m_surface2) editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_QUAD"), m_surface2, transform.m_value, 1.f, gizmoSettings);
 
-		float xRightOffset = avgDistance * 1.5f;
+		float xRightOffset = avgDistance * 3.f;
 		transform.SetPosition({ xRightOffset , 0, 0 });
-		if (m_tempFlatMesh3) editorLayer->DrawGizmoMesh(m_tempFlatMesh3, glm::vec4(1.0f), transform.m_value, 1.f, gizmoSettings);
+		//if (m_tempFlatMesh3) editorLayer->DrawGizmoMesh(m_tempFlatMesh3, glm::vec4(1.0f), transform.m_value, 1.f, gizmoSettings);
+		if (m_surface3) editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_QUAD"), m_surface3, transform.m_value, 1.f, gizmoSettings);
+
 		xRightOffset += circleLength / 4.0f + 0.2f;
 		transform.SetPosition({ xRightOffset , 0, 0 });
-		if (m_tempFlatMesh4) editorLayer->DrawGizmoMesh(m_tempFlatMesh4, glm::vec4(1.0f), transform.m_value, 1.f, gizmoSettings);
+		//if (m_tempFlatMesh4) editorLayer->DrawGizmoMesh(m_tempFlatMesh4, glm::vec4(1.0f), transform.m_value, 1.f, gizmoSettings);
+		if (m_surface4) editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_QUAD"), m_surface4, transform.m_value, 1.f, gizmoSettings);
 	}
-
-	if (!m_availableBestGrading.empty()) {
-		std::string grading = "Current grading: ";
-		if (m_availableBestGrading.front().m_grade <= 3)
-		{
-			grading.append("F1");
-		}
-		else if (m_availableBestGrading.front().m_grade <= 7)
-		{
-			grading.append("F2");
-		}
-		else if (m_availableBestGrading.front().m_grade <= 8)
-		{
-			grading.append("F3");
-		}
-		else
-		{
-			grading.append("N/A");
-		}
-		ImGui::Text(grading.c_str());
-		if (ImGui::SliderInt("Grading index", &m_bestGradingIndex, 0, m_availableBestGrading.size()))
-		{
-			m_bestGradingIndex = glm::clamp(m_bestGradingIndex, 0, static_cast<int>(m_availableBestGrading.size()));
-			m_logWood.ColorBasedOnGrading(m_availableBestGrading[m_bestGradingIndex]);
-			RefreshMesh(m_availableBestGrading[m_bestGradingIndex]);
-		}
-
-		const auto& currentBestGrading = m_availableBestGrading[m_bestGradingIndex];
-		ImGui::Text(("Scaling diameter (Inch): " + std::to_string(LogWood::MetersToInches(currentBestGrading.m_scalingDiameterInMeters))).c_str());
-		ImGui::Text(("Length without trim (Feet): " + std::to_string(LogWood::MetersToFeet(currentBestGrading.m_lengthWithoutTrimInMeters))).c_str());
-		ImGui::Separator();
-		ImGui::Text(("Crook Deduction: " + std::to_string(currentBestGrading.m_crookDeduction)).c_str());
-		ImGui::Text(("Sweep Deduction: " + std::to_string(currentBestGrading.m_sweepDeduction)).c_str());
-		ImGui::Separator();
-		ImGui::Text(("Doyle Rule: " + std::to_string(currentBestGrading.m_doyleRuleScale)).c_str());
-		ImGui::Text(("Scribner Rule: " + std::to_string(currentBestGrading.m_scribnerRuleScale)).c_str());
-		ImGui::Text(("International Rule: " + std::to_string(currentBestGrading.m_internationalRuleScale)).c_str());
-
-		
-		ImGui::Text(("Grade determine face index: " + std::to_string(currentBestGrading.m_gradeDetermineFaceIndex)).c_str());
-		if (ImGui::TreeNode("Grading details"))
-		{
-			ImGui::Text(("Angle offset: " + std::to_string(currentBestGrading.m_angleOffset)).c_str());
-			for (int gradingFaceIndex = 0; gradingFaceIndex < 4; gradingFaceIndex++)
-			{
-				const auto& face = currentBestGrading.m_faces[gradingFaceIndex];
-				if (ImGui::TreeNodeEx(("Face " + std::to_string(gradingFaceIndex)).c_str(), ImGuiTreeNodeFlags_DefaultOpen))
-				{
-					ImGui::Text(("Start angle: " + std::to_string(face.m_startAngle)).c_str());
-					ImGui::Text(("End angle: " + std::to_string(face.m_endAngle)).c_str());
-					ImGui::Text(("Face Grade Index: " + std::to_string(face.m_faceGrade)).c_str());
-					std::string faceGrading = "Face grading: ";
-					if (face.m_faceGrade <= 3)
-					{
-						grading.append("F1");
-					}
-					else if (face.m_faceGrade <= 7)
-					{
-						grading.append("F2");
-					}
-					else if (face.m_faceGrade <= 8)
-					{
-						grading.append("F3");
-					}
-					else
-					{
-						grading.append("N/A");
-					}
-					ImGui::Text(faceGrading.c_str());
-					ImGui::Text(("Clear Cuttings Count: " + std::to_string(face.m_clearCuttings.size())).c_str());
-					ImGui::Text(("Clear Cuttings Min Length: " + std::to_string(face.m_clearCuttingMinLengthInMeters)).c_str());
-					ImGui::Text(("Clear Cuttings Min Proportion: " + std::to_string(face.m_clearCuttingMinProportion)).c_str());
-					ImGui::TreePop();
-				}
-			}
-			ImGui::TreePop();
-		}
-	}
-
-	ImGui::Checkbox("Visualization", &debugVisualization);
 }
 
 void LogGrader::InitializeLogRandomly(const ProceduralLogParameters& proceduralLogParameters, const std::shared_ptr<BranchShape>& branchShape)
@@ -313,9 +342,10 @@ void LogGrader::InitializeLogRandomly(const ProceduralLogParameters& proceduralL
 	}
 }
 
-std::shared_ptr<Mesh> LogGrader::GenerateCylinderMesh(const LogWoodMeshGenerationSettings& meshGeneratorSettings) const
+void LogGrader::GenerateCylinderMesh(const std::shared_ptr<Mesh>& mesh, const LogWoodMeshGenerationSettings& meshGeneratorSettings) const
 {
-	if (m_logWood.m_intersections.size() < 2) return {};
+	if (!mesh) return;
+	if (m_logWood.m_intersections.size() < 2) return;
 	const float logLength = m_logWood.m_length;
 	const int yStepSize = logLength / meshGeneratorSettings.m_ySubdivision;
 	const float yStep = logLength / yStepSize;
@@ -362,16 +392,15 @@ std::shared_ptr<Mesh> LogGrader::GenerateCylinderMesh(const LogWoodMeshGeneratio
 		}
 	);
 
-	const auto retVal = ProjectManager::CreateTemporaryAsset<Mesh>();
 	VertexAttributes attributes{};
 	attributes.m_texCoord = true;
-	retVal->SetVertices(attributes, vertices, indices);
-	return retVal;
+	mesh->SetVertices(attributes, vertices, indices);
 }
 
-std::shared_ptr<Mesh> LogGrader::GenerateFlatMesh(const LogWoodMeshGenerationSettings& meshGeneratorSettings, const int startX, const int endX) const
+void LogGrader::GenerateFlatMesh(const std::shared_ptr<Mesh>& mesh, const LogWoodMeshGenerationSettings& meshGeneratorSettings, const int startX, const int endX) const
 {
-	if (m_logWood.m_intersections.size() < 2) return {};
+	if(!mesh) return;
+	if (m_logWood.m_intersections.size() < 2) return;
 
 	const float avgDistance = m_logWood.GetAverageDistance();
 	const float circleLength = 2.0f * glm::pi<float>() * avgDistance;
@@ -426,15 +455,60 @@ std::shared_ptr<Mesh> LogGrader::GenerateFlatMesh(const LogWoodMeshGenerationSet
 		}
 	);
 
-	const auto retVal = ProjectManager::CreateTemporaryAsset<Mesh>();
 	VertexAttributes attributes{};
 	attributes.m_texCoord = true;
-	retVal->SetVertices(attributes, vertices, indices);
-	return retVal;
+	mesh->SetVertices(attributes, vertices, indices);
+}
+
+void LogGrader::GenerateSurface(const std::shared_ptr<ParticleInfoList>& surface,
+	const LogWoodMeshGenerationSettings& meshGeneratorSettings, const int startX, const int endX) const
+{
+	if (!surface) return;
+	if (m_logWood.m_intersections.size() < 2) return;
+
+	const float avgDistance = m_logWood.GetAverageDistance();
+	const float circleLength = 2.0f * glm::pi<float>() * avgDistance;
+	const float flatXStep = circleLength / 360;
+	const float logLength = m_logWood.m_length;
+	const int yStepSize = logLength / meshGeneratorSettings.m_ySubdivision;
+	const float yStep = logLength / yStepSize;
+
+	const int span = endX - startX;
+
+	surface->m_particleInfos.resize(yStepSize * span);
+
+	Jobs::ParallelFor(yStepSize + 1, [&](const unsigned yIndex)
+		{
+			const float y = yStep * static_cast<float>(yIndex);
+			const float intersectionAvgDistance = m_logWood.GetAverageDistance(y);
+			for (int xIndex = 0; xIndex <= span; xIndex++)
+			{
+				const float x = static_cast<float>(xIndex);
+				const float centerDistance = m_logWood.GetCenterDistance(y, x);
+				const auto position = glm::vec3(flatXStep * static_cast<float>(xIndex - span), y, centerDistance - intersectionAvgDistance);
+				const auto size = glm::vec3(flatXStep, 0.f, yStep);
+				const auto rotation = glm::quat(glm::radians(glm::vec3(-90, 0, 0)));
+				auto& particleInfo = surface->m_particleInfos.at(yIndex * span + xIndex);
+				particleInfo.m_instanceMatrix.m_value = glm::translate(position)* glm::mat4_cast(rotation) * glm::scale(size);
+				particleInfo.m_instanceColor = m_logWood.GetColor(y, x + startX);
+			}
+		}
+	);
+	surface->SetPendingUpdate();
 }
 
 void LogGrader::OnCreate()
 {
+	m_tempCylinderMesh = ProjectManager::CreateTemporaryAsset<Mesh>();
+	m_tempFlatMesh1 = ProjectManager::CreateTemporaryAsset<Mesh>();
+	m_tempFlatMesh2 = ProjectManager::CreateTemporaryAsset<Mesh>();
+	m_tempFlatMesh3 = ProjectManager::CreateTemporaryAsset<Mesh>();
+	m_tempFlatMesh4 = ProjectManager::CreateTemporaryAsset<Mesh>();
+	m_surface1 = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
+	m_surface2 = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
+	m_surface3 = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
+	m_surface4 = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
+
 	auto branchShape = m_branchShape.Get<BranchShape>();
 	if (!branchShape)
 	{
@@ -457,7 +531,8 @@ void LogGrader::InitializeMeshRenderer(const LogWoodMeshGenerationSettings& mesh
 	const auto cylinderEntity = scene->CreateEntity("Log Wood Cylinder Mesh");
 	if (scene->IsEntityValid(cylinderEntity)) {
 		scene->SetParent(cylinderEntity, self);
-		const auto mesh = GenerateCylinderMesh(meshGeneratorSettings);
+		const auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
+		GenerateCylinderMesh(mesh, meshGeneratorSettings);
 		const auto material = ProjectManager::CreateTemporaryAsset<Material>();
 		const auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(cylinderEntity).lock();
 		material->m_materialProperties.m_roughness = 1.0f;
@@ -477,7 +552,8 @@ void LogGrader::InitializeMeshRenderer(const LogWoodMeshGenerationSettings& mesh
 		transform.SetPosition({ xOffset , 0, 0 });
 		transform.SetEulerRotation(glm::radians(glm::vec3(0, 180, 0)));
 		scene->SetDataComponent(flatEntity1, transform);
-		const auto mesh = GenerateFlatMesh(meshGeneratorSettings, 90, 180);
+		const auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
+		GenerateFlatMesh(mesh, meshGeneratorSettings, 90, 180);
 		const auto material = ProjectManager::CreateTemporaryAsset<Material>();
 		const auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(flatEntity1).lock();
 		material->m_materialProperties.m_roughness = 1.0f;
@@ -494,7 +570,8 @@ void LogGrader::InitializeMeshRenderer(const LogWoodMeshGenerationSettings& mesh
 		transform.SetPosition({ xOffset, 0, 0 });
 		transform.SetEulerRotation(glm::radians(glm::vec3(0, 180, 0)));
 		scene->SetDataComponent(flatEntity2, transform);
-		const auto mesh = GenerateFlatMesh(meshGeneratorSettings, 0, 90);
+		const auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
+		GenerateFlatMesh(mesh, meshGeneratorSettings, 0, 90);
 		const auto material = ProjectManager::CreateTemporaryAsset<Material>();
 		const auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(flatEntity2).lock();
 		material->m_materialProperties.m_roughness = 1.0f;
@@ -511,7 +588,8 @@ void LogGrader::InitializeMeshRenderer(const LogWoodMeshGenerationSettings& mesh
 		transform.SetPosition({ xOffset, 0, 0 });
 		transform.SetEulerRotation(glm::radians(glm::vec3(0, 180, 0)));
 		scene->SetDataComponent(flatEntity3, transform);
-		const auto mesh = GenerateFlatMesh(meshGeneratorSettings, 270, 360);
+		const auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
+		GenerateFlatMesh(mesh, meshGeneratorSettings, 270, 360);
 		const auto material = ProjectManager::CreateTemporaryAsset<Material>();
 		const auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(flatEntity3).lock();
 		material->m_materialProperties.m_roughness = 1.0f;
@@ -528,7 +606,8 @@ void LogGrader::InitializeMeshRenderer(const LogWoodMeshGenerationSettings& mesh
 		transform.SetPosition({ xOffset, 0, 0 });
 		transform.SetEulerRotation(glm::radians(glm::vec3(0, 180, 0)));
 		scene->SetDataComponent(flatEntity4, transform);
-		const auto mesh = GenerateFlatMesh(meshGeneratorSettings, 180, 270);
+		const auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
+		GenerateFlatMesh(mesh, meshGeneratorSettings, 180, 270);
 		const auto material = ProjectManager::CreateTemporaryAsset<Material>();
 		const auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(flatEntity4).lock();
 		material->m_materialProperties.m_roughness = 1.0f;
