@@ -12,9 +12,15 @@ void SpatialPlantDistributionSimulator::OnInspectSpatialPlantDistributionFunctio
 	static float zoomFactor = 2.f;
 	static bool enableUniformSize = false;
 	static float uniformSize = 4.f;
+	static float plantSizeFactor = 4.f;
 	ImGui::Checkbox("Uniform size", &enableUniformSize);
 	ImGui::SameLine();
-	ImGui::DragFloat("Uniform Size", &uniformSize);
+	if (enableUniformSize) {
+		ImGui::DragFloat("Uniform size", &uniformSize);
+	}else
+	{
+		ImGui::DragFloat("Plant size factor", &plantSizeFactor, 0.01f, 0.1f, 1.0f);
+	}
 	ImGui::SameLine();
 	ImGui::Text(("Plant count: " + std::to_string(spatialPlantDistribution.m_plants.size() - spatialPlantDistribution.m_recycledPlants.size()) +
 		" | Simulation time: " + std::to_string(spatialPlantDistribution.m_simulationTime)).c_str());
@@ -78,7 +84,7 @@ void SpatialPlantDistributionSimulator::OnInspectSpatialPlantDistributionFunctio
 		const auto& pointColor = spatialPlantDistribution.m_spatialPlantParameters[plant.m_parameterHandle].m_color;
 		const auto canvasPosition =
 			ImVec2(origin.x + pointPosition.x * zoomFactor, origin.y + pointPosition.y * zoomFactor);
-		drawList->AddCircleFilled(canvasPosition, zoomFactor * (enableUniformSize ? uniformSize : plant.m_radius),
+		drawList->AddCircleFilled(canvasPosition, zoomFactor * (enableUniformSize ? uniformSize : plant.m_radius * plantSizeFactor),
 			IM_COL32(255.0f * pointColor.x, 255.0f * pointColor.y, 255.0f * pointColor.z, 255.0f));
 	}
 	drawList->AddCircle(origin,
@@ -109,7 +115,7 @@ void SpatialPlantDistributionSimulator::OnInspect(const std::shared_ptr<EditorLa
 		if (ImGui::Button("Push"))
 		{
 			m_distribution.m_spatialPlantParameters.emplace_back();
-			m_distribution.m_spatialPlantParameters.back().m_color = glm::vec4(glm::sphericalRand(1.f), 1.f);
+			m_distribution.m_spatialPlantParameters.back().m_color = glm::vec4(glm::abs(glm::sphericalRand(1.f)), 1.f);
 			m_treeDescriptors.resize(m_distribution.m_spatialPlantParameters.size());
 		}
 		for (int parameterIndex = 0; parameterIndex < m_distribution.m_spatialPlantParameters.size(); parameterIndex++)
