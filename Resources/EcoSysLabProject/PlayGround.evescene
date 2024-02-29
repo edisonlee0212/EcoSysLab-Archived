@@ -141,6 +141,14 @@ m_entityMetadataList:
         m_material:
           m_assetHandle: 6253201200753582842
           m_assetTypeName: Material
+  - m_name: SpatialPlants
+    m_handle: 3757281826980421486
+    m_enabled: true
+    m_static: false
+    Root.Handle: 3757281826980421486
+    m_privateComponentElements:
+      - m_typeName: SpatialPlantDistributionSimulator
+        m_enabled: true
 m_systems:
   []
 LocalAssets:
@@ -311,7 +319,7 @@ LocalAssets:
 m_dataComponentStorages:
   - m_entitySize: 130
     m_chunkCapacity: 126
-    m_entityAliveCount: 9
+    m_entityAliveCount: 10
     m_dataComponentTypes:
       - m_name: Transform
         m_size: 64
@@ -367,4 +375,9 @@ m_dataComponentStorages:
         DataComponents:
           - Data: !!binary "AEAcRgAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAABAHEYAAAAAAAAAAM3MTL0AAAAAAACAPw=="
           - Data: !!binary "AEAcRgAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAABAHEYAAAAAAAAAAM3MTL0AAAAAAACAPw=="
+          - Data: !!binary "AAA="
+      - m_handle: 3757281826980421486
+        DataComponents:
+          - Data: !!binary "AACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPw=="
+          - Data: !!binary "AACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPw=="
           - Data: !!binary "AAA="

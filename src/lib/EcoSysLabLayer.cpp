@@ -20,7 +20,7 @@
 #include "ClassRegistry.hpp"
 #include "CubeVolume.hpp"
 #include "LogGrader.hpp"
-#include "SpatialPlantDistributionVisualizer.hpp"
+#include "SpatialPlantDistributionSimulator.hpp"
 using namespace EcoSysLab;
 
 void EcoSysLabLayer::OnCreate() {
@@ -29,7 +29,7 @@ void EcoSysLabLayer::OnCreate() {
 	ClassRegistry::RegisterPrivateComponent<Soil>("Soil");
 	ClassRegistry::RegisterPrivateComponent<Climate>("Climate");
 	ClassRegistry::RegisterPrivateComponent<LogGrader>("LogGrader");
-	ClassRegistry::RegisterPrivateComponent<SpatialPlantDistributionVisualizer>("SpatialPlantDistributionVisualizer");
+	ClassRegistry::RegisterPrivateComponent<SpatialPlantDistributionSimulator>("SpatialPlantDistributionSimulator");
 
 	ClassRegistry::RegisterAsset<BranchShape>("BranchShape", { ".bs" });
 	ClassRegistry::RegisterAsset<ForestPatch>("ForestPatch", { ".fp" });

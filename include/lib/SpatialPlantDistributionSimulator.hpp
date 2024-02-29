@@ -1,9 +1,13 @@
 #pragma once
 #include "SpatialPlantDistribution.hpp"
+#include "TreeModel.hpp"
 using namespace EvoEngine;
 namespace EcoSysLab {
-	class SpatialPlantDistributionVisualizer : public IPrivateComponent {
+	class SpatialPlantDistributionSimulator : public IPrivateComponent {
 	public:
+		TreeGrowthSettings m_treeGrowthSettings;
+		std::vector<AssetRef> m_treeDescriptors{};
+
 		SpatialPlantDistribution m_distribution{};
 		bool m_simulate = false;
 		static void OnInspectSpatialPlantDistributionFunction(const SpatialPlantDistribution& spatialPlantDistribution,
