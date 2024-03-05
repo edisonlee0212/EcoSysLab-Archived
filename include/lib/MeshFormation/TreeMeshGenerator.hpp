@@ -119,6 +119,12 @@ namespace EcoSysLab {
 		static void Generate(const Skeleton<SkeletonData, FlowData, NodeData>& treeSkeleton, std::vector<Vertex>& vertices,
 			std::vector<unsigned int>& indices, const TreeMeshGeneratorSettings& settings,
 			const std::function<float(float xFactor, float distanceToRoot)>& func);
+
+		static void GeneratePartially(
+			const std::unordered_set<NodeHandle>& nodeHandles,
+			const Skeleton<SkeletonData, FlowData, NodeData>& treeSkeleton, std::vector<Vertex>& vertices,
+			std::vector<unsigned int>& indices, const TreeMeshGeneratorSettings& settings,
+			const std::function<float(float xFactor, float distanceToRoot)>& func);
 	};
 	template<typename SkeletonData, typename FlowData, typename NodeData>
 	class VoxelMeshGenerator {
@@ -143,7 +149,7 @@ namespace EcoSysLab {
 		const std::function<float(float xFactor, float distanceToRoot)>& func) {
 		const auto& sortedInternodeList = treeSkeleton.RefSortedNodeList();
 		std::vector<std::vector<RingSegment>> ringsList;
-		std::map<NodeHandle, int> steps{};
+		std::unordered_map<NodeHandle, int> steps{};
 		ringsList.resize(sortedInternodeList.size());
 		std::vector<std::shared_future<void>> results;
 		std::vector<std::vector<std::pair<NodeHandle, int>>> tempSteps{};
@@ -252,7 +258,7 @@ namespace EcoSysLab {
 			}
 		}
 
-		std::map<NodeHandle, int> vertexLastRingStartVertexIndex{};
+		std::unordered_map<NodeHandle, int> vertexLastRingStartVertexIndex{};
 
 		int nextTreePartIndex = 0;
 		int nextLineIndex = 0;
@@ -569,6 +575,373 @@ namespace EcoSysLab {
 						}
 					}
 					if (parentInternodeHandle == -1) vertexIndex += pStep;
+				}
+				else {
+					for (int s = 0; s < step - 1; s++) {
+						// Down triangle
+						auto a = vertexIndex + (ringIndex - 1) * step + s;
+						auto b = vertexIndex + (ringIndex - 1) * step + s + 1;
+						auto c = vertexIndex + ringIndex * step + s;
+						if (vertices[a].m_position != vertices[b].m_position
+							&& vertices[b].m_position != vertices[c].m_position
+							&& vertices[a].m_position != vertices[c].m_position) {
+							indices.push_back(a);
+							indices.push_back(b);
+							indices.push_back(c);
+						}
+
+
+						// Up triangle
+						a = vertexIndex + ringIndex * step + s + 1;
+						b = vertexIndex + ringIndex * step + s;
+						c = vertexIndex + (ringIndex - 1) * step + s + 1;
+						if (vertices[a].m_position != vertices[b].m_position
+							&& vertices[b].m_position != vertices[c].m_position
+							&& vertices[a].m_position != vertices[c].m_position) {
+							indices.push_back(a);
+							indices.push_back(b);
+							indices.push_back(c);
+						}
+					}
+					// Down triangle
+					auto a = vertexIndex + (ringIndex - 1) * step + step - 1;
+					auto b = vertexIndex + (ringIndex - 1) * step;
+					auto c = vertexIndex + ringIndex * step + step - 1;
+					if (vertices[a].m_position != vertices[b].m_position
+						&& vertices[b].m_position != vertices[c].m_position
+						&& vertices[a].m_position != vertices[c].m_position) {
+						indices.push_back(a);
+						indices.push_back(b);
+						indices.push_back(c);
+					}
+					// Up triangle
+					a = vertexIndex + ringIndex * step;
+					b = vertexIndex + ringIndex * step + step - 1;
+					c = vertexIndex + (ringIndex - 1) * step;
+					if (vertices[a].m_position != vertices[b].m_position
+						&& vertices[b].m_position != vertices[c].m_position
+						&& vertices[a].m_position != vertices[c].m_position) {
+						indices.push_back(a);
+						indices.push_back(b);
+						indices.push_back(c);
+					}
+				}
+			}
+			vertexLastRingStartVertexIndex[internodeHandle] = vertices.size() - step;
+		}
+	}
+
+	template <typename SkeletonData, typename FlowData, typename NodeData>
+	void CylindricalMeshGenerator<SkeletonData, FlowData, NodeData>::GeneratePartially(
+		const std::unordered_set<NodeHandle>& nodeHandles,
+		const Skeleton<SkeletonData, FlowData, NodeData>& treeSkeleton, std::vector<Vertex>& vertices,
+		std::vector<unsigned>& indices, const TreeMeshGeneratorSettings& settings,
+		const std::function<float(float xFactor, float distanceToRoot)>& func)
+	{
+		const auto& sortedInternodeList = treeSkeleton.RefSortedNodeList();
+		std::vector<std::vector<RingSegment>> ringsList;
+		std::unordered_map<NodeHandle, int> steps{};
+		ringsList.resize(sortedInternodeList.size());
+		std::vector<std::shared_future<void>> results;
+		std::vector<std::vector<std::pair<NodeHandle, int>>> tempSteps{};
+		tempSteps.resize(Jobs::Workers().Size());
+
+		Jobs::ParallelFor(sortedInternodeList.size(), [&](unsigned internodeIndex, unsigned threadIndex) {
+			auto internodeHandle = sortedInternodeList[internodeIndex];
+			const auto& internode = treeSkeleton.PeekNode(internodeHandle);
+			const auto& internodeInfo = internode.m_info;
+
+
+			auto& rings = ringsList[internodeIndex];
+			rings.clear();
+
+			glm::vec3 directionStart = internodeInfo.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
+			glm::vec3 directionEnd = directionStart;
+
+			glm::vec3 positionStart = internodeInfo.m_globalPosition;
+			glm::vec3 positionEnd =
+				positionStart + internodeInfo.m_length * (settings.m_smoothness ? 1.0f - settings.m_baseControlPointRatio : 1.0f) * internodeInfo.m_globalDirection;
+			float thicknessStart = internodeInfo.m_thickness;
+			float thicknessEnd = internodeInfo.m_thickness;
+
+			if (internode.GetParentHandle() != -1) {
+				const auto& parentInternode = treeSkeleton.PeekNode(internode.GetParentHandle());
+				thicknessStart = parentInternode.m_info.m_thickness;
+				directionStart =
+					parentInternode.m_info.m_regulatedGlobalRotation *
+					glm::vec3(0, 0, -1);
+				positionStart =
+					parentInternode.m_info.m_globalPosition + (parentInternode.m_info.m_length * (settings.m_smoothness ? 1.0f - settings.m_baseControlPointRatio : 1.0f)) * parentInternode.m_info.m_globalDirection;
+			}
+
+			if (settings.m_overrideRadius) {
+				thicknessStart = settings.m_radius;
+				thicknessEnd = settings.m_radius;
+			}
+
+			if (settings.m_presentationOverride && settings.m_presentationOverrideSettings.m_maxThickness != 0.0f)
+			{
+				thicknessStart = glm::min(thicknessStart, settings.m_presentationOverrideSettings.m_maxThickness);
+				thicknessEnd = glm::min(thicknessEnd, settings.m_presentationOverrideSettings.m_maxThickness);
+			}
+
+#pragma region Subdivision internode here.
+			const auto boundaryLength = glm::max(thicknessStart, thicknessEnd) * glm::pi<float>();
+			int step = boundaryLength / settings.m_xSubdivision;
+			if (step < 4)
+				step = 4;
+			if (step % 2 != 0)
+				++step;
+
+			tempSteps[threadIndex].emplace_back(internodeHandle, step);
+			int amount = glm::max(1, static_cast<int>(glm::distance(positionStart, positionEnd) / (internodeInfo.m_thickness >= settings.m_trunkThickness ? settings.m_trunkYSubdivision : settings.m_branchYSubdivision)));
+			if (amount % 2 != 0)
+				++amount;
+			BezierCurve curve = BezierCurve(
+				positionStart,
+				positionStart +
+				(settings.m_smoothness ? internodeInfo.m_length * settings.m_baseControlPointRatio : 0.0f) * directionStart,
+				positionEnd -
+				(settings.m_smoothness ? internodeInfo.m_length * settings.m_branchControlPointRatio : 0.0f) * directionEnd,
+				positionEnd);
+			float posStep = 1.0f / static_cast<float>(amount);
+			glm::vec3 dirStep = (directionEnd - directionStart) / static_cast<float>(amount);
+			float thicknessStep = (thicknessEnd - thicknessStart) /
+				static_cast<float>(amount);
+
+			for (int ringIndex = 1; ringIndex < amount; ringIndex++) {
+				float frontThickness = static_cast<float>(ringIndex - 1) * thicknessStep;
+				float endThickness = static_cast<float>(ringIndex) * thicknessStep;
+				if (settings.m_smoothness) {
+					rings.emplace_back(
+						curve.GetPoint(posStep * (ringIndex - 1)), curve.GetPoint(posStep * ringIndex),
+						directionStart + static_cast<float>(ringIndex - 1) * dirStep,
+						directionStart + static_cast<float>(ringIndex) * dirStep,
+						(thicknessStart + frontThickness) * 0.5f, (thicknessStart + endThickness) * 0.5f);
+				}
+				else {
+					rings.emplace_back(
+						curve.GetPoint(posStep * (ringIndex - 1)), curve.GetPoint(posStep * ringIndex),
+						directionEnd,
+						directionEnd,
+						(thicknessStart + frontThickness) * 0.5f, (thicknessStart + endThickness) * 0.5f);
+				}
+			}
+			if (amount > 1)
+				rings.emplace_back(
+					curve.GetPoint(1.0f - posStep), positionEnd, directionEnd - dirStep,
+					directionEnd,
+					(thicknessEnd - thicknessStep) * 0.5f,
+					thicknessEnd * 0.5f);
+			else
+				rings.emplace_back(positionStart, positionEnd,
+					directionStart, directionEnd, thicknessStart * 0.5f,
+					thicknessEnd * 0.5f);
+#pragma endregion
+			}, results);
+		for (auto& i : results) i.wait();
+
+		for (const auto& list : tempSteps)
+		{
+			for (const auto& element : list)
+			{
+				steps[element.first] = element.second;
+			}
+		}
+
+		std::unordered_map<NodeHandle, int> vertexLastRingStartVertexIndex{};
+		std::unordered_map<NodeHandle, TreePartInfo> treePartInfos{};
+
+		for (int internodeIndex = 0; internodeIndex < sortedInternodeList.size(); internodeIndex++) {
+			auto internodeHandle = sortedInternodeList[internodeIndex];
+			if(nodeHandles.find(internodeHandle) == nodeHandles.end()) continue;
+			const auto& internode = treeSkeleton.PeekNode(internodeHandle);
+			const auto& internodeInfo = internode.m_info;
+			auto parentInternodeHandle = internode.GetParentHandle();
+			bool hasParent = false;
+			if(nodeHandles.find(parentInternodeHandle) != nodeHandles.end())
+			{
+				hasParent = true;
+			}
+			const glm::vec3 up = internodeInfo.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
+			glm::vec3 parentUp = up;
+			if (hasParent)
+			{
+				const auto& parentInternode = treeSkeleton.PeekNode(parentInternodeHandle);
+				parentUp = parentInternode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
+			}
+			auto& rings = ringsList[internodeIndex];
+			if (rings.empty()) {
+				continue;
+			}
+			// For stitching
+			const int step = steps[internodeHandle];
+			int pStep = step;
+			if (hasParent)
+			{
+				pStep = steps[parentInternodeHandle];
+			}
+			float angleStep = 360.0f / static_cast<float>(step);
+			float pAngleStep = 360.0f / static_cast<float>(pStep);
+			int vertexIndex = vertices.size();
+			Vertex archetype;
+			const auto flowHandle = internode.GetFlowHandle();
+			archetype.m_vertexInfo1 = internodeHandle + 1;
+			archetype.m_vertexInfo2 = flowHandle + 1;
+			float textureXStep = 1.0f / pStep * 4.0f;
+			if (!hasParent) {
+				for (int p = 0; p < pStep; p++) {
+					float xFactor = static_cast<float>(p) / pStep;
+					float yFactor = internodeInfo.m_rootDistance - internodeInfo.m_length;
+					auto& ring = rings.at(0);
+					auto direction = ring.GetDirection(
+						parentUp, pAngleStep * p, true);
+					archetype.m_position = ring.m_startPosition + direction * ring.m_startRadius * func(xFactor, yFactor);
+					const float x =
+						p < pStep / 2 ? p * textureXStep : (pStep - p) * textureXStep;
+					archetype.m_texCoord = glm::vec2(x, 0.0f);
+					if (!settings.m_junctionColor) archetype.m_color = internodeInfo.m_color;
+					vertices.push_back(archetype);
+				}
+			}
+			std::vector<float> angles;
+			angles.resize(step);
+			std::vector<float> pAngles;
+			pAngles.resize(pStep);
+
+			for (auto p = 0; p < pStep; p++) {
+				pAngles[p] = pAngleStep * p;
+			}
+			for (auto s = 0; s < step; s++) {
+				angles[s] = angleStep * s;
+			}
+
+			std::vector<unsigned> pTarget;
+			std::vector<unsigned> target;
+			pTarget.resize(pStep);
+			target.resize(step);
+			for (int p = 0; p < pStep; p++) {
+				// First we allocate nearest vertices for parent.
+				auto minAngleDiff = 360.0f;
+				for (auto j = 0; j < step; j++) {
+					const float diff = glm::abs(pAngles[p] - angles[j]);
+					if (diff < minAngleDiff) {
+						minAngleDiff = diff;
+						pTarget[p] = j;
+					}
+				}
+			}
+			for (int s = 0; s < step; s++) {
+				// Second we allocate nearest vertices for child
+				float minAngleDiff = 360.0f;
+				for (int j = 0; j < pStep; j++) {
+					const float diff = glm::abs(angles[s] - pAngles[j]);
+					if (diff < minAngleDiff) {
+						minAngleDiff = diff;
+						target[s] = j;
+					}
+				}
+			}
+
+			textureXStep = 1.0f / step * 4.0f;
+			int ringSize = rings.size();
+			for (auto ringIndex = 0; ringIndex < ringSize; ringIndex++) {
+				for (auto s = 0; s < step; s++) {
+					float xFactor = static_cast<float>(s) / step;
+					float yFactor = internodeInfo.m_rootDistance - internodeInfo.m_length + (ringIndex + 1) * internodeInfo.m_length / ringSize;
+					auto& ring = rings.at(ringIndex);
+					auto direction = ring.GetDirection(
+						up, angleStep * s, false);
+					archetype.m_position = ring.m_endPosition + direction * ring.m_endRadius * func(xFactor, yFactor);
+					const auto x =
+						s < (step / 2) ? s * textureXStep : (step - s) * textureXStep;
+					const auto y = ringIndex % 2 == 0 ? 1.0f : 0.0f;
+					archetype.m_texCoord = glm::vec2(x, y);
+					if (!settings.m_junctionColor) archetype.m_color = internodeInfo.m_color;
+					vertices.push_back(archetype);
+				}
+				if (ringIndex == 0)
+				{
+					if (hasParent) {
+						int parentLastRingStartVertexIndex = vertexLastRingStartVertexIndex[parentInternodeHandle];
+						for (int p = 0; p < pStep; p++) {
+							if (pTarget[p] == pTarget[p == pStep - 1 ? 0 : p + 1]) {
+								auto a = parentLastRingStartVertexIndex + p;
+								auto b = parentLastRingStartVertexIndex + (p == pStep - 1 ? 0 : p + 1);
+								auto c = vertexIndex + pTarget[p];
+								if (vertices[a].m_position != vertices[b].m_position
+									&& vertices[b].m_position != vertices[c].m_position
+									&& vertices[a].m_position != vertices[c].m_position) {
+									indices.push_back(a);
+									indices.push_back(b);
+									indices.push_back(c);
+								}
+							}
+							else {
+								auto a = parentLastRingStartVertexIndex + p;
+								auto b = parentLastRingStartVertexIndex + (p == pStep - 1 ? 0 : p + 1);
+								auto c = vertexIndex + pTarget[p];
+								if (vertices[a].m_position != vertices[b].m_position
+									&& vertices[b].m_position != vertices[c].m_position
+									&& vertices[a].m_position != vertices[c].m_position) {
+									indices.push_back(a);
+									indices.push_back(b);
+									indices.push_back(c);
+								}
+								a = vertexIndex + pTarget[p == pStep - 1 ? 0 : p + 1];
+								b = vertexIndex + pTarget[p];
+								c = parentLastRingStartVertexIndex + (p == pStep - 1 ? 0 : p + 1);
+								if (vertices[a].m_position != vertices[b].m_position
+									&& vertices[b].m_position != vertices[c].m_position
+									&& vertices[a].m_position != vertices[c].m_position) {
+									indices.push_back(a);
+									indices.push_back(b);
+									indices.push_back(c);
+								}
+							}
+						}
+					}
+					else
+					{
+						for (int p = 0; p < pStep; p++) {
+							if (pTarget[p] == pTarget[p == pStep - 1 ? 0 : p + 1]) {
+								auto a = vertexIndex + p;
+								auto b = vertexIndex + (p == pStep - 1 ? 0 : p + 1);
+								auto c = vertexIndex + pStep + pTarget[p];
+								if (vertices[a].m_position != vertices[b].m_position
+									&& vertices[b].m_position != vertices[c].m_position
+									&& vertices[a].m_position != vertices[c].m_position) {
+									indices.push_back(a);
+									indices.push_back(b);
+									indices.push_back(c);
+								}
+							}
+							else {
+								auto a = vertexIndex + p;
+								auto b = vertexIndex + (p == pStep - 1 ? 0 : p + 1);
+								auto c = vertexIndex + pStep + pTarget[p];
+								if (vertices[a].m_position != vertices[b].m_position
+									&& vertices[b].m_position != vertices[c].m_position
+									&& vertices[a].m_position != vertices[c].m_position) {
+									indices.push_back(a);
+									indices.push_back(b);
+									indices.push_back(c);
+								}
+								a = vertexIndex + pStep + pTarget[p == pStep - 1 ? 0 : p + 1];
+								b = vertexIndex + pStep + pTarget[p];
+								c = vertexIndex + (p == pStep - 1 ? 0 : p + 1);
+
+								if (vertices[a].m_position != vertices[b].m_position
+									&& vertices[b].m_position != vertices[c].m_position
+									&& vertices[a].m_position != vertices[c].m_position) {
+									indices.push_back(a);
+									indices.push_back(b);
+									indices.push_back(c);
+								}
+							}
+						}
+					}
+					if (!hasParent) vertexIndex += pStep;
 				}
 				else {
 					for (int s = 0; s < step - 1; s++) {

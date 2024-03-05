@@ -5,6 +5,21 @@ using namespace EvoEngine;
 namespace EcoSysLab {
 	class DatasetGenerator {
 	public:
+		static void GenerateTreeTrunkMesh(const std::string& treeParametersPath,
+			float deltaTime,
+			int maxIterations,
+			int maxTreeNodeCount,
+			const TreeMeshGeneratorSettings& meshGeneratorSettings, 
+			const std::string& treeMeshOutputPath,
+			const std::string& treeTrunkOutputPath,
+			const std::string& treeInfoPath);
+
+		static void GenerateTreeMesh(const std::string& treeParametersPath,
+			float deltaTime,
+			int maxIterations,
+			int maxTreeNodeCount,
+			const TreeMeshGeneratorSettings& meshGeneratorSettings, const std::string& treeMeshOutputPath);
+
 		static void GeneratePointCloudForTree(
 			const PointCloudPointSettings& pointSettings,
 			const PointCloudCircularCaptureSettings& captureSettings,

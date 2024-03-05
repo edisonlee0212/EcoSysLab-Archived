@@ -666,6 +666,39 @@ std::shared_ptr<Strands> Tree::GenerateStrands()
 	return strandsAsset;
 }
 
+void Tree::GenerateTrunkMeshes(const std::shared_ptr<Mesh>& trunkMesh, const TreeMeshGeneratorSettings& meshGeneratorSettings)
+{
+	const auto& sortedInternodeList = m_treeModel.RefShootSkeleton().RefSortedNodeList();
+	std::unordered_set<NodeHandle> trunkHandles{};
+	for(const auto& nodeHandle : sortedInternodeList)
+	{
+		const auto& node = m_treeModel.RefShootSkeleton().PeekNode(nodeHandle);
+		trunkHandles.insert(nodeHandle);
+		if(node.RefChildHandles().size() > 1)break;
+	}
+	{
+		std::vector<Vertex> vertices;
+		std::vector<unsigned int> indices;
+		const auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
+		std::shared_ptr<BranchShape> branchShape{};
+		if (treeDescriptor)
+		{
+			branchShape = treeDescriptor->m_shootBranchShape.Get<BranchShape>();
+		}
+		CylindricalMeshGenerator<ShootGrowthData, ShootStemGrowthData, InternodeGrowthData>::GeneratePartially(trunkHandles, m_treeModel.PeekShootSkeleton(), vertices, indices, meshGeneratorSettings, [&](float xFactor, float distanceToRoot)
+			{
+				if (branchShape)
+				{
+					return branchShape->GetValue(xFactor, distanceToRoot);
+				}
+				return 1.0f;
+			});
+		VertexAttributes attributes{};
+		attributes.m_texCoord = true;
+		trunkMesh->SetVertices(attributes, vertices, indices);
+	}
+}
+
 std::shared_ptr<Mesh> Tree::GenerateBranchMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings)
 {
 	std::vector<Vertex> vertices;
@@ -999,6 +1032,73 @@ void Tree::ExportOBJ(const std::filesystem::path& path, const TreeMeshGeneratorS
 						of.flush();
 						std::stringstream data;
 						data << "o tree " + std::to_string(0) + "\n";
+#pragma region Data collection
+						for (auto i = 0; i < vertices.size(); i++) {
+							auto& vertexPosition = vertices.at(i).m_position;
+							auto& color = vertices.at(i).m_color;
+							data << "v " + std::to_string(vertexPosition.x) + " " +
+								std::to_string(vertexPosition.y) + " " +
+								std::to_string(vertexPosition.z) + " " +
+								std::to_string(color.x) + " " + std::to_string(color.y) + " " +
+								std::to_string(color.z) + "\n";
+						}
+						for (const auto& vertex : vertices) {
+							data << "vt " + std::to_string(vertex.m_texCoord.x) + " " +
+								std::to_string(vertex.m_texCoord.y) + "\n";
+						}
+						// data += "s off\n";
+						data << "# List of indices for faces vertices, with (x, y, z).\n";
+						for (auto i = 0; i < triangles.size(); i++) {
+							const auto triangle = triangles[i];
+							const auto f1 = triangle.x + startIndex;
+							const auto f2 = triangle.y + startIndex;
+							const auto f3 = triangle.z + startIndex;
+							data << "f " + std::to_string(f1) + "/" + std::to_string(f1) + "/" +
+								std::to_string(f1) + " " + std::to_string(f2) + "/" +
+								std::to_string(f2) + "/" + std::to_string(f2) + " " +
+								std::to_string(f3) + "/" + std::to_string(f3) + "/" +
+								std::to_string(f3) + "\n";
+						}
+#pragma endregion
+						const auto result = data.str();
+						of.write(result.c_str(), result.size());
+						of.flush();
+						startIndex += vertices.size();
+					}
+				}
+			}
+			of.close();
+		}
+	}
+}
+
+void Tree::ExportTrunkOBJ(const std::filesystem::path& path,
+	const TreeMeshGeneratorSettings& meshGeneratorSettings)
+{
+	if (path.extension() == ".obj") {
+		std::ofstream of;
+		of.open(path.string(), std::ofstream::out | std::ofstream::trunc);
+		if (of.is_open()) {
+			std::string start = "#Forest OBJ exporter, by Bosheng Li";
+			start += "\n";
+			of.write(start.c_str(), start.size());
+			of.flush();
+			unsigned startIndex = 1;
+			if (meshGeneratorSettings.m_enableBranch) {
+				std::shared_ptr<Mesh> trunkMesh = ProjectManager::CreateTemporaryAsset<Mesh>();
+				GenerateTrunkMeshes(trunkMesh, meshGeneratorSettings);
+				if (trunkMesh) {
+					auto& vertices = trunkMesh->UnsafeGetVertices();
+					auto& triangles = trunkMesh->UnsafeGetTriangles();
+					if (!vertices.empty() && !triangles.empty()) {
+						std::string header =
+							"#Vertices: " + std::to_string(vertices.size()) +
+							", tris: " + std::to_string(triangles.size());
+						header += "\n";
+						of.write(header.c_str(), header.size());
+						of.flush();
+						std::stringstream data;
+						data << std::string("o trunk") + "\n";
 #pragma region Data collection
 						for (auto i = 0; i < vertices.size(); i++) {
 							auto& vertexPosition = vertices.at(i).m_position;
