@@ -1,6 +1,6 @@
 m_shootGrowthParameters:
   m_growthRate: 0.180000007
-  m_branchingAngleMeanVariance: [40, 2]
+  m_branchingAngleMeanVariance: [20, 2]
   m_rollAngleMeanVariance: [30, 2]
   m_apicalAngleVariance: 1
   m_gravitropism: 0.00999999978
@@ -8,7 +8,7 @@ m_shootGrowthParameters:
   m_saggingFactorThicknessReductionMax: [0.00100000005, 2, 0.100000001]
   m_internodeLength: 0.0299999993
   m_internodeLengthThicknessFactor: 0.150000006
-  m_endNodeThickness: 0.00400000019
+  m_endNodeThickness: 0.00499999989
   m_thicknessAccumulationFactor: 0.449999988
   m_thicknessAgeFactor: 0
   m_internodeShadowFactor: 0.0500000007
@@ -147,5 +147,18 @@ m_shootGrowthParameterOffsets:
         - [0, 0]
         - [0.0104895104, 0.46853146]
         - [-0.00709219836, -0.494089842]
+        - [1, 1]
+        - [0.100000001, 0]
+  - m_type: 14
+    m_range: [0, 0.0250000004]
+    m_offset:
+      m_tangent: true
+      m_min: [0, 0]
+      m_max: [1, 1]
+      m_values:
+        - [-0.100000001, 0]
+        - [0, 0]
+        - [0.100000001, 0]
+        - [-0.100000001, 0]
         - [1, 1]
         - [0.100000001, 0]

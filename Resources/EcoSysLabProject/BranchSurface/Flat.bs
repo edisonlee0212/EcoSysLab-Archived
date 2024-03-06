@@ -1,7 +1,7 @@
 m_barkXFrequency: 3
 m_barkYFrequency: 5
-m_barkDepth: 0.100000001
+m_barkDepth: 0
 m_baseFrequency: 1
 m_baseMaxDistance: 1
 m_baseDistanceDecreaseFactor: 2
-m_baseDepth: 0.100000001
+m_baseDepth: 0

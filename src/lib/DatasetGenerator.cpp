@@ -71,6 +71,41 @@ void DatasetGenerator::GenerateTreeTrunkMesh(const std::string& treeParametersPa
 	tree->ExportTrunkOBJ(treeTrunkOutputPath, meshGeneratorSettings);
 	tree->ExportOBJ(treeMeshOutputPath, meshGeneratorSettings);
 	Application::Loop();
+	float trunkHeight = 0.0f;
+	float baseDiameter = 0.0f;
+	float topDiameter = 0.0f;
+	const auto& skeleton = tree->m_treeModel.RefShootSkeleton();
+	const auto& sortedInternodeList = skeleton.RefSortedNodeList();
+	if (sortedInternodeList.size() > 1) {
+		std::unordered_set<NodeHandle> trunkHandles{};
+		for (const auto& nodeHandle : sortedInternodeList)
+		{
+			const auto& node = skeleton.PeekNode(nodeHandle);
+			trunkHandles.insert(nodeHandle);
+			if (node.RefChildHandles().size() > 1) {
+				trunkHeight = node.m_info.GetGlobalEndPosition().y;
+				topDiameter = node.m_info.m_thickness;
+				break;
+			}
+		}
+		baseDiameter = skeleton.PeekNode(0).m_info.m_thickness;
+		std::ofstream of;
+		of.open(treeInfoPath, std::ofstream::out | std::ofstream::trunc);
+		std::stringstream data;
+		data << "TrunkHeight " << std::to_string(trunkHeight) << "\n";
+		data << "TrunkBaseDiameter " << std::to_string(baseDiameter) << "\n";
+		data << "TrunkTopDiameter " << std::to_string(topDiameter) << "\n";
+
+		data << "TreeBoundingBoxMinX " << std::to_string(skeleton.m_min.x) << "\n";
+		data << "TreeBoundingBoxMinY " << std::to_string(skeleton.m_min.y) << "\n";
+		data << "TreeBoundingBoxMinZ " << std::to_string(skeleton.m_min.z) << "\n";
+		data << "TreeBoundingBoxMaxX " << std::to_string(skeleton.m_max.x) << "\n";
+		data << "TreeBoundingBoxMaxY " << std::to_string(skeleton.m_max.y) << "\n";
+		data << "TreeBoundingBoxMaxZ " << std::to_string(skeleton.m_max.z) << "\n";
+		const auto result = data.str();
+		of.write(result.c_str(), result.size());
+		of.flush();
+	}
 	scene->DeleteEntity(treeEntity);
 	Application::Loop();
 }

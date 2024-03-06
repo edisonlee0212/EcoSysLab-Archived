@@ -57,7 +57,7 @@ int main() {
 	//std::filesystem::path project_folder_path = "C:\\Users\\62469\\Work\\TreeEngine\\EcoSysLab\\Resources\\EcoSysLabProject";
 	std::filesystem::path project_folder_path = "C:\\Users\\lllll\\Documents\\GitHub\\EcoSysLab\\Resources\\EcoSysLabProject";
 	std::filesystem::path project_path = project_folder_path / "test.eveproj";
-	std::filesystem::path output_root = "D:\\ForestPointCloudData\\";
+	
 
 	StartProjectWindowless(project_path);
 
@@ -69,6 +69,7 @@ int main() {
 	tmgs.m_enableTwig = true;
 
 	if (false) {
+		std::filesystem::path output_root = "D:\\ForestPointCloudData\\";
 		PointCloudPointSettings pcps{};
 		PointCloudCircularCaptureSettings pcccs{};
 		PointCloudGridCaptureSettings pcgcs{};
@@ -103,6 +104,7 @@ int main() {
 	}
 	if(true)
 	{
+		std::filesystem::path output_root = "D:\\TreeTrunkData\\";
 		tmgs.m_enableFoliage = false;
 		std::filesystem::path target_descriptor_folder_path = project_folder_path / "Trunk";
 		std::vector<std::shared_ptr<TreeDescriptor>> collectedTreeDescriptors{};
@@ -110,15 +112,15 @@ int main() {
 		{
 			if (i.is_regular_file() && i.path().extension().string() == ".td")
 			{
-				for (int treeIndex = 0; treeIndex < 1; treeIndex++)
+				for (int treeIndex = 0; treeIndex < 500; treeIndex++)
 				{
 					std::string name = "Tree_" + std::to_string(treeIndex);
 					std::string infoName = "Info_" + std::to_string(treeIndex);
 					std::string trunkName = "Trunk_" + std::to_string(treeIndex);
-					std::filesystem::path target_info_path = output_root / (infoName + ".csv");
+					std::filesystem::path target_info_path = output_root / (infoName + ".txt");
 					std::filesystem::path target_tree_mesh_path = output_root / (name + ".obj");
 					std::filesystem::path target_trunk_mesh_path = output_root / (trunkName + ".obj");
-					DatasetGenerator::GenerateTreeTrunkMesh(i.path().string(), 0.08220f, 400, 40000, tmgs, target_tree_mesh_path.string(), target_trunk_mesh_path.string(), target_info_path.string());
+					DatasetGenerator::GenerateTreeTrunkMesh(i.path().string(), 0.08220f, 999, 50000, tmgs, target_tree_mesh_path.string(), target_trunk_mesh_path.string(), target_info_path.string());
 				}
 			}
 		}

@@ -31,3 +31,26 @@ float BranchShape::GetValue(const float xFactor, const float distanceToRoot)
 
 	return 1.0f + bark + base;
 }
+
+void BranchShape::Serialize(YAML::Emitter& out)
+{
+	out << YAML::Key << "m_barkXFrequency" << YAML::Value << m_barkXFrequency;
+	out << YAML::Key << "m_barkYFrequency" << YAML::Value << m_barkYFrequency;
+	out << YAML::Key << "m_barkDepth" << YAML::Value << m_barkDepth;
+	out << YAML::Key << "m_baseFrequency" << YAML::Value << m_baseFrequency;
+	out << YAML::Key << "m_baseMaxDistance" << YAML::Value << m_baseMaxDistance;
+	out << YAML::Key << "m_baseDistanceDecreaseFactor" << YAML::Value << m_baseDistanceDecreaseFactor;
+	out << YAML::Key << "m_baseDepth" << YAML::Value << m_baseDepth;
+}
+
+void BranchShape::Deserialize(const YAML::Node& in)
+{
+	if (in["m_barkXFrequency"]) m_barkXFrequency = in["m_barkXFrequency"].as<float>();
+	if (in["m_barkYFrequency"]) m_barkYFrequency = in["m_barkYFrequency"].as<float>();
+	if (in["m_barkDepth"]) m_barkDepth = in["m_barkDepth"].as<float>();
+	if (in["m_baseFrequency"]) m_baseFrequency = in["m_baseFrequency"].as<float>();
+	if (in["m_baseMaxDistance"]) m_baseMaxDistance = in["m_baseMaxDistance"].as<float>();
+	if (in["m_baseDistanceDecreaseFactor"]) m_baseDistanceDecreaseFactor = in["m_baseDistanceDecreaseFactor"].as<float>();
+	if (in["m_baseDepth"]) m_baseDepth = in["m_baseDepth"].as<float>();
+
+}
