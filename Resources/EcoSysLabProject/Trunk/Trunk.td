@@ -1,6 +1,6 @@
 m_shootGrowthParameters:
   m_growthRate: 0.180000007
-  m_branchingAngleMeanVariance: [20, 2]
+  m_branchingAngleMeanVariance: [30, 2]
   m_rollAngleMeanVariance: [30, 2]
   m_apicalAngleVariance: 1
   m_gravitropism: 0.00999999978
