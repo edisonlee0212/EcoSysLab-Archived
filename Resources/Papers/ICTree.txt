@@ -1,0 +1,227 @@
+conda-forge: ninja clang glm assimp glfw shaderc
+
+
+anaconda / conda-forge: glm libpng tbb-devel libglvnd-glx-amzn2-aarch64 glew freeyglut 
+omnia: eigen3
+
+perceptree_main.py \
+    Data \
+    --dataset-path Acacia --dataset-use-dither True --dataset-use-augment True \
+    FeaturePredictor \
+    --train --save ictreef.tpm --feature-standardize True \
+    --use-view-scores True --use-tree-variants True --use-view-variants True \
+    --pre-generate-variants False --binary-pretraining True \
+    --differential-pretraining True --model-type dnn \
+    --feature-buckets 8 --feature-resolution 32
+
+
+wget https://developer.download.nvidia.com/compute/cuda/repos/wsl-ubuntu/x86_64/cuda-wsl-ubuntu.pin
+sudo mv cuda-wsl-ubuntu.pin /etc/apt/preferences.d/cuda-repository-pin-600
+wget https://developer.download.nvidia.com/compute/cuda/11.4.0/local_installers/cuda-repo-wsl-ubuntu-11-4-local_11.4.0-1_amd64.deb
+sudo dpkg -i cuda-repo-wsl-ubuntu-11-4-local_11.4.0-1_amd64.deb
+sudo apt-key add /var/cuda-repo-wsl-ubuntu-11-4-local/7fa2af80.pub
+sudo apt-get update
+sudo apt-get -y install cuda
+
+
+Dear Bosheng, 
+Thank you and congratulations on your SiggA paper as well! Your goal sounds exactly like the problem 
+the ICTree was designed to solve. I will strive to help you get the results as fast as possible.
+The quickest way to start using the ICTree on your own is to clone the main repository and follow the 
+"Automated Package Installer" path. Then, you can use the examples in "Score Prediction" to predict 
+the scores.
+As for your questions: 
+1.	The project is setup to work with .fbx and .tree files, since the branching structure is explicitly 
+provided within their data. For OBJ files, it is not as simple. Even when the OBJ contains only 
+the branches, there are various ways of encoding them. Instead of loading OBJ files, I would 
+recommend generating .tree format directly. Does your generation algorithm have access to 
+the skeletal structure - connectivity graph and branch radii?
+2.	Once you have the tree files ready, name them `tree#.<ext>` and then run the score prediction 
+with the "--predict-tree-folder path/to/the/folder".
+3.	All of the necessary information should be already provided within the .fbx or .tree files.
+I hope that this information helps. In case you need further assistance, do not hesitate to contact me!
+
+
+ python -m ictree.perceptree.perceptree_main \
+    Data \
+    --dataset-path dataset_minimized --dataset-use-dither True --dataset-use-augment True \
+    FeaturePredictor \
+    --train --save ictreef.tpm --feature-standardize True \
+    --use-view-scores True --use-tree-variants True --use-view-variants True \
+    --pre-generate-variants False --binary-pretraining True \
+    --differential-pretraining True --model-type dnn \
+    --feature-buckets 8 --feature-resolution 32
+
+perceptree_main.py \
+    FeaturePredictor --load ictreef.tpm \
+    ImagePredictor --load ictreei.tpm \
+    Predict --predict-tree-folder Acacia/ --predict-views-folder input/ \
+    Evaluate --evaluate-current --export-evaluations eval.csv
+
+python -m ictree.perceptree.perceptree_main Generate --input-path Acacia/ --output-path output/ --do-feature --do-render --do-augment --do-dither
+
+
+
+Image for all species and parameters.
+Put it in the appendix.
+
+
+Voxel Grid save
+Compare the paremeters between our current paper and previous Stava's paper/
+equation
+
+
+Teaser
+Branchlets
+
+Obastacle pipeline import prefab 
+
+GT VS Prediction
+
+Age Tulip Maple Pine Hazel
+
+Gritropism
+Age
+Environment
+
+
+Cylinder
+Default checkbox
+voxelgrid
+
+
+Running disable multithread 
+I update parameter table
+
+
+
+$G_{NLB}$ & Number of lateral buds & The number of lateral buds created per internode during growth. \\ 
+$G_{AAV}$ & Apical angle variance & The variance of the angle between the direction of parent shoot and the direction of apical bud. \\ 
+$G_{BAM}$ & Branching angle mean & The mean of angle between the direction of parent shoot and the direction of lateral bud. \\ 
+$G_{BAV}$ & Branching angle variance & The variance of angle between the direction of parent shoot and the direction of lateral bud. \\ 
+$G_{RAM}$ & Roll angle mean & The mean of orientation angle between two lateral buds created with the same internode. \\
+$G_{RAV}$ & Roll angle variance & The variance of orientation angle between two lateral buds created with the same internode. \\ 
+$F_{AKP}$ & Apical bud kill probability & The probability that a given apical bud will die during a growth cycle. \\ 
+$F_{LKP}$ & Lateral bud kill probability & The probability that a given lateral bud will die during a growth cycle. \\ 
+$F_{ALF}$ & Apical bud lighting factor & The influence of the lighting condition on the growth probility of a apical bud. \\ 
+$F_{LLF}$ & Lateral bud lighting factor & The influence of the lighting condition on the growth probility of a lateral bud. \\ 
+$F_{ADB}$ & Apical dominance base & The base level of auxin produced to inhibit parent shoots from growing. \\ 
+$F_{ADF}$ & Apical dominance distance factor & The reduction of auxin due to the transimission along parent shoots. \\ 
+$F_{AAF}$ & Apical dominance age factor & The reduction of auxin due to increasing age of the tree. \\
+$F_{GR}$ & Growth rate & The expected number of internodes generated along the branch during a growth cycle. \\
+$F_{ILB}$ & Internode length base & The base distance between two adjacent internodes on the same shoot. \\ 
+$F_{IAF}$ & Internode length age factor & The relation between internode length and age of the tree. \\
+$F_{ACB}$ & Apical control base & The impact of the branch level on the growth rate. \\
+$F_{AAF}$ & Apical control age factor & The relation of the apical control to the tree age. \\ 
+$F_{ALF}$ & Apical control level factor & The relation of the apical control to the branch level. \\ 
+$F_{MBA}$ & Max bud age & The maximum life time of a bud before forming a new shoot. \\ 
+$E_{LBF}$ & Light blocking factor & How much light will be blocked by branches and leaves. \\ 
+$E_{PHO}$ & Phototropism & The impact of the average growth direction of incoming light. \\ 
+$E_{GGB}$ & Gravitropism base & The impact of the average growth direction of the gravity. \\ 
+$E_{GLF}$ & Gravitropism level factor & The relation of the gravitropism and branch level. \\
+$E_{PPF}$ & Pruning factor & The impact of the amount of incoming light on the shedding of branches. \\
+$E_{LPF}$ & Low branch pruning factor & The height below which all lateral branches are pruned. \\ 
+$E_{GBS}$ & Gravity bending strength & The impact of gravity on branch structural bending. \\
+$E_{GAF}$ & Gravity bending angle factor & The relation of gravity bending related to the thickness of the branch. \\
+t & Desired age & The expected age of the tree. \\ 
+
+
+Sentences describine the foliage and rendering
+
+About foliage:
+The foliage module is independent 
+
+
+
+
+
+Computer.
+
+Stanford2D3D Zhenzhu's talk
+
+Edit: Different tools
+
+Depth estimated model -> edit -> repair (inpaint/stratch removal)
+
+Mesh inpainting
+
+
+What to talk tomorrow
+Business hours
+
+10am to 13pm -> 7am to 10am
+18pm to 23pm -> 15pm to 20pm
+
+Stardust Fusion
+
+
+
+
+
+
+
+
+
+
+
+
+
+1. Open project
+
+2. Open a L-System string in Asset Inspector
+
+3. Attach foliage module (Phyllotaxis) and branch texture for the asset
+
+4. Instantiate the tree and generate mesh for branch/leaves
+
+5. Create a ground by a quad mesh for receiving shadow from the tree.
+
+6. Rescale the quad mesh large enough to be like the actual ground surface.
+
+7. Open the Ray Tracer Manager panel, and enable ray tracer scene camera.
+
+8. Change the resolution multiplier in settings to make the image sharp.
+
+9. Change the environmental properties in ray tracer.
+
+10. You may found out the background is darker than the ground, in this case adjust the Ambient light intensity
+to alleviate the issue.
+
+11. Now, navigate to the Entity Explorer, disable the RagDoll option for SkinnedMeshRenderer for both
+BranchMesh entity and FoliageMesh entity.
+
+12. Add ObjectRotator to the base entity
+
+13. Change the speed, and start the application. You will see the tree starts rotating in a constant speed.
+
+14. You will notice that the tree becomes blurrish during rotation. To make the image clear you need to change
+the ray tracer settings by casting more rays per pixel.
+
+
+
+15. Use any screen recording program to record the rotation video (I prefer Streamlabs OBS) 
+and edit it with Adobe premier or something else.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
