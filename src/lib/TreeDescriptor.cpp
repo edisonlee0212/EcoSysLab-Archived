@@ -26,7 +26,7 @@ void TreeDescriptor::OnCreate() {
 }
 bool TreeDescriptor::OnInspectFoliageParameters(FoliageParameters& foliageParameters) {
 	bool changed = false;
-	if (ImGui::TreeNodeEx("Foliage Parameters", ImGuiTreeNodeFlags_DefaultOpen))
+	if (ImGui::TreeNodeEx("Foliage Parameters"))
 	{
 		if (ImGui::DragFloat2("Leaf size", &foliageParameters.m_leafSize.x, 0.01f, 0.0f, 1.0f)) changed = true;
 		if (ImGui::ColorEdit3("Leaf color", &foliageParameters.m_leafColor.x)) changed = true;
@@ -48,25 +48,27 @@ bool TreeDescriptor::OnInspectShootGrowthParameters(ShootGrowthParameters& treeG
 		changed = ImGui::DragFloat("Growth rate", &treeGrowthParameters.m_growthRate, 0.01f, 0.0f, 10.0f) || changed;
 		if (ImGui::TreeNodeEx("Internode", ImGuiTreeNodeFlags_DefaultOpen))
 		{
+			changed = ImGui::DragInt("Lateral bud count", &treeGrowthParameters.m_lateralBudCount, 1, 0, 3) || changed;
 			changed = ImGui::DragFloat2("Branching angle mean/var", &treeGrowthParameters.m_branchingAngleMeanVariance.x, 0.1f, 0.0f, 100.0f) || changed;
 			changed = ImGui::DragFloat2("Roll angle mean/var", &treeGrowthParameters.m_rollAngleMeanVariance.x, 0.1f, 0.0f, 100.0f) || changed;
 			changed = ImGui::DragFloat2("Apical angle variance", &treeGrowthParameters.m_apicalAngleMeanVariance.x, 0.1f, 0.0f, 100.0f) || changed;
+			changed = ImGui::DragFloat("Internode length", &treeGrowthParameters.m_internodeLength, 0.001f) || changed;
+			changed = ImGui::DragFloat("Internode length thickness factor", &treeGrowthParameters.m_internodeLengthThicknessFactor, 0.0001f, 0.0f, 1.0f) || changed;
+			changed = ImGui::DragFloat3("Thickness min/factor/age", &treeGrowthParameters.m_endNodeThickness, 0.0001f, 0.0f, 1.0f, "%.6f") || changed;
 
-			changed = ImGui::DragFloat("Gravitropism", &treeGrowthParameters.m_gravitropism, 0.01f) || changed;
-			changed = ImGui::DragFloat("Phototropism", &treeGrowthParameters.m_phototropism, 0.01f) || changed;
-			changed = ImGui::DragFloat("Horizontal Tropism", &treeGrowthParameters.m_horizontalTropism, 0.01f) || changed;
 			changed = ImGui::DragFloat("Sagging strength", &treeGrowthParameters.m_saggingFactorThicknessReductionMax.x, 0.0001f, 0.0f, 10.0f, "%.5f") || changed;
 			changed = ImGui::DragFloat("Sagging thickness factor", &treeGrowthParameters.m_saggingFactorThicknessReductionMax.y, 0.01f, 0.0f, 10.0f, "%.5f") || changed;
 			changed = ImGui::DragFloat("Sagging max", &treeGrowthParameters.m_saggingFactorThicknessReductionMax.z, 0.001f, 0.0f, 1.0f, "%.5f") || changed;
 
-			changed = ImGui::DragFloat("Internode length", &treeGrowthParameters.m_internodeLength, 0.001f) || changed;
-			changed = ImGui::DragFloat("Internode length thickness factor", &treeGrowthParameters.m_internodeLengthThicknessFactor, 0.0001f, 0.0f, 1.0f) || changed;
-			changed = ImGui::DragFloat3("Thickness min/factor/age", &treeGrowthParameters.m_endNodeThickness, 0.0001f, 0.0f, 1.0f, "%.6f") || changed;
+			
 			changed = ImGui::DragFloat("Internode shadow factor", &treeGrowthParameters.m_internodeShadowFactor, 0.001f, 0.0f, 1.0f) || changed;
 			ImGui::TreePop();
 		}
 		if (ImGui::TreeNodeEx("Bud fate", ImGuiTreeNodeFlags_DefaultOpen)) {
-			changed = ImGui::DragInt("Lateral bud count", &treeGrowthParameters.m_lateralBudCount, 1, 0, 3) || changed;
+			changed = ImGui::DragFloat("Gravitropism", &treeGrowthParameters.m_gravitropism, 0.01f) || changed;
+			changed = ImGui::DragFloat("Phototropism", &treeGrowthParameters.m_phototropism, 0.01f) || changed;
+			changed = ImGui::DragFloat("Horizontal Tropism", &treeGrowthParameters.m_horizontalTropism, 0.01f) || changed;
+
 			changed = ImGui::DragFloat("Apical bud extinction rate", &treeGrowthParameters.m_apicalBudExtinctionRate, 0.00001f, 0.0f, 1.0f, "%.5f") || changed;
 			changed = ImGui::DragFloat("Lateral bud flushing rate", &treeGrowthParameters.m_lateralBudFlushingRate, 0.00001f, 0.0f, 1.0f, "%.5f") || changed;
 			changed = ImGui::DragFloat("Apical control", &treeGrowthParameters.m_apicalControl, 0.01f) || changed;

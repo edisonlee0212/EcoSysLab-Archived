@@ -276,6 +276,11 @@ namespace EcoSysLab {
 				const auto& parentInternode = treeSkeleton.PeekNode(parentInternodeHandle);
 				parentUp = parentInternode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
 			}
+
+			if (internode.m_info.m_length == 0.0f) {
+				//TODO: Model possible knots and wound here.
+				continue;
+			}
 			auto& rings = ringsList[internodeIndex];
 			if (rings.empty()) {
 				continue;

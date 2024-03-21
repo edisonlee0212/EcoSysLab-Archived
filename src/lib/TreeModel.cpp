@@ -54,11 +54,12 @@ void TreeModel::RegisterVoxel(const glm::mat4& globalTransform, ClimateModel& cl
 	}
 }
 
-void TreeModel::PruneInternode(NodeHandle internodeHandle)
+void TreeModel::PruneInternode(const NodeHandle internodeHandle)
 {
 	auto& internode = m_shootSkeleton.RefNode(internodeHandle);
-
-	m_shootSkeleton.RecycleNode(internodeHandle,
+	for(const auto& childHandle : internode.RefChildHandles())
+	{
+		m_shootSkeleton.RecycleNode(childHandle,
 		[&](FlowHandle flowHandle) {},
 		[&](NodeHandle nodeHandle)
 		{
@@ -70,6 +71,12 @@ void TreeModel::PruneInternode(NodeHandle internodeHandle)
 				if (!m_shootSkeleton.m_data.m_strandGroup.PeekStrandSegment(particle.m_data.m_strandSegmentHandle).IsRecycled()) m_shootSkeleton.m_data.m_strandGroup.RecycleStrandSegment(particle.m_data.m_strandSegmentHandle);
 			}*/
 		});
+	}
+	internode.m_data.m_buds.clear();
+	internode.m_data.m_fruits.clear();
+	internode.m_data.m_leaves.clear();
+
+	internode.m_info.m_length = internode.m_data.m_internodeLength = 0.0f;
 }
 
 void TreeModel::HarvestFruits(const std::function<bool(const ReproductiveModule& fruit)>& harvestFunction)
