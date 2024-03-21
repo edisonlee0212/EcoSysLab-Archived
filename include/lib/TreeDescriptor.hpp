@@ -14,6 +14,7 @@ namespace EcoSysLab {
 		BranchingAngleVariance,
 		RollAngleMean,
 		RollAngleVariance,
+		ApicalAngleMean,
 		ApicalAngleVariance,
 		Gravitropism,
 		Phototropism,

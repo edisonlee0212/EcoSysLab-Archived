@@ -76,12 +76,6 @@ namespace EcoSysLab {
 		NodeInfo m_info;
 
 		/**
-		 * Whether this node is the start node.
-		 * @return True if this is start node, false else wise.
-		 */
-		[[nodiscard]] bool IsFlowStartNode() const;
-
-		/**
 		 * Whether this node is the end node.
 		 * @return True if this is end node, false else wise.
 		 */

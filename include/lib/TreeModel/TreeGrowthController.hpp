@@ -33,6 +33,10 @@ namespace EcoSysLab
 		 */
 		std::function<float(const Node<InternodeGrowthData>& internode)> m_phototropism;
 		/**
+		 * \brief The phototropism
+		 */
+		std::function<float(const Node<InternodeGrowthData>& internode)> m_horizontalTropism;
+		/**
 		 * \brief The strength of gravity bending.
 		 */
 		std::function<float(const Node<InternodeGrowthData>& internode)> m_sagging;
@@ -70,12 +74,12 @@ namespace EcoSysLab
 		/**
 		 * \brief Extinction rate of apical bud.
 		 */
-		std::function<void(const Node<InternodeGrowthData>& internode, Bud& targetBud)> m_budExtinctionRate;
+		std::function<float(const Node<InternodeGrowthData>& internode)> m_apicalBudExtinctionRate;
 
 		/**
 		 * \brief Flushing rate of a bud.
 		 */
-		std::function<void(const Node<InternodeGrowthData>& internode, Bud& targetBud)> m_budFlushingRate;
+		std::function<float(const Node<InternodeGrowthData>& internode)> m_lateralBudFlushingRate;
 		/**
 		 * \brief Apical control base
 		 */

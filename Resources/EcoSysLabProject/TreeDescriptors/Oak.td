@@ -2,23 +2,20 @@ m_shootGrowthParameters:
   m_growthRate: 0.25
   m_branchingAngleMeanVariance: [45, 3]
   m_rollAngleMeanVariance: [30, 2]
-  m_apicalAngleVariance: 4
+  m_apicalAngleMeanVariance: [0, 4]
   m_gravitropism: 0.0450000018
   m_phototropism: 0
+  m_horizontalTropism: 0
   m_saggingFactorThicknessReductionMax: [0.000600000028, 2, 0.100000001]
   m_internodeLength: 0.0299999993
   m_internodeLengthThicknessFactor: 0.150000006
   m_endNodeThickness: 0.00400000019
   m_thicknessAccumulationFactor: 0.449999988
-  m_thicknessAccumulateAgeFactor: 0
+  m_thicknessAgeFactor: 0
   m_internodeShadowFactor: 0.0299999993
   m_lateralBudCount: 1
   m_apicalBudExtinctionRate: 0
   m_lateralBudFlushingRate: 0.5
-  m_apicalBudLightingFactor: 1
-  m_lateralBudLightingFactor: 1
-  m_apicalBudSpaceFactor: 1
-  m_lateralBudSpaceFactor: 1
   m_apicalControl: 1.25
   m_apicalDominance: 0.25
   m_apicalDominanceLoss: 0.0799999982

@@ -8,7 +8,7 @@ namespace EcoSysLab
 		/**
 		 * \brief The expected height gain for the tree for one year (max root distance).
 		 */
-		float m_growthRate = 0.3;
+		float m_growthRate = 0.3f;
 #pragma region Internode
 		/**
 		* \brief The mean and variance of the angle between the direction of a lateral bud and its parent shoot.
@@ -19,9 +19,9 @@ namespace EcoSysLab
 		*/
 		glm::vec2 m_rollAngleMeanVariance{};
 		/**
-		* \brief The variance of the angular difference between the growth direction and the direction of the apical bud
+		* \brief The mean and variance of an angular difference orientation of lateral buds between two internodes
 		*/
-		float m_apicalAngleVariance{};
+		glm::vec2 m_apicalAngleMeanVariance{};
 		/**
 		 * \brief The gravitropism.
 		 */
@@ -30,6 +30,10 @@ namespace EcoSysLab
 		 * \brief The phototropism
 		 */
 		float m_phototropism;
+		/**
+		 * \brief The horizontal tropism
+		 */
+		float m_horizontalTropism;
 		/**
 		 * \brief The strength of gravity bending.
 		 */
@@ -72,14 +76,6 @@ namespace EcoSysLab
 		 * \brief The probability of death of lateral bud each year.
 		 */
 		float m_lateralBudFlushingRate = 1.0f;
-		/**
-		 * \brief Flushing prob of apical bud related to the light intensity.
-		 */
-		float m_apicalBudLightingFactor = 1.0f;
-		/**
-		 * \brief Flushing prob of lateral bud related to the light intensity.
-		 */
-		float m_lateralBudLightingFactor = 1.0f;
 		/**
 		 * \brief Apical control base
 		 */

@@ -1208,7 +1208,6 @@ void Tree::Serialize(YAML::Emitter& out)
 				{
 					nodeOut << YAML::Key << "m_internodeLength" << YAML::Value << nodeData.m_internodeLength;
 					nodeOut << YAML::Key << "m_indexOfParentBud" << YAML::Value << nodeData.m_indexOfParentBud;
-					nodeOut << YAML::Key << "m_lateral" << YAML::Value << nodeData.m_lateral;
 					nodeOut << YAML::Key << "m_startAge" << YAML::Value << nodeData.m_startAge;
 					nodeOut << YAML::Key << "m_finishAge" << YAML::Value << nodeData.m_finishAge;
 					nodeOut << YAML::Key << "m_desiredLocalRotation" << YAML::Value << nodeData.m_desiredLocalRotation;
@@ -1271,7 +1270,6 @@ void Tree::Deserialize(const YAML::Node& in)
 				{
 					if (nodeIn["m_internodeLength"]) nodeData.m_internodeLength = nodeIn["m_internodeLength"].as<float>();
 					if (nodeIn["m_indexOfParentBud"]) nodeData.m_indexOfParentBud = nodeIn["m_indexOfParentBud"].as<int>();
-					if (nodeIn["m_lateral"]) nodeData.m_lateral = nodeIn["m_lateral"].as<bool>();
 					if (nodeIn["m_startAge"]) nodeData.m_startAge = nodeIn["m_startAge"].as<float>();
 					if (nodeIn["m_finishAge"]) nodeData.m_finishAge = nodeIn["m_finishAge"].as<float>();
 					if (nodeIn["m_desiredLocalRotation"]) nodeData.m_desiredLocalRotation = nodeIn["m_desiredLocalRotation"].as<glm::quat>();
@@ -2079,7 +2077,7 @@ void Tree::PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescrip
 			};
 		m_shootGrowthController.m_apicalAngle = [=](const Node<InternodeGrowthData>& internode)
 			{
-				return glm::gaussRand(0.0f, actualShootGrowthParameters.m_apicalAngleVariance);
+				return glm::gaussRand(actualShootGrowthParameters.m_apicalAngleMeanVariance.x, actualShootGrowthParameters.m_apicalAngleMeanVariance.y);
 			};
 		m_shootGrowthController.m_gravitropism = [=](const Node<InternodeGrowthData>& internode)
 			{
@@ -2088,6 +2086,10 @@ void Tree::PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescrip
 		m_shootGrowthController.m_phototropism = [=](const Node<InternodeGrowthData>& internode)
 			{
 				return actualShootGrowthParameters.m_phototropism;
+			};
+		m_shootGrowthController.m_horizontalTropism = [=](const Node<InternodeGrowthData>& internode)
+			{
+				return actualShootGrowthParameters.m_horizontalTropism;
 			};
 		m_shootGrowthController.m_sagging = [=](const Node<InternodeGrowthData>& internode)
 			{
@@ -2110,33 +2112,17 @@ void Tree::PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescrip
 		m_shootGrowthController.m_internodeShadowFactor = actualShootGrowthParameters.m_internodeShadowFactor;
 
 		m_shootGrowthController.m_lateralBudCount = actualShootGrowthParameters.m_lateralBudCount;
-		m_shootGrowthController.m_budExtinctionRate = [=](const Node<InternodeGrowthData>& internode, Bud& bud)
+		m_shootGrowthController.m_apicalBudExtinctionRate = [=](const Node<InternodeGrowthData>& internode)
 			{
 				const auto& shootGrowthParameters = actualShootGrowthParameters;
-				bud.m_extinctionRate = 0.0f;
-				if (bud.m_type == BudType::Apical) {
-					bud.m_extinctionRate = shootGrowthParameters.m_apicalBudExtinctionRate;
-				}
-				else
-				{
-					bud.m_extinctionRate = 0.0f;
-				}
+				return shootGrowthParameters.m_apicalBudExtinctionRate;
 			};
-		m_shootGrowthController.m_budFlushingRate = [=](const Node<InternodeGrowthData>& internode, Bud& bud)
+		m_shootGrowthController.m_lateralBudFlushingRate = [=](const Node<InternodeGrowthData>& internode)
 			{
 				const auto& shootGrowthParameters = actualShootGrowthParameters;
-				bud.m_flushingRate = 1.0f;
-				if (bud.m_type == BudType::Apical) {
-					bud.m_flushingRate = 1.0f;
-					bud.m_flushingRate *= glm::pow(internode.m_data.m_lightIntensity, shootGrowthParameters.m_apicalBudLightingFactor);
-
-				}
-				else
-				{
-					bud.m_flushingRate = shootGrowthParameters.m_lateralBudFlushingRate;
-					bud.m_flushingRate *= glm::pow(internode.m_data.m_lightIntensity, shootGrowthParameters.m_lateralBudLightingFactor);
-					if (internode.m_data.m_inhibitorSink > 0.0f) bud.m_flushingRate *= glm::exp(-internode.m_data.m_inhibitorSink);
-				}
+				float flushingRate = shootGrowthParameters.m_lateralBudFlushingRate * internode.m_data.m_lightIntensity;
+				if (internode.m_data.m_inhibitorSink > 0.0f) flushingRate *= glm::exp(-internode.m_data.m_inhibitorSink);
+				return flushingRate;
 			};
 		m_shootGrowthController.m_apicalControl = actualShootGrowthParameters.m_apicalControl;
 		m_shootGrowthController.m_apicalDominance = [=](const Node<InternodeGrowthData>& internode)

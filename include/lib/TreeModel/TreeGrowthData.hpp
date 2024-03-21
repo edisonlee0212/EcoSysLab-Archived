@@ -19,7 +19,6 @@ namespace EcoSysLab
 	enum class BudStatus {
 		Dormant,
 		Died,
-		Removed
 	};
 
 	struct ReproductiveModule
@@ -63,7 +62,6 @@ namespace EcoSysLab
 	struct InternodeGrowthData {
 		float m_internodeLength = 0.0f;
 		int m_indexOfParentBud = 0;
-		bool m_lateral = false;
 		float m_startAge = 0;
 		float m_finishAge = 0.0f;
 		

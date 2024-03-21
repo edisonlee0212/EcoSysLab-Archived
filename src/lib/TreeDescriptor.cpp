@@ -50,10 +50,11 @@ bool TreeDescriptor::OnInspectShootGrowthParameters(ShootGrowthParameters& treeG
 		{
 			changed = ImGui::DragFloat2("Branching angle mean/var", &treeGrowthParameters.m_branchingAngleMeanVariance.x, 0.1f, 0.0f, 100.0f) || changed;
 			changed = ImGui::DragFloat2("Roll angle mean/var", &treeGrowthParameters.m_rollAngleMeanVariance.x, 0.1f, 0.0f, 100.0f) || changed;
-			changed = ImGui::DragFloat("Apical angle variance", &treeGrowthParameters.m_apicalAngleVariance, 0.1f, 0.0f, 100.0f) || changed;
+			changed = ImGui::DragFloat2("Apical angle variance", &treeGrowthParameters.m_apicalAngleMeanVariance.x, 0.1f, 0.0f, 100.0f) || changed;
 
 			changed = ImGui::DragFloat("Gravitropism", &treeGrowthParameters.m_gravitropism, 0.01f) || changed;
 			changed = ImGui::DragFloat("Phototropism", &treeGrowthParameters.m_phototropism, 0.01f) || changed;
+			changed = ImGui::DragFloat("Horizontal Tropism", &treeGrowthParameters.m_horizontalTropism, 0.01f) || changed;
 			changed = ImGui::DragFloat("Sagging strength", &treeGrowthParameters.m_saggingFactorThicknessReductionMax.x, 0.0001f, 0.0f, 10.0f, "%.5f") || changed;
 			changed = ImGui::DragFloat("Sagging thickness factor", &treeGrowthParameters.m_saggingFactorThicknessReductionMax.y, 0.01f, 0.0f, 10.0f, "%.5f") || changed;
 			changed = ImGui::DragFloat("Sagging max", &treeGrowthParameters.m_saggingFactorThicknessReductionMax.z, 0.001f, 0.0f, 1.0f, "%.5f") || changed;
@@ -66,11 +67,8 @@ bool TreeDescriptor::OnInspectShootGrowthParameters(ShootGrowthParameters& treeG
 		}
 		if (ImGui::TreeNodeEx("Bud fate", ImGuiTreeNodeFlags_DefaultOpen)) {
 			changed = ImGui::DragInt("Lateral bud count", &treeGrowthParameters.m_lateralBudCount, 1, 0, 3) || changed;
-
 			changed = ImGui::DragFloat("Apical bud extinction rate", &treeGrowthParameters.m_apicalBudExtinctionRate, 0.00001f, 0.0f, 1.0f, "%.5f") || changed;
 			changed = ImGui::DragFloat("Lateral bud flushing rate", &treeGrowthParameters.m_lateralBudFlushingRate, 0.00001f, 0.0f, 1.0f, "%.5f") || changed;
-			changed = ImGui::DragFloat2("Lighting factor apical/lateral", &treeGrowthParameters.m_apicalBudLightingFactor, 0.00001f, 0.0f, 1.0f, "%.5f") || changed;
-
 			changed = ImGui::DragFloat("Apical control", &treeGrowthParameters.m_apicalControl, 0.01f) || changed;
 			changed = ImGui::DragFloat2("Inhibitor val/loss", &treeGrowthParameters.m_apicalDominance, 0.01f) || changed;
 			ImGui::TreePop();
@@ -144,9 +142,13 @@ void TreeDescriptor::ApplyOffsets(ShootGrowthParameters& treeGrowthParameters, c
 		{
 			treeGrowthParameters.m_rollAngleMeanVariance.y += glm::mix(i.m_range.x, i.m_range.y, a); break;
 		}
+		case static_cast<unsigned>(ShootGrowthParameterType::ApicalAngleMean):
+		{
+			treeGrowthParameters.m_apicalAngleMeanVariance.x += glm::mix(i.m_range.x, i.m_range.y, a); break;
+		}
 		case static_cast<unsigned>(ShootGrowthParameterType::ApicalAngleVariance):
 		{
-			treeGrowthParameters.m_apicalAngleVariance += glm::mix(i.m_range.x, i.m_range.y, a); break;
+			treeGrowthParameters.m_apicalAngleMeanVariance.y += glm::mix(i.m_range.x, i.m_range.y, a); break;
 		}
 		case static_cast<unsigned>(ShootGrowthParameterType::Gravitropism):
 		{
@@ -195,14 +197,6 @@ void TreeDescriptor::ApplyOffsets(ShootGrowthParameters& treeGrowthParameters, c
 		case static_cast<unsigned>(ShootGrowthParameterType::ApicalBudExtinctionRate):
 		{
 			treeGrowthParameters.m_apicalBudExtinctionRate += glm::mix(i.m_range.x, i.m_range.y, a); break;
-		}
-		case static_cast<unsigned>(ShootGrowthParameterType::ApicalBudLightingFactor):
-		{
-			treeGrowthParameters.m_apicalBudLightingFactor += glm::mix(i.m_range.x, i.m_range.y, a); break;
-		}
-		case static_cast<unsigned>(ShootGrowthParameterType::LateralBudLightingFactor):
-		{
-			treeGrowthParameters.m_lateralBudLightingFactor += glm::mix(i.m_range.x, i.m_range.y, a); break;
 		}
 		case static_cast<unsigned>(ShootGrowthParameterType::ApicalControl):
 		{
@@ -264,7 +258,7 @@ bool TreeDescriptor::OnInspectShootGrowthParametersOffset(
 				}
 				ImGui::SameLine();
 				if (ImGui::Combo("Type", { "GrowthRate", "BranchingAngleMean", "BranchingAngleVariance",
-					"RollAngleMean", "RollAngleVariance", "ApicalAngleVariance", "Gravitropism", "Phototropism", "Sagging", "SaggingThicknessFactor",
+					"RollAngleMean", "RollAngleVariance", "ApicalAngleMean", "ApicalAngleVariance", "Gravitropism", "Phototropism", "Sagging", "SaggingThicknessFactor",
 					"MaxSagging", "InternodeLength", "InternodeLengthThicknessFactor", "EndNodeThickness", "ThicknessAccumulationFactor", "ThicknessAgeFactor", "ShadowFactor",
 					"ApicalBudExtinctionRate", "LateralBudExtinctionRate", "ApicalBudLightingFactor",
 					"LateralBudLightingFactor", "ApicalControl", "ApicalDominance", "ApicalDominanceLoss",
@@ -370,9 +364,10 @@ void TreeDescriptor::SerializeShootGrowthParameters(const std::string& name, con
 	out << YAML::Key << "m_growthRate" << YAML::Value << treeGrowthParameters.m_growthRate;
 	out << YAML::Key << "m_branchingAngleMeanVariance" << YAML::Value << treeGrowthParameters.m_branchingAngleMeanVariance;
 	out << YAML::Key << "m_rollAngleMeanVariance" << YAML::Value << treeGrowthParameters.m_rollAngleMeanVariance;
-	out << YAML::Key << "m_apicalAngleVariance" << YAML::Value << treeGrowthParameters.m_apicalAngleVariance;
+	out << YAML::Key << "m_apicalAngleMeanVariance" << YAML::Value << treeGrowthParameters.m_apicalAngleMeanVariance;
 	out << YAML::Key << "m_gravitropism" << YAML::Value << treeGrowthParameters.m_gravitropism;
 	out << YAML::Key << "m_phototropism" << YAML::Value << treeGrowthParameters.m_phototropism;
+	out << YAML::Key << "m_horizontalTropism" << YAML::Value << treeGrowthParameters.m_horizontalTropism;
 	out << YAML::Key << "m_saggingFactorThicknessReductionMax" << YAML::Value << treeGrowthParameters.m_saggingFactorThicknessReductionMax;
 	out << YAML::Key << "m_internodeLength" << YAML::Value << treeGrowthParameters.m_internodeLength;
 	out << YAML::Key << "m_internodeLengthThicknessFactor" << YAML::Value << treeGrowthParameters.m_internodeLengthThicknessFactor;
@@ -384,8 +379,6 @@ void TreeDescriptor::SerializeShootGrowthParameters(const std::string& name, con
 	out << YAML::Key << "m_lateralBudCount" << YAML::Value << treeGrowthParameters.m_lateralBudCount;
 	out << YAML::Key << "m_apicalBudExtinctionRate" << YAML::Value << treeGrowthParameters.m_apicalBudExtinctionRate;
 	out << YAML::Key << "m_lateralBudFlushingRate" << YAML::Value << treeGrowthParameters.m_lateralBudFlushingRate;
-	out << YAML::Key << "m_apicalBudLightingFactor" << YAML::Value << treeGrowthParameters.m_apicalBudLightingFactor;
-	out << YAML::Key << "m_lateralBudLightingFactor" << YAML::Value << treeGrowthParameters.m_lateralBudLightingFactor;
 	out << YAML::Key << "m_apicalControl" << YAML::Value << treeGrowthParameters.m_apicalControl;
 	out << YAML::Key << "m_apicalDominance" << YAML::Value << treeGrowthParameters.m_apicalDominance;
 	out << YAML::Key << "m_apicalDominanceLoss" << YAML::Value << treeGrowthParameters.m_apicalDominanceLoss;
@@ -470,9 +463,10 @@ void TreeDescriptor::DeserializeShootGrowthParameters(const std::string& name, S
 		if (param["m_growthRate"]) treeGrowthParameters.m_growthRate = param["m_growthRate"].as<float>();
 		if (param["m_branchingAngleMeanVariance"]) treeGrowthParameters.m_branchingAngleMeanVariance = param["m_branchingAngleMeanVariance"].as<glm::vec2>();
 		if (param["m_rollAngleMeanVariance"]) treeGrowthParameters.m_rollAngleMeanVariance = param["m_rollAngleMeanVariance"].as<glm::vec2>();
-		if (param["m_apicalAngleVariance"]) treeGrowthParameters.m_apicalAngleVariance = param["m_apicalAngleVariance"].as<float>();
+		if (param["m_apicalAngleMeanVariance"]) treeGrowthParameters.m_apicalAngleMeanVariance = param["m_apicalAngleMeanVariance"].as<glm::vec2>();
 		if (param["m_gravitropism"]) treeGrowthParameters.m_gravitropism = param["m_gravitropism"].as<float>();
 		if (param["m_phototropism"]) treeGrowthParameters.m_phototropism = param["m_phototropism"].as<float>();
+		if (param["m_horizontalTropism"]) treeGrowthParameters.m_horizontalTropism = param["m_horizontalTropism"].as<float>();
 		if (param["m_saggingFactorThicknessReductionMax"]) treeGrowthParameters.m_saggingFactorThicknessReductionMax = param["m_saggingFactorThicknessReductionMax"].as<glm::vec3>();
 		if (param["m_internodeLength"]) treeGrowthParameters.m_internodeLength = param["m_internodeLength"].as<float>();
 		if (param["m_internodeLengthThicknessFactor"]) treeGrowthParameters.m_internodeLengthThicknessFactor = param["m_internodeLengthThicknessFactor"].as<float>();
@@ -485,8 +479,6 @@ void TreeDescriptor::DeserializeShootGrowthParameters(const std::string& name, S
 		if (param["m_lateralBudCount"]) treeGrowthParameters.m_lateralBudCount = param["m_lateralBudCount"].as<int>();
 		if (param["m_apicalBudExtinctionRate"]) treeGrowthParameters.m_apicalBudExtinctionRate = param["m_apicalBudExtinctionRate"].as<float>();
 		if (param["m_lateralBudFlushingRate"]) treeGrowthParameters.m_lateralBudFlushingRate = param["m_lateralBudFlushingRate"].as<float>();
-		if (param["m_apicalBudLightingFactor"]) treeGrowthParameters.m_apicalBudLightingFactor = param["m_apicalBudLightingFactor"].as<float>();
-		if (param["m_lateralBudLightingFactor"]) treeGrowthParameters.m_lateralBudLightingFactor = param["m_lateralBudLightingFactor"].as<float>();
 		if (param["m_apicalControl"]) treeGrowthParameters.m_apicalControl = param["m_apicalControl"].as<float>();
 		if (param["m_apicalDominance"]) treeGrowthParameters.m_apicalDominance = param["m_apicalDominance"].as<float>();
 		if (param["m_apicalDominanceLoss"]) treeGrowthParameters.m_apicalDominanceLoss = param["m_apicalDominanceLoss"].as<float>();

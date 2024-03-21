@@ -212,9 +212,7 @@ void EcoSysLabLayer::Visualization() {
 								pruningInternode.m_data.m_internodeLength *= treeVisualizer.m_selectedInternodeLengthFactor;
 								treeModel.CalculateTransform(tree->m_shootGrowthController, true);
 								treeVisualizer.m_selectedInternodeLengthFactor = 1.0f;
-								for (auto& bud : pruningInternode.m_data.m_buds) {
-									bud.m_status = BudStatus::Removed;
-								}
+								pruningInternode.m_data.m_buds.clear();
 								skeleton.SortLists();
 								treeVisualizer.m_checkpointIteration = treeModel.CurrentIteration();
 								treeVisualizer.m_needUpdate = true;
