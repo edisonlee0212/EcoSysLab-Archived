@@ -65,7 +65,7 @@ void EcoSysLabLayer::OnCreate() {
 	m_vectorMatrices = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
 	m_scalarMatrices = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
 	m_shadowGridParticleInfoList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
-
+	m_lightingGridParticleInfoList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
 #pragma region Internode camera
 	m_visualizationCamera =
 		Serialization::ProduceSerializable<Camera>();
@@ -151,20 +151,46 @@ void EcoSysLabLayer::Visualization() {
 				const auto climate = climateCandidate.lock();
 				const auto& voxelGrid = climate->m_climateModel.m_environmentGrid.m_voxel;
 				const auto numVoxels = voxelGrid.GetVoxelCount();
-				auto& scalarMatrices = m_shadowGridParticleInfoList->m_particleInfos;
-				if (scalarMatrices.size() != numVoxels) {
-					scalarMatrices.resize(numVoxels);
-				}
-				Jobs::ParallelFor(numVoxels, [&](unsigned i) {
-					const auto coordinate = voxelGrid.GetCoordinate(i);
-					scalarMatrices[i].m_instanceMatrix.m_value =
-						glm::translate(voxelGrid.GetPosition(coordinate) + glm::linearRand(-glm::vec3(0.5f * voxelGrid.GetVoxelSize()), glm::vec3(0.5f * voxelGrid.GetVoxelSize())))
-						* glm::mat4_cast(glm::quat(glm::vec3(0.0f)))
-						* glm::scale(glm::vec3(0.25f * voxelGrid.GetVoxelSize()));
-					scalarMatrices[i].m_instanceColor = glm::vec4(0.5f, 0.5f, 0.5f, glm::clamp(voxelGrid.Peek(static_cast<int>(i)).m_shadowIntensity, 0.0f, 1.0f));
+				{
+					auto& scalarMatrices = m_shadowGridParticleInfoList->m_particleInfos;
+					if (scalarMatrices.size() != numVoxels) {
+						scalarMatrices.resize(numVoxels);
 					}
-				);
-				m_shadowGridParticleInfoList->SetPendingUpdate();
+					Jobs::ParallelFor(numVoxels, [&](unsigned i) {
+						const auto coordinate = voxelGrid.GetCoordinate(i);
+						scalarMatrices[i].m_instanceMatrix.m_value =
+							glm::translate(voxelGrid.GetPosition(coordinate) + glm::linearRand(-glm::vec3(0.5f * voxelGrid.GetVoxelSize()), glm::vec3(0.5f * voxelGrid.GetVoxelSize())))
+							* glm::mat4_cast(glm::quat(glm::vec3(0.0f)))
+							* glm::scale(glm::vec3(0.25f * voxelGrid.GetVoxelSize()));
+						scalarMatrices[i].m_instanceColor = glm::vec4(0.5f, 0.5f, 0.5f, glm::clamp(voxelGrid.Peek(static_cast<int>(i)).m_shadowIntensity, 0.0f, 1.0f));
+						}
+					);
+					m_shadowGridParticleInfoList->SetPendingUpdate();
+				}
+				{
+					auto& scalarMatrices = m_lightingGridParticleInfoList->m_particleInfos;
+					if (scalarMatrices.size() != numVoxels) {
+						scalarMatrices.resize(numVoxels);
+					}
+					Jobs::ParallelFor(numVoxels, [&](unsigned i) {
+						const auto coordinate = voxelGrid.GetCoordinate(i);
+						const auto& voxel = voxelGrid.Peek(coordinate);
+						const auto direction = voxel.m_lightDirection;
+						auto rotation = glm::quatLookAt(
+							direction, glm::vec3(direction.y, direction.z, direction.x));
+						rotation *= glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));
+						const glm::mat4 rotationTransform = glm::mat4_cast(rotation);
+						const auto voxelSize = voxelGrid.GetVoxelSize();
+						scalarMatrices[i].m_instanceMatrix.m_value =
+							glm::translate(voxelGrid.GetPosition(coordinate) + glm::linearRand(-glm::vec3(0.5f * voxelGrid.GetVoxelSize()), glm::vec3(0.5f * voxelGrid.GetVoxelSize())))
+							* rotationTransform
+							* glm::scale(glm::vec3(0.05f * voxelSize, voxelSize * 0.5f, 0.05f * voxelSize));
+						if (voxelGrid.Peek(static_cast<int>(i)).m_lightIntensity == 0.0f) scalarMatrices[i].m_instanceColor = glm::vec4(0.0f);
+						else scalarMatrices[i].m_instanceColor = glm::vec4(0.5f, 0.5f, 0.5f, glm::clamp(voxelGrid.Peek(static_cast<int>(i)).m_shadowIntensity, 0.0f, 1.0f));
+						}
+					);
+					m_lightingGridParticleInfoList->SetPendingUpdate();
+				}
 			}
 		}
 	}
@@ -577,9 +603,15 @@ void EcoSysLabLayer::Visualization() {
 			editorLayer->DrawGizmoMeshInstancedColored(
 				Resources::GetResource<Mesh>("PRIMITIVE_CUBE"), m_visualizationCamera,
 				m_shadowGridParticleInfoList,
+				glm::mat4(1.0f), 1.0f, gizmoSettings);			
+		}
+		if(m_showLightingGrid)
+		{
+			editorLayer->DrawGizmoMeshInstancedColored(
+				Resources::GetResource<Mesh>("PRIMITIVE_CUBE"), m_visualizationCamera,
+				m_lightingGridParticleInfoList,
 				glm::mat4(1.0f), 1.0f, gizmoSettings);
 		}
-
 		if (m_displayShootStem && !m_shootStemPoints.empty()) {
 			gizmoSettings.m_colorMode = GizmoSettings::ColorMode::Default;
 			editorLayer->DrawGizmoStrands(branchStrands, m_visualizationCamera, glm::vec4(1.0f, 1.0f, 1.0f, 0.75f), glm::mat4(1.0f), 1,
@@ -812,11 +844,14 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 				if (ImGui::TreeNode("Shadow Estimation Settings")) {
 					bool settingsChanged = false;
 					settingsChanged =
-						ImGui::DragFloat("Distance power factor", &m_simulationSettings.m_shadowEstimationSettings.m_distancePowerFactor, 0.01f,
+						ImGui::DragFloat("Shadow distance loss", &m_simulationSettings.m_shadowEstimationSettings.m_shadowDistanceLoss, 0.01f,
 							0.0f, 10.0f) || settingsChanged;
 
 					settingsChanged =
-						ImGui::DragFloat("Shadow propagate loss", &m_simulationSettings.m_shadowEstimationSettings.m_shadowPropagateLoss, 0.001f,
+						ImGui::DragFloat("Shadow base loss", &m_simulationSettings.m_shadowEstimationSettings.m_shadowBaseLoss, 0.001f,
+							0.0f, 1.0f) || settingsChanged;
+					settingsChanged =
+						ImGui::DragFloat("Shadow detection radius", &m_simulationSettings.m_shadowEstimationSettings.m_shadowDetectionRadius, 0.001f,
 							0.0f, 1.0f) || settingsChanged;
 
 					if (settingsChanged) {
@@ -875,6 +910,7 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 			}
 			ImGui::Checkbox("Display Bounding Box", &m_displayBoundingBox);
 			ImGui::Checkbox("Show Shadow Grid", &m_showShadowGrid);
+			ImGui::Checkbox("Show Lighting Direction Grid", &m_showLightingGrid);
 			ImGui::TreePop();
 		}
 	}

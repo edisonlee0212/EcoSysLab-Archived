@@ -278,7 +278,7 @@ void TreeModel::CalculateShootFlux(const glm::mat4& globalTransform, ClimateMode
 			}
 		}
 		const glm::vec3 position = globalTransform * glm::vec4(internodeInfo.m_globalPosition, 1.0f);
-		internodeData.m_lightIntensity = climateModel.m_environmentGrid.IlluminationEstimation(position, internodeData.m_lightDirection);
+		internodeData.m_lightIntensity = climateModel.m_environmentGrid.Sample(position, internodeData.m_lightDirection);
 		if (internodeData.m_lightIntensity <= glm::epsilon<float>())
 		{
 			internodeData.m_lightDirection = glm::normalize(internodeInfo.m_globalDirection);

@@ -1,67 +1,79 @@
 #include "EnvironmentGrid.hpp"
 using namespace EcoSysLab;
 
-float EnvironmentGrid::IlluminationEstimation(const glm::vec3& position, glm::vec3& lightDirection) const
+float EnvironmentGrid::Sample(const glm::vec3& position, glm::vec3& lightDirection) const
 {
 	const auto& data = m_voxel.Peek(position);
-	const float lightIntensity = glm::max(0.0f, 1.0f - data.m_shadowIntensity);
-	if (lightIntensity == 0.0f)
-	{
-		lightDirection = glm::vec3(0.0f);
-	}
-	else if(data.m_shadowIntensity == 0.0f)
-	{
-		lightDirection = glm::vec3(0.0f, 1.0f, 0.0f);
-	}
-	else{
-		lightDirection = glm::normalize(glm::vec3(0.0f, 1.0f, 0.0f) + glm::normalize(data.m_shadowDirection) * data.m_shadowIntensity);
-	}
-
-	return lightIntensity;
+	lightDirection = data.m_lightDirection;
+	return data.m_lightIntensity;
 }
 
 void EnvironmentGrid::AddShadowValue(const glm::vec3& position, float value)
 {
 	auto& data = m_voxel.Ref(position);
-	data.m_shadowIntensity += value;
+	data.m_selfShadow += value;
 }
 
 void EnvironmentGrid::ShadowPropagation()
 {
 	const auto resolution = m_voxel.GetResolution();
-	for (int y = resolution.y - 2; y >= 0; y--) {
+	const int shadowDiskSize = glm::ceil(m_settings.m_shadowDetectionRadius / m_voxelSize);
+	for (int y = resolution.y - 1; y >= 0; y--) {
 		Jobs::ParallelFor(resolution.x * resolution.z, [&](unsigned i)
 			{
 				const int x = i / resolution.z;
 				const int z = i % resolution.z;
 				float sum = 0.0f;
-				auto shadowDirection = glm::vec3(0.0f);
-				for(int xOffset = -2; xOffset <= 2; xOffset++)
+				for (int xOffset = -shadowDiskSize; xOffset <= shadowDiskSize; xOffset++)
 				{
-					for (int zOffset = -2; zOffset <= 2; zOffset++)
+					if (x + xOffset < 0 || x + xOffset > resolution.x - 1) continue;
+					for (int zOffset = -shadowDiskSize; zOffset <= shadowDiskSize; zOffset++)
 					{
-						const float distance = glm::sqrt(static_cast<float>(xOffset) * static_cast<float>(xOffset) + static_cast<float>(zOffset) * static_cast<float>(zOffset));
-						if(distance > 2.f) continue;
-						if (x + xOffset < 0 || x + xOffset > resolution.x - 1) continue;
 						if (z + zOffset < 0 || z + zOffset > resolution.z - 1) continue;
+						if (y + 1 > resolution.y - 1) continue;
 						const auto otherVoxelCenter = glm::ivec3(x + xOffset, y + 1, z + zOffset);
-						const float shadowIntensity = m_voxel.Ref(otherVoxelCenter).m_shadowIntensity;
-						float loss = (2.f - distance) / 2.f;
-						loss = glm::pow(loss, m_settings.m_distancePowerFactor);
-						sum += shadowIntensity * loss;
 						const auto positionDiff = m_voxel.GetPosition(otherVoxelCenter) - m_voxel.GetPosition(glm::ivec3(x, y, z));
-						const auto direction = glm::normalize(positionDiff);
-						shadowDirection += direction * shadowIntensity;
+						const float distance = glm::length(positionDiff); // glm::sqrt(static_cast<float>(xOffset) * static_cast<float>(xOffset) + static_cast<float>(zOffset) * static_cast<float>(zOffset));
+						if (distance > m_settings.m_shadowDetectionRadius) continue;
+						const auto& targetVoxel = m_voxel.Ref(otherVoxelCenter);
+						const float distanceLoss = glm::pow(glm::max(0.0f, (m_settings.m_shadowDetectionRadius - distance) / m_settings.m_shadowDetectionRadius), m_settings.m_shadowDistanceLoss);
+						sum += m_settings.m_shadowBaseLoss * (targetVoxel.m_shadowIntensity + targetVoxel.m_selfShadow) * distanceLoss;
 					}
 				}
 				auto& voxel = m_voxel.Ref(glm::ivec3(x, y, z));
-				voxel.m_shadowIntensity += m_settings.m_shadowPropagateLoss * sum;
-				if (voxel.m_shadowIntensity > glm::epsilon<float>()) {
-					voxel.m_shadowDirection = glm::normalize(shadowDirection);
-				}else
+				voxel.m_shadowIntensity += sum;
+				voxel.m_lightIntensity = glm::max(0.0f, 1.0f - voxel.m_shadowIntensity);
+			}
+		);
+	}
+	const int lightSpaceSize = glm::ceil(m_settings.m_lightDetectionRadius / m_voxelSize);
+	for (int y = resolution.y - 1; y >= 0; y--) {
+		Jobs::ParallelFor(resolution.x * resolution.z, [&](unsigned i)
+			{
+				const int x = i / resolution.z;
+				const int z = i % resolution.z;
+				glm::vec3 sum = glm::vec3(0.0f);
+				for (int xOffset = -lightSpaceSize; xOffset <= lightSpaceSize; xOffset++)
 				{
-					voxel.m_shadowDirection = glm::vec3(0.0f);
+					if (x + xOffset < 0 || x + xOffset > resolution.x - 1) continue;
+					for (int zOffset = -lightSpaceSize; zOffset <= lightSpaceSize; zOffset++)
+					{
+						for (int yOffset = 1; yOffset <= lightSpaceSize; yOffset++)
+						{
+							if (y + yOffset < 0 || y + yOffset > resolution.y - 1) continue;
+							if (z + zOffset < 0 || z + zOffset > resolution.z - 1) continue;
+							const auto otherVoxelCenter = glm::ivec3(x + xOffset, y + yOffset, z + zOffset);
+							const auto positionDiff = m_voxel.GetPosition(otherVoxelCenter) - m_voxel.GetPosition(glm::ivec3(x, y, z));
+							const float distance = glm::length(positionDiff); // glm::sqrt(static_cast<float>(xOffset) * static_cast<float>(xOffset) + static_cast<float>(zOffset) * static_cast<float>(zOffset));
+							if (distance > m_settings.m_lightDetectionRadius) continue;
+							const auto& targetVoxel = m_voxel.Ref(otherVoxelCenter);
+							sum += targetVoxel.m_lightIntensity * positionDiff;
+						}
+					}
 				}
+				auto& voxel = m_voxel.Ref(glm::ivec3(x, y, z));
+				if (glm::length(sum) > glm::epsilon<float>()) voxel.m_lightDirection = glm::normalize(sum);
+				else voxel.m_lightDirection = glm::vec3(0.0f, 1.0f, 0.0f);
 			}
 		);
 	}
