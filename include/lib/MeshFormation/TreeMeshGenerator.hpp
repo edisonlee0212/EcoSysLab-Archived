@@ -25,40 +25,13 @@ namespace EcoSysLab {
 		[[nodiscard]] glm::vec3 GetDirection(const glm::vec3& normalDir, float angle, bool isStart) const;
 	};
 
-	struct FoliageDescriptor
-	{
-		glm::vec2 m_leafSize = glm::vec2(0.02f, 0.02f);
-		glm::vec3 m_leafColor = glm::vec3(152 / 255.0f, 203 / 255.0f, 0 / 255.0f);
-		int m_leafCountPerInternode = 20;
-		float m_positionVariance = 0.175f;
-		float m_rotationVariance = 1.f;
-		float m_branchingAngle = 30.f;
-		float m_maxNodeThickness = 1.0f;
-		float m_minRootDistance = 0.0f;
-		float m_maxEndDistance = 0.2f;
-	};
+	
 
 	struct PresentationOverrideSettings
 	{
-		glm::vec3 m_branchOverrideColor = glm::vec3(109, 79, 75) / 255.0f;
-
 		float m_maxThickness = 0.0f;
 	};
 
-	struct TwigParameters
-	{
-		float m_segmentLength = 0.01f;
-		float m_apicalAngleVariance = 3.0f;
-		float m_branchingAngle = 30.f;
-		float m_thickness = 0.002f;
-		float m_maxNodeThickness = 0.003f;
-		float m_minRootDistance = 1.75f;
-		float m_maxEndDistance = 999.0f;
-		int m_segmentSize = 8;
-		float m_unitDistance = 0.03f;
-	};
-
-	
 	struct TreeMeshGeneratorSettings {
 		bool m_vertexColorOnly = false;
 		bool m_enableFoliage = false;
@@ -67,19 +40,7 @@ namespace EcoSysLab {
 		bool m_enableTwig = false;
 
 		bool m_presentationOverride = false;
-		bool m_foliageOverride = false;
-		FoliageDescriptor m_foliageOverrideSettings = {};
 		PresentationOverrideSettings m_presentationOverrideSettings = {};
-		AssetRef m_foliageAlbedoTexture;
-		AssetRef m_foliageNormalTexture;
-		AssetRef m_foliageRoughnessTexture;
-		AssetRef m_foliageMetallicTexture;
-
-		AssetRef m_branchAlbedoTexture;
-		AssetRef m_branchNormalTexture;
-		AssetRef m_branchRoughnessTexture;
-		AssetRef m_branchMetallicTexture;
-
 		float m_trunkThickness = 0.1f;
 		float m_xSubdivision = 0.03f;
 		float m_trunkYSubdivision = 0.03f;
@@ -105,7 +66,7 @@ namespace EcoSysLab {
 
 		float m_marchingCubeRadius = 0.01f;
 
-		TwigParameters m_twigParameters{};
+		
 		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer);
 
 		void Save(const std::string& name, YAML::Emitter& out);

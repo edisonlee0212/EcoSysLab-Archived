@@ -1,0 +1,9 @@
+m_shootDescriptor:
+  m_assetHandle: 3114193180655705288
+  m_assetTypeName: ShootDescriptor
+m_foliageDescriptor:
+  m_assetHandle: 14076980751155658291
+  m_assetTypeName: FoliageDescriptor
+m_shootBranchShape:
+  m_assetHandle: 0
+  m_assetTypeName: ""

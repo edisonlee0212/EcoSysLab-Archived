@@ -237,7 +237,7 @@ namespace EcoSysLab {
 		ReconstructionSettings m_reconstructionSettings{};
 		ConnectivityGraphSettings m_connectivityGraphSettings{};
 		void ImportGraph(const std::filesystem::path& path, float scaleFactor = 0.1f);
-		void ExportForestOBJ(const std::filesystem::path& path) const;
+		void ExportForestOBJ(const std::filesystem::path& path);
 
 		glm::vec3 m_min;
 		glm::vec3 m_max;
@@ -266,10 +266,10 @@ namespace EcoSysLab {
 		void ClearMeshes() const;
 
 		void OnCreate() override;
-
-		void FormGeometryEntity() const;
+		AssetRef m_foliageDescriptor;
+		AssetRef m_shootBranchShape;
 
 		std::vector<std::shared_ptr<Mesh>> GenerateForestBranchMeshes() const;
-		std::vector<std::shared_ptr<Mesh>> GenerateFoliageMeshes() const;
+		std::vector<std::shared_ptr<Mesh>> GenerateFoliageMeshes();
 	};
 }

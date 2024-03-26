@@ -52,12 +52,6 @@ void StrandModelMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLay
 	ImGui::DragInt("Smooth iteration", &m_smoothIteration, 0, 0, 10);
 	ImGui::Checkbox("Branch", &m_enableBranch);
 	ImGui::Checkbox("Foliage", &m_enableFoliage);
-
-	if (ImGui::TreeNodeEx("Foliage settings"))
-	{
-		TreeDescriptor::OnInspectFoliageDescriptor(m_foliageSettings);
-		ImGui::TreePop();
-	}
 }
 
 void StrandModelMeshGenerator::Generate(const StrandModel& strandModel, std::vector<Vertex>& vertices,

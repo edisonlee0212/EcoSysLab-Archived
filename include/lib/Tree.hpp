@@ -5,7 +5,6 @@
 #include "RadialBoundingVolume.hpp"
 #include "TreeDescriptor.hpp"
 #include "TreeGraph.hpp"
-#include "TreeGrowthParameters.hpp"
 #include "StrandModelMeshGenerator.hpp"
 #include "TreeIOTree.hpp"
 using namespace EvoEngine;
@@ -25,6 +24,7 @@ namespace EcoSysLab {
 		void GenerateTrunkMeshes(const std::shared_ptr<Mesh>& trunkMesh, const TreeMeshGeneratorSettings& meshGeneratorSettings);
 		std::shared_ptr<Mesh> GenerateBranchMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings);
 		std::shared_ptr<Mesh> GenerateFoliageMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings);
+		std::shared_ptr<Strands> GenerateTwigStrands(const TreeMeshGeneratorSettings& meshGeneratorSettings);
 		std::shared_ptr<ParticleInfoList> GenerateFoliageParticleInfoList(const TreeMeshGeneratorSettings& meshGeneratorSettings);
 		std::shared_ptr<Mesh> GenerateStrandModelBranchMesh(const StrandModelMeshGeneratorSettings& strandModelMeshGeneratorSettings);
 		std::shared_ptr<Mesh> GenerateStrandModelFoliageMesh(const StrandModelMeshGeneratorSettings& strandModelMeshGeneratorSettings);

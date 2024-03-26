@@ -9,60 +9,6 @@
 using namespace EcoSysLab;
 
 
-void SerializeTwigParameters(const std::string& name, const TwigParameters& twigParameters, YAML::Emitter& out)
-{
-	out << YAML::Key << name << YAML::BeginMap;
-	out << YAML::Key << "m_segmentLength" << YAML::Value << twigParameters.m_segmentLength;
-	out << YAML::Key << "m_apicalAngleVariance" << YAML::Value << twigParameters.m_apicalAngleVariance;
-	out << YAML::Key << "m_branchingAngle" << YAML::Value << twigParameters.m_branchingAngle;
-	out << YAML::Key << "m_thickness" << YAML::Value << twigParameters.m_thickness;
-	out << YAML::Key << "m_maxNodeThickness" << YAML::Value << twigParameters.m_maxNodeThickness;
-	out << YAML::Key << "m_minRootDistance" << YAML::Value << twigParameters.m_minRootDistance;
-	out << YAML::Key << "m_maxEndDistance" << YAML::Value << twigParameters.m_maxEndDistance;
-	out << YAML::Key << "m_segmentSize" << YAML::Value << twigParameters.m_segmentSize;
-	out << YAML::Key << "m_unitDistance" << YAML::Value << twigParameters.m_unitDistance;
-	out << YAML::EndMap;
-}
-
-
-void DeserializeTwigParameters(const std::string& name, TwigParameters& twigParameters, const YAML::Node& in) {
-	if (in[name]) {
-		auto& ms = in[name];
-
-		if (ms["m_segmentLength"]) twigParameters.m_segmentLength = ms["m_segmentLength"].as<float>();
-		if (ms["m_apicalAngleVariance"]) twigParameters.m_apicalAngleVariance = ms["m_apicalAngleVariance"].as<float>();
-		if (ms["m_branchingAngle"]) twigParameters.m_branchingAngle = ms["m_branchingAngle"].as<float>();
-		if (ms["m_thickness"]) twigParameters.m_thickness = ms["m_thickness"].as<float>();
-		if (ms["m_maxNodeThickness"]) twigParameters.m_maxNodeThickness = ms["m_maxNodeThickness"].as<float>();
-		if (ms["m_maxEndDistance"]) twigParameters.m_maxEndDistance = ms["m_maxEndDistance"].as<float>();
-		if (ms["m_segmentSize"]) twigParameters.m_segmentSize = ms["m_segmentSize"].as<int>();
-		if (ms["m_unitDistance"]) twigParameters.m_unitDistance = ms["m_unitDistance"].as<float>();
-		if (ms["m_minRootDistance"]) twigParameters.m_minRootDistance = ms["m_minRootDistance"].as<float>();
-	}
-}
-
-
-bool OnInspectTwigParameters(TwigParameters& twigParameters)
-{
-	bool changed = false;
-	if (ImGui::TreeNodeEx("Twig settings"))
-	{
-		changed = ImGui::DragFloat("Segment length", &twigParameters.m_segmentLength, 0.001f, 0.0f, 1.0f) || changed;
-		changed = ImGui::DragFloat("Apical angle variance", &twigParameters.m_apicalAngleVariance, 0.01f, 0.0f, 10.0f) || changed;
-		changed = ImGui::DragFloat("Branching angle", &twigParameters.m_branchingAngle, 0.01f, 0.0f, 180.0f) || changed;
-		changed = ImGui::DragFloat("Twig thickness", &twigParameters.m_thickness, 0.001f, 0.0f, 1.0f) || changed;
-		changed = ImGui::DragInt("Segment Size", &twigParameters.m_segmentSize, 1, 2, 10) || changed;
-		changed = ImGui::DragFloat("Distance between twigs", &twigParameters.m_unitDistance, 0.001f, 0.0f, 1.0f) || changed;
-
-		changed = ImGui::DragFloat("Max node thickness", &twigParameters.m_maxNodeThickness, 0.001f, 0.0f, 5.0f) || changed;
-		changed = ImGui::DragFloat("Min root distance", &twigParameters.m_minRootDistance, 0.001f, 0.0f, 1.0f) || changed;
-		changed = ImGui::DragFloat("Max end distance", &twigParameters.m_maxEndDistance, 0.001f, 0.0f, 1.0f) || changed;
-		ImGui::TreePop();
-	}
-	return changed;
-}
-
-
 RingSegment::RingSegment(glm::vec3 startPosition, glm::vec3 endPosition, glm::vec3 startAxis,
 	glm::vec3 endAxis, float startRadius, float endRadius)
 	: m_startPosition(startPosition),
@@ -158,7 +104,7 @@ void TreeMeshGeneratorSettings::Save(const std::string& name, YAML::Emitter& out
 
 	out << YAML::Key << "m_branchMeshType" << YAML::Value << m_branchMeshType;
 
-	SerializeTwigParameters("m_twigParameters", m_twigParameters, out);
+	
 
 	out << YAML::EndMap;
 
@@ -193,10 +139,7 @@ void TreeMeshGeneratorSettings::Load(const std::string& name, const YAML::Node& 
 		if (ms["m_removeDuplicate"]) m_removeDuplicate = ms["m_removeDuplicate"].as<bool>();
 
 		if (ms["m_branchMeshType"]) m_branchMeshType = ms["m_branchMeshType"].as<unsigned>();
-		DeserializeTwigParameters("m_twigParameters", m_twigParameters, ms);
 	}
-
-	
 }
 
 void TreeMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
@@ -207,10 +150,7 @@ void TreeMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLayer>& ed
 		ImGui::Checkbox("Foliage", &m_enableFoliage);
 		ImGui::Checkbox("Twig", &m_enableTwig);
 		ImGui::Combo("Branch mesh mode", { "Cylindrical", "Marching cubes" }, m_branchMeshType);
-		if(m_enableTwig)
-		{
-			OnInspectTwigParameters(m_twigParameters);
-		}
+		
 		
 		if(ImGui::TreeNode("Cylindrical mesh settings"))
 		{
@@ -253,24 +193,7 @@ void TreeMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLayer>& ed
 		if (m_presentationOverride && ImGui::TreeNodeEx("Override settings"))
 		{
 			ImGui::DragFloat("Max thickness", &m_presentationOverrideSettings.m_maxThickness, 0.01f, 0.0f, 1.0f);
-			ImGui::ColorEdit3("Branch color", &m_presentationOverrideSettings.m_branchOverrideColor.x);
-			editorLayer->DragAndDropButton<Texture2D>(m_foliageAlbedoTexture, "Foliage Albedo Texture");
-			editorLayer->DragAndDropButton<Texture2D>(m_foliageNormalTexture, "Foliage Normal Texture");
-			editorLayer->DragAndDropButton<Texture2D>(m_foliageRoughnessTexture, "Foliage Roughness Texture");
-			editorLayer->DragAndDropButton<Texture2D>(m_foliageMetallicTexture, "Foliage Metallic Texture");
-
-
-			editorLayer->DragAndDropButton<Texture2D>(m_branchAlbedoTexture, "Branch Albedo Texture");
-			editorLayer->DragAndDropButton<Texture2D>(m_branchNormalTexture, "Branch Normal Texture");
-			editorLayer->DragAndDropButton<Texture2D>(m_branchRoughnessTexture, "Branch Roughness Texture");
-			editorLayer->DragAndDropButton<Texture2D>(m_branchMetallicTexture, "Branch Metallic Texture");
-
-			ImGui::TreePop();
-		}
-		ImGui::Checkbox("Foliage Override", &m_foliageOverride);
-		if(m_foliageOverride && ImGui::TreeNodeEx("Foliage Override settings"))
-		{
-			TreeDescriptor::OnInspectFoliageDescriptor(m_foliageOverrideSettings);
+			
 			ImGui::TreePop();
 		}
 		ImGui::TreePop();

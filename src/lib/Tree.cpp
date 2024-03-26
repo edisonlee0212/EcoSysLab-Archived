@@ -15,6 +15,7 @@
 #include "Climate.hpp"
 #include "Octree.hpp"
 #include "EcoSysLabLayer.hpp"
+#include "FoliageDescriptor.hpp"
 #include "HeightField.hpp"
 #include "StrandsRenderer.hpp"
 using namespace EcoSysLab;
@@ -289,111 +290,113 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 
 	const auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
 	if (treeDescriptor) {
-		ImGui::DragInt("Seed", &m_treeModel.m_seed, 1, 0);
-		if (ImGui::Button("Reset")) {
-			Reset();
-			modelChanged = true;
-		}
-		if (ImGui::TreeNode("Tree settings")) {
-
-			ImGui::Checkbox("Enable History", &m_enableHistory);
-			if (m_enableHistory)
-			{
-				ImGui::DragInt("History per iteration", &m_historyIteration, 1, 1, 1000);
+		const auto shootDescriptor = treeDescriptor->m_shootDescriptor.Get<ShootDescriptor>();
+		if (shootDescriptor) {
+			ImGui::DragInt("Seed", &m_treeModel.m_seed, 1, 0);
+			if (ImGui::Button("Reset")) {
+				Reset();
+				modelChanged = true;
 			}
-			OnInspectTreeGrowthSettings(m_treeModel.m_treeGrowthSettings);
+			if (ImGui::TreeNode("Tree settings")) {
 
-			if (m_treeModel.m_treeGrowthSettings.m_useSpaceColonization && !m_treeModel.m_treeGrowthSettings.m_spaceColonizationAutoResize)
-			{
-				static float radius = 1.5f;
-				static int markersPerVoxel = 5;
-				ImGui::DragFloat("Import radius", &radius, 0.01f, 0.01f, 10.0f);
-				ImGui::DragInt("Markers per voxel", &markersPerVoxel);
-				FileUtils::OpenFile("Load Voxel Data", "Binvox", { ".binvox" }, [&](const std::filesystem::path& path) {
-					auto& occupancyGrid = m_treeModel.m_treeOccupancyGrid;
-					VoxelGrid<TreeOccupancyGridBasicData> inputGrid{};
-					if (ParseBinvox(path, inputGrid, 1.f))
-					{
-						const auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
-						occupancyGrid.Initialize(inputGrid,
-							glm::vec3(-radius, 0, -radius),
-							glm::vec3(radius, 2.0f * radius, radius),
-							treeDescriptor->m_shootDescriptor.m_internodeLength,
-							m_treeModel.m_treeGrowthSettings.m_spaceColonizationRemovalDistanceFactor,
-							m_treeModel.m_treeGrowthSettings.m_spaceColonizationTheta,
-							m_treeModel.m_treeGrowthSettings.m_spaceColonizationDetectionDistanceFactor, markersPerVoxel);
-					}
-
-					}, false);
-
-				static PrivateComponentRef privateComponentRef{};
-
-				if (editorLayer->DragAndDropButton<MeshRenderer>(privateComponentRef, "Add Obstacle"))
+				ImGui::Checkbox("Enable History", &m_enableHistory);
+				if (m_enableHistory)
 				{
-					if (const auto mmr = privateComponentRef.Get<MeshRenderer>())
-					{
-						const auto cubeVolume = ProjectManager::CreateTemporaryAsset<CubeVolume>();
-						cubeVolume->ApplyMeshBounds(mmr->m_mesh.Get<Mesh>());
-						const auto globalTransform = scene->GetDataComponent<GlobalTransform>(mmr->GetOwner());
-						m_treeModel.m_treeOccupancyGrid.InsertObstacle(globalTransform, cubeVolume);
-						privateComponentRef.Clear();
-					}
-
+					ImGui::DragInt("History per iteration", &m_historyIteration, 1, 1, 1000);
 				}
-			}
+				OnInspectTreeGrowthSettings(m_treeModel.m_treeGrowthSettings);
 
-			ImGui::TreePop();
-		}
-		if (ImGui::TreeNode("Mesh generation settings")) {
-			static int iterations = 5;
-			ImGui::DragInt("Iterations", &iterations, 1, 0, m_treeModel.CurrentIteration());
-			iterations = glm::clamp(iterations, 0, m_treeModel.CurrentIteration());
-			m_meshGeneratorSettings.OnInspect(editorLayer);
-			if (ImGui::Button("Generate Mesh")) {
-				InitializeMeshRenderer(m_meshGeneratorSettings, iterations);
-			}
-			if (ImGui::Button("Clear Mesh"))
-			{
-				ClearMeshRenderer();
-			}
-			ImGui::TreePop();
-		}
-		if (ImGui::TreeNode("Sagging"))
-		{
-			bool changed = false;
-			changed = ImGui::DragFloat("Sagging strength", &treeDescriptor->m_shootDescriptor.m_saggingFactorThicknessReductionMax.x, 0.0001f, 0.0f, 10.0f, "%.5f") || changed;
-			changed = ImGui::DragFloat("Sagging thickness factor", &treeDescriptor->m_shootDescriptor.m_saggingFactorThicknessReductionMax.y, 0.01f, 0.0f, 10.0f, "%.5f") || changed;
-			changed = ImGui::DragFloat("Sagging max", &treeDescriptor->m_shootDescriptor.m_saggingFactorThicknessReductionMax.z, 0.001f, 0.0f, 1.0f, "%.5f") || changed;
-			if (changed)
-			{
-				m_shootGrowthController.m_sagging = [=](const Node<InternodeGrowthData>& internode)
+				if (m_treeModel.m_treeGrowthSettings.m_useSpaceColonization && !m_treeModel.m_treeGrowthSettings.m_spaceColonizationAutoResize)
+				{
+					static float radius = 1.5f;
+					static int markersPerVoxel = 5;
+					ImGui::DragFloat("Import radius", &radius, 0.01f, 0.01f, 10.0f);
+					ImGui::DragInt("Markers per voxel", &markersPerVoxel);
+					FileUtils::OpenFile("Load Voxel Data", "Binvox", { ".binvox" }, [&](const std::filesystem::path& path) {
+						auto& occupancyGrid = m_treeModel.m_treeOccupancyGrid;
+						VoxelGrid<TreeOccupancyGridBasicData> inputGrid{};
+						if (ParseBinvox(path, inputGrid, 1.f))
+						{
+							const auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
+							occupancyGrid.Initialize(inputGrid,
+								glm::vec3(-radius, 0, -radius),
+								glm::vec3(radius, 2.0f * radius, radius),
+								shootDescriptor->m_internodeLength,
+								m_treeModel.m_treeGrowthSettings.m_spaceColonizationRemovalDistanceFactor,
+								m_treeModel.m_treeGrowthSettings.m_spaceColonizationTheta,
+								m_treeModel.m_treeGrowthSettings.m_spaceColonizationDetectionDistanceFactor, markersPerVoxel);
+						}
+
+						}, false);
+
+					static PrivateComponentRef privateComponentRef{};
+
+					if (editorLayer->DragAndDropButton<MeshRenderer>(privateComponentRef, "Add Obstacle"))
 					{
-						const auto& shootGrowthParameters = treeDescriptor->m_shootDescriptor;
-						const auto newSagging = glm::min(
-							shootGrowthParameters.m_saggingFactorThicknessReductionMax.z,
-							shootGrowthParameters.m_saggingFactorThicknessReductionMax.x *
-							(internode.m_data.m_descendantTotalBiomass + internode.m_data.m_extraMass) /
-							glm::pow(
-								internode.m_info.m_thickness /
-								shootGrowthParameters.m_endNodeThickness,
-								shootGrowthParameters.m_saggingFactorThicknessReductionMax.y));
-						return newSagging;
-					};
-				m_treeModel.CalculateTransform(m_shootGrowthController, true);
-				m_shootGrowthController.m_sagging = [=](const Node<InternodeGrowthData>& internode)
-					{
-						const auto& shootGrowthParameters = treeDescriptor->m_shootDescriptor;
-						const auto newSagging = glm::min(
-							shootGrowthParameters.m_saggingFactorThicknessReductionMax.z,
-							shootGrowthParameters.m_saggingFactorThicknessReductionMax.x *
-							(internode.m_data.m_descendantTotalBiomass + internode.m_data.m_extraMass) /
-							glm::pow(
-								internode.m_info.m_thickness /
-								shootGrowthParameters.m_endNodeThickness,
-								shootGrowthParameters.m_saggingFactorThicknessReductionMax.y));
-						return glm::max(internode.m_data.m_sagging, newSagging);
-					};
-				m_treeVisualizer.m_needUpdate = true;
+						if (const auto mmr = privateComponentRef.Get<MeshRenderer>())
+						{
+							const auto cubeVolume = ProjectManager::CreateTemporaryAsset<CubeVolume>();
+							cubeVolume->ApplyMeshBounds(mmr->m_mesh.Get<Mesh>());
+							const auto globalTransform = scene->GetDataComponent<GlobalTransform>(mmr->GetOwner());
+							m_treeModel.m_treeOccupancyGrid.InsertObstacle(globalTransform, cubeVolume);
+							privateComponentRef.Clear();
+						}
+
+					}
+				}
+
+				ImGui::TreePop();
+			}
+			if (ImGui::TreeNode("Mesh generation settings")) {
+				static int iterations = 5;
+				ImGui::DragInt("Iterations", &iterations, 1, 0, m_treeModel.CurrentIteration());
+				iterations = glm::clamp(iterations, 0, m_treeModel.CurrentIteration());
+				m_meshGeneratorSettings.OnInspect(editorLayer);
+				if (ImGui::Button("Generate Mesh")) {
+					InitializeMeshRenderer(m_meshGeneratorSettings, iterations);
+				}
+				if (ImGui::Button("Clear Mesh"))
+				{
+					ClearMeshRenderer();
+				}
+				ImGui::TreePop();
+			}
+			if (ImGui::TreeNode("Sagging"))
+			{
+				bool changed = false;
+				changed = ImGui::DragFloat("Sagging strength", &shootDescriptor->m_saggingFactorThicknessReductionMax.x, 0.0001f, 0.0f, 10.0f, "%.5f") || changed;
+				changed = ImGui::DragFloat("Sagging thickness factor", &shootDescriptor->m_saggingFactorThicknessReductionMax.y, 0.01f, 0.0f, 10.0f, "%.5f") || changed;
+				changed = ImGui::DragFloat("Sagging max", &shootDescriptor->m_saggingFactorThicknessReductionMax.z, 0.001f, 0.0f, 1.0f, "%.5f") || changed;
+				if (changed)
+				{
+					m_shootGrowthController.m_sagging = [=](const Node<InternodeGrowthData>& internode)
+						{
+							const auto newSagging = glm::min(
+								shootDescriptor->m_saggingFactorThicknessReductionMax.z,
+								shootDescriptor->m_saggingFactorThicknessReductionMax.x *
+								(internode.m_data.m_descendantTotalBiomass + internode.m_data.m_extraMass) /
+								glm::pow(
+									internode.m_info.m_thickness /
+									shootDescriptor->m_endNodeThickness,
+									shootDescriptor->m_saggingFactorThicknessReductionMax.y));
+							return newSagging;
+						};
+					m_treeModel.CalculateTransform(m_shootGrowthController, true);
+					m_shootGrowthController.m_sagging = [=](const Node<InternodeGrowthData>& internode)
+						{
+							const auto& shootGrowthParameters = treeDescriptor->m_shootDescriptor;
+							const auto newSagging = glm::min(
+								shootDescriptor->m_saggingFactorThicknessReductionMax.z,
+								shootDescriptor->m_saggingFactorThicknessReductionMax.x *
+								(internode.m_data.m_descendantTotalBiomass + internode.m_data.m_extraMass) /
+								glm::pow(
+									internode.m_info.m_thickness /
+									shootDescriptor->m_endNodeThickness,
+									shootDescriptor->m_saggingFactorThicknessReductionMax.y));
+							return glm::max(internode.m_data.m_sagging, newSagging);
+						};
+					m_treeVisualizer.m_needUpdate = true;
+				}
 			}
 		}
 		/*
@@ -741,20 +744,23 @@ std::shared_ptr<Mesh> Tree::GenerateFoliageMesh(const TreeMeshGeneratorSettings&
 	auto quadVerticesSize = quadMesh->GetVerticesAmount();
 	size_t offset = 0;
 	auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
-	const auto& foliageParameters = (!meshGeneratorSettings.m_foliageOverride && treeDescriptor) ? treeDescriptor->m_foliageDescriptor : meshGeneratorSettings.m_foliageOverrideSettings;
+	if (!treeDescriptor) return nullptr;
+	auto foliageDescriptor = treeDescriptor->m_foliageDescriptor.Get<FoliageDescriptor>();
+	if (!foliageDescriptor) foliageDescriptor = ProjectManager::CreateTemporaryAsset<FoliageDescriptor>();
 	const auto& nodeList = m_treeModel.PeekShootSkeleton().RefSortedNodeList();
 	for (const auto& internodeHandle : nodeList) {
 		const auto& internode = m_treeModel.PeekShootSkeleton().PeekNode(internodeHandle);
 		const auto& internodeInfo = internode.m_info;
-		if (internodeInfo.m_thickness < foliageParameters.m_maxNodeThickness
-			&& internodeInfo.m_rootDistance > foliageParameters.m_minRootDistance
-			&& internodeInfo.m_endDistance < foliageParameters.m_maxEndDistance) {
-			for (int i = 0; i < foliageParameters.m_leafCountPerInternode; i++)
+		if (internodeInfo.m_thickness < foliageDescriptor->m_maxNodeThickness
+			&& internodeInfo.m_rootDistance > foliageDescriptor->m_minRootDistance
+			&& internodeInfo.m_endDistance < foliageDescriptor->m_maxEndDistance) {
+			for (int i = 0; i < foliageDescriptor->m_leafCountPerInternode; i++)
 			{
-				auto leafSize = foliageParameters.m_leafSize * internode.m_data.m_lightIntensity;
-				glm::quat rotation = internodeInfo.m_globalRotation * glm::quat(glm::radians(glm::vec3(glm::gaussRand(0.0f, foliageParameters.m_rotationVariance), foliageParameters.m_branchingAngle, glm::linearRand(0.0f, 360.0f))));
+				auto leafSize = foliageDescriptor->m_leafSize * internode.m_data.m_lightIntensity;
+				glm::quat rotation = internodeInfo.m_globalRotation * 
+					glm::quat(glm::radians(glm::vec3(glm::gaussRand(0.0f, foliageDescriptor->m_rotationVariance), foliageDescriptor->m_branchingAngle, glm::linearRand(0.0f, 360.0f))));
 				auto front = rotation * glm::vec3(0, 0, -1);
-				auto foliagePosition = internodeInfo.GetGlobalEndPosition() + front * (leafSize.y + glm::gaussRand(0.0f, foliageParameters.m_positionVariance));
+				auto foliagePosition = internodeInfo.GetGlobalEndPosition() + front * (leafSize.y + glm::gaussRand(0.0f, foliageDescriptor->m_positionVariance));
 				auto leafTransform = glm::translate(foliagePosition) * glm::mat4_cast(rotation) * glm::scale(glm::vec3(leafSize.x, 1.0f, leafSize.y));
 
 				auto& matrix = leafTransform;
@@ -816,25 +822,125 @@ std::shared_ptr<Mesh> Tree::GenerateFoliageMesh(const TreeMeshGeneratorSettings&
 	return mesh;
 }
 
+std::shared_ptr<Strands> Tree::GenerateTwigStrands(const TreeMeshGeneratorSettings& meshGeneratorSettings)
+{
+	const auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
+	if (!treeDescriptor) return nullptr;
+	const auto foliageDescriptor = treeDescriptor->m_foliageDescriptor.Get<FoliageDescriptor>();
+	if (!foliageDescriptor) return nullptr;
+	auto strands = ProjectManager::CreateTemporaryAsset<Strands>();
+
+	std::vector<glm::uint> twigSegments;
+	std::vector<StrandPoint> twigPoints;
+	const auto& shootSkeleton = m_treeModel.PeekShootSkeleton();
+	const auto& internodeList = shootSkeleton.RefSortedNodeList();
+
+	for (int internodeHandle : internodeList)
+	{
+		const auto& internode = shootSkeleton.PeekNode(internodeHandle);
+		const auto& internodeData = internode.m_data;
+		const auto& internodeInfo = internode.m_info;
+		std::vector<std::vector<glm::vec4>> twigs{};
+		if (internodeInfo.m_thickness < foliageDescriptor->m_twigParameters.m_maxNodeThickness
+			&& internodeInfo.m_rootDistance > foliageDescriptor->m_twigParameters.m_minRootDistance
+			&& internodeInfo.m_endDistance < foliageDescriptor->m_twigParameters.m_maxEndDistance)
+		{
+			int twigCount = internodeInfo.m_length / foliageDescriptor->m_twigParameters.m_unitDistance;
+			twigs.resize(twigCount);
+
+			auto desiredGlobalRotation = internodeInfo.m_regulatedGlobalRotation * glm::quat(glm::vec3(
+				glm::radians(foliageDescriptor->m_twigParameters.m_branchingAngle), 0.0f,
+				glm::radians(glm::radians(
+					glm::linearRand(0.0f,
+						360.0f)))));
+
+			glm::vec3 directionStart = internodeInfo.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
+			glm::vec3 directionEnd = directionStart;
+
+			glm::vec3 positionStart = internodeInfo.m_globalPosition;
+			glm::vec3 positionEnd =
+				positionStart + internodeInfo.m_length * (meshGeneratorSettings.m_smoothness ? 1.0f - meshGeneratorSettings.m_baseControlPointRatio * 0.5f : 1.0f) * internodeInfo.m_globalDirection;
+
+			BezierCurve curve = BezierCurve(
+				positionStart,
+				positionStart +
+				(meshGeneratorSettings.m_smoothness ? internodeInfo.m_length * meshGeneratorSettings.m_baseControlPointRatio : 0.0f) * directionStart,
+				positionEnd -
+				(meshGeneratorSettings.m_smoothness ? internodeInfo.m_length * meshGeneratorSettings.m_branchControlPointRatio : 0.0f) * directionEnd,
+				positionEnd);
+
+			for (int twigIndex = 0; twigIndex < twigCount; twigIndex++) {
+				glm::vec3 positionWalker = curve.GetPoint(static_cast<float>(twigIndex) / twigCount);
+				twigs[twigIndex].resize(foliageDescriptor->m_twigParameters.m_segmentSize);
+				const float rollAngle = glm::radians(glm::linearRand(0.0f, 360.0f));
+				for (int twigPointIndex = 0; twigPointIndex < foliageDescriptor->m_twigParameters.m_segmentSize; twigPointIndex++)
+				{
+					twigs[twigIndex][twigPointIndex] = glm::vec4(positionWalker, foliageDescriptor->m_twigParameters.m_thickness);
+					desiredGlobalRotation = internodeInfo.m_regulatedGlobalRotation * glm::quat(glm::vec3(
+						glm::radians(glm::gaussRand(0.f, foliageDescriptor->m_twigParameters.m_apicalAngleVariance) + foliageDescriptor->m_twigParameters.m_branchingAngle), 0.0f,
+						rollAngle));
+
+					auto twigFront = desiredGlobalRotation * glm::vec3(0, 0, -1);
+					positionWalker = positionWalker + twigFront * foliageDescriptor->m_twigParameters.m_segmentLength;
+				}
+			}
+
+		}
+
+		for (const auto& twig : twigs) {
+			const auto twigSegmentSize = twig.size();
+			const auto twigControlPointSize = twig.size() + 3;
+			const auto totalTwigPointSize = twigPoints.size();
+			const auto totalTwigSegmentSize = twigSegments.size();
+			twigPoints.resize(totalTwigPointSize + twigControlPointSize);
+			twigSegments.resize(totalTwigSegmentSize + twigSegmentSize);
+
+			for (int i = 0; i < twigControlPointSize; i++) {
+				auto& p = twigPoints[totalTwigPointSize + i];
+				p.m_position = glm::vec3(twig[glm::clamp(i - 2, 0, static_cast<int>(twigSegmentSize - 1))]);
+				p.m_thickness = twig[glm::clamp(i - 2, 0, static_cast<int>(twigSegmentSize - 1))].w;
+			}
+			twigPoints[totalTwigPointSize].m_position = glm::vec3(twig[0]) * 2.0f - glm::vec3(twig[1]);
+			twigPoints[totalTwigPointSize].m_thickness = twig[0].w * 2.0f - twig[1].w;
+
+			twigPoints[totalTwigPointSize + twigControlPointSize - 1].m_position = glm::vec3(twig[twigSegmentSize - 1]) * 2.0f - glm::vec3(twig[twigSegmentSize - 2]);
+			twigPoints[totalTwigPointSize + twigControlPointSize - 1].m_thickness = twig[twigSegmentSize - 1].w * 2.0f - twig[twigSegmentSize - 2].w;
+
+
+			for (int i = 0; i < twigSegmentSize; i++) {
+				twigSegments[totalTwigSegmentSize + i] = totalTwigPointSize + i;
+			}
+		}
+	}
+
+	StrandPointAttributes strandPointAttributes{};
+	strands->SetSegments(strandPointAttributes, twigSegments, twigPoints);
+	return strands;
+}
+
 std::shared_ptr<ParticleInfoList> Tree::GenerateFoliageParticleInfoList(
 	const TreeMeshGeneratorSettings& meshGeneratorSettings)
 {
+	auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
+	if (!treeDescriptor) return nullptr;
 	const auto retVal = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
-	const auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
-	const auto& foliageParameters = (!meshGeneratorSettings.m_foliageOverride && treeDescriptor) ? treeDescriptor->m_foliageDescriptor : meshGeneratorSettings.m_foliageOverrideSettings;
+	auto foliageDescriptor = treeDescriptor->m_foliageDescriptor.Get<FoliageDescriptor>();
+	if (!foliageDescriptor) foliageDescriptor = ProjectManager::CreateTemporaryAsset<FoliageDescriptor>();
+
 	const auto& nodeList = m_treeModel.PeekShootSkeleton().RefSortedNodeList();
 	for (const auto& internodeHandle : nodeList) {
 		const auto& internode = m_treeModel.PeekShootSkeleton().PeekNode(internodeHandle);
 		const auto& internodeInfo = internode.m_info;
-		if (internodeInfo.m_thickness < foliageParameters.m_maxNodeThickness
-			&& internodeInfo.m_rootDistance > foliageParameters.m_minRootDistance
-			&& internodeInfo.m_endDistance < foliageParameters.m_maxEndDistance) {
-			for (int i = 0; i < foliageParameters.m_leafCountPerInternode; i++)
+		if (internodeInfo.m_thickness < foliageDescriptor->m_maxNodeThickness
+			&& internodeInfo.m_rootDistance > foliageDescriptor->m_minRootDistance
+			&& internodeInfo.m_endDistance < foliageDescriptor->m_maxEndDistance) {
+			for (int i = 0; i < foliageDescriptor->m_leafCountPerInternode; i++)
 			{
-				const auto leafSize = foliageParameters.m_leafSize * internode.m_data.m_lightIntensity;
-				glm::quat rotation = internodeInfo.m_globalRotation * glm::quat(glm::radians(glm::vec3(glm::gaussRand(0.0f, foliageParameters.m_rotationVariance), foliageParameters.m_branchingAngle, glm::linearRand(0.0f, 360.0f))));
+				const auto leafSize = foliageDescriptor->m_leafSize * internode.m_data.m_lightIntensity;
+				glm::quat rotation = internodeInfo.m_globalRotation * 
+					glm::quat(glm::radians(glm::vec3(glm::gaussRand(0.0f, foliageDescriptor->m_rotationVariance), foliageDescriptor->m_branchingAngle, glm::linearRand(0.0f, 360.0f))));
 				auto front = rotation * glm::vec3(0, 0, -1);
-				auto foliagePosition = internodeInfo.GetGlobalEndPosition() + front * (leafSize.y + glm::gaussRand(0.0f, foliageParameters.m_positionVariance));
+				auto foliagePosition = internodeInfo.GetGlobalEndPosition() + front * (leafSize.y + glm::gaussRand(0.0f, foliageDescriptor->m_positionVariance));
 				const auto leafTransform = glm::translate(foliagePosition) * glm::mat4_cast(rotation) * glm::scale(glm::vec3(leafSize.x, 1.0f, leafSize.y));
 
 				ParticleInfo particleInfo{};
@@ -859,21 +965,23 @@ std::shared_ptr<Mesh> Tree::GenerateStrandModelFoliageMesh(
 	auto quadVerticesSize = quadMesh->GetVerticesAmount();
 	size_t offset = 0;
 	auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
-	const auto& foliageParameters = strandModelMeshGeneratorSettings.m_foliageSettings;
+	if (!treeDescriptor) return nullptr;
+	auto foliageDescriptor = treeDescriptor->m_foliageDescriptor.Get<FoliageDescriptor>();
+	if (!foliageDescriptor) foliageDescriptor = ProjectManager::CreateTemporaryAsset<FoliageDescriptor>();
 	const auto& nodeList = m_treeModel.PeekShootSkeleton().RefSortedNodeList();
 	for (const auto& internodeHandle : nodeList) {
 		const auto& internode = m_treeModel.PeekShootSkeleton().PeekNode(internodeHandle);
 		const auto& strandModelNode = m_strandModel.m_strandModelSkeleton.PeekNode(internodeHandle);
 		const auto& internodeInfo = internode.m_info;
-		if (internodeInfo.m_thickness < foliageParameters.m_maxNodeThickness
-			&& internodeInfo.m_rootDistance > foliageParameters.m_minRootDistance
-			&& internodeInfo.m_endDistance < foliageParameters.m_maxEndDistance) {
-			for (int i = 0; i < foliageParameters.m_leafCountPerInternode; i++)
+		if (internodeInfo.m_thickness < foliageDescriptor->m_maxNodeThickness
+			&& internodeInfo.m_rootDistance > foliageDescriptor->m_minRootDistance
+			&& internodeInfo.m_endDistance < foliageDescriptor->m_maxEndDistance) {
+			for (int i = 0; i < foliageDescriptor->m_leafCountPerInternode; i++)
 			{
-				auto leafSize = foliageParameters.m_leafSize * internode.m_data.m_lightIntensity;
-				glm::quat rotation = strandModelNode.m_data.m_adjustedGlobalRotation * glm::quat(glm::radians(glm::vec3(glm::gaussRand(0.0f, foliageParameters.m_rotationVariance), foliageParameters.m_branchingAngle, glm::linearRand(0.0f, 360.0f))));
+				auto leafSize = foliageDescriptor->m_leafSize * internode.m_data.m_lightIntensity;
+				glm::quat rotation = strandModelNode.m_data.m_adjustedGlobalRotation * glm::quat(glm::radians(glm::vec3(glm::gaussRand(0.0f, foliageDescriptor->m_rotationVariance), foliageDescriptor->m_branchingAngle, glm::linearRand(0.0f, 360.0f))));
 				auto front = rotation * glm::vec3(0, 0, -1);
-				auto foliagePosition = strandModelNode.m_data.m_adjustedGlobalPosition + front * (leafSize.y + glm::gaussRand(0.0f, foliageParameters.m_positionVariance));
+				auto foliagePosition = strandModelNode.m_data.m_adjustedGlobalPosition + front * (leafSize.y + glm::gaussRand(0.0f, foliageDescriptor->m_positionVariance));
 				auto leafTransform = glm::translate(foliagePosition) * glm::mat4_cast(rotation) * glm::scale(glm::vec3(leafSize.x, 1.0f, leafSize.y));
 
 				auto& matrix = leafTransform;
@@ -1382,242 +1490,84 @@ void Tree::InitializeMeshRenderer(const TreeMeshGeneratorSettings& meshGenerator
 		auto mesh = GenerateBranchMesh(meshGeneratorSettings);
 		auto material = ProjectManager::CreateTemporaryAsset<Material>();
 		auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(branchEntity).lock();
-
+		bool copiedMaterial = false;
 		if (treeDescriptor) {
-			auto texRef = treeDescriptor->m_branchAlbedoTexture;
-			if (texRef.Get<Texture2D>())
-			{
-				material->SetAlbedoTexture(texRef.Get<Texture2D>());
-
-			}
-			texRef = treeDescriptor->m_branchNormalTexture;
-			if (texRef.Get<Texture2D>())
-			{
-				material->SetNormalTexture(texRef.Get<Texture2D>());
-
-			}
-			texRef = treeDescriptor->m_branchRoughnessTexture;
-			if (texRef.Get<Texture2D>())
-			{
-				material->SetRoughnessTexture(texRef.Get<Texture2D>());
-
-			}
-			texRef = treeDescriptor->m_branchMetallicTexture;
-			if (texRef.Get<Texture2D>())
-			{
-				material->SetMetallicTexture(texRef.Get<Texture2D>());
+			if (const auto shootDescriptor = treeDescriptor->m_shootDescriptor.Get<ShootDescriptor>()) {
+				if (const auto shootMaterial = shootDescriptor->m_barkMaterial.Get<Material>()) {
+					material->SetAlbedoTexture(shootMaterial->GetAlbedoTexture());
+					material->SetNormalTexture(shootMaterial->GetNormalTexture());
+					material->SetRoughnessTexture(shootMaterial->GetRoughnessTexture());
+					material->SetMetallicTexture(shootMaterial->GetMetallicTexture());
+					material->m_materialProperties = shootMaterial->m_materialProperties;
+				}
 			}
 		}
-		if (meshGeneratorSettings.m_presentationOverride)
+		if(!copiedMaterial)
 		{
-			material->m_materialProperties.m_albedoColor = meshGeneratorSettings.m_presentationOverrideSettings.m_branchOverrideColor;
-			auto texRef = meshGeneratorSettings.m_branchAlbedoTexture;
-			if (texRef.Get<Texture2D>())
-			{
-				material->SetAlbedoTexture(texRef.Get<Texture2D>());
-
-			}
-			texRef = meshGeneratorSettings.m_branchNormalTexture;
-			if (texRef.Get<Texture2D>())
-			{
-				material->SetNormalTexture(texRef.Get<Texture2D>());
-
-			}
-			texRef = meshGeneratorSettings.m_branchRoughnessTexture;
-			if (texRef.Get<Texture2D>())
-			{
-				material->SetRoughnessTexture(texRef.Get<Texture2D>());
-			}
-			texRef = meshGeneratorSettings.m_branchMetallicTexture;
-			if (texRef.Get<Texture2D>())
-			{
-				material->SetMetallicTexture(texRef.Get<Texture2D>());
-			}
-		}
-		else {
 			material->m_materialProperties.m_albedoColor = glm::vec3(109, 79, 75) / 255.0f;
-
+			material->m_materialProperties.m_roughness = 1.0f;
+			material->m_materialProperties.m_metallic = 0.0f;
 		}
-		material->m_materialProperties.m_roughness = 1.0f;
-		material->m_materialProperties.m_metallic = 0.0f;
 		meshRenderer->m_mesh = mesh;
 		meshRenderer->m_material = material;
 	}
 
 	if (meshGeneratorSettings.m_enableTwig)
 	{
-		Entity twigEntity;
-		twigEntity = scene->CreateEntity("Twig Strands");
+		const auto twigEntity = scene->CreateEntity("Twig Strands");
 		scene->SetParent(twigEntity, self);
-		std::vector<glm::uint> twigSegments;
-		std::vector<StrandPoint> twigPoints;
-		const auto& shootSkeleton = m_treeModel.PeekShootSkeleton(actualIteration);
-		const auto& internodeList = shootSkeleton.RefSortedNodeList();
-		for (int internodeHandle : internodeList)
-		{
-			const auto& internode = shootSkeleton.PeekNode(internodeHandle);
-			const auto& internodeData = internode.m_data;
-			const auto& internodeInfo = internode.m_info;
-			std::vector<std::vector<glm::vec4>> twigs{};
-			if (internodeInfo.m_thickness < meshGeneratorSettings.m_twigParameters.m_maxNodeThickness
-				&& internodeInfo.m_rootDistance > meshGeneratorSettings.m_twigParameters.m_minRootDistance
-				&& internodeInfo.m_endDistance < meshGeneratorSettings.m_twigParameters.m_maxEndDistance)
-			{
-				int twigCount = internodeInfo.m_length / meshGeneratorSettings.m_twigParameters.m_unitDistance;
-				twigs.resize(twigCount);
-
-				auto desiredGlobalRotation = internodeInfo.m_regulatedGlobalRotation * glm::quat(glm::vec3(
-					glm::radians(meshGeneratorSettings.m_twigParameters.m_branchingAngle), 0.0f,
-					glm::radians(glm::radians(
-						glm::linearRand(0.0f,
-							360.0f)))));
-
-				glm::vec3 directionStart = internodeInfo.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
-				glm::vec3 directionEnd = directionStart;
-
-				glm::vec3 positionStart = internodeInfo.m_globalPosition;
-				glm::vec3 positionEnd =
-					positionStart + internodeInfo.m_length * (meshGeneratorSettings.m_smoothness ? 1.0f - meshGeneratorSettings.m_baseControlPointRatio * 0.5f : 1.0f) * internodeInfo.m_globalDirection;
-
-				BezierCurve curve = BezierCurve(
-					positionStart,
-					positionStart +
-					(meshGeneratorSettings.m_smoothness ? internodeInfo.m_length * meshGeneratorSettings.m_baseControlPointRatio : 0.0f) * directionStart,
-					positionEnd -
-					(meshGeneratorSettings.m_smoothness ? internodeInfo.m_length * meshGeneratorSettings.m_branchControlPointRatio : 0.0f) * directionEnd,
-					positionEnd);
-
-				for (int twigIndex = 0; twigIndex < twigCount; twigIndex++) {
-					glm::vec3 positionWalker = curve.GetPoint(static_cast<float>(twigIndex) / twigCount);
-					twigs[twigIndex].resize(meshGeneratorSettings.m_twigParameters.m_segmentSize);
-					const float rollAngle = glm::radians(glm::linearRand(0.0f, 360.0f));
-					for (int twigPointIndex = 0; twigPointIndex < meshGeneratorSettings.m_twigParameters.m_segmentSize; twigPointIndex++)
-					{
-						twigs[twigIndex][twigPointIndex] = glm::vec4(positionWalker, meshGeneratorSettings.m_twigParameters.m_thickness);
-						desiredGlobalRotation = internodeInfo.m_regulatedGlobalRotation * glm::quat(glm::vec3(
-							glm::radians(glm::gaussRand(0.f, meshGeneratorSettings.m_twigParameters.m_apicalAngleVariance) + meshGeneratorSettings.m_twigParameters.m_branchingAngle), 0.0f,
-							rollAngle));
-
-						auto twigFront = desiredGlobalRotation * glm::vec3(0, 0, -1);
-						positionWalker = positionWalker + twigFront * meshGeneratorSettings.m_twigParameters.m_segmentLength;
-					}
-				}
-
-			}
-
-			for (const auto& twig : twigs) {
-				const auto twigSegmentSize = twig.size();
-				const auto twigControlPointSize = twig.size() + 3;
-				const auto totalTwigPointSize = twigPoints.size();
-				const auto totalTwigSegmentSize = twigSegments.size();
-				twigPoints.resize(totalTwigPointSize + twigControlPointSize);
-				twigSegments.resize(totalTwigSegmentSize + twigSegmentSize);
-
-				for (int i = 0; i < twigControlPointSize; i++) {
-					auto& p = twigPoints[totalTwigPointSize + i];
-					p.m_position = glm::vec3(twig[glm::clamp(i - 2, 0, static_cast<int>(twigSegmentSize - 1))]);
-					p.m_thickness = twig[glm::clamp(i - 2, 0, static_cast<int>(twigSegmentSize - 1))].w;
-				}
-				twigPoints[totalTwigPointSize].m_position = glm::vec3(twig[0]) * 2.0f - glm::vec3(twig[1]);
-				twigPoints[totalTwigPointSize].m_thickness = twig[0].w * 2.0f - twig[1].w;
-
-				twigPoints[totalTwigPointSize + twigControlPointSize - 1].m_position = glm::vec3(twig[twigSegmentSize - 1]) * 2.0f - glm::vec3(twig[twigSegmentSize - 2]);
-				twigPoints[totalTwigPointSize + twigControlPointSize - 1].m_thickness = twig[twigSegmentSize - 1].w * 2.0f - twig[twigSegmentSize - 2].w;
-
-
-				for (int i = 0; i < twigSegmentSize; i++) {
-					twigSegments[totalTwigSegmentSize + i] = totalTwigPointSize + i;
+		const auto strands = GenerateTwigStrands(meshGeneratorSettings);
+		const auto material = ProjectManager::CreateTemporaryAsset<Material>();
+		bool copiedMaterial = false;
+		if (treeDescriptor) {
+			if (const auto foliageDescriptor = treeDescriptor->m_foliageDescriptor.Get<FoliageDescriptor>()) {
+				if (const auto twigMaterial = foliageDescriptor->m_twigMaterial.Get<Material>()) {
+					material->SetAlbedoTexture(twigMaterial->GetAlbedoTexture());
+					material->SetNormalTexture(twigMaterial->GetNormalTexture());
+					material->SetRoughnessTexture(twigMaterial->GetRoughnessTexture());
+					material->SetMetallicTexture(twigMaterial->GetMetallicTexture());
+					material->m_materialProperties = twigMaterial->m_materialProperties;
+					copiedMaterial = true;
 				}
 			}
 		}
+		if (!copiedMaterial) {
+			material->m_materialProperties.m_albedoColor = glm::vec3(109, 79, 75) / 255.0f;
+			material->m_materialProperties.m_roughness = 1.0f;
+			material->m_materialProperties.m_metallic = 0.0f;
+		}
 
-		auto strands = ProjectManager::CreateTemporaryAsset<Strands>();
-		auto material = ProjectManager::CreateTemporaryAsset<Material>();
-		if (meshGeneratorSettings.m_presentationOverride)
-		{
-			material->m_materialProperties.m_albedoColor = meshGeneratorSettings.m_presentationOverrideSettings.m_branchOverrideColor;
-		}
-		else {
-			material->m_materialProperties.m_albedoColor = glm::vec3(80, 60, 50) / 255.0f;
-		}
-		material->m_materialProperties.m_roughness = 1.0f;
-		material->m_materialProperties.m_metallic = 0.0f;
-		StrandPointAttributes strandPointAttributes{};
-		strands->SetSegments(strandPointAttributes, twigSegments, twigPoints);
-		auto strandsRenderer = scene->GetOrSetPrivateComponent<StrandsRenderer>(twigEntity).lock();
+		const auto strandsRenderer = scene->GetOrSetPrivateComponent<StrandsRenderer>(twigEntity).lock();
 		strandsRenderer->m_strands = strands;
 		strandsRenderer->m_material = material;
 	}
 	if (meshGeneratorSettings.m_enableFoliage)
 	{
-		Entity foliageEntity;
-		foliageEntity = scene->CreateEntity("Foliage Mesh");
+		const auto foliageEntity = scene->CreateEntity("Foliage Mesh");
 		scene->SetParent(foliageEntity, self);
 
-		auto mesh = Resources::GetResource<Mesh>("PRIMITIVE_QUAD");
-		auto particleInfoList = GenerateFoliageParticleInfoList(meshGeneratorSettings);
-		auto material = ProjectManager::CreateTemporaryAsset<Material>();
-		VertexAttributes vertexAttributes{};
-		vertexAttributes.m_texCoord = true;
+		const auto mesh = Resources::GetResource<Mesh>("PRIMITIVE_QUAD");
+		const auto particleInfoList = GenerateFoliageParticleInfoList(meshGeneratorSettings);
+		const auto material = ProjectManager::CreateTemporaryAsset<Material>();
+		bool copiedMaterial = false;
 		if (treeDescriptor) {
-			auto texRef = treeDescriptor->m_foliageAlbedoTexture;
-			if (texRef.Get<Texture2D>())
-			{
-				material->SetAlbedoTexture(texRef.Get<Texture2D>());
-
-			}
-			texRef = treeDescriptor->m_foliageNormalTexture;
-			if (texRef.Get<Texture2D>())
-			{
-				material->SetNormalTexture(texRef.Get<Texture2D>());
-
-			}
-			texRef = treeDescriptor->m_foliageRoughnessTexture;
-			if (texRef.Get<Texture2D>())
-			{
-				material->SetRoughnessTexture(texRef.Get<Texture2D>());
-
-			}
-			texRef = treeDescriptor->m_foliageMetallicTexture;
-			if (texRef.Get<Texture2D>())
-			{
-				material->SetMetallicTexture(texRef.Get<Texture2D>());
+			if (const auto foliageDescriptor = treeDescriptor->m_foliageDescriptor.Get<FoliageDescriptor>()) {
+				if (const auto leafMaterial = foliageDescriptor->m_leafMaterial.Get<Material>()) {
+					material->SetAlbedoTexture(leafMaterial->GetAlbedoTexture());
+					material->SetNormalTexture(leafMaterial->GetNormalTexture());
+					material->SetRoughnessTexture(leafMaterial->GetRoughnessTexture());
+					material->SetMetallicTexture(leafMaterial->GetMetallicTexture());
+					material->m_materialProperties = leafMaterial->m_materialProperties;
+					copiedMaterial = true;
+				}
 			}
 		}
-
-		if (meshGeneratorSettings.m_foliageOverride)
-		{
-			material->m_materialProperties.m_albedoColor = meshGeneratorSettings.m_foliageOverrideSettings.m_leafColor;
-			auto texRef = meshGeneratorSettings.m_foliageAlbedoTexture;
-			if (texRef.Get<Texture2D>())
-			{
-				material->SetAlbedoTexture(texRef.Get<Texture2D>());
-
-			}
-			texRef = meshGeneratorSettings.m_foliageNormalTexture;
-			if (texRef.Get<Texture2D>())
-			{
-				material->SetNormalTexture(texRef.Get<Texture2D>());
-
-			}
-			texRef = meshGeneratorSettings.m_foliageRoughnessTexture;
-			if (texRef.Get<Texture2D>())
-			{
-				material->SetRoughnessTexture(texRef.Get<Texture2D>());
-
-			}
-			texRef = meshGeneratorSettings.m_foliageMetallicTexture;
-			if (texRef.Get<Texture2D>())
-			{
-				material->SetMetallicTexture(texRef.Get<Texture2D>());
-			}
+		if(!copiedMaterial) {
+			material->m_materialProperties.m_albedoColor = glm::vec3(152 / 255.0f, 203 / 255.0f, 0 / 255.0f);
+			material->m_materialProperties.m_roughness = 1.0f;
+			material->m_materialProperties.m_metallic = 0.0f;
 		}
-		else {
-			material->m_materialProperties.m_albedoColor = treeDescriptor->m_foliageDescriptor.m_leafColor;
-		}
-		material->m_materialProperties.m_roughness = 1.0f;
-		material->m_materialProperties.m_metallic = 0.0f;
-		auto particles = scene->GetOrSetPrivateComponent<Particles>(foliageEntity).lock();
+		const auto particles = scene->GetOrSetPrivateComponent<Particles>(foliageEntity).lock();
 		particles->m_mesh = mesh;
 		particles->m_material = material;
 		particles->m_particleInfoList = particleInfoList;
@@ -1626,66 +1576,8 @@ void Tree::InitializeMeshRenderer(const TreeMeshGeneratorSettings& meshGenerator
 	}
 	if (meshGeneratorSettings.m_enableFruit)
 	{
-		Entity fruitEntity;
-		fruitEntity = scene->CreateEntity("Fruit Mesh");
+		const auto fruitEntity = scene->CreateEntity("Fruit Mesh");
 		scene->SetParent(fruitEntity, self);
-		std::vector<Vertex> vertices;
-		std::vector<unsigned int> indices;
-		auto fruitMesh = Resources::GetResource<Mesh>("PRIMITIVE_SPHERE");
-		auto& fruitTriangles = fruitMesh->UnsafeGetTriangles();
-		auto fruitVerticesSize = fruitMesh->GetVerticesAmount();
-		size_t offset = 0;
-
-		const auto& nodeList = m_treeModel.PeekShootSkeleton(actualIteration).RefSortedNodeList();
-		for (const auto& internodeHandle : nodeList) {
-			const auto& internode = m_treeModel.PeekShootSkeleton(actualIteration).PeekNode(internodeHandle);
-			const auto& internodeInfo = internode.m_info;
-			const auto& internodeData = internode.m_data;
-			if (!meshGeneratorSettings.m_foliageOverride) {
-				for (const auto& bud : internodeData.m_buds) {
-					if (bud.m_status != BudStatus::Died) continue;
-					if (bud.m_reproductiveModule.m_maturity <= 0.0f) continue;
-					if (bud.m_type == BudType::Fruit)
-					{
-						auto matrix = bud.m_reproductiveModule.m_transform;
-						Vertex archetype;
-						for (auto i = 0; i < fruitMesh->GetVerticesAmount(); i++) {
-							archetype.m_position =
-								matrix * glm::vec4(fruitMesh->UnsafeGetVertices()[i].m_position, 1.0f);
-							archetype.m_normal = glm::normalize(glm::vec3(
-								matrix * glm::vec4(fruitMesh->UnsafeGetVertices()[i].m_normal, 0.0f)));
-							archetype.m_tangent = glm::normalize(glm::vec3(
-								matrix *
-								glm::vec4(fruitMesh->UnsafeGetVertices()[i].m_tangent, 0.0f)));
-							archetype.m_texCoord =
-								fruitMesh->UnsafeGetVertices()[i].m_texCoord;
-							vertices.push_back(archetype);
-						}
-						for (auto triangle : fruitTriangles) {
-							triangle.x += offset;
-							triangle.y += offset;
-							triangle.z += offset;
-							indices.push_back(triangle.x);
-							indices.push_back(triangle.y);
-							indices.push_back(triangle.z);
-						}
-						offset += fruitVerticesSize;
-					}
-				}
-			}
-		}
-
-		auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
-		auto material = ProjectManager::CreateTemporaryAsset<Material>();
-		VertexAttributes vertexAttributes{};
-		vertexAttributes.m_texCoord = true;
-		mesh->SetVertices(vertexAttributes, vertices, indices);
-		material->m_materialProperties.m_albedoColor = glm::vec3(152 / 255.0f, 203 / 255.0f, 0 / 255.0f);
-		material->m_materialProperties.m_roughness = 0.0f;
-
-		auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(fruitEntity).lock();
-		meshRenderer->m_mesh = mesh;
-		meshRenderer->m_material = material;
 	}
 }
 
@@ -2060,81 +1952,81 @@ void Tree::PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescrip
 	const auto climate = m_climate.Get<Climate>();
 
 	{
-		const auto& shootDescriptor = treeDescriptor->m_shootDescriptor;
-		m_shootGrowthController.m_internodeGrowthRate = shootDescriptor.m_growthRate / shootDescriptor.m_internodeLength;
+		const auto& shootDescriptor = treeDescriptor->m_shootDescriptor.Get<ShootDescriptor>();
+		m_shootGrowthController.m_internodeGrowthRate = shootDescriptor->m_growthRate / shootDescriptor->m_internodeLength;
 
 		m_shootGrowthController.m_branchingAngle = [=](const Node<InternodeGrowthData>& internode)
 			{
-				return glm::gaussRand(shootDescriptor.m_branchingAngleMeanVariance.x, shootDescriptor.m_branchingAngleMeanVariance.y);
+				return glm::gaussRand(shootDescriptor->m_branchingAngleMeanVariance.x, shootDescriptor->m_branchingAngleMeanVariance.y);
 			};
 		m_shootGrowthController.m_rollAngle = [=](const Node<InternodeGrowthData>& internode)
 			{
-				return glm::gaussRand(shootDescriptor.m_rollAngleMeanVariance.x, shootDescriptor.m_rollAngleMeanVariance.y);
+				return glm::gaussRand(shootDescriptor->m_rollAngleMeanVariance.x, shootDescriptor->m_rollAngleMeanVariance.y);
 			};
 		m_shootGrowthController.m_apicalAngle = [=](const Node<InternodeGrowthData>& internode)
 			{
-				return glm::gaussRand(shootDescriptor.m_apicalAngleMeanVariance.x, shootDescriptor.m_apicalAngleMeanVariance.y);
+				return glm::gaussRand(shootDescriptor->m_apicalAngleMeanVariance.x, shootDescriptor->m_apicalAngleMeanVariance.y);
 			};
 		m_shootGrowthController.m_gravitropism = [=](const Node<InternodeGrowthData>& internode)
 			{
-				return shootDescriptor.m_gravitropism;
+				return shootDescriptor->m_gravitropism;
 			};
 		m_shootGrowthController.m_phototropism = [=](const Node<InternodeGrowthData>& internode)
 			{
-				return shootDescriptor.m_phototropism;
+				return shootDescriptor->m_phototropism;
 			};
 		m_shootGrowthController.m_horizontalTropism = [=](const Node<InternodeGrowthData>& internode)
 			{
-				return shootDescriptor.m_horizontalTropism;
+				return shootDescriptor->m_horizontalTropism;
 			};
 		m_shootGrowthController.m_sagging = [=](const Node<InternodeGrowthData>& internode)
 			{
 				const auto newSagging = glm::min(
-					shootDescriptor.m_saggingFactorThicknessReductionMax.z,
-					shootDescriptor.m_saggingFactorThicknessReductionMax.x *
+					shootDescriptor->m_saggingFactorThicknessReductionMax.z,
+					shootDescriptor->m_saggingFactorThicknessReductionMax.x *
 					(internode.m_data.m_descendantTotalBiomass + internode.m_data.m_extraMass) /
 					glm::pow(
 						internode.m_info.m_thickness /
-						shootDescriptor.m_endNodeThickness,
-						shootDescriptor.m_saggingFactorThicknessReductionMax.y));
+						shootDescriptor->m_endNodeThickness,
+						shootDescriptor->m_saggingFactorThicknessReductionMax.y));
 				return glm::max(internode.m_data.m_sagging, newSagging);
 			};
-		m_shootGrowthController.m_internodeLength = shootDescriptor.m_internodeLength;
-		m_shootGrowthController.m_internodeLengthThicknessFactor = shootDescriptor.m_internodeLengthThicknessFactor;
-		m_shootGrowthController.m_endNodeThickness = shootDescriptor.m_endNodeThickness;
-		m_shootGrowthController.m_thicknessAccumulationFactor = shootDescriptor.m_thicknessAccumulationFactor;
-		m_shootGrowthController.m_thicknessAgeFactor = shootDescriptor.m_thicknessAgeFactor;
-		m_shootGrowthController.m_internodeShadowFactor = shootDescriptor.m_internodeShadowFactor;
+		m_shootGrowthController.m_internodeLength = shootDescriptor->m_internodeLength;
+		m_shootGrowthController.m_internodeLengthThicknessFactor = shootDescriptor->m_internodeLengthThicknessFactor;
+		m_shootGrowthController.m_endNodeThickness = shootDescriptor->m_endNodeThickness;
+		m_shootGrowthController.m_thicknessAccumulationFactor = shootDescriptor->m_thicknessAccumulationFactor;
+		m_shootGrowthController.m_thicknessAgeFactor = shootDescriptor->m_thicknessAgeFactor;
+		m_shootGrowthController.m_internodeShadowFactor = shootDescriptor->m_internodeShadowFactor;
 
-		m_shootGrowthController.m_lateralBudCount = shootDescriptor.m_lateralBudCount;
+		m_shootGrowthController.m_lateralBudCount = shootDescriptor->m_lateralBudCount;
 		m_shootGrowthController.m_apicalBudExtinctionRate = [=](const Node<InternodeGrowthData>& internode)
 			{
-				return shootDescriptor.m_apicalBudExtinctionRate;
+				return shootDescriptor->m_apicalBudExtinctionRate;
 			};
 		m_shootGrowthController.m_lateralBudFlushingRate = [=](const Node<InternodeGrowthData>& internode)
 			{
-				float flushingRate = shootDescriptor.m_lateralBudFlushingRate * internode.m_data.m_lightIntensity;
+				float flushingRate = shootDescriptor->m_lateralBudFlushingRate * internode.m_data.m_lightIntensity;
 				if (internode.m_data.m_inhibitorSink > 0.0f) flushingRate *= glm::exp(-internode.m_data.m_inhibitorSink);
 				return flushingRate;
 			};
-		m_shootGrowthController.m_apicalControl = shootDescriptor.m_apicalControl;
+		m_shootGrowthController.m_apicalControl = shootDescriptor->m_apicalControl;
 		m_shootGrowthController.m_apicalDominance = [=](const Node<InternodeGrowthData>& internode)
 			{
-				return shootDescriptor.m_apicalDominance * internode.m_data.m_lightIntensity;
+				return shootDescriptor->m_apicalDominance * internode.m_data.m_lightIntensity;
 			};
-		m_shootGrowthController.m_apicalDominanceLoss = shootDescriptor.m_apicalDominanceLoss;
+		m_shootGrowthController.m_apicalDominanceLoss = shootDescriptor->m_apicalDominanceLoss;
 
-		m_shootGrowthController.m_lowBranchPruning = shootDescriptor.m_lowBranchPruning;
-		m_shootGrowthController.m_lowBranchPruningThicknessFactor = shootDescriptor.m_lowBranchPruningThicknessFactor;
+		m_shootGrowthController.m_lowBranchPruning = shootDescriptor->m_lowBranchPruning;
+		m_shootGrowthController.m_lowBranchPruningThicknessFactor = shootDescriptor->m_lowBranchPruningThicknessFactor;
 		m_shootGrowthController.m_pruningFactor = [=](const float deltaTime, const Node<InternodeGrowthData>& internode)
 			{
 				float pruningProbability = 0.0f;
 				if (internode.IsEndNode() && internode.m_data.m_lightIntensity == 0.0f)
 				{
-					pruningProbability = shootDescriptor.m_lightPruningFactor;
+					pruningProbability = shootDescriptor->m_lightPruningFactor;
 				}
-				if (internode.m_data.m_level != 0 && shootDescriptor.m_thicknessPruningFactor != 0.0f
-					&& internode.m_info.m_thickness / internode.m_info.m_endDistance < shootDescriptor.m_thicknessPruningFactor)
+				if (internode.m_data.m_level != 0 && shootDescriptor->m_thicknessPruningFactor != 0.0f
+					&& internode.m_info.m_thickness / internode.m_info.m_endDistance < shootDescriptor->m_thicknessPruningFactor)
 				{
 					pruningProbability += 999.0f;
 				}
@@ -2142,16 +2034,16 @@ void Tree::PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescrip
 			};
 
 
-		m_shootGrowthController.m_leafGrowthRate = shootDescriptor.m_leafGrowthRate;
-		m_shootGrowthController.m_fruitGrowthRate = shootDescriptor.m_fruitGrowthRate;
+		m_shootGrowthController.m_leafGrowthRate = shootDescriptor->m_leafGrowthRate;
+		m_shootGrowthController.m_fruitGrowthRate = shootDescriptor->m_fruitGrowthRate;
 
-		m_shootGrowthController.m_fruitBudCount = shootDescriptor.m_fruitBudCount;
-		m_shootGrowthController.m_leafBudCount = shootDescriptor.m_leafBudCount;
+		m_shootGrowthController.m_fruitBudCount = shootDescriptor->m_fruitBudCount;
+		m_shootGrowthController.m_leafBudCount = shootDescriptor->m_leafBudCount;
 
 		m_shootGrowthController.m_leafBudFlushingProbability = [=](const Node<InternodeGrowthData>& internode)
 			{
 				const auto& internodeData = internode.m_data;
-				const auto& probabilityRange = shootDescriptor.m_leafBudFlushingProbabilityTemperatureRange;
+				const auto& probabilityRange = shootDescriptor->m_leafBudFlushingProbabilityTemperatureRange;
 				float flushProbability = glm::mix(probabilityRange.x, probabilityRange.y,
 					glm::clamp((internodeData.m_temperature - probabilityRange.z) / (probabilityRange.w - probabilityRange.z), 0.0f, 1.0f));
 				flushProbability *= internodeData.m_lightIntensity;
@@ -2160,38 +2052,38 @@ void Tree::PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescrip
 		m_shootGrowthController.m_fruitBudFlushingProbability = [=](const Node<InternodeGrowthData>& internode)
 			{
 				const auto& internodeData = internode.m_data;
-				const auto& probabilityRange = shootDescriptor.m_fruitBudFlushingProbabilityTemperatureRange;
+				const auto& probabilityRange = shootDescriptor->m_fruitBudFlushingProbabilityTemperatureRange;
 				float flushProbability = glm::mix(probabilityRange.x, probabilityRange.y,
 					glm::clamp((internodeData.m_temperature - probabilityRange.z) / (probabilityRange.w - probabilityRange.z), 0.0f, 1.0f));
 				flushProbability *= internodeData.m_lightIntensity;
 				return flushProbability;
 			};
 
-		m_shootGrowthController.m_leafVigorRequirement = shootDescriptor.m_leafVigorRequirement;
-		m_shootGrowthController.m_fruitVigorRequirement = shootDescriptor.m_fruitVigorRequirement;
+		m_shootGrowthController.m_leafVigorRequirement = shootDescriptor->m_leafVigorRequirement;
+		m_shootGrowthController.m_fruitVigorRequirement = shootDescriptor->m_fruitVigorRequirement;
 
 
 
-		m_shootGrowthController.m_maxLeafSize = shootDescriptor.m_maxLeafSize;
-		m_shootGrowthController.m_leafPositionVariance = shootDescriptor.m_leafPositionVariance;
-		m_shootGrowthController.m_leafRotationVariance = shootDescriptor.m_leafRotationVariance;
+		m_shootGrowthController.m_maxLeafSize = shootDescriptor->m_maxLeafSize;
+		m_shootGrowthController.m_leafPositionVariance = shootDescriptor->m_leafPositionVariance;
+		m_shootGrowthController.m_leafRotationVariance = shootDescriptor->m_leafRotationVariance;
 		m_shootGrowthController.m_leafDamage = [=](const Node<InternodeGrowthData>& internode)
 			{
 				const auto& internodeData = internode.m_data;
 				float leafDamage = 0.0f;
-				if (climate->m_climateModel.m_time - glm::floor(climate->m_climateModel.m_time) > 0.5f && internodeData.m_temperature < shootDescriptor.m_leafChlorophyllSynthesisFactorTemperature)
+				if (climate->m_climateModel.m_time - glm::floor(climate->m_climateModel.m_time) > 0.5f && internodeData.m_temperature < shootDescriptor->m_leafChlorophyllSynthesisFactorTemperature)
 				{
-					leafDamage += shootDescriptor.m_leafChlorophyllLoss;
+					leafDamage += shootDescriptor->m_leafChlorophyllLoss;
 				}
 				return leafDamage;
 			};
 		m_shootGrowthController.m_leafFallProbability = [=](const Node<InternodeGrowthData>& internode)
 			{
-				return shootDescriptor.m_leafFallProbability;
+				return shootDescriptor->m_leafFallProbability;
 			};
-		m_shootGrowthController.m_maxFruitSize = shootDescriptor.m_maxFruitSize;
-		m_shootGrowthController.m_fruitPositionVariance = shootDescriptor.m_fruitPositionVariance;
-		m_shootGrowthController.m_fruitRotationVariance = shootDescriptor.m_fruitRotationVariance;
+		m_shootGrowthController.m_maxFruitSize = shootDescriptor->m_maxFruitSize;
+		m_shootGrowthController.m_fruitPositionVariance = shootDescriptor->m_fruitPositionVariance;
+		m_shootGrowthController.m_fruitRotationVariance = shootDescriptor->m_fruitRotationVariance;
 		m_shootGrowthController.m_fruitDamage = [=](const Node<InternodeGrowthData>& internode)
 			{
 				float fruitDamage = 0.0f;
@@ -2199,7 +2091,7 @@ void Tree::PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescrip
 			};
 		m_shootGrowthController.m_fruitFallProbability = [=](const Node<InternodeGrowthData>& internode)
 			{
-				return shootDescriptor.m_fruitFallProbability;
+				return shootDescriptor->m_fruitFallProbability;
 			};
 
 	}
@@ -2250,19 +2142,35 @@ void Tree::InitializeStrandModelMeshRenderer(const StrandModelMeshGeneratorSetti
 	ClearStrandModelMeshRenderer();
 	const auto scene = GetScene();
 	const auto self = GetOwner();
+	const auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
 	if (strandModelMeshGeneratorSettings.m_enableBranch)
 	{
-		Entity foliageEntity = scene->CreateEntity("Strand Model Branch Mesh");
+		const auto foliageEntity = scene->CreateEntity("Strand Model Branch Mesh");
 		scene->SetParent(foliageEntity, self);
 
 		const auto mesh = GenerateStrandModelBranchMesh(strandModelMeshGeneratorSettings);
 		const auto material = ProjectManager::CreateTemporaryAsset<Material>();
 		const auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(foliageEntity).lock();
 
-		material->m_materialProperties.m_albedoColor = glm::vec3(109, 79, 75) / 255.0f;
+		bool copiedMaterial = false;
+		if (treeDescriptor) {
+			if (const auto shootDescriptor = treeDescriptor->m_shootDescriptor.Get<ShootDescriptor>()) {
+				if (const auto shootMaterial = shootDescriptor->m_barkMaterial.Get<Material>()) {
+					material->SetAlbedoTexture(shootMaterial->GetAlbedoTexture());
+					material->SetNormalTexture(shootMaterial->GetNormalTexture());
+					material->SetRoughnessTexture(shootMaterial->GetRoughnessTexture());
+					material->SetMetallicTexture(shootMaterial->GetMetallicTexture());
+					material->m_materialProperties = shootMaterial->m_materialProperties;
+				}
+			}
+		}
+		if (!copiedMaterial)
+		{
+			material->m_materialProperties.m_albedoColor = glm::vec3(109, 79, 75) / 255.0f;
+			material->m_materialProperties.m_roughness = 1.0f;
+			material->m_materialProperties.m_metallic = 0.0f;
+		}
 
-		material->m_materialProperties.m_roughness = 1.0f;
-		material->m_materialProperties.m_metallic = 0.0f;
 		meshRenderer->m_mesh = mesh;
 		meshRenderer->m_material = material;
 	}
@@ -2273,10 +2181,24 @@ void Tree::InitializeStrandModelMeshRenderer(const StrandModelMeshGeneratorSetti
 
 		const auto mesh = GenerateStrandModelFoliageMesh(strandModelMeshGeneratorSettings);
 		const auto material = ProjectManager::CreateTemporaryAsset<Material>();
-
-		material->m_materialProperties.m_roughness = 1.0f;
-		material->m_materialProperties.m_metallic = 0.0f;
-		material->m_materialProperties.m_albedoColor = strandModelMeshGeneratorSettings.m_foliageSettings.m_leafColor;
+		bool copiedMaterial = false;
+		if (treeDescriptor) {
+			if (const auto foliageDescriptor = treeDescriptor->m_foliageDescriptor.Get<FoliageDescriptor>()) {
+				if (const auto leafMaterial = foliageDescriptor->m_leafMaterial.Get<Material>()) {
+					material->SetAlbedoTexture(leafMaterial->GetAlbedoTexture());
+					material->SetNormalTexture(leafMaterial->GetNormalTexture());
+					material->SetRoughnessTexture(leafMaterial->GetRoughnessTexture());
+					material->SetMetallicTexture(leafMaterial->GetMetallicTexture());
+					material->m_materialProperties = leafMaterial->m_materialProperties;
+					copiedMaterial = true;
+				}
+			}
+		}
+		if (!copiedMaterial) {
+			material->m_materialProperties.m_albedoColor = glm::vec3(152 / 255.0f, 203 / 255.0f, 0 / 255.0f);
+			material->m_materialProperties.m_roughness = 1.0f;
+			material->m_materialProperties.m_metallic = 0.0f;
+		}
 		const auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(foliageEntity).lock();
 		meshRenderer->m_mesh = mesh;
 		meshRenderer->m_material = material;

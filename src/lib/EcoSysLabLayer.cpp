@@ -19,6 +19,7 @@
 #include "TreePointCloudScanner.hpp"
 #include "ClassRegistry.hpp"
 #include "CubeVolume.hpp"
+#include "FoliageDescriptor.hpp"
 #include "LogGrader.hpp"
 #include "SpatialPlantDistributionSimulator.hpp"
 #include "ShootDescriptorGenerator.hpp"
@@ -34,7 +35,9 @@ void EcoSysLabLayer::OnCreate() {
 
 	ClassRegistry::RegisterAsset<BranchShape>("BranchShape", { ".bs" });
 	ClassRegistry::RegisterAsset<ForestPatch>("ForestPatch", { ".fp" });
-	ClassRegistry::RegisterAsset<TreeDescriptor>("TreeDescriptor", { ".td" });
+	ClassRegistry::RegisterAsset<TreeDescriptor>("TreeDescriptor", { ".tree" });
+	ClassRegistry::RegisterAsset<ShootDescriptor>("ShootDescriptor", { ".shoot" });
+	ClassRegistry::RegisterAsset<FoliageDescriptor>("FoliageDescriptor", { ".foliage" });
 	ClassRegistry::RegisterAsset<ShootDescriptorGenerator>("ShootDescriptorGenerator", { ".sdg" });
 	ClassRegistry::RegisterAsset<SoilDescriptor>("SoilDescriptor", { ".sd" });
 	ClassRegistry::RegisterAsset<ClimateDescriptor>("ClimateDescriptor", { ".cd" });

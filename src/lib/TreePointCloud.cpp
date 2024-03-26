@@ -2,6 +2,7 @@
 #include <unordered_set>
 #include "Graphics.hpp"
 #include "EcoSysLabLayer.hpp"
+#include "FoliageDescriptor.hpp"
 #include "rapidcsv.h"
 using namespace EcoSysLab;
 
@@ -481,7 +482,7 @@ void TreePointCloud::ImportGraph(const std::filesystem::path& path, float scaleF
 	}
 }
 
-void TreePointCloud::ExportForestOBJ(const std::filesystem::path& path) const
+void TreePointCloud::ExportForestOBJ(const std::filesystem::path& path)
 {
 	if (path.extension() == ".obj") {
 		std::ofstream of;
@@ -720,14 +721,7 @@ void TreePointCloud::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 			refreshData = true;
 		}
 		m_treeMeshGeneratorSettings.OnInspect(editorLayer);
-		if (ImGui::Button("Form tree mesh")) {
-			if (m_branchConnections.empty()) {
-				m_skeletons.clear();
-				EstablishConnectivityGraph();
-			}
-			if (m_skeletons.empty()) BuildSkeletons();
-			FormGeometryEntity();
-		}
+		
 		if (ImGui::Button("Clear meshes"))
 		{
 			ClearMeshes();
@@ -2203,303 +2197,6 @@ void TreePointCloud::OnCreate()
 {
 	m_treeMeshGeneratorSettings.m_enableFoliage = true;
 	m_treeMeshGeneratorSettings.m_enableTwig = true;
-	m_treeMeshGeneratorSettings.m_foliageOverrideSettings.m_leafSize = { 0.015f, 0.015f };
-	m_treeMeshGeneratorSettings.m_foliageOverrideSettings.m_positionVariance = 0.03f;
-	m_treeMeshGeneratorSettings.m_foliageOverrideSettings.m_leafCountPerInternode = 15;
-	m_treeMeshGeneratorSettings.m_foliageOverrideSettings.m_rotationVariance = 1.0f;
-	m_treeMeshGeneratorSettings.m_foliageOverrideSettings.m_minRootDistance = 1.15f;
-	m_treeMeshGeneratorSettings.m_foliageOverrideSettings.m_maxEndDistance = 0.1f;
-}
-
-void TreePointCloud::FormGeometryEntity() const
-{
-	const auto scene = GetScene();
-	const auto self = GetOwner();
-	const auto children = scene->GetChildren(self);
-	const auto& meshGeneratorSettings = m_treeMeshGeneratorSettings;
-	ClearMeshes();
-	for (int i = 0; i < m_skeletons.size(); i++) {
-		Entity treeEntity;
-		treeEntity = scene->CreateEntity("Tree " + std::to_string(i));
-		scene->SetParent(treeEntity, self);
-		GlobalTransform gt{};
-		gt.SetPosition(m_skeletons[i].m_data.m_rootPosition);
-		scene->SetDataComponent(treeEntity, gt);
-
-		if (meshGeneratorSettings.m_enableBranch) {
-			Entity branchEntity;
-			branchEntity = scene->CreateEntity("Branch Mesh");
-			scene->SetParent(branchEntity, treeEntity);
-			std::vector<Vertex> vertices;
-			std::vector<unsigned int> indices;
-
-			switch (meshGeneratorSettings.m_branchMeshType)
-			{
-			case 0:
-			{
-				CylindricalMeshGenerator<ReconstructionSkeletonData, ReconstructionFlowData, ReconstructionNodeData> meshGenerator;
-				meshGenerator.Generate(m_skeletons[i], vertices, indices, meshGeneratorSettings, [&](float xFactor, float yFactor)
-					{
-						return 1.0f;
-					});
-			}
-			break;
-			case 1:
-			{
-				 
-				VoxelMeshGenerator<ReconstructionSkeletonData, ReconstructionFlowData, ReconstructionNodeData> meshGenerator;
-				meshGenerator.Generate(m_skeletons[i], vertices, indices,
-					meshGeneratorSettings );
-			}
-			break;
-			default: break;
-			}
-
-			auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
-			auto material = ProjectManager::CreateTemporaryAsset<Material>();
-			VertexAttributes attributes{};
-			attributes.m_texCoord = true;
-			mesh->SetVertices(attributes, vertices, indices);
-			auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(branchEntity).lock();
-			if (meshGeneratorSettings.m_presentationOverride) {
-				material->m_materialProperties.m_albedoColor = meshGeneratorSettings.m_presentationOverrideSettings.m_branchOverrideColor;
-			}
-			else {
-				material->m_materialProperties.m_albedoColor = glm::vec3(109, 79, 75) / 255.0f;
-			}
-
-			auto texRef = meshGeneratorSettings.m_branchAlbedoTexture;
-			if (texRef.Get<Texture2D>())
-			{
-				material->SetAlbedoTexture(texRef.Get<Texture2D>());
-
-			}
-			texRef = meshGeneratorSettings.m_branchNormalTexture;
-			if (texRef.Get<Texture2D>())
-			{
-				material->SetNormalTexture(texRef.Get<Texture2D>());
-
-			}
-			texRef = meshGeneratorSettings.m_branchRoughnessTexture;
-			if (texRef.Get<Texture2D>())
-			{
-				material->SetRoughnessTexture(texRef.Get<Texture2D>());
-
-			}
-			texRef = meshGeneratorSettings.m_branchMetallicTexture;
-			if (texRef.Get<Texture2D>())
-			{
-				material->SetMetallicTexture(texRef.Get<Texture2D>());
-			}
-			material->m_materialProperties.m_roughness = 1.0f;
-			material->m_materialProperties.m_metallic = 0.0f;
-			meshRenderer->m_mesh = mesh;
-			meshRenderer->m_material = material;
-		}
-		if (meshGeneratorSettings.m_enableTwig)
-		{
-			Entity twigEntity;
-			twigEntity = scene->CreateEntity("Twig Mesh");
-			scene->SetParent(twigEntity, treeEntity);
-			std::vector<glm::uint> twigSegments;
-			std::vector<StrandPoint> twigPoints;
-			const auto& shootSkeleton = m_skeletons[i];
-			const auto& internodeList = shootSkeleton.RefSortedNodeList();
-			for (int internodeHandle : internodeList)
-			{
-				const auto& internode = shootSkeleton.PeekNode(internodeHandle);
-				const auto& internodeInfo = internode.m_info;
-				std::vector<std::vector<glm::vec4>> twigs{};
-				if (internodeInfo.m_thickness < meshGeneratorSettings.m_twigParameters.m_maxNodeThickness
-					&& internodeInfo.m_rootDistance > meshGeneratorSettings.m_twigParameters.m_minRootDistance
-					&& internodeInfo.m_endDistance < meshGeneratorSettings.m_twigParameters.m_maxEndDistance)
-				{
-					int twigCount = internodeInfo.m_length / meshGeneratorSettings.m_twigParameters.m_unitDistance;
-					twigs.resize(twigCount);
-
-					auto desiredGlobalRotation = internodeInfo.m_regulatedGlobalRotation * glm::quat(glm::vec3(
-						glm::radians(meshGeneratorSettings.m_twigParameters.m_branchingAngle), 0.0f,
-						glm::radians(glm::radians(
-							glm::linearRand(0.0f,
-								360.0f)))));
-
-					glm::vec3 directionStart = internodeInfo.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
-					glm::vec3 directionEnd = directionStart;
-
-					glm::vec3 positionStart = internodeInfo.m_globalPosition;
-					glm::vec3 positionEnd =
-						positionStart + internodeInfo.m_length * (meshGeneratorSettings.m_smoothness ? 1.0f - meshGeneratorSettings.m_baseControlPointRatio * 0.5f : 1.0f) * internodeInfo.m_globalDirection;
-
-					BezierCurve curve = BezierCurve(
-						positionStart,
-						positionStart +
-						(meshGeneratorSettings.m_smoothness ? internodeInfo.m_length * meshGeneratorSettings.m_baseControlPointRatio : 0.0f) * directionStart,
-						positionEnd -
-						(meshGeneratorSettings.m_smoothness ? internodeInfo.m_length * meshGeneratorSettings.m_branchControlPointRatio : 0.0f) * directionEnd,
-						positionEnd);
-
-					for (int twigIndex = 0; twigIndex < twigCount; twigIndex++) {
-						glm::vec3 positionWalker = curve.GetPoint(static_cast<float>(twigIndex) / twigCount);
-						twigs[twigIndex].resize(meshGeneratorSettings.m_twigParameters.m_segmentSize);
-						const float rollAngle = glm::radians(glm::linearRand(0.0f, 360.0f));
-						for (int twigPointIndex = 0; twigPointIndex < meshGeneratorSettings.m_twigParameters.m_segmentSize; twigPointIndex++)
-						{
-							twigs[twigIndex][twigPointIndex] = glm::vec4(positionWalker, meshGeneratorSettings.m_twigParameters.m_thickness);
-							desiredGlobalRotation = internodeInfo.m_regulatedGlobalRotation * glm::quat(glm::vec3(
-								glm::radians(glm::gaussRand(0.f, meshGeneratorSettings.m_twigParameters.m_apicalAngleVariance) + meshGeneratorSettings.m_twigParameters.m_branchingAngle), 0.0f,
-								rollAngle));
-
-							auto twigFront = desiredGlobalRotation * glm::vec3(0, 0, -1);
-							positionWalker = positionWalker + twigFront * meshGeneratorSettings.m_twigParameters.m_segmentLength;
-						}
-					}
-
-				}
-
-				for (const auto& twig : twigs) {
-					const auto twigSegmentSize = twig.size();
-					const auto twigControlPointSize = twig.size() + 3;
-					const auto totalTwigPointSize = twigPoints.size();
-					const auto totalTwigSegmentSize = twigSegments.size();
-					twigPoints.resize(totalTwigPointSize + twigControlPointSize);
-					twigSegments.resize(totalTwigSegmentSize + twigSegmentSize);
-
-					for (int i = 0; i < twigControlPointSize; i++) {
-						auto& p = twigPoints[totalTwigPointSize + i];
-						p.m_position = glm::vec3(twig[glm::clamp(i - 2, 0, static_cast<int>(twigSegmentSize - 1))]);
-						p.m_thickness = twig[glm::clamp(i - 2, 0, static_cast<int>(twigSegmentSize - 1))].w;
-					}
-					twigPoints[totalTwigPointSize].m_position = glm::vec3(twig[0]) * 2.0f - glm::vec3(twig[1]);
-					twigPoints[totalTwigPointSize].m_thickness = twig[0].w * 2.0f - twig[1].w;
-
-					twigPoints[totalTwigPointSize + twigControlPointSize - 1].m_position = glm::vec3(twig[twigSegmentSize - 1]) * 2.0f - glm::vec3(twig[twigSegmentSize - 2]);
-					twigPoints[totalTwigPointSize + twigControlPointSize - 1].m_thickness = twig[twigSegmentSize - 1].w * 2.0f - twig[twigSegmentSize - 2].w;
-
-
-					for (int i = 0; i < twigSegmentSize; i++) {
-						twigSegments[totalTwigSegmentSize + i] = totalTwigPointSize + i;
-					}
-				}
-			}
-
-			auto strands = ProjectManager::CreateTemporaryAsset<Strands>();
-			auto material = ProjectManager::CreateTemporaryAsset<Material>();
-			if (meshGeneratorSettings.m_foliageOverride)
-			{
-				material->m_materialProperties.m_albedoColor = meshGeneratorSettings.m_presentationOverrideSettings.m_branchOverrideColor;
-			}
-			else {
-				material->m_materialProperties.m_albedoColor = glm::vec3(80, 60, 50) / 255.0f;
-			}
-			material->m_materialProperties.m_roughness = 1.0f;
-			material->m_materialProperties.m_metallic = 0.0f;
-			StrandPointAttributes strandPointAttributes{};
-			strands->SetSegments(strandPointAttributes, twigSegments, twigPoints);
-			auto strandsRenderer = scene->GetOrSetPrivateComponent<StrandsRenderer>(twigEntity).lock();
-			strandsRenderer->m_strands = strands;
-			strandsRenderer->m_material = material;
-		}
-		if (meshGeneratorSettings.m_enableFoliage)
-		{
-			Entity foliageEntity;
-			foliageEntity = scene->CreateEntity("Foliage Mesh");
-			scene->SetParent(foliageEntity, treeEntity);
-			const auto& shootSkeleton = m_skeletons[i];
-			std::vector<Vertex> vertices;
-			std::vector<unsigned int> indices;
-			auto quadMesh = Resources::GetResource<Mesh>("PRIMITIVE_QUAD");
-			auto& quadTriangles = quadMesh->UnsafeGetTriangles();
-			auto quadVerticesSize = quadMesh->GetVerticesAmount();
-			size_t offset = 0;
-
-			const auto& nodeList = shootSkeleton.RefSortedNodeList();
-			for (const auto& internodeHandle : nodeList) {
-				const auto& internode = shootSkeleton.PeekNode(internodeHandle);
-				const auto& internodeInfo = internode.m_info;
-
-				const auto& foliageOverrideSettings = meshGeneratorSettings.m_foliageOverrideSettings;
-				if (internodeInfo.m_thickness < foliageOverrideSettings.m_maxNodeThickness
-					&& internodeInfo.m_rootDistance > foliageOverrideSettings.m_minRootDistance
-					&& internodeInfo.m_endDistance < foliageOverrideSettings.m_maxEndDistance) {
-					for (int i = 0; i < foliageOverrideSettings.m_leafCountPerInternode; i++)
-					{
-						auto leafSize = foliageOverrideSettings.m_leafSize;
-						glm::quat rotation = internodeInfo.m_globalDirection * glm::quat(glm::radians(glm::linearRand(glm::vec3(0.0f), glm::vec3(360.0f))));
-						auto front = rotation * glm::vec3(0, 0, -1);
-						auto foliagePosition = internodeInfo.m_globalPosition + front * (leafSize.y * 1.5f) + glm::sphericalRand(1.0f) * glm::linearRand(0.0f, foliageOverrideSettings.m_positionVariance);
-						auto leafTransform = glm::translate(foliagePosition) * glm::mat4_cast(rotation) * glm::scale(glm::vec3(leafSize.x, 1.0f, leafSize.y));
-
-						auto& matrix = leafTransform;
-						Vertex archetype;
-						for (auto i = 0; i < quadMesh->GetVerticesAmount(); i++) {
-							archetype.m_position =
-								matrix * glm::vec4(quadMesh->UnsafeGetVertices()[i].m_position, 1.0f);
-							archetype.m_normal = glm::normalize(glm::vec3(
-								matrix * glm::vec4(quadMesh->UnsafeGetVertices()[i].m_normal, 0.0f)));
-							archetype.m_tangent = glm::normalize(glm::vec3(
-								matrix *
-								glm::vec4(quadMesh->UnsafeGetVertices()[i].m_tangent, 0.0f)));
-							archetype.m_texCoord =
-								quadMesh->UnsafeGetVertices()[i].m_texCoord;
-							vertices.push_back(archetype);
-						}
-						for (auto triangle : quadTriangles) {
-							triangle.x += offset;
-							triangle.y += offset;
-							triangle.z += offset;
-							indices.push_back(triangle.x);
-							indices.push_back(triangle.y);
-							indices.push_back(triangle.z);
-						}
-						offset += quadVerticesSize;
-					}
-				}
-
-			}
-
-			auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
-			auto material = ProjectManager::CreateTemporaryAsset<Material>();
-			VertexAttributes vertexAttributes{};
-			vertexAttributes.m_texCoord = true;
-			mesh->SetVertices(vertexAttributes, vertices, indices);
-
-			auto texRef = meshGeneratorSettings.m_foliageAlbedoTexture;
-			if (texRef.Get<Texture2D>())
-			{
-				material->SetAlbedoTexture(texRef.Get<Texture2D>());
-
-			}
-			texRef = meshGeneratorSettings.m_foliageNormalTexture;
-			if (texRef.Get<Texture2D>())
-			{
-				material->SetNormalTexture(texRef.Get<Texture2D>());
-
-			}
-			texRef = meshGeneratorSettings.m_foliageRoughnessTexture;
-			if (texRef.Get<Texture2D>())
-			{
-				material->SetRoughnessTexture(texRef.Get<Texture2D>());
-
-			}
-			texRef = meshGeneratorSettings.m_foliageMetallicTexture;
-			if (texRef.Get<Texture2D>())
-			{
-				material->SetMetallicTexture(texRef.Get<Texture2D>());
-			}
-			if (meshGeneratorSettings.m_foliageOverride)
-			{
-				material->m_materialProperties.m_albedoColor = meshGeneratorSettings.m_foliageOverrideSettings.m_leafColor;
-			}
-			else {
-				material->m_materialProperties.m_albedoColor = glm::vec3(152 / 255.0f, 203 / 255.0f, 0 / 255.0f);
-			}
-			material->m_materialProperties.m_roughness = 0.0f;
-			auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(foliageEntity).lock();
-			meshRenderer->m_mesh = mesh;
-			meshRenderer->m_material = material;
-
-		}
-	}
 }
 
 std::vector<std::shared_ptr<Mesh>> TreePointCloud::GenerateForestBranchMeshes() const
@@ -2526,7 +2223,7 @@ std::vector<std::shared_ptr<Mesh>> TreePointCloud::GenerateForestBranchMeshes() 
 	return meshes;
 }
 
-std::vector<std::shared_ptr<Mesh>> TreePointCloud::GenerateFoliageMeshes() const
+std::vector<std::shared_ptr<Mesh>> TreePointCloud::GenerateFoliageMeshes()
 {
 	std::vector<std::shared_ptr<Mesh>> meshes{};
 	for (int i = 0; i < m_skeletons.size(); i++) {
@@ -2537,22 +2234,22 @@ std::vector<std::shared_ptr<Mesh>> TreePointCloud::GenerateFoliageMeshes() const
 		auto& quadTriangles = quadMesh->UnsafeGetTriangles();
 		auto quadVerticesSize = quadMesh->GetVerticesAmount();
 		size_t offset = 0;
-
+		auto foliageDescriptor = m_foliageDescriptor.Get<FoliageDescriptor>();
+		if (!foliageDescriptor) foliageDescriptor = ProjectManager::CreateTemporaryAsset<FoliageDescriptor>();
 		const auto& nodeList = m_skeletons[i].RefSortedNodeList();
 		for (const auto& internodeHandle : nodeList) {
 			const auto& internode = m_skeletons[i].PeekNode(internodeHandle);
 			const auto& internodeInfo = internode.m_info;
 
-			const auto& foliageOverrideSettings = m_treeMeshGeneratorSettings.m_foliageOverrideSettings;
-			if (internodeInfo.m_thickness < foliageOverrideSettings.m_maxNodeThickness
-				&& internodeInfo.m_rootDistance > foliageOverrideSettings.m_minRootDistance
-				&& internodeInfo.m_endDistance < foliageOverrideSettings.m_maxEndDistance) {
-				for (int i = 0; i < foliageOverrideSettings.m_leafCountPerInternode; i++)
+			if (internodeInfo.m_thickness < foliageDescriptor->m_maxNodeThickness
+				&& internodeInfo.m_rootDistance > foliageDescriptor->m_minRootDistance
+				&& internodeInfo.m_endDistance < foliageDescriptor->m_maxEndDistance) {
+				for (int i = 0; i < foliageDescriptor->m_leafCountPerInternode; i++)
 				{
-					auto leafSize = foliageOverrideSettings.m_leafSize;
+					auto leafSize = foliageDescriptor->m_leafSize;
 					glm::quat rotation = internodeInfo.m_globalDirection * glm::quat(glm::radians(glm::linearRand(glm::vec3(0.0f), glm::vec3(360.0f))));
 					auto front = rotation * glm::vec3(0, 0, -1);
-					auto foliagePosition = internodeInfo.m_globalPosition + front * (leafSize.y * 1.5f) + glm::sphericalRand(1.0f) * glm::linearRand(0.0f, foliageOverrideSettings.m_positionVariance);
+					auto foliagePosition = internodeInfo.m_globalPosition + front * (leafSize.y * 1.5f) + glm::sphericalRand(1.0f) * glm::linearRand(0.0f, foliageDescriptor->m_positionVariance);
 					auto leafTransform = glm::translate(foliagePosition) * glm::mat4_cast(rotation) * glm::scale(glm::vec3(leafSize.x, 1.0f, leafSize.y));
 
 					auto& matrix = leafTransform;
