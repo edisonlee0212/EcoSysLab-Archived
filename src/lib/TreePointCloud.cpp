@@ -1803,6 +1803,11 @@ void TreePointCloud::BuildSkeletons() {
 	SpaceColonization();
 }
 
+void TreePointCloud::FormGeometryEntity()
+{
+
+}
+
 void TreePointCloud::SpaceColonization()
 {
 	if (m_reconstructionSettings.m_spaceColonizationFactor == 0.0f) return;

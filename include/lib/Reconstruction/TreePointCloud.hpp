@@ -262,7 +262,7 @@ namespace EcoSysLab {
 		void EstablishConnectivityGraph();
 
 		void BuildSkeletons();
-
+		void FormGeometryEntity();
 		void ClearMeshes() const;
 
 		void OnCreate() override;

@@ -31,6 +31,7 @@
 #include <TreePointCloudScanner.hpp>
 
 #include "DatasetGenerator.hpp"
+#include "FoliageDescriptor.hpp"
 #include "ParticlePhysics2DDemo.hpp"
 #include "Physics2DDemo.hpp"
 
@@ -162,6 +163,7 @@ void CaptureScene(
 			mainCamera->m_clearColor = clearColor;
 		}
 	}
+
 	EVOENGINE_LOG("Exported image to " + outputPath);
 }
 
@@ -174,7 +176,7 @@ Entity ImportTreePointCloud(const std::string& yamlPath)
 	return retVal;
 }
 
-void YamlToMesh(const std::string& yamlPath,
+void TreeStructor(const std::string& yamlPath,
 	const ConnectivityGraphSettings& connectivityGraphSettings,
 	const ReconstructionSettings& reconstructionSettings,
 	const TreeMeshGeneratorSettings& meshGeneratorSettings,
@@ -211,7 +213,6 @@ void VisualizeYaml(const std::string& yamlPath,
 	treePointCloud->EstablishConnectivityGraph();
 	treePointCloud->BuildSkeletons();
 	treePointCloud->FormGeometryEntity();
-
 	CaptureScene(posX, posY, posZ, angleX, angleY, angleZ, resolutionX, resolutionY, true, outputPath);
 	scene->DeleteEntity(tempEntity);
 }
@@ -300,7 +301,7 @@ void VoxelSpaceColonizationTreeData(
 		occupancyGrid.Initialize(inputGrid,
 			glm::vec3(-radius, 0, -radius),
 			glm::vec3(radius, 2.0f * radius, radius),
-			treeDescriptor->m_shootDescriptor.m_internodeLength,
+			treeDescriptor->m_shootDescriptor.Get<ShootDescriptor>()->m_internodeLength,
 			tree->m_treeModel.m_treeGrowthSettings.m_spaceColonizationRemovalDistanceFactor,
 			tree->m_treeModel.m_treeGrowthSettings.m_spaceColonizationTheta,
 			tree->m_treeModel.m_treeGrowthSettings.m_spaceColonizationDetectionDistanceFactor);
@@ -427,7 +428,7 @@ void RBVSpaceColonizationTreeData(
 	occupancyGrid.Initialize(rbv,
 		glm::vec3(-rbv->m_maxRadius, 0, -rbv->m_maxRadius),
 		glm::vec3(rbv->m_maxRadius, 2.0f * rbv->m_maxRadius, rbv->m_maxRadius),
-		treeDescriptor->m_shootDescriptor.m_internodeLength,
+		treeDescriptor->m_shootDescriptor.Get<ShootDescriptor>()->m_internodeLength,
 		tree->m_treeModel.m_treeGrowthSettings.m_spaceColonizationRemovalDistanceFactor,
 		tree->m_treeModel.m_treeGrowthSettings.m_spaceColonizationTheta,
 		tree->m_treeModel.m_treeGrowthSettings.m_spaceColonizationDetectionDistanceFactor);
@@ -509,6 +510,34 @@ PYBIND11_MODULE(pyecosyslab, m) {
 		.def(py::init<>())
 		.def_readwrite("m_maxThickness", &PresentationOverrideSettings::m_maxThickness);
 
+	py::class_<ShootDescriptor>(m, "ShootDescriptor")
+		.def(py::init<>())
+		.def_readwrite("m_growthRate", &ShootDescriptor::m_growthRate)
+		.def_readwrite("m_branchingAngleMeanVariance", &ShootDescriptor::m_branchingAngleMeanVariance)
+		.def_readwrite("m_rollAngleMeanVariance", &ShootDescriptor::m_rollAngleMeanVariance)
+		.def_readwrite("m_apicalAngleMeanVariance", &ShootDescriptor::m_apicalAngleMeanVariance)
+		.def_readwrite("m_gravitropism", &ShootDescriptor::m_gravitropism)
+		.def_readwrite("m_phototropism", &ShootDescriptor::m_phototropism)
+		.def_readwrite("m_horizontalTropism", &ShootDescriptor::m_horizontalTropism)
+		.def_readwrite("m_internodeLength", &ShootDescriptor::m_internodeLength)
+		.def_readwrite("m_internodeLengthThicknessFactor", &ShootDescriptor::m_internodeLengthThicknessFactor)
+		.def_readwrite("m_endNodeThickness", &ShootDescriptor::m_endNodeThickness)
+		.def_readwrite("m_thicknessAccumulationFactor", &ShootDescriptor::m_thicknessAccumulationFactor)
+		.def_readwrite("m_thicknessAgeFactor", &ShootDescriptor::m_thicknessAgeFactor)
+		.def_readwrite("m_internodeShadowFactor", &ShootDescriptor::m_internodeShadowFactor)
+		.def_readwrite("m_lateralBudCount", &ShootDescriptor::m_lateralBudCount)
+		.def_readwrite("m_apicalBudExtinctionRate", &ShootDescriptor::m_apicalBudExtinctionRate)
+		.def_readwrite("m_lateralBudFlushingRate", &ShootDescriptor::m_lateralBudFlushingRate)
+		.def_readwrite("m_apicalControl", &ShootDescriptor::m_apicalControl)
+		.def_readwrite("m_apicalDominance", &ShootDescriptor::m_apicalDominance)
+		.def_readwrite("m_apicalDominanceLoss", &ShootDescriptor::m_apicalDominanceLoss)
+		.def_readwrite("m_lowBranchPruning", &ShootDescriptor::m_lowBranchPruning)
+		.def_readwrite("m_lowBranchPruningThicknessFactor", &ShootDescriptor::m_lowBranchPruningThicknessFactor)
+		.def_readwrite("m_lightPruningFactor", &ShootDescriptor::m_lightPruningFactor)
+		.def_readwrite("m_thicknessPruningFactor", &ShootDescriptor::m_thicknessPruningFactor)
+		.def_readwrite("m_saggingFactorThicknessReductionMax", &ShootDescriptor::m_saggingFactorThicknessReductionMax);
+
+
 	py::class_<FoliageDescriptor>(m, "FoliageDescriptor")
 		.def(py::init<>())
 		.def_readwrite("m_leafSize", &FoliageDescriptor::m_leafSize)
@@ -527,8 +556,6 @@ PYBIND11_MODULE(pyecosyslab, m) {
 		.def_readwrite("m_enableFruit", &TreeMeshGeneratorSettings::m_enableFruit)
 		.def_readwrite("m_enableBranch", &TreeMeshGeneratorSettings::m_enableBranch)
 		.def_readwrite("m_enableTwig", &TreeMeshGeneratorSettings::m_enableTwig)
-		.def_readwrite("m_foliageOverride", &TreeMeshGeneratorSettings::m_foliageOverride)
-		.def_readwrite("m_foliageOverrideSettings", &TreeMeshGeneratorSettings::m_foliageOverrideSettings)
 		.def_readwrite("m_presentationOverrideSettings", &TreeMeshGeneratorSettings::m_presentationOverrideSettings)
 		.def_readwrite("m_xSubdivision", &TreeMeshGeneratorSettings::m_xSubdivision)
 		.def_readwrite("m_trunkYSubdivision", &TreeMeshGeneratorSettings::m_trunkYSubdivision)
@@ -578,7 +605,7 @@ PYBIND11_MODULE(pyecosyslab, m) {
 	m.def("start_project_windowless", &StartProjectWindowless, "StartProjectWindowless");
 	m.def("start_project_with_editor", &StartProjectWithEditor, "StartProjectWithEditor");
 
-	m.def("yaml_to_mesh", &YamlToMesh, "YamlToMesh");
+	m.def("tree_structor", &TreeStructor, "TreeStructor");
 	m.def("capture_scene", &CaptureScene, "CaptureScene");
 	m.def("visualize_yaml", &VisualizeYaml, "VisualizeYaml");
 	m.def("voxel_space_colonization_tree_data", &VoxelSpaceColonizationTreeData, "VoxelSpaceColonizationTreeData");

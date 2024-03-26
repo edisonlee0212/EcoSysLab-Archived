@@ -56,6 +56,6 @@ namespace EcoSysLab {
 		void Deserialize(const YAML::Node& in) override;
 		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 		[[nodiscard]] std::shared_ptr<ShootDescriptor> Generate();
-		static bool OnInspectShootGrowthParametersOffset(std::vector<ShootGrowthParameterOffset>& shootGrowthParameterOffsets);
+		bool OnInspectShootGrowthParametersOffset(std::vector<ShootGrowthParameterOffset>& shootGrowthParameterOffsets);
 	};
 }
