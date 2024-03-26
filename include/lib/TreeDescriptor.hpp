@@ -7,49 +7,8 @@
 #include "TreeGrowthParameters.hpp"
 using namespace EvoEngine;
 namespace EcoSysLab {
-	enum class ShootGrowthParameterType
-	{
-		GrowthRate,
-		BranchingAngleMean,
-		BranchingAngleVariance,
-		RollAngleMean,
-		RollAngleVariance,
-		ApicalAngleMean,
-		ApicalAngleVariance,
-		Gravitropism,
-		Phototropism,
-		Sagging,
-		SaggingThicknessFactor,
-		MaxSagging,
-		InternodeLength,
-		InternodeLengthThicknessFactor,
-		EndNodeThickness,
-		ThicknessAccumulationFactor,
-		ThicknessAgeFactor,
-		ShadowFactor,
-
-		ApicalBudExtinctionRate,
-		LateralBudExtinctionRate,
-		ApicalBudLightingFactor,
-		LateralBudLightingFactor,
-		ApicalControl,
-		ApicalDominance,
-		ApicalDominanceLoss,
-		
-		LowBranchPruning,
-		LowBranchPruningThicknessFactor,
-		LightPruningFactor,
-		ThicknessPruningFactor
-
-	};
-
-	struct ShootGrowthParameterOffset
-	{
-		unsigned m_type = static_cast<unsigned>(ShootGrowthParameterType::GrowthRate);
-		glm::vec2 m_range = { 0.0f, 0.0f };
-		Curve2D m_offset;
-	};
-
+	
+	
 	class TreeDescriptor : public IAsset {
 	public:
 		ShootGrowthParameters m_shootGrowthParameters;
@@ -70,7 +29,7 @@ namespace EcoSysLab {
 		AssetRef m_branchRoughnessTexture;
 		AssetRef m_branchMetallicTexture;
 
-		std::vector<ShootGrowthParameterOffset> m_shootGrowthParameterOffsets;
+		
 
 		void OnCreate() override;
 
@@ -83,9 +42,7 @@ namespace EcoSysLab {
 		void Deserialize(const YAML::Node& in) override;
 
 		static bool OnInspectShootGrowthParameters(ShootGrowthParameters& treeGrowthParameters);
-		static void ApplyOffsets(ShootGrowthParameters& treeGrowthParameters, const std::vector<ShootGrowthParameterOffset>& offsets);
-		static bool OnInspectShootGrowthParametersOffset(std::vector<ShootGrowthParameterOffset>& shootGrowthParameterOffsets);
-
+		
 		static bool OnInspectFoliageParameters(FoliageParameters& foliageParameters);
 		static void SerializeFoliageParameters(const std::string& name, const FoliageParameters& foliageParameters, YAML::Emitter& out);
 		static void SerializeShootGrowthParameters(const std::string& name, const ShootGrowthParameters& treeGrowthParameters, YAML::Emitter& out);

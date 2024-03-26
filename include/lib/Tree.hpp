@@ -16,7 +16,6 @@ namespace EcoSysLab {
 		ShootGrowthController m_shootGrowthController{};
 	public:
 		StrandModelParameters m_strandModelParameters{};
-		ShootGrowthParameters m_actualShootGrowthParameters;
 		static void SerializeTreeGrowthSettings(const TreeGrowthSettings& treeGrowthSettings, YAML::Emitter& out);
 		static void DeserializeTreeGrowthSettings(TreeGrowthSettings& treeGrowthSettings, const YAML::Node& param);
 		static bool OnInspectTreeGrowthSettings(TreeGrowthSettings& treeGrowthSettings);

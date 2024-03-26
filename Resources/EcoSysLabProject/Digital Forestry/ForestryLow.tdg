@@ -1,4 +1,4 @@
-m_shootGrowthParameters:
+m_baseShootGrowthParameters:
   m_growthRate: 0.180000007
   m_branchingAngleMeanVariance: [40, 2]
   m_rollAngleMeanVariance: [30, 2]
@@ -42,46 +42,6 @@ m_shootGrowthParameters:
   m_fruitPositionVariance: 0.5
   m_fruitRotationVariance: 0
   m_fruitFallProbability: 3
-m_foliageParameters:
-  m_leafSize: [0.0299999993, 0.0299999993]
-  m_leafColor: [0.596078455, 0.796078444, 0]
-  m_leafCountPerInternode: 20
-  m_positionVariance: 0.174999997
-  m_rotationVariance: 1
-  m_branchingAngle: 30
-  m_maxNodeThickness: 1
-  m_minRootDistance: 1.5
-  m_maxEndDistance: 0.300000012
-m_foliageAlbedoTexture:
-  m_assetHandle: 0
-  m_assetTypeName: ""
-m_foliageNormalTexture:
-  m_assetHandle: 0
-  m_assetTypeName: ""
-m_foliageRoughnessTexture:
-  m_assetHandle: 0
-  m_assetTypeName: ""
-m_foliageMetallicTexture:
-  m_assetHandle: 0
-  m_assetTypeName: ""
-m_branchAlbedoTexture:
-  m_assetHandle: 0
-  m_assetTypeName: ""
-m_branchNormalTexture:
-  m_assetHandle: 0
-  m_assetTypeName: ""
-m_branchRoughnessTexture:
-  m_assetHandle: 0
-  m_assetTypeName: ""
-m_branchMetallicTexture:
-  m_assetHandle: 0
-  m_assetTypeName: ""
-m_shootBranchShape:
-  m_assetHandle: 12028426262144384612
-  m_assetTypeName: BranchShape
-m_rootBranchShape:
-  m_assetHandle: 0
-  m_assetTypeName: ""
 m_shootGrowthParameterOffsets:
   - m_type: 5
     m_range: [0.5, 3]
