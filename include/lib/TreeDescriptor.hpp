@@ -7,13 +7,11 @@
 #include "TreeGrowthParameters.hpp"
 using namespace EvoEngine;
 namespace EcoSysLab {
-	
-	
 	class TreeDescriptor : public IAsset {
 	public:
-		ShootGrowthParameters m_shootGrowthParameters;
+		ShootDescriptor m_shootDescriptor;
 
-		FoliageParameters m_foliageParameters;
+		FoliageDescriptor m_foliageDescriptor;
 		TwigParameters m_twigParameters;
 
 		AssetRef m_shootBranchShape;
@@ -41,13 +39,13 @@ namespace EcoSysLab {
 
 		void Deserialize(const YAML::Node& in) override;
 
-		static bool OnInspectShootGrowthParameters(ShootGrowthParameters& treeGrowthParameters);
+		static bool OnInspectShootDescriptor(ShootDescriptor& shootDescriptor);
 		
-		static bool OnInspectFoliageParameters(FoliageParameters& foliageParameters);
-		static void SerializeFoliageParameters(const std::string& name, const FoliageParameters& foliageParameters, YAML::Emitter& out);
-		static void SerializeShootGrowthParameters(const std::string& name, const ShootGrowthParameters& treeGrowthParameters, YAML::Emitter& out);
-		static void DeserializeFoliageParameters(const std::string& name, FoliageParameters& foliageParameters, const YAML::Node& in);
-		static void DeserializeShootGrowthParameters(const std::string& name, ShootGrowthParameters& treeGrowthParameters, const YAML::Node& in);
+		static bool OnInspectFoliageDescriptor(FoliageDescriptor& foliageDescriptor);
+		static void SerializeFoliageDescriptor(const std::string& name, const FoliageDescriptor& foliageDescriptor, YAML::Emitter& out);
+		static void SerializeShootDescriptor(const std::string& name, const ShootDescriptor& shootDescriptor, YAML::Emitter& out);
+		static void DeserializeFoliageDescriptor(const std::string& name, FoliageDescriptor& foliageDescriptor, const YAML::Node& in);
+		static void DeserializeShootDescriptor(const std::string& name, ShootDescriptor& shootDescriptor, const YAML::Node& in);
 	};
 
 

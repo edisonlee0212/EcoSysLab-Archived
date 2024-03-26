@@ -4,7 +4,7 @@
 using namespace EvoEngine;
 namespace EcoSysLab
 {
-	struct ShootGrowthParameters {
+	struct ShootDescriptor {
 		/**
 		 * \brief The expected height gain for the tree for one year (max root distance).
 		 */

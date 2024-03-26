@@ -270,7 +270,7 @@ void TreeMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLayer>& ed
 		ImGui::Checkbox("Foliage Override", &m_foliageOverride);
 		if(m_foliageOverride && ImGui::TreeNodeEx("Foliage Override settings"))
 		{
-			TreeDescriptor::OnInspectFoliageParameters(m_foliageOverrideSettings);
+			TreeDescriptor::OnInspectFoliageDescriptor(m_foliageOverrideSettings);
 			ImGui::TreePop();
 		}
 		ImGui::TreePop();

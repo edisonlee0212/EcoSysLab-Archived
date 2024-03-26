@@ -300,7 +300,7 @@ void VoxelSpaceColonizationTreeData(
 		occupancyGrid.Initialize(inputGrid,
 			glm::vec3(-radius, 0, -radius),
 			glm::vec3(radius, 2.0f * radius, radius),
-			treeDescriptor->m_shootGrowthParameters.m_internodeLength,
+			treeDescriptor->m_shootDescriptor.m_internodeLength,
 			tree->m_treeModel.m_treeGrowthSettings.m_spaceColonizationRemovalDistanceFactor,
 			tree->m_treeModel.m_treeGrowthSettings.m_spaceColonizationTheta,
 			tree->m_treeModel.m_treeGrowthSettings.m_spaceColonizationDetectionDistanceFactor);
@@ -427,7 +427,7 @@ void RBVSpaceColonizationTreeData(
 	occupancyGrid.Initialize(rbv,
 		glm::vec3(-rbv->m_maxRadius, 0, -rbv->m_maxRadius),
 		glm::vec3(rbv->m_maxRadius, 2.0f * rbv->m_maxRadius, rbv->m_maxRadius),
-		treeDescriptor->m_shootGrowthParameters.m_internodeLength,
+		treeDescriptor->m_shootDescriptor.m_internodeLength,
 		tree->m_treeModel.m_treeGrowthSettings.m_spaceColonizationRemovalDistanceFactor,
 		tree->m_treeModel.m_treeGrowthSettings.m_spaceColonizationTheta,
 		tree->m_treeModel.m_treeGrowthSettings.m_spaceColonizationDetectionDistanceFactor);
@@ -509,16 +509,16 @@ PYBIND11_MODULE(pyecosyslab, m) {
 		.def(py::init<>())
 		.def_readwrite("m_maxThickness", &PresentationOverrideSettings::m_maxThickness);
 
-	py::class_<FoliageParameters>(m, "FoliageParameters")
+	py::class_<FoliageDescriptor>(m, "FoliageDescriptor")
 		.def(py::init<>())
-		.def_readwrite("m_leafSize", &FoliageParameters::m_leafSize)
-		.def_readwrite("m_leafCountPerInternode", &FoliageParameters::m_leafCountPerInternode)
-		.def_readwrite("m_positionVariance", &FoliageParameters::m_positionVariance)
-		.def_readwrite("m_rotationVariance", &FoliageParameters::m_rotationVariance)
-		.def_readwrite("m_branchingAngle", &FoliageParameters::m_branchingAngle)
-		.def_readwrite("m_maxNodeThickness", &FoliageParameters::m_maxNodeThickness)
-		.def_readwrite("m_minRootDistance", &FoliageParameters::m_minRootDistance)
-		.def_readwrite("m_maxEndDistance", &FoliageParameters::m_maxEndDistance);
+		.def_readwrite("m_leafSize", &FoliageDescriptor::m_leafSize)
+		.def_readwrite("m_leafCountPerInternode", &FoliageDescriptor::m_leafCountPerInternode)
+		.def_readwrite("m_positionVariance", &FoliageDescriptor::m_positionVariance)
+		.def_readwrite("m_rotationVariance", &FoliageDescriptor::m_rotationVariance)
+		.def_readwrite("m_branchingAngle", &FoliageDescriptor::m_branchingAngle)
+		.def_readwrite("m_maxNodeThickness", &FoliageDescriptor::m_maxNodeThickness)
+		.def_readwrite("m_minRootDistance", &FoliageDescriptor::m_minRootDistance)
+		.def_readwrite("m_maxEndDistance", &FoliageDescriptor::m_maxEndDistance);
 
 	py::class_<TreeMeshGeneratorSettings>(m, "TreeMeshGeneratorSettings")
 		.def(py::init<>())

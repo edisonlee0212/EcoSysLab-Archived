@@ -55,7 +55,7 @@ void StrandModelMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLay
 
 	if (ImGui::TreeNodeEx("Foliage settings"))
 	{
-		TreeDescriptor::OnInspectFoliageParameters(m_foliageSettings);
+		TreeDescriptor::OnInspectFoliageDescriptor(m_foliageSettings);
 		ImGui::TreePop();
 	}
 }

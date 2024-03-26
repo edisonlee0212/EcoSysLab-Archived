@@ -50,15 +50,15 @@ namespace EcoSysLab {
 		Curve2D m_offset;
 	};
 
-	class TreeDescriptorGenerator : public IAsset
+	class ShootDescriptorGenerator : public IAsset
 	{
-		ShootGrowthParameters m_baseShootGrowthParameters;
-		std::vector<ShootGrowthParameterOffset> m_shootGrowthParameterOffsets;
+		ShootDescriptor m_baseShootDescriptor {};
+		std::vector<ShootGrowthParameterOffset> m_shootDescriptorOffsets;
 	public:
 		void Serialize(YAML::Emitter& out) override;
 		void Deserialize(const YAML::Node& in) override;
 		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
-		static void ApplyOffsets(ShootGrowthParameters& treeGrowthParameters, const std::vector<ShootGrowthParameterOffset>& offsets);
+		static void ApplyOffsets(ShootDescriptor& treeGrowthParameters, const std::vector<ShootGrowthParameterOffset>& offsets);
 		static bool OnInspectShootGrowthParametersOffset(std::vector<ShootGrowthParameterOffset>& shootGrowthParameterOffsets);
 	};
 }

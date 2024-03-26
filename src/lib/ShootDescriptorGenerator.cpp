@@ -1,16 +1,16 @@
-#include "TreeDescriptorGenerator.hpp"
+#include "ShootDescriptorGenerator.hpp"
 
 #include "TreeDescriptor.hpp"
 
 using namespace EcoSysLab;
 
-void TreeDescriptorGenerator::Serialize(YAML::Emitter& out)
+void ShootDescriptorGenerator::Serialize(YAML::Emitter& out)
 {
-	TreeDescriptor::SerializeShootGrowthParameters("m_baseShootGrowthParameters", m_baseShootGrowthParameters, out);
-	if (!m_shootGrowthParameterOffsets.empty())
+	TreeDescriptor::SerializeShootDescriptor("m_baseShootDescriptor", m_baseShootDescriptor, out);
+	if (!m_shootDescriptorOffsets.empty())
 	{
-		out << YAML::Key << "m_shootGrowthParameterOffsets" << YAML::BeginSeq;
-		for (const auto& i : m_shootGrowthParameterOffsets)
+		out << YAML::Key << "m_shootDescriptorOffsets" << YAML::BeginSeq;
+		for (const auto& i : m_shootDescriptorOffsets)
 		{
 			out << YAML::BeginMap;
 			out << YAML::Key << "m_type" << YAML::Value << i.m_type;
@@ -22,17 +22,17 @@ void TreeDescriptorGenerator::Serialize(YAML::Emitter& out)
 	}
 }
 
-void TreeDescriptorGenerator::Deserialize(const YAML::Node& in)
+void ShootDescriptorGenerator::Deserialize(const YAML::Node& in)
 {
-	TreeDescriptor::DeserializeShootGrowthParameters("m_baseShootGrowthParameters", m_baseShootGrowthParameters, in);
-	if (in["m_shootGrowthParameterOffsets"])
+	TreeDescriptor::DeserializeShootDescriptor("m_baseShootDescriptor", m_baseShootDescriptor, in);
+	if (in["m_shootDescriptorOffsets"])
 	{
-		m_shootGrowthParameterOffsets.clear();
-		const auto& inShootGrowthParametersOffsets = in["m_shootGrowthParameterOffsets"];
+		m_shootDescriptorOffsets.clear();
+		const auto& inShootGrowthParametersOffsets = in["m_shootDescriptorOffsets"];
 		for (const auto& inShootGrowthParametersOffset : inShootGrowthParametersOffsets)
 		{
-			m_shootGrowthParameterOffsets.emplace_back();
-			auto& shootGrowthParameterOffsets = m_shootGrowthParameterOffsets.back();
+			m_shootDescriptorOffsets.emplace_back();
+			auto& shootGrowthParameterOffsets = m_shootDescriptorOffsets.back();
 			shootGrowthParameterOffsets.m_type = inShootGrowthParametersOffset["m_type"].as<unsigned>();
 			shootGrowthParameterOffsets.m_range = inShootGrowthParametersOffset["m_range"].as<glm::vec2>();
 			shootGrowthParameterOffsets.m_offset.Load("m_offset", inShootGrowthParametersOffset);
@@ -40,7 +40,7 @@ void TreeDescriptorGenerator::Deserialize(const YAML::Node& in)
 	}
 }
 
-void TreeDescriptorGenerator::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
+void ShootDescriptorGenerator::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
 	bool changed = false;
 
@@ -50,15 +50,15 @@ void TreeDescriptorGenerator::OnInspect(const std::shared_ptr<EditorLayer>& edit
 	{
 		if(const auto treeDescriptor = treeDescriptorRef.Get<TreeDescriptor>())
 		{
-			ApplyOffsets(treeDescriptor->m_shootGrowthParameters, m_shootGrowthParameterOffsets);
+			ApplyOffsets(treeDescriptor->m_shootDescriptor, m_shootDescriptorOffsets);
 		}
 	}
-	if (TreeDescriptor::OnInspectShootGrowthParameters(m_baseShootGrowthParameters)) { changed = true; }
-	if (OnInspectShootGrowthParametersOffset(m_shootGrowthParameterOffsets)) { changed = true; }
+	if (TreeDescriptor::OnInspectShootDescriptor(m_baseShootDescriptor)) { changed = true; }
+	if (OnInspectShootGrowthParametersOffset(m_shootDescriptorOffsets)) { changed = true; }
 	if (changed) m_saved = false;
 }
 
-void TreeDescriptorGenerator::ApplyOffsets(ShootGrowthParameters& treeGrowthParameters,
+void ShootDescriptorGenerator::ApplyOffsets(ShootDescriptor& treeGrowthParameters,
                                            const std::vector<ShootGrowthParameterOffset>& offsets)
 {
 	for (const auto& i : offsets)
@@ -176,7 +176,7 @@ void TreeDescriptorGenerator::ApplyOffsets(ShootGrowthParameters& treeGrowthPara
 	}
 }
 
-bool TreeDescriptorGenerator::OnInspectShootGrowthParametersOffset(
+bool ShootDescriptorGenerator::OnInspectShootGrowthParametersOffset(
 	std::vector<ShootGrowthParameterOffset>& shootGrowthParameterOffsets)
 {
 	bool changed = false;

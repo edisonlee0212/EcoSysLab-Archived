@@ -46,7 +46,7 @@ namespace EcoSysLab {
 		bool m_enableBranch = true;
 		bool m_enableFoliage = true;
 
-		FoliageParameters m_foliageSettings = {};
+		FoliageDescriptor m_foliageSettings = {};
 		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer);
 	};
 	class StrandModelMeshGenerator

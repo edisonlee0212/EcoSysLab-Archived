@@ -21,7 +21,7 @@
 #include "CubeVolume.hpp"
 #include "LogGrader.hpp"
 #include "SpatialPlantDistributionSimulator.hpp"
-#include "TreeDescriptorGenerator.hpp"
+#include "ShootDescriptorGenerator.hpp"
 using namespace EcoSysLab;
 
 void EcoSysLabLayer::OnCreate() {
@@ -35,7 +35,7 @@ void EcoSysLabLayer::OnCreate() {
 	ClassRegistry::RegisterAsset<BranchShape>("BranchShape", { ".bs" });
 	ClassRegistry::RegisterAsset<ForestPatch>("ForestPatch", { ".fp" });
 	ClassRegistry::RegisterAsset<TreeDescriptor>("TreeDescriptor", { ".td" });
-	ClassRegistry::RegisterAsset<TreeDescriptorGenerator>("TreeDescriptorGenerator", { ".tdg" });
+	ClassRegistry::RegisterAsset<ShootDescriptorGenerator>("ShootDescriptorGenerator", { ".sdg" });
 	ClassRegistry::RegisterAsset<SoilDescriptor>("SoilDescriptor", { ".sd" });
 	ClassRegistry::RegisterAsset<ClimateDescriptor>("ClimateDescriptor", { ".cd" });
 	ClassRegistry::RegisterAsset<RadialBoundingVolume>("RadialBoundingVolume", { ".rbv" });

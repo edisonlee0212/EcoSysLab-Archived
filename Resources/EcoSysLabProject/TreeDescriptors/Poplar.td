@@ -1,4 +1,4 @@
-m_shootGrowthParameters:
+m_shootDescriptor:
   m_growthRate: 0.200000003
   m_branchingAngleMeanVariance: [30, 2]
   m_rollAngleMeanVariance: [90, 3.5]
@@ -42,7 +42,7 @@ m_shootGrowthParameters:
   m_fruitPositionVariance: 0.5
   m_fruitRotationVariance: 0
   m_fruitFallProbability: 3
-m_foliageParameters:
+m_foliageDescriptor:
   m_leafSize: [0.0149999997, 0.100000001]
   m_leafColor: [0.596078455, 0.796078444, 0]
   m_leafCountPerInternode: 8

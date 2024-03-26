@@ -22,10 +22,10 @@ namespace EcoSysLab {
 			int step);
 
 		[[nodiscard]] glm::vec3 GetPoint(const glm::vec3& normalDir, float angle, bool isStart, float multiplier = 0.0f) const;
-		[[nodiscard]] glm::vec3 GetDirection(const glm::vec3& normalDir, float angle, const bool isStart) const;
+		[[nodiscard]] glm::vec3 GetDirection(const glm::vec3& normalDir, float angle, bool isStart) const;
 	};
 
-	struct FoliageParameters
+	struct FoliageDescriptor
 	{
 		glm::vec2 m_leafSize = glm::vec2(0.02f, 0.02f);
 		glm::vec3 m_leafColor = glm::vec3(152 / 255.0f, 203 / 255.0f, 0 / 255.0f);
@@ -68,7 +68,7 @@ namespace EcoSysLab {
 
 		bool m_presentationOverride = false;
 		bool m_foliageOverride = false;
-		FoliageParameters m_foliageOverrideSettings = {};
+		FoliageDescriptor m_foliageOverrideSettings = {};
 		PresentationOverrideSettings m_presentationOverrideSettings = {};
 		AssetRef m_foliageAlbedoTexture;
 		AssetRef m_foliageNormalTexture;

@@ -1,4 +1,4 @@
-m_shootGrowthParameters:
+m_shootDescriptor:
   m_growthRate: 0.200000003
   m_branchingAngleMeanVariance: [60, 2]
   m_rollAngleMeanVariance: [30, 2]
@@ -42,7 +42,7 @@ m_shootGrowthParameters:
   m_fruitPositionVariance: 0.5
   m_fruitRotationVariance: 0
   m_fruitFallProbability: 3
-m_foliageParameters:
+m_foliageDescriptor:
   m_leafSize: [0.0250000004, 0.0199999996]
   m_leafColor: [0.596078455, 0.796078444, 0]
   m_leafCountPerInternode: 20
@@ -82,30 +82,3 @@ m_shootBranchShape:
 m_rootBranchShape:
   m_assetHandle: 0
   m_assetTypeName: ""
-m_shootGrowthParameterOffsets:
-  - m_type: 1
-    m_range: [-40, 40]
-    m_offset:
-      m_tangent: true
-      m_min: [0, 0]
-      m_max: [1, 1]
-      m_values:
-        - [-0.100000001, 0]
-        - [0, 0]
-        - [0.100000001, 0]
-        - [-0.100000001, 0]
-        - [1, 1]
-        - [0.100000001, 0]
-  - m_type: 24
-    m_range: [-0.100000001, 0.100000001]
-    m_offset:
-      m_tangent: true
-      m_min: [0, 0]
-      m_max: [1, 1]
-      m_values:
-        - [-0.100000001, 0]
-        - [0, 0]
-        - [0.100000001, 0]
-        - [-0.100000001, 0]
-        - [1, 1]
-        - [0.100000001, 0]
