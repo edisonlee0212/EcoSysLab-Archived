@@ -108,7 +108,7 @@ namespace EcoSysLab {
 		Skeleton<SkeletonData, FlowData, NodeData>& treeSkeleton, std::vector<Vertex>& vertices,
 		std::vector<unsigned int>& indices, const TreeMeshGeneratorSettings& settings,
 		const std::function<float(float xFactor, float distanceToRoot)>& func) {
-		const auto& sortedInternodeList = treeSkeleton.RefSortedNodeList();
+		const auto& sortedInternodeList = treeSkeleton.PeekSortedNodeList();
 		std::vector<std::vector<RingSegment>> ringsList;
 		std::unordered_map<NodeHandle, int> steps{};
 		ringsList.resize(sortedInternodeList.size());
@@ -604,7 +604,7 @@ namespace EcoSysLab {
 		std::vector<unsigned>& indices, const TreeMeshGeneratorSettings& settings,
 		const std::function<float(float xFactor, float distanceToRoot)>& func)
 	{
-		const auto& sortedInternodeList = treeSkeleton.RefSortedNodeList();
+		const auto& sortedInternodeList = treeSkeleton.PeekSortedNodeList();
 		std::vector<std::vector<RingSegment>> ringsList;
 		std::unordered_map<NodeHandle, int> steps{};
 		ringsList.resize(sortedInternodeList.size());
@@ -989,7 +989,7 @@ namespace EcoSysLab {
 			octree.Reset(glm::max((boxSize.x, boxSize.y), glm::max(boxSize.y, boxSize.z)) * 0.5f,
 				glm::clamp(settings.m_voxelSubdivisionLevel, 4, 16), (treeSkeleton.m_min + treeSkeleton.m_max) / 2.0f);
 		}
-		auto& nodeList = treeSkeleton.RefSortedNodeList();
+		auto& nodeList = treeSkeleton.PeekSortedNodeList();
 		for (const auto& nodeIndex : nodeList)
 		{
 			const auto& node = treeSkeleton.PeekNode(nodeIndex);

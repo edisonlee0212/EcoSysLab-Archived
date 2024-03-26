@@ -20,7 +20,7 @@ bool TreeVisualizer::ScreenCurvePruning(const std::function<void(NodeHandle)>& h
 	glm::mat4 projectionView = ecoSysLabLayer->m_visualizationCamera->GetProjection() *
 		glm::lookAt(cameraPosition, cameraPosition + cameraFront, cameraUp);
 
-	const auto& sortedInternodeList = skeleton.RefSortedNodeList();
+	const auto& sortedInternodeList = skeleton.PeekSortedNodeList();
 	bool changed = false;
 	for (const auto& internodeHandle : sortedInternodeList) {
 		if (internodeHandle == 0) continue;
@@ -108,7 +108,7 @@ bool TreeVisualizer::RayCastSelection(const std::shared_ptr<Camera>& cameraCompo
 			editorLayer->GetSceneCameraRotation());
 	const Ray cameraRay = cameraComponent->ScreenPointToRay(
 		cameraLtw, mousePosition);
-	const auto& sortedNodeList = skeleton.RefSortedNodeList();
+	const auto& sortedNodeList = skeleton.PeekSortedNodeList();
 	std::vector<std::shared_future<void>> results;
 	Jobs::ParallelFor(sortedNodeList.size(), [&](unsigned i) {
 		const auto nodeHandle = sortedNodeList[i];
@@ -243,7 +243,7 @@ void TreeVisualizer::SetSelectedNode(const ShootSkeleton& skeleton, const NodeHa
 
 void TreeVisualizer::SyncMatrices(const ShootSkeleton& skeleton, const std::shared_ptr<ParticleInfoList>& particleInfoList) {
 
-	const auto& sortedNodeList = skeleton.RefSortedNodeList();
+	const auto& sortedNodeList = skeleton.PeekSortedNodeList();
 	auto& matrices = particleInfoList->m_particleInfos;
 	particleInfoList->SetPendingUpdate();
 	matrices.resize(sortedNodeList.size());
@@ -400,8 +400,8 @@ TreeVisualizer::OnInspect(
 		if (m_visualization) {
 			const auto& treeSkeleton = treeModel.PeekShootSkeleton(m_checkpointIteration);
 			const auto editorLayer = Application::GetLayer<EditorLayer>();
-			const auto& sortedBranchList = treeSkeleton.RefSortedFlowList();
-			const auto& sortedInternodeList = treeSkeleton.RefSortedNodeList();
+			const auto& sortedBranchList = treeSkeleton.PeekSortedFlowList();
+			const auto& sortedInternodeList = treeSkeleton.PeekSortedNodeList();
 			ImGui::Text("Internode count: %d", sortedInternodeList.size());
 			ImGui::Text("Shoot stem count: %d", sortedBranchList.size());
 		}
@@ -981,7 +981,7 @@ void TreeVisualizer::SyncColors(const ShootSkeleton& shootSkeleton, const NodeHa
 		}
 	}
 
-	const auto& sortedNodeList = shootSkeleton.RefSortedNodeList();
+	const auto& sortedNodeList = shootSkeleton.PeekSortedNodeList();
 	auto& matrices = m_internodeMatrices->m_particleInfos;
 	m_internodeMatrices->SetPendingUpdate();
 	matrices.resize(sortedNodeList.size());

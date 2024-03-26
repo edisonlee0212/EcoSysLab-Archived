@@ -8,6 +8,12 @@ namespace EcoSysLab
 		bool m_branchPush = false;
 		bool m_useLevelForApicalControl = true;
 #pragma region Internode
+		int m_baseInternodeCount = 1;
+		/**
+		* \brief The mean and variance of the angular difference between the growth direction and the direction of the apical bud
+		*/
+		std::function<float(const Node<InternodeGrowthData>& internode)> m_baseNodeApicalAngle;
+
 		/**
 		 * \brief The expected elongation length for an internode for one year.
 		 */

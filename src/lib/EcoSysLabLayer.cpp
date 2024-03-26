@@ -523,7 +523,7 @@ void EcoSysLabLayer::Visualization() {
 							const auto climateCandidate = FindClimate();
 							if (!climateCandidate.expired()) {
 								climateCandidate.lock()->PrepareForGrowth();
-								if (tree->TryGrow(m_simulationSettings.m_deltaTime, treeVisualizer.m_selectedInternodeHandle, false, m_overrideGrowRate))
+								if (tree->TryGrowSubTree(m_simulationSettings.m_deltaTime, treeVisualizer.m_selectedInternodeHandle, false, m_overrideGrowRate))
 								{
 									treeVisualizer.m_needUpdate = true;
 									mayNeedGeometryGeneration = true;
@@ -1206,7 +1206,7 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 			const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
 			auto& treeModel = tree->m_treeModel;
 			const auto& branchSkeleton = treeModel.RefShootSkeleton();
-			const auto& branchList = branchSkeleton.RefSortedFlowList();
+			const auto& branchList = branchSkeleton.PeekSortedFlowList();
 
 			auto entityGlobalTransform = scene->GetDataComponent<GlobalTransform>(treeEntity);
 			auto& [instanceMatrix, instanceColor] = m_boundingBoxMatrices->m_particleInfos.emplace_back();
@@ -1245,8 +1245,8 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 				auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
 				auto& treeModel = tree->m_treeModel;
 				const auto& branchSkeleton = treeModel.RefShootSkeleton();
-				const auto& branchFlowList = branchSkeleton.RefSortedFlowList();
-				const auto& internodeList = branchSkeleton.RefSortedNodeList();
+				const auto& branchFlowList = branchSkeleton.PeekSortedFlowList();
+				const auto& internodeList = branchSkeleton.PeekSortedNodeList();
 				auto entityGlobalTransform = scene->GetDataComponent<GlobalTransform>(treeEntity);
 				auto branchStartIndex = branchStartIndices[treeIndex];
 				for (int i = 0; i < branchFlowList.size(); i++) {
@@ -1764,8 +1764,8 @@ void EcoSysLabLayer::Simulate(float deltaTime) {
 			if (!scene->IsEntityEnabled(treeEntity)) return;
 			const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
 			if (!tree->IsEnabled()) return;
-			if (m_simulationSettings.m_maxNodeCount > 0 && tree->m_treeModel.RefShootSkeleton().RefSortedNodeList().size() >= m_simulationSettings.m_maxNodeCount) return;
-			grownStat[threadIndex] = tree->TryGrow(deltaTime, 0, true, -1);
+			if (m_simulationSettings.m_maxNodeCount > 0 && tree->m_treeModel.RefShootSkeleton().PeekSortedNodeList().size() >= m_simulationSettings.m_maxNodeCount) return;
+			grownStat[threadIndex] = tree->TryGrow(deltaTime, true, -1);
 			}, results);
 		for (auto& i : results) i.wait();
 
@@ -1836,8 +1836,8 @@ void EcoSysLabLayer::Simulate(float deltaTime) {
 					auto treeEntity = treeEntities->at(i);
 					auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
 					auto& treeModel = tree->m_treeModel;
-					totalInternodeSize += treeModel.RefShootSkeleton().RefSortedNodeList().size();
-					totalFlowSize += treeModel.RefShootSkeleton().RefSortedFlowList().size();
+					totalInternodeSize += treeModel.RefShootSkeleton().PeekSortedNodeList().size();
+					totalFlowSize += treeModel.RefShootSkeleton().PeekSortedFlowList().size();
 					totalLeafSize += treeModel.GetLeafCount();
 					totalFruitSize += treeModel.GetFruitCount();
 				}

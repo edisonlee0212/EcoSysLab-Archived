@@ -61,7 +61,7 @@ void DatasetGenerator::GenerateTreeTrunkMesh(const std::string& treeParametersPa
 	for (int i = 0; i < maxIterations; i++)
 	{
 		ecoSysLabLayer->Simulate(deltaTime);
-		if (tree->m_treeModel.RefShootSkeleton().RefSortedNodeList().size() >= maxTreeNodeCount)
+		if (tree->m_treeModel.RefShootSkeleton().PeekSortedNodeList().size() >= maxTreeNodeCount)
 		{
 			break;
 		}
@@ -75,7 +75,7 @@ void DatasetGenerator::GenerateTreeTrunkMesh(const std::string& treeParametersPa
 	float baseDiameter = 0.0f;
 	float topDiameter = 0.0f;
 	const auto& skeleton = tree->m_treeModel.RefShootSkeleton();
-	const auto& sortedInternodeList = skeleton.RefSortedNodeList();
+	const auto& sortedInternodeList = skeleton.PeekSortedNodeList();
 	if (sortedInternodeList.size() > 1) {
 		std::unordered_set<NodeHandle> trunkHandles{};
 		for (const auto& nodeHandle : sortedInternodeList)
@@ -163,7 +163,7 @@ void DatasetGenerator::GenerateTreeMesh(const std::string& treeParametersPath, f
 	for (int i = 0; i < maxIterations; i++)
 	{
 		ecoSysLabLayer->Simulate(deltaTime);
-		if (tree->m_treeModel.RefShootSkeleton().RefSortedNodeList().size() >= maxTreeNodeCount)
+		if (tree->m_treeModel.RefShootSkeleton().PeekSortedNodeList().size() >= maxTreeNodeCount)
 		{
 			break;
 		}
@@ -232,7 +232,7 @@ void DatasetGenerator::GeneratePointCloudForTree(const PointCloudPointSettings& 
 	for (int i = 0; i < maxIterations; i++)
 	{
 		ecoSysLabLayer->Simulate(deltaTime);
-		if (tree->m_treeModel.RefShootSkeleton().RefSortedNodeList().size() >= maxTreeNodeCount)
+		if (tree->m_treeModel.RefShootSkeleton().PeekSortedNodeList().size() >= maxTreeNodeCount)
 		{
 			break;
 		}

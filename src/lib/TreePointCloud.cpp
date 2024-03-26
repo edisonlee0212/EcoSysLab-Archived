@@ -145,7 +145,7 @@ void TreePointCloud::CalculateNodeTransforms(ReconstructionSkeleton& skeleton)
 {
 	skeleton.m_min = glm::vec3(FLT_MAX);
 	skeleton.m_max = glm::vec3(FLT_MIN);
-	for (const auto& nodeHandle : skeleton.RefSortedNodeList()) {
+	for (const auto& nodeHandle : skeleton.PeekSortedNodeList()) {
 		auto& node = skeleton.RefNode(nodeHandle);
 		auto& nodeInfo = node.m_info;
 		auto& nodeData = node.m_data;
@@ -819,7 +819,7 @@ void TreePointCloud::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 				}
 				predictedBranchConnectionInfoList->ApplyConnections(predictedBranchConnectionStarts, predictedBranchConnectionEnds, predictedBranchConnectionColors, predictedBranchWidth);
 				for (const auto& skeleton : m_skeletons) {
-					const auto& nodeList = skeleton.RefSortedNodeList();
+					const auto& nodeList = skeleton.PeekSortedNodeList();
 					const auto startIndex = nodeMatrices.size();
 					nodeMatrices.resize(startIndex + nodeList.size());
 					for (int i = 0; i < nodeList.size(); i++) {
@@ -855,7 +855,7 @@ void TreePointCloud::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 				predictedBranchConnectionInfoList->ApplyConnections(predictedBranchConnectionStarts, predictedBranchConnectionEnds, predictedBranchConnectionColors, predictedBranchWidth);
 
 				for (const auto& skeleton : m_skeletons) {
-					const auto& nodeList = skeleton.RefSortedNodeList();
+					const auto& nodeList = skeleton.PeekSortedNodeList();
 					const auto startIndex = nodeMatrices.size();
 					nodeMatrices.resize(startIndex + nodeList.size());
 					for (int i = 0; i < nodeList.size(); i++) {
@@ -891,7 +891,7 @@ void TreePointCloud::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 				}
 				predictedBranchConnectionInfoList->ApplyConnections(predictedBranchConnectionStarts, predictedBranchConnectionEnds, predictedBranchConnectionColors, predictedBranchWidth);
 				for (const auto& skeleton : m_skeletons) {
-					const auto& nodeList = skeleton.RefSortedNodeList();
+					const auto& nodeList = skeleton.PeekSortedNodeList();
 					const auto startIndex = nodeMatrices.size();
 					nodeMatrices.resize(startIndex + nodeList.size());
 					for (int i = 0; i < nodeList.size(); i++) {
@@ -1776,7 +1776,7 @@ void TreePointCloud::BuildSkeletons() {
 		{
 			auto& skeleton = m_skeletons[i];
 			bool remove = false;
-			if (skeleton.RefSortedNodeList().size() < m_reconstructionSettings.m_minimumNodeCount)
+			if (skeleton.PeekSortedNodeList().size() < m_reconstructionSettings.m_minimumNodeCount)
 			{
 				remove = true;
 			}
@@ -1787,7 +1787,7 @@ void TreePointCloud::BuildSkeletons() {
 					auto& otherSkeleton = m_skeletons[j];
 					if (glm::distance(skeleton.m_data.m_rootPosition, otherSkeleton.m_data.m_rootPosition) < m_reconstructionSettings.m_minimumTreeDistance)
 					{
-						if (skeleton.RefSortedNodeList().size() < otherSkeleton.RefSortedNodeList().size()) remove = true;
+						if (skeleton.PeekSortedNodeList().size() < otherSkeleton.PeekSortedNodeList().size()) remove = true;
 					}
 				}
 			}
@@ -1815,7 +1815,7 @@ void TreePointCloud::SpaceColonization()
 	Jobs::ParallelFor(m_skeletons.size(), [&](unsigned i)
 		{
 			auto& skeleton = m_skeletons[i];
-			const auto& sortedInternodeList = skeleton.RefSortedNodeList();
+			const auto& sortedInternodeList = skeleton.PeekSortedNodeList();
 			float maxEndDistance = 0.0f;
 			for (const auto& internodeHandle : sortedInternodeList)
 			{
@@ -1854,7 +1854,7 @@ void TreePointCloud::SpaceColonization()
 	for (int skeletonIndex = 0; skeletonIndex < m_skeletons.size(); skeletonIndex++)
 	{
 		auto& skeleton = m_skeletons[skeletonIndex];
-		const auto& sortedInternodeList = skeleton.RefSortedNodeList();
+		const auto& sortedInternodeList = skeleton.PeekSortedNodeList();
 		for (const auto& internodeHandle : sortedInternodeList)
 		{
 			auto& internode = skeleton.PeekNode(internodeHandle);
@@ -1878,7 +1878,7 @@ void TreePointCloud::SpaceColonization()
 		//1. Remove markers with occupancy zone.
 		for (auto& skeleton : m_skeletons)
 		{
-			const auto& sortedInternodeList = skeleton.RefSortedNodeList();
+			const auto& sortedInternodeList = skeleton.PeekSortedNodeList();
 			for (const auto& internodeHandle : sortedInternodeList)
 			{
 				auto& internode = skeleton.RefNode(internodeHandle);
@@ -1955,7 +1955,7 @@ void TreePointCloud::SpaceColonization()
 		for (int skeletonIndex = 0; skeletonIndex < m_skeletons.size(); skeletonIndex++)
 		{
 			auto& skeleton = m_skeletons[skeletonIndex];
-			const auto& sortedInternodeList = skeleton.RefSortedNodeList();
+			const auto& sortedInternodeList = skeleton.PeekSortedNodeList();
 			for (const auto& internodeHandle : sortedInternodeList)
 			{
 				auto& internode = skeleton.PeekNode(internodeHandle);
@@ -2014,7 +2014,7 @@ void TreePointCloud::CalculateSkeletonGraphs()
 	for (auto& skeleton : m_skeletons)
 	{
 		skeleton.SortLists();
-		auto& sortedNodeList = skeleton.RefSortedNodeList();
+		auto& sortedNodeList = skeleton.PeekSortedNodeList();
 		auto& rootNode = skeleton.RefNode(0);
 		rootNode.m_info.m_globalRotation = rootNode.m_info.m_regulatedGlobalRotation = glm::quatLookAt(
 			glm::vec3(0, 1, 0), glm::vec3(0, 0, -1));
@@ -2135,7 +2135,7 @@ void TreePointCloud::InitializeSkeletalGraph(const std::shared_ptr<Mesh>& pointM
 	pointMaterial->m_vertexColorOnly = true;
 	int prevInternodeSize = 0;
 	for (const auto skeleton : m_skeletons) {
-		const auto& sortedInternodeList = skeleton.RefSortedNodeList();
+		const auto& sortedInternodeList = skeleton.PeekSortedNodeList();
 		lineList->m_particleInfos.resize(sortedInternodeList.size() + prevInternodeSize);
 		pointList->m_particleInfos.resize(sortedInternodeList.size() + prevInternodeSize);
 		Jobs::ParallelFor(sortedInternodeList.size(), [&](unsigned internodeIndex)
@@ -2241,7 +2241,7 @@ std::vector<std::shared_ptr<Mesh>> TreePointCloud::GenerateFoliageMeshes()
 		size_t offset = 0;
 		auto foliageDescriptor = m_foliageDescriptor.Get<FoliageDescriptor>();
 		if (!foliageDescriptor) foliageDescriptor = ProjectManager::CreateTemporaryAsset<FoliageDescriptor>();
-		const auto& nodeList = m_skeletons[i].RefSortedNodeList();
+		const auto& nodeList = m_skeletons[i].PeekSortedNodeList();
 		for (const auto& internodeHandle : nodeList) {
 			const auto& internode = m_skeletons[i].PeekNode(internodeHandle);
 			const auto& internodeInfo = internode.m_info;

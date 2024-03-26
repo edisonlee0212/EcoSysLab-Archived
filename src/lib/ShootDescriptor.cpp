@@ -4,6 +4,9 @@ using namespace EcoSysLab;
 
 void ShootDescriptor::Serialize(YAML::Emitter& out)
 {
+	out << YAML::Key << "m_baseInternodeCount" << YAML::Value << m_baseInternodeCount;
+	out << YAML::Key << "m_baseNodeApicalAngleMeanVariance" << YAML::Value << m_baseNodeApicalAngleMeanVariance;
+
 	out << YAML::Key << "m_growthRate" << YAML::Value << m_growthRate;
 	out << YAML::Key << "m_branchingAngleMeanVariance" << YAML::Value << m_branchingAngleMeanVariance;
 	out << YAML::Key << "m_rollAngleMeanVariance" << YAML::Value << m_rollAngleMeanVariance;
@@ -57,6 +60,9 @@ void ShootDescriptor::Serialize(YAML::Emitter& out)
 
 void ShootDescriptor::Deserialize(const YAML::Node& in)
 {
+	if (in["m_baseInternodeCount"]) m_baseInternodeCount = in["m_baseInternodeCount"].as<float>();
+	if (in["m_baseNodeApicalAngleMeanVariance"]) m_baseNodeApicalAngleMeanVariance = in["m_baseNodeApicalAngleMeanVariance"].as<glm::vec2>();
+
 	if (in["m_growthRate"]) m_growthRate = in["m_growthRate"].as<float>();
 	if (in["m_branchingAngleMeanVariance"]) m_branchingAngleMeanVariance = in["m_branchingAngleMeanVariance"].as<glm::vec2>();
 	if (in["m_rollAngleMeanVariance"]) m_rollAngleMeanVariance = in["m_rollAngleMeanVariance"].as<glm::vec2>();
@@ -116,6 +122,9 @@ void ShootDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 	changed = ImGui::DragFloat("Growth rate", &m_growthRate, 0.01f, 0.0f, 10.0f) || changed;
 	if (ImGui::TreeNodeEx("Internode", ImGuiTreeNodeFlags_DefaultOpen))
 	{
+		changed = ImGui::DragInt("Base node count", &m_baseInternodeCount, 1, 0, 3) || changed;
+		changed = ImGui::DragFloat2("Base apical angle mean/var", &m_baseNodeApicalAngleMeanVariance.x, 0.1f, 0.0f, 100.0f) || changed;
+
 		changed = ImGui::DragInt("Lateral bud count", &m_lateralBudCount, 1, 0, 3) || changed;
 		changed = ImGui::DragFloat2("Branching angle mean/var", &m_branchingAngleMeanVariance.x, 0.1f, 0.0f, 100.0f) || changed;
 		changed = ImGui::DragFloat2("Roll angle mean/var", &m_rollAngleMeanVariance.x, 0.1f, 0.0f, 100.0f) || changed;

@@ -6,7 +6,7 @@ using namespace EcoSysLab;
 void StrandModel::ResetAllProfiles(const StrandModelParameters& strandModelParameters)
 {
 	m_strandModelSkeleton.m_data.m_strandGroup = {};
-	const auto& sortedInternodeList = m_strandModelSkeleton.RefSortedNodeList();
+	const auto& sortedInternodeList = m_strandModelSkeleton.PeekSortedNodeList();
 	for (const auto& internodeHandle : sortedInternodeList)
 	{
 		auto& internode = m_strandModelSkeleton.RefNode(internodeHandle);
@@ -26,7 +26,7 @@ void StrandModel::InitializeProfiles(const StrandModelParameters& strandModelPar
 {
 	m_strandModelSkeleton.m_data.m_strandGroup = {};
 	auto& strandGroup = m_strandModelSkeleton.m_data.m_strandGroup;
-	const auto& sortedInternodeList = m_strandModelSkeleton.RefSortedNodeList();
+	const auto& sortedInternodeList = m_strandModelSkeleton.PeekSortedNodeList();
 	for (const auto& internodeHandle : sortedInternodeList)
 	{
 		auto& internode = m_strandModelSkeleton.RefNode(internodeHandle);
@@ -238,7 +238,7 @@ void StrandModel::InitializeProfiles(const StrandModelParameters& strandModelPar
 void StrandModel::CalculateProfiles(const StrandModelParameters& strandModelParameters)
 {
 	const float time = Times::Now();
-	const auto& sortedInternodeList = m_strandModelSkeleton.RefSortedNodeList();
+	const auto& sortedInternodeList = m_strandModelSkeleton.PeekSortedNodeList();
 	if (sortedInternodeList.empty()) return;
 
 	Jobs::ParallelFor(sortedInternodeList.size(), [&](unsigned i)
@@ -669,7 +669,7 @@ void StrandModel::ApplyProfile(const StrandModelParameters& strandModelParameter
 void StrandModel::ApplyProfiles(const StrandModelParameters& strandModelParameters)
 {
 	auto& strandGroup = m_strandModelSkeleton.m_data.m_strandGroup;
-	const auto& sortedInternodeList = m_strandModelSkeleton.RefSortedNodeList();
+	const auto& sortedInternodeList = m_strandModelSkeleton.PeekSortedNodeList();
 	for (const auto& nodeHandle : sortedInternodeList)
 	{
 		const auto& node = m_strandModelSkeleton.RefNode(nodeHandle);
@@ -709,7 +709,7 @@ void StrandModel::ApplyProfiles(const StrandModelParameters& strandModelParamete
 
 void StrandModel::CalculateStrandProfileAdjustedTransforms(const StrandModelParameters& strandModelParameters)
 {
-	const auto& sortedInternodeList = m_strandModelSkeleton.RefSortedNodeList();
+	const auto& sortedInternodeList = m_strandModelSkeleton.PeekSortedNodeList();
 	float maxRootDistance = 0.0f;
 	for (const auto& nodeHandle : sortedInternodeList)
 	{

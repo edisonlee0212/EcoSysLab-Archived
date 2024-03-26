@@ -11,6 +11,9 @@ namespace EcoSysLab
 		 */
 		float m_growthRate = 0.3f;
 #pragma region Internode
+		int m_baseInternodeCount = 1;
+		glm::vec2 m_baseNodeApicalAngleMeanVariance{};
+
 		/**
 		* \brief The mean and variance of the angle between the direction of a lateral bud and its parent shoot.
 		*/

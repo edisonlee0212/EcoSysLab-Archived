@@ -1425,7 +1425,7 @@ void StrandModelMeshGenerator::CylindricalMeshing(const StrandModel& strandModel
 {
 	const auto& skeleton = strandModel.m_strandModelSkeleton;
 	const auto& pipeGroup = skeleton.m_data.m_strandGroup;
-	const auto& sortedInternodeList = skeleton.RefSortedNodeList();
+	const auto& sortedInternodeList = skeleton.PeekSortedNodeList();
 	std::vector<std::vector<RingSegment>> ringsList;
 	std::map<NodeHandle, int> steps{};
 	ringsList.resize(sortedInternodeList.size());

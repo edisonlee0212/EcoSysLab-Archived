@@ -179,7 +179,7 @@ void Tree::InitializeSkeletalGraph(NodeHandle baseNodeHandle,
 	const auto pointEntity = scene->CreateEntity("Skeletal Graph Points");
 	scene->SetParent(pointEntity, self);
 	const auto& skeleton = m_treeModel.PeekShootSkeleton();
-	const auto& sortedInternodeList = skeleton.RefSortedNodeList();
+	const auto& sortedInternodeList = skeleton.PeekSortedNodeList();
 
 
 
@@ -671,7 +671,7 @@ std::shared_ptr<Strands> Tree::GenerateStrands()
 
 void Tree::GenerateTrunkMeshes(const std::shared_ptr<Mesh>& trunkMesh, const TreeMeshGeneratorSettings& meshGeneratorSettings)
 {
-	const auto& sortedInternodeList = m_treeModel.RefShootSkeleton().RefSortedNodeList();
+	const auto& sortedInternodeList = m_treeModel.RefShootSkeleton().PeekSortedNodeList();
 	std::unordered_set<NodeHandle> trunkHandles{};
 	for(const auto& nodeHandle : sortedInternodeList)
 	{
@@ -747,7 +747,7 @@ std::shared_ptr<Mesh> Tree::GenerateFoliageMesh(const TreeMeshGeneratorSettings&
 	if (!treeDescriptor) return nullptr;
 	auto foliageDescriptor = treeDescriptor->m_foliageDescriptor.Get<FoliageDescriptor>();
 	if (!foliageDescriptor) foliageDescriptor = ProjectManager::CreateTemporaryAsset<FoliageDescriptor>();
-	const auto& nodeList = m_treeModel.PeekShootSkeleton().RefSortedNodeList();
+	const auto& nodeList = m_treeModel.PeekShootSkeleton().PeekSortedNodeList();
 	for (const auto& internodeHandle : nodeList) {
 		const auto& internode = m_treeModel.PeekShootSkeleton().PeekNode(internodeHandle);
 		const auto& internodeInfo = internode.m_info;
@@ -833,7 +833,7 @@ std::shared_ptr<Strands> Tree::GenerateTwigStrands(const TreeMeshGeneratorSettin
 	std::vector<glm::uint> twigSegments;
 	std::vector<StrandPoint> twigPoints;
 	const auto& shootSkeleton = m_treeModel.PeekShootSkeleton();
-	const auto& internodeList = shootSkeleton.RefSortedNodeList();
+	const auto& internodeList = shootSkeleton.PeekSortedNodeList();
 
 	for (int internodeHandle : internodeList)
 	{
@@ -927,7 +927,7 @@ std::shared_ptr<ParticleInfoList> Tree::GenerateFoliageParticleInfoList(
 	auto foliageDescriptor = treeDescriptor->m_foliageDescriptor.Get<FoliageDescriptor>();
 	if (!foliageDescriptor) foliageDescriptor = ProjectManager::CreateTemporaryAsset<FoliageDescriptor>();
 
-	const auto& nodeList = m_treeModel.PeekShootSkeleton().RefSortedNodeList();
+	const auto& nodeList = m_treeModel.PeekShootSkeleton().PeekSortedNodeList();
 	for (const auto& internodeHandle : nodeList) {
 		const auto& internode = m_treeModel.PeekShootSkeleton().PeekNode(internodeHandle);
 		const auto& internodeInfo = internode.m_info;
@@ -968,7 +968,7 @@ std::shared_ptr<Mesh> Tree::GenerateStrandModelFoliageMesh(
 	if (!treeDescriptor) return nullptr;
 	auto foliageDescriptor = treeDescriptor->m_foliageDescriptor.Get<FoliageDescriptor>();
 	if (!foliageDescriptor) foliageDescriptor = ProjectManager::CreateTemporaryAsset<FoliageDescriptor>();
-	const auto& nodeList = m_treeModel.PeekShootSkeleton().RefSortedNodeList();
+	const auto& nodeList = m_treeModel.PeekShootSkeleton().PeekSortedNodeList();
 	for (const auto& internodeHandle : nodeList) {
 		const auto& internode = m_treeModel.PeekShootSkeleton().PeekNode(internodeHandle);
 		const auto& strandModelNode = m_strandModel.m_strandModelSkeleton.PeekNode(internodeHandle);
@@ -1247,7 +1247,59 @@ void Tree::ExportTrunkOBJ(const std::filesystem::path& path,
 	}
 }
 
-bool Tree::TryGrow(const float deltaTime, const NodeHandle baseInternodeHandle, const bool pruning, const float overrideGrowthRate) {
+bool Tree::TryGrow(float deltaTime, bool pruning, float overrideGrowthRate)
+{
+	const auto scene = GetScene();
+	const auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
+	const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
+
+	const auto climateCandidate = EcoSysLabLayer::FindClimate();
+	if (!climateCandidate.expired()) m_climate = climateCandidate.lock();
+	const auto soilCandidate = EcoSysLabLayer::FindSoil();
+	if (!soilCandidate.expired()) m_soil = soilCandidate.lock();
+
+	const auto soil = m_soil.Get<Soil>();
+	const auto climate = m_climate.Get<Climate>();
+
+	if (!soil) {
+		return false;
+	}
+	if (!climate) {
+		return false;
+	}
+
+	if (!treeDescriptor) {
+		EVOENGINE_ERROR("No tree descriptor!");
+		return false;
+	}
+	if (!m_soil.Get<Soil>()) {
+		EVOENGINE_ERROR("No soil model!");
+		return false;
+	}
+	if (!m_climate.Get<Climate>()) {
+		EVOENGINE_ERROR("No climate model!");
+		return false;
+	}
+
+	const auto owner = GetOwner();
+
+	PrepareControllers(treeDescriptor);
+	const bool grown = m_treeModel.Grow(deltaTime, scene->GetDataComponent<GlobalTransform>(owner).m_value, climate->m_climateModel, m_shootGrowthController, pruning, overrideGrowthRate);
+	if (grown)
+	{
+		if (pruning) m_treeVisualizer.ClearSelections();
+		m_treeVisualizer.m_needUpdate = true;
+	}
+	if (m_enableHistory && m_treeModel.m_iteration % m_historyIteration == 0) m_treeModel.Step();
+	if (m_recordBiomassHistory)
+	{
+		const auto& baseShootNode = m_treeModel.RefShootSkeleton().RefNode(0);
+		m_shootBiomassHistory.emplace_back(baseShootNode.m_data.m_biomass + baseShootNode.m_data.m_descendantTotalBiomass);
+	}
+	return grown;
+}
+
+bool Tree::TryGrowSubTree(const float deltaTime, const NodeHandle baseInternodeHandle, const bool pruning, const float overrideGrowthRate) {
 	const auto scene = GetScene();
 	const auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
 	const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
@@ -1632,7 +1684,7 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 		YAML::Emitter out;
 		out << YAML::BeginMap;
 		const auto& skeleton = m_treeModel.RefShootSkeleton();
-		const auto& sortedInternodeList = skeleton.RefSortedNodeList();
+		const auto& sortedInternodeList = skeleton.PeekSortedNodeList();
 		std::vector<TreePart> treeParts{};
 		std::unordered_map<NodeHandle, TreePartInfo> treePartInfos{};
 		int nextLineIndex = 0;
@@ -1889,7 +1941,7 @@ bool Tree::ExportIOTree(const std::filesystem::path& path) const
 	treeio::ArrayTree tree{};
 	using namespace treeio;
 	const auto& shootSkeleton = m_treeModel.PeekShootSkeleton();
-	const auto& sortedInternodeList = shootSkeleton.RefSortedNodeList();
+	const auto& sortedInternodeList = shootSkeleton.PeekSortedNodeList();
 	if (sortedInternodeList.empty()) return false;
 	const auto& rootNode = shootSkeleton.PeekNode(0);
 	TreeNodeData rootNodeData;
@@ -1917,7 +1969,7 @@ bool Tree::ExportIOTree(const std::filesystem::path& path) const
 
 void Tree::ExportRadialBoundingVolume(const std::shared_ptr<RadialBoundingVolume>& rbv) const
 {
-	const auto& sortedInternodeList = m_treeModel.m_shootSkeleton.RefSortedNodeList();
+	const auto& sortedInternodeList = m_treeModel.m_shootSkeleton.PeekSortedNodeList();
 	const auto& skeleton = m_treeModel.m_shootSkeleton;
 	std::vector<glm::vec3> points;
 	for (const auto& nodeHandle : sortedInternodeList)
@@ -1953,6 +2005,13 @@ void Tree::PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescrip
 
 	{
 		const auto& shootDescriptor = treeDescriptor->m_shootDescriptor.Get<ShootDescriptor>();
+		m_shootGrowthController.m_baseInternodeCount = shootDescriptor->m_baseInternodeCount;
+		
+		m_shootGrowthController.m_baseNodeApicalAngle = [=](const Node<InternodeGrowthData>& internode)
+			{
+				return glm::gaussRand(shootDescriptor->m_baseNodeApicalAngleMeanVariance.x, shootDescriptor->m_baseNodeApicalAngleMeanVariance.y);
+			};
+
 		m_shootGrowthController.m_internodeGrowthRate = shootDescriptor->m_growthRate / shootDescriptor->m_internodeLength;
 
 		m_shootGrowthController.m_branchingAngle = [=](const Node<InternodeGrowthData>& internode)

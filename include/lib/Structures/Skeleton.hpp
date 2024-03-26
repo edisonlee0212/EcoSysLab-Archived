@@ -113,7 +113,7 @@ namespace EcoSysLab {
 		 * Access the children by their handles.
 		 * @return The list of handles.
 		 */
-		[[nodiscard]] const std::vector<NodeHandle> &RefChildHandles() const;
+		[[nodiscard]] const std::vector<NodeHandle>& RefChildHandles() const;
 		Node() = default;
 		Node(NodeHandle handle);
 
@@ -167,13 +167,13 @@ namespace EcoSysLab {
 		 * Access the children by their handles.
 		 * @return The list of handles.
 		 */
-		[[nodiscard]] const std::vector<FlowHandle> &RefChildHandles() const;
+		[[nodiscard]] const std::vector<FlowHandle>& RefChildHandles() const;
 
 		/**
 		 * Access the nodes that belongs to this flow.
 		 * @return The list of handles.
 		 */
-		[[nodiscard]] const std::vector<NodeHandle> &RefNodeHandles() const;
+		[[nodiscard]] const std::vector<NodeHandle>& RefNodeHandles() const;
 		Flow() = default;
 		explicit Flow(FlowHandle handle);
 
@@ -216,6 +216,11 @@ namespace EcoSysLab {
 
 		int m_maxNodeIndex = -1;
 		int m_maxFlowIndex = -1;
+
+		std::vector<NodeHandle> m_baseNodeList;
+
+		void RefreshBaseNodeList();
+
 	public:
 		template<typename SrcSkeletonData, typename SrcFlowData, typename SrcNodeData>
 		void Clone(const Skeleton<SrcSkeletonData, SrcFlowData, SrcNodeData>& srcSkeleton);
@@ -242,7 +247,7 @@ namespace EcoSysLab {
 		 * @param flowHandler Function to be called right before a flow in recycled.
 		 * @param nodeHandler Function to be called right before a node in recycled.
 		 */
-		void RecycleFlow(FlowHandle handle, 
+		void RecycleFlow(FlowHandle handle,
 			const std::function<void(FlowHandle)>& flowHandler,
 			const std::function<void(NodeHandle)>& nodeHandler);
 
@@ -258,7 +263,13 @@ namespace EcoSysLab {
 		 * To retrieve a list of handles of all nodes contained within the tree.
 		 * @return The list of handles of nodes sorted from root to ends.
 		 */
-		[[nodiscard]] const std::vector<NodeHandle> &RefSortedNodeList() const;
+		[[nodiscard]] const std::vector<NodeHandle>& PeekBaseNodeList() const;
+
+		/**
+		 * To retrieve a list of handles of all nodes contained within the tree.
+		 * @return The list of handles of nodes sorted from root to ends.
+		 */
+		[[nodiscard]] const std::vector<NodeHandle>& PeekSortedNodeList() const;
 
 		[[nodiscard]] std::vector<NodeHandle> GetSubTree(NodeHandle baseNodeHandle) const;
 		[[nodiscard]] std::vector<NodeHandle> GetNodeListBaseIndex(unsigned baseIndex) const;
@@ -266,11 +277,11 @@ namespace EcoSysLab {
 		 * To retrieve a list of handles of all flows contained within the tree.
 		 * @return The list of handles of flows sorted from root to ends.
 		 */
-		[[nodiscard]] const std::vector<FlowHandle> &RefSortedFlowList() const;
+		[[nodiscard]] const std::vector<FlowHandle>& PeekSortedFlowList() const;
 
-		[[nodiscard]] const std::vector<Flow<FlowData>> &RefRawFlows() const;
+		[[nodiscard]] const std::vector<Flow<FlowData>>& RefRawFlows() const;
 
-		[[nodiscard]] const std::vector<Node<NodeData>> &RefRawNodes() const;
+		[[nodiscard]] const std::vector<Node<NodeData>>& RefRawNodes() const;
 
 		/**
 		 *  Force the structure to sort the node and flow list.
@@ -278,7 +289,7 @@ namespace EcoSysLab {
 		 */
 		void SortLists();
 
-		Skeleton();
+		Skeleton(unsigned initialNodeCount = 1);
 
 		/**
 		 * Get the structural version of the tree. The version will change when the tree structure changes.
@@ -296,28 +307,28 @@ namespace EcoSysLab {
 		 * @param handle The handle to the target node.
 		 * @return The modifiable reference to the node.
 		 */
-		Node<NodeData> &RefNode(NodeHandle handle);
+		Node<NodeData>& RefNode(NodeHandle handle);
 
 		/**
 		 * Retrieve a modifiable reference to the flow with the handle.
 		 * @param handle The handle to the target flow.
 		 * @return The modifiable reference to the flow.
 		 */
-		Flow<FlowData> &RefFlow(FlowHandle handle);
+		Flow<FlowData>& RefFlow(FlowHandle handle);
 
 		/**
 		 * Retrieve a non-modifiable reference to the node with the handle.
 		 * @param handle The handle to the target node.
 		 * @return The non-modifiable reference to the node.
 		 */
-		[[nodiscard]] const Node<NodeData> &PeekNode(NodeHandle handle) const;
+		[[nodiscard]] const Node<NodeData>& PeekNode(NodeHandle handle) const;
 
 		/**
 		 * Retrieve a non-modifiable reference to the flow with the handle.
 		 * @param handle The handle to the target flow.
 		 * @return The non-modifiable reference to the flow.
 		 */
-		[[nodiscard]] const Flow<FlowData> &PeekFlow(FlowHandle handle) const;
+		[[nodiscard]] const Flow<FlowData>& PeekFlow(FlowHandle handle) const;
 
 		/**
 		 * The min value of the bounding box of current tree structure.
@@ -330,7 +341,7 @@ namespace EcoSysLab {
 		glm::vec3 m_max = glm::vec3(0.0f);
 	};
 
-	struct BaseSkeletonData{};
+	struct BaseSkeletonData {};
 	struct BaseFlowData {};
 	struct BaseNodeData {};
 
@@ -340,27 +351,27 @@ namespace EcoSysLab {
 #pragma region Helper
 
 	template<typename SkeletonData, typename FlowData, typename NodeData>
-	Flow<FlowData> &Skeleton<SkeletonData, FlowData, NodeData>::RefFlow(FlowHandle handle) {
+	Flow<FlowData>& Skeleton<SkeletonData, FlowData, NodeData>::RefFlow(FlowHandle handle) {
 		assert(handle >= 0 && handle < m_flows.size());
 		return m_flows[handle];
 	}
 
 	template<typename SkeletonData, typename FlowData, typename NodeData>
-	const Flow<FlowData> &Skeleton<SkeletonData, FlowData, NodeData>::PeekFlow(FlowHandle handle) const {
+	const Flow<FlowData>& Skeleton<SkeletonData, FlowData, NodeData>::PeekFlow(FlowHandle handle) const {
 		assert(handle >= 0 && handle < m_flows.size());
 		return m_flows[handle];
 	}
 
 	template<typename SkeletonData, typename FlowData, typename NodeData>
-	Node<NodeData> &
-	Skeleton<SkeletonData, FlowData, NodeData>::RefNode(NodeHandle handle) {
+	Node<NodeData>&
+		Skeleton<SkeletonData, FlowData, NodeData>::RefNode(NodeHandle handle) {
 		assert(handle >= 0 && handle < m_nodes.size());
 		return m_nodes[handle];
 	}
 
 	template<typename SkeletonData, typename FlowData, typename NodeData>
-	const Node<NodeData> &
-	Skeleton<SkeletonData, FlowData, NodeData>::PeekNode(NodeHandle handle) const {
+	const Node<NodeData>&
+		Skeleton<SkeletonData, FlowData, NodeData>::PeekNode(NodeHandle handle) const {
 		assert(handle >= 0 && handle < m_nodes.size());
 		return m_nodes[handle];
 	}
@@ -371,25 +382,31 @@ namespace EcoSysLab {
 		if (m_nodes.empty()) return;
 		m_version = m_newVersion;
 		m_sortedFlowList.clear();
+		m_sortedNodeList.clear();
+		RefreshBaseNodeList();
 		std::queue<FlowHandle> flowWaitList;
-		flowWaitList.push(0);
+		std::queue<NodeHandle> nodeWaitList;
+
+		for (const auto& baseNodeHandle : m_baseNodeList)
+		{
+			nodeWaitList.push(baseNodeHandle);
+			flowWaitList.push(m_nodes[baseNodeHandle].m_flowHandle);
+		}
+
 		while (!flowWaitList.empty()) {
 			m_sortedFlowList.emplace_back(flowWaitList.front());
 			flowWaitList.pop();
-			for (const auto &i: m_flows[m_sortedFlowList.back()].m_childHandles) {
+			for (const auto& i : m_flows[m_sortedFlowList.back()].m_childHandles) {
 				assert(!m_flows[i].m_recycled);
 				flowWaitList.push(i);
 			}
 
 		}
 
-		m_sortedNodeList.clear();
-		std::queue<NodeHandle> nodeWaitList;
-		nodeWaitList.push(0);
 		while (!nodeWaitList.empty()) {
 			m_sortedNodeList.emplace_back(nodeWaitList.front());
 			nodeWaitList.pop();
-			for (const auto &i: m_nodes[m_sortedNodeList.back()].m_childHandles) {
+			for (const auto& i : m_nodes[m_sortedNodeList.back()].m_childHandles) {
 				assert(!m_nodes[i].m_recycled);
 				nodeWaitList.push(i);
 			}
@@ -397,13 +414,13 @@ namespace EcoSysLab {
 	}
 
 	template<typename SkeletonData, typename FlowData, typename NodeData>
-	const std::vector<FlowHandle> &Skeleton<SkeletonData, FlowData, NodeData>::RefSortedFlowList() const {
+	const std::vector<FlowHandle>& Skeleton<SkeletonData, FlowData, NodeData>::PeekSortedFlowList() const {
 		return m_sortedFlowList;
 	}
 
 	template<typename SkeletonData, typename FlowData, typename NodeData>
-	const std::vector<NodeHandle> &
-	Skeleton<SkeletonData, FlowData, NodeData>::RefSortedNodeList() const {
+	const std::vector<NodeHandle>&
+		Skeleton<SkeletonData, FlowData, NodeData>::PeekSortedNodeList() const {
 		return m_sortedNodeList;
 	}
 
@@ -413,12 +430,12 @@ namespace EcoSysLab {
 		std::vector<NodeHandle> retVal{};
 		std::queue<NodeHandle> nodeHandles;
 		nodeHandles.push(baseNodeHandle);
-		while(!nodeHandles.empty())
+		while (!nodeHandles.empty())
 		{
 			auto nextNodeHandle = nodeHandles.front();
 			retVal.emplace_back(nodeHandles.front());
 			nodeHandles.pop();
-			for(const auto& childHandle : m_nodes[nextNodeHandle].m_childHandles)
+			for (const auto& childHandle : m_nodes[nextNodeHandle].m_childHandles)
 			{
 				nodeHandles.push(childHandle);
 			}
@@ -430,7 +447,7 @@ namespace EcoSysLab {
 	std::vector<NodeHandle> Skeleton<SkeletonData, FlowData, NodeData>::GetNodeListBaseIndex(unsigned baseIndex) const
 	{
 		std::vector<NodeHandle> retVal{};
-		for(const auto& i : m_sortedNodeList)
+		for (const auto& i : m_sortedNodeList)
 		{
 			if (m_nodes[i].m_index >= baseIndex) retVal.push_back(i);
 		}
@@ -439,21 +456,21 @@ namespace EcoSysLab {
 
 	template<typename SkeletonData, typename FlowData, typename NodeData>
 	NodeHandle
-	Skeleton<SkeletonData, FlowData, NodeData>::Extend(NodeHandle targetHandle, const bool branching) {
+		Skeleton<SkeletonData, FlowData, NodeData>::Extend(NodeHandle targetHandle, const bool branching) {
 		assert(targetHandle < m_nodes.size());
-		auto &targetNode = m_nodes[targetHandle];
+		auto& targetNode = m_nodes[targetHandle];
 		assert(!targetNode.m_recycled);
 		assert(targetNode.m_flowHandle < m_flows.size());
-		auto &flow = m_flows[targetNode.m_flowHandle];
+		auto& flow = m_flows[targetNode.m_flowHandle];
 		assert(!flow.m_recycled);
 		auto newNodeHandle = AllocateNode();
 		SetParentNode(newNodeHandle, targetHandle);
-		auto &originalNode = m_nodes[targetHandle];
-		auto &newNode = m_nodes[newNodeHandle];
+		auto& originalNode = m_nodes[targetHandle];
+		auto& newNode = m_nodes[newNodeHandle];
 		originalNode.m_endNode = false;
 		if (branching) {
 			auto newFlowHandle = AllocateFlow();
-			auto &newFlow = m_flows[newFlowHandle];
+			auto& newFlow = m_flows[newFlowHandle];
 
 			newNode.m_flowHandle = newFlowHandle;
 			newNode.m_apical = false;
@@ -461,31 +478,32 @@ namespace EcoSysLab {
 			newFlow.m_apical = false;
 			if (targetHandle != m_flows[originalNode.m_flowHandle].m_nodes.back()) {
 				auto extendedFlowHandle = AllocateFlow();
-				auto &extendedFlow = m_flows[extendedFlowHandle];
+				auto& extendedFlow = m_flows[extendedFlowHandle];
 				extendedFlow.m_apical = true;
 				//Find target node.
-				auto &originalFlow = m_flows[originalNode.m_flowHandle];
+				auto& originalFlow = m_flows[originalNode.m_flowHandle];
 				for (auto r = originalFlow.m_nodes.begin(); r != originalFlow.m_nodes.end(); ++r) {
 					if (*r == targetHandle) {
 						extendedFlow.m_nodes.insert(extendedFlow.m_nodes.end(), r + 1,
-													originalFlow.m_nodes.end());
+							originalFlow.m_nodes.end());
 						originalFlow.m_nodes.erase(r + 1, originalFlow.m_nodes.end());
 						break;
 					}
 				}
-				for (const auto &extractedNodeHandle: extendedFlow.m_nodes) {
-					auto &extractedNode = m_nodes[extractedNodeHandle];
+				for (const auto& extractedNodeHandle : extendedFlow.m_nodes) {
+					auto& extractedNode = m_nodes[extractedNodeHandle];
 					extractedNode.m_flowHandle = extendedFlowHandle;
 				}
 				extendedFlow.m_childHandles = originalFlow.m_childHandles;
 				originalFlow.m_childHandles.clear();
-				for (const auto &childFlowHandle: extendedFlow.m_childHandles) {
+				for (const auto& childFlowHandle : extendedFlow.m_childHandles) {
 					m_flows[childFlowHandle].m_parentHandle = extendedFlowHandle;
 				}
 				SetParentFlow(extendedFlowHandle, originalNode.m_flowHandle);
 			}
 			SetParentFlow(newFlowHandle, originalNode.m_flowHandle);
-		} else {
+		}
+		else {
 			flow.m_nodes.emplace_back(newNodeHandle);
 			newNode.m_flowHandle = originalNode.m_flowHandle;
 			newNode.m_apical = true;
@@ -494,16 +512,23 @@ namespace EcoSysLab {
 		return newNodeHandle;
 	}
 
+	template <typename SkeletonData, typename FlowData, typename NodeData>
+	const std::vector<NodeHandle>& Skeleton<SkeletonData, FlowData, NodeData>::PeekBaseNodeList() const
+	{
+		RefreshBaseNodeList();
+		return m_baseNodeList;
+	}
+
 	template<typename SkeletonData, typename FlowData, typename NodeData>
-	void Skeleton<SkeletonData, FlowData, NodeData>::RecycleFlow(FlowHandle handle, 
+	void Skeleton<SkeletonData, FlowData, NodeData>::RecycleFlow(FlowHandle handle,
 		const std::function<void(FlowHandle)>& flowHandler,
 		const std::function<void(NodeHandle)>& nodeHandler) {
 		assert(handle != 0);
 		assert(!m_flows[handle].m_recycled);
-		auto &flow = m_flows[handle];
+		auto& flow = m_flows[handle];
 		//Remove children
 		auto children = flow.m_childHandles;
-		for (const auto &child: children) {
+		for (const auto& child : children) {
 			if (m_flows[child].m_recycled) continue;
 			RecycleFlow(child, flowHandler, nodeHandler);
 		}
@@ -514,7 +539,7 @@ namespace EcoSysLab {
 		if (!flow.m_nodes.empty()) {
 			//Detach first node from parent.
 			auto nodes = flow.m_nodes;
-			for (const auto &i: nodes) {
+			for (const auto& i : nodes) {
 				RecycleNodeSingle(i, nodeHandler);
 			}
 		}
@@ -528,31 +553,31 @@ namespace EcoSysLab {
 		const std::function<void(NodeHandle)>& nodeHandler) {
 		assert(handle != 0);
 		assert(!m_nodes[handle].m_recycled);
-		auto &node = m_nodes[handle];
+		auto& node = m_nodes[handle];
 		auto flowHandle = node.m_flowHandle;
-		auto &flow = m_flows[flowHandle];
+		auto& flow = m_flows[flowHandle];
 		if (handle == flow.m_nodes[0]) {
 			auto parentFlowHandle = flow.m_parentHandle;
-			
+
 			RecycleFlow(node.m_flowHandle, flowHandler, nodeHandler);
 			//Connect parent branch with the only apical child flow.
-			auto &parentFlow = m_flows[parentFlowHandle];
+			auto& parentFlow = m_flows[parentFlowHandle];
 			if (parentFlow.m_childHandles.size() == 1) {
 				auto childHandle = parentFlow.m_childHandles[0];
-				auto &childFlow = m_flows[childHandle];
+				auto& childFlow = m_flows[childHandle];
 				if (childFlow.m_apical) {
-					for (const auto &nodeHandle: childFlow.m_nodes) {
+					for (const auto& nodeHandle : childFlow.m_nodes) {
 						m_nodes[nodeHandle].m_flowHandle = parentFlowHandle;
 					}
-					for (const auto &grandChildFlowHandle: childFlow.m_childHandles) {
+					for (const auto& grandChildFlowHandle : childFlow.m_childHandles) {
 						m_flows[grandChildFlowHandle].m_parentHandle = parentFlowHandle;
 					}
 					parentFlow.m_nodes.insert(parentFlow.m_nodes.end(), childFlow.m_nodes.begin(),
-											  childFlow.m_nodes.end());
+						childFlow.m_nodes.end());
 					parentFlow.m_childHandles.clear();
 					parentFlow.m_childHandles.insert(parentFlow.m_childHandles.end(),
-													 childFlow.m_childHandles.begin(),
-													 childFlow.m_childHandles.end());
+						childFlow.m_childHandles.begin(),
+						childFlow.m_childHandles.end());
 					RecycleFlowSingle(childHandle, flowHandler);
 				}
 			}
@@ -571,11 +596,11 @@ namespace EcoSysLab {
 		if (node.m_parentHandle != -1) DetachChildNode(node.m_parentHandle, handle);
 		//From end node remove one by one.
 		NodeHandle prev = -1;
-		for (const auto &i: subsequentNodes) {
+		for (const auto& i : subsequentNodes) {
 			auto children = m_nodes[i].m_childHandles;
-			for (const auto &childNodeHandle: children) {
+			for (const auto& childNodeHandle : children) {
 				if (childNodeHandle == prev) continue;
-				auto &child = m_nodes[childNodeHandle];
+				auto& child = m_nodes[childNodeHandle];
 				assert(!child.m_recycled);
 				auto childBranchHandle = child.m_flowHandle;
 				if (childBranchHandle != flowHandle) {
@@ -634,7 +659,7 @@ namespace EcoSysLab {
 	}
 
 	template<typename NodeData>
-	const std::vector<NodeHandle> &Node<NodeData>::RefChildHandles() const {
+	const std::vector<NodeHandle>& Node<NodeData>::RefChildHandles() const {
 		return m_childHandles;
 	}
 
@@ -661,7 +686,7 @@ namespace EcoSysLab {
 	}
 
 	template<typename FlowData>
-	const std::vector<NodeHandle> &Flow<FlowData>::RefNodeHandles() const {
+	const std::vector<NodeHandle>& Flow<FlowData>::RefNodeHandles() const {
 		return m_nodes;
 	}
 
@@ -671,7 +696,7 @@ namespace EcoSysLab {
 	}
 
 	template<typename FlowData>
-	const std::vector<FlowHandle> &Flow<FlowData>::RefChildHandles() const {
+	const std::vector<FlowHandle>& Flow<FlowData>::RefChildHandles() const {
 		return m_childHandles;
 	}
 
@@ -689,27 +714,30 @@ namespace EcoSysLab {
 	}
 
 	template<typename SkeletonData, typename FlowData, typename NodeData>
-	Skeleton<SkeletonData, FlowData, NodeData>::Skeleton() {
+	Skeleton<SkeletonData, FlowData, NodeData>::Skeleton(const unsigned initialNodeCount) {
 		m_maxNodeIndex = -1;
 		m_maxFlowIndex = -1;
-		AllocateFlow();
-		AllocateNode();
-		auto &rootBranch = m_flows[0];
-		auto &rootNode = m_nodes[0];
-		rootNode.m_flowHandle = 0;
-		rootBranch.m_nodes.emplace_back(0);
+		for (int i = 0; i < initialNodeCount; i++) {
+			auto flowHandle = AllocateFlow();
+			auto nodeHandle = AllocateNode();
+			auto& rootFlow = m_flows[flowHandle];
+			auto& rootNode = m_nodes[nodeHandle];
+			rootNode.m_flowHandle = flowHandle;
+			rootFlow.m_nodes.emplace_back(nodeHandle);
+			m_baseNodeList.emplace_back(nodeHandle);
+		}
 	}
 
 	template<typename SkeletonData, typename FlowData, typename NodeData>
 	void Skeleton<SkeletonData, FlowData, NodeData>::DetachChildNode(NodeHandle targetHandle,
-																	 NodeHandle childHandle) {
+		NodeHandle childHandle) {
 		assert(targetHandle >= 0 && childHandle >= 0 && targetHandle < m_nodes.size() &&
-			   childHandle < m_nodes.size());
-		auto &targetNode = m_nodes[targetHandle];
-		auto &childNode = m_nodes[childHandle];
+			childHandle < m_nodes.size());
+		auto& targetNode = m_nodes[targetHandle];
+		auto& childNode = m_nodes[childHandle];
 		assert(!targetNode.m_recycled);
 		assert(!childNode.m_recycled);
-		auto &children = targetNode.m_childHandles;
+		auto& children = targetNode.m_childHandles;
 		for (int i = 0; i < children.size(); i++) {
 			if (children[i] == childHandle) {
 				children[i] = children.back();
@@ -719,6 +747,14 @@ namespace EcoSysLab {
 				return;
 			}
 		}
+	}
+
+	template <typename SkeletonData, typename FlowData, typename NodeData>
+	void Skeleton<SkeletonData, FlowData, NodeData>::RefreshBaseNodeList()
+	{
+		std::vector<NodeHandle> temp;
+		for (const auto& i : m_baseNodeList) if (!m_nodes[i].m_recycled && m_nodes[i].m_parentHandle == -1) temp.emplace_back(i);
+		m_baseNodeList = temp;
 	}
 
 	template <typename SkeletonData, typename FlowData, typename NodeData>
@@ -733,10 +769,10 @@ namespace EcoSysLab {
 		m_sortedFlowList = srcSkeleton.m_sortedFlowList;
 
 		m_nodes.resize(srcSkeleton.m_nodes.size());
-		for(int i = 0; i < srcSkeleton.m_nodes.size(); i++)
+		for (int i = 0; i < srcSkeleton.m_nodes.size(); i++)
 		{
 			m_nodes[i].m_info = srcSkeleton.m_nodes[i].m_info;
-			
+
 			m_nodes[i].m_endNode = srcSkeleton.m_nodes[i].m_endNode;
 			m_nodes[i].m_recycled = srcSkeleton.m_nodes[i].m_recycled;
 			m_nodes[i].m_handle = srcSkeleton.m_nodes[i].m_handle;
@@ -820,7 +856,8 @@ namespace EcoSysLab {
 				auto parentRegulatedUp = parentInfo.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
 				auto regulatedUp = glm::normalize(glm::cross(glm::cross(front, parentRegulatedUp), front));
 				nodeInfo.m_regulatedGlobalRotation = glm::quatLookAt(front, regulatedUp);
-			}else
+			}
+			else
 			{
 				nodeInfo.m_regulatedGlobalRotation = nodeInfo.m_globalRotation;
 			}
@@ -829,11 +866,11 @@ namespace EcoSysLab {
 
 	template<typename SkeletonData, typename FlowData, typename NodeData>
 	void Skeleton<SkeletonData, FlowData, NodeData>::SetParentNode(NodeHandle targetHandle,
-																   NodeHandle parentHandle) {
+		NodeHandle parentHandle) {
 		assert(targetHandle >= 0 && parentHandle >= 0 && targetHandle < m_nodes.size() &&
-			   parentHandle < m_nodes.size());
-		auto &targetNode = m_nodes[targetHandle];
-		auto &parentNode = m_nodes[parentHandle];
+			parentHandle < m_nodes.size());
+		auto& targetNode = m_nodes[targetHandle];
+		auto& parentNode = m_nodes[parentHandle];
 		assert(!targetNode.m_recycled);
 		assert(!parentNode.m_recycled);
 		targetNode.m_parentHandle = parentHandle;
@@ -842,23 +879,23 @@ namespace EcoSysLab {
 
 	template<typename SkeletonData, typename FlowData, typename NodeData>
 	void
-	Skeleton<SkeletonData, FlowData, NodeData>::DetachChildFlow(FlowHandle targetHandle,
-																FlowHandle childHandle) {
+		Skeleton<SkeletonData, FlowData, NodeData>::DetachChildFlow(FlowHandle targetHandle,
+			FlowHandle childHandle) {
 		assert(targetHandle >= 0 && childHandle >= 0 && targetHandle < m_flows.size() &&
-			   childHandle < m_flows.size());
-		auto &targetBranch = m_flows[targetHandle];
-		auto &childBranch = m_flows[childHandle];
+			childHandle < m_flows.size());
+		auto& targetBranch = m_flows[targetHandle];
+		auto& childBranch = m_flows[childHandle];
 		assert(!targetBranch.m_recycled);
 		assert(!childBranch.m_recycled);
 
 		if (!childBranch.m_nodes.empty()) {
 			auto firstNodeHandle = childBranch.m_nodes[0];
-			auto &firstNode = m_nodes[firstNodeHandle];
+			auto& firstNode = m_nodes[firstNodeHandle];
 			if (firstNode.m_parentHandle != -1)
 				DetachChildNode(firstNode.m_parentHandle, firstNodeHandle);
 		}
 
-		auto &children = targetBranch.m_childHandles;
+		auto& children = targetBranch.m_childHandles;
 		for (int i = 0; i < children.size(); i++) {
 			if (children[i] == childHandle) {
 				children[i] = children.back();
@@ -871,24 +908,24 @@ namespace EcoSysLab {
 
 	template<typename SkeletonData, typename FlowData, typename NodeData>
 	void
-	Skeleton<SkeletonData, FlowData, NodeData>::SetParentFlow(FlowHandle targetHandle,
-															  FlowHandle parentHandle) {
+		Skeleton<SkeletonData, FlowData, NodeData>::SetParentFlow(FlowHandle targetHandle,
+			FlowHandle parentHandle) {
 		assert(targetHandle >= 0 && parentHandle >= 0 && targetHandle < m_flows.size() &&
-			   parentHandle < m_flows.size());
-		auto &targetBranch = m_flows[targetHandle];
-		auto &parentBranch = m_flows[parentHandle];
+			parentHandle < m_flows.size());
+		auto& targetBranch = m_flows[targetHandle];
+		auto& parentBranch = m_flows[parentHandle];
 		assert(!targetBranch.m_recycled);
 		assert(!parentBranch.m_recycled);
 		targetBranch.m_parentHandle = parentHandle;
 		parentBranch.m_childHandles.emplace_back(targetHandle);
 	}
 
-	
+
 
 	template<typename SkeletonData, typename FlowData, typename NodeData>
 	void Skeleton<SkeletonData, FlowData, NodeData>::RecycleFlowSingle(FlowHandle handle, const std::function<void(FlowHandle)>& flowHandler) {
 		assert(!m_flows[handle].m_recycled);
-		auto &flow = m_flows[handle];
+		auto& flow = m_flows[handle];
 		flowHandler(handle);
 		flow.m_parentHandle = -1;
 		flow.m_childHandles.clear();
@@ -905,7 +942,7 @@ namespace EcoSysLab {
 	template<typename SkeletonData, typename FlowData, typename NodeData>
 	void Skeleton<SkeletonData, FlowData, NodeData>::RecycleNodeSingle(NodeHandle handle, const std::function<void(NodeHandle)>& nodeHandler) {
 		assert(!m_nodes[handle].m_recycled);
-		auto &node = m_nodes[handle];
+		auto& node = m_nodes[handle];
 		nodeHandler(handle);
 		node.m_parentHandle = -1;
 		node.m_flowHandle = -1;
@@ -945,7 +982,7 @@ namespace EcoSysLab {
 		}
 		auto handle = m_nodePool.front();
 		m_nodePool.pop();
-		auto &node = m_nodes[handle];
+		auto& node = m_nodes[handle];
 		node.m_recycled = false;
 		node.m_index = m_maxNodeIndex;
 		return handle;
@@ -958,22 +995,22 @@ namespace EcoSysLab {
 
 	template<typename SkeletonData, typename FlowData, typename NodeData>
 	void Skeleton<SkeletonData, FlowData, NodeData>::CalculateFlows() {
-		for (const auto &flowHandle: m_sortedFlowList) {
-			auto &flow = m_flows[flowHandle];
-			auto &firstNode = m_nodes[flow.m_nodes.front()];
-			auto &lastNode = m_nodes[flow.m_nodes.back()];
+		for (const auto& flowHandle : m_sortedFlowList) {
+			auto& flow = m_flows[flowHandle];
+			auto& firstNode = m_nodes[flow.m_nodes.front()];
+			auto& lastNode = m_nodes[flow.m_nodes.back()];
 			flow.m_info.m_startThickness = firstNode.m_info.m_thickness;
 			flow.m_info.m_globalStartPosition = firstNode.m_info.m_globalPosition;
 			flow.m_info.m_globalStartRotation = firstNode.m_info.m_globalRotation;
 
 			flow.m_info.m_endThickness = lastNode.m_info.m_thickness;
 			flow.m_info.m_globalEndPosition = lastNode.m_info.m_globalPosition +
-											  lastNode.m_info.m_length *
-											  (lastNode.m_info.m_globalRotation * glm::vec3(0, 0, -1));
+				lastNode.m_info.m_length *
+				(lastNode.m_info.m_globalRotation * glm::vec3(0, 0, -1));
 			flow.m_info.m_globalEndRotation = lastNode.m_info.m_globalRotation;
 
 			flow.m_info.m_flowLength = 0.0f;
-			for(const auto& nodeHandle : flow.m_nodes)
+			for (const auto& nodeHandle : flow.m_nodes)
 			{
 				flow.m_info.m_flowLength += m_nodes[nodeHandle].m_info.m_length;
 			}
@@ -982,13 +1019,13 @@ namespace EcoSysLab {
 	}
 
 	template<typename SkeletonData, typename FlowData, typename NodeData>
-	const std::vector<Flow<FlowData>> &Skeleton<SkeletonData, FlowData, NodeData>::RefRawFlows() const {
+	const std::vector<Flow<FlowData>>& Skeleton<SkeletonData, FlowData, NodeData>::RefRawFlows() const {
 		return m_flows;
 	}
 
 	template<typename SkeletonData, typename FlowData, typename NodeData>
-	const std::vector<Node<NodeData>> &
-	Skeleton<SkeletonData, FlowData, NodeData>::RefRawNodes() const {
+	const std::vector<Node<NodeData>>&
+		Skeleton<SkeletonData, FlowData, NodeData>::RefRawNodes() const {
 		return m_nodes;
 	}
 
