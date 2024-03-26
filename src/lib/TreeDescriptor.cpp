@@ -4,8 +4,7 @@
 
 #include "Tree.hpp"
 
-#include <Material.hpp>
-#include <Mesh.hpp>
+#include "Material.hpp"
 #include "Strands.hpp"
 #include "EditorLayer.hpp"
 #include "Application.hpp"
@@ -19,7 +18,10 @@
 #include "TreeDescriptor.hpp"
 
 #include "BranchShape.hpp"
+#include "FlowerDescriptor.hpp"
 #include "FoliageDescriptor.hpp"
+#include "FruitDescriptor.hpp"
+#include "ShootDescriptor.hpp"
 using namespace EcoSysLab;
 
 void TreeDescriptor::OnCreate() {
@@ -58,6 +60,9 @@ void TreeDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 	}
 	editorLayer->DragAndDropButton<ShootDescriptor>(m_shootDescriptor, "Shoot Descriptor");
 	editorLayer->DragAndDropButton<FoliageDescriptor>(m_foliageDescriptor, "Foliage Descriptor");
+	editorLayer->DragAndDropButton<FruitDescriptor>(m_fruitDescriptor, "Fruit Descriptor");
+	editorLayer->DragAndDropButton<FlowerDescriptor>(m_flowerDescriptor, "Flower Descriptor");
+
 	editorLayer->DragAndDropButton<BranchShape>(m_shootBranchShape, "Shoot Branch Shape");
 	if (changed) m_saved = false;
 }
@@ -65,6 +70,9 @@ void TreeDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 void TreeDescriptor::CollectAssetRef(std::vector<AssetRef>& list) {
 	if (m_shootDescriptor.Get<ShootDescriptor>()) list.push_back(m_shootDescriptor);
 	if (m_foliageDescriptor.Get<FoliageDescriptor>()) list.push_back(m_foliageDescriptor);
+	if (m_fruitDescriptor.Get<FruitDescriptor>()) list.push_back(m_fruitDescriptor);
+	if (m_flowerDescriptor.Get<FlowerDescriptor>()) list.push_back(m_flowerDescriptor);
+
 	if (m_shootBranchShape.Get<BranchShape>()) list.push_back(m_shootBranchShape);
 }
 
@@ -73,6 +81,9 @@ void TreeDescriptor::Serialize(YAML::Emitter& out) {
 	m_shootDescriptor.Save("m_shootDescriptor", out);
 	m_foliageDescriptor.Save("m_foliageDescriptor", out);
 	m_shootBranchShape.Save("m_shootBranchShape", out);
+
+	m_fruitDescriptor.Save("m_fruitDescriptor", out);
+	m_flowerDescriptor.Save("m_flowerDescriptor", out);
 }
 
 
@@ -81,4 +92,7 @@ void TreeDescriptor::Deserialize(const YAML::Node& in) {
 	m_shootDescriptor.Load("m_shootDescriptor", in);
 	m_foliageDescriptor.Load("m_foliageDescriptor", in);
 	m_shootBranchShape.Load("m_shootBranchShape", in);
+
+	m_fruitDescriptor.Load("m_fruitDescriptor", in);
+	m_flowerDescriptor.Load("m_flowerDescriptor", in);
 }

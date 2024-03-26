@@ -19,7 +19,9 @@
 #include "TreePointCloudScanner.hpp"
 #include "ClassRegistry.hpp"
 #include "CubeVolume.hpp"
+#include "FlowerDescriptor.hpp"
 #include "FoliageDescriptor.hpp"
+#include "FruitDescriptor.hpp"
 #include "LogGrader.hpp"
 #include "SpatialPlantDistributionSimulator.hpp"
 #include "ShootDescriptorGenerator.hpp"
@@ -37,6 +39,8 @@ void EcoSysLabLayer::OnCreate() {
 	ClassRegistry::RegisterAsset<ForestPatch>("ForestPatch", { ".fp" });
 	ClassRegistry::RegisterAsset<TreeDescriptor>("TreeDescriptor", { ".tree" });
 	ClassRegistry::RegisterAsset<ShootDescriptor>("ShootDescriptor", { ".shoot" });
+	ClassRegistry::RegisterAsset<FruitDescriptor>("FruitDescriptor", { ".fruit" });
+	ClassRegistry::RegisterAsset<FlowerDescriptor>("FlowerDescriptor", { ".flower" });
 	ClassRegistry::RegisterAsset<FoliageDescriptor>("FoliageDescriptor", { ".foliage" });
 	ClassRegistry::RegisterAsset<ShootDescriptorGenerator>("ShootDescriptorGenerator", { ".sdg" });
 	ClassRegistry::RegisterAsset<SoilDescriptor>("SoilDescriptor", { ".sd" });
