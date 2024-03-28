@@ -2219,12 +2219,13 @@ void TreePointCloud::InitializeSkeletalGraph(const std::shared_ptr<Mesh>& pointM
 
 void TreePointCloud::ClearMeshes() const {
 	const auto scene = GetScene();
-	const auto self = GetOwner();
-	const auto children = scene->GetChildren(self);
-	for (const auto& child : children) {
-		auto name = scene->GetEntityName(child);
-		if (name.substr(0, 4) == "Tree") {
-			scene->DeleteEntity(child);
+	const auto owner = GetOwner();
+	const auto children = scene->GetChildren(owner);
+	for (const auto& i : children)
+	{
+		if (scene->GetEntityName(i) == "Forest")
+		{
+			scene->DeleteEntity(i);
 		}
 	}
 }

@@ -135,7 +135,7 @@ namespace EcoSysLab {
 		int m_maxParentCandidateSize = 100;
 		int m_maxChildSize = 10;
 
-		float m_endNodeThickness = 0.002f;
+		float m_endNodeThickness = 0.004f;
 		float m_thicknessSumFactor = 0.4f;
 		float m_thicknessAccumulationFactor = 0.00005f;
 		float m_overrideThicknessRootDistance = 0.0f;

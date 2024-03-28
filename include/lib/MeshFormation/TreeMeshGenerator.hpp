@@ -470,7 +470,10 @@ namespace EcoSysLab {
 								auto c = vertexIndex + pTarget[p];
 								if (vertices[a].m_position != vertices[b].m_position
 									&& vertices[b].m_position != vertices[c].m_position
-									&& vertices[a].m_position != vertices[c].m_position) {
+									&& vertices[a].m_position != vertices[c].m_position
+									&& !glm::any(glm::isnan(vertices[a].m_position))
+									&& !glm::any(glm::isnan(vertices[b].m_position))
+									&& !glm::any(glm::isnan(vertices[c].m_position))) {
 									indices.push_back(a);
 									indices.push_back(b);
 									indices.push_back(c);
@@ -482,7 +485,10 @@ namespace EcoSysLab {
 								auto c = vertexIndex + pTarget[p];
 								if (vertices[a].m_position != vertices[b].m_position
 									&& vertices[b].m_position != vertices[c].m_position
-									&& vertices[a].m_position != vertices[c].m_position) {
+									&& vertices[a].m_position != vertices[c].m_position
+									&& !glm::any(glm::isnan(vertices[a].m_position))
+									&& !glm::any(glm::isnan(vertices[b].m_position))
+									&& !glm::any(glm::isnan(vertices[c].m_position))) {
 									indices.push_back(a);
 									indices.push_back(b);
 									indices.push_back(c);
@@ -492,7 +498,10 @@ namespace EcoSysLab {
 								c = parentLastRingStartVertexIndex + (p == pStep - 1 ? 0 : p + 1);
 								if (vertices[a].m_position != vertices[b].m_position
 									&& vertices[b].m_position != vertices[c].m_position
-									&& vertices[a].m_position != vertices[c].m_position) {
+									&& vertices[a].m_position != vertices[c].m_position
+									&& !glm::any(glm::isnan(vertices[a].m_position))
+									&& !glm::any(glm::isnan(vertices[b].m_position))
+									&& !glm::any(glm::isnan(vertices[c].m_position))) {
 									indices.push_back(a);
 									indices.push_back(b);
 									indices.push_back(c);
@@ -509,7 +518,10 @@ namespace EcoSysLab {
 								auto c = vertexIndex + pStep + pTarget[p];
 								if (vertices[a].m_position != vertices[b].m_position
 									&& vertices[b].m_position != vertices[c].m_position
-									&& vertices[a].m_position != vertices[c].m_position) {
+									&& vertices[a].m_position != vertices[c].m_position
+									&& !glm::any(glm::isnan(vertices[a].m_position))
+									&& !glm::any(glm::isnan(vertices[b].m_position))
+									&& !glm::any(glm::isnan(vertices[c].m_position))) {
 									indices.push_back(a);
 									indices.push_back(b);
 									indices.push_back(c);
@@ -521,7 +533,10 @@ namespace EcoSysLab {
 								auto c = vertexIndex + pStep + pTarget[p];
 								if (vertices[a].m_position != vertices[b].m_position
 									&& vertices[b].m_position != vertices[c].m_position
-									&& vertices[a].m_position != vertices[c].m_position) {
+									&& vertices[a].m_position != vertices[c].m_position
+									&& !glm::any(glm::isnan(vertices[a].m_position))
+									&& !glm::any(glm::isnan(vertices[b].m_position))
+									&& !glm::any(glm::isnan(vertices[c].m_position))) {
 									indices.push_back(a);
 									indices.push_back(b);
 									indices.push_back(c);
@@ -532,7 +547,10 @@ namespace EcoSysLab {
 
 								if (vertices[a].m_position != vertices[b].m_position
 									&& vertices[b].m_position != vertices[c].m_position
-									&& vertices[a].m_position != vertices[c].m_position) {
+									&& vertices[a].m_position != vertices[c].m_position
+									&& !glm::any(glm::isnan(vertices[a].m_position))
+									&& !glm::any(glm::isnan(vertices[b].m_position))
+									&& !glm::any(glm::isnan(vertices[c].m_position))) {
 									indices.push_back(a);
 									indices.push_back(b);
 									indices.push_back(c);
@@ -550,7 +568,10 @@ namespace EcoSysLab {
 						auto c = vertexIndex + ringIndex * step + s;
 						if (vertices[a].m_position != vertices[b].m_position
 							&& vertices[b].m_position != vertices[c].m_position
-							&& vertices[a].m_position != vertices[c].m_position) {
+							&& vertices[a].m_position != vertices[c].m_position
+							&& !glm::any(glm::isnan(vertices[a].m_position))
+							&& !glm::any(glm::isnan(vertices[b].m_position))
+							&& !glm::any(glm::isnan(vertices[c].m_position))) {
 							indices.push_back(a);
 							indices.push_back(b);
 							indices.push_back(c);
@@ -563,7 +584,10 @@ namespace EcoSysLab {
 						c = vertexIndex + (ringIndex - 1) * step + s + 1;
 						if (vertices[a].m_position != vertices[b].m_position
 							&& vertices[b].m_position != vertices[c].m_position
-							&& vertices[a].m_position != vertices[c].m_position) {
+							&& vertices[a].m_position != vertices[c].m_position
+							&& !glm::any(glm::isnan(vertices[a].m_position))
+							&& !glm::any(glm::isnan(vertices[b].m_position))
+							&& !glm::any(glm::isnan(vertices[c].m_position))) {
 							indices.push_back(a);
 							indices.push_back(b);
 							indices.push_back(c);
@@ -575,7 +599,10 @@ namespace EcoSysLab {
 					auto c = vertexIndex + ringIndex * step + step - 1;
 					if (vertices[a].m_position != vertices[b].m_position
 						&& vertices[b].m_position != vertices[c].m_position
-						&& vertices[a].m_position != vertices[c].m_position) {
+						&& vertices[a].m_position != vertices[c].m_position
+						&& !glm::any(glm::isnan(vertices[a].m_position))
+						&& !glm::any(glm::isnan(vertices[b].m_position))
+						&& !glm::any(glm::isnan(vertices[c].m_position))) {
 						indices.push_back(a);
 						indices.push_back(b);
 						indices.push_back(c);
@@ -586,7 +613,10 @@ namespace EcoSysLab {
 					c = vertexIndex + (ringIndex - 1) * step;
 					if (vertices[a].m_position != vertices[b].m_position
 						&& vertices[b].m_position != vertices[c].m_position
-						&& vertices[a].m_position != vertices[c].m_position) {
+						&& vertices[a].m_position != vertices[c].m_position
+						&& !glm::any(glm::isnan(vertices[a].m_position))
+						&& !glm::any(glm::isnan(vertices[b].m_position))
+						&& !glm::any(glm::isnan(vertices[c].m_position))) {
 						indices.push_back(a);
 						indices.push_back(b);
 						indices.push_back(c);
@@ -763,6 +793,7 @@ namespace EcoSysLab {
 					auto direction = ring.GetDirection(
 						parentUp, pAngleStep * p, true);
 					archetype.m_position = ring.m_startPosition + direction * ring.m_startRadius * func(xFactor, yFactor);
+					assert(!glm::any(glm::isnan(archetype.m_position)));
 					const float x =
 						p < pStep / 2 ? p * textureXStep : (pStep - p) * textureXStep;
 					archetype.m_texCoord = glm::vec2(x, 0.0f);
@@ -819,6 +850,7 @@ namespace EcoSysLab {
 					auto direction = ring.GetDirection(
 						up, angleStep * s, false);
 					archetype.m_position = ring.m_endPosition + direction * ring.m_endRadius * func(xFactor, yFactor);
+					assert(!glm::any(glm::isnan(archetype.m_position)));
 					const auto x =
 						s < (step / 2) ? s * textureXStep : (step - s) * textureXStep;
 					const auto y = ringIndex % 2 == 0 ? 1.0f : 0.0f;
@@ -837,7 +869,7 @@ namespace EcoSysLab {
 								auto c = vertexIndex + pTarget[p];
 								if (vertices[a].m_position != vertices[b].m_position
 									&& vertices[b].m_position != vertices[c].m_position
-									&& vertices[a].m_position != vertices[c].m_position) {
+									&& vertices[a].m_position != vertices[c].m_position){
 									indices.push_back(a);
 									indices.push_back(b);
 									indices.push_back(c);

@@ -108,7 +108,6 @@ int main() {
 	editorLayer->m_showEntityExplorerWindow = true;
 	editorLayer->m_showEntityInspectorWindow = true;
 	const auto renderLayer = Application::GetLayer<RenderLayer>();
-	renderLayer->m_enableParticles = false;
 #pragma region Engine Loop
 	Application::Start();
 	Application::Run();
