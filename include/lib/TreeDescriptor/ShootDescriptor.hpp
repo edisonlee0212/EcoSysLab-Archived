@@ -9,59 +9,59 @@ namespace EcoSysLab
 		/**
 		 * \brief The expected height gain for the tree for one year (max root distance).
 		 */
-		float m_growthRate = 0.3f;
+		float m_growthRate = 0.25f;
 #pragma region Internode
 		int m_baseInternodeCount = 1;
-		glm::vec2 m_baseNodeApicalAngleMeanVariance{};
+		glm::vec2 m_baseNodeApicalAngleMeanVariance = glm::vec2(0.0f);
 
 		/**
 		* \brief The mean and variance of the angle between the direction of a lateral bud and its parent shoot.
 		*/
-		glm::vec2 m_branchingAngleMeanVariance{};
+		glm::vec2 m_branchingAngleMeanVariance = glm::vec2(45, 2);
 		/**
 		* \brief The mean and variance of an angular difference orientation of lateral buds between two internodes
 		*/
-		glm::vec2 m_rollAngleMeanVariance{};
+		glm::vec2 m_rollAngleMeanVariance = glm::vec2(30, 2);
 		/**
 		* \brief The mean and variance of an angular difference orientation of lateral buds between two internodes
 		*/
-		glm::vec2 m_apicalAngleMeanVariance{};
+		glm::vec2 m_apicalAngleMeanVariance = glm::vec2(0, 3);
 		/**
 		 * \brief The gravitropism.
 		 */
-		float m_gravitropism;
+		float m_gravitropism = 0.0;
 		/**
 		 * \brief The phototropism
 		 */
-		float m_phototropism;
+		float m_phototropism = 0.045f;
 		/**
 		 * \brief The horizontal tropism
 		 */
-		float m_horizontalTropism;
+		float m_horizontalTropism = 0.0f;
 		/**
 		 * \brief The strength of gravity bending.
 		 */
-		glm::vec3 m_saggingFactorThicknessReductionMax = glm::vec3(0.8f, 1.75f, 1.0f);
+		glm::vec3 m_saggingFactorThicknessReductionMax = glm::vec3(0.0006f, 2.0f, 0.1f);
 		/**
 		 * \brief The internode length
 		 */
-		float m_internodeLength;
+		float m_internodeLength = 0.03f;
 		/*
 		 * \brief How the thickness of branch effect the length of the actual node.
 		 */
-		float m_internodeLengthThicknessFactor = 0.25f;
+		float m_internodeLengthThicknessFactor = 0.15f;
 		/**
 		 * \brief Thickness of end internode
 		 */
-		float m_endNodeThickness;
+		float m_endNodeThickness = 0.004f;
 		/**
 		 * \brief The thickness accumulation factor
 		 */
-		float m_thicknessAccumulationFactor;
+		float m_thicknessAccumulationFactor = 0.45f;
 		/**
 		 * \brief The extra thickness gained from node length.
 		 */
-		float m_thicknessAgeFactor;
+		float m_thicknessAgeFactor = 0.0f;
 		/**
 		 * \brief The shadow volume factor of the internode.
 		 */
@@ -79,19 +79,19 @@ namespace EcoSysLab
 		/**
 		 * \brief The probability of death of lateral bud each year.
 		 */
-		float m_lateralBudFlushingRate = 1.0f;
+		float m_lateralBudFlushingRate = 0.5f;
 		/**
 		 * \brief Apical control base
 		 */
-		float m_apicalControl;
+		float m_apicalControl = 1.25f;
 		/**
 		* \brief How much inhibitor will an internode generate.
 		*/
-		float m_apicalDominance;
+		float m_apicalDominance = 0.25f;
 		/**
 		* \brief How much inhibitor will shrink when going through the branch.
 		*/
-		float m_apicalDominanceLoss;
+		float m_apicalDominanceLoss = 0.08f;
 
 #pragma endregion
 #pragma region Pruning
@@ -99,7 +99,7 @@ namespace EcoSysLab
 		* \brief The limit of lateral branches being cut off when too close to the
 		* root.
 		*/
-		float m_lowBranchPruning;
+		float m_lowBranchPruning = 0.15f;
 		/**
 		* \brief The limit of lateral branches being cut off when too close to the
 		* root.

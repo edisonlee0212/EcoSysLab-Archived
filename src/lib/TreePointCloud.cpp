@@ -720,6 +720,14 @@ void TreePointCloud::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 			BuildSkeletons();
 			refreshData = true;
 		}
+		if (ImGui::Button("Form tree mesh")) {
+			if (m_branchConnections.empty()) {
+				m_skeletons.clear();
+				EstablishConnectivityGraph();
+			}
+			if (m_skeletons.empty()) BuildSkeletons();
+			FormGeometryEntity();
+		}
 		m_treeMeshGeneratorSettings.OnInspect(editorLayer);
 		
 		if (ImGui::Button("Clear meshes"))
@@ -1805,7 +1813,30 @@ void TreePointCloud::BuildSkeletons() {
 
 void TreePointCloud::FormGeometryEntity()
 {
+	const auto scene = GetScene();
+	const auto owner = GetOwner();
+	const auto children = scene->GetChildren(owner);
+	for(const auto& i : children)
+	{
+		if(scene->GetEntityName(i) == "Forest")
+		{
+			scene->DeleteEntity(i);
+		}
+	}
 
+	const auto forestEntity = scene->CreateEntity("Forest");
+	scene->SetParent(forestEntity, owner);
+	for(const auto& skeleton : m_skeletons)
+	{
+		const auto treeEntity = scene->CreateEntity("Tree");
+		scene->SetParent(treeEntity, forestEntity);
+		const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
+		tree->FromSkeleton(skeleton);
+		tree->InitializeMeshRenderer(m_treeMeshGeneratorSettings);
+		GlobalTransform gt{};
+		gt.SetPosition(skeleton.m_data.m_rootPosition);
+		scene->SetDataComponent(treeEntity, gt);
+	}
 }
 
 void TreePointCloud::SpaceColonization()

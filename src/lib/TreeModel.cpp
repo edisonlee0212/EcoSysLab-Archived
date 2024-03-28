@@ -1077,12 +1077,17 @@ bool TreeModel::PruneInternodes(const glm::mat4& globalTransform, ClimateModel& 
 		const float pruningProbability = shootGrowthController.m_pruningFactor(m_currentDeltaTime, internode);
 		if (pruningProbability > glm::linearRand(0.0f, 1.0f)) pruning = true;
 		bool lowBranchPruning = false;
-		if (!pruning && maxDistance > 5.0f * shootGrowthController.m_internodeLength && internode.m_data.m_order == 1 &&
+		if (!pruning && maxDistance > 5.0f * shootGrowthController.m_internodeLength && !internode.IsApical() &&
 			(internode.m_info.m_rootDistance / maxDistance) < shootGrowthController.m_lowBranchPruning) {
 			const auto parentHandle = internode.GetParentHandle();
 			if (parentHandle != -1) {
 				const auto& parent = m_shootSkeleton.PeekNode(parentHandle);
-				if (shootGrowthController.m_lowBranchPruningThicknessFactor == 0.0f || internode.m_info.m_thickness / parent.m_info.m_thickness < shootGrowthController.m_lowBranchPruningThicknessFactor) lowBranchPruning = true;
+				if (parent.RefChildHandles().size() > 1 && (
+					shootGrowthController.m_lowBranchPruningThicknessFactor == 0.0f
+					|| internode.m_info.m_thickness / parent.m_info.m_thickness < shootGrowthController.m_lowBranchPruningThicknessFactor))
+				{
+					lowBranchPruning = true;
+				}
 			}
 
 		}

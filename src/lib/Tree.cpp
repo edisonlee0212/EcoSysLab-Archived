@@ -707,12 +707,16 @@ std::shared_ptr<Mesh> Tree::GenerateBranchMesh(const TreeMeshGeneratorSettings& 
 	std::vector<Vertex> vertices;
 	std::vector<unsigned int> indices;
 	if (meshGeneratorSettings.m_branchMeshType == 0) {
-		const auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
-		std::shared_ptr<BranchShape> branchShape{};
-		if (treeDescriptor)
+		auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
+		if (!treeDescriptor)
 		{
-			branchShape = treeDescriptor->m_shootBranchShape.Get<BranchShape>();
+			EVOENGINE_WARNING("TreeDescriptor missing!");
+			treeDescriptor = ProjectManager::CreateTemporaryAsset<TreeDescriptor>();
+			treeDescriptor->m_foliageDescriptor = ProjectManager::CreateTemporaryAsset<FoliageDescriptor>();
 		}
+		std::shared_ptr<BranchShape> branchShape{};
+		branchShape = treeDescriptor->m_shootBranchShape.Get<BranchShape>();
+		
 		CylindricalMeshGenerator<ShootGrowthData, ShootStemGrowthData, InternodeGrowthData>::Generate(m_treeModel.PeekShootSkeleton(), vertices, indices, meshGeneratorSettings, [&](float xFactor, float distanceToRoot)
 			{
 				if (branchShape)
@@ -724,7 +728,13 @@ std::shared_ptr<Mesh> Tree::GenerateBranchMesh(const TreeMeshGeneratorSettings& 
 	}
 	else
 	{
-		const auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
+		auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
+		if (!treeDescriptor)
+		{
+			EVOENGINE_WARNING("TreeDescriptor missing!");
+			treeDescriptor = ProjectManager::CreateTemporaryAsset<TreeDescriptor>();
+			treeDescriptor->m_foliageDescriptor = ProjectManager::CreateTemporaryAsset<FoliageDescriptor>();
+		}
 		VoxelMeshGenerator<ShootGrowthData, ShootStemGrowthData, InternodeGrowthData>::Generate(m_treeModel.PeekShootSkeleton(), vertices, indices, meshGeneratorSettings);
 	}
 	auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
@@ -744,7 +754,12 @@ std::shared_ptr<Mesh> Tree::GenerateFoliageMesh(const TreeMeshGeneratorSettings&
 	auto quadVerticesSize = quadMesh->GetVerticesAmount();
 	size_t offset = 0;
 	auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
-	if (!treeDescriptor) return nullptr;
+	if (!treeDescriptor)
+	{
+		EVOENGINE_WARNING("TreeDescriptor missing!");
+		treeDescriptor = ProjectManager::CreateTemporaryAsset<TreeDescriptor>();
+		treeDescriptor->m_foliageDescriptor = ProjectManager::CreateTemporaryAsset<FoliageDescriptor>();
+	}
 	auto foliageDescriptor = treeDescriptor->m_foliageDescriptor.Get<FoliageDescriptor>();
 	if (!foliageDescriptor) foliageDescriptor = ProjectManager::CreateTemporaryAsset<FoliageDescriptor>();
 	const auto& nodeList = m_treeModel.PeekShootSkeleton().PeekSortedNodeList();
@@ -922,7 +937,12 @@ std::shared_ptr<ParticleInfoList> Tree::GenerateFoliageParticleInfoList(
 	const TreeMeshGeneratorSettings& meshGeneratorSettings)
 {
 	auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
-	if (!treeDescriptor) return nullptr;
+	if (!treeDescriptor)
+	{
+		EVOENGINE_WARNING("TreeDescriptor missing!");
+		treeDescriptor = ProjectManager::CreateTemporaryAsset<TreeDescriptor>();
+		treeDescriptor->m_foliageDescriptor = ProjectManager::CreateTemporaryAsset<FoliageDescriptor>();
+	}
 	const auto retVal = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
 	auto foliageDescriptor = treeDescriptor->m_foliageDescriptor.Get<FoliageDescriptor>();
 	if (!foliageDescriptor) foliageDescriptor = ProjectManager::CreateTemporaryAsset<FoliageDescriptor>();
@@ -1250,7 +1270,16 @@ void Tree::ExportTrunkOBJ(const std::filesystem::path& path,
 bool Tree::TryGrow(float deltaTime, bool pruning, float overrideGrowthRate)
 {
 	const auto scene = GetScene();
-	const auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
+	auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
+	if (!treeDescriptor) {
+		EVOENGINE_WARNING("Growing tree without tree descriptor!");
+		treeDescriptor = ProjectManager::CreateTemporaryAsset<TreeDescriptor>();
+		m_treeDescriptor = treeDescriptor;
+		const auto shootDescriptor = ProjectManager::CreateTemporaryAsset<ShootDescriptor>();
+		treeDescriptor->m_shootDescriptor = shootDescriptor;
+		const auto foliageDescriptor = ProjectManager::CreateTemporaryAsset<FoliageDescriptor>();
+		treeDescriptor->m_foliageDescriptor = foliageDescriptor;
+	}
 	const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
 
 	const auto climateCandidate = EcoSysLabLayer::FindClimate();
@@ -1268,10 +1297,6 @@ bool Tree::TryGrow(float deltaTime, bool pruning, float overrideGrowthRate)
 		return false;
 	}
 
-	if (!treeDescriptor) {
-		EVOENGINE_ERROR("No tree descriptor!");
-		return false;
-	}
 	if (!m_soil.Get<Soil>()) {
 		EVOENGINE_ERROR("No soil model!");
 		return false;
@@ -2004,7 +2029,13 @@ void Tree::PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescrip
 	const auto climate = m_climate.Get<Climate>();
 
 	{
-		const auto& shootDescriptor = treeDescriptor->m_shootDescriptor.Get<ShootDescriptor>();
+		auto shootDescriptor = treeDescriptor->m_shootDescriptor.Get<ShootDescriptor>();
+		if(!shootDescriptor)
+		{
+			shootDescriptor = ProjectManager::CreateTemporaryAsset<ShootDescriptor>();
+			treeDescriptor->m_shootDescriptor = shootDescriptor;
+			EVOENGINE_WARNING("Shoot Descriptor Missing!");
+		}
 		m_shootGrowthController.m_baseInternodeCount = shootDescriptor->m_baseInternodeCount;
 		
 		m_shootGrowthController.m_baseNodeApicalAngle = [=](const Node<InternodeGrowthData>& internode)

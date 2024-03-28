@@ -7,6 +7,8 @@
 #include "TreeGraph.hpp"
 #include "StrandModelMeshGenerator.hpp"
 #include "TreeIOTree.hpp"
+#include "FoliageDescriptor.hpp"
+#include "ShootDescriptor.hpp"
 using namespace EvoEngine;
 namespace EcoSysLab {
 	class Tree : public IPrivateComponent {
@@ -85,6 +87,8 @@ namespace EcoSysLab {
 		void ClearStrandModelMeshRenderer();
 
 		void RegisterVoxel();
+		template<typename SrcSkeletonData, typename SrcFlowData, typename SrcNodeData>
+		void FromSkeleton(const Skeleton<SrcSkeletonData, SrcFlowData, SrcNodeData>& srcSkeleton);
 		void FromLSystemString(const std::shared_ptr<LSystemString>& lSystemString);
 		void FromTreeGraph(const std::shared_ptr<TreeGraph>& treeGraph);
 		void FromTreeGraphV2(const std::shared_ptr<TreeGraphV2>& treeGraphV2);
@@ -94,4 +98,24 @@ namespace EcoSysLab {
 
 		void Deserialize(const YAML::Node& in) override;
 	};
+
+	template <typename SrcSkeletonData, typename SrcFlowData, typename SrcNodeData>
+	void Tree::FromSkeleton(const Skeleton<SrcSkeletonData, SrcFlowData, SrcNodeData>& srcSkeleton)
+	{
+		
+		auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
+		if (!treeDescriptor) {
+			EVOENGINE_WARNING("Growing tree without tree descriptor!");
+			treeDescriptor = ProjectManager::CreateTemporaryAsset<TreeDescriptor>();
+			m_treeDescriptor = treeDescriptor;
+			const auto shootDescriptor = ProjectManager::CreateTemporaryAsset<ShootDescriptor>();
+			treeDescriptor->m_shootDescriptor = shootDescriptor;
+			const auto foliageDescriptor = ProjectManager::CreateTemporaryAsset<FoliageDescriptor>();
+			treeDescriptor->m_foliageDescriptor = foliageDescriptor;
+		}
+		PrepareControllers(treeDescriptor);
+		m_treeModel.Initialize(m_shootGrowthController);
+		m_treeModel.RefShootSkeleton().Clone(srcSkeleton);
+		//TODO: Set up buds here.
+	}
 }

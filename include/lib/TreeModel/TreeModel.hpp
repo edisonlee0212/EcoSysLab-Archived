@@ -45,7 +45,7 @@ namespace EcoSysLab {
 		friend class Tree;
 #pragma endregion
 
-		void Initialize(const ShootGrowthController& shootGrowthController);
+		
 
 		bool m_initialized = false;
 
@@ -68,6 +68,8 @@ namespace EcoSysLab {
 		int m_currentSeedValue = 0;
 
 	public:
+		void Initialize(const ShootGrowthController& shootGrowthController);
+
 		float GetSubTreeMaxAge(NodeHandle baseInternodeHandle) const;
 		bool Reduce(const ShootGrowthController& shootGrowthController, NodeHandle baseInternodeHandle, float targetAge);
 
