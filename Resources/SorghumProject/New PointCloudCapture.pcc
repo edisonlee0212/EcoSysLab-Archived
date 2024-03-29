@@ -1,0 +1,13 @@
+m_name: New PointCloudCapture
+m_positionsField:
+  m_assetHandle: 1968019432222624388
+  m_assetTypeName: PositionsField
+m_currentExportFolder: Datasets/
+m_settings:
+  m_boundingBoxHeightRange: [0, 2]
+  m_pointDistance: [0.00499999989, 0.00499999989]
+  m_scannerAngle: 30
+  m_adjustBoundingBox: true
+  m_boundingBoxRadius: 1
+  m_adjustmentFactor: 1.20000005
+  m_segmentAmount: 3

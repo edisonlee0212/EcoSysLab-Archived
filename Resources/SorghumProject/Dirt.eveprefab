@@ -1,0 +1,57 @@
+m_name: Dirt
+m_enabled: true
+m_entityHandle: 13739333388919298050
+m_dataComponents:
+  - m_type.m_name: Transform
+    m_data: !!binary "RtoxPgAAAAAAAAAAAAAAAAAAAADNzIw/zcwMBgAAAAAAAAAARtqxhEbaMT4AAAAAAgAAtACynTwAAAAAAACAPw=="
+  - m_type.m_name: GlobalTransform
+    m_data: !!binary "RtoxPgAAAAAAAAAAAAAAAAAAAADNzIw/zcwMBgAAAAAAAAAARtqxhEbaMT4AAAAAAgAAtACynTwAAAAAAACAPw=="
+  - m_type.m_name: GlobalTransformUpdateFlag
+    m_data: !!binary "AA=="
+m_privateComponents:
+  - m_enabled: true
+    m_typeName: MeshRenderer
+    m_data:
+      m_handle: 12806611656399276659
+      m_forwardRendering: false
+      m_castShadow: true
+      m_receiveShadow: true
+      m_mesh:
+        m_assetHandle: 20
+        m_assetTypeName: Mesh
+      m_material:
+        m_assetHandle: 7789101504618747132
+        m_assetTypeName: Material
+LocalAssets:
+  - TypeName: Material
+    Handle: 7789101504618747132
+    Name: New Material
+    m_albedoTexture:
+      m_assetHandle: 3361893860812859658
+      m_assetTypeName: Texture2D
+    m_normalTexture:
+      m_assetHandle: 0
+      m_assetTypeName: ""
+    m_metallicTexture:
+      m_assetHandle: 0
+      m_assetTypeName: ""
+    m_roughnessTexture:
+      m_assetHandle: 0
+      m_assetTypeName: ""
+    m_aoTexture:
+      m_assetHandle: 0
+      m_assetTypeName: ""
+    m_program:
+      m_assetHandle: 3
+      m_assetTypeName: GLProgram
+    m_polygonMode: 0
+    m_cullingMode: 0
+    m_blendingMode: 0
+    m_metallic: 0.300000012
+    m_roughness: 0.300000012
+    m_ambient: 1
+    m_emission: 0
+    m_albedoColor: [1, 1, 1]
+    m_transparency: 0
+    m_subsurfaceColor: [1, 1, 1]
+    m_subsurfaceRadius: 0
