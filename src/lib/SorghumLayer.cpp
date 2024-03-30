@@ -542,7 +542,7 @@ Entity SorghumLayer::CreateSorghum(
 	Entity sorghum = CreateSorghum();
 	auto sorghumData =
 		scene->GetOrSetPrivateComponent<SorghumData>(sorghum).lock();
-	sorghumData->m_mode = (int)SorghumMode::ProceduralSorghum;
+	sorghumData->m_mode = (int)SorghumMode::SorghumGrowthDescriptor;
 	sorghumData->m_descriptor = descriptor;
 	sorghumData->SetTime(1.0f);
 	sorghumData->FormPlant();
@@ -559,7 +559,7 @@ Entity SorghumLayer::CreateSorghum(
 	Entity sorghum = CreateSorghum();
 	auto sorghumData =
 		scene->GetOrSetPrivateComponent<SorghumData>(sorghum).lock();
-	sorghumData->m_mode = (int)SorghumMode::SorghumStateGenerator;
+	sorghumData->m_mode = (int)SorghumMode::SorghumDescriptor;
 	sorghumData->m_descriptor = descriptor;
 	sorghumData->SetTime(1.0f);
 	sorghumData->FormPlant();

@@ -4,8 +4,8 @@
 using namespace EvoEngine;
 namespace EcoSysLab {
 enum class SorghumMode{
-  ProceduralSorghum,
-  SorghumStateGenerator
+  SorghumGrowthDescriptor,
+  SorghumDescriptor
 };
 
 class SorghumData : public IPrivateComponent {
@@ -14,7 +14,7 @@ class SorghumData : public IPrivateComponent {
   friend class SorghumLayer;
   bool m_segmentedMask = false;
 public:
-  int m_mode = (int)SorghumMode::ProceduralSorghum;
+  int m_mode = (int)SorghumMode::SorghumGrowthDescriptor;
   glm::vec3 m_gravityDirection = glm::vec3(0, -1, 0);
   bool m_meshGenerated = false;
   AssetRef m_descriptor;

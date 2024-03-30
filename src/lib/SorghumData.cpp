@@ -26,7 +26,7 @@ void SorghumData::OnDestroy() {
 }
 
 void SorghumData::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
-	static const char* SorghumModes[]{ "Procedural Growth", "Sorghum State" };
+	static const char* SorghumModes[]{ "SorghumGrowthDescriptor", "SorghumDescriptor" };
 	
 	
 	if (ImGui::Checkbox("Skeleton", &m_skeleton)) {
@@ -36,7 +36,7 @@ void SorghumData::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	ImGui::Checkbox("Mask", &m_segmentedMask);
 	ImGui::Combo("Mode", &m_mode, SorghumModes, IM_ARRAYSIZE(SorghumModes));
 	switch ((SorghumMode)m_mode) {
-	case SorghumMode::ProceduralSorghum: {
+	case SorghumMode::SorghumGrowthDescriptor: {
 		editorLayer->DragAndDropButton<SorghumGrowthDescriptor>(m_descriptor,
 			"Procedural Sorghum");
 		const auto descriptor = m_descriptor.Get<SorghumGrowthDescriptor>();
@@ -52,7 +52,7 @@ void SorghumData::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 			}
 		}
 	} break;
-	case SorghumMode::SorghumStateGenerator: {
+	case SorghumMode::SorghumDescriptor: {
 		editorLayer->DragAndDropButton<SorghumDescriptor>(m_descriptor,
 			"Sorghum State Generator");
 		auto descriptor = m_descriptor.Get<SorghumDescriptor>();
@@ -151,7 +151,7 @@ void SorghumData::FormPlant() {
 	auto sorghumLayer = Application::GetLayer<SorghumLayer>();
 	auto scene = GetScene();
 	switch ((SorghumMode)m_mode) {
-	case SorghumMode::ProceduralSorghum: {
+	case SorghumMode::SorghumGrowthDescriptor: {
 		auto descriptor = m_descriptor.Get<SorghumGrowthDescriptor>();
 		if (!descriptor)
 			break;
@@ -160,7 +160,7 @@ void SorghumData::FormPlant() {
 		statePair = descriptor->Get(m_currentTime);
 		m_recordedVersion = descriptor->GetVersion();
 	} break;
-	case SorghumMode::SorghumStateGenerator: {
+	case SorghumMode::SorghumDescriptor: {
 		auto descriptor = m_descriptor.Get<SorghumDescriptor>();
 		if (!descriptor)
 			break;

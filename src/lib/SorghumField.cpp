@@ -100,7 +100,7 @@ Entity SorghumField::InstantiateField() {
 			scene->SetDataComponent(sorghumEntity, sorghumTransform);
 			auto sorghumData =
 				scene->GetOrSetPrivateComponent<SorghumData>(sorghumEntity).lock();
-			sorghumData->m_mode = (int)SorghumMode::SorghumStateGenerator;
+			sorghumData->m_mode = (int)SorghumMode::SorghumDescriptor;
 			sorghumData->m_descriptor = newSorghum.first;
 			sorghumData->m_seed = size;
 			sorghumData->SetTime(1.0f);
