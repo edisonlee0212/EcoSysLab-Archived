@@ -226,7 +226,7 @@ endif()
 # Example program
 # ------------------------------------------------------------------
 add_executable(ecosyslab-app
-		"src/app/Application.cpp")
+		"src/app/EcoSysLabApplication.cpp")
 
 target_include_directories(ecosyslab-app
 	PRIVATE
@@ -273,6 +273,59 @@ if (BUILD_WITH_PHYSICS)
 		evoengine-physics
 		)
 	target_compile_definitions(ecosyslab-app
+		PRIVATE
+		BUILD_WITH_PHYSICS
+		)
+endif ()
+
+add_executable(sorghum-factory-app
+		"src/app/SorghumFactoryApplication.cpp")
+
+target_include_directories(sorghum-factory-app
+	PRIVATE
+	${LOCAL_ECOSYSLAB_INCLUDES}
+	)
+
+target_precompile_headers(sorghum-factory-app
+	PRIVATE
+	${LOCAL_ECOSYSLAB_PCH}
+	)
+
+target_link_libraries(sorghum-factory-app
+	PRIVATE
+	ecosyslab
+	)
+
+target_compile_definitions(sorghum-factory-app
+	PRIVATE
+	NOMINMAX
+	)
+
+if (BUILD_WITH_RAYTRACER)
+	target_include_directories(sorghum-factory-app
+		PRIVATE
+		${EVOENGINE_RAYTRACER_INCLUDES}
+	)
+	target_link_libraries(sorghum-factory-app
+		PRIVATE
+		evoengine-raytracer
+		)
+	target_compile_definitions(sorghum-factory-app
+		PRIVATE
+		BUILD_WITH_RAYTRACER
+		)
+endif ()
+
+if (BUILD_WITH_PHYSICS)
+	target_include_directories(sorghum-factory-app
+		PRIVATE
+		${EVOENGINE_PHYSICS_INCLUDES}
+	)
+	target_link_libraries(sorghum-factory-app
+		PRIVATE
+		evoengine-physics
+		)
+	target_compile_definitions(sorghum-factory-app
 		PRIVATE
 		BUILD_WITH_PHYSICS
 		)

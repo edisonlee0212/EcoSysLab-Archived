@@ -1,0 +1,412 @@
+m_version: 13276
+m_panicleSize:
+  m_mean: [0, 0]
+  m_deviation: 0
+m_panicleSeedAmount:
+  m_mean: 0
+  m_deviation: 0
+m_panicleSeedRadius:
+  m_mean: 0.00200000009
+  m_deviation: 0
+m_stemTiltAngle:
+  m_mean: 0
+  m_deviation: 1.5
+m_stemLength:
+  m_mean: 0.529999971
+  m_deviation: 0.150000006
+m_stemWidth:
+  m_mean: 0.0140000004
+  m_deviation: 0
+m_leafAmount:
+  m_mean: 14
+  m_deviation: 1.5
+m_leafStartingPoint:
+  m_mean:
+    m_minValue: 0
+    m_maxValue: 1
+    m_curve:
+      m_tangent: true
+      m_min: [0, 0]
+      m_max: [1, 1]
+      m_values:
+        - [-0.100000001, 0]
+        - [0, 0.207000002]
+        - [0.100000001, 0]
+        - [-0.100000001, 0]
+        - [1, 1]
+        - [0.100000001, 0]
+  m_deviation:
+    m_minValue: 0
+    m_maxValue: 1
+    m_curve:
+      m_tangent: true
+      m_min: [0, 0]
+      m_max: [1, 1]
+      m_values:
+        - [-0.100000001, 0]
+        - [0, 0]
+        - [0.100000001, 0]
+        - [-0.100000001, 0]
+        - [1, 0]
+        - [0.100000001, 0]
+m_leafCurling:
+  m_mean:
+    m_minValue: 0
+    m_maxValue: 90
+    m_curve:
+      m_tangent: true
+      m_min: [0, 0]
+      m_max: [1, 1]
+      m_values:
+        - [-0.100000001, 0]
+        - [0, 0.300000012]
+        - [0.100000001, 0]
+        - [-0.100000001, 0]
+        - [1, 0.699999988]
+        - [0.100000001, 0]
+  m_deviation:
+    m_minValue: 0
+    m_maxValue: 1
+    m_curve:
+      m_tangent: true
+      m_min: [0, 0]
+      m_max: [1, 1]
+      m_values:
+        - [-0.100000001, 0]
+        - [0, 0]
+        - [0.100000001, 0]
+        - [-0.100000001, 0]
+        - [1, 0]
+        - [0.100000001, 0]
+m_leafRollAngle:
+  m_mean:
+    m_minValue: -1
+    m_maxValue: 1
+    m_curve:
+      m_tangent: true
+      m_min: [0, 0]
+      m_max: [1, 1]
+      m_values:
+        - [-0.100000001, 0]
+        - [0, 0.5]
+        - [0.100000001, 0]
+        - [-0.100000001, 0]
+        - [1, 0.5]
+        - [0.100000001, 0]
+  m_deviation:
+    m_minValue: 0
+    m_maxValue: 8
+    m_curve:
+      m_tangent: true
+      m_min: [0, 0]
+      m_max: [1, 1]
+      m_values:
+        - [-0.100000001, 0]
+        - [0, 0.300000012]
+        - [0.100000001, 0]
+        - [-0.100000001, 0]
+        - [1, 1]
+        - [0.100000001, 0]
+m_leafBranchingAngle:
+  m_mean:
+    m_minValue: 0
+    m_maxValue: 55
+    m_curve:
+      m_tangent: true
+      m_min: [0, 0]
+      m_max: [1, 1]
+      m_values:
+        - [-0.100000001, 0]
+        - [0, 0.5]
+        - [0.100000001, 0]
+        - [-0.100000001, 0]
+        - [1, 0.200000003]
+        - [0.100000001, 0]
+  m_deviation:
+    m_minValue: 0
+    m_maxValue: 10
+    m_curve:
+      m_tangent: true
+      m_min: [0, 0]
+      m_max: [1, 1]
+      m_values:
+        - [-0.100000001, 0]
+        - [0, 0.564999998]
+        - [0.66842103, -0.000920988386]
+        - [-0.100000001, 0]
+        - [1, 0.238999993]
+        - [0.100000001, 0]
+m_leafBending:
+  m_mean:
+    m_minValue: -180
+    m_maxValue: 180
+    m_curve:
+      m_tangent: true
+      m_min: [0, 0]
+      m_max: [1, 1]
+      m_values:
+        - [-0.100000001, 0]
+        - [0, 0.773000002]
+        - [0.678947389, -0.00150001922]
+        - [-0.100000024, 0.00689490372]
+        - [1, 0.497000009]
+        - [0.100000001, 0]
+  m_deviation:
+    m_minValue: 0
+    m_maxValue: 1
+    m_curve:
+      m_tangent: true
+      m_min: [0, 0]
+      m_max: [1, 1]
+      m_values:
+        - [-0.100000001, 0]
+        - [0, 0.5]
+        - [0.100000001, 0]
+        - [-0.100000001, 0]
+        - [1, 0.5]
+        - [0.100000001, 0]
+m_leafBendingAcceleration:
+  m_mean:
+    m_minValue: 0
+    m_maxValue: 1
+    m_curve:
+      m_tangent: true
+      m_min: [0, 0]
+      m_max: [1, 1]
+      m_values:
+        - [-0.100000001, 0]
+        - [0, 0.781000018]
+        - [0.100000001, 0]
+        - [-0.100000001, 0]
+        - [1, 0.813000023]
+        - [0.100000001, 0]
+  m_deviation:
+    m_minValue: 0
+    m_maxValue: 1
+    m_curve:
+      m_tangent: true
+      m_min: [0, 0]
+      m_max: [1, 1]
+      m_values:
+        - [-0.100000001, 0]
+        - [0, 0.5]
+        - [0.100000001, 0]
+        - [-0.100000001, 0]
+        - [1, 0.5]
+        - [0.100000001, 0]
+m_leafBendingSmoothness:
+  m_mean:
+    m_minValue: 0
+    m_maxValue: 1
+    m_curve:
+      m_tangent: true
+      m_min: [0, 0]
+      m_max: [1, 1]
+      m_values:
+        - [-0.100000001, 0]
+        - [0, 0.5]
+        - [0.100000001, 0]
+        - [-0.100000001, 0]
+        - [1, 0.5]
+        - [0.100000001, 0]
+  m_deviation:
+    m_minValue: 0
+    m_maxValue: 0
+    m_curve:
+      m_tangent: true
+      m_min: [0, 0]
+      m_max: [1, 1]
+      m_values:
+        - [-0.100000001, 0]
+        - [0, 0.5]
+        - [0.100000001, 0]
+        - [-0.100000001, 0]
+        - [1, 0.5]
+        - [0.100000001, 0]
+m_leafWaviness:
+  m_mean:
+    m_minValue: 0
+    m_maxValue: 1.5
+    m_curve:
+      m_tangent: true
+      m_min: [0, 0]
+      m_max: [1, 1]
+      m_values:
+        - [-0.100000001, 0]
+        - [0, 0.5]
+        - [0.100000001, 0]
+        - [-0.100000001, 0]
+        - [1, 0.5]
+        - [0.100000001, 0]
+  m_deviation:
+    m_minValue: 0
+    m_maxValue: 0
+    m_curve:
+      m_tangent: true
+      m_min: [0, 0]
+      m_max: [1, 1]
+      m_values:
+        - [-0.100000001, 0]
+        - [0, 0.5]
+        - [0.100000001, 0]
+        - [-0.100000001, 0]
+        - [1, 0.5]
+        - [0.100000001, 0]
+m_leafWavinessFrequency:
+  m_mean:
+    m_minValue: 0
+    m_maxValue: 45
+    m_curve:
+      m_tangent: true
+      m_min: [0, 0]
+      m_max: [1, 1]
+      m_values:
+        - [-0.100000001, 0]
+        - [0, 0.5]
+        - [0.100000001, 0]
+        - [-0.100000001, 0]
+        - [1, 0.5]
+        - [0.100000001, 0]
+  m_deviation:
+    m_minValue: 0
+    m_maxValue: 2
+    m_curve:
+      m_tangent: true
+      m_min: [0, 0]
+      m_max: [1, 1]
+      m_values:
+        - [-0.100000001, 0]
+        - [0, 0.5]
+        - [0.100000001, 0]
+        - [-0.100000001, 0]
+        - [1, 0.5]
+        - [0.100000001, 0]
+m_leafPeriodStart:
+  m_mean:
+    m_minValue: 0
+    m_maxValue: 0
+    m_curve:
+      m_tangent: true
+      m_min: [0, 0]
+      m_max: [1, 1]
+      m_values:
+        - [-0.100000001, 0]
+        - [0, 0.5]
+        - [0.100000001, 0]
+        - [-0.100000001, 0]
+        - [1, 0.5]
+        - [0.100000001, 0]
+  m_deviation:
+    m_minValue: 0
+    m_maxValue: 100
+    m_curve:
+      m_tangent: true
+      m_min: [0, 0]
+      m_max: [1, 1]
+      m_values:
+        - [-0.100000001, 0]
+        - [0, 0.5]
+        - [0.100000001, 0]
+        - [-0.100000001, 0]
+        - [1, 0.5]
+        - [0.100000001, 0]
+m_leafLength:
+  m_mean:
+    m_minValue: 0
+    m_maxValue: 1.15999997
+    m_curve:
+      m_tangent: true
+      m_min: [0, 0]
+      m_max: [1, 1]
+      m_values:
+        - [-0.100000001, 0]
+        - [0, 0.254000008]
+        - [0.100000001, 0]
+        - [-0.100000001, 0]
+        - [0.201000005, 0.550000012]
+        - [0.100000001, 0]
+        - [-0.356578946, 0.00497372262]
+        - [1, 0.518999994]
+        - [0.100000001, 0]
+  m_deviation:
+    m_minValue: 0
+    m_maxValue: 0
+    m_curve:
+      m_tangent: true
+      m_min: [0, 0]
+      m_max: [1, 1]
+      m_values:
+        - [-0.100000001, 0]
+        - [0, 0.5]
+        - [0.100000001, 0]
+        - [-0.100000001, 0]
+        - [1, 0.5]
+        - [0.100000001, 0]
+m_leafWidth:
+  m_mean:
+    m_minValue: 0
+    m_maxValue: 0.0599999987
+    m_curve:
+      m_tangent: true
+      m_min: [0, 0]
+      m_max: [1, 1]
+      m_values:
+        - [-0.100000001, 0]
+        - [0, 0.5]
+        - [0.100000001, 0]
+        - [-0.100000001, 0]
+        - [1, 0.5]
+        - [0.100000001, 0]
+  m_deviation:
+    m_minValue: 0
+    m_maxValue: 0.0599999987
+    m_curve:
+      m_tangent: true
+      m_min: [0, 0]
+      m_max: [1, 1]
+      m_values:
+        - [-0.100000001, 0]
+        - [0, 0.5]
+        - [0.100000001, 0]
+        - [-0.100000001, 0]
+        - [1, 0.5]
+        - [0.100000001, 0]
+m_widthAlongStem:
+  m_tangent: true
+  m_min: [0, 0]
+  m_max: [1, 1]
+  m_values:
+    - [-0.100000001, 0]
+    - [0, 1]
+    - [0.100000001, 0]
+    - [-0.100000001, 0]
+    - [1, 0.688000023]
+    - [0.100000001, 0]
+m_widthAlongLeaf:
+  m_tangent: true
+  m_min: [0, 0]
+  m_max: [1, 1]
+  m_values:
+    - [-0.100000001, 0]
+    - [0, 0.314999998]
+    - [0.25272727, 0.233409092]
+    - [-0.100000001, 0]
+    - [0.593840241, 0.546797752]
+    - [0.199705258, 0.00114657311]
+    - [-0.205454543, 0.290181994]
+    - [1, 0.0160000008]
+    - [0.100000001, 0]
+m_wavinessAlongLeaf:
+  m_tangent: true
+  m_min: [0, 0]
+  m_max: [1, 1]
+  m_values:
+    - [-0.100000001, 0]
+    - [0, 0]
+    - [0.100000001, 0]
+    - [-0.100000001, 0]
+    - [0.355263144, 0.49473685]
+    - [0.100000001, 0]
+    - [-0.100000001, 0]
+    - [1, 0]
+    - [0.100000001, 0]

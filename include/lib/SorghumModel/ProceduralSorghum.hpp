@@ -72,7 +72,6 @@ public:
   void Serialize(YAML::Emitter &out);
   void Deserialize(const YAML::Node &in);
 };
-class SorghumStateGenerator;
 
 struct SorghumStatePair {
   SorghumState m_left = SorghumState();
