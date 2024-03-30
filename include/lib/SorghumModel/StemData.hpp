@@ -1,9 +1,9 @@
 #pragma once
-#include "ProceduralSorghum.hpp"
+#include "SorghumGrowthDescriptor.hpp"
 #include "Spline.hpp"
 #include <Curve.hpp>
 #include <LeafSegment.hpp>
-#include <SorghumStateGenerator.hpp>
+#include <SorghumDescriptor.hpp>
 #include <Vertex.hpp>
 using namespace EvoEngine;
 namespace EcoSysLab {

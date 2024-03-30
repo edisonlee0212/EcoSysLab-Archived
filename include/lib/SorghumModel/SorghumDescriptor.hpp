@@ -1,11 +1,11 @@
 #pragma once
 
 #include "Plot2D.hpp"
-#include "ProceduralSorghum.hpp"
+#include "SorghumGrowthDescriptor.hpp"
 using namespace EvoEngine;
 namespace EcoSysLab {
 
-class SorghumStateGenerator : public IAsset {
+class SorghumDescriptor : public IAsset {
   unsigned m_version = 0;
 public:
   //Panicle

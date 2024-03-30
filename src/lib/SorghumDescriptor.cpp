@@ -1,6 +1,6 @@
 #include "ProjectManager.hpp"
 #include "SorghumLayer.hpp"
-#include "SorghumStateGenerator.hpp"
+#include "SorghumDescriptor.hpp"
 
 #include "Times.hpp"
 
@@ -16,10 +16,10 @@ void TipMenu(const std::string& content) {
 	}
 }
 
-void SorghumStateGenerator::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
+void SorghumDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	if (ImGui::Button("Instantiate")) {
 		auto sorghum = Application::GetLayer<SorghumLayer>()->CreateSorghum(
-			std::dynamic_pointer_cast<SorghumStateGenerator>(GetSelf()));
+			std::dynamic_pointer_cast<SorghumDescriptor>(GetSelf()));
 		Application::GetActiveScene()->SetEntityName(sorghum, GetSelf()->GetAssetRecord().lock()->GetAssetFileName());
 	}
 	static bool autoSave = true;
@@ -208,7 +208,7 @@ void SorghumStateGenerator::OnInspect(const std::shared_ptr<EditorLayer>& editor
 		}
 	}
 }
-void SorghumStateGenerator::Serialize(YAML::Emitter& out) {
+void SorghumDescriptor::Serialize(YAML::Emitter& out) {
 	out << YAML::Key << "m_version" << YAML::Value << m_version;
 	m_panicleSize.Save("m_panicleSize", out);
 	m_panicleSeedAmount.Save("m_panicleSeedAmount", out);
@@ -237,7 +237,7 @@ void SorghumStateGenerator::Serialize(YAML::Emitter& out) {
 	m_wavinessAlongLeaf.Save("m_wavinessAlongLeaf",
 		out);
 }
-void SorghumStateGenerator::Deserialize(const YAML::Node& in) {
+void SorghumDescriptor::Deserialize(const YAML::Node& in) {
 	if (in["m_version"])
 		m_version = in["m_version"].as<unsigned>();
 
@@ -272,7 +272,7 @@ void SorghumStateGenerator::Deserialize(const YAML::Node& in) {
 	m_wavinessAlongLeaf.Load(
 		"m_wavinessAlongLeaf", in);
 }
-SorghumState SorghumStateGenerator::Generate(unsigned int seed) {
+SorghumState SorghumDescriptor::Generate(unsigned int seed) {
 	srand(seed);
 	SorghumState endState = {};
 
@@ -344,8 +344,8 @@ SorghumState SorghumStateGenerator::Generate(unsigned int seed) {
 
 	return endState;
 }
-unsigned SorghumStateGenerator::GetVersion() const { return m_version; }
-void SorghumStateGenerator::OnCreate() {
+unsigned SorghumDescriptor::GetVersion() const { return m_version; }
+void SorghumDescriptor::OnCreate() {
 	m_panicleSize.m_mean = glm::vec3(0.0, 0.0, 0.0);
 	m_panicleSeedAmount.m_mean = 0;
 	m_panicleSeedRadius.m_mean = 0.002f;

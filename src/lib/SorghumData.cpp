@@ -37,9 +37,9 @@ void SorghumData::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	ImGui::Combo("Mode", &m_mode, SorghumModes, IM_ARRAYSIZE(SorghumModes));
 	switch ((SorghumMode)m_mode) {
 	case SorghumMode::ProceduralSorghum: {
-		editorLayer->DragAndDropButton<ProceduralSorghum>(m_descriptor,
+		editorLayer->DragAndDropButton<SorghumGrowthDescriptor>(m_descriptor,
 			"Procedural Sorghum");
-		const auto descriptor = m_descriptor.Get<ProceduralSorghum>();
+		const auto descriptor = m_descriptor.Get<SorghumGrowthDescriptor>();
 		if (descriptor) {
 			if (ImGui::SliderFloat("Time", &m_currentTime, 0.0f,
 				descriptor->GetCurrentEndTime())) {
@@ -53,9 +53,9 @@ void SorghumData::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 		}
 	} break;
 	case SorghumMode::SorghumStateGenerator: {
-		editorLayer->DragAndDropButton<SorghumStateGenerator>(m_descriptor,
+		editorLayer->DragAndDropButton<SorghumDescriptor>(m_descriptor,
 			"Sorghum State Generator");
-		auto descriptor = m_descriptor.Get<SorghumStateGenerator>();
+		auto descriptor = m_descriptor.Get<SorghumDescriptor>();
 		bool changed = ImGui::DragInt("Seed", &m_seed);
 		if (descriptor) {
 			if (ImGui::Button("Apply") || changed) {
@@ -152,7 +152,7 @@ void SorghumData::FormPlant() {
 	auto scene = GetScene();
 	switch ((SorghumMode)m_mode) {
 	case SorghumMode::ProceduralSorghum: {
-		auto descriptor = m_descriptor.Get<ProceduralSorghum>();
+		auto descriptor = m_descriptor.Get<SorghumGrowthDescriptor>();
 		if (!descriptor)
 			break;
 		m_currentTime =
@@ -161,7 +161,7 @@ void SorghumData::FormPlant() {
 		m_recordedVersion = descriptor->GetVersion();
 	} break;
 	case SorghumMode::SorghumStateGenerator: {
-		auto descriptor = m_descriptor.Get<SorghumStateGenerator>();
+		auto descriptor = m_descriptor.Get<SorghumDescriptor>();
 		if (!descriptor)
 			break;
 		statePair.m_right = statePair.m_left = descriptor->Generate(m_seed);

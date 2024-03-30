@@ -18,7 +18,7 @@ namespace EcoSysLab {
 	struct StemTag : IDataComponent {};
 	struct StemGeometryTag : IDataComponent {};
 	struct SorghumTag : IDataComponent {};
-	class SorghumStateGenerator;
+	class SorghumDescriptor;
 
 
 
@@ -85,9 +85,9 @@ namespace EcoSysLab {
 
 		void OnCreate() override;
 		Entity CreateSorghum();
-		Entity CreateSorghum(const std::shared_ptr<ProceduralSorghum>& descriptor);
+		Entity CreateSorghum(const std::shared_ptr<SorghumGrowthDescriptor>& descriptor);
 		Entity
-			CreateSorghum(const std::shared_ptr<SorghumStateGenerator>& descriptor);
+			CreateSorghum(const std::shared_ptr<SorghumDescriptor>& descriptor);
 		Entity CreateSorghumStem(const Entity& plantEntity);
 		Entity CreateSorghumLeaf(const Entity& plantEntity, int leafIndex);
 		Entity CreateSorghumPanicle(const Entity& plantEntity);

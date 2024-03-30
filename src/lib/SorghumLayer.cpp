@@ -14,6 +14,7 @@
 #include "Times.hpp"
 
 #include "Material.hpp"
+#include "SorghumCoordinates.hpp"
 #ifdef BUILD_WITH_RAYTRACER
 #include "CBTFGroup.hpp"
 #include "DoubleCBTF.hpp"
@@ -40,10 +41,10 @@ void SorghumLayer::OnCreate() {
 	ClassRegistry::RegisterPrivateComponent<StemData>("StemData");
 	ClassRegistry::RegisterPrivateComponent<PanicleData>("PanicleData");
 
-	ClassRegistry::RegisterAsset<ProceduralSorghum>("ProceduralSorghum",
-		{ ".proceduralsorghum" });
-	ClassRegistry::RegisterAsset<SorghumStateGenerator>(
-		"SorghumStateGenerator", { ".sorghumstategenerator" });
+	ClassRegistry::RegisterAsset<SorghumGrowthDescriptor>("SorghumGrowthDescriptor",
+		{ ".sorghumgrowth" });
+	ClassRegistry::RegisterAsset<SorghumDescriptor>(
+		"SorghumDescriptor", { ".sorghum" });
 	ClassRegistry::RegisterAsset<SorghumField>("SorghumField", { ".sorghumfield" });
 #ifdef BUILD_WITH_RAYTRACER
 	ClassRegistry::RegisterAsset<PARSensorGroup>("PARSensorGroup",
@@ -53,22 +54,20 @@ void SorghumLayer::OnCreate() {
 #endif
 	ClassRegistry::RegisterAsset<SkyIlluminance>("SkyIlluminance",
 		{ ".skyilluminance" });
-	ClassRegistry::RegisterAsset<RectangularSorghumField>(
-		"RectangularSorghumField", { ".rectsorghumfield" });
-	ClassRegistry::RegisterAsset<PositionsField>("PositionsField",
-		{ ".possorghumfield" });
+	ClassRegistry::RegisterAsset<SorghumCoordinates>("SorghumCoordinates",
+		{ ".sorghumcoords" });
 
 	if (const auto editorLayer = Application::GetLayer<EditorLayer>()) {
 		auto texture2D = ProjectManager::CreateTemporaryAsset<Texture2D>();
 		texture2D->Import(std::filesystem::absolute(
 			std::filesystem::path("./EcoSysLabResources/Textures") /
-			"ProceduralSorghum.png"));
-		editorLayer->AssetIcons()["ProceduralSorghum"] = texture2D;
+			"SorghumGrowthDescriptor.png"));
+		editorLayer->AssetIcons()["SorghumGrowthDescriptor"] = texture2D;
 		texture2D = ProjectManager::CreateTemporaryAsset<Texture2D>();
 		texture2D->Import(std::filesystem::absolute(
 			std::filesystem::path("./EcoSysLabResources/Textures") /
-			"SorghumStateGenerator.png"));
-		editorLayer->AssetIcons()["SorghumStateGenerator"] = texture2D;
+			"SorghumDescriptor.png"));
+		editorLayer->AssetIcons()["SorghumDescriptor"] = texture2D;
 		texture2D = ProjectManager::CreateTemporaryAsset<Texture2D>();
 		texture2D->Import(std::filesystem::absolute(
 			std::filesystem::path("./EcoSysLabResources/Textures") /
@@ -534,9 +533,9 @@ void SorghumLayer::Update() {
 }
 
 Entity SorghumLayer::CreateSorghum(
-	const std::shared_ptr<ProceduralSorghum>& descriptor) {
+	const std::shared_ptr<SorghumGrowthDescriptor>& descriptor) {
 	if (!descriptor) {
-		EVOENGINE_ERROR("ProceduralSorghum empty!");
+		EVOENGINE_ERROR("SorghumGrowthDescriptor empty!");
 		return {};
 	}
 	auto scene = GetScene();
@@ -551,9 +550,9 @@ Entity SorghumLayer::CreateSorghum(
 	return sorghum;
 }
 Entity SorghumLayer::CreateSorghum(
-	const std::shared_ptr<SorghumStateGenerator>& descriptor) {
+	const std::shared_ptr<SorghumDescriptor>& descriptor) {
 	if (!descriptor) {
-		EVOENGINE_ERROR("SorghumStateGenerator empty!");
+		EVOENGINE_ERROR("SorghumDescriptor empty!");
 		return {};
 	}
 	auto scene = GetScene();
@@ -578,7 +577,7 @@ void SorghumLayer::LateUpdate() {
 				auto sorghumData =
 					scene->GetOrSetPrivateComponent<SorghumData>(plant).lock();
 				auto proceduralSorghum =
-					sorghumData->m_descriptor.Get<ProceduralSorghum>();
+					sorghumData->m_descriptor.Get<SorghumGrowthDescriptor>();
 				if (proceduralSorghum &&
 					proceduralSorghum->GetVersion() != sorghumData->m_recordedVersion) {
 					sorghumData->FormPlant();
@@ -586,7 +585,7 @@ void SorghumLayer::LateUpdate() {
 					continue;
 				}
 				auto sorghumStateGenerator =
-					sorghumData->m_descriptor.Get<SorghumStateGenerator>();
+					sorghumData->m_descriptor.Get<SorghumDescriptor>();
 				if (sorghumStateGenerator && sorghumStateGenerator->GetVersion() !=
 					sorghumData->m_recordedVersion) {
 					sorghumData->FormPlant();

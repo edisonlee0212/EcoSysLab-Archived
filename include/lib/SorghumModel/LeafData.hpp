@@ -1,6 +1,6 @@
 #pragma once
-#include "ProceduralSorghum.hpp"
-#include <SorghumStateGenerator.hpp>
+#include "SorghumGrowthDescriptor.hpp"
+#include <SorghumDescriptor.hpp>
 #include <Curve.hpp>
 #include <LeafSegment.hpp>
 #include <Vertex.hpp>
@@ -9,7 +9,7 @@
 using namespace EvoEngine;
 namespace EcoSysLab {
 class LeafData : public IPrivateComponent {
-  void LeafStateHelper(ProceduralLeafState& left, ProceduralLeafState& right, float& a, const SorghumStatePair &sorghumStatePair, int leafIndex);
+  void LeafStateHelper(SorghumLeafState& left, SorghumLeafState& right, float& a, const SorghumStatePair &sorghumStatePair, int leafIndex);
 
   void GenerateLeafGeometry(const SorghumStatePair & sorghumStatePair, bool isBottomFace = false, float thickness = 0.001f);
 public:

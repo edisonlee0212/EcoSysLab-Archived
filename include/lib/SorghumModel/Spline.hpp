@@ -1,7 +1,7 @@
 #pragma once
 #include <Curve.hpp>
 #include <LeafSegment.hpp>
-#include "ProceduralSorghum.hpp"
+#include "SorghumGrowthDescriptor.hpp"
 using namespace EvoEngine;
 namespace EcoSysLab {
 struct SplineNode {

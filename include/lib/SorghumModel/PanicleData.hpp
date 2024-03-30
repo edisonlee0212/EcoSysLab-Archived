@@ -1,6 +1,6 @@
 #pragma once
-#include "ProceduralSorghum.hpp"
-#include <SorghumStateGenerator.hpp>
+#include "SorghumGrowthDescriptor.hpp"
+#include <SorghumDescriptor.hpp>
 #include <Vertex.hpp>
 
 using namespace EvoEngine;

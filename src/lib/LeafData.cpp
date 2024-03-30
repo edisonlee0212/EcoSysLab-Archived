@@ -5,7 +5,7 @@
 
 #include "Scene.hpp"
 #include "Graphics.hpp"
-#include "ProceduralSorghum.hpp"
+#include "SorghumGrowthDescriptor.hpp"
 #include "SorghumLayer.hpp"
 using namespace EcoSysLab;
 void LeafData::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
@@ -118,7 +118,7 @@ void LeafData::GenerateLeafGeometry(const SorghumStatePair& sorghumStatePair,
 
 	auto scene = GetScene();
 
-	ProceduralLeafState actualLeft, actualRight;
+	SorghumLeafState actualLeft, actualRight;
 	float actualA;
 	LeafStateHelper(actualLeft, actualRight, actualA, sorghumStatePair, m_index);
 
@@ -244,7 +244,7 @@ void LeafData::FormLeaf(const SorghumStatePair& sorghumStatePair, bool skeleton,
 	bool doubleFace) {
 	auto scene = GetScene();
 
-	ProceduralLeafState actualLeft, actualRight;
+	SorghumLeafState actualLeft, actualRight;
 	float actualA;
 	LeafStateHelper(actualLeft, actualRight, actualA, sorghumStatePair, m_index);
 
@@ -397,8 +397,8 @@ void LeafData::FormLeaf(const SorghumStatePair& sorghumStatePair, bool skeleton,
 void LeafData::Copy(const std::shared_ptr<LeafData>& target) {
 	*this = *target;
 }
-void LeafData::LeafStateHelper(ProceduralLeafState& left,
-	ProceduralLeafState& right, float& a,
+void LeafData::LeafStateHelper(SorghumLeafState& left,
+	SorghumLeafState& right, float& a,
 	const SorghumStatePair& sorghumStatePair,
 	int leafIndex) {
 	const int previousLeafSize = sorghumStatePair.m_left.m_leaves.size();

@@ -1,6 +1,6 @@
 #pragma once
-#include "ProceduralSorghum.hpp"
-#include <SorghumStateGenerator.hpp>
+#include "SorghumGrowthDescriptor.hpp"
+#include <SorghumDescriptor.hpp>
 using namespace EvoEngine;
 namespace EcoSysLab {
 enum class SorghumMode{
