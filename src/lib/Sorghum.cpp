@@ -88,7 +88,34 @@ void Sorghum::GenerateGeometryEntities(const SorghumMeshGeneratorSettings& sorgh
 	}
 	if(sorghumMeshGeneratorSettings.m_enableLeaves)
 	{
-		for(const auto& leafState : sorghumState->m_leaves)
+		if (sorghumMeshGeneratorSettings.m_leafSeparated) {
+			for (const auto& leafState : sorghumState->m_leaves)
+			{
+				const auto leafEntity = scene->CreateEntity("Leaf Mesh");
+				const auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(leafEntity).lock();
+				const auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
+				const auto material = ProjectManager::CreateTemporaryAsset<Material>();
+				meshRenderer->m_mesh = mesh;
+				meshRenderer->m_material = material;
+				const auto leafMaterial = sorghumLayer->m_leafMaterial.Get<Material>();
+				//material->SetAlbedoTexture(leafMaterial->GetAlbedoTexture());
+				//material->SetNormalTexture(leafMaterial->GetNormalTexture());
+				//material->SetRoughnessTexture(leafMaterial->GetRoughnessTexture());
+				//material->SetMetallicTexture(leafMaterial->GetMetallicTexture());
+				material->m_materialProperties = leafMaterial->m_materialProperties;
+				std::vector<Vertex> vertices;
+				std::vector<unsigned int> indices;
+				leafState.GenerateGeometry(vertices, indices, false, 0.f);
+				if (sorghumMeshGeneratorSettings.m_bottomFace)
+				{
+					leafState.GenerateGeometry(vertices, indices, true, sorghumMeshGeneratorSettings.m_leafThickness);
+				}
+				VertexAttributes attributes{};
+				attributes.m_texCoord = true;
+				mesh->SetVertices(attributes, vertices, indices);
+				scene->SetParent(leafEntity, owner);
+			}
+		}else
 		{
 			const auto leafEntity = scene->CreateEntity("Leaf Mesh");
 			const auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(leafEntity).lock();
@@ -104,10 +131,13 @@ void Sorghum::GenerateGeometryEntities(const SorghumMeshGeneratorSettings& sorgh
 			material->m_materialProperties = leafMaterial->m_materialProperties;
 			std::vector<Vertex> vertices;
 			std::vector<unsigned int> indices;
-			leafState.GenerateGeometry(vertices, indices, false, 0.f);
-			if(sorghumMeshGeneratorSettings.m_bottomFace)
+			for (const auto& leafState : sorghumState->m_leaves)
 			{
-				leafState.GenerateGeometry(vertices, indices, true, sorghumMeshGeneratorSettings.m_leafThickness);
+				leafState.GenerateGeometry(vertices, indices, false, 0.f);
+				if (sorghumMeshGeneratorSettings.m_bottomFace)
+				{
+					leafState.GenerateGeometry(vertices, indices, true, sorghumMeshGeneratorSettings.m_leafThickness);
+				}
 			}
 			VertexAttributes attributes{};
 			attributes.m_texCoord = true;

@@ -250,6 +250,7 @@ void SorghumLeafState::GenerateGeometry(std::vector<Vertex>& vertices, std::vect
 
 	for (int i = 0; i < segmentSize; i++) {
 		auto& segment = segments.at(i);
+		/*
 		if (i <= segmentSize / 3) {
 			archetype.m_color = glm::vec4(1, 0, 0, 1);
 		}
@@ -258,7 +259,7 @@ void SorghumLeafState::GenerateGeometry(std::vector<Vertex>& vertices, std::vect
 		}
 		else {
 			archetype.m_color = glm::vec4(0, 0, 1, 1);
-		}
+		}*/
 		const float angleStep =
 			segment.m_theta / static_cast<float>(sorghumLayer->m_horizontalSubdivisionStep);
 		const int vertsCount = sorghumLayer->m_horizontalSubdivisionStep * 2 + 1;
