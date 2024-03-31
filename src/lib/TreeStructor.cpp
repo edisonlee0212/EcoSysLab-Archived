@@ -1,4 +1,4 @@
-#include "TreePointCloud.hpp"
+#include "TreeStructor.hpp"
 #include <unordered_set>
 #include "Graphics.hpp"
 #include "EcoSysLabLayer.hpp"
@@ -6,7 +6,7 @@
 #include "rapidcsv.h"
 using namespace EcoSysLab;
 
-void TreePointCloud::ApplyCurve(const OperatorBranch& branch) {
+void TreeStructor::ApplyCurve(const OperatorBranch& branch) {
 	auto& skeleton = m_skeletons[branch.m_skeletonIndex];
 	const auto chainAmount = branch.m_chainNodeHandles.size();
 	for (int i = 0; i < chainAmount; i++) {
@@ -18,7 +18,7 @@ void TreePointCloud::ApplyCurve(const OperatorBranch& branch) {
 	}
 }
 
-void TreePointCloud::BuildVoxelGrid()
+void TreeStructor::BuildVoxelGrid()
 {
 	m_scatterPointsVoxelGrid.Initialize(2.0f * m_connectivityGraphSettings.m_pointPointConnectionDetectionRadius, m_min, m_max);
 	m_allocatedPointsVoxelGrid.Initialize(2.0f * m_connectivityGraphSettings.m_pointPointConnectionDetectionRadius, m_min, m_max);
@@ -62,7 +62,7 @@ void TreePointCloud::BuildVoxelGrid()
 	}
 }
 
-bool TreePointCloud::DirectConnectionCheck(const BezierCurve& parentCurve, const BezierCurve& childCurve, bool reverse)
+bool TreeStructor::DirectConnectionCheck(const BezierCurve& parentCurve, const BezierCurve& childCurve, bool reverse)
 {
 	const auto parentPA = parentCurve.m_p0;
 	const auto parentPB = parentCurve.m_p3;
@@ -103,7 +103,7 @@ bool TreePointCloud::DirectConnectionCheck(const BezierCurve& parentCurve, const
 
 }
 
-void TreePointCloud::FindPoints(const glm::vec3& position, VoxelGrid<std::vector<PointData>>& pointVoxelGrid,
+void TreeStructor::FindPoints(const glm::vec3& position, VoxelGrid<std::vector<PointData>>& pointVoxelGrid,
 	float radius,
 	const std::function<void(const PointData& voxel)>& func)
 {
@@ -115,7 +115,7 @@ void TreePointCloud::FindPoints(const glm::vec3& position, VoxelGrid<std::vector
 		});
 }
 
-bool TreePointCloud::HasPoints(const glm::vec3& position, VoxelGrid<std::vector<PointData>>& pointVoxelGrid,
+bool TreeStructor::HasPoints(const glm::vec3& position, VoxelGrid<std::vector<PointData>>& pointVoxelGrid,
 	float radius)
 {
 	bool retVal = false;
@@ -129,7 +129,7 @@ bool TreePointCloud::HasPoints(const glm::vec3& position, VoxelGrid<std::vector<
 }
 
 void
-TreePointCloud::ForEachBranchEnd(const glm::vec3& position, VoxelGrid<std::vector<BranchEndData>>& branchEndsVoxelGrid,
+TreeStructor::ForEachBranchEnd(const glm::vec3& position, VoxelGrid<std::vector<BranchEndData>>& branchEndsVoxelGrid,
 	float radius,
 	const std::function<void(const BranchEndData& voxel)>& func)
 {
@@ -141,7 +141,7 @@ TreePointCloud::ForEachBranchEnd(const glm::vec3& position, VoxelGrid<std::vecto
 		});
 }
 
-void TreePointCloud::CalculateNodeTransforms(ReconstructionSkeleton& skeleton)
+void TreeStructor::CalculateNodeTransforms(ReconstructionSkeleton& skeleton)
 {
 	skeleton.m_min = glm::vec3(FLT_MAX);
 	skeleton.m_max = glm::vec3(FLT_MIN);
@@ -168,7 +168,7 @@ void TreePointCloud::CalculateNodeTransforms(ReconstructionSkeleton& skeleton)
 	}
 }
 
-void TreePointCloud::BuildConnectionBranch(const BranchHandle processingBranchHandle, NodeHandle& prevNodeHandle)
+void TreeStructor::BuildConnectionBranch(const BranchHandle processingBranchHandle, NodeHandle& prevNodeHandle)
 {
 	m_operatingBranches.emplace_back();
 	auto& processingBranch = m_operatingBranches[processingBranchHandle];
@@ -247,7 +247,7 @@ void TreePointCloud::BuildConnectionBranch(const BranchHandle processingBranchHa
 	processingBranch.m_chainNodeHandles.emplace_back(prevNodeHandle);
 }
 
-void TreePointCloud::Unlink(const BranchHandle childHandle, const BranchHandle parentHandle)
+void TreeStructor::Unlink(const BranchHandle childHandle, const BranchHandle parentHandle)
 {
 	auto& childBranch = m_operatingBranches[childHandle];
 	auto& parentBranch = m_operatingBranches[parentHandle];
@@ -266,7 +266,7 @@ void TreePointCloud::Unlink(const BranchHandle childHandle, const BranchHandle p
 	}
 }
 
-void TreePointCloud::Link(const BranchHandle childHandle, const BranchHandle parentHandle)
+void TreeStructor::Link(const BranchHandle childHandle, const BranchHandle parentHandle)
 {
 	auto& childBranch = m_operatingBranches[childHandle];
 	auto& parentBranch = m_operatingBranches[parentHandle];
@@ -276,7 +276,7 @@ void TreePointCloud::Link(const BranchHandle childHandle, const BranchHandle par
 	parentBranch.m_childHandles.emplace_back(childHandle);
 }
 
-void TreePointCloud::GetSortedBranchList(BranchHandle branchHandle, std::vector<BranchHandle>& list)
+void TreeStructor::GetSortedBranchList(BranchHandle branchHandle, std::vector<BranchHandle>& list)
 {
 	const auto childHandles = m_operatingBranches[branchHandle].m_childHandles;
 	list.push_back(branchHandle);
@@ -286,7 +286,7 @@ void TreePointCloud::GetSortedBranchList(BranchHandle branchHandle, std::vector<
 	}
 }
 
-void TreePointCloud::ConnectBranches(const BranchHandle branchHandle)
+void TreeStructor::ConnectBranches(const BranchHandle branchHandle)
 {
 	const auto childHandles = m_operatingBranches[branchHandle].m_childHandles;
 	for (const auto& childHandle : childHandles) {
@@ -310,7 +310,7 @@ void TreePointCloud::ConnectBranches(const BranchHandle branchHandle)
 	}
 }
 
-void TreePointCloud::ImportGraph(const std::filesystem::path& path, float scaleFactor) {
+void TreeStructor::ImportGraph(const std::filesystem::path& path, float scaleFactor) {
 	if (!std::filesystem::exists(path)) {
 		EVOENGINE_ERROR("Not exist!");
 		return;
@@ -482,7 +482,7 @@ void TreePointCloud::ImportGraph(const std::filesystem::path& path, float scaleF
 	}
 }
 
-void TreePointCloud::ExportForestOBJ(const std::filesystem::path& path)
+void TreeStructor::ExportForestOBJ(const std::filesystem::path& path)
 {
 	if (path.extension() == ".obj") {
 		std::ofstream of;
@@ -603,7 +603,7 @@ void TreePointCloud::ExportForestOBJ(const std::filesystem::path& path)
 	}
 }
 
-void TreePointCloud::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
+void TreeStructor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	static Handle previousHandle = 0;
 	static std::shared_ptr<ParticleInfoList> allocatedPointInfoList;
 	static std::shared_ptr<ParticleInfoList> scatterPointInfoList;
@@ -1056,7 +1056,7 @@ void TreePointCloud::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 	}
 }
 
-void TreePointCloud::EstablishConnectivityGraph() {
+void TreeStructor::EstablishConnectivityGraph() {
 	m_scatterPointsConnections.clear();
 	m_reversedCandidateBranchConnections.clear();
 	m_candidateBranchConnections.clear();
@@ -1431,7 +1431,7 @@ void TreePointCloud::EstablishConnectivityGraph() {
 	*/
 }
 
-void TreePointCloud::BuildSkeletons() {
+void TreeStructor::BuildSkeletons() {
 	m_skeletons.clear();
 	std::unordered_set<BranchHandle> allocatedBranchHandles;
 	m_filteredBranchConnections.clear();
@@ -1811,7 +1811,7 @@ void TreePointCloud::BuildSkeletons() {
 	SpaceColonization();
 }
 
-void TreePointCloud::FormGeometryEntity()
+void TreeStructor::FormGeometryEntity()
 {
 	const auto scene = GetScene();
 	const auto owner = GetOwner();
@@ -1839,7 +1839,7 @@ void TreePointCloud::FormGeometryEntity()
 	}
 }
 
-void TreePointCloud::SpaceColonization()
+void TreeStructor::SpaceColonization()
 {
 	if (m_reconstructionSettings.m_spaceColonizationFactor == 0.0f) return;
 
@@ -2017,7 +2017,7 @@ void TreePointCloud::SpaceColonization()
 	CalculateSkeletonGraphs();
 }
 
-void TreePointCloud::CalculateBranchRootDistance(
+void TreeStructor::CalculateBranchRootDistance(
 	const std::vector<std::pair<glm::vec3, BranchHandle>>& rootBranchHandles)
 {
 	for (const auto& rootBranchHandle : rootBranchHandles)
@@ -2040,7 +2040,7 @@ void TreePointCloud::CalculateBranchRootDistance(
 	}
 }
 
-void TreePointCloud::CalculateSkeletonGraphs()
+void TreeStructor::CalculateSkeletonGraphs()
 {
 	for (auto& skeleton : m_skeletons)
 	{
@@ -2121,7 +2121,7 @@ void TreePointCloud::CalculateSkeletonGraphs()
 	}
 }
 
-void TreePointCloud::ClearSkeletalGraph() const
+void TreeStructor::ClearSkeletalGraph() const
 {
 	const auto scene = GetScene();
 	const auto self = GetOwner();
@@ -2137,7 +2137,7 @@ void TreePointCloud::ClearSkeletalGraph() const
 	}
 }
 
-void TreePointCloud::InitializeSkeletalGraph(const std::shared_ptr<Mesh>& pointMeshSample,
+void TreeStructor::InitializeSkeletalGraph(const std::shared_ptr<Mesh>& pointMeshSample,
                                              const std::shared_ptr<Mesh>& lineMeshSample, const SkeletalGraphSettings& skeletalGraphSettings)
 {
 	const auto scene = GetScene();
@@ -2217,7 +2217,7 @@ void TreePointCloud::InitializeSkeletalGraph(const std::shared_ptr<Mesh>& pointM
 	pointList->SetPendingUpdate();
 }
 
-void TreePointCloud::ClearMeshes() const {
+void TreeStructor::ClearMeshes() const {
 	const auto scene = GetScene();
 	const auto owner = GetOwner();
 	const auto children = scene->GetChildren(owner);
@@ -2230,13 +2230,13 @@ void TreePointCloud::ClearMeshes() const {
 	}
 }
 
-void TreePointCloud::OnCreate()
+void TreeStructor::OnCreate()
 {
 	m_treeMeshGeneratorSettings.m_enableFoliage = true;
 	m_treeMeshGeneratorSettings.m_enableTwig = true;
 }
 
-std::vector<std::shared_ptr<Mesh>> TreePointCloud::GenerateForestBranchMeshes() const
+std::vector<std::shared_ptr<Mesh>> TreeStructor::GenerateForestBranchMeshes() const
 {
 	std::vector<std::shared_ptr<Mesh>> meshes{};
 	for (int i = 0; i < m_skeletons.size(); i++) {
@@ -2260,7 +2260,7 @@ std::vector<std::shared_ptr<Mesh>> TreePointCloud::GenerateForestBranchMeshes() 
 	return meshes;
 }
 
-std::vector<std::shared_ptr<Mesh>> TreePointCloud::GenerateFoliageMeshes()
+std::vector<std::shared_ptr<Mesh>> TreeStructor::GenerateFoliageMeshes()
 {
 	std::vector<std::shared_ptr<Mesh>> meshes{};
 	for (int i = 0; i < m_skeletons.size(); i++) {
@@ -2380,7 +2380,7 @@ void ConnectivityGraphSettings::OnInspect() {
 	ImGui::DragFloat("Point existence check radius", &m_pointCheckRadius, 0.01f, 0.0f, 1.0f);
 }
 
-void TreePointCloud::CloneOperatingBranch(const ReconstructionSettings& reconstructionSettings, OperatorBranch& operatorBranch, const PredictedBranch& target) {
+void TreeStructor::CloneOperatingBranch(const ReconstructionSettings& reconstructionSettings, OperatorBranch& operatorBranch, const PredictedBranch& target) {
 	operatorBranch.m_color = target.m_color;
 	operatorBranch.m_treePartHandle = target.m_treePartHandle;
 	operatorBranch.m_handle = target.m_handle;

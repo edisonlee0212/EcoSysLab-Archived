@@ -192,7 +192,7 @@ namespace EcoSysLab {
 	};
 	typedef Skeleton<ReconstructionSkeletonData, ReconstructionFlowData, ReconstructionNodeData> ReconstructionSkeleton;
 
-	class TreePointCloud : public IPrivateComponent {
+	class TreeStructor : public IPrivateComponent {
 		bool DirectConnectionCheck(const BezierCurve& parentCurve, const BezierCurve& childCurve, bool reverse);
 
 		static void FindPoints(const glm::vec3& position, VoxelGrid<std::vector<PointData>>& pointVoxelGrid, float radius,

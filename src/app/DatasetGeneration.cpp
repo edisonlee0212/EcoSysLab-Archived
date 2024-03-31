@@ -9,7 +9,7 @@
 #include "Soil.hpp"
 #include "SorghumLayer.hpp"
 #include "Tree.hpp"
-#include "TreePointCloud.hpp"
+#include "TreeStructor.hpp"
 #include "WindowLayer.hpp"
 #ifdef BUILD_WITH_RAYTRACER
 #include <CUDAModule.hpp>
@@ -22,13 +22,13 @@
 #include "Physics2DDemo.hpp"
 using namespace EcoSysLab;
 
-void RegisterClasses() {
+void register_classes() {
 	ClassRegistry::RegisterPrivateComponent<ObjectRotator>("ObjectRotator");
 	ClassRegistry::RegisterPrivateComponent<Physics2DDemo>("Physics2DDemo");
 	ClassRegistry::RegisterPrivateComponent<ParticlePhysics2DDemo>("ParticlePhysics2DDemo");
 }
 
-void RegisterLayers(bool enableWindowLayer, bool enableEditorLayer)
+void register_layers(bool enableWindowLayer, bool enableEditorLayer)
 {
 	if (enableWindowLayer) Application::PushLayer<WindowLayer>();
 	if (enableWindowLayer && enableEditorLayer) Application::PushLayer<EditorLayer>();
@@ -40,14 +40,14 @@ void RegisterLayers(bool enableWindowLayer, bool enableEditorLayer)
 #endif
 }
 
-void StartProjectWindowless(const std::filesystem::path& projectPath)
+void start_project_windowless(const std::filesystem::path& projectPath)
 {
 	if (std::filesystem::path(projectPath).extension().string() != ".eveproj") {
 		EVOENGINE_ERROR("Project path doesn't point to a EvoEngine project!");
 		return;
 	}
-	RegisterClasses();
-	RegisterLayers(false, false);
+	register_classes();
+	register_layers(false, false);
 	ApplicationInfo applicationInfo{};
 	applicationInfo.m_projectPath = projectPath;
 	Application::Initialize(applicationInfo);
@@ -59,7 +59,7 @@ int main() {
 	std::filesystem::path project_path = project_folder_path / "test.eveproj";
 	
 
-	StartProjectWindowless(project_path);
+	start_project_windowless(project_path);
 
 	TreeMeshGeneratorSettings tmgs{};
 	tmgs.m_xSubdivision = 0.01f;
@@ -70,9 +70,9 @@ int main() {
 
 	if (false) {
 		std::filesystem::path output_root = "D:\\ForestPointCloudData\\";
-		PointCloudPointSettings pcps{};
-		PointCloudCircularCaptureSettings pcccs{};
-		PointCloudGridCaptureSettings pcgcs{};
+		TreePointCloudPointSettings pcps{};
+		TreePointCloudCircularCaptureSettings pcccs{};
+		TreePointCloudGridCaptureSettings pcgcs{};
 		pcps.m_ballRandRadius = 0.0f;
 		pcps.m_treePartIndex = false;
 		pcps.m_branchIndex = false;

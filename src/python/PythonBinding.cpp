@@ -22,7 +22,7 @@
 #include "HeightField.hpp"
 #include "ObjectRotator.hpp"
 #include "SorghumLayer.hpp"
-#include "TreePointCloud.hpp"
+#include "TreeStructor.hpp"
 #include "Scene.hpp"
 #ifdef BUILD_WITH_RAYTRACER
 #include <CUDAModule.hpp>
@@ -40,29 +40,29 @@ using namespace EcoSysLab;
 
 namespace py = pybind11;
 
-void RegisterClasses() {
+void register_classes() {
 	ClassRegistry::RegisterPrivateComponent<ObjectRotator>("ObjectRotator");
 	ClassRegistry::RegisterPrivateComponent<Physics2DDemo>("Physics2DDemo");
 	ClassRegistry::RegisterPrivateComponent<ParticlePhysics2DDemo>("ParticlePhysics2DDemo");
 }
 
-void PushWindowLayer() {
+void push_window_layer() {
 	Application::PushLayer<WindowLayer>();
 }
-void PushEditorLayer() {
+void push_editor_layer() {
 	Application::PushLayer<EditorLayer>();
 }
-void PushRenderLayer() {
+void push_render_layer() {
 	Application::PushLayer<RenderLayer>();
 }
-void PushEcoSysLabLayer() {
+void push_ecosyslab_layer() {
 	Application::PushLayer<EcoSysLabLayer>();
 }
-void PushSorghumLayer() {
+void push_sorghum_layer() {
 	Application::PushLayer<SorghumLayer>();
 }
 
-void RegisterLayers(bool enableWindowLayer, bool enableEditorLayer)
+void register_layers(bool enableWindowLayer, bool enableEditorLayer)
 {
 	if (enableWindowLayer) Application::PushLayer<WindowLayer>();
 	if (enableWindowLayer && enableEditorLayer) Application::PushLayer<EditorLayer>();
@@ -74,21 +74,21 @@ void RegisterLayers(bool enableWindowLayer, bool enableEditorLayer)
 #endif
 }
 
-void StartProjectWindowless(const std::filesystem::path& projectPath)
+void start_project_windowless(const std::filesystem::path& projectPath)
 {
 	if (std::filesystem::path(projectPath).extension().string() != ".eveproj") {
 		EVOENGINE_ERROR("Project path doesn't point to a EvoEngine project!");
 		return;
 	}
-	RegisterClasses();
-	RegisterLayers(false, false);
+	register_classes();
+	register_layers(false, false);
 	ApplicationInfo applicationInfo{};
 	applicationInfo.m_projectPath = projectPath;
 	Application::Initialize(applicationInfo);
 	Application::Start();
 }
 
-void StartProjectWithEditor(const std::filesystem::path& projectPath)
+void start_project(const std::filesystem::path& projectPath)
 {
 	if (!projectPath.empty()) {
 		if (std::filesystem::path(projectPath).extension().string() != ".eveproj") {
@@ -96,15 +96,15 @@ void StartProjectWithEditor(const std::filesystem::path& projectPath)
 			return;
 		}
 	}
-	RegisterClasses();
-	RegisterLayers(true, true);
+	register_classes();
+	register_layers(true, true);
 	ApplicationInfo applicationInfo{};
 	applicationInfo.m_projectPath = projectPath;
 	Application::Initialize(applicationInfo);
 	Application::Start();
 }
 
-void CaptureScene(
+void scene_capture(
 	const float posX, const float posY, const float posZ,
 	const float angleX, const float angleY, const float angleZ,
 	const int resolutionX, const int resolutionY, bool whiteBackground, const std::string& outputPath)
@@ -167,23 +167,23 @@ void CaptureScene(
 	EVOENGINE_LOG("Exported image to " + outputPath);
 }
 
-Entity ImportTreePointCloud(const std::string& yamlPath)
+Entity import_tree_pointcloud(const std::string& yamlPath)
 {
 	const auto scene = Application::GetActiveScene();
-	const auto retVal = scene->CreateEntity("TreePointCloud");
-	const auto treePointCloud = scene->GetOrSetPrivateComponent<TreePointCloud>(retVal).lock();
+	const auto retVal = scene->CreateEntity("TreeStructor");
+	const auto treePointCloud = scene->GetOrSetPrivateComponent<TreeStructor>(retVal).lock();
 	treePointCloud->ImportGraph(yamlPath);
 	return retVal;
 }
 
-void TreeStructor(const std::string& yamlPath,
+void tree_structor(const std::string& yamlPath,
 	const ConnectivityGraphSettings& connectivityGraphSettings,
 	const ReconstructionSettings& reconstructionSettings,
 	const TreeMeshGeneratorSettings& meshGeneratorSettings,
 	const std::string& meshPath) {
 	const auto scene = Application::GetActiveScene();
 	const auto tempEntity = scene->CreateEntity("Temp");
-	const auto treePointCloud = scene->GetOrSetPrivateComponent<TreePointCloud>(tempEntity).lock();
+	const auto treePointCloud = scene->GetOrSetPrivateComponent<TreeStructor>(tempEntity).lock();
 	
 	treePointCloud->m_connectivityGraphSettings = connectivityGraphSettings;
 	treePointCloud->m_reconstructionSettings = reconstructionSettings;
@@ -195,7 +195,7 @@ void TreeStructor(const std::string& yamlPath,
 	EVOENGINE_LOG("Exported forest as OBJ");
 	scene->DeleteEntity(tempEntity);
 }
-void VisualizeYaml(const std::string& yamlPath,
+void yaml_visualization(const std::string& yamlPath,
 	const ConnectivityGraphSettings& connectivityGraphSettings,
 	const ReconstructionSettings& reconstructionSettings,
 	const TreeMeshGeneratorSettings& meshGeneratorSettings,
@@ -205,7 +205,7 @@ void VisualizeYaml(const std::string& yamlPath,
 {
 	const auto scene = Application::GetActiveScene();
 	const auto tempEntity = scene->CreateEntity("Temp");
-	const auto treePointCloud = scene->GetOrSetPrivateComponent<TreePointCloud>(tempEntity).lock();
+	const auto treePointCloud = scene->GetOrSetPrivateComponent<TreeStructor>(tempEntity).lock();
 	treePointCloud->m_connectivityGraphSettings = connectivityGraphSettings;
 	treePointCloud->m_reconstructionSettings = reconstructionSettings;
 	treePointCloud->m_treeMeshGeneratorSettings = meshGeneratorSettings;
@@ -213,11 +213,11 @@ void VisualizeYaml(const std::string& yamlPath,
 	treePointCloud->EstablishConnectivityGraph();
 	treePointCloud->BuildSkeletons();
 	treePointCloud->FormGeometryEntity();
-	CaptureScene(posX, posY, posZ, angleX, angleY, angleZ, resolutionX, resolutionY, true, outputPath);
+	scene_capture(posX, posY, posZ, angleX, angleY, angleZ, resolutionX, resolutionY, true, outputPath);
 	scene->DeleteEntity(tempEntity);
 }
 
-void VoxelSpaceColonizationTreeData(
+void voxel_space_colonization_tree_data(
 	const float radius,
 	const std::string& binvoxPath,
 	const std::string& treeParametersPath,
@@ -337,7 +337,7 @@ void VoxelSpaceColonizationTreeData(
 	scene->DeleteEntity(tempEntity);
 }
 
-void RBVToObj(
+void rbv_to_obj(
 	const std::string& rbvPath,
 	const std::string& radialBoundingVolumeMeshOutputPath
 )
@@ -347,7 +347,7 @@ void RBVToObj(
 	rbv->ExportAsObj(radialBoundingVolumeMeshOutputPath);
 }
 
-void RBVSpaceColonizationTreeData(
+void rbv_space_colonization_tree_data(
 	const std::string& rbvPath,
 	const std::string& treeParametersPath,
 	const float deltaTime,
@@ -470,32 +470,32 @@ PYBIND11_MODULE(pyecosyslab, m) {
 		.def_readwrite("m_indirectConnectionAngleLimit", &ConnectivityGraphSettings::m_indirectConnectionAngleLimit)
 		;
 
-	py::class_<PointCloudPointSettings>(m, "PointCloudPointSettings")
+	py::class_<TreePointCloudPointSettings>(m, "TreePointCloudPointSettings")
 		.def(py::init<>())
-		.def_readwrite("m_variance", &PointCloudPointSettings::m_variance)
-		.def_readwrite("m_ballRandRadius", &PointCloudPointSettings::m_ballRandRadius)
-		.def_readwrite("m_typeIndex", &PointCloudPointSettings::m_typeIndex)
-		.def_readwrite("m_instanceIndex", &PointCloudPointSettings::m_instanceIndex)
-		.def_readwrite("m_treePartIndex", &PointCloudPointSettings::m_treePartIndex)
-		.def_readwrite("m_lineIndex", &PointCloudPointSettings::m_lineIndex)
-		.def_readwrite("m_branchIndex", &PointCloudPointSettings::m_branchIndex)
-		.def_readwrite("m_internodeIndex", &PointCloudPointSettings::m_internodeIndex)
-		.def_readwrite("m_boundingBoxLimit", &PointCloudPointSettings::m_boundingBoxLimit);
+		.def_readwrite("m_variance", &TreePointCloudPointSettings::m_variance)
+		.def_readwrite("m_ballRandRadius", &TreePointCloudPointSettings::m_ballRandRadius)
+		.def_readwrite("m_typeIndex", &TreePointCloudPointSettings::m_typeIndex)
+		.def_readwrite("m_instanceIndex", &TreePointCloudPointSettings::m_instanceIndex)
+		.def_readwrite("m_treePartIndex", &TreePointCloudPointSettings::m_treePartIndex)
+		.def_readwrite("m_lineIndex", &TreePointCloudPointSettings::m_lineIndex)
+		.def_readwrite("m_branchIndex", &TreePointCloudPointSettings::m_branchIndex)
+		.def_readwrite("m_internodeIndex", &TreePointCloudPointSettings::m_internodeIndex)
+		.def_readwrite("m_boundingBoxLimit", &TreePointCloudPointSettings::m_boundingBoxLimit);
 
 
-	py::class_<PointCloudCircularCaptureSettings>(m, "PointCloudCircularCaptureSettings")
+	py::class_<TreePointCloudCircularCaptureSettings>(m, "PointCloudCircularCaptureSettings")
 		.def(py::init<>())
-		.def_readwrite("m_pitchAngleStart", &PointCloudCircularCaptureSettings::m_pitchAngleStart)
-		.def_readwrite("m_pitchAngleStep", &PointCloudCircularCaptureSettings::m_pitchAngleStep)
-		.def_readwrite("m_pitchAngleEnd", &PointCloudCircularCaptureSettings::m_pitchAngleEnd)
-		.def_readwrite("m_turnAngleStart", &PointCloudCircularCaptureSettings::m_turnAngleStart)
-		.def_readwrite("m_turnAngleStep", &PointCloudCircularCaptureSettings::m_turnAngleStep)
-		.def_readwrite("m_turnAngleEnd", &PointCloudCircularCaptureSettings::m_turnAngleEnd)
-		.def_readwrite("m_distance", &PointCloudCircularCaptureSettings::m_distance)
-		.def_readwrite("m_height", &PointCloudCircularCaptureSettings::m_height)
-		.def_readwrite("m_fov", &PointCloudCircularCaptureSettings::m_fov)
-		.def_readwrite("m_resolution", &PointCloudCircularCaptureSettings::m_resolution)
-		.def_readwrite("m_cameraDepthMax", &PointCloudCircularCaptureSettings::m_cameraDepthMax);
+		.def_readwrite("m_pitchAngleStart", &TreePointCloudCircularCaptureSettings::m_pitchAngleStart)
+		.def_readwrite("m_pitchAngleStep", &TreePointCloudCircularCaptureSettings::m_pitchAngleStep)
+		.def_readwrite("m_pitchAngleEnd", &TreePointCloudCircularCaptureSettings::m_pitchAngleEnd)
+		.def_readwrite("m_turnAngleStart", &TreePointCloudCircularCaptureSettings::m_turnAngleStart)
+		.def_readwrite("m_turnAngleStep", &TreePointCloudCircularCaptureSettings::m_turnAngleStep)
+		.def_readwrite("m_turnAngleEnd", &TreePointCloudCircularCaptureSettings::m_turnAngleEnd)
+		.def_readwrite("m_distance", &TreePointCloudCircularCaptureSettings::m_distance)
+		.def_readwrite("m_height", &TreePointCloudCircularCaptureSettings::m_height)
+		.def_readwrite("m_fov", &TreePointCloudCircularCaptureSettings::m_fov)
+		.def_readwrite("m_resolution", &TreePointCloudCircularCaptureSettings::m_resolution)
+		.def_readwrite("m_cameraDepthMax", &TreePointCloudCircularCaptureSettings::m_cameraDepthMax);
 
 	py::class_<ReconstructionSettings>(m, "ReconstructionSettings")
 		.def(py::init<>())
@@ -600,17 +600,17 @@ PYBIND11_MODULE(pyecosyslab, m) {
 		.def_static("GetOrCreateProject", &ProjectManager::GetOrCreateProject);
 
 	m.doc() = "EcoSysLab"; // optional module docstring
-	m.def("register_classes", &RegisterClasses, "RegisterClasses");
-	m.def("register_layers", &RegisterLayers, "RegisterLayers");
-	m.def("start_project_windowless", &StartProjectWindowless, "StartProjectWindowless");
-	m.def("start_project_with_editor", &StartProjectWithEditor, "StartProjectWithEditor");
+	m.def("register_classes", &register_classes, "register_classes");
+	m.def("register_layers", &register_layers, "register_layers");
+	m.def("start_project_windowless", &start_project_windowless, "StartProjectWindowless");
+	m.def("start_project_with_editor", &start_project, "start_project");
 
-	m.def("tree_structor", &TreeStructor, "TreeStructor");
-	m.def("capture_scene", &CaptureScene, "CaptureScene");
-	m.def("visualize_yaml", &VisualizeYaml, "VisualizeYaml");
-	m.def("voxel_space_colonization_tree_data", &VoxelSpaceColonizationTreeData, "VoxelSpaceColonizationTreeData");
-	m.def("rbv_space_colonization_tree_data", &RBVSpaceColonizationTreeData, "RBVSpaceColonizationTreeData");
-	m.def("rbv_to_obj", &RBVToObj, "RBVToObj");
+	m.def("tree_structor", &tree_structor, "TreeStructor");
+	m.def("scene_capture", &scene_capture, "CaptureScene");
+	m.def("yaml_visualization", &yaml_visualization, "yaml_visualization");
+	m.def("voxel_space_colonization_tree_data", &voxel_space_colonization_tree_data, "voxel_space_colonization_tree_data");
+	m.def("rbv_space_colonization_tree_data", &rbv_space_colonization_tree_data, "rbv_space_colonization_tree_data");
+	m.def("rbv_to_obj", &rbv_to_obj, "rbv_to_obj");
 	
 
 	py::class_<DatasetGenerator>(m, "DatasetGenerator")

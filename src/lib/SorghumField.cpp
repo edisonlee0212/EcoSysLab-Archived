@@ -35,9 +35,6 @@ void SorghumField::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 
 	ImGui::DragInt("Size limit", &m_sizeLimit, 1, 0, 10000);
 	ImGui::DragFloat("Sorghum size", &m_sorghumSize, 0.01f, 0, 10);
-	if (ImGui::Button("Refresh matrices")) {
-		GenerateMatrices();
-	}
 	if (ImGui::Button("Instantiate")) {
 		InstantiateField();
 	}
@@ -77,9 +74,8 @@ void SorghumField::CollectAssetRef(std::vector<AssetRef>& list) {
 		list.push_back(i.first);
 	}
 }
-Entity SorghumField::InstantiateField() {
-	if (m_matrices.empty())
-		GenerateMatrices();
+Entity SorghumField::InstantiateField() const
+{
 	if (m_matrices.empty()) {
 		EVOENGINE_ERROR("No matrices generated!");
 		return {};

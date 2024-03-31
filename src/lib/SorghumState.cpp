@@ -124,6 +124,7 @@ void SorghumStemState::GenerateGeometry(std::vector<Vertex>& vertices, std::vect
 	Vertex archetype{};
 	glm::vec4 m_vertexColor = glm::vec4(0, 0, 0, 1);
 	archetype.m_color = m_vertexColor;
+	
 	const float xStep = 1.0f / sorghumLayer->m_horizontalSubdivisionStep / 2.0f;
 	auto segmentSize = segments.size();
 	const float yStemStep = 0.5f / segmentSize;
@@ -243,7 +244,7 @@ void SorghumLeafState::GenerateGeometry(std::vector<Vertex>& vertices, std::vect
 		index / 9 % 3 * 0.5f, 1.0f);
 #pragma endregion
 	archetype.m_color = vertexColor;
-
+	archetype.m_vertexInfo1 = m_index + 1;
 	const float xStep = 1.0f / static_cast<float>(sorghumLayer->m_horizontalSubdivisionStep) / 2.0f;
 	auto segmentSize = segments.size();
 	const float yLeafStep = 0.5f / segmentSize;

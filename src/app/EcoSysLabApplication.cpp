@@ -24,7 +24,7 @@
 #include "ParticlePhysics2DDemo.hpp"
 #include "Physics2DDemo.hpp"
 #include "SorghumLayer.hpp"
-#include "TreePointCloud.hpp"
+#include "TreeStructor.hpp"
 #include "WindowLayer.hpp"
 #include "TreePointCloudScanner.hpp"
 using namespace EcoSysLab;

@@ -176,8 +176,8 @@ void DatasetGenerator::GenerateTreeMesh(const std::string& treeParametersPath, f
 	Application::Loop();
 }
 
-void DatasetGenerator::GeneratePointCloudForTree(const PointCloudPointSettings& pointSettings,
-                                                 const PointCloudCircularCaptureSettings& captureSettings, const std::string& treeParametersPath, const float deltaTime,
+void DatasetGenerator::GeneratePointCloudForTree(const TreePointCloudPointSettings& pointSettings,
+                                                 const TreePointCloudCircularCaptureSettings& captureSettings, const std::string& treeParametersPath, const float deltaTime,
                                                  const int maxIterations, const int maxTreeNodeCount, const TreeMeshGeneratorSettings& meshGeneratorSettings,
                                                  const std::string& pointCloudOutputPath, bool exportTreeMesh, const std::string& treeMeshOutputPath,
                                                  bool exportJunction, const std::string& treeJunctionOutputPath)
@@ -245,7 +245,7 @@ void DatasetGenerator::GeneratePointCloudForTree(const PointCloudPointSettings& 
 	Application::Loop();
 	const auto scannerEntity = scene->CreateEntity("Scanner");
 	const auto scanner = scene->GetOrSetPrivateComponent<TreePointCloudScanner>(scannerEntity).lock();
-	std::shared_ptr<PointCloudCircularCaptureSettings> pointCloudCircularCaptureSettings = std::make_shared<PointCloudCircularCaptureSettings>(captureSettings);
+	std::shared_ptr<TreePointCloudCircularCaptureSettings> pointCloudCircularCaptureSettings = std::make_shared<TreePointCloudCircularCaptureSettings>(captureSettings);
 	scanner->m_pointSettings = pointSettings;
 	Application::Loop();
 	scanner->Capture(pointCloudOutputPath, pointCloudCircularCaptureSettings);
@@ -258,8 +258,8 @@ void DatasetGenerator::GeneratePointCloudForTree(const PointCloudPointSettings& 
 
 void DatasetGenerator::GeneratePointCloudForForestPatch(
 	const int gridSize, const float gridDistance, const float randomShift, 
-	const PointCloudPointSettings& pointSettings,
-	const PointCloudGridCaptureSettings& captureSettings, const std::string& treeParametersFolderPath,
+	const TreePointCloudPointSettings& pointSettings,
+	const TreePointCloudGridCaptureSettings& captureSettings, const std::string& treeParametersFolderPath,
 	const std::string& forestPatchPath, float deltaTime, int maxIterations, int maxTreeNodeCount,
 	const TreeMeshGeneratorSettings& meshGeneratorSettings, const std::string& pointCloudOutputPath)
 {
@@ -334,7 +334,7 @@ void DatasetGenerator::GeneratePointCloudForForestPatch(
 	Application::Loop();
 	const auto scannerEntity = scene->CreateEntity("Scanner");
 	const auto scanner = scene->GetOrSetPrivateComponent<TreePointCloudScanner>(scannerEntity).lock();
-	const std::shared_ptr<PointCloudGridCaptureSettings> pointCloudGridCaptureSettings = std::make_shared<PointCloudGridCaptureSettings>(captureSettings);
+	const std::shared_ptr<TreePointCloudGridCaptureSettings> pointCloudGridCaptureSettings = std::make_shared<TreePointCloudGridCaptureSettings>(captureSettings);
 	scanner->m_pointSettings = pointSettings;
 	Application::Loop();
 	scanner->Capture(pointCloudOutputPath, pointCloudGridCaptureSettings);

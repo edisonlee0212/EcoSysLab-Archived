@@ -24,7 +24,7 @@
 #include "ParticlePhysics2DDemo.hpp"
 #include "Physics2DDemo.hpp"
 #include "SorghumLayer.hpp"
-#include "TreePointCloud.hpp"
+#include "TreeStructor.hpp"
 #include "WindowLayer.hpp"
 #include "TreePointCloudScanner.hpp"
 using namespace EcoSysLab;
@@ -82,6 +82,7 @@ int main() {
 #ifdef BUILD_WITH_RAYTRACER
 	Application::PushLayer<RayTracerLayer>();
 #endif
+	Application::PushLayer<EcoSysLabLayer>();
 	Application::PushLayer<SorghumLayer>();
 	ClassRegistry::RegisterPrivateComponent<ObjectRotator>("ObjectRotator");
 	ClassRegistry::RegisterPrivateComponent<Physics2DDemo>("Physics2DDemo");

@@ -89,7 +89,7 @@ namespace EcoSysLab
 
 		void CollectAssetRef(std::vector<AssetRef>& list) override;
 
-		Entity GenerateMesh(float xDepth = 1.0f, float zDepth = 1.0f);
+		Entity GenerateMesh(float xDepth = 0.0f, float zDepth = 0.0f);
 
 		void InitializeSoilModel();
 

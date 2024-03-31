@@ -13,6 +13,7 @@
 #include "Material.hpp"
 #include "Sorghum.hpp"
 #include "SorghumCoordinates.hpp"
+#include "SorghumPointCloudScanner.hpp"
 #ifdef BUILD_WITH_RAYTRACER
 #include "CBTFGroup.hpp"
 #include "DoubleCBTF.hpp"
@@ -39,7 +40,7 @@ void SorghumLayer::OnCreate() {
 		{ ".skyilluminance" });
 	ClassRegistry::RegisterAsset<SorghumCoordinates>("SorghumCoordinates",
 		{ ".sorghumcoords" });
-
+	ClassRegistry::RegisterPrivateComponent<SorghumPointCloudScanner>("SorghumPointCloudScanner");
 	if (const auto editorLayer = Application::GetLayer<EditorLayer>()) {
 		auto texture2D = ProjectManager::CreateTemporaryAsset<Texture2D>();
 		texture2D->Import(std::filesystem::absolute(
