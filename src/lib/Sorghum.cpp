@@ -104,7 +104,11 @@ void Sorghum::GenerateGeometryEntities(const SorghumMeshGeneratorSettings& sorgh
 			material->m_materialProperties = leafMaterial->m_materialProperties;
 			std::vector<Vertex> vertices;
 			std::vector<unsigned int> indices;
-			leafState.GenerateGeometry(vertices, indices, sorghumMeshGeneratorSettings.m_bottomFace, sorghumMeshGeneratorSettings.m_leafThickness);
+			leafState.GenerateGeometry(vertices, indices, false, 0.f);
+			if(sorghumMeshGeneratorSettings.m_bottomFace)
+			{
+				leafState.GenerateGeometry(vertices, indices, true, sorghumMeshGeneratorSettings.m_leafThickness);
+			}
 			VertexAttributes attributes{};
 			attributes.m_texCoord = true;
 			mesh->SetVertices(attributes, vertices, indices);
@@ -116,12 +120,15 @@ void Sorghum::GenerateGeometryEntities(const SorghumMeshGeneratorSettings& sorgh
 void Sorghum::Serialize(YAML::Emitter& out)
 {
 	m_sorghumState.Save("m_sorghumState", out);
-
+	m_sorghumDescriptor.Save("m_sorghumDescriptor", out);
+	m_sorghumGrowthDescriptor.Save("m_sorghumGrowthDescriptor", out);
 }
 
 void Sorghum::Deserialize(const YAML::Node& in)
 {
 	m_sorghumState.Load("m_sorghumState", in);
+	m_sorghumGrowthDescriptor.Load("m_sorghumGrowthDescriptor", in);
+	m_sorghumDescriptor.Load("m_sorghumDescriptor", in);
 }
 
 void Sorghum::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
@@ -210,4 +217,6 @@ void Sorghum::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 void Sorghum::CollectAssetRef(std::vector<AssetRef>& list)
 {
 	if (m_sorghumState.Get<SorghumState>()) list.push_back(m_sorghumState);
+	if (m_sorghumGrowthDescriptor.Get<SorghumGrowthDescriptor>()) list.push_back(m_sorghumGrowthDescriptor);
+	if (m_sorghumDescriptor.Get<SorghumDescriptor>()) list.push_back(m_sorghumDescriptor);
 }

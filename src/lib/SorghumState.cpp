@@ -100,8 +100,6 @@ void SorghumStemState::GenerateGeometry(std::vector<Vertex>& vertices, std::vect
 	auto sorghumLayer = Application::GetLayer<SorghumLayer>();
 	if (!sorghumLayer)
 		return;
-	vertices.clear();
-	indices.clear();
 	std::vector<SorghumLeafSegment> segments;
 	for (int i = 1; i < m_nodes.size(); i++) {
 		auto& prev = m_nodes.at(i - 1);
@@ -234,8 +232,6 @@ void SorghumLeafState::GenerateGeometry(std::vector<Vertex>& vertices, std::vect
 	auto sorghumLayer = Application::GetLayer<SorghumLayer>();
 	if (!sorghumLayer)
 		return;
-	vertices.clear();
-	indices.clear();
 	std::vector<SorghumLeafSegment> segments;
 	GenerateSegments(segments);
 

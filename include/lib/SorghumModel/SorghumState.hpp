@@ -9,7 +9,7 @@ namespace EcoSysLab
 		bool m_enablePanicle = true;
 		bool m_enableStem = true;
 		bool m_enableLeaves = true;
-		bool m_bottomFace = false;
+		bool m_bottomFace = true;
 		bool m_leafSeparated = false;
 		float m_leafThickness = 0.001f;
 		bool OnInspect(const std::shared_ptr<EditorLayer>& editorLayer);
