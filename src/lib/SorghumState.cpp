@@ -4,6 +4,21 @@
 #include "SorghumLayer.hpp"
 using namespace EcoSysLab;
 
+bool SorghumMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
+{
+	if(ImGui::TreeNode("Sorghum mesh generator settings"))
+	{
+		ImGui::Checkbox("Panicle", &m_enablePanicle);
+		ImGui::Checkbox("Stem", &m_enableStem);
+		ImGui::Checkbox("Leaves", &m_enableLeaves);
+		ImGui::Checkbox("Bottom Face", &m_bottomFace);
+		ImGui::Checkbox("Leaf separated", &m_leafSeparated);
+		ImGui::DragFloat("Leaf thickness", &m_leafThickness, 0.0001f);
+		ImGui::TreePop();
+	}
+	return false;
+}
+
 bool SorghumPanicleState::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
 	return false;
@@ -151,6 +166,37 @@ void SorghumStemState::GenerateGeometry(std::vector<Vertex>& vertices, std::vect
 	}
 }
 
+void SorghumLeafState::GenerateSegments(std::vector<SorghumLeafSegment>& segments, bool bottomFace) const
+{
+	for (int i = 1; i < m_nodes.size(); i++) {
+		auto& prev = m_nodes.at(i - 1);
+		auto& curr = m_nodes.at(i);
+		if (bottomFace && prev.m_type != SorghumSplineType::Leaf) {
+			continue;
+		}
+		float distance = glm::distance(prev.m_position, curr.m_position);
+		BezierCurve curve = BezierCurve(
+			prev.m_position, prev.m_position + distance / 5.0f * prev.m_axis,
+			curr.m_position - distance / 5.0f * curr.m_axis, curr.m_position);
+
+		for (float div = (i == 1 ? 0.0f : 0.5f); div <= 1.0f; div += 0.5f) {
+
+			auto front = glm::normalize(prev.m_axis * (1.0f - div) + curr.m_axis * div);
+			auto left = m_left;//glm::normalize(prev.m_left * (1.0f - div) + curr.m_left * div);//?
+			auto up = glm::normalize(glm::cross(left, front));
+			auto waviness = glm::mix(prev.m_waviness, curr.m_waviness, div);
+			float leftPeriod = 0.f;
+			float rightPeriod = 0.f;
+			segments.emplace_back(curve.GetPoint(div), up, front,
+				glm::mix(prev.m_stemWidth, curr.m_stemWidth, div),
+				glm::mix(prev.m_leafWidth, curr.m_leafWidth, div),
+				glm::mix(prev.m_theta, curr.m_theta, div),
+				curr.m_type, glm::sin(leftPeriod) * waviness,
+				glm::sin(rightPeriod) * waviness);
+		}
+	}
+}
+
 bool SorghumLeafState::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
 	return false;
@@ -191,44 +237,18 @@ void SorghumLeafState::GenerateGeometry(std::vector<Vertex>& vertices, std::vect
 	vertices.clear();
 	indices.clear();
 	std::vector<SorghumLeafSegment> segments;
-	for (int i = 1; i < m_nodes.size(); i++) {
-		auto& prev = m_nodes.at(i - 1);
-		auto& curr = m_nodes.at(i);
-		if (bottomFace && prev.m_type != SorghumSplineType::Leaf) {
-			continue;
-		}
-		float distance = glm::distance(prev.m_position, curr.m_position);
-		BezierCurve curve = BezierCurve(
-			prev.m_position, prev.m_position + distance / 5.0f * prev.m_axis,
-			curr.m_position - distance / 5.0f * curr.m_axis, curr.m_position);
-
-		for (float div = (i == 1 ? 0.0f : 0.5f); div <= 1.0f; div += 0.5f) {
-
-			auto front = prev.m_axis * (1.0f - div) + curr.m_axis * div;
-			auto left = prev.m_left * (1.0f - div) + curr.m_left * div;
-			auto up = glm::normalize(glm::cross(left, front));
-			auto waviness = glm::mix(prev.m_waviness, curr.m_waviness, div);
-			float leftPeriod = 0.f;
-			float rightPeriod = 0.f;
-			segments.emplace_back(curve.GetPoint(div), up, front,
-				glm::mix(prev.m_stemWidth, curr.m_stemWidth, div),
-				glm::mix(prev.m_leafWidth, curr.m_leafWidth, div),
-				glm::mix(prev.m_theta, curr.m_theta, div),
-				curr.m_type, glm::sin(leftPeriod) * waviness,
-				glm::sin(rightPeriod) * waviness);
-		}
-	}
+	GenerateSegments(segments);
 
 	const int vertexIndex = vertices.size();
 	Vertex archetype{};
 #pragma region Semantic mask color
 	auto index = m_index + 1;
-	glm::vec4 vertexColor = glm::vec4((index % 3) * 0.5f, ((index / 3) % 3) * 0.5f,
-		((index / 9) % 3) * 0.5f, 1.0f);
+	const auto vertexColor = glm::vec4(index % 3 * 0.5f, index / 3 % 3 * 0.5f,
+		index / 9 % 3 * 0.5f, 1.0f);
 #pragma endregion
 	archetype.m_color = vertexColor;
 
-	const float xStep = 1.0f / sorghumLayer->m_horizontalSubdivisionStep / 2.0f;
+	const float xStep = 1.0f / static_cast<float>(sorghumLayer->m_horizontalSubdivisionStep) / 2.0f;
 	auto segmentSize = segments.size();
 	const float yLeafStep = 0.5f / segmentSize;
 
@@ -244,7 +264,7 @@ void SorghumLeafState::GenerateGeometry(std::vector<Vertex>& vertices, std::vect
 			archetype.m_color = glm::vec4(0, 0, 1, 1);
 		}
 		const float angleStep =
-			segment.m_theta / sorghumLayer->m_horizontalSubdivisionStep;
+			segment.m_theta / static_cast<float>(sorghumLayer->m_horizontalSubdivisionStep);
 		const int vertsCount = sorghumLayer->m_horizontalSubdivisionStep * 2 + 1;
 		for (int j = 0; j < vertsCount; j++) {
 			auto position = segment.GetPoint(

@@ -1,4 +1,4 @@
-#include "Spline.hpp"
+#include "SorghumSplineNode.hpp"
 #include "SorghumLayer.hpp"
 
 using namespace EcoSysLab;

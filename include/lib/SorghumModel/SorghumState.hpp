@@ -1,15 +1,18 @@
 #pragma once
-#include "Spline.hpp"
+#include "SorghumLeafSegment.hpp"
+#include "SorghumSplineNode.hpp"
 using namespace EvoEngine;
 namespace EcoSysLab
 {
 	struct SorghumMeshGeneratorSettings
 	{
 		bool m_enablePanicle = true;
-		bool m_enableStem = false;
+		bool m_enableStem = true;
 		bool m_enableLeaves = true;
 		bool m_bottomFace = false;
+		bool m_leafSeparated = false;
 		float m_leafThickness = 0.001f;
+		bool OnInspect(const std::shared_ptr<EditorLayer>& editorLayer);
 	};
 
 	class SorghumPanicleState
@@ -29,7 +32,7 @@ namespace EcoSysLab
 	class SorghumStemState
 	{
 	public:
-		// The "normal" direction of the leaf.
+		glm::vec3 m_left;
 		std::vector<SorghumSplineNode> m_nodes;
 		bool OnInspect(const std::shared_ptr<EditorLayer>& editorLayer);
 		void Serialize(YAML::Emitter& out) const;
@@ -42,12 +45,13 @@ namespace EcoSysLab
 	class SorghumLeafState
 	{
 	public:
+		glm::vec3 m_left;
 		int m_index = 0;
 		std::vector<SorghumSplineNode> m_nodes;
 
 		glm::vec2 m_wavinessPeriodStart = glm::vec2(0.0f);
 		glm::vec2 m_wavinessFrequency = glm::vec2(0.0f);
-
+		void GenerateSegments(std::vector<SorghumLeafSegment>& segments, bool bottomFace = false) const;
 		bool OnInspect(const std::shared_ptr<EditorLayer>& editorLayer);
 		void Serialize(YAML::Emitter& out) const;
 		void Deserialize(const YAML::Node& in);

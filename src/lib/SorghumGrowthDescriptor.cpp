@@ -12,23 +12,24 @@
 #include "Times.hpp"
 using namespace EcoSysLab;
 
-void SorghumGrowthDescriptor::Apply(const std::shared_ptr<SorghumGrowthStage>& targetState, float time) const
+void SorghumGrowthDescriptor::Apply(const std::shared_ptr<SorghumState>& targetState, float time) const
 {
-	if (m_sorghumStates.empty())
+	if (m_sorghumGrowthStages.empty())
 		return;
 	auto actualTime = glm::clamp(time, 0.0f, 99999.0f);
-	float previousTime = m_sorghumStates.begin()->first;
-	
+	float previousTime = m_sorghumGrowthStages.begin()->first;
+	SorghumGrowthStagePair statePair;
+	statePair.m_left = m_sorghumGrowthStages.begin()->second;
+	statePair.m_right = statePair.m_left;
+
 	if (actualTime < previousTime) {
 		// Get from zero state to first state.
-		*targetState = m_sorghumStates.begin()->second;
+		statePair.Apply(targetState, 0.0f);
 		return;
 	}
-	SorghumGrowthStagePair statePair;
-	statePair.m_left = m_sorghumStates.begin()->second;
-	statePair.m_right = statePair.m_left;
+	
 	float a = 0.0f;
-	for (auto it = (++m_sorghumStates.begin()); it != m_sorghumStates.end();
+	for (auto it = (++m_sorghumGrowthStages.begin()); it != m_sorghumGrowthStages.end();
 		++it) {
 		statePair.m_left = statePair.m_right;
 		statePair.m_right = it->second;
@@ -39,14 +40,12 @@ void SorghumGrowthDescriptor::Apply(const std::shared_ptr<SorghumGrowthStage>& t
 		}
 		previousTime = it->first;
 	}
-	statePair.Apply(*targetState, a);
+	statePair.Apply(targetState, a);
 }
-void SorghumGrowthStagePair::Apply(SorghumGrowthStage& targetState, float a)
+void SorghumGrowthStagePair::Apply(const std::shared_ptr<SorghumState>& targetState, float a)
 {
-
 	auto leafSize = GetLeafSize(a);
-	targetState.m_leaves.resize(leafSize);
-
+	//targetState.m_leaves.resize(leafSize);
 }
 
 int SorghumGrowthStagePair::GetLeafSize(float a) const {
@@ -133,14 +132,14 @@ glm::vec3 SorghumGrowthStagePair::GetStemPoint(float a, float point) const {
 	return glm::mix(leftPoint, rightPoint, a);
 }
 
-void SorghumGrowthStagePair::ApplyPanicle(SorghumGrowthStage& targetState, const float a) const
+void SorghumGrowthStagePair::ApplyPanicle(const std::shared_ptr<SorghumState>& targetState, const float a) const
 {
-	targetState.m_panicle.m_panicleSize = glm::mix(m_left.m_panicle.m_panicleSize, m_right.m_panicle.m_panicleSize, a);
-	targetState.m_panicle.m_seedAmount = glm::mix(m_left.m_panicle.m_seedAmount, m_right.m_panicle.m_seedAmount, a);
-	targetState.m_panicle.m_seedRadius = glm::mix(m_left.m_panicle.m_seedRadius, m_right.m_panicle.m_seedRadius, a);
+	//targetState.m_panicle.m_panicleSize = glm::mix(m_left.m_panicle.m_panicleSize, m_right.m_panicle.m_panicleSize, a);
+	//targetState.m_panicle.m_seedAmount = glm::mix(m_left.m_panicle.m_seedAmount, m_right.m_panicle.m_seedAmount, a);
+	//targetState.m_panicle.m_seedRadius = glm::mix(m_left.m_panicle.m_seedRadius, m_right.m_panicle.m_seedRadius, a);
 }
 
-void SorghumGrowthStagePair::ApplyStem(SorghumGrowthStage& targetState, float a) const
+void SorghumGrowthStagePair::ApplyStem(const std::shared_ptr<SorghumState>& targetState, float a) const
 {
 
 }

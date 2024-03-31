@@ -1,5 +1,5 @@
 #pragma once
-#include "Spline.hpp"
+#include "SorghumSplineNode.hpp"
 
 using namespace EvoEngine;
 namespace EcoSysLab {

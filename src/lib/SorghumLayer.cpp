@@ -144,10 +144,7 @@ void SorghumLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 #endif
 		ImGui::Separator();
 		ImGui::Checkbox("Auto regenerate sorghum", &m_autoRefreshSorghums);
-		ImGui::Checkbox("Bottom Face", &m_bottomFace);
-		
-		ImGui::Checkbox("Leaf Separated", &m_separated);
-		ImGui::Checkbox("Include stem", &m_includeStem);
+		m_sorghumMeshGeneratorSettings.OnInspect(editorLayer);
 		if (ImGui::Button("Generate mesh for all sorghums")) {
 			GenerateMeshForAllSorghums();
 		}

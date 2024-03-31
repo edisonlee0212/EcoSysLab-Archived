@@ -5,6 +5,8 @@
 using namespace EvoEngine;
 namespace EcoSysLab
 {
+	class SorghumState;
+
 	class SorghumGrowthStagePair {
 		
 	public:
@@ -15,13 +17,13 @@ namespace EcoSysLab
 		[[nodiscard]] float GetStemLength(float a) const;
 		[[nodiscard]] glm::vec3 GetStemDirection(float a) const;
 		[[nodiscard]] glm::vec3 GetStemPoint(float a, float point) const;
-		void ApplyPanicle(SorghumGrowthStage& targetState, float a) const;
-		void ApplyStem(SorghumGrowthStage& targetState, float a) const;
-		void Apply(SorghumGrowthStage& targetState, float a);
+		void ApplyPanicle(const std::shared_ptr<SorghumState>& targetState, float a) const;
+		void ApplyStem(const std::shared_ptr<SorghumState>& targetState, float a) const;
+		void Apply(const std::shared_ptr<SorghumState>& targetState, float a);
 	};
 
 	class SorghumGrowthDescriptor : public IAsset {
-		std::vector<std::pair<float, SorghumGrowthStage>> m_sorghumStates;
+		std::vector<std::pair<float, SorghumGrowthStage>> m_sorghumGrowthStages;
 
 	public:
 		int m_mode = static_cast<int>(StateMode::Default);
@@ -31,7 +33,7 @@ namespace EcoSysLab
 		void Add(float time, const SorghumGrowthStage& state);
 		void ResetTime(float previousTime, float newTime);
 		void Remove(float time);
-		void Apply(const std::shared_ptr<SorghumGrowthStage>& targetState, float time) const;
+		void Apply(const std::shared_ptr<SorghumState>& targetState, float time) const;
 		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 		void Serialize(YAML::Emitter& out) override;
 		void Deserialize(const YAML::Node& in) override;

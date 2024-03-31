@@ -62,22 +62,22 @@ void SorghumGrowthDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& edit
 	}
 	if (ImGui::TreeNodeEx("States", ImGuiTreeNodeFlags_DefaultOpen)) {
 		float startTime =
-			m_sorghumStates.empty() ? 1.0f : m_sorghumStates.begin()->first;
+			m_sorghumGrowthStages.empty() ? 1.0f : m_sorghumGrowthStages.begin()->first;
 		if (startTime >= 0.01f) {
 			if (ImGui::Button("New start state")) {
 				changed = true;
-				if (m_sorghumStates.empty()) {
+				if (m_sorghumGrowthStages.empty()) {
 					Add(0.0f, SorghumGrowthStage());
 				}
 				else {
-					Add(0.0f, m_sorghumStates.begin()->second);
+					Add(0.0f, m_sorghumGrowthStages.begin()->second);
 				}
 			}
 		}
 
 		float previousTime = 0.0f;
 		int stateIndex = 1;
-		for (auto it = m_sorghumStates.begin(); it != m_sorghumStates.end(); ++it) {
+		for (auto it = m_sorghumGrowthStages.begin(); it != m_sorghumGrowthStages.end(); ++it) {
 			if (ImGui::TreeNodeEx(
 				("State " + std::to_string(stateIndex) + ": " + it->second.m_name)
 				.c_str())) {
@@ -115,7 +115,7 @@ void SorghumGrowthDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& edit
 						changed = true;
 					}
 				}
-				if (it != (--m_sorghumStates.end())) {
+				if (it != (--m_sorghumGrowthStages.end())) {
 					auto tit = it;
 					++tit;
 					float nextTime = tit->first - 0.01f;
@@ -144,16 +144,16 @@ void SorghumGrowthDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& edit
 			stateIndex++;
 		}
 
-		if (!m_sorghumStates.empty()) {
+		if (!m_sorghumGrowthStages.empty()) {
 			if (ImGui::Button("New end state")) {
 				changed = true;
-				float endTime = (--m_sorghumStates.end())->first;
-				Add(endTime + 0.01f, (--m_sorghumStates.end())->second);
+				float endTime = (--m_sorghumGrowthStages.end())->first;
+				Add(endTime + 0.01f, (--m_sorghumGrowthStages.end())->second);
 			}
 			ImGui::SameLine();
 			if (ImGui::Button("Remove end state")) {
 				changed = true;
-				m_sorghumStates.erase(--m_sorghumStates.end());
+				m_sorghumGrowthStages.erase(--m_sorghumGrowthStages.end());
 			}
 		}
 		ImGui::TreePop();
@@ -168,7 +168,7 @@ void SorghumGrowthDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& edit
 		auto temp = descriptor.Get<SorghumDescriptor>();
 		if (temp) {
 			float endTime =
-				m_sorghumStates.empty() ? -0.01f : (--m_sorghumStates.end())->first;
+				m_sorghumGrowthStages.empty() ? -0.01f : (--m_sorghumGrowthStages.end())->first;
 			SorghumGrowthStage stage;
 			temp->Apply(stage, seed);
 			Add(endTime + 0.01f, stage);
@@ -187,8 +187,8 @@ void SorghumGrowthDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& edit
 void SorghumGrowthDescriptor::Serialize(YAML::Emitter& out) {
 	out << YAML::Key << "m_mode" << YAML::Value << m_mode;
 	out << YAML::Key << "m_version" << YAML::Value << m_version;
-	out << YAML::Key << "m_sorghumStates" << YAML::Value << YAML::BeginSeq;
-	for (auto& state : m_sorghumStates) {
+	out << YAML::Key << "m_sorghumGrowthStages" << YAML::Value << YAML::BeginSeq;
+	for (auto& state : m_sorghumGrowthStages) {
 		out << YAML::BeginMap;
 		out << YAML::Key << "Time" << YAML::Value << state.first;
 		state.second.Serialize(out);
@@ -203,11 +203,11 @@ void SorghumGrowthDescriptor::Deserialize(const YAML::Node& in) {
 	if (in["m_version"])
 		m_version = in["m_version"].as<unsigned>();
 	if (in["m_sorghumStates"]) {
-		m_sorghumStates.clear();
+		m_sorghumGrowthStages.clear();
 		for (const auto& inState : in["m_sorghumStates"]) {
 			SorghumGrowthStage state;
 			state.Deserialize(inState);
-			m_sorghumStates.emplace_back(inState["Time"].as<float>(), state);
+			m_sorghumGrowthStages.emplace_back(inState["Time"].as<float>(), state);
 		}
 	}
 }
@@ -218,22 +218,22 @@ Entity SorghumGrowthDescriptor::CreateEntity(float time)
 }
 
 void SorghumGrowthDescriptor::Add(float time, const SorghumGrowthStage& state) {
-	for (auto it = m_sorghumStates.begin(); it != m_sorghumStates.end(); ++it) {
+	for (auto it = m_sorghumGrowthStages.begin(); it != m_sorghumGrowthStages.end(); ++it) {
 		if (it->first == time) {
 			it->second = state;
 			return;
 		}
 		if (it->first > time) {
-			m_sorghumStates.insert(it, { time, state });
+			m_sorghumGrowthStages.insert(it, { time, state });
 			return;
 		}
 	}
-	m_sorghumStates.emplace_back(time, state);
-	m_sorghumStates.back().second.m_name = "Unnamed";
+	m_sorghumGrowthStages.emplace_back(time, state);
+	m_sorghumGrowthStages.back().second.m_name = "Unnamed";
 }
 
 void SorghumGrowthDescriptor::ResetTime(float previousTime, float newTime) {
-	for (auto& i : m_sorghumStates) {
+	for (auto& i : m_sorghumGrowthStages) {
 		if (i.first == previousTime) {
 			i.first = newTime;
 			return;
@@ -242,24 +242,24 @@ void SorghumGrowthDescriptor::ResetTime(float previousTime, float newTime) {
 	EVOENGINE_ERROR("Failed: State at previous time not exists!");
 }
 void SorghumGrowthDescriptor::Remove(float time) {
-	for (auto it = m_sorghumStates.begin(); it != m_sorghumStates.end(); ++it) {
+	for (auto it = m_sorghumGrowthStages.begin(); it != m_sorghumGrowthStages.end(); ++it) {
 		if (it->first == time) {
-			m_sorghumStates.erase(it);
+			m_sorghumGrowthStages.erase(it);
 			return;
 		}
 	}
 }
 float SorghumGrowthDescriptor::GetCurrentStartTime() const {
-	if (m_sorghumStates.empty()) {
+	if (m_sorghumGrowthStages.empty()) {
 		return 0.0f;
 	}
-	return m_sorghumStates.begin()->first;
+	return m_sorghumGrowthStages.begin()->first;
 }
 float SorghumGrowthDescriptor::GetCurrentEndTime() const {
-	if (m_sorghumStates.empty()) {
+	if (m_sorghumGrowthStages.empty()) {
 		return 0.0f;
 	}
-	return (--m_sorghumStates.end())->first;
+	return (--m_sorghumGrowthStages.end())->first;
 }
 
 
@@ -279,7 +279,7 @@ bool SorghumGrowthDescriptor::ImportCSV(const std::filesystem::path& filePath) {
 		std::vector<float> panicleLength = doc.GetColumn<float>("Panicle Height");
 		std::vector<float> panicleWidth = doc.GetColumn<float>("Panicle Width");
 
-		m_sorghumStates.clear();
+		m_sorghumGrowthStages.clear();
 
 		std::map<std::string, std::pair<int, int>> columnIndices;
 		int currentIndex = 0;
@@ -293,10 +293,10 @@ bool SorghumGrowthDescriptor::ImportCSV(const std::filesystem::path& filePath) {
 				columnIndices[timePoint].second = leafIndex[row];
 		}
 
-		m_sorghumStates.resize(currentIndex);
+		m_sorghumGrowthStages.resize(currentIndex);
 		for (int row = 0; row < timePoints.size(); row++) {
 			int stateIndex = columnIndices.at(timePoints[row]).first;
-			auto& statePair = m_sorghumStates[stateIndex];
+			auto& statePair = m_sorghumGrowthStages[stateIndex];
 			auto& state = statePair.second;
 			if (state.m_leaves.empty()) {
 				statePair.first = stateIndex;
@@ -325,7 +325,7 @@ bool SorghumGrowthDescriptor::ImportCSV(const std::filesystem::path& filePath) {
 			}
 		}
 
-		for (auto& sorghumState : m_sorghumStates) {
+		for (auto& sorghumState : m_sorghumGrowthStages) {
 			sorghumState.second.m_saved = false;
 			int leafIndex = 0;
 			for (auto& leafState : sorghumState.second.m_leaves) {

@@ -5,9 +5,7 @@
 #include "ILayer.hpp"
 #include "PointCloud.hpp"
 #include "SorghumField.hpp"
-#include <Curve.hpp>
-#include <SorghumLeafSegment.hpp>
-#include <Spline.hpp>
+#include "SorghumState.hpp"
 using namespace EvoEngine;
 namespace EcoSysLab {
 	class SorghumLayer : public ILayer {
@@ -32,10 +30,7 @@ namespace EcoSysLab {
 
 #pragma endregion
 #endif
-
-		bool m_bottomFace = true;
-		bool m_separated = false;
-		bool m_includeStem = true;
+		SorghumMeshGeneratorSettings m_sorghumMeshGeneratorSettings;
 		bool m_autoRefreshSorghums = true;
 		
 		AssetRef m_panicleMaterial;
