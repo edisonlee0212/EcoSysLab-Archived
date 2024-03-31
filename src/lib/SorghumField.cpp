@@ -4,7 +4,7 @@
 
 #include "SorghumField.hpp"
 
-#include "SorghumData.hpp"
+#include "Sorghum.hpp"
 #include "SorghumLayer.hpp"
 #include "SorghumDescriptor.hpp"
 #include "Scene.hpp"
@@ -93,17 +93,13 @@ Entity SorghumField::InstantiateField() {
 		// Create sorghums here.
 		int size = 0;
 		for (auto& newSorghum : fieldAsset->m_matrices) {
-			Entity sorghumEntity = sorghumLayer->CreateSorghum();
+			const auto sorghumDescriptor = newSorghum.first.Get<SorghumDescriptor>();
+			if (!sorghumDescriptor) continue;
+			Entity sorghumEntity = sorghumDescriptor->CreateEntity(size);
 			auto sorghumTransform = scene->GetDataComponent<Transform>(sorghumEntity);
 			sorghumTransform.m_value = newSorghum.second;
 			sorghumTransform.SetScale(glm::vec3(m_sorghumSize));
 			scene->SetDataComponent(sorghumEntity, sorghumTransform);
-			auto sorghumData =
-				scene->GetOrSetPrivateComponent<SorghumData>(sorghumEntity).lock();
-			sorghumData->m_mode = (int)SorghumMode::SorghumDescriptor;
-			sorghumData->m_descriptor = newSorghum.first;
-			sorghumData->m_seed = size;
-			sorghumData->SetTime(1.0f);
 			scene->SetParent(sorghumEntity, field);
 			size++;
 			if (size >= m_sizeLimit)

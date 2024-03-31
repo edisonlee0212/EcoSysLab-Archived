@@ -66,7 +66,7 @@ void DatasetGenerator::GenerateTreeTrunkMesh(const std::string& treeParametersPa
 			break;
 		}
 	}
-	tree->InitializeMeshRenderer(meshGeneratorSettings);
+	tree->GenerateGeometryEntities(meshGeneratorSettings);
 	Application::Loop();
 	tree->ExportTrunkOBJ(treeTrunkOutputPath, meshGeneratorSettings);
 	tree->ExportOBJ(treeMeshOutputPath, meshGeneratorSettings);
@@ -168,7 +168,7 @@ void DatasetGenerator::GenerateTreeMesh(const std::string& treeParametersPath, f
 			break;
 		}
 	}
-	tree->InitializeMeshRenderer(meshGeneratorSettings);
+	tree->GenerateGeometryEntities(meshGeneratorSettings);
 	Application::Loop();
 	tree->ExportOBJ(treeMeshOutputPath, meshGeneratorSettings);
 	Application::Loop();
@@ -237,7 +237,7 @@ void DatasetGenerator::GeneratePointCloudForTree(const PointCloudPointSettings& 
 			break;
 		}
 	}
-	tree->InitializeMeshRenderer(meshGeneratorSettings);
+	tree->GenerateGeometryEntities(meshGeneratorSettings);
 	Application::Loop();
 	if (exportTreeMesh) {
 		tree->ExportOBJ(treeMeshOutputPath, meshGeneratorSettings);

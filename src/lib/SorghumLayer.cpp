@@ -5,15 +5,13 @@
 #endif
 #include "ClassRegistry.hpp"
 #include "Graphics.hpp"
-#include "LeafData.hpp"
-#include "PanicleData.hpp"
 #include "SkyIlluminance.hpp"
-#include "StemData.hpp"
-#include <SorghumData.hpp>
+#include "SorghumDescriptor.hpp"
 #include <SorghumLayer.hpp>
 #include "Times.hpp"
 
 #include "Material.hpp"
+#include "Sorghum.hpp"
 #include "SorghumCoordinates.hpp"
 #ifdef BUILD_WITH_RAYTRACER
 #include "CBTFGroup.hpp"
@@ -24,23 +22,8 @@ using namespace EcoSysLab;
 using namespace EvoEngine;
 
 void SorghumLayer::OnCreate() {
-	ClassRegistry::RegisterDataComponent<PanicleTag>("PanicleTag");
-	ClassRegistry::RegisterDataComponent<StemTag>("StemTag");
-	ClassRegistry::RegisterDataComponent<LeafTag>("LeafTag");
-	ClassRegistry::RegisterDataComponent<SorghumTag>("SorghumTag");
-
-	ClassRegistry::RegisterDataComponent<LeafGeometryTag>("LeafGeometryTag");
-	ClassRegistry::RegisterDataComponent<LeafBottomFaceGeometryTag>(
-		"LeafBottomFaceGeometryTag");
-	ClassRegistry::RegisterDataComponent<PanicleGeometryTag>(
-		"PanicleGeometryTag");
-	ClassRegistry::RegisterDataComponent<StemGeometryTag>("StemGeometryTag");
-
-	ClassRegistry::RegisterPrivateComponent<SorghumData>("SorghumData");
-	ClassRegistry::RegisterPrivateComponent<LeafData>("LeafData");
-	ClassRegistry::RegisterPrivateComponent<StemData>("StemData");
-	ClassRegistry::RegisterPrivateComponent<PanicleData>("PanicleData");
-
+	ClassRegistry::RegisterAsset<SorghumState>("SorghumState", { ".sorghumstate" });
+	ClassRegistry::RegisterPrivateComponent<Sorghum>("Sorghum");
 	ClassRegistry::RegisterAsset<SorghumGrowthDescriptor>("SorghumGrowthDescriptor",
 		{ ".sorghumgrowth" });
 	ClassRegistry::RegisterAsset<SorghumDescriptor>(
@@ -79,42 +62,7 @@ void SorghumLayer::OnCreate() {
 			"GeneralDataPipeline.png"));
 		editorLayer->AssetIcons()["GeneralDataCapture"] = texture2D;
 	}
-	m_leafArchetype = Entities::CreateEntityArchetype("Leaf", LeafTag());
-	m_leafQuery = Entities::CreateEntityQuery();
-	m_leafQuery.SetAllFilters(LeafTag());
-
-	m_stemArchetype = Entities::CreateEntityArchetype("Stem", StemTag());
-	m_stemQuery = Entities::CreateEntityQuery();
-	m_stemQuery.SetAllFilters(StemTag());
-
-	m_panicleArchetype = Entities::CreateEntityArchetype("Panicle", PanicleTag());
-	m_panicleQuery = Entities::CreateEntityQuery();
-	m_panicleQuery.SetAllFilters(PanicleTag());
-
-	m_sorghumArchetype = Entities::CreateEntityArchetype("Sorghum", SorghumTag());
-	m_sorghumQuery = Entities::CreateEntityQuery();
-	m_sorghumQuery.SetAllFilters(SorghumTag());
-
-	m_leafGeometryArchetype =
-		Entities::CreateEntityArchetype("Leaf Geometry", LeafGeometryTag());
-	m_leafGeometryQuery = Entities::CreateEntityQuery();
-	m_leafGeometryQuery.SetAllFilters(LeafGeometryTag());
-
-	m_leafBottomFaceGeometryArchetype = Entities::CreateEntityArchetype(
-		"Leaf Bottom Face Geometry", LeafBottomFaceGeometryTag());
-	m_leafBottomFaceGeometryQuery = Entities::CreateEntityQuery();
-	m_leafBottomFaceGeometryQuery.SetAllFilters(LeafBottomFaceGeometryTag());
-
-	m_panicleGeometryArchetype =
-		Entities::CreateEntityArchetype("Panicle Geometry", PanicleGeometryTag());
-	m_panicleGeometryQuery = Entities::CreateEntityQuery();
-	m_panicleGeometryQuery.SetAllFilters(PanicleGeometryTag());
-
-	m_stemGeometryArchetype =
-		Entities::CreateEntityArchetype("Stem Geometry", StemGeometryTag());
-	m_stemGeometryQuery = Entities::CreateEntityQuery();
-	m_stemGeometryQuery.SetAllFilters(StemGeometryTag());
-
+	
 	if (!m_leafAlbedoTexture.Get<Texture2D>()) {
 		auto albedo = ProjectManager::CreateTemporaryAsset<Texture2D>();
 		albedo->Import(std::filesystem::absolute(
@@ -164,71 +112,11 @@ void SorghumLayer::OnCreate() {
 	}
 }
 
-Entity SorghumLayer::CreateSorghum() {
-	Transform transform;
-	transform.SetScale(glm::vec3(1.0f));
-	auto scene = GetScene();
-	const Entity entity = scene->CreateEntity(m_sorghumArchetype, "Sorghum");
-	auto sorghumData =
-		scene->GetOrSetPrivateComponent<SorghumData>(entity).lock();
-	scene->SetEntityName(entity, "Sorghum");
-#ifdef BUILD_WITH_RAYTRACER
-	scene->GetOrSetPrivateComponent<TriangleIlluminationEstimator>(entity);
-#endif
-	return entity;
-}
-Entity SorghumLayer::CreateSorghumStem(const Entity& plantEntity) {
-	auto scene = GetScene();
-	const Entity entity = scene->CreateEntity(m_stemArchetype);
-	scene->SetEntityName(entity, "Stem");
-	scene->SetParent(entity, plantEntity);
-	Transform transform;
-	transform.SetScale(glm::vec3(1.0f));
-	auto stemData = scene->GetOrSetPrivateComponent<StemData>(entity).lock();
-
-	StemTag tag;
-	scene->SetDataComponent(entity, tag);
-	scene->SetDataComponent(entity, transform);
-	return entity;
-}
-Entity SorghumLayer::CreateSorghumLeaf(const Entity& plantEntity,
-	int leafIndex) {
-	auto scene = GetScene();
-	const Entity entity = scene->CreateEntity(m_leafArchetype);
-	scene->SetEntityName(entity, "Leaf");
-	scene->SetParent(entity, plantEntity);
-	Transform transform;
-	transform.SetScale(glm::vec3(1.0f));
-	auto leafData = scene->GetOrSetPrivateComponent<LeafData>(entity).lock();
-	leafData->m_index = leafIndex;
-	scene->SetDataComponent(entity, transform);
-	return entity;
-}
-Entity SorghumLayer::CreateSorghumPanicle(const Entity& plantEntity) {
-	auto scene = GetScene();
-	const Entity entity = scene->CreateEntity(m_panicleArchetype);
-	scene->SetEntityName(entity, "Panicle");
-	scene->SetParent(entity, plantEntity);
-	Transform transform;
-	transform.SetScale(glm::vec3(1.0f));
-	auto panicleData =
-		scene->GetOrSetPrivateComponent<PanicleData>(entity).lock();
-	scene->SetDataComponent(entity, transform);
-	return entity;
-}
 
 void SorghumLayer::GenerateMeshForAllSorghums() {
 	std::vector<Entity> plants;
 	auto scene = GetScene();
-	scene->GetEntityArray(m_sorghumQuery, plants);
-	for (auto& plant : plants) {
-		if (scene->HasPrivateComponent<SorghumData>(plant)) {
-			auto sorghumData =
-				scene->GetOrSetPrivateComponent<SorghumData>(plant).lock();
-			sorghumData->FormPlant();
-			sorghumData->ApplyGeometry();
-		}
-	}
+	
 }
 
 void SorghumLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
@@ -287,9 +175,7 @@ void SorghumLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 			if (tex) {
 				m_leafMaterial.Get<Material>()->SetAlbedoTexture(m_leafAlbedoTexture.Get<Texture2D>());
 				std::vector<Entity> sorghumEntities;
-				scene->GetEntityArray(m_sorghumQuery, sorghumEntities, false);
-				scene->GetEntityArray(m_leafQuery, sorghumEntities, false);
-				scene->GetEntityArray(m_stemQuery, sorghumEntities, false);
+
 				for (const auto& i : sorghumEntities) {
 					if (scene->HasPrivateComponent<MeshRenderer>(i)) {
 						scene->GetOrSetPrivateComponent<MeshRenderer>(i)
@@ -307,9 +193,7 @@ void SorghumLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 			if (tex) {
 				m_leafMaterial.Get<Material>()->SetNormalTexture(m_leafNormalTexture.Get<Texture2D>());
 				std::vector<Entity> sorghumEntities;
-				scene->GetEntityArray(m_sorghumQuery, sorghumEntities, false);
-				scene->GetEntityArray(m_leafQuery, sorghumEntities, false);
-				scene->GetEntityArray(m_stemQuery, sorghumEntities, false);
+
 				for (const auto& i : sorghumEntities) {
 					if (scene->HasPrivateComponent<MeshRenderer>(i)) {
 						scene->GetOrSetPrivateComponent<MeshRenderer>(i)
@@ -451,7 +335,6 @@ void SorghumLayer::ExportAllSorghumsModel(const std::string& filename) {
 		auto scene = GetScene();
 		unsigned startIndex = 1;
 		std::vector<Entity> sorghums;
-		scene->GetEntityArray(m_sorghumQuery, sorghums);
 		for (const auto& plant : sorghums) {
 			ExportSorghum(plant, of, startIndex);
 		}
@@ -532,66 +415,12 @@ void SorghumLayer::Update() {
 #endif
 }
 
-Entity SorghumLayer::CreateSorghum(
-	const std::shared_ptr<SorghumGrowthDescriptor>& descriptor) {
-	if (!descriptor) {
-		EVOENGINE_ERROR("SorghumGrowthDescriptor empty!");
-		return {};
-	}
-	auto scene = GetScene();
-	Entity sorghum = CreateSorghum();
-	auto sorghumData =
-		scene->GetOrSetPrivateComponent<SorghumData>(sorghum).lock();
-	sorghumData->m_mode = (int)SorghumMode::SorghumGrowthDescriptor;
-	sorghumData->m_descriptor = descriptor;
-	sorghumData->SetTime(1.0f);
-	sorghumData->FormPlant();
-	sorghumData->ApplyGeometry();
-	return sorghum;
-}
-Entity SorghumLayer::CreateSorghum(
-	const std::shared_ptr<SorghumDescriptor>& descriptor) {
-	if (!descriptor) {
-		EVOENGINE_ERROR("SorghumDescriptor empty!");
-		return {};
-	}
-	auto scene = GetScene();
-	Entity sorghum = CreateSorghum();
-	auto sorghumData =
-		scene->GetOrSetPrivateComponent<SorghumData>(sorghum).lock();
-	sorghumData->m_mode = (int)SorghumMode::SorghumDescriptor;
-	sorghumData->m_descriptor = descriptor;
-	sorghumData->SetTime(1.0f);
-	sorghumData->FormPlant();
-	sorghumData->ApplyGeometry();
-	return sorghum;
-}
-
 void SorghumLayer::LateUpdate() {
 	if (m_autoRefreshSorghums) {
 		auto scene = GetScene();
 		std::vector<Entity> plants;
-		scene->GetEntityArray(m_sorghumQuery, plants);
 		for (auto& plant : plants) {
-			if (scene->HasPrivateComponent<SorghumData>(plant)) {
-				auto sorghumData =
-					scene->GetOrSetPrivateComponent<SorghumData>(plant).lock();
-				auto proceduralSorghum =
-					sorghumData->m_descriptor.Get<SorghumGrowthDescriptor>();
-				if (proceduralSorghum &&
-					proceduralSorghum->GetVersion() != sorghumData->m_recordedVersion) {
-					sorghumData->FormPlant();
-					sorghumData->ApplyGeometry();
-					continue;
-				}
-				auto sorghumStateGenerator =
-					sorghumData->m_descriptor.Get<SorghumDescriptor>();
-				if (sorghumStateGenerator && sorghumStateGenerator->GetVersion() !=
-					sorghumData->m_recordedVersion) {
-					sorghumData->FormPlant();
-					sorghumData->ApplyGeometry();
-				}
-			}
+			
 		}
 	}
 }

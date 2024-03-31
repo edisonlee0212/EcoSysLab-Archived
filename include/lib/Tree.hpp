@@ -73,8 +73,8 @@ namespace EcoSysLab {
 
 		void OnCreate() override;
 
-		void InitializeMeshRenderer(const TreeMeshGeneratorSettings& meshGeneratorSettings, int iteration = -1);
-		void ClearMeshRenderer() const;
+		void GenerateGeometryEntities(const TreeMeshGeneratorSettings& meshGeneratorSettings, int iteration = -1);
+		void ClearGeometryEntities() const;
 		void ClearTwigsStrandRenderer() const;
 
 

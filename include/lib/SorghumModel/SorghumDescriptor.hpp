@@ -2,11 +2,11 @@
 
 #include "Plot2D.hpp"
 #include "SorghumGrowthDescriptor.hpp"
+#include "SorghumState.hpp"
 using namespace EvoEngine;
 namespace EcoSysLab {
 
 class SorghumDescriptor : public IAsset {
-  unsigned m_version = 0;
 public:
   //Panicle
   SingleDistribution<glm::vec2> m_panicleSize;
@@ -34,13 +34,15 @@ public:
 
   //Finer control
   Curve2D m_widthAlongStem;
+  Curve2D m_curlingAlongLeaf;
   Curve2D m_widthAlongLeaf;
   Curve2D m_wavinessAlongLeaf;
-  [[nodiscard]] unsigned GetVersion() const;
   void OnCreate() override;
   void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
   void Serialize(YAML::Emitter &out) override;
   void Deserialize(const YAML::Node &in) override;
-  [[nodiscard]] SorghumState Generate(unsigned int seed);
+
+  [[nodiscard]] Entity CreateEntity(unsigned int seed = 0) const;
+  void Apply(const std::shared_ptr<SorghumState>& targetState, unsigned int seed = 0) const;
 };
 } // namespace EcoSysLab

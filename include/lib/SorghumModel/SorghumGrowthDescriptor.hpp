@@ -1,39 +1,41 @@
 #pragma once
 #include "Plot2D.hpp"
-#include "SorghumState.hpp"
+#include "SorghumGrowthStage.hpp"
 #include "Curve.hpp"
 using namespace EvoEngine;
 namespace EcoSysLab
 {
-	struct SorghumStatePair {
-		SorghumState m_left = SorghumState();
-		SorghumState m_right = SorghumState();
-		float m_a = 1.0f;
-		int m_mode = (int)StateMode::Default;
-		[[nodiscard]] int GetLeafSize() const;
-		[[nodiscard]] float GetStemLength() const;
-		[[nodiscard]] glm::vec3 GetStemDirection() const;
-		[[nodiscard]] glm::vec3 GetStemPoint(float point) const;
+	class SorghumGrowthStagePair {
+		
+	public:
+		SorghumGrowthStage m_left = SorghumGrowthStage();
+		SorghumGrowthStage m_right = SorghumGrowthStage();
+		int m_mode = static_cast<int>(StateMode::Default);
+		[[nodiscard]] int GetLeafSize(float a) const;
+		[[nodiscard]] float GetStemLength(float a) const;
+		[[nodiscard]] glm::vec3 GetStemDirection(float a) const;
+		[[nodiscard]] glm::vec3 GetStemPoint(float a, float point) const;
+		void ApplyPanicle(SorghumGrowthStage& targetState, float a) const;
+		void ApplyStem(SorghumGrowthStage& targetState, float a) const;
+		void Apply(SorghumGrowthStage& targetState, float a);
 	};
 
 	class SorghumGrowthDescriptor : public IAsset {
-		unsigned m_version = 0;
-		friend class SorghumData;
-		std::vector<std::pair<float, SorghumState>> m_sorghumStates;
+		std::vector<std::pair<float, SorghumGrowthStage>> m_sorghumStates;
 
 	public:
-		int m_mode = (int)StateMode::Default;
+		int m_mode = static_cast<int>(StateMode::Default);
 		[[nodiscard]] bool ImportCSV(const std::filesystem::path& filePath);
-		[[nodiscard]] unsigned GetVersion() const;
 		[[nodiscard]] float GetCurrentStartTime() const;
 		[[nodiscard]] float GetCurrentEndTime() const;
-		void Add(float time, const SorghumState& state);
+		void Add(float time, const SorghumGrowthStage& state);
 		void ResetTime(float previousTime, float newTime);
 		void Remove(float time);
-		[[nodiscard]] SorghumStatePair Get(float time) const;
-
+		void Apply(const std::shared_ptr<SorghumGrowthStage>& targetState, float time) const;
 		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 		void Serialize(YAML::Emitter& out) override;
 		void Deserialize(const YAML::Node& in) override;
+
+		[[nodiscard]] Entity CreateEntity(float time = 0.0f);
 	};
 }

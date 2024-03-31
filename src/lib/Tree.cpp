@@ -353,11 +353,11 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 				iterations = glm::clamp(iterations, 0, m_treeModel.CurrentIteration());
 				m_meshGeneratorSettings.OnInspect(editorLayer);
 				if (ImGui::Button("Generate Mesh")) {
-					InitializeMeshRenderer(m_meshGeneratorSettings, iterations);
+					GenerateGeometryEntities(m_meshGeneratorSettings, iterations);
 				}
 				if (ImGui::Button("Clear Mesh"))
 				{
-					ClearMeshRenderer();
+					ClearGeometryEntities();
 				}
 				ImGui::TreePop();
 			}
@@ -586,7 +586,7 @@ void Tree::Update()
 {
 	if (m_temporalProgression) {
 		if (m_temporalProgressionIteration <= m_treeModel.CurrentIteration()) {
-			InitializeMeshRenderer(m_meshGeneratorSettings, m_temporalProgressionIteration);
+			GenerateGeometryEntities(m_meshGeneratorSettings, m_temporalProgressionIteration);
 			m_temporalProgressionIteration++;
 		}
 		else
@@ -1495,7 +1495,7 @@ void Tree::Deserialize(const YAML::Node& in)
 	}
 }
 
-void Tree::ClearMeshRenderer() const
+void Tree::ClearGeometryEntities() const
 {
 	const auto scene = GetScene();
 	const auto self = GetOwner();
@@ -1546,12 +1546,12 @@ void Tree::ClearStrandRenderer() const
 	}
 }
 
-void Tree::InitializeMeshRenderer(const TreeMeshGeneratorSettings& meshGeneratorSettings, int iteration) {
+void Tree::GenerateGeometryEntities(const TreeMeshGeneratorSettings& meshGeneratorSettings, int iteration) {
 	const auto scene = GetScene();
 	const auto self = GetOwner();
 	const auto children = scene->GetChildren(self);
 	auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
-	ClearMeshRenderer();
+	ClearGeometryEntities();
 	ClearTwigsStrandRenderer();
 	auto actualIteration = iteration;
 	if (actualIteration < 0 || actualIteration > m_treeModel.CurrentIteration())

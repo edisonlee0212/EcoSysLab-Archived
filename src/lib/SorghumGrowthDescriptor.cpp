@@ -2,7 +2,6 @@
 // Created by lllll on 1/8/2022.
 //
 #include "SorghumGrowthDescriptor.hpp"
-#include "SorghumData.hpp"
 #include "SorghumLayer.hpp"
 #include "SorghumDescriptor.hpp"
 #include "Utilities.hpp"
@@ -13,42 +12,140 @@
 #include "Times.hpp"
 using namespace EcoSysLab;
 
-SorghumStatePair SorghumGrowthDescriptor::Get(float time) const {
-	SorghumStatePair retVal;
-	retVal.m_mode = m_mode;
+void SorghumGrowthDescriptor::Apply(const std::shared_ptr<SorghumGrowthStage>& targetState, float time) const
+{
 	if (m_sorghumStates.empty())
-		return retVal;
+		return;
 	auto actualTime = glm::clamp(time, 0.0f, 99999.0f);
 	float previousTime = m_sorghumStates.begin()->first;
-	SorghumState previousState = m_sorghumStates.begin()->second;
+	
 	if (actualTime < previousTime) {
 		// Get from zero state to first state.
-		retVal.m_left = SorghumState();
-		retVal.m_left.m_leaves.clear();
-		retVal.m_left.m_stem.m_length = 0;
-		retVal.m_right = m_sorghumStates.begin()->second;
-		retVal.m_a = actualTime / previousTime;
-		return retVal;
+		*targetState = m_sorghumStates.begin()->second;
+		return;
 	}
+	SorghumGrowthStagePair statePair;
+	statePair.m_left = m_sorghumStates.begin()->second;
+	statePair.m_right = statePair.m_left;
+	float a = 0.0f;
 	for (auto it = (++m_sorghumStates.begin()); it != m_sorghumStates.end();
-		it++) {
-		if (it->first > actualTime) {
-			retVal.m_left = previousState;
-			retVal.m_right = it->second;
-			retVal.m_a = (actualTime - previousTime) / (it->first - previousTime);
-			return retVal;
+		++it) {
+		statePair.m_left = statePair.m_right;
+		statePair.m_right = it->second;
+		if(it->first > actualTime)
+		{
+			a = (actualTime - previousTime) / (it->first - previousTime);
+			break;
 		}
 		previousTime = it->first;
-		previousState = it->second;
 	}
+	statePair.Apply(*targetState, a);
+}
+void SorghumGrowthStagePair::Apply(SorghumGrowthStage& targetState, float a)
+{
 
-	retVal.m_left = (--m_sorghumStates.end())->second;
-	retVal.m_right = (--m_sorghumStates.end())->second;
-	retVal.m_a = 1.0f;
-	return retVal;
+	auto leafSize = GetLeafSize(a);
+	targetState.m_leaves.resize(leafSize);
+
 }
 
-bool SorghumPanicleState::OnInspect() {
+int SorghumGrowthStagePair::GetLeafSize(float a) const {
+	if (m_left.m_leaves.size() <= m_right.m_leaves.size()) {
+		return m_left.m_leaves.size() +
+			glm::ceil((m_right.m_leaves.size() - m_left.m_leaves.size()) * a);
+	}
+	return m_left.m_leaves.size();
+}
+float SorghumGrowthStagePair::GetStemLength(float a) const {
+	float leftLength, rightLength;
+	switch ((StateMode)m_mode) {
+	case StateMode::Default:
+		leftLength = m_left.m_stem.m_length;
+		rightLength = m_right.m_stem.m_length;
+		break;
+	case StateMode::CubicBezier:
+		if (!m_left.m_stem.m_spline.m_curves.empty()) {
+			leftLength = glm::distance(m_left.m_stem.m_spline.m_curves.front().m_p0,
+				m_left.m_stem.m_spline.m_curves.back().m_p3);
+		}
+		else {
+			leftLength = 0.0f;
+		}
+		if (!m_right.m_stem.m_spline.m_curves.empty()) {
+			rightLength = glm::distance(m_right.m_stem.m_spline.m_curves.front().m_p0,
+				m_right.m_stem.m_spline.m_curves.back().m_p3);
+		}
+		else {
+			rightLength = 0.0f;
+		}
+		break;
+	}
+	return glm::mix(leftLength, rightLength, a);
+}
+glm::vec3 SorghumGrowthStagePair::GetStemDirection(float a) const {
+	glm::vec3 leftDir, rightDir;
+	switch ((StateMode)m_mode) {
+	case StateMode::Default:
+		leftDir = glm::normalize(m_left.m_stem.m_direction);
+		rightDir = glm::normalize(m_right.m_stem.m_direction);
+		break;
+	case StateMode::CubicBezier:
+		if (!m_left.m_stem.m_spline.m_curves.empty()) {
+			leftDir = glm::vec3(0.0f, 1.0f, 0.0f);
+		}
+		else {
+			leftDir = glm::vec3(0.0f, 1.0f, 0.0f);
+		}
+		if (!m_right.m_stem.m_spline.m_curves.empty()) {
+			rightDir = glm::vec3(0.0f, 1.0f, 0.0f);
+		}
+		else {
+			rightDir = glm::vec3(0.0f, 1.0f, 0.0f);
+		}
+		break;
+	}
+
+	return glm::normalize(glm::mix(leftDir, rightDir, a));
+}
+glm::vec3 SorghumGrowthStagePair::GetStemPoint(float a, float point) const {
+	glm::vec3 leftPoint, rightPoint;
+	switch ((StateMode)m_mode) {
+	case StateMode::Default:
+		leftPoint = glm::normalize(m_left.m_stem.m_direction) * point * m_left.m_stem.m_length;
+		rightPoint = glm::normalize(m_right.m_stem.m_direction) * point * m_right.m_stem.m_length;
+		break;
+	case StateMode::CubicBezier:
+		if (!m_left.m_stem.m_spline.m_curves.empty()) {
+			leftPoint = m_left.m_stem.m_spline.EvaluatePointFromCurves(point);
+		}
+		else {
+			leftPoint = glm::vec3(0.0f, 0.0f, 0.0f);
+		}
+		if (!m_right.m_stem.m_spline.m_curves.empty()) {
+			rightPoint = m_right.m_stem.m_spline.EvaluatePointFromCurves(point);
+		}
+		else {
+			rightPoint = glm::vec3(0.0f, 0.0f, 0.0f);
+		}
+		break;
+	}
+
+	return glm::mix(leftPoint, rightPoint, a);
+}
+
+void SorghumGrowthStagePair::ApplyPanicle(SorghumGrowthStage& targetState, const float a) const
+{
+	targetState.m_panicle.m_panicleSize = glm::mix(m_left.m_panicle.m_panicleSize, m_right.m_panicle.m_panicleSize, a);
+	targetState.m_panicle.m_seedAmount = glm::mix(m_left.m_panicle.m_seedAmount, m_right.m_panicle.m_seedAmount, a);
+	targetState.m_panicle.m_seedRadius = glm::mix(m_left.m_panicle.m_seedRadius, m_right.m_panicle.m_seedRadius, a);
+}
+
+void SorghumGrowthStagePair::ApplyStem(SorghumGrowthStage& targetState, float a) const
+{
+
+}
+
+bool SorghumPanicleGrowthStage::OnInspect() {
 	bool changed = false;
 	if (ImGui::DragFloat("Panicle width", &m_panicleSize.x, 0.001f)) {
 		changed = true;
@@ -64,13 +161,13 @@ bool SorghumPanicleState::OnInspect() {
 		m_saved = false;
 	return changed;
 }
-void SorghumPanicleState::Serialize(YAML::Emitter& out) {
+void SorghumPanicleGrowthStage::Serialize(YAML::Emitter& out) {
 	out << YAML::Key << "m_panicleSize" << YAML::Value << m_panicleSize;
 	out << YAML::Key << "m_seedAmount" << YAML::Value << m_seedAmount;
 	out << YAML::Key << "m_seedRadius" << YAML::Value << m_seedRadius;
 	m_saved = true;
 }
-void SorghumPanicleState::Deserialize(const YAML::Node& in) {
+void SorghumPanicleGrowthStage::Deserialize(const YAML::Node& in) {
 	if (in["m_panicleSize"])
 		m_panicleSize = in["m_panicleSize"].as<glm::vec3>();
 	if (in["m_seedAmount"])
@@ -80,13 +177,13 @@ void SorghumPanicleState::Deserialize(const YAML::Node& in) {
 	m_saved = true;
 }
 
-SorghumPanicleState::SorghumPanicleState() {
+SorghumPanicleGrowthStage::SorghumPanicleGrowthStage() {
 	m_panicleSize = glm::vec3(0, 0, 0);
 	m_seedAmount = 0;
 	m_seedRadius = 0.002f;
 	m_saved = false;
 }
-void SorghumStemState::Serialize(YAML::Emitter& out) {
+void SorghumStemGrowthStage::Serialize(YAML::Emitter& out) {
 	out << YAML::Key << "m_direction" << YAML::Value << m_direction;
 	m_widthAlongStem.Save("m_widthAlongStem", out);
 	out << YAML::Key << "m_length" << YAML::Value << m_length;
@@ -96,7 +193,7 @@ void SorghumStemState::Serialize(YAML::Emitter& out) {
 
 	m_saved = true;
 }
-void SorghumStemState::Deserialize(const YAML::Node& in) {
+void SorghumStemGrowthStage::Deserialize(const YAML::Node& in) {
 	if (in["m_spline"]) {
 		m_spline.Deserialize(in["m_spline"]);
 	}
@@ -109,7 +206,7 @@ void SorghumStemState::Deserialize(const YAML::Node& in) {
 
 	m_saved = true;
 }
-bool SorghumStemState::OnInspect(int mode) {
+bool SorghumStemGrowthStage::OnInspect(int mode) {
 	bool changed = false;
 	switch ((StateMode)mode) {
 	case StateMode::Default:
@@ -131,7 +228,7 @@ bool SorghumStemState::OnInspect(int mode) {
 		m_saved = false;
 	return changed;
 }
-bool SorghumLeafState::OnInspect(int mode) {
+bool SorghumLeafGrowthStage::OnInspect(int mode) {
 	bool changed = false;
 	if (ImGui::Checkbox("Dead", &m_dead)) {
 		changed = true;
@@ -201,7 +298,7 @@ bool SorghumLeafState::OnInspect(int mode) {
 		m_saved = false;
 	return changed;
 }
-void SorghumLeafState::Serialize(YAML::Emitter& out) {
+void SorghumLeafGrowthStage::Serialize(YAML::Emitter& out) {
 
 	out << YAML::Key << "m_dead" << YAML::Value << m_dead;
 	out << YAML::Key << "m_index" << YAML::Value << m_index;
@@ -226,7 +323,7 @@ void SorghumLeafState::Serialize(YAML::Emitter& out) {
 
 	m_saved = true;
 }
-void SorghumLeafState::Deserialize(const YAML::Node& in) {
+void SorghumLeafGrowthStage::Deserialize(const YAML::Node& in) {
 	if (in["m_index"])
 		m_index = in["m_index"].as<int>();
 	if (in["m_dead"])
@@ -257,14 +354,14 @@ void SorghumLeafState::Deserialize(const YAML::Node& in) {
 
 	m_saved = true;
 }
-SorghumStemState::SorghumStemState() {
+SorghumStemGrowthStage::SorghumStemGrowthStage() {
 	m_length = 0.35f;
 	m_widthAlongStem = { 0.0f, 0.015f, {0.6f, 0.4f, {0, 0}, {1, 1}} };
 
 	m_saved = false;
 }
 
-SorghumLeafState::SorghumLeafState() {
+SorghumLeafGrowthStage::SorghumLeafGrowthStage() {
 	m_dead = false;
 	m_wavinessAlongLeaf = { 0.0f, 5.0f, {0.0f, 0.5f, {0, 0}, {1, 1}} };
 	m_wavinessFrequency = { 30.0f, 30.0f };
@@ -295,7 +392,7 @@ SorghumLeafState::SorghumLeafState() {
 
 	m_saved = false;
 }
-void SorghumLeafState::CopyShape(const SorghumLeafState& another) {
+void SorghumLeafGrowthStage::CopyShape(const SorghumLeafGrowthStage& another) {
 	m_spline = another.m_spline;
 	m_widthAlongLeaf.m_curve = another.m_widthAlongLeaf.m_curve;
 	m_curlingAlongLeaf = another.m_curlingAlongLeaf;
@@ -307,7 +404,7 @@ void SorghumLeafState::CopyShape(const SorghumLeafState& another) {
 	m_saved = false;
 }
 
-bool SorghumState::OnInspect(int mode) {
+bool SorghumGrowthStage::OnInspect(int mode) {
 	bool changed = false;
 	if (ImGui::TreeNodeEx((std::string("Stem")).c_str())) {
 		if (m_stem.OnInspect(mode))
@@ -332,7 +429,7 @@ bool SorghumState::OnInspect(int mode) {
 							m_leaves[i - 1].m_startingPoint + 0.1f;
 					}
 					else {
-						m_leaves[i] = SorghumLeafState();
+						m_leaves[i] = SorghumLeafGrowthStage();
 						m_leaves[i].m_rollAngle = 0;
 						m_leaves[i].m_startingPoint = 0.1f;
 					}
@@ -371,7 +468,7 @@ bool SorghumState::OnInspect(int mode) {
 				// Number of leaves in the file
 				int leafCount;
 				file >> leafCount;
-				m_stem = SorghumStemState();
+				m_stem = SorghumStemGrowthStage();
 				m_stem.m_spline.Import(file);
 				/*
 				// Recenter plant:
@@ -387,7 +484,7 @@ bool SorghumState::OnInspect(int mode) {
 				for (int i = 0; i < leafCount; i++) {
 					float startingPoint;
 					file >> startingPoint;
-					m_leaves[i] = SorghumLeafState();
+					m_leaves[i] = SorghumLeafGrowthStage();
 					m_leaves[i].m_startingPoint = startingPoint;
 					m_leaves[i].m_spline.Import(file);
 					m_leaves[i].m_spline.m_curves[0].m_p0 =
@@ -405,7 +502,7 @@ bool SorghumState::OnInspect(int mode) {
 	return changed;
 }
 
-void SorghumState::Serialize(YAML::Emitter& out) {
+void SorghumGrowthStage::Serialize(YAML::Emitter& out) {
 
 	out << YAML::Key << "m_version" << YAML::Value << m_version;
 	out << YAML::Key << "m_name" << YAML::Value << m_name;
@@ -428,7 +525,7 @@ void SorghumState::Serialize(YAML::Emitter& out) {
 
 	m_saved = true;
 }
-void SorghumState::Deserialize(const YAML::Node& in) {
+void SorghumGrowthStage::Deserialize(const YAML::Node& in) {
 	if (in["m_version"])
 		m_version = in["m_version"].as<unsigned>();
 	if (in["m_name"])
@@ -441,14 +538,14 @@ void SorghumState::Deserialize(const YAML::Node& in) {
 
 	if (in["m_leaves"]) {
 		for (const auto& i : in["m_leaves"]) {
-			SorghumLeafState leaf;
+			SorghumLeafGrowthStage leaf;
 			leaf.Deserialize(i);
 			m_leaves.push_back(leaf);
 		}
 	}
 	m_saved = true;
 }
-SorghumState::SorghumState() {
+SorghumGrowthStage::SorghumGrowthStage() {
 	m_saved = false;
 	m_name = "Unnamed";
 }

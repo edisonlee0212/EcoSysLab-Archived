@@ -1832,7 +1832,7 @@ void TreePointCloud::FormGeometryEntity()
 		scene->SetParent(treeEntity, forestEntity);
 		const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
 		tree->FromSkeleton(skeleton);
-		tree->InitializeMeshRenderer(m_treeMeshGeneratorSettings);
+		tree->GenerateGeometryEntities(m_treeMeshGeneratorSettings);
 		GlobalTransform gt{};
 		gt.SetPosition(skeleton.m_data.m_rootPosition);
 		scene->SetDataComponent(treeEntity, gt);

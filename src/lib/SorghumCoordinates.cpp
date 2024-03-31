@@ -1,8 +1,5 @@
 #include "SorghumCoordinates.hpp"
-
-#include <TransformGraph.hpp>
-
-#include "SorghumData.hpp"
+#include "TransformGraph.hpp"
 #include "SorghumLayer.hpp"
 #include "SorghumDescriptor.hpp"
 

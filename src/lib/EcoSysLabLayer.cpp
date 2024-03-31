@@ -253,7 +253,7 @@ void EcoSysLabLayer::Visualization() {
 								treeVisualizer.m_needUpdate = true;
 								if (m_autoGenerateMeshAfterEditing)
 								{
-									tree->InitializeMeshRenderer(m_meshGeneratorSettings, -1);
+									tree->GenerateGeometryEntities(m_meshGeneratorSettings, -1);
 								}
 								if (m_autoGenerateStrandsAfterEditing || m_autoGenerateStrandMeshAfterEditing)
 								{
@@ -277,7 +277,7 @@ void EcoSysLabLayer::Visualization() {
 								treeVisualizer.m_needUpdate = true;
 								if (m_autoGenerateMeshAfterEditing)
 								{
-									tree->InitializeMeshRenderer(m_meshGeneratorSettings, -1);
+									tree->GenerateGeometryEntities(m_meshGeneratorSettings, -1);
 								}
 								if (m_autoGenerateStrandsAfterEditing || m_autoGenerateStrandMeshAfterEditing)
 								{
@@ -438,7 +438,7 @@ void EcoSysLabLayer::Visualization() {
 								treeVisualizer.m_needUpdate = true;
 								if (m_autoGenerateMeshAfterEditing)
 								{
-									tree->InitializeMeshRenderer(m_meshGeneratorSettings, -1);
+									tree->GenerateGeometryEntities(m_meshGeneratorSettings, -1);
 								}
 								if (m_autoGenerateStrandsAfterEditing || m_autoGenerateStrandMeshAfterEditing)
 								{
@@ -581,7 +581,7 @@ void EcoSysLabLayer::Visualization() {
 				{
 					if (m_autoGenerateMeshAfterEditing)
 					{
-						tree->InitializeMeshRenderer(m_meshGeneratorSettings, -1);
+						tree->GenerateGeometryEntities(m_meshGeneratorSettings, -1);
 					}
 					if (m_autoGenerateStrandsAfterEditing || m_autoGenerateStrandMeshAfterEditing)
 					{
@@ -951,7 +951,7 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 				auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
 				if (m_autoGenerateMeshAfterEditing)
 				{
-					tree->InitializeMeshRenderer(m_meshGeneratorSettings, -1);
+					tree->GenerateGeometryEntities(m_meshGeneratorSettings, -1);
 				}
 				if (m_autoGenerateStrandsAfterEditing || m_autoGenerateStrandMeshAfterEditing)
 				{
@@ -1860,7 +1860,7 @@ void EcoSysLabLayer::GenerateMeshes(const TreeMeshGeneratorSettings& meshGenerat
 		const auto copiedEntities = *treeEntities;
 		for (auto treeEntity : copiedEntities) {
 			const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
-			tree->InitializeMeshRenderer(meshGeneratorSettings);
+			tree->GenerateGeometryEntities(meshGeneratorSettings);
 		}
 	}
 }
@@ -1917,7 +1917,7 @@ void EcoSysLabLayer::ClearMeshes() const {
 		const auto copiedEntities = *treeEntities;
 		for (auto treeEntity : copiedEntities) {
 			const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
-			tree->ClearMeshRenderer();
+			tree->ClearGeometryEntities();
 			tree->ClearTwigsStrandRenderer();
 			tree->ClearSkeletalGraph();
 		}

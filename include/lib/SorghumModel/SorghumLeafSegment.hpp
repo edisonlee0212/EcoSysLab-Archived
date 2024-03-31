@@ -1,8 +1,9 @@
 #pragma once
+#include "Spline.hpp"
 
 using namespace EvoEngine;
 namespace EcoSysLab {
-class LeafSegment {
+class SorghumLeafSegment {
 public:
   glm::vec3 m_position;
   glm::vec3 m_front;
@@ -13,13 +14,13 @@ public:
   float m_stemRadius;
   float m_leftHeightFactor = 1.0f;
   float m_rightHeightFactor = 1.0f;
-  bool m_isLeaf;
-  LeafSegment(glm::vec3 position, glm::vec3 up, glm::vec3 front, float stemWidth,
-              float leafHalfWidth, float theta, bool isLeaf,
+  SorghumSplineType m_nodeType;
+  SorghumLeafSegment(glm::vec3 position, glm::vec3 up, glm::vec3 front, float stemWidth,
+              float leafHalfWidth, float theta, SorghumSplineType nodeType,
               float leftHeightFactor = 1.0f, float rightHeightFactor = 1.0f);
 
-  glm::vec3 GetPoint(float angle);
+  glm::vec3 GetPoint(float angle) const;
 
-  glm::vec3 GetNormal(float angle);
+  glm::vec3 GetNormal(float angle) const;
 };
 } // namespace PlantFactory

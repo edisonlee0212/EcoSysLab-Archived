@@ -6,22 +6,10 @@
 #include "PointCloud.hpp"
 #include "SorghumField.hpp"
 #include <Curve.hpp>
-#include <LeafSegment.hpp>
+#include <SorghumLeafSegment.hpp>
 #include <Spline.hpp>
 using namespace EvoEngine;
 namespace EcoSysLab {
-	struct LeafTag : IDataComponent {};
-	struct LeafGeometryTag : IDataComponent {};
-	struct LeafBottomFaceGeometryTag : IDataComponent {};
-	struct PanicleTag : IDataComponent {};
-	struct PanicleGeometryTag : IDataComponent {};
-	struct StemTag : IDataComponent {};
-	struct StemGeometryTag : IDataComponent {};
-	struct SorghumTag : IDataComponent {};
-	class SorghumDescriptor;
-
-
-
 	class SorghumLayer : public ILayer {
 		static void ObjExportHelper(glm::vec3 position, std::shared_ptr<Mesh> mesh,
 			std::ofstream& of, unsigned& startIndex);
@@ -49,24 +37,7 @@ namespace EcoSysLab {
 		bool m_separated = false;
 		bool m_includeStem = true;
 		bool m_autoRefreshSorghums = true;
-		EntityArchetype m_leafArchetype;
-		EntityQuery m_leafQuery;
-		EntityArchetype m_sorghumArchetype;
-		EntityQuery m_sorghumQuery;
-		EntityArchetype m_panicleArchetype;
-		EntityQuery m_panicleQuery;
-		EntityArchetype m_stemArchetype;
-		EntityQuery m_stemQuery;
-
-		EntityArchetype m_leafGeometryArchetype;
-		EntityQuery m_leafGeometryQuery;
-		EntityArchetype m_leafBottomFaceGeometryArchetype;
-		EntityQuery m_leafBottomFaceGeometryQuery;
-		EntityArchetype m_panicleGeometryArchetype;
-		EntityQuery m_panicleGeometryQuery;
-		EntityArchetype m_stemGeometryArchetype;
-		EntityQuery m_stemGeometryQuery;
-
+		
 		AssetRef m_panicleMaterial;
 
 		AssetRef m_leafBottomFaceMaterial;
@@ -84,13 +55,6 @@ namespace EcoSysLab {
 		glm::vec3 m_skeletonColor = glm::vec3(0);
 
 		void OnCreate() override;
-		Entity CreateSorghum();
-		Entity CreateSorghum(const std::shared_ptr<SorghumGrowthDescriptor>& descriptor);
-		Entity
-			CreateSorghum(const std::shared_ptr<SorghumDescriptor>& descriptor);
-		Entity CreateSorghumStem(const Entity& plantEntity);
-		Entity CreateSorghumLeaf(const Entity& plantEntity, int leafIndex);
-		Entity CreateSorghumPanicle(const Entity& plantEntity);
 		void GenerateMeshForAllSorghums();
 		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 		void Update() override;
