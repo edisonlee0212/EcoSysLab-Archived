@@ -180,7 +180,7 @@ void SorghumLeafState::GenerateSegments(std::vector<SorghumLeafSegment>& segment
 		for (float div = (i == 1 ? 0.0f : 0.5f); div <= 1.0f; div += 0.5f) {
 
 			auto front = glm::normalize(prev.m_axis * (1.0f - div) + curr.m_axis * div);
-			auto left = m_left;//glm::normalize(prev.m_left * (1.0f - div) + curr.m_left * div);//?
+			auto left = glm::normalize(prev.m_left * (1.0f - div) + curr.m_left * div);//?
 			auto up = glm::normalize(glm::cross(left, front));
 			auto waviness = glm::mix(prev.m_waviness, curr.m_waviness, div);
 			float leftPeriod = 0.f;

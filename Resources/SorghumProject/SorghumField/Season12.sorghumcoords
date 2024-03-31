@@ -1,6 +1,6 @@
 m_sorghumStateGenerator:
-  m_assetHandle: 0
-  m_assetTypeName: SorghumStateGenerator
+  m_assetHandle: 16945303214368055534
+  m_assetTypeName: SorghumDescriptor
 m_rotationVariance: [0, 0, 0]
 m_sampleX: [0, 5]
 m_sampleY: [0, 5]

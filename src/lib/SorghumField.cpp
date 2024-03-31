@@ -13,7 +13,8 @@
 
 using namespace EcoSysLab;
 void RectangularSorghumFieldPattern::GenerateField(
-	std::vector<glm::mat4>& matricesList) {
+	std::vector<glm::mat4>& matricesList) const
+{
 	matricesList.clear();
 	for (int xi = 0; xi < m_size.x; xi++) {
 		for (int yi = 0; yi < m_size.y; yi++) {
@@ -84,12 +85,11 @@ Entity SorghumField::InstantiateField() {
 		return {};
 	}
 
-
-	auto sorghumLayer = Application::GetLayer<SorghumLayer>();
-	auto scene = sorghumLayer->GetScene();
+	const auto sorghumLayer = Application::GetLayer<SorghumLayer>();
+	const auto scene = sorghumLayer->GetScene();
 	if (sorghumLayer) {
-		auto fieldAsset = std::dynamic_pointer_cast<SorghumField>(GetSelf());
-		auto field = scene->CreateEntity("Field");
+		const auto fieldAsset = std::dynamic_pointer_cast<SorghumField>(GetSelf());
+		const auto field = scene->CreateEntity("Field");
 		// Create sorghums here.
 		int size = 0;
 		for (auto& newSorghum : fieldAsset->m_matrices) {
@@ -101,6 +101,12 @@ Entity SorghumField::InstantiateField() {
 			sorghumTransform.SetScale(glm::vec3(m_sorghumSize));
 			scene->SetDataComponent(sorghumEntity, sorghumTransform);
 			scene->SetParent(sorghumEntity, field);
+
+			const auto sorghum = scene->GetOrSetPrivateComponent<Sorghum>(sorghumEntity).lock();
+			sorghum->m_sorghumDescriptor = sorghumDescriptor;
+			const auto sorghumState = ProjectManager::CreateTemporaryAsset<SorghumState>();
+			sorghumDescriptor->Apply(sorghumState, glm::linearRand(0, INT_MAX));
+			sorghum->m_sorghumState = sorghumState;
 			size++;
 			if (size >= m_sizeLimit)
 				break;

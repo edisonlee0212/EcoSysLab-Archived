@@ -310,7 +310,6 @@ void SorghumDescriptor::Apply(const std::shared_ptr<SorghumState>& targetState, 
 	float stemUnitLength = stemLength / stemNodeAmount;
 	glm::vec3 stemLeft = glm::normalize(glm::rotate(glm::vec3(1, 0, 0),
 		glm::radians(glm::linearRand(0.0f, 0.0f)), stemDirection));
-	targetState->m_stem.m_left = stemLeft;
 	for (int i = 0; i <= stemNodeAmount; i++) {
 		float stemWidth = widthAlongStem.GetValue(static_cast<float>(i) / stemNodeAmount);
 		glm::vec3 stemNodePosition;
@@ -373,7 +372,6 @@ void SorghumDescriptor::Apply(const std::shared_ptr<SorghumState>& targetState, 
 		//BezierSpline middleSpline;
 		glm::vec3 leafLeft = glm::normalize(glm::rotate(glm::vec3(0, 0, -1), glm::radians(rollAngle),
 			glm::vec3(0, 1, 0)));
-		leafState.m_left = leafLeft;
 		auto direction = glm::rotate(glm::vec3(0, 1, 0), glm::radians(branchingAngle), leafLeft);
 		bool modelToRoot = true;
 		float sheathRatio = startingPointRatio - backTrackRatio;

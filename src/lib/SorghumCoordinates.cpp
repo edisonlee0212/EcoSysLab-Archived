@@ -64,6 +64,22 @@ void SorghumCoordinates::OnInspect(const std::shared_ptr<EditorLayer>& editorLay
 		m_sampleY.x = glm::min(m_sampleY.x, m_sampleY.y);
 		m_sampleY.y = glm::max(m_sampleY.x, m_sampleY.y);
 	}
+
+	static int index = 200;
+	static float radius = 2.5f;
+	ImGui::DragInt("Index", &index);
+	ImGui::DragFloat("Radius", &radius);
+	static AssetRef tempField;
+	if(editorLayer->DragAndDropButton<SorghumField>(tempField,
+		"Apply to SorghumField"))
+	{
+		if(const auto field = tempField.Get<SorghumField>())
+		{
+			glm::dvec2 offset;
+			Apply(field, offset, index, radius);
+			tempField.Clear();
+		}
+	}
 	FileUtils::OpenFile(
 		"Load Positions", "Position list", { ".txt" },
 		[this](const std::filesystem::path& path) { ImportFromFile(path); },
