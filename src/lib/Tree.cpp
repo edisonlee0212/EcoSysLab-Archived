@@ -2111,9 +2111,9 @@ void Tree::PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescrip
 		m_shootGrowthController.m_pruningFactor = [=](const float deltaTime, const Node<InternodeGrowthData>& internode)
 			{
 				float pruningProbability = 0.0f;
-				if (internode.IsEndNode() && internode.m_data.m_lightIntensity == 0.0f)
+				if (internode.IsEndNode() && internode.m_data.m_lightIntensity <= shootDescriptor->m_lightPruningFactor)
 				{
-					pruningProbability = shootDescriptor->m_lightPruningFactor;
+					pruningProbability += 999.f;
 				}
 				if (internode.m_data.m_level != 0 && shootDescriptor->m_thicknessPruningFactor != 0.0f
 					&& internode.m_info.m_thickness / internode.m_info.m_endDistance < shootDescriptor->m_thicknessPruningFactor)

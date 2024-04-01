@@ -56,10 +56,8 @@ void TreeModel::RegisterVoxel(const glm::mat4& globalTransform, ClimateModel& cl
 
 void TreeModel::PruneInternode(const NodeHandle internodeHandle)
 {
-	auto& internode = m_shootSkeleton.RefNode(internodeHandle);
-	for(const auto& childHandle : internode.RefChildHandles())
-	{
-		m_shootSkeleton.RecycleNode(childHandle,
+	//auto& internode = m_shootSkeleton.RefNode(internodeHandle);
+	m_shootSkeleton.RecycleNode(internodeHandle,
 		[&](FlowHandle flowHandle) {},
 		[&](NodeHandle nodeHandle)
 		{
@@ -71,12 +69,20 @@ void TreeModel::PruneInternode(const NodeHandle internodeHandle)
 				if (!m_shootSkeleton.m_data.m_strandGroup.PeekStrandSegment(particle.m_data.m_strandSegmentHandle).IsRecycled()) m_shootSkeleton.m_data.m_strandGroup.RecycleStrandSegment(particle.m_data.m_strandSegmentHandle);
 			}*/
 		});
+	/*
+	for(const auto& childHandle : internode.RefChildHandles())
+	{
+		m_shootSkeleton.RecycleNode(childHandle,
+		[&](FlowHandle flowHandle) {},
+		[&](NodeHandle nodeHandle)
+		{
+		});
 	}
 	internode.m_data.m_buds.clear();
 	internode.m_data.m_fruits.clear();
 	internode.m_data.m_leaves.clear();
 
-	internode.m_info.m_length = internode.m_data.m_internodeLength = 0.0f;
+	internode.m_info.m_length = internode.m_data.m_internodeLength = 0.0f;*/
 }
 
 void TreeModel::HarvestFruits(const std::function<bool(const ReproductiveModule& fruit)>& harvestFunction)
@@ -670,7 +676,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, const NodeHandle inter
 					}
 					else
 					{
-						elongateLength = internodeData.m_growthRate * m_currentDeltaTime * shootGrowthController.m_internodeLength * shootGrowthController.m_internodeGrowthRate;
+						elongateLength = glm::clamp(internodeData.m_growthRate, 0.f, internodeData.m_lightIntensity) * m_currentDeltaTime * shootGrowthController.m_internodeLength * shootGrowthController.m_internodeGrowthRate;
 					}
 					//Use up the vigor stored in this bud.
 					float collectedInhibitor = 0.0f;
@@ -923,7 +929,7 @@ float TreeModel::CalculateDesiredGrowthRate(const std::vector<NodeHandle>& sorte
 	for (const auto& internodeHandle : sortedInternodeList)
 	{
 		auto& node = m_shootSkeleton.RefNode(internodeHandle);
-		node.m_data.m_growthPotential = node.m_data.m_lightIntensity;
+		node.m_data.m_growthPotential = 1.f;
 		if (apicalControl > 1.0f)
 		{
 			node.m_data.m_apicalControl = 1.0f / apicalControlValues[node.m_data.m_level];
