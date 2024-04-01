@@ -491,11 +491,11 @@ PYBIND11_MODULE(pyecosyslab, m) {
 		.def_readwrite("m_turnAngleStart", &TreePointCloudCircularCaptureSettings::m_turnAngleStart)
 		.def_readwrite("m_turnAngleStep", &TreePointCloudCircularCaptureSettings::m_turnAngleStep)
 		.def_readwrite("m_turnAngleEnd", &TreePointCloudCircularCaptureSettings::m_turnAngleEnd)
-		.def_readwrite("m_distance", &TreePointCloudCircularCaptureSettings::m_distance)
+		.def_readwrite("m_gridDistance", &TreePointCloudCircularCaptureSettings::m_distance)
 		.def_readwrite("m_height", &TreePointCloudCircularCaptureSettings::m_height)
 		.def_readwrite("m_fov", &TreePointCloudCircularCaptureSettings::m_fov)
 		.def_readwrite("m_resolution", &TreePointCloudCircularCaptureSettings::m_resolution)
-		.def_readwrite("m_cameraDepthMax", &TreePointCloudCircularCaptureSettings::m_cameraDepthMax);
+		.def_readwrite("m_cameraDepthMax", &TreePointCloudCircularCaptureSettingsWWWWWWWWWWW::m_cameraDepthMax);
 
 	py::class_<ReconstructionSettings>(m, "ReconstructionSettings")
 		.def(py::init<>())

@@ -311,6 +311,13 @@ void SoilDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 	if (changed) m_saved = false;
 }
 
+void SoilDescriptor::RandomOffset(const float min, const float max)
+{
+	if(const auto heightField = m_heightField.Get<HeightField>())
+	{
+		heightField->RandomOffset(min, max);
+	}
+}
 
 
 void Soil::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
@@ -587,6 +594,15 @@ void Soil::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 		
 	}
 }
+
+void Soil::RandomOffset(float min, float max)
+{
+	if (const auto soilDescriptor = m_soilDescriptor.Get<SoilDescriptor>())
+	{
+		soilDescriptor->RandomOffset(min, max);
+	}
+}
+
 Entity Soil::GenerateSurfaceQuadX(bool backFacing, float depth, const glm::vec2& minXY, const glm::vec2 maxXY, float waterFactor, float nutrientFactor)
 {
 	auto scene = Application::GetActiveScene();

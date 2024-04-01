@@ -53,11 +53,99 @@ void start_project_windowless(const std::filesystem::path& projectPath)
 	Application::Initialize(applicationInfo);
 	Application::Start();
 }
-int main() {
+
+void forest_patch_point_cloud()
+{
 	//std::filesystem::path project_folder_path = "C:\\Users\\62469\\Work\\TreeEngine\\EcoSysLab\\Resources\\EcoSysLabProject";
 	std::filesystem::path project_folder_path = "C:\\Users\\lllll\\Documents\\GitHub\\EcoSysLab\\Resources\\EcoSysLabProject";
 	std::filesystem::path project_path = project_folder_path / "test.eveproj";
+	start_project_windowless(project_path);
+
+	TreeMeshGeneratorSettings tmgs{};
+	tmgs.m_xSubdivision = 0.01f;
+	tmgs.m_branchYSubdivision = 0.03f;
+	tmgs.m_trunkYSubdivision = 0.01f;
+	tmgs.m_enableFoliage = true;
+	tmgs.m_enableTwig = true;
+	tmgs.m_junctionColor = true;
+	std::filesystem::path output_root = "D:\\ForestPointCloudData\\";
+	TreePointCloudPointSettings pcps{};
+	std::shared_ptr<TreePointCloudCircularCaptureSettings> treePointCloudCircularCaptureSettings = std::make_shared<TreePointCloudCircularCaptureSettings>();
+	std::shared_ptr<TreePointCloudGridCaptureSettings> treePointCloudGridCaptureSettings = std::make_shared<TreePointCloudGridCaptureSettings>();
+	pcps.m_ballRandRadius = 0.0f;
+	pcps.m_treePartIndex = true;
+	pcps.m_instanceIndex = true;
+	pcps.m_typeIndex = true;
+	pcps.m_treePartTypeIndex = true;
+	pcps.m_branchIndex = false;
+	pcps.m_lineIndex = false;
+	treePointCloudCircularCaptureSettings->m_distance = 4.0f;
+	treePointCloudCircularCaptureSettings->m_height = 3.0f;
+
+	int gridSize = 4;
+	float gridDistance = 1.5f;
+	float randomShift = 0.5f;
+	treePointCloudGridCaptureSettings->m_gridSize = { gridSize + 1, gridSize + 1 };
+	treePointCloudGridCaptureSettings->m_gridDistance = gridDistance;
+
+	int index = 0;
+	for (int i = 0; i < 4096; i++) {
+		std::filesystem::path target_descriptor_folder_path = project_folder_path / "Digital Forestry";
+		std::string name = "Forest_" + std::to_string(i);
+		std::filesystem::path target_tree_mesh_path = output_root / (name + ".obj");
+		std::filesystem::path target_tree_pointcloud_path = output_root / (name + ".ply");
+		std::filesystem::path target_tree_junction_path = output_root / (name + ".yml");
+		DatasetGenerator::GeneratePointCloudForForestPatch(gridSize, gridDistance, randomShift, pcps, treePointCloudGridCaptureSettings, target_descriptor_folder_path.string(), 0.08220, 240, 40000, tmgs, target_tree_pointcloud_path.string());
+		index++;
+	}
+}
+
+void sorghum_field_point_cloud()
+{
+	std::filesystem::path project_folder_path = "C:\\Users\\lllll\\Documents\\GitHub\\EcoSysLab\\Resources\\SorghumProject";
+	std::filesystem::path project_path = project_folder_path / "test.eveproj";
+	start_project_windowless(project_path);
+
+	SorghumMeshGeneratorSettings sorghumMeshGeneratorSettings{};
+
+	std::filesystem::path output_root = "D:\\SorghumPointCloudData\\";
+	SorghumPointCloudPointSettings sorghumPointCloudPointSettings{};
+	std::shared_ptr<SorghumGantryCaptureSettings> sorghumGantryCaptureSettings = std::make_shared<SorghumGantryCaptureSettings>();
+	sorghumPointCloudPointSettings.m_ballRandRadius = 0.005f;
+	sorghumPointCloudPointSettings.m_variance = 0.0f;
+	sorghumPointCloudPointSettings.m_instanceIndex = true;
+	sorghumPointCloudPointSettings.m_typeIndex = true;
+	sorghumPointCloudPointSettings.m_leafIndex = true;
 	
+	int gridSize = 6;
+	float gridDistance = 0.75f;
+	float randomShift = 0.25f;
+	sorghumGantryCaptureSettings->m_gridSize = { gridSize, gridSize};
+	sorghumGantryCaptureSettings->m_gridDistance = { gridDistance, gridDistance};
+	RectangularSorghumFieldPattern pattern {};
+	pattern.m_gridSize = { gridSize, gridSize };
+	pattern.m_gridDistance = { gridDistance, gridDistance };
+	pattern.m_randomShiftMean = { randomShift,randomShift };
+	pattern.m_distanceVariance = { 0.3f,0.3f};
+	int index = 0;
+	for (int i = 0; i < 4096; i++) {
+		std::filesystem::path target_descriptor_folder_path = project_folder_path / "SorghumDescriptor";
+		const auto sorghumDescriptor = std::dynamic_pointer_cast<SorghumDescriptor>(ProjectManager::GetOrCreateAsset(std::filesystem::path("SorghumDescriptor") / "Random.sorghum"));
+		std::string name = "Sorghum_" + std::to_string(i);
+		std::filesystem::path target_tree_pointcloud_path = output_root / (name + ".ply");
+		DatasetGenerator::GeneratePointCloudForSorghumPatch(
+			pattern,
+			sorghumDescriptor,
+			sorghumPointCloudPointSettings, sorghumGantryCaptureSettings, sorghumMeshGeneratorSettings, target_tree_pointcloud_path.string());
+		index++;
+	}
+}
+void tree_trunk_mesh()
+{
+	//std::filesystem::path project_folder_path = "C:\\Users\\62469\\Work\\TreeEngine\\EcoSysLab\\Resources\\EcoSysLabProject";
+	std::filesystem::path project_folder_path = "C:\\Users\\lllll\\Documents\\GitHub\\EcoSysLab\\Resources\\EcoSysLabProject";
+	std::filesystem::path project_path = project_folder_path / "test.eveproj";
+
 
 	start_project_windowless(project_path);
 
@@ -68,63 +156,27 @@ int main() {
 	tmgs.m_enableFoliage = true;
 	tmgs.m_enableTwig = true;
 
-	if (false) {
-		std::filesystem::path output_root = "D:\\ForestPointCloudData\\";
-		TreePointCloudPointSettings pcps{};
-		TreePointCloudCircularCaptureSettings pcccs{};
-		TreePointCloudGridCaptureSettings pcgcs{};
-		pcps.m_ballRandRadius = 0.0f;
-		pcps.m_treePartIndex = false;
-		pcps.m_branchIndex = false;
-		pcps.m_instanceIndex = true;
-		pcps.m_typeIndex = true;
-		pcps.m_lineIndex = false;
-		pcccs.m_distance = 4.0f;
-		pcccs.m_height = 3.0f;
-
-		int gridSize = 5;
-		float gridDistance = 1.5f;
-		float randomShift = 0.5f;
-		pcgcs.m_gridSize = { gridSize + 1, gridSize + 1 };
-		pcgcs.m_gridDistance = gridDistance;
-
-		int index = 0;
-		for (int i = 0; i < 4096; i++) {
-			std::filesystem::path target_descriptor_folder_path = project_folder_path / "Digital Forestry";
-			std::filesystem::path target_forest_patch_path = project_folder_path / "Digital Forestry" / "4x4.fp";
-			std::string name = "Forest_" + std::to_string(i);
-			std::filesystem::path target_tree_mesh_path = output_root / (name + ".obj");
-			std::filesystem::path target_tree_pointcloud_path = output_root / (name + ".ply");
-			std::filesystem::path target_tree_junction_path = output_root / (name + ".yml");
-			//DatasetGenerator::GeneratePointCloudForTree(pcps, pcccs, target_descriptor_folder_path.string(), 0.08220, 200, 20000, tmgs, target_tree_pointcloud_path.string(), false, target_tree_mesh_path.string(), true, target_tree_junction_path.string());
-
-			DatasetGenerator::GeneratePointCloudForForestPatch(gridSize, gridDistance, randomShift, pcps, pcgcs, target_descriptor_folder_path.string(), target_forest_patch_path.string(), 0.08220, 240, 40000, tmgs, target_tree_pointcloud_path.string());
-			index++;
-		}
-	}
-	if(true)
+	std::filesystem::path output_root = "D:\\TreeTrunkData\\";
+	tmgs.m_enableFoliage = false;
+	std::filesystem::path target_descriptor_folder_path = project_folder_path / "Trunk";
+	std::vector<std::shared_ptr<TreeDescriptor>> collectedTreeDescriptors{};
+	for (const auto& i : std::filesystem::recursive_directory_iterator(target_descriptor_folder_path))
 	{
-		std::filesystem::path output_root = "D:\\TreeTrunkData\\";
-		tmgs.m_enableFoliage = false;
-		std::filesystem::path target_descriptor_folder_path = project_folder_path / "Trunk";
-		std::vector<std::shared_ptr<TreeDescriptor>> collectedTreeDescriptors{};
-		for (const auto& i : std::filesystem::recursive_directory_iterator(target_descriptor_folder_path))
+		if (i.is_regular_file() && i.path().extension().string() == ".td")
 		{
-			if (i.is_regular_file() && i.path().extension().string() == ".td")
+			for (int treeIndex = 0; treeIndex < 500; treeIndex++)
 			{
-				for (int treeIndex = 0; treeIndex < 500; treeIndex++)
-				{
-					std::string name = "Tree_" + std::to_string(treeIndex);
-					std::string infoName = "Info_" + std::to_string(treeIndex);
-					std::string trunkName = "Trunk_" + std::to_string(treeIndex);
-					std::filesystem::path target_info_path = output_root / (infoName + ".txt");
-					std::filesystem::path target_tree_mesh_path = output_root / (name + ".obj");
-					std::filesystem::path target_trunk_mesh_path = output_root / (trunkName + ".obj");
-					DatasetGenerator::GenerateTreeTrunkMesh(i.path().string(), 0.08220f, 999, 50000, tmgs, target_tree_mesh_path.string(), target_trunk_mesh_path.string(), target_info_path.string());
-				}
+				std::string name = "Tree_" + std::to_string(treeIndex);
+				std::string infoName = "Info_" + std::to_string(treeIndex);
+				std::string trunkName = "Trunk_" + std::to_string(treeIndex);
+				std::filesystem::path target_info_path = output_root / (infoName + ".txt");
+				std::filesystem::path target_tree_mesh_path = output_root / (name + ".obj");
+				std::filesystem::path target_trunk_mesh_path = output_root / (trunkName + ".obj");
+				DatasetGenerator::GenerateTreeTrunkMesh(i.path().string(), 0.08220f, 999, 50000, tmgs, target_tree_mesh_path.string(), target_trunk_mesh_path.string(), target_info_path.string());
 			}
 		}
-
-		
 	}
+}
+int main() {
+	forest_patch_point_cloud();
 }

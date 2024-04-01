@@ -49,6 +49,7 @@ namespace EcoSysLab
 		 * Note that the visualization will only be activated while you are inspecting the soil private component in the entity inspector.
 		 */
 		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
+		void RandomOffset(float min, float max);
 		void Serialize(YAML::Emitter& out) override;
 		void Deserialize(const YAML::Node& in) override;
 		void CollectAssetRef(std::vector<AssetRef>& list) override;
@@ -82,7 +83,7 @@ namespace EcoSysLab
 		 * Note that the visualization will only be activated while you are inspecting the soil private component in the entity inspector.
 		 */
 		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
-
+		void RandomOffset(float min, float max);
 		void Serialize(YAML::Emitter& out) override;
 
 		void Deserialize(const YAML::Node& in) override;

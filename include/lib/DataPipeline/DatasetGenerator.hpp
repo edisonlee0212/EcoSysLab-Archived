@@ -1,4 +1,8 @@
 #pragma once
+#include "SorghumDescriptor.hpp"
+#include "SorghumField.hpp"
+#include "SorghumPointCloudScanner.hpp"
+#include "SorghumState.hpp"
 #include "TreeMeshGenerator.hpp"
 #include "TreePointCloudScanner.hpp"
 using namespace EvoEngine;
@@ -22,7 +26,7 @@ namespace EcoSysLab {
 
 		static void GeneratePointCloudForTree(
 			const TreePointCloudPointSettings& pointSettings,
-			const TreePointCloudCircularCaptureSettings& captureSettings,
+			const std::shared_ptr<PointCloudCaptureSettings>& captureSettings,
 			const std::string& treeParametersPath,
 			float deltaTime,
 			int maxIterations,
@@ -37,13 +41,20 @@ namespace EcoSysLab {
 		static void GeneratePointCloudForForestPatch(
 			int gridSize, float gridDistance, float randomShift,
 			const TreePointCloudPointSettings& pointSettings,
-			const TreePointCloudGridCaptureSettings& captureSettings,
+			const std::shared_ptr<PointCloudCaptureSettings>& captureSettings,
 			const std::string& treeParametersFolderPath,
-			const std::string& forestPatchPath,
 			float deltaTime,
 			int maxIterations,
 			int maxTreeNodeCount,
 			const TreeMeshGeneratorSettings& meshGeneratorSettings,
+			const std::string& pointCloudOutputPath
+		);
+
+		static void GeneratePointCloudForSorghumPatch(const RectangularSorghumFieldPattern& pattern,
+			const std::shared_ptr<SorghumDescriptor>& sorghumDescriptor,
+			const SorghumPointCloudPointSettings& pointSettings,
+			const std::shared_ptr<PointCloudCaptureSettings>& captureSettings,
+			const SorghumMeshGeneratorSettings& sorghumMeshGeneratorSettings, 
 			const std::string& pointCloudOutputPath
 		);
 	};

@@ -15,7 +15,7 @@ namespace EcoSysLab
 		Noises2D m_noises2D;
 		int m_precisionLevel = 2;
 		[[nodiscard]] float GetValue(const glm::vec2& position);
-
+		void RandomOffset(float min, float max);
 		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 		void Serialize(YAML::Emitter& out) override;
 		void Deserialize(const YAML::Node& in) override;

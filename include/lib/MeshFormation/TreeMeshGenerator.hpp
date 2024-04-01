@@ -355,7 +355,6 @@ namespace EcoSysLab {
 						currentTreePartInfo = treePartInfos[parentInternodeHandle];
 						currentTreePartInfo.m_treePartType = 1;
 						currentTreePartIndex = currentTreePartInfo.m_treePartIndex;
-
 						currentLineIndex = currentTreePartInfo.m_lineIndex;
 					}
 					//archetype.m_color = glm::vec4(1, 0, 0, 1);
@@ -385,6 +384,7 @@ namespace EcoSysLab {
 				}
 				archetype.m_vertexInfo3 = currentLineIndex + 1;
 				archetype.m_vertexInfo4.x = currentTreePartIndex + 1;
+				archetype.m_vertexInfo4.y = treePartType + 1;
 #pragma endregion
 			}
 			float textureXStep = 1.0f / pStep * 4.0f;

@@ -38,7 +38,7 @@ namespace EcoSysLab
 		bool OnInspect();
 		void Save(const std::string& name, YAML::Emitter& out) const;
 		void Load(const std::string& name, const YAML::Node& in);
-
+		void RandomOffset(float min, float max);
 		[[nodiscard]] float GetValue(const glm::vec2& position) const;
 	};
 

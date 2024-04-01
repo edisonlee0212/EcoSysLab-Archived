@@ -114,10 +114,19 @@ void SorghumLayer::OnCreate() {
 }
 
 
-void SorghumLayer::GenerateMeshForAllSorghums() {
+void SorghumLayer::GenerateMeshForAllSorghums(const SorghumMeshGeneratorSettings& sorghumMeshGeneratorSettings) const
+{
 	std::vector<Entity> plants;
-	auto scene = GetScene();
-	
+	const auto scene = GetScene();
+	if (const std::vector<Entity>* sorghumEntities =
+		scene->UnsafeGetPrivateComponentOwnersList<Sorghum>(); sorghumEntities && !sorghumEntities->empty())
+	{
+		for (const auto& sorghumEntity : *sorghumEntities)
+		{
+			const auto sorghum = scene->GetOrSetPrivateComponent<Sorghum>(sorghumEntity).lock();
+			sorghum->GenerateGeometryEntities(sorghumMeshGeneratorSettings);
+		}
+	}
 }
 
 void SorghumLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
@@ -147,7 +156,7 @@ void SorghumLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 		ImGui::Checkbox("Auto regenerate sorghum", &m_autoRefreshSorghums);
 		m_sorghumMeshGeneratorSettings.OnInspect(editorLayer);
 		if (ImGui::Button("Generate mesh for all sorghums")) {
-			GenerateMeshForAllSorghums();
+			GenerateMeshForAllSorghums(m_sorghumMeshGeneratorSettings);
 		}
 		if (ImGui::DragFloat("Vertical subdivision max unit length",
 			&m_verticalSubdivisionMaxUnitLength, 0.001f, 0.001f,

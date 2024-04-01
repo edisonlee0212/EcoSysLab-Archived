@@ -50,7 +50,7 @@ namespace EcoSysLab {
 		glm::vec3 m_skeletonColor = glm::vec3(0);
 
 		void OnCreate() override;
-		void GenerateMeshForAllSorghums();
+		void GenerateMeshForAllSorghums(const SorghumMeshGeneratorSettings& sorghumMeshGeneratorSettings) const;
 		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 		void Update() override;
 		void LateUpdate() override;

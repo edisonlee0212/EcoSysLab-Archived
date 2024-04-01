@@ -156,6 +156,12 @@ void Noises2D::Load(const std::string& name, const YAML::Node& in)
 		}
 	}
 }
+
+void Noises2D::RandomOffset(const float min, const float max)
+{
+	for (auto& i : m_noiseDescriptors) i.m_offset = glm::linearRand(min, max);
+}
+
 void Noises3D::Save(const std::string& name, YAML::Emitter& out) const
 {
 	out << YAML::Key << name << YAML::Value << YAML::BeginMap;

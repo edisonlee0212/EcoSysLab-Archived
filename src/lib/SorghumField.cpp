@@ -15,18 +15,21 @@ using namespace EcoSysLab;
 void RectangularSorghumFieldPattern::GenerateField(
 	std::vector<glm::mat4>& matricesList) const
 {
-	matricesList.clear();
-	for (int xi = 0; xi < m_size.x; xi++) {
-		for (int yi = 0; yi < m_size.y; yi++) {
-			auto position =
-				glm::gaussRand(glm::vec3(0.0f), glm::vec3(m_distanceVariance.x, 0.0f,
-					m_distanceVariance.y)) +
-				glm::vec3(xi * m_distance.x, 0.0f, yi * m_distance.y);
+	matricesList.resize(m_gridSize.x * m_gridSize.y);
+	const glm::vec2 startPoint = glm::vec2((m_gridSize.x - 1) * m_gridDistance.x, (m_gridSize.y - 1) * m_gridDistance.y) * 0.5f;
+	for (int i = 0; i < m_gridSize.x; i++) {
+		for (int j = 0; j < m_gridSize.y; j++) {
+			glm::vec3 position = glm::vec3(-startPoint.x + i * m_gridDistance.x, 0.0f, -startPoint.y + j * m_gridDistance.y);
+			position.x += glm::linearRand(-m_gridDistance.x * m_randomShiftMean.x, m_gridDistance.x * m_randomShiftMean.x);
+			position.z += glm::linearRand(-m_gridDistance.y * m_randomShiftMean.y, m_gridDistance.y * m_randomShiftMean.y);
+			position += glm::gaussRand(glm::vec3(0.0f), glm::vec3(m_distanceVariance.x, 0.0f, m_distanceVariance.y));
+			Transform transform{};
+			transform.SetPosition(position);
 			auto rotation = glm::quat(glm::radians(
 				glm::vec3(glm::gaussRand(glm::vec3(0.0f), m_rotationVariance))));
-			matricesList.emplace_back(glm::translate(position) *
-				glm::mat4_cast(rotation) *
-				glm::scale(glm::vec3(1.0f)));
+			transform.SetRotation(rotation);
+			transform.SetScale(glm::vec3(1.f));
+			matricesList[i * m_gridSize.y + j] = transform.m_value;
 		}
 	}
 }
@@ -108,8 +111,7 @@ Entity SorghumField::InstantiateField() const
 				break;
 		}
 
-		Application::GetLayer<SorghumLayer>()->GenerateMeshForAllSorghums();
-
+		
 		TransformGraph::CalculateTransformGraphForDescendents(scene,
 			field);
 		return field;

@@ -95,7 +95,7 @@ void ForestPatch::ApplyTreeDescriptors(const std::filesystem::path& folderPath, 
 	std::vector<std::shared_ptr<TreeDescriptor>> collectedTreeDescriptors{};
 	for (const auto& i : std::filesystem::recursive_directory_iterator(folderPath))
 	{
-		if (i.is_regular_file() && i.path().extension().string() == ".td")
+		if (i.is_regular_file() && i.path().extension().string() == ".tree")
 		{
 			const auto treeDescriptor =
 				std::dynamic_pointer_cast<TreeDescriptor>(ProjectManager::GetOrCreateAsset(ProjectManager::GetPathRelativeToProject(i.path())));
@@ -246,7 +246,7 @@ void ForestPatch::SetupGrid(const glm::ivec2& gridSize, float gridDistance, floa
 	{
 		heightField = soilDescriptor->m_heightField.Get<HeightField>();
 	}
-	const glm::vec2 startPoint = glm::vec2((gridSize.x - 1) * gridDistance, (gridSize.y - 1) * gridDistance) * 0.5f;
+	const glm::vec2 startPoint = glm::vec2((gridSize.x - 0.5f) * gridDistance, (gridSize.y - 0.5f) * gridDistance) * 0.5f;
 	for (int i = 0; i < gridSize.x; i++) {
 		for (int j = 0; j < gridSize.y; j++) {
 			m_treeInfos.emplace_back();
