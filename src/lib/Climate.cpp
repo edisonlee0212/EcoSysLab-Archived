@@ -99,7 +99,8 @@ void Climate::PrepareForGrowth()
 		tree->RegisterVoxel();
 	}
 
-	estimator.ShadowPropagation();
+	//estimator.ShadowPropagation();
+	estimator.LightPropagation();
 }
 
 void Climate::Deserialize(const YAML::Node& in)

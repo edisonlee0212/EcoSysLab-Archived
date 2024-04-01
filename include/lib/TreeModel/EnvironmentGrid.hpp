@@ -42,6 +42,7 @@ namespace EcoSysLab
 		[[nodiscard]] float Sample(const glm::vec3& position, glm::vec3& lightDirection) const;
 		void AddShadowValue(const glm::vec3& position, float value);
 		void ShadowPropagation();
+		void LightPropagation();
 		void AddBiomass(const glm::vec3& position, float value);
 		void AddNode(const InternodeVoxelRegistration& registration);
 	};

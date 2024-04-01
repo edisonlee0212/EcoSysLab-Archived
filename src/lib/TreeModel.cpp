@@ -56,8 +56,8 @@ void TreeModel::RegisterVoxel(const glm::mat4& globalTransform, ClimateModel& cl
 
 void TreeModel::PruneInternode(const NodeHandle internodeHandle)
 {
-	//auto& internode = m_shootSkeleton.RefNode(internodeHandle);
-	m_shootSkeleton.RecycleNode(internodeHandle,
+	const auto& internode = m_shootSkeleton.RefNode(internodeHandle);
+	if(!internode.IsRecycled()) m_shootSkeleton.RecycleNode(internodeHandle,
 		[&](FlowHandle flowHandle) {},
 		[&](NodeHandle nodeHandle)
 		{

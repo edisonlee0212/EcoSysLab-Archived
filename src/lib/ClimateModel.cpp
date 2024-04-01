@@ -27,9 +27,9 @@ float ClimateModel::GetTemperature(const glm::vec3& position) const
 	return avgTemp;
 }
 
-float ClimateModel::GetSolarIntensity(const glm::vec3& position) const 
+float ClimateModel::GetEnvironmentalLight(const glm::vec3& position, glm::vec3& lightDirection) const
 {
-	return 1.0f;
+	return m_environmentGrid.Sample(position, lightDirection);
 }
 
 void ClimateModel::Initialize(const ClimateParameters& climateParameters)

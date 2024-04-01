@@ -13,7 +13,7 @@ namespace EcoSysLab {
 		float m_time = 0.0f;
 		EnvironmentGrid m_environmentGrid{};
 		[[nodiscard]] float GetTemperature(const glm::vec3& position) const;
-		[[nodiscard]] float GetSolarIntensity(const glm::vec3& position) const;
+		[[nodiscard]] float GetEnvironmentalLight(const glm::vec3& position, glm::vec3& lightDirection) const;
 
 		void Initialize(const ClimateParameters& climateParameters);
 	};

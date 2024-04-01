@@ -170,7 +170,7 @@ void EcoSysLabLayer::Visualization() {
 							glm::translate(voxelGrid.GetPosition(coordinate) + glm::linearRand(-glm::vec3(0.5f * voxelGrid.GetVoxelSize()), glm::vec3(0.5f * voxelGrid.GetVoxelSize())))
 							* glm::mat4_cast(glm::quat(glm::vec3(0.0f)))
 							* glm::scale(glm::vec3(0.25f * voxelGrid.GetVoxelSize()));
-						scalarMatrices[i].m_instanceColor = glm::vec4(0.5f, 0.5f, 0.5f, glm::clamp(voxelGrid.Peek(static_cast<int>(i)).m_shadowIntensity, 0.0f, 1.0f));
+						scalarMatrices[i].m_instanceColor = glm::vec4(1.f, 1.f, 1.f, glm::clamp(voxelGrid.Peek(static_cast<int>(i)).m_shadowIntensity, 0.0f, 1.0f));
 						}
 					);
 					m_shadowGridParticleInfoList->SetPendingUpdate();
@@ -194,7 +194,7 @@ void EcoSysLabLayer::Visualization() {
 							* rotationTransform
 							* glm::scale(glm::vec3(0.05f * voxelSize, voxelSize * 0.5f, 0.05f * voxelSize));
 						if (voxelGrid.Peek(static_cast<int>(i)).m_lightIntensity == 0.0f) scalarMatrices[i].m_instanceColor = glm::vec4(0.0f);
-						else scalarMatrices[i].m_instanceColor = glm::vec4(0.5f, 0.5f, 0.5f, glm::clamp(voxelGrid.Peek(static_cast<int>(i)).m_shadowIntensity, 0.0f, 1.0f));
+						else scalarMatrices[i].m_instanceColor = glm::vec4(1.f, 1.f, 1.f, glm::clamp(voxelGrid.Peek(static_cast<int>(i)).m_shadowIntensity, 0.0f, 1.0f));
 						}
 					);
 					m_lightingGridParticleInfoList->SetPendingUpdate();
@@ -1294,7 +1294,7 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 					p4.m_thickness = flow.m_info.m_endThickness * 0.5f;
 
 
-					p2.m_thickness = p3.m_thickness = (p1.m_thickness + p4.m_thickness) * 0.25f;
+					p2.m_thickness = p3.m_thickness = (p1.m_thickness + p4.m_thickness) * 0.5f;
 					p0.m_thickness = 2.0f * p1.m_thickness - p2.m_thickness;
 					p5.m_thickness = 2.0f * p4.m_thickness - p3.m_thickness;
 
