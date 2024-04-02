@@ -162,7 +162,7 @@ void tree_trunk_mesh()
 	std::vector<std::shared_ptr<TreeDescriptor>> collectedTreeDescriptors{};
 	for (const auto& i : std::filesystem::recursive_directory_iterator(target_descriptor_folder_path))
 	{
-		if (i.is_regular_file() && i.path().extension().string() == ".td")
+		if (i.is_regular_file() && i.path().extension().string() == ".tree")
 		{
 			for (int treeIndex = 0; treeIndex < 500; treeIndex++)
 			{
@@ -177,6 +177,46 @@ void tree_trunk_mesh()
 		}
 	}
 }
+
+void tree_growth_mesh()
+{
+	//std::filesystem::path project_folder_path = "C:\\Users\\62469\\Work\\TreeEngine\\EcoSysLab\\Resources\\EcoSysLabProject";
+	std::filesystem::path project_folder_path = "C:\\Users\\lllll\\Documents\\GitHub\\EcoSysLab\\Resources\\EcoSysLabProject";
+	std::filesystem::path project_path = project_folder_path / "test.eveproj";
+
+
+	start_project_windowless(project_path);
+
+	TreeMeshGeneratorSettings tmgs{};
+	tmgs.m_xSubdivision = 0.01f;
+	tmgs.m_branchYSubdivision = 0.03f;
+	tmgs.m_trunkYSubdivision = 0.01f;
+	tmgs.m_enableFoliage = true;
+	tmgs.m_enableTwig = true;
+
+	std::filesystem::path output_root = "D:\\TreeGrowth\\";
+	tmgs.m_enableFoliage = true;
+	std::filesystem::path target_descriptor_folder_path = project_folder_path / "AppleTree";
+	std::vector<std::shared_ptr<TreeDescriptor>> collectedTreeDescriptors{};
+	for (const auto& i : std::filesystem::recursive_directory_iterator(target_descriptor_folder_path))
+	{
+		if (i.is_regular_file() && i.path().extension().string() == ".tree")
+		{
+			for (int treeIndex = 0; treeIndex < 500; treeIndex++)
+			{
+				std::string name = "Tree_" + std::to_string(treeIndex);
+				std::string infoName = "Info_" + std::to_string(treeIndex);
+				std::string trunkName = "Trunk_" + std::to_string(treeIndex);
+				std::filesystem::path target_info_path = output_root / (infoName + ".txt");
+				std::filesystem::path target_tree_mesh_path = output_root / (name + ".obj");
+				std::filesystem::path target_trunk_mesh_path = output_root / (trunkName + ".obj");
+				std::vector<int> nodes = { 3000, 6000, 9000, 12000, 15000 };
+				DatasetGenerator::GenerateTreeMesh(i.path().string(), 0.08220f, 999, nodes, tmgs, target_tree_mesh_path.string());
+			}
+		}
+	}
+}
+
 int main() {
-	forest_patch_point_cloud();
+	tree_growth_mesh();
 }

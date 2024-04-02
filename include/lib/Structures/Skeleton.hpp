@@ -560,25 +560,27 @@ namespace EcoSysLab {
 			auto parentFlowHandle = flow.m_parentHandle;
 
 			RecycleFlow(node.m_flowHandle, flowHandler, nodeHandler);
-			//Connect parent branch with the only apical child flow.
-			auto& parentFlow = m_flows[parentFlowHandle];
-			if (parentFlow.m_childHandles.size() == 1) {
-				auto childHandle = parentFlow.m_childHandles[0];
-				auto& childFlow = m_flows[childHandle];
-				if (childFlow.m_apical) {
-					for (const auto& nodeHandle : childFlow.m_nodes) {
-						m_nodes[nodeHandle].m_flowHandle = parentFlowHandle;
+			if (parentFlowHandle != -1) {
+				//Connect parent branch with the only apical child flow.
+				auto& parentFlow = m_flows[parentFlowHandle];
+				if (parentFlow.m_childHandles.size() == 1) {
+					auto childHandle = parentFlow.m_childHandles[0];
+					auto& childFlow = m_flows[childHandle];
+					if (childFlow.m_apical) {
+						for (const auto& nodeHandle : childFlow.m_nodes) {
+							m_nodes[nodeHandle].m_flowHandle = parentFlowHandle;
+						}
+						for (const auto& grandChildFlowHandle : childFlow.m_childHandles) {
+							m_flows[grandChildFlowHandle].m_parentHandle = parentFlowHandle;
+						}
+						parentFlow.m_nodes.insert(parentFlow.m_nodes.end(), childFlow.m_nodes.begin(),
+							childFlow.m_nodes.end());
+						parentFlow.m_childHandles.clear();
+						parentFlow.m_childHandles.insert(parentFlow.m_childHandles.end(),
+							childFlow.m_childHandles.begin(),
+							childFlow.m_childHandles.end());
+						RecycleFlowSingle(childHandle, flowHandler);
 					}
-					for (const auto& grandChildFlowHandle : childFlow.m_childHandles) {
-						m_flows[grandChildFlowHandle].m_parentHandle = parentFlowHandle;
-					}
-					parentFlow.m_nodes.insert(parentFlow.m_nodes.end(), childFlow.m_nodes.begin(),
-						childFlow.m_nodes.end());
-					parentFlow.m_childHandles.clear();
-					parentFlow.m_childHandles.insert(parentFlow.m_childHandles.end(),
-						childFlow.m_childHandles.begin(),
-						childFlow.m_childHandles.end());
-					RecycleFlowSingle(childHandle, flowHandler);
 				}
 			}
 			return;

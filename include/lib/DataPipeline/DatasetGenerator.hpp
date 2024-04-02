@@ -24,6 +24,12 @@ namespace EcoSysLab {
 			int maxTreeNodeCount,
 			const TreeMeshGeneratorSettings& meshGeneratorSettings, const std::string& treeMeshOutputPath);
 
+		static void GenerateTreeMesh(const std::string& treeParametersPath,
+			float deltaTime,
+			int maxIterations,
+			std::vector<int> targetTreeNodeCount,
+			const TreeMeshGeneratorSettings& meshGeneratorSettings, const std::string& treeMeshOutputPath);
+
 		static void GeneratePointCloudForTree(
 			const TreePointCloudPointSettings& pointSettings,
 			const std::shared_ptr<PointCloudCaptureSettings>& captureSettings,

@@ -766,68 +766,56 @@ std::shared_ptr<Mesh> Tree::GenerateFoliageMesh(const TreeMeshGeneratorSettings&
 	for (const auto& internodeHandle : nodeList) {
 		const auto& internode = m_treeModel.PeekShootSkeleton().PeekNode(internodeHandle);
 		const auto& internodeInfo = internode.m_info;
-		if (internodeInfo.m_thickness < foliageDescriptor->m_maxNodeThickness
-			&& internodeInfo.m_rootDistance > foliageDescriptor->m_minRootDistance
-			&& internodeInfo.m_endDistance < foliageDescriptor->m_maxEndDistance) {
-			for (int i = 0; i < foliageDescriptor->m_leafCountPerInternode; i++)
-			{
-				auto leafSize = foliageDescriptor->m_leafSize * internode.m_data.m_lightIntensity;
-				glm::quat rotation = internodeInfo.m_globalRotation * 
-					glm::quat(glm::radians(glm::vec3(glm::gaussRand(0.0f, foliageDescriptor->m_rotationVariance), foliageDescriptor->m_branchingAngle, glm::linearRand(0.0f, 360.0f))));
-				auto front = rotation * glm::vec3(0, 0, -1);
-				auto foliagePosition = internodeInfo.GetGlobalEndPosition() + front * (leafSize.y + glm::gaussRand(0.0f, foliageDescriptor->m_positionVariance));
-				auto leafTransform = glm::translate(foliagePosition) * glm::mat4_cast(rotation) * glm::scale(glm::vec3(leafSize.x, 1.0f, leafSize.y));
-
-				auto& matrix = leafTransform;
-				Vertex archetype;
-				for (auto i = 0; i < quadMesh->GetVerticesAmount(); i++) {
-					archetype.m_position =
-						matrix * glm::vec4(quadMesh->UnsafeGetVertices()[i].m_position, 1.0f);
-					archetype.m_normal = glm::normalize(glm::vec3(
-						matrix * glm::vec4(quadMesh->UnsafeGetVertices()[i].m_normal, 0.0f)));
-					archetype.m_tangent = glm::normalize(glm::vec3(
-						matrix *
-						glm::vec4(quadMesh->UnsafeGetVertices()[i].m_tangent, 0.0f)));
-					archetype.m_texCoord =
-						quadMesh->UnsafeGetVertices()[i].m_texCoord;
-					vertices.push_back(archetype);
-				}
-				for (auto triangle : quadTriangles) {
-					triangle.x += offset;
-					triangle.y += offset;
-					triangle.z += offset;
-					indices.push_back(triangle.x);
-					indices.push_back(triangle.y);
-					indices.push_back(triangle.z);
-				}
-
-				offset += quadVerticesSize;
-
-
-				for (auto i = 0; i < quadMesh->GetVerticesAmount(); i++) {
-					archetype.m_position =
-						matrix * glm::vec4(quadMesh->UnsafeGetVertices()[i].m_position, 1.0f);
-					archetype.m_normal = glm::normalize(glm::vec3(
-						matrix * glm::vec4(quadMesh->UnsafeGetVertices()[i].m_normal, 0.0f)));
-					archetype.m_tangent = glm::normalize(glm::vec3(
-						matrix *
-						glm::vec4(quadMesh->UnsafeGetVertices()[i].m_tangent, 0.0f)));
-					archetype.m_texCoord =
-						quadMesh->UnsafeGetVertices()[i].m_texCoord;
-					vertices.push_back(archetype);
-				}
-				for (auto triangle : quadTriangles) {
-					triangle.x += offset;
-					triangle.y += offset;
-					triangle.z += offset;
-					indices.push_back(triangle.z);
-					indices.push_back(triangle.y);
-					indices.push_back(triangle.x);
-				}
-				offset += quadVerticesSize;
+		std::vector<glm::mat4> leafMatrices;
+		foliageDescriptor->GenerateFoliageMatrices(leafMatrices, internodeInfo);
+		Vertex archetype;
+		for (const auto& matrix : leafMatrices)
+		{
+			for (auto i = 0; i < quadMesh->GetVerticesAmount(); i++) {
+				archetype.m_position =
+					matrix * glm::vec4(quadMesh->UnsafeGetVertices()[i].m_position, 1.0f);
+				archetype.m_normal = glm::normalize(glm::vec3(
+					matrix * glm::vec4(quadMesh->UnsafeGetVertices()[i].m_normal, 0.0f)));
+				archetype.m_tangent = glm::normalize(glm::vec3(
+					matrix *
+					glm::vec4(quadMesh->UnsafeGetVertices()[i].m_tangent, 0.0f)));
+				archetype.m_texCoord =
+					quadMesh->UnsafeGetVertices()[i].m_texCoord;
+				vertices.push_back(archetype);
 			}
-		}
+			for (auto triangle : quadTriangles) {
+				triangle.x += offset;
+				triangle.y += offset;
+				triangle.z += offset;
+				indices.push_back(triangle.x);
+				indices.push_back(triangle.y);
+				indices.push_back(triangle.z);
+			}
 
+			offset += quadVerticesSize;
+
+			for (auto i = 0; i < quadMesh->GetVerticesAmount(); i++) {
+				archetype.m_position =
+					matrix * glm::vec4(quadMesh->UnsafeGetVertices()[i].m_position, 1.0f);
+				archetype.m_normal = glm::normalize(glm::vec3(
+					matrix * glm::vec4(quadMesh->UnsafeGetVertices()[i].m_normal, 0.0f)));
+				archetype.m_tangent = glm::normalize(glm::vec3(
+					matrix *
+					glm::vec4(quadMesh->UnsafeGetVertices()[i].m_tangent, 0.0f)));
+				archetype.m_texCoord =
+					quadMesh->UnsafeGetVertices()[i].m_texCoord;
+				vertices.push_back(archetype);
+			}
+			for (auto triangle : quadTriangles) {
+				triangle.x += offset;
+				triangle.y += offset;
+				triangle.z += offset;
+				indices.push_back(triangle.z);
+				indices.push_back(triangle.y);
+				indices.push_back(triangle.x);
+			}
+			offset += quadVerticesSize;
+		}
 	}
 
 	auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
@@ -951,25 +939,16 @@ std::shared_ptr<ParticleInfoList> Tree::GenerateFoliageParticleInfoList(
 	for (const auto& internodeHandle : nodeList) {
 		const auto& internode = m_treeModel.PeekShootSkeleton().PeekNode(internodeHandle);
 		const auto& internodeInfo = internode.m_info;
-		if (internodeInfo.m_thickness < foliageDescriptor->m_maxNodeThickness
-			&& internodeInfo.m_rootDistance > foliageDescriptor->m_minRootDistance
-			&& internodeInfo.m_endDistance < foliageDescriptor->m_maxEndDistance) {
-			for (int i = 0; i < foliageDescriptor->m_leafCountPerInternode; i++)
-			{
-				const auto leafSize = foliageDescriptor->m_leafSize * internode.m_data.m_lightIntensity;
-				glm::quat rotation = internodeInfo.m_globalRotation * 
-					glm::quat(glm::radians(glm::vec3(glm::gaussRand(0.0f, foliageDescriptor->m_rotationVariance), foliageDescriptor->m_branchingAngle, glm::linearRand(0.0f, 360.0f))));
-				auto front = rotation * glm::vec3(0, 0, -1);
-				auto foliagePosition = internodeInfo.GetGlobalEndPosition() + front * (leafSize.y + glm::gaussRand(0.0f, foliageDescriptor->m_positionVariance));
-				const auto leafTransform = glm::translate(foliagePosition) * glm::mat4_cast(rotation) * glm::scale(glm::vec3(leafSize.x, 1.0f, leafSize.y));
-
-				ParticleInfo particleInfo{};
-				particleInfo.m_instanceMatrix.m_value = leafTransform;
-				particleInfo.m_instanceColor = glm::vec4(0, 1, 0, 1);
-				retVal->m_particleInfos.emplace_back(particleInfo);
-			}
+		std::vector<glm::mat4> leafMatrices{};
+		foliageDescriptor->GenerateFoliageMatrices(leafMatrices, internodeInfo);
+		const auto startIndex = retVal->m_particleInfos.size();
+		retVal->m_particleInfos.resize(startIndex + leafMatrices.size());
+		for(int i = 0; i < leafMatrices.size(); i++)
+		{
+			auto& particleInfo = retVal->m_particleInfos.at(startIndex + i);
+			particleInfo.m_instanceMatrix.m_value = leafMatrices.at(i);
+			particleInfo.m_instanceColor = glm::vec4(0, 1, 0, 1);
 		}
-
 	}
 	return retVal;
 }
@@ -990,70 +969,57 @@ std::shared_ptr<Mesh> Tree::GenerateStrandModelFoliageMesh(
 	if (!foliageDescriptor) foliageDescriptor = ProjectManager::CreateTemporaryAsset<FoliageDescriptor>();
 	const auto& nodeList = m_treeModel.PeekShootSkeleton().PeekSortedNodeList();
 	for (const auto& internodeHandle : nodeList) {
-		const auto& internode = m_treeModel.PeekShootSkeleton().PeekNode(internodeHandle);
 		const auto& strandModelNode = m_strandModel.m_strandModelSkeleton.PeekNode(internodeHandle);
-		const auto& internodeInfo = internode.m_info;
-		if (internodeInfo.m_thickness < foliageDescriptor->m_maxNodeThickness
-			&& internodeInfo.m_rootDistance > foliageDescriptor->m_minRootDistance
-			&& internodeInfo.m_endDistance < foliageDescriptor->m_maxEndDistance) {
-			for (int i = 0; i < foliageDescriptor->m_leafCountPerInternode; i++)
-			{
-				auto leafSize = foliageDescriptor->m_leafSize * internode.m_data.m_lightIntensity;
-				glm::quat rotation = strandModelNode.m_data.m_adjustedGlobalRotation * glm::quat(glm::radians(glm::vec3(glm::gaussRand(0.0f, foliageDescriptor->m_rotationVariance), foliageDescriptor->m_branchingAngle, glm::linearRand(0.0f, 360.0f))));
-				auto front = rotation * glm::vec3(0, 0, -1);
-				auto foliagePosition = strandModelNode.m_data.m_adjustedGlobalPosition + front * (leafSize.y + glm::gaussRand(0.0f, foliageDescriptor->m_positionVariance));
-				auto leafTransform = glm::translate(foliagePosition) * glm::mat4_cast(rotation) * glm::scale(glm::vec3(leafSize.x, 1.0f, leafSize.y));
-
-				auto& matrix = leafTransform;
-				Vertex archetype;
-				for (auto i = 0; i < quadMesh->GetVerticesAmount(); i++) {
-					archetype.m_position =
-						matrix * glm::vec4(quadMesh->UnsafeGetVertices()[i].m_position, 1.0f);
-					archetype.m_normal = glm::normalize(glm::vec3(
-						matrix * glm::vec4(quadMesh->UnsafeGetVertices()[i].m_normal, 0.0f)));
-					archetype.m_tangent = glm::normalize(glm::vec3(
-						matrix *
-						glm::vec4(quadMesh->UnsafeGetVertices()[i].m_tangent, 0.0f)));
-					archetype.m_texCoord =
-						quadMesh->UnsafeGetVertices()[i].m_texCoord;
-					vertices.push_back(archetype);
-				}
-				for (auto triangle : quadTriangles) {
-					triangle.x += offset;
-					triangle.y += offset;
-					triangle.z += offset;
-					indices.push_back(triangle.x);
-					indices.push_back(triangle.y);
-					indices.push_back(triangle.z);
-				}
-
-				offset += quadVerticesSize;
-
-
-				for (auto i = 0; i < quadMesh->GetVerticesAmount(); i++) {
-					archetype.m_position =
-						matrix * glm::vec4(quadMesh->UnsafeGetVertices()[i].m_position, 1.0f);
-					archetype.m_normal = glm::normalize(glm::vec3(
-						matrix * glm::vec4(quadMesh->UnsafeGetVertices()[i].m_normal, 0.0f)));
-					archetype.m_tangent = glm::normalize(glm::vec3(
-						matrix *
-						glm::vec4(quadMesh->UnsafeGetVertices()[i].m_tangent, 0.0f)));
-					archetype.m_texCoord =
-						quadMesh->UnsafeGetVertices()[i].m_texCoord;
-					vertices.push_back(archetype);
-				}
-				for (auto triangle : quadTriangles) {
-					triangle.x += offset;
-					triangle.y += offset;
-					triangle.z += offset;
-					indices.push_back(triangle.z);
-					indices.push_back(triangle.y);
-					indices.push_back(triangle.x);
-				}
-				offset += quadVerticesSize;
+		std::vector<glm::mat4> leafMatrices;
+		foliageDescriptor->GenerateFoliageMatrices(leafMatrices, strandModelNode.m_info);
+		Vertex archetype;
+		for (const auto& matrix : leafMatrices)
+		{
+			for (auto i = 0; i < quadMesh->GetVerticesAmount(); i++) {
+				archetype.m_position =
+					matrix * glm::vec4(quadMesh->UnsafeGetVertices()[i].m_position, 1.0f);
+				archetype.m_normal = glm::normalize(glm::vec3(
+					matrix * glm::vec4(quadMesh->UnsafeGetVertices()[i].m_normal, 0.0f)));
+				archetype.m_tangent = glm::normalize(glm::vec3(
+					matrix *
+					glm::vec4(quadMesh->UnsafeGetVertices()[i].m_tangent, 0.0f)));
+				archetype.m_texCoord =
+					quadMesh->UnsafeGetVertices()[i].m_texCoord;
+				vertices.push_back(archetype);
 			}
-		}
+			for (auto triangle : quadTriangles) {
+				triangle.x += offset;
+				triangle.y += offset;
+				triangle.z += offset;
+				indices.push_back(triangle.x);
+				indices.push_back(triangle.y);
+				indices.push_back(triangle.z);
+			}
 
+			offset += quadVerticesSize;
+
+			for (auto i = 0; i < quadMesh->GetVerticesAmount(); i++) {
+				archetype.m_position =
+					matrix * glm::vec4(quadMesh->UnsafeGetVertices()[i].m_position, 1.0f);
+				archetype.m_normal = glm::normalize(glm::vec3(
+					matrix * glm::vec4(quadMesh->UnsafeGetVertices()[i].m_normal, 0.0f)));
+				archetype.m_tangent = glm::normalize(glm::vec3(
+					matrix *
+					glm::vec4(quadMesh->UnsafeGetVertices()[i].m_tangent, 0.0f)));
+				archetype.m_texCoord =
+					quadMesh->UnsafeGetVertices()[i].m_texCoord;
+				vertices.push_back(archetype);
+			}
+			for (auto triangle : quadTriangles) {
+				triangle.x += offset;
+				triangle.y += offset;
+				triangle.z += offset;
+				indices.push_back(triangle.z);
+				indices.push_back(triangle.y);
+				indices.push_back(triangle.x);
+			}
+			offset += quadVerticesSize;
+		}
 	}
 
 	auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
