@@ -197,8 +197,11 @@ void Tree::InitializeSkeletalGraph(NodeHandle baseNodeHandle,
 	pointParticles->m_material = pointMaterial;
 	pointParticles->m_particleInfoList = pointList;
 	pointMaterial->m_vertexColorOnly = true;
-	lineList->m_particleInfos.resize(sortedInternodeList.size());
-	pointList->m_particleInfos.resize(sortedInternodeList.size());
+
+	std::vector<ParticleInfo> lineParticleInfos;
+	std::vector<ParticleInfo> pointParticleInfos;
+	lineParticleInfos.resize(sortedInternodeList.size());
+	pointParticleInfos.resize(sortedInternodeList.size());
 	Jobs::ParallelFor(sortedInternodeList.size(), [&](unsigned internodeIndex)
 		{
 			const auto internodeHandle = sortedInternodeList[internodeIndex];
@@ -224,7 +227,7 @@ void Tree::InitializeSkeletalGraph(NodeHandle baseNodeHandle,
 					direction, glm::vec3(direction.y, direction.z, direction.x));
 				rotation *= glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));
 				const glm::mat4 rotationTransform = glm::mat4_cast(rotation);
-				lineList->m_particleInfos[internodeIndex].m_instanceMatrix.m_value =
+				lineParticleInfos[internodeIndex].m_instanceMatrix.m_value =
 					glm::translate(position + (node.m_info.m_length / 2.0f) * direction) *
 					rotationTransform *
 					glm::scale(glm::vec3(
@@ -234,10 +237,10 @@ void Tree::InitializeSkeletalGraph(NodeHandle baseNodeHandle,
 
 				if (subTree)
 				{
-					lineList->m_particleInfos[internodeIndex].m_instanceColor = m_treeVisualizer.m_skeletalGraphSettings.m_lineFocusColor;
+					lineParticleInfos[internodeIndex].m_instanceColor = m_treeVisualizer.m_skeletalGraphSettings.m_lineFocusColor;
 				}
 				else {
-					lineList->m_particleInfos[internodeIndex].m_instanceColor = m_treeVisualizer.m_skeletalGraphSettings.m_lineColor;
+					lineParticleInfos[internodeIndex].m_instanceColor = m_treeVisualizer.m_skeletalGraphSettings.m_lineColor;
 				}
 			}
 			{
@@ -250,25 +253,24 @@ void Tree::InitializeSkeletalGraph(NodeHandle baseNodeHandle,
 				float thicknessFactor = node.m_info.m_thickness;
 				if (m_treeVisualizer.m_skeletalGraphSettings.m_fixedPointSize) thicknessFactor = m_treeVisualizer.m_skeletalGraphSettings.m_fixedPointSizeFactor;
 				auto scale = glm::vec3(m_treeVisualizer.m_skeletalGraphSettings.m_branchPointSize * thicknessFactor);
-				pointList->m_particleInfos[internodeIndex].m_instanceColor = m_treeVisualizer.m_skeletalGraphSettings.m_branchPointColor;
+				pointParticleInfos[internodeIndex].m_instanceColor = m_treeVisualizer.m_skeletalGraphSettings.m_branchPointColor;
 				if (internodeIndex == 0 || node.RefChildHandles().size() > 1)
 				{
 					scale = glm::vec3(m_treeVisualizer.m_skeletalGraphSettings.m_junctionPointSize * thicknessFactor);
-					pointList->m_particleInfos[internodeIndex].m_instanceColor = m_treeVisualizer.m_skeletalGraphSettings.m_junctionPointColor;
+					pointParticleInfos[internodeIndex].m_instanceColor = m_treeVisualizer.m_skeletalGraphSettings.m_junctionPointColor;
 				}
-				pointList->m_particleInfos[internodeIndex].m_instanceMatrix.m_value =
+				pointParticleInfos[internodeIndex].m_instanceMatrix.m_value =
 					glm::translate(position) *
 					rotationTransform *
 					glm::scale(scale * (subTree ? 1.25f : 1.0f));
 				if (subTree)
 				{
-					pointList->m_particleInfos[internodeIndex].m_instanceColor = m_treeVisualizer.m_skeletalGraphSettings.m_branchFocusColor;
+					pointParticleInfos[internodeIndex].m_instanceColor = m_treeVisualizer.m_skeletalGraphSettings.m_branchFocusColor;
 				}
 			}
 		});
-
-	lineList->SetPendingUpdate();
-	pointList->SetPendingUpdate();
+	lineList->SetParticleInfos(lineParticleInfos);
+	pointList->SetParticleInfos(pointParticleInfos);
 }
 
 void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
@@ -934,22 +936,23 @@ std::shared_ptr<ParticleInfoList> Tree::GenerateFoliageParticleInfoList(
 	const auto retVal = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
 	auto foliageDescriptor = treeDescriptor->m_foliageDescriptor.Get<FoliageDescriptor>();
 	if (!foliageDescriptor) foliageDescriptor = ProjectManager::CreateTemporaryAsset<FoliageDescriptor>();
-
+	std::vector<ParticleInfo> particleInfos;
 	const auto& nodeList = m_treeModel.PeekShootSkeleton().PeekSortedNodeList();
 	for (const auto& internodeHandle : nodeList) {
 		const auto& internode = m_treeModel.PeekShootSkeleton().PeekNode(internodeHandle);
 		const auto& internodeInfo = internode.m_info;
 		std::vector<glm::mat4> leafMatrices{};
 		foliageDescriptor->GenerateFoliageMatrices(leafMatrices, internodeInfo);
-		const auto startIndex = retVal->m_particleInfos.size();
-		retVal->m_particleInfos.resize(startIndex + leafMatrices.size());
+		const auto startIndex = particleInfos.size();
+		particleInfos.resize(startIndex + leafMatrices.size());
 		for(int i = 0; i < leafMatrices.size(); i++)
 		{
-			auto& particleInfo = retVal->m_particleInfos.at(startIndex + i);
+			auto& particleInfo = particleInfos.at(startIndex + i);
 			particleInfo.m_instanceMatrix.m_value = leafMatrices.at(i);
 			particleInfo.m_instanceColor = glm::vec4(0, 1, 0, 1);
 		}
 	}
+	retVal->SetParticleInfos(particleInfos);
 	return retVal;
 }
 
@@ -1614,8 +1617,6 @@ void Tree::GenerateGeometryEntities(const TreeMeshGeneratorSettings& meshGenerat
 		particles->m_mesh = mesh;
 		particles->m_material = material;
 		particles->m_particleInfoList = particleInfoList;
-		particleInfoList->SetPendingUpdate();
-
 	}
 	if (meshGeneratorSettings.m_enableFruit)
 	{

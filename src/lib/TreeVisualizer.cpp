@@ -241,11 +241,15 @@ void TreeVisualizer::SetSelectedNode(const ShootSkeleton& skeleton, const NodeHa
 	}
 }
 
-void TreeVisualizer::SyncMatrices(const ShootSkeleton& skeleton, const std::shared_ptr<ParticleInfoList>& particleInfoList) {
-
+void TreeVisualizer::SyncMatrices(const ShootSkeleton& skeleton, const std::shared_ptr<ParticleInfoList>& particleInfoList, NodeHandle selectedNodeHandle) {
+	if (m_randomColors.empty()) {
+		for (int i = 0; i < 1000; i++) {
+			m_randomColors.emplace_back(glm::abs(glm::ballRand(1.0f)), 1.0f);
+		}
+	}
 	const auto& sortedNodeList = skeleton.PeekSortedNodeList();
-	auto& matrices = particleInfoList->m_particleInfos;
-	particleInfoList->SetPendingUpdate();
+	std::vector<ParticleInfo> matrices;
+	
 	matrices.resize(sortedNodeList.size());
 	Jobs::ParallelFor(sortedNodeList.size(), [&](unsigned i) {
 		const auto nodeHandle = sortedNodeList[i];
@@ -287,6 +291,53 @@ void TreeVisualizer::SyncMatrices(const ShootSkeleton& skeleton, const std::shar
 		}
 		}
 	);
+	Jobs::ParallelFor(sortedNodeList.size(), [&](unsigned i) {
+		const auto nodeHandle = sortedNodeList[i];
+		const auto& node = skeleton.PeekNode(nodeHandle);
+		switch (static_cast<ShootVisualizerMode>(m_settings.m_shootVisualizationMode)) {
+		case ShootVisualizerMode::Default:
+			matrices[i].m_instanceColor = m_randomColors[nodeHandle % m_randomColors.size()];
+			break;
+		case ShootVisualizerMode::Order:
+			matrices[i].m_instanceColor = m_randomColors[node.m_data.m_order];
+			break;
+		case ShootVisualizerMode::Level:
+			matrices[i].m_instanceColor = m_randomColors[node.m_data.m_level];
+			break;
+		case ShootVisualizerMode::LightIntensity:
+			matrices[i].m_instanceColor = glm::mix(glm::vec4(0, 1, 0, 1), glm::vec4(1, 0, 0, 1),
+				glm::clamp(glm::pow(node.m_data.m_lightIntensity, m_settings.m_shootColorMultiplier), 0.0f, 1.f));
+			break;
+		case ShootVisualizerMode::LightDirection:
+			matrices[i].m_instanceColor = glm::vec4(glm::vec3(glm::clamp(node.m_data.m_lightDirection, 0.0f, 1.f)),
+				1.0f);
+			break;
+		case ShootVisualizerMode::IsMaxChild:
+			matrices[i].m_instanceColor = glm::vec4(glm::vec3(node.m_data.m_maxChild ? 1.0f : 0.0f), 1.0f);
+			break;
+		case ShootVisualizerMode::GrowthPotential:
+			matrices[i].m_instanceColor = glm::mix(glm::vec4(0, 1, 0, 1), glm::vec4(1, 0, 0, 1), glm::clamp(glm::pow(node.m_data.m_growthPotential, m_settings.m_shootColorMultiplier), 0.0f, 1.f));
+			break;
+		case ShootVisualizerMode::GrowthRate:
+			matrices[i].m_instanceColor = glm::mix(glm::vec4(0, 1, 0, 1), glm::vec4(1, 0, 0, 1), glm::clamp(glm::pow(node.m_data.m_growthRate, m_settings.m_shootColorMultiplier), 0.0f, 1.f));
+			break;
+		case ShootVisualizerMode::ApicalControl:
+			matrices[i].m_instanceColor = glm::mix(glm::vec4(0, 1, 0, 1), glm::vec4(1, 0, 0, 1),
+				glm::clamp(glm::pow(node.m_data.m_apicalControl, m_settings.m_shootColorMultiplier), 0.0f, 1.f));
+			break;
+		case ShootVisualizerMode::DesiredGrowthRate:
+			matrices[i].m_instanceColor = glm::mix(glm::vec4(0, 1, 0, 1), glm::vec4(1, 0, 0, 1),
+				glm::clamp(glm::pow(node.m_data.m_desiredGrowthRate, m_settings.m_shootColorMultiplier), 0.0f, 1.f));
+			break;
+		default:
+			matrices[i].m_instanceColor = m_randomColors[node.m_data.m_order];
+			break;
+		}
+		matrices[i].m_instanceColor.a = 1.0f;
+		if (selectedNodeHandle != -1) matrices[i].m_instanceColor.a = 1.0f;
+		}
+	);
+	particleInfoList->SetParticleInfos(matrices);
 }
 
 bool TreeVisualizer::DrawInternodeInspectionGui(
@@ -372,7 +423,7 @@ TreeVisualizer::OnInspect(
 		if (ImGui::Combo("Shoot Color mode",
 			{ "Default", "Order", "Level", "Light Intensity", "Light Direction", "Growth Potential", "Apical control", "Desired growth rate", "Growth Rate", "IsMaxChild", "AllocatedVigor" },
 			m_settings.m_shootVisualizationMode)) {
-			m_needShootColorUpdate = true;
+			m_needUpdate = true;
 		}
 		ImGui::DragInt("History Limit", &treeModel.m_historyLimit, 1, -1, 1024);
 
@@ -380,11 +431,11 @@ TreeVisualizer::OnInspect(
 			switch (static_cast<ShootVisualizerMode>(m_settings.m_shootVisualizationMode)) {
 			case ShootVisualizerMode::LightIntensity:
 				ImGui::DragFloat("Light intensity multiplier", &m_settings.m_shootColorMultiplier, 0.001f);
-				m_needShootColorUpdate = true;
+				m_needUpdate = true;
 				break;
 			case ShootVisualizerMode::AllocatedVigor:
 				ImGui::DragFloat("Vigor multiplier", &m_settings.m_shootColorMultiplier, 0.001f);
-				m_needShootColorUpdate = true;
+				m_needUpdate = true;
 				break;
 			default:
 				break;
@@ -445,21 +496,14 @@ void TreeVisualizer::Visualize(TreeModel& treeModel, const GlobalTransform& glob
 		const auto editorLayer = Application::GetLayer<EditorLayer>();
 		const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
 		if (m_needUpdate) {
-			SyncMatrices(treeSkeleton, m_internodeMatrices);
-			SyncColors(treeSkeleton, m_selectedInternodeHandle);
+			SyncMatrices(treeSkeleton, m_internodeMatrices, m_selectedInternodeHandle);
 			m_needUpdate = false;
-		}
-		else {
-			if (m_needShootColorUpdate) {
-				SyncColors(treeSkeleton, m_selectedInternodeHandle);
-				m_needShootColorUpdate = false;
-			}
 		}
 		GizmoSettings gizmoSettings;
 		gizmoSettings.m_drawSettings.m_blending = true;
 		gizmoSettings.m_depthTest = true;
 		gizmoSettings.m_depthWrite = true;
-		if (!m_internodeMatrices->m_particleInfos.empty()) {
+		if (!m_internodeMatrices->PeekParticleInfoList().empty()) {
 
 			editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER"), ecoSysLabLayer->m_visualizationCamera,
 				m_internodeMatrices,
@@ -949,8 +993,7 @@ void TreeVisualizer::Reset(TreeModel& treeModel) {
 	m_selectedInternodeHandle = -1;
 	m_selectedInternodeHierarchyList.clear();
 	m_checkpointIteration = treeModel.CurrentIteration();
-	m_internodeMatrices->m_particleInfos.clear();
-	m_internodeMatrices->SetPendingUpdate();
+	m_internodeMatrices->SetParticleInfos({});
 	m_needUpdate = true;
 }
 
@@ -958,8 +1001,7 @@ void TreeVisualizer::Clear() {
 	m_selectedInternodeHandle = -1;
 	m_selectedInternodeHierarchyList.clear();
 	m_checkpointIteration = 0;
-	m_internodeMatrices->m_particleInfos.clear();
-	m_internodeMatrices->SetPendingUpdate();
+	m_internodeMatrices->SetParticleInfos({});
 }
 
 
@@ -971,64 +1013,6 @@ bool TreeVisualizer::Initialized() const
 
 void TreeVisualizer::Initialize()
 {
-	m_internodeMatrices = std::make_shared<ParticleInfoList>();
+	m_internodeMatrices = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
 }
 
-void TreeVisualizer::SyncColors(const ShootSkeleton& shootSkeleton, const NodeHandle selectedNodeHandle) {
-	if (m_randomColors.empty()) {
-		for (int i = 0; i < 1000; i++) {
-			m_randomColors.emplace_back(glm::abs(glm::ballRand(1.0f)), 1.0f);
-		}
-	}
-
-	const auto& sortedNodeList = shootSkeleton.PeekSortedNodeList();
-	auto& matrices = m_internodeMatrices->m_particleInfos;
-	m_internodeMatrices->SetPendingUpdate();
-	matrices.resize(sortedNodeList.size());
-	Jobs::ParallelFor(sortedNodeList.size(), [&](unsigned i) {
-		const auto nodeHandle = sortedNodeList[i];
-		const auto& node = shootSkeleton.PeekNode(nodeHandle);
-		switch (static_cast<ShootVisualizerMode>(m_settings.m_shootVisualizationMode)) {
-		case ShootVisualizerMode::Default:
-			matrices[i].m_instanceColor = m_randomColors[nodeHandle % m_randomColors.size()];
-			break;
-		case ShootVisualizerMode::Order:
-			matrices[i].m_instanceColor = m_randomColors[node.m_data.m_order];
-			break;
-		case ShootVisualizerMode::Level:
-			matrices[i].m_instanceColor = m_randomColors[node.m_data.m_level];
-			break;
-		case ShootVisualizerMode::LightIntensity:
-			matrices[i].m_instanceColor = glm::mix(glm::vec4(0, 1, 0, 1), glm::vec4(1, 0, 0, 1),
-				glm::clamp(glm::pow(node.m_data.m_lightIntensity, m_settings.m_shootColorMultiplier), 0.0f, 1.f));
-			break;
-		case ShootVisualizerMode::LightDirection:
-			matrices[i].m_instanceColor = glm::vec4(glm::vec3(glm::clamp(node.m_data.m_lightDirection, 0.0f, 1.f)),
-				1.0f);
-			break;
-		case ShootVisualizerMode::IsMaxChild:
-			matrices[i].m_instanceColor = glm::vec4(glm::vec3(node.m_data.m_maxChild ? 1.0f : 0.0f), 1.0f);
-			break;
-		case ShootVisualizerMode::GrowthPotential:
-			matrices[i].m_instanceColor = glm::mix(glm::vec4(0, 1, 0, 1), glm::vec4(1, 0, 0, 1), glm::clamp(glm::pow(node.m_data.m_growthPotential, m_settings.m_shootColorMultiplier), 0.0f, 1.f));
-			break;
-		case ShootVisualizerMode::GrowthRate:
-			matrices[i].m_instanceColor = glm::mix(glm::vec4(0, 1, 0, 1), glm::vec4(1, 0, 0, 1), glm::clamp(glm::pow(node.m_data.m_growthRate, m_settings.m_shootColorMultiplier), 0.0f, 1.f));
-			break;
-		case ShootVisualizerMode::ApicalControl:
-			matrices[i].m_instanceColor = glm::mix(glm::vec4(0, 1, 0, 1), glm::vec4(1, 0, 0, 1),
-				glm::clamp(glm::pow(node.m_data.m_apicalControl, m_settings.m_shootColorMultiplier), 0.0f, 1.f));
-			break;
-		case ShootVisualizerMode::DesiredGrowthRate:
-			matrices[i].m_instanceColor = glm::mix(glm::vec4(0, 1, 0, 1), glm::vec4(1, 0, 0, 1),
-				glm::clamp(glm::pow(node.m_data.m_desiredGrowthRate, m_settings.m_shootColorMultiplier), 0.0f, 1.f));
-			break;
-		default:
-			matrices[i].m_instanceColor = m_randomColors[node.m_data.m_order];
-			break;
-		}
-		matrices[i].m_instanceColor.a = 1.0f;
-		if (selectedNodeHandle != -1) matrices[i].m_instanceColor.a = 1.0f;
-		}
-	);
-}

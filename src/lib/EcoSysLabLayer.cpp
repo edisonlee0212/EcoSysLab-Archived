@@ -160,26 +160,24 @@ void EcoSysLabLayer::Visualization() {
 				const auto& voxelGrid = climate->m_climateModel.m_environmentGrid.m_voxel;
 				const auto numVoxels = voxelGrid.GetVoxelCount();
 				{
-					auto& scalarMatrices = m_shadowGridParticleInfoList->m_particleInfos;
-					if (scalarMatrices.size() != numVoxels) {
-						scalarMatrices.resize(numVoxels);
-					}
+					std::vector<ParticleInfo> particleInfos;
+					particleInfos.resize(numVoxels);
+					
 					Jobs::ParallelFor(numVoxels, [&](unsigned i) {
 						const auto coordinate = voxelGrid.GetCoordinate(i);
-						scalarMatrices[i].m_instanceMatrix.m_value =
+						particleInfos[i].m_instanceMatrix.m_value =
 							glm::translate(voxelGrid.GetPosition(coordinate) + glm::linearRand(-glm::vec3(0.5f * voxelGrid.GetVoxelSize()), glm::vec3(0.5f * voxelGrid.GetVoxelSize())))
 							* glm::mat4_cast(glm::quat(glm::vec3(0.0f)))
 							* glm::scale(glm::vec3(0.25f * voxelGrid.GetVoxelSize()));
-						scalarMatrices[i].m_instanceColor = glm::vec4(1.f, 1.f, 1.f, glm::clamp(voxelGrid.Peek(static_cast<int>(i)).m_shadowIntensity, 0.0f, 1.0f));
+						particleInfos[i].m_instanceColor = glm::vec4(1.f, 1.f, 1.f, glm::clamp(voxelGrid.Peek(static_cast<int>(i)).m_shadowIntensity, 0.0f, 1.0f));
 						}
 					);
-					m_shadowGridParticleInfoList->SetPendingUpdate();
+					m_shadowGridParticleInfoList->SetParticleInfos(particleInfos);
 				}
 				{
-					auto& scalarMatrices = m_lightingGridParticleInfoList->m_particleInfos;
-					if (scalarMatrices.size() != numVoxels) {
-						scalarMatrices.resize(numVoxels);
-					}
+					std::vector<ParticleInfo> particleInfos;
+					particleInfos.resize(numVoxels);
+					
 					Jobs::ParallelFor(numVoxels, [&](unsigned i) {
 						const auto coordinate = voxelGrid.GetCoordinate(i);
 						const auto& voxel = voxelGrid.Peek(coordinate);
@@ -189,15 +187,15 @@ void EcoSysLabLayer::Visualization() {
 						rotation *= glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));
 						const glm::mat4 rotationTransform = glm::mat4_cast(rotation);
 						const auto voxelSize = voxelGrid.GetVoxelSize();
-						scalarMatrices[i].m_instanceMatrix.m_value =
+						particleInfos[i].m_instanceMatrix.m_value =
 							glm::translate(voxelGrid.GetPosition(coordinate) + glm::linearRand(-glm::vec3(0.5f * voxelGrid.GetVoxelSize()), glm::vec3(0.5f * voxelGrid.GetVoxelSize())))
 							* rotationTransform
 							* glm::scale(glm::vec3(0.05f * voxelSize, voxelSize * 0.5f, 0.05f * voxelSize));
-						if (voxelGrid.Peek(static_cast<int>(i)).m_lightIntensity == 0.0f) scalarMatrices[i].m_instanceColor = glm::vec4(0.0f);
-						else scalarMatrices[i].m_instanceColor = glm::vec4(1.f, 1.f, 1.f, glm::clamp(voxelGrid.Peek(static_cast<int>(i)).m_shadowIntensity, 0.0f, 1.0f));
+						if (voxelGrid.Peek(static_cast<int>(i)).m_lightIntensity == 0.0f) particleInfos[i].m_instanceColor = glm::vec4(0.0f);
+						else particleInfos[i].m_instanceColor = glm::vec4(1.f, 1.f, 1.f, glm::clamp(voxelGrid.Peek(static_cast<int>(i)).m_shadowIntensity, 0.0f, 1.0f));
 						}
 					);
-					m_lightingGridParticleInfoList->SetPendingUpdate();
+					m_lightingGridParticleInfoList->SetParticleInfos(particleInfos);
 				}
 			}
 		}
@@ -625,20 +623,20 @@ void EcoSysLabLayer::Visualization() {
 			editorLayer->DrawGizmoStrands(branchStrands, m_visualizationCamera, glm::vec4(1.0f, 1.0f, 1.0f, 0.75f), glm::mat4(1.0f), 1,
 				gizmoSettings);
 		}
-		if (m_displayFruit && !m_fruitMatrices->m_particleInfos.empty()) {
+		if (m_displayFruit && !m_fruitMatrices->PeekParticleInfoList().empty()) {
 			editorLayer->DrawGizmoMeshInstancedColored(
 				Resources::GetResource<Mesh>("PRIMITIVE_CUBE"), m_visualizationCamera,
 				m_fruitMatrices,
 				glm::mat4(1.0f), 1.0f, gizmoSettings);
 		}
 		gizmoSettings.m_drawSettings.m_cullMode = VK_CULL_MODE_NONE;
-		if (m_displayFoliage && !m_foliageMatrices->m_particleInfos.empty()) {
+		if (m_displayFoliage && !m_foliageMatrices->PeekParticleInfoList().empty()) {
 			editorLayer->DrawGizmoMeshInstancedColored(
 				Resources::GetResource<Mesh>("PRIMITIVE_QUAD"), m_visualizationCamera,
 				m_foliageMatrices,
 				glm::mat4(1.0f), 1.0f, gizmoSettings);
 		}
-		if (m_displayGroundLeaves && !m_groundLeafMatrices->m_particleInfos.empty()) {
+		if (m_displayGroundLeaves && !m_groundLeafMatrices->PeekParticleInfoList().empty()) {
 			editorLayer->DrawGizmoMeshInstancedColored(
 				Resources::GetResource<Mesh>("PRIMITIVE_QUAD"), m_visualizationCamera,
 				m_groundLeafMatrices,
@@ -646,14 +644,14 @@ void EcoSysLabLayer::Visualization() {
 		}
 		gizmoSettings.m_drawSettings.m_cullMode = VK_CULL_MODE_BACK_BIT;
 
-		if (m_displayGroundFruit && !m_groundFruitMatrices->m_particleInfos.empty()) {
+		if (m_displayGroundFruit && !m_groundFruitMatrices->PeekParticleInfoList().empty()) {
 			editorLayer->DrawGizmoMeshInstancedColored(
 				Resources::GetResource<Mesh>("PRIMITIVE_CUBE"), m_visualizationCamera,
 				m_groundFruitMatrices,
 				glm::mat4(1.0f), 1.0f, gizmoSettings);
 		}
 
-		if (m_displayBoundingBox && !m_boundingBoxMatrices->m_particleInfos.empty()) {
+		if (m_displayBoundingBox && !m_boundingBoxMatrices->PeekParticleInfoList().empty()) {
 			editorLayer->DrawGizmoMeshInstancedColored(
 				Resources::GetResource<Mesh>("PRIMITIVE_CUBE"), m_visualizationCamera,
 				m_boundingBoxMatrices,
@@ -689,12 +687,9 @@ void EcoSysLabLayer::ResetAllTrees(const std::vector<Entity>* treeEntities) {
 
 	m_shootStemStrands = ProjectManager::CreateTemporaryAsset<Strands>();
 
-	m_boundingBoxMatrices->m_particleInfos.clear();
-	m_boundingBoxMatrices->SetPendingUpdate();
-	m_foliageMatrices->m_particleInfos.clear();
-	m_foliageMatrices->SetPendingUpdate();
-	m_fruitMatrices->m_particleInfos.clear();
-	m_fruitMatrices->SetPendingUpdate();
+	m_boundingBoxMatrices->SetParticleInfos({});
+	m_foliageMatrices->SetParticleInfos({});
+	m_fruitMatrices->SetParticleInfos({});
 
 	const auto climateCandidate = FindClimate();
 	if (!climateCandidate.expired()) {
@@ -870,7 +865,7 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 							for (const auto& i : *treeEntities) {
 								const auto tree = scene->GetOrSetPrivateComponent<Tree>(i).lock();
 								tree->m_treeModel.CalculateShootFlux(scene->GetDataComponent<GlobalTransform>(i).m_value, climate->m_climateModel, tree->m_shootGrowthController);
-								tree->m_treeVisualizer.m_needShootColorUpdate = true;
+								tree->m_treeVisualizer.m_needUpdate = true;
 							}
 						}
 					}
@@ -1175,8 +1170,7 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 	{
 		const auto scene = Application::GetActiveScene();
 
-		m_boundingBoxMatrices->m_particleInfos.clear();
-		m_boundingBoxMatrices->SetPendingUpdate();
+		m_boundingBoxMatrices->SetParticleInfos({});
 
 		std::vector<int> branchStartIndices;
 		int branchLastStartIndex = 0;
@@ -1194,12 +1188,10 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 			m_shootStemSegments.clear();
 			m_shootStemPoints.clear();
 
-			m_foliageMatrices->m_particleInfos.clear();
-			m_foliageMatrices->SetPendingUpdate();
-			m_fruitMatrices->m_particleInfos.clear();
-			m_fruitMatrices->SetPendingUpdate();
+			m_foliageMatrices->SetParticleInfos({});
+			m_fruitMatrices->SetParticleInfos({});
 		}
-
+		std::vector<ParticleInfo> boundingBoxMatrices;
 		for (int listIndex = 0; listIndex < treeEntities->size(); listIndex++) {
 			auto treeEntity = treeEntities->at(listIndex);
 			const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
@@ -1208,7 +1200,7 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 			const auto& branchList = branchSkeleton.PeekSortedFlowList();
 
 			auto entityGlobalTransform = scene->GetDataComponent<GlobalTransform>(treeEntity);
-			auto& [instanceMatrix, instanceColor] = m_boundingBoxMatrices->m_particleInfos.emplace_back();
+			auto& [instanceMatrix, instanceColor] = boundingBoxMatrices.emplace_back();
 			instanceMatrix.m_value = entityGlobalTransform.m_value *
 				(glm::translate(
 					(branchSkeleton.m_max + branchSkeleton.m_min) / 2.0f) *
@@ -1231,13 +1223,17 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 				leafStartIndices.emplace_back(leafLastStartIndex);
 			}
 		}
+
+		m_boundingBoxMatrices->SetParticleInfos(boundingBoxMatrices);
+
 		m_shootStemSegments.resize(branchLastStartIndex * 3);
 		m_shootStemPoints.resize(branchLastStartIndex * 6);
-		m_foliageMatrices->m_particleInfos.resize(leafLastStartIndex);
-		m_fruitMatrices->m_particleInfos.resize(fruitLastStartIndex);
+		
 		{
-			auto& foliageMatrices = m_foliageMatrices->m_particleInfos;
-			auto& fruitMatrices = m_fruitMatrices->m_particleInfos;
+			std::vector<ParticleInfo> foliageMatrices;
+			std::vector<ParticleInfo> fruitMatrices;
+			foliageMatrices.resize(leafLastStartIndex);
+			fruitMatrices.resize(fruitLastStartIndex);
 			Jobs::ParallelFor(treeEntities->size(), [&](unsigned treeIndex) {
 				auto treeEntity = treeEntities->at(treeIndex);
 				if (treeEntity == m_selectedTree) return;
@@ -1352,8 +1348,8 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 			StrandPointAttributes strandPointAttributes{};
 			strandPointAttributes.m_normal = false;
 			branchStrands->SetSegments(strandPointAttributes, m_shootStemSegments, m_shootStemPoints);
-			m_foliageMatrices->SetPendingUpdate();
-			m_fruitMatrices->SetPendingUpdate();
+			m_foliageMatrices->SetParticleInfos(foliageMatrices);
+			m_fruitMatrices->SetParticleInfos(fruitMatrices);
 		}
 	}
 }
@@ -1365,14 +1361,14 @@ void EcoSysLabLayer::ClearGroundFruitAndLeaf() {
 }
 
 void EcoSysLabLayer::UpdateGroundFruitAndLeaves() const {
-	auto& fruitMatrices = m_groundFruitMatrices->m_particleInfos;
+	std::vector<ParticleInfo> fruitMatrices;
 	fruitMatrices.resize(m_fruits.size());
 	for (int i = 0; i < m_fruits.size(); i++) {
 		fruitMatrices[i].m_instanceMatrix.m_value = m_fruits[i].m_globalTransform.m_value;
 		fruitMatrices[i].m_instanceColor = glm::vec4(255 / 255.0f, 165 / 255.0f, 0 / 255.0f, 1.0f);
 	}
 
-	auto& leafMatrices = m_groundLeafMatrices->m_particleInfos;
+	std::vector<ParticleInfo> leafMatrices;
 	leafMatrices.resize(m_leaves.size());
 	for (int i = 0; i < m_leaves.size(); i++) {
 		leafMatrices[i].m_instanceMatrix.m_value = m_leaves[i].m_globalTransform.m_value;
@@ -1380,8 +1376,8 @@ void EcoSysLabLayer::UpdateGroundFruitAndLeaves() const {
 			glm::vec3(159 / 255.0f, 100 / 255.0f, 66 / 255.0f),
 			1.0f - m_leaves[i].m_health), 1.0f);
 	}
-	m_groundFruitMatrices->SetPendingUpdate();
-	m_groundLeafMatrices->SetPendingUpdate();
+	m_groundFruitMatrices->SetParticleInfos(fruitMatrices);
+	m_groundLeafMatrices->SetParticleInfos(leafMatrices);
 }
 
 
@@ -1411,24 +1407,19 @@ void EcoSysLabLayer::SoilVisualization() {
 
 void EcoSysLabLayer::SoilVisualizationScalar(VoxelSoilModel& soilModel) {
 	const auto numVoxels = soilModel.m_resolution.x * soilModel.m_resolution.y * soilModel.m_resolution.z;
-	auto& scalarMatrices = m_groundFruitMatrices->m_particleInfos;
-
-	if (scalarMatrices.size() != numVoxels) {
-		scalarMatrices.resize(numVoxels);
-		m_updateScalarMatrices = true;
-	}
 	if (m_updateScalarMatrices) {
-		m_groundFruitMatrices->SetPendingUpdate();
+		std::vector<ParticleInfo> particleInfos;
+		particleInfos.resize(numVoxels);
 		Jobs::ParallelFor(numVoxels, [&](unsigned i) {
 			const auto coordinate = soilModel.GetCoordinateFromIndex(i);
 			if (static_cast<float>(coordinate.x) / soilModel.m_resolution.x<
 				m_soilCutoutXDepth || static_cast<float>(coordinate.z) / soilModel.m_resolution.z>(
 					1.0f - m_soilCutoutZDepth)) {
-				scalarMatrices[i].m_instanceMatrix.m_value =
+				particleInfos[i].m_instanceMatrix.m_value =
 					glm::mat4(0.0f);
 			}
 			else {
-				scalarMatrices[i].m_instanceMatrix.m_value =
+				particleInfos[i].m_instanceMatrix.m_value =
 					glm::translate(soilModel.GetPositionFromCoordinate(coordinate))
 					* glm::mat4_cast(glm::quat(glm::vec3(0.0f)))
 					* glm::scale(glm::vec3(soilModel.GetVoxelSize() * m_scalarBoxSize));
@@ -1437,7 +1428,7 @@ void EcoSysLabLayer::SoilVisualizationScalar(VoxelSoilModel& soilModel) {
 		auto visualize_vec3 = [&](const Field& x, const Field& y, const Field& z) {
 			Jobs::ParallelFor(numVoxels, [&](unsigned i) {
 				const auto value = glm::vec3(x[i], y[i], z[i]);
-				scalarMatrices[i].m_instanceColor = { glm::normalize(value),
+				particleInfos[i].m_instanceColor = { glm::normalize(value),
 														 glm::clamp(glm::length(value) * m_scalarMultiplier, m_scalarMinAlpha, 1.0f) };
 				});
 			};
@@ -1445,7 +1436,7 @@ void EcoSysLabLayer::SoilVisualizationScalar(VoxelSoilModel& soilModel) {
 		auto visualize_float = [&](const Field& v) {
 			Jobs::ParallelFor(numVoxels, [&](unsigned i) {
 				const auto value = glm::vec3(v[i]);
-				scalarMatrices[i].m_instanceColor = { m_scalarBaseColor,
+				particleInfos[i].m_instanceColor = { m_scalarBaseColor,
 														 glm::clamp(glm::length(value) * m_scalarMultiplier, m_scalarMinAlpha, 1.0f) };
 				});
 			};
@@ -1454,7 +1445,7 @@ void EcoSysLabLayer::SoilVisualizationScalar(VoxelSoilModel& soilModel) {
 		switch (static_cast<SoilProperty>(m_scalarSoilProperty)) {
 		case SoilProperty::Blank: {
 			Jobs::ParallelFor(numVoxels, [&](unsigned i) {
-				scalarMatrices[i].m_instanceColor = { m_scalarBaseColor, 0.01f };
+				particleInfos[i].m_instanceColor = { m_scalarBaseColor, 0.01f };
 				});
 		}
 								break;
@@ -1473,9 +1464,9 @@ void EcoSysLabLayer::SoilVisualizationScalar(VoxelSoilModel& soilModel) {
 		case SoilProperty::SoilLayer: {
 			Jobs::ParallelFor(numVoxels, [&](unsigned i) {
 				const auto layerIndex = soilModel.m_material_id[i];
-				if (layerIndex == 0) scalarMatrices[i].m_instanceColor = glm::vec4(0.0f);
+				if (layerIndex == 0) particleInfos[i].m_instanceColor = glm::vec4(0.0f);
 				else {
-					scalarMatrices[i].m_instanceColor = m_soilLayerColors[layerIndex - 1];
+					particleInfos[i].m_instanceColor = m_soilLayerColors[layerIndex - 1];
 				}
 				});
 		}
@@ -1486,12 +1477,13 @@ void EcoSysLabLayer::SoilVisualizationScalar(VoxelSoilModel& soilModel) {
 									}break;*/
 		default: {
 			Jobs::ParallelFor(numVoxels, [&](unsigned i) {
-				scalarMatrices[i].m_instanceColor = { m_scalarBaseColor, 0.01f };
+				particleInfos[i].m_instanceColor = { m_scalarBaseColor, 0.01f };
 				}
 			);
 		}
 			   break;
 		}
+		m_groundFruitMatrices->SetParticleInfos(particleInfos);
 	}
 	m_updateScalarMatrices = false;
 	const auto editorLayer = Application::GetLayer<EditorLayer>();
@@ -1509,13 +1501,11 @@ void EcoSysLabLayer::SoilVisualizationScalar(VoxelSoilModel& soilModel) {
 
 void EcoSysLabLayer::SoilVisualizationVector(VoxelSoilModel& soilModel) {
 	const auto numVoxels = soilModel.m_resolution.x * soilModel.m_resolution.y * soilModel.m_resolution.z;
-	auto& vectorMatrices = m_groundFruitMatrices->m_particleInfos;
-	if (vectorMatrices.size() != numVoxels) {
-		vectorMatrices.resize(numVoxels);
-		m_updateVectorMatrices = true;
-	}
+	
 	if (m_updateVectorMatrices) {
-		m_groundFruitMatrices->SetPendingUpdate();
+		std::vector<ParticleInfo> particleInfos;
+		particleInfos.resize(numVoxels);
+		
 		const auto actualVectorMultiplier = m_vectorMultiplier * soilModel.m_dx;
 		switch (static_cast<SoilProperty>(m_vectorSoilProperty)) {
 			/*
@@ -1533,7 +1523,7 @@ void EcoSysLabLayer::SoilVisualizationVector(VoxelSoilModel& soilModel) {
 						const auto width = glm::min(m_vectorLineMaxWidth, length * m_vectorLineWidthFactor);
 						const auto model = glm::translate((start + end) / 2.0f) * glm::mat4_cast(rotation) *
 							glm::scale(glm::vec3(width, length, width));
-						vectorMatrices[i] = model;
+						particleInfos[i] = model;
 					}, results);
 			}break;*/
 			/*
@@ -1551,13 +1541,13 @@ void EcoSysLabLayer::SoilVisualizationVector(VoxelSoilModel& soilModel) {
 						const auto width = glm::min(m_vectorLineMaxWidth, length * m_vectorLineWidthFactor);
 						const auto model = glm::translate((start + end) / 2.0f) * glm::mat4_cast(rotation) *
 							glm::scale(glm::vec3(width, length, width));
-						vectorMatrices[i] = model;
+						particleInfos[i] = model;
 					}, results);
 			}break;
 			*/
 		default: {
 			Jobs::ParallelFor(numVoxels, [&](unsigned i) {
-				vectorMatrices[i].m_instanceMatrix.m_value =
+				particleInfos[i].m_instanceMatrix.m_value =
 					glm::translate(soilModel.GetPositionFromCoordinate(soilModel.GetCoordinateFromIndex(i)))
 					* glm::mat4_cast(glm::quat(glm::vec3(0.0f)))
 					* glm::scale(glm::vec3(0.0f));
@@ -1568,12 +1558,14 @@ void EcoSysLabLayer::SoilVisualizationVector(VoxelSoilModel& soilModel) {
 		std::vector<std::shared_future<void>> results;
 
 		Jobs::ParallelFor(numVoxels, [&](unsigned i) {
-			vectorMatrices[i].m_instanceColor = m_vectorBaseColor;
+			particleInfos[i].m_instanceColor = m_vectorBaseColor;
 			}, results);
 
 		for (auto& i : results) i.wait();
+		m_groundFruitMatrices->SetParticleInfos(particleInfos);
+		m_updateVectorMatrices = false;
 	}
-	m_updateVectorMatrices = false;
+	
 	const auto editorLayer = Application::GetLayer<EditorLayer>();
 	GizmoSettings gizmoSettings;
 	gizmoSettings.m_drawSettings.m_blending = true;

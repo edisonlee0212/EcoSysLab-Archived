@@ -474,8 +474,9 @@ void LogGrader::GenerateSurface(const std::shared_ptr<ParticleInfoList>& surface
 	const float yStep = logLength / yStepSize;
 
 	const int span = endX - startX;
+	std::vector<ParticleInfo> particleInfos;
 
-	surface->m_particleInfos.resize(yStepSize * span);
+	particleInfos.resize(yStepSize * span);
 
 	Jobs::ParallelFor(yStepSize + 1, [&](const unsigned yIndex)
 		{
@@ -488,13 +489,13 @@ void LogGrader::GenerateSurface(const std::shared_ptr<ParticleInfoList>& surface
 				const auto position = glm::vec3(flatXStep * static_cast<float>(xIndex - span), y, centerDistance - intersectionAvgDistance);
 				const auto size = glm::vec3(flatXStep, 0.f, yStep);
 				const auto rotation = glm::quat(glm::radians(glm::vec3(-90, 0, 0)));
-				auto& particleInfo = surface->m_particleInfos.at(yIndex * span + xIndex);
+				auto& particleInfo = particleInfos.at(yIndex * span + xIndex);
 				particleInfo.m_instanceMatrix.m_value = glm::translate(position)* glm::mat4_cast(rotation) * glm::scale(size);
 				particleInfo.m_instanceColor = m_logWood.GetColor(y, x + startX);
 			}
 		}
 	);
-	surface->SetPendingUpdate();
+	surface->SetParticleInfos(particleInfos);
 }
 
 void LogGrader::OnCreate()

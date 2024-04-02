@@ -83,8 +83,8 @@ void PARSensorGroup::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
     static glm::vec4 pointColor = {1.0f, 0.0f, 0.0f, 0.75f};
     starts.resize(m_samplers.size());
     ends.resize(m_samplers.size());
-    rayParticleInfoList->m_particleInfos.resize(m_samplers.size());
-    pointParticleInfoList->m_particleInfos.resize(m_samplers.size());
+    std::vector<ParticleInfo> pointParticleInfos;
+    pointParticleInfos.resize(m_samplers.size());
     ImGui::DragFloat("Vector width", &lineWidth, 0.01f);
     ImGui::DragFloat("Vector length factor", &lineLengthFactor, 0.01f);
     ImGui::ColorEdit4("Vector Color", &color.x);
@@ -96,11 +96,12 @@ void PARSensorGroup::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
           const auto start = m_samplers[i].m_a.m_position;
           starts[i] = start;
           ends[i] = start + m_samplers[i].m_direction * lineLengthFactor * m_samplers[i].m_energy;
-          pointParticleInfoList->m_particleInfos[i].m_instanceMatrix.m_value =
+          pointParticleInfos[i].m_instanceMatrix.m_value =
               glm::translate(start) * glm::scale(glm::vec3(pointSize));
-          pointParticleInfoList->m_particleInfos[i].m_instanceColor = pointColor;
+          pointParticleInfos[i].m_instanceColor = pointColor;
         });
     rayParticleInfoList->ApplyConnections(starts, ends, color, lineWidth);
+    pointParticleInfoList->SetParticleInfos(pointParticleInfos);
     editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER"), rayParticleInfoList);
     editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CUBE"), pointParticleInfoList);
   }

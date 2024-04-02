@@ -218,9 +218,8 @@ void Sorghum::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 		}
 		static std::shared_ptr<ParticleInfoList> nodeDebugInfoList;
 		if (!nodeDebugInfoList) nodeDebugInfoList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
+		std::vector<ParticleInfo> particleInfos;
 		
-		auto& particleInfos = nodeDebugInfoList->m_particleInfos;
-		particleInfos.clear();
 		if (const auto sorghumState = m_sorghumState.Get<SorghumState>())
 		{
 			const auto owner = GetOwner();
@@ -237,7 +236,7 @@ void Sorghum::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 						((leafState.m_index / 9) % 3) * 0.5f, 1.0f);
 				}
 			}
-			nodeDebugInfoList->SetPendingUpdate();
+			nodeDebugInfoList->SetParticleInfos(particleInfos);
 
 		}
 		editorLayer->DrawGizmoCubes(nodeDebugInfoList);

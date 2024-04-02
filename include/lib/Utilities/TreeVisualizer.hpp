@@ -86,7 +86,6 @@ namespace EcoSysLab {
 		float m_selectedInternodeLengthFactor = 0.0f;
 		int m_checkpointIteration = 0;
 		bool m_needUpdate = false;
-		bool m_needShootColorUpdate = false;
 
 		[[nodiscard]] bool Initialized() const;
 		void ClearSelections();
@@ -95,10 +94,7 @@ namespace EcoSysLab {
 
 		void SetSelectedNode(const ShootSkeleton& skeleton, NodeHandle nodeHandle);
 
-		void SyncMatrices(const ShootSkeleton& skeleton, const std::shared_ptr<ParticleInfoList>& particleInfoList);
-
-		void SyncColors(const ShootSkeleton& shootSkeleton, NodeHandle selectedNodeHandle);
-
+		void SyncMatrices(const ShootSkeleton& skeleton, const std::shared_ptr<ParticleInfoList>& particleInfoList, NodeHandle selectedNodeHandle);
 
 		bool OnInspect(TreeModel& treeModel);
 

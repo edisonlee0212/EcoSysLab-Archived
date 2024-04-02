@@ -658,9 +658,11 @@ void TreeStructor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	if (!scatterPointToBranchConnectionInfoList) scatterPointToBranchConnectionInfoList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
 	if (!predictedBranchConnectionInfoList) predictedBranchConnectionInfoList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
 
-	auto& allocatedPointMatrices = allocatedPointInfoList->m_particleInfos;
-	auto& scatterPointMatrices = scatterPointInfoList->m_particleInfos;
-	auto& nodeMatrices = nodeInfoList->m_particleInfos;
+	
+
+	std::vector<ParticleInfo> allocatedPointMatrices;
+	std::vector<ParticleInfo> scatterPointMatrices;
+	std::vector<ParticleInfo> nodeMatrices;
 
 	static bool enableDebugRendering = true;
 
@@ -805,10 +807,6 @@ void TreeStructor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 			predictedBranchConnectionStarts.resize(m_predictedBranches.size());
 			predictedBranchConnectionEnds.resize(m_predictedBranches.size());
 			predictedBranchConnectionColors.resize(m_predictedBranches.size());
-
-			allocatedPointInfoList->SetPendingUpdate();
-			scatterPointInfoList->SetPendingUpdate();
-			nodeInfoList->SetPendingUpdate();
 
 			nodeMatrices.clear();
 			switch (colorMode) {
@@ -1016,6 +1014,10 @@ void TreeStructor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 				scatterPointToBranchConnectionEnds,
 				scatterPointToBranchConnectionColors, connectionWidth
 			);
+
+			allocatedPointInfoList->SetParticleInfos(allocatedPointMatrices);
+			scatterPointInfoList->SetParticleInfos(scatterPointMatrices);
+			nodeInfoList->SetParticleInfos(nodeMatrices);
 		}
 		if (!scatterPointMatrices.empty()) {
 			if (drawScatteredPoints) {
@@ -2165,10 +2167,12 @@ void TreeStructor::InitializeSkeletalGraph(const std::shared_ptr<Mesh>& pointMes
 	pointParticles->m_particleInfoList = pointList;
 	pointMaterial->m_vertexColorOnly = true;
 	int prevInternodeSize = 0;
+	std::vector<ParticleInfo> listInfos;
+	std::vector<ParticleInfo> pointInfos;
 	for (const auto skeleton : m_skeletons) {
 		const auto& sortedInternodeList = skeleton.PeekSortedNodeList();
-		lineList->m_particleInfos.resize(sortedInternodeList.size() + prevInternodeSize);
-		pointList->m_particleInfos.resize(sortedInternodeList.size() + prevInternodeSize);
+		listInfos.resize(sortedInternodeList.size() + prevInternodeSize);
+		pointInfos.resize(sortedInternodeList.size() + prevInternodeSize);
 		Jobs::ParallelFor(sortedInternodeList.size(), [&](unsigned internodeIndex)
 			{
 				const auto internodeHandle = sortedInternodeList[internodeIndex];
@@ -2180,14 +2184,14 @@ void TreeStructor::InitializeSkeletalGraph(const std::shared_ptr<Mesh>& pointMes
 						direction, glm::vec3(direction.y, direction.z, direction.x));
 					rotation *= glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));
 					const glm::mat4 rotationTransform = glm::mat4_cast(rotation);
-					lineList->m_particleInfos[internodeIndex + prevInternodeSize].m_instanceMatrix.m_value = 
+					listInfos[internodeIndex + prevInternodeSize].m_instanceMatrix.m_value =
 						glm::translate(position + (node.m_info.m_length / 2.0f) * direction) *
 						rotationTransform *
 						glm::scale(glm::vec3(
 							skeletalGraphSettings.m_lineThickness,
 							node.m_info.m_length,
 							skeletalGraphSettings.m_lineThickness));
-					lineList->m_particleInfos[internodeIndex + prevInternodeSize].m_instanceColor = skeletalGraphSettings.m_lineColor;
+					listInfos[internodeIndex + prevInternodeSize].m_instanceColor = skeletalGraphSettings.m_lineColor;
 				}
 				{
 					const glm::vec3 position = skeleton.m_data.m_rootPosition + node.m_info.m_globalPosition;
@@ -2199,13 +2203,13 @@ void TreeStructor::InitializeSkeletalGraph(const std::shared_ptr<Mesh>& pointMes
 					float thicknessFactor = node.m_info.m_thickness;
 					if (skeletalGraphSettings.m_fixedPointSize) thicknessFactor = skeletalGraphSettings.m_fixedPointSizeFactor;
 					auto scale = glm::vec3(skeletalGraphSettings.m_branchPointSize * thicknessFactor);
-					pointList->m_particleInfos[internodeIndex + prevInternodeSize].m_instanceColor = skeletalGraphSettings.m_branchPointColor;
+					pointInfos[internodeIndex + prevInternodeSize].m_instanceColor = skeletalGraphSettings.m_branchPointColor;
 					if (internodeIndex == 0 || node.RefChildHandles().size() > 1)
 					{
 						scale = glm::vec3(skeletalGraphSettings.m_junctionPointSize * thicknessFactor);
-						pointList->m_particleInfos[internodeIndex + prevInternodeSize].m_instanceColor = skeletalGraphSettings.m_junctionPointColor;
+						pointInfos[internodeIndex + prevInternodeSize].m_instanceColor = skeletalGraphSettings.m_junctionPointColor;
 					}
-					pointList->m_particleInfos[internodeIndex + prevInternodeSize].m_instanceMatrix.m_value =
+					pointInfos[internodeIndex + prevInternodeSize].m_instanceMatrix.m_value =
 						glm::translate(position) *
 						rotationTransform *
 						glm::scale(scale);
@@ -2213,8 +2217,8 @@ void TreeStructor::InitializeSkeletalGraph(const std::shared_ptr<Mesh>& pointMes
 			});
 		prevInternodeSize += sortedInternodeList.size();
 	}
-	lineList->SetPendingUpdate();
-	pointList->SetPendingUpdate();
+	lineList->SetParticleInfos(listInfos);
+	pointList->SetParticleInfos(pointInfos);
 }
 
 void TreeStructor::ClearMeshes() const {
