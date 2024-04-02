@@ -1678,7 +1678,6 @@ void Tree::FromTreeGraph(const std::shared_ptr<TreeGraph>& treeGraph)
 void Tree::FromTreeGraphV2(const std::shared_ptr<TreeGraphV2>& treeGraphV2)
 {
 }
-
 struct JunctionLine {
 	int m_lineIndex = -1;
 	glm::vec3 m_startPosition;
@@ -1700,14 +1699,9 @@ struct TreePart {
 	std::vector<int> m_lineIndex;
 };
 
-void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings, const std::filesystem::path& path)
+void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings, YAML::Emitter& out)
 {
-	try {
-		auto directory = path;
-		directory.remove_filename();
-		std::filesystem::create_directories(directory);
-		YAML::Emitter out;
-		out << YAML::BeginMap;
+	out << YAML::Key << "Tree" << YAML::Value << YAML::BeginMap; {
 		const auto& skeleton = m_treeModel.RefShootSkeleton();
 		const auto& sortedInternodeList = skeleton.PeekSortedNodeList();
 		std::vector<TreePart> treeParts{};
@@ -1951,7 +1945,20 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 			out << YAML::EndMap;
 		}
 		out << YAML::EndSeq;
-		out << YAML::EndMap;
+	}
+	out << YAML::EndMap;
+}
+
+
+
+void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings, const std::filesystem::path& path)
+{
+	try {
+		auto directory = path;
+		directory.remove_filename();
+		std::filesystem::create_directories(directory);
+		YAML::Emitter out;
+		ExportJunction(meshGeneratorSettings, out);
 		std::ofstream outputFile(path.string());
 		outputFile << out.c_str();
 		outputFile.flush();

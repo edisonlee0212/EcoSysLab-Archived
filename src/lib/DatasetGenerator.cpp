@@ -249,7 +249,7 @@ void DatasetGenerator::GeneratePointCloudForTree(const TreePointCloudPointSettin
 	const auto scanner = scene->GetOrSetPrivateComponent<TreePointCloudScanner>(scannerEntity).lock();
 	scanner->m_pointSettings = pointSettings;
 	Application::Loop();
-	scanner->Capture(pointCloudOutputPath, captureSettings);
+	scanner->Capture(meshGeneratorSettings, pointCloudOutputPath, captureSettings);
 	if (exportJunction) tree->ExportJunction(meshGeneratorSettings, treeJunctionOutputPath);
 	Application::Loop();
 	scene->DeleteEntity(treeEntity);
@@ -330,7 +330,8 @@ void DatasetGenerator::GeneratePointCloudForForestPatch(
 	const auto scanner = scene->GetOrSetPrivateComponent<TreePointCloudScanner>(scannerEntity).lock();
 	scanner->m_pointSettings = pointSettings;
 	Application::Loop();
-	scanner->Capture(pointCloudOutputPath, captureSettings);
+	scanner->Capture(meshGeneratorSettings, pointCloudOutputPath, captureSettings);
+
 	if (const std::vector<Entity>* treeEntities =
 		scene->UnsafeGetPrivateComponentOwnersList<Tree>(); treeEntities && !treeEntities->empty())
 	{

@@ -294,6 +294,7 @@ namespace EcoSysLab {
 				}
 				int currentTreePartIndex = -1;
 				int currentLineIndex = -1;
+				archetype.m_vertexInfo4.y = 0;
 				if (treePartType == 0)
 				{
 					//IShape
@@ -328,6 +329,7 @@ namespace EcoSysLab {
 
 						currentLineIndex = currentTreePartInfo.m_lineIndex;
 					}
+					archetype.m_vertexInfo4.y = 1;
 					//archetype.m_color = glm::vec4(1, 1, 1, 1);
 				}
 				else if (treePartType == 1)
@@ -357,6 +359,7 @@ namespace EcoSysLab {
 						currentTreePartIndex = currentTreePartInfo.m_treePartIndex;
 						currentLineIndex = currentTreePartInfo.m_lineIndex;
 					}
+					archetype.m_vertexInfo4.y = 2;
 					//archetype.m_color = glm::vec4(1, 0, 0, 1);
 				}
 				else if (treePartType == 2)
@@ -380,11 +383,12 @@ namespace EcoSysLab {
 
 						currentLineIndex = currentTreePartInfo.m_lineIndex;
 					}
+					archetype.m_vertexInfo4.y = 2;
 					//archetype.m_color = glm::vec4(1, 0, 0, 1);
 				}
 				archetype.m_vertexInfo3 = currentLineIndex + 1;
 				archetype.m_vertexInfo4.x = currentTreePartIndex + 1;
-				archetype.m_vertexInfo4.y = treePartType + 1;
+				
 #pragma endregion
 			}
 			float textureXStep = 1.0f / pStep * 4.0f;

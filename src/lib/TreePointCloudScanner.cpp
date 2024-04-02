@@ -271,7 +271,7 @@ bool TreePointCloudGridCaptureSettings::SampleFilter(const PointCloudSample& sam
 }
 #pragma endregion
 
-void TreePointCloudScanner::Capture(const std::filesystem::path& savePath, const std::shared_ptr<PointCloudCaptureSettings>& captureSettings) const
+void TreePointCloudScanner::Capture(const TreeMeshGeneratorSettings& meshGeneratorSettings, const std::filesystem::path& savePath, const std::shared_ptr<PointCloudCaptureSettings>& captureSettings) const
 {
 #ifdef BUILD_WITH_RAYTRACER
 	
@@ -500,16 +500,43 @@ void TreePointCloudScanner::Capture(const std::filesystem::path& savePath, const
 	}
 	// Write a binary file
 	cube_file.write(outstream_binary, true);
+
+
+	try {
+		std::filesystem::path ymlPath = savePath;
+		ymlPath.replace_extension(".yml");
+		YAML::Emitter out;
+		out << YAML::BeginMap;
+		out << YAML::Key << "Forest" << YAML::BeginSeq;
+		for(const auto & treeEntity : *treeEntities)
+		{
+			if (!scene->IsEntityValid(treeEntity)) continue;
+			out << YAML::BeginMap;
+			out << YAML::Key << "II" << YAML::Value << treeEntity.GetIndex();
+			const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
+			tree->ExportJunction(meshGeneratorSettings, out);
+			out << YAML::EndMap;
+		}
+		out << YAML::EndSeq;
+		out << YAML::EndMap;
+		std::ofstream outputFile(ymlPath.string());
+		outputFile << out.c_str();
+		outputFile.flush();
+	}
+	catch (const std::exception& e) {
+		EVOENGINE_ERROR("Failed to save!");
+	}
 #endif
 }
 
 void TreePointCloudScanner::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
+	const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
 	if (ImGui::TreeNodeEx("Circular Capture")) {
 		static std::shared_ptr<TreePointCloudCircularCaptureSettings> captureSettings = std::make_shared<TreePointCloudCircularCaptureSettings>();
 		captureSettings->OnInspect();
 		FileUtils::SaveFile("Capture", "Point Cloud", { ".ply" }, [&](const std::filesystem::path& path) {
-			Capture(path, captureSettings);
+			Capture(ecoSysLabLayer->m_meshGeneratorSettings, path, captureSettings);
 			}, false);
 		ImGui::TreePop();
 	}
@@ -517,7 +544,7 @@ void TreePointCloudScanner::OnInspect(const std::shared_ptr<EditorLayer>& editor
 		static std::shared_ptr<TreePointCloudGridCaptureSettings> captureSettings = std::make_shared<TreePointCloudGridCaptureSettings>();
 		captureSettings->OnInspect();
 		FileUtils::SaveFile("Capture", "Point Cloud", { ".ply" }, [&](const std::filesystem::path& path) {
-			Capture(path, captureSettings);
+			Capture(ecoSysLabLayer->m_meshGeneratorSettings, path, captureSettings);
 			}, false);
 		ImGui::TreePop();
 	}
