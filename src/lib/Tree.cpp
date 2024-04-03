@@ -4,6 +4,7 @@
 #include "ShootDescriptor.hpp"
 #include "Tree.hpp"
 #include "SkeletonSerializer.hpp"
+#include "StrandGroupSerializer.hpp"
 #include <Material.hpp>
 #include <Mesh.hpp>
 #include "Strands.hpp"
@@ -1356,30 +1357,30 @@ void Tree::Serialize(YAML::Emitter& out)
 			SkeletonSerializer<ShootGrowthData, ShootStemGrowthData, InternodeGrowthData>::Serialize(out, m_treeModel.RefShootSkeleton(),
 				[&](YAML::Emitter& nodeOut, const InternodeGrowthData& nodeData)
 				{
-					nodeOut << YAML::Key << "m_internodeLength" << YAML::Value << nodeData.m_internodeLength;
-					nodeOut << YAML::Key << "m_indexOfParentBud" << YAML::Value << nodeData.m_indexOfParentBud;
-					nodeOut << YAML::Key << "m_startAge" << YAML::Value << nodeData.m_startAge;
-					nodeOut << YAML::Key << "m_finishAge" << YAML::Value << nodeData.m_finishAge;
-					nodeOut << YAML::Key << "m_desiredLocalRotation" << YAML::Value << nodeData.m_desiredLocalRotation;
-					nodeOut << YAML::Key << "m_desiredGlobalRotation" << YAML::Value << nodeData.m_desiredGlobalRotation;
-					nodeOut << YAML::Key << "m_desiredGlobalPosition" << YAML::Value << nodeData.m_desiredGlobalPosition;
-					nodeOut << YAML::Key << "m_sagging" << YAML::Value << nodeData.m_sagging;
-					nodeOut << YAML::Key << "m_order" << YAML::Value << nodeData.m_order;
-					nodeOut << YAML::Key << "m_extraMass" << YAML::Value << nodeData.m_extraMass;
+					nodeOut << YAML::Key << "IL" << YAML::Value << nodeData.m_internodeLength;
+					nodeOut << YAML::Key << "IPB" << YAML::Value << nodeData.m_indexOfParentBud;
+					nodeOut << YAML::Key << "SA" << YAML::Value << nodeData.m_startAge;
+					nodeOut << YAML::Key << "FA" << YAML::Value << nodeData.m_finishAge;
+					nodeOut << YAML::Key << "DLR" << YAML::Value << nodeData.m_desiredLocalRotation;
+					nodeOut << YAML::Key << "DGR" << YAML::Value << nodeData.m_desiredGlobalRotation;
+					nodeOut << YAML::Key << "DGP" << YAML::Value << nodeData.m_desiredGlobalPosition;
+					nodeOut << YAML::Key << "S" << YAML::Value << nodeData.m_sagging;
+					nodeOut << YAML::Key << "O" << YAML::Value << nodeData.m_order;
+					nodeOut << YAML::Key << "EM" << YAML::Value << nodeData.m_extraMass;
 
-					nodeOut << YAML::Key << "m_buds" << YAML::Value << YAML::BeginSeq;
+					nodeOut << YAML::Key << "B" << YAML::Value << YAML::BeginSeq;
 					for (const auto& bud : nodeData.m_buds)
 					{
 						nodeOut << YAML::BeginMap;
 						{
-							nodeOut << YAML::Key << "m_type" << YAML::Value << static_cast<unsigned>(bud.m_type);
-							nodeOut << YAML::Key << "m_status" << YAML::Value << static_cast<unsigned>(bud.m_status);
-							nodeOut << YAML::Key << "m_localRotation" << YAML::Value << bud.m_localRotation;
-							nodeOut << YAML::Key << "m_reproductiveModule" << YAML::Value << YAML::BeginMap;
+							nodeOut << YAML::Key << "T" << YAML::Value << static_cast<unsigned>(bud.m_type);
+							nodeOut << YAML::Key << "S" << YAML::Value << static_cast<unsigned>(bud.m_status);
+							nodeOut << YAML::Key << "LR" << YAML::Value << bud.m_localRotation;
+							nodeOut << YAML::Key << "RM" << YAML::Value << YAML::BeginMap;
 							{
-								nodeOut << YAML::Key << "m_maturity" << YAML::Value << bud.m_reproductiveModule.m_maturity;
-								nodeOut << YAML::Key << "m_health" << YAML::Value << bud.m_reproductiveModule.m_health;
-								nodeOut << YAML::Key << "m_transform" << YAML::Value << bud.m_reproductiveModule.m_transform;
+								nodeOut << YAML::Key << "M" << YAML::Value << bud.m_reproductiveModule.m_maturity;
+								nodeOut << YAML::Key << "H" << YAML::Value << bud.m_reproductiveModule.m_health;
+								nodeOut << YAML::Key << "T" << YAML::Value << bud.m_reproductiveModule.m_transform;
 							}
 							nodeOut << YAML::EndMap;
 						}
@@ -1389,7 +1390,7 @@ void Tree::Serialize(YAML::Emitter& out)
 				},
 				[&](YAML::Emitter& flowOut, const ShootStemGrowthData& flowData)
 				{
-					flowOut << YAML::Key << "m_order" << YAML::Value << flowData.m_order;
+					flowOut << YAML::Key << "O" << YAML::Value << flowData.m_order;
 				},
 				[&](YAML::Emitter& skeletonOut, const ShootGrowthData& skeletonData)
 				{
@@ -1418,40 +1419,40 @@ void Tree::Deserialize(const YAML::Node& in)
 			SkeletonSerializer<ShootGrowthData, ShootStemGrowthData, InternodeGrowthData>::Deserialize(inShootSkeleton, m_treeModel.RefShootSkeleton(),
 				[&](const YAML::Node& nodeIn, InternodeGrowthData& nodeData)
 				{
-					if (nodeIn["m_internodeLength"]) nodeData.m_internodeLength = nodeIn["m_internodeLength"].as<float>();
-					if (nodeIn["m_indexOfParentBud"]) nodeData.m_indexOfParentBud = nodeIn["m_indexOfParentBud"].as<int>();
-					if (nodeIn["m_startAge"]) nodeData.m_startAge = nodeIn["m_startAge"].as<float>();
-					if (nodeIn["m_finishAge"]) nodeData.m_finishAge = nodeIn["m_finishAge"].as<float>();
-					if (nodeIn["m_desiredLocalRotation"]) nodeData.m_desiredLocalRotation = nodeIn["m_desiredLocalRotation"].as<glm::quat>();
-					if (nodeIn["m_desiredGlobalRotation"]) nodeData.m_desiredGlobalRotation = nodeIn["m_desiredGlobalRotation"].as<glm::quat>();
-					if (nodeIn["m_desiredGlobalPosition"]) nodeData.m_desiredGlobalPosition = nodeIn["m_desiredGlobalPosition"].as<glm::vec3>();
-					if (nodeIn["m_sagging"]) nodeData.m_sagging = nodeIn["m_sagging"].as<float>();
-					if (nodeIn["m_order"]) nodeData.m_order = nodeIn["m_order"].as<int>();
-					if (nodeIn["m_extraMass"]) nodeData.m_extraMass = nodeIn["m_extraMass"].as<float>();
+					if (nodeIn["IL"]) nodeData.m_internodeLength = nodeIn["IL"].as<float>();
+					if (nodeIn["IPB"]) nodeData.m_indexOfParentBud = nodeIn["IPB"].as<int>();
+					if (nodeIn["SA"]) nodeData.m_startAge = nodeIn["SA"].as<float>();
+					if (nodeIn["FA"]) nodeData.m_finishAge = nodeIn["FA"].as<float>();
+					if (nodeIn["DLR"]) nodeData.m_desiredLocalRotation = nodeIn["DLR"].as<glm::quat>();
+					if (nodeIn["DGR"]) nodeData.m_desiredGlobalRotation = nodeIn["DGR"].as<glm::quat>();
+					if (nodeIn["DGP"]) nodeData.m_desiredGlobalPosition = nodeIn["DGP"].as<glm::vec3>();
+					if (nodeIn["S"]) nodeData.m_sagging = nodeIn["S"].as<float>();
+					if (nodeIn["O"]) nodeData.m_order = nodeIn["O"].as<int>();
+					if (nodeIn["EM"]) nodeData.m_extraMass = nodeIn["EM"].as<float>();
 					nodeData.m_buds.clear();
-					if(nodeIn["m_buds"])
+					if(nodeIn["B"])
 					{
-						const auto& inBuds = nodeIn["m_buds"];
+						const auto& inBuds = nodeIn["B"];
 						for(const auto& inBud : inBuds)
 						{
 							nodeData.m_buds.emplace_back();
 							auto& bud = nodeData.m_buds.back();
-							if (inBud["m_type"]) bud.m_type = static_cast<BudType>(inBud["m_type"].as<unsigned>());
-							if (inBud["m_status"]) bud.m_status = static_cast<BudStatus>(inBud["m_status"].as<unsigned>());
-							if (inBud["m_localRotation"]) bud.m_localRotation = inBud["m_localRotation"].as<glm::quat>();
-							if(inBud["m_reproductiveModule"])
+							if (inBud["T"]) bud.m_type = static_cast<BudType>(inBud["T"].as<unsigned>());
+							if (inBud["S"]) bud.m_status = static_cast<BudStatus>(inBud["S"].as<unsigned>());
+							if (inBud["LR"]) bud.m_localRotation = inBud["LR"].as<glm::quat>();
+							if(inBud["RM"])
 							{
-								const auto& inReproductiveModule = inBud["m_reproductiveModule"];
-								if (inReproductiveModule["m_maturity"]) bud.m_reproductiveModule.m_maturity = inReproductiveModule["m_maturity"].as<float>();
-								if (inReproductiveModule["m_health"]) bud.m_reproductiveModule.m_health = inReproductiveModule["m_health"].as<float>();
-								if (inReproductiveModule["m_transform"]) bud.m_reproductiveModule.m_transform = inReproductiveModule["m_transform"].as<glm::mat4>();
+								const auto& inReproductiveModule = inBud["RM"];
+								if (inReproductiveModule["M"]) bud.m_reproductiveModule.m_maturity = inReproductiveModule["M"].as<float>();
+								if (inReproductiveModule["H"]) bud.m_reproductiveModule.m_health = inReproductiveModule["H"].as<float>();
+								if (inReproductiveModule["T"]) bud.m_reproductiveModule.m_transform = inReproductiveModule["T"].as<glm::mat4>();
 							}
 						}
 					}
 				},
 				[&](const YAML::Node& flowIn, ShootStemGrowthData& flowData)
 				{
-					if (flowIn["m_order"]) flowData.m_order = flowIn["m_order"].as<int>();
+					if (flowIn["O"]) flowData.m_order = flowIn["O"].as<int>();
 				},
 				[&](const YAML::Node& skeletonIn, ShootGrowthData& skeletonData)
 				{

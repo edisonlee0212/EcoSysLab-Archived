@@ -40,23 +40,23 @@ namespace EcoSysLab {
 			const auto& node = skeleton.m_nodes[nodeIndex];
 			out << YAML::BeginMap;
 			{
-				out << YAML::Key << "m_recycled" << YAML::Value << node.m_recycled;
-				out << YAML::Key << "m_flowHandle" << YAML::Value << node.m_flowHandle;
-				out << YAML::Key << "m_parentHandle" << YAML::Value << node.m_parentHandle;
-				out << YAML::Key << "m_apical" << YAML::Value << node.m_apical;
-				out << YAML::Key << "m_index" << YAML::Value << node.m_index;
+				out << YAML::Key << "R" << YAML::Value << node.m_recycled;
+				out << YAML::Key << "F" << YAML::Value << node.m_flowHandle;
+				out << YAML::Key << "P" << YAML::Value << node.m_parentHandle;
+				out << YAML::Key << "A" << YAML::Value << node.m_apical;
+				out << YAML::Key << "I" << YAML::Value << node.m_index;
 
-				out << YAML::Key << "m_info" << YAML::Value << YAML::BeginMap;
+				out << YAML::Key << "IF" << YAML::Value << YAML::BeginMap;
 				{
-					out << YAML::Key << "m_globalPosition" << YAML::Value << node.m_info.m_globalPosition;
-					out << YAML::Key << "m_globalRotation" << YAML::Value << node.m_info.m_globalRotation;
-					out << YAML::Key << "m_length" << YAML::Value << node.m_info.m_length;
-					out << YAML::Key << "m_thickness" << YAML::Value << node.m_info.m_thickness;
-					out << YAML::Key << "m_color" << YAML::Value << node.m_info.m_color;
+					out << YAML::Key << "GP" << YAML::Value << node.m_info.m_globalPosition;
+					out << YAML::Key << "GR" << YAML::Value << node.m_info.m_globalRotation;
+					out << YAML::Key << "L" << YAML::Value << node.m_info.m_length;
+					out << YAML::Key << "T" << YAML::Value << node.m_info.m_thickness;
+					out << YAML::Key << "C" << YAML::Value << node.m_info.m_color;
 				}
 				out << YAML::EndMap;
 				
-				out << YAML::Key << "m_data" << YAML::Value << YAML::BeginMap;
+				out << YAML::Key << "D" << YAML::Value << YAML::BeginMap;
 				{
 					nodeFunc(out, node.m_data);
 				}
@@ -72,18 +72,18 @@ namespace EcoSysLab {
 			const auto& flow = skeleton.m_flows[flowIndex];
 			out << YAML::BeginMap;
 			{
-				out << YAML::Key << "m_recycled" << YAML::Value << flow.m_recycled;
-				out << YAML::Key << "m_parentHandle" << YAML::Value << flow.m_parentHandle;
-				out << YAML::Key << "m_apical" << YAML::Value << flow.m_apical;
-				out << YAML::Key << "m_index" << YAML::Value << flow.m_index;
-				out << YAML::Key << "m_nodes" << YAML::Value << YAML::BeginSeq;
+				out << YAML::Key << "R" << YAML::Value << flow.m_recycled;
+				out << YAML::Key << "P" << YAML::Value << flow.m_parentHandle;
+				out << YAML::Key << "A" << YAML::Value << flow.m_apical;
+				out << YAML::Key << "I" << YAML::Value << flow.m_index;
+				out << YAML::Key << "N" << YAML::Value << YAML::BeginSeq;
 				for(const auto& nodeHandle : flow.m_nodes)
 				{
 					out << nodeHandle;
 				}
 				out << YAML::EndSeq;
 
-				out << YAML::Key << "m_data" << YAML::Value << YAML::BeginMap;
+				out << YAML::Key << "D" << YAML::Value << YAML::BeginMap;
 				{
 					flowFunc(out, flow.m_data);
 				}
@@ -117,24 +117,24 @@ namespace EcoSysLab {
 				skeleton.m_nodes.emplace_back();
 				auto& node = skeleton.m_nodes.back();
 				node.m_handle = nodeHandle;
-				if (inNode["m_recycled"]) node.m_recycled = inNode["m_recycled"].as<bool>();
-				if (inNode["m_flowHandle"]) node.m_flowHandle = inNode["m_flowHandle"].as<FlowHandle>();
-				if (inNode["m_parentHandle"]) node.m_parentHandle = inNode["m_parentHandle"].as<NodeHandle>();
-				if (inNode["m_index"]) node.m_index = inNode["m_index"].as<int>();
-				if (inNode["m_apical"]) node.m_apical = inNode["m_apical"].as<bool>();
-				if (inNode["m_info"])
+				if (inNode["R"]) node.m_recycled = inNode["R"].as<bool>();
+				if (inNode["F"]) node.m_flowHandle = inNode["F"].as<FlowHandle>();
+				if (inNode["P"]) node.m_parentHandle = inNode["P"].as<NodeHandle>();
+				if (inNode["I"]) node.m_index = inNode["I"].as<int>();
+				if (inNode["A"]) node.m_apical = inNode["A"].as<bool>();
+				if (inNode["IF"])
 				{
-					const auto& inNodeInfo = inNode["m_info"];
-					if (inNodeInfo["m_globalPosition"]) node.m_info.m_globalPosition = inNodeInfo["m_globalPosition"].as<glm::vec3>();
-					if (inNodeInfo["m_globalRotation"]) node.m_info.m_globalRotation = inNodeInfo["m_globalRotation"].as<glm::quat>();
+					const auto& inNodeInfo = inNode["IF"];
+					if (inNodeInfo["GP"]) node.m_info.m_globalPosition = inNodeInfo["GP"].as<glm::vec3>();
+					if (inNodeInfo["GR"]) node.m_info.m_globalRotation = inNodeInfo["GR"].as<glm::quat>();
 					node.m_info.m_globalDirection = glm::normalize(node.m_info.m_globalRotation * glm::vec3(0, 0, -1));
-					if (inNodeInfo["m_length"]) node.m_info.m_length = inNodeInfo["m_length"].as<float>();
-					if (inNodeInfo["m_thickness"]) node.m_info.m_thickness = inNodeInfo["m_thickness"].as<float>();
-					if (inNodeInfo["m_color"]) node.m_info.m_color = inNodeInfo["m_color"].as<glm::vec4>();
+					if (inNodeInfo["L"]) node.m_info.m_length = inNodeInfo["L"].as<float>();
+					if (inNodeInfo["T"]) node.m_info.m_thickness = inNodeInfo["T"].as<float>();
+					if (inNodeInfo["C"]) node.m_info.m_color = inNodeInfo["C"].as<glm::vec4>();
 				}
-				if(inNode["m_data"])
+				if(inNode["D"])
 				{
-					const auto& inNodeData = inNode["m_data"];
+					const auto& inNodeData = inNode["D"];
 					nodeFunc(inNodeData, node.m_data);
 				}
 				nodeHandle++;
@@ -148,21 +148,21 @@ namespace EcoSysLab {
 				skeleton.m_flows.emplace_back();
 				auto& flow = skeleton.m_flows.back();
 				flow.m_handle = flowHandle;
-				if (inFlow["m_recycled"]) flow.m_recycled = inFlow["m_recycled"].as<bool>();
-				if (inFlow["m_parentHandle"]) flow.m_parentHandle = inFlow["m_parentHandle"].as<FlowHandle>();
-				if (inFlow["m_index"]) flow.m_index = inFlow["m_index"].as<int>();
-				if (inFlow["m_apical"]) flow.m_apical = inFlow["m_apical"].as<bool>();
-				if (inFlow["m_nodes"])
+				if (inFlow["R"]) flow.m_recycled = inFlow["R"].as<bool>();
+				if (inFlow["P"]) flow.m_parentHandle = inFlow["P"].as<FlowHandle>();
+				if (inFlow["I"]) flow.m_index = inFlow["I"].as<int>();
+				if (inFlow["A"]) flow.m_apical = inFlow["A"].as<bool>();
+				if (inFlow["N"])
 				{
-					const auto& inFlowNodes= inFlow["m_nodes"];
+					const auto& inFlowNodes= inFlow["N"];
 					for (const auto& inFlowNode : inFlowNodes)
 					{
 						flow.m_nodes.emplace_back(inFlowNode.as<NodeHandle>());
 					}
 				}
-				if (inFlow["m_data"])
+				if (inFlow["D"])
 				{
-					const auto& inFlowData = inFlow["m_data"];
+					const auto& inFlowData = inFlow["D"];
 					flowFunc(inFlowData, flow.m_data);
 				}
 				flowHandle++;
@@ -175,7 +175,7 @@ namespace EcoSysLab {
 			if(node.m_recycled)
 			{
 				skeleton.m_nodePool.emplace(node.m_handle);
-			}else if(node.m_handle != 0)
+			}else if(node.m_parentHandle != -1)
 			{
 				skeleton.m_nodes[node.m_parentHandle].m_childHandles.emplace_back(node.m_handle);
 			}
@@ -190,7 +190,7 @@ namespace EcoSysLab {
 			{
 				skeleton.m_flowPool.emplace(flow.m_handle);
 			}
-			else if (flow.m_handle != 0)
+			else if (flow.m_parentHandle != -1)
 			{
 				skeleton.m_flows[flow.m_parentHandle].m_childHandles.emplace_back(flow.m_handle);
 			}

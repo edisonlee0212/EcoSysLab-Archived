@@ -148,7 +148,8 @@ namespace EcoSysLab
 	 */
 	template<typename StrandGroupData, typename StrandData, typename StrandSegmentData>
 	class StrandGroup {
-
+		template<typename SGD, typename SD, typename SSD>
+		friend class StrandGroupSerializer;
 		std::vector<Strand<StrandData>> m_strands;
 		std::vector<StrandSegment<StrandSegmentData>> m_strandSegments;
 
