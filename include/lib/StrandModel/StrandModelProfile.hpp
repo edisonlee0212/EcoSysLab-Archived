@@ -15,6 +15,9 @@ namespace EcoSysLab {
 	template<typename ParticleData>
 	class StrandModelProfile
 	{
+		template<typename PD>
+		friend class StrandModelProfileSerializer;
+
 		std::vector<Particle2D<ParticleData>> m_particles2D{};
 		void SolveCollision(ParticleHandle p1Handle, ParticleHandle p2Handle);
 		float m_deltaTime = 0.001f;

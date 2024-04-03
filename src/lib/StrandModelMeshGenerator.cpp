@@ -1499,7 +1499,7 @@ void StrandModelMeshGenerator::CylindricalMeshing(const StrandModel& strandModel
 			NodeHandle maxChildHandle = -1;
 			for (const auto& childHandle : internode.RefChildHandles()) {
 				const auto& childInternode = skeleton.PeekNode(childHandle);
-				const auto childSize = static_cast<float>(childInternode.m_data.m_frontParticleMap.size());
+				const auto childSize = static_cast<float>(childInternode.m_data.m_backProfile.PeekParticles().size());
 				if (childSize > maxChildSize)
 				{
 					maxChildSize = childSize;

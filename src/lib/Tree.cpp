@@ -19,6 +19,7 @@
 #include "FoliageDescriptor.hpp"
 #include "HeightField.hpp"
 #include "StrandsRenderer.hpp"
+#include "StrandModelProfileSerializer.hpp"
 using namespace EcoSysLab;
 void Tree::SerializeTreeGrowthSettings(const TreeGrowthSettings& treeGrowthSettings, YAML::Emitter& out)
 {
@@ -1350,22 +1351,56 @@ void Tree::Serialize(YAML::Emitter& out)
 			SkeletonSerializer<StrandModelSkeletonData, StrandModelFlowData, StrandModelNodeData>::Serialize(out, m_strandModel.m_strandModelSkeleton,
 				[&](YAML::Emitter& nodeOut, const StrandModelNodeData& nodeData)
 				{
-					
+					nodeOut << YAML::Key << "O" << YAML::Value << nodeData.m_offset;
+					nodeOut << YAML::Key << "T" << YAML::Value << nodeData.m_twistAngle;
+					nodeOut << YAML::Key << "SF" << YAML::Value << nodeData.m_shift;
+					nodeOut << YAML::Key << "A" << YAML::Value << nodeData.m_apical;
+					nodeOut << YAML::Key << "SP" << YAML::Value << nodeData.m_split;
+					nodeOut << YAML::Key << "AGP" << YAML::Value << nodeData.m_adjustedGlobalPosition;
+					nodeOut << YAML::Key << "AGR" << YAML::Value << nodeData.m_adjustedGlobalRotation;
+					nodeOut << YAML::Key << "SR" << YAML::Value << nodeData.m_strandRadius;
+					nodeOut << YAML::Key << "SC" << YAML::Value << nodeData.m_strandCount;
+
+					nodeOut << YAML::Key << "m_frontProfile" << YAML::Value << YAML::BeginMap;
+					{
+						StrandModelProfileSerializer<CellParticlePhysicsData>::Serialize(nodeOut, nodeData.m_frontProfile,
+							[&](YAML::Emitter& particleOut, const CellParticlePhysicsData& particleData)
+							{
+								particleOut << YAML::Key << "H" << YAML::Value << particleData.m_strandHandle;
+								particleOut << YAML::Key << "S" << YAML::Value << particleData.m_strandSegmentHandle;
+								particleOut << YAML::Key << "M" << YAML::Value << particleData.m_mainChild;
+								particleOut << YAML::Key << "B" << YAML::Value << particleData.m_base;
+							}
+						);
+					}
+					out << YAML::EndMap;
+
+					nodeOut << YAML::Key << "m_backProfile" << YAML::Value << YAML::BeginMap;
+					{
+						StrandModelProfileSerializer<CellParticlePhysicsData>::Serialize(nodeOut, nodeData.m_backProfile,
+							[&](YAML::Emitter& particleOut, const CellParticlePhysicsData& particleData)
+							{
+								particleOut << YAML::Key << "H" << YAML::Value << particleData.m_strandHandle;
+								particleOut << YAML::Key << "S" << YAML::Value << particleData.m_strandSegmentHandle;
+								particleOut << YAML::Key << "M" << YAML::Value << particleData.m_mainChild;
+								particleOut << YAML::Key << "B" << YAML::Value << particleData.m_base;
+							}
+						);
+					}
+					out << YAML::EndMap;
 				},
 				[&](YAML::Emitter& flowOut, const StrandModelFlowData& flowData)
-				{
-					
-				},
+				{},
 				[&](YAML::Emitter& skeletonOut, const StrandModelSkeletonData& skeletonData)
 				{
 					skeletonOut << YAML::Key << "m_strandGroup" << YAML::Value << YAML::BeginMap;
 					{
-						StrandGroupSerializer<StrandModelStrandGroupData, StrandModelStrandData, StrandModelStrandSegmentData>::Serialize(skeletonOut, m_strandModel.m_strandModelSkeleton.m_data.m_strandGroup,
+						StrandGroupSerializer<StrandModelStrandGroupData, StrandModelStrandData, StrandModelStrandSegmentData>::Serialize(skeletonOut, skeletonData.m_strandGroup,
 							[&](YAML::Emitter& segmentOut, const StrandModelStrandSegmentData& segmentData)
 							{
-								//nodeOut << YAML::Key << "H" << YAML::Value << segmentData.m_nodeHandle;
-								//nodeOut << YAML::Key << "F" << YAML::Value << segmentData.m_frontProfileParticleHandle;
-								//nodeOut << YAML::Key << "B" << YAML::Value << segmentData.m_backProfileParticleHandle;
+								segmentOut << YAML::Key << "H" << YAML::Value << segmentData.m_nodeHandle;
+								segmentOut << YAML::Key << "F" << YAML::Value << segmentData.m_frontProfileParticleHandle;
+								segmentOut << YAML::Key << "B" << YAML::Value << segmentData.m_backProfileParticleHandle;
 							},
 							[&](YAML::Emitter& strandOut, const StrandModelStrandData& strandData) {},
 							[&](YAML::Emitter& groupOut, const StrandModelStrandGroupData& groupData) {}
@@ -1447,11 +1482,45 @@ void Tree::Deserialize(const YAML::Node& in)
 			SkeletonSerializer<StrandModelSkeletonData, StrandModelFlowData, StrandModelNodeData>::Deserialize(inStrandModelSkeleton, m_strandModel.m_strandModelSkeleton,
 				[&](const YAML::Node& nodeIn, StrandModelNodeData& nodeData)
 				{
-					
+					if (nodeIn["O"]) nodeData.m_offset = nodeIn["O"].as<glm::vec2>();
+					if (nodeIn["T"]) nodeData.m_twistAngle = nodeIn["T"].as<float>();
+					if (nodeIn["SF"]) nodeData.m_shift = nodeIn["SF"].as<glm::vec2>();
+					if (nodeIn["A"]) nodeData.m_apical = nodeIn["A"].as<bool>();
+					if (nodeIn["SP"]) nodeData.m_split = nodeIn["SP"].as<bool>();
+					if (nodeIn["AGP"]) nodeData.m_adjustedGlobalPosition = nodeIn["AGP"].as<glm::vec3>();
+					if (nodeIn["AGR"]) nodeData.m_adjustedGlobalRotation = nodeIn["AGR"].as<glm::quat>();
+					if (nodeIn["SR"]) nodeData.m_strandRadius = nodeIn["SR"].as<float>();
+					if (nodeIn["SC"]) nodeData.m_strandCount = nodeIn["SC"].as<int>();
+
+					if (nodeIn["m_frontProfile"])
+					{
+						const auto& inStrandGroup = nodeIn["m_frontProfile"];
+						StrandModelProfileSerializer<CellParticlePhysicsData>::Deserialize(inStrandGroup, nodeData.m_frontProfile,
+							[&](const YAML::Node& segmentIn, CellParticlePhysicsData& particleData)
+							{
+								if (segmentIn["H"]) particleData.m_strandHandle = segmentIn["H"].as<StrandHandle>();
+								if (segmentIn["S"]) particleData.m_strandSegmentHandle = segmentIn["S"].as<StrandSegmentHandle>();
+								if (segmentIn["M"]) particleData.m_mainChild = segmentIn["M"].as<bool>();
+								if (segmentIn["B"]) particleData.m_base = segmentIn["B"].as<bool>();
+							}
+						);
+					}
+					if (nodeIn["m_backProfile"])
+					{
+						const auto& inStrandGroup = nodeIn["m_backProfile"];
+						StrandModelProfileSerializer<CellParticlePhysicsData>::Deserialize(inStrandGroup, nodeData.m_backProfile,
+							[&](const YAML::Node& segmentIn, CellParticlePhysicsData& particleData)
+							{
+								if (segmentIn["H"]) particleData.m_strandHandle = segmentIn["H"].as<StrandHandle>();
+								if (segmentIn["S"]) particleData.m_strandSegmentHandle = segmentIn["S"].as<StrandSegmentHandle>();
+								if (segmentIn["M"]) particleData.m_mainChild = segmentIn["M"].as<bool>();
+								if (segmentIn["B"]) particleData.m_base = segmentIn["B"].as<bool>();
+							}
+						);
+					}
 				},
 				[&](const YAML::Node& flowIn, StrandModelFlowData& flowData)
-				{
-				},
+				{},
 				[&](const YAML::Node& skeletonIn, StrandModelSkeletonData& skeletonData)
 				{
 					if(skeletonIn["m_strandGroup"])
@@ -1460,9 +1529,9 @@ void Tree::Deserialize(const YAML::Node& in)
 						StrandGroupSerializer<StrandModelStrandGroupData, StrandModelStrandData, StrandModelStrandSegmentData>::Deserialize(inStrandGroup, m_strandModel.m_strandModelSkeleton.m_data.m_strandGroup,
 							[&](const YAML::Node& segmentIn, StrandModelStrandSegmentData& segmentData)
 							{
-								//nodeOut << YAML::Key << "H" << YAML::Value << segmentData.m_nodeHandle;
-								//nodeOut << YAML::Key << "F" << YAML::Value << segmentData.m_frontProfileParticleHandle;
-								//nodeOut << YAML::Key << "B" << YAML::Value << segmentData.m_backProfileParticleHandle;
+								if (segmentIn["H"]) segmentData.m_nodeHandle = segmentIn["H"].as<NodeHandle>();
+								if (segmentIn["F"]) segmentData.m_frontProfileParticleHandle = segmentIn["F"].as<ParticleHandle>();
+								if (segmentIn["B"]) segmentData.m_frontProfileParticleHandle = segmentIn["B"].as<ParticleHandle>();
 							},
 							[&](const YAML::Node& strandIn, StrandModelStrandData& strandData) {},
 							[&](const YAML::Node& groupIn, StrandModelStrandGroupData& groupData) {}

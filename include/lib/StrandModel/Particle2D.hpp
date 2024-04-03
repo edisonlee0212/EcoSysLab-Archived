@@ -14,6 +14,9 @@ namespace EcoSysLab {
 	class Particle2D
 	{
 		template<typename PD>
+		friend class StrandModelProfileSerializer;
+
+		template<typename PD>
 		friend class StrandModelProfile;
 		glm::vec3 m_color = glm::vec3(1.0f);
 		glm::vec2 m_position = glm::vec2(0.0f);
