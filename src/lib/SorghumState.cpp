@@ -100,23 +100,22 @@ void SorghumStemState::GenerateGeometry(std::vector<Vertex>& vertices, std::vect
 	auto sorghumLayer = Application::GetLayer<SorghumLayer>();
 	if (!sorghumLayer)
 		return;
-	std::vector<SorghumLeafSegment> segments;
+	std::vector<SorghumSplineSegment> segments;
 	for (int i = 1; i < m_nodes.size(); i++) {
 		auto& prev = m_nodes.at(i - 1);
 		auto& curr = m_nodes.at(i);
 		float distance = glm::distance(prev.m_position, curr.m_position);
 		BezierCurve curve = BezierCurve(
-			prev.m_position, prev.m_position + distance / 5.0f * prev.m_axis,
-			curr.m_position - distance / 5.0f * curr.m_axis, curr.m_position);
+			prev.m_position, prev.m_position + distance / 5.0f * prev.m_front,
+			curr.m_position - distance / 5.0f * curr.m_front, curr.m_position);
 		for (float div = (i == 1 ? 0.0f : 0.5f); div <= 1.0f; div += 0.5f) {
-			auto front = prev.m_axis * (1.0f - div) + curr.m_axis * div;
+			auto front = prev.m_front * (1.0f - div) + curr.m_front * div;
 			auto left = prev.m_left * (1.0f - div) + curr.m_left * div;
 			auto up = glm::normalize(glm::cross(left, front));
 			segments.emplace_back(
 				curve.GetPoint(div), up, front,
-				prev.m_stemWidth * (1.0f - div) + curr.m_stemWidth * div,
-				prev.m_leafWidth * (1.0f - div) + curr.m_leafWidth * div,
-				prev.m_theta * (1.0f - div) + curr.m_theta * div, curr.m_type, 1.0f,
+				prev.m_width * (1.0f - div) + curr.m_width * div,
+				prev.m_theta * (1.0f - div) + curr.m_theta * div, 1.0f,
 				1.0f);
 		}
 	}
@@ -143,7 +142,7 @@ void SorghumStemState::GenerateGeometry(std::vector<Vertex>& vertices, std::vect
 			segment.m_theta / sorghumLayer->m_horizontalSubdivisionStep;
 		const int vertsCount = sorghumLayer->m_horizontalSubdivisionStep * 2 + 1;
 		for (int j = 0; j < vertsCount; j++) {
-			const auto position = segment.GetPoint(
+			const auto position = segment.GetStemPoint(
 				(j - sorghumLayer->m_horizontalSubdivisionStep) * angleStep);
 			archetype.m_position = glm::vec3(position.x, position.y, position.z);
 			float yPos = yStemStep * i;
@@ -165,32 +164,71 @@ void SorghumStemState::GenerateGeometry(std::vector<Vertex>& vertices, std::vect
 	}
 }
 
-void SorghumLeafState::GenerateSegments(std::vector<SorghumLeafSegment>& segments, bool bottomFace) const
+void SorghumLeafState::GenerateSegments(std::vector<SorghumSplineSegment>& segments, bool bottomFace) const
 {
 	for (int i = 1; i < m_nodes.size(); i++) {
 		auto& prev = m_nodes.at(i - 1);
 		auto& curr = m_nodes.at(i);
-		if (bottomFace && prev.m_type != SorghumSplineType::Leaf) {
+		if (bottomFace && prev.m_theta > 90.f) {
 			continue;
 		}
+		/*
 		float distance = glm::distance(prev.m_position, curr.m_position);
 		BezierCurve curve = BezierCurve(
-			prev.m_position, prev.m_position + distance / 5.0f * prev.m_axis,
-			curr.m_position - distance / 5.0f * curr.m_axis, curr.m_position);
+			prev.m_position, prev.m_position + distance / 5.0f * prev.m_front,
+			curr.m_position - distance / 5.0f * curr.m_front, curr.m_position);
+		*/
+		const auto& p1 = prev.m_position;
+		const auto& p2 = curr.m_position;
+		glm::vec3 p0, p3;
+		if(i == 1)
+		{
+			p0 = 2.f * p1 - p2;
+		}else
+		{
+			p0 = m_nodes.at(i - 2).m_position;
+		}
+		if(i == m_nodes.size() - 1)
+		{
+			p3 = 2.f * p2 - p1;
+		}else
+		{
+			p3 = m_nodes.at(i + 1).m_position;
+		}
+
+		const auto& l1 = prev.m_left;
+		const auto& l2 = curr.m_left;
+		glm::vec3 l0, l3;
+		if (i == 1)
+		{
+			l0 = 2.f * l1 - l2;
+		}
+		else
+		{
+			l0 = m_nodes.at(i - 2).m_left;
+		}
+		if (i == m_nodes.size() - 1)
+		{
+			l3 = 2.f * l2 - l1;
+		}
+		else
+		{
+			l3 = m_nodes.at(i + 1).m_left;
+		}
 
 		for (float div = (i == 1 ? 0.0f : 0.5f); div <= 1.0f; div += 0.5f) {
-
-			auto front = glm::normalize(prev.m_axis * (1.0f - div) + curr.m_axis * div);
-			auto left = glm::normalize(prev.m_left * (1.0f - div) + curr.m_left * div);//?
-			auto up = glm::normalize(glm::cross(left, front));
+			glm::vec3 center, front;
+			Strands::CubicInterpolation(p0, p1, p2, p3, center, front, div);
+			front = glm::normalize(front);
+			auto left = Strands::CubicInterpolation(l0, l1, l2, l3, div);// glm::normalize(prev.m_left * (1.0f - div) + curr.m_left * div);//?
+			auto up = glm::normalize(glm::cross(front, left));
 			auto waviness = glm::mix(prev.m_waviness, curr.m_waviness, div);
 			float leftPeriod = 0.f;
 			float rightPeriod = 0.f;
-			segments.emplace_back(curve.GetPoint(div), up, front,
-				glm::mix(prev.m_stemWidth, curr.m_stemWidth, div),
-				glm::mix(prev.m_leafWidth, curr.m_leafWidth, div),
+			segments.emplace_back(center, up, front,
+				glm::mix(prev.m_width, curr.m_width, div),
 				glm::mix(prev.m_theta, curr.m_theta, div),
-				curr.m_type, glm::sin(leftPeriod) * waviness,
+				glm::sin(leftPeriod) * waviness,
 				glm::sin(rightPeriod) * waviness);
 		}
 	}
@@ -233,7 +271,7 @@ void SorghumLeafState::GenerateGeometry(std::vector<Vertex>& vertices, std::vect
 	auto sorghumLayer = Application::GetLayer<SorghumLayer>();
 	if (!sorghumLayer)
 		return;
-	std::vector<SorghumLeafSegment> segments;
+	std::vector<SorghumSplineSegment> segments;
 	GenerateSegments(segments);
 
 	const int vertexIndex = vertices.size();
@@ -251,21 +289,11 @@ void SorghumLeafState::GenerateGeometry(std::vector<Vertex>& vertices, std::vect
 
 	for (int i = 0; i < segmentSize; i++) {
 		auto& segment = segments.at(i);
-		/*
-		if (i <= segmentSize / 3) {
-			archetype.m_color = glm::vec4(1, 0, 0, 1);
-		}
-		else if (i <= segmentSize * 2 / 3) {
-			archetype.m_color = glm::vec4(0, 1, 0, 1);
-		}
-		else {
-			archetype.m_color = glm::vec4(0, 0, 1, 1);
-		}*/
 		const float angleStep =
 			segment.m_theta / static_cast<float>(sorghumLayer->m_horizontalSubdivisionStep);
 		const int vertsCount = sorghumLayer->m_horizontalSubdivisionStep * 2 + 1;
 		for (int j = 0; j < vertsCount; j++) {
-			auto position = segment.GetPoint(
+			auto position = segment.GetLeafPoint(
 				(j - sorghumLayer->m_horizontalSubdivisionStep) * angleStep);
 			auto normal = segment.GetNormal(
 				(j - sorghumLayer->m_horizontalSubdivisionStep) * angleStep);

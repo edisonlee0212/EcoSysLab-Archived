@@ -458,6 +458,7 @@ void DatasetGenerator::GeneratePointCloudForSorghumPatch(
 		EVOENGINE_ERROR("No soil in scene!");
 		return;
 	}
+	soil->RandomOffset(0, 99999);
 	soil->GenerateMesh(0.0f, 0.0f);
 	Application::Loop();
 	const auto sorghumField = ProjectManager::CreateTemporaryAsset<SorghumField>();

@@ -231,7 +231,7 @@ void Sorghum::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 				for(int i = 0; i < leafState.m_nodes.size(); i++)
 				{
 					auto& matrix = particleInfos[startIndex + i].m_instanceMatrix;
-					matrix.m_value = glm::translate(leafState.m_nodes.at(i).m_position + plantPosition) * glm::scale(glm::vec3(nodeRenderSize * leafState.m_nodes.at(i).m_leafWidth));
+					matrix.m_value = glm::translate(leafState.m_nodes.at(i).m_position + plantPosition) * glm::scale(glm::vec3(nodeRenderSize * leafState.m_nodes.at(i).m_width));
 					particleInfos[startIndex + i].m_instanceColor = glm::vec4((leafState.m_index % 3) * 0.5f, ((leafState.m_index / 3) % 3) * 0.5f,
 						((leafState.m_index / 9) % 3) * 0.5f, 1.0f);
 				}

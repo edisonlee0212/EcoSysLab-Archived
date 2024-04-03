@@ -6,6 +6,7 @@
 
 #include "Scene.hpp"
 #include "Sorghum.hpp"
+#include "SorghumSpline.hpp"
 
 using namespace EcoSysLab;
 
@@ -294,11 +295,9 @@ void SorghumDescriptor::Apply(const std::shared_ptr<SorghumState>& targetState, 
 	frontDirection = glm::rotate(
 		frontDirection, glm::radians(glm::linearRand(0.0f, 360.0f)), upDirection);
 
-	glm::vec3 stemDirection =
+	glm::vec3 stemFront = glm::normalize(
 		glm::rotate(upDirection,
-			glm::radians(glm::gaussRand(m_stemTiltAngle.m_mean,
-				m_stemTiltAngle.m_deviation)),
-			frontDirection);
+			glm::radians(glm::gaussRand(m_stemTiltAngle.m_mean, m_stemTiltAngle.m_deviation)), frontDirection));
 	float stemLength = m_stemLength.GetValue();
 	Plot2D<float> widthAlongStem = { 0.0f, m_stemWidth.GetValue(),
 										m_widthAlongStem };
@@ -309,13 +308,13 @@ void SorghumDescriptor::Apply(const std::shared_ptr<SorghumState>& targetState, 
 		4.0f, stemLength / sorghumLayer->m_verticalSubdivisionMaxUnitLength));
 	float stemUnitLength = stemLength / stemNodeAmount;
 	glm::vec3 stemLeft = glm::normalize(glm::rotate(glm::vec3(1, 0, 0),
-		glm::radians(glm::linearRand(0.0f, 0.0f)), stemDirection));
+		glm::radians(glm::linearRand(0.0f, 0.0f)), stemFront));
 	for (int i = 0; i <= stemNodeAmount; i++) {
 		float stemWidth = widthAlongStem.GetValue(static_cast<float>(i) / stemNodeAmount);
 		glm::vec3 stemNodePosition;
-		stemNodePosition = glm::normalize(stemDirection) * stemUnitLength * static_cast<float>(i);
-		targetState->m_stem.m_nodes.emplace_back(stemNodePosition, 180.0f, stemWidth, stemWidth, 0.0f,
-			-stemDirection, stemLeft, SorghumSplineType::Stem, static_cast<float>(i) / stemNodeAmount);
+		stemNodePosition = stemFront * stemUnitLength * static_cast<float>(i);
+		targetState->m_stem.m_nodes.emplace_back(stemNodePosition, 180.0f, stemWidth, 0.0f,
+			-stemFront, stemLeft, static_cast<float>(i) / stemNodeAmount);
 	}
 
 	const int leafSize = glm::clamp(m_leafAmount.GetValue(), 2.0f, 128.0f);
@@ -367,11 +366,14 @@ void SorghumDescriptor::Apply(const std::shared_ptr<SorghumState>& targetState, 
 		float stemWidth = widthAlongStem.GetValue(startingPointRatio);
 		float backTrackRatio = 0.05f;
 		if (startingPointRatio < backTrackRatio) backTrackRatio = startingPointRatio;
-		
-		glm::vec3 nodePosition = glm::normalize(stemDirection) * startingPointRatio * stemLength;
-		//BezierSpline middleSpline;
+
 		glm::vec3 leafLeft = glm::normalize(glm::rotate(glm::vec3(0, 0, -1), glm::radians(rollAngle),
 			glm::vec3(0, 1, 0)));
+		auto leafUp = glm::normalize(glm::cross(leafLeft, stemFront));
+		glm::vec3 stemOffset = stemWidth * leafUp;
+		glm::vec3 nodePosition = stemFront * startingPointRatio * stemLength + stemOffset;
+		//BezierSpline middleSpline;
+		
 		auto direction = glm::rotate(glm::vec3(0, 1, 0), glm::radians(branchingAngle), leafLeft);
 		bool modelToRoot = true;
 		float sheathRatio = startingPointRatio - backTrackRatio;
@@ -382,10 +384,10 @@ void SorghumDescriptor::Apply(const std::shared_ptr<SorghumState>& targetState, 
 						sorghumLayer->m_verticalSubdivisionMaxUnitLength);
 				for (int i = 0; i < rootToSheathNodeCount; i++) {
 					float currentRootToSheathPoint = static_cast<float>(i) / rootToSheathNodeCount * sheathRatio;
-					glm::vec3 actualDirection = stemDirection;
-					leafState.m_nodes.emplace_back(glm::normalize(stemDirection) * currentRootToSheathPoint * stemLength, 180.0f, stemWidth,
+					glm::vec3 actualDirection = stemFront;
+					leafState.m_nodes.emplace_back(glm::normalize(stemFront) * currentRootToSheathPoint * stemLength + stemOffset, 180.0f,
 						stemWidth, 0.0f,
-						-actualDirection, leafLeft, SorghumSplineType::LeafSheathToRoot, 0.0f);
+						-actualDirection, leafLeft, 0.0f);
 				}
 			}
 		}
@@ -396,12 +398,11 @@ void SorghumDescriptor::Apply(const std::shared_ptr<SorghumState>& targetState, 
 		for (int i = 0; i <= sheathNodeCount; i++) {
 			float currentSheathPoint = sheathRatio + static_cast<float>(i) / sheathNodeCount * backTrackRatio;
 			glm::vec3 actualDirection =
-				glm::mix(stemDirection, direction, static_cast<float>(i) / sheathNodeCount);
-			leafState.m_nodes.emplace_back(glm::normalize(stemDirection) * currentSheathPoint * stemLength,
+				glm::mix(stemFront, direction, static_cast<float>(i) / sheathNodeCount);
+			leafState.m_nodes.emplace_back(glm::normalize(stemFront) * currentSheathPoint * stemLength + stemOffset,
 				180.0f - 90.0f * static_cast<float>(i) / sheathNodeCount,
-				stemWidth + 0.002f,
 				stemWidth + 0.002f * static_cast<float>(i) / sheathNodeCount,
-				0.0f, -actualDirection, leafLeft, SorghumSplineType::LeafSheath, 0.0f);
+				0.0f, -actualDirection, leafLeft, 0.0f);
 		}
 
 		int nodeAmount = glm::max(
@@ -430,9 +431,8 @@ void SorghumDescriptor::Apply(const std::shared_ptr<SorghumState>& targetState, 
 				collarFactor);
 			float angle = 90.0f - (90.0f - expandAngle) * glm::pow(collarFactor, 2.0f);
 			leafState.m_nodes.emplace_back(nodePosition, angle,
-				stemWidth + 0.002f,
 				width,
-				waviness, -currentDirection, leafLeft, SorghumSplineType::Leaf, factor);
+				waviness, -currentDirection, leafLeft, factor);
 		}
 	}
 

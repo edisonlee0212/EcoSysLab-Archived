@@ -1,6 +1,5 @@
 #pragma once
-#include "SorghumLeafSegment.hpp"
-#include "SorghumSplineNode.hpp"
+#include "SorghumSpline.hpp"
 using namespace EvoEngine;
 namespace EcoSysLab
 {
@@ -48,7 +47,7 @@ namespace EcoSysLab
 		std::vector<SorghumSplineNode> m_nodes;
 		glm::vec2 m_wavinessPeriodStart = glm::vec2(0.0f);
 		glm::vec2 m_wavinessFrequency = glm::vec2(0.0f);
-		void GenerateSegments(std::vector<SorghumLeafSegment>& segments, bool bottomFace = false) const;
+		void GenerateSegments(std::vector<SorghumSplineSegment>& segments, bool bottomFace = false) const;
 		bool OnInspect(const std::shared_ptr<EditorLayer>& editorLayer);
 		void Serialize(YAML::Emitter& out) const;
 		void Deserialize(const YAML::Node& in);
