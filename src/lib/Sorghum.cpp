@@ -38,7 +38,7 @@ void Sorghum::GenerateGeometryEntities(const SorghumMeshGeneratorSettings& sorgh
 	}
 	
 	if(!sorghumState) return;
-	if (sorghumState->m_stem.m_nodes.empty()) return;
+	if (sorghumState->m_stem.m_spline.m_segments.empty()) return;
 	ClearGeometryEntities();
 	const auto scene = GetScene();
 	const auto owner = GetOwner();
@@ -58,7 +58,7 @@ void Sorghum::GenerateGeometryEntities(const SorghumMeshGeneratorSettings& sorgh
 		material->m_materialProperties = panicleMaterial->m_materialProperties;
 		std::vector<Vertex> vertices;
 		std::vector<unsigned int> indices;
-		sorghumState->m_panicle.GenerateGeometry(sorghumState->m_stem.m_nodes.back().m_position, vertices, indices);
+		sorghumState->m_panicle.GenerateGeometry(sorghumState->m_stem.m_spline.m_segments.back().m_position, vertices, indices);
 		VertexAttributes attributes{};
 		attributes.m_texCoord = true;
 		mesh->SetVertices(attributes, vertices, indices);
@@ -227,11 +227,11 @@ void Sorghum::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 			const auto plantPosition = scene->GetDataComponent<GlobalTransform>(owner).GetPosition();
 			for (const auto& leafState : sorghumState->m_leaves) {
 				const auto startIndex = particleInfos.size();
-				particleInfos.resize(startIndex + leafState.m_nodes.size());
-				for(int i = 0; i < leafState.m_nodes.size(); i++)
+				particleInfos.resize(startIndex + leafState.m_spline.m_segments.size());
+				for(int i = 0; i < leafState.m_spline.m_segments.size(); i++)
 				{
 					auto& matrix = particleInfos[startIndex + i].m_instanceMatrix;
-					matrix.m_value = glm::translate(leafState.m_nodes.at(i).m_position + plantPosition) * glm::scale(glm::vec3(nodeRenderSize * leafState.m_nodes.at(i).m_width));
+					matrix.m_value = glm::translate(leafState.m_spline.m_segments.at(i).m_position + plantPosition) * glm::scale(glm::vec3(nodeRenderSize * leafState.m_spline.m_segments.at(i).m_radius));
 					particleInfos[startIndex + i].m_instanceColor = glm::vec4((leafState.m_index % 3) * 0.5f, ((leafState.m_index / 3) % 3) * 0.5f,
 						((leafState.m_index / 9) % 3) * 0.5f, 1.0f);
 				}

@@ -28,7 +28,6 @@ public:
   PlottedDistribution<float> m_leafBendingSmoothness;
   PlottedDistribution<float> m_leafWaviness;
   PlottedDistribution<float> m_leafWavinessFrequency;
-  PlottedDistribution<float> m_leafPeriodStart;
   PlottedDistribution<float> m_leafLength;
   PlottedDistribution<float> m_leafWidth;
 

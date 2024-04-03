@@ -155,9 +155,7 @@ void SorghumDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLaye
 			changed = true;
 		if (m_leafWavinessFrequency.OnInspect("Waviness Frequency"))
 			changed = true;
-		if (m_leafPeriodStart.OnInspect("Waviness Period Start"))
-			changed = true;
-
+		
 		if (m_leafLength.OnInspect("Length"))
 			changed = true;
 		if (m_leafWidth.OnInspect("Width"))
@@ -228,7 +226,6 @@ void SorghumDescriptor::Serialize(YAML::Emitter& out) {
 	m_leafBendingSmoothness.Save("m_leafBendingSmoothness", out);
 	m_leafWaviness.Save("m_leafWaviness", out);
 	m_leafWavinessFrequency.Save("m_leafWavinessFrequency", out);
-	m_leafPeriodStart.Save("m_leafPeriodStart", out);
 	m_leafLength.Save("m_leafLength", out);
 	m_leafWidth.Save("m_leafWidth", out);
 
@@ -261,7 +258,6 @@ void SorghumDescriptor::Deserialize(const YAML::Node& in) {
 	m_leafBendingSmoothness.Load("m_leafBendingSmoothness", in);
 	m_leafWaviness.Load("m_leafWaviness", in);
 	m_leafWavinessFrequency.Load("m_leafWavinessFrequency", in);
-	m_leafPeriodStart.Load("m_leafPeriodStart", in);
 	m_leafLength.Load("m_leafLength", in);
 	m_leafWidth.Load("m_leafWidth", in);
 
@@ -303,9 +299,9 @@ void SorghumDescriptor::Apply(const std::shared_ptr<SorghumState>& targetState, 
 										m_widthAlongStem };
 	const auto sorghumLayer = Application::GetLayer<SorghumLayer>();
 	//Build stem...
-	targetState->m_stem.m_nodes.clear();
+	targetState->m_stem.m_spline.m_segments.clear();
 	int stemNodeAmount = static_cast<int>(glm::max(
-		4.0f, stemLength / sorghumLayer->m_verticalSubdivisionMaxUnitLength));
+		4.0f, stemLength / sorghumLayer->m_verticalSubdivisionLength));
 	float stemUnitLength = stemLength / stemNodeAmount;
 	glm::vec3 stemLeft = glm::normalize(glm::rotate(glm::vec3(1, 0, 0),
 		glm::radians(glm::linearRand(0.0f, 0.0f)), stemFront));
@@ -313,8 +309,14 @@ void SorghumDescriptor::Apply(const std::shared_ptr<SorghumState>& targetState, 
 		float stemWidth = widthAlongStem.GetValue(static_cast<float>(i) / stemNodeAmount);
 		glm::vec3 stemNodePosition;
 		stemNodePosition = stemFront * stemUnitLength * static_cast<float>(i);
-		targetState->m_stem.m_nodes.emplace_back(stemNodePosition, 180.0f, stemWidth, 0.0f,
-			-stemFront, stemLeft, static_cast<float>(i) / stemNodeAmount);
+
+
+		const auto up = glm::normalize(glm::cross(stemFront, stemLeft));
+		targetState->m_stem.m_spline.m_segments.emplace_back(
+			stemNodePosition,
+			up, stemFront,
+			stemWidth,
+			180.f, 0, 0);
 	}
 
 	const int leafSize = glm::clamp(m_leafAmount.GetValue(), 2.0f, 128.0f);
@@ -322,13 +324,10 @@ void SorghumDescriptor::Apply(const std::shared_ptr<SorghumState>& targetState, 
 	for (int i = 0; i < leafSize; i++) {
 		const float step = static_cast<float>(i) / (static_cast<float>(leafSize) - 1.0f);
 		auto& leafState = targetState->m_leaves[i];
-		leafState.m_nodes.clear();
+		leafState.m_spline.m_segments.clear();
 		leafState.m_index = i;
 		leafState.m_wavinessFrequency.x = m_leafWavinessFrequency.GetValue(step);
 		leafState.m_wavinessFrequency.y = m_leafWavinessFrequency.GetValue(step);
-
-		leafState.m_wavinessPeriodStart.x = m_leafPeriodStart.GetValue(step);
-		leafState.m_wavinessPeriodStart.y = m_leafPeriodStart.GetValue(step);
 
 		float startingPointRatio = m_leafStartingPoint.GetValue(step);
 		float leafLength = m_leafLength.GetValue(step);
@@ -347,6 +346,7 @@ void SorghumDescriptor::Apply(const std::shared_ptr<SorghumState>& targetState, 
 		bending = (bending + 180) / 360.0f;
 		const auto bendingAcceleration = m_leafBendingAcceleration.GetValue(step);
 		const auto bendingSmoothness = m_leafBendingSmoothness.GetValue(step);
+		
 
 		Plot2D bendingAlongLeaf = {-180.0f, 180.0f, {0.5f, bending} };
 		const glm::vec2 middle = glm::mix(glm::vec2(0, bending), glm::vec2(1, 0.5f), bendingAcceleration);
@@ -369,8 +369,8 @@ void SorghumDescriptor::Apply(const std::shared_ptr<SorghumState>& targetState, 
 
 		glm::vec3 leafLeft = glm::normalize(glm::rotate(glm::vec3(0, 0, -1), glm::radians(rollAngle),
 			glm::vec3(0, 1, 0)));
-		auto leafUp = glm::normalize(glm::cross(leafLeft, stemFront));
-		glm::vec3 stemOffset = stemWidth * leafUp;
+		auto leafUp = glm::normalize(glm::cross(stemFront, leafLeft));
+		glm::vec3 stemOffset = stemWidth * -leafUp;
 		glm::vec3 nodePosition = stemFront * startingPointRatio * stemLength + stemOffset;
 		//BezierSpline middleSpline;
 		
@@ -381,37 +381,45 @@ void SorghumDescriptor::Apply(const std::shared_ptr<SorghumState>& targetState, 
 			if (sheathRatio > 0) {
 				int rootToSheathNodeCount =
 					glm::min(2.0f, stemLength * sheathRatio /
-						sorghumLayer->m_verticalSubdivisionMaxUnitLength);
+						sorghumLayer->m_verticalSubdivisionLength);
 				for (int i = 0; i < rootToSheathNodeCount; i++) {
 					float currentRootToSheathPoint = static_cast<float>(i) / rootToSheathNodeCount * sheathRatio;
-					glm::vec3 actualDirection = stemFront;
-					leafState.m_nodes.emplace_back(glm::normalize(stemFront) * currentRootToSheathPoint * stemLength + stemOffset, 180.0f,
-						stemWidth, 0.0f,
-						-actualDirection, leafLeft, 0.0f);
+
+					const auto up = glm::normalize(glm::cross(stemFront, leafLeft));
+					leafState.m_spline.m_segments.emplace_back(
+						glm::normalize(stemFront) * currentRootToSheathPoint * stemLength + stemOffset,
+						up, stemFront,
+						stemWidth,
+						180.f, 0, 0);
 				}
 			}
 		}
 		
 		int sheathNodeCount =
 			glm::max(2.0f, stemLength * backTrackRatio /
-				sorghumLayer->m_verticalSubdivisionMaxUnitLength);
+				sorghumLayer->m_verticalSubdivisionLength);
 		for (int i = 0; i <= sheathNodeCount; i++) {
 			float currentSheathPoint = sheathRatio + static_cast<float>(i) / sheathNodeCount * backTrackRatio;
 			glm::vec3 actualDirection =
 				glm::mix(stemFront, direction, static_cast<float>(i) / sheathNodeCount);
-			leafState.m_nodes.emplace_back(glm::normalize(stemFront) * currentSheathPoint * stemLength + stemOffset,
-				180.0f - 90.0f * static_cast<float>(i) / sheathNodeCount,
+
+			const auto up = glm::normalize(glm::cross(actualDirection, leafLeft));
+			leafState.m_spline.m_segments.emplace_back(
+				glm::normalize(stemFront) * currentSheathPoint * stemLength + stemOffset, 
+				up, actualDirection, 
 				stemWidth + 0.002f * static_cast<float>(i) / sheathNodeCount,
-				0.0f, -actualDirection, leafLeft, 0.0f);
+				180.0f - 90.0f * static_cast<float>(i) / sheathNodeCount, 0, 0);
 		}
 
 		int nodeAmount = glm::max(
-			4.0f, leafLength / sorghumLayer->m_verticalSubdivisionMaxUnitLength);
+			4.0f, leafLength / sorghumLayer->m_verticalSubdivisionLength);
 		float unitLength = leafLength / nodeAmount;
 
 		int nodeToFullExpand =
-			0.1f * leafLength / sorghumLayer->m_verticalSubdivisionMaxUnitLength;
+			0.1f * leafLength / sorghumLayer->m_verticalSubdivisionLength;
 
+		float heightOffset = glm::linearRand(0.f, 100.f);
+		const float wavinessFrequency = m_leafWavinessFrequency.GetValue(step);
 		for (int i = 1; i <= nodeAmount; i++) {
 			const float factor = static_cast<float>(i) / nodeAmount;
 			glm::vec3 currentDirection;
@@ -424,15 +432,21 @@ void SorghumDescriptor::Apply(const std::shared_ptr<SorghumState>& targetState, 
 			float expandAngle = curlingAlongLeaf.GetValue(factor);
 
 			float collarFactor = glm::min(1.0f, static_cast<float>(i) / nodeToFullExpand);
+
 			float waviness = wavinessAlongLeaf.GetValue(factor);
+			heightOffset += wavinessFrequency;
+
 			float width = glm::mix(
 				stemWidth + 0.002f,
 				widthAlongLeaf.GetValue(factor),
 				collarFactor);
 			float angle = 90.0f - (90.0f - expandAngle) * glm::pow(collarFactor, 2.0f);
-			leafState.m_nodes.emplace_back(nodePosition, angle,
-				width,
-				waviness, -currentDirection, leafLeft, factor);
+			
+			const auto up = glm::normalize(glm::cross(currentDirection, leafLeft));
+			leafState.m_spline.m_segments.emplace_back(
+				nodePosition, up, currentDirection, width, angle, 
+				waviness * glm::simplex(glm::vec2(heightOffset, 0.f)),
+				waviness * glm::simplex(glm::vec2(0.f, heightOffset)));
 		}
 	}
 

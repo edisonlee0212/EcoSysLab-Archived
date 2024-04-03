@@ -77,48 +77,23 @@ bool SorghumStemState::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer
 
 void SorghumStemState::Serialize(YAML::Emitter& out) const
 {
-	if (!m_nodes.empty()) {
-		out << YAML::Key << "m_nodes" << YAML::Value
-			<< YAML::Binary((const unsigned char*)m_nodes.data(),
-				m_nodes.size() * sizeof(SorghumSplineNode));
-	}
+	
 }
 
 void SorghumStemState::Deserialize(const YAML::Node& in)
 {
-	if (in["m_nodes"]) {
-		const auto& nodes = in["m_nodes"].as<YAML::Binary>();
-		m_nodes.resize(nodes.size() / sizeof(SorghumSplineNode));
-		std::memcpy(m_nodes.data(), nodes.data(), nodes.size());
-	}
 }
 
 void SorghumStemState::GenerateGeometry(std::vector<Vertex>& vertices, std::vector<unsigned>& indices) const
 {
-	if (m_nodes.empty())
+	if (m_spline.m_segments.empty())
 		return;
 	auto sorghumLayer = Application::GetLayer<SorghumLayer>();
 	if (!sorghumLayer)
 		return;
 	std::vector<SorghumSplineSegment> segments;
-	for (int i = 1; i < m_nodes.size(); i++) {
-		auto& prev = m_nodes.at(i - 1);
-		auto& curr = m_nodes.at(i);
-		float distance = glm::distance(prev.m_position, curr.m_position);
-		BezierCurve curve = BezierCurve(
-			prev.m_position, prev.m_position + distance / 5.0f * prev.m_front,
-			curr.m_position - distance / 5.0f * curr.m_front, curr.m_position);
-		for (float div = (i == 1 ? 0.0f : 0.5f); div <= 1.0f; div += 0.5f) {
-			auto front = prev.m_front * (1.0f - div) + curr.m_front * div;
-			auto left = prev.m_left * (1.0f - div) + curr.m_left * div;
-			auto up = glm::normalize(glm::cross(left, front));
-			segments.emplace_back(
-				curve.GetPoint(div), up, front,
-				prev.m_width * (1.0f - div) + curr.m_width * div,
-				prev.m_theta * (1.0f - div) + curr.m_theta * div, 1.0f,
-				1.0f);
-		}
-	}
+	m_spline.Subdivide(sorghumLayer->m_verticalSubdivisionLength, segments);
+
 	const int vertexIndex = vertices.size();
 	Vertex archetype{};
 	glm::vec4 m_vertexColor = glm::vec4(0, 0, 0, 1);
@@ -164,76 +139,6 @@ void SorghumStemState::GenerateGeometry(std::vector<Vertex>& vertices, std::vect
 	}
 }
 
-void SorghumLeafState::GenerateSegments(std::vector<SorghumSplineSegment>& segments, bool bottomFace) const
-{
-	for (int i = 1; i < m_nodes.size(); i++) {
-		auto& prev = m_nodes.at(i - 1);
-		auto& curr = m_nodes.at(i);
-		if (bottomFace && prev.m_theta > 90.f) {
-			continue;
-		}
-		/*
-		float distance = glm::distance(prev.m_position, curr.m_position);
-		BezierCurve curve = BezierCurve(
-			prev.m_position, prev.m_position + distance / 5.0f * prev.m_front,
-			curr.m_position - distance / 5.0f * curr.m_front, curr.m_position);
-		*/
-		const auto& p1 = prev.m_position;
-		const auto& p2 = curr.m_position;
-		glm::vec3 p0, p3;
-		if(i == 1)
-		{
-			p0 = 2.f * p1 - p2;
-		}else
-		{
-			p0 = m_nodes.at(i - 2).m_position;
-		}
-		if(i == m_nodes.size() - 1)
-		{
-			p3 = 2.f * p2 - p1;
-		}else
-		{
-			p3 = m_nodes.at(i + 1).m_position;
-		}
-
-		const auto& l1 = prev.m_left;
-		const auto& l2 = curr.m_left;
-		glm::vec3 l0, l3;
-		if (i == 1)
-		{
-			l0 = 2.f * l1 - l2;
-		}
-		else
-		{
-			l0 = m_nodes.at(i - 2).m_left;
-		}
-		if (i == m_nodes.size() - 1)
-		{
-			l3 = 2.f * l2 - l1;
-		}
-		else
-		{
-			l3 = m_nodes.at(i + 1).m_left;
-		}
-
-		for (float div = (i == 1 ? 0.0f : 0.5f); div <= 1.0f; div += 0.5f) {
-			glm::vec3 center, front;
-			Strands::CubicInterpolation(p0, p1, p2, p3, center, front, div);
-			front = glm::normalize(front);
-			auto left = Strands::CubicInterpolation(l0, l1, l2, l3, div);// glm::normalize(prev.m_left * (1.0f - div) + curr.m_left * div);//?
-			auto up = glm::normalize(glm::cross(front, left));
-			auto waviness = glm::mix(prev.m_waviness, curr.m_waviness, div);
-			float leftPeriod = 0.f;
-			float rightPeriod = 0.f;
-			segments.emplace_back(center, up, front,
-				glm::mix(prev.m_width, curr.m_width, div),
-				glm::mix(prev.m_theta, curr.m_theta, div),
-				glm::sin(leftPeriod) * waviness,
-				glm::sin(rightPeriod) * waviness);
-		}
-	}
-}
-
 bool SorghumLeafState::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
 	return false;
@@ -244,11 +149,7 @@ void SorghumLeafState::Serialize(YAML::Emitter& out) const
 	out << YAML::Key << "m_wavinessPeriodStart" << YAML::Value << m_wavinessPeriodStart;
 	out << YAML::Key << "m_wavinessFrequency" << YAML::Value << m_wavinessFrequency;
 	out << YAML::Key << "m_index" << YAML::Value << m_index;
-	if (!m_nodes.empty()) {
-		out << YAML::Key << "m_nodes" << YAML::Value
-			<< YAML::Binary((const unsigned char*)m_nodes.data(),
-				m_nodes.size() * sizeof(SorghumSplineNode));
-	}
+	
 }
 
 void SorghumLeafState::Deserialize(const YAML::Node& in)
@@ -257,22 +158,18 @@ void SorghumLeafState::Deserialize(const YAML::Node& in)
 	if (in["m_wavinessPeriodStart"]) m_wavinessPeriodStart = in["m_wavinessPeriodStart"].as<glm::vec2>();
 	if (in["m_wavinessFrequency"]) m_wavinessFrequency = in["m_wavinessFrequency"].as<glm::vec2>();
 
-	if (in["m_nodes"]) {
-		const auto& nodes = in["m_nodes"].as<YAML::Binary>();
-		m_nodes.resize(nodes.size() / sizeof(SorghumSplineNode));
-		std::memcpy(m_nodes.data(), nodes.data(), nodes.size());
-	}
+	
 }
 
 void SorghumLeafState::GenerateGeometry(std::vector<Vertex>& vertices, std::vector<unsigned>& indices, bool bottomFace, float thickness) const
 {
-	if (m_nodes.empty())
+	if (m_spline.m_segments.empty())
 		return;
 	auto sorghumLayer = Application::GetLayer<SorghumLayer>();
 	if (!sorghumLayer)
 		return;
-	std::vector<SorghumSplineSegment> segments;
-	GenerateSegments(segments);
+	std::vector<SorghumSplineSegment> segments;// = m_spline.m_segments;
+	m_spline.Subdivide(sorghumLayer->m_verticalSubdivisionLength, segments);
 
 	const int vertexIndex = vertices.size();
 	Vertex archetype{};
@@ -372,7 +269,7 @@ void SorghumState::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 		for (auto& leaf : m_leaves) {
 			if (ImGui::TreeNode(
 				("Leaf No." + std::to_string(leaf.m_index + 1) +
-					(leaf.m_nodes.empty() ? " (Dead)" : ""))
+					(leaf.m_spline.m_segments.empty() ? " (Dead)" : ""))
 				.c_str())) {
 				if (leaf.OnInspect(editorLayer))
 					changed = true;

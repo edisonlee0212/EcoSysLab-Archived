@@ -43,8 +43,8 @@ namespace EcoSysLab {
 		AssetRef m_leafNormalTexture;
 		AssetRef m_segmentedLeafMaterials[25];
 
-		float m_verticalSubdivisionMaxUnitLength = 0.02f;
-		int m_horizontalSubdivisionStep = 2;
+		float m_verticalSubdivisionLength = 0.01f;
+		int m_horizontalSubdivisionStep = 4;
 		float m_skeletonWidth = 0.0025f;
 
 		glm::vec3 m_skeletonColor = glm::vec3(0);

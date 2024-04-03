@@ -31,7 +31,7 @@ namespace EcoSysLab
 	class SorghumStemState
 	{
 	public:
-		std::vector<SorghumSplineNode> m_nodes;
+		SorghumSpline m_spline;
 		bool OnInspect(const std::shared_ptr<EditorLayer>& editorLayer);
 		void Serialize(YAML::Emitter& out) const;
 		void Deserialize(const YAML::Node& in);
@@ -44,10 +44,9 @@ namespace EcoSysLab
 	{
 	public:
 		int m_index = 0;
-		std::vector<SorghumSplineNode> m_nodes;
+		SorghumSpline m_spline;
 		glm::vec2 m_wavinessPeriodStart = glm::vec2(0.0f);
 		glm::vec2 m_wavinessFrequency = glm::vec2(0.0f);
-		void GenerateSegments(std::vector<SorghumSplineSegment>& segments, bool bottomFace = false) const;
 		bool OnInspect(const std::shared_ptr<EditorLayer>& editorLayer);
 		void Serialize(YAML::Emitter& out) const;
 		void Deserialize(const YAML::Node& in);

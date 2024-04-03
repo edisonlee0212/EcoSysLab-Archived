@@ -159,10 +159,10 @@ void SorghumLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 			GenerateMeshForAllSorghums(m_sorghumMeshGeneratorSettings);
 		}
 		if (ImGui::DragFloat("Vertical subdivision max unit length",
-			&m_verticalSubdivisionMaxUnitLength, 0.001f, 0.001f,
+			&m_verticalSubdivisionLength, 0.001f, 0.001f,
 			1.0f, "%.4f")) {
-			m_verticalSubdivisionMaxUnitLength =
-				glm::max(0.0001f, m_verticalSubdivisionMaxUnitLength);
+			m_verticalSubdivisionLength =
+				glm::max(0.0001f, m_verticalSubdivisionLength);
 		}
 
 		if (ImGui::DragInt("Horizontal subdivision step",
