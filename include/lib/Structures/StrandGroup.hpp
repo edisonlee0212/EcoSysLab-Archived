@@ -46,7 +46,8 @@ namespace EcoSysLab
 	{
 		template<typename PGD, typename PD, typename PSD>
 		friend class StrandGroup;
-
+		template<typename SGD, typename SD, typename SSD>
+		friend class StrandGroupSerializer;
 		bool m_endSegment = true;
 		bool m_recycled = false;
 		StrandSegmentHandle m_prevHandle = -1;
@@ -96,7 +97,7 @@ namespace EcoSysLab
 		[[nodiscard]] StrandSegmentHandle GetNextHandle() const;
 
 		[[nodiscard]] int GetIndex() const;
-
+		StrandSegment() = default;
 		explicit StrandSegment(StrandHandle strandHandle, StrandSegmentHandle handle, StrandSegmentHandle prevHandle);
 	};
 
@@ -109,7 +110,8 @@ namespace EcoSysLab
 	{
 		template<typename PGD, typename PD, typename PSD>
 		friend class StrandGroup;
-
+		template<typename SGD, typename SD, typename SSD>
+		friend class StrandGroupSerializer;
 		bool m_recycled = false;
 		StrandHandle m_handle = -1;
 
@@ -136,7 +138,7 @@ namespace EcoSysLab
 		 * @return The list of handles.
 		 */
 		[[nodiscard]] const std::vector<StrandSegmentHandle>& PeekStrandSegmentHandles() const;
-
+		Strand() = default;
 		explicit Strand(StrandHandle handle);
 	};
 

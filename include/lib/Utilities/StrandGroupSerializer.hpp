@@ -7,12 +7,12 @@ namespace EcoSysLab {
 	class StrandGroupSerializer {
 	public:
 		static void Serialize(YAML::Emitter& out, const StrandGroup<StrandGroupData, StrandData, StrandSegmentData>& strandGroup,
-			const std::function<void(YAML::Emitter& segmentOut, const StrandSegmentData& segmentData)>& segmentFunc,
+			const std::function<void(YAML::Emitter& strandSegmentOut, const StrandSegmentData& strandSegmentData)>& strandSegmentFunc,
 			const std::function<void(YAML::Emitter& strandOut, const StrandData& strandData)>& strandFunc,
 			const std::function<void(YAML::Emitter& groupOut, const StrandGroupData& groupData)>& groupFunc);
 
 		static void Deserialize(const YAML::Node& in, StrandGroup<StrandGroupData, StrandData, StrandSegmentData>& strandGroup,
-			const std::function<void(const YAML::Node& segmentIn, StrandSegmentData& segmentData)>& segmentFunc,
+			const std::function<void(const YAML::Node& strandSegmentIn, StrandSegmentData& segmentData)>& strandSegmentFunc,
 			const std::function<void(const YAML::Node& strandIn, StrandData& strandData)>& strandFunc,
 			const std::function<void(const YAML::Node& groupIn, StrandGroupData& groupData)>& groupFunc);
 	};
@@ -20,7 +20,7 @@ namespace EcoSysLab {
 	template <typename StrandGroupData, typename StrandData, typename StrandSegmentData>
 	void StrandGroupSerializer<StrandGroupData, StrandData, StrandSegmentData>::Serialize(YAML::Emitter& out,
 		const StrandGroup<StrandGroupData, StrandData, StrandSegmentData>& strandGroup,
-		const std::function<void(YAML::Emitter& segmentOut, const StrandSegmentData& segmentData)>& segmentFunc,
+		const std::function<void(YAML::Emitter& strandSegmentOut, const StrandSegmentData& strandSegmentData)>& strandSegmentFunc,
 		const std::function<void(YAML::Emitter& strandOut, const StrandData& strandData)>& strandFunc,
 		const std::function<void(YAML::Emitter& groupOut, const StrandGroupData& groupData)>& groupFunc)
 	{
@@ -29,7 +29,7 @@ namespace EcoSysLab {
 		out << YAML::EndMap;
 
 		out << YAML::Key << "m_strands" << YAML::Value << YAML::BeginSeq;
-		for (const auto strand : strandGroup.m_strands)
+		for (const auto& strand : strandGroup.m_strands)
 		{
 			out << YAML::BeginMap;
 			{
@@ -56,13 +56,14 @@ namespace EcoSysLab {
 				{
 					strandFunc(out, strand.m_data);
 				}
+				out << YAML::EndMap;
 			}
 			out << YAML::EndMap;
 		}
 		out << YAML::EndSeq;
 
 		out << YAML::Key << "m_strandSegments" << YAML::Value << YAML::BeginSeq;
-		for (const auto strandSegment : strandGroup.m_strandSegments)
+		for (const auto& strandSegment : strandGroup.m_strandSegments)
 		{
 			out << YAML::BeginMap;
 			{
@@ -83,8 +84,9 @@ namespace EcoSysLab {
 				out << YAML::EndMap;
 				out << YAML::Key << "D" << YAML::Value << YAML::BeginMap;
 				{
-					segmentFunc(out, strandSegment.m_data);
+					strandSegmentFunc(out, strandSegment.m_data);
 				}
+				out << YAML::EndMap;
 			}
 			out << YAML::EndMap;
 		}
@@ -94,7 +96,7 @@ namespace EcoSysLab {
 	template <typename StrandGroupData, typename StrandData, typename StrandSegmentData>
 	void StrandGroupSerializer<StrandGroupData, StrandData, StrandSegmentData>::Deserialize(const YAML::Node& in,
 		StrandGroup<StrandGroupData, StrandData, StrandSegmentData>& strandGroup,
-		const std::function<void(const YAML::Node& segmentIn, StrandSegmentData& segmentData)>& segmentFunc,
+		const std::function<void(const YAML::Node& segmentIn, StrandSegmentData& segmentData)>& strandSegmentFunc,
 		const std::function<void(const YAML::Node& strandIn, StrandData& strandData)>& strandFunc,
 		const std::function<void(const YAML::Node& groupIn, StrandGroupData& groupData)>& groupFunc)
 	{
@@ -149,10 +151,10 @@ namespace EcoSysLab {
 				strandSegment.m_handle = strandSegmentHandle;
 				if (inStrandSegment["E"]) strandSegment.m_endSegment = inStrandSegment["E"].as<bool>();
 				if (inStrandSegment["R"]) strandSegment.m_recycled = inStrandSegment["R"].as<bool>();
-				if (inStrandSegment["P"]) strandSegment.m_prevHandle = inStrandSegment["P"].as<bool>();
-				if (inStrandSegment["N"]) strandSegment.m_nextHandle = inStrandSegment["N"].as<bool>();
-				if (inStrandSegment["S"]) strandSegment.m_strandHandle = inStrandSegment["S"].as<bool>();
-				if (inStrandSegment["I"]) strandSegment.m_index = inStrandSegment["I"].as<bool>();
+				if (inStrandSegment["P"]) strandSegment.m_prevHandle = inStrandSegment["P"].as<StrandSegmentHandle>();
+				if (inStrandSegment["N"]) strandSegment.m_nextHandle = inStrandSegment["N"].as<StrandSegmentHandle>();
+				if (inStrandSegment["S"]) strandSegment.m_strandHandle = inStrandSegment["S"].as<StrandSegmentHandle>();
+				if (inStrandSegment["I"]) strandSegment.m_index = inStrandSegment["I"].as<int>();
 
 				if (inStrandSegment["IF"])
 				{

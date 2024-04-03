@@ -654,13 +654,13 @@ void Tree::PrepareProfiles()
 
 	m_strandModel.InitializeProfiles(m_strandModelParameters);
 	m_strandModel.CalculateProfiles(m_strandModelParameters);
-}
-
-std::shared_ptr<Strands> Tree::GenerateStrands()
-{
-	const auto strandsAsset = ProjectManager::CreateTemporaryAsset<Strands>();
 	m_strandModel.CalculateStrandProfileAdjustedTransforms(m_strandModelParameters);
 	m_strandModel.ApplyProfiles(m_strandModelParameters);
+}
+
+std::shared_ptr<Strands> Tree::GenerateStrands() const
+{
+	const auto strandsAsset = ProjectManager::CreateTemporaryAsset<Strands>();
 	const auto& parameters = m_strandModelParameters;
 	std::vector<glm::uint> strandsList;
 	std::vector<StrandPoint> points;
@@ -1035,13 +1035,6 @@ std::shared_ptr<Mesh> Tree::GenerateStrandModelFoliageMesh(
 
 std::shared_ptr<Mesh> Tree::GenerateStrandModelBranchMesh(const StrandModelMeshGeneratorSettings& strandModelMeshGeneratorSettings)
 {
-	m_strandModel.CalculateStrandProfileAdjustedTransforms(m_strandModelParameters);
-	m_strandModel.ApplyProfiles(m_strandModelParameters);
-	const auto& parameters = m_strandModelParameters;
-	std::vector<glm::uint> strandsList;
-	std::vector<StrandPoint> points;
-	m_strandModel.m_strandModelSkeleton.m_data.m_strandGroup.BuildStrands(parameters.m_controlPointRatio, strandsList, points, parameters.m_triplePoints, parameters.m_nodeMaxCount);
-
 	std::vector<Vertex> vertices;
 	std::vector<unsigned int> indices;
 	StrandModelMeshGenerator::Generate(m_strandModel, vertices, indices, strandModelMeshGeneratorSettings);
@@ -1350,6 +1343,42 @@ void Tree::Serialize(YAML::Emitter& out)
 {
 	m_treeDescriptor.Save("m_treeDescriptor", out);
 
+	out << YAML::Key << "m_strandModel" << YAML::Value << YAML::BeginMap;
+	{
+		out << YAML::Key << "m_strandModelSkeleton" << YAML::Value << YAML::BeginMap;
+		{
+			SkeletonSerializer<StrandModelSkeletonData, StrandModelFlowData, StrandModelNodeData>::Serialize(out, m_strandModel.m_strandModelSkeleton,
+				[&](YAML::Emitter& nodeOut, const StrandModelNodeData& nodeData)
+				{
+					
+				},
+				[&](YAML::Emitter& flowOut, const StrandModelFlowData& flowData)
+				{
+					
+				},
+				[&](YAML::Emitter& skeletonOut, const StrandModelSkeletonData& skeletonData)
+				{
+					skeletonOut << YAML::Key << "m_strandGroup" << YAML::Value << YAML::BeginMap;
+					{
+						StrandGroupSerializer<StrandModelStrandGroupData, StrandModelStrandData, StrandModelStrandSegmentData>::Serialize(skeletonOut, m_strandModel.m_strandModelSkeleton.m_data.m_strandGroup,
+							[&](YAML::Emitter& segmentOut, const StrandModelStrandSegmentData& segmentData)
+							{
+								//nodeOut << YAML::Key << "H" << YAML::Value << segmentData.m_nodeHandle;
+								//nodeOut << YAML::Key << "F" << YAML::Value << segmentData.m_frontProfileParticleHandle;
+								//nodeOut << YAML::Key << "B" << YAML::Value << segmentData.m_backProfileParticleHandle;
+							},
+							[&](YAML::Emitter& strandOut, const StrandModelStrandData& strandData) {},
+							[&](YAML::Emitter& groupOut, const StrandModelStrandGroupData& groupData) {}
+							);
+					}
+					out << YAML::EndMap;
+				}
+			);
+		}
+		out << YAML::EndMap;
+	}
+	out << YAML::EndMap;
+
 	out << YAML::Key << "m_treeModel" << YAML::Value << YAML::BeginMap;
 	{
 		out << YAML::Key << "m_shootSkeleton" << YAML::Value << YAML::BeginMap;
@@ -1409,7 +1438,40 @@ void Tree::Serialize(YAML::Emitter& out)
 void Tree::Deserialize(const YAML::Node& in)
 {
 	m_treeDescriptor.Load("m_treeDescriptor", in);
-
+	if(in["m_strandModel"])
+	{
+		const auto& inStrandModel = in["m_strandModel"];
+		if(inStrandModel["m_strandModelSkeleton"])
+		{
+			const auto& inStrandModelSkeleton = inStrandModel["m_strandModelSkeleton"];
+			SkeletonSerializer<StrandModelSkeletonData, StrandModelFlowData, StrandModelNodeData>::Deserialize(inStrandModelSkeleton, m_strandModel.m_strandModelSkeleton,
+				[&](const YAML::Node& nodeIn, StrandModelNodeData& nodeData)
+				{
+					
+				},
+				[&](const YAML::Node& flowIn, StrandModelFlowData& flowData)
+				{
+				},
+				[&](const YAML::Node& skeletonIn, StrandModelSkeletonData& skeletonData)
+				{
+					if(skeletonIn["m_strandGroup"])
+					{
+						const auto& inStrandGroup = skeletonIn["m_strandGroup"];
+						StrandGroupSerializer<StrandModelStrandGroupData, StrandModelStrandData, StrandModelStrandSegmentData>::Deserialize(inStrandGroup, m_strandModel.m_strandModelSkeleton.m_data.m_strandGroup,
+							[&](const YAML::Node& segmentIn, StrandModelStrandSegmentData& segmentData)
+							{
+								//nodeOut << YAML::Key << "H" << YAML::Value << segmentData.m_nodeHandle;
+								//nodeOut << YAML::Key << "F" << YAML::Value << segmentData.m_frontProfileParticleHandle;
+								//nodeOut << YAML::Key << "B" << YAML::Value << segmentData.m_backProfileParticleHandle;
+							},
+							[&](const YAML::Node& strandIn, StrandModelStrandData& strandData) {},
+							[&](const YAML::Node& groupIn, StrandModelStrandGroupData& groupData) {}
+						);
+					}
+				}
+			);
+		}
+	}
 	if(in["m_treeModel"])
 	{
 		const auto& inTreeModel = in["m_treeModel"];

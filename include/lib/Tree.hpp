@@ -22,7 +22,7 @@ namespace EcoSysLab {
 		static bool OnInspectTreeGrowthSettings(TreeGrowthSettings& treeGrowthSettings);
 
 		void PrepareProfiles();
-		std::shared_ptr<Strands> GenerateStrands();
+		std::shared_ptr<Strands> GenerateStrands() const;
 		void GenerateTrunkMeshes(const std::shared_ptr<Mesh>& trunkMesh, const TreeMeshGeneratorSettings& meshGeneratorSettings);
 		std::shared_ptr<Mesh> GenerateBranchMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings);
 		std::shared_ptr<Mesh> GenerateFoliageMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings);
