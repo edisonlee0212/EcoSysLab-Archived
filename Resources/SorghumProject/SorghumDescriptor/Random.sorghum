@@ -1,4 +1,4 @@
-m_version: 20697
+m_version: 22789
 m_panicleSize:
   m_mean: [0, 0]
   m_deviation: 0
@@ -10,16 +10,16 @@ m_panicleSeedRadius:
   m_deviation: 0
 m_stemTiltAngle:
   m_mean: 0
-  m_deviation: 2
+  m_deviation: 1.5
 m_internodeLength:
   m_mean: 0.0399999991
   m_deviation: 0.00499999989
 m_stemWidth:
   m_mean: 0.0140000004
-  m_deviation: 0
+  m_deviation: 0.00499999989
 m_leafAmount:
-  m_mean: 13
-  m_deviation: 2.5
+  m_mean: 17
+  m_deviation: 1
 m_leafStartingPoint:
   m_mean:
     m_minValue: 0
@@ -120,11 +120,11 @@ m_leafBranchingAngle:
         - [0, 0.449999988]
         - [0.576832175, 0.128513053]
         - [-0.100000001, 0]
-        - [1, 0.430000007]
+        - [1, 0.515999973]
         - [0.100000001, 0]
   m_deviation:
     m_minValue: 0
-    m_maxValue: 1
+    m_maxValue: 0.5
     m_curve:
       m_tangent: true
       m_min: [0, 0]
@@ -149,21 +149,24 @@ m_leafBending:
         - [0, 0.773000002]
         - [0.678947389, -0.00150001922]
         - [-0.100000024, 0.00689490372]
-        - [1, 0.497000009]
+        - [1, 0.616999984]
         - [0.100000001, 0]
   m_deviation:
     m_minValue: 0
-    m_maxValue: 1
+    m_maxValue: 0.5
     m_curve:
       m_tangent: true
       m_min: [0, 0]
       m_max: [1, 1]
       m_values:
         - [-0.100000001, 0]
-        - [0, 0.5]
+        - [0, 0.229000002]
         - [0.100000001, 0]
         - [-0.100000001, 0]
-        - [1, 0.5]
+        - [0.496453911, 0.654028416]
+        - [0.100000001, 0]
+        - [-0.100000001, 0]
+        - [1, 0.221000001]
         - [0.100000001, 0]
 m_leafBendingAcceleration:
   m_mean:
@@ -226,7 +229,7 @@ m_leafBendingSmoothness:
 m_leafWaviness:
   m_mean:
     m_minValue: 0
-    m_maxValue: 0.119999997
+    m_maxValue: 0.189999998
     m_curve:
       m_tangent: true
       m_min: [0, 0]
@@ -243,7 +246,7 @@ m_leafWaviness:
         - [0.100000001, 0]
   m_deviation:
     m_minValue: 0
-    m_maxValue: 0
+    m_maxValue: 0.100000001
     m_curve:
       m_tangent: true
       m_min: [0, 0]
@@ -258,7 +261,7 @@ m_leafWaviness:
 m_leafWavinessFrequency:
   m_mean:
     m_minValue: 0
-    m_maxValue: 0.100000001
+    m_maxValue: 0.0900000036
     m_curve:
       m_tangent: true
       m_min: [0, 0]
@@ -287,19 +290,16 @@ m_leafWavinessFrequency:
 m_leafLength:
   m_mean:
     m_minValue: 0
-    m_maxValue: 1.15999997
+    m_maxValue: 1.20000005
     m_curve:
       m_tangent: true
       m_min: [0, 0]
       m_max: [1, 1]
       m_values:
         - [-0.100000001, 0]
-        - [0, 0.254000008]
-        - [0.100000001, 0]
-        - [-0.100000001, 0]
-        - [0.201000005, 0.550000012]
-        - [0.100000001, 0]
-        - [-0.356578946, 0.00497372262]
+        - [0, 0.365999997]
+        - [0.111111104, 0.0852884054]
+        - [-0.888888896, -0.00593144866]
         - [1, 0.518999994]
         - [0.100000001, 0]
   m_deviation:

@@ -10,11 +10,24 @@
 #include "Scene.hpp"
 #include "EditorLayer.hpp"
 #include "TransformGraph.hpp"
-
+#include "Soil.hpp"
+#include "EcoSysLabLayer.hpp"
 using namespace EcoSysLab;
 void RectangularSorghumFieldPattern::GenerateField(
 	std::vector<glm::mat4>& matricesList) const
 {
+	std::shared_ptr<Soil> soil;
+	const auto soilCandidate = EcoSysLabLayer::FindSoil();
+	if (!soilCandidate.expired()) soil = soilCandidate.lock();
+	std::shared_ptr<SoilDescriptor> soilDescriptor;
+	if (soil) {
+		soilDescriptor = soil->m_soilDescriptor.Get<SoilDescriptor>();
+	}
+	std::shared_ptr<HeightField> heightField{};
+	if (soilDescriptor)
+	{
+		heightField = soilDescriptor->m_heightField.Get<HeightField>();
+	}
 	matricesList.resize(m_gridSize.x * m_gridSize.y);
 	const glm::vec2 startPoint = glm::vec2((m_gridSize.x - 1) * m_gridDistance.x, (m_gridSize.y - 1) * m_gridDistance.y) * 0.5f;
 	for (int i = 0; i < m_gridSize.x; i++) {
@@ -23,6 +36,7 @@ void RectangularSorghumFieldPattern::GenerateField(
 			position.x += glm::linearRand(-m_gridDistance.x * m_randomShiftMean.x, m_gridDistance.x * m_randomShiftMean.x);
 			position.z += glm::linearRand(-m_gridDistance.y * m_randomShiftMean.y, m_gridDistance.y * m_randomShiftMean.y);
 			position += glm::gaussRand(glm::vec3(0.0f), glm::vec3(m_distanceVariance.x, 0.0f, m_distanceVariance.y));
+			if (heightField) position.y = heightField->GetValue({ position.x, position.z }) - 0.01f;
 			Transform transform{};
 			transform.SetPosition(position);
 			auto rotation = glm::quat(glm::radians(

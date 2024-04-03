@@ -218,5 +218,5 @@ void tree_growth_mesh()
 }
 
 int main() {
-	tree_growth_mesh();
+	sorghum_field_point_cloud();
 }
