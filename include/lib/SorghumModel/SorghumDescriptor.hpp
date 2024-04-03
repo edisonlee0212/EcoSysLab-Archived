@@ -14,7 +14,7 @@ public:
   SingleDistribution<float> m_panicleSeedRadius;
   //Stem
   SingleDistribution<float> m_stemTiltAngle;
-  SingleDistribution<float> m_stemLength;
+  SingleDistribution<float> m_internodeLength;
   SingleDistribution<float> m_stemWidth;
   //Leaf
   SingleDistribution<float> m_leafAmount;

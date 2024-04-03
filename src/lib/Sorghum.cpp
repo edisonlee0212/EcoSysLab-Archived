@@ -124,7 +124,7 @@ void Sorghum::GenerateGeometryEntities(const SorghumMeshGeneratorSettings& sorgh
 			meshRenderer->m_mesh = mesh;
 			meshRenderer->m_material = material;
 			const auto leafMaterial = sorghumLayer->m_leafMaterial.Get<Material>();
-			//material->SetAlbedoTexture(leafMaterial->GetAlbedoTexture());
+			material->SetAlbedoTexture(leafMaterial->GetAlbedoTexture());
 			//material->SetNormalTexture(leafMaterial->GetNormalTexture());
 			//material->SetRoughnessTexture(leafMaterial->GetRoughnessTexture());
 			//material->SetMetallicTexture(leafMaterial->GetMetallicTexture());

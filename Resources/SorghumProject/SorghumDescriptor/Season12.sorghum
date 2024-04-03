@@ -1,4 +1,4 @@
-m_version: 12097
+m_version: 12109
 m_panicleSize:
   m_mean: [0, 0]
   m_deviation: 0
@@ -11,9 +11,9 @@ m_panicleSeedRadius:
 m_stemTiltAngle:
   m_mean: 0
   m_deviation: 1.5
-m_stemLength:
-  m_mean: 0.529999971
-  m_deviation: 0.150000006
+m_internodeLength:
+  m_mean: 0.0350000001
+  m_deviation: 0.00499999989
 m_stemWidth:
   m_mean: 0.0140000004
   m_deviation: 0
@@ -313,7 +313,7 @@ m_leafLength:
 m_leafWidth:
   m_mean:
     m_minValue: 0
-    m_maxValue: 0.0500000007
+    m_maxValue: 0.100000001
     m_curve:
       m_tangent: true
       m_min: [0, 0]

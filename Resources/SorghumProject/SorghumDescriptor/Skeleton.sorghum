@@ -1,4 +1,4 @@
-m_version: 43971
+m_version: 43986
 m_panicleSize:
   m_mean: [0, 0]
   m_deviation: 0
@@ -11,9 +11,9 @@ m_panicleSeedRadius:
 m_stemTiltAngle:
   m_mean: 0
   m_deviation: 0
-m_stemLength:
-  m_mean: 0.349999994
-  m_deviation: 0.100000001
+m_internodeLength:
+  m_mean: 0.0399999991
+  m_deviation: 0.00999999978
 m_stemWidth:
   m_mean: 0.0140000004
   m_deviation: 0
@@ -235,7 +235,7 @@ m_leafBendingSmoothness:
 m_leafWaviness:
   m_mean:
     m_minValue: 0
-    m_maxValue: 1
+    m_maxValue: 0.00999999978
     m_curve:
       m_tangent: true
       m_min: [0, 0]
@@ -270,7 +270,7 @@ m_leafWaviness:
 m_leafWavinessFrequency:
   m_mean:
     m_minValue: 0
-    m_maxValue: 80
+    m_maxValue: 0.00999999978
     m_curve:
       m_tangent: true
       m_min: [0, 0]
@@ -287,7 +287,7 @@ m_leafWavinessFrequency:
         - [0.100000001, 0]
   m_deviation:
     m_minValue: 0
-    m_maxValue: 5
+    m_maxValue: 0.00999999978
     m_curve:
       m_tangent: true
       m_min: [0, 0]
@@ -301,35 +301,6 @@ m_leafWavinessFrequency:
         - [0.100000001, 0]
         - [-0.100000001, 0]
         - [1, 0.164000005]
-        - [0.100000001, 0]
-m_leafPeriodStart:
-  m_mean:
-    m_minValue: 0
-    m_maxValue: 0
-    m_curve:
-      m_tangent: true
-      m_min: [0, 0]
-      m_max: [1, 1]
-      m_values:
-        - [-0.100000001, 0]
-        - [0, 0.5]
-        - [0.100000001, 0]
-        - [-0.100000001, 0]
-        - [1, 0.5]
-        - [0.100000001, 0]
-  m_deviation:
-    m_minValue: 0
-    m_maxValue: 100
-    m_curve:
-      m_tangent: true
-      m_min: [0, 0]
-      m_max: [1, 1]
-      m_values:
-        - [-0.100000001, 0]
-        - [0, 0.5]
-        - [0.100000001, 0]
-        - [-0.100000001, 0]
-        - [1, 0.5]
         - [0.100000001, 0]
 m_leafLength:
   m_mean:

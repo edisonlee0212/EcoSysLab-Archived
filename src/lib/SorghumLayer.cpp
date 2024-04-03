@@ -65,15 +65,15 @@ void SorghumLayer::OnCreate() {
 	}
 	
 	if (!m_leafAlbedoTexture.Get<Texture2D>()) {
-		auto albedo = ProjectManager::CreateTemporaryAsset<Texture2D>();
+		const auto albedo = ProjectManager::CreateTemporaryAsset<Texture2D>();
 		albedo->Import(std::filesystem::absolute(
 			std::filesystem::path("./EcoSysLabResources/Textures") /
-			"leafSurface.png"));
+			"leafSurface.jpg"));
 		m_leafAlbedoTexture.Set(albedo);
 	}
 
 	if (!m_leafMaterial.Get<Material>()) {
-		auto material = ProjectManager::CreateTemporaryAsset<Material>();
+		const auto material = ProjectManager::CreateTemporaryAsset<Material>();
 		m_leafMaterial = material;
 		material->SetAlbedoTexture(m_leafAlbedoTexture.Get<Texture2D>());
 		material->m_materialProperties.m_albedoColor =
@@ -83,7 +83,7 @@ void SorghumLayer::OnCreate() {
 	}
 
 	if (!m_leafBottomFaceMaterial.Get<Material>()) {
-		auto material = ProjectManager::CreateTemporaryAsset<Material>();
+		const auto material = ProjectManager::CreateTemporaryAsset<Material>();
 		m_leafBottomFaceMaterial = material;
 		material->SetAlbedoTexture(m_leafAlbedoTexture.Get<Texture2D>());
 		material->m_materialProperties.m_albedoColor =
@@ -93,7 +93,7 @@ void SorghumLayer::OnCreate() {
 	}
 
 	if (!m_panicleMaterial.Get<Material>()) {
-		auto material = ProjectManager::CreateTemporaryAsset<Material>();
+		const auto material = ProjectManager::CreateTemporaryAsset<Material>();
 		m_panicleMaterial = material;
 		material->m_materialProperties.m_albedoColor =
 			glm::vec3(255.0 / 255, 210.0 / 255, 0.0 / 255);
@@ -103,7 +103,7 @@ void SorghumLayer::OnCreate() {
 
 	for (auto& i : m_segmentedLeafMaterials) {
 		if (!i.Get<Material>()) {
-			auto material = ProjectManager::CreateTemporaryAsset<Material>();
+			const auto material = ProjectManager::CreateTemporaryAsset<Material>();
 			i = material;
 			material->m_materialProperties.m_albedoColor =
 				glm::linearRand(glm::vec3(0.0f), glm::vec3(1.0f));

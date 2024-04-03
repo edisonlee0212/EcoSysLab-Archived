@@ -84,15 +84,19 @@ SorghumSplineSegment SorghumSpline::Interpolate(int leftIndex, float a) const
 	{
 		s3 = m_segments.at(leftIndex + 2);
 	}
-	Strands::CubicInterpolation(s0.m_position, s1.m_position, s2.m_position, s3.m_position, retVal.m_position, retVal.m_front, a);
-	retVal.m_front = glm::normalize(retVal.m_front);
-	retVal.m_up = Strands::CubicInterpolation(s0.m_up, s1.m_up, s2.m_up, s3.m_up, a);
-	retVal.m_up = glm::normalize(glm::cross(glm::cross(retVal.m_front, retVal.m_up), retVal.m_front));
+	//Strands::CubicInterpolation(s0.m_position, s1.m_position, s2.m_position, s3.m_position, retVal.m_position, retVal.m_front, a);
+	//retVal.m_front = glm::normalize(retVal.m_front);
+	//retVal.m_up = Strands::CubicInterpolation(s0.m_up, s1.m_up, s2.m_up, s3.m_up, a);
+	
 	retVal.m_radius = glm::mix(s1.m_radius, s2.m_radius, a);//Strands::CubicInterpolation(s0.m_radius, s1.m_radius, s2.m_radius, s3.m_radius, a);
 	retVal.m_theta = glm::mix(s1.m_theta, s2.m_theta, a); //Strands::CubicInterpolation(s0.m_theta, s1.m_theta, s2.m_theta, s3.m_theta, a);
 	retVal.m_leftHeightOffset = glm::mix(s1.m_leftHeightOffset, s2.m_leftHeightOffset, a); //Strands::CubicInterpolation(s0.m_leftHeightOffset, s1.m_leftHeightOffset, s2.m_leftHeightOffset, s3.m_leftHeightOffset, a);
 	retVal.m_rightHeightOffset = glm::mix(s1.m_rightHeightOffset, s2.m_rightHeightOffset, a); //Strands::CubicInterpolation(s0.m_rightHeightOffset, s1.m_rightHeightOffset, s2.m_rightHeightOffset, s3.m_rightHeightOffset, a);
 
+	retVal.m_position = glm::mix(s1.m_position, s2.m_position, a);
+	retVal.m_front = glm::normalize(glm::mix(s1.m_front, s2.m_front, a));
+	retVal.m_up = glm::normalize(glm::mix(s1.m_up, s2.m_up, a));
+	retVal.m_up = glm::normalize(glm::cross(glm::cross(retVal.m_front, retVal.m_up), retVal.m_front));
 	return retVal;
 }
 
