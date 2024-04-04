@@ -73,7 +73,7 @@ void StrandModelMeshGenerator::Generate(const StrandModel& strandModel, std::vec
 	{
 		MeshSmoothing(vertices, indices);
 	}
-	CylindricalMeshing(strandModel, vertices, indices, settings);
+	//CylindricalMeshing(strandModel, vertices, indices, settings);
 
 	const float usedTime = Times::Now() - time;
 	EVOENGINE_LOG("Mesh formation time: " + std::to_string(usedTime));
@@ -1455,7 +1455,7 @@ void StrandModelMeshGenerator::CylindricalMeshing(const StrandModel& strandModel
 			p[1] = internode.m_info.m_globalPosition;
 			p[0] = p[1] * 2.0f - p[2];
 
-			f[1] = internode.m_info.m_globalRotation * glm::vec3(0, 0, -1);
+			f[1] = internode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
 			f[0] = f[1] * 2.0f - f[2];
 
 			t[2] = glm::sqrt(static_cast<float>(particleSize)) * internode.m_data.m_strandRadius;
@@ -1466,7 +1466,7 @@ void StrandModelMeshGenerator::CylindricalMeshing(const StrandModel& strandModel
 			p[0] = internode.m_info.m_globalPosition;
 			p[1] = skeleton.PeekNode(0).m_info.GetGlobalEndPosition();
 
-			f[0] = internode.m_info.m_globalRotation * glm::vec3(0, 0, -1);
+			f[0] = internode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
 			f[1] = skeleton.PeekNode(0).m_info.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
 
 			t[0] = glm::sqrt(static_cast<float>(particleSize)) * internode.m_data.m_strandRadius;
@@ -1474,8 +1474,8 @@ void StrandModelMeshGenerator::CylindricalMeshing(const StrandModel& strandModel
 		}
 		else
 		{
-			p[1] = skeleton.PeekNode(internode.GetParentHandle()).m_info.GetGlobalEndPosition();
-			p[0] = skeleton.PeekNode(skeleton.PeekNode(internode.GetParentHandle()).GetParentHandle()).m_info.GetGlobalEndPosition();
+			p[1] = internode.m_info.m_globalPosition;
+			p[0] = skeleton.PeekNode(internode.GetParentHandle()).m_info.m_globalPosition;
 
 			f[1] = skeleton.PeekNode(internode.GetParentHandle()).m_info.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
 			f[0] = skeleton.PeekNode(skeleton.PeekNode(internode.GetParentHandle()).GetParentHandle()).m_info.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);

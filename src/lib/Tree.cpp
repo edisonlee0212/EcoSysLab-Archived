@@ -145,6 +145,11 @@ bool Tree::ParseBinvox(const std::filesystem::path& filePath, VoxelGrid<TreeOccu
 
 void Tree::Reset()
 {
+	ClearSkeletalGraph();
+	ClearGeometryEntities();
+	ClearStrandModelMeshRenderer();
+	ClearStrandRenderer();
+	ClearTwigsStrandRenderer();
 	m_treeModel.Clear();
 	m_strandModel = {};
 	m_treeModel.m_index = GetOwner().GetIndex();
@@ -738,15 +743,27 @@ std::shared_ptr<Mesh> Tree::GenerateBranchMesh(const TreeMeshGeneratorSettings& 
 		}
 		std::shared_ptr<BranchShape> branchShape{};
 		branchShape = treeDescriptor->m_shootBranchShape.Get<BranchShape>();
-		
-		CylindricalMeshGenerator<ShootGrowthData, ShootStemGrowthData, InternodeGrowthData>::Generate(m_treeModel.PeekShootSkeleton(), vertices, indices, meshGeneratorSettings, [&](float xFactor, float distanceToRoot)
-			{
-				if (branchShape)
+		if (!m_strandModel.m_strandModelSkeleton.RefRawNodes().empty())
+		{
+			CylindricalMeshGenerator<StrandModelSkeletonData, StrandModelFlowData, StrandModelNodeData>::Generate(m_strandModel.m_strandModelSkeleton, vertices, indices, meshGeneratorSettings, [&](float xFactor, float distanceToRoot)
 				{
-					return branchShape->GetValue(xFactor, distanceToRoot);
-				}
-				return 1.0f;
-			});
+					if (branchShape)
+					{
+						return branchShape->GetValue(xFactor, distanceToRoot);
+					}
+					return 1.0f;
+				});
+		}
+		else {
+			CylindricalMeshGenerator<ShootGrowthData, ShootStemGrowthData, InternodeGrowthData>::Generate(m_treeModel.PeekShootSkeleton(), vertices, indices, meshGeneratorSettings, [&](float xFactor, float distanceToRoot)
+				{
+					if (branchShape)
+					{
+						return branchShape->GetValue(xFactor, distanceToRoot);
+					}
+					return 1.0f;
+				});
+		}
 	}
 	else
 	{
@@ -998,6 +1015,7 @@ std::shared_ptr<Mesh> Tree::GenerateStrandModelFoliageMesh(
 		Vertex archetype;
 		for (const auto& matrix : leafMatrices)
 		{
+			
 			for (auto i = 0; i < quadMesh->GetVerticesAmount(); i++) {
 				archetype.m_position =
 					matrix * glm::vec4(quadMesh->UnsafeGetVertices()[i].m_position, 1.0f);

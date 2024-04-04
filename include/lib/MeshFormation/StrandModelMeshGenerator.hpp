@@ -40,8 +40,8 @@ namespace EcoSysLab {
 		glm::vec4 m_cylindricalColor = glm::vec4(0.1, 0.9, 0.0f, 1.0f);
 		float m_texCoordsMultiplier = 10.0f;
 #pragma endregion
-		int m_smoothIteration = 5;
-		int m_minCellCountForMajorBranches = 50;
+		int m_smoothIteration = 0;
+		int m_minCellCountForMajorBranches = 3;
 		int m_maxCellCountForMinorBranches = 200;
 		bool m_enableBranch = true;
 		bool m_enableFoliage = true;

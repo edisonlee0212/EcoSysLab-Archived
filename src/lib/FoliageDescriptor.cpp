@@ -137,6 +137,7 @@ void FoliageDescriptor::GenerateFoliageMatrices(std::vector<glm::mat4>& matrices
 					front, up);
 			}
 			auto foliagePosition = internodeInfo.GetGlobalEndPosition() + front * (leafSize.y + glm::gaussRand(0.0f, m_positionVariance));
+			if(glm::any(glm::isnan(foliagePosition)) || glm::any(glm::isnan(front)) || glm::any(glm::isnan(up))) continue;
 			const auto leafTransform = glm::translate(foliagePosition) * glm::mat4_cast(glm::quatLookAt(front, up)) * glm::scale(glm::vec3(leafSize.x, 1.0f, leafSize.y));
 			matrices.emplace_back(leafTransform);
 		}
