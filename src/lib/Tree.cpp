@@ -297,17 +297,55 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	if (treeDescriptor) {
 		const auto shootDescriptor = treeDescriptor->m_shootDescriptor.Get<ShootDescriptor>();
 		if (shootDescriptor) {
+			/*
 			ImGui::DragInt("Seed", &m_treeModel.m_seed, 1, 0);
 			if (ImGui::Button("Reset")) {
 				Reset();
 				modelChanged = true;
-			}
+			}*/
 			if (ImGui::TreeNode("Tree settings")) {
 
 				ImGui::Checkbox("Enable History", &m_enableHistory);
 				if (m_enableHistory)
 				{
 					ImGui::DragInt("History per iteration", &m_historyIteration, 1, 1, 1000);
+				}
+				if (ImGui::TreeNode("Sagging"))
+				{
+					bool changed = false;
+					changed = ImGui::DragFloat("Sagging strength", &shootDescriptor->m_saggingFactorThicknessReductionMax.x, 0.0001f, 0.0f, 10.0f, "%.5f") || changed;
+					changed = ImGui::DragFloat("Sagging thickness factor", &shootDescriptor->m_saggingFactorThicknessReductionMax.y, 0.01f, 0.0f, 10.0f, "%.5f") || changed;
+					changed = ImGui::DragFloat("Sagging max", &shootDescriptor->m_saggingFactorThicknessReductionMax.z, 0.001f, 0.0f, 1.0f, "%.5f") || changed;
+					if (changed)
+					{
+						m_shootGrowthController.m_sagging = [=](const Node<InternodeGrowthData>& internode)
+							{
+								const auto newSagging = glm::min(
+									shootDescriptor->m_saggingFactorThicknessReductionMax.z,
+									shootDescriptor->m_saggingFactorThicknessReductionMax.x *
+									(internode.m_data.m_descendantTotalBiomass + internode.m_data.m_extraMass) /
+									glm::pow(
+										internode.m_info.m_thickness /
+										shootDescriptor->m_endNodeThickness,
+										shootDescriptor->m_saggingFactorThicknessReductionMax.y));
+								return newSagging;
+							};
+						m_treeModel.CalculateTransform(m_shootGrowthController, true);
+						m_shootGrowthController.m_sagging = [=](const Node<InternodeGrowthData>& internode)
+							{
+								const auto& shootGrowthParameters = treeDescriptor->m_shootDescriptor;
+								const auto newSagging = glm::min(
+									shootDescriptor->m_saggingFactorThicknessReductionMax.z,
+									shootDescriptor->m_saggingFactorThicknessReductionMax.x *
+									(internode.m_data.m_descendantTotalBiomass + internode.m_data.m_extraMass) /
+									glm::pow(
+										internode.m_info.m_thickness /
+										shootDescriptor->m_endNodeThickness,
+										shootDescriptor->m_saggingFactorThicknessReductionMax.y));
+								return glm::max(internode.m_data.m_sagging, newSagging);
+							};
+						m_treeVisualizer.m_needUpdate = true;
+					}
 				}
 				OnInspectTreeGrowthSettings(m_treeModel.m_treeGrowthSettings);
 
@@ -352,57 +390,24 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 
 				ImGui::TreePop();
 			}
-			if (ImGui::TreeNode("Mesh generation settings")) {
-				static int iterations = 5;
-				ImGui::DragInt("Iterations", &iterations, 1, 0, m_treeModel.CurrentIteration());
-				iterations = glm::clamp(iterations, 0, m_treeModel.CurrentIteration());
+			static int meshGenerateIterations = 0;
+			if (ImGui::TreeNode("Cylindrical Mesh generation settings")) {
+				
+				ImGui::DragInt("Iterations", &meshGenerateIterations, 1, 0, m_treeModel.CurrentIteration());
+				meshGenerateIterations = glm::clamp(meshGenerateIterations, 0, m_treeModel.CurrentIteration());
 				m_meshGeneratorSettings.OnInspect(editorLayer);
-				if (ImGui::Button("Generate Mesh")) {
-					GenerateGeometryEntities(m_meshGeneratorSettings, iterations);
-				}
-				if (ImGui::Button("Clear Mesh"))
-				{
-					ClearGeometryEntities();
-				}
+				
 				ImGui::TreePop();
 			}
-			if (ImGui::TreeNode("Sagging"))
-			{
-				bool changed = false;
-				changed = ImGui::DragFloat("Sagging strength", &shootDescriptor->m_saggingFactorThicknessReductionMax.x, 0.0001f, 0.0f, 10.0f, "%.5f") || changed;
-				changed = ImGui::DragFloat("Sagging thickness factor", &shootDescriptor->m_saggingFactorThicknessReductionMax.y, 0.01f, 0.0f, 10.0f, "%.5f") || changed;
-				changed = ImGui::DragFloat("Sagging max", &shootDescriptor->m_saggingFactorThicknessReductionMax.z, 0.001f, 0.0f, 1.0f, "%.5f") || changed;
-				if (changed)
-				{
-					m_shootGrowthController.m_sagging = [=](const Node<InternodeGrowthData>& internode)
-						{
-							const auto newSagging = glm::min(
-								shootDescriptor->m_saggingFactorThicknessReductionMax.z,
-								shootDescriptor->m_saggingFactorThicknessReductionMax.x *
-								(internode.m_data.m_descendantTotalBiomass + internode.m_data.m_extraMass) /
-								glm::pow(
-									internode.m_info.m_thickness /
-									shootDescriptor->m_endNodeThickness,
-									shootDescriptor->m_saggingFactorThicknessReductionMax.y));
-							return newSagging;
-						};
-					m_treeModel.CalculateTransform(m_shootGrowthController, true);
-					m_shootGrowthController.m_sagging = [=](const Node<InternodeGrowthData>& internode)
-						{
-							const auto& shootGrowthParameters = treeDescriptor->m_shootDescriptor;
-							const auto newSagging = glm::min(
-								shootDescriptor->m_saggingFactorThicknessReductionMax.z,
-								shootDescriptor->m_saggingFactorThicknessReductionMax.x *
-								(internode.m_data.m_descendantTotalBiomass + internode.m_data.m_extraMass) /
-								glm::pow(
-									internode.m_info.m_thickness /
-									shootDescriptor->m_endNodeThickness,
-									shootDescriptor->m_saggingFactorThicknessReductionMax.y));
-							return glm::max(internode.m_data.m_sagging, newSagging);
-						};
-					m_treeVisualizer.m_needUpdate = true;
-				}
+			if (ImGui::Button("Generate Cylindrical Mesh")) {
+				GenerateGeometryEntities(m_meshGeneratorSettings, meshGenerateIterations);
 			}
+			ImGui::SameLine();
+			if (ImGui::Button("Clear Cylindrical Mesh"))
+			{
+				ClearGeometryEntities();
+			}
+			
 		}
 		/*
 		if (m_enableVisualization) {
@@ -537,52 +542,64 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 		ImGui::ColorEdit4("Boundary color", &strandModelParameters.m_boundaryPointColor.x);
 		ImGui::ColorEdit4("Content color", &strandModelParameters.m_contentPointColor.x);
 
-		if (ImGui::Button("Reset profiles"))
-		{
-			m_strandModel.ResetAllProfiles(m_strandModelParameters);
-		}
-		if (ImGui::Button("Prepare profiles"))
-		{
-			PrepareProfiles();
-		}
-		if (ImGui::Button("Create StrandsRenderer"))
-		{
-			InitializeStrandRenderer();
-		}
-		if (ImGui::Button("Clear StrandsRenderer"))
-		{
-			ClearStrandRenderer();
-		}
+		
+		
 
 		if (ImGui::TreeNodeEx("Strand Model Mesh Generator Settings", ImGuiTreeNodeFlags_DefaultOpen)) {
 			m_strandModelMeshGeneratorSettings.OnInspect(editorLayer);
 			ImGui::TreePop();
 		}
-		if (ImGui::Button("Build Strand Model Mesh"))
-		{
-			InitializeStrandModelMeshRenderer(m_strandModelMeshGeneratorSettings);
-		}
 
-		if (ImGui::Button("Clear Strand Model Mesh"))
-		{
-			ClearStrandModelMeshRenderer();
-		}
+		
 
 		ImGui::TreePop();
 	}
 
-
-
-	m_treeVisualizer.OnInspect(m_treeModel);
+	if (ImGui::Button("Prepare profiles"))
+	{
+		PrepareProfiles();
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Reset profiles"))
+	{
+		m_strandModel.ResetAllProfiles(m_strandModelParameters);
+	}
+	if (ImGui::Button("Build Strands"))
+	{
+		InitializeStrandRenderer();
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Clear Strands"))
+	{
+		ClearStrandRenderer();
+	}
+	if (ImGui::Button("Build Strand Mesh"))
+	{
+		InitializeStrandModelMeshRenderer(m_strandModelMeshGeneratorSettings);
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Clear Strand Mesh"))
+	{
+		ClearStrandModelMeshRenderer();
+	}
+	if(ImGui::TreeNode("Tree Visualizer"))
+	{
+		m_treeVisualizer.OnInspect(m_treeModel);
+		ImGui::TreePop();
+	}
 	m_treeVisualizer.Visualize(m_strandModel);
-	m_treeVisualizer.m_skeletalGraphSettings.OnInspect();
-	if (ImGui::Button("Build Skeletal Graph"))
+	if (ImGui::TreeNode("Skeletal graph settings"))
+	{
+		m_treeVisualizer.m_skeletalGraphSettings.OnInspect();
+	}
+	if (ImGui::Button("Build skeletal graph"))
 	{
 		InitializeSkeletalGraph(-1,
 			Resources::GetResource<Mesh>("PRIMITIVE_SPHERE"),
 			Resources::GetResource<Mesh>("PRIMITIVE_CUBE"));
 	}
-	if (ImGui::Button("Clear Skeletal Graph"))
+	ImGui::SameLine();
+	if (ImGui::Button("Clear skeletal graph"))
 	{
 		ClearSkeletalGraph();
 	}
@@ -1357,8 +1374,6 @@ void Tree::Serialize(YAML::Emitter& out)
 					nodeOut << YAML::Key << "SF" << YAML::Value << nodeData.m_shift;
 					nodeOut << YAML::Key << "A" << YAML::Value << nodeData.m_apical;
 					nodeOut << YAML::Key << "SP" << YAML::Value << nodeData.m_split;
-					nodeOut << YAML::Key << "AGP" << YAML::Value << nodeData.m_adjustedGlobalPosition;
-					nodeOut << YAML::Key << "AGR" << YAML::Value << nodeData.m_adjustedGlobalRotation;
 					nodeOut << YAML::Key << "SR" << YAML::Value << nodeData.m_strandRadius;
 					nodeOut << YAML::Key << "SC" << YAML::Value << nodeData.m_strandCount;
 
@@ -1473,8 +1488,6 @@ void Tree::Deserialize(const YAML::Node& in)
 					if (nodeIn["SF"]) nodeData.m_shift = nodeIn["SF"].as<glm::vec2>();
 					if (nodeIn["A"]) nodeData.m_apical = nodeIn["A"].as<bool>();
 					if (nodeIn["SP"]) nodeData.m_split = nodeIn["SP"].as<bool>();
-					if (nodeIn["AGP"]) nodeData.m_adjustedGlobalPosition = nodeIn["AGP"].as<glm::vec3>();
-					if (nodeIn["AGR"]) nodeData.m_adjustedGlobalRotation = nodeIn["AGR"].as<glm::quat>();
 					if (nodeIn["SR"]) nodeData.m_strandRadius = nodeIn["SR"].as<float>();
 					if (nodeIn["SC"]) nodeData.m_strandCount = nodeIn["SC"].as<int>();
 

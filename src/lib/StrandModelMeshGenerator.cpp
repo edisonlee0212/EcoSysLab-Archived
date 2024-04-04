@@ -1447,8 +1447,8 @@ void StrandModelMeshGenerator::CylindricalMeshing(const StrandModel& strandModel
 		glm::vec3 f[4];
 
 		float t[4];
-		p[2] = internode.m_data.m_adjustedGlobalPosition;
-		f[2] = internode.m_data.m_adjustedGlobalRotation * glm::vec3(0, 0, -1);
+		p[2] = internode.m_info.GetGlobalEndPosition();
+		f[2] = internode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
 		t[2] = glm::sqrt(static_cast<float>(particleSize)) * internode.m_data.m_strandRadius;
 		if (internode.GetParentHandle() == -1)
 		{
@@ -1464,21 +1464,21 @@ void StrandModelMeshGenerator::CylindricalMeshing(const StrandModel& strandModel
 		else if (internode.GetParentHandle() == 0)
 		{
 			p[0] = internode.m_info.m_globalPosition;
-			p[1] = skeleton.PeekNode(0).m_data.m_adjustedGlobalPosition;
+			p[1] = skeleton.PeekNode(0).m_info.GetGlobalEndPosition();
 
 			f[0] = internode.m_info.m_globalRotation * glm::vec3(0, 0, -1);
-			f[1] = skeleton.PeekNode(0).m_data.m_adjustedGlobalRotation * glm::vec3(0, 0, -1);
+			f[1] = skeleton.PeekNode(0).m_info.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
 
 			t[0] = glm::sqrt(static_cast<float>(particleSize)) * internode.m_data.m_strandRadius;
 			t[1] = glm::sqrt(static_cast<float>(skeleton.PeekNode(0).m_data.m_profile.PeekParticles().size())) * internode.m_data.m_strandRadius;
 		}
 		else
 		{
-			p[1] = skeleton.PeekNode(internode.GetParentHandle()).m_data.m_adjustedGlobalPosition;
-			p[0] = skeleton.PeekNode(skeleton.PeekNode(internode.GetParentHandle()).GetParentHandle()).m_data.m_adjustedGlobalPosition;
+			p[1] = skeleton.PeekNode(internode.GetParentHandle()).m_info.GetGlobalEndPosition();
+			p[0] = skeleton.PeekNode(skeleton.PeekNode(internode.GetParentHandle()).GetParentHandle()).m_info.GetGlobalEndPosition();
 
-			f[1] = skeleton.PeekNode(internode.GetParentHandle()).m_data.m_adjustedGlobalRotation * glm::vec3(0, 0, -1);
-			f[0] = skeleton.PeekNode(skeleton.PeekNode(internode.GetParentHandle()).GetParentHandle()).m_data.m_adjustedGlobalRotation * glm::vec3(0, 0, -1);
+			f[1] = skeleton.PeekNode(internode.GetParentHandle()).m_info.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
+			f[0] = skeleton.PeekNode(skeleton.PeekNode(internode.GetParentHandle()).GetParentHandle()).m_info.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
 
 			int prevParticleSize = skeleton.PeekNode(internode.GetParentHandle()).m_data.m_profile.PeekParticles().size();
 			int prevPrevParticleSize = skeleton.PeekNode(skeleton.PeekNode(internode.GetParentHandle()).GetParentHandle()).m_data.m_profile.PeekParticles().size();
@@ -1511,9 +1511,9 @@ void StrandModelMeshGenerator::CylindricalMeshing(const StrandModel& strandModel
 				const auto& childInternode = skeleton.PeekNode(childHandle);
 				if (childHandle == maxChildHandle)
 				{
-					p[3] = childInternode.m_data.m_adjustedGlobalPosition;
+					p[3] = childInternode.m_info.GetGlobalEndPosition();
 
-					f[3] = childInternode.m_data.m_adjustedGlobalRotation * glm::vec3(0, 0, -1);
+					f[3] = childInternode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
 
 					t[3] = glm::sqrt(static_cast<float>(childInternode.m_data.m_profile.PeekParticles().size())) * internode.m_data.m_strandRadius;
 				}

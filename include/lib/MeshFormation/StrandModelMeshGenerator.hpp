@@ -15,7 +15,7 @@ namespace EcoSysLab {
 
 	struct StrandModelMeshGeneratorSettings
 	{
-		unsigned m_generatorType = static_cast<unsigned>(StrandModelMeshGeneratorType::HybridMarchingCube);
+		unsigned m_generatorType = static_cast<unsigned>(StrandModelMeshGeneratorType::RecursiveSlicing);
 #pragma region Recursive Slicing
 		int m_stepsPerSegment = 4;
 		// this is for debugging purposes only and should not be used to obtain a proper mesh
@@ -40,7 +40,7 @@ namespace EcoSysLab {
 		glm::vec4 m_cylindricalColor = glm::vec4(0.1, 0.9, 0.0f, 1.0f);
 		float m_texCoordsMultiplier = 10.0f;
 #pragma endregion
-		int m_smoothIteration = 15;
+		int m_smoothIteration = 5;
 		int m_minCellCountForMajorBranches = 50;
 		int m_maxCellCountForMinorBranches = 200;
 		bool m_enableBranch = true;

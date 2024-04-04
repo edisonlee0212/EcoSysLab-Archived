@@ -1,4 +1,4 @@
-m_baseInternodeCount: 3
+m_baseInternodeCount: 1
 m_baseNodeApicalAngleMeanVariance: [0, 0]
 m_growthRate: 0.200000003
 m_branchingAngleMeanVariance: [30, 3]

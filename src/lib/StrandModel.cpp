@@ -558,9 +558,9 @@ void StrandModel::ApplyProfile(const StrandModelParameters& strandModelParameter
 	const NodeHandle nodeHandle)
 {
 	const auto& node = m_strandModelSkeleton.RefNode(nodeHandle);
-	const auto currentFront = node.m_data.m_adjustedGlobalRotation * glm::vec3(0, 0, -1);
-	const auto currentUp = node.m_data.m_adjustedGlobalRotation * glm::vec3(0, 1, 0);
-	const auto currentLeft = node.m_data.m_adjustedGlobalRotation * glm::vec3(1, 0, 0);
+	const auto currentFront = node.m_info.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
+	const auto currentUp = node.m_info.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
+	const auto currentLeft = node.m_info.m_regulatedGlobalRotation * glm::vec3(1, 0, 0);
 	const auto& parameters = strandModelParameters;
 	const bool wound = node.IsEndNode();
 	for (const auto& [strandHandle, particleHandle] : node.m_data.m_particleMap)
@@ -568,14 +568,14 @@ void StrandModel::ApplyProfile(const StrandModelParameters& strandModelParameter
 		const auto& particle = node.m_data.m_profile.PeekParticle(particleHandle);
 		auto& newStrandSegment = m_strandModelSkeleton.m_data.m_strandGroup.RefStrandSegment(particle.m_data.m_strandSegmentHandle);
 		newStrandSegment.m_info.m_thickness = node.m_data.m_strandRadius;
-		newStrandSegment.m_info.m_globalPosition = node.m_data.m_adjustedGlobalPosition
+		newStrandSegment.m_info.m_globalPosition = node.m_info.GetGlobalEndPosition()
 			+ node.m_data.m_strandRadius * particle.GetInitialPosition().x * currentLeft
 			+ node.m_data.m_strandRadius * particle.GetInitialPosition().y * currentUp;
 		if (wound)
 		{
 			newStrandSegment.m_info.m_globalPosition += currentFront * glm::max(0.0f, strandModelParameters.m_cladoptosisDistribution.GetValue(glm::max(0.0f, (strandModelParameters.m_cladoptosisRange - particle.GetDistanceToBoundary()) / strandModelParameters.m_cladoptosisRange)));
 		}
-		newStrandSegment.m_info.m_globalRotation = node.m_data.m_adjustedGlobalRotation;
+		newStrandSegment.m_info.m_globalRotation = node.m_info.m_regulatedGlobalRotation;
 		newStrandSegment.m_info.m_color = particle.IsBoundary() ? parameters.m_boundaryPointColor : parameters.m_contentPointColor;
 		newStrandSegment.m_info.m_isBoundary = particle.IsBoundary();
 	}
@@ -588,20 +588,10 @@ void StrandModel::ApplyProfiles(const StrandModelParameters& strandModelParamete
 	for (const auto& nodeHandle : sortedInternodeList)
 	{
 		const auto& node = m_strandModelSkeleton.RefNode(nodeHandle);
-		glm::quat parentGlobalRotation;
-		glm::vec3 parentGlobalPosition;
 		if (node.GetParentHandle() == -1)
 		{
-			parentGlobalRotation = node.m_data.m_adjustedGlobalRotation;
-			parentGlobalPosition = glm::vec3(0.0f);
-		}
-		else {
-			const auto& parent = m_strandModelSkeleton.RefNode(node.GetParentHandle());
-			parentGlobalRotation = parent.m_data.m_adjustedGlobalRotation;
-			parentGlobalPosition = parent.m_data.m_adjustedGlobalPosition;
-		}
-		if (node.GetParentHandle() == -1)
-		{
+			const auto parentGlobalRotation = node.m_info.m_regulatedGlobalRotation;
+
 			const auto currentUp = parentGlobalRotation * glm::vec3(0, 1, 0);
 			const auto currentLeft = parentGlobalRotation * glm::vec3(1, 0, 0);
 			const auto baseRadius = strandModelParameters.m_strandRadiusDistribution.GetValue(0.0f);
@@ -610,14 +600,15 @@ void StrandModel::ApplyProfiles(const StrandModelParameters& strandModelParamete
 				const auto& particle = node.m_data.m_profile.PeekParticle(particleHandle);
 				auto& strand = strandGroup.RefStrand(strandHandle);
 				strand.m_info.m_baseInfo.m_thickness = baseRadius;
-				strand.m_info.m_baseInfo.m_globalPosition = parentGlobalPosition
-					+ strand.m_info.m_baseInfo.m_thickness * particle.GetPosition().x * currentLeft
+				strand.m_info.m_baseInfo.m_globalPosition = 
+					strand.m_info.m_baseInfo.m_thickness * particle.GetPosition().x * currentLeft
 					+ strand.m_info.m_baseInfo.m_thickness * particle.GetPosition().y * currentUp;
 				strand.m_info.m_baseInfo.m_globalRotation = parentGlobalRotation;
 				strand.m_info.m_baseInfo.m_isBoundary = particle.IsBoundary();
 				strand.m_info.m_baseInfo.m_color = particle.IsBoundary() ? strandModelParameters.m_boundaryPointColor : strandModelParameters.m_contentPointColor;
 			}
 		}
+		
 		ApplyProfile(strandModelParameters, nodeHandle);
 	}
 }
@@ -630,28 +621,36 @@ void StrandModel::CalculateStrandProfileAdjustedTransforms(const StrandModelPara
 	{
 		auto& node = m_strandModelSkeleton.RefNode(nodeHandle);
 		const auto parentHandle = node.GetParentHandle();
+		if (parentHandle != -1) break;
+		node.m_info.m_globalPosition = node.m_info.m_globalPosition;
+		node.m_info.m_globalRotation = node.m_info.m_regulatedGlobalRotation;
+		maxRootDistance = glm::max(maxRootDistance, node.m_info.m_endDistance + node.m_info.m_length);
+	}
+
+	for (const auto& nodeHandle : sortedInternodeList)
+	{
+		auto& node = m_strandModelSkeleton.RefNode(nodeHandle);
+		const auto parentHandle = node.GetParentHandle();
 		if (parentHandle == -1)
 		{
-			node.m_data.m_adjustedGlobalPosition = node.m_info.GetGlobalEndPosition();
-			node.m_data.m_adjustedGlobalRotation = node.m_info.m_regulatedGlobalRotation;
-			maxRootDistance = node.m_info.m_endDistance + node.m_info.m_length;
-
+			node.m_info.m_globalPosition = node.m_info.m_globalPosition;
+			node.m_info.m_globalRotation = node.m_info.m_regulatedGlobalRotation;
 			node.m_data.m_strandRadius = strandModelParameters.m_strandRadiusDistribution.GetValue(node.m_info.m_rootDistance / maxRootDistance);
 			continue;
 		}
 		const auto& parentNode = m_strandModelSkeleton.PeekNode(parentHandle);
-		glm::vec3 parentGlobalPosition = parentNode.m_data.m_adjustedGlobalPosition;
-		glm::quat parentGlobalRotation = parentNode.m_data.m_adjustedGlobalRotation;
+		node.m_info.m_globalPosition = parentNode.m_info.GetGlobalEndPosition();
+		glm::quat parentGlobalRotation = parentNode.m_info.m_globalRotation;
 		node.m_data.m_strandRadius = strandModelParameters.m_strandRadiusDistribution.GetValue(node.m_info.m_rootDistance / maxRootDistance);
-		node.m_data.m_adjustedGlobalPosition = parentGlobalPosition + node.m_info.GetGlobalEndPosition() - parentNode.m_info.GetGlobalEndPosition();
-		node.m_data.m_adjustedGlobalRotation = parentGlobalRotation * (glm::inverse(parentNode.m_info.m_regulatedGlobalRotation) * node.m_info.m_regulatedGlobalRotation);
+		auto newGlobalEndPosition = node.m_info.m_globalPosition + node.m_info.m_globalDirection * node.m_info.m_length;
+		node.m_info.m_globalRotation = parentGlobalRotation * (glm::inverse(parentNode.m_info.m_regulatedGlobalRotation) * node.m_info.m_regulatedGlobalRotation);
 
 		const auto parentUp = parentGlobalRotation * glm::vec3(0, 1, 0);
 		const auto parentLeft = parentGlobalRotation * glm::vec3(1, 0, 0);
 		const auto parentFront = parentGlobalRotation * glm::vec3(0, 0, -1);
 
 
-		const auto front = node.m_data.m_adjustedGlobalRotation * glm::vec3(0, 0, -1);
+		const auto front = node.m_info.m_globalRotation * glm::vec3(0, 0, -1);
 		const float offsetLength = glm::length(node.m_data.m_offset);
 		float maxDistanceToCenter = node.m_data.m_profile.GetMaxDistanceToCenter();
 		const float cosFront = glm::dot(front, parentFront); //Horizontal
@@ -661,19 +660,23 @@ void StrandModel::CalculateStrandProfileAdjustedTransforms(const StrandModelPara
 			const float innerRadius = node.m_data.m_profile.GetDistanceToCenter(-glm::normalize(node.m_data.m_offset));
 			const auto offsetDirection = glm::normalize(node.m_data.m_offset);
 			const auto newOffset = (offsetLength + innerRadius + (outerRadius - outerRadius * cosFront) * strandModelParameters.m_rotationPushRatio) * offsetDirection;
-			node.m_data.m_adjustedGlobalPosition += parentUp * newOffset.y * strandModelParameters.m_sidePushRatio * node.m_data.m_strandRadius;
-			node.m_data.m_adjustedGlobalPosition += parentLeft * newOffset.x * strandModelParameters.m_sidePushRatio * node.m_data.m_strandRadius;
-			node.m_data.m_adjustedGlobalPosition += parentFront * (sinFront * outerRadius * strandModelParameters.m_rotationPushRatio) * node.m_data.m_strandRadius;
+			newGlobalEndPosition += parentUp * newOffset.y * strandModelParameters.m_sidePushRatio * node.m_data.m_strandRadius;
+			newGlobalEndPosition += parentLeft * newOffset.x * strandModelParameters.m_sidePushRatio * node.m_data.m_strandRadius;
+			newGlobalEndPosition += parentFront * (sinFront * outerRadius * strandModelParameters.m_rotationPushRatio) * node.m_data.m_strandRadius;
 		}
 		else if (node.m_data.m_apical)
 		{
 			//This part needs improvement.
-			node.m_data.m_adjustedGlobalPosition += parentFront * sinFront * maxDistanceToCenter * strandModelParameters.m_frontPushRatio * node.m_data.m_strandRadius;
+			newGlobalEndPosition += parentFront * sinFront * maxDistanceToCenter * strandModelParameters.m_frontPushRatio * node.m_data.m_strandRadius;
 		}
-		node.m_data.m_adjustedGlobalPosition += parentUp * node.m_data.m_shift.y * strandModelParameters.m_shiftPushRatio * node.m_data.m_strandRadius;
-		node.m_data.m_adjustedGlobalPosition += parentLeft * node.m_data.m_shift.x * strandModelParameters.m_shiftPushRatio * node.m_data.m_strandRadius;
+		newGlobalEndPosition += parentUp * node.m_data.m_shift.y * strandModelParameters.m_shiftPushRatio * node.m_data.m_strandRadius;
+		newGlobalEndPosition += parentLeft * node.m_data.m_shift.x * strandModelParameters.m_shiftPushRatio * node.m_data.m_strandRadius;
 
+		const auto diff = newGlobalEndPosition - node.m_info.m_globalPosition;
+		node.m_info.m_length = glm::length(diff);
+		node.m_info.m_globalDirection = glm::normalize(diff);
 	}
+	m_strandModelSkeleton.CalculateRegulatedGlobalRotation();
 }
 
 

@@ -137,8 +137,6 @@ namespace EcoSysLab
 		bool m_split = false;
 		std::vector<std::shared_future<void>> m_tasks{};
 
-		glm::vec3 m_adjustedGlobalPosition{};
-		glm::quat m_adjustedGlobalRotation{};
 		float m_strandRadius = 0.002f;
 		int m_strandCount = 0;
 	};
