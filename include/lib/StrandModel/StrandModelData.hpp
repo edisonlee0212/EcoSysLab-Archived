@@ -20,8 +20,7 @@ namespace EcoSysLab
 		 * \brief The handle of the internode this pipe segment belongs to. Pipe -> PipeSegment <-> Cell <- Profile <- Internode
 		 */
 		NodeHandle m_nodeHandle = -1;
-		ParticleHandle m_frontProfileParticleHandle = -1;
-		ParticleHandle m_backProfileParticleHandle = -1;
+		ParticleHandle m_profileParticleHandle = -1;
 	};
 
 	typedef StrandGroup<StrandModelStrandGroupData, StrandModelStrandData, StrandModelStrandSegmentData> StrandModelStrandGroup;

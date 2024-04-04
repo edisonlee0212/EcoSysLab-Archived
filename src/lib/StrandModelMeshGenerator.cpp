@@ -254,13 +254,13 @@ const Particle2D<CellParticlePhysicsData>& getEndParticle(const StrandModel& str
 	auto& pipeSegment = skeleton.m_data.m_strandGroup.PeekStrandSegment(segHandle);
 
 	const auto& node = skeleton.PeekNode(pipeSegment.m_data.m_nodeHandle);
-	const auto& startProfile = node.m_data.m_frontProfile;
+	const auto& startProfile = node.m_data.m_profile;
 	//To access the user's defined constraints (attractors, etc.)
 	const auto& profileConstraints = node.m_data.m_profileConstraints;
 
 	//To access the position of the start of the pipe segment within a profile:
 	const auto parentHandle = node.GetParentHandle();
-	const auto& endParticle = startProfile.PeekParticle(pipeSegment.m_data.m_backProfileParticleHandle);
+	const auto& endParticle = startProfile.PeekParticle(pipeSegment.m_data.m_profileParticleHandle);
 
 	return endParticle;
 }
@@ -278,13 +278,13 @@ const Particle2D<CellParticlePhysicsData>& getStartParticle(const StrandModel& s
 	auto& pipeSegment = skeleton.m_data.m_strandGroup.PeekStrandSegment(segHandle);
 
 	const auto& node = skeleton.PeekNode(pipeSegment.m_data.m_nodeHandle);
-	const auto& startProfile = node.m_data.m_frontProfile;
+	const auto& startProfile = node.m_data.m_profile;
 	//To access the user's defined constraints (attractors, etc.)
 	const auto& profileConstraints = node.m_data.m_profileConstraints;
 
 	//To access the position of the start of the pipe segment within a profile:
 	const auto parentHandle = node.GetParentHandle();
-	const auto& startParticle = startProfile.PeekParticle(pipeSegment.m_data.m_frontProfileParticleHandle);
+	const auto& startParticle = startProfile.PeekParticle(pipeSegment.m_data.m_profileParticleHandle);
 
 	return startParticle;
 }
@@ -1359,7 +1359,7 @@ void StrandModelMeshGenerator::MarchingCube(const StrandModel& strandModel, std:
 	for (const auto& pipeSegment : pipeGroup.PeekStrandSegments())
 	{
 		const auto& node = skeleton.PeekNode(pipeSegment.m_data.m_nodeHandle);
-		const auto& profile = node.m_data.m_backProfile;
+		const auto& profile = node.m_data.m_profile;
 		if (profile.PeekParticles().size() < settings.m_minCellCountForMajorBranches) continue;
 		needTriangulation = true;
 		min = glm::min(pipeSegment.m_info.m_globalPosition, min);
@@ -1392,7 +1392,7 @@ void StrandModelMeshGenerator::MarchingCube(const StrandModel& strandModel, std:
 		for (const auto& pipeSegment : pipeGroup.PeekStrandSegments())
 		{
 			const auto& node = skeleton.PeekNode(pipeSegment.m_data.m_nodeHandle);
-			const auto& profile = node.m_data.m_backProfile;
+			const auto& profile = node.m_data.m_profile;
 			if (profile.PeekParticles().size() < settings.m_minCellCountForMajorBranches) continue;
 
 			//Get interpolated position on pipe segment. Example to get middle point here:
@@ -1401,7 +1401,7 @@ void StrandModelMeshGenerator::MarchingCube(const StrandModel& strandModel, std:
 			const auto distance = glm::distance(startPosition, endPosition);
 			const auto stepSize = glm::max(1, static_cast<int>(distance / subdivisionLength));
 
-			const auto polarX = profile.PeekParticle(pipeSegment.m_data.m_backProfileParticleHandle).GetPolarPosition().y / glm::radians(360.0f);
+			const auto polarX = profile.PeekParticle(pipeSegment.m_data.m_profileParticleHandle).GetInitialPolarPosition().y / glm::radians(360.0f);
 			for (int step = 0; step < stepSize; step++)
 			{
 				const auto a = static_cast<float>(step) / stepSize;
@@ -1440,7 +1440,7 @@ void StrandModelMeshGenerator::CylindricalMeshing(const StrandModel& strandModel
 		auto& rings = ringsList[internodeIndex];
 		rings.clear();
 		if (internode.GetParentHandle() == -1) return;
-		int particleSize = internode.m_data.m_backProfile.PeekParticles().size();
+		int particleSize = internode.m_data.m_profile.PeekParticles().size();
 		if (particleSize > settings.m_maxCellCountForMinorBranches) return;
 		particleSize = glm::min(particleSize, settings.m_maxCellCountForMinorBranches);
 		glm::vec3 p[4];
@@ -1470,7 +1470,7 @@ void StrandModelMeshGenerator::CylindricalMeshing(const StrandModel& strandModel
 			f[1] = skeleton.PeekNode(0).m_data.m_adjustedGlobalRotation * glm::vec3(0, 0, -1);
 
 			t[0] = glm::sqrt(static_cast<float>(particleSize)) * internode.m_data.m_strandRadius;
-			t[1] = glm::sqrt(static_cast<float>(skeleton.PeekNode(0).m_data.m_backProfile.PeekParticles().size())) * internode.m_data.m_strandRadius;
+			t[1] = glm::sqrt(static_cast<float>(skeleton.PeekNode(0).m_data.m_profile.PeekParticles().size())) * internode.m_data.m_strandRadius;
 		}
 		else
 		{
@@ -1480,8 +1480,8 @@ void StrandModelMeshGenerator::CylindricalMeshing(const StrandModel& strandModel
 			f[1] = skeleton.PeekNode(internode.GetParentHandle()).m_data.m_adjustedGlobalRotation * glm::vec3(0, 0, -1);
 			f[0] = skeleton.PeekNode(skeleton.PeekNode(internode.GetParentHandle()).GetParentHandle()).m_data.m_adjustedGlobalRotation * glm::vec3(0, 0, -1);
 
-			int prevParticleSize = skeleton.PeekNode(internode.GetParentHandle()).m_data.m_backProfile.PeekParticles().size();
-			int prevPrevParticleSize = skeleton.PeekNode(skeleton.PeekNode(internode.GetParentHandle()).GetParentHandle()).m_data.m_backProfile.PeekParticles().size();
+			int prevParticleSize = skeleton.PeekNode(internode.GetParentHandle()).m_data.m_profile.PeekParticles().size();
+			int prevPrevParticleSize = skeleton.PeekNode(skeleton.PeekNode(internode.GetParentHandle()).GetParentHandle()).m_data.m_profile.PeekParticles().size();
 			t[1] = glm::sqrt(static_cast<float>(glm::min(prevParticleSize, settings.m_maxCellCountForMinorBranches))) * internode.m_data.m_strandRadius;
 			t[0] = glm::sqrt(static_cast<float>(glm::min(prevPrevParticleSize, settings.m_maxCellCountForMinorBranches))) * internode.m_data.m_strandRadius;
 		}
@@ -1499,7 +1499,7 @@ void StrandModelMeshGenerator::CylindricalMeshing(const StrandModel& strandModel
 			NodeHandle maxChildHandle = -1;
 			for (const auto& childHandle : internode.RefChildHandles()) {
 				const auto& childInternode = skeleton.PeekNode(childHandle);
-				const auto childSize = static_cast<float>(childInternode.m_data.m_backProfile.PeekParticles().size());
+				const auto childSize = static_cast<float>(childInternode.m_data.m_profile.PeekParticles().size());
 				if (childSize > maxChildSize)
 				{
 					maxChildSize = childSize;
@@ -1515,7 +1515,7 @@ void StrandModelMeshGenerator::CylindricalMeshing(const StrandModel& strandModel
 
 					f[3] = childInternode.m_data.m_adjustedGlobalRotation * glm::vec3(0, 0, -1);
 
-					t[3] = glm::sqrt(static_cast<float>(childInternode.m_data.m_backProfile.PeekParticles().size())) * internode.m_data.m_strandRadius;
+					t[3] = glm::sqrt(static_cast<float>(childInternode.m_data.m_profile.PeekParticles().size())) * internode.m_data.m_strandRadius;
 				}
 			}
 		}
@@ -1567,7 +1567,7 @@ void StrandModelMeshGenerator::CylindricalMeshing(const StrandModel& strandModel
 		auto internodeHandle = sortedInternodeList[internodeIndex];
 		const auto& internode = skeleton.PeekNode(internodeHandle);
 		if (internode.GetParentHandle() == -1) continue;
-		if (internode.m_data.m_backProfile.PeekParticles().size() > settings.m_maxCellCountForMinorBranches) continue;
+		if (internode.m_data.m_profile.PeekParticles().size() > settings.m_maxCellCountForMinorBranches) continue;
 		const auto& internodeInfo = internode.m_info;
 		auto parentInternodeHandle = internode.GetParentHandle();
 		bool continuous = false;
@@ -1577,7 +1577,7 @@ void StrandModelMeshGenerator::CylindricalMeshing(const StrandModel& strandModel
 		{
 			const auto& parentInternode = skeleton.PeekNode(parentInternodeHandle);
 			parentUp = parentInternode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
-			if (parentInternode.m_data.m_backProfile.PeekParticles().size() <= settings.m_maxCellCountForMinorBranches) continuous = true;
+			if (parentInternode.m_data.m_profile.PeekParticles().size() <= settings.m_maxCellCountForMinorBranches) continuous = true;
 		}
 		auto& rings = ringsList[internodeIndex];
 		if (rings.empty()) {

@@ -63,7 +63,7 @@ void TreeModel::PruneInternode(const NodeHandle internodeHandle)
 		{
 			/*
 			const auto& node = m_shootSkeleton.RefNode(nodeHandle);
-			const auto& physics2D = node.m_data.m_frontProfile;
+			const auto& physics2D = node.m_data.m_profile;
 			for (const auto& particle : physics2D.PeekParticles())
 			{
 				if (!m_shootSkeleton.m_data.m_strandGroup.PeekStrandSegment(particle.m_data.m_strandSegmentHandle).IsRecycled()) m_shootSkeleton.m_data.m_strandGroup.RecycleStrandSegment(particle.m_data.m_strandSegmentHandle);

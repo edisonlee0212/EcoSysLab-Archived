@@ -595,14 +595,14 @@ void TreeVisualizer::Visualize(StrandModel& strandModel, const GlobalTransform& 
 							}
 						}
 					}
-					node.m_data.m_frontProfile.OnInspect([&](const glm::vec2 position)
+					node.m_data.m_profile.OnInspect([&](const glm::vec2 position)
 						{
 							mouseDown = true;
 							mousePosition = position;
 						},
 						[&](const ImVec2 origin, const float zoomFactor, ImDrawList* drawList) {
-							node.m_data.m_frontProfile.RenderEdges(origin, zoomFactor, drawList, IM_COL32(0.0f, 0.0f, 128.0f, 128.0f), 1.0f);
-							node.m_data.m_frontProfile.RenderBoundary(origin, zoomFactor, drawList, IM_COL32(255.f, 255.f, 255.0f, 255.0f), 4.0f);
+							node.m_data.m_profile.RenderEdges(origin, zoomFactor, drawList, IM_COL32(0.0f, 0.0f, 128.0f, 128.0f), 1.0f);
+							node.m_data.m_profile.RenderBoundary(origin, zoomFactor, drawList, IM_COL32(255.f, 255.f, 255.0f, 255.0f), 4.0f);
 
 							if (node.GetParentHandle() != -1)
 							{
@@ -738,41 +738,6 @@ void TreeVisualizer::Visualize(StrandModel& strandModel, const GlobalTransform& 
 							}
 						}
 					}
-					node.m_data.m_backProfile.OnInspect([&](const glm::vec2 position)
-						{},
-						[&](const ImVec2 origin, const float zoomFactor, ImDrawList* drawList)
-						{
-							node.m_data.m_backProfile.RenderEdges(origin, zoomFactor, drawList, IM_COL32(0.0f, 0.0f, 128.0f, 128.0f), 1.0f);
-							node.m_data.m_backProfile.RenderBoundary(origin, zoomFactor, drawList, IM_COL32(255.f, 255.f, 255.0f, 255.0f), 4.0f);
-
-
-							if (node.GetParentHandle() != -1)
-							{
-								const auto& parentNode = skeleton.RefNode(node.GetParentHandle());
-								if (!parentNode.m_data.m_profileConstraints.m_boundaries.empty())
-								{
-									for (const auto& parentBoundary : parentNode.m_data.m_profileConstraints.m_boundaries)
-									{
-										parentBoundary.RenderBoundary(origin, zoomFactor, drawList, IM_COL32(128.0f, 0.0f, 0, 128.0f), 4.0f);
-									}
-									for (const auto& parentAttractor : parentNode.m_data.m_profileConstraints.m_attractors)
-									{
-										parentAttractor.RenderAttractor(origin, zoomFactor, drawList, IM_COL32(0.0f, 128.0f, 0, 128.0f), 4.0f);
-									}
-								}
-
-							}
-							for (const auto& boundary : node.m_data.m_profileConstraints.m_boundaries)
-							{
-								boundary.RenderBoundary(origin, zoomFactor, drawList, IM_COL32(255.0f, 0.0f, 0, 255.0f), 2.0f);
-							}
-
-							for (const auto& attractor : node.m_data.m_profileConstraints.m_attractors)
-							{
-								attractor.RenderAttractor(origin, zoomFactor, drawList, IM_COL32(0.0f, 255.0f, 0, 255.0f), 2.0f);
-							}
-						},
-						showGrid);
 				}
 				else
 				{

@@ -119,11 +119,9 @@ namespace EcoSysLab
 
 	struct StrandModelNodeData
 	{
-		StrandModelProfile<CellParticlePhysicsData> m_frontProfile{};
-		std::unordered_map<StrandHandle, ParticleHandle> m_frontParticleMap{};
+		StrandModelProfile<CellParticlePhysicsData> m_profile{};
+		std::unordered_map<StrandHandle, ParticleHandle> m_particleMap{};
 		bool m_boundariesUpdated = false;
-		StrandModelProfile<CellParticlePhysicsData> m_backProfile{};
-		std::unordered_map<StrandHandle, ParticleHandle> m_backParticleMap{};
 		ProfileConstraints m_profileConstraints{};
 
 		float m_frontControlPointDistance = 0.0f;

@@ -28,7 +28,11 @@ namespace EcoSysLab {
 
 		bool m_boundary = false;
 		float m_distanceToBoundary = 0.0f;
+
+		glm::vec2 m_initialPosition = glm::vec2(0.0f);
 	public:
+		void SetInitialPosition(const glm::vec2& initialPosition);
+		[[nodiscard]] glm::vec2 GetInitialPosition() const;
 		[[nodiscard]] float GetDistanceToBoundary() const;
 		bool m_enable = true;
 		[[nodiscard]] bool IsBoundary() const;
@@ -51,9 +55,22 @@ namespace EcoSysLab {
 		void SetAcceleration(const glm::vec2& acceleration);
 
 		[[nodiscard]] glm::vec2 GetPolarPosition() const;
+		[[nodiscard]] glm::vec2 GetInitialPolarPosition() const;
 		void SetPolarPosition(const glm::vec2& position);
 	};
 
+
+	template <typename T>
+	void Particle2D<T>::SetInitialPosition(const glm::vec2& initialPosition)
+	{
+		m_initialPosition = initialPosition;
+	}
+
+	template <typename T>
+	glm::vec2 Particle2D<T>::GetInitialPosition() const
+	{
+		return m_initialPosition;
+	}
 
 	template <typename T>
 	float Particle2D<T>::GetDistanceToBoundary() const
@@ -159,6 +176,18 @@ namespace EcoSysLab {
 		}
 		if (m_position.y >= 0) return { r, glm::acos(m_position.x / r) };
 		return { r, -glm::acos(m_position.x / r) };
+	}
+
+	template <typename T>
+	glm::vec2 Particle2D<T>::GetInitialPolarPosition() const
+	{
+		const auto r = glm::length(m_initialPosition);
+		if (r <= glm::epsilon<float>())
+		{
+			return { 0, 0 };
+		}
+		if (m_initialPosition.y >= 0) return { r, glm::acos(m_initialPosition.x / r) };
+		return { r, -glm::acos(m_initialPosition.x / r) };
 	}
 
 	template <typename T>
