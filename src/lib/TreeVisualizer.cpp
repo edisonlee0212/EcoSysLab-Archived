@@ -444,8 +444,7 @@ TreeVisualizer::OnInspect(
 		}
 
 		ImGui::Checkbox("Visualization", &m_visualization);
-		ImGui::Checkbox("Front Profile", &m_frontProfileGui);
-		ImGui::Checkbox("Back Profile", &m_backProfileGui);
+		ImGui::Checkbox("Profile", &m_profileGui);
 		ImGui::Checkbox("Tree Hierarchy", &m_treeHierarchyGui);
 
 		if (m_visualization) {
@@ -490,7 +489,7 @@ TreeVisualizer::OnInspect(
 	return updated;
 }
 
-void TreeVisualizer::Visualize(TreeModel& treeModel, const GlobalTransform& globalTransform) {
+void TreeVisualizer::Visualize(const TreeModel& treeModel, const GlobalTransform& globalTransform) {
 	const auto& treeSkeleton = treeModel.PeekShootSkeleton(m_checkpointIteration);
 	if (m_visualization) {
 		const auto editorLayer = Application::GetLayer<EditorLayer>();
@@ -534,17 +533,17 @@ void TreeVisualizer::Visualize(TreeModel& treeModel, const GlobalTransform& glob
 	}
 }
 
-void TreeVisualizer::Visualize(StrandModel& strandModel, const GlobalTransform& globalTransform)
+void TreeVisualizer::Visualize(StrandModel& strandModel)
 {
 	if (m_visualization)
 	{
 		auto& skeleton = strandModel.m_strandModelSkeleton;
 		static bool showGrid = false;
-		if (m_frontProfileGui) {
-			const std::string frontTag = "Front Profile";
-			if (ImGui::Begin(frontTag.c_str()))
+		if (m_profileGui) {
+			const std::string tag = "Profile";
+			if (ImGui::Begin(tag.c_str()))
 			{
-				if (m_selectedInternodeHandle != -1) {
+				if (m_selectedInternodeHandle != -1 && m_selectedInternodeHandle < skeleton.RefRawNodes().size()) {
 					auto& node = skeleton.RefNode(m_selectedInternodeHandle);
 					glm::vec2 mousePosition{};
 					static bool lastFrameClicked = false;
@@ -695,53 +694,7 @@ void TreeVisualizer::Visualize(StrandModel& strandModel, const GlobalTransform& 
 				}
 				else
 				{
-					ImGui::Text("Select an internode to show its front profile!");
-				}
-			}
-			ImGui::End();
-		}
-		if (m_backProfileGui) {
-			const std::string backTag = "Back Profile";
-			if (ImGui::Begin(backTag.c_str()))
-			{
-				if (m_selectedInternodeHandle != -1) {
-					auto& node = skeleton.RefNode(m_selectedInternodeHandle);
-					ImGui::Checkbox("Show Grid", &showGrid);
-					if (node.GetParentHandle() != -1)
-					{
-						if (ImGui::Button("Copy from root"))
-						{
-							std::vector<NodeHandle> parentNodeToRootChain;
-							parentNodeToRootChain.emplace_back(m_selectedInternodeHandle);
-							NodeHandle walker = node.GetParentHandle();
-							while (walker != -1)
-							{
-								parentNodeToRootChain.emplace_back(walker);
-								walker = skeleton.PeekNode(walker).GetParentHandle();
-							}
-							for (auto it = parentNodeToRootChain.rbegin() + 1; it != parentNodeToRootChain.rend(); ++it)
-							{
-								const auto& fromNode = skeleton.PeekNode(*(it - 1));
-								auto& toNode = skeleton.RefNode(*it);
-								toNode.m_data.m_profileConstraints = fromNode.m_data.m_profileConstraints;
-								toNode.m_data.m_boundariesUpdated = true;
-							}
-						}
-						const auto& parentNode = skeleton.RefNode(node.GetParentHandle());
-						if (!parentNode.m_data.m_profileConstraints.m_boundaries.empty() || !parentNode.m_data.m_profileConstraints.m_attractors.empty())
-						{
-							ImGui::SameLine();
-							if (ImGui::Button("Copy parent settings"))
-							{
-								node.m_data.m_profileConstraints = parentNode.m_data.m_profileConstraints;
-								node.m_data.m_boundariesUpdated = true;
-							}
-						}
-					}
-				}
-				else
-				{
-					ImGui::Text("Select an internode to show its back profile!");
+					ImGui::Text("Select an internode to show its profile!");
 				}
 			}
 			ImGui::End();

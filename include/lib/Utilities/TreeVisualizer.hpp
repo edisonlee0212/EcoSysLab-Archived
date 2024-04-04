@@ -80,8 +80,7 @@ namespace EcoSysLab {
 		bool m_visualization = true;
 		TreeVisualizerColorSettings m_settings;
 		SkeletalGraphSettings m_skeletalGraphSettings{};
-		bool m_frontProfileGui = true;
-		bool m_backProfileGui = false;
+		bool m_profileGui = true;
 		bool m_treeHierarchyGui = false;
 		float m_selectedInternodeLengthFactor = 0.0f;
 		int m_checkpointIteration = 0;
@@ -98,8 +97,8 @@ namespace EcoSysLab {
 
 		bool OnInspect(TreeModel& treeModel);
 
-		void Visualize(TreeModel& treeModel, const GlobalTransform& globalTransform);
-		void Visualize(StrandModel& strandModel, const GlobalTransform& globalTransform);
+		void Visualize(const TreeModel& treeModel, const GlobalTransform& globalTransform);
+		void Visualize(StrandModel& strandModel);
 		void Reset(TreeModel& treeModel);
 
 		void Clear();

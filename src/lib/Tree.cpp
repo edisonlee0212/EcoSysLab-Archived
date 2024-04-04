@@ -146,6 +146,7 @@ bool Tree::ParseBinvox(const std::filesystem::path& filePath, VoxelGrid<TreeOccu
 void Tree::Reset()
 {
 	m_treeModel.Clear();
+	m_strandModel = {};
 	m_treeModel.m_index = GetOwner().GetIndex();
 	m_treeVisualizer.Reset(m_treeModel);
 }
@@ -573,7 +574,7 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 
 
 	m_treeVisualizer.OnInspect(m_treeModel);
-
+	m_treeVisualizer.Visualize(m_strandModel);
 	m_treeVisualizer.m_skeletalGraphSettings.OnInspect();
 	if (ImGui::Button("Build Skeletal Graph"))
 	{
