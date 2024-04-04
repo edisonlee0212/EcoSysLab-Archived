@@ -16,10 +16,6 @@ namespace EcoSysLab {
 		 */
 		glm::quat m_globalRotation = glm::vec3(0.0f);
 
-		/**
-		 * \brief The global direction that the rod points to.
-		 */
-		glm::vec3 m_globalDirection = glm::vec3(0.0f);
 		float m_length = 0.0f;
 		float m_thickness = 0.1f;
 		float m_rootDistance = 0.0f;
@@ -29,13 +25,18 @@ namespace EcoSysLab {
 
 		glm::vec4 m_color = glm::vec4(1.0f);
 		[[nodiscard]] glm::vec3 GetGlobalEndPosition() const;
+		[[nodiscard]] glm::vec3 GetGlobalDirection() const;
 	};
 
 	inline glm::vec3 NodeInfo::GetGlobalEndPosition() const
 	{
-		return m_globalPosition + m_globalDirection * m_length;
+		return m_globalPosition + glm::normalize(m_globalRotation * glm::vec3(0, 0, -1)) * m_length;
 	}
 
+	inline glm::vec3 NodeInfo::GetGlobalDirection() const
+	{
+		return glm::normalize(m_globalRotation * glm::vec3(0, 0, -1));
+	}
 	struct FlowInfo {
 		glm::vec3 m_globalStartPosition = glm::vec3(0.0f);
 		glm::quat m_globalStartRotation = glm::vec3(0.0f);

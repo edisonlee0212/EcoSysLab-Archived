@@ -130,7 +130,7 @@ namespace EcoSysLab {
 
 			glm::vec3 positionStart = internodeInfo.m_globalPosition;
 			glm::vec3 positionEnd =
-				positionStart + internodeInfo.m_length * (settings.m_smoothness ? 1.0f - settings.m_baseControlPointRatio : 1.0f) * internodeInfo.m_globalDirection;
+				positionStart + internodeInfo.m_length * (settings.m_smoothness ? 1.0f - settings.m_baseControlPointRatio : 1.0f) * internodeInfo.GetGlobalDirection();
 			float thicknessStart = internodeInfo.m_thickness;
 			float thicknessEnd = internodeInfo.m_thickness;
 
@@ -141,7 +141,7 @@ namespace EcoSysLab {
 					parentInternode.m_info.m_regulatedGlobalRotation *
 					glm::vec3(0, 0, -1);
 				positionStart =
-					parentInternode.m_info.m_globalPosition + (parentInternode.m_info.m_length * (settings.m_smoothness ? 1.0f - settings.m_baseControlPointRatio : 1.0f)) * parentInternode.m_info.m_globalDirection;
+					parentInternode.m_info.m_globalPosition + (parentInternode.m_info.m_length * (settings.m_smoothness ? 1.0f - settings.m_baseControlPointRatio : 1.0f)) * parentInternode.m_info.GetGlobalDirection();
 			}
 
 			if (settings.m_overrideRadius) {
@@ -660,7 +660,7 @@ namespace EcoSysLab {
 
 			glm::vec3 positionStart = internodeInfo.m_globalPosition;
 			glm::vec3 positionEnd =
-				positionStart + internodeInfo.m_length * (settings.m_smoothness ? 1.0f - settings.m_baseControlPointRatio : 1.0f) * internodeInfo.m_globalDirection;
+				positionStart + internodeInfo.m_length * (settings.m_smoothness ? 1.0f - settings.m_baseControlPointRatio : 1.0f) * internodeInfo.GetGlobalDirection();
 			float thicknessStart = internodeInfo.m_thickness;
 			float thicknessEnd = internodeInfo.m_thickness;
 
@@ -671,7 +671,7 @@ namespace EcoSysLab {
 					parentInternode.m_info.m_regulatedGlobalRotation *
 					glm::vec3(0, 0, -1);
 				positionStart =
-					parentInternode.m_info.m_globalPosition + (parentInternode.m_info.m_length * (settings.m_smoothness ? 1.0f - settings.m_baseControlPointRatio : 1.0f)) * parentInternode.m_info.m_globalDirection;
+					parentInternode.m_info.m_globalPosition + (parentInternode.m_info.m_length * (settings.m_smoothness ? 1.0f - settings.m_baseControlPointRatio : 1.0f)) * parentInternode.m_info.GetGlobalDirection();
 			}
 
 			if (settings.m_overrideRadius) {

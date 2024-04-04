@@ -352,7 +352,7 @@ void TreeModel::CalculateShootFlux(const glm::mat4& globalTransform, ClimateMode
 		internodeData.m_lightIntensity = climateModel.m_environmentGrid.Sample(position, internodeData.m_lightDirection);
 		if (internodeData.m_lightIntensity <= glm::epsilon<float>())
 		{
-			internodeData.m_lightDirection = glm::normalize(internodeInfo.m_globalDirection);
+			internodeData.m_lightDirection = glm::normalize(internodeInfo.GetGlobalDirection());
 		}
 		internodeData.m_spaceOccupancy = climateModel.m_environmentGrid.m_voxel.Peek(position).m_totalBiomass;
 	}
@@ -484,7 +484,7 @@ void TreeModel::CalculateTransform(const ShootGrowthController& shootGrowthContr
 			internodeInfo.m_globalPosition = internodeData.m_desiredGlobalPosition = glm::vec3(0.0f);
 			internodeData.m_desiredLocalRotation = glm::vec3(0.0f);
 			internodeInfo.m_globalRotation = internodeInfo.m_regulatedGlobalRotation = internodeData.m_desiredGlobalRotation = glm::vec3(glm::radians(90.0f), 0.0f, 0.0f);
-			internodeInfo.m_globalDirection = glm::normalize(internodeInfo.m_globalRotation * glm::vec3(0, 0, -1));
+			internodeInfo.GetGlobalDirection() = glm::normalize(internodeInfo.m_globalRotation * glm::vec3(0, 0, -1));
 		}
 		else {
 			auto& parentInternode = m_shootSkeleton.RefNode(internode.GetParentHandle());
@@ -502,10 +502,10 @@ void TreeModel::CalculateTransform(const ShootGrowthController& shootGrowthContr
 			auto regulatedUp = glm::normalize(glm::cross(glm::cross(front, parentRegulatedUp), front));
 			internodeInfo.m_regulatedGlobalRotation = glm::quatLookAt(front, regulatedUp);
 
-			internodeInfo.m_globalDirection = glm::normalize(internodeInfo.m_globalRotation * glm::vec3(0, 0, -1));
+			internodeInfo.GetGlobalDirection() = glm::normalize(internodeInfo.m_globalRotation * glm::vec3(0, 0, -1));
 			internodeInfo.m_globalPosition =
 				parentInternode.m_info.m_globalPosition
-				+ parentInternode.m_info.m_length * parentInternode.m_info.m_globalDirection;
+				+ parentInternode.m_info.m_length * parentInternode.m_info.GetGlobalDirection();
 
 			if (shootGrowthController.m_branchPush && !internode.IsApical())
 			{
@@ -529,7 +529,7 @@ void TreeModel::CalculateTransform(const ShootGrowthController& shootGrowthContr
 		m_shootSkeleton.m_min = glm::min(m_shootSkeleton.m_min, internodeInfo.m_globalPosition);
 		m_shootSkeleton.m_max = glm::max(m_shootSkeleton.m_max, internodeInfo.m_globalPosition);
 		const auto endPosition = internodeInfo.m_globalPosition
-			+ internodeInfo.m_length * internodeInfo.m_globalDirection;
+			+ internodeInfo.m_length * internodeInfo.GetGlobalDirection();
 		m_shootSkeleton.m_min = glm::min(m_shootSkeleton.m_min, endPosition);
 		m_shootSkeleton.m_max = glm::max(m_shootSkeleton.m_max, endPosition);
 

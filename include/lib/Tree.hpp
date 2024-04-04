@@ -97,7 +97,7 @@ namespace EcoSysLab {
 		void ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings, const std::filesystem::path& path);
 		[[maybe_unused]] bool ExportIOTree(const std::filesystem::path& path) const;
 		void ExportRadialBoundingVolume(const std::shared_ptr<RadialBoundingVolume>& rbv) const;
-
+		void CollectAssetRef(std::vector<AssetRef>& list) override;
 		void Deserialize(const YAML::Node& in) override;
 	};
 

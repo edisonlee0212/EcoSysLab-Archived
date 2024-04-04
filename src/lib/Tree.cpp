@@ -230,13 +230,11 @@ void Tree::InitializeSkeletalGraph(NodeHandle baseNodeHandle,
 
 			{
 				const glm::vec3 position = node.m_info.m_globalPosition;
-				const auto direction = node.m_info.m_globalDirection;
-				auto rotation = glm::quatLookAt(
-					direction, glm::vec3(direction.y, direction.z, direction.x));
+				auto rotation = node.m_info.m_globalRotation;
 				rotation *= glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));
 				const glm::mat4 rotationTransform = glm::mat4_cast(rotation);
 				lineParticleInfos[internodeIndex].m_instanceMatrix.m_value =
-					glm::translate(position + (node.m_info.m_length / 2.0f) * direction) *
+					glm::translate(position + (node.m_info.m_length / 2.0f) * node.m_info.GetGlobalDirection()) *
 					rotationTransform *
 					glm::scale(glm::vec3(
 						m_treeVisualizer.m_skeletalGraphSettings.m_lineThickness * (subTree ? 1.25f : 1.0f),
@@ -253,9 +251,7 @@ void Tree::InitializeSkeletalGraph(NodeHandle baseNodeHandle,
 			}
 			{
 				const glm::vec3 position = node.m_info.m_globalPosition;
-				const auto direction = node.m_info.m_globalDirection;
-				auto rotation = glm::quatLookAt(
-					direction, glm::vec3(direction.y, direction.z, direction.x));
+				auto rotation = node.m_info.m_globalRotation;
 				rotation *= glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));
 				const glm::mat4 rotationTransform = glm::mat4_cast(rotation);
 				float thicknessFactor = node.m_info.m_thickness;
@@ -282,14 +278,9 @@ void Tree::InitializeSkeletalGraph(NodeHandle baseNodeHandle,
 }
 
 void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
-
-	bool modelChanged = false;
 	const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
 	const auto scene = GetScene();
-	if (editorLayer->DragAndDropButton<TreeDescriptor>(m_treeDescriptor, "TreeDescriptor", true)) {
-		m_treeModel.Clear();
-		modelChanged = true;
-	}
+	editorLayer->DragAndDropButton<TreeDescriptor>(m_treeDescriptor, "TreeDescriptor", true);
 	static bool showSpaceColonizationGrid = false;
 
 	static std::shared_ptr<ParticleInfoList> spaceColonizationGridParticleInfoList;
@@ -899,7 +890,7 @@ std::shared_ptr<Strands> Tree::GenerateTwigStrands(const TreeMeshGeneratorSettin
 
 			glm::vec3 positionStart = internodeInfo.m_globalPosition;
 			glm::vec3 positionEnd =
-				positionStart + internodeInfo.m_length * (meshGeneratorSettings.m_smoothness ? 1.0f - meshGeneratorSettings.m_baseControlPointRatio * 0.5f : 1.0f) * internodeInfo.m_globalDirection;
+				positionStart + internodeInfo.m_length * (meshGeneratorSettings.m_smoothness ? 1.0f - meshGeneratorSettings.m_baseControlPointRatio * 0.5f : 1.0f) * internodeInfo.GetGlobalDirection();
 
 			BezierCurve curve = BezierCurve(
 				positionStart,
@@ -1965,8 +1956,8 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 				treePart.m_baseLine.m_endPosition = centerInternode.m_info.GetGlobalEndPosition();
 				treePart.m_baseLine.m_endRadius = centerInternode.m_info.m_thickness;
 
-				treePart.m_baseLine.m_startDirection = startInternode.m_info.m_globalDirection;
-				treePart.m_baseLine.m_endDirection = centerInternode.m_info.m_globalDirection;
+				treePart.m_baseLine.m_startDirection = startInternode.m_info.GetGlobalDirection();
+				treePart.m_baseLine.m_endDirection = centerInternode.m_info.GetGlobalDirection();
 
 				treePart.m_baseLine.m_lineIndex = treePart.m_lineIndex.front();
 				for (int i = 1; i < treePart.m_nodeHandles.size(); i++)
@@ -1981,8 +1972,8 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 						newLine.m_endPosition = endInternode.m_info.GetGlobalEndPosition();
 						newLine.m_endRadius = endInternode.m_info.m_thickness;
 
-						newLine.m_startDirection = centerInternode.m_info.m_globalDirection;
-						newLine.m_endDirection = endInternode.m_info.m_globalDirection;
+						newLine.m_startDirection = centerInternode.m_info.GetGlobalDirection();
+						newLine.m_endDirection = endInternode.m_info.GetGlobalDirection();
 
 						newLine.m_lineIndex = treePart.m_lineIndex[i];
 					}
@@ -1996,8 +1987,8 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 				treePart.m_baseLine.m_endPosition = endInternode.m_info.GetGlobalEndPosition();
 				treePart.m_baseLine.m_endRadius = endInternode.m_info.m_thickness;
 
-				treePart.m_baseLine.m_startDirection = startInternode.m_info.m_globalDirection;
-				treePart.m_baseLine.m_endDirection = endInternode.m_info.m_globalDirection;
+				treePart.m_baseLine.m_startDirection = startInternode.m_info.GetGlobalDirection();
+				treePart.m_baseLine.m_endDirection = endInternode.m_info.GetGlobalDirection();
 
 				treePart.m_baseLine.m_lineIndex = treePart.m_lineIndex.front();
 			}
@@ -2112,6 +2103,14 @@ void Tree::ExportRadialBoundingVolume(const std::shared_ptr<RadialBoundingVolume
 		points.emplace_back(node.m_info.GetGlobalEndPosition());
 	}
 	rbv->CalculateVolume(points);
+}
+
+void Tree::CollectAssetRef(std::vector<AssetRef>& list)
+{
+	if(m_treeDescriptor.Get<TreeDescriptor>())
+	{
+		list.emplace_back(m_treeDescriptor);
+	}
 }
 
 

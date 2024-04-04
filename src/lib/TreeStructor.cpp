@@ -151,18 +151,17 @@ void TreeStructor::CalculateNodeTransforms(ReconstructionSkeleton& skeleton)
 		auto& nodeData = node.m_data;
 		if (node.GetParentHandle() != -1) {
 			auto& parentInfo = skeleton.RefNode(node.GetParentHandle()).m_info;
-			nodeInfo.m_globalDirection = glm::normalize(nodeInfo.m_globalRotation * glm::vec3(0, 0, -1));
 			nodeInfo.m_globalPosition =
 				parentInfo.m_globalPosition
-				+ parentInfo.m_length * parentInfo.m_globalDirection;
+				+ parentInfo.m_length * parentInfo.GetGlobalDirection();
 			auto parentRegulatedUp = parentInfo.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
-			auto regulatedUp = glm::normalize(glm::cross(glm::cross(nodeInfo.m_globalDirection, parentRegulatedUp), nodeInfo.m_globalDirection));
-			nodeInfo.m_regulatedGlobalRotation = glm::quatLookAt(nodeInfo.m_globalDirection, regulatedUp);
+			auto regulatedUp = glm::normalize(glm::cross(glm::cross(nodeInfo.GetGlobalDirection(), parentRegulatedUp), nodeInfo.GetGlobalDirection()));
+			nodeInfo.m_regulatedGlobalRotation = glm::quatLookAt(nodeInfo.GetGlobalDirection(), regulatedUp);
 		}
 		skeleton.m_min = glm::min(skeleton.m_min, nodeInfo.m_globalPosition);
 		skeleton.m_max = glm::max(skeleton.m_max, nodeInfo.m_globalPosition);
 		const auto endPosition = nodeInfo.m_globalPosition
-			+ nodeInfo.m_length * nodeInfo.m_globalDirection;
+			+ nodeInfo.m_length * nodeInfo.GetGlobalDirection();
 		skeleton.m_min = glm::min(skeleton.m_min, endPosition);
 		skeleton.m_max = glm::max(skeleton.m_max, endPosition);
 	}
@@ -1896,7 +1895,7 @@ void TreeStructor::SpaceColonization()
 			voxel.m_handle = internodeHandle;
 			voxel.m_index = skeletonIndex;
 			voxel.m_position = internode.m_data.m_globalEndPosition;
-			voxel.m_direction = internode.m_info.m_globalDirection;
+			voxel.m_direction = internode.m_info.GetGlobalDirection();
 			internodeEndGrid.Ref(voxel.m_position).emplace_back(voxel);
 		}
 	}
@@ -2000,14 +1999,15 @@ void TreeStructor::SpaceColonization()
 				auto& newInternode = skeleton.RefNode(newInternodeHandle);
 				newInternode.m_info.m_globalPosition = oldInternode.m_info.GetGlobalEndPosition();
 				newInternode.m_info.m_length = m_reconstructionSettings.m_internodeLength;
-				newInternode.m_info.m_globalDirection = glm::normalize(oldInternode.m_data.m_regrowDirection);
-				newInternode.m_data.m_globalEndPosition = oldInternode.m_data.m_globalEndPosition + newInternode.m_info.m_length * newInternode.m_info.m_globalDirection;
+				newInternode.m_info.m_globalRotation = glm::quatLookAt(
+					oldInternode.m_data.m_regrowDirection, glm::vec3(oldInternode.m_data.m_regrowDirection.y, oldInternode.m_data.m_regrowDirection.z, oldInternode.m_data.m_regrowDirection.x));
+				newInternode.m_data.m_globalEndPosition = oldInternode.m_data.m_globalEndPosition + newInternode.m_info.m_length * newInternode.m_info.GetGlobalDirection();
 				newInternode.m_data.m_regrowth = true;
 				PointData voxel;
 				voxel.m_handle = newInternodeHandle;
 				voxel.m_index = skeletonIndex;
 				voxel.m_position = newInternode.m_data.m_globalEndPosition;
-				voxel.m_direction = newInternode.m_info.m_globalDirection;
+				voxel.m_direction = newInternode.m_info.GetGlobalDirection();
 				internodeEndGrid.Ref(voxel.m_position).emplace_back(voxel);
 			}
 		}
@@ -2179,7 +2179,7 @@ void TreeStructor::InitializeSkeletalGraph(const std::shared_ptr<Mesh>& pointMes
 				const auto& node = skeleton.PeekNode(internodeHandle);
 				{
 					const glm::vec3 position = skeleton.m_data.m_rootPosition + node.m_info.m_globalPosition;
-					const auto direction = node.m_info.m_globalDirection;
+					const auto direction = node.m_info.GetGlobalDirection();
 					auto rotation = glm::quatLookAt(
 						direction, glm::vec3(direction.y, direction.z, direction.x));
 					rotation *= glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));
@@ -2195,7 +2195,7 @@ void TreeStructor::InitializeSkeletalGraph(const std::shared_ptr<Mesh>& pointMes
 				}
 				{
 					const glm::vec3 position = skeleton.m_data.m_rootPosition + node.m_info.m_globalPosition;
-					const auto direction = node.m_info.m_globalDirection;
+					const auto direction = node.m_info.GetGlobalDirection();
 					auto rotation = glm::quatLookAt(
 						direction, glm::vec3(direction.y, direction.z, direction.x));
 					rotation *= glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));
@@ -2288,7 +2288,7 @@ std::vector<std::shared_ptr<Mesh>> TreeStructor::GenerateFoliageMeshes()
 				for (int i = 0; i < foliageDescriptor->m_leafCountPerInternode; i++)
 				{
 					auto leafSize = foliageDescriptor->m_leafSize;
-					glm::quat rotation = internodeInfo.m_globalDirection * glm::quat(glm::radians(glm::linearRand(glm::vec3(0.0f), glm::vec3(360.0f))));
+					glm::quat rotation = internodeInfo.GetGlobalDirection() * glm::quat(glm::radians(glm::linearRand(glm::vec3(0.0f), glm::vec3(360.0f))));
 					auto front = rotation * glm::vec3(0, 0, -1);
 					auto foliagePosition = internodeInfo.m_globalPosition + front * (leafSize.y * 1.5f) + glm::sphericalRand(1.0f) * glm::linearRand(0.0f, foliageDescriptor->m_positionVariance);
 					auto leafTransform = glm::translate(foliagePosition) * glm::mat4_cast(rotation) * glm::scale(glm::vec3(leafSize.x, 1.0f, leafSize.y));

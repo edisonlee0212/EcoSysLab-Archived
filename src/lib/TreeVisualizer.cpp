@@ -265,14 +265,11 @@ void TreeVisualizer::SyncMatrices(const ShootSkeleton& skeleton, const std::shar
 			}
 			walker = skeleton.PeekNode(walker).GetParentHandle();
 		}
-		const glm::vec3 position = node.m_info.m_globalPosition;
-		const auto direction = node.m_info.m_globalDirection;
-		auto rotation = glm::quatLookAt(
-			direction, glm::vec3(direction.y, direction.z, direction.x));
+		auto rotation = node.m_info.m_globalRotation;
 		rotation *= glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));
 		const glm::mat4 rotationTransform = glm::mat4_cast(rotation);
 		if (m_skeletalGraphSettings.m_lineThickness != 0.0f) {
-			matrices[i].m_instanceMatrix.m_value = glm::translate(position + (node.m_info.m_length / 2.0f) * direction) *
+			matrices[i].m_instanceMatrix.m_value = glm::translate(node.m_info.m_globalPosition + (node.m_info.m_length / 2.0f) * node.m_info.GetGlobalDirection()) *
 				rotationTransform *
 				glm::scale(glm::vec3(
 					m_skeletalGraphSettings.m_lineThickness * (subTree ? 1.25f : 1.0f),
@@ -282,7 +279,7 @@ void TreeVisualizer::SyncMatrices(const ShootSkeleton& skeleton, const std::shar
 		else
 		{
 			matrices[i].m_instanceMatrix.m_value =
-				glm::translate(position + (node.m_info.m_length / 2.0f) * direction) *
+				glm::translate(node.m_info.m_globalPosition + (node.m_info.m_length / 2.0f) * node.m_info.GetGlobalDirection()) *
 				rotationTransform *
 				glm::scale(glm::vec3(
 					node.m_info.m_thickness,
@@ -510,14 +507,11 @@ void TreeVisualizer::Visualize(const TreeModel& treeModel, const GlobalTransform
 			if (m_selectedInternodeHandle != -1)
 			{
 				const auto& node = treeSkeleton.PeekNode(m_selectedInternodeHandle);
-				glm::vec3 position = node.m_info.m_globalPosition;
-				const auto direction = node.m_info.m_globalDirection;
-				auto rotation = glm::quatLookAt(
-					direction, glm::vec3(direction.y, direction.z, direction.x));
+				auto rotation = node.m_info.m_globalRotation;
 				rotation *= glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));
 				const glm::mat4 rotationTransform = glm::mat4_cast(rotation);
 				const glm::vec3 selectedCenter =
-					position + node.m_info.m_length * m_selectedInternodeLengthFactor * direction;
+					node.m_info.m_globalPosition + node.m_info.m_length * m_selectedInternodeLengthFactor * node.m_info.GetGlobalDirection();
 				const auto matrix = globalTransform.m_value * glm::translate(selectedCenter) *
 					rotationTransform *
 					glm::scale(glm::vec3(

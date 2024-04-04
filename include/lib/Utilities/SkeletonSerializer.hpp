@@ -127,7 +127,6 @@ namespace EcoSysLab {
 					const auto& inNodeInfo = inNode["IF"];
 					if (inNodeInfo["GP"]) node.m_info.m_globalPosition = inNodeInfo["GP"].as<glm::vec3>();
 					if (inNodeInfo["GR"]) node.m_info.m_globalRotation = inNodeInfo["GR"].as<glm::quat>();
-					node.m_info.m_globalDirection = glm::normalize(node.m_info.m_globalRotation * glm::vec3(0, 0, -1));
 					if (inNodeInfo["L"]) node.m_info.m_length = inNodeInfo["L"].as<float>();
 					if (inNodeInfo["T"]) node.m_info.m_thickness = inNodeInfo["T"].as<float>();
 					if (inNodeInfo["C"]) node.m_info.m_color = inNodeInfo["C"].as<glm::vec4>();

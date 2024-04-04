@@ -1,5 +1,7 @@
 #include "StrandModel.hpp"
 
+#include <any>
+
 using namespace EcoSysLab;
 
 
@@ -557,7 +559,7 @@ void StrandModel::CalculateShiftTask(const NodeHandle nodeHandle, const StrandMo
 void StrandModel::ApplyProfile(const StrandModelParameters& strandModelParameters,
 	const NodeHandle nodeHandle)
 {
-	const auto& node = m_strandModelSkeleton.RefNode(nodeHandle);
+	auto& node = m_strandModelSkeleton.RefNode(nodeHandle);
 	const auto currentFront = node.m_info.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
 	const auto currentUp = node.m_info.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
 	const auto currentLeft = node.m_info.m_regulatedGlobalRotation * glm::vec3(1, 0, 0);
@@ -571,6 +573,10 @@ void StrandModel::ApplyProfile(const StrandModelParameters& strandModelParameter
 		newStrandSegment.m_info.m_globalPosition = node.m_info.GetGlobalEndPosition()
 			+ node.m_data.m_strandRadius * particle.GetInitialPosition().x * currentLeft
 			+ node.m_data.m_strandRadius * particle.GetInitialPosition().y * currentUp;
+		if(glm::any(glm::isnan(newStrandSegment.m_info.m_globalPosition)))
+		{
+			EVOENGINE_ERROR("Nan!");
+		}
 		if (wound)
 		{
 			newStrandSegment.m_info.m_globalPosition += currentFront * glm::max(0.0f, strandModelParameters.m_cladoptosisDistribution.GetValue(glm::max(0.0f, (strandModelParameters.m_cladoptosisRange - particle.GetDistanceToBoundary()) / strandModelParameters.m_cladoptosisRange)));
@@ -642,7 +648,7 @@ void StrandModel::CalculateStrandProfileAdjustedTransforms(const StrandModelPara
 		node.m_info.m_globalPosition = parentNode.m_info.GetGlobalEndPosition();
 		glm::quat parentGlobalRotation = parentNode.m_info.m_globalRotation;
 		node.m_data.m_strandRadius = strandModelParameters.m_strandRadiusDistribution.GetValue(node.m_info.m_rootDistance / maxRootDistance);
-		auto newGlobalEndPosition = node.m_info.m_globalPosition + node.m_info.m_globalDirection * node.m_info.m_length;
+		auto newGlobalEndPosition = node.m_info.m_globalPosition + node.m_info.GetGlobalDirection() * node.m_info.m_length;
 		node.m_info.m_globalRotation = parentGlobalRotation * (glm::inverse(parentNode.m_info.m_regulatedGlobalRotation) * node.m_info.m_regulatedGlobalRotation);
 
 		const auto parentUp = parentGlobalRotation * glm::vec3(0, 1, 0);
@@ -671,12 +677,19 @@ void StrandModel::CalculateStrandProfileAdjustedTransforms(const StrandModelPara
 		}
 		newGlobalEndPosition += parentUp * node.m_data.m_shift.y * strandModelParameters.m_shiftPushRatio * node.m_data.m_strandRadius;
 		newGlobalEndPosition += parentLeft * node.m_data.m_shift.x * strandModelParameters.m_shiftPushRatio * node.m_data.m_strandRadius;
+		
+		assert(!glm::any(glm::isnan(node.m_info.m_globalPosition)));
+		assert(!glm::any(glm::isnan(newGlobalEndPosition)));
 
 		const auto diff = newGlobalEndPosition - node.m_info.m_globalPosition;
 		node.m_info.m_length = glm::length(diff);
-		node.m_info.m_globalDirection = glm::normalize(diff);
 	}
 	m_strandModelSkeleton.CalculateRegulatedGlobalRotation();
+	for (const auto& nodeHandle : sortedInternodeList)
+	{
+		auto& node = m_strandModelSkeleton.RefNode(nodeHandle);
+		node.m_info.m_globalRotation = node.m_info.m_regulatedGlobalRotation;
+	}
 }
 
 
@@ -718,10 +731,11 @@ operator-(const EvoEngine::StrandPoint& lhs, const EvoEngine::StrandPoint& rhs) 
 	return retVal;
 }
 
-glm::vec3 StrandModel::InterpolateStrandSegmentPosition(const StrandSegmentHandle strandSegmentHandle, const float a) const
+glm::vec3 StrandModel::InterpolateStrandSegmentPosition(const StrandSegmentHandle strandSegmentHandle, float a) const
 {
 	assert(strandSegmentHandle >= 0);
 	assert(a >= 0.f && a <= 1.f);
+	a = glm::clamp(a, 0.0f, 1.0f);
 	const auto& strandGroup = m_strandModelSkeleton.m_data.m_strandGroup;
 	assert(strandGroup.PeekStrandSegments().size() > strandSegmentHandle);
 	const auto& strandSegment = strandGroup.PeekStrandSegment(strandSegmentHandle);
@@ -761,6 +775,10 @@ glm::vec3 StrandModel::InterpolateStrandSegmentPosition(const StrandSegmentHandl
 	}
 	glm::vec3 position, tangent;
 	Strands::CubicInterpolation(p[0], p[1], p[2], p[3], position, tangent, a);
+	if(glm::any(glm::isnan(position)))
+	{
+		EVOENGINE_ERROR("nan");
+	}
 	return position;
 }
 
