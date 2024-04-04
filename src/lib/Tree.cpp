@@ -732,7 +732,7 @@ std::shared_ptr<Mesh> Tree::GenerateBranchMesh(const TreeMeshGeneratorSettings& 
 		}
 		std::shared_ptr<BranchShape> branchShape{};
 		branchShape = treeDescriptor->m_shootBranchShape.Get<BranchShape>();
-		if (!m_strandModel.m_strandModelSkeleton.RefRawNodes().empty())
+		if (m_strandModel.m_strandModelSkeleton.RefRawNodes().size() == m_treeModel.m_shootSkeleton.RefRawNodes().size())
 		{
 			CylindricalMeshGenerator<StrandModelSkeletonData, StrandModelFlowData, StrandModelNodeData>::Generate(m_strandModel.m_strandModelSkeleton, vertices, indices, meshGeneratorSettings, [&](float xFactor, float distanceToRoot)
 				{
