@@ -116,17 +116,17 @@ void sorghum_field_point_cloud()
 	sorghumPointCloudPointSettings.m_instanceIndex = true;
 	sorghumPointCloudPointSettings.m_typeIndex = true;
 	sorghumPointCloudPointSettings.m_leafIndex = true;
-	
+
 	int gridSize = 6;
 	float gridDistance = 0.75f;
 	float randomShift = 0.25f;
-	sorghumGantryCaptureSettings->m_gridSize = { gridSize, gridSize};
-	sorghumGantryCaptureSettings->m_gridDistance = { gridDistance, gridDistance};
-	RectangularSorghumFieldPattern pattern {};
+	sorghumGantryCaptureSettings->m_gridSize = { gridSize, gridSize };
+	sorghumGantryCaptureSettings->m_gridDistance = { gridDistance, gridDistance };
+	RectangularSorghumFieldPattern pattern{};
 	pattern.m_gridSize = { gridSize, gridSize };
 	pattern.m_gridDistance = { gridDistance, gridDistance };
 	pattern.m_randomShiftMean = { randomShift,randomShift };
-	pattern.m_distanceVariance = { 0.3f,0.3f};
+	pattern.m_distanceVariance = { 0.3f,0.3f };
 	int index = 0;
 	for (int i = 0; i < 4096; i++) {
 		std::filesystem::path target_descriptor_folder_path = project_folder_path / "SorghumDescriptor";
@@ -196,7 +196,7 @@ void tree_growth_mesh()
 
 	std::filesystem::path output_root = "D:\\TreeGrowth\\";
 	tmgs.m_enableFoliage = true;
-	std::filesystem::path target_descriptor_folder_path = project_folder_path / "AppleTree";
+	std::filesystem::path target_descriptor_folder_path = project_folder_path / "TreeDescriptors";
 	std::vector<std::shared_ptr<TreeDescriptor>> collectedTreeDescriptors{};
 	for (const auto& i : std::filesystem::recursive_directory_iterator(target_descriptor_folder_path))
 	{
@@ -217,6 +217,41 @@ void tree_growth_mesh()
 	}
 }
 
+void apple_tree_growth()
+{
+	//std::filesystem::path project_folder_path = "C:\\Users\\62469\\Work\\TreeEngine\\EcoSysLab\\Resources\\EcoSysLabProject";
+	std::filesystem::path project_folder_path = "C:\\Users\\lllll\\Documents\\GitHub\\EcoSysLab\\Resources\\EcoSysLabProject";
+	std::filesystem::path project_path = project_folder_path / "test.eveproj";
+
+
+	start_project_windowless(project_path);
+
+	TreeMeshGeneratorSettings tmgs{};
+	tmgs.m_xSubdivision = 0.01f;
+	tmgs.m_branchYSubdivision = 0.03f;
+	tmgs.m_trunkYSubdivision = 0.01f;
+	tmgs.m_enableFoliage = true;
+	tmgs.m_enableTwig = true;
+
+	std::filesystem::path output_root = "D:\\TreeGrowth\\";
+	tmgs.m_enableFoliage = true;
+	std::filesystem::path target_descriptor_path = project_folder_path / "TreeDescriptors" / "Apple.tree";
+	std::vector<std::shared_ptr<TreeDescriptor>> collectedTreeDescriptors{};
+
+	for (int treeIndex = 0; treeIndex < 500; treeIndex++)
+	{
+		std::string name = "Tree_" + std::to_string(treeIndex);
+		std::string infoName = "Info_" + std::to_string(treeIndex);
+		std::string trunkName = "Trunk_" + std::to_string(treeIndex);
+		std::filesystem::path target_info_path = output_root / (infoName + ".txt");
+		std::filesystem::path target_tree_mesh_path = output_root / (name + ".obj");
+		std::filesystem::path target_trunk_mesh_path = output_root / (trunkName + ".obj");
+		std::vector<int> nodes = { 5000, 10000, 15000, 20000, 25000 };
+		DatasetGenerator::GenerateTreeMesh(target_descriptor_path.string(), 0.08220f, 999, nodes, tmgs, target_tree_mesh_path.string());
+	}
+}
+
 int main() {
-	sorghum_field_point_cloud();
+	apple_tree_growth();
+	//sorghum_field_point_cloud();
 }
