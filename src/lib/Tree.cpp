@@ -547,34 +547,32 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 		ImGui::ColorEdit4("Boundary color", &strandModelParameters.m_boundaryPointColor.x);
 		ImGui::ColorEdit4("Content color", &strandModelParameters.m_contentPointColor.x);
 
-		
-		
+		if (ImGui::Button("Rebuild Strand Model"))
+		{
+			BuildStrandModel();
+		}
+
+		ImGui::SameLine();
+		if (ImGui::Button("Clear Strand Model"))
+		{
+			m_strandModel = {};
+			//m_strandModel.ResetAllProfiles(m_strandModelParameters);
+		}
 
 		if (ImGui::TreeNodeEx("Strand Model Mesh Generator Settings", ImGuiTreeNodeFlags_DefaultOpen)) {
 			m_strandModelMeshGeneratorSettings.OnInspect(editorLayer);
 			ImGui::TreePop();
 		}
 
-		
-
 		ImGui::TreePop();
 	}
 
-	if (ImGui::Button("Prepare profiles"))
-	{
-		PrepareProfiles();
-	}
-	ImGui::SameLine();
-	if (ImGui::Button("Reset profiles"))
-	{
-		m_strandModel.ResetAllProfiles(m_strandModelParameters);
-	}
-	if (ImGui::Button("Build Strands"))
+	if (ImGui::Button("Build StrandRenderer"))
 	{
 		InitializeStrandRenderer();
 	}
 	ImGui::SameLine();
-	if (ImGui::Button("Clear Strands"))
+	if (ImGui::Button("Clear StrandRenderer"))
 	{
 		ClearStrandRenderer();
 	}
@@ -672,7 +670,7 @@ bool Tree::OnInspectTreeGrowthSettings(TreeGrowthSettings& treeGrowthSettings)
 	return changed;
 }
 
-void Tree::PrepareProfiles()
+void Tree::BuildStrandModel()
 {
 	m_strandModel.m_strandModelSkeleton.Clone(m_treeModel.RefShootSkeleton());
 
@@ -2306,8 +2304,12 @@ void Tree::InitializeStrandRenderer()
 	const auto strandsEntity = scene->CreateEntity("Branch Strands");
 	scene->SetParent(strandsEntity, owner);
 
-	const auto renderer = scene->GetOrSetPrivateComponent<StrandsRenderer>(strandsEntity).lock();
+	if(m_strandModel.m_strandModelSkeleton.RefRawNodes().size() != m_treeModel.RefShootSkeleton().RefRawNodes().size())
+	{
+		BuildStrandModel();
+	}
 
+	const auto renderer = scene->GetOrSetPrivateComponent<StrandsRenderer>(strandsEntity).lock();
 	renderer->m_strands = GenerateStrands();
 
 	const auto material = ProjectManager::CreateTemporaryAsset<Material>();
@@ -2340,6 +2342,10 @@ void Tree::InitializeStrandRenderer(const std::shared_ptr<Strands>& strands) con
 void Tree::InitializeStrandModelMeshRenderer(const StrandModelMeshGeneratorSettings& strandModelMeshGeneratorSettings)
 {
 	ClearStrandModelMeshRenderer();
+	if (m_strandModel.m_strandModelSkeleton.RefRawNodes().size() != m_treeModel.RefShootSkeleton().RefRawNodes().size())
+	{
+		BuildStrandModel();
+	}
 	const auto scene = GetScene();
 	const auto self = GetOwner();
 	const auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();

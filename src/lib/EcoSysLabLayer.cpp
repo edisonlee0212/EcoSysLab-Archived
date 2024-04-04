@@ -582,7 +582,7 @@ void EcoSysLabLayer::Visualization() {
 					}
 					if (m_autoGenerateStrandsAfterEditing || m_autoGenerateStrandMeshAfterEditing)
 					{
-						tree->PrepareProfiles();
+						tree->BuildStrandModel();
 						if (m_autoGenerateStrandsAfterEditing) {
 							auto strands = tree->GenerateStrands();
 							tree->InitializeStrandRenderer(strands);
@@ -949,7 +949,7 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 				}
 				if (m_autoGenerateStrandsAfterEditing || m_autoGenerateStrandMeshAfterEditing)
 				{
-					tree->PrepareProfiles();
+					tree->BuildStrandModel();
 					if (m_autoGenerateStrandsAfterEditing) {
 						auto strands = tree->GenerateStrands();
 						tree->InitializeStrandRenderer(strands);
@@ -1865,7 +1865,7 @@ void EcoSysLabLayer::GenerateStrandModelProfiles() const
 		const auto copiedEntities = *treeEntities;
 		for (auto treeEntity : copiedEntities) {
 			const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
-			tree->PrepareProfiles();
+			tree->BuildStrandModel();
 		}
 	}
 }
