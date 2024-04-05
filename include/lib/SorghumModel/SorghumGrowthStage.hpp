@@ -45,7 +45,7 @@ namespace EcoSysLab {
 		Plot2D<float> m_bendingAlongLeaf;
 		Plot2D<float> m_wavinessAlongLeaf;
 		glm::vec2 m_wavinessPeriodStart = glm::vec2(0.0f);
-		glm::vec2 m_wavinessFrequency = glm::vec2(0.0f);
+		float m_wavinessFrequency = 0.0f;
 
 		bool m_saved = false;
 		SorghumLeafGrowthStage();

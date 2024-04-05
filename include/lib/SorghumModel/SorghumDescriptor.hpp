@@ -23,9 +23,16 @@ public:
   PlottedDistribution<float> m_leafCurling;
   PlottedDistribution<float> m_leafRollAngle;
   PlottedDistribution<float> m_leafBranchingAngle;
+
   PlottedDistribution<float> m_leafBending;
   PlottedDistribution<float> m_leafBendingAcceleration;
   PlottedDistribution<float> m_leafBendingSmoothness;
+
+  //PlottedDistribution<float> m_leafSaggingBase;
+  //PlottedDistribution<float> m_leafSaggingStrength;
+  //PlottedDistribution<float> m_leafGravitropism;
+  
+
   PlottedDistribution<float> m_leafWaviness;
   PlottedDistribution<float> m_leafWavinessFrequency;
   PlottedDistribution<float> m_leafLength;

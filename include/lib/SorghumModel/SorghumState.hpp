@@ -26,6 +26,8 @@ namespace EcoSysLab
 
 		void GenerateGeometry(const glm::vec3 &stemTip, std::vector<Vertex>& vertices,
 			std::vector<unsigned int>& indices) const;
+		void GenerateGeometry(const glm::vec3& stemTip, std::vector<Vertex>& vertices,
+			std::vector<unsigned int>& indices, const std::shared_ptr<ParticleInfoList>& particleInfoList) const;
 	};
 
 	class SorghumStemState
@@ -45,8 +47,6 @@ namespace EcoSysLab
 	public:
 		int m_index = 0;
 		SorghumSpline m_spline;
-		glm::vec2 m_wavinessPeriodStart = glm::vec2(0.0f);
-		glm::vec2 m_wavinessFrequency = glm::vec2(0.0f);
 		bool OnInspect(const std::shared_ptr<EditorLayer>& editorLayer);
 		void Serialize(YAML::Emitter& out) const;
 		void Deserialize(const YAML::Node& in);

@@ -70,6 +70,11 @@ void SorghumPanicleState::GenerateGeometry(const glm::vec3& stemTip, std::vector
 	}
 }
 
+void SorghumPanicleState::GenerateGeometry(const glm::vec3& stemTip, std::vector<Vertex>& vertices,
+	std::vector<unsigned>& indices, const std::shared_ptr<ParticleInfoList>& particleInfoList) const
+{
+}
+
 bool SorghumStemState::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
 	return false;
@@ -146,19 +151,12 @@ bool SorghumLeafState::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer
 
 void SorghumLeafState::Serialize(YAML::Emitter& out) const
 {
-	out << YAML::Key << "m_wavinessPeriodStart" << YAML::Value << m_wavinessPeriodStart;
-	out << YAML::Key << "m_wavinessFrequency" << YAML::Value << m_wavinessFrequency;
 	out << YAML::Key << "m_index" << YAML::Value << m_index;
-	
 }
 
 void SorghumLeafState::Deserialize(const YAML::Node& in)
 {
 	if (in["m_index"]) m_index = in["m_index"].as<int>();
-	if (in["m_wavinessPeriodStart"]) m_wavinessPeriodStart = in["m_wavinessPeriodStart"].as<glm::vec2>();
-	if (in["m_wavinessFrequency"]) m_wavinessFrequency = in["m_wavinessFrequency"].as<glm::vec2>();
-
-	
 }
 
 void SorghumLeafState::GenerateGeometry(std::vector<Vertex>& vertices, std::vector<unsigned>& indices, bool bottomFace, float thickness) const

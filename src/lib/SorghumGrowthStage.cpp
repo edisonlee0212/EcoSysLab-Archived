@@ -9,6 +9,7 @@
 #include "EditorLayer.hpp"
 #include "Application.hpp"
 #include "Scene.hpp"
+#include "Sorghum.hpp"
 #include "Times.hpp"
 using namespace EcoSysLab;
 static const char* StateModes[]{ "Default", "Cubic-Bezier" };
@@ -202,9 +203,9 @@ void SorghumGrowthDescriptor::Deserialize(const YAML::Node& in) {
 		m_mode = in["m_mode"].as<int>();
 	if (in["m_version"])
 		m_version = in["m_version"].as<unsigned>();
-	if (in["m_sorghumStates"]) {
+	if (in["m_sorghumGrowthStages"]) {
 		m_sorghumGrowthStages.clear();
-		for (const auto& inState : in["m_sorghumStates"]) {
+		for (const auto& inState : in["m_sorghumGrowthStages"]) {
 			SorghumGrowthStage state;
 			state.Deserialize(inState);
 			m_sorghumGrowthStages.emplace_back(inState["Time"].as<float>(), state);
@@ -212,9 +213,17 @@ void SorghumGrowthDescriptor::Deserialize(const YAML::Node& in) {
 	}
 }
 
-Entity SorghumGrowthDescriptor::CreateEntity(float time)
+Entity SorghumGrowthDescriptor::CreateEntity(const float time) const
 {
-	return {};
+	const auto scene = Application::GetActiveScene();
+	const auto entity = scene->CreateEntity(GetTitle());
+	const auto sorghum = scene->GetOrSetPrivateComponent<Sorghum>(entity).lock();
+	const auto sorghumState = ProjectManager::CreateTemporaryAsset<SorghumState>();
+	Apply(sorghumState, time);
+	sorghum->m_sorghumState = sorghumState;
+	sorghum->m_sorghumGrowthDescriptor = GetSelf();
+	sorghum->GenerateGeometryEntities(SorghumMeshGeneratorSettings{});
+	return entity;
 }
 
 void SorghumGrowthDescriptor::Add(float time, const SorghumGrowthStage& state) {

@@ -327,9 +327,7 @@ void SorghumDescriptor::Apply(const std::shared_ptr<SorghumState>& targetState, 
 		auto& leafState = targetState->m_leaves[leafIndex];
 		leafState.m_spline.m_segments.clear();
 		leafState.m_index = leafIndex;
-		leafState.m_wavinessFrequency.x = m_leafWavinessFrequency.GetValue(step);
-		leafState.m_wavinessFrequency.y = m_leafWavinessFrequency.GetValue(step);
-
+		
 		float startingPointRatio = m_leafStartingPoint.GetValue(step);
 		float leafLength = m_leafLength.GetValue(step);
 		if (leafLength == 0.0f) return;

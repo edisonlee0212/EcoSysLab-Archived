@@ -34,6 +34,9 @@ void Sorghum::GenerateGeometryEntities(const SorghumMeshGeneratorSettings& sorgh
 		if(const auto sorghumDescriptor = m_sorghumDescriptor.Get<SorghumDescriptor>())
 		{
 			sorghumDescriptor->Apply(sorghumState);
+		}else if (const auto sorghumGrowthDescriptor = m_sorghumGrowthDescriptor.Get<SorghumGrowthDescriptor>())
+		{
+			sorghumGrowthDescriptor->Apply(sorghumState, 1.f);
 		}
 	}
 	
@@ -205,6 +208,7 @@ void Sorghum::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 				sorghumGrowthDescriptor->Apply(sorghumState, time);
 				GenerateGeometryEntities(SorghumMeshGeneratorSettings{});
 			}
+			ImGui::TreePop();
 		}
 	}
 	static bool debugRendering = false;

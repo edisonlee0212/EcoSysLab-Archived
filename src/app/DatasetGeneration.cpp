@@ -56,9 +56,16 @@ void start_project_windowless(const std::filesystem::path& projectPath)
 
 void forest_patch_point_cloud()
 {
-	//std::filesystem::path project_folder_path = "C:\\Users\\62469\\Work\\TreeEngine\\EcoSysLab\\Resources\\EcoSysLabProject";
-	std::filesystem::path project_folder_path = "C:\\Users\\lllll\\Documents\\GitHub\\EcoSysLab\\Resources\\EcoSysLabProject";
-	std::filesystem::path project_path = project_folder_path / "test.eveproj";
+	std::filesystem::path resourceFolderPath("../../../Resources");
+	if (!std::filesystem::exists(resourceFolderPath)) {
+		resourceFolderPath = "../../Resources";
+	}
+	if (!std::filesystem::exists(resourceFolderPath)) {
+		resourceFolderPath = "../Resources";
+	}
+	resourceFolderPath = std::filesystem::absolute(resourceFolderPath);
+
+	std::filesystem::path project_path = resourceFolderPath / "EcoSysLabProject" / "test.eveproj";
 	start_project_windowless(project_path);
 
 	TreeMeshGeneratorSettings tmgs{};
@@ -90,7 +97,7 @@ void forest_patch_point_cloud()
 
 	int index = 0;
 	for (int i = 0; i < 4096; i++) {
-		std::filesystem::path target_descriptor_folder_path = project_folder_path / "Digital Forestry";
+		std::filesystem::path target_descriptor_folder_path = resourceFolderPath / "EcoSysLabProject" / "Digital Forestry";
 		std::string name = "Forest_" + std::to_string(i);
 		std::filesystem::path target_tree_mesh_path = output_root / (name + ".obj");
 		std::filesystem::path target_tree_pointcloud_path = output_root / (name + ".ply");
@@ -102,8 +109,16 @@ void forest_patch_point_cloud()
 
 void sorghum_field_point_cloud()
 {
-	std::filesystem::path project_folder_path = "C:\\Users\\lllll\\Documents\\GitHub\\EcoSysLab\\Resources\\SorghumProject";
-	std::filesystem::path project_path = project_folder_path / "test.eveproj";
+	std::filesystem::path resourceFolderPath("../../../Resources");
+	if (!std::filesystem::exists(resourceFolderPath)) {
+		resourceFolderPath = "../../Resources";
+	}
+	if (!std::filesystem::exists(resourceFolderPath)) {
+		resourceFolderPath = "../Resources";
+	}
+	resourceFolderPath = std::filesystem::absolute(resourceFolderPath);
+
+	std::filesystem::path project_path = resourceFolderPath / "SorghumProject" / "test.eveproj";
 	start_project_windowless(project_path);
 
 	SorghumMeshGeneratorSettings sorghumMeshGeneratorSettings{};
@@ -129,7 +144,7 @@ void sorghum_field_point_cloud()
 	pattern.m_distanceVariance = { 0.3f,0.3f };
 	int index = 0;
 	for (int i = 0; i < 4096; i++) {
-		std::filesystem::path target_descriptor_folder_path = project_folder_path / "SorghumDescriptor";
+		std::filesystem::path target_descriptor_folder_path = resourceFolderPath / "SorghumProject" / "SorghumDescriptor";
 		const auto sorghumDescriptor = std::dynamic_pointer_cast<SorghumDescriptor>(ProjectManager::GetOrCreateAsset(std::filesystem::path("SorghumDescriptor") / "Random.sorghum"));
 		std::string name = "Sorghum_" + std::to_string(i);
 		std::filesystem::path target_tree_pointcloud_path = output_root / (name + ".ply");
@@ -142,9 +157,16 @@ void sorghum_field_point_cloud()
 }
 void tree_trunk_mesh()
 {
-	//std::filesystem::path project_folder_path = "C:\\Users\\62469\\Work\\TreeEngine\\EcoSysLab\\Resources\\EcoSysLabProject";
-	std::filesystem::path project_folder_path = "C:\\Users\\lllll\\Documents\\GitHub\\EcoSysLab\\Resources\\EcoSysLabProject";
-	std::filesystem::path project_path = project_folder_path / "test.eveproj";
+	std::filesystem::path resourceFolderPath("../../../Resources");
+	if (!std::filesystem::exists(resourceFolderPath)) {
+		resourceFolderPath = "../../Resources";
+	}
+	if (!std::filesystem::exists(resourceFolderPath)) {
+		resourceFolderPath = "../Resources";
+	}
+	resourceFolderPath = std::filesystem::absolute(resourceFolderPath);
+
+	std::filesystem::path project_path = resourceFolderPath / "EcoSysLabProject" / "test.eveproj";
 
 
 	start_project_windowless(project_path);
@@ -158,7 +180,7 @@ void tree_trunk_mesh()
 
 	std::filesystem::path output_root = "D:\\TreeTrunkData\\";
 	tmgs.m_enableFoliage = false;
-	std::filesystem::path target_descriptor_folder_path = project_folder_path / "Trunk";
+	std::filesystem::path target_descriptor_folder_path = resourceFolderPath / "EcoSysLabProject" / "Trunk";
 	std::vector<std::shared_ptr<TreeDescriptor>> collectedTreeDescriptors{};
 	for (const auto& i : std::filesystem::recursive_directory_iterator(target_descriptor_folder_path))
 	{
@@ -180,9 +202,16 @@ void tree_trunk_mesh()
 
 void tree_growth_mesh()
 {
-	//std::filesystem::path project_folder_path = "C:\\Users\\62469\\Work\\TreeEngine\\EcoSysLab\\Resources\\EcoSysLabProject";
-	std::filesystem::path project_folder_path = "C:\\Users\\lllll\\Documents\\GitHub\\EcoSysLab\\Resources\\EcoSysLabProject";
-	std::filesystem::path project_path = project_folder_path / "test.eveproj";
+	std::filesystem::path resourceFolderPath("../../../Resources");
+	if (!std::filesystem::exists(resourceFolderPath)) {
+		resourceFolderPath = "../../Resources";
+	}
+	if (!std::filesystem::exists(resourceFolderPath)) {
+		resourceFolderPath = "../Resources";
+	}
+	resourceFolderPath = std::filesystem::absolute(resourceFolderPath);
+
+	std::filesystem::path project_path = resourceFolderPath / "EcoSysLabProject" / "test.eveproj";
 
 
 	start_project_windowless(project_path);
@@ -196,7 +225,7 @@ void tree_growth_mesh()
 
 	std::filesystem::path output_root = "D:\\TreeGrowth\\";
 	tmgs.m_enableFoliage = true;
-	std::filesystem::path target_descriptor_folder_path = project_folder_path / "TreeDescriptors";
+	std::filesystem::path target_descriptor_folder_path = resourceFolderPath / "EcoSysLabProject" / "TreeDescriptors";
 	std::vector<std::shared_ptr<TreeDescriptor>> collectedTreeDescriptors{};
 	for (const auto& i : std::filesystem::recursive_directory_iterator(target_descriptor_folder_path))
 	{
@@ -220,8 +249,15 @@ void tree_growth_mesh()
 void apple_tree_growth()
 {
 	//std::filesystem::path project_folder_path = "C:\\Users\\62469\\Work\\TreeEngine\\EcoSysLab\\Resources\\EcoSysLabProject";
-	std::filesystem::path project_folder_path = "C:\\Users\\lllll\\Documents\\GitHub\\EcoSysLab\\Resources\\EcoSysLabProject";
-	std::filesystem::path project_path = project_folder_path / "test.eveproj";
+	std::filesystem::path resourceFolderPath("../../../Resources");
+	if (!std::filesystem::exists(resourceFolderPath)) {
+		resourceFolderPath = "../../Resources";
+	}
+	if (!std::filesystem::exists(resourceFolderPath)) {
+		resourceFolderPath = "../Resources";
+	}
+	resourceFolderPath = std::filesystem::absolute(resourceFolderPath);
+	std::filesystem::path project_path = resourceFolderPath / "EcoSysLabProject" / "test.eveproj";
 
 
 	start_project_windowless(project_path);
@@ -235,7 +271,7 @@ void apple_tree_growth()
 
 	std::filesystem::path output_root = "D:\\TreeGrowth\\";
 	tmgs.m_enableFoliage = true;
-	std::filesystem::path target_descriptor_path = project_folder_path / "TreeDescriptors" / "Apple.tree";
+	std::filesystem::path target_descriptor_path = resourceFolderPath / "EcoSysLabProject" / "TreeDescriptors" / "Apple.tree";
 	std::vector<std::shared_ptr<TreeDescriptor>> collectedTreeDescriptors{};
 
 	for (int treeIndex = 0; treeIndex < 500; treeIndex++)
