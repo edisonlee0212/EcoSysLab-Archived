@@ -1,6 +1,6 @@
 #pragma once
 #include <Curve.hpp>
-#include "SorghumGrowthDescriptor.hpp"
+#include "SorghumGrowthStages.hpp"
 using namespace EvoEngine;
 namespace EcoSysLab {
 	class SorghumSplineSegment {

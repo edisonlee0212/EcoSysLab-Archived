@@ -1,7 +1,7 @@
 #include "SorghumCoordinates.hpp"
 #include "TransformGraph.hpp"
 #include "SorghumLayer.hpp"
-#include "SorghumDescriptor.hpp"
+#include "SorghumStateGenerator.hpp"
 
 using namespace EcoSysLab;
 
@@ -44,8 +44,8 @@ void SorghumCoordinates::Apply(const std::shared_ptr<SorghumField>& sorghumField
 
 
 void SorghumCoordinates::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
-	editorLayer->DragAndDropButton<SorghumDescriptor>(m_sorghumStateGenerator,
-		"SorghumDescriptor");
+	editorLayer->DragAndDropButton<SorghumStateGenerator>(m_sorghumStateGenerator,
+		"SorghumStateGenerator");
 	ImGui::Text("Available count: %d", m_positions.size());
 	ImGui::DragFloat("Distance factor", &m_factor, 0.01f, 0.0f, 20.0f);
 	ImGui::DragFloat3("Rotation variance", &m_rotationVariance.x, 0.01f, 0.0f,

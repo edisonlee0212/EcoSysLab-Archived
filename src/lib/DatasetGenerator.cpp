@@ -419,7 +419,7 @@ void DatasetGenerator::GeneratePointCloudForForestPatch(
 
 void DatasetGenerator::GeneratePointCloudForSorghumPatch(
 	const RectangularSorghumFieldPattern& pattern,
-	const std::shared_ptr<SorghumDescriptor>& sorghumDescriptor,
+	const std::shared_ptr<SorghumStateGenerator>& sorghumDescriptor,
 	const SorghumPointCloudPointSettings& pointSettings, 
 	const std::shared_ptr<PointCloudCaptureSettings>& captureSettings,
 	const SorghumMeshGeneratorSettings& sorghumMeshGeneratorSettings, const std::string& pointCloudOutputPath)

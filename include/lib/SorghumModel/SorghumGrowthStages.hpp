@@ -25,7 +25,7 @@ namespace EcoSysLab
 		void ApplyLeaf(const std::shared_ptr<SorghumState>& targetState, float a, int leafIndex);
 	};
 
-	class SorghumGrowthDescriptor : public IAsset {
+	class SorghumGrowthStages : public IAsset {
 		std::vector<std::pair<float, SorghumGrowthStage>> m_sorghumGrowthStages;
 
 	public:

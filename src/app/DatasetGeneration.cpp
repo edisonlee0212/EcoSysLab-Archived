@@ -145,7 +145,7 @@ void sorghum_field_point_cloud()
 	int index = 0;
 	for (int i = 0; i < 4096; i++) {
 		std::filesystem::path target_descriptor_folder_path = resourceFolderPath / "SorghumProject" / "SorghumDescriptor";
-		const auto sorghumDescriptor = std::dynamic_pointer_cast<SorghumDescriptor>(ProjectManager::GetOrCreateAsset(std::filesystem::path("SorghumDescriptor") / "Random.sorghum"));
+		const auto sorghumDescriptor = std::dynamic_pointer_cast<SorghumStateGenerator>(ProjectManager::GetOrCreateAsset(std::filesystem::path("SorghumStateGenerator") / "Random.sorghum"));
 		std::string name = "Sorghum_" + std::to_string(i);
 		std::filesystem::path target_tree_pointcloud_path = output_root / (name + ".ply");
 		DatasetGenerator::GeneratePointCloudForSorghumPatch(

@@ -6,13 +6,14 @@
 #include "ClassRegistry.hpp"
 #include "Graphics.hpp"
 #include "SkyIlluminance.hpp"
-#include "SorghumDescriptor.hpp"
+#include "SorghumStateGenerator.hpp"
 #include <SorghumLayer.hpp>
 #include "Times.hpp"
 
 #include "Material.hpp"
 #include "Sorghum.hpp"
 #include "SorghumCoordinates.hpp"
+#include "SorghumDescriptor.hpp"
 #include "SorghumPointCloudScanner.hpp"
 #ifdef BUILD_WITH_RAYTRACER
 #include "CBTFGroup.hpp"
@@ -23,12 +24,15 @@ using namespace EcoSysLab;
 using namespace EvoEngine;
 
 void SorghumLayer::OnCreate() {
-	ClassRegistry::RegisterAsset<SorghumState>("SorghumState", { ".sorghumstate" });
+	ClassRegistry::RegisterAsset<SorghumState>("SorghumState", { ".ss" });
 	ClassRegistry::RegisterPrivateComponent<Sorghum>("Sorghum");
-	ClassRegistry::RegisterAsset<SorghumGrowthDescriptor>("SorghumGrowthDescriptor",
-		{ ".sorghumgrowth" });
-	ClassRegistry::RegisterAsset<SorghumDescriptor>(
-		"SorghumDescriptor", { ".sorghum" });
+
+	ClassRegistry::RegisterAsset<SorghumDescriptor>("SorghumDescriptor",
+		{ ".sorghum" });
+	ClassRegistry::RegisterAsset<SorghumGrowthStages>("SorghumGrowthStages",
+		{ ".sgs" });
+	ClassRegistry::RegisterAsset<SorghumStateGenerator>(
+		"SorghumStateGenerator", { ".ssg" });
 	ClassRegistry::RegisterAsset<SorghumField>("SorghumField", { ".sorghumfield" });
 #ifdef BUILD_WITH_RAYTRACER
 	ClassRegistry::RegisterAsset<PARSensorGroup>("PARSensorGroup",

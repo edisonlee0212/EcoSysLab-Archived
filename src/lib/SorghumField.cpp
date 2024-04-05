@@ -6,7 +6,7 @@
 
 #include "Sorghum.hpp"
 #include "SorghumLayer.hpp"
-#include "SorghumDescriptor.hpp"
+#include "SorghumStateGenerator.hpp"
 #include "Scene.hpp"
 #include "EditorLayer.hpp"
 #include "TransformGraph.hpp"
@@ -106,7 +106,7 @@ Entity SorghumField::InstantiateField() const
 		// Create sorghums here.
 		int size = 0;
 		for (auto& newSorghum : fieldAsset->m_matrices) {
-			const auto sorghumDescriptor = newSorghum.first.Get<SorghumDescriptor>();
+			const auto sorghumDescriptor = newSorghum.first.Get<SorghumStateGenerator>();
 			if (!sorghumDescriptor) continue;
 			Entity sorghumEntity = sorghumDescriptor->CreateEntity(size);
 			auto sorghumTransform = scene->GetDataComponent<Transform>(sorghumEntity);

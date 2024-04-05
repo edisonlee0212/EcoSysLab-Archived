@@ -1,9 +1,9 @@
 //
 // Created by lllll on 1/8/2022.
 //
-#include "SorghumGrowthDescriptor.hpp"
+#include "SorghumGrowthStages.hpp"
 #include "SorghumLayer.hpp"
-#include "SorghumDescriptor.hpp"
+#include "SorghumGrowthStages.hpp"
 #include "Utilities.hpp"
 #include "rapidcsv.h"
 #include "EditorLayer.hpp"
@@ -12,7 +12,7 @@
 #include "Times.hpp"
 using namespace EcoSysLab;
 
-void SorghumGrowthDescriptor::Apply(const std::shared_ptr<SorghumState>& targetState, float time) const
+void SorghumGrowthStages::Apply(const std::shared_ptr<SorghumState>& targetState, float time) const
 {
 	if (m_sorghumGrowthStages.empty())
 		return;
@@ -563,10 +563,6 @@ void SorghumLeafGrowthStage::Deserialize(const YAML::Node& in) {
 		m_bendingAlongLeaf.Load("m_bendingAlongLeaf", in);
 		m_widthAlongLeaf.Load("m_widthAlongLeaf", in);
 		m_wavinessAlongLeaf.Load("m_wavinessAlongLeaf", in);
-		for(auto& value : m_widthAlongLeaf.m_curve.UnsafeGetValues())
-		{
-			value.y *= 2.f;
-		}
 	}
 
 	m_saved = true;

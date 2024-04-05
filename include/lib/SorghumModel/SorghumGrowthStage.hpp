@@ -57,7 +57,7 @@ namespace EcoSysLab {
 #pragma endregion
 
 	class SorghumGrowthStage {
-		friend class SorghumGrowthDescriptor;
+		friend class SorghumGrowthStages;
 		unsigned m_version = 0;
 
 	public:

@@ -1,5 +1,5 @@
 #pragma once
-#include "SorghumDescriptor.hpp"
+#include "SorghumStateGenerator.hpp"
 #include "SorghumField.hpp"
 #include "SorghumPointCloudScanner.hpp"
 #include "SorghumState.hpp"
@@ -57,7 +57,7 @@ namespace EcoSysLab {
 		);
 
 		static void GeneratePointCloudForSorghumPatch(const RectangularSorghumFieldPattern& pattern,
-			const std::shared_ptr<SorghumDescriptor>& sorghumDescriptor,
+			const std::shared_ptr<SorghumStateGenerator>& sorghumDescriptor,
 			const SorghumPointCloudPointSettings& pointSettings,
 			const std::shared_ptr<PointCloudCaptureSettings>& captureSettings,
 			const SorghumMeshGeneratorSettings& sorghumMeshGeneratorSettings, 

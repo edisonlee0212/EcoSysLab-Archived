@@ -73,6 +73,36 @@ void SorghumPanicleState::GenerateGeometry(const glm::vec3& stemTip, std::vector
 void SorghumPanicleState::GenerateGeometry(const glm::vec3& stemTip, std::vector<Vertex>& vertices,
 	std::vector<unsigned>& indices, const std::shared_ptr<ParticleInfoList>& particleInfoList) const
 {
+	std::vector<glm::vec3> icosahedronVertices;
+	std::vector<glm::uvec3> icosahedronTriangles;
+	SphereMeshGenerator::Icosahedron(icosahedronVertices, icosahedronTriangles);
+	Vertex archetype = {};
+	archetype.m_color = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+	for (const auto position : icosahedronVertices) {
+		archetype.m_position = position;
+		vertices.push_back(archetype);
+	}
+	for (const auto triangle : icosahedronTriangles) {
+		glm::uvec3 actualTriangle = triangle;
+		indices.emplace_back(actualTriangle.x);
+		indices.emplace_back(actualTriangle.y);
+		indices.emplace_back(actualTriangle.z);
+	}
+	std::vector<ParticleInfo> infos;
+	infos.resize(m_seedAmount);
+	SphericalVolume volume;
+	volume.m_radius = m_panicleSize;
+
+	for (int seedIndex = 0;
+		seedIndex < m_seedAmount;
+		seedIndex++) {
+		glm::vec3 positionOffset = volume.GetRandomPoint();
+		glm::vec3 position = glm::vec3(0, m_panicleSize.y, 0) +
+			positionOffset + stemTip;
+		infos.at(seedIndex).m_instanceMatrix.m_value = glm::translate(position) * glm::scale(glm::vec3(m_seedRadius));
+	}
+
+	particleInfoList->SetParticleInfos(infos);
 }
 
 bool SorghumStemState::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)

@@ -1,9 +1,9 @@
 //
 // Created by lllll on 1/8/2022.
 //
-#include "SorghumGrowthDescriptor.hpp"
+#include "SorghumGrowthStages.hpp"
 #include "SorghumLayer.hpp"
-#include "SorghumDescriptor.hpp"
+#include "SorghumStateGenerator.hpp"
 #include "Utilities.hpp"
 #include "rapidcsv.h"
 #include "EditorLayer.hpp"
@@ -14,7 +14,7 @@
 using namespace EcoSysLab;
 static const char* StateModes[]{ "Default", "Cubic-Bezier" };
 
-void SorghumGrowthDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
+void SorghumGrowthStages::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	if (ImGui::Button("Instantiate")) {
 		auto entity = CreateEntity();
 	}
@@ -164,9 +164,9 @@ void SorghumGrowthDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& edit
 		static int seed = 0;
 		ImGui::DragInt("Using seed", &seed);
 		static AssetRef descriptor;
-		editorLayer->DragAndDropButton<SorghumDescriptor>(
+		editorLayer->DragAndDropButton<SorghumStateGenerator>(
 			descriptor, "Drag SPD here to add end state");
-		auto temp = descriptor.Get<SorghumDescriptor>();
+		auto temp = descriptor.Get<SorghumStateGenerator>();
 		if (temp) {
 			float endTime =
 				m_sorghumGrowthStages.empty() ? -0.01f : (--m_sorghumGrowthStages.end())->first;
@@ -185,7 +185,7 @@ void SorghumGrowthDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& edit
 	}
 }
 
-void SorghumGrowthDescriptor::Serialize(YAML::Emitter& out) {
+void SorghumGrowthStages::Serialize(YAML::Emitter& out) {
 	out << YAML::Key << "m_mode" << YAML::Value << m_mode;
 	out << YAML::Key << "m_version" << YAML::Value << m_version;
 	out << YAML::Key << "m_sorghumGrowthStages" << YAML::Value << YAML::BeginSeq;
@@ -198,7 +198,7 @@ void SorghumGrowthDescriptor::Serialize(YAML::Emitter& out) {
 	out << YAML::EndSeq;
 }
 
-void SorghumGrowthDescriptor::Deserialize(const YAML::Node& in) {
+void SorghumGrowthStages::Deserialize(const YAML::Node& in) {
 	if (in["m_mode"])
 		m_mode = in["m_mode"].as<int>();
 	if (in["m_version"])
@@ -213,7 +213,7 @@ void SorghumGrowthDescriptor::Deserialize(const YAML::Node& in) {
 	}
 }
 
-Entity SorghumGrowthDescriptor::CreateEntity(const float time) const
+Entity SorghumGrowthStages::CreateEntity(const float time) const
 {
 	const auto scene = Application::GetActiveScene();
 	const auto entity = scene->CreateEntity(GetTitle());
@@ -226,7 +226,7 @@ Entity SorghumGrowthDescriptor::CreateEntity(const float time) const
 	return entity;
 }
 
-void SorghumGrowthDescriptor::Add(float time, const SorghumGrowthStage& state) {
+void SorghumGrowthStages::Add(float time, const SorghumGrowthStage& state) {
 	for (auto it = m_sorghumGrowthStages.begin(); it != m_sorghumGrowthStages.end(); ++it) {
 		if (it->first == time) {
 			it->second = state;
@@ -241,7 +241,7 @@ void SorghumGrowthDescriptor::Add(float time, const SorghumGrowthStage& state) {
 	m_sorghumGrowthStages.back().second.m_name = "Unnamed";
 }
 
-void SorghumGrowthDescriptor::ResetTime(float previousTime, float newTime) {
+void SorghumGrowthStages::ResetTime(float previousTime, float newTime) {
 	for (auto& i : m_sorghumGrowthStages) {
 		if (i.first == previousTime) {
 			i.first = newTime;
@@ -250,7 +250,7 @@ void SorghumGrowthDescriptor::ResetTime(float previousTime, float newTime) {
 	}
 	EVOENGINE_ERROR("Failed: State at previous time not exists!");
 }
-void SorghumGrowthDescriptor::Remove(float time) {
+void SorghumGrowthStages::Remove(float time) {
 	for (auto it = m_sorghumGrowthStages.begin(); it != m_sorghumGrowthStages.end(); ++it) {
 		if (it->first == time) {
 			m_sorghumGrowthStages.erase(it);
@@ -258,13 +258,13 @@ void SorghumGrowthDescriptor::Remove(float time) {
 		}
 	}
 }
-float SorghumGrowthDescriptor::GetCurrentStartTime() const {
+float SorghumGrowthStages::GetCurrentStartTime() const {
 	if (m_sorghumGrowthStages.empty()) {
 		return 0.0f;
 	}
 	return m_sorghumGrowthStages.begin()->first;
 }
-float SorghumGrowthDescriptor::GetCurrentEndTime() const {
+float SorghumGrowthStages::GetCurrentEndTime() const {
 	if (m_sorghumGrowthStages.empty()) {
 		return 0.0f;
 	}
@@ -272,7 +272,7 @@ float SorghumGrowthDescriptor::GetCurrentEndTime() const {
 }
 
 
-bool SorghumGrowthDescriptor::ImportCSV(const std::filesystem::path& filePath) {
+bool SorghumGrowthStages::ImportCSV(const std::filesystem::path& filePath) {
 	try {
 		rapidcsv::Document doc(filePath.string());
 		std::vector<std::string> timePoints =

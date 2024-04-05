@@ -1,6 +1,6 @@
 #include "Sorghum.hpp"
 
-#include "SorghumDescriptor.hpp"
+#include "SorghumStateGenerator.hpp"
 #include "SorghumLayer.hpp"
 
 using namespace EcoSysLab;
@@ -31,10 +31,10 @@ void Sorghum::GenerateGeometryEntities(const SorghumMeshGeneratorSettings& sorgh
 	const auto sorghumState = m_sorghumState.Get<SorghumState>();
 	if(!sorghumState)
 	{
-		if(const auto sorghumDescriptor = m_sorghumDescriptor.Get<SorghumDescriptor>())
+		if(const auto sorghumDescriptor = m_sorghumDescriptor.Get<SorghumStateGenerator>())
 		{
 			sorghumDescriptor->Apply(sorghumState);
-		}else if (const auto sorghumGrowthDescriptor = m_sorghumGrowthDescriptor.Get<SorghumGrowthDescriptor>())
+		}else if (const auto sorghumGrowthDescriptor = m_sorghumGrowthDescriptor.Get<SorghumGrowthStages>())
 		{
 			sorghumGrowthDescriptor->Apply(sorghumState, 1.f);
 		}
@@ -48,11 +48,12 @@ void Sorghum::GenerateGeometryEntities(const SorghumMeshGeneratorSettings& sorgh
 	if(sorghumMeshGeneratorSettings.m_enablePanicle && sorghumState->m_panicle.m_seedAmount > 0)
 	{
 		const auto panicleEntity = scene->CreateEntity("Panicle Mesh");
-		const auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(panicleEntity).lock();
+		const auto particles = scene->GetOrSetPrivateComponent<Particles>(panicleEntity).lock();
 		const auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
 		const auto material = ProjectManager::CreateTemporaryAsset<Material>();
-		meshRenderer->m_mesh = mesh;
-		meshRenderer->m_material = material;
+		const auto particleInfoList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
+		particles->m_mesh = mesh;
+		particles->m_material = material;
 		const auto panicleMaterial = sorghumLayer->m_panicleMaterial.Get<Material>();
 		//material->SetAlbedoTexture(panicleMaterial->GetAlbedoTexture());
 		//material->SetNormalTexture(panicleMaterial->GetNormalTexture());
@@ -61,10 +62,13 @@ void Sorghum::GenerateGeometryEntities(const SorghumMeshGeneratorSettings& sorgh
 		material->m_materialProperties = panicleMaterial->m_materialProperties;
 		std::vector<Vertex> vertices;
 		std::vector<unsigned int> indices;
-		sorghumState->m_panicle.GenerateGeometry(sorghumState->m_stem.m_spline.m_segments.back().m_position, vertices, indices);
+		
+		sorghumState->m_panicle.GenerateGeometry(sorghumState->m_stem.m_spline.m_segments.back().m_position, vertices, indices, particleInfoList);
 		VertexAttributes attributes{};
 		attributes.m_texCoord = true;
 		mesh->SetVertices(attributes, vertices, indices);
+
+		particles->m_particleInfoList = particleInfoList;
 		scene->SetParent(panicleEntity, owner);
 	}
 	if(sorghumMeshGeneratorSettings.m_enableStem)
@@ -166,8 +170,8 @@ void Sorghum::Deserialize(const YAML::Node& in)
 
 void Sorghum::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
-	editorLayer->DragAndDropButton<SorghumDescriptor>(m_sorghumDescriptor, "SorghumDescriptor");
-	editorLayer->DragAndDropButton<SorghumGrowthDescriptor>(m_sorghumGrowthDescriptor, "SorghumGrowthDescriptor");
+	editorLayer->DragAndDropButton<SorghumStateGenerator>(m_sorghumDescriptor, "SorghumStateGenerator");
+	editorLayer->DragAndDropButton<SorghumGrowthStages>(m_sorghumGrowthDescriptor, "SorghumGrowthStages");
 	editorLayer->DragAndDropButton<SorghumState>(m_sorghumState, "SorghumState");
 
 	if(ImGui::Button("Form meshes"))
@@ -175,7 +179,7 @@ void Sorghum::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 		GenerateGeometryEntities(SorghumMeshGeneratorSettings{});
 	}
 
-	if(const auto sorghumDescriptor = m_sorghumDescriptor.Get<SorghumDescriptor>())
+	if(const auto sorghumDescriptor = m_sorghumDescriptor.Get<SorghumStateGenerator>())
 	{
 		if (ImGui::TreeNode("Sorghum Descriptor settings")) {
 			static int seed = 0;
@@ -192,7 +196,7 @@ void Sorghum::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 			ImGui::TreePop();
 		}
 	}
-	if (const auto sorghumGrowthDescriptor = m_sorghumGrowthDescriptor.Get<SorghumGrowthDescriptor>())
+	if (const auto sorghumGrowthDescriptor = m_sorghumGrowthDescriptor.Get<SorghumGrowthStages>())
 	{
 		if (ImGui::TreeNode("Sorghum Growth Descriptor settings")) {
 			static float time = 0.0f;
@@ -250,6 +254,6 @@ void Sorghum::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 void Sorghum::CollectAssetRef(std::vector<AssetRef>& list)
 {
 	if (m_sorghumState.Get<SorghumState>()) list.push_back(m_sorghumState);
-	if (m_sorghumGrowthDescriptor.Get<SorghumGrowthDescriptor>()) list.push_back(m_sorghumGrowthDescriptor);
-	if (m_sorghumDescriptor.Get<SorghumDescriptor>()) list.push_back(m_sorghumDescriptor);
+	if (m_sorghumGrowthDescriptor.Get<SorghumGrowthStages>()) list.push_back(m_sorghumGrowthDescriptor);
+	if (m_sorghumDescriptor.Get<SorghumStateGenerator>()) list.push_back(m_sorghumDescriptor);
 }
