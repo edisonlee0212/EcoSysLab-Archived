@@ -9,7 +9,7 @@
 #include "Delaunator2D.hpp"
 #include "TreeDescriptor.hpp"
 
-#define DEBUG_OUTPUT false
+#define DEBUG_OUTPUT true
 
 using namespace EcoSysLab;
 
@@ -26,7 +26,7 @@ void StrandModelMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLay
 		//ImGui::Checkbox("[DEBUG] Limit Profile Iterations", &m_limitProfileIterations);
 		//ImGui::DragInt("[DEBUG] Limit", &m_maxProfileIterations);
 
-		//ImGui::DragFloat("[DEBUG] MaxParam", &m_maxParam);
+		ImGui::DragFloat("[DEBUG] MaxParam", &m_maxParam);
 		//ImGui::Checkbox("Compute branch joints", &m_branchConnections);
 		ImGui::DragInt("uCoord multiplier", &m_uMultiplier, 1, 1);
 		ImGui::DragFloat("vCoord multiplier", &m_vMultiplier, 0.1f);
@@ -987,14 +987,27 @@ void connect(std::vector<std::pair<StrandHandle, glm::vec3> >& slice0, size_t i0
 	std::vector<std::pair<StrandHandle, glm::vec3> >& slice1, size_t i1, size_t j1, size_t offset1,
 	std::vector<Vertex>& vertices, std::vector<unsigned>& indices)
 {
-	//if(DEBUG_OUTPUT) std::cout << "connecting " << i0 << ", " << j0 << " to " << i1 << ", " << j1 << std::endl;
+	if(DEBUG_OUTPUT) std::cout << "connecting " << i0 << ", " << j0 << " to " << i1 << ", " << j1 << std::endl;
 	size_t vertBetween0 = (j0 + slice0.size() - i0) % slice0.size();
 	size_t vertBetween1 = (j1 + slice1.size() - i1) % slice1.size();
-	//if(DEBUG_OUTPUT) std::cout << vertBetween0 << " and " << vertBetween1 << " steps, respectively " << std::endl;
+	if(DEBUG_OUTPUT) std::cout << vertBetween0 << " and " << vertBetween1 << " steps, respectively " << std::endl;
+
+	if (vertBetween0 > slice0.size() / 2)
+	{
+		std::cout << "Warning: too many steps for slice 0, should probably be swapped." << std::endl;
+		//return;
+	}
+
+	if (vertBetween1 > slice1.size() / 2)
+	{
+		std::cout << "Warning: too many steps for slice 1, should probably be swapped." << std::endl;
+		//return;
+	}
+
 	size_t offset = vertices.size();
 
 	// merge the two
-	//if(DEBUG_OUTPUT) std::cout << "connecting slices with triangles" << std::endl;
+	if(DEBUG_OUTPUT) std::cout << "connecting slices with triangles" << std::endl;
 	size_t k0 = 0;
 	size_t k1 = 0;
 
@@ -1032,12 +1045,54 @@ size_t midIndex(size_t a, size_t b, size_t size)
 	return (a + mid / 2) % size;
 }
 
+/* We need to deal with inversions of the strand order on the outside somehow.
+ * We have two different situations:
+ * 
+ * Case 1: A split into two branches occurs. In this case we have a well defined linear order for each bottom section that corresponds
+ * to only one branch. Here, we can easily identify inversions. (TODO: Unintended interleaving could occur here, i.e. bottom
+ * vertices correspond to the branches A and B in order A B A B instead of A A B B)
+ * 
+ * Case 2: No branching, the order here is cyclic. We can resolve this by cutting the cyclic order to obtain a linear order.
+ * But we should choose a good cutting point to minimize the amount of inversions in order to preserve twisting.
+ * A heuristic to achieve this is to define a family of permutations sigma_i which introduce an offset i. Then identify the
+ * permutation that has the most fixed points.
+ */
+void cyclicOrderUntangle(std::vector<size_t>& permutation)
+{
+	size_t n = permutation.size();
+
+	std::vector<size_t> offsetHistogram(n, 0);
+
+	for (size_t i = 0; i < n; i++)
+	{
+		size_t offset = (permutation[i] - i + n) % n;
+
+		offsetHistogram[offset]++;
+	}
+
+	size_t indexWithMostFixedPoints = 0;
+
+	for (size_t i = 1; i < n; i++)
+	{
+		if (offsetHistogram[indexWithMostFixedPoints] > offsetHistogram[i])
+		{
+			indexWithMostFixedPoints = i;
+		}
+	}
+
+
+}
+
 void connectSlices(const StrandModelStrandGroup& pipes, Slice& bottomSlice, size_t bottomOffset,
 	std::vector<Slice>& topSlices, std::vector<size_t> topOffsets,
 	std::vector<Vertex>& vertices, std::vector<unsigned>& indices, bool branchConnections)
 {
 	// compute (incomplete) permutation that turns 0 into 1
+
+	// map of pipe handle index to top slice and index in top slice
 	std::vector<std::pair<size_t, size_t> > topPipeHandleIndexMap(pipes.PeekStrands().size(), std::make_pair<>(-1, -1));
+
+	// map of pipe handle index to index in bottom slice
 	std::vector<size_t> bottomPipeHandleIndexMap(pipes.PeekStrands().size(), -1);
 
 	for (size_t s = 0; s < topSlices.size(); s++)
@@ -1054,7 +1109,10 @@ void connectSlices(const StrandModelStrandGroup& pipes, Slice& bottomSlice, size
 		bottomPipeHandleIndexMap[bottomSlice[i].first] = i;
 	}
 
+	// map index in bottom slice to top slice and index in top slice
 	std::vector<std::pair<size_t, size_t> > bottomPermutation(bottomSlice.size(), std::make_pair<>(-1, -1));
+
+	// map top slice and index in top slice to index in bottom slice
 	std::vector<std::vector<size_t> > topPermutations(topSlices.size());
 
 	for (std::size_t s = 0; s < topSlices.size(); s++)
@@ -1067,7 +1125,7 @@ void connectSlices(const StrandModelStrandGroup& pipes, Slice& bottomSlice, size
 		}
 	}
 
-	//if(DEBUG_OUTPUT) std::cout << "mapping back to permutation vector..." << std::endl;
+	if(DEBUG_OUTPUT) std::cout << "mapping back to permutation vector..." << std::endl;
 	for (size_t i = 0; i < bottomPermutation.size(); i++)
 	{
 		bottomPermutation[i] = topPipeHandleIndexMap[bottomSlice[i].first];
@@ -1085,10 +1143,37 @@ void connectSlices(const StrandModelStrandGroup& pipes, Slice& bottomSlice, size
 			break;
 		}
 	}
-
-	//if(DEBUG_OUTPUT) std::cout << "Found first index " << prevI << std::endl;
+	if (DEBUG_OUTPUT) std::cout << "Found first index " << prevI << std::endl;
+	// need to find a start index where correspondence changes
+	// TODO: only need to do this if there is a branching
+	size_t startIndex = 0; // set 0 as default because this will work if there is no branching
 	for (size_t i = 0; i < bottomPermutation.size(); i++)
 	{
+		if (bottomPermutation[i].second == -1)
+		{
+			continue;
+		}
+
+		if (bottomPermutation[prevI].first != bottomPermutation[i].first)
+		{
+			startIndex = i;
+			break;
+		}
+		prevI = i;
+	}
+	if (DEBUG_OUTPUT) std::cout << "Found start index " << startIndex << std::endl;
+	
+	std::vector<size_t> indicesWithSameBranchCorrespondence;
+	size_t endIndex = prevI;
+	if (DEBUG_OUTPUT) std::cout << "Found end index " << endIndex << std::endl;
+	
+	size_t sectionStart = startIndex;
+	//shift this by one, otherwise the last section is not handled
+	indicesWithSameBranchCorrespondence.push_back(startIndex);
+	for (size_t counter = startIndex + 1; counter != startIndex + bottomPermutation.size() + 1; counter++)
+	{
+		size_t i = counter % bottomPermutation.size();
+
 		if (bottomPermutation[i].second == -1)
 		{
 			//if(DEBUG_OUTPUT) std::cout << "No correspondence at index " << i << std::endl;
@@ -1099,16 +1184,139 @@ void connectSlices(const StrandModelStrandGroup& pipes, Slice& bottomSlice, size
 		{
 			//if(DEBUG_OUTPUT) std::cout << "Connecting at index " << i << std::endl;
 
-			connect(bottomSlice, prevI, i, bottomOffset,
-				topSlices[bottomPermutation[i].first], bottomPermutation[prevI].second, bottomPermutation[i].second, topOffsets[bottomPermutation[i].first],
-				vertices, indices);
+			if (topSlices.size() == 1)
+			{
+				// for now, also need a better solution that does untangling
+				connect(bottomSlice, prevI, i, bottomOffset,
+					topSlices[bottomPermutation[i].first], bottomPermutation[prevI].second, bottomPermutation[i].second, topOffsets[bottomPermutation[i].first],
+					vertices, indices);
+			}
+			else
+			{
+				indicesWithSameBranchCorrespondence.push_back(i);
+			}
 		}
 		else
 		{
-			//std::cout << "Multiple branches not implemented yet!" << std::endl;
-			// idea: walk half of each top slice to the next matching strand
+			if (topSlices.size() > 1 && !indicesWithSameBranchCorrespondence.empty())
+			{
+				std::vector<size_t> topIndices;
 
-			// first find next point with correspondence on top profile
+				size_t branchIndex = bottomPermutation[indicesWithSameBranchCorrespondence.front()].first;
+
+				for (size_t j = 0; j < indicesWithSameBranchCorrespondence.size(); j++)
+				{
+					topIndices.push_back(bottomPermutation[indicesWithSameBranchCorrespondence[j]].second);
+				}
+
+				// now check for errors and swap until there are no more errors
+				// this is essentially bubble sort. We cannot use a conventional sorting algorithm here
+				// because there is no global order - the comparison does not satisfy transitivity.
+				// However, there is a local order and we hope that the elements are close enough to this that bubble sort works as a heuristic
+				bool foundError;
+				do
+				{
+					foundError = false;
+					for (size_t j = 1; j < topIndices.size(); j++)
+					{
+						size_t steps = (topIndices[j] + topSlices[branchIndex].size() - topIndices[j-1]) % topSlices[branchIndex].size();
+
+						if (steps > topSlices[branchIndex].size() / 2)
+						{
+							foundError = true;
+							std::cout << "found error, swapping " << topIndices[j - 1] << " and " << topIndices[j] << std::endl;
+							size_t tmp = topIndices[j];
+							topIndices[j] = topIndices[j - 1];
+							topIndices[j - 1] = tmp;
+						}
+					}
+
+				} while (foundError);
+
+				for (size_t j = 1; j < indicesWithSameBranchCorrespondence.size(); j++)
+				{
+					size_t prevI = indicesWithSameBranchCorrespondence[j - 1];
+					size_t i = indicesWithSameBranchCorrespondence[j];
+
+					connect(bottomSlice, prevI, i, bottomOffset,
+						topSlices[branchIndex], topIndices[j - 1], topIndices[j], topOffsets[branchIndex],
+						vertices, indices);
+				}
+
+				indicesWithSameBranchCorrespondence.clear();
+				indicesWithSameBranchCorrespondence.push_back(i);
+			}
+
+			/*if (!indicesWithSameBranchCorrespondence.empty())
+			{
+				// section with same branch correspondence is finished
+				// re-order it to untangle crossings, then connect it
+				std::vector<size_t> sectionMap(bottomPermutation.size(), -1);
+
+				for (size_t j = 0; j < indicesWithSameBranchCorrespondence.size(); j++)
+				{
+					sectionMap[indicesWithSameBranchCorrespondence[j]] = j;
+				}
+				std::cout << "bottom indices: ";
+				for (size_t index : indicesWithSameBranchCorrespondence)
+				{
+					std::cout << index << ' ';
+				}
+				std::cout << std::endl;
+
+				// now we can assign ordinals to the top permutation using the section maps. Sorting them in ascending order gives us an untangled matching
+
+				// idea: start at first index and go to the right until there is no more correspondence in the sectionMap
+				// if necessary, repeat this process to the left
+				// then we have a suitable re-ordering
+				// TODO: this could still go wrong if there are more crossings at the branching
+				size_t branchIndex = bottomPermutation[prevI].first;
+
+				size_t indexInTop = indicesWithSameBranchCorrespondence.front();
+				size_t indexInBottom;
+				std::vector<size_t> topIndices;
+				do
+				{
+					topIndices.push_back(indexInTop);
+
+					indexInTop = (indexInTop + 1) % topPermutations[branchIndex].size();
+
+					indexInBottom = topPermutations[branchIndex][indexInTop];
+
+					if (indexInBottom == -1)
+					{
+						continue; // no correspondence
+					}
+
+				} while (sectionMap[indexInBottom] != -1 && indexInTop != indicesWithSameBranchCorrespondence.front());
+
+
+				std::cout << "top indices: ";
+				for (size_t index : topIndices)
+				{
+					std::cout << index << ' ';
+				}
+				std::cout << std::endl;
+				// TODO: if the branch does not split into multiple sections, some shifting around might be a good idea because the first index in top might actually cross a different branch
+
+				// temporary solution (maybe permanent, we will see): Do not account for strand correspondence. Just match everything up from start to end
+				connect(bottomSlice, indicesWithSameBranchCorrespondence.front(), indicesWithSameBranchCorrespondence.back(), bottomOffset,
+					topSlices[branchIndex], bottomPermutation[topIndices.front()].second, bottomPermutation[topIndices.back()].second, topOffsets[branchIndex],
+					vertices, indices);
+
+
+				// TODO
+				// clear vector for next section
+				indicesWithSameBranchCorrespondence.clear();
+				// idea: walk half of each top slice to the next matching strand
+				// first find next point with correspondence on top profile
+			}*/
+
+			// connect section
+			/*connect(bottomSlice, sectionStart, prevI, bottomOffset,
+				topSlices[bottomPermutation[prevI].first], bottomPermutation[sectionStart].second, bottomPermutation[prevI].second, topOffsets[bottomPermutation[prevI].first],
+				vertices, indices);*/
+
 			size_t nextIndex = -1;
 
 			for (size_t j = (bottomPermutation[prevI].second + 1) % topSlices[bottomPermutation[prevI].first].size();
@@ -1139,7 +1347,7 @@ void connectSlices(const StrandModelStrandGroup& pipes, Slice& bottomSlice, size
 			size_t nextMid = midIndex(bottomPermutation[prevI].second, nextIndex, topSlices[bottomPermutation[prevI].first].size());
 			size_t prevMid = midIndex(prevIndex, bottomPermutation[i].second, topSlices[bottomPermutation[i].first].size());
 
-			// for now let us do a very simple test if we selected the correct indices
+			// TODO: we could do a very simple test if we selected the correct indices
 			if (branchConnections)
 			{
 				connect(bottomSlice, prevI, bottomMid, bottomOffset,
@@ -1154,8 +1362,6 @@ void connectSlices(const StrandModelStrandGroup& pipes, Slice& bottomSlice, size
 				indices.push_back(topOffsets[bottomPermutation[i].first] + prevMid);
 
 				// TODO: connecting with the same top slice looks better
-
-				//indices.push_back()
 
 				connect(bottomSlice, bottomMid, i, bottomOffset,
 					topSlices[bottomPermutation[i].first], prevMid, bottomPermutation[i].second, topOffsets[bottomPermutation[i].first],
@@ -1210,6 +1416,11 @@ void sliceRecursively(const StrandModel& strandModel, std::pair < Slice, PipeClu
 	if (t + 0.01 > glm::ceil(t))
 	{
 		t = glm::ceil(t);
+	}
+
+	if (t > settings.m_maxParam)
+	{
+		return;
 	}
 
 	auto slicesAndClusters = computeSlices(strandModel, prevSlice.second, t, maxDist, settings.m_minCellCountForMajorBranches);
