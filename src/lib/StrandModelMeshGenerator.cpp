@@ -994,13 +994,13 @@ void connect(std::vector<std::pair<StrandHandle, glm::vec3> >& slice0, size_t i0
 
 	if (vertBetween0 > slice0.size() / 2)
 	{
-		std::cout << "Warning: too many steps for slice 0, should probably be swapped." << std::endl;
+		if (DEBUG_OUTPUT) std::cout << "Warning: too many steps for slice 0, should probably be swapped." << std::endl;
 		//return;
 	}
 
 	if (vertBetween1 > slice1.size() / 2)
 	{
-		std::cout << "Warning: too many steps for slice 1, should probably be swapped." << std::endl;
+		if (DEBUG_OUTPUT) std::cout << "Warning: too many steps for slice 1, should probably be swapped." << std::endl;
 		//return;
 	}
 
@@ -1224,7 +1224,7 @@ void connectSlices(const StrandModelStrandGroup& pipes, Slice& bottomSlice, size
 						if (steps > topSlices[branchIndex].size() / 2)
 						{
 							foundError = true;
-							std::cout << "found error, swapping " << topIndices[j - 1] << " and " << topIndices[j] << std::endl;
+							if (DEBUG_OUTPUT) std::cout << "found error, correcting by swapping " << topIndices[j - 1] << " and " << topIndices[j] << std::endl;
 							size_t tmp = topIndices[j];
 							topIndices[j] = topIndices[j - 1];
 							topIndices[j - 1] = tmp;
@@ -1246,76 +1246,6 @@ void connectSlices(const StrandModelStrandGroup& pipes, Slice& bottomSlice, size
 				indicesWithSameBranchCorrespondence.clear();
 				indicesWithSameBranchCorrespondence.push_back(i);
 			}
-
-			/*if (!indicesWithSameBranchCorrespondence.empty())
-			{
-				// section with same branch correspondence is finished
-				// re-order it to untangle crossings, then connect it
-				std::vector<size_t> sectionMap(bottomPermutation.size(), -1);
-
-				for (size_t j = 0; j < indicesWithSameBranchCorrespondence.size(); j++)
-				{
-					sectionMap[indicesWithSameBranchCorrespondence[j]] = j;
-				}
-				std::cout << "bottom indices: ";
-				for (size_t index : indicesWithSameBranchCorrespondence)
-				{
-					std::cout << index << ' ';
-				}
-				std::cout << std::endl;
-
-				// now we can assign ordinals to the top permutation using the section maps. Sorting them in ascending order gives us an untangled matching
-
-				// idea: start at first index and go to the right until there is no more correspondence in the sectionMap
-				// if necessary, repeat this process to the left
-				// then we have a suitable re-ordering
-				// TODO: this could still go wrong if there are more crossings at the branching
-				size_t branchIndex = bottomPermutation[prevI].first;
-
-				size_t indexInTop = indicesWithSameBranchCorrespondence.front();
-				size_t indexInBottom;
-				std::vector<size_t> topIndices;
-				do
-				{
-					topIndices.push_back(indexInTop);
-
-					indexInTop = (indexInTop + 1) % topPermutations[branchIndex].size();
-
-					indexInBottom = topPermutations[branchIndex][indexInTop];
-
-					if (indexInBottom == -1)
-					{
-						continue; // no correspondence
-					}
-
-				} while (sectionMap[indexInBottom] != -1 && indexInTop != indicesWithSameBranchCorrespondence.front());
-
-
-				std::cout << "top indices: ";
-				for (size_t index : topIndices)
-				{
-					std::cout << index << ' ';
-				}
-				std::cout << std::endl;
-				// TODO: if the branch does not split into multiple sections, some shifting around might be a good idea because the first index in top might actually cross a different branch
-
-				// temporary solution (maybe permanent, we will see): Do not account for strand correspondence. Just match everything up from start to end
-				connect(bottomSlice, indicesWithSameBranchCorrespondence.front(), indicesWithSameBranchCorrespondence.back(), bottomOffset,
-					topSlices[branchIndex], bottomPermutation[topIndices.front()].second, bottomPermutation[topIndices.back()].second, topOffsets[branchIndex],
-					vertices, indices);
-
-
-				// TODO
-				// clear vector for next section
-				indicesWithSameBranchCorrespondence.clear();
-				// idea: walk half of each top slice to the next matching strand
-				// first find next point with correspondence on top profile
-			}*/
-
-			// connect section
-			/*connect(bottomSlice, sectionStart, prevI, bottomOffset,
-				topSlices[bottomPermutation[prevI].first], bottomPermutation[sectionStart].second, bottomPermutation[prevI].second, topOffsets[bottomPermutation[prevI].first],
-				vertices, indices);*/
 
 			size_t nextIndex = -1;
 
