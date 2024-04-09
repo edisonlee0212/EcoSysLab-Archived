@@ -339,7 +339,6 @@ void MarchingCubes::TriangulateCell(MarchingCubeCell& cell, float isovalue, std:
 		for (int j = 2; j >= 0; j--) {
 
 			archetype.m_position = intersections[m_triangleTable[cubeIndex][i + j]];
-			archetype.m_texCoord = cell.m_texCoords;
 			vertices.push_back(archetype);
 		}
 	}
@@ -375,7 +374,7 @@ void MarchingCubes::TriangulateField(const glm::vec3& center, const std::functio
 							sampleFunction({adjCenter.x + cellRadius, adjCenter.y - cellRadius, adjCenter.z + cellRadius}), sampleFunction({adjCenter.x - cellRadius, adjCenter.y - cellRadius, adjCenter.z + cellRadius}),
 							sampleFunction({adjCenter.x - cellRadius, adjCenter.y + cellRadius, adjCenter.z - cellRadius}), sampleFunction({adjCenter.x + cellRadius, adjCenter.y + cellRadius, adjCenter.z - cellRadius}),
 							sampleFunction({adjCenter.x + cellRadius, adjCenter.y + cellRadius, adjCenter.z + cellRadius}), sampleFunction({adjCenter.x - cellRadius, adjCenter.y + cellRadius, adjCenter.z + cellRadius})
-						}, cell.m_texCoords
+						}
 						};
 						TriangulateCell(testingCell, isovalue, outVertices);
 						testedCells[glm::ivec3(glm::round((adjCenter - center) / cellRadius))] = testingCell;

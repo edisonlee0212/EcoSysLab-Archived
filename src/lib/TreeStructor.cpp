@@ -22,7 +22,7 @@ void TreeStructor::BuildVoxelGrid()
 {
 	m_scatterPointsVoxelGrid.Initialize(2.0f * m_connectivityGraphSettings.m_pointPointConnectionDetectionRadius, m_min, m_max);
 	m_allocatedPointsVoxelGrid.Initialize(2.0f * m_connectivityGraphSettings.m_pointPointConnectionDetectionRadius, m_min, m_max);
-	
+
 	m_branchEndsVoxelGrid.Initialize(2.0f * m_connectivityGraphSettings.m_pointPointConnectionDetectionRadius, m_min, m_max);
 	for (auto& point : m_allocatedPoints) {
 		point.m_branchHandle = point.m_nodeHandle = point.m_skeletonIndex = -1;
@@ -83,7 +83,7 @@ bool TreeStructor::DirectConnectionCheck(const BezierCurve& parentCurve, const B
 		//const auto dotP0 = glm::dot(glm::normalize(shortenedChildP0 - shortenedParentP0), glm::normalize(shortenedParentP3 - shortenedParentP0));
 		if (dotC0 > 0 || dotP3 > 0/* && dotP0 < 0*/) return false;
 	}
-	if (m_connectivityGraphSettings.m_parallelShiftCheck 
+	if (m_connectivityGraphSettings.m_parallelShiftCheck
 		&& parentPB.y > m_connectivityGraphSettings.m_parallelShiftCheckHeightLimit
 		&& childPA.y > m_connectivityGraphSettings.m_parallelShiftCheckHeightLimit)
 	{
@@ -254,9 +254,9 @@ void TreeStructor::Unlink(const BranchHandle childHandle, const BranchHandle par
 	childBranch.m_parentHandle = -1;
 	childBranch.m_used = false;
 
-	for(int i = 0; i < parentBranch.m_childHandles.size(); i++)
+	for (int i = 0; i < parentBranch.m_childHandles.size(); i++)
 	{
-		if(childHandle == parentBranch.m_childHandles[i])
+		if (childHandle == parentBranch.m_childHandles[i])
 		{
 			parentBranch.m_childHandles[i] = parentBranch.m_childHandles.back();
 			parentBranch.m_childHandles.pop_back();
@@ -351,8 +351,9 @@ void TreeStructor::ImportGraph(const std::filesystem::path& path, float scaleFac
 		float minHeight = 999.0f;
 		for (int i = 0; i < treeParts.size(); i++) {
 			const auto& inTreeParts = treeParts[i];
-			auto& treePart = m_treeParts.emplace_back();
-			treePart.m_handle = m_treeParts.size() - 1;
+
+			TreePart treePart = {};
+			treePart.m_handle = m_treeParts.size();
 			try {
 				if (inTreeParts["Color"]) treePart.m_color = inTreeParts["Color"].as<glm::vec3>() / 255.0f;
 			}
@@ -360,16 +361,29 @@ void TreeStructor::ImportGraph(const std::filesystem::path& path, float scaleFac
 			{
 				EVOENGINE_ERROR("Color is wrong at node " + std::to_string(i) + ": " + std::string(e.what()));
 			}
+			int branchSize = 0;
 			for (const auto& inBranch : inTreeParts["Branches"]) {
+				auto branchStart = inBranch["Start Pos"].as<glm::vec3>() * scaleFactor;
+				auto branchEnd = inBranch["End Pos"].as<glm::vec3>() * scaleFactor;
+				auto startDir = inBranch["Start Dir"].as<glm::vec3>();
+				auto endDir = inBranch["End Dir"].as<glm::vec3>();
+
+				auto startRadius = inBranch["Start Radius"].as<float>() * scaleFactor;
+				auto endRadius = inBranch["End Radius"].as<float>() * scaleFactor;
+				if (branchStart == branchEnd || glm::any(glm::isnan(startDir)) || glm::any(glm::isnan(endDir)) || startRadius == 0.f || endRadius == 0.f)
+				{
+					continue;
+				}
+				branchSize++;
 				auto& branch = m_predictedBranches.emplace_back();
-				branch.m_bezierCurve.m_p0 = inBranch["Start Pos"].as<glm::vec3>() * scaleFactor;
-				branch.m_bezierCurve.m_p3 = inBranch["End Pos"].as<glm::vec3>() * scaleFactor;
+				branch.m_bezierCurve.m_p0 = branchStart;
+				branch.m_bezierCurve.m_p3 = branchEnd;
 				branch.m_color = treePart.m_color;
 				auto cPLength = glm::distance(branch.m_bezierCurve.m_p0, branch.m_bezierCurve.m_p3) * 0.3f;
 				branch.m_bezierCurve.m_p1 =
-					glm::normalize(inBranch["Start Dir"].as<glm::vec3>()) * cPLength + branch.m_bezierCurve.m_p0;
+					glm::normalize(startDir) * cPLength + branch.m_bezierCurve.m_p0;
 				branch.m_bezierCurve.m_p2 =
-					branch.m_bezierCurve.m_p3 - glm::normalize(inBranch["End Dir"].as<glm::vec3>()) * cPLength;
+					branch.m_bezierCurve.m_p3 - glm::normalize(endDir) * cPLength;
 				if (glm::any(glm::isnan(branch.m_bezierCurve.m_p1)))
 				{
 					branch.m_bezierCurve.m_p1 = glm::mix(branch.m_bezierCurve.m_p0, branch.m_bezierCurve.m_p3, 0.25f);
@@ -378,15 +392,17 @@ void TreeStructor::ImportGraph(const std::filesystem::path& path, float scaleFac
 				{
 					branch.m_bezierCurve.m_p2 = glm::mix(branch.m_bezierCurve.m_p0, branch.m_bezierCurve.m_p3, 0.75f);
 				}
-				branch.m_startThickness = inBranch["Start Radius"].as<float>() * scaleFactor;
-				branch.m_endThickness = inBranch["End Radius"].as<float>() * scaleFactor;
+				branch.m_startThickness = startRadius;
+				branch.m_endThickness = endRadius;
 				branch.m_handle = m_predictedBranches.size() - 1;
 				treePart.m_branchHandles.emplace_back(branch.m_handle);
 				branch.m_treePartHandle = treePart.m_handle;
 				minHeight = glm::min(minHeight, branch.m_bezierCurve.m_p0.y);
 				minHeight = glm::min(minHeight, branch.m_bezierCurve.m_p3.y);
 			}
-
+			if (branchSize == 0) continue;
+			//auto& treePart = m_treeParts.emplace_back();
+			m_treeParts.emplace_back(treePart);
 			for (const auto& inAllocatedPoint : inTreeParts["Allocated Points"]) {
 				auto& allocatedPoint = m_allocatedPoints.emplace_back();
 				allocatedPoint.m_color = treePart.m_color;
@@ -657,11 +673,11 @@ void TreeStructor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	if (!scatterPointToBranchConnectionInfoList) scatterPointToBranchConnectionInfoList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
 	if (!predictedBranchConnectionInfoList) predictedBranchConnectionInfoList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
 
-	
 
-	std::vector<ParticleInfo> allocatedPointMatrices;
-	std::vector<ParticleInfo> scatterPointMatrices;
-	std::vector<ParticleInfo> nodeMatrices;
+
+	static std::vector<ParticleInfo> allocatedPointMatrices;
+	static std::vector<ParticleInfo> scatterPointMatrices;
+	static std::vector<ParticleInfo> nodeMatrices;
 
 	static bool enableDebugRendering = true;
 
@@ -730,7 +746,7 @@ void TreeStructor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 			FormGeometryEntity();
 		}
 		m_treeMeshGeneratorSettings.OnInspect(editorLayer);
-		
+
 		if (ImGui::Button("Clear meshes"))
 		{
 			ClearMeshes();
@@ -1454,7 +1470,7 @@ void TreeStructor::BuildSkeletons() {
 		auto shortenedP3 = branch.m_bezierCurve.GetPoint(1.0f - m_reconstructionSettings.m_branchShortening);
 		auto shortenedLength = glm::distance(shortenedP0, shortenedP3);
 		if (branchStart.y <= m_reconstructionSettings.m_minHeight) {
-			branch.m_bezierCurve.m_p0.y = 0.0f;
+			//branch.m_bezierCurve.m_p0.y = 0.0f;
 			rootBranchHandles.emplace_back(branch.m_bezierCurve.m_p0, branch.m_handle);
 			rootBranchHandleSet.emplace(branch.m_handle);
 		}
@@ -1506,8 +1522,10 @@ void TreeStructor::BuildSkeletons() {
 	}
 	for (auto& operatingBranch : m_operatingBranches)
 	{
+		if (operatingBranch.m_orphan) continue;
 		for (const auto& parentCandidate : operatingBranch.m_parentCandidates) {
-			const auto& parentBranch = m_predictedBranches[parentCandidate.first];
+			const auto& parentBranch = m_operatingBranches[parentCandidate.first];
+			if (parentBranch.m_orphan) continue;
 			m_filteredBranchConnections.emplace_back(operatingBranch.m_bezierCurve.m_p0, parentBranch.m_bezierCurve.m_p3);
 		}
 	}
@@ -1549,18 +1567,18 @@ void TreeStructor::BuildSkeletons() {
 			float bestParentDistance = FLT_MAX;
 			float bestRootDistance = FLT_MAX;
 			int maxIndex = -1;
-			for(int i = 0; i < childBranch.m_parentCandidates.size(); i++)
+			for (int i = 0; i < childBranch.m_parentCandidates.size(); i++)
 			{
 				const auto& parentCandidate = childBranch.m_parentCandidates[i];
 				const auto& parentBranch = m_operatingBranches[parentCandidate.first];
-				if(!parentBranch.m_used || parentBranch.m_childHandles.size() >= m_reconstructionSettings.m_maxChildSize) continue;
+				if (!parentBranch.m_used || parentBranch.m_childHandles.size() >= m_reconstructionSettings.m_maxChildSize) continue;
 				float distance = parentCandidate.second;
 				float rootDistance = parentBranch.m_rootDistance + glm::distance(parentBranch.m_bezierCurve.m_p0, parentBranch.m_bezierCurve.m_p3) + distance;
-				if(m_reconstructionSettings.m_useRootDistance)
+				if (m_reconstructionSettings.m_useRootDistance)
 				{
 					distance = rootDistance;
 				}
-				if(distance < bestDistance)
+				if (distance < bestDistance)
 				{
 					bestParentHandle = parentCandidate.first;
 					bestRootDistance = rootDistance;
@@ -1569,7 +1587,7 @@ void TreeStructor::BuildSkeletons() {
 					bestDistance = distance;
 				}
 			}
-			if(maxIndex != -1)
+			if (maxIndex != -1)
 			{
 				childBranch.m_parentCandidates[maxIndex] = childBranch.m_parentCandidates.back();
 				childBranch.m_parentCandidates.pop_back();
@@ -1583,7 +1601,7 @@ void TreeStructor::BuildSkeletons() {
 	}
 	bool optimized = true;
 	int iteration = 0;
-	while(optimized && iteration < m_reconstructionSettings.m_optimizationTimeout)
+	while (optimized && iteration < m_reconstructionSettings.m_optimizationTimeout)
 	{
 		optimized = false;
 		for (auto& childBranch : m_operatingBranches)
@@ -1616,9 +1634,9 @@ void TreeStructor::BuildSkeletons() {
 			}
 			std::vector<BranchHandle> subTreeBranchList{};
 			GetSortedBranchList(childBranch.m_handle, subTreeBranchList);
-			if(maxIndex != -1)
+			if (maxIndex != -1)
 			{
-				for(const auto& branchHandle : subTreeBranchList)
+				for (const auto& branchHandle : subTreeBranchList)
 				{
 					if (branchHandle == bestParentHandle) {
 						maxIndex = -1;
@@ -1639,7 +1657,7 @@ void TreeStructor::BuildSkeletons() {
 				optimized = true;
 			}
 		}
-		if(optimized)
+		if (optimized)
 		{
 			CalculateBranchRootDistance(rootBranchHandles);
 		}
@@ -1647,7 +1665,7 @@ void TreeStructor::BuildSkeletons() {
 	}
 	CalculateBranchRootDistance(rootBranchHandles);
 
-	for(const auto& operatingBranch : m_operatingBranches)
+	for (const auto& operatingBranch : m_operatingBranches)
 	{
 		if (operatingBranch.m_parentHandle != -1) {
 			m_branchConnections.emplace_back(m_predictedBranches[operatingBranch.m_handle].m_bezierCurve.m_p0,
@@ -1665,11 +1683,11 @@ void TreeStructor::BuildSkeletons() {
 			auto& operatingBranch = m_operatingBranches[*it];
 			int maxDescendentSize = -1;
 			operatingBranch.m_largestChildHandle = -1;
-			for(const auto& childHandle : operatingBranch.m_childHandles)
+			for (const auto& childHandle : operatingBranch.m_childHandles)
 			{
 				auto& childBranch = m_operatingBranches[childHandle];
 				operatingBranch.m_descendentSize += childBranch.m_descendentSize + 1;
-				if(childBranch.m_descendentSize >= maxDescendentSize)
+				if (childBranch.m_descendentSize >= maxDescendentSize)
 				{
 					maxDescendentSize = childBranch.m_descendentSize;
 					operatingBranch.m_largestChildHandle = childHandle;
@@ -1678,10 +1696,11 @@ void TreeStructor::BuildSkeletons() {
 			for (const auto& childHandle : operatingBranch.m_childHandles)
 			{
 				auto& childBranch = m_operatingBranches[childHandle];
-				if(childHandle == operatingBranch.m_largestChildHandle)
+				if (childHandle == operatingBranch.m_largestChildHandle)
 				{
 					childBranch.m_apical = true;
-				}else
+				}
+				else
 				{
 					childBranch.m_apical = false;
 				}
@@ -1701,7 +1720,7 @@ void TreeStructor::BuildSkeletons() {
 				if (branch.m_parentHandle != -1 && branch.m_largestChildHandle != -1)
 				{
 					const auto& parentBranch = m_operatingBranches[branch.m_parentHandle];
-					if(parentBranch.m_largestChildHandle != branchHandle) continue;
+					if (parentBranch.m_largestChildHandle != branchHandle) continue;
 					const auto& childBranch = m_operatingBranches[branch.m_largestChildHandle];
 					const auto parentCenter = (parentBranch.m_bezierCurve.m_p0 + parentBranch.m_bezierCurve.m_p3) * 0.5f;
 					const auto childCenter = (childBranch.m_bezierCurve.m_p0 + childBranch.m_bezierCurve.m_p3) * 0.5f;
@@ -1796,7 +1815,30 @@ void TreeStructor::BuildSkeletons() {
 					auto& otherSkeleton = m_skeletons[j];
 					if (glm::distance(skeleton.m_data.m_rootPosition, otherSkeleton.m_data.m_rootPosition) < m_reconstructionSettings.m_minimumTreeDistance)
 					{
-						if (skeleton.PeekSortedNodeList().size() < otherSkeleton.PeekSortedNodeList().size()) remove = true;
+						const auto& sortedNodeList = skeleton.PeekSortedNodeList();
+						const auto& otherSkeletonSortedNodeList = otherSkeleton.PeekSortedNodeList();
+						if (sortedNodeList.size() < otherSkeletonSortedNodeList.size())
+						{
+							remove = true;
+							if (sortedNodeList.size() > m_reconstructionSettings.m_minimumNodeCount) {
+								std::unordered_map<NodeHandle, NodeHandle> nodeHandleMap;
+								nodeHandleMap[0] = 0;
+								for (const auto& nodeHandle : sortedNodeList)
+								{
+									const auto& node = skeleton.PeekNode(nodeHandle);
+									NodeHandle newNodeHandle = -1;
+									if (node.GetParentHandle() == -1)
+									{
+										continue;
+									}
+									newNodeHandle = otherSkeleton.Extend(nodeHandleMap.at(node.GetParentHandle()), !node.IsApical());
+									nodeHandleMap[nodeHandle] = newNodeHandle;
+									auto& newNode = otherSkeleton.RefNode(newNodeHandle);
+									newNode.m_info = node.m_info;
+									newNode.m_data = node.m_data;
+								}
+							}
+						}
 					}
 				}
 			}
@@ -1808,7 +1850,7 @@ void TreeStructor::BuildSkeletons() {
 			}
 		}
 	}
-
+	CalculateSkeletonGraphs();
 	SpaceColonization();
 }
 
@@ -1817,9 +1859,9 @@ void TreeStructor::FormGeometryEntity()
 	const auto scene = GetScene();
 	const auto owner = GetOwner();
 	const auto children = scene->GetChildren(owner);
-	for(const auto& i : children)
+	for (const auto& i : children)
 	{
-		if(scene->GetEntityName(i) == "Forest")
+		if (scene->GetEntityName(i) == "Forest")
 		{
 			scene->DeleteEntity(i);
 		}
@@ -1827,7 +1869,7 @@ void TreeStructor::FormGeometryEntity()
 
 	const auto forestEntity = scene->CreateEntity("Forest");
 	scene->SetParent(forestEntity, owner);
-	for(const auto& skeleton : m_skeletons)
+	for (const auto& skeleton : m_skeletons)
 	{
 		const auto treeEntity = scene->CreateEntity("Tree");
 		scene->SetParent(treeEntity, forestEntity);
@@ -1903,7 +1945,7 @@ void TreeStructor::SpaceColonization()
 	const auto dotMin = glm::cos(glm::radians(m_reconstructionSettings.m_spaceColonizationTheta));
 	bool newBranchGrown = true;
 	int timeout = 0;
-	while(newBranchGrown && timeout < m_reconstructionSettings.m_spaceColonizationTimeout)
+	while (newBranchGrown && timeout < m_reconstructionSettings.m_spaceColonizationTimeout)
 	{
 		newBranchGrown = false;
 		timeout++;
@@ -1920,12 +1962,12 @@ void TreeStructor::SpaceColonization()
 				m_spaceColonizationVoxelGrid.ForEach(internodeEndPosition, removalDistance,
 					[&](std::vector<PointData>& voxels)
 					{
-						for(int i = 0; i < voxels.size(); i++)
+						for (int i = 0; i < voxels.size(); i++)
 						{
 							auto& marker = voxels[i];
 							const auto diff = marker.m_position - internodeEndPosition;
 							const auto distance = glm::length(diff);
-							if(distance < removalDistance)
+							if (distance < removalDistance)
 							{
 								voxels[i] = voxels.back();
 								voxels.pop_back();
@@ -1938,7 +1980,7 @@ void TreeStructor::SpaceColonization()
 		}
 
 		//2. Allocate markers to node with perception volume.
-		for(auto& voxel : m_spaceColonizationVoxelGrid.RefData())
+		for (auto& voxel : m_spaceColonizationVoxelGrid.RefData())
 		{
 			for (auto& point : voxel)
 			{
@@ -1954,7 +1996,7 @@ void TreeStructor::SpaceColonization()
 							const auto diff = point.m_position - internodeEnd.m_position;
 							const auto distance = glm::length(diff);
 							const auto direction = glm::normalize(diff);
-							if (distance < detectionDistance 
+							if (distance < detectionDistance
 								&& glm::dot(direction, internodeEnd.m_direction) > dotMin
 								&& distance < point.m_minDistance)
 							{
@@ -1974,7 +2016,7 @@ void TreeStructor::SpaceColonization()
 		{
 			for (auto& point : voxel)
 			{
-				if(point.m_handle != -1)
+				if (point.m_handle != -1)
 				{
 					auto& internode = m_skeletons[point.m_index].RefNode(point.m_handle);
 					internode.m_data.m_markerSize++;
@@ -1992,7 +2034,7 @@ void TreeStructor::SpaceColonization()
 			{
 				auto& internode = skeleton.PeekNode(internodeHandle);
 				if (!internode.m_data.m_regrowth || internode.m_data.m_markerSize == 0) continue;
-				if(internode.m_info.m_rootDistance > skeleton.m_data.m_maxEndDistance) continue;
+				if (internode.m_info.m_rootDistance > skeleton.m_data.m_maxEndDistance) continue;
 				newBranchGrown = true;
 				const auto newInternodeHandle = skeleton.Extend(internodeHandle, !internode.RefChildHandles().empty());
 				auto& oldInternode = skeleton.RefNode(internodeHandle);
@@ -2026,13 +2068,14 @@ void TreeStructor::CalculateBranchRootDistance(
 	{
 		std::vector<BranchHandle> sortedBranchList{};
 		GetSortedBranchList(rootBranchHandle.second, sortedBranchList);
-		for(const auto branchHandle : sortedBranchList)
+		for (const auto branchHandle : sortedBranchList)
 		{
 			auto& branch = m_operatingBranches[branchHandle];
-			if(branch.m_parentHandle == -1)
+			if (branch.m_parentHandle == -1)
 			{
 				branch.m_rootDistance = 0.0f;
-			}else
+			}
+			else
 			{
 				const auto& parentBranch = m_operatingBranches[branch.m_parentHandle];
 				branch.m_rootDistance = parentBranch.m_rootDistance + glm::distance(parentBranch.m_bezierCurve.m_p0, parentBranch.m_bezierCurve.m_p3) + branch.m_distanceToParentBranch;
@@ -2140,7 +2183,7 @@ void TreeStructor::ClearSkeletalGraph() const
 }
 
 void TreeStructor::InitializeSkeletalGraph(const std::shared_ptr<Mesh>& pointMeshSample,
-                                             const std::shared_ptr<Mesh>& lineMeshSample, const SkeletalGraphSettings& skeletalGraphSettings)
+	const std::shared_ptr<Mesh>& lineMeshSample, const SkeletalGraphSettings& skeletalGraphSettings)
 {
 	const auto scene = GetScene();
 	const auto self = GetOwner();
@@ -2336,7 +2379,7 @@ std::vector<std::shared_ptr<Mesh>> TreeStructor::GenerateFoliageMeshes()
 
 void ConnectivityGraphSettings::OnInspect() {
 	//ImGui::Checkbox("Allow Reverse connections", &m_reverseConnection);
-	if(ImGui::Button("Load reduced connection settings"))
+	if (ImGui::Button("Load reduced connection settings"))
 	{
 		m_pointPointConnectionDetectionRadius = 0.05f;
 		m_pointBranchConnectionDetectionRadius = 0.1f;
@@ -2399,7 +2442,7 @@ void TreeStructor::CloneOperatingBranch(const ReconstructionSettings& reconstruc
 	{
 		operatorBranch.m_parentCandidates.emplace_back(data.first, data.second);
 		count++;
-		if(count > reconstructionSettings.m_maxParentCandidateSize) break;
+		if (count > reconstructionSettings.m_maxParentCandidateSize) break;
 	}
 	operatorBranch.m_distanceToParentBranch = 0.0f;
 	operatorBranch.m_bestDistance = FLT_MAX;
@@ -2422,7 +2465,7 @@ void ReconstructionSettings::OnInspect() {
 
 	ImGui::DragFloat("Override thickness root distance", &m_overrideThicknessRootDistance, 0.01f, 0.01f, 0.5f);
 	ImGui::DragFloat("Space colonization factor", &m_spaceColonizationFactor, 0.01f, 0.f, 1.0f);
-	if(m_spaceColonizationFactor > 0.0f)
+	if (m_spaceColonizationFactor > 0.0f)
 	{
 		ImGui::DragInt("Space colonization timeout", &m_spaceColonizationTimeout, 1, 0, 500);
 		ImGui::DragFloat("Space colonization removal distance", &m_spaceColonizationRemovalDistanceFactor, 0.1f, 0.f, 10.0f);

@@ -42,7 +42,6 @@ void StrandModelMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLay
 		if (m_smoothIteration == 0) ImGui::Checkbox("Remove duplicate", &m_removeDuplicate);
 		ImGui::ColorEdit4("Marching cube color", &m_marchingCubeColor.x);
 		ImGui::ColorEdit4("Cylindrical color", &m_cylindricalColor.x);
-		ImGui::DragFloat("TexCoords multiplier", &m_texCoordsMultiplier);
 		ImGui::TreePop();
 	}
 
@@ -1408,16 +1407,14 @@ void StrandModelMeshGenerator::MarchingCube(const StrandModel& strandModel, std:
 				const auto position = strandModel.InterpolateStrandSegmentPosition(pipeSegment.GetHandle(), a);
 				
 				octree.Occupy(position, [&](OctreeNode& octreeNode)
-					{
-						octreeNode.m_texCoords = glm::vec2(glm::mod(settings.m_texCoordsMultiplier * a, 1.0f), 0.05f);
-					});
+					{});
 			}
 		}
 		octree.TriangulateField(vertices, indices, settings.m_removeDuplicate);
 		
 	}
 	CalculateNormal(vertices, indices);
-	CalculateUV(vertices, settings.m_texCoordsMultiplier);
+	CalculateUV(strandModel, vertices, settings);
 }
 
 void StrandModelMeshGenerator::CylindricalMeshing(const StrandModel& strandModel, std::vector<Vertex>& vertices,
@@ -1868,18 +1865,24 @@ void StrandModelMeshGenerator::MeshSmoothing(std::vector<Vertex>& vertices, std:
 		}
 	}
 	std::vector<glm::vec3> newPositions;
+	std::vector<glm::vec2> newUvs;
 	for (int i = 0; i < vertices.size(); i++)
 	{
 		auto position = glm::vec3(0.0f);
+		auto uv = glm::vec2(0.f);
 		for (const auto& index : connectivity.at(i))
 		{
-			position += vertices.at(index).m_position;
+			const auto& vertex = vertices.at(index);
+			position += vertex.m_position;
+			uv += vertex.m_texCoord;
 		}
 		newPositions.push_back(position / static_cast<float>(connectivity.at(i).size()));
+		newUvs.push_back(uv / static_cast<float>(connectivity.at(i).size()));
 	}
 	for (int i = 0; i < vertices.size(); i++)
 	{
 		vertices[i].m_position = newPositions[i];
+		vertices[i].m_texCoord = newUvs[i];
 	}
 }
 
@@ -1915,21 +1918,53 @@ void StrandModelMeshGenerator::CalculateNormal(std::vector<Vertex>& vertices, co
 	}
 }
 
-void StrandModelMeshGenerator::CalculateUV(std::vector<Vertex>& vertices, float factor)
+glm::vec3 ProjectVec3(const glm::vec3& a, const glm::vec3& dir)
 {
-	for (auto& vertex : vertices)
-	{
-		if (glm::abs(vertex.m_normal.x) >= glm::abs(vertex.m_normal.z) && glm::abs(vertex.m_normal.x) >= glm::abs(vertex.m_normal.y))
+	return glm::normalize(dir) * glm::dot(a, dir) / glm::length(dir);
+}
+
+void StrandModelMeshGenerator::CalculateUV(const StrandModel& strandModel, std::vector<Vertex>& vertices, const StrandModelMeshGeneratorSettings& settings)
+{
+	Jobs::ParallelFor(vertices.size(), [&](unsigned vertexIndex)
 		{
-			vertex.m_texCoord = glm::vec2(glm::mod(vertex.m_position.z * factor, 1.0f), glm::mod(vertex.m_position.y * factor, 1.0f));
+			auto& vertex = vertices.at(vertexIndex);
+			const auto sortedNodeList = strandModel.m_strandModelSkeleton.PeekSortedNodeList();
+			float minDistance = FLT_MAX;
+			NodeHandle closestNodeHandle = -1;
+			for(const auto& nodeHandle : sortedNodeList)
+			{
+				const auto& node = strandModel.m_strandModelSkeleton.PeekNode(nodeHandle);
+				const auto closestPoint = glm::closestPointOnLine(vertex.m_position, node.m_info.m_globalPosition, node.m_info.GetGlobalEndPosition());
+				const auto currentDistance = glm::distance(closestPoint, vertex.m_position);
+				if(currentDistance < minDistance)
+				{
+					minDistance = currentDistance;
+					closestNodeHandle = nodeHandle;
+				}
+			}
+			if(closestNodeHandle != -1)
+			{
+				const auto closestNode = strandModel.m_strandModelSkeleton.PeekNode(closestNodeHandle);
+				const float endPointRootDistance = closestNode.m_info.m_rootDistance;
+				const float startPointRootDistance = closestNode.m_info.m_rootDistance - closestNode.m_info.m_length;
+				const auto closestPoint = glm::closestPointOnLine(vertex.m_position, closestNode.m_info.m_globalPosition, closestNode.m_info.GetGlobalEndPosition());
+				const float distanceToStart = glm::distance(closestPoint, closestNode.m_info.m_globalPosition);
+				const float a = closestNode.m_info.m_length == 0 ? 1.f : distanceToStart / closestNode.m_info.m_length;
+				const float rootDistance = glm::mix(startPointRootDistance, endPointRootDistance, a);
+				vertex.m_texCoord.y = rootDistance * settings.m_rootDistanceMultiplier;
+				const auto v = glm::normalize(vertex.m_position - closestPoint);
+				const auto up = closestNode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
+				const auto left = closestNode.m_info.m_regulatedGlobalRotation * glm::vec3(1, 0, 0);
+				const auto projUp = ProjectVec3(v, up);
+				const auto projLeft = ProjectVec3(v, left);
+				const glm::vec2 position = glm::vec2(glm::length(projLeft) * (glm::dot(projLeft, left) > 0.f ? 1.f : -1.f), glm::length(projUp) * (glm::dot(projUp, up) > 0.f ? 1.f : -1.f));
+				const float acosVal = glm::acos(position.x / glm::length(position));
+				vertex.m_texCoord.x = acosVal / glm::pi<float>();
+				//vertex.m_texCoord.x = (position.y > 0 ?  : 2.f * glm::pi<float>() - glm::acos(position.x / glm::length(position))) / 2.f * glm::pi<float>() * settings.m_circleMultiplier;
+			}else
+			{
+				vertex.m_texCoord = glm::vec2(0.0f);
+			}
 		}
-		else if (glm::abs(vertex.m_normal.z) >= glm::abs(vertex.m_normal.x) && glm::abs(vertex.m_normal.z) >= glm::abs(vertex.m_normal.y))
-		{
-			vertex.m_texCoord = glm::vec2(glm::mod(vertex.m_position.x * factor, 1.0f), glm::mod(vertex.m_position.y * factor, 1.0f));
-		}
-		else
-		{
-			vertex.m_texCoord = glm::vec2(glm::mod(vertex.m_position.x * factor, 1.0f), glm::mod(vertex.m_position.z * factor, 1.0f));
-		}
-	}
+	);
 }

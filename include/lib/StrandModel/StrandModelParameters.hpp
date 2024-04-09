@@ -29,9 +29,9 @@ namespace EcoSysLab
 		glm::vec4 m_boundaryPointColor = glm::vec4(0.6f, 0.3f, 0, 1);
 		glm::vec4 m_contentPointColor = glm::vec4(0, 0.3, 0.0f, 1);
 
-		float m_shiftPushRatio = 0.0f;
+		float m_shiftPushRatio = 1.0f;
 		float m_sidePushRatio = 1.0f;
-		float m_frontPushRatio = 0.0f;
+		float m_frontPushRatio = 1.0f;
 		float m_rotationPushRatio = 1.f;
 
 

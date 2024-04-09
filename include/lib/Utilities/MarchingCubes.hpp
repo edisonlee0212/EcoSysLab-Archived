@@ -14,15 +14,12 @@ namespace EcoSysLab
     struct TestingCell
     {
         glm::vec3 m_position;
-        glm::vec2 m_texCoords{};
     };
 
     struct MarchingCubeCell
     {
         glm::vec3 m_vertex[8];
         float m_value[8];
-
-        glm::vec2 m_texCoords{};
     };
 
     class MarchingCubes
@@ -38,7 +35,6 @@ namespace EcoSysLab
 
         /// m_triangleTable[i] is a list of edges forming triangles for cubeIndex i
         static int m_triangleTable[256][16];
-#pragma endregion
         /// Get triangles of a single cell
         static void TriangulateCell(MarchingCubeCell& cell, float isovalue, std::vector<Vertex>& vertices);
         

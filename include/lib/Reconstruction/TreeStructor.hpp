@@ -146,7 +146,7 @@ namespace EcoSysLab {
 		float m_spaceColonizationDetectionDistanceFactor = 4;
 		float m_spaceColonizationTheta = 20.0f;
 
-		int m_minimumNodeCount = 1;
+		int m_minimumNodeCount = 10;
 		bool m_limitParentThickness = true;
 		float m_minimumRootThickness = 0.02f;
 
