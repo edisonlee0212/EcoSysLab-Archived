@@ -42,12 +42,17 @@ void StrandModelMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLay
 		if (m_smoothIteration == 0) ImGui::Checkbox("Remove duplicate", &m_removeDuplicate);
 		ImGui::ColorEdit4("Marching cube color", &m_marchingCubeColor.x);
 		ImGui::ColorEdit4("Cylindrical color", &m_cylindricalColor.x);
+		ImGui::DragInt("uCoord multiplier", &m_rootDistanceMultiplier, 1, 1, 100);
+		ImGui::DragFloat("vCoord multiplier", &m_circleMultiplier, 0.1f);
 		ImGui::TreePop();
 	}
+
+
 
 	ImGui::DragInt("Major branch cell min", &m_minCellCountForMajorBranches, 1, 0, 1000);
 	ImGui::DragInt("Minor branch cell max", &m_maxCellCountForMinorBranches, 1, 0, 1000);
 
+	ImGui::Checkbox("Recalculate UV", &m_recalculateUV);
 	ImGui::DragInt("Smooth iteration", &m_smoothIteration, 0, 0, 10);
 	ImGui::Checkbox("Branch", &m_enableBranch);
 	ImGui::Checkbox("Foliage", &m_enableFoliage);
@@ -68,6 +73,8 @@ void StrandModelMeshGenerator::Generate(const StrandModel& strandModel, std::vec
 		MarchingCube(strandModel, vertices, indices, settings);
 	}break;
 	}
+	if(settings.m_recalculateUV) CalculateUV(strandModel, vertices, settings);
+
 	for (int i = 0; i < settings.m_smoothIteration; i++)
 	{
 		MeshSmoothing(vertices, indices);
@@ -1912,8 +1919,11 @@ void StrandModelMeshGenerator::CalculateUV(const StrandModel& strandModel, std::
 			for(const auto& nodeHandle : sortedNodeList)
 			{
 				const auto& node = strandModel.m_strandModelSkeleton.PeekNode(nodeHandle);
-				const auto closestPoint = glm::closestPointOnLine(vertex.m_position, node.m_info.m_globalPosition, node.m_info.GetGlobalEndPosition());
-				const auto currentDistance = glm::distance(closestPoint, vertex.m_position);
+				const auto nodeStart = node.m_info.m_globalPosition;
+				const auto nodeEnd = node.m_info.GetGlobalEndPosition();
+				const auto closestPoint = glm::closestPointOnLine(vertex.m_position, nodeStart, nodeEnd);
+				if(glm::dot(nodeEnd - nodeStart, closestPoint - nodeStart) <= 0.f || glm::dot(nodeStart - nodeEnd, closestPoint - nodeEnd) <= 0.f) continue;
+				const auto currentDistance = glm::distance(closestPoint, vertex.m_position) / node.m_info.m_thickness;
 				if(currentDistance < minDistance)
 				{
 					minDistance = currentDistance;

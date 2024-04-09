@@ -685,6 +685,7 @@ void StrandModel::CalculateStrandProfileAdjustedTransforms(const StrandModelPara
 		node.m_info.m_length = glm::length(diff);
 	}
 	m_strandModelSkeleton.CalculateRegulatedGlobalRotation();
+	m_strandModelSkeleton.CalculateDistance();
 	for (const auto& nodeHandle : sortedInternodeList)
 	{
 		auto& node = m_strandModelSkeleton.RefNode(nodeHandle);

@@ -39,12 +39,14 @@ namespace EcoSysLab {
 		glm::vec4 m_marchingCubeColor = glm::vec4(0.6, 0.3, 0.0f, 1.0f);
 		glm::vec4 m_cylindricalColor = glm::vec4(0.1, 0.9, 0.0f, 1.0f);
 
-		float m_rootDistanceMultiplier = 10.f;
+		int m_rootDistanceMultiplier = 10;
 		float m_circleMultiplier = 1.f;
 #pragma endregion
+
+		bool m_recalculateUV = false;
 		int m_smoothIteration = 12;
 		int m_minCellCountForMajorBranches = 100;
-		int m_maxCellCountForMinorBranches = 200;
+		int m_maxCellCountForMinorBranches = 150;
 		bool m_enableBranch = true;
 		bool m_enableFoliage = true;
 		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer);
