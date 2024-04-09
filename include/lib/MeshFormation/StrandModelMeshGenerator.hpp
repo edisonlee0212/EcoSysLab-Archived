@@ -43,7 +43,7 @@ namespace EcoSysLab {
 		float m_circleMultiplier = 1.f;
 #pragma endregion
 		int m_smoothIteration = 12;
-		int m_minCellCountForMajorBranches = 3;
+		int m_minCellCountForMajorBranches = 100;
 		int m_maxCellCountForMinorBranches = 200;
 		bool m_enableBranch = true;
 		bool m_enableFoliage = true;
