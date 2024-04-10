@@ -1852,6 +1852,15 @@ void TreeStructor::BuildSkeletons() {
 				i--;
 			}
 		}
+		for (int i = 0; i < m_skeletons.size(); i++)
+		{
+			auto& skeleton = m_skeletons[i];
+			const auto& sortedList = skeleton.PeekSortedNodeList();
+			if(!sortedList.empty())
+			{
+				skeleton.RefNode(0).m_info.m_globalPosition.y = 0;
+			}
+		}
 	}
 	CalculateSkeletonGraphs();
 	SpaceColonization();
@@ -2099,6 +2108,7 @@ void TreeStructor::CalculateSkeletonGraphs()
 		rootNode.m_info.m_globalRotation = rootNode.m_info.m_regulatedGlobalRotation = glm::quatLookAt(
 			glm::vec3(0, 1, 0), glm::vec3(0, 0, -1));
 		rootNode.m_info.m_globalPosition = glm::vec3(0.0f);
+		rootNode.m_info.m_length = glm::length(rootNode.m_data.m_globalEndPosition);
 		for (const auto& nodeHandle : sortedNodeList) {
 			auto& node = skeleton.RefNode(nodeHandle);
 			auto& nodeInfo = node.m_info;

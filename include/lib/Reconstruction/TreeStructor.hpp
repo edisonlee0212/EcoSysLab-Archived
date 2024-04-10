@@ -129,7 +129,7 @@ namespace EcoSysLab {
 
 	struct ReconstructionSettings {
 		float m_internodeLength = 0.03f;
-		float m_minHeight = 0.3f;
+		float m_minHeight = 0.1f;
 		float m_minimumTreeDistance = 0.1f;
 		float m_branchShortening = 0.3f;
 		int m_maxParentCandidateSize = 100;
