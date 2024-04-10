@@ -34,7 +34,7 @@ namespace EcoSysLab {
 
 	struct TreeMeshGeneratorSettings {
 		bool m_vertexColorOnly = false;
-		bool m_enableFoliage = false;
+		bool m_enableFoliage = true;
 		bool m_enableFruit = false;
 		bool m_enableBranch = true;
 		bool m_enableTwig = false;

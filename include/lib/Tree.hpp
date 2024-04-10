@@ -118,6 +118,9 @@ namespace EcoSysLab {
 		PrepareControllers(treeDescriptor);
 		m_treeModel.Initialize(m_shootGrowthController);
 		m_treeModel.RefShootSkeleton().Clone(srcSkeleton);
+		m_treeModel.RefShootSkeleton().CalculateDistance();
+		m_treeModel.RefShootSkeleton().CalculateRegulatedGlobalRotation();
+		m_treeModel.RefShootSkeleton().SortLists();
 		//TODO: Set up buds here.
 	}
 }

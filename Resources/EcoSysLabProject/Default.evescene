@@ -40,6 +40,9 @@ m_entityMetadataList:
     m_privateComponentElements:
       - m_typeName: TreeStructor
         m_enabled: true
+        m_treeDescriptor:
+          m_assetHandle: 11449186231039243581
+          m_assetTypeName: TreeDescriptor
   - m_name: Markers
     m_handle: 8350535051805926162
     m_enabled: false

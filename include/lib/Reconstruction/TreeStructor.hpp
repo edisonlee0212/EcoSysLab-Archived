@@ -239,6 +239,7 @@ namespace EcoSysLab {
 		void ImportGraph(const std::filesystem::path& path, float scaleFactor = 0.1f);
 		void ExportForestOBJ(const std::filesystem::path& path);
 
+
 		glm::vec3 m_min;
 		glm::vec3 m_max;
 		std::vector<ScatteredPoint> m_scatteredPoints;
@@ -266,10 +267,13 @@ namespace EcoSysLab {
 		void ClearMeshes() const;
 
 		void OnCreate() override;
-		AssetRef m_foliageDescriptor;
-		AssetRef m_shootBranchShape;
+		AssetRef m_treeDescriptor;
 
 		std::vector<std::shared_ptr<Mesh>> GenerateForestBranchMeshes() const;
 		std::vector<std::shared_ptr<Mesh>> GenerateFoliageMeshes();
+
+		void Serialize(YAML::Emitter& out) override;
+		void Deserialize(const YAML::Node& in) override;
+		void CollectAssetRef(std::vector<AssetRef>& list) override;
 	};
 }

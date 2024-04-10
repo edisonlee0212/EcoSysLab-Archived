@@ -321,18 +321,21 @@ void TreeStructor::ImportGraph(const std::filesystem::path& path, float scaleFac
 		YAML::Node in = YAML::Load(stringStream.str());
 
 		const auto& tree = in["Tree"];
-		const auto& scatterPoints = tree["Scatter Points"];
-		const auto& treeParts = tree["Tree Parts"];
+		if (tree["Scatter Points"])
+		{
+			const auto& scatterPoints = tree["Scatter Points"];
+			m_scatteredPoints.resize(scatterPoints.size());
 
-		m_scatteredPoints.resize(scatterPoints.size());
+			for (int i = 0; i < scatterPoints.size(); i++) {
+				auto& point = m_scatteredPoints[i];
+				point.m_position = scatterPoints[i].as<glm::vec3>() * scaleFactor;
 
-		for (int i = 0; i < scatterPoints.size(); i++) {
-			auto& point = m_scatteredPoints[i];
-			point.m_position = scatterPoints[i].as<glm::vec3>() * scaleFactor;
-
-			point.m_handle = i;
-			point.m_neighborScatterPoints.clear();
+				point.m_handle = i;
+				point.m_neighborScatterPoints.clear();
+			}
 		}
+
+		const auto& treeParts = tree["Tree Parts"];
 
 		m_predictedBranches.clear();
 		m_operatingBranches.clear();
@@ -713,13 +716,15 @@ void TreeStructor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	static glm::vec4 branchConnectionColor = glm::vec4(1, 0, 0, 1);
 
 	static float importScale = 0.1f;
+	editorLayer->DragAndDropButton<TreeDescriptor>(m_treeDescriptor, "TreeDescriptor", true);
+
 	ImGui::DragFloat("Import scale", &importScale, 0.01f, 0.01f, 10.0f);
 	FileUtils::OpenFile("Load YAML", "YAML", { ".yml" }, [&](const std::filesystem::path& path) {
 		ImportGraph(path, importScale);
 		refreshData = true;
 		}, false);
 
-	if (!m_scatteredPoints.empty()) {
+	if (!m_treeParts.empty()) {
 		if (ImGui::TreeNodeEx("Graph Settings")) {
 			m_connectivityGraphSettings.OnInspect();
 			ImGui::TreePop();
@@ -1034,41 +1039,39 @@ void TreeStructor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 			scatterPointInfoList->SetParticleInfos(scatterPointMatrices);
 			nodeInfoList->SetParticleInfos(nodeMatrices);
 		}
-		if (!scatterPointMatrices.empty()) {
-			if (drawScatteredPoints) {
-				editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CUBE"),
-					scatterPointInfoList,
-					glm::mat4(1.0f),
-					pointSize, gizmoSettings);
-			}
-			if (drawAllocatedPoints) {
-				editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CUBE"),
-					allocatedPointInfoList,
-					glm::mat4(1.0f),
-					pointSize, gizmoSettings);
-			}
-			if (drawpredictedBranches)
-				editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CONE"), predictedBranchConnectionInfoList, glm::mat4(1.0f), 1.0f, gizmoSettings);
-			if (drawScatteredPointConnections)
-				editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER"), scatteredPointConnectionInfoList, glm::mat4(1.0f), 1.0f, gizmoSettings);
+		if (drawScatteredPoints) {
+			editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CUBE"),
+				scatterPointInfoList,
+				glm::mat4(1.0f),
+				pointSize, gizmoSettings);
+		}
+		if (drawAllocatedPoints) {
+			editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CUBE"),
+				allocatedPointInfoList,
+				glm::mat4(1.0f),
+				pointSize, gizmoSettings);
+		}
+		if (drawpredictedBranches)
+			editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CONE"), predictedBranchConnectionInfoList, glm::mat4(1.0f), 1.0f, gizmoSettings);
+		if (drawScatteredPointConnections)
+			editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER"), scatteredPointConnectionInfoList, glm::mat4(1.0f), 1.0f, gizmoSettings);
 
-			if (drawCandidateConnections)
-				editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CONE"), candidateBranchConnectionInfoList, glm::mat4(1.0f), 1.0f, gizmoSettings);
+		if (drawCandidateConnections)
+			editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CONE"), candidateBranchConnectionInfoList, glm::mat4(1.0f), 1.0f, gizmoSettings);
 
-			if (drawReversedCandidateConnections)
-				editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER"), reversedCandidateBranchConnectionInfoList, glm::mat4(1.0f), 1.0f, gizmoSettings);
+		if (drawReversedCandidateConnections)
+			editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER"), reversedCandidateBranchConnectionInfoList, glm::mat4(1.0f), 1.0f, gizmoSettings);
 
-			if (drawFilteredConnections)
-				editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER"), filteredBranchConnectionInfoList, glm::mat4(1.0f), 1.0f, gizmoSettings);
-			if (drawBranchConnections)
-				editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER"), branchConnectionInfoList, glm::mat4(1.0f), 1.0f, gizmoSettings);
+		if (drawFilteredConnections)
+			editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER"), filteredBranchConnectionInfoList, glm::mat4(1.0f), 1.0f, gizmoSettings);
+		if (drawBranchConnections)
+			editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER"), branchConnectionInfoList, glm::mat4(1.0f), 1.0f, gizmoSettings);
 
-			if (drawScatterPointToBranchConnections)
-				editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER"), scatterPointToBranchConnectionInfoList, glm::mat4(1.0f), 1.0f, gizmoSettings);
-			if (drawNode) {
-				editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CUBE"), nodeInfoList,
-					glm::mat4(1.0f), nodeSize, gizmoSettings);
-			}
+		if (drawScatterPointToBranchConnections)
+			editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER"), scatterPointToBranchConnectionInfoList, glm::mat4(1.0f), 1.0f, gizmoSettings);
+		if (drawNode) {
+			editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CUBE"), nodeInfoList,
+				glm::mat4(1.0f), nodeSize, gizmoSettings);
 		}
 	}
 }
@@ -1874,6 +1877,7 @@ void TreeStructor::FormGeometryEntity()
 		const auto treeEntity = scene->CreateEntity("Tree");
 		scene->SetParent(treeEntity, forestEntity);
 		const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
+		tree->m_treeDescriptor = m_treeDescriptor;
 		tree->FromSkeleton(skeleton);
 		tree->GenerateGeometryEntities(m_treeMeshGeneratorSettings);
 		GlobalTransform gt{};
@@ -2279,8 +2283,6 @@ void TreeStructor::ClearMeshes() const {
 
 void TreeStructor::OnCreate()
 {
-	m_treeMeshGeneratorSettings.m_enableFoliage = true;
-	m_treeMeshGeneratorSettings.m_enableTwig = true;
 }
 
 std::vector<std::shared_ptr<Mesh>> TreeStructor::GenerateForestBranchMeshes() const
@@ -2310,62 +2312,65 @@ std::vector<std::shared_ptr<Mesh>> TreeStructor::GenerateForestBranchMeshes() co
 std::vector<std::shared_ptr<Mesh>> TreeStructor::GenerateFoliageMeshes()
 {
 	std::vector<std::shared_ptr<Mesh>> meshes{};
-	for (int i = 0; i < m_skeletons.size(); i++) {
+	for (auto& skeleton : m_skeletons)
+	{
 		std::vector<Vertex> vertices;
 		std::vector<unsigned int> indices;
 
 		auto quadMesh = Resources::GetResource<Mesh>("PRIMITIVE_QUAD");
 		auto& quadTriangles = quadMesh->UnsafeGetTriangles();
 		auto quadVerticesSize = quadMesh->GetVerticesAmount();
-		size_t offset = 0;
-		auto foliageDescriptor = m_foliageDescriptor.Get<FoliageDescriptor>();
-		if (!foliageDescriptor) foliageDescriptor = ProjectManager::CreateTemporaryAsset<FoliageDescriptor>();
-		const auto& nodeList = m_skeletons[i].PeekSortedNodeList();
-		for (const auto& internodeHandle : nodeList) {
-			const auto& internode = m_skeletons[i].PeekNode(internodeHandle);
-			const auto& internodeInfo = internode.m_info;
+		if (const auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>()) {
+			size_t offset = 0;
+			auto foliageDescriptor = treeDescriptor->m_foliageDescriptor.Get<FoliageDescriptor>();
+			if (!foliageDescriptor) foliageDescriptor = ProjectManager::CreateTemporaryAsset<FoliageDescriptor>();
+			const auto& nodeList = skeleton.PeekSortedNodeList();
+			for (const auto& internodeHandle : nodeList) {
+				const auto& internode = skeleton.PeekNode(internodeHandle);
+				const auto& internodeInfo = internode.m_info;
 
-			if (internodeInfo.m_thickness < foliageDescriptor->m_maxNodeThickness
-				&& internodeInfo.m_rootDistance > foliageDescriptor->m_minRootDistance
-				&& internodeInfo.m_endDistance < foliageDescriptor->m_maxEndDistance) {
-				for (int i = 0; i < foliageDescriptor->m_leafCountPerInternode; i++)
-				{
-					auto leafSize = foliageDescriptor->m_leafSize;
-					glm::quat rotation = internodeInfo.GetGlobalDirection() * glm::quat(glm::radians(glm::linearRand(glm::vec3(0.0f), glm::vec3(360.0f))));
-					auto front = rotation * glm::vec3(0, 0, -1);
-					auto foliagePosition = internodeInfo.m_globalPosition + front * (leafSize.y * 1.5f) + glm::sphericalRand(1.0f) * glm::linearRand(0.0f, foliageDescriptor->m_positionVariance);
-					auto leafTransform = glm::translate(foliagePosition) * glm::mat4_cast(rotation) * glm::scale(glm::vec3(leafSize.x, 1.0f, leafSize.y));
+				if (internodeInfo.m_thickness < foliageDescriptor->m_maxNodeThickness
+					&& internodeInfo.m_rootDistance > foliageDescriptor->m_minRootDistance
+					&& internodeInfo.m_endDistance < foliageDescriptor->m_maxEndDistance) {
+					for (int i = 0; i < foliageDescriptor->m_leafCountPerInternode; i++)
+					{
+						auto leafSize = foliageDescriptor->m_leafSize;
+						glm::quat rotation = internodeInfo.GetGlobalDirection() * glm::quat(glm::radians(glm::linearRand(glm::vec3(0.0f), glm::vec3(360.0f))));
+						auto front = rotation * glm::vec3(0, 0, -1);
+						auto foliagePosition = internodeInfo.m_globalPosition + front * (leafSize.y * 1.5f) + glm::sphericalRand(1.0f) * glm::linearRand(0.0f, foliageDescriptor->m_positionVariance);
+						auto leafTransform = glm::translate(foliagePosition) * glm::mat4_cast(rotation) * glm::scale(glm::vec3(leafSize.x, 1.0f, leafSize.y));
 
-					auto& matrix = leafTransform;
-					Vertex archetype;
-					for (auto i = 0; i < quadMesh->GetVerticesAmount(); i++) {
-						archetype.m_position =
-							matrix * glm::vec4(quadMesh->UnsafeGetVertices()[i].m_position, 1.0f);
-						archetype.m_normal = glm::normalize(glm::vec3(
-							matrix * glm::vec4(quadMesh->UnsafeGetVertices()[i].m_normal, 0.0f)));
-						archetype.m_tangent = glm::normalize(glm::vec3(
-							matrix *
-							glm::vec4(quadMesh->UnsafeGetVertices()[i].m_tangent, 0.0f)));
-						archetype.m_texCoord =
-							quadMesh->UnsafeGetVertices()[i].m_texCoord;
-						vertices.push_back(archetype);
+						auto& matrix = leafTransform;
+						Vertex archetype;
+						for (auto i = 0; i < quadMesh->GetVerticesAmount(); i++) {
+							archetype.m_position =
+								matrix * glm::vec4(quadMesh->UnsafeGetVertices()[i].m_position, 1.0f);
+							archetype.m_normal = glm::normalize(glm::vec3(
+								matrix * glm::vec4(quadMesh->UnsafeGetVertices()[i].m_normal, 0.0f)));
+							archetype.m_tangent = glm::normalize(glm::vec3(
+								matrix *
+								glm::vec4(quadMesh->UnsafeGetVertices()[i].m_tangent, 0.0f)));
+							archetype.m_texCoord =
+								quadMesh->UnsafeGetVertices()[i].m_texCoord;
+							vertices.push_back(archetype);
+						}
+						for (auto triangle : quadTriangles) {
+							triangle.x += offset;
+							triangle.y += offset;
+							triangle.z += offset;
+							indices.push_back(triangle.x);
+							indices.push_back(triangle.y);
+							indices.push_back(triangle.z);
+						}
+						offset += quadVerticesSize;
 					}
-					for (auto triangle : quadTriangles) {
-						triangle.x += offset;
-						triangle.y += offset;
-						triangle.z += offset;
-						indices.push_back(triangle.x);
-						indices.push_back(triangle.y);
-						indices.push_back(triangle.z);
-					}
-					offset += quadVerticesSize;
 				}
-			}
 
+			}
 		}
 		Jobs::ParallelFor(vertices.size(), [&](unsigned j)
 			{
-				vertices[j].m_position += m_skeletons[i].m_data.m_rootPosition;
+				vertices[j].m_position += skeleton.m_data.m_rootPosition;
 			});
 		auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
 		VertexAttributes attributes{};
@@ -2374,6 +2379,21 @@ std::vector<std::shared_ptr<Mesh>> TreeStructor::GenerateFoliageMeshes()
 		meshes.emplace_back(mesh);
 	}
 	return meshes;
+}
+
+void TreeStructor::Serialize(YAML::Emitter& out)
+{
+	m_treeDescriptor.Save("m_treeDescriptor", out);
+}
+
+void TreeStructor::Deserialize(const YAML::Node& in)
+{
+	m_treeDescriptor.Load("m_treeDescriptor", in);
+}
+
+void TreeStructor::CollectAssetRef(std::vector<AssetRef>& list)
+{
+	if (m_treeDescriptor.Get<TreeDescriptor>()) list.emplace_back(m_treeDescriptor);
 }
 
 

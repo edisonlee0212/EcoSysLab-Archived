@@ -4,8 +4,10 @@ m_positionVariance: 0.174999997
 m_rotationVariance: 1
 m_branchingAngle: 30
 m_maxNodeThickness: 1
-m_minRootDistance: 0
-m_maxEndDistance: 0.400000006
+m_minRootDistance: 0.5
+m_maxEndDistance: 0.300000012
+m_horizontalTropism: 0
+m_gravitropism: 0
 m_twigParameters:
   m_segmentLength: 0.00999999978
   m_apicalAngleVariance: 3
