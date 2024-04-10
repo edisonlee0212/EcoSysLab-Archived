@@ -393,8 +393,8 @@ void StrandModel::MergeTask(float maxRootDistance, NodeHandle nodeHandle, const 
 				{
 					direction = glm::vec2(1, 0);
 				}
-				childNode.m_data.m_centerDirectionRadius = childPhysics2D.GetDistanceToCenter(-direction);
-				const auto mainChildRadius = mainChildPhysics2D.GetDistanceToCenter(direction);
+				childNode.m_data.m_centerDirectionRadius = childPhysics2D.GetDistanceToOrigin(-direction, glm::vec2(0.0f));
+				const auto mainChildRadius = mainChildPhysics2D.GetDistanceToOrigin(direction, glm::vec2(0.0f));
 				auto offset = glm::vec2(0.0f);
 				offset = (mainChildRadius - childNode.m_data.m_centerDirectionRadius + 2.0f) * direction;
 				childNode.m_data.m_offset = offset;
@@ -443,8 +443,8 @@ void StrandModel::MergeTask(float maxRootDistance, NodeHandle nodeHandle, const 
 				{
 					direction = glm::vec2(1, 0);
 				}
-				childNode.m_data.m_centerDirectionRadius = childPhysics2D.GetDistanceToCenter(-direction);
-				const auto centerRadius = internodeData.m_profile.GetDistanceToCenter(direction);
+				childNode.m_data.m_centerDirectionRadius = childPhysics2D.GetDistanceToOrigin(-direction, glm::vec2(0.0f));
+				const auto centerRadius = internodeData.m_profile.GetDistanceToOrigin(direction, glm::vec2(0.0f));
 				auto offset = glm::vec2(0.0f);
 				offset = (centerRadius + childNode.m_data.m_centerDirectionRadius + 2.0f) * direction;
 				childNode.m_data.m_offset = offset;
@@ -480,8 +480,8 @@ void StrandModel::MergeTask(float maxRootDistance, NodeHandle nodeHandle, const 
 			{
 				direction = glm::vec2(1, 0);
 			}
-			childNode.m_data.m_centerDirectionRadius = childPhysics2D.GetDistanceToCenter(-direction);
-			const auto mainChildRadius = mainChildPhysics2D.GetDistanceToCenter(direction);
+			childNode.m_data.m_centerDirectionRadius = childPhysics2D.GetDistanceToOrigin(-direction, glm::vec2(0.0f));
+			const auto mainChildRadius = mainChildPhysics2D.GetDistanceToOrigin(direction, glm::vec2(0.0f));
 			auto offset = glm::vec2(0.0f);
 			if (childNode.m_data.m_split)
 			{
@@ -662,8 +662,8 @@ void StrandModel::CalculateStrandProfileAdjustedTransforms(const StrandModelPara
 		const float cosFront = glm::dot(front, parentFront); //Horizontal
 		const float sinFront = glm::sin(glm::acos(glm::clamp(cosFront, -1.0f, 1.0f))); //Vertical
 		if (!node.m_data.m_apical && offsetLength > glm::epsilon<float>()) {
-			const float outerRadius = node.m_data.m_profile.GetDistanceToCenter(glm::normalize(node.m_data.m_offset));
-			const float innerRadius = node.m_data.m_profile.GetDistanceToCenter(-glm::normalize(node.m_data.m_offset));
+			const float outerRadius = node.m_data.m_profile.GetDistanceToOrigin(glm::normalize(node.m_data.m_offset), glm::vec2(0.f));
+			const float innerRadius = node.m_data.m_profile.GetDistanceToOrigin(-glm::normalize(node.m_data.m_offset), glm::vec2(0.f));
 			const auto offsetDirection = glm::normalize(node.m_data.m_offset);
 			const auto newOffset = (offsetLength + innerRadius + (outerRadius - outerRadius * cosFront) * strandModelParameters.m_rotationPushRatio) * offsetDirection;
 			newGlobalEndPosition += parentUp * newOffset.y * strandModelParameters.m_sidePushRatio * node.m_data.m_strandRadius;

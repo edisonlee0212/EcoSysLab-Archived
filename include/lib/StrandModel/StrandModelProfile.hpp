@@ -45,7 +45,7 @@ namespace EcoSysLab {
 		ParticleGrid2D m_particleGrid2D{};
 		bool m_parallel = false;
 		bool m_forceResetGrid = false;
-		[[nodiscard]] float GetDistanceToCenter(const glm::vec2& direction) const;
+		[[nodiscard]] float GetDistanceToOrigin(const glm::vec2& direction, const glm::vec2& origin) const;
 		[[nodiscard]] float GetDeltaTime() const;
 		void SetEnableAllParticles(bool value);
 		void Reset(float deltaTime = 0.002f);
@@ -428,7 +428,7 @@ namespace EcoSysLab {
 	}
 
 	template <typename T>
-	float StrandModelProfile<T>::GetDistanceToCenter(const glm::vec2& direction) const
+	float StrandModelProfile<T>::GetDistanceToOrigin(const glm::vec2& direction, const glm::vec2& origin) const
 	{
 		float maxDistance = FLT_MIN;
 		if (m_parallel) {
@@ -443,7 +443,7 @@ namespace EcoSysLab {
 				{
 					const auto& particle = m_particles2D[i];
 					if (!particle.m_enable) return;
-					const auto distance = glm::length(glm::closestPointOnLine(particle.m_position, glm::vec2(0.0f), direction * 100.0f));
+					const auto distance = glm::length(glm::closestPointOnLine(particle.m_position, glm::vec2(origin), origin + direction * 1000.0f));
 					maxDistances[threadIndex] = glm::max(maxDistances[threadIndex], distance);
 				});
 
@@ -456,7 +456,7 @@ namespace EcoSysLab {
 		{
 			for (const auto& particle : m_particles2D)
 			{
-				const auto distance = glm::length(glm::closestPointOnLine(particle.m_position, glm::vec2(0.0f), direction * 100.0f));
+				const auto distance = glm::length(glm::closestPointOnLine(particle.m_position, glm::vec2(origin), origin + direction * 1000.0f));
 				maxDistance = glm::max(maxDistance, distance);
 			}
 		}
