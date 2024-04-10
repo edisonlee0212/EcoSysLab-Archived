@@ -1083,10 +1083,13 @@ void cyclicOrderUntangle(std::vector<size_t>& permutation)
 
 }
 
-void connectSlices(const StrandModelStrandGroup& pipes, Slice& bottomSlice, size_t bottomOffset,
+bool connectSlices(const StrandModelStrandGroup& pipes, Slice& bottomSlice, size_t bottomOffset,
 	std::vector<Slice>& topSlices, std::vector<size_t> topOffsets,
 	std::vector<Vertex>& vertices, std::vector<unsigned>& indices, bool branchConnections)
 {
+	// we want to track whether we actually produced any geometry
+	size_t sizeBefore = indices.size();
+
 	// compute (incomplete) permutation that turns 0 into 1
 
 	// map of pipe handle index to top slice and index in top slice
@@ -1304,6 +1307,8 @@ void connectSlices(const StrandModelStrandGroup& pipes, Slice& bottomSlice, size
 
 		prevI = i;
 	}
+
+	return sizeBefore != indices.size();
 }
 
 void createTwigTip(const StrandModel& strandModel, std::pair < Slice, PipeCluster>& prevSlice, size_t prevOffset, float t,
@@ -1404,7 +1409,12 @@ void sliceRecursively(const StrandModel& strandModel, std::pair < Slice, PipeClu
 		}
 	}
 
-	connectSlices(pipeGroup, prevSlice.first, prevOffset, topSlices, offsets, vertices, indices, settings.m_branchConnections);
+	bool connected = connectSlices(pipeGroup, prevSlice.first, prevOffset, topSlices, offsets, vertices, indices, settings.m_branchConnections);
+
+	if (!connected)
+	{
+		std::cerr << "Error: did not connect the slices at t = " << t << " ---" << std::endl;
+	}
 
 	if (DEBUG_OUTPUT) std::cout << "--- Done with slice at t = " << t << " ---" << std::endl;
 	// recursive call
