@@ -53,6 +53,7 @@ void StrandModelMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLay
 	ImGui::DragInt("Minor branch cell max", &m_maxCellCountForMinorBranches, 1, 0, 1000);
 
 	ImGui::Checkbox("Recalculate UV", &m_recalculateUV);
+	ImGui::Checkbox("Fast UV", &m_fastUV);
 	ImGui::DragInt("Smooth iteration", &m_smoothIteration, 0, 0, 10);
 	ImGui::Checkbox("Branch", &m_enableBranch);
 	ImGui::Checkbox("Foliage", &m_enableFoliage);
@@ -61,7 +62,7 @@ void StrandModelMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLay
 void StrandModelMeshGenerator::Generate(const StrandModel& strandModel, std::vector<Vertex>& vertices,
 	std::vector<unsigned>& indices, const StrandModelMeshGeneratorSettings& settings)
 {
-	const float time = Times::Now();
+	const float meshFormationTime = Times::Now();
 	switch (settings.m_generatorType)
 	{
 	case StrandModelMeshGeneratorType::RecursiveSlicing:
@@ -73,16 +74,21 @@ void StrandModelMeshGenerator::Generate(const StrandModel& strandModel, std::vec
 		MarchingCube(strandModel, vertices, indices, settings);
 	}break;
 	}
-	if(settings.m_recalculateUV) CalculateUV(strandModel, vertices, settings);
+	EVOENGINE_LOG("Mesh formation finished in: " + std::to_string(Times::Now() - meshFormationTime) + "s.");
 
+		if (settings.m_recalculateUV || settings.m_generatorType == static_cast<unsigned>(StrandModelMeshGeneratorType::HybridMarchingCube)) {
+			const float recalculateUVTime = Times::Now();
+			CalculateUV(strandModel, vertices, settings);
+			EVOENGINE_LOG("Recalculate UV time: " + std::to_string(Times::Now() - recalculateUVTime) + "s.");
+		}
+	
+	const float meshSmoothingTime = Times::Now();
 	for (int i = 0; i < settings.m_smoothIteration; i++)
 	{
 		MeshSmoothing(vertices, indices);
 	}
+	EVOENGINE_LOG("Mesh smoothing time: " + std::to_string(Times::Now() - meshSmoothingTime) + "s.");
 	CylindricalMeshing(strandModel, vertices, indices, settings);
-
-	const float usedTime = Times::Now() - time;
-	EVOENGINE_LOG("Mesh formation time: " + std::to_string(usedTime));
 }
 
 int roundInDir(float val, int dir)
@@ -308,9 +314,9 @@ float getPipePolar(const StrandModel& strandModel, const StrandHandle& pipeHandl
 		a1 = p1.GetPolarPosition().y;
 	}
 
-	
+
 	float a0 = p0.GetPolarPosition().y;
-	
+
 
 	// we will just assume that the difference cannot exceed 180 degrees
 	if (a1 < a0)
@@ -324,7 +330,7 @@ float getPipePolar(const StrandModel& strandModel, const StrandHandle& pipeHandl
 	if (a1 - a0 > glm::pi<float>())
 	{
 		// rotation wraps around
-		angle = fmod((a0 + 2 * glm::pi<float>()) * interpolationParam + a1 * (1 - interpolationParam) , 2 * glm::pi<float>());
+		angle = fmod((a0 + 2 * glm::pi<float>()) * interpolationParam + a1 * (1 - interpolationParam), 2 * glm::pi<float>());
 
 		if (angle > glm::pi<float>())
 		{
@@ -401,7 +407,7 @@ void delaunay(Graph& g, float removalLength, std::vector<size_t>& candidates, co
 		NodeHandle n0 = getNodeHandle(pipeGroup, p0, t);
 		NodeHandle n1 = getNodeHandle(pipeGroup, p1, t);
 		NodeHandle n2 = getNodeHandle(pipeGroup, p2, t);
-		
+
 		if (n0 == n1 && n1 == n2)
 		{
 			g.addEdge(v0, v1);
@@ -947,7 +953,7 @@ std::pair< std::vector<Graph>, std::vector<std::vector<size_t> > > computeCluste
 			for (size_t j : clusters[i])
 			{
 				StrandHandle pipeHandle = pipesInPrevious[j];
-								
+
 
 				std::cerr << "Strand no. " << j << " with handle " << pipeHandle << " belonging to node with handle " << pipeSegment.m_data.m_nodeHandle << std::endl;
 			}
@@ -1412,16 +1418,35 @@ void StrandModelMeshGenerator::MarchingCube(const StrandModel& strandModel, std:
 			{
 				const auto a = static_cast<float>(step) / stepSize;
 				const auto position = strandModel.InterpolateStrandSegmentPosition(pipeSegment.GetHandle(), a);
-				
+
 				octree.Occupy(position, [&](OctreeNode& octreeNode)
 					{});
 			}
 		}
 		octree.TriangulateField(vertices, indices, settings.m_removeDuplicate);
-		
+		std::unordered_set<unsigned> indicesMap;
+		for (int triangleIndex = 0; triangleIndex < indices.size() / 3; triangleIndex++)
+		{
+			const auto& v1i = indices[triangleIndex * 3];
+			const auto& v2i = indices[triangleIndex * 3 + 1];
+			const auto& v3i = indices[triangleIndex * 3 + 2];
+			const auto& v1 = vertices[v1i];
+			const auto& v2 = vertices[v2i];
+			const auto& v3 = vertices[v3i];
+			if (v1.m_position.y < 0.001f && v2.m_position.y < 0.001f && v3.m_position.y < 0.001f)
+			{
+				indices[triangleIndex * 3] = indices[indices.size() - 3];
+				indices[triangleIndex * 3 + 1] = indices[indices.size() - 2];
+				indices[triangleIndex * 3 + 2] = indices[indices.size() - 1];
+				indices.pop_back();
+				indices.pop_back();
+				indices.pop_back();
+				triangleIndex--;
+			}
+		}
+
 	}
 	CalculateNormal(vertices, indices);
-	CalculateUV(strandModel, vertices, settings);
 }
 
 void StrandModelMeshGenerator::CylindricalMeshing(const StrandModel& strandModel, std::vector<Vertex>& vertices,
@@ -1464,7 +1489,8 @@ void StrandModelMeshGenerator::CylindricalMeshing(const StrandModel& strandModel
 			p[0] = p[1] * 2.0f - p[2];
 			f[0] = f[1] * 2.0f - f[2];
 			t[0] = t[1] * 2.0f - t[2];
-		}else
+		}
+		else
 		{
 			p[0] = skeleton.PeekNode(internode.GetParentHandle()).m_info.m_globalPosition;
 			f[0] = skeleton.PeekNode(skeleton.PeekNode(internode.GetParentHandle()).GetParentHandle()).m_info.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
@@ -1866,7 +1892,12 @@ void StrandModelMeshGenerator::MeshSmoothing(std::vector<Vertex>& vertices, std:
 	}
 	for (int i = 0; i < vertices.size(); i++)
 	{
-		vertices[i].m_position = newPositions[i];
+		if (vertices[i].m_position.y > 0.001f) vertices[i].m_position = newPositions[i];
+		else
+		{
+			vertices[i].m_position.x = newPositions[i].x;
+			vertices[i].m_position.z = newPositions[i].z;
+		}
 		vertices[i].m_texCoord = newUvs[i];
 	}
 }
@@ -1910,49 +1941,147 @@ glm::vec3 ProjectVec3(const glm::vec3& a, const glm::vec3& dir)
 
 void StrandModelMeshGenerator::CalculateUV(const StrandModel& strandModel, std::vector<Vertex>& vertices, const StrandModelMeshGeneratorSettings& settings)
 {
-	Jobs::ParallelFor(vertices.size(), [&](unsigned vertexIndex)
-		{
-			auto& vertex = vertices.at(vertexIndex);
-			const auto sortedNodeList = strandModel.m_strandModelSkeleton.PeekSortedNodeList();
-			float minDistance = FLT_MAX;
-			NodeHandle closestNodeHandle = -1;
-			for(const auto& nodeHandle : sortedNodeList)
+	if (settings.m_fastUV)
+	{
+		const auto& sortedNodeList = strandModel.m_strandModelSkeleton.PeekSortedNodeList();
+
+		Jobs::ParallelFor(vertices.size(), [&](unsigned vertexIndex)
 			{
-				const auto& node = strandModel.m_strandModelSkeleton.PeekNode(nodeHandle);
-				const auto nodeStart = node.m_info.m_globalPosition;
-				const auto nodeEnd = node.m_info.GetGlobalEndPosition();
-				const auto closestPoint = glm::closestPointOnLine(vertex.m_position, nodeStart, nodeEnd);
-				if(glm::dot(nodeEnd - nodeStart, closestPoint - nodeStart) <= 0.f || glm::dot(nodeStart - nodeEnd, closestPoint - nodeEnd) <= 0.f) continue;
-				const auto currentDistance = glm::distance(closestPoint, vertex.m_position) / node.m_info.m_thickness;
-				if(currentDistance < minDistance)
+				auto& vertex = vertices.at(vertexIndex);
+
+				float minDistance = FLT_MAX;
+				NodeHandle closestNodeHandle = -1;
+
+				for (const auto& nodeHandle : sortedNodeList)
 				{
-					minDistance = currentDistance;
-					closestNodeHandle = nodeHandle;
+					const auto& node = strandModel.m_strandModelSkeleton.PeekNode(nodeHandle);
+					const auto& profile = node.m_data.m_profile;
+					if (profile.PeekParticles().size() < settings.m_minCellCountForMajorBranches) continue;
+					const auto nodeStart = node.m_info.m_globalPosition;
+					const auto nodeEnd = node.m_info.GetGlobalEndPosition();
+					const auto closestPoint = glm::closestPointOnLine(vertex.m_position, nodeStart, nodeEnd);
+					if (glm::dot(nodeEnd - nodeStart, closestPoint - nodeStart) <= 0.f || glm::dot(nodeStart - nodeEnd, closestPoint - nodeEnd) <= 0.f) continue;
+					const auto currentDistance = glm::distance(closestPoint, vertex.m_position) / node.m_info.m_thickness;
+					if (currentDistance < minDistance)
+					{
+						minDistance = currentDistance;
+						closestNodeHandle = nodeHandle;
+					}
+				}
+				if (closestNodeHandle != -1)
+				{
+					const auto closestNode = strandModel.m_strandModelSkeleton.PeekNode(closestNodeHandle);
+					const float endPointRootDistance = closestNode.m_info.m_rootDistance;
+					const float startPointRootDistance = closestNode.m_info.m_rootDistance - closestNode.m_info.m_length;
+					const auto closestPoint = glm::closestPointOnLine(vertex.m_position, closestNode.m_info.m_globalPosition, closestNode.m_info.GetGlobalEndPosition());
+					const float distanceToStart = glm::distance(closestPoint, closestNode.m_info.m_globalPosition);
+					const float a = closestNode.m_info.m_length == 0 ? 1.f : distanceToStart / closestNode.m_info.m_length;
+					const float rootDistance = glm::mix(startPointRootDistance, endPointRootDistance, a);
+					vertex.m_texCoord.y = rootDistance * settings.m_rootDistanceMultiplier;
+					const auto v = glm::normalize(vertex.m_position - closestPoint);
+					const auto up = closestNode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
+					const auto left = closestNode.m_info.m_regulatedGlobalRotation * glm::vec3(1, 0, 0);
+					const auto projUp = ProjectVec3(v, up);
+					const auto projLeft = ProjectVec3(v, left);
+					const glm::vec2 position = glm::vec2(glm::length(projLeft) * (glm::dot(projLeft, left) > 0.f ? 1.f : -1.f), glm::length(projUp) * (glm::dot(projUp, up) > 0.f ? 1.f : -1.f));
+					const float acosVal = glm::acos(position.x / glm::length(position));
+					vertex.m_texCoord.x = acosVal / glm::pi<float>();
+				}
+				else
+				{
+					vertex.m_texCoord = glm::vec2(0.0f);
 				}
 			}
-			if(closestNodeHandle != -1)
-			{
-				const auto closestNode = strandModel.m_strandModelSkeleton.PeekNode(closestNodeHandle);
-				const float endPointRootDistance = closestNode.m_info.m_rootDistance;
-				const float startPointRootDistance = closestNode.m_info.m_rootDistance - closestNode.m_info.m_length;
-				const auto closestPoint = glm::closestPointOnLine(vertex.m_position, closestNode.m_info.m_globalPosition, closestNode.m_info.GetGlobalEndPosition());
-				const float distanceToStart = glm::distance(closestPoint, closestNode.m_info.m_globalPosition);
-				const float a = closestNode.m_info.m_length == 0 ? 1.f : distanceToStart / closestNode.m_info.m_length;
-				const float rootDistance = glm::mix(startPointRootDistance, endPointRootDistance, a);
-				vertex.m_texCoord.y = rootDistance * settings.m_rootDistanceMultiplier;
-				const auto v = glm::normalize(vertex.m_position - closestPoint);
-				const auto up = closestNode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
-				const auto left = closestNode.m_info.m_regulatedGlobalRotation * glm::vec3(1, 0, 0);
-				const auto projUp = ProjectVec3(v, up);
-				const auto projLeft = ProjectVec3(v, left);
-				const glm::vec2 position = glm::vec2(glm::length(projLeft) * (glm::dot(projLeft, left) > 0.f ? 1.f : -1.f), glm::length(projUp) * (glm::dot(projUp, up) > 0.f ? 1.f : -1.f));
-				const float acosVal = glm::acos(position.x / glm::length(position));
-				vertex.m_texCoord.x = acosVal / glm::pi<float>();
-				//vertex.m_texCoord.x = (position.y > 0 ?  : 2.f * glm::pi<float>() - glm::acos(position.x / glm::length(position))) / 2.f * glm::pi<float>() * settings.m_circleMultiplier;
-			}else
-			{
-				vertex.m_texCoord = glm::vec2(0.0f);
-			}
+		);
+	}
+	else {
+		const auto& strandGroup = strandModel.m_strandModelSkeleton.m_data.m_strandGroup;
+		auto min = glm::vec3(FLT_MAX);
+		auto max = glm::vec3(FLT_MIN);
+		for (const auto& segment : strandGroup.PeekStrandSegments())
+		{
+			if (segment.IsRecycled()) continue;
+			const auto& node = strandModel.m_strandModelSkeleton.PeekNode(segment.m_data.m_nodeHandle);
+			const auto& profile = node.m_data.m_profile;
+			if (profile.PeekParticles().size() < settings.m_minCellCountForMajorBranches) continue;
+			const auto segmentStart = strandGroup.GetStrandSegmentStart(segment.GetHandle());
+			const auto segmentEnd = segment.m_info.m_globalPosition;
+			min = glm::min(segmentStart, min);
+			min = glm::min(segmentStart, min);
+			max = glm::max(segmentEnd, max);
+			max = glm::max(segmentEnd, max);
 		}
-	);
+		min -= glm::vec3(0.1f);
+		max += glm::vec3(0.1f);
+		VoxelGrid<std::vector<StrandSegmentHandle>> boundarySegments;
+		boundarySegments.Initialize(0.01f, min, max, {});
+
+		for (const auto& segment : strandGroup.PeekStrandSegments())
+		{
+			if (segment.IsRecycled()) continue;
+			const auto& node = strandModel.m_strandModelSkeleton.PeekNode(segment.m_data.m_nodeHandle);
+			const auto& profile = node.m_data.m_profile;
+			if (profile.PeekParticles().size() < settings.m_minCellCountForMajorBranches) continue;
+
+			const auto segmentStart = strandGroup.GetStrandSegmentStart(segment.GetHandle());
+			const auto segmentEnd = segment.m_info.m_globalPosition;
+			boundarySegments.Ref((segmentStart + segmentEnd) * 0.5f).emplace_back(segment.GetHandle());
+		}
+
+
+		Jobs::ParallelFor(vertices.size(), [&](unsigned vertexIndex)
+			{
+				auto& vertex = vertices.at(vertexIndex);
+				float minDistance = FLT_MAX;
+				StrandSegmentHandle closestSegmentHandle = -1;
+				boundarySegments.ForEach(vertex.m_position, 0.05f, [&](std::vector<StrandSegmentHandle>& segmentHandles)
+					{
+						for (const auto& segmentHandle : segmentHandles)
+						{
+							const auto& segment = strandGroup.PeekStrandSegment(segmentHandle);
+							const auto segmentStart = strandGroup.GetStrandSegmentStart(segmentHandle);
+							const auto segmentEnd = segment.m_info.m_globalPosition;
+							const auto closestPoint = glm::closestPointOnLine(vertex.m_position, segmentStart, segmentEnd);
+							if (glm::dot(segmentEnd - segmentStart, closestPoint - segmentStart) <= 0.f || glm::dot(segmentStart - segmentEnd, closestPoint - segmentEnd) <= 0.f) continue;
+							const auto currentDistance = glm::distance(segmentEnd, vertex.m_position);
+							if (currentDistance < minDistance)
+							{
+								minDistance = currentDistance;
+								closestSegmentHandle = segment.GetHandle();
+							}
+						}
+					}
+				);
+				NodeHandle closestNodeHandle = -1;
+				if (closestSegmentHandle != -1)
+				{
+					const auto segment = strandGroup.PeekStrandSegment(closestSegmentHandle);
+					closestNodeHandle = segment.m_data.m_nodeHandle;
+				}
+				if (closestNodeHandle != -1)
+				{
+					const auto closestNode = strandModel.m_strandModelSkeleton.PeekNode(closestNodeHandle);
+					const float endPointRootDistance = closestNode.m_info.m_rootDistance;
+					const float startPointRootDistance = closestNode.m_info.m_rootDistance - closestNode.m_info.m_length;
+					const auto closestPoint = glm::closestPointOnLine(vertex.m_position, closestNode.m_info.m_globalPosition, closestNode.m_info.GetGlobalEndPosition());
+					const float distanceToStart = glm::distance(closestPoint, closestNode.m_info.m_globalPosition);
+					const float a = closestNode.m_info.m_length == 0 ? 1.f : distanceToStart / closestNode.m_info.m_length;
+					const float rootDistance = glm::mix(startPointRootDistance, endPointRootDistance, a);
+					vertex.m_texCoord.y = rootDistance * settings.m_rootDistanceMultiplier;
+					const auto v = glm::normalize(vertex.m_position - closestPoint);
+					const auto up = closestNode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
+					const auto left = closestNode.m_info.m_regulatedGlobalRotation * glm::vec3(1, 0, 0);
+					const auto projUp = ProjectVec3(v, up);
+					const auto projLeft = ProjectVec3(v, left);
+					const glm::vec2 position = glm::vec2(glm::length(projLeft) * (glm::dot(projLeft, left) > 0.f ? 1.f : -1.f), glm::length(projUp) * (glm::dot(projUp, up) > 0.f ? 1.f : -1.f));
+					const float acosVal = glm::acos(position.x / glm::length(position));
+					vertex.m_texCoord.x = acosVal / glm::pi<float>();
+				}
+				else
+				{
+					vertex.m_texCoord = glm::vec2(0.0f);
+				}
+			}
+		);
+	}
 }

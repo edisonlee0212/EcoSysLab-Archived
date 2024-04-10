@@ -850,9 +850,15 @@ namespace EcoSysLab {
 	template<typename SkeletonData, typename FlowData, typename NodeData>
 	void Skeleton<SkeletonData, FlowData, NodeData>::CalculateRegulatedGlobalRotation()
 	{
+		m_min = glm::vec3(FLT_MAX);
+		m_max = glm::vec3(FLT_MIN);
 		for (const auto& nodeHandle : m_sortedNodeList) {
 			auto& node = m_nodes[nodeHandle];
 			auto& nodeInfo = node.m_info;
+			m_min = glm::min(m_min, node.m_info.m_globalPosition);
+			m_min = glm::min(m_min, node.m_info.GetGlobalEndPosition());
+			m_max = glm::max(m_max, node.m_info.m_globalPosition);
+			m_max = glm::max(m_max, node.m_info.GetGlobalEndPosition());
 			if (node.m_parentHandle != -1) {
 				auto& parentInfo = m_nodes[node.m_parentHandle].m_info;
 				auto front = nodeInfo.m_globalRotation * glm::vec3(0, 0, -1);

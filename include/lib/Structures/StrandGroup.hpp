@@ -247,6 +247,8 @@ namespace EcoSysLab
 		 * @return The version
 		 */
 		[[nodiscard]] int GetVersion() const;
+
+		[[nodiscard]] glm::vec3 GetStrandSegmentStart(StrandSegmentHandle handle) const;
 	};
 
 	template <typename StrandGroupData, typename StrandData, typename StrandSegmentData>
@@ -558,6 +560,23 @@ namespace EcoSysLab
 	int StrandGroup<StrandGroupData, StrandData, StrandSegmentData>::GetVersion() const
 	{
 		return m_version;
+	}
+
+	template <typename StrandGroupData, typename StrandData, typename StrandSegmentData>
+	glm::vec3 StrandGroup<StrandGroupData, StrandData, StrandSegmentData>::GetStrandSegmentStart(
+		StrandSegmentHandle handle) const
+	{
+		const auto& segment = m_strandSegments[handle];
+		glm::vec3 segmentStart;
+		if (segment.GetPrevHandle() != -1)
+		{
+			segmentStart = m_strandSegments[segment.GetPrevHandle()].m_info.m_globalPosition;
+		}
+		else
+		{
+			segmentStart = m_strands[segment.GetStrandHandle()].m_info.m_baseInfo.m_globalPosition;
+		}
+		return segmentStart;
 	}
 
 	template <typename StrandSegmentData>
