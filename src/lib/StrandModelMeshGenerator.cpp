@@ -8,6 +8,7 @@
 #include "MeshGenUtils.hpp"
 #include "Delaunator2D.hpp"
 #include "TreeDescriptor.hpp"
+#include <queue>
 
 #define DEBUG_OUTPUT false
 
@@ -26,7 +27,7 @@ void StrandModelMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLay
 		//ImGui::Checkbox("[DEBUG] Limit Profile Iterations", &m_limitProfileIterations);
 		//ImGui::DragInt("[DEBUG] Limit", &m_maxProfileIterations);
 
-		//ImGui::DragFloat("[DEBUG] MaxParam", &m_maxParam);
+		ImGui::DragFloat("[DEBUG] MaxParam", &m_maxParam);
 		//ImGui::Checkbox("Compute branch joints", &m_branchConnections);
 		ImGui::DragInt("uCoord multiplier", &m_uMultiplier, 1, 1);
 		ImGui::DragFloat("vCoord multiplier", &m_vMultiplier, 0.1f);
@@ -110,7 +111,7 @@ glm::ivec3 roundInDir(glm::vec3 val, glm::ivec3 dir)
 
 void verifyMesh(std::vector<Vertex>& vertices, std::vector<unsigned>& indices)
 {
-	std::cerr << "checking indices for " << vertices.size() << " vertices..." << std::endl;
+	if (DEBUG_OUTPUT) std::cout << "checking indices for " << vertices.size() << " vertices..." << std::endl;
 	for (size_t index : indices)
 	{
 		if (index >= vertices.size())
@@ -849,119 +850,6 @@ std::pair< std::vector<Graph>, std::vector<std::vector<size_t> > > computeCluste
 
 	}
 
-	// fix clusters that are too small
-
-	/*if (tooSmallClusters.size() > 1)
-	{
-		// try to merge with each other by using skeleton nodes
-
-		std::cerr << "Not implemented yet: More than one cluster is too small" << std::endl;
-		for (size_t i = 0; i < tooSmallClusters.size(); i++)
-		{
-			for (size_t j = 0; j < tooSmallClusters[i].size(); j++)
-			{
-				for (size_t k = i; k < tooSmallClusters.size(); k++)
-				{
-					for (size_t l = j + 1; l < tooSmallClusters[k].size(); l++)
-					{
-						// TODO
-					}
-				}
-			}
-		}
-	}
-
-	// merge with the other clusters
-	for (auto& smallCluster : tooSmallClusters)
-	{
-		std::cerr << "Trying to merge cluster of size " << smallCluster.size() << std::endl;;
-
-		for (size_t smallIndex : smallCluster)
-		{
-			NodeHandle nh0 = getNodeHandle(pipeGroup, pipesInPrevious[smallIndex], t);
-
-			std::vector<std::pair<size_t, Graph::Edge> > mergeIntoClusters;
-
-			// search for Node handle
-			for (size_t i = 0; i < clusters.size(); i++)
-			{
-				for (size_t index : clusters[i])
-				{
-					NodeHandle nh1 = getNodeHandle(pipeGroup, pipesInPrevious[index], t);
-
-					if (nh0 == nh1)
-					{
-						mergeIntoClusters.push_back(std::pair<size_t, Graph::Edge>(i, Graph::Edge{index, smallIndex}));
-
-						//graphs[i].addEdge(index, smallIndex);
-					}
-				}
-			}
-
-			if (mergeIntoClusters.size() == 0)
-			{
-				std::cerr << "could not merge small cluster!" << std::endl;
-			}
-			else if (mergeIntoClusters.size() == 1)
-			{
-				std::cerr << "could not merge small cluster!" << std::endl;
-			}
-			else if (mergeIntoClusters.size() == 2)
-			{
-				if (mergeIntoClusters[0].first == mergeIntoClusters[1].first)
-				{
-					clusters[mergeIntoClusters[0].first].push_back(smallIndex);
-					graphs[mergeIntoClusters[0].first].addEdge(mergeIntoClusters[0].second.m_source, mergeIntoClusters[0].second.m_target);
-					graphs[mergeIntoClusters[1].first].addEdge(mergeIntoClusters[1].second.m_source, mergeIntoClusters[1].second.m_target);
-					std::cerr << "Merged into one cluster, this is good!" << std::endl;
-				}
-				else
-				{
-					std::cerr << "Merged into different clusters, this will not work!" << std::endl;
-				}
-			}
-		}
-	}*/
-
-	/*if (clusters.size() > 1)
-	{
-		clusters.clear();
-		graphs.clear();
-		visited = std::vector<bool>(pipesInPrevious.size(), false);
-
-		for (std::size_t i = 0; i < pipesInPrevious.size(); i++)
-		{
-			if (visited[i])
-			{
-				//std::cout << "skipping already visited pipe no. " << i << " with handle " << pipesInPrevious[i] << std::endl;
-				continue;
-			}
-
-			auto graphAndCluster = computeCluster(strandModel, pipesInPrevious, i, visited, t, maxDist);
-
-			graphs.push_back(graphAndCluster.first);
-			clusters.push_back(graphAndCluster.second);
-
-		}
-
-		std::cerr << "Partitioning into " << clusters.size() << " clusters at t = " << t << std::endl;
-
-		for (size_t i = 0; i < clusters.size(); i++)
-		{
-			std::cerr << "cluster " << i << std::endl;
-
-			for (size_t j : clusters[i])
-			{
-				StrandHandle pipeHandle = pipesInPrevious[j];
-
-
-				std::cerr << "Strand no. " << j << " with handle " << pipeHandle << " belonging to node with handle " << pipeSegment.m_data.m_nodeHandle << std::endl;
-			}
-
-			outputGraph(graphs[i], "t_" + std::to_string(t) + "_cluster_" + std::to_string(i), pipesInPrevious);
-		}
-	}*/
-
 	return std::pair< std::vector<Graph>, std::vector<std::vector<size_t> > >(graphs, clusters);
 }
 
@@ -999,14 +887,27 @@ void connect(std::vector<std::pair<StrandHandle, glm::vec3> >& slice0, size_t i0
 	std::vector<std::pair<StrandHandle, glm::vec3> >& slice1, size_t i1, size_t j1, size_t offset1,
 	std::vector<Vertex>& vertices, std::vector<unsigned>& indices)
 {
-	//if(DEBUG_OUTPUT) std::cout << "connecting " << i0 << ", " << j0 << " to " << i1 << ", " << j1 << std::endl;
+	if (DEBUG_OUTPUT) std::cout << "connecting " << i0 << ", " << j0 << " to " << i1 << ", " << j1 << std::endl;
 	size_t vertBetween0 = (j0 + slice0.size() - i0) % slice0.size();
 	size_t vertBetween1 = (j1 + slice1.size() - i1) % slice1.size();
-	//if(DEBUG_OUTPUT) std::cout << vertBetween0 << " and " << vertBetween1 << " steps, respectively " << std::endl;
+	if (DEBUG_OUTPUT) std::cout << vertBetween0 << " and " << vertBetween1 << " steps, respectively " << std::endl;
+
+	if (vertBetween0 > slice0.size() / 2)
+	{
+		if (DEBUG_OUTPUT) std::cout << "Warning: too many steps for slice 0, should probably be swapped." << std::endl;
+		//return;
+	}
+
+	if (vertBetween1 > slice1.size() / 2)
+	{
+		if (DEBUG_OUTPUT) std::cout << "Warning: too many steps for slice 1, should probably be swapped." << std::endl;
+		//return;
+	}
+
 	size_t offset = vertices.size();
 
 	// merge the two
-	//if(DEBUG_OUTPUT) std::cout << "connecting slices with triangles" << std::endl;
+	if (DEBUG_OUTPUT) std::cout << "connecting slices with triangles" << std::endl;
 	size_t k0 = 0;
 	size_t k1 = 0;
 
@@ -1044,12 +945,57 @@ size_t midIndex(size_t a, size_t b, size_t size)
 	return (a + mid / 2) % size;
 }
 
-void connectSlices(const StrandModelStrandGroup& pipes, Slice& bottomSlice, size_t bottomOffset,
+/* We need to deal with inversions of the strand order on the outside somehow.
+ * We have two different situations:
+ *
+ * Case 1: A split into two branches occurs. In this case we have a well defined linear order for each bottom section that corresponds
+ * to only one branch. Here, we can easily identify inversions. (TODO: Unintended interleaving could occur here, i.e. bottom
+ * vertices correspond to the branches A and B in order A B A B instead of A A B B)
+ *
+ * Case 2: No branching, the order here is cyclic. We can resolve this by cutting the cyclic order to obtain a linear order.
+ * But we should choose a good cutting point to minimize the amount of inversions in order to preserve twisting.
+ * A heuristic to achieve this is to define a family of permutations sigma_i which introduce an offset i. Then identify the
+ * permutation that has the most fixed points.
+ */
+void cyclicOrderUntangle(std::vector<size_t>& permutation)
+{
+	size_t n = permutation.size();
+
+	std::vector<size_t> offsetHistogram(n, 0);
+
+	for (size_t i = 0; i < n; i++)
+	{
+		size_t offset = (permutation[i] - i + n) % n;
+
+		offsetHistogram[offset]++;
+	}
+
+	size_t indexWithMostFixedPoints = 0;
+
+	for (size_t i = 1; i < n; i++)
+	{
+		if (offsetHistogram[indexWithMostFixedPoints] > offsetHistogram[i])
+		{
+			indexWithMostFixedPoints = i;
+		}
+	}
+
+
+}
+
+bool connectSlices(const StrandModelStrandGroup& pipes, Slice& bottomSlice, size_t bottomOffset,
 	std::vector<Slice>& topSlices, std::vector<size_t> topOffsets,
 	std::vector<Vertex>& vertices, std::vector<unsigned>& indices, bool branchConnections)
 {
+	// we want to track whether we actually produced any geometry
+	size_t sizeBefore = indices.size();
+
 	// compute (incomplete) permutation that turns 0 into 1
+
+	// map of pipe handle index to top slice and index in top slice
 	std::vector<std::pair<size_t, size_t> > topPipeHandleIndexMap(pipes.PeekStrands().size(), std::make_pair<>(-1, -1));
+
+	// map of pipe handle index to index in bottom slice
 	std::vector<size_t> bottomPipeHandleIndexMap(pipes.PeekStrands().size(), -1);
 
 	for (size_t s = 0; s < topSlices.size(); s++)
@@ -1066,7 +1012,10 @@ void connectSlices(const StrandModelStrandGroup& pipes, Slice& bottomSlice, size
 		bottomPipeHandleIndexMap[bottomSlice[i].first] = i;
 	}
 
+	// map index in bottom slice to top slice and index in top slice
 	std::vector<std::pair<size_t, size_t> > bottomPermutation(bottomSlice.size(), std::make_pair<>(-1, -1));
+
+	// map top slice and index in top slice to index in bottom slice
 	std::vector<std::vector<size_t> > topPermutations(topSlices.size());
 
 	for (std::size_t s = 0; s < topSlices.size(); s++)
@@ -1079,7 +1028,7 @@ void connectSlices(const StrandModelStrandGroup& pipes, Slice& bottomSlice, size
 		}
 	}
 
-	//if(DEBUG_OUTPUT) std::cout << "mapping back to permutation vector..." << std::endl;
+	if (DEBUG_OUTPUT) std::cout << "mapping back to permutation vector..." << std::endl;
 	for (size_t i = 0; i < bottomPermutation.size(); i++)
 	{
 		bottomPermutation[i] = topPipeHandleIndexMap[bottomSlice[i].first];
@@ -1097,10 +1046,37 @@ void connectSlices(const StrandModelStrandGroup& pipes, Slice& bottomSlice, size
 			break;
 		}
 	}
-
-	//if(DEBUG_OUTPUT) std::cout << "Found first index " << prevI << std::endl;
+	if (DEBUG_OUTPUT) std::cout << "Found first index " << prevI << std::endl;
+	// need to find a start index where correspondence changes
+	// TODO: only need to do this if there is a branching
+	size_t startIndex = prevI; // set prevI as default because this will work if there is no branching
 	for (size_t i = 0; i < bottomPermutation.size(); i++)
 	{
+		if (bottomPermutation[i].second == -1)
+		{
+			continue;
+		}
+
+		if (bottomPermutation[prevI].first != bottomPermutation[i].first)
+		{
+			startIndex = i;
+			break;
+		}
+		prevI = i;
+	}
+	if (DEBUG_OUTPUT) std::cout << "Found start index " << startIndex << std::endl;
+
+	std::vector<size_t> indicesWithSameBranchCorrespondence;
+	size_t endIndex = prevI;
+	if (DEBUG_OUTPUT) std::cout << "Found end index " << endIndex << std::endl;
+
+	size_t sectionStart = startIndex;
+	//shift this by one, otherwise the last section is not handled
+	indicesWithSameBranchCorrespondence.push_back(startIndex);
+	for (size_t counter = startIndex + 1; counter != startIndex + bottomPermutation.size() + 1; counter++)
+	{
+		size_t i = counter % bottomPermutation.size();
+
 		if (bottomPermutation[i].second == -1)
 		{
 			//if(DEBUG_OUTPUT) std::cout << "No correspondence at index " << i << std::endl;
@@ -1111,16 +1087,20 @@ void connectSlices(const StrandModelStrandGroup& pipes, Slice& bottomSlice, size
 		{
 			//if(DEBUG_OUTPUT) std::cout << "Connecting at index " << i << std::endl;
 
-			connect(bottomSlice, prevI, i, bottomOffset,
-				topSlices[bottomPermutation[i].first], bottomPermutation[prevI].second, bottomPermutation[i].second, topOffsets[bottomPermutation[i].first],
-				vertices, indices);
+			/*if (topSlices.size() == 1)
+			{
+				// for now, also need a better solution that does untangling
+				connect(bottomSlice, prevI, i, bottomOffset,
+					topSlices[bottomPermutation[i].first], bottomPermutation[prevI].second, bottomPermutation[i].second, topOffsets[bottomPermutation[i].first],
+					vertices, indices);
+			}
+			else
+			{*/
+			indicesWithSameBranchCorrespondence.push_back(i);
+			//}
 		}
 		else
 		{
-			//std::cout << "Multiple branches not implemented yet!" << std::endl;
-			// idea: walk half of each top slice to the next matching strand
-
-			// first find next point with correspondence on top profile
 			size_t nextIndex = -1;
 
 			for (size_t j = (bottomPermutation[prevI].second + 1) % topSlices[bottomPermutation[prevI].first].size();
@@ -1151,7 +1131,7 @@ void connectSlices(const StrandModelStrandGroup& pipes, Slice& bottomSlice, size
 			size_t nextMid = midIndex(bottomPermutation[prevI].second, nextIndex, topSlices[bottomPermutation[prevI].first].size());
 			size_t prevMid = midIndex(prevIndex, bottomPermutation[i].second, topSlices[bottomPermutation[i].first].size());
 
-			// for now let us do a very simple test if we selected the correct indices
+			// TODO: we could do a very simple test if we selected the correct indices
 			if (branchConnections)
 			{
 				connect(bottomSlice, prevI, bottomMid, bottomOffset,
@@ -1167,8 +1147,6 @@ void connectSlices(const StrandModelStrandGroup& pipes, Slice& bottomSlice, size
 
 				// TODO: connecting with the same top slice looks better
 
-				//indices.push_back()
-
 				connect(bottomSlice, bottomMid, i, bottomOffset,
 					topSlices[bottomPermutation[i].first], prevMid, bottomPermutation[i].second, topOffsets[bottomPermutation[i].first],
 					vertices, indices);
@@ -1178,8 +1156,61 @@ void connectSlices(const StrandModelStrandGroup& pipes, Slice& bottomSlice, size
 			}
 		}
 
+		// TODO: I'm pretty sure the topSlices.size() check is redundant
+		if (((bottomPermutation[prevI].first != bottomPermutation[i].first && topSlices.size() > 1) || counter == startIndex + bottomPermutation.size()) && !indicesWithSameBranchCorrespondence.empty())
+		{
+			std::vector<size_t> topIndices;
+
+			size_t branchIndex = bottomPermutation[indicesWithSameBranchCorrespondence.front()].first;
+
+			for (size_t j = 0; j < indicesWithSameBranchCorrespondence.size(); j++)
+			{
+				topIndices.push_back(bottomPermutation[indicesWithSameBranchCorrespondence[j]].second);
+			}
+
+			// now check for errors and swap until there are no more errors
+			// this is essentially bubble sort. We cannot use a conventional sorting algorithm here
+			// because there is no global order - the comparison does not satisfy transitivity.
+			// However, there is a local order and we hope that the elements are close enough to this that bubble sort works as a heuristic
+			bool foundError;
+			do
+			{
+				foundError = false;
+				for (size_t j = 1; j < topIndices.size(); j++)
+				{
+					size_t steps = (topIndices[j] + topSlices[branchIndex].size() - topIndices[j - 1]) % topSlices[branchIndex].size();
+
+					if (steps > (topSlices[branchIndex].size() + 1) / 2)
+					{
+						foundError = true;
+						if (DEBUG_OUTPUT) std::cout << "found error, correcting by swapping " << topIndices[j - 1] << " and "
+							<< topIndices[j] << "; steps: " << steps << "; element count: " << topSlices[branchIndex].size() << std::endl;
+						size_t tmp = topIndices[j];
+						topIndices[j] = topIndices[j - 1];
+						topIndices[j - 1] = tmp;
+					}
+				}
+
+			} while (foundError);
+
+			for (size_t j = 1; j < indicesWithSameBranchCorrespondence.size(); j++)
+			{
+				size_t prevI = indicesWithSameBranchCorrespondence[j - 1];
+				size_t i = indicesWithSameBranchCorrespondence[j];
+
+				connect(bottomSlice, prevI, i, bottomOffset,
+					topSlices[branchIndex], topIndices[j - 1], topIndices[j], topOffsets[branchIndex],
+					vertices, indices);
+			}
+
+			indicesWithSameBranchCorrespondence.clear();
+			indicesWithSameBranchCorrespondence.push_back(i);
+		}
+
 		prevI = i;
 	}
+
+	return sizeBefore != indices.size();
 }
 
 void createTwigTip(const StrandModel& strandModel, std::pair < Slice, PipeCluster>& prevSlice, size_t prevOffset, float t,
@@ -1212,7 +1243,15 @@ void createTwigTip(const StrandModel& strandModel, std::pair < Slice, PipeCluste
 	}
 }
 
-void sliceRecursively(const StrandModel& strandModel, std::pair < Slice, PipeCluster>& prevSlice, size_t prevOffset, float t, float stepSize, float maxDist,
+ struct SlicingData
+ {
+	std::pair < Slice, PipeCluster> slice;
+	size_t offset;
+	float t;
+	float accumulatedAngle;
+	};
+
+std::vector<SlicingData> slice(const StrandModel & strandModel, std::pair < Slice, PipeCluster>&prevSlice, size_t prevOffset, float t, float stepSize, float maxDist,
 	std::vector<Vertex>& vertices, std::vector<unsigned>& indices, const StrandModelMeshGeneratorSettings& settings, float accumulatedAngle = 0.0f)
 {
 	const auto& skeleton = strandModel.m_strandModelSkeleton;
@@ -1222,6 +1261,11 @@ void sliceRecursively(const StrandModel& strandModel, std::pair < Slice, PipeClu
 	if (t + 0.01 > glm::ceil(t))
 	{
 		t = glm::ceil(t);
+	}
+
+	if (t > settings.m_maxParam)
+	{
+		return {};
 	}
 
 	auto slicesAndClusters = computeSlices(strandModel, prevSlice.second, t, maxDist, settings.m_minCellCountForMajorBranches);
@@ -1241,11 +1285,11 @@ void sliceRecursively(const StrandModel& strandModel, std::pair < Slice, PipeClu
 
 	if (allEmpty)
 	{
-		if (DEBUG_OUTPUT) std::cout << "=== Ending recursion at t = " << t << " ===" << std::endl;
+		if (DEBUG_OUTPUT) std::cout << "=== Ending branch at t = " << t << " ===" << std::endl;
 
 		//createTwigTip(strandModel, prevSlice, prevOffset, t - stepSize, vertices, indices);
 
-		return;
+		return {};
 	}
 
 
@@ -1275,11 +1319,18 @@ void sliceRecursively(const StrandModel& strandModel, std::pair < Slice, PipeClu
 		}
 	}
 
-	connectSlices(pipeGroup, prevSlice.first, prevOffset, topSlices, offsets, vertices, indices, settings.m_branchConnections);
+	bool connected = connectSlices(pipeGroup, prevSlice.first, prevOffset, topSlices, offsets, vertices, indices, settings.m_branchConnections);
+
+	if (!connected)
+	{
+		std::cerr << "Error: did not connect the slices at t = " << t << " ---" << std::endl;
+	}
 
 	if (DEBUG_OUTPUT) std::cout << "--- Done with slice at t = " << t << " ---" << std::endl;
-	// recursive call
+	// accumulate next slices
 	t += stepSize;
+	std::vector<SlicingData> nextSlices;
+
 	for (size_t i = 0; i < slicesAndClusters.size(); i++)
 	{
 		if (slicesAndClusters[i].first.size() != 0)
@@ -1296,7 +1347,40 @@ void sliceRecursively(const StrandModel& strandModel, std::pair < Slice, PipeClu
 				newAccumulatedAngle += node.m_data.m_twistAngle;
 			}
 
-			sliceRecursively(strandModel, slicesAndClusters[i], offsets[i], t, stepSize, maxDist, vertices, indices, settings, newAccumulatedAngle);
+			nextSlices.push_back(SlicingData{ slicesAndClusters[i], offsets[i], t, newAccumulatedAngle });
+			
+		}
+		
+	}
+	
+	return nextSlices;
+	
+}
+
+void sliceIteratively(const StrandModel & strandModel, std::vector<SlicingData>&startSlices, float stepSize, float maxDist,
+	std::vector<Vertex>&vertices, std::vector<unsigned>&indices, const StrandModelMeshGeneratorSettings & settings)
+{
+	std::queue<SlicingData> queue;
+	
+	for (SlicingData& s : startSlices)
+	{
+		queue.push(s);
+	}
+	
+	float accumulatedAngle = 0.0f;
+	
+	while (!queue.empty())
+	{
+		SlicingData cur = queue.front();
+		queue.pop();
+		
+		if (DEBUG_OUTPUT) std::cout << "Took next slice with t = " << cur.t << " out of the queue" << std::endl;
+		
+		std::vector<SlicingData> slices = slice(strandModel, cur.slice, cur.offset, cur.t, stepSize, maxDist, vertices, indices, settings, accumulatedAngle);
+		
+		for (SlicingData& s : slices)
+		{
+			queue.push(s);
 		}
 	}
 }
@@ -1343,20 +1427,30 @@ void StrandModelMeshGenerator::RecursiveSlicing(
 	float stepSize = 1.0f / settings.m_stepsPerSegment;
 	//float max = settings.m_maxParam;
 
-	auto firstCluster = computeCluster(strandModel, pipeCluster, 0, visited, 0.0, maxDist);
-	auto firstSlice = computeSlice(strandModel, pipeCluster, firstCluster.first, firstCluster.second, 0.0, maxDist);
+	//auto firstCluster = computeCluster(strandModel, pipeCluster, 0, visited, 0.0, maxDist);
+	//auto firstSlice = computeSlice(strandModel, pipeCluster, firstCluster.first, firstCluster.second, 0.0, maxDist);
 
-	// create initial vertices
-	for (auto& el : firstSlice.first)
+	auto firstSlices = computeSlices(strandModel, pipeCluster, 0, maxDist, 3.0); // TODO: magic number
+	std::vector<SlicingData> startSlices;
+
+	for (auto& slice : firstSlices)
 	{
-		Vertex v;
-		v.m_position = el.second;
-		v.m_texCoord.y = 0.0;
-		v.m_texCoord.x = getPipePolar(strandModel, el.first, 0.0) / (2 * glm::pi<float>()) * settings.m_uMultiplier;
-		vertices.push_back(v);
-	}
+		// create initial vertices
+		size_t offset = vertices.size();
 
-	sliceRecursively(strandModel, firstSlice, 0, stepSize, stepSize, maxDist, vertices, indices, settings);
+		for (auto& el : slice.first)
+		{
+			Vertex v;
+			v.m_position = el.second;
+			v.m_texCoord.y = 0.0;
+			v.m_texCoord.x = getPipePolar(strandModel, el.first, 0.0) / (2 * glm::pi<float>()) * settings.m_uMultiplier;
+			vertices.push_back(v);
+		}	
+
+		startSlices.push_back(SlicingData{ slice, offset, stepSize, 0.0 });
+	}
+	
+	sliceIteratively(strandModel, startSlices, stepSize, maxDist, vertices, indices, settings);
 }
 
 void StrandModelMeshGenerator::RecursiveSlicing(const StrandModel& strandModel, std::vector<Vertex>& vertices,
@@ -1430,26 +1524,6 @@ void StrandModelMeshGenerator::MarchingCube(const StrandModel& strandModel, std:
 			}
 		}
 		octree.TriangulateField(vertices, indices, settings.m_removeDuplicate);
-		std::unordered_set<unsigned> indicesMap;
-		for (int triangleIndex = 0; triangleIndex < indices.size() / 3; triangleIndex++)
-		{
-			const auto& v1i = indices[triangleIndex * 3];
-			const auto& v2i = indices[triangleIndex * 3 + 1];
-			const auto& v3i = indices[triangleIndex * 3 + 2];
-			const auto& v1 = vertices[v1i];
-			const auto& v2 = vertices[v2i];
-			const auto& v3 = vertices[v3i];
-			if (v1.m_position.y < 0.001f && v2.m_position.y < 0.001f && v3.m_position.y < 0.001f)
-			{
-				indices[triangleIndex * 3] = indices[indices.size() - 3];
-				indices[triangleIndex * 3 + 1] = indices[indices.size() - 2];
-				indices[triangleIndex * 3 + 2] = indices[indices.size() - 1];
-				indices.pop_back();
-				indices.pop_back();
-				indices.pop_back();
-				triangleIndex--;
-			}
-		}
 
 	}
 	CalculateNormal(vertices, indices);
