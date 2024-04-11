@@ -10,6 +10,8 @@
 #include "TreeDescriptor.hpp"
 #include <queue>
 
+#include "EcoSysLabLayer.hpp"
+
 #define DEBUG_OUTPUT false
 
 using namespace EcoSysLab;
@@ -1542,6 +1544,28 @@ void StrandModelMeshGenerator::CylindricalMeshing(const StrandModel& strandModel
 {
 	const auto& skeleton = strandModel.m_strandModelSkeleton;
 	const auto& sortedInternodeList = skeleton.PeekSortedNodeList();
+	std::unordered_set<NodeHandle> nodeHandles;
+	for(const auto& nodeHandle : sortedInternodeList)
+	{
+		const auto& internode = skeleton.PeekNode(nodeHandle);
+		const int particleSize = internode.m_data.m_profile.PeekParticles().size();
+		if (particleSize > settings.m_maxCellCountForMinorBranches) continue;
+		nodeHandles.insert(nodeHandle);
+	}
+	const auto ecoSysLab = Application::GetLayer<EcoSysLabLayer>();
+	CylindricalMeshGenerator<StrandModelSkeletonData, StrandModelFlowData, StrandModelNodeData>::GeneratePartially(
+		nodeHandles, skeleton, vertices, indices, 
+		ecoSysLab->m_meshGeneratorSettings,
+		[&](float xFactor, float distanceToRoot)
+		{
+			return 1.0f;
+		}
+	);
+	for (auto& vertex : vertices) vertex.m_color = glm::vec4(0, 1, 0, 1);
+	return;
+	/*
+	const auto& skeleton = strandModel.m_strandModelSkeleton;
+	const auto& sortedInternodeList = skeleton.PeekSortedNodeList();
 	std::vector<std::vector<RingSegment>> ringsList;
 	std::map<NodeHandle, int> steps{};
 	ringsList.resize(sortedInternodeList.size());
@@ -1902,6 +1926,7 @@ void StrandModelMeshGenerator::CylindricalMeshing(const StrandModel& strandModel
 		}
 		vertexLastRingStartVertexIndex[internodeHandle] = vertices.size() - step;
 	}
+	*/
 }
 
 void StrandModelMeshGenerator::MeshSmoothing(std::vector<Vertex>& vertices, std::vector<unsigned>& indices)

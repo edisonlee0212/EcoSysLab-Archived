@@ -166,14 +166,14 @@ namespace EcoSysLab {
 				float maxChildThickness = -1;
 				NodeHandle maxChildHandle = -1;
 				const auto& childHandles = internode.RefChildHandles();
-				if(childHandles.size() == 1)
+				if (childHandles.size() == 1)
 				{
 					maxChildHandle = childHandles.at(0);
 				}
 				else {
 					for (const auto& childHandle : childHandles) {
 						const auto& childInternode = skeleton.PeekNode(childHandle);
-						if(childInternode.IsApical())
+						if (childInternode.IsApical())
 						{
 							maxChildHandle = childHandle;
 							break;
@@ -252,7 +252,7 @@ namespace EcoSysLab {
 				const auto& parentInternode = skeleton.PeekNode(parentInternodeHandle);
 				parentUp = parentInternode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
 				if (internode.IsApical() || parentInternode.RefChildHandles().size() == 1) needStitching = true;
-				if(!needStitching)
+				if (!needStitching)
 				{
 					float maxChildThickness = -1;
 					NodeHandle maxChildHandle = -1;
@@ -701,8 +701,15 @@ namespace EcoSysLab {
 
 			float thicknessStart, thicknessEnd, thicknessStartT, thicknessEndT;
 			thicknessStart = thicknessEnd = internode.m_info.m_thickness;
+			bool hasParent = nodeHandles.find(internode.GetParentHandle()) != nodeHandles.end();
+			bool hasChildren = false;
+			const auto& childHandles = internode.RefChildHandles();
+			for (const auto childHandle : childHandles)
+			{
+				if (nodeHandles.find(childHandle) == nodeHandles.end()) hasChildren = true;
+			}
 
-			if (internode.GetParentHandle() == -1)
+			if (!hasParent)
 			{
 				p[0] = p[1] * 2.0f - p[2];
 				f[0] = f[1] * 2.0f - f[2];
@@ -715,7 +722,7 @@ namespace EcoSysLab {
 				thicknessStart = skeleton.PeekNode(internode.GetParentHandle()).m_info.m_thickness;
 				d[0] = skeleton.PeekNode(internode.GetParentHandle()).m_info.m_rootDistance;
 			}
-			if (internode.IsEndNode())
+			if (!hasChildren)
 			{
 				p[3] = p[2] * 2.0f - p[1];
 				f[3] = f[2] * 2.0f - f[1];
@@ -725,27 +732,22 @@ namespace EcoSysLab {
 			{
 				float maxChildThickness = -1;
 				NodeHandle maxChildHandle = -1;
-				const auto& childHandles = internode.RefChildHandles();
-				if (childHandles.size() == 1)
-				{
-					maxChildHandle = childHandles.at(0);
-				}
-				else {
-					for (const auto& childHandle : childHandles) {
-						const auto& childInternode = skeleton.PeekNode(childHandle);
-						if (childInternode.IsApical())
-						{
-							maxChildHandle = childHandle;
-							break;
-						}
-						const float childThickness = childInternode.m_info.m_thickness;
-						if (childThickness > maxChildThickness)
-						{
-							maxChildThickness = childThickness;
-							maxChildHandle = childHandle;
-						}
+				for (const auto& childHandle : childHandles) {
+					if (nodeHandles.find(childHandle) == nodeHandles.end()) continue;
+					const auto& childInternode = skeleton.PeekNode(childHandle);
+					if (childInternode.IsApical())
+					{
+						maxChildHandle = childHandle;
+						break;
+					}
+					const float childThickness = childInternode.m_info.m_thickness;
+					if (childThickness > maxChildThickness)
+					{
+						maxChildThickness = childThickness;
+						maxChildHandle = childHandle;
 					}
 				}
+
 				const auto& childInternode = skeleton.PeekNode(maxChildHandle);
 
 				p[3] = childInternode.m_info.GetGlobalEndPosition();
@@ -763,7 +765,7 @@ namespace EcoSysLab {
 
 			tempSteps[threadIndex].emplace_back(internodeHandle, step);
 			int amount = internodeInfo.m_length / (internodeInfo.m_thickness >= settings.m_trunkThickness ? settings.m_trunkYSubdivision : settings.m_branchYSubdivision);
-			
+
 			amount = glm::max(1, amount);
 			for (int ringIndex = 1; ringIndex <= amount; ringIndex++) {
 				const float a = static_cast<float>(ringIndex - 1) / amount;
@@ -806,12 +808,14 @@ namespace EcoSysLab {
 			const auto& internode = skeleton.PeekNode(internodeHandle);
 			const auto& internodeInfo = internode.m_info;
 			auto parentInternodeHandle = internode.GetParentHandle();
+
+			bool hasParent = nodeHandles.find(internode.GetParentHandle()) != nodeHandles.end();
 			bool needStitching = false;
 
 			const glm::vec3 up = internodeInfo.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
 			glm::vec3 parentUp = up;
 
-			if (nodeHandles.find(parentInternodeHandle) != nodeHandles.end())
+			if (hasParent)
 			{
 				const auto& parentInternode = skeleton.PeekNode(parentInternodeHandle);
 				parentUp = parentInternode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
@@ -821,6 +825,7 @@ namespace EcoSysLab {
 					float maxChildThickness = -1;
 					NodeHandle maxChildHandle = -1;
 					for (const auto& childHandle : parentInternode.RefChildHandles()) {
+						if (nodeHandles.find(childHandle) == nodeHandles.end()) continue;
 						const auto& childInternode = skeleton.PeekNode(childHandle);
 						if (childInternode.IsApical()) break;
 						const float childThickness = childInternode.m_info.m_thickness;
