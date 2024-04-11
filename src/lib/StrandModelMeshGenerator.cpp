@@ -8,6 +8,7 @@
 #include "MeshGenUtils.hpp"
 #include "Delaunator2D.hpp"
 #include "TreeDescriptor.hpp"
+#include <queue>
 
 #define DEBUG_OUTPUT true
 
@@ -1230,7 +1231,15 @@ void createTwigTip(const StrandModel& strandModel, std::pair < Slice, PipeCluste
 	}
 }
 
-void sliceRecursively(const StrandModel& strandModel, std::pair < Slice, PipeCluster>& prevSlice, size_t prevOffset, float t, float stepSize, float maxDist,
+ struct SlicingData
+ {
+	std::pair < Slice, PipeCluster> slice;
+	size_t offset;
+	float t;
+	float accumulatedAngle;
+	};
+
+std::vector<SlicingData> slice(const StrandModel & strandModel, std::pair < Slice, PipeCluster>&prevSlice, size_t prevOffset, float t, float stepSize, float maxDist,
 	std::vector<Vertex>& vertices, std::vector<unsigned>& indices, const StrandModelMeshGeneratorSettings& settings, float accumulatedAngle = 0.0f)
 {
 	const auto& skeleton = strandModel.m_strandModelSkeleton;
@@ -1244,7 +1253,7 @@ void sliceRecursively(const StrandModel& strandModel, std::pair < Slice, PipeClu
 
 	if (t > settings.m_maxParam)
 	{
-		return;
+		return {};
 	}
 
 	auto slicesAndClusters = computeSlices(strandModel, prevSlice.second, t, maxDist, settings.m_minCellCountForMajorBranches);
@@ -1264,11 +1273,11 @@ void sliceRecursively(const StrandModel& strandModel, std::pair < Slice, PipeClu
 
 	if (allEmpty)
 	{
-		if (DEBUG_OUTPUT) std::cout << "=== Ending recursion at t = " << t << " ===" << std::endl;
+		if (DEBUG_OUTPUT) std::cout << "=== Ending branch at t = " << t << " ===" << std::endl;
 
 		//createTwigTip(strandModel, prevSlice, prevOffset, t - stepSize, vertices, indices);
 
-		return;
+		return {};
 	}
 
 
@@ -1306,8 +1315,10 @@ void sliceRecursively(const StrandModel& strandModel, std::pair < Slice, PipeClu
 	}
 
 	if (DEBUG_OUTPUT) std::cout << "--- Done with slice at t = " << t << " ---" << std::endl;
-	// recursive call
+	// accumulate next slices
 	t += stepSize;
+	std::vector<SlicingData> nextSlices;
+
 	for (size_t i = 0; i < slicesAndClusters.size(); i++)
 	{
 		if (slicesAndClusters[i].first.size() != 0)
@@ -1324,7 +1335,40 @@ void sliceRecursively(const StrandModel& strandModel, std::pair < Slice, PipeClu
 				newAccumulatedAngle += node.m_data.m_twistAngle;
 			}
 
-			sliceRecursively(strandModel, slicesAndClusters[i], offsets[i], t, stepSize, maxDist, vertices, indices, settings, newAccumulatedAngle);
+			nextSlices.push_back(SlicingData{ slicesAndClusters[i], offsets[i], t, newAccumulatedAngle });
+			
+		}
+		
+	}
+	
+	return nextSlices;
+	
+}
+
+void sliceIteratively(const StrandModel & strandModel, std::vector<SlicingData>&startSlices, float stepSize, float maxDist,
+	std::vector<Vertex>&vertices, std::vector<unsigned>&indices, const StrandModelMeshGeneratorSettings & settings)
+{
+	std::queue<SlicingData> queue;
+	
+	for (SlicingData& s : startSlices)
+	{
+		queue.push(s);
+	}
+	
+	float accumulatedAngle = 0.0f;
+	
+	while (!queue.empty())
+	{
+		SlicingData cur = queue.front();
+		queue.pop();
+		
+		if (DEBUG_OUTPUT) std::cout << "Took next slice with t = " << cur.t << " out of the queue" << std::endl;
+		
+		std::vector<SlicingData> slices = slice(strandModel, cur.slice, cur.offset, cur.t, stepSize, maxDist, vertices, indices, settings, accumulatedAngle);
+		
+		for (SlicingData& s : slices)
+		{
+			queue.push(s);
 		}
 	}
 }
@@ -1384,7 +1428,11 @@ void StrandModelMeshGenerator::RecursiveSlicing(
 		vertices.push_back(v);
 	}
 
-	sliceRecursively(strandModel, firstSlice, 0, stepSize, stepSize, maxDist, vertices, indices, settings);
+	std::vector<SlicingData> startSlices;
+	
+	startSlices.push_back(SlicingData{ firstSlice, 0, stepSize, 0.0 });
+	
+	sliceIteratively(strandModel, startSlices, stepSize, maxDist, vertices, indices, settings);
 }
 
 void StrandModelMeshGenerator::MarchingCube(const StrandModel& strandModel, std::vector<Vertex>& vertices,
