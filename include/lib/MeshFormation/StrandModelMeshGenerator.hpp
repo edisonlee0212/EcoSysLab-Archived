@@ -81,5 +81,9 @@ namespace EcoSysLab {
 		static void Generate(
 			const StrandModel& strandModel, std::vector<Vertex>& vertices,
 			std::vector<unsigned int>& indices, const StrandModelMeshGeneratorSettings& settings);
+		static void Generate(
+			const StrandModel& strandModel, std::vector<Vertex>& vertices,
+			std::vector<glm::vec2>& texCoords,
+			std::vector<std::pair<unsigned int, unsigned int>>& indices, const StrandModelMeshGeneratorSettings& settings);
 	};
 }

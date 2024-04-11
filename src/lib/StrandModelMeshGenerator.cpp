@@ -94,6 +94,12 @@ void StrandModelMeshGenerator::Generate(const StrandModel& strandModel, std::vec
 	CalculateNormal(vertices, indices);
 }
 
+void StrandModelMeshGenerator::Generate(const StrandModel& strandModel, std::vector<Vertex>& vertices,
+	std::vector<glm::vec2>& texCoords, std::vector<std::pair<unsigned, unsigned>>& indices,
+	const StrandModelMeshGeneratorSettings& settings)
+{
+}
+
 int roundInDir(float val, int dir)
 {
 	if (dir > 0)
@@ -1535,7 +1541,6 @@ void StrandModelMeshGenerator::CylindricalMeshing(const StrandModel& strandModel
 	std::vector<unsigned>& indices, const StrandModelMeshGeneratorSettings& settings)
 {
 	const auto& skeleton = strandModel.m_strandModelSkeleton;
-	const auto& pipeGroup = skeleton.m_data.m_strandGroup;
 	const auto& sortedInternodeList = skeleton.PeekSortedNodeList();
 	std::vector<std::vector<RingSegment>> ringsList;
 	std::map<NodeHandle, int> steps{};
@@ -1556,34 +1561,39 @@ void StrandModelMeshGenerator::CylindricalMeshing(const StrandModel& strandModel
 		particleSize = glm::min(particleSize, settings.m_maxCellCountForMinorBranches);
 		glm::vec3 p[4];
 		glm::vec3 f[4];
-		float t[4];
-
+		float r[4];
+		float d[4];
 
 		p[1] = internode.m_info.m_globalPosition;
 		f[1] = internode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
-		t[1] = glm::sqrt(static_cast<float>(particleSize)) * internode.m_data.m_strandRadius;
+		r[1] = glm::sqrt(static_cast<float>(particleSize)) * internode.m_data.m_strandRadius;
+		d[1] = internode.m_info.m_rootDistance;
 
 		p[2] = internode.m_info.GetGlobalEndPosition();
 		f[2] = internode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
-		t[2] = glm::sqrt(static_cast<float>(particleSize)) * internode.m_data.m_strandRadius;
+		r[2] = glm::sqrt(static_cast<float>(particleSize)) * internode.m_data.m_strandRadius;
+		d[2] = internode.m_info.m_rootDistance;
 		if (internode.GetParentHandle() == -1)
 		{
 			p[0] = p[1] * 2.0f - p[2];
 			f[0] = f[1] * 2.0f - f[2];
-			t[0] = t[1] * 2.0f - t[2];
+			r[0] = r[1] * 2.0f - r[2];
+			d[0] = d[1] * 2.0f - d[2];
 		}
 		else
 		{
 			p[0] = skeleton.PeekNode(internode.GetParentHandle()).m_info.m_globalPosition;
-			f[0] = skeleton.PeekNode(skeleton.PeekNode(internode.GetParentHandle()).GetParentHandle()).m_info.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
+			f[0] = skeleton.PeekNode(internode.GetParentHandle()).m_info.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
 			int prevParticleSize = skeleton.PeekNode(internode.GetParentHandle()).m_data.m_profile.PeekParticles().size();
-			t[0] = glm::sqrt(static_cast<float>(glm::min(prevParticleSize, settings.m_maxCellCountForMinorBranches))) * internode.m_data.m_strandRadius;
+			r[0] = glm::sqrt(static_cast<float>(glm::min(prevParticleSize, settings.m_maxCellCountForMinorBranches))) * internode.m_data.m_strandRadius;
+			d[0] = skeleton.PeekNode(internode.GetParentHandle()).m_info.m_rootDistance;
 		}
 		if (internode.IsEndNode())
 		{
 			p[3] = p[2] * 2.0f - p[1];
 			f[3] = f[2] * 2.0f - f[1];
-			t[3] = t[2] * 2.0f - t[1];
+			r[3] = r[2] * 2.0f - r[1];
+			d[3] = d[2] * 2.0f - d[1];
 		}
 		else
 		{
@@ -1598,22 +1608,19 @@ void StrandModelMeshGenerator::CylindricalMeshing(const StrandModel& strandModel
 					maxChildHandle = childHandle;
 				}
 			}
-			for (const auto childHandle : internode.RefChildHandles())
-			{
-				const auto& childInternode = skeleton.PeekNode(childHandle);
-				if (childHandle == maxChildHandle)
-				{
-					p[3] = childInternode.m_info.GetGlobalEndPosition();
-					f[3] = childInternode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
-					t[3] = glm::sqrt(static_cast<float>(childInternode.m_data.m_profile.PeekParticles().size())) * internode.m_data.m_strandRadius;
-				}
-			}
+			const auto& childInternode = skeleton.PeekNode(maxChildHandle);
+
+			p[3] = childInternode.m_info.GetGlobalEndPosition();
+			f[3] = childInternode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
+			r[3] = glm::sqrt(static_cast<float>(childInternode.m_data.m_profile.PeekParticles().size())) * internode.m_data.m_strandRadius;
+			d[3] = childInternode.m_info.m_rootDistance;
+
 		}
 #pragma region Subdivision internode here.
 		float thicknessStart, thicknessEnd, thicknessStartT, thicknessEndT;
-		Strands::CubicInterpolation(t[0], t[1], t[2], t[3], thicknessStart, thicknessStartT, 0.0f);
-		Strands::CubicInterpolation(t[0], t[1], t[2], t[3], thicknessEnd, thicknessEndT, 1.0f);
-		const auto diameter = glm::max(thicknessStart, thicknessEnd) * 2.0f * glm::pi<float>();
+		Strands::CubicInterpolation(r[0], r[1], r[2], r[3], thicknessStart, thicknessStartT, 0.0f);
+		Strands::CubicInterpolation(r[0], r[1], r[2], r[3], thicknessEnd, thicknessEndT, 1.0f);
+		const auto diameter = glm::max(thicknessStart, thicknessEnd) * glm::pi<float>();
 		int step = diameter / settings.m_xSubdivision;
 		if (step < 4)
 			step = 4;
@@ -1629,18 +1636,23 @@ void StrandModelMeshGenerator::CylindricalMeshing(const StrandModel& strandModel
 			const float a = static_cast<float>(ringIndex - 1) / amount;
 			const float b = static_cast<float>(ringIndex) / amount;
 			glm::vec3 startPosition, endPosition, startAxis, endAxis, tempStart, tempEnd;
+			float rootDistanceStart, rootDistanceEnd;
 			Strands::CubicInterpolation(p[0], p[1], p[2], p[3], startPosition, tempStart, a);
 			Strands::CubicInterpolation(p[0], p[1], p[2], p[3], endPosition, tempEnd, b);
 			Strands::CubicInterpolation(f[0], f[1], f[2], f[3], startAxis, tempStart, a);
 			Strands::CubicInterpolation(f[0], f[1], f[2], f[3], endAxis, tempEnd, b);
-			Strands::CubicInterpolation(t[0], t[1], t[2], t[3], thicknessStart, thicknessStartT, a);
-			Strands::CubicInterpolation(t[0], t[1], t[2], t[3], thicknessEnd, thicknessEndT, b);
+			Strands::CubicInterpolation(r[0], r[1], r[2], r[3], thicknessStart, thicknessStartT, a);
+			Strands::CubicInterpolation(r[0], r[1], r[2], r[3], thicknessEnd, thicknessEndT, b);
+
+			Strands::CubicInterpolation(d[0], d[1], d[2], d[3], rootDistanceStart, thicknessStartT, a);
+			Strands::CubicInterpolation(d[0], d[1], d[2], d[3], rootDistanceEnd, thicknessEndT, b);
 			rings.emplace_back(
 				startPosition, endPosition,
 				startAxis,
 				endAxis,
-				thicknessStart, thicknessEnd);
+				thicknessStart, thicknessEnd, rootDistanceStart, rootDistanceEnd);
 		}
+#pragma endregion
 		}, results);
 	for (auto& i : results) i.wait();
 
@@ -1741,7 +1753,7 @@ void StrandModelMeshGenerator::CylindricalMeshing(const StrandModel& strandModel
 			}
 		}
 
-		textureXStep = 1.0f / step * 4.0f;
+		textureXStep = 1.0f / step;
 		int ringSize = rings.size();
 		for (auto ringIndex = 0; ringIndex < ringSize; ringIndex++) {
 			for (auto s = 0; s < step; s++) {
@@ -1749,8 +1761,7 @@ void StrandModelMeshGenerator::CylindricalMeshing(const StrandModel& strandModel
 				auto direction = ring.GetDirection(
 					up, angleStep * s, false);
 				archetype.m_position = ring.m_endPosition + direction * ring.m_endRadius;
-				const auto x =
-					s < (step / 2) ? s * textureXStep : (step - s) * textureXStep;
+				const auto x = s * textureXStep;
 				const auto y = ringIndex % 2 == 0 ? 1.0f : 0.0f;
 				archetype.m_texCoord = glm::vec2(x, y);
 				vertices.push_back(archetype);

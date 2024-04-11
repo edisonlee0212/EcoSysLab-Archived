@@ -10,13 +10,15 @@ using namespace EcoSysLab;
 
 
 RingSegment::RingSegment(glm::vec3 startPosition, glm::vec3 endPosition, glm::vec3 startAxis,
-	glm::vec3 endAxis, float startRadius, float endRadius)
+	glm::vec3 endAxis, float startRadius, float endRadius, float startDistanceToRoot, float endDistanceToRoot)
 	: m_startPosition(startPosition),
 	m_endPosition(endPosition),
 	m_startAxis(startAxis),
 	m_endAxis(endAxis),
 	m_startRadius(startRadius),
-	m_endRadius(endRadius) {
+	m_endRadius(endRadius),
+	m_startDistanceToRoot(startDistanceToRoot),
+	m_endDistanceToRoot(endDistanceToRoot) {
 }
 
 void RingSegment::AppendPoints(std::vector<Vertex>& vertices, glm::vec3& normalDir, int step) {
