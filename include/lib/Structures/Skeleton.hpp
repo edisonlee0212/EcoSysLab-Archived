@@ -20,7 +20,7 @@ namespace EcoSysLab {
 		float m_thickness = 0.1f;
 		float m_rootDistance = 0.0f;
 		float m_endDistance = 0.0f;
-
+		int m_chainIndex = 0;
 		glm::quat m_regulatedGlobalRotation = glm::vec3(0.0f);
 
 		glm::vec4 m_color = glm::vec4(1.0f);
@@ -233,7 +233,7 @@ namespace EcoSysLab {
 		void CalculateDistance();
 		void CalculateRegulatedGlobalRotation();
 		/**
-		 * Recycle (Remove) a node, the descendents of this node will also be recycled. The relevant flow will also be removed/restructured.
+		 * Recycle (Remove) a node, the descendants of this node will also be recycled. The relevant flow will also be removed/restructured.
 		 * @param handle The handle of the node to be removed. Must be valid (non-zero and the node should not be recycled prior to this operation).
 		 * @param flowHandler Function to be called right before a flow in recycled.
 		 * @param nodeHandler Function to be called right before a node in recycled.
@@ -243,7 +243,7 @@ namespace EcoSysLab {
 			const std::function<void(NodeHandle)>& nodeHandler);
 
 		/**
-		 * Recycle (Remove) a flow, the descendents of this flow will also be recycled. The relevant node will also be removed/restructured.
+		 * Recycle (Remove) a flow, the descendants of this flow will also be recycled. The relevant node will also be removed/restructured.
 		 * @param handle The handle of the flow to be removed. Must be valid (non-zero and the flow should not be recycled prior to this operation).
 		 * @param flowHandler Function to be called right before a flow in recycled.
 		 * @param nodeHandler Function to be called right before a node in recycled.
@@ -825,10 +825,19 @@ namespace EcoSysLab {
 			auto& nodeInfo = node.m_info;
 			if (node.GetParentHandle() == -1) {
 				nodeInfo.m_rootDistance = nodeInfo.m_length;
+				nodeInfo.m_chainIndex = 0;
 			}
 			else {
 				const auto& parentInternode = m_nodes[node.GetParentHandle()];
 				nodeInfo.m_rootDistance = parentInternode.m_info.m_rootDistance + nodeInfo.m_length;
+
+				if(node.IsApical())
+				{
+					node.m_info.m_chainIndex = parentInternode.m_info.m_chainIndex + 1;
+				}else
+				{
+					node.m_info.m_chainIndex = 0;
+				}
 			}
 		}
 		for (auto it = m_sortedNodeList.rbegin(); it != m_sortedNodeList.rend(); ++it) {

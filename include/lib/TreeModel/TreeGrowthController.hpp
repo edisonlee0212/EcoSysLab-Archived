@@ -114,7 +114,7 @@ namespace EcoSysLab
 		/**
 		 * \brief The The impact of the amount of incoming light on the shedding of end internodes.
 		 */
-		std::function<float(float deltaTime, const Node<InternodeGrowthData>& internode)> m_pruningFactor;
+		std::function<float(const ShootSkeleton& shootSkeleton, const Node<InternodeGrowthData>& internode)> m_pruningFactor;
 #pragma endregion
 #pragma region Leaf
 		/**

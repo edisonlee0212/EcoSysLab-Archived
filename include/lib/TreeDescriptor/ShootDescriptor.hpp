@@ -95,6 +95,9 @@ namespace EcoSysLab
 
 #pragma endregion
 #pragma region Pruning
+		bool m_trunkProtection = false;
+
+		int m_maxFlowLength = 0;
 		/**
 		* \brief The limit of lateral branches being cut off when too close to the
 		* root.
@@ -108,11 +111,18 @@ namespace EcoSysLab
 		/**
 		 * \brief The pruning factor for branch because of absence of light
 		 */
+		float m_lightPruningProbability = 20.0f;
+
+		/**
+		 * \brief The pruning factor for branch because of absence of light
+		 */
 		float m_lightPruningFactor = 0.0f;
 		/**
 		 * \brief The pruning factor for branch because of being too long
 		 */
 		float m_thicknessPruningFactor = 0.005f;
+
+		float m_thicknessPruningProbability = 20.f;
 #pragma endregion
 
 		AssetRef m_barkMaterial;

@@ -12,8 +12,9 @@ namespace EcoSysLab {
 	struct SkeletalGraphSettings
 	{
 		float m_lineThickness = 0.0f;
+		float m_fixedLineThickness = 0.001f;
 		float m_branchPointSize = 1.0f;
-		float m_junctionPointSize = 1.75f;
+		float m_junctionPointSize = 1.f;
 
 		bool m_fixedPointSize = false;
 		float m_fixedPointSizeFactor = 0.01f;

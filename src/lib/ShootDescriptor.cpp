@@ -29,10 +29,15 @@ void ShootDescriptor::Serialize(YAML::Emitter& out)
 	out << YAML::Key << "m_apicalDominance" << YAML::Value << m_apicalDominance;
 	out << YAML::Key << "m_apicalDominanceLoss" << YAML::Value << m_apicalDominanceLoss;
 
+	out << YAML::Key << "m_trunkProtection" << YAML::Value << m_trunkProtection;
+	out << YAML::Key << "m_maxFlowLength" << YAML::Value << m_maxFlowLength;
 	out << YAML::Key << "m_lowBranchPruning" << YAML::Value << m_lowBranchPruning;
 	out << YAML::Key << "m_lowBranchPruningThicknessFactor" << YAML::Value << m_lowBranchPruningThicknessFactor;
 	out << YAML::Key << "m_lightPruningFactor" << YAML::Value << m_lightPruningFactor;
 	out << YAML::Key << "m_thicknessPruningFactor" << YAML::Value << m_thicknessPruningFactor;
+
+	out << YAML::Key << "m_lightPruningProbability" << YAML::Value << m_lightPruningProbability;
+	out << YAML::Key << "m_thicknessPruningProbability" << YAML::Value << m_thicknessPruningProbability;
 
 	out << YAML::Key << "m_leafBudCount" << YAML::Value << m_leafBudCount;
 	out << YAML::Key << "m_leafGrowthRate" << YAML::Value << m_leafGrowthRate;
@@ -86,10 +91,15 @@ void ShootDescriptor::Deserialize(const YAML::Node& in)
 	if (in["m_apicalDominance"]) m_apicalDominance = in["m_apicalDominance"].as<float>();
 	if (in["m_apicalDominanceLoss"]) m_apicalDominanceLoss = in["m_apicalDominanceLoss"].as<float>();
 
+	if (in["m_trunkProtection"]) m_trunkProtection = in["m_trunkProtection"].as<bool>();
+	if (in["m_maxFlowLength"]) m_maxFlowLength = in["m_maxFlowLength"].as<int>();
 	if (in["m_lowBranchPruning"]) m_lowBranchPruning = in["m_lowBranchPruning"].as<float>();
 	if (in["m_lowBranchPruningThicknessFactor"]) m_lowBranchPruningThicknessFactor = in["m_lowBranchPruningThicknessFactor"].as<float>();
 	if (in["m_lightPruningFactor"]) m_lightPruningFactor = in["m_lightPruningFactor"].as<float>();
 	if (in["m_thicknessPruningFactor"]) m_thicknessPruningFactor = in["m_thicknessPruningFactor"].as<float>();
+	if (in["m_lightPruningProbability"]) m_lightPruningProbability = in["m_lightPruningProbability"].as<float>();
+	if (in["m_thicknessPruningProbability"]) m_thicknessPruningProbability = in["m_thicknessPruningProbability"].as<float>();
+
 
 	if (in["m_leafBudCount"]) m_leafBudCount = in["m_leafBudCount"].as<int>();
 	if (in["m_leafGrowthRate"]) m_leafGrowthRate = in["m_leafGrowthRate"].as<float>();
@@ -154,10 +164,17 @@ void ShootDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 	}
 	if (ImGui::TreeNodeEx("Pruning", ImGuiTreeNodeFlags_DefaultOpen))
 	{
+		changed = ImGui::Checkbox("Trunk Protection", &m_trunkProtection) || changed;
+		changed = ImGui::DragInt("Max chain length", &m_maxFlowLength, 1) || changed;
 		changed = ImGui::DragFloat("Low branch pruning", &m_lowBranchPruning, 0.01f) || changed;
+
 		if (m_lowBranchPruning > 0.0f) changed = ImGui::DragFloat("Low branch pruning thickness factor", &m_lowBranchPruningThicknessFactor, 0.01f) || changed;
+
 		changed = ImGui::DragFloat("Light pruning", &m_lightPruningFactor, 0.01f) || changed;
+		changed = ImGui::DragFloat("Light pruning prob", &m_lightPruningProbability, 0.01f) || changed;
+
 		changed = ImGui::DragFloat("Thin branch pruning", &m_thicknessPruningFactor, 0.01f, 0.0f) || changed;
+		changed = ImGui::DragFloat("Thin branch pruning prob", &m_thicknessPruningProbability, 0.01f, 0.0f) || changed;
 		ImGui::TreePop();
 	}
 	changed = ImGui::DragInt("Leaf bud count", &m_leafBudCount, 1, 0, 3) || changed;

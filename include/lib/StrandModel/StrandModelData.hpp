@@ -28,6 +28,8 @@ namespace EcoSysLab
 
 	struct CellParticlePhysicsData
 	{
+		NodeHandle m_correspondingChildNodeHandle = -1;
+
 		StrandHandle m_strandHandle = -1;
 		StrandSegmentHandle m_strandSegmentHandle = -1;
 		bool m_mainChild = false;

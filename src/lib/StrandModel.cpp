@@ -235,7 +235,6 @@ void StrandModel::CalculateProfile(const float maxRootDistance, const NodeHandle
 			if (internode.m_data.m_profile.PeekParticles().size() > 1) {
 				PackTask(nodeHandle, strandModelParameters, !scheduling);
 				if (internode.RefChildHandles().empty()) CopyFrontToBackTask(nodeHandle);
-				CalculateShiftTask(nodeHandle, strandModelParameters);
 			}
 			internode.m_data.m_profile.CalculateBoundaries(true, strandModelParameters.m_boundaryPointDistance);
 			}
@@ -249,7 +248,6 @@ void StrandModel::CalculateProfile(const float maxRootDistance, const NodeHandle
 		if (internode.m_data.m_profile.PeekParticles().size() > 1) {
 			PackTask(nodeHandle, strandModelParameters, !scheduling);
 			if (internode.RefChildHandles().empty()) CopyFrontToBackTask(nodeHandle);
-			CalculateShiftTask(nodeHandle, strandModelParameters);
 		}
 		internode.m_data.m_profile.CalculateBoundaries(true, strandModelParameters.m_boundaryPointDistance);
 	}
@@ -317,6 +315,7 @@ void StrandModel::MergeTask(float maxRootDistance, NodeHandle nodeHandle, const 
 			maxChildHandle = childHandle;
 		}
 	}
+
 	internodeData.m_centerDirectionRadius = 0.0f;
 	if (!internodeData.m_profileConstraints.m_boundaries.empty())
 	{
@@ -333,12 +332,24 @@ void StrandModel::MergeTask(float maxRootDistance, NodeHandle nodeHandle, const 
 			particleIndex++;
 			nodeParticle.SetColor(particle.GetColor());
 			nodeParticle.m_data.m_mainChild = true;
+			nodeParticle.m_data.m_correspondingChildNodeHandle = -1;
 		}
 		return;
 	}
 
 	if (maxChildHandle == -1) maxChildHandle = childHandles.front();
 	auto& mainChildNode = m_strandModelSkeleton.RefNode(maxChildHandle);
+	const auto& mainChildPhysics2D = mainChildNode.m_data.m_profile;
+	for (const auto& childHandle : childHandles)
+	{
+		auto& childNode = m_strandModelSkeleton.RefNode(childHandle);
+		const auto childNodeFront = glm::inverse(internode.m_info.m_regulatedGlobalRotation) * childNode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
+		auto direction = glm::normalize(glm::vec2(childNodeFront.x, childNodeFront.y));
+		const auto mainChildRadius = mainChildPhysics2D.GetDistanceToOrigin(direction, glm::vec2(0.0f));
+		auto offset = glm::vec2(0.0f);
+		offset = (mainChildRadius - childNode.m_data.m_centerDirectionRadius + 2.0f) * direction;
+		childNode.m_data.m_offset = offset;
+	}
 	const auto branchTwistAngle = strandModelParameters.m_branchTwistDistribution.GetValue(internode.m_info.m_rootDistance / maxRootDistance);
 	const auto junctionTwistAngle = strandModelParameters.m_junctionTwistDistribution.GetValue(internode.m_info.m_rootDistance / maxRootDistance);
 	if (childHandles.size() == 1)
@@ -357,13 +368,14 @@ void StrandModel::MergeTask(float maxRootDistance, NodeHandle nodeHandle, const 
 			polarPosition.y += glm::radians(branchTwistAngle);
 			nodeParticle.SetPolarPosition(polarPosition);
 			nodeParticle.SetInitialPosition(nodeParticle.GetPosition());
-			nodeParticle.m_data.m_mainChild =  true;
+			nodeParticle.m_data.m_mainChild = true;
+			nodeParticle.m_data.m_correspondingChildNodeHandle = childHandles.front();
 		}
 		if (internodeData.m_profileConstraints.m_boundaries.empty()) internode.m_data.m_packingIteration = glm::min(strandModelParameters.m_branchProfilePackingMaxIteration, static_cast<int>(internodeData.m_profile.RefParticles().size()) * strandModelParameters.m_maxSimulationIterationCellFactor);
 		return;
 	}
 	if (internodeData.m_profileConstraints.m_boundaries.empty()) internode.m_data.m_packingIteration = glm::min(strandModelParameters.m_junctionProfilePackingMaxIteration, static_cast<int>(internodeData.m_profile.RefParticles().size()) * strandModelParameters.m_maxSimulationIterationCellFactor);
-	const auto& mainChildPhysics2D = mainChildNode.m_data.m_profile;
+
 	mainChildNode.m_data.m_twistAngle = junctionTwistAngle;
 	for (const auto& mainChildParticle : mainChildPhysics2D.PeekParticles())
 	{
@@ -376,7 +388,10 @@ void StrandModel::MergeTask(float maxRootDistance, NodeHandle nodeHandle, const 
 		nodeParticle.SetInitialPosition(nodeParticle.GetPosition());
 
 		nodeParticle.m_data.m_mainChild = true;
+		nodeParticle.m_data.m_correspondingChildNodeHandle = maxChildHandle;
 	}
+
+
 	if (strandModelParameters.m_preMerge) {
 		bool needSimulation = false;
 		for (const auto& childHandle : childHandles)
@@ -394,13 +409,10 @@ void StrandModel::MergeTask(float maxRootDistance, NodeHandle nodeHandle, const 
 					direction = glm::vec2(1, 0);
 				}
 				childNode.m_data.m_centerDirectionRadius = childPhysics2D.GetDistanceToOrigin(-direction, glm::vec2(0.0f));
-				const auto mainChildRadius = mainChildPhysics2D.GetDistanceToOrigin(direction, glm::vec2(0.0f));
-				auto offset = glm::vec2(0.0f);
-				offset = (mainChildRadius - childNode.m_data.m_centerDirectionRadius + 2.0f) * direction;
-				childNode.m_data.m_offset = offset;
+
 				for (auto& childParticle : childPhysics2D.RefParticles())
 				{
-					childParticle.SetPosition(childParticle.GetPosition() + offset);
+					childParticle.SetPosition(childParticle.GetPosition() + childNode.m_data.m_offset);
 
 					const auto nodeParticleHandle = internodeData.m_particleMap.at(childParticle.m_data.m_strandHandle);
 					auto& nodeParticle = internodeData.m_profile.RefParticle(nodeParticleHandle);
@@ -411,6 +423,7 @@ void StrandModel::MergeTask(float maxRootDistance, NodeHandle nodeHandle, const 
 					nodeParticle.SetPolarPosition(nodeParticle.GetPosition());
 					nodeParticle.m_enable = true;
 					nodeParticle.m_data.m_mainChild = false;
+					nodeParticle.m_data.m_correspondingChildNodeHandle = childHandle;
 				}
 			}
 			else
@@ -426,6 +439,7 @@ void StrandModel::MergeTask(float maxRootDistance, NodeHandle nodeHandle, const 
 					nodeParticle.SetPolarPosition(nodeParticle.GetPosition());
 					nodeParticle.m_enable = false;
 					nodeParticle.m_data.m_mainChild = false;
+					nodeParticle.m_data.m_correspondingChildNodeHandle = childHandle;
 				}
 			}
 		}
@@ -461,6 +475,7 @@ void StrandModel::MergeTask(float maxRootDistance, NodeHandle nodeHandle, const 
 					nodeParticle.SetPosition(childParticle.GetPosition());
 					nodeParticle.SetInitialPosition(childParticle.GetPosition());
 					nodeParticle.m_data.m_mainChild = false;
+					nodeParticle.m_data.m_correspondingChildNodeHandle = childHandle;
 				}
 			}
 		}
@@ -504,6 +519,7 @@ void StrandModel::MergeTask(float maxRootDistance, NodeHandle nodeHandle, const 
 				nodeParticle.SetPolarPosition(polarPosition);
 				nodeParticle.SetInitialPosition(nodeParticle.GetPosition());
 				nodeParticle.m_data.m_mainChild = false;
+				nodeParticle.m_data.m_correspondingChildNodeHandle = childHandle;
 			}
 		}
 	}
@@ -517,43 +533,6 @@ void StrandModel::CopyFrontToBackTask(const NodeHandle nodeHandle)
 	{
 		internodeData.m_profile.RefParticle(i).SetInitialPosition(internodeData.m_profile.RefParticle(i).GetPosition());
 	}
-}
-
-void StrandModel::CalculateShiftTask(const NodeHandle nodeHandle, const StrandModelParameters& strandModelParameters)
-{
-	auto& internode = m_strandModelSkeleton.RefNode(nodeHandle);
-	auto& internodeData = internode.m_data;
-	const auto& childHandles = internode.RefChildHandles();
-	int maxChildSize = -1;
-	NodeHandle maxChildHandle = -1;
-	for (const auto& childHandle : childHandles) {
-		Wait(childHandle);
-		auto& childInternode = m_strandModelSkeleton.RefNode(childHandle);
-		const auto childSize = static_cast<float>(childInternode.m_data.m_particleMap.size());
-		if (childSize > maxChildSize)
-		{
-			maxChildSize = childSize;
-			maxChildHandle = childHandle;
-		}
-	}
-	internodeData.m_centerDirectionRadius = 0.0f;
-	if (childHandles.empty())
-	{
-		internode.m_data.m_packingIteration = glm::min(strandModelParameters.m_junctionProfilePackingMaxIteration, static_cast<int>(internodeData.m_profile.RefParticles().size()) * strandModelParameters.m_maxSimulationIterationCellFactor);
-		return;
-	}
-	if (maxChildHandle == -1) maxChildHandle = childHandles.front();
-	const auto& mainChildNode = m_strandModelSkeleton.RefNode(maxChildHandle);
-	const auto& mainChildPhysics2D = mainChildNode.m_data.m_profile;
-	auto sum = glm::vec2(0.0f);
-	for (const auto& mainChildParticle : mainChildPhysics2D.PeekParticles())
-	{
-		const auto nodeParticleHandle = internodeData.m_particleMap.at(mainChildParticle.m_data.m_strandHandle);
-		auto& nodeParticle = internodeData.m_profile.RefParticle(nodeParticleHandle);
-		sum += nodeParticle.GetPosition();
-	}
-	internodeData.m_shift = sum / static_cast<float>(mainChildPhysics2D.PeekParticles().size());
-
 }
 
 void StrandModel::ApplyProfile(const StrandModelParameters& strandModelParameters,
@@ -573,7 +552,7 @@ void StrandModel::ApplyProfile(const StrandModelParameters& strandModelParameter
 		newStrandSegment.m_info.m_globalPosition = node.m_info.GetGlobalEndPosition()
 			+ node.m_data.m_strandRadius * particle.GetInitialPosition().x * currentLeft
 			+ node.m_data.m_strandRadius * particle.GetInitialPosition().y * currentUp;
-		if(glm::any(glm::isnan(newStrandSegment.m_info.m_globalPosition)))
+		if (glm::any(glm::isnan(newStrandSegment.m_info.m_globalPosition)))
 		{
 			EVOENGINE_ERROR("Nan!");
 		}
@@ -606,7 +585,7 @@ void StrandModel::ApplyProfiles(const StrandModelParameters& strandModelParamete
 				const auto& particle = node.m_data.m_profile.PeekParticle(particleHandle);
 				auto& strand = strandGroup.RefStrand(strandHandle);
 				strand.m_info.m_baseInfo.m_thickness = baseRadius;
-				strand.m_info.m_baseInfo.m_globalPosition = 
+				strand.m_info.m_baseInfo.m_globalPosition =
 					strand.m_info.m_baseInfo.m_thickness * particle.GetPosition().x * currentLeft
 					+ strand.m_info.m_baseInfo.m_thickness * particle.GetPosition().y * currentUp;
 				strand.m_info.m_baseInfo.m_globalRotation = parentGlobalRotation;
@@ -614,7 +593,7 @@ void StrandModel::ApplyProfiles(const StrandModelParameters& strandModelParamete
 				strand.m_info.m_baseInfo.m_color = particle.IsBoundary() ? strandModelParameters.m_boundaryPointColor : strandModelParameters.m_contentPointColor;
 			}
 		}
-		
+
 		ApplyProfile(strandModelParameters, nodeHandle);
 	}
 }
@@ -655,29 +634,61 @@ void StrandModel::CalculateStrandProfileAdjustedTransforms(const StrandModelPara
 		const auto parentLeft = parentGlobalRotation * glm::vec3(1, 0, 0);
 		const auto parentFront = parentGlobalRotation * glm::vec3(0, 0, -1);
 
-
 		const auto front = node.m_info.m_globalRotation * glm::vec3(0, 0, -1);
 		const float offsetLength = glm::length(node.m_data.m_offset);
-		float maxDistanceToCenter = node.m_data.m_profile.GetMaxDistanceToCenter();
 		const float cosFront = glm::dot(front, parentFront); //Horizontal
 		const float sinFront = glm::sin(glm::acos(glm::clamp(cosFront, -1.0f, 1.0f))); //Vertical
-		if (!node.m_data.m_apical && offsetLength > glm::epsilon<float>()) {
-			const float outerRadius = node.m_data.m_profile.GetDistanceToOrigin(glm::normalize(node.m_data.m_offset), glm::vec2(0.f));
-			const float innerRadius = node.m_data.m_profile.GetDistanceToOrigin(-glm::normalize(node.m_data.m_offset), glm::vec2(0.f));
-			const auto offsetDirection = glm::normalize(node.m_data.m_offset);
-			const auto newOffset = (offsetLength + innerRadius + (outerRadius - outerRadius * cosFront) * strandModelParameters.m_rotationPushRatio) * offsetDirection;
-			newGlobalEndPosition += parentUp * newOffset.y * strandModelParameters.m_sidePushRatio * node.m_data.m_strandRadius;
-			newGlobalEndPosition += parentLeft * newOffset.x * strandModelParameters.m_sidePushRatio * node.m_data.m_strandRadius;
-			newGlobalEndPosition += parentFront * (sinFront * outerRadius * strandModelParameters.m_rotationPushRatio) * node.m_data.m_strandRadius;
-		}
-		else if (node.m_data.m_apical)
+
+		glm::vec2 parentCenter = glm::vec2(0.0f);
+		int particleCount = 0;
+
+		for (const auto& parentParticle : parentNode.m_data.m_profile.PeekParticles())
 		{
-			//This part needs improvement.
-			newGlobalEndPosition += parentFront * sinFront * maxDistanceToCenter * strandModelParameters.m_frontPushRatio * node.m_data.m_strandRadius;
+			if (parentParticle.m_data.m_correspondingChildNodeHandle == nodeHandle)
+			{
+				parentCenter += parentParticle.GetPosition();
+				particleCount++;
+			}
 		}
-		newGlobalEndPosition += parentUp * node.m_data.m_shift.y * strandModelParameters.m_shiftPushRatio * node.m_data.m_strandRadius;
-		newGlobalEndPosition += parentLeft * node.m_data.m_shift.x * strandModelParameters.m_shiftPushRatio * node.m_data.m_strandRadius;
-		
+		if (particleCount > 0) {
+			parentCenter /= particleCount;
+		}
+		if (strandModelParameters.m_sidePushFactor > 0.f) {
+
+			newGlobalEndPosition += parentUp * parentCenter.y * strandModelParameters.m_sidePushFactor * node.m_data.m_strandRadius;
+			newGlobalEndPosition += parentLeft * parentCenter.x * strandModelParameters.m_sidePushFactor * node.m_data.m_strandRadius;
+		}
+		if (offsetLength > glm::epsilon<float>()) {
+			const auto offsetDirection = glm::normalize(node.m_data.m_offset);
+			float maxRadius = node.m_data.m_profile.GetMaxDistanceToCenter();
+			for (const auto& parentParticle : parentNode.m_data.m_profile.PeekParticles())
+			{
+				if (parentParticle.m_data.m_correspondingChildNodeHandle == nodeHandle)
+				{
+					const auto distance = glm::length(glm::closestPointOnLine(parentParticle.GetPosition(), parentCenter, parentCenter + node.m_data.m_offset * 1000.0f));
+					maxRadius = glm::max(maxRadius, distance);
+				}
+			}
+			for (const auto& particle : parentNode.m_data.m_profile.PeekParticles())
+			{
+				const auto distance = glm::length(glm::closestPointOnLine(particle.GetPosition(), glm::vec2(0.f), node.m_data.m_offset * 1000.0f));
+				maxRadius = glm::max(maxRadius, distance);
+			}
+
+			if (node.IsApical())
+			{
+				newGlobalEndPosition += parentUp * offsetDirection.y * cosFront * maxRadius * strandModelParameters.m_apicalBranchRotationPushFactor * node.m_data.m_strandRadius;
+				newGlobalEndPosition += parentLeft * offsetDirection.x * cosFront * maxRadius * strandModelParameters.m_apicalBranchRotationPushFactor * node.m_data.m_strandRadius;
+				newGlobalEndPosition += parentFront * sinFront * maxRadius * strandModelParameters.m_apicalBranchRotationPushFactor * node.m_data.m_strandRadius;
+			}
+			else
+			{
+
+				newGlobalEndPosition += parentUp * offsetDirection.y * cosFront * maxRadius * strandModelParameters.m_rotationPushFactor * node.m_data.m_strandRadius;
+				newGlobalEndPosition += parentLeft * offsetDirection.x * cosFront * maxRadius * strandModelParameters.m_rotationPushFactor * node.m_data.m_strandRadius;
+				newGlobalEndPosition += parentFront * sinFront * maxRadius * strandModelParameters.m_rotationPushFactor * node.m_data.m_strandRadius;
+			}
+		}
 		assert(!glm::any(glm::isnan(node.m_info.m_globalPosition)));
 		assert(!glm::any(glm::isnan(newGlobalEndPosition)));
 
@@ -776,7 +787,7 @@ glm::vec3 StrandModel::InterpolateStrandSegmentPosition(const StrandSegmentHandl
 	}
 	glm::vec3 position, tangent;
 	Strands::CubicInterpolation(p[0], p[1], p[2], p[3], position, tangent, a);
-	if(glm::any(glm::isnan(position)))
+	if (glm::any(glm::isnan(position)))
 	{
 		EVOENGINE_ERROR("nan");
 	}

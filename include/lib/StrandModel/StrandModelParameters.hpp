@@ -16,12 +16,12 @@ namespace EcoSysLab
 		int m_modifiedProfilePackingMaxIteration = 1500;
 
 		float m_overlapThreshold = 0.1f;
-		int m_endNodeStrands = 3;
+		int m_endNodeStrands = 1;
 		int m_strandsAlongBranch = 0;
 		bool m_preMerge = true;
 
 		float m_controlPointRatio = 0.3f;
-		bool m_triplePoints = false;
+		bool m_triplePoints = true;
 		int m_nodeMaxCount = -1;
 
 		int m_boundaryPointDistance = 6;
@@ -29,11 +29,9 @@ namespace EcoSysLab
 		glm::vec4 m_boundaryPointColor = glm::vec4(0.6f, 0.3f, 0, 1);
 		glm::vec4 m_contentPointColor = glm::vec4(0, 0.3, 0.0f, 1);
 
-		float m_shiftPushRatio = 1.0f;
-		float m_sidePushRatio = 1.0f;
-		float m_frontPushRatio = 1.0f;
-		float m_rotationPushRatio = 1.f;
-
+		float m_sidePushFactor = 1.0f;
+		float m_rotationPushFactor = 0.5f;
+		float m_apicalBranchRotationPushFactor = 0.25f;
 
 		PlottedDistribution<float> m_branchTwistDistribution{};
 		PlottedDistribution<float> m_junctionTwistDistribution{};

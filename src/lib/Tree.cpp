@@ -186,10 +186,13 @@ void Tree::InitializeSkeletalGraph(NodeHandle baseNodeHandle,
 
 	const auto pointEntity = scene->CreateEntity("Skeletal Graph Points");
 	scene->SetParent(pointEntity, self);
-	const auto& skeleton = m_treeModel.PeekShootSkeleton();
-	const auto& sortedInternodeList = skeleton.PeekSortedNodeList();
 
 
+	bool strandReady = false;
+	if (m_strandModel.m_strandModelSkeleton.PeekSortedNodeList().size() > 1)
+	{
+		strandReady = true;
+	}
 
 	const auto lineList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
 	const auto lineMaterial = ProjectManager::CreateTemporaryAsset<Material>();
@@ -208,70 +211,142 @@ void Tree::InitializeSkeletalGraph(NodeHandle baseNodeHandle,
 
 	std::vector<ParticleInfo> lineParticleInfos;
 	std::vector<ParticleInfo> pointParticleInfos;
-	lineParticleInfos.resize(sortedInternodeList.size());
-	pointParticleInfos.resize(sortedInternodeList.size());
-	Jobs::ParallelFor(sortedInternodeList.size(), [&](unsigned internodeIndex)
+	const int nodeSize = strandReady ? m_strandModel.m_strandModelSkeleton.PeekSortedNodeList().size() : m_treeModel.PeekShootSkeleton().PeekSortedNodeList().size();
+	if (strandReady) {
+		lineParticleInfos.resize(nodeSize);
+		pointParticleInfos.resize(nodeSize);
+	}
+	else
+	{
+		lineParticleInfos.resize(nodeSize);
+		pointParticleInfos.resize(nodeSize);
+	}
+	Jobs::ParallelFor(nodeSize, [&](unsigned internodeIndex)
 		{
-			const auto internodeHandle = sortedInternodeList[internodeIndex];
-			const auto& node = skeleton.PeekNode(internodeHandle);
-			bool subTree = false;
-			NodeHandle walker = internodeHandle;
-
-			while (walker != -1)
+			if (strandReady)
 			{
-				if (walker == baseNodeHandle)
+				const auto& sortedInternodeList = m_strandModel.m_strandModelSkeleton.PeekSortedNodeList();
+				const auto internodeHandle = sortedInternodeList[internodeIndex];
+				NodeHandle walker = internodeHandle;
+				bool subTree = false;
+				const auto& skeleton = m_strandModel.m_strandModelSkeleton;
+				const auto& node = skeleton.PeekNode(internodeHandle);
+
+				while (walker != -1)
 				{
-					subTree = true;
-					break;
+					if (walker == baseNodeHandle)
+					{
+						subTree = true;
+						break;
+					}
+					walker = skeleton.PeekNode(walker).GetParentHandle();
 				}
-				walker = skeleton.PeekNode(walker).GetParentHandle();
-			}
-
-
-			{
 				const glm::vec3 position = node.m_info.m_globalPosition;
 				auto rotation = node.m_info.m_globalRotation;
-				rotation *= glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));
-				const glm::mat4 rotationTransform = glm::mat4_cast(rotation);
-				lineParticleInfos[internodeIndex].m_instanceMatrix.m_value =
-					glm::translate(position + (node.m_info.m_length / 2.0f) * node.m_info.GetGlobalDirection()) *
-					rotationTransform *
-					glm::scale(glm::vec3(
-						m_treeVisualizer.m_skeletalGraphSettings.m_lineThickness * (subTree ? 1.25f : 1.0f),
-						node.m_info.m_length,
-						m_treeVisualizer.m_skeletalGraphSettings.m_lineThickness * (subTree ? 1.25f : 1.0f)));
-
-				if (subTree)
 				{
-					lineParticleInfos[internodeIndex].m_instanceColor = m_treeVisualizer.m_skeletalGraphSettings.m_lineFocusColor;
+
+					rotation *= glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));
+					const glm::mat4 rotationTransform = glm::mat4_cast(rotation);
+					lineParticleInfos[internodeIndex].m_instanceMatrix.m_value =
+						glm::translate(position + (node.m_info.m_length / 2.0f) * node.m_info.GetGlobalDirection()) *
+						rotationTransform *
+						glm::scale(glm::vec3(
+							m_treeVisualizer.m_skeletalGraphSettings.m_fixedLineThickness * (subTree ? 1.25f : 1.0f),
+							node.m_info.m_length,
+							m_treeVisualizer.m_skeletalGraphSettings.m_fixedLineThickness * (subTree ? 1.25f : 1.0f)));
+
+					if (subTree)
+					{
+						lineParticleInfos[internodeIndex].m_instanceColor = m_treeVisualizer.m_skeletalGraphSettings.m_lineFocusColor;
+					}
+					else {
+						lineParticleInfos[internodeIndex].m_instanceColor = m_treeVisualizer.m_skeletalGraphSettings.m_lineColor;
+					}
 				}
-				else {
-					lineParticleInfos[internodeIndex].m_instanceColor = m_treeVisualizer.m_skeletalGraphSettings.m_lineColor;
+				{
+					rotation *= glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));
+					const glm::mat4 rotationTransform = glm::mat4_cast(rotation);
+					float thicknessFactor = node.m_info.m_thickness;
+					if (m_treeVisualizer.m_skeletalGraphSettings.m_fixedPointSize) thicknessFactor = m_treeVisualizer.m_skeletalGraphSettings.m_fixedPointSizeFactor;
+					auto scale = glm::vec3(m_treeVisualizer.m_skeletalGraphSettings.m_branchPointSize * thicknessFactor);
+					pointParticleInfos[internodeIndex].m_instanceColor = m_treeVisualizer.m_skeletalGraphSettings.m_branchPointColor;
+					if (internodeIndex == 0 || node.RefChildHandles().size() > 1)
+					{
+						scale = glm::vec3(m_treeVisualizer.m_skeletalGraphSettings.m_junctionPointSize * thicknessFactor);
+						pointParticleInfos[internodeIndex].m_instanceColor = m_treeVisualizer.m_skeletalGraphSettings.m_junctionPointColor;
+					}
+					pointParticleInfos[internodeIndex].m_instanceMatrix.m_value =
+						glm::translate(position) *
+						rotationTransform *
+						glm::scale(scale * (subTree ? 1.25f : 1.0f));
+					if (subTree)
+					{
+						pointParticleInfos[internodeIndex].m_instanceColor = m_treeVisualizer.m_skeletalGraphSettings.m_branchFocusColor;
+					}
 				}
 			}
-			{
+			else {
+				const auto& sortedInternodeList = m_treeModel.PeekShootSkeleton().PeekSortedNodeList();
+				const auto internodeHandle = sortedInternodeList[internodeIndex];
+				NodeHandle walker = internodeHandle;
+				bool subTree = false;
+				const auto& skeleton = m_treeModel.PeekShootSkeleton();
+				const auto& node = skeleton.PeekNode(internodeHandle);
+
+				while (walker != -1)
+				{
+					if (walker == baseNodeHandle)
+					{
+						subTree = true;
+						break;
+					}
+					walker = skeleton.PeekNode(walker).GetParentHandle();
+				}
 				const glm::vec3 position = node.m_info.m_globalPosition;
 				auto rotation = node.m_info.m_globalRotation;
-				rotation *= glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));
-				const glm::mat4 rotationTransform = glm::mat4_cast(rotation);
-				float thicknessFactor = node.m_info.m_thickness;
-				if (m_treeVisualizer.m_skeletalGraphSettings.m_fixedPointSize) thicknessFactor = m_treeVisualizer.m_skeletalGraphSettings.m_fixedPointSizeFactor;
-				auto scale = glm::vec3(m_treeVisualizer.m_skeletalGraphSettings.m_branchPointSize * thicknessFactor);
-				pointParticleInfos[internodeIndex].m_instanceColor = m_treeVisualizer.m_skeletalGraphSettings.m_branchPointColor;
-				if (internodeIndex == 0 || node.RefChildHandles().size() > 1)
 				{
-					scale = glm::vec3(m_treeVisualizer.m_skeletalGraphSettings.m_junctionPointSize * thicknessFactor);
-					pointParticleInfos[internodeIndex].m_instanceColor = m_treeVisualizer.m_skeletalGraphSettings.m_junctionPointColor;
+
+					rotation *= glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));
+					const glm::mat4 rotationTransform = glm::mat4_cast(rotation);
+					lineParticleInfos[internodeIndex].m_instanceMatrix.m_value =
+						glm::translate(position + (node.m_info.m_length / 2.0f) * node.m_info.GetGlobalDirection()) *
+						rotationTransform *
+						glm::scale(glm::vec3(
+							m_treeVisualizer.m_skeletalGraphSettings.m_fixedLineThickness * (subTree ? 1.25f : 1.0f),
+							node.m_info.m_length,
+							m_treeVisualizer.m_skeletalGraphSettings.m_fixedLineThickness * (subTree ? 1.25f : 1.0f)));
+
+					if (subTree)
+					{
+						lineParticleInfos[internodeIndex].m_instanceColor = m_treeVisualizer.m_skeletalGraphSettings.m_lineFocusColor;
+					}
+					else {
+						lineParticleInfos[internodeIndex].m_instanceColor = m_treeVisualizer.m_skeletalGraphSettings.m_lineColor;
+					}
 				}
-				pointParticleInfos[internodeIndex].m_instanceMatrix.m_value =
-					glm::translate(position) *
-					rotationTransform *
-					glm::scale(scale * (subTree ? 1.25f : 1.0f));
-				if (subTree)
 				{
-					pointParticleInfos[internodeIndex].m_instanceColor = m_treeVisualizer.m_skeletalGraphSettings.m_branchFocusColor;
+					rotation *= glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));
+					const glm::mat4 rotationTransform = glm::mat4_cast(rotation);
+					float thicknessFactor = node.m_info.m_thickness;
+					if (m_treeVisualizer.m_skeletalGraphSettings.m_fixedPointSize) thicknessFactor = m_treeVisualizer.m_skeletalGraphSettings.m_fixedPointSizeFactor;
+					auto scale = glm::vec3(m_treeVisualizer.m_skeletalGraphSettings.m_branchPointSize * thicknessFactor);
+					pointParticleInfos[internodeIndex].m_instanceColor = m_treeVisualizer.m_skeletalGraphSettings.m_branchPointColor;
+					if (internodeIndex == 0 || node.RefChildHandles().size() > 1)
+					{
+						scale = glm::vec3(m_treeVisualizer.m_skeletalGraphSettings.m_junctionPointSize * thicknessFactor);
+						pointParticleInfos[internodeIndex].m_instanceColor = m_treeVisualizer.m_skeletalGraphSettings.m_junctionPointColor;
+					}
+					pointParticleInfos[internodeIndex].m_instanceMatrix.m_value =
+						glm::translate(position) *
+						rotationTransform *
+						glm::scale(scale * (subTree ? 1.25f : 1.0f));
+					if (subTree)
+					{
+						pointParticleInfos[internodeIndex].m_instanceColor = m_treeVisualizer.m_skeletalGraphSettings.m_branchFocusColor;
+					}
 				}
 			}
+
 		});
 	lineList->SetParticleInfos(lineParticleInfos);
 	pointList->SetParticleInfos(pointParticleInfos);
@@ -388,11 +463,11 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 			}
 			static int meshGenerateIterations = 0;
 			if (ImGui::TreeNode("Cylindrical Mesh generation settings")) {
-				
+
 				ImGui::DragInt("Iterations", &meshGenerateIterations, 1, 0, m_treeModel.CurrentIteration());
 				meshGenerateIterations = glm::clamp(meshGenerateIterations, 0, m_treeModel.CurrentIteration());
 				m_meshGeneratorSettings.OnInspect(editorLayer);
-				
+
 				ImGui::TreePop();
 			}
 			if (ImGui::Button("Generate Cylindrical Mesh")) {
@@ -403,7 +478,7 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 			{
 				ClearGeometryEntities();
 			}
-			
+
 		}
 		/*
 		if (m_enableVisualization) {
@@ -523,12 +598,11 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 		ImGui::Text(("Total particle count: " + std::to_string(m_strandModel.m_strandModelSkeleton.m_data.m_numOfParticles)).c_str());
 
 
-		if (ImGui::TreeNodeEx("Graph Adjustment settings"))
+		if (ImGui::TreeNodeEx("Graph Adjustment settings", ImGuiTreeNodeFlags_DefaultOpen))
 		{
-			ImGui::DragFloat("Shift push ratio", &strandModelParameters.m_shiftPushRatio, 0.01f, 0.0f, 2.0f);
-			ImGui::DragFloat("Side push ratio", &strandModelParameters.m_sidePushRatio, 0.01f, 0.0f, 2.0f);
-			ImGui::DragFloat("Front push ratio", &strandModelParameters.m_frontPushRatio, 0.01f, 0.0f, 2.0f);
-			ImGui::DragFloat("Rotation push ratio", &strandModelParameters.m_rotationPushRatio, 0.01f, 0.0f, 2.0f);
+			ImGui::DragFloat("Side factor", &strandModelParameters.m_sidePushFactor, 0.01f, 0.0f, 2.0f);
+			ImGui::DragFloat("Rotation factor", &strandModelParameters.m_rotationPushFactor, 0.01f, 0.0f, 2.0f);
+			ImGui::DragFloat("Apical Rotation factor", &strandModelParameters.m_apicalBranchRotationPushFactor, 0.01f, 0.0f, 2.0f);
 			ImGui::TreePop();
 		}
 		ImGui::Checkbox("Triple points", &strandModelParameters.m_triplePoints);
@@ -540,6 +614,7 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 
 		if (ImGui::Button("Rebuild Strand Model"))
 		{
+			m_strandModel = {};
 			BuildStrandModel();
 		}
 
@@ -547,7 +622,6 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 		if (ImGui::Button("Clear Strand Model"))
 		{
 			m_strandModel = {};
-			//m_strandModel.ResetAllProfiles(m_strandModelParameters);
 		}
 
 		if (ImGui::TreeNodeEx("Strand Model Mesh Generator Settings", ImGuiTreeNodeFlags_DefaultOpen)) {
@@ -576,7 +650,7 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	{
 		ClearStrandModelMeshRenderer();
 	}
-	if(ImGui::TreeNode("Tree Visualizer"))
+	if (ImGui::TreeNode("Tree Visualizer"))
 	{
 		m_treeVisualizer.OnInspect(m_treeModel);
 		ImGui::TreePop();
@@ -661,12 +735,27 @@ bool Tree::OnInspectTreeGrowthSettings(TreeGrowthSettings& treeGrowthSettings)
 	return changed;
 }
 
-void Tree::BuildStrandModel()
+void Tree::CalculateProfiles()
 {
 	m_strandModel.m_strandModelSkeleton.Clone(m_treeModel.RefShootSkeleton());
 
 	m_strandModel.InitializeProfiles(m_strandModelParameters);
 	m_strandModel.CalculateProfiles(m_strandModelParameters);
+}
+
+void Tree::BuildStrandModel()
+{
+	if (m_strandModel.m_strandModelSkeleton.RefRawNodes().size() != m_treeModel.PeekShootSkeleton().RefRawNodes().size())
+	{
+		CalculateProfiles();
+	}
+	else
+	{
+		for (const auto& nodeHandle : m_treeModel.PeekShootSkeleton().PeekSortedNodeList())
+		{
+			m_strandModel.m_strandModelSkeleton.RefNode(nodeHandle).m_info = m_treeModel.PeekShootSkeleton().PeekNode(nodeHandle).m_info;
+		}
+	}
 	m_strandModel.CalculateStrandProfileAdjustedTransforms(m_strandModelParameters);
 	m_strandModel.ApplyProfiles(m_strandModelParameters);
 }
@@ -689,11 +778,11 @@ void Tree::GenerateTrunkMeshes(const std::shared_ptr<Mesh>& trunkMesh, const Tre
 {
 	const auto& sortedInternodeList = m_treeModel.RefShootSkeleton().PeekSortedNodeList();
 	std::unordered_set<NodeHandle> trunkHandles{};
-	for(const auto& nodeHandle : sortedInternodeList)
+	for (const auto& nodeHandle : sortedInternodeList)
 	{
 		const auto& node = m_treeModel.RefShootSkeleton().PeekNode(nodeHandle);
 		trunkHandles.insert(nodeHandle);
-		if(node.RefChildHandles().size() > 1)break;
+		if (node.RefChildHandles().size() > 1)break;
 	}
 	{
 		std::vector<Vertex> vertices;
@@ -971,7 +1060,7 @@ std::shared_ptr<ParticleInfoList> Tree::GenerateFoliageParticleInfoList(
 		foliageDescriptor->GenerateFoliageMatrices(leafMatrices, internodeInfo);
 		const auto startIndex = particleInfos.size();
 		particleInfos.resize(startIndex + leafMatrices.size());
-		for(int i = 0; i < leafMatrices.size(); i++)
+		for (int i = 0; i < leafMatrices.size(); i++)
 		{
 			auto& particleInfo = particleInfos.at(startIndex + i);
 			particleInfo.m_instanceMatrix.m_value = leafMatrices.at(i);
@@ -996,7 +1085,7 @@ std::shared_ptr<Mesh> Tree::GenerateStrandModelFoliageMesh(
 	if (!treeDescriptor) return nullptr;
 	auto foliageDescriptor = treeDescriptor->m_foliageDescriptor.Get<FoliageDescriptor>();
 	if (!foliageDescriptor) foliageDescriptor = ProjectManager::CreateTemporaryAsset<FoliageDescriptor>();
-	const auto& nodeList = m_treeModel.PeekShootSkeleton().PeekSortedNodeList();
+	const auto& nodeList = m_strandModel.m_strandModelSkeleton.PeekSortedNodeList();
 	for (const auto& internodeHandle : nodeList) {
 		const auto& strandModelNode = m_strandModel.m_strandModelSkeleton.PeekNode(internodeHandle);
 		std::vector<glm::mat4> leafMatrices;
@@ -1004,7 +1093,7 @@ std::shared_ptr<Mesh> Tree::GenerateStrandModelFoliageMesh(
 		Vertex archetype;
 		for (const auto& matrix : leafMatrices)
 		{
-			
+
 			for (auto i = 0; i < quadMesh->GetVerticesAmount(); i++) {
 				archetype.m_position =
 					matrix * glm::vec4(quadMesh->UnsafeGetVertices()[i].m_position, 1.0f);
@@ -1378,8 +1467,6 @@ void Tree::Serialize(YAML::Emitter& out)
 				{
 					nodeOut << YAML::Key << "O" << YAML::Value << nodeData.m_offset;
 					nodeOut << YAML::Key << "T" << YAML::Value << nodeData.m_twistAngle;
-					nodeOut << YAML::Key << "SF" << YAML::Value << nodeData.m_shift;
-					nodeOut << YAML::Key << "A" << YAML::Value << nodeData.m_apical;
 					nodeOut << YAML::Key << "SP" << YAML::Value << nodeData.m_split;
 					nodeOut << YAML::Key << "SR" << YAML::Value << nodeData.m_strandRadius;
 					nodeOut << YAML::Key << "SC" << YAML::Value << nodeData.m_strandCount;
@@ -1389,6 +1476,7 @@ void Tree::Serialize(YAML::Emitter& out)
 						StrandModelProfileSerializer<CellParticlePhysicsData>::Serialize(nodeOut, nodeData.m_profile,
 							[&](YAML::Emitter& particleOut, const CellParticlePhysicsData& particleData)
 							{
+								particleOut << YAML::Key << "CN" << YAML::Value << particleData.m_correspondingChildNodeHandle;
 								particleOut << YAML::Key << "H" << YAML::Value << particleData.m_strandHandle;
 								particleOut << YAML::Key << "S" << YAML::Value << particleData.m_strandSegmentHandle;
 								particleOut << YAML::Key << "M" << YAML::Value << particleData.m_mainChild;
@@ -1412,7 +1500,7 @@ void Tree::Serialize(YAML::Emitter& out)
 							},
 							[&](YAML::Emitter& strandOut, const StrandModelStrandData& strandData) {},
 							[&](YAML::Emitter& groupOut, const StrandModelStrandGroupData& groupData) {}
-							);
+						);
 					}
 					out << YAML::EndMap;
 				}
@@ -1481,10 +1569,10 @@ void Tree::Serialize(YAML::Emitter& out)
 void Tree::Deserialize(const YAML::Node& in)
 {
 	m_treeDescriptor.Load("m_treeDescriptor", in);
-	if(in["m_strandModel"])
+	if (in["m_strandModel"])
 	{
 		const auto& inStrandModel = in["m_strandModel"];
-		if(inStrandModel["m_strandModelSkeleton"])
+		if (inStrandModel["m_strandModelSkeleton"])
 		{
 			const auto& inStrandModelSkeleton = inStrandModel["m_strandModelSkeleton"];
 			SkeletonSerializer<StrandModelSkeletonData, StrandModelFlowData, StrandModelNodeData>::Deserialize(inStrandModelSkeleton, m_strandModel.m_strandModelSkeleton,
@@ -1492,8 +1580,6 @@ void Tree::Deserialize(const YAML::Node& in)
 				{
 					if (nodeIn["O"]) nodeData.m_offset = nodeIn["O"].as<glm::vec2>();
 					if (nodeIn["T"]) nodeData.m_twistAngle = nodeIn["T"].as<float>();
-					if (nodeIn["SF"]) nodeData.m_shift = nodeIn["SF"].as<glm::vec2>();
-					if (nodeIn["A"]) nodeData.m_apical = nodeIn["A"].as<bool>();
 					if (nodeIn["SP"]) nodeData.m_split = nodeIn["SP"].as<bool>();
 					if (nodeIn["SR"]) nodeData.m_strandRadius = nodeIn["SR"].as<float>();
 					if (nodeIn["SC"]) nodeData.m_strandCount = nodeIn["SC"].as<int>();
@@ -1504,6 +1590,7 @@ void Tree::Deserialize(const YAML::Node& in)
 						StrandModelProfileSerializer<CellParticlePhysicsData>::Deserialize(inStrandGroup, nodeData.m_profile,
 							[&](const YAML::Node& segmentIn, CellParticlePhysicsData& particleData)
 							{
+								if (segmentIn["CN"]) particleData.m_correspondingChildNodeHandle = segmentIn["CN"].as<NodeHandle>();
 								if (segmentIn["H"]) particleData.m_strandHandle = segmentIn["H"].as<StrandHandle>();
 								if (segmentIn["S"]) particleData.m_strandSegmentHandle = segmentIn["S"].as<StrandSegmentHandle>();
 								if (segmentIn["M"]) particleData.m_mainChild = segmentIn["M"].as<bool>();
@@ -1516,7 +1603,7 @@ void Tree::Deserialize(const YAML::Node& in)
 				{},
 				[&](const YAML::Node& skeletonIn, StrandModelSkeletonData& skeletonData)
 				{
-					if(skeletonIn["m_strandGroup"])
+					if (skeletonIn["m_strandGroup"])
 					{
 						const auto& inStrandGroup = skeletonIn["m_strandGroup"];
 						StrandGroupSerializer<StrandModelStrandGroupData, StrandModelStrandData, StrandModelStrandSegmentData>::Deserialize(inStrandGroup, m_strandModel.m_strandModelSkeleton.m_data.m_strandGroup,
@@ -1524,7 +1611,6 @@ void Tree::Deserialize(const YAML::Node& in)
 							{
 								if (segmentIn["H"]) segmentData.m_nodeHandle = segmentIn["H"].as<NodeHandle>();
 								if (segmentIn["F"]) segmentData.m_profileParticleHandle = segmentIn["F"].as<ParticleHandle>();
-								if (segmentIn["B"]) segmentData.m_profileParticleHandle = segmentIn["B"].as<ParticleHandle>();
 							},
 							[&](const YAML::Node& strandIn, StrandModelStrandData& strandData) {},
 							[&](const YAML::Node& groupIn, StrandModelStrandGroupData& groupData) {}
@@ -1534,7 +1620,7 @@ void Tree::Deserialize(const YAML::Node& in)
 			);
 		}
 	}
-	if(in["m_treeModel"])
+	if (in["m_treeModel"])
 	{
 		const auto& inTreeModel = in["m_treeModel"];
 		if (inTreeModel["m_shootSkeleton"])
@@ -1554,17 +1640,17 @@ void Tree::Deserialize(const YAML::Node& in)
 					if (nodeIn["O"]) nodeData.m_order = nodeIn["O"].as<int>();
 					if (nodeIn["EM"]) nodeData.m_extraMass = nodeIn["EM"].as<float>();
 					nodeData.m_buds.clear();
-					if(nodeIn["B"])
+					if (nodeIn["B"])
 					{
 						const auto& inBuds = nodeIn["B"];
-						for(const auto& inBud : inBuds)
+						for (const auto& inBud : inBuds)
 						{
 							nodeData.m_buds.emplace_back();
 							auto& bud = nodeData.m_buds.back();
 							if (inBud["T"]) bud.m_type = static_cast<BudType>(inBud["T"].as<unsigned>());
 							if (inBud["S"]) bud.m_status = static_cast<BudStatus>(inBud["S"].as<unsigned>());
 							if (inBud["LR"]) bud.m_localRotation = inBud["LR"].as<glm::quat>();
-							if(inBud["RM"])
+							if (inBud["RM"])
 							{
 								const auto& inReproductiveModule = inBud["RM"];
 								if (inReproductiveModule["M"]) bud.m_reproductiveModule.m_maturity = inReproductiveModule["M"].as<float>();
@@ -1673,7 +1759,7 @@ void Tree::GenerateGeometryEntities(const TreeMeshGeneratorSettings& meshGenerat
 				}
 			}
 		}
-		if(!copiedMaterial)
+		if (!copiedMaterial)
 		{
 			material->m_materialProperties.m_albedoColor = glm::vec3(109, 79, 75) / 255.0f;
 			material->m_materialProperties.m_roughness = 1.0f;
@@ -1733,7 +1819,7 @@ void Tree::GenerateGeometryEntities(const TreeMeshGeneratorSettings& meshGenerat
 				}
 			}
 		}
-		if(!copiedMaterial) {
+		if (!copiedMaterial) {
 			material->m_materialProperties.m_albedoColor = glm::vec3(152 / 255.0f, 203 / 255.0f, 0 / 255.0f);
 			material->m_materialProperties.m_roughness = 1.0f;
 			material->m_materialProperties.m_metallic = 0.0f;
@@ -2107,7 +2193,7 @@ void Tree::ExportRadialBoundingVolume(const std::shared_ptr<RadialBoundingVolume
 
 void Tree::CollectAssetRef(std::vector<AssetRef>& list)
 {
-	if(m_treeDescriptor.Get<TreeDescriptor>())
+	if (m_treeDescriptor.Get<TreeDescriptor>())
 	{
 		list.emplace_back(m_treeDescriptor);
 	}
@@ -2117,6 +2203,7 @@ void Tree::CollectAssetRef(std::vector<AssetRef>& list)
 void SkeletalGraphSettings::OnInspect()
 {
 	ImGui::DragFloat("Line thickness", &m_lineThickness, 0.001f, 0.0f, 1.0f);
+	ImGui::DragFloat("Fixed line thickness", &m_fixedLineThickness, 0.001f, 0.0f, 1.0f);
 	ImGui::DragFloat("Branch point size", &m_branchPointSize, 0.01f, 0.0f, 1.0f);
 	ImGui::DragFloat("Junction point size", &m_junctionPointSize, 0.01f, 0.0f, 1.0f);
 
@@ -2137,14 +2224,14 @@ void Tree::PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescrip
 
 	{
 		auto shootDescriptor = treeDescriptor->m_shootDescriptor.Get<ShootDescriptor>();
-		if(!shootDescriptor)
+		if (!shootDescriptor)
 		{
 			shootDescriptor = ProjectManager::CreateTemporaryAsset<ShootDescriptor>();
 			treeDescriptor->m_shootDescriptor = shootDescriptor;
 			EVOENGINE_WARNING("Shoot Descriptor Missing!");
 		}
 		m_shootGrowthController.m_baseInternodeCount = shootDescriptor->m_baseInternodeCount;
-		
+
 		m_shootGrowthController.m_baseNodeApicalAngle = [=](const Node<InternodeGrowthData>& internode)
 			{
 				return glm::gaussRand(shootDescriptor->m_baseNodeApicalAngleMeanVariance.x, shootDescriptor->m_baseNodeApicalAngleMeanVariance.y);
@@ -2198,6 +2285,7 @@ void Tree::PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescrip
 		m_shootGrowthController.m_lateralBudCount = shootDescriptor->m_lateralBudCount;
 		m_shootGrowthController.m_apicalBudExtinctionRate = [=](const Node<InternodeGrowthData>& internode)
 			{
+				if (internode.m_info.m_rootDistance < 0.5f) return 0.f;
 				return shootDescriptor->m_apicalBudExtinctionRate;
 			};
 		m_shootGrowthController.m_lateralBudFlushingRate = [=](const Node<InternodeGrowthData>& internode)
@@ -2215,19 +2303,29 @@ void Tree::PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescrip
 
 		m_shootGrowthController.m_lowBranchPruning = shootDescriptor->m_lowBranchPruning;
 		m_shootGrowthController.m_lowBranchPruningThicknessFactor = shootDescriptor->m_lowBranchPruningThicknessFactor;
-		m_shootGrowthController.m_pruningFactor = [=](const float deltaTime, const Node<InternodeGrowthData>& internode)
+		m_shootGrowthController.m_pruningFactor = [=](const ShootSkeleton& shootSkeleton, const Node<InternodeGrowthData>& internode)
 			{
+				if (shootDescriptor->m_trunkProtection && internode.m_data.m_order == 0)
+				{
+					return 0.f;
+				}
 				float pruningProbability = 0.0f;
-				if (internode.IsEndNode() && internode.m_data.m_lightIntensity <= shootDescriptor->m_lightPruningFactor)
+				if (shootDescriptor->m_maxFlowLength != 0 && shootDescriptor->m_maxFlowLength < internode.m_info.m_chainIndex)
 				{
 					pruningProbability += 999.f;
+				}
+				if (internode.IsEndNode()) {
+					if (internode.m_data.m_lightIntensity <= shootDescriptor->m_lightPruningFactor)
+					{
+						pruningProbability += shootDescriptor->m_lightPruningProbability;
+					}
 				}
 				if (internode.m_data.m_level != 0 && shootDescriptor->m_thicknessPruningFactor != 0.0f
 					&& internode.m_info.m_thickness / internode.m_info.m_endDistance < shootDescriptor->m_thicknessPruningFactor)
 				{
-					pruningProbability += 999.0f;
+					pruningProbability += shootDescriptor->m_thicknessPruningProbability;
 				}
-				return pruningProbability * deltaTime;
+				return pruningProbability;
 			};
 
 
@@ -2300,13 +2398,11 @@ void Tree::InitializeStrandRenderer()
 	const auto owner = GetOwner();
 
 	ClearStrandRenderer();
+
+	BuildStrandModel();
+
 	const auto strandsEntity = scene->CreateEntity("Branch Strands");
 	scene->SetParent(strandsEntity, owner);
-
-	if(m_strandModel.m_strandModelSkeleton.RefRawNodes().size() != m_treeModel.RefShootSkeleton().RefRawNodes().size())
-	{
-		BuildStrandModel();
-	}
 
 	const auto renderer = scene->GetOrSetPrivateComponent<StrandsRenderer>(strandsEntity).lock();
 	renderer->m_strands = GenerateStrands();
@@ -2324,6 +2420,8 @@ void Tree::InitializeStrandRenderer(const std::shared_ptr<Strands>& strands) con
 	const auto owner = GetOwner();
 
 	ClearStrandRenderer();
+
+
 	const auto strandsEntity = scene->CreateEntity("Branch Strands");
 	scene->SetParent(strandsEntity, owner);
 
@@ -2341,10 +2439,9 @@ void Tree::InitializeStrandRenderer(const std::shared_ptr<Strands>& strands) con
 void Tree::InitializeStrandModelMeshRenderer(const StrandModelMeshGeneratorSettings& strandModelMeshGeneratorSettings)
 {
 	ClearStrandModelMeshRenderer();
-	if (m_strandModel.m_strandModelSkeleton.RefRawNodes().size() != m_treeModel.RefShootSkeleton().RefRawNodes().size())
-	{
-		BuildStrandModel();
-	}
+
+	BuildStrandModel();
+
 	const auto scene = GetScene();
 	const auto self = GetOwner();
 	const auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
@@ -2411,7 +2508,7 @@ void Tree::InitializeStrandModelMeshRenderer(const StrandModelMeshGeneratorSetti
 	}
 }
 
-void Tree::ClearStrandModelMeshRenderer()
+void Tree::ClearStrandModelMeshRenderer() const
 {
 	const auto scene = GetScene();
 	const auto self = GetOwner();

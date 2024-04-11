@@ -1359,8 +1359,14 @@ void StrandModelMeshGenerator::RecursiveSlicing(
 	sliceRecursively(strandModel, firstSlice, 0, stepSize, stepSize, maxDist, vertices, indices, settings);
 }
 
+void StrandModelMeshGenerator::RecursiveSlicing(const StrandModel& strandModel, std::vector<Vertex>& vertices,
+	std::vector<glm::vec2>& texCoords, std::vector<std::pair<unsigned, unsigned>>& indices,
+	const StrandModelMeshGeneratorSettings& settings)
+{
+}
+
 void StrandModelMeshGenerator::MarchingCube(const StrandModel& strandModel, std::vector<Vertex>& vertices,
-	std::vector<unsigned>& indices, const StrandModelMeshGeneratorSettings& settings)
+                                            std::vector<unsigned>& indices, const StrandModelMeshGeneratorSettings& settings)
 {
 	const auto& skeleton = strandModel.m_strandModelSkeleton;
 	const auto& pipeGroup = skeleton.m_data.m_strandGroup;

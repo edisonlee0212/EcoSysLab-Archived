@@ -57,6 +57,12 @@ namespace EcoSysLab {
 		static void RecursiveSlicing(
 			const StrandModel& strandModel, std::vector<Vertex>& vertices,
 			std::vector<unsigned int>& indices, const StrandModelMeshGeneratorSettings& settings);
+
+		static void RecursiveSlicing(
+			const StrandModel& strandModel, std::vector<Vertex>& vertices,
+			std::vector<glm::vec2>& texCoords,
+			std::vector<std::pair<unsigned int, unsigned int>>& indices, const StrandModelMeshGeneratorSettings& settings);
+
 		static void MarchingCube(
 			const StrandModel& strandModel, std::vector<Vertex>& vertices,
 			std::vector<unsigned int>& indices, const StrandModelMeshGeneratorSettings& settings);

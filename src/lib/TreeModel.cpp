@@ -57,7 +57,7 @@ void TreeModel::RegisterVoxel(const glm::mat4& globalTransform, ClimateModel& cl
 void TreeModel::PruneInternode(const NodeHandle internodeHandle)
 {
 	const auto& internode = m_shootSkeleton.RefNode(internodeHandle);
-	if(!internode.IsRecycled()) m_shootSkeleton.RecycleNode(internodeHandle,
+	if (!internode.IsRecycled()) m_shootSkeleton.RecycleNode(internodeHandle,
 		[&](FlowHandle flowHandle) {},
 		[&](NodeHandle nodeHandle)
 		{
@@ -160,7 +160,7 @@ bool TreeModel::Grow(float deltaTime, const glm::mat4& globalTransform, ClimateM
 			anyBranchGrown = anyBranchGrown || graphChanged;
 		}
 	}
-	
+
 	if (anyBranchGrown) {
 		m_shootSkeleton.SortLists();
 	}
@@ -247,7 +247,7 @@ void TreeModel::Initialize(const ShootGrowthController& shootGrowthController) {
 	{
 		m_shootSkeleton = ShootSkeleton(shootGrowthController.m_baseInternodeCount);
 		m_shootSkeleton.SortLists();
-		for(const auto &nodeHandle : m_shootSkeleton.PeekSortedNodeList())
+		for (const auto& nodeHandle : m_shootSkeleton.PeekSortedNodeList())
 		{
 			auto& node = m_shootSkeleton.RefNode(nodeHandle);
 			node.m_info.m_thickness = shootGrowthController.m_endNodeThickness;
@@ -609,6 +609,7 @@ bool TreeModel::ElongateInternode(float extendLength, NodeHandle internodeHandle
 					glm::radians(glm::linearRand(0.0f, 360.0f)));
 			}
 		}
+
 		//Create new internode
 		const auto newInternodeHandle = m_shootSkeleton.Extend(internodeHandle, false);
 		auto& oldInternode = m_shootSkeleton.RefNode(internodeHandle);
@@ -627,24 +628,28 @@ bool TreeModel::ElongateInternode(float extendLength, NodeHandle internodeHandle
 		newInternode.m_data.m_desiredLocalRotation =
 			glm::inverse(oldInternode.m_info.m_globalRotation) *
 			newInternode.m_info.m_globalRotation;
-		//Allocate apical bud for new internode
-		newInternode.m_data.m_buds.emplace_back();
-		auto& newApicalBud = newInternode.m_data.m_buds.back();
-		newApicalBud.m_type = BudType::Apical;
-		newApicalBud.m_status = BudStatus::Dormant;
-		newApicalBud.m_localRotation = glm::vec3(
-			glm::radians(shootGrowthController.m_apicalAngle(newInternode)), 0.0f,
-			glm::radians(shootGrowthController.m_rollAngle(newInternode)));
-
-		if (extraLength > internodeLength) {
-			float childInhibitor = 0.0f;
-			ElongateInternode(extraLength - internodeLength, newInternodeHandle, shootGrowthController, childInhibitor);
-			auto& currentNewInternode = m_shootSkeleton.RefNode(newInternodeHandle);
-			currentNewInternode.m_data.m_inhibitorSink += glm::max(0.0f, childInhibitor * glm::clamp(1.0f - shootGrowthController.m_apicalDominanceLoss, 0.0f, 1.0f));
-			collectedInhibitor += currentNewInternode.m_data.m_inhibitorSink + shootGrowthController.m_apicalDominance(currentNewInternode);
-		}
-		else {
-			collectedInhibitor += shootGrowthController.m_apicalDominance(newInternode);
+		if (shootGrowthController.m_apicalBudExtinctionRate(oldInternode) < glm::linearRand(0.0f, 1.0f)) {
+			//Allocate apical bud for new internode
+			newInternode.m_data.m_buds.emplace_back();
+			auto& newApicalBud = newInternode.m_data.m_buds.back();
+			newApicalBud.m_type = BudType::Apical;
+			newApicalBud.m_status = BudStatus::Dormant;
+			newApicalBud.m_localRotation = glm::vec3(
+				glm::radians(shootGrowthController.m_apicalAngle(newInternode)), 0.0f,
+				glm::radians(shootGrowthController.m_rollAngle(newInternode)));
+			if (extraLength > internodeLength) {
+				float childInhibitor = 0.0f;
+				ElongateInternode(extraLength - internodeLength, newInternodeHandle, shootGrowthController, childInhibitor);
+				auto& currentNewInternode = m_shootSkeleton.RefNode(newInternodeHandle);
+				currentNewInternode.m_data.m_inhibitorSink += glm::max(0.0f, childInhibitor * glm::clamp(1.0f - shootGrowthController.m_apicalDominanceLoss, 0.0f, 1.0f));
+				collectedInhibitor += currentNewInternode.m_data.m_inhibitorSink + shootGrowthController.m_apicalDominance(currentNewInternode);
+			}
+			else {
+				collectedInhibitor += shootGrowthController.m_apicalDominance(newInternode);
+			}
+		}else
+		{
+			newInternode.m_info.m_thickness = oldInternode.m_info.m_thickness;
 		}
 	}
 	return graphChanged;
@@ -658,31 +663,30 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, const NodeHandle inter
 		internodeData.m_inhibitorSink = 0;
 		for (const auto& childHandle : internode.RefChildHandles()) {
 			auto& childNode = m_shootSkeleton.RefNode(childHandle);
-			internodeData.m_inhibitorSink += glm::max(0.0f, (shootGrowthController.m_apicalDominance(childNode) + childNode.m_data.m_inhibitorSink) *
+			float childNodeInhibitor = 0.f;
+			if (!childNode.m_data.m_buds.empty() && childNode.m_data.m_buds[0].m_type == BudType::Apical)
+			{
+				childNodeInhibitor = shootGrowthController.m_apicalDominance(childNode);
+			}
+			internodeData.m_inhibitorSink += glm::max(0.0f, (childNodeInhibitor + childNode.m_data.m_inhibitorSink) *
 				glm::clamp(1.0f - shootGrowthController.m_apicalDominanceLoss, 0.0f, 1.0f));
 		}
 		if (!internode.m_data.m_buds.empty()) {
 			const auto& bud = internode.m_data.m_buds[0];
 			if (bud.m_type == BudType::Apical) {
 				assert(internode.m_data.m_buds.size() == 1);
-				if (internode.IsApical() && internode.GetParentHandle() != -1 && shootGrowthController.m_apicalBudExtinctionRate(internode) >= glm::linearRand(0.0f, 1.0f))
+				float elongateLength = 0.0f;
+				if (m_treeGrowthSettings.m_useSpaceColonization) {
+					if (m_shootSkeleton.m_data.m_maxMarkerCount > 0) elongateLength = static_cast<float>(bud.m_markerCount) / m_shootSkeleton.m_data.m_maxMarkerCount * shootGrowthController.m_internodeLength;
+				}
+				else
 				{
-					internode.m_data.m_buds.clear();
+					elongateLength = glm::clamp(internodeData.m_growthRate, 0.f, internodeData.m_lightIntensity) * m_currentDeltaTime * shootGrowthController.m_internodeLength * shootGrowthController.m_internodeGrowthRate;
 				}
-				else {
-					float elongateLength = 0.0f;
-					if (m_treeGrowthSettings.m_useSpaceColonization) {
-						if (m_shootSkeleton.m_data.m_maxMarkerCount > 0) elongateLength = static_cast<float>(bud.m_markerCount) / m_shootSkeleton.m_data.m_maxMarkerCount * shootGrowthController.m_internodeLength;
-					}
-					else
-					{
-						elongateLength = glm::clamp(internodeData.m_growthRate, 0.f, internodeData.m_lightIntensity) * m_currentDeltaTime * shootGrowthController.m_internodeLength * shootGrowthController.m_internodeGrowthRate;
-					}
-					//Use up the vigor stored in this bud.
-					float collectedInhibitor = 0.0f;
-					graphChanged = ElongateInternode(elongateLength, internodeHandle, shootGrowthController, collectedInhibitor) || graphChanged;
-					m_shootSkeleton.RefNode(internodeHandle).m_data.m_inhibitorSink += glm::max(0.0f, collectedInhibitor * glm::clamp(1.0f - shootGrowthController.m_apicalDominanceLoss, 0.0f, 1.0f));
-				}
+				//Use up the vigor stored in this bud.
+				float collectedInhibitor = 0.0f;
+				graphChanged = ElongateInternode(elongateLength, internodeHandle, shootGrowthController, collectedInhibitor) || graphChanged;
+				m_shootSkeleton.RefNode(internodeHandle).m_data.m_inhibitorSink += glm::max(0.0f, collectedInhibitor * glm::clamp(1.0f - shootGrowthController.m_apicalDominanceLoss, 0.0f, 1.0f));
 			}
 		}
 	}
@@ -1080,7 +1084,7 @@ bool TreeModel::PruneInternodes(const glm::mat4& globalTransform, ClimateModel& 
 		const auto& internode = m_shootSkeleton.PeekNode(internodeHandle);
 		//Pruning here.
 		bool pruning = false;
-		const float pruningProbability = shootGrowthController.m_pruningFactor(m_currentDeltaTime, internode);
+		const float pruningProbability = shootGrowthController.m_pruningFactor(m_shootSkeleton, internode) * m_currentDeltaTime;
 		if (pruningProbability > glm::linearRand(0.0f, 1.0f)) pruning = true;
 		bool lowBranchPruning = false;
 		if (!pruning && maxDistance > 5.0f * shootGrowthController.m_internodeLength && !internode.IsApical() &&

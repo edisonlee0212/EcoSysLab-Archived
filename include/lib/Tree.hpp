@@ -21,6 +21,7 @@ namespace EcoSysLab {
 		static void DeserializeTreeGrowthSettings(TreeGrowthSettings& treeGrowthSettings, const YAML::Node& param);
 		static bool OnInspectTreeGrowthSettings(TreeGrowthSettings& treeGrowthSettings);
 
+		void CalculateProfiles();
 		void BuildStrandModel();
 		
 		std::shared_ptr<Strands> GenerateStrands() const;
@@ -85,7 +86,7 @@ namespace EcoSysLab {
 
 		void InitializeStrandModelMeshRenderer(const StrandModelMeshGeneratorSettings& strandModelMeshGeneratorSettings);
 
-		void ClearStrandModelMeshRenderer();
+		void ClearStrandModelMeshRenderer() const;
 
 		void RegisterVoxel();
 		template<typename SrcSkeletonData, typename SrcFlowData, typename SrcNodeData>

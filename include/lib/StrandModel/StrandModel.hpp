@@ -17,7 +17,6 @@ namespace EcoSysLab
 		void PackTask(NodeHandle nodeHandle, const StrandModelParameters& strandModelParameters, bool parallel);
 		void MergeTask(float maxRootDistance, NodeHandle nodeHandle, const StrandModelParameters& strandModelParameters);
 		void CopyFrontToBackTask(NodeHandle nodeHandle);
-		void CalculateShiftTask(NodeHandle nodeHandle, const StrandModelParameters& strandModelParameters);
 		void ApplyProfile(const StrandModelParameters& strandModelParameters,
 			NodeHandle nodeHandle);
 		void ApplyProfiles(const StrandModelParameters& strandModelParameters);

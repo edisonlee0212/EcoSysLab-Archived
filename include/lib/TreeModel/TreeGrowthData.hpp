@@ -131,9 +131,7 @@ namespace EcoSysLab
 
 		glm::vec2 m_offset = glm::vec2(0.0f);
 		float m_twistAngle = 0.0f;
-		glm::vec2 m_shift = glm::vec2(0.0f);
 		int m_packingIteration = 0;
-		bool m_apical = false;
 		bool m_split = false;
 		std::vector<std::shared_future<void>> m_tasks{};
 

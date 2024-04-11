@@ -925,6 +925,7 @@ bool TreeVisualizer::Initialized() const
 
 void TreeVisualizer::Initialize()
 {
+	m_settings = {};
 	m_internodeMatrices = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
 }
 
