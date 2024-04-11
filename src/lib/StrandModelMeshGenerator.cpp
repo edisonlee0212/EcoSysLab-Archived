@@ -10,7 +10,7 @@
 #include "TreeDescriptor.hpp"
 #include <queue>
 
-#define DEBUG_OUTPUT true
+#define DEBUG_OUTPUT false
 
 using namespace EcoSysLab;
 
@@ -1415,22 +1415,28 @@ void StrandModelMeshGenerator::RecursiveSlicing(
 	float stepSize = 1.0f / settings.m_stepsPerSegment;
 	//float max = settings.m_maxParam;
 
-	auto firstCluster = computeCluster(strandModel, pipeCluster, 0, visited, 0.0, maxDist);
-	auto firstSlice = computeSlice(strandModel, pipeCluster, firstCluster.first, firstCluster.second, 0.0, maxDist);
+	//auto firstCluster = computeCluster(strandModel, pipeCluster, 0, visited, 0.0, maxDist);
+	//auto firstSlice = computeSlice(strandModel, pipeCluster, firstCluster.first, firstCluster.second, 0.0, maxDist);
 
-	// create initial vertices
-	for (auto& el : firstSlice.first)
-	{
-		Vertex v;
-		v.m_position = el.second;
-		v.m_texCoord.y = 0.0;
-		v.m_texCoord.x = getPipePolar(strandModel, el.first, 0.0) / (2 * glm::pi<float>()) * settings.m_uMultiplier;
-		vertices.push_back(v);
-	}
-
+	auto firstSlices = computeSlices(strandModel, pipeCluster, 0, maxDist, 3.0); // TODO: magic number
 	std::vector<SlicingData> startSlices;
-	
-	startSlices.push_back(SlicingData{ firstSlice, 0, stepSize, 0.0 });
+
+	for (auto& slice : firstSlices)
+	{
+		// create initial vertices
+		size_t offset = vertices.size();
+
+		for (auto& el : slice.first)
+		{
+			Vertex v;
+			v.m_position = el.second;
+			v.m_texCoord.y = 0.0;
+			v.m_texCoord.x = getPipePolar(strandModel, el.first, 0.0) / (2 * glm::pi<float>()) * settings.m_uMultiplier;
+			vertices.push_back(v);
+		}	
+
+		startSlices.push_back(SlicingData{ slice, offset, stepSize, 0.0 });
+	}
 	
 	sliceIteratively(strandModel, startSlices, stepSize, maxDist, vertices, indices, settings);
 }
