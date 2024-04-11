@@ -77,12 +77,12 @@ void StrandModelMeshGenerator::Generate(const StrandModel& strandModel, std::vec
 	}
 	EVOENGINE_LOG("Mesh formation finished in: " + std::to_string(Times::Now() - meshFormationTime) + "s.");
 
-		if (settings.m_recalculateUV || settings.m_generatorType == static_cast<unsigned>(StrandModelMeshGeneratorType::HybridMarchingCube)) {
-			const float recalculateUVTime = Times::Now();
-			CalculateUV(strandModel, vertices, settings);
-			EVOENGINE_LOG("Recalculate UV time: " + std::to_string(Times::Now() - recalculateUVTime) + "s.");
-		}
-	
+	if (settings.m_recalculateUV || settings.m_generatorType == static_cast<unsigned>(StrandModelMeshGeneratorType::HybridMarchingCube)) {
+		const float recalculateUVTime = Times::Now();
+		CalculateUV(strandModel, vertices, settings);
+		EVOENGINE_LOG("Recalculate UV time: " + std::to_string(Times::Now() - recalculateUVTime) + "s.");
+	}
+
 	const float meshSmoothingTime = Times::Now();
 	for (int i = 0; i < settings.m_smoothIteration; i++)
 	{
@@ -90,6 +90,8 @@ void StrandModelMeshGenerator::Generate(const StrandModel& strandModel, std::vec
 	}
 	EVOENGINE_LOG("Mesh smoothing time: " + std::to_string(Times::Now() - meshSmoothingTime) + "s.");
 	CylindricalMeshing(strandModel, vertices, indices, settings);
+
+	CalculateNormal(vertices, indices);
 }
 
 int roundInDir(float val, int dir)
@@ -1243,15 +1245,15 @@ void createTwigTip(const StrandModel& strandModel, std::pair < Slice, PipeCluste
 	}
 }
 
- struct SlicingData
- {
+struct SlicingData
+{
 	std::pair < Slice, PipeCluster> slice;
 	size_t offset;
 	float t;
 	float accumulatedAngle;
-	};
+};
 
-std::vector<SlicingData> slice(const StrandModel & strandModel, std::pair < Slice, PipeCluster>&prevSlice, size_t prevOffset, float t, float stepSize, float maxDist,
+std::vector<SlicingData> slice(const StrandModel& strandModel, std::pair < Slice, PipeCluster>& prevSlice, size_t prevOffset, float t, float stepSize, float maxDist,
 	std::vector<Vertex>& vertices, std::vector<unsigned>& indices, const StrandModelMeshGeneratorSettings& settings, float accumulatedAngle = 0.0f)
 {
 	const auto& skeleton = strandModel.m_strandModelSkeleton;
@@ -1348,36 +1350,36 @@ std::vector<SlicingData> slice(const StrandModel & strandModel, std::pair < Slic
 			}
 
 			nextSlices.push_back(SlicingData{ slicesAndClusters[i], offsets[i], t, newAccumulatedAngle });
-			
+
 		}
-		
+
 	}
-	
+
 	return nextSlices;
-	
+
 }
 
-void sliceIteratively(const StrandModel & strandModel, std::vector<SlicingData>&startSlices, float stepSize, float maxDist,
-	std::vector<Vertex>&vertices, std::vector<unsigned>&indices, const StrandModelMeshGeneratorSettings & settings)
+void sliceIteratively(const StrandModel& strandModel, std::vector<SlicingData>& startSlices, float stepSize, float maxDist,
+	std::vector<Vertex>& vertices, std::vector<unsigned>& indices, const StrandModelMeshGeneratorSettings& settings)
 {
 	std::queue<SlicingData> queue;
-	
+
 	for (SlicingData& s : startSlices)
 	{
 		queue.push(s);
 	}
-	
+
 	float accumulatedAngle = 0.0f;
-	
+
 	while (!queue.empty())
 	{
 		SlicingData cur = queue.front();
 		queue.pop();
-		
+
 		if (DEBUG_OUTPUT) std::cout << "Took next slice with t = " << cur.t << " out of the queue" << std::endl;
-		
+
 		std::vector<SlicingData> slices = slice(strandModel, cur.slice, cur.offset, cur.t, stepSize, maxDist, vertices, indices, settings, accumulatedAngle);
-		
+
 		for (SlicingData& s : slices)
 		{
 			queue.push(s);
@@ -1445,11 +1447,11 @@ void StrandModelMeshGenerator::RecursiveSlicing(
 			v.m_texCoord.y = 0.0;
 			v.m_texCoord.x = getPipePolar(strandModel, el.first, 0.0) / (2 * glm::pi<float>()) * settings.m_uMultiplier;
 			vertices.push_back(v);
-		}	
+		}
 
 		startSlices.push_back(SlicingData{ slice, offset, stepSize, 0.0 });
 	}
-	
+
 	sliceIteratively(strandModel, startSlices, stepSize, maxDist, vertices, indices, settings);
 }
 
@@ -1460,7 +1462,7 @@ void StrandModelMeshGenerator::RecursiveSlicing(const StrandModel& strandModel, 
 }
 
 void StrandModelMeshGenerator::MarchingCube(const StrandModel& strandModel, std::vector<Vertex>& vertices,
-                                            std::vector<unsigned>& indices, const StrandModelMeshGeneratorSettings& settings)
+	std::vector<unsigned>& indices, const StrandModelMeshGeneratorSettings& settings)
 {
 	const auto& skeleton = strandModel.m_strandModelSkeleton;
 	const auto& pipeGroup = skeleton.m_data.m_strandGroup;
@@ -1526,7 +1528,7 @@ void StrandModelMeshGenerator::MarchingCube(const StrandModel& strandModel, std:
 		octree.TriangulateField(vertices, indices, settings.m_removeDuplicate);
 
 	}
-	CalculateNormal(vertices, indices);
+
 }
 
 void StrandModelMeshGenerator::CylindricalMeshing(const StrandModel& strandModel, std::vector<Vertex>& vertices,
