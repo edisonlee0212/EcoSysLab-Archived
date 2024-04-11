@@ -43,9 +43,9 @@ namespace EcoSysLab {
 		bool m_presentationOverride = false;
 		PresentationOverrideSettings m_presentationOverrideSettings = {};
 		float m_trunkThickness = 0.1f;
-		float m_xSubdivision = 0.03f;
-		float m_trunkYSubdivision = 0.03f;
-		float m_branchYSubdivision = 0.03f;
+		float m_xSubdivision = 0.01f;
+		float m_trunkYSubdivision = 0.01f;
+		float m_branchYSubdivision = 0.01f;
 
 		bool m_overrideRadius = false;
 		float m_radius = 0.01f;
@@ -111,8 +111,11 @@ namespace EcoSysLab {
 		const std::function<float(float xFactor, float distanceToRoot)>& func) {
 		const auto& sortedInternodeList = skeleton.PeekSortedNodeList();
 		std::vector<std::vector<RingSegment>> ringsList;
+		std::vector<bool> mainChildStatus;
+
 		std::unordered_map<NodeHandle, int> steps{};
 		ringsList.resize(sortedInternodeList.size());
+		mainChildStatus.resize(sortedInternodeList.size());
 		std::vector<std::shared_future<void>> results;
 		std::vector<std::vector<std::pair<NodeHandle, int>>> tempSteps{};
 		tempSteps.resize(Jobs::Workers().Size());
@@ -127,65 +130,68 @@ namespace EcoSysLab {
 
 			glm::vec3 p[4];
 			glm::vec3 f[4];
-			float r[4];
 			float d[4];
 
 			p[1] = internode.m_info.m_globalPosition;
 			f[1] = internode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
-			r[1] = internode.m_info.m_thickness;
 			d[1] = internode.m_info.m_rootDistance;
 
 			p[2] = internode.m_info.GetGlobalEndPosition();
 			f[2] = internode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
-			r[2] = internode.m_info.m_thickness;
 			d[2] = internode.m_info.m_rootDistance;
+
+			float thicknessStart, thicknessEnd, thicknessStartT, thicknessEndT;
+			thicknessStart = thicknessEnd = internode.m_info.m_thickness;
 			if (internode.GetParentHandle() == -1)
 			{
 				p[0] = p[1] * 2.0f - p[2];
 				f[0] = f[1] * 2.0f - f[2];
-				r[0] = r[1] * 2.0f - r[2];
 				d[0] = d[1] * 2.0f - d[2];
 			}
 			else
 			{
 				p[0] = skeleton.PeekNode(internode.GetParentHandle()).m_info.m_globalPosition;
 				f[0] = skeleton.PeekNode(internode.GetParentHandle()).m_info.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
-				r[0] = skeleton.PeekNode(internode.GetParentHandle()).m_info.m_thickness;
+				thicknessStart = skeleton.PeekNode(internode.GetParentHandle()).m_info.m_thickness;
 				d[0] = skeleton.PeekNode(internode.GetParentHandle()).m_info.m_rootDistance;
 			}
 			if (internode.IsEndNode())
 			{
 				p[3] = p[2] * 2.0f - p[1];
 				f[3] = f[2] * 2.0f - f[1];
-				r[3] = r[2] * 2.0f - r[1];
 				d[3] = d[2] * 2.0f - d[1];
 			}
 			else
 			{
 				float maxChildThickness = -1;
 				NodeHandle maxChildHandle = -1;
-				for (const auto& childHandle : internode.RefChildHandles()) {
-					const auto& childInternode = skeleton.PeekNode(childHandle);
-					const float childThickness = childInternode.m_info.m_thickness;
-					if (childThickness > maxChildThickness)
-					{
-						maxChildThickness = childThickness;
-						maxChildHandle = childHandle;
+				const auto& childHandles = internode.RefChildHandles();
+				if(childHandles.size() == 1)
+				{
+					maxChildHandle = childHandles.at(0);
+				}
+				else {
+					for (const auto& childHandle : childHandles) {
+						const auto& childInternode = skeleton.PeekNode(childHandle);
+						if(childInternode.IsApical())
+						{
+							maxChildHandle = childHandle;
+							break;
+						}
+						const float childThickness = childInternode.m_info.m_thickness;
+						if (childThickness > maxChildThickness)
+						{
+							maxChildThickness = childThickness;
+							maxChildHandle = childHandle;
+						}
 					}
 				}
-
 				const auto& childInternode = skeleton.PeekNode(maxChildHandle);
-
 				p[3] = childInternode.m_info.GetGlobalEndPosition();
 				f[3] = childInternode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
-				r[3] = childInternode.m_info.m_thickness;
 				d[3] = childInternode.m_info.m_rootDistance;
-
 			}
 #pragma region Subdivision internode here.
-			float thicknessStart, thicknessEnd, thicknessStartT, thicknessEndT;
-			Strands::CubicInterpolation(r[0], r[1], r[2], r[3], thicknessStart, thicknessStartT, 0.0f);
-			Strands::CubicInterpolation(r[0], r[1], r[2], r[3], thicknessEnd, thicknessEndT, 1.0f);
 			const auto diameter = glm::max(thicknessStart, thicknessEnd) * glm::pi<float>();
 			int step = diameter / settings.m_xSubdivision;
 			if (step < 4)
@@ -195,8 +201,7 @@ namespace EcoSysLab {
 
 			tempSteps[threadIndex].emplace_back(internodeHandle, step);
 			int amount = internodeInfo.m_length / (internodeInfo.m_thickness >= settings.m_trunkThickness ? settings.m_trunkYSubdivision : settings.m_branchYSubdivision);
-			if (amount % 2 != 0)
-				++amount;
+			amount = glm::max(1, amount);
 			for (int ringIndex = 1; ringIndex <= amount; ringIndex++) {
 				const float a = static_cast<float>(ringIndex - 1) / amount;
 				const float b = static_cast<float>(ringIndex) / amount;
@@ -206,16 +211,15 @@ namespace EcoSysLab {
 				Strands::CubicInterpolation(p[0], p[1], p[2], p[3], endPosition, tempEnd, b);
 				Strands::CubicInterpolation(f[0], f[1], f[2], f[3], startAxis, tempStart, a);
 				Strands::CubicInterpolation(f[0], f[1], f[2], f[3], endAxis, tempEnd, b);
-				Strands::CubicInterpolation(r[0], r[1], r[2], r[3], thicknessStart, thicknessStartT, a);
-				Strands::CubicInterpolation(r[0], r[1], r[2], r[3], thicknessEnd, thicknessEndT, b);
-
+				float ringThicknessStart = glm::mix(thicknessStart, thicknessEnd, a);
+				float ringThicknessEnd = glm::mix(thicknessStart, thicknessEnd, b);
 				Strands::CubicInterpolation(d[0], d[1], d[2], d[3], rootDistanceStart, thicknessStartT, a);
 				Strands::CubicInterpolation(d[0], d[1], d[2], d[3], rootDistanceEnd, thicknessEndT, b);
 				rings.emplace_back(
 					startPosition, endPosition,
 					startAxis,
 					endAxis,
-					thicknessStart * .5f, thicknessEnd * .5f, rootDistanceStart, rootDistanceEnd);
+					ringThicknessStart * .5f, ringThicknessEnd * .5f, rootDistanceStart, rootDistanceEnd);
 			}
 #pragma endregion
 			}, results);
@@ -242,10 +246,28 @@ namespace EcoSysLab {
 			auto parentInternodeHandle = internode.GetParentHandle();
 			const glm::vec3 up = internodeInfo.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
 			glm::vec3 parentUp = up;
+			bool needStitching = false;
 			if (parentInternodeHandle != -1)
 			{
 				const auto& parentInternode = skeleton.PeekNode(parentInternodeHandle);
 				parentUp = parentInternode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
+				if (internode.IsApical() || parentInternode.RefChildHandles().size() == 1) needStitching = true;
+				if(!needStitching)
+				{
+					float maxChildThickness = -1;
+					NodeHandle maxChildHandle = -1;
+					for (const auto& childHandle : parentInternode.RefChildHandles()) {
+						const auto& childInternode = skeleton.PeekNode(childHandle);
+						if (childInternode.IsApical()) break;
+						const float childThickness = childInternode.m_info.m_thickness;
+						if (childThickness > maxChildThickness)
+						{
+							maxChildThickness = childThickness;
+							maxChildHandle = childHandle;
+						}
+					}
+					if (maxChildHandle == internodeHandle) needStitching = true;
+				}
 			}
 
 			if (internode.m_info.m_length == 0.0f) {
@@ -259,7 +281,7 @@ namespace EcoSysLab {
 			// For stitching
 			const int step = steps[internodeHandle];
 			int pStep = step;
-			if (parentInternodeHandle != -1)
+			if (needStitching)
 			{
 				pStep = steps[parentInternodeHandle];
 			}
@@ -402,7 +424,7 @@ namespace EcoSysLab {
 #pragma endregion
 			}
 			float textureXStep = 1.0f / pStep * 4.0f;
-			if (parentInternodeHandle == -1) {
+			if (!needStitching) {
 				for (int p = 0; p < pStep; p++) {
 					float xFactor = static_cast<float>(p) / pStep;
 					float yFactor = internodeInfo.m_rootDistance - internodeInfo.m_length;
@@ -475,7 +497,7 @@ namespace EcoSysLab {
 				}
 				if (ringIndex == 0)
 				{
-					if (parentInternodeHandle != -1) {
+					if (needStitching) {
 						int parentLastRingStartVertexIndex = vertexLastRingStartVertexIndex[parentInternodeHandle];
 						for (int p = 0; p < pStep; p++) {
 							if (pTarget[p] == pTarget[p == pStep - 1 ? 0 : p + 1]) {
@@ -572,7 +594,7 @@ namespace EcoSysLab {
 							}
 						}
 					}
-					if (parentInternodeHandle == -1) vertexIndex += pStep;
+					if (!needStitching) vertexIndex += pStep;
 				}
 				else {
 					for (int s = 0; s < step - 1; s++) {
@@ -667,65 +689,71 @@ namespace EcoSysLab {
 
 			glm::vec3 p[4];
 			glm::vec3 f[4];
-			float r[4];
 			float d[4];
 
 			p[1] = internode.m_info.m_globalPosition;
 			f[1] = internode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
-			r[1] = internode.m_info.m_thickness;
 			d[1] = internode.m_info.m_rootDistance;
 
 			p[2] = internode.m_info.GetGlobalEndPosition();
 			f[2] = internode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
-			r[2] = internode.m_info.m_thickness;
 			d[2] = internode.m_info.m_rootDistance;
+
+			float thicknessStart, thicknessEnd, thicknessStartT, thicknessEndT;
+			thicknessStart = thicknessEnd = internode.m_info.m_thickness;
+
 			if (internode.GetParentHandle() == -1)
 			{
 				p[0] = p[1] * 2.0f - p[2];
 				f[0] = f[1] * 2.0f - f[2];
-				r[0] = r[1] * 2.0f - r[2];
 				d[0] = d[1] * 2.0f - d[2];
 			}
 			else
 			{
 				p[0] = skeleton.PeekNode(internode.GetParentHandle()).m_info.m_globalPosition;
 				f[0] = skeleton.PeekNode(internode.GetParentHandle()).m_info.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
-				r[0] = skeleton.PeekNode(internode.GetParentHandle()).m_info.m_thickness;
+				thicknessStart = skeleton.PeekNode(internode.GetParentHandle()).m_info.m_thickness;
 				d[0] = skeleton.PeekNode(internode.GetParentHandle()).m_info.m_rootDistance;
 			}
 			if (internode.IsEndNode())
 			{
 				p[3] = p[2] * 2.0f - p[1];
 				f[3] = f[2] * 2.0f - f[1];
-				r[3] = r[2] * 2.0f - r[1];
 				d[3] = d[2] * 2.0f - d[1];
 			}
 			else
 			{
 				float maxChildThickness = -1;
 				NodeHandle maxChildHandle = -1;
-				for (const auto& childHandle : internode.RefChildHandles()) {
-					const auto& childInternode = skeleton.PeekNode(childHandle);
-					const float childThickness = childInternode.m_info.m_thickness;
-					if (childThickness > maxChildThickness)
-					{
-						maxChildThickness = childThickness;
-						maxChildHandle = childHandle;
+				const auto& childHandles = internode.RefChildHandles();
+				if (childHandles.size() == 1)
+				{
+					maxChildHandle = childHandles.at(0);
+				}
+				else {
+					for (const auto& childHandle : childHandles) {
+						const auto& childInternode = skeleton.PeekNode(childHandle);
+						if (childInternode.IsApical())
+						{
+							maxChildHandle = childHandle;
+							break;
+						}
+						const float childThickness = childInternode.m_info.m_thickness;
+						if (childThickness > maxChildThickness)
+						{
+							maxChildThickness = childThickness;
+							maxChildHandle = childHandle;
+						}
 					}
 				}
-
 				const auto& childInternode = skeleton.PeekNode(maxChildHandle);
 
 				p[3] = childInternode.m_info.GetGlobalEndPosition();
 				f[3] = childInternode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
-				r[3] = childInternode.m_info.m_thickness;
 				d[3] = childInternode.m_info.m_rootDistance;
 
 			}
 #pragma region Subdivision internode here.
-			float thicknessStart, thicknessEnd, thicknessStartT, thicknessEndT;
-			Strands::CubicInterpolation(r[0], r[1], r[2], r[3], thicknessStart, thicknessStartT, 0.0f);
-			Strands::CubicInterpolation(r[0], r[1], r[2], r[3], thicknessEnd, thicknessEndT, 1.0f);
 			const auto diameter = glm::max(thicknessStart, thicknessEnd) * glm::pi<float>();
 			int step = diameter / settings.m_xSubdivision;
 			if (step < 4)
@@ -735,9 +763,8 @@ namespace EcoSysLab {
 
 			tempSteps[threadIndex].emplace_back(internodeHandle, step);
 			int amount = internodeInfo.m_length / (internodeInfo.m_thickness >= settings.m_trunkThickness ? settings.m_trunkYSubdivision : settings.m_branchYSubdivision);
-			if (amount % 2 != 0)
-				++amount;
-
+			
+			amount = glm::max(1, amount);
 			for (int ringIndex = 1; ringIndex <= amount; ringIndex++) {
 				const float a = static_cast<float>(ringIndex - 1) / amount;
 				const float b = static_cast<float>(ringIndex) / amount;
@@ -747,8 +774,8 @@ namespace EcoSysLab {
 				Strands::CubicInterpolation(p[0], p[1], p[2], p[3], endPosition, tempEnd, b);
 				Strands::CubicInterpolation(f[0], f[1], f[2], f[3], startAxis, tempStart, a);
 				Strands::CubicInterpolation(f[0], f[1], f[2], f[3], endAxis, tempEnd, b);
-				Strands::CubicInterpolation(r[0], r[1], r[2], r[3], thicknessStart, thicknessStartT, a);
-				Strands::CubicInterpolation(r[0], r[1], r[2], r[3], thicknessEnd, thicknessEndT, b);
+				float ringThicknessStart = glm::mix(thicknessStart, thicknessEnd, a);
+				float ringThicknessEnd = glm::mix(thicknessStart, thicknessEnd, b);
 
 				Strands::CubicInterpolation(d[0], d[1], d[2], d[3], rootDistanceStart, thicknessStartT, a);
 				Strands::CubicInterpolation(d[0], d[1], d[2], d[3], rootDistanceEnd, thicknessEndT, b);
@@ -756,7 +783,7 @@ namespace EcoSysLab {
 					startPosition, endPosition,
 					startAxis,
 					endAxis,
-					thicknessStart * .5f, thicknessEnd * .5f, rootDistanceStart, rootDistanceEnd);
+					ringThicknessStart * .5f, ringThicknessEnd * .5f, rootDistanceStart, rootDistanceEnd);
 			}
 #pragma endregion
 			}, results);
@@ -779,17 +806,32 @@ namespace EcoSysLab {
 			const auto& internode = skeleton.PeekNode(internodeHandle);
 			const auto& internodeInfo = internode.m_info;
 			auto parentInternodeHandle = internode.GetParentHandle();
-			bool hasParent = false;
-			if (nodeHandles.find(parentInternodeHandle) != nodeHandles.end())
-			{
-				hasParent = true;
-			}
+			bool needStitching = false;
+
 			const glm::vec3 up = internodeInfo.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
 			glm::vec3 parentUp = up;
-			if (hasParent)
+
+			if (nodeHandles.find(parentInternodeHandle) != nodeHandles.end())
 			{
 				const auto& parentInternode = skeleton.PeekNode(parentInternodeHandle);
 				parentUp = parentInternode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
+				if (internode.IsApical() || parentInternode.RefChildHandles().size() == 1) needStitching = true;
+				if (!needStitching)
+				{
+					float maxChildThickness = -1;
+					NodeHandle maxChildHandle = -1;
+					for (const auto& childHandle : parentInternode.RefChildHandles()) {
+						const auto& childInternode = skeleton.PeekNode(childHandle);
+						if (childInternode.IsApical()) break;
+						const float childThickness = childInternode.m_info.m_thickness;
+						if (childThickness > maxChildThickness)
+						{
+							maxChildThickness = childThickness;
+							maxChildHandle = childHandle;
+						}
+					}
+					if (maxChildHandle == internodeHandle) needStitching = true;
+				}
 			}
 			auto& rings = ringsList[internodeIndex];
 			if (rings.empty()) {
@@ -798,7 +840,7 @@ namespace EcoSysLab {
 			// For stitching
 			const int step = steps[internodeHandle];
 			int pStep = step;
-			if (hasParent)
+			if (needStitching)
 			{
 				pStep = steps[parentInternodeHandle];
 			}
@@ -810,7 +852,7 @@ namespace EcoSysLab {
 			archetype.m_vertexInfo1 = internodeHandle + 1;
 			archetype.m_vertexInfo2 = flowHandle + 1;
 			float textureXStep = 1.0f / pStep * 4.0f;
-			if (!hasParent) {
+			if (!needStitching) {
 				for (int p = 0; p < pStep; p++) {
 					float xFactor = static_cast<float>(p) / pStep;
 					float yFactor = internodeInfo.m_rootDistance - internodeInfo.m_length;
@@ -885,7 +927,7 @@ namespace EcoSysLab {
 				}
 				if (ringIndex == 0)
 				{
-					if (hasParent) {
+					if (needStitching) {
 						int parentLastRingStartVertexIndex = vertexLastRingStartVertexIndex[parentInternodeHandle];
 						for (int p = 0; p < pStep; p++) {
 							if (pTarget[p] == pTarget[p == pStep - 1 ? 0 : p + 1]) {
@@ -964,7 +1006,7 @@ namespace EcoSysLab {
 							}
 						}
 					}
-					if (!hasParent) vertexIndex += pStep;
+					if (!needStitching) vertexIndex += pStep;
 				}
 				else {
 					for (int s = 0; s < step - 1; s++) {
