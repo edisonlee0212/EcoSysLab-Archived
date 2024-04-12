@@ -2,6 +2,166 @@
 
 using namespace EcoSysLab;
 
+void ShootDescriptor::PrepareController(ShootGrowthController& shootGrowthController) const
+{
+	shootGrowthController.m_baseInternodeCount = m_baseInternodeCount;
+
+	shootGrowthController.m_baseNodeApicalAngle = [=](const Node<InternodeGrowthData>& internode)
+		{
+			return glm::gaussRand(m_baseNodeApicalAngleMeanVariance.x, m_baseNodeApicalAngleMeanVariance.y);
+		};
+
+	shootGrowthController.m_internodeGrowthRate = m_growthRate / m_internodeLength;
+
+	shootGrowthController.m_branchingAngle = [=](const Node<InternodeGrowthData>& internode)
+		{
+			const float noise = glm::perlin(glm::vec2(internode.GetHandle(), internode.m_info.m_rootDistance / m_internodeLength * m_branchingAngleFrequencyAmplitude.x)) * m_branchingAngleFrequencyAmplitude.y;
+			const float gaussian = glm::gaussRand(m_branchingAngleMeanVariance.x, m_branchingAngleMeanVariance.y);
+			return noise + gaussian;
+		};
+	shootGrowthController.m_rollAngle = [=](const Node<InternodeGrowthData>& internode)
+		{
+			const float noise = glm::perlin(glm::vec2(internode.GetHandle(), internode.m_info.m_rootDistance / m_internodeLength * m_rollAngleFrequencyAmplitude.x)) * m_rollAngleFrequencyAmplitude.y;
+			const float gaussian = glm::gaussRand(m_rollAngleMeanVariance.x, m_rollAngleMeanVariance.y);
+			return noise + gaussian;
+		};
+	shootGrowthController.m_apicalAngle = [=](const Node<InternodeGrowthData>& internode)
+		{
+			const float noise = glm::perlin(glm::vec2(internode.GetHandle(), internode.m_info.m_rootDistance / m_internodeLength * m_apicalAngleFrequencyAmplitude.x)) * m_apicalAngleFrequencyAmplitude.y;
+			const float gaussian = glm::gaussRand(m_apicalAngleMeanVariance.x, m_apicalAngleMeanVariance.y);
+			return noise + gaussian;
+		};
+	shootGrowthController.m_gravitropism = [=](const Node<InternodeGrowthData>& internode)
+		{
+			return m_gravitropism;
+		};
+	shootGrowthController.m_phototropism = [=](const Node<InternodeGrowthData>& internode)
+		{
+			return m_phototropism;
+		};
+	shootGrowthController.m_horizontalTropism = [=](const Node<InternodeGrowthData>& internode)
+		{
+			return m_horizontalTropism;
+		};
+	shootGrowthController.m_sagging = [=](const Node<InternodeGrowthData>& internode)
+		{
+			const auto newSagging = glm::min(
+				m_saggingFactorThicknessReductionMax.z,
+				m_saggingFactorThicknessReductionMax.x *
+				(internode.m_data.m_descendantTotalBiomass + internode.m_data.m_extraMass) /
+				glm::pow(
+					internode.m_info.m_thickness /
+					m_endNodeThickness,
+					m_saggingFactorThicknessReductionMax.y));
+			return glm::max(internode.m_data.m_sagging, newSagging);
+		};
+	shootGrowthController.m_internodeLength = m_internodeLength;
+	shootGrowthController.m_internodeLengthThicknessFactor = m_internodeLengthThicknessFactor;
+	shootGrowthController.m_endNodeThickness = m_endNodeThickness;
+	shootGrowthController.m_thicknessAccumulationFactor = m_thicknessAccumulationFactor;
+	shootGrowthController.m_thicknessAgeFactor = m_thicknessAgeFactor;
+	shootGrowthController.m_internodeShadowFactor = m_internodeShadowFactor;
+
+	shootGrowthController.m_lateralBudCount = m_lateralBudCount;
+	shootGrowthController.m_apicalBudExtinctionRate = [=](const Node<InternodeGrowthData>& internode)
+		{
+			if (internode.m_info.m_rootDistance < 0.5f) return 0.f;
+			return m_apicalBudExtinctionRate;
+		};
+	shootGrowthController.m_lateralBudFlushingRate = [=](const Node<InternodeGrowthData>& internode)
+		{
+			float flushingRate = m_lateralBudFlushingRate * internode.m_data.m_lightIntensity;
+			if (internode.m_data.m_inhibitorSink > 0.0f) flushingRate *= glm::exp(-internode.m_data.m_inhibitorSink);
+			return flushingRate;
+		};
+	shootGrowthController.m_apicalControl = m_apicalControl;
+	shootGrowthController.m_apicalDominance = [=](const Node<InternodeGrowthData>& internode)
+		{
+			return m_apicalDominance * internode.m_data.m_lightIntensity;
+		};
+	shootGrowthController.m_apicalDominanceLoss = m_apicalDominanceLoss;
+
+	shootGrowthController.m_lowBranchPruning = m_lowBranchPruning;
+	shootGrowthController.m_lowBranchPruningThicknessFactor = m_lowBranchPruningThicknessFactor;
+	shootGrowthController.m_pruningFactor = [=](const ShootSkeleton& shootSkeleton, const Node<InternodeGrowthData>& internode)
+		{
+			if (m_trunkProtection && internode.m_data.m_order == 0)
+			{
+				return 0.f;
+			}
+			float pruningProbability = 0.0f;
+			if (m_maxFlowLength != 0 && m_maxFlowLength < internode.m_info.m_chainIndex)
+			{
+				pruningProbability += 999.f;
+			}
+			if (internode.IsEndNode()) {
+				if (internode.m_data.m_lightIntensity <= m_lightPruningFactor)
+				{
+					pruningProbability += m_lightPruningProbability;
+				}
+			}
+			if (internode.m_data.m_level != 0 && m_thicknessPruningFactor != 0.0f
+				&& internode.m_info.m_thickness / internode.m_info.m_endDistance < m_thicknessPruningFactor)
+			{
+				pruningProbability += m_thicknessPruningProbability;
+			}
+			return pruningProbability;
+		};
+
+
+	shootGrowthController.m_leafGrowthRate = m_leafGrowthRate;
+	shootGrowthController.m_fruitGrowthRate = m_fruitGrowthRate;
+
+	shootGrowthController.m_fruitBudCount = m_fruitBudCount;
+	shootGrowthController.m_leafBudCount = m_leafBudCount;
+
+	shootGrowthController.m_leafBudFlushingProbability = [=](const Node<InternodeGrowthData>& internode)
+		{
+			const auto& internodeData = internode.m_data;
+			const auto& probabilityRange = m_leafBudFlushingProbabilityTemperatureRange;
+			float flushProbability = glm::mix(probabilityRange.x, probabilityRange.y,
+				glm::clamp((internodeData.m_temperature - probabilityRange.z) / (probabilityRange.w - probabilityRange.z), 0.0f, 1.0f));
+			flushProbability *= internodeData.m_lightIntensity;
+			return flushProbability;
+		};
+	shootGrowthController.m_fruitBudFlushingProbability = [=](const Node<InternodeGrowthData>& internode)
+		{
+			const auto& internodeData = internode.m_data;
+			const auto& probabilityRange = m_fruitBudFlushingProbabilityTemperatureRange;
+			float flushProbability = glm::mix(probabilityRange.x, probabilityRange.y,
+				glm::clamp((internodeData.m_temperature - probabilityRange.z) / (probabilityRange.w - probabilityRange.z), 0.0f, 1.0f));
+			flushProbability *= internodeData.m_lightIntensity;
+			return flushProbability;
+		};
+
+	shootGrowthController.m_leafVigorRequirement = m_leafVigorRequirement;
+	shootGrowthController.m_fruitVigorRequirement = m_fruitVigorRequirement;
+
+
+
+	shootGrowthController.m_maxLeafSize = m_maxLeafSize;
+	shootGrowthController.m_leafPositionVariance = m_leafPositionVariance;
+	shootGrowthController.m_leafRotationVariance = m_leafRotationVariance;
+	
+	shootGrowthController.m_leafFallProbability = [=](const Node<InternodeGrowthData>& internode)
+		{
+			return m_leafFallProbability;
+		};
+	shootGrowthController.m_maxFruitSize = m_maxFruitSize;
+	shootGrowthController.m_fruitPositionVariance = m_fruitPositionVariance;
+	shootGrowthController.m_fruitRotationVariance = m_fruitRotationVariance;
+	shootGrowthController.m_fruitDamage = [=](const Node<InternodeGrowthData>& internode)
+		{
+			float fruitDamage = 0.0f;
+			return fruitDamage;
+		};
+	shootGrowthController.m_fruitFallProbability = [=](const Node<InternodeGrowthData>& internode)
+		{
+			return m_fruitFallProbability;
+		};
+
+}
+
 void ShootDescriptor::Serialize(YAML::Emitter& out)
 {
 	out << YAML::Key << "m_baseInternodeCount" << YAML::Value << m_baseInternodeCount;
@@ -9,8 +169,11 @@ void ShootDescriptor::Serialize(YAML::Emitter& out)
 
 	out << YAML::Key << "m_growthRate" << YAML::Value << m_growthRate;
 	out << YAML::Key << "m_branchingAngleMeanVariance" << YAML::Value << m_branchingAngleMeanVariance;
+	out << YAML::Key << "m_branchingAngleFrequencyAmplitude" << YAML::Value << m_branchingAngleFrequencyAmplitude;
 	out << YAML::Key << "m_rollAngleMeanVariance" << YAML::Value << m_rollAngleMeanVariance;
+	out << YAML::Key << "m_rollAngleFrequencyAmplitude" << YAML::Value << m_rollAngleFrequencyAmplitude;
 	out << YAML::Key << "m_apicalAngleMeanVariance" << YAML::Value << m_apicalAngleMeanVariance;
+	out << YAML::Key << "m_apicalAngleFrequencyAmplitude" << YAML::Value << m_apicalAngleFrequencyAmplitude;
 	out << YAML::Key << "m_gravitropism" << YAML::Value << m_gravitropism;
 	out << YAML::Key << "m_phototropism" << YAML::Value << m_phototropism;
 	out << YAML::Key << "m_horizontalTropism" << YAML::Value << m_horizontalTropism;
@@ -70,8 +233,11 @@ void ShootDescriptor::Deserialize(const YAML::Node& in)
 
 	if (in["m_growthRate"]) m_growthRate = in["m_growthRate"].as<float>();
 	if (in["m_branchingAngleMeanVariance"]) m_branchingAngleMeanVariance = in["m_branchingAngleMeanVariance"].as<glm::vec2>();
+	if (in["m_branchingAngleFrequencyAmplitude"]) m_branchingAngleFrequencyAmplitude = in["m_branchingAngleFrequencyAmplitude"].as<glm::vec2>();
 	if (in["m_rollAngleMeanVariance"]) m_rollAngleMeanVariance = in["m_rollAngleMeanVariance"].as<glm::vec2>();
+	if (in["m_rollAngleFrequencyAmplitude"]) m_rollAngleFrequencyAmplitude = in["m_rollAngleFrequencyAmplitude"].as<glm::vec2>();
 	if (in["m_apicalAngleMeanVariance"]) m_apicalAngleMeanVariance = in["m_apicalAngleMeanVariance"].as<glm::vec2>();
+	if (in["m_apicalAngleFrequencyAmplitude"]) m_apicalAngleFrequencyAmplitude = in["m_apicalAngleFrequencyAmplitude"].as<glm::vec2>();
 	if (in["m_gravitropism"]) m_gravitropism = in["m_gravitropism"].as<float>();
 	if (in["m_phototropism"]) m_phototropism = in["m_phototropism"].as<float>();
 	if (in["m_horizontalTropism"]) m_horizontalTropism = in["m_horizontalTropism"].as<float>();
@@ -137,8 +303,11 @@ void ShootDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 
 		changed = ImGui::DragInt("Lateral bud count", &m_lateralBudCount, 1, 0, 3) || changed;
 		changed = ImGui::DragFloat2("Branching angle mean/var", &m_branchingAngleMeanVariance.x, 0.1f, 0.0f, 100.0f) || changed;
+		changed = ImGui::DragFloat2("Branching angle freq/amp", &m_branchingAngleFrequencyAmplitude.x, 0.1f, 0.0f, 100.0f) || changed;
 		changed = ImGui::DragFloat2("Roll angle mean/var", &m_rollAngleMeanVariance.x, 0.1f, 0.0f, 100.0f) || changed;
-		changed = ImGui::DragFloat2("Apical angle variance", &m_apicalAngleMeanVariance.x, 0.1f, 0.0f, 100.0f) || changed;
+		changed = ImGui::DragFloat2("Roll angle freq/amp", &m_rollAngleFrequencyAmplitude.x, 0.1f, 0.0f, 100.0f) || changed;
+		changed = ImGui::DragFloat2("Apical angle mean/var", &m_apicalAngleMeanVariance.x, 0.1f, 0.0f, 100.0f) || changed;
+		changed = ImGui::DragFloat2("Apical angle freq/amp", &m_apicalAngleFrequencyAmplitude.x, 0.1f, 0.0f, 100.0f) || changed;
 		changed = ImGui::DragFloat("Internode length", &m_internodeLength, 0.001f) || changed;
 		changed = ImGui::DragFloat("Internode length thickness factor", &m_internodeLengthThicknessFactor, 0.0001f, 0.0f, 1.0f) || changed;
 		changed = ImGui::DragFloat3("Thickness min/factor/age", &m_endNodeThickness, 0.0001f, 0.0f, 1.0f, "%.6f") || changed;
