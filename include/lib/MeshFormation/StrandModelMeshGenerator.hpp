@@ -73,8 +73,14 @@ namespace EcoSysLab {
 		static void MeshSmoothing(std::vector<Vertex>& vertices,
 			std::vector<unsigned int>& indices);
 
+		static void MeshSmoothing(std::vector<Vertex>& vertices,
+			std::vector<std::pair<unsigned int, unsigned int>>& indices);
+
 		static void CalculateNormal(std::vector<Vertex>& vertices,
 			const std::vector<unsigned int>& indices);
+
+		static void CalculateNormal(std::vector<Vertex>& vertices,
+			const std::vector<std::pair<unsigned int, unsigned int>>& indices);
 
 		static void CalculateUV(const StrandModel& strandModel, std::vector<Vertex>& vertices, const StrandModelMeshGeneratorSettings& settings);
 	public:

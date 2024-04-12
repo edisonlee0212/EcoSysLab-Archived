@@ -671,6 +671,14 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	{
 		ClearSkeletalGraph();
 	}
+
+	FileUtils::SaveFile("Export Cylindrical Mesh", "OBJ", { ".obj" }, [&](const std::filesystem::path& path) {
+		ExportOBJ(path, m_meshGeneratorSettings);
+		}, false);
+	ImGui::SameLine();
+	FileUtils::SaveFile("Export Strand Mesh", "OBJ", { ".obj" }, [&](const std::filesystem::path& path) {
+		ExportStrandModelOBJ(path, m_strandModelMeshGeneratorSettings);
+		}, false);
 }
 void Tree::Update()
 {
@@ -1170,234 +1178,248 @@ std::shared_ptr<Mesh> Tree::GenerateStrandModelBranchMesh(const StrandModelMeshG
 void Tree::ExportOBJ(const std::filesystem::path& path, const TreeMeshGeneratorSettings& meshGeneratorSettings)
 {
 	if (path.extension() == ".obj") {
-		std::ofstream of;
-		of.open(path.string(), std::ofstream::out | std::ofstream::trunc);
-		if (of.is_open()) {
-			std::string start = "#Forest OBJ exporter, by Bosheng Li";
-			start += "\n";
-			of.write(start.c_str(), start.size());
-			of.flush();
-			unsigned startIndex = 1;
-			if (meshGeneratorSettings.m_enableBranch) {
-				const auto branchMesh = GenerateBranchMesh(meshGeneratorSettings);
-				if (branchMesh) {
-					auto& vertices = branchMesh->UnsafeGetVertices();
-					auto& triangles = branchMesh->UnsafeGetTriangles();
-					if (!vertices.empty() && !triangles.empty()) {
-						std::string header =
-							"#Vertices: " + std::to_string(vertices.size()) +
-							", tris: " + std::to_string(triangles.size());
-						header += "\n";
-						of.write(header.c_str(), header.size());
-						of.flush();
-						std::stringstream data;
-						data << "o tree " + std::to_string(0) + "\n";
+		try
+		{
+			std::ofstream of;
+			of.open(path.string(), std::ofstream::out | std::ofstream::trunc);
+			if (of.is_open()) {
+				std::string start = "#Forest OBJ exporter, by Bosheng Li";
+				start += "\n";
+				of.write(start.c_str(), start.size());
+				of.flush();
+				unsigned startIndex = 1;
+				if (meshGeneratorSettings.m_enableBranch) {
+					const auto branchMesh = GenerateBranchMesh(meshGeneratorSettings);
+					if (branchMesh) {
+						auto& vertices = branchMesh->UnsafeGetVertices();
+						auto& triangles = branchMesh->UnsafeGetTriangles();
+						if (!vertices.empty() && !triangles.empty()) {
+							std::string header =
+								"#Vertices: " + std::to_string(vertices.size()) +
+								", tris: " + std::to_string(triangles.size());
+							header += "\n";
+							of.write(header.c_str(), header.size());
+							of.flush();
+							std::stringstream data;
+							data << "o tree " + std::to_string(0) + "\n";
 #pragma region Data collection
-						for (auto i = 0; i < vertices.size(); i++) {
-							auto& vertexPosition = vertices.at(i).m_position;
-							auto& color = vertices.at(i).m_color;
-							data << "v " + std::to_string(vertexPosition.x) + " " +
-								std::to_string(vertexPosition.y) + " " +
-								std::to_string(vertexPosition.z) + " " +
-								std::to_string(color.x) + " " + std::to_string(color.y) + " " +
-								std::to_string(color.z) + "\n";
-						}
-						for (const auto& vertex : vertices) {
-							data << "vt " + std::to_string(vertex.m_texCoord.x) + " " +
-								std::to_string(vertex.m_texCoord.y) + "\n";
-						}
-						// data += "s off\n";
-						data << "# List of indices for faces vertices, with (x, y, z).\n";
-						for (auto i = 0; i < triangles.size(); i++) {
-							const auto triangle = triangles[i];
-							const auto f1 = triangle.x + startIndex;
-							const auto f2 = triangle.y + startIndex;
-							const auto f3 = triangle.z + startIndex;
-							data << "f " + std::to_string(f1) + "/" + std::to_string(f1) + "/" +
-								std::to_string(f1) + " " + std::to_string(f2) + "/" +
-								std::to_string(f2) + "/" + std::to_string(f2) + " " +
-								std::to_string(f3) + "/" + std::to_string(f3) + "/" +
-								std::to_string(f3) + "\n";
-						}
+							for (auto i = 0; i < vertices.size(); i++) {
+								auto& vertexPosition = vertices.at(i).m_position;
+								auto& color = vertices.at(i).m_color;
+								data << "v " + std::to_string(vertexPosition.x) + " " +
+									std::to_string(vertexPosition.y) + " " +
+									std::to_string(vertexPosition.z) + " " +
+									std::to_string(color.x) + " " + std::to_string(color.y) + " " +
+									std::to_string(color.z) + "\n";
+							}
+							for (const auto& vertex : vertices) {
+								data << "vt " + std::to_string(vertex.m_texCoord.x) + " " +
+									std::to_string(vertex.m_texCoord.y) + "\n";
+							}
+							// data += "s off\n";
+							data << "# List of indices for faces vertices, with (x, y, z).\n";
+							for (auto i = 0; i < triangles.size(); i++) {
+								const auto triangle = triangles[i];
+								const auto f1 = triangle.x + startIndex;
+								const auto f2 = triangle.y + startIndex;
+								const auto f3 = triangle.z + startIndex;
+								data << "f " + std::to_string(f1) + "/" + std::to_string(f1) + "/" +
+									std::to_string(f1) + " " + std::to_string(f2) + "/" +
+									std::to_string(f2) + "/" + std::to_string(f2) + " " +
+									std::to_string(f3) + "/" + std::to_string(f3) + "/" +
+									std::to_string(f3) + "\n";
+							}
 #pragma endregion
-						const auto result = data.str();
-						of.write(result.c_str(), result.size());
-						of.flush();
-						startIndex += vertices.size();
+							const auto result = data.str();
+							of.write(result.c_str(), result.size());
+							of.flush();
+							startIndex += vertices.size();
+						}
 					}
 				}
-			}
-			if (meshGeneratorSettings.m_enableFoliage) {
-				const auto foliageMesh = GenerateFoliageMesh(meshGeneratorSettings);
-				if (foliageMesh) {
+				if (meshGeneratorSettings.m_enableFoliage) {
+					const auto foliageMesh = GenerateFoliageMesh(meshGeneratorSettings);
+					if (foliageMesh) {
 
-					auto& vertices = foliageMesh->UnsafeGetVertices();
-					auto& triangles = foliageMesh->UnsafeGetTriangles();
-					if (!vertices.empty() && !triangles.empty()) {
-						std::string header =
-							"#Vertices: " + std::to_string(vertices.size()) +
-							", tris: " + std::to_string(triangles.size());
-						header += "\n";
-						of.write(header.c_str(), header.size());
-						of.flush();
-						std::stringstream data;
-						data << "o tree " + std::to_string(0) + "\n";
+						auto& vertices = foliageMesh->UnsafeGetVertices();
+						auto& triangles = foliageMesh->UnsafeGetTriangles();
+						if (!vertices.empty() && !triangles.empty()) {
+							std::string header =
+								"#Vertices: " + std::to_string(vertices.size()) +
+								", tris: " + std::to_string(triangles.size());
+							header += "\n";
+							of.write(header.c_str(), header.size());
+							of.flush();
+							std::stringstream data;
+							data << "o tree " + std::to_string(0) + "\n";
 #pragma region Data collection
-						for (auto i = 0; i < vertices.size(); i++) {
-							auto& vertexPosition = vertices.at(i).m_position;
-							auto& color = vertices.at(i).m_color;
-							data << "v " + std::to_string(vertexPosition.x) + " " +
-								std::to_string(vertexPosition.y) + " " +
-								std::to_string(vertexPosition.z) + " " +
-								std::to_string(color.x) + " " + std::to_string(color.y) + " " +
-								std::to_string(color.z) + "\n";
-						}
-						for (const auto& vertex : vertices) {
-							data << "vt " + std::to_string(vertex.m_texCoord.x) + " " +
-								std::to_string(vertex.m_texCoord.y) + "\n";
-						}
-						// data += "s off\n";
-						data << "# List of indices for faces vertices, with (x, y, z).\n";
-						for (auto i = 0; i < triangles.size(); i++) {
-							const auto triangle = triangles[i];
-							const auto f1 = triangle.x + startIndex;
-							const auto f2 = triangle.y + startIndex;
-							const auto f3 = triangle.z + startIndex;
-							data << "f " + std::to_string(f1) + "/" + std::to_string(f1) + "/" +
-								std::to_string(f1) + " " + std::to_string(f2) + "/" +
-								std::to_string(f2) + "/" + std::to_string(f2) + " " +
-								std::to_string(f3) + "/" + std::to_string(f3) + "/" +
-								std::to_string(f3) + "\n";
-						}
+							for (auto i = 0; i < vertices.size(); i++) {
+								auto& vertexPosition = vertices.at(i).m_position;
+								auto& color = vertices.at(i).m_color;
+								data << "v " + std::to_string(vertexPosition.x) + " " +
+									std::to_string(vertexPosition.y) + " " +
+									std::to_string(vertexPosition.z) + " " +
+									std::to_string(color.x) + " " + std::to_string(color.y) + " " +
+									std::to_string(color.z) + "\n";
+							}
+							for (const auto& vertex : vertices) {
+								data << "vt " + std::to_string(vertex.m_texCoord.x) + " " +
+									std::to_string(vertex.m_texCoord.y) + "\n";
+							}
+							// data += "s off\n";
+							data << "# List of indices for faces vertices, with (x, y, z).\n";
+							for (auto i = 0; i < triangles.size(); i++) {
+								const auto triangle = triangles[i];
+								const auto f1 = triangle.x + startIndex;
+								const auto f2 = triangle.y + startIndex;
+								const auto f3 = triangle.z + startIndex;
+								data << "f " + std::to_string(f1) + "/" + std::to_string(f1) + "/" +
+									std::to_string(f1) + " " + std::to_string(f2) + "/" +
+									std::to_string(f2) + "/" + std::to_string(f2) + " " +
+									std::to_string(f3) + "/" + std::to_string(f3) + "/" +
+									std::to_string(f3) + "\n";
+							}
 #pragma endregion
-						const auto result = data.str();
-						of.write(result.c_str(), result.size());
-						of.flush();
-						startIndex += vertices.size();
+							const auto result = data.str();
+							of.write(result.c_str(), result.size());
+							of.flush();
+							startIndex += vertices.size();
+						}
 					}
 				}
+				of.close();
 			}
-			of.close();
 		}
+		catch (std::exception e)
+		{
+			EVOENGINE_ERROR("Export failed: " + std::string(e.what()));
+		}
+		
 	}
 }
 
 void Tree::ExportStrandModelOBJ(const std::filesystem::path& path,
-	const TreeMeshGeneratorSettings& meshGeneratorSettings)
+	const StrandModelMeshGeneratorSettings& meshGeneratorSettings)
 {
-	const auto scene = GetScene();
-	const auto owner = GetOwner();
-
-	BuildStrandModel();
 	if (path.extension() == ".obj") {
-		std::ofstream of;
-		of.open(path.string(), std::ofstream::out | std::ofstream::trunc);
-		if (of.is_open()) {
-			std::string start = "#Forest OBJ exporter, by Bosheng Li";
-			start += "\n";
-			of.write(start.c_str(), start.size());
-			of.flush();
-			unsigned startIndex = 1;
-			if (meshGeneratorSettings.m_enableBranch) {
-				const auto branchMesh = GenerateBranchMesh(meshGeneratorSettings);
-				if (branchMesh) {
-					auto& vertices = branchMesh->UnsafeGetVertices();
-					auto& triangles = branchMesh->UnsafeGetTriangles();
-					if (!vertices.empty() && !triangles.empty()) {
+		BuildStrandModel();
+		try
+		{
+			std::ofstream of;
+			of.open(path.string(), std::ofstream::out | std::ofstream::trunc);
+			if (of.is_open()) {
+				std::string start = "#Forest OBJ exporter, by Bosheng Li";
+				start += "\n";
+				of.write(start.c_str(), start.size());
+				of.flush();
+				unsigned vertexStartIndex = 1;
+				unsigned texCoordsStartIndex = 1;
+				if (meshGeneratorSettings.m_enableBranch) {
+					std::vector<Vertex> vertices;
+					std::vector<glm::vec2> texCoords;
+					std::vector<std::pair<unsigned int, unsigned int>> indices;
+					StrandModelMeshGenerator::Generate(m_strandModel, vertices, texCoords, indices, meshGeneratorSettings);
+					if (!vertices.empty() && !indices.empty()) {
 						std::string header =
 							"#Vertices: " + std::to_string(vertices.size()) +
-							", tris: " + std::to_string(triangles.size());
+							", tris: " + std::to_string(indices.size());
 						header += "\n";
 						of.write(header.c_str(), header.size());
 						of.flush();
 						std::stringstream data;
 						data << "o tree " + std::to_string(0) + "\n";
 #pragma region Data collection
-						for (auto i = 0; i < vertices.size(); i++) {
-							auto& vertexPosition = vertices.at(i).m_position;
-							auto& color = vertices.at(i).m_color;
+						for (auto& vertex : vertices)
+						{
+							auto& vertexPosition = vertex.m_position;
+							auto& color = vertex.m_color;
 							data << "v " + std::to_string(vertexPosition.x) + " " +
 								std::to_string(vertexPosition.y) + " " +
 								std::to_string(vertexPosition.z) + " " +
 								std::to_string(color.x) + " " + std::to_string(color.y) + " " +
 								std::to_string(color.z) + "\n";
 						}
-						for (const auto& vertex : vertices) {
-							data << "vt " + std::to_string(vertex.m_texCoord.x) + " " +
-								std::to_string(vertex.m_texCoord.y) + "\n";
+						for (const auto& texCoord : texCoords) {
+							data << "vt " + std::to_string(texCoord.x) + " " +
+								std::to_string(texCoord.y) + "\n";
 						}
-						// data += "s off\n";
 						data << "# List of indices for faces vertices, with (x, y, z).\n";
-						for (auto i = 0; i < triangles.size(); i++) {
-							const auto triangle = triangles[i];
-							const auto f1 = triangle.x + startIndex;
-							const auto f2 = triangle.y + startIndex;
-							const auto f3 = triangle.z + startIndex;
-							data << "f " + std::to_string(f1) + "/" + std::to_string(f1) + "/" +
-								std::to_string(f1) + " " + std::to_string(f2) + "/" +
-								std::to_string(f2) + "/" + std::to_string(f2) + " " +
-								std::to_string(f3) + "/" + std::to_string(f3) + "/" +
-								std::to_string(f3) + "\n";
+						for (auto i = 0; i < indices.size() / 3; i++) {
+							const auto f1 = indices.at(i * 3).first + vertexStartIndex;
+							const auto f2 = indices.at(i * 3 + 1).first + vertexStartIndex;
+							const auto f3 = indices.at(i * 3 + 2).first + vertexStartIndex;
+							const auto t1 = indices.at(i * 3).second + texCoordsStartIndex;
+							const auto t2 = indices.at(i * 3 + 1).second + texCoordsStartIndex;
+							const auto t3 = indices.at(i * 3 + 2).second + texCoordsStartIndex;
+							data << "f " + std::to_string(f1) + "/" + std::to_string(t1) + "/" + std::to_string(f1) + " "
+								+ std::to_string(f2) + "/" + std::to_string(t2) + "/" + std::to_string(f2) + " "
+								+ std::to_string(f3) + "/" + std::to_string(t3) + "/" + std::to_string(f3) + "\n";
 						}
 #pragma endregion
 						const auto result = data.str();
 						of.write(result.c_str(), result.size());
 						of.flush();
-						startIndex += vertices.size();
+						vertexStartIndex += vertices.size();
+						texCoordsStartIndex += texCoords.size();
 					}
 				}
-			}
-			if (meshGeneratorSettings.m_enableFoliage) {
-				const auto foliageMesh = GenerateFoliageMesh(meshGeneratorSettings);
-				if (foliageMesh) {
-
-					auto& vertices = foliageMesh->UnsafeGetVertices();
-					auto& triangles = foliageMesh->UnsafeGetTriangles();
-					if (!vertices.empty() && !triangles.empty()) {
-						std::string header =
-							"#Vertices: " + std::to_string(vertices.size()) +
-							", tris: " + std::to_string(triangles.size());
-						header += "\n";
-						of.write(header.c_str(), header.size());
-						of.flush();
-						std::stringstream data;
-						data << "o tree " + std::to_string(0) + "\n";
+				if (meshGeneratorSettings.m_enableFoliage) {
+					if (const auto foliageMesh = GenerateStrandModelFoliageMesh(meshGeneratorSettings)) {
+						const auto& vertices = foliageMesh->UnsafeGetVertices();
+						const auto& triangles = foliageMesh->UnsafeGetTriangles();
+						if (!vertices.empty() && !triangles.empty()) {
+							std::string header =
+								"#Vertices: " + std::to_string(vertices.size()) +
+								", tris: " + std::to_string(triangles.size());
+							header += "\n";
+							of.write(header.c_str(), header.size());
+							of.flush();
+							std::stringstream data;
+							data << "o tree " + std::to_string(0) + "\n";
 #pragma region Data collection
-						for (auto i = 0; i < vertices.size(); i++) {
-							auto& vertexPosition = vertices.at(i).m_position;
-							auto& color = vertices.at(i).m_color;
-							data << "v " + std::to_string(vertexPosition.x) + " " +
-								std::to_string(vertexPosition.y) + " " +
-								std::to_string(vertexPosition.z) + " " +
-								std::to_string(color.x) + " " + std::to_string(color.y) + " " +
-								std::to_string(color.z) + "\n";
-						}
-						for (const auto& vertex : vertices) {
-							data << "vt " + std::to_string(vertex.m_texCoord.x) + " " +
-								std::to_string(vertex.m_texCoord.y) + "\n";
-						}
-						// data += "s off\n";
-						data << "# List of indices for faces vertices, with (x, y, z).\n";
-						for (auto i = 0; i < triangles.size(); i++) {
-							const auto triangle = triangles[i];
-							const auto f1 = triangle.x + startIndex;
-							const auto f2 = triangle.y + startIndex;
-							const auto f3 = triangle.z + startIndex;
-							data << "f " + std::to_string(f1) + "/" + std::to_string(f1) + "/" +
-								std::to_string(f1) + " " + std::to_string(f2) + "/" +
-								std::to_string(f2) + "/" + std::to_string(f2) + " " +
-								std::to_string(f3) + "/" + std::to_string(f3) + "/" +
-								std::to_string(f3) + "\n";
-						}
+							for (auto& vertex : vertices)
+							{
+								auto& vertexPosition = vertex.m_position;
+								auto& color = vertex.m_color;
+								data << "v " + std::to_string(vertexPosition.x) + " " +
+									std::to_string(vertexPosition.y) + " " +
+									std::to_string(vertexPosition.z) + " " +
+									std::to_string(color.x) + " " + std::to_string(color.y) + " " +
+									std::to_string(color.z) + "\n";
+							}
+							for (const auto& vertex : vertices) {
+								data << "vt " + std::to_string(vertex.m_texCoord.x) + " " +
+									std::to_string(vertex.m_texCoord.y) + "\n";
+							}
+							// data += "s off\n";
+							data << "# List of indices for faces vertices, with (x, y, z).\n";
+							for (auto triangle : triangles)
+							{
+								const auto f1 = triangle.x + vertexStartIndex;
+								const auto f2 = triangle.y + vertexStartIndex;
+								const auto f3 = triangle.z + vertexStartIndex;
+								const auto t1 = triangle.x + texCoordsStartIndex;
+								const auto t2 = triangle.y + texCoordsStartIndex;
+								const auto t3 = triangle.z + texCoordsStartIndex;
+								data << "f " + std::to_string(f1) + "/" + std::to_string(t1) + "/" + std::to_string(f1) + " "
+									+ std::to_string(f2) + "/" + std::to_string(t2) + "/" + std::to_string(f2) + " "
+									+ std::to_string(f3) + "/" + std::to_string(t3) + "/" + std::to_string(f3) + "\n";
+							}
 #pragma endregion
-						const auto result = data.str();
-						of.write(result.c_str(), result.size());
-						of.flush();
-						startIndex += vertices.size();
+							const auto result = data.str();
+							of.write(result.c_str(), result.size());
+							of.flush();
+							vertexStartIndex += vertices.size();
+							texCoordsStartIndex += vertices.size();
+						}
 					}
 				}
+				of.close();
 			}
-			of.close();
+		}
+		catch (std::exception e)
+		{
+			EVOENGINE_ERROR("Export failed: " + std::string(e.what()));
 		}
 	}
 }

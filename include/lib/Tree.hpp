@@ -33,7 +33,7 @@ namespace EcoSysLab {
 		std::shared_ptr<Mesh> GenerateStrandModelBranchMesh(const StrandModelMeshGeneratorSettings& strandModelMeshGeneratorSettings);
 		std::shared_ptr<Mesh> GenerateStrandModelFoliageMesh(const StrandModelMeshGeneratorSettings& strandModelMeshGeneratorSettings);
 		void ExportOBJ(const std::filesystem::path& path, const TreeMeshGeneratorSettings& meshGeneratorSettings);
-		void ExportStrandModelOBJ(const std::filesystem::path& path, const TreeMeshGeneratorSettings& meshGeneratorSettings);
+		void ExportStrandModelOBJ(const std::filesystem::path& path, const StrandModelMeshGeneratorSettings& meshGeneratorSettings);
 
 		void ExportTrunkOBJ(const std::filesystem::path& path, const TreeMeshGeneratorSettings& meshGeneratorSettings);
 		bool TryGrow(float deltaTime, bool pruning, float overrideGrowthRate);

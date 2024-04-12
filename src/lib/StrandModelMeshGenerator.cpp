@@ -41,7 +41,7 @@ void StrandModelMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLay
 	{
 		ImGui::Checkbox("Auto set level", &m_autoLevel);
 		if (!m_autoLevel) ImGui::DragInt("Voxel subdivision level", &m_voxelSubdivisionLevel, 1, 5, 16);
-		else ImGui::DragFloat("Min Cube size", &m_marchingCubeRadius, 0.0001, 0.001f, 1.0f);
+		else ImGui::DragFloat("Min Cube size", &m_marchingCubeRadius, 0.0001f, 0.001f, 1.0f);
 		if (m_smoothIteration == 0) ImGui::Checkbox("Remove duplicate", &m_removeDuplicate);
 		ImGui::ColorEdit4("Marching cube color", &m_marchingCubeColor.x);
 		ImGui::ColorEdit4("Cylindrical color", &m_cylindricalColor.x);
@@ -100,6 +100,26 @@ void StrandModelMeshGenerator::Generate(const StrandModel& strandModel, std::vec
 	std::vector<glm::vec2>& texCoords, std::vector<std::pair<unsigned, unsigned>>& indices,
 	const StrandModelMeshGeneratorSettings& settings)
 {
+	const float meshFormationTime = Times::Now();
+	RecursiveSlicing(strandModel, vertices, texCoords, indices, settings);
+	EVOENGINE_LOG("Mesh formation finished in: " + std::to_string(Times::Now() - meshFormationTime) + "s.");
+	const float meshSmoothingTime = Times::Now();
+	for (int i = 0; i < settings.m_smoothIteration; i++)
+	{
+		MeshSmoothing(vertices, indices);
+	}
+	EVOENGINE_LOG("Mesh smoothing time: " + std::to_string(Times::Now() - meshSmoothingTime) + "s.");
+	std::vector<unsigned int> tempIndices{};
+	CylindricalMeshing(strandModel, vertices, tempIndices, settings);
+	for (const auto& index : tempIndices)
+	{
+		const auto& vertex = vertices.at(index);
+		const auto texCoordsIndex = texCoords.size();
+		texCoords.emplace_back(vertex.m_texCoord);
+		indices.emplace_back(index, texCoordsIndex);
+	}
+
+	CalculateNormal(vertices, indices);
 }
 
 int roundInDir(float val, int dir)
@@ -1658,6 +1678,98 @@ void StrandModelMeshGenerator::MeshSmoothing(std::vector<Vertex>& vertices, std:
 	}
 }
 
+void StrandModelMeshGenerator::MeshSmoothing(std::vector<Vertex>& vertices,
+	std::vector<std::pair<unsigned, unsigned>>& indices)
+{
+	std::vector<std::vector<unsigned>> connectivity;
+	connectivity.resize(vertices.size());
+	for (int i = 0; i < indices.size() / 3; i++)
+	{
+		auto a = indices[3 * i];
+		auto b = indices[3 * i + 1];
+		auto c = indices[3 * i + 2];
+		//a
+		{
+			bool found1 = false;
+			bool found2 = false;
+			for (const auto& index : connectivity.at(a.first))
+			{
+				if (b.first == index) found1 = true;
+				if (c.first == index) found2 = true;
+			}
+			if (!found1)
+			{
+				connectivity.at(a.first).emplace_back(b.first);
+			}
+			if (!found2)
+			{
+				connectivity.at(a.first).emplace_back(c.first);
+			}
+		}
+		//b
+		{
+			bool found1 = false;
+			bool found2 = false;
+			for (const auto& index : connectivity.at(b.first))
+			{
+				if (a.first == index) found1 = true;
+				if (c.first == index) found2 = true;
+			}
+			if (!found1)
+			{
+				connectivity.at(b.first).emplace_back(a.first);
+			}
+			if (!found2)
+			{
+				connectivity.at(b.first).emplace_back(c.first);
+			}
+		}
+		//c
+		{
+			bool found1 = false;
+			bool found2 = false;
+			for (const auto& index : connectivity.at(c.first))
+			{
+				if (a.first == index) found1 = true;
+				if (b.first == index) found2 = true;
+			}
+			if (!found1)
+			{
+				connectivity.at(c.first).emplace_back(a.first);
+			}
+			if (!found2)
+			{
+				connectivity.at(c.first).emplace_back(b.first);
+			}
+		}
+	}
+	std::vector<glm::vec3> newPositions;
+	std::vector<glm::vec2> newUvs;
+	for (int i = 0; i < vertices.size(); i++)
+	{
+		auto position = glm::vec3(0.0f);
+		auto uv = glm::vec2(0.f);
+		for (const auto& index : connectivity.at(i))
+		{
+			const auto& vertex = vertices.at(index);
+			position += vertex.m_position;
+			uv += vertex.m_texCoord;
+		}
+		newPositions.push_back(position / static_cast<float>(connectivity.at(i).size()));
+		newUvs.push_back(uv / static_cast<float>(connectivity.at(i).size()));
+	}
+	for (int i = 0; i < vertices.size(); i++)
+	{
+		if (vertices[i].m_position.y > 0.001f) vertices[i].m_position = newPositions[i];
+		else
+		{
+			vertices[i].m_position.x = newPositions[i].x;
+			vertices[i].m_position.z = newPositions[i].z;
+		}
+		vertices[i].m_texCoord = newUvs[i];
+	}
+}
+
 void StrandModelMeshGenerator::CalculateNormal(std::vector<Vertex>& vertices, const std::vector<unsigned>& indices)
 {
 	auto normalLists = std::vector<std::vector<glm::vec3>>();
@@ -1678,6 +1790,39 @@ void StrandModelMeshGenerator::CalculateNormal(std::vector<Vertex>& vertices, co
 		normalLists[i1].push_back(normal);
 		normalLists[i2].push_back(normal);
 		normalLists[i3].push_back(normal);
+	}
+	for (auto i = 0; i < size; i++)
+	{
+		auto normal = glm::vec3(0.0f);
+		for (const auto j : normalLists[i])
+		{
+			normal += j;
+		}
+		vertices[i].m_normal = glm::normalize(normal);
+	}
+}
+
+void StrandModelMeshGenerator::CalculateNormal(std::vector<Vertex>& vertices,
+	const std::vector<std::pair<unsigned, unsigned>>& indices)
+{
+	auto normalLists = std::vector<std::vector<glm::vec3>>();
+	const auto size = vertices.size();
+	for (auto i = 0; i < size; i++)
+	{
+		normalLists.emplace_back();
+	}
+	for (int i = 0; i < indices.size() / 3; i++)
+	{
+		const auto i1 = indices.at(i * 3);
+		const auto i2 = indices.at(i * 3 + 1);
+		const auto i3 = indices.at(i * 3 + 2);
+		auto v1 = vertices[i1.first].m_position;
+		auto v2 = vertices[i2.first].m_position;
+		auto v3 = vertices[i3.first].m_position;
+		auto normal = glm::normalize(glm::cross(v1 - v2, v1 - v3));
+		normalLists[i1.first].push_back(normal);
+		normalLists[i2.first].push_back(normal);
+		normalLists[i3.first].push_back(normal);
 	}
 	for (auto i = 0; i < size; i++)
 	{
