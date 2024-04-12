@@ -21,7 +21,7 @@ typedef std::vector<StrandHandle> PipeCluster;
 
 void StrandModelMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
-	ImGui::Combo("Mode", { "Recursive Slicing", "Hybrid Marching Cube" }, m_generatorType);
+	ImGui::Combo("Mode", { "Recursive Slicing", "Marching Cube" }, m_generatorType);
 	if (m_generatorType == 0 && ImGui::TreeNode("Recursive Slicing settings"))
 	{
 		ImGui::DragInt("Steps per segment", &m_stepsPerSegment, 1.0f, 1, 99);
@@ -37,7 +37,7 @@ void StrandModelMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLay
 		ImGui::TreePop();
 	}
 
-	if (m_generatorType == 1 && ImGui::TreeNode("Hybrid Marching Cube settings"))
+	if (m_generatorType == 1 && ImGui::TreeNode("Marching Cube settings"))
 	{
 		ImGui::Checkbox("Auto set level", &m_autoLevel);
 		if (!m_autoLevel) ImGui::DragInt("Voxel subdivision level", &m_voxelSubdivisionLevel, 1, 5, 16);
@@ -72,14 +72,14 @@ void StrandModelMeshGenerator::Generate(const StrandModel& strandModel, std::vec
 	{
 		RecursiveSlicing(strandModel, vertices, indices, settings);
 	}break;
-	case StrandModelMeshGeneratorType::HybridMarchingCube:
+	case StrandModelMeshGeneratorType::MarchingCube:
 	{
 		MarchingCube(strandModel, vertices, indices, settings);
 	}break;
 	}
 	EVOENGINE_LOG("Mesh formation finished in: " + std::to_string(Times::Now() - meshFormationTime) + "s.");
 
-	if (settings.m_recalculateUV || settings.m_generatorType == static_cast<unsigned>(StrandModelMeshGeneratorType::HybridMarchingCube)) {
+	if (settings.m_recalculateUV || settings.m_generatorType == static_cast<unsigned>(StrandModelMeshGeneratorType::MarchingCube)) {
 		const float recalculateUVTime = Times::Now();
 		CalculateUV(strandModel, vertices, settings);
 		EVOENGINE_LOG("Recalculate UV time: " + std::to_string(Times::Now() - recalculateUVTime) + "s.");
@@ -1552,381 +1552,19 @@ void StrandModelMeshGenerator::CylindricalMeshing(const StrandModel& strandModel
 		if (particleSize > settings.m_maxCellCountForMinorBranches) continue;
 		nodeHandles.insert(nodeHandle);
 	}
+	const auto currentVerticesSize = vertices.size();
 	const auto ecoSysLab = Application::GetLayer<EcoSysLabLayer>();
 	CylindricalMeshGenerator<StrandModelSkeletonData, StrandModelFlowData, StrandModelNodeData>::GeneratePartially(
 		nodeHandles, skeleton, vertices, indices, 
 		ecoSysLab->m_meshGeneratorSettings,
-		[&](float xFactor, float distanceToRoot)
-		{
-			return 1.0f;
-		}
+		[&](glm::vec3& vertexPosition, const glm::vec3& direction, const float xFactor, const float yFactor)
+		{},
+		[&](glm::vec2& texCoords, const float xFactor, const float yFactor)
+		{}
 	);
-	for (auto& vertex : vertices) vertex.m_color = glm::vec4(0, 1, 0, 1);
-	return;
-	/*
-	const auto& skeleton = strandModel.m_strandModelSkeleton;
-	const auto& sortedInternodeList = skeleton.PeekSortedNodeList();
-	std::vector<std::vector<RingSegment>> ringsList;
-	std::map<NodeHandle, int> steps{};
-	ringsList.resize(sortedInternodeList.size());
-	std::vector<std::shared_future<void>> results;
-	std::vector<std::vector<std::pair<NodeHandle, int>>> tempSteps{};
-	tempSteps.resize(Jobs::Workers().Size());
-	Jobs::ParallelFor(sortedInternodeList.size(), [&](unsigned internodeIndex, unsigned threadIndex) {
-		auto internodeHandle = sortedInternodeList[internodeIndex];
-		const auto& internode = skeleton.PeekNode(internodeHandle);
-		const auto& internodeInfo = internode.m_info;
-
-		auto& rings = ringsList[internodeIndex];
-		rings.clear();
-		if (internode.GetParentHandle() == -1) return;
-		int particleSize = internode.m_data.m_profile.PeekParticles().size();
-		if (particleSize > settings.m_maxCellCountForMinorBranches) return;
-		particleSize = glm::min(particleSize, settings.m_maxCellCountForMinorBranches);
-		glm::vec3 p[4];
-		glm::vec3 f[4];
-		float r[4];
-		float d[4];
-
-		p[1] = internode.m_info.m_globalPosition;
-		f[1] = internode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
-		r[1] = glm::sqrt(static_cast<float>(particleSize)) * internode.m_data.m_strandRadius;
-		d[1] = internode.m_info.m_rootDistance;
-
-		p[2] = internode.m_info.GetGlobalEndPosition();
-		f[2] = internode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
-		r[2] = glm::sqrt(static_cast<float>(particleSize)) * internode.m_data.m_strandRadius;
-		d[2] = internode.m_info.m_rootDistance;
-		if (internode.GetParentHandle() == -1)
-		{
-			p[0] = p[1] * 2.0f - p[2];
-			f[0] = f[1] * 2.0f - f[2];
-			r[0] = r[1] * 2.0f - r[2];
-			d[0] = d[1] * 2.0f - d[2];
-		}
-		else
-		{
-			p[0] = skeleton.PeekNode(internode.GetParentHandle()).m_info.m_globalPosition;
-			f[0] = skeleton.PeekNode(internode.GetParentHandle()).m_info.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
-			int prevParticleSize = skeleton.PeekNode(internode.GetParentHandle()).m_data.m_profile.PeekParticles().size();
-			r[0] = glm::sqrt(static_cast<float>(glm::min(prevParticleSize, settings.m_maxCellCountForMinorBranches))) * internode.m_data.m_strandRadius;
-			d[0] = skeleton.PeekNode(internode.GetParentHandle()).m_info.m_rootDistance;
-		}
-		if (internode.IsEndNode())
-		{
-			p[3] = p[2] * 2.0f - p[1];
-			f[3] = f[2] * 2.0f - f[1];
-			r[3] = r[2] * 2.0f - r[1];
-			d[3] = d[2] * 2.0f - d[1];
-		}
-		else
-		{
-			int maxChildSize = -1;
-			NodeHandle maxChildHandle = -1;
-			for (const auto& childHandle : internode.RefChildHandles()) {
-				const auto& childInternode = skeleton.PeekNode(childHandle);
-				const auto childSize = static_cast<float>(childInternode.m_data.m_profile.PeekParticles().size());
-				if (childSize > maxChildSize)
-				{
-					maxChildSize = childSize;
-					maxChildHandle = childHandle;
-				}
-			}
-			const auto& childInternode = skeleton.PeekNode(maxChildHandle);
-
-			p[3] = childInternode.m_info.GetGlobalEndPosition();
-			f[3] = childInternode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
-			r[3] = glm::sqrt(static_cast<float>(childInternode.m_data.m_profile.PeekParticles().size())) * internode.m_data.m_strandRadius;
-			d[3] = childInternode.m_info.m_rootDistance;
-
-		}
-#pragma region Subdivision internode here.
-		float thicknessStart, thicknessEnd, thicknessStartT, thicknessEndT;
-		Strands::CubicInterpolation(r[0], r[1], r[2], r[3], thicknessStart, thicknessStartT, 0.0f);
-		Strands::CubicInterpolation(r[0], r[1], r[2], r[3], thicknessEnd, thicknessEndT, 1.0f);
-		const auto diameter = glm::max(thicknessStart, thicknessEnd) * glm::pi<float>();
-		int step = diameter / settings.m_xSubdivision;
-		if (step < 4)
-			step = 4;
-		if (step % 2 != 0)
-			++step;
-
-		tempSteps[threadIndex].emplace_back(internodeHandle, step);
-		int amount = glm::max(4.0f, internodeInfo.m_length / settings.m_ySubdivision);
-		if (amount % 2 != 0)
-			++amount;
-
-		for (int ringIndex = 1; ringIndex <= amount; ringIndex++) {
-			const float a = static_cast<float>(ringIndex - 1) / amount;
-			const float b = static_cast<float>(ringIndex) / amount;
-			glm::vec3 startPosition, endPosition, startAxis, endAxis, tempStart, tempEnd;
-			float rootDistanceStart, rootDistanceEnd;
-			Strands::CubicInterpolation(p[0], p[1], p[2], p[3], startPosition, tempStart, a);
-			Strands::CubicInterpolation(p[0], p[1], p[2], p[3], endPosition, tempEnd, b);
-			Strands::CubicInterpolation(f[0], f[1], f[2], f[3], startAxis, tempStart, a);
-			Strands::CubicInterpolation(f[0], f[1], f[2], f[3], endAxis, tempEnd, b);
-			Strands::CubicInterpolation(r[0], r[1], r[2], r[3], thicknessStart, thicknessStartT, a);
-			Strands::CubicInterpolation(r[0], r[1], r[2], r[3], thicknessEnd, thicknessEndT, b);
-
-			Strands::CubicInterpolation(d[0], d[1], d[2], d[3], rootDistanceStart, thicknessStartT, a);
-			Strands::CubicInterpolation(d[0], d[1], d[2], d[3], rootDistanceEnd, thicknessEndT, b);
-			rings.emplace_back(
-				startPosition, endPosition,
-				startAxis,
-				endAxis,
-				thicknessStart, thicknessEnd, rootDistanceStart, rootDistanceEnd);
-		}
-#pragma endregion
-		}, results);
-	for (auto& i : results) i.wait();
-
-	for (const auto& list : tempSteps)
-	{
-		for (const auto& element : list)
-		{
-			steps[element.first] = element.second;
-		}
+	for (auto i = currentVerticesSize; i < vertices.size(); i++) {
+		vertices.at(i).m_color = glm::vec4(0, 1, 0, 1);
 	}
-
-	std::map<NodeHandle, int> vertexLastRingStartVertexIndex{};
-	for (int internodeIndex = 0; internodeIndex < sortedInternodeList.size(); internodeIndex++) {
-		auto internodeHandle = sortedInternodeList[internodeIndex];
-		const auto& internode = skeleton.PeekNode(internodeHandle);
-		if (internode.GetParentHandle() == -1) continue;
-		if (internode.m_data.m_profile.PeekParticles().size() > settings.m_maxCellCountForMinorBranches) continue;
-		const auto& internodeInfo = internode.m_info;
-		auto parentInternodeHandle = internode.GetParentHandle();
-		bool continuous = false;
-		const glm::vec3 up = internodeInfo.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
-		glm::vec3 parentUp = up;
-		if (parentInternodeHandle != -1)
-		{
-			const auto& parentInternode = skeleton.PeekNode(parentInternodeHandle);
-			parentUp = parentInternode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
-			if (parentInternode.m_data.m_profile.PeekParticles().size() <= settings.m_maxCellCountForMinorBranches) continuous = true;
-		}
-		auto& rings = ringsList[internodeIndex];
-		if (rings.empty()) {
-			continue;
-		}
-		// For stitching
-		const int step = steps[internodeHandle];
-		int pStep = step;
-		if (!continuous)
-		{
-			pStep = steps[parentInternodeHandle];
-		}
-		float angleStep = 360.0f / static_cast<float>(step);
-		float pAngleStep = 360.0f / static_cast<float>(pStep);
-		int vertexIndex = vertices.size();
-		Vertex archetype;
-		archetype.m_color = settings.m_cylindricalColor;
-		const auto flowHandle = internode.GetFlowHandle();
-		archetype.m_vertexInfo1 = internodeHandle + 1;
-		archetype.m_vertexInfo2 = flowHandle + 1;
-		float textureXStep = 1.0f / pStep * 4.0f;
-		if (!continuous) {
-			for (int p = 0; p < pStep; p++) {
-				auto& ring = rings.at(0);
-				auto direction = ring.GetDirection(
-					parentUp, pAngleStep * p, true);
-				archetype.m_position = ring.m_startPosition + direction * ring.m_startRadius;
-				const float x =
-					p < pStep / 2 ? p * textureXStep : (pStep - p) * textureXStep;
-				archetype.m_texCoord = glm::vec2(x, 0.0f);
-				archetype.m_color = internodeInfo.m_color;
-				vertices.push_back(archetype);
-			}
-		}
-		std::vector<float> angles;
-		angles.resize(step);
-		std::vector<float> pAngles;
-		pAngles.resize(pStep);
-
-		for (auto p = 0; p < pStep; p++) {
-			pAngles[p] = pAngleStep * p;
-		}
-		for (auto s = 0; s < step; s++) {
-			angles[s] = angleStep * s;
-		}
-
-		std::vector<unsigned> pTarget;
-		std::vector<unsigned> target;
-		pTarget.resize(pStep);
-		target.resize(step);
-		for (int p = 0; p < pStep; p++) {
-			// First we allocate nearest vertices for parent.
-			auto minAngleDiff = 360.0f;
-			for (auto j = 0; j < step; j++) {
-				const float diff = glm::abs(pAngles[p] - angles[j]);
-				if (diff < minAngleDiff) {
-					minAngleDiff = diff;
-					pTarget[p] = j;
-				}
-			}
-		}
-		for (int s = 0; s < step; s++) {
-			// Second we allocate nearest vertices for child
-			float minAngleDiff = 360.0f;
-			for (int j = 0; j < pStep; j++) {
-				const float diff = glm::abs(angles[s] - pAngles[j]);
-				if (diff < minAngleDiff) {
-					minAngleDiff = diff;
-					target[s] = j;
-				}
-			}
-		}
-
-		textureXStep = 1.0f / step;
-		int ringSize = rings.size();
-		for (auto ringIndex = 0; ringIndex < ringSize; ringIndex++) {
-			for (auto s = 0; s < step; s++) {
-				auto& ring = rings.at(ringIndex);
-				auto direction = ring.GetDirection(
-					up, angleStep * s, false);
-				archetype.m_position = ring.m_endPosition + direction * ring.m_endRadius;
-				const auto x = s * textureXStep;
-				const auto y = ringIndex % 2 == 0 ? 1.0f : 0.0f;
-				archetype.m_texCoord = glm::vec2(x, y);
-				vertices.push_back(archetype);
-			}
-			if (ringIndex == 0)
-			{
-				if (continuous) {
-					int parentLastRingStartVertexIndex = vertexLastRingStartVertexIndex[parentInternodeHandle];
-					for (int p = 0; p < pStep; p++) {
-						if (pTarget[p] == pTarget[p == pStep - 1 ? 0 : p + 1]) {
-							auto a = parentLastRingStartVertexIndex + p;
-							auto b = parentLastRingStartVertexIndex + (p == pStep - 1 ? 0 : p + 1);
-							auto c = vertexIndex + pTarget[p];
-							if (vertices[a].m_position != vertices[b].m_position
-								&& vertices[b].m_position != vertices[c].m_position
-								&& vertices[a].m_position != vertices[c].m_position) {
-								indices.push_back(a);
-								indices.push_back(b);
-								indices.push_back(c);
-							}
-						}
-						else {
-							auto a = parentLastRingStartVertexIndex + p;
-							auto b = parentLastRingStartVertexIndex + (p == pStep - 1 ? 0 : p + 1);
-							auto c = vertexIndex + pTarget[p];
-							if (vertices[a].m_position != vertices[b].m_position
-								&& vertices[b].m_position != vertices[c].m_position
-								&& vertices[a].m_position != vertices[c].m_position) {
-								indices.push_back(a);
-								indices.push_back(b);
-								indices.push_back(c);
-							}
-							a = vertexIndex + pTarget[p == pStep - 1 ? 0 : p + 1];
-							b = vertexIndex + pTarget[p];
-							c = parentLastRingStartVertexIndex + (p == pStep - 1 ? 0 : p + 1);
-							if (vertices[a].m_position != vertices[b].m_position
-								&& vertices[b].m_position != vertices[c].m_position
-								&& vertices[a].m_position != vertices[c].m_position) {
-								indices.push_back(a);
-								indices.push_back(b);
-								indices.push_back(c);
-							}
-						}
-					}
-				}
-				else
-				{
-					for (int p = 0; p < pStep; p++) {
-						if (pTarget[p] == pTarget[p == pStep - 1 ? 0 : p + 1]) {
-							auto a = vertexIndex + p;
-							auto b = vertexIndex + (p == pStep - 1 ? 0 : p + 1);
-							auto c = vertexIndex + pStep + pTarget[p];
-							if (vertices[a].m_position != vertices[b].m_position
-								&& vertices[b].m_position != vertices[c].m_position
-								&& vertices[a].m_position != vertices[c].m_position) {
-								indices.push_back(a);
-								indices.push_back(b);
-								indices.push_back(c);
-							}
-						}
-						else {
-							auto a = vertexIndex + p;
-							auto b = vertexIndex + (p == pStep - 1 ? 0 : p + 1);
-							auto c = vertexIndex + pStep + pTarget[p];
-							if (vertices[a].m_position != vertices[b].m_position
-								&& vertices[b].m_position != vertices[c].m_position
-								&& vertices[a].m_position != vertices[c].m_position) {
-								indices.push_back(a);
-								indices.push_back(b);
-								indices.push_back(c);
-							}
-							a = vertexIndex + pStep + pTarget[p == pStep - 1 ? 0 : p + 1];
-							b = vertexIndex + pStep + pTarget[p];
-							c = vertexIndex + (p == pStep - 1 ? 0 : p + 1);
-
-							if (vertices[a].m_position != vertices[b].m_position
-								&& vertices[b].m_position != vertices[c].m_position
-								&& vertices[a].m_position != vertices[c].m_position) {
-								indices.push_back(a);
-								indices.push_back(b);
-								indices.push_back(c);
-							}
-						}
-					}
-				}
-				if (!continuous) vertexIndex += pStep;
-			}
-			else {
-				for (int s = 0; s < step - 1; s++) {
-					// Down triangle
-					auto a = vertexIndex + (ringIndex - 1) * step + s;
-					auto b = vertexIndex + (ringIndex - 1) * step + s + 1;
-					auto c = vertexIndex + ringIndex * step + s;
-					if (vertices[a].m_position != vertices[b].m_position
-						&& vertices[b].m_position != vertices[c].m_position
-						&& vertices[a].m_position != vertices[c].m_position) {
-						indices.push_back(a);
-						indices.push_back(b);
-						indices.push_back(c);
-					}
-
-
-					// Up triangle
-					a = vertexIndex + ringIndex * step + s + 1;
-					b = vertexIndex + ringIndex * step + s;
-					c = vertexIndex + (ringIndex - 1) * step + s + 1;
-					if (vertices[a].m_position != vertices[b].m_position
-						&& vertices[b].m_position != vertices[c].m_position
-						&& vertices[a].m_position != vertices[c].m_position) {
-						indices.push_back(a);
-						indices.push_back(b);
-						indices.push_back(c);
-					}
-				}
-				// Down triangle
-				auto a = vertexIndex + (ringIndex - 1) * step + step - 1;
-				auto b = vertexIndex + (ringIndex - 1) * step;
-				auto c = vertexIndex + ringIndex * step + step - 1;
-				if (vertices[a].m_position != vertices[b].m_position
-					&& vertices[b].m_position != vertices[c].m_position
-					&& vertices[a].m_position != vertices[c].m_position) {
-					indices.push_back(a);
-					indices.push_back(b);
-					indices.push_back(c);
-				}
-				// Up triangle
-				a = vertexIndex + ringIndex * step;
-				b = vertexIndex + ringIndex * step + step - 1;
-				c = vertexIndex + (ringIndex - 1) * step;
-				if (vertices[a].m_position != vertices[b].m_position
-					&& vertices[b].m_position != vertices[c].m_position
-					&& vertices[a].m_position != vertices[c].m_position) {
-					indices.push_back(a);
-					indices.push_back(b);
-					indices.push_back(c);
-				}
-			}
-		}
-		vertexLastRingStartVertexIndex[internodeHandle] = vertices.size() - step;
-	}
-	*/
 }
 
 void StrandModelMeshGenerator::MeshSmoothing(std::vector<Vertex>& vertices, std::vector<unsigned>& indices)

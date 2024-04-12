@@ -2302,10 +2302,10 @@ std::vector<std::shared_ptr<Mesh>> TreeStructor::GenerateForestBranchMeshes() co
 		std::vector<Vertex> vertices;
 		std::vector<unsigned int> indices;
 		CylindricalMeshGenerator<ReconstructionSkeletonData, ReconstructionFlowData, ReconstructionNodeData> meshGenerator;
-		meshGenerator.Generate(m_skeletons[i], vertices, indices, m_treeMeshGeneratorSettings, [&](float xFactor, float yFactor)
-			{
-				return 1.0f;
-			});
+		meshGenerator.Generate(m_skeletons[i], vertices, indices, m_treeMeshGeneratorSettings, [&](glm::vec3& vertexPosition, const glm::vec3& direction, const float xFactor, const float yFactor)
+			{},
+			[&](glm::vec2& texCoords, float xFactor, float yFactor)
+			{});
 		Jobs::ParallelFor(vertices.size(), [&](unsigned j)
 			{
 				vertices[j].m_position += m_skeletons[i].m_data.m_rootPosition;

@@ -10,12 +10,12 @@ namespace EcoSysLab {
 	enum class StrandModelMeshGeneratorType
 	{
 		RecursiveSlicing,
-		HybridMarchingCube
+		MarchingCube
 	};
 
 	struct StrandModelMeshGeneratorSettings
 	{
-		unsigned m_generatorType = static_cast<unsigned>(StrandModelMeshGeneratorType::HybridMarchingCube);
+		unsigned m_generatorType = static_cast<unsigned>(StrandModelMeshGeneratorType::RecursiveSlicing);
 #pragma region Recursive Slicing
 		int m_stepsPerSegment = 4;
 		// this is for debugging purposes only and should not be used to obtain a proper mesh

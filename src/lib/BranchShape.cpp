@@ -29,7 +29,7 @@ float BranchShape::GetValue(const float xFactor, const float distanceToRoot)
 
 	base *= glm::pow(glm::max(0.0f, (m_baseMaxDistance - distanceToRoot) / m_baseMaxDistance), m_baseDistanceDecreaseFactor);
 
-	return 1.0f + bark + base;
+	return bark + base;
 }
 
 void BranchShape::Serialize(YAML::Emitter& out)

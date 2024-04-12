@@ -793,14 +793,17 @@ void Tree::GenerateTrunkMeshes(const std::shared_ptr<Mesh>& trunkMesh, const Tre
 		{
 			branchShape = treeDescriptor->m_shootBranchShape.Get<BranchShape>();
 		}
-		CylindricalMeshGenerator<ShootGrowthData, ShootStemGrowthData, InternodeGrowthData>::GeneratePartially(trunkHandles, m_treeModel.PeekShootSkeleton(), vertices, indices, meshGeneratorSettings, [&](float xFactor, float distanceToRoot)
+		CylindricalMeshGenerator<ShootGrowthData, ShootStemGrowthData, InternodeGrowthData>::GeneratePartially(trunkHandles, m_treeModel.PeekShootSkeleton(), vertices, indices, meshGeneratorSettings,
+			[&](glm::vec3& vertexPosition, const glm::vec3& direction, const float xFactor, const float yFactor)
 			{
 				if (branchShape)
 				{
-					return branchShape->GetValue(xFactor, distanceToRoot);
+					const float pushValue = branchShape->GetValue(xFactor, yFactor);
+					vertexPosition += pushValue * direction;
 				}
-				return 1.0f;
-			});
+			},
+			[&](glm::vec2& texCoords, float xFactor, float distanceToRoot)
+			{});
 		VertexAttributes attributes{};
 		attributes.m_texCoord = true;
 		trunkMesh->SetVertices(attributes, vertices, indices);
@@ -823,24 +826,25 @@ std::shared_ptr<Mesh> Tree::GenerateBranchMesh(const TreeMeshGeneratorSettings& 
 		branchShape = treeDescriptor->m_shootBranchShape.Get<BranchShape>();
 		if (m_strandModel.m_strandModelSkeleton.RefRawNodes().size() == m_treeModel.m_shootSkeleton.RefRawNodes().size())
 		{
-			CylindricalMeshGenerator<StrandModelSkeletonData, StrandModelFlowData, StrandModelNodeData>::Generate(m_strandModel.m_strandModelSkeleton, vertices, indices, meshGeneratorSettings, [&](float xFactor, float distanceToRoot)
+			CylindricalMeshGenerator<StrandModelSkeletonData, StrandModelFlowData, StrandModelNodeData>::Generate(m_strandModel.m_strandModelSkeleton, vertices, indices, meshGeneratorSettings,
+				[&](glm::vec3& vertexPosition, const glm::vec3& direction, const float xFactor, const float yFactor)
 				{
 					if (branchShape)
 					{
-						return branchShape->GetValue(xFactor, distanceToRoot);
+						const float pushValue = branchShape->GetValue(xFactor, yFactor);
+						vertexPosition += pushValue * direction;
 					}
-					return 1.0f;
-				});
+				},
+				[&](glm::vec2& texCoords, float xFactor, float distanceToRoot)
+				{});
 		}
 		else {
-			CylindricalMeshGenerator<ShootGrowthData, ShootStemGrowthData, InternodeGrowthData>::Generate(m_treeModel.PeekShootSkeleton(), vertices, indices, meshGeneratorSettings, [&](float xFactor, float distanceToRoot)
-				{
-					if (branchShape)
-					{
-						return branchShape->GetValue(xFactor, distanceToRoot);
-					}
-					return 1.0f;
-				});
+			CylindricalMeshGenerator<ShootGrowthData, ShootStemGrowthData, InternodeGrowthData>::Generate(m_treeModel.PeekShootSkeleton(), vertices, indices, meshGeneratorSettings,
+				[&](glm::vec3& vertexPosition, const glm::vec3& direction, const float xFactor, const float yFactor)
+				{},
+				[&](glm::vec2& texCoords, float xFactor, float distanceToRoot)
+				{}
+			);
 		}
 	}
 	else
@@ -1399,7 +1403,7 @@ void Tree::ExportStrandModelOBJ(const std::filesystem::path& path,
 }
 
 void Tree::ExportTrunkOBJ(const std::filesystem::path& path,
-                          const TreeMeshGeneratorSettings& meshGeneratorSettings)
+	const TreeMeshGeneratorSettings& meshGeneratorSettings)
 {
 	if (path.extension() == ".obj") {
 		std::ofstream of;

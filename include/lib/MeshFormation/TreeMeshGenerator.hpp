@@ -80,13 +80,15 @@ namespace EcoSysLab {
 	public:
 		static void Generate(const Skeleton<SkeletonData, FlowData, NodeData>& skeleton, std::vector<Vertex>& vertices,
 			std::vector<unsigned int>& indices, const TreeMeshGeneratorSettings& settings,
-			const std::function<float(float xFactor, float distanceToRoot)>& func);
+			const std::function<void(glm::vec3& vertexPosition, const glm::vec3& direction, float xFactor, float distanceToRoot)>& vertexPositionModifier,
+			const std::function<void(glm::vec2& texCoords, float xFactor, float distanceToRoot)>& texCoordsModifier);
 
 		static void GeneratePartially(
 			const std::unordered_set<NodeHandle>& nodeHandles,
 			const Skeleton<SkeletonData, FlowData, NodeData>& skeleton, std::vector<Vertex>& vertices,
 			std::vector<unsigned int>& indices, const TreeMeshGeneratorSettings& settings,
-			const std::function<float(float xFactor, float distanceToRoot)>& func);
+			const std::function<void(glm::vec3 &vertexPosition, const glm::vec3& direction, float xFactor, float distanceToRoot)>& vertexPositionModifier,
+			const std::function<void(glm::vec2& texCoords, float xFactor, float distanceToRoot)>& texCoordsModifier);
 	};
 	template<typename SkeletonData, typename FlowData, typename NodeData>
 	class VoxelMeshGenerator {
@@ -108,7 +110,8 @@ namespace EcoSysLab {
 	void CylindricalMeshGenerator<SkeletonData, FlowData, NodeData>::Generate(const
 		Skeleton<SkeletonData, FlowData, NodeData>& skeleton, std::vector<Vertex>& vertices,
 		std::vector<unsigned int>& indices, const TreeMeshGeneratorSettings& settings,
-		const std::function<float(float xFactor, float distanceToRoot)>& func) {
+		const std::function<void(glm::vec3& vertexPosition, const glm::vec3& direction, float xFactor, float yFactor)>& vertexPositionModifier,
+		const std::function<void(glm::vec2& texCoords, float xFactor, float yFactor)>& texCoordsModifier) {
 		const auto& sortedInternodeList = skeleton.PeekSortedNodeList();
 		std::vector<std::vector<RingSegment>> ringsList;
 		std::vector<bool> mainChildStatus;
@@ -128,98 +131,82 @@ namespace EcoSysLab {
 			auto& rings = ringsList[internodeIndex];
 			rings.clear();
 
-			glm::vec3 p[4];
-			glm::vec3 f[4];
-			float d[4];
+			glm::vec3 directionStart = internodeInfo.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
+			glm::vec3 directionEnd = directionStart;
+			float rootDistanceStart = internodeInfo.m_rootDistance;
+			float rootDistanceEnd = rootDistanceStart;
 
-			p[1] = internode.m_info.m_globalPosition;
-			f[1] = internode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
-			d[1] = internode.m_info.m_rootDistance;
+			glm::vec3 positionStart = internodeInfo.m_globalPosition;
+			glm::vec3 positionEnd =
+				positionStart + internodeInfo.m_length * (settings.m_smoothness ? 1.0f - settings.m_baseControlPointRatio : 1.0f) * internodeInfo.GetGlobalDirection();
+			float thicknessStart = internodeInfo.m_thickness;
+			float thicknessEnd = internodeInfo.m_thickness;
 
-			p[2] = internode.m_info.GetGlobalEndPosition();
-			f[2] = internode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
-			d[2] = internode.m_info.m_rootDistance;
+			if (internode.GetParentHandle() != -1) {
+				const auto& parentInternode = skeleton.PeekNode(internode.GetParentHandle());
+				thicknessStart = parentInternode.m_info.m_thickness;
+				directionStart =
+					parentInternode.m_info.m_regulatedGlobalRotation *
+					glm::vec3(0, 0, -1);
+				positionStart =
+					parentInternode.m_info.m_globalPosition + (parentInternode.m_info.m_length * (settings.m_smoothness ? 1.0f - settings.m_baseControlPointRatio : 1.0f)) * parentInternode.m_info.GetGlobalDirection();
 
-			float thicknessStart, thicknessEnd, thicknessStartT, thicknessEndT;
-			thicknessStart = thicknessEnd = internode.m_info.m_thickness;
-			if (internode.GetParentHandle() == -1)
-			{
-				p[0] = p[1] * 2.0f - p[2];
-				f[0] = f[1] * 2.0f - f[2];
-				d[0] = d[1] * 2.0f - d[2];
+				rootDistanceStart = parentInternode.m_info.m_rootDistance;
 			}
-			else
-			{
-				p[0] = skeleton.PeekNode(internode.GetParentHandle()).m_info.m_globalPosition;
-				f[0] = skeleton.PeekNode(internode.GetParentHandle()).m_info.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
-				thicknessStart = skeleton.PeekNode(internode.GetParentHandle()).m_info.m_thickness;
-				d[0] = skeleton.PeekNode(internode.GetParentHandle()).m_info.m_rootDistance;
+
+			if (settings.m_overrideRadius) {
+				thicknessStart = settings.m_radius;
+				thicknessEnd = settings.m_radius;
 			}
-			if (internode.IsEndNode())
+
+			if (settings.m_presentationOverride && settings.m_presentationOverrideSettings.m_maxThickness != 0.0f)
 			{
-				p[3] = p[2] * 2.0f - p[1];
-				f[3] = f[2] * 2.0f - f[1];
-				d[3] = d[2] * 2.0f - d[1];
+				thicknessStart = glm::min(thicknessStart, settings.m_presentationOverrideSettings.m_maxThickness);
+				thicknessEnd = glm::min(thicknessEnd, settings.m_presentationOverrideSettings.m_maxThickness);
 			}
-			else
-			{
-				float maxChildThickness = -1;
-				NodeHandle maxChildHandle = -1;
-				const auto& childHandles = internode.RefChildHandles();
-				if (childHandles.size() == 1)
-				{
-					maxChildHandle = childHandles.at(0);
-				}
-				else {
-					for (const auto& childHandle : childHandles) {
-						const auto& childInternode = skeleton.PeekNode(childHandle);
-						if (childInternode.IsApical())
-						{
-							maxChildHandle = childHandle;
-							break;
-						}
-						const float childThickness = childInternode.m_info.m_thickness;
-						if (childThickness > maxChildThickness)
-						{
-							maxChildThickness = childThickness;
-							maxChildHandle = childHandle;
-						}
-					}
-				}
-				const auto& childInternode = skeleton.PeekNode(maxChildHandle);
-				p[3] = childInternode.m_info.GetGlobalEndPosition();
-				f[3] = childInternode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
-				d[3] = childInternode.m_info.m_rootDistance;
-			}
+
 #pragma region Subdivision internode here.
-			const auto diameter = glm::max(thicknessStart, thicknessEnd) * glm::pi<float>();
-			int step = diameter / settings.m_xSubdivision;
+			const auto boundaryLength = glm::max(thicknessStart, thicknessEnd) * glm::pi<float>();
+			int step = boundaryLength / settings.m_xSubdivision;
 			if (step < 4)
 				step = 4;
 			if (step % 2 != 0)
 				++step;
 
 			tempSteps[threadIndex].emplace_back(internodeHandle, step);
-			int amount = internodeInfo.m_length / (internodeInfo.m_thickness >= settings.m_trunkThickness ? settings.m_trunkYSubdivision : settings.m_branchYSubdivision);
+			int amount = glm::max(1, static_cast<int>(glm::distance(positionStart, positionEnd) / (internodeInfo.m_thickness >= settings.m_trunkThickness ? settings.m_trunkYSubdivision : settings.m_branchYSubdivision)));
+			if (amount % 2 != 0)
+				++amount;
 			amount = glm::max(1, amount);
+			BezierCurve curve = BezierCurve(
+				positionStart,
+				positionStart +
+				(settings.m_smoothness ? internodeInfo.m_length * settings.m_baseControlPointRatio : 0.0f) * directionStart,
+				positionEnd -
+				(settings.m_smoothness ? internodeInfo.m_length * settings.m_branchControlPointRatio : 0.0f) * directionEnd,
+				positionEnd);
+			
 			for (int ringIndex = 1; ringIndex <= amount; ringIndex++) {
 				const float a = static_cast<float>(ringIndex - 1) / amount;
 				const float b = static_cast<float>(ringIndex) / amount;
-				glm::vec3 startPosition, endPosition, startAxis, endAxis, tempStart, tempEnd;
-				float rootDistanceStart, rootDistanceEnd;
-				Strands::CubicInterpolation(p[0], p[1], p[2], p[3], startPosition, tempStart, a);
-				Strands::CubicInterpolation(p[0], p[1], p[2], p[3], endPosition, tempEnd, b);
-				Strands::CubicInterpolation(f[0], f[1], f[2], f[3], startAxis, tempStart, a);
-				Strands::CubicInterpolation(f[0], f[1], f[2], f[3], endAxis, tempEnd, b);
-				float ringThicknessStart = glm::mix(thicknessStart, thicknessEnd, a);
-				float ringThicknessEnd = glm::mix(thicknessStart, thicknessEnd, b);
-				Strands::CubicInterpolation(d[0], d[1], d[2], d[3], rootDistanceStart, thicknessStartT, a);
-				Strands::CubicInterpolation(d[0], d[1], d[2], d[3], rootDistanceEnd, thicknessEndT, b);
-				rings.emplace_back(
-					startPosition, endPosition,
-					startAxis,
-					endAxis,
-					ringThicknessStart * .5f, ringThicknessEnd * .5f, rootDistanceStart, rootDistanceEnd);
+				if (settings.m_smoothness) {
+					rings.emplace_back(
+						curve.GetPoint(a), curve.GetPoint(b),
+						glm::mix(directionStart, directionEnd, a),
+						glm::mix(directionStart, directionEnd, b),
+						glm::mix(thicknessStart, thicknessEnd, a) * .5f,
+						glm::mix(thicknessStart, thicknessEnd, b) * .5f, 
+						glm::mix(rootDistanceStart, rootDistanceEnd, a), glm::mix(rootDistanceStart, rootDistanceEnd, b));
+				}
+				else {
+					rings.emplace_back(
+						curve.GetPoint(a), curve.GetPoint(b),
+						directionEnd,
+						directionEnd,
+						glm::mix(thicknessStart, thicknessEnd, a) * .5f,
+						glm::mix(thicknessStart, thicknessEnd, b) * .5f,
+						glm::mix(rootDistanceStart, rootDistanceEnd, a), glm::mix(rootDistanceStart, rootDistanceEnd, b));
+				}
 			}
 #pragma endregion
 			}, results);
@@ -423,18 +410,17 @@ namespace EcoSysLab {
 
 #pragma endregion
 			}
-			float textureXStep = 1.0f / pStep * 4.0f;
 			if (!needStitching) {
 				for (int p = 0; p < pStep; p++) {
 					float xFactor = static_cast<float>(p) / pStep;
-					float yFactor = internodeInfo.m_rootDistance - internodeInfo.m_length;
-					auto& ring = rings.at(0);
-					auto direction = ring.GetDirection(
-						parentUp, pAngleStep * p, true);
-					archetype.m_position = ring.m_startPosition + direction * ring.m_startRadius * func(xFactor, yFactor);
-					const float x =
-						p < pStep / 2 ? p * textureXStep : (pStep - p) * textureXStep;
-					archetype.m_texCoord = glm::vec2(x, 0.0f);
+					const auto& ring = rings.at(0);
+					float yFactor = ring.m_startDistanceToRoot;
+					auto direction = ring.GetDirection(parentUp, pAngleStep * p, true);
+					archetype.m_position = ring.m_startPosition + direction * ring.m_startRadius;
+					vertexPositionModifier(archetype.m_position, direction * ring.m_startRadius, xFactor, yFactor);
+					assert(!glm::any(glm::isnan(archetype.m_position)));
+					archetype.m_texCoord = glm::vec2(xFactor, yFactor);
+					texCoordsModifier(archetype.m_texCoord, xFactor, yFactor);
 					if (!settings.m_junctionColor) archetype.m_color = internodeInfo.m_color;
 					vertices.push_back(archetype);
 				}
@@ -478,20 +464,19 @@ namespace EcoSysLab {
 				}
 			}
 
-			textureXStep = 1.0f / step * 4.0f;
 			int ringSize = rings.size();
 			for (auto ringIndex = 0; ringIndex < ringSize; ringIndex++) {
 				for (auto s = 0; s < step; s++) {
 					float xFactor = static_cast<float>(s) / step;
-					float yFactor = internodeInfo.m_rootDistance - internodeInfo.m_length + (ringIndex + 1) * internodeInfo.m_length / ringSize;
 					auto& ring = rings.at(ringIndex);
+					float yFactor = ring.m_endDistanceToRoot;
 					auto direction = ring.GetDirection(
 						up, angleStep * s, false);
-					archetype.m_position = ring.m_endPosition + direction * ring.m_endRadius * func(xFactor, yFactor);
-					const auto x =
-						s < (step / 2) ? s * textureXStep : (step - s) * textureXStep;
-					const auto y = ringIndex % 2 == 0 ? 1.0f : 0.0f;
-					archetype.m_texCoord = glm::vec2(x, y);
+					archetype.m_position = ring.m_endPosition + direction * ring.m_endRadius;
+					vertexPositionModifier(archetype.m_position, direction * ring.m_endRadius, xFactor, yFactor);
+					assert(!glm::any(glm::isnan(archetype.m_position)));
+					archetype.m_texCoord = glm::vec2(xFactor, yFactor);
+					texCoordsModifier(archetype.m_texCoord, xFactor, yFactor);
 					if (!settings.m_junctionColor) archetype.m_color = internodeInfo.m_color;
 					vertices.push_back(archetype);
 				}
@@ -668,7 +653,8 @@ namespace EcoSysLab {
 		const std::unordered_set<NodeHandle>& nodeHandles,
 		const Skeleton<SkeletonData, FlowData, NodeData>& skeleton, std::vector<Vertex>& vertices,
 		std::vector<unsigned>& indices, const TreeMeshGeneratorSettings& settings,
-		const std::function<float(float xFactor, float distanceToRoot)>& func)
+		const std::function<void(glm::vec3& vertexPosition, const glm::vec3& direction, float xFactor, float distanceToRoot)>& vertexPositionModifier,
+		const std::function<void(glm::vec2& texCoords, float xFactor, float distanceToRoot)>& texCoordsModifier)
 	{
 		const auto& sortedInternodeList = skeleton.PeekSortedNodeList();
 		std::vector<std::vector<RingSegment>> ringsList;
@@ -683,109 +669,86 @@ namespace EcoSysLab {
 			const auto& internode = skeleton.PeekNode(internodeHandle);
 			const auto& internodeInfo = internode.m_info;
 
-
 			auto& rings = ringsList[internodeIndex];
 			rings.clear();
 
-			glm::vec3 p[4];
-			glm::vec3 f[4];
-			float d[4];
-
-			p[1] = internode.m_info.m_globalPosition;
-			f[1] = internode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
-			d[1] = internode.m_info.m_rootDistance;
-
-			p[2] = internode.m_info.GetGlobalEndPosition();
-			f[2] = internode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
-			d[2] = internode.m_info.m_rootDistance;
-
-			float thicknessStart, thicknessEnd, thicknessStartT, thicknessEndT;
-			thicknessStart = thicknessEnd = internode.m_info.m_thickness;
 			bool hasParent = nodeHandles.find(internode.GetParentHandle()) != nodeHandles.end();
-			bool hasChildren = false;
-			const auto& childHandles = internode.RefChildHandles();
-			for (const auto childHandle : childHandles)
-			{
-				if (nodeHandles.find(childHandle) == nodeHandles.end()) hasChildren = true;
+			glm::vec3 directionStart = internodeInfo.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
+			glm::vec3 directionEnd = directionStart;
+			float rootDistanceStart = internodeInfo.m_rootDistance;
+			float rootDistanceEnd = rootDistanceStart;
+
+			glm::vec3 positionStart = internodeInfo.m_globalPosition;
+			glm::vec3 positionEnd =
+				positionStart + internodeInfo.m_length * (settings.m_smoothness ? 1.0f - settings.m_baseControlPointRatio : 1.0f) * internodeInfo.GetGlobalDirection();
+			float thicknessStart = internodeInfo.m_thickness;
+			float thicknessEnd = internodeInfo.m_thickness;
+
+			if (hasParent) {
+				const auto& parentInternode = skeleton.PeekNode(internode.GetParentHandle());
+				thicknessStart = parentInternode.m_info.m_thickness;
+				directionStart =
+					parentInternode.m_info.m_regulatedGlobalRotation *
+					glm::vec3(0, 0, -1);
+				positionStart =
+					parentInternode.m_info.m_globalPosition + (parentInternode.m_info.m_length * (settings.m_smoothness ? 1.0f - settings.m_baseControlPointRatio : 1.0f)) * parentInternode.m_info.GetGlobalDirection();
+
+				rootDistanceStart = parentInternode.m_info.m_rootDistance;
 			}
 
-			if (!hasParent)
-			{
-				p[0] = p[1] * 2.0f - p[2];
-				f[0] = f[1] * 2.0f - f[2];
-				d[0] = d[1] * 2.0f - d[2];
+			if (settings.m_overrideRadius) {
+				thicknessStart = settings.m_radius;
+				thicknessEnd = settings.m_radius;
 			}
-			else
-			{
-				p[0] = skeleton.PeekNode(internode.GetParentHandle()).m_info.m_globalPosition;
-				f[0] = skeleton.PeekNode(internode.GetParentHandle()).m_info.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
-				thicknessStart = skeleton.PeekNode(internode.GetParentHandle()).m_info.m_thickness;
-				d[0] = skeleton.PeekNode(internode.GetParentHandle()).m_info.m_rootDistance;
-			}
-			if (!hasChildren)
-			{
-				p[3] = p[2] * 2.0f - p[1];
-				f[3] = f[2] * 2.0f - f[1];
-				d[3] = d[2] * 2.0f - d[1];
-			}
-			else
-			{
-				float maxChildThickness = -1;
-				NodeHandle maxChildHandle = -1;
-				for (const auto& childHandle : childHandles) {
-					if (nodeHandles.find(childHandle) == nodeHandles.end()) continue;
-					const auto& childInternode = skeleton.PeekNode(childHandle);
-					if (childInternode.IsApical())
-					{
-						maxChildHandle = childHandle;
-						break;
-					}
-					const float childThickness = childInternode.m_info.m_thickness;
-					if (childThickness > maxChildThickness)
-					{
-						maxChildThickness = childThickness;
-						maxChildHandle = childHandle;
-					}
-				}
 
-				const auto& childInternode = skeleton.PeekNode(maxChildHandle);
-
-				p[3] = childInternode.m_info.GetGlobalEndPosition();
-				f[3] = childInternode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
-				d[3] = childInternode.m_info.m_rootDistance;
-
+			if (settings.m_presentationOverride && settings.m_presentationOverrideSettings.m_maxThickness != 0.0f)
+			{
+				thicknessStart = glm::min(thicknessStart, settings.m_presentationOverrideSettings.m_maxThickness);
+				thicknessEnd = glm::min(thicknessEnd, settings.m_presentationOverrideSettings.m_maxThickness);
 			}
+
 #pragma region Subdivision internode here.
-			const auto diameter = glm::max(thicknessStart, thicknessEnd) * glm::pi<float>();
-			int step = diameter / settings.m_xSubdivision;
+			const auto boundaryLength = glm::max(thicknessStart, thicknessEnd) * glm::pi<float>();
+			int step = boundaryLength / settings.m_xSubdivision;
 			if (step < 4)
 				step = 4;
 			if (step % 2 != 0)
 				++step;
 
 			tempSteps[threadIndex].emplace_back(internodeHandle, step);
-			int amount = internodeInfo.m_length / (internodeInfo.m_thickness >= settings.m_trunkThickness ? settings.m_trunkYSubdivision : settings.m_branchYSubdivision);
-
+			int amount = glm::max(1, static_cast<int>(glm::distance(positionStart, positionEnd) / (internodeInfo.m_thickness >= settings.m_trunkThickness ? settings.m_trunkYSubdivision : settings.m_branchYSubdivision)));
+			if (amount % 2 != 0)
+				++amount;
 			amount = glm::max(1, amount);
+			BezierCurve curve = BezierCurve(
+				positionStart,
+				positionStart +
+				(settings.m_smoothness ? internodeInfo.m_length * settings.m_baseControlPointRatio : 0.0f) * directionStart,
+				positionEnd -
+				(settings.m_smoothness ? internodeInfo.m_length * settings.m_branchControlPointRatio : 0.0f) * directionEnd,
+				positionEnd);
+
 			for (int ringIndex = 1; ringIndex <= amount; ringIndex++) {
 				const float a = static_cast<float>(ringIndex - 1) / amount;
 				const float b = static_cast<float>(ringIndex) / amount;
-				glm::vec3 startPosition, endPosition, startAxis, endAxis, tempStart, tempEnd;
-				float rootDistanceStart, rootDistanceEnd;
-				Strands::CubicInterpolation(p[0], p[1], p[2], p[3], startPosition, tempStart, a);
-				Strands::CubicInterpolation(p[0], p[1], p[2], p[3], endPosition, tempEnd, b);
-				Strands::CubicInterpolation(f[0], f[1], f[2], f[3], startAxis, tempStart, a);
-				Strands::CubicInterpolation(f[0], f[1], f[2], f[3], endAxis, tempEnd, b);
-				float ringThicknessStart = glm::mix(thicknessStart, thicknessEnd, a);
-				float ringThicknessEnd = glm::mix(thicknessStart, thicknessEnd, b);
-
-				Strands::CubicInterpolation(d[0], d[1], d[2], d[3], rootDistanceStart, thicknessStartT, a);
-				Strands::CubicInterpolation(d[0], d[1], d[2], d[3], rootDistanceEnd, thicknessEndT, b);
-				rings.emplace_back(
-					startPosition, endPosition,
-					startAxis,
-					endAxis,
-					ringThicknessStart * .5f, ringThicknessEnd * .5f, rootDistanceStart, rootDistanceEnd);
+				if (settings.m_smoothness) {
+					rings.emplace_back(
+						curve.GetPoint(a), curve.GetPoint(b),
+						glm::mix(directionStart, directionEnd, a),
+						glm::mix(directionStart, directionEnd, b),
+						glm::mix(thicknessStart, thicknessEnd, a) * .5f,
+						glm::mix(thicknessStart, thicknessEnd, b) * .5f,
+						glm::mix(rootDistanceStart, rootDistanceEnd, a), glm::mix(rootDistanceStart, rootDistanceEnd, b));
+				}
+				else {
+					rings.emplace_back(
+						curve.GetPoint(a), curve.GetPoint(b),
+						directionEnd,
+						directionEnd,
+						glm::mix(thicknessStart, thicknessEnd, a) * .5f,
+						glm::mix(thicknessStart, thicknessEnd, b) * .5f,
+						glm::mix(rootDistanceStart, rootDistanceEnd, a), glm::mix(rootDistanceStart, rootDistanceEnd, b));
+				}
 			}
 #pragma endregion
 			}, results);
@@ -856,19 +819,17 @@ namespace EcoSysLab {
 			const auto flowHandle = internode.GetFlowHandle();
 			archetype.m_vertexInfo1 = internodeHandle + 1;
 			archetype.m_vertexInfo2 = flowHandle + 1;
-			float textureXStep = 1.0f / pStep * 4.0f;
 			if (!needStitching) {
 				for (int p = 0; p < pStep; p++) {
 					float xFactor = static_cast<float>(p) / pStep;
-					float yFactor = internodeInfo.m_rootDistance - internodeInfo.m_length;
-					auto& ring = rings.at(0);
-					auto direction = ring.GetDirection(
-						parentUp, pAngleStep * p, true);
-					archetype.m_position = ring.m_startPosition + direction * ring.m_startRadius * func(xFactor, yFactor);
+					const auto& ring = rings.at(0);
+					float yFactor = ring.m_startDistanceToRoot;
+					auto direction = ring.GetDirection(parentUp, pAngleStep * p, true);
+					archetype.m_position = ring.m_startPosition + direction * ring.m_startRadius;
+					vertexPositionModifier(archetype.m_position, direction * ring.m_startRadius, xFactor, yFactor);
 					assert(!glm::any(glm::isnan(archetype.m_position)));
-					const float x =
-						p < pStep / 2 ? p * textureXStep : (pStep - p) * textureXStep;
-					archetype.m_texCoord = glm::vec2(x, 0.0f);
+					archetype.m_texCoord = glm::vec2(xFactor, yFactor);
+					texCoordsModifier(archetype.m_texCoord, xFactor, yFactor);
 					if (!settings.m_junctionColor) archetype.m_color = internodeInfo.m_color;
 					vertices.push_back(archetype);
 				}
@@ -912,21 +873,18 @@ namespace EcoSysLab {
 				}
 			}
 
-			textureXStep = 1.0f / step * 4.0f;
 			int ringSize = rings.size();
 			for (auto ringIndex = 0; ringIndex < ringSize; ringIndex++) {
 				for (auto s = 0; s < step; s++) {
 					float xFactor = static_cast<float>(s) / step;
-					float yFactor = internodeInfo.m_rootDistance - internodeInfo.m_length + (ringIndex + 1) * internodeInfo.m_length / ringSize;
 					auto& ring = rings.at(ringIndex);
-					auto direction = ring.GetDirection(
-						up, angleStep * s, false);
-					archetype.m_position = ring.m_endPosition + direction * ring.m_endRadius * func(xFactor, yFactor);
+					float yFactor = ring.m_endDistanceToRoot;
+					auto direction = ring.GetDirection(up, angleStep * s, false);
+					archetype.m_position = ring.m_endPosition + direction * ring.m_endRadius;
+					vertexPositionModifier(archetype.m_position, direction * ring.m_endRadius, xFactor, yFactor);
 					assert(!glm::any(glm::isnan(archetype.m_position)));
-					const auto x =
-						s < (step / 2) ? s * textureXStep : (step - s) * textureXStep;
-					const auto y = ringIndex % 2 == 0 ? 1.0f : 0.0f;
-					archetype.m_texCoord = glm::vec2(x, y);
+					archetype.m_texCoord = glm::vec2(xFactor, yFactor);
+					texCoordsModifier(archetype.m_texCoord, xFactor, yFactor);
 					if (!settings.m_junctionColor) archetype.m_color = internodeInfo.m_color;
 					vertices.push_back(archetype);
 				}
