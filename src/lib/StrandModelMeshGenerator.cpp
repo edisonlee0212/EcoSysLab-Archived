@@ -883,8 +883,27 @@ std::pair< std::vector<Graph>, std::vector<std::vector<size_t> > > computeCluste
 	return std::pair< std::vector<Graph>, std::vector<std::vector<size_t> > >(graphs, clusters);
 }
 
-std::vector<std::pair<Slice, PipeCluster> > computeSlices(const StrandModel& strandModel, const PipeCluster& pipesInPrevious, float t, float maxDist, size_t minStrandCount)
+std::vector<std::pair<Slice, PipeCluster> > computeSlices(const StrandModel& strandModel, const PipeCluster& pipesInPrevious, float t, float stepSize, float maxDist, size_t minStrandCount)
 {
+	const auto& skeleton = strandModel.m_strandModelSkeleton;
+	const auto& pipeGroup = skeleton.m_data.m_strandGroup;
+
+	// first check if there are any pipes that might be needed for merging
+	NodeHandle nh = getNodeHandle(pipeGroup, pipesInPrevious.front(), glm::floor(t - stepSize));
+
+	const auto& node = skeleton.PeekNode(nh);
+	
+	PipeCluster allPipesWithSameNode;
+	for (auto& kv : node.m_data.m_particleMap)
+	{
+		allPipesWithSameNode.push_back(kv.first);
+	}
+
+	if (allPipesWithSameNode.size() != pipesInPrevious.size())
+	{
+		/*std::cout << "Potential for merge at t = " << t << ". Previous slice had " << pipesInPrevious.size()
+			<< " strand, but this one has potentially " << allPipesWithSameNode.size() << std::endl;*/
+	}
 
 	// compute clusters
 	auto graphsAndClusters = computeClusters(strandModel, pipesInPrevious, t, maxDist, minStrandCount);
@@ -925,13 +944,11 @@ void connect(std::vector<std::pair<StrandHandle, glm::vec3> >& slice0, size_t i0
 	if (vertBetween0 > slice0.size() / 2)
 	{
 		if (DEBUG_OUTPUT) std::cout << "Warning: too many steps for slice 0, should probably be swapped." << std::endl;
-		//return;
 	}
 
 	if (vertBetween1 > slice1.size() / 2)
 	{
 		if (DEBUG_OUTPUT) std::cout << "Warning: too many steps for slice 1, should probably be swapped." << std::endl;
-		//return;
 	}
 
 	// merge the two
@@ -1178,19 +1195,7 @@ bool connectSlices(const StrandModelStrandGroup& pipes, Slice& bottomSlice, std:
 
 		if (bottomPermutation[prevI].first == bottomPermutation[i].first)
 		{
-			//if(DEBUG_OUTPUT) std::cout << "Connecting at index " << i << std::endl;
-
-			/*if (topSlices.size() == 1)
-			{
-				// for now, also need a better solution that does untangling
-				connect(bottomSlice, prevI, i, bottomOffset,
-					topSlices[bottomPermutation[i].first], bottomPermutation[prevI].second, bottomPermutation[i].second, topOffsets[bottomPermutation[i].first],
-					vertices, indices);
-			}
-			else
-			{*/
 			indicesWithSameBranchCorrespondence.push_back(i);
-			//}
 		}
 		else
 		{
@@ -1384,7 +1389,7 @@ std::vector<SlicingData> slice(const StrandModel& strandModel, std::pair < Slice
 		return {};
 	}
 
-	auto slicesAndClusters = computeSlices(strandModel, prevSlice.second, t, maxDist, settings.m_minCellCountForMajorBranches);
+	auto slicesAndClusters = computeSlices(strandModel, prevSlice.second, t, stepSize, maxDist, settings.m_minCellCountForMajorBranches);
 	std::vector<Slice> topSlices;
 
 	bool allEmpty = true;
@@ -1441,6 +1446,7 @@ std::vector<SlicingData> slice(const StrandModel& strandModel, std::pair < Slice
 				texCoord.x += settings.m_uMultiplier;
 			}
 
+			v.m_texCoord = texCoord; // legacy support
 			vertices.push_back(v);
 			texCoords.push_back(texCoord);
 
@@ -1527,7 +1533,16 @@ void StrandModelMeshGenerator::RecursiveSlicing(
 	const StrandModel& strandModel, std::vector<Vertex>& vertices,
 	std::vector<unsigned>& indices, const StrandModelMeshGeneratorSettings& settings)
 {
-	
+	// support mesh generation in framework
+	std::vector<glm::vec2> dummyTexCoords;
+	std::vector<std::pair<unsigned, unsigned>> indexPairs;
+
+	RecursiveSlicing(strandModel, vertices, dummyTexCoords, indexPairs, settings);
+
+	for (auto& pair : indexPairs)
+	{
+		indices.push_back(pair.first);
+	}
 }
 
 void StrandModelMeshGenerator::RecursiveSlicing(const StrandModel& strandModel, std::vector<Vertex>& vertices,
@@ -1575,7 +1590,7 @@ void StrandModelMeshGenerator::RecursiveSlicing(const StrandModel& strandModel, 
 	//auto firstCluster = computeCluster(strandModel, pipeCluster, 0, visited, 0.0, maxDist);
 	//auto firstSlice = computeSlice(strandModel, pipeCluster, firstCluster.first, firstCluster.second, 0.0, maxDist);
 
-	auto firstSlices = computeSlices(strandModel, pipeCluster, 0, maxDist, 3.0); // TODO: magic number
+	auto firstSlices = computeSlices(strandModel, pipeCluster, 0, 0, maxDist, 3.0); // TODO: magic number
 	std::vector<SlicingData> startSlices;
 
 	for (auto& slice : firstSlices)
@@ -1595,6 +1610,7 @@ void StrandModelMeshGenerator::RecursiveSlicing(const StrandModel& strandModel, 
 			texCoord.y = 0.0;
 			texCoord.x = getPipePolar(strandModel, el.first, 0.0) / (2 * glm::pi<float>()) * settings.m_uMultiplier;
 
+			v.m_texCoord = texCoord; // legacy support
 			vertices.push_back(v);
 
 			if (!isFirst && texCoord.x < texCoords.back().x)
