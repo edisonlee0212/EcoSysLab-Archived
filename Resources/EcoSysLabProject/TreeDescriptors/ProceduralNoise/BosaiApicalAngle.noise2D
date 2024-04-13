@@ -1,0 +1,118 @@
+m_pipeline:
+  m_maxNodeIndex: 4
+  m_maxFlowIndex: 4
+  m_newVersion: 5
+  m_min: [0, 0, 0]
+  m_max: [1.17549435e-38, 1.17549435e-38, 1.17549435e-38]
+  m_data:
+    {}
+  m_nodes:
+    - R: false
+      F: 0
+      P: -1
+      A: true
+      I: 0
+      IF:
+        GP: [0, 0, 0]
+        GR: [0, 0, 0, 1]
+        L: 0
+        T: 0.100000001
+        C: [1, 1, 1, 1]
+      D:
+        m_data:
+          m_name: BaseAverage
+          m_operatorType: 2
+          m_valueType: 0
+          m_frequency: [1, 1]
+          m_constantValue: 10
+          m_offset: [0, 0]
+    - R: false
+      F: 1
+      P: 0
+      A: false
+      I: 1
+      IF:
+        GP: [0, 0, 0]
+        GR: [0, 0, 0, 1]
+        L: 0
+        T: 0.100000001
+        C: [1, 1, 1, 1]
+      D:
+        m_data:
+          m_name: New node
+          m_operatorType: 2
+          m_valueType: 5
+          m_frequency: [1, 1]
+          m_constantValue: 0
+          m_offset: [0, 0]
+    - R: false
+      F: 2
+      P: 1
+      A: false
+      I: 3
+      IF:
+        GP: [0, 0, 0]
+        GR: [0, 0, 0, 1]
+        L: 0
+        T: 0.100000001
+        C: [1, 1, 1, 1]
+      D:
+        m_data:
+          m_name: New node
+          m_operatorType: 4
+          m_valueType: 5
+          m_frequency: [1, 1]
+          m_constantValue: 0
+          m_offset: [0, 0]
+    - R: false
+      F: 3
+      P: 2
+      A: false
+      I: 4
+      IF:
+        GP: [0, 0, 0]
+        GR: [0, 0, 0, 1]
+        L: 0
+        T: 0.100000001
+        C: [1, 1, 1, 1]
+      D:
+        m_data:
+          m_name: New node
+          m_operatorType: 1
+          m_valueType: 0
+          m_frequency: [1, 1]
+          m_constantValue: 20
+          m_offset: [0, 0]
+  m_flows:
+    - R: false
+      P: -1
+      A: false
+      I: 0
+      N:
+        - 0
+      D:
+        {}
+    - R: false
+      P: 0
+      A: false
+      I: 1
+      N:
+        - 1
+      D:
+        {}
+    - R: false
+      P: 1
+      A: false
+      I: 3
+      N:
+        - 2
+      D:
+        {}
+    - R: false
+      P: 2
+      A: false
+      I: 4
+      N:
+        - 3
+      D:
+        {}

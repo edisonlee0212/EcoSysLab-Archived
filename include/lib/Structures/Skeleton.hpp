@@ -114,7 +114,13 @@ namespace EcoSysLab {
 		 * Access the children by their handles.
 		 * @return The list of handles.
 		 */
-		[[nodiscard]] const std::vector<NodeHandle>& RefChildHandles() const;
+		[[nodiscard]] const std::vector<NodeHandle>& PeekChildHandles() const;
+
+		/**
+		 * Access the children by their handles. Allow modification. Potentially break the skeleton structure!
+		 * @return The list of handles.
+		 */
+		[[nodiscard]] std::vector<NodeHandle>& UnsafeRefChildHandles();
 		Node() = default;
 		Node(NodeHandle handle);
 
@@ -168,13 +174,13 @@ namespace EcoSysLab {
 		 * Access the children by their handles.
 		 * @return The list of handles.
 		 */
-		[[nodiscard]] const std::vector<FlowHandle>& RefChildHandles() const;
+		[[nodiscard]] const std::vector<FlowHandle>& PeekChildHandles() const;
 
 		/**
 		 * Access the nodes that belongs to this flow.
 		 * @return The list of handles.
 		 */
-		[[nodiscard]] const std::vector<NodeHandle>& RefNodeHandles() const;
+		[[nodiscard]] const std::vector<NodeHandle>& PeekNodeHandles() const;
 		Flow() = default;
 		explicit Flow(FlowHandle handle);
 
@@ -662,7 +668,13 @@ namespace EcoSysLab {
 	}
 
 	template<typename NodeData>
-	const std::vector<NodeHandle>& Node<NodeData>::RefChildHandles() const {
+	const std::vector<NodeHandle>& Node<NodeData>::PeekChildHandles() const {
+		return m_childHandles;
+	}
+
+	template <typename NodeData>
+	std::vector<NodeHandle>& Node<NodeData>::UnsafeRefChildHandles()
+	{
 		return m_childHandles;
 	}
 
@@ -689,7 +701,7 @@ namespace EcoSysLab {
 	}
 
 	template<typename FlowData>
-	const std::vector<NodeHandle>& Flow<FlowData>::RefNodeHandles() const {
+	const std::vector<NodeHandle>& Flow<FlowData>::PeekNodeHandles() const {
 		return m_nodes;
 	}
 
@@ -699,7 +711,7 @@ namespace EcoSysLab {
 	}
 
 	template<typename FlowData>
-	const std::vector<FlowHandle>& Flow<FlowData>::RefChildHandles() const {
+	const std::vector<FlowHandle>& Flow<FlowData>::PeekChildHandles() const {
 		return m_childHandles;
 	}
 
@@ -844,7 +856,7 @@ namespace EcoSysLab {
 			auto& node = m_nodes[*it];
 			float maxDistanceToAnyBranchEnd = 0;
 			node.m_info.m_endDistance = 0;
-			for (const auto& i : node.RefChildHandles())
+			for (const auto& i : node.PeekChildHandles())
 			{
 				const auto& childNode = m_nodes[i];
 				const float childMaxDistanceToAnyBranchEnd =

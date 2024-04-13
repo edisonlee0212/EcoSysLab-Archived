@@ -70,7 +70,7 @@ void TreeModel::PruneInternode(const NodeHandle internodeHandle)
 			}*/
 		});
 	/*
-	for(const auto& childHandle : internode.RefChildHandles())
+	for(const auto& childHandle : internode.PeekChildHandles())
 	{
 		m_shootSkeleton.RecycleNode(childHandle,
 		[&](FlowHandle flowHandle) {},
@@ -661,7 +661,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, const NodeHandle inter
 		auto& internode = m_shootSkeleton.RefNode(internodeHandle);
 		auto& internodeData = internode.m_data;
 		internodeData.m_inhibitorSink = 0;
-		for (const auto& childHandle : internode.RefChildHandles()) {
+		for (const auto& childHandle : internode.PeekChildHandles()) {
 			auto& childNode = m_shootSkeleton.RefNode(childHandle);
 			float childNodeInhibitor = 0.f;
 			if (!childNode.m_data.m_buds.empty() && childNode.m_data.m_buds[0].m_type == BudType::Apical)
@@ -875,7 +875,7 @@ void TreeModel::CalculateLevel()
 		{
 			float maxBiomass = 0.0f;
 			NodeHandle maxChild = -1;
-			for (const auto& childHandle : node.RefChildHandles())
+			for (const auto& childHandle : node.PeekChildHandles())
 			{
 				auto& childNode = m_shootSkeleton.PeekNode(childHandle);
 				const auto childBiomass = childNode.m_data.m_descendantTotalBiomass + childNode.m_data.m_biomass;
@@ -885,7 +885,7 @@ void TreeModel::CalculateLevel()
 					maxChild = childHandle;
 				}
 			}
-			for (const auto& childHandle : node.RefChildHandles())
+			for (const auto& childHandle : node.PeekChildHandles())
 			{
 				auto& childNode = m_shootSkeleton.RefNode(childHandle);
 				if (childHandle == maxChild)
@@ -978,7 +978,7 @@ void TreeModel::CalculateThickness(const ShootGrowthController& shootGrowthContr
 		const auto& internodeData = internode.m_data;
 		auto& internodeInfo = internode.m_info;
 		float childThicknessCollection = 0.0f;
-		for (const auto& i : internode.RefChildHandles()) {
+		for (const auto& i : internode.PeekChildHandles()) {
 			const auto& childInternode = m_shootSkeleton.PeekNode(i);
 			childThicknessCollection += glm::pow(childInternode.m_info.m_thickness,
 				1.0f / shootGrowthController.m_thicknessAccumulationFactor);
@@ -1005,7 +1005,7 @@ void TreeModel::CalculateBiomass(const ShootGrowthController& shootGrowthControl
 		internodeData.m_biomass =
 			internodeInfo.m_thickness / shootGrowthController.m_endNodeThickness * internodeData.m_internodeLength /
 			shootGrowthController.m_internodeLength;
-		for (const auto& i : internode.RefChildHandles()) {
+		for (const auto& i : internode.PeekChildHandles()) {
 			const auto& childInternode = m_shootSkeleton.RefNode(i);
 			internodeData.m_descendantTotalBiomass +=
 				childInternode.m_data.m_descendantTotalBiomass +
@@ -1092,7 +1092,7 @@ bool TreeModel::PruneInternodes(const glm::mat4& globalTransform, ClimateModel& 
 			const auto parentHandle = internode.GetParentHandle();
 			if (parentHandle != -1) {
 				const auto& parent = m_shootSkeleton.PeekNode(parentHandle);
-				if (parent.RefChildHandles().size() > 1 && (
+				if (parent.PeekChildHandles().size() > 1 && (
 					shootGrowthController.m_lowBranchPruningThicknessFactor == 0.0f
 					|| internode.m_info.m_thickness / parent.m_info.m_thickness < shootGrowthController.m_lowBranchPruningThicknessFactor))
 				{

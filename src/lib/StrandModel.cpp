@@ -156,7 +156,7 @@ void StrandModel::InitializeProfiles(const StrandModelParameters& strandModelPar
 		auto& internode = m_strandModelSkeleton.RefNode(internodeHandle);
 		int maxChildSize = 0;
 		NodeHandle maxChildHandle = -1;
-		for (const auto& childHandle : internode.RefChildHandles())
+		for (const auto& childHandle : internode.PeekChildHandles())
 		{
 			auto& childInternode = m_strandModelSkeleton.RefNode(childHandle);
 			const auto childSize = static_cast<float>(childInternode.m_data.m_particleMap.size());
@@ -166,7 +166,7 @@ void StrandModel::InitializeProfiles(const StrandModelParameters& strandModelPar
 				maxChildHandle = childHandle;
 			}
 		}
-		for (const auto& childHandle : internode.RefChildHandles())
+		for (const auto& childHandle : internode.PeekChildHandles())
 		{
 			auto& childInternode = m_strandModelSkeleton.RefNode(childHandle);
 			if (childHandle == maxChildHandle) childInternode.m_data.m_split = false;
@@ -234,7 +234,7 @@ void StrandModel::CalculateProfile(const float maxRootDistance, const NodeHandle
 			auto& internode = m_strandModelSkeleton.RefNode(nodeHandle);
 			if (internode.m_data.m_profile.PeekParticles().size() > 1) {
 				PackTask(nodeHandle, strandModelParameters, !scheduling);
-				if (internode.RefChildHandles().empty()) CopyFrontToBackTask(nodeHandle);
+				if (internode.PeekChildHandles().empty()) CopyFrontToBackTask(nodeHandle);
 			}
 			internode.m_data.m_profile.CalculateBoundaries(true, strandModelParameters.m_boundaryPointDistance);
 			}
@@ -247,7 +247,7 @@ void StrandModel::CalculateProfile(const float maxRootDistance, const NodeHandle
 		auto& internode = m_strandModelSkeleton.RefNode(nodeHandle);
 		if (internode.m_data.m_profile.PeekParticles().size() > 1) {
 			PackTask(nodeHandle, strandModelParameters, !scheduling);
-			if (internode.RefChildHandles().empty()) CopyFrontToBackTask(nodeHandle);
+			if (internode.PeekChildHandles().empty()) CopyFrontToBackTask(nodeHandle);
 		}
 		internode.m_data.m_profile.CalculateBoundaries(true, strandModelParameters.m_boundaryPointDistance);
 	}
@@ -302,7 +302,7 @@ void StrandModel::MergeTask(float maxRootDistance, NodeHandle nodeHandle, const 
 	auto& internode = m_strandModelSkeleton.RefNode(nodeHandle);
 	auto& internodeData = internode.m_data;
 	internodeData.m_twistAngle = 0.0f;
-	const auto& childHandles = internode.RefChildHandles();
+	const auto& childHandles = internode.PeekChildHandles();
 	int maxChildSize = -1;
 	NodeHandle maxChildHandle = -1;
 	for (const auto& childHandle : childHandles) {

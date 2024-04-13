@@ -214,7 +214,7 @@ void TreeVisualizer::PeekNodeInspectionGui(
 	if (opened) {
 		ImGui::TreePush(std::to_string(nodeHandle).c_str());
 		const auto& internode = skeleton.PeekNode(nodeHandle);
-		const auto& internodeChildren = internode.RefChildHandles();
+		const auto& internodeChildren = internode.PeekChildHandles();
 		for (const auto& child : internodeChildren) {
 			PeekNodeInspectionGui(skeleton, child, hierarchyLevel + 1);
 		}
@@ -368,7 +368,7 @@ bool TreeVisualizer::DrawInternodeInspectionGui(
 	bool modified = deleted;
 	if (opened && !deleted) {
 		ImGui::TreePush(std::to_string(internodeHandle).c_str());
-		const auto& internodeChildren = treeSkeleton.RefNode(internodeHandle).RefChildHandles();
+		const auto& internodeChildren = treeSkeleton.RefNode(internodeHandle).PeekChildHandles();
 		for (const auto& child : internodeChildren) {
 			bool childDeleted = false;
 			DrawInternodeInspectionGui(treeModel, child, childDeleted, hierarchyLevel + 1);
@@ -795,11 +795,11 @@ TreeVisualizer::InspectInternode(
 	}
 	if (ImGui::TreeNodeEx("Flow info", ImGuiTreeNodeFlags_DefaultOpen)) {
 		const auto& flow = shootSkeleton.PeekFlow(internode.GetFlowHandle());
-		ImGui::Text("Child flow size: %d", flow.RefChildHandles().size());
-		ImGui::Text("Internode size: %d", flow.RefNodeHandles().size());
+		ImGui::Text("Child flow size: %d", flow.PeekChildHandles().size());
+		ImGui::Text("Internode size: %d", flow.PeekNodeHandles().size());
 		if (ImGui::TreeNode("Internodes")) {
 			int i = 0;
-			for (const auto& chainedInternodeHandle : flow.RefNodeHandles()) {
+			for (const auto& chainedInternodeHandle : flow.PeekNodeHandles()) {
 				ImGui::Text("No.%d: Handle: %d", i, chainedInternodeHandle);
 				i++;
 			}
@@ -887,11 +887,11 @@ TreeVisualizer::PeekInternode(const ShootSkeleton& shootSkeleton, NodeHandle int
 	}
 	if (ImGui::TreeNodeEx("Stem info", ImGuiTreeNodeFlags_DefaultOpen)) {
 		const auto& flow = shootSkeleton.PeekFlow(internode.GetFlowHandle());
-		ImGui::Text("Child stem size: %d", flow.RefChildHandles().size());
-		ImGui::Text("Internode size: %d", flow.RefNodeHandles().size());
+		ImGui::Text("Child stem size: %d", flow.PeekChildHandles().size());
+		ImGui::Text("Internode size: %d", flow.PeekNodeHandles().size());
 		if (ImGui::TreeNode("Internodes")) {
 			int i = 0;
-			for (const auto& chainedInternodeHandle : flow.RefNodeHandles()) {
+			for (const auto& chainedInternodeHandle : flow.PeekNodeHandles()) {
 				ImGui::Text("No.%d: Handle: %d", i, chainedInternodeHandle);
 				i++;
 			}

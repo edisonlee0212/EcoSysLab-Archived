@@ -2049,7 +2049,7 @@ void TreeStructor::SpaceColonization()
 				if (!internode.m_data.m_regrowth || internode.m_data.m_markerSize == 0) continue;
 				if (internode.m_info.m_rootDistance > skeleton.m_data.m_maxEndDistance) continue;
 				newBranchGrown = true;
-				const auto newInternodeHandle = skeleton.Extend(internodeHandle, !internode.RefChildHandles().empty());
+				const auto newInternodeHandle = skeleton.Extend(internodeHandle, !internode.PeekChildHandles().empty());
 				auto& oldInternode = skeleton.RefNode(internodeHandle);
 				auto& newInternode = skeleton.RefNode(newInternodeHandle);
 				newInternode.m_info.m_globalPosition = oldInternode.m_info.GetGlobalEndPosition();
@@ -2128,7 +2128,7 @@ void TreeStructor::CalculateSkeletonGraphs()
 		for (auto i = sortedNodeList.rbegin(); i != sortedNodeList.rend(); ++i) {
 			auto& node = skeleton.RefNode(*i);
 			auto& nodeData = node.m_data;
-			auto& childHandles = node.RefChildHandles();
+			auto& childHandles = node.PeekChildHandles();
 			if (childHandles.empty())
 			{
 				nodeData.m_draftThickness = m_reconstructionSettings.m_endNodeThickness;
@@ -2165,7 +2165,7 @@ void TreeStructor::CalculateSkeletonGraphs()
 			}
 			if (m_reconstructionSettings.m_limitParentThickness)
 			{
-				auto& childHandles = node.RefChildHandles();
+				auto& childHandles = node.PeekChildHandles();
 				float maxChildThickness = 0.0f;
 				for (const auto& childHandle : childHandles)
 				{
@@ -2261,7 +2261,7 @@ void TreeStructor::InitializeSkeletalGraph(const std::shared_ptr<Mesh>& pointMes
 					if (skeletalGraphSettings.m_fixedPointSize) thicknessFactor = skeletalGraphSettings.m_fixedPointSizeFactor;
 					auto scale = glm::vec3(skeletalGraphSettings.m_branchPointSize * thicknessFactor);
 					pointInfos[internodeIndex + prevInternodeSize].m_instanceColor = skeletalGraphSettings.m_branchPointColor;
-					if (internodeIndex == 0 || node.RefChildHandles().size() > 1)
+					if (internodeIndex == 0 || node.PeekChildHandles().size() > 1)
 					{
 						scale = glm::vec3(skeletalGraphSettings.m_junctionPointSize * thicknessFactor);
 						pointInfos[internodeIndex + prevInternodeSize].m_instanceColor = skeletalGraphSettings.m_junctionPointColor;

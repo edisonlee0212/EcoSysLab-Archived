@@ -35,6 +35,8 @@ void EcoSysLabLayer::OnCreate() {
 	ClassRegistry::RegisterPrivateComponent<LogGrader>("LogGrader");
 	ClassRegistry::RegisterPrivateComponent<SpatialPlantDistributionSimulator>("SpatialPlantDistributionSimulator");
 
+	ClassRegistry::RegisterAsset<ProceduralNoise2D>("ProceduralNoise2D", { ".noise2D" });
+	ClassRegistry::RegisterAsset<ProceduralNoise3D>("ProceduralNoise3D", { ".noise3D" });
 	ClassRegistry::RegisterAsset<BranchShape>("BranchShape", { ".bs" });
 	ClassRegistry::RegisterAsset<ForestPatch>("ForestPatch", { ".fp" });
 	ClassRegistry::RegisterAsset<TreeDescriptor>("TreeDescriptor", { ".tree" });
@@ -237,7 +239,7 @@ void EcoSysLabLayer::Visualization() {
 								treeModel.Step();
 								auto& skeleton = treeModel.RefShootSkeleton();
 								auto& pruningInternode = skeleton.RefNode(treeVisualizer.m_selectedInternodeHandle);
-								const auto childHandles = pruningInternode.RefChildHandles();
+								const auto childHandles = pruningInternode.PeekChildHandles();
 								for (const auto& childHandle : childHandles) {
 									treeModel.PruneInternode(childHandle);
 								}

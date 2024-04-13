@@ -270,7 +270,7 @@ void Tree::InitializeSkeletalGraph(NodeHandle baseNodeHandle,
 					if (m_treeVisualizer.m_skeletalGraphSettings.m_fixedPointSize) thicknessFactor = m_treeVisualizer.m_skeletalGraphSettings.m_fixedPointSizeFactor;
 					auto scale = glm::vec3(m_treeVisualizer.m_skeletalGraphSettings.m_branchPointSize * thicknessFactor);
 					pointParticleInfos[internodeIndex].m_instanceColor = m_treeVisualizer.m_skeletalGraphSettings.m_branchPointColor;
-					if (internodeIndex == 0 || node.RefChildHandles().size() > 1)
+					if (internodeIndex == 0 || node.PeekChildHandles().size() > 1)
 					{
 						scale = glm::vec3(m_treeVisualizer.m_skeletalGraphSettings.m_junctionPointSize * thicknessFactor);
 						pointParticleInfos[internodeIndex].m_instanceColor = m_treeVisualizer.m_skeletalGraphSettings.m_junctionPointColor;
@@ -331,7 +331,7 @@ void Tree::InitializeSkeletalGraph(NodeHandle baseNodeHandle,
 					if (m_treeVisualizer.m_skeletalGraphSettings.m_fixedPointSize) thicknessFactor = m_treeVisualizer.m_skeletalGraphSettings.m_fixedPointSizeFactor;
 					auto scale = glm::vec3(m_treeVisualizer.m_skeletalGraphSettings.m_branchPointSize * thicknessFactor);
 					pointParticleInfos[internodeIndex].m_instanceColor = m_treeVisualizer.m_skeletalGraphSettings.m_branchPointColor;
-					if (internodeIndex == 0 || node.RefChildHandles().size() > 1)
+					if (internodeIndex == 0 || node.PeekChildHandles().size() > 1)
 					{
 						scale = glm::vec3(m_treeVisualizer.m_skeletalGraphSettings.m_junctionPointSize * thicknessFactor);
 						pointParticleInfos[internodeIndex].m_instanceColor = m_treeVisualizer.m_skeletalGraphSettings.m_junctionPointColor;
@@ -790,7 +790,7 @@ void Tree::GenerateTrunkMeshes(const std::shared_ptr<Mesh>& trunkMesh, const Tre
 	{
 		const auto& node = m_treeModel.RefShootSkeleton().PeekNode(nodeHandle);
 		trunkHandles.insert(nodeHandle);
-		if (node.RefChildHandles().size() > 1)break;
+		if (node.PeekChildHandles().size() > 1)break;
 	}
 	{
 		std::vector<Vertex> vertices;
@@ -2038,8 +2038,8 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 			auto parentInternodeHandle = internode.GetParentHandle();
 			const auto flowHandle = internode.GetFlowHandle();
 			const auto& flow = skeleton.PeekFlow(flowHandle);
-			const auto& chainHandles = flow.RefNodeHandles();
-			const bool hasMultipleChildren = flow.RefChildHandles().size() > 1;
+			const auto& chainHandles = flow.PeekNodeHandles();
+			const bool hasMultipleChildren = flow.PeekChildHandles().size() > 1;
 			bool onlyChild = true;
 			const auto parentFlowHandle = flow.GetParentHandle();
 			float distanceToChainStart = 0;
@@ -2056,7 +2056,7 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 			if (parentFlowHandle != -1)
 			{
 				const auto& parentFlow = skeleton.PeekFlow(parentFlowHandle);
-				onlyChild = parentFlow.RefChildHandles().size() <= 1;
+				onlyChild = parentFlow.PeekChildHandles().size() <= 1;
 				compareRadius = parentFlow.m_info.m_endThickness;
 			}
 			int treePartType = 0;
@@ -2180,7 +2180,7 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 			{
 				const auto& baseNode = skeleton.PeekNode(treePart.m_nodeHandles.front());
 				const auto& flow = skeleton.PeekFlow(baseNode.GetFlowHandle());
-				const auto& chainHandles = flow.RefNodeHandles();
+				const auto& chainHandles = flow.PeekNodeHandles();
 				const auto centerInternodeHandle = chainHandles.back();
 				const auto& centerInternode = skeleton.PeekNode(centerInternodeHandle);
 				treePart.m_baseLine.m_startPosition = startInternode.m_info.m_globalPosition;

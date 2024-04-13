@@ -238,12 +238,12 @@ namespace EcoSysLab {
 			{
 				const auto& parentInternode = skeleton.PeekNode(parentInternodeHandle);
 				parentUp = parentInternode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
-				if (internode.IsApical() || parentInternode.RefChildHandles().size() == 1) needStitching = true;
+				if (internode.IsApical() || parentInternode.PeekChildHandles().size() == 1) needStitching = true;
 				if (!needStitching)
 				{
 					float maxChildThickness = -1;
 					NodeHandle maxChildHandle = -1;
-					for (const auto& childHandle : parentInternode.RefChildHandles()) {
+					for (const auto& childHandle : parentInternode.PeekChildHandles()) {
 						const auto& childInternode = skeleton.PeekNode(childHandle);
 						if (childInternode.IsApical()) break;
 						const float childThickness = childInternode.m_info.m_thickness;
@@ -282,8 +282,8 @@ namespace EcoSysLab {
 			if (settings.m_junctionColor) {
 #pragma region TreePart
 				const auto& flow = skeleton.PeekFlow(internode.GetFlowHandle());
-				const auto& chainHandles = flow.RefNodeHandles();
-				const bool hasMultipleChildren = flow.RefChildHandles().size() > 1;
+				const auto& chainHandles = flow.PeekNodeHandles();
+				const bool hasMultipleChildren = flow.PeekChildHandles().size() > 1;
 				bool onlyChild = true;
 				const auto parentFlowHandle = flow.GetParentHandle();
 				float distanceToChainStart = 0;
@@ -300,7 +300,7 @@ namespace EcoSysLab {
 				if (parentFlowHandle != -1)
 				{
 					const auto& parentFlow = skeleton.PeekFlow(parentFlowHandle);
-					onlyChild = parentFlow.RefChildHandles().size() <= 1;
+					onlyChild = parentFlow.PeekChildHandles().size() <= 1;
 					compareRadius = parentFlow.m_info.m_endThickness;
 				}
 				int treePartType = 0;
@@ -782,12 +782,12 @@ namespace EcoSysLab {
 			{
 				const auto& parentInternode = skeleton.PeekNode(parentInternodeHandle);
 				parentUp = parentInternode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
-				if (internode.IsApical() || parentInternode.RefChildHandles().size() == 1) needStitching = true;
+				if (internode.IsApical() || parentInternode.PeekChildHandles().size() == 1) needStitching = true;
 				if (!needStitching)
 				{
 					float maxChildThickness = -1;
 					NodeHandle maxChildHandle = -1;
-					for (const auto& childHandle : parentInternode.RefChildHandles()) {
+					for (const auto& childHandle : parentInternode.PeekChildHandles()) {
 						if (nodeHandles.find(childHandle) == nodeHandles.end()) continue;
 						const auto& childInternode = skeleton.PeekNode(childHandle);
 						if (childInternode.IsApical()) break;

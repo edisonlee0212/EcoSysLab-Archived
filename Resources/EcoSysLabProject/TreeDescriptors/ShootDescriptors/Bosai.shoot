@@ -1,9 +1,18 @@
 m_baseInternodeCount: 1
 m_baseNodeApicalAngleMeanVariance: [0, 0]
 m_growthRate: 0.25
-m_branchingAngleMeanVariance: [45, 3]
-m_rollAngleMeanVariance: [30, 3]
-m_apicalAngleMeanVariance: [10, 2.5]
+m_branchingAngleNoise:
+  m_assetHandle: 0
+  m_assetTypeName: ""
+m_rollAngleNoise:
+  m_assetHandle: 0
+  m_assetTypeName: ""
+m_apicalAngleNoise:
+  m_assetHandle: 5657507265067326366
+  m_assetTypeName: ProceduralNoise2D
+m_branchingAngleMeanVariance: [60, 3]
+m_rollAngleMeanVariance: [30, 0]
+m_apicalAngleMeanVariance: [0, 0]
 m_gravitropism: 0
 m_phototropism: 0.0250000004
 m_horizontalTropism: 0.200000003

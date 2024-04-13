@@ -84,7 +84,7 @@ void DatasetGenerator::GenerateTreeTrunkMesh(const std::string& treeParametersPa
 		{
 			const auto& node = skeleton.PeekNode(nodeHandle);
 			trunkHandles.insert(nodeHandle);
-			if (node.RefChildHandles().size() > 1) {
+			if (node.PeekChildHandles().size() > 1) {
 				trunkHeight = node.m_info.GetGlobalEndPosition().y;
 				topDiameter = node.m_info.m_thickness;
 				break;
