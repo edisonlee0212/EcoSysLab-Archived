@@ -614,6 +614,7 @@ bool TreeModel::ElongateInternode(float extendLength, NodeHandle internodeHandle
 		const auto newInternodeHandle = m_shootSkeleton.Extend(internodeHandle, false);
 		auto& oldInternode = m_shootSkeleton.RefNode(internodeHandle);
 		auto& newInternode = m_shootSkeleton.RefNode(newInternodeHandle);
+		
 		newInternode.m_data = {};
 		newInternode.m_data.m_indexOfParentBud = 0;
 		newInternode.m_data.m_lightIntensity = oldInternode.m_data.m_lightIntensity;
@@ -623,6 +624,7 @@ bool TreeModel::ElongateInternode(float extendLength, NodeHandle internodeHandle
 		newInternode.m_data.m_order = oldInternode.m_data.m_order;
 		newInternode.m_data.m_inhibitorSink = 0.0f;
 		newInternode.m_data.m_internodeLength = glm::clamp(extendLength, 0.0f, internodeLength);
+		newInternode.m_info.m_rootDistance = oldInternode.m_info.m_rootDistance + newInternode.m_data.m_internodeLength;
 		newInternode.m_info.m_thickness = shootGrowthController.m_endNodeThickness;
 		newInternode.m_info.m_globalRotation = glm::quatLookAt(desiredGlobalFront, desiredGlobalUp);
 		newInternode.m_data.m_desiredLocalRotation =
@@ -737,6 +739,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, const NodeHandle inter
 				newInternode.m_data.m_finishAge = 0.0f;
 				newInternode.m_data.m_order = oldInternode.m_data.m_order + 1;
 				newInternode.m_data.m_internodeLength = 0.0f;
+				newInternode.m_info.m_rootDistance = oldInternode.m_info.m_rootDistance;
 				newInternode.m_info.m_thickness = shootGrowthController.m_endNodeThickness;
 				newInternode.m_data.m_desiredLocalRotation =
 					glm::inverse(oldInternode.m_info.m_globalRotation) *

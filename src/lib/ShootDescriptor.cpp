@@ -181,8 +181,11 @@ void ShootDescriptor::Serialize(YAML::Emitter& out)
 	m_rollAngleNoise.Save("m_rollAngleNoise", out);
 	m_apicalAngleNoise.Save("m_apicalAngleNoise", out);
 	out << YAML::Key << "m_branchingAngleMeanVariance" << YAML::Value << m_branchingAngleMeanVariance;
+	out << YAML::Key << "m_branchingAngleFrequencyAmplitude" << YAML::Value << m_branchingAngleFrequencyAmplitude;
 	out << YAML::Key << "m_rollAngleMeanVariance" << YAML::Value << m_rollAngleMeanVariance;
+	out << YAML::Key << "m_rollAngleFrequencyAmplitude" << YAML::Value << m_rollAngleFrequencyAmplitude;
 	out << YAML::Key << "m_apicalAngleMeanVariance" << YAML::Value << m_apicalAngleMeanVariance;
+	out << YAML::Key << "m_apicalAngleFrequencyAmplitude" << YAML::Value << m_apicalAngleFrequencyAmplitude;
 	out << YAML::Key << "m_gravitropism" << YAML::Value << m_gravitropism;
 	out << YAML::Key << "m_phototropism" << YAML::Value << m_phototropism;
 	out << YAML::Key << "m_horizontalTropism" << YAML::Value << m_horizontalTropism;
@@ -246,7 +249,9 @@ void ShootDescriptor::Deserialize(const YAML::Node& in)
 	m_rollAngleNoise.Load("m_rollAngleNoise", in);
 	m_apicalAngleNoise.Load("m_apicalAngleNoise", in);
 	if (in["m_rollAngleMeanVariance"]) m_rollAngleMeanVariance = in["m_rollAngleMeanVariance"].as<glm::vec2>();
+	if (in["m_rollAngleFrequencyAmplitude"]) m_rollAngleFrequencyAmplitude = in["m_rollAngleFrequencyAmplitude"].as<glm::vec2>();
 	if (in["m_apicalAngleMeanVariance"]) m_apicalAngleMeanVariance = in["m_apicalAngleMeanVariance"].as<glm::vec2>();
+	if (in["m_apicalAngleFrequencyAmplitude"]) m_apicalAngleFrequencyAmplitude = in["m_apicalAngleFrequencyAmplitude"].as<glm::vec2>();
 	if (in["m_gravitropism"]) m_gravitropism = in["m_gravitropism"].as<float>();
 	if (in["m_phototropism"]) m_phototropism = in["m_phototropism"].as<float>();
 	if (in["m_horizontalTropism"]) m_horizontalTropism = in["m_horizontalTropism"].as<float>();
