@@ -1,7 +1,7 @@
 m_pipeline:
   m_maxNodeIndex: 4
   m_maxFlowIndex: 4
-  m_newVersion: 5
+  m_newVersion: 8
   m_min: [0, 0, 0]
   m_max: [1.17549435e-38, 1.17549435e-38, 1.17549435e-38]
   m_data:
@@ -26,9 +26,9 @@ m_pipeline:
           m_frequency: [1, 1]
           m_constantValue: 10
           m_offset: [0, 0]
-    - R: false
-      F: 1
-      P: 0
+    - R: true
+      F: -1
+      P: -1
       A: false
       I: 1
       IF:
@@ -40,14 +40,14 @@ m_pipeline:
       D:
         m_data:
           m_name: New node
-          m_operatorType: 2
-          m_valueType: 5
+          m_operatorType: 0
+          m_valueType: 0
           m_frequency: [1, 1]
           m_constantValue: 0
           m_offset: [0, 0]
-    - R: false
-      F: 2
-      P: 1
+    - R: true
+      F: -1
+      P: -1
       A: false
       I: 3
       IF:
@@ -59,14 +59,14 @@ m_pipeline:
       D:
         m_data:
           m_name: New node
-          m_operatorType: 4
-          m_valueType: 5
+          m_operatorType: 0
+          m_valueType: 0
           m_frequency: [1, 1]
           m_constantValue: 0
           m_offset: [0, 0]
-    - R: false
-      F: 3
-      P: 2
+    - R: true
+      F: -1
+      P: -1
       A: false
       I: 4
       IF:
@@ -78,10 +78,10 @@ m_pipeline:
       D:
         m_data:
           m_name: New node
-          m_operatorType: 1
+          m_operatorType: 0
           m_valueType: 0
           m_frequency: [1, 1]
-          m_constantValue: 20
+          m_constantValue: 0
           m_offset: [0, 0]
   m_flows:
     - R: false
@@ -92,27 +92,27 @@ m_pipeline:
         - 0
       D:
         {}
-    - R: false
-      P: 0
+    - R: true
+      P: -1
       A: false
       I: 1
       N:
-        - 1
+        []
       D:
         {}
-    - R: false
-      P: 1
+    - R: true
+      P: -1
       A: false
       I: 3
       N:
-        - 2
+        []
       D:
         {}
-    - R: false
-      P: 2
+    - R: true
+      P: -1
       A: false
       I: 4
       N:
-        - 3
+        []
       D:
         {}
