@@ -40,8 +40,8 @@ void StrandModel::InitializeProfiles(const StrandModelParameters& strandModelPar
 		auto& internode = m_strandModelSkeleton.RefNode(internodeHandle);
 		auto& profile = internode.m_data.m_profile;
 
-		std::vector<NodeHandle> parentNodeToRootChain;
-		NodeHandle walker = internode.GetParentHandle();
+		std::vector<SkeletonNodeHandle> parentNodeToRootChain;
+		SkeletonNodeHandle walker = internode.GetParentHandle();
 		while (walker >= 0)
 		{
 			parentNodeToRootChain.emplace_back(walker);
@@ -155,7 +155,7 @@ void StrandModel::InitializeProfiles(const StrandModelParameters& strandModelPar
 	{
 		auto& internode = m_strandModelSkeleton.RefNode(internodeHandle);
 		int maxChildSize = 0;
-		NodeHandle maxChildHandle = -1;
+		SkeletonNodeHandle maxChildHandle = -1;
 		for (const auto& childHandle : internode.PeekChildHandles())
 		{
 			auto& childInternode = m_strandModelSkeleton.RefNode(childHandle);
@@ -226,7 +226,7 @@ void StrandModel::CalculateProfiles(const StrandModelParameters& strandModelPara
 	m_strandModelSkeleton.m_data.m_profileCalculationTime = Times::Now() - time;
 }
 
-void StrandModel::CalculateProfile(const float maxRootDistance, const NodeHandle nodeHandle, const StrandModelParameters& strandModelParameters, bool scheduling)
+void StrandModel::CalculateProfile(const float maxRootDistance, const SkeletonNodeHandle nodeHandle, const StrandModelParameters& strandModelParameters, bool scheduling)
 {
 	if (scheduling) {
 		m_strandModelSkeleton.RefNode(nodeHandle).m_data.m_tasks.emplace_back(Jobs::AddTask([&, nodeHandle, scheduling](unsigned threadIndex) {
@@ -253,7 +253,7 @@ void StrandModel::CalculateProfile(const float maxRootDistance, const NodeHandle
 	}
 }
 
-void StrandModel::Wait(const NodeHandle nodeHandle)
+void StrandModel::Wait(const SkeletonNodeHandle nodeHandle)
 {
 	auto& internode = m_strandModelSkeleton.RefNode(nodeHandle);
 	if (internode.m_data.m_tasks.empty()) return;
@@ -264,7 +264,7 @@ void StrandModel::Wait(const NodeHandle nodeHandle)
 	internode.m_data.m_tasks.clear();
 }
 
-void StrandModel::PackTask(const NodeHandle nodeHandle, const StrandModelParameters& strandModelParameters, const bool parallel)
+void StrandModel::PackTask(const SkeletonNodeHandle nodeHandle, const StrandModelParameters& strandModelParameters, const bool parallel)
 {
 	auto& internode = m_strandModelSkeleton.RefNode(nodeHandle);
 	auto& internodeData = internode.m_data;
@@ -297,14 +297,14 @@ void StrandModel::PackTask(const NodeHandle nodeHandle, const StrandModelParamet
 	}
 }
 
-void StrandModel::MergeTask(float maxRootDistance, NodeHandle nodeHandle, const StrandModelParameters& strandModelParameters)
+void StrandModel::MergeTask(float maxRootDistance, SkeletonNodeHandle nodeHandle, const StrandModelParameters& strandModelParameters)
 {
 	auto& internode = m_strandModelSkeleton.RefNode(nodeHandle);
 	auto& internodeData = internode.m_data;
 	internodeData.m_twistAngle = 0.0f;
 	const auto& childHandles = internode.PeekChildHandles();
 	int maxChildSize = -1;
-	NodeHandle maxChildHandle = -1;
+	SkeletonNodeHandle maxChildHandle = -1;
 	for (const auto& childHandle : childHandles) {
 		Wait(childHandle);
 		auto& childInternode = m_strandModelSkeleton.RefNode(childHandle);
@@ -525,7 +525,7 @@ void StrandModel::MergeTask(float maxRootDistance, NodeHandle nodeHandle, const 
 	}
 }
 
-void StrandModel::CopyFrontToBackTask(const NodeHandle nodeHandle)
+void StrandModel::CopyFrontToBackTask(const SkeletonNodeHandle nodeHandle)
 {
 	auto& internode = m_strandModelSkeleton.RefNode(nodeHandle);
 	auto& internodeData = internode.m_data;
@@ -536,7 +536,7 @@ void StrandModel::CopyFrontToBackTask(const NodeHandle nodeHandle)
 }
 
 void StrandModel::ApplyProfile(const StrandModelParameters& strandModelParameters,
-	const NodeHandle nodeHandle)
+	const SkeletonNodeHandle nodeHandle)
 {
 	auto& node = m_strandModelSkeleton.RefNode(nodeHandle);
 	const auto currentFront = node.m_info.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);

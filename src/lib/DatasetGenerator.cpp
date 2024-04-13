@@ -79,7 +79,7 @@ void DatasetGenerator::GenerateTreeTrunkMesh(const std::string& treeParametersPa
 	const auto& skeleton = tree->m_treeModel.RefShootSkeleton();
 	const auto& sortedInternodeList = skeleton.PeekSortedNodeList();
 	if (sortedInternodeList.size() > 1) {
-		std::unordered_set<NodeHandle> trunkHandles{};
+		std::unordered_set<SkeletonNodeHandle> trunkHandles{};
 		for (const auto& nodeHandle : sortedInternodeList)
 		{
 			const auto& node = skeleton.PeekNode(nodeHandle);

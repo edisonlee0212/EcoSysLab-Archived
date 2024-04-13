@@ -17,7 +17,7 @@ namespace EcoSysLab
 	struct InternodeVoxelRegistration
 	{
 		glm::vec3 m_position = glm::vec3(0.0f);
-		NodeHandle m_nodeHandle = -1;
+		SkeletonNodeHandle m_nodeHandle = -1;
 		unsigned m_treeModelIndex = 0;
 		float m_thickness = 0.0f;
 	};

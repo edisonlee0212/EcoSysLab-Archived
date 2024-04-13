@@ -112,14 +112,14 @@ namespace EcoSysLab {
 		if (in["m_nodes"]) {
 			skeleton.m_nodes.clear();
 			const auto& inNodes = in["m_nodes"];
-			NodeHandle nodeHandle = 0;
+			SkeletonNodeHandle nodeHandle = 0;
 			for (const auto& inNode : inNodes) {
 				skeleton.m_nodes.emplace_back();
 				auto& node = skeleton.m_nodes.back();
 				node.m_handle = nodeHandle;
 				if (inNode["R"]) node.m_recycled = inNode["R"].as<bool>();
-				if (inNode["F"]) node.m_flowHandle = inNode["F"].as<FlowHandle>();
-				if (inNode["P"]) node.m_parentHandle = inNode["P"].as<NodeHandle>();
+				if (inNode["F"]) node.m_flowHandle = inNode["F"].as<SkeletonFlowHandle>();
+				if (inNode["P"]) node.m_parentHandle = inNode["P"].as<SkeletonNodeHandle>();
 				if (inNode["I"]) node.m_index = inNode["I"].as<int>();
 				if (inNode["A"]) node.m_apical = inNode["A"].as<bool>();
 				if (inNode["IF"])
@@ -142,13 +142,13 @@ namespace EcoSysLab {
 		if (in["m_flows"]) {
 			skeleton.m_flows.clear();
 			const auto& inFlows = in["m_flows"];
-			FlowHandle flowHandle = 0;
+			SkeletonFlowHandle flowHandle = 0;
 			for (const auto& inFlow : inFlows) {
 				skeleton.m_flows.emplace_back();
 				auto& flow = skeleton.m_flows.back();
 				flow.m_handle = flowHandle;
 				if (inFlow["R"]) flow.m_recycled = inFlow["R"].as<bool>();
-				if (inFlow["P"]) flow.m_parentHandle = inFlow["P"].as<FlowHandle>();
+				if (inFlow["P"]) flow.m_parentHandle = inFlow["P"].as<SkeletonFlowHandle>();
 				if (inFlow["I"]) flow.m_index = inFlow["I"].as<int>();
 				if (inFlow["A"]) flow.m_apical = inFlow["A"].as<bool>();
 				if (inFlow["N"])
@@ -156,7 +156,7 @@ namespace EcoSysLab {
 					const auto& inFlowNodes= inFlow["N"];
 					for (const auto& inFlowNode : inFlowNodes)
 					{
-						flow.m_nodes.emplace_back(inFlowNode.as<NodeHandle>());
+						flow.m_nodes.emplace_back(inFlowNode.as<SkeletonNodeHandle>());
 					}
 				}
 				if (inFlow["D"])

@@ -38,7 +38,7 @@ namespace EcoSysLab {
 		void ExportTrunkOBJ(const std::filesystem::path& path, const TreeMeshGeneratorSettings& meshGeneratorSettings);
 		bool TryGrow(float deltaTime, bool pruning, float overrideGrowthRate);
 
-		bool TryGrowSubTree(float deltaTime, NodeHandle baseInternodeHandle, bool pruning, float overrideGrowthRate);
+		bool TryGrowSubTree(float deltaTime, SkeletonNodeHandle baseInternodeHandle, bool pruning, float overrideGrowthRate);
 		[[nodiscard]] bool ParseBinvox(const std::filesystem::path& filePath, VoxelGrid<TreeOccupancyGridBasicData>& voxelGrid, float voxelSize = 1.0f);
 
 		void Reset();
@@ -67,7 +67,7 @@ namespace EcoSysLab {
 		bool m_enableHistory = false;
 		int m_historyIteration = 30;
 		void ClearSkeletalGraph() const;
-		void InitializeSkeletalGraph(NodeHandle baseNodeHandle, const std::shared_ptr<Mesh> &pointMeshSample, const std::shared_ptr<Mesh>& lineMeshSample) const;
+		void InitializeSkeletalGraph(SkeletonNodeHandle baseNodeHandle, const std::shared_ptr<Mesh> &pointMeshSample, const std::shared_ptr<Mesh>& lineMeshSample) const;
 
 		TreeModel m_treeModel{};
 		StrandModel m_strandModel{};

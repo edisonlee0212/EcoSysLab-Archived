@@ -29,7 +29,7 @@ namespace EcoSysLab {
 		PointHandle m_handle = -1;
 		TreePartHandle m_treePartHandle = -1;
 		BranchHandle m_branchHandle = -1;
-		NodeHandle m_nodeHandle = -1;
+		SkeletonNodeHandle m_nodeHandle = -1;
 		int m_skeletonIndex = -1;
 	};
 	struct PredictedBranch {
@@ -69,7 +69,7 @@ namespace EcoSysLab {
 		std::vector<BranchHandle> m_childHandles;
 		BranchHandle m_largestChildHandle = -1;
 		int m_skeletonIndex = -1;
-		std::vector<NodeHandle> m_chainNodeHandles;
+		std::vector<SkeletonNodeHandle> m_chainNodeHandles;
 
 		float m_bestDistance = FLT_MAX;
 
@@ -203,7 +203,7 @@ namespace EcoSysLab {
 
 		void CalculateNodeTransforms(ReconstructionSkeleton& skeleton);
 
-		void BuildConnectionBranch(BranchHandle processingBranchHandle, NodeHandle& prevNodeHandle);
+		void BuildConnectionBranch(BranchHandle processingBranchHandle, SkeletonNodeHandle& prevNodeHandle);
 
 		void Unlink(BranchHandle childHandle, BranchHandle parentHandle);
 		void Link(BranchHandle childHandle, BranchHandle parentHandle);

@@ -490,7 +490,7 @@ void EcoSysLabLayer::Visualization() {
 								treeModel.Step();
 								auto& skeleton = treeModel.RefShootSkeleton();
 								if (treeVisualizer.ScreenCurvePruning(
-									[&](const NodeHandle nodeHandle) { treeModel.PruneInternode(nodeHandle); }, mousePositions, skeleton, globalTransform)) {
+									[&](const SkeletonNodeHandle nodeHandle) { treeModel.PruneInternode(nodeHandle); }, mousePositions, skeleton, globalTransform)) {
 									skeleton.SortLists();
 									treeVisualizer.m_checkpointIteration = treeModel.CurrentIteration();
 									treeVisualizer.m_needUpdate = true;

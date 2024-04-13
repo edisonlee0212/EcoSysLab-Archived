@@ -18,11 +18,11 @@ namespace EcoSysLab {
 
 	class TreeModel {
 #pragma region Tree Growth
-		ShootFlux CollectShootFlux(const std::vector<NodeHandle>& sortedInternodeList);
+		ShootFlux CollectShootFlux(const std::vector<SkeletonNodeHandle>& sortedInternodeList);
 
-		void AdjustGrowthRate(const std::vector<NodeHandle>& sortedInternodeList, float factor);
+		void AdjustGrowthRate(const std::vector<SkeletonNodeHandle>& sortedInternodeList, float factor);
 
-		float CalculateDesiredGrowthRate(const std::vector<NodeHandle>& sortedInternodeList, const ShootGrowthController& shootGrowthController);
+		float CalculateDesiredGrowthRate(const std::vector<SkeletonNodeHandle>& sortedInternodeList, const ShootGrowthController& shootGrowthController);
 
 		bool PruneInternodes(const glm::mat4& globalTransform, ClimateModel& climateModel, const ShootGrowthController& shootGrowthController);
 
@@ -32,12 +32,12 @@ namespace EcoSysLab {
 
 		void CalculateLevel();
 
-		bool GrowInternode(ClimateModel& climateModel, NodeHandle internodeHandle, const ShootGrowthController& shootGrowthController);
+		bool GrowInternode(ClimateModel& climateModel, SkeletonNodeHandle internodeHandle, const ShootGrowthController& shootGrowthController);
 
-		bool GrowReproductiveModules(ClimateModel& climateModel, NodeHandle internodeHandle, const ShootGrowthController& shootGrowthController);
+		bool GrowReproductiveModules(ClimateModel& climateModel, SkeletonNodeHandle internodeHandle, const ShootGrowthController& shootGrowthController);
 
 
-		bool ElongateInternode(float extendLength, NodeHandle internodeHandle,
+		bool ElongateInternode(float extendLength, SkeletonNodeHandle internodeHandle,
 			const ShootGrowthController& shootGrowthController, float& collectedInhibitor);
 
 		void ShootGrowthPostProcess(const ShootGrowthController& shootGrowthController);
@@ -70,8 +70,8 @@ namespace EcoSysLab {
 	public:
 		void Initialize(const ShootGrowthController& shootGrowthController);
 
-		float GetSubTreeMaxAge(NodeHandle baseInternodeHandle) const;
-		bool Reduce(const ShootGrowthController& shootGrowthController, NodeHandle baseInternodeHandle, float targetAge);
+		float GetSubTreeMaxAge(SkeletonNodeHandle baseInternodeHandle) const;
+		bool Reduce(const ShootGrowthController& shootGrowthController, SkeletonNodeHandle baseInternodeHandle, float targetAge);
 
 		void CalculateTransform(const ShootGrowthController& shootGrowthController, bool sagging);
 
@@ -82,7 +82,7 @@ namespace EcoSysLab {
 		void RegisterVoxel(const glm::mat4& globalTransform, ClimateModel& climateModel, const ShootGrowthController& shootGrowthController);
 		TreeOccupancyGrid m_treeOccupancyGrid{};
 
-		void PruneInternode(NodeHandle internodeHandle);
+		void PruneInternode(SkeletonNodeHandle internodeHandle);
 
 		void CalculateShootFlux(const glm::mat4& globalTransform, ClimateModel& climateModel, const ShootGrowthController& shootGrowthController);
 		
@@ -133,7 +133,7 @@ namespace EcoSysLab {
 		 * @param overrideGrowthRate If positive (clamped to below 1), the growth rate will be overwritten instead of calculating by available resources.
 		 * @return Whether the growth caused a structural change during the growth.
 		 */
-		bool Grow(float deltaTime, NodeHandle baseInternodeHandle, const glm::mat4& globalTransform, ClimateModel& climateModel,
+		bool Grow(float deltaTime, SkeletonNodeHandle baseInternodeHandle, const glm::mat4& globalTransform, ClimateModel& climateModel,
 			const ShootGrowthController& shootGrowthController, bool pruning = true, float overrideGrowthRate = -1);
 
 		int m_historyLimit = -1;

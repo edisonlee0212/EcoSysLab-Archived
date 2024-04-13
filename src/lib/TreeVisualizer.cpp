@@ -9,7 +9,7 @@
 #include "ProfileConstraints.hpp"
 using namespace EcoSysLab;
 
-bool TreeVisualizer::ScreenCurvePruning(const std::function<void(NodeHandle)>& handler, std::vector<glm::vec2>& mousePositions,
+bool TreeVisualizer::ScreenCurvePruning(const std::function<void(SkeletonNodeHandle)>& handler, std::vector<glm::vec2>& mousePositions,
 	ShootSkeleton& skeleton, const GlobalTransform& globalTransform) {
 	auto editorLayer = Application::GetLayer<EditorLayer>();
 	auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
@@ -97,7 +97,7 @@ bool TreeVisualizer::RayCastSelection(const std::shared_ptr<Camera>& cameraCompo
 	const auto editorLayer = Application::GetLayer<EditorLayer>();
 	bool changed = false;
 #pragma region Ray selection
-	NodeHandle currentFocusingNodeHandle = -1;
+	SkeletonNodeHandle currentFocusingNodeHandle = -1;
 	std::mutex writeMutex;
 	float minDistance = FLT_MAX;
 	GlobalTransform cameraLtw;
@@ -112,7 +112,7 @@ bool TreeVisualizer::RayCastSelection(const std::shared_ptr<Camera>& cameraCompo
 	std::vector<std::shared_future<void>> results;
 	Jobs::ParallelFor(sortedNodeList.size(), [&](unsigned i) {
 		const auto nodeHandle = sortedNodeList[i];
-		NodeHandle walker = nodeHandle;
+		SkeletonNodeHandle walker = nodeHandle;
 		bool subTree = false;
 		while (walker != -1)
 		{
@@ -195,7 +195,7 @@ bool TreeVisualizer::RayCastSelection(const std::shared_ptr<Camera>& cameraCompo
 
 void TreeVisualizer::PeekNodeInspectionGui(
 	const ShootSkeleton& skeleton,
-	NodeHandle nodeHandle,
+	SkeletonNodeHandle nodeHandle,
 	const unsigned& hierarchyLevel) {
 	const int index = m_selectedInternodeHierarchyList.size() - hierarchyLevel - 1;
 	if (!m_selectedInternodeHierarchyList.empty() && index >= 0 &&
@@ -223,7 +223,7 @@ void TreeVisualizer::PeekNodeInspectionGui(
 }
 
 
-void TreeVisualizer::SetSelectedNode(const ShootSkeleton& skeleton, const NodeHandle nodeHandle) {
+void TreeVisualizer::SetSelectedNode(const ShootSkeleton& skeleton, const SkeletonNodeHandle nodeHandle) {
 	if (nodeHandle != m_selectedInternodeHandle) {
 		m_selectedInternodeHierarchyList.clear();
 		if (nodeHandle < 0) {
@@ -241,7 +241,7 @@ void TreeVisualizer::SetSelectedNode(const ShootSkeleton& skeleton, const NodeHa
 	}
 }
 
-void TreeVisualizer::SyncMatrices(const ShootSkeleton& skeleton, const std::shared_ptr<ParticleInfoList>& particleInfoList, NodeHandle selectedNodeHandle) {
+void TreeVisualizer::SyncMatrices(const ShootSkeleton& skeleton, const std::shared_ptr<ParticleInfoList>& particleInfoList, SkeletonNodeHandle selectedNodeHandle) {
 	if (m_randomColors.empty()) {
 		for (int i = 0; i < 1000; i++) {
 			m_randomColors.emplace_back(glm::abs(glm::ballRand(1.0f)), 1.0f);
@@ -255,7 +255,7 @@ void TreeVisualizer::SyncMatrices(const ShootSkeleton& skeleton, const std::shar
 		const auto nodeHandle = sortedNodeList[i];
 		const auto& node = skeleton.PeekNode(nodeHandle);
 		bool subTree = false;
-		NodeHandle walker = nodeHandle;
+		SkeletonNodeHandle walker = nodeHandle;
 		while (walker != -1)
 		{
 			if (walker == m_selectedInternodeHandle)
@@ -339,7 +339,7 @@ void TreeVisualizer::SyncMatrices(const ShootSkeleton& skeleton, const std::shar
 
 bool TreeVisualizer::DrawInternodeInspectionGui(
 	TreeModel& treeModel,
-	NodeHandle internodeHandle,
+	SkeletonNodeHandle internodeHandle,
 	bool& deleted,
 	const unsigned& hierarchyLevel) {
 	auto& treeSkeleton = treeModel.RefShootSkeleton();
@@ -561,9 +561,9 @@ void TreeVisualizer::Visualize(StrandModel& strandModel)
 					{
 						if (ImGui::Button("Copy from root"))
 						{
-							std::vector<NodeHandle> parentNodeToRootChain;
+							std::vector<SkeletonNodeHandle> parentNodeToRootChain;
 							parentNodeToRootChain.emplace_back(m_selectedInternodeHandle);
-							NodeHandle walker = node.GetParentHandle();
+							SkeletonNodeHandle walker = node.GetParentHandle();
 							while (walker != -1)
 							{
 								parentNodeToRootChain.emplace_back(walker);
@@ -699,7 +699,7 @@ void TreeVisualizer::Visualize(StrandModel& strandModel)
 bool
 TreeVisualizer::InspectInternode(
 	ShootSkeleton& shootSkeleton,
-	NodeHandle internodeHandle) {
+	SkeletonNodeHandle internodeHandle) {
 	bool changed = false;
 
 	const auto& internode = shootSkeleton.RefNode(internodeHandle);
@@ -811,7 +811,7 @@ TreeVisualizer::InspectInternode(
 }
 
 void
-TreeVisualizer::PeekInternode(const ShootSkeleton& shootSkeleton, NodeHandle internodeHandle) const {
+TreeVisualizer::PeekInternode(const ShootSkeleton& shootSkeleton, SkeletonNodeHandle internodeHandle) const {
 	const auto& internode = shootSkeleton.PeekNode(internodeHandle);
 	if (ImGui::TreeNode("Internode info")) {
 		ImGui::Checkbox("Is max child", (bool*)&internode.m_data.m_maxChild);

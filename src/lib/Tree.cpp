@@ -173,7 +173,7 @@ void Tree::ClearSkeletalGraph() const
 
 }
 
-void Tree::InitializeSkeletalGraph(NodeHandle baseNodeHandle,
+void Tree::InitializeSkeletalGraph(SkeletonNodeHandle baseNodeHandle,
 	const std::shared_ptr<Mesh>& pointMeshSample,
 	const std::shared_ptr<Mesh>& lineMeshSample) const
 {
@@ -227,7 +227,7 @@ void Tree::InitializeSkeletalGraph(NodeHandle baseNodeHandle,
 			{
 				const auto& sortedInternodeList = m_strandModel.m_strandModelSkeleton.PeekSortedNodeList();
 				const auto internodeHandle = sortedInternodeList[internodeIndex];
-				NodeHandle walker = internodeHandle;
+				SkeletonNodeHandle walker = internodeHandle;
 				bool subTree = false;
 				const auto& skeleton = m_strandModel.m_strandModelSkeleton;
 				const auto& node = skeleton.PeekNode(internodeHandle);
@@ -288,7 +288,7 @@ void Tree::InitializeSkeletalGraph(NodeHandle baseNodeHandle,
 			else {
 				const auto& sortedInternodeList = m_treeModel.PeekShootSkeleton().PeekSortedNodeList();
 				const auto internodeHandle = sortedInternodeList[internodeIndex];
-				NodeHandle walker = internodeHandle;
+				SkeletonNodeHandle walker = internodeHandle;
 				bool subTree = false;
 				const auto& skeleton = m_treeModel.PeekShootSkeleton();
 				const auto& node = skeleton.PeekNode(internodeHandle);
@@ -389,7 +389,7 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 					changed = ImGui::DragFloat("Sagging max", &shootDescriptor->m_saggingFactorThicknessReductionMax.z, 0.001f, 0.0f, 1.0f, "%.5f") || changed;
 					if (changed)
 					{
-						m_shootGrowthController.m_sagging = [=](const Node<InternodeGrowthData>& internode)
+						m_shootGrowthController.m_sagging = [=](const SkeletonNode<InternodeGrowthData>& internode)
 							{
 								const auto newSagging = glm::min(
 									shootDescriptor->m_saggingFactorThicknessReductionMax.z,
@@ -402,7 +402,7 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 								return newSagging;
 							};
 						m_treeModel.CalculateTransform(m_shootGrowthController, true);
-						m_shootGrowthController.m_sagging = [=](const Node<InternodeGrowthData>& internode)
+						m_shootGrowthController.m_sagging = [=](const SkeletonNode<InternodeGrowthData>& internode)
 							{
 								const auto& shootGrowthParameters = treeDescriptor->m_shootDescriptor;
 								const auto newSagging = glm::min(
@@ -785,7 +785,7 @@ std::shared_ptr<Strands> Tree::GenerateStrands() const
 void Tree::GenerateTrunkMeshes(const std::shared_ptr<Mesh>& trunkMesh, const TreeMeshGeneratorSettings& meshGeneratorSettings)
 {
 	const auto& sortedInternodeList = m_treeModel.RefShootSkeleton().PeekSortedNodeList();
-	std::unordered_set<NodeHandle> trunkHandles{};
+	std::unordered_set<SkeletonNodeHandle> trunkHandles{};
 	for (const auto& nodeHandle : sortedInternodeList)
 	{
 		const auto& node = m_treeModel.RefShootSkeleton().PeekNode(nodeHandle);
@@ -1548,7 +1548,7 @@ bool Tree::TryGrow(float deltaTime, bool pruning, float overrideGrowthRate)
 	return grown;
 }
 
-bool Tree::TryGrowSubTree(const float deltaTime, const NodeHandle baseInternodeHandle, const bool pruning, const float overrideGrowthRate) {
+bool Tree::TryGrowSubTree(const float deltaTime, const SkeletonNodeHandle baseInternodeHandle, const bool pruning, const float overrideGrowthRate) {
 	const auto scene = GetScene();
 	const auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
 	const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
@@ -1736,7 +1736,7 @@ void Tree::Deserialize(const YAML::Node& in)
 						StrandModelProfileSerializer<CellParticlePhysicsData>::Deserialize(inStrandGroup, nodeData.m_profile,
 							[&](const YAML::Node& segmentIn, CellParticlePhysicsData& particleData)
 							{
-								if (segmentIn["CN"]) particleData.m_correspondingChildNodeHandle = segmentIn["CN"].as<NodeHandle>();
+								if (segmentIn["CN"]) particleData.m_correspondingChildNodeHandle = segmentIn["CN"].as<SkeletonNodeHandle>();
 								if (segmentIn["H"]) particleData.m_strandHandle = segmentIn["H"].as<StrandHandle>();
 								if (segmentIn["S"]) particleData.m_strandSegmentHandle = segmentIn["S"].as<StrandSegmentHandle>();
 								if (segmentIn["M"]) particleData.m_mainChild = segmentIn["M"].as<bool>();
@@ -1755,7 +1755,7 @@ void Tree::Deserialize(const YAML::Node& in)
 						StrandGroupSerializer<StrandModelStrandGroupData, StrandModelStrandData, StrandModelStrandSegmentData>::Deserialize(inStrandGroup, m_strandModel.m_strandModelSkeleton.m_data.m_strandGroup,
 							[&](const YAML::Node& segmentIn, StrandModelStrandSegmentData& segmentData)
 							{
-								if (segmentIn["H"]) segmentData.m_nodeHandle = segmentIn["H"].as<NodeHandle>();
+								if (segmentIn["H"]) segmentData.m_nodeHandle = segmentIn["H"].as<SkeletonNodeHandle>();
 								if (segmentIn["F"]) segmentData.m_profileParticleHandle = segmentIn["F"].as<ParticleHandle>();
 							},
 							[&](const YAML::Node& strandIn, StrandModelStrandData& strandData) {},
@@ -2018,7 +2018,7 @@ struct TreePart {
 	bool m_isJunction = false;
 	JunctionLine m_baseLine;
 	std::vector<JunctionLine> m_childrenLines;
-	std::vector<NodeHandle> m_nodeHandles;
+	std::vector<SkeletonNodeHandle> m_nodeHandles;
 	std::vector<bool> m_isEnd;
 	std::vector<int> m_lineIndex;
 };
@@ -2029,7 +2029,7 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 		const auto& skeleton = m_treeModel.RefShootSkeleton();
 		const auto& sortedInternodeList = skeleton.PeekSortedNodeList();
 		std::vector<TreePart> treeParts{};
-		std::unordered_map<NodeHandle, TreePartInfo> treePartInfos{};
+		std::unordered_map<SkeletonNodeHandle, TreePartInfo> treePartInfos{};
 		int nextLineIndex = 0;
 		for (int internodeHandle : sortedInternodeList)
 		{
@@ -2306,7 +2306,7 @@ bool Tree::ExportIOTree(const std::filesystem::path& path) const
 	rootNodeData.pos = rootNode.m_info.m_globalPosition;
 
 	auto rootId = tree.addRoot(rootNodeData);
-	std::unordered_map<NodeHandle, size_t> nodeMap;
+	std::unordered_map<SkeletonNodeHandle, size_t> nodeMap;
 	nodeMap[0] = rootId;
 	for (const auto& nodeHandle : sortedInternodeList)
 	{
@@ -2378,7 +2378,7 @@ void Tree::PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescrip
 		}
 
 		shootDescriptor->PrepareController(m_shootGrowthController);
-		m_shootGrowthController.m_leafDamage = [=](const Node<InternodeGrowthData>& internode)
+		m_shootGrowthController.m_leafDamage = [=](const SkeletonNode<InternodeGrowthData>& internode)
 			{
 				const auto& internodeData = internode.m_data;
 				float leafDamage = 0.0f;

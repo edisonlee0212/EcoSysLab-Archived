@@ -23,7 +23,7 @@ bool OperatorTypeSelection(ProceduralNoiseOperatorType& target, const std::strin
 	}
 	return false;
 }
-bool ProceduralNoise2D::OnInspect(const NodeHandle nodeHandle)
+bool ProceduralNoise2D::OnInspect(const SkeletonNodeHandle nodeHandle)
 {
 	bool changed = false;
 	auto& node = m_pipeline.RefNode(nodeHandle);
@@ -33,7 +33,7 @@ bool ProceduralNoise2D::OnInspect(const NodeHandle nodeHandle)
 	{
 		if (nodeHandle != 0 && ImGui::Button(("Remove" + tag).c_str()))
 		{
-			m_pipeline.RecycleNode(nodeHandle, [&](FlowHandle) {}, [&](NodeHandle) {});
+			m_pipeline.RecycleNode(nodeHandle, [&](SkeletonFlowHandle) {}, [&](SkeletonNodeHandle) {});
 			ImGui::TreePop();
 			return true;
 		}
@@ -90,7 +90,7 @@ bool ProceduralNoise2D::OnInspect(const NodeHandle nodeHandle)
 	return changed;
 }
 
-bool ProceduralNoise3D::OnInspect(const NodeHandle nodeHandle)
+bool ProceduralNoise3D::OnInspect(const SkeletonNodeHandle nodeHandle)
 {
 	bool changed = false;
 	auto& node = m_pipeline.RefNode(nodeHandle);
@@ -100,7 +100,7 @@ bool ProceduralNoise3D::OnInspect(const NodeHandle nodeHandle)
 	{
 		if (nodeHandle != 0 && ImGui::Button(("Remove" + tag).c_str()))
 		{
-			m_pipeline.RecycleNode(nodeHandle, [&](FlowHandle) {}, [&](NodeHandle) {});
+			m_pipeline.RecycleNode(nodeHandle, [&](SkeletonFlowHandle) {}, [&](SkeletonNodeHandle) {});
 			ImGui::TreePop();
 			return true;
 		}
@@ -158,7 +158,7 @@ bool ProceduralNoise3D::OnInspect(const NodeHandle nodeHandle)
 	return changed;
 }
 
-float ProceduralNoise2D::Process(const NodeHandle nodeHandle, const glm::vec2& samplePoint, float value)
+float ProceduralNoise2D::Process(const SkeletonNodeHandle nodeHandle, const glm::vec2& samplePoint, float value)
 {
 	const auto& node = m_pipeline.RefNode(nodeHandle);
 	const auto& childHandles = node.PeekChildHandles();
@@ -175,7 +175,7 @@ float ProceduralNoise2D::Process(const NodeHandle nodeHandle, const glm::vec2& s
 	return value;
 }
 
-float ProceduralNoise3D::Process(const NodeHandle nodeHandle, const glm::vec3& samplePoint, float value)
+float ProceduralNoise3D::Process(const SkeletonNodeHandle nodeHandle, const glm::vec3& samplePoint, float value)
 {
 	const auto& node = m_pipeline.RefNode(nodeHandle);
 	const auto& childHandles = node.PeekChildHandles();
@@ -196,8 +196,8 @@ void ProceduralNoise2D::Serialize(YAML::Emitter& out)
 {
 	out << YAML::Key << "m_pipeline" << YAML::Value << YAML::BeginMap;
 	{
-		SkeletonSerializer<ProceduralNoiseSkeletonData, ProceduralNoiseFlowData, ProceduralNoiseNodeData<glm::vec2>>::Serialize(out, m_pipeline,
-			[&](YAML::Emitter& nodeOut, const ProceduralNoiseNodeData<glm::vec2>& nodeData)
+		SkeletonSerializer<ProceduralNoiseSkeletonData, ProceduralNoiseFlowData, ProceduralNoiseStage<glm::vec2>>::Serialize(out, m_pipeline,
+			[&](YAML::Emitter& nodeOut, const ProceduralNoiseStage<glm::vec2>& nodeData)
 			{
 				nodeData.Save("m_data", nodeOut);
 			},
@@ -212,8 +212,8 @@ void ProceduralNoise2D::Deserialize(const YAML::Node& in)
 	if (in["m_pipeline"])
 	{
 		const auto& inPipeline = in["m_pipeline"];
-		SkeletonSerializer<ProceduralNoiseSkeletonData, ProceduralNoiseFlowData, ProceduralNoiseNodeData<glm::vec2>>::Deserialize(inPipeline, m_pipeline,
-			[&](const YAML::Node& nodeIn, ProceduralNoiseNodeData<glm::vec2>& nodeData)
+		SkeletonSerializer<ProceduralNoiseSkeletonData, ProceduralNoiseFlowData, ProceduralNoiseStage<glm::vec2>>::Deserialize(inPipeline, m_pipeline,
+			[&](const YAML::Node& nodeIn, ProceduralNoiseStage<glm::vec2>& nodeData)
 			{
 				nodeData.Load("m_data", nodeIn);
 			},
@@ -269,8 +269,8 @@ void ProceduralNoise3D::Serialize(YAML::Emitter& out)
 {
 	out << YAML::Key << "m_pipeline" << YAML::Value << YAML::BeginMap;
 	{
-		SkeletonSerializer<ProceduralNoiseSkeletonData, ProceduralNoiseFlowData, ProceduralNoiseNodeData<glm::vec3>>::Serialize(out, m_pipeline,
-			[&](YAML::Emitter& nodeOut, const ProceduralNoiseNodeData<glm::vec3>& nodeData)
+		SkeletonSerializer<ProceduralNoiseSkeletonData, ProceduralNoiseFlowData, ProceduralNoiseStage<glm::vec3>>::Serialize(out, m_pipeline,
+			[&](YAML::Emitter& nodeOut, const ProceduralNoiseStage<glm::vec3>& nodeData)
 			{
 				nodeData.Save("m_data", nodeOut);
 			},
@@ -285,8 +285,8 @@ void ProceduralNoise3D::Deserialize(const YAML::Node& in)
 	if (in["m_pipeline"])
 	{
 		const auto& inPipeline = in["m_pipeline"];
-		SkeletonSerializer<ProceduralNoiseSkeletonData, ProceduralNoiseFlowData, ProceduralNoiseNodeData<glm::vec3>>::Deserialize(inPipeline, m_pipeline,
-			[&](const YAML::Node& nodeIn, ProceduralNoiseNodeData<glm::vec3>& nodeData)
+		SkeletonSerializer<ProceduralNoiseSkeletonData, ProceduralNoiseFlowData, ProceduralNoiseStage<glm::vec3>>::Deserialize(inPipeline, m_pipeline,
+			[&](const YAML::Node& nodeIn, ProceduralNoiseStage<glm::vec3>& nodeData)
 			{
 				nodeData.Load("m_data", nodeIn);
 			},

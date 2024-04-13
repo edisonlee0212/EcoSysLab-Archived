@@ -6,14 +6,14 @@ void ShootDescriptor::PrepareController(ShootGrowthController& shootGrowthContro
 {
 	shootGrowthController.m_baseInternodeCount = m_baseInternodeCount;
 
-	shootGrowthController.m_baseNodeApicalAngle = [&](const Node<InternodeGrowthData>& internode)
+	shootGrowthController.m_baseNodeApicalAngle = [&](const SkeletonNode<InternodeGrowthData>& internode)
 		{
 			return glm::gaussRand(m_baseNodeApicalAngleMeanVariance.x, m_baseNodeApicalAngleMeanVariance.y);
 		};
 
 	shootGrowthController.m_internodeGrowthRate = m_growthRate / m_internodeLength;
 
-	shootGrowthController.m_branchingAngle = [&](const Node<InternodeGrowthData>& internode)
+	shootGrowthController.m_branchingAngle = [&](const SkeletonNode<InternodeGrowthData>& internode)
 		{
 			float value = glm::gaussRand(m_branchingAngleMeanVariance.x, m_branchingAngleMeanVariance.y);
 			if(const auto noise = m_branchingAngleNoise.Get<ProceduralNoise2D>())
@@ -22,7 +22,7 @@ void ShootDescriptor::PrepareController(ShootGrowthController& shootGrowthContro
 			}
 			return value;
 		};
-	shootGrowthController.m_rollAngle = [&](const Node<InternodeGrowthData>& internode)
+	shootGrowthController.m_rollAngle = [&](const SkeletonNode<InternodeGrowthData>& internode)
 		{
 			float value = glm::gaussRand(m_rollAngleMeanVariance.x, m_rollAngleMeanVariance.y);
 			if (const auto noise = m_rollAngleNoise.Get<ProceduralNoise2D>())
@@ -31,7 +31,7 @@ void ShootDescriptor::PrepareController(ShootGrowthController& shootGrowthContro
 			}
 			return value;
 		};
-	shootGrowthController.m_apicalAngle = [&](const Node<InternodeGrowthData>& internode)
+	shootGrowthController.m_apicalAngle = [&](const SkeletonNode<InternodeGrowthData>& internode)
 		{
 			float value = glm::gaussRand(m_apicalAngleMeanVariance.x, m_apicalAngleMeanVariance.y);
 			if (const auto noise = m_apicalAngleNoise.Get<ProceduralNoise2D>())
@@ -40,19 +40,19 @@ void ShootDescriptor::PrepareController(ShootGrowthController& shootGrowthContro
 			}
 			return value;
 		};
-	shootGrowthController.m_gravitropism = [&](const Node<InternodeGrowthData>& internode)
+	shootGrowthController.m_gravitropism = [&](const SkeletonNode<InternodeGrowthData>& internode)
 		{
 			return m_gravitropism;
 		};
-	shootGrowthController.m_phototropism = [&](const Node<InternodeGrowthData>& internode)
+	shootGrowthController.m_phototropism = [&](const SkeletonNode<InternodeGrowthData>& internode)
 		{
 			return m_phototropism;
 		};
-	shootGrowthController.m_horizontalTropism = [&](const Node<InternodeGrowthData>& internode)
+	shootGrowthController.m_horizontalTropism = [&](const SkeletonNode<InternodeGrowthData>& internode)
 		{
 			return m_horizontalTropism;
 		};
-	shootGrowthController.m_sagging = [&](const Node<InternodeGrowthData>& internode)
+	shootGrowthController.m_sagging = [&](const SkeletonNode<InternodeGrowthData>& internode)
 		{
 			const auto newSagging = glm::min(
 				m_saggingFactorThicknessReductionMax.z,
@@ -72,19 +72,19 @@ void ShootDescriptor::PrepareController(ShootGrowthController& shootGrowthContro
 	shootGrowthController.m_internodeShadowFactor = m_internodeShadowFactor;
 
 	shootGrowthController.m_lateralBudCount = m_lateralBudCount;
-	shootGrowthController.m_apicalBudExtinctionRate = [&](const Node<InternodeGrowthData>& internode)
+	shootGrowthController.m_apicalBudExtinctionRate = [&](const SkeletonNode<InternodeGrowthData>& internode)
 		{
 			if (internode.m_info.m_rootDistance < 0.5f) return 0.f;
 			return m_apicalBudExtinctionRate;
 		};
-	shootGrowthController.m_lateralBudFlushingRate = [&](const Node<InternodeGrowthData>& internode)
+	shootGrowthController.m_lateralBudFlushingRate = [&](const SkeletonNode<InternodeGrowthData>& internode)
 		{
 			float flushingRate = m_lateralBudFlushingRate * internode.m_data.m_lightIntensity;
 			if (internode.m_data.m_inhibitorSink > 0.0f) flushingRate *= glm::exp(-internode.m_data.m_inhibitorSink);
 			return flushingRate;
 		};
 	shootGrowthController.m_apicalControl = m_apicalControl;
-	shootGrowthController.m_apicalDominance = [&](const Node<InternodeGrowthData>& internode)
+	shootGrowthController.m_apicalDominance = [&](const SkeletonNode<InternodeGrowthData>& internode)
 		{
 			return m_apicalDominance * internode.m_data.m_lightIntensity;
 		};
@@ -92,7 +92,7 @@ void ShootDescriptor::PrepareController(ShootGrowthController& shootGrowthContro
 
 	shootGrowthController.m_lowBranchPruning = m_lowBranchPruning;
 	shootGrowthController.m_lowBranchPruningThicknessFactor = m_lowBranchPruningThicknessFactor;
-	shootGrowthController.m_pruningFactor = [&](const ShootSkeleton& shootSkeleton, const Node<InternodeGrowthData>& internode)
+	shootGrowthController.m_pruningFactor = [&](const ShootSkeleton& shootSkeleton, const SkeletonNode<InternodeGrowthData>& internode)
 		{
 			if (m_trunkProtection && internode.m_data.m_order == 0)
 			{
@@ -124,7 +124,7 @@ void ShootDescriptor::PrepareController(ShootGrowthController& shootGrowthContro
 	shootGrowthController.m_fruitBudCount = m_fruitBudCount;
 	shootGrowthController.m_leafBudCount = m_leafBudCount;
 
-	shootGrowthController.m_leafBudFlushingProbability = [&](const Node<InternodeGrowthData>& internode)
+	shootGrowthController.m_leafBudFlushingProbability = [&](const SkeletonNode<InternodeGrowthData>& internode)
 		{
 			const auto& internodeData = internode.m_data;
 			const auto& probabilityRange = m_leafBudFlushingProbabilityTemperatureRange;
@@ -133,7 +133,7 @@ void ShootDescriptor::PrepareController(ShootGrowthController& shootGrowthContro
 			flushProbability *= internodeData.m_lightIntensity;
 			return flushProbability;
 		};
-	shootGrowthController.m_fruitBudFlushingProbability = [&](const Node<InternodeGrowthData>& internode)
+	shootGrowthController.m_fruitBudFlushingProbability = [&](const SkeletonNode<InternodeGrowthData>& internode)
 		{
 			const auto& internodeData = internode.m_data;
 			const auto& probabilityRange = m_fruitBudFlushingProbabilityTemperatureRange;
@@ -152,19 +152,19 @@ void ShootDescriptor::PrepareController(ShootGrowthController& shootGrowthContro
 	shootGrowthController.m_leafPositionVariance = m_leafPositionVariance;
 	shootGrowthController.m_leafRotationVariance = m_leafRotationVariance;
 	
-	shootGrowthController.m_leafFallProbability = [&](const Node<InternodeGrowthData>& internode)
+	shootGrowthController.m_leafFallProbability = [&](const SkeletonNode<InternodeGrowthData>& internode)
 		{
 			return m_leafFallProbability;
 		};
 	shootGrowthController.m_maxFruitSize = m_maxFruitSize;
 	shootGrowthController.m_fruitPositionVariance = m_fruitPositionVariance;
 	shootGrowthController.m_fruitRotationVariance = m_fruitRotationVariance;
-	shootGrowthController.m_fruitDamage = [=](const Node<InternodeGrowthData>& internode)
+	shootGrowthController.m_fruitDamage = [=](const SkeletonNode<InternodeGrowthData>& internode)
 		{
 			float fruitDamage = 0.0f;
 			return fruitDamage;
 		};
-	shootGrowthController.m_fruitFallProbability = [&](const Node<InternodeGrowthData>& internode)
+	shootGrowthController.m_fruitFallProbability = [&](const SkeletonNode<InternodeGrowthData>& internode)
 		{
 			return m_fruitFallProbability;
 		};

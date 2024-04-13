@@ -255,7 +255,7 @@ glm::vec3 getSegPos(const StrandModel& strandModel, const StrandSegmentHandle se
 	return retVal;
 }
 
-NodeHandle getNodeHandle(const StrandModelStrandGroup& pipeGroup, const StrandHandle& pipeHandle, float t)
+SkeletonNodeHandle getNodeHandle(const StrandModelStrandGroup& pipeGroup, const StrandHandle& pipeHandle, float t)
 {
 	size_t lookupIndex = glm::round(t) < pipeGroup.PeekStrand(pipeHandle).PeekStrandSegmentHandles().size() ? glm::round(t) : (pipeGroup.PeekStrand(pipeHandle).PeekStrandSegmentHandles().size() - 1);
 	auto& pipeSegmentHandle = pipeGroup.PeekStrand(pipeHandle).PeekStrandSegmentHandles()[lookupIndex];
@@ -435,9 +435,9 @@ void delaunay(Graph& g, float removalLength, std::vector<size_t>& candidates, co
 		StrandHandle p1 = prevPipes[v1];
 		StrandHandle p2 = prevPipes[v2];
 
-		NodeHandle n0 = getNodeHandle(pipeGroup, p0, t);
-		NodeHandle n1 = getNodeHandle(pipeGroup, p1, t);
-		NodeHandle n2 = getNodeHandle(pipeGroup, p2, t);
+		SkeletonNodeHandle n0 = getNodeHandle(pipeGroup, p0, t);
+		SkeletonNodeHandle n1 = getNodeHandle(pipeGroup, p1, t);
+		SkeletonNodeHandle n2 = getNodeHandle(pipeGroup, p2, t);
 
 		if (n0 == n1 && n1 == n2)
 		{
@@ -1564,7 +1564,7 @@ void StrandModelMeshGenerator::CylindricalMeshing(const StrandModel& strandModel
 {
 	const auto& skeleton = strandModel.m_strandModelSkeleton;
 	const auto& sortedInternodeList = skeleton.PeekSortedNodeList();
-	std::unordered_set<NodeHandle> nodeHandles;
+	std::unordered_set<SkeletonNodeHandle> nodeHandles;
 	for(const auto& nodeHandle : sortedInternodeList)
 	{
 		const auto& internode = skeleton.PeekNode(nodeHandle);
@@ -1851,7 +1851,7 @@ void StrandModelMeshGenerator::CalculateUV(const StrandModel& strandModel, std::
 				auto& vertex = vertices.at(vertexIndex);
 
 				float minDistance = FLT_MAX;
-				NodeHandle closestNodeHandle = -1;
+				SkeletonNodeHandle closestNodeHandle = -1;
 
 				for (const auto& nodeHandle : sortedNodeList)
 				{
@@ -1953,7 +1953,7 @@ void StrandModelMeshGenerator::CalculateUV(const StrandModel& strandModel, std::
 						}
 					}
 				);
-				NodeHandle closestNodeHandle = -1;
+				SkeletonNodeHandle closestNodeHandle = -1;
 				if (closestSegmentHandle != -1)
 				{
 					const auto segment = strandGroup.PeekStrandSegment(closestSegmentHandle);

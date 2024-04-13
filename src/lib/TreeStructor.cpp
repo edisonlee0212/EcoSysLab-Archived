@@ -167,7 +167,7 @@ void TreeStructor::CalculateNodeTransforms(ReconstructionSkeleton& skeleton)
 	}
 }
 
-void TreeStructor::BuildConnectionBranch(const BranchHandle processingBranchHandle, NodeHandle& prevNodeHandle)
+void TreeStructor::BuildConnectionBranch(const BranchHandle processingBranchHandle, SkeletonNodeHandle& prevNodeHandle)
 {
 	m_operatingBranches.emplace_back();
 	auto& processingBranch = m_operatingBranches[processingBranchHandle];
@@ -190,10 +190,10 @@ void TreeStructor::BuildConnectionBranch(const BranchHandle processingBranchHand
 		}
 	}
 
-	NodeHandle bestPrevNodeHandle = parentBranch.m_chainNodeHandles.back();
+	SkeletonNodeHandle bestPrevNodeHandle = parentBranch.m_chainNodeHandles.back();
 	float dotMax = -1.0f;
 	glm::vec3 connectionBranchStartPosition = parentBranch.m_bezierCurve.m_p3;
-	NodeHandle backTrackWalker = bestPrevNodeHandle;
+	SkeletonNodeHandle backTrackWalker = bestPrevNodeHandle;
 	int branchBackTrackCount = 0;
 	BranchHandle prevBranchHandle = processingBranch.m_parentHandle;
 	for (int i = 0; i < m_reconstructionSettings.m_nodeBackTrackLimit; i++)
@@ -290,7 +290,7 @@ void TreeStructor::ConnectBranches(const BranchHandle branchHandle)
 	const auto childHandles = m_operatingBranches[branchHandle].m_childHandles;
 	for (const auto& childHandle : childHandles) {
 		//Connect branches.
-		NodeHandle prevNodeHandle = -1;
+		SkeletonNodeHandle prevNodeHandle = -1;
 		BuildConnectionBranch(childHandle, prevNodeHandle);
 		auto& childBranch = m_operatingBranches[childHandle];
 		const float chainLength = childBranch.m_bezierCurve.GetLength();
@@ -1779,7 +1779,7 @@ void TreeStructor::BuildSkeletons() {
 	for (auto& allocatedPoint : m_allocatedPoints) {
 		const auto& treePart = m_treeParts[allocatedPoint.m_treePartHandle];
 		float minDistance = 999.f;
-		NodeHandle closestNodeHandle = -1;
+		SkeletonNodeHandle closestNodeHandle = -1;
 		BranchHandle closestBranchHandle = -1;
 		int closestSkeletonIndex = -1;
 		for (const auto& branchHandle : treePart.m_branchHandles) {
@@ -1824,12 +1824,12 @@ void TreeStructor::BuildSkeletons() {
 						{
 							remove = true;
 							if (sortedNodeList.size() > m_reconstructionSettings.m_minimumNodeCount) {
-								std::unordered_map<NodeHandle, NodeHandle> nodeHandleMap;
+								std::unordered_map<SkeletonNodeHandle, SkeletonNodeHandle> nodeHandleMap;
 								nodeHandleMap[0] = 0;
 								for (const auto& nodeHandle : sortedNodeList)
 								{
 									const auto& node = skeleton.PeekNode(nodeHandle);
-									NodeHandle newNodeHandle = -1;
+									SkeletonNodeHandle newNodeHandle = -1;
 									if (node.GetParentHandle() == -1)
 									{
 										continue;

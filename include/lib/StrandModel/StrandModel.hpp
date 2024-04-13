@@ -11,14 +11,14 @@ namespace EcoSysLab
 		void ResetAllProfiles(const StrandModelParameters& strandModelParameters);
 		void InitializeProfiles(const StrandModelParameters& strandModelParameters);
 		void CalculateProfiles(const StrandModelParameters& strandModelParameters);
-		void CalculateProfile(float maxRootDistance, NodeHandle nodeHandle, const StrandModelParameters& strandModelParameters, bool scheduling);
-		void Wait(NodeHandle nodeHandle);
+		void CalculateProfile(float maxRootDistance, SkeletonNodeHandle nodeHandle, const StrandModelParameters& strandModelParameters, bool scheduling);
+		void Wait(SkeletonNodeHandle nodeHandle);
 
-		void PackTask(NodeHandle nodeHandle, const StrandModelParameters& strandModelParameters, bool parallel);
-		void MergeTask(float maxRootDistance, NodeHandle nodeHandle, const StrandModelParameters& strandModelParameters);
-		void CopyFrontToBackTask(NodeHandle nodeHandle);
+		void PackTask(SkeletonNodeHandle nodeHandle, const StrandModelParameters& strandModelParameters, bool parallel);
+		void MergeTask(float maxRootDistance, SkeletonNodeHandle nodeHandle, const StrandModelParameters& strandModelParameters);
+		void CopyFrontToBackTask(SkeletonNodeHandle nodeHandle);
 		void ApplyProfile(const StrandModelParameters& strandModelParameters,
-			NodeHandle nodeHandle);
+			SkeletonNodeHandle nodeHandle);
 		void ApplyProfiles(const StrandModelParameters& strandModelParameters);
 		void CalculateStrandProfileAdjustedTransforms(const StrandModelParameters& strandModelParameters);
 		[[nodiscard]] glm::vec3 InterpolateStrandSegmentPosition(StrandSegmentHandle strandSegmentHandle, float a) const;

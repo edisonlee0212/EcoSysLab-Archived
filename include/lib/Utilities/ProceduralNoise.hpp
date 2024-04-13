@@ -3,6 +3,7 @@
 #include <glm/glm.hpp>
 #include <vector>
 #include "Skeleton.hpp"
+#include "NodeGraph.hpp"
 using namespace EvoEngine;
 
 namespace EcoSysLab
@@ -33,7 +34,7 @@ namespace EcoSysLab
 	};
 
 	template<typename T>
-	struct ProceduralNoiseNodeData
+	struct ProceduralNoiseStage
 	{
 		std::string m_name = "New node";
 		ProceduralNoiseOperatorType m_operatorType = ProceduralNoiseOperatorType::None;
@@ -50,7 +51,7 @@ namespace EcoSysLab
 	};
 	
 	template <typename T>
-	void ProceduralNoiseNodeData<T>::Serialize(YAML::Emitter& out) const
+	void ProceduralNoiseStage<T>::Serialize(YAML::Emitter& out) const
 	{
 		out << YAML::Key << "m_name" << YAML::Value << m_name;
 		out << YAML::Key << "m_operatorType" << YAML::Value << static_cast<unsigned>(m_operatorType);
@@ -61,7 +62,7 @@ namespace EcoSysLab
 	}
 
 	template <typename T>
-	void ProceduralNoiseNodeData<T>::Deserialize(const YAML::Node& in)
+	void ProceduralNoiseStage<T>::Deserialize(const YAML::Node& in)
 	{
 		if (in["m_name"]) m_name = in["m_name"].as<std::string>();
 		if (in["m_operatorType"]) m_operatorType = static_cast<ProceduralNoiseOperatorType>(in["m_operatorType"].as<unsigned>());
@@ -72,7 +73,7 @@ namespace EcoSysLab
 	}
 
 	template <typename T>
-	void ProceduralNoiseNodeData<T>::Save(const std::string& name, YAML::Emitter& out) const
+	void ProceduralNoiseStage<T>::Save(const std::string& name, YAML::Emitter& out) const
 	{
 		out << YAML::Key << name << YAML::Value << YAML::BeginMap;
 		Serialize(out);
@@ -80,7 +81,7 @@ namespace EcoSysLab
 	}
 
 	template <typename T>
-	void ProceduralNoiseNodeData<T>::Load(const std::string& name, const YAML::Node& in)
+	void ProceduralNoiseStage<T>::Load(const std::string& name, const YAML::Node& in)
 	{
 		if (in[name]) Deserialize(in[name]);
 	}
@@ -97,10 +98,10 @@ namespace EcoSysLab
 
 	class ProceduralNoise2D : public IAsset
 	{
-		bool OnInspect(NodeHandle nodeHandle);
-		float Process(NodeHandle nodeHandle, const glm::vec2& samplePoint, float value);
+		bool OnInspect(SkeletonNodeHandle nodeHandle);
+		float Process(SkeletonNodeHandle nodeHandle, const glm::vec2& samplePoint, float value);
 	public:
-		Skeleton<ProceduralNoiseSkeletonData, ProceduralNoiseFlowData, ProceduralNoiseNodeData<glm::vec2>> m_pipeline {};
+		Skeleton<ProceduralNoiseSkeletonData, ProceduralNoiseFlowData, ProceduralNoiseStage<glm::vec2>> m_pipeline {};
 		void Serialize(YAML::Emitter& out) override;
 		void Deserialize(const YAML::Node& in) override;
 		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
@@ -108,10 +109,10 @@ namespace EcoSysLab
 	};
 	class ProceduralNoise3D : public IAsset
 	{
-		bool OnInspect(NodeHandle nodeHandle);
-		float Process(NodeHandle nodeHandle, const glm::vec3& samplePoint, float value);
+		bool OnInspect(SkeletonNodeHandle nodeHandle);
+		float Process(SkeletonNodeHandle nodeHandle, const glm::vec3& samplePoint, float value);
 	public:
-		Skeleton<ProceduralNoiseSkeletonData, ProceduralNoiseFlowData, ProceduralNoiseNodeData<glm::vec3>> m_pipeline {};
+		Skeleton<ProceduralNoiseSkeletonData, ProceduralNoiseFlowData, ProceduralNoiseStage<glm::vec3>> m_pipeline {};
 		float Process(const glm::vec3& samplePoint, float value);
 		void Serialize(YAML::Emitter& out) override;
 		void Deserialize(const YAML::Node& in) override;
@@ -120,7 +121,7 @@ namespace EcoSysLab
 
 
 	template <typename T>
-	void ProceduralNoiseNodeData<T>::Calculate(const T& samplePoint, float& value) const
+	void ProceduralNoiseStage<T>::Calculate(const T& samplePoint, float& value) const
 	{
 		float stageValue = 0.f;
 		const auto actualSamplePoint = (samplePoint + m_offset) * m_frequency;

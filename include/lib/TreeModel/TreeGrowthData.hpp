@@ -52,8 +52,8 @@ namespace EcoSysLab
 
 	struct TreeVoxelData
 	{
-		NodeHandle m_nodeHandle = -1;
-		NodeHandle m_flowHandle = -1;
+		SkeletonNodeHandle m_nodeHandle = -1;
+		SkeletonNodeHandle m_flowHandle = -1;
 		unsigned m_referenceCount = 0;
 	};
 
