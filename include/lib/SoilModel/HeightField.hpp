@@ -12,7 +12,7 @@ namespace EcoSysLab
 	class HeightField : public IAsset
 	{
 	public:
-		Noises2D m_noises2D;
+		Noise2D m_noises2D;
 		int m_precisionLevel = 2;
 		[[nodiscard]] float GetValue(const glm::vec2& position);
 		void RandomOffset(float min, float max);

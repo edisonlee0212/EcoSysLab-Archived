@@ -45,7 +45,7 @@ bool OnInspectSoilParameters(SoilParameters& soilParameters)
 	return changed;
 }
 
-void SetSoilPhysicalMaterial(Noises3D& c, Noises3D& p, float sandRatio, float siltRatio, float clayRatio, float compactness)
+void SetSoilPhysicalMaterial(Noise3D& c, Noise3D& p, float sandRatio, float siltRatio, float clayRatio, float compactness)
 {
 	assert(compactness <= 1.0f && compactness >= 0.0f);
 

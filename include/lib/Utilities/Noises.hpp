@@ -29,12 +29,12 @@ namespace EcoSysLab
 		void Serialize(YAML::Emitter& out) const;
 		void Deserialize(const YAML::Node& in);
 	};
-	class Noises2D {
+	class Noise2D {
 	public:
 		glm::vec2 m_minMax = glm::vec2(-1000, 1000);
 		
 		std::vector<NoiseDescriptor> m_noiseDescriptors;
-		Noises2D();
+		Noise2D();
 		bool OnInspect();
 		void Save(const std::string& name, YAML::Emitter& out) const;
 		void Load(const std::string& name, const YAML::Node& in);
@@ -42,11 +42,11 @@ namespace EcoSysLab
 		[[nodiscard]] float GetValue(const glm::vec2& position) const;
 	};
 
-	class Noises3D {
+	class Noise3D {
 	public:
 		glm::vec2 m_minMax = glm::vec2(-1000, 1000);
 		std::vector<NoiseDescriptor> m_noiseDescriptors;
-		Noises3D();
+		Noise3D();
 		bool OnInspect();
 		void Save(const std::string& name, YAML::Emitter& out) const;
 		void Load(const std::string& name, const YAML::Node& in);

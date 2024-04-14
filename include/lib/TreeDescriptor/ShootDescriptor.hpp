@@ -1,4 +1,5 @@
 #pragma once
+#include "Noises.hpp"
 #include "TreeModel.hpp"
 #include "ProceduralNoise.hpp"
 using namespace EvoEngine;
@@ -21,7 +22,7 @@ namespace EcoSysLab
 		/**
 		* \brief The procedural noise of the angle between the direction of a lateral bud and its parent shoot.
 		*/
-		AssetRef m_branchingAngleNoise {};
+		AssetRef m_branchingAngle {};
 		/**
 		* \brief The mean and variance of an angular difference orientation of lateral buds between two internodes
 		*/
@@ -29,7 +30,8 @@ namespace EcoSysLab
 		/**
 		* \brief The procedural noise of an angular difference orientation of lateral buds between two internodes
 		*/
-		AssetRef m_rollAngleNoise {};
+		AssetRef m_rollAngle {};
+		Noise2D m_rollAngleNoise2D{};
 		/**
 		* \brief The mean and variance of an angular difference orientation of lateral buds between two internodes
 		*/
@@ -37,7 +39,8 @@ namespace EcoSysLab
 		/**
 		* \brief The procedural noise of an angular difference orientation of lateral buds between two internodes
 		*/
-		AssetRef m_apicalAngleNoise {};
+		AssetRef m_apicalAngle {};
+		Noise2D m_apicalAngleNoise2D{};
 		/**
 		 * \brief The gravitropism.
 		 */

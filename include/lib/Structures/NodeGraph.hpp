@@ -46,7 +46,7 @@ namespace EvoEngine {
 		friend class NodeGraph;
 		NodeGraphNodeHandle m_handle = -1;
 		bool m_recycled = true;
-		
+
 
 		std::vector<NodeGraphInputPinHandle> m_inputPinHandles;
 		NodeGraphOutputPinHandle m_outputPinHandle;
@@ -78,7 +78,7 @@ namespace EvoEngine {
 		std::vector<NodeGraphInputPin<ID>> m_inputPins;
 		std::vector<NodeGraphOutputPin<OD>> m_outputPins;
 		std::vector<NodeGraphNode<ND>> m_nodes;
-		
+
 		std::vector<NodeGraphLink<LD>> m_links;
 
 		std::queue<NodeGraphInputPinHandle> m_inputPinPool;
@@ -88,11 +88,11 @@ namespace EvoEngine {
 
 		NodeGraphInputPinHandle AllocateInputPin(NodeGraphNodeHandle nodeHandle);
 		NodeGraphOutputPinHandle AllocateOutputPin(NodeGraphNodeHandle nodeHandle);
-		
+
 		void RecycleOutputPin(NodeGraphOutputPinHandle handle);
 		void RecycleInputPin(NodeGraphInputPinHandle handle);
 	public:
-		
+
 		NodeGraphLinkHandle AllocateLink(NodeGraphOutputPinHandle startHandle, NodeGraphInputPinHandle endHandle);
 		void RecycleLink(NodeGraphLinkHandle handle);
 
@@ -104,6 +104,7 @@ namespace EvoEngine {
 			const std::string& title,
 			const std::shared_ptr<EditorLayer>& editorLayer,
 			const std::function<void(ImVec2 clickPos)>& nodeEditorPopupGui,
+			const std::function<void(NodeGraphNodeHandle nodeHandle)>& nodeTitleBarGui,
 			const std::function<void(NodeGraphInputPinHandle inputPinHandle)>& nodeInputPinGui,
 			const std::function<void(NodeGraphOutputPinHandle outputPinHandle)>& nodeOutputPinGui,
 			const std::function<void(NodeGraphOutputPinHandle startHandle, NodeGraphInputPinHandle endHandle)>& linkCreateHandler,
@@ -211,9 +212,9 @@ namespace EvoEngine {
 		auto& link = m_links[handle];
 		link.m_data = {};
 		auto& outputPinLinkHandles = m_outputPins[link.m_start].m_linkHandles;
-		for(int i = 0; i < outputPinLinkHandles.size(); i++)
+		for (int i = 0; i < outputPinLinkHandles.size(); i++)
 		{
-			if(outputPinLinkHandles[i] == handle)
+			if (outputPinLinkHandles[i] == handle)
 			{
 				outputPinLinkHandles[i] = outputPinLinkHandles.back();
 				outputPinLinkHandles.pop_back();
@@ -233,7 +234,7 @@ namespace EvoEngine {
 		outputPin.m_data = {};
 
 		auto linkHandles = outputPin.m_linkHandles;
-		for(const auto& i : linkHandles) RecycleLink(i);
+		for (const auto& i : linkHandles) RecycleLink(i);
 		assert(outputPin.m_linkHandles.empty());
 		outputPin.m_recycled = true;
 		m_outputPinPool.emplace(handle);
@@ -261,7 +262,8 @@ namespace EvoEngine {
 		if (m_nodePool.empty()) {
 			m_nodes.emplace_back(m_nodes.size());
 			newNodeHandle = m_nodes.back().m_handle;
-		}else
+		}
+		else
 		{
 			newNodeHandle = m_nodePool.front();
 			m_nodePool.pop();
@@ -270,11 +272,11 @@ namespace EvoEngine {
 		node.m_data = {};
 		node.m_inputPinHandles.clear();
 		node.m_outputPinHandle = -1;
-		for(int i = 0; i < inputPinCount; i++)
+		for (int i = 0; i < inputPinCount; i++)
 		{
 			node.m_inputPinHandles.emplace_back(AllocateInputPin(newNodeHandle));
 		}
-		if(hasOutput) node.m_outputPinHandle = AllocateOutputPin(newNodeHandle);
+		if (hasOutput) node.m_outputPinHandle = AllocateOutputPin(newNodeHandle);
 		node.m_recycled = false;
 		return newNodeHandle;
 	}
@@ -285,11 +287,11 @@ namespace EvoEngine {
 		assert(!m_nodes[handle].m_recycled);
 		auto& node = m_nodes[handle];
 		node.m_data = {};
-		for(const auto& i : node.m_inputPinHandles)
+		for (const auto& i : node.m_inputPinHandles)
 		{
 			RecycleInputPin(i);
 		}
-		if(node.m_outputPinHandle != -1) RecycleOutputPin(node.m_outputPinHandle);
+		if (node.m_outputPinHandle != -1) RecycleOutputPin(node.m_outputPinHandle);
 		node.m_recycled = true;
 		m_nodePool.emplace(handle);
 	}
@@ -299,13 +301,14 @@ namespace EvoEngine {
 		const std::string& title,
 		const std::shared_ptr<EditorLayer>& editorLayer,
 		const std::function<void(ImVec2 clickPos)>& nodeEditorPopupGui,
+		const std::function<void(NodeGraphNodeHandle nodeHandle)>& nodeTitleBarGui,
 		const std::function<void(NodeGraphInputPinHandle inputPinHandle)>& nodeInputPinGui,
 		const std::function<void(NodeGraphOutputPinHandle outputPinHandle)>& nodeOutputPinGui,
 		const std::function<void(NodeGraphOutputPinHandle startHandle, NodeGraphInputPinHandle endHandle)>& linkCreateHandler,
 		const std::function<void(NodeGraphLinkHandle linkHandle)>& linkDestroyHandler,
 		const std::function<void(NodeGraphNodeHandle nodeHandle, NodeGraphLinkHandle linkHandle, NodeGraphInputPinHandle inputPinHandle, NodeGraphOutputPinHandle outputPinHandle)>& hoverHandler,
 		const std::function<void(const std::vector<NodeGraphNodeHandle>& selectedNodeHandles, const std::vector<NodeGraphLinkHandle>& selectedLinkHandles)>& selectionHandler
-		)
+	)
 	{
 		ImNodesIO& io = ImNodes::GetIO();
 		io.LinkDetachWithModifierClick.Modifier = &ImGui::GetIO().KeyAlt;
@@ -317,36 +320,34 @@ namespace EvoEngine {
 
 		// Handle new nodes
 		// These are driven by the user, so we place this code before rendering the nodes
-		
-			const bool openPopup = ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
-				ImNodes::IsEditorHovered() && editorLayer->GetKey(GLFW_MOUSE_BUTTON_RIGHT) == KeyActionType::Press;
 
-			if (!ImGui::IsAnyItemHovered() && openPopup)
-			{
-				ImGui::OpenPopup((title + "_editor_menu").c_str());
-			}
-			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8.f, 8.f));
-			if (ImGui::BeginPopup((title + "_editor_menu").c_str()))
-			{
-				const ImVec2 clickPos = ImGui::GetMousePosOnOpeningCurrentPopup();
-				nodeEditorPopupGui(clickPos);
-				ImGui::EndPopup();
-			}
-			ImGui::PopStyleVar();
-		
+		const bool openPopup = ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
+			ImNodes::IsEditorHovered() && editorLayer->GetKey(GLFW_MOUSE_BUTTON_RIGHT) == KeyActionType::Press;
+
+		if (!ImGui::IsAnyItemHovered() && openPopup)
+		{
+			ImGui::OpenPopup((title + "_editor_menu").c_str());
+		}
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8.f, 8.f));
+		if (ImGui::BeginPopup((title + "_editor_menu").c_str()))
+		{
+			const ImVec2 clickPos = ImGui::GetMousePosOnOpeningCurrentPopup();
+			nodeEditorPopupGui(clickPos);
+			ImGui::EndPopup();
+		}
+		ImGui::PopStyleVar();
+
 
 
 		for (const auto& node : m_nodes)
 		{
 			if (node.m_recycled) continue;
-
-
 			ImNodes::BeginNode(node.m_handle);
 			ImNodes::BeginNodeTitleBar();
-			ImGui::TextUnformatted("Node");
+			nodeTitleBarGui(node.m_handle);
 			ImNodes::EndNodeTitleBar();
-			
-			for(const auto inputPinHandle : node.m_inputPinHandles)
+
+			for (const auto inputPinHandle : node.m_inputPinHandles)
 			{
 				ImNodes::BeginInputAttribute(inputPinHandle + (1 << 16), ImNodesPinShape_QuadFilled);
 				// in between Begin|EndAttribute calls, you can call ImGui
@@ -356,18 +357,18 @@ namespace EvoEngine {
 			}
 
 
-			if(node.m_outputPinHandle != -1){
+			if (node.m_outputPinHandle != -1) {
 				ImNodes::BeginOutputAttribute(node.m_outputPinHandle + (1 << 17));
 				// in between Begin|EndAttribute calls, you can call ImGui
 				// UI functions
 				nodeOutputPinGui(node.m_outputPinHandle);
 				ImNodes::EndOutputAttribute();
 			}
-			
+
 			ImNodes::EndNode();
 		}
 
-		for(const auto& link : m_links)
+		for (const auto& link : m_links)
 		{
 			if (link.m_recycled) continue;
 			ImNodes::Link(link.m_handle, link.m_start + (1 << 17), link.m_end + (1 << 16));

@@ -16,28 +16,33 @@ void ShootDescriptor::PrepareController(ShootGrowthController& shootGrowthContro
 	shootGrowthController.m_branchingAngle = [&](const SkeletonNode<InternodeGrowthData>& internode)
 		{
 			float value = glm::gaussRand(m_branchingAngleMeanVariance.x, m_branchingAngleMeanVariance.y);
-			if(const auto noise = m_branchingAngleNoise.Get<ProceduralNoise2D>())
+		/*
+			if(const auto noise = m_branchingAngle.Get<ProceduralNoise2D>())
 			{
 				noise->Process(glm::vec2(internode.GetHandle(), internode.m_info.m_rootDistance), value);
-			}
+			}*/
 			return value;
 		};
 	shootGrowthController.m_rollAngle = [&](const SkeletonNode<InternodeGrowthData>& internode)
 		{
 			float value = glm::gaussRand(m_rollAngleMeanVariance.x, m_rollAngleMeanVariance.y);
-			if (const auto noise = m_rollAngleNoise.Get<ProceduralNoise2D>())
+		/*
+			if (const auto noise = m_rollAngle.Get<ProceduralNoise2D>())
 			{
 				noise->Process(glm::vec2(internode.GetHandle(), internode.m_info.m_rootDistance), value);
-			}
+			}*/
+			value += m_rollAngleNoise2D.GetValue(glm::vec2(internode.GetHandle(), internode.m_info.m_rootDistance));
 			return value;
 		};
 	shootGrowthController.m_apicalAngle = [&](const SkeletonNode<InternodeGrowthData>& internode)
 		{
 			float value = glm::gaussRand(m_apicalAngleMeanVariance.x, m_apicalAngleMeanVariance.y);
-			if (const auto noise = m_apicalAngleNoise.Get<ProceduralNoise2D>())
+		/*
+			if (const auto noise = m_apicalAngle.Get<ProceduralNoise2D>())
 			{
 				noise->Process(glm::vec2(internode.GetHandle(), internode.m_info.m_rootDistance), value);
-			}
+			}*/
+			value += m_apicalAngleNoise2D.GetValue(glm::vec2(internode.GetHandle(), internode.m_info.m_rootDistance));
 			return value;
 		};
 	shootGrowthController.m_gravitropism = [&](const SkeletonNode<InternodeGrowthData>& internode)
@@ -177,9 +182,13 @@ void ShootDescriptor::Serialize(YAML::Emitter& out)
 	out << YAML::Key << "m_baseNodeApicalAngleMeanVariance" << YAML::Value << m_baseNodeApicalAngleMeanVariance;
 
 	out << YAML::Key << "m_growthRate" << YAML::Value << m_growthRate;
-	m_branchingAngleNoise.Save("m_branchingAngleNoise", out);
-	m_rollAngleNoise.Save("m_rollAngleNoise", out);
-	m_apicalAngleNoise.Save("m_apicalAngleNoise", out);
+	m_branchingAngle.Save("m_branchingAngle", out);
+	m_rollAngle.Save("m_rollAngle", out);
+	m_apicalAngle.Save("m_apicalAngle", out);
+
+	m_rollAngleNoise2D.Save("m_rollAngleNoise2D", out);
+	m_apicalAngleNoise2D.Save("m_apicalAngleNoise2D", out);
+
 	out << YAML::Key << "m_branchingAngleMeanVariance" << YAML::Value << m_branchingAngleMeanVariance;
 	out << YAML::Key << "m_rollAngleMeanVariance" << YAML::Value << m_rollAngleMeanVariance;
 	out << YAML::Key << "m_apicalAngleMeanVariance" << YAML::Value << m_apicalAngleMeanVariance;
@@ -241,9 +250,13 @@ void ShootDescriptor::Deserialize(const YAML::Node& in)
 	if (in["m_baseNodeApicalAngleMeanVariance"]) m_baseNodeApicalAngleMeanVariance = in["m_baseNodeApicalAngleMeanVariance"].as<glm::vec2>();
 
 	if (in["m_growthRate"]) m_growthRate = in["m_growthRate"].as<float>();
-	m_branchingAngleNoise.Load("m_branchingAngleNoise", in);
-	m_rollAngleNoise.Load("m_rollAngleNoise", in);
-	m_apicalAngleNoise.Load("m_apicalAngleNoise", in);
+	m_branchingAngle.Load("m_branchingAngle", in);
+	m_rollAngle.Load("m_rollAngle", in);
+	m_apicalAngle.Load("m_apicalAngle", in);
+
+	m_rollAngleNoise2D.Load("m_rollAngleNoise2D", in);
+	m_apicalAngleNoise2D.Load("m_apicalAngleNoise2D", in);
+
 	if (in["m_branchingAngleMeanVariance"]) m_branchingAngleMeanVariance = in["m_branchingAngleMeanVariance"].as<glm::vec2>();
 	if (in["m_rollAngleMeanVariance"]) m_rollAngleMeanVariance = in["m_rollAngleMeanVariance"].as<glm::vec2>();
 	if (in["m_apicalAngleMeanVariance"]) m_apicalAngleMeanVariance = in["m_apicalAngleMeanVariance"].as<glm::vec2>();
@@ -311,12 +324,26 @@ void ShootDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 		changed = ImGui::DragFloat2("Base apical angle mean/var", &m_baseNodeApicalAngleMeanVariance.x, 0.1f, 0.0f, 100.0f) || changed;
 
 		changed = ImGui::DragInt("Lateral bud count", &m_lateralBudCount, 1, 0, 3) || changed;
-		changed = ImGui::DragFloat2("Branching angle base/var", &m_branchingAngleMeanVariance.x, 0.1f, 0.0f, 100.0f) || changed;
-		editorLayer->DragAndDropButton<ProceduralNoise2D>(m_branchingAngleNoise, "Branching Angle Noise");
-		changed = ImGui::DragFloat2("Roll angle base/var", &m_rollAngleMeanVariance.x, 0.1f, 0.0f, 100.0f) || changed;
-		editorLayer->DragAndDropButton<ProceduralNoise2D>(m_rollAngleNoise, "Roll Angle Noise");
-		changed = ImGui::DragFloat2("Apical angle base/var", &m_apicalAngleMeanVariance.x, 0.1f, 0.0f, 100.0f) || changed;
-		editorLayer->DragAndDropButton<ProceduralNoise2D>(m_apicalAngleNoise, "Apical Angle Noise");
+		if (ImGui::TreeNodeEx("Angles"))
+		{
+			changed = ImGui::DragFloat2("Branching angle base/var", &m_branchingAngleMeanVariance.x, 0.1f, 0.0f, 100.0f) || changed;
+			//editorLayer->DragAndDropButton<ProceduralNoise2D>(m_branchingAngle, "Branching Angle Noise");
+			changed = ImGui::DragFloat2("Roll angle base/var", &m_rollAngleMeanVariance.x, 0.1f, 0.0f, 100.0f) || changed;
+			//editorLayer->DragAndDropButton<ProceduralNoise2D>(m_rollAngle, "Roll Angle Noise");
+			changed = ImGui::DragFloat2("Apical angle base/var", &m_apicalAngleMeanVariance.x, 0.1f, 0.0f, 100.0f) || changed;
+			//editorLayer->DragAndDropButton<ProceduralNoise2D>(m_apicalAngle, "Apical Angle Noise");
+			if (ImGui::TreeNodeEx("Roll Angle Noise2D"))
+			{
+				changed = m_rollAngleNoise2D.OnInspect() | changed;
+				ImGui::TreePop();
+			}
+			if (ImGui::TreeNodeEx("Apical Angle Noise2D"))
+			{
+				changed = m_apicalAngleNoise2D.OnInspect() | changed;
+				ImGui::TreePop();
+			}
+			ImGui::TreePop();
+		}
 		changed = ImGui::DragFloat("Internode length", &m_internodeLength, 0.001f) || changed;
 		changed = ImGui::DragFloat("Internode length thickness factor", &m_internodeLengthThicknessFactor, 0.0001f, 0.0f, 1.0f) || changed;
 		changed = ImGui::DragFloat3("Thickness min/factor/age", &m_endNodeThickness, 0.0001f, 0.0f, 1.0f, "%.6f") || changed;
@@ -391,9 +418,9 @@ void ShootDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 
 void ShootDescriptor::CollectAssetRef(std::vector<AssetRef>& list)
 {
-	if (m_branchingAngleNoise.Get<ProceduralNoise2D>()) list.push_back(m_branchingAngleNoise);
-	if (m_rollAngleNoise.Get<ProceduralNoise2D>()) list.push_back(m_rollAngleNoise);
-	if (m_apicalAngleNoise.Get<ProceduralNoise2D>()) list.push_back(m_apicalAngleNoise);
+	if (m_branchingAngle.Get<ProceduralNoise2D>()) list.push_back(m_branchingAngle);
+	if (m_rollAngle.Get<ProceduralNoise2D>()) list.push_back(m_rollAngle);
+	if (m_apicalAngle.Get<ProceduralNoise2D>()) list.push_back(m_apicalAngle);
 
 	if (m_barkMaterial.Get<Material>()) list.push_back(m_barkMaterial);
 }

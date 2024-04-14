@@ -1,22 +1,56 @@
 m_baseInternodeCount: 1
 m_baseNodeApicalAngleMeanVariance: [0, 0]
 m_growthRate: 0.25
-m_branchingAngleNoise:
+m_branchingAngle:
   m_assetHandle: 0
   m_assetTypeName: ""
-m_rollAngleNoise:
+m_rollAngle:
   m_assetHandle: 0
   m_assetTypeName: ""
-m_apicalAngleNoise:
-  m_assetHandle: 5657507265067326366
-  m_assetTypeName: ProceduralNoise2D
-m_branchingAngleMeanVariance: [60, 3]
+m_apicalAngle:
+  m_assetHandle: 0
+  m_assetTypeName: ""
+m_rollAngleNoise2D:
+  m_minMax: [-1000, 1000]
+  m_noiseDescriptors:
+    []
+m_apicalAngleNoise2D:
+  m_minMax: [-1000, 1000]
+  m_noiseDescriptors:
+    - m_type: 3
+      m_frequency: 0.100000001
+      m_intensity: 1
+      m_multiplier: 20
+      m_min: -1000
+      m_max: 1000
+      m_offset: 0
+      m_shift: [0, 0, 0]
+      m_ridgid: false
+    - m_type: 0
+      m_frequency: 0.100000001
+      m_intensity: 1
+      m_multiplier: 1
+      m_min: -10
+      m_max: 10
+      m_offset: 2
+      m_shift: [0, 0, 0]
+      m_ridgid: false
+    - m_type: 3
+      m_frequency: 1
+      m_intensity: 1
+      m_multiplier: 10
+      m_min: -100
+      m_max: 100
+      m_offset: 0
+      m_shift: [0, 0, 0]
+      m_ridgid: false
+m_branchingAngleMeanVariance: [60, 1]
 m_rollAngleMeanVariance: [30, 0]
 m_apicalAngleMeanVariance: [0, 0]
 m_gravitropism: 0
-m_phototropism: 0.00100000005
-m_horizontalTropism: 0.5
-m_saggingFactorThicknessReductionMax: [0.000600000028, 2, 0.100000001]
+m_phototropism: 0.00999999978
+m_horizontalTropism: 0.100000001
+m_saggingFactorThicknessReductionMax: [0, 2, 0.100000001]
 m_internodeLength: 0.0299999993
 m_internodeLengthThicknessFactor: 0.150000006
 m_endNodeThickness: 0.00400000019

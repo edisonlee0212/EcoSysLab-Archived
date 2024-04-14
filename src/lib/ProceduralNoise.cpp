@@ -228,7 +228,7 @@ void ProceduralNoise2D::Deserialize(const YAML::Node& in)
 void ProceduralNoise2D::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
 	static NodeGraph<int, int, int, int> graph{};
-	static bool showNodeGraph = true;
+	static bool showNodeGraph = false;
 	if (showNodeGraph)
 	{
 		graph.OnInspect("Node Graph",
@@ -241,6 +241,10 @@ void ProceduralNoise2D::OnInspect(const std::shared_ptr<EditorLayer>& editorLaye
 
 					ImNodes::SetNodeScreenSpacePos(newNodeHandle, clickPos);
 				}
+			},
+			[&](NodeGraphNodeHandle nodeHandle)
+			{
+				ImGui::Text("Node");
 			},
 			[&](NodeGraphInputPinHandle inputPinHandle)
 			{
