@@ -627,7 +627,9 @@ void StrandModel::CalculateStrandProfileAdjustedTransforms(const StrandModelPara
 		node.m_info.m_globalPosition = parentNode.m_info.GetGlobalEndPosition();
 		glm::quat parentGlobalRotation = parentNode.m_info.m_globalRotation;
 		node.m_data.m_strandRadius = strandModelParameters.m_strandRadiusDistribution.GetValue(node.m_info.m_rootDistance / maxRootDistance);
-		auto newGlobalEndPosition = node.m_info.m_globalPosition + node.m_info.GetGlobalDirection() * node.m_info.m_length;
+		const auto globalDirection = node.m_info.GetGlobalDirection();
+		auto localPosition = globalDirection * node.m_info.m_length;
+		auto newGlobalEndPosition = node.m_info.m_globalPosition;
 		node.m_info.m_globalRotation = parentGlobalRotation * (glm::inverse(parentNode.m_info.m_regulatedGlobalRotation) * node.m_info.m_regulatedGlobalRotation);
 
 		const auto parentUp = parentGlobalRotation * glm::vec3(0, 1, 0);
@@ -674,19 +676,28 @@ void StrandModel::CalculateStrandProfileAdjustedTransforms(const StrandModelPara
 				const auto distance = glm::length(glm::closestPointOnLine(particle.GetPosition(), glm::vec2(0.f), node.m_data.m_offset * 1000.0f));
 				maxRadius = glm::max(maxRadius, distance);
 			}
-
+			glm::vec3 minRotationShift = glm::vec3(0.f);
 			if (node.IsApical())
 			{
-				newGlobalEndPosition += parentUp * offsetDirection.y * cosFront * maxRadius * strandModelParameters.m_apicalBranchRotationPushFactor * node.m_data.m_strandRadius;
-				newGlobalEndPosition += parentLeft * offsetDirection.x * cosFront * maxRadius * strandModelParameters.m_apicalBranchRotationPushFactor * node.m_data.m_strandRadius;
-				newGlobalEndPosition += parentFront * sinFront * maxRadius * strandModelParameters.m_apicalBranchRotationPushFactor * node.m_data.m_strandRadius;
+				minRotationShift += parentUp * offsetDirection.y * cosFront * maxRadius * strandModelParameters.m_apicalBranchRotationPushFactor * node.m_data.m_strandRadius;
+				minRotationShift += parentLeft * offsetDirection.x * cosFront * maxRadius * strandModelParameters.m_apicalBranchRotationPushFactor * node.m_data.m_strandRadius;
+				minRotationShift += parentFront * sinFront * maxRadius * strandModelParameters.m_apicalBranchRotationPushFactor * node.m_data.m_strandRadius;
 			}
 			else
 			{
 
-				newGlobalEndPosition += parentUp * offsetDirection.y * cosFront * maxRadius * strandModelParameters.m_rotationPushFactor * node.m_data.m_strandRadius;
-				newGlobalEndPosition += parentLeft * offsetDirection.x * cosFront * maxRadius * strandModelParameters.m_rotationPushFactor * node.m_data.m_strandRadius;
-				newGlobalEndPosition += parentFront * sinFront * maxRadius * strandModelParameters.m_rotationPushFactor * node.m_data.m_strandRadius;
+				minRotationShift += parentUp * offsetDirection.y * cosFront * maxRadius * strandModelParameters.m_rotationPushFactor * node.m_data.m_strandRadius;
+				minRotationShift += parentLeft * offsetDirection.x * cosFront * maxRadius * strandModelParameters.m_rotationPushFactor * node.m_data.m_strandRadius;
+				minRotationShift += parentFront * sinFront * maxRadius * strandModelParameters.m_rotationPushFactor * node.m_data.m_strandRadius;
+			}
+			
+			const auto projectedMinRotationShift = glm::normalize(globalDirection)* glm::dot(minRotationShift, globalDirection);
+			if(glm::length(projectedMinRotationShift) > glm::length(localPosition))
+			{
+				newGlobalEndPosition += projectedMinRotationShift;
+			}else
+			{
+				newGlobalEndPosition += localPosition;
 			}
 		}
 		assert(!glm::any(glm::isnan(node.m_info.m_globalPosition)));

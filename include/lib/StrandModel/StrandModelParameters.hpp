@@ -21,7 +21,7 @@ namespace EcoSysLab
 		bool m_preMerge = true;
 
 		float m_controlPointRatio = 0.3f;
-		bool m_triplePoints = true;
+		bool m_triplePoints = false;
 		int m_nodeMaxCount = -1;
 
 		int m_boundaryPointDistance = 6;
