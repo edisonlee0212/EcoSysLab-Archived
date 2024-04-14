@@ -227,6 +227,25 @@ namespace EcoSysLab {
 		SkeletalGraphSettings m_skeletalGraphSettings{};
 		void ClearSkeletalGraph() const;
 		void InitializeSkeletalGraph(const std::shared_ptr<Mesh>& pointMeshSample, const std::shared_ptr<Mesh>& lineMeshSample, const SkeletalGraphSettings& skeletalGraphSettings);
+		
+		std::shared_ptr<ParticleInfoList> m_allocatedPointInfoList;
+		std::shared_ptr<ParticleInfoList> m_scatteredPointInfoList;
+		std::shared_ptr<ParticleInfoList> m_scatteredPointConnectionInfoList;
+		std::shared_ptr<ParticleInfoList> m_candidateBranchConnectionInfoList;
+		std::shared_ptr<ParticleInfoList> m_reversedCandidateBranchConnectionInfoList;
+		std::shared_ptr<ParticleInfoList> m_filteredBranchConnectionInfoList;
+		std::shared_ptr<ParticleInfoList> m_selectedBranchConnectionInfoList;
+		std::shared_ptr<ParticleInfoList> m_scatterPointToBranchConnectionInfoList;
+		std::shared_ptr<ParticleInfoList> m_predictedBranchInfoList;
+		glm::vec4 m_scatterPointToBranchConnectionColor = glm::vec4(1, 0, 1, 1);
+		glm::vec4 m_allocatedPointColor = glm::vec4(0, 0.5, 0.25, 1);
+		glm::vec4 m_scatterPointColor = glm::vec4(0.25, 0.5, 0, 1);
+		glm::vec4 m_scatteredPointConnectionColor = glm::vec4(0, 0, 0, 1);
+		glm::vec4 m_candidateBranchConnectionColor = glm::vec4(1, 1, 0, 1);
+		glm::vec4 m_reversedCandidateBranchConnectionColor = glm::vec4(0, 1, 1, 1);
+		glm::vec4 m_filteredBranchConnectionColor = glm::vec4(0, 0, 1, 1);
+		glm::vec4 m_selectedBranchConnectionColor = glm::vec4(0.3, 0, 0, 1);
+		glm::vec4 m_selectedBranchColor = glm::vec4(0.6, 0.3, 0.0, 1.0f);
 
 		VoxelGrid<std::vector<PointData>> m_scatterPointsVoxelGrid;
 		VoxelGrid<std::vector<PointData>> m_allocatedPointsVoxelGrid;
@@ -253,9 +272,9 @@ namespace EcoSysLab {
 
 		std::vector<ReconstructionSkeleton> m_skeletons;
 
-		std::vector<std::pair<glm::vec3, glm::vec3>> m_scatterPointToBranchEndConnections;
-		std::vector<std::pair<glm::vec3, glm::vec3>> m_scatterPointToBranchStartConnections;
-		std::vector<std::pair<glm::vec3, glm::vec3>> m_scatterPointsConnections;
+		std::vector<std::pair<glm::vec3, glm::vec3>> m_scatteredPointToBranchEndConnections;
+		std::vector<std::pair<glm::vec3, glm::vec3>> m_scatteredPointToBranchStartConnections;
+		std::vector<std::pair<glm::vec3, glm::vec3>> m_scatteredPointsConnections;
 		std::vector<std::pair<glm::vec3, glm::vec3>> m_candidateBranchConnections;
 		std::vector<std::pair<glm::vec3, glm::vec3>> m_reversedCandidateBranchConnections;
 		std::vector<std::pair<glm::vec3, glm::vec3>> m_filteredBranchConnections;
@@ -264,6 +283,7 @@ namespace EcoSysLab {
 
 		void BuildSkeletons();
 		void FormGeometryEntity();
+		void FormInfoEntities();
 		void ClearMeshes() const;
 
 		void OnCreate() override;

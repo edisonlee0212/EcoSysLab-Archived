@@ -342,9 +342,9 @@ void TreeStructor::ImportGraph(const std::filesystem::path& path, float scaleFac
 		m_treeParts.clear();
 		m_allocatedPoints.clear();
 		m_skeletons.clear();
-		m_scatterPointToBranchEndConnections.clear();
-		m_scatterPointToBranchStartConnections.clear();
-		m_scatterPointsConnections.clear();
+		m_scatteredPointToBranchEndConnections.clear();
+		m_scatteredPointToBranchStartConnections.clear();
+		m_scatteredPointsConnections.clear();
 		m_candidateBranchConnections.clear();
 		m_reversedCandidateBranchConnections.clear();
 		m_filteredBranchConnections.clear();
@@ -623,69 +623,64 @@ void TreeStructor::ExportForestOBJ(const std::filesystem::path& path)
 
 void TreeStructor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	static Handle previousHandle = 0;
-	static std::shared_ptr<ParticleInfoList> allocatedPointInfoList;
-	static std::shared_ptr<ParticleInfoList> scatterPointInfoList;
-	static std::shared_ptr<ParticleInfoList> nodeInfoList;
 
-	static std::shared_ptr<ParticleInfoList> scatteredPointConnectionInfoList;
+
 	static std::vector<glm::vec3> scatteredPointConnectionsStarts;
 	static std::vector<glm::vec3> scatteredPointConnectionsEnds;
 	static std::vector<glm::vec4> scatteredPointConnectionColors;
 
-	static std::shared_ptr<ParticleInfoList> candidateBranchConnectionInfoList;
+
 	static std::vector<glm::vec3> candidateBranchConnectionStarts;
 	static std::vector<glm::vec3> candidateBranchConnectionEnds;
 	static std::vector<glm::vec4> candidateBranchConnectionColors;
 
-	static std::shared_ptr<ParticleInfoList> reversedCandidateBranchConnectionInfoList;
+
 	static std::vector<glm::vec3> reversedCandidateBranchConnectionStarts;
 	static std::vector<glm::vec3> reversedCandidateBranchConnectionEnds;
 	static std::vector<glm::vec4> reversedCandidateBranchConnectionColors;
 
-	static std::shared_ptr<ParticleInfoList> filteredBranchConnectionInfoList;
+
 	static std::vector<glm::vec3> filteredBranchConnectionStarts;
 	static std::vector<glm::vec3> filteredBranchConnectionEnds;
 	static std::vector<glm::vec4> filteredBranchConnectionColors;
 
-	static std::shared_ptr<ParticleInfoList> branchConnectionInfoList;
-	static std::vector<glm::vec3> branchConnectionStarts;
-	static std::vector<glm::vec3> branchConnectionEnds;
-	static std::vector<glm::vec4> branchConnectionColors;
 
-	static std::shared_ptr<ParticleInfoList> scatterPointToBranchConnectionInfoList;
+	static std::vector<glm::vec3> selectedBranchConnectionStarts;
+	static std::vector<glm::vec3> selectedBranchConnectionEnds;
+	static std::vector<glm::vec4> selectedBranchConnectionColors;
+
+
 	static std::vector<glm::vec3> scatterPointToBranchConnectionStarts;
 	static std::vector<glm::vec3> scatterPointToBranchConnectionEnds;
 	static std::vector<glm::vec4> scatterPointToBranchConnectionColors;
 
-	static std::shared_ptr<ParticleInfoList> predictedBranchConnectionInfoList;
-	static std::vector<glm::vec3> predictedBranchConnectionStarts;
-	static std::vector<glm::vec3> predictedBranchConnectionEnds;
-	static std::vector<glm::vec4> predictedBranchConnectionColors;
+
+	static std::vector<glm::vec3> predictedBranchStarts;
+	static std::vector<glm::vec3> predictedBranchEnds;
+	static std::vector<glm::vec4> predictedBranchColors;
 
 
-	if (!allocatedPointInfoList) allocatedPointInfoList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
-	if (!scatterPointInfoList) scatterPointInfoList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
-	if (!nodeInfoList) nodeInfoList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
-	if (!scatteredPointConnectionInfoList) scatteredPointConnectionInfoList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
+	if (!m_allocatedPointInfoList) m_allocatedPointInfoList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
+	if (!m_scatteredPointInfoList) m_scatteredPointInfoList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
+	if (!m_scatteredPointConnectionInfoList) m_scatteredPointConnectionInfoList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
 
-	if (!candidateBranchConnectionInfoList) candidateBranchConnectionInfoList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
-	if (!reversedCandidateBranchConnectionInfoList) reversedCandidateBranchConnectionInfoList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
-	if (!filteredBranchConnectionInfoList) filteredBranchConnectionInfoList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
-	if (!branchConnectionInfoList) branchConnectionInfoList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
+	if (!m_candidateBranchConnectionInfoList) m_candidateBranchConnectionInfoList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
+	if (!m_reversedCandidateBranchConnectionInfoList) m_reversedCandidateBranchConnectionInfoList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
+	if (!m_filteredBranchConnectionInfoList) m_filteredBranchConnectionInfoList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
+	if (!m_selectedBranchConnectionInfoList) m_selectedBranchConnectionInfoList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
 
-	if (!scatterPointToBranchConnectionInfoList) scatterPointToBranchConnectionInfoList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
-	if (!predictedBranchConnectionInfoList) predictedBranchConnectionInfoList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
+	if (!m_scatterPointToBranchConnectionInfoList) m_scatterPointToBranchConnectionInfoList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
+	if (!m_predictedBranchInfoList) m_predictedBranchInfoList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
 
 
 
 	static std::vector<ParticleInfo> allocatedPointMatrices;
 	static std::vector<ParticleInfo> scatterPointMatrices;
-	static std::vector<ParticleInfo> nodeMatrices;
 
 	static bool enableDebugRendering = true;
 
 	static bool drawAllocatedPoints = true;
-	static bool drawpredictedBranches = true;
+	static bool drawPredictedBranches = true;
 	static bool drawScatteredPoints = true;
 	static bool drawScatteredPointConnections = false;
 
@@ -695,25 +690,13 @@ void TreeStructor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	static bool drawBranchConnections = true;
 
 	static bool drawScatterPointToBranchConnections = false;
-	static bool drawNode = true;
 	static float predictedBranchWidth = 0.005f;
 	static float connectionWidth = 0.001f;
-	static float pointSize = 0.002f;
+	static float pointSize = 1.f;
 
-	static float nodeSize = 1.0f;
 	bool refreshData = false;
 
 	static int colorMode = 0;
-
-
-	static glm::vec4 scatterPointToBranchConnectionColor = glm::vec4(1, 0, 1, 1);
-	static glm::vec4 scatterPointColor = glm::vec4(0, 1, 0, 1);
-	static glm::vec4 scatteredPointConnectionColor = glm::vec4(1, 1, 1, 1);
-
-	static glm::vec4 candidateBranchConnectionColor = glm::vec4(1, 1, 0, 1);
-	static glm::vec4 reversedCandidateBranchConnectionColor = glm::vec4(0, 1, 1, 1);
-	static glm::vec4 filteredBranchConnectionColor = glm::vec4(0, 0, 1, 1);
-	static glm::vec4 branchConnectionColor = glm::vec4(1, 0, 0, 1);
 
 	static float importScale = 0.1f;
 	editorLayer->DragAndDropButton<TreeDescriptor>(m_treeDescriptor, "TreeDescriptor", true);
@@ -785,33 +768,31 @@ void TreeStructor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 			if (ImGui::DragFloat("Branch width", &predictedBranchWidth, 0.0001f, 0.0001f, 1.0f, "%.4f")) refreshData = true;
 			if (ImGui::DragFloat("Connection width", &connectionWidth, 0.0001f, 0.0001f, 1.0f, "%.4f")) refreshData = true;
 			if (ImGui::DragFloat("Point size", &pointSize, 0.0001f, 0.0001f, 1.0f, "%.4f")) refreshData = true;
-			if (ImGui::DragFloat("Node size", &nodeSize, 0.01f, 0.1f, 10.0f)) refreshData = true;
 
-			if (ImGui::Checkbox("Render branches", &drawpredictedBranches)) refreshData = true;
+			if (ImGui::Checkbox("Render branches", &drawPredictedBranches)) refreshData = true;
 			if (ImGui::Checkbox("Render allocated points", &drawAllocatedPoints)) refreshData = true;
 			if (ImGui::Checkbox("Render scattered points", &drawScatteredPoints)) refreshData = true;
 			if (drawScatteredPoints) {
-				if (ImGui::ColorEdit4("Scatter Point color", &scatterPointColor.x)) refreshData = true;
+				if (ImGui::ColorEdit4("Scatter Point color", &m_scatterPointColor.x)) refreshData = true;
 				if (ImGui::Checkbox("Render Point-Point links", &drawScatteredPointConnections)) refreshData = true;
 				if (ImGui::Checkbox("Render Point-Branch links", &drawScatterPointToBranchConnections)) refreshData = true;
-				if (drawScatteredPointConnections && ImGui::ColorEdit4("Point-Point links color", &scatteredPointConnectionColor.x)) refreshData = true;
-				if (drawScatterPointToBranchConnections && ImGui::ColorEdit4("Point-Branch links color", &scatterPointToBranchConnectionColor.x)) refreshData = true;
+				if (drawScatteredPointConnections && ImGui::ColorEdit4("Point-Point links color", &m_scatteredPointConnectionColor.x)) refreshData = true;
+				if (drawScatterPointToBranchConnections && ImGui::ColorEdit4("Point-Branch links color", &m_scatterPointToBranchConnectionColor.x)) refreshData = true;
 			}
 
 			if (ImGui::Checkbox("Render candidate connections", &drawCandidateConnections)) refreshData = true;
-			if (drawCandidateConnections && ImGui::ColorEdit4("Candidate connection color", &candidateBranchConnectionColor.x))
+			if (drawCandidateConnections && ImGui::ColorEdit4("Candidate connection color", &m_candidateBranchConnectionColor.x))
 				refreshData = true;
 			if (ImGui::Checkbox("Render reversed candidate connections", &drawReversedCandidateConnections)) refreshData = true;
-			if (drawReversedCandidateConnections && ImGui::ColorEdit4("Reversed candidate connection color", &reversedCandidateBranchConnectionColor.x))
+			if (drawReversedCandidateConnections && ImGui::ColorEdit4("Reversed candidate connection color", &m_reversedCandidateBranchConnectionColor.x))
 				refreshData = true;
 			if (ImGui::Checkbox("Render filtered connections", &drawFilteredConnections)) refreshData = true;
-			if (drawFilteredConnections && ImGui::ColorEdit4("Filtered Connection Color", &filteredBranchConnectionColor.x))
+			if (drawFilteredConnections && ImGui::ColorEdit4("Filtered Connection Color", &m_filteredBranchConnectionColor.x))
 				refreshData = true;
 			if (ImGui::Checkbox("Render connections", &drawBranchConnections)) refreshData = true;
-			if (drawBranchConnections && ImGui::ColorEdit4("Branch Connection Color", &branchConnectionColor.x))
+			if (drawBranchConnections && ImGui::ColorEdit4("Branch Connection Color", &m_selectedBranchConnectionColor.x))
 				refreshData = true;
 
-			if (ImGui::Checkbox("Render nodes", &drawNode)) refreshData = true;
 			gizmoSettings.m_drawSettings.OnInspect();
 
 			ImGui::TreePop();
@@ -824,44 +805,33 @@ void TreeStructor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 
 			allocatedPointMatrices.resize(m_allocatedPoints.size());
 
-			predictedBranchConnectionStarts.resize(m_predictedBranches.size());
-			predictedBranchConnectionEnds.resize(m_predictedBranches.size());
-			predictedBranchConnectionColors.resize(m_predictedBranches.size());
+			predictedBranchStarts.resize(m_predictedBranches.size());
+			predictedBranchEnds.resize(m_predictedBranches.size());
+			predictedBranchColors.resize(m_predictedBranches.size());
 
-			nodeMatrices.clear();
 			switch (colorMode) {
 			case 0: {
 				//TreePart
 				for (int i = 0; i < m_allocatedPoints.size(); i++) {
 					allocatedPointMatrices[i].m_instanceMatrix.m_value =
-						glm::translate(m_allocatedPoints[i].m_position) * glm::scale(glm::vec3(1.0f));
+						glm::translate(m_allocatedPoints[i].m_position) * glm::scale(glm::vec3(0.003f));
 					allocatedPointMatrices[i].m_instanceColor = glm::vec4(m_allocatedPoints[i].m_color, 1.0f);
 				}
 
 				for (int i = 0; i < m_predictedBranches.size(); i++) {
-					predictedBranchConnectionStarts[i] = m_predictedBranches[i].m_bezierCurve.m_p0;
-					predictedBranchConnectionEnds[i] = m_predictedBranches[i].m_bezierCurve.m_p3;
-					predictedBranchConnectionColors[i] = glm::vec4(m_predictedBranches[i].m_color, 1.0f);
+					predictedBranchStarts[i] = m_predictedBranches[i].m_bezierCurve.m_p0;
+					predictedBranchEnds[i] = m_predictedBranches[i].m_bezierCurve.m_p3;
+					predictedBranchColors[i] = glm::vec4(m_predictedBranches[i].m_color, 1.0f);
 				}
-				predictedBranchConnectionInfoList->ApplyConnections(predictedBranchConnectionStarts, predictedBranchConnectionEnds, predictedBranchConnectionColors, predictedBranchWidth);
-				for (const auto& skeleton : m_skeletons) {
-					const auto& nodeList = skeleton.PeekSortedNodeList();
-					const auto startIndex = nodeMatrices.size();
-					nodeMatrices.resize(startIndex + nodeList.size());
-					for (int i = 0; i < nodeList.size(); i++) {
-						const auto& node = skeleton.PeekNode(nodeList[i]);
-						nodeMatrices[startIndex + i].m_instanceMatrix.m_value = glm::translate(node.m_info.m_globalPosition + skeleton.m_data.m_rootPosition) *
-							glm::scale(glm::vec3(node.m_info.m_thickness));
-						nodeMatrices[startIndex + i].m_instanceColor = glm::vec4(1.0f);
-					}
-				}
+				m_predictedBranchInfoList->ApplyConnections(predictedBranchStarts, predictedBranchEnds, predictedBranchColors, predictedBranchWidth);
+
 			}
 				  break;
 			case 1: {
 				//Branch
 				for (int i = 0; i < m_allocatedPoints.size(); i++) {
 					allocatedPointMatrices[i].m_instanceMatrix.m_value =
-						glm::translate(m_allocatedPoints[i].m_position) * glm::scale(glm::vec3(1.0f));
+						glm::translate(m_allocatedPoints[i].m_position) * glm::scale(glm::vec3(0.003f));
 					if (m_allocatedPoints[i].m_branchHandle >= 0) {
 						allocatedPointMatrices[i].m_instanceColor = glm::vec4(
 							ecoSysLabLayer->RandomColors()[m_allocatedPoints[i].m_branchHandle], 1.0f);
@@ -873,33 +843,20 @@ void TreeStructor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 				}
 
 				for (int i = 0; i < m_predictedBranches.size(); i++) {
-					predictedBranchConnectionStarts[i] = m_predictedBranches[i].m_bezierCurve.m_p0;
-					predictedBranchConnectionEnds[i] = m_predictedBranches[i].m_bezierCurve.m_p3;
-					predictedBranchConnectionColors[i] = glm::vec4(
+					predictedBranchStarts[i] = m_predictedBranches[i].m_bezierCurve.m_p0;
+					predictedBranchEnds[i] = m_predictedBranches[i].m_bezierCurve.m_p3;
+					predictedBranchColors[i] = glm::vec4(
 						ecoSysLabLayer->RandomColors()[m_predictedBranches[i].m_handle], 1.0f);
 				}
-				predictedBranchConnectionInfoList->ApplyConnections(predictedBranchConnectionStarts, predictedBranchConnectionEnds, predictedBranchConnectionColors, predictedBranchWidth);
+				m_predictedBranchInfoList->ApplyConnections(predictedBranchStarts, predictedBranchEnds, predictedBranchColors, predictedBranchWidth);
 
-				for (const auto& skeleton : m_skeletons) {
-					const auto& nodeList = skeleton.PeekSortedNodeList();
-					const auto startIndex = nodeMatrices.size();
-					nodeMatrices.resize(startIndex + nodeList.size());
-					for (int i = 0; i < nodeList.size(); i++) {
-						const auto& node = skeleton.PeekNode(nodeList[i]);
-						nodeMatrices[startIndex + i].m_instanceMatrix.m_value = glm::translate(node.m_info.m_globalPosition + skeleton.m_data.m_rootPosition) *
-							glm::scale(glm::vec3(node.m_info.m_thickness));
-						nodeMatrices[startIndex + i].m_instanceColor = glm::vec4(
-							ecoSysLabLayer->RandomColors()[node.m_data.m_branchHandle],
-							1.0f);
-					}
-				}
 			}
 				  break;
 			case 2: {
 				//Node
 				for (int i = 0; i < m_allocatedPoints.size(); i++) {
 					allocatedPointMatrices[i].m_instanceMatrix.m_value =
-						glm::translate(m_allocatedPoints[i].m_position) * glm::scale(glm::vec3(1.0f));
+						glm::translate(m_allocatedPoints[i].m_position) * glm::scale(glm::vec3(0.003f));
 					if (m_allocatedPoints[i].m_nodeHandle >= 0) {
 						allocatedPointMatrices[i].m_instanceColor = glm::vec4(
 							ecoSysLabLayer->RandomColors()[m_allocatedPoints[i].m_nodeHandle], 1.0f);
@@ -911,42 +868,31 @@ void TreeStructor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 				}
 
 				for (int i = 0; i < m_predictedBranches.size(); i++) {
-					predictedBranchConnectionStarts[i] = m_predictedBranches[i].m_bezierCurve.m_p0;
-					predictedBranchConnectionEnds[i] = m_predictedBranches[i].m_bezierCurve.m_p3;
-					predictedBranchConnectionColors[i] = glm::vec4(1.0f);
+					predictedBranchStarts[i] = m_predictedBranches[i].m_bezierCurve.m_p0;
+					predictedBranchEnds[i] = m_predictedBranches[i].m_bezierCurve.m_p3;
+					predictedBranchColors[i] = glm::vec4(1.0f);
 				}
-				predictedBranchConnectionInfoList->ApplyConnections(predictedBranchConnectionStarts, predictedBranchConnectionEnds, predictedBranchConnectionColors, predictedBranchWidth);
-				for (const auto& skeleton : m_skeletons) {
-					const auto& nodeList = skeleton.PeekSortedNodeList();
-					const auto startIndex = nodeMatrices.size();
-					nodeMatrices.resize(startIndex + nodeList.size());
-					for (int i = 0; i < nodeList.size(); i++) {
-						const auto& node = skeleton.PeekNode(nodeList[i]);
-						nodeMatrices[startIndex + i].m_instanceMatrix.m_value = glm::translate(node.m_info.m_globalPosition + skeleton.m_data.m_rootPosition) *
-							glm::scale(glm::vec3(node.m_info.m_thickness));
-						nodeMatrices[startIndex + i].m_instanceColor = glm::vec4(ecoSysLabLayer->RandomColors()[node.GetHandle()],
-							1.0f);
-					}
-				}
+				m_predictedBranchInfoList->ApplyConnections(predictedBranchStarts, predictedBranchEnds, predictedBranchColors, predictedBranchWidth);
+
 			}
 				  break;
 			}
 
 			scatterPointMatrices.resize(m_scatteredPoints.size());
 			for (int i = 0; i < m_scatteredPoints.size(); i++) {
-				scatterPointMatrices[i].m_instanceMatrix.m_value = glm::translate(m_scatteredPoints[i].m_position) * glm::scale(glm::vec3(1.0f));
-				scatterPointMatrices[i].m_instanceColor = scatterPointColor;
+				scatterPointMatrices[i].m_instanceMatrix.m_value = glm::translate(m_scatteredPoints[i].m_position) * glm::scale(glm::vec3(0.004f));
+				scatterPointMatrices[i].m_instanceColor = m_scatterPointColor;
 			}
 
-			scatteredPointConnectionsStarts.resize(m_scatterPointsConnections.size());
-			scatteredPointConnectionsEnds.resize(m_scatterPointsConnections.size());
-			scatteredPointConnectionColors.resize(m_scatterPointsConnections.size());
-			for (int i = 0; i < m_scatterPointsConnections.size(); i++) {
-				scatteredPointConnectionsStarts[i] = m_scatterPointsConnections[i].first;
-				scatteredPointConnectionsEnds[i] = m_scatterPointsConnections[i].second;
-				scatteredPointConnectionColors[i] = scatterPointToBranchConnectionColor;
+			scatteredPointConnectionsStarts.resize(m_scatteredPointsConnections.size());
+			scatteredPointConnectionsEnds.resize(m_scatteredPointsConnections.size());
+			scatteredPointConnectionColors.resize(m_scatteredPointsConnections.size());
+			for (int i = 0; i < m_scatteredPointsConnections.size(); i++) {
+				scatteredPointConnectionsStarts[i] = m_scatteredPointsConnections[i].first;
+				scatteredPointConnectionsEnds[i] = m_scatteredPointsConnections[i].second;
+				scatteredPointConnectionColors[i] = m_scatterPointToBranchConnectionColor;
 			}
-			scatteredPointConnectionInfoList->ApplyConnections(
+			m_scatteredPointConnectionInfoList->ApplyConnections(
 				scatteredPointConnectionsStarts,
 				scatteredPointConnectionsEnds,
 				scatteredPointConnectionColors, connectionWidth
@@ -959,13 +905,13 @@ void TreeStructor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 			for (int i = 0; i < m_candidateBranchConnections.size(); i++) {
 				candidateBranchConnectionStarts[i] = m_candidateBranchConnections[i].first;
 				candidateBranchConnectionEnds[i] = m_candidateBranchConnections[i].second;
-				candidateBranchConnectionColors[i] = candidateBranchConnectionColor;
+				candidateBranchConnectionColors[i] = m_candidateBranchConnectionColor;
 			}
 
-			candidateBranchConnectionInfoList->ApplyConnections(
+			m_candidateBranchConnectionInfoList->ApplyConnections(
 				candidateBranchConnectionStarts,
 				candidateBranchConnectionEnds,
-				candidateBranchConnectionColors, connectionWidth * 1.5f
+				candidateBranchConnectionColors, connectionWidth
 			);
 
 			reversedCandidateBranchConnectionStarts.resize(m_reversedCandidateBranchConnections.size());
@@ -974,13 +920,13 @@ void TreeStructor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 			for (int i = 0; i < m_reversedCandidateBranchConnections.size(); i++) {
 				reversedCandidateBranchConnectionStarts[i] = m_reversedCandidateBranchConnections[i].first;
 				reversedCandidateBranchConnectionEnds[i] = m_reversedCandidateBranchConnections[i].second;
-				reversedCandidateBranchConnectionColors[i] = reversedCandidateBranchConnectionColor;
+				reversedCandidateBranchConnectionColors[i] = m_reversedCandidateBranchConnectionColor;
 			}
 
-			reversedCandidateBranchConnectionInfoList->ApplyConnections(
+			m_reversedCandidateBranchConnectionInfoList->ApplyConnections(
 				reversedCandidateBranchConnectionStarts,
 				reversedCandidateBranchConnectionEnds,
-				reversedCandidateBranchConnectionColors, connectionWidth * 1.5f
+				reversedCandidateBranchConnectionColors, connectionWidth
 			);
 
 			filteredBranchConnectionStarts.resize(m_filteredBranchConnections.size());
@@ -989,101 +935,213 @@ void TreeStructor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 			for (int i = 0; i < m_filteredBranchConnections.size(); i++) {
 				filteredBranchConnectionStarts[i] = m_filteredBranchConnections[i].first;
 				filteredBranchConnectionEnds[i] = m_filteredBranchConnections[i].second;
-				filteredBranchConnectionColors[i] = filteredBranchConnectionColor;
+				filteredBranchConnectionColors[i] = m_filteredBranchConnectionColor;
 			}
-			filteredBranchConnectionInfoList->ApplyConnections(
+			m_filteredBranchConnectionInfoList->ApplyConnections(
 				filteredBranchConnectionStarts,
 				filteredBranchConnectionEnds,
-				filteredBranchConnectionColors, connectionWidth * 1.75f
+				filteredBranchConnectionColors, connectionWidth * 1.1f
 			);
 
-			branchConnectionStarts.resize(m_branchConnections.size());
-			branchConnectionEnds.resize(m_branchConnections.size());
-			branchConnectionColors.resize(m_branchConnections.size());
+			selectedBranchConnectionStarts.resize(m_branchConnections.size());
+			selectedBranchConnectionEnds.resize(m_branchConnections.size());
+			selectedBranchConnectionColors.resize(m_branchConnections.size());
 			for (int i = 0; i < m_branchConnections.size(); i++) {
-				branchConnectionStarts[i] = m_branchConnections[i].first;
-				branchConnectionEnds[i] = m_branchConnections[i].second;
-				branchConnectionColors[i] = branchConnectionColor;
+				selectedBranchConnectionStarts[i] = m_branchConnections[i].first;
+				selectedBranchConnectionEnds[i] = m_branchConnections[i].second;
+				selectedBranchConnectionColors[i] = m_selectedBranchConnectionColor;
 			}
-			branchConnectionInfoList->ApplyConnections(
-				branchConnectionStarts,
-				branchConnectionEnds,
-				branchConnectionColors, connectionWidth * 2.0f
+			m_selectedBranchConnectionInfoList->ApplyConnections(
+				selectedBranchConnectionStarts,
+				selectedBranchConnectionEnds,
+				selectedBranchConnectionColors, connectionWidth * 1.2f
 			);
 
 			scatterPointToBranchConnectionStarts.resize(
-				m_scatterPointToBranchStartConnections.size() + m_scatterPointToBranchEndConnections.size());
+				m_scatteredPointToBranchStartConnections.size() + m_scatteredPointToBranchEndConnections.size());
 			scatterPointToBranchConnectionEnds.resize(
-				m_scatterPointToBranchStartConnections.size() + m_scatterPointToBranchEndConnections.size());
+				m_scatteredPointToBranchStartConnections.size() + m_scatteredPointToBranchEndConnections.size());
 			scatterPointToBranchConnectionColors.resize(
-				m_scatterPointToBranchStartConnections.size() + m_scatterPointToBranchEndConnections.size());
-			for (int i = 0; i < m_scatterPointToBranchStartConnections.size(); i++) {
-				scatterPointToBranchConnectionStarts[i] = m_scatterPointToBranchStartConnections[i].first;
-				scatterPointToBranchConnectionEnds[i] = m_scatterPointToBranchStartConnections[i].second;
-				scatterPointToBranchConnectionColors[i] = scatterPointToBranchConnectionColor;
+				m_scatteredPointToBranchStartConnections.size() + m_scatteredPointToBranchEndConnections.size());
+			for (int i = 0; i < m_scatteredPointToBranchStartConnections.size(); i++) {
+				scatterPointToBranchConnectionStarts[i] = m_scatteredPointToBranchStartConnections[i].first;
+				scatterPointToBranchConnectionEnds[i] = m_scatteredPointToBranchStartConnections[i].second;
+				scatterPointToBranchConnectionColors[i] = m_scatterPointToBranchConnectionColor;
 			}
-			for (int i = m_scatterPointToBranchStartConnections.size();
-				i < m_scatterPointToBranchStartConnections.size() + m_scatterPointToBranchEndConnections.size(); i++) {
-				scatterPointToBranchConnectionStarts[i] = m_scatterPointToBranchEndConnections[i -
-					m_scatterPointToBranchStartConnections.size()].first;
-				scatterPointToBranchConnectionEnds[i] = m_scatterPointToBranchEndConnections[i -
-					m_scatterPointToBranchStartConnections.size()].second;
+			for (int i = m_scatteredPointToBranchStartConnections.size();
+				i < m_scatteredPointToBranchStartConnections.size() + m_scatteredPointToBranchEndConnections.size(); i++) {
+				scatterPointToBranchConnectionStarts[i] = m_scatteredPointToBranchEndConnections[i -
+					m_scatteredPointToBranchStartConnections.size()].first;
+				scatterPointToBranchConnectionEnds[i] = m_scatteredPointToBranchEndConnections[i -
+					m_scatteredPointToBranchStartConnections.size()].second;
 			}
-			scatterPointToBranchConnectionInfoList->ApplyConnections(
+			m_scatterPointToBranchConnectionInfoList->ApplyConnections(
 				scatterPointToBranchConnectionStarts,
 				scatterPointToBranchConnectionEnds,
 				scatterPointToBranchConnectionColors, connectionWidth
 			);
 
-			allocatedPointInfoList->SetParticleInfos(allocatedPointMatrices);
-			scatterPointInfoList->SetParticleInfos(scatterPointMatrices);
-			nodeInfoList->SetParticleInfos(nodeMatrices);
+			m_allocatedPointInfoList->SetParticleInfos(allocatedPointMatrices);
+			m_scatteredPointInfoList->SetParticleInfos(scatterPointMatrices);
 		}
 		if (drawScatteredPoints) {
 			editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CUBE"),
-				scatterPointInfoList,
+				m_scatteredPointInfoList,
 				glm::mat4(1.0f),
 				pointSize, gizmoSettings);
 		}
 		if (drawAllocatedPoints) {
 			editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CUBE"),
-				allocatedPointInfoList,
+				m_allocatedPointInfoList,
 				glm::mat4(1.0f),
 				pointSize, gizmoSettings);
 		}
-		if (drawpredictedBranches)
-			editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CONE"), predictedBranchConnectionInfoList, glm::mat4(1.0f), 1.0f, gizmoSettings);
+		if (drawPredictedBranches)
+			editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CONE"), m_predictedBranchInfoList, glm::mat4(1.0f), 1.0f, gizmoSettings);
 		if (drawScatteredPointConnections)
-			editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER"), scatteredPointConnectionInfoList, glm::mat4(1.0f), 1.0f, gizmoSettings);
+			editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER"), m_scatteredPointConnectionInfoList, glm::mat4(1.0f), 1.0f, gizmoSettings);
 
 		if (drawCandidateConnections)
-			editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CONE"), candidateBranchConnectionInfoList, glm::mat4(1.0f), 1.0f, gizmoSettings);
+			editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CONE"), m_candidateBranchConnectionInfoList, glm::mat4(1.0f), 1.0f, gizmoSettings);
 
 		if (drawReversedCandidateConnections)
-			editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER"), reversedCandidateBranchConnectionInfoList, glm::mat4(1.0f), 1.0f, gizmoSettings);
+			editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER"), m_reversedCandidateBranchConnectionInfoList, glm::mat4(1.0f), 1.0f, gizmoSettings);
 
 		if (drawFilteredConnections)
-			editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER"), filteredBranchConnectionInfoList, glm::mat4(1.0f), 1.0f, gizmoSettings);
+			editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER"), m_filteredBranchConnectionInfoList, glm::mat4(1.0f), 1.0f, gizmoSettings);
 		if (drawBranchConnections)
-			editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER"), branchConnectionInfoList, glm::mat4(1.0f), 1.0f, gizmoSettings);
+			editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER"), m_selectedBranchConnectionInfoList, glm::mat4(1.0f), 1.0f, gizmoSettings);
 
 		if (drawScatterPointToBranchConnections)
-			editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER"), scatterPointToBranchConnectionInfoList, glm::mat4(1.0f), 1.0f, gizmoSettings);
-		if (drawNode) {
-			editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CUBE"), nodeInfoList,
-				glm::mat4(1.0f), nodeSize, gizmoSettings);
+			editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER"), m_scatterPointToBranchConnectionInfoList, glm::mat4(1.0f), 1.0f, gizmoSettings);
+	}
+
+	if (ImGui::Button("Build Info Visualization"))
+	{
+		FormInfoEntities();
+	}
+}
+
+void TreeStructor::FormInfoEntities()
+{
+	const auto scene = GetScene();
+	const auto owner = GetOwner();
+	const auto children = scene->GetChildren(owner);
+	for (const auto& i : children)
+	{
+		if (scene->GetEntityName(i) == "Info")
+		{
+			scene->DeleteEntity(i);
 		}
+	}
+
+	const auto infoEntity = scene->CreateEntity("Info");
+	scene->SetParent(infoEntity, owner);
+	{
+		const auto allocatedPointInfoEntity = scene->CreateEntity("Allocated Points");
+		scene->SetParent(allocatedPointInfoEntity, infoEntity);
+		const auto particles = scene->GetOrSetPrivateComponent<Particles>(allocatedPointInfoEntity).lock();
+		particles->m_mesh = Resources::GetResource<Mesh>("PRIMITIVE_SPHERE");
+		particles->m_particleInfoList = m_allocatedPointInfoList;
+		const auto material = ProjectManager::CreateTemporaryAsset<Material>();
+		particles->m_material = material;
+		material->m_materialProperties.m_albedoColor = m_allocatedPointColor;
+	}
+	{
+		const auto scatterPointInfoEntity = scene->CreateEntity("Scattered Points");
+		scene->SetParent(scatterPointInfoEntity, infoEntity);
+		const auto particles = scene->GetOrSetPrivateComponent<Particles>(scatterPointInfoEntity).lock();
+		particles->m_mesh = Resources::GetResource<Mesh>("PRIMITIVE_SPHERE");
+		particles->m_particleInfoList = m_scatteredPointInfoList;
+		const auto material = ProjectManager::CreateTemporaryAsset<Material>();
+		particles->m_material = material;
+		material->m_materialProperties.m_albedoColor = m_scatterPointColor;
+	}
+	{
+		const auto scatteredPointConnectionInfoEntity = scene->CreateEntity("Scattered Point Connections");
+		scene->SetParent(scatteredPointConnectionInfoEntity, infoEntity);
+		scene->SetEnable(scatteredPointConnectionInfoEntity, false);
+		const auto particles = scene->GetOrSetPrivateComponent<Particles>(scatteredPointConnectionInfoEntity).lock();
+		particles->m_mesh = Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER");
+		particles->m_particleInfoList = m_scatteredPointConnectionInfoList;
+		const auto material = ProjectManager::CreateTemporaryAsset<Material>();
+		particles->m_material = material;
+		material->m_materialProperties.m_albedoColor = m_scatteredPointConnectionColor;
+	}
+	{
+		const auto candidateBranchConnectionInfoEntity = scene->CreateEntity("Candidate Branch Connections");
+		scene->SetEnable(candidateBranchConnectionInfoEntity, false);
+		scene->SetParent(candidateBranchConnectionInfoEntity, infoEntity);
+		const auto particles = scene->GetOrSetPrivateComponent<Particles>(candidateBranchConnectionInfoEntity).lock();
+		particles->m_mesh = Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER");
+		particles->m_particleInfoList = m_candidateBranchConnectionInfoList;
+		const auto material = ProjectManager::CreateTemporaryAsset<Material>();
+		particles->m_material = material;
+		material->m_materialProperties.m_albedoColor = m_candidateBranchConnectionColor;
+	}
+	if (false) {
+		const auto reversedCandidateBranchConnectionInfoEntity = scene->CreateEntity("Reversed Candidate Branch Connections");
+		scene->SetEnable(reversedCandidateBranchConnectionInfoEntity, false);
+		scene->SetParent(reversedCandidateBranchConnectionInfoEntity, infoEntity);
+		const auto particles = scene->GetOrSetPrivateComponent<Particles>(reversedCandidateBranchConnectionInfoEntity).lock();
+		particles->m_mesh = Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER");
+		particles->m_particleInfoList = m_reversedCandidateBranchConnectionInfoList;
+		const auto material = ProjectManager::CreateTemporaryAsset<Material>();
+		particles->m_material = material;
+		material->m_materialProperties.m_albedoColor = m_reversedCandidateBranchConnectionColor;
+	}
+	{
+		const auto filteredBranchConnectionInfoEntity = scene->CreateEntity("Filtered Branch Connections");
+		scene->SetEnable(filteredBranchConnectionInfoEntity, false);
+		scene->SetParent(filteredBranchConnectionInfoEntity, infoEntity);
+		const auto particles = scene->GetOrSetPrivateComponent<Particles>(filteredBranchConnectionInfoEntity).lock();
+		particles->m_mesh = Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER");
+		particles->m_particleInfoList = m_filteredBranchConnectionInfoList;
+		const auto material = ProjectManager::CreateTemporaryAsset<Material>();
+		particles->m_material = material;
+		material->m_materialProperties.m_albedoColor = m_filteredBranchConnectionColor;
+	}
+	{
+		const auto branchConnectionInfoEntity = scene->CreateEntity("Selected Branch Connections");
+		scene->SetParent(branchConnectionInfoEntity, infoEntity);
+		const auto particles = scene->GetOrSetPrivateComponent<Particles>(branchConnectionInfoEntity).lock();
+		particles->m_mesh = Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER");
+		particles->m_particleInfoList = m_selectedBranchConnectionInfoList;
+		const auto material = ProjectManager::CreateTemporaryAsset<Material>();
+		particles->m_material = material;
+		material->m_materialProperties.m_albedoColor = m_selectedBranchConnectionColor;
+	}
+	{
+		const auto scatterPointToBranchConnection = scene->CreateEntity("Scatter Point To Branch Connections");
+		scene->SetParent(scatterPointToBranchConnection, infoEntity);
+		scene->SetEnable(scatterPointToBranchConnection, false);
+		const auto particles = scene->GetOrSetPrivateComponent<Particles>(scatterPointToBranchConnection).lock();
+		particles->m_mesh = Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER");
+		particles->m_particleInfoList = m_scatterPointToBranchConnectionInfoList;
+		const auto material = ProjectManager::CreateTemporaryAsset<Material>();
+		particles->m_material = material;
+		material->m_materialProperties.m_albedoColor = m_scatterPointToBranchConnectionColor;
+	}
+	{
+		const auto predictedBranchConnectionInfoEntity = scene->CreateEntity("Selected Branches");
+		scene->SetParent(predictedBranchConnectionInfoEntity, infoEntity);
+		const auto particles = scene->GetOrSetPrivateComponent<Particles>(predictedBranchConnectionInfoEntity).lock();
+		particles->m_mesh = Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER");
+		particles->m_particleInfoList = m_predictedBranchInfoList;
+		const auto material = ProjectManager::CreateTemporaryAsset<Material>();
+		particles->m_material = material;
+		material->m_materialProperties.m_albedoColor = m_selectedBranchColor;
 	}
 }
 
 void TreeStructor::EstablishConnectivityGraph() {
-	m_scatterPointsConnections.clear();
+	m_scatteredPointsConnections.clear();
 	m_reversedCandidateBranchConnections.clear();
 	m_candidateBranchConnections.clear();
 	m_filteredBranchConnections.clear();
 	m_branchConnections.clear();
-	m_scatterPointToBranchStartConnections.clear();
-	m_scatterPointToBranchEndConnections.clear();
+	m_scatteredPointToBranchStartConnections.clear();
+	m_scatteredPointToBranchEndConnections.clear();
 
 	for (auto& point : m_scatteredPoints) {
 		point.m_neighborScatterPoints.clear();
@@ -1103,7 +1161,7 @@ void TreeStructor::EstablishConnectivityGraph() {
 
 	//We establish connection between any 2 scatter points.
 	for (auto& point : m_scatteredPoints) {
-		if (m_scatterPointsConnections.size() > 1000000) {
+		if (m_scatteredPointsConnections.size() > 1000000) {
 			EVOENGINE_ERROR("Too much connections!");
 			break;
 		}
@@ -1117,7 +1175,7 @@ void TreeStructor::EstablishConnectivityGraph() {
 				auto& otherPoint = m_scatteredPoints[voxel.m_handle];
 				point.m_neighborScatterPoints.emplace_back(voxel.m_handle);
 				otherPoint.m_neighborScatterPoints.emplace_back(point.m_handle);
-				m_scatterPointsConnections.emplace_back(point.m_position, otherPoint.m_position);
+				m_scatteredPointsConnections.emplace_back(point.m_position, otherPoint.m_position);
 			});
 	}
 
@@ -1151,7 +1209,7 @@ void TreeStructor::EstablishConnectivityGraph() {
 						}
 						if (!duplicate) branch.m_pointsToP0.emplace_back(glm::distance(branch.m_bezierCurve.m_p0, voxel.m_position), voxel.m_handle);
 					}
-					m_scatterPointToBranchStartConnections.emplace_back(branch.m_bezierCurve.m_p0,
+					m_scatteredPointToBranchStartConnections.emplace_back(branch.m_bezierCurve.m_p0,
 						voxel.m_position);
 				});
 		}
@@ -1181,7 +1239,7 @@ void TreeStructor::EstablishConnectivityGraph() {
 						}
 						if (!duplicate) otherPoint.m_p3.emplace_back(glm::distance(branch.m_bezierCurve.m_p3, voxel.m_position), branch.m_handle);
 					}
-					m_scatterPointToBranchEndConnections.emplace_back(branch.m_bezierCurve.m_p3,
+					m_scatteredPointToBranchEndConnections.emplace_back(branch.m_bezierCurve.m_p3,
 						voxel.m_position);
 				});
 		}
@@ -1856,7 +1914,7 @@ void TreeStructor::BuildSkeletons() {
 		{
 			auto& skeleton = m_skeletons[i];
 			const auto& sortedList = skeleton.PeekSortedNodeList();
-			if(!sortedList.empty())
+			if (!sortedList.empty())
 			{
 				skeleton.RefNode(0).m_info.m_globalPosition.y = 0;
 			}
@@ -1894,6 +1952,8 @@ void TreeStructor::FormGeometryEntity()
 		scene->SetDataComponent(treeEntity, gt);
 	}
 }
+
+
 
 void TreeStructor::SpaceColonization()
 {
@@ -2293,6 +2353,7 @@ void TreeStructor::ClearMeshes() const {
 
 void TreeStructor::OnCreate()
 {
+	m_treeMeshGeneratorSettings.m_enableFoliage = false;
 }
 
 std::vector<std::shared_ptr<Mesh>> TreeStructor::GenerateForestBranchMeshes() const
