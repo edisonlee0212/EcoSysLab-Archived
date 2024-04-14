@@ -263,8 +263,8 @@ namespace EcoSysLab
 			auto& baseInfo = strand.m_info.m_baseInfo;
 			strands.emplace_back(points.size());
 			StrandPoint basePoint;
-			const auto& secondstrandSegment = PeekStrandSegment(strandSegmentHandles[0]);
-			auto basePointDistance = glm::distance(baseInfo.m_globalPosition, secondstrandSegment.m_info.m_globalPosition);
+			const auto& secondStrandSegment = PeekStrandSegment(strandSegmentHandles[0]);
+			auto basePointDistance = glm::distance(baseInfo.m_globalPosition, secondStrandSegment.m_info.m_globalPosition);
 			const auto baseTangent = glm::normalize(baseInfo.m_globalRotation * glm::vec3(0, 0, -1));
 			basePoint.m_color = baseInfo.m_color;
 			basePoint.m_position = baseInfo.m_globalPosition - baseTangent * basePointDistance * controlPointRatio;
@@ -358,8 +358,8 @@ namespace EcoSysLab
 	{
 		StrandSegmentHandle newSegmentHandle;
 		if (m_strandSegmentPool.empty()) {
-			auto newSegment = m_strandSegments.emplace_back(strandHandle, m_strandSegments.size(), prevHandle);
-			newSegmentHandle = newSegment.m_handle;
+			m_strandSegments.emplace_back(strandHandle, m_strandSegments.size(), prevHandle);
+			newSegmentHandle = m_strandSegments.back().m_handle;
 		}
 		else {
 			newSegmentHandle = m_strandSegmentPool.front();
@@ -393,9 +393,9 @@ namespace EcoSysLab
 	StrandHandle StrandGroup<StrandGroupData, StrandData, StrandSegmentData>::AllocateStrand()
 	{
 		if (m_strandPool.empty()) {
-			auto newstrand = m_strands.emplace_back(m_strands.size());
+			m_strands.emplace_back(m_strands.size());
 			m_version++;
-			return newstrand.m_handle;
+			return m_strands.back().m_handle;
 		}
 		auto handle = m_strandPool.front();
 		m_strandPool.pop();

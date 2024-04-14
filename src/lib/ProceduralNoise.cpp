@@ -26,6 +26,9 @@ bool OperatorTypeSelection(ProceduralNoiseOperatorType& target, const std::strin
 bool ProceduralNoise2D::OnInspect(const SkeletonNodeHandle nodeHandle)
 {
 	bool changed = false;
+
+
+
 	auto& node = m_pipeline.RefNode(nodeHandle);
 	const std::string prefix = "[" + std::to_string(nodeHandle) + "] ";
 	const std::string tag = "##ProceduralNoise3DNode" + std::to_string(nodeHandle);
@@ -50,7 +53,7 @@ bool ProceduralNoise2D::OnInspect(const SkeletonNodeHandle nodeHandle)
 			ImGui::EndPopup();
 		}
 		OperatorTypeSelection(node.m_data.m_operatorType, tag);
-		if(node.m_data.m_operatorType != ProceduralNoiseOperatorType::None) ValueTypeSelection(node.m_data.m_valueType, tag);
+		if (node.m_data.m_operatorType != ProceduralNoiseOperatorType::None) ValueTypeSelection(node.m_data.m_valueType, tag);
 		if (node.m_data.m_valueType != ProceduralNoiseValueType::Constant) {
 			if (ImGui::DragFloat2(("Offset" + tag).c_str(), &node.m_data.m_offset.x, 0.01f)) changed = true;
 			if (ImGui::DragFloat2(("Frequency" + tag).c_str(), &node.m_data.m_frequency.x, 0.01f)) changed = true;
@@ -224,6 +227,48 @@ void ProceduralNoise2D::Deserialize(const YAML::Node& in)
 
 void ProceduralNoise2D::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
+	static NodeGraph<int, int, int, int> graph{};
+	static bool showNodeGraph = true;
+	if (showNodeGraph)
+	{
+		graph.OnInspect("Node Graph",
+			editorLayer,
+			[&](const ImVec2 clickPos)
+			{
+				if (ImGui::MenuItem("add"))
+				{
+					const auto newNodeHandle = graph.AllocateNode(3, true);
+
+					ImNodes::SetNodeScreenSpacePos(newNodeHandle, clickPos);
+				}
+			},
+			[&](NodeGraphInputPinHandle inputPinHandle)
+			{
+				ImGui::Text("Input");
+			},
+			[&](NodeGraphOutputPinHandle outputPinHandle)
+			{
+				ImGui::Text("Output");
+			},
+			[&](NodeGraphOutputPinHandle startHandle, NodeGraphInputPinHandle endHandle)
+			{
+				graph.AllocateLink(startHandle, endHandle);
+			},
+			[&](NodeGraphLinkHandle linkHandle)
+			{
+				graph.RecycleLink(linkHandle);
+			},
+			[&](NodeGraphNodeHandle nodeHandle, NodeGraphLinkHandle linkHandle, NodeGraphInputPinHandle inputPinHandle, NodeGraphOutputPinHandle outputPinHandle)
+			{
+
+			},
+			[&](const std::vector<NodeGraphNodeHandle>& selectedNodeHandles, const std::vector<NodeGraphLinkHandle>& selectedLinkHandles)
+			{
+
+			}
+		);
+	}
+
 	if (m_pipeline.RefRawNodes().empty() || m_pipeline.PeekNode(0).IsRecycled())
 	{
 		return;
