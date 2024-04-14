@@ -605,8 +605,6 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 			ImGui::DragFloat("Apical Rotation factor", &strandModelParameters.m_apicalBranchRotationPushFactor, 0.01f, 0.0f, 2.0f);
 			ImGui::TreePop();
 		}
-		ImGui::Checkbox("Triple points", &strandModelParameters.m_triplePoints);
-		if (strandModelParameters.m_triplePoints) ImGui::DragFloat("Control Point Ratio", &strandModelParameters.m_controlPointRatio, 0.01f, 0.01f, 0.5f);
 		ImGui::DragInt("Max node count", &strandModelParameters.m_nodeMaxCount, 1, -1, 999);
 		ImGui::DragInt("Boundary point distance", &strandModelParameters.m_boundaryPointDistance, 1, 3, 30);
 		ImGui::ColorEdit4("Boundary color", &strandModelParameters.m_boundaryPointColor.x);
@@ -774,7 +772,7 @@ std::shared_ptr<Strands> Tree::GenerateStrands() const
 	const auto& parameters = m_strandModelParameters;
 	std::vector<glm::uint> strandsList;
 	std::vector<StrandPoint> points;
-	m_strandModel.m_strandModelSkeleton.m_data.m_strandGroup.BuildStrands(parameters.m_controlPointRatio, strandsList, points, parameters.m_triplePoints, parameters.m_nodeMaxCount);
+	m_strandModel.m_strandModelSkeleton.m_data.m_strandGroup.BuildStrands(strandsList, points, parameters.m_nodeMaxCount);
 	if (!points.empty()) strandsList.emplace_back(points.size());
 	StrandPointAttributes strandPointAttributes{};
 	strandPointAttributes.m_color = true;

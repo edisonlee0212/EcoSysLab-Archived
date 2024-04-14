@@ -20,8 +20,6 @@ namespace EcoSysLab
 		int m_strandsAlongBranch = 0;
 		bool m_preMerge = true;
 
-		float m_controlPointRatio = 0.3f;
-		bool m_triplePoints = false;
 		int m_nodeMaxCount = -1;
 
 		int m_boundaryPointDistance = 6;
@@ -30,8 +28,8 @@ namespace EcoSysLab
 		glm::vec4 m_contentPointColor = glm::vec4(0, 0.3, 0.0f, 1);
 
 		float m_sidePushFactor = 1.0f;
-		float m_rotationPushFactor = 0.5f;
-		float m_apicalBranchRotationPushFactor = 0.25f;
+		float m_rotationPushFactor = 1.f;
+		float m_apicalBranchRotationPushFactor = 1.f;
 
 		PlottedDistribution<float> m_branchTwistDistribution{};
 		PlottedDistribution<float> m_junctionTwistDistribution{};

@@ -46,7 +46,6 @@ namespace EcoSysLab {
 				{
 					out << YAML::Key << "C" << YAML::Value << strand.m_info.m_color;
 					out << YAML::Key << "BGP" << YAML::Value << strand.m_info.m_baseInfo.m_globalPosition;
-					out << YAML::Key << "BGR" << YAML::Value << strand.m_info.m_baseInfo.m_globalRotation;
 					out << YAML::Key << "BT" << YAML::Value << strand.m_info.m_baseInfo.m_thickness;
 					out << YAML::Key << "BC" << YAML::Value << strand.m_info.m_baseInfo.m_color;
 					out << YAML::Key << "IB" << YAML::Value << strand.m_info.m_baseInfo.m_isBoundary;
@@ -76,7 +75,6 @@ namespace EcoSysLab {
 				out << YAML::Key << "IF" << YAML::Value << YAML::BeginMap;
 				{
 					out << YAML::Key << "GP" << YAML::Value << strandSegment.m_info.m_globalPosition;
-					out << YAML::Key << "GR" << YAML::Value << strandSegment.m_info.m_globalRotation;
 					out << YAML::Key << "T" << YAML::Value << strandSegment.m_info.m_thickness;
 					out << YAML::Key << "C" << YAML::Value << strandSegment.m_info.m_color;
 					out << YAML::Key << "B" << YAML::Value << strandSegment.m_info.m_isBoundary;
@@ -126,7 +124,6 @@ namespace EcoSysLab {
 					const auto& inStrandInfo = inStrand["IF"];
 					if (inStrandInfo["C"]) strand.m_info.m_color = inStrandInfo["C"].as<glm::vec4>();
 					if (inStrandInfo["BGP"]) strand.m_info.m_baseInfo.m_globalPosition = inStrandInfo["BGP"].as<glm::vec3>();
-					if (inStrandInfo["BGR"]) strand.m_info.m_baseInfo.m_globalRotation = inStrandInfo["BGR"].as<glm::quat>();
 					if (inStrandInfo["BT"]) strand.m_info.m_baseInfo.m_thickness = inStrandInfo["BT"].as<float>();
 					if (inStrandInfo["BC"]) strand.m_info.m_baseInfo.m_color = inStrandInfo["BC"].as<glm::vec4>();
 					if (inStrandInfo["IB"]) strand.m_info.m_baseInfo.m_isBoundary = inStrandInfo["IB"].as<bool>();
@@ -160,7 +157,6 @@ namespace EcoSysLab {
 				{
 					const auto& inStrandSegmentInfo = inStrandSegment["IF"];
 					if (inStrandSegmentInfo["GP"]) strandSegment.m_info.m_globalPosition = inStrandSegmentInfo["GP"].as<glm::vec3>();
-					if (inStrandSegmentInfo["GR"]) strandSegment.m_info.m_globalRotation = inStrandSegmentInfo["GR"].as<glm::quat>();
 					if (inStrandSegmentInfo["T"]) strandSegment.m_info.m_thickness = inStrandSegmentInfo["T"].as<float>();
 					if (inStrandSegmentInfo["C"]) strandSegment.m_info.m_color = inStrandSegmentInfo["C"].as<glm::vec4>();
 					if (inStrandSegmentInfo["B"]) strandSegment.m_info.m_isBoundary = inStrandSegmentInfo["B"].as<bool>();

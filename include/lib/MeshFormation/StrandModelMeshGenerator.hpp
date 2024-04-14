@@ -45,7 +45,7 @@ namespace EcoSysLab {
 
 		bool m_recalculateUV = false;
 		bool m_fastUV = true;
-		int m_smoothIteration = 12;
+		int m_smoothIteration = 0;
 		int m_minCellCountForMajorBranches = 100;
 		int m_maxCellCountForMinorBranches = 150;
 		bool m_enableBranch = true;

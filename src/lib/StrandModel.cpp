@@ -560,7 +560,6 @@ void StrandModel::ApplyProfile(const StrandModelParameters& strandModelParameter
 		{
 			newStrandSegment.m_info.m_globalPosition += currentFront * glm::max(0.0f, strandModelParameters.m_cladoptosisDistribution.GetValue(glm::max(0.0f, (strandModelParameters.m_cladoptosisRange - particle.GetDistanceToBoundary()) / strandModelParameters.m_cladoptosisRange)));
 		}
-		newStrandSegment.m_info.m_globalRotation = node.m_info.m_regulatedGlobalRotation;
 		newStrandSegment.m_info.m_color = particle.IsBoundary() ? parameters.m_boundaryPointColor : parameters.m_contentPointColor;
 		newStrandSegment.m_info.m_isBoundary = particle.IsBoundary();
 	}
@@ -588,7 +587,6 @@ void StrandModel::ApplyProfiles(const StrandModelParameters& strandModelParamete
 				strand.m_info.m_baseInfo.m_globalPosition =
 					strand.m_info.m_baseInfo.m_thickness * particle.GetPosition().x * currentLeft
 					+ strand.m_info.m_baseInfo.m_thickness * particle.GetPosition().y * currentUp;
-				strand.m_info.m_baseInfo.m_globalRotation = parentGlobalRotation;
 				strand.m_info.m_baseInfo.m_isBoundary = particle.IsBoundary();
 				strand.m_info.m_baseInfo.m_color = particle.IsBoundary() ? strandModelParameters.m_boundaryPointColor : strandModelParameters.m_contentPointColor;
 			}
@@ -691,7 +689,7 @@ void StrandModel::CalculateStrandProfileAdjustedTransforms(const StrandModelPara
 				minRotationShift += parentFront * sinFront * maxRadius * strandModelParameters.m_rotationPushFactor * node.m_data.m_strandRadius;
 			}
 			
-			const auto projectedMinRotationShift = glm::normalize(globalDirection)* glm::dot(minRotationShift, globalDirection);
+			const auto projectedMinRotationShift = globalDirection * glm::dot(minRotationShift, globalDirection);
 			if(glm::length(projectedMinRotationShift) > glm::length(localPosition))
 			{
 				newGlobalEndPosition += projectedMinRotationShift;
