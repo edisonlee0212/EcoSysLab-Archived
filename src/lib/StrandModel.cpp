@@ -653,11 +653,16 @@ void StrandModel::CalculateStrandProfileAdjustedTransforms(const StrandModelPara
 		if (particleCount > 0) {
 			parentCenter /= particleCount;
 		}
-		if (strandModelParameters.m_sidePushFactor > 0.f) {
+		glm::vec3 sideShift = glm::vec3(0.f);
+		if (node.IsApical() && strandModelParameters.m_sidePushFactor > 0.f) {
 
-			newGlobalEndPosition += parentUp * parentCenter.y * strandModelParameters.m_sidePushFactor * node.m_data.m_strandRadius;
-			newGlobalEndPosition += parentLeft * parentCenter.x * strandModelParameters.m_sidePushFactor * node.m_data.m_strandRadius;
+			sideShift += parentUp * parentCenter.y * strandModelParameters.m_sidePushFactor * node.m_data.m_strandRadius;
+			sideShift += parentLeft * parentCenter.x * strandModelParameters.m_sidePushFactor * node.m_data.m_strandRadius;
+		}else if(!node.IsApical() && strandModelParameters.m_apicalSidePushFactor > 0.f){
+			sideShift += parentUp * parentCenter.y * strandModelParameters.m_apicalSidePushFactor * node.m_data.m_strandRadius;
+			sideShift += parentLeft * parentCenter.x * strandModelParameters.m_apicalSidePushFactor * node.m_data.m_strandRadius;
 		}
+		glm::vec3 rotationShift = glm::vec3(0.f);
 		if (offsetLength > glm::epsilon<float>()) {
 			const auto offsetDirection = glm::normalize(node.m_data.m_offset);
 			float maxRadius = node.m_data.m_profile.GetMaxDistanceToCenter();
@@ -674,29 +679,34 @@ void StrandModel::CalculateStrandProfileAdjustedTransforms(const StrandModelPara
 				const auto distance = glm::length(glm::closestPointOnLine(particle.GetPosition(), glm::vec2(0.f), node.m_data.m_offset * 1000.0f));
 				maxRadius = glm::max(maxRadius, distance);
 			}
-			glm::vec3 minRotationShift = glm::vec3(0.f);
+			
 			if (node.IsApical())
 			{
-				minRotationShift += parentUp * offsetDirection.y * cosFront * maxRadius * strandModelParameters.m_apicalBranchRotationPushFactor * node.m_data.m_strandRadius;
-				minRotationShift += parentLeft * offsetDirection.x * cosFront * maxRadius * strandModelParameters.m_apicalBranchRotationPushFactor * node.m_data.m_strandRadius;
-				minRotationShift += parentFront * sinFront * maxRadius * strandModelParameters.m_apicalBranchRotationPushFactor * node.m_data.m_strandRadius;
+				rotationShift += parentUp * offsetDirection.y * cosFront * maxRadius * strandModelParameters.m_apicalBranchRotationPushFactor * node.m_data.m_strandRadius;
+				rotationShift += parentLeft * offsetDirection.x * cosFront * maxRadius * strandModelParameters.m_apicalBranchRotationPushFactor * node.m_data.m_strandRadius;
+				rotationShift += parentFront * sinFront * maxRadius * strandModelParameters.m_apicalBranchRotationPushFactor * node.m_data.m_strandRadius;
 			}
 			else
 			{
 
-				minRotationShift += parentUp * offsetDirection.y * cosFront * maxRadius * strandModelParameters.m_rotationPushFactor * node.m_data.m_strandRadius;
-				minRotationShift += parentLeft * offsetDirection.x * cosFront * maxRadius * strandModelParameters.m_rotationPushFactor * node.m_data.m_strandRadius;
-				minRotationShift += parentFront * sinFront * maxRadius * strandModelParameters.m_rotationPushFactor * node.m_data.m_strandRadius;
+				rotationShift += parentUp * offsetDirection.y * cosFront * maxRadius * strandModelParameters.m_rotationPushFactor * node.m_data.m_strandRadius;
+				rotationShift += parentLeft * offsetDirection.x * cosFront * maxRadius * strandModelParameters.m_rotationPushFactor * node.m_data.m_strandRadius;
+				rotationShift += parentFront * sinFront * maxRadius * strandModelParameters.m_rotationPushFactor * node.m_data.m_strandRadius;
 			}
-			
-			const auto projectedMinRotationShift = globalDirection * glm::dot(minRotationShift, globalDirection);
-			if(glm::length(projectedMinRotationShift) > glm::length(localPosition))
+		}
+		if (!node.IsApical()) {
+			const auto projectedShift = globalDirection * glm::dot(rotationShift + sideShift, globalDirection);
+			if (glm::length(projectedShift) > glm::length(localPosition))
 			{
-				newGlobalEndPosition += projectedMinRotationShift;
-			}else
+				newGlobalEndPosition += projectedShift;
+			}
+			else
 			{
 				newGlobalEndPosition += localPosition;
 			}
+		}else
+		{
+			newGlobalEndPosition += localPosition;
 		}
 		assert(!glm::any(glm::isnan(node.m_info.m_globalPosition)));
 		assert(!glm::any(glm::isnan(newGlobalEndPosition)));

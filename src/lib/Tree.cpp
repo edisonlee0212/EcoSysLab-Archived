@@ -600,6 +600,7 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 		if (ImGui::TreeNodeEx("Graph Adjustment settings", ImGuiTreeNodeFlags_DefaultOpen))
 		{
 			ImGui::DragFloat("Side factor", &strandModelParameters.m_sidePushFactor, 0.01f, 0.0f, 2.0f);
+			ImGui::DragFloat("Apical Side factor", &strandModelParameters.m_apicalSidePushFactor, 0.01f, 0.0f, 2.0f);
 			ImGui::DragFloat("Rotation factor", &strandModelParameters.m_rotationPushFactor, 0.01f, 0.0f, 2.0f);
 			ImGui::DragFloat("Apical Rotation factor", &strandModelParameters.m_apicalBranchRotationPushFactor, 0.01f, 0.0f, 2.0f);
 			ImGui::TreePop();
@@ -1542,7 +1543,7 @@ bool Tree::TryGrow(float deltaTime, bool pruning, float overrideGrowthRate)
 
 	const auto owner = GetOwner();
 
-	PrepareControllers(treeDescriptor);
+	PrepareController(treeDescriptor);
 	const bool grown = m_treeModel.Grow(deltaTime, scene->GetDataComponent<GlobalTransform>(owner).m_value, climate->m_climateModel, m_shootGrowthController, pruning, overrideGrowthRate);
 	if (grown)
 	{
@@ -1593,7 +1594,7 @@ bool Tree::TryGrowSubTree(const float deltaTime, const SkeletonNodeHandle baseIn
 
 	const auto owner = GetOwner();
 
-	PrepareControllers(treeDescriptor);
+	PrepareController(treeDescriptor);
 	const bool grown = m_treeModel.Grow(deltaTime, baseInternodeHandle, scene->GetDataComponent<GlobalTransform>(owner).m_value, climate->m_climateModel, m_shootGrowthController, pruning, overrideGrowthRate);
 	if (grown)
 	{
@@ -2373,7 +2374,7 @@ void SkeletalGraphSettings::OnInspect()
 	ImGui::ColorEdit4("Junction point color", &m_junctionPointColor.x);
 }
 
-void Tree::PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescriptor)
+void Tree::PrepareController(const std::shared_ptr<TreeDescriptor>& treeDescriptor)
 {
 	const auto soil = m_soil.Get<Soil>();
 	const auto climate = m_climate.Get<Climate>();
@@ -2398,7 +2399,30 @@ void Tree::PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescrip
 				}
 				return leafDamage;
 			};
-
+		m_shootGrowthController.m_pruningFactor = [&](const ShootSkeleton& shootSkeleton, const SkeletonNode<InternodeGrowthData>& internode)
+			{
+				if (shootDescriptor->m_trunkProtection && internode.m_data.m_order == 0)
+				{
+					return 0.f;
+				}
+				float pruningProbability = 0.0f;
+				if (shootDescriptor->m_maxFlowLength != 0 && shootDescriptor->m_maxFlowLength < internode.m_info.m_chainIndex)
+				{
+					pruningProbability += 999.f;
+				}
+				if (internode.IsEndNode()) {
+					if (internode.m_data.m_lightIntensity <= shootDescriptor->m_lightPruningFactor)
+					{
+						pruningProbability += shootDescriptor->m_lightPruningProbability;
+					}
+				}
+				if (internode.m_data.m_level != 0 && shootDescriptor->m_thicknessPruningFactor != 0.0f
+					&& internode.m_info.m_thickness / internode.m_info.m_endDistance < shootDescriptor->m_thicknessPruningFactor)
+				{
+					pruningProbability += shootDescriptor->m_thicknessPruningProbability;
+				}
+				return pruningProbability;
+			};
 	}
 }
 

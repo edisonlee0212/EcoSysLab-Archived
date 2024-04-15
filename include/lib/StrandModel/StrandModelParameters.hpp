@@ -28,6 +28,7 @@ namespace EcoSysLab
 		glm::vec4 m_contentPointColor = glm::vec4(0, 0.3, 0.0f, 1);
 
 		float m_sidePushFactor = 1.0f;
+		float m_apicalSidePushFactor = 1.f;
 		float m_rotationPushFactor = 1.f;
 		float m_apicalBranchRotationPushFactor = 1.f;
 

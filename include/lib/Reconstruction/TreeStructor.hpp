@@ -177,6 +177,7 @@ namespace EcoSysLab {
 
 	};
 	struct ReconstructionNodeData {
+		glm::vec3 m_globalStartPosition = glm::vec3(0.f);
 		glm::vec3 m_globalEndPosition = glm::vec3(0.0f);
 
 		float m_draftThickness = 0.0f;

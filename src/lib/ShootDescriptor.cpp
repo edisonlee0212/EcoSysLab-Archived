@@ -97,30 +97,7 @@ void ShootDescriptor::PrepareController(ShootGrowthController& shootGrowthContro
 
 	shootGrowthController.m_lowBranchPruning = m_lowBranchPruning;
 	shootGrowthController.m_lowBranchPruningThicknessFactor = m_lowBranchPruningThicknessFactor;
-	shootGrowthController.m_pruningFactor = [&](const ShootSkeleton& shootSkeleton, const SkeletonNode<InternodeGrowthData>& internode)
-		{
-			if (m_trunkProtection && internode.m_data.m_order == 0)
-			{
-				return 0.f;
-			}
-			float pruningProbability = 0.0f;
-			if (m_maxFlowLength != 0 && m_maxFlowLength < internode.m_info.m_chainIndex)
-			{
-				pruningProbability += 999.f;
-			}
-			if (internode.IsEndNode()) {
-				if (internode.m_data.m_lightIntensity <= m_lightPruningFactor)
-				{
-					pruningProbability += m_lightPruningProbability;
-				}
-			}
-			if (internode.m_data.m_level != 0 && m_thicknessPruningFactor != 0.0f
-				&& internode.m_info.m_thickness / internode.m_info.m_endDistance < m_thicknessPruningFactor)
-			{
-				pruningProbability += m_thicknessPruningProbability;
-			}
-			return pruningProbability;
-		};
+	
 
 
 	shootGrowthController.m_leafGrowthRate = m_leafGrowthRate;

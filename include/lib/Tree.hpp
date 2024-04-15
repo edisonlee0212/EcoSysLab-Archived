@@ -13,7 +13,7 @@ using namespace EvoEngine;
 namespace EcoSysLab {
 	class Tree : public IPrivateComponent {
 		friend class EcoSysLabLayer;
-		void PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescriptor);
+		void PrepareController(const std::shared_ptr<TreeDescriptor>& treeDescriptor);
 		ShootGrowthController m_shootGrowthController{};
 	public:
 		StrandModelParameters m_strandModelParameters{};
@@ -118,7 +118,7 @@ namespace EcoSysLab {
 			const auto foliageDescriptor = ProjectManager::CreateTemporaryAsset<FoliageDescriptor>();
 			treeDescriptor->m_foliageDescriptor = foliageDescriptor;
 		}
-		PrepareControllers(treeDescriptor);
+		PrepareController(treeDescriptor);
 		m_treeModel.Initialize(m_shootGrowthController);
 		m_treeModel.RefShootSkeleton().Clone(srcSkeleton);
 		m_treeModel.RefShootSkeleton().CalculateDistance();

@@ -11,6 +11,7 @@ void TreeStructor::ApplyCurve(const OperatorBranch& branch) {
 	const auto chainAmount = branch.m_chainNodeHandles.size();
 	for (int i = 0; i < chainAmount; i++) {
 		auto& node = skeleton.RefNode(branch.m_chainNodeHandles[i]);
+		node.m_data.m_globalStartPosition = branch.m_bezierCurve.GetPoint(static_cast<float>(i) / chainAmount);
 		node.m_data.m_globalEndPosition = branch.m_bezierCurve.GetPoint(static_cast<float>(i + 1) / chainAmount);
 		node.m_info.m_thickness = branch.m_thickness;
 		node.m_data.m_branchHandle = branch.m_handle;
@@ -381,6 +382,10 @@ void TreeStructor::ImportGraph(const std::filesystem::path& path, float scaleFac
 				auto& branch = m_predictedBranches.emplace_back();
 				branch.m_bezierCurve.m_p0 = branchStart;
 				branch.m_bezierCurve.m_p3 = branchEnd;
+				if(glm::distance(branchStart, branchEnd) > 0.3f)
+				{
+					EVOENGINE_WARNING("Too long internode!");
+				}
 				branch.m_color = treePart.m_color;
 				auto cPLength = glm::distance(branch.m_bezierCurve.m_p0, branch.m_bezierCurve.m_p3) * 0.3f;
 				branch.m_bezierCurve.m_p1 =
@@ -1914,10 +1919,6 @@ void TreeStructor::BuildSkeletons() {
 		{
 			auto& skeleton = m_skeletons[i];
 			const auto& sortedList = skeleton.PeekSortedNodeList();
-			if (!sortedList.empty())
-			{
-				skeleton.RefNode(0).m_info.m_globalPosition.y = 0;
-			}
 		}
 	}
 	CalculateSkeletonGraphs();
@@ -2168,7 +2169,7 @@ void TreeStructor::CalculateSkeletonGraphs()
 		rootNode.m_info.m_globalRotation = rootNode.m_info.m_regulatedGlobalRotation = glm::quatLookAt(
 			glm::vec3(0, 1, 0), glm::vec3(0, 0, -1));
 		rootNode.m_info.m_globalPosition = glm::vec3(0.0f);
-		rootNode.m_info.m_length = glm::length(rootNode.m_data.m_globalEndPosition);
+		rootNode.m_info.m_length = glm::length(rootNode.m_data.m_globalEndPosition - rootNode.m_data.m_globalStartPosition);
 		for (const auto& nodeHandle : sortedNodeList) {
 			auto& node = skeleton.RefNode(nodeHandle);
 			auto& nodeInfo = node.m_info;

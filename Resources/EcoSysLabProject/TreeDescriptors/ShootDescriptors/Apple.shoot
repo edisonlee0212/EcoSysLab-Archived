@@ -10,32 +10,16 @@ m_apicalAngle:
 m_rollAngleNoise2D:
   m_minMax: [-1000, 1000]
   m_noiseDescriptors:
-    - m_type: 0
-      m_frequency: 0.100000001
-      m_intensity: 1
-      m_multiplier: 1
-      m_min: -10
-      m_max: 10
-      m_offset: 0
-      m_shift: [0, 0, 0]
-      m_ridgid: false
+    []
 m_apicalAngleNoise2D:
   m_minMax: [-1000, 1000]
   m_noiseDescriptors:
-    - m_type: 0
-      m_frequency: 0.100000001
-      m_intensity: 1
-      m_multiplier: 1
-      m_min: -10
-      m_max: 10
-      m_offset: 0
-      m_shift: [0, 0, 0]
-      m_ridgid: false
+    []
 m_branchingAngleMeanVariance: [65, 3]
-m_rollAngleMeanVariance: [0, 0]
-m_apicalAngleMeanVariance: [2, 2.20000005]
+m_rollAngleMeanVariance: [0, 10]
+m_apicalAngleMeanVariance: [0, 2.20000005]
 m_gravitropism: 0
-m_phototropism: 0.0250000004
+m_phototropism: 0.0149999997
 m_horizontalTropism: 0
 m_saggingFactorThicknessReductionMax: [0.00100000005, 2, 0.5]
 m_internodeLength: 0.0299999993
@@ -47,7 +31,7 @@ m_internodeShadowFactor: 0.0199999996
 m_lateralBudCount: 1
 m_apicalBudExtinctionRate: 0
 m_lateralBudFlushingRate: 0.200000003
-m_apicalControl: 1.08000004
+m_apicalControl: 1.01999998
 m_apicalDominance: 0.340000004
 m_apicalDominanceLoss: 0.0700000003
 m_trunkProtection: false
