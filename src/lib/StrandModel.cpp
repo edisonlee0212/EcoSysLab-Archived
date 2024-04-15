@@ -186,7 +186,7 @@ void StrandModel::InitializeProfiles(const StrandModelParameters& strandModelPar
 
 void StrandModel::CalculateProfiles(const StrandModelParameters& strandModelParameters)
 {
-	const float time = Times::Now();
+	
 	const auto& sortedInternodeList = m_strandModelSkeleton.PeekSortedNodeList();
 	if (sortedInternodeList.empty()) return;
 
@@ -223,7 +223,7 @@ void StrandModel::CalculateProfiles(const StrandModelParameters& strandModelPara
 			m_strandModelSkeleton.m_data.m_numOfParticles += m_strandModelSkeleton.RefNode(*it).m_data.m_profile.PeekParticles().size();
 		}
 	}
-	m_strandModelSkeleton.m_data.m_profileCalculationTime = Times::Now() - time;
+	
 }
 
 void StrandModel::CalculateProfile(const float maxRootDistance, const SkeletonNodeHandle nodeHandle, const StrandModelParameters& strandModelParameters, bool scheduling)

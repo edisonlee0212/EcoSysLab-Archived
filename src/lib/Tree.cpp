@@ -593,7 +593,6 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 
 		ImGui::DragFloat("Cladoptosis Range", &strandModelParameters.m_cladoptosisRange, 0.01f, 0.0f, 50.f);
 		m_strandModelParameters.m_cladoptosisDistribution.OnInspect("Cladoptosis", plottedDistributionSettings);
-		ImGui::Text(("Last calculation time: " + std::to_string(m_strandModel.m_strandModelSkeleton.m_data.m_profileCalculationTime)).c_str());
 		ImGui::Text(("Strand count: " + std::to_string(m_strandModel.m_strandModelSkeleton.m_data.m_strandGroup.PeekStrands().size())).c_str());
 		ImGui::Text(("Total particle count: " + std::to_string(m_strandModel.m_strandModelSkeleton.m_data.m_numOfParticles)).c_str());
 
@@ -743,14 +742,23 @@ bool Tree::OnInspectTreeGrowthSettings(TreeGrowthSettings& treeGrowthSettings)
 
 void Tree::CalculateProfiles()
 {
+	const float time = Times::Now();
 	m_strandModel.m_strandModelSkeleton.Clone(m_treeModel.RefShootSkeleton());
 
 	m_strandModel.InitializeProfiles(m_strandModelParameters);
 	m_strandModel.CalculateProfiles(m_strandModelParameters);
+	const float profileCalculationTime = Times::Now() - time;
+	std::string output;
+	output += "\nProfile count: [" + std::to_string(m_strandModel.m_strandModelSkeleton.PeekSortedNodeList().size());
+	output += "], Strand count: [" + std::to_string(m_strandModel.m_strandModelSkeleton.m_data.m_strandGroup.PeekStrands().size());
+	output += "], Particle count: [" + std::to_string(m_strandModel.m_strandModelSkeleton.m_data.m_numOfParticles);
+	output += "]\nCalculate Profile Used time: " + std::to_string(profileCalculationTime) + "\n";
+	EVOENGINE_LOG(output);
 }
 
 void Tree::BuildStrandModel()
 {
+	std::string output;
 	if (m_strandModel.m_strandModelSkeleton.RefRawNodes().size() != m_treeModel.PeekShootSkeleton().RefRawNodes().size())
 	{
 		CalculateProfiles();
@@ -762,8 +770,12 @@ void Tree::BuildStrandModel()
 			m_strandModel.m_strandModelSkeleton.RefNode(nodeHandle).m_info = m_treeModel.PeekShootSkeleton().PeekNode(nodeHandle).m_info;
 		}
 	}
+	const float time = Times::Now();
 	m_strandModel.CalculateStrandProfileAdjustedTransforms(m_strandModelParameters);
 	m_strandModel.ApplyProfiles(m_strandModelParameters);
+	const float strandModelingTime = Times::Now() - time;
+	output += "\nBuild Strand Model Used time: " + std::to_string(strandModelingTime) + "\n";
+	EVOENGINE_LOG(output);
 }
 
 std::shared_ptr<Strands> Tree::GenerateStrands() const
@@ -2440,6 +2452,7 @@ void Tree::InitializeStrandModelMeshRenderer(const StrandModelMeshGeneratorSetti
 
 	BuildStrandModel();
 
+	const float time = Times::Now();
 	const auto scene = GetScene();
 	const auto self = GetOwner();
 	const auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
@@ -2504,6 +2517,10 @@ void Tree::InitializeStrandModelMeshRenderer(const StrandModelMeshGeneratorSetti
 		meshRenderer->m_material = material;
 
 	}
+	std::string output;
+	const float meshGenerationTime = Times::Now() - time;
+	output += "\nMesh generation Used time: " + std::to_string(meshGenerationTime) + "\n";
+	EVOENGINE_LOG(output);
 }
 
 void Tree::ClearStrandModelMeshRenderer() const

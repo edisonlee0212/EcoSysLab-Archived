@@ -65,7 +65,6 @@ void StrandModelMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLay
 void StrandModelMeshGenerator::Generate(const StrandModel& strandModel, std::vector<Vertex>& vertices,
 	std::vector<unsigned>& indices, const StrandModelMeshGeneratorSettings& settings)
 {
-	const float meshFormationTime = Times::Now();
 	switch (settings.m_generatorType)
 	{
 	case StrandModelMeshGeneratorType::RecursiveSlicing:
@@ -77,20 +76,15 @@ void StrandModelMeshGenerator::Generate(const StrandModel& strandModel, std::vec
 		MarchingCube(strandModel, vertices, indices, settings);
 	}break;
 	}
-	EVOENGINE_LOG("Mesh formation finished in: " + std::to_string(Times::Now() - meshFormationTime) + "s.");
 
 	if (settings.m_recalculateUV || settings.m_generatorType == static_cast<unsigned>(StrandModelMeshGeneratorType::MarchingCube)) {
-		const float recalculateUVTime = Times::Now();
 		CalculateUV(strandModel, vertices, settings);
-		EVOENGINE_LOG("Recalculate UV time: " + std::to_string(Times::Now() - recalculateUVTime) + "s.");
 	}
 
-	const float meshSmoothingTime = Times::Now();
 	for (int i = 0; i < settings.m_smoothIteration; i++)
 	{
 		MeshSmoothing(vertices, indices);
 	}
-	EVOENGINE_LOG("Mesh smoothing time: " + std::to_string(Times::Now() - meshSmoothingTime) + "s.");
 	CylindricalMeshing(strandModel, vertices, indices, settings);
 
 	CalculateNormal(vertices, indices);

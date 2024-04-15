@@ -150,7 +150,6 @@ namespace EcoSysLab
 
 		StrandModelStrandGroup m_strandGroup{};
 
-		float m_profileCalculationTime = 0.0f;
 		int m_numOfParticles = 0;
 	};
 
