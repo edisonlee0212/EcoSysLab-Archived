@@ -572,14 +572,13 @@ bool TreeModel::ElongateInternode(float extendLength, SkeletonNodeHandle interno
 		//Allocate Lateral bud for current internode
 		{
 			const auto lateralBudCount = shootGrowthController.m_lateralBudCount;
-			const float turnAngle = glm::radians(360.0f / lateralBudCount);
 			for (int i = 0; i < lateralBudCount; i++) {
 				internodeData.m_buds.emplace_back();
 				auto& newLateralBud = internodeData.m_buds.back();
 				newLateralBud.m_type = BudType::Lateral;
 				newLateralBud.m_status = BudStatus::Dormant;
-				newLateralBud.m_localRotation = glm::vec3(glm::radians(shootGrowthController.m_branchingAngle(internode)), 0.0f,
-					i * turnAngle);
+				newLateralBud.m_localRotation = glm::vec3(0.f, glm::radians(shootGrowthController.m_branchingAngle(internode)),
+					glm::linearRand(0.0f, 360.0f));
 			}
 		}
 		//Allocate Fruit bud for current internode
@@ -749,9 +748,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, const SkeletonNodeHand
 				auto& apicalBud = newInternode.m_data.m_buds.back();
 				apicalBud.m_type = BudType::Apical;
 				apicalBud.m_status = BudStatus::Dormant;
-				apicalBud.m_localRotation = glm::vec3(
-					glm::radians(shootGrowthController.m_apicalAngle(newInternode)), 0.0f,
-					glm::radians(shootGrowthController.m_rollAngle(newInternode)));
+				apicalBud.m_localRotation = glm::vec3(0.f);
 			}
 		}
 	}

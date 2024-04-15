@@ -20,10 +20,6 @@ namespace EcoSysLab
 		*/
 		glm::vec2 m_branchingAngleMeanVariance = glm::vec2(45, 2);
 		/**
-		* \brief The procedural noise of the angle between the direction of a lateral bud and its parent shoot.
-		*/
-		AssetRef m_branchingAngle {};
-		/**
 		* \brief The mean and variance of an angular difference orientation of lateral buds between two internodes
 		*/
 		glm::vec2 m_rollAngleMeanVariance = glm::vec2(30, 2);

@@ -182,7 +182,6 @@ void ShootDescriptor::Serialize(YAML::Emitter& out)
 	out << YAML::Key << "m_baseNodeApicalAngleMeanVariance" << YAML::Value << m_baseNodeApicalAngleMeanVariance;
 
 	out << YAML::Key << "m_growthRate" << YAML::Value << m_growthRate;
-	m_branchingAngle.Save("m_branchingAngle", out);
 	m_rollAngle.Save("m_rollAngle", out);
 	m_apicalAngle.Save("m_apicalAngle", out);
 
@@ -250,7 +249,6 @@ void ShootDescriptor::Deserialize(const YAML::Node& in)
 	if (in["m_baseNodeApicalAngleMeanVariance"]) m_baseNodeApicalAngleMeanVariance = in["m_baseNodeApicalAngleMeanVariance"].as<glm::vec2>();
 
 	if (in["m_growthRate"]) m_growthRate = in["m_growthRate"].as<float>();
-	m_branchingAngle.Load("m_branchingAngle", in);
 	m_rollAngle.Load("m_rollAngle", in);
 	m_apicalAngle.Load("m_apicalAngle", in);
 
@@ -418,7 +416,6 @@ void ShootDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 
 void ShootDescriptor::CollectAssetRef(std::vector<AssetRef>& list)
 {
-	if (m_branchingAngle.Get<ProceduralNoise2D>()) list.push_back(m_branchingAngle);
 	if (m_rollAngle.Get<ProceduralNoise2D>()) list.push_back(m_rollAngle);
 	if (m_apicalAngle.Get<ProceduralNoise2D>()) list.push_back(m_apicalAngle);
 

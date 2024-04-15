@@ -1,9 +1,6 @@
 m_baseInternodeCount: 1
 m_baseNodeApicalAngleMeanVariance: [0, 0]
 m_growthRate: 0.25
-m_branchingAngle:
-  m_assetHandle: 0
-  m_assetTypeName: ""
 m_rollAngle:
   m_assetHandle: 0
   m_assetTypeName: ""
@@ -45,7 +42,7 @@ m_apicalAngleNoise2D:
       m_shift: [0, 0, 0]
       m_ridgid: false
 m_branchingAngleMeanVariance: [60, 1]
-m_rollAngleMeanVariance: [30, 0]
+m_rollAngleMeanVariance: [0, 0]
 m_apicalAngleMeanVariance: [0, 0]
 m_gravitropism: 0
 m_phototropism: 0.00999999978
