@@ -873,8 +873,27 @@ std::pair< std::vector<Graph>, std::vector<std::vector<size_t> > > computeCluste
 	return std::pair< std::vector<Graph>, std::vector<std::vector<size_t> > >(graphs, clusters);
 }
 
-std::vector<std::pair<Slice, PipeCluster> > computeSlices(const StrandModel& strandModel, const PipeCluster& pipesInPrevious, float t, float maxDist, size_t minStrandCount)
+std::vector<std::pair<Slice, PipeCluster> > computeSlices(const StrandModel& strandModel, const PipeCluster& pipesInPrevious, float t, float stepSize, float maxDist, size_t minStrandCount)
 {
+	const auto& skeleton = strandModel.m_strandModelSkeleton;
+	const auto& pipeGroup = skeleton.m_data.m_strandGroup;
+
+	// first check if there are any pipes that might be needed for merging
+	NodeHandle nh = getNodeHandle(pipeGroup, pipesInPrevious.front(), glm::floor(t - stepSize));
+
+	const auto& node = skeleton.PeekNode(nh);
+	
+	PipeCluster allPipesWithSameNode;
+	for (auto& kv : node.m_data.m_particleMap)
+	{
+		allPipesWithSameNode.push_back(kv.first);
+	}
+
+	if (allPipesWithSameNode.size() != pipesInPrevious.size())
+	{
+		/*std::cout << "Potential for merge at t = " << t << ". Previous slice had " << pipesInPrevious.size()
+			<< " strand, but this one has potentially " << allPipesWithSameNode.size() << std::endl;*/
+	}
 
 	// compute clusters
 	auto graphsAndClusters = computeClusters(strandModel, pipesInPrevious, t, maxDist, minStrandCount);
@@ -903,9 +922,9 @@ void forEachSegment(const StrandModelStrandGroup& pipes, std::vector<StrandSegme
 	}
 }
 
-void connect(std::vector<std::pair<StrandHandle, glm::vec3> >& slice0, size_t i0, size_t j0, size_t offset0,
-	std::vector<std::pair<StrandHandle, glm::vec3> >& slice1, size_t i1, size_t j1, size_t offset1,
-	std::vector<Vertex>& vertices, std::vector<unsigned>& indices)
+void connect(std::vector<std::pair<StrandHandle, glm::vec3> >& slice0, size_t i0, size_t j0, std::pair<size_t, size_t> offset0,
+	std::vector<std::pair<StrandHandle, glm::vec3> >& slice1, size_t i1, size_t j1, std::pair<size_t, size_t> offset1,
+	std::vector<Vertex>& vertices, std::vector<glm::vec2>& texCoords, std::vector<std::pair<unsigned, unsigned>>& indices)
 {
 	if (DEBUG_OUTPUT) std::cout << "connecting " << i0 << ", " << j0 << " to " << i1 << ", " << j1 << std::endl;
 	size_t vertBetween0 = (j0 + slice0.size() - i0) % slice0.size();
@@ -915,16 +934,12 @@ void connect(std::vector<std::pair<StrandHandle, glm::vec3> >& slice0, size_t i0
 	if (vertBetween0 > slice0.size() / 2)
 	{
 		if (DEBUG_OUTPUT) std::cout << "Warning: too many steps for slice 0, should probably be swapped." << std::endl;
-		//return;
 	}
 
 	if (vertBetween1 > slice1.size() / 2)
 	{
 		if (DEBUG_OUTPUT) std::cout << "Warning: too many steps for slice 1, should probably be swapped." << std::endl;
-		//return;
 	}
-
-	size_t offset = vertices.size();
 
 	// merge the two
 	if (DEBUG_OUTPUT) std::cout << "connecting slices with triangles" << std::endl;
@@ -935,18 +950,83 @@ void connect(std::vector<std::pair<StrandHandle, glm::vec3> >& slice0, size_t i0
 	{
 		if (k0 / double(vertBetween0) < k1 / double(vertBetween1))
 		{
+			size_t texIndex0 = offset0.second + (i0 + k0) % slice0.size() + 1; // use end texture coordinate
+			size_t texIndex1 = offset0.second + (i0 + k0) % slice0.size();
+			size_t texIndex2 = offset1.second + (i1 + k1) % slice1.size();
+
+			if ((i0 + k0) % slice0.size() + 1 == slice0.size()) // use end texture coordinate
+			{
+				texIndex2 = offset1.second + (i1 + k1 - 1) % slice1.size() + 1;
+			}
+
+
 			// make triangle consisting of k0, k0 + 1 and k1
-			indices.push_back(offset0 + (i0 + k0 + 1) % slice0.size());
-			indices.push_back(offset0 + (i0 + k0) % slice0.size());
-			indices.push_back(offset1 + (i1 + k1) % slice1.size());
+			// assign new texture coordinates to the third corner if necessary
+			glm::vec2 texCoord2 = texCoords[texIndex2];
+			float avgX = 0.5 * (texCoords[texIndex0].x + texCoords[texIndex1].x);
+
+			float diff = avgX - texCoord2.x;
+			float move = glm::round(diff); // TODO: probably makes more sense to round to a multiple of the uv-coordinate factor
+
+			if (move != 0.0)
+			{
+				texIndex2 = texCoords.size();
+				texCoord2.x += move;
+				texCoords.push_back(texCoord2);
+			}
+
+			indices.push_back(std::make_pair<>(
+				offset0.first + (i0 + k0 + 1) % slice0.size(),
+				texIndex0
+			));
+			indices.push_back(std::make_pair<>(
+				offset0.first + (i0 + k0) % slice0.size(),
+				texIndex1
+			));
+			indices.push_back(std::make_pair<>(
+				offset1.first + (i1 + k1) % slice1.size(),
+				texIndex2
+			));
 
 			k0++;
 		}
 		else
 		{
-			indices.push_back(offset1 + (i1 + k1) % slice1.size());
-			indices.push_back(offset1 + (i1 + k1 + 1) % slice1.size());
-			indices.push_back(offset0 + (i0 + k0) % slice0.size());
+			size_t texIndex0 = offset1.second + (i1 + k1) % slice1.size(); // use end texture coordinate
+			size_t texIndex1 = offset1.second + (i1 + k1) % slice1.size() + 1;
+			size_t texIndex2 = offset0.second + (i0 + k0) % slice0.size();
+
+			if ((i1 + k1) % slice1.size() + 1 == slice1.size()) // use end texture coordinate
+			{
+				texIndex2 = offset0.second + (i0 + k0 - 1) % slice0.size() + 1;
+			}
+
+			glm::vec2 texCoord2 = texCoords[texIndex2];
+			float avgX = 0.5 * (texCoords[texIndex0].x + texCoords[texIndex1].x);
+
+			float diff = avgX - texCoord2.x;
+			float move = glm::round(diff); // TODO: probably makes more sense to round to a multiple of the uv-coordinate factor
+
+			if (move != 0.0)
+			{
+				texIndex2 = texCoords.size();
+				texCoord2.x += move;
+				texCoords.push_back(texCoord2);
+			}
+
+			indices.push_back(std::make_pair<>(
+				offset1.first + (i1 + k1) % slice1.size(),
+				texIndex0
+			));
+			indices.push_back(std::make_pair<>(
+				offset1.first + (i1 + k1 + 1) % slice1.size(),
+				texIndex1 // use end texture coordinate
+			));
+
+			indices.push_back(std::make_pair<>(
+				offset0.first + (i0 + k0) % slice0.size(),
+				texIndex2
+			));
 
 			k1++;
 		}
@@ -1003,9 +1083,9 @@ void cyclicOrderUntangle(std::vector<size_t>& permutation)
 
 }
 
-bool connectSlices(const StrandModelStrandGroup& pipes, Slice& bottomSlice, size_t bottomOffset,
-	std::vector<Slice>& topSlices, std::vector<size_t> topOffsets,
-	std::vector<Vertex>& vertices, std::vector<unsigned>& indices, bool branchConnections)
+bool connectSlices(const StrandModelStrandGroup& pipes, Slice& bottomSlice, std::pair<unsigned, unsigned> bottomOffset,
+	std::vector<Slice>& topSlices, std::vector<std::pair<unsigned, unsigned> > topOffsets,
+	std::vector<Vertex>& vertices, std::vector<glm::vec2>& texCoords, std::vector<std::pair<unsigned, unsigned>>& indices, bool branchConnections)
 {
 	// we want to track whether we actually produced any geometry
 	size_t sizeBefore = indices.size();
@@ -1105,19 +1185,7 @@ bool connectSlices(const StrandModelStrandGroup& pipes, Slice& bottomSlice, size
 
 		if (bottomPermutation[prevI].first == bottomPermutation[i].first)
 		{
-			//if(DEBUG_OUTPUT) std::cout << "Connecting at index " << i << std::endl;
-
-			/*if (topSlices.size() == 1)
-			{
-				// for now, also need a better solution that does untangling
-				connect(bottomSlice, prevI, i, bottomOffset,
-					topSlices[bottomPermutation[i].first], bottomPermutation[prevI].second, bottomPermutation[i].second, topOffsets[bottomPermutation[i].first],
-					vertices, indices);
-			}
-			else
-			{*/
 			indicesWithSameBranchCorrespondence.push_back(i);
-			//}
 		}
 		else
 		{
@@ -1156,20 +1224,30 @@ bool connectSlices(const StrandModelStrandGroup& pipes, Slice& bottomSlice, size
 			{
 				connect(bottomSlice, prevI, bottomMid, bottomOffset,
 					topSlices[bottomPermutation[prevI].first], bottomPermutation[prevI].second, nextMid, topOffsets[bottomPermutation[prevI].first],
-					vertices, indices);
+					vertices, texCoords, indices);
 				if (DEBUG_OUTPUT) std::cout << "Connected bottom indices " << prevI << " to " << bottomMid << " with " << bottomPermutation[prevI].second << " to "
 					<< nextMid << " of top profile no. " << bottomPermutation[prevI].first << std::endl;
 
 				// connect mid indices with triangle
-				indices.push_back(bottomOffset + bottomMid);
-				indices.push_back(topOffsets[bottomPermutation[prevI].first] + nextMid);
-				indices.push_back(topOffsets[bottomPermutation[i].first] + prevMid);
+				// TODO: Think about texture coordinates
+				indices.push_back(std::make_pair<>(
+					bottomOffset.first + bottomMid,
+					bottomOffset.second + bottomMid
+				));
+				indices.push_back(std::make_pair<>(
+					topOffsets[bottomPermutation[prevI].first].first + nextMid,
+					topOffsets[bottomPermutation[prevI].first].second + nextMid
+				));
+				indices.push_back(std::make_pair<>(
+					topOffsets[bottomPermutation[i].first].first + prevMid,
+					topOffsets[bottomPermutation[i].first].second + prevMid
+				));
 
 				// TODO: connecting with the same top slice looks better
 
 				connect(bottomSlice, bottomMid, i, bottomOffset,
 					topSlices[bottomPermutation[i].first], prevMid, bottomPermutation[i].second, topOffsets[bottomPermutation[i].first],
-					vertices, indices);
+					vertices, texCoords, indices);
 
 				if (DEBUG_OUTPUT) std::cout << "Connected bottom indices " << bottomMid << " to " << i << " with " << prevMid << " to "
 					<< bottomPermutation[i].second << " of top profile no. " << bottomPermutation[i].first << std::endl;
@@ -1220,7 +1298,7 @@ bool connectSlices(const StrandModelStrandGroup& pipes, Slice& bottomSlice, size
 
 				connect(bottomSlice, prevI, i, bottomOffset,
 					topSlices[branchIndex], topIndices[j - 1], topIndices[j], topOffsets[branchIndex],
-					vertices, indices);
+					vertices, texCoords, indices);
 			}
 
 			indicesWithSameBranchCorrespondence.clear();
@@ -1233,8 +1311,8 @@ bool connectSlices(const StrandModelStrandGroup& pipes, Slice& bottomSlice, size
 	return sizeBefore != indices.size();
 }
 
-void createTwigTip(const StrandModel& strandModel, std::pair < Slice, PipeCluster>& prevSlice, size_t prevOffset, float t,
-	std::vector<Vertex>& vertices, std::vector<unsigned>& indices)
+void createTwigTip(const StrandModel& strandModel, std::pair < Slice, PipeCluster>& prevSlice, std::pair<unsigned, unsigned> prevOffset, float t,
+	std::vector<Vertex>& vertices, std::vector<glm::vec2>& texCoords, std::vector<std::pair<unsigned, unsigned>>& indices)
 {
 	// compute average positions of all slice points
 	glm::vec3 pos(0, 0, 0);
@@ -1252,27 +1330,40 @@ void createTwigTip(const StrandModel& strandModel, std::pair < Slice, PipeCluste
 	Vertex v;
 	v.m_position = pos / float(prevSlice.second.size());
 
-	size_t tipIndex = vertices.size();
+	size_t tipVertIndex = vertices.size();
 	vertices.push_back(v);
+
+	size_t tipTexIndex = texCoords.size();
+	texCoords.push_back(glm::vec2(t, 0.0));
 
 	for (size_t i = 0; i < prevSlice.second.size(); i++)
 	{
-		indices.push_back(prevOffset + i);
-		indices.push_back(tipIndex);
-		indices.push_back(prevOffset + (i + 1) % prevSlice.second.size());
+		indices.push_back(std::make_pair<>(
+			prevOffset.first + i,
+			prevOffset.second + i
+		));
+		indices.push_back(std::make_pair<>(
+			tipVertIndex,
+			tipTexIndex
+		));
+		indices.push_back(std::make_pair<>(
+			prevOffset.first + (i + 1) % prevSlice.second.size(),
+			prevOffset.second + i + 1
+		));
 	}
 }
 
 struct SlicingData
 {
 	std::pair < Slice, PipeCluster> slice;
-	size_t offset;
+	size_t offsetVert;
+	size_t offsetTex;
 	float t;
 	float accumulatedAngle;
 };
 
-std::vector<SlicingData> slice(const StrandModel& strandModel, std::pair < Slice, PipeCluster>& prevSlice, size_t prevOffset, float t, float stepSize, float maxDist,
-	std::vector<Vertex>& vertices, std::vector<unsigned>& indices, const StrandModelMeshGeneratorSettings& settings, float accumulatedAngle = 0.0f)
+std::vector<SlicingData> slice(const StrandModel& strandModel, std::pair < Slice, PipeCluster>& prevSlice, std::pair<unsigned, unsigned> prevOffset, float t, float stepSize, float maxDist,
+	std::vector<Vertex>& vertices, std::vector<glm::vec2>& texCoords, std::vector<std::pair<unsigned, unsigned>>& indices, const StrandModelMeshGeneratorSettings& settings, float accumulatedAngle = 0.0f)
 {
 	const auto& skeleton = strandModel.m_strandModelSkeleton;
 	const auto& pipeGroup = skeleton.m_data.m_strandGroup;
@@ -1288,7 +1379,7 @@ std::vector<SlicingData> slice(const StrandModel& strandModel, std::pair < Slice
 		return {};
 	}
 
-	auto slicesAndClusters = computeSlices(strandModel, prevSlice.second, t, maxDist, settings.m_minCellCountForMajorBranches);
+	auto slicesAndClusters = computeSlices(strandModel, prevSlice.second, t, stepSize, maxDist, settings.m_minCellCountForMajorBranches);
 	std::vector<Slice> topSlices;
 
 	bool allEmpty = true;
@@ -1313,19 +1404,23 @@ std::vector<SlicingData> slice(const StrandModel& strandModel, std::pair < Slice
 	}
 
 
-	std::vector<size_t> offsets;
+	std::vector<std::pair<unsigned, unsigned> > offsets;
 
 	// create vertices
 	for (Slice& s : topSlices)
 	{
-		offsets.push_back(vertices.size());
+		offsets.push_back(std::make_pair<>(vertices.size(), texCoords.size()));
+
+		bool isFirst = true;
 
 		for (auto& el : s)
 		{
 			Vertex v;
 			v.m_position = el.second;
-			v.m_texCoord.y = t * settings.m_vMultiplier;
-			v.m_texCoord.x = getPipePolar(strandModel, el.first, t) / (2 * glm::pi<float>()) * settings.m_uMultiplier + accumulatedAngle / 360.0f;
+
+			glm::vec2 texCoord;
+			texCoord.y = t * settings.m_vMultiplier;
+			texCoord.x = getPipePolar(strandModel, el.first, t) / (2 * glm::pi<float>()) * settings.m_uMultiplier + accumulatedAngle / 360.0f;
 
 			// add twisting to uv-Coordinates
 			auto nodeHandle = getNodeHandle(pipeGroup, el.first, t);
@@ -1333,13 +1428,34 @@ std::vector<SlicingData> slice(const StrandModel& strandModel, std::pair < Slice
 
 			float frac = fmod(t, 1.0);
 
-			v.m_texCoord.x += frac * node.m_data.m_twistAngle / 360.0f;
+			texCoord.x += frac * node.m_data.m_twistAngle / 360.0f;
 
+			// need to do proper wraparound
+			if (!isFirst && texCoord.x < texCoords.back().x)
+			{
+				texCoord.x += settings.m_uMultiplier;
+			}
+
+			v.m_texCoord = texCoord; // legacy support
 			vertices.push_back(v);
+			texCoords.push_back(texCoord);
+
+			isFirst = false;
 		}
+
+		// texCoord for final vertex
+		glm::vec2 texCoord = texCoords[offsets.back().second];
+
+		if (texCoord.x < texCoords.back().x)
+		{
+			texCoord.x += settings.m_uMultiplier;
+		}
+
+		texCoords.push_back(texCoord);
 	}
 
-	bool connected = connectSlices(pipeGroup, prevSlice.first, prevOffset, topSlices, offsets, vertices, indices, settings.m_branchConnections);
+	bool connected = connectSlices(pipeGroup, prevSlice.first, prevOffset, topSlices, offsets,
+		vertices, texCoords, indices, settings.m_branchConnections);
 
 	if (!connected)
 	{
@@ -1367,18 +1483,15 @@ std::vector<SlicingData> slice(const StrandModel& strandModel, std::pair < Slice
 				newAccumulatedAngle += node.m_data.m_twistAngle;
 			}
 
-			nextSlices.push_back(SlicingData{ slicesAndClusters[i], offsets[i], t, newAccumulatedAngle });
-
+			nextSlices.push_back(SlicingData{ slicesAndClusters[i], offsets[i].first, offsets[i].second, t, newAccumulatedAngle });
 		}
-
 	}
 
 	return nextSlices;
-
 }
 
 void sliceIteratively(const StrandModel& strandModel, std::vector<SlicingData>& startSlices, float stepSize, float maxDist,
-	std::vector<Vertex>& vertices, std::vector<unsigned>& indices, const StrandModelMeshGeneratorSettings& settings)
+	std::vector<Vertex>& vertices, std::vector<glm::vec2>& texCoords, std::vector<std::pair<unsigned, unsigned>>& indices, const StrandModelMeshGeneratorSettings& settings)
 {
 	std::queue<SlicingData> queue;
 
@@ -1396,7 +1509,8 @@ void sliceIteratively(const StrandModel& strandModel, std::vector<SlicingData>& 
 
 		if (DEBUG_OUTPUT) std::cout << "Took next slice with t = " << cur.t << " out of the queue" << std::endl;
 
-		std::vector<SlicingData> slices = slice(strandModel, cur.slice, cur.offset, cur.t, stepSize, maxDist, vertices, indices, settings, accumulatedAngle);
+		std::vector<SlicingData> slices = slice(strandModel, cur.slice, std::make_pair<>(cur.offsetVert, cur.offsetTex), cur.t,
+			stepSize, maxDist, vertices, texCoords, indices, settings, accumulatedAngle);
 
 		for (SlicingData& s : slices)
 		{
@@ -1408,6 +1522,22 @@ void sliceIteratively(const StrandModel& strandModel, std::vector<SlicingData>& 
 void StrandModelMeshGenerator::RecursiveSlicing(
 	const StrandModel& strandModel, std::vector<Vertex>& vertices,
 	std::vector<unsigned>& indices, const StrandModelMeshGeneratorSettings& settings)
+{
+	// support mesh generation in framework
+	std::vector<glm::vec2> dummyTexCoords;
+	std::vector<std::pair<unsigned, unsigned>> indexPairs;
+
+	RecursiveSlicing(strandModel, vertices, dummyTexCoords, indexPairs, settings);
+
+	for (auto& pair : indexPairs)
+	{
+		indices.push_back(pair.first);
+	}
+}
+
+void StrandModelMeshGenerator::RecursiveSlicing(const StrandModel& strandModel, std::vector<Vertex>& vertices,
+	std::vector<glm::vec2>& texCoords, std::vector<std::pair<unsigned, unsigned>>& indices,
+	const StrandModelMeshGeneratorSettings& settings)
 {
 	const auto& skeleton = strandModel.m_strandModelSkeleton;
 	const auto& pipeGroup = skeleton.m_data.m_strandGroup;
@@ -1450,33 +1580,53 @@ void StrandModelMeshGenerator::RecursiveSlicing(
 	//auto firstCluster = computeCluster(strandModel, pipeCluster, 0, visited, 0.0, maxDist);
 	//auto firstSlice = computeSlice(strandModel, pipeCluster, firstCluster.first, firstCluster.second, 0.0, maxDist);
 
-	auto firstSlices = computeSlices(strandModel, pipeCluster, 0, maxDist, 3.0); // TODO: magic number
+	auto firstSlices = computeSlices(strandModel, pipeCluster, 0, 0, maxDist, 3.0); // TODO: magic number
 	std::vector<SlicingData> startSlices;
 
 	for (auto& slice : firstSlices)
 	{
 		// create initial vertices
-		size_t offset = vertices.size();
+		size_t offsetVert = vertices.size();
+		size_t offsetTex = texCoords.size();
+
+		bool isFirst = true;
 
 		for (auto& el : slice.first)
 		{
 			Vertex v;
 			v.m_position = el.second;
-			v.m_texCoord.y = 0.0;
-			v.m_texCoord.x = getPipePolar(strandModel, el.first, 0.0) / (2 * glm::pi<float>()) * settings.m_uMultiplier;
+
+			glm::vec2 texCoord;
+			texCoord.y = 0.0;
+			texCoord.x = getPipePolar(strandModel, el.first, 0.0) / (2 * glm::pi<float>()) * settings.m_uMultiplier;
+
+			v.m_texCoord = texCoord; // legacy support
 			vertices.push_back(v);
+
+			if (!isFirst && texCoord.x < texCoords.back().x)
+			{
+				texCoord.x += settings.m_uMultiplier;
+			}
+
+			texCoords.push_back(texCoord);
+
+			isFirst = false;
 		}
 
-		startSlices.push_back(SlicingData{ slice, offset, stepSize, 0.0 });
+		// need two different texture coordinates for the first and final vertex
+		glm::vec2 texCoord = texCoords[offsetTex];
+
+		if (texCoord.x < texCoords.back().x)
+		{
+			texCoord.x += settings.m_uMultiplier;
+		}
+
+		texCoords.push_back(texCoord);
+
+		startSlices.push_back(SlicingData{ slice, offsetVert, offsetTex, stepSize, 0.0 });
 	}
 
-	sliceIteratively(strandModel, startSlices, stepSize, maxDist, vertices, indices, settings);
-}
-
-void StrandModelMeshGenerator::RecursiveSlicing(const StrandModel& strandModel, std::vector<Vertex>& vertices,
-	std::vector<glm::vec2>& texCoords, std::vector<std::pair<unsigned, unsigned>>& indices,
-	const StrandModelMeshGeneratorSettings& settings)
-{
+	sliceIteratively(strandModel, startSlices, stepSize, maxDist, vertices, texCoords, indices, settings);
 }
 
 void StrandModelMeshGenerator::MarchingCube(const StrandModel& strandModel, std::vector<Vertex>& vertices,
