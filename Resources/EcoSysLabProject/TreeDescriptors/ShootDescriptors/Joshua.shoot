@@ -46,7 +46,7 @@ m_thicknessAgeFactor: 0
 m_internodeShadowFactor: 0.0199999996
 m_lateralBudCount: 1
 m_apicalBudExtinctionRate: 0
-m_lateralBudFlushingRate: 0.5
+m_lateralBudFlushingRate: 0.800000012
 m_apicalControl: 1.02999997
 m_apicalDominance: 0.629999995
 m_apicalDominanceLoss: 0

@@ -1053,7 +1053,7 @@ bool TreeModel::PruneInternodes(const glm::mat4& globalTransform, ClimateModel& 
 		const auto internodeHandle = *it;
 		if (m_shootSkeleton.PeekNode(internodeHandle).IsRecycled()) continue;
 		if (internodeHandle == 0) continue;
-		/*
+		
 		const auto& internode = m_shootSkeleton.PeekNode(*it);
 		if (internode.m_info.m_globalPosition.y <= 0.05f && internode.m_data.m_order != 0)
 		{
@@ -1072,7 +1072,7 @@ bool TreeModel::PruneInternodes(const glm::mat4& globalTransform, ClimateModel& 
 					anyInternodePruned = true;
 				}
 			}
-		}*/
+		}
 	}
 
 	if (anyInternodePruned) m_shootSkeleton.SortLists();

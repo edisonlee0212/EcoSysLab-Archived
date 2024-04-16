@@ -40,7 +40,7 @@ m_horizontalTropism: 0.340000004
 m_saggingFactorThicknessReductionMax: [0.000600000028, 2, 0.100000001]
 m_internodeLength: 0.0299999993
 m_internodeLengthThicknessFactor: 0.150000006
-m_endNodeThickness: 0.00400000019
+m_endNodeThickness: 0.00999999978
 m_thicknessAccumulationFactor: 0.449999988
 m_thicknessAgeFactor: 0
 m_internodeShadowFactor: 0.0299999993
@@ -52,7 +52,7 @@ m_apicalDominance: 0.430000007
 m_apicalDominanceLoss: 0.0299999993
 m_trunkProtection: false
 m_maxFlowLength: 0
-m_lowBranchPruning: 0.100000001
+m_lowBranchPruning: 0
 m_lowBranchPruningThicknessFactor: 0
 m_lightPruningFactor: 0.879999995
 m_thicknessPruningFactor: 0
