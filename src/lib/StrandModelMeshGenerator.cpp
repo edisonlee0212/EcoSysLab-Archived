@@ -619,7 +619,7 @@ std::vector<size_t> computeComponent(Graph& strandGraph, glm::vec3 min, glm::vec
 	return collectComponent(strandGraph, index, visited);
 }
 
-std::pair<Graph, std::vector<size_t> > computeCluster(const StrandModel& strandModel, const PipeCluster& pipesInPrevious, size_t index, std::vector<bool>& visited, float t, float maxDist)
+std::pair<Graph, std::vector<size_t> > computeCluster(const StrandModel& strandModel, const PipeCluster& pipesInPrevious, size_t index, std::vector<bool>& visited, float t, float maxDist, size_t minStrandCount)
 {
 	if (!isValidPipeParam(strandModel, pipesInPrevious[index], t))
 	{
@@ -718,7 +718,7 @@ std::pair<Graph, std::vector<size_t> > computeCluster(const StrandModel& strandM
 		}
 	}
 
-	if (candidates.size() < 3)
+	if (candidates.size() < minStrandCount)
 	{
 		//std::cout << "Cluster is too small, will be discarded" << std::endl;
 	}
@@ -855,7 +855,7 @@ std::pair< std::vector<Graph>, std::vector<std::vector<size_t> > > computeCluste
 			continue;
 		}
 
-		auto graphAndCluster = computeCluster(strandModel, pipesInPrevious, i, visited, t, maxDist);
+		auto graphAndCluster = computeCluster(strandModel, pipesInPrevious, i, visited, t, maxDist, minStrandCount);
 
 		if (graphAndCluster.second.size() >= minStrandCount)
 		{
