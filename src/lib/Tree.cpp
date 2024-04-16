@@ -697,6 +697,9 @@ void Tree::Update()
 }
 
 void Tree::OnCreate() {
+	m_treeModel = {};
+	m_strandModel = {};
+
 	m_treeVisualizer.Initialize();
 
 	m_strandModelParameters.m_branchTwistDistribution.m_mean = { -60.0f, 60.0f };
@@ -2702,6 +2705,7 @@ void Tree::PrepareController(const std::shared_ptr<ShootDescriptor>& shootDescri
 
 void Tree::InitializeStrandRenderer()
 {
+	m_strandModel = {};
 	const auto scene = GetScene();
 	const auto owner = GetOwner();
 
@@ -2746,6 +2750,7 @@ void Tree::InitializeStrandRenderer(const std::shared_ptr<Strands>& strands) con
 
 void Tree::InitializeStrandModelMeshRenderer(const StrandModelMeshGeneratorSettings& strandModelMeshGeneratorSettings)
 {
+	m_strandModel = {};
 	ClearStrandModelMeshRenderer();
 
 	BuildStrandModel();
