@@ -391,7 +391,7 @@ void TreeStructor::ImportGraph(const std::filesystem::path& path, float scaleFac
 				auto& branch = m_predictedBranches.emplace_back();
 				branch.m_bezierCurve.m_p0 = branchStart;
 				branch.m_bezierCurve.m_p3 = branchEnd;
-				if(glm::distance(branchStart, branchEnd) > 0.3f)
+				if (glm::distance(branchStart, branchEnd) > 0.3f)
 				{
 					EVOENGINE_WARNING("Too long internode!");
 				}
@@ -693,7 +693,7 @@ void TreeStructor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 
 	static bool enableDebugRendering = true;
 
-	
+
 	static float predictedBranchWidth = 0.005f;
 	static float connectionWidth = 0.001f;
 	static float pointSize = 1.f;
@@ -714,48 +714,54 @@ void TreeStructor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	if (!m_treeParts.empty()) {
 		if (ImGui::TreeNodeEx("Graph Settings")) {
 			m_connectivityGraphSettings.OnInspect();
+			if (ImGui::Button("Rebuild Voxel Grid"))
+			{
+				BuildVoxelGrid();
+			}
 			ImGui::TreePop();
 		}
 		if (ImGui::TreeNodeEx("Reconstruction Settings")) {
 			m_reconstructionSettings.OnInspect();
+			if (ImGui::Button("Build Skeleton")) {
+				EstablishConnectivityGraph();
+				BuildSkeletons();
+				refreshData = true;
+			}
 			ImGui::TreePop();
 		}
-		if (ImGui::Button("Rebuild Voxel Grid"))
-		{
-			BuildVoxelGrid();
-		}
-		if (ImGui::Button("Build Skeleton")) {
-			EstablishConnectivityGraph();
-			BuildSkeletons();
-			refreshData = true;
-		}
+
 		if (ImGui::Button("Form forest")) {
 			if (m_branchConnections.empty()) {
 				m_skeletons.clear();
 				EstablishConnectivityGraph();
+				refreshData = true;
 			}
-			if (m_skeletons.empty()) BuildSkeletons();
+			if (m_skeletons.empty()) {
+				BuildSkeletons();
+				refreshData = true;
+			}
 			GenerateForest();
 		}
-		
+		ImGui::SameLine();
 		if (ImGui::Button("Clear forest"))
 		{
 			ClearForest();
 		}
+		ImGui::Separator();
 		const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
-		FileUtils::SaveFile("Export all trees as OBJ", "OBJ", { ".obj" }, [&](const std::filesystem::path& path) {
+		FileUtils::SaveFile("Export all forest as OBJ", "OBJ", { ".obj" }, [&](const std::filesystem::path& path) {
 			ExportForestOBJ(ecoSysLabLayer->m_meshGeneratorSettings, path);
 			}, false);
-		if (ImGui::Button("Refresh Data")) {
-			refreshData = true;
-		}
+
 	}
 
 	ImGui::Checkbox("Debug Rendering", &enableDebugRendering);
 	if (enableDebugRendering) {
-		GizmoSettings gizmoSettings;
-		if (ImGui::Combo("Color mode", { "TreePart", "Branch", "Node" }, colorMode)) refreshData = true;
-		if (ImGui::TreeNode("Render settings")) {
+		static GizmoSettings gizmoSettings{};
+		if (ImGui::TreeNode("Debug rendering settings"))
+		{
+			if (ImGui::Combo("Color mode", { "TreePart", "Branch", "Node" }, colorMode)) refreshData = true;
+
 			if (ImGui::DragFloat("Branch width", &predictedBranchWidth, 0.0001f, 0.0001f, 1.0f, "%.4f")) refreshData = true;
 			if (ImGui::DragFloat("Connection width", &connectionWidth, 0.0001f, 0.0001f, 1.0f, "%.4f")) refreshData = true;
 			if (ImGui::DragFloat("Point size", &pointSize, 0.0001f, 0.0001f, 1.0f, "%.4f")) refreshData = true;
@@ -786,6 +792,11 @@ void TreeStructor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 
 			ImGui::TreePop();
 		}
+
+		if (ImGui::Button("Refresh Data")) {
+			refreshData = true;
+		}
+
 		if (GetHandle() != previousHandle) refreshData = true;
 
 		if (refreshData) {
@@ -1012,13 +1023,12 @@ void TreeStructor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 		ImGui::Checkbox("Candidate connections", &m_enableCandidateBranchConnections);
 		ImGui::Checkbox("Filtered branch connections", &m_enableFilteredBranchConnections);
 		ImGui::Checkbox("Selected branch connections", &m_enableSelectedBranchConnections);
-		ImGui::Checkbox("Selected branch connections", &m_enableSelectedBranchConnections);
 		ImGui::Checkbox("Selected branches", &m_enableSelectedBranches);
-		if (ImGui::Button("Build Info"))
-		{
-			FormInfoEntities();
-		}
 		ImGui::TreePop();
+	}
+	if (ImGui::Button("Build Info"))
+	{
+		FormInfoEntities();
 	}
 }
 
@@ -1037,7 +1047,7 @@ void TreeStructor::FormInfoEntities()
 
 	const auto infoEntity = scene->CreateEntity("Info");
 	scene->SetParent(infoEntity, owner);
-	if(m_enableAllocatedPoints){
+	if (m_enableAllocatedPoints) {
 		const auto allocatedPointInfoEntity = scene->CreateEntity("Allocated Points");
 		scene->SetParent(allocatedPointInfoEntity, infoEntity);
 		const auto particles = scene->GetOrSetPrivateComponent<Particles>(allocatedPointInfoEntity).lock();

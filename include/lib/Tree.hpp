@@ -16,12 +16,12 @@ namespace EcoSysLab {
 	struct SkeletalGraphSettings
 	{
 		float m_lineThickness = 0.0f;
-		float m_fixedLineThickness = 0.001f;
+		float m_fixedLineThickness = 0.002f;
 		float m_branchPointSize = 1.0f;
 		float m_junctionPointSize = 1.f;
 
-		bool m_fixedPointSize = false;
-		float m_fixedPointSizeFactor = 0.01f;
+		bool m_fixedPointSize = true;
+		float m_fixedPointSizeFactor = 0.005f;
 		glm::vec4 m_lineColor = glm::vec4(1.f, .5f, 0.5f, 1.0f);
 		glm::vec4 m_branchPointColor = glm::vec4(1.f, 1.f, 0.f, 1.f);
 		glm::vec4 m_junctionPointColor = glm::vec4(0.f, .7f, 1.f, 1.f);
