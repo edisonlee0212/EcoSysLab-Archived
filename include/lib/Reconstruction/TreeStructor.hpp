@@ -237,7 +237,7 @@ namespace EcoSysLab {
 		std::shared_ptr<ParticleInfoList> m_filteredBranchConnectionInfoList;
 		std::shared_ptr<ParticleInfoList> m_selectedBranchConnectionInfoList;
 		std::shared_ptr<ParticleInfoList> m_scatterPointToBranchConnectionInfoList;
-		std::shared_ptr<ParticleInfoList> m_predictedBranchInfoList;
+		std::shared_ptr<ParticleInfoList> m_selectedBranchInfoList;
 		glm::vec4 m_scatterPointToBranchConnectionColor = glm::vec4(1, 0, 1, 1);
 		glm::vec4 m_allocatedPointColor = glm::vec4(0, 0.5, 0.25, 1);
 		glm::vec4 m_scatterPointColor = glm::vec4(0.25, 0.5, 0, 1);
@@ -247,6 +247,17 @@ namespace EcoSysLab {
 		glm::vec4 m_filteredBranchConnectionColor = glm::vec4(0, 0, 1, 1);
 		glm::vec4 m_selectedBranchConnectionColor = glm::vec4(0.3, 0, 0, 1);
 		glm::vec4 m_selectedBranchColor = glm::vec4(0.6, 0.3, 0.0, 1.0f);
+		bool m_enableAllocatedPoints = true;
+		//bool m_enablePredictedBranches = true;
+		bool m_enableScatteredPoints = true;
+		bool m_enableScatteredPointConnections = false;
+		bool m_enableScatterPointToBranchConnections = false;
+		bool m_enableCandidateConnections = false;
+		bool m_enableReversedCandidateConnections = false;
+		bool m_enableFilteredConnections = false;
+		bool m_enableSelectedBranchConnections = true;
+		bool m_enableSelectedBranches = true;
+		
 
 		VoxelGrid<std::vector<PointData>> m_scatterPointsVoxelGrid;
 		VoxelGrid<std::vector<PointData>> m_allocatedPointsVoxelGrid;

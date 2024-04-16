@@ -684,7 +684,7 @@ void TreeStructor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	if (!m_selectedBranchConnectionInfoList) m_selectedBranchConnectionInfoList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
 
 	if (!m_scatterPointToBranchConnectionInfoList) m_scatterPointToBranchConnectionInfoList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
-	if (!m_predictedBranchInfoList) m_predictedBranchInfoList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
+	if (!m_selectedBranchInfoList) m_selectedBranchInfoList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
 
 
 
@@ -693,17 +693,7 @@ void TreeStructor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 
 	static bool enableDebugRendering = true;
 
-	static bool drawAllocatedPoints = true;
-	static bool drawPredictedBranches = true;
-	static bool drawScatteredPoints = true;
-	static bool drawScatteredPointConnections = false;
-
-	static bool drawCandidateConnections = false;
-	static bool drawReversedCandidateConnections = false;
-	static bool drawFilteredConnections = false;
-	static bool drawBranchConnections = true;
-
-	static bool drawScatterPointToBranchConnections = false;
+	
 	static float predictedBranchWidth = 0.005f;
 	static float connectionWidth = 0.001f;
 	static float pointSize = 1.f;
@@ -782,31 +772,29 @@ void TreeStructor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 			if (ImGui::DragFloat("Branch width", &predictedBranchWidth, 0.0001f, 0.0001f, 1.0f, "%.4f")) refreshData = true;
 			if (ImGui::DragFloat("Connection width", &connectionWidth, 0.0001f, 0.0001f, 1.0f, "%.4f")) refreshData = true;
 			if (ImGui::DragFloat("Point size", &pointSize, 0.0001f, 0.0001f, 1.0f, "%.4f")) refreshData = true;
-
-			if (ImGui::Checkbox("Render branches", &drawPredictedBranches)) refreshData = true;
-			if (ImGui::Checkbox("Render allocated points", &drawAllocatedPoints)) refreshData = true;
-			if (ImGui::Checkbox("Render scattered points", &drawScatteredPoints)) refreshData = true;
-			if (drawScatteredPoints) {
+			if (ImGui::Checkbox("Allocated points", &m_enableAllocatedPoints)) refreshData = true;
+			if (ImGui::Checkbox("Scattered points", &m_enableScatteredPoints)) refreshData = true;
+			if (m_enableScatteredPoints) {
 				if (ImGui::ColorEdit4("Scatter Point color", &m_scatterPointColor.x)) refreshData = true;
-				if (ImGui::Checkbox("Render Point-Point links", &drawScatteredPointConnections)) refreshData = true;
-				if (ImGui::Checkbox("Render Point-Branch links", &drawScatterPointToBranchConnections)) refreshData = true;
-				if (drawScatteredPointConnections && ImGui::ColorEdit4("Point-Point links color", &m_scatteredPointConnectionColor.x)) refreshData = true;
-				if (drawScatterPointToBranchConnections && ImGui::ColorEdit4("Point-Branch links color", &m_scatterPointToBranchConnectionColor.x)) refreshData = true;
+				if (ImGui::Checkbox("Render Point-Point links", &m_enableScatteredPointConnections)) refreshData = true;
+				if (ImGui::Checkbox("Render Point-Branch links", &m_enableScatterPointToBranchConnections)) refreshData = true;
+				if (m_enableScatteredPointConnections && ImGui::ColorEdit4("Point-Point links color", &m_scatteredPointConnectionColor.x)) refreshData = true;
+				if (m_enableScatterPointToBranchConnections && ImGui::ColorEdit4("Point-Branch links color", &m_scatterPointToBranchConnectionColor.x)) refreshData = true;
 			}
 
-			if (ImGui::Checkbox("Render candidate connections", &drawCandidateConnections)) refreshData = true;
-			if (drawCandidateConnections && ImGui::ColorEdit4("Candidate connection color", &m_candidateBranchConnectionColor.x))
+			if (ImGui::Checkbox("Candidate connections", &m_enableCandidateConnections)) refreshData = true;
+			if (m_enableCandidateConnections && ImGui::ColorEdit4("Candidate connection color", &m_candidateBranchConnectionColor.x))
 				refreshData = true;
-			if (ImGui::Checkbox("Render reversed candidate connections", &drawReversedCandidateConnections)) refreshData = true;
-			if (drawReversedCandidateConnections && ImGui::ColorEdit4("Reversed candidate connection color", &m_reversedCandidateBranchConnectionColor.x))
+			if (ImGui::Checkbox("Reversed candidate connections", &m_enableReversedCandidateConnections)) refreshData = true;
+			if (m_enableReversedCandidateConnections && ImGui::ColorEdit4("Reversed candidate connection color", &m_reversedCandidateBranchConnectionColor.x))
 				refreshData = true;
-			if (ImGui::Checkbox("Render filtered connections", &drawFilteredConnections)) refreshData = true;
-			if (drawFilteredConnections && ImGui::ColorEdit4("Filtered Connection Color", &m_filteredBranchConnectionColor.x))
+			if (ImGui::Checkbox("Filtered connections", &m_enableFilteredConnections)) refreshData = true;
+			if (m_enableFilteredConnections && ImGui::ColorEdit4("Filtered Connection Color", &m_filteredBranchConnectionColor.x))
 				refreshData = true;
-			if (ImGui::Checkbox("Render connections", &drawBranchConnections)) refreshData = true;
-			if (drawBranchConnections && ImGui::ColorEdit4("Branch Connection Color", &m_selectedBranchConnectionColor.x))
+			if (ImGui::Checkbox("Selected Branch connections", &m_enableSelectedBranchConnections)) refreshData = true;
+			if (m_enableSelectedBranchConnections && ImGui::ColorEdit4("Branch Connection Color", &m_selectedBranchConnectionColor.x))
 				refreshData = true;
-
+			if (ImGui::Checkbox("Selected branches", &m_enableSelectedBranches)) refreshData = true;
 			gizmoSettings.m_drawSettings.OnInspect();
 
 			ImGui::TreePop();
@@ -837,7 +825,7 @@ void TreeStructor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 					predictedBranchEnds[i] = m_predictedBranches[i].m_bezierCurve.m_p3;
 					predictedBranchColors[i] = glm::vec4(m_predictedBranches[i].m_color, 1.0f);
 				}
-				m_predictedBranchInfoList->ApplyConnections(predictedBranchStarts, predictedBranchEnds, predictedBranchColors, predictedBranchWidth);
+				m_selectedBranchInfoList->ApplyConnections(predictedBranchStarts, predictedBranchEnds, predictedBranchColors, predictedBranchWidth);
 
 			}
 				  break;
@@ -862,7 +850,7 @@ void TreeStructor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 					predictedBranchColors[i] = glm::vec4(
 						ecoSysLabLayer->RandomColors()[m_predictedBranches[i].m_handle], 1.0f);
 				}
-				m_predictedBranchInfoList->ApplyConnections(predictedBranchStarts, predictedBranchEnds, predictedBranchColors, predictedBranchWidth);
+				m_selectedBranchInfoList->ApplyConnections(predictedBranchStarts, predictedBranchEnds, predictedBranchColors, predictedBranchWidth);
 
 			}
 				  break;
@@ -886,7 +874,7 @@ void TreeStructor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 					predictedBranchEnds[i] = m_predictedBranches[i].m_bezierCurve.m_p3;
 					predictedBranchColors[i] = glm::vec4(1.0f);
 				}
-				m_predictedBranchInfoList->ApplyConnections(predictedBranchStarts, predictedBranchEnds, predictedBranchColors, predictedBranchWidth);
+				m_selectedBranchInfoList->ApplyConnections(predictedBranchStarts, predictedBranchEnds, predictedBranchColors, predictedBranchWidth);
 
 			}
 				  break;
@@ -998,35 +986,35 @@ void TreeStructor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 			m_allocatedPointInfoList->SetParticleInfos(allocatedPointMatrices);
 			m_scatteredPointInfoList->SetParticleInfos(scatterPointMatrices);
 		}
-		if (drawScatteredPoints) {
+		if (m_enableScatteredPoints) {
 			editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CUBE"),
 				m_scatteredPointInfoList,
 				glm::mat4(1.0f),
 				pointSize, gizmoSettings);
 		}
-		if (drawAllocatedPoints) {
+		if (m_enableAllocatedPoints) {
 			editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CUBE"),
 				m_allocatedPointInfoList,
 				glm::mat4(1.0f),
 				pointSize, gizmoSettings);
 		}
-		if (drawPredictedBranches)
-			editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CONE"), m_predictedBranchInfoList, glm::mat4(1.0f), 1.0f, gizmoSettings);
-		if (drawScatteredPointConnections)
+		if (m_enableSelectedBranches)
+			editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CONE"), m_selectedBranchInfoList, glm::mat4(1.0f), 1.0f, gizmoSettings);
+		if (m_enableScatteredPointConnections)
 			editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER"), m_scatteredPointConnectionInfoList, glm::mat4(1.0f), 1.0f, gizmoSettings);
 
-		if (drawCandidateConnections)
+		if (m_enableCandidateConnections)
 			editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CONE"), m_candidateBranchConnectionInfoList, glm::mat4(1.0f), 1.0f, gizmoSettings);
 
-		if (drawReversedCandidateConnections)
+		if (m_enableReversedCandidateConnections)
 			editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER"), m_reversedCandidateBranchConnectionInfoList, glm::mat4(1.0f), 1.0f, gizmoSettings);
 
-		if (drawFilteredConnections)
+		if (m_enableFilteredConnections)
 			editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER"), m_filteredBranchConnectionInfoList, glm::mat4(1.0f), 1.0f, gizmoSettings);
-		if (drawBranchConnections)
+		if (m_enableSelectedBranchConnections)
 			editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER"), m_selectedBranchConnectionInfoList, glm::mat4(1.0f), 1.0f, gizmoSettings);
 
-		if (drawScatterPointToBranchConnections)
+		if (m_enableScatterPointToBranchConnections)
 			editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER"), m_scatterPointToBranchConnectionInfoList, glm::mat4(1.0f), 1.0f, gizmoSettings);
 	}
 
@@ -1051,7 +1039,7 @@ void TreeStructor::FormInfoEntities()
 
 	const auto infoEntity = scene->CreateEntity("Info");
 	scene->SetParent(infoEntity, owner);
-	{
+	if(m_enableAllocatedPoints){
 		const auto allocatedPointInfoEntity = scene->CreateEntity("Allocated Points");
 		scene->SetParent(allocatedPointInfoEntity, infoEntity);
 		const auto particles = scene->GetOrSetPrivateComponent<Particles>(allocatedPointInfoEntity).lock();
@@ -1061,7 +1049,7 @@ void TreeStructor::FormInfoEntities()
 		particles->m_material = material;
 		material->m_materialProperties.m_albedoColor = m_allocatedPointColor;
 	}
-	{
+	if (m_enableScatteredPoints) {
 		const auto scatterPointInfoEntity = scene->CreateEntity("Scattered Points");
 		scene->SetParent(scatterPointInfoEntity, infoEntity);
 		const auto particles = scene->GetOrSetPrivateComponent<Particles>(scatterPointInfoEntity).lock();
@@ -1071,7 +1059,7 @@ void TreeStructor::FormInfoEntities()
 		particles->m_material = material;
 		material->m_materialProperties.m_albedoColor = m_scatterPointColor;
 	}
-	{
+	if (m_enableScatteredPointConnections) {
 		const auto scatteredPointConnectionInfoEntity = scene->CreateEntity("Scattered Point Connections");
 		scene->SetParent(scatteredPointConnectionInfoEntity, infoEntity);
 		scene->SetEnable(scatteredPointConnectionInfoEntity, false);
@@ -1082,7 +1070,7 @@ void TreeStructor::FormInfoEntities()
 		particles->m_material = material;
 		material->m_materialProperties.m_albedoColor = m_scatteredPointConnectionColor;
 	}
-	{
+	if (m_enableCandidateConnections) {
 		const auto candidateBranchConnectionInfoEntity = scene->CreateEntity("Candidate Branch Connections");
 		scene->SetEnable(candidateBranchConnectionInfoEntity, false);
 		scene->SetParent(candidateBranchConnectionInfoEntity, infoEntity);
@@ -1093,7 +1081,7 @@ void TreeStructor::FormInfoEntities()
 		particles->m_material = material;
 		material->m_materialProperties.m_albedoColor = m_candidateBranchConnectionColor;
 	}
-	if (false) {
+	if (m_enableReversedCandidateConnections) {
 		const auto reversedCandidateBranchConnectionInfoEntity = scene->CreateEntity("Reversed Candidate Branch Connections");
 		scene->SetEnable(reversedCandidateBranchConnectionInfoEntity, false);
 		scene->SetParent(reversedCandidateBranchConnectionInfoEntity, infoEntity);
@@ -1104,7 +1092,7 @@ void TreeStructor::FormInfoEntities()
 		particles->m_material = material;
 		material->m_materialProperties.m_albedoColor = m_reversedCandidateBranchConnectionColor;
 	}
-	{
+	if (m_enableFilteredConnections) {
 		const auto filteredBranchConnectionInfoEntity = scene->CreateEntity("Filtered Branch Connections");
 		scene->SetEnable(filteredBranchConnectionInfoEntity, false);
 		scene->SetParent(filteredBranchConnectionInfoEntity, infoEntity);
@@ -1115,7 +1103,7 @@ void TreeStructor::FormInfoEntities()
 		particles->m_material = material;
 		material->m_materialProperties.m_albedoColor = m_filteredBranchConnectionColor;
 	}
-	{
+	if (m_enableSelectedBranchConnections) {
 		const auto branchConnectionInfoEntity = scene->CreateEntity("Selected Branch Connections");
 		scene->SetParent(branchConnectionInfoEntity, infoEntity);
 		const auto particles = scene->GetOrSetPrivateComponent<Particles>(branchConnectionInfoEntity).lock();
@@ -1125,7 +1113,7 @@ void TreeStructor::FormInfoEntities()
 		particles->m_material = material;
 		material->m_materialProperties.m_albedoColor = m_selectedBranchConnectionColor;
 	}
-	{
+	if (m_enableScatterPointToBranchConnections) {
 		const auto scatterPointToBranchConnection = scene->CreateEntity("Scatter Point To Branch Connections");
 		scene->SetParent(scatterPointToBranchConnection, infoEntity);
 		scene->SetEnable(scatterPointToBranchConnection, false);
@@ -1136,12 +1124,12 @@ void TreeStructor::FormInfoEntities()
 		particles->m_material = material;
 		material->m_materialProperties.m_albedoColor = m_scatterPointToBranchConnectionColor;
 	}
-	{
+	if (m_enableSelectedBranches) {
 		const auto predictedBranchConnectionInfoEntity = scene->CreateEntity("Selected Branches");
 		scene->SetParent(predictedBranchConnectionInfoEntity, infoEntity);
 		const auto particles = scene->GetOrSetPrivateComponent<Particles>(predictedBranchConnectionInfoEntity).lock();
 		particles->m_mesh = Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER");
-		particles->m_particleInfoList = m_predictedBranchInfoList;
+		particles->m_particleInfoList = m_selectedBranchInfoList;
 		const auto material = ProjectManager::CreateTemporaryAsset<Material>();
 		particles->m_material = material;
 		material->m_materialProperties.m_albedoColor = m_selectedBranchColor;
