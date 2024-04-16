@@ -56,9 +56,9 @@ void StrandModel::InitializeProfiles(const StrandModelParameters& strandModelPar
 					auto& nodeOnChain = m_strandModelSkeleton.RefNode(*it);
 					const auto newParticleHandle = nodeOnChain.m_data.m_profile.AllocateParticle();
 					auto& newParticle = nodeOnChain.m_data.m_profile.RefParticle(newParticleHandle);
-					newParticle.m_data.m_strandHandle = strandHandle;
-					newParticle.m_data.m_strandSegmentHandle = newStrandSegmentHandle;
-					newParticle.m_data.m_base = false;
+					newParticle.m_strandHandle = strandHandle;
+					newParticle.m_strandSegmentHandle = newStrandSegmentHandle;
+					newParticle.m_base = false;
 
 					auto& newSegment = strandGroup.RefStrandSegment(newStrandSegmentHandle);
 					newSegment.m_data.m_nodeHandle = *it;
@@ -68,9 +68,9 @@ void StrandModel::InitializeProfiles(const StrandModelParameters& strandModelPar
 				const auto newStrandSegmentHandle = strandGroup.Extend(strandHandle);
 				const auto newParticleHandle = profile.AllocateParticle();
 				auto& newParticle = profile.RefParticle(newParticleHandle);
-				newParticle.m_data.m_strandHandle = strandHandle;
-				newParticle.m_data.m_strandSegmentHandle = newStrandSegmentHandle;
-				newParticle.m_data.m_base = true;
+				newParticle.m_strandHandle = strandHandle;
+				newParticle.m_strandSegmentHandle = newStrandSegmentHandle;
+				newParticle.m_base = true;
 				newParticle.SetPosition(position);
 				newParticle.SetInitialPosition(position);
 				auto& newSegment = strandGroup.RefStrandSegment(newStrandSegmentHandle);
@@ -87,9 +87,9 @@ void StrandModel::InitializeProfiles(const StrandModelParameters& strandModelPar
 						auto& nodeOnChain = m_strandModelSkeleton.RefNode(*it);
 						const auto newParticleHandle = nodeOnChain.m_data.m_profile.AllocateParticle();
 						auto& newParticle = nodeOnChain.m_data.m_profile.RefParticle(newParticleHandle);
-						newParticle.m_data.m_strandHandle = strandHandle;
-						newParticle.m_data.m_strandSegmentHandle = newStrandSegmentHandle;
-						newParticle.m_data.m_base = false;
+						newParticle.m_strandHandle = strandHandle;
+						newParticle.m_strandSegmentHandle = newStrandSegmentHandle;
+						newParticle.m_base = false;
 						auto& newSegment = strandGroup.RefStrandSegment(newStrandSegmentHandle);
 						newSegment.m_data.m_nodeHandle = *it;
 						newSegment.m_data.m_profileParticleHandle = newParticleHandle;
@@ -98,9 +98,9 @@ void StrandModel::InitializeProfiles(const StrandModelParameters& strandModelPar
 					const auto newStrandSegmentHandle = strandGroup.Extend(strandHandle);
 					const auto newParticleHandle = profile.AllocateParticle();
 					auto& newParticle = profile.RefParticle(newParticleHandle);
-					newParticle.m_data.m_strandHandle = strandHandle;
-					newParticle.m_data.m_strandSegmentHandle = newStrandSegmentHandle;
-					newParticle.m_data.m_base = true;
+					newParticle.m_strandHandle = strandHandle;
+					newParticle.m_strandSegmentHandle = newStrandSegmentHandle;
+					newParticle.m_base = true;
 					newParticle.SetPosition(position);
 					newParticle.SetInitialPosition(position);
 					auto& newSegment = strandGroup.RefStrandSegment(newStrandSegmentHandle);
@@ -118,18 +118,18 @@ void StrandModel::InitializeProfiles(const StrandModelParameters& strandModelPar
 						auto& nodeOnChain = m_strandModelSkeleton.RefNode(*it);
 						const auto newParticleHandle = nodeOnChain.m_data.m_profile.AllocateParticle();
 						auto& newParticle = nodeOnChain.m_data.m_profile.RefParticle(newParticleHandle);
-						newParticle.m_data.m_strandHandle = strandHandle;
-						newParticle.m_data.m_strandSegmentHandle = newStrandSegmentHandle;
-						newParticle.m_data.m_base = false;
+						newParticle.m_strandHandle = strandHandle;
+						newParticle.m_strandSegmentHandle = newStrandSegmentHandle;
+						newParticle.m_base = false;
 						auto& newSegment = strandGroup.RefStrandSegment(newStrandSegmentHandle);
 						newSegment.m_data.m_nodeHandle = *it;
 						newSegment.m_data.m_profileParticleHandle = newParticleHandle;
 					}
 					const auto newStrandSegmentHandle = strandGroup.Extend(strandHandle);
 					auto& particle2D = profile.RefParticle(particleHandle);
-					particle2D.m_data.m_strandHandle = strandHandle;
-					particle2D.m_data.m_strandSegmentHandle = newStrandSegmentHandle;
-					particle2D.m_data.m_base = true;
+					particle2D.m_strandHandle = strandHandle;
+					particle2D.m_strandSegmentHandle = newStrandSegmentHandle;
+					particle2D.m_base = true;
 					particle2D.SetPosition(particle2D.GetInitialPosition());
 					auto& newSegment = strandGroup.RefStrandSegment(newStrandSegmentHandle);
 					newSegment.m_data.m_nodeHandle = internodeHandle;
@@ -146,7 +146,7 @@ void StrandModel::InitializeProfiles(const StrandModelParameters& strandModelPar
 		auto& profile = internode.m_data.m_profile;
 		for (auto& particle : profile.RefParticles())
 		{
-			internode.m_data.m_particleMap.insert({ particle.m_data.m_strandHandle, particle.GetHandle() });
+			internode.m_data.m_particleMap.insert({ particle.m_strandHandle, particle.GetHandle() });
 		}
 		internode.m_data.m_strandCount = profile.RefParticles().size();
 	}
@@ -327,12 +327,12 @@ void StrandModel::MergeTask(float maxRootDistance, SkeletonNodeHandle nodeHandle
 		int particleIndex = 0;
 		for (const auto& particle : internodeData.m_profile.RefParticles())
 		{
-			const auto nodeParticleHandle = internodeData.m_particleMap.at(particle.m_data.m_strandHandle);
+			const auto nodeParticleHandle = internodeData.m_particleMap.at(particle.m_strandHandle);
 			auto& nodeParticle = internodeData.m_profile.RefParticle(nodeParticleHandle);
 			particleIndex++;
 			nodeParticle.SetColor(particle.GetColor());
-			nodeParticle.m_data.m_mainChild = true;
-			nodeParticle.m_data.m_correspondingChildNodeHandle = -1;
+			nodeParticle.m_mainChild = true;
+			nodeParticle.m_correspondingChildNodeHandle = -1;
 		}
 		return;
 	}
@@ -361,15 +361,15 @@ void StrandModel::MergeTask(float maxRootDistance, SkeletonNodeHandle nodeHandle
 
 		for (const auto& childParticle : childPhysics2D.PeekParticles())
 		{
-			const auto nodeParticleHandle = internodeData.m_particleMap.at(childParticle.m_data.m_strandHandle);
+			const auto nodeParticleHandle = internodeData.m_particleMap.at(childParticle.m_strandHandle);
 			auto& nodeParticle = internodeData.m_profile.RefParticle(nodeParticleHandle);
 			nodeParticle.SetColor(childParticle.GetColor());
 			auto polarPosition = childParticle.GetPolarPosition();
 			polarPosition.y += glm::radians(branchTwistAngle);
 			nodeParticle.SetPolarPosition(polarPosition);
 			nodeParticle.SetInitialPosition(nodeParticle.GetPosition());
-			nodeParticle.m_data.m_mainChild = true;
-			nodeParticle.m_data.m_correspondingChildNodeHandle = childHandles.front();
+			nodeParticle.m_mainChild = true;
+			nodeParticle.m_correspondingChildNodeHandle = childHandles.front();
 		}
 		if (internodeData.m_profileConstraints.m_boundaries.empty()) internode.m_data.m_packingIteration = glm::min(strandModelParameters.m_branchProfilePackingMaxIteration, static_cast<int>(internodeData.m_profile.RefParticles().size()) * strandModelParameters.m_maxSimulationIterationCellFactor);
 		return;
@@ -379,7 +379,7 @@ void StrandModel::MergeTask(float maxRootDistance, SkeletonNodeHandle nodeHandle
 	mainChildNode.m_data.m_twistAngle = junctionTwistAngle;
 	for (const auto& mainChildParticle : mainChildPhysics2D.PeekParticles())
 	{
-		const auto nodeParticleHandle = internodeData.m_particleMap.at(mainChildParticle.m_data.m_strandHandle);
+		const auto nodeParticleHandle = internodeData.m_particleMap.at(mainChildParticle.m_strandHandle);
 		auto& nodeParticle = internodeData.m_profile.RefParticle(nodeParticleHandle);
 		nodeParticle.SetColor(mainChildParticle.GetColor());
 		auto polarPosition = mainChildParticle.GetPolarPosition();
@@ -387,8 +387,8 @@ void StrandModel::MergeTask(float maxRootDistance, SkeletonNodeHandle nodeHandle
 		nodeParticle.SetPolarPosition(polarPosition);
 		nodeParticle.SetInitialPosition(nodeParticle.GetPosition());
 
-		nodeParticle.m_data.m_mainChild = true;
-		nodeParticle.m_data.m_correspondingChildNodeHandle = maxChildHandle;
+		nodeParticle.m_mainChild = true;
+		nodeParticle.m_correspondingChildNodeHandle = maxChildHandle;
 	}
 
 
@@ -414,7 +414,7 @@ void StrandModel::MergeTask(float maxRootDistance, SkeletonNodeHandle nodeHandle
 				{
 					childParticle.SetPosition(childParticle.GetPosition() + childNode.m_data.m_offset);
 
-					const auto nodeParticleHandle = internodeData.m_particleMap.at(childParticle.m_data.m_strandHandle);
+					const auto nodeParticleHandle = internodeData.m_particleMap.at(childParticle.m_strandHandle);
 					auto& nodeParticle = internodeData.m_profile.RefParticle(nodeParticleHandle);
 					nodeParticle.SetColor(childParticle.GetColor());
 					auto polarPosition = childParticle.GetPolarPosition();
@@ -422,15 +422,15 @@ void StrandModel::MergeTask(float maxRootDistance, SkeletonNodeHandle nodeHandle
 					nodeParticle.SetPolarPosition(polarPosition);
 					nodeParticle.SetPolarPosition(nodeParticle.GetPosition());
 					nodeParticle.m_enable = true;
-					nodeParticle.m_data.m_mainChild = false;
-					nodeParticle.m_data.m_correspondingChildNodeHandle = childHandle;
+					nodeParticle.m_mainChild = false;
+					nodeParticle.m_correspondingChildNodeHandle = childHandle;
 				}
 			}
 			else
 			{
 				for (auto& childParticle : childPhysics2D.RefParticles())
 				{
-					const auto nodeParticleHandle = internodeData.m_particleMap.at(childParticle.m_data.m_strandHandle);
+					const auto nodeParticleHandle = internodeData.m_particleMap.at(childParticle.m_strandHandle);
 					auto& nodeParticle = internodeData.m_profile.RefParticle(nodeParticleHandle);
 					nodeParticle.SetColor(childParticle.GetColor());
 					auto polarPosition = childParticle.GetPolarPosition();
@@ -438,8 +438,8 @@ void StrandModel::MergeTask(float maxRootDistance, SkeletonNodeHandle nodeHandle
 					nodeParticle.SetPolarPosition(polarPosition);
 					nodeParticle.SetPolarPosition(nodeParticle.GetPosition());
 					nodeParticle.m_enable = false;
-					nodeParticle.m_data.m_mainChild = false;
-					nodeParticle.m_data.m_correspondingChildNodeHandle = childHandle;
+					nodeParticle.m_mainChild = false;
+					nodeParticle.m_correspondingChildNodeHandle = childHandle;
 				}
 			}
 		}
@@ -469,13 +469,13 @@ void StrandModel::MergeTask(float maxRootDistance, SkeletonNodeHandle nodeHandle
 					childParticle.SetPolarPosition(polarPosition);
 					childParticle.SetPosition(childParticle.GetPosition() + offset);
 
-					const auto nodeParticleHandle = internodeData.m_particleMap.at(childParticle.m_data.m_strandHandle);
+					const auto nodeParticleHandle = internodeData.m_particleMap.at(childParticle.m_strandHandle);
 					auto& nodeParticle = internodeData.m_profile.RefParticle(nodeParticleHandle);
 					nodeParticle.SetColor(childParticle.GetColor());
 					nodeParticle.SetPosition(childParticle.GetPosition());
 					nodeParticle.SetInitialPosition(childParticle.GetPosition());
-					nodeParticle.m_data.m_mainChild = false;
-					nodeParticle.m_data.m_correspondingChildNodeHandle = childHandle;
+					nodeParticle.m_mainChild = false;
+					nodeParticle.m_correspondingChildNodeHandle = childHandle;
 				}
 			}
 		}
@@ -511,15 +511,15 @@ void StrandModel::MergeTask(float maxRootDistance, SkeletonNodeHandle nodeHandle
 			{
 				childParticle.SetPosition(childParticle.GetPosition() + offset);
 
-				const auto nodeParticleHandle = internodeData.m_particleMap.at(childParticle.m_data.m_strandHandle);
+				const auto nodeParticleHandle = internodeData.m_particleMap.at(childParticle.m_strandHandle);
 				auto& nodeParticle = internodeData.m_profile.RefParticle(nodeParticleHandle);
 				nodeParticle.SetColor(childParticle.GetColor());
 				auto polarPosition = childParticle.GetPolarPosition();
 				polarPosition.y += glm::radians(strandModelParameters.m_junctionTwistDistribution.GetValue(internode.m_info.m_rootDistance / maxRootDistance));
 				nodeParticle.SetPolarPosition(polarPosition);
 				nodeParticle.SetInitialPosition(nodeParticle.GetPosition());
-				nodeParticle.m_data.m_mainChild = false;
-				nodeParticle.m_data.m_correspondingChildNodeHandle = childHandle;
+				nodeParticle.m_mainChild = false;
+				nodeParticle.m_correspondingChildNodeHandle = childHandle;
 			}
 		}
 	}
@@ -547,7 +547,7 @@ void StrandModel::ApplyProfile(const StrandModelParameters& strandModelParameter
 	for (const auto& [strandHandle, particleHandle] : node.m_data.m_particleMap)
 	{
 		const auto& particle = node.m_data.m_profile.PeekParticle(particleHandle);
-		auto& newStrandSegment = m_strandModelSkeleton.m_data.m_strandGroup.RefStrandSegment(particle.m_data.m_strandSegmentHandle);
+		auto& newStrandSegment = m_strandModelSkeleton.m_data.m_strandGroup.RefStrandSegment(particle.m_strandSegmentHandle);
 		newStrandSegment.m_info.m_thickness = node.m_data.m_strandRadius;
 		newStrandSegment.m_info.m_globalPosition = node.m_info.GetGlobalEndPosition()
 			+ node.m_data.m_strandRadius * particle.GetInitialPosition().x * currentLeft
@@ -644,7 +644,7 @@ void StrandModel::CalculateStrandProfileAdjustedTransforms(const StrandModelPara
 
 		for (const auto& parentParticle : parentNode.m_data.m_profile.PeekParticles())
 		{
-			if (parentParticle.m_data.m_correspondingChildNodeHandle == nodeHandle)
+			if (parentParticle.m_correspondingChildNodeHandle == nodeHandle)
 			{
 				parentCenter += parentParticle.GetPosition();
 				particleCount++;
@@ -668,7 +668,7 @@ void StrandModel::CalculateStrandProfileAdjustedTransforms(const StrandModelPara
 			float maxRadius = node.m_data.m_profile.GetMaxDistanceToCenter();
 			for (const auto& parentParticle : parentNode.m_data.m_profile.PeekParticles())
 			{
-				if (parentParticle.m_data.m_correspondingChildNodeHandle == nodeHandle)
+				if (parentParticle.m_correspondingChildNodeHandle == nodeHandle)
 				{
 					const auto distance = glm::length(glm::closestPointOnLine(parentParticle.GetPosition(), parentCenter, parentCenter + node.m_data.m_offset * 1000.0f));
 					maxRadius = glm::max(maxRadius, distance);

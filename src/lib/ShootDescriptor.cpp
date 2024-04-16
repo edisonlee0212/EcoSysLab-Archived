@@ -151,6 +151,8 @@ void ShootDescriptor::PrepareController(ShootGrowthController& shootGrowthContro
 			return m_fruitFallProbability;
 		};
 
+
+	
 }
 
 void ShootDescriptor::Serialize(YAML::Emitter& out)

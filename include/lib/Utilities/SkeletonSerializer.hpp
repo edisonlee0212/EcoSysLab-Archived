@@ -30,60 +30,104 @@ namespace EcoSysLab {
 		out << YAML::Key << "m_min" << YAML::Value << skeleton.m_min;
 		out << YAML::Key << "m_max" << YAML::Value << skeleton.m_max;
 
-		out << YAML::Key << "m_data" << YAML::Value << YAML::BeginMap;
-		skeletonFunc(out, skeleton.m_data);
-		out << YAML::EndMap;
+		
+		const auto nodeSize = skeleton.m_nodes.size();
+		auto nodeRecycledList = std::vector<int>(nodeSize);
+		auto nodeFlowHandleList = std::vector<SkeletonFlowHandle>(nodeSize);
+		auto nodeParentHandleList = std::vector<SkeletonNodeHandle>(nodeSize);
+		auto nodeApicalList = std::vector<int>(nodeSize);
+		auto nodeIndexList = std::vector<int>(nodeSize);
 
-		out << YAML::Key << "m_nodes" << YAML::Value << YAML::BeginSeq;
-		for (int nodeIndex = 0; nodeIndex < skeleton.m_nodes.size(); nodeIndex++)
+		auto infoGlobalPositionList = std::vector<glm::vec3>(nodeSize);
+		auto infoGlobalRotationList = std::vector<glm::quat>(nodeSize);
+		auto infoLengthList = std::vector<float>(nodeSize);
+		auto infoThicknessList = std::vector<float>(nodeSize);
+		auto infoColorList = std::vector<glm::vec4>(nodeSize);
+
+		for (int nodeIndex = 0; nodeIndex < nodeSize; nodeIndex++)
+		{
+			const auto& node = skeleton.m_nodes[nodeIndex];
+			nodeRecycledList[nodeIndex] = node.m_recycled ? 1 : 0;
+			nodeFlowHandleList[nodeIndex] = node.m_flowHandle;
+			nodeParentHandleList[nodeIndex] = node.m_parentHandle;
+			nodeApicalList[nodeIndex] = node.m_apical ? 1 : 0;
+			nodeIndexList[nodeIndex] = node.m_index;
+
+			infoGlobalPositionList[nodeIndex] = node.m_info.m_globalPosition;
+			infoGlobalRotationList[nodeIndex] = node.m_info.m_globalRotation;
+			infoLengthList[nodeIndex] = node.m_info.m_length;
+			infoThicknessList[nodeIndex] = node.m_info.m_thickness;
+			infoColorList[nodeIndex] = node.m_info.m_color;
+
+		}
+		out << YAML::Key << "m_nodes.m_recycled" << YAML::Value << YAML::Binary(
+			reinterpret_cast<const unsigned char*>(nodeRecycledList.data()), nodeRecycledList.size() * sizeof(int));
+		out << YAML::Key << "m_nodes.m_flowHandle" << YAML::Value << YAML::Binary(
+			reinterpret_cast<const unsigned char*>(nodeFlowHandleList.data()), nodeFlowHandleList.size() * sizeof(SkeletonFlowHandle));
+		out << YAML::Key << "m_nodes.m_parentHandle" << YAML::Value << YAML::Binary(
+			reinterpret_cast<const unsigned char*>(nodeParentHandleList.data()), nodeParentHandleList.size() * sizeof(SkeletonNodeHandle));
+		out << YAML::Key << "m_nodes.m_apical" << YAML::Value << YAML::Binary(
+			reinterpret_cast<const unsigned char*>(nodeApicalList.data()), nodeApicalList.size() * sizeof(int));
+		out << YAML::Key << "m_nodes.m_index" << YAML::Value << YAML::Binary(
+			reinterpret_cast<const unsigned char*>(nodeIndexList.data()), nodeIndexList.size() * sizeof(int));
+
+		out << YAML::Key << "m_nodes.m_info.m_globalPosition" << YAML::Value << YAML::Binary(
+			reinterpret_cast<const unsigned char*>(infoGlobalPositionList.data()), infoGlobalPositionList.size() * sizeof(glm::vec3));
+		out << YAML::Key << "m_nodes.m_info.m_globalRotation" << YAML::Value << YAML::Binary(
+			reinterpret_cast<const unsigned char*>(infoGlobalRotationList.data()), infoGlobalRotationList.size() * sizeof(glm::quat));
+		out << YAML::Key << "m_nodes.m_info.m_length" << YAML::Value << YAML::Binary(
+			reinterpret_cast<const unsigned char*>(infoLengthList.data()), infoLengthList.size() * sizeof(float));
+		out << YAML::Key << "m_nodes.m_info.m_thickness" << YAML::Value << YAML::Binary(
+			reinterpret_cast<const unsigned char*>(infoThicknessList.data()), infoThicknessList.size() * sizeof(float));
+		out << YAML::Key << "m_nodes.m_info.m_color" << YAML::Value << YAML::Binary(
+			reinterpret_cast<const unsigned char*>(infoColorList.data()), infoColorList.size() * sizeof(glm::vec4));
+
+		out << YAML::Key << "m_nodes.m_data" << YAML::Value << YAML::BeginSeq;
+		for (size_t nodeIndex = 0; nodeIndex < nodeSize; nodeIndex++)
 		{
 			const auto& node = skeleton.m_nodes[nodeIndex];
 			out << YAML::BeginMap;
 			{
-				out << YAML::Key << "R" << YAML::Value << node.m_recycled;
-				out << YAML::Key << "F" << YAML::Value << node.m_flowHandle;
-				out << YAML::Key << "P" << YAML::Value << node.m_parentHandle;
-				out << YAML::Key << "A" << YAML::Value << node.m_apical;
-				out << YAML::Key << "I" << YAML::Value << node.m_index;
-
-				out << YAML::Key << "IF" << YAML::Value << YAML::BeginMap;
-				{
-					out << YAML::Key << "GP" << YAML::Value << node.m_info.m_globalPosition;
-					out << YAML::Key << "GR" << YAML::Value << node.m_info.m_globalRotation;
-					out << YAML::Key << "L" << YAML::Value << node.m_info.m_length;
-					out << YAML::Key << "T" << YAML::Value << node.m_info.m_thickness;
-					out << YAML::Key << "C" << YAML::Value << node.m_info.m_color;
-				}
-				out << YAML::EndMap;
-				
-				out << YAML::Key << "D" << YAML::Value << YAML::BeginMap;
-				{
-					nodeFunc(out, node.m_data);
-				}
-				out << YAML::EndMap;
+				nodeFunc(out, node.m_data);
 			}
 			out << YAML::EndMap;
 		}
 		out << YAML::EndSeq;
 
+
+		const auto flowSize = skeleton.m_flows.size();
+		auto flowRecycledList = std::vector<int>(flowSize);
+		auto flowParentHandleList = std::vector<SkeletonFlowHandle>(flowSize);
+		auto flowApicalList = std::vector<int>(flowSize);
+		auto flowIndexList = std::vector<int>(flowSize);
+		for (int flowIndex = 0; flowIndex < flowSize; flowIndex++)
+		{
+			const auto& flow = skeleton.m_flows[flowIndex];
+			flowRecycledList[flowIndex] = flow.m_recycled ? 1 : 0;
+			flowParentHandleList[flowIndex] = flow.m_parentHandle;
+			flowApicalList[flowIndex] = flow.m_apical ? 1 : 0;
+			flowIndexList[flowIndex] = flow.m_index;
+		}
+		out << YAML::Key << "m_flows.m_recycled" << YAML::Value << YAML::Binary(
+			reinterpret_cast<const unsigned char*>(flowRecycledList.data()), flowRecycledList.size() * sizeof(int));
+		out << YAML::Key << "m_flows.m_parentHandle" << YAML::Value << YAML::Binary(
+			reinterpret_cast<const unsigned char*>(flowParentHandleList.data()), flowParentHandleList.size() * sizeof(SkeletonFlowHandle));
+		out << YAML::Key << "m_flows.m_apical" << YAML::Value << YAML::Binary(
+			reinterpret_cast<const unsigned char*>(flowApicalList.data()), flowApicalList.size() * sizeof(int));
+		out << YAML::Key << "m_flows.m_index" << YAML::Value << YAML::Binary(
+			reinterpret_cast<const unsigned char*>(flowIndexList.data()), flowIndexList.size() * sizeof(int));
+
 		out << YAML::Key << "m_flows" << YAML::Value << YAML::BeginSeq;
-		for (int flowIndex = 0; flowIndex < skeleton.m_flows.size(); flowIndex++)
+		for (int flowIndex = 0; flowIndex < flowSize; flowIndex++)
 		{
 			const auto& flow = skeleton.m_flows[flowIndex];
 			out << YAML::BeginMap;
 			{
-				out << YAML::Key << "R" << YAML::Value << flow.m_recycled;
-				out << YAML::Key << "P" << YAML::Value << flow.m_parentHandle;
-				out << YAML::Key << "A" << YAML::Value << flow.m_apical;
-				out << YAML::Key << "I" << YAML::Value << flow.m_index;
-				out << YAML::Key << "N" << YAML::Value << YAML::BeginSeq;
-				for(const auto& nodeHandle : flow.m_nodes)
-				{
-					out << nodeHandle;
+				if (!flow.m_nodes.empty()) {
+					out << YAML::Key << "m_nodes" << YAML::Value << YAML::Binary(
+						reinterpret_cast<const unsigned char*>(flow.m_nodes.data()), flow.m_nodes.size() * sizeof(SkeletonNodeHandle));
 				}
-				out << YAML::EndSeq;
-
-				out << YAML::Key << "D" << YAML::Value << YAML::BeginMap;
+				out << YAML::Key << "m_data" << YAML::Value << YAML::BeginMap;
 				{
 					flowFunc(out, flow.m_data);
 				}
@@ -92,6 +136,11 @@ namespace EcoSysLab {
 			out << YAML::EndMap;
 		}
 		out << YAML::EndSeq;
+
+		out << YAML::Key << "m_data" << YAML::Value << YAML::BeginMap;
+		skeletonFunc(out, skeleton.m_data);
+		out << YAML::EndMap;
+
 	}
 
 	template <typename SkeletonData, typename FlowData, typename NodeData>
@@ -107,61 +156,218 @@ namespace EcoSysLab {
 		skeleton.m_version = -1;
 		if (in["m_min"]) skeleton.m_min = in["m_min"].as<glm::vec3>();
 		if (in["m_max"]) skeleton.m_max = in["m_max"].as<glm::vec3>();
+		
+		if(in["m_nodes.m_recycled"])
+		{
+			auto nodeRecycledList = std::vector<int>();
+			const auto data = in["m_nodes.m_recycled"].as<YAML::Binary>();
+			nodeRecycledList.resize(data.size() / sizeof(int));
+			std::memcpy(nodeRecycledList.data(), data.data(), data.size());
 
-		if(in["m_data"]) skeletonFunc(in["m_data"], skeleton.m_data);
-		if (in["m_nodes"]) {
-			skeleton.m_nodes.clear();
-			const auto& inNodes = in["m_nodes"];
+			skeleton.m_nodes.resize(nodeRecycledList.size());
+			for(size_t i = 0; i < nodeRecycledList.size(); i++)
+			{
+				skeleton.m_nodes[i].m_recycled = nodeRecycledList[i] == 1;
+			}
+		}
+
+		if (in["m_nodes.m_flowHandle"])
+		{
+			auto nodeFlowHandleList = std::vector<SkeletonFlowHandle>();
+			const auto data = in["m_nodes.m_flowHandle"].as<YAML::Binary>();
+			nodeFlowHandleList.resize(data.size() / sizeof(SkeletonFlowHandle));
+			std::memcpy(nodeFlowHandleList.data(), data.data(), data.size());
+
+			for (size_t i = 0; i < nodeFlowHandleList.size(); i++)
+			{
+				skeleton.m_nodes[i].m_flowHandle = nodeFlowHandleList[i];
+			}
+		}
+
+		if (in["m_nodes.m_parentHandle"])
+		{
+			auto nodeParentHandleList = std::vector<SkeletonNodeHandle>();
+			const auto data = in["m_nodes.m_parentHandle"].as<YAML::Binary>();
+			nodeParentHandleList.resize(data.size() / sizeof(SkeletonFlowHandle));
+			std::memcpy(nodeParentHandleList.data(), data.data(), data.size());
+
+			for (size_t i = 0; i < nodeParentHandleList.size(); i++)
+			{
+				skeleton.m_nodes[i].m_parentHandle = nodeParentHandleList[i];
+			}
+		}
+
+		if (in["m_nodes.m_apical"])
+		{
+			auto nodeApicalList = std::vector<int>();
+			const auto data = in["m_nodes.m_apical"].as<YAML::Binary>();
+			nodeApicalList.resize(data.size() / sizeof(int));
+			std::memcpy(nodeApicalList.data(), data.data(), data.size());
+
+			for (size_t i = 0; i < nodeApicalList.size(); i++)
+			{
+				skeleton.m_nodes[i].m_apical = nodeApicalList[i] == 1;
+			}
+		}
+
+		if (in["m_nodes.m_index"])
+		{
+			auto nodeIndexList = std::vector<int>();
+			const auto data = in["m_nodes.m_index"].as<YAML::Binary>();
+			nodeIndexList.resize(data.size() / sizeof(int));
+			std::memcpy(nodeIndexList.data(), data.data(), data.size());
+
+			for (size_t i = 0; i < nodeIndexList.size(); i++)
+			{
+				skeleton.m_nodes[i].m_index = nodeIndexList[i];
+			}
+		}
+
+		if (in["m_nodes.m_info.m_globalPosition"])
+		{
+			auto infoGlobalPositionList = std::vector<glm::vec3>();
+			const auto data = in["m_nodes.m_info.m_globalPosition"].as<YAML::Binary>();
+			infoGlobalPositionList.resize(data.size() / sizeof(glm::vec3));
+			std::memcpy(infoGlobalPositionList.data(), data.data(), data.size());
+
+			for (size_t i = 0; i < infoGlobalPositionList.size(); i++)
+			{
+				skeleton.m_nodes[i].m_info.m_globalPosition = infoGlobalPositionList[i];
+			}
+		}
+
+		if (in["m_nodes.m_info.m_globalRotation"])
+		{
+			auto infoGlobalRotationList = std::vector<glm::quat>();
+			const auto data = in["m_nodes.m_info.m_globalRotation"].as<YAML::Binary>();
+			infoGlobalRotationList.resize(data.size() / sizeof(glm::quat));
+			std::memcpy(infoGlobalRotationList.data(), data.data(), data.size());
+
+			for (size_t i = 0; i < infoGlobalRotationList.size(); i++)
+			{
+				skeleton.m_nodes[i].m_info.m_globalRotation = infoGlobalRotationList[i];
+			}
+		}
+
+		if (in["m_nodes.m_info.m_length"])
+		{
+			auto infoLengthList = std::vector<float>();
+			const auto data = in["m_nodes.m_info.m_length"].as<YAML::Binary>();
+			infoLengthList.resize(data.size() / sizeof(float));
+			std::memcpy(infoLengthList.data(), data.data(), data.size());
+
+			for (size_t i = 0; i < infoLengthList.size(); i++)
+			{
+				skeleton.m_nodes[i].m_info.m_length = infoLengthList[i];
+			}
+		}
+
+		if (in["m_nodes.m_info.m_thickness"])
+		{
+			auto infoThicknessList = std::vector<float>();
+			const auto data = in["m_nodes.m_info.m_thickness"].as<YAML::Binary>();
+			infoThicknessList.resize(data.size() / sizeof(float));
+			std::memcpy(infoThicknessList.data(), data.data(), data.size());
+
+			for (size_t i = 0; i < infoThicknessList.size(); i++)
+			{
+				skeleton.m_nodes[i].m_info.m_thickness = infoThicknessList[i];
+			}
+		}
+
+		if (in["m_nodes.m_info.m_color"])
+		{
+			auto infoColorList = std::vector<glm::vec4>();
+			const auto data = in["m_nodes.m_info.m_color"].as<YAML::Binary>();
+			infoColorList.resize(data.size() / sizeof(glm::vec4));
+			std::memcpy(infoColorList.data(), data.data(), data.size());
+
+			for (size_t i = 0; i < infoColorList.size(); i++)
+			{
+				skeleton.m_nodes[i].m_info.m_color = infoColorList[i];
+			}
+		}
+
+		if (in["m_nodes.m_data"]) {
+			const auto& inNodes = in["m_nodes.m_data"];
 			SkeletonNodeHandle nodeHandle = 0;
-			for (const auto& inNode : inNodes) {
-				skeleton.m_nodes.emplace_back();
-				auto& node = skeleton.m_nodes.back();
+			for (const auto& inNodeData : inNodes) {
+				auto& node = skeleton.m_nodes[nodeHandle];
 				node.m_handle = nodeHandle;
-				if (inNode["R"]) node.m_recycled = inNode["R"].as<bool>();
-				if (inNode["F"]) node.m_flowHandle = inNode["F"].as<SkeletonFlowHandle>();
-				if (inNode["P"]) node.m_parentHandle = inNode["P"].as<SkeletonNodeHandle>();
-				if (inNode["I"]) node.m_index = inNode["I"].as<int>();
-				if (inNode["A"]) node.m_apical = inNode["A"].as<bool>();
-				if (inNode["IF"])
-				{
-					const auto& inNodeInfo = inNode["IF"];
-					if (inNodeInfo["GP"]) node.m_info.m_globalPosition = inNodeInfo["GP"].as<glm::vec3>();
-					if (inNodeInfo["GR"]) node.m_info.m_globalRotation = inNodeInfo["GR"].as<glm::quat>();
-					if (inNodeInfo["L"]) node.m_info.m_length = inNodeInfo["L"].as<float>();
-					if (inNodeInfo["T"]) node.m_info.m_thickness = inNodeInfo["T"].as<float>();
-					if (inNodeInfo["C"]) node.m_info.m_color = inNodeInfo["C"].as<glm::vec4>();
-				}
-				if(inNode["D"])
-				{
-					const auto& inNodeData = inNode["D"];
-					nodeFunc(inNodeData, node.m_data);
-				}
+				nodeFunc(inNodeData, node.m_data);
 				nodeHandle++;
 			}
 		}
+
+
+		if (in["m_flows.m_recycled"])
+		{
+			auto flowRecycledList = std::vector<int>();
+			const auto data = in["m_flows.m_recycled"].as<YAML::Binary>();
+			flowRecycledList.resize(data.size() / sizeof(int));
+			std::memcpy(flowRecycledList.data(), data.data(), data.size());
+
+			skeleton.m_flows.resize(flowRecycledList.size());
+			for (size_t i = 0; i < flowRecycledList.size(); i++)
+			{
+				skeleton.m_flows[i].m_recycled = flowRecycledList[i] == 1;
+			}
+		}
+
+		if (in["m_flows.m_parentHandle"])
+		{
+			auto flowParentHandleList = std::vector<SkeletonFlowHandle>();
+			const auto data = in["m_flows.m_parentHandle"].as<YAML::Binary>();
+			flowParentHandleList.resize(data.size() / sizeof(SkeletonFlowHandle));
+			std::memcpy(flowParentHandleList.data(), data.data(), data.size());
+
+			for (size_t i = 0; i < flowParentHandleList.size(); i++)
+			{
+				skeleton.m_flows[i].m_parentHandle = flowParentHandleList[i];
+			}
+		}
+
+		if (in["m_flows.m_apical"])
+		{
+			auto flowApicalList = std::vector<int>();
+			const auto data = in["m_flows.m_apical"].as<YAML::Binary>();
+			flowApicalList.resize(data.size() / sizeof(int));
+			std::memcpy(flowApicalList.data(), data.data(), data.size());
+
+			for (size_t i = 0; i < flowApicalList.size(); i++)
+			{
+				skeleton.m_flows[i].m_apical = flowApicalList[i] == 1;
+			}
+		}
+
+		if (in["m_flows.m_index"])
+		{
+			auto flowIndexList = std::vector<int>();
+			const auto data = in["m_flows.m_index"].as<YAML::Binary>();
+			flowIndexList.resize(data.size() / sizeof(int));
+			std::memcpy(flowIndexList.data(), data.data(), data.size());
+
+			for (size_t i = 0; i < flowIndexList.size(); i++)
+			{
+				skeleton.m_flows[i].m_index = flowIndexList[i];
+			}
+		}
+
 		if (in["m_flows"]) {
-			skeleton.m_flows.clear();
 			const auto& inFlows = in["m_flows"];
 			SkeletonFlowHandle flowHandle = 0;
 			for (const auto& inFlow : inFlows) {
-				skeleton.m_flows.emplace_back();
-				auto& flow = skeleton.m_flows.back();
+				auto& flow = skeleton.m_flows[flowHandle];
 				flow.m_handle = flowHandle;
-				if (inFlow["R"]) flow.m_recycled = inFlow["R"].as<bool>();
-				if (inFlow["P"]) flow.m_parentHandle = inFlow["P"].as<SkeletonFlowHandle>();
-				if (inFlow["I"]) flow.m_index = inFlow["I"].as<int>();
-				if (inFlow["A"]) flow.m_apical = inFlow["A"].as<bool>();
-				if (inFlow["N"])
+				if (inFlow["m_nodes"])
 				{
-					const auto& inFlowNodes= inFlow["N"];
-					for (const auto& inFlowNode : inFlowNodes)
-					{
-						flow.m_nodes.emplace_back(inFlowNode.as<SkeletonNodeHandle>());
-					}
+					const auto nodes = inFlow["m_nodes"].as<YAML::Binary>();
+					flow.m_nodes.resize(nodes.size() / sizeof(SkeletonNodeHandle));
+					std::memcpy(flow.m_nodes.data(), nodes.data(), nodes.size());
 				}
-				if (inFlow["D"])
+				if (inFlow["m_data"])
 				{
-					const auto& inFlowData = inFlow["D"];
+					const auto& inFlowData = inFlow["m_data"];
 					flowFunc(inFlowData, flow.m_data);
 				}
 				flowHandle++;
@@ -195,9 +401,11 @@ namespace EcoSysLab {
 			}
 		}
 		skeleton.SortLists();
+
 		skeleton.CalculateDistance();
 		skeleton.CalculateFlows();
 		skeleton.CalculateRegulatedGlobalRotation();
-		
+
+		if (in["m_data"]) skeletonFunc(in["m_data"], skeleton.m_data);
 	}
 }

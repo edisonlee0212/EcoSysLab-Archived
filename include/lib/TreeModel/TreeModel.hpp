@@ -69,6 +69,8 @@ namespace EcoSysLab {
 
 	public:
 		void Initialize(const ShootGrowthController& shootGrowthController);
+		template <typename SrcSkeletonData, typename SrcFlowData, typename SrcNodeData>
+		void Initialize(const Skeleton<SrcSkeletonData, SrcFlowData, SrcNodeData>& srcSkeleton);
 
 		float GetSubTreeMaxAge(SkeletonNodeHandle baseInternodeHandle) const;
 		bool Reduce(const ShootGrowthController& shootGrowthController, SkeletonNodeHandle baseInternodeHandle, float targetAge);
@@ -153,4 +155,16 @@ namespace EcoSysLab {
 
 		void Reverse(int iteration);
 	};
+
+	template <typename SrcSkeletonData, typename SrcFlowData, typename SrcNodeData>
+	void TreeModel::Initialize(const Skeleton<SrcSkeletonData, SrcFlowData, SrcNodeData>& srcSkeleton)
+	{
+		if (m_initialized) Clear();
+		m_shootSkeleton.Clone(srcSkeleton);
+		m_shootSkeleton.CalculateDistance();
+		m_shootSkeleton.CalculateRegulatedGlobalRotation();
+		m_shootSkeleton.SortLists();
+		m_currentSeedValue = m_seed;
+		m_initialized = true;
+	}
 }

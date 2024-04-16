@@ -1,4 +1,5 @@
 #pragma once
+#include "Climate.hpp"
 #include "TreeVisualizer.hpp"
 #include "TreeMeshGenerator.hpp"
 #include "LSystemString.hpp"
@@ -9,11 +10,12 @@
 #include "TreeIOTree.hpp"
 #include "FoliageDescriptor.hpp"
 #include "ShootDescriptor.hpp"
+#include "Soil.hpp"
 using namespace EvoEngine;
 namespace EcoSysLab {
 	class Tree : public IPrivateComponent {
 		friend class EcoSysLabLayer;
-		void PrepareController(const std::shared_ptr<TreeDescriptor>& treeDescriptor);
+		void PrepareController(const std::shared_ptr<ShootDescriptor>& shootDescriptor, const std::shared_ptr<Soil>& soil, const std::shared_ptr<Climate>& climate);
 		ShootGrowthController m_shootGrowthController{};
 	public:
 		StrandModelParameters m_strandModelParameters{};
@@ -118,12 +120,7 @@ namespace EcoSysLab {
 			const auto foliageDescriptor = ProjectManager::CreateTemporaryAsset<FoliageDescriptor>();
 			treeDescriptor->m_foliageDescriptor = foliageDescriptor;
 		}
-		PrepareController(treeDescriptor);
-		m_treeModel.Initialize(m_shootGrowthController);
-		m_treeModel.RefShootSkeleton().Clone(srcSkeleton);
-		m_treeModel.RefShootSkeleton().CalculateDistance();
-		m_treeModel.RefShootSkeleton().CalculateRegulatedGlobalRotation();
-		m_treeModel.RefShootSkeleton().SortLists();
+		m_treeModel.Initialize(srcSkeleton);
 		//TODO: Set up buds here.
 	}
 }

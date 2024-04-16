@@ -235,8 +235,17 @@ void TreeStructor::BuildConnectionBranch(const BranchHandle processingBranchHand
 	connectionBranch.m_chainNodeHandles.emplace_back(connectionFirstNodeHandle);
 	prevNodeHandle = connectionFirstNodeHandle;
 	const float connectionChainLength = connectionBranch.m_bezierCurve.GetLength();
-	const int connectionChainAmount = glm::max(2, static_cast<int>(connectionChainLength /
+	int connectionChainAmount = glm::max(2, static_cast<int>(connectionChainLength /
 		m_reconstructionSettings.m_internodeLength));
+	/*
+	if(const auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>())
+	{
+		if(const auto shootDescriptor = treeDescriptor->m_shootDescriptor.Get<ShootDescriptor>())
+		{
+			connectionChainAmount = glm::max(2, static_cast<int>(connectionChainLength /
+				shootDescriptor->m_internodeLength));
+		}
+	}*/
 	for (int i = 1; i < connectionChainAmount; i++) {
 		prevNodeHandle = skeleton.Extend(prevNodeHandle, false);
 		connectionBranch.m_chainNodeHandles.emplace_back(prevNodeHandle);
