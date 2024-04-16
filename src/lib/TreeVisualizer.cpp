@@ -133,9 +133,9 @@ bool TreeVisualizer::RayCastSelection(const std::shared_ptr<Camera>& cameraCompo
 		const auto center =
 			(position + position2) / 2.0f;
 		auto radius = node.m_info.m_thickness;
-		if (m_skeletalGraphSettings.m_lineThickness != 0.0f)
+		if (m_lineThickness != 0.0f)
 		{
-			radius = m_skeletalGraphSettings.m_lineThickness * (subTree ? 0.625f : 0.5f);
+			radius = m_lineThickness * (subTree ? 0.625f : 0.5f);
 		}
 		const auto height = glm::distance(position2,
 			position);
@@ -268,13 +268,13 @@ void TreeVisualizer::SyncMatrices(const ShootSkeleton& skeleton, const std::shar
 		auto rotation = node.m_info.m_globalRotation;
 		rotation *= glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));
 		const glm::mat4 rotationTransform = glm::mat4_cast(rotation);
-		if (m_skeletalGraphSettings.m_lineThickness != 0.0f) {
+		if (m_lineThickness != 0.0f) {
 			matrices[i].m_instanceMatrix.m_value = glm::translate(node.m_info.m_globalPosition + (node.m_info.m_length / 2.0f) * node.m_info.GetGlobalDirection()) *
 				rotationTransform *
 				glm::scale(glm::vec3(
-					m_skeletalGraphSettings.m_lineThickness * (subTree ? 1.25f : 1.0f),
+					m_lineThickness * (subTree ? 1.25f : 1.0f),
 					node.m_info.m_length,
-					m_skeletalGraphSettings.m_lineThickness * (subTree ? 1.25f : 1.0f)));
+					m_lineThickness * (subTree ? 1.25f : 1.0f)));
 		}
 		else
 		{

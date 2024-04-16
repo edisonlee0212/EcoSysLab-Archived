@@ -13,6 +13,24 @@
 #include "Soil.hpp"
 using namespace EvoEngine;
 namespace EcoSysLab {
+	struct SkeletalGraphSettings
+	{
+		float m_lineThickness = 0.0f;
+		float m_fixedLineThickness = 0.002f;
+		float m_branchPointSize = 1.0f;
+		float m_junctionPointSize = 1.f;
+
+		bool m_fixedPointSize = true;
+		float m_fixedPointSizeFactor = 0.005f;
+		glm::vec4 m_lineColor = glm::vec4(1.f, .5f, 0.5f, 1.0f);
+		glm::vec4 m_branchPointColor = glm::vec4(1.f, 1.f, 0.f, 1.f);
+		glm::vec4 m_junctionPointColor = glm::vec4(0.f, .7f, 1.f, 1.f);
+
+		glm::vec4 m_lineFocusColor = glm::vec4(1.f, 0.f, 0.f, 1.f);
+		glm::vec4 m_branchFocusColor = glm::vec4(1.f, 0.f, 0.f, 1.f);
+		void OnInspect();
+	};
+
 	class Tree : public IPrivateComponent {
 		friend class EcoSysLabLayer;
 		void PrepareController(const std::shared_ptr<ShootDescriptor>& shootDescriptor, const std::shared_ptr<Soil>& soil, const std::shared_ptr<Climate>& climate);
@@ -54,6 +72,8 @@ namespace EcoSysLab {
 		float m_rightSideBiomass;
 		TreeMeshGeneratorSettings m_meshGeneratorSettings {};
 		StrandModelMeshGeneratorSettings m_strandModelMeshGeneratorSettings{};
+		SkeletalGraphSettings m_skeletalGraphSettings{};
+
 		int m_temporalProgressionIteration = 0;
 		bool m_temporalProgression = false;
 		void Update() override;
@@ -69,7 +89,7 @@ namespace EcoSysLab {
 		bool m_enableHistory = false;
 		int m_historyIteration = 30;
 		void ClearSkeletalGraph() const;
-		void InitializeSkeletalGraph(SkeletonNodeHandle baseNodeHandle, const std::shared_ptr<Mesh> &pointMeshSample, const std::shared_ptr<Mesh>& lineMeshSample) const;
+		void GenerateSkeletalGraph(const SkeletalGraphSettings& skeletalGraphSettings, SkeletonNodeHandle baseNodeHandle, const std::shared_ptr<Mesh> &pointMeshSample, const std::shared_ptr<Mesh>& lineMeshSample) const;
 
 		TreeModel m_treeModel{};
 		StrandModel m_strandModel{};

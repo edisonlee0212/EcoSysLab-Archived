@@ -173,7 +173,9 @@ void Tree::ClearSkeletalGraph() const
 
 }
 
-void Tree::InitializeSkeletalGraph(SkeletonNodeHandle baseNodeHandle,
+void Tree::GenerateSkeletalGraph(
+	const SkeletalGraphSettings& skeletalGraphSettings, 
+	SkeletonNodeHandle baseNodeHandle,
 	const std::shared_ptr<Mesh>& pointMeshSample,
 	const std::shared_ptr<Mesh>& lineMeshSample) const
 {
@@ -251,29 +253,29 @@ void Tree::InitializeSkeletalGraph(SkeletonNodeHandle baseNodeHandle,
 						glm::translate(position + (node.m_info.m_length / 2.0f) * node.m_info.GetGlobalDirection()) *
 						rotationTransform *
 						glm::scale(glm::vec3(
-							m_treeVisualizer.m_skeletalGraphSettings.m_fixedLineThickness * (subTree ? 1.25f : 1.0f),
+							skeletalGraphSettings.m_fixedLineThickness * (subTree ? 1.25f : 1.0f),
 							node.m_info.m_length,
-							m_treeVisualizer.m_skeletalGraphSettings.m_fixedLineThickness * (subTree ? 1.25f : 1.0f)));
+							skeletalGraphSettings.m_fixedLineThickness * (subTree ? 1.25f : 1.0f)));
 
 					if (subTree)
 					{
-						lineParticleInfos[internodeIndex].m_instanceColor = m_treeVisualizer.m_skeletalGraphSettings.m_lineFocusColor;
+						lineParticleInfos[internodeIndex].m_instanceColor = skeletalGraphSettings.m_lineFocusColor;
 					}
 					else {
-						lineParticleInfos[internodeIndex].m_instanceColor = m_treeVisualizer.m_skeletalGraphSettings.m_lineColor;
+						lineParticleInfos[internodeIndex].m_instanceColor = skeletalGraphSettings.m_lineColor;
 					}
 				}
 				{
 					rotation *= glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));
 					const glm::mat4 rotationTransform = glm::mat4_cast(rotation);
 					float thicknessFactor = node.m_info.m_thickness;
-					if (m_treeVisualizer.m_skeletalGraphSettings.m_fixedPointSize) thicknessFactor = m_treeVisualizer.m_skeletalGraphSettings.m_fixedPointSizeFactor;
-					auto scale = glm::vec3(m_treeVisualizer.m_skeletalGraphSettings.m_branchPointSize * thicknessFactor);
-					pointParticleInfos[internodeIndex].m_instanceColor = m_treeVisualizer.m_skeletalGraphSettings.m_branchPointColor;
+					if (skeletalGraphSettings.m_fixedPointSize) thicknessFactor = skeletalGraphSettings.m_fixedPointSizeFactor;
+					auto scale = glm::vec3(skeletalGraphSettings.m_branchPointSize * thicknessFactor);
+					pointParticleInfos[internodeIndex].m_instanceColor = skeletalGraphSettings.m_branchPointColor;
 					if (internodeIndex == 0 || node.PeekChildHandles().size() > 1)
 					{
-						scale = glm::vec3(m_treeVisualizer.m_skeletalGraphSettings.m_junctionPointSize * thicknessFactor);
-						pointParticleInfos[internodeIndex].m_instanceColor = m_treeVisualizer.m_skeletalGraphSettings.m_junctionPointColor;
+						scale = glm::vec3(skeletalGraphSettings.m_junctionPointSize * thicknessFactor);
+						pointParticleInfos[internodeIndex].m_instanceColor = skeletalGraphSettings.m_junctionPointColor;
 					}
 					pointParticleInfos[internodeIndex].m_instanceMatrix.m_value =
 						glm::translate(position) *
@@ -281,7 +283,7 @@ void Tree::InitializeSkeletalGraph(SkeletonNodeHandle baseNodeHandle,
 						glm::scale(scale * (subTree ? 1.25f : 1.0f));
 					if (subTree)
 					{
-						pointParticleInfos[internodeIndex].m_instanceColor = m_treeVisualizer.m_skeletalGraphSettings.m_branchFocusColor;
+						pointParticleInfos[internodeIndex].m_instanceColor = skeletalGraphSettings.m_branchFocusColor;
 					}
 				}
 			}
@@ -312,29 +314,29 @@ void Tree::InitializeSkeletalGraph(SkeletonNodeHandle baseNodeHandle,
 						glm::translate(position + (node.m_info.m_length / 2.0f) * node.m_info.GetGlobalDirection()) *
 						rotationTransform *
 						glm::scale(glm::vec3(
-							m_treeVisualizer.m_skeletalGraphSettings.m_fixedLineThickness * (subTree ? 1.25f : 1.0f),
+							skeletalGraphSettings.m_fixedLineThickness * (subTree ? 1.25f : 1.0f),
 							node.m_info.m_length,
-							m_treeVisualizer.m_skeletalGraphSettings.m_fixedLineThickness * (subTree ? 1.25f : 1.0f)));
+							skeletalGraphSettings.m_fixedLineThickness * (subTree ? 1.25f : 1.0f)));
 
 					if (subTree)
 					{
-						lineParticleInfos[internodeIndex].m_instanceColor = m_treeVisualizer.m_skeletalGraphSettings.m_lineFocusColor;
+						lineParticleInfos[internodeIndex].m_instanceColor = skeletalGraphSettings.m_lineFocusColor;
 					}
 					else {
-						lineParticleInfos[internodeIndex].m_instanceColor = m_treeVisualizer.m_skeletalGraphSettings.m_lineColor;
+						lineParticleInfos[internodeIndex].m_instanceColor = skeletalGraphSettings.m_lineColor;
 					}
 				}
 				{
 					rotation *= glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));
 					const glm::mat4 rotationTransform = glm::mat4_cast(rotation);
 					float thicknessFactor = node.m_info.m_thickness;
-					if (m_treeVisualizer.m_skeletalGraphSettings.m_fixedPointSize) thicknessFactor = m_treeVisualizer.m_skeletalGraphSettings.m_fixedPointSizeFactor;
-					auto scale = glm::vec3(m_treeVisualizer.m_skeletalGraphSettings.m_branchPointSize * thicknessFactor);
-					pointParticleInfos[internodeIndex].m_instanceColor = m_treeVisualizer.m_skeletalGraphSettings.m_branchPointColor;
+					if (skeletalGraphSettings.m_fixedPointSize) thicknessFactor = skeletalGraphSettings.m_fixedPointSizeFactor;
+					auto scale = glm::vec3(skeletalGraphSettings.m_branchPointSize * thicknessFactor);
+					pointParticleInfos[internodeIndex].m_instanceColor = skeletalGraphSettings.m_branchPointColor;
 					if (internodeIndex == 0 || node.PeekChildHandles().size() > 1)
 					{
-						scale = glm::vec3(m_treeVisualizer.m_skeletalGraphSettings.m_junctionPointSize * thicknessFactor);
-						pointParticleInfos[internodeIndex].m_instanceColor = m_treeVisualizer.m_skeletalGraphSettings.m_junctionPointColor;
+						scale = glm::vec3(skeletalGraphSettings.m_junctionPointSize * thicknessFactor);
+						pointParticleInfos[internodeIndex].m_instanceColor = skeletalGraphSettings.m_junctionPointColor;
 					}
 					pointParticleInfos[internodeIndex].m_instanceMatrix.m_value =
 						glm::translate(position) *
@@ -342,7 +344,7 @@ void Tree::InitializeSkeletalGraph(SkeletonNodeHandle baseNodeHandle,
 						glm::scale(scale * (subTree ? 1.25f : 1.0f));
 					if (subTree)
 					{
-						pointParticleInfos[internodeIndex].m_instanceColor = m_treeVisualizer.m_skeletalGraphSettings.m_branchFocusColor;
+						pointParticleInfos[internodeIndex].m_instanceColor = skeletalGraphSettings.m_branchFocusColor;
 					}
 				}
 			}
@@ -656,11 +658,11 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	m_treeVisualizer.Visualize(m_strandModel);
 	if (ImGui::TreeNode("Skeletal graph settings"))
 	{
-		m_treeVisualizer.m_skeletalGraphSettings.OnInspect();
+		m_skeletalGraphSettings.OnInspect();
 	}
 	if (ImGui::Button("Build skeletal graph"))
 	{
-		InitializeSkeletalGraph(-1,
+		GenerateSkeletalGraph(m_skeletalGraphSettings, -1,
 			Resources::GetResource<Mesh>("PRIMITIVE_SPHERE"),
 			Resources::GetResource<Mesh>("PRIMITIVE_CUBE"));
 	}

@@ -597,7 +597,7 @@ void EcoSysLabLayer::Visualization() {
 				}
 				else if (treeVisualizer.m_needUpdate && m_autoGenerateSkeletalGraphEveryFrame)
 				{
-					tree->InitializeSkeletalGraph(treeVisualizer.m_selectedInternodeHandle,
+					tree->GenerateSkeletalGraph(m_skeletalGraphSettings, treeVisualizer.m_selectedInternodeHandle,
 						Resources::GetResource<Mesh>("PRIMITIVE_SPHERE"),
 						Resources::GetResource<Mesh>("PRIMITIVE_CUBE"));
 				}
@@ -811,6 +811,19 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 			if (!m_simulationSettings.m_autoClearFruitAndLeaves && ImGui::Button("Clear ground leaves and fruits")) {
 				ClearGroundFruitAndLeaf();
 			}
+			ImGui::Separator();
+			if (ImGui::TreeNode("Skeletal graph"))
+			{
+				m_skeletalGraphSettings.OnInspect();
+			}
+			if (ImGui::Button("Generate Skeletal graphs")) {
+				GenerateSkeletalGraphs(m_skeletalGraphSettings);
+			}
+			ImGui::SameLine();
+			if (ImGui::Button("Clear Skeletal graphs")) {
+				ClearSkeletalGraphs();
+			}
+			ImGui::Separator();
 			if (ImGui::TreeNodeEx("Mesh generation")) {
 				m_meshGeneratorSettings.OnInspect(editorLayer);
 				ImGui::TreePop();
@@ -822,14 +835,18 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 			if (ImGui::Button("Clear Meshes")) {
 				ClearMeshes();
 			}
+			ImGui::Separator();
 			if (ImGui::TreeNodeEx("Strand Model Mesh generation")) {
 				m_strandMeshGeneratorSettings.OnInspect(editorLayer);
 				ImGui::TreePop();
 			}
-			if (ImGui::Button("Build Profiles")) {
-				GenerateStrandModelProfiles();
+			if (ImGui::Button("Build Strand Renderer")) {
+				
 			}
 			ImGui::SameLine();
+			if (ImGui::Button("Clear Strand Renderer")) {
+
+			}
 			if (ImGui::Button("Generate Strand Model Meshes")) {
 				GenerateStrandModelMeshes(m_strandMeshGeneratorSettings);
 			}
@@ -837,6 +854,7 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 			if (ImGui::Button("Clear Strand Model Meshes")) {
 				ClearStrandModelMeshes();
 			}
+			ImGui::Separator();
 			if (ImGui::TreeNode("Tree Growth Settings")) {
 				if (ImGui::Button("Grow weekly")) m_simulationSettings.m_deltaTime = 0.01918f;
 				ImGui::SameLine();
@@ -932,7 +950,7 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 			tree->m_treeVisualizer.m_needUpdate = true;
 			if (m_autoGenerateSkeletalGraphEveryFrame)
 			{
-				tree->InitializeSkeletalGraph(-1,
+				tree->GenerateSkeletalGraph(m_skeletalGraphSettings, -1,
 					Resources::GetResource<Mesh>("PRIMITIVE_SPHERE"),
 					Resources::GetResource<Mesh>("PRIMITIVE_CUBE"));
 			}
@@ -1858,6 +1876,20 @@ void EcoSysLabLayer::GenerateMeshes(const TreeMeshGeneratorSettings& meshGenerat
 	}
 }
 
+void EcoSysLabLayer::GenerateSkeletalGraphs(const SkeletalGraphSettings& skeletalGraphSettings) const
+{
+	const auto scene = GetScene();
+	const std::vector<Entity>* treeEntities =
+		scene->UnsafeGetPrivateComponentOwnersList<Tree>();
+	if (treeEntities && !treeEntities->empty()) {
+		const auto copiedEntities = *treeEntities;
+		for (auto treeEntity : copiedEntities) {
+			const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
+			tree->GenerateSkeletalGraph(m_skeletalGraphSettings, -1, Resources::GetResource<Mesh>("PRIMITIVE_SPHERE"), Resources::GetResource<Mesh>("PRIMITIVE_CUBE"));
+		}
+	}
+}
+
 void EcoSysLabLayer::GenerateStrandModelProfiles() const
 {
 	const auto scene = GetScene();
@@ -1912,11 +1944,23 @@ void EcoSysLabLayer::ClearMeshes() const {
 			const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
 			tree->ClearGeometryEntities();
 			tree->ClearTwigsStrandRenderer();
-			tree->ClearSkeletalGraph();
 		}
 	}
 }
 
+void EcoSysLabLayer::ClearSkeletalGraphs() const
+{
+	const auto scene = GetScene();
+	const std::vector<Entity>* treeEntities =
+		scene->UnsafeGetPrivateComponentOwnersList<Tree>();
+	if (treeEntities && !treeEntities->empty()) {
+		const auto copiedEntities = *treeEntities;
+		for (auto treeEntity : copiedEntities) {
+			const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
+			tree->ClearSkeletalGraph();
+		}
+	}
+}
 
 
 void EcoSysLabLayer::UpdateVisualizationCamera() {
