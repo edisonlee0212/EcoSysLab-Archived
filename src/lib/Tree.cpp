@@ -2705,7 +2705,6 @@ void Tree::PrepareController(const std::shared_ptr<ShootDescriptor>& shootDescri
 
 void Tree::InitializeStrandRenderer()
 {
-	m_strandModel = {};
 	const auto scene = GetScene();
 	const auto owner = GetOwner();
 
@@ -2750,7 +2749,6 @@ void Tree::InitializeStrandRenderer(const std::shared_ptr<Strands>& strands) con
 
 void Tree::InitializeStrandModelMeshRenderer(const StrandModelMeshGeneratorSettings& strandModelMeshGeneratorSettings)
 {
-	m_strandModel = {};
 	ClearStrandModelMeshRenderer();
 
 	BuildStrandModel();
