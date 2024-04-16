@@ -879,7 +879,7 @@ std::vector<std::pair<Slice, PipeCluster> > computeSlices(const StrandModel& str
 	const auto& pipeGroup = skeleton.m_data.m_strandGroup;
 
 	// first check if there are any pipes that might be needed for merging
-	NodeHandle nh = getNodeHandle(pipeGroup, pipesInPrevious.front(), glm::floor(t - stepSize));
+	auto nh = getNodeHandle(pipeGroup, pipesInPrevious.front(), glm::floor(t - stepSize));
 
 	const auto& node = skeleton.PeekNode(nh);
 	
