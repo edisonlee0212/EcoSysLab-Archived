@@ -212,7 +212,7 @@ void yaml_visualization(const std::string& yamlPath,
 	treePointCloud->ImportGraph(yamlPath);
 	treePointCloud->EstablishConnectivityGraph();
 	treePointCloud->BuildSkeletons();
-	treePointCloud->FormGeometryEntity();
+	treePointCloud->GenerateForest();
 	scene_capture(posX, posY, posZ, angleX, angleY, angleZ, resolutionX, resolutionY, true, outputPath);
 	scene->DeleteEntity(tempEntity);
 }

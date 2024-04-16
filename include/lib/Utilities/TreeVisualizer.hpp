@@ -8,25 +8,6 @@
 #include "StrandModel.hpp"
 using namespace EvoEngine;
 namespace EcoSysLab {
-	
-	struct SkeletalGraphSettings
-	{
-		float m_lineThickness = 0.0f;
-		float m_fixedLineThickness = 0.001f;
-		float m_branchPointSize = 1.0f;
-		float m_junctionPointSize = 1.f;
-
-		bool m_fixedPointSize = false;
-		float m_fixedPointSizeFactor = 0.01f;
-		glm::vec4 m_lineColor = glm::vec4(1.f, .5f, 0.5f, 1.0f);
-		glm::vec4 m_branchPointColor = glm::vec4(1.f, 1.f, 0.f, 1.f);
-		glm::vec4 m_junctionPointColor = glm::vec4(0.f, .7f, 1.f, 1.f);
-
-		glm::vec4 m_lineFocusColor = glm::vec4(1.f, 0.f, 0.f, 1.f);
-		glm::vec4 m_branchFocusColor = glm::vec4(1.f, 0.f, 0.f, 1.f);
-		void OnInspect();
-	};
-
 	enum class ShootVisualizerMode {
 		Default,
 		Order,
@@ -80,7 +61,7 @@ namespace EcoSysLab {
 		SkeletonNodeHandle m_selectedInternodeHandle = -1;
 		bool m_visualization = true;
 		TreeVisualizerColorSettings m_settings;
-		SkeletalGraphSettings m_skeletalGraphSettings{};
+		float m_lineThickness = 0.f;
 		bool m_profileGui = true;
 		bool m_treeHierarchyGui = false;
 		float m_selectedInternodeLengthFactor = 0.0f;

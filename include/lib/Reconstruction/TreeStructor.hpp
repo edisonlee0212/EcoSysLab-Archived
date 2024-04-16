@@ -225,10 +225,6 @@ namespace EcoSysLab {
 
 		void CalculateSkeletonGraphs();
 	public:
-		SkeletalGraphSettings m_skeletalGraphSettings{};
-		void ClearSkeletalGraph() const;
-		void InitializeSkeletalGraph(const std::shared_ptr<Mesh>& pointMeshSample, const std::shared_ptr<Mesh>& lineMeshSample, const SkeletalGraphSettings& skeletalGraphSettings);
-		
 		std::shared_ptr<ParticleInfoList> m_allocatedPointInfoList;
 		std::shared_ptr<ParticleInfoList> m_scatteredPointInfoList;
 		std::shared_ptr<ParticleInfoList> m_scatteredPointConnectionInfoList;
@@ -247,28 +243,35 @@ namespace EcoSysLab {
 		glm::vec4 m_filteredBranchConnectionColor = glm::vec4(0, 0, 1, 1);
 		glm::vec4 m_selectedBranchConnectionColor = glm::vec4(0.3, 0, 0, 1);
 		glm::vec4 m_selectedBranchColor = glm::vec4(0.6, 0.3, 0.0, 1.0f);
-		bool m_enableAllocatedPoints = true;
-		//bool m_enablePredictedBranches = true;
-		bool m_enableScatteredPoints = true;
+		bool m_enableAllocatedPoints = false;
+		bool m_enableScatteredPoints = false;
 		bool m_enableScatteredPointConnections = false;
 		bool m_enableScatterPointToBranchConnections = false;
-		bool m_enableCandidateConnections = false;
-		bool m_enableReversedCandidateConnections = false;
-		bool m_enableFilteredConnections = false;
+		bool m_enableCandidateBranchConnections = false;
+		bool m_enableReversedCandidateBranchConnections = false;
+		bool m_enableFilteredBranchConnections = false;
 		bool m_enableSelectedBranchConnections = true;
 		bool m_enableSelectedBranches = true;
 		
+		bool m_debugAllocatedPoints = true;
+		bool m_debugScatteredPoints = true;
+		bool m_debugScatteredPointConnections = false;
+		bool m_debugScatterPointToBranchConnections = false;
+		bool m_debugCandidateConnections = false;
+		bool m_debugReversedCandidateConnections = false;
+		bool m_debugFilteredConnections = false;
+		bool m_debugSelectedBranchConnections = true;
+		bool m_debugSelectedBranches = true;
 
 		VoxelGrid<std::vector<PointData>> m_scatterPointsVoxelGrid;
 		VoxelGrid<std::vector<PointData>> m_allocatedPointsVoxelGrid;
 		VoxelGrid<std::vector<PointData>> m_spaceColonizationVoxelGrid;
 		VoxelGrid<std::vector<BranchEndData>> m_branchEndsVoxelGrid;
 
-		TreeMeshGeneratorSettings m_treeMeshGeneratorSettings {};
 		ReconstructionSettings m_reconstructionSettings{};
 		ConnectivityGraphSettings m_connectivityGraphSettings{};
 		void ImportGraph(const std::filesystem::path& path, float scaleFactor = 0.1f);
-		void ExportForestOBJ(const std::filesystem::path& path);
+		void ExportForestOBJ(const TreeMeshGeneratorSettings& meshGeneratorSettings, const std::filesystem::path& path);
 
 
 		glm::vec3 m_min;
@@ -294,14 +297,14 @@ namespace EcoSysLab {
 		void EstablishConnectivityGraph();
 
 		void BuildSkeletons();
-		void FormGeometryEntity();
+		void GenerateForest() const;
 		void FormInfoEntities();
-		void ClearMeshes() const;
+		void ClearForest() const;
 
 		void OnCreate() override;
 		AssetRef m_treeDescriptor;
 
-		std::vector<std::shared_ptr<Mesh>> GenerateForestBranchMeshes() const;
+		std::vector<std::shared_ptr<Mesh>> GenerateForestBranchMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings) const;
 		std::vector<std::shared_ptr<Mesh>> GenerateFoliageMeshes();
 
 		void Serialize(YAML::Emitter& out) override;

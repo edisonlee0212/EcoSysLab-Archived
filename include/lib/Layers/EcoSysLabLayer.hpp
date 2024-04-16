@@ -166,6 +166,8 @@ namespace EcoSysLab {
 
 		TreeMeshGeneratorSettings m_meshGeneratorSettings;
 		StrandModelMeshGeneratorSettings m_strandMeshGeneratorSettings{};
+		SkeletalGraphSettings m_skeletalGraphSettings{};
+
 		Entity m_selectedTree = {};
 
 		[[nodiscard]] glm::vec2 GetMouseSceneCameraPosition() const;
@@ -173,9 +175,9 @@ namespace EcoSysLab {
 		void Simulate(float deltaTime);
 
 		void GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings) const;
-
+		void GenerateSkeletalGraphs(const SkeletalGraphSettings& skeletalGraphSettings) const;
 		void ClearMeshes() const;
-
+		void ClearSkeletalGraphs() const;
 		void GenerateStrandModelProfiles() const;
 		void GenerateStrandModelMeshes(const StrandModelMeshGeneratorSettings& strandModelMeshGeneratorSettings) const;
 
