@@ -1111,7 +1111,8 @@ bool TreeModel::PruneInternodes(const glm::mat4& globalTransform, ClimateModel& 
 					for (const auto& i : data.m_internodeVoxelRegistrations)
 					{
 						if (i.m_treeModelIndex == m_index) continue;
-						if (glm::distance(endPosition, i.m_position) < m_crownShynessDistance) pruneByCrownShyness = true;
+						if (glm::distance(endPosition, i.m_position) < m_crownShynessDistance) 
+							pruneByCrownShyness = true;
 					}
 				}
 			);
