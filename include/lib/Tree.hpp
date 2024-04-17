@@ -32,6 +32,7 @@ namespace EcoSysLab {
 	};
 
 	class Tree : public IPrivateComponent {
+		void CalculateProfiles();
 		friend class EcoSysLabLayer;
 		void PrepareController(const std::shared_ptr<ShootDescriptor>& shootDescriptor, const std::shared_ptr<Soil>& soil, const std::shared_ptr<Climate>& climate);
 		ShootGrowthController m_shootGrowthController{};
@@ -41,7 +42,7 @@ namespace EcoSysLab {
 		static void DeserializeTreeGrowthSettings(TreeGrowthSettings& treeGrowthSettings, const YAML::Node& param);
 		static bool OnInspectTreeGrowthSettings(TreeGrowthSettings& treeGrowthSettings);
 
-		void CalculateProfiles();
+		
 		void BuildStrandModel();
 		
 		std::shared_ptr<Strands> GenerateStrands() const;

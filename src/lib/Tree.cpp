@@ -174,7 +174,7 @@ void Tree::ClearSkeletalGraph() const
 }
 
 void Tree::GenerateSkeletalGraph(
-	const SkeletalGraphSettings& skeletalGraphSettings, 
+	const SkeletalGraphSettings& skeletalGraphSettings,
 	SkeletonNodeHandle baseNodeHandle,
 	const std::shared_ptr<Mesh>& pointMeshSample,
 	const std::shared_ptr<Mesh>& lineMeshSample) const
@@ -614,7 +614,6 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 
 		if (ImGui::Button("Rebuild Strand Model"))
 		{
-			m_strandModel = {};
 			BuildStrandModel();
 		}
 
@@ -762,20 +761,15 @@ void Tree::CalculateProfiles()
 void Tree::BuildStrandModel()
 {
 	std::string output;
-	if (m_strandModel.m_strandModelSkeleton.RefRawNodes().size() != m_treeModel.PeekShootSkeleton().RefRawNodes().size())
+
+	CalculateProfiles();
+	for (const auto& nodeHandle : m_treeModel.PeekShootSkeleton().PeekSortedNodeList())
 	{
-		CalculateProfiles();
+		m_strandModel.m_strandModelSkeleton.RefNode(nodeHandle).m_info = m_treeModel.PeekShootSkeleton().PeekNode(nodeHandle).m_info;
 	}
-	else
-	{
-		for (const auto& nodeHandle : m_treeModel.PeekShootSkeleton().PeekSortedNodeList())
-		{
-			m_strandModel.m_strandModelSkeleton.RefNode(nodeHandle).m_info = m_treeModel.PeekShootSkeleton().PeekNode(nodeHandle).m_info;
-		}
-	}
-	const float time = Times::Now();
 	m_strandModel.CalculateStrandProfileAdjustedTransforms(m_strandModelParameters);
 	m_strandModel.ApplyProfiles(m_strandModelParameters);
+	const float time = Times::Now();
 	const float strandModelingTime = Times::Now() - time;
 	output += "\nBuild Strand Model Used time: " + std::to_string(strandModelingTime) + "\n";
 	EVOENGINE_LOG(output);
@@ -1643,11 +1637,11 @@ void Tree::Serialize(YAML::Emitter& out)
 					nodeOut << YAML::Key << "m_profile" << YAML::Value << YAML::BeginMap;
 					{
 						StrandModelProfileSerializer<CellParticlePhysicsData>::Serialize(nodeOut, nodeData.m_profile,
-							[&](YAML::Emitter& particleOut, const CellParticlePhysicsData& particleData){});
+							[&](YAML::Emitter& particleOut, const CellParticlePhysicsData& particleData) {});
 					}
 					nodeOut << YAML::EndMap;
 				},
-				[&](YAML::Emitter& flowOut, const StrandModelFlowData& flowData){},
+				[&](YAML::Emitter& flowOut, const StrandModelFlowData& flowData) {},
 				[&](YAML::Emitter& skeletonOut, const StrandModelSkeletonData& skeletonData)
 				{
 					skeletonOut << YAML::Key << "m_strandGroup" << YAML::Value << YAML::BeginMap;
@@ -1825,7 +1819,7 @@ void Tree::Deserialize(const YAML::Node& in)
 					{
 						const auto& inStrandGroup = nodeIn["m_profile"];
 						StrandModelProfileSerializer<CellParticlePhysicsData>::Deserialize(inStrandGroup, nodeData.m_profile,
-							[&](const YAML::Node& segmentIn, CellParticlePhysicsData& particleData){});
+							[&](const YAML::Node& segmentIn, CellParticlePhysicsData& particleData) {});
 					}
 				},
 				[&](const YAML::Node& flowIn, StrandModelFlowData& flowData) {},
@@ -2713,9 +2707,10 @@ void Tree::InitializeStrandRenderer()
 	const auto owner = GetOwner();
 
 	ClearStrandRenderer();
-
-	BuildStrandModel();
-
+	if (m_strandModel.m_strandModelSkeleton.RefRawNodes().size() != m_treeModel.PeekShootSkeleton().RefRawNodes().size())
+	{
+		BuildStrandModel();
+	}
 	const auto strandsEntity = scene->CreateEntity("Branch Strands");
 	scene->SetParent(strandsEntity, owner);
 
@@ -2754,9 +2749,10 @@ void Tree::InitializeStrandRenderer(const std::shared_ptr<Strands>& strands) con
 void Tree::InitializeStrandModelMeshRenderer(const StrandModelMeshGeneratorSettings& strandModelMeshGeneratorSettings)
 {
 	ClearStrandModelMeshRenderer();
-
-	BuildStrandModel();
-
+	if (m_strandModel.m_strandModelSkeleton.RefRawNodes().size() != m_treeModel.PeekShootSkeleton().RefRawNodes().size())
+	{
+		BuildStrandModel();
+	}
 	const float time = Times::Now();
 	const auto scene = GetScene();
 	const auto self = GetOwner();
