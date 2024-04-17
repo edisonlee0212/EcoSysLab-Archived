@@ -938,7 +938,8 @@ std::vector<std::tuple<Slice, PipeCluster, std::vector<size_t> > > computeSlices
 
 			if (pipeToSliceIndexMap[strandHandle] == -1)
 			{
-				std::cout << "Warning: pipeToSliceIndexMap contains -1" << std::endl;
+				// this seems to be no issue after all
+				//std::cout << "Warning: pipeToSliceIndexMap contains -1" << std::endl;
 				continue;
 			}
 
@@ -950,7 +951,7 @@ std::vector<std::tuple<Slice, PipeCluster, std::vector<size_t> > > computeSlices
 
 		if (*mergeIndices.begin() < prevSliceIndex) // use minimum index to make mergers unique to avoid duplicates
 		{
-			std::vector<size_t> mergeIndicesVec;
+			/*std::vector<size_t> mergeIndicesVec;
 			std::copy(mergeIndices.begin(), mergeIndices.end(), std::back_inserter(mergeIndicesVec));
 
 			std::cout << "discarding slice that must be connected with the following slices because it has been handled earlier or has no match:\n";
@@ -959,7 +960,7 @@ std::vector<std::tuple<Slice, PipeCluster, std::vector<size_t> > > computeSlices
 			{
 				std::cout << index << ", ";
 			}
-			std::cout << std::endl;
+			std::cout << std::endl;*/
 		}
 		else if (mergeIndices.find(prevSliceIndex) != mergeIndices.end())
 		{
@@ -969,19 +970,22 @@ std::vector<std::tuple<Slice, PipeCluster, std::vector<size_t> > > computeSlices
 			std::vector<size_t> mergeIndicesVec;
 			std::copy(mergeIndices.begin(), mergeIndices.end(), std::back_inserter(mergeIndicesVec));
 
-			std::cout << "Need to merge the following slices:\n";
-
-			for (size_t index : mergeIndicesVec)
+			if (mergeIndicesVec.size() > 1)
 			{
-				std::cout << index << ", ";
+				std::cout << "Need to merge the following slices:\n";
+
+				for (size_t index : mergeIndicesVec)
+				{
+					std::cout << index << ", ";
+				}
+				std::cout << std::endl;
 			}
-			std::cout << std::endl;
 
 			mergeList.push_back(mergeIndicesVec);
 		}
 		else
 		{
-			std::vector<size_t> mergeIndicesVec;
+			/*std::vector<size_t> mergeIndicesVec;
 			std::copy(mergeIndices.begin(), mergeIndices.end(), std::back_inserter(mergeIndicesVec));
 
 			std::cout << "discarding slice that must be connected to the following slices:\n";
@@ -990,7 +994,7 @@ std::vector<std::tuple<Slice, PipeCluster, std::vector<size_t> > > computeSlices
 			{
 				std::cout << index << ", ";
 			}
-			std::cout << std::endl;
+			std::cout << std::endl;*/
 		}
 	}
 
@@ -1587,6 +1591,25 @@ std::vector<SlicingData> slice(const StrandModel& strandModel, std::vector<Slici
 	if (std::get<2>(slicesAndClusters.front()).size() > 1)
 	{
 		// need to merge here
+		if (slicesAndClusters.size() > 1)
+		{
+			std::cout << "Warning: Multiple slices on both sides, not supported!" << std::endl;
+		}
+		else
+		{
+			std::cout << "Merging branches at t = " << t << std::endl;
+			std::vector<Slice> bottomSlices;
+			std::vector<std::pair<unsigned, unsigned> > bottomOffsets;
+
+			for (size_t index : std::get<2>(slicesAndClusters.front()))
+			{
+				bottomSlices.push_back(prevSlices[index].slice.first);
+				bottomOffsets.push_back(std::make_pair<>(prevSlices[index].offsetVert, prevSlices[index].offsetTex));
+			}
+
+			connected = connectSlices(pipeGroup, topSlices.front(), offsets.front(), bottomSlices, bottomOffsets,
+				vertices, texCoords, indices, settings.m_branchConnections);
+		}
 	}
 	else
 	{
