@@ -706,7 +706,7 @@ void StrandModel::CalculateStrandProfileAdjustedTransforms(const StrandModelPara
 			}
 		}else
 		{
-			newGlobalEndPosition += localPosition;
+			newGlobalEndPosition += localPosition + sideShift;
 		}
 		assert(!glm::any(glm::isnan(node.m_info.m_globalPosition)));
 		assert(!glm::any(glm::isnan(newGlobalEndPosition)));
