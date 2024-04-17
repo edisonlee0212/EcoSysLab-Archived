@@ -29,19 +29,19 @@ void NoiseDescriptor::Deserialize(const YAML::Node& in)
 	if (in["m_ridgid"]) m_ridgid = in["m_ridgid"].as<bool>();
 }
 
-Noises2D::Noises2D() {
+Noise2D::Noise2D() {
 	m_minMax = glm::vec2(-1000, 1000);
 	m_noiseDescriptors.clear();
 	m_noiseDescriptors.emplace_back();
 }
-Noises3D::Noises3D()
+Noise3D::Noise3D()
 {
 	m_minMax = glm::vec2(-1000, 1000);
 	m_noiseDescriptors.clear();
 	m_noiseDescriptors.emplace_back();
 }
 
-bool Noises2D::OnInspect() {
+bool Noise2D::OnInspect() {
 	bool changed = false;
 	if (ImGui::DragFloat2("Global Min/max", &m_minMax.x, 0, -1000, 1000)) { changed = true; }
 	if (ImGui::Button("New start descriptor")) {
@@ -122,7 +122,7 @@ bool Noises2D::OnInspect() {
 	return changed;
 }
 
-void Noises2D::Save(const std::string& name, YAML::Emitter& out) const
+void Noise2D::Save(const std::string& name, YAML::Emitter& out) const
 {
 	out << YAML::Key << name << YAML::Value << YAML::BeginMap;
 	out << YAML::Key << "m_minMax" << YAML::Value << m_minMax;
@@ -137,7 +137,7 @@ void Noises2D::Save(const std::string& name, YAML::Emitter& out) const
 	out << YAML::EndMap;
 }
 
-void Noises2D::Load(const std::string& name, const YAML::Node& in)
+void Noise2D::Load(const std::string& name, const YAML::Node& in)
 {
 	if (in[name])
 	{
@@ -157,12 +157,12 @@ void Noises2D::Load(const std::string& name, const YAML::Node& in)
 	}
 }
 
-void Noises2D::RandomOffset(const float min, const float max)
+void Noise2D::RandomOffset(const float min, const float max)
 {
 	for (auto& i : m_noiseDescriptors) i.m_offset = glm::linearRand(min, max);
 }
 
-void Noises3D::Save(const std::string& name, YAML::Emitter& out) const
+void Noise3D::Save(const std::string& name, YAML::Emitter& out) const
 {
 	out << YAML::Key << name << YAML::Value << YAML::BeginMap;
 	out << YAML::Key << "m_minMax" << YAML::Value << m_minMax;
@@ -175,7 +175,7 @@ void Noises3D::Save(const std::string& name, YAML::Emitter& out) const
 	out << YAML::EndMap;
 }
 
-void Noises3D::Load(const std::string& name, const YAML::Node& in)
+void Noise3D::Load(const std::string& name, const YAML::Node& in)
 {
 	if (in[name])
 	{
@@ -195,7 +195,7 @@ void Noises3D::Load(const std::string& name, const YAML::Node& in)
 	}
 }
 
-float Noises2D::GetValue(const glm::vec2& position) const
+float Noise2D::GetValue(const glm::vec2& position) const
 {
 	float retVal = 0;
 
@@ -234,7 +234,7 @@ float Noises2D::GetValue(const glm::vec2& position) const
 }
 
 
-bool Noises3D::OnInspect() {
+bool Noise3D::OnInspect() {
 	bool changed = false;
 	if (ImGui::DragFloat2("Global Min/max", &m_minMax.x, 0, -1000, 1000)) { changed = true; }
 	if (ImGui::Button("New start descriptor")) {
@@ -320,7 +320,7 @@ bool Noises3D::OnInspect() {
 }
 
 
-float Noises3D::GetValue(const glm::vec3& position) const
+float Noise3D::GetValue(const glm::vec3& position) const
 {
 	float retVal = 0;
 	for (const auto& noiseDescriptor : m_noiseDescriptors)

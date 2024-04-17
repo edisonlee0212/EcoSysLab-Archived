@@ -117,7 +117,7 @@ void FoliageDescriptor::CollectAssetRef(std::vector<AssetRef>& list)
 	if (m_leafMaterial.Get<Material>()) list.push_back(m_leafMaterial);
 }
 
-void FoliageDescriptor::GenerateFoliageMatrices(std::vector<glm::mat4>& matrices, const NodeInfo& internodeInfo) const
+void FoliageDescriptor::GenerateFoliageMatrices(std::vector<glm::mat4>& matrices, const SkeletonNodeInfo& internodeInfo) const
 {
 	if (internodeInfo.m_thickness < m_maxNodeThickness
 		&& internodeInfo.m_rootDistance > m_minRootDistance

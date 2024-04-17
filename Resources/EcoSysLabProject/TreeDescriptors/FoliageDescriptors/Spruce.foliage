@@ -1,11 +1,11 @@
-m_leafSize: [0.0199999996, 0.0299999993]
-m_leafCountPerInternode: 10
-m_positionVariance: 0.174999997
-m_rotationVariance: 10
-m_branchingAngle: 30
+m_leafSize: [0.00499999989, 0.0500000007]
+m_leafCountPerInternode: 5
+m_positionVariance: 0
+m_rotationVariance: 0.100000001
+m_branchingAngle: 10
 m_maxNodeThickness: 1
 m_minRootDistance: 0
-m_maxEndDistance: 0.200000003
+m_maxEndDistance: 0.400000006
 m_horizontalTropism: 0.5
 m_gravitropism: 0
 m_twigParameters:

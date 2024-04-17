@@ -65,7 +65,6 @@ void StrandModelMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLay
 void StrandModelMeshGenerator::Generate(const StrandModel& strandModel, std::vector<Vertex>& vertices,
 	std::vector<unsigned>& indices, const StrandModelMeshGeneratorSettings& settings)
 {
-	const float meshFormationTime = Times::Now();
 	switch (settings.m_generatorType)
 	{
 	case StrandModelMeshGeneratorType::RecursiveSlicing:
@@ -77,20 +76,15 @@ void StrandModelMeshGenerator::Generate(const StrandModel& strandModel, std::vec
 		MarchingCube(strandModel, vertices, indices, settings);
 	}break;
 	}
-	EVOENGINE_LOG("Mesh formation finished in: " + std::to_string(Times::Now() - meshFormationTime) + "s.");
 
 	if (settings.m_recalculateUV || settings.m_generatorType == static_cast<unsigned>(StrandModelMeshGeneratorType::MarchingCube)) {
-		const float recalculateUVTime = Times::Now();
 		CalculateUV(strandModel, vertices, settings);
-		EVOENGINE_LOG("Recalculate UV time: " + std::to_string(Times::Now() - recalculateUVTime) + "s.");
 	}
-
-	const float meshSmoothingTime = Times::Now();
+	 
 	for (int i = 0; i < settings.m_smoothIteration; i++)
 	{
 		MeshSmoothing(vertices, indices);
 	}
-	EVOENGINE_LOG("Mesh smoothing time: " + std::to_string(Times::Now() - meshSmoothingTime) + "s.");
 	CylindricalMeshing(strandModel, vertices, indices, settings);
 
 	CalculateNormal(vertices, indices);
@@ -100,15 +94,11 @@ void StrandModelMeshGenerator::Generate(const StrandModel& strandModel, std::vec
 	std::vector<glm::vec2>& texCoords, std::vector<std::pair<unsigned, unsigned>>& indices,
 	const StrandModelMeshGeneratorSettings& settings)
 {
-	const float meshFormationTime = Times::Now();
 	RecursiveSlicing(strandModel, vertices, texCoords, indices, settings);
-	EVOENGINE_LOG("Mesh formation finished in: " + std::to_string(Times::Now() - meshFormationTime) + "s.");
-	const float meshSmoothingTime = Times::Now();
 	for (int i = 0; i < settings.m_smoothIteration; i++)
 	{
 		MeshSmoothing(vertices, indices);
 	}
-	EVOENGINE_LOG("Mesh smoothing time: " + std::to_string(Times::Now() - meshSmoothingTime) + "s.");
 	std::vector<unsigned int> tempIndices{};
 	CylindricalMeshing(strandModel, vertices, tempIndices, settings);
 	for (const auto& index : tempIndices)
@@ -255,7 +245,7 @@ glm::vec3 getSegPos(const StrandModel& strandModel, const StrandSegmentHandle se
 	return retVal;
 }
 
-NodeHandle getNodeHandle(const StrandModelStrandGroup& pipeGroup, const StrandHandle& pipeHandle, float t)
+SkeletonNodeHandle getNodeHandle(const StrandModelStrandGroup& pipeGroup, const StrandHandle& pipeHandle, float t)
 {
 	size_t lookupIndex = glm::round(t) < pipeGroup.PeekStrand(pipeHandle).PeekStrandSegmentHandles().size() ? glm::round(t) : (pipeGroup.PeekStrand(pipeHandle).PeekStrandSegmentHandles().size() - 1);
 	auto& pipeSegmentHandle = pipeGroup.PeekStrand(pipeHandle).PeekStrandSegmentHandles()[lookupIndex];
@@ -435,9 +425,9 @@ void delaunay(Graph& g, float removalLength, std::vector<size_t>& candidates, co
 		StrandHandle p1 = prevPipes[v1];
 		StrandHandle p2 = prevPipes[v2];
 
-		NodeHandle n0 = getNodeHandle(pipeGroup, p0, t);
-		NodeHandle n1 = getNodeHandle(pipeGroup, p1, t);
-		NodeHandle n2 = getNodeHandle(pipeGroup, p2, t);
+		SkeletonNodeHandle n0 = getNodeHandle(pipeGroup, p0, t);
+		SkeletonNodeHandle n1 = getNodeHandle(pipeGroup, p1, t);
+		SkeletonNodeHandle n2 = getNodeHandle(pipeGroup, p2, t);
 
 		if (n0 == n1 && n1 == n2)
 		{
@@ -629,7 +619,7 @@ std::vector<size_t> computeComponent(Graph& strandGraph, glm::vec3 min, glm::vec
 	return collectComponent(strandGraph, index, visited);
 }
 
-std::pair<Graph, std::vector<size_t> > computeCluster(const StrandModel& strandModel, const PipeCluster& pipesInPrevious, size_t index, std::vector<bool>& visited, float t, float maxDist)
+std::pair<Graph, std::vector<size_t> > computeCluster(const StrandModel& strandModel, const PipeCluster& pipesInPrevious, size_t index, std::vector<bool>& visited, float t, float maxDist, size_t minStrandCount)
 {
 	if (!isValidPipeParam(strandModel, pipesInPrevious[index], t))
 	{
@@ -728,7 +718,7 @@ std::pair<Graph, std::vector<size_t> > computeCluster(const StrandModel& strandM
 		}
 	}
 
-	if (candidates.size() < 3)
+	if (candidates.size() < minStrandCount)
 	{
 		//std::cout << "Cluster is too small, will be discarded" << std::endl;
 	}
@@ -865,7 +855,7 @@ std::pair< std::vector<Graph>, std::vector<std::vector<size_t> > > computeCluste
 			continue;
 		}
 
-		auto graphAndCluster = computeCluster(strandModel, pipesInPrevious, i, visited, t, maxDist);
+		auto graphAndCluster = computeCluster(strandModel, pipesInPrevious, i, visited, t, maxDist, minStrandCount);
 
 		if (graphAndCluster.second.size() >= minStrandCount)
 		{
@@ -893,7 +883,7 @@ std::vector<std::tuple<Slice, PipeCluster, std::vector<size_t> > > computeSlices
 	// first check if there are any pipes that might be needed for merging
 	if (t > 0.0)
 	{
-		NodeHandle nh = getNodeHandle(pipeGroup, pipesInPrevious.front(), glm::floor(t - stepSize));
+		SkeletonNodeHandle nh = getNodeHandle(pipeGroup, pipesInPrevious.front(), glm::floor(t - stepSize));
 		const auto* node = &skeleton.PeekNode(nh);
 
 		// need to go further down in some cases
@@ -907,7 +897,7 @@ std::vector<std::tuple<Slice, PipeCluster, std::vector<size_t> > > computeSlices
 
 		for (auto& particle : node->m_data.m_profile.PeekParticles())
 		{		
-			allPipesWithSameNode.push_back(particle.m_data.m_strandHandle);
+			allPipesWithSameNode.push_back(particle.m_strandHandle);
 		}
 
 		/*if (allPipesWithSameNode.size() != pipesInPrevious.size())
@@ -1855,7 +1845,7 @@ void StrandModelMeshGenerator::CylindricalMeshing(const StrandModel& strandModel
 {
 	const auto& skeleton = strandModel.m_strandModelSkeleton;
 	const auto& sortedInternodeList = skeleton.PeekSortedNodeList();
-	std::unordered_set<NodeHandle> nodeHandles;
+	std::unordered_set<SkeletonNodeHandle> nodeHandles;
 	for(const auto& nodeHandle : sortedInternodeList)
 	{
 		const auto& internode = skeleton.PeekNode(nodeHandle);
@@ -2142,7 +2132,7 @@ void StrandModelMeshGenerator::CalculateUV(const StrandModel& strandModel, std::
 				auto& vertex = vertices.at(vertexIndex);
 
 				float minDistance = FLT_MAX;
-				NodeHandle closestNodeHandle = -1;
+				SkeletonNodeHandle closestNodeHandle = -1;
 
 				for (const auto& nodeHandle : sortedNodeList)
 				{
@@ -2244,7 +2234,7 @@ void StrandModelMeshGenerator::CalculateUV(const StrandModel& strandModel, std::
 						}
 					}
 				);
-				NodeHandle closestNodeHandle = -1;
+				SkeletonNodeHandle closestNodeHandle = -1;
 				if (closestSegmentHandle != -1)
 				{
 					const auto segment = strandGroup.PeekStrandSegment(closestSegmentHandle);

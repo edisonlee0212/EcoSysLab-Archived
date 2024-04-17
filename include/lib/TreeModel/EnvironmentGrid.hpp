@@ -17,7 +17,7 @@ namespace EcoSysLab
 	struct InternodeVoxelRegistration
 	{
 		glm::vec3 m_position = glm::vec3(0.0f);
-		NodeHandle m_nodeHandle = -1;
+		SkeletonNodeHandle m_nodeHandle = -1;
 		unsigned m_treeModelIndex = 0;
 		float m_thickness = 0.0f;
 	};
@@ -41,7 +41,6 @@ namespace EcoSysLab
 		VoxelGrid<EnvironmentVoxel> m_voxel;
 		[[nodiscard]] float Sample(const glm::vec3& position, glm::vec3& lightDirection) const;
 		void AddShadowValue(const glm::vec3& position, float value);
-		void ShadowPropagation();
 		void LightPropagation();
 		void AddBiomass(const glm::vec3& position, float value);
 		void AddNode(const InternodeVoxelRegistration& registration);

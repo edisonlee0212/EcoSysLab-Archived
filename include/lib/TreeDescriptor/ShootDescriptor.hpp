@@ -1,6 +1,7 @@
 #pragma once
+#include "Noises.hpp"
 #include "TreeModel.hpp"
-
+#include "ProceduralNoise.hpp"
 using namespace EvoEngine;
 namespace EcoSysLab
 {
@@ -19,25 +20,23 @@ namespace EcoSysLab
 		*/
 		glm::vec2 m_branchingAngleMeanVariance = glm::vec2(45, 2);
 		/**
-		* \brief The frequency and amplitude of the angle between the direction of a lateral bud and its parent shoot.
-		*/
-		glm::vec2 m_branchingAngleFrequencyAmplitude = glm::vec2(0.f, 0.f);
-		/**
 		* \brief The mean and variance of an angular difference orientation of lateral buds between two internodes
 		*/
 		glm::vec2 m_rollAngleMeanVariance = glm::vec2(30, 2);
 		/**
-		* \brief The frequency and amplitude of an angular difference orientation of lateral buds between two internodes
+		* \brief The procedural noise of an angular difference orientation of lateral buds between two internodes
 		*/
-		glm::vec2 m_rollAngleFrequencyAmplitude = glm::vec2(0.f, 0.f);
+		AssetRef m_rollAngle {};
+		Noise2D m_rollAngleNoise2D{};
 		/**
 		* \brief The mean and variance of an angular difference orientation of lateral buds between two internodes
 		*/
 		glm::vec2 m_apicalAngleMeanVariance = glm::vec2(0, 3);
 		/**
-		* \brief The frequency and amplitude of an angular difference orientation of lateral buds between two internodes
+		* \brief The procedural noise of an angular difference orientation of lateral buds between two internodes
 		*/
-		glm::vec2 m_apicalAngleFrequencyAmplitude = glm::vec2(0.f, 0.f);
+		AssetRef m_apicalAngle {};
+		Noise2D m_apicalAngleNoise2D{};
 		/**
 		 * \brief The gravitropism.
 		 */
@@ -184,7 +183,7 @@ namespace EcoSysLab
 
 		float m_fruitFallProbability;
 #pragma endregion
-		void PrepareController(ShootGrowthController& shootGrowthController) const;
+		void PrepareController(ShootGrowthController& shootGrowthController);
 
 		void Serialize(YAML::Emitter& out) override;
 		void Deserialize(const YAML::Node& in) override;

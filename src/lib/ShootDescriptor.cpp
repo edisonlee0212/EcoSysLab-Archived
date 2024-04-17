@@ -2,48 +2,62 @@
 
 using namespace EcoSysLab;
 
-void ShootDescriptor::PrepareController(ShootGrowthController& shootGrowthController) const
+void ShootDescriptor::PrepareController(ShootGrowthController& shootGrowthController)
 {
 	shootGrowthController.m_baseInternodeCount = m_baseInternodeCount;
 
-	shootGrowthController.m_baseNodeApicalAngle = [=](const Node<InternodeGrowthData>& internode)
+	shootGrowthController.m_baseNodeApicalAngle = [&](const SkeletonNode<InternodeGrowthData>& internode)
 		{
 			return glm::gaussRand(m_baseNodeApicalAngleMeanVariance.x, m_baseNodeApicalAngleMeanVariance.y);
 		};
 
 	shootGrowthController.m_internodeGrowthRate = m_growthRate / m_internodeLength;
 
-	shootGrowthController.m_branchingAngle = [=](const Node<InternodeGrowthData>& internode)
+	shootGrowthController.m_branchingAngle = [&](const SkeletonNode<InternodeGrowthData>& internode)
 		{
-			const float noise = glm::perlin(glm::vec2(internode.GetHandle(), internode.m_info.m_rootDistance / m_internodeLength * m_branchingAngleFrequencyAmplitude.x)) * m_branchingAngleFrequencyAmplitude.y;
-			const float gaussian = glm::gaussRand(m_branchingAngleMeanVariance.x, m_branchingAngleMeanVariance.y);
-			return noise + gaussian;
+			float value = glm::gaussRand(m_branchingAngleMeanVariance.x, m_branchingAngleMeanVariance.y);
+		/*
+			if(const auto noise = m_branchingAngle.Get<ProceduralNoise2D>())
+			{
+				noise->Process(glm::vec2(internode.GetHandle(), internode.m_info.m_rootDistance), value);
+			}*/
+			return value;
 		};
-	shootGrowthController.m_rollAngle = [=](const Node<InternodeGrowthData>& internode)
+	shootGrowthController.m_rollAngle = [&](const SkeletonNode<InternodeGrowthData>& internode)
 		{
-			const float noise = glm::perlin(glm::vec2(internode.GetHandle(), internode.m_info.m_rootDistance / m_internodeLength * m_rollAngleFrequencyAmplitude.x)) * m_rollAngleFrequencyAmplitude.y;
-			const float gaussian = glm::gaussRand(m_rollAngleMeanVariance.x, m_rollAngleMeanVariance.y);
-			return noise + gaussian;
+			float value = glm::gaussRand(m_rollAngleMeanVariance.x, m_rollAngleMeanVariance.y);
+		/*
+			if (const auto noise = m_rollAngle.Get<ProceduralNoise2D>())
+			{
+				noise->Process(glm::vec2(internode.GetHandle(), internode.m_info.m_rootDistance), value);
+			}*/
+			value += m_rollAngleNoise2D.GetValue(glm::vec2(internode.GetHandle(), internode.m_info.m_rootDistance));
+			return value;
 		};
-	shootGrowthController.m_apicalAngle = [=](const Node<InternodeGrowthData>& internode)
+	shootGrowthController.m_apicalAngle = [&](const SkeletonNode<InternodeGrowthData>& internode)
 		{
-			const float noise = glm::perlin(glm::vec2(internode.GetHandle(), internode.m_info.m_rootDistance / m_internodeLength * m_apicalAngleFrequencyAmplitude.x)) * m_apicalAngleFrequencyAmplitude.y;
-			const float gaussian = glm::gaussRand(m_apicalAngleMeanVariance.x, m_apicalAngleMeanVariance.y);
-			return noise + gaussian;
+			float value = glm::gaussRand(m_apicalAngleMeanVariance.x, m_apicalAngleMeanVariance.y);
+		/*
+			if (const auto noise = m_apicalAngle.Get<ProceduralNoise2D>())
+			{
+				noise->Process(glm::vec2(internode.GetHandle(), internode.m_info.m_rootDistance), value);
+			}*/
+			value += m_apicalAngleNoise2D.GetValue(glm::vec2(internode.GetHandle(), internode.m_info.m_rootDistance));
+			return value;
 		};
-	shootGrowthController.m_gravitropism = [=](const Node<InternodeGrowthData>& internode)
+	shootGrowthController.m_gravitropism = [&](const SkeletonNode<InternodeGrowthData>& internode)
 		{
 			return m_gravitropism;
 		};
-	shootGrowthController.m_phototropism = [=](const Node<InternodeGrowthData>& internode)
+	shootGrowthController.m_phototropism = [&](const SkeletonNode<InternodeGrowthData>& internode)
 		{
 			return m_phototropism;
 		};
-	shootGrowthController.m_horizontalTropism = [=](const Node<InternodeGrowthData>& internode)
+	shootGrowthController.m_horizontalTropism = [&](const SkeletonNode<InternodeGrowthData>& internode)
 		{
 			return m_horizontalTropism;
 		};
-	shootGrowthController.m_sagging = [=](const Node<InternodeGrowthData>& internode)
+	shootGrowthController.m_sagging = [&](const SkeletonNode<InternodeGrowthData>& internode)
 		{
 			const auto newSagging = glm::min(
 				m_saggingFactorThicknessReductionMax.z,
@@ -63,19 +77,19 @@ void ShootDescriptor::PrepareController(ShootGrowthController& shootGrowthContro
 	shootGrowthController.m_internodeShadowFactor = m_internodeShadowFactor;
 
 	shootGrowthController.m_lateralBudCount = m_lateralBudCount;
-	shootGrowthController.m_apicalBudExtinctionRate = [=](const Node<InternodeGrowthData>& internode)
+	shootGrowthController.m_apicalBudExtinctionRate = [&](const SkeletonNode<InternodeGrowthData>& internode)
 		{
 			if (internode.m_info.m_rootDistance < 0.5f) return 0.f;
 			return m_apicalBudExtinctionRate;
 		};
-	shootGrowthController.m_lateralBudFlushingRate = [=](const Node<InternodeGrowthData>& internode)
+	shootGrowthController.m_lateralBudFlushingRate = [&](const SkeletonNode<InternodeGrowthData>& internode)
 		{
 			float flushingRate = m_lateralBudFlushingRate * internode.m_data.m_lightIntensity;
 			if (internode.m_data.m_inhibitorSink > 0.0f) flushingRate *= glm::exp(-internode.m_data.m_inhibitorSink);
 			return flushingRate;
 		};
 	shootGrowthController.m_apicalControl = m_apicalControl;
-	shootGrowthController.m_apicalDominance = [=](const Node<InternodeGrowthData>& internode)
+	shootGrowthController.m_apicalDominance = [&](const SkeletonNode<InternodeGrowthData>& internode)
 		{
 			return m_apicalDominance * internode.m_data.m_lightIntensity;
 		};
@@ -83,30 +97,7 @@ void ShootDescriptor::PrepareController(ShootGrowthController& shootGrowthContro
 
 	shootGrowthController.m_lowBranchPruning = m_lowBranchPruning;
 	shootGrowthController.m_lowBranchPruningThicknessFactor = m_lowBranchPruningThicknessFactor;
-	shootGrowthController.m_pruningFactor = [=](const ShootSkeleton& shootSkeleton, const Node<InternodeGrowthData>& internode)
-		{
-			if (m_trunkProtection && internode.m_data.m_order == 0)
-			{
-				return 0.f;
-			}
-			float pruningProbability = 0.0f;
-			if (m_maxFlowLength != 0 && m_maxFlowLength < internode.m_info.m_chainIndex)
-			{
-				pruningProbability += 999.f;
-			}
-			if (internode.IsEndNode()) {
-				if (internode.m_data.m_lightIntensity <= m_lightPruningFactor)
-				{
-					pruningProbability += m_lightPruningProbability;
-				}
-			}
-			if (internode.m_data.m_level != 0 && m_thicknessPruningFactor != 0.0f
-				&& internode.m_info.m_thickness / internode.m_info.m_endDistance < m_thicknessPruningFactor)
-			{
-				pruningProbability += m_thicknessPruningProbability;
-			}
-			return pruningProbability;
-		};
+	
 
 
 	shootGrowthController.m_leafGrowthRate = m_leafGrowthRate;
@@ -115,7 +106,7 @@ void ShootDescriptor::PrepareController(ShootGrowthController& shootGrowthContro
 	shootGrowthController.m_fruitBudCount = m_fruitBudCount;
 	shootGrowthController.m_leafBudCount = m_leafBudCount;
 
-	shootGrowthController.m_leafBudFlushingProbability = [=](const Node<InternodeGrowthData>& internode)
+	shootGrowthController.m_leafBudFlushingProbability = [&](const SkeletonNode<InternodeGrowthData>& internode)
 		{
 			const auto& internodeData = internode.m_data;
 			const auto& probabilityRange = m_leafBudFlushingProbabilityTemperatureRange;
@@ -124,7 +115,7 @@ void ShootDescriptor::PrepareController(ShootGrowthController& shootGrowthContro
 			flushProbability *= internodeData.m_lightIntensity;
 			return flushProbability;
 		};
-	shootGrowthController.m_fruitBudFlushingProbability = [=](const Node<InternodeGrowthData>& internode)
+	shootGrowthController.m_fruitBudFlushingProbability = [&](const SkeletonNode<InternodeGrowthData>& internode)
 		{
 			const auto& internodeData = internode.m_data;
 			const auto& probabilityRange = m_fruitBudFlushingProbabilityTemperatureRange;
@@ -143,23 +134,25 @@ void ShootDescriptor::PrepareController(ShootGrowthController& shootGrowthContro
 	shootGrowthController.m_leafPositionVariance = m_leafPositionVariance;
 	shootGrowthController.m_leafRotationVariance = m_leafRotationVariance;
 	
-	shootGrowthController.m_leafFallProbability = [=](const Node<InternodeGrowthData>& internode)
+	shootGrowthController.m_leafFallProbability = [&](const SkeletonNode<InternodeGrowthData>& internode)
 		{
 			return m_leafFallProbability;
 		};
 	shootGrowthController.m_maxFruitSize = m_maxFruitSize;
 	shootGrowthController.m_fruitPositionVariance = m_fruitPositionVariance;
 	shootGrowthController.m_fruitRotationVariance = m_fruitRotationVariance;
-	shootGrowthController.m_fruitDamage = [=](const Node<InternodeGrowthData>& internode)
+	shootGrowthController.m_fruitDamage = [=](const SkeletonNode<InternodeGrowthData>& internode)
 		{
 			float fruitDamage = 0.0f;
 			return fruitDamage;
 		};
-	shootGrowthController.m_fruitFallProbability = [=](const Node<InternodeGrowthData>& internode)
+	shootGrowthController.m_fruitFallProbability = [&](const SkeletonNode<InternodeGrowthData>& internode)
 		{
 			return m_fruitFallProbability;
 		};
 
+
+	
 }
 
 void ShootDescriptor::Serialize(YAML::Emitter& out)
@@ -168,12 +161,15 @@ void ShootDescriptor::Serialize(YAML::Emitter& out)
 	out << YAML::Key << "m_baseNodeApicalAngleMeanVariance" << YAML::Value << m_baseNodeApicalAngleMeanVariance;
 
 	out << YAML::Key << "m_growthRate" << YAML::Value << m_growthRate;
+	m_rollAngle.Save("m_rollAngle", out);
+	m_apicalAngle.Save("m_apicalAngle", out);
+
+	m_rollAngleNoise2D.Save("m_rollAngleNoise2D", out);
+	m_apicalAngleNoise2D.Save("m_apicalAngleNoise2D", out);
+
 	out << YAML::Key << "m_branchingAngleMeanVariance" << YAML::Value << m_branchingAngleMeanVariance;
-	out << YAML::Key << "m_branchingAngleFrequencyAmplitude" << YAML::Value << m_branchingAngleFrequencyAmplitude;
 	out << YAML::Key << "m_rollAngleMeanVariance" << YAML::Value << m_rollAngleMeanVariance;
-	out << YAML::Key << "m_rollAngleFrequencyAmplitude" << YAML::Value << m_rollAngleFrequencyAmplitude;
 	out << YAML::Key << "m_apicalAngleMeanVariance" << YAML::Value << m_apicalAngleMeanVariance;
-	out << YAML::Key << "m_apicalAngleFrequencyAmplitude" << YAML::Value << m_apicalAngleFrequencyAmplitude;
 	out << YAML::Key << "m_gravitropism" << YAML::Value << m_gravitropism;
 	out << YAML::Key << "m_phototropism" << YAML::Value << m_phototropism;
 	out << YAML::Key << "m_horizontalTropism" << YAML::Value << m_horizontalTropism;
@@ -232,12 +228,15 @@ void ShootDescriptor::Deserialize(const YAML::Node& in)
 	if (in["m_baseNodeApicalAngleMeanVariance"]) m_baseNodeApicalAngleMeanVariance = in["m_baseNodeApicalAngleMeanVariance"].as<glm::vec2>();
 
 	if (in["m_growthRate"]) m_growthRate = in["m_growthRate"].as<float>();
+	m_rollAngle.Load("m_rollAngle", in);
+	m_apicalAngle.Load("m_apicalAngle", in);
+
+	m_rollAngleNoise2D.Load("m_rollAngleNoise2D", in);
+	m_apicalAngleNoise2D.Load("m_apicalAngleNoise2D", in);
+
 	if (in["m_branchingAngleMeanVariance"]) m_branchingAngleMeanVariance = in["m_branchingAngleMeanVariance"].as<glm::vec2>();
-	if (in["m_branchingAngleFrequencyAmplitude"]) m_branchingAngleFrequencyAmplitude = in["m_branchingAngleFrequencyAmplitude"].as<glm::vec2>();
 	if (in["m_rollAngleMeanVariance"]) m_rollAngleMeanVariance = in["m_rollAngleMeanVariance"].as<glm::vec2>();
-	if (in["m_rollAngleFrequencyAmplitude"]) m_rollAngleFrequencyAmplitude = in["m_rollAngleFrequencyAmplitude"].as<glm::vec2>();
 	if (in["m_apicalAngleMeanVariance"]) m_apicalAngleMeanVariance = in["m_apicalAngleMeanVariance"].as<glm::vec2>();
-	if (in["m_apicalAngleFrequencyAmplitude"]) m_apicalAngleFrequencyAmplitude = in["m_apicalAngleFrequencyAmplitude"].as<glm::vec2>();
 	if (in["m_gravitropism"]) m_gravitropism = in["m_gravitropism"].as<float>();
 	if (in["m_phototropism"]) m_phototropism = in["m_phototropism"].as<float>();
 	if (in["m_horizontalTropism"]) m_horizontalTropism = in["m_horizontalTropism"].as<float>();
@@ -302,12 +301,26 @@ void ShootDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 		changed = ImGui::DragFloat2("Base apical angle mean/var", &m_baseNodeApicalAngleMeanVariance.x, 0.1f, 0.0f, 100.0f) || changed;
 
 		changed = ImGui::DragInt("Lateral bud count", &m_lateralBudCount, 1, 0, 3) || changed;
-		changed = ImGui::DragFloat2("Branching angle mean/var", &m_branchingAngleMeanVariance.x, 0.1f, 0.0f, 100.0f) || changed;
-		changed = ImGui::DragFloat2("Branching angle freq/amp", &m_branchingAngleFrequencyAmplitude.x, 0.1f, 0.0f, 100.0f) || changed;
-		changed = ImGui::DragFloat2("Roll angle mean/var", &m_rollAngleMeanVariance.x, 0.1f, 0.0f, 100.0f) || changed;
-		changed = ImGui::DragFloat2("Roll angle freq/amp", &m_rollAngleFrequencyAmplitude.x, 0.1f, 0.0f, 100.0f) || changed;
-		changed = ImGui::DragFloat2("Apical angle mean/var", &m_apicalAngleMeanVariance.x, 0.1f, 0.0f, 100.0f) || changed;
-		changed = ImGui::DragFloat2("Apical angle freq/amp", &m_apicalAngleFrequencyAmplitude.x, 0.1f, 0.0f, 100.0f) || changed;
+		if (ImGui::TreeNodeEx("Angles"))
+		{
+			changed = ImGui::DragFloat2("Branching angle base/var", &m_branchingAngleMeanVariance.x, 0.1f, 0.0f, 100.0f) || changed;
+			//editorLayer->DragAndDropButton<ProceduralNoise2D>(m_branchingAngle, "Branching Angle Noise");
+			changed = ImGui::DragFloat2("Roll angle base/var", &m_rollAngleMeanVariance.x, 0.1f, 0.0f, 100.0f) || changed;
+			//editorLayer->DragAndDropButton<ProceduralNoise2D>(m_rollAngle, "Roll Angle Noise");
+			changed = ImGui::DragFloat2("Apical angle base/var", &m_apicalAngleMeanVariance.x, 0.1f, 0.0f, 100.0f) || changed;
+			//editorLayer->DragAndDropButton<ProceduralNoise2D>(m_apicalAngle, "Apical Angle Noise");
+			if (ImGui::TreeNodeEx("Roll Angle Noise2D"))
+			{
+				changed = m_rollAngleNoise2D.OnInspect() | changed;
+				ImGui::TreePop();
+			}
+			if (ImGui::TreeNodeEx("Apical Angle Noise2D"))
+			{
+				changed = m_apicalAngleNoise2D.OnInspect() | changed;
+				ImGui::TreePop();
+			}
+			ImGui::TreePop();
+		}
 		changed = ImGui::DragFloat("Internode length", &m_internodeLength, 0.001f) || changed;
 		changed = ImGui::DragFloat("Internode length thickness factor", &m_internodeLengthThicknessFactor, 0.0001f, 0.0f, 1.0f) || changed;
 		changed = ImGui::DragFloat3("Thickness min/factor/age", &m_endNodeThickness, 0.0001f, 0.0f, 1.0f, "%.6f") || changed;
@@ -382,5 +395,8 @@ void ShootDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 
 void ShootDescriptor::CollectAssetRef(std::vector<AssetRef>& list)
 {
+	if (m_rollAngle.Get<ProceduralNoise2D>()) list.push_back(m_rollAngle);
+	if (m_apicalAngle.Get<ProceduralNoise2D>()) list.push_back(m_apicalAngle);
+
 	if (m_barkMaterial.Get<Material>()) list.push_back(m_barkMaterial);
 }

@@ -84,7 +84,7 @@ namespace EcoSysLab {
 			const std::function<void(glm::vec2& texCoords, float xFactor, float distanceToRoot)>& texCoordsModifier);
 
 		static void GeneratePartially(
-			const std::unordered_set<NodeHandle>& nodeHandles,
+			const std::unordered_set<SkeletonNodeHandle>& nodeHandles,
 			const Skeleton<SkeletonData, FlowData, NodeData>& skeleton, std::vector<Vertex>& vertices,
 			std::vector<unsigned int>& indices, const TreeMeshGeneratorSettings& settings,
 			const std::function<void(glm::vec3 &vertexPosition, const glm::vec3& direction, float xFactor, float distanceToRoot)>& vertexPositionModifier,
@@ -103,7 +103,7 @@ namespace EcoSysLab {
 		int m_lineIndex = -1;
 		int m_treePartType = 0;
 		float m_distanceToStart = 0.0f;
-		FlowHandle m_baseFlowHandle = -1;
+		SkeletonFlowHandle m_baseFlowHandle = -1;
 	};
 
 	template<typename SkeletonData, typename FlowData, typename NodeData>
@@ -116,11 +116,11 @@ namespace EcoSysLab {
 		std::vector<std::vector<RingSegment>> ringsList;
 		std::vector<bool> mainChildStatus;
 
-		std::unordered_map<NodeHandle, int> steps{};
+		std::unordered_map<SkeletonNodeHandle, int> steps{};
 		ringsList.resize(sortedInternodeList.size());
 		mainChildStatus.resize(sortedInternodeList.size());
 		std::vector<std::shared_future<void>> results;
-		std::vector<std::vector<std::pair<NodeHandle, int>>> tempSteps{};
+		std::vector<std::vector<std::pair<SkeletonNodeHandle, int>>> tempSteps{};
 		tempSteps.resize(Jobs::Workers().Size());
 
 		Jobs::ParallelFor(sortedInternodeList.size(), [&](unsigned internodeIndex, unsigned threadIndex) {
@@ -220,11 +220,11 @@ namespace EcoSysLab {
 			}
 		}
 
-		std::unordered_map<NodeHandle, int> vertexLastRingStartVertexIndex{};
+		std::unordered_map<SkeletonNodeHandle, int> vertexLastRingStartVertexIndex{};
 
 		int nextTreePartIndex = 0;
 		int nextLineIndex = 0;
-		std::unordered_map<NodeHandle, TreePartInfo> treePartInfos{};
+		std::unordered_map<SkeletonNodeHandle, TreePartInfo> treePartInfos{};
 
 		for (int internodeIndex = 0; internodeIndex < sortedInternodeList.size(); internodeIndex++) {
 			auto internodeHandle = sortedInternodeList[internodeIndex];
@@ -238,12 +238,12 @@ namespace EcoSysLab {
 			{
 				const auto& parentInternode = skeleton.PeekNode(parentInternodeHandle);
 				parentUp = parentInternode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
-				if (internode.IsApical() || parentInternode.RefChildHandles().size() == 1) needStitching = true;
+				if (internode.IsApical() || parentInternode.PeekChildHandles().size() == 1) needStitching = true;
 				if (!needStitching)
 				{
 					float maxChildThickness = -1;
-					NodeHandle maxChildHandle = -1;
-					for (const auto& childHandle : parentInternode.RefChildHandles()) {
+					SkeletonNodeHandle maxChildHandle = -1;
+					for (const auto& childHandle : parentInternode.PeekChildHandles()) {
 						const auto& childInternode = skeleton.PeekNode(childHandle);
 						if (childInternode.IsApical()) break;
 						const float childThickness = childInternode.m_info.m_thickness;
@@ -282,8 +282,8 @@ namespace EcoSysLab {
 			if (settings.m_junctionColor) {
 #pragma region TreePart
 				const auto& flow = skeleton.PeekFlow(internode.GetFlowHandle());
-				const auto& chainHandles = flow.RefNodeHandles();
-				const bool hasMultipleChildren = flow.RefChildHandles().size() > 1;
+				const auto& chainHandles = flow.PeekNodeHandles();
+				const bool hasMultipleChildren = flow.PeekChildHandles().size() > 1;
 				bool onlyChild = true;
 				const auto parentFlowHandle = flow.GetParentHandle();
 				float distanceToChainStart = 0;
@@ -300,7 +300,7 @@ namespace EcoSysLab {
 				if (parentFlowHandle != -1)
 				{
 					const auto& parentFlow = skeleton.PeekFlow(parentFlowHandle);
-					onlyChild = parentFlow.RefChildHandles().size() <= 1;
+					onlyChild = parentFlow.PeekChildHandles().size() <= 1;
 					compareRadius = parentFlow.m_info.m_endThickness;
 				}
 				int treePartType = 0;
@@ -650,7 +650,7 @@ namespace EcoSysLab {
 
 	template <typename SkeletonData, typename FlowData, typename NodeData>
 	void CylindricalMeshGenerator<SkeletonData, FlowData, NodeData>::GeneratePartially(
-		const std::unordered_set<NodeHandle>& nodeHandles,
+		const std::unordered_set<SkeletonNodeHandle>& nodeHandles,
 		const Skeleton<SkeletonData, FlowData, NodeData>& skeleton, std::vector<Vertex>& vertices,
 		std::vector<unsigned>& indices, const TreeMeshGeneratorSettings& settings,
 		const std::function<void(glm::vec3& vertexPosition, const glm::vec3& direction, float xFactor, float distanceToRoot)>& vertexPositionModifier,
@@ -658,10 +658,10 @@ namespace EcoSysLab {
 	{
 		const auto& sortedInternodeList = skeleton.PeekSortedNodeList();
 		std::vector<std::vector<RingSegment>> ringsList;
-		std::unordered_map<NodeHandle, int> steps{};
+		std::unordered_map<SkeletonNodeHandle, int> steps{};
 		ringsList.resize(sortedInternodeList.size());
 		std::vector<std::shared_future<void>> results;
-		std::vector<std::vector<std::pair<NodeHandle, int>>> tempSteps{};
+		std::vector<std::vector<std::pair<SkeletonNodeHandle, int>>> tempSteps{};
 		tempSteps.resize(Jobs::Workers().Size());
 
 		Jobs::ParallelFor(sortedInternodeList.size(), [&](unsigned internodeIndex, unsigned threadIndex) {
@@ -762,8 +762,8 @@ namespace EcoSysLab {
 			}
 		}
 
-		std::unordered_map<NodeHandle, int> vertexLastRingStartVertexIndex{};
-		std::unordered_map<NodeHandle, TreePartInfo> treePartInfos{};
+		std::unordered_map<SkeletonNodeHandle, int> vertexLastRingStartVertexIndex{};
+		std::unordered_map<SkeletonNodeHandle, TreePartInfo> treePartInfos{};
 
 		for (int internodeIndex = 0; internodeIndex < sortedInternodeList.size(); internodeIndex++) {
 			auto internodeHandle = sortedInternodeList[internodeIndex];
@@ -782,12 +782,12 @@ namespace EcoSysLab {
 			{
 				const auto& parentInternode = skeleton.PeekNode(parentInternodeHandle);
 				parentUp = parentInternode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
-				if (internode.IsApical() || parentInternode.RefChildHandles().size() == 1) needStitching = true;
+				if (internode.IsApical() || parentInternode.PeekChildHandles().size() == 1) needStitching = true;
 				if (!needStitching)
 				{
 					float maxChildThickness = -1;
-					NodeHandle maxChildHandle = -1;
-					for (const auto& childHandle : parentInternode.RefChildHandles()) {
+					SkeletonNodeHandle maxChildHandle = -1;
+					for (const auto& childHandle : parentInternode.PeekChildHandles()) {
 						if (nodeHandles.find(childHandle) == nodeHandles.end()) continue;
 						const auto& childInternode = skeleton.PeekNode(childHandle);
 						if (childInternode.IsApical()) break;

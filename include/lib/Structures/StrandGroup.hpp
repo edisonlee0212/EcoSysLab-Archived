@@ -16,10 +16,6 @@ namespace EcoSysLab
 		 */
 		glm::vec3 m_globalPosition = glm::vec3(0.0f);
 		/**
-		 * \brief The rotation of the end of current strand segment.
-		 */
-		glm::quat m_globalRotation = glm::vec3(0.0f);
-		/**
 		 * \brief The thickness of the end of current strand segment.
 		 */
 		float m_thickness = 0.0f;
@@ -34,7 +30,7 @@ namespace EcoSysLab
 		/**
 		 * \brief The info of the start of the first strand segment in this strand.
 		 */
-		StrandSegmentInfo m_baseInfo {};
+		StrandSegmentInfo m_baseInfo{};
 	};
 
 	/**
@@ -58,8 +54,8 @@ namespace EcoSysLab
 
 		int m_index = -1;
 	public:
-		StrandSegmentData m_data {};
-		StrandSegmentInfo m_info {};
+		StrandSegmentData m_data{};
+		StrandSegmentInfo m_info{};
 
 		/**
 		 * Whether this segment is the end segment.
@@ -159,12 +155,12 @@ namespace EcoSysLab
 		std::queue<StrandSegmentHandle> m_strandSegmentPool;
 
 		int m_version = -1;
-		void BuildStrand(float controlPointRatio, const Strand<StrandData>& strand, std::vector<glm::uint>& strands, std::vector<StrandPoint>& points, bool triplePoints, int nodeMaxCount) const;
+		void BuildStrand(const Strand<StrandData>& strand, std::vector<glm::uint>& strands, std::vector<StrandPoint>& points, int nodeMaxCount) const;
 
 		[[nodiscard]] StrandSegmentHandle AllocateStrandSegment(StrandHandle strandHandle, StrandSegmentHandle prevHandle, int index);
 	public:
 
-		void BuildStrands(float controlPointRatio, std::vector<glm::uint>& strands, std::vector<StrandPoint>& points, bool triplePoints, int nodeMaxCount) const;
+		void BuildStrands(std::vector<glm::uint>& strands, std::vector<StrandPoint>& points, int nodeMaxCount) const;
 
 		StrandGroupData m_data;
 
@@ -252,105 +248,48 @@ namespace EcoSysLab
 	};
 
 	template <typename StrandGroupData, typename StrandData, typename StrandSegmentData>
-	void StrandGroup<StrandGroupData, StrandData, StrandSegmentData>::BuildStrand(const float controlPointRatio, const Strand<StrandData>& strand,
-		std::vector<glm::uint>& strands, std::vector<StrandPoint>& points, bool triplePoints, int nodeMaxCount) const
+	void StrandGroup<StrandGroupData, StrandData, StrandSegmentData>::BuildStrand(const Strand<StrandData>& strand,
+		std::vector<glm::uint>& strands, std::vector<StrandPoint>& points, int nodeMaxCount) const
 	{
 		const auto& strandSegmentHandles = strand.PeekStrandSegmentHandles();
 		if (strandSegmentHandles.empty())
 			return;
-		if(triplePoints)
+
+		auto& baseInfo = strand.m_info.m_baseInfo;
+		const auto startIndex = points.size();
+		strands.emplace_back(startIndex);
+		StrandPoint basePoint;
+		basePoint.m_color = baseInfo.m_color;
+		basePoint.m_thickness = baseInfo.m_thickness;
+		basePoint.m_position = baseInfo.m_globalPosition;
+
+		points.emplace_back(basePoint);
+		points.emplace_back(basePoint);
+
+		StrandPoint point;
+		for (int i = 0; i < strandSegmentHandles.size() && (nodeMaxCount == -1 || i < nodeMaxCount); i++)
 		{
-			auto& baseInfo = strand.m_info.m_baseInfo;
-			strands.emplace_back(points.size());
-			StrandPoint basePoint;
-			const auto& secondstrandSegment = PeekStrandSegment(strandSegmentHandles[0]);
-			auto basePointDistance = glm::distance(baseInfo.m_globalPosition, secondstrandSegment.m_info.m_globalPosition);
-			const auto baseTangent = glm::normalize(baseInfo.m_globalRotation * glm::vec3(0, 0, -1));
-			basePoint.m_color = baseInfo.m_color;
-			basePoint.m_position = baseInfo.m_globalPosition - baseTangent * basePointDistance * controlPointRatio;
-			basePoint.m_thickness = baseInfo.m_thickness;
-			points.emplace_back(basePoint);
-			basePoint.m_position = baseInfo.m_globalPosition;
-			points.emplace_back(basePoint);
-			basePoint.m_position = baseInfo.m_globalPosition + baseTangent * basePointDistance * controlPointRatio;
-			points.emplace_back(basePoint);
-
-			StrandPoint point;
-			for (int i = 0; i < strandSegmentHandles.size() && (nodeMaxCount == -1 || i < nodeMaxCount); i++)
-			{
-				const auto& strandSegment = PeekStrandSegment(strandSegmentHandles[i]);
-				glm::vec3 prevPosition;
-				glm::vec3 nextPosition;
-				glm::vec3 tangent;
-				if (i == 0)
-				{
-					prevPosition = baseInfo.m_globalPosition;
-				}
-				else {
-					prevPosition = PeekStrandSegment(strandSegmentHandles[i - 1]).m_info.m_globalPosition;
-				}
-
-				if(i == strandSegmentHandles.size() - 1)
-				{
-					nextPosition = 2.0f * strandSegment.m_info.m_globalPosition - prevPosition;
-				}else
-				{
-					nextPosition = PeekStrandSegment(strandSegmentHandles[i + 1]).m_info.m_globalPosition;
-				}
-				tangent = glm::normalize(nextPosition - prevPosition);
-				auto prevDistance = glm::distance(strandSegment.m_info.m_globalPosition, prevPosition);
-				auto nextDistance = glm::distance(strandSegment.m_info.m_globalPosition, nextPosition);
-				auto distance = glm::min(prevDistance, nextDistance);
-				point.m_color = strandSegment.m_info.m_color;
-				point.m_position = strandSegment.m_info.m_globalPosition - tangent * distance * controlPointRatio;
-				point.m_thickness = strandSegment.m_info.m_thickness;
-				points.emplace_back(point);
-
-				point.m_position = strandSegment.m_info.m_globalPosition;
-				points.emplace_back(point);
-
-				point.m_position = strandSegment.m_info.m_globalPosition + tangent * distance * controlPointRatio;
-				points.emplace_back(point);
-			}
-
-		}
-		else {
-			auto& baseInfo = strand.m_info.m_baseInfo;
-			const auto startIndex = points.size();
-			strands.emplace_back(startIndex);
-			StrandPoint basePoint;
-			basePoint.m_color = baseInfo.m_color;
-			basePoint.m_thickness = baseInfo.m_thickness;
-			basePoint.m_position = baseInfo.m_globalPosition;
-
-			points.emplace_back(basePoint);
-			points.emplace_back(basePoint);
-
-			StrandPoint point;
-			for (int i = 0; i < strandSegmentHandles.size() && (nodeMaxCount == -1 || i < nodeMaxCount); i++)
-			{
-				const auto& strandSegment = PeekStrandSegment(strandSegmentHandles[i]);
-				//auto distance = glm::min(prevDistance, nextDistance);
-				point.m_color = strandSegment.m_info.m_color;
-				point.m_thickness = strandSegment.m_info.m_thickness;
-				point.m_position = strandSegment.m_info.m_globalPosition;
-				points.emplace_back(point);
-			}
-			auto& backPoint = points.at(points.size() - 2);
-			auto& lastPoint = points.at(points.size() - 1);
-
-			point.m_color = 2.0f * lastPoint.m_color - backPoint.m_color;
-			point.m_thickness = 2.0f * lastPoint.m_thickness - backPoint.m_thickness;
-			point.m_position = 2.0f * lastPoint.m_position - backPoint.m_position;
+			const auto& strandSegment = PeekStrandSegment(strandSegmentHandles[i]);
+			//auto distance = glm::min(prevDistance, nextDistance);
+			point.m_color = strandSegment.m_info.m_color;
+			point.m_thickness = strandSegment.m_info.m_thickness;
+			point.m_position = strandSegment.m_info.m_globalPosition;
 			points.emplace_back(point);
-
-			auto& firstPoint = points.at(startIndex);
-			auto& secondPoint = points.at(startIndex + 1);
-			auto& thirdPoint = points.at(startIndex + 2);
-			firstPoint.m_color = 2.0f * secondPoint.m_color - thirdPoint.m_color;
-			firstPoint.m_thickness = 2.0f * secondPoint.m_thickness - thirdPoint.m_thickness;
-			firstPoint.m_position = 2.0f * secondPoint.m_position - thirdPoint.m_position;
 		}
+		auto& backPoint = points.at(points.size() - 2);
+		auto& lastPoint = points.at(points.size() - 1);
+
+		point.m_color = 2.0f * lastPoint.m_color - backPoint.m_color;
+		point.m_thickness = 2.0f * lastPoint.m_thickness - backPoint.m_thickness;
+		point.m_position = 2.0f * lastPoint.m_position - backPoint.m_position;
+		points.emplace_back(point);
+
+		auto& firstPoint = points.at(startIndex);
+		auto& secondPoint = points.at(startIndex + 1);
+		auto& thirdPoint = points.at(startIndex + 2);
+		firstPoint.m_color = 2.0f * secondPoint.m_color - thirdPoint.m_color;
+		firstPoint.m_thickness = 2.0f * secondPoint.m_thickness - thirdPoint.m_thickness;
+		firstPoint.m_position = 2.0f * secondPoint.m_position - thirdPoint.m_position;
 	}
 
 	template <typename StrandGroupData, typename StrandData, typename StrandSegmentData>
@@ -358,8 +297,8 @@ namespace EcoSysLab
 	{
 		StrandSegmentHandle newSegmentHandle;
 		if (m_strandSegmentPool.empty()) {
-			auto newSegment = m_strandSegments.emplace_back(strandHandle, m_strandSegments.size(), prevHandle);
-			newSegmentHandle = newSegment.m_handle;
+			m_strandSegments.emplace_back(strandHandle, m_strandSegments.size(), prevHandle);
+			newSegmentHandle = m_strandSegments.back().m_handle;
 		}
 		else {
 			newSegmentHandle = m_strandSegmentPool.front();
@@ -379,13 +318,13 @@ namespace EcoSysLab
 	}
 
 	template <typename StrandGroupData, typename StrandData, typename StrandSegmentData>
-	void StrandGroup<StrandGroupData, StrandData, StrandSegmentData>::BuildStrands(const float controlPointRatio, std::vector<glm::uint>& strands,
-		std::vector<StrandPoint>& points, bool triplePoints, int nodeMaxCount) const
+	void StrandGroup<StrandGroupData, StrandData, StrandSegmentData>::BuildStrands(std::vector<glm::uint>& strands,
+		std::vector<StrandPoint>& points, int nodeMaxCount) const
 	{
 		for (const auto& strand : m_strands)
 		{
 			if (strand.IsRecycled()) continue;
-			BuildStrand(controlPointRatio, strand, strands, points, triplePoints, nodeMaxCount);
+			BuildStrand(strand, strands, points, nodeMaxCount);
 		}
 	}
 
@@ -393,9 +332,9 @@ namespace EcoSysLab
 	StrandHandle StrandGroup<StrandGroupData, StrandData, StrandSegmentData>::AllocateStrand()
 	{
 		if (m_strandPool.empty()) {
-			auto newstrand = m_strands.emplace_back(m_strands.size());
+			m_strands.emplace_back(m_strands.size());
 			m_version++;
-			return newstrand.m_handle;
+			return m_strands.back().m_handle;
 		}
 		auto handle = m_strandPool.front();
 		m_strandPool.pop();
@@ -404,7 +343,7 @@ namespace EcoSysLab
 		m_version++;
 		return handle;
 	}
-	
+
 
 	template <typename StrandGroupData, typename StrandData, typename StrandSegmentData>
 	StrandSegmentHandle StrandGroup<StrandGroupData, StrandData, StrandSegmentData>::Extend(StrandHandle targetHandle)
@@ -437,7 +376,7 @@ namespace EcoSysLab
 		auto& nextSegment = m_strandSegments[nextSegmentHandle];
 		nextSegment.m_prevHandle = newSegmentHandle;
 		strand.m_strandSegmentHandles.insert(strand.m_strandSegmentHandles.begin() + prevSegmentIndex + 1, newSegmentHandle);
-		for(int i = prevSegmentIndex + 2; i < strand.m_strandSegmentHandles.size(); ++i)
+		for (int i = prevSegmentIndex + 2; i < strand.m_strandSegmentHandles.size(); ++i)
 		{
 			m_strandSegments[strand.m_strandSegmentHandles[i]].m_index = i;
 		}

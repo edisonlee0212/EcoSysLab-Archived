@@ -1,5 +1,7 @@
 #pragma once
 #include "ParticleGrid2D.hpp"
+#include "Skeleton.hpp"
+#include "StrandGroup.hpp"
 using namespace EvoEngine;
 namespace EcoSysLab {
 
@@ -22,8 +24,8 @@ namespace EcoSysLab {
 		glm::vec2 m_position = glm::vec2(0.0f);
 		glm::vec2 m_lastPosition = glm::vec2(0.0f);
 		glm::vec2 m_acceleration = glm::vec2(0.0f);
-
 		glm::vec2 m_deltaPosition = glm::vec2(0.0f);
+
 		ParticleHandle m_handle = -1;
 
 		bool m_boundary = false;
@@ -31,6 +33,12 @@ namespace EcoSysLab {
 
 		glm::vec2 m_initialPosition = glm::vec2(0.0f);
 	public:
+		SkeletonNodeHandle m_correspondingChildNodeHandle = -1;
+		StrandHandle m_strandHandle = -1;
+		StrandSegmentHandle m_strandSegmentHandle = -1;
+		bool m_mainChild = false;
+		bool m_base = false;
+
 		void SetInitialPosition(const glm::vec2& initialPosition);
 		[[nodiscard]] glm::vec2 GetInitialPosition() const;
 		[[nodiscard]] float GetDistanceToBoundary() const;

@@ -19,7 +19,7 @@ namespace EcoSysLab
 		/**
 		 * \brief The handle of the internode this pipe segment belongs to. Pipe -> PipeSegment <-> Cell <- Profile <- Internode
 		 */
-		NodeHandle m_nodeHandle = -1;
+		SkeletonNodeHandle m_nodeHandle = -1;
 		ParticleHandle m_profileParticleHandle = -1;
 	};
 
@@ -28,11 +28,5 @@ namespace EcoSysLab
 
 	struct CellParticlePhysicsData
 	{
-		NodeHandle m_correspondingChildNodeHandle = -1;
-
-		StrandHandle m_strandHandle = -1;
-		StrandSegmentHandle m_strandSegmentHandle = -1;
-		bool m_mainChild = false;
-		bool m_base = false;
 	};
 }

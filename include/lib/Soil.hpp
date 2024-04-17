@@ -23,12 +23,12 @@ namespace EcoSysLab
 		AssetRef m_normalTexture;
 		AssetRef m_heightTexture;
 
-		Noises3D m_capacity;
-		Noises3D m_permeability;
-		Noises3D m_density;
-		Noises3D m_initialNutrients;
-		Noises3D m_initialWater;
-		Noises2D m_thickness;
+		Noise3D m_capacity;
+		Noise3D m_permeability;
+		Noise3D m_density;
+		Noise3D m_initialNutrients;
+		Noise3D m_initialWater;
+		Noise2D m_thickness;
 		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 		void Serialize(YAML::Emitter& out) override;
 		void Deserialize(const YAML::Node& in) override;

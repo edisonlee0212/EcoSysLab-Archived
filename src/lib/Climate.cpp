@@ -99,7 +99,6 @@ void Climate::PrepareForGrowth()
 		tree->RegisterVoxel();
 	}
 
-	//estimator.ShadowPropagation();
 	estimator.LightPropagation();
 }
 

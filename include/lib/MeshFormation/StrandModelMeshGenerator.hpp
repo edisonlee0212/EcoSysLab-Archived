@@ -45,9 +45,9 @@ namespace EcoSysLab {
 
 		bool m_recalculateUV = false;
 		bool m_fastUV = true;
-		int m_smoothIteration = 12;
+		int m_smoothIteration = 0;
 		int m_minCellCountForMajorBranches = 100;
-		int m_maxCellCountForMinorBranches = 150;
+		int m_maxCellCountForMinorBranches = 110;
 		bool m_enableBranch = true;
 		bool m_enableFoliage = true;
 		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer);

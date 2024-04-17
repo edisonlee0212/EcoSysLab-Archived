@@ -106,9 +106,9 @@ void ForestPatch::ApplyTreeDescriptors(const std::filesystem::path& folderPath, 
 }
 
 void ForestPatch::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
-	static glm::ivec2 gridSize = { 5, 5 };
+	static glm::ivec2 gridSize = { 4, 4 };
 	static float gridDistance = 1.5f;
-	static float randomShift = 0.25f;
+	static float randomShift = 0.5f;
 	static bool setParent = true;
 	static bool enableHistory = false;
 	static int historyIteration = 30;

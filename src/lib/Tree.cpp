@@ -173,7 +173,9 @@ void Tree::ClearSkeletalGraph() const
 
 }
 
-void Tree::InitializeSkeletalGraph(NodeHandle baseNodeHandle,
+void Tree::GenerateSkeletalGraph(
+	const SkeletalGraphSettings& skeletalGraphSettings, 
+	SkeletonNodeHandle baseNodeHandle,
 	const std::shared_ptr<Mesh>& pointMeshSample,
 	const std::shared_ptr<Mesh>& lineMeshSample) const
 {
@@ -227,7 +229,7 @@ void Tree::InitializeSkeletalGraph(NodeHandle baseNodeHandle,
 			{
 				const auto& sortedInternodeList = m_strandModel.m_strandModelSkeleton.PeekSortedNodeList();
 				const auto internodeHandle = sortedInternodeList[internodeIndex];
-				NodeHandle walker = internodeHandle;
+				SkeletonNodeHandle walker = internodeHandle;
 				bool subTree = false;
 				const auto& skeleton = m_strandModel.m_strandModelSkeleton;
 				const auto& node = skeleton.PeekNode(internodeHandle);
@@ -251,29 +253,29 @@ void Tree::InitializeSkeletalGraph(NodeHandle baseNodeHandle,
 						glm::translate(position + (node.m_info.m_length / 2.0f) * node.m_info.GetGlobalDirection()) *
 						rotationTransform *
 						glm::scale(glm::vec3(
-							m_treeVisualizer.m_skeletalGraphSettings.m_fixedLineThickness * (subTree ? 1.25f : 1.0f),
+							skeletalGraphSettings.m_fixedLineThickness * (subTree ? 1.25f : 1.0f),
 							node.m_info.m_length,
-							m_treeVisualizer.m_skeletalGraphSettings.m_fixedLineThickness * (subTree ? 1.25f : 1.0f)));
+							skeletalGraphSettings.m_fixedLineThickness * (subTree ? 1.25f : 1.0f)));
 
 					if (subTree)
 					{
-						lineParticleInfos[internodeIndex].m_instanceColor = m_treeVisualizer.m_skeletalGraphSettings.m_lineFocusColor;
+						lineParticleInfos[internodeIndex].m_instanceColor = skeletalGraphSettings.m_lineFocusColor;
 					}
 					else {
-						lineParticleInfos[internodeIndex].m_instanceColor = m_treeVisualizer.m_skeletalGraphSettings.m_lineColor;
+						lineParticleInfos[internodeIndex].m_instanceColor = skeletalGraphSettings.m_lineColor;
 					}
 				}
 				{
 					rotation *= glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));
 					const glm::mat4 rotationTransform = glm::mat4_cast(rotation);
 					float thicknessFactor = node.m_info.m_thickness;
-					if (m_treeVisualizer.m_skeletalGraphSettings.m_fixedPointSize) thicknessFactor = m_treeVisualizer.m_skeletalGraphSettings.m_fixedPointSizeFactor;
-					auto scale = glm::vec3(m_treeVisualizer.m_skeletalGraphSettings.m_branchPointSize * thicknessFactor);
-					pointParticleInfos[internodeIndex].m_instanceColor = m_treeVisualizer.m_skeletalGraphSettings.m_branchPointColor;
-					if (internodeIndex == 0 || node.RefChildHandles().size() > 1)
+					if (skeletalGraphSettings.m_fixedPointSize) thicknessFactor = skeletalGraphSettings.m_fixedPointSizeFactor;
+					auto scale = glm::vec3(skeletalGraphSettings.m_branchPointSize * thicknessFactor);
+					pointParticleInfos[internodeIndex].m_instanceColor = skeletalGraphSettings.m_branchPointColor;
+					if (internodeIndex == 0 || node.PeekChildHandles().size() > 1)
 					{
-						scale = glm::vec3(m_treeVisualizer.m_skeletalGraphSettings.m_junctionPointSize * thicknessFactor);
-						pointParticleInfos[internodeIndex].m_instanceColor = m_treeVisualizer.m_skeletalGraphSettings.m_junctionPointColor;
+						scale = glm::vec3(skeletalGraphSettings.m_junctionPointSize * thicknessFactor);
+						pointParticleInfos[internodeIndex].m_instanceColor = skeletalGraphSettings.m_junctionPointColor;
 					}
 					pointParticleInfos[internodeIndex].m_instanceMatrix.m_value =
 						glm::translate(position) *
@@ -281,14 +283,14 @@ void Tree::InitializeSkeletalGraph(NodeHandle baseNodeHandle,
 						glm::scale(scale * (subTree ? 1.25f : 1.0f));
 					if (subTree)
 					{
-						pointParticleInfos[internodeIndex].m_instanceColor = m_treeVisualizer.m_skeletalGraphSettings.m_branchFocusColor;
+						pointParticleInfos[internodeIndex].m_instanceColor = skeletalGraphSettings.m_branchFocusColor;
 					}
 				}
 			}
 			else {
 				const auto& sortedInternodeList = m_treeModel.PeekShootSkeleton().PeekSortedNodeList();
 				const auto internodeHandle = sortedInternodeList[internodeIndex];
-				NodeHandle walker = internodeHandle;
+				SkeletonNodeHandle walker = internodeHandle;
 				bool subTree = false;
 				const auto& skeleton = m_treeModel.PeekShootSkeleton();
 				const auto& node = skeleton.PeekNode(internodeHandle);
@@ -312,29 +314,29 @@ void Tree::InitializeSkeletalGraph(NodeHandle baseNodeHandle,
 						glm::translate(position + (node.m_info.m_length / 2.0f) * node.m_info.GetGlobalDirection()) *
 						rotationTransform *
 						glm::scale(glm::vec3(
-							m_treeVisualizer.m_skeletalGraphSettings.m_fixedLineThickness * (subTree ? 1.25f : 1.0f),
+							skeletalGraphSettings.m_fixedLineThickness * (subTree ? 1.25f : 1.0f),
 							node.m_info.m_length,
-							m_treeVisualizer.m_skeletalGraphSettings.m_fixedLineThickness * (subTree ? 1.25f : 1.0f)));
+							skeletalGraphSettings.m_fixedLineThickness * (subTree ? 1.25f : 1.0f)));
 
 					if (subTree)
 					{
-						lineParticleInfos[internodeIndex].m_instanceColor = m_treeVisualizer.m_skeletalGraphSettings.m_lineFocusColor;
+						lineParticleInfos[internodeIndex].m_instanceColor = skeletalGraphSettings.m_lineFocusColor;
 					}
 					else {
-						lineParticleInfos[internodeIndex].m_instanceColor = m_treeVisualizer.m_skeletalGraphSettings.m_lineColor;
+						lineParticleInfos[internodeIndex].m_instanceColor = skeletalGraphSettings.m_lineColor;
 					}
 				}
 				{
 					rotation *= glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));
 					const glm::mat4 rotationTransform = glm::mat4_cast(rotation);
 					float thicknessFactor = node.m_info.m_thickness;
-					if (m_treeVisualizer.m_skeletalGraphSettings.m_fixedPointSize) thicknessFactor = m_treeVisualizer.m_skeletalGraphSettings.m_fixedPointSizeFactor;
-					auto scale = glm::vec3(m_treeVisualizer.m_skeletalGraphSettings.m_branchPointSize * thicknessFactor);
-					pointParticleInfos[internodeIndex].m_instanceColor = m_treeVisualizer.m_skeletalGraphSettings.m_branchPointColor;
-					if (internodeIndex == 0 || node.RefChildHandles().size() > 1)
+					if (skeletalGraphSettings.m_fixedPointSize) thicknessFactor = skeletalGraphSettings.m_fixedPointSizeFactor;
+					auto scale = glm::vec3(skeletalGraphSettings.m_branchPointSize * thicknessFactor);
+					pointParticleInfos[internodeIndex].m_instanceColor = skeletalGraphSettings.m_branchPointColor;
+					if (internodeIndex == 0 || node.PeekChildHandles().size() > 1)
 					{
-						scale = glm::vec3(m_treeVisualizer.m_skeletalGraphSettings.m_junctionPointSize * thicknessFactor);
-						pointParticleInfos[internodeIndex].m_instanceColor = m_treeVisualizer.m_skeletalGraphSettings.m_junctionPointColor;
+						scale = glm::vec3(skeletalGraphSettings.m_junctionPointSize * thicknessFactor);
+						pointParticleInfos[internodeIndex].m_instanceColor = skeletalGraphSettings.m_junctionPointColor;
 					}
 					pointParticleInfos[internodeIndex].m_instanceMatrix.m_value =
 						glm::translate(position) *
@@ -342,7 +344,7 @@ void Tree::InitializeSkeletalGraph(NodeHandle baseNodeHandle,
 						glm::scale(scale * (subTree ? 1.25f : 1.0f));
 					if (subTree)
 					{
-						pointParticleInfos[internodeIndex].m_instanceColor = m_treeVisualizer.m_skeletalGraphSettings.m_branchFocusColor;
+						pointParticleInfos[internodeIndex].m_instanceColor = skeletalGraphSettings.m_branchFocusColor;
 					}
 				}
 			}
@@ -389,7 +391,7 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 					changed = ImGui::DragFloat("Sagging max", &shootDescriptor->m_saggingFactorThicknessReductionMax.z, 0.001f, 0.0f, 1.0f, "%.5f") || changed;
 					if (changed)
 					{
-						m_shootGrowthController.m_sagging = [=](const Node<InternodeGrowthData>& internode)
+						m_shootGrowthController.m_sagging = [=](const SkeletonNode<InternodeGrowthData>& internode)
 							{
 								const auto newSagging = glm::min(
 									shootDescriptor->m_saggingFactorThicknessReductionMax.z,
@@ -402,7 +404,7 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 								return newSagging;
 							};
 						m_treeModel.CalculateTransform(m_shootGrowthController, true);
-						m_shootGrowthController.m_sagging = [=](const Node<InternodeGrowthData>& internode)
+						m_shootGrowthController.m_sagging = [=](const SkeletonNode<InternodeGrowthData>& internode)
 							{
 								const auto& shootGrowthParameters = treeDescriptor->m_shootDescriptor;
 								const auto newSagging = glm::min(
@@ -593,7 +595,6 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 
 		ImGui::DragFloat("Cladoptosis Range", &strandModelParameters.m_cladoptosisRange, 0.01f, 0.0f, 50.f);
 		m_strandModelParameters.m_cladoptosisDistribution.OnInspect("Cladoptosis", plottedDistributionSettings);
-		ImGui::Text(("Last calculation time: " + std::to_string(m_strandModel.m_strandModelSkeleton.m_data.m_profileCalculationTime)).c_str());
 		ImGui::Text(("Strand count: " + std::to_string(m_strandModel.m_strandModelSkeleton.m_data.m_strandGroup.PeekStrands().size())).c_str());
 		ImGui::Text(("Total particle count: " + std::to_string(m_strandModel.m_strandModelSkeleton.m_data.m_numOfParticles)).c_str());
 
@@ -601,12 +602,11 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 		if (ImGui::TreeNodeEx("Graph Adjustment settings", ImGuiTreeNodeFlags_DefaultOpen))
 		{
 			ImGui::DragFloat("Side factor", &strandModelParameters.m_sidePushFactor, 0.01f, 0.0f, 2.0f);
+			ImGui::DragFloat("Apical Side factor", &strandModelParameters.m_apicalSidePushFactor, 0.01f, 0.0f, 2.0f);
 			ImGui::DragFloat("Rotation factor", &strandModelParameters.m_rotationPushFactor, 0.01f, 0.0f, 2.0f);
 			ImGui::DragFloat("Apical Rotation factor", &strandModelParameters.m_apicalBranchRotationPushFactor, 0.01f, 0.0f, 2.0f);
 			ImGui::TreePop();
 		}
-		ImGui::Checkbox("Triple points", &strandModelParameters.m_triplePoints);
-		if (strandModelParameters.m_triplePoints) ImGui::DragFloat("Control Point Ratio", &strandModelParameters.m_controlPointRatio, 0.01f, 0.01f, 0.5f);
 		ImGui::DragInt("Max node count", &strandModelParameters.m_nodeMaxCount, 1, -1, 999);
 		ImGui::DragInt("Boundary point distance", &strandModelParameters.m_boundaryPointDistance, 1, 3, 30);
 		ImGui::ColorEdit4("Boundary color", &strandModelParameters.m_boundaryPointColor.x);
@@ -658,11 +658,11 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	m_treeVisualizer.Visualize(m_strandModel);
 	if (ImGui::TreeNode("Skeletal graph settings"))
 	{
-		m_treeVisualizer.m_skeletalGraphSettings.OnInspect();
+		m_skeletalGraphSettings.OnInspect();
 	}
 	if (ImGui::Button("Build skeletal graph"))
 	{
-		InitializeSkeletalGraph(-1,
+		GenerateSkeletalGraph(m_skeletalGraphSettings, -1,
 			Resources::GetResource<Mesh>("PRIMITIVE_SPHERE"),
 			Resources::GetResource<Mesh>("PRIMITIVE_CUBE"));
 	}
@@ -700,7 +700,7 @@ void Tree::Update()
 
 void Tree::OnCreate() {
 	m_treeVisualizer.Initialize();
-
+	m_treeVisualizer.m_needUpdate = true;
 	m_strandModelParameters.m_branchTwistDistribution.m_mean = { -60.0f, 60.0f };
 	m_strandModelParameters.m_branchTwistDistribution.m_deviation = { 0.0f, 1.0f, {0, 0} };
 
@@ -745,14 +745,23 @@ bool Tree::OnInspectTreeGrowthSettings(TreeGrowthSettings& treeGrowthSettings)
 
 void Tree::CalculateProfiles()
 {
+	const float time = Times::Now();
 	m_strandModel.m_strandModelSkeleton.Clone(m_treeModel.RefShootSkeleton());
 
 	m_strandModel.InitializeProfiles(m_strandModelParameters);
 	m_strandModel.CalculateProfiles(m_strandModelParameters);
+	const float profileCalculationTime = Times::Now() - time;
+	std::string output;
+	output += "\nProfile count: [" + std::to_string(m_strandModel.m_strandModelSkeleton.PeekSortedNodeList().size());
+	output += "], Strand count: [" + std::to_string(m_strandModel.m_strandModelSkeleton.m_data.m_strandGroup.PeekStrands().size());
+	output += "], Particle count: [" + std::to_string(m_strandModel.m_strandModelSkeleton.m_data.m_numOfParticles);
+	output += "]\nCalculate Profile Used time: " + std::to_string(profileCalculationTime) + "\n";
+	EVOENGINE_LOG(output);
 }
 
 void Tree::BuildStrandModel()
 {
+	std::string output;
 	if (m_strandModel.m_strandModelSkeleton.RefRawNodes().size() != m_treeModel.PeekShootSkeleton().RefRawNodes().size())
 	{
 		CalculateProfiles();
@@ -764,8 +773,12 @@ void Tree::BuildStrandModel()
 			m_strandModel.m_strandModelSkeleton.RefNode(nodeHandle).m_info = m_treeModel.PeekShootSkeleton().PeekNode(nodeHandle).m_info;
 		}
 	}
+	const float time = Times::Now();
 	m_strandModel.CalculateStrandProfileAdjustedTransforms(m_strandModelParameters);
 	m_strandModel.ApplyProfiles(m_strandModelParameters);
+	const float strandModelingTime = Times::Now() - time;
+	output += "\nBuild Strand Model Used time: " + std::to_string(strandModelingTime) + "\n";
+	EVOENGINE_LOG(output);
 }
 
 std::shared_ptr<Strands> Tree::GenerateStrands() const
@@ -774,7 +787,7 @@ std::shared_ptr<Strands> Tree::GenerateStrands() const
 	const auto& parameters = m_strandModelParameters;
 	std::vector<glm::uint> strandsList;
 	std::vector<StrandPoint> points;
-	m_strandModel.m_strandModelSkeleton.m_data.m_strandGroup.BuildStrands(parameters.m_controlPointRatio, strandsList, points, parameters.m_triplePoints, parameters.m_nodeMaxCount);
+	m_strandModel.m_strandModelSkeleton.m_data.m_strandGroup.BuildStrands(strandsList, points, parameters.m_nodeMaxCount);
 	if (!points.empty()) strandsList.emplace_back(points.size());
 	StrandPointAttributes strandPointAttributes{};
 	strandPointAttributes.m_color = true;
@@ -785,12 +798,12 @@ std::shared_ptr<Strands> Tree::GenerateStrands() const
 void Tree::GenerateTrunkMeshes(const std::shared_ptr<Mesh>& trunkMesh, const TreeMeshGeneratorSettings& meshGeneratorSettings)
 {
 	const auto& sortedInternodeList = m_treeModel.RefShootSkeleton().PeekSortedNodeList();
-	std::unordered_set<NodeHandle> trunkHandles{};
+	std::unordered_set<SkeletonNodeHandle> trunkHandles{};
 	for (const auto& nodeHandle : sortedInternodeList)
 	{
 		const auto& node = m_treeModel.RefShootSkeleton().PeekNode(nodeHandle);
 		trunkHandles.insert(nodeHandle);
-		if (node.RefChildHandles().size() > 1)break;
+		if (node.PeekChildHandles().size() > 1)break;
 	}
 	{
 		std::vector<Vertex> vertices;
@@ -1532,7 +1545,15 @@ bool Tree::TryGrow(float deltaTime, bool pruning, float overrideGrowthRate)
 
 	const auto owner = GetOwner();
 
-	PrepareControllers(treeDescriptor);
+	auto shootDescriptor = treeDescriptor->m_shootDescriptor.Get<ShootDescriptor>();
+	if (!shootDescriptor)
+	{
+		shootDescriptor = ProjectManager::CreateTemporaryAsset<ShootDescriptor>();
+		treeDescriptor->m_shootDescriptor = shootDescriptor;
+		EVOENGINE_WARNING("Shoot Descriptor Missing!");
+	}
+
+	PrepareController(shootDescriptor, soil, climate);
 	const bool grown = m_treeModel.Grow(deltaTime, scene->GetDataComponent<GlobalTransform>(owner).m_value, climate->m_climateModel, m_shootGrowthController, pruning, overrideGrowthRate);
 	if (grown)
 	{
@@ -1548,7 +1569,7 @@ bool Tree::TryGrow(float deltaTime, bool pruning, float overrideGrowthRate)
 	return grown;
 }
 
-bool Tree::TryGrowSubTree(const float deltaTime, const NodeHandle baseInternodeHandle, const bool pruning, const float overrideGrowthRate) {
+bool Tree::TryGrowSubTree(const float deltaTime, const SkeletonNodeHandle baseInternodeHandle, const bool pruning, const float overrideGrowthRate) {
 	const auto scene = GetScene();
 	const auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
 	const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
@@ -1583,7 +1604,15 @@ bool Tree::TryGrowSubTree(const float deltaTime, const NodeHandle baseInternodeH
 
 	const auto owner = GetOwner();
 
-	PrepareControllers(treeDescriptor);
+	auto shootDescriptor = treeDescriptor->m_shootDescriptor.Get<ShootDescriptor>();
+	if (!shootDescriptor)
+	{
+		shootDescriptor = ProjectManager::CreateTemporaryAsset<ShootDescriptor>();
+		treeDescriptor->m_shootDescriptor = shootDescriptor;
+		EVOENGINE_WARNING("Shoot Descriptor Missing!");
+	}
+
+	PrepareController(shootDescriptor, soil, climate);
 	const bool grown = m_treeModel.Grow(deltaTime, baseInternodeHandle, scene->GetDataComponent<GlobalTransform>(owner).m_value, climate->m_climateModel, m_shootGrowthController, pruning, overrideGrowthRate);
 	if (grown)
 	{
@@ -1611,44 +1640,72 @@ void Tree::Serialize(YAML::Emitter& out)
 			SkeletonSerializer<StrandModelSkeletonData, StrandModelFlowData, StrandModelNodeData>::Serialize(out, m_strandModel.m_strandModelSkeleton,
 				[&](YAML::Emitter& nodeOut, const StrandModelNodeData& nodeData)
 				{
-					nodeOut << YAML::Key << "O" << YAML::Value << nodeData.m_offset;
-					nodeOut << YAML::Key << "T" << YAML::Value << nodeData.m_twistAngle;
-					nodeOut << YAML::Key << "SP" << YAML::Value << nodeData.m_split;
-					nodeOut << YAML::Key << "SR" << YAML::Value << nodeData.m_strandRadius;
-					nodeOut << YAML::Key << "SC" << YAML::Value << nodeData.m_strandCount;
-
 					nodeOut << YAML::Key << "m_profile" << YAML::Value << YAML::BeginMap;
 					{
 						StrandModelProfileSerializer<CellParticlePhysicsData>::Serialize(nodeOut, nodeData.m_profile,
-							[&](YAML::Emitter& particleOut, const CellParticlePhysicsData& particleData)
-							{
-								particleOut << YAML::Key << "CN" << YAML::Value << particleData.m_correspondingChildNodeHandle;
-								particleOut << YAML::Key << "H" << YAML::Value << particleData.m_strandHandle;
-								particleOut << YAML::Key << "S" << YAML::Value << particleData.m_strandSegmentHandle;
-								particleOut << YAML::Key << "M" << YAML::Value << particleData.m_mainChild;
-								particleOut << YAML::Key << "B" << YAML::Value << particleData.m_base;
-							}
-						);
+							[&](YAML::Emitter& particleOut, const CellParticlePhysicsData& particleData){});
 					}
-					out << YAML::EndMap;
+					nodeOut << YAML::EndMap;
 				},
-				[&](YAML::Emitter& flowOut, const StrandModelFlowData& flowData)
-				{},
+				[&](YAML::Emitter& flowOut, const StrandModelFlowData& flowData){},
 				[&](YAML::Emitter& skeletonOut, const StrandModelSkeletonData& skeletonData)
 				{
 					skeletonOut << YAML::Key << "m_strandGroup" << YAML::Value << YAML::BeginMap;
 					{
 						StrandGroupSerializer<StrandModelStrandGroupData, StrandModelStrandData, StrandModelStrandSegmentData>::Serialize(skeletonOut, skeletonData.m_strandGroup,
 							[&](YAML::Emitter& segmentOut, const StrandModelStrandSegmentData& segmentData)
-							{
-								segmentOut << YAML::Key << "H" << YAML::Value << segmentData.m_nodeHandle;
-								segmentOut << YAML::Key << "F" << YAML::Value << segmentData.m_profileParticleHandle;
-							},
+							{},
 							[&](YAML::Emitter& strandOut, const StrandModelStrandData& strandData) {},
-							[&](YAML::Emitter& groupOut, const StrandModelStrandGroupData& groupData) {}
+							[&](YAML::Emitter& groupOut, const StrandModelStrandGroupData& groupData)
+							{
+								const auto strandSegmentSize = skeletonData.m_strandGroup.PeekStrandSegments().size();
+								auto nodeHandle = std::vector<SkeletonNodeHandle>(strandSegmentSize);
+								auto profileParticleHandles = std::vector<ParticleHandle>(strandSegmentSize);
+								for (int strandSegmentIndex = 0; strandSegmentIndex < strandSegmentSize; strandSegmentIndex++)
+								{
+									const auto& strandSegment = skeletonData.m_strandGroup.PeekStrandSegment(strandSegmentIndex);
+									nodeHandle.at(strandSegmentIndex) = strandSegment.m_data.m_nodeHandle;
+									profileParticleHandles.at(strandSegmentIndex) = strandSegment.m_data.m_profileParticleHandle;
+								}
+								if (strandSegmentSize != 0) {
+									groupOut << YAML::Key << "m_strandSegments.m_data.m_nodeHandle" << YAML::Value << YAML::Binary(
+										reinterpret_cast<const unsigned char*>(nodeHandle.data()), nodeHandle.size() * sizeof(SkeletonNodeHandle));
+									groupOut << YAML::Key << "m_strandSegments.m_data.m_profileParticleHandle" << YAML::Value << YAML::Binary(
+										reinterpret_cast<const unsigned char*>(profileParticleHandles.data()), profileParticleHandles.size() * sizeof(ParticleHandle));
+								}
+							}
 						);
 					}
-					out << YAML::EndMap;
+					skeletonOut << YAML::EndMap;
+
+					const auto nodeSize = m_strandModel.m_strandModelSkeleton.RefRawNodes().size();
+					auto offset = std::vector<glm::vec2>(nodeSize);
+					auto twistAngle = std::vector<float>(nodeSize);
+					auto split = std::vector<int>(nodeSize);
+					auto strandRadius = std::vector<float>(nodeSize);
+					auto strandCount = std::vector<int>(nodeSize);
+
+					for (int nodeIndex = 0; nodeIndex < nodeSize; nodeIndex++)
+					{
+						const auto& node = m_strandModel.m_strandModelSkeleton.RefRawNodes().at(nodeIndex);
+						offset.at(nodeIndex) = node.m_data.m_offset;
+						twistAngle.at(nodeIndex) = node.m_data.m_twistAngle;
+						split.at(nodeIndex) = node.m_data.m_split == 1;
+						strandRadius.at(nodeIndex) = node.m_data.m_strandRadius;
+						strandCount.at(nodeIndex) = node.m_data.m_strandCount;
+					}
+					if (nodeSize != 0) {
+						skeletonOut << YAML::Key << "m_node.m_data.m_offset" << YAML::Value << YAML::Binary(
+							reinterpret_cast<const unsigned char*>(offset.data()), offset.size() * sizeof(glm::vec2));
+						skeletonOut << YAML::Key << "m_node.m_data.m_twistAngle" << YAML::Value << YAML::Binary(
+							reinterpret_cast<const unsigned char*>(twistAngle.data()), twistAngle.size() * sizeof(float));
+						skeletonOut << YAML::Key << "m_node.m_data.m_split" << YAML::Value << YAML::Binary(
+							reinterpret_cast<const unsigned char*>(split.data()), split.size() * sizeof(int));
+						skeletonOut << YAML::Key << "m_node.m_data.m_strandRadius" << YAML::Value << YAML::Binary(
+							reinterpret_cast<const unsigned char*>(strandRadius.data()), strandRadius.size() * sizeof(float));
+						skeletonOut << YAML::Key << "m_node.m_data.m_strandCount" << YAML::Value << YAML::Binary(
+							reinterpret_cast<const unsigned char*>(strandCount.data()), strandCount.size() * sizeof(float));
+					}
 				}
 			);
 		}
@@ -1663,18 +1720,7 @@ void Tree::Serialize(YAML::Emitter& out)
 			SkeletonSerializer<ShootGrowthData, ShootStemGrowthData, InternodeGrowthData>::Serialize(out, m_treeModel.RefShootSkeleton(),
 				[&](YAML::Emitter& nodeOut, const InternodeGrowthData& nodeData)
 				{
-					nodeOut << YAML::Key << "IL" << YAML::Value << nodeData.m_internodeLength;
-					nodeOut << YAML::Key << "IPB" << YAML::Value << nodeData.m_indexOfParentBud;
-					nodeOut << YAML::Key << "SA" << YAML::Value << nodeData.m_startAge;
-					nodeOut << YAML::Key << "FA" << YAML::Value << nodeData.m_finishAge;
-					nodeOut << YAML::Key << "DLR" << YAML::Value << nodeData.m_desiredLocalRotation;
-					nodeOut << YAML::Key << "DGR" << YAML::Value << nodeData.m_desiredGlobalRotation;
-					nodeOut << YAML::Key << "DGP" << YAML::Value << nodeData.m_desiredGlobalPosition;
-					nodeOut << YAML::Key << "S" << YAML::Value << nodeData.m_sagging;
-					nodeOut << YAML::Key << "O" << YAML::Value << nodeData.m_order;
-					nodeOut << YAML::Key << "EM" << YAML::Value << nodeData.m_extraMass;
-
-					nodeOut << YAML::Key << "B" << YAML::Value << YAML::BeginSeq;
+					nodeOut << YAML::Key << "m_buds" << YAML::Value << YAML::BeginSeq;
 					for (const auto& bud : nodeData.m_buds)
 					{
 						nodeOut << YAML::BeginMap;
@@ -1696,12 +1742,62 @@ void Tree::Serialize(YAML::Emitter& out)
 				},
 				[&](YAML::Emitter& flowOut, const ShootStemGrowthData& flowData)
 				{
-					flowOut << YAML::Key << "O" << YAML::Value << flowData.m_order;
+					flowOut << YAML::Key << "m_order" << YAML::Value << flowData.m_order;
 				},
 				[&](YAML::Emitter& skeletonOut, const ShootGrowthData& skeletonData)
 				{
 					skeletonOut << YAML::Key << "m_desiredMin" << YAML::Value << skeletonData.m_desiredMin;
 					skeletonOut << YAML::Key << "m_desiredMax" << YAML::Value << skeletonData.m_desiredMax;
+
+					const auto nodeSize = m_treeModel.RefShootSkeleton().RefRawNodes().size();
+					auto internodeLength = std::vector<float>(nodeSize);
+					auto indexOfParentBud = std::vector<int>(nodeSize);
+					auto startAge = std::vector<float>(nodeSize);
+					auto finishAge = std::vector<float>(nodeSize);
+					auto desiredLocalRotation = std::vector<glm::quat>(nodeSize);
+					auto desiredGlobalRotation = std::vector<glm::quat>(nodeSize);
+					auto desiredGlobalPosition = std::vector<glm::vec3>(nodeSize);
+					auto sagging = std::vector<float>(nodeSize);
+					auto order = std::vector<int>(nodeSize);
+					auto extraMass = std::vector<float>(nodeSize);
+
+					for (int nodeIndex = 0; nodeIndex < nodeSize; nodeIndex++)
+					{
+						const auto& node = m_treeModel.RefShootSkeleton().RefRawNodes().at(nodeIndex);
+						internodeLength.at(nodeIndex) = node.m_data.m_internodeLength;
+						indexOfParentBud.at(nodeIndex) = node.m_data.m_indexOfParentBud;
+						startAge.at(nodeIndex) = node.m_data.m_startAge;
+						finishAge.at(nodeIndex) = node.m_data.m_finishAge;
+						desiredLocalRotation.at(nodeIndex) = node.m_data.m_desiredLocalRotation;
+						desiredGlobalRotation.at(nodeIndex) = node.m_data.m_desiredGlobalRotation;
+						desiredGlobalPosition.at(nodeIndex) = node.m_data.m_desiredGlobalPosition;
+						sagging.at(nodeIndex) = node.m_data.m_sagging;
+						order.at(nodeIndex) = node.m_data.m_order;
+						extraMass.at(nodeIndex) = node.m_data.m_extraMass;
+
+					}
+					if (nodeSize != 0) {
+						skeletonOut << YAML::Key << "m_node.m_data.m_internodeLength" << YAML::Value << YAML::Binary(
+							reinterpret_cast<const unsigned char*>(internodeLength.data()), internodeLength.size() * sizeof(float));
+						skeletonOut << YAML::Key << "m_node.m_data.m_indexOfParentBud" << YAML::Value << YAML::Binary(
+							reinterpret_cast<const unsigned char*>(indexOfParentBud.data()), indexOfParentBud.size() * sizeof(int));
+						skeletonOut << YAML::Key << "m_node.m_data.m_startAge" << YAML::Value << YAML::Binary(
+							reinterpret_cast<const unsigned char*>(startAge.data()), startAge.size() * sizeof(float));
+						skeletonOut << YAML::Key << "m_node.m_data.m_finishAge" << YAML::Value << YAML::Binary(
+							reinterpret_cast<const unsigned char*>(finishAge.data()), finishAge.size() * sizeof(float));
+						skeletonOut << YAML::Key << "m_node.m_data.m_desiredLocalRotation" << YAML::Value << YAML::Binary(
+							reinterpret_cast<const unsigned char*>(desiredLocalRotation.data()), desiredLocalRotation.size() * sizeof(glm::quat));
+						skeletonOut << YAML::Key << "m_node.m_data.m_desiredGlobalRotation" << YAML::Value << YAML::Binary(
+							reinterpret_cast<const unsigned char*>(desiredGlobalRotation.data()), desiredGlobalRotation.size() * sizeof(glm::quat));
+						skeletonOut << YAML::Key << "m_node.m_data.m_desiredGlobalPosition" << YAML::Value << YAML::Binary(
+							reinterpret_cast<const unsigned char*>(desiredGlobalPosition.data()), desiredGlobalPosition.size() * sizeof(glm::vec3));
+						skeletonOut << YAML::Key << "m_node.m_data.m_sagging" << YAML::Value << YAML::Binary(
+							reinterpret_cast<const unsigned char*>(sagging.data()), sagging.size() * sizeof(float));
+						skeletonOut << YAML::Key << "m_node.m_data.m_order" << YAML::Value << YAML::Binary(
+							reinterpret_cast<const unsigned char*>(order.data()), order.size() * sizeof(int));
+						skeletonOut << YAML::Key << "m_node.m_data.m_extraMass" << YAML::Value << YAML::Binary(
+							reinterpret_cast<const unsigned char*>(extraMass.data()), extraMass.size() * sizeof(float));
+					}
 				}
 			);
 		}
@@ -1724,29 +1820,15 @@ void Tree::Deserialize(const YAML::Node& in)
 			SkeletonSerializer<StrandModelSkeletonData, StrandModelFlowData, StrandModelNodeData>::Deserialize(inStrandModelSkeleton, m_strandModel.m_strandModelSkeleton,
 				[&](const YAML::Node& nodeIn, StrandModelNodeData& nodeData)
 				{
-					if (nodeIn["O"]) nodeData.m_offset = nodeIn["O"].as<glm::vec2>();
-					if (nodeIn["T"]) nodeData.m_twistAngle = nodeIn["T"].as<float>();
-					if (nodeIn["SP"]) nodeData.m_split = nodeIn["SP"].as<bool>();
-					if (nodeIn["SR"]) nodeData.m_strandRadius = nodeIn["SR"].as<float>();
-					if (nodeIn["SC"]) nodeData.m_strandCount = nodeIn["SC"].as<int>();
-
+					nodeData = {};
 					if (nodeIn["m_profile"])
 					{
 						const auto& inStrandGroup = nodeIn["m_profile"];
 						StrandModelProfileSerializer<CellParticlePhysicsData>::Deserialize(inStrandGroup, nodeData.m_profile,
-							[&](const YAML::Node& segmentIn, CellParticlePhysicsData& particleData)
-							{
-								if (segmentIn["CN"]) particleData.m_correspondingChildNodeHandle = segmentIn["CN"].as<NodeHandle>();
-								if (segmentIn["H"]) particleData.m_strandHandle = segmentIn["H"].as<StrandHandle>();
-								if (segmentIn["S"]) particleData.m_strandSegmentHandle = segmentIn["S"].as<StrandSegmentHandle>();
-								if (segmentIn["M"]) particleData.m_mainChild = segmentIn["M"].as<bool>();
-								if (segmentIn["B"]) particleData.m_base = segmentIn["B"].as<bool>();
-							}
-						);
+							[&](const YAML::Node& segmentIn, CellParticlePhysicsData& particleData){});
 					}
 				},
-				[&](const YAML::Node& flowIn, StrandModelFlowData& flowData)
-				{},
+				[&](const YAML::Node& flowIn, StrandModelFlowData& flowData) {},
 				[&](const YAML::Node& skeletonIn, StrandModelSkeletonData& skeletonData)
 				{
 					if (skeletonIn["m_strandGroup"])
@@ -1754,13 +1836,115 @@ void Tree::Deserialize(const YAML::Node& in)
 						const auto& inStrandGroup = skeletonIn["m_strandGroup"];
 						StrandGroupSerializer<StrandModelStrandGroupData, StrandModelStrandData, StrandModelStrandSegmentData>::Deserialize(inStrandGroup, m_strandModel.m_strandModelSkeleton.m_data.m_strandGroup,
 							[&](const YAML::Node& segmentIn, StrandModelStrandSegmentData& segmentData)
-							{
-								if (segmentIn["H"]) segmentData.m_nodeHandle = segmentIn["H"].as<NodeHandle>();
-								if (segmentIn["F"]) segmentData.m_profileParticleHandle = segmentIn["F"].as<ParticleHandle>();
-							},
+							{},
 							[&](const YAML::Node& strandIn, StrandModelStrandData& strandData) {},
-							[&](const YAML::Node& groupIn, StrandModelStrandGroupData& groupData) {}
+							[&](const YAML::Node& groupIn, StrandModelStrandGroupData& groupData)
+							{
+								if (groupIn["m_strandSegments.m_data.m_nodeHandle"])
+								{
+									auto list = std::vector<SkeletonNodeHandle>();
+									const auto data = groupIn["m_strandSegments.m_data.m_nodeHandle"].as<YAML::Binary>();
+									list.resize(data.size() / sizeof(SkeletonNodeHandle));
+									std::memcpy(list.data(), data.data(), data.size());
+									for (size_t i = 0; i < list.size(); i++)
+									{
+										auto& strandSegment = skeletonData.m_strandGroup.RefStrandSegment(i);
+										strandSegment.m_data.m_nodeHandle = list[i];
+									}
+								}
+
+								if (groupIn["m_strandSegments.m_data.m_profileParticleHandle"])
+								{
+									auto list = std::vector<ParticleHandle>();
+									const auto data = groupIn["m_strandSegments.m_data.m_profileParticleHandle"].as<YAML::Binary>();
+									list.resize(data.size() / sizeof(ParticleHandle));
+									std::memcpy(list.data(), data.data(), data.size());
+									for (size_t i = 0; i < list.size(); i++)
+									{
+										auto& strandSegment = skeletonData.m_strandGroup.RefStrandSegment(i);
+										strandSegment.m_data.m_profileParticleHandle = list[i];
+									}
+								}
+							}
 						);
+					}
+
+					if (skeletonIn["m_node.m_data.m_offset"])
+					{
+						auto list = std::vector<glm::vec2>();
+						const auto data = skeletonIn["m_node.m_data.m_offset"].as<YAML::Binary>();
+						list.resize(data.size() / sizeof(glm::vec2));
+						std::memcpy(list.data(), data.data(), data.size());
+						for (size_t i = 0; i < list.size(); i++)
+						{
+							auto& node = m_strandModel.m_strandModelSkeleton.RefNode(i);
+							node.m_data.m_offset = list[i];
+						}
+					}
+
+					if (skeletonIn["m_node.m_data.m_twistAngle"])
+					{
+						auto list = std::vector<float>();
+						const auto data = skeletonIn["m_node.m_data.m_twistAngle"].as<YAML::Binary>();
+						list.resize(data.size() / sizeof(float));
+						std::memcpy(list.data(), data.data(), data.size());
+						for (size_t i = 0; i < list.size(); i++)
+						{
+							auto& node = m_strandModel.m_strandModelSkeleton.RefNode(i);
+							node.m_data.m_twistAngle = list[i];
+						}
+					}
+
+					if (skeletonIn["m_node.m_data.m_packingIteration"])
+					{
+						auto list = std::vector<int>();
+						const auto data = skeletonIn["m_node.m_data.m_packingIteration"].as<YAML::Binary>();
+						list.resize(data.size() / sizeof(int));
+						std::memcpy(list.data(), data.data(), data.size());
+						for (size_t i = 0; i < list.size(); i++)
+						{
+							auto& node = m_strandModel.m_strandModelSkeleton.RefNode(i);
+							node.m_data.m_packingIteration = list[i];
+						}
+					}
+
+					if (skeletonIn["m_node.m_data.m_split"])
+					{
+						auto list = std::vector<int>();
+						const auto data = skeletonIn["m_node.m_data.m_split"].as<YAML::Binary>();
+						list.resize(data.size() / sizeof(int));
+						std::memcpy(list.data(), data.data(), data.size());
+						for (size_t i = 0; i < list.size(); i++)
+						{
+							auto& node = m_strandModel.m_strandModelSkeleton.RefNode(i);
+							node.m_data.m_split = list[i] == 1;
+						}
+					}
+
+					if (skeletonIn["m_node.m_data.m_strandRadius"])
+					{
+						auto list = std::vector<float>();
+						const auto data = skeletonIn["m_node.m_data.m_strandRadius"].as<YAML::Binary>();
+						list.resize(data.size() / sizeof(float));
+						std::memcpy(list.data(), data.data(), data.size());
+						for (size_t i = 0; i < list.size(); i++)
+						{
+							auto& node = m_strandModel.m_strandModelSkeleton.RefNode(i);
+							node.m_data.m_strandRadius = list[i];
+						}
+					}
+
+					if (skeletonIn["m_node.m_data.m_strandCount"])
+					{
+						auto list = std::vector<int>();
+						const auto data = skeletonIn["m_node.m_data.m_strandCount"].as<YAML::Binary>();
+						list.resize(data.size() / sizeof(int));
+						std::memcpy(list.data(), data.data(), data.size());
+						for (size_t i = 0; i < list.size(); i++)
+						{
+							auto& node = m_strandModel.m_strandModelSkeleton.RefNode(i);
+							node.m_data.m_strandCount = list[i];
+						}
 					}
 				}
 			);
@@ -1775,20 +1959,10 @@ void Tree::Deserialize(const YAML::Node& in)
 			SkeletonSerializer<ShootGrowthData, ShootStemGrowthData, InternodeGrowthData>::Deserialize(inShootSkeleton, m_treeModel.RefShootSkeleton(),
 				[&](const YAML::Node& nodeIn, InternodeGrowthData& nodeData)
 				{
-					if (nodeIn["IL"]) nodeData.m_internodeLength = nodeIn["IL"].as<float>();
-					if (nodeIn["IPB"]) nodeData.m_indexOfParentBud = nodeIn["IPB"].as<int>();
-					if (nodeIn["SA"]) nodeData.m_startAge = nodeIn["SA"].as<float>();
-					if (nodeIn["FA"]) nodeData.m_finishAge = nodeIn["FA"].as<float>();
-					if (nodeIn["DLR"]) nodeData.m_desiredLocalRotation = nodeIn["DLR"].as<glm::quat>();
-					if (nodeIn["DGR"]) nodeData.m_desiredGlobalRotation = nodeIn["DGR"].as<glm::quat>();
-					if (nodeIn["DGP"]) nodeData.m_desiredGlobalPosition = nodeIn["DGP"].as<glm::vec3>();
-					if (nodeIn["S"]) nodeData.m_sagging = nodeIn["S"].as<float>();
-					if (nodeIn["O"]) nodeData.m_order = nodeIn["O"].as<int>();
-					if (nodeIn["EM"]) nodeData.m_extraMass = nodeIn["EM"].as<float>();
 					nodeData.m_buds.clear();
-					if (nodeIn["B"])
+					if (nodeIn["m_buds"])
 					{
-						const auto& inBuds = nodeIn["B"];
+						const auto& inBuds = nodeIn["m_buds"];
 						for (const auto& inBud : inBuds)
 						{
 							nodeData.m_buds.emplace_back();
@@ -1808,12 +1982,142 @@ void Tree::Deserialize(const YAML::Node& in)
 				},
 				[&](const YAML::Node& flowIn, ShootStemGrowthData& flowData)
 				{
-					if (flowIn["O"]) flowData.m_order = flowIn["O"].as<int>();
+					if (flowIn["m_data"]) flowData.m_order = flowIn["m_data"].as<int>();
 				},
 				[&](const YAML::Node& skeletonIn, ShootGrowthData& skeletonData)
 				{
 					if (skeletonIn["m_desiredMin"]) skeletonData.m_desiredMin = skeletonIn["m_desiredMin"].as<glm::vec3>();
 					if (skeletonIn["m_desiredMax"]) skeletonData.m_desiredMax = skeletonIn["m_desiredMax"].as<glm::vec3>();
+
+					if (skeletonIn["m_node.m_data.m_internodeLength"])
+					{
+						auto list = std::vector<float>();
+						const auto data = skeletonIn["m_node.m_data.m_internodeLength"].as<YAML::Binary>();
+						list.resize(data.size() / sizeof(float));
+						std::memcpy(list.data(), data.data(), data.size());
+						for (size_t i = 0; i < list.size(); i++)
+						{
+							auto& node = m_treeModel.RefShootSkeleton().RefNode(i);
+							node.m_data.m_internodeLength = list[i];
+						}
+					}
+
+					if (skeletonIn["m_node.m_data.m_indexOfParentBud"])
+					{
+						auto list = std::vector<int>();
+						const auto data = skeletonIn["m_node.m_data.m_indexOfParentBud"].as<YAML::Binary>();
+						list.resize(data.size() / sizeof(int));
+						std::memcpy(list.data(), data.data(), data.size());
+						for (size_t i = 0; i < list.size(); i++)
+						{
+							auto& node = m_treeModel.RefShootSkeleton().RefNode(i);
+							node.m_data.m_indexOfParentBud = list[i];
+						}
+					}
+
+					if (skeletonIn["m_node.m_data.m_startAge"])
+					{
+						auto list = std::vector<float>();
+						const auto data = skeletonIn["m_node.m_data.m_startAge"].as<YAML::Binary>();
+						list.resize(data.size() / sizeof(float));
+						std::memcpy(list.data(), data.data(), data.size());
+						for (size_t i = 0; i < list.size(); i++)
+						{
+							auto& node = m_treeModel.RefShootSkeleton().RefNode(i);
+							node.m_data.m_startAge = list[i];
+						}
+					}
+
+					if (skeletonIn["m_node.m_data.m_finishAge"])
+					{
+						auto list = std::vector<float>();
+						const auto data = skeletonIn["m_node.m_data.m_finishAge"].as<YAML::Binary>();
+						list.resize(data.size() / sizeof(float));
+						std::memcpy(list.data(), data.data(), data.size());
+						for (size_t i = 0; i < list.size(); i++)
+						{
+							auto& node = m_treeModel.RefShootSkeleton().RefNode(i);
+							node.m_data.m_finishAge = list[i];
+						}
+					}
+
+					if (skeletonIn["m_node.m_data.m_desiredLocalRotation"])
+					{
+						auto list = std::vector<glm::quat>();
+						const auto data = skeletonIn["m_node.m_data.m_desiredLocalRotation"].as<YAML::Binary>();
+						list.resize(data.size() / sizeof(glm::quat));
+						std::memcpy(list.data(), data.data(), data.size());
+						for (size_t i = 0; i < list.size(); i++)
+						{
+							auto& node = m_treeModel.RefShootSkeleton().RefNode(i);
+							node.m_data.m_desiredLocalRotation = list[i];
+						}
+					}
+
+					if (skeletonIn["m_node.m_data.m_desiredGlobalRotation"])
+					{
+						auto list = std::vector<glm::quat>();
+						const auto data = skeletonIn["m_node.m_data.m_desiredGlobalRotation"].as<YAML::Binary>();
+						list.resize(data.size() / sizeof(glm::quat));
+						std::memcpy(list.data(), data.data(), data.size());
+						for (size_t i = 0; i < list.size(); i++)
+						{
+							auto& node = m_treeModel.RefShootSkeleton().RefNode(i);
+							node.m_data.m_desiredGlobalRotation = list[i];
+						}
+					}
+
+					if (skeletonIn["m_node.m_data.m_desiredGlobalPosition"])
+					{
+						auto list = std::vector<glm::vec3>();
+						const auto data = skeletonIn["m_node.m_data.m_desiredGlobalPosition"].as<YAML::Binary>();
+						list.resize(data.size() / sizeof(glm::vec3));
+						std::memcpy(list.data(), data.data(), data.size());
+						for (size_t i = 0; i < list.size(); i++)
+						{
+							auto& node = m_treeModel.RefShootSkeleton().RefNode(i);
+							node.m_data.m_desiredGlobalPosition = list[i];
+						}
+					}
+
+					if (skeletonIn["m_node.m_data.m_sagging"])
+					{
+						auto list = std::vector<float>();
+						const auto data = skeletonIn["m_node.m_data.m_sagging"].as<YAML::Binary>();
+						list.resize(data.size() / sizeof(float));
+						std::memcpy(list.data(), data.data(), data.size());
+						for (size_t i = 0; i < list.size(); i++)
+						{
+							auto& node = m_treeModel.RefShootSkeleton().RefNode(i);
+							node.m_data.m_sagging = list[i];
+						}
+					}
+
+					if (skeletonIn["m_node.m_data.m_order"])
+					{
+						auto list = std::vector<int>();
+						const auto data = skeletonIn["m_node.m_data.m_order"].as<YAML::Binary>();
+						list.resize(data.size() / sizeof(int));
+						std::memcpy(list.data(), data.data(), data.size());
+						for (size_t i = 0; i < list.size(); i++)
+						{
+							auto& node = m_treeModel.RefShootSkeleton().RefNode(i);
+							node.m_data.m_order = list[i];
+						}
+					}
+
+					if (skeletonIn["m_node.m_data.m_extraMass"])
+					{
+						auto list = std::vector<float>();
+						const auto data = skeletonIn["m_node.m_data.m_extraMass"].as<YAML::Binary>();
+						list.resize(data.size() / sizeof(float));
+						std::memcpy(list.data(), data.data(), data.size());
+						for (size_t i = 0; i < list.size(); i++)
+						{
+							auto& node = m_treeModel.RefShootSkeleton().RefNode(i);
+							node.m_data.m_extraMass = list[i];
+						}
+					}
 				}
 			);
 			m_treeModel.m_initialized = true;
@@ -1988,7 +2292,8 @@ void Tree::RegisterVoxel()
 	const auto owner = GetOwner();
 	const auto globalTransform = scene->GetDataComponent<GlobalTransform>(owner).m_value;
 	m_treeModel.m_index = owner.GetIndex();
-	m_treeModel.RegisterVoxel(globalTransform, m_climate.Get<Climate>()->m_climateModel, m_shootGrowthController);
+	const auto climate = m_climate.Get<Climate>();
+	m_treeModel.RegisterVoxel(globalTransform, climate->m_climateModel, m_shootGrowthController);
 }
 
 void Tree::FromLSystemString(const std::shared_ptr<LSystemString>& lSystemString)
@@ -2018,7 +2323,7 @@ struct TreePart {
 	bool m_isJunction = false;
 	JunctionLine m_baseLine;
 	std::vector<JunctionLine> m_childrenLines;
-	std::vector<NodeHandle> m_nodeHandles;
+	std::vector<SkeletonNodeHandle> m_nodeHandles;
 	std::vector<bool> m_isEnd;
 	std::vector<int> m_lineIndex;
 };
@@ -2029,7 +2334,7 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 		const auto& skeleton = m_treeModel.RefShootSkeleton();
 		const auto& sortedInternodeList = skeleton.PeekSortedNodeList();
 		std::vector<TreePart> treeParts{};
-		std::unordered_map<NodeHandle, TreePartInfo> treePartInfos{};
+		std::unordered_map<SkeletonNodeHandle, TreePartInfo> treePartInfos{};
 		int nextLineIndex = 0;
 		for (int internodeHandle : sortedInternodeList)
 		{
@@ -2038,8 +2343,8 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 			auto parentInternodeHandle = internode.GetParentHandle();
 			const auto flowHandle = internode.GetFlowHandle();
 			const auto& flow = skeleton.PeekFlow(flowHandle);
-			const auto& chainHandles = flow.RefNodeHandles();
-			const bool hasMultipleChildren = flow.RefChildHandles().size() > 1;
+			const auto& chainHandles = flow.PeekNodeHandles();
+			const bool hasMultipleChildren = flow.PeekChildHandles().size() > 1;
 			bool onlyChild = true;
 			const auto parentFlowHandle = flow.GetParentHandle();
 			float distanceToChainStart = 0;
@@ -2056,7 +2361,7 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 			if (parentFlowHandle != -1)
 			{
 				const auto& parentFlow = skeleton.PeekFlow(parentFlowHandle);
-				onlyChild = parentFlow.RefChildHandles().size() <= 1;
+				onlyChild = parentFlow.PeekChildHandles().size() <= 1;
 				compareRadius = parentFlow.m_info.m_endThickness;
 			}
 			int treePartType = 0;
@@ -2180,7 +2485,7 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 			{
 				const auto& baseNode = skeleton.PeekNode(treePart.m_nodeHandles.front());
 				const auto& flow = skeleton.PeekFlow(baseNode.GetFlowHandle());
-				const auto& chainHandles = flow.RefNodeHandles();
+				const auto& chainHandles = flow.PeekNodeHandles();
 				const auto centerInternodeHandle = chainHandles.back();
 				const auto& centerInternode = skeleton.PeekNode(centerInternodeHandle);
 				treePart.m_baseLine.m_startPosition = startInternode.m_info.m_globalPosition;
@@ -2306,7 +2611,7 @@ bool Tree::ExportIOTree(const std::filesystem::path& path) const
 	rootNodeData.pos = rootNode.m_info.m_globalPosition;
 
 	auto rootId = tree.addRoot(rootNodeData);
-	std::unordered_map<NodeHandle, size_t> nodeMap;
+	std::unordered_map<SkeletonNodeHandle, size_t> nodeMap;
 	nodeMap[0] = rootId;
 	for (const auto& nodeHandle : sortedInternodeList)
 	{
@@ -2363,33 +2668,43 @@ void SkeletalGraphSettings::OnInspect()
 	ImGui::ColorEdit4("Junction point color", &m_junctionPointColor.x);
 }
 
-void Tree::PrepareControllers(const std::shared_ptr<TreeDescriptor>& treeDescriptor)
+void Tree::PrepareController(const std::shared_ptr<ShootDescriptor>& shootDescriptor, const std::shared_ptr<Soil>& soil, const std::shared_ptr<Climate>& climate)
 {
-	const auto soil = m_soil.Get<Soil>();
-	const auto climate = m_climate.Get<Climate>();
-
-	{
-		auto shootDescriptor = treeDescriptor->m_shootDescriptor.Get<ShootDescriptor>();
-		if (!shootDescriptor)
+	shootDescriptor->PrepareController(m_shootGrowthController);
+	m_shootGrowthController.m_leafDamage = [=](const SkeletonNode<InternodeGrowthData>& internode)
 		{
-			shootDescriptor = ProjectManager::CreateTemporaryAsset<ShootDescriptor>();
-			treeDescriptor->m_shootDescriptor = shootDescriptor;
-			EVOENGINE_WARNING("Shoot Descriptor Missing!");
-		}
-
-		shootDescriptor->PrepareController(m_shootGrowthController);
-		m_shootGrowthController.m_leafDamage = [=](const Node<InternodeGrowthData>& internode)
+			const auto& internodeData = internode.m_data;
+			float leafDamage = 0.0f;
+			if (climate->m_climateModel.m_time - glm::floor(climate->m_climateModel.m_time) > 0.5f && internodeData.m_temperature < shootDescriptor->m_leafChlorophyllSynthesisFactorTemperature)
 			{
-				const auto& internodeData = internode.m_data;
-				float leafDamage = 0.0f;
-				if (climate->m_climateModel.m_time - glm::floor(climate->m_climateModel.m_time) > 0.5f && internodeData.m_temperature < shootDescriptor->m_leafChlorophyllSynthesisFactorTemperature)
+				leafDamage += shootDescriptor->m_leafChlorophyllLoss;
+			}
+			return leafDamage;
+		};
+	m_shootGrowthController.m_pruningFactor = [&](const ShootSkeleton& shootSkeleton, const SkeletonNode<InternodeGrowthData>& internode)
+		{
+			if (shootDescriptor->m_trunkProtection && internode.m_data.m_order == 0)
+			{
+				return 0.f;
+			}
+			float pruningProbability = 0.0f;
+			if (shootDescriptor->m_maxFlowLength != 0 && shootDescriptor->m_maxFlowLength < internode.m_info.m_chainIndex)
+			{
+				pruningProbability += 999.f;
+			}
+			if (internode.IsEndNode()) {
+				if (internode.m_data.m_lightIntensity <= shootDescriptor->m_lightPruningFactor)
 				{
-					leafDamage += shootDescriptor->m_leafChlorophyllLoss;
+					pruningProbability += shootDescriptor->m_lightPruningProbability;
 				}
-				return leafDamage;
-			};
-
-	}
+			}
+			if (internode.m_data.m_level != 0 && shootDescriptor->m_thicknessPruningFactor != 0.0f
+				&& internode.m_info.m_thickness / internode.m_info.m_endDistance < shootDescriptor->m_thicknessPruningFactor)
+			{
+				pruningProbability += shootDescriptor->m_thicknessPruningProbability;
+			}
+			return pruningProbability;
+		};
 }
 
 void Tree::InitializeStrandRenderer()
@@ -2442,6 +2757,7 @@ void Tree::InitializeStrandModelMeshRenderer(const StrandModelMeshGeneratorSetti
 
 	BuildStrandModel();
 
+	const float time = Times::Now();
 	const auto scene = GetScene();
 	const auto self = GetOwner();
 	const auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
@@ -2506,6 +2822,10 @@ void Tree::InitializeStrandModelMeshRenderer(const StrandModelMeshGeneratorSetti
 		meshRenderer->m_material = material;
 
 	}
+	std::string output;
+	const float meshGenerationTime = Times::Now() - time;
+	output += "\nMesh generation Used time: " + std::to_string(meshGenerationTime) + "\n";
+	EVOENGINE_LOG(output);
 }
 
 void Tree::ClearStrandModelMeshRenderer() const

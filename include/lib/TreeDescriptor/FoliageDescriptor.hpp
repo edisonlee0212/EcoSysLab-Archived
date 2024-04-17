@@ -46,7 +46,7 @@ namespace EcoSysLab
 		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 		void CollectAssetRef(std::vector<AssetRef>& list) override;
 
-		void GenerateFoliageMatrices(std::vector<glm::mat4>& matrices, const NodeInfo& internodeInfo) const;
+		void GenerateFoliageMatrices(std::vector<glm::mat4>& matrices, const SkeletonNodeInfo& internodeInfo) const;
 	};
 
 
