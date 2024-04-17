@@ -885,7 +885,7 @@ std::vector<std::tuple<Slice, PipeCluster, std::vector<size_t> > > computeSlices
 	// first check if there are any pipes that might be needed for merging
 	if (t > 0.0)
 	{
-		NodeHandle nh = getNodeHandle(pipeGroup, pipesInPrevious.front(), glm::floor(t - stepSize));
+		SkeletonNodeHandle nh = getNodeHandle(pipeGroup, pipesInPrevious.front(), glm::floor(t - stepSize));
 		const auto* node = &skeleton.PeekNode(nh);
 
 		// need to go further down in some cases
@@ -899,7 +899,7 @@ std::vector<std::tuple<Slice, PipeCluster, std::vector<size_t> > > computeSlices
 
 		for (auto& particle : node->m_data.m_profile.PeekParticles())
 		{		
-			allPipesWithSameNode.push_back(particle.m_data.m_strandHandle);
+			allPipesWithSameNode.push_back(particle.m_strandHandle);
 		}
 
 		/*if (allPipesWithSameNode.size() != pipesInPrevious.size())
