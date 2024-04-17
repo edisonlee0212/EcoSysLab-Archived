@@ -44,20 +44,20 @@ namespace EcoSysLab {
 			strandInfoBaseInfoColorList[strandIndex] = strand.m_info.m_baseInfo.m_color;
 			strandInfoBaseInfoIsBoundaryList[strandIndex] = strand.m_info.m_baseInfo.m_isBoundary;
 		}
-
-		out << YAML::Key << "m_strands.m_recycled" << YAML::Value << YAML::Binary(
-			reinterpret_cast<const unsigned char*>(strandRecycledList.data()), strandRecycledList.size() * sizeof(int));
-		out << YAML::Key << "m_strands.m_info.m_color" << YAML::Value << YAML::Binary(
-			reinterpret_cast<const unsigned char*>(strandInfoColorList.data()), strandInfoColorList.size() * sizeof(glm::vec4));
-		out << YAML::Key << "m_strands.m_info.m_baseInfo.m_globalPosition" << YAML::Value << YAML::Binary(
-			reinterpret_cast<const unsigned char*>(strandInfoBaseInfoGlobalPositionList.data()), strandInfoBaseInfoGlobalPositionList.size() * sizeof(glm::vec3));
-		out << YAML::Key << "m_strands.m_info.m_baseInfo.m_thickness" << YAML::Value << YAML::Binary(
-			reinterpret_cast<const unsigned char*>(strandInfoBaseInfoThicknessList.data()), strandInfoBaseInfoThicknessList.size() * sizeof(float));
-		out << YAML::Key << "m_strands.m_info.m_baseInfo.m_color" << YAML::Value << YAML::Binary(
-			reinterpret_cast<const unsigned char*>(strandInfoBaseInfoColorList.data()), strandInfoBaseInfoColorList.size() * sizeof(glm::vec4));
-		out << YAML::Key << "m_strands.m_info.m_baseInfo.m_isBoundary" << YAML::Value << YAML::Binary(
-			reinterpret_cast<const unsigned char*>(strandInfoBaseInfoIsBoundaryList.data()), strandInfoBaseInfoIsBoundaryList.size() * sizeof(int));
-
+		if (strandSize != 0) {
+			out << YAML::Key << "m_strands.m_recycled" << YAML::Value << YAML::Binary(
+				reinterpret_cast<const unsigned char*>(strandRecycledList.data()), strandRecycledList.size() * sizeof(int));
+			out << YAML::Key << "m_strands.m_info.m_color" << YAML::Value << YAML::Binary(
+				reinterpret_cast<const unsigned char*>(strandInfoColorList.data()), strandInfoColorList.size() * sizeof(glm::vec4));
+			out << YAML::Key << "m_strands.m_info.m_baseInfo.m_globalPosition" << YAML::Value << YAML::Binary(
+				reinterpret_cast<const unsigned char*>(strandInfoBaseInfoGlobalPositionList.data()), strandInfoBaseInfoGlobalPositionList.size() * sizeof(glm::vec3));
+			out << YAML::Key << "m_strands.m_info.m_baseInfo.m_thickness" << YAML::Value << YAML::Binary(
+				reinterpret_cast<const unsigned char*>(strandInfoBaseInfoThicknessList.data()), strandInfoBaseInfoThicknessList.size() * sizeof(float));
+			out << YAML::Key << "m_strands.m_info.m_baseInfo.m_color" << YAML::Value << YAML::Binary(
+				reinterpret_cast<const unsigned char*>(strandInfoBaseInfoColorList.data()), strandInfoBaseInfoColorList.size() * sizeof(glm::vec4));
+			out << YAML::Key << "m_strands.m_info.m_baseInfo.m_isBoundary" << YAML::Value << YAML::Binary(
+				reinterpret_cast<const unsigned char*>(strandInfoBaseInfoIsBoundaryList.data()), strandInfoBaseInfoIsBoundaryList.size() * sizeof(int));
+		}
 		out << YAML::Key << "m_strands" << YAML::Value << YAML::BeginSeq;
 		for (const auto& strand : strandGroup.m_strands)
 		{
@@ -107,31 +107,30 @@ namespace EcoSysLab {
 			strandSegmentColorList[strandSegmentIndex] = strandSegment.m_info.m_color;
 			strandSegmentBoundaryList[strandSegmentIndex] = strandSegment.m_info.m_isBoundary;
 		}
+		if (strandSegmentSize != 0) {
+			out << YAML::Key << "m_strandSegments.m_endSegment" << YAML::Value << YAML::Binary(
+				reinterpret_cast<const unsigned char*>(strandSegmentEndSegmentList.data()), strandSegmentEndSegmentList.size() * sizeof(int));
+			out << YAML::Key << "m_strandSegments.m_recycled" << YAML::Value << YAML::Binary(
+				reinterpret_cast<const unsigned char*>(strandSegmentRecycledList.data()), strandSegmentRecycledList.size() * sizeof(int));
 
-		out << YAML::Key << "m_strandSegments.m_endSegment" << YAML::Value << YAML::Binary(
-			reinterpret_cast<const unsigned char*>(strandSegmentEndSegmentList.data()), strandSegmentEndSegmentList.size() * sizeof(int));
-		out << YAML::Key << "m_strandSegments.m_recycled" << YAML::Value << YAML::Binary(
-			reinterpret_cast<const unsigned char*>(strandSegmentRecycledList.data()), strandSegmentRecycledList.size() * sizeof(int));
+			out << YAML::Key << "m_strandSegments.m_prevHandle" << YAML::Value << YAML::Binary(
+				reinterpret_cast<const unsigned char*>(strandSegmentPrevList.data()), strandSegmentPrevList.size() * sizeof(StrandSegmentHandle));
+			out << YAML::Key << "m_strandSegments.m_nextHandle" << YAML::Value << YAML::Binary(
+				reinterpret_cast<const unsigned char*>(strandSegmentNextList.data()), strandSegmentNextList.size() * sizeof(StrandSegmentHandle));
+			out << YAML::Key << "m_strandSegments.m_strandHandle" << YAML::Value << YAML::Binary(
+				reinterpret_cast<const unsigned char*>(strandSegmentStrandHandleList.data()), strandSegmentStrandHandleList.size() * sizeof(StrandHandle));
+			out << YAML::Key << "m_strandSegments.m_index" << YAML::Value << YAML::Binary(
+				reinterpret_cast<const unsigned char*>(strandSegmentIndexList.data()), strandSegmentIndexList.size() * sizeof(int));
 
-		out << YAML::Key << "m_strandSegments.m_prevHandle" << YAML::Value << YAML::Binary(
-			reinterpret_cast<const unsigned char*>(strandSegmentPrevList.data()), strandSegmentPrevList.size() * sizeof(StrandSegmentHandle));
-		out << YAML::Key << "m_strandSegments.m_nextHandle" << YAML::Value << YAML::Binary(
-			reinterpret_cast<const unsigned char*>(strandSegmentNextList.data()), strandSegmentNextList.size() * sizeof(StrandSegmentHandle));
-		out << YAML::Key << "m_strandSegments.m_strandHandle" << YAML::Value << YAML::Binary(
-			reinterpret_cast<const unsigned char*>(strandSegmentStrandHandleList.data()), strandSegmentStrandHandleList.size() * sizeof(StrandHandle));
-		out << YAML::Key << "m_strandSegments.m_index" << YAML::Value << YAML::Binary(
-			reinterpret_cast<const unsigned char*>(strandSegmentIndexList.data()), strandSegmentIndexList.size() * sizeof(int));
-
-		out << YAML::Key << "m_strandSegments.m_info.m_globalPosition" << YAML::Value << YAML::Binary(
-			reinterpret_cast<const unsigned char*>(strandSegmentGlobalPositionList.data()), strandSegmentGlobalPositionList.size() * sizeof(glm::vec3));
-		out << YAML::Key << "m_strandSegments.m_info.m_thickness" << YAML::Value << YAML::Binary(
-			reinterpret_cast<const unsigned char*>(strandSegmentThicknessList.data()), strandSegmentThicknessList.size() * sizeof(float));
-		out << YAML::Key << "m_strandSegments.m_info.m_color" << YAML::Value << YAML::Binary(
-			reinterpret_cast<const unsigned char*>(strandSegmentColorList.data()), strandSegmentColorList.size() * sizeof(glm::vec4));
-		out << YAML::Key << "m_strandSegments.m_info.m_isBoundary" << YAML::Value << YAML::Binary(
-			reinterpret_cast<const unsigned char*>(strandSegmentBoundaryList.data()), strandSegmentBoundaryList.size() * sizeof(int));
-
-
+			out << YAML::Key << "m_strandSegments.m_info.m_globalPosition" << YAML::Value << YAML::Binary(
+				reinterpret_cast<const unsigned char*>(strandSegmentGlobalPositionList.data()), strandSegmentGlobalPositionList.size() * sizeof(glm::vec3));
+			out << YAML::Key << "m_strandSegments.m_info.m_thickness" << YAML::Value << YAML::Binary(
+				reinterpret_cast<const unsigned char*>(strandSegmentThicknessList.data()), strandSegmentThicknessList.size() * sizeof(float));
+			out << YAML::Key << "m_strandSegments.m_info.m_color" << YAML::Value << YAML::Binary(
+				reinterpret_cast<const unsigned char*>(strandSegmentColorList.data()), strandSegmentColorList.size() * sizeof(glm::vec4));
+			out << YAML::Key << "m_strandSegments.m_info.m_isBoundary" << YAML::Value << YAML::Binary(
+				reinterpret_cast<const unsigned char*>(strandSegmentBoundaryList.data()), strandSegmentBoundaryList.size() * sizeof(int));
+		}
 		out << YAML::Key << "m_strandSegments.m_data" << YAML::Value << YAML::BeginSeq;
 		for (const auto& strandSegment : strandGroup.m_strandSegments)
 		{

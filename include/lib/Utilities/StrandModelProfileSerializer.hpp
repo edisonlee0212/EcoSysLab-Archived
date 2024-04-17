@@ -54,34 +54,35 @@ namespace EcoSysLab {
 			mainChildList[particleIndex] = particle.m_mainChild ? 1 : 0;
 			baseList[particleIndex] = particle.m_base ? 1 : 0;
 		}
-		out << YAML::Key << "m_particles.m_color" << YAML::Value << YAML::Binary(
-			reinterpret_cast<const unsigned char*>(colorList.data()), colorList.size() * sizeof(glm::vec3));
-		out << YAML::Key << "m_particles.m_position" << YAML::Value << YAML::Binary(
-			reinterpret_cast<const unsigned char*>(positionList.data()), positionList.size() * sizeof(glm::vec2));
-		out << YAML::Key << "m_particles.m_lastPosition" << YAML::Value << YAML::Binary(
-			reinterpret_cast<const unsigned char*>(lastPositionList.data()), lastPositionList.size() * sizeof(glm::vec2));
-		out << YAML::Key << "m_particles.m_acceleration" << YAML::Value << YAML::Binary(
-			reinterpret_cast<const unsigned char*>(accelerationList.data()), accelerationList.size() * sizeof(glm::vec2));
-		out << YAML::Key << "m_particles.m_deltaPosition" << YAML::Value << YAML::Binary(
-			reinterpret_cast<const unsigned char*>(deltaPositionList.data()), deltaPositionList.size() * sizeof(glm::vec2));
-		out << YAML::Key << "m_particles.m_boundary" << YAML::Value << YAML::Binary(
-			reinterpret_cast<const unsigned char*>(boundaryList.data()), boundaryList.size() * sizeof(int));
-		out << YAML::Key << "m_particles.m_distanceToBoundary" << YAML::Value << YAML::Binary(
-			reinterpret_cast<const unsigned char*>(distanceToBoundaryList.data()), distanceToBoundaryList.size() * sizeof(float));
-		out << YAML::Key << "m_particles.m_initialPosition" << YAML::Value << YAML::Binary(
-			reinterpret_cast<const unsigned char*>(initialPositionList.data()), initialPositionList.size() * sizeof(glm::vec2));
+		if (particleSize != 0) {
+			out << YAML::Key << "m_particles.m_color" << YAML::Value << YAML::Binary(
+				reinterpret_cast<const unsigned char*>(colorList.data()), colorList.size() * sizeof(glm::vec3));
+			out << YAML::Key << "m_particles.m_position" << YAML::Value << YAML::Binary(
+				reinterpret_cast<const unsigned char*>(positionList.data()), positionList.size() * sizeof(glm::vec2));
+			out << YAML::Key << "m_particles.m_lastPosition" << YAML::Value << YAML::Binary(
+				reinterpret_cast<const unsigned char*>(lastPositionList.data()), lastPositionList.size() * sizeof(glm::vec2));
+			out << YAML::Key << "m_particles.m_acceleration" << YAML::Value << YAML::Binary(
+				reinterpret_cast<const unsigned char*>(accelerationList.data()), accelerationList.size() * sizeof(glm::vec2));
+			out << YAML::Key << "m_particles.m_deltaPosition" << YAML::Value << YAML::Binary(
+				reinterpret_cast<const unsigned char*>(deltaPositionList.data()), deltaPositionList.size() * sizeof(glm::vec2));
+			out << YAML::Key << "m_particles.m_boundary" << YAML::Value << YAML::Binary(
+				reinterpret_cast<const unsigned char*>(boundaryList.data()), boundaryList.size() * sizeof(int));
+			out << YAML::Key << "m_particles.m_distanceToBoundary" << YAML::Value << YAML::Binary(
+				reinterpret_cast<const unsigned char*>(distanceToBoundaryList.data()), distanceToBoundaryList.size() * sizeof(float));
+			out << YAML::Key << "m_particles.m_initialPosition" << YAML::Value << YAML::Binary(
+				reinterpret_cast<const unsigned char*>(initialPositionList.data()), initialPositionList.size() * sizeof(glm::vec2));
 
-		out << YAML::Key << "m_particles.m_correspondingChildNodeHandle" << YAML::Value << YAML::Binary(
-			reinterpret_cast<const unsigned char*>(correspondingChildNodeHandleList.data()), correspondingChildNodeHandleList.size() * sizeof(SkeletonNodeHandle));
-		out << YAML::Key << "m_particles.m_strandHandle" << YAML::Value << YAML::Binary(
-			reinterpret_cast<const unsigned char*>(strandList.data()), strandList.size() * sizeof(StrandHandle));
-		out << YAML::Key << "m_particles.m_strandSegmentHandle" << YAML::Value << YAML::Binary(
-			reinterpret_cast<const unsigned char*>(strandSegmentHandleList.data()), strandSegmentHandleList.size() * sizeof(StrandSegmentHandle));
-		out << YAML::Key << "m_particles.m_mainChild" << YAML::Value << YAML::Binary(
-			reinterpret_cast<const unsigned char*>(mainChildList.data()), mainChildList.size() * sizeof(int));
-		out << YAML::Key << "m_particles.m_base" << YAML::Value << YAML::Binary(
-			reinterpret_cast<const unsigned char*>(baseList.data()), baseList.size() * sizeof(int));
-
+			out << YAML::Key << "m_particles.m_correspondingChildNodeHandle" << YAML::Value << YAML::Binary(
+				reinterpret_cast<const unsigned char*>(correspondingChildNodeHandleList.data()), correspondingChildNodeHandleList.size() * sizeof(SkeletonNodeHandle));
+			out << YAML::Key << "m_particles.m_strandHandle" << YAML::Value << YAML::Binary(
+				reinterpret_cast<const unsigned char*>(strandList.data()), strandList.size() * sizeof(StrandHandle));
+			out << YAML::Key << "m_particles.m_strandSegmentHandle" << YAML::Value << YAML::Binary(
+				reinterpret_cast<const unsigned char*>(strandSegmentHandleList.data()), strandSegmentHandleList.size() * sizeof(StrandSegmentHandle));
+			out << YAML::Key << "m_particles.m_mainChild" << YAML::Value << YAML::Binary(
+				reinterpret_cast<const unsigned char*>(mainChildList.data()), mainChildList.size() * sizeof(int));
+			out << YAML::Key << "m_particles.m_base" << YAML::Value << YAML::Binary(
+				reinterpret_cast<const unsigned char*>(baseList.data()), baseList.size() * sizeof(int));
+		}
 
 		out << YAML::Key << "m_particles.m_data" << YAML::Value << YAML::BeginSeq;
 		for (const auto& particles2D : strandModelProfile.m_particles2D)

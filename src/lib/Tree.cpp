@@ -699,11 +699,8 @@ void Tree::Update()
 }
 
 void Tree::OnCreate() {
-	m_treeModel = {};
-	m_strandModel = {};
-
 	m_treeVisualizer.Initialize();
-
+	m_treeVisualizer.m_needUpdate = true;
 	m_strandModelParameters.m_branchTwistDistribution.m_mean = { -60.0f, 60.0f };
 	m_strandModelParameters.m_branchTwistDistribution.m_deviation = { 0.0f, 1.0f, {0, 0} };
 
@@ -1670,10 +1667,12 @@ void Tree::Serialize(YAML::Emitter& out)
 									nodeHandle.at(strandSegmentIndex) = strandSegment.m_data.m_nodeHandle;
 									profileParticleHandles.at(strandSegmentIndex) = strandSegment.m_data.m_profileParticleHandle;
 								}
-								groupOut << YAML::Key << "m_strandSegments.m_data.m_nodeHandle" << YAML::Value << YAML::Binary(
-									reinterpret_cast<const unsigned char*>(nodeHandle.data()), nodeHandle.size() * sizeof(SkeletonNodeHandle));
-								groupOut << YAML::Key << "m_strandSegments.m_data.m_profileParticleHandle" << YAML::Value << YAML::Binary(
-									reinterpret_cast<const unsigned char*>(profileParticleHandles.data()), profileParticleHandles.size() * sizeof(ParticleHandle));
+								if (strandSegmentSize != 0) {
+									groupOut << YAML::Key << "m_strandSegments.m_data.m_nodeHandle" << YAML::Value << YAML::Binary(
+										reinterpret_cast<const unsigned char*>(nodeHandle.data()), nodeHandle.size() * sizeof(SkeletonNodeHandle));
+									groupOut << YAML::Key << "m_strandSegments.m_data.m_profileParticleHandle" << YAML::Value << YAML::Binary(
+										reinterpret_cast<const unsigned char*>(profileParticleHandles.data()), profileParticleHandles.size() * sizeof(ParticleHandle));
+								}
 							}
 						);
 					}
@@ -1695,17 +1694,18 @@ void Tree::Serialize(YAML::Emitter& out)
 						strandRadius.at(nodeIndex) = node.m_data.m_strandRadius;
 						strandCount.at(nodeIndex) = node.m_data.m_strandCount;
 					}
-
-					skeletonOut << YAML::Key << "m_node.m_data.m_offset" << YAML::Value << YAML::Binary(
-						reinterpret_cast<const unsigned char*>(offset.data()), offset.size() * sizeof(glm::vec2));
-					skeletonOut << YAML::Key << "m_node.m_data.m_twistAngle" << YAML::Value << YAML::Binary(
-						reinterpret_cast<const unsigned char*>(twistAngle.data()), twistAngle.size() * sizeof(float));
-					skeletonOut << YAML::Key << "m_node.m_data.m_split" << YAML::Value << YAML::Binary(
-						reinterpret_cast<const unsigned char*>(split.data()), split.size() * sizeof(int));
-					skeletonOut << YAML::Key << "m_node.m_data.m_strandRadius" << YAML::Value << YAML::Binary(
-						reinterpret_cast<const unsigned char*>(strandRadius.data()), strandRadius.size() * sizeof(float));
-					skeletonOut << YAML::Key << "m_node.m_data.m_strandCount" << YAML::Value << YAML::Binary(
-						reinterpret_cast<const unsigned char*>(strandCount.data()), strandCount.size() * sizeof(float));
+					if (nodeSize != 0) {
+						skeletonOut << YAML::Key << "m_node.m_data.m_offset" << YAML::Value << YAML::Binary(
+							reinterpret_cast<const unsigned char*>(offset.data()), offset.size() * sizeof(glm::vec2));
+						skeletonOut << YAML::Key << "m_node.m_data.m_twistAngle" << YAML::Value << YAML::Binary(
+							reinterpret_cast<const unsigned char*>(twistAngle.data()), twistAngle.size() * sizeof(float));
+						skeletonOut << YAML::Key << "m_node.m_data.m_split" << YAML::Value << YAML::Binary(
+							reinterpret_cast<const unsigned char*>(split.data()), split.size() * sizeof(int));
+						skeletonOut << YAML::Key << "m_node.m_data.m_strandRadius" << YAML::Value << YAML::Binary(
+							reinterpret_cast<const unsigned char*>(strandRadius.data()), strandRadius.size() * sizeof(float));
+						skeletonOut << YAML::Key << "m_node.m_data.m_strandCount" << YAML::Value << YAML::Binary(
+							reinterpret_cast<const unsigned char*>(strandCount.data()), strandCount.size() * sizeof(float));
+					}
 				}
 			);
 		}
@@ -1776,27 +1776,28 @@ void Tree::Serialize(YAML::Emitter& out)
 						extraMass.at(nodeIndex) = node.m_data.m_extraMass;
 
 					}
-
-					skeletonOut << YAML::Key << "m_node.m_data.m_internodeLength" << YAML::Value << YAML::Binary(
-						reinterpret_cast<const unsigned char*>(internodeLength.data()), internodeLength.size() * sizeof(float));
-					skeletonOut << YAML::Key << "m_node.m_data.m_indexOfParentBud" << YAML::Value << YAML::Binary(
-						reinterpret_cast<const unsigned char*>(indexOfParentBud.data()), indexOfParentBud.size() * sizeof(int));
-					skeletonOut << YAML::Key << "m_node.m_data.m_startAge" << YAML::Value << YAML::Binary(
-						reinterpret_cast<const unsigned char*>(startAge.data()), startAge.size() * sizeof(float));
-					skeletonOut << YAML::Key << "m_node.m_data.m_finishAge" << YAML::Value << YAML::Binary(
-						reinterpret_cast<const unsigned char*>(finishAge.data()), finishAge.size() * sizeof(float));
-					skeletonOut << YAML::Key << "m_node.m_data.m_desiredLocalRotation" << YAML::Value << YAML::Binary(
-						reinterpret_cast<const unsigned char*>(desiredLocalRotation.data()), desiredLocalRotation.size() * sizeof(glm::quat));
-					skeletonOut << YAML::Key << "m_node.m_data.m_desiredGlobalRotation" << YAML::Value << YAML::Binary(
-						reinterpret_cast<const unsigned char*>(desiredGlobalRotation.data()), desiredGlobalRotation.size() * sizeof(glm::quat));
-					skeletonOut << YAML::Key << "m_node.m_data.m_desiredGlobalPosition" << YAML::Value << YAML::Binary(
-						reinterpret_cast<const unsigned char*>(desiredGlobalPosition.data()), desiredGlobalPosition.size() * sizeof(glm::vec3));
-					skeletonOut << YAML::Key << "m_node.m_data.m_sagging" << YAML::Value << YAML::Binary(
-						reinterpret_cast<const unsigned char*>(sagging.data()), sagging.size() * sizeof(float));
-					skeletonOut << YAML::Key << "m_node.m_data.m_order" << YAML::Value << YAML::Binary(
-						reinterpret_cast<const unsigned char*>(order.data()), order.size() * sizeof(int));
-					skeletonOut << YAML::Key << "m_node.m_data.m_extraMass" << YAML::Value << YAML::Binary(
-						reinterpret_cast<const unsigned char*>(extraMass.data()), extraMass.size() * sizeof(float));
+					if (nodeSize != 0) {
+						skeletonOut << YAML::Key << "m_node.m_data.m_internodeLength" << YAML::Value << YAML::Binary(
+							reinterpret_cast<const unsigned char*>(internodeLength.data()), internodeLength.size() * sizeof(float));
+						skeletonOut << YAML::Key << "m_node.m_data.m_indexOfParentBud" << YAML::Value << YAML::Binary(
+							reinterpret_cast<const unsigned char*>(indexOfParentBud.data()), indexOfParentBud.size() * sizeof(int));
+						skeletonOut << YAML::Key << "m_node.m_data.m_startAge" << YAML::Value << YAML::Binary(
+							reinterpret_cast<const unsigned char*>(startAge.data()), startAge.size() * sizeof(float));
+						skeletonOut << YAML::Key << "m_node.m_data.m_finishAge" << YAML::Value << YAML::Binary(
+							reinterpret_cast<const unsigned char*>(finishAge.data()), finishAge.size() * sizeof(float));
+						skeletonOut << YAML::Key << "m_node.m_data.m_desiredLocalRotation" << YAML::Value << YAML::Binary(
+							reinterpret_cast<const unsigned char*>(desiredLocalRotation.data()), desiredLocalRotation.size() * sizeof(glm::quat));
+						skeletonOut << YAML::Key << "m_node.m_data.m_desiredGlobalRotation" << YAML::Value << YAML::Binary(
+							reinterpret_cast<const unsigned char*>(desiredGlobalRotation.data()), desiredGlobalRotation.size() * sizeof(glm::quat));
+						skeletonOut << YAML::Key << "m_node.m_data.m_desiredGlobalPosition" << YAML::Value << YAML::Binary(
+							reinterpret_cast<const unsigned char*>(desiredGlobalPosition.data()), desiredGlobalPosition.size() * sizeof(glm::vec3));
+						skeletonOut << YAML::Key << "m_node.m_data.m_sagging" << YAML::Value << YAML::Binary(
+							reinterpret_cast<const unsigned char*>(sagging.data()), sagging.size() * sizeof(float));
+						skeletonOut << YAML::Key << "m_node.m_data.m_order" << YAML::Value << YAML::Binary(
+							reinterpret_cast<const unsigned char*>(order.data()), order.size() * sizeof(int));
+						skeletonOut << YAML::Key << "m_node.m_data.m_extraMass" << YAML::Value << YAML::Binary(
+							reinterpret_cast<const unsigned char*>(extraMass.data()), extraMass.size() * sizeof(float));
+					}
 				}
 			);
 		}
