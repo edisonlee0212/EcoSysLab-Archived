@@ -815,6 +815,7 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 			if (ImGui::TreeNode("Skeletal graph"))
 			{
 				m_skeletalGraphSettings.OnInspect();
+				ImGui::TreePop();
 			}
 			if (ImGui::Button("Generate Skeletal graphs")) {
 				GenerateSkeletalGraphs(m_skeletalGraphSettings);
@@ -881,6 +882,10 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 						const auto climateCandidate = FindClimate();
 						if (!climateCandidate.expired()) {
 							const auto climate = climateCandidate.lock();
+							for (const auto& i : *treeEntities) {
+								const auto tree = scene->GetOrSetPrivateComponent<Tree>(i).lock();
+								tree->m_climate = climate;
+							}
 							climate->PrepareForGrowth();
 							for (const auto& i : *treeEntities) {
 								const auto tree = scene->GetOrSetPrivateComponent<Tree>(i).lock();

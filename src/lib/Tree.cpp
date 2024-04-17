@@ -2292,7 +2292,8 @@ void Tree::RegisterVoxel()
 	const auto owner = GetOwner();
 	const auto globalTransform = scene->GetDataComponent<GlobalTransform>(owner).m_value;
 	m_treeModel.m_index = owner.GetIndex();
-	m_treeModel.RegisterVoxel(globalTransform, m_climate.Get<Climate>()->m_climateModel, m_shootGrowthController);
+	const auto climate = m_climate.Get<Climate>();
+	m_treeModel.RegisterVoxel(globalTransform, climate->m_climateModel, m_shootGrowthController);
 }
 
 void Tree::FromLSystemString(const std::shared_ptr<LSystemString>& lSystemString)

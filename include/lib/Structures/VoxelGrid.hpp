@@ -79,11 +79,14 @@ namespace EcoSysLab {
 	template <typename VoxelData>
 	void VoxelGrid<VoxelData>::Initialize(const float voxelSize, const glm::vec3& minBound, const glm::vec3& maxBound, const VoxelData& defaultData)
 	{
+		const glm::vec3 regulatedMinBound = glm::floor(minBound / voxelSize) * voxelSize;
+		const glm::vec3 regulatedMaxBound = glm::ceil(maxBound / voxelSize) * voxelSize;
+
 		Initialize(voxelSize,
 			glm::ivec3(
-				glm::ceil((maxBound.x - minBound.x) / voxelSize) + 1,
-				glm::ceil((maxBound.y - minBound.y) / voxelSize) + 1,
-				glm::ceil((maxBound.z - minBound.z) / voxelSize) + 1), minBound, defaultData);
+				glm::ceil((regulatedMaxBound.x - regulatedMinBound.x) / voxelSize) + 1,
+				glm::ceil((regulatedMaxBound.y - regulatedMinBound.y) / voxelSize) + 1,
+				glm::ceil((regulatedMaxBound.z - regulatedMinBound.z) / voxelSize) + 1), regulatedMinBound, defaultData);
 	}
 
 	template <typename VoxelData>
