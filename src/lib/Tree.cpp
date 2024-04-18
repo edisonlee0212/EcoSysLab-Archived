@@ -746,7 +746,7 @@ void Tree::CalculateProfiles()
 {
 	const float time = Times::Now();
 	m_strandModel.m_strandModelSkeleton.Clone(m_treeModel.RefShootSkeleton());
-
+	m_strandModel.ResetAllProfiles(m_strandModelParameters);
 	m_strandModel.InitializeProfiles(m_strandModelParameters);
 	m_strandModel.CalculateProfiles(m_strandModelParameters);
 	const float profileCalculationTime = Times::Now() - time;
@@ -2707,7 +2707,7 @@ void Tree::InitializeStrandRenderer()
 	const auto owner = GetOwner();
 
 	ClearStrandRenderer();
-	if (m_strandModel.m_strandModelSkeleton.RefRawNodes().size() != m_treeModel.PeekShootSkeleton().RefRawNodes().size())
+	if (m_strandModel.m_strandModelSkeleton.RefRawNodes().size() != m_treeModel.PeekShootSkeleton().PeekRawNodes().size())
 	{
 		BuildStrandModel();
 	}
@@ -2749,7 +2749,7 @@ void Tree::InitializeStrandRenderer(const std::shared_ptr<Strands>& strands) con
 void Tree::InitializeStrandModelMeshRenderer(const StrandModelMeshGeneratorSettings& strandModelMeshGeneratorSettings)
 {
 	ClearStrandModelMeshRenderer();
-	if (m_strandModel.m_strandModelSkeleton.RefRawNodes().size() != m_treeModel.PeekShootSkeleton().RefRawNodes().size())
+	if (m_strandModel.m_strandModelSkeleton.RefRawNodes().size() != m_treeModel.PeekShootSkeleton().PeekRawNodes().size())
 	{
 		BuildStrandModel();
 	}

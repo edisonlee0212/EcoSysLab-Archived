@@ -8,10 +8,8 @@ using namespace EcoSysLab;
 void StrandModel::ResetAllProfiles(const StrandModelParameters& strandModelParameters)
 {
 	m_strandModelSkeleton.m_data.m_strandGroup = {};
-	const auto& sortedInternodeList = m_strandModelSkeleton.PeekSortedNodeList();
-	for (const auto& internodeHandle : sortedInternodeList)
+	for (auto& internode : m_strandModelSkeleton.RefRawNodes())
 	{
-		auto& internode = m_strandModelSkeleton.RefNode(internodeHandle);
 		auto& profile = internode.m_data.m_profile;
 		profile.m_settings = strandModelParameters.m_profilePhysicsSettings;
 		profile.Reset(0.001f);
@@ -79,7 +77,7 @@ void StrandModel::InitializeProfiles(const StrandModelParameters& strandModelPar
 			}
 		}
 		else {
-			if (profile.RefParticles().empty()) {
+			if (true || profile.RefParticles().empty()) {
 				for (int i = 0; i < strandModelParameters.m_endNodeStrands; i++) {
 					const auto strandHandle = strandGroup.AllocateStrand();
 					for (auto it = parentNodeToRootChain.rbegin(); it != parentNodeToRootChain.rend(); ++it) {

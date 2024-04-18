@@ -286,9 +286,13 @@ namespace EcoSysLab {
 		 */
 		[[nodiscard]] const std::vector<SkeletonFlowHandle>& PeekSortedFlowList() const;
 
-		[[nodiscard]] const std::vector<SkeletonFlow<FlowData>>& RefRawFlows() const;
+		[[nodiscard]] std::vector<SkeletonFlow<FlowData>>& RefRawFlows();
 
-		[[nodiscard]] const std::vector<SkeletonNode<NodeData>>& RefRawNodes() const;
+		[[nodiscard]] std::vector<SkeletonNode<NodeData>>& RefRawNodes();
+
+		[[nodiscard]] const std::vector<SkeletonFlow<FlowData>>& PeekRawFlows() const;
+
+		[[nodiscard]] const std::vector<SkeletonNode<NodeData>>& PeekRawNodes() const;
 
 		/**
 		 *  Force the structure to sort the node and flow list.
@@ -1049,13 +1053,25 @@ namespace EcoSysLab {
 	}
 
 	template<typename SkeletonData, typename FlowData, typename NodeData>
-	const std::vector<SkeletonFlow<FlowData>>& Skeleton<SkeletonData, FlowData, NodeData>::RefRawFlows() const {
+	std::vector<SkeletonFlow<FlowData>>& Skeleton<SkeletonData, FlowData, NodeData>::RefRawFlows() {
 		return m_flows;
 	}
 
 	template<typename SkeletonData, typename FlowData, typename NodeData>
-	const std::vector<SkeletonNode<NodeData>>&
-		Skeleton<SkeletonData, FlowData, NodeData>::RefRawNodes() const {
+	std::vector<SkeletonNode<NodeData>>&
+		Skeleton<SkeletonData, FlowData, NodeData>::RefRawNodes() {
+		return m_nodes;
+	}
+
+	template <typename SkeletonData, typename FlowData, typename NodeData>
+	const std::vector<SkeletonFlow<FlowData>>& Skeleton<SkeletonData, FlowData, NodeData>::PeekRawFlows() const
+	{
+		return m_flows;
+	}
+
+	template <typename SkeletonData, typename FlowData, typename NodeData>
+	const std::vector<SkeletonNode<NodeData>>& Skeleton<SkeletonData, FlowData, NodeData>::PeekRawNodes() const
+	{
 		return m_nodes;
 	}
 
