@@ -1528,7 +1528,7 @@ void sliceIteratively(const StrandModel& strandModel, std::vector<SlicingData>& 
 		if (DEBUG_OUTPUT) std::cout << "Took next slice with t = " << cur.t << " out of the queue" << std::endl;
 
 		std::vector<SlicingData> slices = slice(strandModel, cur.slice, std::make_pair<>(cur.offsetVert, cur.offsetTex), cur.t,
-			stepSize, maxDist, vertices, texCoords, indices, settings, accumulatedAngle);
+			stepSize, maxDist, vertices, texCoords, indices, settings, cur.accumulatedAngle);
 
 		for (SlicingData& s : slices)
 		{
