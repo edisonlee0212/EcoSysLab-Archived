@@ -1312,7 +1312,7 @@ void Tree::ExportStrandModelOBJ(const std::filesystem::path& path,
 		if (m_strandModel.m_strandModelSkeleton.RefRawNodes().size() != m_treeModel.PeekShootSkeleton().PeekRawNodes().size())
 		{
 			BuildStrandModel();
-		}007
+		}
 		try
 		{
 			std::ofstream of;
