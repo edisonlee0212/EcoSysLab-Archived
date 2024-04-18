@@ -1309,7 +1309,10 @@ void Tree::ExportStrandModelOBJ(const std::filesystem::path& path,
 	const StrandModelMeshGeneratorSettings& meshGeneratorSettings)
 {
 	if (path.extension() == ".obj") {
-		BuildStrandModel();
+		if (m_strandModel.m_strandModelSkeleton.RefRawNodes().size() != m_treeModel.PeekShootSkeleton().PeekRawNodes().size())
+		{
+			BuildStrandModel();
+		}007
 		try
 		{
 			std::ofstream of;
