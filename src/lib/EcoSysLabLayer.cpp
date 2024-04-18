@@ -842,11 +842,11 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 				ImGui::TreePop();
 			}
 			if (ImGui::Button("Build Strand Renderer")) {
-				
+				GenerateStrandRenderers();
 			}
 			ImGui::SameLine();
 			if (ImGui::Button("Clear Strand Renderer")) {
-
+				ClearStrandRenderers();
 			}
 			if (ImGui::Button("Generate Strand Model Meshes")) {
 				GenerateStrandModelMeshes(m_strandMeshGeneratorSettings);
@@ -1924,7 +1924,21 @@ void EcoSysLabLayer::GenerateStrandModelMeshes(const StrandModelMeshGeneratorSet
 	}
 }
 
-void EcoSysLabLayer::ClearStrandModelMeshes() const
+void EcoSysLabLayer::GenerateStrandRenderers() const
+{
+	const auto scene = GetScene();
+	const std::vector<Entity>* treeEntities =
+		scene->UnsafeGetPrivateComponentOwnersList<Tree>();
+	if (treeEntities && !treeEntities->empty()) {
+		const auto copiedEntities = *treeEntities;
+		for (auto treeEntity : copiedEntities) {
+			const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
+			tree->InitializeStrandRenderer();
+		}
+	}
+}
+
+void EcoSysLabLayer::ClearStrandRenderers() const
 {
 	const auto scene = GetScene();
 	const std::vector<Entity>* treeEntities =
@@ -1934,10 +1948,25 @@ void EcoSysLabLayer::ClearStrandModelMeshes() const
 		for (auto treeEntity : copiedEntities) {
 			const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
 			tree->ClearStrandRenderer();
+		}
+	}
+}
+
+void EcoSysLabLayer::ClearStrandModelMeshes() const
+{
+	const auto scene = GetScene();
+	const std::vector<Entity>* treeEntities =
+		scene->UnsafeGetPrivateComponentOwnersList<Tree>();
+	if (treeEntities && !treeEntities->empty()) {
+		const auto copiedEntities = *treeEntities;
+		for (auto treeEntity : copiedEntities) {
+			const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
 			tree->ClearStrandModelMeshRenderer();
 		}
 	}
 }
+
+
 
 void EcoSysLabLayer::ClearMeshes() const {
 	const auto scene = GetScene();

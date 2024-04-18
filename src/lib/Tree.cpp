@@ -763,13 +763,13 @@ void Tree::BuildStrandModel()
 	std::string output;
 
 	CalculateProfiles();
+	const float time = Times::Now();
 	for (const auto& nodeHandle : m_treeModel.PeekShootSkeleton().PeekSortedNodeList())
 	{
 		m_strandModel.m_strandModelSkeleton.RefNode(nodeHandle).m_info = m_treeModel.PeekShootSkeleton().PeekNode(nodeHandle).m_info;
 	}
 	m_strandModel.CalculateStrandProfileAdjustedTransforms(m_strandModelParameters);
 	m_strandModel.ApplyProfiles(m_strandModelParameters);
-	const float time = Times::Now();
 	const float strandModelingTime = Times::Now() - time;
 	output += "\nBuild Strand Model Used time: " + std::to_string(strandModelingTime) + "\n";
 	EVOENGINE_LOG(output);

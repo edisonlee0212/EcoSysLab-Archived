@@ -92,7 +92,7 @@ void StrandModel::InitializeProfiles(const StrandModelParameters& strandModelPar
 						newSegment.m_data.m_nodeHandle = *it;
 						newSegment.m_data.m_profileParticleHandle = newParticleHandle;
 					}
-					const auto position = glm::diskRand(glm::sqrt(static_cast<float>(strandModelParameters.m_endNodeStrands)));
+					const auto position = strandModelParameters.m_endNodeStrands == 1 ? glm::vec2(0.f) : glm::diskRand(glm::sqrt(static_cast<float>(strandModelParameters.m_endNodeStrands)));
 					const auto newStrandSegmentHandle = strandGroup.Extend(strandHandle);
 					const auto newParticleHandle = profile.AllocateParticle();
 					auto& newParticle = profile.RefParticle(newParticleHandle);

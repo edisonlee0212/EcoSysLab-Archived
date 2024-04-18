@@ -180,8 +180,10 @@ namespace EcoSysLab {
 		void ClearSkeletalGraphs() const;
 		void GenerateStrandModelProfiles() const;
 		void GenerateStrandModelMeshes(const StrandModelMeshGeneratorSettings& strandModelMeshGeneratorSettings) const;
-
 		void ClearStrandModelMeshes() const;
+
+		void GenerateStrandRenderers() const;
+		void ClearStrandRenderers() const;
 
 		void ResetAllTrees(const std::vector<Entity>* treeEntities);
 
