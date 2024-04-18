@@ -898,10 +898,12 @@ std::shared_ptr<Mesh> Tree::GenerateFoliageMesh(const TreeMeshGeneratorSettings&
 	}
 	auto foliageDescriptor = treeDescriptor->m_foliageDescriptor.Get<FoliageDescriptor>();
 	if (!foliageDescriptor) foliageDescriptor = ProjectManager::CreateTemporaryAsset<FoliageDescriptor>();
+
+
+
 	const auto& nodeList = m_treeModel.PeekShootSkeleton().PeekSortedNodeList();
 	for (const auto& internodeHandle : nodeList) {
-		const auto& internode = m_treeModel.PeekShootSkeleton().PeekNode(internodeHandle);
-		const auto& internodeInfo = internode.m_info;
+		const auto& internodeInfo = m_strandModel.m_strandModelSkeleton.RefRawNodes().size() == m_treeModel.m_shootSkeleton.RefRawNodes().size() ? m_strandModel.m_strandModelSkeleton.PeekNode(internodeHandle).m_info : m_treeModel.PeekShootSkeleton().PeekNode(internodeHandle).m_info;
 		std::vector<glm::mat4> leafMatrices;
 		foliageDescriptor->GenerateFoliageMatrices(leafMatrices, internodeInfo);
 		Vertex archetype;
