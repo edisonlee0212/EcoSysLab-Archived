@@ -1167,12 +1167,10 @@ bool connectSlices(const StrandModelStrandGroup& pipes, Slice& bottomSlice, std:
 	if (DEBUG_OUTPUT) std::cout << "Found start index " << startIndex << std::endl;
 
 	std::vector<size_t> indicesWithSameBranchCorrespondence;
-	size_t endIndex = prevI;
-	if (DEBUG_OUTPUT) std::cout << "Found end index " << endIndex << std::endl;
 
-	size_t sectionStart = startIndex;
 	//shift this by one, otherwise the last section is not handled
 	indicesWithSameBranchCorrespondence.push_back(startIndex);
+	prevI = startIndex;
 	for (size_t counter = startIndex + 1; counter != startIndex + bottomPermutation.size() + 1; counter++)
 	{
 		size_t i = counter % bottomPermutation.size();
@@ -1271,14 +1269,28 @@ bool connectSlices(const StrandModelStrandGroup& pipes, Slice& bottomSlice, std:
 			// because there is no global order - the comparison does not satisfy transitivity.
 			// However, there is a local order and we hope that the elements are close enough to this that bubble sort works as a heuristic
 			bool foundError;
+			size_t attempts = 0;
+
 			do
 			{
+				attempts++;
+				
+				if (attempts > topIndices.size() + 10) // add a constant because I'm not sure how small sizes of topIndices behave
+				{
+					std::cerr << "Error: Untangling meshing errors failed. This will most likely result in artifacts." << std::endl;
+					break;
+				}
+
 				foundError = false;
 				for (size_t j = 1; j < topIndices.size(); j++)
 				{
 					size_t steps = (topIndices[j] + topSlices[branchIndex].size() - topIndices[j - 1]) % topSlices[branchIndex].size();
 
-					if (steps > (topSlices[branchIndex].size() + 1) / 2)
+					if (topIndices[j] >= topSlices[branchIndex].size() || topIndices[j - 1] >= topSlices[branchIndex].size())
+					{
+						std::cerr << "Error: Looks like an incorrect index ended up in the index list. Ignoring this pair." << std::endl;
+					}
+					else if (steps > (topSlices[branchIndex].size() + 1) / 2)
 					{
 						foundError = true;
 						if (DEBUG_OUTPUT) std::cout << "found error, correcting by swapping " << topIndices[j - 1] << " and "
@@ -1300,6 +1312,12 @@ bool connectSlices(const StrandModelStrandGroup& pipes, Slice& bottomSlice, std:
 					topSlices[branchIndex], topIndices[j - 1], topIndices[j], topOffsets[branchIndex],
 					vertices, texCoords, indices);
 			}
+
+		}
+
+		// need to always do this
+		if (bottomPermutation[prevI].first != bottomPermutation[i].first)
+		{
 
 			indicesWithSameBranchCorrespondence.clear();
 			indicesWithSameBranchCorrespondence.push_back(i);
