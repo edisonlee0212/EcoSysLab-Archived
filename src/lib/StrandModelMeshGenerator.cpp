@@ -924,7 +924,8 @@ void forEachSegment(const StrandModelStrandGroup& pipes, std::vector<StrandSegme
 
 void connect(std::vector<std::pair<StrandHandle, glm::vec3> >& slice0, size_t i0, size_t j0, std::pair<size_t, size_t> offset0,
 	std::vector<std::pair<StrandHandle, glm::vec3> >& slice1, size_t i1, size_t j1, std::pair<size_t, size_t> offset1,
-	std::vector<Vertex>& vertices, std::vector<glm::vec2>& texCoords, std::vector<std::pair<unsigned, unsigned>>& indices)
+	std::vector<Vertex>& vertices, std::vector<glm::vec2>& texCoords, std::vector<std::pair<unsigned, unsigned>>& indices,
+	const StrandModelMeshGeneratorSettings& settings)
 {
 	if (DEBUG_OUTPUT) std::cout << "connecting " << i0 << ", " << j0 << " to " << i1 << ", " << j1 << std::endl;
 	size_t vertBetween0 = (j0 + slice0.size() - i0) % slice0.size();
@@ -966,7 +967,7 @@ void connect(std::vector<std::pair<StrandHandle, glm::vec3> >& slice0, size_t i0
 			float avgX = 0.5 * (texCoords[texIndex0].x + texCoords[texIndex1].x);
 
 			float diff = avgX - texCoord2.x;
-			float move = glm::round(diff); // TODO: probably makes more sense to round to a multiple of the uv-coordinate factor
+			float move = settings.m_uMultiplier * glm::round(diff / settings.m_uMultiplier);
 
 			if (move != 0.0)
 			{
@@ -1005,7 +1006,7 @@ void connect(std::vector<std::pair<StrandHandle, glm::vec3> >& slice0, size_t i0
 			float avgX = 0.5 * (texCoords[texIndex0].x + texCoords[texIndex1].x);
 
 			float diff = avgX - texCoord2.x;
-			float move = glm::round(diff); // TODO: probably makes more sense to round to a multiple of the uv-coordinate factor
+			float move = settings.m_uMultiplier * glm::round(diff / settings.m_uMultiplier);
 
 			if (move != 0.0)
 			{
@@ -1085,7 +1086,8 @@ void cyclicOrderUntangle(std::vector<size_t>& permutation)
 
 bool connectSlices(const StrandModelStrandGroup& pipes, Slice& bottomSlice, std::pair<unsigned, unsigned> bottomOffset,
 	std::vector<Slice>& topSlices, std::vector<std::pair<unsigned, unsigned> > topOffsets,
-	std::vector<Vertex>& vertices, std::vector<glm::vec2>& texCoords, std::vector<std::pair<unsigned, unsigned>>& indices, bool branchConnections)
+	std::vector<Vertex>& vertices, std::vector<glm::vec2>& texCoords, std::vector<std::pair<unsigned, unsigned>>& indices, bool branchConnections,
+	const StrandModelMeshGeneratorSettings& settings)
 {
 	// we want to track whether we actually produced any geometry
 	size_t sizeBefore = indices.size();
@@ -1222,7 +1224,7 @@ bool connectSlices(const StrandModelStrandGroup& pipes, Slice& bottomSlice, std:
 			{
 				connect(bottomSlice, prevI, bottomMid, bottomOffset,
 					topSlices[bottomPermutation[prevI].first], bottomPermutation[prevI].second, nextMid, topOffsets[bottomPermutation[prevI].first],
-					vertices, texCoords, indices);
+					vertices, texCoords, indices, settings);
 				if (DEBUG_OUTPUT) std::cout << "Connected bottom indices " << prevI << " to " << bottomMid << " with " << bottomPermutation[prevI].second << " to "
 					<< nextMid << " of top profile no. " << bottomPermutation[prevI].first << std::endl;
 
@@ -1245,7 +1247,7 @@ bool connectSlices(const StrandModelStrandGroup& pipes, Slice& bottomSlice, std:
 
 				connect(bottomSlice, bottomMid, i, bottomOffset,
 					topSlices[bottomPermutation[i].first], prevMid, bottomPermutation[i].second, topOffsets[bottomPermutation[i].first],
-					vertices, texCoords, indices);
+					vertices, texCoords, indices, settings);
 
 				if (DEBUG_OUTPUT) std::cout << "Connected bottom indices " << bottomMid << " to " << i << " with " << prevMid << " to "
 					<< bottomPermutation[i].second << " of top profile no. " << bottomPermutation[i].first << std::endl;
@@ -1310,7 +1312,7 @@ bool connectSlices(const StrandModelStrandGroup& pipes, Slice& bottomSlice, std:
 
 				connect(bottomSlice, prevI, i, bottomOffset,
 					topSlices[branchIndex], topIndices[j - 1], topIndices[j], topOffsets[branchIndex],
-					vertices, texCoords, indices);
+					vertices, texCoords, indices, settings);
 			}
 
 		}
@@ -1438,7 +1440,7 @@ std::vector<SlicingData> slice(const StrandModel& strandModel, std::pair < Slice
 
 			glm::vec2 texCoord;
 			texCoord.y = t * settings.m_vMultiplier;
-			texCoord.x = getPipePolar(strandModel, el.first, t) / (2 * glm::pi<float>()) * settings.m_uMultiplier + accumulatedAngle / 360.0f;
+			texCoord.x = (getPipePolar(strandModel, el.first, t) / (2 * glm::pi<float>()) + accumulatedAngle / 360.0f) * settings.m_uMultiplier;
 
 			// add twisting to uv-Coordinates
 			auto nodeHandle = getNodeHandle(pipeGroup, el.first, t);
@@ -1446,10 +1448,10 @@ std::vector<SlicingData> slice(const StrandModel& strandModel, std::pair < Slice
 
 			float frac = fmod(t, 1.0);
 
-			texCoord.x += frac * node.m_data.m_twistAngle / 360.0f;
+			texCoord.x += frac * node.m_data.m_twistAngle * settings.m_uMultiplier / 360.0f;
 
 			// need to do proper wraparound
-			if (!isFirst && texCoord.x < texCoords.back().x)
+			if (!isFirst && texCoord.x + (settings.m_uMultiplier * 0.5) < texCoords.back().x)
 			{
 				texCoord.x += settings.m_uMultiplier;
 			}
@@ -1473,7 +1475,7 @@ std::vector<SlicingData> slice(const StrandModel& strandModel, std::pair < Slice
 	}
 
 	bool connected = connectSlices(pipeGroup, prevSlice.first, prevOffset, topSlices, offsets,
-		vertices, texCoords, indices, settings.m_branchConnections);
+		vertices, texCoords, indices, settings.m_branchConnections, settings);
 
 	if (!connected)
 	{
