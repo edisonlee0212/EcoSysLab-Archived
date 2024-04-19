@@ -298,6 +298,9 @@ void TreeVisualizer::SyncMatrices(const ShootSkeleton& skeleton, const std::shar
 		case ShootVisualizerMode::Order:
 			matrices[i].m_instanceColor = m_randomColors[node.m_data.m_order];
 			break;
+		case ShootVisualizerMode::Locked:
+			matrices[i].m_instanceColor = node.m_info.m_locked ? glm::vec4(1, 0, 0, 1) : glm::vec4(0, 1, 0, 1);
+			break;
 		case ShootVisualizerMode::Level:
 			matrices[i].m_instanceColor = m_randomColors[node.m_data.m_level];
 			break;
@@ -395,11 +398,7 @@ TreeVisualizer::OnInspect(
 	TreeModel& treeModel) {
 	bool updated = false;
 	if (ImGui::TreeNodeEx("Checkpoints")) {
-		if (ImGui::Button("Push Checkpoint"))
-		{
-			treeModel.Step();
-			m_checkpointIteration = treeModel.CurrentIteration();
-		}
+		
 		if (ImGui::SliderInt("Current checkpoint", &m_checkpointIteration, 0, treeModel.CurrentIteration())) {
 			m_checkpointIteration = glm::clamp(m_checkpointIteration, 0, treeModel.CurrentIteration());
 			m_selectedInternodeHandle = -1;
@@ -416,12 +415,13 @@ TreeVisualizer::OnInspect(
 		}
 		ImGui::TreePop();
 	}
+	if (ImGui::Button("Add Checkpoint"))
+	{
+		treeModel.Step();
+		m_checkpointIteration = treeModel.CurrentIteration();
+	}
 	if (ImGui::TreeNodeEx("Visualizer Settings")) {
-		if (ImGui::Combo("Shoot Color mode",
-			{ "Default", "Order", "Level", "Light Intensity", "Light Direction", "Growth Potential", "Apical control", "Desired growth rate", "Growth Rate", "IsMaxChild", "AllocatedVigor" },
-			m_settings.m_shootVisualizationMode)) {
-			m_needUpdate = true;
-		}
+		
 		ImGui::DragInt("History Limit", &treeModel.m_historyLimit, 1, -1, 1024);
 
 		if (ImGui::TreeNode("Shoot Color settings")) {
@@ -455,7 +455,12 @@ TreeVisualizer::OnInspect(
 
 		ImGui::TreePop();
 	}
-	if (ImGui::TreeNodeEx("Inspection")) {
+	if (ImGui::Combo("Visualizer mode",
+		{ "Default", "Order", "Level", "Light Intensity", "Light Direction", "Growth Potential", "Apical control", "Desired growth rate", "Growth Rate", "Max Child", "Allocated Vigor", "Locked" },
+		m_settings.m_shootVisualizationMode)) {
+		m_needUpdate = true;
+	}
+	if (ImGui::TreeNodeEx("Inspection", ImGuiTreeNodeFlags_DefaultOpen)) {
 		if (m_selectedInternodeHandle >= 0) {
 			if (m_checkpointIteration == treeModel.CurrentIteration()) {
 				InspectInternode(treeModel.RefShootSkeleton(), m_selectedInternodeHandle);
@@ -702,56 +707,76 @@ TreeVisualizer::InspectInternode(
 	SkeletonNodeHandle internodeHandle) {
 	bool changed = false;
 
-	const auto& internode = shootSkeleton.RefNode(internodeHandle);
+	auto& internode = shootSkeleton.RefNode(internodeHandle);
+	if (internode.m_info.m_locked && ImGui::Button("Unlock"))
+	{
+		const auto subTree = shootSkeleton.GetSubTree(internodeHandle);
+		for (const auto& handle : subTree)
+		{
+			shootSkeleton.RefNode(handle).m_info.m_locked = false;
+		}
+		m_needUpdate = true;
+	}
+	if (!internode.m_info.m_locked && ImGui::Button("Lock"))
+	{
+		const auto chainToRoot = shootSkeleton.GetChainToRoot(internodeHandle);
+		for (const auto& handle : chainToRoot)
+		{
+			shootSkeleton.RefNode(handle).m_info.m_locked = true;
+		}
+		m_needUpdate = true;
+	}
 	if (ImGui::TreeNode("Internode info")) {
-		ImGui::Checkbox("Is max child", (bool*)&internode.m_data.m_maxChild);
+		ImGui::Checkbox("Is max child", &internode.m_data.m_maxChild);
 		ImGui::Text("Thickness: %.3f", internode.m_info.m_thickness);
 		ImGui::Text("Length: %.3f", internode.m_info.m_length);
-		ImGui::InputFloat3("Position", (float*)&internode.m_info.m_globalPosition.x, "%.3f",
+		ImGui::InputFloat3("Position", &internode.m_info.m_globalPosition.x, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
 		auto globalRotationAngle = glm::eulerAngles(internode.m_info.m_globalRotation);
-		ImGui::InputFloat3("Global rotation", (float*)&globalRotationAngle.x, "%.3f",
+		ImGui::InputFloat3("Global rotation", &globalRotationAngle.x, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
 		auto localRotationAngle = glm::eulerAngles(internode.m_data.m_desiredLocalRotation);
-		ImGui::InputFloat3("Local rotation", (float*)&localRotationAngle.x, "%.3f",
+		ImGui::InputFloat3("Local rotation", &localRotationAngle.x, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
 		auto& internodeData = internode.m_data;
-		ImGui::InputFloat("Start Age", (float*)&internodeData.m_startAge, 1, 100, "%.3f",
+		ImGui::InputFloat("Start Age", &internodeData.m_startAge, 1, 100, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
-		ImGui::InputFloat("Distance to end", (float*)&internode.m_info.m_endDistance, 1, 100,
+		ImGui::InputFloat("Distance to end", &internode.m_info.m_endDistance, 1, 100,
 			"%.3f",
 			ImGuiInputTextFlags_ReadOnly);
-		ImGui::InputFloat("Descendent biomass", (float*)&internodeData.m_descendantTotalBiomass, 1, 100, "%.3f",
+		ImGui::InputFloat("Descendent biomass", &internodeData.m_descendantTotalBiomass, 1, 100, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
-		ImGui::InputFloat("Biomass", (float*)&internodeData.m_biomass, 1, 100, "%.3f",
-			ImGuiInputTextFlags_ReadOnly);
-
-		ImGui::InputFloat("Root distance", (float*)&internode.m_info.m_rootDistance, 1, 100, "%.3f",
+		ImGui::InputFloat("Biomass", &internodeData.m_biomass, 1, 100, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
 
-		ImGui::InputFloat("Light Intensity", (float*)&internodeData.m_lightIntensity, 1, 100, "%.3f",
-			ImGuiInputTextFlags_ReadOnly);
-		ImGui::InputFloat3("Light direction", (float*)&internodeData.m_lightDirection.x, "%.3f",
+		ImGui::InputFloat("Root distance", &internode.m_info.m_rootDistance, 1, 100, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
 
-		ImGui::InputFloat("Growth potential", (float*)&internodeData.m_growthPotential, 1, 100, "%.3f",
+		ImGui::InputFloat("Light Intensity", &internodeData.m_lightIntensity, 1, 100, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
-		ImGui::InputFloat("Apical control", (float*)&internodeData.m_apicalControl, 1, 100, "%.3f",
-			ImGuiInputTextFlags_ReadOnly);
-		ImGui::InputFloat("Desired growth rate", (float*)&internodeData.m_desiredGrowthRate, 1, 100, "%.3f",
-			ImGuiInputTextFlags_ReadOnly);
-		ImGui::InputFloat("Growth rate", (float*)&internodeData.m_growthRate, 1, 100, "%.3f",
+		ImGui::InputFloat3("Light direction", &internodeData.m_lightDirection.x, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
 
-		if (ImGui::DragFloat("Sagging", (float*)&internodeData.m_sagging)) {
+		ImGui::InputFloat("Growth potential", &internodeData.m_growthPotential, 1, 100, "%.3f",
+			ImGuiInputTextFlags_ReadOnly);
+		ImGui::InputFloat("Apical control", &internodeData.m_apicalControl, 1, 100, "%.3f",
+			ImGuiInputTextFlags_ReadOnly);
+		ImGui::InputFloat("Desired growth rate", &internodeData.m_desiredGrowthRate, 1, 100, "%.3f",
+			ImGuiInputTextFlags_ReadOnly);
+		ImGui::InputFloat("Growth rate", &internodeData.m_growthRate, 1, 100, "%.3f",
+			ImGuiInputTextFlags_ReadOnly);
+
+		if (ImGui::DragFloat("Sagging", &internodeData.m_sagging)) {
 			changed = true;
 		}
-		if (ImGui::DragFloat("Extra mass", (float*)&internodeData.m_extraMass)) {
+		if (ImGui::DragFloat("Extra mass", &internodeData.m_extraMass)) {
 			changed = true;
 		}
 
+		
 
-		if (ImGui::TreeNodeEx("Buds", ImGuiTreeNodeFlags_DefaultOpen)) {
+
+		if (ImGui::TreeNodeEx("Buds")) {
 			int index = 1;
 			for (auto& bud : internodeData.m_buds) {
 				if (ImGui::TreeNode(("Bud " + std::to_string(index)).c_str())) {
@@ -793,7 +818,7 @@ TreeVisualizer::InspectInternode(
 		}
 		ImGui::TreePop();
 	}
-	if (ImGui::TreeNodeEx("Flow info", ImGuiTreeNodeFlags_DefaultOpen)) {
+	if (ImGui::TreeNodeEx("Flow info")) {
 		const auto& flow = shootSkeleton.PeekFlow(internode.GetFlowHandle());
 		ImGui::Text("Child flow size: %d", flow.PeekChildHandles().size());
 		ImGui::Text("Internode size: %d", flow.PeekNodeHandles().size());

@@ -43,7 +43,7 @@ namespace EcoSysLab {
 		auto infoLengthList = std::vector<float>(nodeSize);
 		auto infoThicknessList = std::vector<float>(nodeSize);
 		auto infoColorList = std::vector<glm::vec4>(nodeSize);
-
+		auto infoLockedList = std::vector<int>(nodeSize);
 		for (int nodeIndex = 0; nodeIndex < nodeSize; nodeIndex++)
 		{
 			const auto& node = skeleton.m_nodes[nodeIndex];
@@ -58,7 +58,7 @@ namespace EcoSysLab {
 			infoLengthList[nodeIndex] = node.m_info.m_length;
 			infoThicknessList[nodeIndex] = node.m_info.m_thickness;
 			infoColorList[nodeIndex] = node.m_info.m_color;
-
+			infoLockedList[nodeIndex] = node.m_info.m_locked ? 1 : 0;
 		}
 		out << YAML::Key << "m_nodes.m_recycled" << YAML::Value << YAML::Binary(
 			reinterpret_cast<const unsigned char*>(nodeRecycledList.data()), nodeRecycledList.size() * sizeof(int));
@@ -81,6 +81,23 @@ namespace EcoSysLab {
 			reinterpret_cast<const unsigned char*>(infoThicknessList.data()), infoThicknessList.size() * sizeof(float));
 		out << YAML::Key << "m_nodes.m_info.m_color" << YAML::Value << YAML::Binary(
 			reinterpret_cast<const unsigned char*>(infoColorList.data()), infoColorList.size() * sizeof(glm::vec4));
+		out << YAML::Key << "m_nodes.m_info.m_locked" << YAML::Value << YAML::Binary(
+			reinterpret_cast<const unsigned char*>(infoLockedList.data()), infoLockedList.size() * sizeof(int));
+
+		out << YAML::Key << "m_nodes.m_info" << YAML::Value << YAML::BeginSeq;
+		for (size_t nodeIndex = 0; nodeIndex < nodeSize; nodeIndex++)
+		{
+			const auto& node = skeleton.m_nodes[nodeIndex];
+			out << YAML::BeginMap;
+			{
+				if (!node.m_info.m_wounds.empty()) {
+					out << YAML::Key << "m_wounds" << YAML::Value << YAML::Binary(
+						reinterpret_cast<const unsigned char*>(node.m_info.m_wounds.data()), node.m_info.m_wounds.size() * sizeof(SkeletonNodeWound));
+				}
+			}
+			out << YAML::EndMap;
+		}
+		out << YAML::EndSeq;
 
 		out << YAML::Key << "m_nodes.m_data" << YAML::Value << YAML::BeginSeq;
 		for (size_t nodeIndex = 0; nodeIndex < nodeSize; nodeIndex++)
@@ -264,27 +281,55 @@ namespace EcoSysLab {
 
 		if (in["m_nodes.m_info.m_thickness"])
 		{
-			auto infoThicknessList = std::vector<float>();
+			auto list = std::vector<float>();
 			const auto data = in["m_nodes.m_info.m_thickness"].as<YAML::Binary>();
-			infoThicknessList.resize(data.size() / sizeof(float));
-			std::memcpy(infoThicknessList.data(), data.data(), data.size());
+			list.resize(data.size() / sizeof(float));
+			std::memcpy(list.data(), data.data(), data.size());
 
-			for (size_t i = 0; i < infoThicknessList.size(); i++)
+			for (size_t i = 0; i < list.size(); i++)
 			{
-				skeleton.m_nodes[i].m_info.m_thickness = infoThicknessList[i];
+				skeleton.m_nodes[i].m_info.m_thickness = list[i];
 			}
 		}
 
 		if (in["m_nodes.m_info.m_color"])
 		{
-			auto infoColorList = std::vector<glm::vec4>();
+			auto list = std::vector<glm::vec4>();
 			const auto data = in["m_nodes.m_info.m_color"].as<YAML::Binary>();
-			infoColorList.resize(data.size() / sizeof(glm::vec4));
-			std::memcpy(infoColorList.data(), data.data(), data.size());
+			list.resize(data.size() / sizeof(glm::vec4));
+			std::memcpy(list.data(), data.data(), data.size());
 
-			for (size_t i = 0; i < infoColorList.size(); i++)
+			for (size_t i = 0; i < list.size(); i++)
 			{
-				skeleton.m_nodes[i].m_info.m_color = infoColorList[i];
+				skeleton.m_nodes[i].m_info.m_color = list[i];
+			}
+		}
+
+		if (in["m_nodes.m_info.m_locked"])
+		{
+			auto list = std::vector<int>();
+			const auto data = in["m_nodes.m_info.m_locked"].as<YAML::Binary>();
+			list.resize(data.size() / sizeof(int));
+			std::memcpy(list.data(), data.data(), data.size());
+
+			for (size_t i = 0; i < list.size(); i++)
+			{
+				skeleton.m_nodes[i].m_info.m_locked = list[i] == 1;
+			}
+		}
+
+		if(in["m_nodes.m_info"])
+		{
+			const auto& inNodes = in["m_nodes.m_info"];
+			SkeletonNodeHandle nodeHandle = 0;
+			for (const auto& inNodeInfo : inNodes) {
+				if(inNodeInfo["m_wounds"])
+				{
+					auto& node = skeleton.m_nodes[nodeHandle];
+					const auto data = inNodeInfo["m_wounds"].as<YAML::Binary>();
+					node.m_info.m_wounds.resize(data.size() / sizeof(SkeletonNodeWound));
+					std::memcpy(node.m_info.m_wounds.data(), data.data(), data.size());
+				}
 			}
 		}
 

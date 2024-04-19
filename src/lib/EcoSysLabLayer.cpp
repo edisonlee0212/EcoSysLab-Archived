@@ -736,21 +736,14 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 		const std::vector<Entity>* treeEntities =
 			scene->UnsafeGetPrivateComponentOwnersList<Tree>();
 		if (treeEntities && !treeEntities->empty()) {
-			FileUtils::SaveFile("Export all trees as OBJ", "OBJ", { ".obj" }, [&](const std::filesystem::path& path) {
-				ExportAllTrees(path);
-				}, false);
-
-			ImGui::Checkbox("Auto generate mesh", &m_autoGenerateMeshAfterEditing);
-			ImGui::Checkbox("Auto generate Skeletal Graph Per Frame", &m_autoGenerateSkeletalGraphEveryFrame);
-			ImGui::Checkbox("Auto generate strands", &m_autoGenerateStrandsAfterEditing);
-			ImGui::Checkbox("Auto generate strands mesh", &m_autoGenerateStrandMeshAfterEditing);
-			ImGui::Separator();
+			
+			
 			ImGui::Text("Editing");
 			if (scene->IsEntityValid(m_selectedTree)) {
 				const auto& tree = scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock();
 				auto& treeVisualizer = tree->m_treeVisualizer;
 				if (treeVisualizer.m_checkpointIteration == tree->m_treeModel.CurrentIteration()) {
-					if (ImGui::TreeNodeEx("Operator", ImGuiTreeNodeFlags_DefaultOpen)) {
+					if (ImGui::TreeNodeEx("Tree Operator", ImGuiTreeNodeFlags_DefaultOpen)) {
 						if (ImGui::Combo("Mode", { "Select", "Rotate", "Prune", "Invigorate", "Reduce" }, m_operatorMode))
 						{
 							treeVisualizer.m_selectedInternodeHandle = -1;
@@ -771,15 +764,19 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 				{
 					ImGui::Text("Go to current skeleton to enable operator!");
 				}
-
-				treeVisualizer.OnInspect(tree->m_treeModel);
+				ImGui::Separator();
+				if (ImGui::TreeNode("Tree Visualizer"))
+				{
+					treeVisualizer.OnInspect(tree->m_treeModel);
+					ImGui::TreePop();
+				}
 			}
 			else
 			{
-				ImGui::Text("Select a tree entity to enable editing!");
+				ImGui::Text("Select a tree entity to enable editing & visualization!");
 			}
 			ImGui::Separator();
-			ImGui::Text("Simulation");
+			ImGui::Text("Growth simulation");
 			if (ImGui::Button("Reset all trees")) {
 				ResetAllTrees(treeEntities);
 				ClearMeshes();
@@ -897,6 +894,16 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 					ImGui::TreePop();
 				}
 
+				ImGui::TreePop();
+			}
+			if (ImGui::TreeNode("Auto geometry generation")) {
+				ImGui::Checkbox("Auto generate mesh", &m_autoGenerateMeshAfterEditing);
+				ImGui::Checkbox("Auto generate Skeletal Graph Per Frame", &m_autoGenerateSkeletalGraphEveryFrame);
+				ImGui::Checkbox("Auto generate strands", &m_autoGenerateStrandsAfterEditing);
+				ImGui::Checkbox("Auto generate strands mesh", &m_autoGenerateStrandMeshAfterEditing);
+				FileUtils::SaveFile("Export all trees as OBJ", "OBJ", { ".obj" }, [&](const std::filesystem::path& path) {
+					ExportAllTrees(path);
+					}, false);
 				ImGui::TreePop();
 			}
 			if (ImGui::TreeNodeEx("Stats")) {

@@ -57,32 +57,23 @@ void TreeModel::RegisterVoxel(const glm::mat4& globalTransform, ClimateModel& cl
 void TreeModel::PruneInternode(const SkeletonNodeHandle internodeHandle)
 {
 	const auto& internode = m_shootSkeleton.RefNode(internodeHandle);
-	if (!internode.IsRecycled()) m_shootSkeleton.RecycleNode(internodeHandle,
-		[&](SkeletonFlowHandle flowHandle) {},
-		[&](SkeletonNodeHandle nodeHandle)
-		{
-			/*
-			const auto& node = m_shootSkeleton.RefNode(nodeHandle);
-			const auto& physics2D = node.m_data.m_profile;
-			for (const auto& particle : physics2D.PeekParticles())
-			{
-				if (!m_shootSkeleton.m_data.m_strandGroup.PeekStrandSegment(particle.m_data.m_strandSegmentHandle).IsRecycled()) m_shootSkeleton.m_data.m_strandGroup.RecycleStrandSegment(particle.m_data.m_strandSegmentHandle);
-			}*/
-		});
-	/*
-	for(const auto& childHandle : internode.PeekChildHandles())
-	{
-		m_shootSkeleton.RecycleNode(childHandle,
-		[&](SkeletonFlowHandle flowHandle) {},
-		[&](SkeletonNodeHandle nodeHandle)
-		{
-		});
-	}
-	internode.m_data.m_buds.clear();
-	internode.m_data.m_fruits.clear();
-	internode.m_data.m_leaves.clear();
 
-	internode.m_info.m_length = internode.m_data.m_internodeLength = 0.0f;*/
+	if (!internode.IsRecycled() && !internode.m_info.m_locked) {
+		auto& parentNode = m_shootSkeleton.RefNode(internode.GetParentHandle());
+		parentNode.m_info.m_wounds.emplace_back();
+		auto& wound = parentNode.m_info.m_wounds.back();
+		wound.m_apical = internode.IsApical();
+		wound.m_thickness = internode.m_info.m_thickness;
+		wound.m_healing = 0.f;
+		wound.m_localRotation = glm::inverse(parentNode.m_info.m_globalRotation) * internode.m_info.m_globalRotation;
+
+		m_shootSkeleton.RecycleNode(internodeHandle,
+			[&](SkeletonFlowHandle flowHandle) {},
+			[&](SkeletonNodeHandle nodeHandle)
+			{
+				
+			});
+	}
 }
 
 void TreeModel::HarvestFruits(const std::function<bool(const ReproductiveModule& fruit)>& harvestFunction)
@@ -1048,13 +1039,15 @@ bool TreeModel::PruneInternodes(const glm::mat4& globalTransform, ClimateModel& 
 	const auto maxDistance = m_shootSkeleton.PeekNode(0).m_info.m_endDistance;
 	const auto& sortedInternodeList = m_shootSkeleton.PeekSortedNodeList();
 	bool anyInternodePruned = false;
-
+	
 	for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); ++it) {
 		const auto internodeHandle = *it;
 		if (m_shootSkeleton.PeekNode(internodeHandle).IsRecycled()) continue;
 		if (internodeHandle == 0) continue;
-		
-		const auto& internode = m_shootSkeleton.PeekNode(*it);
+		const auto& internode = m_shootSkeleton.PeekNode(internodeHandle);
+		if(internode.m_info.m_locked) continue;
+		//Pruning here.
+		bool pruning = false;
 		if (internode.m_info.m_globalPosition.y <= 0.05f && internode.m_data.m_order != 0)
 		{
 			auto handleWalker = internodeHandle;
@@ -1068,24 +1061,13 @@ bool TreeModel::PruneInternodes(const glm::mat4& globalTransform, ClimateModel& 
 				auto& targetInternode = m_shootSkeleton.PeekNode(handleWalker);
 				if (targetInternode.m_data.m_order != 0)
 				{
-					PruneInternode(handleWalker);
-					anyInternodePruned = true;
+					pruning = true;
 				}
 			}
 		}
-	}
 
-	if (anyInternodePruned) m_shootSkeleton.SortLists();
-
-	for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); ++it) {
-		const auto internodeHandle = *it;
-		if (m_shootSkeleton.PeekNode(internodeHandle).IsRecycled()) continue;
-		if (internodeHandle == 0) continue;
-		const auto& internode = m_shootSkeleton.PeekNode(internodeHandle);
-		//Pruning here.
-		bool pruning = false;
 		const float pruningProbability = shootGrowthController.m_pruningFactor(m_shootSkeleton, internode) * m_currentDeltaTime;
-		if (pruningProbability > glm::linearRand(0.0f, 1.0f)) pruning = true;
+		if (!pruning && pruningProbability > glm::linearRand(0.0f, 1.0f)) pruning = true;
 		bool lowBranchPruning = false;
 		if (!pruning && maxDistance > 5.0f * shootGrowthController.m_internodeLength && !internode.IsApical() &&
 			(internode.m_info.m_rootDistance / maxDistance) < shootGrowthController.m_lowBranchPruning) {

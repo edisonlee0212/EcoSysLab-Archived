@@ -6,7 +6,16 @@ namespace EcoSysLab {
 	typedef int SkeletonFlowHandle;
 
 #pragma region Structural Info
+	struct SkeletonNodeWound
+	{
+		bool m_apical = false;
+		glm::quat m_localRotation = glm::vec3(0.f);
+		float m_thickness = 0.f;
+		float m_healing = 0.f;
+	};
+
 	struct SkeletonNodeInfo {
+		bool m_locked = false;
 		/**
 		 * \brief The global position at the start of the node.
 		 */
@@ -22,7 +31,7 @@ namespace EcoSysLab {
 		float m_endDistance = 0.0f;
 		int m_chainIndex = 0;
 		glm::quat m_regulatedGlobalRotation = glm::vec3(0.0f);
-
+		std::vector<SkeletonNodeWound> m_wounds;
 		glm::vec4 m_color = glm::vec4(1.0f);
 		[[nodiscard]] glm::vec3 GetGlobalEndPosition() const;
 		[[nodiscard]] glm::vec3 GetGlobalDirection() const;
@@ -279,6 +288,8 @@ namespace EcoSysLab {
 		[[nodiscard]] const std::vector<SkeletonNodeHandle>& PeekSortedNodeList() const;
 
 		[[nodiscard]] std::vector<SkeletonNodeHandle> GetSubTree(SkeletonNodeHandle baseNodeHandle) const;
+		[[nodiscard]] std::vector<SkeletonNodeHandle> GetChainToRoot(SkeletonNodeHandle endNodeHandle) const;
+
 		[[nodiscard]] std::vector<SkeletonNodeHandle> GetNodeListBaseIndex(unsigned baseIndex) const;
 		/**
 		 * To retrieve a list of handles of all flows contained within the tree.
@@ -436,7 +447,7 @@ namespace EcoSysLab {
 	}
 
 	template <typename SkeletonData, typename FlowData, typename NodeData>
-	std::vector<SkeletonNodeHandle> Skeleton<SkeletonData, FlowData, NodeData>::GetSubTree(SkeletonNodeHandle baseNodeHandle) const
+	std::vector<SkeletonNodeHandle> Skeleton<SkeletonData, FlowData, NodeData>::GetSubTree(const SkeletonNodeHandle baseNodeHandle) const
 	{
 		std::vector<SkeletonNodeHandle> retVal{};
 		std::queue<SkeletonNodeHandle> nodeHandles;
@@ -450,6 +461,20 @@ namespace EcoSysLab {
 			{
 				nodeHandles.push(childHandle);
 			}
+		}
+		return retVal;
+	}
+
+	template <typename SkeletonData, typename FlowData, typename NodeData>
+	std::vector<SkeletonNodeHandle> Skeleton<SkeletonData, FlowData, NodeData>::GetChainToRoot(
+		const SkeletonNodeHandle endNodeHandle) const
+	{
+		std::vector<SkeletonNodeHandle> retVal{};
+		SkeletonNodeHandle walker = endNodeHandle;
+		while(walker != -1)
+		{
+			retVal.emplace_back(walker);
+			walker = m_nodes[walker].m_parentHandle;
 		}
 		return retVal;
 	}
@@ -985,6 +1010,8 @@ namespace EcoSysLab {
 
 		node.m_data = {};
 		node.m_info = {};
+		node.m_info.m_locked = false;
+		node.m_info.m_wounds.clear();
 
 		node.m_recycled = true;
 		m_nodePool.emplace(handle);

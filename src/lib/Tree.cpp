@@ -524,11 +524,6 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 				spaceColonizationGridParticleInfoList->SetPendingUpdate();
 			}
 		}*/
-		if (ImGui::Button("Add Checkpoint"))
-		{
-			m_treeModel.Step();
-			m_treeVisualizer.m_checkpointIteration = m_treeModel.CurrentIteration();
-		}
 
 		if (m_enableHistory)
 		{
@@ -649,11 +644,7 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	{
 		ClearStrandModelMeshRenderer();
 	}
-	if (ImGui::TreeNode("Tree Visualizer"))
-	{
-		m_treeVisualizer.OnInspect(m_treeModel);
-		ImGui::TreePop();
-	}
+	
 	m_treeVisualizer.Visualize(m_strandModel);
 	if (ImGui::TreeNode("Skeletal graph settings"))
 	{
