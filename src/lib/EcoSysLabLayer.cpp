@@ -489,7 +489,7 @@ void EcoSysLabLayer::Visualization() {
 							if (!mousePositions.empty()) {
 								treeModel.Step();
 								auto& skeleton = treeModel.RefShootSkeleton();
-								if (treeVisualizer.ScreenCurvePruning(
+								if (treeVisualizer.ScreenCurveSelection(
 									[&](const SkeletonNodeHandle nodeHandle) { treeModel.PruneInternode(nodeHandle); }, mousePositions, skeleton, globalTransform)) {
 									skeleton.SortLists();
 									treeVisualizer.m_checkpointIteration = treeModel.CurrentIteration();
@@ -748,6 +748,21 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 						{
 							treeVisualizer.m_selectedInternodeHandle = -1;
 							treeVisualizer.m_selectedInternodeHierarchyList.clear();
+						}
+						switch(static_cast<OperatorMode>(m_operatorMode))
+						{
+						case OperatorMode::Select:
+							ImGui::Text("Press T to cut off entire node, press R to cut at point of selection.");
+							break;
+						case OperatorMode::Rotate:
+							ImGui::Text("Press T to cut off entire node.");
+							break;
+						case OperatorMode::Prune:
+							break;
+						case OperatorMode::Invigorate:
+							break;
+						case OperatorMode::Reduce:
+							break;
 						}
 						if (m_operatorMode == static_cast<unsigned>(OperatorMode::Invigorate))
 						{

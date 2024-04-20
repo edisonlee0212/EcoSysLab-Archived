@@ -56,7 +56,7 @@ namespace EcoSysLab {
 	public:
 		bool RayCastSelection(const std::shared_ptr<Camera>& cameraComponent, const glm::vec2& mousePosition, const ShootSkeleton& skeleton, const GlobalTransform& globalTransform);
 
-		bool ScreenCurvePruning(const std::function<void(SkeletonNodeHandle)>& handler, std::vector<glm::vec2>& mousePositions, ShootSkeleton& skeleton, const GlobalTransform& globalTransform);
+		bool ScreenCurveSelection(const std::function<void(SkeletonNodeHandle)>& handler, std::vector<glm::vec2>& mousePositions, ShootSkeleton& skeleton, const GlobalTransform& globalTransform);
 
 		std::vector<SkeletonNodeHandle> m_selectedInternodeHierarchyList;
 		SkeletonNodeHandle m_selectedInternodeHandle = -1;

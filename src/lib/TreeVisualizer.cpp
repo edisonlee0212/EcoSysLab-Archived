@@ -9,7 +9,7 @@
 #include "ProfileConstraints.hpp"
 using namespace EcoSysLab;
 
-bool TreeVisualizer::ScreenCurvePruning(const std::function<void(SkeletonNodeHandle)>& handler, std::vector<glm::vec2>& mousePositions,
+bool TreeVisualizer::ScreenCurveSelection(const std::function<void(SkeletonNodeHandle)>& handler, std::vector<glm::vec2>& mousePositions,
 	ShootSkeleton& skeleton, const GlobalTransform& globalTransform) {
 	auto editorLayer = Application::GetLayer<EditorLayer>();
 	auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
