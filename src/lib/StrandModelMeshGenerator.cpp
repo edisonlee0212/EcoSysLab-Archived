@@ -1454,10 +1454,6 @@ std::vector<SlicingData> slice(const StrandModel& strandModel, std::pair < Slice
 			const auto& node = skeleton.PeekNode(nodeHandle);
 
 			float frac = fmod(t, 1.0);
-
-			if(t < 5)
-			std::cout << "twist angle at t = " << t << ": " << node.m_data.m_twistAngle << std::endl;
-
 			texCoord.x += frac * node.m_data.m_twistAngle * settings.m_uMultiplier / 360.0f;
 
 			// need to do proper wraparound
@@ -1511,11 +1507,6 @@ std::vector<SlicingData> slice(const StrandModel& strandModel, std::pair < Slice
 				auto nodeHandle = getNodeHandle(pipeGroup, slicesAndClusters[i].second[0], t);
 				const auto& node = skeleton.PeekNode(nodeHandle);
 				newAccumulatedAngle += node.m_data.m_twistAngle;
-
-				if (t < 3)
-				{
-					std::cout << "Setting new accumulated angle: " << newAccumulatedAngle << " after t = " << t << std::endl;
-				}
 			}
 
 			nextSlices.push_back(SlicingData{ slicesAndClusters[i], offsets[i].first, offsets[i].second, t, newAccumulatedAngle });
@@ -1640,8 +1631,6 @@ void StrandModelMeshGenerator::RecursiveSlicing(const StrandModel& strandModel, 
 			const auto& node = skeleton.PeekNode(nodeHandle);
 
 			texCoord.x += node.m_data.m_twistAngle * settings.m_uMultiplier / 360.0f;
-			std::cout << "Initial twist angle: " << node.m_data.m_twistAngle << std::endl;
-
 			v.m_texCoord = texCoord; // legacy support
 			vertices.push_back(v);
 
@@ -1762,7 +1751,10 @@ void StrandModelMeshGenerator::CylindricalMeshing(const StrandModel& strandModel
 		[&](glm::vec3& vertexPosition, const glm::vec3& direction, const float xFactor, const float yFactor)
 		{},
 		[&](glm::vec2& texCoords, const float xFactor, const float yFactor)
-		{}
+		{
+			texCoords.x *= 2.0f;
+			texCoords.y *= 12.0f * settings.m_vMultiplier;
+		}
 	);
 	for (auto i = currentVerticesSize; i < vertices.size(); i++) {
 		vertices.at(i).m_color = glm::vec4(0, 1, 0, 1);
