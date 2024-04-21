@@ -22,6 +22,8 @@
 #include "FlowerDescriptor.hpp"
 #include "FoliageDescriptor.hpp"
 #include "FruitDescriptor.hpp"
+#include "JoeScanScanner.hpp"
+#include "Json.hpp"
 #include "LogGrader.hpp"
 #include "SpatialPlantDistributionSimulator.hpp"
 #include "ShootDescriptorGenerator.hpp"
@@ -52,6 +54,11 @@ void EcoSysLabLayer::OnCreate() {
 	ClassRegistry::RegisterAsset<HeightField>("HeightField", { ".hf" });
 	ClassRegistry::RegisterAsset<SoilLayerDescriptor>("SoilLayerDescriptor", { ".nsld" });
 	ClassRegistry::RegisterPrivateComponent<TreePointCloudScanner>("TreePointCloudScanner");
+
+
+	ClassRegistry::RegisterAsset<Json>("Json", { ".json" });
+	ClassRegistry::RegisterPrivateComponent<JoeScanScanner>("JoeScanScanner");
+
 	if (m_randomColors.empty()) {
 		for (int i = 0; i < 20000; i++) {
 			m_randomColors.emplace_back(glm::linearRand(glm::vec3(0.0f), glm::vec3(1.0f)));

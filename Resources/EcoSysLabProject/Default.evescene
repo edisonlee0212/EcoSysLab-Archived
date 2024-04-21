@@ -125,6 +125,17 @@ m_entityMetadataList:
     m_privateComponentElements:
       - m_typeName: SpatialPlantDistributionSimulator
         m_enabled: true
+  - m_name: JoeScan
+    m_handle: 16935083883529019863
+    m_enabled: true
+    m_static: false
+    Root.Handle: 16935083883529019863
+    m_privateComponentElements:
+      - m_typeName: JoeScanScanner
+        m_enabled: true
+        m_config:
+          m_assetHandle: 1918024899627197930
+          m_assetTypeName: Json
 m_systems:
   []
 LocalAssets:
@@ -254,7 +265,7 @@ LocalAssets:
 m_dataComponentStorages:
   - m_entitySize: 130
     m_chunkCapacity: 126
-    m_entityAliveCount: 9
+    m_entityAliveCount: 10
     m_dataComponentTypes:
       - m_name: Transform
         m_size: 64
@@ -307,6 +318,11 @@ m_dataComponentStorages:
           - Data: !!binary "AACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPw=="
           - Data: !!binary "AAA="
       - m_handle: 3757281826980421486
+        DataComponents:
+          - Data: !!binary "AACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPw=="
+          - Data: !!binary "AACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPw=="
+          - Data: !!binary "AAA="
+      - m_handle: 16935083883529019863
         DataComponents:
           - Data: !!binary "AACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPw=="
           - Data: !!binary "AACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPw=="

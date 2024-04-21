@@ -187,11 +187,10 @@ void tree_structor(const std::string& yamlPath,
 	
 	treePointCloud->m_connectivityGraphSettings = connectivityGraphSettings;
 	treePointCloud->m_reconstructionSettings = reconstructionSettings;
-	treePointCloud->m_treeMeshGeneratorSettings = meshGeneratorSettings;
 	treePointCloud->ImportGraph(yamlPath);
 	treePointCloud->EstablishConnectivityGraph();
 	treePointCloud->BuildSkeletons();
-	treePointCloud->ExportForestOBJ(meshPath);
+	treePointCloud->ExportForestOBJ(meshGeneratorSettings, meshPath);
 	EVOENGINE_LOG("Exported forest as OBJ");
 	scene->DeleteEntity(tempEntity);
 }
@@ -208,11 +207,12 @@ void yaml_visualization(const std::string& yamlPath,
 	const auto treePointCloud = scene->GetOrSetPrivateComponent<TreeStructor>(tempEntity).lock();
 	treePointCloud->m_connectivityGraphSettings = connectivityGraphSettings;
 	treePointCloud->m_reconstructionSettings = reconstructionSettings;
-	treePointCloud->m_treeMeshGeneratorSettings = meshGeneratorSettings;
 	treePointCloud->ImportGraph(yamlPath);
 	treePointCloud->EstablishConnectivityGraph();
 	treePointCloud->BuildSkeletons();
 	treePointCloud->GenerateForest();
+	const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
+	ecoSysLabLayer->GenerateMeshes(meshGeneratorSettings);
 	scene_capture(posX, posY, posZ, angleX, angleY, angleZ, resolutionX, resolutionY, true, outputPath);
 	scene->DeleteEntity(tempEntity);
 }

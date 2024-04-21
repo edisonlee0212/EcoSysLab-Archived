@@ -70,8 +70,10 @@ file(GLOB LOCAL_ECOSYSLAB_SOURCES "src/lib/*.cpp")
 set(LOCAL_ECOSYSLAB_INCLUDES
 	${EVOENGINE_INCLUDES}
 	${TREEIO_INCLUDES}
+	${PINCHOT_INCLUDES}
 	${CMAKE_CURRENT_BINARY_DIR}
 	${CMAKE_CURRENT_SOURCE_DIR}/include/lib
+	${CMAKE_CURRENT_SOURCE_DIR}/include/lib/JoeScan
 	${CMAKE_CURRENT_SOURCE_DIR}/include/lib/MeshFormation
 	${CMAKE_CURRENT_SOURCE_DIR}/include/lib/Layers
 	${CMAKE_CURRENT_SOURCE_DIR}/include/lib/TreeDescriptor
@@ -122,6 +124,7 @@ target_link_libraries(ecosyslab
 	csvpp
 	JSON
 	Base64
+	${PINCHOT_LIB}
 	)
 
 target_compile_definitions(ecosyslab
@@ -412,8 +415,13 @@ endif ()
 # Copy Internal resources
 # ------------------------------------------------------------------
 add_custom_command(TARGET ecosyslab POST_BUILD
-		COMMAND ${CMAKE_COMMAND} -E copy_directory
-		${CMAKE_CURRENT_SOURCE_DIR}/src/Internals
-		${CMAKE_BINARY_DIR})
+	COMMAND ${CMAKE_COMMAND} -E copy_directory
+	${CMAKE_CURRENT_SOURCE_DIR}/src/Internals
+	${CMAKE_BINARY_DIR})
+
+add_custom_command(TARGET ecosyslab POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E copy
+	${PINCHOT_DLL}
+	${CMAKE_BINARY_DIR})
 
 file(COPY src/app/imgui.ini DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
