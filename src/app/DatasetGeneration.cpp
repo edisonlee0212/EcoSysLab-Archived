@@ -134,7 +134,7 @@ void sorghum_field_point_cloud()
 
 	int gridSize = 6;
 	float gridDistance = 0.75f;
-	float randomShift = 0.25f;
+	float randomShift = 0.5f;
 	sorghumGantryCaptureSettings->m_gridSize = { gridSize, gridSize };
 	sorghumGantryCaptureSettings->m_gridDistance = { gridDistance, gridDistance };
 	RectangularSorghumFieldPattern pattern{};
