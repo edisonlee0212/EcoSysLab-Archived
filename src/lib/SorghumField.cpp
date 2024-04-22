@@ -126,7 +126,7 @@ Entity SorghumField::InstantiateField() const
 		}
 
 		
-		TransformGraph::CalculateTransformGraphForDescendents(scene,
+		TransformGraph::CalculateTransformGraphForDescendants(scene,
 			field);
 		return field;
 	}

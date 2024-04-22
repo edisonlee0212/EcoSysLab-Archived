@@ -32,12 +32,11 @@ void PARSensorGroup::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
       step = glm::clamp(step, 0.1f, 10.0f);
     }
     if (ImGui::Button("Instantiate")) {
-      const int sx = (int)((maxRange.x - minRange.x + step) / step);
-      const int sy = (int)((maxRange.y - minRange.y + step) / step);
-      const int sz = (int)((maxRange.z - minRange.z + step) / step);
-      auto voxelSize = sx * sy * sz;
+      const int sx = static_cast<int>((maxRange.x - minRange.x + step) / step);
+      const int sy = static_cast<int>((maxRange.y - minRange.y + step) / step);
+      const int sz = static_cast<int>((maxRange.z - minRange.z + step) / step);
+      const auto voxelSize = sx * sy * sz;
       m_samplers.resize(voxelSize);
-      std::vector<std::shared_future<void>> results;
       Jobs::ParallelFor(
           voxelSize,
           [&](unsigned i) {
@@ -49,10 +48,7 @@ void PARSensorGroup::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
             m_samplers[i].m_frontFace = true;
 						m_samplers[i].m_backFace = false;
 						m_samplers[i].m_a.m_normal = m_samplers[i].m_b.m_normal = m_samplers[i].m_c.m_normal = glm::vec3(0, 1, 0);
-          },
-          results);
-      for (const auto &i : results)
-        i.wait();
+          });
     }
     ImGui::TreePop();
   }

@@ -10,11 +10,10 @@ namespace EcoSysLab
 		StrandModelSkeleton m_strandModelSkeleton;
 		void ResetAllProfiles(const StrandModelParameters& strandModelParameters);
 		void InitializeProfiles(const StrandModelParameters& strandModelParameters);
-		void CalculateProfiles(const StrandModelParameters& strandModelParameters);
-		void CalculateProfile(float maxRootDistance, SkeletonNodeHandle nodeHandle, const StrandModelParameters& strandModelParameters, bool scheduling);
-		void Wait(SkeletonNodeHandle nodeHandle);
+		WorkerHandle CalculateProfiles(const StrandModelParameters& strandModelParameters);
+		void CalculateProfile(float maxRootDistance, SkeletonNodeHandle nodeHandle, const StrandModelParameters& strandModelParameters);
 
-		void PackTask(SkeletonNodeHandle nodeHandle, const StrandModelParameters& strandModelParameters, bool parallel);
+		void PackTask(SkeletonNodeHandle nodeHandle, const StrandModelParameters& strandModelParameters);
 		void MergeTask(float maxRootDistance, SkeletonNodeHandle nodeHandle, const StrandModelParameters& strandModelParameters);
 		void CopyFrontToBackTask(SkeletonNodeHandle nodeHandle);
 		void ApplyProfile(const StrandModelParameters& strandModelParameters,

@@ -134,10 +134,11 @@ namespace EcoSysLab
 		float m_twistAngle = 0.0f;
 		int m_packingIteration = 0;
 		bool m_split = false;
-		std::vector<std::shared_future<void>> m_tasks{};
-
+		
 		float m_strandRadius = 0.002f;
 		int m_strandCount = 0;
+
+		WorkerHandle m_workerHandle = -1;
 	};
 
 	struct StrandModelFlowData
@@ -147,10 +148,7 @@ namespace EcoSysLab
 
 	struct StrandModelSkeletonData
 	{
-		bool m_parallelScheduling = true;
-
 		StrandModelStrandGroup m_strandGroup{};
-
 		int m_numOfParticles = 0;
 	};
 

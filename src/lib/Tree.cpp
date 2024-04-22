@@ -739,7 +739,8 @@ void Tree::CalculateProfiles()
 	m_strandModel.m_strandModelSkeleton.Clone(m_treeModel.RefShootSkeleton());
 	m_strandModel.ResetAllProfiles(m_strandModelParameters);
 	m_strandModel.InitializeProfiles(m_strandModelParameters);
-	m_strandModel.CalculateProfiles(m_strandModelParameters);
+	const auto workerHandle = m_strandModel.CalculateProfiles(m_strandModelParameters);
+	Jobs::Wait(workerHandle);
 	const float profileCalculationTime = Times::Now() - time;
 	std::string output;
 	output += "\nProfile count: [" + std::to_string(m_strandModel.m_strandModelSkeleton.PeekSortedNodeList().size());

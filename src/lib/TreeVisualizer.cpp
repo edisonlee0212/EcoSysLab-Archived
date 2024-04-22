@@ -109,7 +109,6 @@ bool TreeVisualizer::RayCastSelection(const std::shared_ptr<Camera>& cameraCompo
 	const Ray cameraRay = cameraComponent->ScreenPointToRay(
 		cameraLtw, mousePosition);
 	const auto& sortedNodeList = skeleton.PeekSortedNodeList();
-	std::vector<std::shared_future<void>> results;
 	Jobs::ParallelFor(sortedNodeList.size(), [&](unsigned i) {
 		const auto nodeHandle = sortedNodeList[i];
 		SkeletonNodeHandle walker = nodeHandle;
@@ -183,8 +182,7 @@ bool TreeVisualizer::RayCastSelection(const std::shared_ptr<Camera>& cameraCompo
 			m_selectedInternodeLengthFactor = glm::clamp(1.0f - tc, 0.0f, 1.0f);
 			currentFocusingNodeHandle = sortedNodeList[i];
 		}
-		}, results);
-	for (auto& i : results) i.wait();
+		});
 	if (currentFocusingNodeHandle != -1) {
 		SetSelectedNode(skeleton, currentFocusingNodeHandle);
 		changed = true;

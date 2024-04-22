@@ -87,7 +87,7 @@ namespace EcoSysLab {
 			const std::unordered_set<SkeletonNodeHandle>& nodeHandles,
 			const Skeleton<SkeletonData, FlowData, NodeData>& skeleton, std::vector<Vertex>& vertices,
 			std::vector<unsigned int>& indices, const TreeMeshGeneratorSettings& settings,
-			const std::function<void(glm::vec3 &vertexPosition, const glm::vec3& direction, float xFactor, float distanceToRoot)>& vertexPositionModifier,
+			const std::function<void(glm::vec3& vertexPosition, const glm::vec3& direction, float xFactor, float distanceToRoot)>& vertexPositionModifier,
 			const std::function<void(glm::vec2& texCoords, float xFactor, float distanceToRoot)>& texCoordsModifier);
 	};
 	template<typename SkeletonData, typename FlowData, typename NodeData>
@@ -121,7 +121,7 @@ namespace EcoSysLab {
 		mainChildStatus.resize(sortedInternodeList.size());
 		std::vector<std::shared_future<void>> results;
 		std::vector<std::vector<std::pair<SkeletonNodeHandle, int>>> tempSteps{};
-		tempSteps.resize(Jobs::Workers().Size());
+		tempSteps.resize(Jobs::GetDefaultThreadSize());
 
 		Jobs::ParallelFor(sortedInternodeList.size(), [&](unsigned internodeIndex, unsigned threadIndex) {
 			auto internodeHandle = sortedInternodeList[internodeIndex];
@@ -185,7 +185,7 @@ namespace EcoSysLab {
 				positionEnd -
 				(settings.m_smoothness ? internodeInfo.m_length * settings.m_branchControlPointRatio : 0.0f) * directionEnd,
 				positionEnd);
-			
+
 			for (int ringIndex = 1; ringIndex <= amount; ringIndex++) {
 				const float a = static_cast<float>(ringIndex - 1) / amount;
 				const float b = static_cast<float>(ringIndex) / amount;
@@ -195,7 +195,7 @@ namespace EcoSysLab {
 						glm::mix(directionStart, directionEnd, a),
 						glm::mix(directionStart, directionEnd, b),
 						glm::mix(thicknessStart, thicknessEnd, a) * .5f,
-						glm::mix(thicknessStart, thicknessEnd, b) * .5f, 
+						glm::mix(thicknessStart, thicknessEnd, b) * .5f,
 						glm::mix(rootDistanceStart, rootDistanceEnd, a), glm::mix(rootDistanceStart, rootDistanceEnd, b));
 				}
 				else {
@@ -209,8 +209,7 @@ namespace EcoSysLab {
 				}
 			}
 #pragma endregion
-			}, results);
-		for (auto& i : results) i.wait();
+			});
 
 		for (const auto& list : tempSteps)
 		{
@@ -662,7 +661,7 @@ namespace EcoSysLab {
 		ringsList.resize(sortedInternodeList.size());
 		std::vector<std::shared_future<void>> results;
 		std::vector<std::vector<std::pair<SkeletonNodeHandle, int>>> tempSteps{};
-		tempSteps.resize(Jobs::Workers().Size());
+		tempSteps.resize(Jobs::GetDefaultThreadSize());
 
 		Jobs::ParallelFor(sortedInternodeList.size(), [&](unsigned internodeIndex, unsigned threadIndex) {
 			auto internodeHandle = sortedInternodeList[internodeIndex];
@@ -751,8 +750,7 @@ namespace EcoSysLab {
 				}
 			}
 #pragma endregion
-			}, results);
-		for (auto& i : results) i.wait();
+			});
 
 		for (const auto& list : tempSteps)
 		{

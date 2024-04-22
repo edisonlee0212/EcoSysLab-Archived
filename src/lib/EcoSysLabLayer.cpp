@@ -1609,13 +1609,10 @@ void EcoSysLabLayer::SoilVisualizationVector(VoxelSoilModel& soilModel) {
 		}
 			   break;
 		}
-		std::vector<std::shared_future<void>> results;
-
 		Jobs::ParallelFor(numVoxels, [&](unsigned i) {
 			particleInfos[i].m_instanceColor = m_vectorBaseColor;
-			}, results);
+			});
 
-		for (auto& i : results) i.wait();
 		m_groundFruitMatrices->SetParticleInfos(particleInfos);
 		m_updateVectorMatrices = false;
 	}
@@ -1802,8 +1799,7 @@ void EcoSysLabLayer::Simulate(float deltaTime) {
 		}
 		climate->PrepareForGrowth();
 		std::vector<bool> grownStat{};
-		grownStat.resize(Jobs::Workers().Size());
-		std::vector<std::shared_future<void>> results;
+		grownStat.resize(Jobs::GetDefaultThreadSize());
 		Jobs::ParallelFor(treeEntities->size(), [&](unsigned i, unsigned threadIndex) {
 			const auto treeEntity = treeEntities->at(i);
 			if (!scene->IsEntityEnabled(treeEntity)) return;
@@ -1811,8 +1807,7 @@ void EcoSysLabLayer::Simulate(float deltaTime) {
 			if (!tree->IsEnabled()) return;
 			if (m_simulationSettings.m_maxNodeCount > 0 && tree->m_treeModel.RefShootSkeleton().PeekSortedNodeList().size() >= m_simulationSettings.m_maxNodeCount) return;
 			grownStat[threadIndex] = tree->TryGrow(deltaTime, true, -1);
-			}, results);
-		for (auto& i : results) i.wait();
+			});
 
 		auto heightField = soil->m_soilDescriptor.Get<SoilDescriptor>()->m_heightField.Get<HeightField>();
 		for (const auto& treeEntity : *treeEntities) {

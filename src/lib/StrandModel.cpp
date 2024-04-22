@@ -182,11 +182,10 @@ void StrandModel::InitializeProfiles(const StrandModelParameters& strandModelPar
 	}
 }
 
-void StrandModel::CalculateProfiles(const StrandModelParameters& strandModelParameters)
+WorkerHandle StrandModel::CalculateProfiles(const StrandModelParameters& strandModelParameters)
 {
-	
 	const auto& sortedInternodeList = m_strandModelSkeleton.PeekSortedNodeList();
-	if (sortedInternodeList.empty()) return;
+	if (sortedInternodeList.empty()) return -1;
 
 	Jobs::ParallelFor(sortedInternodeList.size(), [&](unsigned i)
 		{
@@ -201,72 +200,52 @@ void StrandModel::CalculateProfiles(const StrandModelParameters& strandModelPara
 	);
 	const auto& baseNode = m_strandModelSkeleton.PeekNode(0);
 	const float maxRootDistance = baseNode.m_info.m_endDistance + baseNode.m_info.m_length;
-	if (m_strandModelSkeleton.m_data.m_parallelScheduling) {
-		for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); ++it)
-		{
-			CalculateProfile(maxRootDistance, *it, strandModelParameters, true);
-			m_strandModelSkeleton.m_data.m_numOfParticles += m_strandModelSkeleton.RefNode(*it).m_data.m_profile.PeekParticles().size();
-		}
-		if (!sortedInternodeList.empty())
-		{
-			Wait(sortedInternodeList.front());
-		}
-	}
-	else
+
+	for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); ++it)
 	{
-		for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); ++it)
-		{
-			CalculateProfile(maxRootDistance, *it, strandModelParameters, false);
-			Wait(*it);
-			m_strandModelSkeleton.m_data.m_numOfParticles += m_strandModelSkeleton.RefNode(*it).m_data.m_profile.PeekParticles().size();
+
+		CalculateProfile(maxRootDistance, *it, strandModelParameters);
+		m_strandModelSkeleton.m_data.m_numOfParticles += m_strandModelSkeleton.RefNode(*it).m_data.m_profile.PeekParticles().size();
+	}
+	std::vector<WorkerHandle> retVal;
+	for (const auto nodeHandle : m_strandModelSkeleton.PeekBaseNodeList())
+	{
+		const auto& node = m_strandModelSkeleton.PeekNode(nodeHandle);
+		if (node.m_data.m_workerHandle != -1) {
+			retVal.emplace_back(node.m_data.m_workerHandle);
 		}
 	}
-	
+	return Jobs::PackTask(retVal);
 }
 
-void StrandModel::CalculateProfile(const float maxRootDistance, const SkeletonNodeHandle nodeHandle, const StrandModelParameters& strandModelParameters, bool scheduling)
+void StrandModel::CalculateProfile(const float maxRootDistance, const SkeletonNodeHandle nodeHandle, const StrandModelParameters& strandModelParameters)
 {
-	if (scheduling) {
-		m_strandModelSkeleton.RefNode(nodeHandle).m_data.m_tasks.emplace_back(Jobs::AddTask([&, nodeHandle, scheduling](unsigned threadIndex) {
-			MergeTask(maxRootDistance, nodeHandle, strandModelParameters);
-			auto& internode = m_strandModelSkeleton.RefNode(nodeHandle);
-			if (internode.m_data.m_profile.PeekParticles().size() > 1) {
-				PackTask(nodeHandle, strandModelParameters, !scheduling);
-				if (internode.PeekChildHandles().empty()) CopyFrontToBackTask(nodeHandle);
-			}
-			internode.m_data.m_profile.CalculateBoundaries(true, strandModelParameters.m_boundaryPointDistance);
-			}
-		)
-		);
-	}
-	else
+	std::vector<WorkerHandle> dependencies;
+	for (const auto& childHandle : m_strandModelSkeleton.RefNode(nodeHandle).PeekChildHandles())
 	{
+		const auto workerHandle = m_strandModelSkeleton.RefNode(childHandle).m_data.m_workerHandle;
+		if (workerHandle != -1)
+		{
+			dependencies.emplace_back(workerHandle);
+		}
+	}
+	m_strandModelSkeleton.RefNode(nodeHandle).m_data.m_workerHandle = -1;
+	m_strandModelSkeleton.RefNode(nodeHandle).m_data.m_workerHandle = Jobs::AddTask(dependencies, [&, nodeHandle]() {
 		MergeTask(maxRootDistance, nodeHandle, strandModelParameters);
 		auto& internode = m_strandModelSkeleton.RefNode(nodeHandle);
 		if (internode.m_data.m_profile.PeekParticles().size() > 1) {
-			PackTask(nodeHandle, strandModelParameters, !scheduling);
+			PackTask(nodeHandle, strandModelParameters);
 			if (internode.PeekChildHandles().empty()) CopyFrontToBackTask(nodeHandle);
 		}
 		internode.m_data.m_profile.CalculateBoundaries(true, strandModelParameters.m_boundaryPointDistance);
-	}
+		}
+	);
 }
 
-void StrandModel::Wait(const SkeletonNodeHandle nodeHandle)
-{
-	auto& internode = m_strandModelSkeleton.RefNode(nodeHandle);
-	if (internode.m_data.m_tasks.empty()) return;
-	for (const auto& i : internode.m_data.m_tasks)
-	{
-		i.wait();
-	}
-	internode.m_data.m_tasks.clear();
-}
-
-void StrandModel::PackTask(const SkeletonNodeHandle nodeHandle, const StrandModelParameters& strandModelParameters, const bool parallel)
+void StrandModel::PackTask(const SkeletonNodeHandle nodeHandle, const StrandModelParameters& strandModelParameters)
 {
 	auto& internode = m_strandModelSkeleton.RefNode(nodeHandle);
 	auto& internodeData = internode.m_data;
-	internodeData.m_profile.m_parallel = parallel;
 
 	const auto iterations = internodeData.m_packingIteration;
 
@@ -304,7 +283,6 @@ void StrandModel::MergeTask(float maxRootDistance, SkeletonNodeHandle nodeHandle
 	int maxChildSize = -1;
 	SkeletonNodeHandle maxChildHandle = -1;
 	for (const auto& childHandle : childHandles) {
-		Wait(childHandle);
 		auto& childInternode = m_strandModelSkeleton.RefNode(childHandle);
 		const auto childSize = static_cast<float>(childInternode.m_data.m_particleMap.size());
 		if (childSize > maxChildSize)
@@ -441,7 +419,7 @@ void StrandModel::MergeTask(float maxRootDistance, SkeletonNodeHandle nodeHandle
 				}
 			}
 		}
-		if (needSimulation) PackTask(nodeHandle, strandModelParameters, false);
+		if (needSimulation) PackTask(nodeHandle, strandModelParameters);
 		for (const auto& childHandle : childHandles)
 		{
 			if (childHandle == maxChildHandle) continue;
@@ -656,7 +634,8 @@ void StrandModel::CalculateStrandProfileAdjustedTransforms(const StrandModelPara
 
 			sideShift += parentUp * parentCenter.y * strandModelParameters.m_sidePushFactor * node.m_data.m_strandRadius;
 			sideShift += parentLeft * parentCenter.x * strandModelParameters.m_sidePushFactor * node.m_data.m_strandRadius;
-		}else if(!node.IsApical() && strandModelParameters.m_apicalSidePushFactor > 0.f){
+		}
+		else if (!node.IsApical() && strandModelParameters.m_apicalSidePushFactor > 0.f) {
 			sideShift += parentUp * parentCenter.y * strandModelParameters.m_apicalSidePushFactor * node.m_data.m_strandRadius;
 			sideShift += parentLeft * parentCenter.x * strandModelParameters.m_apicalSidePushFactor * node.m_data.m_strandRadius;
 		}
@@ -677,7 +656,7 @@ void StrandModel::CalculateStrandProfileAdjustedTransforms(const StrandModelPara
 				const auto distance = glm::length(glm::closestPointOnLine(particle.GetPosition(), glm::vec2(0.f), node.m_data.m_offset * 1000.0f));
 				maxRadius = glm::max(maxRadius, distance);
 			}
-			
+
 			if (node.IsApical())
 			{
 				rotationShift += parentUp * offsetDirection.y * cosFront * maxRadius * strandModelParameters.m_apicalBranchRotationPushFactor * node.m_data.m_strandRadius;
@@ -702,7 +681,8 @@ void StrandModel::CalculateStrandProfileAdjustedTransforms(const StrandModelPara
 			{
 				newGlobalEndPosition += localPosition;
 			}
-		}else
+		}
+		else
 		{
 			newGlobalEndPosition += localPosition + sideShift;
 		}

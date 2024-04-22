@@ -279,7 +279,7 @@ namespace EcoSysLab {
 		 * To retrieve a list of handles of all nodes contained within the tree.
 		 * @return The list of handles of nodes sorted from root to ends.
 		 */
-		[[nodiscard]] const std::vector<SkeletonNodeHandle>& PeekBaseNodeList() const;
+		[[nodiscard]] const std::vector<SkeletonNodeHandle>& PeekBaseNodeList();
 
 		/**
 		 * To retrieve a list of handles of all nodes contained within the tree.
@@ -549,7 +549,7 @@ namespace EcoSysLab {
 	}
 
 	template <typename SkeletonData, typename FlowData, typename NodeData>
-	const std::vector<SkeletonNodeHandle>& Skeleton<SkeletonData, FlowData, NodeData>::PeekBaseNodeList() const
+	const std::vector<SkeletonNodeHandle>& Skeleton<SkeletonData, FlowData, NodeData>::PeekBaseNodeList()
 	{
 		RefreshBaseNodeList();
 		return m_baseNodeList;
