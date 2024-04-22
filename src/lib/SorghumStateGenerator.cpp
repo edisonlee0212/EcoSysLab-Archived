@@ -284,7 +284,7 @@ Entity SorghumStateGenerator::CreateEntity(const unsigned int seed) const
 
 void SorghumStateGenerator::Apply(const std::shared_ptr<SorghumState>& targetState, const unsigned int seed) const
 {
-	//if(seed >= 0) srand(seed);
+	if(seed > 0) srand(seed);
 
 	const auto upDirection = glm::vec3(0, 1, 0);
 	auto frontDirection = glm::vec3(0, 0, -1);
