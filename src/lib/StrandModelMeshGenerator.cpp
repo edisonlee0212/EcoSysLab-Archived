@@ -338,20 +338,22 @@ float getPipePolar(const StrandModel& strandModel, const StrandHandle& pipeHandl
 
 	float a0 = p0.GetPolarPosition().y;
 
+	float interpolationParam = fmod(t, 1.0f);
 
 	// we will just assume that the difference cannot exceed 180 degrees
 	if (a1 < a0)
 	{
 		std::swap(a0, a1);
+		interpolationParam = 1 - interpolationParam;
 	}
 
-	float interpolationParam = fmod(t, 1.0f);
+	
 	float angle;
 
 	if (a1 - a0 > glm::pi<float>())
 	{
 		// rotation wraps around
-		angle = fmod((a0 + 2 * glm::pi<float>()) * interpolationParam + a1 * (1 - interpolationParam), 2 * glm::pi<float>());
+		angle = fmod((a0 + 2 * glm::pi<float>()) * (1 - interpolationParam) + a1 * interpolationParam, 2 * glm::pi<float>());
 
 		if (angle > glm::pi<float>())
 		{
@@ -360,7 +362,7 @@ float getPipePolar(const StrandModel& strandModel, const StrandHandle& pipeHandl
 	}
 	else
 	{
-		angle = a0 * interpolationParam + a1 * (1 - interpolationParam);
+		angle = a0 * (1 - interpolationParam) + a1 * interpolationParam;
 
 		if (angle > glm::pi<float>())
 		{
@@ -1423,6 +1425,11 @@ std::vector<SlicingData> slice(const StrandModel& strandModel, std::pair < Slice
 		return {};
 	}
 
+	if (t <= 1)
+	{
+		std::cout << "accumulated angle at t = " << t << ": " << accumulatedAngle << std::endl;
+	}
+
 
 	std::vector<std::pair<unsigned, unsigned> > offsets;
 
@@ -1443,11 +1450,10 @@ std::vector<SlicingData> slice(const StrandModel& strandModel, std::pair < Slice
 			texCoord.x = (getPipePolar(strandModel, el.first, t) / (2 * glm::pi<float>()) + accumulatedAngle / 360.0f) * settings.m_uMultiplier;
 
 			// add twisting to uv-Coordinates
-			auto nodeHandle = getNodeHandle(pipeGroup, el.first, t);
+			auto nodeHandle = getNodeHandle(pipeGroup, el.first, glm::floor(t + 1));
 			const auto& node = skeleton.PeekNode(nodeHandle);
 
 			float frac = fmod(t, 1.0);
-
 			texCoord.x += frac * node.m_data.m_twistAngle * settings.m_uMultiplier / 360.0f;
 
 			// need to do proper wraparound
@@ -1466,7 +1472,7 @@ std::vector<SlicingData> slice(const StrandModel& strandModel, std::pair < Slice
 		// texCoord for final vertex
 		glm::vec2 texCoord = texCoords[offsets.back().second];
 
-		if (texCoord.x < texCoords.back().x)
+		if (texCoord.x + (settings.m_uMultiplier * 0.5) < texCoords.back().x)
 		{
 			texCoord.x += settings.m_uMultiplier;
 		}
@@ -1620,10 +1626,15 @@ void StrandModelMeshGenerator::RecursiveSlicing(const StrandModel& strandModel, 
 			texCoord.y = 0.0;
 			texCoord.x = getPipePolar(strandModel, el.first, 0.0) / (2 * glm::pi<float>()) * settings.m_uMultiplier;
 
+			// add twisting to uv-Coordinates
+			auto nodeHandle = getNodeHandle(pipeGroup, el.first, 0);
+			const auto& node = skeleton.PeekNode(nodeHandle);
+
+			texCoord.x += node.m_data.m_twistAngle * settings.m_uMultiplier / 360.0f;
 			v.m_texCoord = texCoord; // legacy support
 			vertices.push_back(v);
 
-			if (!isFirst && texCoord.x < texCoords.back().x)
+			if (!isFirst && texCoord.x + (settings.m_uMultiplier * 0.5) < texCoords.back().x)
 			{
 				texCoord.x += settings.m_uMultiplier;
 			}
@@ -1636,7 +1647,7 @@ void StrandModelMeshGenerator::RecursiveSlicing(const StrandModel& strandModel, 
 		// need two different texture coordinates for the first and final vertex
 		glm::vec2 texCoord = texCoords[offsetTex];
 
-		if (texCoord.x < texCoords.back().x)
+		if (texCoord.x + (settings.m_uMultiplier * 0.5) < texCoords.back().x)
 		{
 			texCoord.x += settings.m_uMultiplier;
 		}
@@ -1740,7 +1751,10 @@ void StrandModelMeshGenerator::CylindricalMeshing(const StrandModel& strandModel
 		[&](glm::vec3& vertexPosition, const glm::vec3& direction, const float xFactor, const float yFactor)
 		{},
 		[&](glm::vec2& texCoords, const float xFactor, const float yFactor)
-		{}
+		{
+			texCoords.x *= 2.0f;
+			texCoords.y *= 12.0f * settings.m_vMultiplier;
+		}
 	);
 	for (auto i = currentVerticesSize; i < vertices.size(); i++) {
 		vertices.at(i).m_color = glm::vec4(0, 1, 0, 1);

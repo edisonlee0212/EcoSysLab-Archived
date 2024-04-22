@@ -118,7 +118,7 @@ Entity SorghumField::InstantiateField() const
 			const auto sorghum = scene->GetOrSetPrivateComponent<Sorghum>(sorghumEntity).lock();
 			sorghum->m_sorghumDescriptor = sorghumDescriptor;
 			const auto sorghumState = ProjectManager::CreateTemporaryAsset<SorghumState>();
-			sorghumDescriptor->Apply(sorghumState, glm::linearRand(0, INT_MAX));
+			sorghumDescriptor->Apply(sorghumState, 0);
 			sorghum->m_sorghumState = sorghumState;
 			size++;
 			if (size >= m_sizeLimit)
