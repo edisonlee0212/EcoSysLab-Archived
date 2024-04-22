@@ -467,7 +467,7 @@ namespace EcoSysLab {
 			int ringSize = rings.size();
 			for (auto ringIndex = 0; ringIndex < ringSize; ringIndex++) {
 				for (auto s = 0; s < step; s++) {
-					float xFactor = static_cast<float>(s) / step;
+					float xFactor = static_cast<float>(glm::min(s, step - s)) / step;
 					auto& ring = rings.at(ringIndex);
 					float yFactor = ring.m_endDistanceToRoot;
 					auto direction = ring.GetDirection(
@@ -675,8 +675,8 @@ namespace EcoSysLab {
 			bool hasParent = nodeHandles.find(internode.GetParentHandle()) != nodeHandles.end();
 			glm::vec3 directionStart = internodeInfo.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
 			glm::vec3 directionEnd = directionStart;
-			float rootDistanceStart = internodeInfo.m_rootDistance;
-			float rootDistanceEnd = rootDistanceStart;
+			float rootDistanceStart = internodeInfo.m_rootDistance - 0.05f;// this is a total hack, but whatever
+			float rootDistanceEnd = internodeInfo.m_rootDistance;
 
 			glm::vec3 positionStart = internodeInfo.m_globalPosition;
 			glm::vec3 positionEnd =
@@ -821,7 +821,7 @@ namespace EcoSysLab {
 			archetype.m_vertexInfo2 = flowHandle + 1;
 			if (!needStitching) {
 				for (int p = 0; p < pStep; p++) {
-					float xFactor = static_cast<float>(p) / pStep;
+					float xFactor = static_cast<float>(glm::min(p, pStep - p)) / pStep;
 					const auto& ring = rings.at(0);
 					float yFactor = ring.m_startDistanceToRoot;
 					auto direction = ring.GetDirection(parentUp, pAngleStep * p, true);
@@ -876,7 +876,7 @@ namespace EcoSysLab {
 			int ringSize = rings.size();
 			for (auto ringIndex = 0; ringIndex < ringSize; ringIndex++) {
 				for (auto s = 0; s < step; s++) {
-					float xFactor = static_cast<float>(s) / step;
+					float xFactor = static_cast<float>(glm::min(s, step - s)) / step; // another hack
 					auto& ring = rings.at(ringIndex);
 					float yFactor = ring.m_endDistanceToRoot;
 					auto direction = ring.GetDirection(up, angleStep * s, false);
