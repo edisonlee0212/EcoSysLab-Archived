@@ -144,8 +144,8 @@ void sorghum_field_point_cloud()
 	pattern.m_distanceVariance = { 0.3f,0.3f };
 	int index = 0;
 	for (int i = 0; i < 4096; i++) {
-		std::filesystem::path target_descriptor_folder_path = resourceFolderPath / "SorghumProject" / "SorghumDescriptor";
-		const auto sorghumDescriptor = std::dynamic_pointer_cast<SorghumStateGenerator>(ProjectManager::GetOrCreateAsset(std::filesystem::path("SorghumStateGenerator") / "Random.sorghum"));
+		std::filesystem::path target_descriptor_folder_path = resourceFolderPath / "SorghumProject" / "SorghumStateGenerator";
+		const auto sorghumDescriptor = std::dynamic_pointer_cast<SorghumStateGenerator>(ProjectManager::GetOrCreateAsset(std::filesystem::path("SorghumStateGenerator") / "Random.ssg"));
 		std::string name = "Sorghum_" + std::to_string(i);
 		std::filesystem::path target_tree_pointcloud_path = output_root / (name + ".ply");
 		DatasetGenerator::GeneratePointCloudForSorghumPatch(
@@ -288,6 +288,6 @@ void apple_tree_growth()
 }
 
 int main() {
-	apple_tree_growth();
-	//sorghum_field_point_cloud();
+	//apple_tree_growth();
+	sorghum_field_point_cloud();
 }
