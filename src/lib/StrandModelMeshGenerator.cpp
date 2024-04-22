@@ -80,7 +80,7 @@ void StrandModelMeshGenerator::Generate(const StrandModel& strandModel, std::vec
 	if (settings.m_recalculateUV || settings.m_generatorType == static_cast<unsigned>(StrandModelMeshGeneratorType::MarchingCube)) {
 		CalculateUV(strandModel, vertices, settings);
 	}
-	 
+
 	for (int i = 0; i < settings.m_smoothIteration; i++)
 	{
 		MeshSmoothing(vertices, indices);
@@ -875,41 +875,139 @@ std::pair< std::vector<Graph>, std::vector<std::vector<size_t> > > computeCluste
 	return std::pair< std::vector<Graph>, std::vector<std::vector<size_t> > >(graphs, clusters);
 }
 
-std::vector<std::pair<Slice, PipeCluster> > computeSlices(const StrandModel& strandModel, const PipeCluster& pipesInPrevious, float t, float stepSize, float maxDist, size_t minStrandCount)
+std::vector<std::tuple<Slice, PipeCluster, std::vector<size_t> > > computeSlices(const StrandModel& strandModel, const PipeCluster& pipesInPrevious, float t, float stepSize,
+	float maxDist, size_t minStrandCount, std::vector<size_t>& pipeToSliceIndexMap, size_t prevSliceIndex)
 {
+	std::cout << "Computing slices at t = " << t << "..." << std::endl;
 	const auto& skeleton = strandModel.m_strandModelSkeleton;
 	const auto& pipeGroup = skeleton.m_data.m_strandGroup;
-
-	// first check if there are any pipes that might be needed for merging
-	auto nh = getNodeHandle(pipeGroup, pipesInPrevious.front(), glm::floor(t - stepSize));
-
-	const auto& node = skeleton.PeekNode(nh);
-	
 	PipeCluster allPipesWithSameNode;
-	for (auto& kv : node.m_data.m_particleMap)
+	// first check if there are any pipes that might be needed for merging
+	if (t > 0.0)
 	{
-		allPipesWithSameNode.push_back(kv.first);
-	}
+		SkeletonNodeHandle nh = getNodeHandle(pipeGroup, pipesInPrevious.front(), glm::floor(t - stepSize));
+		const auto* node = &skeleton.PeekNode(nh);
 
-	if (allPipesWithSameNode.size() != pipesInPrevious.size())
+		// need to go further down in some cases
+		size_t subtract = 1;
+		while (node->m_data.m_profile.PeekParticles().size() < pipesInPrevious.size())
+		{
+			nh = getNodeHandle(pipeGroup, pipesInPrevious.front(), glm::floor(t - stepSize) - subtract);
+			node = &skeleton.PeekNode(nh);
+			subtract++;
+		}
+
+		for (auto& particle : node->m_data.m_profile.PeekParticles())
+		{
+			allPipesWithSameNode.push_back(particle.m_strandHandle);
+		}
+
+		/*if (allPipesWithSameNode.size() != pipesInPrevious.size())
+		{
+			std::cout << "Potential for merge at t = " << t << ". Previous slice had " << pipesInPrevious.size()
+				<< " strands, but this one has potentially " << allPipesWithSameNode.size() << std::endl;
+		}*/
+	}
+	else
 	{
-		/*std::cout << "Potential for merge at t = " << t << ". Previous slice had " << pipesInPrevious.size()
-			<< " strand, but this one has potentially " << allPipesWithSameNode.size() << std::endl;*/
+		allPipesWithSameNode = pipesInPrevious;
 	}
 
 	// compute clusters
-	auto graphsAndClusters = computeClusters(strandModel, pipesInPrevious, t, maxDist, minStrandCount);
+	// a vector of pairs would probably make more sense here...
+	std::pair< std::vector<Graph>, std::vector<std::vector<size_t> > > graphsAndClusters =
+		computeClusters(strandModel, allPipesWithSameNode, t, maxDist, minStrandCount);
+
+	std::pair< std::vector<Graph>, std::vector<std::vector<size_t> > > filteredGraphsAndClusters;
+
+	std::vector<std::vector<size_t>> mergeList;
+
+	// we need to filter now for clusters that are actually connected to pipes of the previous
+	for (std::size_t i = 0; i < graphsAndClusters.first.size(); i++)
+	{
+		auto& cluster = graphsAndClusters.second[i];
+
+		//bool isConnected = false;
+		//bool needsMerging = false;
+
+		std::set<size_t> mergeIndices;
+
+		for (auto& indexInComponent : cluster)
+		{
+			StrandHandle strandHandle = allPipesWithSameNode[indexInComponent];
+
+			if (pipeToSliceIndexMap[strandHandle] == -1)
+			{
+				// this seems to be no issue after all
+				//std::cout << "Warning: pipeToSliceIndexMap contains -1" << std::endl;
+				continue;
+			}
+
+			//isConnected |= (pipeToSliceIndexMap[strandHandle] == prevSliceIndex);
+			//needsMerging |= (pipeToSliceIndexMap[strandHandle] != prevSliceIndex);
+			mergeIndices.insert(pipeToSliceIndexMap[strandHandle]);
+		}
+
+
+		if (*mergeIndices.begin() < prevSliceIndex) // use minimum index to make mergers unique to avoid duplicates
+		{
+			/*std::vector<size_t> mergeIndicesVec;
+			std::copy(mergeIndices.begin(), mergeIndices.end(), std::back_inserter(mergeIndicesVec));
+
+			std::cout << "discarding slice that must be connected with the following slices because it has been handled earlier or has no match:\n";
+
+			for (size_t index : mergeIndicesVec)
+			{
+				std::cout << index << ", ";
+			}
+			std::cout << std::endl;*/
+		}
+		else if (mergeIndices.find(prevSliceIndex) != mergeIndices.end())
+		{
+			filteredGraphsAndClusters.first.push_back(graphsAndClusters.first[i]);
+			filteredGraphsAndClusters.second.push_back(graphsAndClusters.second[i]);
+
+			std::vector<size_t> mergeIndicesVec;
+			std::copy(mergeIndices.begin(), mergeIndices.end(), std::back_inserter(mergeIndicesVec));
+
+			if (mergeIndicesVec.size() > 1)
+			{
+				std::cout << "Need to merge the following slices:\n";
+
+				for (size_t index : mergeIndicesVec)
+				{
+					std::cout << index << ", ";
+				}
+				std::cout << std::endl;
+			}
+
+			mergeList.push_back(mergeIndicesVec);
+		}
+		else
+		{
+			/*std::vector<size_t> mergeIndicesVec;
+			std::copy(mergeIndices.begin(), mergeIndices.end(), std::back_inserter(mergeIndicesVec));
+
+			std::cout << "discarding slice that must be connected to the following slices:\n";
+
+			for (size_t index : mergeIndicesVec)
+			{
+				std::cout << index << ", ";
+			}
+			std::cout << std::endl;*/
+		}
+	}
 
 	// then loop over the clusters to compute slices
-	std::vector<std::pair<Slice, PipeCluster> > slices;
+	std::vector<std::tuple<Slice, PipeCluster, std::vector<size_t> > > slices;
 
 
-	for (std::size_t i = 0; i < graphsAndClusters.first.size(); i++)
+	for (std::size_t i = 0; i < filteredGraphsAndClusters.first.size(); i++)
 	{
 		// if not visited, determine connected component around this
 		//std::cout << "computing slice containing pipe no. " << i << " with handle " << pipesInPrevious[i] << " at t = " << t << std::endl;
-		auto slice = computeSlice(strandModel, pipesInPrevious, graphsAndClusters.first[i], graphsAndClusters.second[i], t, maxDist);
-		slices.push_back(slice);
+		auto slice = computeSlice(strandModel, allPipesWithSameNode, filteredGraphsAndClusters.first[i], filteredGraphsAndClusters.second[i], t, maxDist);
+		slices.push_back(std::tuple<Slice, PipeCluster, std::vector<size_t> >(slice.first, slice.second, mergeList[i]));
 	}
 
 	return slices;
@@ -1380,13 +1478,20 @@ struct SlicingData
 	std::pair < Slice, PipeCluster> slice;
 	size_t offsetVert;
 	size_t offsetTex;
+	size_t index = -1;
 	float t;
 	float accumulatedAngle;
 };
 
-std::vector<SlicingData> slice(const StrandModel& strandModel, std::pair < Slice, PipeCluster>& prevSlice, std::pair<unsigned, unsigned> prevOffset, float t, float stepSize, float maxDist,
-	std::vector<Vertex>& vertices, std::vector<glm::vec2>& texCoords, std::vector<std::pair<unsigned, unsigned>>& indices, const StrandModelMeshGeneratorSettings& settings, float accumulatedAngle = 0.0f)
+std::vector<SlicingData> slice(const StrandModel& strandModel, std::vector<SlicingData>& prevSlices, float stepSize, float maxDist,
+	std::vector<Vertex>& vertices, std::vector<glm::vec2>& texCoords, std::vector<std::pair<unsigned, unsigned>>& indices, const StrandModelMeshGeneratorSettings& settings,
+	std::vector<size_t>& pipeToSliceIndexMap, size_t prevSliceIndex)
 {
+	auto& prevSlice = prevSlices[prevSliceIndex].slice;
+	float t = prevSlices[prevSliceIndex].t;
+	std::pair<size_t, size_t> prevOffset(prevSlices[prevSliceIndex].offsetVert, prevSlices[prevSliceIndex].offsetTex);
+	float accumulatedAngle = prevSlices[prevSliceIndex].accumulatedAngle;
+
 	const auto& skeleton = strandModel.m_strandModelSkeleton;
 	const auto& pipeGroup = skeleton.m_data.m_strandGroup;
 
@@ -1401,16 +1506,16 @@ std::vector<SlicingData> slice(const StrandModel& strandModel, std::pair < Slice
 		return {};
 	}
 
-	auto slicesAndClusters = computeSlices(strandModel, prevSlice.second, t, stepSize, maxDist, settings.m_minCellCountForMajorBranches);
+	auto slicesAndClusters = computeSlices(strandModel, prevSlice.second, t, stepSize, maxDist, settings.m_minCellCountForMajorBranches, pipeToSliceIndexMap, prevSliceIndex);
 	std::vector<Slice> topSlices;
 
 	bool allEmpty = true;
 
 	for (auto& s : slicesAndClusters)
 	{
-		topSlices.push_back(s.first);
+		topSlices.push_back(std::get<0>(s));
 
-		if (s.first.size() != 0)
+		if (std::get<0>(s).size() != 0)
 		{
 			allEmpty = false;
 		}
@@ -1425,17 +1530,13 @@ std::vector<SlicingData> slice(const StrandModel& strandModel, std::pair < Slice
 		return {};
 	}
 
-	if (t <= 1)
-	{
-		std::cout << "accumulated angle at t = " << t << ": " << accumulatedAngle << std::endl;
-	}
-
 
 	std::vector<std::pair<unsigned, unsigned> > offsets;
 
 	// create vertices
-	for (Slice& s : topSlices)
+	for (auto& scm : slicesAndClusters)
 	{
+		Slice& s = std::get<0>(scm);
 		offsets.push_back(std::make_pair<>(vertices.size(), texCoords.size()));
 
 		bool isFirst = true;
@@ -1480,8 +1581,36 @@ std::vector<SlicingData> slice(const StrandModel& strandModel, std::pair < Slice
 		texCoords.push_back(texCoord);
 	}
 
-	bool connected = connectSlices(pipeGroup, prevSlice.first, prevOffset, topSlices, offsets,
-		vertices, texCoords, indices, settings.m_branchConnections, settings);
+	bool connected;
+
+	if (std::get<2>(slicesAndClusters.front()).size() > 1)
+	{
+		// need to merge here
+		if (slicesAndClusters.size() > 1)
+		{
+			std::cout << "Warning: Multiple slices on both sides, not supported!" << std::endl;
+		}
+		else
+		{
+			std::cout << "Merging branches at t = " << t << std::endl;
+			std::vector<Slice> bottomSlices;
+			std::vector<std::pair<unsigned, unsigned> > bottomOffsets;
+
+			for (size_t index : std::get<2>(slicesAndClusters.front()))
+			{
+				bottomSlices.push_back(prevSlices[index].slice.first);
+				bottomOffsets.push_back(std::make_pair<>(prevSlices[index].offsetVert, prevSlices[index].offsetTex));
+			}
+
+			connected = connectSlices(pipeGroup, topSlices.front(), offsets.front(), bottomSlices, bottomOffsets,
+				vertices, texCoords, indices, settings.m_branchConnections, settings);
+		}
+	}
+	else
+	{
+		connected = connectSlices(pipeGroup, prevSlice.first, prevOffset, topSlices, offsets,
+			vertices, texCoords, indices, settings.m_branchConnections, settings);
+	}
 
 	if (!connected)
 	{
@@ -1490,12 +1619,12 @@ std::vector<SlicingData> slice(const StrandModel& strandModel, std::pair < Slice
 
 	if (DEBUG_OUTPUT) std::cout << "--- Done with slice at t = " << t << " ---" << std::endl;
 	// accumulate next slices
-	t += stepSize;
+	t += stepSize; // perhaps we should move this somewhere to the top
 	std::vector<SlicingData> nextSlices;
 
 	for (size_t i = 0; i < slicesAndClusters.size(); i++)
 	{
-		if (slicesAndClusters[i].first.size() != 0)
+		if (std::get<0>(slicesAndClusters[i]).size() != 0)
 		{
 			if (DEBUG_OUTPUT) std::cout << "___ Slice at t = " << t << " ___" << std::endl;
 
@@ -1504,12 +1633,13 @@ std::vector<SlicingData> slice(const StrandModel& strandModel, std::pair < Slice
 			if (std::floor(t - stepSize) < std::floor(t))
 			{
 				// need to compute new accumulated angle
-				auto nodeHandle = getNodeHandle(pipeGroup, slicesAndClusters[i].second[0], t);
+				auto nodeHandle = getNodeHandle(pipeGroup, std::get<1>(slicesAndClusters[i])[0], t);
 				const auto& node = skeleton.PeekNode(nodeHandle);
 				newAccumulatedAngle += node.m_data.m_twistAngle;
 			}
 
-			nextSlices.push_back(SlicingData{ slicesAndClusters[i], offsets[i].first, offsets[i].second, t, newAccumulatedAngle });
+			nextSlices.push_back(SlicingData{ std::make_pair<>(std::get<0>(slicesAndClusters[i]), std::get<1>(slicesAndClusters[i])),
+				offsets[i].first, offsets[i].second, 0, t, newAccumulatedAngle });
 		}
 	}
 
@@ -1527,19 +1657,47 @@ void sliceIteratively(const StrandModel& strandModel, std::vector<SlicingData>& 
 	}
 
 	float accumulatedAngle = 0.0f;
+	float t = 0.0;
+	size_t index = 0;
+
+	std::vector<size_t> pipeToSliceIndexMap(strandModel.m_strandModelSkeleton.m_data.m_strandGroup.PeekStrands().size(), -1);
+	std::vector < SlicingData> prevSlices;
 
 	while (!queue.empty())
 	{
 		SlicingData cur = queue.front();
+
+		if (t != cur.t) // re-compute pipeToSliceIndexMap
+		{
+			// reset to -1 to make this error-proof. It could happen that a strand is missing in the slices for some reason.
+			pipeToSliceIndexMap = std::vector<size_t>(strandModel.m_strandModelSkeleton.m_data.m_strandGroup.PeekStrands().size(), -1);
+			prevSlices.clear();
+			for (const SlicingData& s : queue._Get_container())
+			{
+				for (auto& pipeHandle : s.slice.second)
+				{
+					pipeToSliceIndexMap[pipeHandle] = s.index;
+
+				}
+
+				prevSlices.push_back(s);
+			}
+
+			t = cur.t;
+			index = 0;
+		}
+
 		queue.pop();
 
 		if (DEBUG_OUTPUT) std::cout << "Took next slice with t = " << cur.t << " out of the queue" << std::endl;
 
-		std::vector<SlicingData> slices = slice(strandModel, cur.slice, std::make_pair<>(cur.offsetVert, cur.offsetTex), cur.t,
-			stepSize, maxDist, vertices, texCoords, indices, settings, cur.accumulatedAngle);
+		std::vector<SlicingData> slices = slice(strandModel, prevSlices,
+			stepSize, maxDist, vertices, texCoords, indices, settings, pipeToSliceIndexMap, cur.index);
 
 		for (SlicingData& s : slices)
 		{
+			s.index = index;
+			index++;
 			queue.push(s);
 		}
 	}
@@ -1603,10 +1761,10 @@ void StrandModelMeshGenerator::RecursiveSlicing(const StrandModel& strandModel, 
 	float stepSize = 1.0f / settings.m_stepsPerSegment;
 	//float max = settings.m_maxParam;
 
-	//auto firstCluster = computeCluster(strandModel, pipeCluster, 0, visited, 0.0, maxDist);
-	//auto firstSlice = computeSlice(strandModel, pipeCluster, firstCluster.first, firstCluster.second, 0.0, maxDist);
+	// all strands in the same slice initially
+	std::vector<size_t> pipeToSliceIndexMap(strandModel.m_strandModelSkeleton.m_data.m_strandGroup.PeekStrands().size(), 0);
 
-	auto firstSlices = computeSlices(strandModel, pipeCluster, 0, 0, maxDist, 3.0); // TODO: magic number
+	auto firstSlices = computeSlices(strandModel, pipeCluster, 0, 0, maxDist, 3, pipeToSliceIndexMap, 0); // TODO: magic number 3
 	std::vector<SlicingData> startSlices;
 
 	for (auto& slice : firstSlices)
@@ -1617,7 +1775,7 @@ void StrandModelMeshGenerator::RecursiveSlicing(const StrandModel& strandModel, 
 
 		bool isFirst = true;
 
-		for (auto& el : slice.first)
+		for (auto& el : std::get<0>(slice))
 		{
 			Vertex v;
 			v.m_position = el.second;
@@ -1654,7 +1812,8 @@ void StrandModelMeshGenerator::RecursiveSlicing(const StrandModel& strandModel, 
 
 		texCoords.push_back(texCoord);
 
-		startSlices.push_back(SlicingData{ slice, offsetVert, offsetTex, stepSize, 0.0 });
+		startSlices.push_back(SlicingData{ std::make_pair<>(std::get<0>(slice), std::get<1>(slice)),
+			offsetVert, offsetTex, 0, stepSize, 0.0 });
 	}
 
 	sliceIteratively(strandModel, startSlices, stepSize, maxDist, vertices, texCoords, indices, settings);
@@ -1736,7 +1895,7 @@ void StrandModelMeshGenerator::CylindricalMeshing(const StrandModel& strandModel
 	const auto& skeleton = strandModel.m_strandModelSkeleton;
 	const auto& sortedInternodeList = skeleton.PeekSortedNodeList();
 	std::unordered_set<SkeletonNodeHandle> nodeHandles;
-	for(const auto& nodeHandle : sortedInternodeList)
+	for (const auto& nodeHandle : sortedInternodeList)
 	{
 		const auto& internode = skeleton.PeekNode(nodeHandle);
 		const int particleSize = internode.m_data.m_profile.PeekParticles().size();
@@ -1746,14 +1905,14 @@ void StrandModelMeshGenerator::CylindricalMeshing(const StrandModel& strandModel
 	const auto currentVerticesSize = vertices.size();
 	const auto ecoSysLab = Application::GetLayer<EcoSysLabLayer>();
 	CylindricalMeshGenerator<StrandModelSkeletonData, StrandModelFlowData, StrandModelNodeData>::GeneratePartially(
-		nodeHandles, skeleton, vertices, indices, 
+		nodeHandles, skeleton, vertices, indices,
 		ecoSysLab->m_meshGeneratorSettings,
 		[&](glm::vec3& vertexPosition, const glm::vec3& direction, const float xFactor, const float yFactor)
 		{},
 		[&](glm::vec2& texCoords, const float xFactor, const float yFactor)
 		{
 			texCoords.x *= 2.0f;
-			texCoords.y *= 12.0f * settings.m_vMultiplier;
+			texCoords.y *= 16.0f * settings.m_vMultiplier;
 		}
 	);
 	for (auto i = currentVerticesSize; i < vertices.size(); i++) {
