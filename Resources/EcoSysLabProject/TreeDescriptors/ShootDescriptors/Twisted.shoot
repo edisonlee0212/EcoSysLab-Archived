@@ -14,12 +14,20 @@ m_rollAngleNoise2D:
 m_apicalAngleNoise2D:
   m_minMax: [-1000, 1000]
   m_noiseDescriptors:
-    []
-m_branchingAngleMeanVariance: [45, 3]
-m_rollAngleMeanVariance: [32, 2]
-m_apicalAngleMeanVariance: [0, 4]
+    - m_type: 3
+      m_frequency: 0.100000001
+      m_intensity: 1
+      m_multiplier: 90
+      m_min: -100
+      m_max: 100
+      m_offset: 0
+      m_shift: [0, 0, 0]
+      m_ridgid: false
+m_branchingAngleMeanVariance: [60, 2]
+m_rollAngleMeanVariance: [0, 2]
+m_apicalAngleMeanVariance: [0, 0]
 m_gravitropism: 0
-m_phototropism: 0
+m_phototropism: 0.0299999993
 m_horizontalTropism: 0
 m_saggingFactorThicknessReductionMax: [0.00100000005, 2, 0.5]
 m_internodeLength: 0.0299999993
@@ -36,9 +44,9 @@ m_apicalDominance: 0.5
 m_apicalDominanceLoss: 0.0199999996
 m_trunkProtection: false
 m_maxFlowLength: 0
-m_lowBranchPruning: 0
+m_lowBranchPruning: 0.100000001
 m_lowBranchPruningThicknessFactor: 0
-m_lightPruningFactor: 0.800000012
+m_lightPruningFactor: 0.699999988
 m_thicknessPruningFactor: 0
 m_lightPruningProbability: 20
 m_thicknessPruningProbability: 20
