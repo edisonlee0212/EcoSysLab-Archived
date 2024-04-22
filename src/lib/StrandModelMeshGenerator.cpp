@@ -1912,7 +1912,7 @@ void StrandModelMeshGenerator::CylindricalMeshing(const StrandModel& strandModel
 		[&](glm::vec2& texCoords, const float xFactor, const float yFactor)
 		{
 			texCoords.x *= 2.0f;
-			texCoords.y *= 16.0f * settings.m_vMultiplier;
+			texCoords.y *= 24.0f * settings.m_vMultiplier;
 		}
 	);
 	for (auto i = currentVerticesSize; i < vertices.size(); i++) {
