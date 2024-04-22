@@ -6,6 +6,7 @@ namespace EcoSysLab {
 	typedef int SkeletonFlowHandle;
 
 #pragma region Structural Info
+	struct SkeletonNodeInfo {
 	struct SkeletonNodeWound
 	{
 		bool m_apical = false;
@@ -288,6 +289,8 @@ namespace EcoSysLab {
 		[[nodiscard]] const std::vector<SkeletonNodeHandle>& PeekSortedNodeList() const;
 
 		[[nodiscard]] std::vector<SkeletonNodeHandle> GetSubTree(SkeletonNodeHandle baseNodeHandle) const;
+		[[nodiscard]] std::vector<SkeletonNodeHandle> GetNodeListBaseIndex(unsigned baseIndex) const;
+		[[nodiscard]] std::vector<SkeletonNodeHandle> GetSubTree(SkeletonNodeHandle baseNodeHandle) const;
 		[[nodiscard]] std::vector<SkeletonNodeHandle> GetChainToRoot(SkeletonNodeHandle endNodeHandle) const;
 
 		[[nodiscard]] std::vector<SkeletonNodeHandle> GetNodeListBaseIndex(unsigned baseIndex) const;
@@ -297,8 +300,10 @@ namespace EcoSysLab {
 		 */
 		[[nodiscard]] const std::vector<SkeletonFlowHandle>& PeekSortedFlowList() const;
 
+		[[nodiscard]] const std::vector<SkeletonFlow<FlowData>>& RefRawFlows() const;
 		[[nodiscard]] std::vector<SkeletonFlow<FlowData>>& RefRawFlows();
 
+		[[nodiscard]] const std::vector<SkeletonNode<NodeData>>& RefRawNodes() const;
 		[[nodiscard]] std::vector<SkeletonNode<NodeData>>& RefRawNodes();
 
 		[[nodiscard]] const std::vector<SkeletonFlow<FlowData>>& PeekRawFlows() const;
@@ -447,6 +452,7 @@ namespace EcoSysLab {
 	}
 
 	template <typename SkeletonData, typename FlowData, typename NodeData>
+	std::vector<SkeletonNodeHandle> Skeleton<SkeletonData, FlowData, NodeData>::GetSubTree(SkeletonNodeHandle baseNodeHandle) const
 	std::vector<SkeletonNodeHandle> Skeleton<SkeletonData, FlowData, NodeData>::GetSubTree(const SkeletonNodeHandle baseNodeHandle) const
 	{
 		std::vector<SkeletonNodeHandle> retVal{};
@@ -1080,11 +1086,14 @@ namespace EcoSysLab {
 	}
 
 	template<typename SkeletonData, typename FlowData, typename NodeData>
+	const std::vector<SkeletonFlow<FlowData>>& Skeleton<SkeletonData, FlowData, NodeData>::RefRawFlows() const {
 	std::vector<SkeletonFlow<FlowData>>& Skeleton<SkeletonData, FlowData, NodeData>::RefRawFlows() {
 		return m_flows;
 	}
 
 	template<typename SkeletonData, typename FlowData, typename NodeData>
+	const std::vector<SkeletonNode<NodeData>>&
+		Skeleton<SkeletonData, FlowData, NodeData>::RefRawNodes() const {
 	std::vector<SkeletonNode<NodeData>>&
 		Skeleton<SkeletonData, FlowData, NodeData>::RefRawNodes() {
 		return m_nodes;
