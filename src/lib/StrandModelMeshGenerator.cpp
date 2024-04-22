@@ -878,35 +878,45 @@ std::pair< std::vector<Graph>, std::vector<std::vector<size_t> > > computeCluste
 std::vector<std::tuple<Slice, PipeCluster, std::vector<size_t> > > computeSlices(const StrandModel& strandModel, const PipeCluster& pipesInPrevious, float t, float stepSize,
 	float maxDist, size_t minStrandCount, std::vector<size_t>& pipeToSliceIndexMap, size_t prevSliceIndex)
 {
-	std::cout << "Computing slices at t = " << t << "..." << std::endl;
+	//std::cout << "Computing slices at t = " << t << "..." << std::endl;
 	const auto& skeleton = strandModel.m_strandModelSkeleton;
 	const auto& pipeGroup = skeleton.m_data.m_strandGroup;
 	PipeCluster allPipesWithSameNode;
 	// first check if there are any pipes that might be needed for merging
 	if (t > 0.0)
 	{
-		SkeletonNodeHandle nh = getNodeHandle(pipeGroup, pipesInPrevious.front(), glm::floor(t - stepSize));
-		const auto* node = &skeleton.PeekNode(nh);
+		// need to find all nodes that are asociated with the slice
+		std::set<SkeletonNodeHandle> nodeHandles;
 
-		// need to go further down in some cases
-		size_t subtract = 1;
-		while (node->m_data.m_profile.PeekParticles().size() < pipesInPrevious.size())
+		for (auto& pipeHandle : pipesInPrevious)
 		{
-			nh = getNodeHandle(pipeGroup, pipesInPrevious.front(), glm::floor(t - stepSize) - subtract);
-			node = &skeleton.PeekNode(nh);
-			subtract++;
+			nodeHandles.insert(getNodeHandle(pipeGroup, pipeHandle, glm::floor(t - stepSize)));
 		}
 
-		for (auto& particle : node->m_data.m_profile.PeekParticles())
+		for (auto nh : nodeHandles)
 		{
-			allPipesWithSameNode.push_back(particle.m_strandHandle);
-		}
+			const auto* node = &skeleton.PeekNode(nh);
 
-		/*if (allPipesWithSameNode.size() != pipesInPrevious.size())
-		{
-			std::cout << "Potential for merge at t = " << t << ". Previous slice had " << pipesInPrevious.size()
-				<< " strands, but this one has potentially " << allPipesWithSameNode.size() << std::endl;
-		}*/
+			// need to go further down in some cases
+			size_t subtract = 1;
+			while (node->m_data.m_profile.PeekParticles().size() < pipesInPrevious.size())
+			{
+				nh = getNodeHandle(pipeGroup, pipesInPrevious.front(), glm::floor(t - stepSize) - subtract);
+				node = &skeleton.PeekNode(nh);
+				subtract++;
+			}
+
+			for (auto& particle : node->m_data.m_profile.PeekParticles())
+			{
+				allPipesWithSameNode.push_back(particle.m_strandHandle);
+			}
+
+			/*if (allPipesWithSameNode.size() != pipesInPrevious.size())
+			{
+				std::cout << "Potential for merge at t = " << t << ". Previous slice had " << pipesInPrevious.size()
+					<< " strands, but this one has potentially " << allPipesWithSameNode.size() << std::endl;
+			}*/
+		}
 	}
 	else
 	{
@@ -1025,7 +1035,7 @@ void forEachSegment(const StrandModelStrandGroup& pipes, std::vector<StrandSegme
 void connect(std::vector<std::pair<StrandHandle, glm::vec3> >& slice0, size_t i0, size_t j0, std::pair<size_t, size_t> offset0,
 	std::vector<std::pair<StrandHandle, glm::vec3> >& slice1, size_t i1, size_t j1, std::pair<size_t, size_t> offset1,
 	std::vector<Vertex>& vertices, std::vector<glm::vec2>& texCoords, std::vector<std::pair<unsigned, unsigned>>& indices,
-	const StrandModelMeshGeneratorSettings& settings)
+	const StrandModelMeshGeneratorSettings& settings, bool invertTriangle)
 {
 	if (DEBUG_OUTPUT) std::cout << "connecting " << i0 << ", " << j0 << " to " << i1 << ", " << j1 << std::endl;
 	size_t vertBetween0 = (j0 + slice0.size() - i0) % slice0.size();
@@ -1076,18 +1086,37 @@ void connect(std::vector<std::pair<StrandHandle, glm::vec3> >& slice0, size_t i0
 				texCoords.push_back(texCoord2);
 			}
 
-			indices.push_back(std::make_pair<>(
-				offset0.first + (i0 + k0 + 1) % slice0.size(),
-				texIndex0
-			));
-			indices.push_back(std::make_pair<>(
-				offset0.first + (i0 + k0) % slice0.size(),
-				texIndex1
-			));
-			indices.push_back(std::make_pair<>(
-				offset1.first + (i1 + k1) % slice1.size(),
-				texIndex2
-			));
+
+			if (!invertTriangle)
+			{
+				indices.push_back(std::make_pair<>(
+					offset0.first + (i0 + k0 + 1) % slice0.size(),
+					texIndex0
+				));
+				indices.push_back(std::make_pair<>(
+					offset0.first + (i0 + k0) % slice0.size(),
+					texIndex1
+				));
+				indices.push_back(std::make_pair<>(
+					offset1.first + (i1 + k1) % slice1.size(),
+					texIndex2
+				));
+			}
+			else
+			{
+				indices.push_back(std::make_pair<>(
+					offset0.first + (i0 + k0 + 1) % slice0.size(),
+					texIndex0
+				));
+				indices.push_back(std::make_pair<>(
+					offset1.first + (i1 + k1) % slice1.size(),
+					texIndex2
+				));
+				indices.push_back(std::make_pair<>(
+					offset0.first + (i0 + k0) % slice0.size(),
+					texIndex1
+				));	
+			}
 
 			k0++;
 		}
@@ -1115,19 +1144,37 @@ void connect(std::vector<std::pair<StrandHandle, glm::vec3> >& slice0, size_t i0
 				texCoords.push_back(texCoord2);
 			}
 
-			indices.push_back(std::make_pair<>(
-				offset1.first + (i1 + k1) % slice1.size(),
-				texIndex0
-			));
-			indices.push_back(std::make_pair<>(
-				offset1.first + (i1 + k1 + 1) % slice1.size(),
-				texIndex1 // use end texture coordinate
-			));
+			if (!invertTriangle)
+			{
+				indices.push_back(std::make_pair<>(
+					offset1.first + (i1 + k1) % slice1.size(),
+					texIndex0
+				));
+				indices.push_back(std::make_pair<>(
+					offset1.first + (i1 + k1 + 1) % slice1.size(),
+					texIndex1 // use end texture coordinate
+				));
 
-			indices.push_back(std::make_pair<>(
-				offset0.first + (i0 + k0) % slice0.size(),
-				texIndex2
-			));
+				indices.push_back(std::make_pair<>(
+					offset0.first + (i0 + k0) % slice0.size(),
+					texIndex2
+				));
+			}
+			else
+			{
+				indices.push_back(std::make_pair<>(
+					offset1.first + (i1 + k1) % slice1.size(),
+					texIndex0
+				));
+				indices.push_back(std::make_pair<>(
+					offset0.first + (i0 + k0) % slice0.size(),
+					texIndex2
+				));
+				indices.push_back(std::make_pair<>(
+					offset1.first + (i1 + k1 + 1) % slice1.size(),
+					texIndex1 // use end texture coordinate
+				));
+			}
 
 			k1++;
 		}
@@ -1187,7 +1234,7 @@ void cyclicOrderUntangle(std::vector<size_t>& permutation)
 bool connectSlices(const StrandModelStrandGroup& pipes, Slice& bottomSlice, std::pair<unsigned, unsigned> bottomOffset,
 	std::vector<Slice>& topSlices, std::vector<std::pair<unsigned, unsigned> > topOffsets,
 	std::vector<Vertex>& vertices, std::vector<glm::vec2>& texCoords, std::vector<std::pair<unsigned, unsigned>>& indices, bool branchConnections,
-	const StrandModelMeshGeneratorSettings& settings)
+	const StrandModelMeshGeneratorSettings& settings, bool invertTriangles = false)
 {
 	// we want to track whether we actually produced any geometry
 	size_t sizeBefore = indices.size();
@@ -1324,7 +1371,7 @@ bool connectSlices(const StrandModelStrandGroup& pipes, Slice& bottomSlice, std:
 			{
 				connect(bottomSlice, prevI, bottomMid, bottomOffset,
 					topSlices[bottomPermutation[prevI].first], bottomPermutation[prevI].second, nextMid, topOffsets[bottomPermutation[prevI].first],
-					vertices, texCoords, indices, settings);
+					vertices, texCoords, indices, settings, invertTriangles);
 				if (DEBUG_OUTPUT) std::cout << "Connected bottom indices " << prevI << " to " << bottomMid << " with " << bottomPermutation[prevI].second << " to "
 					<< nextMid << " of top profile no. " << bottomPermutation[prevI].first << std::endl;
 
@@ -1347,7 +1394,7 @@ bool connectSlices(const StrandModelStrandGroup& pipes, Slice& bottomSlice, std:
 
 				connect(bottomSlice, bottomMid, i, bottomOffset,
 					topSlices[bottomPermutation[i].first], prevMid, bottomPermutation[i].second, topOffsets[bottomPermutation[i].first],
-					vertices, texCoords, indices, settings);
+					vertices, texCoords, indices, settings, invertTriangles);
 
 				if (DEBUG_OUTPUT) std::cout << "Connected bottom indices " << bottomMid << " to " << i << " with " << prevMid << " to "
 					<< bottomPermutation[i].second << " of top profile no. " << bottomPermutation[i].first << std::endl;
@@ -1412,7 +1459,7 @@ bool connectSlices(const StrandModelStrandGroup& pipes, Slice& bottomSlice, std:
 
 				connect(bottomSlice, prevI, i, bottomOffset,
 					topSlices[branchIndex], topIndices[j - 1], topIndices[j], topOffsets[branchIndex],
-					vertices, texCoords, indices, settings);
+					vertices, texCoords, indices, settings, invertTriangles);
 			}
 
 		}
@@ -1581,7 +1628,7 @@ std::vector<SlicingData> slice(const StrandModel& strandModel, std::vector<Slici
 		texCoords.push_back(texCoord);
 	}
 
-	bool connected;
+	bool connected = false;
 
 	if (std::get<2>(slicesAndClusters.front()).size() > 1)
 	{
@@ -1589,6 +1636,23 @@ std::vector<SlicingData> slice(const StrandModel& strandModel, std::vector<Slici
 		if (slicesAndClusters.size() > 1)
 		{
 			std::cout << "Warning: Multiple slices on both sides, not supported!" << std::endl;
+
+			// let's just connect all of them. This will create intersecting meshes, but should work
+			std::vector<Slice> bottomSlices;
+			std::vector<std::pair<unsigned, unsigned> > bottomOffsets;
+
+			for (size_t index : std::get<2>(slicesAndClusters.front()))
+			{
+				bottomSlices.push_back(prevSlices[index].slice.first);
+				bottomOffsets.push_back(std::make_pair<>(prevSlices[index].offsetVert, prevSlices[index].offsetTex));
+			}
+
+			for (size_t i = 0; i < bottomSlices.size(); i++)
+			{
+				connected = connectSlices(pipeGroup, bottomSlices[i], bottomOffsets[i], topSlices, offsets,
+					vertices, texCoords, indices, settings.m_branchConnections, settings);
+			}
+
 		}
 		else
 		{
@@ -1603,7 +1667,7 @@ std::vector<SlicingData> slice(const StrandModel& strandModel, std::vector<Slici
 			}
 
 			connected = connectSlices(pipeGroup, topSlices.front(), offsets.front(), bottomSlices, bottomOffsets,
-				vertices, texCoords, indices, settings.m_branchConnections, settings);
+				vertices, texCoords, indices, settings.m_branchConnections, settings, true);
 		}
 	}
 	else
