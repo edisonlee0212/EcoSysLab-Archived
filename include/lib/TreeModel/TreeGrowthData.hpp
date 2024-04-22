@@ -138,7 +138,7 @@ namespace EcoSysLab
 		float m_strandRadius = 0.002f;
 		int m_strandCount = 0;
 
-		WorkerHandle m_workerHandle = -1;
+		JobDependency m_job = {};
 	};
 
 	struct StrandModelFlowData

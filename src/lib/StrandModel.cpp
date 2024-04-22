@@ -182,10 +182,10 @@ void StrandModel::InitializeProfiles(const StrandModelParameters& strandModelPar
 	}
 }
 
-WorkerHandle StrandModel::CalculateProfiles(const StrandModelParameters& strandModelParameters)
+JobDependency StrandModel::CalculateProfiles(const StrandModelParameters& strandModelParameters)
 {
 	const auto& sortedInternodeList = m_strandModelSkeleton.PeekSortedNodeList();
-	if (sortedInternodeList.empty()) return -1;
+	if (sortedInternodeList.empty()) return {};
 
 	Jobs::ParallelFor(sortedInternodeList.size(), [&](unsigned i)
 		{
@@ -207,12 +207,12 @@ WorkerHandle StrandModel::CalculateProfiles(const StrandModelParameters& strandM
 		CalculateProfile(maxRootDistance, *it, strandModelParameters);
 		m_strandModelSkeleton.m_data.m_numOfParticles += m_strandModelSkeleton.RefNode(*it).m_data.m_profile.PeekParticles().size();
 	}
-	std::vector<WorkerHandle> retVal;
+	std::vector<JobDependency> retVal;
 	for (const auto nodeHandle : m_strandModelSkeleton.PeekBaseNodeList())
 	{
 		const auto& node = m_strandModelSkeleton.PeekNode(nodeHandle);
-		if (node.m_data.m_workerHandle != -1) {
-			retVal.emplace_back(node.m_data.m_workerHandle);
+		if (node.m_data.m_job.Valid()) {
+			retVal.emplace_back(node.m_data.m_job);
 		}
 	}
 	return Jobs::PackTask(retVal);
@@ -220,17 +220,17 @@ WorkerHandle StrandModel::CalculateProfiles(const StrandModelParameters& strandM
 
 void StrandModel::CalculateProfile(const float maxRootDistance, const SkeletonNodeHandle nodeHandle, const StrandModelParameters& strandModelParameters)
 {
-	std::vector<WorkerHandle> dependencies;
+	std::vector<JobDependency> dependencies;
 	for (const auto& childHandle : m_strandModelSkeleton.RefNode(nodeHandle).PeekChildHandles())
 	{
-		const auto workerHandle = m_strandModelSkeleton.RefNode(childHandle).m_data.m_workerHandle;
-		if (workerHandle != -1)
+		const auto workerHandle = m_strandModelSkeleton.RefNode(childHandle).m_data.m_job;
+		if (workerHandle.Valid())
 		{
 			dependencies.emplace_back(workerHandle);
 		}
 	}
-	m_strandModelSkeleton.RefNode(nodeHandle).m_data.m_workerHandle = -1;
-	m_strandModelSkeleton.RefNode(nodeHandle).m_data.m_workerHandle = Jobs::AddTask(dependencies, [&, nodeHandle]() {
+	m_strandModelSkeleton.RefNode(nodeHandle).m_data.m_job = {};
+	m_strandModelSkeleton.RefNode(nodeHandle).m_data.m_job = Jobs::AddTask(dependencies, [&, nodeHandle]() {
 		MergeTask(maxRootDistance, nodeHandle, strandModelParameters);
 		auto& internode = m_strandModelSkeleton.RefNode(nodeHandle);
 		if (internode.m_data.m_profile.PeekParticles().size() > 1) {
