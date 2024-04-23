@@ -13,6 +13,109 @@ void logger(const jsError err, const std::string msg)
 	}
 }
 
+void JoeScanScanner::StopScanningProcess()
+{
+	if (m_scanEnabled) {
+		m_scanEnabled = false;
+	}else
+	{
+		return;
+	}
+	if (m_scannerJob.Valid()) {
+		Jobs::Wait(m_scannerJob);
+		m_scannerJob = {};
+	}
+}
+/*
+void JoeScanScanner::Scan(const jsScanSystem& scanSystem, std::vector<jsScanHead>& scanHeads, std::vector<glm::vec2>& result)
+{
+	jsScanSystemStartFrameScanning(scanSystem, 1000, JS_DATA_FORMAT_XY_FULL);
+	jsScanSystemWaitUntilFrameAvailable(scanSystem, 1024);
+	const auto profileSize = jsScanSystemGetProfilesPerFrame(scanSystem);
+	std::vector<jsProfile> profiles;
+	std::vector<jsRawProfile> rawProfiles;
+	profiles.resize(profileSize);
+	rawProfiles.resize(profileSize);
+	jsScanSystemGetFrame(scanSystem, profiles.data());
+	jsScanSystemGetRawFrame(scanSystem, rawProfiles.data());
+	jsScanSystemClearFrames(scanSystem);
+	jsScanSystemStopScanning(scanSystem);
+}
+*/
+void JoeScanScanner::StartScanProcess()
+{
+	StopScanningProcess();
+	const int32_t minPeriod = jsScanSystemGetMinScanPeriod(m_scanSystem);
+	if (0 >= minPeriod) {
+		EVOENGINE_ERROR("Failed to read min scan period.");
+	}
+
+	const int startScanningResult = jsScanSystemStartFrameScanning(m_scanSystem, minPeriod, JS_DATA_FORMAT_XY_BRIGHTNESS_FULL);
+	if (0 > startScanningResult) {
+		EVOENGINE_ERROR("Failed to start scanning.");
+		return;
+	}
+
+	m_scanEnabled = true;
+	m_scannerJob = Jobs::AddTask([&]()
+		{
+			SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
+			const auto profileSize = jsScanSystemGetProfilesPerFrame(m_scanSystem);
+			while (m_scanEnabled)
+			{
+				const int scanResult = jsScanSystemWaitUntilFrameAvailable(m_scanSystem, 1000);
+				if (0 == scanResult) {
+					continue;
+				}
+				if (0 > scanResult) {
+					EVOENGINE_ERROR("Failed to wait for frame.");
+					break;
+				}
+
+				std::vector<jsProfile> profiles;
+				profiles.resize(profileSize);
+				const int getFrameResult = jsScanSystemGetFrame(m_scanSystem, profiles.data());
+				if (0 >= getFrameResult) {
+					EVOENGINE_ERROR("Failed to read frame.");
+					break;
+				}
+				size_t validCount = 0;
+				std::vector<glm::vec2> points;
+				for (int profileIndex = 0; profileIndex < profileSize; profileIndex++) {
+					if (jsRawProfileIsValid(profiles[profileIndex]))
+					{
+						bool containRealData = false;
+						for (const auto& point : profiles[profileIndex].data)
+						{
+							if (point.x != 0 || point.y != 0)
+							{
+								containRealData = true;
+								points.emplace_back(glm::vec2(point.x, point.y) / 100000.f);
+							}
+						}
+						if (containRealData) validCount++;
+					}
+				}
+				if (validCount != 0) {
+					EVOENGINE_LOG("Received [" + std::to_string(validCount) + "/" + std::to_string(profileSize) + "] profiles");
+					std::lock_guard lock(*m_scannerMutex);
+					m_points = points;
+				}
+			}
+		}
+	);
+}
+
+JoeScanScanner::JoeScanScanner()
+{
+	m_scannerMutex = new std::mutex;
+}
+
+JoeScanScanner::~JoeScanScanner()
+{
+	delete m_scannerMutex;
+}
+
 bool JoeScanScanner::InitializeScanSystem(const std::shared_ptr<Json>& json, jsScanSystem& scanSystem, std::vector<jsScanHead>& scanHeads)
 {
 	try
@@ -72,21 +175,6 @@ void JoeScanScanner::FreeScanSystem(jsScanSystem& scanSystem, std::vector<jsScan
 	EVOENGINE_LOG("JoeScan: ScanSysten Freed!");
 }
 
-void JoeScanScanner::Scan(const jsScanSystem& scanSystem, std::vector<jsScanHead>& scanHeads, std::vector<glm::vec2>& result)
-{
-	jsScanSystemStartFrameScanning(scanSystem, 1000, JS_DATA_FORMAT_XY_FULL);
-	jsScanSystemWaitUntilFrameAvailable(scanSystem, 1024);
-	const auto profileSize = jsScanSystemGetProfilesPerFrame(scanSystem);
-	std::vector<jsProfile> profiles;
-	std::vector<jsRawProfile> rawProfiles;
-	profiles.resize(profileSize);
-	rawProfiles.resize(profileSize);
-	jsScanSystemGetFrame(scanSystem, profiles.data());
-	jsScanSystemGetRawFrame(scanSystem, rawProfiles.data());
-	jsScanSystemClearFrames(scanSystem);
-	jsScanSystemStopScanning(scanSystem);
-}
-
 void JoeScanScanner::Serialize(YAML::Emitter& out)
 {
 	m_config.Save("m_config", out);
@@ -112,14 +200,40 @@ void JoeScanScanner::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 	}
 
 	ImGui::Separator();
-	if(m_scanSystem != 0 && ImGui::Button("Scan"))
+	if(m_scanSystem != 0 && !m_scanEnabled && ImGui::Button("Start Scanning"))
 	{
 		std::vector<glm::vec2> results;
-		Scan(m_scanSystem, m_scanHeads, results);
+		StartScanProcess();
+	}
+
+	if(m_scanEnabled && ImGui::Button("Stop Scanning"))
+	{
+		StopScanningProcess();
+	}
+
+	static bool enableRendering = true;
+	static std::shared_ptr<ParticleInfoList> list;
+	if (!list) list = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
+	if(enableRendering)
+	{
+		std::vector<glm::vec2> copy;
+		{
+			std::lock_guard lock(*m_scannerMutex);
+			copy = m_points;
+		}
+		std::vector<ParticleInfo> data;
+		data.resize(copy.size());
+		Jobs::ParallelFor(copy.size(), [&](unsigned i)
+			{
+				data[i].m_instanceMatrix.SetPosition(glm::vec3(copy[i].x, copy[i].y, -10.f));
+
+			});
+		list->SetParticleInfos(data);
+		editorLayer->DrawGizmoCubes(list, glm::mat4(1), 0.1f);
 	}
 }
 
-void JoeScanScanner::Update()
+void JoeScanScanner::FixedUpdate()
 {
 
 }

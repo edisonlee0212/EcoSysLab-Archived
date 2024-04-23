@@ -6,7 +6,7 @@
       "Id": 0,
       "ProductType": "JS50WX",
       "Serial": 20302,
-      "Orientation": "CableIsUpstream",
+      "Orientation": "CableIsDownstream",
       "Alignments": [
         {
           "Camera": "CameraB",
@@ -28,13 +28,47 @@
           "Camera": "CameraB",
           "Laser": "Laser1",
           "Enabled": true,
-          "Vertices": []
+          "Vertices": [
+            {
+              "X": -10000.0,
+              "Y": 10000.0
+            },
+            {
+              "X": 10000.0,
+              "Y": 10000.0
+            },
+            {
+              "X": 10000.0,
+              "Y": 0.0
+            },
+            {
+              "X": -10000.0,
+              "Y": 0.0
+            }
+          ]
         },
         {
           "Camera": "CameraA",
           "Laser": "Laser1",
           "Enabled": true,
-          "Vertices": []
+          "Vertices": [
+            {
+              "X": -10000.0,
+              "Y": 10000.0
+            },
+            {
+              "X": 10000.0,
+              "Y": 10000.0
+            },
+            {
+              "X": 10000.0,
+              "Y": 0.0
+            },
+            {
+              "X": -10000.0,
+              "Y": 0.0
+            }
+          ]
         }
       ],
       "ExclusionMasks": [
@@ -53,14 +87,14 @@
       ],
       "Exposure": {
         "MinLaserOnTimeUs": 100,
-        "DefLaserOnTimeUs": 500,
+        "DefLaserOnTimeUs": 200,
         "MaxLaserOnTimeUs": 1000,
         "MinExposureTimeUs": 10000,
         "DefExposureTimeUs": 500000,
         "MaxExposureTimeUs": 1000000,
         "LaserDetectionThreshold": 120,
-        "SaturationThreshold": 800,
-        "SaturationPercentage": 30
+        "SaturationThreshold": 500,
+        "SaturationPercentage": 100
       }
     }
   ],
@@ -73,7 +107,7 @@
     },
     {
       "Id": 0,
-      "Phase": 0,
+      "Phase": 1,
       "Camera": "CameraB",
       "Laser": "Laser1"
     }
