@@ -203,8 +203,10 @@ void SorghumPointCloudScanner::Capture(const std::filesystem::path& savePath,
 	std::vector<int> leafIndex;
 	std::vector<int> instanceIndex;
 	std::vector<int> typeIndex;
-
-	for (const auto& sample : pcSamples) {
+	glm::vec3 leftOffset = glm::linearRand(-m_leftRandomOffset, m_leftRandomOffset);
+	glm::vec3 rightOffset = glm::linearRand(-m_rightRandomOffset, m_rightRandomOffset);
+	for (int sampleIndex = 0; sampleIndex < pcSamples.size(); sampleIndex++) {
+		const auto& sample = pcSamples.at(sampleIndex);
 		if (!sample.m_hit) continue;
 		if (!captureSettings->SampleFilter(sample)) continue;
 		auto& position = sample.m_hitInfo.m_position;
@@ -220,12 +222,14 @@ void SorghumPointCloudScanner::Capture(const std::filesystem::path& savePath,
 			ballRand = glm::ballRand(m_sorghumPointCloudPointSettings.m_ballRandRadius);
 		}
 		const auto distance = glm::distance(sample.m_hitInfo.m_position, sample.m_start);
+
 		points.emplace_back(
 			sample.m_hitInfo.m_position +
 			distance * glm::vec3(glm::gaussRand(0.0f, m_sorghumPointCloudPointSettings.m_variance),
 				glm::gaussRand(0.0f, m_sorghumPointCloudPointSettings.m_variance),
 				glm::gaussRand(0.0f, m_sorghumPointCloudPointSettings.m_variance))
-			+ ballRand);
+			+ ballRand
+		+ (sampleIndex >= pcSamples.size() / 2 ? leftOffset : rightOffset));
 
 
 		if (m_sorghumPointCloudPointSettings.m_leafIndex)

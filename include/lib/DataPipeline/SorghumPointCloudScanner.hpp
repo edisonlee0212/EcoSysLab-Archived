@@ -43,6 +43,8 @@ namespace EcoSysLab
         glm::vec2 m_gridDistance = { 0.75f, 0.75f };
         glm::vec2 m_step = { 0.0075f,0.0075f };
         float m_sampleHeight = 2.5f;
+
+        
         float m_scannerAngle = 30.f;
         void OnInspect() override;
         void GenerateSamples(std::vector<PointCloudSample>& pointCloudSamples) override;
@@ -60,6 +62,8 @@ namespace EcoSysLab
 	class SorghumPointCloudScanner : public IPrivateComponent
 	{
 	public:
+        glm::vec3 m_leftRandomOffset = glm::vec3(0.02f);
+        glm::vec3 m_rightRandomOffset = glm::vec3(0.02f);
         SorghumPointCloudPointSettings m_sorghumPointCloudPointSettings {};
         void Capture(const std::filesystem::path& savePath, const std::shared_ptr<PointCloudCaptureSettings>& captureSettings) const;
         void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
