@@ -123,7 +123,7 @@ namespace EcoSysLab {
 		std::vector<std::vector<std::pair<SkeletonNodeHandle, int>>> tempSteps{};
 		tempSteps.resize(Jobs::GetDefaultThreadSize());
 
-		Jobs::ParallelFor(sortedInternodeList.size(), [&](unsigned internodeIndex, unsigned threadIndex) {
+		Jobs::RunParallelFor(sortedInternodeList.size(), [&](unsigned internodeIndex, unsigned threadIndex) {
 			auto internodeHandle = sortedInternodeList[internodeIndex];
 			const auto& internode = skeleton.PeekNode(internodeHandle);
 			const auto& internodeInfo = internode.m_info;
@@ -663,7 +663,7 @@ namespace EcoSysLab {
 		std::vector<std::vector<std::pair<SkeletonNodeHandle, int>>> tempSteps{};
 		tempSteps.resize(Jobs::GetDefaultThreadSize());
 
-		Jobs::ParallelFor(sortedInternodeList.size(), [&](unsigned internodeIndex, unsigned threadIndex) {
+		Jobs::RunParallelFor(sortedInternodeList.size(), [&](unsigned internodeIndex, unsigned threadIndex) {
 			auto internodeHandle = sortedInternodeList[internodeIndex];
 			const auto& internode = skeleton.PeekNode(internodeHandle);
 			const auto& internodeInfo = internode.m_info;

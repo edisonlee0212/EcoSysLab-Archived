@@ -18,7 +18,7 @@ void EnvironmentGrid::LightPropagation()
 {
 	const auto resolution = m_voxel.GetResolution();
 	const int shadowDiskSize = glm::ceil(m_settings.m_shadowDetectionRadius / m_voxelSize);
-	Jobs::ParallelFor(resolution.x * resolution.z, [&](unsigned i)
+	Jobs::RunParallelFor(resolution.x * resolution.z, [&](unsigned i)
 	{
 			const int x = i / resolution.z;
 			const int z = i % resolution.z;
@@ -26,7 +26,7 @@ void EnvironmentGrid::LightPropagation()
 			targetVoxel.m_lightIntensity = 1.f;
 	});
 	for (int y = resolution.y - 2; y >= 0; y--) {
-		Jobs::ParallelFor(resolution.x * resolution.z, [&](unsigned i)
+		Jobs::RunParallelFor(resolution.x * resolution.z, [&](unsigned i)
 			{
 				const int x = i / resolution.z;
 				const int z = i % resolution.z;
@@ -65,7 +65,7 @@ void EnvironmentGrid::LightPropagation()
 
 	const int lightSpaceSize = glm::ceil(m_settings.m_lightDetectionRadius / m_voxelSize);
 	for (int y = resolution.y - 1; y >= 0; y--) {
-		Jobs::ParallelFor(resolution.x * resolution.z, [&](unsigned i)
+		Jobs::RunParallelFor(resolution.x * resolution.z, [&](unsigned i)
 			{
 				const int x = i / resolution.z;
 				const int z = i % resolution.z;

@@ -175,7 +175,7 @@ void SpatialPlantDistribution::Simulate()
 	{
 		maxRadius = glm::max(maxRadius, parameter.m_finalRadius);
 	}
-	Jobs::ParallelFor(m_plants.size(), [&](unsigned plantIndex)
+	Jobs::RunParallelFor(m_plants.size(), [&](unsigned plantIndex)
 		{
 			auto& plant = m_plants[plantIndex];
 			if (plant.m_recycled) return;

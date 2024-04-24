@@ -1964,7 +1964,7 @@ void TreeStructor::SpaceColonization()
 {
 	if (m_reconstructionSettings.m_spaceColonizationFactor == 0.0f) return;
 
-	Jobs::ParallelFor(m_skeletons.size(), [&](unsigned i)
+	Jobs::RunParallelFor(m_skeletons.size(), [&](unsigned i)
 		{
 			auto& skeleton = m_skeletons[i];
 			const auto& sortedInternodeList = skeleton.PeekSortedNodeList();
@@ -2272,7 +2272,7 @@ std::vector<std::shared_ptr<Mesh>> TreeStructor::GenerateForestBranchMeshes(cons
 			{},
 			[&](glm::vec2& texCoords, float xFactor, float yFactor)
 			{});
-		Jobs::ParallelFor(vertices.size(), [&](unsigned j)
+		Jobs::RunParallelFor(vertices.size(), [&](unsigned j)
 			{
 				vertices[j].m_position += m_skeletons[i].m_data.m_rootPosition;
 			});
@@ -2344,7 +2344,7 @@ std::vector<std::shared_ptr<Mesh>> TreeStructor::GenerateFoliageMeshes()
 
 			}
 		}
-		Jobs::ParallelFor(vertices.size(), [&](unsigned j)
+		Jobs::RunParallelFor(vertices.size(), [&](unsigned j)
 			{
 				vertices[j].m_position += skeleton.m_data.m_rootPosition;
 			});

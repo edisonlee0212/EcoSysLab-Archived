@@ -139,7 +139,7 @@ void TreePointCloudCircularCaptureSettings::GenerateSamples(std::vector<PointClo
 			auto left = scannerGlobalTransform.GetRotation() * glm::vec3(1, 0, 0);
 			auto position = scannerGlobalTransform.GetPosition();
 			std::vector<std::shared_future<void>> results;
-			Jobs::ParallelFor(
+			Jobs::RunParallelFor(
 				m_resolution * m_resolution,
 				[&](const unsigned i) {
 					const float x = i % m_resolution;
@@ -185,7 +185,7 @@ void TreePointCloudGridCaptureSettings::GenerateSamples(std::vector<PointCloudSa
 		{
 			float z = step * m_step;
 			const glm::vec3 center = glm::vec3{ x, m_backpackHeight, z } - glm::vec3(startPoint.x, 0, startPoint.y);
-			Jobs::ParallelFor(m_backpackSample, [&](unsigned sampleIndex)
+			Jobs::RunParallelFor(m_backpackSample, [&](unsigned sampleIndex)
 				{
 					auto& sample = pointCloudSamples[m_backpackSample * (i * yStepSize + step) + sampleIndex];
 					sample.m_direction = glm::sphericalRand(1.0f);
@@ -210,7 +210,7 @@ void TreePointCloudGridCaptureSettings::GenerateSamples(std::vector<PointCloudSa
 		{
 			float x = step * m_step;
 			const glm::vec3 center = glm::vec3{ x, m_backpackHeight, z } - glm::vec3(startPoint.x, 0, startPoint.y);
-			Jobs::ParallelFor(m_backpackSample, [&](unsigned sampleIndex)
+			Jobs::RunParallelFor(m_backpackSample, [&](unsigned sampleIndex)
 				{
 					auto& sample = pointCloudSamples[startIndex + m_backpackSample * (i * xStepSize + step) + sampleIndex];
 					sample.m_direction = glm::sphericalRand(1.0f);
@@ -235,7 +235,7 @@ void TreePointCloudGridCaptureSettings::GenerateSamples(std::vector<PointCloudSa
 		{
 			float z = step * m_step;
 			const glm::vec3 center = glm::vec3{ x, m_droneHeight, z } - glm::vec3(startPoint.x, 0, startPoint.y);
-			Jobs::ParallelFor(m_droneSample, [&](unsigned sampleIndex)
+			Jobs::RunParallelFor(m_droneSample, [&](unsigned sampleIndex)
 				{
 					auto& sample = pointCloudSamples[m_droneSample * (i * yStepSize + step) + sampleIndex];
 					sample.m_direction = glm::sphericalRand(1.0f);
@@ -253,7 +253,7 @@ void TreePointCloudGridCaptureSettings::GenerateSamples(std::vector<PointCloudSa
 		{
 			float x = step * m_step;
 			const glm::vec3 center = glm::vec3{ x, m_droneHeight, z } - glm::vec3(startPoint.x, 0, startPoint.y);
-			Jobs::ParallelFor(m_droneSample, [&](unsigned sampleIndex)
+			Jobs::RunParallelFor(m_droneSample, [&](unsigned sampleIndex)
 				{
 					auto& sample = pointCloudSamples[startIndex + m_droneSample * (i * xStepSize + step) + sampleIndex];
 					sample.m_direction = glm::sphericalRand(1.0f);

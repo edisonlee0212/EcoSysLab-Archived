@@ -172,7 +172,7 @@ void EcoSysLabLayer::Visualization() {
 					std::vector<ParticleInfo> particleInfos;
 					particleInfos.resize(numVoxels);
 					
-					Jobs::ParallelFor(numVoxels, [&](unsigned i) {
+					Jobs::RunParallelFor(numVoxels, [&](unsigned i) {
 						const auto coordinate = voxelGrid.GetCoordinate(i);
 						particleInfos[i].m_instanceMatrix.m_value =
 							glm::translate(voxelGrid.GetPosition(coordinate) + glm::linearRand(-glm::vec3(0.5f * voxelGrid.GetVoxelSize()), glm::vec3(0.5f * voxelGrid.GetVoxelSize())))
@@ -187,7 +187,7 @@ void EcoSysLabLayer::Visualization() {
 					std::vector<ParticleInfo> particleInfos;
 					particleInfos.resize(numVoxels);
 					
-					Jobs::ParallelFor(numVoxels, [&](unsigned i) {
+					Jobs::RunParallelFor(numVoxels, [&](unsigned i) {
 						const auto coordinate = voxelGrid.GetCoordinate(i);
 						const auto& voxel = voxelGrid.Peek(coordinate);
 						const auto direction = voxel.m_lightDirection;
@@ -1288,7 +1288,7 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 			std::vector<ParticleInfo> fruitMatrices;
 			foliageMatrices.resize(leafLastStartIndex);
 			fruitMatrices.resize(fruitLastStartIndex);
-			Jobs::ParallelFor(treeEntities->size(), [&](unsigned treeIndex) {
+			Jobs::RunParallelFor(treeEntities->size(), [&](unsigned treeIndex) {
 				auto treeEntity = treeEntities->at(treeIndex);
 				if (treeEntity == m_selectedTree) return;
 				auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
@@ -1464,7 +1464,7 @@ void EcoSysLabLayer::SoilVisualizationScalar(VoxelSoilModel& soilModel) {
 	if (m_updateScalarMatrices) {
 		std::vector<ParticleInfo> particleInfos;
 		particleInfos.resize(numVoxels);
-		Jobs::ParallelFor(numVoxels, [&](unsigned i) {
+		Jobs::RunParallelFor(numVoxels, [&](unsigned i) {
 			const auto coordinate = soilModel.GetCoordinateFromIndex(i);
 			if (static_cast<float>(coordinate.x) / soilModel.m_resolution.x<
 				m_soilCutoutXDepth || static_cast<float>(coordinate.z) / soilModel.m_resolution.z>(
@@ -1480,7 +1480,7 @@ void EcoSysLabLayer::SoilVisualizationScalar(VoxelSoilModel& soilModel) {
 			}
 			});
 		auto visualize_vec3 = [&](const Field& x, const Field& y, const Field& z) {
-			Jobs::ParallelFor(numVoxels, [&](unsigned i) {
+			Jobs::RunParallelFor(numVoxels, [&](unsigned i) {
 				const auto value = glm::vec3(x[i], y[i], z[i]);
 				particleInfos[i].m_instanceColor = { glm::normalize(value),
 														 glm::clamp(glm::length(value) * m_scalarMultiplier, m_scalarMinAlpha, 1.0f) };
@@ -1488,7 +1488,7 @@ void EcoSysLabLayer::SoilVisualizationScalar(VoxelSoilModel& soilModel) {
 			};
 
 		auto visualize_float = [&](const Field& v) {
-			Jobs::ParallelFor(numVoxels, [&](unsigned i) {
+			Jobs::RunParallelFor(numVoxels, [&](unsigned i) {
 				const auto value = glm::vec3(v[i]);
 				particleInfos[i].m_instanceColor = { m_scalarBaseColor,
 														 glm::clamp(glm::length(value) * m_scalarMultiplier, m_scalarMinAlpha, 1.0f) };
@@ -1498,7 +1498,7 @@ void EcoSysLabLayer::SoilVisualizationScalar(VoxelSoilModel& soilModel) {
 
 		switch (static_cast<SoilProperty>(m_scalarSoilProperty)) {
 		case SoilProperty::Blank: {
-			Jobs::ParallelFor(numVoxels, [&](unsigned i) {
+			Jobs::RunParallelFor(numVoxels, [&](unsigned i) {
 				particleInfos[i].m_instanceColor = { m_scalarBaseColor, 0.01f };
 				});
 		}
@@ -1516,7 +1516,7 @@ void EcoSysLabLayer::SoilVisualizationScalar(VoxelSoilModel& soilModel) {
 		}
 									  break;
 		case SoilProperty::SoilLayer: {
-			Jobs::ParallelFor(numVoxels, [&](unsigned i) {
+			Jobs::RunParallelFor(numVoxels, [&](unsigned i) {
 				const auto layerIndex = soilModel.m_material_id[i];
 				if (layerIndex == 0) particleInfos[i].m_instanceColor = glm::vec4(0.0f);
 				else {
@@ -1530,7 +1530,7 @@ void EcoSysLabLayer::SoilVisualizationScalar(VoxelSoilModel& soilModel) {
 										visualize_vec3(soilModel.m_div_diff_x, soilModel.m_div_diff_y, soilModel.m_div_diff_z);
 									}break;*/
 		default: {
-			Jobs::ParallelFor(numVoxels, [&](unsigned i) {
+			Jobs::RunParallelFor(numVoxels, [&](unsigned i) {
 				particleInfos[i].m_instanceColor = { m_scalarBaseColor, 0.01f };
 				}
 			);
@@ -1600,7 +1600,7 @@ void EcoSysLabLayer::SoilVisualizationVector(VoxelSoilModel& soilModel) {
 			}break;
 			*/
 		default: {
-			Jobs::ParallelFor(numVoxels, [&](unsigned i) {
+			Jobs::RunParallelFor(numVoxels, [&](unsigned i) {
 				particleInfos[i].m_instanceMatrix.m_value =
 					glm::translate(soilModel.GetPositionFromCoordinate(soilModel.GetCoordinateFromIndex(i)))
 					* glm::mat4_cast(glm::quat(glm::vec3(0.0f)))
@@ -1609,7 +1609,7 @@ void EcoSysLabLayer::SoilVisualizationVector(VoxelSoilModel& soilModel) {
 		}
 			   break;
 		}
-		Jobs::ParallelFor(numVoxels, [&](unsigned i) {
+		Jobs::RunParallelFor(numVoxels, [&](unsigned i) {
 			particleInfos[i].m_instanceColor = m_vectorBaseColor;
 			});
 
@@ -1800,7 +1800,7 @@ void EcoSysLabLayer::Simulate(float deltaTime) {
 		climate->PrepareForGrowth();
 		std::vector<bool> grownStat{};
 		grownStat.resize(Jobs::GetDefaultThreadSize());
-		Jobs::ParallelFor(treeEntities->size(), [&](unsigned i, unsigned threadIndex) {
+		Jobs::RunParallelFor(treeEntities->size(), [&](unsigned i, unsigned threadIndex) {
 			const auto treeEntity = treeEntities->at(i);
 			if (!scene->IsEntityEnabled(treeEntity)) return;
 			const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();

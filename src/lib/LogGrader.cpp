@@ -356,7 +356,7 @@ void LogGrader::GenerateCylinderMesh(const std::shared_ptr<Mesh>& mesh, const Lo
 	vertices.resize((yStepSize + 1) * 360);
 	indices.resize(yStepSize * 360 * 6);
 
-	Jobs::ParallelFor(yStepSize + 1, [&](const unsigned yIndex)
+	Jobs::RunParallelFor(yStepSize + 1, [&](const unsigned yIndex)
 		{
 			Vertex archetype{};
 			const float y = yStep * static_cast<float>(yIndex);
@@ -371,7 +371,7 @@ void LogGrader::GenerateCylinderMesh(const std::shared_ptr<Mesh>& mesh, const Lo
 			}
 		}
 	);
-	Jobs::ParallelFor(yStepSize, [&](const unsigned yIndex)
+	Jobs::RunParallelFor(yStepSize, [&](const unsigned yIndex)
 		{
 			const auto vertexStartIndex = yIndex * 360;
 			for (int xIndex = 0; xIndex < 360; xIndex++)
@@ -418,7 +418,7 @@ void LogGrader::GenerateFlatMesh(const std::shared_ptr<Mesh>& mesh, const LogWoo
 	vertices.resize((yStepSize + 1) * (span + 1));
 	indices.resize(yStepSize * span * 6);
 
-	Jobs::ParallelFor(yStepSize + 1, [&](const unsigned yIndex)
+	Jobs::RunParallelFor(yStepSize + 1, [&](const unsigned yIndex)
 		{
 			Vertex archetype{};
 			const float y = yStep * static_cast<float>(yIndex);
@@ -434,7 +434,7 @@ void LogGrader::GenerateFlatMesh(const std::shared_ptr<Mesh>& mesh, const LogWoo
 			}
 		}
 	);
-	Jobs::ParallelFor(yStepSize, [&](const unsigned yIndex)
+	Jobs::RunParallelFor(yStepSize, [&](const unsigned yIndex)
 		{
 			const auto vertexStartIndex = yIndex * (span + 1);
 			for (int xIndex = 0; xIndex < span; xIndex++)
@@ -478,7 +478,7 @@ void LogGrader::GenerateSurface(const std::shared_ptr<ParticleInfoList>& surface
 
 	particleInfos.resize(yStepSize * span);
 
-	Jobs::ParallelFor(yStepSize + 1, [&](const unsigned yIndex)
+	Jobs::RunParallelFor(yStepSize + 1, [&](const unsigned yIndex)
 		{
 			const float y = yStep * static_cast<float>(yIndex);
 			const float intersectionAvgDistance = m_logWood.GetAverageDistance(y);

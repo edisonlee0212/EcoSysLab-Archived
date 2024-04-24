@@ -96,7 +96,7 @@ namespace EcoSysLab {
 		const auto originalResolution = m_resolution;
 		const auto originalMinBound = m_minBound;
 		Initialize(m_voxelSize, m_resolution + diffMin + diffMax, m_minBound - glm::vec3(diffMin) * m_voxelSize, {});
-		Jobs::ParallelFor(originalVoxelData.size(), [&](unsigned i)
+		Jobs::RunParallelFor(originalVoxelData.size(), [&](unsigned i)
 			{
 				const auto originalCoordinate = glm::ivec3(
 					i % originalResolution.x,

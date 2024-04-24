@@ -57,7 +57,7 @@ void JoeScanScanner::StartScanProcess()
 	}
 
 	m_scanEnabled = true;
-	m_scannerJob = Jobs::AddTask([&]()
+	m_scannerJob = Jobs::Run([&]()
 		{
 			SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
 			const auto profileSize = jsScanSystemGetProfilesPerFrame(m_scanSystem);
@@ -223,7 +223,7 @@ void JoeScanScanner::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 		}
 		std::vector<ParticleInfo> data;
 		data.resize(copy.size());
-		Jobs::ParallelFor(copy.size(), [&](unsigned i)
+		Jobs::RunParallelFor(copy.size(), [&](unsigned i)
 			{
 				data[i].m_instanceMatrix.SetPosition(glm::vec3(copy[i].x, copy[i].y, -10.f));
 

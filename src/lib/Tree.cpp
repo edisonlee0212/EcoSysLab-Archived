@@ -223,7 +223,7 @@ void Tree::GenerateSkeletalGraph(
 		lineParticleInfos.resize(nodeSize);
 		pointParticleInfos.resize(nodeSize);
 	}
-	Jobs::ParallelFor(nodeSize, [&](unsigned internodeIndex)
+	Jobs::RunParallelFor(nodeSize, [&](unsigned internodeIndex)
 		{
 			if (strandReady)
 			{

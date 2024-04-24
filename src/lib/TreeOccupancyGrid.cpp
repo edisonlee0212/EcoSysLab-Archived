@@ -6,7 +6,7 @@ using namespace EcoSysLab;
 
 void TreeOccupancyGrid::ResetMarkers()
 {
-	Jobs::ParallelFor(m_occupancyGrid.GetVoxelCount(), [&](unsigned i)
+	Jobs::RunParallelFor(m_occupancyGrid.GetVoxelCount(), [&](unsigned i)
 		{
 			auto& voxelData = m_occupancyGrid.Ref(static_cast<int>(i));
 
@@ -53,7 +53,7 @@ void TreeOccupancyGrid::Initialize(const glm::vec3& min, const glm::vec3& max, c
 	m_markersPerVoxel = markersPerVoxel;
 	m_occupancyGrid.Initialize(m_removalDistanceFactor * internodeLength, min, max, {});
 	const auto voxelSize = m_occupancyGrid.GetVoxelSize();
-	Jobs::ParallelFor(m_occupancyGrid.GetVoxelCount(), [&](unsigned i)
+	Jobs::RunParallelFor(m_occupancyGrid.GetVoxelCount(), [&](unsigned i)
 		{
 			auto& voxelData = m_occupancyGrid.Ref(static_cast<int>(i));
 			for (int v = 0; v < m_markersPerVoxel; v++)
@@ -72,7 +72,7 @@ void TreeOccupancyGrid::Resize(const glm::vec3& min, const glm::vec3& max)
 	const auto diffMax = glm::ceil((max - m_occupancyGrid.GetMaxBound() + m_detectionDistanceFactor * m_internodeLength) / voxelSize);
 	m_occupancyGrid.Resize(-diffMin, diffMax);
 	const auto newResolution = m_occupancyGrid.GetResolution();
-	Jobs::ParallelFor(m_occupancyGrid.GetVoxelCount(), [&](unsigned i)
+	Jobs::RunParallelFor(m_occupancyGrid.GetVoxelCount(), [&](unsigned i)
 		{
 			const auto coordinate = m_occupancyGrid.GetCoordinate(i);
 			
@@ -101,7 +101,7 @@ void TreeOccupancyGrid::Initialize(const VoxelGrid<TreeOccupancyGridBasicData>& 
 	m_occupancyGrid.Initialize(m_removalDistanceFactor * internodeLength, min, max, {});
 	const auto voxelSize = m_occupancyGrid.GetVoxelSize();
 
-	Jobs::ParallelFor(m_occupancyGrid.GetVoxelCount(), [&](unsigned i)
+	Jobs::RunParallelFor(m_occupancyGrid.GetVoxelCount(), [&](unsigned i)
 		{
 			const glm::vec3 normalizedPosition = glm::vec3(m_occupancyGrid.GetCoordinate(i)) / glm::vec3(m_occupancyGrid.GetResolution()) - glm::vec3(0.5f, 0.0f, 0.5f);
 			const auto srcGridSize = srcGrid.GetMaxBound() - srcGrid.GetMinBound();
@@ -133,7 +133,7 @@ void TreeOccupancyGrid::Initialize(const std::shared_ptr<RadialBoundingVolume>& 
 	m_occupancyGrid.Initialize(m_removalDistanceFactor * internodeLength, min, max, {});
 	const auto voxelSize = m_occupancyGrid.GetVoxelSize();
 
-	Jobs::ParallelFor(m_occupancyGrid.GetVoxelCount(), [&](unsigned i)
+	Jobs::RunParallelFor(m_occupancyGrid.GetVoxelCount(), [&](unsigned i)
 		{
 			if (srcRadialBoundingVolume->InVolume(m_occupancyGrid.GetPosition(i)))
 			{
@@ -165,7 +165,7 @@ glm::vec3 TreeOccupancyGrid::GetMax() const
 
 void TreeOccupancyGrid::InsertObstacle(const GlobalTransform &globalTransform, const std::shared_ptr<CubeVolume>& cubeVolume)
 {
-	Jobs::ParallelFor(m_occupancyGrid.GetVoxelCount(), [&](unsigned i)
+	Jobs::RunParallelFor(m_occupancyGrid.GetVoxelCount(), [&](unsigned i)
 		{
 			const auto center = m_occupancyGrid.GetPosition(i);
 			if(cubeVolume->InVolume(globalTransform, center))

@@ -37,7 +37,7 @@ void PARSensorGroup::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
       const int sz = static_cast<int>((maxRange.z - minRange.z + step) / step);
       const auto voxelSize = sx * sy * sz;
       m_samplers.resize(voxelSize);
-      Jobs::ParallelFor(
+      Jobs::RunParallelFor(
           voxelSize,
           [&](unsigned i) {
             float z = (i % sz) * step + minRange.z;
@@ -86,7 +86,7 @@ void PARSensorGroup::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
     ImGui::ColorEdit4("Vector Color", &color.x);
     ImGui::DragFloat("Point Size", &pointSize, 0.01f);
     ImGui::ColorEdit4("Point Color", &pointColor.x);
-    Jobs::ParallelFor(
+    Jobs::RunParallelFor(
         m_samplers.size(),
         [&](unsigned i) {
           const auto start = m_samplers[i].m_a.m_position;

@@ -45,7 +45,7 @@ void SorghumPointCloudGridCaptureSettings::GenerateSamples(std::vector<PointClou
 		{
 			float z = step * m_step;
 			const glm::vec3 center = glm::vec3{ x, m_droneHeight, z } - glm::vec3(startPoint.x, 0, startPoint.y);
-			Jobs::ParallelFor(m_droneSample, [&](unsigned sampleIndex)
+			Jobs::RunParallelFor(m_droneSample, [&](unsigned sampleIndex)
 				{
 					auto& sample = pointCloudSamples[m_droneSample * (i * yStepSize + step) + sampleIndex];
 					sample.m_direction = glm::sphericalRand(1.0f);
@@ -62,7 +62,7 @@ void SorghumPointCloudGridCaptureSettings::GenerateSamples(std::vector<PointClou
 		{
 			float x = step * m_step;
 			const glm::vec3 center = glm::vec3{ x, m_droneHeight, z } - glm::vec3(startPoint.x, 0, startPoint.y);
-			Jobs::ParallelFor(m_droneSample, [&](unsigned sampleIndex)
+			Jobs::RunParallelFor(m_droneSample, [&](unsigned sampleIndex)
 				{
 					auto& sample = pointCloudSamples[startIndex + m_droneSample * (i * xStepSize + step) + sampleIndex];
 					sample.m_direction = glm::sphericalRand(1.0f);
@@ -96,7 +96,7 @@ void SorghumGantryCaptureSettings::GenerateSamples(std::vector<PointCloudSample>
 	constexpr auto front = glm::vec3(0, -1, 0);
 	float rollAngle = glm::linearRand(0, 360);
 	const auto up = glm::vec3(glm::sin(glm::radians(rollAngle)), 0, glm::cos(glm::radians(rollAngle)));
-	Jobs::ParallelFor(yStepSize * xStepSize, [&](unsigned i)
+	Jobs::RunParallelFor(yStepSize * xStepSize, [&](unsigned i)
 		{
 			const auto x = i / yStepSize;
 			const auto y = i % yStepSize;

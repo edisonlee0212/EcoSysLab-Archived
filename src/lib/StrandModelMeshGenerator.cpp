@@ -2020,7 +2020,7 @@ void StrandModelMeshGenerator::CalculateUV(const StrandModel& strandModel, std::
 	{
 		const auto& sortedNodeList = strandModel.m_strandModelSkeleton.PeekSortedNodeList();
 
-		Jobs::ParallelFor(vertices.size(), [&](unsigned vertexIndex)
+		Jobs::RunParallelFor(vertices.size(), [&](unsigned vertexIndex)
 			{
 				auto& vertex = vertices.at(vertexIndex);
 
@@ -2104,7 +2104,7 @@ void StrandModelMeshGenerator::CalculateUV(const StrandModel& strandModel, std::
 		}
 
 
-		Jobs::ParallelFor(vertices.size(), [&](unsigned vertexIndex)
+		Jobs::RunParallelFor(vertices.size(), [&](unsigned vertexIndex)
 			{
 				auto& vertex = vertices.at(vertexIndex);
 				float minDistance = FLT_MAX;

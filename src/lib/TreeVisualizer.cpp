@@ -109,7 +109,7 @@ bool TreeVisualizer::RayCastSelection(const std::shared_ptr<Camera>& cameraCompo
 	const Ray cameraRay = cameraComponent->ScreenPointToRay(
 		cameraLtw, mousePosition);
 	const auto& sortedNodeList = skeleton.PeekSortedNodeList();
-	Jobs::ParallelFor(sortedNodeList.size(), [&](unsigned i) {
+	Jobs::RunParallelFor(sortedNodeList.size(), [&](unsigned i) {
 		const auto nodeHandle = sortedNodeList[i];
 		SkeletonNodeHandle walker = nodeHandle;
 		bool subTree = false;
@@ -249,7 +249,7 @@ void TreeVisualizer::SyncMatrices(const ShootSkeleton& skeleton, const std::shar
 	std::vector<ParticleInfo> matrices;
 	
 	matrices.resize(sortedNodeList.size());
-	Jobs::ParallelFor(sortedNodeList.size(), [&](unsigned i) {
+	Jobs::RunParallelFor(sortedNodeList.size(), [&](unsigned i) {
 		const auto nodeHandle = sortedNodeList[i];
 		const auto& node = skeleton.PeekNode(nodeHandle);
 		bool subTree = false;
@@ -286,7 +286,7 @@ void TreeVisualizer::SyncMatrices(const ShootSkeleton& skeleton, const std::shar
 		}
 		}
 	);
-	Jobs::ParallelFor(sortedNodeList.size(), [&](unsigned i) {
+	Jobs::RunParallelFor(sortedNodeList.size(), [&](unsigned i) {
 		const auto nodeHandle = sortedNodeList[i];
 		const auto& node = skeleton.PeekNode(nodeHandle);
 		switch (static_cast<ShootVisualizerMode>(m_settings.m_shootVisualizationMode)) {

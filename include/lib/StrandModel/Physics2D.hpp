@@ -44,7 +44,7 @@ namespace EcoSysLab {
 	void Physics2D<T>::Update(
 		const std::function<void(RigidBody2D<T>& collisionRigidBody)>& modifyRigidBodyFunc)
 	{
-		Jobs::ParallelFor(m_rigidBodies2D.size(), [&](unsigned i)
+		Jobs::RunParallelFor(m_rigidBodies2D.size(), [&](unsigned i)
 			{
 				modifyRigidBodyFunc(m_rigidBodies2D[i]);
 			}
@@ -56,7 +56,7 @@ namespace EcoSysLab {
 				SolveContact(i, j);
 			}
 		}
-		Jobs::ParallelFor(m_rigidBodies2D.size(), [&](unsigned i)
+		Jobs::RunParallelFor(m_rigidBodies2D.size(), [&](unsigned i)
 			{
 				m_rigidBodies2D[i].Update(m_deltaTime);
 			}

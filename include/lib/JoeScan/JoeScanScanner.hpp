@@ -7,7 +7,7 @@ namespace EcoSysLab {
 	class JoeScanScanner : public IPrivateComponent {
 		std::mutex* m_scannerMutex = nullptr;
 		bool m_scanEnabled = false;
-		JobDependency m_scannerJob{};
+		JobHandle m_scannerJob{};
 		float m_scanTimeStep = 0.5f;
 
 		std::vector<glm::vec2> m_points;
