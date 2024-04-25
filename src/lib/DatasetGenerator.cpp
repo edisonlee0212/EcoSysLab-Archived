@@ -255,7 +255,7 @@ void DatasetGenerator::GeneratePointCloudForTree(const TreePointCloudPointSettin
                                                  const std::shared_ptr<PointCloudCaptureSettings>& captureSettings, const std::string& treeParametersPath, const float deltaTime,
                                                  const int maxIterations, const int maxTreeNodeCount, const TreeMeshGeneratorSettings& meshGeneratorSettings,
                                                  const std::string& pointCloudOutputPath, bool exportTreeMesh, const std::string& treeMeshOutputPath,
-                                                 bool exportJunction, const std::string& treeJunctionOutputPath)
+                                                 bool exportJunction)
 {
 	const auto applicationStatus = Application::GetApplicationStatus();
 	if (applicationStatus == ApplicationStatus::NoProject)
@@ -322,8 +322,7 @@ void DatasetGenerator::GeneratePointCloudForTree(const TreePointCloudPointSettin
 	const auto scanner = scene->GetOrSetPrivateComponent<TreePointCloudScanner>(scannerEntity).lock();
 	scanner->m_pointSettings = pointSettings;
 	Application::Loop();
-	scanner->Capture(meshGeneratorSettings, pointCloudOutputPath, captureSettings);
-	if (exportJunction) tree->ExportJunction(meshGeneratorSettings, treeJunctionOutputPath);
+	scanner->Capture(meshGeneratorSettings, pointCloudOutputPath, exportJunction, captureSettings);
 	Application::Loop();
 	scene->DeleteEntity(treeEntity);
 	scene->DeleteEntity(scannerEntity);
@@ -335,7 +334,7 @@ void DatasetGenerator::GeneratePointCloudForForestPatch(
 	const TreePointCloudPointSettings& pointSettings,
 	const std::shared_ptr<PointCloudCaptureSettings>& captureSettings, const std::string& treeParametersFolderPath,
 	float deltaTime, int maxIterations, int maxTreeNodeCount,
-	const TreeMeshGeneratorSettings& meshGeneratorSettings, const std::string& pointCloudOutputPath)
+	const TreeMeshGeneratorSettings& meshGeneratorSettings, const std::string& pointCloudOutputPath, const bool exportJunction)
 {
 	const auto applicationStatus = Application::GetApplicationStatus();
 	if (applicationStatus == ApplicationStatus::NoProject)
@@ -403,7 +402,7 @@ void DatasetGenerator::GeneratePointCloudForForestPatch(
 	const auto scanner = scene->GetOrSetPrivateComponent<TreePointCloudScanner>(scannerEntity).lock();
 	scanner->m_pointSettings = pointSettings;
 	Application::Loop();
-	scanner->Capture(meshGeneratorSettings, pointCloudOutputPath, captureSettings);
+	scanner->Capture(meshGeneratorSettings, pointCloudOutputPath, exportJunction, captureSettings);
 
 	if (const std::vector<Entity>* treeEntities =
 		scene->UnsafeGetPrivateComponentOwnersList<Tree>(); treeEntities && !treeEntities->empty())

@@ -57,7 +57,7 @@ namespace EcoSysLab {
         glm::ivec2 m_gridSize = { 5, 5 };
         float m_gridDistance = 1.25f;
         float m_step = 0.01f;
-        int m_backpackSample = 2048;
+        int m_backpackSample = 512;
         float m_backpackHeight = 1.0f;
         int m_droneSample = 128;
         float m_droneHeight = 5.0f;
@@ -69,7 +69,7 @@ namespace EcoSysLab {
 	class TreePointCloudScanner : public IPrivateComponent{
 	public:
         TreePointCloudPointSettings m_pointSettings;
-        void Capture(const TreeMeshGeneratorSettings& meshGeneratorSettings, const std::filesystem::path& savePath, const std::shared_ptr<PointCloudCaptureSettings>& captureSettings) const;
+        void Capture(const TreeMeshGeneratorSettings& meshGeneratorSettings, const std::filesystem::path& savePath, bool exportJunction, const std::shared_ptr<PointCloudCaptureSettings>& captureSettings) const;
 		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 
         void OnDestroy() override;

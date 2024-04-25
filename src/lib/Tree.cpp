@@ -2317,11 +2317,23 @@ struct TreePart {
 	std::vector<SkeletonNodeHandle> m_nodeHandles;
 	std::vector<bool> m_isEnd;
 	std::vector<int> m_lineIndex;
+
+	int m_numOfLeaves = 0;
 };
 
 void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings, YAML::Emitter& out)
 {
 	out << YAML::Key << "Tree" << YAML::Value << YAML::BeginMap; {
+		auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
+		if (!treeDescriptor)
+		{
+			EVOENGINE_WARNING("TreeDescriptor missing!");
+			treeDescriptor = ProjectManager::CreateTemporaryAsset<TreeDescriptor>();
+			treeDescriptor->m_foliageDescriptor = ProjectManager::CreateTemporaryAsset<FoliageDescriptor>();
+		}
+		auto foliageDescriptor = treeDescriptor->m_foliageDescriptor.Get<FoliageDescriptor>();
+		if (!foliageDescriptor) foliageDescriptor = ProjectManager::CreateTemporaryAsset<FoliageDescriptor>();
+
 		const auto& skeleton = m_treeModel.RefShootSkeleton();
 		const auto& sortedInternodeList = skeleton.PeekSortedNodeList();
 		std::vector<TreePart> treeParts{};
@@ -2331,6 +2343,7 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 		{
 			const auto& internode = skeleton.PeekNode(internodeHandle);
 			const auto& internodeInfo = internode.m_info;
+
 			auto parentInternodeHandle = internode.GetParentHandle();
 			const auto flowHandle = internode.GetFlowHandle();
 			const auto& flow = skeleton.PeekFlow(flowHandle);
@@ -2386,6 +2399,7 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 					treeParts.emplace_back();
 					auto& treePart = treeParts.back();
 					treePart.m_isJunction = false;
+					treePart.m_numOfLeaves = 0;
 					currentTreePartIndex = treePart.m_treePartIndex = treePartInfo.m_treePartIndex;
 
 					currentLineIndex = nextLineIndex;
@@ -2418,6 +2432,7 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 					treeParts.emplace_back();
 					auto& treePart = treeParts.back();
 					treePart.m_isJunction = true;
+					treePart.m_numOfLeaves = 0;
 					currentTreePartIndex = treePart.m_treePartIndex = treePartInfo.m_treePartIndex;
 
 					currentLineIndex = nextLineIndex;
@@ -2469,6 +2484,18 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 				}
 			}
 		}
+		for (int internodeHandle : sortedInternodeList)
+		{
+			const auto& internode = skeleton.PeekNode(internodeHandle);
+			const auto& internodeInfo = internode.m_info;
+			std::vector<glm::mat4> leafMatrices;
+			foliageDescriptor->GenerateFoliageMatrices(leafMatrices, internodeInfo);
+
+			auto& currentTreePartInfo = treePartInfos[internodeHandle];
+			auto& treePart = treeParts[currentTreePartInfo.m_treePartIndex];
+			treePart.m_numOfLeaves += leafMatrices.size();
+		}
+
 		for (auto& treePart : treeParts)
 		{
 			const auto& startInternode = skeleton.PeekNode(treePart.m_nodeHandles.front());
@@ -2529,6 +2556,8 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 			out << YAML::Key << "J" << YAML::Value << (treePart.m_isJunction ? 1 : 0);
 			out << YAML::Key << "I" << YAML::Value << treePart.m_treePartIndex + 1;
 			out << YAML::Key << "LI" << YAML::Value << treePart.m_baseLine.m_lineIndex + 1;
+
+			out << YAML::Key << "F" << YAML::Value << treePart.m_numOfLeaves;
 			if (lineIndexCheck.find(treePart.m_baseLine.m_lineIndex) != lineIndexCheck.end())
 			{
 				EVOENGINE_ERROR("Duplicate!");
@@ -2540,6 +2569,7 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 			out << YAML::Key << "BER" << YAML::Value << treePart.m_baseLine.m_endRadius;
 			out << YAML::Key << "BSD" << YAML::Value << treePart.m_baseLine.m_startDirection;
 			out << YAML::Key << "BED" << YAML::Value << treePart.m_baseLine.m_endDirection;
+
 			out << YAML::Key << "C" << YAML::Value << YAML::BeginSeq;
 			if (treePart.m_childrenLines.size() > 3)
 			{

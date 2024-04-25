@@ -76,6 +76,9 @@ void forest_patch_point_cloud()
 	tmgs.m_enableTwig = true;
 	tmgs.m_junctionColor = true;
 	std::filesystem::path output_root = "D:\\ForestPointCloudData\\";
+
+	std::filesystem::create_directories(output_root);
+
 	TreePointCloudPointSettings pcps{};
 	std::shared_ptr<TreePointCloudCircularCaptureSettings> treePointCloudCircularCaptureSettings = std::make_shared<TreePointCloudCircularCaptureSettings>();
 	std::shared_ptr<TreePointCloudGridCaptureSettings> treePointCloudGridCaptureSettings = std::make_shared<TreePointCloudGridCaptureSettings>();
@@ -102,7 +105,7 @@ void forest_patch_point_cloud()
 		std::filesystem::path target_tree_mesh_path = output_root / (name + ".obj");
 		std::filesystem::path target_tree_pointcloud_path = output_root / (name + ".ply");
 		//std::filesystem::path target_tree_junction_path = output_root / (name + ".yml");
-		DatasetGenerator::GeneratePointCloudForForestPatch(gridSize, gridDistance, randomShift, pcps, treePointCloudGridCaptureSettings, target_descriptor_folder_path.string(), 0.08220f, 240, 15000, tmgs, target_tree_pointcloud_path.string());
+		DatasetGenerator::GeneratePointCloudForForestPatch(gridSize, gridDistance, randomShift, pcps, treePointCloudGridCaptureSettings, target_descriptor_folder_path.string(), 0.08220f, 240, 15000, tmgs, target_tree_pointcloud_path.string(), true);
 		index++;
 	}
 }
@@ -124,6 +127,8 @@ void sorghum_field_point_cloud()
 	SorghumMeshGeneratorSettings sorghumMeshGeneratorSettings{};
 
 	std::filesystem::path output_root = "D:\\SorghumPointCloudData\\";
+	std::filesystem::create_directories(output_root);
+
 	SorghumPointCloudPointSettings sorghumPointCloudPointSettings{};
 	std::shared_ptr<SorghumGantryCaptureSettings> sorghumGantryCaptureSettings = std::make_shared<SorghumGantryCaptureSettings>();
 	sorghumPointCloudPointSettings.m_ballRandRadius = 0.005f;
@@ -179,6 +184,8 @@ void tree_trunk_mesh()
 	tmgs.m_enableTwig = true;
 
 	std::filesystem::path output_root = "D:\\TreeTrunkData\\";
+	std::filesystem::create_directories(output_root);
+
 	tmgs.m_enableFoliage = false;
 	std::filesystem::path target_descriptor_folder_path = resourceFolderPath / "EcoSysLabProject" / "Trunk";
 	std::vector<std::shared_ptr<TreeDescriptor>> collectedTreeDescriptors{};
@@ -224,6 +231,7 @@ void tree_growth_mesh()
 	tmgs.m_enableTwig = true;
 
 	std::filesystem::path output_root = "D:\\TreeGrowth\\";
+	std::filesystem::create_directories(output_root);
 	tmgs.m_enableFoliage = true;
 	std::filesystem::path target_descriptor_folder_path = resourceFolderPath / "EcoSysLabProject" / "TreeDescriptors";
 	std::vector<std::shared_ptr<TreeDescriptor>> collectedTreeDescriptors{};
@@ -270,6 +278,7 @@ void apple_tree_growth()
 	tmgs.m_enableTwig = true;
 
 	std::filesystem::path output_root = "D:\\TreeGrowth\\";
+	std::filesystem::create_directories(output_root);
 	tmgs.m_enableFoliage = true;
 	std::filesystem::path target_descriptor_path = resourceFolderPath / "EcoSysLabProject" / "TreeDescriptors" / "Apple.tree";
 	std::vector<std::shared_ptr<TreeDescriptor>> collectedTreeDescriptors{};
@@ -289,5 +298,6 @@ void apple_tree_growth()
 
 int main() {
 	//apple_tree_growth();
-	sorghum_field_point_cloud();
+	//sorghum_field_point_cloud();
+	forest_patch_point_cloud();
 }
