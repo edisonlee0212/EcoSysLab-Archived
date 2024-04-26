@@ -30,12 +30,36 @@ namespace EcoSysLab {
 		glm::vec4 m_branchFocusColor = glm::vec4(1.f, 0.f, 0.f, 1.f);
 		void OnInspect();
 	};
+	struct JunctionLine {
+		int m_lineIndex = -1;
+		glm::vec3 m_startPosition;
+		glm::vec3 m_endPosition;
+		float m_startRadius;
+		float m_endRadius;
+
+		glm::vec3 m_startDirection;
+		glm::vec3 m_endDirection;
+	};
+
+	struct TreePartData {
+		int m_treePartIndex;
+		bool m_isJunction = false;
+		JunctionLine m_baseLine;
+		std::vector<JunctionLine> m_childrenLines;
+		std::vector<SkeletonNodeHandle> m_nodeHandles;
+		std::vector<bool> m_isEnd;
+		std::vector<int> m_lineIndex;
+
+		int m_numOfLeaves = 0;
+	};
 
 	class Tree : public IPrivateComponent {
 		void CalculateProfiles();
 		friend class EcoSysLabLayer;
 		void PrepareController(const std::shared_ptr<ShootDescriptor>& shootDescriptor, const std::shared_ptr<Soil>& soil, const std::shared_ptr<Climate>& climate);
 		ShootGrowthController m_shootGrowthController{};
+
+		void GenerateTreeParts(const TreeMeshGeneratorSettings& meshGeneratorSettings, std::vector<TreePartData>& treeParts);
 	public:
 		StrandModelParameters m_strandModelParameters{};
 		static void SerializeTreeGrowthSettings(const TreeGrowthSettings& treeGrowthSettings, YAML::Emitter& out);
@@ -119,8 +143,10 @@ namespace EcoSysLab {
 		void FromLSystemString(const std::shared_ptr<LSystemString>& lSystemString);
 		void FromTreeGraph(const std::shared_ptr<TreeGraph>& treeGraph);
 		void FromTreeGraphV2(const std::shared_ptr<TreeGraphV2>& treeGraphV2);
-		void ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings, YAML::Emitter& out);
-		void ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings, const std::filesystem::path& path);
+		void ExportTreeParts(const TreeMeshGeneratorSettings& meshGeneratorSettings, YAML::Emitter& out);
+		void ExportTreeParts(const TreeMeshGeneratorSettings& meshGeneratorSettings, treeio::json& out);
+
+		void ExportTreeParts(const TreeMeshGeneratorSettings& meshGeneratorSettings, const std::filesystem::path& path);
 		[[maybe_unused]] bool ExportIOTree(const std::filesystem::path& path) const;
 		void ExportRadialBoundingVolume(const std::shared_ptr<RadialBoundingVolume>& rbv) const;
 		void CollectAssetRef(std::vector<AssetRef>& list) override;

@@ -2298,256 +2298,244 @@ void Tree::FromTreeGraph(const std::shared_ptr<TreeGraph>& treeGraph)
 void Tree::FromTreeGraphV2(const std::shared_ptr<TreeGraphV2>& treeGraphV2)
 {
 }
-struct JunctionLine {
-	int m_lineIndex = -1;
-	glm::vec3 m_startPosition;
-	glm::vec3 m_endPosition;
-	float m_startRadius;
-	float m_endRadius;
 
-	glm::vec3 m_startDirection;
-	glm::vec3 m_endDirection;
-};
-
-struct TreePart {
-	int m_treePartIndex;
-	bool m_isJunction = false;
-	JunctionLine m_baseLine;
-	std::vector<JunctionLine> m_childrenLines;
-	std::vector<SkeletonNodeHandle> m_nodeHandles;
-	std::vector<bool> m_isEnd;
-	std::vector<int> m_lineIndex;
-
-	int m_numOfLeaves = 0;
-};
-
-void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings, YAML::Emitter& out)
+void Tree::GenerateTreeParts(const TreeMeshGeneratorSettings& meshGeneratorSettings, std::vector<TreePartData>& treeParts)
 {
-	out << YAML::Key << "Tree" << YAML::Value << YAML::BeginMap; {
-		auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
-		if (!treeDescriptor)
+	auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
+	if (!treeDescriptor)
+	{
+		EVOENGINE_WARNING("TreeDescriptor missing!");
+		treeDescriptor = ProjectManager::CreateTemporaryAsset<TreeDescriptor>();
+		treeDescriptor->m_foliageDescriptor = ProjectManager::CreateTemporaryAsset<FoliageDescriptor>();
+	}
+	auto foliageDescriptor = treeDescriptor->m_foliageDescriptor.Get<FoliageDescriptor>();
+	if (!foliageDescriptor) foliageDescriptor = ProjectManager::CreateTemporaryAsset<FoliageDescriptor>();
+
+	const auto& skeleton = m_treeModel.RefShootSkeleton();
+	const auto& sortedInternodeList = skeleton.PeekSortedNodeList();
+	
+	std::unordered_map<SkeletonNodeHandle, TreePartInfo> treePartInfos{};
+	int nextLineIndex = 0;
+	for (int internodeHandle : sortedInternodeList)
+	{
+		const auto& internode = skeleton.PeekNode(internodeHandle);
+		const auto& internodeInfo = internode.m_info;
+
+		auto parentInternodeHandle = internode.GetParentHandle();
+		const auto flowHandle = internode.GetFlowHandle();
+		const auto& flow = skeleton.PeekFlow(flowHandle);
+		const auto& chainHandles = flow.PeekNodeHandles();
+		const bool hasMultipleChildren = flow.PeekChildHandles().size() > 1;
+		bool onlyChild = true;
+		const auto parentFlowHandle = flow.GetParentHandle();
+		float distanceToChainStart = 0;
+		float distanceToChainEnd = 0;
+		const auto chainSize = chainHandles.size();
+		for (int i = 0; i < chainSize; i++)
 		{
-			EVOENGINE_WARNING("TreeDescriptor missing!");
-			treeDescriptor = ProjectManager::CreateTemporaryAsset<TreeDescriptor>();
-			treeDescriptor->m_foliageDescriptor = ProjectManager::CreateTemporaryAsset<FoliageDescriptor>();
+			if (chainHandles[i] == internodeHandle) break;
+			distanceToChainStart += skeleton.PeekNode(chainHandles[i]).m_info.m_length;
+
 		}
-		auto foliageDescriptor = treeDescriptor->m_foliageDescriptor.Get<FoliageDescriptor>();
-		if (!foliageDescriptor) foliageDescriptor = ProjectManager::CreateTemporaryAsset<FoliageDescriptor>();
-
-		const auto& skeleton = m_treeModel.RefShootSkeleton();
-		const auto& sortedInternodeList = skeleton.PeekSortedNodeList();
-		std::vector<TreePart> treeParts{};
-		std::unordered_map<SkeletonNodeHandle, TreePartInfo> treePartInfos{};
-		int nextLineIndex = 0;
-		for (int internodeHandle : sortedInternodeList)
+		distanceToChainEnd = flow.m_info.m_flowLength - distanceToChainStart - internode.m_info.m_length;
+		float compareRadius = internode.m_info.m_thickness;
+		if (parentFlowHandle != -1)
 		{
-			const auto& internode = skeleton.PeekNode(internodeHandle);
-			const auto& internodeInfo = internode.m_info;
-
-			auto parentInternodeHandle = internode.GetParentHandle();
-			const auto flowHandle = internode.GetFlowHandle();
-			const auto& flow = skeleton.PeekFlow(flowHandle);
-			const auto& chainHandles = flow.PeekNodeHandles();
-			const bool hasMultipleChildren = flow.PeekChildHandles().size() > 1;
-			bool onlyChild = true;
-			const auto parentFlowHandle = flow.GetParentHandle();
-			float distanceToChainStart = 0;
-			float distanceToChainEnd = 0;
-			const auto chainSize = chainHandles.size();
-			for (int i = 0; i < chainSize; i++)
-			{
-				if (chainHandles[i] == internodeHandle) break;
-				distanceToChainStart += skeleton.PeekNode(chainHandles[i]).m_info.m_length;
-
-			}
-			distanceToChainEnd = flow.m_info.m_flowLength - distanceToChainStart - internode.m_info.m_length;
-			float compareRadius = internode.m_info.m_thickness;
-			if (parentFlowHandle != -1)
-			{
-				const auto& parentFlow = skeleton.PeekFlow(parentFlowHandle);
-				onlyChild = parentFlow.PeekChildHandles().size() <= 1;
-				compareRadius = parentFlow.m_info.m_endThickness;
-			}
-			int treePartType = 0;
-			if (hasMultipleChildren && distanceToChainEnd <= meshGeneratorSettings.m_treePartBaseDistance * compareRadius) {
-				treePartType = 1;
-			}
-			else if (!onlyChild && distanceToChainStart <= meshGeneratorSettings.m_treePartEndDistance * compareRadius)
-			{
-				treePartType = 2;
-			}
-			int currentTreePartIndex = -1;
-			int currentLineIndex = -1;
-			if (treePartType == 0)
-			{
-				//IShape
-				//If root or parent is Y Shape or length exceeds limit, create a new IShape from this node.
-				bool restartIShape = parentInternodeHandle == -1 || treePartInfos[parentInternodeHandle].m_treePartType != 0;
-				if (!restartIShape)
-				{
-					const auto& parentJunctionInfo = treePartInfos[parentInternodeHandle];
-					if (parentJunctionInfo.m_distanceToStart / internodeInfo.m_thickness > meshGeneratorSettings.m_treePartBreakRatio) restartIShape = true;
-				}
-				if (restartIShape)
-				{
-					TreePartInfo treePartInfo;
-					treePartInfo.m_treePartType = 0;
-					treePartInfo.m_treePartIndex = treeParts.size();
-					treePartInfo.m_lineIndex = nextLineIndex;
-					treePartInfo.m_distanceToStart = 0.0f;
-					treePartInfos[internodeHandle] = treePartInfo;
-					treeParts.emplace_back();
-					auto& treePart = treeParts.back();
-					treePart.m_isJunction = false;
-					treePart.m_numOfLeaves = 0;
-					currentTreePartIndex = treePart.m_treePartIndex = treePartInfo.m_treePartIndex;
-
-					currentLineIndex = nextLineIndex;
-					nextLineIndex++;
-				}
-				else
-				{
-					auto& currentTreePartInfo = treePartInfos[internodeHandle];
-					currentTreePartInfo = treePartInfos[parentInternodeHandle];
-					currentTreePartInfo.m_distanceToStart += internodeInfo.m_length;
-					currentTreePartInfo.m_treePartType = 0;
-					currentTreePartIndex = currentTreePartInfo.m_treePartIndex;
-
-					currentLineIndex = currentTreePartInfo.m_lineIndex;
-				}
-			}
-			else if (treePartType == 1)
-			{
-				//Base of Y Shape
-				if (parentInternodeHandle == -1 || treePartInfos[parentInternodeHandle].m_treePartType != 1
-					|| treePartInfos[parentInternodeHandle].m_baseFlowHandle != flowHandle)
-				{
-					TreePartInfo treePartInfo;
-					treePartInfo.m_treePartType = 1;
-					treePartInfo.m_treePartIndex = treeParts.size();
-					treePartInfo.m_lineIndex = nextLineIndex;
-					treePartInfo.m_distanceToStart = 0.0f;
-					treePartInfo.m_baseFlowHandle = flowHandle;
-					treePartInfos[internodeHandle] = treePartInfo;
-					treeParts.emplace_back();
-					auto& treePart = treeParts.back();
-					treePart.m_isJunction = true;
-					treePart.m_numOfLeaves = 0;
-					currentTreePartIndex = treePart.m_treePartIndex = treePartInfo.m_treePartIndex;
-
-					currentLineIndex = nextLineIndex;
-					nextLineIndex++;
-				}
-				else
-				{
-					auto& currentTreePartInfo = treePartInfos[internodeHandle];
-					currentTreePartInfo = treePartInfos[parentInternodeHandle];
-					currentTreePartInfo.m_treePartType = 1;
-					currentTreePartIndex = currentTreePartInfo.m_treePartIndex;
-
-					currentLineIndex = currentTreePartInfo.m_lineIndex;
-				}
-			}
-			else if (treePartType == 2)
-			{
-				//Branch of Y Shape
-				if (parentInternodeHandle == -1 || treePartInfos[parentInternodeHandle].m_treePartType == 0
-					|| treePartInfos[parentInternodeHandle].m_baseFlowHandle != parentFlowHandle)
-				{
-					EVOENGINE_ERROR("Error!");
-				}
-				else
-				{
-					auto& currentTreePartInfo = treePartInfos[internodeHandle];
-					currentTreePartInfo = treePartInfos[parentInternodeHandle];
-					if (currentTreePartInfo.m_treePartType != 2)
-					{
-						currentTreePartInfo.m_lineIndex = nextLineIndex;
-						nextLineIndex++;
-					}
-					currentTreePartInfo.m_treePartType = 2;
-					currentTreePartIndex = currentTreePartInfo.m_treePartIndex;
-
-					currentLineIndex = currentTreePartInfo.m_lineIndex;
-				}
-			}
-			auto& treePart = treeParts[currentTreePartIndex];
-			treePart.m_nodeHandles.emplace_back(internodeHandle);
-			treePart.m_isEnd.emplace_back(true);
-			treePart.m_lineIndex.emplace_back(currentLineIndex);
-			for (int i = 0; i < treePart.m_nodeHandles.size(); i++)
-			{
-				if (treePart.m_nodeHandles[i] == parentInternodeHandle)
-				{
-					treePart.m_isEnd[i] = false;
-					break;
-				}
-			}
+			const auto& parentFlow = skeleton.PeekFlow(parentFlowHandle);
+			onlyChild = parentFlow.PeekChildHandles().size() <= 1;
+			compareRadius = parentFlow.m_info.m_endThickness;
 		}
-		for (int internodeHandle : sortedInternodeList)
-		{
-			const auto& internode = skeleton.PeekNode(internodeHandle);
-			const auto& internodeInfo = internode.m_info;
-			std::vector<glm::mat4> leafMatrices;
-			foliageDescriptor->GenerateFoliageMatrices(leafMatrices, internodeInfo);
-
-			auto& currentTreePartInfo = treePartInfos[internodeHandle];
-			auto& treePart = treeParts[currentTreePartInfo.m_treePartIndex];
-			treePart.m_numOfLeaves += leafMatrices.size();
+		int treePartType = 0;
+		if (hasMultipleChildren && distanceToChainEnd <= meshGeneratorSettings.m_treePartBaseDistance * compareRadius) {
+			treePartType = 1;
 		}
-
-		for (auto& treePart : treeParts)
+		else if (!onlyChild && distanceToChainStart <= meshGeneratorSettings.m_treePartEndDistance * compareRadius)
 		{
-			const auto& startInternode = skeleton.PeekNode(treePart.m_nodeHandles.front());
-			if (treePart.m_isJunction)
+			treePartType = 2;
+		}
+		int currentTreePartIndex = -1;
+		int currentLineIndex = -1;
+		if (treePartType == 0)
+		{
+			//IShape
+			//If root or parent is Y Shape or length exceeds limit, create a new IShape from this node.
+			bool restartIShape = parentInternodeHandle == -1 || treePartInfos[parentInternodeHandle].m_treePartType != 0;
+			if (!restartIShape)
 			{
-				const auto& baseNode = skeleton.PeekNode(treePart.m_nodeHandles.front());
-				const auto& flow = skeleton.PeekFlow(baseNode.GetFlowHandle());
-				const auto& chainHandles = flow.PeekNodeHandles();
-				const auto centerInternodeHandle = chainHandles.back();
-				const auto& centerInternode = skeleton.PeekNode(centerInternodeHandle);
-				treePart.m_baseLine.m_startPosition = startInternode.m_info.m_globalPosition;
-				treePart.m_baseLine.m_startRadius = startInternode.m_info.m_thickness;
-				treePart.m_baseLine.m_endPosition = centerInternode.m_info.GetGlobalEndPosition();
-				treePart.m_baseLine.m_endRadius = centerInternode.m_info.m_thickness;
+				const auto& parentJunctionInfo = treePartInfos[parentInternodeHandle];
+				if (parentJunctionInfo.m_distanceToStart / internodeInfo.m_thickness > meshGeneratorSettings.m_treePartBreakRatio) restartIShape = true;
+			}
+			if (restartIShape)
+			{
+				TreePartInfo treePartInfo;
+				treePartInfo.m_treePartType = 0;
+				treePartInfo.m_treePartIndex = treeParts.size();
+				treePartInfo.m_lineIndex = nextLineIndex;
+				treePartInfo.m_distanceToStart = 0.0f;
+				treePartInfos[internodeHandle] = treePartInfo;
+				treeParts.emplace_back();
+				auto& treePart = treeParts.back();
+				treePart.m_isJunction = false;
+				treePart.m_numOfLeaves = 0;
+				currentTreePartIndex = treePart.m_treePartIndex = treePartInfo.m_treePartIndex;
 
-				treePart.m_baseLine.m_startDirection = startInternode.m_info.GetGlobalDirection();
-				treePart.m_baseLine.m_endDirection = centerInternode.m_info.GetGlobalDirection();
-
-				treePart.m_baseLine.m_lineIndex = treePart.m_lineIndex.front();
-				for (int i = 1; i < treePart.m_nodeHandles.size(); i++)
-				{
-					if (treePart.m_isEnd[i])
-					{
-						const auto& endInternode = skeleton.PeekNode(treePart.m_nodeHandles[i]);
-						treePart.m_childrenLines.emplace_back();
-						auto& newLine = treePart.m_childrenLines.back();
-						newLine.m_startPosition = centerInternode.m_info.GetGlobalEndPosition();
-						newLine.m_startRadius = centerInternode.m_info.m_thickness;
-						newLine.m_endPosition = endInternode.m_info.GetGlobalEndPosition();
-						newLine.m_endRadius = endInternode.m_info.m_thickness;
-
-						newLine.m_startDirection = centerInternode.m_info.GetGlobalDirection();
-						newLine.m_endDirection = endInternode.m_info.GetGlobalDirection();
-
-						newLine.m_lineIndex = treePart.m_lineIndex[i];
-					}
-				}
+				currentLineIndex = nextLineIndex;
+				nextLineIndex++;
 			}
 			else
 			{
-				const auto& endInternode = skeleton.PeekNode(treePart.m_nodeHandles.back());
-				treePart.m_baseLine.m_startPosition = startInternode.m_info.m_globalPosition;
-				treePart.m_baseLine.m_startRadius = startInternode.m_info.m_thickness;
-				treePart.m_baseLine.m_endPosition = endInternode.m_info.GetGlobalEndPosition();
-				treePart.m_baseLine.m_endRadius = endInternode.m_info.m_thickness;
+				auto& currentTreePartInfo = treePartInfos[internodeHandle];
+				currentTreePartInfo = treePartInfos[parentInternodeHandle];
+				currentTreePartInfo.m_distanceToStart += internodeInfo.m_length;
+				currentTreePartInfo.m_treePartType = 0;
+				currentTreePartIndex = currentTreePartInfo.m_treePartIndex;
 
-				treePart.m_baseLine.m_startDirection = startInternode.m_info.GetGlobalDirection();
-				treePart.m_baseLine.m_endDirection = endInternode.m_info.GetGlobalDirection();
-
-				treePart.m_baseLine.m_lineIndex = treePart.m_lineIndex.front();
+				currentLineIndex = currentTreePartInfo.m_lineIndex;
 			}
 		}
+		else if (treePartType == 1)
+		{
+			//Base of Y Shape
+			if (parentInternodeHandle == -1 || treePartInfos[parentInternodeHandle].m_treePartType != 1
+				|| treePartInfos[parentInternodeHandle].m_baseFlowHandle != flowHandle)
+			{
+				TreePartInfo treePartInfo;
+				treePartInfo.m_treePartType = 1;
+				treePartInfo.m_treePartIndex = treeParts.size();
+				treePartInfo.m_lineIndex = nextLineIndex;
+				treePartInfo.m_distanceToStart = 0.0f;
+				treePartInfo.m_baseFlowHandle = flowHandle;
+				treePartInfos[internodeHandle] = treePartInfo;
+				treeParts.emplace_back();
+				auto& treePart = treeParts.back();
+				treePart.m_isJunction = true;
+				treePart.m_numOfLeaves = 0;
+				currentTreePartIndex = treePart.m_treePartIndex = treePartInfo.m_treePartIndex;
+
+				currentLineIndex = nextLineIndex;
+				nextLineIndex++;
+			}
+			else
+			{
+				auto& currentTreePartInfo = treePartInfos[internodeHandle];
+				currentTreePartInfo = treePartInfos[parentInternodeHandle];
+				currentTreePartInfo.m_treePartType = 1;
+				currentTreePartIndex = currentTreePartInfo.m_treePartIndex;
+
+				currentLineIndex = currentTreePartInfo.m_lineIndex;
+			}
+		}
+		else if (treePartType == 2)
+		{
+			//Branch of Y Shape
+			if (parentInternodeHandle == -1 || treePartInfos[parentInternodeHandle].m_treePartType == 0
+				|| treePartInfos[parentInternodeHandle].m_baseFlowHandle != parentFlowHandle)
+			{
+				EVOENGINE_ERROR("Error!");
+			}
+			else
+			{
+				auto& currentTreePartInfo = treePartInfos[internodeHandle];
+				currentTreePartInfo = treePartInfos[parentInternodeHandle];
+				if (currentTreePartInfo.m_treePartType != 2)
+				{
+					currentTreePartInfo.m_lineIndex = nextLineIndex;
+					nextLineIndex++;
+				}
+				currentTreePartInfo.m_treePartType = 2;
+				currentTreePartIndex = currentTreePartInfo.m_treePartIndex;
+
+				currentLineIndex = currentTreePartInfo.m_lineIndex;
+			}
+		}
+		auto& treePart = treeParts[currentTreePartIndex];
+		treePart.m_nodeHandles.emplace_back(internodeHandle);
+		treePart.m_isEnd.emplace_back(true);
+		treePart.m_lineIndex.emplace_back(currentLineIndex);
+		for (int i = 0; i < treePart.m_nodeHandles.size(); i++)
+		{
+			if (treePart.m_nodeHandles[i] == parentInternodeHandle)
+			{
+				treePart.m_isEnd[i] = false;
+				break;
+			}
+		}
+	}
+	for (int internodeHandle : sortedInternodeList)
+	{
+		const auto& internode = skeleton.PeekNode(internodeHandle);
+		const auto& internodeInfo = internode.m_info;
+		std::vector<glm::mat4> leafMatrices;
+		foliageDescriptor->GenerateFoliageMatrices(leafMatrices, internodeInfo);
+
+		auto& currentTreePartInfo = treePartInfos[internodeHandle];
+		auto& treePart = treeParts[currentTreePartInfo.m_treePartIndex];
+		treePart.m_numOfLeaves += leafMatrices.size();
+	}
+	for (auto& treePart : treeParts)
+	{
+		const auto& startInternode = skeleton.PeekNode(treePart.m_nodeHandles.front());
+		if (treePart.m_isJunction)
+		{
+			const auto& baseNode = skeleton.PeekNode(treePart.m_nodeHandles.front());
+			const auto& flow = skeleton.PeekFlow(baseNode.GetFlowHandle());
+			const auto& chainHandles = flow.PeekNodeHandles();
+			const auto centerInternodeHandle = chainHandles.back();
+			const auto& centerInternode = skeleton.PeekNode(centerInternodeHandle);
+			treePart.m_baseLine.m_startPosition = startInternode.m_info.m_globalPosition;
+			treePart.m_baseLine.m_startRadius = startInternode.m_info.m_thickness;
+			treePart.m_baseLine.m_endPosition = centerInternode.m_info.GetGlobalEndPosition();
+			treePart.m_baseLine.m_endRadius = centerInternode.m_info.m_thickness;
+
+			treePart.m_baseLine.m_startDirection = startInternode.m_info.GetGlobalDirection();
+			treePart.m_baseLine.m_endDirection = centerInternode.m_info.GetGlobalDirection();
+
+			treePart.m_baseLine.m_lineIndex = treePart.m_lineIndex.front();
+			for (int i = 1; i < treePart.m_nodeHandles.size(); i++)
+			{
+				if (treePart.m_isEnd[i])
+				{
+					const auto& endInternode = skeleton.PeekNode(treePart.m_nodeHandles[i]);
+					treePart.m_childrenLines.emplace_back();
+					auto& newLine = treePart.m_childrenLines.back();
+					newLine.m_startPosition = centerInternode.m_info.GetGlobalEndPosition();
+					newLine.m_startRadius = centerInternode.m_info.m_thickness;
+					newLine.m_endPosition = endInternode.m_info.GetGlobalEndPosition();
+					newLine.m_endRadius = endInternode.m_info.m_thickness;
+
+					newLine.m_startDirection = centerInternode.m_info.GetGlobalDirection();
+					newLine.m_endDirection = endInternode.m_info.GetGlobalDirection();
+
+					newLine.m_lineIndex = treePart.m_lineIndex[i];
+				}
+			}
+		}
+		else
+		{
+			const auto& endInternode = skeleton.PeekNode(treePart.m_nodeHandles.back());
+			treePart.m_baseLine.m_startPosition = startInternode.m_info.m_globalPosition;
+			treePart.m_baseLine.m_startRadius = startInternode.m_info.m_thickness;
+			treePart.m_baseLine.m_endPosition = endInternode.m_info.GetGlobalEndPosition();
+			treePart.m_baseLine.m_endRadius = endInternode.m_info.m_thickness;
+
+			treePart.m_baseLine.m_startDirection = startInternode.m_info.GetGlobalDirection();
+			treePart.m_baseLine.m_endDirection = endInternode.m_info.GetGlobalDirection();
+
+			treePart.m_baseLine.m_lineIndex = treePart.m_lineIndex.front();
+		}
+	}
+}
+
+void Tree::ExportTreeParts(const TreeMeshGeneratorSettings& meshGeneratorSettings, treeio::json& out)
+{
+	
+}
+
+void Tree::ExportTreeParts(const TreeMeshGeneratorSettings& meshGeneratorSettings, YAML::Emitter& out)
+{
+	out << YAML::Key << "Tree" << YAML::Value << YAML::BeginMap; {
+		std::vector<TreePartData> treeParts{};
+		GenerateTreeParts(meshGeneratorSettings, treeParts);
 		std::unordered_set<int> lineIndexCheck{};
 		out << YAML::Key << "TreeParts" << YAML::Value << YAML::BeginSeq;
 		for (const auto& treePart : treeParts)
@@ -2601,14 +2589,15 @@ void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings
 
 
 
-void Tree::ExportJunction(const TreeMeshGeneratorSettings& meshGeneratorSettings, const std::filesystem::path& path)
+
+void Tree::ExportTreeParts(const TreeMeshGeneratorSettings& meshGeneratorSettings, const std::filesystem::path& path)
 {
 	try {
 		auto directory = path;
 		directory.remove_filename();
 		std::filesystem::create_directories(directory);
 		YAML::Emitter out;
-		ExportJunction(meshGeneratorSettings, out);
+		ExportTreeParts(meshGeneratorSettings, out);
 		std::ofstream outputFile(path.string());
 		outputFile << out.c_str();
 		outputFile.flush();
@@ -2727,6 +2716,8 @@ void Tree::PrepareController(const std::shared_ptr<ShootDescriptor>& shootDescri
 			return pruningProbability;
 		};
 }
+
+
 
 void Tree::InitializeStrandRenderer()
 {

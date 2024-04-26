@@ -299,7 +299,7 @@ void TreePointCloudScanner::Capture(const TreeMeshGeneratorSettings& meshGenerat
 
 			//auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
 			//auto copyPath = savePath;
-			//tree->ExportJunction(ecoSysLabLayer->m_meshGeneratorSettings, copyPath.replace_extension(".yml"));
+			//tree->ExportTreeParts(ecoSysLabLayer->m_meshGeneratorSettings, copyPath.replace_extension(".yml"));
 
 			scene->ForEachChild(treeEntity, [&](Entity child) {
 				if (scene->GetEntityName(child) == "Branch Mesh" && scene->HasPrivateComponent<MeshRenderer>(child)) {
@@ -517,7 +517,7 @@ void TreePointCloudScanner::Capture(const TreeMeshGeneratorSettings& meshGenerat
 				out << YAML::Key << "P" << YAML::Value << gt.GetPosition();
 
 				const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
-				tree->ExportJunction(meshGeneratorSettings, out);
+				tree->ExportTreeParts(meshGeneratorSettings, out);
 				out << YAML::EndMap;
 			}
 			out << YAML::EndSeq;
