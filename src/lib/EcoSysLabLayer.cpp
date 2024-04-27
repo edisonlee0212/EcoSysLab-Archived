@@ -57,6 +57,7 @@ void EcoSysLabLayer::OnCreate() {
 
 
 	ClassRegistry::RegisterAsset<Json>("Json", { ".json" });
+	ClassRegistry::RegisterAsset<JoeScan>("JoeScan", { ".jscan" });
 	ClassRegistry::RegisterPrivateComponent<JoeScanScanner>("JoeScanScanner");
 
 	if (m_randomColors.empty()) {

@@ -1,5 +1,5 @@
 #pragma once
-
+#include "json/json.h"
 using namespace EvoEngine;
 namespace EcoSysLab
 {
@@ -10,7 +10,7 @@ namespace EcoSysLab
 		bool LoadInternal(const std::filesystem::path& path) override;
 
 	public:
-		std::string m_content;
+		treeio::json m_json;
 		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 	};
 }

@@ -88,7 +88,7 @@ void forest_patch_point_cloud()
 	pcps.m_typeIndex = true;
 	pcps.m_treePartTypeIndex = true;
 	pcps.m_branchIndex = false;
-	pcps.m_lineIndex = false;
+	pcps.m_lineIndex = true;
 	treePointCloudCircularCaptureSettings->m_distance = 4.0f;
 	treePointCloudCircularCaptureSettings->m_height = 3.0f;
 
