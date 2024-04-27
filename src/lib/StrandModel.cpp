@@ -203,7 +203,6 @@ JobHandle StrandModel::CalculateProfiles(const StrandModelParameters& strandMode
 
 	for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); ++it)
 	{
-
 		CalculateProfile(maxRootDistance, *it, strandModelParameters);
 		m_strandModelSkeleton.m_data.m_numOfParticles += m_strandModelSkeleton.RefNode(*it).m_data.m_profile.PeekParticles().size();
 	}
@@ -240,6 +239,7 @@ void StrandModel::CalculateProfile(const float maxRootDistance, const SkeletonNo
 		internode.m_data.m_profile.CalculateBoundaries(true, strandModelParameters.m_boundaryPointDistance);
 		}
 	);
+	Jobs::Execute(m_strandModelSkeleton.RefNode(nodeHandle).m_data.m_job);
 }
 
 void StrandModel::PackTask(const SkeletonNodeHandle nodeHandle, const StrandModelParameters& strandModelParameters)
