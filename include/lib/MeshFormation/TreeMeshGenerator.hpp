@@ -230,57 +230,11 @@ namespace EcoSysLab {
 			const auto& internode = skeleton.PeekNode(internodeHandle);
 			const auto& internodeInfo = internode.m_info;
 			auto parentInternodeHandle = internode.GetParentHandle();
-			const glm::vec3 up = internodeInfo.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
-			glm::vec3 parentUp = up;
-			bool needStitching = false;
-			if (parentInternodeHandle != -1)
-			{
-				const auto& parentInternode = skeleton.PeekNode(parentInternodeHandle);
-				parentUp = parentInternode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
-				if (internode.IsApical() || parentInternode.PeekChildHandles().size() == 1) needStitching = true;
-				if (!needStitching)
-				{
-					float maxChildThickness = -1;
-					SkeletonNodeHandle maxChildHandle = -1;
-					for (const auto& childHandle : parentInternode.PeekChildHandles()) {
-						const auto& childInternode = skeleton.PeekNode(childHandle);
-						if (childInternode.IsApical()) break;
-						const float childThickness = childInternode.m_info.m_thickness;
-						if (childThickness > maxChildThickness)
-						{
-							maxChildThickness = childThickness;
-							maxChildHandle = childHandle;
-						}
-					}
-					if (maxChildHandle == internodeHandle) needStitching = true;
-				}
-			}
-
-			if (internode.m_info.m_length == 0.0f) {
-				//TODO: Model possible knots and wound here.
-				continue;
-			}
-			auto& rings = ringsList[internodeIndex];
-			if (rings.empty()) {
-				continue;
-			}
-			// For stitching
-			const int step = steps[internodeHandle];
-			int pStep = step;
-			if (needStitching)
-			{
-				pStep = steps[parentInternodeHandle];
-			}
-			float angleStep = 360.0f / static_cast<float>(step);
-			float pAngleStep = 360.0f / static_cast<float>(pStep);
-			int vertexIndex = vertices.size();
 			Vertex archetype;
 			const auto flowHandle = internode.GetFlowHandle();
-			archetype.m_vertexInfo1 = internodeHandle + 1;
-			archetype.m_vertexInfo2 = flowHandle + 1;
 			if (settings.m_junctionColor) {
 #pragma region TreePart
-				const auto& flow = skeleton.PeekFlow(internode.GetFlowHandle());
+				const auto& flow = skeleton.PeekFlow(flowHandle);
 				const auto& chainHandles = flow.PeekNodeHandles();
 				const bool hasMultipleChildren = flow.PeekChildHandles().size() > 1;
 				bool onlyChild = true;
@@ -409,6 +363,55 @@ namespace EcoSysLab {
 
 #pragma endregion
 			}
+			const glm::vec3 up = internodeInfo.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
+			glm::vec3 parentUp = up;
+			bool needStitching = false;
+			if (parentInternodeHandle != -1)
+			{
+				const auto& parentInternode = skeleton.PeekNode(parentInternodeHandle);
+				parentUp = parentInternode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
+				if (internode.IsApical() || parentInternode.PeekChildHandles().size() == 1) needStitching = true;
+				if (!needStitching)
+				{
+					float maxChildThickness = -1;
+					SkeletonNodeHandle maxChildHandle = -1;
+					for (const auto& childHandle : parentInternode.PeekChildHandles()) {
+						const auto& childInternode = skeleton.PeekNode(childHandle);
+						if (childInternode.IsApical()) break;
+						const float childThickness = childInternode.m_info.m_thickness;
+						if (childThickness > maxChildThickness)
+						{
+							maxChildThickness = childThickness;
+							maxChildHandle = childHandle;
+						}
+					}
+					if (maxChildHandle == internodeHandle) needStitching = true;
+				}
+			}
+
+			if (internode.m_info.m_length == 0.0f) {
+				//TODO: Model possible knots and wound here.
+				continue;
+			}
+			auto& rings = ringsList[internodeIndex];
+			if (rings.empty()) {
+				continue;
+			}
+			// For stitching
+			const int step = steps[internodeHandle];
+			int pStep = step;
+			if (needStitching)
+			{
+				pStep = steps[parentInternodeHandle];
+			}
+			float angleStep = 360.0f / static_cast<float>(step);
+			float pAngleStep = 360.0f / static_cast<float>(pStep);
+			int vertexIndex = vertices.size();
+
+
+			archetype.m_vertexInfo1 = internodeHandle + 1;
+			archetype.m_vertexInfo2 = flowHandle + 1;
+
 			if (!needStitching) {
 				for (int p = 0; p < pStep; p++) {
 					float xFactor = static_cast<float>(p) / pStep;

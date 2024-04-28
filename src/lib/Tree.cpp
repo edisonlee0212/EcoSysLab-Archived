@@ -2433,8 +2433,7 @@ void Tree::GenerateTreeParts(const TreeMeshGeneratorSettings& meshGeneratorSetti
 			{
 				EVOENGINE_ERROR("Error!");
 			}
-			else
-			{
+			
 				auto& currentTreePartInfo = treePartInfos[internodeHandle];
 				currentTreePartInfo = treePartInfos[parentInternodeHandle];
 				if (currentTreePartInfo.m_treePartType != 2)
@@ -2446,7 +2445,7 @@ void Tree::GenerateTreeParts(const TreeMeshGeneratorSettings& meshGeneratorSetti
 				currentTreePartIndex = currentTreePartInfo.m_treePartIndex;
 
 				currentLineIndex = currentTreePartInfo.m_lineIndex;
-			}
+			
 		}
 		auto& treePart = treeParts[currentTreePartIndex];
 		treePart.m_nodeHandles.emplace_back(internodeHandle);
@@ -2546,11 +2545,12 @@ void Tree::ExportTreeParts(const TreeMeshGeneratorSettings& meshGeneratorSetting
 			out << YAML::Key << "LI" << YAML::Value << treePart.m_baseLine.m_lineIndex + 1;
 
 			out << YAML::Key << "F" << YAML::Value << treePart.m_numOfLeaves;
+			/*
 			if (lineIndexCheck.find(treePart.m_baseLine.m_lineIndex) != lineIndexCheck.end())
 			{
 				EVOENGINE_ERROR("Duplicate!");
 			}
-			lineIndexCheck.emplace(treePart.m_baseLine.m_lineIndex);
+			lineIndexCheck.emplace(treePart.m_baseLine.m_lineIndex);*/
 			out << YAML::Key << "BSP" << YAML::Value << treePart.m_baseLine.m_startPosition;
 			out << YAML::Key << "BEP" << YAML::Value << treePart.m_baseLine.m_endPosition;
 			out << YAML::Key << "BSR" << YAML::Value << treePart.m_baseLine.m_startRadius;
@@ -2566,11 +2566,12 @@ void Tree::ExportTreeParts(const TreeMeshGeneratorSettings& meshGeneratorSetting
 			for (const auto& childLine : treePart.m_childrenLines) {
 				out << YAML::BeginMap;
 				out << YAML::Key << "LI" << YAML::Value << childLine.m_lineIndex + 1;
+				/*
 				if (lineIndexCheck.find(childLine.m_lineIndex) != lineIndexCheck.end())
 				{
 					EVOENGINE_ERROR("Duplicate!");
 				}
-				lineIndexCheck.emplace(childLine.m_lineIndex);
+				lineIndexCheck.emplace(childLine.m_lineIndex);*/
 				out << YAML::Key << "SP" << YAML::Value << childLine.m_startPosition;
 				out << YAML::Key << "EP" << YAML::Value << childLine.m_endPosition;
 				out << YAML::Key << "SR" << YAML::Value << childLine.m_startRadius;
