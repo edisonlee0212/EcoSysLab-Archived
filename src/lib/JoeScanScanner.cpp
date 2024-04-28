@@ -24,7 +24,7 @@ void JoeScan::Deserialize(const YAML::Node& in)
 	if (in["m_profiles"])
 	{
 		m_profiles.clear();
-		for (const auto& inProfile : in["m_profile"])
+		for (const auto& inProfile : in["m_profiles"])
 		{
 			m_profiles.emplace_back();
 			auto& profile = m_profiles.back();
@@ -52,6 +52,11 @@ void JoeScan::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 
 	static bool enableJoeScanRendering = true;
 	ImGui::Checkbox("Render JoeScan", &enableJoeScanRendering);
+	static float divider = 100.f;
+	ImGui::DragFloat("Divider", &divider);
+
+	static glm::vec4 color = glm::vec4(1, 1, 1, .25f);
+	ImGui::ColorEdit4("Color", &color.x);
 	if (enableJoeScanRendering) {
 		if (ImGui::Button("Refresh JoeScan"))
 		{
@@ -62,7 +67,8 @@ void JoeScan::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 				data.resize(profile.m_points.size() + startIndex);
 				Jobs::RunParallelFor(profile.m_points.size(), [&](unsigned i)
 					{
-						data[i].m_instanceMatrix.SetPosition(glm::vec3(profile.m_points[i + startIndex].x / 10000.f, profile.m_points[i + startIndex].y / 10000.f, profile.m_encoderValue / 100.f));
+						data[i + startIndex].m_instanceMatrix.SetPosition(glm::vec3(profile.m_points[i].x / 10000.f, profile.m_points[i].y / 10000.f, profile.m_encoderValue / divider));
+						data[i + startIndex].m_instanceColor = color;
 					}
 				);
 			}
@@ -72,7 +78,9 @@ void JoeScan::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 
 	if (enableJoeScanRendering)
 	{
-		editorLayer->DrawGizmoCubes(joeScanList, glm::mat4(1), 0.001f);
+		GizmoSettings settings{};
+		settings.m_drawSettings.m_blending = true;
+		editorLayer->DrawGizmoCubes(joeScanList, glm::mat4(1), 0.01f, settings);
 	}
 }
 
@@ -108,6 +116,8 @@ void JoeScanScanner::StopScanningProcess()
 			{
 				joeScan->m_profiles.emplace_back(profile.second);
 			}
+
+			EVOENGINE_LOG("Recorded " + std::to_string(joeScan->m_profiles.size()));
 		}
 	}
 }
@@ -162,7 +172,7 @@ void JoeScanScanner::StartScanProcess()
 							if (point.x != 0 || point.y != 0)
 							{
 								containRealData = true;
-								points.emplace_back(glm::vec2(point.x, point.y) / 100000.f);
+								points.emplace_back(glm::vec2(point.x, point.y) / 10000.f);
 								joeScanProfile.m_points.emplace_back(glm::vec2(point.x, point.y));
 								joeScanProfile.m_brightness.emplace_back(point.brightness);
 							}
@@ -173,15 +183,14 @@ void JoeScanScanner::StartScanProcess()
 				if (validCount != 0) {
 					std::lock_guard lock(*m_scannerMutex);
 					m_points = points;
-					if (i % 50 == 0) {
-						joeScanProfile.m_encoderValue = i;
-						m_preservedProfiles[i] = joeScanProfile;
-					}
-					i++;
+					joeScanProfile.m_encoderValue = i;
+					m_preservedProfiles[joeScanProfile.m_encoderValue] = joeScanProfile;
 				}
+				i++;
 			}
 		}
 	);
+	Jobs::Execute(m_scannerJob);
 }
 
 JoeScanScanner::JoeScanScanner()
@@ -250,11 +259,13 @@ void JoeScanScanner::FreeScanSystem(jsScanSystem& scanSystem, std::vector<jsScan
 void JoeScanScanner::Serialize(YAML::Emitter& out)
 {
 	m_config.Save("m_config", out);
+	m_joeScan.Save("m_joeScan", out);
 }
 
 void JoeScanScanner::Deserialize(const YAML::Node& in)
 {
 	m_config.Load("m_config", in);
+	m_joeScan.Load("m_joeScan", in);
 }
 
 void JoeScanScanner::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
@@ -291,9 +302,9 @@ void JoeScanScanner::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 		if (enableLatestPointRendering && !m_points.empty())
 		{
 			std::vector<ParticleInfo> data;
+			std::lock_guard lock(*m_scannerMutex);
 			data.resize(m_points.size());
 			{
-				std::lock_guard lock(*m_scannerMutex);
 				Jobs::RunParallelFor(m_points.size(), [&](unsigned i)
 					{
 						data[i].m_instanceMatrix.SetPosition(glm::vec3(m_points[i].x, m_points[i].y, -1.f));

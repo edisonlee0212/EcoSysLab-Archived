@@ -11,16 +11,16 @@
         {
           "Camera": "CameraB",
           "Laser": "Laser1",
-          "ShiftX": 16.1339043554254,
-          "ShiftY": 20.955641475752042,
-          "RollDeg": 135.30788533025768
+          "ShiftX": 0.11043422351020533,
+          "ShiftY": -23.53321994162966,
+          "RollDeg": 0.5555715492428144
         },
         {
           "Camera": "CameraA",
           "Laser": "Laser1",
-          "ShiftX": 16.217083770938295,
-          "ShiftY": 20.8650833240493,
-          "RollDeg": 135.05153259881476
+          "ShiftX": 0.11043422351020533,
+          "ShiftY": -23.53321994162966,
+          "RollDeg": 0.5555715492428144
         }
       ],
       "Windows": [
@@ -28,51 +28,13 @@
           "Camera": "CameraB",
           "Laser": "Laser1",
           "Enabled": true,
-          "Vertices": [
-            {
-              "X": -9.625055,
-              "Y": 10.968457
-            },
-            {
-              "X": 10.634414,
-              "Y": 11.273876
-            },
-            {
-              "X": 11.041639,
-              "Y": -4.404306
-            },
-            {
-              "X": -9.625055,
-              "Y": -4.404306
-            }
-          ]
+          "Vertices": []
         },
         {
           "Camera": "CameraA",
           "Laser": "Laser1",
           "Enabled": true,
-          "Vertices": [
-            {
-              "X": -11.596861,
-              "Y": 13.504053
-            },
-            {
-              "X": 14.92824,
-              "Y": 13.905949
-            },
-            {
-              "X": 15.129188,
-              "Y": -6.791668
-            },
-            {
-              "X": -11.596861,
-              "Y": -7.1935635
-            },
-            {
-              "X": -11.618982,
-              "Y": 13.463496
-            }
-          ]
+          "Vertices": []
         }
       ],
       "ExclusionMasks": [
@@ -110,16 +72,16 @@
         {
           "Camera": "CameraB",
           "Laser": "Laser1",
-          "ShiftX": -18.054830185131948,
-          "ShiftY": -13.337327443995003,
-          "RollDeg": 315.0845355625219
+          "ShiftX": 27.204876122200613,
+          "ShiftY": 5.968260085851744,
+          "RollDeg": 94.04979728566323
         },
         {
           "Camera": "CameraA",
           "Laser": "Laser1",
-          "ShiftX": -18.181648083176867,
-          "ShiftY": -13.197761975004488,
-          "RollDeg": -45.29194275626405
+          "ShiftX": 27.204876122200613,
+          "ShiftY": 5.968260085851744,
+          "RollDeg": 94.04979728566323
         }
       ],
       "Windows": [
@@ -171,16 +133,16 @@
         {
           "Camera": "CameraB",
           "Laser": "Laser1",
-          "ShiftX": 16.35385208659128,
-          "ShiftY": -13.402537128748579,
-          "RollDeg": -314.7266782862867
+          "ShiftX": -0.5475107307580803,
+          "ShiftY": 31.440057127770217,
+          "RollDeg": -178.81171440355754
         },
         {
           "Camera": "CameraA",
           "Laser": "Laser1",
-          "ShiftX": 16.395007851374142,
-          "ShiftY": -13.34730228643128,
-          "RollDeg": -314.6250638136662
+          "ShiftX": -0.5475107307580803,
+          "ShiftY": 31.440057127770217,
+          "RollDeg": -178.81171440355754
         }
       ],
       "Windows": [
@@ -208,14 +170,7 @@
           "Camera": "CameraA",
           "Laser": "Laser1",
           "Enabled": true,
-          "ExcludedRegions": [
-            {
-              "Left": 425,
-              "Top": 488,
-              "Width": 468,
-              "Height": 234
-            }
-          ]
+          "ExcludedRegions": []
         }
       ],
       "Exposure": {
@@ -239,16 +194,16 @@
         {
           "Camera": "CameraB",
           "Laser": "Laser1",
-          "ShiftX": -18.034331111594266,
-          "ShiftY": 21.019535136325274,
-          "RollDeg": -134.9536055835475
+          "ShiftX": -27.484370990576394,
+          "ShiftY": 4.315569524010818,
+          "RollDeg": -90.32011952269264
         },
         {
           "Camera": "CameraA",
           "Laser": "Laser1",
-          "ShiftX": -17.837573178342655,
-          "ShiftY": 21.18847526776268,
-          "RollDeg": -135.51406355547635
+          "ShiftX": -27.484370990576394,
+          "ShiftY": 4.315569524010818,
+          "RollDeg": -90.32011952269264
         }
       ],
       "Windows": [
@@ -347,10 +302,10 @@
     "Name": "Default",
     "DefaultFixture": "Squared Cant 8x9 inch",
     "FixtureOverrides": {
-      "0": "Box 4x4 inch",
-      "1": "Box 4x4 inch",
-      "2": "Box 4x4 inch",
-      "3": "Box 4x4 inch"
+      "0": "Box 5x6 inch",
+      "1": "Box 5x6 inch",
+      "2": "Box 5x6 inch",
+      "3": "Box 5x6 inch"
     }
   }
 }

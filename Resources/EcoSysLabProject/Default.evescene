@@ -134,8 +134,11 @@ m_entityMetadataList:
       - m_typeName: JoeScanScanner
         m_enabled: true
         m_config:
-          m_assetHandle: 1918024899627197930
+          m_assetHandle: 1282599904186998230
           m_assetTypeName: Json
+        m_joeScan:
+          m_assetHandle: 9219360098573808445
+          m_assetTypeName: JoeScan
 m_systems:
   []
 LocalAssets:
