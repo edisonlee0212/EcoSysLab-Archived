@@ -121,7 +121,7 @@ namespace EcoSysLab {
 		mainChildStatus.resize(sortedInternodeList.size());
 		std::vector<std::shared_future<void>> results;
 		std::vector<std::vector<std::pair<SkeletonNodeHandle, int>>> tempSteps{};
-		tempSteps.resize(Jobs::GetDefaultThreadSize());
+		tempSteps.resize(Jobs::GetWorkerSize());
 
 		Jobs::RunParallelFor(sortedInternodeList.size(), [&](unsigned internodeIndex, unsigned threadIndex) {
 			auto internodeHandle = sortedInternodeList[internodeIndex];
@@ -661,7 +661,7 @@ namespace EcoSysLab {
 		ringsList.resize(sortedInternodeList.size());
 		std::vector<std::shared_future<void>> results;
 		std::vector<std::vector<std::pair<SkeletonNodeHandle, int>>> tempSteps{};
-		tempSteps.resize(Jobs::GetDefaultThreadSize());
+		tempSteps.resize(Jobs::GetWorkerSize());
 
 		Jobs::RunParallelFor(sortedInternodeList.size(), [&](unsigned internodeIndex, unsigned threadIndex) {
 			auto internodeHandle = sortedInternodeList[internodeIndex];

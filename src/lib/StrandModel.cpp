@@ -239,7 +239,6 @@ void StrandModel::CalculateProfile(const float maxRootDistance, const SkeletonNo
 		internode.m_data.m_profile.CalculateBoundaries(true, strandModelParameters.m_boundaryPointDistance);
 		}
 	);
-	Jobs::Execute(m_strandModelSkeleton.RefNode(nodeHandle).m_data.m_job);
 }
 
 void StrandModel::PackTask(const SkeletonNodeHandle nodeHandle, const StrandModelParameters& strandModelParameters)

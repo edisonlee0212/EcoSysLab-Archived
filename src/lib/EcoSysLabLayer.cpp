@@ -1800,7 +1800,7 @@ void EcoSysLabLayer::Simulate(float deltaTime) {
 		}
 		climate->PrepareForGrowth();
 		std::vector<bool> grownStat{};
-		grownStat.resize(Jobs::GetDefaultThreadSize());
+		grownStat.resize(Jobs::GetWorkerSize());
 		Jobs::RunParallelFor(treeEntities->size(), [&](unsigned i, unsigned threadIndex) {
 			const auto treeEntity = treeEntities->at(i);
 			if (!scene->IsEntityEnabled(treeEntity)) return;
