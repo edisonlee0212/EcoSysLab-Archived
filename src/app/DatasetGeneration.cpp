@@ -142,11 +142,11 @@ void sorghum_field_point_cloud()
 	float randomShift = 0.5f;
 	sorghumGantryCaptureSettings->m_gridSize = { gridSize, gridSize };
 	sorghumGantryCaptureSettings->m_gridDistance = { gridDistance, gridDistance };
-	RectangularSorghumFieldPattern pattern{};
+	SorghumFieldPatch pattern{};
 	pattern.m_gridSize = { gridSize, gridSize };
 	pattern.m_gridDistance = { gridDistance, gridDistance };
-	pattern.m_randomShiftMean = { randomShift,randomShift };
-	pattern.m_distanceVariance = { 0.3f,0.3f };
+	pattern.m_positionOffsetMean = { randomShift,randomShift };
+	pattern.m_positionOffsetVariance = { 0.3f,0.3f };
 	int index = 0;
 	for (int i = 0; i < 4096; i++) {
 		std::filesystem::path target_descriptor_folder_path = resourceFolderPath / "SorghumProject" / "SorghumStateGenerator";

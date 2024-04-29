@@ -63,10 +63,10 @@ void LogGrader::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 	
 	if (ImGui::Button("Initialize Log"))
 	{
-		auto branchShape = m_branchShape.Get<BranchShape>();
+		auto branchShape = m_branchShape.Get<BarkDescriptor>();
 		if (!branchShape)
 		{
-			branchShape = ProjectManager::CreateTemporaryAsset<BranchShape>();
+			branchShape = ProjectManager::CreateTemporaryAsset<BarkDescriptor>();
 			m_branchShape = branchShape;
 			branchShape->m_barkDepth = branchShape->m_baseDepth = 0.1f;
 		}
@@ -78,7 +78,7 @@ void LogGrader::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 	}
 	if (ImGui::TreeNode("Log Mesh Generation"))
 	{
-		//editorLayer->DragAndDropButton<BranchShape>(m_branchShape, "Branch Shape", true);
+		//editorLayer->DragAndDropButton<BarkDescriptor>(m_branchShape, "Branch Shape", true);
 		ImGui::DragFloat("Y Subdivision", &m_logWoodMeshGenerationSettings.m_ySubdivision, 0.01f, 0.01f, 0.5f);
 		static int rotateDegrees = 10;
 		ImGui::DragInt("Degrees", &rotateDegrees, 1, 1, 360);
@@ -285,7 +285,7 @@ void LogGrader::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 	}
 }
 
-void LogGrader::InitializeLogRandomly(const ProceduralLogParameters& proceduralLogParameters, const std::shared_ptr<BranchShape>& branchShape)
+void LogGrader::InitializeLogRandomly(const ProceduralLogParameters& proceduralLogParameters, const std::shared_ptr<BarkDescriptor>& branchShape)
 {
 	m_logWood.m_intersections.clear();
 	m_logWood.m_length = LogWood::FeetToMeter(proceduralLogParameters.m_lengthWithoutTrimInFeet);
@@ -510,10 +510,10 @@ void LogGrader::OnCreate()
 	m_surface3 = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
 	m_surface4 = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
 
-	auto branchShape = m_branchShape.Get<BranchShape>();
+	auto branchShape = m_branchShape.Get<BarkDescriptor>();
 	if (!branchShape)
 	{
-		branchShape = ProjectManager::CreateTemporaryAsset<BranchShape>();
+		branchShape = ProjectManager::CreateTemporaryAsset<BarkDescriptor>();
 		m_branchShape = branchShape;
 		branchShape->m_barkDepth = branchShape->m_baseDepth = 0.1f;
 	}

@@ -1,11 +1,11 @@
 #pragma once
 using namespace EvoEngine;
 namespace EcoSysLab {
-	class RectangularSorghumFieldPattern {
+	class SorghumFieldPatch {
 	public:
 		glm::vec2 m_gridDistance = glm::vec2(1.0f);
-		glm::vec2 m_randomShiftMean = glm::vec2(0.f);
-		glm::vec2 m_distanceVariance = glm::vec2(0.0f);
+		glm::vec2 m_positionOffsetMean = glm::vec2(0.f);
+		glm::vec2 m_positionOffsetVariance = glm::vec2(0.0f);
 		glm::vec3 m_rotationVariance = glm::vec3(0.0f);
 		glm::ivec2 m_gridSize = glm::ivec2(10, 10);
 		void GenerateField(std::vector<glm::mat4>& matricesList) const;

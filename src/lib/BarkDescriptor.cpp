@@ -1,8 +1,8 @@
-#include "BranchShape.hpp"
+#include "BarkDescriptor.hpp"
 
 using namespace EcoSysLab;
 
-void BranchShape::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
+void BarkDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
 	ImGui::DragFloat("Bark X Frequency", &m_barkXFrequency, 0.1f, 0.0f, 100.0f);
 	ImGui::DragFloat("Bark Y Frequency", &m_barkYFrequency, 0.1f, 0.0f, 100.0f);
@@ -14,7 +14,7 @@ void BranchShape::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 	ImGui::DragFloat("Base Depth", &m_baseDepth, 0.01f, 0.0f, 1.0f);
 }
 
-float BranchShape::GetValue(const float xFactor, const float distanceToRoot)
+float BarkDescriptor::GetValue(const float xFactor, const float distanceToRoot)
 {
 	float bark = m_barkDepth * 
 		glm::perlin(glm::vec3(
@@ -32,7 +32,7 @@ float BranchShape::GetValue(const float xFactor, const float distanceToRoot)
 	return bark + base;
 }
 
-void BranchShape::Serialize(YAML::Emitter& out)
+void BarkDescriptor::Serialize(YAML::Emitter& out)
 {
 	out << YAML::Key << "m_barkXFrequency" << YAML::Value << m_barkXFrequency;
 	out << YAML::Key << "m_barkYFrequency" << YAML::Value << m_barkYFrequency;
@@ -43,7 +43,7 @@ void BranchShape::Serialize(YAML::Emitter& out)
 	out << YAML::Key << "m_baseDepth" << YAML::Value << m_baseDepth;
 }
 
-void BranchShape::Deserialize(const YAML::Node& in)
+void BarkDescriptor::Deserialize(const YAML::Node& in)
 {
 	if (in["m_barkXFrequency"]) m_barkXFrequency = in["m_barkXFrequency"].as<float>();
 	if (in["m_barkYFrequency"]) m_barkYFrequency = in["m_barkYFrequency"].as<float>();

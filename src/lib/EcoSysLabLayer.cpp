@@ -6,12 +6,12 @@
 #ifdef BUILD_WITH_RAYTRACER
 #include <RayTracerLayer.hpp>
 #endif
-#include "BranchShape.hpp"
+#include "BarkDescriptor.hpp"
 #include "Times.hpp"
 
 #include "StrandsRenderer.hpp"
 #include "Climate.hpp"
-#include "ForestPatch.hpp"
+#include "ForestDescriptor.hpp"
 #include "Soil.hpp"
 #include "Tree.hpp"
 #include "RenderLayer.hpp" 
@@ -39,8 +39,8 @@ void EcoSysLabLayer::OnCreate() {
 
 	ClassRegistry::RegisterAsset<ProceduralNoise2D>("ProceduralNoise2D", { ".noise2D" });
 	ClassRegistry::RegisterAsset<ProceduralNoise3D>("ProceduralNoise3D", { ".noise3D" });
-	ClassRegistry::RegisterAsset<BranchShape>("BranchShape", { ".bs" });
-	ClassRegistry::RegisterAsset<ForestPatch>("ForestPatch", { ".fp" });
+	ClassRegistry::RegisterAsset<BarkDescriptor>("BarkDescriptor", { ".bark" });
+	ClassRegistry::RegisterAsset<ForestDescriptor>("ForestDescriptor", { ".forest" });
 	ClassRegistry::RegisterAsset<TreeDescriptor>("TreeDescriptor", { ".tree" });
 	ClassRegistry::RegisterAsset<ShootDescriptor>("ShootDescriptor", { ".shoot" });
 	ClassRegistry::RegisterAsset<FruitDescriptor>("FruitDescriptor", { ".fruit" });
@@ -54,6 +54,8 @@ void EcoSysLabLayer::OnCreate() {
 	ClassRegistry::RegisterAsset<HeightField>("HeightField", { ".hf" });
 	ClassRegistry::RegisterAsset<SoilLayerDescriptor>("SoilLayerDescriptor", { ".nsld" });
 	ClassRegistry::RegisterPrivateComponent<TreePointCloudScanner>("TreePointCloudScanner");
+
+	ClassRegistry::RegisterAsset<ForestPatch>("ForestPatch", { ".forestpatch" });
 
 
 	ClassRegistry::RegisterAsset<Json>("Json", { ".json" });

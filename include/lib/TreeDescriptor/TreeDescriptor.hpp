@@ -9,7 +9,7 @@ namespace EcoSysLab {
 		AssetRef m_fruitDescriptor;
 		AssetRef m_flowerDescriptor;
 
-		AssetRef m_shootBranchShape;
+		AssetRef m_barkDescriptor;
 		void OnCreate() override;
 
 		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;

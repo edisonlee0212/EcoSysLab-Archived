@@ -2,7 +2,7 @@
 #include "Climate.hpp"
 #include "Soil.hpp"
 #include "EcoSysLabLayer.hpp"
-#include "ForestPatch.hpp"
+#include "ForestDescriptor.hpp"
 #include "Sorghum.hpp"
 #include "SorghumLayer.hpp"
 using namespace EcoSysLab;
@@ -359,7 +359,7 @@ void DatasetGenerator::GeneratePointCloudForForestPatch(
 		EVOENGINE_ERROR("Application doesn't contain EcoSysLab layer!");
 		return;
 	}
-	std::shared_ptr<ForestPatch> forestPatch = ProjectManager::CreateTemporaryAsset<ForestPatch>();
+	std::shared_ptr<ForestDescriptor> forestPatch = ProjectManager::CreateTemporaryAsset<ForestDescriptor>();
 	std::shared_ptr<Soil> soil;
 	const std::vector<Entity>* soilEntities =
 		scene->UnsafeGetPrivateComponentOwnersList<Soil>();
@@ -417,7 +417,7 @@ void DatasetGenerator::GeneratePointCloudForForestPatch(
 }
 
 void DatasetGenerator::GeneratePointCloudForSorghumPatch(
-	const RectangularSorghumFieldPattern& pattern,
+	const SorghumFieldPatch& pattern,
 	const std::shared_ptr<SorghumStateGenerator>& sorghumDescriptor,
 	const SorghumPointCloudPointSettings& pointSettings, 
 	const std::shared_ptr<PointCloudCaptureSettings>& captureSettings,

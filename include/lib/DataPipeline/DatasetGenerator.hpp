@@ -56,7 +56,7 @@ namespace EcoSysLab {
 			bool exportJunction
 		);
 
-		static void GeneratePointCloudForSorghumPatch(const RectangularSorghumFieldPattern& pattern,
+		static void GeneratePointCloudForSorghumPatch(const SorghumFieldPatch& pattern,
 			const std::shared_ptr<SorghumStateGenerator>& sorghumDescriptor,
 			const SorghumPointCloudPointSettings& pointSettings,
 			const std::shared_ptr<PointCloudCaptureSettings>& captureSettings,

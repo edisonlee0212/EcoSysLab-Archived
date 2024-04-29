@@ -25,7 +25,7 @@ int main() {
 	Application::PushLayer<RenderLayer>();
 
 	ClassRegistry::RegisterPrivateComponent<LogGrader>("LogGrader");
-	ClassRegistry::RegisterAsset<BranchShape>("BranchShape", { ".bs" });
+	ClassRegistry::RegisterAsset<BarkDescriptor>("BarkDescriptor", { ".bs" });
 
 	ApplicationInfo applicationConfigs;
 	applicationConfigs.m_applicationName = "Log Grader";

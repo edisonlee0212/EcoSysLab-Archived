@@ -2,7 +2,7 @@
 
 using namespace EvoEngine;
 namespace EcoSysLab {
-	class BranchShape : public IAsset
+	class BarkDescriptor : public IAsset
 	{
 	public:
 		float m_barkXFrequency = 3.0f;

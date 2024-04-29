@@ -17,7 +17,7 @@
 #include "StrandsRenderer.hpp"
 #include "TreeDescriptor.hpp"
 
-#include "BranchShape.hpp"
+#include "BarkDescriptor.hpp"
 #include "FlowerDescriptor.hpp"
 #include "FoliageDescriptor.hpp"
 #include "FruitDescriptor.hpp"
@@ -63,7 +63,7 @@ void TreeDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 	editorLayer->DragAndDropButton<FruitDescriptor>(m_fruitDescriptor, "Fruit Descriptor");
 	editorLayer->DragAndDropButton<FlowerDescriptor>(m_flowerDescriptor, "Flower Descriptor");
 
-	editorLayer->DragAndDropButton<BranchShape>(m_shootBranchShape, "Shoot Branch Shape");
+	editorLayer->DragAndDropButton<BarkDescriptor>(m_barkDescriptor, "BarkDescriptor");
 	if (changed) m_saved = false;
 }
 
@@ -73,14 +73,14 @@ void TreeDescriptor::CollectAssetRef(std::vector<AssetRef>& list) {
 	if (m_fruitDescriptor.Get<FruitDescriptor>()) list.push_back(m_fruitDescriptor);
 	if (m_flowerDescriptor.Get<FlowerDescriptor>()) list.push_back(m_flowerDescriptor);
 
-	if (m_shootBranchShape.Get<BranchShape>()) list.push_back(m_shootBranchShape);
+	if (m_barkDescriptor.Get<BarkDescriptor>()) list.push_back(m_barkDescriptor);
 }
 
 
 void TreeDescriptor::Serialize(YAML::Emitter& out) {
 	m_shootDescriptor.Save("m_shootDescriptor", out);
 	m_foliageDescriptor.Save("m_foliageDescriptor", out);
-	m_shootBranchShape.Save("m_shootBranchShape", out);
+	m_barkDescriptor.Save("m_barkDescriptor", out);
 
 	m_fruitDescriptor.Save("m_fruitDescriptor", out);
 	m_flowerDescriptor.Save("m_flowerDescriptor", out);
@@ -91,7 +91,7 @@ void TreeDescriptor::Serialize(YAML::Emitter& out) {
 void TreeDescriptor::Deserialize(const YAML::Node& in) {
 	m_shootDescriptor.Load("m_shootDescriptor", in);
 	m_foliageDescriptor.Load("m_foliageDescriptor", in);
-	m_shootBranchShape.Load("m_shootBranchShape", in);
+	m_barkDescriptor.Load("m_barkDescriptor", in);
 
 	m_fruitDescriptor.Load("m_fruitDescriptor", in);
 	m_flowerDescriptor.Load("m_flowerDescriptor", in);

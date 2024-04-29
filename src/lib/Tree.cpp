@@ -10,7 +10,7 @@
 #include "Strands.hpp"
 #include "EditorLayer.hpp"
 #include "Application.hpp"
-#include "BranchShape.hpp"
+#include "BarkDescriptor.hpp"
 #include "TreeMeshGenerator.hpp"
 #include "Soil.hpp"
 #include "Climate.hpp"
@@ -795,17 +795,17 @@ void Tree::GenerateTrunkMeshes(const std::shared_ptr<Mesh>& trunkMesh, const Tre
 		std::vector<Vertex> vertices;
 		std::vector<unsigned int> indices;
 		const auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
-		std::shared_ptr<BranchShape> branchShape{};
+		std::shared_ptr<BarkDescriptor> barkDescriptor{};
 		if (treeDescriptor)
 		{
-			branchShape = treeDescriptor->m_shootBranchShape.Get<BranchShape>();
+			barkDescriptor = treeDescriptor->m_barkDescriptor.Get<BarkDescriptor>();
 		}
 		CylindricalMeshGenerator<ShootGrowthData, ShootStemGrowthData, InternodeGrowthData>::GeneratePartially(trunkHandles, m_treeModel.PeekShootSkeleton(), vertices, indices, meshGeneratorSettings,
 			[&](glm::vec3& vertexPosition, const glm::vec3& direction, const float xFactor, const float yFactor)
 			{
-				if (branchShape)
+				if (barkDescriptor)
 				{
-					const float pushValue = branchShape->GetValue(xFactor, yFactor);
+					const float pushValue = barkDescriptor->GetValue(xFactor, yFactor);
 					vertexPosition += pushValue * direction;
 				}
 			},
@@ -829,16 +829,16 @@ std::shared_ptr<Mesh> Tree::GenerateBranchMesh(const TreeMeshGeneratorSettings& 
 			treeDescriptor = ProjectManager::CreateTemporaryAsset<TreeDescriptor>();
 			treeDescriptor->m_foliageDescriptor = ProjectManager::CreateTemporaryAsset<FoliageDescriptor>();
 		}
-		std::shared_ptr<BranchShape> branchShape{};
-		branchShape = treeDescriptor->m_shootBranchShape.Get<BranchShape>();
+		std::shared_ptr<BarkDescriptor> barkDescriptor{};
+		barkDescriptor = treeDescriptor->m_barkDescriptor.Get<BarkDescriptor>();
 		if (m_strandModel.m_strandModelSkeleton.RefRawNodes().size() == m_treeModel.m_shootSkeleton.RefRawNodes().size())
 		{
 			CylindricalMeshGenerator<StrandModelSkeletonData, StrandModelFlowData, StrandModelNodeData>::Generate(m_strandModel.m_strandModelSkeleton, vertices, indices, meshGeneratorSettings,
 				[&](glm::vec3& vertexPosition, const glm::vec3& direction, const float xFactor, const float yFactor)
 				{
-					if (branchShape)
+					if (barkDescriptor)
 					{
-						const float pushValue = branchShape->GetValue(xFactor, yFactor);
+						const float pushValue = barkDescriptor->GetValue(xFactor, yFactor);
 						vertexPosition += pushValue * direction;
 					}
 				},

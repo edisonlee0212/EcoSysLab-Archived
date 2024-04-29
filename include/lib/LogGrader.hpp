@@ -1,7 +1,7 @@
 #pragma once
 #include <Plot2D.hpp>
 
-#include "BranchShape.hpp"
+#include "BarkDescriptor.hpp"
 #include "LogWood.hpp"
 using namespace EvoEngine;
 namespace EcoSysLab
@@ -49,7 +49,7 @@ namespace EcoSysLab
 		ProceduralLogParameters m_proceduralLogParameters;
 		AssetRef m_branchShape{};
 		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
-		void InitializeLogRandomly(const ProceduralLogParameters& proceduralLogParameters, const std::shared_ptr<BranchShape>& branchShape);
+		void InitializeLogRandomly(const ProceduralLogParameters& proceduralLogParameters, const std::shared_ptr<BarkDescriptor>& branchShape);
 		LogWoodMeshGenerationSettings m_logWoodMeshGenerationSettings{};
 		LogWood m_logWood{};
 		void GenerateCylinderMesh(const std::shared_ptr<Mesh>& mesh, const LogWoodMeshGenerationSettings& meshGeneratorSettings) const;

@@ -13,7 +13,7 @@
 #include "Soil.hpp"
 #include "EcoSysLabLayer.hpp"
 using namespace EcoSysLab;
-void RectangularSorghumFieldPattern::GenerateField(
+void SorghumFieldPatch::GenerateField(
 	std::vector<glm::mat4>& matricesList) const
 {
 	std::shared_ptr<Soil> soil;
@@ -33,9 +33,9 @@ void RectangularSorghumFieldPattern::GenerateField(
 	for (int i = 0; i < m_gridSize.x; i++) {
 		for (int j = 0; j < m_gridSize.y; j++) {
 			glm::vec3 position = glm::vec3(-startPoint.x + i * m_gridDistance.x, 0.0f, -startPoint.y + j * m_gridDistance.y);
-			position.x += glm::linearRand(-m_gridDistance.x * m_randomShiftMean.x, m_gridDistance.x * m_randomShiftMean.x);
-			position.z += glm::linearRand(-m_gridDistance.y * m_randomShiftMean.y, m_gridDistance.y * m_randomShiftMean.y);
-			position += glm::gaussRand(glm::vec3(0.0f), glm::vec3(m_distanceVariance.x, 0.0f, m_distanceVariance.y));
+			position.x += glm::linearRand(-m_gridDistance.x * m_positionOffsetMean.x, m_gridDistance.x * m_positionOffsetMean.x);
+			position.z += glm::linearRand(-m_gridDistance.y * m_positionOffsetMean.y, m_gridDistance.y * m_positionOffsetMean.y);
+			position += glm::gaussRand(glm::vec3(0.0f), glm::vec3(m_positionOffsetVariance.x, 0.0f, m_positionOffsetVariance.y));
 			if (heightField) position.y = heightField->GetValue({ position.x, position.z }) - 0.01f;
 			Transform transform{};
 			transform.SetPosition(position);

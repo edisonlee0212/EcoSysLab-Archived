@@ -4,7 +4,7 @@ m_shootDescriptor:
 m_foliageDescriptor:
   m_assetHandle: 9627352552686616531
   m_assetTypeName: FoliageDescriptor
-m_shootBranchShape:
+m_barkDescriptor:
   m_assetHandle: 0
   m_assetTypeName: ""
 m_fruitDescriptor:
