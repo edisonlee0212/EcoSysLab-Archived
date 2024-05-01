@@ -141,7 +141,7 @@ bool TreeModel::Grow(float deltaTime, const glm::mat4& globalTransform, ClimateM
 		const auto& sortedNodeList = m_shootSkeleton.PeekSortedNodeList();
 		if (!m_treeGrowthSettings.m_useSpaceColonization) {
 			const auto totalShootFlux = CollectShootFlux(sortedNodeList);
-			const float requiredVigor = CalculateDesiredGrowthRate(sortedNodeList, shootGrowthController);
+			const float requiredVigor = CalculateGrowthPotential(sortedNodeList, shootGrowthController);
 			float growthRate = totalShootFlux.m_value / requiredVigor;
 			if (overrideGrowthRate > 0.0f) growthRate = overrideGrowthRate;
 			CalculateGrowthRate(sortedNodeList, growthRate);
@@ -202,7 +202,7 @@ bool TreeModel::Grow(const float deltaTime, const SkeletonNodeHandle baseInterno
 
 	if (!m_treeGrowthSettings.m_useSpaceColonization) {
 		const auto totalShootFlux = CollectShootFlux(sortedSubTreeInternodeList);
-		const float requiredVigor = CalculateDesiredGrowthRate(sortedSubTreeInternodeList, shootGrowthController);
+		const float requiredVigor = CalculateGrowthPotential(sortedSubTreeInternodeList, shootGrowthController);
 		float growthRate = totalShootFlux.m_value / requiredVigor;
 		if (overrideGrowthRate > 0.0f) growthRate = overrideGrowthRate;
 		CalculateGrowthRate(sortedSubTreeInternodeList, growthRate);
@@ -912,13 +912,13 @@ void TreeModel::CalculateGrowthRate(const std::vector<SkeletonNodeHandle>& sorte
 	}
 }
 
-float TreeModel::CalculateDesiredGrowthRate(const std::vector<SkeletonNodeHandle>& sortedInternodeList, const ShootGrowthController& shootGrowthController)
+float TreeModel::CalculateGrowthPotential(const std::vector<SkeletonNodeHandle>& sortedInternodeList, const ShootGrowthController& shootGrowthController)
 {
 	const float apicalControl = shootGrowthController.m_apicalControl;
 	const float rootDistanceControl = shootGrowthController.m_rootDistanceControl;
 	const float heightControl = shootGrowthController.m_heightControl;
 
-	float maximumGrowthRateControl = 0.0f;
+	float maxGrowPotential = 0.0f;
 	
 	std::vector<float> apicalControlValues{};
 	apicalControlValues.resize(shootGrowthController.m_useLevelForApicalControl ? m_shootSkeleton.m_data.m_maxLevel + 1 : m_shootSkeleton.m_data.m_maxOrder + 1);
@@ -964,15 +964,15 @@ float TreeModel::CalculateDesiredGrowthRate(const std::vector<SkeletonNodeHandle
 		{
 			localHeightControl = 1.f;
 		}
-		node.m_data.m_growthRateControl = localApicalControl * localRootDistanceControl * localHeightControl;
-		if(node.IsEndNode()) maximumGrowthRateControl = glm::max(maximumGrowthRateControl, node.m_data.m_growthRateControl);
+		node.m_data.m_growthPotential = localApicalControl * localRootDistanceControl * localHeightControl;
+		if(node.IsEndNode()) maxGrowPotential = glm::max(maxGrowPotential, node.m_data.m_growthPotential);
 	}
 	float totalDesiredGrowthRate = 1.0f;
 	for (const auto& internodeHandle : sortedInternodeList)
 	{
 		auto& node = m_shootSkeleton.RefNode(internodeHandle);
-		if (maximumGrowthRateControl > 0.0f) node.m_data.m_growthRateControl /= maximumGrowthRateControl;
-		node.m_data.m_desiredGrowthRate = node.m_data.m_lightIntensity * node.m_data.m_growthRateControl;
+		if (maxGrowPotential > 0.0f) node.m_data.m_growthPotential /= maxGrowPotential;
+		node.m_data.m_desiredGrowthRate = node.m_data.m_lightIntensity * node.m_data.m_growthPotential;
 		totalDesiredGrowthRate += node.m_data.m_desiredGrowthRate;
 	}
 	return totalDesiredGrowthRate;

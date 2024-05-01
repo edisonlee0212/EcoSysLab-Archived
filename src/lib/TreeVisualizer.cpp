@@ -321,9 +321,9 @@ void TreeVisualizer::SyncMatrices(const ShootSkeleton& skeleton, const std::shar
 			matrices[i].m_instanceColor = glm::mix(glm::vec4(0, 1, 0, 1), glm::vec4(1, 0, 0, 1),
 				glm::clamp(glm::pow(node.m_data.m_desiredGrowthRate, m_settings.m_shootColorMultiplier), 0.0f, 1.f));
 			break;
-		case ShootVisualizerMode::GrowthRateControl:
+		case ShootVisualizerMode::GrowthPotential:
 			matrices[i].m_instanceColor = glm::mix(glm::vec4(0, 1, 0, 1), glm::vec4(1, 0, 0, 1),
-				glm::clamp(glm::pow(node.m_data.m_growthRateControl, m_settings.m_shootColorMultiplier), 0.0f, 1.f));
+				glm::clamp(glm::pow(node.m_data.m_growthPotential, m_settings.m_shootColorMultiplier), 0.0f, 1.f));
 			break;
 		case ShootVisualizerMode::GrowthRate:
 			matrices[i].m_instanceColor = glm::mix(glm::vec4(0, 1, 0, 1), glm::vec4(1, 0, 0, 1), glm::clamp(glm::pow(node.m_data.m_growthRate, m_settings.m_shootColorMultiplier), 0.0f, 1.f));
@@ -397,7 +397,7 @@ TreeVisualizer::OnInspect(
 	TreeModel& treeModel) {
 	bool updated = false;
 	if (ImGui::Combo("Visualizer mode",
-		{ "Default", "Order", "Level", "Max descendant light intensity", "Light intensity", "Light direction", "Desired growth rate", "Growth rate control", "Growth rate", "Is max child", "Allocated vigor", "Locked" },
+		{ "Default", "Order", "Level", "Max descendant light intensity", "Light intensity", "Light direction", "Desired growth rate", "Growth potential", "Growth rate", "Is max child", "Allocated vigor", "Locked" },
 		m_settings.m_shootVisualizationMode)) {
 		m_needUpdate = true;
 	}
@@ -757,7 +757,7 @@ TreeVisualizer::InspectInternode(
 		ImGui::InputFloat3("Light direction", &internodeData.m_lightDirection.x, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
 
-		ImGui::InputFloat("Growth rate control", &internodeData.m_growthRateControl, 1, 100, "%.3f",
+		ImGui::InputFloat("Growth rate control", &internodeData.m_growthPotential, 1, 100, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
 		ImGui::InputFloat("Desired growth rate", &internodeData.m_desiredGrowthRate, 1, 100, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);

@@ -1,4 +1,4 @@
-m_baseInternodeCount: 1
+m_baseInternodeCount: 2
 m_baseNodeApicalAngleMeanVariance: [0, 0]
 m_growthRate: 0.200000003
 m_rollAngle:
@@ -22,43 +22,35 @@ m_rollAngleNoise2D:
 m_apicalAngleNoise2D:
   m_minMax: [-1000, 1000]
   m_noiseDescriptors:
-    - m_type: 0
-      m_frequency: 0.100000001
-      m_intensity: 1
-      m_multiplier: 1
-      m_min: -10
-      m_max: 10
-      m_offset: 0
-      m_shift: [0, 0, 0]
-      m_ridgid: false
-m_branchingAngleMeanVariance: [65, 2]
+    []
+m_branchingAngleMeanVariance: [35, 3]
 m_rollAngleMeanVariance: [0, 0]
-m_apicalAngleMeanVariance: [0, 1]
-m_gravitropism: 0
-m_phototropism: 0.0799999982
-m_horizontalTropism: 0.0199999996
-m_saggingFactorThicknessReductionMax: [0, 2.0999999, 1]
+m_apicalAngleMeanVariance: [0, 2]
+m_gravitropism: 0.0500000007
+m_phototropism: 0
+m_horizontalTropism: 0
+m_saggingFactorThicknessReductionMax: [0.00749999983, 2, 1]
 m_internodeLength: 0.0299999993
 m_internodeLengthThicknessFactor: 0.150000006
-m_endNodeThickness: 0.00400000019
+m_endNodeThickness: 0.00300000003
 m_thicknessAccumulationFactor: 0.400000006
 m_thicknessAgeFactor: 0
 m_internodeShadowFactor: 0.0199999996
 m_lateralBudCount: 2
 m_apicalBudExtinctionRate: 0
-m_lateralBudFlushingRate: 0.300000012
-m_apicalControl: 1
+m_lateralBudFlushingRate: 0.400000006
+m_apicalControl: 0.970000029
 m_heightControl: 0
-m_rootDistanceControl: 1
-m_apicalDominance: 0.25
+m_rootDistanceControl: 0.5
+m_apicalDominance: 0
 m_apicalDominanceLoss: 0.00999999978
 m_trunkProtection: false
 m_maxFlowLength: 0
-m_lowBranchPruning: 0.100000001
+m_lowBranchPruning: 0.0500000007
 m_lowBranchPruningThicknessFactor: 0
-m_lightPruningFactor: 0.699999988
+m_lightPruningFactor: 0.5
 m_thicknessPruningFactor: 0.00499999989
-m_lightPruningProbability: 20
+m_lightPruningProbability: 10
 m_thicknessPruningProbability: 20
 m_leafBudCount: 1
 m_leafGrowthRate: 18

@@ -22,7 +22,7 @@ namespace EcoSysLab {
 
 		void CalculateGrowthRate(const std::vector<SkeletonNodeHandle>& sortedInternodeList, float factor);
 
-		float CalculateDesiredGrowthRate(const std::vector<SkeletonNodeHandle>& sortedInternodeList, const ShootGrowthController& shootGrowthController);
+		float CalculateGrowthPotential(const std::vector<SkeletonNodeHandle>& sortedInternodeList, const ShootGrowthController& shootGrowthController);
 
 		bool PruneInternodes(const glm::mat4& globalTransform, ClimateModel& climateModel, const ShootGrowthController& shootGrowthController);
 
