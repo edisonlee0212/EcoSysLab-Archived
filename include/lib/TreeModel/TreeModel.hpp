@@ -86,7 +86,7 @@ namespace EcoSysLab {
 
 		void PruneInternode(SkeletonNodeHandle internodeHandle);
 
-		void CalculateShootFlux(const glm::mat4& globalTransform, ClimateModel& climateModel, const ShootGrowthController& shootGrowthController);
+		void CalculateShootFlux(const glm::mat4& globalTransform, const ClimateModel& climateModel, const ShootGrowthController& shootGrowthController);
 		
 
 		void HarvestFruits(const std::function<bool(const ReproductiveModule& fruit)>& harvestFunction);

@@ -6,12 +6,8 @@ namespace EcoSysLab
 {
 	struct IlluminationEstimationSettings
 	{
-		float m_shadowDistanceLoss = 2.5f;
-		float m_shadowBaseLoss = 0.5f;
-
-		float m_shadowDetectionRadius = 0.3f;
-
-		float m_lightDetectionRadius = 0.5f;
+		float m_shadowDistanceLoss = 1.f;
+		float m_detectionRadius = 0.5f;
 	};
 	
 	struct InternodeVoxelRegistration
@@ -26,7 +22,6 @@ namespace EcoSysLab
 	{
 		glm::vec3 m_lightDirection = glm::vec3(0, 1, 0);
 		float m_selfShadow = 0.0f;
-		float m_shadowIntensity = 0.0f;
 		float m_lightIntensity = 1.0f;
 		float m_totalBiomass = 0.0f;
 

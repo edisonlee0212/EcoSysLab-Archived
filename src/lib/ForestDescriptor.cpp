@@ -14,7 +14,7 @@ using namespace EcoSysLab;
 void ForestPatch::InstantiatePatch(const bool setParent)
 {
 	const auto scene = Application::GetActiveScene();
-	std::vector<glm::mat4> treeMatrices;
+	std::vector<GlobalTransform> treeMatrices;
 	std::shared_ptr<Soil> soil;
 	const auto soilCandidate = EcoSysLabLayer::FindSoil();
 	if (!soilCandidate.expired()) soil = soilCandidate.lock();
@@ -36,13 +36,13 @@ void ForestPatch::InstantiatePatch(const bool setParent)
 			position.z += glm::linearRand(-m_gridDistance.y * m_positionOffsetMean.y, m_gridDistance.y * m_positionOffsetMean.y);
 			position += glm::gaussRand(glm::vec3(0.0f), glm::vec3(m_positionOffsetVariance.x, 0.0f, m_positionOffsetVariance.y));
 			if (heightField) position.y = heightField->GetValue({ position.x, position.z }) - 0.01f;
-			Transform transform{};
+			GlobalTransform transform{};
 			transform.SetPosition(position);
 			auto rotation = glm::quat(glm::radians(
 				glm::vec3(glm::gaussRand(glm::vec3(0.0f), m_rotationOffsetVariance))));
 			transform.SetRotation(rotation);
 			transform.SetScale(glm::vec3(1.f));
-			treeMatrices[i * m_gridSize.y + j] = transform.m_value;
+			treeMatrices[i * m_gridSize.y + j] = transform;
 		}
 	}
 
@@ -54,6 +54,7 @@ void ForestPatch::InstantiatePatch(const bool setParent)
 	for (const auto& gt : treeMatrices) {
 		auto treeEntity = scene->CreateEntity("Tree No." + std::to_string(i));
 		i++;
+
 		scene->SetDataComponent(treeEntity, gt);
 		const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
 		tree->m_treeModel.m_treeGrowthSettings = m_treeGrowthSettings;

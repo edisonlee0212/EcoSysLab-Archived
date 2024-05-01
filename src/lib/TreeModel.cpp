@@ -263,7 +263,7 @@ void TreeModel::Initialize(const ShootGrowthController& shootGrowthController) {
 	m_initialized = true;
 }
 
-void TreeModel::CalculateShootFlux(const glm::mat4& globalTransform, ClimateModel& climateModel, const ShootGrowthController& shootGrowthController)
+void TreeModel::CalculateShootFlux(const glm::mat4& globalTransform, const ClimateModel& climateModel, const ShootGrowthController& shootGrowthController)
 {
 	auto& shootData = m_shootSkeleton.m_data;
 	shootData.m_maxMarkerCount = 0;
@@ -353,9 +353,14 @@ ShootFlux TreeModel::CollectShootFlux(const std::vector<SkeletonNodeHandle>& sor
 	ShootFlux totalShootFlux;
 	totalShootFlux.m_value = 0.0f;
 	for (const auto& internodeHandle : sortedInternodeList) {
-		auto& internode = m_shootSkeleton.PeekNode(internodeHandle);
-		const auto& internodeData = internode.m_data;
+		auto& internode = m_shootSkeleton.RefNode(internodeHandle);
+		auto& internodeData = internode.m_data;
 		totalShootFlux.m_value += internodeData.m_lightIntensity;
+		internodeData.m_maxDescendantLightIntensity = glm::clamp(internodeData.m_lightIntensity, 0.f, 1.f);
+		for(const auto& childHandle : internode.PeekChildHandles())
+		{
+			internodeData.m_maxDescendantLightIntensity = glm::max(internodeData.m_maxDescendantLightIntensity, m_shootSkeleton.RefNode(childHandle).m_data.m_maxDescendantLightIntensity);
+		}
 	}
 	return totalShootFlux;
 }
@@ -976,7 +981,7 @@ void TreeModel::CalculateThickness(const ShootGrowthController& shootGrowthContr
 		}
 		childThicknessCollection += shootGrowthController.m_thicknessAgeFactor * shootGrowthController.m_endNodeThickness * shootGrowthController.m_internodeGrowthRate * (m_age - internodeData.m_startAge);
 		if (childThicknessCollection != 0.0f) {
-			internodeInfo.m_thickness = glm::pow(childThicknessCollection, shootGrowthController.m_thicknessAccumulationFactor);
+			internodeInfo.m_thickness = glm::max(internodeInfo.m_thickness, glm::pow(childThicknessCollection, shootGrowthController.m_thicknessAccumulationFactor));
 		}
 		else
 		{

@@ -302,8 +302,12 @@ void TreeVisualizer::SyncMatrices(const ShootSkeleton& skeleton, const std::shar
 		case ShootVisualizerMode::Level:
 			matrices[i].m_instanceColor = m_randomColors[node.m_data.m_level];
 			break;
+		case ShootVisualizerMode::MaxDescendantLightIntensity:
+			matrices[i].m_instanceColor = glm::mix(glm::vec4(0, 0, 0, 1), glm::vec4(1, 1, 1, 1),
+				glm::clamp(glm::pow(node.m_data.m_maxDescendantLightIntensity, m_settings.m_shootColorMultiplier), 0.0f, 1.f));
+			break;
 		case ShootVisualizerMode::LightIntensity:
-			matrices[i].m_instanceColor = glm::mix(glm::vec4(0, 1, 0, 1), glm::vec4(1, 0, 0, 1),
+			matrices[i].m_instanceColor = glm::mix(glm::vec4(0, 0, 0, 1), glm::vec4(1, 1, 1, 1),
 				glm::clamp(glm::pow(node.m_data.m_lightIntensity, m_settings.m_shootColorMultiplier), 0.0f, 1.f));
 			break;
 		case ShootVisualizerMode::LightDirection:
@@ -454,7 +458,7 @@ TreeVisualizer::OnInspect(
 		ImGui::TreePop();
 	}
 	if (ImGui::Combo("Visualizer mode",
-		{ "Default", "Order", "Level", "Light Intensity", "Light Direction", "Growth Potential", "Apical control", "Desired growth rate", "Growth Rate", "Max Child", "Allocated Vigor", "Locked" },
+		{ "Default", "Order", "Level", "Max Descendant Light Intensity", "Light Intensity", "Light Direction", "Growth Potential", "Apical control", "Desired growth rate", "Growth Rate", "Max Child", "Allocated Vigor", "Locked" },
 		m_settings.m_shootVisualizationMode)) {
 		m_needUpdate = true;
 	}

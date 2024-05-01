@@ -43,7 +43,7 @@ m_internodeLengthThicknessFactor: 0.150000006
 m_endNodeThickness: 0.00400000019
 m_thicknessAccumulationFactor: 0.449999988
 m_thicknessAgeFactor: 0
-m_internodeShadowFactor: 0.0299999993
+m_internodeShadowFactor: 0.0199999996
 m_lateralBudCount: 1
 m_apicalBudExtinctionRate: 0
 m_lateralBudFlushingRate: 0.400000006

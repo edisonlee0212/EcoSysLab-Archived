@@ -12,6 +12,7 @@ namespace EcoSysLab {
 		Default,
 		Order,
 		Level,
+		MaxDescendantLightIntensity,
 		LightIntensity,
 		LightDirection,
 

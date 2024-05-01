@@ -33,11 +33,11 @@ m_apicalAngleNoise2D:
       m_ridgid: false
 m_branchingAngleMeanVariance: [75, 1]
 m_rollAngleMeanVariance: [0, 0]
-m_apicalAngleMeanVariance: [0, 0]
+m_apicalAngleMeanVariance: [0, 1]
 m_gravitropism: 0
 m_phototropism: 0.100000001
 m_horizontalTropism: 0.00999999978
-m_saggingFactorThicknessReductionMax: [0.0105999997, 1.25, 0.125]
+m_saggingFactorThicknessReductionMax: [0.00710000005, 1.25, 0.125]
 m_internodeLength: 0.0299999993
 m_internodeLengthThicknessFactor: 0.150000006
 m_endNodeThickness: 0.00200000009

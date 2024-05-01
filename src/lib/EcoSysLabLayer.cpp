@@ -181,7 +181,7 @@ void EcoSysLabLayer::Visualization() {
 							glm::translate(voxelGrid.GetPosition(coordinate) + glm::linearRand(-glm::vec3(0.5f * voxelGrid.GetVoxelSize()), glm::vec3(0.5f * voxelGrid.GetVoxelSize())))
 							* glm::mat4_cast(glm::quat(glm::vec3(0.0f)))
 							* glm::scale(glm::vec3(0.25f * voxelGrid.GetVoxelSize()));
-						particleInfos[i].m_instanceColor = glm::vec4(1.f, 1.f, 1.f, glm::clamp(voxelGrid.Peek(static_cast<int>(i)).m_shadowIntensity, 0.0f, 1.0f));
+						particleInfos[i].m_instanceColor = glm::vec4(1.f, 1.f, 1.f, 1.f - glm::clamp(voxelGrid.Peek(static_cast<int>(i)).m_lightIntensity, 0.0f, 1.0f));
 						}
 					);
 					m_shadowGridParticleInfoList->SetParticleInfos(particleInfos);
@@ -204,7 +204,7 @@ void EcoSysLabLayer::Visualization() {
 							* rotationTransform
 							* glm::scale(glm::vec3(0.05f * voxelSize, voxelSize * 0.5f, 0.05f * voxelSize));
 						if (voxelGrid.Peek(static_cast<int>(i)).m_lightIntensity == 0.0f) particleInfos[i].m_instanceColor = glm::vec4(0.0f);
-						else particleInfos[i].m_instanceColor = glm::vec4(1.f, 1.f, 1.f, glm::clamp(voxelGrid.Peek(static_cast<int>(i)).m_shadowIntensity, 0.0f, 1.0f));
+						else particleInfos[i].m_instanceColor = glm::vec4(1.f, 1.f, 1.f, 1.f - glm::clamp(voxelGrid.Peek(static_cast<int>(i)).m_lightIntensity, 0.0f, 1.0f));
 						}
 					);
 					m_lightingGridParticleInfoList->SetParticleInfos(particleInfos);
@@ -892,12 +892,8 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 					settingsChanged =
 						ImGui::DragFloat("Shadow distance loss", &m_simulationSettings.m_shadowEstimationSettings.m_shadowDistanceLoss, 0.01f,
 							0.0f, 10.0f) || settingsChanged;
-
 					settingsChanged =
-						ImGui::DragFloat("Shadow base loss", &m_simulationSettings.m_shadowEstimationSettings.m_shadowBaseLoss, 0.001f,
-							0.0f, 1.0f) || settingsChanged;
-					settingsChanged =
-						ImGui::DragFloat("Shadow detection radius", &m_simulationSettings.m_shadowEstimationSettings.m_shadowDetectionRadius, 0.001f,
+						ImGui::DragFloat("Shadow detection radius", &m_simulationSettings.m_shadowEstimationSettings.m_detectionRadius, 0.001f,
 							0.0f, 1.0f) || settingsChanged;
 
 					if (settingsChanged) {

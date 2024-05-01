@@ -31,13 +31,13 @@ m_apicalAngleNoise2D:
       m_offset: 0
       m_shift: [0, 0, 0]
       m_ridgid: false
-m_branchingAngleMeanVariance: [15, 3]
+m_branchingAngleMeanVariance: [15, 2]
 m_rollAngleMeanVariance: [0, 0]
 m_apicalAngleMeanVariance: [0, 2.5]
 m_gravitropism: 0
 m_phototropism: 0.0500000007
 m_horizontalTropism: 0
-m_saggingFactorThicknessReductionMax: [9.99999975e-05, 2, 0.300000012]
+m_saggingFactorThicknessReductionMax: [0, 2, 0.300000012]
 m_internodeLength: 0.0199999996
 m_internodeLengthThicknessFactor: 0.150000006
 m_endNodeThickness: 0.00499999989
@@ -54,7 +54,7 @@ m_trunkProtection: false
 m_maxFlowLength: 0
 m_lowBranchPruning: 0
 m_lowBranchPruningThicknessFactor: 0
-m_lightPruningFactor: 0.649999976
+m_lightPruningFactor: 0.75
 m_thicknessPruningFactor: 0.00499999989
 m_lightPruningProbability: 20
 m_thicknessPruningProbability: 20

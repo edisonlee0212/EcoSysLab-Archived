@@ -73,7 +73,9 @@ namespace EcoSysLab
 		float m_sagging = 0;
 		int m_order = 0;
 		float m_extraMass = 0.0f;
-		
+
+		float m_maxDescendantLightIntensity = 0.f;
+
 		/**
 		 * List of buds, first one will always be the apical bud which points forward.
 		 */

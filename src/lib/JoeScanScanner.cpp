@@ -52,11 +52,16 @@ void JoeScan::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 
 	static bool enableJoeScanRendering = true;
 	ImGui::Checkbox("Render JoeScan", &enableJoeScanRendering);
-	static float divider = 100.f;
+	static float divider = 200.f;
 	ImGui::DragFloat("Divider", &divider);
 
-	static glm::vec4 color = glm::vec4(1, 1, 1, .25f);
-	ImGui::ColorEdit4("Color", &color.x);
+	static auto color = glm::vec3(1);
+	static float brightnessFactor = 1.f;
+	static bool brightness = true;
+	ImGui::Checkbox("Brightness", &brightness);
+	if(brightness) ImGui::DragFloat("Brightness factor", &brightnessFactor, 0.001f, 0.0f, 1.0f);
+
+	ImGui::ColorEdit3("Color", &color.x);
 	if (enableJoeScanRendering) {
 		if (ImGui::Button("Refresh JoeScan"))
 		{
@@ -68,7 +73,8 @@ void JoeScan::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 				Jobs::RunParallelFor(profile.m_points.size(), [&](unsigned i)
 					{
 						data[i + startIndex].m_instanceMatrix.SetPosition(glm::vec3(profile.m_points[i].x / 10000.f, profile.m_points[i].y / 10000.f, profile.m_encoderValue / divider));
-						data[i + startIndex].m_instanceColor = color;
+						data[i + startIndex].m_instanceColor = glm::vec4(color, 1.f / 128);
+						if(brightness) data[i + startIndex].m_instanceColor.w = static_cast<float>(profile.m_brightness[i]) / 2048.f * brightnessFactor;
 					}
 				);
 			}
