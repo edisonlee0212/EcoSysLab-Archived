@@ -35,8 +35,6 @@ namespace EcoSysLab {
 
 		LowBranchPruning,
 		LowBranchPruningThicknessFactor,
-		LightPruningFactor,
-		ThicknessPruningFactor
 
 	};
 

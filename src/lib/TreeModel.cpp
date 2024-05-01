@@ -71,7 +71,7 @@ void TreeModel::PruneInternode(const SkeletonNodeHandle internodeHandle)
 			[&](SkeletonFlowHandle flowHandle) {},
 			[&](SkeletonNodeHandle nodeHandle)
 			{
-				
+
 			});
 	}
 }
@@ -131,6 +131,7 @@ bool TreeModel::Grow(float deltaTime, const glm::mat4& globalTransform, ClimateM
 	m_shootSkeleton.SortLists();
 	CalculateShootFlux(globalTransform, climateModel, shootGrowthController);
 	SampleTemperature(globalTransform, climateModel);
+
 	if (pruning) {
 		const bool anyBranchPruned = PruneInternodes(globalTransform, climateModel, shootGrowthController);
 		if (anyBranchPruned) m_shootSkeleton.SortLists();
@@ -141,6 +142,7 @@ bool TreeModel::Grow(float deltaTime, const glm::mat4& globalTransform, ClimateM
 		const auto& sortedNodeList = m_shootSkeleton.PeekSortedNodeList();
 		if (!m_treeGrowthSettings.m_useSpaceColonization) {
 			const auto totalShootFlux = CollectShootFlux(sortedNodeList);
+			CalculateInternodeStrength(sortedNodeList, shootGrowthController);
 			const float requiredVigor = CalculateGrowthPotential(sortedNodeList, shootGrowthController);
 			float growthRate = totalShootFlux.m_value / requiredVigor;
 			if (overrideGrowthRate > 0.0f) growthRate = overrideGrowthRate;
@@ -333,17 +335,24 @@ void TreeModel::CalculateShootFlux(const glm::mat4& globalTransform, const Clima
 		auto& internodeData = internode.m_data;
 		auto& internodeInfo = internode.m_info;
 		internodeData.m_lightIntensity = 0.0f;
-		if (m_treeGrowthSettings.m_useSpaceColonization) {
-			for (const auto& bud : internodeData.m_buds)
-			{
+		internodeData.m_lightDirection = -m_currentGravityDirection;
+		bool sampleLightIntensity = false;
+
+		for (const auto& bud : internodeData.m_buds)
+		{
+			if (bud.m_type == BudType::Apical || bud.m_type == BudType::Lateral) sampleLightIntensity = true;
+			if (m_treeGrowthSettings.m_useSpaceColonization) {
 				shootData.m_maxMarkerCount = glm::max(shootData.m_maxMarkerCount, bud.m_markerCount);
 			}
 		}
 		const glm::vec3 position = globalTransform * glm::vec4(internodeInfo.m_globalPosition, 1.0f);
-		internodeData.m_lightIntensity = glm::clamp(climateModel.m_environmentGrid.Sample(position, internodeData.m_lightDirection), 0.f, 1.f);
-		if (internodeData.m_lightIntensity <= glm::epsilon<float>())
-		{
-			internodeData.m_lightDirection = glm::normalize(internodeInfo.GetGlobalDirection());
+		if (sampleLightIntensity) {
+
+			internodeData.m_lightIntensity = glm::clamp(climateModel.m_environmentGrid.Sample(position, internodeData.m_lightDirection), 0.f, 1.f);
+			if (internodeData.m_lightIntensity <= glm::epsilon<float>())
+			{
+				internodeData.m_lightDirection = glm::normalize(internodeInfo.GetGlobalDirection());
+			}
 		}
 		internodeData.m_spaceOccupancy = climateModel.m_environmentGrid.m_voxel.Peek(position).m_totalBiomass;
 	}
@@ -357,12 +366,22 @@ ShootFlux TreeModel::CollectShootFlux(const std::vector<SkeletonNodeHandle>& sor
 		auto& internodeData = internode.m_data;
 		totalShootFlux.m_value += internodeData.m_lightIntensity;
 		internodeData.m_maxDescendantLightIntensity = glm::clamp(internodeData.m_lightIntensity, 0.f, 1.f);
-		for(const auto& childHandle : internode.PeekChildHandles())
+		for (const auto& childHandle : internode.PeekChildHandles())
 		{
 			internodeData.m_maxDescendantLightIntensity = glm::max(internodeData.m_maxDescendantLightIntensity, m_shootSkeleton.RefNode(childHandle).m_data.m_maxDescendantLightIntensity);
 		}
 	}
 	return totalShootFlux;
+}
+
+void TreeModel::CalculateInternodeStrength(const std::vector<SkeletonNodeHandle>& sortedInternodeList,
+	const ShootGrowthController& shootGrowthController)
+{
+	for (const auto& internodeHandle : sortedInternodeList) {
+		auto& internode = m_shootSkeleton.RefNode(internodeHandle);
+		auto& internodeData = internode.m_data;
+		internodeData.m_strength = shootGrowthController.m_internodeStrength(internode);
+	}
 }
 
 void TreeModel::ShootGrowthPostProcess(const ShootGrowthController& shootGrowthController)
@@ -375,7 +394,10 @@ void TreeModel::ShootGrowthPostProcess(const ShootGrowthController& shootGrowthC
 
 		m_shootSkeleton.CalculateDistance();
 		CalculateThickness(shootGrowthController);
-		CalculateBiomass(shootGrowthController);
+		const auto& sortedInternodeList = m_shootSkeleton.PeekSortedNodeList();
+		for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); ++it) {
+			CalculateBiomass(*it, shootGrowthController);
+		}
 		CalculateLevel();
 		CalculateTransform(shootGrowthController, true);
 
@@ -609,7 +631,7 @@ bool TreeModel::ElongateInternode(float extendLength, SkeletonNodeHandle interno
 		const auto newInternodeHandle = m_shootSkeleton.Extend(internodeHandle, false);
 		auto& oldInternode = m_shootSkeleton.RefNode(internodeHandle);
 		auto& newInternode = m_shootSkeleton.RefNode(newInternodeHandle);
-		
+
 		newInternode.m_data = {};
 		newInternode.m_data.m_indexOfParentBud = 0;
 		newInternode.m_data.m_lightIntensity = oldInternode.m_data.m_lightIntensity;
@@ -644,7 +666,8 @@ bool TreeModel::ElongateInternode(float extendLength, SkeletonNodeHandle interno
 			else {
 				collectedInhibitor += shootGrowthController.m_apicalDominance(newInternode);
 			}
-		}else
+		}
+		else
 		{
 			newInternode.m_info.m_thickness = oldInternode.m_info.m_thickness;
 		}
@@ -919,7 +942,7 @@ float TreeModel::CalculateGrowthPotential(const std::vector<SkeletonNodeHandle>&
 	const float heightControl = shootGrowthController.m_heightControl;
 
 	float maxGrowPotential = 0.0f;
-	
+
 	std::vector<float> apicalControlValues{};
 	apicalControlValues.resize(shootGrowthController.m_useLevelForApicalControl ? m_shootSkeleton.m_data.m_maxLevel + 1 : m_shootSkeleton.m_data.m_maxOrder + 1);
 	apicalControlValues[0] = 1.0f;
@@ -955,17 +978,18 @@ float TreeModel::CalculateGrowthPotential(const std::vector<SkeletonNodeHandle>&
 			localRootDistanceControl = 1.f;
 		}
 		float localHeightControl;
-		if(heightControl != 0.f)
+		if (heightControl != 0.f)
 		{
 			float y = node.m_info.GetGlobalEndPosition().y;
 			if (y == 0.f) y = 1.f;
 			localHeightControl = glm::pow(1.f / y, heightControl);
-		}else
+		}
+		else
 		{
 			localHeightControl = 1.f;
 		}
 		node.m_data.m_growthPotential = localApicalControl * localRootDistanceControl * localHeightControl;
-		if(node.IsEndNode()) maxGrowPotential = glm::max(maxGrowPotential, node.m_data.m_growthPotential);
+		if (node.IsEndNode()) maxGrowPotential = glm::max(maxGrowPotential, node.m_data.m_growthPotential);
 	}
 	float totalDesiredGrowthRate = 1.0f;
 	for (const auto& internodeHandle : sortedInternodeList)
@@ -1002,24 +1026,41 @@ void TreeModel::CalculateThickness(const ShootGrowthController& shootGrowthContr
 		}
 	}
 }
-void TreeModel::CalculateBiomass(const ShootGrowthController& shootGrowthController)
+void TreeModel::CalculateBiomass(SkeletonNodeHandle internodeHandle, const ShootGrowthController& shootGrowthController)
 {
-	auto& sortedInternodeList = m_shootSkeleton.PeekSortedNodeList();
-	for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); ++it) {
-		const auto internodeHandle = *it;
-		auto& internode = m_shootSkeleton.RefNode(internodeHandle);
-		auto& internodeData = internode.m_data;
-		const auto& internodeInfo = internode.m_info;
-		internodeData.m_descendantTotalBiomass = internodeData.m_biomass = 0.0f;
-		internodeData.m_biomass =
-			internodeInfo.m_thickness / shootGrowthController.m_endNodeThickness * internodeData.m_internodeLength /
-			shootGrowthController.m_internodeLength;
-		for (const auto& i : internode.PeekChildHandles()) {
-			const auto& childInternode = m_shootSkeleton.RefNode(i);
-			internodeData.m_descendantTotalBiomass +=
-				childInternode.m_data.m_descendantTotalBiomass +
-				childInternode.m_data.m_biomass;
-		}
+	auto& internode = m_shootSkeleton.RefNode(internodeHandle);
+	auto& internodeData = internode.m_data;
+	const auto& internodeInfo = internode.m_info;
+	internodeData.m_descendantTotalBiomass = internodeData.m_biomass = 0.0f;
+	internodeData.m_biomass =
+		internodeData.m_density * internodeInfo.m_thickness / shootGrowthController.m_endNodeThickness * internodeData.m_internodeLength /
+		shootGrowthController.m_internodeLength;
+	glm::vec3 positionedSum = glm::vec3(0.f);
+	glm::vec3 desiredPositionSum = glm::vec3(0.f);
+	for (const auto& i : internode.PeekChildHandles()) {
+		const auto& childInternode = m_shootSkeleton.RefNode(i);
+		internodeData.m_descendantTotalBiomass +=
+			childInternode.m_data.m_descendantTotalBiomass +
+			childInternode.m_data.m_biomass;
+		positionedSum += childInternode.m_data.m_biomass * (childInternode.m_info.m_globalPosition + childInternode.m_info.GetGlobalEndPosition()) * .5f;
+		positionedSum += childInternode.m_data.m_descendantWeightCenter * childInternode.m_data.m_descendantTotalBiomass;
+
+		glm::vec3 childDesiredGlobalEndPosition = childInternode.m_data.m_desiredGlobalPosition;
+		childDesiredGlobalEndPosition += childInternode.m_info.m_length * (childInternode.m_data.m_desiredGlobalRotation * glm::vec3(0, 0, -1));
+		desiredPositionSum += childInternode.m_data.m_biomass * (childInternode.m_data.m_desiredGlobalPosition + childDesiredGlobalEndPosition) * .5f;
+		desiredPositionSum += childInternode.m_data.m_desiredDescendantWeightCenter * childInternode.m_data.m_descendantTotalBiomass;
+	}
+	if (!internode.PeekChildHandles().empty()) {
+		internodeData.m_descendantWeightCenter = positionedSum / internodeData.m_descendantTotalBiomass;
+		internodeData.m_desiredDescendantWeightCenter = positionedSum / internodeData.m_descendantTotalBiomass;
+	}
+	else
+	{
+		internodeData.m_descendantWeightCenter = internode.m_info.GetGlobalEndPosition();
+
+		glm::vec3 desiredGlobalEndPosition = internode.m_data.m_desiredGlobalPosition;
+		desiredGlobalEndPosition += internode.m_info.m_length * (internode.m_data.m_desiredGlobalRotation * glm::vec3(0, 0, -1));
+		internodeData.m_desiredDescendantWeightCenter = desiredGlobalEndPosition;
 	}
 }
 void TreeModel::Clear() {
@@ -1057,13 +1098,14 @@ bool TreeModel::PruneInternodes(const glm::mat4& globalTransform, ClimateModel& 
 	const auto maxDistance = m_shootSkeleton.PeekNode(0).m_info.m_endDistance;
 	const auto& sortedInternodeList = m_shootSkeleton.PeekSortedNodeList();
 	bool anyInternodePruned = false;
-	
+
 	for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); ++it) {
 		const auto internodeHandle = *it;
 		if (m_shootSkeleton.PeekNode(internodeHandle).IsRecycled()) continue;
+		CalculateBiomass(internodeHandle, shootGrowthController);
+		auto& internode = m_shootSkeleton.RefNode(internodeHandle);
 		if (internodeHandle == 0) continue;
-		const auto& internode = m_shootSkeleton.PeekNode(internodeHandle);
-		if(internode.m_info.m_locked) continue;
+		if (internode.m_info.m_locked) continue;
 		//Pruning here.
 		bool pruning = false;
 		if (internode.m_info.m_globalPosition.y <= 0.05f && internode.m_data.m_order != 0)
@@ -1111,7 +1153,7 @@ bool TreeModel::PruneInternodes(const glm::mat4& globalTransform, ClimateModel& 
 					for (const auto& i : data.m_internodeVoxelRegistrations)
 					{
 						if (i.m_treeModelIndex == m_index) continue;
-						if (glm::distance(endPosition, i.m_position) < m_crownShynessDistance) 
+						if (glm::distance(endPosition, i.m_position) < m_crownShynessDistance)
 							pruneByCrownShyness = true;
 					}
 				}

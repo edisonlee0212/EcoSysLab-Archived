@@ -159,6 +159,9 @@ namespace EcoSysLab
 		 * \brief The damage to the leaf during this iteration caused by various factors
 		 */
 		std::function<float(const SkeletonNode<InternodeGrowthData>& internode)> m_leafDamage;
+
+		std::function<float(const SkeletonNode<InternodeGrowthData>& internode)> m_internodeStrength;
+
 		/**
 		 * \brief The probability of leaf falling after health return to 0.0
 		 */

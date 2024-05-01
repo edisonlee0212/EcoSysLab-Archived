@@ -73,8 +73,9 @@ namespace EcoSysLab
 		float m_sagging = 0;
 		int m_order = 0;
 		float m_extraMass = 0.0f;
-
-		float m_maxDescendantLightIntensity = 0.f;
+		float m_density = 1.f;
+		float m_strength = 1.f;
+		
 
 		/**
 		 * List of buds, first one will always be the apical bud which points forward.
@@ -87,9 +88,12 @@ namespace EcoSysLab
 		bool m_maxChild = false;// No Serialize
 		float m_descendantTotalBiomass = 0;// No Serialize
 		float m_biomass = 0;// No Serialize
+		glm::vec3 m_desiredDescendantWeightCenter = glm::vec3(0.f);
+		glm::vec3 m_descendantWeightCenter = glm::vec3(0.f);
 		float m_temperature = 0.0f;// No Serialize
 		float m_inhibitorSink = 0;// No Serialize
 		float m_lightIntensity = 1.0f;// No Serialize
+		float m_maxDescendantLightIntensity = 0.f;//No Serialize
 		glm::vec3 m_lightDirection = glm::vec3(0, 1, 0);// No Serialize
 		float m_growthPotential = 0.0f;// No Serialize
 		float m_desiredGrowthRate = 0.0f;// No Serialize

@@ -69,6 +69,12 @@ void ShootDescriptor::PrepareController(ShootGrowthController& shootGrowthContro
 					m_saggingFactorThicknessReductionMax.y));
 			return glm::max(internode.m_data.m_sagging, newSagging);
 		};
+
+	shootGrowthController.m_internodeStrength = [&](const SkeletonNode<InternodeGrowthData>& internode)
+		{
+			return glm::clamp(1.0f - (1.0f - internode.m_data.m_maxDescendantLightIntensity) * m_internodeStrengthLightingFactor, 0.0f, 1.0f);
+		};
+
 	shootGrowthController.m_internodeLength = m_internodeLength;
 	shootGrowthController.m_internodeLengthThicknessFactor = m_internodeLengthThicknessFactor;
 	shootGrowthController.m_endNodeThickness = m_endNodeThickness;
@@ -198,11 +204,9 @@ void ShootDescriptor::Serialize(YAML::Emitter& out)
 	out << YAML::Key << "m_maxFlowLength" << YAML::Value << m_maxFlowLength;
 	out << YAML::Key << "m_lowBranchPruning" << YAML::Value << m_lowBranchPruning;
 	out << YAML::Key << "m_lowBranchPruningThicknessFactor" << YAML::Value << m_lowBranchPruningThicknessFactor;
+	out << YAML::Key << "m_internodeStrengthLightingFactor" << YAML::Value << m_internodeStrengthLightingFactor;
 	out << YAML::Key << "m_lightPruningFactor" << YAML::Value << m_lightPruningFactor;
-	out << YAML::Key << "m_thicknessPruningFactor" << YAML::Value << m_thicknessPruningFactor;
-
-	out << YAML::Key << "m_lightPruningProbability" << YAML::Value << m_lightPruningProbability;
-	out << YAML::Key << "m_thicknessPruningProbability" << YAML::Value << m_thicknessPruningProbability;
+	out << YAML::Key << "m_breakingStressFactor" << YAML::Value << m_breakingStressFactor;
 
 	out << YAML::Key << "m_leafBudCount" << YAML::Value << m_leafBudCount;
 	out << YAML::Key << "m_leafGrowthRate" << YAML::Value << m_leafGrowthRate;
@@ -269,10 +273,10 @@ void ShootDescriptor::Deserialize(const YAML::Node& in)
 	if (in["m_maxFlowLength"]) m_maxFlowLength = in["m_maxFlowLength"].as<int>();
 	if (in["m_lowBranchPruning"]) m_lowBranchPruning = in["m_lowBranchPruning"].as<float>();
 	if (in["m_lowBranchPruningThicknessFactor"]) m_lowBranchPruningThicknessFactor = in["m_lowBranchPruningThicknessFactor"].as<float>();
+	if (in["m_internodeStrengthLightingFactor"]) m_internodeStrengthLightingFactor = in["m_internodeStrengthLightingFactor"].as<float>();
 	if (in["m_lightPruningFactor"]) m_lightPruningFactor = in["m_lightPruningFactor"].as<float>();
-	if (in["m_thicknessPruningFactor"]) m_thicknessPruningFactor = in["m_thicknessPruningFactor"].as<float>();
-	if (in["m_lightPruningProbability"]) m_lightPruningProbability = in["m_lightPruningProbability"].as<float>();
-	if (in["m_thicknessPruningProbability"]) m_thicknessPruningProbability = in["m_thicknessPruningProbability"].as<float>();
+
+	if (in["m_breakingStressFactor"]) m_breakingStressFactor = in["m_breakingStressFactor"].as<float>();
 
 
 	if (in["m_leafBudCount"]) m_leafBudCount = in["m_leafBudCount"].as<int>();
@@ -340,6 +344,9 @@ void ShootDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 
 
 		changed = ImGui::DragFloat("Internode shadow factor", &m_internodeShadowFactor, 0.001f, 0.0f, 1.0f) || changed;
+
+		changed = ImGui::DragFloat("Internode strength lighting factor", &m_internodeStrengthLightingFactor, 0.01f, 0.0f, 1.0f) || changed;
+
 		ImGui::TreePop();
 	}
 	if (ImGui::TreeNodeEx("Bud fate", ImGuiTreeNodeFlags_DefaultOpen)) {
@@ -347,8 +354,8 @@ void ShootDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 		changed = ImGui::DragFloat("Phototropism", &m_phototropism, 0.01f) || changed;
 		changed = ImGui::DragFloat("Horizontal Tropism", &m_horizontalTropism, 0.01f) || changed;
 
-		changed = ImGui::DragFloat("Apical bud extinction rate", &m_apicalBudExtinctionRate, 0.00001f, 0.0f, 1.0f, "%.5f") || changed;
-		changed = ImGui::DragFloat("Lateral bud flushing rate", &m_lateralBudFlushingRate, 0.00001f, 0.0f, 1.0f, "%.5f") || changed;
+		changed = ImGui::DragFloat("Apical bud extinction rate", &m_apicalBudExtinctionRate, 0.01f, 0.0f, 1.0f, "%.5f") || changed;
+		changed = ImGui::DragFloat("Lateral bud flushing rate", &m_lateralBudFlushingRate, 0.01f, 0.0f, 1.0f, "%.5f") || changed;
 		
 		changed = ImGui::DragFloat2("Inhibitor val/loss", &m_apicalDominance, 0.01f) || changed;
 		ImGui::TreePop();
@@ -368,19 +375,15 @@ void ShootDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 		changed = ImGui::DragFloat("Low branch pruning", &m_lowBranchPruning, 0.01f) || changed;
 
 		if (m_lowBranchPruning > 0.0f) changed = ImGui::DragFloat("Low branch pruning thickness factor", &m_lowBranchPruningThicknessFactor, 0.01f) || changed;
-
 		changed = ImGui::DragFloat("Light pruning", &m_lightPruningFactor, 0.01f) || changed;
-		changed = ImGui::DragFloat("Light pruning prob", &m_lightPruningProbability, 0.01f) || changed;
-
-		changed = ImGui::DragFloat("Thin branch pruning", &m_thicknessPruningFactor, 0.01f, 0.0f) || changed;
-		changed = ImGui::DragFloat("Thin branch pruning prob", &m_thicknessPruningProbability, 0.01f, 0.0f) || changed;
+		changed = ImGui::DragFloat("Branch breaking factor", &m_breakingStressFactor, 0.01f, 0.0f) || changed;
 		ImGui::TreePop();
 	}
 	changed = ImGui::DragInt("Leaf bud count", &m_leafBudCount, 1, 0, 3) || changed;
 	if (m_leafBudCount > 0 && ImGui::TreeNodeEx("Leaf"))
 	{
 		changed = ImGui::DragFloat("Leaf growth rate", &m_leafGrowthRate, 0.01f, 0.0f, 1.0f) || changed;
-		changed = ImGui::DragFloat4("Leaf flushing prob/temp range", &m_leafBudFlushingProbabilityTemperatureRange.x, 0.00001f, 0.0f, 1.0f, "%.5f") || changed;
+		changed = ImGui::DragFloat4("Leaf flushing prob/temp range", &m_leafBudFlushingProbabilityTemperatureRange.x, 0.01f, 0.0f, 1.0f, "%.5f") || changed;
 		changed = ImGui::DragFloat3("Leaf vigor requirement", &m_leafVigorRequirement, 0.01f) || changed;
 		changed = ImGui::DragFloat3("Size", &m_maxLeafSize.x, 0.01f) || changed;
 		changed = ImGui::DragFloat("Position Variance", &m_leafPositionVariance, 0.01f) || changed;
@@ -395,7 +398,7 @@ void ShootDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 	if (m_fruitBudCount > 0 && ImGui::TreeNodeEx("Fruit"))
 	{
 		changed = ImGui::DragFloat("Fruit growth rate", &m_fruitGrowthRate, 0.01f, 0.0f, 1.0f) || changed;
-		changed = ImGui::DragFloat4("Fruit flushing prob/temp range", &m_fruitBudFlushingProbabilityTemperatureRange.x, 0.00001f, 0.0f, 1.0f, "%.5f") || changed;
+		changed = ImGui::DragFloat4("Fruit flushing prob/temp range", &m_fruitBudFlushingProbabilityTemperatureRange.x, 0.01f, 0.0f, 1.0f, "%.5f") || changed;
 		changed = ImGui::DragFloat3("Fruit vigor requirement", &m_fruitVigorRequirement, 0.01f) || changed;
 		changed = ImGui::DragFloat3("Size", &m_maxFruitSize.x, 0.01f) || changed;
 		changed = ImGui::DragFloat("Position Variance", &m_fruitPositionVariance, 0.01f) || changed;

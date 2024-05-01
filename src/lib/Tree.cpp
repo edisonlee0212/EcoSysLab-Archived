@@ -644,7 +644,7 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	{
 		ClearStrandModelMeshRenderer();
 	}
-	
+
 	m_treeVisualizer.Visualize(m_strandModel);
 	if (ImGui::TreeNode("Skeletal graph settings"))
 	{
@@ -1751,6 +1751,8 @@ void Tree::Serialize(YAML::Emitter& out)
 					auto sagging = std::vector<float>(nodeSize);
 					auto order = std::vector<int>(nodeSize);
 					auto extraMass = std::vector<float>(nodeSize);
+					auto density = std::vector<float>(nodeSize);
+					auto strength = std::vector<float>(nodeSize);
 
 					for (int nodeIndex = 0; nodeIndex < nodeSize; nodeIndex++)
 					{
@@ -1765,7 +1767,8 @@ void Tree::Serialize(YAML::Emitter& out)
 						sagging.at(nodeIndex) = node.m_data.m_sagging;
 						order.at(nodeIndex) = node.m_data.m_order;
 						extraMass.at(nodeIndex) = node.m_data.m_extraMass;
-
+						density.at(nodeIndex) = node.m_data.m_density;
+						strength.at(nodeIndex) = node.m_data.m_strength;
 					}
 					if (nodeSize != 0) {
 						skeletonOut << YAML::Key << "m_node.m_data.m_internodeLength" << YAML::Value << YAML::Binary(
@@ -1788,6 +1791,10 @@ void Tree::Serialize(YAML::Emitter& out)
 							reinterpret_cast<const unsigned char*>(order.data()), order.size() * sizeof(int));
 						skeletonOut << YAML::Key << "m_node.m_data.m_extraMass" << YAML::Value << YAML::Binary(
 							reinterpret_cast<const unsigned char*>(extraMass.data()), extraMass.size() * sizeof(float));
+						skeletonOut << YAML::Key << "m_node.m_data.m_density" << YAML::Value << YAML::Binary(
+							reinterpret_cast<const unsigned char*>(density.data()), density.size() * sizeof(float));
+						skeletonOut << YAML::Key << "m_node.m_data.m_strength" << YAML::Value << YAML::Binary(
+							reinterpret_cast<const unsigned char*>(strength.data()), strength.size() * sizeof(float));
 					}
 				}
 			);
@@ -2109,6 +2116,32 @@ void Tree::Deserialize(const YAML::Node& in)
 							node.m_data.m_extraMass = list[i];
 						}
 					}
+
+					if (skeletonIn["m_node.m_data.m_density"])
+					{
+						auto list = std::vector<float>();
+						const auto data = skeletonIn["m_node.m_data.m_density"].as<YAML::Binary>();
+						list.resize(data.size() / sizeof(float));
+						std::memcpy(list.data(), data.data(), data.size());
+						for (size_t i = 0; i < list.size(); i++)
+						{
+							auto& node = m_treeModel.RefShootSkeleton().RefNode(i);
+							node.m_data.m_density = list[i];
+						}
+					}
+
+					if (skeletonIn["m_node.m_data.m_strength"])
+					{
+						auto list = std::vector<float>();
+						const auto data = skeletonIn["m_node.m_data.m_strength"].as<YAML::Binary>();
+						list.resize(data.size() / sizeof(float));
+						std::memcpy(list.data(), data.data(), data.size());
+						for (size_t i = 0; i < list.size(); i++)
+						{
+							auto& node = m_treeModel.RefShootSkeleton().RefNode(i);
+							node.m_data.m_strength = list[i];
+						}
+					}
 				}
 			);
 			m_treeModel.m_initialized = true;
@@ -2313,7 +2346,7 @@ void Tree::GenerateTreeParts(const TreeMeshGeneratorSettings& meshGeneratorSetti
 
 	const auto& skeleton = m_treeModel.RefShootSkeleton();
 	const auto& sortedInternodeList = skeleton.PeekSortedNodeList();
-	
+
 	std::unordered_map<SkeletonNodeHandle, TreePartInfo> treePartInfos{};
 	int nextLineIndex = 0;
 	for (int internodeHandle : sortedInternodeList)
@@ -2433,19 +2466,19 @@ void Tree::GenerateTreeParts(const TreeMeshGeneratorSettings& meshGeneratorSetti
 			{
 				EVOENGINE_ERROR("Error!");
 			}
-			
-				auto& currentTreePartInfo = treePartInfos[internodeHandle];
-				currentTreePartInfo = treePartInfos[parentInternodeHandle];
-				if (currentTreePartInfo.m_treePartType != 2)
-				{
-					currentTreePartInfo.m_lineIndex = nextLineIndex;
-					nextLineIndex++;
-				}
-				currentTreePartInfo.m_treePartType = 2;
-				currentTreePartIndex = currentTreePartInfo.m_treePartIndex;
 
-				currentLineIndex = currentTreePartInfo.m_lineIndex;
-			
+			auto& currentTreePartInfo = treePartInfos[internodeHandle];
+			currentTreePartInfo = treePartInfos[parentInternodeHandle];
+			if (currentTreePartInfo.m_treePartType != 2)
+			{
+				currentTreePartInfo.m_lineIndex = nextLineIndex;
+				nextLineIndex++;
+			}
+			currentTreePartInfo.m_treePartType = 2;
+			currentTreePartIndex = currentTreePartInfo.m_treePartIndex;
+
+			currentLineIndex = currentTreePartInfo.m_lineIndex;
+
 		}
 		auto& treePart = treeParts[currentTreePartIndex];
 		treePart.m_nodeHandles.emplace_back(internodeHandle);
@@ -2527,7 +2560,7 @@ void Tree::GenerateTreeParts(const TreeMeshGeneratorSettings& meshGeneratorSetti
 
 void Tree::ExportTreeParts(const TreeMeshGeneratorSettings& meshGeneratorSettings, treeio::json& out)
 {
-	
+
 }
 
 void Tree::ExportTreeParts(const TreeMeshGeneratorSettings& meshGeneratorSettings, YAML::Emitter& out)
@@ -2698,6 +2731,7 @@ void Tree::PrepareController(const std::shared_ptr<ShootDescriptor>& shootDescri
 			{
 				return 0.f;
 			}
+
 			float pruningProbability = 0.0f;
 			if (shootDescriptor->m_maxFlowLength != 0 && shootDescriptor->m_maxFlowLength < internode.m_info.m_chainIndex)
 			{
@@ -2706,13 +2740,19 @@ void Tree::PrepareController(const std::shared_ptr<ShootDescriptor>& shootDescri
 			if (internode.IsEndNode()) {
 				if (internode.m_data.m_lightIntensity <= shootDescriptor->m_lightPruningFactor)
 				{
-					pruningProbability += shootDescriptor->m_lightPruningProbability;
+					pruningProbability += 999.f;
 				}
 			}
-			if (internode.m_data.m_level != 0 && shootDescriptor->m_thicknessPruningFactor != 0.0f
-				&& internode.m_info.m_thickness / internode.m_info.m_endDistance < shootDescriptor->m_thicknessPruningFactor)
-			{
-				pruningProbability += shootDescriptor->m_thicknessPruningProbability;
+			if (shootDescriptor->m_breakingStressFactor != 0.f) {
+				const auto weightCenterRelativePosition = internode.m_info.GetGlobalEndPosition() - internode.m_data.m_descendantWeightCenter;
+				const float breakingStress = internode.m_data.m_descendantTotalBiomass * glm::length(
+					glm::vec2(weightCenterRelativePosition.x, weightCenterRelativePosition.z));
+				const float maximumAllowedBreakingStress = glm::pow(internode.m_info.m_thickness / shootDescriptor->m_endNodeThickness, 3.f) * internode.m_data.m_strength / shootDescriptor->m_breakingStressFactor;
+
+				if (internode.m_info.m_thickness != 0.f && breakingStress > maximumAllowedBreakingStress)
+				{
+					pruningProbability += 999.f;
+				}
 			}
 			return pruningProbability;
 		};

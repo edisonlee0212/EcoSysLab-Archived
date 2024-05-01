@@ -19,7 +19,7 @@ namespace EcoSysLab {
 	class TreeModel {
 #pragma region Tree Growth
 		ShootFlux CollectShootFlux(const std::vector<SkeletonNodeHandle>& sortedInternodeList);
-
+		void CalculateInternodeStrength(const std::vector<SkeletonNodeHandle>& sortedInternodeList, const ShootGrowthController& shootGrowthController);
 		void CalculateGrowthRate(const std::vector<SkeletonNodeHandle>& sortedInternodeList, float factor);
 
 		float CalculateGrowthPotential(const std::vector<SkeletonNodeHandle>& sortedInternodeList, const ShootGrowthController& shootGrowthController);
@@ -28,7 +28,7 @@ namespace EcoSysLab {
 
 		void CalculateThickness(const ShootGrowthController& shootGrowthController);
 
-		void CalculateBiomass(const ShootGrowthController& shootGrowthController);
+		void CalculateBiomass(SkeletonNodeHandle internodeHandle, const ShootGrowthController& shootGrowthController);
 
 		void CalculateLevel();
 
@@ -45,7 +45,7 @@ namespace EcoSysLab {
 		friend class Tree;
 #pragma endregion
 
-		
+
 
 		bool m_initialized = false;
 
@@ -87,7 +87,7 @@ namespace EcoSysLab {
 		void PruneInternode(SkeletonNodeHandle internodeHandle);
 
 		void CalculateShootFlux(const glm::mat4& globalTransform, const ClimateModel& climateModel, const ShootGrowthController& shootGrowthController);
-		
+
 
 		void HarvestFruits(const std::function<bool(const ReproductiveModule& fruit)>& harvestFunction);
 

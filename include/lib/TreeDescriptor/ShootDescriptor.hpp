@@ -77,6 +77,8 @@ namespace EcoSysLab
 		 * \brief The shadow volume factor of the internode.
 		 */
 		float m_internodeShadowFactor = 0.03f;
+
+		float m_internodeStrengthLightingFactor = 0.f;
 #pragma endregion
 #pragma region Bud fate
 		/**
@@ -128,21 +130,14 @@ namespace EcoSysLab
 		* root.
 		*/
 		float m_lowBranchPruningThicknessFactor = 0.0f;
-		/**
-		 * \brief The pruning factor for branch because of absence of light
-		 */
-		float m_lightPruningProbability = 20.0f;
 
 		/**
 		 * \brief The pruning factor for branch because of absence of light
 		 */
 		float m_lightPruningFactor = 0.0f;
-		/**
-		 * \brief The pruning factor for branch because of being too long
-		 */
-		float m_thicknessPruningFactor = 0.005f;
 
-		float m_thicknessPruningProbability = 20.f;
+		float m_breakingStressFactor = 0.f;
+		
 #pragma endregion
 
 		AssetRef m_barkMaterial;
