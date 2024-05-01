@@ -20,7 +20,7 @@ namespace EcoSysLab {
 #pragma region Tree Growth
 		ShootFlux CollectShootFlux(const std::vector<SkeletonNodeHandle>& sortedInternodeList);
 
-		void AdjustGrowthRate(const std::vector<SkeletonNodeHandle>& sortedInternodeList, float factor);
+		void CalculateGrowthRate(const std::vector<SkeletonNodeHandle>& sortedInternodeList, float factor);
 
 		float CalculateDesiredGrowthRate(const std::vector<SkeletonNodeHandle>& sortedInternodeList, const ShootGrowthController& shootGrowthController);
 

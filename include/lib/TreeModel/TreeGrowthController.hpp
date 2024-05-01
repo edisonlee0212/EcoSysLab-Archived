@@ -91,6 +91,15 @@ namespace EcoSysLab
 		 */
 		float m_apicalControl;
 		/**
+		 * \brief Root distance control base
+		 */
+		float m_rootDistanceControl;
+		/**
+		 * \brief Height control base
+		 */
+		float m_heightControl;
+
+		/**
 		* \brief How much inhibitor will an internode generate.
 		*/
 		std::function<float(const SkeletonNode<InternodeGrowthData>& internode)> m_apicalDominance;

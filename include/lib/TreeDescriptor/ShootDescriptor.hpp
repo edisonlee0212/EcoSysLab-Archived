@@ -96,6 +96,15 @@ namespace EcoSysLab
 		 */
 		float m_apicalControl = 1.25f;
 		/**
+		 * \brief Apical control base
+		 */
+		float m_rootDistanceControl = 0.f;
+		/**
+		 * \brief Apical control base
+		 */
+		float m_heightControl = 0.f;
+
+		/**
 		* \brief How much inhibitor will an internode generate.
 		*/
 		float m_apicalDominance = 0.25f;

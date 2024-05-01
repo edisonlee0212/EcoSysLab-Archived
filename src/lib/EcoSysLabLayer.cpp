@@ -790,7 +790,7 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 					ImGui::Text("Go to current skeleton to enable operator!");
 				}
 				ImGui::Separator();
-				if (ImGui::TreeNode("Tree Visualizer"))
+				if (ImGui::TreeNodeEx("Tree Visualizer", ImGuiTreeNodeFlags_DefaultOpen))
 				{
 					treeVisualizer.OnInspect(tree->m_treeModel);
 					ImGui::TreePop();

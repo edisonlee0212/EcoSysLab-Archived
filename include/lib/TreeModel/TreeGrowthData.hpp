@@ -91,8 +91,7 @@ namespace EcoSysLab
 		float m_inhibitorSink = 0;// No Serialize
 		float m_lightIntensity = 1.0f;// No Serialize
 		glm::vec3 m_lightDirection = glm::vec3(0, 1, 0);// No Serialize
-		float m_growthPotential = 0.0f;// No Serialize
-		float m_apicalControl = 0.0f;// No Serialize
+		float m_growthRateControl = 0.0f;// No Serialize
 		float m_desiredGrowthRate = 0.0f;// No Serialize
 		float m_growthRate = 0.0f;// No Serialize
 		float m_spaceOccupancy = 0.0f;

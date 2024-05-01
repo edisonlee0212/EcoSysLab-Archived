@@ -317,19 +317,16 @@ void TreeVisualizer::SyncMatrices(const ShootSkeleton& skeleton, const std::shar
 		case ShootVisualizerMode::IsMaxChild:
 			matrices[i].m_instanceColor = glm::vec4(glm::vec3(node.m_data.m_maxChild ? 1.0f : 0.0f), 1.0f);
 			break;
-		case ShootVisualizerMode::GrowthPotential:
-			matrices[i].m_instanceColor = glm::mix(glm::vec4(0, 1, 0, 1), glm::vec4(1, 0, 0, 1), glm::clamp(glm::pow(node.m_data.m_growthPotential, m_settings.m_shootColorMultiplier), 0.0f, 1.f));
-			break;
-		case ShootVisualizerMode::GrowthRate:
-			matrices[i].m_instanceColor = glm::mix(glm::vec4(0, 1, 0, 1), glm::vec4(1, 0, 0, 1), glm::clamp(glm::pow(node.m_data.m_growthRate, m_settings.m_shootColorMultiplier), 0.0f, 1.f));
-			break;
-		case ShootVisualizerMode::ApicalControl:
-			matrices[i].m_instanceColor = glm::mix(glm::vec4(0, 1, 0, 1), glm::vec4(1, 0, 0, 1),
-				glm::clamp(glm::pow(node.m_data.m_apicalControl, m_settings.m_shootColorMultiplier), 0.0f, 1.f));
-			break;
 		case ShootVisualizerMode::DesiredGrowthRate:
 			matrices[i].m_instanceColor = glm::mix(glm::vec4(0, 1, 0, 1), glm::vec4(1, 0, 0, 1),
 				glm::clamp(glm::pow(node.m_data.m_desiredGrowthRate, m_settings.m_shootColorMultiplier), 0.0f, 1.f));
+			break;
+		case ShootVisualizerMode::GrowthRateControl:
+			matrices[i].m_instanceColor = glm::mix(glm::vec4(0, 1, 0, 1), glm::vec4(1, 0, 0, 1),
+				glm::clamp(glm::pow(node.m_data.m_growthRateControl, m_settings.m_shootColorMultiplier), 0.0f, 1.f));
+			break;
+		case ShootVisualizerMode::GrowthRate:
+			matrices[i].m_instanceColor = glm::mix(glm::vec4(0, 1, 0, 1), glm::vec4(1, 0, 0, 1), glm::clamp(glm::pow(node.m_data.m_growthRate, m_settings.m_shootColorMultiplier), 0.0f, 1.f));
 			break;
 		default:
 			matrices[i].m_instanceColor = m_randomColors[node.m_data.m_order];
@@ -399,6 +396,11 @@ bool
 TreeVisualizer::OnInspect(
 	TreeModel& treeModel) {
 	bool updated = false;
+	if (ImGui::Combo("Visualizer mode",
+		{ "Default", "Order", "Level", "Max descendant light intensity", "Light intensity", "Light direction", "Desired growth rate", "Growth rate control", "Growth rate", "Is max child", "Allocated vigor", "Locked" },
+		m_settings.m_shootVisualizationMode)) {
+		m_needUpdate = true;
+	}
 	if (ImGui::TreeNodeEx("Checkpoints")) {
 		
 		if (ImGui::SliderInt("Current checkpoint", &m_checkpointIteration, 0, treeModel.CurrentIteration())) {
@@ -457,12 +459,8 @@ TreeVisualizer::OnInspect(
 
 		ImGui::TreePop();
 	}
-	if (ImGui::Combo("Visualizer mode",
-		{ "Default", "Order", "Level", "Max Descendant Light Intensity", "Light Intensity", "Light Direction", "Growth Potential", "Apical control", "Desired growth rate", "Growth Rate", "Max Child", "Allocated Vigor", "Locked" },
-		m_settings.m_shootVisualizationMode)) {
-		m_needUpdate = true;
-	}
-	if (ImGui::TreeNodeEx("Inspection", ImGuiTreeNodeFlags_DefaultOpen)) {
+	
+	if (ImGui::TreeNodeEx("Inspection")) {
 		if (m_selectedInternodeHandle >= 0) {
 			if (m_checkpointIteration == treeModel.CurrentIteration()) {
 				InspectInternode(treeModel.RefShootSkeleton(), m_selectedInternodeHandle);
@@ -759,9 +757,7 @@ TreeVisualizer::InspectInternode(
 		ImGui::InputFloat3("Light direction", &internodeData.m_lightDirection.x, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
 
-		ImGui::InputFloat("Growth potential", &internodeData.m_growthPotential, 1, 100, "%.3f",
-			ImGuiInputTextFlags_ReadOnly);
-		ImGui::InputFloat("Apical control", &internodeData.m_apicalControl, 1, 100, "%.3f",
+		ImGui::InputFloat("Growth rate control", &internodeData.m_growthRateControl, 1, 100, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
 		ImGui::InputFloat("Desired growth rate", &internodeData.m_desiredGrowthRate, 1, 100, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);

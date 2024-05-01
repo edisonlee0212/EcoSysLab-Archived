@@ -16,9 +16,8 @@ namespace EcoSysLab {
 		LightIntensity,
 		LightDirection,
 
-		GrowthPotential,
-		ApicalControl,
 		DesiredGrowthRate,
+		GrowthRateControl,
 		GrowthRate,
 
 		IsMaxChild,

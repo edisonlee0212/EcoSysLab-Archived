@@ -197,7 +197,7 @@ bool ShootDescriptorGenerator::OnInspectShootGrowthParametersOffset(
 					"RollAngleMean", "RollAngleVariance", "ApicalAngleMean", "ApicalAngleVariance", "Gravitropism", "Phototropism", "Sagging", "SaggingThicknessFactor",
 					"MaxSagging", "InternodeLength", "InternodeLengthThicknessFactor", "EndNodeThickness", "ThicknessAccumulationFactor", "ThicknessAgeFactor", "ShadowFactor",
 					"ApicalBudExtinctionRate", "LateralBudExtinctionRate", "ApicalBudLightingFactor",
-					"LateralBudLightingFactor", "ApicalControl", "ApicalDominance", "ApicalDominanceLoss",
+					"LateralBudLightingFactor", "GrowthRateControl", "ApicalDominance", "ApicalDominanceLoss",
 					"LowBranchPruning", "LowBranchPruningThicknessFactor", "LightPruningFactor", "ThicknessPruningFactor" }, offset.m_type)) {
 					changed = true;
 				}

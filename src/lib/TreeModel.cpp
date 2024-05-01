@@ -144,7 +144,7 @@ bool TreeModel::Grow(float deltaTime, const glm::mat4& globalTransform, ClimateM
 			const float requiredVigor = CalculateDesiredGrowthRate(sortedNodeList, shootGrowthController);
 			float growthRate = totalShootFlux.m_value / requiredVigor;
 			if (overrideGrowthRate > 0.0f) growthRate = overrideGrowthRate;
-			AdjustGrowthRate(sortedNodeList, growthRate);
+			CalculateGrowthRate(sortedNodeList, growthRate);
 		}
 		for (auto it = sortedNodeList.rbegin(); it != sortedNodeList.rend(); ++it) {
 			const bool graphChanged = GrowInternode(climateModel, *it, shootGrowthController);
@@ -205,7 +205,7 @@ bool TreeModel::Grow(const float deltaTime, const SkeletonNodeHandle baseInterno
 		const float requiredVigor = CalculateDesiredGrowthRate(sortedSubTreeInternodeList, shootGrowthController);
 		float growthRate = totalShootFlux.m_value / requiredVigor;
 		if (overrideGrowthRate > 0.0f) growthRate = overrideGrowthRate;
-		AdjustGrowthRate(sortedSubTreeInternodeList, growthRate);
+		CalculateGrowthRate(sortedSubTreeInternodeList, growthRate);
 	}
 	for (auto it = sortedSubTreeInternodeList.rbegin(); it != sortedSubTreeInternodeList.rend(); ++it) {
 		const bool graphChanged = GrowInternode(climateModel, *it, shootGrowthController);
@@ -678,7 +678,7 @@ bool TreeModel::GrowInternode(ClimateModel& climateModel, const SkeletonNodeHand
 				}
 				else
 				{
-					elongateLength = glm::clamp(internodeData.m_growthRate, 0.f, internodeData.m_lightIntensity) * m_currentDeltaTime * shootGrowthController.m_internodeLength * shootGrowthController.m_internodeGrowthRate;
+					elongateLength = internodeData.m_growthRate * m_currentDeltaTime * shootGrowthController.m_internodeLength * shootGrowthController.m_internodeGrowthRate;
 				}
 				//Use up the vigor stored in this bud.
 				float collectedInhibitor = 0.0f;
@@ -862,7 +862,6 @@ void TreeModel::CalculateLevel()
 	for (const auto& internodeHandle : sortedInternodeList)
 	{
 		auto& node = m_shootSkeleton.RefNode(internodeHandle);
-		node.m_data.m_growthPotential = 0.0f;
 		if (node.GetParentHandle() == -1)
 		{
 			node.m_data.m_level = 0;
@@ -902,7 +901,7 @@ void TreeModel::CalculateLevel()
 }
 
 
-void TreeModel::AdjustGrowthRate(const std::vector<SkeletonNodeHandle>& sortedInternodeList, float factor)
+void TreeModel::CalculateGrowthRate(const std::vector<SkeletonNodeHandle>& sortedInternodeList, const float factor)
 {
 	const float clampedFactor = glm::clamp(factor, 0.0f, 1.0f);
 	for (const auto& internodeHandle : sortedInternodeList)
@@ -916,8 +915,11 @@ void TreeModel::AdjustGrowthRate(const std::vector<SkeletonNodeHandle>& sortedIn
 float TreeModel::CalculateDesiredGrowthRate(const std::vector<SkeletonNodeHandle>& sortedInternodeList, const ShootGrowthController& shootGrowthController)
 {
 	const float apicalControl = shootGrowthController.m_apicalControl;
-	float maximumDesiredGrowthPotential = 0.0f;
-	float maximumApicalControl = 0.0f;
+	const float rootDistanceControl = shootGrowthController.m_rootDistanceControl;
+	const float heightControl = shootGrowthController.m_heightControl;
+
+	float maximumGrowthRateControl = 0.0f;
+	
 	std::vector<float> apicalControlValues{};
 	apicalControlValues.resize(shootGrowthController.m_useLevelForApicalControl ? m_shootSkeleton.m_data.m_maxLevel + 1 : m_shootSkeleton.m_data.m_maxOrder + 1);
 	apicalControlValues[0] = 1.0f;
@@ -929,37 +931,48 @@ float TreeModel::CalculateDesiredGrowthRate(const std::vector<SkeletonNodeHandle
 	for (const auto& internodeHandle : sortedInternodeList)
 	{
 		auto& node = m_shootSkeleton.RefNode(internodeHandle);
-		node.m_data.m_growthPotential = 1.f;
+
+		float localApicalControl;
 		if (apicalControl > 1.0f)
 		{
-			node.m_data.m_apicalControl = 1.0f / apicalControlValues[node.m_data.m_level];
+			localApicalControl = 1.0f / apicalControlValues[node.m_data.m_level];
 		}
 		else if (apicalControl < 1.0f)
 		{
-			node.m_data.m_apicalControl = apicalControlValues[m_shootSkeleton.m_data.m_maxLevel - (shootGrowthController.m_useLevelForApicalControl ? node.m_data.m_level : node.m_data.m_order)];
+			localApicalControl = apicalControlValues[m_shootSkeleton.m_data.m_maxLevel - (shootGrowthController.m_useLevelForApicalControl ? node.m_data.m_level : node.m_data.m_order)];
 		}
 		else
 		{
-			node.m_data.m_apicalControl = 1.0f;
+			localApicalControl = 1.0f;
 		}
-		maximumApicalControl = glm::max(maximumApicalControl, node.m_data.m_apicalControl);
-		maximumDesiredGrowthPotential = glm::max(maximumDesiredGrowthPotential, node.m_data.m_growthPotential);
+		float localRootDistanceControl;
+		if (rootDistanceControl != 0.f) {
+			float distance = node.m_info.m_rootDistance + node.m_info.m_length;
+			if (distance == 0.f) distance = 1.f;
+			localRootDistanceControl = glm::pow(1.f / distance, rootDistanceControl);
+		}
+		else {
+			localRootDistanceControl = 1.f;
+		}
+		float localHeightControl;
+		if(heightControl != 0.f)
+		{
+			float y = node.m_info.GetGlobalEndPosition().y;
+			if (y == 0.f) y = 1.f;
+			localHeightControl = glm::pow(1.f / y, heightControl);
+		}else
+		{
+			localHeightControl = 1.f;
+		}
+		node.m_data.m_growthRateControl = localApicalControl * localRootDistanceControl * localHeightControl;
+		if(node.IsEndNode()) maximumGrowthRateControl = glm::max(maximumGrowthRateControl, node.m_data.m_growthRateControl);
 	}
-	float maximumGrowthRate = 0.0f;
-	for (const auto& internodeHandle : sortedInternodeList)
-	{
-		auto& node = m_shootSkeleton.RefNode(internodeHandle);
-		if (maximumDesiredGrowthPotential > 0.0f) node.m_data.m_growthPotential /= maximumDesiredGrowthPotential;
-		if (maximumApicalControl > 0.0f) node.m_data.m_apicalControl /= maximumApicalControl;
-		node.m_data.m_desiredGrowthRate = node.m_data.m_growthPotential * node.m_data.m_apicalControl;
-		if (node.IsEndNode()) maximumGrowthRate = glm::max(maximumGrowthRate, node.m_data.m_desiredGrowthRate);
-	}
-
 	float totalDesiredGrowthRate = 1.0f;
 	for (const auto& internodeHandle : sortedInternodeList)
 	{
 		auto& node = m_shootSkeleton.RefNode(internodeHandle);
-		if (maximumGrowthRate > 0.0f) node.m_data.m_desiredGrowthRate /= maximumGrowthRate;
+		if (maximumGrowthRateControl > 0.0f) node.m_data.m_growthRateControl /= maximumGrowthRateControl;
+		node.m_data.m_desiredGrowthRate = node.m_data.m_lightIntensity * node.m_data.m_growthRateControl;
 		totalDesiredGrowthRate += node.m_data.m_desiredGrowthRate;
 	}
 	return totalDesiredGrowthRate;

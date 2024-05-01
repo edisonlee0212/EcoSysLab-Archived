@@ -84,11 +84,14 @@ void ShootDescriptor::PrepareController(ShootGrowthController& shootGrowthContro
 		};
 	shootGrowthController.m_lateralBudFlushingRate = [&](const SkeletonNode<InternodeGrowthData>& internode)
 		{
-			float flushingRate = m_lateralBudFlushingRate * internode.m_data.m_lightIntensity;
+			float flushingRate = m_lateralBudFlushingRate;
 			if (internode.m_data.m_inhibitorSink > 0.0f) flushingRate *= glm::exp(-internode.m_data.m_inhibitorSink);
 			return flushingRate;
 		};
 	shootGrowthController.m_apicalControl = m_apicalControl;
+	shootGrowthController.m_rootDistanceControl = m_rootDistanceControl;
+	shootGrowthController.m_heightControl = m_heightControl;
+
 	shootGrowthController.m_apicalDominance = [&](const SkeletonNode<InternodeGrowthData>& internode)
 		{
 			return m_apicalDominance * internode.m_data.m_lightIntensity;
@@ -185,6 +188,9 @@ void ShootDescriptor::Serialize(YAML::Emitter& out)
 	out << YAML::Key << "m_apicalBudExtinctionRate" << YAML::Value << m_apicalBudExtinctionRate;
 	out << YAML::Key << "m_lateralBudFlushingRate" << YAML::Value << m_lateralBudFlushingRate;
 	out << YAML::Key << "m_apicalControl" << YAML::Value << m_apicalControl;
+	out << YAML::Key << "m_heightControl" << YAML::Value << m_heightControl;
+	out << YAML::Key << "m_rootDistanceControl" << YAML::Value << m_rootDistanceControl;
+
 	out << YAML::Key << "m_apicalDominance" << YAML::Value << m_apicalDominance;
 	out << YAML::Key << "m_apicalDominanceLoss" << YAML::Value << m_apicalDominanceLoss;
 
@@ -253,6 +259,9 @@ void ShootDescriptor::Deserialize(const YAML::Node& in)
 	if (in["m_apicalBudExtinctionRate"]) m_apicalBudExtinctionRate = in["m_apicalBudExtinctionRate"].as<float>();
 	if (in["m_lateralBudFlushingRate"]) m_lateralBudFlushingRate = in["m_lateralBudFlushingRate"].as<float>();
 	if (in["m_apicalControl"]) m_apicalControl = in["m_apicalControl"].as<float>();
+	if (in["m_rootDistanceControl"]) m_rootDistanceControl = in["m_rootDistanceControl"].as<float>();
+	if (in["m_heightControl"]) m_heightControl = in["m_heightControl"].as<float>();
+
 	if (in["m_apicalDominance"]) m_apicalDominance = in["m_apicalDominance"].as<float>();
 	if (in["m_apicalDominanceLoss"]) m_apicalDominanceLoss = in["m_apicalDominanceLoss"].as<float>();
 
@@ -340,8 +349,16 @@ void ShootDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 
 		changed = ImGui::DragFloat("Apical bud extinction rate", &m_apicalBudExtinctionRate, 0.00001f, 0.0f, 1.0f, "%.5f") || changed;
 		changed = ImGui::DragFloat("Lateral bud flushing rate", &m_lateralBudFlushingRate, 0.00001f, 0.0f, 1.0f, "%.5f") || changed;
-		changed = ImGui::DragFloat("Apical control", &m_apicalControl, 0.01f) || changed;
+		
 		changed = ImGui::DragFloat2("Inhibitor val/loss", &m_apicalDominance, 0.01f) || changed;
+		ImGui::TreePop();
+	}
+	if(ImGui::TreeNodeEx("Tree Shape Control", ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		changed = ImGui::DragFloat("Apical control", &m_apicalControl, 0.01f) || changed;
+		changed = ImGui::DragFloat("Root distance control", &m_rootDistanceControl, 0.01f) || changed;
+		changed = ImGui::DragFloat("Height control", &m_heightControl, 0.01f) || changed;
+
 		ImGui::TreePop();
 	}
 	if (ImGui::TreeNodeEx("Pruning", ImGuiTreeNodeFlags_DefaultOpen))
