@@ -6,6 +6,8 @@ namespace EcoSysLab
 {
 	struct LightingEstimationSettings
 	{
+		float m_skylightIntensity = 1.f;
+
 		float m_shadowDistanceLoss = 1.f;
 		float m_detectionRadius = 0.5f;
 

@@ -39,7 +39,7 @@ void EnvironmentGrid::LightPropagation()
 			const int x = i / resolution.z;
 			const int z = i % resolution.z;
 			auto& targetVoxel = m_voxel.Ref(glm::ivec3(x, resolution.y - 1, z));
-			targetVoxel.m_lightIntensity = 1.f;
+			targetVoxel.m_lightIntensity = m_settings.m_skylightIntensity;
 		});
 	for (int y = resolution.y - 2; y >= 0; y--) {
 		Jobs::RunParallelFor(resolution.x * resolution.z, [&](unsigned i, unsigned workerIndex)
@@ -67,7 +67,7 @@ void EnvironmentGrid::LightPropagation()
 						}
 						else {
 							const auto& targetVoxel = m_voxel.Ref(otherVoxelCenter);
-							sum += glm::clamp(targetVoxel.m_lightIntensity * distanceLoss * (1.f - targetVoxel.m_selfShadow), 0.0f, 1.0f);
+							sum += glm::max(targetVoxel.m_lightIntensity * distanceLoss * (1.f - targetVoxel.m_selfShadow), 0.0f);
 							max += distanceLoss;
 						}
 					}

@@ -890,6 +890,10 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 				if (ImGui::TreeNode("Lighting Estimation Settings")) {
 					bool settingsChanged = false;
 					settingsChanged =
+						ImGui::DragFloat("Skylight Intensity", &m_simulationSettings.m_lightingEstimationSettings.m_skylightIntensity, 0.01f,
+							0.0f, 10.0f) || settingsChanged;
+
+					settingsChanged =
 						ImGui::DragFloat("Shadow distance loss", &m_simulationSettings.m_lightingEstimationSettings.m_shadowDistanceLoss, 0.01f,
 							0.0f, 10.0f) || settingsChanged;
 					settingsChanged =
