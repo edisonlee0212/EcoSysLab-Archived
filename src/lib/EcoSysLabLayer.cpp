@@ -887,15 +887,16 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 				ImGui::Checkbox("Auto clear fruit and leaves", &m_simulationSettings.m_autoClearFruitAndLeaves);
 				ImGui::DragFloat("Crown shyness", &m_simulationSettings.m_crownShynessDistance, 0.01f, 0.0f, 1.0f);
 				ImGui::Checkbox("Simulate soil", &m_simulationSettings.m_soilSimulation);
-				if (ImGui::TreeNode("Shadow Estimation Settings")) {
+				if (ImGui::TreeNode("Lighting Estimation Settings")) {
 					bool settingsChanged = false;
 					settingsChanged =
-						ImGui::DragFloat("Shadow distance loss", &m_simulationSettings.m_shadowEstimationSettings.m_shadowDistanceLoss, 0.01f,
+						ImGui::DragFloat("Shadow distance loss", &m_simulationSettings.m_lightingEstimationSettings.m_shadowDistanceLoss, 0.01f,
 							0.0f, 10.0f) || settingsChanged;
 					settingsChanged =
-						ImGui::DragFloat("Shadow detection radius", &m_simulationSettings.m_shadowEstimationSettings.m_detectionRadius, 0.001f,
+						ImGui::DragFloat("Detection radius", &m_simulationSettings.m_lightingEstimationSettings.m_detectionRadius, 0.001f,
 							0.0f, 1.0f) || settingsChanged;
-
+					settingsChanged =
+						ImGui::DragInt("Blur iteration", &m_simulationSettings.m_lightingEstimationSettings.m_blurIteration, 1, 0, 10) || settingsChanged;
 					if (settingsChanged) {
 						const auto climateCandidate = FindClimate();
 						if (!climateCandidate.expired()) {

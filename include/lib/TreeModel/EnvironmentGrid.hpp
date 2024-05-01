@@ -4,10 +4,12 @@
 using namespace EvoEngine;
 namespace EcoSysLab
 {
-	struct IlluminationEstimationSettings
+	struct LightingEstimationSettings
 	{
 		float m_shadowDistanceLoss = 1.f;
 		float m_detectionRadius = 0.5f;
+
+		int m_blurIteration = 0;
 	};
 	
 	struct InternodeVoxelRegistration
@@ -31,8 +33,8 @@ namespace EcoSysLab
 	class EnvironmentGrid
 	{
 	public:
-		float m_voxelSize = 0.1f;
-		IlluminationEstimationSettings m_settings;
+		float m_voxelSize = 0.2f;
+		LightingEstimationSettings m_settings;
 		VoxelGrid<EnvironmentVoxel> m_voxel;
 		[[nodiscard]] float Sample(const glm::vec3& position, glm::vec3& lightDirection) const;
 		void AddShadowValue(const glm::vec3& position, float value);

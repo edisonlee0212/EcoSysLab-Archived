@@ -71,7 +71,7 @@ void Climate::PrepareForGrowth()
 	if (!treeEntities || treeEntities->empty()) return;
 
 	auto& estimator = m_climateModel.m_environmentGrid;
-	estimator.m_settings = ecoSysLabLayer->m_simulationSettings.m_shadowEstimationSettings;
+	estimator.m_settings = ecoSysLabLayer->m_simulationSettings.m_lightingEstimationSettings;
 	auto minBound = estimator.m_voxel.GetMinBound();
 	auto maxBound = estimator.m_voxel.GetMaxBound();
 	bool boundChanged = false;

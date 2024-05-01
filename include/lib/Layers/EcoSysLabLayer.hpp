@@ -34,7 +34,7 @@ namespace EcoSysLab {
 		bool m_autoClearFruitAndLeaves = true;
 		float m_crownShynessDistance = 0.1f;
 		int m_maxNodeCount = 0;
-		IlluminationEstimationSettings m_shadowEstimationSettings;
+		LightingEstimationSettings m_lightingEstimationSettings;
 	};
 
 	class EcoSysLabLayer : public ILayer {
