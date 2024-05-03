@@ -911,6 +911,7 @@ std::shared_ptr<Mesh> Tree::GenerateFoliageMesh(const TreeMeshGeneratorSettings&
 					glm::vec4(quadMesh->UnsafeGetVertices()[i].m_tangent, 0.0f)));
 				archetype.m_texCoord =
 					quadMesh->UnsafeGetVertices()[i].m_texCoord;
+				archetype.m_color = internodeInfo.m_color;
 				vertices.push_back(archetype);
 			}
 			for (auto triangle : quadTriangles) {
@@ -1077,7 +1078,7 @@ std::shared_ptr<ParticleInfoList> Tree::GenerateFoliageParticleInfoList(
 		{
 			auto& particleInfo = particleInfos.at(startIndex + i);
 			particleInfo.m_instanceMatrix.m_value = leafMatrices.at(i);
-			particleInfo.m_instanceColor = glm::vec4(0, 1, 0, 1);
+			particleInfo.m_instanceColor = internodeInfo.m_color;
 		}
 	}
 	retVal->SetParticleInfos(particleInfos);
@@ -1117,6 +1118,7 @@ std::shared_ptr<Mesh> Tree::GenerateStrandModelFoliageMesh(
 					glm::vec4(quadMesh->UnsafeGetVertices()[i].m_tangent, 0.0f)));
 				archetype.m_texCoord =
 					quadMesh->UnsafeGetVertices()[i].m_texCoord;
+				archetype.m_color = strandModelNode.m_info.m_color;
 				vertices.push_back(archetype);
 			}
 			for (auto triangle : quadTriangles) {
@@ -2744,7 +2746,7 @@ void Tree::PrepareController(const std::shared_ptr<ShootDescriptor>& shootDescri
 				}
 			}
 			if (shootDescriptor->m_breakingStressFactor != 0.f) {
-				const auto weightCenterRelativePosition = internode.m_info.GetGlobalEndPosition() - internode.m_data.m_descendantWeightCenter;
+				const auto weightCenterRelativePosition = internode.m_info.m_globalPosition - internode.m_data.m_descendantWeightCenter;
 				const float breakingStress = internode.m_data.m_descendantTotalBiomass * glm::length(
 					glm::vec2(weightCenterRelativePosition.x, weightCenterRelativePosition.z));
 				const float maximumAllowedBreakingStress = glm::pow(internode.m_info.m_thickness / shootDescriptor->m_endNodeThickness, 3.f) * internode.m_data.m_strength / shootDescriptor->m_breakingStressFactor;

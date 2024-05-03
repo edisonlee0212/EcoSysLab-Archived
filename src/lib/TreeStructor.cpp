@@ -493,11 +493,11 @@ void TreeStructor::ImportGraph(const std::filesystem::path& path, float scaleFac
 					distanceAvg += glm::length(point.m_planePosition);
 				}
 				distanceAvg /= predictedBranch.m_allocatedPoints.size();
-				predictedBranch.m_branchThickness = distanceAvg * 2.0f;
+				predictedBranch.m_finalThickness = distanceAvg * 2.0f;
 			}
 			else
 			{
-				predictedBranch.m_branchThickness = (predictedBranch.m_startThickness + predictedBranch.m_endThickness) * 0.5f;
+				predictedBranch.m_finalThickness = (predictedBranch.m_startThickness + predictedBranch.m_endThickness) * 0.5f;
 			}
 		}
 
@@ -672,7 +672,7 @@ void TreeStructor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	static std::vector<glm::vec3> predictedBranchStarts;
 	static std::vector<glm::vec3> predictedBranchEnds;
 	static std::vector<glm::vec4> predictedBranchColors;
-
+	static std::vector<float> predictedBranchWidths;
 
 	if (!m_allocatedPointInfoList) m_allocatedPointInfoList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
 	if (!m_scatteredPointInfoList) m_scatteredPointInfoList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
@@ -693,7 +693,7 @@ void TreeStructor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 
 	static bool enableDebugRendering = true;
 
-
+	static bool useRealBranchWidth = true;
 	static float predictedBranchWidth = 0.005f;
 	static float connectionWidth = 0.001f;
 	static float pointSize = 1.f;
@@ -788,6 +788,7 @@ void TreeStructor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 			if (m_debugSelectedBranchConnections && ImGui::ColorEdit4("Branch Connection Color", &m_selectedBranchConnectionColor.x))
 				refreshData = true;
 			if (ImGui::Checkbox("Selected branches", &m_debugSelectedBranches)) refreshData = true;
+			
 			gizmoSettings.m_drawSettings.OnInspect();
 
 			ImGui::TreePop();
@@ -808,7 +809,7 @@ void TreeStructor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 			predictedBranchStarts.resize(m_predictedBranches.size());
 			predictedBranchEnds.resize(m_predictedBranches.size());
 			predictedBranchColors.resize(m_predictedBranches.size());
-
+			predictedBranchWidths.resize(m_predictedBranches.size());
 			switch (colorMode) {
 			case 0: {
 				//TreePart
@@ -822,8 +823,10 @@ void TreeStructor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 					predictedBranchStarts[i] = m_predictedBranches[i].m_bezierCurve.m_p0;
 					predictedBranchEnds[i] = m_predictedBranches[i].m_bezierCurve.m_p3;
 					predictedBranchColors[i] = glm::vec4(m_predictedBranches[i].m_color, 1.0f);
+					if (useRealBranchWidth) predictedBranchWidths[i] = m_predictedBranches[i].m_finalThickness;
+					else predictedBranchWidths[i] = predictedBranchWidth;
 				}
-				m_selectedBranchInfoList->ApplyConnections(predictedBranchStarts, predictedBranchEnds, predictedBranchColors, predictedBranchWidth);
+				m_selectedBranchInfoList->ApplyConnections(predictedBranchStarts, predictedBranchEnds, predictedBranchColors, predictedBranchWidths);
 
 			}
 				  break;
@@ -847,8 +850,10 @@ void TreeStructor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 					predictedBranchEnds[i] = m_predictedBranches[i].m_bezierCurve.m_p3;
 					predictedBranchColors[i] = glm::vec4(
 						ecoSysLabLayer->RandomColors()[m_predictedBranches[i].m_handle], 1.0f);
+					if (useRealBranchWidth) predictedBranchWidths[i] = m_predictedBranches[i].m_finalThickness;
+					else predictedBranchWidths[i] = predictedBranchWidth;
 				}
-				m_selectedBranchInfoList->ApplyConnections(predictedBranchStarts, predictedBranchEnds, predictedBranchColors, predictedBranchWidth);
+				m_selectedBranchInfoList->ApplyConnections(predictedBranchStarts, predictedBranchEnds, predictedBranchColors, predictedBranchWidths);
 
 			}
 				  break;
@@ -871,8 +876,10 @@ void TreeStructor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 					predictedBranchStarts[i] = m_predictedBranches[i].m_bezierCurve.m_p0;
 					predictedBranchEnds[i] = m_predictedBranches[i].m_bezierCurve.m_p3;
 					predictedBranchColors[i] = glm::vec4(1.0f);
+					if (useRealBranchWidth) predictedBranchWidths[i] = m_predictedBranches[i].m_finalThickness;
+					else predictedBranchWidths[i] = predictedBranchWidth;
 				}
-				m_selectedBranchInfoList->ApplyConnections(predictedBranchStarts, predictedBranchEnds, predictedBranchColors, predictedBranchWidth);
+				m_selectedBranchInfoList->ApplyConnections(predictedBranchStarts, predictedBranchEnds, predictedBranchColors, predictedBranchWidths);
 
 			}
 				  break;
@@ -1032,7 +1039,7 @@ void TreeStructor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	}
 }
 
-void TreeStructor::FormInfoEntities()
+void TreeStructor::FormInfoEntities() const
 {
 	const auto scene = GetScene();
 	const auto owner = GetOwner();
@@ -1757,10 +1764,10 @@ void TreeStructor::BuildSkeletons() {
 			for (const auto& childHandle : operatingBranch.m_childHandles)
 			{
 				auto& childBranch = m_operatingBranches[childHandle];
-				operatingBranch.m_descendentSize += childBranch.m_descendentSize + 1;
-				if (childBranch.m_descendentSize >= maxDescendentSize)
+				operatingBranch.m_descendantSize += childBranch.m_descendantSize + 1;
+				if (childBranch.m_descendantSize >= maxDescendentSize)
 				{
-					maxDescendentSize = childBranch.m_descendentSize;
+					maxDescendentSize = childBranch.m_descendantSize;
 					operatingBranch.m_largestChildHandle = childHandle;
 				}
 			}
@@ -2238,6 +2245,8 @@ void TreeStructor::CalculateSkeletonGraphs()
 				}
 				nodeInfo.m_thickness = glm::max(nodeInfo.m_thickness, maxChildThickness);
 			}
+
+			if(nodeData.m_branchHandle < m_predictedBranches.size()) m_predictedBranches[nodeData.m_branchHandle].m_finalThickness = nodeInfo.m_thickness;
 		}
 
 		CalculateNodeTransforms(skeleton);
@@ -2264,17 +2273,18 @@ void TreeStructor::OnCreate()
 std::vector<std::shared_ptr<Mesh>> TreeStructor::GenerateForestBranchMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings) const
 {
 	std::vector<std::shared_ptr<Mesh>> meshes{};
-	for (int i = 0; i < m_skeletons.size(); i++) {
+	for (const auto& skeleton : m_skeletons)
+	{
 		std::vector<Vertex> vertices;
 		std::vector<unsigned int> indices;
-		CylindricalMeshGenerator<ReconstructionSkeletonData, ReconstructionFlowData, ReconstructionNodeData> meshGenerator;
-		meshGenerator.Generate(m_skeletons[i], vertices, indices, meshGeneratorSettings, [&](glm::vec3& vertexPosition, const glm::vec3& direction, const float xFactor, const float yFactor)
-			{},
-			[&](glm::vec2& texCoords, float xFactor, float yFactor)
-			{});
+		CylindricalMeshGenerator<ReconstructionSkeletonData, ReconstructionFlowData,
+		                                    ReconstructionNodeData>::Generate(skeleton, vertices, indices, meshGeneratorSettings, [&](glm::vec3& vertexPosition, const glm::vec3& direction, const float xFactor, const float yFactor)
+		                                                                      {},
+		                                                                      [&](glm::vec2& texCoords, float xFactor, float yFactor)
+		                                                                      {});
 		Jobs::RunParallelFor(vertices.size(), [&](unsigned j)
 			{
-				vertices[j].m_position += m_skeletons[i].m_data.m_rootPosition;
+				vertices[j].m_position += skeleton.m_data.m_rootPosition;
 			});
 		auto mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
 		VertexAttributes attributes{};
@@ -2328,6 +2338,7 @@ std::vector<std::shared_ptr<Mesh>> TreeStructor::GenerateFoliageMeshes()
 								glm::vec4(quadMesh->UnsafeGetVertices()[i].m_tangent, 0.0f)));
 							archetype.m_texCoord =
 								quadMesh->UnsafeGetVertices()[i].m_texCoord;
+							archetype.m_color = internodeInfo.m_color;
 							vertices.push_back(archetype);
 						}
 						for (auto triangle : quadTriangles) {
@@ -2428,7 +2439,7 @@ void TreeStructor::CloneOperatingBranch(const ReconstructionSettings& reconstruc
 	operatorBranch.m_treePartHandle = target.m_treePartHandle;
 	operatorBranch.m_handle = target.m_handle;
 	operatorBranch.m_bezierCurve = target.m_bezierCurve;
-	operatorBranch.m_thickness = target.m_branchThickness;
+	operatorBranch.m_thickness = target.m_finalThickness;
 	operatorBranch.m_parentHandle = -1;
 	operatorBranch.m_childHandles.clear();
 	operatorBranch.m_orphan = false;
@@ -2443,7 +2454,7 @@ void TreeStructor::CloneOperatingBranch(const ReconstructionSettings& reconstruc
 	operatorBranch.m_distanceToParentBranch = 0.0f;
 	operatorBranch.m_bestDistance = FLT_MAX;
 	operatorBranch.m_rootDistance = 0.0f;
-	operatorBranch.m_descendentSize = 0;
+	operatorBranch.m_descendantSize = 0;
 	operatorBranch.m_skeletonIndex = -1;
 	operatorBranch.m_used = false;
 	operatorBranch.m_chainNodeHandles.clear();

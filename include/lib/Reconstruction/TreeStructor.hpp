@@ -41,7 +41,7 @@ namespace EcoSysLab {
 		float m_startThickness = 0.0f;
 		float m_endThickness = 0.0f;
 
-		float m_branchThickness = 0.0f;
+		float m_finalThickness = 0.0f;
 		std::vector<PointHandle> m_allocatedPoints;
 
 		std::vector<std::pair<float, PointHandle>> m_pointsToP3;
@@ -82,7 +82,7 @@ namespace EcoSysLab {
 		float m_distanceToParentBranch = 0.0f;
 		float m_rootDistance = 0.0f;
 
-		int m_descendentSize = 0;
+		int m_descendantSize = 0;
 	};
 
 	struct TreePart {
@@ -243,6 +243,8 @@ namespace EcoSysLab {
 		glm::vec4 m_filteredBranchConnectionColor = glm::vec4(0, 0, 1, 1);
 		glm::vec4 m_selectedBranchConnectionColor = glm::vec4(0.3, 0, 0, 1);
 		glm::vec4 m_selectedBranchColor = glm::vec4(0.6, 0.3, 0.0, 1.0f);
+
+
 		bool m_enableAllocatedPoints = false;
 		bool m_enableScatteredPoints = false;
 		bool m_enableScatteredPointConnections = false;
@@ -298,7 +300,7 @@ namespace EcoSysLab {
 
 		void BuildSkeletons();
 		void GenerateForest() const;
-		void FormInfoEntities();
+		void FormInfoEntities() const;
 		void ClearForest() const;
 
 		void OnCreate() override;
