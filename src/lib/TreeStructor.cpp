@@ -493,12 +493,13 @@ void TreeStructor::ImportGraph(const std::filesystem::path& path, float scaleFac
 					distanceAvg += glm::length(point.m_planePosition);
 				}
 				distanceAvg /= predictedBranch.m_allocatedPoints.size();
-				predictedBranch.m_finalThickness = distanceAvg * 2.0f;
+				//predictedBranch.m_finalThickness = distanceAvg * 2.0f;
 			}
 			else
 			{
-				predictedBranch.m_finalThickness = (predictedBranch.m_startThickness + predictedBranch.m_endThickness) * 0.5f;
+				//predictedBranch.m_finalThickness = (predictedBranch.m_startThickness + predictedBranch.m_endThickness) * 0.5f;
 			}
+			predictedBranch.m_finalThickness = 0.f;
 		}
 
 		auto center = (m_min + m_max) / 2.0f;
