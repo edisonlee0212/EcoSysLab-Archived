@@ -2747,8 +2747,15 @@ void Tree::PrepareController(const std::shared_ptr<ShootDescriptor>& shootDescri
 			}
 			if (shootDescriptor->m_breakingStressFactor != 0.f) {
 				const auto weightCenterRelativePosition = internode.m_info.m_globalPosition - internode.m_data.m_descendantWeightCenter;
-				const float breakingStress = internode.m_data.m_descendantTotalBiomass * glm::length(
-					glm::vec2(weightCenterRelativePosition.x, weightCenterRelativePosition.z));
+				const auto horizontalDistanceToEnd = glm::length(glm::vec2(weightCenterRelativePosition.x, weightCenterRelativePosition.z));
+				const auto front = glm::normalize(internode.m_info.m_globalRotation * glm::vec3(0, 0, -1));
+				const auto frontVector = internode.m_info.m_length * front;
+				const auto baseVector = glm::vec2(glm::length(glm::vec2(frontVector.x, frontVector.z)), glm::abs(frontVector.y));
+				const auto combinedVector = glm::vec2(horizontalDistanceToEnd, glm::abs(weightCenterRelativePosition.y)) + baseVector;
+				const auto projectedVector = baseVector * glm::dot(combinedVector, baseVector);
+				const auto forceArm = glm::length(projectedVector) / glm::length(baseVector);
+				const auto normalizedCombinedVector = glm::normalize(combinedVector);
+				const float breakingStress = internode.m_data.m_descendantTotalBiomass * normalizedCombinedVector.x * forceArm;
 				const float maximumAllowedBreakingStress = glm::pow(internode.m_info.m_thickness / shootDescriptor->m_endNodeThickness, 3.f) * internode.m_data.m_strength / shootDescriptor->m_breakingStressFactor;
 
 				if (internode.m_info.m_thickness != 0.f && breakingStress > maximumAllowedBreakingStress)

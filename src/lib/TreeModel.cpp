@@ -1032,8 +1032,9 @@ void TreeModel::CalculateBiomass(SkeletonNodeHandle internodeHandle, const Shoot
 	auto& internodeData = internode.m_data;
 	const auto& internodeInfo = internode.m_info;
 	internodeData.m_descendantTotalBiomass = internodeData.m_biomass = 0.0f;
+	const auto relativeThickness = internodeInfo.m_thickness / shootGrowthController.m_endNodeThickness;
 	internodeData.m_biomass =
-		internodeData.m_density * internodeInfo.m_thickness / shootGrowthController.m_endNodeThickness * internodeData.m_internodeLength /
+		internodeData.m_density * (relativeThickness * relativeThickness) * internodeData.m_internodeLength /
 		shootGrowthController.m_internodeLength;
 	glm::vec3 positionedSum = glm::vec3(0.f);
 	glm::vec3 desiredPositionSum = glm::vec3(0.f);

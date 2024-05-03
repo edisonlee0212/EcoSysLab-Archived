@@ -21,7 +21,7 @@ m_apicalAngleMeanVariance: [0, 2.20000005]
 m_gravitropism: 0
 m_phototropism: 0.00499999989
 m_horizontalTropism: 0
-m_saggingFactorThicknessReductionMax: [0.00100000005, 2, 0.5]
+m_saggingFactorThicknessReductionMax: [0.00200000009, 3, 0.5]
 m_internodeLength: 0.0299999993
 m_internodeLengthThicknessFactor: 0.150000006
 m_endNodeThickness: 0.00449999981
@@ -40,10 +40,9 @@ m_trunkProtection: false
 m_maxFlowLength: 0
 m_lowBranchPruning: 0.100000001
 m_lowBranchPruningThicknessFactor: 0
+m_internodeStrengthLightingFactor: 0
 m_lightPruningFactor: 0.800000012
-m_thicknessPruningFactor: 0
-m_lightPruningProbability: 20
-m_thicknessPruningProbability: 20
+m_breakingStressFactor: 0
 m_leafBudCount: 1
 m_leafGrowthRate: 18
 m_leafBudFlushingProbabilityTemperatureRange: [1, 1, 45, 60]
