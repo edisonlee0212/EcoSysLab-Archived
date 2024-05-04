@@ -2739,13 +2739,14 @@ void Tree::PrepareController(const std::shared_ptr<ShootDescriptor>& shootDescri
 			{
 				pruningProbability += 999.f;
 			}
+		
 			if (internode.IsEndNode()) {
 				if (internode.m_data.m_lightIntensity <= shootDescriptor->m_lightPruningFactor)
 				{
 					pruningProbability += 999.f;
 				}
 			}
-			if (shootDescriptor->m_breakingStressFactor != 0.f) {
+			if (shootDescriptor->m_branchStrength != 0.f && internode.m_info.m_thickness != 0.f && internode.m_info.m_length != 0.f) {
 				const auto weightCenterRelativePosition = internode.m_info.m_globalPosition - internode.m_data.m_descendantWeightCenter;
 				const auto horizontalDistanceToEnd = glm::length(glm::vec2(weightCenterRelativePosition.x, weightCenterRelativePosition.z));
 				const auto front = glm::normalize(internode.m_info.m_globalRotation * glm::vec3(0, 0, -1));
@@ -2755,10 +2756,17 @@ void Tree::PrepareController(const std::shared_ptr<ShootDescriptor>& shootDescri
 				const auto projectedVector = baseVector * glm::dot(combinedVector, baseVector);
 				const auto forceArm = glm::length(projectedVector) / glm::length(baseVector);
 				const auto normalizedCombinedVector = glm::normalize(combinedVector);
-				const float breakingStress = internode.m_data.m_descendantTotalBiomass * normalizedCombinedVector.x * forceArm;
-				const float maximumAllowedBreakingStress = glm::pow(internode.m_info.m_thickness / shootDescriptor->m_endNodeThickness, 3.f) * internode.m_data.m_strength / shootDescriptor->m_breakingStressFactor;
+				const float breakingStress = (internode.m_data.m_biomass + internode.m_data.m_descendantTotalBiomass) * normalizedCombinedVector.x * forceArm;
 
-				if (internode.m_info.m_thickness != 0.f && breakingStress > maximumAllowedBreakingStress)
+				float branchWaterFactor = 1.f;
+				if(internode.m_data.m_maxDescendantLightIntensity <= shootDescriptor->m_branchStrengthLightingThreshold)
+				{
+					branchWaterFactor = 1.f - shootDescriptor->m_branchStrengthLightingLoss;
+				}
+
+				const float maximumAllowedBreakingStress = glm::pow(internode.m_info.m_thickness / shootDescriptor->m_endNodeThickness, shootDescriptor->m_branchStrengthThicknessFactor) * branchWaterFactor * internode.m_data.m_strength * shootDescriptor->m_branchStrength;
+
+				if (breakingStress > maximumAllowedBreakingStress)
 				{
 					pruningProbability += 999.f;
 				}

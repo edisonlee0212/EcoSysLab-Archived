@@ -78,7 +78,8 @@ namespace EcoSysLab
 		 */
 		float m_internodeShadowFactor = 0.03f;
 
-		float m_internodeStrengthLightingFactor = 0.f;
+		
+		
 #pragma endregion
 #pragma region Bud fate
 		/**
@@ -136,8 +137,10 @@ namespace EcoSysLab
 		 */
 		float m_lightPruningFactor = 0.0f;
 
-		float m_breakingStressFactor = 0.f;
-		
+		float m_branchStrength = 1.f;
+		float m_branchStrengthThicknessFactor = 3.f;
+		float m_branchStrengthLightingThreshold = 0.f;
+		float m_branchStrengthLightingLoss = 0.f;
 #pragma endregion
 
 		AssetRef m_barkMaterial;
