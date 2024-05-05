@@ -363,8 +363,15 @@ ShootFlux TreeModel::CollectShootFlux(const std::vector<SkeletonNodeHandle>& sor
 	totalShootFlux.m_value = 0.0f;
 	for (const auto& internodeHandle : sortedInternodeList) {
 		auto& internode = m_shootSkeleton.RefNode(internodeHandle);
-		auto& internodeData = internode.m_data;
+		const auto& internodeData = internode.m_data;
 		totalShootFlux.m_value += internodeData.m_lightIntensity;
+		
+	}
+
+	for(auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); ++it)
+	{
+		auto& internode = m_shootSkeleton.RefNode(*it);
+		auto& internodeData = internode.m_data;
 		internodeData.m_maxDescendantLightIntensity = glm::clamp(internodeData.m_lightIntensity, 0.f, 1.f);
 		for (const auto& childHandle : internode.PeekChildHandles())
 		{

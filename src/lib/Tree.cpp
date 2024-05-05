@@ -2736,12 +2736,43 @@ void Tree::PrepareController(const std::shared_ptr<ShootDescriptor>& shootDescri
 			float pruningProbability = 0.0f;
 		
 			if (internode.IsEndNode()) {
-				if (internode.m_data.m_lightIntensity <= shootDescriptor->m_lightPruningFactor)
+				if (internode.m_data.m_lightIntensity < shootDescriptor->m_lightPruningFactor)
 				{
 					pruningProbability += 999.f;
 				}
 			}
-			
+			if (shootDescriptor->m_branchStrength != 0.f && !internode.IsEndNode() && internode.m_info.m_thickness != 0.f && internode.m_info.m_length != 0.f) {
+				const auto weightCenterRelativePosition = internode.m_info.m_globalPosition - internode.m_data.m_descendantWeightCenter;
+				const auto horizontalDistanceToEnd = glm::length(glm::vec2(weightCenterRelativePosition.x, weightCenterRelativePosition.z));
+				const auto front = glm::normalize(internode.m_info.m_globalRotation * glm::vec3(0, 0, -1));
+				const auto frontVector = internode.m_info.m_length * front;
+				const auto baseVector = glm::vec2(glm::length(glm::vec2(frontVector.x, frontVector.z)), glm::abs(frontVector.y));
+				const auto combinedVector = glm::vec2(horizontalDistanceToEnd, glm::abs(weightCenterRelativePosition.y)) + baseVector;
+				const auto projectedVector = baseVector * glm::dot(combinedVector, baseVector);
+				const auto forceArm = glm::length(projectedVector) / glm::length(baseVector);
+
+				const auto normalizedCombinedVector = glm::normalize(combinedVector);
+
+				const float cosTheta = glm::abs(glm::dot(normalizedCombinedVector, glm::normalize(glm::vec2(baseVector.y, -baseVector.x))));
+				const float sinTheta = glm::sqrt(1 - cosTheta * cosTheta);
+				const float tangentForce = (internode.m_data.m_biomass + internode.m_data.m_descendantTotalBiomass) * glm::length(glm::vec2(0, -1) * glm::dot(normalizedCombinedVector, glm::vec2(0, -1))) * sinTheta;
+				const float breakingStress = tangentForce * forceArm;
+
+
+
+				float branchWaterFactor = 1.f;
+				if (internode.m_data.m_maxDescendantLightIntensity < shootDescriptor->m_branchStrengthLightingThreshold)
+				{
+					branchWaterFactor = 1.f - shootDescriptor->m_branchStrengthLightingLoss;
+				}
+
+				const float maximumAllowedBreakingStress = glm::pow(internode.m_info.m_thickness / shootDescriptor->m_endNodeThickness, shootDescriptor->m_branchStrengthThicknessFactor) * branchWaterFactor * internode.m_data.m_strength * shootDescriptor->m_branchStrength;
+
+				if (breakingStress > maximumAllowedBreakingStress)
+				{
+					pruningProbability += 999.f;
+				}
+			}
 			return pruningProbability;
 		};
 	m_shootGrowthController.m_rootToEndPruningFactor = [&](const ShootSkeleton& shootSkeleton, const SkeletonNode<InternodeGrowthData>& internode)
@@ -2756,31 +2787,7 @@ void Tree::PrepareController(const std::shared_ptr<ShootDescriptor>& shootDescri
 			{
 				pruningProbability += 999.f;
 			}
-			if (shootDescriptor->m_branchStrength != 0.f && !internode.IsEndNode() && internode.m_info.m_thickness != 0.f && internode.m_info.m_length != 0.f) {
-				const auto weightCenterRelativePosition = internode.m_info.m_globalPosition - internode.m_data.m_descendantWeightCenter;
-				const auto horizontalDistanceToEnd = glm::length(glm::vec2(weightCenterRelativePosition.x, weightCenterRelativePosition.z));
-				const auto front = glm::normalize(internode.m_info.m_globalRotation * glm::vec3(0, 0, -1));
-				const auto frontVector = internode.m_info.m_length * front;
-				const auto baseVector = glm::vec2(glm::length(glm::vec2(frontVector.x, frontVector.z)), glm::abs(frontVector.y));
-				const auto combinedVector = glm::vec2(horizontalDistanceToEnd, glm::abs(weightCenterRelativePosition.y)) + baseVector;
-				const auto projectedVector = baseVector * glm::dot(combinedVector, baseVector);
-				const auto forceArm = glm::length(projectedVector) / glm::length(baseVector);
-				const auto normalizedCombinedVector = glm::normalize(combinedVector);
-				const float breakingStress = (internode.m_data.m_biomass + internode.m_data.m_descendantTotalBiomass) * normalizedCombinedVector.x * forceArm;
-
-				float branchWaterFactor = 1.f;
-				if (internode.m_data.m_maxDescendantLightIntensity <= shootDescriptor->m_branchStrengthLightingThreshold)
-				{
-					branchWaterFactor = 1.f - shootDescriptor->m_branchStrengthLightingLoss;
-				}
-
-				const float maximumAllowedBreakingStress = glm::pow(internode.m_info.m_thickness / shootDescriptor->m_endNodeThickness, shootDescriptor->m_branchStrengthThicknessFactor) * branchWaterFactor * internode.m_data.m_strength * shootDescriptor->m_branchStrength;
-
-				if (breakingStress > maximumAllowedBreakingStress)
-				{
-					pruningProbability += 999.f;
-				}
-			}
+			
 			return pruningProbability;
 		};
 }

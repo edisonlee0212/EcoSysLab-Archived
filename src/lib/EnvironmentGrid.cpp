@@ -73,7 +73,7 @@ void EnvironmentGrid::LightPropagation()
 					}
 				}
 				auto& voxel = m_voxel.Ref(glm::ivec3(x, y, z));
-				voxel.m_lightIntensity = sum / max;
+				voxel.m_lightIntensity = glm::clamp(sum / max, 0.0f, 1.0f - m_settings.m_environmentLightIntensity) + m_settings.m_environmentLightIntensity;
 			}
 		);
 	}
