@@ -340,7 +340,7 @@ void TreeModel::CalculateShootFlux(const glm::mat4& globalTransform, const Clima
 
 		for (const auto& bud : internodeData.m_buds)
 		{
-			if (bud.m_type == BudType::Apical || bud.m_type == BudType::Lateral) sampleLightIntensity = true;
+			sampleLightIntensity = true;
 			if (m_treeGrowthSettings.m_useSpaceColonization) {
 				shootData.m_maxMarkerCount = glm::max(shootData.m_maxMarkerCount, bud.m_markerCount);
 			}

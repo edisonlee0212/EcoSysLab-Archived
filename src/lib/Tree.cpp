@@ -2770,7 +2770,7 @@ void Tree::PrepareController(const std::shared_ptr<ShootDescriptor>& shootDescri
 
 				if (breakingStress > maximumAllowedBreakingStress)
 				{
-					pruningProbability += 999.f;
+					pruningProbability += breakingStress / maximumAllowedBreakingStress;
 				}
 			}
 			return pruningProbability;
