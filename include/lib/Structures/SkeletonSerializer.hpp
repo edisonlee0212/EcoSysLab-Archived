@@ -44,6 +44,9 @@ namespace EcoSysLab {
 		auto infoThicknessList = std::vector<float>(nodeSize);
 		auto infoColorList = std::vector<glm::vec4>(nodeSize);
 		auto infoLockedList = std::vector<int>(nodeSize);
+
+		auto infoLeavesList = std::vector<int>(nodeSize);
+		auto infoFruitsList = std::vector<int>(nodeSize);
 		for (int nodeIndex = 0; nodeIndex < nodeSize; nodeIndex++)
 		{
 			const auto& node = skeleton.m_nodes[nodeIndex];
@@ -59,6 +62,9 @@ namespace EcoSysLab {
 			infoThicknessList[nodeIndex] = node.m_info.m_thickness;
 			infoColorList[nodeIndex] = node.m_info.m_color;
 			infoLockedList[nodeIndex] = node.m_info.m_locked ? 1 : 0;
+
+			infoLeavesList[nodeIndex] = node.m_info.m_leaves;
+			infoFruitsList[nodeIndex] = node.m_info.m_fruits;
 		}
 		out << YAML::Key << "m_nodes.m_recycled" << YAML::Value << YAML::Binary(
 			reinterpret_cast<const unsigned char*>(nodeRecycledList.data()), nodeRecycledList.size() * sizeof(int));
@@ -83,6 +89,11 @@ namespace EcoSysLab {
 			reinterpret_cast<const unsigned char*>(infoColorList.data()), infoColorList.size() * sizeof(glm::vec4));
 		out << YAML::Key << "m_nodes.m_info.m_locked" << YAML::Value << YAML::Binary(
 			reinterpret_cast<const unsigned char*>(infoLockedList.data()), infoLockedList.size() * sizeof(int));
+
+		out << YAML::Key << "m_nodes.m_info.m_leaves" << YAML::Value << YAML::Binary(
+			reinterpret_cast<const unsigned char*>(infoLeavesList.data()), infoLeavesList.size() * sizeof(float));
+		out << YAML::Key << "m_nodes.m_info.m_fruits" << YAML::Value << YAML::Binary(
+			reinterpret_cast<const unsigned char*>(infoFruitsList.data()), infoFruitsList.size() * sizeof(float));
 
 		out << YAML::Key << "m_nodes.m_info" << YAML::Value << YAML::BeginSeq;
 		for (size_t nodeIndex = 0; nodeIndex < nodeSize; nodeIndex++)
@@ -315,6 +326,32 @@ namespace EcoSysLab {
 			for (size_t i = 0; i < list.size(); i++)
 			{
 				skeleton.m_nodes[i].m_info.m_locked = list[i] == 1;
+			}
+		}
+
+		if (in["m_nodes.m_info.m_leaves"])
+		{
+			auto list = std::vector<float>();
+			const auto data = in["m_nodes.m_info.m_leaves"].as<YAML::Binary>();
+			list.resize(data.size() / sizeof(float));
+			std::memcpy(list.data(), data.data(), data.size());
+
+			for (size_t i = 0; i < list.size(); i++)
+			{
+				skeleton.m_nodes[i].m_info.m_leaves = list[i];
+			}
+		}
+
+		if (in["m_nodes.m_info.m_fruits"])
+		{
+			auto list = std::vector<float>();
+			const auto data = in["m_nodes.m_info.m_fruits"].as<YAML::Binary>();
+			list.resize(data.size() / sizeof(float));
+			std::memcpy(list.data(), data.data(), data.size());
+
+			for (size_t i = 0; i < list.size(); i++)
+			{
+				skeleton.m_nodes[i].m_info.m_fruits = list[i];
 			}
 		}
 

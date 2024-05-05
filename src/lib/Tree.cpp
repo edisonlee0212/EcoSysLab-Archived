@@ -2727,7 +2727,24 @@ void Tree::PrepareController(const std::shared_ptr<ShootDescriptor>& shootDescri
 			}
 			return leafDamage;
 		};
-	m_shootGrowthController.m_pruningFactor = [&](const ShootSkeleton& shootSkeleton, const SkeletonNode<InternodeGrowthData>& internode)
+	m_shootGrowthController.m_endToRootPruningFactor = [&](const ShootSkeleton& shootSkeleton, const SkeletonNode<InternodeGrowthData>& internode)
+		{
+			if (shootDescriptor->m_trunkProtection && internode.m_data.m_order == 0)
+			{
+				return 0.f;
+			}
+			float pruningProbability = 0.0f;
+		
+			if (internode.IsEndNode()) {
+				if (internode.m_data.m_lightIntensity <= shootDescriptor->m_lightPruningFactor)
+				{
+					pruningProbability += 999.f;
+				}
+			}
+			
+			return pruningProbability;
+		};
+	m_shootGrowthController.m_rootToEndPruningFactor = [&](const ShootSkeleton& shootSkeleton, const SkeletonNode<InternodeGrowthData>& internode)
 		{
 			if (shootDescriptor->m_trunkProtection && internode.m_data.m_order == 0)
 			{
@@ -2739,14 +2756,7 @@ void Tree::PrepareController(const std::shared_ptr<ShootDescriptor>& shootDescri
 			{
 				pruningProbability += 999.f;
 			}
-		
-			if (internode.IsEndNode()) {
-				if (internode.m_data.m_lightIntensity <= shootDescriptor->m_lightPruningFactor)
-				{
-					pruningProbability += 999.f;
-				}
-			}
-			if (shootDescriptor->m_branchStrength != 0.f && internode.m_info.m_thickness != 0.f && internode.m_info.m_length != 0.f) {
+			if (shootDescriptor->m_branchStrength != 0.f && !internode.IsEndNode() && internode.m_info.m_thickness != 0.f && internode.m_info.m_length != 0.f) {
 				const auto weightCenterRelativePosition = internode.m_info.m_globalPosition - internode.m_data.m_descendantWeightCenter;
 				const auto horizontalDistanceToEnd = glm::length(glm::vec2(weightCenterRelativePosition.x, weightCenterRelativePosition.z));
 				const auto front = glm::normalize(internode.m_info.m_globalRotation * glm::vec3(0, 0, -1));
@@ -2759,7 +2769,7 @@ void Tree::PrepareController(const std::shared_ptr<ShootDescriptor>& shootDescri
 				const float breakingStress = (internode.m_data.m_biomass + internode.m_data.m_descendantTotalBiomass) * normalizedCombinedVector.x * forceArm;
 
 				float branchWaterFactor = 1.f;
-				if(internode.m_data.m_maxDescendantLightIntensity <= shootDescriptor->m_branchStrengthLightingThreshold)
+				if (internode.m_data.m_maxDescendantLightIntensity <= shootDescriptor->m_branchStrengthLightingThreshold)
 				{
 					branchWaterFactor = 1.f - shootDescriptor->m_branchStrengthLightingLoss;
 				}

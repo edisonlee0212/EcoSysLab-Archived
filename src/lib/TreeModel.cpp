@@ -427,6 +427,7 @@ void TreeModel::ShootGrowthPostProcess(const ShootGrowthController& shootGrowthC
 		for (const auto& internodeHandle : sortedInternodeList)
 		{
 			auto& internode = m_shootSkeleton.RefNode(internodeHandle);
+			internode.m_info.m_leaves = internode.m_data.m_lightIntensity <= 0.1f ? 0 : 1;
 			const auto order = m_shootSkeleton.RefFlow(internode.GetFlowHandle()).m_data.m_order;
 			internode.m_data.m_order = order;
 			m_internodeOrderCounts[order]++;
@@ -588,17 +589,17 @@ bool TreeModel::ElongateInternode(float extendLength, SkeletonNodeHandle interno
 		//First, remove only apical bud.
 		internode.m_data.m_buds.clear();
 		//Allocate Lateral bud for current internode
-		{
-			const auto lateralBudCount = shootGrowthController.m_lateralBudCount;
-			for (int i = 0; i < lateralBudCount; i++) {
-				internodeData.m_buds.emplace_back();
-				auto& newLateralBud = internodeData.m_buds.back();
-				newLateralBud.m_type = BudType::Lateral;
-				newLateralBud.m_status = BudStatus::Dormant;
-				newLateralBud.m_localRotation = glm::vec3(0.f, glm::radians(shootGrowthController.m_branchingAngle(internode)),
-					glm::linearRand(0.0f, 360.0f));
-			}
+
+		const auto lateralBudCount = shootGrowthController.m_lateralBudCount(internode);
+		for (int i = 0; i < lateralBudCount; i++) {
+			internodeData.m_buds.emplace_back();
+			auto& newLateralBud = internodeData.m_buds.back();
+			newLateralBud.m_type = BudType::Lateral;
+			newLateralBud.m_status = BudStatus::Dormant;
+			newLateralBud.m_localRotation = glm::vec3(0.f, glm::radians(shootGrowthController.m_branchingAngle(internode)),
+				glm::linearRand(0.0f, 360.0f));
 		}
+
 		//Allocate Fruit bud for current internode
 		{
 			const auto fruitBudCount = shootGrowthController.m_fruitBudCount;
@@ -1098,8 +1099,43 @@ bool TreeModel::PruneInternodes(const glm::mat4& globalTransform, ClimateModel& 
 
 	const auto maxDistance = m_shootSkeleton.PeekNode(0).m_info.m_endDistance;
 	const auto& sortedInternodeList = m_shootSkeleton.PeekSortedNodeList();
-	bool anyInternodePruned = false;
 
+	bool rootToEndPruned = false;
+	for(const auto& internodeHandle : sortedInternodeList)
+	{
+		if (m_shootSkeleton.PeekNode(internodeHandle).IsRecycled()) continue;
+		auto& internode = m_shootSkeleton.RefNode(internodeHandle);
+		if (internodeHandle == 0) continue;
+		if (internode.m_info.m_locked) continue;
+		//Pruning here.
+		bool pruning = false;
+		if (internode.m_info.m_globalPosition.y <= 0.05f && internode.m_data.m_order != 0)
+		{
+			auto handleWalker = internodeHandle;
+			int i = 0;
+			while (i < 4 && handleWalker != -1 && m_shootSkeleton.PeekNode(handleWalker).IsApical())
+			{
+				handleWalker = m_shootSkeleton.PeekNode(handleWalker).GetParentHandle();
+				i++;
+			}
+			if (handleWalker != -1) {
+				auto& targetInternode = m_shootSkeleton.PeekNode(handleWalker);
+				if (targetInternode.m_data.m_order != 0)
+				{
+					pruning = true;
+				}
+			}
+		}
+		const float pruningProbability = shootGrowthController.m_rootToEndPruningFactor(m_shootSkeleton, internode) * m_currentDeltaTime;
+		if (!pruning && pruningProbability > glm::linearRand(0.0f, 1.0f)) pruning = true;
+
+		if (pruning)
+		{
+			PruneInternode(internodeHandle);
+			rootToEndPruned = true;
+		}
+	}
+	bool endToRootPruned = false;
 	for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); ++it) {
 		const auto internodeHandle = *it;
 		if (m_shootSkeleton.PeekNode(internodeHandle).IsRecycled()) continue;
@@ -1127,7 +1163,7 @@ bool TreeModel::PruneInternodes(const glm::mat4& globalTransform, ClimateModel& 
 			}
 		}
 
-		const float pruningProbability = shootGrowthController.m_pruningFactor(m_shootSkeleton, internode) * m_currentDeltaTime;
+		const float pruningProbability = shootGrowthController.m_endToRootPruningFactor(m_shootSkeleton, internode) * m_currentDeltaTime;
 		if (!pruning && pruningProbability > glm::linearRand(0.0f, 1.0f)) pruning = true;
 		bool lowBranchPruning = false;
 		if (!pruning && maxDistance > 5.0f * shootGrowthController.m_internodeLength && !internode.IsApical() &&
@@ -1163,12 +1199,12 @@ bool TreeModel::PruneInternodes(const glm::mat4& globalTransform, ClimateModel& 
 		if (pruning || pruneByCrownShyness || lowBranchPruning)
 		{
 			PruneInternode(internodeHandle);
-			anyInternodePruned = true;
+			endToRootPruned = true;
 		}
 	}
 	m_shootSkeleton.CalculateDistance();
 	CalculateLevel();
-	return anyInternodePruned;
+	return rootToEndPruned || endToRootPruned;
 }
 
 

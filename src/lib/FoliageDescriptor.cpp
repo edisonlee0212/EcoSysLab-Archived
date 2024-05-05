@@ -122,7 +122,7 @@ void FoliageDescriptor::GenerateFoliageMatrices(std::vector<glm::mat4>& matrices
 	if (internodeInfo.m_thickness < m_maxNodeThickness
 		&& internodeInfo.m_rootDistance > m_minRootDistance
 		&& internodeInfo.m_endDistance < m_maxEndDistance) {
-		for (int i = 0; i < m_leafCountPerInternode; i++)
+		for (int i = 0; i < m_leafCountPerInternode * internodeInfo.m_leaves; i++)
 		{
 			const auto leafSize = m_leafSize;
 			glm::quat rotation = internodeInfo.m_globalRotation *

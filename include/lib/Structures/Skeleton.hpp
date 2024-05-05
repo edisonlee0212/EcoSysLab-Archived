@@ -32,6 +32,9 @@ namespace EcoSysLab {
 		int m_chainIndex = 0;
 		glm::quat m_regulatedGlobalRotation = glm::vec3(0.0f);
 		std::vector<SkeletonNodeWound> m_wounds;
+
+		float m_leaves = 1.f;
+		float m_fruits = 1.f;
 		glm::vec4 m_color = glm::vec4(1.0f);
 		[[nodiscard]] glm::vec3 GetGlobalEndPosition() const;
 		[[nodiscard]] glm::vec3 GetGlobalDirection() const;

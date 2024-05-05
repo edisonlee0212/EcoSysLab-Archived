@@ -76,7 +76,7 @@ namespace EcoSysLab
 		/**
 		 * \brief The number of lateral buds an internode contains
 		 */
-		int m_lateralBudCount;
+		std::function<int(const SkeletonNode<InternodeGrowthData>& internode)> m_lateralBudCount;
 		/**
 		 * \brief Extinction rate of apical bud.
 		 */
@@ -123,7 +123,11 @@ namespace EcoSysLab
 		/**
 		 * \brief The The impact of the amount of incoming light on the shedding of end internodes.
 		 */
-		std::function<float(const ShootSkeleton& shootSkeleton, const SkeletonNode<InternodeGrowthData>& internode)> m_pruningFactor;
+		std::function<float(const ShootSkeleton& shootSkeleton, const SkeletonNode<InternodeGrowthData>& internode)> m_endToRootPruningFactor;
+		/**
+		 * \brief The The impact of the amount of incoming light on the shedding of end internodes.
+		 */
+		std::function<float(const ShootSkeleton& shootSkeleton, const SkeletonNode<InternodeGrowthData>& internode)> m_rootToEndPruningFactor;
 #pragma endregion
 #pragma region Leaf
 		/**

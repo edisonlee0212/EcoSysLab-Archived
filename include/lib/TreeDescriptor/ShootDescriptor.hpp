@@ -86,6 +86,7 @@ namespace EcoSysLab
 		 * \brief The number of lateral buds an internode contains
 		 */
 		int m_lateralBudCount = 1;
+		int m_maxOrder = -1;
 		/**
 		 * \brief The probability of death of apical bud each year.
 		 */
@@ -116,6 +117,7 @@ namespace EcoSysLab
 		*/
 		float m_apicalDominanceLoss = 0.08f;
 
+		
 #pragma endregion
 #pragma region Pruning
 		bool m_trunkProtection = false;

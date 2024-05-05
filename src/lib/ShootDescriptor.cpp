@@ -82,7 +82,14 @@ void ShootDescriptor::PrepareController(ShootGrowthController& shootGrowthContro
 	shootGrowthController.m_thicknessAgeFactor = m_thicknessAgeFactor;
 	shootGrowthController.m_internodeShadowFactor = m_internodeShadowFactor;
 
-	shootGrowthController.m_lateralBudCount = m_lateralBudCount;
+	shootGrowthController.m_lateralBudCount = [&](const SkeletonNode<InternodeGrowthData>& internode)
+		{
+			if(m_maxOrder == -1 || internode.m_data.m_order < m_maxOrder)
+			{
+				return m_lateralBudCount;
+			}
+			return 0;
+		};
 	shootGrowthController.m_apicalBudExtinctionRate = [&](const SkeletonNode<InternodeGrowthData>& internode)
 		{
 			if (internode.m_info.m_rootDistance < 0.5f) return 0.f;
@@ -191,6 +198,7 @@ void ShootDescriptor::Serialize(YAML::Emitter& out)
 	out << YAML::Key << "m_internodeShadowFactor" << YAML::Value << m_internodeShadowFactor;
 
 	out << YAML::Key << "m_lateralBudCount" << YAML::Value << m_lateralBudCount;
+	out << YAML::Key << "m_maxOrder" << YAML::Value << m_maxOrder;
 	out << YAML::Key << "m_apicalBudExtinctionRate" << YAML::Value << m_apicalBudExtinctionRate;
 	out << YAML::Key << "m_lateralBudFlushingRate" << YAML::Value << m_lateralBudFlushingRate;
 	out << YAML::Key << "m_apicalControl" << YAML::Value << m_apicalControl;
@@ -262,6 +270,7 @@ void ShootDescriptor::Deserialize(const YAML::Node& in)
 
 
 	if (in["m_lateralBudCount"]) m_lateralBudCount = in["m_lateralBudCount"].as<int>();
+	if (in["m_maxOrder"]) m_maxOrder = in["m_maxOrder"].as<int>();
 	if (in["m_apicalBudExtinctionRate"]) m_apicalBudExtinctionRate = in["m_apicalBudExtinctionRate"].as<float>();
 	if (in["m_lateralBudFlushingRate"]) m_lateralBudFlushingRate = in["m_lateralBudFlushingRate"].as<float>();
 	if (in["m_apicalControl"]) m_apicalControl = in["m_apicalControl"].as<float>();
@@ -317,6 +326,7 @@ void ShootDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 		changed = ImGui::DragFloat2("Base apical angle mean/var", &m_baseNodeApicalAngleMeanVariance.x, 0.1f, 0.0f, 100.0f) || changed;
 
 		changed = ImGui::DragInt("Lateral bud count", &m_lateralBudCount, 1, 0, 3) || changed;
+		changed = ImGui::DragInt("Max Order", &m_maxOrder, 1, -1, 100) || changed;
 		if (ImGui::TreeNodeEx("Angles"))
 		{
 			changed = ImGui::DragFloat2("Branching angle base/var", &m_branchingAngleMeanVariance.x, 0.1f, 0.0f, 100.0f) || changed;
