@@ -50,6 +50,10 @@ namespace EcoSysLab
 		float m_value = 0.0f;
 	};
 
+	struct RootFlux {
+		float m_value = 0.0f;
+	};
+
 	struct TreeVoxelData
 	{
 		SkeletonNodeHandle m_nodeHandle = -1;

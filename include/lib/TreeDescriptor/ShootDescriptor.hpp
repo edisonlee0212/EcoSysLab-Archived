@@ -11,6 +11,8 @@ namespace EcoSysLab
 		 * \brief The expected height gain for the tree for one year (max root distance).
 		 */
 		float m_growthRate = 0.25f;
+		float m_straightTrunk = 0.0f;
+
 #pragma region Internode
 		int m_baseInternodeCount = 1;
 		glm::vec2 m_baseNodeApicalAngleMeanVariance = glm::vec2(0.0f);
@@ -192,7 +194,7 @@ namespace EcoSysLab
 
 		float m_fruitFallProbability;
 #pragma endregion
-		void PrepareController(ShootGrowthController& shootGrowthController);
+		void PrepareController(ShootGrowthController& shootGrowthController) const;
 
 		void Serialize(YAML::Emitter& out) override;
 		void Deserialize(const YAML::Node& in) override;

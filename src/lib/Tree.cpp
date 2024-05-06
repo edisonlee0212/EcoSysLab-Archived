@@ -1497,7 +1497,7 @@ void Tree::ExportTrunkOBJ(const std::filesystem::path& path,
 	}
 }
 
-bool Tree::TryGrow(float deltaTime, bool pruning, float overrideGrowthRate)
+bool Tree::TryGrow(float deltaTime, bool pruning, float growthRateMultiplier)
 {
 	const auto scene = GetScene();
 	auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
@@ -1547,7 +1547,7 @@ bool Tree::TryGrow(float deltaTime, bool pruning, float overrideGrowthRate)
 	}
 
 	PrepareController(shootDescriptor, soil, climate);
-	const bool grown = m_treeModel.Grow(deltaTime, scene->GetDataComponent<GlobalTransform>(owner).m_value, climate->m_climateModel, m_shootGrowthController, pruning, overrideGrowthRate);
+	const bool grown = m_treeModel.Grow(deltaTime, scene->GetDataComponent<GlobalTransform>(owner).m_value, climate->m_climateModel, m_shootGrowthController, pruning, growthRateMultiplier);
 	if (grown)
 	{
 		if (pruning) m_treeVisualizer.ClearSelections();
@@ -1562,7 +1562,7 @@ bool Tree::TryGrow(float deltaTime, bool pruning, float overrideGrowthRate)
 	return grown;
 }
 
-bool Tree::TryGrowSubTree(const float deltaTime, const SkeletonNodeHandle baseInternodeHandle, const bool pruning, const float overrideGrowthRate) {
+bool Tree::TryGrowSubTree(const float deltaTime, const SkeletonNodeHandle baseInternodeHandle, const bool pruning, const float growthRateMultiplier) {
 	const auto scene = GetScene();
 	const auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
 	const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
@@ -1606,7 +1606,7 @@ bool Tree::TryGrowSubTree(const float deltaTime, const SkeletonNodeHandle baseIn
 	}
 
 	PrepareController(shootDescriptor, soil, climate);
-	const bool grown = m_treeModel.Grow(deltaTime, baseInternodeHandle, scene->GetDataComponent<GlobalTransform>(owner).m_value, climate->m_climateModel, m_shootGrowthController, pruning, overrideGrowthRate);
+	const bool grown = m_treeModel.Grow(deltaTime, baseInternodeHandle, scene->GetDataComponent<GlobalTransform>(owner).m_value, climate->m_climateModel, m_shootGrowthController, pruning, growthRateMultiplier);
 	if (grown)
 	{
 		if (pruning) m_treeVisualizer.ClearSelections();
@@ -2734,11 +2734,12 @@ void Tree::PrepareController(const std::shared_ptr<ShootDescriptor>& shootDescri
 				return 0.f;
 			}
 			float pruningProbability = 0.0f;
-		
-			if (internode.IsEndNode()) {
-				if (internode.m_data.m_lightIntensity < shootDescriptor->m_lightPruningFactor)
-				{
-					pruningProbability += 999.f;
+			if (shootDescriptor->m_lightPruningFactor != 0.f) {
+				if (internode.IsEndNode()) {
+					if (internode.m_data.m_lightIntensity < shootDescriptor->m_lightPruningFactor)
+					{
+						pruningProbability += 999.f;
+					}
 				}
 			}
 			if (shootDescriptor->m_branchStrength != 0.f && !internode.IsEndNode() && internode.m_info.m_thickness != 0.f && internode.m_info.m_length != 0.f) {
@@ -2761,7 +2762,7 @@ void Tree::PrepareController(const std::shared_ptr<ShootDescriptor>& shootDescri
 
 
 				float branchWaterFactor = 1.f;
-				if (internode.m_data.m_maxDescendantLightIntensity < shootDescriptor->m_branchStrengthLightingThreshold)
+				if (shootDescriptor->m_branchStrengthLightingThreshold != 0.f && internode.m_data.m_maxDescendantLightIntensity < shootDescriptor->m_branchStrengthLightingThreshold)
 				{
 					branchWaterFactor = 1.f - shootDescriptor->m_branchStrengthLightingLoss;
 				}

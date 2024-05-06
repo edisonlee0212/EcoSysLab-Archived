@@ -81,9 +81,9 @@ namespace EcoSysLab {
 		void ExportStrandModelOBJ(const std::filesystem::path& path, const StrandModelMeshGeneratorSettings& meshGeneratorSettings);
 
 		void ExportTrunkOBJ(const std::filesystem::path& path, const TreeMeshGeneratorSettings& meshGeneratorSettings);
-		bool TryGrow(float deltaTime, bool pruning, float overrideGrowthRate);
+		bool TryGrow(float deltaTime, bool pruning, float growthRateMultiplier = 1.f);
 
-		bool TryGrowSubTree(float deltaTime, SkeletonNodeHandle baseInternodeHandle, bool pruning, float overrideGrowthRate);
+		bool TryGrowSubTree(float deltaTime, SkeletonNodeHandle baseInternodeHandle, bool pruning, float growthRateMultiplier = 1.f);
 		[[nodiscard]] bool ParseBinvox(const std::filesystem::path& filePath, VoxelGrid<TreeOccupancyGridBasicData>& voxelGrid, float voxelSize = 1.0f);
 
 		void Reset();

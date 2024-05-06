@@ -1812,7 +1812,8 @@ void EcoSysLabLayer::Simulate(float deltaTime) {
 			const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
 			if (!tree->IsEnabled()) return;
 			if (m_simulationSettings.m_maxNodeCount > 0 && tree->m_treeModel.RefShootSkeleton().PeekSortedNodeList().size() >= m_simulationSettings.m_maxNodeCount) return;
-			grownStat[threadIndex] = tree->TryGrow(deltaTime, true, -1);
+			auto gt = scene->GetDataComponent<GlobalTransform>(treeEntity);
+			grownStat[threadIndex] = tree->TryGrow(deltaTime, true, glm::mix(m_simulationSettings.m_minGrowthRate, m_simulationSettings.m_maxGrowthRate, glm::abs(glm::perlin(gt.GetPosition()))));
 			});
 
 		auto heightField = soil->m_soilDescriptor.Get<SoilDescriptor>()->m_heightField.Get<HeightField>();

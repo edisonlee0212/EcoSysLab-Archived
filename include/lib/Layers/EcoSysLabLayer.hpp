@@ -34,6 +34,9 @@ namespace EcoSysLab {
 		bool m_autoClearFruitAndLeaves = true;
 		float m_crownShynessDistance = 0.1f;
 		int m_maxNodeCount = 0;
+
+		float m_minGrowthRate = 0.8f;
+		float m_maxGrowthRate = 1.f;
 		LightingEstimationSettings m_lightingEstimationSettings;
 	};
 

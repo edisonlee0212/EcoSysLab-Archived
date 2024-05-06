@@ -2,7 +2,7 @@
 
 using namespace EcoSysLab;
 
-void ShootDescriptor::PrepareController(ShootGrowthController& shootGrowthController)
+void ShootDescriptor::PrepareController(ShootGrowthController& shootGrowthController) const
 {
 	shootGrowthController.m_baseInternodeCount = m_baseInternodeCount;
 
@@ -36,6 +36,7 @@ void ShootDescriptor::PrepareController(ShootGrowthController& shootGrowthContro
 		};
 	shootGrowthController.m_apicalAngle = [&](const SkeletonNode<InternodeGrowthData>& internode)
 		{
+			if (m_straightTrunk != 0.f && internode.m_data.m_order == 0 && internode.m_info.m_rootDistance < m_straightTrunk) return 0.f;
 			float value = glm::gaussRand(m_apicalAngleMeanVariance.x, m_apicalAngleMeanVariance.y);
 		/*
 			if (const auto noise = m_apicalAngle.Get<ProceduralNoise2D>())
@@ -174,6 +175,7 @@ void ShootDescriptor::PrepareController(ShootGrowthController& shootGrowthContro
 void ShootDescriptor::Serialize(YAML::Emitter& out)
 {
 	out << YAML::Key << "m_baseInternodeCount" << YAML::Value << m_baseInternodeCount;
+	out << YAML::Key << "m_straightTrunk" << YAML::Value << m_straightTrunk;
 	out << YAML::Key << "m_baseNodeApicalAngleMeanVariance" << YAML::Value << m_baseNodeApicalAngleMeanVariance;
 
 	out << YAML::Key << "m_growthRate" << YAML::Value << m_growthRate;
@@ -244,7 +246,8 @@ void ShootDescriptor::Serialize(YAML::Emitter& out)
 
 void ShootDescriptor::Deserialize(const YAML::Node& in)
 {
-	if (in["m_baseInternodeCount"]) m_baseInternodeCount = in["m_baseInternodeCount"].as<float>();
+	if (in["m_baseInternodeCount"]) m_baseInternodeCount = in["m_baseInternodeCount"].as<int>();
+	if (in["m_straightTrunk"]) m_straightTrunk = in["m_straightTrunk"].as<float>();
 	if (in["m_baseNodeApicalAngleMeanVariance"]) m_baseNodeApicalAngleMeanVariance = in["m_baseNodeApicalAngleMeanVariance"].as<glm::vec2>();
 
 	if (in["m_growthRate"]) m_growthRate = in["m_growthRate"].as<float>();
@@ -320,6 +323,7 @@ void ShootDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
 	bool changed = false;
 	changed = ImGui::DragFloat("Growth rate", &m_growthRate, 0.01f, 0.0f, 10.0f) || changed;
+	changed = ImGui::DragFloat("Straight Trunk", &m_straightTrunk, 0.1f, 0.0f, 100.f) || changed;
 	if (ImGui::TreeNodeEx("Internode", ImGuiTreeNodeFlags_DefaultOpen))
 	{
 		changed = ImGui::DragInt("Base node count", &m_baseInternodeCount, 1, 0, 3) || changed;

@@ -11,7 +11,7 @@ namespace EcoSysLab
 		float m_shadowDistanceLoss = 1.f;
 		float m_detectionRadius = 0.5f;
 
-		float m_environmentLightIntensity = 0.05f;
+		float m_environmentLightIntensity = 0.01f;
 
 		int m_blurIteration = 0;
 	};

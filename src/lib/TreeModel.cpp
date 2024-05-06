@@ -142,11 +142,12 @@ bool TreeModel::Grow(float deltaTime, const glm::mat4& globalTransform, ClimateM
 		const auto& sortedNodeList = m_shootSkeleton.PeekSortedNodeList();
 		if (!m_treeGrowthSettings.m_useSpaceColonization) {
 			const auto totalShootFlux = CollectShootFlux(sortedNodeList);
+			RootFlux totalRootFlux;
+			totalRootFlux.m_value = totalShootFlux.m_value;
+			const auto totalFlux = glm::min(totalShootFlux.m_value, totalRootFlux.m_value);
 			CalculateInternodeStrength(sortedNodeList, shootGrowthController);
 			const float requiredVigor = CalculateGrowthPotential(sortedNodeList, shootGrowthController);
-			float growthRate = totalShootFlux.m_value / requiredVigor;
-			if (overrideGrowthRate > 0.0f) growthRate = overrideGrowthRate;
-			CalculateGrowthRate(sortedNodeList, growthRate);
+			CalculateGrowthRate(sortedNodeList, glm::clamp(totalFlux / requiredVigor * overrideGrowthRate, 0.f, 1.f));
 		}
 		for (auto it = sortedNodeList.rbegin(); it != sortedNodeList.rend(); ++it) {
 			const bool graphChanged = GrowInternode(climateModel, *it, shootGrowthController);
@@ -204,10 +205,11 @@ bool TreeModel::Grow(const float deltaTime, const SkeletonNodeHandle baseInterno
 
 	if (!m_treeGrowthSettings.m_useSpaceColonization) {
 		const auto totalShootFlux = CollectShootFlux(sortedSubTreeInternodeList);
+		RootFlux totalRootFlux;
+		totalRootFlux.m_value = totalShootFlux.m_value;
+		const auto totalFlux = glm::min(totalShootFlux.m_value, totalRootFlux.m_value);
 		const float requiredVigor = CalculateGrowthPotential(sortedSubTreeInternodeList, shootGrowthController);
-		float growthRate = totalShootFlux.m_value / requiredVigor;
-		if (overrideGrowthRate > 0.0f) growthRate = overrideGrowthRate;
-		CalculateGrowthRate(sortedSubTreeInternodeList, growthRate);
+		CalculateGrowthRate(sortedSubTreeInternodeList, glm::clamp(totalFlux / requiredVigor * overrideGrowthRate, 0.f, 1.f));
 	}
 	for (auto it = sortedSubTreeInternodeList.rbegin(); it != sortedSubTreeInternodeList.rend(); ++it) {
 		const bool graphChanged = GrowInternode(climateModel, *it, shootGrowthController);
