@@ -1,5 +1,5 @@
 m_baseInternodeCount: 1
-m_straightTrunk: true
+m_straightTrunk: 1.25
 m_baseNodeApicalAngleMeanVariance: [0, 0]
 m_growthRate: 0.224999994
 m_rollAngle:
@@ -16,16 +16,16 @@ m_apicalAngleNoise2D:
   m_minMax: [-1000, 1000]
   m_noiseDescriptors:
     []
-m_branchingAngleMeanVariance: [65, 2]
+m_branchingAngleMeanVariance: [65, 3]
 m_rollAngleMeanVariance: [0, 5]
-m_apicalAngleMeanVariance: [0, 5]
+m_apicalAngleMeanVariance: [0, 3]
 m_gravitropism: 0
-m_phototropism: 0
+m_phototropism: 0.0299999993
 m_horizontalTropism: 0
-m_saggingFactorThicknessReductionMax: [0.00100000005, 2, 0.5]
+m_saggingFactorThicknessReductionMax: [0, 2, 0.5]
 m_internodeLength: 0.0299999993
 m_internodeLengthThicknessFactor: 0.150000006
-m_endNodeThickness: 0.00400000019
+m_endNodeThickness: 0.00300000003
 m_thicknessAccumulationFactor: 0.449999988
 m_thicknessAgeFactor: 0
 m_internodeShadowFactor: 0.0199999996
@@ -40,10 +40,10 @@ m_apicalDominance: 0.5
 m_apicalDominanceLoss: 0.0199999996
 m_trunkProtection: true
 m_maxFlowLength: 0
-m_lowBranchPruning: 0
+m_lowBranchPruning: 0.100000001
 m_lowBranchPruningThicknessFactor: 0
 m_lightPruningFactor: 0
-m_branchStrength: 0.0799999982
+m_branchStrength: 0.100000001
 m_branchStrengthThicknessFactor: 2
 m_branchStrengthLightingThreshold: 0.200000003
 m_branchStrengthLightingLoss: 0.899999976

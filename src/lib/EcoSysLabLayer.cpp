@@ -886,6 +886,10 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 				ImGui::DragFloat("Delta time", &m_simulationSettings.m_deltaTime, 0.00001f, 0, 1, "%.5f");
 				ImGui::Checkbox("Auto clear fruit and leaves", &m_simulationSettings.m_autoClearFruitAndLeaves);
 				ImGui::DragFloat("Crown shyness", &m_simulationSettings.m_crownShynessDistance, 0.01f, 0.0f, 1.0f);
+
+				ImGui::DragFloat("Min growth rate", &m_simulationSettings.m_minGrowthRate, 0.01f, 0.f, m_simulationSettings.m_maxGrowthRate);
+				ImGui::DragFloat("Max growth rate", &m_simulationSettings.m_maxGrowthRate, 0.01f, m_simulationSettings.m_minGrowthRate, 3.f);
+
 				ImGui::Checkbox("Simulate soil", &m_simulationSettings.m_soilSimulation);
 				if (ImGui::TreeNode("Lighting Estimation Settings")) {
 					bool settingsChanged = false;

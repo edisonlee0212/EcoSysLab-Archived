@@ -5,7 +5,7 @@ m_rotationVariance: 1
 m_branchingAngle: 15
 m_maxNodeThickness: 1
 m_minRootDistance: 0
-m_maxEndDistance: 0.00999999978
+m_maxEndDistance: 1
 m_horizontalTropism: 0
 m_gravitropism: 0
 m_twigParameters:

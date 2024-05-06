@@ -2,7 +2,7 @@ m_shootDescriptor:
   m_assetHandle: 908545608898213592
   m_assetTypeName: ShootDescriptor
 m_foliageDescriptor:
-  m_assetHandle: 10666858918539207976
+  m_assetHandle: 18089246524042684830
   m_assetTypeName: FoliageDescriptor
 m_barkDescriptor:
   m_assetHandle: 0

@@ -1,5 +1,5 @@
 m_baseInternodeCount: 1
-m_straightTrunk: false
+m_straightTrunk: 0
 m_baseNodeApicalAngleMeanVariance: [0, 0]
 m_growthRate: 0.200000003
 m_rollAngle:
