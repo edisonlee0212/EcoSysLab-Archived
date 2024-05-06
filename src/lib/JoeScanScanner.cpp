@@ -1,5 +1,6 @@
 #include "JoeScanScanner.hpp"
 #include "Json.hpp"
+#include "Scene.hpp"
 using namespace EcoSysLab;
 
 void JoeScan::Serialize(YAML::Emitter& out)
@@ -52,7 +53,7 @@ void JoeScan::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 
 	static bool enableJoeScanRendering = true;
 	ImGui::Checkbox("Render JoeScan", &enableJoeScanRendering);
-	static float divider = 200.f;
+	static float divider = 2000.f;
 	ImGui::DragFloat("Divider", &divider);
 
 	static auto color = glm::vec3(1);
@@ -73,12 +74,22 @@ void JoeScan::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 				Jobs::RunParallelFor(profile.m_points.size(), [&](unsigned i)
 					{
 						data[i + startIndex].m_instanceMatrix.SetPosition(glm::vec3(profile.m_points[i].x / 10000.f, profile.m_points[i].y / 10000.f, profile.m_encoderValue / divider));
+						data[i + startIndex].m_instanceMatrix.SetScale(glm::vec3(0.005f));
 						data[i + startIndex].m_instanceColor = glm::vec4(color, 1.f / 128);
 						if(brightness) data[i + startIndex].m_instanceColor.w = static_cast<float>(profile.m_brightness[i]) / 2048.f * brightnessFactor;
 					}
 				);
 			}
 			joeScanList->SetParticleInfos(data);
+			/*
+			const auto scene = Application::GetActiveScene();
+			const auto newEntity = scene->CreateEntity("Scan");
+			const auto particles = scene->GetOrSetPrivateComponent<Particles>(newEntity).lock();
+			const auto material = ProjectManager::CreateTemporaryAsset<Material>();
+			particles->m_material = material;
+			particles->m_mesh = Resources::GetResource<Mesh>("PRIMITIVE_CUBE");
+			particles->m_particleInfoList = joeScanList;
+			*/
 		}
 	}
 
@@ -86,7 +97,7 @@ void JoeScan::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 	{
 		GizmoSettings settings{};
 		settings.m_drawSettings.m_blending = true;
-		editorLayer->DrawGizmoCubes(joeScanList, glm::mat4(1), 0.01f, settings);
+		editorLayer->DrawGizmoCubes(joeScanList, glm::mat4(1), 1.f, settings);
 	}
 }
 
@@ -128,9 +139,12 @@ void JoeScanScanner::StopScanningProcess()
 	}
 }
 
-void JoeScanScanner::StartScanProcess()
+void JoeScanScanner::StartScanProcess(const JoeScanScannerSettings& settings)
 {
 	StopScanningProcess();
+
+	m_points.clear();
+	m_preservedProfiles.clear();
 	const int32_t minPeriod = jsScanSystemGetMinScanPeriod(m_scanSystem);
 	if (0 >= minPeriod) {
 		EVOENGINE_ERROR("Failed to read min scan period.");
@@ -143,7 +157,7 @@ void JoeScanScanner::StartScanProcess()
 	}
 
 	m_scanEnabled = true;
-	m_scannerJob = Jobs::Run([&]()
+	m_scannerJob = Jobs::Run([&, settings]()
 		{
 			SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
 			const auto profileSize = jsScanSystemGetProfilesPerFrame(m_scanSystem);
@@ -169,6 +183,7 @@ void JoeScanScanner::StartScanProcess()
 				size_t validCount = 0;
 				std::vector<glm::vec2> points;
 				JoeScanProfile joeScanProfile;
+				bool hasEncoderValue = false;
 				for (int profileIndex = 0; profileIndex < profileSize; profileIndex++) {
 					if (jsRawProfileIsValid(profiles[profileIndex]))
 					{
@@ -185,12 +200,15 @@ void JoeScanScanner::StartScanProcess()
 						}
 						if (containRealData) validCount++;
 					}
+					if (validCount != 0 && !hasEncoderValue) {
+						hasEncoderValue = true;
+						joeScanProfile.m_encoderValue = profiles[profileIndex].encoder_values[0];
+					}
 				}
-				if (validCount != 0) {
+				if (hasEncoderValue) {
 					std::lock_guard lock(*m_scannerMutex);
 					m_points = points;
-					joeScanProfile.m_encoderValue = i;
-					m_preservedProfiles[joeScanProfile.m_encoderValue] = joeScanProfile;
+					m_preservedProfiles[joeScanProfile.m_encoderValue / settings.m_step] = joeScanProfile;
 				}
 				i++;
 			}
@@ -293,7 +311,7 @@ void JoeScanScanner::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 	if (m_scanSystem != 0 && !m_scanEnabled && ImGui::Button("Start Scanning"))
 	{
 		std::vector<glm::vec2> results;
-		StartScanProcess();
+		StartScanProcess({});
 	}
 
 	if (m_scanEnabled && ImGui::Button("Stop Scanning"))

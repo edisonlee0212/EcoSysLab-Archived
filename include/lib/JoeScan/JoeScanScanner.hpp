@@ -24,7 +24,7 @@ namespace EcoSysLab {
 
 	struct JoeScanScannerSettings
 	{
-		float m_step = 1000.f;
+		int m_step = 1;
 	};
 
 	class JoeScanScanner : public IPrivateComponent {
@@ -40,7 +40,7 @@ namespace EcoSysLab {
 		AssetRef m_config;
 		AssetRef m_joeScan;
 		void StopScanningProcess();
-		void StartScanProcess();
+		void StartScanProcess(const JoeScanScannerSettings &settings);
 		JoeScanScanner();
 		static bool InitializeScanSystem(const std::shared_ptr<Json>& json, jsScanSystem& scanSystem, std::vector<jsScanHead>& scanHeads);
 		static void FreeScanSystem(jsScanSystem& scanSystem, std::vector<jsScanHead>& scanHeads);
