@@ -462,7 +462,7 @@ PYBIND11_MODULE(pyecosyslab, m) {
 
 	py::class_<ConnectivityGraphSettings>(m, "ConnectivityGraphSettings")
 		.def(py::init<>())
-		.def_readwrite("m_pointCheckRadius", &ConnectivityGraphSettings::m_pointCheckRadius)
+		.def_readwrite("m_pointExistenceCheckRadius", &ConnectivityGraphSettings::m_pointExistenceCheckRadius)
 		.def_readwrite("m_pointPointConnectionDetectionRadius", &ConnectivityGraphSettings::m_pointPointConnectionDetectionRadius)
 		.def_readwrite("m_pointBranchConnectionDetectionRadius", &ConnectivityGraphSettings::m_pointBranchConnectionDetectionRadius)
 		.def_readwrite("m_branchBranchConnectionMaxLengthRange", &ConnectivityGraphSettings::m_branchBranchConnectionMaxLengthRange)

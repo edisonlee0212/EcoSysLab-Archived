@@ -96,9 +96,9 @@ bool TreeStructor::DirectConnectionCheck(const BezierCurve& parentCurve, const B
 		if (projectedLength > m_connectivityGraphSettings.m_parallelShiftLimitRange * childLength
 			|| projectedLength > m_connectivityGraphSettings.m_parallelShiftLimitRange * parentLength) return false;
 	}
-	if (m_connectivityGraphSettings.m_pointCheckRadius > 0.0f) {
+	if (m_connectivityGraphSettings.m_pointExistenceCheck && m_connectivityGraphSettings.m_pointExistenceCheckRadius > 0.0f) {
 		const auto middlePoint = (childPA + parentPB) * 0.5f;
-		if (!HasPoints(middlePoint, m_allocatedPointsVoxelGrid, m_connectivityGraphSettings.m_pointCheckRadius) && !HasPoints(middlePoint, m_scatterPointsVoxelGrid, m_connectivityGraphSettings.m_pointCheckRadius)) return false;
+		if (!HasPoints(middlePoint, m_allocatedPointsVoxelGrid, m_connectivityGraphSettings.m_pointExistenceCheckRadius) && !HasPoints(middlePoint, m_scatterPointsVoxelGrid, m_connectivityGraphSettings.m_pointExistenceCheckRadius)) return false;
 	}
 	return true;
 
@@ -723,14 +723,13 @@ void TreeStructor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 		}
 		if (ImGui::TreeNodeEx("Reconstruction Settings")) {
 			m_reconstructionSettings.OnInspect();
-			if (ImGui::Button("Build Skeleton")) {
-				EstablishConnectivityGraph();
-				BuildSkeletons();
-				refreshData = true;
-			}
 			ImGui::TreePop();
 		}
-
+		if (ImGui::Button("Build Skeletons")) {
+			EstablishConnectivityGraph();
+			BuildSkeletons();
+			refreshData = true;
+		}
 		if (ImGui::Button("Form forest")) {
 			if (m_branchConnections.empty()) {
 				m_skeletons.clear();
@@ -762,8 +761,8 @@ void TreeStructor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 		if (ImGui::TreeNode("Debug rendering settings"))
 		{
 			if (ImGui::Combo("Color mode", { "TreePart", "Branch", "Node" }, colorMode)) refreshData = true;
-
-			if (ImGui::DragFloat("Branch width", &predictedBranchWidth, 0.0001f, 0.0001f, 1.0f, "%.4f")) refreshData = true;
+			ImGui::Checkbox("Use skeleton width", &useRealBranchWidth);
+			if(!useRealBranchWidth) if (ImGui::DragFloat("Branch width", &predictedBranchWidth, 0.0001f, 0.0001f, 1.0f, "%.4f")) refreshData = true;
 			if (ImGui::DragFloat("Connection width", &connectionWidth, 0.0001f, 0.0001f, 1.0f, "%.4f")) refreshData = true;
 			if (ImGui::DragFloat("Point size", &pointSize, 0.0001f, 0.0001f, 1.0f, "%.4f")) refreshData = true;
 			if (ImGui::Checkbox("Allocated points", &m_debugAllocatedPoints)) refreshData = true;
@@ -2399,13 +2398,7 @@ void ConnectivityGraphSettings::OnInspect() {
 	}
 	if (ImGui::Button("Load default connection settings"))
 	{
-		m_pointPointConnectionDetectionRadius = 0.05f;
-		m_pointBranchConnectionDetectionRadius = 0.1f;
-		m_branchBranchConnectionMaxLengthRange = 5.0f;
-		m_directionConnectionAngleLimit = 65.0f;
-		m_indirectConnectionAngleLimit = 65.0f;
-		m_maxScatterPointConnectionHeight = 1.5f;
-		m_parallelShiftCheck = true;
+		*this = ConnectivityGraphSettings();
 	}
 	if (ImGui::Button("Load max connection settings"))
 	{
@@ -2432,7 +2425,9 @@ void ConnectivityGraphSettings::OnInspect() {
 	}
 	ImGui::Checkbox("Parallel shift check", &m_parallelShiftCheck);
 	if (m_parallelShiftCheck) ImGui::DragFloat("Parallel Shift range limit", &m_parallelShiftLimitRange, 0.01f, 0.0f, 1.0f);
-	ImGui::DragFloat("Point existence check radius", &m_pointCheckRadius, 0.01f, 0.0f, 1.0f);
+
+	ImGui::Checkbox("Point existence check", &m_pointExistenceCheck);
+	if(m_pointExistenceCheck) ImGui::DragFloat("Point existence check radius", &m_pointExistenceCheckRadius, 0.01f, 0.0f, 1.0f);
 }
 
 void TreeStructor::CloneOperatingBranch(const ReconstructionSettings& reconstructionSettings, OperatorBranch& operatorBranch, const PredictedBranch& target) {

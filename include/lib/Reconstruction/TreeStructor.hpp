@@ -95,8 +95,8 @@ namespace EcoSysLab {
 
 	struct ConnectivityGraphSettings {
 		bool m_reverseConnection = false;
-
-		float m_pointCheckRadius = 0.05f;
+		bool m_pointExistenceCheck = true;
+		float m_pointExistenceCheckRadius = 0.1f;
 		bool m_zigzagCheck = true;
 		float m_zigzagBranchShortening = 0.1f;
 		float m_parallelShiftCheckHeightLimit = 1.5f;
