@@ -325,6 +325,10 @@ void TreeVisualizer::SyncMatrices(const ShootSkeleton& skeleton, const std::shar
 			matrices[i].m_instanceColor = glm::mix(glm::vec4(0, 1, 0, 1), glm::vec4(1, 0, 0, 1),
 				glm::clamp(glm::pow(node.m_data.m_growthPotential, m_settings.m_shootColorMultiplier), 0.0f, 1.f));
 			break;
+		case ShootVisualizerMode::SaggingStress:
+			matrices[i].m_instanceColor = glm::mix(glm::vec4(0, 1, 0, 1), glm::vec4(1, 0, 0, 1),
+				glm::clamp(glm::pow(node.m_data.m_saggingStress, m_settings.m_shootColorMultiplier), 0.0f, 1.f));
+			break;
 		case ShootVisualizerMode::GrowthRate:
 			matrices[i].m_instanceColor = glm::mix(glm::vec4(0, 1, 0, 1), glm::vec4(1, 0, 0, 1), glm::clamp(glm::pow(node.m_data.m_growthRate, m_settings.m_shootColorMultiplier), 0.0f, 1.f));
 			break;
@@ -397,7 +401,7 @@ TreeVisualizer::OnInspect(
 	TreeModel& treeModel) {
 	bool updated = false;
 	if (ImGui::Combo("Visualizer mode",
-		{ "Default", "Order", "Level", "Max descendant light intensity", "Light intensity", "Light direction", "Desired growth rate", "Growth potential", "Growth rate", "Is max child", "Allocated vigor", "Locked" },
+		{ "Default", "Order", "Level", "Max descendant light intensity", "Light intensity", "Light direction", "Desired growth rate", "Growth potential", "Growth rate", "Is max child", "Allocated vigor", "Sagging stress", "Locked" },
 		m_settings.m_shootVisualizationMode)) {
 		m_needUpdate = true;
 	}
@@ -429,15 +433,10 @@ TreeVisualizer::OnInspect(
 		ImGui::DragInt("History Limit", &treeModel.m_historyLimit, 1, -1, 1024);
 
 		if (ImGui::TreeNode("Shoot Color settings")) {
+			if (ImGui::DragFloat("Multiplier", &m_settings.m_shootColorMultiplier, 0.001f)) {
+				m_needUpdate = true;
+			}
 			switch (static_cast<ShootVisualizerMode>(m_settings.m_shootVisualizationMode)) {
-			case ShootVisualizerMode::LightIntensity:
-				ImGui::DragFloat("Light intensity multiplier", &m_settings.m_shootColorMultiplier, 0.001f);
-				m_needUpdate = true;
-				break;
-			case ShootVisualizerMode::AllocatedVigor:
-				ImGui::DragFloat("Vigor multiplier", &m_settings.m_shootColorMultiplier, 0.001f);
-				m_needUpdate = true;
-				break;
 			default:
 				break;
 			}
@@ -763,7 +762,8 @@ TreeVisualizer::InspectInternode(
 			ImGuiInputTextFlags_ReadOnly);
 		ImGui::InputFloat("Growth rate", &internodeData.m_growthRate, 1, 100, "%.3f",
 			ImGuiInputTextFlags_ReadOnly);
-
+		ImGui::InputFloat("Sagging Stress", &internodeData.m_saggingStress, 1, 100, "%.3f",
+			ImGuiInputTextFlags_ReadOnly);
 		if (ImGui::DragFloat("Sagging", &internodeData.m_sagging)) {
 			changed = true;
 		}

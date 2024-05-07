@@ -23,6 +23,8 @@ namespace EcoSysLab {
 		IsMaxChild,
 		AllocatedVigor,
 
+		SaggingStress,
+
 		Locked
 	};
 
@@ -32,7 +34,7 @@ namespace EcoSysLab {
 	};
 
 	struct TreeVisualizerColorSettings {
-		int m_shootVisualizationMode = static_cast<int>(ShootVisualizerMode::Order);
+		int m_shootVisualizationMode = static_cast<int>(ShootVisualizerMode::Default);
 		float m_shootColorMultiplier = 1.0f;
 	};
 

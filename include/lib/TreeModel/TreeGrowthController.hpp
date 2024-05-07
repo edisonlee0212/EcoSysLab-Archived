@@ -6,7 +6,7 @@ namespace EcoSysLab
 {
 	struct ShootGrowthController {
 		bool m_branchPush = false;
-		bool m_useLevelForApicalControl = true;
+		bool m_useLevelForApicalControl = false;
 #pragma region Internode
 		int m_baseInternodeCount = 1;
 		/**
@@ -110,6 +110,7 @@ namespace EcoSysLab
 		
 #pragma endregion
 #pragma region Pruning
+		std::function<float(const SkeletonNode<InternodeGrowthData>& internode)> m_breakingForce;
 		/**
 		* \brief The limit of lateral branches being cut off when too close to the
 		* root.

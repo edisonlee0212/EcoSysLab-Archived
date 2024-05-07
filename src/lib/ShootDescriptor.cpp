@@ -5,6 +5,19 @@ using namespace EcoSysLab;
 void ShootDescriptor::PrepareController(ShootGrowthController& shootGrowthController) const
 {
 	shootGrowthController.m_baseInternodeCount = m_baseInternodeCount;
+	shootGrowthController.m_breakingForce = [&](const SkeletonNode<InternodeGrowthData>& internode)
+		{
+			if (m_branchStrength != 0.f && !internode.IsEndNode() && internode.m_info.m_thickness != 0.f && internode.m_info.m_length != 0.f) {
+				float branchWaterFactor = 1.f;
+				if (m_branchStrengthLightingThreshold != 0.f && internode.m_data.m_maxDescendantLightIntensity < m_branchStrengthLightingThreshold)
+				{
+					branchWaterFactor = 1.f - m_branchStrengthLightingLoss;
+				}
+
+				return glm::pow(internode.m_info.m_thickness / m_endNodeThickness, m_branchStrengthThicknessFactor) * branchWaterFactor * internode.m_data.m_strength * m_branchStrength;
+			}
+			return FLT_MAX;
+		};
 
 	shootGrowthController.m_baseNodeApicalAngle = [&](const SkeletonNode<InternodeGrowthData>& internode)
 		{
@@ -219,6 +232,7 @@ void ShootDescriptor::Serialize(YAML::Emitter& out)
 	out << YAML::Key << "m_branchStrengthThicknessFactor" << YAML::Value << m_branchStrengthThicknessFactor;
 	out << YAML::Key << "m_branchStrengthLightingThreshold" << YAML::Value << m_branchStrengthLightingThreshold;
 	out << YAML::Key << "m_branchStrengthLightingLoss" << YAML::Value << m_branchStrengthLightingLoss;
+	out << YAML::Key << "m_branchBreakingFactor" << YAML::Value << m_branchBreakingFactor;
 
 	out << YAML::Key << "m_leafBudCount" << YAML::Value << m_leafBudCount;
 	out << YAML::Key << "m_leafGrowthRate" << YAML::Value << m_leafGrowthRate;
@@ -292,7 +306,7 @@ void ShootDescriptor::Deserialize(const YAML::Node& in)
 	if (in["m_branchStrengthThicknessFactor"]) m_branchStrengthThicknessFactor = in["m_branchStrengthThicknessFactor"].as<float>();
 	if (in["m_branchStrengthLightingThreshold"]) m_branchStrengthLightingThreshold = in["m_branchStrengthLightingThreshold"].as<float>();
 	if (in["m_branchStrengthLightingLoss"]) m_branchStrengthLightingLoss = in["m_branchStrengthLightingLoss"].as<float>();
-
+	if (in["m_branchBreakingFactor"]) m_branchBreakingFactor = in["m_branchBreakingFactor"].as<float>();
 
 	if (in["m_leafBudCount"]) m_leafBudCount = in["m_leafBudCount"].as<int>();
 	if (in["m_leafGrowthRate"]) m_leafGrowthRate = in["m_leafGrowthRate"].as<float>();
@@ -397,6 +411,7 @@ void ShootDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 		changed = ImGui::DragFloat("Branch strength thickness factor", &m_branchStrengthThicknessFactor, 0.01f, 0.0f) || changed;
 		changed = ImGui::DragFloat("Branch strength lighting threshold", &m_branchStrengthLightingThreshold, 0.01f, 0.0f, 1.0f) || changed;
 		changed = ImGui::DragFloat("Branch strength lighting loss", &m_branchStrengthLightingLoss, 0.01f, 0.0f, 1.0f) || changed;
+		changed = ImGui::DragFloat("Branch breaking factor", &m_branchBreakingFactor, 0.01f, 0.01f, 10.0f) || changed;
 
 
 		ImGui::TreePop();

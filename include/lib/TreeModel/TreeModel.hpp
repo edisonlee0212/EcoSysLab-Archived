@@ -30,6 +30,8 @@ namespace EcoSysLab {
 
 		void CalculateBiomass(SkeletonNodeHandle internodeHandle, const ShootGrowthController& shootGrowthController);
 
+		void CalculateSaggingStress(SkeletonNodeHandle internodeHandle, const ShootGrowthController& shootGrowthController);
+
 		void CalculateLevel();
 
 		bool GrowInternode(ClimateModel& climateModel, SkeletonNodeHandle internodeHandle, const ShootGrowthController& shootGrowthController);

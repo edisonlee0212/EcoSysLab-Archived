@@ -406,6 +406,7 @@ void TreeModel::ShootGrowthPostProcess(const ShootGrowthController& shootGrowthC
 		const auto& sortedInternodeList = m_shootSkeleton.PeekSortedNodeList();
 		for (auto it = sortedInternodeList.rbegin(); it != sortedInternodeList.rend(); ++it) {
 			CalculateBiomass(*it, shootGrowthController);
+			CalculateSaggingStress(*it, shootGrowthController);
 		}
 		CalculateLevel();
 		CalculateTransform(shootGrowthController, true);
@@ -954,9 +955,11 @@ float TreeModel::CalculateGrowthPotential(const std::vector<SkeletonNodeHandle>&
 	float maxGrowPotential = 0.0f;
 
 	std::vector<float> apicalControlValues{};
-	apicalControlValues.resize(shootGrowthController.m_useLevelForApicalControl ? m_shootSkeleton.m_data.m_maxLevel + 1 : m_shootSkeleton.m_data.m_maxOrder + 1);
+
+	const auto maxVal = shootGrowthController.m_useLevelForApicalControl ? m_shootSkeleton.m_data.m_maxLevel : m_shootSkeleton.m_data.m_maxOrder;
+	apicalControlValues.resize(maxVal + 1);
 	apicalControlValues[0] = 1.0f;
-	for (int i = 1; i < (shootGrowthController.m_useLevelForApicalControl ? m_shootSkeleton.m_data.m_maxLevel + 1 : m_shootSkeleton.m_data.m_maxOrder + 1); i++)
+	for (int i = 1; i < (maxVal + 1); i++)
 	{
 		apicalControlValues[i] = apicalControlValues[i - 1] * apicalControl;
 	}
@@ -968,11 +971,11 @@ float TreeModel::CalculateGrowthPotential(const std::vector<SkeletonNodeHandle>&
 		float localApicalControl;
 		if (apicalControl > 1.0f)
 		{
-			localApicalControl = 1.0f / apicalControlValues[node.m_data.m_level];
+			localApicalControl = 1.0f / apicalControlValues[(shootGrowthController.m_useLevelForApicalControl ? node.m_data.m_level : node.m_data.m_order)];
 		}
 		else if (apicalControl < 1.0f)
 		{
-			localApicalControl = apicalControlValues[m_shootSkeleton.m_data.m_maxLevel - (shootGrowthController.m_useLevelForApicalControl ? node.m_data.m_level : node.m_data.m_order)];
+			localApicalControl = apicalControlValues[maxVal - (shootGrowthController.m_useLevelForApicalControl ? node.m_data.m_level : node.m_data.m_order)];
 		}
 		else
 		{
@@ -1061,7 +1064,7 @@ void TreeModel::CalculateBiomass(SkeletonNodeHandle internodeHandle, const Shoot
 		desiredPositionSum += childInternode.m_data.m_biomass * (childInternode.m_data.m_desiredGlobalPosition + childDesiredGlobalEndPosition) * .5f;
 		desiredPositionSum += childInternode.m_data.m_desiredDescendantWeightCenter * childInternode.m_data.m_descendantTotalBiomass;
 	}
-	if (!internode.PeekChildHandles().empty()) {
+	if (!internode.PeekChildHandles().empty() && internodeData.m_descendantTotalBiomass != 0.f) {
 		internodeData.m_descendantWeightCenter = positionedSum / internodeData.m_descendantTotalBiomass;
 		internodeData.m_desiredDescendantWeightCenter = positionedSum / internodeData.m_descendantTotalBiomass;
 	}
@@ -1074,6 +1077,44 @@ void TreeModel::CalculateBiomass(SkeletonNodeHandle internodeHandle, const Shoot
 		internodeData.m_desiredDescendantWeightCenter = desiredGlobalEndPosition;
 	}
 }
+
+void TreeModel::CalculateSaggingStress(const SkeletonNodeHandle internodeHandle, const ShootGrowthController& shootGrowthController)
+{
+	auto& internode = m_shootSkeleton.RefNode(internodeHandle);
+	if(internode.IsEndNode() || internode.m_info.m_thickness == 0.f || internode.m_info.m_length == 0.f)
+	{
+		internode.m_data.m_saggingForce = 0.f;
+		internode.m_data.m_saggingStress = 0.f;
+		return;
+	}
+	const auto weightCenterRelativePosition = internode.m_info.m_globalPosition - internode.m_data.m_descendantWeightCenter;
+	//const auto horizontalDistanceToEnd = glm::length(glm::vec2(weightCenterRelativePosition.x, weightCenterRelativePosition.z));
+	//const auto front = glm::normalize(internode.m_info.m_globalRotation * glm::vec3(0, 0, -1));
+	//const auto frontVector = internode.m_info.m_length * front;
+	//const auto baseVector = glm::vec2(glm::length(glm::vec2(frontVector.x, frontVector.z)), glm::abs(frontVector.y));
+	//const auto combinedVector = glm::vec2(horizontalDistanceToEnd, glm::abs(weightCenterRelativePosition.y)) + baseVector;
+	//const auto projectedVector = baseVector * glm::dot(combinedVector, baseVector);
+	//const auto forceArm = glm::length(projectedVector) / shootGrowthController.m_endNodeThickness;
+
+	//const auto normalizedCombinedVector = glm::normalize(combinedVector);
+	//const float cosTheta = glm::abs(glm::dot(normalizedCombinedVector, glm::normalize(glm::vec2(baseVector.y, -baseVector.x))));
+	//float sinTheta = 1.0f;
+	//if(cosTheta != 1.f) sinTheta = glm::sqrt(1 - cosTheta * cosTheta);
+	//const float tangentForce = (internode.m_data.m_biomass + internode.m_data.m_descendantTotalBiomass) * sinTheta * glm::length(glm::vec2(0, -1) * glm::dot(normalizedCombinedVector, glm::vec2(0, -1)));
+	const float cosTheta = glm::abs(glm::dot(glm::normalize(weightCenterRelativePosition), glm::vec3(0, -1, 0)));
+	float sinTheta = 0.0f;
+	if(cosTheta != 1.f) sinTheta = glm::sqrt(1 - cosTheta * cosTheta);
+	const float tangentForce = (internode.m_data.m_biomass + internode.m_data.m_descendantTotalBiomass) * sinTheta * glm::length(weightCenterRelativePosition);
+	internode.m_data.m_saggingForce = tangentForce;
+	if(glm::isnan(internode.m_data.m_saggingForce))
+	{
+		internode.m_data.m_saggingForce = 0.f;
+	}
+	const auto breakingForce = shootGrowthController.m_breakingForce(internode);
+	const auto prevStress = internode.m_data.m_saggingStress;
+	internode.m_data.m_saggingStress = internode.m_data.m_saggingForce / breakingForce;
+}
+
 void TreeModel::Clear() {
 	m_shootSkeleton = {};
 	m_history = {};
@@ -1149,6 +1190,7 @@ bool TreeModel::PruneInternodes(const glm::mat4& globalTransform, ClimateModel& 
 		const auto internodeHandle = *it;
 		if (m_shootSkeleton.PeekNode(internodeHandle).IsRecycled()) continue;
 		CalculateBiomass(internodeHandle, shootGrowthController);
+		CalculateSaggingStress(internodeHandle, shootGrowthController);
 		auto& internode = m_shootSkeleton.RefNode(internodeHandle);
 		if (internodeHandle == 0) continue;
 		if (internode.m_info.m_locked) continue;
