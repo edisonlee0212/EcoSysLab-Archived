@@ -1,4 +1,4 @@
-m_gridDistance: [1.25, 1.25]
+m_gridDistance: [1, 1]
 m_positionOffsetMean: [0.25, 0.25]
 m_positionOffsetVariance: [0, 0]
 m_rotationOffsetVariance: [0, 0, 0]

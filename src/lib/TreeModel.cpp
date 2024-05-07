@@ -436,7 +436,7 @@ void TreeModel::ShootGrowthPostProcess(const ShootGrowthController& shootGrowthC
 		for (const auto& internodeHandle : sortedInternodeList)
 		{
 			auto& internode = m_shootSkeleton.RefNode(internodeHandle);
-			internode.m_info.m_leaves = internode.m_data.m_lightIntensity <= 0.1f ? 0 : 1;
+			internode.m_info.m_leaves = internode.m_data.m_lightIntensity;
 			const auto order = m_shootSkeleton.RefFlow(internode.GetFlowHandle()).m_data.m_order;
 			internode.m_data.m_order = order;
 			m_internodeOrderCounts[order]++;

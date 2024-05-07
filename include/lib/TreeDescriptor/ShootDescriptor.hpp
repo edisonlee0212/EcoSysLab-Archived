@@ -149,6 +149,8 @@ namespace EcoSysLab
 
 		AssetRef m_barkMaterial;
 #pragma region Leaf
+		float m_leafFlushingLightingRequirement = 0.1f;
+
 		/**
 		 * \brief The number of leaf buds an internode contains
 		 */

@@ -1,5 +1,5 @@
 m_leafSize: [0.0199999996, 0.0199999996]
-m_leafCountPerInternode: 10
+m_leafCountPerInternode: 15
 m_positionVariance: 0.150000006
 m_rotationVariance: 1
 m_branchingAngle: 15
