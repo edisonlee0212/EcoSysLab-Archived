@@ -23,7 +23,7 @@ namespace EcoSysLab {
         float m_maxLowBranchPruning = 0.f;
 
         float m_simulationTime = 0.f;
-
+        float m_startTimeMax = 0.0f;
         void InstantiatePatch(bool setParent = true, bool setSimulationSettings = true);
         void CollectAssetRef(std::vector<AssetRef>& list) override;
         void Serialize(YAML::Emitter& out) override;

@@ -34,21 +34,21 @@ m_internodeShadowFactor: 0.0199999996
 m_lateralBudCount: 2
 m_maxOrder: 2
 m_apicalBudExtinctionRate: 0
-m_lateralBudFlushingRate: 0.75
+m_lateralBudFlushingRate: 1
 m_apicalControl: 1.10000002
 m_heightControl: 0
 m_rootDistanceControl: 0
-m_apicalDominance: 1
+m_apicalDominance: 0.5
 m_apicalDominanceLoss: 0.100000001
 m_trunkProtection: true
 m_maxFlowLength: 0
 m_lightPruningFactor: 0
 m_branchStrength: 0.5
 m_branchStrengthThicknessFactor: 3
-m_branchStrengthLightingThreshold: 0.300000012
+m_branchStrengthLightingThreshold: 0.159999996
 m_branchStrengthLightingLoss: 0.899999976
 m_branchBreakingFactor: 1
-m_branchBreakingMultiplier: 0.100000001
+m_branchBreakingMultiplier: 0.5
 m_leafBudCount: 1
 m_leafGrowthRate: 18
 m_leafBudFlushingProbabilityTemperatureRange: [1, 1, 45, 60]

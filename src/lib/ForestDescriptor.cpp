@@ -63,7 +63,7 @@ void ForestPatch::InstantiatePatch(const bool setParent, const bool setSimulatio
 		tree->m_treeModel.m_treeGrowthSettings = m_treeGrowthSettings;
 		tree->m_treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
 		if (setParent) scene->SetParent(treeEntity, parent);
-
+		tree->m_startTime = glm::linearRand(0.0f, m_startTimeMax);
 		tree->m_lowBranchPruning = glm::mix(m_minLowBranchPruning, m_maxLowBranchPruning, glm::abs(glm::perlin(offset + gt.GetPosition())));
 		tree->m_growthRateMultiplier = glm::mix(m_minGrowthRate, m_maxGrowthRate, glm::abs(glm::perlin(offset2 + gt.GetPosition())));
 	}
@@ -92,6 +92,8 @@ void ForestPatch::Serialize(YAML::Emitter& out)
 	out << YAML::Key << "m_minLowBranchPruning" << YAML::Value << m_minLowBranchPruning;
 	out << YAML::Key << "m_maxLowBranchPruning" << YAML::Value << m_maxLowBranchPruning;
 	out << YAML::Key << "m_simulationTime" << YAML::Value << m_simulationTime;
+	out << YAML::Key << "m_startTimeMax" << YAML::Value << m_startTimeMax;
+
 	m_treeDescriptor.Save("m_treeDescriptor", out);
 
 	m_simulationSettings.Save("m_simulationSettings", out);
@@ -110,6 +112,7 @@ void ForestPatch::Deserialize(const YAML::Node& in)
 	if (in["m_minLowBranchPruning"]) m_minLowBranchPruning = in["m_minLowBranchPruning"].as<float>();
 	if (in["m_maxLowBranchPruning"]) m_maxLowBranchPruning = in["m_maxLowBranchPruning"].as<float>();
 	if (in["m_simulationTime"]) m_simulationTime = in["m_simulationTime"].as<float>();
+	if (in["m_startTimeMax"]) m_startTimeMax = in["m_startTimeMax"].as<float>();
 	m_treeDescriptor.Load("m_treeDescriptor", in);
 
 	m_simulationSettings.Load("m_simulationSettings", in);
@@ -139,6 +142,7 @@ void ForestPatch::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 	ImGui::DragFloat("Min low branch pruning", &m_minLowBranchPruning, 0.01f, 0.f, m_maxLowBranchPruning);
 	ImGui::DragFloat("Max low branch pruning", &m_maxLowBranchPruning, 0.01f, m_minLowBranchPruning, 1.f);
 	ImGui::DragFloat("Simulation time", &m_simulationTime, 0.1f, 0.0f, 100.f);
+	ImGui::DragFloat("Start time max", &m_startTimeMax, 0.01f, 0.0f, 10.f);
 
 	if (ImGui::Button("Instantiate")) {
 		InstantiatePatch(setParent);

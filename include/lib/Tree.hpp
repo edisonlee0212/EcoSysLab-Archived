@@ -68,6 +68,7 @@ namespace EcoSysLab {
 		float m_lowBranchPruning = 0.f;
 		float m_crownShynessDistance = 0.f;
 		float m_growthRateMultiplier = 1.f;
+		float m_startTime = 0.f;
 		void BuildStrandModel();
 		
 		std::shared_ptr<Strands> GenerateStrands() const;
@@ -114,6 +115,7 @@ namespace EcoSysLab {
 		AssetRef m_treeDescriptor;
 		bool m_enableHistory = false;
 		int m_historyIteration = 30;
+		
 		void ClearSkeletalGraph() const;
 		void GenerateSkeletalGraph(const SkeletalGraphSettings& skeletalGraphSettings, SkeletonNodeHandle baseNodeHandle, const std::shared_ptr<Mesh> &pointMeshSample, const std::shared_ptr<Mesh>& lineMeshSample) const;
 

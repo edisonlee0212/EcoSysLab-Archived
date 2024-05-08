@@ -113,7 +113,7 @@ void EcoSysLabLayer::Visualization() {
 			m_needFlowUpdateForSelection = true;
 			m_operatorMode = static_cast<unsigned>(OperatorMode::Select);
 		}
-		else if(m_selectedTree.GetIndex() != 0){
+		else if (m_selectedTree.GetIndex() != 0) {
 			m_selectedTree = Entity();
 			m_needFlowUpdateForSelection = true;
 		}
@@ -174,7 +174,7 @@ void EcoSysLabLayer::Visualization() {
 				{
 					std::vector<ParticleInfo> particleInfos;
 					particleInfos.resize(numVoxels);
-					
+
 					Jobs::RunParallelFor(numVoxels, [&](unsigned i) {
 						const auto coordinate = voxelGrid.GetCoordinate(i);
 						particleInfos[i].m_instanceMatrix.m_value =
@@ -189,7 +189,7 @@ void EcoSysLabLayer::Visualization() {
 				{
 					std::vector<ParticleInfo> particleInfos;
 					particleInfos.resize(numVoxels);
-					
+
 					Jobs::RunParallelFor(numVoxels, [&](unsigned i) {
 						const auto coordinate = voxelGrid.GetCoordinate(i);
 						const auto& voxel = voxelGrid.Peek(coordinate);
@@ -369,7 +369,7 @@ void EcoSysLabLayer::Visualization() {
 							ImGui::PopStyleVar();
 						}
 #ifdef BUILD_WITH_RAYTRACER
-						else if(rayTracerLayer){
+						else if (rayTracerLayer) {
 							ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{ 0, 0 });
 							if (ImGui::Begin("Scene (RT)")) {
 								if (ImGui::BeginChild("RaySceneRenderer", ImVec2(0, 0), false)) {
@@ -624,9 +624,9 @@ void EcoSysLabLayer::Visualization() {
 			editorLayer->DrawGizmoMeshInstancedColored(
 				Resources::GetResource<Mesh>("PRIMITIVE_CUBE"), m_visualizationCamera,
 				m_shadowGridParticleInfoList,
-				glm::mat4(1.0f), 1.0f, gizmoSettings);			
+				glm::mat4(1.0f), 1.0f, gizmoSettings);
 		}
-		if(m_showLightingGrid)
+		if (m_showLightingGrid)
 		{
 			editorLayer->DrawGizmoMeshInstancedColored(
 				Resources::GetResource<Mesh>("PRIMITIVE_CUBE"), m_visualizationCamera,
@@ -750,8 +750,8 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 		const std::vector<Entity>* treeEntities =
 			scene->UnsafeGetPrivateComponentOwnersList<Tree>();
 		if (treeEntities && !treeEntities->empty()) {
-			
-			
+
+
 			ImGui::Text("Editing");
 			if (scene->IsEntityValid(m_selectedTree)) {
 				const auto& tree = scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock();
@@ -763,7 +763,7 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 							treeVisualizer.m_selectedInternodeHandle = -1;
 							treeVisualizer.m_selectedInternodeHierarchyList.clear();
 						}
-						switch(static_cast<OperatorMode>(m_operatorMode))
+						switch (static_cast<OperatorMode>(m_operatorMode))
 						{
 						case OperatorMode::Select:
 							ImGui::Text("Press T to cut off entire node, press R to cut at point of selection.");
@@ -887,7 +887,7 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 				ClearStrandModelMeshes();
 			}
 			ImGui::Separator();
-			
+
 			if (ImGui::TreeNode("Auto geometry generation")) {
 				ImGui::Checkbox("Auto generate mesh", &m_autoGenerateMeshAfterEditing);
 				ImGui::Checkbox("Auto generate Skeletal Graph Per Frame", &m_autoGenerateSkeletalGraphEveryFrame);
@@ -1253,7 +1253,7 @@ void EcoSysLabLayer::UpdateFlows(const std::vector<Entity>* treeEntities, const 
 
 		m_shootStemSegments.resize(branchLastStartIndex * 3);
 		m_shootStemPoints.resize(branchLastStartIndex * 6);
-		
+
 		{
 			std::vector<ParticleInfo> foliageMatrices;
 			std::vector<ParticleInfo> fruitMatrices;
@@ -1526,11 +1526,11 @@ void EcoSysLabLayer::SoilVisualizationScalar(VoxelSoilModel& soilModel) {
 
 void EcoSysLabLayer::SoilVisualizationVector(VoxelSoilModel& soilModel) {
 	const auto numVoxels = soilModel.m_resolution.x * soilModel.m_resolution.y * soilModel.m_resolution.z;
-	
+
 	if (m_updateVectorMatrices) {
 		std::vector<ParticleInfo> particleInfos;
 		particleInfos.resize(numVoxels);
-		
+
 		const auto actualVectorMultiplier = m_vectorMultiplier * soilModel.m_dx;
 		switch (static_cast<SoilProperty>(m_vectorSoilProperty)) {
 			/*
@@ -1587,7 +1587,7 @@ void EcoSysLabLayer::SoilVisualizationVector(VoxelSoilModel& soilModel) {
 		m_groundFruitMatrices->SetParticleInfos(particleInfos);
 		m_updateVectorMatrices = false;
 	}
-	
+
 	const auto editorLayer = Application::GetLayer<EditorLayer>();
 	GizmoSettings gizmoSettings;
 	gizmoSettings.m_drawSettings.m_blending = true;
@@ -1763,14 +1763,10 @@ void EcoSysLabLayer::Simulate(const SimulationSettings& simulationSettings) {
 			soil->m_soilModel.Step();
 		}
 		for (const auto& treeEntity : *treeEntities) {
-			if (!scene->IsEntityEnabled(treeEntity)) return;
-			auto gt = scene->GetDataComponent<GlobalTransform>(treeEntity);
 			auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
 			tree->m_climate = climate;
 			tree->m_soil = soil;
-
 			tree->m_crownShynessDistance = simulationSettings.m_crownShynessDistance;
-			
 		}
 		climate->PrepareForGrowth();
 		std::vector<bool> grownStat{};
@@ -1780,8 +1776,8 @@ void EcoSysLabLayer::Simulate(const SimulationSettings& simulationSettings) {
 			if (!scene->IsEntityEnabled(treeEntity)) return;
 			const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
 			if (!tree->IsEnabled()) return;
+			if (tree->m_startTime > m_time) return;
 			if (simulationSettings.m_maxNodeCount > 0 && tree->m_treeModel.RefShootSkeleton().PeekSortedNodeList().size() >= simulationSettings.m_maxNodeCount) return;
-			auto gt = scene->GetDataComponent<GlobalTransform>(treeEntity);
 			grownStat[threadIndex] = tree->TryGrow(simulationSettings.m_deltaTime, true);
 			});
 
@@ -1835,35 +1831,39 @@ void EcoSysLabLayer::Simulate(const SimulationSettings& simulationSettings) {
 		}
 		m_lastUsedTime = Times::Now() - time;
 		m_totalTime += m_lastUsedTime;
-
+		bool treeGrown = false;
 		for (int i = 0; i < grownStat.size(); i++)
 		{
 			if (grownStat[i])
 			{
-				m_needFullFlowUpdate = true;
-
-				int totalInternodeSize = 0;
-				int totalFlowSize = 0;
-				int totalRootNodeSize = 0;
-				int totalRootFlowSize = 0;
-				int totalLeafSize = 0;
-				int totalFruitSize = 0;
-				for (int i = 0; i < treeEntities->size(); i++) {
-					auto treeEntity = treeEntities->at(i);
-					auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
-					auto& treeModel = tree->m_treeModel;
-					totalInternodeSize += treeModel.RefShootSkeleton().PeekSortedNodeList().size();
-					totalFlowSize += treeModel.RefShootSkeleton().PeekSortedFlowList().size();
-					totalLeafSize += treeModel.GetLeafCount();
-					totalFruitSize += treeModel.GetFruitCount();
-				}
-				m_internodeSize = totalInternodeSize;
-				m_shootStemSize = totalFlowSize;
-				m_rootNodeSize = totalRootNodeSize;
-				m_rootStemSize = totalRootFlowSize;
-				m_leafSize = totalLeafSize;
-				m_fruitSize = totalFruitSize;
+				treeGrown = true;
 			}
+		}
+		if (treeGrown)
+		{
+			m_needFullFlowUpdate = true;
+
+			int totalInternodeSize = 0;
+			int totalFlowSize = 0;
+			int totalRootNodeSize = 0;
+			int totalRootFlowSize = 0;
+			int totalLeafSize = 0;
+			int totalFruitSize = 0;
+			for (auto treeEntity : *treeEntities)
+			{
+				auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
+				auto& treeModel = tree->m_treeModel;
+				totalInternodeSize += treeModel.RefShootSkeleton().PeekSortedNodeList().size();
+				totalFlowSize += treeModel.RefShootSkeleton().PeekSortedFlowList().size();
+				totalLeafSize += treeModel.GetLeafCount();
+				totalFruitSize += treeModel.GetFruitCount();
+			}
+			m_internodeSize = totalInternodeSize;
+			m_shootStemSize = totalFlowSize;
+			m_rootNodeSize = totalRootNodeSize;
+			m_rootStemSize = totalRootFlowSize;
+			m_leafSize = totalLeafSize;
+			m_fruitSize = totalFruitSize;
 		}
 	}
 }

@@ -147,7 +147,7 @@ bool TreeModel::Grow(float deltaTime, const glm::mat4& globalTransform, ClimateM
 			const auto totalFlux = glm::min(totalShootFlux.m_value, totalRootFlux.m_value);
 			CalculateInternodeStrength(sortedNodeList, shootGrowthController);
 			const float requiredVigor = CalculateGrowthPotential(sortedNodeList, shootGrowthController);
-			CalculateGrowthRate(sortedNodeList, glm::clamp(totalFlux / requiredVigor * overrideGrowthRate, 0.f, 1.f));
+			CalculateGrowthRate(sortedNodeList, overrideGrowthRate);
 		}
 		for (auto it = sortedNodeList.rbegin(); it != sortedNodeList.rend(); ++it) {
 			const bool graphChanged = GrowInternode(climateModel, *it, shootGrowthController);
