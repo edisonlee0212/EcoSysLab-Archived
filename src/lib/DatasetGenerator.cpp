@@ -60,9 +60,10 @@ void DatasetGenerator::GenerateTreeTrunkMesh(const std::string& treeParametersPa
 	tree->m_treeDescriptor = treeDescriptor;
 	tree->m_treeModel.m_treeGrowthSettings.m_useSpaceColonization = false;
 	Application::Loop();
+	ecoSysLabLayer->m_simulationSettings.m_deltaTime = deltaTime;
 	for (int i = 0; i < maxIterations; i++)
 	{
-		ecoSysLabLayer->Simulate(deltaTime);
+		ecoSysLabLayer->Simulate();
 		if (tree->m_treeModel.RefShootSkeleton().PeekSortedNodeList().size() >= maxTreeNodeCount)
 		{
 			break;
@@ -162,9 +163,11 @@ void DatasetGenerator::GenerateTreeMesh(const std::string& treeParametersPath, f
 	tree->m_treeDescriptor = treeDescriptor;
 	tree->m_treeModel.m_treeGrowthSettings.m_useSpaceColonization = false;
 	Application::Loop();
+	ecoSysLabLayer->m_simulationSettings.m_deltaTime = deltaTime;
+
 	for (int i = 0; i < maxIterations; i++)
 	{
-		ecoSysLabLayer->Simulate(deltaTime);
+		ecoSysLabLayer->Simulate();
 		if (tree->m_treeModel.RefShootSkeleton().PeekSortedNodeList().size() >= maxTreeNodeCount)
 		{
 			break;
@@ -231,9 +234,11 @@ void DatasetGenerator::GenerateTreeMesh(const std::string& treeParametersPath, f
 	Application::Loop();
 	int testIndex = 0;
 	std::filesystem::path basePath = treeMeshOutputPath;
+	ecoSysLabLayer->m_simulationSettings.m_deltaTime = deltaTime;
+
 	for (int i = 0; i < maxIterations; i++)
 	{
-		ecoSysLabLayer->Simulate(deltaTime);
+		ecoSysLabLayer->Simulate();
 		if (tree->m_treeModel.RefShootSkeleton().PeekSortedNodeList().size() >= targetTreeNodeCount[testIndex])
 		{
 			auto copyPath = basePath;
@@ -304,9 +309,11 @@ void DatasetGenerator::GeneratePointCloudForTree(const TreePointCloudPointSettin
 	tree->m_treeDescriptor = treeDescriptor;
 	tree->m_treeModel.m_treeGrowthSettings.m_useSpaceColonization = false;
 	Application::Loop();
+	ecoSysLabLayer->m_simulationSettings.m_deltaTime = deltaTime;
+
 	for (int i = 0; i < maxIterations; i++)
 	{
-		ecoSysLabLayer->Simulate(deltaTime);
+		ecoSysLabLayer->Simulate();
 		if (tree->m_treeModel.RefShootSkeleton().PeekSortedNodeList().size() >= maxTreeNodeCount)
 		{
 			break;
@@ -391,10 +398,11 @@ void DatasetGenerator::GeneratePointCloudForForestPatch(
 	forestPatch->InstantiatePatch(false);
 	
 	ecoSysLabLayer->m_simulationSettings.m_maxNodeCount = maxTreeNodeCount;
-	
+	ecoSysLabLayer->m_simulationSettings.m_deltaTime = deltaTime;
+
 	for (int i = 0; i < maxIterations; i++)
 	{
-		ecoSysLabLayer->Simulate(deltaTime);
+		ecoSysLabLayer->Simulate();
 	}
 	ecoSysLabLayer->GenerateMeshes(meshGeneratorSettings);
 	Application::Loop();

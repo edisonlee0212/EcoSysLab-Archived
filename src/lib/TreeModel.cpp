@@ -47,7 +47,7 @@ void TreeModel::RegisterVoxel(const glm::mat4& globalTransform, ClimateModel& cl
 			InternodeVoxelRegistration registration;
 			registration.m_position = worldPosition;
 			registration.m_nodeHandle = *it;
-			registration.m_treeModelIndex = m_index;
+			registration.m_treeSkeletonIndex = m_shootSkeleton.m_data.m_index;
 			registration.m_thickness = internodeInfo.m_thickness;
 			environmentGrid.AddNode(registration);
 		}
@@ -1146,7 +1146,7 @@ int TreeModel::GetFruitCount() const
 
 bool TreeModel::PruneInternodes(const glm::mat4& globalTransform, ClimateModel& climateModel, const ShootGrowthController& shootGrowthController) {
 
-	const auto maxDistance = m_shootSkeleton.PeekNode(0).m_info.m_endDistance;
+	
 	const auto& sortedInternodeList = m_shootSkeleton.PeekSortedNodeList();
 
 	bool rootToEndPruned = false;
@@ -1175,7 +1175,7 @@ bool TreeModel::PruneInternodes(const glm::mat4& globalTransform, ClimateModel& 
 				}
 			}
 		}
-		const float pruningProbability = shootGrowthController.m_rootToEndPruningFactor(m_shootSkeleton, internode) * m_currentDeltaTime;
+		const float pruningProbability = shootGrowthController.m_rootToEndPruningFactor(globalTransform, climateModel, m_shootSkeleton, internode) * m_currentDeltaTime;
 		if (!pruning && pruningProbability > glm::linearRand(0.0f, 1.0f)) pruning = true;
 
 		if (pruning)
@@ -1213,40 +1213,9 @@ bool TreeModel::PruneInternodes(const glm::mat4& globalTransform, ClimateModel& 
 			}
 		}
 
-		const float pruningProbability = shootGrowthController.m_endToRootPruningFactor(m_shootSkeleton, internode) * m_currentDeltaTime;
+		const float pruningProbability = shootGrowthController.m_endToRootPruningFactor(globalTransform, climateModel, m_shootSkeleton, internode) * m_currentDeltaTime;
 		if (!pruning && pruningProbability > glm::linearRand(0.0f, 1.0f)) pruning = true;
-		bool lowBranchPruning = false;
-		if (!pruning && maxDistance > 5.0f * shootGrowthController.m_internodeLength && !internode.IsApical() &&
-			(internode.m_info.m_rootDistance / maxDistance) < shootGrowthController.m_lowBranchPruning) {
-			const auto parentHandle = internode.GetParentHandle();
-			if (parentHandle != -1) {
-				const auto& parent = m_shootSkeleton.PeekNode(parentHandle);
-				if (parent.PeekChildHandles().size() > 1 && (
-					shootGrowthController.m_lowBranchPruningThicknessFactor == 0.0f
-					|| internode.m_info.m_thickness / parent.m_info.m_thickness < shootGrowthController.m_lowBranchPruningThicknessFactor))
-				{
-					lowBranchPruning = true;
-				}
-			}
-
-		}
-		bool pruneByCrownShyness = false;
-		if (!pruning && m_crownShynessDistance > 0.f && internode.IsEndNode()) {
-			//const glm::vec3 startPosition = globalTransform * glm::vec4(internode.m_info.m_globalPosition, 1.0f);
-			const glm::vec3 endPosition = globalTransform * glm::vec4(internode.m_info.GetGlobalEndPosition(), 1.0f);
-			climateModel.m_environmentGrid.m_voxel.ForEach(endPosition, m_crownShynessDistance * 2.0f, [&](EnvironmentVoxel& data)
-				{
-					if (pruneByCrownShyness) return;
-					for (const auto& i : data.m_internodeVoxelRegistrations)
-					{
-						if (i.m_treeModelIndex == m_index) continue;
-						if (glm::distance(endPosition, i.m_position) < m_crownShynessDistance)
-							pruneByCrownShyness = true;
-					}
-				}
-			);
-		}
-		if (pruning || pruneByCrownShyness || lowBranchPruning)
+		if (pruning)
 		{
 			PruneInternode(internodeHandle);
 			endToRootPruned = true;

@@ -125,16 +125,6 @@ namespace EcoSysLab
 		bool m_trunkProtection = false;
 
 		int m_maxFlowLength = 0;
-		/**
-		* \brief The limit of lateral branches being cut off when too close to the
-		* root.
-		*/
-		float m_lowBranchPruning = 0.15f;
-		/**
-		* \brief The limit of lateral branches being cut off when too close to the
-		* root.
-		*/
-		float m_lowBranchPruningThicknessFactor = 0.0f;
 
 		/**
 		 * \brief The pruning factor for branch because of absence of light

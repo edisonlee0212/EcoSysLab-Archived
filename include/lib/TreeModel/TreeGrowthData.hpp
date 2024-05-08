@@ -126,6 +126,8 @@ namespace EcoSysLab
 
 		int m_maxLevel = 0;
 		int m_maxOrder = 0;
+
+		unsigned m_index = 0;
 	};
 
 

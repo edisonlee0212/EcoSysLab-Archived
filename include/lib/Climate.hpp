@@ -4,8 +4,6 @@
 using namespace EvoEngine;
 namespace EcoSysLab
 {
-	struct SimulationSettings;
-
 	class ClimateDescriptor : public IAsset {
 	public:
 		ClimateParameters m_climateParameters;

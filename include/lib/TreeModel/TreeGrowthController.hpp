@@ -112,23 +112,13 @@ namespace EcoSysLab
 #pragma region Pruning
 		std::function<float(const SkeletonNode<InternodeGrowthData>& internode)> m_breakingForce;
 		/**
-		* \brief The limit of lateral branches being cut off when too close to the
-		* root.
-		*/
-		float m_lowBranchPruning;
-		/**
-		* \brief The limit of lateral branches being cut off when too close to the
-		* root.
-		*/
-		float m_lowBranchPruningThicknessFactor;
+		 * \brief The The impact of the amount of incoming light on the shedding of end internodes.
+		 */
+		std::function<float(const glm::mat4& globalTransform, ClimateModel& climateModel, const ShootSkeleton& shootSkeleton, const SkeletonNode<InternodeGrowthData>& internode)> m_endToRootPruningFactor;
 		/**
 		 * \brief The The impact of the amount of incoming light on the shedding of end internodes.
 		 */
-		std::function<float(const ShootSkeleton& shootSkeleton, const SkeletonNode<InternodeGrowthData>& internode)> m_endToRootPruningFactor;
-		/**
-		 * \brief The The impact of the amount of incoming light on the shedding of end internodes.
-		 */
-		std::function<float(const ShootSkeleton& shootSkeleton, const SkeletonNode<InternodeGrowthData>& internode)> m_rootToEndPruningFactor;
+		std::function<float(const glm::mat4& globalTransform, ClimateModel& climateModel, const ShootSkeleton& shootSkeleton, const SkeletonNode<InternodeGrowthData>& internode)> m_rootToEndPruningFactor;
 #pragma endregion
 #pragma region Leaf
 		/**

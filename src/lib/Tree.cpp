@@ -152,7 +152,7 @@ void Tree::Reset()
 	ClearTwigsStrandRenderer();
 	m_treeModel.Clear();
 	m_strandModel = {};
-	m_treeModel.m_index = GetOwner().GetIndex();
+	m_treeModel.m_shootSkeleton.m_data.m_index = GetOwner().GetIndex();
 	m_treeVisualizer.Reset(m_treeModel);
 }
 
@@ -2317,7 +2317,7 @@ void Tree::RegisterVoxel()
 	const auto scene = GetScene();
 	const auto owner = GetOwner();
 	const auto globalTransform = scene->GetDataComponent<GlobalTransform>(owner).m_value;
-	m_treeModel.m_index = owner.GetIndex();
+	m_treeModel.m_shootSkeleton.m_data.m_index = owner.GetIndex();
 	const auto climate = m_climate.Get<Climate>();
 	m_treeModel.RegisterVoxel(globalTransform, climate->m_climateModel, m_shootGrowthController);
 }
@@ -2727,7 +2727,7 @@ void Tree::PrepareController(const std::shared_ptr<ShootDescriptor>& shootDescri
 			}
 			return leafDamage;
 		};
-	m_shootGrowthController.m_endToRootPruningFactor = [&](const ShootSkeleton& shootSkeleton, const SkeletonNode<InternodeGrowthData>& internode)
+	m_shootGrowthController.m_endToRootPruningFactor = [&](const glm::mat4& globalTransform, ClimateModel& climateModel, const ShootSkeleton& shootSkeleton, const SkeletonNode<InternodeGrowthData>& internode)
 		{
 			if (shootDescriptor->m_trunkProtection && internode.m_data.m_order == 0)
 			{
@@ -2748,19 +2748,46 @@ void Tree::PrepareController(const std::shared_ptr<ShootDescriptor>& shootDescri
 			}
 			return pruningProbability;
 		};
-	m_shootGrowthController.m_rootToEndPruningFactor = [&](const ShootSkeleton& shootSkeleton, const SkeletonNode<InternodeGrowthData>& internode)
+	m_shootGrowthController.m_rootToEndPruningFactor = [&](const glm::mat4& globalTransform, ClimateModel& climateModel, const ShootSkeleton& shootSkeleton, const SkeletonNode<InternodeGrowthData>& internode)
 		{
 			if (shootDescriptor->m_trunkProtection && internode.m_data.m_order == 0)
 			{
 				return 0.f;
 			}
-
-			float pruningProbability = 0.0f;
+			
 			if (shootDescriptor->m_maxFlowLength != 0 && shootDescriptor->m_maxFlowLength < internode.m_info.m_chainIndex)
 			{
-				pruningProbability += 999.f;
+				return 999.f;
 			}
-			
+			const auto maxDistance = shootSkeleton.PeekNode(0).m_info.m_endDistance;
+			if (maxDistance > 5.0f * m_shootGrowthController.m_internodeLength && internode.m_data.m_order > 0 &&
+				internode.m_info.m_rootDistance / maxDistance < m_lowBranchPruning) {
+				const auto parentHandle = internode.GetParentHandle();
+				if (parentHandle != -1) {
+					const auto& parent = shootSkeleton.PeekNode(parentHandle);
+					if (parent.PeekChildHandles().size() > 1)
+					{
+						return 999.f;
+					}
+				}
+			}
+			if (m_crownShynessDistance > 0.f && internode.IsEndNode()) {
+				const glm::vec3 endPosition = globalTransform * glm::vec4(internode.m_info.GetGlobalEndPosition(), 1.0f);
+				bool pruneByCrownShyness = false;
+				climateModel.m_environmentGrid.m_voxel.ForEach(endPosition, m_crownShynessDistance * 2.0f, [&](const EnvironmentVoxel& data)
+					{
+						if (pruneByCrownShyness) return;
+						for (const auto& i : data.m_internodeVoxelRegistrations)
+						{
+							if (i.m_treeSkeletonIndex == shootSkeleton.m_data.m_index) continue;
+							if (glm::distance(endPosition, i.m_position) < m_crownShynessDistance)
+								pruneByCrownShyness = true;
+						}
+					}
+				);
+				if (pruneByCrownShyness) return 999.f;
+			}
+			float pruningProbability = 0.0f;
 			return pruningProbability;
 		};
 }

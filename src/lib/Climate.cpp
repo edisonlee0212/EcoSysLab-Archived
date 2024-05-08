@@ -89,7 +89,7 @@ void Climate::PrepareForGrowth()
 			boundChanged = true;
 			//EVOENGINE_LOG("Shadow grid resized!");
 		}
-		tree->m_treeModel.m_crownShynessDistance = ecoSysLabLayer->m_simulationSettings.m_crownShynessDistance;
+		tree->m_crownShynessDistance = ecoSysLabLayer->m_simulationSettings.m_crownShynessDistance;
 	}
 	if (boundChanged) estimator.m_voxel.Initialize(estimator.m_voxelSize, minBound, maxBound);
 	estimator.m_voxel.Reset();

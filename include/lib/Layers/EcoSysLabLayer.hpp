@@ -4,6 +4,7 @@
 #include "Soil.hpp"
 #include "Climate.hpp"
 #include "Strands.hpp"
+#include "SimulationSettings.hpp"
 using namespace EvoEngine;
 namespace EcoSysLab {
 	struct Fruit {
@@ -24,20 +25,6 @@ namespace EcoSysLab {
 		GlobalTransform m_globalTransform;
 		float m_maturity = 0.0f;
 		float m_health = 1.0f;
-	};
-
-	struct SimulationSettings
-	{
-		int m_iteration = 0;
-		float m_deltaTime = 0.0822f;
-		bool m_soilSimulation = false;
-		bool m_autoClearFruitAndLeaves = true;
-		float m_crownShynessDistance = 0.15f;
-		int m_maxNodeCount = 0;
-
-		float m_minGrowthRate = 0.8f;
-		float m_maxGrowthRate = 1.f;
-		LightingEstimationSettings m_lightingEstimationSettings;
 	};
 
 	class EcoSysLabLayer : public ILayer {
@@ -175,7 +162,8 @@ namespace EcoSysLab {
 
 		[[nodiscard]] glm::vec2 GetMouseSceneCameraPosition() const;
 
-		void Simulate(float deltaTime);
+		void Simulate(const SimulationSettings& simulationSettings);
+		void Simulate();
 
 		void GenerateMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings) const;
 		void GenerateSkeletalGraphs(const SkeletalGraphSettings& skeletalGraphSettings) const;

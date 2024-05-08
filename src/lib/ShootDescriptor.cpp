@@ -125,10 +125,6 @@ void ShootDescriptor::PrepareController(ShootGrowthController& shootGrowthContro
 		};
 	shootGrowthController.m_apicalDominanceLoss = m_apicalDominanceLoss;
 
-	shootGrowthController.m_lowBranchPruning = m_lowBranchPruning;
-	shootGrowthController.m_lowBranchPruningThicknessFactor = m_lowBranchPruningThicknessFactor;
-	
-
 
 	shootGrowthController.m_leafGrowthRate = m_leafGrowthRate;
 	shootGrowthController.m_fruitGrowthRate = m_fruitGrowthRate;
@@ -225,8 +221,6 @@ void ShootDescriptor::Serialize(YAML::Emitter& out)
 
 	out << YAML::Key << "m_trunkProtection" << YAML::Value << m_trunkProtection;
 	out << YAML::Key << "m_maxFlowLength" << YAML::Value << m_maxFlowLength;
-	out << YAML::Key << "m_lowBranchPruning" << YAML::Value << m_lowBranchPruning;
-	out << YAML::Key << "m_lowBranchPruningThicknessFactor" << YAML::Value << m_lowBranchPruningThicknessFactor;
 	out << YAML::Key << "m_lightPruningFactor" << YAML::Value << m_lightPruningFactor;
 	out << YAML::Key << "m_branchStrength" << YAML::Value << m_branchStrength;
 	out << YAML::Key << "m_branchStrengthThicknessFactor" << YAML::Value << m_branchStrengthThicknessFactor;
@@ -299,8 +293,6 @@ void ShootDescriptor::Deserialize(const YAML::Node& in)
 
 	if (in["m_trunkProtection"]) m_trunkProtection = in["m_trunkProtection"].as<bool>();
 	if (in["m_maxFlowLength"]) m_maxFlowLength = in["m_maxFlowLength"].as<int>();
-	if (in["m_lowBranchPruning"]) m_lowBranchPruning = in["m_lowBranchPruning"].as<float>();
-	if (in["m_lowBranchPruningThicknessFactor"]) m_lowBranchPruningThicknessFactor = in["m_lowBranchPruningThicknessFactor"].as<float>();
 	if (in["m_lightPruningFactor"]) m_lightPruningFactor = in["m_lightPruningFactor"].as<float>();
 	if (in["m_branchStrength"]) m_branchStrength = in["m_branchStrength"].as<float>();
 	if (in["m_branchStrengthThicknessFactor"]) m_branchStrengthThicknessFactor = in["m_branchStrengthThicknessFactor"].as<float>();
@@ -403,9 +395,6 @@ void ShootDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 	{
 		changed = ImGui::Checkbox("Trunk Protection", &m_trunkProtection) || changed;
 		changed = ImGui::DragInt("Max chain length", &m_maxFlowLength, 1) || changed;
-		changed = ImGui::DragFloat("Low branch pruning", &m_lowBranchPruning, 0.01f) || changed;
-
-		if (m_lowBranchPruning > 0.0f) changed = ImGui::DragFloat("Low branch pruning thickness factor", &m_lowBranchPruningThicknessFactor, 0.01f) || changed;
 		changed = ImGui::DragFloat("Light pruning threshold", &m_lightPruningFactor, 0.01f) || changed;
 		
 		changed = ImGui::DragFloat("Branch strength", &m_branchStrength, 0.01f, 0.0f) || changed;

@@ -20,7 +20,7 @@ namespace EcoSysLab
 	{
 		glm::vec3 m_position = glm::vec3(0.0f);
 		SkeletonNodeHandle m_nodeHandle = -1;
-		unsigned m_treeModelIndex = 0;
+		unsigned m_treeSkeletonIndex = 0;
 		float m_thickness = 0.0f;
 	};
 

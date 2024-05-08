@@ -145,14 +145,6 @@ std::shared_ptr<ShootDescriptor> ShootDescriptorGenerator::Generate()
 		{
 			retVal->m_apicalDominanceLoss += glm::mix(i.m_range.x, i.m_range.y, a); break;
 		}
-		case static_cast<unsigned>(ShootGrowthParameterType::LowBranchPruning):
-		{
-			retVal->m_lowBranchPruning += glm::mix(i.m_range.x, i.m_range.y, a); break;
-		}
-		case static_cast<unsigned>(ShootGrowthParameterType::LowBranchPruningThicknessFactor):
-		{
-			retVal->m_lowBranchPruningThicknessFactor += glm::mix(i.m_range.x, i.m_range.y, a); break;
-		}
 		
 		default:break;
 		}
