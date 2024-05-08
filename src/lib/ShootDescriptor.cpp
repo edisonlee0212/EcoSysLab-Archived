@@ -18,7 +18,18 @@ void ShootDescriptor::PrepareController(ShootGrowthController& shootGrowthContro
 			}
 			return FLT_MAX;
 		};
-
+	shootGrowthController.m_sagging = [&](const SkeletonNode<InternodeGrowthData>& internode)
+		{
+			const auto newSagging = glm::min(
+				m_saggingFactorThicknessReductionMax.z,
+				m_saggingFactorThicknessReductionMax.x *
+				internode.m_data.m_saggingForce /
+				glm::pow(
+					internode.m_info.m_thickness /
+					m_endNodeThickness,
+					m_saggingFactorThicknessReductionMax.y));
+			return glm::max(internode.m_data.m_sagging, newSagging);
+		};
 	shootGrowthController.m_baseNodeApicalAngle = [&](const SkeletonNode<InternodeGrowthData>& internode)
 		{
 			return glm::gaussRand(m_baseNodeApicalAngleMeanVariance.x, m_baseNodeApicalAngleMeanVariance.y);
@@ -71,18 +82,7 @@ void ShootDescriptor::PrepareController(ShootGrowthController& shootGrowthContro
 		{
 			return m_horizontalTropism;
 		};
-	shootGrowthController.m_sagging = [&](const SkeletonNode<InternodeGrowthData>& internode)
-		{
-			const auto newSagging = glm::min(
-				m_saggingFactorThicknessReductionMax.z,
-				m_saggingFactorThicknessReductionMax.x *
-				internode.m_data.m_saggingForce /
-				glm::pow(
-					internode.m_info.m_thickness /
-					m_endNodeThickness,
-					m_saggingFactorThicknessReductionMax.y));
-			return glm::max(internode.m_data.m_sagging, newSagging);
-		};
+	
 
 	shootGrowthController.m_internodeStrength = [&](const SkeletonNode<InternodeGrowthData>& internode)
 		{

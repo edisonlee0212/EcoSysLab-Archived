@@ -1,5 +1,6 @@
 #pragma once
 #include "Tree.hpp"
+#include "SimulationSettings.hpp"
 using namespace EvoEngine;
 namespace EcoSysLab {
 
@@ -13,7 +14,8 @@ namespace EcoSysLab {
         glm::ivec2 m_gridSize = glm::ivec2(4, 4);
         AssetRef m_treeDescriptor;
         TreeGrowthSettings m_treeGrowthSettings{};
-        void InstantiatePatch(bool setParent);
+        SimulationSettings m_simulationSettings;
+        void InstantiatePatch(bool setParent = true, bool setSimulationSettings = true);
         void CollectAssetRef(std::vector<AssetRef>& list) override;
         void Serialize(YAML::Emitter& out) override;
         void Deserialize(const YAML::Node& in) override;

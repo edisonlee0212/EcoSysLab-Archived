@@ -680,7 +680,6 @@ void EcoSysLabLayer::Visualization() {
 void EcoSysLabLayer::ResetAllTrees(const std::vector<Entity>* treeEntities) {
 	const auto scene = Application::GetActiveScene();
 	m_time = 0;
-	m_simulationSettings.m_iteration = 0;
 	for (const auto& i : *treeEntities) {
 		const auto tree = scene->GetOrSetPrivateComponent<Tree>(i).lock();
 		tree->Reset();
@@ -895,7 +894,6 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 				ImGui::TreePop();
 			}
 			if (ImGui::TreeNodeEx("Stats")) {
-				ImGui::Text(("Simulated iteration: " + std::to_string(m_simulationSettings.m_iteration)).c_str());
 				ImGui::Text("Growth time: %.4f", m_lastUsedTime);
 				ImGui::Text("Total time: %.4f", m_totalTime);
 				ImGui::Text("Tree count: %d", treeEntities->size());
@@ -1759,12 +1757,13 @@ void EcoSysLabLayer::Simulate(const SimulationSettings& simulationSettings) {
 		}
 		for (const auto& treeEntity : *treeEntities) {
 			if (!scene->IsEntityEnabled(treeEntity)) return;
+			auto gt = scene->GetDataComponent<GlobalTransform>(treeEntity);
 			auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
 			tree->m_climate = climate;
 			tree->m_soil = soil;
 
 			tree->m_crownShynessDistance = simulationSettings.m_crownShynessDistance;
-			tree->m_lowBranchPruning = glm::linearRand(simulationSettings.m_minLowBranchPruning, simulationSettings.m_maxLowBranchPruning);
+			tree->m_lowBranchPruning = glm::mix(simulationSettings.m_minLowBranchPruning, simulationSettings.m_maxLowBranchPruning, glm::abs(glm::perlin(gt.GetPosition())));
 		}
 		climate->PrepareForGrowth();
 		std::vector<bool> grownStat{};

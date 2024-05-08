@@ -1,5 +1,7 @@
 #include "EnvironmentGrid.hpp"
+#include "SimulationSettings.hpp"
 using namespace EcoSysLab;
+
 
 float EnvironmentGrid::Sample(const glm::vec3& position, glm::vec3& lightDirection) const
 {
@@ -30,16 +32,16 @@ void EnvironmentGrid::AddShadowValue(const glm::vec3& position, const float valu
 	data.m_selfShadow += value;
 }
 
-void EnvironmentGrid::LightPropagation()
+void EnvironmentGrid::LightPropagation(const SimulationSettings& simulationSettings)
 {
 	const auto resolution = m_voxel.GetResolution();
-	const int shadowDiskSize = glm::ceil(m_settings.m_detectionRadius / m_voxelSize);
+	const int shadowDiskSize = glm::ceil(simulationSettings.m_detectionRadius / m_voxelSize);
 	Jobs::RunParallelFor(resolution.x * resolution.z, [&](unsigned i)
 		{
 			const int x = i / resolution.z;
 			const int z = i % resolution.z;
 			auto& targetVoxel = m_voxel.Ref(glm::ivec3(x, resolution.y - 1, z));
-			targetVoxel.m_lightIntensity = m_settings.m_skylightIntensity;
+			targetVoxel.m_lightIntensity = simulationSettings.m_skylightIntensity;
 		});
 	for (int y = resolution.y - 2; y >= 0; y--) {
 		Jobs::RunParallelFor(resolution.x * resolution.z, [&](unsigned i, unsigned workerIndex)
@@ -57,9 +59,9 @@ void EnvironmentGrid::LightPropagation()
 						const auto otherVoxelCenter = glm::ivec3(x + xOffset, y + 1, z + zOffset);
 						const auto positionDiff = m_voxel.GetPosition(otherVoxelCenter) - m_voxel.GetPosition(glm::ivec3(x, y, z));
 						const float distance = glm::length(positionDiff);
-						if (distance > m_settings.m_detectionRadius) continue;
+						if (distance > simulationSettings.m_detectionRadius) continue;
 						const float baseLossFactor = m_voxelSize / distance;
-						const float distanceLoss = glm::pow(glm::max(0.0f, baseLossFactor), m_settings.m_shadowDistanceLoss);
+						const float distanceLoss = glm::pow(glm::max(0.0f, baseLossFactor), simulationSettings.m_shadowDistanceLoss);
 						if (x + xOffset < 0 || x + xOffset > resolution.x - 1 || z + zOffset < 0 || z + zOffset > resolution.z - 1)
 						{
 							sum += distanceLoss;
@@ -73,11 +75,11 @@ void EnvironmentGrid::LightPropagation()
 					}
 				}
 				auto& voxel = m_voxel.Ref(glm::ivec3(x, y, z));
-				voxel.m_lightIntensity = glm::clamp(sum / max, 0.0f, 1.0f - m_settings.m_environmentLightIntensity) + m_settings.m_environmentLightIntensity;
+				voxel.m_lightIntensity = glm::clamp(sum / max, 0.0f, 1.0f - simulationSettings.m_environmentLightIntensity) + simulationSettings.m_environmentLightIntensity;
 			}
 		);
 	}
-	for (int iteration = 0; iteration < m_settings.m_blurIteration; iteration++) {
+	for (int iteration = 0; iteration < simulationSettings.m_blurIteration; iteration++) {
 		for (int y = resolution.y - 2; y >= 0; y--) {
 			Jobs::RunParallelFor(resolution.x * resolution.z, [&](unsigned i, unsigned workerIndex)
 				{
@@ -107,7 +109,7 @@ void EnvironmentGrid::LightPropagation()
 			);
 		}
 	}
-	const int lightSpaceSize = glm::ceil(m_settings.m_detectionRadius / m_voxelSize);
+	const int lightSpaceSize = glm::ceil(simulationSettings.m_detectionRadius / m_voxelSize);
 	for (int y = resolution.y - 1; y >= 0; y--) {
 		Jobs::RunParallelFor(resolution.x * resolution.z, [&](unsigned i)
 			{
@@ -124,7 +126,7 @@ void EnvironmentGrid::LightPropagation()
 							const auto otherVoxelCenter = glm::ivec3(x + xOffset, y + yOffset, z + zOffset);
 							const auto positionDiff = m_voxel.GetPosition(otherVoxelCenter) - m_voxel.GetPosition(glm::ivec3(x, y, z));
 							const float distance = glm::length(positionDiff);
-							if (distance > m_settings.m_detectionRadius) continue;
+							if (distance > simulationSettings.m_detectionRadius) continue;
 
 							if (x + xOffset < 0 || x + xOffset > resolution.x - 1 || z + zOffset < 0 || z + zOffset > resolution.z - 1)
 							{

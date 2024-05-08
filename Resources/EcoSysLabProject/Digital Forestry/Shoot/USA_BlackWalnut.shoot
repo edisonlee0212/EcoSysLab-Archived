@@ -22,10 +22,10 @@ m_apicalAngleMeanVariance: [0, 2]
 m_gravitropism: 0
 m_phototropism: 0
 m_horizontalTropism: 0.0500000007
-m_saggingFactorThicknessReductionMax: [0.00999999978, 3, 0.5]
+m_saggingFactorThicknessReductionMax: [0.00999999978, 2, 0.5]
 m_internodeLength: 0.0299999993
 m_internodeLengthThicknessFactor: 0.150000006
-m_endNodeThickness: 0.00300000003
+m_endNodeThickness: 0.00249999994
 m_thicknessAccumulationFactor: 0.449999988
 m_thicknessAgeFactor: 0
 m_internodeShadowFactor: 0.0199999996
@@ -40,8 +40,6 @@ m_apicalDominance: 1
 m_apicalDominanceLoss: 0.189999998
 m_trunkProtection: true
 m_maxFlowLength: 0
-m_lowBranchPruning: 0.150000006
-m_lowBranchPruningThicknessFactor: 0
 m_lightPruningFactor: 0
 m_branchStrength: 1
 m_branchStrengthThicknessFactor: 3

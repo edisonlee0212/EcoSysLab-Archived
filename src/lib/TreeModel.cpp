@@ -1066,7 +1066,7 @@ void TreeModel::CalculateBiomass(SkeletonNodeHandle internodeHandle, const Shoot
 	}
 	if (!internode.PeekChildHandles().empty() && internodeData.m_descendantTotalBiomass != 0.f) {
 		internodeData.m_descendantWeightCenter = positionedSum / internodeData.m_descendantTotalBiomass;
-		internodeData.m_desiredDescendantWeightCenter = positionedSum / internodeData.m_descendantTotalBiomass;
+		internodeData.m_desiredDescendantWeightCenter = desiredPositionSum / internodeData.m_descendantTotalBiomass;
 	}
 	else
 	{

@@ -11,7 +11,7 @@
 #include "EcoSysLabLayer.hpp"
 using namespace EcoSysLab;
 
-void ForestPatch::InstantiatePatch(const bool setParent)
+void ForestPatch::InstantiatePatch(const bool setParent, const bool setSimulationSettings)
 {
 	const auto scene = Application::GetActiveScene();
 	std::vector<GlobalTransform> treeMatrices;
@@ -61,6 +61,10 @@ void ForestPatch::InstantiatePatch(const bool setParent)
 		tree->m_treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
 		if (setParent) scene->SetParent(treeEntity, parent);
 	}
+	if(setSimulationSettings)
+	{
+		Application::GetLayer<EcoSysLabLayer>()->m_simulationSettings = m_simulationSettings;
+	}
 }
 
 void ForestPatch::CollectAssetRef(std::vector<AssetRef>& list)
@@ -77,6 +81,7 @@ void ForestPatch::Serialize(YAML::Emitter& out)
 	out << YAML::Key << "m_gridSize" << YAML::Value << m_gridSize;
 	m_treeDescriptor.Save("m_treeDescriptor", out);
 
+	m_simulationSettings.Save("m_simulationSettings", out);
 }
 
 void ForestPatch::Deserialize(const YAML::Node& in)
@@ -88,6 +93,7 @@ void ForestPatch::Deserialize(const YAML::Node& in)
 	if (in["m_gridSize"]) m_gridSize = in["m_gridSize"].as<glm::ivec2>();
 	m_treeDescriptor.Load("m_treeDescriptor", in);
 
+	m_simulationSettings.Load("m_simulationSettings", in);
 }
 
 void ForestPatch::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
@@ -101,6 +107,14 @@ void ForestPatch::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 	ImGui::DragFloat2("Rotation offset variance", &m_rotationOffsetVariance.x, 0.01f, 0.0f, 5.f);
 	static bool setParent = true;
 	ImGui::Checkbox("Set Parent", &setParent);
+	static bool setSimulationSettings = true;
+	ImGui::Checkbox("Set Simulation settings", &setSimulationSettings);
+	if (ImGui::TreeNodeEx("Simulation Settings", ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		m_simulationSettings.OnInspect(editorLayer);
+		ImGui::TreePop();
+	}
+
 	if (ImGui::Button("Instantiate")) {
 		InstantiatePatch(setParent);
 	}
