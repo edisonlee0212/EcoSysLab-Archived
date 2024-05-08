@@ -1,8 +1,8 @@
-m_gridDistance: [1, 1]
+m_gridDistance: [1.5, 1.5]
 m_positionOffsetMean: [0.25, 0.25]
 m_positionOffsetVariance: [0, 0]
 m_rotationOffsetVariance: [0, 0, 0]
-m_gridSize: [6, 6]
+m_gridSize: [5, 5]
 m_treeDescriptor:
   m_assetHandle: 1677674567687312750
   m_assetTypeName: TreeDescriptor

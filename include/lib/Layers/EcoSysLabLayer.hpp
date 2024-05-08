@@ -32,7 +32,7 @@ namespace EcoSysLab {
 		float m_deltaTime = 0.0822f;
 		bool m_soilSimulation = false;
 		bool m_autoClearFruitAndLeaves = true;
-		float m_crownShynessDistance = 0.1f;
+		float m_crownShynessDistance = 0.15f;
 		int m_maxNodeCount = 0;
 
 		float m_minGrowthRate = 0.8f;
