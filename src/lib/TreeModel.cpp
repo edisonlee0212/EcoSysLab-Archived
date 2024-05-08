@@ -1087,7 +1087,7 @@ void TreeModel::CalculateSaggingStress(const SkeletonNodeHandle internodeHandle,
 		internode.m_data.m_saggingStress = 0.f;
 		return;
 	}
-	const auto weightCenterRelativePosition = internode.m_info.m_globalPosition - internode.m_data.m_descendantWeightCenter;
+	const auto weightCenterRelativePosition = internode.m_data.m_desiredGlobalPosition - internode.m_data.m_desiredDescendantWeightCenter;
 	//const auto horizontalDistanceToEnd = glm::length(glm::vec2(weightCenterRelativePosition.x, weightCenterRelativePosition.z));
 	//const auto front = glm::normalize(internode.m_info.m_globalRotation * glm::vec3(0, 0, -1));
 	//const auto frontVector = internode.m_info.m_length * front;
@@ -1111,7 +1111,6 @@ void TreeModel::CalculateSaggingStress(const SkeletonNodeHandle internodeHandle,
 		internode.m_data.m_saggingForce = 0.f;
 	}
 	const auto breakingForce = shootGrowthController.m_breakingForce(internode);
-	const auto prevStress = internode.m_data.m_saggingStress;
 	internode.m_data.m_saggingStress = internode.m_data.m_saggingForce / breakingForce;
 }
 

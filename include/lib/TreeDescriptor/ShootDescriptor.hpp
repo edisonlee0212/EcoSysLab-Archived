@@ -145,6 +145,7 @@ namespace EcoSysLab
 		float m_branchStrengthThicknessFactor = 3.f;
 		float m_branchStrengthLightingThreshold = 0.f;
 		float m_branchStrengthLightingLoss = 0.f;
+		float m_branchBreakingMultiplier = 1.f;
 		float m_branchBreakingFactor = 1.f;
 #pragma endregion
 

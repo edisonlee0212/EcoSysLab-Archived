@@ -2744,7 +2744,7 @@ void Tree::PrepareController(const std::shared_ptr<ShootDescriptor>& shootDescri
 			}
 			if (internode.m_data.m_saggingStress > 1.)
 			{
-				pruningProbability += glm::pow(internode.m_data.m_saggingStress, shootDescriptor->m_branchBreakingFactor);
+				pruningProbability += shootDescriptor->m_branchBreakingMultiplier * glm::pow(internode.m_data.m_saggingStress, shootDescriptor->m_branchBreakingFactor);
 			}
 			return pruningProbability;
 		};
