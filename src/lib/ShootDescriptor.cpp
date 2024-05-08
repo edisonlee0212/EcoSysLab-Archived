@@ -20,15 +20,9 @@ void ShootDescriptor::PrepareController(ShootGrowthController& shootGrowthContro
 		};
 	shootGrowthController.m_sagging = [&](const SkeletonNode<InternodeGrowthData>& internode)
 		{
-			const auto newSagging = glm::min(
-				m_saggingFactorThicknessReductionMax.z,
-				m_saggingFactorThicknessReductionMax.x *
-				internode.m_data.m_saggingForce /
-				glm::pow(
-					internode.m_info.m_thickness /
-					m_endNodeThickness,
-					m_saggingFactorThicknessReductionMax.y));
-			return glm::max(internode.m_data.m_sagging, newSagging);
+			float strength = m_endNodeThickness * internode.m_data.m_saggingForce * m_gravityBendingStrength / glm::pow(internode.m_info.m_thickness / m_endNodeThickness, m_gravityBendingThicknessFactor);
+			strength = m_gravityBendingMax * (1.f - glm::exp(-glm::abs(strength)));
+			return strength;//glm::max(internode.m_data.m_sagging, strength);
 		};
 	shootGrowthController.m_baseNodeApicalAngle = [&](const SkeletonNode<InternodeGrowthData>& internode)
 		{
@@ -200,7 +194,10 @@ void ShootDescriptor::Serialize(YAML::Emitter& out)
 	out << YAML::Key << "m_gravitropism" << YAML::Value << m_gravitropism;
 	out << YAML::Key << "m_phototropism" << YAML::Value << m_phototropism;
 	out << YAML::Key << "m_horizontalTropism" << YAML::Value << m_horizontalTropism;
-	out << YAML::Key << "m_saggingFactorThicknessReductionMax" << YAML::Value << m_saggingFactorThicknessReductionMax;
+	out << YAML::Key << "m_gravityBendingStrength" << YAML::Value << m_gravityBendingStrength;
+	out << YAML::Key << "m_gravityBendingThicknessFactor" << YAML::Value << m_gravityBendingThicknessFactor;
+	out << YAML::Key << "m_gravityBendingMax" << YAML::Value << m_gravityBendingMax;
+
 	out << YAML::Key << "m_internodeLength" << YAML::Value << m_internodeLength;
 	out << YAML::Key << "m_internodeLengthThicknessFactor" << YAML::Value << m_internodeLengthThicknessFactor;
 	out << YAML::Key << "m_endNodeThickness" << YAML::Value << m_endNodeThickness;
@@ -271,7 +268,10 @@ void ShootDescriptor::Deserialize(const YAML::Node& in)
 	if (in["m_gravitropism"]) m_gravitropism = in["m_gravitropism"].as<float>();
 	if (in["m_phototropism"]) m_phototropism = in["m_phototropism"].as<float>();
 	if (in["m_horizontalTropism"]) m_horizontalTropism = in["m_horizontalTropism"].as<float>();
-	if (in["m_saggingFactorThicknessReductionMax"]) m_saggingFactorThicknessReductionMax = in["m_saggingFactorThicknessReductionMax"].as<glm::vec3>();
+	if (in["m_gravityBendingStrength"]) m_gravityBendingStrength = in["m_gravityBendingStrength"].as<float>();
+	if (in["m_gravityBendingThicknessFactor"]) m_gravityBendingThicknessFactor = in["m_gravityBendingThicknessFactor"].as<float>();
+	if (in["m_gravityBendingMax"]) m_gravityBendingMax = in["m_gravityBendingMax"].as<float>();
+
 	if (in["m_internodeLength"]) m_internodeLength = in["m_internodeLength"].as<float>();
 	if (in["m_internodeLengthThicknessFactor"]) m_internodeLengthThicknessFactor = in["m_internodeLengthThicknessFactor"].as<float>();
 	if (in["m_endNodeThickness"]) m_endNodeThickness = in["m_endNodeThickness"].as<float>();
@@ -362,10 +362,9 @@ void ShootDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 		changed = ImGui::DragFloat("Internode length thickness factor", &m_internodeLengthThicknessFactor, 0.0001f, 0.0f, 1.0f) || changed;
 		changed = ImGui::DragFloat3("Thickness min/factor/age", &m_endNodeThickness, 0.0001f, 0.0f, 1.0f, "%.6f") || changed;
 
-		changed = ImGui::DragFloat("Sagging strength", &m_saggingFactorThicknessReductionMax.x, 0.0001f, 0.0f, 10.0f, "%.5f") || changed;
-		changed = ImGui::DragFloat("Sagging thickness factor", &m_saggingFactorThicknessReductionMax.y, 0.01f, 0.0f, 10.0f, "%.5f") || changed;
-		changed = ImGui::DragFloat("Sagging max", &m_saggingFactorThicknessReductionMax.z, 0.001f, 0.0f, 1.0f, "%.5f") || changed;
-
+		changed = ImGui::DragFloat("Bending strength", &m_gravityBendingStrength, 0.01f, 0.0f, 1.0f, "%.3f") || changed;
+		changed = ImGui::DragFloat("Bending thickness factor", &m_gravityBendingThicknessFactor, 0.1f, 0.0f, 10.f, "%.3f") || changed;
+		changed = ImGui::DragFloat("Bending angle factor", &m_gravityBendingMax, 0.01f, 0.0f, 1.0f, "%.3f") || changed;
 
 		changed = ImGui::DragFloat("Internode shadow factor", &m_internodeShadowFactor, 0.001f, 0.0f, 1.0f) || changed;
 

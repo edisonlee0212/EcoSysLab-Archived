@@ -51,10 +51,11 @@ namespace EcoSysLab
 		 * \brief The horizontal tropism
 		 */
 		float m_horizontalTropism = 0.0f;
-		/**
-		 * \brief The strength of gravity bending.
-		 */
-		glm::vec3 m_saggingFactorThicknessReductionMax = glm::vec3(0.0006f, 2.0f, 0.1f);
+
+		float m_gravityBendingStrength = 0.f;
+		float m_gravityBendingThicknessFactor = 1.f;
+		float m_gravityBendingMax = 1.f;
+
 		/**
 		 * \brief The internode length
 		 */

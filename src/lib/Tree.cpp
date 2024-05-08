@@ -386,37 +386,18 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 				if (ImGui::TreeNode("Sagging"))
 				{
 					bool changed = false;
-					changed = ImGui::DragFloat("Sagging strength", &shootDescriptor->m_saggingFactorThicknessReductionMax.x, 0.0001f, 0.0f, 10.0f, "%.5f") || changed;
-					changed = ImGui::DragFloat("Sagging thickness factor", &shootDescriptor->m_saggingFactorThicknessReductionMax.y, 0.01f, 0.0f, 10.0f, "%.5f") || changed;
-					changed = ImGui::DragFloat("Sagging max", &shootDescriptor->m_saggingFactorThicknessReductionMax.z, 0.001f, 0.0f, 1.0f, "%.5f") || changed;
+					changed = ImGui::DragFloat("Bending strength", &shootDescriptor->m_gravityBendingStrength, 0.01f, 0.0f, 1.0f, "%.3f") || changed;
+					changed = ImGui::DragFloat("Bending thickness factor", &shootDescriptor->m_gravityBendingThicknessFactor, 0.1f, 0.0f, 10.f, "%.3f") || changed;
+					changed = ImGui::DragFloat("Bending angle factor", &shootDescriptor->m_gravityBendingMax, 0.01f, 0.0f, 1.0f, "%.3f") || changed;
 					if (changed)
 					{
 						m_shootGrowthController.m_sagging = [=](const SkeletonNode<InternodeGrowthData>& internode)
 							{
-								const auto newSagging = glm::min(
-									shootDescriptor->m_saggingFactorThicknessReductionMax.z,
-									shootDescriptor->m_saggingFactorThicknessReductionMax.x *
-									(internode.m_data.m_descendantTotalBiomass + internode.m_data.m_extraMass) /
-									glm::pow(
-										internode.m_info.m_thickness /
-										shootDescriptor->m_endNodeThickness,
-										shootDescriptor->m_saggingFactorThicknessReductionMax.y));
-								return newSagging;
+								float strength = internode.m_data.m_saggingForce * shootDescriptor->m_gravityBendingStrength / glm::pow(internode.m_info.m_thickness / shootDescriptor->m_endNodeThickness, shootDescriptor->m_gravityBendingThicknessFactor);
+								strength = shootDescriptor->m_gravityBendingMax * (1.f - glm::exp(-glm::abs(strength)));
+								return strength;
 							};
 						m_treeModel.CalculateTransform(m_shootGrowthController, true);
-						m_shootGrowthController.m_sagging = [=](const SkeletonNode<InternodeGrowthData>& internode)
-							{
-								const auto& shootGrowthParameters = treeDescriptor->m_shootDescriptor;
-								const auto newSagging = glm::min(
-									shootDescriptor->m_saggingFactorThicknessReductionMax.z,
-									shootDescriptor->m_saggingFactorThicknessReductionMax.x *
-									(internode.m_data.m_descendantTotalBiomass + internode.m_data.m_extraMass) /
-									glm::pow(
-										internode.m_info.m_thickness /
-										shootDescriptor->m_endNodeThickness,
-										shootDescriptor->m_saggingFactorThicknessReductionMax.y));
-								return glm::max(internode.m_data.m_sagging, newSagging);
-							};
 						m_treeVisualizer.m_needUpdate = true;
 					}
 				}

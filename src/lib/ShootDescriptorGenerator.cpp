@@ -93,18 +93,6 @@ std::shared_ptr<ShootDescriptor> ShootDescriptorGenerator::Generate()
 		{
 			retVal->m_phototropism += glm::mix(i.m_range.x, i.m_range.y, a); break;
 		}
-		case static_cast<unsigned>(ShootGrowthParameterType::Sagging):
-		{
-			retVal->m_saggingFactorThicknessReductionMax.x += glm::mix(i.m_range.x, i.m_range.y, a); break;
-		}
-		case static_cast<unsigned>(ShootGrowthParameterType::SaggingThicknessFactor):
-		{
-			retVal->m_saggingFactorThicknessReductionMax.y += glm::mix(i.m_range.x, i.m_range.y, a); break;
-		}
-		case static_cast<unsigned>(ShootGrowthParameterType::MaxSagging):
-		{
-			retVal->m_saggingFactorThicknessReductionMax.z += glm::mix(i.m_range.x, i.m_range.y, a); break;
-		}
 		case static_cast<unsigned>(ShootGrowthParameterType::InternodeLength):
 		{
 			retVal->m_internodeLength += glm::mix(i.m_range.x, i.m_range.y, a); break;
