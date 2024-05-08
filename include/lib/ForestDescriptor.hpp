@@ -15,6 +15,15 @@ namespace EcoSysLab {
         AssetRef m_treeDescriptor;
         TreeGrowthSettings m_treeGrowthSettings{};
         SimulationSettings m_simulationSettings;
+
+        float m_minGrowthRate = 0.8f;
+        float m_maxGrowthRate = 1.f;
+
+        float m_minLowBranchPruning = 0.f;
+        float m_maxLowBranchPruning = 0.f;
+
+        float m_simulationTime = 0.f;
+
         void InstantiatePatch(bool setParent = true, bool setSimulationSettings = true);
         void CollectAssetRef(std::vector<AssetRef>& list) override;
         void Serialize(YAML::Emitter& out) override;

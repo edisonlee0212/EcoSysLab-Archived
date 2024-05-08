@@ -22,7 +22,7 @@ void ShootDescriptor::PrepareController(ShootGrowthController& shootGrowthContro
 		{
 			float strength = m_endNodeThickness * internode.m_data.m_saggingForce * m_gravityBendingStrength / glm::pow(internode.m_info.m_thickness / m_endNodeThickness, m_gravityBendingThicknessFactor);
 			strength = m_gravityBendingMax * (1.f - glm::exp(-glm::abs(strength)));
-			return strength;//glm::max(internode.m_data.m_sagging, strength);
+			return glm::max(internode.m_data.m_sagging, strength);
 		};
 	shootGrowthController.m_baseNodeApicalAngle = [&](const SkeletonNode<InternodeGrowthData>& internode)
 		{

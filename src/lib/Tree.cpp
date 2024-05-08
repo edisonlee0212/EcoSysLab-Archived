@@ -829,7 +829,13 @@ std::shared_ptr<Mesh> Tree::GenerateBranchMesh(const TreeMeshGeneratorSettings& 
 		else {
 			CylindricalMeshGenerator<ShootGrowthData, ShootStemGrowthData, InternodeGrowthData>::Generate(m_treeModel.PeekShootSkeleton(), vertices, indices, meshGeneratorSettings,
 				[&](glm::vec3& vertexPosition, const glm::vec3& direction, const float xFactor, const float yFactor)
-				{},
+				{
+					if (barkDescriptor)
+					{
+						const float pushValue = barkDescriptor->GetValue(xFactor, yFactor);
+						vertexPosition += pushValue * direction;
+					}
+				},
 				[&](glm::vec2& texCoords, float xFactor, float distanceToRoot)
 				{}
 			);
@@ -1478,7 +1484,7 @@ void Tree::ExportTrunkOBJ(const std::filesystem::path& path,
 	}
 }
 
-bool Tree::TryGrow(float deltaTime, bool pruning, float growthRateMultiplier)
+bool Tree::TryGrow(float deltaTime, bool pruning)
 {
 	const auto scene = GetScene();
 	auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
@@ -1528,7 +1534,7 @@ bool Tree::TryGrow(float deltaTime, bool pruning, float growthRateMultiplier)
 	}
 
 	PrepareController(shootDescriptor, soil, climate);
-	const bool grown = m_treeModel.Grow(deltaTime, scene->GetDataComponent<GlobalTransform>(owner).m_value, climate->m_climateModel, m_shootGrowthController, pruning, growthRateMultiplier);
+	const bool grown = m_treeModel.Grow(deltaTime, scene->GetDataComponent<GlobalTransform>(owner).m_value, climate->m_climateModel, m_shootGrowthController, pruning, m_growthRateMultiplier);
 	if (grown)
 	{
 		if (pruning) m_treeVisualizer.ClearSelections();
@@ -1543,7 +1549,7 @@ bool Tree::TryGrow(float deltaTime, bool pruning, float growthRateMultiplier)
 	return grown;
 }
 
-bool Tree::TryGrowSubTree(const float deltaTime, const SkeletonNodeHandle baseInternodeHandle, const bool pruning, const float growthRateMultiplier) {
+bool Tree::TryGrowSubTree(const float deltaTime, const SkeletonNodeHandle baseInternodeHandle, const bool pruning) {
 	const auto scene = GetScene();
 	const auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
 	const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
@@ -1587,7 +1593,7 @@ bool Tree::TryGrowSubTree(const float deltaTime, const SkeletonNodeHandle baseIn
 	}
 
 	PrepareController(shootDescriptor, soil, climate);
-	const bool grown = m_treeModel.Grow(deltaTime, baseInternodeHandle, scene->GetDataComponent<GlobalTransform>(owner).m_value, climate->m_climateModel, m_shootGrowthController, pruning, growthRateMultiplier);
+	const bool grown = m_treeModel.Grow(deltaTime, baseInternodeHandle, scene->GetDataComponent<GlobalTransform>(owner).m_value, climate->m_climateModel, m_shootGrowthController, pruning, m_growthRateMultiplier);
 	if (grown)
 	{
 		if (pruning) m_treeVisualizer.ClearSelections();

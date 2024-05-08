@@ -21,10 +21,7 @@ void SimulationSettings::Serialize(YAML::Emitter& out)
 	out << YAML::Key << "m_autoClearFruitAndLeaves" << YAML::Value << m_autoClearFruitAndLeaves;
 	out << YAML::Key << "m_crownShynessDistance" << YAML::Value << m_crownShynessDistance;
 	out << YAML::Key << "m_maxNodeCount" << YAML::Value << m_maxNodeCount;
-	out << YAML::Key << "m_minGrowthRate" << YAML::Value << m_minGrowthRate;
-	out << YAML::Key << "m_maxGrowthRate" << YAML::Value << m_maxGrowthRate;
-	out << YAML::Key << "m_minLowBranchPruning" << YAML::Value << m_minLowBranchPruning;
-	out << YAML::Key << "m_maxLowBranchPruning" << YAML::Value << m_maxLowBranchPruning;
+	
 
 	out << YAML::Key << "m_skylightIntensity" << YAML::Value << m_skylightIntensity;
 	out << YAML::Key << "m_shadowDistanceLoss" << YAML::Value << m_shadowDistanceLoss;
@@ -40,11 +37,7 @@ void SimulationSettings::Deserialize(const YAML::Node& in)
 	if (in["m_autoClearFruitAndLeaves"]) m_autoClearFruitAndLeaves = in["m_autoClearFruitAndLeaves"].as<bool>();
 	if (in["m_crownShynessDistance"]) m_crownShynessDistance = in["m_crownShynessDistance"].as<float>();
 	if (in["m_maxNodeCount"]) m_maxNodeCount = in["m_maxNodeCount"].as<int>();
-	if (in["m_minGrowthRate"]) m_minGrowthRate = in["m_minGrowthRate"].as<float>();
-	if (in["m_maxGrowthRate"]) m_maxGrowthRate = in["m_maxGrowthRate"].as<float>();
-	if (in["m_minLowBranchPruning"]) m_minLowBranchPruning = in["m_minLowBranchPruning"].as<float>();
-	if (in["m_maxLowBranchPruning"]) m_maxLowBranchPruning = in["m_maxLowBranchPruning"].as<float>();
-
+	
 	if (in["m_skylightIntensity"]) m_skylightIntensity = in["m_skylightIntensity"].as<float>();
 	if (in["m_shadowDistanceLoss"]) m_shadowDistanceLoss = in["m_shadowDistanceLoss"].as<float>();
 	if (in["m_detectionRadius"]) m_detectionRadius = in["m_detectionRadius"].as<float>();
@@ -62,12 +55,6 @@ void SimulationSettings::OnInspect(const std::shared_ptr<EditorLayer>& editorLay
 	ImGui::DragFloat("Delta time", &m_deltaTime, 0.00001f, 0, 1, "%.5f");
 	ImGui::Checkbox("Auto clear fruit and leaves", &m_autoClearFruitAndLeaves);
 	ImGui::DragFloat("Crown shyness", &m_crownShynessDistance, 0.01f, 0.0f, 1.0f);
-
-	ImGui::DragFloat("Min growth rate", &m_minGrowthRate, 0.01f, 0.f, m_maxGrowthRate);
-	ImGui::DragFloat("Max growth rate", &m_maxGrowthRate, 0.01f, m_minGrowthRate, 3.f);
-	ImGui::DragFloat("Min low branch pruning", &m_minLowBranchPruning, 0.01f, 0.f, m_maxLowBranchPruning);
-	ImGui::DragFloat("Max low branch pruning", &m_maxLowBranchPruning, 0.01f, m_minLowBranchPruning, 1.f);
-
 	ImGui::Checkbox("Simulate soil", &m_soilSimulation);
 	if (ImGui::TreeNode("Lighting Estimation Settings")) {
 		bool settingsChanged = false;

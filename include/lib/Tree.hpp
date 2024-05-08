@@ -67,6 +67,7 @@ namespace EcoSysLab {
 		static bool OnInspectTreeGrowthSettings(TreeGrowthSettings& treeGrowthSettings);
 		float m_lowBranchPruning = 0.f;
 		float m_crownShynessDistance = 0.f;
+		float m_growthRateMultiplier = 1.f;
 		void BuildStrandModel();
 		
 		std::shared_ptr<Strands> GenerateStrands() const;
@@ -81,9 +82,9 @@ namespace EcoSysLab {
 		void ExportStrandModelOBJ(const std::filesystem::path& path, const StrandModelMeshGeneratorSettings& meshGeneratorSettings);
 
 		void ExportTrunkOBJ(const std::filesystem::path& path, const TreeMeshGeneratorSettings& meshGeneratorSettings);
-		bool TryGrow(float deltaTime, bool pruning, float growthRateMultiplier = 1.f);
+		bool TryGrow(float deltaTime, bool pruning);
 
-		bool TryGrowSubTree(float deltaTime, SkeletonNodeHandle baseInternodeHandle, bool pruning, float growthRateMultiplier = 1.f);
+		bool TryGrowSubTree(float deltaTime, SkeletonNodeHandle baseInternodeHandle, bool pruning);
 		[[nodiscard]] bool ParseBinvox(const std::filesystem::path& filePath, VoxelGrid<TreeOccupancyGridBasicData>& voxelGrid, float voxelSize = 1.0f);
 
 		void Reset();

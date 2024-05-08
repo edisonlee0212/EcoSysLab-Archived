@@ -532,11 +532,14 @@ void EcoSysLabLayer::Visualization() {
 							const auto climateCandidate = FindClimate();
 							if (!climateCandidate.expired()) {
 								climateCandidate.lock()->PrepareForGrowth();
-								if (tree->TryGrowSubTree(m_simulationSettings.m_deltaTime, treeVisualizer.m_selectedInternodeHandle, false, m_overrideGrowRate))
+								const auto prevGrowthRateMul = tree->m_growthRateMultiplier;
+								tree->m_growthRateMultiplier = m_overrideGrowRate;
+								if (tree->TryGrowSubTree(m_simulationSettings.m_deltaTime, treeVisualizer.m_selectedInternodeHandle, false))
 								{
 									treeVisualizer.m_needUpdate = true;
 									mayNeedGeometryGeneration = true;
 								}
+								tree->m_growthRateMultiplier = prevGrowthRateMul;
 							}
 							lastFrameInvigorate = true;
 						}
@@ -680,9 +683,11 @@ void EcoSysLabLayer::Visualization() {
 void EcoSysLabLayer::ResetAllTrees(const std::vector<Entity>* treeEntities) {
 	const auto scene = Application::GetActiveScene();
 	m_time = 0;
-	for (const auto& i : *treeEntities) {
-		const auto tree = scene->GetOrSetPrivateComponent<Tree>(i).lock();
-		tree->Reset();
+	if (treeEntities) {
+		for (const auto& i : *treeEntities) {
+			const auto tree = scene->GetOrSetPrivateComponent<Tree>(i).lock();
+			tree->Reset();
+		}
 	}
 	m_needFullFlowUpdate = true;
 	m_totalTime = 0;
@@ -910,6 +915,8 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 		}
 		else {
 			ImGui::Text("No trees in the scene!");
+			ResetAllTrees(nullptr);
+			targetTime = 0.0f;
 		}
 		ImGui::Checkbox("Visualization", &m_visualization);
 		if (m_visualization && ImGui::TreeNodeEx("Visualization settings")) {
@@ -1763,7 +1770,7 @@ void EcoSysLabLayer::Simulate(const SimulationSettings& simulationSettings) {
 			tree->m_soil = soil;
 
 			tree->m_crownShynessDistance = simulationSettings.m_crownShynessDistance;
-			tree->m_lowBranchPruning = glm::mix(simulationSettings.m_minLowBranchPruning, simulationSettings.m_maxLowBranchPruning, glm::abs(glm::perlin(gt.GetPosition())));
+			
 		}
 		climate->PrepareForGrowth();
 		std::vector<bool> grownStat{};
@@ -1775,7 +1782,7 @@ void EcoSysLabLayer::Simulate(const SimulationSettings& simulationSettings) {
 			if (!tree->IsEnabled()) return;
 			if (simulationSettings.m_maxNodeCount > 0 && tree->m_treeModel.RefShootSkeleton().PeekSortedNodeList().size() >= simulationSettings.m_maxNodeCount) return;
 			auto gt = scene->GetDataComponent<GlobalTransform>(treeEntity);
-			grownStat[threadIndex] = tree->TryGrow(simulationSettings.m_deltaTime, true, glm::mix(simulationSettings.m_minGrowthRate, simulationSettings.m_maxGrowthRate, glm::abs(glm::perlin(gt.GetPosition()))));
+			grownStat[threadIndex] = tree->TryGrow(simulationSettings.m_deltaTime, true);
 			});
 
 		auto heightField = soil->m_soilDescriptor.Get<SoilDescriptor>()->m_heightField.Get<HeightField>();

@@ -51,6 +51,9 @@ void ForestPatch::InstantiatePatch(const bool setParent, const bool setSimulatio
 		parent = scene->CreateEntity("Forest (" + std::to_string(treeMatrices.size()) + ") - " + GetTitle());
 	}
 	int i = 0;
+
+	glm::vec3 offset = glm::linearRand(glm::vec3(-10000), glm::vec3(10000));
+	glm::vec3 offset2 = glm::linearRand(glm::vec3(-10000), glm::vec3(10000));
 	for (const auto& gt : treeMatrices) {
 		auto treeEntity = scene->CreateEntity("Tree No." + std::to_string(i));
 		i++;
@@ -60,10 +63,14 @@ void ForestPatch::InstantiatePatch(const bool setParent, const bool setSimulatio
 		tree->m_treeModel.m_treeGrowthSettings = m_treeGrowthSettings;
 		tree->m_treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
 		if (setParent) scene->SetParent(treeEntity, parent);
+
+		tree->m_lowBranchPruning = glm::mix(m_minLowBranchPruning, m_maxLowBranchPruning, glm::abs(glm::perlin(offset + gt.GetPosition())));
+		tree->m_growthRateMultiplier = glm::mix(m_minGrowthRate, m_maxGrowthRate, glm::abs(glm::perlin(offset2 + gt.GetPosition())));
 	}
 	if(setSimulationSettings)
 	{
-		Application::GetLayer<EcoSysLabLayer>()->m_simulationSettings = m_simulationSettings;
+		const auto lab = Application::GetLayer<EcoSysLabLayer>();
+		lab->m_simulationSettings = m_simulationSettings;
 	}
 }
 
@@ -79,6 +86,12 @@ void ForestPatch::Serialize(YAML::Emitter& out)
 	out << YAML::Key << "m_positionOffsetVariance" << YAML::Value << m_positionOffsetVariance;
 	out << YAML::Key << "m_rotationOffsetVariance" << YAML::Value << m_rotationOffsetVariance;
 	out << YAML::Key << "m_gridSize" << YAML::Value << m_gridSize;
+
+	out << YAML::Key << "m_minGrowthRate" << YAML::Value << m_minGrowthRate;
+	out << YAML::Key << "m_maxGrowthRate" << YAML::Value << m_maxGrowthRate;
+	out << YAML::Key << "m_minLowBranchPruning" << YAML::Value << m_minLowBranchPruning;
+	out << YAML::Key << "m_maxLowBranchPruning" << YAML::Value << m_maxLowBranchPruning;
+	out << YAML::Key << "m_simulationTime" << YAML::Value << m_simulationTime;
 	m_treeDescriptor.Save("m_treeDescriptor", out);
 
 	m_simulationSettings.Save("m_simulationSettings", out);
@@ -91,6 +104,12 @@ void ForestPatch::Deserialize(const YAML::Node& in)
 	if (in["m_positionOffsetVariance"]) m_positionOffsetVariance = in["m_positionOffsetVariance"].as<glm::vec2>();
 	if (in["m_rotationOffsetVariance"]) m_rotationOffsetVariance = in["m_rotationOffsetVariance"].as<glm::vec3>();
 	if (in["m_gridSize"]) m_gridSize = in["m_gridSize"].as<glm::ivec2>();
+
+	if (in["m_minGrowthRate"]) m_minGrowthRate = in["m_minGrowthRate"].as<float>();
+	if (in["m_maxGrowthRate"]) m_maxGrowthRate = in["m_maxGrowthRate"].as<float>();
+	if (in["m_minLowBranchPruning"]) m_minLowBranchPruning = in["m_minLowBranchPruning"].as<float>();
+	if (in["m_maxLowBranchPruning"]) m_maxLowBranchPruning = in["m_maxLowBranchPruning"].as<float>();
+	if (in["m_simulationTime"]) m_simulationTime = in["m_simulationTime"].as<float>();
 	m_treeDescriptor.Load("m_treeDescriptor", in);
 
 	m_simulationSettings.Load("m_simulationSettings", in);
@@ -114,6 +133,12 @@ void ForestPatch::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 		m_simulationSettings.OnInspect(editorLayer);
 		ImGui::TreePop();
 	}
+
+	ImGui::DragFloat("Min growth rate", &m_minGrowthRate, 0.01f, 0.f, m_maxGrowthRate);
+	ImGui::DragFloat("Max growth rate", &m_maxGrowthRate, 0.01f, m_minGrowthRate, 3.f);
+	ImGui::DragFloat("Min low branch pruning", &m_minLowBranchPruning, 0.01f, 0.f, m_maxLowBranchPruning);
+	ImGui::DragFloat("Max low branch pruning", &m_maxLowBranchPruning, 0.01f, m_minLowBranchPruning, 1.f);
+	ImGui::DragFloat("Simulation time", &m_simulationTime, 0.1f, 0.0f, 100.f);
 
 	if (ImGui::Button("Instantiate")) {
 		InstantiatePatch(setParent);

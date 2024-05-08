@@ -16,11 +16,7 @@ namespace EcoSysLab {
 		float m_crownShynessDistance = 0.15f;
 		int m_maxNodeCount = 0;
 
-		float m_minGrowthRate = 0.8f;
-		float m_maxGrowthRate = 1.f;
-
-		float m_minLowBranchPruning = 0.f;
-		float m_maxLowBranchPruning = 0.f;
+		
 
 
 		float m_skylightIntensity = 1.f;
