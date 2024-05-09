@@ -20,11 +20,11 @@ m_branchingAngleMeanVariance: [30, 1]
 m_rollAngleMeanVariance: [0, 0]
 m_apicalAngleMeanVariance: [0, 0.5]
 m_gravitropism: 0
-m_phototropism: 0.00999999978
+m_phototropism: 0.0500000007
 m_horizontalTropism: 0.5
-m_gravityBendingStrength: 10
+m_gravityBendingStrength: 40
 m_gravityBendingThicknessFactor: 1
-m_gravityBendingMax: 0.150000006
+m_gravityBendingMax: 0.400000006
 m_internodeLength: 0.0299999993
 m_internodeLengthThicknessFactor: 0.150000006
 m_endNodeThickness: 0.00100000005
@@ -49,7 +49,7 @@ m_branchStrengthLightingThreshold: 0.159999996
 m_branchStrengthLightingLoss: 0.899999976
 m_branchBreakingFactor: 1
 m_branchBreakingMultiplier: 0.5
-m_leafFlushingLightingRequirement: 0.0500000007
+m_leafFlushingLightingRequirement: 0.00999999978
 m_leafFallProbability: 3
 m_leafDistanceToBranchEndLimit: 1
 m_fruitFlushingLightingRequirement: 0.100000001

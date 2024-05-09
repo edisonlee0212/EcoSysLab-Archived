@@ -14,7 +14,7 @@ m_simulationSettings:
   m_deltaTime: 0.0821999982
   m_soilSimulation: false
   m_autoClearFruitAndLeaves: true
-  m_crownShynessDistance: 0.100000001
+  m_crownShynessDistance: 0.0500000007
   m_maxNodeCount: 0
   m_skylightIntensity: 1
   m_shadowDistanceLoss: 1
