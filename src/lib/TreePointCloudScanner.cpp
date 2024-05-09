@@ -165,22 +165,22 @@ void TreePointCloudCircularCaptureSettings::GenerateSamples(std::vector<PointClo
 void TreePointCloudGridCaptureSettings::OnInspect()
 {
 	ImGui::DragInt2("Grid size", &m_gridSize.x, 1, 0, 100);
-	ImGui::DragFloat("Grid distance", &m_gridDistance, 0.1f, 0.0f, 100.0f);
+	ImGui::DragFloat2("Grid distance", &m_gridDistance.x, 0.1f, 0.0f, 100.0f);
 	ImGui::DragFloat("Step", &m_step, 0.01f, 0.0f, 0.5f);
 	ImGui::DragInt("Sample", &m_backpackSample, 1, 1, INT_MAX);
 }
 
 void TreePointCloudGridCaptureSettings::GenerateSamples(std::vector<PointCloudSample>& pointCloudSamples)
 {
-	const glm::vec2 startPoint = glm::vec2((static_cast<float>(m_gridSize.x) * 0.5f - 0.5f) * m_gridDistance, (static_cast<float>(m_gridSize.y) * 0.5f - 0.5f) * m_gridDistance);
+	const glm::vec2 startPoint = glm::vec2((static_cast<float>(m_gridSize.x) * 0.5f - 0.5f) * m_gridDistance.x, (static_cast<float>(m_gridSize.y) * 0.5f - 0.5f) * m_gridDistance.y);
 
-	const int yStepSize = m_gridSize.y * m_gridDistance / m_step;
-	const int xStepSize = m_gridSize.x * m_gridDistance / m_step;
+	const int yStepSize = m_gridSize.y * m_gridDistance.y / m_step;
+	const int xStepSize = m_gridSize.x * m_gridDistance.x / m_step;
 
 	pointCloudSamples.resize((m_gridSize.x * yStepSize + m_gridSize.y * xStepSize) * (m_backpackSample + m_droneSample));
 	unsigned startIndex = 0;
 	for (int i = 0; i < m_gridSize.x; i++) {
-		float x = i * m_gridDistance;
+		float x = i * m_gridDistance.x;
 		for (int step = 0; step < yStepSize; step++)
 		{
 			float z = step * m_step;
@@ -205,7 +205,7 @@ void TreePointCloudGridCaptureSettings::GenerateSamples(std::vector<PointCloudSa
 
 	startIndex += m_gridSize.x * yStepSize * m_backpackSample;
 	for (int i = 0; i < m_gridSize.y; i++) {
-		float z = i * m_gridDistance;
+		float z = i * m_gridDistance.y;
 		for (int step = 0; step < xStepSize; step++)
 		{
 			float x = step * m_step;
@@ -230,7 +230,7 @@ void TreePointCloudGridCaptureSettings::GenerateSamples(std::vector<PointCloudSa
 
 	startIndex += m_gridSize.y * xStepSize * m_backpackSample;
 	for (int i = 0; i < m_gridSize.x; i++) {
-		float x = i * m_gridDistance;
+		float x = i * m_gridDistance.x;
 		for (int step = 0; step < yStepSize; step++)
 		{
 			float z = step * m_step;
@@ -248,7 +248,7 @@ void TreePointCloudGridCaptureSettings::GenerateSamples(std::vector<PointCloudSa
 
 	startIndex += m_gridSize.x * yStepSize * m_droneSample;
 	for (int i = 0; i < m_gridSize.y; i++) {
-		float z = i * m_gridDistance;
+		float z = i * m_gridDistance.y;
 		for (int step = 0; step < xStepSize; step++)
 		{
 			float x = step * m_step;

@@ -1,4 +1,5 @@
 #pragma once
+#include "ForestDescriptor.hpp"
 #include "SorghumStateGenerator.hpp"
 #include "SorghumField.hpp"
 #include "SorghumPointCloudScanner.hpp"
@@ -43,7 +44,7 @@ namespace EcoSysLab {
 			const std::string& treeMeshOutputPath,
 			bool exportJunction
 		);
-		static void GeneratePointCloudForForestPatch(
+		static void GeneratePointCloudForForest(
 			int gridSize, float gridDistance, float randomShift,
 			const TreePointCloudPointSettings& pointSettings,
 			const std::shared_ptr<PointCloudCaptureSettings>& captureSettings,
@@ -55,7 +56,15 @@ namespace EcoSysLab {
 			const std::string& pointCloudOutputPath,
 			bool exportJunction
 		);
-
+		static void GeneratePointCloudForForestPatch(
+			const glm::ivec2& gridSize,
+			const TreePointCloudPointSettings& pointSettings,
+			const std::shared_ptr<PointCloudCaptureSettings>& captureSettings,
+			const std::shared_ptr<ForestPatch>& forestPatch,
+			const TreeMeshGeneratorSettings& meshGeneratorSettings,
+			const std::string& pointCloudOutputPath,
+			bool exportJunction
+		);
 		static void GeneratePointCloudForSorghumPatch(const SorghumFieldPatch& pattern,
 			const std::shared_ptr<SorghumStateGenerator>& sorghumDescriptor,
 			const SorghumPointCloudPointSettings& pointSettings,

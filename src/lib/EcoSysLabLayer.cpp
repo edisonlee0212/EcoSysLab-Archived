@@ -679,7 +679,7 @@ void EcoSysLabLayer::Visualization() {
 
 void EcoSysLabLayer::ResetAllTrees(const std::vector<Entity>* treeEntities) {
 	const auto scene = Application::GetActiveScene();
-	m_time = 0;
+	m_simulatedTime = 0;
 	if (treeEntities) {
 		for (const auto& i : *treeEntities) {
 			const auto tree = scene->GetOrSetPrivateComponent<Tree>(i).lock();
@@ -812,15 +812,15 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 				ClearGroundFruitAndLeaf();
 				targetTime = 0.0f;
 			}
-			ImGui::Text(("Simulated time: " + std::to_string(m_time) + " years").c_str());
+			ImGui::Text(("Simulated time: " + std::to_string(m_simulatedTime) + " years").c_str());
 			ImGui::DragInt("target nodes", &m_simulationSettings.m_maxNodeCount, 500, 0, INT_MAX);
-			ImGui::DragFloat("target years", &extraTime, 0.1f, m_time, 999);
+			ImGui::DragFloat("target years", &extraTime, 0.1f, m_simulatedTime, 999);
 			if (autoTimeGrow)
 			{
 				if (ImGui::Button("Force stop"))
 				{
 					autoTimeGrow = false;
-					targetTime = m_time;
+					targetTime = m_simulatedTime;
 
 				}
 			}
@@ -959,7 +959,7 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 	const std::vector<Entity>* treeEntities =
 		scene->UnsafeGetPrivateComponentOwnersList<Tree>();
 	if (treeEntities && !treeEntities->empty()) {
-		if (targetTime <= m_time && autoTimeGrow) {
+		if (targetTime <= m_simulatedTime && autoTimeGrow) {
 			autoTimeGrow = false;
 			for (const auto& treeEntity : *treeEntities) {
 				auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
@@ -1593,6 +1593,11 @@ void EcoSysLabLayer::SoilVisualizationVector(VoxelSoilModel& soilModel) {
 	editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_CYLINDER"), m_vectorMatrices, glm::mat4(1.0f), 1.0f, gizmoSettings);
 }
 
+float EcoSysLabLayer::GetSimulatedTime() const
+{
+	return m_simulatedTime;
+}
+
 void EcoSysLabLayer::ExportAllTrees(const std::filesystem::path& path) const
 {
 	const auto scene = GetScene();
@@ -1733,7 +1738,7 @@ void EcoSysLabLayer::Simulate(const SimulationSettings& simulationSettings) {
 	const auto scene = GetScene();
 	const std::vector<Entity>* treeEntities =
 		scene->UnsafeGetPrivateComponentOwnersList<Tree>();
-	m_time += simulationSettings.m_deltaTime;
+	m_simulatedTime += simulationSettings.m_deltaTime;
 	if (treeEntities && !treeEntities->empty()) {
 		float time = Times::Now();
 
@@ -1751,7 +1756,7 @@ void EcoSysLabLayer::Simulate(const SimulationSettings& simulationSettings) {
 			EVOENGINE_ERROR("Simulation Failed! No climate in scene!");
 			return;
 		}
-		climate->m_climateModel.m_time = m_time;
+		climate->m_climateModel.m_time = m_simulatedTime;
 
 		if (simulationSettings.m_soilSimulation) {
 			soil->m_soilModel.Irrigation();
@@ -1771,7 +1776,7 @@ void EcoSysLabLayer::Simulate(const SimulationSettings& simulationSettings) {
 			if (!scene->IsEntityEnabled(treeEntity)) return;
 			const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
 			if (!tree->IsEnabled()) return;
-			if (tree->m_startTime > m_time) return;
+			if (tree->m_startTime > m_simulatedTime) return;
 			if (simulationSettings.m_maxNodeCount > 0 && tree->m_treeModel.RefShootSkeleton().PeekSortedNodeList().size() >= simulationSettings.m_maxNodeCount) return;
 			grownStat[threadIndex] = tree->TryGrow(simulationSettings.m_deltaTime, true);
 			});

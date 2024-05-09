@@ -55,7 +55,7 @@ namespace EcoSysLab {
         float m_boundingBoxSize = 3.;
 
         glm::ivec2 m_gridSize = { 5, 5 };
-        float m_gridDistance = 1.25f;
+        glm::vec2 m_gridDistance = { 1.25f, 1.25f };
         float m_step = 0.01f;
         int m_backpackSample = 512;
         float m_backpackHeight = 1.0f;

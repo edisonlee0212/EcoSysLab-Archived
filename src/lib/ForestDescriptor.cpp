@@ -11,7 +11,7 @@
 #include "EcoSysLabLayer.hpp"
 using namespace EcoSysLab;
 
-Entity ForestPatch::InstantiatePatch(const bool setSimulationSettings)
+Entity ForestPatch::InstantiatePatch(const glm::ivec2& gridSize, const bool setSimulationSettings)
 {
 	const auto scene = Application::GetActiveScene();
 	std::shared_ptr<Soil> soil;
@@ -26,22 +26,19 @@ Entity ForestPatch::InstantiatePatch(const bool setSimulationSettings)
 	{
 		heightField = soilDescriptor->m_heightField.Get<HeightField>();
 	}
-	const glm::vec2 startPoint = glm::vec2((m_gridSize.x - 1) * m_gridDistance.x, (m_gridSize.y - 1) * m_gridDistance.y) * 0.5f;
-	Entity retVal;
-	Entity forest;
-	Entity boundary;
+	const glm::vec2 startPoint = glm::vec2((gridSize.x - 1) * m_gridDistance.x, (gridSize.y - 1) * m_gridDistance.y) * 0.5f;
 
-	retVal = scene->CreateEntity("Forest (" + std::to_string(m_gridSize.x * m_gridSize.y) + ") - " + GetTitle());
-	forest = scene->CreateEntity("Center");
-	boundary = scene->CreateEntity("Boundary");
+	const auto retVal = scene->CreateEntity("Forest (" + std::to_string(gridSize.x * gridSize.y) + ") - " + GetTitle());
+	const auto forest = scene->CreateEntity("Center");
+	const auto boundary = scene->CreateEntity("Boundary");
 	scene->SetParent(forest, retVal);
 	scene->SetParent(boundary, retVal);
 
 	int index = 0;
 
 	const auto offset = glm::linearRand(glm::vec3(-10000), glm::vec3(10000));
-	for (int i = 0; i < m_gridSize.x; i++) {
-		for (int j = 0; j < m_gridSize.y; j++) {
+	for (int i = 0; i < gridSize.x; i++) {
+		for (int j = 0; j < gridSize.y; j++) {
 			auto position = glm::vec3(-startPoint.x + i * m_gridDistance.x, 0.0f, -startPoint.y + j * m_gridDistance.y);
 			position.x += glm::linearRand(-m_gridDistance.x * m_positionOffsetMean.x, m_gridDistance.x * m_positionOffsetMean.x);
 			position.z += glm::linearRand(-m_gridDistance.y * m_positionOffsetMean.y, m_gridDistance.y * m_positionOffsetMean.y);
@@ -61,7 +58,7 @@ Entity ForestPatch::InstantiatePatch(const bool setSimulationSettings)
 			const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
 			tree->m_treeModel.m_treeGrowthSettings = m_treeGrowthSettings;
 			tree->m_treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
-			if (i == 0 || j == 0 || i == m_gridSize.x - 1 || j == m_gridSize.y - 1) {
+			if (i == 0 || j == 0 || i == gridSize.x - 1 || j == gridSize.y - 1) {
 				scene->SetParent(treeEntity, boundary);
 				tree->m_generateMesh = false;
 			}
@@ -96,7 +93,6 @@ void ForestPatch::Serialize(YAML::Emitter& out)
 	out << YAML::Key << "m_positionOffsetMean" << YAML::Value << m_positionOffsetMean;
 	out << YAML::Key << "m_positionOffsetVariance" << YAML::Value << m_positionOffsetVariance;
 	out << YAML::Key << "m_rotationOffsetVariance" << YAML::Value << m_rotationOffsetVariance;
-	out << YAML::Key << "m_gridSize" << YAML::Value << m_gridSize;
 
 	out << YAML::Key << "m_minLowBranchPruning" << YAML::Value << m_minLowBranchPruning;
 	out << YAML::Key << "m_maxLowBranchPruning" << YAML::Value << m_maxLowBranchPruning;
@@ -114,8 +110,7 @@ void ForestPatch::Deserialize(const YAML::Node& in)
 	if (in["m_positionOffsetMean"]) m_positionOffsetMean = in["m_positionOffsetMean"].as<glm::vec2>();
 	if (in["m_positionOffsetVariance"]) m_positionOffsetVariance = in["m_positionOffsetVariance"].as<glm::vec2>();
 	if (in["m_rotationOffsetVariance"]) m_rotationOffsetVariance = in["m_rotationOffsetVariance"].as<glm::vec3>();
-	if (in["m_gridSize"]) m_gridSize = in["m_gridSize"].as<glm::ivec2>();
-
+	
 	if (in["m_minLowBranchPruning"]) m_minLowBranchPruning = in["m_minLowBranchPruning"].as<float>();
 	if (in["m_maxLowBranchPruning"]) m_maxLowBranchPruning = in["m_maxLowBranchPruning"].as<float>();
 	if (in["m_simulationTime"]) m_simulationTime = in["m_simulationTime"].as<float>();
@@ -128,7 +123,8 @@ void ForestPatch::Deserialize(const YAML::Node& in)
 void ForestPatch::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
 	editorLayer->DragAndDropButton<TreeDescriptor>(m_treeDescriptor, "TreeDescriptor");
-	ImGui::DragInt2("Grid size", &m_gridSize.x, 1, 0, 100);
+	static glm::ivec2 gridSize = {8, 8};
+	ImGui::DragInt2("Grid size", &gridSize.x, 1, 0, 100);
 	ImGui::DragFloat2("Grid distance", &m_gridDistance.x, 0.1f, 0.0f, 100.0f);
 	ImGui::Separator();
 	ImGui::DragFloat2("Position offset mean", &m_positionOffsetMean.x, 0.01f, 0.0f, 5.f);
@@ -150,7 +146,7 @@ void ForestPatch::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 	ImGui::DragFloat("Start time max", &m_startTimeMax, 0.01f, 0.0f, 10.f);
 
 	if (ImGui::Button("Instantiate")) {
-		InstantiatePatch(setParent);
+		InstantiatePatch(gridSize, setParent);
 	}
 }
 

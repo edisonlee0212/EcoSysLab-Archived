@@ -11,7 +11,6 @@ namespace EcoSysLab {
         glm::vec2 m_positionOffsetMean = glm::vec2(0.f);
         glm::vec2 m_positionOffsetVariance = glm::vec2(0.0f);
         glm::vec3 m_rotationOffsetVariance = glm::vec3(0.0f);
-        glm::ivec2 m_gridSize = glm::ivec2(4, 4);
         AssetRef m_treeDescriptor;
         TreeGrowthSettings m_treeGrowthSettings{};
         SimulationSettings m_simulationSettings;
@@ -21,7 +20,7 @@ namespace EcoSysLab {
 
         float m_simulationTime = 0.f;
         float m_startTimeMax = 0.0f;
-        Entity InstantiatePatch(bool setSimulationSettings = true);
+        Entity InstantiatePatch(const glm::ivec2& gridSize, bool setSimulationSettings = true);
         void CollectAssetRef(std::vector<AssetRef>& list) override;
         void Serialize(YAML::Emitter& out) override;
         void Deserialize(const YAML::Node& in) override;

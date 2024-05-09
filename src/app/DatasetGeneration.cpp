@@ -79,35 +79,49 @@ void forest_patch_point_cloud()
 
 	std::filesystem::create_directories(output_root);
 
-	TreePointCloudPointSettings pcps{};
+	TreePointCloudPointSettings treePointCloudPointSettings{};
 	std::shared_ptr<TreePointCloudCircularCaptureSettings> treePointCloudCircularCaptureSettings = std::make_shared<TreePointCloudCircularCaptureSettings>();
 	std::shared_ptr<TreePointCloudGridCaptureSettings> treePointCloudGridCaptureSettings = std::make_shared<TreePointCloudGridCaptureSettings>();
-	pcps.m_ballRandRadius = 0.0f;
-	pcps.m_treePartIndex = true;
-	pcps.m_instanceIndex = true;
-	pcps.m_typeIndex = true;
-	pcps.m_treePartTypeIndex = true;
-	pcps.m_branchIndex = false;
-	pcps.m_lineIndex = true;
+	treePointCloudPointSettings.m_ballRandRadius = 0.0f;
+	treePointCloudPointSettings.m_treePartIndex = false;
+	treePointCloudPointSettings.m_instanceIndex = true;
+	treePointCloudPointSettings.m_typeIndex = true;
+	treePointCloudPointSettings.m_treePartTypeIndex = false;
+	treePointCloudPointSettings.m_branchIndex = false;
+	treePointCloudPointSettings.m_lineIndex = false;
 	treePointCloudCircularCaptureSettings->m_distance = 4.0f;
 	treePointCloudCircularCaptureSettings->m_height = 3.0f;
 
-	int gridSize = 4;
-	float gridDistance = 1.5f;
-	float randomShift = 0.5f;
-	treePointCloudGridCaptureSettings->m_gridSize = { gridSize + 1, gridSize + 1 };
-	treePointCloudGridCaptureSettings->m_gridDistance = gridDistance;
+	glm::ivec2 gridSize = { 8, 8 };
+	treePointCloudGridCaptureSettings->m_gridSize = { gridSize.x + 1, gridSize.y + 1 };
 
-	int index = 0;
-	for (int i = 0; i < 4096; i++) {
-		std::filesystem::path target_descriptor_folder_path = resourceFolderPath / "EcoSysLabProject" / "Digital Forestry";
-		std::string name = "Forest_" + std::to_string(i);
-		std::filesystem::path target_tree_mesh_path = output_root / (name + ".obj");
-		std::filesystem::path target_tree_pointcloud_path = output_root / (name + ".ply");
-		//std::filesystem::path target_tree_junction_path = output_root / (name + ".yml");
-		DatasetGenerator::GeneratePointCloudForForestPatch(gridSize, gridDistance, randomShift, pcps, treePointCloudGridCaptureSettings, target_descriptor_folder_path.string(), 0.08220f, 200, 15000, tmgs, target_tree_pointcloud_path.string(), true);
-		index++;
+
+	std::filesystem::path target_descriptor_folder_path = resourceFolderPath / "EcoSysLabProject" / "Digital Forestry";
+	for (int index = 0; index < 256; index++) {
+		for (const auto& i : std::filesystem::recursive_directory_iterator(target_descriptor_folder_path))
+		{
+			if (i.is_regular_file() && i.path().extension().string() == ".forestpatch")
+			{
+				const auto forestPatch =
+					std::dynamic_pointer_cast<ForestPatch>(ProjectManager::GetOrCreateAsset(ProjectManager::GetPathRelativeToProject(i.path())));
+				std::filesystem::create_directories(output_root / forestPatch->GetTitle());
+
+
+				std::string name = forestPatch->GetTitle() + "_" + std::to_string(index);
+				std::filesystem::path target_tree_point_cloud_path = output_root / forestPatch->GetTitle() / (name + ".ply");
+
+				treePointCloudGridCaptureSettings->m_gridDistance = forestPatch->m_gridDistance;
+
+				DatasetGenerator::GeneratePointCloudForForestPatch(
+					gridSize,
+					treePointCloudPointSettings,
+					treePointCloudGridCaptureSettings,
+					forestPatch,
+					tmgs, target_tree_point_cloud_path.string(), false);
+			}
+		}
 	}
+
 }
 
 void sorghum_field_point_cloud()

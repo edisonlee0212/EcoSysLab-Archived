@@ -129,7 +129,7 @@ namespace EcoSysLab {
 		void SoilVisualizationScalar(VoxelSoilModel& soilModel); // called during LateUpdate()
 		void SoilVisualizationVector(VoxelSoilModel& soilModel); // called during LateUpdate()
 
-		float m_time;
+		float m_simulatedTime;
 		
 
 		std::vector<Fruit> m_fruits;
@@ -143,7 +143,7 @@ namespace EcoSysLab {
 
 
 	public:
-
+		[[nodiscard]] float GetSimulatedTime() const;
 		void ExportAllTrees(const std::filesystem::path& path) const;
 
 		SimulationSettings m_simulationSettings {};
