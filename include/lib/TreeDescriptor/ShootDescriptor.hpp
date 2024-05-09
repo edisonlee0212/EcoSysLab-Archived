@@ -143,51 +143,13 @@ namespace EcoSysLab
 		AssetRef m_barkMaterial;
 #pragma region Leaf
 		float m_leafFlushingLightingRequirement = 0.1f;
-
-		/**
-		 * \brief The number of leaf buds an internode contains
-		 */
-		int m_leafBudCount;
-		float m_leafGrowthRate = 0.05f;
-		/**
-		 * \brief Flushing prob of leaf bud related to the temperature.
-		 */
-		glm::vec4 m_leafBudFlushingProbabilityTemperatureRange;
-		/**
-		* \brief Base resource requirement factor for leaf
-		*/
-		float m_leafVigorRequirement;
-		
-		glm::vec3 m_maxLeafSize;
-		float m_leafPositionVariance;
-		float m_leafRotationVariance;
-		float m_leafChlorophyllLoss;
-		float m_leafChlorophyllSynthesisFactorTemperature;
 		float m_leafFallProbability;
-
 		float m_leafDistanceToBranchEndLimit;
 #pragma endregion
 #pragma region Fruit
-		/**
-		 * \brief The number of fruit buds an internode contains
-		 */
-		int m_fruitBudCount;
-		float m_fruitGrowthRate = 0.05f;
-		/**
-		 * \brief Flushing prob of fruit bud related to the temperature.
-		 */
-		glm::vec4 m_fruitBudFlushingProbabilityTemperatureRange;
-
-		/**
-		* \brief Base resource requirement factor for fruit
-		*/
-		float m_fruitVigorRequirement;
-
-		glm::vec3 m_maxFruitSize;
-		float m_fruitPositionVariance;
-		float m_fruitRotationVariance;
-
+		float m_fruitFlushingLightingRequirement = 0.1f;
 		float m_fruitFallProbability;
+		float m_fruitDistanceToBranchEndLimit;
 #pragma endregion
 		void PrepareController(ShootGrowthController& shootGrowthController) const;
 

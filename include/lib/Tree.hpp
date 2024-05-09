@@ -65,9 +65,9 @@ namespace EcoSysLab {
 		static void SerializeTreeGrowthSettings(const TreeGrowthSettings& treeGrowthSettings, YAML::Emitter& out);
 		static void DeserializeTreeGrowthSettings(TreeGrowthSettings& treeGrowthSettings, const YAML::Node& param);
 		static bool OnInspectTreeGrowthSettings(TreeGrowthSettings& treeGrowthSettings);
+		bool m_generateMesh = true;
 		float m_lowBranchPruning = 0.f;
 		float m_crownShynessDistance = 0.f;
-		float m_growthRateMultiplier = 1.f;
 		float m_startTime = 0.f;
 		void BuildStrandModel();
 		

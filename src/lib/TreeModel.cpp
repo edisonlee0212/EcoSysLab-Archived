@@ -119,7 +119,7 @@ void TreeModel::ApplyTropism(const glm::vec3& targetDir, float tropism, glm::qua
 }
 
 bool TreeModel::Grow(float deltaTime, const glm::mat4& globalTransform, ClimateModel& climateModel,
-	const ShootGrowthController& shootGrowthController, bool pruning, float overrideGrowthRate)
+	const ShootGrowthController& shootGrowthController, const bool pruning)
 {
 	m_currentDeltaTime = deltaTime;
 	m_age += m_currentDeltaTime;
@@ -147,7 +147,7 @@ bool TreeModel::Grow(float deltaTime, const glm::mat4& globalTransform, ClimateM
 			const auto totalFlux = glm::min(totalShootFlux.m_value, totalRootFlux.m_value);
 			CalculateInternodeStrength(sortedNodeList, shootGrowthController);
 			const float requiredVigor = CalculateGrowthPotential(sortedNodeList, shootGrowthController);
-			CalculateGrowthRate(sortedNodeList, overrideGrowthRate);
+			CalculateGrowthRate(sortedNodeList, totalFlux / requiredVigor);
 		}
 		for (auto it = sortedNodeList.rbegin(); it != sortedNodeList.rend(); ++it) {
 			const bool graphChanged = GrowInternode(climateModel, *it, shootGrowthController);
@@ -181,7 +181,7 @@ bool TreeModel::Grow(float deltaTime, const glm::mat4& globalTransform, ClimateM
 
 bool TreeModel::Grow(const float deltaTime, const SkeletonNodeHandle baseInternodeHandle, const glm::mat4& globalTransform, ClimateModel& climateModel,
 	const ShootGrowthController& shootGrowthController,
-	const bool pruning, const float overrideGrowthRate)
+	const bool pruning)
 {
 	m_currentDeltaTime = deltaTime;
 	m_age += m_currentDeltaTime;
@@ -209,7 +209,7 @@ bool TreeModel::Grow(const float deltaTime, const SkeletonNodeHandle baseInterno
 		totalRootFlux.m_value = totalShootFlux.m_value;
 		const auto totalFlux = glm::min(totalShootFlux.m_value, totalRootFlux.m_value);
 		const float requiredVigor = CalculateGrowthPotential(sortedSubTreeInternodeList, shootGrowthController);
-		CalculateGrowthRate(sortedSubTreeInternodeList, glm::clamp(totalFlux / requiredVigor * overrideGrowthRate, 0.f, 1.f));
+		CalculateGrowthRate(sortedSubTreeInternodeList, totalFlux / requiredVigor);
 	}
 	for (auto it = sortedSubTreeInternodeList.rbegin(); it != sortedSubTreeInternodeList.rend(); ++it) {
 		const bool graphChanged = GrowInternode(climateModel, *it, shootGrowthController);
@@ -437,7 +437,7 @@ void TreeModel::ShootGrowthPostProcess(const ShootGrowthController& shootGrowthC
 		for (const auto& internodeHandle : sortedInternodeList)
 		{
 			auto& internode = m_shootSkeleton.RefNode(internodeHandle);
-			internode.m_info.m_leaves = internode.m_data.m_lightIntensity;
+			internode.m_info.m_leaves = shootGrowthController.m_leaf(internode);
 			const auto order = m_shootSkeleton.RefFlow(internode.GetFlowHandle()).m_data.m_order;
 			internode.m_data.m_order = order;
 			m_internodeOrderCounts[order]++;
@@ -612,7 +612,7 @@ bool TreeModel::ElongateInternode(float extendLength, SkeletonNodeHandle interno
 
 		//Allocate Fruit bud for current internode
 		{
-			const auto fruitBudCount = shootGrowthController.m_fruitBudCount;
+			const auto fruitBudCount = 1;
 			for (int i = 0; i < fruitBudCount; i++) {
 				internodeData.m_buds.emplace_back();
 				auto& newFruitBud = internodeData.m_buds.back();
@@ -625,7 +625,7 @@ bool TreeModel::ElongateInternode(float extendLength, SkeletonNodeHandle interno
 		}
 		//Allocate Leaf bud for current internode
 		{
-			const auto leafBudCount = shootGrowthController.m_leafBudCount;
+			const auto leafBudCount = 1;
 			for (int i = 0; i < leafBudCount; i++) {
 				internodeData.m_buds.emplace_back();
 				auto& newLeafBud = internodeData.m_buds.back();
@@ -848,7 +848,7 @@ bool TreeModel::GrowReproductiveModules(ClimateModel& climateModel, const Skelet
 		else if (bud.m_type == BudType::Leaf)
 		{
 			if (bud.m_status == BudStatus::Dormant) {
-				const float flushProbability = m_currentDeltaTime * shootGrowthController.m_leafBudFlushingProbability(internode);
+				const float flushProbability = m_currentDeltaTime * 1.;
 				if (flushProbability >= glm::linearRand(0.0f, 1.0f))
 				{
 					bud.m_status = BudStatus::Died;
@@ -861,6 +861,7 @@ bool TreeModel::GrowReproductiveModules(ClimateModel& climateModel, const Skelet
 				//const float maturityIncrease = glm::min(maxMaturityIncrease, glm::min(m_currentDeltaTime * shootGrowthController.m_leafGrowthRate, 1.0f - bud.m_reproductiveModule.m_maturity));
 				//bud.m_reproductiveModule.m_maturity += maturityIncrease;
 				//const auto developmentVigor = bud.m_vigorSink.SubtractVigor(maturityIncrease * shootGrowthController.m_leafVigorRequirement);
+				/*
 				auto leafSize = shootGrowthController.m_maxLeafSize * glm::sqrt(bud.m_reproductiveModule.m_maturity);
 				glm::quat rotation = internodeData.m_desiredLocalRotation * bud.m_localRotation;
 				auto up = rotation * glm::vec3(0, 1, 0);
@@ -883,7 +884,7 @@ bool TreeModel::GrowReproductiveModules(ClimateModel& climateModel, const Skelet
 						m_shootSkeleton.m_data.m_droppedLeaves.emplace_back(bud.m_reproductiveModule);
 						bud.m_reproductiveModule.Reset();
 					}
-				}
+				}*/
 			}
 		}
 	}

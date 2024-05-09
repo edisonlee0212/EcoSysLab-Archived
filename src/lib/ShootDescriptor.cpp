@@ -118,53 +118,18 @@ void ShootDescriptor::PrepareController(ShootGrowthController& shootGrowthContro
 			return m_apicalDominance * internode.m_data.m_lightIntensity;
 		};
 	shootGrowthController.m_apicalDominanceLoss = m_apicalDominanceLoss;
-
-
-	shootGrowthController.m_leafGrowthRate = m_leafGrowthRate;
-	shootGrowthController.m_fruitGrowthRate = m_fruitGrowthRate;
-
-	shootGrowthController.m_fruitBudCount = m_fruitBudCount;
-	shootGrowthController.m_leafBudCount = m_leafBudCount;
-
-	shootGrowthController.m_leafBudFlushingProbability = [&](const SkeletonNode<InternodeGrowthData>& internode)
+	shootGrowthController.m_leaf = [&](const SkeletonNode<InternodeGrowthData>& internode)
 		{
-			const auto& internodeData = internode.m_data;
-			const auto& probabilityRange = m_leafBudFlushingProbabilityTemperatureRange;
-			float flushProbability = glm::mix(probabilityRange.x, probabilityRange.y,
-				glm::clamp((internodeData.m_temperature - probabilityRange.z) / (probabilityRange.w - probabilityRange.z), 0.0f, 1.0f));
-			flushProbability *= internodeData.m_lightIntensity;
-			return flushProbability;
-		};
-	shootGrowthController.m_fruitBudFlushingProbability = [&](const SkeletonNode<InternodeGrowthData>& internode)
-		{
-			const auto& internodeData = internode.m_data;
-			const auto& probabilityRange = m_fruitBudFlushingProbabilityTemperatureRange;
-			float flushProbability = glm::mix(probabilityRange.x, probabilityRange.y,
-				glm::clamp((internodeData.m_temperature - probabilityRange.z) / (probabilityRange.w - probabilityRange.z), 0.0f, 1.0f));
-			flushProbability *= internodeData.m_lightIntensity;
-			return flushProbability;
+			return internode.m_data.m_lightIntensity > m_leafFlushingLightingRequirement;
 		};
 
-	shootGrowthController.m_leafVigorRequirement = m_leafVigorRequirement;
-	shootGrowthController.m_fruitVigorRequirement = m_fruitVigorRequirement;
-
-
-
-	shootGrowthController.m_maxLeafSize = m_maxLeafSize;
-	shootGrowthController.m_leafPositionVariance = m_leafPositionVariance;
-	shootGrowthController.m_leafRotationVariance = m_leafRotationVariance;
-	
 	shootGrowthController.m_leafFallProbability = [&](const SkeletonNode<InternodeGrowthData>& internode)
 		{
 			return m_leafFallProbability;
 		};
-	shootGrowthController.m_maxFruitSize = m_maxFruitSize;
-	shootGrowthController.m_fruitPositionVariance = m_fruitPositionVariance;
-	shootGrowthController.m_fruitRotationVariance = m_fruitRotationVariance;
-	shootGrowthController.m_fruitDamage = [=](const SkeletonNode<InternodeGrowthData>& internode)
+	shootGrowthController.m_fruit = [&](const SkeletonNode<InternodeGrowthData>& internode)
 		{
-			float fruitDamage = 0.0f;
-			return fruitDamage;
+			return internode.m_data.m_lightIntensity > m_fruitFlushingLightingRequirement;
 		};
 	shootGrowthController.m_fruitFallProbability = [&](const SkeletonNode<InternodeGrowthData>& internode)
 		{
@@ -225,26 +190,14 @@ void ShootDescriptor::Serialize(YAML::Emitter& out)
 	out << YAML::Key << "m_branchStrengthLightingLoss" << YAML::Value << m_branchStrengthLightingLoss;
 	out << YAML::Key << "m_branchBreakingFactor" << YAML::Value << m_branchBreakingFactor;
 	out << YAML::Key << "m_branchBreakingMultiplier" << YAML::Value << m_branchBreakingMultiplier;
-	out << YAML::Key << "m_leafBudCount" << YAML::Value << m_leafBudCount;
-	out << YAML::Key << "m_leafGrowthRate" << YAML::Value << m_leafGrowthRate;
-	out << YAML::Key << "m_leafBudFlushingProbabilityTemperatureRange" << YAML::Value << m_leafBudFlushingProbabilityTemperatureRange;
-	out << YAML::Key << "m_leafVigorRequirement" << YAML::Value << m_leafVigorRequirement;
-	out << YAML::Key << "m_maxLeafSize" << YAML::Value << m_maxLeafSize;
-	out << YAML::Key << "m_leafPositionVariance" << YAML::Value << m_leafPositionVariance;
-	out << YAML::Key << "m_leafRotationVariance" << YAML::Value << m_leafRotationVariance;
-	out << YAML::Key << "m_leafChlorophyllLoss" << YAML::Value << m_leafChlorophyllLoss;
-	out << YAML::Key << "m_leafChlorophyllSynthesisFactorTemperature" << YAML::Value << m_leafChlorophyllSynthesisFactorTemperature;
+
+	out << YAML::Key << "m_leafFlushingLightingRequirement" << YAML::Value << m_leafFlushingLightingRequirement;
 	out << YAML::Key << "m_leafFallProbability" << YAML::Value << m_leafFallProbability;
 	out << YAML::Key << "m_leafDistanceToBranchEndLimit" << YAML::Value << m_leafDistanceToBranchEndLimit;
 
-	out << YAML::Key << "m_fruitBudCount" << YAML::Value << m_fruitBudCount;
-	out << YAML::Key << "m_fruitGrowthRate" << YAML::Value << m_fruitGrowthRate;
-	out << YAML::Key << "m_fruitBudFlushingProbabilityTemperatureRange" << YAML::Value << m_fruitBudFlushingProbabilityTemperatureRange;
-	out << YAML::Key << "m_fruitVigorRequirement" << YAML::Value << m_fruitVigorRequirement;
-	out << YAML::Key << "m_maxFruitSize" << YAML::Value << m_maxFruitSize;
-	out << YAML::Key << "m_fruitPositionVariance" << YAML::Value << m_fruitPositionVariance;
-	out << YAML::Key << "m_fruitRotationVariance" << YAML::Value << m_fruitRotationVariance;
+	out << YAML::Key << "m_fruitFlushingLightingRequirement" << YAML::Value << m_fruitFlushingLightingRequirement;
 	out << YAML::Key << "m_fruitFallProbability" << YAML::Value << m_fruitFallProbability;
+	out << YAML::Key << "m_fruitDistanceToBranchEndLimit" << YAML::Value << m_fruitDistanceToBranchEndLimit;
 
 	m_barkMaterial.Save("m_barkMaterial", out);
 }
@@ -301,27 +254,14 @@ void ShootDescriptor::Deserialize(const YAML::Node& in)
 	if (in["m_branchBreakingFactor"]) m_branchBreakingFactor = in["m_branchBreakingFactor"].as<float>();
 	if (in["m_branchBreakingMultiplier"]) m_branchBreakingMultiplier = in["m_branchBreakingMultiplier"].as<float>();
 
-	if (in["m_leafBudCount"]) m_leafBudCount = in["m_leafBudCount"].as<int>();
-	if (in["m_leafGrowthRate"]) m_leafGrowthRate = in["m_leafGrowthRate"].as<float>();
-	if (in["m_leafBudFlushingProbabilityTemperatureRange"]) m_leafBudFlushingProbabilityTemperatureRange = in["m_leafBudFlushingProbabilityTemperatureRange"].as< glm::vec4>();
-	if (in["m_leafVigorRequirement"]) m_leafVigorRequirement = in["m_leafVigorRequirement"].as<float>();
-	if (in["m_maxLeafSize"]) m_maxLeafSize = in["m_maxLeafSize"].as<glm::vec3>();
-	if (in["m_leafPositionVariance"]) m_leafPositionVariance = in["m_leafPositionVariance"].as<float>();
-	if (in["m_leafRotationVariance"]) m_leafRotationVariance = in["m_leafRotationVariance"].as<float>();
-	if (in["m_leafChlorophyllLoss"]) m_leafChlorophyllLoss = in["m_leafChlorophyllLoss"].as<float>();
-	if (in["m_leafChlorophyllSynthesisFactorTemperature"]) m_leafChlorophyllSynthesisFactorTemperature = in["m_leafChlorophyllSynthesisFactorTemperature"].as<float>();
+	if (in["m_leafFlushingLightingRequirement"]) m_leafFlushingLightingRequirement = in["m_leafFlushingLightingRequirement"].as<float>();
 	if (in["m_leafFallProbability"]) m_leafFallProbability = in["m_leafFallProbability"].as<float>();
 	if (in["m_leafDistanceToBranchEndLimit"]) m_leafDistanceToBranchEndLimit = in["m_leafDistanceToBranchEndLimit"].as<float>();
 
 	//Structure
-	if (in["m_fruitBudCount"]) m_fruitBudCount = in["m_fruitBudCount"].as<int>();
-	if (in["m_fruitGrowthRate"]) m_fruitGrowthRate = in["m_fruitGrowthRate"].as<float>();
-	if (in["m_fruitBudFlushingProbabilityTemperatureRange"]) m_fruitBudFlushingProbabilityTemperatureRange = in["m_fruitBudFlushingProbabilityTemperatureRange"].as<glm::vec4>();
-	if (in["m_fruitVigorRequirement"]) m_fruitVigorRequirement = in["m_fruitVigorRequirement"].as<float>();
-	if (in["m_maxFruitSize"]) m_maxFruitSize = in["m_maxFruitSize"].as<glm::vec3>();
-	if (in["m_fruitPositionVariance"]) m_fruitPositionVariance = in["m_fruitPositionVariance"].as<float>();
-	if (in["m_fruitRotationVariance"]) m_fruitRotationVariance = in["m_fruitRotationVariance"].as<float>();
+	if (in["m_fruitFlushingLightingRequirement"]) m_fruitFlushingLightingRequirement = in["m_fruitFlushingLightingRequirement"].as<float>();
 	if (in["m_fruitFallProbability"]) m_fruitFallProbability = in["m_fruitFallProbability"].as<float>();
+	if (in["m_fruitDistanceToBranchEndLimit"]) m_fruitDistanceToBranchEndLimit = in["m_fruitDistanceToBranchEndLimit"].as<float>();
 
 	m_barkMaterial.Load("m_barkMaterial", in);
 }
@@ -407,32 +347,18 @@ void ShootDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 
 		ImGui::TreePop();
 	}
-	changed = ImGui::DragInt("Leaf bud count", &m_leafBudCount, 1, 0, 3) || changed;
-	if (m_leafBudCount > 0 && ImGui::TreeNodeEx("Leaf"))
+	if (ImGui::TreeNodeEx("Leaf"))
 	{
-		changed = ImGui::DragFloat("Leaf growth rate", &m_leafGrowthRate, 0.01f, 0.0f, 1.0f) || changed;
-		changed = ImGui::DragFloat4("Leaf flushing prob/temp range", &m_leafBudFlushingProbabilityTemperatureRange.x, 0.01f, 0.0f, 1.0f, "%.5f") || changed;
-		changed = ImGui::DragFloat3("Leaf vigor requirement", &m_leafVigorRequirement, 0.01f) || changed;
-		changed = ImGui::DragFloat3("Size", &m_maxLeafSize.x, 0.01f) || changed;
-		changed = ImGui::DragFloat("Position Variance", &m_leafPositionVariance, 0.01f) || changed;
-		changed = ImGui::DragFloat("Random rotation", &m_leafRotationVariance, 0.01f) || changed;
-		changed = ImGui::DragFloat("Chlorophyll Loss", &m_leafChlorophyllLoss, 0.01f) || changed;
-		changed = ImGui::DragFloat("Chlorophyll temperature", &m_leafChlorophyllSynthesisFactorTemperature, 0.01f) || changed;
+		changed = ImGui::DragFloat("Lighting requirement", &m_leafFlushingLightingRequirement, 0.01f, 0.0f, 1.0f) || changed;
 		changed = ImGui::DragFloat("Drop prob", &m_leafFallProbability, 0.01f) || changed;
 		changed = ImGui::DragFloat("Distance To End Limit", &m_leafDistanceToBranchEndLimit, 0.01f) || changed;
 		ImGui::TreePop();
 	}
-	changed = ImGui::DragInt("Fruit bud count", &m_fruitBudCount, 1, 0, 3) || changed;
-	if (m_fruitBudCount > 0 && ImGui::TreeNodeEx("Fruit"))
+	if (ImGui::TreeNodeEx("Fruit"))
 	{
-		changed = ImGui::DragFloat("Fruit growth rate", &m_fruitGrowthRate, 0.01f, 0.0f, 1.0f) || changed;
-		changed = ImGui::DragFloat4("Fruit flushing prob/temp range", &m_fruitBudFlushingProbabilityTemperatureRange.x, 0.01f, 0.0f, 1.0f, "%.5f") || changed;
-		changed = ImGui::DragFloat3("Fruit vigor requirement", &m_fruitVigorRequirement, 0.01f) || changed;
-		changed = ImGui::DragFloat3("Size", &m_maxFruitSize.x, 0.01f) || changed;
-		changed = ImGui::DragFloat("Position Variance", &m_fruitPositionVariance, 0.01f) || changed;
-		changed = ImGui::DragFloat("Random rotation", &m_fruitRotationVariance, 0.01f) || changed;
-
+		changed = ImGui::DragFloat("Lighting requirement", &m_fruitFlushingLightingRequirement, 0.01f, 0.0f, 1.0f) || changed;
 		changed = ImGui::DragFloat("Drop prob", &m_fruitFallProbability, 0.01f) || changed;
+		changed = ImGui::DragFloat("Distance To End Limit", &m_fruitDistanceToBranchEndLimit, 0.01f) || changed;
 		ImGui::TreePop();
 	}
 

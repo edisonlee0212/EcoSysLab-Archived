@@ -699,6 +699,11 @@ void Tree::OnDestroy() {
 	m_leftSideBiomass = m_rightSideBiomass = 0.0f;
 	m_rootBiomassHistory.clear();
 	m_shootBiomassHistory.clear();
+
+	m_generateMesh = true;
+	m_lowBranchPruning = 0.f;
+	m_crownShynessDistance = 0.f;
+	m_startTime = 0.f;
 }
 
 bool Tree::OnInspectTreeGrowthSettings(TreeGrowthSettings& treeGrowthSettings)
@@ -878,13 +883,13 @@ std::shared_ptr<Mesh> Tree::GenerateFoliageMesh(const TreeMeshGeneratorSettings&
 	auto foliageDescriptor = treeDescriptor->m_foliageDescriptor.Get<FoliageDescriptor>();
 	if (!foliageDescriptor) foliageDescriptor = ProjectManager::CreateTemporaryAsset<FoliageDescriptor>();
 
-
+	const auto treeDim = m_strandModel.m_strandModelSkeleton.m_max - m_strandModel.m_strandModelSkeleton.m_min;
 
 	const auto& nodeList = m_treeModel.PeekShootSkeleton().PeekSortedNodeList();
 	for (const auto& internodeHandle : nodeList) {
 		const auto& internodeInfo = m_strandModel.m_strandModelSkeleton.RefRawNodes().size() == m_treeModel.m_shootSkeleton.RefRawNodes().size() ? m_strandModel.m_strandModelSkeleton.PeekNode(internodeHandle).m_info : m_treeModel.PeekShootSkeleton().PeekNode(internodeHandle).m_info;
 		std::vector<glm::mat4> leafMatrices;
-		foliageDescriptor->GenerateFoliageMatrices(leafMatrices, internodeInfo);
+		foliageDescriptor->GenerateFoliageMatrices(leafMatrices, internodeInfo, glm::length(treeDim));
 		Vertex archetype;
 		for (const auto& matrix : leafMatrices)
 		{
@@ -1054,11 +1059,12 @@ std::shared_ptr<ParticleInfoList> Tree::GenerateFoliageParticleInfoList(
 	if (!foliageDescriptor) foliageDescriptor = ProjectManager::CreateTemporaryAsset<FoliageDescriptor>();
 	std::vector<ParticleInfo> particleInfos;
 	const auto& nodeList = m_treeModel.PeekShootSkeleton().PeekSortedNodeList();
+	const auto treeDim = m_treeModel.PeekShootSkeleton().m_max - m_treeModel.PeekShootSkeleton().m_min;
 	for (const auto& internodeHandle : nodeList) {
 		const auto& internode = m_treeModel.PeekShootSkeleton().PeekNode(internodeHandle);
 		const auto& internodeInfo = internode.m_info;
 		std::vector<glm::mat4> leafMatrices{};
-		foliageDescriptor->GenerateFoliageMatrices(leafMatrices, internodeInfo);
+		foliageDescriptor->GenerateFoliageMatrices(leafMatrices, internodeInfo, glm::length(treeDim));
 		const auto startIndex = particleInfos.size();
 		particleInfos.resize(startIndex + leafMatrices.size());
 		for (int i = 0; i < leafMatrices.size(); i++)
@@ -1087,10 +1093,11 @@ std::shared_ptr<Mesh> Tree::GenerateStrandModelFoliageMesh(
 	auto foliageDescriptor = treeDescriptor->m_foliageDescriptor.Get<FoliageDescriptor>();
 	if (!foliageDescriptor) foliageDescriptor = ProjectManager::CreateTemporaryAsset<FoliageDescriptor>();
 	const auto& nodeList = m_strandModel.m_strandModelSkeleton.PeekSortedNodeList();
+	const auto treeDim = m_strandModel.m_strandModelSkeleton.m_max - m_strandModel.m_strandModelSkeleton.m_min;
 	for (const auto& internodeHandle : nodeList) {
 		const auto& strandModelNode = m_strandModel.m_strandModelSkeleton.PeekNode(internodeHandle);
 		std::vector<glm::mat4> leafMatrices;
-		foliageDescriptor->GenerateFoliageMatrices(leafMatrices, strandModelNode.m_info);
+		foliageDescriptor->GenerateFoliageMatrices(leafMatrices, strandModelNode.m_info, glm::length(treeDim));
 		Vertex archetype;
 		for (const auto& matrix : leafMatrices)
 		{
@@ -1534,7 +1541,7 @@ bool Tree::TryGrow(float deltaTime, bool pruning)
 	}
 
 	PrepareController(shootDescriptor, soil, climate);
-	const bool grown = m_treeModel.Grow(deltaTime, scene->GetDataComponent<GlobalTransform>(owner).m_value, climate->m_climateModel, m_shootGrowthController, pruning, m_growthRateMultiplier);
+	const bool grown = m_treeModel.Grow(deltaTime, scene->GetDataComponent<GlobalTransform>(owner).m_value, climate->m_climateModel, m_shootGrowthController, pruning);
 	if (grown)
 	{
 		if (pruning) m_treeVisualizer.ClearSelections();
@@ -1593,7 +1600,7 @@ bool Tree::TryGrowSubTree(const float deltaTime, const SkeletonNodeHandle baseIn
 	}
 
 	PrepareController(shootDescriptor, soil, climate);
-	const bool grown = m_treeModel.Grow(deltaTime, baseInternodeHandle, scene->GetDataComponent<GlobalTransform>(owner).m_value, climate->m_climateModel, m_shootGrowthController, pruning, m_growthRateMultiplier);
+	const bool grown = m_treeModel.Grow(deltaTime, baseInternodeHandle, scene->GetDataComponent<GlobalTransform>(owner).m_value, climate->m_climateModel, m_shootGrowthController, pruning);
 	if (grown)
 	{
 		if (pruning) m_treeVisualizer.ClearSelections();
@@ -2487,7 +2494,8 @@ void Tree::GenerateTreeParts(const TreeMeshGeneratorSettings& meshGeneratorSetti
 		const auto& internode = skeleton.PeekNode(internodeHandle);
 		const auto& internodeInfo = internode.m_info;
 		std::vector<glm::mat4> leafMatrices;
-		foliageDescriptor->GenerateFoliageMatrices(leafMatrices, internodeInfo);
+		const auto treeDim = skeleton.m_max - skeleton.m_min;
+		foliageDescriptor->GenerateFoliageMatrices(leafMatrices, internodeInfo, glm::length(treeDim));
 
 		auto& currentTreePartInfo = treePartInfos[internodeHandle];
 		auto& treePart = treeParts[currentTreePartInfo.m_treePartIndex];
@@ -2704,16 +2712,7 @@ void SkeletalGraphSettings::OnInspect()
 void Tree::PrepareController(const std::shared_ptr<ShootDescriptor>& shootDescriptor, const std::shared_ptr<Soil>& soil, const std::shared_ptr<Climate>& climate)
 {
 	shootDescriptor->PrepareController(m_shootGrowthController);
-	m_shootGrowthController.m_leafDamage = [=](const SkeletonNode<InternodeGrowthData>& internode)
-		{
-			const auto& internodeData = internode.m_data;
-			float leafDamage = 0.0f;
-			if (climate->m_climateModel.m_time - glm::floor(climate->m_climateModel.m_time) > 0.5f && internodeData.m_temperature < shootDescriptor->m_leafChlorophyllSynthesisFactorTemperature)
-			{
-				leafDamage += shootDescriptor->m_leafChlorophyllLoss;
-			}
-			return leafDamage;
-		};
+	
 	m_shootGrowthController.m_endToRootPruningFactor = [&](const glm::mat4& globalTransform, ClimateModel& climateModel, const ShootSkeleton& shootSkeleton, const SkeletonNode<InternodeGrowthData>& internode)
 		{
 			if (shootDescriptor->m_trunkProtection && internode.m_data.m_order == 0)

@@ -1,13 +1,12 @@
-m_gridDistance: [2, 2]
+m_gridDistance: [1, 1]
 m_positionOffsetMean: [0.300000012, 0.300000012]
 m_positionOffsetVariance: [0, 0]
 m_rotationOffsetVariance: [0, 0, 0]
-m_gridSize: [5, 5]
-m_minGrowthRate: 0.800000012
-m_maxGrowthRate: 1
+m_gridSize: [10, 10]
 m_minLowBranchPruning: 0
 m_maxLowBranchPruning: 0
-m_simulationTime: 12
+m_simulationTime: 8
+m_startTimeMax: 3
 m_treeDescriptor:
   m_assetHandle: 18200897071482260113
   m_assetTypeName: TreeDescriptor

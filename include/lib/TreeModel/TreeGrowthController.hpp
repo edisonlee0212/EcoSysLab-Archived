@@ -107,7 +107,7 @@ namespace EcoSysLab
 		* \brief How much inhibitor will shrink when going through the branch.
 		*/
 		float m_apicalDominanceLoss;
-		
+		std::function<float(const SkeletonNode<InternodeGrowthData>& internode)> m_internodeStrength;
 #pragma endregion
 #pragma region Pruning
 		std::function<float(const SkeletonNode<InternodeGrowthData>& internode)> m_breakingForce;
@@ -121,79 +121,16 @@ namespace EcoSysLab
 		std::function<float(const glm::mat4& globalTransform, ClimateModel& climateModel, const ShootSkeleton& shootSkeleton, const SkeletonNode<InternodeGrowthData>& internode)> m_rootToEndPruningFactor;
 #pragma endregion
 #pragma region Leaf
-		/**
-		* \brief Base resource requirement factor for leaf
-		*/
-		float m_leafVigorRequirement;
 		
-		/**
-		 * \brief Flushing prob of leaf bud.
-		 */
-		std::function<float(const SkeletonNode<InternodeGrowthData>& internode)> m_leafBudFlushingProbability;
-		
-		/**
-		 * \brief The number of leaf buds an internode contains
-		 */
-		int m_leafBudCount;
-
-		float m_leafGrowthRate = 0.05f;
-		
-		/**
-		 * \brief The size of the leaf when it reaches full maturity.
-		 */
-		glm::vec3 m_maxLeafSize;
-		/**
-		 * \brief The relative distance variance between leaf and bud.
-		 */
-		float m_leafPositionVariance;
-		/**
-		 * \brief The rotation variance between leaf and bud.
-		 */
-		float m_leafRotationVariance;
-		/**
-		 * \brief The damage to the leaf during this iteration caused by various factors
-		 */
-		std::function<float(const SkeletonNode<InternodeGrowthData>& internode)> m_leafDamage;
-
-		std::function<float(const SkeletonNode<InternodeGrowthData>& internode)> m_internodeStrength;
+		std::function<float(const SkeletonNode<InternodeGrowthData>& internode)> m_leaf;
 
 		/**
 		 * \brief The probability of leaf falling after health return to 0.0
 		 */
 		std::function<float(const SkeletonNode<InternodeGrowthData>& internode)> m_leafFallProbability;
-		float m_leafShadowVolume = 0.05f;
 #pragma endregion
 #pragma region Fruit
-		/**
-		* \brief Base resource requirement factor for fruit
-		*/
-		float m_fruitVigorRequirement;
-		/**
-		 * \brief Flushing prob of fruit bud.
-		 */
-		std::function<float(const SkeletonNode<InternodeGrowthData>& internode)> m_fruitBudFlushingProbability;
-		/**
-		 * \brief The number of fruit buds an internode contains
-		 */
-		int m_fruitBudCount;
-
-		float m_fruitGrowthRate = 0.05f;
-		/**
-		 * \brief The size of the fruit when it reaches full maturity.
-		 */
-		glm::vec3 m_maxFruitSize;
-		/**
-		 * \brief The position variance between fruit and bud.
-		 */
-		float m_fruitPositionVariance;
-		/**
-		 * \brief The rotation variance between fruit and bud.
-		 */
-		float m_fruitRotationVariance;
-		/**
-		 * \brief The damage to the fruit during this iteration caused by various factors
-		 */
-		std::function<float(const SkeletonNode<InternodeGrowthData>& internode)> m_fruitDamage;
+		std::function<float(const SkeletonNode<InternodeGrowthData>& internode)> m_fruit;
 		/**
 		 * \brief The probability of fruit falling after health return to 0.0
 		 */

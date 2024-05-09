@@ -123,7 +123,7 @@ namespace EcoSysLab {
 		 * @return Whether the growth caused a structural change during the growth.
 		 */
 		bool Grow(float deltaTime, const glm::mat4& globalTransform, ClimateModel& climateModel,
-			const ShootGrowthController& shootGrowthController, bool pruning = true, float overrideGrowthRate = -1);
+			const ShootGrowthController& shootGrowthController, bool pruning = true);
 
 		/**
 		 * Grow one iteration of the tree, given the nutrients and the procedural parameters.
@@ -137,7 +137,7 @@ namespace EcoSysLab {
 		 * @return Whether the growth caused a structural change during the growth.
 		 */
 		bool Grow(float deltaTime, SkeletonNodeHandle baseInternodeHandle, const glm::mat4& globalTransform, ClimateModel& climateModel,
-			const ShootGrowthController& shootGrowthController, bool pruning = true, float overrideGrowthRate = -1);
+			const ShootGrowthController& shootGrowthController, bool pruning = true);
 
 		int m_historyLimit = -1;
 

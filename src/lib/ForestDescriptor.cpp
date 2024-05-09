@@ -11,10 +11,9 @@
 #include "EcoSysLabLayer.hpp"
 using namespace EcoSysLab;
 
-void ForestPatch::InstantiatePatch(const bool setParent, const bool setSimulationSettings)
+Entity ForestPatch::InstantiatePatch(const bool setSimulationSettings)
 {
 	const auto scene = Application::GetActiveScene();
-	std::vector<GlobalTransform> treeMatrices;
 	std::shared_ptr<Soil> soil;
 	const auto soilCandidate = EcoSysLabLayer::FindSoil();
 	if (!soilCandidate.expired()) soil = soilCandidate.lock();
@@ -27,11 +26,23 @@ void ForestPatch::InstantiatePatch(const bool setParent, const bool setSimulatio
 	{
 		heightField = soilDescriptor->m_heightField.Get<HeightField>();
 	}
-	treeMatrices.resize(m_gridSize.x * m_gridSize.y);
 	const glm::vec2 startPoint = glm::vec2((m_gridSize.x - 1) * m_gridDistance.x, (m_gridSize.y - 1) * m_gridDistance.y) * 0.5f;
+	Entity retVal;
+	Entity forest;
+	Entity boundary;
+
+	retVal = scene->CreateEntity("Forest (" + std::to_string(m_gridSize.x * m_gridSize.y) + ") - " + GetTitle());
+	forest = scene->CreateEntity("Center");
+	boundary = scene->CreateEntity("Boundary");
+	scene->SetParent(forest, retVal);
+	scene->SetParent(boundary, retVal);
+
+	int index = 0;
+
+	const auto offset = glm::linearRand(glm::vec3(-10000), glm::vec3(10000));
 	for (int i = 0; i < m_gridSize.x; i++) {
 		for (int j = 0; j < m_gridSize.y; j++) {
-			glm::vec3 position = glm::vec3(-startPoint.x + i * m_gridDistance.x, 0.0f, -startPoint.y + j * m_gridDistance.y);
+			auto position = glm::vec3(-startPoint.x + i * m_gridDistance.x, 0.0f, -startPoint.y + j * m_gridDistance.y);
 			position.x += glm::linearRand(-m_gridDistance.x * m_positionOffsetMean.x, m_gridDistance.x * m_positionOffsetMean.x);
 			position.z += glm::linearRand(-m_gridDistance.y * m_positionOffsetMean.y, m_gridDistance.y * m_positionOffsetMean.y);
 			position += glm::gaussRand(glm::vec3(0.0f), glm::vec3(m_positionOffsetVariance.x, 0.0f, m_positionOffsetVariance.y));
@@ -42,36 +53,36 @@ void ForestPatch::InstantiatePatch(const bool setParent, const bool setSimulatio
 				glm::vec3(glm::gaussRand(glm::vec3(0.0f), m_rotationOffsetVariance))));
 			transform.SetRotation(rotation);
 			transform.SetScale(glm::vec3(1.f));
-			treeMatrices[i * m_gridSize.y + j] = transform;
+
+			auto treeEntity = scene->CreateEntity("Tree No." + std::to_string(index));
+			index++;
+
+			scene->SetDataComponent(treeEntity, transform);
+			const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
+			tree->m_treeModel.m_treeGrowthSettings = m_treeGrowthSettings;
+			tree->m_treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
+			if (i == 0 || j == 0 || i == m_gridSize.x - 1 || j == m_gridSize.y - 1) {
+				scene->SetParent(treeEntity, boundary);
+				tree->m_generateMesh = false;
+			}
+			else
+			{
+				scene->SetParent(treeEntity, forest);
+				tree->m_generateMesh = true;
+			}
+			tree->m_startTime = glm::linearRand(0.0f, m_startTimeMax);
+			tree->m_lowBranchPruning = glm::mix(m_minLowBranchPruning, m_maxLowBranchPruning, glm::abs(glm::perlin(offset + transform.GetPosition())));
 		}
 	}
 
-	Entity parent;
-	if (setParent) {
-		parent = scene->CreateEntity("Forest (" + std::to_string(treeMatrices.size()) + ") - " + GetTitle());
-	}
-	int i = 0;
 
-	glm::vec3 offset = glm::linearRand(glm::vec3(-10000), glm::vec3(10000));
-	glm::vec3 offset2 = glm::linearRand(glm::vec3(-10000), glm::vec3(10000));
-	for (const auto& gt : treeMatrices) {
-		auto treeEntity = scene->CreateEntity("Tree No." + std::to_string(i));
-		i++;
-
-		scene->SetDataComponent(treeEntity, gt);
-		const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
-		tree->m_treeModel.m_treeGrowthSettings = m_treeGrowthSettings;
-		tree->m_treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
-		if (setParent) scene->SetParent(treeEntity, parent);
-		tree->m_startTime = glm::linearRand(0.0f, m_startTimeMax);
-		tree->m_lowBranchPruning = glm::mix(m_minLowBranchPruning, m_maxLowBranchPruning, glm::abs(glm::perlin(offset + gt.GetPosition())));
-		tree->m_growthRateMultiplier = glm::mix(m_minGrowthRate, m_maxGrowthRate, glm::abs(glm::perlin(offset2 + gt.GetPosition())));
-	}
-	if(setSimulationSettings)
+	if (setSimulationSettings)
 	{
 		const auto lab = Application::GetLayer<EcoSysLabLayer>();
 		lab->m_simulationSettings = m_simulationSettings;
 	}
+
+	return retVal;
 }
 
 void ForestPatch::CollectAssetRef(std::vector<AssetRef>& list)
@@ -87,8 +98,6 @@ void ForestPatch::Serialize(YAML::Emitter& out)
 	out << YAML::Key << "m_rotationOffsetVariance" << YAML::Value << m_rotationOffsetVariance;
 	out << YAML::Key << "m_gridSize" << YAML::Value << m_gridSize;
 
-	out << YAML::Key << "m_minGrowthRate" << YAML::Value << m_minGrowthRate;
-	out << YAML::Key << "m_maxGrowthRate" << YAML::Value << m_maxGrowthRate;
 	out << YAML::Key << "m_minLowBranchPruning" << YAML::Value << m_minLowBranchPruning;
 	out << YAML::Key << "m_maxLowBranchPruning" << YAML::Value << m_maxLowBranchPruning;
 	out << YAML::Key << "m_simulationTime" << YAML::Value << m_simulationTime;
@@ -107,8 +116,6 @@ void ForestPatch::Deserialize(const YAML::Node& in)
 	if (in["m_rotationOffsetVariance"]) m_rotationOffsetVariance = in["m_rotationOffsetVariance"].as<glm::vec3>();
 	if (in["m_gridSize"]) m_gridSize = in["m_gridSize"].as<glm::ivec2>();
 
-	if (in["m_minGrowthRate"]) m_minGrowthRate = in["m_minGrowthRate"].as<float>();
-	if (in["m_maxGrowthRate"]) m_maxGrowthRate = in["m_maxGrowthRate"].as<float>();
 	if (in["m_minLowBranchPruning"]) m_minLowBranchPruning = in["m_minLowBranchPruning"].as<float>();
 	if (in["m_maxLowBranchPruning"]) m_maxLowBranchPruning = in["m_maxLowBranchPruning"].as<float>();
 	if (in["m_simulationTime"]) m_simulationTime = in["m_simulationTime"].as<float>();
@@ -137,8 +144,6 @@ void ForestPatch::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 		ImGui::TreePop();
 	}
 
-	ImGui::DragFloat("Min growth rate", &m_minGrowthRate, 0.01f, 0.f, m_maxGrowthRate);
-	ImGui::DragFloat("Max growth rate", &m_maxGrowthRate, 0.01f, m_minGrowthRate, 3.f);
 	ImGui::DragFloat("Min low branch pruning", &m_minLowBranchPruning, 0.01f, 0.f, m_maxLowBranchPruning);
 	ImGui::DragFloat("Max low branch pruning", &m_maxLowBranchPruning, 0.01f, m_minLowBranchPruning, 1.f);
 	ImGui::DragFloat("Simulation time", &m_simulationTime, 0.1f, 0.0f, 100.f);

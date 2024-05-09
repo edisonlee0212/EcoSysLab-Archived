@@ -117,14 +117,14 @@ void FoliageDescriptor::CollectAssetRef(std::vector<AssetRef>& list)
 	if (m_leafMaterial.Get<Material>()) list.push_back(m_leafMaterial);
 }
 
-void FoliageDescriptor::GenerateFoliageMatrices(std::vector<glm::mat4>& matrices, const SkeletonNodeInfo& internodeInfo) const
+void FoliageDescriptor::GenerateFoliageMatrices(std::vector<glm::mat4>& matrices, const SkeletonNodeInfo& internodeInfo, const float treeSize) const
 {
 	if (internodeInfo.m_thickness < m_maxNodeThickness
 		&& internodeInfo.m_rootDistance > m_minRootDistance
 		&& internodeInfo.m_endDistance < m_maxEndDistance) {
 		for (int i = 0; i < m_leafCountPerInternode * internodeInfo.m_leaves; i++)
 		{
-			const auto leafSize = m_leafSize;
+			const auto leafSize = m_leafSize * treeSize * 0.1f;
 			glm::quat rotation = internodeInfo.m_globalRotation *
 				glm::quat(glm::radians(glm::vec3(glm::gaussRand(0.0f, m_rotationVariance), m_branchingAngle, glm::linearRand(0.0f, 360.0f))));
 			auto front = rotation * glm::vec3(0, 0, -1);
@@ -136,7 +136,7 @@ void FoliageDescriptor::GenerateFoliageMatrices(std::vector<glm::mat4>& matrices
 				TreeModel::ApplyTropism(glm::normalize(horizontalDirection), m_horizontalTropism,
 					front, up);
 			}
-			auto foliagePosition = glm::mix(internodeInfo.m_globalPosition, internodeInfo.GetGlobalEndPosition(), glm::linearRand(0.f, 1.f)) + front * (leafSize.y + glm::gaussRand(0.0f, m_positionVariance));
+			auto foliagePosition = glm::mix(internodeInfo.m_globalPosition, internodeInfo.GetGlobalEndPosition(), glm::linearRand(0.f, 1.f)) + front * (leafSize.y + glm::linearRand(0.0f, m_positionVariance) * treeSize * 0.1f);
 			if(glm::any(glm::isnan(foliagePosition)) || glm::any(glm::isnan(front)) || glm::any(glm::isnan(up))) continue;
 			const auto leafTransform = glm::translate(foliagePosition) * glm::mat4_cast(glm::quatLookAt(front, up)) * glm::scale(glm::vec3(leafSize.x, 1.0f, leafSize.y));
 			matrices.emplace_back(leafTransform);

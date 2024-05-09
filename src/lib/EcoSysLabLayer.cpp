@@ -532,14 +532,11 @@ void EcoSysLabLayer::Visualization() {
 							const auto climateCandidate = FindClimate();
 							if (!climateCandidate.expired()) {
 								climateCandidate.lock()->PrepareForGrowth();
-								const auto prevGrowthRateMul = tree->m_growthRateMultiplier;
-								tree->m_growthRateMultiplier = m_overrideGrowRate;
 								if (tree->TryGrowSubTree(m_simulationSettings.m_deltaTime, treeVisualizer.m_selectedInternodeHandle, false))
 								{
 									treeVisualizer.m_needUpdate = true;
 									mayNeedGeometryGeneration = true;
 								}
-								tree->m_growthRateMultiplier = prevGrowthRateMul;
 							}
 							lastFrameInvigorate = true;
 						}
@@ -750,8 +747,6 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 		const std::vector<Entity>* treeEntities =
 			scene->UnsafeGetPrivateComponentOwnersList<Tree>();
 		if (treeEntities && !treeEntities->empty()) {
-
-
 			ImGui::Text("Editing");
 			if (scene->IsEntityValid(m_selectedTree)) {
 				const auto& tree = scene->GetOrSetPrivateComponent<Tree>(m_selectedTree).lock();
@@ -780,7 +775,7 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 						}
 						if (m_operatorMode == static_cast<unsigned>(OperatorMode::Invigorate))
 						{
-							ImGui::DragFloat("Invigorate speed", &m_overrideGrowRate, 0.01f, 0.01f, 1.0f);
+							ImGui::DragFloat("Invigorate speed", &m_simulationSettings.m_deltaTime, 0.01f, 0.01f, 1.0f);
 						}if (m_operatorMode == static_cast<unsigned>(OperatorMode::Reduce))
 						{
 							ImGui::DragFloat("Reduce speed", &m_reduceRate, 0.001f, 0.001f, 1.0f);
@@ -1881,7 +1876,7 @@ void EcoSysLabLayer::GenerateMeshes(const TreeMeshGeneratorSettings& meshGenerat
 		const auto copiedEntities = *treeEntities;
 		for (auto treeEntity : copiedEntities) {
 			const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
-			tree->GenerateGeometryEntities(meshGeneratorSettings);
+			if(tree->m_generateMesh) tree->GenerateGeometryEntities(meshGeneratorSettings);
 		}
 	}
 }
@@ -1895,7 +1890,7 @@ void EcoSysLabLayer::GenerateSkeletalGraphs(const SkeletalGraphSettings& skeleta
 		const auto copiedEntities = *treeEntities;
 		for (auto treeEntity : copiedEntities) {
 			const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
-			tree->GenerateSkeletalGraph(m_skeletalGraphSettings, -1, Resources::GetResource<Mesh>("PRIMITIVE_SPHERE"), Resources::GetResource<Mesh>("PRIMITIVE_CUBE"));
+			if (tree->m_generateMesh) tree->GenerateSkeletalGraph(m_skeletalGraphSettings, -1, Resources::GetResource<Mesh>("PRIMITIVE_SPHERE"), Resources::GetResource<Mesh>("PRIMITIVE_CUBE"));
 		}
 	}
 }
@@ -1909,7 +1904,7 @@ void EcoSysLabLayer::GenerateStrandModelProfiles() const
 		const auto copiedEntities = *treeEntities;
 		for (auto treeEntity : copiedEntities) {
 			const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
-			tree->BuildStrandModel();
+			if (tree->m_generateMesh) tree->BuildStrandModel();
 		}
 	}
 }
@@ -1924,7 +1919,7 @@ void EcoSysLabLayer::GenerateStrandModelMeshes(const StrandModelMeshGeneratorSet
 		const auto copiedEntities = *treeEntities;
 		for (auto treeEntity : copiedEntities) {
 			const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
-			tree->InitializeStrandModelMeshRenderer(strandModelMeshGeneratorSettings);
+			if (tree->m_generateMesh) tree->InitializeStrandModelMeshRenderer(strandModelMeshGeneratorSettings);
 		}
 	}
 }
@@ -1938,7 +1933,7 @@ void EcoSysLabLayer::GenerateStrandRenderers() const
 		const auto copiedEntities = *treeEntities;
 		for (auto treeEntity : copiedEntities) {
 			const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
-			tree->InitializeStrandRenderer();
+			if (tree->m_generateMesh) tree->InitializeStrandRenderer();
 		}
 	}
 }
