@@ -6,7 +6,7 @@ m_gridSize: [10, 10]
 m_minLowBranchPruning: 0.100000001
 m_maxLowBranchPruning: 0.300000012
 m_simulationTime: 8
-m_startTimeMax: 2
+m_startTimeMax: 1
 m_treeDescriptor:
   m_assetHandle: 12091124918564175137
   m_assetTypeName: TreeDescriptor

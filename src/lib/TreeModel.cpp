@@ -1003,7 +1003,7 @@ float TreeModel::CalculateGrowthPotential(const std::vector<SkeletonNodeHandle>&
 			localHeightControl = 1.f;
 		}
 		node.m_data.m_growthPotential = localApicalControl * localRootDistanceControl * localHeightControl;
-		if (node.IsEndNode()) maxGrowPotential = glm::max(maxGrowPotential, node.m_data.m_growthPotential);
+		maxGrowPotential = glm::max(maxGrowPotential, node.m_data.m_growthPotential);
 	}
 	float totalDesiredGrowthRate = 1.0f;
 	for (const auto& internodeHandle : sortedInternodeList)
