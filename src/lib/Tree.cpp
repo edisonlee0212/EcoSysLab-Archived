@@ -358,7 +358,7 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
 	const auto scene = GetScene();
 	editorLayer->DragAndDropButton<TreeDescriptor>(m_treeDescriptor, "TreeDescriptor", true);
-	static bool showSpaceColonizationGrid = false;
+	static bool showSpaceColonizationGrid = true;
 
 	static std::shared_ptr<ParticleInfoList> spaceColonizationGridParticleInfoList;
 	if (!spaceColonizationGridParticleInfoList)
@@ -463,7 +463,7 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 			}
 
 		}
-		
+
 		if (m_treeModel.m_treeGrowthSettings.m_useSpaceColonization) {
 			bool needGridUpdate = false;
 			if (m_treeVisualizer.m_needUpdate)
@@ -472,37 +472,45 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 			}
 			if (ImGui::Button("Update grids")) needGridUpdate = true;
 			ImGui::Checkbox("Show Space Colonization Grid", &showSpaceColonizationGrid);
-			if (showSpaceColonizationGrid && needGridUpdate) {
-				auto& occupancyGrid = m_treeModel.m_treeOccupancyGrid;
-				auto& voxelGrid = occupancyGrid.RefGrid();
-				const auto numVoxels = voxelGrid.GetVoxelCount();
-				std::vector<ParticleInfo> scalarMatrices{};
+			if (showSpaceColonizationGrid) {
+				if (needGridUpdate) {
+					auto& occupancyGrid = m_treeModel.m_treeOccupancyGrid;
+					auto& voxelGrid = occupancyGrid.RefGrid();
+					const auto numVoxels = voxelGrid.GetVoxelCount();
+					std::vector<ParticleInfo> scalarMatrices{};
 
-				if (scalarMatrices.size() != numVoxels) {
-					scalarMatrices.resize(numVoxels);
-				}
-
-				if (scalarMatrices.size() != numVoxels) {
-					scalarMatrices.reserve(occupancyGrid.GetMarkersPerVoxel() * numVoxels);
-				}
-				int i = 0;
-				for (const auto& voxel : voxelGrid.RefData())
-				{
-					for (const auto& marker : voxel.m_markers) {
-						scalarMatrices.resize(i + 1);
-						scalarMatrices[i].m_instanceMatrix.m_value =
-							glm::translate(marker.m_position)
-							* glm::mat4_cast(glm::quat(glm::vec3(0.0f)))
-							* glm::scale(glm::vec3(voxelGrid.GetVoxelSize() * 0.2f));
-						if (marker.m_nodeHandle == -1) scalarMatrices[i].m_instanceColor = glm::vec4(1.0f, 1.0f, 1.0f, 0.75f);
-						else
-						{
-							scalarMatrices[i].m_instanceColor = glm::vec4(ecoSysLabLayer->RandomColors()[marker.m_nodeHandle], 1.0f);
-						}
-						i++;
+					if (scalarMatrices.size() != numVoxels) {
+						scalarMatrices.resize(numVoxels);
 					}
+
+					if (scalarMatrices.size() != numVoxels) {
+						scalarMatrices.reserve(occupancyGrid.GetMarkersPerVoxel() * numVoxels);
+					}
+					int i = 0;
+					for (const auto& voxel : voxelGrid.RefData())
+					{
+						for (const auto& marker : voxel.m_markers) {
+							scalarMatrices.resize(i + 1);
+							scalarMatrices[i].m_instanceMatrix.m_value =
+								glm::translate(marker.m_position)
+								* glm::mat4_cast(glm::quat(glm::vec3(0.0f)))
+								* glm::scale(glm::vec3(voxelGrid.GetVoxelSize() * 0.2f));
+							if (marker.m_nodeHandle == -1) scalarMatrices[i].m_instanceColor = glm::vec4(1.0f, 1.0f, 1.0f, 0.75f);
+							else
+							{
+								scalarMatrices[i].m_instanceColor = glm::vec4(ecoSysLabLayer->RandomColors()[marker.m_nodeHandle], 1.0f);
+							}
+							i++;
+						}
+					}
+					spaceColonizationGridParticleInfoList->SetParticleInfos(scalarMatrices);
 				}
-				spaceColonizationGridParticleInfoList->SetParticleInfos(scalarMatrices);
+				GizmoSettings gizmoSettings{};
+				gizmoSettings.m_drawSettings.m_blending = true;
+				editorLayer->DrawGizmoMeshInstancedColored(
+					Resources::GetResource<Mesh>("PRIMITIVE_CUBE"), spaceColonizationGridParticleInfoList,
+					glm::mat4(1.0f), 1.0f, gizmoSettings);
+
 			}
 		}
 
@@ -522,19 +530,8 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 
 	if (m_splitRootTest) ImGui::Text(("Left/Right side biomass: [" + std::to_string(m_leftSideBiomass) + ", " + std::to_string(m_rightSideBiomass) + "]").c_str());
 	*/
-	/*
-	if (m_enableVisualization)
-	{
-		if (showSpaceColonizationGrid)
-		{
-			GizmoSettings gizmoSettings{};
-			gizmoSettings.m_drawSettings.m_blending = true;
-			editorLayer->DrawGizmoMeshInstancedColored(
-				Resources::GetResource<Mesh>("PRIMITIVE_CUBE"), spaceColonizationGridParticleInfoList,
-				glm::mat4(1.0f), 1.0f, gizmoSettings);
-		}
-	}
-	*/
+
+
 	if (ImGui::TreeNode("Strand Model")) {
 
 		auto& strandModelParameters = m_strandModelParameters;
@@ -2712,7 +2709,7 @@ void SkeletalGraphSettings::OnInspect()
 void Tree::PrepareController(const std::shared_ptr<ShootDescriptor>& shootDescriptor, const std::shared_ptr<Soil>& soil, const std::shared_ptr<Climate>& climate)
 {
 	shootDescriptor->PrepareController(m_shootGrowthController);
-	
+
 	m_shootGrowthController.m_endToRootPruningFactor = [&](const glm::mat4& globalTransform, ClimateModel& climateModel, const ShootSkeleton& shootSkeleton, const SkeletonNode<InternodeGrowthData>& internode)
 		{
 			if (shootDescriptor->m_trunkProtection && internode.m_data.m_order == 0)
@@ -2740,7 +2737,7 @@ void Tree::PrepareController(const std::shared_ptr<ShootDescriptor>& shootDescri
 			{
 				return 0.f;
 			}
-			
+
 			if (shootDescriptor->m_maxFlowLength != 0 && shootDescriptor->m_maxFlowLength < internode.m_info.m_chainIndex)
 			{
 				return 999.f;
