@@ -463,8 +463,8 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 			}
 
 		}
-		/*
-		if (m_enableVisualization) {
+		
+		if (m_treeModel.m_treeGrowthSettings.m_useSpaceColonization) {
 			bool needGridUpdate = false;
 			if (m_treeVisualizer.m_needUpdate)
 			{
@@ -476,7 +476,7 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 				auto& occupancyGrid = m_treeModel.m_treeOccupancyGrid;
 				auto& voxelGrid = occupancyGrid.RefGrid();
 				const auto numVoxels = voxelGrid.GetVoxelCount();
-				auto& scalarMatrices = spaceColonizationGridParticleInfoList->m_particleInfos;
+				std::vector<ParticleInfo> scalarMatrices{};
 
 				if (scalarMatrices.size() != numVoxels) {
 					scalarMatrices.resize(numVoxels);
@@ -502,9 +502,9 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 						i++;
 					}
 				}
-				spaceColonizationGridParticleInfoList->SetPendingUpdate();
+				spaceColonizationGridParticleInfoList->SetParticleInfos(scalarMatrices);
 			}
-		}*/
+		}
 
 		if (m_enableHistory)
 		{
