@@ -416,8 +416,10 @@ void RadialBoundingVolume::CalculateVolume(const std::vector<glm::vec3>& points)
     CalculateSizes();
 }
 
-void RadialBoundingVolume::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
-    IVolume::OnInspect(editorLayer);
+bool RadialBoundingVolume::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
+    bool changed = false;
+
+    if (IVolume::OnInspect(editorLayer)) changed = true;
 
 
     PrivateComponentRef treeRef;
@@ -428,16 +430,16 @@ void RadialBoundingVolume::OnInspect(const std::shared_ptr<EditorLayer>& editorL
         {
             //CopyVolume(tree->m_treeModel);
             treeRef.Clear();
+            changed = true;
         }
     }
 
     ImGui::ColorEdit4("Display Color", &m_displayColor.x);
     ImGui::DragFloat("Display Scale", &m_displayScale, 0.01f, 0.01f, 1.0f);
-    bool edited = false;
     if (ImGui::DragInt("Layer Amount", &m_layerAmount, 1, 1, 100))
-        edited = true;
+        changed = true;
     if (ImGui::DragInt("Slice Amount", &m_sectorAmount, 1, 1, 100))
-        edited = true;
+        changed = true;
     if (ImGui::Button("Form Entity")) {
         FormEntity();
     }
@@ -527,7 +529,7 @@ void RadialBoundingVolume::OnInspect(const std::shared_ptr<EditorLayer>& editorL
             }
         }
     }
-
+    return changed;
 }
 
 bool RadialBoundingVolume::InVolume(const glm::vec3& position) {
@@ -586,7 +588,7 @@ void RadialBoundingVolume::Deserialize(const YAML::Node& in) {
     GenerateMesh();
 }
 
-void RadialBoundingVolume::Serialize(YAML::Emitter& out) {
+void RadialBoundingVolume::Serialize(YAML::Emitter& out) const {
     IVolume::Serialize(out);
     out << YAML::Key << "m_offset" << YAML::Value << m_offset;
     out << YAML::Key << "m_displayColor" << YAML::Value << m_displayColor;

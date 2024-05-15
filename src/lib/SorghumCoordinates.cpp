@@ -43,7 +43,8 @@ void SorghumCoordinates::Apply(const std::shared_ptr<SorghumField>& sorghumField
 }
 
 
-void SorghumCoordinates::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
+bool SorghumCoordinates::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
+	bool changed = false;
 	editorLayer->DragAndDropButton<SorghumStateGenerator>(m_sorghumStateGenerator,
 		"SorghumStateGenerator");
 	ImGui::Text("Available count: %d", m_positions.size());
@@ -70,10 +71,10 @@ void SorghumCoordinates::OnInspect(const std::shared_ptr<EditorLayer>& editorLay
 	ImGui::DragInt("Index", &index);
 	ImGui::DragFloat("Radius", &radius);
 	static AssetRef tempField;
-	if(editorLayer->DragAndDropButton<SorghumField>(tempField,
+	if (editorLayer->DragAndDropButton<SorghumField>(tempField,
 		"Apply to SorghumField"))
 	{
-		if(const auto field = tempField.Get<SorghumField>())
+		if (const auto field = tempField.Get<SorghumField>())
 		{
 			glm::dvec2 offset;
 			Apply(field, offset, index, radius);
@@ -84,8 +85,10 @@ void SorghumCoordinates::OnInspect(const std::shared_ptr<EditorLayer>& editorLay
 		"Load Positions", "Position list", { ".txt" },
 		[this](const std::filesystem::path& path) { ImportFromFile(path); },
 		false);
+
+	return changed;
 }
-void SorghumCoordinates::Serialize(YAML::Emitter& out) {
+void SorghumCoordinates::Serialize(YAML::Emitter& out) const {
 	m_sorghumStateGenerator.Save("m_sorghumStateGenerator", out);
 	out << YAML::Key << "m_rotationVariance" << YAML::Value << m_rotationVariance;
 	out << YAML::Key << "m_sampleX" << YAML::Value << m_sampleX;

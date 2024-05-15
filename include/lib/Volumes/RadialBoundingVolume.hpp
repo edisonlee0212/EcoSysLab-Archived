@@ -44,7 +44,7 @@ namespace EcoSysLab {
 		float m_totalSize = 0;
 		void CalculateVolume(const std::vector<glm::vec3>& points);
 
-		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
+		bool OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 
 		void ResizeVolumes();
 
@@ -52,7 +52,7 @@ namespace EcoSysLab {
 
 		bool InVolume(const glm::vec3& position) override;
 
-		void Serialize(YAML::Emitter& out) override;
+		void Serialize(YAML::Emitter& out) const override;
 
 		void Deserialize(const YAML::Node& in) override;
 

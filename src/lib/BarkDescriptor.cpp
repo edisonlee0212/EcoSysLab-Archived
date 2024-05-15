@@ -2,16 +2,19 @@
 
 using namespace EcoSysLab;
 
-void BarkDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
+bool BarkDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
-	ImGui::DragFloat("Bark X Frequency", &m_barkXFrequency, 0.1f, 0.0f, 100.0f);
-	ImGui::DragFloat("Bark Y Frequency", &m_barkYFrequency, 0.1f, 0.0f, 100.0f);
-	ImGui::DragFloat("Bark Depth", &m_barkDepth, 0.01f, 0.0f, 1.0f);
+	bool changed = false;
+	if(ImGui::DragFloat("Bark X Frequency", &m_barkXFrequency, 0.1f, 0.0f, 100.0f)) changed = true;
+	if (ImGui::DragFloat("Bark Y Frequency", &m_barkYFrequency, 0.1f, 0.0f, 100.0f)) changed = true;
+	if (ImGui::DragFloat("Bark Depth", &m_barkDepth, 0.01f, 0.0f, 1.0f)) changed = true;
 
-	ImGui::DragFloat("Base Frequency", &m_baseFrequency, 0.01f, 0.0f, 1.0f);
-	ImGui::DragFloat("Base Max Distance", &m_baseMaxDistance, 0.01f, 0.0f, 1.0f);
-	ImGui::DragFloat("Base Distance Decrease Factor", &m_baseDistanceDecreaseFactor, 0.01f, 0.0f, 1.0f);
-	ImGui::DragFloat("Base Depth", &m_baseDepth, 0.01f, 0.0f, 1.0f);
+	if (ImGui::DragFloat("Base Frequency", &m_baseFrequency, 0.01f, 0.0f, 1.0f)) changed = true;
+	if (ImGui::DragFloat("Base Max Distance", &m_baseMaxDistance, 0.01f, 0.0f, 1.0f)) changed = true;
+	if (ImGui::DragFloat("Base Distance Decrease Factor", &m_baseDistanceDecreaseFactor, 0.01f, 0.0f, 1.0f)) changed = true;
+	if (ImGui::DragFloat("Base Depth", &m_baseDepth, 0.01f, 0.0f, 1.0f)) changed = true;
+
+	return changed;
 }
 
 float BarkDescriptor::GetValue(const float xFactor, const float distanceToRoot)
@@ -32,7 +35,7 @@ float BarkDescriptor::GetValue(const float xFactor, const float distanceToRoot)
 	return bark + base;
 }
 
-void BarkDescriptor::Serialize(YAML::Emitter& out)
+void BarkDescriptor::Serialize(YAML::Emitter& out) const  
 {
 	out << YAML::Key << "m_barkXFrequency" << YAML::Value << m_barkXFrequency;
 	out << YAML::Key << "m_barkYFrequency" << YAML::Value << m_barkYFrequency;

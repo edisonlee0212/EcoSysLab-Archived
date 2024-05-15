@@ -16,7 +16,7 @@ namespace EcoSysLab {
 		float m_crownShynessDistance = 0.15f;
 		int m_maxNodeCount = 0;
 
-		
+
 
 
 		float m_skylightIntensity = 1.f;
@@ -28,10 +28,10 @@ namespace EcoSysLab {
 
 		int m_blurIteration = 0;
 
-		void Save(const std::string& name, YAML::Emitter& out);
+		void Save(const std::string& name, YAML::Emitter& out) const;
 		void Load(const std::string& name, const YAML::Node& in);
-		void Serialize(YAML::Emitter& out);
+		void Serialize(YAML::Emitter& out) const;
 		void Deserialize(const YAML::Node& in);
-		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer);
+		bool OnInspect(const std::shared_ptr<EditorLayer>& editorLayer);
 	};
 }

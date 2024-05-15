@@ -68,7 +68,7 @@ void SetSoilPhysicalMaterial(Noise3D& c, Noise3D& p, float sandRatio, float silt
 	p.m_noiseDescriptors[0].m_offset = sandRatio * sandMaterialProperties.y + siltRatio * siltMaterialProperties.y + clayRatio * clayMaterialProperties.y + airRatio * airMaterialProperties.y;
 }
 
-void SoilLayerDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
+bool SoilLayerDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
 	bool changed = false;
 	if (ImGui::TreeNodeEx("Generate from preset soil ratio")) {
@@ -162,10 +162,10 @@ void SoilLayerDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLa
 		if (editorLayer->DragAndDropButton<Texture2D>(m_heightTexture, "Height")) changed = true;
 		ImGui::TreePop();
 	}
-	if (changed) m_saved = false;
+	return changed;
 }
 
-void SoilLayerDescriptor::Serialize(YAML::Emitter& out)
+void SoilLayerDescriptor::Serialize(YAML::Emitter& out) const
 {
 	m_capacity.Save("m_capacity", out);
 	m_permeability.Save("m_permeability", out);
@@ -207,7 +207,7 @@ void SoilLayerDescriptor::CollectAssetRef(std::vector<AssetRef>& list)
 	list.push_back(m_heightTexture);
 }
 
-void SoilDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
+bool SoilDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
 	bool changed = false;
 	if (editorLayer->DragAndDropButton<HeightField>(m_heightField, "Height Field", true))
@@ -308,20 +308,21 @@ void SoilDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 	}
 
 
-	if (changed) m_saved = false;
+	return changed;
 }
 
 void SoilDescriptor::RandomOffset(const float min, const float max)
 {
-	if(const auto heightField = m_heightField.Get<HeightField>())
+	if (const auto heightField = m_heightField.Get<HeightField>())
 	{
 		heightField->RandomOffset(min, max);
 	}
 }
 
 
-void Soil::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
+bool Soil::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
+	bool changed;
 	if (editorLayer->DragAndDropButton<SoilDescriptor>(m_soilDescriptor, "SoilDescriptor", true)) {
 		InitializeSoilModel();
 	}
@@ -378,7 +379,7 @@ void Soil::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 			scene->SetParent(cutOutEntity, owner);
 		}
 
-		if(ImGui::Button("Temporal Progression"))
+		if (ImGui::Button("Temporal Progression"))
 		{
 			m_temporalProgressionProgress = 0;
 			m_temporalProgression = true;
@@ -410,7 +411,7 @@ void Soil::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 		editorLayer->DragAndDropButton<Texture2D>(soilRoughnessTexture, "Roughness", true);
 		editorLayer->DragAndDropButton<Texture2D>(soilHeightTexture, "Height", true);
 		editorLayer->DragAndDropButton<Texture2D>(soilMetallicTexture, "Metallic", true);
-		if(ImGui::Button("Nutrient Transport: Sand"))
+		if (ImGui::Button("Nutrient Transport: Sand"))
 		{
 			auto albedo = soilAlbedoTexture.Get<Texture2D>();
 			auto normal = soilNormalTexture.Get<Texture2D>();
@@ -591,8 +592,9 @@ void Soil::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 		}
 
 
-		
+
 	}
+	return changed;
 }
 
 void Soil::RandomOffset(float min, float max)
@@ -716,9 +718,9 @@ Entity Soil::GenerateCutOut(float xDepth, float zDepth, float waterFactor, float
 		auto quad4 = GenerateSurfaceQuadZ(true, 1.0, { xDepth, 0 }, { 1 , 1 }, waterFactor, nutrientFactor);
 		scene->SetParent(quad4, combinedEntity);
 	}
-	
-	
-	
+
+
+
 	if (groundSurface) {
 		auto groundSurface = GenerateMesh(xDepth, zDepth);
 		auto soilDescriptor = m_soilDescriptor.Get<SoilDescriptor>();
@@ -749,15 +751,15 @@ Entity Soil::GenerateFullBox(float waterFactor, float nutrientFactor, bool groun
 	auto scene = Application::GetActiveScene();
 	auto combinedEntity = scene->CreateEntity("Cube");
 
-	
+
 	auto quad1 = GenerateSurfaceQuadX(false, 0, { 0, 0 }, { 1 , 1 }, waterFactor, nutrientFactor);
 	scene->SetParent(quad1, combinedEntity);
-	
-	
+
+
 	auto quad2 = GenerateSurfaceQuadX(true, 1, { 0, 0 }, { 1 , 1 }, waterFactor, nutrientFactor);
 	scene->SetParent(quad2, combinedEntity);
-	
-	
+
+
 	auto quad3 = GenerateSurfaceQuadZ(true, 0, { 0, 0 }, { 1 , 1 }, waterFactor, nutrientFactor);
 	scene->SetParent(quad3, combinedEntity);
 
@@ -789,7 +791,7 @@ Entity Soil::GenerateFullBox(float waterFactor, float nutrientFactor, bool groun
 	return combinedEntity;
 }
 
-void Soil::Serialize(YAML::Emitter& out)
+void Soil::Serialize(YAML::Emitter& out) const
 {
 	m_soilDescriptor.Save("m_soilDescriptor", out);
 }
@@ -823,7 +825,7 @@ Entity Soil::GenerateMesh(float xDepth, float zDepth)
 	std::vector<glm::uvec3> triangles;
 	heightField->GenerateMesh(glm::vec2(soilDescriptor->m_soilParameters.m_boundingBoxMin.x, soilDescriptor->m_soilParameters.m_boundingBoxMin.z),
 		glm::uvec2(soilDescriptor->m_soilParameters.m_voxelResolution.x, soilDescriptor->m_soilParameters.m_voxelResolution.z), soilDescriptor->m_soilParameters.m_deltaX, vertices, triangles
-	, xDepth, zDepth);
+		, xDepth, zDepth);
 
 	const auto scene = Application::GetActiveScene();
 	const auto self = GetOwner();
@@ -874,16 +876,16 @@ void Soil::InitializeSoilModel()
 		if (heightField)
 		{
 			soilSurface.m_height = [heightField](const glm::vec2& position)
-			{
-				return heightField->GetValue(glm::vec2(position.x, position.y));
-			};
+				{
+					return heightField->GetValue(glm::vec2(position.x, position.y));
+				};
 		}
 		else {
 
 			soilSurface.m_height = [&](const glm::vec2& position)
-			{
-				return 0.0f;
-			};
+				{
+					return 0.0f;
+				};
 
 		}
 
@@ -932,9 +934,9 @@ void Soil::InitializeSoilModel()
 				soilLayer.m_mat.m_w = [=](const glm::vec3& position) { return soilLayerDescriptor->m_initialWater.GetValue(position); };
 				soilLayer.m_mat.m_id = materialIndex;
 				soilLayer.m_thickness = [soilLayerDescriptor](const glm::vec2& position)
-				{
-					return soilLayerDescriptor->m_thickness.GetValue(position);
-				};
+					{
+						return soilLayerDescriptor->m_thickness.GetValue(position);
+					};
 				const auto albedo = soilLayerDescriptor->m_albedoTexture.Get<Texture2D>();
 				const auto height = soilLayerDescriptor->m_heightTexture.Get<Texture2D>();
 				const auto metallic = soilLayerDescriptor->m_metallicTexture.Get<Texture2D>();
@@ -949,14 +951,16 @@ void Soil::InitializeSoilModel()
 						albedo->GetRgbaChannelData(soilLayers[0].m_mat.m_soilMaterialTexture->m_color_map, soilDescriptor->m_textureResolution.x, soilDescriptor->m_textureResolution.y);
 						for (auto& value : soilLayers[0].m_mat.m_soilMaterialTexture->m_color_map) value.w = 0.0f;
 					}
-				}else
+				}
+				else
 				{
 					soilLayer.m_mat.m_soilMaterialTexture->m_color_map.resize(soilDescriptor->m_textureResolution.x * soilDescriptor->m_textureResolution.y);
 					std::fill(soilLayer.m_mat.m_soilMaterialTexture->m_color_map.begin(), soilLayer.m_mat.m_soilMaterialTexture->m_color_map.end(), Application::GetLayer<EcoSysLabLayer>()->m_soilLayerColors[materialIndex]);
 				}
 				if (height) {
 					height->GetRedChannelData(soilLayer.m_mat.m_soilMaterialTexture->m_height_map, soilDescriptor->m_textureResolution.x, soilDescriptor->m_textureResolution.y);
-				}else
+				}
+				else
 				{
 					soilLayer.m_mat.m_soilMaterialTexture->m_height_map.resize(soilDescriptor->m_textureResolution.x * soilDescriptor->m_textureResolution.y);
 					std::fill(soilLayer.m_mat.m_soilMaterialTexture->m_height_map.begin(), soilLayer.m_mat.m_soilMaterialTexture->m_height_map.end(), 1.0f);
@@ -1113,7 +1117,7 @@ void DeserializeSoilParameters(const std::string& name, SoilParameters& soilPara
 	}
 }
 
-void SoilDescriptor::Serialize(YAML::Emitter& out)
+void SoilDescriptor::Serialize(YAML::Emitter& out) const
 {
 	m_heightField.Save("m_heightField", out);
 	SerializeSoilParameters("m_soilParameters", m_soilParameters, out);
@@ -1121,17 +1125,9 @@ void SoilDescriptor::Serialize(YAML::Emitter& out)
 	out << YAML::Key << "m_soilLayerDescriptors" << YAML::Value << YAML::BeginSeq;
 	for (int i = 0; i < m_soilLayerDescriptors.size(); i++)
 	{
-		if (auto soilLayerDescriptor = m_soilLayerDescriptors[i].Get<SoilLayerDescriptor>())
-		{
-			out << YAML::BeginMap;
-			m_soilLayerDescriptors[i].Serialize(out);
-			out << YAML::EndMap;
-		}
-		else
-		{
-			m_soilLayerDescriptors.erase(m_soilLayerDescriptors.begin() + i);
-			i--;
-		}
+		out << YAML::BeginMap;
+		m_soilLayerDescriptors[i].Serialize(out);
+		out << YAML::EndMap;
 	}
 	out << YAML::EndSeq;
 }

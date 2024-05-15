@@ -102,9 +102,9 @@ namespace EcoSysLab
 		float Process(SkeletonNodeHandle nodeHandle, const glm::vec2& samplePoint, float value);
 	public:
 		Skeleton<ProceduralNoiseSkeletonData, ProceduralNoiseFlowData, ProceduralNoiseStage<glm::vec2>> m_pipeline {};
-		void Serialize(YAML::Emitter& out) override;
+		void Serialize(YAML::Emitter& out) const override;
 		void Deserialize(const YAML::Node& in) override;
-		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
+		bool OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 		float Process(const glm::vec2& samplePoint, float value);
 	};
 	class ProceduralNoise3D : public IAsset
@@ -114,9 +114,9 @@ namespace EcoSysLab
 	public:
 		Skeleton<ProceduralNoiseSkeletonData, ProceduralNoiseFlowData, ProceduralNoiseStage<glm::vec3>> m_pipeline {};
 		float Process(const glm::vec3& samplePoint, float value);
-		void Serialize(YAML::Emitter& out) override;
+		void Serialize(YAML::Emitter& out) const override;
 		void Deserialize(const YAML::Node& in) override;
-		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
+		bool OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 	};
 
 

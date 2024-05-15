@@ -17,7 +17,7 @@ namespace EcoSysLab
 		glm::vec2 m_gravityDirection = glm::vec2(0, 1);
 		float m_gravityStrength = 9.7f;
 		float m_friction = 1.0f;
-		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
+		bool OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 		void FixedUpdate() override;
 	};
 }

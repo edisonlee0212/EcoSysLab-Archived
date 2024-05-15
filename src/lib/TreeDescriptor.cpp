@@ -28,7 +28,7 @@ void TreeDescriptor::OnCreate() {
 
 }
 
-void TreeDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
+bool TreeDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	bool changed = false;
 	const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
 	std::shared_ptr<Climate> climate;
@@ -58,13 +58,13 @@ void TreeDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 	{
 		ImGui::Text("Create soil and climate entity to instantiate!");
 	}
-	editorLayer->DragAndDropButton<ShootDescriptor>(m_shootDescriptor, "Shoot Descriptor");
-	editorLayer->DragAndDropButton<FoliageDescriptor>(m_foliageDescriptor, "Foliage Descriptor");
-	editorLayer->DragAndDropButton<FruitDescriptor>(m_fruitDescriptor, "Fruit Descriptor");
-	editorLayer->DragAndDropButton<FlowerDescriptor>(m_flowerDescriptor, "Flower Descriptor");
+	if(editorLayer->DragAndDropButton<ShootDescriptor>(m_shootDescriptor, "Shoot Descriptor")) changed = true;
+	if (editorLayer->DragAndDropButton<FoliageDescriptor>(m_foliageDescriptor, "Foliage Descriptor")) changed = true;
+	if (editorLayer->DragAndDropButton<FruitDescriptor>(m_fruitDescriptor, "Fruit Descriptor")) changed = true;
+	if (editorLayer->DragAndDropButton<FlowerDescriptor>(m_flowerDescriptor, "Flower Descriptor")) changed = true;
 
 	editorLayer->DragAndDropButton<BarkDescriptor>(m_barkDescriptor, "BarkDescriptor");
-	if (changed) m_saved = false;
+	return changed;
 }
 
 void TreeDescriptor::CollectAssetRef(std::vector<AssetRef>& list) {
@@ -77,7 +77,7 @@ void TreeDescriptor::CollectAssetRef(std::vector<AssetRef>& list) {
 }
 
 
-void TreeDescriptor::Serialize(YAML::Emitter& out) {
+void TreeDescriptor::Serialize(YAML::Emitter& out) const {
 	m_shootDescriptor.Save("m_shootDescriptor", out);
 	m_foliageDescriptor.Save("m_foliageDescriptor", out);
 	m_barkDescriptor.Save("m_barkDescriptor", out);

@@ -96,8 +96,9 @@ void SpatialPlantDistributionSimulator::OnInspectSpatialPlantDistributionFunctio
 	drawList->PopClipRect();
 }
 
-void SpatialPlantDistributionSimulator::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
+bool SpatialPlantDistributionSimulator::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
+	bool changed = false;
 	if (ImGui::TreeNode("Global Parameters"))
 	{
 		ImGui::DragFloat("Weighting Factor", &m_distribution.m_spatialPlantGlobalParameters.m_p, 0.01f, 0.0f, 1.0f);
@@ -213,6 +214,8 @@ void SpatialPlantDistributionSimulator::OnInspect(const std::shared_ptr<EditorLa
 				});
 	}
 	ImGui::End();
+
+	return changed;
 }
 
 void SpatialPlantDistributionSimulator::FixedUpdate()

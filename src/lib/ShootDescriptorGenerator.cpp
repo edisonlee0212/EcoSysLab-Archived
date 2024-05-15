@@ -4,7 +4,7 @@
 
 using namespace EcoSysLab;
 
-void ShootDescriptorGenerator::Serialize(YAML::Emitter& out)
+void ShootDescriptorGenerator::Serialize(YAML::Emitter& out) const 
 {
 	if (!m_shootDescriptorOffsets.empty())
 	{
@@ -40,12 +40,12 @@ void ShootDescriptorGenerator::Deserialize(const YAML::Node& in)
 	m_baseShootDescriptor.Load("m_baseShootDescriptor", in);
 }
 
-void ShootDescriptorGenerator::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
+bool ShootDescriptorGenerator::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
 	bool changed = false;
 	editorLayer->DragAndDropButton<TreeDescriptor>(m_baseShootDescriptor, "Base");
 	if (OnInspectShootGrowthParametersOffset(m_shootDescriptorOffsets)) { changed = true; }
-	if (changed) m_saved = false;
+	return changed;
 }
 
 std::shared_ptr<ShootDescriptor> ShootDescriptorGenerator::Generate()

@@ -39,7 +39,7 @@ namespace EcoSysLab {
 		[[nodiscard]] glm::vec3 EvaluateAxisFromCurves(float point) const;
 		[[nodiscard]] glm::vec3 EvaluatePointFromCurves(float point) const;
 		void OnInspect();
-		void Serialize(YAML::Emitter& out);
+		void Serialize(YAML::Emitter& out)const;
 		void Deserialize(const YAML::Node& in);
 	};
 } // namespace PlantFactory

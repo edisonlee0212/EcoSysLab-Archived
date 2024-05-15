@@ -30,7 +30,7 @@ namespace EvoEngine
     class PointCloudCaptureSettings
     {
     public:
-        virtual void OnInspect() = 0;
+        virtual bool OnInspect() = 0;
         virtual void Save(const std::string& name, YAML::Emitter& out) const {}
         virtual void Load(const std::string& name, const YAML::Node& in) {}
         virtual void GenerateSamples(std::vector<PointCloudSample>& pointCloudSamples) = 0;

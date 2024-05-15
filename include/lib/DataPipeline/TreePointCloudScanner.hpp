@@ -39,7 +39,7 @@ namespace EcoSysLab {
         int m_resolution = 128;
         float m_cameraDepthMax = 10;
 
-        void OnInspect() override;
+        bool OnInspect() override;
 
         void Save(const std::string& name, YAML::Emitter& out) const override;
 
@@ -61,7 +61,7 @@ namespace EcoSysLab {
         float m_backpackHeight = 1.0f;
         int m_droneSample = 128;
         float m_droneHeight = 5.0f;
-        void OnInspect() override;
+        bool OnInspect() override;
         void GenerateSamples(std::vector<PointCloudSample>& pointCloudSamples) override;
         bool SampleFilter(const PointCloudSample& sample) override;
     };
@@ -70,11 +70,11 @@ namespace EcoSysLab {
 	public:
         TreePointCloudPointSettings m_pointSettings;
         void Capture(const TreeMeshGeneratorSettings& meshGeneratorSettings, const std::filesystem::path& savePath, bool exportJunction, const std::shared_ptr<PointCloudCaptureSettings>& captureSettings) const;
-		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
+		bool OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 
         void OnDestroy() override;
 
-        void Serialize(YAML::Emitter& out) override;
+        void Serialize(YAML::Emitter& out) const override;
         void Deserialize(const YAML::Node& in) override;
 	};
 }

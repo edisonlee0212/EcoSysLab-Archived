@@ -14,7 +14,7 @@ namespace EcoSysLab
 
         float m_boundingBoxLimit = 1.f;
 
-        void OnInspect();
+        bool OnInspect();
         void Save(const std::string& name, YAML::Emitter& out) const;
         void Load(const std::string& name, const YAML::Node& in);
     };
@@ -29,7 +29,7 @@ namespace EcoSysLab
         float m_step = 0.01f;
         int m_droneSample = 512;
         float m_droneHeight = 2.5f;
-        void OnInspect() override;
+        bool OnInspect() override;
         void GenerateSamples(std::vector<PointCloudSample>& pointCloudSamples) override;
         bool SampleFilter(const PointCloudSample& sample) override;
     };
@@ -46,7 +46,7 @@ namespace EcoSysLab
 
         
         float m_scannerAngle = 30.f;
-        void OnInspect() override;
+        bool OnInspect() override;
         void GenerateSamples(std::vector<PointCloudSample>& pointCloudSamples) override;
         bool SampleFilter(const PointCloudSample& sample) override;
     };
@@ -54,7 +54,7 @@ namespace EcoSysLab
     class SorghumPointCloudCaptureSettings : public PointCloudCaptureSettings
     {
     public:
-        void OnInspect() override;
+        bool OnInspect() override;
         void GenerateSamples(std::vector<PointCloudSample>& pointCloudSamples) override;
         bool SampleFilter(const PointCloudSample& sample) override;
     };
@@ -66,11 +66,11 @@ namespace EcoSysLab
         glm::vec3 m_rightRandomOffset = glm::vec3(0.02f);
         SorghumPointCloudPointSettings m_sorghumPointCloudPointSettings {};
         void Capture(const std::filesystem::path& savePath, const std::shared_ptr<PointCloudCaptureSettings>& captureSettings) const;
-        void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
+        bool OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 
         void OnDestroy() override;
 
-        void Serialize(YAML::Emitter& out) override;
+        void Serialize(YAML::Emitter& out) const override;
         void Deserialize(const YAML::Node& in) override;
 	};
 }

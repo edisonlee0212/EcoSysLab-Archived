@@ -54,20 +54,21 @@ void TreePointCloudPointSettings::Load(const std::string& name, const YAML::Node
 	}
 }
 
-void TreePointCloudCircularCaptureSettings::OnInspect()
+bool TreePointCloudCircularCaptureSettings::OnInspect()
 {
-	ImGui::DragFloat("Distance to focus point", &m_distance, 0.01f);
-	ImGui::DragFloat("Height to ground", &m_height, 0.01f);
+	bool changed = false;
+	if (ImGui::DragFloat("Distance to focus point", &m_distance, 0.01f)) changed = true;
+	if (ImGui::DragFloat("Height to ground", &m_height, 0.01f)) changed = true;
 	ImGui::Separator();
 	ImGui::Text("Rotation:");
-	ImGui::DragInt3("Pitch Angle Start/Step/End", &m_pitchAngleStart, 1);
-	ImGui::DragInt3("Turn Angle Start/Step/End", &m_turnAngleStart, 1);
+	if (ImGui::DragInt3("Pitch Angle Start/Step/End", &m_pitchAngleStart, 1)) changed = true;
+	if (ImGui::DragInt3("Turn Angle Start/Step/End", &m_turnAngleStart, 1)) changed = true;
 	ImGui::Separator();
 	ImGui::Text("Camera Settings:");
-	ImGui::DragFloat("FOV", &m_fov);
-	ImGui::DragInt("Resolution", &m_resolution);
-	ImGui::DragFloat("Max Depth", &m_cameraDepthMax);
-
+	if (ImGui::DragFloat("FOV", &m_fov)) changed = true;
+	if (ImGui::DragInt("Resolution", &m_resolution)) changed = true;
+	if (ImGui::DragFloat("Max Depth", &m_cameraDepthMax)) changed = true;
+	return changed;
 }
 
 void TreePointCloudCircularCaptureSettings::Save(const std::string& name, YAML::Emitter& out) const
@@ -162,12 +163,14 @@ void TreePointCloudCircularCaptureSettings::GenerateSamples(std::vector<PointClo
 	}
 }
 
-void TreePointCloudGridCaptureSettings::OnInspect()
+bool TreePointCloudGridCaptureSettings::OnInspect()
 {
-	ImGui::DragInt2("Grid size", &m_gridSize.x, 1, 0, 100);
-	ImGui::DragFloat2("Grid distance", &m_gridDistance.x, 0.1f, 0.0f, 100.0f);
-	ImGui::DragFloat("Step", &m_step, 0.01f, 0.0f, 0.5f);
-	ImGui::DragInt("Sample", &m_backpackSample, 1, 1, INT_MAX);
+	bool changed = false;
+	if (ImGui::DragInt2("Grid size", &m_gridSize.x, 1, 0, 100)) changed = true;
+	if (ImGui::DragFloat2("Grid distance", &m_gridDistance.x, 0.1f, 0.0f, 100.0f)) changed = true;
+	if (ImGui::DragFloat("Step", &m_step, 0.01f, 0.0f, 0.5f)) changed = true;
+	if (ImGui::DragInt("Sample", &m_backpackSample, 1, 1, INT_MAX)) changed = true;
+	return changed;
 }
 
 void TreePointCloudGridCaptureSettings::GenerateSamples(std::vector<PointCloudSample>& pointCloudSamples)
@@ -274,12 +277,12 @@ bool TreePointCloudGridCaptureSettings::SampleFilter(const PointCloudSample& sam
 void TreePointCloudScanner::Capture(const TreeMeshGeneratorSettings& meshGeneratorSettings, const std::filesystem::path& savePath, const bool exportJunction, const std::shared_ptr<PointCloudCaptureSettings>& captureSettings) const
 {
 #ifdef BUILD_WITH_RAYTRACER
-	
+
 	const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
 	std::shared_ptr<Soil> soil;
 	const auto soilCandidate = EcoSysLabLayer::FindSoil();
 	if (!soilCandidate.expired()) soil = soilCandidate.lock();
-	if(!soil)
+	if (!soil)
 	{
 		EVOENGINE_ERROR("No soil!");
 		return;
@@ -289,7 +292,7 @@ void TreePointCloudScanner::Capture(const TreeMeshGeneratorSettings& meshGenerat
 	auto scene = GetScene();
 	const std::vector<Entity>* treeEntities =
 		scene->UnsafeGetPrivateComponentOwnersList<Tree>();
-	if(treeEntities == nullptr)
+	if (treeEntities == nullptr)
 	{
 		EVOENGINE_ERROR("No trees!");
 		return;
@@ -345,13 +348,13 @@ void TreePointCloudScanner::Capture(const TreeMeshGeneratorSettings& meshGenerat
 			}
 		);
 	}
-	
+
 	std::vector<PointCloudSample> pcSamples;
 	captureSettings->GenerateSamples(pcSamples);
 	CudaModule::SamplePointCloud(
 		Application::GetLayer<RayTracerLayer>()->m_environmentProperties,
 		pcSamples);
-	
+
 	std::vector<glm::vec3> points;
 
 	std::vector<int> internodeIndex;
@@ -362,7 +365,7 @@ void TreePointCloudScanner::Capture(const TreeMeshGeneratorSettings& meshGenerat
 	std::vector<int> instanceIndex;
 	std::vector<int> typeIndex;
 
-	
+
 
 	for (const auto& sample : pcSamples) {
 		if (!sample.m_hit) continue;
@@ -386,7 +389,7 @@ void TreePointCloudScanner::Capture(const TreeMeshGeneratorSettings& meshGenerat
 				glm::gaussRand(0.0f, m_pointSettings.m_variance),
 				glm::gaussRand(0.0f, m_pointSettings.m_variance))
 			+ ballRand);
-		
+
 		if (m_pointSettings.m_internodeIndex) {
 
 			internodeIndex.emplace_back(static_cast<int>(sample.m_hitInfo.m_data.x + 0.1f));
@@ -418,12 +421,13 @@ void TreePointCloudScanner::Capture(const TreeMeshGeneratorSettings& meshGenerat
 			else if (foliageSearch != foliageMeshRendererHandles.end())
 			{
 				instanceIndex.emplace_back(foliageSearch->second);
-			}else
+			}
+			else
 			{
 				instanceIndex.emplace_back(0);
 			}
 		}
-		
+
 		if (m_pointSettings.m_typeIndex) {
 			if (branchSearch != branchMeshRendererHandles.end())
 			{
@@ -533,8 +537,9 @@ void TreePointCloudScanner::Capture(const TreeMeshGeneratorSettings& meshGenerat
 #endif
 }
 
-void TreePointCloudScanner::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
+bool TreePointCloudScanner::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
+	bool changed = false;
 	const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
 	if (ImGui::TreeNodeEx("Circular Capture")) {
 		static std::shared_ptr<TreePointCloudCircularCaptureSettings> captureSettings = std::make_shared<TreePointCloudCircularCaptureSettings>();
@@ -558,7 +563,7 @@ void TreePointCloudScanner::OnInspect(const std::shared_ptr<EditorLayer>& editor
 		ImGui::TreePop();
 	}
 
-	
+	return changed;
 }
 
 void TreePointCloudScanner::OnDestroy()
@@ -566,7 +571,7 @@ void TreePointCloudScanner::OnDestroy()
 	m_pointSettings = {};
 }
 
-void TreePointCloudScanner::Serialize(YAML::Emitter& out)
+void TreePointCloudScanner::Serialize(YAML::Emitter& out) const
 {
 	m_pointSettings.Save("m_pointSettings", out);
 }

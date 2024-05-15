@@ -154,7 +154,7 @@ void Sorghum::GenerateGeometryEntities(const SorghumMeshGeneratorSettings& sorgh
 	}
 }
 
-void Sorghum::Serialize(YAML::Emitter& out)
+void Sorghum::Serialize(YAML::Emitter& out) const
 {
 	m_sorghumState.Save("m_sorghumState", out);
 	m_sorghumDescriptor.Save("m_sorghumDescriptor", out);
@@ -168,11 +168,12 @@ void Sorghum::Deserialize(const YAML::Node& in)
 	m_sorghumDescriptor.Load("m_sorghumDescriptor", in);
 }
 
-void Sorghum::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
+bool Sorghum::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
-	editorLayer->DragAndDropButton<SorghumStateGenerator>(m_sorghumDescriptor, "SorghumStateGenerator");
-	editorLayer->DragAndDropButton<SorghumGrowthStages>(m_sorghumGrowthDescriptor, "SorghumGrowthStages");
-	editorLayer->DragAndDropButton<SorghumState>(m_sorghumState, "SorghumState");
+	bool changed = false;
+	if(editorLayer->DragAndDropButton<SorghumStateGenerator>(m_sorghumDescriptor, "SorghumStateGenerator")) changed = true;
+	if(editorLayer->DragAndDropButton<SorghumGrowthStages>(m_sorghumGrowthDescriptor, "SorghumGrowthStages")) changed = true;
+	if(editorLayer->DragAndDropButton<SorghumState>(m_sorghumState, "SorghumState")) changed = true;
 
 	if(ImGui::Button("Form meshes"))
 	{
@@ -249,6 +250,8 @@ void Sorghum::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 		}
 		editorLayer->DrawGizmoCubes(nodeDebugInfoList);
 	}
+
+	return changed;
 }
 
 void Sorghum::CollectAssetRef(std::vector<AssetRef>& list)

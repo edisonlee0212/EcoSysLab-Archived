@@ -18,7 +18,7 @@ void TipMenu(const std::string& content) {
 	}
 }
 
-void SorghumStateGenerator::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
+bool SorghumStateGenerator::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	if (ImGui::Button("Instantiate")) {
 		auto entity = CreateEntity();
 	}
@@ -170,10 +170,6 @@ void SorghumStateGenerator::OnInspect(const std::shared_ptr<EditorLayer>& editor
 		}
 		ImGui::TreePop();
 	}
-	if (changed) {
-		m_saved = false;
-		m_version++;
-	}
 
 	static double lastAutoSaveTime = 0;
 	static float autoSaveInterval = 5;
@@ -205,8 +201,10 @@ void SorghumStateGenerator::OnInspect(const std::shared_ptr<EditorLayer>& editor
 			ImGui::PopStyleColor();
 		}
 	}
+
+	return changed;
 }
-void SorghumStateGenerator::Serialize(YAML::Emitter& out) {
+void SorghumStateGenerator::Serialize(YAML::Emitter& out) const {
 	out << YAML::Key << "m_version" << YAML::Value << m_version;
 	m_panicleSize.Save("m_panicleSize", out);
 	m_panicleSeedAmount.Save("m_panicleSeedAmount", out);

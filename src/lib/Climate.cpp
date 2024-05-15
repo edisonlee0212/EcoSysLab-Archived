@@ -7,17 +7,19 @@
 
 using namespace EcoSysLab;
 
-void ClimateDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
+bool ClimateDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
+	bool changed = false;
 	if (ImGui::Button("Instantiate")) {
 		const auto scene = Application::GetActiveScene();
 		const auto climateEntity = scene->CreateEntity(GetTitle());
 		const auto climate = scene->GetOrSetPrivateComponent<Climate>(climateEntity).lock();
 		climate->m_climateDescriptor = ProjectManager::GetAsset(GetHandle());
 	}
+	return changed;
 }
 
-void ClimateDescriptor::Serialize(YAML::Emitter& out)
+void ClimateDescriptor::Serialize(YAML::Emitter& out) const
 {
 	
 }
@@ -27,7 +29,7 @@ void ClimateDescriptor::Deserialize(const YAML::Node& in)
 	
 }
 
-void Climate::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
+bool Climate::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
 	bool changed = false;
 	if(editorLayer->DragAndDropButton<ClimateDescriptor>(m_climateDescriptor, "ClimateDescriptor", true))
@@ -42,7 +44,7 @@ void Climate::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 		
 }
 
-void Climate::Serialize(YAML::Emitter& out)
+void Climate::Serialize(YAML::Emitter& out) const 
 {
 	m_climateDescriptor.Save("m_climateDescriptor", out);
 }

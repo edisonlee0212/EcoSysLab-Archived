@@ -37,8 +37,8 @@ namespace EcoSysLab
 		void ResetTime(float previousTime, float newTime);
 		void Remove(float time);
 		void Apply(const std::shared_ptr<SorghumState>& targetState, float time) const;
-		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
-		void Serialize(YAML::Emitter& out) override;
+		bool OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
+		void Serialize(YAML::Emitter& out) const override;
 		void Deserialize(const YAML::Node& in) override;
 
 		[[nodiscard]] Entity CreateEntity(float time = 0.0f) const;

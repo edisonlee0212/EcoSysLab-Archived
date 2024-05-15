@@ -48,7 +48,7 @@ namespace EcoSysLab
 		std::vector<LogGrading> m_availableBestGrading{};
 		ProceduralLogParameters m_proceduralLogParameters;
 		AssetRef m_branchShape{};
-		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
+		bool OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 		void InitializeLogRandomly(const ProceduralLogParameters& proceduralLogParameters, const std::shared_ptr<BarkDescriptor>& branchShape);
 		LogWoodMeshGenerationSettings m_logWoodMeshGenerationSettings{};
 		LogWood m_logWood{};

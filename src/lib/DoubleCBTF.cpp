@@ -7,17 +7,19 @@
 #include "CompressedBTF.hpp"
 #endif
 using namespace EcoSysLab;
-void DoubleCBTF::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
+bool DoubleCBTF::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
+	bool changed = false;
 #ifdef BUILD_WITH_RAYTRACER
-	editorLayer->DragAndDropButton<CompressedBTF>(m_top, "Top");
-	editorLayer->DragAndDropButton<CompressedBTF>(m_bottom, "Bottom");
+	if (editorLayer->DragAndDropButton<CompressedBTF>(m_top, "Top")) changed = true;
+	if (editorLayer->DragAndDropButton<CompressedBTF>(m_bottom, "Bottom")) changed = true;
 #endif
+	return changed;
 }
 void DoubleCBTF::CollectAssetRef(std::vector<AssetRef>& list) {
 	list.push_back(m_top);
 	list.push_back(m_bottom);
 }
-void DoubleCBTF::Serialize(YAML::Emitter& out) {
+void DoubleCBTF::Serialize(YAML::Emitter& out) const {
 	m_top.Save("m_top", out);
 	m_bottom.Save("m_bottom", out);
 }

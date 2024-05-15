@@ -7,10 +7,11 @@ void CubeVolume::ApplyMeshBounds(const std::shared_ptr<Mesh>& mesh) {
 	m_minMaxBound = mesh->GetBound();
 }
 
-void CubeVolume::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
-	IVolume::OnInspect(editorLayer);
-	ImGui::DragFloat3("Min", &m_minMaxBound.m_min.x, 0.1);
-	ImGui::DragFloat3("Max", &m_minMaxBound.m_max.x, 0.1);
+bool CubeVolume::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
+	bool changed = false;
+	if(IVolume::OnInspect(editorLayer)) changed = true;
+	if(ImGui::DragFloat3("Min", &m_minMaxBound.m_min.x, 0.1f)) changed = true;
+	if(ImGui::DragFloat3("Max", &m_minMaxBound.m_max.x, 0.1f)) changed = true;
 	static PrivateComponentRef privateComponentRef{};
 
 	if (editorLayer->DragAndDropButton<MeshRenderer>(privateComponentRef, "Target MeshRenderer"))
@@ -19,8 +20,10 @@ void CubeVolume::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 		{
 			ApplyMeshBounds(mmr->m_mesh.Get<Mesh>());
 			privateComponentRef.Clear();
+			changed = true;
 		}
 	}
+	return changed;
 }
 
 bool CubeVolume::InVolume(const glm::vec3& position) {
@@ -38,7 +41,7 @@ bool CubeVolume::InVolume(const GlobalTransform& globalTransform,
 	return m_minMaxBound.InBound(finalPos);
 }
 
-void CubeVolume::Serialize(YAML::Emitter& out) {
+void CubeVolume::Serialize(YAML::Emitter& out) const {
 	IVolume::Serialize(out);
 	out << YAML::Key << "m_minMaxBound.m_min" << YAML::Value
 		<< m_minMaxBound.m_min;

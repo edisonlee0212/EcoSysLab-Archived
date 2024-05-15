@@ -354,7 +354,9 @@ void Tree::GenerateSkeletalGraph(
 	pointList->SetParticleInfos(pointParticleInfos);
 }
 
-void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
+bool Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
+
+	bool changed = false;
 	const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
 	const auto scene = GetScene();
 	editorLayer->DragAndDropButton<TreeDescriptor>(m_treeDescriptor, "TreeDescriptor", true);
@@ -385,11 +387,11 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 				}
 				if (ImGui::TreeNode("Sagging"))
 				{
-					bool changed = false;
-					changed = ImGui::DragFloat("Bending strength", &shootDescriptor->m_gravityBendingStrength, 0.01f, 0.0f, 1.0f, "%.3f") || changed;
-					changed = ImGui::DragFloat("Bending thickness factor", &shootDescriptor->m_gravityBendingThicknessFactor, 0.1f, 0.0f, 10.f, "%.3f") || changed;
-					changed = ImGui::DragFloat("Bending angle factor", &shootDescriptor->m_gravityBendingMax, 0.01f, 0.0f, 1.0f, "%.3f") || changed;
-					if (changed)
+					bool bendingChanged = false;
+					bendingChanged = ImGui::DragFloat("Bending strength", &shootDescriptor->m_gravityBendingStrength, 0.01f, 0.0f, 1.0f, "%.3f") || bendingChanged;
+					bendingChanged = ImGui::DragFloat("Bending thickness factor", &shootDescriptor->m_gravityBendingThicknessFactor, 0.1f, 0.0f, 10.f, "%.3f") || bendingChanged;
+					bendingChanged = ImGui::DragFloat("Bending angle factor", &shootDescriptor->m_gravityBendingMax, 0.01f, 0.0f, 1.0f, "%.3f") || bendingChanged;
+					if (bendingChanged)
 					{
 						m_shootGrowthController.m_sagging = [=](const SkeletonNode<InternodeGrowthData>& internode)
 							{
@@ -647,6 +649,8 @@ void Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	FileUtils::SaveFile("Export Strand Mesh", "OBJ", { ".obj" }, [&](const std::filesystem::path& path) {
 		ExportStrandModelOBJ(path, m_strandModelMeshGeneratorSettings);
 		}, false);
+
+	return changed;
 }
 void Tree::Update()
 {
@@ -1613,7 +1617,7 @@ bool Tree::TryGrowSubTree(const float deltaTime, const SkeletonNodeHandle baseIn
 }
 
 
-void Tree::Serialize(YAML::Emitter& out)
+void Tree::Serialize(YAML::Emitter& out) const
 {
 	m_treeDescriptor.Save("m_treeDescriptor", out);
 
@@ -1662,7 +1666,7 @@ void Tree::Serialize(YAML::Emitter& out)
 					}
 					skeletonOut << YAML::EndMap;
 
-					const auto nodeSize = m_strandModel.m_strandModelSkeleton.RefRawNodes().size();
+					const auto nodeSize = m_strandModel.m_strandModelSkeleton.PeekRawNodes().size();
 					auto offset = std::vector<glm::vec2>(nodeSize);
 					auto twistAngle = std::vector<float>(nodeSize);
 					auto split = std::vector<int>(nodeSize);
@@ -1671,7 +1675,7 @@ void Tree::Serialize(YAML::Emitter& out)
 
 					for (int nodeIndex = 0; nodeIndex < nodeSize; nodeIndex++)
 					{
-						const auto& node = m_strandModel.m_strandModelSkeleton.RefRawNodes().at(nodeIndex);
+						const auto& node = m_strandModel.m_strandModelSkeleton.PeekRawNodes().at(nodeIndex);
 						offset.at(nodeIndex) = node.m_data.m_offset;
 						twistAngle.at(nodeIndex) = node.m_data.m_twistAngle;
 						split.at(nodeIndex) = node.m_data.m_split == 1;
@@ -1701,7 +1705,7 @@ void Tree::Serialize(YAML::Emitter& out)
 	{
 		out << YAML::Key << "m_shootSkeleton" << YAML::Value << YAML::BeginMap;
 		{
-			SkeletonSerializer<ShootGrowthData, ShootStemGrowthData, InternodeGrowthData>::Serialize(out, m_treeModel.RefShootSkeleton(),
+			SkeletonSerializer<ShootGrowthData, ShootStemGrowthData, InternodeGrowthData>::Serialize(out, m_treeModel.PeekShootSkeleton(),
 				[&](YAML::Emitter& nodeOut, const InternodeGrowthData& nodeData)
 				{
 					nodeOut << YAML::Key << "m_buds" << YAML::Value << YAML::BeginSeq;
@@ -1733,7 +1737,7 @@ void Tree::Serialize(YAML::Emitter& out)
 					skeletonOut << YAML::Key << "m_desiredMin" << YAML::Value << skeletonData.m_desiredMin;
 					skeletonOut << YAML::Key << "m_desiredMax" << YAML::Value << skeletonData.m_desiredMax;
 
-					const auto nodeSize = m_treeModel.RefShootSkeleton().RefRawNodes().size();
+					const auto nodeSize = m_treeModel.PeekShootSkeleton().PeekRawNodes().size();
 					auto internodeLength = std::vector<float>(nodeSize);
 					auto indexOfParentBud = std::vector<int>(nodeSize);
 					auto startAge = std::vector<float>(nodeSize);
@@ -1749,7 +1753,7 @@ void Tree::Serialize(YAML::Emitter& out)
 
 					for (int nodeIndex = 0; nodeIndex < nodeSize; nodeIndex++)
 					{
-						const auto& node = m_treeModel.RefShootSkeleton().RefRawNodes().at(nodeIndex);
+						const auto& node = m_treeModel.PeekShootSkeleton().PeekRawNodes().at(nodeIndex);
 						internodeLength.at(nodeIndex) = node.m_data.m_internodeLength;
 						indexOfParentBud.at(nodeIndex) = node.m_data.m_indexOfParentBud;
 						startAge.at(nodeIndex) = node.m_data.m_startAge;

@@ -11,8 +11,9 @@
 using namespace tinyply;
 using namespace EcoSysLab;
 
-void SorghumPointCloudPointSettings::OnInspect()
+bool SorghumPointCloudPointSettings::OnInspect()
 {
+	return false;
 }
 
 void SorghumPointCloudPointSettings::Save(const std::string& name, YAML::Emitter& out) const
@@ -23,11 +24,13 @@ void SorghumPointCloudPointSettings::Load(const std::string& name, const YAML::N
 {
 }
 
-void SorghumPointCloudGridCaptureSettings::OnInspect()
+bool SorghumPointCloudGridCaptureSettings::OnInspect()
 {
-	ImGui::DragInt2("Grid size", &m_gridSize.x, 1, 0, 100);
-	ImGui::DragFloat("Grid distance", &m_gridDistance, 0.1f, 0.0f, 100.0f);
-	ImGui::DragFloat("Step", &m_step, 0.01f, 0.0f, 0.5f);
+	bool changed = false;
+	if (ImGui::DragInt2("Grid size", &m_gridSize.x, 1, 0, 100)) changed = true;
+	if (ImGui::DragFloat("Grid distance", &m_gridDistance, 0.1f, 0.0f, 100.0f)) changed = true;
+	if (ImGui::DragFloat("Step", &m_step, 0.01f, 0.0f, 0.5f)) changed = true;
+	return changed;
 }
 
 void SorghumPointCloudGridCaptureSettings::GenerateSamples(std::vector<PointCloudSample>& pointCloudSamples)
@@ -79,11 +82,14 @@ bool SorghumPointCloudGridCaptureSettings::SampleFilter(const PointCloudSample& 
 	return glm::abs(sample.m_hitInfo.m_position.x) < m_boundingBoxSize && glm::abs(sample.m_hitInfo.m_position.z) < m_boundingBoxSize;
 }
 
-void SorghumGantryCaptureSettings::OnInspect()
+bool SorghumGantryCaptureSettings::OnInspect()
 {
-	ImGui::DragInt2("Grid size", &m_gridSize.x, 1, 0, 100);
-	ImGui::DragFloat2("Grid distance", &m_gridDistance.x, 0.1f, 0.0f, 100.0f);
-	ImGui::DragFloat2("Step", &m_step.x, 0.00001f, 0.0f, 0.5f);
+	bool changed = false;
+	if (ImGui::DragInt2("Grid size", &m_gridSize.x, 1, 0, 100)) changed = true;
+	if (ImGui::DragFloat2("Grid distance", &m_gridDistance.x, 0.1f, 0.0f, 100.0f)) changed = true;
+	if (ImGui::DragFloat2("Step", &m_step.x, 0.00001f, 0.0f, 0.5f)) changed = true;
+
+	return changed;
 }
 
 void SorghumGantryCaptureSettings::GenerateSamples(std::vector<PointCloudSample>& pointCloudSamples)
@@ -101,7 +107,7 @@ void SorghumGantryCaptureSettings::GenerateSamples(std::vector<PointCloudSample>
 			const auto x = i / yStepSize;
 			const auto y = i % yStepSize;
 			const glm::vec3 center = glm::vec3{ m_step.x * x, 0.f, m_step.y * y } - glm::vec3(startPoint.x, 0, startPoint.y);
-			
+
 			auto& sample1 = pointCloudSamples[i];
 			sample1.m_direction = glm::normalize(
 				glm::rotate(front, glm::radians(m_scannerAngle), up));
@@ -229,7 +235,7 @@ void SorghumPointCloudScanner::Capture(const std::filesystem::path& savePath,
 				glm::gaussRand(0.0f, m_sorghumPointCloudPointSettings.m_variance),
 				glm::gaussRand(0.0f, m_sorghumPointCloudPointSettings.m_variance))
 			+ ballRand
-		+ (sampleIndex >= pcSamples.size() / 2 ? leftOffset : rightOffset));
+			+ (sampleIndex >= pcSamples.size() / 2 ? leftOffset : rightOffset));
 
 
 		if (m_sorghumPointCloudPointSettings.m_leafIndex)
@@ -315,8 +321,9 @@ void SorghumPointCloudScanner::Capture(const std::filesystem::path& savePath,
 #endif
 }
 
-void SorghumPointCloudScanner::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
+bool SorghumPointCloudScanner::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
+	bool changed = false;
 	if (ImGui::TreeNodeEx("Grid Capture")) {
 		static std::shared_ptr<TreePointCloudGridCaptureSettings> captureSettings = std::make_shared<TreePointCloudGridCaptureSettings>();
 		captureSettings->OnInspect();
@@ -326,9 +333,10 @@ void SorghumPointCloudScanner::OnInspect(const std::shared_ptr<EditorLayer>& edi
 		ImGui::TreePop();
 	}
 	if (ImGui::TreeNodeEx("Point settings")) {
-		m_sorghumPointCloudPointSettings.OnInspect();
+		if(m_sorghumPointCloudPointSettings.OnInspect()) changed = true;
 		ImGui::TreePop();
 	}
+	return changed;
 }
 
 void SorghumPointCloudScanner::OnDestroy()
@@ -336,7 +344,7 @@ void SorghumPointCloudScanner::OnDestroy()
 	m_sorghumPointCloudPointSettings = {};
 }
 
-void SorghumPointCloudScanner::Serialize(YAML::Emitter& out)
+void SorghumPointCloudScanner::Serialize(YAML::Emitter& out) const
 {
 	m_sorghumPointCloudPointSettings.Save("m_sorghumPointCloudPointSettings", out);
 }

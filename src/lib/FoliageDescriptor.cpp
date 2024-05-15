@@ -2,7 +2,7 @@
 #include "TreeModel.hpp"
 using namespace EcoSysLab;
 
-void TwigParameters::Save(const std::string& name, YAML::Emitter& out)
+void TwigParameters::Save(const std::string& name, YAML::Emitter& out) const
 {
 	out << YAML::Key << name << YAML::BeginMap;
 	out << YAML::Key << "m_segmentLength" << YAML::Value << m_segmentLength;
@@ -14,7 +14,7 @@ void TwigParameters::Save(const std::string& name, YAML::Emitter& out)
 	out << YAML::Key << "m_maxEndDistance" << YAML::Value << m_maxEndDistance;
 	out << YAML::Key << "m_segmentSize" << YAML::Value << m_segmentSize;
 	out << YAML::Key << "m_unitDistance" << YAML::Value << m_unitDistance;
-	
+
 	out << YAML::EndMap;
 }
 
@@ -52,13 +52,13 @@ bool TwigParameters::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 		changed = ImGui::DragFloat("Min root distance", &m_minRootDistance, 0.001f, 0.0f, 1.0f) || changed;
 		changed = ImGui::DragFloat("Max end distance", &m_maxEndDistance, 0.001f, 0.0f, 1.0f) || changed;
 
-		
+
 		ImGui::TreePop();
 	}
 	return changed;
 }
 
-void FoliageDescriptor::Serialize(YAML::Emitter& out)
+void FoliageDescriptor::Serialize(YAML::Emitter& out) const
 {
 	out << YAML::Key << "m_leafSize" << YAML::Value << m_leafSize;
 	out << YAML::Key << "m_leafCountPerInternode" << YAML::Value << m_leafCountPerInternode;
@@ -92,7 +92,7 @@ void FoliageDescriptor::Deserialize(const YAML::Node& in)
 	m_leafMaterial.Load("m_leafMaterial", in);
 }
 
-void FoliageDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
+bool FoliageDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
 	bool changed = false;
 
@@ -107,9 +107,9 @@ void FoliageDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLaye
 
 	changed = ImGui::DragFloat("Horizontal Tropism", &m_horizontalTropism, 0.001f, 0.0f, 1.0f) || changed;
 	changed = ImGui::DragFloat("Gravitropism", &m_gravitropism, 0.001f, 0.0f, 1.0f) || changed;
-	editorLayer->DragAndDropButton<Material>(m_leafMaterial, "Leaf Material");
-	m_twigParameters.OnInspect(editorLayer);
-	if (changed) m_saved = false;
+	if (editorLayer->DragAndDropButton<Material>(m_leafMaterial, "Leaf Material")) changed = true;
+	if (m_twigParameters.OnInspect(editorLayer)) changed = true;
+	return changed;
 }
 
 void FoliageDescriptor::CollectAssetRef(std::vector<AssetRef>& list)
@@ -137,7 +137,7 @@ void FoliageDescriptor::GenerateFoliageMatrices(std::vector<glm::mat4>& matrices
 					front, up);
 			}
 			auto foliagePosition = glm::mix(internodeInfo.m_globalPosition, internodeInfo.GetGlobalEndPosition(), glm::linearRand(0.f, 1.f)) + front * (leafSize.y + glm::linearRand(0.0f, m_positionVariance) * treeSize * 0.1f);
-			if(glm::any(glm::isnan(foliagePosition)) || glm::any(glm::isnan(front)) || glm::any(glm::isnan(up))) continue;
+			if (glm::any(glm::isnan(foliagePosition)) || glm::any(glm::isnan(front)) || glm::any(glm::isnan(up))) continue;
 			const auto leafTransform = glm::translate(foliagePosition) * glm::mat4_cast(glm::quatLookAt(front, up)) * glm::scale(glm::vec3(leafSize.x, 1.0f, leafSize.y));
 			matrices.emplace_back(leafTransform);
 		}

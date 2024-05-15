@@ -6,8 +6,9 @@
 using namespace EcoSysLab;
 
 
-void ParticlePhysics2DDemo::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
+bool ParticlePhysics2DDemo::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
+	bool changed = false;
 	static bool enableRender = true;
 	static float deltaTime = 0.002f;
 	ImGui::DragFloat("Simulation Delta time", &deltaTime, 0.001f, 0.001f, 1.0f);
@@ -165,6 +166,7 @@ void ParticlePhysics2DDemo::OnInspect(const std::shared_ptr<EditorLayer>& editor
 		}
 		ImGui::End();
 	}
+	return changed;
 }
 
 void ParticlePhysics2DDemo::FixedUpdate()

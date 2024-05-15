@@ -51,7 +51,7 @@ namespace EcoSysLab
 
 	class LSystemString : public IAsset {
 	protected:
-		bool SaveInternal(const std::filesystem::path& path) override;
+		bool SaveInternal(const std::filesystem::path& path) const override;
 
 		bool LoadInternal(const std::filesystem::path& path) override;
 
@@ -62,7 +62,7 @@ namespace EcoSysLab
 
 		void ParseLString(const std::string& string);
 
-		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
+		bool OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 
 		std::vector<LSystemCommand> m_commands;
 

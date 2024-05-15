@@ -87,7 +87,7 @@ void ForestPatch::CollectAssetRef(std::vector<AssetRef>& list)
 	if (m_treeDescriptor.Get<TreeDescriptor>()) list.push_back(m_treeDescriptor);
 }
 
-void ForestPatch::Serialize(YAML::Emitter& out)
+void ForestPatch::Serialize(YAML::Emitter& out) const 
 {
 	out << YAML::Key << "m_gridDistance" << YAML::Value << m_gridDistance;
 	out << YAML::Key << "m_positionOffsetMean" << YAML::Value << m_positionOffsetMean;
@@ -120,34 +120,37 @@ void ForestPatch::Deserialize(const YAML::Node& in)
 	m_simulationSettings.Load("m_simulationSettings", in);
 }
 
-void ForestPatch::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
+bool ForestPatch::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
+	bool changed = false;
 	editorLayer->DragAndDropButton<TreeDescriptor>(m_treeDescriptor, "TreeDescriptor");
 	static glm::ivec2 gridSize = {8, 8};
 	ImGui::DragInt2("Grid size", &gridSize.x, 1, 0, 100);
-	ImGui::DragFloat2("Grid distance", &m_gridDistance.x, 0.1f, 0.0f, 100.0f);
+	if(ImGui::DragFloat2("Grid distance", &m_gridDistance.x, 0.1f, 0.0f, 100.0f)) changed = true;
 	ImGui::Separator();
-	ImGui::DragFloat2("Position offset mean", &m_positionOffsetMean.x, 0.01f, 0.0f, 5.f);
-	ImGui::DragFloat2("Position offset variance", &m_positionOffsetVariance.x, 0.01f, 0.0f, 5.f);
-	ImGui::DragFloat2("Rotation offset variance", &m_rotationOffsetVariance.x, 0.01f, 0.0f, 5.f);
+	if (ImGui::DragFloat2("Position offset mean", &m_positionOffsetMean.x, 0.01f, 0.0f, 5.f)) changed = true;
+	if (ImGui::DragFloat2("Position offset variance", &m_positionOffsetVariance.x, 0.01f, 0.0f, 5.f)) changed = true;
+	if (ImGui::DragFloat2("Rotation offset variance", &m_rotationOffsetVariance.x, 0.01f, 0.0f, 5.f)) changed = true;
 	static bool setParent = true;
 	ImGui::Checkbox("Set Parent", &setParent);
 	static bool setSimulationSettings = true;
 	ImGui::Checkbox("Set Simulation settings", &setSimulationSettings);
 	if (ImGui::TreeNodeEx("Simulation Settings", ImGuiTreeNodeFlags_DefaultOpen))
 	{
-		m_simulationSettings.OnInspect(editorLayer);
+		if (m_simulationSettings.OnInspect(editorLayer)) changed = true;
 		ImGui::TreePop();
 	}
 
-	ImGui::DragFloat("Min low branch pruning", &m_minLowBranchPruning, 0.01f, 0.f, m_maxLowBranchPruning);
-	ImGui::DragFloat("Max low branch pruning", &m_maxLowBranchPruning, 0.01f, m_minLowBranchPruning, 1.f);
-	ImGui::DragFloat("Simulation time", &m_simulationTime, 0.1f, 0.0f, 100.f);
-	ImGui::DragFloat("Start time max", &m_startTimeMax, 0.01f, 0.0f, 10.f);
+	if (ImGui::DragFloat("Min low branch pruning", &m_minLowBranchPruning, 0.01f, 0.f, m_maxLowBranchPruning)) changed = true;
+	if (ImGui::DragFloat("Max low branch pruning", &m_maxLowBranchPruning, 0.01f, m_minLowBranchPruning, 1.f)) changed = true;
+	if (ImGui::DragFloat("Simulation time", &m_simulationTime, 0.1f, 0.0f, 100.f)) changed = true;
+	if (ImGui::DragFloat("Start time max", &m_startTimeMax, 0.01f, 0.0f, 10.f)) changed = true;
 
 	if (ImGui::Button("Instantiate")) {
 		InstantiatePatch(gridSize, setParent);
 	}
+
+	return changed;
 }
 
 void TreeInfo::Serialize(YAML::Emitter& out) const
@@ -244,7 +247,8 @@ void ForestDescriptor::ApplyTreeDescriptors(const std::filesystem::path& folderP
 	ApplyTreeDescriptors(collectedTreeDescriptors, ratios);
 }
 
-void ForestDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
+bool ForestDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
+	bool changed = false;
 	static glm::ivec2 gridSize = { 4, 4 };
 	static float gridDistance = 1.5f;
 	static float randomShift = 0.5f;
@@ -327,6 +331,8 @@ void ForestDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer
 	if (!m_treeInfos.empty() && ImGui::Button("Clear")) {
 		m_treeInfos.clear();
 	}
+
+	return changed;
 }
 
 void ForestDescriptor::OnCreate() {
@@ -340,7 +346,7 @@ void ForestDescriptor::CollectAssetRef(std::vector<AssetRef>& list) {
 	}
 }
 
-void ForestDescriptor::Serialize(YAML::Emitter& out) {
+void ForestDescriptor::Serialize(YAML::Emitter& out) const {
 	out << YAML::Key << "m_treeInfos" << YAML::BeginSeq;
 	for (const auto& i : m_treeInfos)
 	{

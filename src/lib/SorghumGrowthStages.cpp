@@ -374,11 +374,10 @@ bool SorghumPanicleGrowthStage::OnInspect() {
 		m_saved = false;
 	return changed;
 }
-void SorghumPanicleGrowthStage::Serialize(YAML::Emitter& out) {
+void SorghumPanicleGrowthStage::Serialize(YAML::Emitter& out) const {
 	out << YAML::Key << "m_panicleSize" << YAML::Value << m_panicleSize;
 	out << YAML::Key << "m_seedAmount" << YAML::Value << m_seedAmount;
 	out << YAML::Key << "m_seedRadius" << YAML::Value << m_seedRadius;
-	m_saved = true;
 }
 void SorghumPanicleGrowthStage::Deserialize(const YAML::Node& in) {
 	if (in["m_panicleSize"])
@@ -396,15 +395,13 @@ SorghumPanicleGrowthStage::SorghumPanicleGrowthStage() {
 	m_seedRadius = 0.002f;
 	m_saved = false;
 }
-void SorghumStemGrowthStage::Serialize(YAML::Emitter& out) {
+void SorghumStemGrowthStage::Serialize(YAML::Emitter& out) const {
 	out << YAML::Key << "m_direction" << YAML::Value << m_direction;
 	m_widthAlongStem.Save("m_widthAlongStem", out);
 	out << YAML::Key << "m_length" << YAML::Value << m_length;
 	out << YAML::Key << "m_spline" << YAML::Value << YAML::BeginMap;
 	m_spline.Serialize(out);
 	out << YAML::EndMap;
-
-	m_saved = true;
 }
 void SorghumStemGrowthStage::Deserialize(const YAML::Node& in) {
 	if (in["m_spline"]) {
@@ -511,7 +508,7 @@ bool SorghumLeafGrowthStage::OnInspect(int mode) {
 		m_saved = false;
 	return changed;
 }
-void SorghumLeafGrowthStage::Serialize(YAML::Emitter& out) {
+void SorghumLeafGrowthStage::Serialize(YAML::Emitter& out) const {
 
 	out << YAML::Key << "m_dead" << YAML::Value << m_dead;
 	out << YAML::Key << "m_index" << YAML::Value << m_index;
@@ -533,9 +530,8 @@ void SorghumLeafGrowthStage::Serialize(YAML::Emitter& out) {
 		out << YAML::Key << "m_wavinessPeriodStart" << YAML::Value
 			<< m_wavinessPeriodStart;
 	}
-
-	m_saved = true;
 }
+
 void SorghumLeafGrowthStage::Deserialize(const YAML::Node& in) {
 	if (in["m_index"])
 		m_index = in["m_index"].as<int>();
@@ -715,7 +711,7 @@ bool SorghumGrowthStage::OnInspect(int mode) {
 	return changed;
 }
 
-void SorghumGrowthStage::Serialize(YAML::Emitter& out) {
+void SorghumGrowthStage::Serialize(YAML::Emitter& out) const {
 
 	out << YAML::Key << "m_version" << YAML::Value << m_version;
 	out << YAML::Key << "m_name" << YAML::Value << m_name;
@@ -735,9 +731,8 @@ void SorghumGrowthStage::Serialize(YAML::Emitter& out) {
 		}
 		out << YAML::EndSeq;
 	}
-
-	m_saved = true;
 }
+
 void SorghumGrowthStage::Deserialize(const YAML::Node& in) {
 	if (in["m_version"])
 		m_version = in["m_version"].as<unsigned>();
@@ -756,7 +751,6 @@ void SorghumGrowthStage::Deserialize(const YAML::Node& in) {
 			m_leaves.push_back(leaf);
 		}
 	}
-	m_saved = true;
 }
 SorghumGrowthStage::SorghumGrowthStage() {
 	m_saved = false;

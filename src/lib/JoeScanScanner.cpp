@@ -3,7 +3,7 @@
 #include "Scene.hpp"
 using namespace EcoSysLab;
 
-void JoeScan::Serialize(YAML::Emitter& out)
+void JoeScan::Serialize(YAML::Emitter& out) const
 {
 	out << YAML::Key << "m_profiles" << YAML::Value << YAML::BeginSeq;
 	for (const auto& profile : m_profiles)
@@ -46,8 +46,9 @@ void JoeScan::Deserialize(const YAML::Node& in)
 	}
 }
 
-void JoeScan::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
+bool JoeScan::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
+	bool changed = false;
 	static std::shared_ptr<ParticleInfoList> joeScanList;
 	if (!joeScanList) joeScanList = ProjectManager::CreateTemporaryAsset<ParticleInfoList>();
 
@@ -60,7 +61,7 @@ void JoeScan::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 	static float brightnessFactor = 1.f;
 	static bool brightness = true;
 	ImGui::Checkbox("Brightness", &brightness);
-	if(brightness) ImGui::DragFloat("Brightness factor", &brightnessFactor, 0.001f, 0.0f, 1.0f);
+	if (brightness) ImGui::DragFloat("Brightness factor", &brightnessFactor, 0.001f, 0.0f, 1.0f);
 
 	ImGui::ColorEdit3("Color", &color.x);
 	if (enableJoeScanRendering) {
@@ -76,7 +77,7 @@ void JoeScan::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 						data[i + startIndex].m_instanceMatrix.SetPosition(glm::vec3(profile.m_points[i].x / 10000.f, profile.m_points[i].y / 10000.f, profile.m_encoderValue / divider));
 						data[i + startIndex].m_instanceMatrix.SetScale(glm::vec3(0.005f));
 						data[i + startIndex].m_instanceColor = glm::vec4(color, 1.f / 128);
-						if(brightness) data[i + startIndex].m_instanceColor.w = static_cast<float>(profile.m_brightness[i]) / 2048.f * brightnessFactor;
+						if (brightness) data[i + startIndex].m_instanceColor.w = static_cast<float>(profile.m_brightness[i]) / 2048.f * brightnessFactor;
 					}
 				);
 			}
@@ -99,6 +100,8 @@ void JoeScan::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 		settings.m_drawSettings.m_blending = true;
 		editorLayer->DrawGizmoCubes(joeScanList, glm::mat4(1), 1.f, settings);
 	}
+
+	return changed;
 }
 
 void logger(const jsError err, const std::string msg)
@@ -280,7 +283,7 @@ void JoeScanScanner::FreeScanSystem(jsScanSystem& scanSystem, std::vector<jsScan
 	EVOENGINE_LOG("JoeScan: ScanSysten Freed!");
 }
 
-void JoeScanScanner::Serialize(YAML::Emitter& out)
+void JoeScanScanner::Serialize(YAML::Emitter& out) const
 {
 	m_config.Save("m_config", out);
 	m_joeScan.Save("m_joeScan", out);
@@ -292,10 +295,11 @@ void JoeScanScanner::Deserialize(const YAML::Node& in)
 	m_joeScan.Load("m_joeScan", in);
 }
 
-void JoeScanScanner::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
+bool JoeScanScanner::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
-	editorLayer->DragAndDropButton<Json>(m_config, "Json Config");
-	editorLayer->DragAndDropButton<JoeScan>(m_joeScan, "JoeScan");
+	bool changed = false;
+	if (editorLayer->DragAndDropButton<Json>(m_config, "Json Config")) changed = true;
+	if (editorLayer->DragAndDropButton<JoeScan>(m_joeScan, "JoeScan")) changed = true;
 	const auto config = m_config.Get<Json>();
 	if (config && ImGui::Button("Initialize ScanSystem"))
 	{
@@ -340,7 +344,7 @@ void JoeScanScanner::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 		}
 	}
 
-
+	return changed;
 }
 
 void JoeScanScanner::FixedUpdate()

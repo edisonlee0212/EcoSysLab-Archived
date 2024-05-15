@@ -16,10 +16,10 @@ namespace EcoSysLab {
 	{
 	public:
 		std::vector<JoeScanProfile> m_profiles;
-		void Serialize(YAML::Emitter& out) override;
+		void Serialize(YAML::Emitter& out) const override;
 		void Deserialize(const YAML::Node& in) override;
-		
-		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
+
+		bool OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 	};
 
 	struct JoeScanScannerSettings
@@ -40,15 +40,15 @@ namespace EcoSysLab {
 		AssetRef m_config;
 		AssetRef m_joeScan;
 		void StopScanningProcess();
-		void StartScanProcess(const JoeScanScannerSettings &settings);
+		void StartScanProcess(const JoeScanScannerSettings& settings);
 		JoeScanScanner();
 		static bool InitializeScanSystem(const std::shared_ptr<Json>& json, jsScanSystem& scanSystem, std::vector<jsScanHead>& scanHeads);
 		static void FreeScanSystem(jsScanSystem& scanSystem, std::vector<jsScanHead>& scanHeads);
 		jsScanSystem m_scanSystem = 0;
 		std::vector<jsScanHead> m_scanHeads;
-		void Serialize(YAML::Emitter& out) override;
+		void Serialize(YAML::Emitter& out) const override;
 		void Deserialize(const YAML::Node& in) override;
-		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
+		bool OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 		void FixedUpdate() override;
 		void OnCreate() override;
 		void OnDestroy() override;

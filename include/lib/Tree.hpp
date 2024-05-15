@@ -92,7 +92,7 @@ namespace EcoSysLab {
 
 		TreeVisualizer m_treeVisualizer {};
 		
-		void Serialize(YAML::Emitter& out) override;
+		void Serialize(YAML::Emitter& out) const override;
 		bool m_splitRootTest = true;
 		bool m_recordBiomassHistory = true;
 		float m_leftSideBiomass;
@@ -121,7 +121,7 @@ namespace EcoSysLab {
 
 		TreeModel m_treeModel{};
 		StrandModel m_strandModel{};
-		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
+		bool OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 
 		void OnDestroy() override;
 

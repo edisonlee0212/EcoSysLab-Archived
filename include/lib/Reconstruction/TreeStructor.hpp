@@ -285,7 +285,7 @@ namespace EcoSysLab {
 		std::vector<OperatorBranch> m_operatingBranches;
 		std::vector<TreePart> m_treeParts;
 
-		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
+		bool OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 
 		std::vector<ReconstructionSkeleton> m_skeletons;
 
@@ -309,7 +309,7 @@ namespace EcoSysLab {
 		std::vector<std::shared_ptr<Mesh>> GenerateForestBranchMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings) const;
 		std::vector<std::shared_ptr<Mesh>> GenerateFoliageMeshes();
 
-		void Serialize(YAML::Emitter& out) override;
+		void Serialize(YAML::Emitter& out) const override;
 		void Deserialize(const YAML::Node& in) override;
 		void CollectAssetRef(std::vector<AssetRef>& list) override;
 	};

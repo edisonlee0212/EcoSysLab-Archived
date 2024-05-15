@@ -6,7 +6,7 @@ using namespace EcoSysLab;
 
 bool SorghumMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
-	if(ImGui::TreeNode("Sorghum mesh generator settings"))
+	if (ImGui::TreeNode("Sorghum mesh generator settings"))
 	{
 		ImGui::Checkbox("Panicle", &m_enablePanicle);
 		ImGui::Checkbox("Stem", &m_enableStem);
@@ -112,7 +112,7 @@ bool SorghumStemState::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer
 
 void SorghumStemState::Serialize(YAML::Emitter& out) const
 {
-	
+
 }
 
 void SorghumStemState::Deserialize(const YAML::Node& in)
@@ -133,7 +133,7 @@ void SorghumStemState::GenerateGeometry(std::vector<Vertex>& vertices, std::vect
 	Vertex archetype{};
 	glm::vec4 m_vertexColor = glm::vec4(0, 0, 0, 1);
 	archetype.m_color = m_vertexColor;
-	
+
 	const float xStep = 1.0f / sorghumLayer->m_horizontalSubdivisionStep / 2.0f;
 	auto segmentSize = segments.size();
 	const float yStemStep = 0.5f / segmentSize;
@@ -258,7 +258,7 @@ void SorghumLeafState::GenerateGeometry(std::vector<Vertex>& vertices, std::vect
 	}
 }
 
-void SorghumState::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
+bool SorghumState::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
 	bool changed = false;
 	if (ImGui::TreeNodeEx((std::string("Stem")).c_str())) {
@@ -313,11 +313,10 @@ void SorghumState::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 		ImGui::TreePop();
 	}
 
-	if (changed)
-		m_saved = false;
+	return changed;
 }
 
-void SorghumState::Serialize(YAML::Emitter& out)
+void SorghumState::Serialize(YAML::Emitter& out) const
 {
 	out << YAML::Key << "m_version" << YAML::Value << m_version;
 	out << YAML::Key << "m_panicle" << YAML::Value << YAML::BeginMap;
@@ -336,8 +335,6 @@ void SorghumState::Serialize(YAML::Emitter& out)
 		}
 		out << YAML::EndSeq;
 	}
-
-	m_saved = true;
 }
 
 void SorghumState::Deserialize(const YAML::Node& in)
@@ -355,5 +352,4 @@ void SorghumState::Deserialize(const YAML::Node& in)
 			m_leaves.push_back(leafState);
 		}
 	}
-	m_saved = true;
 }

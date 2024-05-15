@@ -7,11 +7,11 @@ namespace EcoSysLab {
 	public:
 		void ApplyMeshBounds(const std::shared_ptr<Mesh>& mesh);
 		Bound m_minMaxBound;
-		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
+		bool OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 		bool InVolume(const GlobalTransform& globalTransform, const glm::vec3& position) override;
 		bool InVolume(const glm::vec3& position) override;
 		glm::vec3 GetRandomPoint() override;
-		void Serialize(YAML::Emitter& out) override;
+		void Serialize(YAML::Emitter& out) const override;
 		void Deserialize(const YAML::Node& in) override;
 	};
 }

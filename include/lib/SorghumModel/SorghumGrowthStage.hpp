@@ -15,7 +15,7 @@ namespace EcoSysLab {
 		bool m_saved = false;
 		SorghumPanicleGrowthStage();
 		bool OnInspect();
-		void Serialize(YAML::Emitter& out);
+		void Serialize(YAML::Emitter& out) const;
 		void Deserialize(const YAML::Node& in);
 	};
 	struct SorghumStemGrowthStage {
@@ -27,7 +27,7 @@ namespace EcoSysLab {
 		bool m_saved = false;
 		SorghumStemGrowthStage();
 		[[nodiscard]] glm::vec3 GetPoint(float point) const;
-		void Serialize(YAML::Emitter& out);
+		void Serialize(YAML::Emitter& out) const;
 		void Deserialize(const YAML::Node& in);
 		bool OnInspect(int mode);
 	};
@@ -50,7 +50,7 @@ namespace EcoSysLab {
 		bool m_saved = false;
 		SorghumLeafGrowthStage();
 		void CopyShape(const SorghumLeafGrowthStage& another);
-		void Serialize(YAML::Emitter& out);
+		void Serialize(YAML::Emitter& out) const;
 		void Deserialize(const YAML::Node& in);
 		bool OnInspect(int mode);
 	};
@@ -69,7 +69,7 @@ namespace EcoSysLab {
 		std::vector<SorghumLeafGrowthStage> m_leaves;
 		bool OnInspect(int mode);
 
-		void Serialize(YAML::Emitter& out);
+		void Serialize(YAML::Emitter& out) const;
 		void Deserialize(const YAML::Node& in);
 	};
 } // namespace EcoSysLab

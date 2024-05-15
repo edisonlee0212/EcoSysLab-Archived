@@ -48,17 +48,19 @@ void SorghumFieldPatch::GenerateField(
 	}
 }
 
-void SorghumField::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
-
-	ImGui::DragInt("Size limit", &m_sizeLimit, 1, 0, 10000);
-	ImGui::DragFloat("Sorghum size", &m_sorghumSize, 0.01f, 0, 10);
+bool SorghumField::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
+	bool changed = false;
+	if(ImGui::DragInt("Size limit", &m_sizeLimit, 1, 0, 10000)) changed = false;
+	if(ImGui::DragFloat("Sorghum size", &m_sorghumSize, 0.01f, 0, 10)) changed = false;
 	if (ImGui::Button("Instantiate")) {
 		InstantiateField();
 	}
 
 	ImGui::Text("Matrices count: %d", (int)m_matrices.size());
+
+	return changed;
 }
-void SorghumField::Serialize(YAML::Emitter& out) {
+void SorghumField::Serialize(YAML::Emitter& out) const {
 	out << YAML::Key << "m_sizeLimit" << YAML::Value << m_sizeLimit;
 	out << YAML::Key << "m_sorghumSize" << YAML::Value << m_sorghumSize;
 

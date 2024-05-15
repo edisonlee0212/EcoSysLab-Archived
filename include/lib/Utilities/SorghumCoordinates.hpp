@@ -19,8 +19,8 @@ namespace EcoSysLab
 		void Apply(const std::shared_ptr<SorghumField> & sorghumField);
 		void Apply(const std::shared_ptr<SorghumField>& sorghumField, glm::dvec2& offset, unsigned i = 0, float radius = 2.5f, float positionVariance = 0.0f);
 		void ImportFromFile(const std::filesystem::path& path);
-		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
-		void Serialize(YAML::Emitter& out) override;
+		bool OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
+		void Serialize(YAML::Emitter& out) const override;
 		void Deserialize(const YAML::Node& in) override;
 		void CollectAssetRef(std::vector<AssetRef>& list) override;
 	};

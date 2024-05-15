@@ -14,7 +14,7 @@
 using namespace EcoSysLab;
 static const char* StateModes[]{ "Default", "Cubic-Bezier" };
 
-void SorghumGrowthStages::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
+bool SorghumGrowthStages::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	if (ImGui::Button("Instantiate")) {
 		auto entity = CreateEntity();
 	}
@@ -179,13 +179,10 @@ void SorghumGrowthStages::OnInspect(const std::shared_ptr<EditorLayer>& editorLa
 		ImGui::TreePop();
 	}
 	*/
-	if (changed) {
-		m_saved = false;
-		m_version++;
-	}
+	return changed;
 }
 
-void SorghumGrowthStages::Serialize(YAML::Emitter& out) {
+void SorghumGrowthStages::Serialize(YAML::Emitter& out) const {
 	out << YAML::Key << "m_mode" << YAML::Value << m_mode;
 	out << YAML::Key << "m_version" << YAML::Value << m_version;
 	out << YAML::Key << "m_sorghumGrowthStages" << YAML::Value << YAML::BeginSeq;

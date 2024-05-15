@@ -195,7 +195,7 @@ float ProceduralNoise3D::Process(const SkeletonNodeHandle nodeHandle, const glm:
 	return value;
 }
 
-void ProceduralNoise2D::Serialize(YAML::Emitter& out)
+void ProceduralNoise2D::Serialize(YAML::Emitter& out) const 
 {
 	out << YAML::Key << "m_pipeline" << YAML::Value << YAML::BeginMap;
 	{
@@ -225,8 +225,9 @@ void ProceduralNoise2D::Deserialize(const YAML::Node& in)
 	}
 }
 
-void ProceduralNoise2D::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
+bool ProceduralNoise2D::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
+	bool changed = false;
 	static NodeGraph<int, int, int, int> graph{};
 	static bool showNodeGraph = false;
 	if (showNodeGraph)
@@ -275,7 +276,7 @@ void ProceduralNoise2D::OnInspect(const std::shared_ptr<EditorLayer>& editorLaye
 
 	if (m_pipeline.RefRawNodes().empty() || m_pipeline.PeekNode(0).IsRecycled())
 	{
-		return;
+		return changed;
 	}
 	static glm::vec2 testPoint{};
 	static float initialValue = 0.f;
@@ -286,7 +287,9 @@ void ProceduralNoise2D::OnInspect(const std::shared_ptr<EditorLayer>& editorLaye
 	ImGui::Text("Value: %.3f", value);
 
 	ImGui::Separator();
-	if (OnInspect(0)) m_saved = false;
+	if (OnInspect(0)) changed = true;
+
+	return changed;
 }
 
 float ProceduralNoise2D::Process(const glm::vec2& samplePoint, float value)
@@ -314,7 +317,7 @@ float ProceduralNoise3D::Process(const glm::vec3& samplePoint, float value)
 
 
 
-void ProceduralNoise3D::Serialize(YAML::Emitter& out)
+void ProceduralNoise3D::Serialize(YAML::Emitter& out) const
 {
 	out << YAML::Key << "m_pipeline" << YAML::Value << YAML::BeginMap;
 	{
@@ -344,11 +347,12 @@ void ProceduralNoise3D::Deserialize(const YAML::Node& in)
 	}
 }
 
-void ProceduralNoise3D::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
+bool ProceduralNoise3D::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
+	bool changed = false;
 	if (m_pipeline.RefRawNodes().empty() || m_pipeline.PeekNode(0).IsRecycled())
 	{
-		return;
+		return changed;
 	}
 	static glm::vec3 testPoint{};
 	ImGui::DragFloat3("Test Point", &testPoint.x, 0.1f);
@@ -356,5 +360,6 @@ void ProceduralNoise3D::OnInspect(const std::shared_ptr<EditorLayer>& editorLaye
 	Process(testPoint, value);
 	ImGui::Text("Value: %.3f", value);
 	ImGui::Separator();
-	if (OnInspect(0)) m_saved = false;
+	if (OnInspect(0)) changed = true;
+	return changed;
 }

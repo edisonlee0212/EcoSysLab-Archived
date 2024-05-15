@@ -50,9 +50,9 @@ namespace EcoSysLab {
 		std::vector<ShootGrowthParameterOffset> m_shootDescriptorOffsets;
 	public:
 		AssetRef m_baseShootDescriptor{};
-		void Serialize(YAML::Emitter& out) override;
+		void Serialize(YAML::Emitter& out) const override;
 		void Deserialize(const YAML::Node& in) override;
-		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
+		bool OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 		[[nodiscard]] std::shared_ptr<ShootDescriptor> Generate();
 		bool OnInspectShootGrowthParametersOffset(std::vector<ShootGrowthParameterOffset>& shootGrowthParameterOffsets);
 	};

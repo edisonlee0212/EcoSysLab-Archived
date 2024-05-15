@@ -153,9 +153,9 @@ namespace EcoSysLab
 #pragma endregion
 		void PrepareController(ShootGrowthController& shootGrowthController) const;
 
-		void Serialize(YAML::Emitter& out) override;
+		void Serialize(YAML::Emitter& out) const override;
 		void Deserialize(const YAML::Node& in) override;
-		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
+		bool OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 		void CollectAssetRef(std::vector<AssetRef>& list) override;
 	};
 

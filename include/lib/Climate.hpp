@@ -8,9 +8,9 @@ namespace EcoSysLab
 	public:
 		ClimateParameters m_climateParameters;
 
-		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
+		bool OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 
-		void Serialize(YAML::Emitter& out) override;
+		void Serialize(YAML::Emitter& out) const override;
 
 		void Deserialize(const YAML::Node& in) override;
 	};
@@ -23,8 +23,8 @@ namespace EcoSysLab
 		/**ImGui menu goes here. Also, you can take care you visualization with Gizmos here.
 		 * Note that the visualization will only be activated while you are inspecting the soil private component in the entity inspector.
 		 */
-		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
-		void Serialize(YAML::Emitter& out) override;
+		bool OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
+		void Serialize(YAML::Emitter& out) const override;
 
 		void Deserialize(const YAML::Node& in) override;
 

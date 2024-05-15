@@ -2,7 +2,7 @@
 
 using namespace EcoSysLab;
 
-void TreeGraph::Serialize(YAML::Emitter& out) {
+void TreeGraph::Serialize(YAML::Emitter& out) const {
     out << YAML::Key << "name" << YAML::Value << m_name;
     out << YAML::Key << "layersize" << YAML::Value << m_layerSize;
     out << YAML::Key << "layers" << YAML::Value << YAML::BeginMap;
@@ -122,10 +122,13 @@ void TreeGraph::Deserialize(const YAML::Node& in) {
     }
 }
 
-void TreeGraph::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
+bool TreeGraph::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
+    bool changed = false;
     ImGui::Checkbox("Length limit", &m_enableInstantiateLengthLimit);
-    ImGui::DragFloat("Length limit", &m_instantiateLengthLimit, 0.1f);
+    if(m_enableInstantiateLengthLimit) ImGui::DragFloat("Length limit", &m_instantiateLengthLimit, 0.1f);
+
+    return false;
 }
 
 void TreeGraph::CollectChild(const std::shared_ptr<TreeGraphNode>& node,
@@ -138,7 +141,7 @@ void TreeGraph::CollectChild(const std::shared_ptr<TreeGraphNode>& node,
 }
 
 
-void TreeGraphV2::Serialize(YAML::Emitter& out) {
+void TreeGraphV2::Serialize(YAML::Emitter& out) const {
 }
 
 
@@ -203,10 +206,12 @@ void TreeGraphV2::Deserialize(const YAML::Node& in) {
     }
 }
 
-void TreeGraphV2::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
+bool TreeGraphV2::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
+    bool changed = false;
     ImGui::Checkbox("Length limit", &m_enableInstantiateLengthLimit);
     ImGui::DragFloat("Length limit", &m_instantiateLengthLimit, 0.1f);
+    return changed;
 }
 
 void TreeGraphV2::CollectChild(const std::shared_ptr<TreeGraphNode>& node,

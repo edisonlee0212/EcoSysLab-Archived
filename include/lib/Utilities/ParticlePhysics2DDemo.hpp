@@ -18,7 +18,7 @@ namespace EcoSysLab
 		float m_worldRadius = 100.0f;
 		float m_gravityStrength = 10.0f;
 		int m_particleAddCount = 10;
-		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
+		bool OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 		void FixedUpdate() override;
 	};
 }

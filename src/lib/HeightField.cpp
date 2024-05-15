@@ -7,7 +7,7 @@ using namespace EcoSysLab;
 float HeightField::GetValue(const glm::vec2& position)
 {
 	float retVal = 0.0f;
-	if(position.x < 0)
+	if (position.x < 0)
 	{
 		//retVal += glm::max(position.x, -5.0f);
 	}
@@ -20,15 +20,15 @@ void HeightField::RandomOffset(const float min, const float max)
 	m_noises2D.RandomOffset(min, max);
 }
 
-void HeightField::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
+bool HeightField::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
 	bool changed = false;
 	changed = ImGui::DragInt("Precision level", &m_precisionLevel) || changed;
 	changed = m_noises2D.OnInspect() | changed;
-	if (changed) m_saved = false;
+	return changed;
 }
 
-void HeightField::Serialize(YAML::Emitter& out)
+void HeightField::Serialize(YAML::Emitter& out) const
 {
 	out << YAML::Key << "m_precisionLevel" << YAML::Value << m_precisionLevel;
 	m_noises2D.Save("m_noises2D", out);

@@ -13,10 +13,10 @@ namespace EcoSysLab {
 		float m_baseMaxDistance = 1.f;
 		float m_baseDistanceDecreaseFactor = 2.f;
 		float m_baseDepth = .1f;
-		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
+		bool OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 		float GetValue(float xFactor, float distanceToRoot);
 
-		void Serialize(YAML::Emitter& out) override;
+		void Serialize(YAML::Emitter& out) const override;
 		void Deserialize(const YAML::Node& in) override;
 	};
 }

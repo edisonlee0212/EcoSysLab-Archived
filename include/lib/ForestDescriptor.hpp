@@ -22,9 +22,9 @@ namespace EcoSysLab {
         float m_startTimeMax = 0.0f;
         Entity InstantiatePatch(const glm::ivec2& gridSize, bool setSimulationSettings = true);
         void CollectAssetRef(std::vector<AssetRef>& list) override;
-        void Serialize(YAML::Emitter& out) override;
+        void Serialize(YAML::Emitter& out) const override;
         void Deserialize(const YAML::Node& in) override;
-        void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
+        bool OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
     };
 
     struct TreeInfo
@@ -46,13 +46,13 @@ namespace EcoSysLab {
         void ApplyTreeDescriptors(const std::filesystem::path& folderPath);
         void ApplyTreeDescriptors(const std::vector<std::shared_ptr<TreeDescriptor>>& treeDescriptors, const std::vector<float>& ratios);
         void ApplyTreeDescriptors(const std::filesystem::path& folderPath, const std::vector<float>& ratios);
-        void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
+        bool OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 
         void OnCreate() override;
 
         void CollectAssetRef(std::vector<AssetRef> &list) override;
 
-        void Serialize(YAML::Emitter &out) override;
+        void Serialize(YAML::Emitter &out) const override;
 
         void Deserialize(const YAML::Node &in) override;
 

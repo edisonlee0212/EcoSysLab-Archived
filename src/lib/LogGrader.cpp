@@ -57,8 +57,9 @@ void LogGrader::RefreshMesh(const LogGrading& logGrading) const
 	//GenerateFlatMesh(m_tempFlatMesh4, m_logWoodMeshGenerationSettings, 180 + logGrading.m_angleOffset, 270 + logGrading.m_angleOffset);
 }
 
-void LogGrader::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
+bool LogGrader::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
+	bool changed = false;
 	m_proceduralLogParameters.OnInspect();
 	
 	if (ImGui::Button("Initialize Log"))
@@ -283,6 +284,8 @@ void LogGrader::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 		//if (m_tempFlatMesh4) editorLayer->DrawGizmoMesh(m_tempFlatMesh4, glm::vec4(1.0f), transform.m_value, 1.f, gizmoSettings);
 		if (m_surface4) editorLayer->DrawGizmoMeshInstancedColored(Resources::GetResource<Mesh>("PRIMITIVE_QUAD"), m_surface4, transform.m_value, 1.f, gizmoSettings);
 	}
+
+	return changed;
 }
 
 void LogGrader::InitializeLogRandomly(const ProceduralLogParameters& proceduralLogParameters, const std::shared_ptr<BarkDescriptor>& branchShape)

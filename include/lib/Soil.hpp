@@ -29,8 +29,8 @@ namespace EcoSysLab
 		Noise3D m_initialNutrients;
 		Noise3D m_initialWater;
 		Noise2D m_thickness;
-		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
-		void Serialize(YAML::Emitter& out) override;
+		bool OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
+		void Serialize(YAML::Emitter& out) const override;
 		void Deserialize(const YAML::Node& in) override;
 		void CollectAssetRef(std::vector<AssetRef>& list) override;
 	};
@@ -48,9 +48,9 @@ namespace EcoSysLab
 		/**ImGui menu goes to here. Also you can take care you visualization with Gizmos here.
 		 * Note that the visualization will only be activated while you are inspecting the soil private component in the entity inspector.
 		 */
-		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
+		bool OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 		void RandomOffset(float min, float max);
-		void Serialize(YAML::Emitter& out) override;
+		void Serialize(YAML::Emitter& out) const override;
 		void Deserialize(const YAML::Node& in) override;
 		void CollectAssetRef(std::vector<AssetRef>& list) override;
 	};
@@ -82,9 +82,9 @@ namespace EcoSysLab
 		/**ImGui menu goes to here.Also you can take care you visualization with Gizmos here.
 		 * Note that the visualization will only be activated while you are inspecting the soil private component in the entity inspector.
 		 */
-		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
+		bool OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 		void RandomOffset(float min, float max);
-		void Serialize(YAML::Emitter& out) override;
+		void Serialize(YAML::Emitter& out) const override;
 
 		void Deserialize(const YAML::Node& in) override;
 

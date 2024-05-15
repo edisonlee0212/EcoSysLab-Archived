@@ -636,9 +636,9 @@ void TreeStructor::ExportForestOBJ(const TreeMeshGeneratorSettings& meshGenerato
 	}
 }
 
-void TreeStructor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
+bool TreeStructor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	static Handle previousHandle = 0;
-
+	bool changed = false;
 
 	static std::vector<glm::vec3> scatteredPointConnectionsStarts;
 	static std::vector<glm::vec3> scatteredPointConnectionsEnds;
@@ -1037,6 +1037,8 @@ void TreeStructor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	{
 		FormInfoEntities();
 	}
+
+	return changed;
 }
 
 void TreeStructor::FormInfoEntities() const
@@ -2368,7 +2370,7 @@ std::vector<std::shared_ptr<Mesh>> TreeStructor::GenerateFoliageMeshes()
 	return meshes;
 }
 
-void TreeStructor::Serialize(YAML::Emitter& out)
+void TreeStructor::Serialize(YAML::Emitter& out) const
 {
 	m_treeDescriptor.Save("m_treeDescriptor", out);
 }

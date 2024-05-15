@@ -140,7 +140,7 @@ void ShootDescriptor::PrepareController(ShootGrowthController& shootGrowthContro
 	
 }
 
-void ShootDescriptor::Serialize(YAML::Emitter& out)
+void ShootDescriptor::Serialize(YAML::Emitter& out) const
 {
 	out << YAML::Key << "m_baseInternodeCount" << YAML::Value << m_baseInternodeCount;
 	out << YAML::Key << "m_straightTrunk" << YAML::Value << m_straightTrunk;
@@ -266,7 +266,7 @@ void ShootDescriptor::Deserialize(const YAML::Node& in)
 	m_barkMaterial.Load("m_barkMaterial", in);
 }
 
-void ShootDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
+bool ShootDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
 	bool changed = false;
 	changed = ImGui::DragFloat("Growth rate", &m_growthRate, 0.01f, 0.0f, 10.0f) || changed;
@@ -364,7 +364,7 @@ void ShootDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 
 	editorLayer->DragAndDropButton<Material>(m_barkMaterial, "Bark Material##SBS");
 
-	if (changed) m_saved = false;
+	return changed;
 }
 
 void ShootDescriptor::CollectAssetRef(std::vector<AssetRef>& list)

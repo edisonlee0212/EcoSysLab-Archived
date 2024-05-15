@@ -17,7 +17,7 @@ namespace EcoSysLab
 		float m_maxEndDistance = 999.0f;
 		int m_segmentSize = 8;
 		float m_unitDistance = 0.03f;
-		void Save(const std::string& name, YAML::Emitter& out);
+		void Save(const std::string& name, YAML::Emitter& out) const;
 		void Load(const std::string& name, const YAML::Node& in);
 		bool OnInspect(const std::shared_ptr<EditorLayer>& editorLayer);
 	};
@@ -41,9 +41,9 @@ namespace EcoSysLab
 
 		AssetRef m_leafMaterial;
 		AssetRef m_twigMaterial;
-		void Serialize(YAML::Emitter& out) override;
+		void Serialize(YAML::Emitter& out) const override;
 		void Deserialize(const YAML::Node& in) override;
-		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
+		bool OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 		void CollectAssetRef(std::vector<AssetRef>& list) override;
 
 		void GenerateFoliageMatrices(std::vector<glm::mat4>& matrices, const SkeletonNodeInfo& internodeInfo, const float treeSize) const;

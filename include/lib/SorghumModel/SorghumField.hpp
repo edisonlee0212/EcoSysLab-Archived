@@ -18,8 +18,8 @@ namespace EcoSysLab {
 		float m_sorghumSize = 1.0f;
 		std::vector<std::pair<AssetRef, glm::mat4>> m_matrices;
 		Entity InstantiateField() const;
-		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
-		void Serialize(YAML::Emitter& out) override;
+		bool OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
+		void Serialize(YAML::Emitter& out) const override;
 		void Deserialize(const YAML::Node& in) override;
 		void CollectAssetRef(std::vector<AssetRef>& list) override;
 	};

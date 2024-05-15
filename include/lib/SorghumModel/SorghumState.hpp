@@ -61,8 +61,8 @@ namespace EcoSysLab
 		SorghumPanicleState m_panicle;
 		SorghumStemState m_stem;
 		std::vector<SorghumLeafState> m_leaves;
-		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
-		void Serialize(YAML::Emitter& out) override;
+		bool OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
+		void Serialize(YAML::Emitter& out) const override;
 		void Deserialize(const YAML::Node& in) override;
 	};
 

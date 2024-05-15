@@ -2,9 +2,9 @@
 
 using namespace EcoSysLab;
 
-bool Json::SaveInternal(const std::filesystem::path& path)
+bool Json::SaveInternal(const std::filesystem::path& path) const
 {
-	std::ofstream o("pretty.json");
+	std::ofstream o(path);
 	o << std::setw(4) << m_json << std::endl;
 	return true;
 }
@@ -16,6 +16,9 @@ bool Json::LoadInternal(const std::filesystem::path& path)
 	return true;
 }
 
-void Json::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
+bool Json::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
+	bool changed = false;
+
+	return changed;
 }

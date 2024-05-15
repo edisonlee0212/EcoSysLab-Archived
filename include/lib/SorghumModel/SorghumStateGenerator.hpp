@@ -44,8 +44,8 @@ public:
   Curve2D m_widthAlongLeaf;
   Curve2D m_wavinessAlongLeaf;
   void OnCreate() override;
-  void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
-  void Serialize(YAML::Emitter &out) override;
+  bool OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
+  void Serialize(YAML::Emitter &out) const override;
   void Deserialize(const YAML::Node &in) override;
 
   [[nodiscard]] Entity CreateEntity(unsigned int seed = 0) const;
