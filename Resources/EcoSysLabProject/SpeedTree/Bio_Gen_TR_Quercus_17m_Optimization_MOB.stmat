@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<!-- Generated using SpeedTree tools -->
+<Materials Count="1" Mesh="Bio_Gen_TR_Quercus_17m_Optimization_MOB.fbx" FlipOpacity="0">
+	<Material ID="1" Name="Quercus_Combined_Mat" TwoSided="1" UserData="" VertexOpacity="1" FlipNormalsOnBackside="1">
+		<Map Name="Color" File="Quercus_Combined.tga" Source="C:/Users/Bosheng Li/Desktop/Quercus_17m_ForTesting/BIO_GEN_TR_Quercus_Combined_01_basecolor.tga" />
+		<Map Name="Opacity" File="Quercus_Combined_Opacity.tga" Source="C:/Users/Bosheng Li/Desktop/Quercus_17m_ForTesting/BIO_GEN_TR_Quercus_Combined_01_Opacity.tga" />
+		<Map Name="Normal" File="Quercus_Combined_Normal.tga" Source="C:/Users/Bosheng Li/Desktop/Quercus_17m_ForTesting/BIO_GEN_TR_Quercus_Combined_01_normal.tga" />
+		<Map Name="Gloss" Value="0.25" />
+		<Map Name="Specular" ColorR="0.75" ColorG="0.75" ColorB="0.75" />
+		<Map Name="Height" Value="0.5" />
+		<Map Name="Custom" ColorR="0" ColorG="0" ColorB="0" />
+		<Map Name="Custom2" Value="0" />
+	</Material>
+</Materials>
