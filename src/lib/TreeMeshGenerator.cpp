@@ -85,7 +85,6 @@ void TreeMeshGeneratorSettings::Save(const std::string& name, YAML::Emitter& out
 	out << YAML::Key << "m_trunkThickness" << YAML::Value << m_trunkThickness;
 	out << YAML::Key << "m_branchYSubdivision" << YAML::Value << m_branchYSubdivision;
 
-	out << YAML::Key << "m_vertexColorOnly" << YAML::Value << m_vertexColorOnly;
 	out << YAML::Key << "m_enableFoliage" << YAML::Value << m_enableFoliage;
 	out << YAML::Key << "m_enableBranch" << YAML::Value << m_enableBranch;
 	out << YAML::Key << "m_enableFruit" << YAML::Value << m_enableFruit;
@@ -121,7 +120,6 @@ void TreeMeshGeneratorSettings::Load(const std::string& name, const YAML::Node& 
 		if (ms["m_trunkThickness"]) m_trunkThickness = ms["m_trunkThickness"].as<float>();
 		if (ms["m_branchYSubdivision"]) m_branchYSubdivision = ms["m_branchYSubdivision"].as<float>();
 
-		if (ms["m_vertexColorOnly"]) m_vertexColorOnly = ms["m_vertexColorOnly"].as<bool>();
 		if (ms["m_enableFoliage"]) m_enableFoliage = ms["m_enableFoliage"].as<bool>();
 		if (ms["m_enableBranch"]) m_enableBranch = ms["m_enableBranch"].as<bool>();
 		if (ms["m_enableFruit"]) m_enableFruit = ms["m_enableFruit"].as<bool>();
@@ -146,13 +144,13 @@ void TreeMeshGeneratorSettings::Load(const std::string& name, const YAML::Node& 
 
 void TreeMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	if (ImGui::TreeNodeEx("Mesh Generator settings")) {
-		ImGui::Checkbox("Vertex color only", &m_vertexColorOnly);
 		ImGui::Checkbox("Branch", &m_enableBranch);
 		ImGui::Checkbox("Fruit", &m_enableFruit);
 		ImGui::Checkbox("Foliage", &m_enableFoliage);
 		ImGui::Checkbox("Twig", &m_enableTwig);
 		ImGui::Combo("Branch mesh mode", { "Cylindrical", "Marching cubes" }, m_branchMeshType);
-		
+
+		ImGui::Combo("Branch color mode", { "Internode Color", "Junction" }, m_vertexColorMode);
 		
 		if(ImGui::TreeNode("Cylindrical mesh settings"))
 		{
@@ -182,7 +180,6 @@ void TreeMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLayer>& ed
 			ImGui::TreePop();
 		}
 		if (m_enableBranch && ImGui::TreeNode("Branch settings")) {
-			ImGui::Checkbox("Junction Color", &m_junctionColor);
 			ImGui::TreePop();
 		}
 		if (m_enableFoliage && ImGui::TreeNode("Foliage settings"))

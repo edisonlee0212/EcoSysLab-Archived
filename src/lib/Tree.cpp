@@ -379,7 +379,9 @@ bool Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 				modelChanged = true;
 			}*/
 			if (ImGui::TreeNode("Tree settings")) {
-
+				if (ImGui::DragFloat("Low Branch Pruning", &m_lowBranchPruning, 0.01f, 0.0f, 1.f)) changed = true;
+				if (ImGui::DragFloat("Crown shyness distance", &m_crownShynessDistance, 0.01f, 0.0f, 1.f)) changed = true;
+				if (ImGui::DragFloat("Start time", &m_startTime, 0.01f, 0.0f, 100.f)) changed = true;
 				ImGui::Checkbox("Enable History", &m_enableHistory);
 				if (m_enableHistory)
 				{
@@ -883,12 +885,11 @@ std::shared_ptr<Mesh> Tree::GenerateFoliageMesh(const TreeMeshGeneratorSettings&
 	}
 	auto foliageDescriptor = treeDescriptor->m_foliageDescriptor.Get<FoliageDescriptor>();
 	if (!foliageDescriptor) foliageDescriptor = ProjectManager::CreateTemporaryAsset<FoliageDescriptor>();
-
-	const auto treeDim = m_strandModel.m_strandModelSkeleton.m_max - m_strandModel.m_strandModelSkeleton.m_min;
+	const auto treeDim = m_treeModel.PeekShootSkeleton().m_max - m_treeModel.PeekShootSkeleton().m_min;
 
 	const auto& nodeList = m_treeModel.PeekShootSkeleton().PeekSortedNodeList();
 	for (const auto& internodeHandle : nodeList) {
-		const auto& internodeInfo = m_strandModel.m_strandModelSkeleton.RefRawNodes().size() == m_treeModel.m_shootSkeleton.RefRawNodes().size() ? m_strandModel.m_strandModelSkeleton.PeekNode(internodeHandle).m_info : m_treeModel.PeekShootSkeleton().PeekNode(internodeHandle).m_info;
+		const auto& internodeInfo = m_treeModel.PeekShootSkeleton().PeekNode(internodeHandle).m_info;
 		std::vector<glm::mat4> leafMatrices;
 		foliageDescriptor->GenerateFoliageMatrices(leafMatrices, internodeInfo, glm::length(treeDim));
 		Vertex archetype;
@@ -1060,10 +1061,14 @@ std::shared_ptr<ParticleInfoList> Tree::GenerateFoliageParticleInfoList(
 	if (!foliageDescriptor) foliageDescriptor = ProjectManager::CreateTemporaryAsset<FoliageDescriptor>();
 	std::vector<ParticleInfo> particleInfos;
 	const auto& nodeList = m_treeModel.PeekShootSkeleton().PeekSortedNodeList();
-	const auto treeDim = m_treeModel.PeekShootSkeleton().m_max - m_treeModel.PeekShootSkeleton().m_min;
+	bool strandModel = m_strandModel.m_strandModelSkeleton.RefRawNodes().size() == m_treeModel.m_shootSkeleton.RefRawNodes().size();
+	const auto treeDim = strandModel ?
+		m_strandModel.m_strandModelSkeleton.m_max - m_strandModel.m_strandModelSkeleton.m_min
+		: m_treeModel.PeekShootSkeleton().m_max - m_treeModel.PeekShootSkeleton().m_min;
+
 	for (const auto& internodeHandle : nodeList) {
-		const auto& internode = m_treeModel.PeekShootSkeleton().PeekNode(internodeHandle);
-		const auto& internodeInfo = internode.m_info;
+		const auto& internodeInfo = strandModel ? m_strandModel.m_strandModelSkeleton.PeekNode(internodeHandle).m_info : m_treeModel.PeekShootSkeleton().PeekNode(internodeHandle).m_info;
+
 		std::vector<glm::mat4> leafMatrices{};
 		foliageDescriptor->GenerateFoliageMatrices(leafMatrices, internodeInfo, glm::length(treeDim));
 		const auto startIndex = particleInfos.size();
@@ -1199,7 +1204,7 @@ void Tree::ExportOBJ(const std::filesystem::path& path, const TreeMeshGeneratorS
 							of.write(header.c_str(), header.size());
 							of.flush();
 							std::stringstream data;
-							data << "o tree " + std::to_string(0) + "\n";
+							data << "o branch " + std::to_string(0) + "\n";
 #pragma region Data collection
 							for (auto i = 0; i < vertices.size(); i++) {
 								auto& vertexPosition = vertices.at(i).m_position;
@@ -1249,7 +1254,7 @@ void Tree::ExportOBJ(const std::filesystem::path& path, const TreeMeshGeneratorS
 							of.write(header.c_str(), header.size());
 							of.flush();
 							std::stringstream data;
-							data << "o tree " + std::to_string(0) + "\n";
+							data << "o foliage " + std::to_string(0) + "\n";
 #pragma region Data collection
 							for (auto i = 0; i < vertices.size(); i++) {
 								auto& vertexPosition = vertices.at(i).m_position;

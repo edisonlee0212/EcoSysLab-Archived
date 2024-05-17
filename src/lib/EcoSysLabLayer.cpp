@@ -888,11 +888,12 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
 				ImGui::Checkbox("Auto generate Skeletal Graph Per Frame", &m_autoGenerateSkeletalGraphEveryFrame);
 				ImGui::Checkbox("Auto generate strands", &m_autoGenerateStrandsAfterEditing);
 				ImGui::Checkbox("Auto generate strands mesh", &m_autoGenerateStrandMeshAfterEditing);
-				FileUtils::SaveFile("Export all trees as OBJ", "OBJ", { ".obj" }, [&](const std::filesystem::path& path) {
-					ExportAllTrees(path);
-					}, false);
+				
 				ImGui::TreePop();
 			}
+			FileUtils::SaveFile("Export all trees as OBJ", "OBJ", { ".obj" }, [&](const std::filesystem::path& path) {
+				ExportAllTrees(path);
+				}, false);
 			if (ImGui::TreeNodeEx("Stats")) {
 				ImGui::Text("Growth time: %.4f", m_lastUsedTime);
 				ImGui::Text("Total time: %.4f", m_totalTime);
@@ -1630,7 +1631,7 @@ void EcoSysLabLayer::ExportAllTrees(const std::filesystem::path& path) const
 							of.write(header.c_str(), header.size());
 							of.flush();
 							std::stringstream data;
-							data << "o tree " + std::to_string(treeIndex) + "\n";
+							data << "o branch " + std::to_string(treeIndex) + "\n";
 #pragma region Data collection
 							for (auto i = 0; i < vertices.size(); i++) {
 								auto vertexPosition = glm::vec4(vertices.at(i).m_position, 1.0f);
@@ -1684,7 +1685,7 @@ void EcoSysLabLayer::ExportAllTrees(const std::filesystem::path& path) const
 							of.write(header.c_str(), header.size());
 							of.flush();
 							std::stringstream data;
-							data << "o tree " + std::to_string(treeIndex) + "\n";
+							data << "o foliage " + std::to_string(treeIndex) + "\n";
 #pragma region Data collection
 							for (auto i = 0; i < vertices.size(); i++) {
 								auto vertexPosition = glm::vec4(vertices.at(i).m_position, 1.0f);

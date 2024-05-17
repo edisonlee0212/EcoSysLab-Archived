@@ -33,8 +33,15 @@ namespace EcoSysLab {
 		float m_maxThickness = 0.0f;
 	};
 
+
 	struct TreeMeshGeneratorSettings {
-		bool m_vertexColorOnly = false;
+		enum class VertexColorMode
+		{
+			InternodeColor,
+			Junction,
+		};
+		unsigned m_vertexColorMode = static_cast<unsigned>(VertexColorMode::InternodeColor);
+
 		bool m_enableFoliage = true;
 		bool m_enableFruit = false;
 		bool m_enableBranch = true;
@@ -49,7 +56,6 @@ namespace EcoSysLab {
 
 		bool m_overrideRadius = false;
 		float m_radius = 0.01f;
-		bool m_junctionColor = false;
 		float m_baseControlPointRatio = 0.3f;
 		float m_branchControlPointRatio = 0.3f;
 		bool m_smoothness = true;
@@ -232,7 +238,7 @@ namespace EcoSysLab {
 			auto parentInternodeHandle = internode.GetParentHandle();
 			Vertex archetype;
 			const auto flowHandle = internode.GetFlowHandle();
-			if (settings.m_junctionColor) {
+			if (settings.m_vertexColorMode == static_cast<unsigned>(TreeMeshGeneratorSettings::VertexColorMode::Junction)) {
 #pragma region TreePart
 				const auto& flow = skeleton.PeekFlow(flowHandle);
 				const auto& chainHandles = flow.PeekNodeHandles();
@@ -423,7 +429,7 @@ namespace EcoSysLab {
 					assert(!glm::any(glm::isnan(archetype.m_position)));
 					archetype.m_texCoord = glm::vec2(xFactor, yFactor);
 					texCoordsModifier(archetype.m_texCoord, xFactor, yFactor);
-					if (!settings.m_junctionColor) archetype.m_color = internodeInfo.m_color;
+					if (settings.m_vertexColorMode == static_cast<unsigned>(TreeMeshGeneratorSettings::VertexColorMode::InternodeColor)) archetype.m_color = internodeInfo.m_color;
 					vertices.push_back(archetype);
 				}
 			}
@@ -479,7 +485,7 @@ namespace EcoSysLab {
 					assert(!glm::any(glm::isnan(archetype.m_position)));
 					archetype.m_texCoord = glm::vec2(xFactor, yFactor);
 					texCoordsModifier(archetype.m_texCoord, xFactor, yFactor);
-					if (!settings.m_junctionColor) archetype.m_color = internodeInfo.m_color;
+					if (settings.m_vertexColorMode == static_cast<unsigned>(TreeMeshGeneratorSettings::VertexColorMode::InternodeColor)) archetype.m_color = internodeInfo.m_color;
 					vertices.push_back(archetype);
 				}
 				if (ringIndex == 0)
@@ -831,7 +837,7 @@ namespace EcoSysLab {
 					assert(!glm::any(glm::isnan(archetype.m_position)));
 					archetype.m_texCoord = glm::vec2(xFactor, yFactor);
 					texCoordsModifier(archetype.m_texCoord, xFactor, yFactor);
-					if (!settings.m_junctionColor) archetype.m_color = internodeInfo.m_color;
+					if (settings.m_vertexColorMode == static_cast<unsigned>(TreeMeshGeneratorSettings::VertexColorMode::InternodeColor)) archetype.m_color = internodeInfo.m_color;
 					vertices.push_back(archetype);
 				}
 			}
@@ -886,7 +892,7 @@ namespace EcoSysLab {
 					assert(!glm::any(glm::isnan(archetype.m_position)));
 					archetype.m_texCoord = glm::vec2(xFactor, yFactor);
 					texCoordsModifier(archetype.m_texCoord, xFactor, yFactor);
-					if (!settings.m_junctionColor) archetype.m_color = internodeInfo.m_color;
+					if (settings.m_vertexColorMode == static_cast<unsigned>(TreeMeshGeneratorSettings::VertexColorMode::InternodeColor)) archetype.m_color = internodeInfo.m_color;
 					vertices.push_back(archetype);
 				}
 				if (ringIndex == 0)

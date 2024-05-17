@@ -36,6 +36,9 @@ namespace EcoSysLab {
 		float m_leaves = 1.f;
 		float m_fruits = 1.f;
 		glm::vec4 m_color = glm::vec4(1.0f);
+
+		int m_clusterIndex = 0;
+
 		[[nodiscard]] glm::vec3 GetGlobalEndPosition() const;
 		[[nodiscard]] glm::vec3 GetGlobalDirection() const;
 	};
@@ -199,6 +202,11 @@ namespace EcoSysLab {
 		[[nodiscard]] int GetIndex() const;
 	};
 
+	struct SkeletonClusterSettings
+	{
+		
+	};
+
 	template<typename SkeletonData, typename FlowData, typename NodeData>
 	class Skeleton {
 		template<typename SD, typename FD, typename ID>
@@ -241,6 +249,9 @@ namespace EcoSysLab {
 		void RefreshBaseNodeList();
 
 	public:
+
+		void CalculateClusters(const SkeletonClusterSettings& clusterSettings);
+
 		template<typename SrcSkeletonData, typename SrcFlowData, typename SrcNodeData>
 		void Clone(const Skeleton<SrcSkeletonData, SrcFlowData, SrcNodeData>& srcSkeleton);
 
@@ -802,6 +813,12 @@ namespace EcoSysLab {
 		std::vector<SkeletonNodeHandle> temp;
 		for (const auto& i : m_baseNodeList) if (!m_nodes[i].m_recycled && m_nodes[i].m_parentHandle == -1) temp.emplace_back(i);
 		m_baseNodeList = temp;
+	}
+
+	template <typename SkeletonData, typename FlowData, typename NodeData>
+	void Skeleton<SkeletonData, FlowData, NodeData>::CalculateClusters(const SkeletonClusterSettings& clusterSettings)
+	{
+
 	}
 
 	template <typename SkeletonData, typename FlowData, typename NodeData>

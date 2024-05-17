@@ -41,7 +41,7 @@ bool Climate::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 	{
 
 	}
-		
+	return changed;
 }
 
 void Climate::Serialize(YAML::Emitter& out) const 
