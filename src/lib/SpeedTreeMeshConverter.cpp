@@ -13,7 +13,8 @@ void SpeedTreeMeshConverter::Convert()
 
 bool SpeedTreeMeshConverter::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
 {
-	EditorLayer::DragAndDropButton<Prefab>(m_originalModel, "SpeedTree Model");
+	bool changed = false;
+	if(EditorLayer::DragAndDropButton<Prefab>(m_originalModel, "SpeedTree Model")) changed = true;
 	if(m_originalModel.Get<Mesh>() && ImGui::Button("Convert"))
 	{
 		Convert();
@@ -23,4 +24,5 @@ bool SpeedTreeMeshConverter::OnInspect(const std::shared_ptr<EditorLayer>& edito
 	EditorLayer::DragAndDropButton<Mesh>(m_foliageMaterial, "Foliage material");
 	EditorLayer::DragAndDropButton<Mesh>(m_branchMaterial, "Branch material");
 
+	return changed;
 }
