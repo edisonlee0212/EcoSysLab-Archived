@@ -74,7 +74,7 @@ void forest_patch_point_cloud()
 	tmgs.m_trunkYSubdivision = 0.01f;
 	tmgs.m_enableFoliage = true;
 	tmgs.m_enableTwig = true;
-	tmgs.m_junctionColor = true;
+	tmgs.m_vertexColorMode = static_cast<unsigned>(TreeMeshGeneratorSettings::VertexColorMode::Junction);
 	std::filesystem::path output_root = "D:\\ForestPointCloudData\\";
 
 	std::filesystem::create_directories(output_root);
@@ -94,10 +94,11 @@ void forest_patch_point_cloud()
 
 	glm::ivec2 gridSize = { 8, 8 };
 	treePointCloudGridCaptureSettings->m_gridSize = { gridSize.x + 1, gridSize.y + 1 };
-
+	treePointCloudGridCaptureSettings->m_backpackSample = 2048;
+	treePointCloudGridCaptureSettings->m_droneSample = 512;
 
 	std::filesystem::path target_descriptor_folder_path = resourceFolderPath / "EcoSysLabProject" / "Digital Forestry";
-	for (int index = 0; index < 256; index++) {
+	for (int index = 0; index < 512; index++) {
 		for (const auto& i : std::filesystem::recursive_directory_iterator(target_descriptor_folder_path))
 		{
 			if (i.is_regular_file() && i.path().extension().string() == ".forestpatch")
