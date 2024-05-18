@@ -98,7 +98,7 @@ void forest_patch_point_cloud()
 	treePointCloudGridCaptureSettings->m_droneSample = 512;
 
 	std::filesystem::path target_descriptor_folder_path = resourceFolderPath / "EcoSysLabProject" / "Digital Forestry";
-	for (int index = 0; index < 256; index++) {
+	for (int index = 0; index < 512; index++) {
 		for (const auto& i : std::filesystem::recursive_directory_iterator(target_descriptor_folder_path))
 		{
 			if (i.is_regular_file() && i.path().extension().string() == ".forestpatch")
