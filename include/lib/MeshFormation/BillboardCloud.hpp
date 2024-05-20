@@ -6,6 +6,7 @@
 
 namespace EvoEngine {
 	class BillboardCloud {
+		
 
 	public:
 		static void ProjectToPlane(const Vertex& v0, const Vertex& v1, const Vertex& v2,
@@ -37,6 +38,43 @@ namespace EvoEngine {
 			Transform m_modelSpaceTransform{};
 		};
 
+		struct ProjectedRenderContent
+		{
+			std::shared_ptr<Mesh> m_mesh;
+			std::shared_ptr<Material> m_material;
+		};
+
+		struct ProjectedElement {
+			ProjectedRenderContent m_content{};
+		};
+
+		struct Rectangle
+		{
+			glm::vec2 m_points[4];
+
+
+			void Update();
+
+			glm::vec2 m_center;
+			glm::vec2 m_xAxis;
+			glm::vec2 m_yAxis;
+
+			float m_width;
+			float m_height;
+		};
+
+		struct ProjectedCluster
+		{
+			glm::vec3 m_clusterCenter = glm::vec3(0.0f);
+			glm::vec3 m_planeNormal = glm::vec3(1, 0, 0);
+			glm::vec3 m_planeYAxis = glm::vec3(0, 1, 0);
+			std::vector<ProjectedElement> m_elements;
+
+			Rectangle m_billboardRectangle;
+			std::shared_ptr<Mesh> m_billboardMesh;
+			std::shared_ptr<Material> m_billboardMaterial;
+		};
+
 		struct Cluster {
 			glm::vec3 m_clusterCenter = glm::vec3(0.0f);
 			glm::vec3 m_planeNormal = glm::vec3(1, 0, 0);
@@ -56,7 +94,11 @@ namespace EvoEngine {
 			glm::uvec2 m_resolution;
 
 		};
-		static Cluster Project(const Cluster& cluster, const ProjectSettings& settings);
+
+		static void RotatingCalipers(std::vector<glm::vec2>& points, Rectangle &rectangle);
+
+
+		static ProjectedCluster Project(const Cluster& cluster, const ProjectSettings& settings);
 
 		static RenderContent Join(const Cluster& cluster, const JoinSettings& settings);
 	};
