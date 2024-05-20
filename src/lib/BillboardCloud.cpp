@@ -1,199 +1,6 @@
 #include "BillboardCloud.hpp"
 
 using namespace EvoEngine;
-#pragma region Rotating Calipers
-void Swap(std::vector<glm::vec2>& points, const int a, const int b)
-{
-	const auto temp = points[a];
-	points[a] = points[b];
-	points[b] = temp;
-}
-
-float GetDistance(const glm::vec2& p1, const glm::vec2& p2)
-{
-	return (p2.x - p1.x) * (p2.x - p1.x) + (p2.y - p1.y) * (p2.y - p1.y);
-}
-
-glm::vec2 GetDiff(const glm::vec2& p1, const glm::vec2& p2)
-{
-	glm::vec2 temp;
-	temp.x = p1.x - p2.x;
-	temp.y = p1.y - p2.y;
-
-	return temp;
-}
-
-float GetCross(const glm::vec2& p0, const glm::vec2& p1, const glm::vec2& p2)
-{
-	return (p1.x - p0.x) * (p2.y - p0.y) - (p2.x - p0.x) * (p1.y - p0.y);
-}
-
-float GetDot(const glm::vec2& p0, const glm::vec2& p1, const glm::vec2& p2)
-{
-	return (p1.x - p0.x) * (p2.x - p0.x) + (p1.y - p0.y) * (p2.y - p0.y);
-}
-
-float CompareAngle(const glm::vec2& p0, const glm::vec2& p1, const glm::vec2& p2)
-{
-	const float cross = GetCross(p0, p1, p2);
-	if (cross == 0.f) {
-		return GetDistance(p0, p2) - GetDistance(p0, p1);
-	}
-	return cross;
-}
-
-void SortPoints(std::vector<glm::vec2>& points, const int left, const int right)
-{
-	if (left >= right) {
-		return;
-	}
-
-	const int mid = (left + right) >> 1;
-	Swap(points, left, mid);
-	int last = left;
-	for (int i = left + 1; i <= right; i++) {
-		if (CompareAngle(points[0], points[i], points[left]) > 0) {
-			Swap(points, i, ++last);
-		}
-	}
-	Swap(points, left, last);
-	SortPoints(points, left, last - 1);
-	SortPoints(points, last + 1, right);
-}
-
-void GetConvex(std::vector<glm::vec2>& points, int& n)
-{
-	const int verticesSize = points.size();
-	if (verticesSize < 4) {
-		n = verticesSize;
-		return;
-	}
-	// base point
-	int base = 0;
-	for (int i = 0; i < verticesSize; i++) {
-		if (points[i].y == points[base].y && points[i].x < points[base].x) {
-			base = i;
-		}
-		else if (points[i].y < points[base].y) {
-			base = i;
-		}
-	}
-	Swap(points, base, 0);
-
-	// sort
-	SortPoints(points, 1, verticesSize - 1);
-
-	// calculate convex hull
-	int top = 1;
-	for (int i = 2; i < verticesSize; i++) {
-		while (top > 0 && GetCross(points[top - 1], points[top], points[i]) <= 0) {
-			top--;
-		}
-		points[++top] = points[i];
-	}
-	n = top;
-}
-void BillboardCloud::RotatingCalipers(std::vector<glm::vec2>& points, Rectangle& rectangle)
-{
-	int top, downLast = 0, rightLast = 0, upLast = 0, leftLast = 0;
-	const auto pointSize = points.size();
-	GetConvex(points, top);
-	if (pointSize < 4) {
-		points[top] = points[0];
-	}
-	else {
-		points[++top] = points[0];
-	}
-	assert(pointSize > 2);
-
-	int up = 0;
-	float area = FLT_MAX;
-	int left = 0;
-	int right = 1;
-	for (int down = 0; down < top; down++) {
-		// find right
-		while (GetDot(points[down], points[down + 1], points[right]) <= GetDot(points[down], points[down + 1], points[right + 1])) {
-			right = (right + 1) % top;
-		}
-
-		// find up
-		if (down == 0) {
-			up = right;
-		}
-		while (GetCross(points[down], points[down + 1], points[up]) <= GetCross(points[down], points[down + 1], points[up + 1])) {
-			up = (up + 1) % top;
-		}
-
-		// find down
-		if (down == 0) {
-			left = up;
-		}
-		while (GetDot(points[down], points[down + 1], points[left]) >= GetDot(points[down], points[down + 1], points[left + 1])) {
-			left = (left + 1) % top;
-		}
-
-		const float distance = GetDistance(points[down], points[down + 1]);
-		const float x = GetCross(points[down], points[down + 1], points[up]) / distance;
-		glm::vec2 temp;
-		temp.x = points[right].x + points[down].x - points[left].x;
-		temp.y = points[right].y + points[down].y - points[left].y;
-
-		if (const float y = GetDot(points[down], points[down + 1], temp); area > x * y) {
-			area = x * y;
-			downLast = down;
-			rightLast = right;
-			upLast = up;
-			leftLast = left;
-		}
-	}
-
-	// Calculate outer rectangle
-	if (points[downLast + 1].y == points[downLast].y) {
-		rectangle.m_points[0].x = points[leftLast].x;
-		rectangle.m_points[0].y = points[downLast].y;
-
-		rectangle.m_points[1].x = points[rightLast].x;
-		rectangle.m_points[1].y = points[downLast].y;
-
-		rectangle.m_points[2].x = points[rightLast].x;
-		rectangle.m_points[2].y = points[upLast].y;
-
-		rectangle.m_points[3].x = points[leftLast].x;
-		rectangle.m_points[3].y = points[upLast].y;
-
-	}
-	else if (points[downLast + 1].x == points[downLast].x) {
-		rectangle.m_points[0].x = points[downLast].x;
-		rectangle.m_points[0].y = points[leftLast].y;
-
-		rectangle.m_points[1].x = points[downLast].x;
-		rectangle.m_points[1].y = points[rightLast].y;
-
-		rectangle.m_points[2].x = points[upLast].x;
-		rectangle.m_points[2].y = points[rightLast].y;
-
-		rectangle.m_points[3].x = points[upLast].x;
-		rectangle.m_points[3].y = points[leftLast].y;
-
-	}
-	else {
-		const float k = (points[downLast + 1].y - points[downLast].y) / (points[downLast + 1].x - points[downLast].x);
-
-		rectangle.m_points[0].x = (k * points[leftLast].y + points[leftLast].x - k * points[downLast].y + k * k * points[downLast].x) / (k * k + 1.f);
-		rectangle.m_points[0].y = k * rectangle.m_points[0].x + points[downLast].y - k * points[downLast].x;
-
-		rectangle.m_points[1].x = (k * points[rightLast].y + points[rightLast].x - k * points[downLast].y + k * k * points[downLast].x) / (k * k + 1.f);
-		rectangle.m_points[1].y = k * rectangle.m_points[1].x + points[downLast].y - k * points[downLast].x;
-
-		rectangle.m_points[2].x = (k * points[rightLast].y + points[rightLast].x - k * points[upLast].y + k * k * points[upLast].x) / (k * k + 1.f);
-		rectangle.m_points[2].y = k * rectangle.m_points[2].x + points[upLast].y - k * points[upLast].x;
-
-		rectangle.m_points[3].x = (k * points[leftLast].y + points[leftLast].x - k * points[upLast].y + k * k * points[upLast].x) / (k * k + 1.f);
-		rectangle.m_points[3].y = k * rectangle.m_points[3].x + points[upLast].y - k * points[upLast].x;
-	}
-}
-
-#pragma endregion
 
 void BillboardCloud::ProjectToPlane(const Vertex& v0, const Vertex& v1, const Vertex& v2,
 	Vertex& pV0, Vertex& pV1, Vertex& pV2, const glm::mat4& transform)
@@ -376,7 +183,7 @@ BillboardCloud::ProjectedCluster BillboardCloud::Project(const Cluster& cluster,
 	}
 	else
 	{
-		RotatingCalipers(points, projectedCluster.m_billboardRectangle);
+		projectedCluster.m_billboardRectangle = RotatingCalipers::GetMinAreaRectangle(std::move(points));
 	}
 	projectedCluster.m_billboardRectangle.Update();
 
@@ -388,6 +195,245 @@ BillboardCloud::RenderContent BillboardCloud::Join(const Cluster& cluster, const
 	RenderContent retVal{};
 
 
+
+	return retVal;
+}
+inline double Cross(const glm::vec2& origin, const glm::vec2& a, const glm::vec2& b)
+{
+	return (a.x - origin.x) * (b.y - origin.y) - (a.y - origin.y) * (b.x - origin.x);
+}
+struct PointComparator
+{
+	bool operator()(const glm::vec2& a, const glm::vec2& b) const
+	{
+		return a.x < b.x || (a.x == b.x && a.y < b.y);
+	}
+};
+std::vector<glm::vec2> BillboardCloud::RotatingCalipers::ConvexHull(std::vector<glm::vec2> points)
+{
+	const size_t pointSize = points.size();
+	size_t k = 0;
+	if (pointSize <= 3) return points;
+
+	std::vector<glm::vec2> retVal(2 * pointSize);
+	std::sort(points.begin(), points.end(), PointComparator());
+
+	for (size_t i = 0; i < pointSize; ++i)
+	{
+		while (k >= 2 && Cross(retVal[k - 2], retVal[k - 1], points[i]) <= 0) k--;
+		retVal[k++] = points[i];
+	}
+
+	for (size_t i = pointSize - 1, t = k + 1; i > 0; --i)
+	{
+		while (k >= t && Cross(retVal[k - 2], retVal[k - 1], points[i - 1]) <= 0) k--;
+		retVal[k++] = points[i - 1];
+	}
+	retVal.resize(k - 1);
+	return retVal;
+}
+
+struct MinAreaState
+{
+	size_t m_bottom;
+	size_t m_left;
+	float m_height;
+	float m_width;
+	float m_baseA;
+	float m_baseB;
+	float m_area;
+};
+
+BillboardCloud::Rectangle BillboardCloud::RotatingCalipers::GetMinAreaRectangle(std::vector<glm::vec2>&& points)
+{
+	auto convexHull = ConvexHull(std::move(points));
+	float minArea = FLT_MAX;
+	size_t left = 0, bottom = 0, right = 0, top = 0;
+
+	/* rotating calipers sides will always have coordinates
+	 (a,b) (-b,a) (-a,-b) (b, -a)
+	 */
+	 /* this is a first base bector (a,b) initialized by (1,0) */
+
+	glm::vec2 pt0 = convexHull[0];
+	float leftX = pt0.x;
+	float rightX = pt0.x;
+	float topY = pt0.y;
+	float bottomY = pt0.y;
+
+	size_t n = convexHull.size();
+
+	std::vector<glm::vec2> list(n);
+	std::vector<float> lengths(n);
+
+	for (size_t i = 0; i < n; i++)
+	{
+		if (pt0.x < leftX)
+		{
+			leftX = pt0.x;
+			left = i;
+		}
+		if (pt0.x > rightX)
+		{
+			rightX = pt0.x;
+			right = i;
+		}
+		if (pt0.y > topY)
+		{
+			topY = pt0.y;
+			top = i;
+		}
+		if (pt0.y < bottomY)
+		{
+			bottomY = pt0.y;
+			bottom = i;
+		}
+
+		glm::vec2 pt = convexHull[(i + 1) & (i + 1 < n ? -1 : 0)];
+		float dx = pt.x - pt0.x;
+		float dy = pt.y - pt0.y;
+
+		list[i].x = dx;
+		list[i].y = dy;
+
+		lengths[i] = 1.f / sqrt(dx * dx + dy * dy);
+		pt0 = pt;
+	}
+
+	// find convex hull orientation
+	float ax = list[n - 1].x;
+	float ay = list[n - 1].y;
+	float orientation = 0, baseA = 0, baseB = 0;
+
+	for (size_t i = 0; i < n; i++)
+	{
+		float bx = list[i].x;
+		float by = list[i].y;
+		if (float convexity = ax * by - ay * bx; convexity != 0.f)
+		{
+			orientation = convexity > 0 ? 1.0 : -1.0;
+			break;
+		}
+		ax = bx;
+		ay = by;
+	}
+
+	baseA = orientation;
+
+	/*****************************************************************************************/
+	/*                         init calipers position                                        */
+	size_t seq[4] = { 0 };
+	seq[0] = bottom;
+	seq[1] = right;
+	seq[2] = top;
+	seq[3] = left;
+
+	/*****************************************************************************************/
+	/*                         Main loop - evaluate angles and rotate calipers               */
+
+	MinAreaState minAreaState;
+
+	/* all the edges will be checked while rotating calipers by 90 degrees */
+	for (size_t k = 0; k < n; k++)
+	{
+		/* sinus of minimal angle */
+		/*float sinus;*/
+
+		/* compute cosine of angle between calipers side and polygon edge */
+		/* dp - dot product */
+		float dp0 = baseA * list[seq[0]].x + baseB * list[seq[0]].y;
+		float dp1 = -baseB * list[seq[1]].x + baseA * list[seq[1]].y;
+		float dp2 = -baseA * list[seq[2]].x - baseB * list[seq[2]].y;
+		float dp3 = baseB * list[seq[3]].x - baseA * list[seq[3]].y;
+
+		float cosAlpha = dp0 * lengths[seq[0]];
+		float maxCos = cosAlpha;
+		/* number of calipers edges, that has minimal angle with edge */
+		int main_element = 0;
+
+		/* choose minimal angle */
+		cosAlpha = dp1 * lengths[seq[1]];
+		maxCos = cosAlpha > maxCos ? (main_element = 1, cosAlpha) : maxCos;
+		cosAlpha = dp2 * lengths[seq[2]];
+		maxCos = cosAlpha > maxCos ? (main_element = 2, cosAlpha) : maxCos;
+		cosAlpha = dp3 * lengths[seq[3]];
+		maxCos = cosAlpha > maxCos ? (main_element = 3, cosAlpha) : maxCos;
+
+		/*rotate calipers*/
+		//get next base
+		size_t pindex = seq[main_element];
+		float leadX = list[pindex].x * lengths[pindex];
+		float leadY = list[pindex].y * lengths[pindex];
+		switch (main_element)
+		{
+		case 0:
+			baseA = leadX;
+			baseB = leadY;
+			break;
+		case 1:
+			baseA = leadY;
+			baseB = -leadX;
+			break;
+		case 2:
+			baseA = -leadX;
+			baseB = -leadY;
+			break;
+		case 3:
+			baseA = -leadY;
+			baseB = leadX;
+			break;
+		}
+
+		/* change base point of main edge */
+		seq[main_element] += 1;
+		seq[main_element] = seq[main_element] == n ? 0 : seq[main_element];
+
+		float dx = convexHull[seq[1]].x - convexHull[seq[3]].x;
+		float dy = convexHull[seq[1]].y - convexHull[seq[3]].y;
+		float width = dx * baseA + dy * baseB;
+		dx = convexHull[seq[2]].x - convexHull[seq[0]].x;
+		dy = convexHull[seq[2]].y - convexHull[seq[0]].y;
+		float height = -dx * baseB + dy * baseA;
+		if (float area = width * height; area <= minArea)
+		{
+			minArea = area;
+			minAreaState.m_baseA = baseA;
+			minAreaState.m_baseB = baseB;
+			minAreaState.m_width = width;
+			minAreaState.m_height = height;
+			minAreaState.m_left = seq[3];
+			minAreaState.m_bottom = seq[0];
+			minAreaState.m_area = area;
+		}
+	}
+
+
+	float a1 = minAreaState.m_baseA;
+	float b1 = minAreaState.m_baseB;
+
+	float a2 = -minAreaState.m_baseB;
+	float b2 = minAreaState.m_baseA;
+
+	float c1 = a1 * convexHull[minAreaState.m_left].x + convexHull[minAreaState.m_left].y * b1;
+	float c2 = a2 * convexHull[minAreaState.m_bottom].x + convexHull[minAreaState.m_bottom].y * b2;
+
+	float id = 1.f / (a1 * b2 - a2 * b1);
+
+	float px = (c1 * b2 - c2 * b1) * id;
+	float py = (a1 * c2 - a2 * c1) * id;
+
+	glm::vec2 out0(px, py);
+	glm::vec2 out1(a1 * minAreaState.m_width, b1 * minAreaState.m_width);
+	glm::vec2 out2(a2 * minAreaState.m_height, b2 * minAreaState.m_height);
+
+	Rectangle retVal;
+
+	retVal.m_points[0] = out0;
+	retVal.m_points[1] = out0 + out1;
+	retVal.m_points[2] = out0 + out1 + out2;
+	retVal.m_points[3] = out0 + out2;
+
+	retVal.Update();
 
 	return retVal;
 }

@@ -6,7 +6,6 @@
 
 namespace EvoEngine {
 	class BillboardCloud {
-		
 
 	public:
 		static void ProjectToPlane(const Vertex& v0, const Vertex& v1, const Vertex& v2,
@@ -63,6 +62,14 @@ namespace EvoEngine {
 			float m_height;
 		};
 
+		//Adopted from https://github.com/DreamVersion/RotatingCalipers
+		class RotatingCalipers
+		{
+		public:
+			static std::vector<glm::vec2> ConvexHull(std::vector<glm::vec2> points);
+			static Rectangle GetMinAreaRectangle(std::vector<glm::vec2>&& points);
+		};
+
 		struct ProjectedCluster
 		{
 			glm::vec3 m_clusterCenter = glm::vec3(0.0f);
@@ -94,9 +101,6 @@ namespace EvoEngine {
 			glm::uvec2 m_resolution;
 
 		};
-
-		static void RotatingCalipers(std::vector<glm::vec2>& points, Rectangle &rectangle);
-
 
 		static ProjectedCluster Project(const Cluster& cluster, const ProjectSettings& settings);
 
