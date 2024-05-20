@@ -8,8 +8,7 @@ namespace EvoEngine {
 	class BillboardCloud {
 
 	public:
-		static void ProjectToPlane(const Plane& plane,
-			const Vertex& v0, const Vertex& v1, const Vertex& v2,
+		static void ProjectToPlane(const Vertex& v0, const Vertex& v1, const Vertex& v2,
 			Vertex& pV0, Vertex& pV1, Vertex& pV2,
 			const glm::mat4& transform);
 
@@ -39,7 +38,9 @@ namespace EvoEngine {
 		};
 
 		struct Cluster {
-			Plane m_modelSpaceProjectionPlane;
+			glm::vec3 m_clusterCenter = glm::vec3(0.0f);
+			glm::vec3 m_planeNormal = glm::vec3(1, 0, 0);
+			glm::vec3 m_planeYAxis = glm::vec3(0, 1, 0);
 			std::vector<Element> m_elements;
 			std::vector<InstancedElement> m_instancedElements;
 		};

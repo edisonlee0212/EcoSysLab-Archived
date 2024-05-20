@@ -359,10 +359,18 @@ bool Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 
 	if (ImGui::Button("Project"))
 	{
-		Plane planeFront{ glm::vec3(0,0, -1), 0.f };
-		Plane planeLeft{ glm::vec3(1,0, 0), 0.f };
-		Plane planeUp{ glm::vec3(0,1, 0), (m_treeModel.PeekShootSkeleton().m_max.y - m_treeModel.PeekShootSkeleton().m_min.y) * .5f };
-		Project({ planeFront, planeLeft, planeUp });
+		glm::vec3 clusterCenter = (m_treeModel.PeekShootSkeleton().m_max + m_treeModel.PeekShootSkeleton().m_min) * .5f;
+		BillboardCloud::Cluster frontCluster, leftCluster, upCluster;
+		frontCluster.m_clusterCenter = clusterCenter;
+		leftCluster.m_clusterCenter = clusterCenter;
+		upCluster.m_clusterCenter = clusterCenter;
+		frontCluster.m_planeNormal = glm::vec3(0,0, -1);
+		leftCluster.m_planeNormal = glm::vec3(1,0, 0);
+		upCluster.m_planeNormal = glm::vec3(0, 1, 0);
+		frontCluster.m_planeYAxis = glm::vec3(frontCluster.m_planeNormal.y,frontCluster.m_planeNormal.z, frontCluster.m_planeNormal.x);
+		leftCluster.m_planeYAxis = glm::vec3(leftCluster.m_planeNormal.y,leftCluster.m_planeNormal.z, leftCluster.m_planeNormal.x);
+		upCluster.m_planeYAxis = glm::vec3(upCluster.m_planeNormal.y,upCluster.m_planeNormal.z, upCluster.m_planeNormal.x);
+		Project({ frontCluster, leftCluster, upCluster });
 	}
 
 	bool changed = false;
@@ -2160,7 +2168,7 @@ void Tree::Deserialize(const YAML::Node& in)
 	}
 }
 
-void Tree::Project(const std::vector<Plane>& planes)
+void Tree::Project(std::vector<BillboardCloud::Cluster> clusters)
 {
 	GenerateGeometryEntities(m_meshGeneratorSettings);
 
@@ -2178,11 +2186,9 @@ void Tree::Project(const std::vector<Plane>& planes)
 	}
 	const auto projectedTree = scene->CreateEntity("Projected Tree");
 	scene->SetParent(projectedTree, owner);
-	for (int planeIndex = 0; planeIndex < planes.size(); planeIndex++) {
-		BillboardCloud::Cluster cluster;
-		const auto& plane = planes[planeIndex];
-		cluster.m_modelSpaceProjectionPlane = plane;
-
+	for (int clusterIndex = 0; clusterIndex < clusters.size(); clusterIndex++) {
+		auto& cluster = clusters[clusterIndex];
+		
 		for (const auto& child : children) {
 			auto name = scene->GetEntityName(child);
 			const auto modelSpaceTransform = glm::inverse(ownerGlobalTransform.m_value) * scene->GetDataComponent<GlobalTransform>(child).m_value;
@@ -2239,9 +2245,10 @@ void Tree::Project(const std::vector<Plane>& planes)
 
 			}
 		}
+
 		const auto projectedCluster = BillboardCloud::Project(cluster, {});
 
-		const auto projectedPlaneEntity = scene->CreateEntity("Projected Plane [" + std::to_string(planeIndex) + "]");
+		const auto projectedPlaneEntity = scene->CreateEntity("Projected Plane [" + std::to_string(clusterIndex) + "]");
 		scene->SetParent(projectedPlaneEntity, projectedTree);
 
 		for (const auto& projectedElement : projectedCluster.m_elements)

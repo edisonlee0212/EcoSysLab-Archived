@@ -11,6 +11,7 @@
 #include "FoliageDescriptor.hpp"
 #include "ShootDescriptor.hpp"
 #include "Soil.hpp"
+#include "BillboardCloud.hpp"
 using namespace EvoEngine;
 namespace EcoSysLab {
 	struct SkeletalGraphSettings
@@ -156,7 +157,7 @@ namespace EcoSysLab {
 		void Deserialize(const YAML::Node& in) override;
 
 
-		void Project(const std::vector<Plane>& planes);
+		void Project(std::vector<BillboardCloud::Cluster> clusters);
 	};
 
 	template <typename SrcSkeletonData, typename SrcFlowData, typename SrcNodeData>
