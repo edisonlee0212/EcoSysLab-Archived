@@ -11,6 +11,7 @@
 #include "EditorLayer.hpp"
 #include "Application.hpp"
 #include "BarkDescriptor.hpp"
+#include "BillboardCloud.hpp"
 #include "TreeMeshGenerator.hpp"
 #include "Soil.hpp"
 #include "Climate.hpp"
@@ -355,6 +356,14 @@ void Tree::GenerateSkeletalGraph(
 }
 
 bool Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
+
+	if (ImGui::Button("Project"))
+	{
+		Plane planeFront{ glm::vec3(0,0, -1), 0.f };
+		Plane planeLeft{ glm::vec3(1,0, 0), 0.f };
+		Plane planeUp{ glm::vec3(0,1, 0), 0.f };
+		Project({planeFront, planeLeft, planeUp});
+	}
 
 	bool changed = false;
 	const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
@@ -2151,6 +2160,97 @@ void Tree::Deserialize(const YAML::Node& in)
 	}
 }
 
+void Tree::Project(const std::vector<Plane>& planes)
+{
+	GenerateGeometryEntities(m_meshGeneratorSettings);
+	for (int planeIndex = 0; planeIndex < planes.size(); planeIndex++) {
+		BillboardCloud::Cluster cluster;
+		const auto& plane = planes[planeIndex];
+		cluster.m_modelSpaceProjectionPlane = plane;
+		const auto scene = GetScene();
+		const auto owner = GetOwner();
+		const auto children = scene->GetChildren(owner);
+		const auto ownerGlobalTransform = scene->GetDataComponent<GlobalTransform>(owner);
+		for (const auto& child : children)
+		{
+			auto name = scene->GetEntityName(child);
+			if (name == "Projected Tree")
+			{
+				scene->DeleteEntity(child);
+			}
+		}
+		for (const auto& child : children) {
+			auto name = scene->GetEntityName(child);
+			const auto modelSpaceTransform = glm::inverse(ownerGlobalTransform.m_value) * scene->GetDataComponent<GlobalTransform>(child).m_value;
+			if (name == "Branch Mesh") {
+				const auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(child).lock();
+				const auto mesh = meshRenderer->m_mesh.Get<Mesh>();
+				const auto material = meshRenderer->m_material.Get<Material>();
+				if (mesh && material) {
+					cluster.m_elements.emplace_back();
+					auto& element = cluster.m_elements.back();
+					element.m_modelSpaceTransform.m_value = modelSpaceTransform;
+					element.m_content.m_mesh = mesh;
+					element.m_content.m_material = material;
+					element.m_content.m_triangles = mesh->UnsafeGetTriangles();
+				}
+				scene->SetEnable(child, false);
+			}
+			else if (name == "Root Mesh") {
+
+			}
+			else if (name == "Foliage Mesh") {
+				if (scene->HasPrivateComponent<MeshRenderer>(child)) {
+					const auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(child).lock();
+					const auto mesh = meshRenderer->m_mesh.Get<Mesh>();
+					const auto material = meshRenderer->m_material.Get<Material>();
+					if (mesh && material) {
+						cluster.m_elements.emplace_back();
+						auto& element = cluster.m_elements.back();
+						element.m_modelSpaceTransform.m_value = modelSpaceTransform;
+						element.m_content.m_mesh = mesh;
+						element.m_content.m_material = material;
+						element.m_content.m_triangles = mesh->UnsafeGetTriangles();
+					}
+				}
+				else if (scene->HasPrivateComponent<Particles>(child))
+				{
+					const auto particles = scene->GetOrSetPrivateComponent<Particles>(child).lock();
+					const auto particleInfoList = particles->m_particleInfoList.Get<ParticleInfoList>();
+					const auto mesh = particles->m_mesh.Get<Mesh>();
+					const auto material = particles->m_material.Get<Material>();
+					if (particleInfoList && mesh && material) {
+						cluster.m_instancedElements.emplace_back();
+						auto& instancedElement = cluster.m_instancedElements.back();
+						instancedElement.m_modelSpaceTransform.m_value = modelSpaceTransform;
+						instancedElement.m_content.m_particleInfoList = particleInfoList;
+						instancedElement.m_content.m_mesh = mesh;
+						instancedElement.m_content.m_material = material;
+						instancedElement.m_content.m_triangles = mesh->UnsafeGetTriangles();
+					}
+				}
+				scene->SetEnable(child, false);
+			}
+			else if (name == "Fruit Mesh") {
+
+			}
+		}
+		const auto projectedCluster = BillboardCloud::Project(cluster, {});
+		const auto projectedTree = scene->CreateEntity("Projected Tree");
+		const auto projectedPlaneEntity = scene->CreateEntity("Projected Plane [" + std::to_string(planeIndex) + "]");
+		scene->SetParent(projectedPlaneEntity, projectedTree);
+
+		for (const auto& projectedElement : projectedCluster.m_elements)
+		{
+			const auto projectedChild = scene->CreateEntity("Projected Element");
+			const auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(projectedChild).lock();
+			meshRenderer->m_mesh = projectedElement.m_content.m_mesh;
+			meshRenderer->m_material = projectedElement.m_content.m_material;
+			scene->SetParent(projectedChild, projectedPlaneEntity);
+		}
+	}
+}
+
 void Tree::ClearGeometryEntities() const
 {
 	const auto scene = GetScene();
@@ -2700,6 +2800,7 @@ void Tree::CollectAssetRef(std::vector<AssetRef>& list)
 
 void SkeletalGraphSettings::OnInspect()
 {
+
 	ImGui::DragFloat("Line thickness", &m_lineThickness, 0.001f, 0.0f, 1.0f);
 	ImGui::DragFloat("Fixed line thickness", &m_fixedLineThickness, 0.001f, 0.0f, 1.0f);
 	ImGui::DragFloat("Branch point size", &m_branchPointSize, 0.01f, 0.0f, 1.0f);

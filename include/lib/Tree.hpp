@@ -154,6 +154,9 @@ namespace EcoSysLab {
 		void ExportRadialBoundingVolume(const std::shared_ptr<RadialBoundingVolume>& rbv) const;
 		void CollectAssetRef(std::vector<AssetRef>& list) override;
 		void Deserialize(const YAML::Node& in) override;
+
+
+		void Project(const std::vector<Plane>& planes);
 	};
 
 	template <typename SrcSkeletonData, typename SrcFlowData, typename SrcNodeData>
