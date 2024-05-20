@@ -361,8 +361,8 @@ bool Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	{
 		Plane planeFront{ glm::vec3(0,0, -1), 0.f };
 		Plane planeLeft{ glm::vec3(1,0, 0), 0.f };
-		Plane planeUp{ glm::vec3(0,1, 0), 0.f };
-		Project({planeFront, planeLeft, planeUp});
+		Plane planeUp{ glm::vec3(0,1, 0), (m_treeModel.PeekShootSkeleton().m_max.y - m_treeModel.PeekShootSkeleton().m_min.y) * .5f };
+		Project({ planeFront, planeLeft, planeUp });
 	}
 
 	bool changed = false;
@@ -2163,22 +2163,26 @@ void Tree::Deserialize(const YAML::Node& in)
 void Tree::Project(const std::vector<Plane>& planes)
 {
 	GenerateGeometryEntities(m_meshGeneratorSettings);
+
+	const auto scene = GetScene();
+	const auto owner = GetOwner();
+	const auto children = scene->GetChildren(owner);
+	const auto ownerGlobalTransform = scene->GetDataComponent<GlobalTransform>(owner);
+	for (const auto& child : children)
+	{
+		auto name = scene->GetEntityName(child);
+		if (name == "Projected Tree")
+		{
+			scene->DeleteEntity(child);
+		}
+	}
+	const auto projectedTree = scene->CreateEntity("Projected Tree");
+	scene->SetParent(projectedTree, owner);
 	for (int planeIndex = 0; planeIndex < planes.size(); planeIndex++) {
 		BillboardCloud::Cluster cluster;
 		const auto& plane = planes[planeIndex];
 		cluster.m_modelSpaceProjectionPlane = plane;
-		const auto scene = GetScene();
-		const auto owner = GetOwner();
-		const auto children = scene->GetChildren(owner);
-		const auto ownerGlobalTransform = scene->GetDataComponent<GlobalTransform>(owner);
-		for (const auto& child : children)
-		{
-			auto name = scene->GetEntityName(child);
-			if (name == "Projected Tree")
-			{
-				scene->DeleteEntity(child);
-			}
-		}
+
 		for (const auto& child : children) {
 			auto name = scene->GetEntityName(child);
 			const auto modelSpaceTransform = glm::inverse(ownerGlobalTransform.m_value) * scene->GetDataComponent<GlobalTransform>(child).m_value;
@@ -2236,7 +2240,7 @@ void Tree::Project(const std::vector<Plane>& planes)
 			}
 		}
 		const auto projectedCluster = BillboardCloud::Project(cluster, {});
-		const auto projectedTree = scene->CreateEntity("Projected Tree");
+
 		const auto projectedPlaneEntity = scene->CreateEntity("Projected Plane [" + std::to_string(planeIndex) + "]");
 		scene->SetParent(projectedPlaneEntity, projectedTree);
 
@@ -2247,6 +2251,7 @@ void Tree::Project(const std::vector<Plane>& planes)
 			meshRenderer->m_mesh = projectedElement.m_content.m_mesh;
 			meshRenderer->m_material = projectedElement.m_content.m_material;
 			scene->SetParent(projectedChild, projectedPlaneEntity);
+			scene->SetDataComponent(projectedChild, projectedElement.m_modelSpaceTransform);
 		}
 	}
 }
