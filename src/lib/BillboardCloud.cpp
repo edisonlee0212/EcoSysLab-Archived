@@ -281,34 +281,9 @@ BillboardCloud::ProjectedCluster BillboardCloud::Project(const Cluster& cluster,
 						glm::vec3(textureSpaceVertices[2].x, textureSpaceVertices[2].y, 1.f)
 						}
 					);
-					glm::mat3 vs;
-					vs[0] = v0.m_position;
-					vs[1] = v1.m_position;
-					vs[2] = v2.m_position;
-
-					glm::mat3 cs;
-					cs[0] = v0.m_color;
-					cs[1] = v1.m_color;
-					cs[2] = v2.m_color;
-					glm::mat3 nms;
-					nms[0] = v0.m_normal;
-					nms[1] = v1.m_normal;
-					nms[2] = v2.m_normal;
-					glm::mat3 ttcs;
-					ttcs[0] = glm::vec3(v0.m_texCoord, 1.f);
-					ttcs[1] = glm::vec3(v1.m_texCoord, 1.f);
-					ttcs[2] = glm::vec3(v2.m_texCoord, 1.f);
-					glm::mat3 qm = glm::transpose(vs);
-					glm::mat3 cam = glm::mat3(
-						glm::vec3(1, 0, -textureWidth * .5f),
-						glm::vec3(0, 1, textureHeight * .5f),
-						glm::vec3(0, 0, -textureWidth * .5f));
-
-					glm::mat3 modelSpaceInterpolationMat = glm::inverse(qm) * cam;
-					glm::vec3 densityABC = modelSpaceInterpolationMat[0] + modelSpaceInterpolationMat[1] + modelSpaceInterpolationMat[2];
-					glm::mat3 colorsABC = glm::transpose(cs) * modelSpaceInterpolationMat;
-					glm::mat3 normalsABC = glm::transpose(nms) * modelSpaceInterpolationMat;
-					glm::mat3 texCoordABC = glm::transpose(ttcs);
+					glm::vec3 c2 = {1, 0, 0};
+					glm::vec3 c1 = {0, 1, 0};
+					glm::vec3 c0 = {0, 0, 1};
 					const glm::vec3 z = screenSpaceInterpolationMat * glm::vec3(textureSpaceVertices[0][2], textureSpaceVertices[1][2], textureSpaceVertices[2][2]);
 					for (auto v = top; v <= bottom; v++)
 					{
@@ -319,7 +294,7 @@ BillboardCloud::ProjectedCluster BillboardCloud::Project(const Cluster& cluster,
 								|| glm::dot(pixel, eeqs[2]) < 0.0f)
 								continue;
 							
-							glm::vec3 texCoord = texCoordABC * pixel / (densityABC * pixel);
+							//glm::vec3 texCoord = texCoordABC * pixel / (densityABC * pixel);
 							glm::vec3 normal = glm::vec3(0, 0, 1);//normalsABC * pixel / (densityABC * pixel);
 							glm::vec4 albedoColor = glm::vec4(material->m_materialProperties.m_albedoColor, 1.f);//glm::vec4(colorsABC * pixel / (densityABC * pixel), 1.f);
 							if(hasNormalTexture)
@@ -332,7 +307,7 @@ BillboardCloud::ProjectedCluster BillboardCloud::Project(const Cluster& cluster,
 							}
 							pixel[2] = glm::dot(pixel, z);
 							albedoFrameBuffer.SetColor(pixel[0], pixel[1], pixel[2], albedoColor);
-							normalFrameBuffer.SetColor(pixel[0], pixel[1], pixel[2], glm::normalize(normal));
+							normalFrameBuffer.SetColor(pixel[0], pixel[1], pixel[2], normal);
 						}
 					}
 				});
