@@ -60,6 +60,9 @@ namespace EvoEngine {
 
 			float m_width;
 			float m_height;
+
+			[[nodiscard]] glm::vec2 Transform(const glm::vec2 &target) const;
+			[[nodiscard]] glm::vec3 Transform(const glm::vec3 &target) const;
 		};
 
 		//Adopted from https://github.com/DreamVersion/RotatingCalipers

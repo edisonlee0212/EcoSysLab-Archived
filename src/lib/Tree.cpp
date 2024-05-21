@@ -2246,44 +2246,16 @@ void Tree::Project(std::vector<BillboardCloud::Cluster> clusters)
 
 			}
 		}
-
 		const auto projectedCluster = BillboardCloud::Project(cluster, {});
-
 		const auto projectedClusterEntity = scene->CreateEntity("Projected Cluster [" + std::to_string(clusterIndex) + "]");
 		scene->SetParent(projectedClusterEntity, projectedTree);
-
-		for (const auto& projectedElement : projectedCluster.m_elements)
 		{
-			const auto projectedElementEntity = scene->CreateEntity("Projected Element");
+			const auto projectedElementEntity = scene->CreateEntity("Projected Billboard");
 			const auto elementMeshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(projectedElementEntity).lock();
-			elementMeshRenderer->m_mesh = projectedElement.m_content.m_mesh;
-			elementMeshRenderer->m_material = projectedElement.m_content.m_material;
+			elementMeshRenderer->m_mesh = projectedCluster.m_billboardMesh;
+			elementMeshRenderer->m_material = projectedCluster.m_billboardMaterial;
 			scene->SetParent(projectedElementEntity, projectedClusterEntity);
-
-
 		}
-
-		const auto projectedPlaneEntity = scene->CreateEntity("Projected Plane");
-		const auto planeMeshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(projectedPlaneEntity).lock();
-
-		const auto planeMesh = ProjectManager::CreateTemporaryAsset<Mesh>();
-		const auto planeMaterial = ProjectManager::CreateTemporaryAsset<Material>();
-		std::vector<Vertex> planeVertices;
-		planeVertices.resize(4);
-		planeVertices[0].m_position = glm::vec3(projectedCluster.m_billboardRectangle.m_points[0].x, projectedCluster.m_billboardRectangle.m_points[0].y, 0.f);
-		planeVertices[1].m_position = glm::vec3(projectedCluster.m_billboardRectangle.m_points[1].x, projectedCluster.m_billboardRectangle.m_points[1].y, 0.f);
-		planeVertices[2].m_position = glm::vec3(projectedCluster.m_billboardRectangle.m_points[2].x, projectedCluster.m_billboardRectangle.m_points[2].y, 0.f);
-		planeVertices[3].m_position = glm::vec3(projectedCluster.m_billboardRectangle.m_points[3].x, projectedCluster.m_billboardRectangle.m_points[3].y, 0.f);
-		std::vector<glm::uvec3> planeTriangles;
-		planeTriangles.resize(2);
-		planeTriangles[0] = {0, 1, 2};
-		planeTriangles[1] = {2, 3, 0};
-		planeMesh->SetVertices({}, planeVertices, planeTriangles);
-		planeMaterial->m_drawSettings.m_lineWidth = 5.f;
-		planeMaterial->m_drawSettings.m_polygonMode = VK_POLYGON_MODE_LINE;
-		planeMeshRenderer->m_mesh = planeMesh;
-		planeMeshRenderer->m_material = planeMaterial;
-		scene->SetParent(projectedPlaneEntity, projectedClusterEntity);
 	}
 }
 

@@ -12,17 +12,14 @@ void BillboardCloud::ProjectToPlane(const Vertex& v0, const Vertex& v1, const Ve
 	pV0.m_normal = transform * glm::vec4(v0.m_normal, 0.f);
 	pV0.m_tangent = transform * glm::vec4(v0.m_tangent, 0.f);
 	pV0.m_position = p0;
-	//pV0.m_position.z = 0.f;
 	pV1 = v1;
 	pV1.m_normal = transform * glm::vec4(v1.m_normal, 0.f);
 	pV1.m_tangent = transform * glm::vec4(v1.m_tangent, 0.f);
 	pV1.m_position = p1;
-	//pV1.m_position.z = 0.f;
 	pV2 = v2;
 	pV2.m_normal = transform * glm::vec4(v2.m_normal, 0.f);
 	pV2.m_tangent = transform * glm::vec4(v2.m_tangent, 0.f);
 	pV2.m_position = p2;
-	//pV2.m_position.z = 0.f;
 }
 
 void BillboardCloud::Rectangle::Update()
@@ -36,6 +33,39 @@ void BillboardCloud::Rectangle::Update()
 	m_width = glm::length(vX);
 	m_height = glm::length(vY);
 }
+
+template<typename T>
+struct CPUFramebuffer
+{
+	std::vector<float> m_depthBuffer;
+	std::vector<T> m_colorBuffer;
+	std::vector<std::mutex> m_pixelLocks;
+	int m_width = 0;
+	int m_height = 0;
+	CPUFramebuffer(const size_t width, const size_t height)
+	{
+		m_depthBuffer = std::vector<float>(width * height);
+		m_colorBuffer = std::vector<T>(width * height);
+		std::fill(m_colorBuffer.begin(), m_colorBuffer.end(), T(0.f));
+		std::fill(m_depthBuffer.begin(), m_depthBuffer.end(), -FLT_MAX);
+		m_pixelLocks = std::vector<std::mutex>(width * height);
+		m_width = width;
+		m_height = height;
+	}
+
+	void SetColor(const float u, const float v, const float z, const T& color)
+	{
+		if (u < 0 || v < 0 || u > m_width - 1 || v > m_height - 1)
+			return;
+
+		const int uv = u + m_width * v;
+		std::lock_guard lock(m_pixelLocks[uv]);
+		if (z < m_depthBuffer[uv])
+			return;
+		m_depthBuffer[uv] = z;
+		m_colorBuffer[uv] = color;
+	}
+};
 
 BillboardCloud::ProjectedCluster BillboardCloud::Project(const Cluster& cluster, const ProjectSettings& settings)
 {
@@ -129,7 +159,6 @@ BillboardCloud::ProjectedCluster BillboardCloud::Project(const Cluster& cluster,
 		projectedContent.m_material = content.m_material;
 		projectedMesh->SetVertices({ true, true, true, true }, projectedVertices, projectedTriangles);
 	}
-
 	std::vector<glm::vec2> points;
 	for (const auto& projectedElement : projectedCluster.m_elements)
 	{
@@ -143,6 +172,8 @@ BillboardCloud::ProjectedCluster BillboardCloud::Project(const Cluster& cluster,
 				points[startIndex + pointIndex] = glm::vec2(position.x, position.y);
 			});
 	}
+
+	//Calculate bounding triangle.
 	assert(points.size() > 2);
 	if (points.size() == 3)
 	{
@@ -185,8 +216,155 @@ BillboardCloud::ProjectedCluster BillboardCloud::Project(const Cluster& cluster,
 	{
 		projectedCluster.m_billboardRectangle = RotatingCalipers::GetMinAreaRectangle(std::move(points));
 	}
-	projectedCluster.m_billboardRectangle.Update();
 
+
+	//Rasterization
+	{
+		//Calculate texture size
+		size_t textureWidth, textureHeight;
+		const auto& boundingRectangle = projectedCluster.m_billboardRectangle;
+		float textureZoomFactor = 1024.f;
+		textureWidth = static_cast<size_t>(boundingRectangle.m_width * textureZoomFactor);
+		textureHeight = static_cast<size_t>(boundingRectangle.m_height * textureZoomFactor);
+
+		CPUFramebuffer<glm::vec4> albedoFrameBuffer(textureWidth, textureHeight);
+		CPUFramebuffer<glm::vec3> normalFrameBuffer(textureWidth, textureHeight);
+
+		for (const auto& projectedElement : projectedCluster.m_elements)
+		{
+			const auto material = projectedElement.m_content.m_material;
+			const auto albedoTexture = material->GetAlbedoTexture();
+			bool hasAlbedoTexture = albedoTexture.get();
+			const auto normalTexture = material->GetNormalTexture();
+			bool hasNormalTexture = normalTexture.get();
+
+			const auto& vertices = projectedElement.m_content.m_mesh->UnsafeGetVertices();
+			const auto& triangles = projectedElement.m_content.m_mesh->UnsafeGetTriangles();
+			Jobs::RunParallelFor(triangles.size(), [&](const unsigned triangleIndex)
+				{
+					const auto& v0 = vertices[triangles[triangleIndex].x];
+					const auto& v1 = vertices[triangles[triangleIndex].y];
+					const auto& v2 = vertices[triangles[triangleIndex].z];
+
+					glm::vec3 textureSpaceVertices[3];
+					textureSpaceVertices[0] = boundingRectangle.Transform(v0.m_position) * textureZoomFactor;
+					textureSpaceVertices[1] = boundingRectangle.Transform(v1.m_position) * textureZoomFactor;
+					textureSpaceVertices[2] = boundingRectangle.Transform(v2.m_position) * textureZoomFactor;
+
+					//Bounds bound;
+					auto minBound = glm::vec2(FLT_MAX, FLT_MAX);
+					auto maxBound = glm::vec2(-FLT_MAX, -FLT_MAX);
+					for (const auto& textureSpaceVertex : textureSpaceVertices)
+					{
+						minBound = glm::min(glm::vec2(textureSpaceVertex), minBound);
+						maxBound = glm::max(glm::vec2(textureSpaceVertex), maxBound);
+					}
+
+					glm::vec3 eeqs[3];
+					for (auto vi = 0; vi < 3; vi++)
+					{
+						eeqs[vi][0] = textureSpaceVertices[(vi + 1) % 3][1] - textureSpaceVertices[vi][1];
+						eeqs[vi][1] = textureSpaceVertices[vi][0] - textureSpaceVertices[(vi + 1) % 3][0];
+						eeqs[vi][2] = -textureSpaceVertices[vi][0] * eeqs[vi][0] + textureSpaceVertices[vi][1] * -eeqs[vi][1];
+						glm::vec3 v2P(textureSpaceVertices[(vi + 2) % 3][0], textureSpaceVertices[(vi + 2) % 3][1], 1.0f);
+						if (glm::dot(v2P, eeqs[vi]) < 0.0f)
+							eeqs[vi] = eeqs[vi] * -1.0f;
+					}
+
+					const auto left = static_cast<int>(minBound.x + 0.5f);
+					const auto right = static_cast<int>(maxBound.x - 0.5f);
+					const auto top = static_cast<int>(minBound.y + 0.5f);
+					const auto bottom = static_cast<int>(maxBound.y - 0.5f);
+					const glm::mat3 screenSpaceInterpolationMat = glm::inverse(glm::mat3{
+						glm::vec3(textureSpaceVertices[0].x, textureSpaceVertices[0].y, 1.f),
+						glm::vec3(textureSpaceVertices[1].x, textureSpaceVertices[1].y, 1.f),
+						glm::vec3(textureSpaceVertices[2].x, textureSpaceVertices[2].y, 1.f)
+						}
+					);
+					glm::mat3 vs;
+					vs[0] = v0.m_position;
+					vs[1] = v1.m_position;
+					vs[2] = v2.m_position;
+
+					glm::mat3 cs;
+					cs[0] = v0.m_color;
+					cs[1] = v1.m_color;
+					cs[2] = v2.m_color;
+					glm::mat3 nms;
+					nms[0] = v0.m_normal;
+					nms[1] = v1.m_normal;
+					nms[2] = v2.m_normal;
+					glm::mat3 ttcs;
+					ttcs[0] = glm::vec3(v0.m_texCoord, 1.f);
+					ttcs[1] = glm::vec3(v1.m_texCoord, 1.f);
+					ttcs[2] = glm::vec3(v2.m_texCoord, 1.f);
+					glm::mat3 qm = glm::transpose(vs);
+					glm::mat3 cam = glm::mat3(
+						glm::vec3(1, 0, -textureWidth * .5f),
+						glm::vec3(0, 1, textureHeight * .5f),
+						glm::vec3(0, 0, -textureWidth * .5f));
+
+					glm::mat3 modelSpaceInterpolationMat = glm::inverse(qm) * cam;
+					glm::vec3 densityABC = modelSpaceInterpolationMat[0] + modelSpaceInterpolationMat[1] + modelSpaceInterpolationMat[2];
+					glm::mat3 colorsABC = glm::transpose(cs) * modelSpaceInterpolationMat;
+					glm::mat3 normalsABC = glm::transpose(nms) * modelSpaceInterpolationMat;
+					glm::mat3 texCoordABC = glm::transpose(ttcs);
+					const glm::vec3 z = screenSpaceInterpolationMat * glm::vec3(textureSpaceVertices[0][2], textureSpaceVertices[1][2], textureSpaceVertices[2][2]);
+					for (auto v = top; v <= bottom; v++)
+					{
+						for (auto u = left; u <= right; u++)
+						{
+							glm::vec3 pixel(u, v, 1.0f);
+							if (glm::dot(pixel, eeqs[0]) < 0.0f || glm::dot(pixel, eeqs[1]) < 0.0f
+								|| glm::dot(pixel, eeqs[2]) < 0.0f)
+								continue;
+							
+							glm::vec3 texCoord = texCoordABC * pixel / (densityABC * pixel);
+							glm::vec3 normal = glm::vec3(0, 0, 1);//normalsABC * pixel / (densityABC * pixel);
+							glm::vec4 albedoColor = glm::vec4(material->m_materialProperties.m_albedoColor, 1.f);//glm::vec4(colorsABC * pixel / (densityABC * pixel), 1.f);
+							if(hasNormalTexture)
+							{
+								
+							}
+							if(hasAlbedoTexture)
+							{
+								
+							}
+							pixel[2] = glm::dot(pixel, z);
+							albedoFrameBuffer.SetColor(pixel[0], pixel[1], pixel[2], albedoColor);
+							normalFrameBuffer.SetColor(pixel[0], pixel[1], pixel[2], glm::normalize(normal));
+						}
+					}
+				});
+		}
+
+		std::shared_ptr<Texture2D> albedoTexture = ProjectManager::CreateTemporaryAsset<Texture2D>();
+		albedoTexture->SetRgbaChannelData(albedoFrameBuffer.m_colorBuffer, glm::uvec2(albedoFrameBuffer.m_width, albedoFrameBuffer.m_height));
+		std::shared_ptr<Texture2D> normalTexture = ProjectManager::CreateTemporaryAsset<Texture2D>();
+		normalTexture->SetRgbChannelData(normalFrameBuffer.m_colorBuffer, glm::uvec2(normalFrameBuffer.m_width, normalFrameBuffer.m_height));
+		
+		projectedCluster.m_billboardMaterial = ProjectManager::CreateTemporaryAsset<Material>();
+		projectedCluster.m_billboardMaterial->SetAlbedoTexture(albedoTexture);
+		projectedCluster.m_billboardMaterial->SetNormalTexture(normalTexture);
+		projectedCluster.m_billboardMesh = ProjectManager::CreateTemporaryAsset<Mesh>();
+
+		std::vector<Vertex> planeVertices;
+		planeVertices.resize(4);
+		planeVertices[0].m_position = glm::vec3(projectedCluster.m_billboardRectangle.m_points[0].x, projectedCluster.m_billboardRectangle.m_points[0].y, 0.f);
+		planeVertices[0].m_texCoord = glm::vec2(0, 0);
+		planeVertices[1].m_position = glm::vec3(projectedCluster.m_billboardRectangle.m_points[1].x, projectedCluster.m_billboardRectangle.m_points[1].y, 0.f);
+		planeVertices[1].m_texCoord = glm::vec2(1, 0);
+		planeVertices[2].m_position = glm::vec3(projectedCluster.m_billboardRectangle.m_points[2].x, projectedCluster.m_billboardRectangle.m_points[2].y, 0.f);
+		planeVertices[2].m_texCoord = glm::vec2(1, 1);
+		planeVertices[3].m_position = glm::vec3(projectedCluster.m_billboardRectangle.m_points[3].x, projectedCluster.m_billboardRectangle.m_points[3].y, 0.f);
+		planeVertices[3].m_texCoord = glm::vec2(0, 1);
+		std::vector<glm::uvec3> planeTriangles;
+		planeTriangles.resize(2);
+		planeTriangles[0] = { 0, 1, 2 };
+		planeTriangles[1] = { 2, 3, 0 };
+		projectedCluster.m_billboardMesh->SetVertices({}, planeVertices, planeTriangles);
+
+	}
 	return projectedCluster;
 }
 
@@ -211,6 +389,28 @@ struct PointComparator
 		return a.x < b.x || (a.x == b.x && a.y < b.y);
 	}
 };
+
+glm::vec2 BillboardCloud::Rectangle::Transform(const glm::vec2& target) const
+{
+	glm::vec2 retVal = target;
+	//Recenter
+	retVal -= m_center;
+	const float x = glm::dot(retVal, m_xAxis);
+	const float y = glm::dot(retVal, m_yAxis);
+	retVal = glm::vec2(x, y) + glm::vec2(m_width, m_height) * .5f;
+	return retVal;
+}
+
+glm::vec3 BillboardCloud::Rectangle::Transform(const glm::vec3& target) const
+{
+	glm::vec2 retVal = target;
+	//Recenter
+	retVal -= m_center;
+	const float x = glm::dot(retVal, m_xAxis);
+	const float y = glm::dot(retVal, m_yAxis);
+	retVal = glm::vec2(x, y) + glm::vec2(m_width, m_height) * .5f;
+	return glm::vec3(retVal, target.z);
+}
 
 std::vector<glm::vec2> BillboardCloud::RotatingCalipers::ConvexHull(std::vector<glm::vec2> points)
 {
