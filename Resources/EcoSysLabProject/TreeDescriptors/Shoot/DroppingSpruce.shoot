@@ -34,7 +34,7 @@ m_apicalAngleNoise2D:
       m_ridgid: false
 m_branchingAngleMeanVariance: [60, 2]
 m_rollAngleMeanVariance: [0, 0]
-m_apicalAngleMeanVariance: [0, 1]
+m_apicalAngleMeanVariance: [0, 0.5]
 m_gravitropism: -0.159999996
 m_phototropism: 0
 m_horizontalTropism: 0.0799999982

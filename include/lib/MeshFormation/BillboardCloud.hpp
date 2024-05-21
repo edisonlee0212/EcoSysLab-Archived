@@ -67,7 +67,7 @@ namespace EvoEngine {
 		{
 		public:
 			static std::vector<glm::vec2> ConvexHull(std::vector<glm::vec2> points);
-			static Rectangle GetMinAreaRectangle(std::vector<glm::vec2>&& points);
+			static Rectangle GetMinAreaRectangle(std::vector<glm::vec2> points);
 		};
 
 		struct ProjectedCluster

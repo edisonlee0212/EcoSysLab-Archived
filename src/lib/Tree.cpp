@@ -2279,7 +2279,7 @@ void Tree::Project(std::vector<BillboardCloud::Cluster> clusters)
 		planeTriangles[0] = {0, 1, 2};
 		planeTriangles[1] = {2, 3, 0};
 		planeMesh->SetVertices({}, planeVertices, planeTriangles);
-		planeMaterial->m_drawSettings.m_lineWidth = 0.1f;
+		planeMaterial->m_drawSettings.m_lineWidth = 5.f;
 		planeMaterial->m_drawSettings.m_polygonMode = VK_POLYGON_MODE_LINE;
 		planeMeshRenderer->m_mesh = planeMesh;
 		planeMeshRenderer->m_material = planeMaterial;

@@ -12,17 +12,17 @@ void BillboardCloud::ProjectToPlane(const Vertex& v0, const Vertex& v1, const Ve
 	pV0.m_normal = transform * glm::vec4(v0.m_normal, 0.f);
 	pV0.m_tangent = transform * glm::vec4(v0.m_tangent, 0.f);
 	pV0.m_position = p0;
-	pV0.m_position.z /= 10.f;
+	//pV0.m_position.z = 0.f;
 	pV1 = v1;
 	pV1.m_normal = transform * glm::vec4(v1.m_normal, 0.f);
 	pV1.m_tangent = transform * glm::vec4(v1.m_tangent, 0.f);
 	pV1.m_position = p1;
-	pV1.m_position.z /= 10.f;
+	//pV1.m_position.z = 0.f;
 	pV2 = v2;
 	pV2.m_normal = transform * glm::vec4(v2.m_normal, 0.f);
 	pV2.m_tangent = transform * glm::vec4(v2.m_tangent, 0.f);
 	pV2.m_position = p2;
-	pV2.m_position.z /= 10.f;
+	//pV2.m_position.z = 0.f;
 }
 
 void BillboardCloud::Rectangle::Update()
@@ -198,10 +198,12 @@ BillboardCloud::RenderContent BillboardCloud::Join(const Cluster& cluster, const
 
 	return retVal;
 }
+
 inline double Cross(const glm::vec2& origin, const glm::vec2& a, const glm::vec2& b)
 {
 	return (a.x - origin.x) * (b.y - origin.y) - (a.y - origin.y) * (b.x - origin.x);
 }
+
 struct PointComparator
 {
 	bool operator()(const glm::vec2& a, const glm::vec2& b) const
@@ -209,6 +211,7 @@ struct PointComparator
 		return a.x < b.x || (a.x == b.x && a.y < b.y);
 	}
 };
+
 std::vector<glm::vec2> BillboardCloud::RotatingCalipers::ConvexHull(std::vector<glm::vec2> points)
 {
 	const size_t pointSize = points.size();
@@ -244,7 +247,7 @@ struct MinAreaState
 	float m_area;
 };
 
-BillboardCloud::Rectangle BillboardCloud::RotatingCalipers::GetMinAreaRectangle(std::vector<glm::vec2>&& points)
+BillboardCloud::Rectangle BillboardCloud::RotatingCalipers::GetMinAreaRectangle(std::vector<glm::vec2> points)
 {
 	auto convexHull = ConvexHull(std::move(points));
 	float minArea = FLT_MAX;
@@ -253,7 +256,7 @@ BillboardCloud::Rectangle BillboardCloud::RotatingCalipers::GetMinAreaRectangle(
 	/* rotating calipers sides will always have coordinates
 	 (a,b) (-b,a) (-a,-b) (b, -a)
 	 */
-	 /* this is a first base bector (a,b) initialized by (1,0) */
+	 /* this is a first base vector (a,b) initialized by (1,0) */
 
 	glm::vec2 pt0 = convexHull[0];
 	float leftX = pt0.x;
@@ -322,7 +325,7 @@ BillboardCloud::Rectangle BillboardCloud::RotatingCalipers::GetMinAreaRectangle(
 
 	/*****************************************************************************************/
 	/*                         init calipers position                                        */
-	size_t seq[4] = { 0 };
+	size_t seq[4];
 	seq[0] = bottom;
 	seq[1] = right;
 	seq[2] = top;
@@ -349,22 +352,22 @@ BillboardCloud::Rectangle BillboardCloud::RotatingCalipers::GetMinAreaRectangle(
 		float cosAlpha = dp0 * lengths[seq[0]];
 		float maxCos = cosAlpha;
 		/* number of calipers edges, that has minimal angle with edge */
-		int main_element = 0;
+		int mainElement = 0;
 
 		/* choose minimal angle */
 		cosAlpha = dp1 * lengths[seq[1]];
-		maxCos = cosAlpha > maxCos ? (main_element = 1, cosAlpha) : maxCos;
+		maxCos = cosAlpha > maxCos ? (mainElement = 1, cosAlpha) : maxCos;
 		cosAlpha = dp2 * lengths[seq[2]];
-		maxCos = cosAlpha > maxCos ? (main_element = 2, cosAlpha) : maxCos;
+		maxCos = cosAlpha > maxCos ? (mainElement = 2, cosAlpha) : maxCos;
 		cosAlpha = dp3 * lengths[seq[3]];
-		maxCos = cosAlpha > maxCos ? (main_element = 3, cosAlpha) : maxCos;
+		maxCos = cosAlpha > maxCos ? (mainElement = 3, cosAlpha) : maxCos;
 
 		/*rotate calipers*/
 		//get next base
-		size_t pindex = seq[main_element];
-		float leadX = list[pindex].x * lengths[pindex];
-		float leadY = list[pindex].y * lengths[pindex];
-		switch (main_element)
+		size_t tempPoint = seq[mainElement];
+		float leadX = list[tempPoint].x * lengths[tempPoint];
+		float leadY = list[tempPoint].y * lengths[tempPoint];
+		switch (mainElement)
 		{
 		case 0:
 			baseA = leadX;
@@ -385,8 +388,8 @@ BillboardCloud::Rectangle BillboardCloud::RotatingCalipers::GetMinAreaRectangle(
 		}
 
 		/* change base point of main edge */
-		seq[main_element] += 1;
-		seq[main_element] = seq[main_element] == n ? 0 : seq[main_element];
+		seq[mainElement] += 1;
+		seq[mainElement] = seq[mainElement] == n ? 0 : seq[mainElement];
 
 		float dx = convexHull[seq[1]].x - convexHull[seq[3]].x;
 		float dy = convexHull[seq[1]].y - convexHull[seq[3]].y;
