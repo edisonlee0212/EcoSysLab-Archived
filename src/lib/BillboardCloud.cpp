@@ -618,10 +618,9 @@ BillboardCloud::ProjectedCluster BillboardCloud::Project(const Cluster& cluster,
 							//Early depth check.
 							if(!albedoFrameBuffer.CompareZ(u, v, z)) continue;
 
-							glm::vec2 texCoords;
-							texCoords.x = bc0 * v0.m_texCoord.x + bc1 * v1.m_texCoord.x + bc2 * v2.m_texCoord.x;
-							texCoords.y = bc0 * v0.m_texCoord.y + bc1 * v1.m_texCoord.y + bc2 * v2.m_texCoord.y;
-							auto normal = glm::vec3(0, 0, 1);
+							const auto texCoords = bc0 * v0.m_texCoord + bc1 * v1.m_texCoord + bc2 * v2.m_texCoord;
+							auto normal = glm::normalize(bc0 * v0.m_normal + bc1 * v1.m_normal + bc2 * v2.m_normal);
+							
 							auto albedo = glm::vec4(material->m_materialProperties.m_albedoColor, 1.f);
 							float roughness = material->m_materialProperties.m_roughness;
 							float metallic = material->m_materialProperties.m_metallic;
@@ -644,8 +643,14 @@ BillboardCloud::ProjectedCluster BillboardCloud::Project(const Cluster& cluster,
 								if(textureX >= 0 && textureX < normalTextureResolution.x
 									&& textureY >= 0 && textureY < normalTextureResolution.y)
 								{
+									auto tangent = glm::normalize(bc0 * v0.m_tangent + bc1 * v1.m_tangent + bc2 * v2.m_tangent);
+									const auto b = glm::cross(normal, tangent);
+									const auto tbn = glm::mat3(tangent, b, normal);
+
 									const auto index = textureY * static_cast<int>(normalTextureResolution.x) + textureX;
-									normal = normalTextureData[index];
+									auto sampledNormal = normalTextureData[index];
+									sampledNormal = sampledNormal * 2.0f - glm::vec3(1.0f);
+									normal = normalize(tbn * sampledNormal);
 								}
 							}
 							if (!roughnessTextureData.empty())
@@ -682,6 +687,8 @@ BillboardCloud::ProjectedCluster BillboardCloud::Project(const Cluster& cluster,
 								}
 							}
 							albedoFrameBuffer.SetPixel(u, v, z, albedo);
+
+							normal = normal * 0.5f + glm::vec3(0.5f);
 							normalFrameBuffer.SetPixel(u, v, z, normal);
 							roughnessFrameBuffer.SetPixel(u, v, z, roughness);
 							metallicFrameBuffer.SetPixel(u, v, z, metallic);
