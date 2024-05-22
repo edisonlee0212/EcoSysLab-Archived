@@ -53,7 +53,16 @@ struct CPUFramebuffer
 		m_height = height;
 	}
 
-	void SetColor(const float u, const float v, const float z, const T& color)
+	[[nodiscard]] bool CompareZ(const int u, const int v, const float z) const
+	{
+		if (u < 0 || v < 0 || u > m_width - 1 || v > m_height - 1)
+			return false;
+
+		const int uv = u + m_width * v;
+		return z >= m_depthBuffer[uv];
+	}
+
+	void SetPixel(const int u, const int v, const float z, const T& color)
 	{
 		if (u < 0 || v < 0 || u > m_width - 1 || v > m_height - 1)
 			return;
@@ -67,290 +76,7 @@ struct CPUFramebuffer
 	}
 };
 
-BillboardCloud::ProjectedCluster BillboardCloud::Project(const Cluster& cluster, const ProjectSettings& settings)
-{
-	ProjectedCluster projectedCluster{};
-	glm::vec3 frontAxis = cluster.m_planeNormal;
-	glm::vec3 upAxis = cluster.m_planeYAxis;
-	glm::vec3 leftAxis = glm::normalize(glm::cross(frontAxis, upAxis));
-	upAxis = glm::normalize(glm::cross(leftAxis, frontAxis));
-	//glm::mat4 viewMatrix = glm::lookAt(cluster.m_clusterCenter, cluster.m_clusterCenter + cluster.m_planeNormal, cluster.m_planeYAxis);
-	glm::mat4 rotateMatrix = glm::transpose(glm::mat4(glm::vec4(leftAxis, 0.0f), glm::vec4(upAxis, 0.0f), glm::vec4(frontAxis, 0.0f), glm::vec4(0.0f, 0.0f, 0.0f, 1.0f)));
-	//glm::mat4 translateMatrix = glm::translate(-cluster.m_clusterCenter);
-	//const auto viewMatrix = translateMatrix * rotateMatrix;
-	for (const auto& instancedElement : cluster.m_instancedElements)
-	{
-		const auto& content = instancedElement.m_content;
-		const auto& modelSpaceTransform = instancedElement.m_modelSpaceTransform.m_value * rotateMatrix;
-		projectedCluster.m_elements.emplace_back();
-		auto& newElement = projectedCluster.m_elements.back();
-		const auto& triangles = content.m_triangles;
-		const auto& vertices = content.m_mesh->UnsafeGetVertices();
-		const auto& particleInfoList = content.m_particleInfoList->PeekParticleInfoList();
-		std::vector<Vertex> projectedVertices;
-		std::vector<glm::uvec3> projectedTriangles;
 
-		projectedTriangles.resize(triangles.size() * particleInfoList.size());
-		projectedVertices.resize(triangles.size() * 3 * particleInfoList.size());
-
-		Jobs::RunParallelFor(particleInfoList.size(), [&](const unsigned particleIndex)
-			{
-				const auto& particleInfo = particleInfoList[particleIndex];
-				const auto transform = modelSpaceTransform * particleInfo.m_instanceMatrix.m_value;
-				const auto vertexStartIndex = triangles.size() * 3 * particleIndex;
-				const auto triangleStartIndex = triangles.size() * particleIndex;
-				for (auto triangleIndex = 0; triangleIndex < triangles.size(); triangleIndex++) {
-					projectedTriangles[triangleIndex + triangleStartIndex] = glm::uvec3(
-						triangleIndex * 3 + vertexStartIndex,
-						triangleIndex * 3 + 1 + vertexStartIndex,
-						triangleIndex * 3 + 2 + vertexStartIndex);
-					//Vertices of projected triangle.
-					auto& pV0 = projectedVertices[triangleIndex * 3 + vertexStartIndex];
-					auto& pV1 = projectedVertices[triangleIndex * 3 + 1 + vertexStartIndex];
-					auto& pV2 = projectedVertices[triangleIndex * 3 + 2 + vertexStartIndex];
-
-					const auto& v0 = vertices[triangles[triangleIndex].x];
-					const auto& v1 = vertices[triangles[triangleIndex].y];
-					const auto& v2 = vertices[triangles[triangleIndex].z];
-
-					ProjectToPlane(v0, v1, v2, pV0, pV1, pV2, transform);
-				}
-			});
-
-		const auto projectedMesh = ProjectManager::CreateTemporaryAsset<Mesh>();
-		auto& projectedContent = newElement.m_content;
-		projectedContent.m_mesh = projectedMesh;
-		projectedContent.m_material = content.m_material;
-		projectedMesh->SetVertices({ true, true, true, true }, projectedVertices, projectedTriangles);
-	}
-	for (const auto& element : cluster.m_elements)
-	{
-		const auto& content = element.m_content;
-		const auto& transform = element.m_modelSpaceTransform.m_value * rotateMatrix;
-		projectedCluster.m_elements.emplace_back();
-		auto& newElement = projectedCluster.m_elements.back();
-		const auto& triangles = content.m_triangles;
-		const auto& vertices = content.m_mesh->UnsafeGetVertices();
-
-		std::vector<Vertex> projectedVertices;
-		std::vector<glm::uvec3> projectedTriangles;
-
-		projectedTriangles.resize(triangles.size());
-		projectedVertices.resize(triangles.size() * 3);
-
-		Jobs::RunParallelFor(triangles.size(), [&](const unsigned triangleIndex)
-			{
-				projectedTriangles[triangleIndex] = glm::uvec3(triangleIndex * 3, triangleIndex * 3 + 1, triangleIndex * 3 + 2);
-				//Vertices of projected triangle.
-				auto& pV0 = projectedVertices[triangleIndex * 3];
-				auto& pV1 = projectedVertices[triangleIndex * 3 + 1];
-				auto& pV2 = projectedVertices[triangleIndex * 3 + 2];
-
-				const auto& v0 = vertices[triangles[triangleIndex].x];
-				const auto& v1 = vertices[triangles[triangleIndex].y];
-				const auto& v2 = vertices[triangles[triangleIndex].z];
-
-				ProjectToPlane(v0, v1, v2, pV0, pV1, pV2, transform);
-			});
-
-		const auto projectedMesh = ProjectManager::CreateTemporaryAsset<Mesh>();
-		auto& projectedContent = newElement.m_content;
-		projectedContent.m_mesh = projectedMesh;
-		projectedContent.m_material = content.m_material;
-		projectedMesh->SetVertices({ true, true, true, true }, projectedVertices, projectedTriangles);
-	}
-	std::vector<glm::vec2> points;
-	for (const auto& projectedElement : projectedCluster.m_elements)
-	{
-		const auto startIndex = points.size();
-		const auto& vertices = projectedElement.m_content.m_mesh->UnsafeGetVertices();
-		const auto newPointsSize = vertices.size();
-		points.resize(startIndex + newPointsSize);
-		Jobs::RunParallelFor(newPointsSize, [&](unsigned pointIndex)
-			{
-				const auto& position = vertices.at(pointIndex).m_position;
-				points[startIndex + pointIndex] = glm::vec2(position.x, position.y);
-			});
-	}
-
-	//Calculate bounding triangle.
-	assert(points.size() > 2);
-	if (points.size() == 3)
-	{
-		const auto& p0 = points[0];
-		const auto& p1 = points[1];
-		const auto& p2 = points[2];
-
-		const auto e0 = glm::distance(p0, p1);
-		const auto e1 = glm::distance(p1, p2);
-		const auto e2 = glm::distance(p2, p0);
-		glm::vec2 longestEdgeStart, longestEdgeEnd, otherPoint;
-		if (e0 >= e1 && e0 >= e2) {
-			longestEdgeStart = p0;
-			longestEdgeEnd = p1;
-			otherPoint = p2;
-
-		}
-		else if (e1 >= e0 && e1 >= e2) {
-			longestEdgeStart = p1;
-			longestEdgeEnd = p2;
-			otherPoint = p0;
-		}
-		else {
-			longestEdgeStart = p2;
-			longestEdgeEnd = p0;
-			otherPoint = p1;
-		}
-		float length = glm::length(longestEdgeEnd - longestEdgeStart);
-		glm::vec2 lengthVector = glm::normalize(longestEdgeEnd - longestEdgeStart);
-		float projectedDistance = glm::dot(otherPoint - longestEdgeStart, lengthVector);
-		glm::vec2 projectedPoint = longestEdgeStart + projectedDistance * lengthVector;
-		float width = glm::distance(otherPoint, projectedPoint);
-		glm::vec2 widthVector = glm::normalize(otherPoint - projectedPoint);
-		projectedCluster.m_billboardRectangle.m_points[0] = longestEdgeStart;
-		projectedCluster.m_billboardRectangle.m_points[3] = longestEdgeStart + length * lengthVector;
-		projectedCluster.m_billboardRectangle.m_points[1] = projectedCluster.m_billboardRectangle.m_points[0] + width * widthVector;
-		projectedCluster.m_billboardRectangle.m_points[2] = projectedCluster.m_billboardRectangle.m_points[3] + width * widthVector;
-	}
-	else
-	{
-		projectedCluster.m_billboardRectangle = RotatingCalipers::GetMinAreaRectangle(std::move(points));
-	}
-
-
-	//Rasterization
-	{
-		//Calculate texture size
-		size_t textureWidth, textureHeight;
-		const auto& boundingRectangle = projectedCluster.m_billboardRectangle;
-		float textureZoomFactor = 1024.f;
-		textureWidth = static_cast<size_t>(boundingRectangle.m_width * textureZoomFactor);
-		textureHeight = static_cast<size_t>(boundingRectangle.m_height * textureZoomFactor);
-
-		CPUFramebuffer<glm::vec4> albedoFrameBuffer(textureWidth, textureHeight);
-		CPUFramebuffer<glm::vec3> normalFrameBuffer(textureWidth, textureHeight);
-
-		for (const auto& projectedElement : projectedCluster.m_elements)
-		{
-			const auto material = projectedElement.m_content.m_material;
-			const auto albedoTexture = material->GetAlbedoTexture();
-			bool hasAlbedoTexture = albedoTexture.get();
-			const auto normalTexture = material->GetNormalTexture();
-			bool hasNormalTexture = normalTexture.get();
-
-			const auto& vertices = projectedElement.m_content.m_mesh->UnsafeGetVertices();
-			const auto& triangles = projectedElement.m_content.m_mesh->UnsafeGetTriangles();
-			Jobs::RunParallelFor(triangles.size(), [&](const unsigned triangleIndex)
-				{
-					const auto& v0 = vertices[triangles[triangleIndex].x];
-					const auto& v1 = vertices[triangles[triangleIndex].y];
-					const auto& v2 = vertices[triangles[triangleIndex].z];
-
-					glm::vec3 textureSpaceVertices[3];
-					textureSpaceVertices[0] = boundingRectangle.Transform(v0.m_position) * textureZoomFactor;
-					textureSpaceVertices[1] = boundingRectangle.Transform(v1.m_position) * textureZoomFactor;
-					textureSpaceVertices[2] = boundingRectangle.Transform(v2.m_position) * textureZoomFactor;
-
-					//Bounds bound;
-					auto minBound = glm::vec2(FLT_MAX, FLT_MAX);
-					auto maxBound = glm::vec2(-FLT_MAX, -FLT_MAX);
-					for (const auto& textureSpaceVertex : textureSpaceVertices)
-					{
-						minBound = glm::min(glm::vec2(textureSpaceVertex), minBound);
-						maxBound = glm::max(glm::vec2(textureSpaceVertex), maxBound);
-					}
-
-					glm::vec3 eeqs[3];
-					for (auto vi = 0; vi < 3; vi++)
-					{
-						eeqs[vi][0] = textureSpaceVertices[(vi + 1) % 3][1] - textureSpaceVertices[vi][1];
-						eeqs[vi][1] = textureSpaceVertices[vi][0] - textureSpaceVertices[(vi + 1) % 3][0];
-						eeqs[vi][2] = -textureSpaceVertices[vi][0] * eeqs[vi][0] + textureSpaceVertices[vi][1] * -eeqs[vi][1];
-						glm::vec3 v2P(textureSpaceVertices[(vi + 2) % 3][0], textureSpaceVertices[(vi + 2) % 3][1], 1.0f);
-						if (glm::dot(v2P, eeqs[vi]) < 0.0f)
-							eeqs[vi] = eeqs[vi] * -1.0f;
-					}
-
-					const auto left = static_cast<int>(minBound.x + 0.5f);
-					const auto right = static_cast<int>(maxBound.x - 0.5f);
-					const auto top = static_cast<int>(minBound.y + 0.5f);
-					const auto bottom = static_cast<int>(maxBound.y - 0.5f);
-					const glm::mat3 screenSpaceInterpolationMat = glm::inverse(glm::mat3{
-						glm::vec3(textureSpaceVertices[0].x, textureSpaceVertices[0].y, 1.f),
-						glm::vec3(textureSpaceVertices[1].x, textureSpaceVertices[1].y, 1.f),
-						glm::vec3(textureSpaceVertices[2].x, textureSpaceVertices[2].y, 1.f)
-						}
-					);
-					glm::vec3 c2 = {1, 0, 0};
-					glm::vec3 c1 = {0, 1, 0};
-					glm::vec3 c0 = {0, 0, 1};
-					const glm::vec3 z = screenSpaceInterpolationMat * glm::vec3(textureSpaceVertices[0][2], textureSpaceVertices[1][2], textureSpaceVertices[2][2]);
-					for (auto v = top; v <= bottom; v++)
-					{
-						for (auto u = left; u <= right; u++)
-						{
-							glm::vec3 pixel(u, v, 1.0f);
-							if (glm::dot(pixel, eeqs[0]) < 0.0f || glm::dot(pixel, eeqs[1]) < 0.0f
-								|| glm::dot(pixel, eeqs[2]) < 0.0f)
-								continue;
-							
-							//glm::vec3 texCoord = texCoordABC * pixel / (densityABC * pixel);
-							glm::vec3 normal = glm::vec3(0, 0, 1);//normalsABC * pixel / (densityABC * pixel);
-							glm::vec4 albedoColor = glm::vec4(material->m_materialProperties.m_albedoColor, 1.f);//glm::vec4(colorsABC * pixel / (densityABC * pixel), 1.f);
-							if(hasNormalTexture)
-							{
-								
-							}
-							if(hasAlbedoTexture)
-							{
-								
-							}
-							pixel[2] = glm::dot(pixel, z);
-							albedoFrameBuffer.SetColor(pixel[0], pixel[1], pixel[2], albedoColor);
-							normalFrameBuffer.SetColor(pixel[0], pixel[1], pixel[2], normal);
-						}
-					}
-				});
-		}
-
-		std::shared_ptr<Texture2D> albedoTexture = ProjectManager::CreateTemporaryAsset<Texture2D>();
-		albedoTexture->SetRgbaChannelData(albedoFrameBuffer.m_colorBuffer, glm::uvec2(albedoFrameBuffer.m_width, albedoFrameBuffer.m_height));
-		std::shared_ptr<Texture2D> normalTexture = ProjectManager::CreateTemporaryAsset<Texture2D>();
-		normalTexture->SetRgbChannelData(normalFrameBuffer.m_colorBuffer, glm::uvec2(normalFrameBuffer.m_width, normalFrameBuffer.m_height));
-		
-		projectedCluster.m_billboardMaterial = ProjectManager::CreateTemporaryAsset<Material>();
-		projectedCluster.m_billboardMaterial->SetAlbedoTexture(albedoTexture);
-		projectedCluster.m_billboardMaterial->SetNormalTexture(normalTexture);
-		projectedCluster.m_billboardMesh = ProjectManager::CreateTemporaryAsset<Mesh>();
-
-		std::vector<Vertex> planeVertices;
-		planeVertices.resize(4);
-		planeVertices[0].m_position = glm::vec3(projectedCluster.m_billboardRectangle.m_points[0].x, projectedCluster.m_billboardRectangle.m_points[0].y, 0.f);
-		planeVertices[0].m_texCoord = glm::vec2(0, 0);
-		planeVertices[1].m_position = glm::vec3(projectedCluster.m_billboardRectangle.m_points[1].x, projectedCluster.m_billboardRectangle.m_points[1].y, 0.f);
-		planeVertices[1].m_texCoord = glm::vec2(1, 0);
-		planeVertices[2].m_position = glm::vec3(projectedCluster.m_billboardRectangle.m_points[2].x, projectedCluster.m_billboardRectangle.m_points[2].y, 0.f);
-		planeVertices[2].m_texCoord = glm::vec2(1, 1);
-		planeVertices[3].m_position = glm::vec3(projectedCluster.m_billboardRectangle.m_points[3].x, projectedCluster.m_billboardRectangle.m_points[3].y, 0.f);
-		planeVertices[3].m_texCoord = glm::vec2(0, 1);
-		std::vector<glm::uvec3> planeTriangles;
-		planeTriangles.resize(2);
-		planeTriangles[0] = { 0, 1, 2 };
-		planeTriangles[1] = { 2, 3, 0 };
-		projectedCluster.m_billboardMesh->SetVertices({}, planeVertices, planeTriangles);
-
-	}
-	return projectedCluster;
-}
-
-BillboardCloud::RenderContent BillboardCloud::Join(const Cluster& cluster, const JoinSettings& settings)
-{
-	RenderContent retVal{};
-
-
-
-	return retVal;
-}
 
 inline double Cross(const glm::vec2& origin, const glm::vec2& a, const glm::vec2& b)
 {
@@ -384,7 +110,7 @@ glm::vec3 BillboardCloud::Rectangle::Transform(const glm::vec3& target) const
 	const float x = glm::dot(retVal, m_xAxis);
 	const float y = glm::dot(retVal, m_yAxis);
 	retVal = glm::vec2(x, y) + glm::vec2(m_width, m_height) * .5f;
-	return glm::vec3(retVal, target.z);
+	return {retVal, target.z};
 }
 
 std::vector<glm::vec2> BillboardCloud::RotatingCalipers::ConvexHull(std::vector<glm::vec2> points)
@@ -612,6 +338,403 @@ BillboardCloud::Rectangle BillboardCloud::RotatingCalipers::GetMinAreaRectangle(
 	retVal.m_points[3] = out0 + out2;
 
 	retVal.Update();
+
+	return retVal;
+}
+
+inline
+float EdgeFunction(const glm::vec3& a, const glm::vec3& b, const glm::vec3& c) {
+	return (c[0] - a[0]) * (b[1] - a[1]) - (c[1] - a[1]) * (b[0] - a[0]);
+}
+
+void Barycentric3D(const glm::vec3 & p, const glm::vec3 & a, const glm::vec3 & b, const glm::vec3 & c, float &c0, float &c1, float &c2)
+{
+    const auto & v0 = b - a, v1 = c - a, v2 = p - a;
+    const float d00 = glm::dot(v0, v0);
+    const float d01 = glm::dot(v0, v1);
+    const float d11 = glm::dot(v1, v1);
+    const float d20 = glm::dot(v2, v0);
+    const float d21 = glm::dot(v2, v1);
+    const float den = d00 * d11 - d01 * d01;
+    c1 = (d11 * d20 - d01 * d21) / den;
+    c2 = (d00 * d21 - d01 * d20) / den;
+    c0 = 1.0f - c1 - c2;
+}
+
+inline void Barycentric2D(const glm::vec2 &p, const glm::vec2 & a, const glm::vec2 & b, const glm::vec2 & c, float &c0, float &c1, float &c2)
+{
+    const auto v0 = b - a, v1 = c - a, v2 = p - a;
+    const float den = v0.x * v1.y - v1.x * v0.y;
+    c1 = (v2.x * v1.y - v1.x * v2.y) / den;
+    c2 = (v0.x * v2.y - v2.x * v0.y) / den;
+    c0 = 1.0f - c1 - c2;
+}
+
+BillboardCloud::ProjectedCluster BillboardCloud::Project(const Cluster& cluster, const ProjectSettings& settings)
+{
+	ProjectedCluster projectedCluster{};
+	glm::vec3 frontAxis = cluster.m_planeNormal;
+	glm::vec3 upAxis = cluster.m_planeYAxis;
+	glm::vec3 leftAxis = glm::normalize(glm::cross(frontAxis, upAxis));
+	upAxis = glm::normalize(glm::cross(leftAxis, frontAxis));
+	//glm::mat4 viewMatrix = glm::lookAt(cluster.m_clusterCenter, cluster.m_clusterCenter + cluster.m_planeNormal, cluster.m_planeYAxis);
+	glm::mat4 rotateMatrix = glm::transpose(glm::mat4(glm::vec4(leftAxis, 0.0f), glm::vec4(upAxis, 0.0f), glm::vec4(frontAxis, 0.0f), glm::vec4(0.0f, 0.0f, 0.0f, 1.0f)));
+	//glm::mat4 translateMatrix = glm::translate(-cluster.m_clusterCenter);
+	//const auto viewMatrix = translateMatrix * rotateMatrix;
+	for (const auto& instancedElement : cluster.m_instancedElements)
+	{
+		const auto& content = instancedElement.m_content;
+		const auto& modelSpaceTransform = instancedElement.m_modelSpaceTransform.m_value * rotateMatrix;
+		projectedCluster.m_elements.emplace_back();
+		auto& newElement = projectedCluster.m_elements.back();
+		const auto& triangles = content.m_triangles;
+		const auto& vertices = content.m_mesh->UnsafeGetVertices();
+		const auto& particleInfoList = content.m_particleInfoList->PeekParticleInfoList();
+		std::vector<Vertex> projectedVertices;
+		std::vector<glm::uvec3> projectedTriangles;
+
+		projectedTriangles.resize(triangles.size() * particleInfoList.size());
+		projectedVertices.resize(triangles.size() * 3 * particleInfoList.size());
+
+		Jobs::RunParallelFor(particleInfoList.size(), [&](const unsigned particleIndex)
+			{
+				const auto& particleInfo = particleInfoList[particleIndex];
+				const auto transform = modelSpaceTransform * particleInfo.m_instanceMatrix.m_value;
+				const auto vertexStartIndex = triangles.size() * 3 * particleIndex;
+				const auto triangleStartIndex = triangles.size() * particleIndex;
+				for (auto triangleIndex = 0; triangleIndex < triangles.size(); triangleIndex++) {
+					projectedTriangles[triangleIndex + triangleStartIndex] = glm::uvec3(
+						triangleIndex * 3 + vertexStartIndex,
+						triangleIndex * 3 + 1 + vertexStartIndex,
+						triangleIndex * 3 + 2 + vertexStartIndex);
+					//Vertices of projected triangle.
+					auto& pV0 = projectedVertices[triangleIndex * 3 + vertexStartIndex];
+					auto& pV1 = projectedVertices[triangleIndex * 3 + 1 + vertexStartIndex];
+					auto& pV2 = projectedVertices[triangleIndex * 3 + 2 + vertexStartIndex];
+
+					const auto& v0 = vertices[triangles[triangleIndex].x];
+					const auto& v1 = vertices[triangles[triangleIndex].y];
+					const auto& v2 = vertices[triangles[triangleIndex].z];
+
+					ProjectToPlane(v0, v1, v2, pV0, pV1, pV2, transform);
+				}
+			});
+
+		const auto projectedMesh = ProjectManager::CreateTemporaryAsset<Mesh>();
+		auto& projectedContent = newElement.m_content;
+		projectedContent.m_mesh = projectedMesh;
+		projectedContent.m_material = content.m_material;
+		projectedMesh->SetVertices({ true, true, true, true }, projectedVertices, projectedTriangles);
+	}
+	for (const auto& element : cluster.m_elements)
+	{
+		const auto& content = element.m_content;
+		const auto& transform = element.m_modelSpaceTransform.m_value * rotateMatrix;
+		projectedCluster.m_elements.emplace_back();
+		auto& newElement = projectedCluster.m_elements.back();
+		const auto& triangles = content.m_triangles;
+		const auto& vertices = content.m_mesh->UnsafeGetVertices();
+
+		std::vector<Vertex> projectedVertices;
+		std::vector<glm::uvec3> projectedTriangles;
+
+		projectedTriangles.resize(triangles.size());
+		projectedVertices.resize(triangles.size() * 3);
+
+		Jobs::RunParallelFor(triangles.size(), [&](const unsigned triangleIndex)
+			{
+				projectedTriangles[triangleIndex] = glm::uvec3(triangleIndex * 3, triangleIndex * 3 + 1, triangleIndex * 3 + 2);
+				//Vertices of projected triangle.
+				auto& pV0 = projectedVertices[triangleIndex * 3];
+				auto& pV1 = projectedVertices[triangleIndex * 3 + 1];
+				auto& pV2 = projectedVertices[triangleIndex * 3 + 2];
+
+				const auto& v0 = vertices[triangles[triangleIndex].x];
+				const auto& v1 = vertices[triangles[triangleIndex].y];
+				const auto& v2 = vertices[triangles[triangleIndex].z];
+
+				ProjectToPlane(v0, v1, v2, pV0, pV1, pV2, transform);
+			});
+
+		const auto projectedMesh = ProjectManager::CreateTemporaryAsset<Mesh>();
+		auto& projectedContent = newElement.m_content;
+		projectedContent.m_mesh = projectedMesh;
+		projectedContent.m_material = content.m_material;
+		projectedMesh->SetVertices({ true, true, true, true }, projectedVertices, projectedTriangles);
+	}
+	std::vector<glm::vec2> points;
+	for (const auto& projectedElement : projectedCluster.m_elements)
+	{
+		const auto startIndex = points.size();
+		const auto& vertices = projectedElement.m_content.m_mesh->UnsafeGetVertices();
+		const auto newPointsSize = vertices.size();
+		points.resize(startIndex + newPointsSize);
+		Jobs::RunParallelFor(newPointsSize, [&](unsigned pointIndex)
+			{
+				const auto& position = vertices.at(pointIndex).m_position;
+				points[startIndex + pointIndex] = glm::vec2(position.x, position.y);
+			});
+	}
+
+	//Calculate bounding triangle.
+	assert(points.size() > 2);
+	if (points.size() == 3)
+	{
+		const auto& p0 = points[0];
+		const auto& p1 = points[1];
+		const auto& p2 = points[2];
+
+		const auto e0 = glm::distance(p0, p1);
+		const auto e1 = glm::distance(p1, p2);
+		const auto e2 = glm::distance(p2, p0);
+		glm::vec2 longestEdgeStart, longestEdgeEnd, otherPoint;
+		if (e0 >= e1 && e0 >= e2) {
+			longestEdgeStart = p0;
+			longestEdgeEnd = p1;
+			otherPoint = p2;
+
+		}
+		else if (e1 >= e0 && e1 >= e2) {
+			longestEdgeStart = p1;
+			longestEdgeEnd = p2;
+			otherPoint = p0;
+		}
+		else {
+			longestEdgeStart = p2;
+			longestEdgeEnd = p0;
+			otherPoint = p1;
+		}
+		float length = glm::length(longestEdgeEnd - longestEdgeStart);
+		glm::vec2 lengthVector = glm::normalize(longestEdgeEnd - longestEdgeStart);
+		float projectedDistance = glm::dot(otherPoint - longestEdgeStart, lengthVector);
+		glm::vec2 projectedPoint = longestEdgeStart + projectedDistance * lengthVector;
+		float width = glm::distance(otherPoint, projectedPoint);
+		glm::vec2 widthVector = glm::normalize(otherPoint - projectedPoint);
+		projectedCluster.m_billboardRectangle.m_points[0] = longestEdgeStart;
+		projectedCluster.m_billboardRectangle.m_points[3] = longestEdgeStart + length * lengthVector;
+		projectedCluster.m_billboardRectangle.m_points[1] = projectedCluster.m_billboardRectangle.m_points[0] + width * widthVector;
+		projectedCluster.m_billboardRectangle.m_points[2] = projectedCluster.m_billboardRectangle.m_points[3] + width * widthVector;
+	}
+	else
+	{
+		projectedCluster.m_billboardRectangle = RotatingCalipers::GetMinAreaRectangle(std::move(points));
+	}
+
+
+	//Rasterization
+	{
+		//Calculate texture size
+		size_t textureWidth, textureHeight;
+		const auto& boundingRectangle = projectedCluster.m_billboardRectangle;
+		float textureZoomFactor = 1024.f;
+		textureWidth = static_cast<size_t>(boundingRectangle.m_width * textureZoomFactor);
+		textureHeight = static_cast<size_t>(boundingRectangle.m_height * textureZoomFactor);
+
+		CPUFramebuffer<glm::vec4> albedoFrameBuffer(textureWidth, textureHeight);
+		CPUFramebuffer<glm::vec3> normalFrameBuffer(textureWidth, textureHeight);
+		CPUFramebuffer<float> roughnessFrameBuffer(textureWidth, textureHeight);
+		CPUFramebuffer<float> metallicFrameBuffer(textureWidth, textureHeight);
+		CPUFramebuffer<float> aoFrameBuffer(textureWidth, textureHeight);
+
+		for (const auto& projectedElement : projectedCluster.m_elements)
+		{
+			const auto material = projectedElement.m_content.m_material;
+			const auto albedoTexture = material->GetAlbedoTexture();
+			std::vector<glm::vec4> albedoTextureData {};
+			glm::vec2 albedoTextureResolution;
+			if(albedoTexture)
+			{
+				albedoTexture->GetRgbaChannelData(albedoTextureData);
+				albedoTextureResolution = albedoTexture->GetResolution();
+			}
+			const auto normalTexture = material->GetNormalTexture();
+			std::vector<glm::vec3> normalTextureData {};
+			glm::vec2 normalTextureResolution;
+			if(normalTexture)
+			{
+				normalTexture->GetRgbChannelData(normalTextureData);
+				normalTextureResolution = normalTexture->GetResolution();
+			}
+			const auto roughnessTexture = material->GetRoughnessTexture();
+			std::vector<float> roughnessTextureData {};
+			glm::vec2 roughnessTextureResolution {};
+			if(roughnessTexture)
+			{
+				roughnessTexture->GetRedChannelData(roughnessTextureData);
+				roughnessTextureResolution = roughnessTexture->GetResolution();
+			}
+			const auto metallicTexture = material->GetMetallicTexture();
+			std::vector<float> metallicTextureData {};
+			glm::vec2 metallicTextureResolution;
+			if(metallicTexture)
+			{
+				metallicTexture->GetRedChannelData(metallicTextureData);
+				metallicTextureResolution = metallicTexture->GetResolution();
+			}
+			const auto aoTexture = material->GetAoTexture();
+			std::vector<float> aoTextureData {};
+			glm::vec2 aoTextureResolution {};
+			if(aoTexture)
+			{
+				aoTexture->GetRedChannelData(aoTextureData);
+				aoTextureResolution = aoTexture->GetResolution();
+			}
+			//Adopted from https://www.scratchapixel.com/lessons/3d-basic-rendering/rasterization-practical-implementation/perspective-correct-interpolation-vertex-attributes.html
+			const auto& vertices = projectedElement.m_content.m_mesh->UnsafeGetVertices();
+			const auto& triangles = projectedElement.m_content.m_mesh->UnsafeGetTriangles();
+			Jobs::RunParallelFor(triangles.size(), [&](const unsigned triangleIndex)
+				{
+					const auto& v0 = vertices[triangles[triangleIndex].x];
+					const auto& v1 = vertices[triangles[triangleIndex].y];
+					const auto& v2 = vertices[triangles[triangleIndex].z];
+
+					glm::vec3 textureSpaceVertices[3];
+					textureSpaceVertices[0] = boundingRectangle.Transform(v0.m_position) * textureZoomFactor;
+					textureSpaceVertices[1] = boundingRectangle.Transform(v1.m_position) * textureZoomFactor;
+					textureSpaceVertices[2] = boundingRectangle.Transform(v2.m_position) * textureZoomFactor;
+
+					//Bound check;
+					auto minBound = glm::vec2(FLT_MAX, FLT_MAX);
+					auto maxBound = glm::vec2(-FLT_MAX, -FLT_MAX);
+					for (const auto& textureSpaceVertex : textureSpaceVertices)
+					{
+						minBound = glm::min(glm::vec2(textureSpaceVertex), minBound);
+						maxBound = glm::max(glm::vec2(textureSpaceVertex), maxBound);
+					}
+
+					const auto left = static_cast<int>(minBound.x + 0.5f);
+					const auto right = static_cast<int>(maxBound.x - 0.5f);
+					const auto top = static_cast<int>(minBound.y + 0.5f);
+					const auto bottom = static_cast<int>(maxBound.y - 0.5f);
+					for (auto u = left; u <= right; u++)
+					{
+						for (auto v = top; v <= bottom; v++)
+						{
+							glm::vec3 p = glm::vec3(u + .5f, v + .5f, 0.f);
+							float bc0, bc1, bc2;
+							Barycentric2D(p, textureSpaceVertices[0], textureSpaceVertices[1], textureSpaceVertices[2], bc0, bc1, bc2);
+							if(bc0 < 0.f || bc1 < 0.f || bc2 < 0.f) continue;
+							const float z = 1.f / (bc0 * textureSpaceVertices[0].z + bc1 * textureSpaceVertices[1].z + bc2 * textureSpaceVertices[2].z);
+							//Early depth check.
+							if(!albedoFrameBuffer.CompareZ(u, v, z)) continue;
+
+							glm::vec2 texCoords;
+							texCoords.x = bc0 * v0.m_texCoord.x + bc1 * v1.m_texCoord.x + bc2 * v2.m_texCoord.x;
+							texCoords.y = bc0 * v0.m_texCoord.y + bc1 * v1.m_texCoord.y + bc2 * v2.m_texCoord.y;
+							auto normal = glm::vec3(0, 0, 1);
+							auto albedo = glm::vec4(material->m_materialProperties.m_albedoColor, 1.f);
+							float roughness = material->m_materialProperties.m_roughness;
+							float metallic = material->m_materialProperties.m_metallic;
+							float ao = 1.f;
+							if (!albedoTextureData.empty())
+							{
+								int textureX = glm::round(albedoTextureResolution.x * texCoords.x);
+								int textureY = glm::round(albedoTextureResolution.y * texCoords.y);
+								if(textureX >= 0 && textureX < albedoTextureResolution.x
+									&& textureY >= 0 && textureY < albedoTextureResolution.y)
+								{
+									const auto index = textureY * static_cast<int>(albedoTextureResolution.x) + textureX;
+									albedo = albedoTextureData[index];
+								}
+							}
+							if (!normalTextureData.empty())
+							{
+								int textureX = glm::round(normalTextureResolution.x * texCoords.x);
+								int textureY = glm::round(normalTextureResolution.y * texCoords.y);
+								if(textureX >= 0 && textureX < normalTextureResolution.x
+									&& textureY >= 0 && textureY < normalTextureResolution.y)
+								{
+									const auto index = textureY * static_cast<int>(normalTextureResolution.x) + textureX;
+									normal = normalTextureData[index];
+								}
+							}
+							if (!roughnessTextureData.empty())
+							{
+								int textureX = glm::round(roughnessTextureResolution.x * texCoords.x);
+								int textureY = glm::round(roughnessTextureResolution.y * texCoords.y);
+								if(textureX >= 0 && textureX < roughnessTextureResolution.x
+									&& textureY >= 0 && textureY < roughnessTextureResolution.y)
+								{
+									const auto index = textureY * static_cast<int>(roughnessTextureResolution.x) + textureX;
+									roughness = roughnessTextureData[index];
+								}
+							}
+							if (!metallicTextureData.empty())
+							{
+								int textureX = glm::round(metallicTextureResolution.x * texCoords.x);
+								int textureY = glm::round(metallicTextureResolution.y * texCoords.y);
+								if(textureX >= 0 && textureX < metallicTextureResolution.x
+									&& textureY >= 0 && textureY < metallicTextureResolution.y)
+								{
+									const auto index = textureY * static_cast<int>(metallicTextureResolution.x) + textureX;
+									metallic = metallicTextureData[index];
+								}
+							}
+							if (!aoTextureData.empty())
+							{
+								int textureX = glm::round(aoTextureResolution.x * texCoords.x);
+								int textureY = glm::round(aoTextureResolution.y * texCoords.y);
+								if(textureX >= 0 && textureX < aoTextureResolution.x
+									&& textureY >= 0 && textureY < aoTextureResolution.y)
+								{
+									const auto index = textureY * static_cast<int>(aoTextureResolution.x) + textureX;
+									ao = aoTextureData[index];
+								}
+							}
+							albedoFrameBuffer.SetPixel(u, v, z, albedo);
+							normalFrameBuffer.SetPixel(u, v, z, normal);
+							roughnessFrameBuffer.SetPixel(u, v, z, roughness);
+							metallicFrameBuffer.SetPixel(u, v, z, metallic);
+							aoFrameBuffer.SetPixel(u, v, z, ao);
+						}
+					}
+				});
+		}
+
+		std::shared_ptr<Texture2D> albedoTexture = ProjectManager::CreateTemporaryAsset<Texture2D>();
+		albedoTexture->SetRgbaChannelData(albedoFrameBuffer.m_colorBuffer, glm::uvec2(albedoFrameBuffer.m_width, albedoFrameBuffer.m_height));
+		std::shared_ptr<Texture2D> normalTexture = ProjectManager::CreateTemporaryAsset<Texture2D>();
+		normalTexture->SetRgbChannelData(normalFrameBuffer.m_colorBuffer, glm::uvec2(normalFrameBuffer.m_width, normalFrameBuffer.m_height));
+		std::shared_ptr<Texture2D> roughnessTexture = ProjectManager::CreateTemporaryAsset<Texture2D>();
+		roughnessTexture->SetRedChannelData(roughnessFrameBuffer.m_colorBuffer, glm::uvec2(roughnessFrameBuffer.m_width, roughnessFrameBuffer.m_height));
+		std::shared_ptr<Texture2D> metallicTexture = ProjectManager::CreateTemporaryAsset<Texture2D>();
+		metallicTexture->SetRedChannelData(metallicFrameBuffer.m_colorBuffer, glm::uvec2(metallicFrameBuffer.m_width, metallicFrameBuffer.m_height));
+		std::shared_ptr<Texture2D> aoTexture = ProjectManager::CreateTemporaryAsset<Texture2D>();
+		aoTexture->SetRedChannelData(aoFrameBuffer.m_colorBuffer, glm::uvec2(aoFrameBuffer.m_width, aoFrameBuffer.m_height));
+		projectedCluster.m_billboardMaterial = ProjectManager::CreateTemporaryAsset<Material>();
+		projectedCluster.m_billboardMaterial->SetAlbedoTexture(albedoTexture);
+		projectedCluster.m_billboardMaterial->SetNormalTexture(normalTexture);
+		projectedCluster.m_billboardMaterial->SetRoughnessTexture(roughnessTexture);
+		projectedCluster.m_billboardMaterial->SetMetallicTexture(metallicTexture);
+		projectedCluster.m_billboardMaterial->SetAOTexture(aoTexture);
+
+		projectedCluster.m_billboardMesh = ProjectManager::CreateTemporaryAsset<Mesh>();
+
+		std::vector<Vertex> planeVertices;
+		planeVertices.resize(4);
+		planeVertices[0].m_position = glm::vec3(projectedCluster.m_billboardRectangle.m_points[0].x, projectedCluster.m_billboardRectangle.m_points[0].y, 0.f);
+		planeVertices[0].m_texCoord = glm::vec2(0, 0);
+		planeVertices[1].m_position = glm::vec3(projectedCluster.m_billboardRectangle.m_points[1].x, projectedCluster.m_billboardRectangle.m_points[1].y, 0.f);
+		planeVertices[1].m_texCoord = glm::vec2(1, 0);
+		planeVertices[2].m_position = glm::vec3(projectedCluster.m_billboardRectangle.m_points[2].x, projectedCluster.m_billboardRectangle.m_points[2].y, 0.f);
+		planeVertices[2].m_texCoord = glm::vec2(1, 1);
+		planeVertices[3].m_position = glm::vec3(projectedCluster.m_billboardRectangle.m_points[3].x, projectedCluster.m_billboardRectangle.m_points[3].y, 0.f);
+		planeVertices[3].m_texCoord = glm::vec2(0, 1);
+		std::vector<glm::uvec3> planeTriangles;
+		planeTriangles.resize(2);
+		planeTriangles[0] = { 0, 1, 2 };
+		planeTriangles[1] = { 2, 3, 0 };
+		projectedCluster.m_billboardMesh->SetVertices({}, planeVertices, planeTriangles);
+
+	}
+	return projectedCluster;
+}
+
+BillboardCloud::RenderContent BillboardCloud::Join(const Cluster& cluster, const JoinSettings& settings)
+{
+	RenderContent retVal{};
+
+
 
 	return retVal;
 }
