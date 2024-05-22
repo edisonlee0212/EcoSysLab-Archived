@@ -8,7 +8,7 @@ m_environment:
     m_assetTypeName: ""
 m_mainCamera:
   m_entityHandle: 0
-  m_privateComponentTypeName: Camera
+  m_privateComponentTypeName: ""
 m_entityMetadataList:
   - m_name: PlayGround
     m_handle: 3689751878173549223
@@ -41,7 +41,7 @@ m_entityMetadataList:
       - m_typeName: TreeStructor
         m_enabled: true
         m_treeDescriptor:
-          m_assetHandle: 11449186231039243581
+          m_assetHandle: 0
           m_assetTypeName: TreeDescriptor
   - m_name: Markers
     m_handle: 8350535051805926162
@@ -137,8 +137,16 @@ m_entityMetadataList:
           m_assetHandle: 1282599904186998230
           m_assetTypeName: Json
         m_joeScan:
-          m_assetHandle: 9219360098573808445
+          m_assetHandle: 0
           m_assetTypeName: JoeScan
+  - m_name: SpeedTree
+    m_handle: 9933489831517059817
+    m_enabled: true
+    m_static: false
+    Root.Handle: 9933489831517059817
+    m_privateComponentElements:
+      - m_typeName: SpeedTreeMeshConverter
+        m_enabled: true
 m_systems:
   []
 LocalAssets:
@@ -268,7 +276,7 @@ LocalAssets:
 m_dataComponentStorages:
   - m_entitySize: 130
     m_chunkCapacity: 126
-    m_entityAliveCount: 10
+    m_entityAliveCount: 11
     m_dataComponentTypes:
       - m_name: Transform
         m_size: 64
@@ -326,6 +334,11 @@ m_dataComponentStorages:
           - Data: !!binary "AACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPw=="
           - Data: !!binary "AAA="
       - m_handle: 16935083883529019863
+        DataComponents:
+          - Data: !!binary "AACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPw=="
+          - Data: !!binary "AACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPw=="
+          - Data: !!binary "AAA="
+      - m_handle: 9933489831517059817
         DataComponents:
           - Data: !!binary "AACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPw=="
           - Data: !!binary "AACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPw=="

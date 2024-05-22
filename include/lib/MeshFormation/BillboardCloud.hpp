@@ -96,7 +96,7 @@ namespace EvoEngine {
 		struct ProjectSettings
 		{
 			glm::uvec2 m_resolution;
-
+			float m_textureSizeFactor = 64.f;
 		};
 
 		struct JoinSettings
