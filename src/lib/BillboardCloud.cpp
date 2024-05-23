@@ -612,19 +612,11 @@ BillboardCloud::ProjectedCluster BillboardCloud::Project(const Cluster& cluster,
 							float bc0, bc1, bc2;
 							Barycentric2D(p, textureSpaceVertices[0], textureSpaceVertices[1], textureSpaceVertices[2], bc0, bc1, bc2);
 							if (bc0 < 0.f || bc1 < 0.f || bc2 < 0.f) continue;
-							const float z = 1.f / (bc0 * textureSpaceVertices[0].z + bc1 * textureSpaceVertices[1].z + bc2 * textureSpaceVertices[2].z);
+							float z = bc0 * textureSpaceVertices[0].z + bc1 * textureSpaceVertices[1].z + bc2 * textureSpaceVertices[2].z;
 							//Early depth check.
 							if (!albedoFrameBuffer.CompareZ(u, v, z)) continue;
 
 							const auto texCoords = bc0 * v0.m_texCoord + bc1 * v1.m_texCoord + bc2 * v2.m_texCoord;
-							auto normal = glm::vec3(0, 0, 1); //glm::normalize(bc0 * v0.m_normal + bc1 * v1.m_normal + bc2 * v2.m_normal);
-							/*
-							constexpr auto textureNormal = glm::vec3(0, 0, 1);
-							constexpr auto textureTangent = glm::vec3(1, 0, 0);
-							const auto textureBiTangent = glm::cross(textureNormal, textureTangent);
-							const auto textureTBN = glm::mat3(textureTangent, textureBiTangent, textureNormal);
-							normal = glm::normalize(glm::inverse(textureTBN) * normal);
-							*/
 							auto albedo = glm::vec4(material->m_materialProperties.m_albedoColor, 1.f);
 							float roughness = material->m_materialProperties.m_roughness;
 							float metallic = material->m_materialProperties.m_metallic;
@@ -641,9 +633,8 @@ BillboardCloud::ProjectedCluster BillboardCloud::Project(const Cluster& cluster,
 							}
 							//Alpha discard
 							if(albedo.a < 0.1f) continue;
-							auto tangent = bc0 * v0.m_tangent + bc1 * v1.m_tangent + bc2 * v2.m_tangent;
-							const auto biTangent = glm::cross(normal, tangent);
-							const auto tbn = glm::mat3(tangent, biTangent, normal);
+							auto normal = glm::normalize(bc0 * v0.m_normal + bc1 * v1.m_normal + bc2 * v2.m_normal);
+							
 							if (!normalTextureData.empty())
 							{
 								int textureX = static_cast<int>(normalTextureResolution.x * texCoords.x) % normalTextureResolution.x;
@@ -653,8 +644,18 @@ BillboardCloud::ProjectedCluster BillboardCloud::Project(const Cluster& cluster,
 
 								const auto index = textureY * normalTextureResolution.x + textureX;
 								auto sampledNormal = normalTextureData[index] * 2.0f - glm::vec3(1.0f);
-								//normal = glm::normalize(tbn * sampledNormal);
+
+								auto tangent = glm::normalize(bc0 * v0.m_tangent + bc1 * v1.m_tangent + bc2 * v2.m_tangent);
+								const auto biTangent = glm::cross(normal, tangent);
+								const auto tbn = glm::mat3(tangent, biTangent, normal);
+
+								normal = glm::normalize(tbn * sampledNormal);
 							}
+
+							if(glm::dot(normal, glm::vec3(0, 0, 1)) < 0) normal = -normal;
+							normal = normal * 0.5f + glm::vec3(0.5f);
+							normalFrameBuffer.SetPixel(u, v, z, normal);
+
 							if (!roughnessTextureData.empty())
 							{
 								int textureX = static_cast<int>(roughnessTextureResolution.x * texCoords.x) % roughnessTextureResolution.x;
@@ -692,8 +693,7 @@ BillboardCloud::ProjectedCluster BillboardCloud::Project(const Cluster& cluster,
 							}
 							albedoFrameBuffer.SetPixel(u, v, z, albedo);
 
-							normal = normal * 0.5f + glm::vec3(0.5f);
-							normalFrameBuffer.SetPixel(u, v, z, normal);
+							
 							roughnessFrameBuffer.SetPixel(u, v, z, roughness);
 							metallicFrameBuffer.SetPixel(u, v, z, metallic);
 							aoFrameBuffer.SetPixel(u, v, z, ao);
