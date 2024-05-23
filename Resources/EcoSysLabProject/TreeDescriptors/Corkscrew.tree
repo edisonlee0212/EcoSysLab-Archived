@@ -5,8 +5,8 @@ m_foliageDescriptor:
   m_assetHandle: 16335710799551062163
   m_assetTypeName: FoliageDescriptor
 m_barkDescriptor:
-  m_assetHandle: 0
-  m_assetTypeName: ""
+  m_assetHandle: 6319091429255928016
+  m_assetTypeName: BarkDescriptor
 m_fruitDescriptor:
   m_assetHandle: 0
   m_assetTypeName: ""

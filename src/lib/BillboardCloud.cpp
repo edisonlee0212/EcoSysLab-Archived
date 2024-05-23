@@ -540,7 +540,7 @@ BillboardCloud::ProjectedCluster BillboardCloud::Project(const Cluster& cluster,
 			const auto albedoTexture = material->GetAlbedoTexture();
 			std::vector<glm::vec4> albedoTextureData{};
 			glm::ivec2 albedoTextureResolution;
-			if (albedoTexture)
+			if (settings.m_transferAlbedoMap && albedoTexture)
 			{
 				albedoTexture->GetRgbaChannelData(albedoTextureData);
 				albedoTextureResolution = albedoTexture->GetResolution();
@@ -548,7 +548,7 @@ BillboardCloud::ProjectedCluster BillboardCloud::Project(const Cluster& cluster,
 			const auto normalTexture = material->GetNormalTexture();
 			std::vector<glm::vec3> normalTextureData{};
 			glm::ivec2 normalTextureResolution;
-			if (normalTexture)
+			if (settings.m_transferNormalMap && normalTexture)
 			{
 				normalTexture->GetRgbChannelData(normalTextureData);
 				normalTextureResolution = normalTexture->GetResolution();
@@ -556,7 +556,7 @@ BillboardCloud::ProjectedCluster BillboardCloud::Project(const Cluster& cluster,
 			const auto roughnessTexture = material->GetRoughnessTexture();
 			std::vector<float> roughnessTextureData{};
 			glm::ivec2 roughnessTextureResolution{};
-			if (roughnessTexture)
+			if (settings.m_transferRoughnessMap && roughnessTexture)
 			{
 				roughnessTexture->GetRedChannelData(roughnessTextureData);
 				roughnessTextureResolution = roughnessTexture->GetResolution();
@@ -564,7 +564,7 @@ BillboardCloud::ProjectedCluster BillboardCloud::Project(const Cluster& cluster,
 			const auto metallicTexture = material->GetMetallicTexture();
 			std::vector<float> metallicTextureData{};
 			glm::ivec2 metallicTextureResolution;
-			if (metallicTexture)
+			if (settings.m_transferMetallicMap && metallicTexture)
 			{
 				metallicTexture->GetRedChannelData(metallicTextureData);
 				metallicTextureResolution = metallicTexture->GetResolution();
@@ -572,7 +572,7 @@ BillboardCloud::ProjectedCluster BillboardCloud::Project(const Cluster& cluster,
 			const auto aoTexture = material->GetAoTexture();
 			std::vector<float> aoTextureData{};
 			glm::ivec2 aoTextureResolution{};
-			if (aoTexture)
+			if (settings.m_transferAoMap && aoTexture)
 			{
 				aoTexture->GetRedChannelData(aoTextureData);
 				aoTextureResolution = aoTexture->GetResolution();
@@ -634,6 +634,7 @@ BillboardCloud::ProjectedCluster BillboardCloud::Project(const Cluster& cluster,
 							//Alpha discard
 							if(albedo.a < 0.1f) continue;
 							auto normal = glm::normalize(bc0 * v0.m_normal + bc1 * v1.m_normal + bc2 * v2.m_normal);
+							
 							if (!normalTextureData.empty())
 							{
 								auto tangent = glm::normalize(bc0 * v0.m_tangent + bc1 * v1.m_tangent + bc2 * v2.m_tangent);
@@ -646,9 +647,8 @@ BillboardCloud::ProjectedCluster BillboardCloud::Project(const Cluster& cluster,
 								if (textureY < 0) textureY += normalTextureResolution.y;
 
 								const auto index = textureY * normalTextureResolution.x + textureX;
-								
-								//normal = normalTextureData[index] * 2.0f - glm::vec3(1.0f);
-								//normal = glm::normalize(tbn * normal);
+								const auto sampled = glm::normalize(normalTextureData[index]) * 2.0f - glm::vec3(1.0f);
+								normal = glm::normalize(tbn * sampled);
 							}
 							if(glm::dot(normal, glm::vec3(0, 0, 1)) < 0) normal = -normal;
 

@@ -1,7 +1,7 @@
 m_baseInternodeCount: 1
 m_straightTrunk: 0
 m_baseNodeApicalAngleMeanVariance: [0, 0]
-m_growthRate: 0.200000003
+m_growthRate: 0.25
 m_rollAngle:
   m_assetHandle: 0
   m_assetTypeName: ""
@@ -42,7 +42,7 @@ m_gravityBendingStrength: 0
 m_gravityBendingThicknessFactor: 1
 m_gravityBendingMax: 1
 m_internodeLength: 0.0299999993
-m_internodeLengthThicknessFactor: 0.100000001
+m_internodeLengthThicknessFactor: 0.150000006
 m_endNodeThickness: 0.00200000009
 m_thicknessAccumulationFactor: 0.400000006
 m_thicknessAgeFactor: 0

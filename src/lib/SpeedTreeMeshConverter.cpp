@@ -77,6 +77,12 @@ bool SpeedTreeMeshConverter::OnInspect(const std::shared_ptr<EditorLayer>& edito
 	if (m_originalModel.Get<Prefab>())
 	{
 		static BillboardCloud::ProjectSettings settings;
+		ImGui::Checkbox("Albedo map", &settings.m_transferAlbedoMap);
+		ImGui::Checkbox("Normal map", &settings.m_transferNormalMap);
+		ImGui::Checkbox("Roughness map", &settings.m_transferRoughnessMap);
+		ImGui::Checkbox("Metallic map", &settings.m_transferMetallicMap);
+		ImGui::Checkbox("AO map", &settings.m_transferAoMap);
+
 		ImGui::DragFloat("Size factor", &settings.m_textureSizeFactor, 1.f, 1, 1024);
 		if (ImGui::Button("Convert")) {
 			Convert(settings);

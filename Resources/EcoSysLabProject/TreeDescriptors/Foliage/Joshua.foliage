@@ -1,10 +1,10 @@
 m_leafSize: [0.0199999996, 0.200000003]
-m_leafCountPerInternode: 3
+m_leafCountPerInternode: 7
 m_positionVariance: 0
 m_rotationVariance: 10
 m_branchingAngle: 30
 m_maxNodeThickness: 1
-m_minRootDistance: 0
+m_minRootDistance: 3
 m_maxEndDistance: 0.00999999978
 m_horizontalTropism: 0
 m_gravitropism: 0

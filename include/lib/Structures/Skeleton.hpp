@@ -921,7 +921,7 @@ namespace EcoSysLab {
 	void Skeleton<SkeletonData, FlowData, NodeData>::CalculateRegulatedGlobalRotation()
 	{
 		m_min = glm::vec3(FLT_MAX);
-		m_max = glm::vec3(FLT_MIN);
+		m_max = glm::vec3(-FLT_MAX);
 		for (const auto& nodeHandle : m_sortedNodeList) {
 			auto& node = m_nodes[nodeHandle];
 			auto& nodeInfo = node.m_info;

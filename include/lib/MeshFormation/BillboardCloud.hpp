@@ -95,7 +95,12 @@ namespace EvoEngine {
 
 		struct ProjectSettings
 		{
-			glm::uvec2 m_resolution;
+			bool m_transferAlbedoMap = true;
+			bool m_transferNormalMap = true;
+			bool m_transferRoughnessMap = true;
+			bool m_transferMetallicMap = true;
+			bool m_transferAoMap = true;
+
 			float m_textureSizeFactor = 64.f;
 		};
 

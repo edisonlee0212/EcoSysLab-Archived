@@ -397,9 +397,9 @@ void TreeModel::ShootGrowthPostProcess(const ShootGrowthController& shootGrowthC
 {
 	{
 		m_shootSkeleton.m_min = glm::vec3(FLT_MAX);
-		m_shootSkeleton.m_max = glm::vec3(FLT_MIN);
+		m_shootSkeleton.m_max = glm::vec3(-FLT_MAX);
 		m_shootSkeleton.m_data.m_desiredMin = glm::vec3(FLT_MAX);
-		m_shootSkeleton.m_data.m_desiredMax = glm::vec3(FLT_MIN);
+		m_shootSkeleton.m_data.m_desiredMax = glm::vec3(-FLT_MAX);
 
 		m_shootSkeleton.CalculateDistance();
 		CalculateThickness(shootGrowthController);
