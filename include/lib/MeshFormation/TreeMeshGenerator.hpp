@@ -43,6 +43,7 @@ namespace EcoSysLab {
 		unsigned m_vertexColorMode = static_cast<unsigned>(VertexColorMode::InternodeColor);
 
 		bool m_enableFoliage = true;
+		bool m_foliageInstancing = true;
 		bool m_enableFruit = false;
 		bool m_enableBranch = true;
 		bool m_enableTwig = false;

@@ -14,21 +14,8 @@ namespace EvoEngine {
 			std::vector<glm::uvec3> m_triangles;
 		};
 
-		struct InstancedRenderContent {
-			std::shared_ptr<ParticleInfoList> m_particleInfoList;
-			std::shared_ptr<Mesh> m_mesh;
-			std::shared_ptr<Material> m_material;
-
-			std::vector<glm::uvec3> m_triangles;
-		};
-
 		struct Element {
 			std::shared_ptr<RenderContent> m_content{};
-			Transform m_modelSpaceTransform{};
-		};
-
-		struct InstancedElement {
-			std::shared_ptr<InstancedRenderContent> m_content{};
 			Transform m_modelSpaceTransform{};
 		};
 
@@ -54,7 +41,6 @@ namespace EvoEngine {
 			glm::vec3 m_planeNormal = glm::vec3(0, 0, 1);
 			glm::vec3 m_planeYAxis = glm::vec3(0, 1, 0);
 			std::vector<Element> m_elements;
-			std::vector<InstancedElement> m_instancedElements;
 		};
 
 		struct Billboard
@@ -105,7 +91,7 @@ namespace EvoEngine {
 
 		[[nodiscard]] static std::vector<Cluster> Clusterize(const Cluster& targetCluster, const ClusterizeSettings& clusterizeSettings);
 
-		void Clusterize(const std::shared_ptr<Prefab> &prefab, const ClusterizeSettings& clusterizeSettings, bool combine);
+		void BuildClusters(const std::shared_ptr<Prefab> &prefab, const ClusterizeSettings& clusterizeSettings, bool combine);
 		void ProjectClusters(const ProjectSettings& projectSettings);
 
 		[[nodiscard]] Entity BuildEntity(const std::shared_ptr<Scene>& scene);

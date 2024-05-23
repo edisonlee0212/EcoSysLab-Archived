@@ -358,7 +358,7 @@ void Tree::GenerateSkeletalGraph(
 }
 
 bool Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
-	static BillboardCloud::ProjectSettings projectSettings {};
+	static BillboardCloud::ProjectSettings projectSettings{};
 	ImGui::DragFloat("Project resolution factor", &projectSettings.m_resolutionFactor);
 	if (ImGui::Button("Project"))
 	{
@@ -2174,8 +2174,10 @@ void Tree::Deserialize(const YAML::Node& in)
 
 void Tree::Project(std::vector<BillboardCloud::Cluster> clusters, const BillboardCloud::ProjectSettings& projectSettings)
 {
-	GenerateGeometryEntities(m_meshGeneratorSettings);
-	
+	auto meshGeneratorSettings = m_meshGeneratorSettings;
+	meshGeneratorSettings.m_foliageInstancing = false;
+	GenerateGeometryEntities(meshGeneratorSettings);
+
 	const auto scene = GetScene();
 	const auto owner = GetOwner();
 	TransformGraph::CalculateTransformGraphForDescendants(scene, owner);
@@ -2195,23 +2197,25 @@ void Tree::Project(std::vector<BillboardCloud::Cluster> clusters, const Billboar
 		auto& cluster = clusters[clusterIndex];
 
 		for (const auto& child : children) {
-			if(!scene->IsEntityValid(child)) continue;
+			if (!scene->IsEntityValid(child)) continue;
 			auto name = scene->GetEntityName(child);
 			const auto modelSpaceTransform = glm::inverse(ownerGlobalTransform.m_value) * scene->GetDataComponent<GlobalTransform>(child).m_value;
 			if (name == "Branch Mesh") {
-				const auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(child).lock();
-				const auto mesh = meshRenderer->m_mesh.Get<Mesh>();
-				const auto material = meshRenderer->m_material.Get<Material>();
-				if (mesh && material) {
-					cluster.m_elements.emplace_back();
-					auto& element = cluster.m_elements.back();
-					element.m_modelSpaceTransform.m_value = modelSpaceTransform;
-					element.m_content = std::make_shared<BillboardCloud::RenderContent>();
-					element.m_content->m_mesh = mesh;
-					element.m_content->m_material = material;
-					element.m_content->m_triangles = mesh->UnsafeGetTriangles();
+				if (scene->HasPrivateComponent<MeshRenderer>(child)) {
+					const auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(child).lock();
+					const auto mesh = meshRenderer->m_mesh.Get<Mesh>();
+					const auto material = meshRenderer->m_material.Get<Material>();
+					if (mesh && material) {
+						cluster.m_elements.emplace_back();
+						auto& element = cluster.m_elements.back();
+						element.m_modelSpaceTransform.m_value = modelSpaceTransform;
+						element.m_content = std::make_shared<BillboardCloud::RenderContent>();
+						element.m_content->m_mesh = mesh;
+						element.m_content->m_material = material;
+						element.m_content->m_triangles = mesh->UnsafeGetTriangles();
+					}
+					scene->SetEnable(child, false);
 				}
-				scene->SetEnable(child, false);
 			}
 			else if (name == "Root Mesh") {
 
@@ -2229,23 +2233,6 @@ void Tree::Project(std::vector<BillboardCloud::Cluster> clusters, const Billboar
 						element.m_content->m_mesh = mesh;
 						element.m_content->m_material = material;
 						element.m_content->m_triangles = mesh->UnsafeGetTriangles();
-					}
-				}
-				else if (scene->HasPrivateComponent<Particles>(child))
-				{
-					const auto particles = scene->GetOrSetPrivateComponent<Particles>(child).lock();
-					const auto particleInfoList = particles->m_particleInfoList.Get<ParticleInfoList>();
-					const auto mesh = particles->m_mesh.Get<Mesh>();
-					const auto material = particles->m_material.Get<Material>();
-					if (particleInfoList && mesh && material) {
-						cluster.m_instancedElements.emplace_back();
-						auto& instancedElement = cluster.m_instancedElements.back();
-						instancedElement.m_modelSpaceTransform.m_value = modelSpaceTransform;
-						instancedElement.m_content = std::make_shared<BillboardCloud::InstancedRenderContent>();
-						instancedElement.m_content->m_particleInfoList = particleInfoList;
-						instancedElement.m_content->m_mesh = mesh;
-						instancedElement.m_content->m_material = material;
-						instancedElement.m_content->m_triangles = mesh->UnsafeGetTriangles();
 					}
 				}
 				scene->SetEnable(child, false);
@@ -2395,32 +2382,58 @@ void Tree::GenerateGeometryEntities(const TreeMeshGeneratorSettings& meshGenerat
 	{
 		const auto foliageEntity = scene->CreateEntity("Foliage Mesh");
 		scene->SetParent(foliageEntity, self);
-
-		const auto mesh = Resources::GetResource<Mesh>("PRIMITIVE_QUAD");
-		const auto particleInfoList = GenerateFoliageParticleInfoList(meshGeneratorSettings);
-		const auto material = ProjectManager::CreateTemporaryAsset<Material>();
-		bool copiedMaterial = false;
-		if (treeDescriptor) {
-			if (const auto foliageDescriptor = treeDescriptor->m_foliageDescriptor.Get<FoliageDescriptor>()) {
-				if (const auto leafMaterial = foliageDescriptor->m_leafMaterial.Get<Material>()) {
-					material->SetAlbedoTexture(leafMaterial->GetAlbedoTexture());
-					material->SetNormalTexture(leafMaterial->GetNormalTexture());
-					material->SetRoughnessTexture(leafMaterial->GetRoughnessTexture());
-					material->SetMetallicTexture(leafMaterial->GetMetallicTexture());
-					material->m_materialProperties = leafMaterial->m_materialProperties;
-					copiedMaterial = true;
+		if(meshGeneratorSettings.m_foliageInstancing){
+			const auto mesh = Resources::GetResource<Mesh>("PRIMITIVE_QUAD");
+			const auto particleInfoList = GenerateFoliageParticleInfoList(meshGeneratorSettings);
+			const auto material = ProjectManager::CreateTemporaryAsset<Material>();
+			bool copiedMaterial = false;
+			if (treeDescriptor) {
+				if (const auto foliageDescriptor = treeDescriptor->m_foliageDescriptor.Get<FoliageDescriptor>()) {
+					if (const auto leafMaterial = foliageDescriptor->m_leafMaterial.Get<Material>()) {
+						material->SetAlbedoTexture(leafMaterial->GetAlbedoTexture());
+						material->SetNormalTexture(leafMaterial->GetNormalTexture());
+						material->SetRoughnessTexture(leafMaterial->GetRoughnessTexture());
+						material->SetMetallicTexture(leafMaterial->GetMetallicTexture());
+						material->m_materialProperties = leafMaterial->m_materialProperties;
+						copiedMaterial = true;
+					}
 				}
 			}
+			if (!copiedMaterial) {
+				material->m_materialProperties.m_albedoColor = glm::vec3(152 / 255.0f, 203 / 255.0f, 0 / 255.0f);
+				material->m_materialProperties.m_roughness = 1.0f;
+				material->m_materialProperties.m_metallic = 0.0f;
+			}
+			const auto particles = scene->GetOrSetPrivateComponent<Particles>(foliageEntity).lock();
+			particles->m_mesh = mesh;
+			particles->m_material = material;
+			particles->m_particleInfoList = particleInfoList;
+		}else
+		{
+			auto mesh = GenerateFoliageMesh(meshGeneratorSettings);
+			auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(foliageEntity).lock();
+			const auto material = ProjectManager::CreateTemporaryAsset<Material>();
+			bool copiedMaterial = false;
+			if (treeDescriptor) {
+				if (const auto foliageDescriptor = treeDescriptor->m_foliageDescriptor.Get<FoliageDescriptor>()) {
+					if (const auto leafMaterial = foliageDescriptor->m_leafMaterial.Get<Material>()) {
+						material->SetAlbedoTexture(leafMaterial->GetAlbedoTexture());
+						material->SetNormalTexture(leafMaterial->GetNormalTexture());
+						material->SetRoughnessTexture(leafMaterial->GetRoughnessTexture());
+						material->SetMetallicTexture(leafMaterial->GetMetallicTexture());
+						material->m_materialProperties = leafMaterial->m_materialProperties;
+						copiedMaterial = true;
+					}
+				}
+			}
+			if (!copiedMaterial) {
+				material->m_materialProperties.m_albedoColor = glm::vec3(152 / 255.0f, 203 / 255.0f, 0 / 255.0f);
+				material->m_materialProperties.m_roughness = 1.0f;
+				material->m_materialProperties.m_metallic = 0.0f;
+			}
+			meshRenderer->m_mesh = mesh;
+			meshRenderer->m_material = material;
 		}
-		if (!copiedMaterial) {
-			material->m_materialProperties.m_albedoColor = glm::vec3(152 / 255.0f, 203 / 255.0f, 0 / 255.0f);
-			material->m_materialProperties.m_roughness = 1.0f;
-			material->m_materialProperties.m_metallic = 0.0f;
-		}
-		const auto particles = scene->GetOrSetPrivateComponent<Particles>(foliageEntity).lock();
-		particles->m_mesh = mesh;
-		particles->m_material = material;
-		particles->m_particleInfoList = particleInfoList;
 	}
 	if (meshGeneratorSettings.m_enableFruit)
 	{

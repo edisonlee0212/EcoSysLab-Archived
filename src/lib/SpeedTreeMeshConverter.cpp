@@ -21,7 +21,7 @@ bool SpeedTreeMeshConverter::OnInspect(const std::shared_ptr<EditorLayer>& edito
 		ImGui::DragFloat("Size factor", &projectSettings.m_resolutionFactor, 1.f, 1, 1024);
 		if (ImGui::Button("Build Billboard Cloud")) {
 			BillboardCloud billboardCloud {};
-			billboardCloud.Clusterize(prefab, clusterizeSettings, combinePrefab);
+			billboardCloud.BuildClusters(prefab, clusterizeSettings, combinePrefab);
 			billboardCloud.ProjectClusters(projectSettings);
 			const auto entity = billboardCloud.BuildEntity(scene);
 			if(scene->IsEntityValid(entity)) scene->SetEntityName(entity, "SpeedTree billboard cloud");

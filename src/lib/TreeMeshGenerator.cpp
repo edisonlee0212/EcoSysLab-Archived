@@ -86,6 +86,7 @@ void TreeMeshGeneratorSettings::Save(const std::string& name, YAML::Emitter& out
 	out << YAML::Key << "m_branchYSubdivision" << YAML::Value << m_branchYSubdivision;
 
 	out << YAML::Key << "m_enableFoliage" << YAML::Value << m_enableFoliage;
+	out << YAML::Key << "m_foliageInstancing" << YAML::Value << m_foliageInstancing;
 	out << YAML::Key << "m_enableBranch" << YAML::Value << m_enableBranch;
 	out << YAML::Key << "m_enableFruit" << YAML::Value << m_enableFruit;
 	out << YAML::Key << "m_enableTwig" << YAML::Value << m_enableTwig;
@@ -121,6 +122,7 @@ void TreeMeshGeneratorSettings::Load(const std::string& name, const YAML::Node& 
 		if (ms["m_branchYSubdivision"]) m_branchYSubdivision = ms["m_branchYSubdivision"].as<float>();
 
 		if (ms["m_enableFoliage"]) m_enableFoliage = ms["m_enableFoliage"].as<bool>();
+		if (ms["m_foliageInstancing"]) m_foliageInstancing = ms["m_foliageInstancing"].as<bool>();
 		if (ms["m_enableBranch"]) m_enableBranch = ms["m_enableBranch"].as<bool>();
 		if (ms["m_enableFruit"]) m_enableFruit = ms["m_enableFruit"].as<bool>();
 		if (ms["m_enableTwig"]) m_enableTwig = ms["m_enableTwig"].as<bool>();
@@ -147,6 +149,7 @@ void TreeMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLayer>& ed
 		ImGui::Checkbox("Branch", &m_enableBranch);
 		ImGui::Checkbox("Fruit", &m_enableFruit);
 		ImGui::Checkbox("Foliage", &m_enableFoliage);
+		ImGui::Checkbox("Foliage instancing", &m_foliageInstancing);
 		ImGui::Checkbox("Twig", &m_enableTwig);
 		ImGui::Combo("Branch mesh mode", { "Cylindrical", "Marching cubes" }, m_branchMeshType);
 

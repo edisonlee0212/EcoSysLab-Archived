@@ -517,7 +517,7 @@ std::vector<BillboardCloud::Cluster> BillboardCloud::Clusterize(const Cluster& t
 	}
 }
 
-void BillboardCloud::Clusterize(const std::shared_ptr<Prefab>& prefab, const ClusterizeSettings& clusterizeSettings, const bool combine)
+void BillboardCloud::BuildClusters(const std::shared_ptr<Prefab>& prefab, const ClusterizeSettings& clusterizeSettings, const bool combine)
 {
 	if(!clusterizeSettings.m_append) m_clusters.clear();
 	if(combine){
@@ -555,47 +555,6 @@ BillboardCloud::Billboard BillboardCloud::Project(const Cluster& cluster, const 
 	billboardUpAxis = glm::normalize(glm::cross(billboardLeftAxis, billboardFrontAxis));
 	glm::mat4 rotateMatrix = glm::transpose(glm::mat4(glm::vec4(billboardLeftAxis, 0.0f), glm::vec4(billboardUpAxis, 0.0f), glm::vec4(billboardFrontAxis, 0.0f), glm::vec4(0.0f, 0.0f, 0.0f, 1.0f)));
 	std::vector<ProjectedRenderContent> projectedRenderContents {};
-	for (const auto& instancedElement : cluster.m_instancedElements)
-	{
-		const auto& content = instancedElement.m_content;
-		const auto& modelSpaceTransform = glm::inverse(instancedElement.m_modelSpaceTransform.m_value) * rotateMatrix;
-		projectedRenderContents.emplace_back();
-		auto& newRenderContent = projectedRenderContents.back();
-		const auto& triangles = content->m_triangles;
-		const auto& vertices = content->m_mesh->UnsafeGetVertices();
-		const auto& particleInfoList = content->m_particleInfoList->PeekParticleInfoList();
-		
-		auto& projectedTriangles = newRenderContent.m_projectedTriangles;
-		auto& projectedVertices = newRenderContent.m_projectedVertices;
-		projectedTriangles.resize(triangles.size() * particleInfoList.size());
-		projectedVertices.resize(triangles.size() * 3 * particleInfoList.size());
-
-		Jobs::RunParallelFor(particleInfoList.size(), [&](const unsigned particleIndex)
-			{
-				const auto& particleInfo = particleInfoList[particleIndex];
-				const auto transform = modelSpaceTransform * particleInfo.m_instanceMatrix.m_value;
-				const auto vertexStartIndex = triangles.size() * 3 * particleIndex;
-				const auto triangleStartIndex = triangles.size() * particleIndex;
-				for (auto triangleIndex = 0; triangleIndex < triangles.size(); triangleIndex++) {
-					projectedTriangles[triangleIndex + triangleStartIndex] = glm::uvec3(
-						triangleIndex * 3 + vertexStartIndex,
-						triangleIndex * 3 + 1 + vertexStartIndex,
-						triangleIndex * 3 + 2 + vertexStartIndex);
-					//Vertices of projected triangle.
-					auto& pV0 = projectedVertices[triangleIndex * 3 + vertexStartIndex];
-					auto& pV1 = projectedVertices[triangleIndex * 3 + 1 + vertexStartIndex];
-					auto& pV2 = projectedVertices[triangleIndex * 3 + 2 + vertexStartIndex];
-
-					const auto& v0 = vertices[triangles[triangleIndex].x];
-					const auto& v1 = vertices[triangles[triangleIndex].y];
-					const auto& v2 = vertices[triangles[triangleIndex].z];
-
-					ProjectToPlane(v0, v1, v2, pV0, pV1, pV2, transform);
-				}
-			});
-
-		newRenderContent.m_material = content->m_material;
-	}
 	for (const auto& element : cluster.m_elements)
 	{
 		const auto& content = element.m_content;
