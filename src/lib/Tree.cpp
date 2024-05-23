@@ -7,6 +7,8 @@
 #include "StrandGroupSerializer.hpp"
 #include <Material.hpp>
 #include <Mesh.hpp>
+#include <TransformGraph.hpp>
+
 #include "Strands.hpp"
 #include "EditorLayer.hpp"
 #include "Application.hpp"
@@ -356,10 +358,12 @@ void Tree::GenerateSkeletalGraph(
 }
 
 bool Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
-
+	static BillboardCloud::ProjectSettings projectSettings {};
+	ImGui::DragFloat("Project resolution factor", &projectSettings.m_resolutionFactor);
 	if (ImGui::Button("Project"))
 	{
 		glm::vec3 clusterCenter = (m_treeModel.PeekShootSkeleton().m_max + m_treeModel.PeekShootSkeleton().m_min) * .5f;
+		clusterCenter.x = clusterCenter.z = 0.f;
 		BillboardCloud::Cluster frontCluster, leftCluster, upCluster;
 		frontCluster.m_clusterCenter = clusterCenter;
 		leftCluster.m_clusterCenter = clusterCenter;
@@ -370,7 +374,7 @@ bool Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 		frontCluster.m_planeYAxis = glm::vec3(frontCluster.m_planeNormal.y, frontCluster.m_planeNormal.z, frontCluster.m_planeNormal.x);
 		leftCluster.m_planeYAxis = glm::vec3(leftCluster.m_planeNormal.y, leftCluster.m_planeNormal.z, leftCluster.m_planeNormal.x);
 		upCluster.m_planeYAxis = glm::vec3(upCluster.m_planeNormal.y, upCluster.m_planeNormal.z, upCluster.m_planeNormal.x);
-		Project({ frontCluster, leftCluster, upCluster });
+		Project({ frontCluster, leftCluster, upCluster }, projectSettings);
 	}
 
 	bool changed = false;
@@ -2168,12 +2172,13 @@ void Tree::Deserialize(const YAML::Node& in)
 	}
 }
 
-void Tree::Project(std::vector<BillboardCloud::Cluster> clusters)
+void Tree::Project(std::vector<BillboardCloud::Cluster> clusters, const BillboardCloud::ProjectSettings& projectSettings)
 {
 	GenerateGeometryEntities(m_meshGeneratorSettings);
-
+	
 	const auto scene = GetScene();
 	const auto owner = GetOwner();
+	TransformGraph::CalculateTransformGraphForDescendants(scene, owner);
 	const auto children = scene->GetChildren(owner);
 	const auto ownerGlobalTransform = scene->GetDataComponent<GlobalTransform>(owner);
 	for (const auto& child : children)
@@ -2201,9 +2206,10 @@ void Tree::Project(std::vector<BillboardCloud::Cluster> clusters)
 					cluster.m_elements.emplace_back();
 					auto& element = cluster.m_elements.back();
 					element.m_modelSpaceTransform.m_value = modelSpaceTransform;
-					element.m_content.m_mesh = mesh;
-					element.m_content.m_material = material;
-					element.m_content.m_triangles = mesh->UnsafeGetTriangles();
+					element.m_content = std::make_shared<BillboardCloud::RenderContent>();
+					element.m_content->m_mesh = mesh;
+					element.m_content->m_material = material;
+					element.m_content->m_triangles = mesh->UnsafeGetTriangles();
 				}
 				scene->SetEnable(child, false);
 			}
@@ -2218,10 +2224,11 @@ void Tree::Project(std::vector<BillboardCloud::Cluster> clusters)
 					if (mesh && material) {
 						cluster.m_elements.emplace_back();
 						auto& element = cluster.m_elements.back();
+						element.m_content = std::make_shared<BillboardCloud::RenderContent>();
 						element.m_modelSpaceTransform.m_value = modelSpaceTransform;
-						element.m_content.m_mesh = mesh;
-						element.m_content.m_material = material;
-						element.m_content.m_triangles = mesh->UnsafeGetTriangles();
+						element.m_content->m_mesh = mesh;
+						element.m_content->m_material = material;
+						element.m_content->m_triangles = mesh->UnsafeGetTriangles();
 					}
 				}
 				else if (scene->HasPrivateComponent<Particles>(child))
@@ -2234,10 +2241,11 @@ void Tree::Project(std::vector<BillboardCloud::Cluster> clusters)
 						cluster.m_instancedElements.emplace_back();
 						auto& instancedElement = cluster.m_instancedElements.back();
 						instancedElement.m_modelSpaceTransform.m_value = modelSpaceTransform;
-						instancedElement.m_content.m_particleInfoList = particleInfoList;
-						instancedElement.m_content.m_mesh = mesh;
-						instancedElement.m_content.m_material = material;
-						instancedElement.m_content.m_triangles = mesh->UnsafeGetTriangles();
+						instancedElement.m_content = std::make_shared<BillboardCloud::InstancedRenderContent>();
+						instancedElement.m_content->m_particleInfoList = particleInfoList;
+						instancedElement.m_content->m_mesh = mesh;
+						instancedElement.m_content->m_material = material;
+						instancedElement.m_content->m_triangles = mesh->UnsafeGetTriangles();
 					}
 				}
 				scene->SetEnable(child, false);
@@ -2246,14 +2254,15 @@ void Tree::Project(std::vector<BillboardCloud::Cluster> clusters)
 
 			}
 		}
-		const auto projectedCluster = BillboardCloud::Project(cluster, {});
+
+		const auto billboard = BillboardCloud::Project(cluster, projectSettings);
 		const auto projectedClusterEntity = scene->CreateEntity("Projected Cluster [" + std::to_string(clusterIndex) + "]");
 		scene->SetParent(projectedClusterEntity, projectedTree);
 		{
 			const auto projectedElementEntity = scene->CreateEntity("Projected Billboard");
 			const auto elementMeshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(projectedElementEntity).lock();
-			elementMeshRenderer->m_mesh = projectedCluster.m_billboardMesh;
-			elementMeshRenderer->m_material = projectedCluster.m_billboardMaterial;
+			elementMeshRenderer->m_mesh = billboard.m_mesh;
+			elementMeshRenderer->m_material = billboard.m_material;
 			scene->SetParent(projectedElementEntity, projectedClusterEntity);
 		}
 	}

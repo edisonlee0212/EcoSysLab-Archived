@@ -369,29 +369,40 @@ inline void Barycentric2D(const glm::vec2& p, const glm::vec2& a, const glm::vec
 	c0 = 1.0f - c1 - c2;
 }
 
-BillboardCloud::ProjectedCluster BillboardCloud::Project(const Cluster& cluster, const ProjectSettings& settings)
+struct ProjectedRenderContent
 {
-	ProjectedCluster projectedCluster{};
-	glm::vec3 frontAxis = cluster.m_planeNormal;
-	glm::vec3 upAxis = cluster.m_planeYAxis;
-	glm::vec3 leftAxis = glm::normalize(glm::cross(frontAxis, upAxis));
-	upAxis = glm::normalize(glm::cross(leftAxis, frontAxis));
-	//glm::mat4 viewMatrix = glm::lookAt(cluster.m_clusterCenter, cluster.m_clusterCenter + cluster.m_planeNormal, cluster.m_planeYAxis);
-	glm::mat4 rotateMatrix = glm::transpose(glm::mat4(glm::vec4(leftAxis, 0.0f), glm::vec4(upAxis, 0.0f), glm::vec4(frontAxis, 0.0f), glm::vec4(0.0f, 0.0f, 0.0f, 1.0f)));
-	//glm::mat4 translateMatrix = glm::translate(-cluster.m_clusterCenter);
-	//const auto viewMatrix = translateMatrix * rotateMatrix;
+	std::vector<Vertex> m_projectedVertices;
+	std::vector<glm::uvec3> m_projectedTriangles;
+	std::shared_ptr<Material> m_material;
+};
+
+BillboardCloud::Billboard BillboardCloud::Project(const Cluster& cluster, const ProjectSettings& projectSettings)
+{
+	Billboard billboard{};
+
+	
+	billboard.m_center = cluster.m_clusterCenter;
+	billboard.m_planeNormal = cluster.m_planeNormal;
+	billboard.m_planeYAxis = cluster.m_planeYAxis;
+
+	glm::vec3 billboardFrontAxis = cluster.m_planeNormal;
+	glm::vec3 billboardUpAxis = cluster.m_planeYAxis;
+	glm::vec3 billboardLeftAxis = glm::normalize(glm::cross(billboardFrontAxis, billboardUpAxis));
+	billboardUpAxis = glm::normalize(glm::cross(billboardLeftAxis, billboardFrontAxis));
+	glm::mat4 rotateMatrix = glm::transpose(glm::mat4(glm::vec4(billboardLeftAxis, 0.0f), glm::vec4(billboardUpAxis, 0.0f), glm::vec4(billboardFrontAxis, 0.0f), glm::vec4(0.0f, 0.0f, 0.0f, 1.0f)));
+	std::vector<ProjectedRenderContent> projectedRenderContents {};
 	for (const auto& instancedElement : cluster.m_instancedElements)
 	{
 		const auto& content = instancedElement.m_content;
-		const auto& modelSpaceTransform = instancedElement.m_modelSpaceTransform.m_value * rotateMatrix;
-		projectedCluster.m_elements.emplace_back();
-		auto& newElement = projectedCluster.m_elements.back();
-		const auto& triangles = content.m_triangles;
-		const auto& vertices = content.m_mesh->UnsafeGetVertices();
-		const auto& particleInfoList = content.m_particleInfoList->PeekParticleInfoList();
-		std::vector<Vertex> projectedVertices;
-		std::vector<glm::uvec3> projectedTriangles;
-
+		const auto& modelSpaceTransform = glm::inverse(instancedElement.m_modelSpaceTransform.m_value) * rotateMatrix;
+		projectedRenderContents.emplace_back();
+		auto& newRenderContent = projectedRenderContents.back();
+		const auto& triangles = content->m_triangles;
+		const auto& vertices = content->m_mesh->UnsafeGetVertices();
+		const auto& particleInfoList = content->m_particleInfoList->PeekParticleInfoList();
+		
+		auto& projectedTriangles = newRenderContent.m_projectedTriangles;
+		auto& projectedVertices = newRenderContent.m_projectedVertices;
 		projectedTriangles.resize(triangles.size() * particleInfoList.size());
 		projectedVertices.resize(triangles.size() * 3 * particleInfoList.size());
 
@@ -419,24 +430,20 @@ BillboardCloud::ProjectedCluster BillboardCloud::Project(const Cluster& cluster,
 				}
 			});
 
-		const auto projectedMesh = ProjectManager::CreateTemporaryAsset<Mesh>();
-		auto& projectedContent = newElement.m_content;
-		projectedContent.m_mesh = projectedMesh;
-		projectedContent.m_material = content.m_material;
-		projectedMesh->SetVertices({ true, true, true, true }, projectedVertices, projectedTriangles);
+		newRenderContent.m_material = content->m_material;
 	}
 	for (const auto& element : cluster.m_elements)
 	{
 		const auto& content = element.m_content;
 		const auto& transform = element.m_modelSpaceTransform.m_value * rotateMatrix;
-		projectedCluster.m_elements.emplace_back();
-		auto& newElement = projectedCluster.m_elements.back();
-		const auto& triangles = content.m_triangles;
-		const auto& vertices = content.m_mesh->UnsafeGetVertices();
+		projectedRenderContents.emplace_back();
+		auto& newRenderContent = projectedRenderContents.back();
+		const auto& triangles = content->m_triangles;
+		const auto& vertices = content->m_mesh->UnsafeGetVertices();
 
-		std::vector<Vertex> projectedVertices;
-		std::vector<glm::uvec3> projectedTriangles;
-
+		auto& projectedTriangles = newRenderContent.m_projectedTriangles;
+		auto& projectedVertices = newRenderContent.m_projectedVertices;
+		
 		projectedTriangles.resize(triangles.size());
 		projectedVertices.resize(triangles.size() * 3);
 
@@ -455,17 +462,13 @@ BillboardCloud::ProjectedCluster BillboardCloud::Project(const Cluster& cluster,
 				ProjectToPlane(v0, v1, v2, pV0, pV1, pV2, transform);
 			});
 
-		const auto projectedMesh = ProjectManager::CreateTemporaryAsset<Mesh>();
-		auto& projectedContent = newElement.m_content;
-		projectedContent.m_mesh = projectedMesh;
-		projectedContent.m_material = content.m_material;
-		projectedMesh->SetVertices({ true, true, true, true }, projectedVertices, projectedTriangles);
+		newRenderContent.m_material = content->m_material;
 	}
 	std::vector<glm::vec2> points;
-	for (const auto& projectedElement : projectedCluster.m_elements)
+	for (const auto& projectedRenderContent : projectedRenderContents)
 	{
 		const auto startIndex = points.size();
-		const auto& vertices = projectedElement.m_content.m_mesh->UnsafeGetVertices();
+		const auto& vertices = projectedRenderContent.m_projectedVertices;
 		const auto newPointsSize = vertices.size();
 		points.resize(startIndex + newPointsSize);
 		Jobs::RunParallelFor(newPointsSize, [&](unsigned pointIndex)
@@ -509,24 +512,23 @@ BillboardCloud::ProjectedCluster BillboardCloud::Project(const Cluster& cluster,
 		glm::vec2 projectedPoint = longestEdgeStart + projectedDistance * lengthVector;
 		float width = glm::distance(otherPoint, projectedPoint);
 		glm::vec2 widthVector = glm::normalize(otherPoint - projectedPoint);
-		projectedCluster.m_billboardRectangle.m_points[0] = longestEdgeStart;
-		projectedCluster.m_billboardRectangle.m_points[3] = longestEdgeStart + length * lengthVector;
-		projectedCluster.m_billboardRectangle.m_points[1] = projectedCluster.m_billboardRectangle.m_points[0] + width * widthVector;
-		projectedCluster.m_billboardRectangle.m_points[2] = projectedCluster.m_billboardRectangle.m_points[3] + width * widthVector;
+		billboard.m_rectangle.m_points[0] = longestEdgeStart;
+		billboard.m_rectangle.m_points[3] = longestEdgeStart + length * lengthVector;
+		billboard.m_rectangle.m_points[1] = billboard.m_rectangle.m_points[0] + width * widthVector;
+		billboard.m_rectangle.m_points[2] = billboard.m_rectangle.m_points[3] + width * widthVector;
 	}
 	else
 	{
-		projectedCluster.m_billboardRectangle = RotatingCalipers::GetMinAreaRectangle(std::move(points));
+		billboard.m_rectangle = RotatingCalipers::GetMinAreaRectangle(std::move(points));
 	}
-
 
 	//Rasterization
 	{
 		//Calculate texture size
 		size_t textureWidth, textureHeight;
-		const auto& boundingRectangle = projectedCluster.m_billboardRectangle;
-		textureWidth = static_cast<size_t>(boundingRectangle.m_width * settings.m_textureSizeFactor);
-		textureHeight = static_cast<size_t>(boundingRectangle.m_height * settings.m_textureSizeFactor);
+		const auto& boundingRectangle = billboard.m_rectangle;
+		textureWidth = static_cast<size_t>(boundingRectangle.m_width * projectSettings.m_resolutionFactor);
+		textureHeight = static_cast<size_t>(boundingRectangle.m_height * projectSettings.m_resolutionFactor);
 
 		CPUFramebuffer<glm::vec4> albedoFrameBuffer(textureWidth, textureHeight);
 		CPUFramebuffer<glm::vec3> normalFrameBuffer(textureWidth, textureHeight);
@@ -534,13 +536,13 @@ BillboardCloud::ProjectedCluster BillboardCloud::Project(const Cluster& cluster,
 		CPUFramebuffer<float> metallicFrameBuffer(textureWidth, textureHeight);
 		CPUFramebuffer<float> aoFrameBuffer(textureWidth, textureHeight);
 
-		for (const auto& projectedElement : projectedCluster.m_elements)
+		for (const auto& projectedRenderContent : projectedRenderContents)
 		{
-			const auto material = projectedElement.m_content.m_material;
+			const auto material = projectedRenderContent.m_material;
 			const auto albedoTexture = material->GetAlbedoTexture();
 			std::vector<glm::vec4> albedoTextureData{};
 			glm::ivec2 albedoTextureResolution;
-			if (settings.m_transferAlbedoMap && albedoTexture)
+			if (projectSettings.m_transferAlbedoMap && albedoTexture)
 			{
 				albedoTexture->GetRgbaChannelData(albedoTextureData);
 				albedoTextureResolution = albedoTexture->GetResolution();
@@ -548,7 +550,7 @@ BillboardCloud::ProjectedCluster BillboardCloud::Project(const Cluster& cluster,
 			const auto normalTexture = material->GetNormalTexture();
 			std::vector<glm::vec3> normalTextureData{};
 			glm::ivec2 normalTextureResolution;
-			if (settings.m_transferNormalMap && normalTexture)
+			if (projectSettings.m_transferNormalMap && normalTexture)
 			{
 				normalTexture->GetRgbChannelData(normalTextureData);
 				normalTextureResolution = normalTexture->GetResolution();
@@ -556,7 +558,7 @@ BillboardCloud::ProjectedCluster BillboardCloud::Project(const Cluster& cluster,
 			const auto roughnessTexture = material->GetRoughnessTexture();
 			std::vector<float> roughnessTextureData{};
 			glm::ivec2 roughnessTextureResolution{};
-			if (settings.m_transferRoughnessMap && roughnessTexture)
+			if (projectSettings.m_transferRoughnessMap && roughnessTexture)
 			{
 				roughnessTexture->GetRedChannelData(roughnessTextureData);
 				roughnessTextureResolution = roughnessTexture->GetResolution();
@@ -564,7 +566,7 @@ BillboardCloud::ProjectedCluster BillboardCloud::Project(const Cluster& cluster,
 			const auto metallicTexture = material->GetMetallicTexture();
 			std::vector<float> metallicTextureData{};
 			glm::ivec2 metallicTextureResolution;
-			if (settings.m_transferMetallicMap && metallicTexture)
+			if (projectSettings.m_transferMetallicMap && metallicTexture)
 			{
 				metallicTexture->GetRedChannelData(metallicTextureData);
 				metallicTextureResolution = metallicTexture->GetResolution();
@@ -572,14 +574,14 @@ BillboardCloud::ProjectedCluster BillboardCloud::Project(const Cluster& cluster,
 			const auto aoTexture = material->GetAoTexture();
 			std::vector<float> aoTextureData{};
 			glm::ivec2 aoTextureResolution{};
-			if (settings.m_transferAoMap && aoTexture)
+			if (projectSettings.m_transferAoMap && aoTexture)
 			{
 				aoTexture->GetRedChannelData(aoTextureData);
 				aoTextureResolution = aoTexture->GetResolution();
 			}
 			//Adopted from https://www.scratchapixel.com/lessons/3d-basic-rendering/rasterization-practical-implementation/perspective-correct-interpolation-vertex-attributes.html
-			const auto& vertices = projectedElement.m_content.m_mesh->UnsafeGetVertices();
-			const auto& triangles = projectedElement.m_content.m_mesh->UnsafeGetTriangles();
+			const auto& vertices = projectedRenderContent.m_projectedVertices;
+			const auto& triangles = projectedRenderContent.m_projectedTriangles;
 			Jobs::RunParallelFor(triangles.size(), [&](const unsigned triangleIndex)
 				{
 					const auto& v0 = vertices[triangles[triangleIndex].x];
@@ -587,9 +589,9 @@ BillboardCloud::ProjectedCluster BillboardCloud::Project(const Cluster& cluster,
 					const auto& v2 = vertices[triangles[triangleIndex].z];
 
 					glm::vec3 textureSpaceVertices[3];
-					textureSpaceVertices[0] = boundingRectangle.Transform(v0.m_position) * settings.m_textureSizeFactor;
-					textureSpaceVertices[1] = boundingRectangle.Transform(v1.m_position) * settings.m_textureSizeFactor;
-					textureSpaceVertices[2] = boundingRectangle.Transform(v2.m_position) * settings.m_textureSizeFactor;
+					textureSpaceVertices[0] = boundingRectangle.Transform(v0.m_position) * projectSettings.m_resolutionFactor;
+					textureSpaceVertices[1] = boundingRectangle.Transform(v1.m_position) * projectSettings.m_resolutionFactor;
+					textureSpaceVertices[2] = boundingRectangle.Transform(v2.m_position) * projectSettings.m_resolutionFactor;
 
 					//Bound check;
 					auto minBound = glm::vec2(FLT_MAX, FLT_MAX);
@@ -708,33 +710,44 @@ BillboardCloud::ProjectedCluster BillboardCloud::Project(const Cluster& cluster,
 		metallicTexture->SetRedChannelData(metallicFrameBuffer.m_colorBuffer, glm::uvec2(metallicFrameBuffer.m_width, metallicFrameBuffer.m_height));
 		std::shared_ptr<Texture2D> aoTexture = ProjectManager::CreateTemporaryAsset<Texture2D>();
 		aoTexture->SetRedChannelData(aoFrameBuffer.m_colorBuffer, glm::uvec2(aoFrameBuffer.m_width, aoFrameBuffer.m_height));
-		projectedCluster.m_billboardMaterial = ProjectManager::CreateTemporaryAsset<Material>();
-		projectedCluster.m_billboardMaterial->SetAlbedoTexture(albedoTexture);
-		projectedCluster.m_billboardMaterial->SetNormalTexture(normalTexture);
-		projectedCluster.m_billboardMaterial->SetRoughnessTexture(roughnessTexture);
-		projectedCluster.m_billboardMaterial->SetMetallicTexture(metallicTexture);
-		projectedCluster.m_billboardMaterial->SetAOTexture(aoTexture);
+		billboard.m_material = ProjectManager::CreateTemporaryAsset<Material>();
+		billboard.m_material->SetAlbedoTexture(albedoTexture);
+		billboard.m_material->SetNormalTexture(normalTexture);
+		billboard.m_material->SetRoughnessTexture(roughnessTexture);
+		billboard.m_material->SetMetallicTexture(metallicTexture);
+		billboard.m_material->SetAOTexture(aoTexture);
 
-		projectedCluster.m_billboardMesh = ProjectManager::CreateTemporaryAsset<Mesh>();
+		billboard.m_mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
 
 		std::vector<Vertex> planeVertices;
 		planeVertices.resize(4);
-		planeVertices[0].m_position = glm::vec3(projectedCluster.m_billboardRectangle.m_points[0].x, projectedCluster.m_billboardRectangle.m_points[0].y, 0.f);
+
+		const auto inverseRotateMatrix = glm::inverse(rotateMatrix);
+
+		planeVertices[0].m_position = inverseRotateMatrix * glm::vec4(billboard.m_rectangle.m_points[0].x, billboard.m_rectangle.m_points[0].y, 0.f, 0.f);
 		planeVertices[0].m_texCoord = glm::vec2(0, 0);
-		planeVertices[1].m_position = glm::vec3(projectedCluster.m_billboardRectangle.m_points[1].x, projectedCluster.m_billboardRectangle.m_points[1].y, 0.f);
+		planeVertices[1].m_position = inverseRotateMatrix * glm::vec4(billboard.m_rectangle.m_points[1].x, billboard.m_rectangle.m_points[1].y, 0.f, 0.f);
 		planeVertices[1].m_texCoord = glm::vec2(1, 0);
-		planeVertices[2].m_position = glm::vec3(projectedCluster.m_billboardRectangle.m_points[2].x, projectedCluster.m_billboardRectangle.m_points[2].y, 0.f);
+		planeVertices[2].m_position = inverseRotateMatrix * glm::vec4(billboard.m_rectangle.m_points[2].x, billboard.m_rectangle.m_points[2].y, 0.f, 0.f);
 		planeVertices[2].m_texCoord = glm::vec2(1, 1);
-		planeVertices[3].m_position = glm::vec3(projectedCluster.m_billboardRectangle.m_points[3].x, projectedCluster.m_billboardRectangle.m_points[3].y, 0.f);
+		planeVertices[3].m_position = inverseRotateMatrix * glm::vec4(billboard.m_rectangle.m_points[3].x, billboard.m_rectangle.m_points[3].y, 0.f, 0.f);
 		planeVertices[3].m_texCoord = glm::vec2(0, 1);
+
+		
+		float frontPush = glm::dot(cluster.m_clusterCenter, billboardFrontAxis);
+		planeVertices[0].m_position += frontPush * billboardFrontAxis;
+		planeVertices[1].m_position += frontPush * billboardFrontAxis;
+		planeVertices[2].m_position += frontPush * billboardFrontAxis;
+		planeVertices[3].m_position += frontPush * billboardFrontAxis;
+
 		std::vector<glm::uvec3> planeTriangles;
 		planeTriangles.resize(2);
 		planeTriangles[0] = { 0, 1, 2 };
 		planeTriangles[1] = { 2, 3, 0 };
-		projectedCluster.m_billboardMesh->SetVertices({}, planeVertices, planeTriangles);
+		billboard.m_mesh->SetVertices({}, planeVertices, planeTriangles);
 
 	}
-	return projectedCluster;
+	return billboard;
 }
 
 BillboardCloud::RenderContent BillboardCloud::Join(const Cluster& cluster, const JoinSettings& settings)

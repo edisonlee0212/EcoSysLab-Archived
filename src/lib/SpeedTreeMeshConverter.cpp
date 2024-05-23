@@ -37,9 +37,10 @@ void SpeedTreeMeshConverter::Convert(const std::shared_ptr<Prefab>& currentPrefa
 			{
 				cluster.m_elements.emplace_back();
 				auto& element = cluster.m_elements.back();
-				element.m_content.m_mesh = mesh;
-				element.m_content.m_material = material;
-				element.m_content.m_triangles = mesh->UnsafeGetTriangles();
+				element.m_content = std::make_shared<BillboardCloud::RenderContent>();
+				element.m_content->m_mesh = mesh;
+				element.m_content->m_material = material;
+				element.m_content->m_triangles = mesh->UnsafeGetTriangles();
 				element.m_modelSpaceTransform.m_value = transform.m_value;
 			}
 		}
@@ -64,8 +65,8 @@ void SpeedTreeMeshConverter::Convert(const BillboardCloud::ProjectSettings& proj
 	{
 		const auto projectedElementEntity = scene->CreateEntity("Projected Billboard");
 		const auto elementMeshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(projectedElementEntity).lock();
-		elementMeshRenderer->m_mesh = projectedCluster.m_billboardMesh;
-		elementMeshRenderer->m_material = projectedCluster.m_billboardMaterial;
+		elementMeshRenderer->m_mesh = projectedCluster.m_mesh;
+		elementMeshRenderer->m_material = projectedCluster.m_material;
 		scene->SetParent(projectedElementEntity, projectedClusterEntity);
 	}
 }
@@ -83,7 +84,7 @@ bool SpeedTreeMeshConverter::OnInspect(const std::shared_ptr<EditorLayer>& edito
 		ImGui::Checkbox("Metallic map", &settings.m_transferMetallicMap);
 		ImGui::Checkbox("AO map", &settings.m_transferAoMap);
 
-		ImGui::DragFloat("Size factor", &settings.m_textureSizeFactor, 1.f, 1, 1024);
+		ImGui::DragFloat("Size factor", &settings.m_resolutionFactor, 1.f, 1, 1024);
 		if (ImGui::Button("Convert")) {
 			Convert(settings);
 		}
