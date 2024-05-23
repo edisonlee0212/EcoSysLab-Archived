@@ -608,7 +608,7 @@ BillboardCloud::ProjectedCluster BillboardCloud::Project(const Cluster& cluster,
 					{
 						for (auto v = top; v <= bottom; v++)
 						{
-							glm::vec3 p = glm::vec3(u + .5f, v + .5f, 0.f);
+							const auto p = glm::vec3(u + .5f, v + .5f, 0.f);
 							float bc0, bc1, bc2;
 							Barycentric2D(p, textureSpaceVertices[0], textureSpaceVertices[1], textureSpaceVertices[2], bc0, bc1, bc2);
 							if (bc0 < 0.f || bc1 < 0.f || bc2 < 0.f) continue;
@@ -634,7 +634,6 @@ BillboardCloud::ProjectedCluster BillboardCloud::Project(const Cluster& cluster,
 							//Alpha discard
 							if(albedo.a < 0.1f) continue;
 							auto normal = glm::normalize(bc0 * v0.m_normal + bc1 * v1.m_normal + bc2 * v2.m_normal);
-							
 							if (!normalTextureData.empty())
 							{
 								int textureX = static_cast<int>(normalTextureResolution.x * texCoords.x) % normalTextureResolution.x;
@@ -651,10 +650,7 @@ BillboardCloud::ProjectedCluster BillboardCloud::Project(const Cluster& cluster,
 
 								normal = glm::normalize(tbn * sampledNormal);
 							}
-
 							if(glm::dot(normal, glm::vec3(0, 0, 1)) < 0) normal = -normal;
-							normal = normal * 0.5f + glm::vec3(0.5f);
-							normalFrameBuffer.SetPixel(u, v, z, normal);
 
 							if (!roughnessTextureData.empty())
 							{
@@ -692,8 +688,8 @@ BillboardCloud::ProjectedCluster BillboardCloud::Project(const Cluster& cluster,
 
 							}
 							albedoFrameBuffer.SetPixel(u, v, z, albedo);
-
-							
+							normal = normal * 0.5f + glm::vec3(0.5f);
+							normalFrameBuffer.SetPixel(u, v, z, normal);
 							roughnessFrameBuffer.SetPixel(u, v, z, roughness);
 							metallicFrameBuffer.SetPixel(u, v, z, metallic);
 							aoFrameBuffer.SetPixel(u, v, z, ao);
