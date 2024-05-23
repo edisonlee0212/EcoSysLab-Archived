@@ -68,7 +68,18 @@ namespace EvoEngine {
 			std::shared_ptr<Material> m_material;
 		};
 
-		
+		enum class ClusterizeMode
+		{
+			PassThrough,
+			Default,
+			Stochastic
+		};
+
+		struct ClusterizeSettings
+		{
+			bool m_append = true;
+			ClusterizeMode m_clusterizeMode = ClusterizeMode::PassThrough;
+		};
 
 		struct ProjectSettings
 		{
@@ -89,8 +100,18 @@ namespace EvoEngine {
 
 		static Billboard Project(const Cluster& cluster, const ProjectSettings& projectSettings);
 
-		static RenderContent Join(const Cluster& cluster, const JoinSettings& settings);
+		std::vector<Cluster> m_clusters {};
+		std::vector<Billboard> m_billboards {};
+
+		[[nodiscard]] static std::vector<Cluster> Clusterize(const Cluster& targetCluster, const ClusterizeSettings& clusterizeSettings);
+
+		void Clusterize(const std::shared_ptr<Prefab> &prefab, const ClusterizeSettings& clusterizeSettings, bool combine);
+		void ProjectClusters(const ProjectSettings& projectSettings);
+
+		[[nodiscard]] Entity BuildEntity(const std::shared_ptr<Scene>& scene);
 	private:
+		static void PreprocessPrefab(std::vector<Cluster>& clusters, const std::shared_ptr<Prefab> &currentPrefab, const Transform& parentModelSpaceTransform);
+		static void PreprocessPrefab(Cluster& combinedCluster, const std::shared_ptr<Prefab> &currentPrefab, const Transform& parentModelSpaceTransform);
 
 		static void ProjectToPlane(const Vertex& v0, const Vertex& v1, const Vertex& v2,
 			Vertex& pV0, Vertex& pV1, Vertex& pV2,

@@ -1,9 +1,133 @@
 #include "BillboardCloud.hpp"
-
+#include "Prefab.hpp"
 using namespace EvoEngine;
 
+void BillboardCloud::ProjectClusters(const ProjectSettings& projectSettings)
+{
+	m_billboards.clear();
+	for(const auto &cluster : m_clusters)
+	{
+		m_billboards.emplace_back(Project(cluster, projectSettings));
+	}
+}
+
+Entity BillboardCloud::BuildEntity(const std::shared_ptr<Scene>& scene)
+{
+	if(m_billboards.empty()) return {};
+	const auto owner = scene->CreateEntity("Billboard Cloud");
+	for(const auto& billboard : m_billboards){
+		if(!billboard.m_mesh || !billboard.m_material) continue;
+		const auto projectedElementEntity = scene->CreateEntity("Billboard");
+		const auto elementMeshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(projectedElementEntity).lock();
+		elementMeshRenderer->m_mesh = billboard.m_mesh;
+		elementMeshRenderer->m_material = billboard.m_material;
+		scene->SetParent(projectedElementEntity, owner);
+	}
+}
+
+void BillboardCloud::PreprocessPrefab(std::vector<Cluster>& clusters, const std::shared_ptr<Prefab>& currentPrefab, const Transform& parentModelSpaceTransform)
+{
+	Transform transform{};
+	for (const auto& dataComponent : currentPrefab->m_dataComponents)
+	{
+		if (dataComponent.m_type == Typeof<Transform>())
+		{
+			transform = *std::reinterpret_pointer_cast<Transform>(dataComponent.m_data);
+		}
+	}
+	transform.m_value = parentModelSpaceTransform.m_value * transform.m_value;
+	for (const auto& privateComponent : currentPrefab->m_privateComponents)
+	{
+
+		if (privateComponent.m_data->GetTypeName() == "MeshRenderer")
+		{
+			std::vector<AssetRef> assetRefs;
+			privateComponent.m_data->CollectAssetRef(assetRefs);
+			std::shared_ptr<Mesh> mesh{};
+			std::shared_ptr<Material> material{};
+			for (auto& assetRef : assetRefs)
+			{
+				if (const auto testMesh = assetRef.Get<Mesh>())
+				{
+					mesh = testMesh;
+				}
+				else if (const auto testMaterial = assetRef.Get<Material>())
+				{
+					material = testMaterial;
+				}
+			}
+			if (mesh && material)
+			{
+				clusters.emplace_back();
+				auto& targetCluster = clusters.back();
+				targetCluster.m_elements.emplace_back();
+				auto& element = targetCluster.m_elements.back();
+				element.m_content = std::make_shared<RenderContent>();
+				element.m_content->m_mesh = mesh;
+				element.m_content->m_material = material;
+				element.m_content->m_triangles = mesh->UnsafeGetTriangles();
+				element.m_modelSpaceTransform.m_value = parentModelSpaceTransform.m_value;
+			}
+		}
+	}
+	for (const auto& childPrefab : currentPrefab->m_children)
+	{
+		PreprocessPrefab(clusters, childPrefab, transform);
+	}
+}
+
+void BillboardCloud::PreprocessPrefab(Cluster& combinedCluster, const std::shared_ptr<Prefab>& currentPrefab,
+	const Transform& parentModelSpaceTransform)
+{
+	Transform transform{};
+	for (const auto& dataComponent : currentPrefab->m_dataComponents)
+	{
+		if (dataComponent.m_type == Typeof<Transform>())
+		{
+			transform = *std::reinterpret_pointer_cast<Transform>(dataComponent.m_data);
+		}
+	}
+	transform.m_value = parentModelSpaceTransform.m_value * transform.m_value;
+	for (const auto& privateComponent : currentPrefab->m_privateComponents)
+	{
+
+		if (privateComponent.m_data->GetTypeName() == "MeshRenderer")
+		{
+			std::vector<AssetRef> assetRefs;
+			privateComponent.m_data->CollectAssetRef(assetRefs);
+			std::shared_ptr<Mesh> mesh{};
+			std::shared_ptr<Material> material{};
+			for (auto& assetRef : assetRefs)
+			{
+				if (const auto testMesh = assetRef.Get<Mesh>())
+				{
+					mesh = testMesh;
+				}
+				else if (const auto testMaterial = assetRef.Get<Material>())
+				{
+					material = testMaterial;
+				}
+			}
+			if (mesh && material)
+			{
+				combinedCluster.m_elements.emplace_back();
+				auto& element = combinedCluster.m_elements.back();
+				element.m_content = std::make_shared<RenderContent>();
+				element.m_content->m_mesh = mesh;
+				element.m_content->m_material = material;
+				element.m_content->m_triangles = mesh->UnsafeGetTriangles();
+				element.m_modelSpaceTransform.m_value = parentModelSpaceTransform.m_value;
+			}
+		}
+	}
+	for (const auto& childPrefab : currentPrefab->m_children)
+	{
+		PreprocessPrefab(combinedCluster, childPrefab, transform);
+	}
+}
+
 void BillboardCloud::ProjectToPlane(const Vertex& v0, const Vertex& v1, const Vertex& v2,
-	Vertex& pV0, Vertex& pV1, Vertex& pV2, const glm::mat4& transform)
+                                    Vertex& pV0, Vertex& pV1, Vertex& pV2, const glm::mat4& transform)
 {
 	pV0 = v0;
 	pV0.m_normal = glm::normalize(transform * glm::vec4(v0.m_normal, 0.f));
@@ -375,6 +499,46 @@ struct ProjectedRenderContent
 	std::vector<glm::uvec3> m_projectedTriangles;
 	std::shared_ptr<Material> m_material;
 };
+
+std::vector<BillboardCloud::Cluster> BillboardCloud::Clusterize(const Cluster& targetCluster, const ClusterizeSettings& clusterizeSettings)
+{
+	switch (clusterizeSettings.m_clusterizeMode)
+	{
+	case ClusterizeMode::PassThrough:
+		return {targetCluster};
+	case ClusterizeMode::Default:
+		{
+		return {};
+		}
+	case ClusterizeMode::Stochastic:
+		{
+		return {};
+		}
+	}
+}
+
+void BillboardCloud::Clusterize(const std::shared_ptr<Prefab>& prefab, const ClusterizeSettings& clusterizeSettings, const bool combine)
+{
+	if(!clusterizeSettings.m_append) m_clusters.clear();
+	if(combine){
+		Cluster newCluster {};
+		PreprocessPrefab(newCluster, prefab, Transform());
+		const auto resultClusters = Clusterize(newCluster, clusterizeSettings);
+		m_clusters.insert(m_clusters.begin(), resultClusters.begin(), resultClusters.end());
+	}else
+	{
+		std::vector<Cluster> newClusters {};
+		PreprocessPrefab(newClusters, prefab, Transform());
+
+		for(auto& cluster : newClusters)
+		{
+			const auto resultClusters = Clusterize(cluster, clusterizeSettings);
+			m_clusters.insert(m_clusters.begin(), resultClusters.begin(), resultClusters.end());
+		}
+	}
+
+	
+}
 
 BillboardCloud::Billboard BillboardCloud::Project(const Cluster& cluster, const ProjectSettings& projectSettings)
 {
@@ -748,13 +912,4 @@ BillboardCloud::Billboard BillboardCloud::Project(const Cluster& cluster, const 
 
 	}
 	return billboard;
-}
-
-BillboardCloud::RenderContent BillboardCloud::Join(const Cluster& cluster, const JoinSettings& settings)
-{
-	RenderContent retVal{};
-
-
-
-	return retVal;
 }
