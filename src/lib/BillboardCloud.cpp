@@ -636,19 +636,19 @@ BillboardCloud::ProjectedCluster BillboardCloud::Project(const Cluster& cluster,
 							auto normal = glm::normalize(bc0 * v0.m_normal + bc1 * v1.m_normal + bc2 * v2.m_normal);
 							if (!normalTextureData.empty())
 							{
+								auto tangent = glm::normalize(bc0 * v0.m_tangent + bc1 * v1.m_tangent + bc2 * v2.m_tangent);
+								const auto biTangent = glm::cross(normal, tangent);
+								const auto tbn = glm::mat3(tangent, biTangent, normal);
+
 								int textureX = static_cast<int>(normalTextureResolution.x * texCoords.x) % normalTextureResolution.x;
 								int textureY = static_cast<int>(normalTextureResolution.y * texCoords.y) % normalTextureResolution.y;
 								if (textureX < 0) textureX += normalTextureResolution.x;
 								if (textureY < 0) textureY += normalTextureResolution.y;
 
 								const auto index = textureY * normalTextureResolution.x + textureX;
-								auto sampledNormal = normalTextureData[index] * 2.0f - glm::vec3(1.0f);
-
-								auto tangent = glm::normalize(bc0 * v0.m_tangent + bc1 * v1.m_tangent + bc2 * v2.m_tangent);
-								const auto biTangent = glm::cross(normal, tangent);
-								const auto tbn = glm::mat3(tangent, biTangent, normal);
-
-								normal = glm::normalize(tbn * sampledNormal);
+								
+								//normal = normalTextureData[index] * 2.0f - glm::vec3(1.0f);
+								//normal = glm::normalize(tbn * normal);
 							}
 							if(glm::dot(normal, glm::vec3(0, 0, 1)) < 0) normal = -normal;
 

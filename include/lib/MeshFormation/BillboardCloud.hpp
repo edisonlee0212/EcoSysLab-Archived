@@ -76,7 +76,7 @@ namespace EvoEngine {
 		struct ProjectedCluster
 		{
 			glm::vec3 m_clusterCenter = glm::vec3(0.0f);
-			glm::vec3 m_planeNormal = glm::vec3(1, 0, 0);
+			glm::vec3 m_planeNormal = glm::vec3(0, 0, 1);
 			glm::vec3 m_planeYAxis = glm::vec3(0, 1, 0);
 			std::vector<ProjectedElement> m_elements;
 
@@ -87,7 +87,7 @@ namespace EvoEngine {
 
 		struct Cluster {
 			glm::vec3 m_clusterCenter = glm::vec3(0.0f);
-			glm::vec3 m_planeNormal = glm::vec3(1, 0, 0);
+			glm::vec3 m_planeNormal = glm::vec3(0, 0, 1);
 			glm::vec3 m_planeYAxis = glm::vec3(0, 1, 0);
 			std::vector<Element> m_elements;
 			std::vector<InstancedElement> m_instancedElements;
