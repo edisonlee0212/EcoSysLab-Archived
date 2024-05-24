@@ -364,7 +364,8 @@ bool Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 	{
 		glm::vec3 clusterCenter = (m_treeModel.PeekShootSkeleton().m_max + m_treeModel.PeekShootSkeleton().m_min) * .5f;
 		clusterCenter.x = clusterCenter.z = 0.f;
-		BillboardCloud::Cluster frontCluster, leftCluster, upCluster;
+		/*
+		BillboardCloud::ElementCollection frontCluster, leftCluster, upCluster;
 		frontCluster.m_clusterCenter = clusterCenter;
 		leftCluster.m_clusterCenter = clusterCenter;
 		upCluster.m_clusterCenter = clusterCenter;
@@ -374,7 +375,7 @@ bool Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 		frontCluster.m_planeYAxis = glm::vec3(frontCluster.m_planeNormal.y, frontCluster.m_planeNormal.z, frontCluster.m_planeNormal.x);
 		leftCluster.m_planeYAxis = glm::vec3(leftCluster.m_planeNormal.y, leftCluster.m_planeNormal.z, leftCluster.m_planeNormal.x);
 		upCluster.m_planeYAxis = glm::vec3(upCluster.m_planeNormal.y, upCluster.m_planeNormal.z, upCluster.m_planeNormal.x);
-		Project({ frontCluster, leftCluster, upCluster }, projectSettings);
+		Project({ frontCluster, leftCluster, upCluster }, projectSettings);*/
 	}
 
 	bool changed = false;
@@ -2171,9 +2172,15 @@ void Tree::Deserialize(const YAML::Node& in)
 		}
 	}
 }
-
-void Tree::Project(std::vector<BillboardCloud::Cluster> clusters, const BillboardCloud::ProjectSettings& projectSettings)
+inline void TransformVertex(Vertex& v, const glm::mat4& transform)
 {
+	v.m_normal = glm::normalize(transform * glm::vec4(v.m_normal, 0.f));
+	v.m_tangent = glm::normalize(transform * glm::vec4(v.m_tangent, 0.f));
+	v.m_position = transform * glm::vec4(v.m_position, 1.f);
+}
+void Tree::Project(std::vector<BillboardCloud::ElementCollection> renderCollections, const BillboardCloud::ProjectSettings& projectSettings)
+{
+	/*
 	auto meshGeneratorSettings = m_meshGeneratorSettings;
 	meshGeneratorSettings.m_foliageInstancing = false;
 	GenerateGeometryEntities(meshGeneratorSettings);
@@ -2193,8 +2200,8 @@ void Tree::Project(std::vector<BillboardCloud::Cluster> clusters, const Billboar
 	}
 	const auto projectedTree = scene->CreateEntity("Projected Tree");
 	scene->SetParent(projectedTree, owner);
-	for (int clusterIndex = 0; clusterIndex < clusters.size(); clusterIndex++) {
-		auto& cluster = clusters[clusterIndex];
+	for (int clusterIndex = 0; clusterIndex < renderCollections.size(); clusterIndex++) {
+		auto& cluster = renderCollections[clusterIndex];
 
 		for (const auto& child : children) {
 			if (!scene->IsEntityValid(child)) continue;
@@ -2208,11 +2215,14 @@ void Tree::Project(std::vector<BillboardCloud::Cluster> clusters, const Billboar
 					if (mesh && material) {
 						cluster.m_elements.emplace_back();
 						auto& element = cluster.m_elements.back();
-						element.m_modelSpaceTransform.m_value = modelSpaceTransform;
 						element.m_content = std::make_shared<BillboardCloud::RenderContent>();
-						element.m_content->m_mesh = mesh;
+						element.m_content->m_vertices = mesh->UnsafeGetVertices();
 						element.m_content->m_material = material;
 						element.m_content->m_triangles = mesh->UnsafeGetTriangles();
+						Jobs::RunParallelFor(element.m_content->m_vertices.size(), [&](unsigned vertexIndex)
+						{
+							TransformVertex(element.m_content->m_vertices.at(vertexIndex), modelSpaceTransform);
+						});
 					}
 					scene->SetEnable(child, false);
 				}
@@ -2229,10 +2239,13 @@ void Tree::Project(std::vector<BillboardCloud::Cluster> clusters, const Billboar
 						cluster.m_elements.emplace_back();
 						auto& element = cluster.m_elements.back();
 						element.m_content = std::make_shared<BillboardCloud::RenderContent>();
-						element.m_modelSpaceTransform.m_value = modelSpaceTransform;
-						element.m_content->m_mesh = mesh;
+						element.m_content->m_vertices = mesh->UnsafeGetVertices();
 						element.m_content->m_material = material;
 						element.m_content->m_triangles = mesh->UnsafeGetTriangles();
+						Jobs::RunParallelFor(element.m_content->m_vertices.size(), [&](unsigned vertexIndex)
+						{
+							TransformVertex(element.m_content->m_vertices.at(vertexIndex), modelSpaceTransform);
+						});
 					}
 				}
 				scene->SetEnable(child, false);
@@ -2252,7 +2265,7 @@ void Tree::Project(std::vector<BillboardCloud::Cluster> clusters, const Billboar
 			elementMeshRenderer->m_material = billboard.m_material;
 			scene->SetParent(projectedElementEntity, projectedClusterEntity);
 		}
-	}
+	}*/
 }
 
 void Tree::ClearGeometryEntities() const

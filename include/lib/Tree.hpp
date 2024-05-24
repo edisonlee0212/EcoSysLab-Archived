@@ -157,7 +157,7 @@ namespace EcoSysLab {
 		void Deserialize(const YAML::Node& in) override;
 
 
-		void Project(std::vector<BillboardCloud::Cluster> clusters, const BillboardCloud::ProjectSettings& projectSettings);
+		void Project(std::vector<BillboardCloud::ElementCollection> renderCollections, const BillboardCloud::ProjectSettings& projectSettings);
 	};
 
 	template <typename SrcSkeletonData, typename SrcFlowData, typename SrcNodeData>
