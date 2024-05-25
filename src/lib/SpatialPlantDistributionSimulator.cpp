@@ -44,7 +44,7 @@ void SpatialPlantDistributionSimulator::OnInspectSpatialPlantDistributionFunctio
 		(io.MousePos.y - origin.y) / zoomFactor);
 
 	// Draw border and background color
-	drawList->AddRectFilled(canvasP0, canvasP1, IM_COL32(50, 50, 50, 255));
+	drawList->AddRectFilled(canvasP0, canvasP1, IM_COL32(255, 255, 255, 255));
 	drawList->AddRect(canvasP0, canvasP1, IM_COL32(255, 255, 255, 255));
 
 	// This will catch our interactions

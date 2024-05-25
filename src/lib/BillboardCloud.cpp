@@ -29,11 +29,11 @@ Entity BillboardCloud::BuildEntity(const std::shared_ptr<Scene>& scene) const
 	const auto owner = scene->CreateEntity("Billboard Cloud");
 	for (const auto& elementCollection : m_elementCollections) {
 		for (const auto& cluster : elementCollection.m_clusters) {
-			if (!cluster.m_mesh || !cluster.m_material) continue;
+			if (!cluster.m_billboardMesh || !cluster.m_billboardMaterial) continue;
 			const auto projectedElementEntity = scene->CreateEntity("Billboard");
 			const auto elementMeshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(projectedElementEntity).lock();
-			elementMeshRenderer->m_mesh = cluster.m_mesh;
-			elementMeshRenderer->m_material = cluster.m_material;
+			elementMeshRenderer->m_mesh = cluster.m_billboardMesh;
+			elementMeshRenderer->m_material = cluster.m_billboardMaterial;
 			scene->SetParent(projectedElementEntity, owner);
 		}
 	}
@@ -45,13 +45,13 @@ struct BoundingSphere
 	glm::vec3 m_center = glm::vec3(0.f);
 	float m_radius = 0.f;
 
-	void Initialize(const BillboardCloud::ElementCollection& elementCollection)
+	void Initialize(const std::vector<BillboardCloud::Element>& elements)
 	{
 		size_t triangleSize = 0;
 		auto positionSum = glm::vec3(0.f);
 
 		//TODO: Parallelize
-		for (const auto& element : elementCollection.m_elements)
+		for (const auto& element : elements)
 		{
 			for (const auto& triangle : element.m_triangles)
 			{
@@ -62,7 +62,7 @@ struct BoundingSphere
 		m_center = positionSum / static_cast<float>(triangleSize);
 
 		m_radius = 0.f;
-		for (const auto& element : elementCollection.m_elements)
+		for (const auto& element : elements)
 		{
 			for (const auto& vertex : element.m_vertices)
 			{
@@ -72,46 +72,141 @@ struct BoundingSphere
 	}
 };
 
-struct ClusterTriangle
+void AppendTriangles(std::vector<BillboardCloud::ClusterTriangle>& triangles, const std::vector<BillboardCloud::Element>& elements)
 {
-	int m_elementIndex = 0;
-	int m_triangleIndex = 0;
-};
-
-struct ClusterTriangleGroup
-{
-	std::vector<ClusterTriangle> m_triangles;
-	void Initialize(const BillboardCloud::ElementCollection& elementCollection)
+	for (int elementIndex = 0; elementIndex < elements.size(); elementIndex++)
 	{
-
-		m_triangles.clear();
-		int elementIndex = 0;
-		for (const auto& element : elementCollection.m_elements)
+		const auto& element = elements.at(elementIndex);
+		for (int triangleIndex = 0; triangleIndex < element.m_triangles.size(); triangleIndex++)
 		{
-			int triangleIndex = 0;
-			for (const auto& triangle : element.m_triangles)
-			{
-				ClusterTriangle clusterTriangle{ elementIndex, triangleIndex };
-				m_triangles.emplace_back(clusterTriangle);
-				triangleIndex++;
-			}
-			elementIndex++;
+			BillboardCloud::ClusterTriangle clusterTriangle;
+			clusterTriangle.m_elementIndex = elementIndex;
+			clusterTriangle.m_triangleIndex = triangleIndex;
+			triangles.emplace_back(clusterTriangle);
 		}
 	}
-};
+}
 
-std::vector<BillboardCloud::Cluster> BillboardCloud::StochasticClusterize(const ElementCollection& elementCollection,
-	const ClusterizeSettings& clusterizeSettings)
+std::vector<BillboardCloud::Cluster> BillboardCloud::ElementCollection::StochasticClusterize(std::vector<ClusterTriangle> operatingTriangles, const ClusterizationSettings& clusterizeSettings)
 {
-	float epsilonPercentage = 0.01f;
-	int iteration = 500;
-
 	BoundingSphere boundingSphere;
-	boundingSphere.Initialize(elementCollection);
+	boundingSphere.Initialize(m_elements);
+
+	float epsilon = boundingSphere.m_radius * clusterizeSettings.m_stochasticClusterizationSettings.m_epsilon;
+
+	float maxPlaneSize = boundingSphere.m_radius * clusterizeSettings.m_stochasticClusterizationSettings.m_maxPlaneSize;
+
+	AppendTriangles(operatingTriangles, m_elements);
+	m_skippedTriangles.clear();
+
+	std::vector<Cluster> retVal;
+
+	int epoch = 0;
+	while (!operatingTriangles.empty())
+	{
+		Cluster newCluster;
+		float maxArea = 0.f;
+		std::vector<int> selectedTriangleIndices;
+		for (int iteration = 0; iteration < clusterizeSettings.m_stochasticClusterizationSettings.m_iteration; iteration++)
+		{
+			int seedTriangleIndex = glm::linearRand(0, static_cast<int>(operatingTriangles.size()) - 1);
+			ClusterTriangle seedTriangle = operatingTriangles.at(seedTriangleIndex);
+			const auto perturb0 = glm::linearRand(-epsilon, epsilon);
+			const auto perturb1 = glm::linearRand(-epsilon, epsilon);
+			const auto perturb2 = glm::linearRand(-epsilon, epsilon);
+			const auto& seedTriangleElement = m_elements.at(seedTriangle.m_elementIndex);
+			const auto& seedTriangleIndices = seedTriangleElement.m_triangles.at(seedTriangle.m_triangleIndex);
+			const auto seedTriangleNormal = CalculateNormal(seedTriangle);
+			glm::vec3 seedTriangleP0 = seedTriangleElement.m_vertices.at(seedTriangleIndices.x).m_position + perturb0 * seedTriangleNormal;
+			glm::vec3 seedTriangleP1 = seedTriangleElement.m_vertices.at(seedTriangleIndices.y).m_position + perturb1 * seedTriangleNormal;
+			glm::vec3 seedTriangleP2 = seedTriangleElement.m_vertices.at(seedTriangleIndices.z).m_position + perturb2 * seedTriangleNormal;
+			auto testPlaneNormal = glm::normalize(glm::cross(seedTriangleP0 - seedTriangleP1, seedTriangleP0 - seedTriangleP2));
+			if (glm::dot(testPlaneNormal, seedTriangleNormal) < 0.f)
+			{
+				testPlaneNormal = -testPlaneNormal;
+			}
+			const auto planeCenter = (seedTriangleP0 + seedTriangleP1 + seedTriangleP2) / 3.f;
+			float testPlaneDistance = glm::dot(seedTriangleP0, testPlaneNormal);
+			float area = 0.f;
+			std::vector<int> currentIterationSelectedTriangleIndices;
+			for (int testTriangleIndex = 0; testTriangleIndex < operatingTriangles.size(); testTriangleIndex++)
+			{
+				const auto& testTriangle = operatingTriangles.at(testTriangleIndex);
+				const auto& testTriangleElement = m_elements.at(testTriangle.m_elementIndex);
+				const auto& testTriangleIndices = testTriangleElement.m_triangles.at(testTriangle.m_triangleIndex);
+				const auto& testTriangleP0 = testTriangleElement.m_vertices.at(testTriangleIndices.x).m_position;
+				const auto& testTriangleP1 = testTriangleElement.m_vertices.at(testTriangleIndices.y).m_position;
+				const auto& testTriangleP2 = testTriangleElement.m_vertices.at(testTriangleIndices.z).m_position;
+
+				if (glm::distance(planeCenter, testTriangleP0) > maxPlaneSize) continue;
 
 
+				if (glm::abs(testPlaneDistance - glm::dot(testTriangleP0, testPlaneNormal)) > epsilon) continue;
+				if (glm::abs(testPlaneDistance - glm::dot(testTriangleP1, testPlaneNormal)) > epsilon) continue;
+				if (glm::abs(testPlaneDistance - glm::dot(testTriangleP2, testPlaneNormal)) > epsilon) continue;
 
-	return {};
+				// increment projected area (Angular area Contribution)
+				// use projected area Contribution
+				float angle = glm::acos(glm::abs(glm::dot(testPlaneNormal, CalculateNormal(testTriangle))));
+				float angular = (glm::pi<float>() / 2.f - angle) / (glm::pi<float>() / 2.f);
+				area += CalculateArea(testTriangle) * angular;
+
+				// save reference to T with billboard plane
+				currentIterationSelectedTriangleIndices.emplace_back(testTriangleIndex);
+
+			}
+			if (!currentIterationSelectedTriangleIndices.empty() && area > maxArea)
+			{
+				//Update cluster.
+				newCluster.m_clusterPlane = Plane(testPlaneNormal, testPlaneDistance);
+				newCluster.m_triangles.clear();
+				for (const auto& triangleIndex : currentIterationSelectedTriangleIndices)
+				{
+					newCluster.m_triangles.emplace_back(operatingTriangles.at(triangleIndex));
+				}
+
+				selectedTriangleIndices = currentIterationSelectedTriangleIndices;
+			}
+		}
+
+		if (selectedTriangleIndices.empty())
+		{
+			m_skippedTriangles.insert(m_skippedTriangles.end(), operatingTriangles.begin(), operatingTriangles.end());
+			break;
+		}
+
+		retVal.emplace_back(std::move(newCluster));
+
+		//Remove selected triangle from the remaining triangle.
+		for (auto it = selectedTriangleIndices.rbegin(); it != selectedTriangleIndices.rend(); ++it)
+		{
+			operatingTriangles[*it] = operatingTriangles.back();
+			operatingTriangles.pop_back();
+		}
+		epoch++;
+		if (epoch >= clusterizeSettings.m_stochasticClusterizationSettings.m_timeout)
+		{
+			EVOENGINE_ERROR("Stochastic clustering timeout!")
+				break;
+		}
+	}
+	return std::move(retVal);
+}
+
+glm::vec3 BillboardCloud::ElementCollection::CalculateCentroid(const ClusterTriangle& triangle) const
+{
+	return m_elements.at(triangle.m_elementIndex).CalculateCentroid(triangle.m_triangleIndex);
+}
+
+
+float BillboardCloud::ElementCollection::CalculateArea(const ClusterTriangle& triangle) const
+{
+	return m_elements.at(triangle.m_elementIndex).CalculateArea(triangle.m_triangleIndex);
+}
+
+glm::vec3 BillboardCloud::ElementCollection::CalculateNormal(const ClusterTriangle& triangle) const
+{
+	return m_elements.at(triangle.m_elementIndex).CalculateNormal(triangle.m_triangleIndex);
 }
 
 void BillboardCloud::PreprocessPrefab(std::vector<ElementCollection>& elementCollections, const std::shared_ptr<Prefab>& currentPrefab, const Transform& parentModelSpaceTransform)
@@ -220,6 +315,20 @@ void BillboardCloud::PreprocessPrefab(ElementCollection& elementCollection, cons
 	}
 }
 
+glm::vec3 BillboardCloud::Element::CalculateCentroid(int triangleIndex) const
+{
+	return CalculateCentroid(m_triangles.at(triangleIndex));
+}
+
+float BillboardCloud::Element::CalculateArea(const int triangleIndex) const
+{
+	return CalculateArea(m_triangles.at(triangleIndex));
+}
+
+glm::vec3 BillboardCloud::Element::CalculateNormal(const int triangleIndex) const
+{
+	return CalculateNormal(m_triangles.at(triangleIndex));
+}
 
 glm::vec3 BillboardCloud::Element::CalculateCentroid(const glm::uvec3& triangle) const
 {
@@ -232,6 +341,26 @@ glm::vec3 BillboardCloud::Element::CalculateCentroid(const glm::uvec3& triangle)
 			(a.y + b.y + c.y) / 3,
 			(a.z + b.z + c.z) / 3
 	};
+}
+
+float BillboardCloud::Element::CalculateArea(const glm::uvec3& triangle) const
+{
+	const auto& p0 = m_vertices[triangle.x].m_position;
+	const auto& p1 = m_vertices[triangle.y].m_position;
+	const auto& p2 = m_vertices[triangle.z].m_position;
+	const float a = glm::length(p0 - p1);
+	const float b = glm::length(p2 - p1);
+	const float c = glm::length(p0 - p2);
+	const float d = (a + b + c) / 2;
+	return glm::sqrt(d * (d - a) * (d - b) * (d - c));
+}
+
+glm::vec3 BillboardCloud::Element::CalculateNormal(const glm::uvec3& triangle) const
+{
+	const auto& p0 = m_vertices[triangle.x].m_position;
+	const auto& p1 = m_vertices[triangle.y].m_position;
+	const auto& p2 = m_vertices[triangle.z].m_position;
+	return glm::normalize(glm::cross(p0 - p1, p0 - p2));
 }
 
 void BillboardCloud::Rectangle::Update()
@@ -588,37 +717,36 @@ void BillboardCloud::ElementCollection::Project(const ProjectSettings& projectSe
 	for (auto& cluster : m_clusters) Project(cluster, projectSettings);
 }
 
-void BillboardCloud::ElementCollection::Clusterize(const ClusterizeSettings& clusterizeSettings)
+void BillboardCloud::ElementCollection::Clusterize(const ClusterizationSettings& clusterizeSettings)
 {
 	m_clusters.clear();
 	switch (clusterizeSettings.m_clusterizeMode)
 	{
-	case ClusterizeMode::PassThrough:
-		{
-			m_clusters.emplace_back();
-			auto& cluster = m_clusters.back();
-			for(int elementIndex = 0; elementIndex < m_elements.size(); elementIndex++)
-			{
-				const auto& element = m_elements.at(elementIndex);
-				for(int triangleIndex = 0; triangleIndex < element.m_triangles.size(); triangleIndex++)
-				{
-					ClusterTriangle clusterTriangle;
-					clusterTriangle.m_elementIndex = elementIndex;
-					clusterTriangle.m_triangleIndex = triangleIndex;
-					cluster.m_triangles.emplace_back(clusterTriangle);
-				}
-			}
-		}
-	case ClusterizeMode::Default:
+	case ClusterizationMode::PassThrough:
 	{
+		m_clusters.emplace_back();
+		auto& cluster = m_clusters.back();
+		AppendTriangles(cluster.m_triangles, m_elements);
 	}
-	case ClusterizeMode::Stochastic:
+	break;
+	case ClusterizationMode::Stochastic:
 	{
+		std::vector<ClusterTriangle> operatingTriangles;
+		AppendTriangles(operatingTriangles, m_elements);
+		m_clusters = StochasticClusterize(std::move(operatingTriangles), clusterizeSettings);
 	}
+	break;
+	case ClusterizationMode::Default:
+	{
+		std::vector<ClusterTriangle> operatingTriangles;
+		AppendTriangles(operatingTriangles, m_elements);
+		m_clusters = DefaultClusterize(std::move(operatingTriangles), clusterizeSettings);
+	}
+	break;
 	}
 }
 
-void BillboardCloud::BuildClusters(const std::shared_ptr<Prefab>& prefab, const ClusterizeSettings& clusterizeSettings, const bool combine)
+void BillboardCloud::BuildClusters(const std::shared_ptr<Prefab>& prefab, const ClusterizationSettings& clusterizeSettings, const bool combine)
 {
 	if (!clusterizeSettings.m_append) m_elementCollections.clear();
 	if (combine) {
@@ -646,18 +774,16 @@ struct ProjectedTriangle
 	int m_elementIndex;
 };
 
-
-
-void BillboardCloud::ElementCollection::Project(Cluster& cluster, const ProjectSettings& projectSettings)
+void BillboardCloud::ElementCollection::Project(Cluster& cluster, const ProjectSettings& projectSettings) const
 {
-	glm::vec3 billboardFrontAxis = cluster.m_planeNormal;
-	glm::vec3 billboardUpAxis = cluster.m_planeYAxis;
-	glm::vec3 billboardLeftAxis = glm::normalize(glm::cross(billboardFrontAxis, billboardUpAxis));
+	const auto billboardFrontAxis = cluster.m_clusterPlane.GetNormal();
+	auto billboardUpAxis = glm::vec3(billboardFrontAxis.y, billboardFrontAxis.z, billboardFrontAxis.x); //cluster.m_planeYAxis;
+	const auto billboardLeftAxis = glm::normalize(glm::cross(billboardFrontAxis, billboardUpAxis));
 	billboardUpAxis = glm::normalize(glm::cross(billboardLeftAxis, billboardFrontAxis));
 	glm::mat4 rotateMatrix = glm::transpose(glm::mat4(glm::vec4(billboardLeftAxis, 0.0f), glm::vec4(billboardUpAxis, 0.0f), glm::vec4(billboardFrontAxis, 0.0f), glm::vec4(0.0f, 0.0f, 0.0f, 1.0f)));
 	std::vector<ProjectedTriangle> projectedTriangles;
 	projectedTriangles.resize(cluster.m_triangles.size());
-	Jobs::RunParallelFor(cluster.m_triangles.size(), [&](unsigned triangleIndex)
+	Jobs::RunParallelFor(cluster.m_triangles.size(), [&](const unsigned triangleIndex)
 		{
 			const auto& clusterTriangle = cluster.m_triangles.at(triangleIndex);
 			const auto& renderElement = m_elements.at(clusterTriangle.m_elementIndex);
@@ -731,250 +857,270 @@ void BillboardCloud::ElementCollection::Project(Cluster& cluster, const ProjectS
 	}
 
 	//Rasterization
+	//Calculate texture size
+	size_t textureWidth, textureHeight;
+	const auto& boundingRectangle = cluster.m_rectangle;
+	textureWidth = static_cast<size_t>(boundingRectangle.m_width * projectSettings.m_resolutionFactor);
+	textureHeight = static_cast<size_t>(boundingRectangle.m_height * projectSettings.m_resolutionFactor);
+	if (textureWidth < 1 || textureHeight < 1) return;
+	CPUFramebuffer<glm::vec4> albedoFrameBuffer(textureWidth, textureHeight);
+	CPUFramebuffer<glm::vec3> normalFrameBuffer(textureWidth, textureHeight);
+	CPUFramebuffer<float> roughnessFrameBuffer(textureWidth, textureHeight);
+	CPUFramebuffer<float> metallicFrameBuffer(textureWidth, textureHeight);
+	CPUFramebuffer<float> aoFrameBuffer(textureWidth, textureHeight);
+
+	struct PBRMaterial
 	{
-		//Calculate texture size
-		size_t textureWidth, textureHeight;
-		const auto& boundingRectangle = cluster.m_rectangle;
-		textureWidth = static_cast<size_t>(boundingRectangle.m_width * projectSettings.m_resolutionFactor);
-		textureHeight = static_cast<size_t>(boundingRectangle.m_height * projectSettings.m_resolutionFactor);
+		glm::vec4 m_baseAlbedo = glm::vec4(1.f);
+		float m_baseRoughness = 0.3f;
+		float m_baseMetallic = 0.3f;
+		float m_baseAo = 1.f;
+		glm::ivec2 m_albedoTextureResolution;
+		std::vector<glm::vec4> m_albedoTextureData;
 
-		CPUFramebuffer<glm::vec4> albedoFrameBuffer(textureWidth, textureHeight);
-		CPUFramebuffer<glm::vec3> normalFrameBuffer(textureWidth, textureHeight);
-		CPUFramebuffer<float> roughnessFrameBuffer(textureWidth, textureHeight);
-		CPUFramebuffer<float> metallicFrameBuffer(textureWidth, textureHeight);
-		CPUFramebuffer<float> aoFrameBuffer(textureWidth, textureHeight);
+		glm::ivec2 m_normalTextureResolution;
+		std::vector<glm::vec3> m_normalTextureData;
 
-		struct PBRMaterial
+		glm::ivec2 m_roughnessTextureResolution;
+		std::vector<float> m_roughnessTextureData;
+
+		glm::ivec2 m_metallicTextureResolution;
+		std::vector<float> m_metallicTextureData;
+
+		glm::ivec2 m_aoTextureResolution;
+		std::vector<float> m_aoTextureData;
+
+		void ApplyMaterial(const std::shared_ptr<Material>& material, const ProjectSettings& projectSettings)
 		{
-			glm::vec4 m_baseAlbedo = glm::vec4(1.f);
-			float m_baseRoughness = 0.3f;
-			float m_baseMetallic = 0.3f;
-			float m_baseAo = 1.f;
-			glm::ivec2 m_albedoTextureResolution;
-			std::vector<glm::vec4> m_albedoTextureData;
+			m_baseAlbedo = glm::vec4(material->m_materialProperties.m_albedoColor, 1.f - material->m_materialProperties.m_transmission);
+			m_baseRoughness = material->m_materialProperties.m_roughness;
+			m_baseMetallic = material->m_materialProperties.m_metallic;
+			m_baseAo = 1.f;
 
-			glm::ivec2 m_normalTextureResolution;
-			std::vector<glm::vec3> m_normalTextureData;
-
-			glm::ivec2 m_roughnessTextureResolution;
-			std::vector<float> m_roughnessTextureData;
-
-			glm::ivec2 m_metallicTextureResolution;
-			std::vector<float> m_metallicTextureData;
-
-			glm::ivec2 m_aoTextureResolution;
-			std::vector<float> m_aoTextureData;
-
-			void ApplyMaterial(const std::shared_ptr<Material>& material, const ProjectSettings& projectSettings)
+			const auto albedoTexture = material->GetAlbedoTexture();
+			if (projectSettings.m_transferAlbedoMap && albedoTexture)
 			{
-				m_baseAlbedo = glm::vec4(material->m_materialProperties.m_albedoColor, material->m_materialProperties.m_transmission);
-				m_baseRoughness = material->m_materialProperties.m_roughness;
-				m_baseMetallic = material->m_materialProperties.m_metallic;
-				m_baseAo = 1.f;
+				albedoTexture->GetRgbaChannelData(m_albedoTextureData);
+				m_albedoTextureResolution = albedoTexture->GetResolution();
+			}
+			const auto normalTexture = material->GetNormalTexture();
+			if (projectSettings.m_transferNormalMap && normalTexture)
+			{
+				normalTexture->GetRgbChannelData(m_normalTextureData);
+				m_normalTextureResolution = normalTexture->GetResolution();
+			}
+			const auto roughnessTexture = material->GetRoughnessTexture();
+			if (projectSettings.m_transferRoughnessMap && roughnessTexture)
+			{
+				roughnessTexture->GetRedChannelData(m_roughnessTextureData);
+				m_roughnessTextureResolution = roughnessTexture->GetResolution();
+			}
+			const auto metallicTexture = material->GetMetallicTexture();
+			if (projectSettings.m_transferMetallicMap && metallicTexture)
+			{
+				metallicTexture->GetRedChannelData(m_metallicTextureData);
+				m_metallicTextureResolution = metallicTexture->GetResolution();
+			}
+			const auto aoTexture = material->GetAoTexture();
+			if (projectSettings.m_transferAoMap && aoTexture)
+			{
+				aoTexture->GetRedChannelData(m_aoTextureData);
+				m_aoTextureResolution = aoTexture->GetResolution();
+			}
+		}
+	};
 
-				const auto albedoTexture = material->GetAlbedoTexture();
-				if (projectSettings.m_transferAlbedoMap && albedoTexture)
+	std::vector<PBRMaterial> pbrMaterials;
+	float averageRoughness = 1.f;
+	float averageMetallic = 0.0f;
+	pbrMaterials.resize(m_elements.size());
+	for (int i = 0; i < pbrMaterials.size(); i++)
+	{
+		pbrMaterials[i].ApplyMaterial(m_elements.at(i).m_material, projectSettings);
+	}
+
+	Jobs::RunParallelFor(projectedTriangles.size(), [&](const unsigned triangleIndex)
+		{
+			const auto& triangle = projectedTriangles[triangleIndex];
+			const auto& v0 = triangle.m_projectedV0;
+			const auto& v1 = triangle.m_projectedV1;
+			const auto& v2 = triangle.m_projectedV2;
+			const auto& material = pbrMaterials.at(triangle.m_elementIndex);
+			glm::vec3 textureSpaceVertices[3];
+			textureSpaceVertices[0] = boundingRectangle.Transform(v0.m_position) * projectSettings.m_resolutionFactor;
+			textureSpaceVertices[1] = boundingRectangle.Transform(v1.m_position) * projectSettings.m_resolutionFactor;
+			textureSpaceVertices[2] = boundingRectangle.Transform(v2.m_position) * projectSettings.m_resolutionFactor;
+
+			//Bound check;
+			auto minBound = glm::vec2(FLT_MAX, FLT_MAX);
+			auto maxBound = glm::vec2(-FLT_MAX, -FLT_MAX);
+			for (const auto& textureSpaceVertex : textureSpaceVertices)
+			{
+				minBound = glm::min(glm::vec2(textureSpaceVertex), minBound);
+				maxBound = glm::max(glm::vec2(textureSpaceVertex), maxBound);
+			}
+
+			const auto left = static_cast<int>(minBound.x + 0.5f);
+			const auto right = static_cast<int>(maxBound.x - 0.5f);
+			const auto top = static_cast<int>(minBound.y + 0.5f);
+			const auto bottom = static_cast<int>(maxBound.y - 0.5f);
+			for (auto u = left; u <= right; u++)
+			{
+				for (auto v = top; v <= bottom; v++)
 				{
-					albedoTexture->GetRgbaChannelData(m_albedoTextureData);
-					m_albedoTextureResolution = albedoTexture->GetResolution();
-				}
-				const auto normalTexture = material->GetNormalTexture();
-				if (projectSettings.m_transferNormalMap && normalTexture)
-				{
-					normalTexture->GetRgbChannelData(m_normalTextureData);
-					m_normalTextureResolution = normalTexture->GetResolution();
-				}
-				const auto roughnessTexture = material->GetRoughnessTexture();
-				if (projectSettings.m_transferRoughnessMap && roughnessTexture)
-				{
-					roughnessTexture->GetRedChannelData(m_roughnessTextureData);
-					m_roughnessTextureResolution = roughnessTexture->GetResolution();
-				}
-				const auto metallicTexture = material->GetMetallicTexture();
-				if (projectSettings.m_transferMetallicMap && metallicTexture)
-				{
-					metallicTexture->GetRedChannelData(m_metallicTextureData);
-					m_metallicTextureResolution = metallicTexture->GetResolution();
-				}
-				const auto aoTexture = material->GetAoTexture();
-				if (projectSettings.m_transferAoMap && aoTexture)
-				{
-					aoTexture->GetRedChannelData(m_aoTextureData);
-					m_aoTextureResolution = aoTexture->GetResolution();
+					const auto p = glm::vec3(u + .5f, v + .5f, 0.f);
+					float bc0, bc1, bc2;
+					Barycentric2D(p, textureSpaceVertices[0], textureSpaceVertices[1], textureSpaceVertices[2], bc0, bc1, bc2);
+					if (bc0 < 0.f || bc1 < 0.f || bc2 < 0.f) continue;
+					float z = bc0 * textureSpaceVertices[0].z + bc1 * textureSpaceVertices[1].z + bc2 * textureSpaceVertices[2].z;
+					//Early depth check.
+					if (!albedoFrameBuffer.CompareZ(u, v, z)) continue;
+
+					const auto texCoords = bc0 * v0.m_texCoord + bc1 * v1.m_texCoord + bc2 * v2.m_texCoord;
+					auto albedo = material.m_baseAlbedo;
+					float roughness = material.m_baseRoughness;
+					float metallic = material.m_baseMetallic;
+					float ao = material.m_baseAo;
+					if (!material.m_albedoTextureData.empty())
+					{
+						int textureX = static_cast<int>(material.m_albedoTextureResolution.x * texCoords.x) % material.m_albedoTextureResolution.x;
+						int textureY = static_cast<int>(material.m_albedoTextureResolution.y * texCoords.y) % material.m_albedoTextureResolution.y;
+						if (textureX < 0) textureX += material.m_albedoTextureResolution.x;
+						if (textureY < 0) textureY += material.m_albedoTextureResolution.y;
+
+						const auto index = textureY * material.m_albedoTextureResolution.x + textureX;
+						albedo = material.m_albedoTextureData[index];
+					}
+					//Alpha discard
+					if (albedo.a < 0.1f) continue;
+					auto normal = glm::normalize(bc0 * v0.m_normal + bc1 * v1.m_normal + bc2 * v2.m_normal);
+
+					if (!material.m_normalTextureData.empty())
+					{
+						auto tangent = glm::normalize(bc0 * v0.m_tangent + bc1 * v1.m_tangent + bc2 * v2.m_tangent);
+						const auto biTangent = glm::cross(normal, tangent);
+						const auto tbn = glm::mat3(tangent, biTangent, normal);
+
+						int textureX = static_cast<int>(material.m_normalTextureResolution.x * texCoords.x) % material.m_normalTextureResolution.x;
+						int textureY = static_cast<int>(material.m_normalTextureResolution.y * texCoords.y) % material.m_normalTextureResolution.y;
+						if (textureX < 0) textureX += material.m_normalTextureResolution.x;
+						if (textureY < 0) textureY += material.m_normalTextureResolution.y;
+
+						const auto index = textureY * material.m_normalTextureResolution.x + textureX;
+						const auto sampled = glm::normalize(material.m_normalTextureData[index]) * 2.0f - glm::vec3(1.0f);
+						normal = glm::normalize(tbn * sampled);
+					}
+					if (glm::dot(normal, glm::vec3(0, 0, 1)) < 0) normal = -normal;
+
+					if (!material.m_roughnessTextureData.empty())
+					{
+						int textureX = static_cast<int>(material.m_roughnessTextureResolution.x * texCoords.x) % material.m_roughnessTextureResolution.x;
+						int textureY = static_cast<int>(material.m_roughnessTextureResolution.y * texCoords.y) % material.m_roughnessTextureResolution.y;
+						if (textureX < 0) textureX += material.m_roughnessTextureResolution.x;
+						if (textureY < 0) textureY += material.m_roughnessTextureResolution.y;
+
+
+						const auto index = textureY * material.m_roughnessTextureResolution.x + textureX;
+						roughness = material.m_roughnessTextureData[index];
+
+					}
+					if (!material.m_metallicTextureData.empty())
+					{
+						int textureX = static_cast<int>(material.m_metallicTextureResolution.x * texCoords.x) % material.m_metallicTextureResolution.x;
+						int textureY = static_cast<int>(material.m_metallicTextureResolution.y * texCoords.y) % material.m_metallicTextureResolution.y;
+						if (textureX < 0) textureX += material.m_metallicTextureResolution.x;
+						if (textureY < 0) textureY += material.m_metallicTextureResolution.y;
+
+						const auto index = textureY * material.m_metallicTextureResolution.x + textureX;
+						metallic = material.m_metallicTextureData[index];
+
+					}
+					if (!material.m_aoTextureData.empty())
+					{
+						int textureX = static_cast<int>(material.m_aoTextureResolution.x * texCoords.x) % material.m_aoTextureResolution.x;
+						int textureY = static_cast<int>(material.m_aoTextureResolution.y * texCoords.y) % material.m_aoTextureResolution.y;
+						if (textureX < 0) textureX += material.m_aoTextureResolution.x;
+						if (textureY < 0) textureY += material.m_aoTextureResolution.y;
+
+
+						const auto index = textureY * material.m_aoTextureResolution.x + textureX;
+						ao = material.m_aoTextureData[index];
+
+					}
+					albedoFrameBuffer.SetPixel(u, v, z, albedo);
+					normal = normal * 0.5f + glm::vec3(0.5f);
+					normalFrameBuffer.SetPixel(u, v, z, normal);
+					roughnessFrameBuffer.SetPixel(u, v, z, roughness);
+					metallicFrameBuffer.SetPixel(u, v, z, metallic);
+					aoFrameBuffer.SetPixel(u, v, z, ao);
 				}
 			}
-		};
+		});
 
-		std::vector<PBRMaterial> pbrMaterials;
-		pbrMaterials.resize(m_elements.size());
-		for (int i = 0; i < pbrMaterials.size(); i++)
-		{
-			pbrMaterials[i].ApplyMaterial(m_elements.at(i).m_material, projectSettings);
-		}
-
-		Jobs::RunParallelFor(projectedTriangles.size(), [&](const unsigned triangleIndex)
-			{
-				const auto& triangle = projectedTriangles[triangleIndex];
-				const auto& v0 = triangle.m_projectedV0;
-				const auto& v1 = triangle.m_projectedV1;
-				const auto& v2 = triangle.m_projectedV2;
-				const auto& material = pbrMaterials.at(triangle.m_elementIndex);
-				glm::vec3 textureSpaceVertices[3];
-				textureSpaceVertices[0] = boundingRectangle.Transform(v0.m_position) * projectSettings.m_resolutionFactor;
-				textureSpaceVertices[1] = boundingRectangle.Transform(v1.m_position) * projectSettings.m_resolutionFactor;
-				textureSpaceVertices[2] = boundingRectangle.Transform(v2.m_position) * projectSettings.m_resolutionFactor;
-
-				//Bound check;
-				auto minBound = glm::vec2(FLT_MAX, FLT_MAX);
-				auto maxBound = glm::vec2(-FLT_MAX, -FLT_MAX);
-				for (const auto& textureSpaceVertex : textureSpaceVertices)
-				{
-					minBound = glm::min(glm::vec2(textureSpaceVertex), minBound);
-					maxBound = glm::max(glm::vec2(textureSpaceVertex), maxBound);
-				}
-
-				const auto left = static_cast<int>(minBound.x + 0.5f);
-				const auto right = static_cast<int>(maxBound.x - 0.5f);
-				const auto top = static_cast<int>(minBound.y + 0.5f);
-				const auto bottom = static_cast<int>(maxBound.y - 0.5f);
-				for (auto u = left; u <= right; u++)
-				{
-					for (auto v = top; v <= bottom; v++)
-					{
-						const auto p = glm::vec3(u + .5f, v + .5f, 0.f);
-						float bc0, bc1, bc2;
-						Barycentric2D(p, textureSpaceVertices[0], textureSpaceVertices[1], textureSpaceVertices[2], bc0, bc1, bc2);
-						if (bc0 < 0.f || bc1 < 0.f || bc2 < 0.f) continue;
-						float z = bc0 * textureSpaceVertices[0].z + bc1 * textureSpaceVertices[1].z + bc2 * textureSpaceVertices[2].z;
-						//Early depth check.
-						if (!albedoFrameBuffer.CompareZ(u, v, z)) continue;
-
-						const auto texCoords = bc0 * v0.m_texCoord + bc1 * v1.m_texCoord + bc2 * v2.m_texCoord;
-						auto albedo = material.m_baseAlbedo;
-						float roughness = material.m_baseRoughness;
-						float metallic = material.m_baseMetallic;
-						float ao = material.m_baseAo;
-						if (!material.m_albedoTextureData.empty())
-						{
-							int textureX = static_cast<int>(material.m_albedoTextureResolution.x * texCoords.x) % material.m_albedoTextureResolution.x;
-							int textureY = static_cast<int>(material.m_albedoTextureResolution.y * texCoords.y) % material.m_albedoTextureResolution.y;
-							if (textureX < 0) textureX += material.m_albedoTextureResolution.x;
-							if (textureY < 0) textureY += material.m_albedoTextureResolution.y;
-
-							const auto index = textureY * material.m_albedoTextureResolution.x + textureX;
-							albedo = material.m_albedoTextureData[index];
-						}
-						//Alpha discard
-						if (albedo.a < 0.1f) continue;
-						auto normal = glm::normalize(bc0 * v0.m_normal + bc1 * v1.m_normal + bc2 * v2.m_normal);
-
-						if (!material.m_normalTextureData.empty())
-						{
-							auto tangent = glm::normalize(bc0 * v0.m_tangent + bc1 * v1.m_tangent + bc2 * v2.m_tangent);
-							const auto biTangent = glm::cross(normal, tangent);
-							const auto tbn = glm::mat3(tangent, biTangent, normal);
-
-							int textureX = static_cast<int>(material.m_normalTextureResolution.x * texCoords.x) % material.m_normalTextureResolution.x;
-							int textureY = static_cast<int>(material.m_normalTextureResolution.y * texCoords.y) % material.m_normalTextureResolution.y;
-							if (textureX < 0) textureX += material.m_normalTextureResolution.x;
-							if (textureY < 0) textureY += material.m_normalTextureResolution.y;
-
-							const auto index = textureY * material.m_normalTextureResolution.x + textureX;
-							const auto sampled = glm::normalize(material.m_normalTextureData[index]) * 2.0f - glm::vec3(1.0f);
-							normal = glm::normalize(tbn * sampled);
-						}
-						if (glm::dot(normal, glm::vec3(0, 0, 1)) < 0) normal = -normal;
-
-						if (!material.m_roughnessTextureData.empty())
-						{
-							int textureX = static_cast<int>(material.m_roughnessTextureResolution.x * texCoords.x) % material.m_roughnessTextureResolution.x;
-							int textureY = static_cast<int>(material.m_roughnessTextureResolution.y * texCoords.y) % material.m_roughnessTextureResolution.y;
-							if (textureX < 0) textureX += material.m_roughnessTextureResolution.x;
-							if (textureY < 0) textureY += material.m_roughnessTextureResolution.y;
-
-
-							const auto index = textureY * material.m_roughnessTextureResolution.x + textureX;
-							roughness = material.m_roughnessTextureData[index];
-
-						}
-						if (!material.m_metallicTextureData.empty())
-						{
-							int textureX = static_cast<int>(material.m_metallicTextureResolution.x * texCoords.x) % material.m_metallicTextureResolution.x;
-							int textureY = static_cast<int>(material.m_metallicTextureResolution.y * texCoords.y) % material.m_metallicTextureResolution.y;
-							if (textureX < 0) textureX += material.m_metallicTextureResolution.x;
-							if (textureY < 0) textureY += material.m_metallicTextureResolution.y;
-
-							const auto index = textureY * material.m_metallicTextureResolution.x + textureX;
-							metallic = material.m_metallicTextureData[index];
-
-						}
-						if (!material.m_aoTextureData.empty())
-						{
-							int textureX = static_cast<int>(material.m_aoTextureResolution.x * texCoords.x) % material.m_aoTextureResolution.x;
-							int textureY = static_cast<int>(material.m_aoTextureResolution.y * texCoords.y) % material.m_aoTextureResolution.y;
-							if (textureX < 0) textureX += material.m_aoTextureResolution.x;
-							if (textureY < 0) textureY += material.m_aoTextureResolution.y;
-
-
-							const auto index = textureY * material.m_aoTextureResolution.x + textureX;
-							ao = material.m_aoTextureData[index];
-
-						}
-						albedoFrameBuffer.SetPixel(u, v, z, albedo);
-						normal = normal * 0.5f + glm::vec3(0.5f);
-						normalFrameBuffer.SetPixel(u, v, z, normal);
-						roughnessFrameBuffer.SetPixel(u, v, z, roughness);
-						metallicFrameBuffer.SetPixel(u, v, z, metallic);
-						aoFrameBuffer.SetPixel(u, v, z, ao);
-					}
-				}
-			});
-
-		std::shared_ptr<Texture2D> albedoTexture = ProjectManager::CreateTemporaryAsset<Texture2D>();
-		albedoTexture->SetRgbaChannelData(albedoFrameBuffer.m_colorBuffer, glm::uvec2(albedoFrameBuffer.m_width, albedoFrameBuffer.m_height));
+	cluster.m_billboardMaterial = ProjectManager::CreateTemporaryAsset<Material>();
+	std::shared_ptr<Texture2D> albedoTexture = ProjectManager::CreateTemporaryAsset<Texture2D>();
+	albedoTexture->SetRgbaChannelData(albedoFrameBuffer.m_colorBuffer, glm::uvec2(albedoFrameBuffer.m_width, albedoFrameBuffer.m_height));
+	cluster.m_billboardMaterial->SetAlbedoTexture(albedoTexture);
+	if (projectSettings.m_transferNormalMap) {
 		std::shared_ptr<Texture2D> normalTexture = ProjectManager::CreateTemporaryAsset<Texture2D>();
 		normalTexture->SetRgbChannelData(normalFrameBuffer.m_colorBuffer, glm::uvec2(normalFrameBuffer.m_width, normalFrameBuffer.m_height));
+		cluster.m_billboardMaterial->SetNormalTexture(normalTexture);
+	}
+	if (projectSettings.m_transferRoughnessMap) {
 		std::shared_ptr<Texture2D> roughnessTexture = ProjectManager::CreateTemporaryAsset<Texture2D>();
 		roughnessTexture->SetRedChannelData(roughnessFrameBuffer.m_colorBuffer, glm::uvec2(roughnessFrameBuffer.m_width, roughnessFrameBuffer.m_height));
+		cluster.m_billboardMaterial->SetRoughnessTexture(roughnessTexture);
+	}
+	else
+	{
+		cluster.m_billboardMaterial->m_materialProperties.m_roughness = averageRoughness;
+	}
+	if (projectSettings.m_transferMetallicMap) {
 		std::shared_ptr<Texture2D> metallicTexture = ProjectManager::CreateTemporaryAsset<Texture2D>();
 		metallicTexture->SetRedChannelData(metallicFrameBuffer.m_colorBuffer, glm::uvec2(metallicFrameBuffer.m_width, metallicFrameBuffer.m_height));
+		cluster.m_billboardMaterial->SetMetallicTexture(metallicTexture);
+	}
+	else
+	{
+		cluster.m_billboardMaterial->m_materialProperties.m_metallic = averageMetallic;
+	}
+	if (projectSettings.m_transferAoMap) {
 		std::shared_ptr<Texture2D> aoTexture = ProjectManager::CreateTemporaryAsset<Texture2D>();
 		aoTexture->SetRedChannelData(aoFrameBuffer.m_colorBuffer, glm::uvec2(aoFrameBuffer.m_width, aoFrameBuffer.m_height));
-		cluster.m_material = ProjectManager::CreateTemporaryAsset<Material>();
-		cluster.m_material->SetAlbedoTexture(albedoTexture);
-		cluster.m_material->SetNormalTexture(normalTexture);
-		cluster.m_material->SetRoughnessTexture(roughnessTexture);
-		cluster.m_material->SetMetallicTexture(metallicTexture);
-		cluster.m_material->SetAOTexture(aoTexture);
-
-		cluster.m_mesh = ProjectManager::CreateTemporaryAsset<Mesh>();
-
-		std::vector<Vertex> planeVertices;
-		planeVertices.resize(4);
-
-		const auto inverseRotateMatrix = glm::inverse(rotateMatrix);
-
-		planeVertices[0].m_position = inverseRotateMatrix * glm::vec4(cluster.m_rectangle.m_points[0].x, cluster.m_rectangle.m_points[0].y, 0.f, 0.f);
-		planeVertices[0].m_texCoord = glm::vec2(0, 0);
-		planeVertices[1].m_position = inverseRotateMatrix * glm::vec4(cluster.m_rectangle.m_points[1].x, cluster.m_rectangle.m_points[1].y, 0.f, 0.f);
-		planeVertices[1].m_texCoord = glm::vec2(1, 0);
-		planeVertices[2].m_position = inverseRotateMatrix * glm::vec4(cluster.m_rectangle.m_points[2].x, cluster.m_rectangle.m_points[2].y, 0.f, 0.f);
-		planeVertices[2].m_texCoord = glm::vec2(1, 1);
-		planeVertices[3].m_position = inverseRotateMatrix * glm::vec4(cluster.m_rectangle.m_points[3].x, cluster.m_rectangle.m_points[3].y, 0.f, 0.f);
-		planeVertices[3].m_texCoord = glm::vec2(0, 1);
-
-
-		float frontPush = glm::dot(cluster.m_clusterCenter, billboardFrontAxis);
-		planeVertices[0].m_position += frontPush * billboardFrontAxis;
-		planeVertices[1].m_position += frontPush * billboardFrontAxis;
-		planeVertices[2].m_position += frontPush * billboardFrontAxis;
-		planeVertices[3].m_position += frontPush * billboardFrontAxis;
-
-		std::vector<glm::uvec3> planeTriangles;
-		planeTriangles.resize(2);
-		planeTriangles[0] = { 0, 1, 2 };
-		planeTriangles[1] = { 2, 3, 0 };
-		cluster.m_mesh->SetVertices({}, planeVertices, planeTriangles);
-
+		cluster.m_billboardMaterial->SetAOTexture(aoTexture);
 	}
+
+	cluster.m_billboardMesh = ProjectManager::CreateTemporaryAsset<Mesh>();
+
+	std::vector<Vertex> planeVertices;
+	planeVertices.resize(4);
+
+	const auto inverseRotateMatrix = glm::inverse(rotateMatrix);
+
+	planeVertices[0].m_position = inverseRotateMatrix * glm::vec4(cluster.m_rectangle.m_points[0].x, cluster.m_rectangle.m_points[0].y, 0.f, 0.f);
+	planeVertices[0].m_texCoord = glm::vec2(0, 0);
+	planeVertices[1].m_position = inverseRotateMatrix * glm::vec4(cluster.m_rectangle.m_points[1].x, cluster.m_rectangle.m_points[1].y, 0.f, 0.f);
+	planeVertices[1].m_texCoord = glm::vec2(1, 0);
+	planeVertices[2].m_position = inverseRotateMatrix * glm::vec4(cluster.m_rectangle.m_points[2].x, cluster.m_rectangle.m_points[2].y, 0.f, 0.f);
+	planeVertices[2].m_texCoord = glm::vec2(1, 1);
+	planeVertices[3].m_position = inverseRotateMatrix * glm::vec4(cluster.m_rectangle.m_points[3].x, cluster.m_rectangle.m_points[3].y, 0.f, 0.f);
+	planeVertices[3].m_texCoord = glm::vec2(0, 1);
+
+
+	planeVertices[0].m_position -= cluster.m_clusterPlane.m_d * billboardFrontAxis;
+	planeVertices[1].m_position -= cluster.m_clusterPlane.m_d * billboardFrontAxis;
+	planeVertices[2].m_position -= cluster.m_clusterPlane.m_d * billboardFrontAxis;
+	planeVertices[3].m_position -= cluster.m_clusterPlane.m_d * billboardFrontAxis;
+
+	std::vector<glm::uvec3> planeTriangles;
+	planeTriangles.resize(2);
+	planeTriangles[0] = { 0, 1, 2 };
+	planeTriangles[1] = { 2, 3, 0 };
+	cluster.m_billboardMesh->SetVertices({}, planeVertices, planeTriangles);
+}
+
+std::vector<BillboardCloud::Cluster> BillboardCloud::ElementCollection::DefaultClusterize(
+	std::vector<ClusterTriangle> operatingTriangles, const ClusterizationSettings& clusterizeSettings)
+{
+	return {};
 }

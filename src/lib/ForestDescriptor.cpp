@@ -82,6 +82,80 @@ Entity ForestPatch::InstantiatePatch(const glm::ivec2& gridSize, const bool setS
 	return retVal;
 }
 
+Entity ForestPatch::InstantiatePatch(const std::vector<std::pair<TreeGrowthSettings, std::shared_ptr<TreeDescriptor>>>& candidates,
+	const glm::ivec2& gridSize, bool setSimulationSettings)
+{
+	const auto scene = Application::GetActiveScene();
+	std::shared_ptr<Soil> soil;
+	const auto soilCandidate = EcoSysLabLayer::FindSoil();
+	if (!soilCandidate.expired()) soil = soilCandidate.lock();
+	std::shared_ptr<SoilDescriptor> soilDescriptor;
+	if (soil) {
+		soilDescriptor = soil->m_soilDescriptor.Get<SoilDescriptor>();
+	}
+	std::shared_ptr<HeightField> heightField{};
+	if (soilDescriptor)
+	{
+		heightField = soilDescriptor->m_heightField.Get<HeightField>();
+	}
+	const glm::vec2 startPoint = glm::vec2((gridSize.x - 1) * m_gridDistance.x, (gridSize.y - 1) * m_gridDistance.y) * 0.5f;
+
+	const auto retVal = scene->CreateEntity("Forest (" + std::to_string(gridSize.x * gridSize.y) + ") - " + GetTitle());
+	const auto forest = scene->CreateEntity("Center");
+	const auto boundary = scene->CreateEntity("Boundary");
+	scene->SetParent(forest, retVal);
+	scene->SetParent(boundary, retVal);
+
+	int index = 0;
+
+	const auto offset = glm::linearRand(glm::vec3(-10000), glm::vec3(10000));
+	for (int i = 0; i < gridSize.x; i++) {
+		for (int j = 0; j < gridSize.y; j++) {
+			auto position = glm::vec3(-startPoint.x + i * m_gridDistance.x, 0.0f, -startPoint.y + j * m_gridDistance.y);
+			position.x += glm::linearRand(-m_gridDistance.x * m_positionOffsetMean.x, m_gridDistance.x * m_positionOffsetMean.x);
+			position.z += glm::linearRand(-m_gridDistance.y * m_positionOffsetMean.y, m_gridDistance.y * m_positionOffsetMean.y);
+			position += glm::gaussRand(glm::vec3(0.0f), glm::vec3(m_positionOffsetVariance.x, 0.0f, m_positionOffsetVariance.y));
+			if (heightField) position.y = heightField->GetValue({ position.x, position.z }) - 0.01f;
+			GlobalTransform transform{};
+			transform.SetPosition(position);
+			auto rotation = glm::quat(glm::radians(
+				glm::vec3(glm::gaussRand(glm::vec3(0.0f), m_rotationOffsetVariance))));
+			transform.SetRotation(rotation);
+			transform.SetScale(glm::vec3(1.f));
+
+			auto treeEntity = scene->CreateEntity("Tree No." + std::to_string(index));
+			index++;
+
+			scene->SetDataComponent(treeEntity, transform);
+			const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
+			
+			const auto candidateIndex = glm::linearRand(0, static_cast<int>(candidates.size()));
+			tree->m_treeModel.m_treeGrowthSettings = candidates.at(candidateIndex).first;
+			tree->m_treeDescriptor = candidates.at(candidateIndex).second;//m_treeDescriptor.Get<TreeDescriptor>();
+			if (i == 0 || j == 0 || i == gridSize.x - 1 || j == gridSize.y - 1) {
+				scene->SetParent(treeEntity, boundary);
+				tree->m_generateMesh = false;
+			}
+			else
+			{
+				scene->SetParent(treeEntity, forest);
+				tree->m_generateMesh = true;
+			}
+			tree->m_startTime = glm::linearRand(0.0f, m_startTimeMax);
+			tree->m_lowBranchPruning = glm::mix(m_minLowBranchPruning, m_maxLowBranchPruning, glm::abs(glm::perlin(offset + transform.GetPosition())));
+		}
+	}
+
+
+	if (setSimulationSettings)
+	{
+		const auto lab = Application::GetLayer<EcoSysLabLayer>();
+		lab->m_simulationSettings = m_simulationSettings;
+	}
+
+	return retVal;
+}
+
 void ForestPatch::CollectAssetRef(std::vector<AssetRef>& list)
 {
 	if (m_treeDescriptor.Get<TreeDescriptor>()) list.push_back(m_treeDescriptor);
