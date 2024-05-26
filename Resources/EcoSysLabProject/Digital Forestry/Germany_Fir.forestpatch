@@ -5,7 +5,7 @@ m_rotationOffsetVariance: [0, 0, 0]
 m_minLowBranchPruning: 0.100000001
 m_maxLowBranchPruning: 0.400000006
 m_simulationTime: 8
-m_startTimeMax: 2
+m_startTimeMax: 3
 m_treeDescriptor:
   m_assetHandle: 17608166553037637422
   m_assetTypeName: TreeDescriptor

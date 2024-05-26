@@ -2192,7 +2192,8 @@ void Tree::GenerateBillboardClouds(const BillboardCloud::ProjectSettings& projec
 			if (!scene->IsEntityValid(child)) continue;
 			auto name = scene->GetEntityName(child);
 			const auto modelSpaceTransform = glm::inverse(ownerGlobalTransform.m_value) * scene->GetDataComponent<GlobalTransform>(child).m_value;
-			if (name == "Branch Mesh") {
+			if (false && name == "Branch Mesh") {
+
 				if (scene->HasPrivateComponent<MeshRenderer>(child)) {
 					const auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(child).lock();
 					const auto mesh = meshRenderer->m_mesh.Get<Mesh>();
@@ -2211,7 +2212,7 @@ void Tree::GenerateBillboardClouds(const BillboardCloud::ProjectSettings& projec
 						});
 						BillboardCloud::ClusterizationSettings clusterizeSettings {};
 						clusterizeSettings.m_append = false;
-						clusterizeSettings.m_clusterizeMode = BillboardCloud::ClusterizationMode::PassThrough;
+						clusterizeSettings.m_clusterizeMode = BillboardCloud::ClusterizationMode::Stochastic;
 						elementCollection.Clusterize(clusterizeSettings);
 					}
 					scene->SetEnable(child, false);

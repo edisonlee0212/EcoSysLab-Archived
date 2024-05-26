@@ -93,10 +93,10 @@ namespace EvoEngine {
 
 		struct StochasticClusterizationSettings
 		{
-			float m_epsilon = 0.05f;
-			int m_iteration = 500;
-			int m_timeout = 200;
-			float m_maxPlaneSize = 0.5f;
+			float m_epsilon = 0.3f;
+			int m_iteration = 200;
+			int m_timeout = 300;
+			float m_maxPlaneSize = 0.1f;
 		};
 
 		struct ClusterizationSettings

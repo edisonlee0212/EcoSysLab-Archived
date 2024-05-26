@@ -107,67 +107,72 @@ std::vector<BillboardCloud::Cluster> BillboardCloud::ElementCollection::Stochast
 		Cluster newCluster;
 		float maxArea = 0.f;
 		std::vector<int> selectedTriangleIndices;
-		for (int iteration = 0; iteration < clusterizeSettings.m_stochasticClusterizationSettings.m_iteration; iteration++)
-		{
-			int seedTriangleIndex = glm::linearRand(0, static_cast<int>(operatingTriangles.size()) - 1);
-			ClusterTriangle seedTriangle = operatingTriangles.at(seedTriangleIndex);
-			const auto perturb0 = glm::linearRand(-epsilon, epsilon);
-			const auto perturb1 = glm::linearRand(-epsilon, epsilon);
-			const auto perturb2 = glm::linearRand(-epsilon, epsilon);
-			const auto& seedTriangleElement = m_elements.at(seedTriangle.m_elementIndex);
-			const auto& seedTriangleIndices = seedTriangleElement.m_triangles.at(seedTriangle.m_triangleIndex);
-			const auto seedTriangleNormal = CalculateNormal(seedTriangle);
-			glm::vec3 seedTriangleP0 = seedTriangleElement.m_vertices.at(seedTriangleIndices.x).m_position + perturb0 * seedTriangleNormal;
-			glm::vec3 seedTriangleP1 = seedTriangleElement.m_vertices.at(seedTriangleIndices.y).m_position + perturb1 * seedTriangleNormal;
-			glm::vec3 seedTriangleP2 = seedTriangleElement.m_vertices.at(seedTriangleIndices.z).m_position + perturb2 * seedTriangleNormal;
-			auto testPlaneNormal = glm::normalize(glm::cross(seedTriangleP0 - seedTriangleP1, seedTriangleP0 - seedTriangleP2));
-			if (glm::dot(testPlaneNormal, seedTriangleNormal) < 0.f)
+		std::mutex voteMutex;
+		Jobs::RunParallelFor(clusterizeSettings.m_stochasticClusterizationSettings.m_iteration, [&](unsigned iteration)
 			{
-				testPlaneNormal = -testPlaneNormal;
-			}
-			const auto planeCenter = (seedTriangleP0 + seedTriangleP1 + seedTriangleP2) / 3.f;
-			float testPlaneDistance = glm::dot(seedTriangleP0, testPlaneNormal);
-			float area = 0.f;
-			std::vector<int> currentIterationSelectedTriangleIndices;
-			for (int testTriangleIndex = 0; testTriangleIndex < operatingTriangles.size(); testTriangleIndex++)
-			{
-				const auto& testTriangle = operatingTriangles.at(testTriangleIndex);
-				const auto& testTriangleElement = m_elements.at(testTriangle.m_elementIndex);
-				const auto& testTriangleIndices = testTriangleElement.m_triangles.at(testTriangle.m_triangleIndex);
-				const auto& testTriangleP0 = testTriangleElement.m_vertices.at(testTriangleIndices.x).m_position;
-				const auto& testTriangleP1 = testTriangleElement.m_vertices.at(testTriangleIndices.y).m_position;
-				const auto& testTriangleP2 = testTriangleElement.m_vertices.at(testTriangleIndices.z).m_position;
-
-				if (glm::distance(planeCenter, testTriangleP0) > maxPlaneSize) continue;
-
-
-				if (glm::abs(testPlaneDistance - glm::dot(testTriangleP0, testPlaneNormal)) > epsilon) continue;
-				if (glm::abs(testPlaneDistance - glm::dot(testTriangleP1, testPlaneNormal)) > epsilon) continue;
-				if (glm::abs(testPlaneDistance - glm::dot(testTriangleP2, testPlaneNormal)) > epsilon) continue;
-
-				// increment projected area (Angular area Contribution)
-				// use projected area Contribution
-				float angle = glm::acos(glm::abs(glm::dot(testPlaneNormal, CalculateNormal(testTriangle))));
-				float angular = (glm::pi<float>() / 2.f - angle) / (glm::pi<float>() / 2.f);
-				area += CalculateArea(testTriangle) * angular;
-
-				// save reference to T with billboard plane
-				currentIterationSelectedTriangleIndices.emplace_back(testTriangleIndex);
-
-			}
-			if (!currentIterationSelectedTriangleIndices.empty() && area > maxArea)
-			{
-				//Update cluster.
-				newCluster.m_clusterPlane = Plane(testPlaneNormal, testPlaneDistance);
-				newCluster.m_triangles.clear();
-				for (const auto& triangleIndex : currentIterationSelectedTriangleIndices)
+				int seedTriangleIndex = glm::linearRand(0, static_cast<int>(operatingTriangles.size()) - 1);
+				ClusterTriangle seedTriangle = operatingTriangles.at(seedTriangleIndex);
+				const auto perturb0 = glm::linearRand(-epsilon, epsilon);
+				const auto perturb1 = glm::linearRand(-epsilon, epsilon);
+				const auto perturb2 = glm::linearRand(-epsilon, epsilon);
+				const auto& seedTriangleElement = m_elements.at(seedTriangle.m_elementIndex);
+				const auto& seedTriangleIndices = seedTriangleElement.m_triangles.at(seedTriangle.m_triangleIndex);
+				const auto seedTriangleNormal = CalculateNormal(seedTriangle);
+				glm::vec3 seedTriangleP0 = seedTriangleElement.m_vertices.at(seedTriangleIndices.x).m_position + perturb0 * seedTriangleNormal;
+				glm::vec3 seedTriangleP1 = seedTriangleElement.m_vertices.at(seedTriangleIndices.y).m_position + perturb1 * seedTriangleNormal;
+				glm::vec3 seedTriangleP2 = seedTriangleElement.m_vertices.at(seedTriangleIndices.z).m_position + perturb2 * seedTriangleNormal;
+				auto testPlaneNormal = glm::normalize(glm::cross(seedTriangleP0 - seedTriangleP1, seedTriangleP0 - seedTriangleP2));
+				if (glm::dot(testPlaneNormal, seedTriangleNormal) < 0.f)
 				{
-					newCluster.m_triangles.emplace_back(operatingTriangles.at(triangleIndex));
+					testPlaneNormal = -testPlaneNormal;
 				}
+				const auto planeCenter = (seedTriangleP0 + seedTriangleP1 + seedTriangleP2) / 3.f;
+				float testPlaneDistance = glm::dot(seedTriangleP0, testPlaneNormal);
+				float area = 0.f;
+				std::vector<int> currentIterationSelectedTriangleIndices;
+				for (int testTriangleIndex = 0; testTriangleIndex < operatingTriangles.size(); testTriangleIndex++)
+				{
+					const auto& testTriangle = operatingTriangles.at(testTriangleIndex);
+					const auto& testTriangleElement = m_elements.at(testTriangle.m_elementIndex);
+					const auto& testTriangleIndices = testTriangleElement.m_triangles.at(testTriangle.m_triangleIndex);
+					const auto& testTriangleP0 = testTriangleElement.m_vertices.at(testTriangleIndices.x).m_position;
+					const auto& testTriangleP1 = testTriangleElement.m_vertices.at(testTriangleIndices.y).m_position;
+					const auto& testTriangleP2 = testTriangleElement.m_vertices.at(testTriangleIndices.z).m_position;
 
-				selectedTriangleIndices = currentIterationSelectedTriangleIndices;
+					if (glm::distance(planeCenter, testTriangleP0) > maxPlaneSize) continue;
+
+
+					if (glm::abs(testPlaneDistance - glm::dot(testTriangleP0, testPlaneNormal)) > epsilon) continue;
+					if (glm::abs(testPlaneDistance - glm::dot(testTriangleP1, testPlaneNormal)) > epsilon) continue;
+					if (glm::abs(testPlaneDistance - glm::dot(testTriangleP2, testPlaneNormal)) > epsilon) continue;
+
+					// increment projected area (Angular area Contribution)
+					// use projected area Contribution
+					float angle = glm::acos(glm::abs(glm::dot(testPlaneNormal, CalculateNormal(testTriangle))));
+					float angular = (glm::pi<float>() / 2.f - angle) / (glm::pi<float>() / 2.f);
+					area += CalculateArea(testTriangle) * angular;
+
+					// save reference to T with billboard plane
+					currentIterationSelectedTriangleIndices.emplace_back(testTriangleIndex);
+
+				}
+				if (!currentIterationSelectedTriangleIndices.empty()) {
+					std::lock_guard lock(voteMutex);
+					if (area > maxArea)
+					{
+						//Update cluster.
+						newCluster.m_clusterPlane = Plane(testPlaneNormal, testPlaneDistance);
+						newCluster.m_triangles.clear();
+						for (const auto& triangleIndex : currentIterationSelectedTriangleIndices)
+						{
+							newCluster.m_triangles.emplace_back(operatingTriangles.at(triangleIndex));
+						}
+
+						selectedTriangleIndices = currentIterationSelectedTriangleIndices;
+					}
+				}
 			}
-		}
+		);
 
 		if (selectedTriangleIndices.empty())
 		{

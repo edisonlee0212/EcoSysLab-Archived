@@ -22,7 +22,7 @@ namespace EcoSysLab {
         float m_startTimeMax = 0.0f;
         Entity InstantiatePatch(const glm::ivec2& gridSize, bool setSimulationSettings = true);
 
-        Entity InstantiatePatch(const std::vector<std::pair<TreeGrowthSettings, std::shared_ptr<TreeDescriptor>>>& candidates, const glm::ivec2& gridSize, bool setSimulationSettings = true);
+        Entity InstantiatePatch(const std::vector<std::pair<TreeGrowthSettings, std::shared_ptr<TreeDescriptor>>>& candidates, const glm::ivec2& gridSize, bool setSimulationSettings = true) const;
 
         void CollectAssetRef(std::vector<AssetRef>& list) override;
         void Serialize(YAML::Emitter& out) const override;

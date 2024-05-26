@@ -166,6 +166,7 @@ void TreePointCloudCircularCaptureSettings::GenerateSamples(std::vector<PointClo
 bool TreePointCloudGridCaptureSettings::OnInspect()
 {
 	bool changed = false;
+	if(ImGui::DragFloat("Max size", &m_boundingBoxSize, 0.1f, 0.f, 999.f)) changed = true;
 	if (ImGui::DragInt2("Grid size", &m_gridSize.x, 1, 0, 100)) changed = true;
 	if (ImGui::DragFloat2("Grid distance", &m_gridDistance.x, 0.1f, 0.0f, 100.0f)) changed = true;
 	if (ImGui::DragFloat("Step", &m_step, 0.01f, 0.0f, 0.5f)) changed = true;
@@ -270,6 +271,7 @@ void TreePointCloudGridCaptureSettings::GenerateSamples(std::vector<PointCloudSa
 
 bool TreePointCloudGridCaptureSettings::SampleFilter(const PointCloudSample& sample)
 {
+	if(m_boundingBoxSize == 0.f) return true;
 	return glm::abs(sample.m_hitInfo.m_position.x) < m_boundingBoxSize && glm::abs(sample.m_hitInfo.m_position.z) < m_boundingBoxSize;
 }
 #pragma endregion

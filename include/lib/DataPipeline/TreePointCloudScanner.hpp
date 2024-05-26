@@ -52,7 +52,7 @@ namespace EcoSysLab {
     class TreePointCloudGridCaptureSettings : public PointCloudCaptureSettings
     {
     public:
-        float m_boundingBoxSize = 3.;
+        float m_boundingBoxSize = 0.f;
 
         glm::ivec2 m_gridSize = { 5, 5 };
         glm::vec2 m_gridDistance = { 1.25f, 1.25f };
