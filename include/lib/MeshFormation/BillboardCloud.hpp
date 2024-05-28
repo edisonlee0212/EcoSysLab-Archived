@@ -43,17 +43,17 @@ namespace EvoEngine {
 			float m_width;
 			float m_height;
 
-			[[nodiscard]] glm::vec2 Transform(const glm::vec2 &target) const;
-			[[nodiscard]] glm::vec3 Transform(const glm::vec3 &target) const;
+			[[nodiscard]] glm::vec2 Transform(const glm::vec2& target) const;
+			[[nodiscard]] glm::vec3 Transform(const glm::vec3& target) const;
 		};
 
-		
+
 
 		struct Cluster
 		{
 			Plane m_clusterPlane = Plane(glm::vec3(0, 0, 1), 0.f);
 
-			
+
 
 			std::vector<ClusterTriangle> m_triangles;
 
@@ -70,7 +70,7 @@ namespace EvoEngine {
 			 */
 			std::shared_ptr<Material> m_billboardMaterial;
 
-			
+
 		};
 
 		struct ProjectSettings
@@ -102,12 +102,35 @@ namespace EvoEngine {
 		struct ClusterizationSettings
 		{
 			bool m_append = true;
-			StochasticClusterizationSettings m_stochasticClusterizationSettings {};
+			StochasticClusterizationSettings m_stochasticClusterizationSettings{};
 			ClusterizationMode m_clusterizeMode = ClusterizationMode::PassThrough;
 		};
 
 		class ElementCollection {
-			void Project(Cluster& cluster, const ProjectSettings& projectSettings) const;
+			struct PBRMaterial
+			{
+				glm::vec4 m_baseAlbedo = glm::vec4(1.f);
+				float m_baseRoughness = 0.3f;
+				float m_baseMetallic = 0.3f;
+				float m_baseAo = 1.f;
+				glm::ivec2 m_albedoTextureResolution;
+				std::vector<glm::vec4> m_albedoTextureData;
+
+				glm::ivec2 m_normalTextureResolution;
+				std::vector<glm::vec3> m_normalTextureData;
+
+				glm::ivec2 m_roughnessTextureResolution;
+				std::vector<float> m_roughnessTextureData;
+
+				glm::ivec2 m_metallicTextureResolution;
+				std::vector<float> m_metallicTextureData;
+
+				glm::ivec2 m_aoTextureResolution;
+				std::vector<float> m_aoTextureData;
+
+				void ApplyMaterial(const std::shared_ptr<Material>& material, const ProjectSettings& projectSettings);
+			};
+			void Project(std::unordered_map<Handle, PBRMaterial>& pbrMaterials, Cluster& cluster, const ProjectSettings& projectSettings) const;
 			std::vector<Cluster> StochasticClusterize(std::vector<ClusterTriangle> operatingTriangles, const ClusterizationSettings& clusterizeSettings);
 			std::vector<Cluster> DefaultClusterize(std::vector<ClusterTriangle> operatingTriangles, const ClusterizationSettings& clusterizeSettings);
 
@@ -134,17 +157,17 @@ namespace EvoEngine {
 		 * Each element collection corresponding to a group of mesh material combinations.
 		 * The primitives are grouped together to be clustered.
 		 */
-		std::vector<ElementCollection> m_elementCollections {};
+		std::vector<ElementCollection> m_elementCollections{};
 
-		void BuildClusters(const std::shared_ptr<Prefab> &prefab, const ClusterizationSettings& clusterizeSettings, bool combine);
+		void BuildClusters(const std::shared_ptr<Prefab>& prefab, const ClusterizationSettings& clusterizeSettings, bool combine);
 
 		void ProjectClusters(const ProjectSettings& projectSettings);
 
 		[[nodiscard]] Entity BuildEntity(const std::shared_ptr<Scene>& scene) const;
 	private:
-		
-		static void PreprocessPrefab(std::vector<ElementCollection>& elementCollections, const std::shared_ptr<Prefab> &currentPrefab, const Transform& parentModelSpaceTransform);
-		static void PreprocessPrefab(ElementCollection& elementCollection, const std::shared_ptr<Prefab> &currentPrefab, const Transform& parentModelSpaceTransform);
+
+		static void PreprocessPrefab(std::vector<ElementCollection>& elementCollections, const std::shared_ptr<Prefab>& currentPrefab, const Transform& parentModelSpaceTransform);
+		static void PreprocessPrefab(ElementCollection& elementCollection, const std::shared_ptr<Prefab>& currentPrefab, const Transform& parentModelSpaceTransform);
 
 		//Adopted from https://github.com/DreamVersion/RotatingCalipers
 		class RotatingCalipers

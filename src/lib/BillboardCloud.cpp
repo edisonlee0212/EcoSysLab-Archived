@@ -1,77 +1,7 @@
 #include "BillboardCloud.hpp"
 #include "Prefab.hpp"
 using namespace EvoEngine;
-
-inline void TransformVertex(const Vertex& v,
-	Vertex& tV, const glm::mat4& transform)
-{
-	tV = v;
-	tV.m_normal = glm::normalize(transform * glm::vec4(v.m_normal, 0.f));
-	tV.m_tangent = glm::normalize(transform * glm::vec4(v.m_tangent, 0.f));
-	tV.m_position = transform * glm::vec4(v.m_position, 1.f);
-}
-
-inline void TransformVertex(Vertex& v, const glm::mat4& transform)
-{
-	v.m_normal = glm::normalize(transform * glm::vec4(v.m_normal, 0.f));
-	v.m_tangent = glm::normalize(transform * glm::vec4(v.m_tangent, 0.f));
-	v.m_position = transform * glm::vec4(v.m_position, 1.f);
-}
-
-void BillboardCloud::ProjectClusters(const ProjectSettings& projectSettings)
-{
-	for (auto& elementCollection : m_elementCollections) elementCollection.Project(projectSettings);
-}
-
-Entity BillboardCloud::BuildEntity(const std::shared_ptr<Scene>& scene) const
-{
-	if (m_elementCollections.empty()) return {};
-	const auto owner = scene->CreateEntity("Billboard Cloud");
-	for (const auto& elementCollection : m_elementCollections) {
-		for (const auto& cluster : elementCollection.m_clusters) {
-			if (!cluster.m_billboardMesh || !cluster.m_billboardMaterial) continue;
-			const auto projectedElementEntity = scene->CreateEntity("Billboard");
-			const auto elementMeshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(projectedElementEntity).lock();
-			elementMeshRenderer->m_mesh = cluster.m_billboardMesh;
-			elementMeshRenderer->m_material = cluster.m_billboardMaterial;
-			scene->SetParent(projectedElementEntity, owner);
-		}
-	}
-	return owner;
-}
-
-struct BoundingSphere
-{
-	glm::vec3 m_center = glm::vec3(0.f);
-	float m_radius = 0.f;
-
-	void Initialize(const std::vector<BillboardCloud::Element>& elements)
-	{
-		size_t triangleSize = 0;
-		auto positionSum = glm::vec3(0.f);
-
-		//TODO: Parallelize
-		for (const auto& element : elements)
-		{
-			for (const auto& triangle : element.m_triangles)
-			{
-				triangleSize++;
-				positionSum += element.CalculateCentroid(triangle);
-			}
-		}
-		m_center = positionSum / static_cast<float>(triangleSize);
-
-		m_radius = 0.f;
-		for (const auto& element : elements)
-		{
-			for (const auto& vertex : element.m_vertices)
-			{
-				m_radius = glm::max(m_radius, glm::distance(m_center, vertex.m_position));
-			}
-		}
-	}
-};
-
+#pragma region Projection
 void AppendTriangles(std::vector<BillboardCloud::ClusterTriangle>& triangles, const std::vector<BillboardCloud::Element>& elements)
 {
 	for (int elementIndex = 0; elementIndex < elements.size(); elementIndex++)
@@ -85,117 +15,6 @@ void AppendTriangles(std::vector<BillboardCloud::ClusterTriangle>& triangles, co
 			triangles.emplace_back(clusterTriangle);
 		}
 	}
-}
-
-std::vector<BillboardCloud::Cluster> BillboardCloud::ElementCollection::StochasticClusterize(std::vector<ClusterTriangle> operatingTriangles, const ClusterizationSettings& clusterizeSettings)
-{
-	BoundingSphere boundingSphere;
-	boundingSphere.Initialize(m_elements);
-
-	float epsilon = boundingSphere.m_radius * clusterizeSettings.m_stochasticClusterizationSettings.m_epsilon;
-
-	float maxPlaneSize = boundingSphere.m_radius * clusterizeSettings.m_stochasticClusterizationSettings.m_maxPlaneSize;
-
-	AppendTriangles(operatingTriangles, m_elements);
-	m_skippedTriangles.clear();
-
-	std::vector<Cluster> retVal;
-
-	int epoch = 0;
-	while (!operatingTriangles.empty())
-	{
-		Cluster newCluster;
-		float maxArea = 0.f;
-		std::vector<int> selectedTriangleIndices;
-		std::mutex voteMutex;
-		Jobs::RunParallelFor(clusterizeSettings.m_stochasticClusterizationSettings.m_iteration, [&](unsigned iteration)
-			{
-				int seedTriangleIndex = glm::linearRand(0, static_cast<int>(operatingTriangles.size()) - 1);
-				ClusterTriangle seedTriangle = operatingTriangles.at(seedTriangleIndex);
-				const auto perturb0 = glm::linearRand(-epsilon, epsilon);
-				const auto perturb1 = glm::linearRand(-epsilon, epsilon);
-				const auto perturb2 = glm::linearRand(-epsilon, epsilon);
-				const auto& seedTriangleElement = m_elements.at(seedTriangle.m_elementIndex);
-				const auto& seedTriangleIndices = seedTriangleElement.m_triangles.at(seedTriangle.m_triangleIndex);
-				const auto seedTriangleNormal = CalculateNormal(seedTriangle);
-				glm::vec3 seedTriangleP0 = seedTriangleElement.m_vertices.at(seedTriangleIndices.x).m_position + perturb0 * seedTriangleNormal;
-				glm::vec3 seedTriangleP1 = seedTriangleElement.m_vertices.at(seedTriangleIndices.y).m_position + perturb1 * seedTriangleNormal;
-				glm::vec3 seedTriangleP2 = seedTriangleElement.m_vertices.at(seedTriangleIndices.z).m_position + perturb2 * seedTriangleNormal;
-				auto testPlaneNormal = glm::normalize(glm::cross(seedTriangleP0 - seedTriangleP1, seedTriangleP0 - seedTriangleP2));
-				if (glm::dot(testPlaneNormal, seedTriangleNormal) < 0.f)
-				{
-					testPlaneNormal = -testPlaneNormal;
-				}
-				const auto planeCenter = (seedTriangleP0 + seedTriangleP1 + seedTriangleP2) / 3.f;
-				float testPlaneDistance = glm::dot(seedTriangleP0, testPlaneNormal);
-				float area = 0.f;
-				std::vector<int> currentIterationSelectedTriangleIndices;
-				for (int testTriangleIndex = 0; testTriangleIndex < operatingTriangles.size(); testTriangleIndex++)
-				{
-					const auto& testTriangle = operatingTriangles.at(testTriangleIndex);
-					const auto& testTriangleElement = m_elements.at(testTriangle.m_elementIndex);
-					const auto& testTriangleIndices = testTriangleElement.m_triangles.at(testTriangle.m_triangleIndex);
-					const auto& testTriangleP0 = testTriangleElement.m_vertices.at(testTriangleIndices.x).m_position;
-					const auto& testTriangleP1 = testTriangleElement.m_vertices.at(testTriangleIndices.y).m_position;
-					const auto& testTriangleP2 = testTriangleElement.m_vertices.at(testTriangleIndices.z).m_position;
-
-					if (glm::distance(planeCenter, testTriangleP0) > maxPlaneSize) continue;
-
-
-					if (glm::abs(testPlaneDistance - glm::dot(testTriangleP0, testPlaneNormal)) > epsilon) continue;
-					if (glm::abs(testPlaneDistance - glm::dot(testTriangleP1, testPlaneNormal)) > epsilon) continue;
-					if (glm::abs(testPlaneDistance - glm::dot(testTriangleP2, testPlaneNormal)) > epsilon) continue;
-
-					// increment projected area (Angular area Contribution)
-					// use projected area Contribution
-					float angle = glm::acos(glm::abs(glm::dot(testPlaneNormal, CalculateNormal(testTriangle))));
-					float angular = (glm::pi<float>() / 2.f - angle) / (glm::pi<float>() / 2.f);
-					area += CalculateArea(testTriangle) * angular;
-
-					// save reference to T with billboard plane
-					currentIterationSelectedTriangleIndices.emplace_back(testTriangleIndex);
-
-				}
-				if (!currentIterationSelectedTriangleIndices.empty()) {
-					std::lock_guard lock(voteMutex);
-					if (area > maxArea)
-					{
-						//Update cluster.
-						newCluster.m_clusterPlane = Plane(testPlaneNormal, testPlaneDistance);
-						newCluster.m_triangles.clear();
-						for (const auto& triangleIndex : currentIterationSelectedTriangleIndices)
-						{
-							newCluster.m_triangles.emplace_back(operatingTriangles.at(triangleIndex));
-						}
-
-						selectedTriangleIndices = currentIterationSelectedTriangleIndices;
-					}
-				}
-			}
-		);
-
-		if (selectedTriangleIndices.empty())
-		{
-			m_skippedTriangles.insert(m_skippedTriangles.end(), operatingTriangles.begin(), operatingTriangles.end());
-			break;
-		}
-
-		retVal.emplace_back(std::move(newCluster));
-
-		//Remove selected triangle from the remaining triangle.
-		for (auto it = selectedTriangleIndices.rbegin(); it != selectedTriangleIndices.rend(); ++it)
-		{
-			operatingTriangles[*it] = operatingTriangles.back();
-			operatingTriangles.pop_back();
-		}
-		epoch++;
-		if (epoch >= clusterizeSettings.m_stochasticClusterizationSettings.m_timeout)
-		{
-			EVOENGINE_ERROR("Stochastic clustering timeout!")
-				break;
-		}
-	}
-	return std::move(retVal);
 }
 
 glm::vec3 BillboardCloud::ElementCollection::CalculateCentroid(const ClusterTriangle& triangle) const
@@ -213,111 +32,25 @@ glm::vec3 BillboardCloud::ElementCollection::CalculateNormal(const ClusterTriang
 {
 	return m_elements.at(triangle.m_elementIndex).CalculateNormal(triangle.m_triangleIndex);
 }
-
-void BillboardCloud::PreprocessPrefab(std::vector<ElementCollection>& elementCollections, const std::shared_ptr<Prefab>& currentPrefab, const Transform& parentModelSpaceTransform)
+void BillboardCloud::ProjectClusters(const ProjectSettings& projectSettings)
 {
-	Transform transform{};
-	for (const auto& dataComponent : currentPrefab->m_dataComponents)
-	{
-		if (dataComponent.m_type == Typeof<Transform>())
-		{
-			transform = *std::reinterpret_pointer_cast<Transform>(dataComponent.m_data);
-		}
-	}
-	transform.m_value = parentModelSpaceTransform.m_value * transform.m_value;
-	for (const auto& privateComponent : currentPrefab->m_privateComponents)
-	{
-
-		if (privateComponent.m_data->GetTypeName() == "MeshRenderer")
-		{
-			std::vector<AssetRef> assetRefs;
-			privateComponent.m_data->CollectAssetRef(assetRefs);
-			std::shared_ptr<Mesh> mesh{};
-			std::shared_ptr<Material> material{};
-			for (auto& assetRef : assetRefs)
-			{
-				if (const auto testMesh = assetRef.Get<Mesh>())
-				{
-					mesh = testMesh;
-				}
-				else if (const auto testMaterial = assetRef.Get<Material>())
-				{
-					material = testMaterial;
-				}
-			}
-			if (mesh && material)
-			{
-				elementCollections.emplace_back();
-				auto& targetCluster = elementCollections.back();
-				targetCluster.m_elements.emplace_back();
-				auto& element = targetCluster.m_elements.back();
-				element.m_vertices = mesh->UnsafeGetVertices();
-				element.m_material = material;
-				element.m_triangles = mesh->UnsafeGetTriangles();
-				Jobs::RunParallelFor(element.m_vertices.size(), [&](unsigned vertexIndex)
-					{
-						TransformVertex(element.m_vertices.at(vertexIndex), parentModelSpaceTransform.m_value);
-
-					});
-			}
-		}
-	}
-	for (const auto& childPrefab : currentPrefab->m_children)
-	{
-		PreprocessPrefab(elementCollections, childPrefab, transform);
-	}
+	for (auto& elementCollection : m_elementCollections) elementCollection.Project(projectSettings);
 }
 
-void BillboardCloud::PreprocessPrefab(ElementCollection& elementCollection, const std::shared_ptr<Prefab>& currentPrefab,
-	const Transform& parentModelSpaceTransform)
+inline void TransformVertex(const Vertex& v,
+	Vertex& tV, const glm::mat4& transform)
 {
-	Transform transform{};
-	for (const auto& dataComponent : currentPrefab->m_dataComponents)
-	{
-		if (dataComponent.m_type == Typeof<Transform>())
-		{
-			transform = *std::reinterpret_pointer_cast<Transform>(dataComponent.m_data);
-		}
-	}
-	transform.m_value = parentModelSpaceTransform.m_value * transform.m_value;
-	for (const auto& privateComponent : currentPrefab->m_privateComponents)
-	{
+	tV = v;
+	tV.m_normal = glm::normalize(transform * glm::vec4(v.m_normal, 0.f));
+	tV.m_tangent = glm::normalize(transform * glm::vec4(v.m_tangent, 0.f));
+	tV.m_position = transform * glm::vec4(v.m_position, 1.f);
+}
 
-		if (privateComponent.m_data->GetTypeName() == "MeshRenderer")
-		{
-			std::vector<AssetRef> assetRefs;
-			privateComponent.m_data->CollectAssetRef(assetRefs);
-			std::shared_ptr<Mesh> mesh{};
-			std::shared_ptr<Material> material{};
-			for (auto& assetRef : assetRefs)
-			{
-				if (const auto testMesh = assetRef.Get<Mesh>())
-				{
-					mesh = testMesh;
-				}
-				else if (const auto testMaterial = assetRef.Get<Material>())
-				{
-					material = testMaterial;
-				}
-			}
-			if (mesh && material)
-			{
-				elementCollection.m_elements.emplace_back();
-				auto& element = elementCollection.m_elements.back();
-				element.m_vertices = mesh->UnsafeGetVertices();
-				element.m_material = material;
-				element.m_triangles = mesh->UnsafeGetTriangles();
-				Jobs::RunParallelFor(element.m_vertices.size(), [&](unsigned vertexIndex)
-					{
-						TransformVertex(element.m_vertices.at(vertexIndex), parentModelSpaceTransform.m_value);
-					});
-			}
-		}
-	}
-	for (const auto& childPrefab : currentPrefab->m_children)
-	{
-		PreprocessPrefab(elementCollection, childPrefab, transform);
-	}
+inline void TransformVertex(Vertex& v, const glm::mat4& transform)
+{
+	v.m_normal = glm::normalize(transform * glm::vec4(v.m_normal, 0.f));
+	v.m_tangent = glm::normalize(transform * glm::vec4(v.m_tangent, 0.f));
+	v.m_position = transform * glm::vec4(v.m_position, 1.f);
 }
 
 glm::vec3 BillboardCloud::Element::CalculateCentroid(int triangleIndex) const
@@ -716,70 +449,68 @@ inline void Barycentric2D(const glm::vec2& p, const glm::vec2& a, const glm::vec
 	c0 = 1.0f - c1 - c2;
 }
 
-
-void BillboardCloud::ElementCollection::Project(const ProjectSettings& projectSettings)
-{
-	for (auto& cluster : m_clusters) Project(cluster, projectSettings);
-}
-
-void BillboardCloud::ElementCollection::Clusterize(const ClusterizationSettings& clusterizeSettings)
-{
-	m_clusters.clear();
-	switch (clusterizeSettings.m_clusterizeMode)
-	{
-	case ClusterizationMode::PassThrough:
-	{
-		m_clusters.emplace_back();
-		auto& cluster = m_clusters.back();
-		AppendTriangles(cluster.m_triangles, m_elements);
-	}
-	break;
-	case ClusterizationMode::Stochastic:
-	{
-		std::vector<ClusterTriangle> operatingTriangles;
-		AppendTriangles(operatingTriangles, m_elements);
-		m_clusters = StochasticClusterize(std::move(operatingTriangles), clusterizeSettings);
-	}
-	break;
-	case ClusterizationMode::Default:
-	{
-		std::vector<ClusterTriangle> operatingTriangles;
-		AppendTriangles(operatingTriangles, m_elements);
-		m_clusters = DefaultClusterize(std::move(operatingTriangles), clusterizeSettings);
-	}
-	break;
-	}
-}
-
-void BillboardCloud::BuildClusters(const std::shared_ptr<Prefab>& prefab, const ClusterizationSettings& clusterizeSettings, const bool combine)
-{
-	if (!clusterizeSettings.m_append) m_elementCollections.clear();
-	if (combine) {
-		m_elementCollections.emplace_back();
-		auto& newElementCollection = m_elementCollections.back();
-		PreprocessPrefab(newElementCollection, prefab, Transform());
-		newElementCollection.Clusterize(clusterizeSettings);
-	}
-	else
-	{
-		PreprocessPrefab(m_elementCollections, prefab, Transform());
-
-		for (auto& elementCollection : m_elementCollections)
-		{
-			elementCollection.Clusterize(clusterizeSettings);
-		}
-	}
-}
-
 struct ProjectedTriangle
 {
 	Vertex m_projectedV0;
 	Vertex m_projectedV1;
 	Vertex m_projectedV2;
-	int m_elementIndex;
+	Handle m_materialHandle;
 };
 
-void BillboardCloud::ElementCollection::Project(Cluster& cluster, const ProjectSettings& projectSettings) const
+void BillboardCloud::ElementCollection::Project(const ProjectSettings& projectSettings)
+{
+	std::unordered_map<Handle, PBRMaterial> pbrMaterials;
+	for (auto& element : m_elements)
+	{
+		const auto& material = element.m_material;
+		auto materialHandle = material->GetHandle();
+		pbrMaterials[materialHandle].ApplyMaterial(material, projectSettings);
+	}
+
+	for (auto& cluster : m_clusters) Project(pbrMaterials, cluster, projectSettings);
+}
+
+void BillboardCloud::ElementCollection::PBRMaterial::ApplyMaterial(const std::shared_ptr<Material>& material,
+	const ProjectSettings& projectSettings)
+{
+	m_baseAlbedo = glm::vec4(material->m_materialProperties.m_albedoColor, 1.f - material->m_materialProperties.m_transmission);
+	m_baseRoughness = material->m_materialProperties.m_roughness;
+	m_baseMetallic = material->m_materialProperties.m_metallic;
+	m_baseAo = 1.f;
+
+	const auto albedoTexture = material->GetAlbedoTexture();
+	if (projectSettings.m_transferAlbedoMap && albedoTexture)
+	{
+		albedoTexture->GetRgbaChannelData(m_albedoTextureData);
+		m_albedoTextureResolution = albedoTexture->GetResolution();
+	}
+	const auto normalTexture = material->GetNormalTexture();
+	if (projectSettings.m_transferNormalMap && normalTexture)
+	{
+		normalTexture->GetRgbChannelData(m_normalTextureData);
+		m_normalTextureResolution = normalTexture->GetResolution();
+	}
+	const auto roughnessTexture = material->GetRoughnessTexture();
+	if (projectSettings.m_transferRoughnessMap && roughnessTexture)
+	{
+		roughnessTexture->GetRedChannelData(m_roughnessTextureData);
+		m_roughnessTextureResolution = roughnessTexture->GetResolution();
+	}
+	const auto metallicTexture = material->GetMetallicTexture();
+	if (projectSettings.m_transferMetallicMap && metallicTexture)
+	{
+		metallicTexture->GetRedChannelData(m_metallicTextureData);
+		m_metallicTextureResolution = metallicTexture->GetResolution();
+	}
+	const auto aoTexture = material->GetAoTexture();
+	if (projectSettings.m_transferAoMap && aoTexture)
+	{
+		aoTexture->GetRedChannelData(m_aoTextureData);
+		m_aoTextureResolution = aoTexture->GetResolution();
+	}
+}
+
+void BillboardCloud::ElementCollection::Project(std::unordered_map<Handle, PBRMaterial>& pbrMaterials, Cluster& cluster, const ProjectSettings& projectSettings) const
 {
 	const auto billboardFrontAxis = cluster.m_clusterPlane.GetNormal();
 	auto billboardUpAxis = glm::vec3(billboardFrontAxis.y, billboardFrontAxis.z, billboardFrontAxis.x); //cluster.m_planeYAxis;
@@ -791,20 +522,23 @@ void BillboardCloud::ElementCollection::Project(Cluster& cluster, const ProjectS
 	Jobs::RunParallelFor(cluster.m_triangles.size(), [&](const unsigned triangleIndex)
 		{
 			const auto& clusterTriangle = cluster.m_triangles.at(triangleIndex);
-			const auto& renderElement = m_elements.at(clusterTriangle.m_elementIndex);
-			const auto& vertices = renderElement.m_vertices;
-			const auto& triangle = renderElement.m_triangles.at(clusterTriangle.m_triangleIndex);
+			auto& projectedTriangle = projectedTriangles[triangleIndex];
+			const auto& element = m_elements.at(clusterTriangle.m_elementIndex);
+			const auto& vertices = element.m_vertices;
+			const auto& triangle = element.m_triangles.at(clusterTriangle.m_triangleIndex);
 			auto& v0 = vertices.at(triangle.x);
 			auto& v1 = vertices.at(triangle.y);
 			auto& v2 = vertices.at(triangle.z);
 
-			auto& pV0 = projectedTriangles[triangleIndex].m_projectedV0;
-			auto& pV1 = projectedTriangles[triangleIndex].m_projectedV1;
-			auto& pV2 = projectedTriangles[triangleIndex].m_projectedV2;
+			auto& pV0 = projectedTriangle.m_projectedV0;
+			auto& pV1 = projectedTriangle.m_projectedV1;
+			auto& pV2 = projectedTriangle.m_projectedV2;
 
 			TransformVertex(v0, pV0, rotateMatrix);
 			TransformVertex(v1, pV1, rotateMatrix);
 			TransformVertex(v2, pV2, rotateMatrix);
+
+			projectedTriangle.m_materialHandle = element.m_material->GetHandle();
 		});
 
 	std::vector<glm::vec2> points;
@@ -874,75 +608,10 @@ void BillboardCloud::ElementCollection::Project(Cluster& cluster, const ProjectS
 	CPUFramebuffer<float> metallicFrameBuffer(textureWidth, textureHeight);
 	CPUFramebuffer<float> aoFrameBuffer(textureWidth, textureHeight);
 
-	struct PBRMaterial
-	{
-		glm::vec4 m_baseAlbedo = glm::vec4(1.f);
-		float m_baseRoughness = 0.3f;
-		float m_baseMetallic = 0.3f;
-		float m_baseAo = 1.f;
-		glm::ivec2 m_albedoTextureResolution;
-		std::vector<glm::vec4> m_albedoTextureData;
 
-		glm::ivec2 m_normalTextureResolution;
-		std::vector<glm::vec3> m_normalTextureData;
 
-		glm::ivec2 m_roughnessTextureResolution;
-		std::vector<float> m_roughnessTextureData;
-
-		glm::ivec2 m_metallicTextureResolution;
-		std::vector<float> m_metallicTextureData;
-
-		glm::ivec2 m_aoTextureResolution;
-		std::vector<float> m_aoTextureData;
-
-		void ApplyMaterial(const std::shared_ptr<Material>& material, const ProjectSettings& projectSettings)
-		{
-			m_baseAlbedo = glm::vec4(material->m_materialProperties.m_albedoColor, 1.f - material->m_materialProperties.m_transmission);
-			m_baseRoughness = material->m_materialProperties.m_roughness;
-			m_baseMetallic = material->m_materialProperties.m_metallic;
-			m_baseAo = 1.f;
-
-			const auto albedoTexture = material->GetAlbedoTexture();
-			if (projectSettings.m_transferAlbedoMap && albedoTexture)
-			{
-				albedoTexture->GetRgbaChannelData(m_albedoTextureData);
-				m_albedoTextureResolution = albedoTexture->GetResolution();
-			}
-			const auto normalTexture = material->GetNormalTexture();
-			if (projectSettings.m_transferNormalMap && normalTexture)
-			{
-				normalTexture->GetRgbChannelData(m_normalTextureData);
-				m_normalTextureResolution = normalTexture->GetResolution();
-			}
-			const auto roughnessTexture = material->GetRoughnessTexture();
-			if (projectSettings.m_transferRoughnessMap && roughnessTexture)
-			{
-				roughnessTexture->GetRedChannelData(m_roughnessTextureData);
-				m_roughnessTextureResolution = roughnessTexture->GetResolution();
-			}
-			const auto metallicTexture = material->GetMetallicTexture();
-			if (projectSettings.m_transferMetallicMap && metallicTexture)
-			{
-				metallicTexture->GetRedChannelData(m_metallicTextureData);
-				m_metallicTextureResolution = metallicTexture->GetResolution();
-			}
-			const auto aoTexture = material->GetAoTexture();
-			if (projectSettings.m_transferAoMap && aoTexture)
-			{
-				aoTexture->GetRedChannelData(m_aoTextureData);
-				m_aoTextureResolution = aoTexture->GetResolution();
-			}
-		}
-	};
-
-	std::vector<PBRMaterial> pbrMaterials;
 	float averageRoughness = 1.f;
 	float averageMetallic = 0.0f;
-	pbrMaterials.resize(m_elements.size());
-	for (int i = 0; i < pbrMaterials.size(); i++)
-	{
-		pbrMaterials[i].ApplyMaterial(m_elements.at(i).m_material, projectSettings);
-	}
 
 	Jobs::RunParallelFor(projectedTriangles.size(), [&](const unsigned triangleIndex)
 		{
@@ -950,7 +619,7 @@ void BillboardCloud::ElementCollection::Project(Cluster& cluster, const ProjectS
 			const auto& v0 = triangle.m_projectedV0;
 			const auto& v1 = triangle.m_projectedV1;
 			const auto& v2 = triangle.m_projectedV2;
-			const auto& material = pbrMaterials.at(triangle.m_elementIndex);
+			const auto& material = pbrMaterials.at(triangle.m_materialHandle);
 			glm::vec3 textureSpaceVertices[3];
 			textureSpaceVertices[0] = boundingRectangle.Transform(v0.m_position) * projectSettings.m_resolutionFactor;
 			textureSpaceVertices[1] = boundingRectangle.Transform(v1.m_position) * projectSettings.m_resolutionFactor;
@@ -1124,8 +793,327 @@ void BillboardCloud::ElementCollection::Project(Cluster& cluster, const ProjectS
 	cluster.m_billboardMesh->SetVertices({}, planeVertices, planeTriangles);
 }
 
+#pragma endregion
+#pragma region IO
+Entity BillboardCloud::BuildEntity(const std::shared_ptr<Scene>& scene) const
+{
+	if (m_elementCollections.empty()) return {};
+	const auto owner = scene->CreateEntity("Billboard Cloud");
+	for (const auto& elementCollection : m_elementCollections) {
+		for (const auto& cluster : elementCollection.m_clusters) {
+			if (!cluster.m_billboardMesh || !cluster.m_billboardMaterial) continue;
+			const auto projectedElementEntity = scene->CreateEntity("Billboard");
+			const auto elementMeshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(projectedElementEntity).lock();
+			elementMeshRenderer->m_mesh = cluster.m_billboardMesh;
+			elementMeshRenderer->m_material = cluster.m_billboardMaterial;
+			scene->SetParent(projectedElementEntity, owner);
+		}
+	}
+	return owner;
+}
+void BillboardCloud::PreprocessPrefab(std::vector<ElementCollection>& elementCollections, const std::shared_ptr<Prefab>& currentPrefab, const Transform& parentModelSpaceTransform)
+{
+	Transform transform{};
+	for (const auto& dataComponent : currentPrefab->m_dataComponents)
+	{
+		if (dataComponent.m_type == Typeof<Transform>())
+		{
+			transform = *std::reinterpret_pointer_cast<Transform>(dataComponent.m_data);
+		}
+	}
+	transform.m_value = parentModelSpaceTransform.m_value * transform.m_value;
+	for (const auto& privateComponent : currentPrefab->m_privateComponents)
+	{
+
+		if (privateComponent.m_data->GetTypeName() == "MeshRenderer")
+		{
+			std::vector<AssetRef> assetRefs;
+			privateComponent.m_data->CollectAssetRef(assetRefs);
+			std::shared_ptr<Mesh> mesh{};
+			std::shared_ptr<Material> material{};
+			for (auto& assetRef : assetRefs)
+			{
+				if (const auto testMesh = assetRef.Get<Mesh>())
+				{
+					mesh = testMesh;
+				}
+				else if (const auto testMaterial = assetRef.Get<Material>())
+				{
+					material = testMaterial;
+				}
+			}
+			if (mesh && material)
+			{
+				elementCollections.emplace_back();
+				auto& targetCluster = elementCollections.back();
+				targetCluster.m_elements.emplace_back();
+				auto& element = targetCluster.m_elements.back();
+				element.m_vertices = mesh->UnsafeGetVertices();
+				element.m_material = material;
+				element.m_triangles = mesh->UnsafeGetTriangles();
+				Jobs::RunParallelFor(element.m_vertices.size(), [&](unsigned vertexIndex)
+					{
+						TransformVertex(element.m_vertices.at(vertexIndex), parentModelSpaceTransform.m_value);
+
+					});
+			}
+		}
+	}
+	for (const auto& childPrefab : currentPrefab->m_children)
+	{
+		PreprocessPrefab(elementCollections, childPrefab, transform);
+	}
+}
+
+void BillboardCloud::PreprocessPrefab(ElementCollection& elementCollection, const std::shared_ptr<Prefab>& currentPrefab,
+	const Transform& parentModelSpaceTransform)
+{
+	Transform transform{};
+	for (const auto& dataComponent : currentPrefab->m_dataComponents)
+	{
+		if (dataComponent.m_type == Typeof<Transform>())
+		{
+			transform = *std::reinterpret_pointer_cast<Transform>(dataComponent.m_data);
+		}
+	}
+	transform.m_value = parentModelSpaceTransform.m_value * transform.m_value;
+	for (const auto& privateComponent : currentPrefab->m_privateComponents)
+	{
+
+		if (privateComponent.m_data->GetTypeName() == "MeshRenderer")
+		{
+			std::vector<AssetRef> assetRefs;
+			privateComponent.m_data->CollectAssetRef(assetRefs);
+			std::shared_ptr<Mesh> mesh{};
+			std::shared_ptr<Material> material{};
+			for (auto& assetRef : assetRefs)
+			{
+				if (const auto testMesh = assetRef.Get<Mesh>())
+				{
+					mesh = testMesh;
+				}
+				else if (const auto testMaterial = assetRef.Get<Material>())
+				{
+					material = testMaterial;
+				}
+			}
+			if (mesh && material)
+			{
+				elementCollection.m_elements.emplace_back();
+				auto& element = elementCollection.m_elements.back();
+				element.m_vertices = mesh->UnsafeGetVertices();
+				element.m_material = material;
+				element.m_triangles = mesh->UnsafeGetTriangles();
+				Jobs::RunParallelFor(element.m_vertices.size(), [&](unsigned vertexIndex)
+					{
+						TransformVertex(element.m_vertices.at(vertexIndex), parentModelSpaceTransform.m_value);
+					});
+			}
+		}
+	}
+	for (const auto& childPrefab : currentPrefab->m_children)
+	{
+		PreprocessPrefab(elementCollection, childPrefab, transform);
+	}
+}
+
+#pragma endregion
+#pragma region Clusterization
+void BillboardCloud::BuildClusters(const std::shared_ptr<Prefab>& prefab, const ClusterizationSettings& clusterizeSettings, const bool combine)
+{
+	if (!clusterizeSettings.m_append) m_elementCollections.clear();
+	if (combine) {
+		m_elementCollections.emplace_back();
+		auto& newElementCollection = m_elementCollections.back();
+		PreprocessPrefab(newElementCollection, prefab, Transform());
+		newElementCollection.Clusterize(clusterizeSettings);
+	}
+	else
+	{
+		PreprocessPrefab(m_elementCollections, prefab, Transform());
+
+		for (auto& elementCollection : m_elementCollections)
+		{
+			elementCollection.Clusterize(clusterizeSettings);
+		}
+	}
+}
+
+void BillboardCloud::ElementCollection::Clusterize(const ClusterizationSettings& clusterizeSettings)
+{
+	m_clusters.clear();
+	switch (clusterizeSettings.m_clusterizeMode)
+	{
+	case ClusterizationMode::PassThrough:
+	{
+		m_clusters.emplace_back();
+		auto& cluster = m_clusters.back();
+		AppendTriangles(cluster.m_triangles, m_elements);
+	}
+	break;
+	case ClusterizationMode::Stochastic:
+	{
+		std::vector<ClusterTriangle> operatingTriangles;
+		AppendTriangles(operatingTriangles, m_elements);
+		m_clusters = StochasticClusterize(std::move(operatingTriangles), clusterizeSettings);
+	}
+	break;
+	case ClusterizationMode::Default:
+	{
+		std::vector<ClusterTriangle> operatingTriangles;
+		AppendTriangles(operatingTriangles, m_elements);
+		m_clusters = DefaultClusterize(std::move(operatingTriangles), clusterizeSettings);
+	}
+	break;
+	}
+}
+
+std::vector<BillboardCloud::Cluster> BillboardCloud::ElementCollection::StochasticClusterize(std::vector<ClusterTriangle> operatingTriangles, const ClusterizationSettings& clusterizeSettings)
+{
+	struct BoundingSphere
+	{
+		glm::vec3 m_center = glm::vec3(0.f);
+		float m_radius = 0.f;
+
+		void Initialize(const std::vector<Element>& elements)
+		{
+			size_t triangleSize = 0;
+			auto positionSum = glm::vec3(0.f);
+
+			//TODO: Parallelize
+			for (const auto& element : elements)
+			{
+				for (const auto& triangle : element.m_triangles)
+				{
+					triangleSize++;
+					positionSum += element.CalculateCentroid(triangle);
+				}
+			}
+			m_center = positionSum / static_cast<float>(triangleSize);
+
+			m_radius = 0.f;
+			for (const auto& element : elements)
+			{
+				for (const auto& vertex : element.m_vertices)
+				{
+					m_radius = glm::max(m_radius, glm::distance(m_center, vertex.m_position));
+				}
+			}
+		}
+	};
+
+	BoundingSphere boundingSphere;
+	boundingSphere.Initialize(m_elements);
+
+	float epsilon = boundingSphere.m_radius * clusterizeSettings.m_stochasticClusterizationSettings.m_epsilon;
+
+	float maxPlaneSize = boundingSphere.m_radius * clusterizeSettings.m_stochasticClusterizationSettings.m_maxPlaneSize;
+
+	AppendTriangles(operatingTriangles, m_elements);
+	m_skippedTriangles.clear();
+
+	std::vector<Cluster> retVal;
+
+	int epoch = 0;
+	while (!operatingTriangles.empty())
+	{
+		Cluster newCluster;
+		float maxArea = 0.f;
+		std::vector<int> selectedTriangleIndices;
+		std::mutex voteMutex;
+		Jobs::RunParallelFor(clusterizeSettings.m_stochasticClusterizationSettings.m_iteration, [&](unsigned iteration)
+			{
+				int seedTriangleIndex = glm::linearRand(0, static_cast<int>(operatingTriangles.size()) - 1);
+				ClusterTriangle seedTriangle = operatingTriangles.at(seedTriangleIndex);
+				const auto perturb0 = glm::linearRand(-epsilon, epsilon);
+				const auto perturb1 = glm::linearRand(-epsilon, epsilon);
+				const auto perturb2 = glm::linearRand(-epsilon, epsilon);
+				const auto& seedTriangleElement = m_elements.at(seedTriangle.m_elementIndex);
+				const auto& seedTriangleIndices = seedTriangleElement.m_triangles.at(seedTriangle.m_triangleIndex);
+				const auto seedTriangleNormal = CalculateNormal(seedTriangle);
+				glm::vec3 seedTriangleP0 = seedTriangleElement.m_vertices.at(seedTriangleIndices.x).m_position + perturb0 * seedTriangleNormal;
+				glm::vec3 seedTriangleP1 = seedTriangleElement.m_vertices.at(seedTriangleIndices.y).m_position + perturb1 * seedTriangleNormal;
+				glm::vec3 seedTriangleP2 = seedTriangleElement.m_vertices.at(seedTriangleIndices.z).m_position + perturb2 * seedTriangleNormal;
+				auto testPlaneNormal = glm::normalize(glm::cross(seedTriangleP0 - seedTriangleP1, seedTriangleP0 - seedTriangleP2));
+				if (glm::dot(testPlaneNormal, seedTriangleNormal) < 0.f)
+				{
+					testPlaneNormal = -testPlaneNormal;
+				}
+				const auto planeCenter = (seedTriangleP0 + seedTriangleP1 + seedTriangleP2) / 3.f;
+				float testPlaneDistance = glm::dot(seedTriangleP0, testPlaneNormal);
+				float area = 0.f;
+				std::vector<int> currentIterationSelectedTriangleIndices;
+				for (int testTriangleIndex = 0; testTriangleIndex < operatingTriangles.size(); testTriangleIndex++)
+				{
+					const auto& testTriangle = operatingTriangles.at(testTriangleIndex);
+					const auto& testTriangleElement = m_elements.at(testTriangle.m_elementIndex);
+					const auto& testTriangleIndices = testTriangleElement.m_triangles.at(testTriangle.m_triangleIndex);
+					const auto& testTriangleP0 = testTriangleElement.m_vertices.at(testTriangleIndices.x).m_position;
+					const auto& testTriangleP1 = testTriangleElement.m_vertices.at(testTriangleIndices.y).m_position;
+					const auto& testTriangleP2 = testTriangleElement.m_vertices.at(testTriangleIndices.z).m_position;
+
+					if (glm::distance(planeCenter, testTriangleP0) > maxPlaneSize) continue;
+
+
+					if (glm::abs(testPlaneDistance - glm::dot(testTriangleP0, testPlaneNormal)) > epsilon) continue;
+					if (glm::abs(testPlaneDistance - glm::dot(testTriangleP1, testPlaneNormal)) > epsilon) continue;
+					if (glm::abs(testPlaneDistance - glm::dot(testTriangleP2, testPlaneNormal)) > epsilon) continue;
+
+					// increment projected area (Angular area Contribution)
+					// use projected area Contribution
+					float angle = glm::acos(glm::abs(glm::dot(testPlaneNormal, CalculateNormal(testTriangle))));
+					float angular = (glm::pi<float>() / 2.f - angle) / (glm::pi<float>() / 2.f);
+					area += CalculateArea(testTriangle) * angular;
+
+					// save reference to T with billboard plane
+					currentIterationSelectedTriangleIndices.emplace_back(testTriangleIndex);
+
+				}
+				if (!currentIterationSelectedTriangleIndices.empty()) {
+					std::lock_guard lock(voteMutex);
+					if (area > maxArea)
+					{
+						//Update cluster.
+						newCluster.m_clusterPlane = Plane(testPlaneNormal, testPlaneDistance);
+						newCluster.m_triangles.clear();
+						for (const auto& triangleIndex : currentIterationSelectedTriangleIndices)
+						{
+							newCluster.m_triangles.emplace_back(operatingTriangles.at(triangleIndex));
+						}
+
+						selectedTriangleIndices = currentIterationSelectedTriangleIndices;
+					}
+				}
+			}
+		);
+
+		if (selectedTriangleIndices.empty())
+		{
+			m_skippedTriangles.insert(m_skippedTriangles.end(), operatingTriangles.begin(), operatingTriangles.end());
+			break;
+		}
+
+		retVal.emplace_back(std::move(newCluster));
+
+		//Remove selected triangle from the remaining triangle.
+		for (auto it = selectedTriangleIndices.rbegin(); it != selectedTriangleIndices.rend(); ++it)
+		{
+			operatingTriangles[*it] = operatingTriangles.back();
+			operatingTriangles.pop_back();
+		}
+		epoch++;
+		if (epoch >= clusterizeSettings.m_stochasticClusterizationSettings.m_timeout)
+		{
+			EVOENGINE_ERROR("Stochastic clustering timeout!")
+				break;
+		}
+	}
+	return std::move(retVal);
+}
+
 std::vector<BillboardCloud::Cluster> BillboardCloud::ElementCollection::DefaultClusterize(
 	std::vector<ClusterTriangle> operatingTriangles, const ClusterizationSettings& clusterizeSettings)
 {
 	return {};
 }
+#pragma endregion
