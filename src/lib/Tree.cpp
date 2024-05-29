@@ -358,11 +358,9 @@ void Tree::GenerateSkeletalGraph(
 }
 
 bool Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
-	static BillboardCloud::ProjectSettings projectSettings{};
-	ImGui::DragFloat("Billboard resolution factor", &projectSettings.m_resolutionFactor);
 	if (ImGui::Button("Generate billboard"))
 	{
-		GenerateBillboardClouds(projectSettings);
+		GenerateBillboardClouds(2048);
 	}
 
 	bool changed = false;
@@ -2165,7 +2163,7 @@ inline void TransformVertex(Vertex& v, const glm::mat4& transform)
 	v.m_tangent = glm::normalize(transform * glm::vec4(v.m_tangent, 0.f));
 	v.m_position = transform * glm::vec4(v.m_position, 1.f);
 }
-void Tree::GenerateBillboardClouds(const BillboardCloud::ProjectSettings& projectSettings)
+void Tree::GenerateBillboardClouds(int resolution)
 {
 	auto meshGeneratorSettings = m_meshGeneratorSettings;
 	meshGeneratorSettings.m_foliageInstancing = false;
@@ -2242,6 +2240,9 @@ void Tree::GenerateBillboardClouds(const BillboardCloud::ProjectSettings& projec
 						clusterizeSettings.m_append = false;
 						clusterizeSettings.m_clusterizeMode = BillboardCloud::ClusterizationMode::Stochastic;
 						elementCollection.Clusterize(clusterizeSettings);
+						elementCollection.Project({});
+						elementCollection.Join({});
+						elementCollection.Rasterize({});
 					}
 				}
 				scene->SetEnable(child, false);
@@ -2251,20 +2252,17 @@ void Tree::GenerateBillboardClouds(const BillboardCloud::ProjectSettings& projec
 			}
 		}
 
-	billboardCloud.ProjectClusters(projectSettings);
 	for (int collectionIndex = 0; collectionIndex < billboardCloud.m_elementCollections.size(); collectionIndex++) {
 		auto& elementCollection = billboardCloud.m_elementCollections[collectionIndex];
-		for(const auto& cluster : elementCollection.m_clusters)
+
+		const auto projectedClusterEntity = scene->CreateEntity("Projected Cluster [" + std::to_string(collectionIndex) + "]");
+		scene->SetParent(projectedClusterEntity, projectedTree);
 		{
-			const auto projectedClusterEntity = scene->CreateEntity("Projected Cluster [" + std::to_string(collectionIndex) + "]");
-			scene->SetParent(projectedClusterEntity, projectedTree);
-			{
-				const auto projectedElementEntity = scene->CreateEntity("Projected Billboard");
-				const auto elementMeshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(projectedElementEntity).lock();
-				elementMeshRenderer->m_mesh = cluster.m_billboardMesh;
-				elementMeshRenderer->m_material = cluster.m_billboardMaterial;
-				scene->SetParent(projectedElementEntity, projectedClusterEntity);
-			}
+			const auto projectedElementEntity = scene->CreateEntity("Projected Billboard");
+			const auto elementMeshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(projectedElementEntity).lock();
+			elementMeshRenderer->m_mesh = elementCollection.m_billboardCloudMesh;
+			elementMeshRenderer->m_material = elementCollection.m_billboardCloudMaterial;
+			scene->SetParent(projectedElementEntity, projectedClusterEntity);
 		}
 	}
 }

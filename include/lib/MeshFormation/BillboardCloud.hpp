@@ -14,6 +14,11 @@ namespace EvoEngine {
 
 			int m_index;
 		};
+		struct ProjectedTriangle
+		{
+			Vertex m_projectedVertices[3];
+			Handle m_materialHandle;
+		};
 
 		struct Element {
 			/**
@@ -38,6 +43,8 @@ namespace EvoEngine {
 		{
 			glm::vec2 m_points[4];
 
+			glm::vec2 m_texCoords[4];
+
 			void Update();
 
 			glm::vec2 m_center;
@@ -50,30 +57,17 @@ namespace EvoEngine {
 			[[nodiscard]] glm::vec2 Transform(const glm::vec2& target) const;
 			[[nodiscard]] glm::vec3 Transform(const glm::vec3& target) const;
 		};
-
-		struct Cluster
+		struct ProjectSettings
 		{
-			Plane m_clusterPlane = Plane(glm::vec3(0, 0, 1), 0.f);
-
-			std::vector<ClusterTriangle> m_triangles;
-
-			/**
-			 * Billboard's bounding rectangle.
-			 */
-			Rectangle m_rectangle;
-			/**
-			 * Billboard's corresponding mesh.
-			 */
-			std::shared_ptr<Mesh> m_billboardMesh;
-			/**
-			 * Billboard's corresponding material.
-			 */
-			std::shared_ptr<Material> m_billboardMaterial;
-
-
+			
+		};
+		
+		struct JoinSettings
+		{
+			glm::uvec2 m_resolution = glm::uvec2(2048);
 		};
 
-		struct ProjectSettings
+		struct RasterizeSettings
 		{
 			bool m_transferAlbedoMap = true;
 			bool m_transferNormalMap = true;
@@ -81,7 +75,48 @@ namespace EvoEngine {
 			bool m_transferMetallicMap = false;
 			bool m_transferAoMap = false;
 
-			float m_resolutionFactor = 128;
+			glm::uvec2 m_resolution = glm::uvec2(2048);
+		};
+		struct PBRMaterial
+		{
+			glm::vec4 m_baseAlbedo = glm::vec4(1.f);
+			float m_baseRoughness = 0.3f;
+			float m_baseMetallic = 0.3f;
+			float m_baseAo = 1.f;
+			glm::ivec2 m_albedoTextureResolution = glm::ivec2(-1);
+			std::vector<glm::vec4> m_albedoTextureData;
+
+			glm::ivec2 m_normalTextureResolution = glm::ivec2(-1);
+			std::vector<glm::vec3> m_normalTextureData;
+
+			glm::ivec2 m_roughnessTextureResolution = glm::ivec2(-1);
+			std::vector<float> m_roughnessTextureData;
+
+			glm::ivec2 m_metallicTextureResolution = glm::ivec2(-1);
+			std::vector<float> m_metallicTextureData;
+
+			glm::ivec2 m_aoTextureResolution = glm::ivec2(-1);
+			std::vector<float> m_aoTextureData;
+			void Clear();
+			void ApplyMaterial(const std::shared_ptr<Material>& material, const RasterizeSettings& rasterizeSettings);
+		};
+		struct Cluster
+		{
+			Plane m_clusterPlane = Plane(glm::vec3(0, 0, 1), 0.f);
+
+			std::vector<ClusterTriangle> m_triangles;
+
+			std::vector<ProjectedTriangle> m_projectedTriangles;
+			/**
+			 * Billboard's bounding rectangle.
+			 */
+			Rectangle m_rectangle;
+			/**
+			 * Billboard's corresponding mesh.
+			 */
+			std::vector<Vertex> m_billboardVertices;
+			std::vector<glm::uvec3> m_billboardTriangles;
+			
 		};
 
 		enum class ClusterizationMode
@@ -115,33 +150,11 @@ namespace EvoEngine {
 		};
 
 		class ElementCollection {
-			struct PBRMaterial
-			{
-				glm::vec4 m_baseAlbedo = glm::vec4(1.f);
-				float m_baseRoughness = 0.3f;
-				float m_baseMetallic = 0.3f;
-				float m_baseAo = 1.f;
-				glm::ivec2 m_albedoTextureResolution;
-				std::vector<glm::vec4> m_albedoTextureData;
-
-				glm::ivec2 m_normalTextureResolution;
-				std::vector<glm::vec3> m_normalTextureData;
-
-				glm::ivec2 m_roughnessTextureResolution;
-				std::vector<float> m_roughnessTextureData;
-
-				glm::ivec2 m_metallicTextureResolution;
-				std::vector<float> m_metallicTextureData;
-
-				glm::ivec2 m_aoTextureResolution;
-				std::vector<float> m_aoTextureData;
-
-				void ApplyMaterial(const std::shared_ptr<Material>& material, const ProjectSettings& projectSettings);
-			};
-			void Project(std::unordered_map<Handle, PBRMaterial>& pbrMaterials, Cluster& cluster, const ProjectSettings& projectSettings) const;
+			
+			void Project(Cluster& cluster, const ProjectSettings& projectSettings) const;
 			std::vector<Cluster> StochasticClusterize(std::vector<ClusterTriangle> operatingTriangles, const ClusterizationSettings& clusterizeSettings);
 			std::vector<Cluster> DefaultClusterize(std::vector<ClusterTriangle> operatingTriangles, const ClusterizationSettings& clusterizeSettings);
-
+			
 		public:
 			std::vector<ClusterTriangle> m_skippedTriangles;
 
@@ -153,13 +166,14 @@ namespace EvoEngine {
 			[[nodiscard]] float CalculateNormalDistance(const ClusterTriangle& triangle) const;
 			[[nodiscard]] glm::vec3 CalculateNormal(const ClusterTriangle& triangle) const;
 
+
+			std::shared_ptr<Mesh> m_billboardCloudMesh;
+			std::shared_ptr<Material> m_billboardCloudMaterial;
+
 			void Clusterize(const ClusterizationSettings& clusterizeSettings);
 			void Project(const ProjectSettings& projectSettings);
-		};
-
-		struct JoinSettings
-		{
-			glm::uvec2 m_resolution;
+			void Join(const JoinSettings& joinSettings);
+			void Rasterize(const RasterizeSettings& rasterizeSettings);
 		};
 
 		/**
@@ -168,9 +182,7 @@ namespace EvoEngine {
 		 */
 		std::vector<ElementCollection> m_elementCollections{};
 
-		void BuildClusters(const std::shared_ptr<Prefab>& prefab, const ClusterizationSettings& clusterizeSettings, bool combine);
-
-		void ProjectClusters(const ProjectSettings& projectSettings);
+		void ProcessPrefab(const std::shared_ptr<Prefab>& prefab, bool combine);
 
 		[[nodiscard]] Entity BuildEntity(const std::shared_ptr<Scene>& scene) const;
 	private:
