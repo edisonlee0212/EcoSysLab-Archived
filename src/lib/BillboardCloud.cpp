@@ -1,5 +1,6 @@
 #include "BillboardCloud.hpp"
 #include "Prefab.hpp"
+#include "xatlas/xatlas.h"
 using namespace EvoEngine;
 #pragma region Projection
 void AppendTriangles(std::vector<BillboardCloud::ClusterTriangle>& triangles, const std::vector<BillboardCloud::Element>& elements)

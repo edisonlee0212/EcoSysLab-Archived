@@ -123,6 +123,7 @@ target_link_libraries(ecosyslab
 	evoengine
 	csvpp
 	JSON
+	xatlas
 	Base64
 	${PINCHOT_LIB}
 	)
