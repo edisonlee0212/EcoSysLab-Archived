@@ -16,6 +16,7 @@ bool SpeedTreeMeshConverter::OnInspect(const std::shared_ptr<EditorLayer>& edito
 		ImGui::Checkbox("Metallic map", &projectSettings.m_transferMetallicMap);
 		ImGui::Checkbox("AO map", &projectSettings.m_transferAoMap);
 		static BillboardCloud::ClusterizationSettings clusterizeSettings{};
+		clusterizeSettings.m_clusterizeMode = BillboardCloud::ClusterizationMode::Default;
 		static bool combinePrefab = true;
 		ImGui::Checkbox("Combine", &combinePrefab);
 		ImGui::DragFloat("Size factor", &projectSettings.m_resolutionFactor, 1.f, 1, 1024);

@@ -11,6 +11,8 @@ namespace EvoEngine {
 		{
 			int m_elementIndex = -1;
 			int m_triangleIndex = -1;
+
+			int m_index;
 		};
 
 		struct Element {
@@ -23,11 +25,13 @@ namespace EvoEngine {
 
 			[[nodiscard]] glm::vec3 CalculateCentroid(int triangleIndex) const;
 			[[nodiscard]] float CalculateArea(int triangleIndex) const;
+			[[nodiscard]] float CalculateNormalDistance(int triangleIndex) const;
 			[[nodiscard]] glm::vec3 CalculateNormal(int triangleIndex) const;
 
 			[[nodiscard]] glm::vec3 CalculateCentroid(const glm::uvec3& triangle) const;
 			[[nodiscard]] float CalculateArea(const glm::uvec3& triangle) const;
 			[[nodiscard]] glm::vec3 CalculateNormal(const glm::uvec3& triangle) const;
+			[[nodiscard]] float CalculateNormalDistance(const glm::uvec3& triangle) const;
 		};
 
 		struct Rectangle
@@ -47,13 +51,9 @@ namespace EvoEngine {
 			[[nodiscard]] glm::vec3 Transform(const glm::vec3& target) const;
 		};
 
-
-
 		struct Cluster
 		{
 			Plane m_clusterPlane = Plane(glm::vec3(0, 0, 1), 0.f);
-
-
 
 			std::vector<ClusterTriangle> m_triangles;
 
@@ -98,11 +98,19 @@ namespace EvoEngine {
 			int m_timeout = 300;
 			float m_maxPlaneSize = 0.1f;
 		};
+		struct DefaultClusterizationSettings
+		{
+			float m_epsilonPercentage = 0.01f;
+			int m_thetaNum = 10;
+			int m_phiNum = 10;
+			int m_timeout = 300;
+		};
 
 		struct ClusterizationSettings
 		{
 			bool m_append = true;
 			StochasticClusterizationSettings m_stochasticClusterizationSettings{};
+			DefaultClusterizationSettings m_defaultClusterizationSettings{};
 			ClusterizationMode m_clusterizeMode = ClusterizationMode::PassThrough;
 		};
 
@@ -142,6 +150,7 @@ namespace EvoEngine {
 
 			[[nodiscard]] glm::vec3 CalculateCentroid(const ClusterTriangle& triangle) const;
 			[[nodiscard]] float CalculateArea(const ClusterTriangle& triangle) const;
+			[[nodiscard]] float CalculateNormalDistance(const ClusterTriangle& triangle) const;
 			[[nodiscard]] glm::vec3 CalculateNormal(const ClusterTriangle& triangle) const;
 
 			void Clusterize(const ClusterizationSettings& clusterizeSettings);
