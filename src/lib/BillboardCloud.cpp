@@ -475,7 +475,7 @@ float Area(const glm::vec2& a, const glm::vec2& b) { return(a.x * b.y) - (a.y * 
 inline void Barycentric2D(const glm::vec2& p, const glm::vec2& a, const glm::vec2& b, const glm::vec2& c, const glm::vec2& d, float& c0, float& c1, float& c2, float& c3)
 {
 	float r[4], t[4], u[4];
-	glm::vec2 v[4] = {a, b, c, d};
+	glm::vec2 v[4] = { a, b, c, d };
 	glm::vec2 s[4];
 	for (int i = 0; i < 4; i++) {
 		s[i] = v[i] - p;
@@ -559,8 +559,30 @@ void BillboardCloud::ElementCollection::Join(const JoinSettings& joinSettings)
 	m_billboardCloudMesh->SetVertices({ false, false, true, false }, billboardCloudVertices, billboardCloudTriangles);
 	xatlas::Destroy(atlas);
 }
+struct PBRMaterial
+{
+	glm::vec4 m_baseAlbedo = glm::vec4(1.f);
+	float m_baseRoughness = 0.3f;
+	float m_baseMetallic = 0.3f;
+	float m_baseAo = 1.f;
+	glm::ivec2 m_albedoTextureResolution = glm::ivec2(-1);
+	std::vector<glm::vec4> m_albedoTextureData;
 
-void BillboardCloud::PBRMaterial::Clear()
+	glm::ivec2 m_normalTextureResolution = glm::ivec2(-1);
+	std::vector<glm::vec3> m_normalTextureData;
+
+	glm::ivec2 m_roughnessTextureResolution = glm::ivec2(-1);
+	std::vector<float> m_roughnessTextureData;
+
+	glm::ivec2 m_metallicTextureResolution = glm::ivec2(-1);
+	std::vector<float> m_metallicTextureData;
+
+	glm::ivec2 m_aoTextureResolution = glm::ivec2(-1);
+	std::vector<float> m_aoTextureData;
+	void Clear();
+	void ApplyMaterial(const std::shared_ptr<Material>& material, const BillboardCloud::RasterizeSettings& rasterizeSettings);
+};
+void PBRMaterial::Clear()
 {
 	m_baseAlbedo = glm::vec4(1.f);
 	m_baseRoughness = 0.3f;
@@ -579,8 +601,8 @@ void BillboardCloud::PBRMaterial::Clear()
 	m_aoTextureData.clear();
 }
 
-void BillboardCloud::PBRMaterial::ApplyMaterial(const std::shared_ptr<Material>& material,
-	const RasterizeSettings& rasterizeSettings)
+void PBRMaterial::ApplyMaterial(const std::shared_ptr<Material>& material,
+	const BillboardCloud::RasterizeSettings& rasterizeSettings)
 {
 	m_baseAlbedo = glm::vec4(material->m_materialProperties.m_albedoColor, 1.f - material->m_materialProperties.m_transmission);
 	m_baseRoughness = material->m_materialProperties.m_roughness;
@@ -652,9 +674,9 @@ void BillboardCloud::ElementCollection::Rasterize(const RasterizeSettings& raste
 				const auto& v1 = triangle.m_projectedVertices[1];
 				const auto& v2 = triangle.m_projectedVertices[2];
 				const auto& material = pbrMaterials.at(triangle.m_materialHandle);
-				
+
 				glm::vec3 textureSpaceVertices[3];
-				for(int i = 0; i < 3; i++)
+				for (int i = 0; i < 3; i++)
 				{
 					const auto p = glm::vec2(triangle.m_projectedVertices[i].m_position.x, triangle.m_projectedVertices[i].m_position.y);
 					const auto r0 = boundingRectangle.m_points[0];
