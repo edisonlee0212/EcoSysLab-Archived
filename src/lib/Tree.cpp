@@ -358,9 +358,13 @@ void Tree::GenerateSkeletalGraph(
 }
 
 bool Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
+	static BillboardCloud::GenerateSettings foliageBillboardCloudGenerateSettings {};
+	
+	foliageBillboardCloudGenerateSettings.OnInspect("Foliage billboard cloud settings");
+
 	if (ImGui::Button("Generate billboard"))
 	{
-		GenerateBillboardClouds(2048);
+		GenerateBillboardClouds(foliageBillboardCloudGenerateSettings);
 	}
 
 	bool changed = false;
@@ -2163,7 +2167,7 @@ inline void TransformVertex(Vertex& v, const glm::mat4& transform)
 	v.m_tangent = glm::normalize(transform * glm::vec4(v.m_tangent, 0.f));
 	v.m_position = transform * glm::vec4(v.m_position, 1.f);
 }
-void Tree::GenerateBillboardClouds(int resolution)
+void Tree::GenerateBillboardClouds(const BillboardCloud::GenerateSettings& foliageGenerateSettings)
 {
 	auto meshGeneratorSettings = m_meshGeneratorSettings;
 	meshGeneratorSettings.m_foliageInstancing = false;
@@ -2184,86 +2188,45 @@ void Tree::GenerateBillboardClouds(int resolution)
 	}
 	const auto projectedTree = scene->CreateEntity("Projected Tree");
 	scene->SetParent(projectedTree, owner);
-	BillboardCloud billboardCloud;
+	std::vector<BillboardCloud> billboardClouds;
 
 	for (const auto& child : children) {
-			if (!scene->IsEntityValid(child)) continue;
-			auto name = scene->GetEntityName(child);
-			const auto modelSpaceTransform = glm::inverse(ownerGlobalTransform.m_value) * scene->GetDataComponent<GlobalTransform>(child).m_value;
-			if (false && name == "Branch Mesh") {
-
-				if (scene->HasPrivateComponent<MeshRenderer>(child)) {
-					const auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(child).lock();
-					const auto mesh = meshRenderer->m_mesh.Get<Mesh>();
-					const auto material = meshRenderer->m_material.Get<Material>();
-					if (mesh && material) {
-						billboardCloud.m_elementCollections.emplace_back();
-						auto& elementCollection = billboardCloud.m_elementCollections.back();
-						elementCollection.m_elements.emplace_back();
-						auto& element = elementCollection.m_elements.back();
-						element.m_vertices = mesh->UnsafeGetVertices();
-						element.m_material = material;
-						element.m_triangles = mesh->UnsafeGetTriangles();
-						Jobs::RunParallelFor(element.m_vertices.size(), [&](unsigned vertexIndex)
+		if (!scene->IsEntityValid(child)) continue;
+		auto name = scene->GetEntityName(child);
+		const auto modelSpaceTransform = glm::inverse(ownerGlobalTransform.m_value) * scene->GetDataComponent<GlobalTransform>(child).m_value;
+		if (name == "Foliage Mesh") {
+			if (scene->HasPrivateComponent<MeshRenderer>(child)) {
+				const auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(child).lock();
+				const auto mesh = meshRenderer->m_mesh.Get<Mesh>();
+				const auto material = meshRenderer->m_material.Get<Material>();
+				if (mesh && material) {
+					billboardClouds.emplace_back();
+					auto& billboardCloud = billboardClouds.back();
+					billboardCloud.m_elements.emplace_back();
+					auto& element = billboardCloud.m_elements.back();
+					element.m_vertices = mesh->UnsafeGetVertices();
+					element.m_material = material;
+					element.m_triangles = mesh->UnsafeGetTriangles();
+					Jobs::RunParallelFor(element.m_vertices.size(), [&](unsigned vertexIndex)
 						{
 							TransformVertex(element.m_vertices.at(vertexIndex), modelSpaceTransform);
 						});
-						BillboardCloud::ClusterizationSettings clusterizeSettings {};
-						clusterizeSettings.m_append = false;
-						clusterizeSettings.m_clusterizeMode = BillboardCloud::ClusterizationMode::Stochastic;
-						elementCollection.Clusterize(clusterizeSettings);
-					}
-					scene->SetEnable(child, false);
+					billboardCloud.Generate(foliageGenerateSettings);
 				}
 			}
-			else if (name == "Root Mesh") {
-
-			}
-			else if (name == "Foliage Mesh") {
-				if (scene->HasPrivateComponent<MeshRenderer>(child)) {
-					const auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(child).lock();
-					const auto mesh = meshRenderer->m_mesh.Get<Mesh>();
-					const auto material = meshRenderer->m_material.Get<Material>();
-					if (mesh && material) {
-						billboardCloud.m_elementCollections.emplace_back();
-						auto& elementCollection = billboardCloud.m_elementCollections.back();
-						elementCollection.m_elements.emplace_back();
-						auto& element = elementCollection.m_elements.back();
-						element.m_vertices = mesh->UnsafeGetVertices();
-						element.m_material = material;
-						element.m_triangles = mesh->UnsafeGetTriangles();
-						Jobs::RunParallelFor(element.m_vertices.size(), [&](unsigned vertexIndex)
-						{
-							TransformVertex(element.m_vertices.at(vertexIndex), modelSpaceTransform);
-						});
-						BillboardCloud::ClusterizationSettings clusterizeSettings {};
-						clusterizeSettings.m_append = false;
-						clusterizeSettings.m_clusterizeMode = BillboardCloud::ClusterizationMode::Stochastic;
-						elementCollection.Clusterize(clusterizeSettings);
-						elementCollection.Project({});
-						elementCollection.Join({});
-						elementCollection.Rasterize({});
-					}
-				}
-				scene->SetEnable(child, false);
-			}
-			else if (name == "Fruit Mesh") {
-
-			}
+			scene->SetEnable(child, false);
 		}
+		else if (name == "Fruit Mesh") {
 
-	for (int collectionIndex = 0; collectionIndex < billboardCloud.m_elementCollections.size(); collectionIndex++) {
-		auto& elementCollection = billboardCloud.m_elementCollections[collectionIndex];
-
-		const auto projectedClusterEntity = scene->CreateEntity("Projected Cluster [" + std::to_string(collectionIndex) + "]");
-		scene->SetParent(projectedClusterEntity, projectedTree);
-		{
-			const auto projectedElementEntity = scene->CreateEntity("Projected Billboard");
-			const auto elementMeshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(projectedElementEntity).lock();
-			elementMeshRenderer->m_mesh = elementCollection.m_billboardCloudMesh;
-			elementMeshRenderer->m_material = elementCollection.m_billboardCloudMaterial;
-			scene->SetParent(projectedElementEntity, projectedClusterEntity);
 		}
+	}
+	int cloudIndex = 0;
+	for (const auto& billboardCloud : billboardClouds)
+	{
+		const auto billboardCloudEntity = billboardCloud.BuildEntity(scene);
+		scene->SetEntityName(billboardCloudEntity, "Projected Cluster [" + std::to_string(cloudIndex) + "]");
+		scene->SetParent(billboardCloudEntity, projectedTree);
+		cloudIndex++;
 	}
 }
 
@@ -2394,7 +2357,7 @@ void Tree::GenerateGeometryEntities(const TreeMeshGeneratorSettings& meshGenerat
 	{
 		const auto foliageEntity = scene->CreateEntity("Foliage Mesh");
 		scene->SetParent(foliageEntity, self);
-		if(meshGeneratorSettings.m_foliageInstancing){
+		if (meshGeneratorSettings.m_foliageInstancing) {
 			const auto mesh = Resources::GetResource<Mesh>("PRIMITIVE_QUAD");
 			const auto particleInfoList = GenerateFoliageParticleInfoList(meshGeneratorSettings);
 			const auto material = ProjectManager::CreateTemporaryAsset<Material>();
@@ -2420,7 +2383,8 @@ void Tree::GenerateGeometryEntities(const TreeMeshGeneratorSettings& meshGenerat
 			particles->m_mesh = mesh;
 			particles->m_material = material;
 			particles->m_particleInfoList = particleInfoList;
-		}else
+		}
+		else
 		{
 			auto mesh = GenerateFoliageMesh(meshGeneratorSettings);
 			auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(foliageEntity).lock();

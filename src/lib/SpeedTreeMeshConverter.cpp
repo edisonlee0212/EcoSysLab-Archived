@@ -9,22 +9,12 @@ bool SpeedTreeMeshConverter::OnInspect(const std::shared_ptr<EditorLayer>& edito
 	if (EditorLayer::DragAndDropButton<Prefab>(m_originalModel, "SpeedTree Model")) changed = true;
 	if (const auto prefab = m_originalModel.Get<Prefab>())
 	{
-		static BillboardCloud::JoinSettings joinSettings {};
-		static BillboardCloud::ProjectSettings projectSettings {};
-		static BillboardCloud::RasterizeSettings rasterizeSettings {};
-		ImGui::Checkbox("Albedo map", &rasterizeSettings.m_transferAlbedoMap);
-		ImGui::Checkbox("Normal map", &rasterizeSettings.m_transferNormalMap);
-		ImGui::Checkbox("Roughness map", &rasterizeSettings.m_transferRoughnessMap);
-		ImGui::Checkbox("Metallic map", &rasterizeSettings.m_transferMetallicMap);
-		ImGui::Checkbox("AO map", &rasterizeSettings.m_transferAoMap);
-		static BillboardCloud::ClusterizationSettings clusterizeSettings{};
-		clusterizeSettings.m_clusterizeMode = BillboardCloud::ClusterizationMode::Default;
-		static bool combinePrefab = true;
-		ImGui::Checkbox("Combine", &combinePrefab);
-		//ImGui::DragInt2("Size factor", &joinSettings.m_resolution, 1.f, 1, 1024);
+		static BillboardCloud::GenerateSettings generateSettings {};
+		generateSettings.OnInspect("Generate settings");
 		if (ImGui::Button("Build Billboard Cloud")) {
 			BillboardCloud billboardCloud {};
-			billboardCloud.ProcessPrefab(prefab, combinePrefab);
+			billboardCloud.ProcessPrefab(prefab);
+			billboardCloud.Generate(generateSettings);
 			const auto entity = billboardCloud.BuildEntity(scene);
 			if(scene->IsEntityValid(entity)) scene->SetEntityName(entity, "SpeedTree billboard cloud");
 			else

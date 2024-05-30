@@ -3,38 +3,41 @@
 #include "xatlas/xatlas.h"
 using namespace EvoEngine;
 #pragma region Projection
-void AppendTriangles(std::vector<BillboardCloud::ClusterTriangle>& triangles, const std::vector<BillboardCloud::Element>& elements)
+
+std::vector<BillboardCloud::ClusterTriangle> BillboardCloud::CollectTriangles() const
 {
-	for (int elementIndex = 0; elementIndex < elements.size(); elementIndex++)
+	std::vector<ClusterTriangle> retVal;
+	for (int elementIndex = 0; elementIndex < m_elements.size(); elementIndex++)
 	{
-		const auto& element = elements.at(elementIndex);
+		const auto& element = m_elements.at(elementIndex);
 		for (int triangleIndex = 0; triangleIndex < element.m_triangles.size(); triangleIndex++)
 		{
-			BillboardCloud::ClusterTriangle clusterTriangle;
+			ClusterTriangle clusterTriangle;
 			clusterTriangle.m_elementIndex = elementIndex;
 			clusterTriangle.m_triangleIndex = triangleIndex;
-			triangles.emplace_back(clusterTriangle);
+			retVal.emplace_back(clusterTriangle);
 		}
 	}
+	return retVal;
 }
 
-glm::vec3 BillboardCloud::ElementCollection::CalculateCentroid(const ClusterTriangle& triangle) const
+glm::vec3 BillboardCloud::CalculateCentroid(const ClusterTriangle& triangle) const
 {
 	return m_elements.at(triangle.m_elementIndex).CalculateCentroid(triangle.m_triangleIndex);
 }
 
 
-float BillboardCloud::ElementCollection::CalculateArea(const ClusterTriangle& triangle) const
+float BillboardCloud::CalculateArea(const ClusterTriangle& triangle) const
 {
 	return m_elements.at(triangle.m_elementIndex).CalculateArea(triangle.m_triangleIndex);
 }
 
-float BillboardCloud::ElementCollection::CalculateNormalDistance(const ClusterTriangle& triangle) const
+float BillboardCloud::CalculateNormalDistance(const ClusterTriangle& triangle) const
 {
 	return m_elements.at(triangle.m_elementIndex).CalculateNormalDistance(triangle.m_triangleIndex);
 }
 
-glm::vec3 BillboardCloud::ElementCollection::CalculateNormal(const ClusterTriangle& triangle) const
+glm::vec3 BillboardCloud::CalculateNormal(const ClusterTriangle& triangle) const
 {
 	return m_elements.at(triangle.m_elementIndex).CalculateNormal(triangle.m_triangleIndex);
 }
@@ -215,6 +218,8 @@ glm::vec3 BillboardCloud::Rectangle::Transform(const glm::vec3& target) const
 	retVal = glm::vec2(x, y) + glm::vec2(m_width, m_height) * .5f;
 	return { retVal, target.z };
 }
+
+
 
 std::vector<glm::vec2> BillboardCloud::RotatingCalipers::ConvexHull(std::vector<glm::vec2> points)
 {
@@ -495,12 +500,12 @@ inline void Barycentric2D(const glm::vec2& p, const glm::vec2& a, const glm::vec
 	c3 = u[3] / sum;
 }
 
-void BillboardCloud::ElementCollection::Project(const ProjectSettings& projectSettings)
+void BillboardCloud::Project(const ProjectSettings& projectSettings)
 {
 	for (auto& cluster : m_clusters) Project(cluster, projectSettings);
 }
 
-void BillboardCloud::ElementCollection::Join(const JoinSettings& joinSettings)
+void BillboardCloud::Join(const JoinSettings& joinSettings)
 {
 	xatlas::Atlas* atlas = xatlas::Create();
 
@@ -641,7 +646,7 @@ void PBRMaterial::ApplyMaterial(const std::shared_ptr<Material>& material,
 	}
 }
 
-void BillboardCloud::ElementCollection::Rasterize(const RasterizeSettings& rasterizeSettings)
+void BillboardCloud::Rasterize(const RasterizeSettings& rasterizeSettings)
 {
 	std::unordered_map<Handle, PBRMaterial> pbrMaterials;
 	for (auto& element : m_elements)
@@ -834,7 +839,15 @@ void BillboardCloud::ElementCollection::Rasterize(const RasterizeSettings& raste
 	}
 }
 
-void BillboardCloud::ElementCollection::Project(Cluster& cluster, const ProjectSettings& projectSettings) const
+void BillboardCloud::Generate(const GenerateSettings& generateSettings)
+{
+	Clusterize(generateSettings.m_clusterizationSettings);
+	Project(generateSettings.m_projectSettings);
+	Join(generateSettings.m_joinSettings);
+	Rasterize(generateSettings.m_rasterizeSettings);
+}
+
+void BillboardCloud::Project(Cluster& cluster, const ProjectSettings& projectSettings) const
 {
 	const auto billboardFrontAxis = cluster.m_clusterPlane.GetNormal();
 	auto billboardUpAxis = glm::vec3(billboardFrontAxis.y, billboardFrontAxis.z, billboardFrontAxis.x); //cluster.m_planeYAxis;
@@ -944,74 +957,20 @@ void BillboardCloud::ElementCollection::Project(Cluster& cluster, const ProjectS
 #pragma region IO
 Entity BillboardCloud::BuildEntity(const std::shared_ptr<Scene>& scene) const
 {
-	if (m_elementCollections.empty()) return {};
+	if (!m_billboardCloudMesh || !m_billboardCloudMaterial) return {};
 	const auto owner = scene->CreateEntity("Billboard Cloud");
-	for (const auto& elementCollection : m_elementCollections) {
-		if (!elementCollection.m_billboardCloudMesh || !elementCollection.m_billboardCloudMaterial) continue;
-		const auto projectedElementEntity = scene->CreateEntity("Billboard Cloud");
-		const auto elementMeshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(projectedElementEntity).lock();
-		elementMeshRenderer->m_mesh = elementCollection.m_billboardCloudMesh;
-		elementMeshRenderer->m_material = elementCollection.m_billboardCloudMaterial;
-		scene->SetParent(projectedElementEntity, owner);
 
-	}
+	const auto projectedElementEntity = scene->CreateEntity("Billboard Cloud");
+	const auto elementMeshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(projectedElementEntity).lock();
+	elementMeshRenderer->m_mesh = m_billboardCloudMesh;
+	elementMeshRenderer->m_material = m_billboardCloudMaterial;
+	scene->SetParent(projectedElementEntity, owner);
+
+
 	return owner;
 }
-void BillboardCloud::PreprocessPrefab(std::vector<ElementCollection>& elementCollections, const std::shared_ptr<Prefab>& currentPrefab, const Transform& parentModelSpaceTransform)
-{
-	Transform transform{};
-	for (const auto& dataComponent : currentPrefab->m_dataComponents)
-	{
-		if (dataComponent.m_type == Typeof<Transform>())
-		{
-			transform = *std::reinterpret_pointer_cast<Transform>(dataComponent.m_data);
-		}
-	}
-	transform.m_value = parentModelSpaceTransform.m_value * transform.m_value;
-	for (const auto& privateComponent : currentPrefab->m_privateComponents)
-	{
 
-		if (privateComponent.m_data->GetTypeName() == "MeshRenderer")
-		{
-			std::vector<AssetRef> assetRefs;
-			privateComponent.m_data->CollectAssetRef(assetRefs);
-			std::shared_ptr<Mesh> mesh{};
-			std::shared_ptr<Material> material{};
-			for (auto& assetRef : assetRefs)
-			{
-				if (const auto testMesh = assetRef.Get<Mesh>())
-				{
-					mesh = testMesh;
-				}
-				else if (const auto testMaterial = assetRef.Get<Material>())
-				{
-					material = testMaterial;
-				}
-			}
-			if (mesh && material)
-			{
-				elementCollections.emplace_back();
-				auto& targetCluster = elementCollections.back();
-				targetCluster.m_elements.emplace_back();
-				auto& element = targetCluster.m_elements.back();
-				element.m_vertices = mesh->UnsafeGetVertices();
-				element.m_material = material;
-				element.m_triangles = mesh->UnsafeGetTriangles();
-				Jobs::RunParallelFor(element.m_vertices.size(), [&](unsigned vertexIndex)
-					{
-						TransformVertex(element.m_vertices.at(vertexIndex), parentModelSpaceTransform.m_value);
-
-					});
-			}
-		}
-	}
-	for (const auto& childPrefab : currentPrefab->m_children)
-	{
-		PreprocessPrefab(elementCollections, childPrefab, transform);
-	}
-}
-
-void BillboardCloud::PreprocessPrefab(ElementCollection& elementCollection, const std::shared_ptr<Prefab>& currentPrefab,
+void BillboardCloud::ProcessPrefab(const std::shared_ptr<Prefab>& currentPrefab,
 	const Transform& parentModelSpaceTransform)
 {
 	Transform transform{};
@@ -1045,8 +1004,8 @@ void BillboardCloud::PreprocessPrefab(ElementCollection& elementCollection, cons
 			}
 			if (mesh && material)
 			{
-				elementCollection.m_elements.emplace_back();
-				auto& element = elementCollection.m_elements.back();
+				m_elements.emplace_back();
+				auto& element = m_elements.back();
 				element.m_vertices = mesh->UnsafeGetVertices();
 				element.m_material = material;
 				element.m_triangles = mesh->UnsafeGetTriangles();
@@ -1059,48 +1018,38 @@ void BillboardCloud::PreprocessPrefab(ElementCollection& elementCollection, cons
 	}
 	for (const auto& childPrefab : currentPrefab->m_children)
 	{
-		PreprocessPrefab(elementCollection, childPrefab, transform);
+		ProcessPrefab(childPrefab, transform);
 	}
 }
 
 #pragma endregion
 #pragma region Clusterization
-void BillboardCloud::ProcessPrefab(const std::shared_ptr<Prefab>& prefab, const bool combine)
+void BillboardCloud::ProcessPrefab(const std::shared_ptr<Prefab>& prefab)
 {
-	if (combine) {
-		m_elementCollections.emplace_back();
-		auto& newElementCollection = m_elementCollections.back();
-		PreprocessPrefab(newElementCollection, prefab, Transform());
-	}
-	else
-	{
-		PreprocessPrefab(m_elementCollections, prefab, Transform());
-	}
+	ProcessPrefab(prefab, Transform());
 }
 
-void BillboardCloud::ElementCollection::Clusterize(const ClusterizationSettings& clusterizeSettings)
+void BillboardCloud::Clusterize(const ClusterizationSettings& clusterizeSettings)
 {
 	m_clusters.clear();
 	switch (clusterizeSettings.m_clusterizeMode)
 	{
-	case ClusterizationMode::PassThrough:
+	case static_cast<unsigned>(ClusterizationMode::PassThrough):
 	{
 		m_clusters.emplace_back();
 		auto& cluster = m_clusters.back();
-		AppendTriangles(cluster.m_triangles, m_elements);
+		cluster.m_triangles = CollectTriangles();
 	}
 	break;
-	case ClusterizationMode::Stochastic:
+	case static_cast<unsigned>(ClusterizationMode::Stochastic):
 	{
-		std::vector<ClusterTriangle> operatingTriangles;
-		AppendTriangles(operatingTriangles, m_elements);
+		std::vector<ClusterTriangle> operatingTriangles = CollectTriangles();
 		m_clusters = StochasticClusterize(std::move(operatingTriangles), clusterizeSettings);
 	}
 	break;
-	case ClusterizationMode::Default:
+	case static_cast<unsigned>(ClusterizationMode::Original):
 	{
-		std::vector<ClusterTriangle> operatingTriangles;
-		AppendTriangles(operatingTriangles, m_elements);
+		std::vector<ClusterTriangle> operatingTriangles = CollectTriangles();
 		m_clusters = DefaultClusterize(std::move(operatingTriangles), clusterizeSettings);
 	}
 	break;
@@ -1760,14 +1709,14 @@ public:
 	}
 };
 
-std::vector<BillboardCloud::Cluster> BillboardCloud::ElementCollection::StochasticClusterize(std::vector<ClusterTriangle> operatingTriangles, const ClusterizationSettings& clusterizeSettings)
+std::vector<BillboardCloud::Cluster> BillboardCloud::StochasticClusterize(std::vector<ClusterTriangle> operatingTriangles, const ClusterizationSettings& clusterizeSettings)
 {
 	BoundingSphere boundingSphere;
 	boundingSphere.Initialize(m_elements);
 
 	float epsilon = boundingSphere.m_radius * clusterizeSettings.m_stochasticClusterizationSettings.m_epsilon;
 
-	float maxPlaneSize = boundingSphere.m_radius * clusterizeSettings.m_stochasticClusterizationSettings.m_maxPlaneSize;
+	float maxPlaneSize = clusterizeSettings.m_stochasticClusterizationSettings.m_maxPlaneSize == 0.f ? FLT_MAX : boundingSphere.m_radius * clusterizeSettings.m_stochasticClusterizationSettings.m_maxPlaneSize;
 	m_skippedTriangles.clear();
 
 	std::vector<Cluster> retVal;
@@ -1870,12 +1819,12 @@ std::vector<BillboardCloud::Cluster> BillboardCloud::ElementCollection::Stochast
 }
 
 
-std::vector<BillboardCloud::Cluster> BillboardCloud::ElementCollection::DefaultClusterize(
+std::vector<BillboardCloud::Cluster> BillboardCloud::DefaultClusterize(
 	std::vector<ClusterTriangle> operatingTriangles, const ClusterizationSettings& clusterizeSettings)
 {
 	BoundingSphere boundingSphere;
 	boundingSphere.Initialize(m_elements);
-	const auto& settings = clusterizeSettings.m_defaultClusterizationSettings;
+	const auto& settings = clusterizeSettings.m_originalClusterizationSettings;
 	const int roNum = static_cast<int>(1.5f / settings.m_epsilonPercentage);
 	const float epsilon = boundingSphere.m_radius * settings.m_epsilonPercentage;
 
@@ -1891,7 +1840,7 @@ std::vector<BillboardCloud::Cluster> BillboardCloud::ElementCollection::DefaultC
 
 	int epoch = 0;
 
-	Discretization discretization(maxNormalDistance, epsilon, settings.m_thetaNum, settings.m_phiNum, roNum);
+	Discretization discretization(maxNormalDistance, epsilon, settings.m_discretizationSize, settings.m_discretizationSize, roNum);
 	discretization.UpdateDensity(m_elements, operatingTriangles, true);
 
 	while (!operatingTriangles.empty())
@@ -1973,3 +1922,112 @@ std::vector<BillboardCloud::Cluster> BillboardCloud::ElementCollection::DefaultC
 	return retVal;
 }
 #pragma endregion
+
+bool BillboardCloud::OriginalClusterizationSettings::OnInspect()
+{
+	bool changed = false;
+	if (ImGui::TreeNode("Original clusterization settings"))
+	{
+		if (ImGui::DragFloat("Epsilon percentage", &m_epsilonPercentage, 0.01f, 0.01f, 1.f)) changed = true;
+		if (ImGui::DragInt("Discretization size", &m_discretizationSize, 1, 1, 1000)) changed = true;
+		if (ImGui::DragInt("Timeout", &m_timeout, 1, 1, 1000)) changed = true;
+		ImGui::TreePop();
+	}
+	return changed;
+}
+
+bool BillboardCloud::StochasticClusterizationSettings::OnInspect()
+{
+	bool changed = false;
+	if (ImGui::TreeNode("Stochastic clusterization settings"))
+	{
+		if (ImGui::DragFloat("Epsilon", &m_epsilon, 0.01f, 0.01f, 1.f)) changed = true;
+		if (ImGui::DragInt("Iteration", &m_iteration, 1, 1, 1000)) changed = true;
+		if (ImGui::DragInt("Timeout", &m_timeout, 1, 1, 1000)) changed = true;
+		if (ImGui::DragFloat("Max plane size", &m_maxPlaneSize, 0.01f, 0.f, 1.f)) changed = true;
+		ImGui::TreePop();
+	}
+	return changed;
+}
+
+bool BillboardCloud::ClusterizationSettings::OnInspect()
+{
+	bool changed = false;
+
+	if (ImGui::TreeNode("Clusterization settings"))
+	{
+		if (ImGui::Combo("Clusterize mode",
+			{ "PassThrough", "Original", "Stochastic" },
+			m_clusterizeMode)) {
+			changed = true;
+		}
+		switch (m_clusterizeMode)
+		{
+		case static_cast<unsigned>(ClusterizationMode::PassThrough): break;
+		case static_cast<unsigned>(ClusterizationMode::Stochastic):
+		{
+			if (m_stochasticClusterizationSettings.OnInspect()) changed = true;
+		}
+		break;
+		case static_cast<unsigned>(ClusterizationMode::Original):
+		{
+			if (m_originalClusterizationSettings.OnInspect()) changed = true;
+		}
+		break;
+		}
+		ImGui::TreePop();
+	}
+	return changed;
+}
+
+bool BillboardCloud::ProjectSettings::OnInspect()
+{
+	bool changed = false;
+	if (ImGui::TreeNode("Project settings"))
+	{
+		ImGui::TreePop();
+	}
+	return changed;
+}
+
+bool BillboardCloud::JoinSettings::OnInspect()
+{
+	bool changed = false;
+	if (ImGui::TreeNode("Join settings"))
+	{
+		ImGui::TreePop();
+	}
+	return changed;
+}
+
+bool BillboardCloud::RasterizeSettings::OnInspect()
+{
+	bool changed = false;
+	if (ImGui::TreeNode("Rasterize settings"))
+	{
+		if (ImGui::Checkbox("Transfer albedo texture", &m_transferAlbedoMap)) changed = true;
+		if (ImGui::Checkbox("Transfer normal texture", &m_transferNormalMap)) changed = true;
+		if (ImGui::Checkbox("Transfer roughness texture", &m_transferRoughnessMap)) changed = true;
+		if (ImGui::Checkbox("Transfer metallic texture", &m_transferMetallicMap)) changed = true;
+		if (ImGui::Checkbox("Transfer ao texture", &m_transferAoMap)) changed = true;
+		if (ImGui::DragInt2("Resolution", &m_resolution.x, 1, 1, 8192)) changed = true;
+		ImGui::TreePop();
+	}
+	return changed;
+}
+
+bool BillboardCloud::GenerateSettings::OnInspect(const std::string& title)
+{
+	bool changed = false;
+	if (ImGui::TreeNodeEx(title.c_str()))
+	{
+		if (m_clusterizationSettings.OnInspect()) changed = true;
+		if (m_projectSettings.OnInspect()) changed = true;
+		if (m_joinSettings.OnInspect()) changed = true;
+		if (m_rasterizeSettings.OnInspect()) changed = true;
+		ImGui::TreePop();
+	}
+	return changed;
+}
+
+

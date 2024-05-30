@@ -59,23 +59,70 @@ namespace EvoEngine {
 		};
 		struct ProjectSettings
 		{
-
+			bool OnInspect();
 		};
 
 		struct JoinSettings
 		{
-			glm::uvec2 m_resolution = glm::uvec2(2048);
+			bool OnInspect();
 		};
 
 		struct RasterizeSettings
 		{
 			bool m_transferAlbedoMap = true;
 			bool m_transferNormalMap = true;
-			bool m_transferRoughnessMap = false;
-			bool m_transferMetallicMap = false;
+			bool m_transferRoughnessMap = true;
+			bool m_transferMetallicMap = true;
 			bool m_transferAoMap = false;
 
-			glm::uvec2 m_resolution = glm::uvec2(2048);
+			glm::ivec2 m_resolution = glm::ivec2(2048);
+
+			bool OnInspect();
+		};
+
+		enum class ClusterizationMode
+		{
+			PassThrough,
+			Original,
+			Stochastic
+		};
+
+		struct StochasticClusterizationSettings
+		{
+			float m_epsilon = 0.3f;
+			int m_iteration = 200;
+			int m_timeout = 500;
+			float m_maxPlaneSize = 1.f;
+
+			bool OnInspect();
+		};
+		struct OriginalClusterizationSettings
+		{
+			float m_epsilonPercentage = 0.01f;
+			int m_discretizationSize = 10;
+			int m_timeout = 300;
+
+			bool OnInspect();
+		};
+
+		struct ClusterizationSettings
+		{
+			bool m_append = true;
+			StochasticClusterizationSettings m_stochasticClusterizationSettings{};
+			OriginalClusterizationSettings m_originalClusterizationSettings{};
+			unsigned m_clusterizeMode = static_cast<unsigned>(ClusterizationMode::PassThrough);
+
+			bool OnInspect();
+		};
+
+		struct GenerateSettings
+		{
+			ClusterizationSettings m_clusterizationSettings{};
+			ProjectSettings m_projectSettings{};
+			JoinSettings m_joinSettings {};
+			RasterizeSettings m_rasterizeSettings {};
+
+			bool OnInspect(const std::string& title);
 		};
 
 		struct Cluster
@@ -97,77 +144,37 @@ namespace EvoEngine {
 
 		};
 
-		enum class ClusterizationMode
-		{
-			PassThrough,
-			Default,
-			Stochastic
-		};
+		std::vector<ClusterTriangle> CollectTriangles() const;
 
-		struct StochasticClusterizationSettings
-		{
-			float m_epsilon = 0.3f;
-			int m_iteration = 200;
-			int m_timeout = 300;
-			float m_maxPlaneSize = 0.1f;
-		};
-		struct DefaultClusterizationSettings
-		{
-			float m_epsilonPercentage = 0.01f;
-			int m_thetaNum = 10;
-			int m_phiNum = 10;
-			int m_timeout = 300;
-		};
+		std::vector<ClusterTriangle> m_skippedTriangles;
 
-		struct ClusterizationSettings
-		{
-			bool m_append = true;
-			StochasticClusterizationSettings m_stochasticClusterizationSettings{};
-			DefaultClusterizationSettings m_defaultClusterizationSettings{};
-			ClusterizationMode m_clusterizeMode = ClusterizationMode::PassThrough;
-		};
+		std::vector<Element> m_elements;
+		std::vector<Cluster> m_clusters;
 
-		class ElementCollection {
+		std::shared_ptr<Mesh> m_billboardCloudMesh;
+		std::shared_ptr<Material> m_billboardCloudMaterial;
 
-			void Project(Cluster& cluster, const ProjectSettings& projectSettings) const;
-			std::vector<Cluster> StochasticClusterize(std::vector<ClusterTriangle> operatingTriangles, const ClusterizationSettings& clusterizeSettings);
-			std::vector<Cluster> DefaultClusterize(std::vector<ClusterTriangle> operatingTriangles, const ClusterizationSettings& clusterizeSettings);
+		void Clusterize(const ClusterizationSettings& clusterizeSettings);
+		void Project(const ProjectSettings& projectSettings);
+		void Join(const JoinSettings& joinSettings);
+		void Rasterize(const RasterizeSettings& rasterizeSettings);
 
-		public:
-			std::vector<ClusterTriangle> m_skippedTriangles;
+		void Generate(const GenerateSettings& generateSettings);
 
-			std::vector<Element> m_elements;
-			std::vector<Cluster> m_clusters;
-
-			[[nodiscard]] glm::vec3 CalculateCentroid(const ClusterTriangle& triangle) const;
-			[[nodiscard]] float CalculateArea(const ClusterTriangle& triangle) const;
-			[[nodiscard]] float CalculateNormalDistance(const ClusterTriangle& triangle) const;
-			[[nodiscard]] glm::vec3 CalculateNormal(const ClusterTriangle& triangle) const;
-
-
-			std::shared_ptr<Mesh> m_billboardCloudMesh;
-			std::shared_ptr<Material> m_billboardCloudMaterial;
-
-			void Clusterize(const ClusterizationSettings& clusterizeSettings);
-			void Project(const ProjectSettings& projectSettings);
-			void Join(const JoinSettings& joinSettings);
-			void Rasterize(const RasterizeSettings& rasterizeSettings);
-		};
-
-		/**
-		 * Each element collection corresponding to a group of mesh material combinations.
-		 * The primitives are grouped together to be clustered.
-		 */
-		std::vector<ElementCollection> m_elementCollections{};
-
-		void ProcessPrefab(const std::shared_ptr<Prefab>& prefab, bool combine);
+		void ProcessPrefab(const std::shared_ptr<Prefab>& prefab);
 
 		[[nodiscard]] Entity BuildEntity(const std::shared_ptr<Scene>& scene) const;
 	private:
 
-		static void PreprocessPrefab(std::vector<ElementCollection>& elementCollections, const std::shared_ptr<Prefab>& currentPrefab, const Transform& parentModelSpaceTransform);
-		static void PreprocessPrefab(ElementCollection& elementCollection, const std::shared_ptr<Prefab>& currentPrefab, const Transform& parentModelSpaceTransform);
+		[[nodiscard]] glm::vec3 CalculateCentroid(const ClusterTriangle& triangle) const;
+		[[nodiscard]] float CalculateArea(const ClusterTriangle& triangle) const;
+		[[nodiscard]] float CalculateNormalDistance(const ClusterTriangle& triangle) const;
+		[[nodiscard]] glm::vec3 CalculateNormal(const ClusterTriangle& triangle) const;
+		void Project(Cluster& cluster, const ProjectSettings& projectSettings) const;
+		std::vector<Cluster> StochasticClusterize(std::vector<ClusterTriangle> operatingTriangles, const ClusterizationSettings& clusterizeSettings);
+		std::vector<Cluster> DefaultClusterize(std::vector<ClusterTriangle> operatingTriangles, const ClusterizationSettings& clusterizeSettings);
 
+		void ProcessPrefab(const std::shared_ptr<Prefab>& currentPrefab, const Transform& parentModelSpaceTransform);
 		//Adopted from https://github.com/DreamVersion/RotatingCalipers
 		class RotatingCalipers
 		{

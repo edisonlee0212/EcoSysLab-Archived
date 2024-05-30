@@ -156,7 +156,7 @@ namespace EcoSysLab {
 		void CollectAssetRef(std::vector<AssetRef>& list) override;
 		void Deserialize(const YAML::Node& in) override;
 
-		void GenerateBillboardClouds(int resolution);
+		void GenerateBillboardClouds(const BillboardCloud::GenerateSettings &foliageGenerateSettings);
 	};
 
 	template <typename SrcSkeletonData, typename SrcFlowData, typename SrcNodeData>
