@@ -475,21 +475,21 @@ inline void Barycentric2D(const glm::vec2& p, const glm::vec2& a, const glm::vec
 	c2 = (v0.x * v2.y - v2.x * v0.y) / den;
 	c0 = 1.0f - c1 - c2;
 }
-float Area(const glm::vec2& a, const glm::vec2& b) { return(a.x * b.y) - (a.y * b.x); }
+inline float Area(const glm::vec2& a, const glm::vec2& b) { return a.x * b.y - a.y * b.x; }
 
 inline void Barycentric2D(const glm::vec2& p, const glm::vec2& a, const glm::vec2& b, const glm::vec2& c, const glm::vec2& d, float& c0, float& c1, float& c2, float& c3)
 {
 	float r[4], t[4], u[4];
-	glm::vec2 v[4] = { a, b, c, d };
+	const glm::vec2 v[4] = { a, b, c, d };
 	glm::vec2 s[4];
 	for (int i = 0; i < 4; i++) {
 		s[i] = v[i] - p;
 		r[i] = length(s[i]);
 	}
 	for (int i = 0; i < 4; i++) {
-		double A = Area(s[i], s[(i + 1) % 4]);
-		double D = dot(s[i], s[(i + 1) % 4]);
-		t[i] = (r[i] * r[(i + 1) % 4] - D) / A;
+		const float area = Area(s[i], s[(i + 1) % 4]);
+		const float dotResult = glm::dot(s[i], s[(i + 1) % 4]);
+		t[i] = (r[i] * r[(i + 1) % 4] - dotResult) / area;
 	}
 	for (int i = 0; i < 4; i++)
 		u[i] = (t[(i + 3) % 4] + t[i]) / r[i];
@@ -509,7 +509,7 @@ void BillboardCloud::Join(const JoinSettings& joinSettings)
 {
 	xatlas::Atlas* atlas = xatlas::Create();
 
-	for (auto& cluster : m_clusters)
+	for (const auto& cluster : m_clusters)
 	{
 		xatlas::MeshDecl meshDecl;
 		meshDecl.vertexCount = cluster.m_billboardVertices.size();
@@ -525,15 +525,12 @@ void BillboardCloud::Join(const JoinSettings& joinSettings)
 		}
 	}
 	xatlas::AddMeshJoin(atlas);
-
 	xatlas::Generate(atlas);
-
-
 	std::vector<Vertex> billboardCloudVertices;
 	billboardCloudVertices.resize(m_clusters.size() * 4);
 	std::vector<glm::uvec3> billboardCloudTriangles;
 	billboardCloudTriangles.resize(m_clusters.size() * 2);
-	for (int clusterIndex = 0; clusterIndex < m_clusters.size(); clusterIndex++)
+	Jobs::RunParallelFor(m_clusters.size(), [&](const unsigned clusterIndex)
 	{
 		const xatlas::Mesh& mesh = atlas->meshes[clusterIndex];
 		auto& cluster = m_clusters[clusterIndex];
@@ -558,7 +555,7 @@ void BillboardCloud::Join(const JoinSettings& joinSettings)
 
 		billboardCloudTriangles[2 * clusterIndex] = cluster.m_billboardTriangles[0] + glm::uvec3(clusterIndex * 4);
 		billboardCloudTriangles[2 * clusterIndex + 1] = cluster.m_billboardTriangles[1] + glm::uvec3(clusterIndex * 4);
-	}
+	});
 
 	m_billboardCloudMesh = ProjectManager::CreateTemporaryAsset<Mesh>();
 	m_billboardCloudMesh->SetVertices({ false, false, true, false }, billboardCloudVertices, billboardCloudTriangles);

@@ -115,6 +115,7 @@ namespace EvoEngine {
 			bool m_append = true;
 			StochasticClusterizationSettings m_stochasticClusterizationSettings{};
 			OriginalClusterizationSettings m_originalClusterizationSettings{};
+			FoliageClusterizationSettings m_foliageClusterizationSettings{};
 			unsigned m_clusterizeMode = static_cast<unsigned>(ClusterizationMode::PassThrough);
 
 			bool OnInspect();
