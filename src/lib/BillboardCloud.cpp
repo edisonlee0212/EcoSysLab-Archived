@@ -1949,7 +1949,16 @@ bool BillboardCloud::StochasticClusterizationSettings::OnInspect()
 	}
 	return changed;
 }
+bool BillboardCloud::FoliageClusterizationSettings::OnInspect()
+{
+	bool changed = false;
+	if (ImGui::TreeNode("Foliage clusterization settings"))
+	{
 
+		ImGui::TreePop();
+	}
+	return changed;
+}
 bool BillboardCloud::ClusterizationSettings::OnInspect()
 {
 	bool changed = false;
@@ -1957,7 +1966,7 @@ bool BillboardCloud::ClusterizationSettings::OnInspect()
 	if (ImGui::TreeNode("Clusterization settings"))
 	{
 		if (ImGui::Combo("Clusterize mode",
-			{ "PassThrough", "Original", "Stochastic" },
+			{ "PassThrough", "Original", "Stochastic", "Foliage" },
 			m_clusterizeMode)) {
 			changed = true;
 		}
@@ -1972,6 +1981,11 @@ bool BillboardCloud::ClusterizationSettings::OnInspect()
 		case static_cast<unsigned>(ClusterizationMode::Original):
 		{
 			if (m_originalClusterizationSettings.OnInspect()) changed = true;
+		}
+		break;
+		case static_cast<unsigned>(ClusterizationMode::Foliage):
+		{
+			if (m_foliageClusterizationSettings.OnInspect()) changed = true;
 		}
 		break;
 		}
@@ -2015,6 +2029,8 @@ bool BillboardCloud::RasterizeSettings::OnInspect()
 	}
 	return changed;
 }
+
+
 
 bool BillboardCloud::GenerateSettings::OnInspect(const std::string& title)
 {

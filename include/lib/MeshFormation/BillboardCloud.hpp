@@ -84,9 +84,14 @@ namespace EvoEngine {
 		{
 			PassThrough,
 			Original,
-			Stochastic
+			Stochastic,
+			Foliage,
 		};
+		struct FoliageClusterizationSettings
+		{
 
+			bool OnInspect();
+		};
 		struct StochasticClusterizationSettings
 		{
 			float m_epsilon = 0.3f;
