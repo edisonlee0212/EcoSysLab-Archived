@@ -1944,7 +1944,7 @@ std::vector<BillboardCloud::Cluster> BillboardCloud::StochasticClusterize(std::v
 			break;
 		}
 
-		retVal.emplace_back(std::move(newCluster));
+		if(!newCluster.m_triangles.empty()) retVal.emplace_back(std::move(newCluster));
 
 		//Remove selected triangle from the remaining triangle.
 		for (auto it = selectedTriangleIndices.rbegin(); it != selectedTriangleIndices.rend(); ++it)
