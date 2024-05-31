@@ -69,6 +69,8 @@ namespace EvoEngine {
 
 		struct RasterizeSettings
 		{
+			bool m_debugFullFill = false;
+			bool m_debugOpaque = false;
 			bool m_transferAlbedoMap = true;
 			bool m_transferNormalMap = true;
 			bool m_transferRoughnessMap = true;
@@ -82,30 +84,26 @@ namespace EvoEngine {
 
 		enum class ClusterizationMode
 		{
-			PassThrough,
+			FlipBook,
 			Original,
-			Stochastic,
 			Foliage,
 		};
+		
 		struct FoliageClusterizationSettings
 		{
+			float m_density = 0.9f;
+			int m_iteration = 400;
+			int m_timeout = 0;
+			float m_sampleRange = 1.f;
 
-			bool OnInspect();
-		};
-		struct StochasticClusterizationSettings
-		{
-			float m_epsilon = 0.3f;
-			int m_iteration = 200;
-			int m_timeout = 500;
-			float m_maxPlaneSize = 1.f;
-
+			bool m_fillBand = true;
 			bool OnInspect();
 		};
 		struct OriginalClusterizationSettings
 		{
 			float m_epsilonPercentage = 0.01f;
 			int m_discretizationSize = 10;
-			int m_timeout = 300;
+			int m_timeout = 0;
 
 			bool OnInspect();
 		};
@@ -113,10 +111,9 @@ namespace EvoEngine {
 		struct ClusterizationSettings
 		{
 			bool m_append = true;
-			StochasticClusterizationSettings m_stochasticClusterizationSettings{};
-			OriginalClusterizationSettings m_originalClusterizationSettings{};
 			FoliageClusterizationSettings m_foliageClusterizationSettings{};
-			unsigned m_clusterizeMode = static_cast<unsigned>(ClusterizationMode::PassThrough);
+			OriginalClusterizationSettings m_originalClusterizationSettings{};
+			unsigned m_clusterizeMode = static_cast<unsigned>(ClusterizationMode::Foliage);
 
 			bool OnInspect();
 		};

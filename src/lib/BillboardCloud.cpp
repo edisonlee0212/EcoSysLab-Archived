@@ -140,23 +140,24 @@ void BillboardCloud::Rectangle::Update()
 	m_height = glm::length(vY);
 }
 
-template<typename T>
-struct CPUFramebuffer
+struct CPUDepthBuffer
 {
 	std::vector<float> m_depthBuffer;
-	std::vector<T> m_colorBuffer;
 	std::vector<std::mutex> m_pixelLocks;
 	int m_width = 0;
 	int m_height = 0;
-	CPUFramebuffer(const size_t width, const size_t height)
+	CPUDepthBuffer(const size_t width, const size_t height)
 	{
 		m_depthBuffer = std::vector<float>(width * height);
-		m_colorBuffer = std::vector<T>(width * height);
-		std::fill(m_colorBuffer.begin(), m_colorBuffer.end(), T(0.f));
-		std::fill(m_depthBuffer.begin(), m_depthBuffer.end(), -FLT_MAX);
+		Reset();
 		m_pixelLocks = std::vector<std::mutex>(width * height);
 		m_width = width;
 		m_height = height;
+	}
+
+	void Reset()
+	{
+		std::fill(m_depthBuffer.begin(), m_depthBuffer.end(), -FLT_MAX);
 	}
 
 	[[nodiscard]] bool CompareZ(const int u, const int v, const float z) const
@@ -167,22 +168,39 @@ struct CPUFramebuffer
 		const int uv = u + m_width * v;
 		return z >= m_depthBuffer[uv];
 	}
+};
 
-	void SetPixel(const int u, const int v, const float z, const T& color)
+template<typename T>
+struct CPUColorBuffer
+{
+	std::vector<T> m_colorBuffer;
+	std::vector<std::mutex> m_pixelLocks;
+	int m_width = 0;
+	int m_height = 0;
+	CPUColorBuffer(const size_t width, const size_t height)
+	{
+		m_colorBuffer = std::vector<T>(width * height);
+		std::fill(m_colorBuffer.begin(), m_colorBuffer.end(), T(0.f));
+		m_pixelLocks = std::vector<std::mutex>(width * height);
+		m_width = width;
+		m_height = height;
+	}
+
+	void FillColor(const T& val)
+	{
+		std::fill(m_colorBuffer.begin(), m_colorBuffer.end(), val);
+	}
+
+	void SetPixel(const int u, const int v, const T& color)
 	{
 		if (u < 0 || v < 0 || u > m_width - 1 || v > m_height - 1)
 			return;
 
 		const int uv = u + m_width * v;
 		std::lock_guard lock(m_pixelLocks[uv]);
-		if (z < m_depthBuffer[uv])
-			return;
-		m_depthBuffer[uv] = z;
 		m_colorBuffer[uv] = color;
 	}
 };
-
-
 
 inline double Cross(const glm::vec2& origin, const glm::vec2& a, const glm::vec2& b)
 {
@@ -471,9 +489,16 @@ inline void Barycentric2D(const glm::vec2& p, const glm::vec2& a, const glm::vec
 {
 	const auto v0 = b - a, v1 = c - a, v2 = p - a;
 	const float den = v0.x * v1.y - v1.x * v0.y;
-	c1 = (v2.x * v1.y - v1.x * v2.y) / den;
-	c2 = (v0.x * v2.y - v2.x * v0.y) / den;
-	c0 = 1.0f - c1 - c2;
+	if (den == 0.f)
+	{
+		c1 = c2 = 0.f;
+		c0 = 1.f;
+	}
+	else {
+		c1 = (v2.x * v1.y - v1.x * v2.y) / den;
+		c2 = (v0.x * v2.y - v2.x * v0.y) / den;
+		c0 = 1.0f - c1 - c2;
+	}
 }
 inline float Area(const glm::vec2& a, const glm::vec2& b) { return a.x * b.y - a.y * b.x; }
 
@@ -489,11 +514,17 @@ inline void Barycentric2D(const glm::vec2& p, const glm::vec2& a, const glm::vec
 	for (int i = 0; i < 4; i++) {
 		const float area = Area(s[i], s[(i + 1) % 4]);
 		const float dotResult = glm::dot(s[i], s[(i + 1) % 4]);
-		t[i] = (r[i] * r[(i + 1) % 4] - dotResult) / area;
+		if (area == 0.f) t[i] = 0.f;
+		else {
+			t[i] = (r[i] * r[(i + 1) % 4] - dotResult) / area;
+		}
 	}
-	for (int i = 0; i < 4; i++)
-		u[i] = (t[(i + 3) % 4] + t[i]) / r[i];
+	for (int i = 0; i < 4; i++) {
+		if (r[i] == 0.f) u[i] = 0.f;
+		else u[i] = (t[(i + 3) % 4] + t[i]) / r[i];
+	}
 	const auto sum = u[0] + u[1] + u[2] + u[3];
+	assert(sum != 0.f);
 	c0 = u[0] / sum;
 	c1 = u[1] / sum;
 	c2 = u[2] / sum;
@@ -531,31 +562,31 @@ void BillboardCloud::Join(const JoinSettings& joinSettings)
 	std::vector<glm::uvec3> billboardCloudTriangles;
 	billboardCloudTriangles.resize(m_clusters.size() * 2);
 	Jobs::RunParallelFor(m_clusters.size(), [&](const unsigned clusterIndex)
-	{
-		const xatlas::Mesh& mesh = atlas->meshes[clusterIndex];
-		auto& cluster = m_clusters[clusterIndex];
-		cluster.m_rectangle.m_texCoords[0].x = mesh.vertexArray[0].uv[0] / static_cast<float>(atlas->width);
-		cluster.m_rectangle.m_texCoords[0].y = mesh.vertexArray[0].uv[1] / static_cast<float>(atlas->height);
-		cluster.m_rectangle.m_texCoords[1].x = mesh.vertexArray[1].uv[0] / static_cast<float>(atlas->width);
-		cluster.m_rectangle.m_texCoords[1].y = mesh.vertexArray[1].uv[1] / static_cast<float>(atlas->height);
-		cluster.m_rectangle.m_texCoords[2].x = mesh.vertexArray[2].uv[0] / static_cast<float>(atlas->width);
-		cluster.m_rectangle.m_texCoords[2].y = mesh.vertexArray[2].uv[1] / static_cast<float>(atlas->height);
-		cluster.m_rectangle.m_texCoords[3].x = mesh.vertexArray[3].uv[0] / static_cast<float>(atlas->width);
-		cluster.m_rectangle.m_texCoords[3].y = mesh.vertexArray[3].uv[1] / static_cast<float>(atlas->height);
+		{
+			const xatlas::Mesh& mesh = atlas->meshes[clusterIndex];
+			auto& cluster = m_clusters[clusterIndex];
+			cluster.m_rectangle.m_texCoords[0].x = mesh.vertexArray[0].uv[0] / static_cast<float>(atlas->width);
+			cluster.m_rectangle.m_texCoords[0].y = mesh.vertexArray[0].uv[1] / static_cast<float>(atlas->height);
+			cluster.m_rectangle.m_texCoords[1].x = mesh.vertexArray[1].uv[0] / static_cast<float>(atlas->width);
+			cluster.m_rectangle.m_texCoords[1].y = mesh.vertexArray[1].uv[1] / static_cast<float>(atlas->height);
+			cluster.m_rectangle.m_texCoords[2].x = mesh.vertexArray[2].uv[0] / static_cast<float>(atlas->width);
+			cluster.m_rectangle.m_texCoords[2].y = mesh.vertexArray[2].uv[1] / static_cast<float>(atlas->height);
+			cluster.m_rectangle.m_texCoords[3].x = mesh.vertexArray[3].uv[0] / static_cast<float>(atlas->width);
+			cluster.m_rectangle.m_texCoords[3].y = mesh.vertexArray[3].uv[1] / static_cast<float>(atlas->height);
 
-		billboardCloudVertices[4 * clusterIndex] = cluster.m_billboardVertices[0];
-		billboardCloudVertices[4 * clusterIndex + 1] = cluster.m_billboardVertices[1];
-		billboardCloudVertices[4 * clusterIndex + 2] = cluster.m_billboardVertices[2];
-		billboardCloudVertices[4 * clusterIndex + 3] = cluster.m_billboardVertices[3];
+			billboardCloudVertices[4 * clusterIndex] = cluster.m_billboardVertices[0];
+			billboardCloudVertices[4 * clusterIndex + 1] = cluster.m_billboardVertices[1];
+			billboardCloudVertices[4 * clusterIndex + 2] = cluster.m_billboardVertices[2];
+			billboardCloudVertices[4 * clusterIndex + 3] = cluster.m_billboardVertices[3];
 
-		billboardCloudVertices[4 * clusterIndex].m_texCoord = cluster.m_rectangle.m_texCoords[0];
-		billboardCloudVertices[4 * clusterIndex + 1].m_texCoord = cluster.m_rectangle.m_texCoords[1];
-		billboardCloudVertices[4 * clusterIndex + 2].m_texCoord = cluster.m_rectangle.m_texCoords[2];
-		billboardCloudVertices[4 * clusterIndex + 3].m_texCoord = cluster.m_rectangle.m_texCoords[3];
+			billboardCloudVertices[4 * clusterIndex].m_texCoord = cluster.m_rectangle.m_texCoords[0];
+			billboardCloudVertices[4 * clusterIndex + 1].m_texCoord = cluster.m_rectangle.m_texCoords[1];
+			billboardCloudVertices[4 * clusterIndex + 2].m_texCoord = cluster.m_rectangle.m_texCoords[2];
+			billboardCloudVertices[4 * clusterIndex + 3].m_texCoord = cluster.m_rectangle.m_texCoords[3];
 
-		billboardCloudTriangles[2 * clusterIndex] = cluster.m_billboardTriangles[0] + glm::uvec3(clusterIndex * 4);
-		billboardCloudTriangles[2 * clusterIndex + 1] = cluster.m_billboardTriangles[1] + glm::uvec3(clusterIndex * 4);
-	});
+			billboardCloudTriangles[2 * clusterIndex] = cluster.m_billboardTriangles[0] + glm::uvec3(clusterIndex * 4);
+			billboardCloudTriangles[2 * clusterIndex + 1] = cluster.m_billboardTriangles[1] + glm::uvec3(clusterIndex * 4);
+		});
 
 	m_billboardCloudMesh = ProjectManager::CreateTemporaryAsset<Mesh>();
 	m_billboardCloudMesh->SetVertices({ false, false, true, false }, billboardCloudVertices, billboardCloudTriangles);
@@ -645,23 +676,89 @@ void PBRMaterial::ApplyMaterial(const std::shared_ptr<Material>& material,
 
 void BillboardCloud::Rasterize(const RasterizeSettings& rasterizeSettings)
 {
+	if (rasterizeSettings.m_resolution.x < 1 || rasterizeSettings.m_resolution.y < 1) return;
 	std::unordered_map<Handle, PBRMaterial> pbrMaterials;
+	float averageRoughness = 0.f;
+	float averageMetallic = 0.0f;
+	float averageAo = 0.f;
 	for (auto& element : m_elements)
 	{
 		const auto& material = element.m_material;
 		auto materialHandle = material->GetHandle();
 		pbrMaterials[materialHandle].ApplyMaterial(material, rasterizeSettings);
+
+		averageRoughness += material->m_materialProperties.m_roughness;
+		averageMetallic += material->m_materialProperties.m_metallic;
+		averageAo += 1.f;
 	}
+	averageRoughness /= m_elements.size();
+	averageMetallic /= m_elements.size();
+	averageAo /= m_elements.size();
 
-	if (rasterizeSettings.m_resolution.x < 1 || rasterizeSettings.m_resolution.y < 1) return;
-	CPUFramebuffer<glm::vec4> albedoFrameBuffer(rasterizeSettings.m_resolution.x, rasterizeSettings.m_resolution.y);
-	CPUFramebuffer<glm::vec3> normalFrameBuffer(rasterizeSettings.m_resolution.x, rasterizeSettings.m_resolution.y);
-	CPUFramebuffer<float> roughnessFrameBuffer(rasterizeSettings.m_resolution.x, rasterizeSettings.m_resolution.y);
-	CPUFramebuffer<float> metallicFrameBuffer(rasterizeSettings.m_resolution.x, rasterizeSettings.m_resolution.y);
-	CPUFramebuffer<float> aoFrameBuffer(rasterizeSettings.m_resolution.x, rasterizeSettings.m_resolution.y);
+	CPUDepthBuffer depthBuffer(rasterizeSettings.m_resolution.x, rasterizeSettings.m_resolution.y);
 
-	float averageRoughness = 1.f;
-	float averageMetallic = 0.0f;
+	CPUColorBuffer<glm::vec4> albedoFrameBuffer(rasterizeSettings.m_resolution.x, rasterizeSettings.m_resolution.y);
+	CPUColorBuffer<glm::vec3> normalFrameBuffer(rasterizeSettings.m_resolution.x, rasterizeSettings.m_resolution.y);
+	CPUColorBuffer<float> roughnessFrameBuffer(rasterizeSettings.m_resolution.x, rasterizeSettings.m_resolution.y);
+	CPUColorBuffer<float> metallicFrameBuffer(rasterizeSettings.m_resolution.x, rasterizeSettings.m_resolution.y);
+	CPUColorBuffer<float> aoFrameBuffer(rasterizeSettings.m_resolution.x, rasterizeSettings.m_resolution.y);
+
+	if (rasterizeSettings.m_debugFullFill) albedoFrameBuffer.FillColor(glm::vec4(1.f));
+
+	if (rasterizeSettings.m_debugOpaque)
+	{
+		averageRoughness = 1.f;
+		averageMetallic = 0.f;
+		averageAo = 1.f;
+		Jobs::RunParallelFor(m_clusters.size(), [&](const unsigned clusterIndex)
+			{
+				const auto& cluster = m_clusters[clusterIndex];
+				glm::vec3 color = glm::ballRand(1.f);
+				const auto& boundingRectangle = cluster.m_rectangle;
+
+				for (int triangleIndex = 0; triangleIndex < 2; triangleIndex++) {
+
+					glm::vec3 textureSpaceVertices[3];
+					if (triangleIndex == 0) {
+						textureSpaceVertices[0] = glm::vec3(boundingRectangle.m_texCoords[0] * glm::vec2(rasterizeSettings.m_resolution), 0.f);
+						textureSpaceVertices[1] = glm::vec3(boundingRectangle.m_texCoords[1] * glm::vec2(rasterizeSettings.m_resolution), 0.f);
+						textureSpaceVertices[2] = glm::vec3(boundingRectangle.m_texCoords[2] * glm::vec2(rasterizeSettings.m_resolution), 0.f);
+					}
+					else
+					{
+						textureSpaceVertices[0] = glm::vec3(boundingRectangle.m_texCoords[2] * glm::vec2(rasterizeSettings.m_resolution), 0.f);
+						textureSpaceVertices[1] = glm::vec3(boundingRectangle.m_texCoords[3] * glm::vec2(rasterizeSettings.m_resolution), 0.f);
+						textureSpaceVertices[2] = glm::vec3(boundingRectangle.m_texCoords[0] * glm::vec2(rasterizeSettings.m_resolution), 0.f);
+					}
+					//Bound check;
+					auto minBound = glm::vec2(FLT_MAX, FLT_MAX);
+					auto maxBound = glm::vec2(-FLT_MAX, -FLT_MAX);
+					for (const auto& textureSpaceVertex : textureSpaceVertices)
+					{
+						minBound = glm::min(glm::vec2(textureSpaceVertex), minBound);
+						maxBound = glm::max(glm::vec2(textureSpaceVertex), maxBound);
+					}
+
+					const auto left = static_cast<int>(minBound.x - 0.5f);
+					const auto right = static_cast<int>(maxBound.x + 0.5f);
+					const auto top = static_cast<int>(minBound.y - 0.5f);
+					const auto bottom = static_cast<int>(maxBound.y + 0.5f);
+					for (auto u = left; u <= right; u++)
+					{
+						for (auto v = top; v <= bottom; v++)
+						{
+							const auto p = glm::vec3(u + .5f, v + .5f, 0.f);
+							float bc0, bc1, bc2;
+							Barycentric2D(p, textureSpaceVertices[0], textureSpaceVertices[1], textureSpaceVertices[2], bc0, bc1, bc2);
+							if (bc0 < 0.f || bc1 < 0.f || bc2 < 0.f) continue;
+							auto albedo = glm::vec4(color, 1.f);
+							albedoFrameBuffer.SetPixel(u, v, albedo);
+						}
+					}
+				}
+			}
+		);
+	}
 
 	for (auto& cluster : m_clusters) {
 
@@ -717,7 +814,7 @@ void BillboardCloud::Rasterize(const RasterizeSettings& rasterizeSettings)
 						if (bc0 < 0.f || bc1 < 0.f || bc2 < 0.f) continue;
 						float z = bc0 * v0.m_position.z + bc1 * v1.m_position.z + bc2 * v2.m_position.z;
 						//Early depth check.
-						if (!albedoFrameBuffer.CompareZ(u, v, z)) continue;
+						if (!depthBuffer.CompareZ(u, v, z)) continue;
 
 						const auto texCoords = bc0 * v0.m_texCoord + bc1 * v1.m_texCoord + bc2 * v2.m_texCoord;
 						auto albedo = material.m_baseAlbedo;
@@ -790,18 +887,17 @@ void BillboardCloud::Rasterize(const RasterizeSettings& rasterizeSettings)
 							ao = material.m_aoTextureData[index];
 
 						}
-						albedoFrameBuffer.SetPixel(u, v, z, albedo);
+						albedoFrameBuffer.SetPixel(u, v, albedo);
 						normal = normal * 0.5f + glm::vec3(0.5f);
-						normalFrameBuffer.SetPixel(u, v, z, normal);
-						roughnessFrameBuffer.SetPixel(u, v, z, roughness);
-						metallicFrameBuffer.SetPixel(u, v, z, metallic);
-						aoFrameBuffer.SetPixel(u, v, z, ao);
+						normalFrameBuffer.SetPixel(u, v, normal);
+						roughnessFrameBuffer.SetPixel(u, v, roughness);
+						metallicFrameBuffer.SetPixel(u, v, metallic);
+						aoFrameBuffer.SetPixel(u, v, ao);
 					}
 				}
 			});
-
-
 	}
+
 	m_billboardCloudMaterial = ProjectManager::CreateTemporaryAsset<Material>();
 	std::shared_ptr<Texture2D> albedoTexture = ProjectManager::CreateTemporaryAsset<Texture2D>();
 	albedoTexture->SetRgbaChannelData(albedoFrameBuffer.m_colorBuffer, glm::uvec2(albedoFrameBuffer.m_width, albedoFrameBuffer.m_height));
@@ -1031,14 +1127,14 @@ void BillboardCloud::Clusterize(const ClusterizationSettings& clusterizeSettings
 	m_clusters.clear();
 	switch (clusterizeSettings.m_clusterizeMode)
 	{
-	case static_cast<unsigned>(ClusterizationMode::PassThrough):
+	case static_cast<unsigned>(ClusterizationMode::FlipBook):
 	{
 		m_clusters.emplace_back();
 		auto& cluster = m_clusters.back();
 		cluster.m_triangles = CollectTriangles();
 	}
 	break;
-	case static_cast<unsigned>(ClusterizationMode::Stochastic):
+	case static_cast<unsigned>(ClusterizationMode::Foliage):
 	{
 		std::vector<ClusterTriangle> operatingTriangles = CollectTriangles();
 		m_clusters = StochasticClusterize(std::move(operatingTriangles), clusterizeSettings);
@@ -1710,25 +1806,24 @@ std::vector<BillboardCloud::Cluster> BillboardCloud::StochasticClusterize(std::v
 {
 	BoundingSphere boundingSphere;
 	boundingSphere.Initialize(m_elements);
+	const auto& settings = clusterizeSettings.m_foliageClusterizationSettings;
+	float epsilon = boundingSphere.m_radius * glm::clamp(1.f - settings.m_density, 0.05f, 1.f);
 
-	float epsilon = boundingSphere.m_radius * clusterizeSettings.m_stochasticClusterizationSettings.m_epsilon;
-
-	float maxPlaneSize = clusterizeSettings.m_stochasticClusterizationSettings.m_maxPlaneSize == 0.f ? FLT_MAX : boundingSphere.m_radius * clusterizeSettings.m_stochasticClusterizationSettings.m_maxPlaneSize;
 	m_skippedTriangles.clear();
-
+	auto remainingTriangles = operatingTriangles;
 	std::vector<Cluster> retVal;
 
 	int epoch = 0;
-	while (!operatingTriangles.empty())
+	while (!remainingTriangles.empty())
 	{
 		Cluster newCluster;
 		float maxArea = 0.f;
 		std::vector<int> selectedTriangleIndices;
 		std::mutex voteMutex;
-		Jobs::RunParallelFor(clusterizeSettings.m_stochasticClusterizationSettings.m_iteration, [&](unsigned iteration)
+		Jobs::RunParallelFor(settings.m_iteration, [&](unsigned iteration)
 			{
-				int seedTriangleIndex = glm::linearRand(0, static_cast<int>(operatingTriangles.size()) - 1);
-				ClusterTriangle seedTriangle = operatingTriangles.at(seedTriangleIndex);
+				int seedTriangleIndex = glm::linearRand(0, static_cast<int>(remainingTriangles.size()) - 1);
+				ClusterTriangle seedTriangle = remainingTriangles.at(seedTriangleIndex);
 				const auto perturb0 = glm::linearRand(-epsilon, epsilon);
 				const auto perturb1 = glm::linearRand(-epsilon, epsilon);
 				const auto perturb2 = glm::linearRand(-epsilon, epsilon);
@@ -1743,26 +1838,29 @@ std::vector<BillboardCloud::Cluster> BillboardCloud::StochasticClusterize(std::v
 				{
 					testPlaneNormal = -testPlaneNormal;
 				}
-				const auto planeCenter = (seedTriangleP0 + seedTriangleP1 + seedTriangleP2) / 3.f;
 				float testPlaneDistance = glm::dot(seedTriangleP0, testPlaneNormal);
 				float area = 0.f;
-				std::vector<int> currentIterationSelectedTriangleIndices;
-				for (int testTriangleIndex = 0; testTriangleIndex < operatingTriangles.size(); testTriangleIndex++)
+				std::vector<int> currentPendingRemovalTriangles;
+				std::vector<ClusterTriangle> trianglesForCluster;
+				for (int testTriangleIndex = 0; testTriangleIndex < remainingTriangles.size(); testTriangleIndex++)
 				{
-					const auto& testTriangle = operatingTriangles.at(testTriangleIndex);
+					const auto& testTriangle = remainingTriangles.at(testTriangleIndex);
 					const auto& testTriangleElement = m_elements.at(testTriangle.m_elementIndex);
 					const auto& testTriangleIndices = testTriangleElement.m_triangles.at(testTriangle.m_triangleIndex);
 					const auto& testTriangleP0 = testTriangleElement.m_vertices.at(testTriangleIndices.x).m_position;
 					const auto& testTriangleP1 = testTriangleElement.m_vertices.at(testTriangleIndices.y).m_position;
 					const auto& testTriangleP2 = testTriangleElement.m_vertices.at(testTriangleIndices.z).m_position;
 
-					if (glm::distance(planeCenter, testTriangleP0) > maxPlaneSize) continue;
 
-
+					if (!settings.m_fillBand && glm::abs(testPlaneDistance - glm::dot(testTriangleP0, testPlaneNormal)) <= epsilon * settings.m_sampleRange
+						&& glm::abs(testPlaneDistance - glm::dot(testTriangleP1, testPlaneNormal)) <= epsilon * settings.m_sampleRange
+						&& glm::abs(testPlaneDistance - glm::dot(testTriangleP2, testPlaneNormal)) <= epsilon * settings.m_sampleRange)
+					{
+						trianglesForCluster.emplace_back(remainingTriangles.at(testTriangleIndex));
+					}
 					if (glm::abs(testPlaneDistance - glm::dot(testTriangleP0, testPlaneNormal)) > epsilon) continue;
 					if (glm::abs(testPlaneDistance - glm::dot(testTriangleP1, testPlaneNormal)) > epsilon) continue;
 					if (glm::abs(testPlaneDistance - glm::dot(testTriangleP2, testPlaneNormal)) > epsilon) continue;
-
 					// increment projected area (Angular area Contribution)
 					// use projected area Contribution
 					float angle = glm::acos(glm::abs(glm::dot(testPlaneNormal, CalculateNormal(testTriangle))));
@@ -1770,22 +1868,36 @@ std::vector<BillboardCloud::Cluster> BillboardCloud::StochasticClusterize(std::v
 					area += CalculateArea(testTriangle) * angular;
 
 					// save reference to T with billboard plane
-					currentIterationSelectedTriangleIndices.emplace_back(testTriangleIndex);
-
+					currentPendingRemovalTriangles.emplace_back(testTriangleIndex);
 				}
-				if (!currentIterationSelectedTriangleIndices.empty()) {
+
+				if(settings.m_fillBand)
+				{
+					for (auto& operatingTriangle : operatingTriangles)
+					{
+						const auto& testTriangle = operatingTriangle;
+						const auto& testTriangleElement = m_elements.at(testTriangle.m_elementIndex);
+						const auto& testTriangleIndices = testTriangleElement.m_triangles.at(testTriangle.m_triangleIndex);
+						const auto& testTriangleP0 = testTriangleElement.m_vertices.at(testTriangleIndices.x).m_position;
+						const auto& testTriangleP1 = testTriangleElement.m_vertices.at(testTriangleIndices.y).m_position;
+						const auto& testTriangleP2 = testTriangleElement.m_vertices.at(testTriangleIndices.z).m_position;
+
+						if (glm::abs(testPlaneDistance - glm::dot(testTriangleP0, testPlaneNormal)) <= epsilon * settings.m_sampleRange
+							&& glm::abs(testPlaneDistance - glm::dot(testTriangleP1, testPlaneNormal)) <= epsilon * settings.m_sampleRange
+							&& glm::abs(testPlaneDistance - glm::dot(testTriangleP2, testPlaneNormal)) <= epsilon * settings.m_sampleRange)
+						{
+							trianglesForCluster.emplace_back(operatingTriangle);
+						}
+					}
+				}
+				if (!currentPendingRemovalTriangles.empty()) {
 					std::lock_guard lock(voteMutex);
 					if (area > maxArea)
 					{
 						//Update cluster.
 						newCluster.m_clusterPlane = Plane(testPlaneNormal, testPlaneDistance);
-						newCluster.m_triangles.clear();
-						for (const auto& triangleIndex : currentIterationSelectedTriangleIndices)
-						{
-							newCluster.m_triangles.emplace_back(operatingTriangles.at(triangleIndex));
-						}
-
-						selectedTriangleIndices = currentIterationSelectedTriangleIndices;
+						newCluster.m_triangles = trianglesForCluster;
+						selectedTriangleIndices = currentPendingRemovalTriangles;
 					}
 				}
 			}
@@ -1793,7 +1905,7 @@ std::vector<BillboardCloud::Cluster> BillboardCloud::StochasticClusterize(std::v
 
 		if (selectedTriangleIndices.empty())
 		{
-			m_skippedTriangles.insert(m_skippedTriangles.end(), operatingTriangles.begin(), operatingTriangles.end());
+			m_skippedTriangles.insert(m_skippedTriangles.end(), remainingTriangles.begin(), remainingTriangles.end());
 			break;
 		}
 
@@ -1802,17 +1914,17 @@ std::vector<BillboardCloud::Cluster> BillboardCloud::StochasticClusterize(std::v
 		//Remove selected triangle from the remaining triangle.
 		for (auto it = selectedTriangleIndices.rbegin(); it != selectedTriangleIndices.rend(); ++it)
 		{
-			operatingTriangles[*it] = operatingTriangles.back();
-			operatingTriangles.pop_back();
+			remainingTriangles[*it] = remainingTriangles.back();
+			remainingTriangles.pop_back();
 		}
 		epoch++;
-		if (epoch >= clusterizeSettings.m_stochasticClusterizationSettings.m_timeout)
+		if (settings.m_timeout != 0 && epoch >= settings.m_timeout)
 		{
 			EVOENGINE_ERROR("Stochastic clustering timeout!")
 				break;
 		}
 	}
-	return std::move(retVal);
+	return retVal;
 }
 
 
@@ -1909,7 +2021,7 @@ std::vector<BillboardCloud::Cluster> BillboardCloud::DefaultClusterize(
 			operatingTriangles.pop_back();
 		}
 		epoch++;
-		if (epoch >= settings.m_timeout)
+		if (settings.m_timeout != 0 && epoch >= settings.m_timeout)
 		{
 			EVOENGINE_ERROR("Default clustering timeout!")
 				break;
@@ -1933,29 +2045,22 @@ bool BillboardCloud::OriginalClusterizationSettings::OnInspect()
 	return changed;
 }
 
-bool BillboardCloud::StochasticClusterizationSettings::OnInspect()
-{
-	bool changed = false;
-	if (ImGui::TreeNode("Stochastic clusterization settings"))
-	{
-		if (ImGui::DragFloat("Epsilon", &m_epsilon, 0.01f, 0.01f, 1.f)) changed = true;
-		if (ImGui::DragInt("Iteration", &m_iteration, 1, 1, 1000)) changed = true;
-		if (ImGui::DragInt("Timeout", &m_timeout, 1, 1, 1000)) changed = true;
-		if (ImGui::DragFloat("Max plane size", &m_maxPlaneSize, 0.01f, 0.f, 1.f)) changed = true;
-		ImGui::TreePop();
-	}
-	return changed;
-}
 bool BillboardCloud::FoliageClusterizationSettings::OnInspect()
 {
 	bool changed = false;
 	if (ImGui::TreeNode("Foliage clusterization settings"))
 	{
+		if (ImGui::DragFloat("Complexity", &m_density, 0.01f, 0.0f, 0.95f)) changed = true;
+		if (ImGui::DragInt("Iteration", &m_iteration, 1, 1, 1000)) changed = true;
+		if (ImGui::DragInt("Timeout", &m_timeout, 1, 1, 1000)) changed = true;
+		if (ImGui::DragFloat("Density", &m_sampleRange, 0.01f, 0.1f, 2.f)) changed = true;
 
+		if(ImGui::Checkbox("Fill band", &m_fillBand)) changed = true;
 		ImGui::TreePop();
 	}
 	return changed;
 }
+
 bool BillboardCloud::ClusterizationSettings::OnInspect()
 {
 	bool changed = false;
@@ -1963,26 +2068,21 @@ bool BillboardCloud::ClusterizationSettings::OnInspect()
 	if (ImGui::TreeNode("Clusterization settings"))
 	{
 		if (ImGui::Combo("Clusterize mode",
-			{ "PassThrough", "Original", "Stochastic", "Foliage" },
+			{ "FlipBook", "Original", "Foliage" },
 			m_clusterizeMode)) {
 			changed = true;
 		}
 		switch (m_clusterizeMode)
 		{
-		case static_cast<unsigned>(ClusterizationMode::PassThrough): break;
-		case static_cast<unsigned>(ClusterizationMode::Stochastic):
+		case static_cast<unsigned>(ClusterizationMode::FlipBook): break;
+		case static_cast<unsigned>(ClusterizationMode::Foliage):
 		{
-			if (m_stochasticClusterizationSettings.OnInspect()) changed = true;
+			if (m_foliageClusterizationSettings.OnInspect()) changed = true;
 		}
 		break;
 		case static_cast<unsigned>(ClusterizationMode::Original):
 		{
 			if (m_originalClusterizationSettings.OnInspect()) changed = true;
-		}
-		break;
-		case static_cast<unsigned>(ClusterizationMode::Foliage):
-		{
-			if (m_foliageClusterizationSettings.OnInspect()) changed = true;
 		}
 		break;
 		}
@@ -2016,6 +2116,8 @@ bool BillboardCloud::RasterizeSettings::OnInspect()
 	bool changed = false;
 	if (ImGui::TreeNode("Rasterize settings"))
 	{
+		if (ImGui::Checkbox("(Debug) Full Fill", &m_debugFullFill)) changed = true;
+		if (ImGui::Checkbox("(Debug) Opaque", &m_debugOpaque)) changed = true;
 		if (ImGui::Checkbox("Transfer albedo texture", &m_transferAlbedoMap)) changed = true;
 		if (ImGui::Checkbox("Transfer normal texture", &m_transferNormalMap)) changed = true;
 		if (ImGui::Checkbox("Transfer roughness texture", &m_transferRoughnessMap)) changed = true;
