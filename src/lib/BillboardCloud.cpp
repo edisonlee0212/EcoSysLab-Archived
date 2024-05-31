@@ -1115,11 +1115,46 @@ void BillboardCloud::ProcessPrefab(const std::shared_ptr<Prefab>& currentPrefab,
 	}
 }
 
+void BillboardCloud::ProcessEntity(const std::shared_ptr<Scene>& scene, const Entity& entity,
+	const Transform& parentModelSpaceTransform)
+{
+	Transform transform = scene->GetDataComponent<Transform>(entity);
+	transform.m_value = parentModelSpaceTransform.m_value * transform.m_value;
+	if (scene->HasPrivateComponent<MeshRenderer>(entity))
+	{
+		const auto meshRenderer = scene->GetOrSetPrivateComponent<MeshRenderer>(entity).lock();
+		const auto mesh = meshRenderer->m_mesh.Get<Mesh>();
+		const auto material = meshRenderer->m_material.Get<Material>();
+		if (mesh && material)
+		{
+			m_elements.emplace_back();
+			auto& element = m_elements.back();
+			element.m_vertices = mesh->UnsafeGetVertices();
+			element.m_material = material;
+			element.m_triangles = mesh->UnsafeGetTriangles();
+			Jobs::RunParallelFor(element.m_vertices.size(), [&](unsigned vertexIndex)
+				{
+					TransformVertex(element.m_vertices.at(vertexIndex), parentModelSpaceTransform.m_value);
+				});
+		}
+	}
+
+	for (const auto& childEntity : scene->GetChildren(entity))
+	{
+		ProcessEntity(scene, childEntity, transform);
+	}
+}
+
 #pragma endregion
 #pragma region Clusterization
 void BillboardCloud::ProcessPrefab(const std::shared_ptr<Prefab>& prefab)
 {
 	ProcessPrefab(prefab, Transform());
+}
+
+void BillboardCloud::ProcessEntity(const std::shared_ptr<Scene>& scene, const Entity& entity)
+{
+	ProcessEntity(scene, entity, Transform());
 }
 
 void BillboardCloud::Clusterize(const ClusterizationSettings& clusterizeSettings)
@@ -1871,7 +1906,7 @@ std::vector<BillboardCloud::Cluster> BillboardCloud::StochasticClusterize(std::v
 					currentPendingRemovalTriangles.emplace_back(testTriangleIndex);
 				}
 
-				if(settings.m_fillBand)
+				if (settings.m_fillBand)
 				{
 					for (auto& operatingTriangle : operatingTriangles)
 					{
@@ -1964,9 +1999,9 @@ std::vector<BillboardCloud::Cluster> BillboardCloud::DefaultClusterize(
 		float maxDensity = discretization.ComputeMaxDensity(maxDensityBinCoordinate);
 		const auto& maxDensityBin = discretization.m_bins[maxDensityBinCoordinate.x][maxDensityBinCoordinate.y][maxDensityBinCoordinate.z];
 		const auto binValidSet = discretization.ComputeBinValidSet(m_elements, operatingTriangles, maxDensityBin);
-		std::vector<ClusterTriangle> planeValidSet;
 		if (!binValidSet.empty())
 		{
+			std::vector<ClusterTriangle> planeValidSet;
 			newCluster.m_clusterPlane = discretization.RefineBin(m_elements, binValidSet, maxDensityBin);
 
 			if (discretization.m_failSafeModeTriggered)
@@ -2055,7 +2090,7 @@ bool BillboardCloud::FoliageClusterizationSettings::OnInspect()
 		if (ImGui::DragInt("Timeout", &m_timeout, 1, 1, 1000)) changed = true;
 		if (ImGui::DragFloat("Density", &m_sampleRange, 0.01f, 0.1f, 2.f)) changed = true;
 
-		if(ImGui::Checkbox("Fill band", &m_fillBand)) changed = true;
+		if (ImGui::Checkbox("Fill band", &m_fillBand)) changed = true;
 		ImGui::TreePop();
 	}
 	return changed;

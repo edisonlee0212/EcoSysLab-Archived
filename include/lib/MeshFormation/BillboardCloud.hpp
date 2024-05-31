@@ -165,6 +165,7 @@ namespace EvoEngine {
 		void Generate(const GenerateSettings& generateSettings);
 
 		void ProcessPrefab(const std::shared_ptr<Prefab>& prefab);
+		void ProcessEntity(const std::shared_ptr<Scene>& scene, const Entity& entity);
 
 		[[nodiscard]] Entity BuildEntity(const std::shared_ptr<Scene>& scene) const;
 	private:
@@ -178,6 +179,9 @@ namespace EvoEngine {
 		std::vector<Cluster> DefaultClusterize(std::vector<ClusterTriangle> operatingTriangles, const ClusterizationSettings& clusterizeSettings);
 
 		void ProcessPrefab(const std::shared_ptr<Prefab>& currentPrefab, const Transform& parentModelSpaceTransform);
+		void ProcessEntity(const std::shared_ptr<Scene>& scene, const Entity& entity, const Transform& parentModelSpaceTransform);
+
+
 		//Adopted from https://github.com/DreamVersion/RotatingCalipers
 		class RotatingCalipers
 		{

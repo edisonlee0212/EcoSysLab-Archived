@@ -139,13 +139,13 @@ m_entityMetadataList:
         m_joeScan:
           m_assetHandle: 0
           m_assetTypeName: JoeScan
-  - m_name: SpeedTree
+  - m_name: BillboardClouds
     m_handle: 9933489831517059817
     m_enabled: true
     m_static: false
     Root.Handle: 9933489831517059817
     m_privateComponentElements:
-      - m_typeName: SpeedTreeMeshConverter
+      - m_typeName: BillboardCloudsConverter
         m_enabled: true
 m_systems:
   []
