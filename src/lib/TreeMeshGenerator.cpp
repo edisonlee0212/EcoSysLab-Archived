@@ -9,9 +9,12 @@
 using namespace EcoSysLab;
 
 
-RingSegment::RingSegment(glm::vec3 startPosition, glm::vec3 endPosition, glm::vec3 startAxis,
+RingSegment::RingSegment(const float startA, const float endA, glm::vec3 startPosition, glm::vec3 endPosition, glm::vec3 startAxis,
 	glm::vec3 endAxis, float startRadius, float endRadius, float startDistanceToRoot, float endDistanceToRoot)
-	: m_startPosition(startPosition),
+	:
+	m_startA(startA),
+	m_endA(endA),
+	m_startPosition(startPosition),
 	m_endPosition(endPosition),
 	m_startAxis(startAxis),
 	m_endAxis(endAxis),
@@ -89,7 +92,6 @@ void TreeMeshGeneratorSettings::Save(const std::string& name, YAML::Emitter& out
 	out << YAML::Key << "m_foliageInstancing" << YAML::Value << m_foliageInstancing;
 	out << YAML::Key << "m_enableBranch" << YAML::Value << m_enableBranch;
 	out << YAML::Key << "m_enableFruit" << YAML::Value << m_enableFruit;
-	out << YAML::Key << "m_enableTwig" << YAML::Value << m_enableTwig;
 
 	out << YAML::Key << "m_smoothness" << YAML::Value << m_smoothness;
 	out << YAML::Key << "m_overrideRadius" << YAML::Value << m_overrideRadius;
@@ -125,7 +127,6 @@ void TreeMeshGeneratorSettings::Load(const std::string& name, const YAML::Node& 
 		if (ms["m_foliageInstancing"]) m_foliageInstancing = ms["m_foliageInstancing"].as<bool>();
 		if (ms["m_enableBranch"]) m_enableBranch = ms["m_enableBranch"].as<bool>();
 		if (ms["m_enableFruit"]) m_enableFruit = ms["m_enableFruit"].as<bool>();
-		if (ms["m_enableTwig"]) m_enableTwig = ms["m_enableTwig"].as<bool>();
 
 		if (ms["m_smoothness"]) m_smoothness = ms["m_smoothness"].as<bool>();
 		if (ms["m_overrideRadius"]) m_overrideRadius = ms["m_overrideRadius"].as<bool>();
@@ -150,7 +151,6 @@ void TreeMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLayer>& ed
 		ImGui::Checkbox("Fruit", &m_enableFruit);
 		ImGui::Checkbox("Foliage", &m_enableFoliage);
 		ImGui::Checkbox("Foliage instancing", &m_foliageInstancing);
-		ImGui::Checkbox("Twig", &m_enableTwig);
 		ImGui::Combo("Branch mesh mode", { "Cylindrical", "Marching cubes" }, m_branchMeshType);
 
 		ImGui::Combo("Branch color mode", { "Internode Color", "Junction" }, m_vertexColorMode);

@@ -1985,7 +1985,6 @@ void EcoSysLabLayer::ClearMeshes() const {
 		for (auto treeEntity : copiedEntities) {
 			const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
 			tree->ClearGeometryEntities();
-			tree->ClearTwigsStrandRenderer();
 		}
 	}
 }

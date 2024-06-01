@@ -14,7 +14,7 @@
 #include "Application.hpp"
 #include "BarkDescriptor.hpp"
 #include "BillboardCloud.hpp"
-#include "TreeMeshGenerator.hpp"
+#include "TreeSkinnedMeshGenerator.hpp"
 #include "Soil.hpp"
 #include "Climate.hpp"
 #include "Octree.hpp"
@@ -152,7 +152,7 @@ void Tree::Reset()
 	ClearGeometryEntities();
 	ClearStrandModelMeshRenderer();
 	ClearStrandRenderer();
-	ClearTwigsStrandRenderer();
+	ClearAnimatedGeometryEntities();
 	m_treeModel.Clear();
 	m_strandModel = {};
 	m_treeModel.m_shootSkeleton.m_data.m_index = GetOwner().GetIndex();
@@ -358,8 +358,8 @@ void Tree::GenerateSkeletalGraph(
 }
 
 bool Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
-	static BillboardCloud::GenerateSettings foliageBillboardCloudGenerateSettings {};
-	
+	static BillboardCloud::GenerateSettings foliageBillboardCloudGenerateSettings{};
+
 	foliageBillboardCloudGenerateSettings.OnInspect("Foliage billboard cloud settings");
 
 	if (ImGui::Button("Generate billboard"))
@@ -475,6 +475,15 @@ bool Tree::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
 			if (ImGui::Button("Clear Cylindrical Mesh"))
 			{
 				ClearGeometryEntities();
+			}
+
+			if (ImGui::Button("Generate Animated Cylindrical Mesh")) {
+				GenerateAnimatedGeometryEntities(m_meshGeneratorSettings, meshGenerateIterations);
+			}
+			ImGui::SameLine();
+			if (ImGui::Button("Clear Animated Cylindrical Mesh"))
+			{
+				ClearAnimatedGeometryEntities();
 			}
 
 		}
@@ -959,102 +968,6 @@ std::shared_ptr<Mesh> Tree::GenerateFoliageMesh(const TreeMeshGeneratorSettings&
 	attributes.m_texCoord = true;
 	mesh->SetVertices(attributes, vertices, indices);
 	return mesh;
-}
-
-std::shared_ptr<Strands> Tree::GenerateTwigStrands(const TreeMeshGeneratorSettings& meshGeneratorSettings)
-{
-	const auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
-	if (!treeDescriptor) return nullptr;
-	const auto foliageDescriptor = treeDescriptor->m_foliageDescriptor.Get<FoliageDescriptor>();
-	if (!foliageDescriptor) return nullptr;
-	auto strands = ProjectManager::CreateTemporaryAsset<Strands>();
-
-	std::vector<glm::uint> twigSegments;
-	std::vector<StrandPoint> twigPoints;
-	const auto& shootSkeleton = m_treeModel.PeekShootSkeleton();
-	const auto& internodeList = shootSkeleton.PeekSortedNodeList();
-
-	for (int internodeHandle : internodeList)
-	{
-		const auto& internode = shootSkeleton.PeekNode(internodeHandle);
-		const auto& internodeData = internode.m_data;
-		const auto& internodeInfo = internode.m_info;
-		std::vector<std::vector<glm::vec4>> twigs{};
-		if (internodeInfo.m_thickness < foliageDescriptor->m_twigParameters.m_maxNodeThickness
-			&& internodeInfo.m_rootDistance > foliageDescriptor->m_twigParameters.m_minRootDistance
-			&& internodeInfo.m_endDistance < foliageDescriptor->m_twigParameters.m_maxEndDistance)
-		{
-			int twigCount = internodeInfo.m_length / foliageDescriptor->m_twigParameters.m_unitDistance;
-			twigs.resize(twigCount);
-
-			auto desiredGlobalRotation = internodeInfo.m_regulatedGlobalRotation * glm::quat(glm::vec3(
-				glm::radians(foliageDescriptor->m_twigParameters.m_branchingAngle), 0.0f,
-				glm::radians(glm::radians(
-					glm::linearRand(0.0f,
-						360.0f)))));
-
-			glm::vec3 directionStart = internodeInfo.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
-			glm::vec3 directionEnd = directionStart;
-
-			glm::vec3 positionStart = internodeInfo.m_globalPosition;
-			glm::vec3 positionEnd =
-				positionStart + internodeInfo.m_length * (meshGeneratorSettings.m_smoothness ? 1.0f - meshGeneratorSettings.m_baseControlPointRatio * 0.5f : 1.0f) * internodeInfo.GetGlobalDirection();
-
-			BezierCurve curve = BezierCurve(
-				positionStart,
-				positionStart +
-				(meshGeneratorSettings.m_smoothness ? internodeInfo.m_length * meshGeneratorSettings.m_baseControlPointRatio : 0.0f) * directionStart,
-				positionEnd -
-				(meshGeneratorSettings.m_smoothness ? internodeInfo.m_length * meshGeneratorSettings.m_branchControlPointRatio : 0.0f) * directionEnd,
-				positionEnd);
-
-			for (int twigIndex = 0; twigIndex < twigCount; twigIndex++) {
-				glm::vec3 positionWalker = curve.GetPoint(static_cast<float>(twigIndex) / twigCount);
-				twigs[twigIndex].resize(foliageDescriptor->m_twigParameters.m_segmentSize);
-				const float rollAngle = glm::radians(glm::linearRand(0.0f, 360.0f));
-				for (int twigPointIndex = 0; twigPointIndex < foliageDescriptor->m_twigParameters.m_segmentSize; twigPointIndex++)
-				{
-					twigs[twigIndex][twigPointIndex] = glm::vec4(positionWalker, foliageDescriptor->m_twigParameters.m_thickness);
-					desiredGlobalRotation = internodeInfo.m_regulatedGlobalRotation * glm::quat(glm::vec3(
-						glm::radians(glm::gaussRand(0.f, foliageDescriptor->m_twigParameters.m_apicalAngleVariance) + foliageDescriptor->m_twigParameters.m_branchingAngle), 0.0f,
-						rollAngle));
-
-					auto twigFront = desiredGlobalRotation * glm::vec3(0, 0, -1);
-					positionWalker = positionWalker + twigFront * foliageDescriptor->m_twigParameters.m_segmentLength;
-				}
-			}
-
-		}
-
-		for (const auto& twig : twigs) {
-			const auto twigSegmentSize = twig.size();
-			const auto twigControlPointSize = twig.size() + 3;
-			const auto totalTwigPointSize = twigPoints.size();
-			const auto totalTwigSegmentSize = twigSegments.size();
-			twigPoints.resize(totalTwigPointSize + twigControlPointSize);
-			twigSegments.resize(totalTwigSegmentSize + twigSegmentSize);
-
-			for (int i = 0; i < twigControlPointSize; i++) {
-				auto& p = twigPoints[totalTwigPointSize + i];
-				p.m_position = glm::vec3(twig[glm::clamp(i - 2, 0, static_cast<int>(twigSegmentSize - 1))]);
-				p.m_thickness = twig[glm::clamp(i - 2, 0, static_cast<int>(twigSegmentSize - 1))].w;
-			}
-			twigPoints[totalTwigPointSize].m_position = glm::vec3(twig[0]) * 2.0f - glm::vec3(twig[1]);
-			twigPoints[totalTwigPointSize].m_thickness = twig[0].w * 2.0f - twig[1].w;
-
-			twigPoints[totalTwigPointSize + twigControlPointSize - 1].m_position = glm::vec3(twig[twigSegmentSize - 1]) * 2.0f - glm::vec3(twig[twigSegmentSize - 2]);
-			twigPoints[totalTwigPointSize + twigControlPointSize - 1].m_thickness = twig[twigSegmentSize - 1].w * 2.0f - twig[twigSegmentSize - 2].w;
-
-
-			for (int i = 0; i < twigSegmentSize; i++) {
-				twigSegments[totalTwigSegmentSize + i] = totalTwigPointSize + i;
-			}
-		}
-	}
-
-	StrandPointAttributes strandPointAttributes{};
-	strands->SetSegments(strandPointAttributes, twigSegments, twigPoints);
-	return strands;
 }
 
 std::shared_ptr<ParticleInfoList> Tree::GenerateFoliageParticleInfoList(
@@ -2230,6 +2143,216 @@ void Tree::GenerateBillboardClouds(const BillboardCloud::GenerateSettings& folia
 	}
 }
 
+
+void Tree::GenerateAnimatedGeometryEntities(const TreeMeshGeneratorSettings& meshGeneratorSettings, int iteration)
+{
+	const auto scene = GetScene();
+	const auto self = GetOwner();
+	const auto children = scene->GetChildren(self);
+	auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
+	const auto treeGlobalTransform = scene->GetDataComponent<GlobalTransform>(self);
+	ClearAnimatedGeometryEntities();
+	Entity ragDoll;
+	ragDoll = scene->CreateEntity("Rag Doll");
+	scene->SetParent(ragDoll, self);
+	auto actualIteration = iteration;
+	if (actualIteration < 0 || actualIteration > m_treeModel.CurrentIteration())
+	{
+		actualIteration = m_treeModel.CurrentIteration();
+	}
+	const auto& skeleton = m_treeModel.PeekShootSkeleton(actualIteration);
+	const auto& sortedFlowList = skeleton.PeekSortedFlowList();
+	std::vector<glm::mat4> offsetMatrices;
+	std::unordered_map<SkeletonFlowHandle, int> flowStartBoneIdMap;
+	std::unordered_map<SkeletonFlowHandle, int> flowEndBoneIdMap;
+	
+	CylindricalSkinnedMeshGenerator<ShootGrowthData, ShootStemGrowthData, InternodeGrowthData>::GenerateBones(skeleton, sortedFlowList, offsetMatrices, flowStartBoneIdMap, flowEndBoneIdMap);
+
+	std::vector<std::string> names;
+	std::vector<Entity> boundEntities;
+	std::vector<unsigned> boneIndicesLists;
+	boneIndicesLists.resize(offsetMatrices.size());
+	boundEntities.resize(offsetMatrices.size());
+	names.resize(offsetMatrices.size());
+	std::unordered_map<SkeletonFlowHandle, Entity> correspondingFlowHandles;
+
+	for(const auto& [flowHandle, matrixIndex] : flowStartBoneIdMap)
+	{
+		names[matrixIndex] = std::to_string(flowHandle);
+		boundEntities[matrixIndex] = scene->CreateEntity(names[matrixIndex]);
+		const auto& flow = skeleton.PeekFlow(flowHandle);
+
+		correspondingFlowHandles[flowHandle] = boundEntities[matrixIndex];
+		GlobalTransform globalTransform;
+		
+		const auto& startNode = skeleton.PeekNode(flow.PeekNodeHandles().front());
+		globalTransform.m_value = treeGlobalTransform.m_value * (glm::translate(startNode.m_info.m_globalPosition) * glm::mat4_cast(startNode.m_info.m_globalRotation));
+		scene->SetDataComponent(boundEntities[matrixIndex], globalTransform);
+		
+		boneIndicesLists[matrixIndex] = matrixIndex;
+	}
+	for(const auto& flowHandle : sortedFlowList)
+	{
+		const auto& flow = skeleton.PeekFlow(flowHandle);
+		const auto& parentFlowHandle = flow.GetParentHandle();
+		if(parentFlowHandle != -1) scene->SetParent(correspondingFlowHandles[flowHandle], correspondingFlowHandles[parentFlowHandle]);
+		else
+		{
+			scene->SetParent(correspondingFlowHandles[flowHandle], ragDoll);
+		}
+	}
+	if (meshGeneratorSettings.m_enableBranch)
+	{
+		Entity branchEntity;
+		branchEntity = scene->CreateEntity("Animated Branch Mesh");
+		scene->SetParent(branchEntity, self);
+		auto animator = scene->GetOrSetPrivateComponent<Animator>(branchEntity).lock();
+		auto skinnedMesh = ProjectManager::CreateTemporaryAsset<SkinnedMesh>();
+		auto material = ProjectManager::CreateTemporaryAsset<Material>();
+		auto skinnedMeshRenderer = scene->GetOrSetPrivateComponent<SkinnedMeshRenderer>(branchEntity).lock();
+		bool copiedMaterial = false;
+		if (treeDescriptor) {
+			if (const auto shootDescriptor = treeDescriptor->m_shootDescriptor.Get<ShootDescriptor>()) {
+				if (const auto shootMaterial = shootDescriptor->m_barkMaterial.Get<Material>()) {
+					material->SetAlbedoTexture(shootMaterial->GetAlbedoTexture());
+					material->SetNormalTexture(shootMaterial->GetNormalTexture());
+					material->SetRoughnessTexture(shootMaterial->GetRoughnessTexture());
+					material->SetMetallicTexture(shootMaterial->GetMetallicTexture());
+					material->m_materialProperties = shootMaterial->m_materialProperties;
+				}
+			}
+		}
+		if (!copiedMaterial)
+		{
+			material->m_materialProperties.m_albedoColor = glm::vec3(109, 79, 75) / 255.0f;
+			material->m_materialProperties.m_roughness = 1.0f;
+			material->m_materialProperties.m_metallic = 0.0f;
+		}
+
+		std::vector<SkinnedVertex> skinnedVertices;
+		std::vector<unsigned int> indices;
+
+		if (!treeDescriptor)
+		{
+			EVOENGINE_WARNING("TreeDescriptor missing!");
+			treeDescriptor = ProjectManager::CreateTemporaryAsset<TreeDescriptor>();
+			treeDescriptor->m_foliageDescriptor = ProjectManager::CreateTemporaryAsset<FoliageDescriptor>();
+		}
+		std::shared_ptr<BarkDescriptor> barkDescriptor{};
+		barkDescriptor = treeDescriptor->m_barkDescriptor.Get<BarkDescriptor>();
+		if (m_strandModel.m_strandModelSkeleton.RefRawNodes().size() == m_treeModel.m_shootSkeleton.RefRawNodes().size())
+		{
+			CylindricalSkinnedMeshGenerator<StrandModelSkeletonData, StrandModelFlowData, StrandModelNodeData>::Generate(m_strandModel.m_strandModelSkeleton, skinnedVertices, indices,
+				offsetMatrices, meshGeneratorSettings,
+				[&](glm::vec3& vertexPosition, const glm::vec3& direction, const float xFactor, const float yFactor)
+				{
+					if (barkDescriptor)
+					{
+						const float pushValue = barkDescriptor->GetValue(xFactor, yFactor);
+						vertexPosition += pushValue * direction;
+					}
+				},
+				[&](glm::vec2& texCoords, float xFactor, float distanceToRoot)
+				{});
+		}
+		else {
+			CylindricalSkinnedMeshGenerator<ShootGrowthData, ShootStemGrowthData, InternodeGrowthData>::Generate(m_treeModel.PeekShootSkeleton(), skinnedVertices, indices,
+				offsetMatrices, meshGeneratorSettings,
+				[&](glm::vec3& vertexPosition, const glm::vec3& direction, const float xFactor, const float yFactor)
+				{
+					if (barkDescriptor)
+					{
+						const float pushValue = barkDescriptor->GetValue(xFactor, yFactor);
+						vertexPosition += pushValue * direction;
+					}
+				},
+				[&](glm::vec2& texCoords, float xFactor, float distanceToRoot)
+				{}
+			);
+		}
+		
+		skinnedMesh->m_boneAnimatorIndices = boneIndicesLists;
+		SkinnedVertexAttributes attributes{};
+		attributes.m_texCoord = true;
+		skinnedMesh->SetVertices(attributes, skinnedVertices, indices);
+		skinnedMeshRenderer->m_animator = animator;
+		skinnedMeshRenderer->m_skinnedMesh = skinnedMesh;
+		skinnedMeshRenderer->m_material = material;
+
+		animator->Setup(names, offsetMatrices);
+		skinnedMeshRenderer->SetRagDoll(true);
+		skinnedMeshRenderer->SetRagDollBoundEntities(boundEntities, false);
+	}
+
+	if (meshGeneratorSettings.m_enableFoliage)
+	{
+		const auto foliageEntity = scene->CreateEntity("Animated Foliage Mesh");
+		scene->SetParent(foliageEntity, self);
+		auto animator = scene->GetOrSetPrivateComponent<Animator>(foliageEntity).lock();
+
+		auto skinnedMesh = ProjectManager::CreateTemporaryAsset<SkinnedMesh>();
+		auto skinnedMeshRenderer = scene->GetOrSetPrivateComponent<SkinnedMeshRenderer>(foliageEntity).lock();
+		const auto material = ProjectManager::CreateTemporaryAsset<Material>();
+		bool copiedMaterial = false;
+		if (treeDescriptor) {
+			if (const auto foliageDescriptor = treeDescriptor->m_foliageDescriptor.Get<FoliageDescriptor>()) {
+				if (const auto leafMaterial = foliageDescriptor->m_leafMaterial.Get<Material>()) {
+					material->SetAlbedoTexture(leafMaterial->GetAlbedoTexture());
+					material->SetNormalTexture(leafMaterial->GetNormalTexture());
+					material->SetRoughnessTexture(leafMaterial->GetRoughnessTexture());
+					material->SetMetallicTexture(leafMaterial->GetMetallicTexture());
+					material->m_materialProperties = leafMaterial->m_materialProperties;
+					copiedMaterial = true;
+				}
+			}
+		}
+		if (!copiedMaterial) {
+			material->m_materialProperties.m_albedoColor = glm::vec3(152 / 255.0f, 203 / 255.0f, 0 / 255.0f);
+			material->m_materialProperties.m_roughness = 1.0f;
+			material->m_materialProperties.m_metallic = 0.0f;
+		}
+
+		skinnedMesh->m_boneAnimatorIndices = boneIndicesLists;
+		skinnedMeshRenderer->m_animator = animator;
+		skinnedMeshRenderer->m_skinnedMesh = skinnedMesh;
+		skinnedMeshRenderer->m_material = material;
+
+		animator->Setup(names, offsetMatrices);
+		skinnedMeshRenderer->SetRagDoll(true);
+		skinnedMeshRenderer->SetRagDollBoundEntities(boundEntities, false);
+	}
+	if (meshGeneratorSettings.m_enableFruit)
+	{
+		const auto fruitEntity = scene->CreateEntity("Animated Fruit Mesh");
+		scene->SetParent(fruitEntity, self);
+	}
+}
+
+void Tree::ClearAnimatedGeometryEntities() const
+{
+	const auto scene = GetScene();
+	const auto self = GetOwner();
+	const auto children = scene->GetChildren(self);
+	for (const auto& child : children) {
+		auto name = scene->GetEntityName(child);
+		if (name == "Rag Doll") {
+			scene->DeleteEntity(child);
+		}
+		else if (name == "Animated Branch Mesh") {
+			scene->DeleteEntity(child);
+		}
+		else if (name == "Animated Root Mesh") {
+			scene->DeleteEntity(child);
+		}
+		else if (name == "Animated Foliage Mesh") {
+			scene->DeleteEntity(child);
+		}
+		else if (name == "Animated Fruit Mesh") {
+			scene->DeleteEntity(child);
+		}
+	}
+}
+
 void Tree::ClearGeometryEntities() const
 {
 	const auto scene = GetScene();
@@ -2247,22 +2370,6 @@ void Tree::ClearGeometryEntities() const
 			scene->DeleteEntity(child);
 		}
 		else if (name == "Fruit Mesh") {
-			scene->DeleteEntity(child);
-		}
-	}
-}
-
-void Tree::ClearTwigsStrandRenderer() const
-{
-	const auto scene = GetScene();
-	const auto self = GetOwner();
-	const auto children = scene->GetChildren(self);
-	for (const auto& child : children) {
-		auto name = scene->GetEntityName(child);
-		if (name == "Twig Strands") {
-			scene->DeleteEntity(child);
-		}
-		else if (name == "Fine Root Strands") {
 			scene->DeleteEntity(child);
 		}
 	}
@@ -2287,7 +2394,6 @@ void Tree::GenerateGeometryEntities(const TreeMeshGeneratorSettings& meshGenerat
 	const auto children = scene->GetChildren(self);
 	auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
 	ClearGeometryEntities();
-	ClearTwigsStrandRenderer();
 	auto actualIteration = iteration;
 	if (actualIteration < 0 || actualIteration > m_treeModel.CurrentIteration())
 	{
@@ -2324,35 +2430,6 @@ void Tree::GenerateGeometryEntities(const TreeMeshGeneratorSettings& meshGenerat
 		meshRenderer->m_material = material;
 	}
 
-	if (meshGeneratorSettings.m_enableTwig)
-	{
-		const auto twigEntity = scene->CreateEntity("Twig Strands");
-		scene->SetParent(twigEntity, self);
-		const auto strands = GenerateTwigStrands(meshGeneratorSettings);
-		const auto material = ProjectManager::CreateTemporaryAsset<Material>();
-		bool copiedMaterial = false;
-		if (treeDescriptor) {
-			if (const auto foliageDescriptor = treeDescriptor->m_foliageDescriptor.Get<FoliageDescriptor>()) {
-				if (const auto twigMaterial = foliageDescriptor->m_twigMaterial.Get<Material>()) {
-					material->SetAlbedoTexture(twigMaterial->GetAlbedoTexture());
-					material->SetNormalTexture(twigMaterial->GetNormalTexture());
-					material->SetRoughnessTexture(twigMaterial->GetRoughnessTexture());
-					material->SetMetallicTexture(twigMaterial->GetMetallicTexture());
-					material->m_materialProperties = twigMaterial->m_materialProperties;
-					copiedMaterial = true;
-				}
-			}
-		}
-		if (!copiedMaterial) {
-			material->m_materialProperties.m_albedoColor = glm::vec3(109, 79, 75) / 255.0f;
-			material->m_materialProperties.m_roughness = 1.0f;
-			material->m_materialProperties.m_metallic = 0.0f;
-		}
-
-		const auto strandsRenderer = scene->GetOrSetPrivateComponent<StrandsRenderer>(twigEntity).lock();
-		strandsRenderer->m_strands = strands;
-		strandsRenderer->m_material = material;
-	}
 	if (meshGeneratorSettings.m_enableFoliage)
 	{
 		const auto foliageEntity = scene->CreateEntity("Foliage Mesh");

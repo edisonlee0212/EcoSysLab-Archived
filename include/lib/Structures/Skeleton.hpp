@@ -61,6 +61,9 @@ namespace EcoSysLab {
 		glm::quat m_globalEndRotation = glm::vec3(0.0f);
 		float m_endThickness = 0.0f;
 
+		/**
+		 * The length from the start of the first node to the end of the last node.
+		 */
 		float m_flowLength = 0.0f;
 	};
 #pragma endregion

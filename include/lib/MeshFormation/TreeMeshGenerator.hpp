@@ -8,6 +8,7 @@
 using namespace EvoEngine;
 namespace EcoSysLab {
 	struct RingSegment {
+		float m_startA, m_endA;
 		glm::vec3 m_startPosition, m_endPosition;
 		glm::vec3 m_startAxis, m_endAxis;
 		float m_startRadius, m_endRadius;
@@ -15,7 +16,7 @@ namespace EcoSysLab {
 		float m_endDistanceToRoot;
 		RingSegment() = default;
 
-		RingSegment(glm::vec3 startPosition, glm::vec3 endPosition,
+		RingSegment(float startA, float endA, glm::vec3 startPosition, glm::vec3 endPosition,
 			glm::vec3 startAxis, glm::vec3 endAxis,
 			float startRadius, float endRadius, float startDistanceToRoot, float endDistanceToRoot);
 
@@ -46,7 +47,6 @@ namespace EcoSysLab {
 		bool m_foliageInstancing = true;
 		bool m_enableFruit = false;
 		bool m_enableBranch = true;
-		bool m_enableTwig = false;
 
 		bool m_presentationOverride = false;
 		PresentationOverrideSettings m_presentationOverrideSettings = {};
@@ -197,7 +197,7 @@ namespace EcoSysLab {
 				const float a = static_cast<float>(ringIndex - 1) / amount;
 				const float b = static_cast<float>(ringIndex) / amount;
 				if (settings.m_smoothness) {
-					rings.emplace_back(
+					rings.emplace_back(a, b,
 						curve.GetPoint(a), curve.GetPoint(b),
 						glm::mix(directionStart, directionEnd, a),
 						glm::mix(directionStart, directionEnd, b),
@@ -206,7 +206,7 @@ namespace EcoSysLab {
 						glm::mix(rootDistanceStart, rootDistanceEnd, a), glm::mix(rootDistanceStart, rootDistanceEnd, b));
 				}
 				else {
-					rings.emplace_back(
+					rings.emplace_back(a, b,
 						curve.GetPoint(a), curve.GetPoint(b),
 						directionEnd,
 						directionEnd,
@@ -741,7 +741,7 @@ namespace EcoSysLab {
 				const float a = static_cast<float>(ringIndex - 1) / amount;
 				const float b = static_cast<float>(ringIndex) / amount;
 				if (settings.m_smoothness) {
-					rings.emplace_back(
+					rings.emplace_back(a, b,
 						curve.GetPoint(a), curve.GetPoint(b),
 						glm::mix(directionStart, directionEnd, a),
 						glm::mix(directionStart, directionEnd, b),
@@ -750,7 +750,7 @@ namespace EcoSysLab {
 						glm::mix(rootDistanceStart, rootDistanceEnd, a), glm::mix(rootDistanceStart, rootDistanceEnd, b));
 				}
 				else {
-					rings.emplace_back(
+					rings.emplace_back(a, b, 
 						curve.GetPoint(a), curve.GetPoint(b),
 						directionEnd,
 						directionEnd,

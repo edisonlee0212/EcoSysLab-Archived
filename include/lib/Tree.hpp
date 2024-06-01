@@ -76,7 +76,6 @@ namespace EcoSysLab {
 		void GenerateTrunkMeshes(const std::shared_ptr<Mesh>& trunkMesh, const TreeMeshGeneratorSettings& meshGeneratorSettings);
 		std::shared_ptr<Mesh> GenerateBranchMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings);
 		std::shared_ptr<Mesh> GenerateFoliageMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings);
-		std::shared_ptr<Strands> GenerateTwigStrands(const TreeMeshGeneratorSettings& meshGeneratorSettings);
 		std::shared_ptr<ParticleInfoList> GenerateFoliageParticleInfoList(const TreeMeshGeneratorSettings& meshGeneratorSettings);
 		std::shared_ptr<Mesh> GenerateStrandModelBranchMesh(const StrandModelMeshGeneratorSettings& strandModelMeshGeneratorSettings);
 		std::shared_ptr<Mesh> GenerateStrandModelFoliageMesh(const StrandModelMeshGeneratorSettings& strandModelMeshGeneratorSettings);
@@ -130,7 +129,6 @@ namespace EcoSysLab {
 
 		void GenerateGeometryEntities(const TreeMeshGeneratorSettings& meshGeneratorSettings, int iteration = -1);
 		void ClearGeometryEntities() const;
-		void ClearTwigsStrandRenderer() const;
 
 
 		void InitializeStrandRenderer();
@@ -157,6 +155,10 @@ namespace EcoSysLab {
 		void Deserialize(const YAML::Node& in) override;
 
 		void GenerateBillboardClouds(const BillboardCloud::GenerateSettings &foliageGenerateSettings);
+
+
+		void GenerateAnimatedGeometryEntities(const TreeMeshGeneratorSettings& meshGeneratorSettings, int iteration);
+		void ClearAnimatedGeometryEntities() const;
 	};
 
 	template <typename SrcSkeletonData, typename SrcFlowData, typename SrcNodeData>
