@@ -12,8 +12,40 @@
 #include "ShootDescriptor.hpp"
 #include "Soil.hpp"
 #include "BillboardCloud.hpp"
+
+#ifdef BUILD_WITH_PHYSICS
+#include "PhysicsLayer.hpp"
+#include "RigidBody.hpp"
+#endif
 using namespace EvoEngine;
 namespace EcoSysLab {
+
+	struct BranchPhysicsParameters {
+#pragma region Physics
+		float m_density = 1.0f;
+		float m_linearDamping = 8.0f;
+		float m_angularDamping = 8.0f;
+		int m_positionSolverIteration = 8;
+		int m_velocitySolverIteration = 8;
+		float m_jointDriveStiffnessFactor = 3000.0f;
+		float m_jointDriveStiffnessThicknessFactor = 40.0f;
+		float m_jointDriveDampingFactor = 10.0f;
+		float m_jointDriveDampingThicknessFactor = 4.0f;
+		bool m_enableAccelerationForDrive = true;
+		float m_minimumThickness = 0.01f;
+#pragma endregion
+		void Serialize(YAML::Emitter& out);
+
+		void Deserialize(const YAML::Node& in);
+
+		template<typename SkeletonData, typename FlowData, typename NodeData>
+		void Link(const std::shared_ptr<Scene>& scene,
+			const Skeleton<SkeletonData, FlowData, NodeData>& skeleton,
+			const std::unordered_map<unsigned, SkeletonFlowHandle>& correspondingFlowHandles,
+			const Entity& entity, const Entity& child);
+		void OnInspect();
+	};
+
 	struct SkeletalGraphSettings
 	{
 		float m_lineThickness = 0.0f;
@@ -71,7 +103,7 @@ namespace EcoSysLab {
 		float m_crownShynessDistance = 0.f;
 		float m_startTime = 0.f;
 		void BuildStrandModel();
-		
+
 		std::shared_ptr<Strands> GenerateStrands() const;
 		void GenerateTrunkMeshes(const std::shared_ptr<Mesh>& trunkMesh, const TreeMeshGeneratorSettings& meshGeneratorSettings);
 		std::shared_ptr<Mesh> GenerateBranchMesh(const TreeMeshGeneratorSettings& meshGeneratorSettings);
@@ -90,22 +122,22 @@ namespace EcoSysLab {
 
 		void Reset();
 
-		TreeVisualizer m_treeVisualizer {};
-		
+		TreeVisualizer m_treeVisualizer{};
+
 		void Serialize(YAML::Emitter& out) const override;
 		bool m_splitRootTest = true;
 		bool m_recordBiomassHistory = true;
 		float m_leftSideBiomass;
 		float m_rightSideBiomass;
-		TreeMeshGeneratorSettings m_meshGeneratorSettings {};
+		TreeMeshGeneratorSettings m_meshGeneratorSettings{};
 		StrandModelMeshGeneratorSettings m_strandModelMeshGeneratorSettings{};
 		SkeletalGraphSettings m_skeletalGraphSettings{};
-
+		BranchPhysicsParameters m_branchPhysicsParameters{};
 		int m_temporalProgressionIteration = 0;
 		bool m_temporalProgression = false;
 		void Update() override;
 
-		
+
 
 		std::vector<float> m_rootBiomassHistory;
 		std::vector<float> m_shootBiomassHistory;
@@ -115,9 +147,9 @@ namespace EcoSysLab {
 		AssetRef m_treeDescriptor;
 		bool m_enableHistory = false;
 		int m_historyIteration = 30;
-		
+
 		void ClearSkeletalGraph() const;
-		void GenerateSkeletalGraph(const SkeletalGraphSettings& skeletalGraphSettings, SkeletonNodeHandle baseNodeHandle, const std::shared_ptr<Mesh> &pointMeshSample, const std::shared_ptr<Mesh>& lineMeshSample) const;
+		void GenerateSkeletalGraph(const SkeletalGraphSettings& skeletalGraphSettings, SkeletonNodeHandle baseNodeHandle, const std::shared_ptr<Mesh>& pointMeshSample, const std::shared_ptr<Mesh>& lineMeshSample) const;
 
 		TreeModel m_treeModel{};
 		StrandModel m_strandModel{};
@@ -154,17 +186,65 @@ namespace EcoSysLab {
 		void CollectAssetRef(std::vector<AssetRef>& list) override;
 		void Deserialize(const YAML::Node& in) override;
 
-		void GenerateBillboardClouds(const BillboardCloud::GenerateSettings &foliageGenerateSettings);
+		void GenerateBillboardClouds(const BillboardCloud::GenerateSettings& foliageGenerateSettings);
 
 
-		void GenerateAnimatedGeometryEntities(const TreeMeshGeneratorSettings& meshGeneratorSettings, int iteration);
+		void GenerateAnimatedGeometryEntities(const TreeMeshGeneratorSettings& meshGeneratorSettings, int iteration, bool enablePhysics = true);
 		void ClearAnimatedGeometryEntities() const;
 	};
+
+	template <typename SkeletonData, typename FlowData, typename NodeData>
+	void BranchPhysicsParameters::Link(const std::shared_ptr<Scene>& scene,
+		const Skeleton<SkeletonData, FlowData, NodeData>& skeleton,
+		const std::unordered_map<unsigned, SkeletonFlowHandle>& correspondingFlowHandles, const Entity& entity,
+		const Entity& child)
+	{
+#ifdef BUILD_WITH_PHYSICS
+		if (!scene->HasPrivateComponent<RigidBody>(entity))
+		{
+			scene->RemovePrivateComponent<RigidBody>(child);
+			scene->RemovePrivateComponent<Joint>(child);
+			return;
+		}
+
+		const auto& flow = skeleton.PeekFlow(correspondingFlowHandles.at(child.GetIndex()));
+
+		const float childThickness = flow.m_info.m_startThickness;
+		const float childLength = flow.m_info.m_flowLength;
+
+		if (childThickness < m_minimumThickness) return;
+		auto rigidBody = scene->GetOrSetPrivateComponent<RigidBody>(child).lock();
+		rigidBody->SetEnableGravity(false);
+		rigidBody->SetDensityAndMassCenter(m_density *
+			childThickness *
+			childThickness * childLength);
+		rigidBody->SetLinearDamping(m_linearDamping);
+		rigidBody->SetAngularDamping(m_angularDamping);
+		rigidBody->SetSolverIterations(m_positionSolverIteration,
+			m_velocitySolverIteration);
+		rigidBody->SetAngularVelocity(glm::vec3(0.0f));
+		rigidBody->SetLinearVelocity(glm::vec3(0.0f));
+
+		auto joint = scene->GetOrSetPrivateComponent<Joint>(child).lock();
+		joint->Link(entity);
+		joint->SetType(JointType::D6);
+		joint->SetMotion(MotionAxis::SwingY, MotionType::Free);
+		joint->SetMotion(MotionAxis::SwingZ, MotionType::Free);
+		joint->SetDrive(DriveType::Swing,
+			glm::pow(childThickness,
+				m_jointDriveStiffnessThicknessFactor) *
+			m_jointDriveStiffnessFactor,
+			glm::pow(childThickness,
+				m_jointDriveDampingThicknessFactor) *
+			m_jointDriveDampingFactor,
+			m_enableAccelerationForDrive);
+#endif
+	}
 
 	template <typename SrcSkeletonData, typename SrcFlowData, typename SrcNodeData>
 	void Tree::FromSkeleton(const Skeleton<SrcSkeletonData, SrcFlowData, SrcNodeData>& srcSkeleton)
 	{
-		
+
 		auto treeDescriptor = m_treeDescriptor.Get<TreeDescriptor>();
 		if (!treeDescriptor) {
 			EVOENGINE_WARNING("Growing tree without tree descriptor!");

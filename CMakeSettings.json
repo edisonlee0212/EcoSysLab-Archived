@@ -20,6 +20,11 @@
           "name": "NO_DX",
           "value": "True",
           "type": "BOOL"
+        },
+        {
+          "name": "BUILD_WITH_PHYSICS",
+          "value": "True",
+          "type": "BOOL"
         }
       ]
     },
@@ -41,6 +46,11 @@
         },
         {
           "name": "NO_DX",
+          "value": "True",
+          "type": "BOOL"
+        },
+        {
+          "name": "BUILD_WITH_PHYSICS",
           "value": "True",
           "type": "BOOL"
         }
@@ -66,8 +76,7 @@
       "cmakeCommandArgs": "",
       "buildCommandArgs": "",
       "ctestCommandArgs": "",
-      "inheritEnvironments": [ "msvc_x64_x64" ],
-      "variables": []
+      "inheritEnvironments": [ "msvc_x64_x64" ]
     }
   ]
 }

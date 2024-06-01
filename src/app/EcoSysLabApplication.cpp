@@ -82,11 +82,15 @@ int main() {
 #ifdef BUILD_WITH_RAYTRACER
 	Application::PushLayer<RayTracerLayer>();
 #endif
+
+#ifdef BUILD_WITH_PHYSICS
+	Application::PushLayer<PhysicsLayer>();
+#endif
 	Application::PushLayer<EcoSysLabLayer>();
 	ClassRegistry::RegisterPrivateComponent<ObjectRotator>("ObjectRotator");
 	ClassRegistry::RegisterPrivateComponent<Physics2DDemo>("Physics2DDemo");
 	ClassRegistry::RegisterPrivateComponent<ParticlePhysics2DDemo>("ParticlePhysics2DDemo");
-	
+
 	ApplicationInfo applicationConfigs;
 	applicationConfigs.m_applicationName = "EcoSysLab";
 	applicationConfigs.m_projectPath = std::filesystem::absolute(resourceFolderPath / "EcoSysLabProject" / "test.eveproj");
@@ -96,7 +100,9 @@ int main() {
 
 	auto rayTracerLayer = Application::GetLayer<RayTracerLayer>();
 #endif
-
+#ifdef BUILD_WITH_PHYSICS
+	Application::GetActiveScene()->GetOrCreateSystem<PhysicsSystem>(1);
+#endif
 	// adjust default camera speed
 	const auto editorLayer = Application::GetLayer<EditorLayer>();
 	editorLayer->m_velocity = 2.f;
