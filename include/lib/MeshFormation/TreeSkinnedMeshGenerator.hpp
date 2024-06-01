@@ -13,8 +13,7 @@ namespace EcoSysLab {
 			const Skeleton<SkeletonData, FlowData, NodeData>& skeleton,
 			const std::vector<SkeletonFlowHandle>& flowHandles,
 			std::vector<glm::mat4>& offsetMatrices,
-			std::unordered_map<SkeletonFlowHandle, int>& flowStartBoneIdMap,
-			std::unordered_map<SkeletonFlowHandle, int>& flowEndBoneIdMap);
+			std::unordered_map<SkeletonFlowHandle, int>& flowBoneIdMap);
 		static void Generate(const Skeleton<SkeletonData, FlowData, NodeData>& skeleton,
 			std::vector<SkinnedVertex>& skinnedVertices, std::vector<unsigned int>& indices, std::vector<glm::mat4>& offsetMatrices,
 			const TreeMeshGeneratorSettings& settings,
@@ -27,33 +26,18 @@ namespace EcoSysLab {
 		const Skeleton<SkeletonData, FlowData, NodeData>& skeleton,
 		const std::vector<SkeletonFlowHandle>& flowHandles,
 		std::vector<glm::mat4>& offsetMatrices,
-		std::unordered_map<SkeletonFlowHandle, int>& flowStartBoneIdMap,
-		std::unordered_map<SkeletonFlowHandle, int>& flowEndBoneIdMap)
+		std::unordered_map<SkeletonFlowHandle, int>& flowBoneIdMap)
 	{
-		flowStartBoneIdMap.clear();
-		flowEndBoneIdMap.clear();
+		flowBoneIdMap.clear();
 		int currentBoneIndex = 0;
 		for (const auto& flowHandle : flowHandles)
 		{
-			flowStartBoneIdMap[flowHandle] = currentBoneIndex;
+			flowBoneIdMap[flowHandle] = currentBoneIndex;
 			currentBoneIndex++;
 		}
 
-		for (const auto& flowHandle : flowHandles)
-		{
-			const auto& flow = skeleton.PeekFlow(flowHandle);
-			const auto& children = flow.PeekChildHandles();
-			flowEndBoneIdMap[flowHandle] = flowStartBoneIdMap[flowHandle];
-			/*
-			if(children.empty()) flowEndBoneIdMap[flowHandle] = flowStartBoneIdMap[flowHandle];
-			else
-			{
-				flowEndBoneIdMap[flowHandle] = flowStartBoneIdMap[children.front()];
-			}*/
-		}
-
 		offsetMatrices.resize(currentBoneIndex + 1);
-		for(const auto& [flowHandle, matrixIndex] : flowStartBoneIdMap)
+		for(const auto& [flowHandle, matrixIndex] : flowBoneIdMap)
 		{
 			const auto& flow = skeleton.PeekFlow(flowHandle);
 			offsetMatrices[matrixIndex] = glm::inverse(glm::translate(flow.m_info.m_globalStartPosition) * glm::mat4_cast(flow.m_info.m_globalStartRotation));
@@ -185,10 +169,9 @@ namespace EcoSysLab {
 		int nextLineIndex = 0;
 		std::unordered_map<SkeletonNodeHandle, TreePartInfo> treePartInfos{};
 
-		std::unordered_map<SkeletonFlowHandle, int> flowStartBoneIdMap;
-		std::unordered_map<SkeletonFlowHandle, int> flowEndBoneIdMap;
+		std::unordered_map<SkeletonFlowHandle, int> flowBoneIdMap;
 
-		GenerateBones(skeleton, sortedFlowList, offsetMatrices, flowStartBoneIdMap, flowEndBoneIdMap);
+		GenerateBones(skeleton, sortedFlowList, offsetMatrices, flowBoneIdMap);
 
 		for (int internodeIndex = 0; internodeIndex < sortedInternodeList.size(); internodeIndex++) {
 			auto internodeHandle = sortedInternodeList[internodeIndex];
@@ -391,16 +374,16 @@ namespace EcoSysLab {
 					archetype.m_texCoord = glm::vec2(xFactor, yFactor);
 					texCoordsModifier(archetype.m_texCoord, xFactor, yFactor);
 					if (settings.m_vertexColorMode == static_cast<unsigned>(TreeMeshGeneratorSettings::VertexColorMode::InternodeColor)) archetype.m_color = internodeInfo.m_color;
-					if(parentFlowHandle != -1) archetype.m_bondId = glm::ivec4(flowStartBoneIdMap[parentFlowHandle], flowEndBoneIdMap[parentFlowHandle], -1, -1);
+					if(parentFlowHandle != -1) archetype.m_bondId = glm::ivec4(flowBoneIdMap[parentFlowHandle], flowBoneIdMap[parentFlowHandle], -1, -1);
 					else{
-						archetype.m_bondId = glm::ivec4(-1, flowStartBoneIdMap[0], -1, -1);
+						archetype.m_bondId = glm::ivec4(-1, flowBoneIdMap[0], -1, -1);
 					}
 					archetype.m_weight.x = 0.f;
 					archetype.m_weight.y = 1.f;
 					skinnedVertices.push_back(archetype);
 				}
 			}
-			archetype.m_bondId = glm::ivec4(flowStartBoneIdMap[flowHandle], flowEndBoneIdMap[flowHandle], -1, -1);
+			archetype.m_bondId = glm::ivec4(flowBoneIdMap[flowHandle], flowBoneIdMap[flowHandle], -1, -1);
 			archetype.m_bondId2 = glm::ivec4(-1);
 			archetype.m_weight = archetype.m_weight2 = glm::vec4(0.f);
 

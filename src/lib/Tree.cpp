@@ -2170,10 +2170,9 @@ void Tree::GenerateAnimatedGeometryEntities(const TreeMeshGeneratorSettings& mes
 	const auto& skeleton = m_treeModel.PeekShootSkeleton(actualIteration);
 	const auto& sortedFlowList = skeleton.PeekSortedFlowList();
 	std::vector<glm::mat4> offsetMatrices;
-	std::unordered_map<SkeletonFlowHandle, int> flowStartBoneIdMap;
-	std::unordered_map<SkeletonFlowHandle, int> flowEndBoneIdMap;
+	std::unordered_map<SkeletonFlowHandle, int> flowBoneIdMap;
 
-	CylindricalSkinnedMeshGenerator<ShootGrowthData, ShootStemGrowthData, InternodeGrowthData>::GenerateBones(skeleton, sortedFlowList, offsetMatrices, flowStartBoneIdMap, flowEndBoneIdMap);
+	CylindricalSkinnedMeshGenerator<ShootGrowthData, ShootStemGrowthData, InternodeGrowthData>::GenerateBones(skeleton, sortedFlowList, offsetMatrices, flowBoneIdMap);
 
 	std::vector<std::string> names;
 	std::vector<Entity> boundEntities;
@@ -2183,7 +2182,7 @@ void Tree::GenerateAnimatedGeometryEntities(const TreeMeshGeneratorSettings& mes
 	names.resize(offsetMatrices.size());
 	std::unordered_map<SkeletonFlowHandle, Entity> correspondingFlowHandles;
 	std::unordered_map<unsigned, SkeletonFlowHandle> correspondingEntities;
-	for (const auto& [flowHandle, matrixIndex] : flowStartBoneIdMap)
+	for (const auto& [flowHandle, matrixIndex] : flowBoneIdMap)
 	{
 		names[matrixIndex] = std::to_string(flowHandle);
 		boundEntities[matrixIndex] = scene->CreateEntity(names[matrixIndex]);
@@ -2344,7 +2343,7 @@ void Tree::GenerateAnimatedGeometryEntities(const TreeMeshGeneratorSettings& mes
 				std::vector<glm::mat4> leafMatrices;
 				foliageDescriptor->GenerateFoliageMatrices(leafMatrices, internodeInfo, glm::length(treeDim));
 				SkinnedVertex archetype;
-				archetype.m_bondId = glm::ivec4(flowStartBoneIdMap[flowHandle], flowEndBoneIdMap[flowHandle], -1, -1);
+				archetype.m_bondId = glm::ivec4(flowBoneIdMap[flowHandle], flowBoneIdMap[flowHandle], -1, -1);
 				archetype.m_bondId2 = glm::ivec4(-1);
 				archetype.m_weight = glm::vec4(.5f, .5f, .0f, .0f);
 				archetype.m_weight2 = glm::vec4(0.f);
