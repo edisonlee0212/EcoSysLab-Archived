@@ -35,22 +35,28 @@ namespace EcoSysLab {
 		int currentBoneIndex = 0;
 		for (const auto& flowHandle : flowHandles)
 		{
+			flowStartBoneIdMap[flowHandle] = currentBoneIndex;
+			currentBoneIndex++;
+		}
+
+		for (const auto& flowHandle : flowHandles)
+		{
 			const auto& flow = skeleton.PeekFlow(flowHandle);
-			const auto parentFlowHandle = flow.GetParentHandle();
-			if (parentFlowHandle == -1) flowStartBoneIdMap[flowHandle] = currentBoneIndex;
+			const auto& children = flow.PeekChildHandles();
+			flowEndBoneIdMap[flowHandle] = flowStartBoneIdMap[flowHandle];
+			/*
+			if(children.empty()) flowEndBoneIdMap[flowHandle] = flowStartBoneIdMap[flowHandle];
 			else
 			{
-				flowStartBoneIdMap[flowHandle] = flowEndBoneIdMap[parentFlowHandle];
-			}
-			if(!flow.PeekChildHandles().empty()) currentBoneIndex++;
-			flowEndBoneIdMap[flowHandle] = currentBoneIndex;
+				flowEndBoneIdMap[flowHandle] = flowStartBoneIdMap[children.front()];
+			}*/
 		}
+
 		offsetMatrices.resize(currentBoneIndex + 1);
 		for(const auto& [flowHandle, matrixIndex] : flowStartBoneIdMap)
 		{
 			const auto& flow = skeleton.PeekFlow(flowHandle);
-			const auto& startNode = skeleton.PeekNode(flow.PeekNodeHandles().front());
-			offsetMatrices[matrixIndex] = glm::inverse(glm::translate(startNode.m_info.m_globalPosition) * glm::mat4_cast(startNode.m_info.m_globalRotation));
+			offsetMatrices[matrixIndex] = glm::inverse(glm::translate(flow.m_info.m_globalStartPosition) * glm::mat4_cast(flow.m_info.m_globalStartRotation));
 		}
 	}
 
@@ -193,7 +199,7 @@ namespace EcoSysLab {
 			const auto flowHandle = internode.GetFlowHandle();
 			const auto& flow = skeleton.PeekFlow(flowHandle);
 			const auto& chainHandles = flow.PeekNodeHandles();
-
+			const auto parentFlowHandle = flow.GetParentHandle();
 			float distanceToChainStart = 0;
 			float distanceToChainEnd = 0;
 			const auto chainSize = chainHandles.size();
@@ -210,7 +216,7 @@ namespace EcoSysLab {
 
 				const bool hasMultipleChildren = flow.PeekChildHandles().size() > 1;
 				bool onlyChild = true;
-				const auto parentFlowHandle = flow.GetParentHandle();
+				
 				float compareRadius = internode.m_info.m_thickness;
 				if (parentFlowHandle != -1)
 				{
@@ -369,10 +375,7 @@ namespace EcoSysLab {
 			float pAngleStep = 360.0f / static_cast<float>(pStep);
 			int vertexIndex = skinnedVertices.size();
 
-			archetype.m_bondId = glm::ivec4(flowStartBoneIdMap[flowHandle], flowEndBoneIdMap[flowHandle], -1, -1);
-			archetype.m_bondId2 = glm::ivec4(-1);
-			archetype.m_weight = archetype.m_weight2 = glm::vec4(0.f);
-
+			
 			archetype.m_vertexInfo1 = internodeHandle + 1;
 			archetype.m_vertexInfo2 = flowHandle + 1;
 
@@ -388,12 +391,19 @@ namespace EcoSysLab {
 					archetype.m_texCoord = glm::vec2(xFactor, yFactor);
 					texCoordsModifier(archetype.m_texCoord, xFactor, yFactor);
 					if (settings.m_vertexColorMode == static_cast<unsigned>(TreeMeshGeneratorSettings::VertexColorMode::InternodeColor)) archetype.m_color = internodeInfo.m_color;
-
-					archetype.m_weight.x = 1.f;//glm::clamp(distanceToChainStart / (distanceToChainStart + distanceToChainEnd), 0.f, 1.f);
-					archetype.m_weight.y = 0.f;//glm::clamp(distanceToChainEnd / (distanceToChainStart + distanceToChainEnd), 0.f, 1.f);
+					if(parentFlowHandle != -1) archetype.m_bondId = glm::ivec4(flowStartBoneIdMap[parentFlowHandle], flowEndBoneIdMap[parentFlowHandle], -1, -1);
+					else{
+						archetype.m_bondId = glm::ivec4(-1, flowStartBoneIdMap[0], -1, -1);
+					}
+					archetype.m_weight.x = 0.f;
+					archetype.m_weight.y = 1.f;
 					skinnedVertices.push_back(archetype);
 				}
 			}
+			archetype.m_bondId = glm::ivec4(flowStartBoneIdMap[flowHandle], flowEndBoneIdMap[flowHandle], -1, -1);
+			archetype.m_bondId2 = glm::ivec4(-1);
+			archetype.m_weight = archetype.m_weight2 = glm::vec4(0.f);
+
 			std::vector<float> angles;
 			angles.resize(step);
 			std::vector<float> pAngles;
@@ -448,8 +458,8 @@ namespace EcoSysLab {
 					texCoordsModifier(archetype.m_texCoord, xFactor, yFactor);
 					if (settings.m_vertexColorMode == static_cast<unsigned>(TreeMeshGeneratorSettings::VertexColorMode::InternodeColor)) archetype.m_color = internodeInfo.m_color;
 
-					archetype.m_weight.x = 1.f;//glm::clamp(distanceToChainStart / (distanceToChainStart + distanceToChainEnd), 0.f, 1.f);
-					archetype.m_weight.y = 0.f;//glm::clamp(distanceToChainEnd / (distanceToChainStart + distanceToChainEnd), 0.f, 1.f);
+					archetype.m_weight.x = glm::clamp((distanceToChainStart + ring.m_endA * internode.m_info.m_length)/ (distanceToChainStart + distanceToChainEnd), 0.f, 1.f);
+					archetype.m_weight.y = glm::clamp((distanceToChainEnd - ring.m_endA * internode.m_info.m_length) / (distanceToChainStart + distanceToChainEnd), 0.f, 1.f);
 					skinnedVertices.push_back(archetype);
 				}
 				if (ringIndex == 0)

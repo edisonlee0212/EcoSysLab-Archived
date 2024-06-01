@@ -2165,7 +2165,7 @@ void Tree::GenerateAnimatedGeometryEntities(const TreeMeshGeneratorSettings& mes
 	std::vector<glm::mat4> offsetMatrices;
 	std::unordered_map<SkeletonFlowHandle, int> flowStartBoneIdMap;
 	std::unordered_map<SkeletonFlowHandle, int> flowEndBoneIdMap;
-	
+
 	CylindricalSkinnedMeshGenerator<ShootGrowthData, ShootStemGrowthData, InternodeGrowthData>::GenerateBones(skeleton, sortedFlowList, offsetMatrices, flowStartBoneIdMap, flowEndBoneIdMap);
 
 	std::vector<std::string> names;
@@ -2176,7 +2176,7 @@ void Tree::GenerateAnimatedGeometryEntities(const TreeMeshGeneratorSettings& mes
 	names.resize(offsetMatrices.size());
 	std::unordered_map<SkeletonFlowHandle, Entity> correspondingFlowHandles;
 
-	for(const auto& [flowHandle, matrixIndex] : flowStartBoneIdMap)
+	for (const auto& [flowHandle, matrixIndex] : flowStartBoneIdMap)
 	{
 		names[matrixIndex] = std::to_string(flowHandle);
 		boundEntities[matrixIndex] = scene->CreateEntity(names[matrixIndex]);
@@ -2184,18 +2184,17 @@ void Tree::GenerateAnimatedGeometryEntities(const TreeMeshGeneratorSettings& mes
 
 		correspondingFlowHandles[flowHandle] = boundEntities[matrixIndex];
 		GlobalTransform globalTransform;
-		
-		const auto& startNode = skeleton.PeekNode(flow.PeekNodeHandles().front());
-		globalTransform.m_value = treeGlobalTransform.m_value * (glm::translate(startNode.m_info.m_globalPosition) * glm::mat4_cast(startNode.m_info.m_globalRotation));
+
+		globalTransform.m_value = treeGlobalTransform.m_value * (glm::translate(flow.m_info.m_globalStartPosition) * glm::mat4_cast(flow.m_info.m_globalStartRotation));
 		scene->SetDataComponent(boundEntities[matrixIndex], globalTransform);
-		
+
 		boneIndicesLists[matrixIndex] = matrixIndex;
 	}
-	for(const auto& flowHandle : sortedFlowList)
+	for (const auto& flowHandle : sortedFlowList)
 	{
 		const auto& flow = skeleton.PeekFlow(flowHandle);
 		const auto& parentFlowHandle = flow.GetParentHandle();
-		if(parentFlowHandle != -1) scene->SetParent(correspondingFlowHandles[flowHandle], correspondingFlowHandles[parentFlowHandle]);
+		if (parentFlowHandle != -1) scene->SetParent(correspondingFlowHandles[flowHandle], correspondingFlowHandles[parentFlowHandle]);
 		else
 		{
 			scene->SetParent(correspondingFlowHandles[flowHandle], ragDoll);
@@ -2256,7 +2255,7 @@ void Tree::GenerateAnimatedGeometryEntities(const TreeMeshGeneratorSettings& mes
 				{});
 		}
 		else {
-			CylindricalSkinnedMeshGenerator<ShootGrowthData, ShootStemGrowthData, InternodeGrowthData>::Generate(m_treeModel.PeekShootSkeleton(), skinnedVertices, indices,
+			CylindricalSkinnedMeshGenerator<ShootGrowthData, ShootStemGrowthData, InternodeGrowthData>::Generate(skeleton, skinnedVertices, indices,
 				offsetMatrices, meshGeneratorSettings,
 				[&](glm::vec3& vertexPosition, const glm::vec3& direction, const float xFactor, const float yFactor)
 				{
@@ -2270,7 +2269,7 @@ void Tree::GenerateAnimatedGeometryEntities(const TreeMeshGeneratorSettings& mes
 				{}
 			);
 		}
-		
+
 		skinnedMesh->m_boneAnimatorIndices = boneIndicesLists;
 		SkinnedVertexAttributes attributes{};
 		attributes.m_texCoord = true;
@@ -2311,8 +2310,92 @@ void Tree::GenerateAnimatedGeometryEntities(const TreeMeshGeneratorSettings& mes
 			material->m_materialProperties.m_roughness = 1.0f;
 			material->m_materialProperties.m_metallic = 0.0f;
 		}
+		std::vector<SkinnedVertex> skinnedVertices;
+		std::vector<unsigned> indices;
+		{
+			auto quadMesh = Resources::GetResource<Mesh>("PRIMITIVE_QUAD");
+			auto& quadTriangles = quadMesh->UnsafeGetTriangles();
+			auto quadVerticesSize = quadMesh->GetVerticesAmount();
+			size_t offset = 0;
+			if (!treeDescriptor)
+			{
+				EVOENGINE_WARNING("TreeDescriptor missing!");
+				treeDescriptor = ProjectManager::CreateTemporaryAsset<TreeDescriptor>();
+				treeDescriptor->m_foliageDescriptor = ProjectManager::CreateTemporaryAsset<FoliageDescriptor>();
+			}
+			auto foliageDescriptor = treeDescriptor->m_foliageDescriptor.Get<FoliageDescriptor>();
+			if (!foliageDescriptor) foliageDescriptor = ProjectManager::CreateTemporaryAsset<FoliageDescriptor>();
+			const auto treeDim = skeleton.m_max - skeleton.m_min;
+			
+			const auto& nodeList = skeleton.PeekSortedNodeList();
+			for (const auto& internodeHandle : nodeList) {
+				const auto& node = skeleton.PeekNode(internodeHandle);
+				const auto flowHandle = node.GetFlowHandle();
+				const auto& flow = skeleton.PeekFlow(flowHandle);
+				const auto& internodeInfo = node.m_info;
+				std::vector<glm::mat4> leafMatrices;
+				foliageDescriptor->GenerateFoliageMatrices(leafMatrices, internodeInfo, glm::length(treeDim));
+				SkinnedVertex archetype;
+				archetype.m_bondId = glm::ivec4(flowStartBoneIdMap[flowHandle], flowEndBoneIdMap[flowHandle], -1, -1);
+				archetype.m_bondId2 = glm::ivec4(-1);
+				archetype.m_weight = glm::vec4(.5f, .5f, .0f, .0f);
+				archetype.m_weight2 = glm::vec4(0.f);
+
+				for (const auto& matrix : leafMatrices)
+				{
+					for (auto i = 0; i < quadMesh->GetVerticesAmount(); i++) {
+						archetype.m_position =
+							matrix * glm::vec4(quadMesh->UnsafeGetVertices()[i].m_position, 1.0f);
+						archetype.m_normal = glm::normalize(glm::vec3(
+							matrix * glm::vec4(quadMesh->UnsafeGetVertices()[i].m_normal, 0.0f)));
+						archetype.m_tangent = glm::normalize(glm::vec3(
+							matrix *
+							glm::vec4(quadMesh->UnsafeGetVertices()[i].m_tangent, 0.0f)));
+						archetype.m_texCoord =
+							quadMesh->UnsafeGetVertices()[i].m_texCoord;
+						archetype.m_color = internodeInfo.m_color;
+						skinnedVertices.push_back(archetype);
+					}
+					for (auto triangle : quadTriangles) {
+						triangle.x += offset;
+						triangle.y += offset;
+						triangle.z += offset;
+						indices.push_back(triangle.x);
+						indices.push_back(triangle.y);
+						indices.push_back(triangle.z);
+					}
+
+					offset += quadVerticesSize;
+
+					for (auto i = 0; i < quadMesh->GetVerticesAmount(); i++) {
+						archetype.m_position =
+							matrix * glm::vec4(quadMesh->UnsafeGetVertices()[i].m_position, 1.0f);
+						archetype.m_normal = glm::normalize(glm::vec3(
+							matrix * glm::vec4(quadMesh->UnsafeGetVertices()[i].m_normal, 0.0f)));
+						archetype.m_tangent = glm::normalize(glm::vec3(
+							matrix *
+							glm::vec4(quadMesh->UnsafeGetVertices()[i].m_tangent, 0.0f)));
+						archetype.m_texCoord =
+							quadMesh->UnsafeGetVertices()[i].m_texCoord;
+						skinnedVertices.push_back(archetype);
+					}
+					for (auto triangle : quadTriangles) {
+						triangle.x += offset;
+						triangle.y += offset;
+						triangle.z += offset;
+						indices.push_back(triangle.z);
+						indices.push_back(triangle.y);
+						indices.push_back(triangle.x);
+					}
+					offset += quadVerticesSize;
+				}
+			}
+		}
 
 		skinnedMesh->m_boneAnimatorIndices = boneIndicesLists;
+		SkinnedVertexAttributes attributes{};
+		attributes.m_texCoord = true;
+		skinnedMesh->SetVertices(attributes, skinnedVertices, indices);
 		skinnedMeshRenderer->m_animator = animator;
 		skinnedMeshRenderer->m_skinnedMesh = skinnedMesh;
 		skinnedMeshRenderer->m_material = material;
