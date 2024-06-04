@@ -3000,9 +3000,9 @@ void BranchPhysicsParameters::Serialize(YAML::Emitter& out)
 	out << YAML::Key << "m_angularDamping" << YAML::Value << m_angularDamping;
 	out << YAML::Key << "m_positionSolverIteration" << YAML::Value << m_positionSolverIteration;
 	out << YAML::Key << "m_velocitySolverIteration" << YAML::Value << m_velocitySolverIteration;
-	out << YAML::Key << "m_jointDriveStiffnessFactor" << YAML::Value << m_jointDriveStiffnessFactor;
+	out << YAML::Key << "m_jointDriveStiffness" << YAML::Value << m_jointDriveStiffness;
 	out << YAML::Key << "m_jointDriveStiffnessThicknessFactor" << YAML::Value << m_jointDriveStiffnessThicknessFactor;
-	out << YAML::Key << "m_jointDriveDampingFactor" << YAML::Value << m_jointDriveDampingFactor;
+	out << YAML::Key << "m_jointDriveDamping" << YAML::Value << m_jointDriveDamping;
 	out << YAML::Key << "m_jointDriveDampingThicknessFactor" << YAML::Value << m_jointDriveDampingThicknessFactor;
 	out << YAML::Key << "m_enableAccelerationForDrive" << YAML::Value << m_enableAccelerationForDrive;
 	out << YAML::Key << "m_minimumThickness" << YAML::Value << m_minimumThickness;
@@ -3014,9 +3014,9 @@ void BranchPhysicsParameters::Deserialize(const YAML::Node& in)
 	if (in["m_angularDamping"]) m_angularDamping = in["m_angularDamping"].as<float>();
 	if (in["m_positionSolverIteration"]) m_positionSolverIteration = in["m_positionSolverIteration"].as<int>();
 	if (in["m_velocitySolverIteration"]) m_velocitySolverIteration = in["m_velocitySolverIteration"].as<int>();
-	if (in["m_jointDriveStiffnessFactor"]) m_jointDriveStiffnessFactor = in["m_jointDriveStiffnessFactor"].as<float>();
+	if (in["m_jointDriveStiffness"]) m_jointDriveStiffness = in["m_jointDriveStiffness"].as<float>();
 	if (in["m_jointDriveStiffnessThicknessFactor"]) m_jointDriveStiffnessThicknessFactor = in["m_jointDriveStiffnessThicknessFactor"].as<float>();
-	if (in["m_jointDriveDampingFactor"]) m_jointDriveDampingFactor = in["m_jointDriveDampingFactor"].as<float>();
+	if (in["m_jointDriveDamping"]) m_jointDriveDamping = in["m_jointDriveDamping"].as<float>();
 	if (in["m_jointDriveDampingThicknessFactor"]) m_jointDriveDampingThicknessFactor = in["m_jointDriveDampingThicknessFactor"].as<float>();
 	if (in["m_enableAccelerationForDrive"]) m_enableAccelerationForDrive = in["m_enableAccelerationForDrive"].as<bool>();
 	if (in["m_minimumThickness"]) m_minimumThickness = in["m_minimumThickness"].as<float>();
@@ -3027,11 +3027,17 @@ void BranchPhysicsParameters::OnInspect()
 {
 	if (ImGui::TreeNodeEx("Physics Parameters")) {
 		ImGui::DragFloat("Internode Density", &m_density, 0.1f, 0.01f, 1000.0f);
-		ImGui::DragFloat2("RigidBody Damping", &m_linearDamping, 0.1f, 0.01f,
+		ImGui::DragFloat("RigidBody Linear Damping", &m_linearDamping, 0.1f, 0.01f,
 			1000.0f);
-		ImGui::DragFloat2("Drive Stiffness", &m_jointDriveStiffnessFactor, 0.1f,
+		ImGui::DragFloat("RigidBody Angular Damping", &m_angularDamping, 0.1f, 0.01f,
+			1000.0f);
+		ImGui::DragFloat("Drive Stiffness", &m_jointDriveStiffness, 0.1f,
 			0.01f, 1000000.0f);
-		ImGui::DragFloat2("Drive Damping", &m_jointDriveDampingFactor, 0.1f, 0.01f,
+		ImGui::DragFloat("Drive Stiffness Thickness Factor", &m_jointDriveStiffnessThicknessFactor, 0.1f,
+			0.01f, 1000000.0f);
+		ImGui::DragFloat("Drive Damping", &m_jointDriveDamping, 0.1f, 0.01f,
+			1000000.0f);
+		ImGui::DragFloat("Drive Damping Thickness Factor", &m_jointDriveDampingThicknessFactor, 0.1f, 0.01f,
 			1000000.0f);
 		ImGui::Checkbox("Use acceleration", &m_enableAccelerationForDrive);
 

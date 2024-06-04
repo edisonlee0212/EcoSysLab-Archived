@@ -69,11 +69,9 @@ void forest_patch_point_cloud()
 	start_project_windowless(project_path);
 
 	TreeMeshGeneratorSettings tmgs{};
-	tmgs.m_xSubdivision = 0.01f;
-	tmgs.m_branchYSubdivision = 0.03f;
-	tmgs.m_trunkYSubdivision = 0.01f;
+	tmgs.m_branchYSubdivision = 0.05f;
+	tmgs.m_trunkYSubdivision = 0.05f;
 	tmgs.m_enableFoliage = true;
-	tmgs.m_enableTwig = true;
 	tmgs.m_vertexColorMode = static_cast<unsigned>(TreeMeshGeneratorSettings::VertexColorMode::Junction);
 	std::filesystem::path output_root = "D:\\ForestPointCloudData\\";
 
@@ -92,13 +90,13 @@ void forest_patch_point_cloud()
 	treePointCloudCircularCaptureSettings->m_distance = 4.0f;
 	treePointCloudCircularCaptureSettings->m_height = 3.0f;
 
-	glm::ivec2 gridSize = { 8, 8 };
+	glm::ivec2 gridSize = { 17, 17 };
 	treePointCloudGridCaptureSettings->m_gridSize = { gridSize.x + 1, gridSize.y + 1 };
-	treePointCloudGridCaptureSettings->m_backpackSample = 2048;
-	treePointCloudGridCaptureSettings->m_droneSample = 512;
+	treePointCloudGridCaptureSettings->m_backpackSample = 1024;
+	treePointCloudGridCaptureSettings->m_droneSample = 256;
 
 	std::filesystem::path target_descriptor_folder_path = resourceFolderPath / "EcoSysLabProject" / "Digital Forestry";
-	for (int index = 0; index < 512; index++) {
+	for (int index = 0; index < 256; index++) {
 		for (const auto& i : std::filesystem::recursive_directory_iterator(target_descriptor_folder_path))
 		{
 			if (i.is_regular_file() && i.path().extension().string() == ".forestpatch")
@@ -118,7 +116,78 @@ void forest_patch_point_cloud()
 					treePointCloudPointSettings,
 					treePointCloudGridCaptureSettings,
 					forestPatch,
-					tmgs, target_tree_point_cloud_path.string(), false);
+					tmgs, target_tree_point_cloud_path.string());
+			}
+		}
+	}
+
+}
+
+void forest_patch_point_cloud_joined()
+{
+	std::filesystem::path resourceFolderPath("D:/GitHub/EcoSysLab/Resources");
+	if (!std::filesystem::exists(resourceFolderPath)) {
+		resourceFolderPath = "../../Resources";
+	}
+	if (!std::filesystem::exists(resourceFolderPath)) {
+		resourceFolderPath = "../Resources";
+	}
+	resourceFolderPath = std::filesystem::absolute(resourceFolderPath);
+
+	std::filesystem::path project_path = resourceFolderPath / "EcoSysLabProject" / "test.eveproj";
+	start_project_windowless(project_path);
+
+	TreeMeshGeneratorSettings tmgs{};
+	tmgs.m_branchYSubdivision = 0.05f;
+	tmgs.m_trunkYSubdivision = 0.05f;
+	tmgs.m_enableFoliage = true;
+	tmgs.m_vertexColorMode = static_cast<unsigned>(TreeMeshGeneratorSettings::VertexColorMode::Junction);
+	std::filesystem::path output_root = "D:\\ForestPointCloudData\\";
+
+	std::filesystem::create_directories(output_root);
+
+	TreePointCloudPointSettings treePointCloudPointSettings{};
+	std::shared_ptr<TreePointCloudCircularCaptureSettings> treePointCloudCircularCaptureSettings = std::make_shared<TreePointCloudCircularCaptureSettings>();
+	std::shared_ptr<TreePointCloudGridCaptureSettings> treePointCloudGridCaptureSettings = std::make_shared<TreePointCloudGridCaptureSettings>();
+	treePointCloudPointSettings.m_ballRandRadius = 0.0f;
+	treePointCloudPointSettings.m_treePartIndex = false;
+	treePointCloudPointSettings.m_instanceIndex = true;
+	treePointCloudPointSettings.m_typeIndex = true;
+	treePointCloudPointSettings.m_treePartTypeIndex = false;
+	treePointCloudPointSettings.m_branchIndex = false;
+	treePointCloudPointSettings.m_lineIndex = false;
+	treePointCloudCircularCaptureSettings->m_distance = 4.0f;
+	treePointCloudCircularCaptureSettings->m_height = 3.0f;
+
+	glm::ivec2 gridSize = { 17, 17 };
+	treePointCloudGridCaptureSettings->m_gridSize = { gridSize.x + 1, gridSize.y + 1 };
+	treePointCloudGridCaptureSettings->m_backpackSample = 1024;
+	treePointCloudGridCaptureSettings->m_droneSample = 256;
+	std::string folderName = "Coniferous";
+	std::filesystem::path target_descriptor_folder_path = resourceFolderPath / "EcoSysLabProject" / folderName;
+
+	for (int index = 0; index < 256; index++) {
+		for (const auto& i : std::filesystem::recursive_directory_iterator(target_descriptor_folder_path))
+		{
+			if (i.is_regular_file() && i.path().extension().string() == ".forestpatch")
+			{
+				const auto forestPatch =
+					std::dynamic_pointer_cast<ForestPatch>(ProjectManager::GetOrCreateAsset(ProjectManager::GetPathRelativeToProject(i.path())));
+				std::filesystem::create_directories(output_root / forestPatch->GetTitle());
+
+
+				std::string name = folderName + "_" + std::to_string(index);
+				std::filesystem::path target_tree_point_cloud_path = output_root / folderName / (name + ".ply");
+
+				treePointCloudGridCaptureSettings->m_gridDistance = forestPatch->m_gridDistance;
+
+				DatasetGenerator::GeneratePointCloudForForestPatchJoinedSpecies(
+					gridSize,
+					treePointCloudPointSettings,
+					treePointCloudGridCaptureSettings,
+					forestPatch,
+					target_descriptor_folder_path.string(),
+					tmgs, target_tree_point_cloud_path.string());
 			}
 		}
 	}
@@ -196,7 +265,6 @@ void tree_trunk_mesh()
 	tmgs.m_branchYSubdivision = 0.03f;
 	tmgs.m_trunkYSubdivision = 0.01f;
 	tmgs.m_enableFoliage = true;
-	tmgs.m_enableTwig = true;
 
 	std::filesystem::path output_root = "D:\\TreeTrunkData\\";
 	std::filesystem::create_directories(output_root);
@@ -243,7 +311,6 @@ void tree_growth_mesh()
 	tmgs.m_branchYSubdivision = 0.03f;
 	tmgs.m_trunkYSubdivision = 0.01f;
 	tmgs.m_enableFoliage = true;
-	tmgs.m_enableTwig = true;
 
 	std::filesystem::path output_root = "D:\\TreeGrowth\\";
 	std::filesystem::create_directories(output_root);
@@ -290,7 +357,6 @@ void apple_tree_growth()
 	tmgs.m_branchYSubdivision = 0.03f;
 	tmgs.m_trunkYSubdivision = 0.01f;
 	tmgs.m_enableFoliage = true;
-	tmgs.m_enableTwig = true;
 
 	std::filesystem::path output_root = "D:\\TreeGrowth\\";
 	std::filesystem::create_directories(output_root);
@@ -314,5 +380,5 @@ void apple_tree_growth()
 int main() {
 	//apple_tree_growth();
 	//sorghum_field_point_cloud();
-	forest_patch_point_cloud();
+	forest_patch_point_cloud_joined();
 }

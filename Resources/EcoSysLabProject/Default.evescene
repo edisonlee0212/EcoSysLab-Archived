@@ -19,7 +19,7 @@ m_entityMetadataList:
       - m_typeName: Soil
         m_enabled: true
         m_soilDescriptor:
-          m_assetHandle: 1718482293111794114
+          m_assetHandle: 1508474816598170180
           m_assetTypeName: SoilDescriptor
   - m_name: Climate
     m_handle: 8924180446070587710
@@ -148,7 +148,10 @@ m_entityMetadataList:
       - m_typeName: BillboardCloudsConverter
         m_enabled: true
 m_systems:
-  []
+  - m_typeName: PhysicsSystem
+    m_enabled: true
+    m_rank: 1
+    m_handle: 15331458266091749286
 LocalAssets:
   - m_typeName: Material
     m_handle: 2148205339428634797

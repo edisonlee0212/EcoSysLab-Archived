@@ -69,7 +69,7 @@ namespace EcoSysLab {
 	class TreePointCloudScanner : public IPrivateComponent{
 	public:
         TreePointCloudPointSettings m_pointSettings;
-        void Capture(const TreeMeshGeneratorSettings& meshGeneratorSettings, const std::filesystem::path& savePath, bool exportJunction, const std::shared_ptr<PointCloudCaptureSettings>& captureSettings) const;
+        void Capture(const TreeMeshGeneratorSettings& meshGeneratorSettings, const std::filesystem::path& savePath, const std::shared_ptr<PointCloudCaptureSettings>& captureSettings) const;
 		bool OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 
         void OnDestroy() override;

@@ -55,6 +55,7 @@ namespace EcoSysLab {
 		float m_trunkYSubdivision = 0.01f;
 		float m_branchYSubdivision = 0.01f;
 
+		float m_radiusMultiplier = 1.f;
 		bool m_overrideRadius = false;
 		float m_radius = 0.01f;
 		float m_baseControlPointRatio = 0.3f;
@@ -166,11 +167,16 @@ namespace EcoSysLab {
 				thicknessEnd = settings.m_radius;
 			}
 
+
+
 			if (settings.m_presentationOverride && settings.m_presentationOverrideSettings.m_maxThickness != 0.0f)
 			{
 				thicknessStart = glm::min(thicknessStart, settings.m_presentationOverrideSettings.m_maxThickness);
 				thicknessEnd = glm::min(thicknessEnd, settings.m_presentationOverrideSettings.m_maxThickness);
 			}
+
+			thicknessStart *= settings.m_radiusMultiplier;
+			thicknessEnd *= settings.m_radiusMultiplier;
 
 #pragma region Subdivision internode here.
 			const auto boundaryLength = glm::max(thicknessStart, thicknessEnd) * glm::pi<float>();

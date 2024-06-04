@@ -23,14 +23,14 @@ namespace EcoSysLab {
 	struct BranchPhysicsParameters {
 #pragma region Physics
 		float m_density = 1.0f;
-		float m_linearDamping = 8.0f;
-		float m_angularDamping = 8.0f;
+		float m_linearDamping = 1.0f;
+		float m_angularDamping = 1.0f;
 		int m_positionSolverIteration = 8;
 		int m_velocitySolverIteration = 8;
-		float m_jointDriveStiffnessFactor = 3000.0f;
-		float m_jointDriveStiffnessThicknessFactor = 40.0f;
-		float m_jointDriveDampingFactor = 10.0f;
-		float m_jointDriveDampingThicknessFactor = 4.0f;
+		float m_jointDriveStiffness = 3000.0f;
+		float m_jointDriveStiffnessThicknessFactor = 3.0f;
+		float m_jointDriveDamping = 10.0f;
+		float m_jointDriveDampingThicknessFactor = 3.0f;
 		bool m_enableAccelerationForDrive = true;
 		float m_minimumThickness = 0.01f;
 #pragma endregion
@@ -231,12 +231,8 @@ namespace EcoSysLab {
 		joint->SetMotion(MotionAxis::SwingY, MotionType::Free);
 		joint->SetMotion(MotionAxis::SwingZ, MotionType::Free);
 		joint->SetDrive(DriveType::Swing,
-			glm::pow(childThickness,
-				m_jointDriveStiffnessThicknessFactor) *
-			m_jointDriveStiffnessFactor,
-			glm::pow(childThickness,
-				m_jointDriveDampingThicknessFactor) *
-			m_jointDriveDampingFactor,
+			glm::pow(childThickness, m_jointDriveStiffnessThicknessFactor) * m_jointDriveStiffness,
+			glm::pow(childThickness, m_jointDriveDampingThicknessFactor) * m_jointDriveDamping,
 			m_enableAccelerationForDrive);
 #endif
 	}

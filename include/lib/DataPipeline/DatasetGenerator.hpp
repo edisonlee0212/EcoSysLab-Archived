@@ -41,8 +41,7 @@ namespace EcoSysLab {
 			const TreeMeshGeneratorSettings& meshGeneratorSettings,
 			const std::string& pointCloudOutputPath,
 			bool exportTreeMesh,
-			const std::string& treeMeshOutputPath,
-			bool exportJunction
+			const std::string& treeMeshOutputPath
 		);
 		static void GeneratePointCloudForForest(
 			int gridSize, float gridDistance, float randomShift,
@@ -53,8 +52,7 @@ namespace EcoSysLab {
 			int maxIterations,
 			int maxTreeNodeCount,
 			const TreeMeshGeneratorSettings& meshGeneratorSettings,
-			const std::string& pointCloudOutputPath,
-			bool exportJunction
+			const std::string& pointCloudOutputPath
 		);
 		static void GeneratePointCloudForForestPatch(
 			const glm::ivec2& gridSize,
@@ -62,8 +60,16 @@ namespace EcoSysLab {
 			const std::shared_ptr<PointCloudCaptureSettings>& captureSettings,
 			const std::shared_ptr<ForestPatch>& forestPatch,
 			const TreeMeshGeneratorSettings& meshGeneratorSettings,
-			const std::string& pointCloudOutputPath,
-			bool exportJunction
+			const std::string& pointCloudOutputPath
+		);
+		static void GeneratePointCloudForForestPatchJoinedSpecies(
+			const glm::ivec2& gridSize,
+			const TreePointCloudPointSettings& pointSettings,
+			const std::shared_ptr<PointCloudCaptureSettings>& captureSettings,
+			const std::shared_ptr<ForestPatch>& forestPatch,
+			const std::string& speciesFolderPath,
+			const TreeMeshGeneratorSettings& meshGeneratorSettings,
+			const std::string& pointCloudOutputPath
 		);
 		static void GeneratePointCloudForSorghumPatch(const SorghumFieldPatch& pattern,
 			const std::shared_ptr<SorghumStateGenerator>& sorghumDescriptor,

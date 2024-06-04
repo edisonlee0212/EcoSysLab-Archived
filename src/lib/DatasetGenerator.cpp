@@ -248,19 +248,18 @@ void DatasetGenerator::GenerateTreeMesh(const std::string& treeParametersPath, f
 			tree->ExportOBJ(copyPath, meshGeneratorSettings);
 			testIndex++;
 		}
-		if(testIndex == targetTreeNodeCount.size()) break;
+		if (testIndex == targetTreeNodeCount.size()) break;
 	}
-	
+
 	Application::Loop();
 	scene->DeleteEntity(treeEntity);
 	Application::Loop();
 }
 
 void DatasetGenerator::GeneratePointCloudForTree(const TreePointCloudPointSettings& pointSettings,
-                                                 const std::shared_ptr<PointCloudCaptureSettings>& captureSettings, const std::string& treeParametersPath, const float deltaTime,
-                                                 const int maxIterations, const int maxTreeNodeCount, const TreeMeshGeneratorSettings& meshGeneratorSettings,
-                                                 const std::string& pointCloudOutputPath, bool exportTreeMesh, const std::string& treeMeshOutputPath,
-                                                 bool exportJunction)
+	const std::shared_ptr<PointCloudCaptureSettings>& captureSettings, const std::string& treeParametersPath, const float deltaTime,
+	const int maxIterations, const int maxTreeNodeCount, const TreeMeshGeneratorSettings& meshGeneratorSettings,
+	const std::string& pointCloudOutputPath, bool exportTreeMesh, const std::string& treeMeshOutputPath)
 {
 	const auto applicationStatus = Application::GetApplicationStatus();
 	if (applicationStatus == ApplicationStatus::NoProject)
@@ -305,7 +304,7 @@ void DatasetGenerator::GeneratePointCloudForTree(const TreePointCloudPointSettin
 
 	const auto treeEntity = scene->CreateEntity("Tree");
 	const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
-	
+
 	tree->m_treeDescriptor = treeDescriptor;
 	tree->m_treeModel.m_treeGrowthSettings.m_useSpaceColonization = false;
 	Application::Loop();
@@ -329,7 +328,7 @@ void DatasetGenerator::GeneratePointCloudForTree(const TreePointCloudPointSettin
 	const auto scanner = scene->GetOrSetPrivateComponent<TreePointCloudScanner>(scannerEntity).lock();
 	scanner->m_pointSettings = pointSettings;
 	Application::Loop();
-	scanner->Capture(meshGeneratorSettings, pointCloudOutputPath, exportJunction, captureSettings);
+	scanner->Capture(meshGeneratorSettings, pointCloudOutputPath, captureSettings);
 	Application::Loop();
 	scene->DeleteEntity(treeEntity);
 	scene->DeleteEntity(scannerEntity);
@@ -341,7 +340,7 @@ void DatasetGenerator::GeneratePointCloudForForest(
 	const TreePointCloudPointSettings& pointSettings,
 	const std::shared_ptr<PointCloudCaptureSettings>& captureSettings, const std::string& treeParametersFolderPath,
 	float deltaTime, int maxIterations, int maxTreeNodeCount,
-	const TreeMeshGeneratorSettings& meshGeneratorSettings, const std::string& pointCloudOutputPath, const bool exportJunction)
+	const TreeMeshGeneratorSettings& meshGeneratorSettings, const std::string& pointCloudOutputPath)
 {
 	const auto applicationStatus = Application::GetApplicationStatus();
 	if (applicationStatus == ApplicationStatus::NoProject)
@@ -392,11 +391,11 @@ void DatasetGenerator::GeneratePointCloudForForest(
 	forestPatch->m_treeGrowthSettings.m_useSpaceColonization = false;
 
 	Application::Loop();
-	
+
 	forestPatch->SetupGrid({ gridSize, gridSize }, gridDistance, randomShift);
-	forestPatch->ApplyTreeDescriptors(treeParametersFolderPath, {1.f});
+	forestPatch->ApplyTreeDescriptors(treeParametersFolderPath, { 1.f });
 	forestPatch->InstantiatePatch(false);
-	
+
 	ecoSysLabLayer->m_simulationSettings.m_maxNodeCount = maxTreeNodeCount;
 	ecoSysLabLayer->m_simulationSettings.m_deltaTime = deltaTime;
 
@@ -410,12 +409,12 @@ void DatasetGenerator::GeneratePointCloudForForest(
 	const auto scanner = scene->GetOrSetPrivateComponent<TreePointCloudScanner>(scannerEntity).lock();
 	scanner->m_pointSettings = pointSettings;
 	Application::Loop();
-	scanner->Capture(meshGeneratorSettings, pointCloudOutputPath, exportJunction, captureSettings);
+	scanner->Capture(meshGeneratorSettings, pointCloudOutputPath, captureSettings);
 
 	if (const std::vector<Entity>* treeEntities =
 		scene->UnsafeGetPrivateComponentOwnersList<Tree>(); treeEntities && !treeEntities->empty())
 	{
-		for(const auto& treeEntity : *treeEntities)
+		for (const auto& treeEntity : *treeEntities)
 		{
 			scene->DeleteEntity(treeEntity);
 		}
@@ -426,8 +425,7 @@ void DatasetGenerator::GeneratePointCloudForForest(
 
 void DatasetGenerator::GeneratePointCloudForForestPatch(const glm::ivec2& gridSize, const TreePointCloudPointSettings& pointSettings,
 	const std::shared_ptr<PointCloudCaptureSettings>& captureSettings, const std::shared_ptr<ForestPatch>& forestPatch,
-	const TreeMeshGeneratorSettings& meshGeneratorSettings, const std::string& pointCloudOutputPath,
-	bool exportJunction)
+	const TreeMeshGeneratorSettings& meshGeneratorSettings, const std::string& pointCloudOutputPath)
 {
 	const auto applicationStatus = Application::GetApplicationStatus();
 	if (applicationStatus == ApplicationStatus::NoProject)
@@ -474,7 +472,8 @@ void DatasetGenerator::GeneratePointCloudForForestPatch(const glm::ivec2& gridSi
 			scene->DeleteEntity(treeEntity);
 		}
 		ecoSysLabLayer->ResetAllTrees(treeEntities);
-	}else
+	}
+	else
 	{
 		ecoSysLabLayer->ResetAllTrees(treeEntities);
 	}
@@ -484,8 +483,8 @@ void DatasetGenerator::GeneratePointCloudForForestPatch(const glm::ivec2& gridSi
 	Application::Loop();
 
 	const auto forest = forestPatch->InstantiatePatch(gridSize, true);
-	
-	while(ecoSysLabLayer->GetSimulatedTime() < forestPatch->m_simulationTime){
+
+	while (ecoSysLabLayer->GetSimulatedTime() < forestPatch->m_simulationTime) {
 		ecoSysLabLayer->Simulate();
 	}
 	ecoSysLabLayer->GenerateMeshes(meshGeneratorSettings);
@@ -494,9 +493,104 @@ void DatasetGenerator::GeneratePointCloudForForestPatch(const glm::ivec2& gridSi
 	const auto scanner = scene->GetOrSetPrivateComponent<TreePointCloudScanner>(scannerEntity).lock();
 	scanner->m_pointSettings = pointSettings;
 	Application::Loop();
-	scanner->Capture(meshGeneratorSettings, pointCloudOutputPath, exportJunction, captureSettings);
+	scanner->Capture(meshGeneratorSettings, pointCloudOutputPath, captureSettings);
 	Application::Loop();
 	scene->DeleteEntity(forest);
+	scene->DeleteEntity(scannerEntity);
+	Application::Loop();
+}
+
+void DatasetGenerator::GeneratePointCloudForForestPatchJoinedSpecies(const glm::ivec2& gridSize,
+	const TreePointCloudPointSettings& pointSettings, const std::shared_ptr<PointCloudCaptureSettings>& captureSettings,
+	const std::shared_ptr<ForestPatch>& forestPatch, const std::string& speciesFolderPath,
+	const TreeMeshGeneratorSettings& meshGeneratorSettings, const std::string& pointCloudOutputPath)
+{
+	const auto applicationStatus = Application::GetApplicationStatus();
+	if (applicationStatus == ApplicationStatus::NoProject)
+	{
+		EVOENGINE_ERROR("No project!");
+		return;
+	}
+	if (applicationStatus == ApplicationStatus::OnDestroy)
+	{
+		EVOENGINE_ERROR("Application is destroyed!");
+		return;
+	}
+	if (applicationStatus == ApplicationStatus::Uninitialized)
+	{
+		EVOENGINE_ERROR("Application not uninitialized!");
+		return;
+	}
+	const auto scene = Application::GetActiveScene();
+	const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
+	if (!ecoSysLabLayer)
+	{
+		EVOENGINE_ERROR("Application doesn't contain EcoSysLab layer!");
+		return;
+	}
+	std::shared_ptr<Soil> soil;
+	const std::vector<Entity>* soilEntities =
+		scene->UnsafeGetPrivateComponentOwnersList<Soil>();
+	if (soilEntities && !soilEntities->empty()) {
+		soil = scene->GetOrSetPrivateComponent<Soil>(soilEntities->at(0)).lock();
+	}
+	if (!soil)
+	{
+		EVOENGINE_ERROR("No soil in scene!");
+		return;
+	}
+
+	soil->RandomOffset(0, 99999);
+	soil->GenerateMesh(0.0f, 0.0f);
+	if (const std::vector<Entity>* treeEntities =
+		scene->UnsafeGetPrivateComponentOwnersList<Tree>(); treeEntities && !treeEntities->empty())
+	{
+		for (const auto& treeEntity : *treeEntities)
+		{
+			scene->DeleteEntity(treeEntity);
+		}
+		ecoSysLabLayer->ResetAllTrees(treeEntities);
+	}
+	else
+	{
+		ecoSysLabLayer->ResetAllTrees(treeEntities);
+	}
+
+	forestPatch->m_treeGrowthSettings.m_useSpaceColonization = false;
+
+	Application::Loop();
+	Entity forest;
+
+	std::vector<std::pair<TreeGrowthSettings, std::shared_ptr<TreeDescriptor>>> treeDescriptors;
+	for (const auto& i : std::filesystem::recursive_directory_iterator(speciesFolderPath))
+	{
+		if (i.is_regular_file() && i.path().extension().string() == ".tree")
+		{
+			if (const auto treeDescriptor =
+				std::dynamic_pointer_cast<TreeDescriptor>(ProjectManager::GetOrCreateAsset(ProjectManager::GetPathRelativeToProject(i.path()))))
+			{
+				treeDescriptors.emplace_back(std::make_pair(forestPatch->m_treeGrowthSettings, treeDescriptor));
+			}
+		}
+	}
+	if (!treeDescriptors.empty())
+	{
+		forest = forestPatch->InstantiatePatch(treeDescriptors, gridSize, true);
+	}
+
+
+	while (ecoSysLabLayer->GetSimulatedTime() < forestPatch->m_simulationTime) {
+		ecoSysLabLayer->Simulate();
+	}
+	ecoSysLabLayer->GenerateMeshes(meshGeneratorSettings);
+	Application::Loop();
+	const auto scannerEntity = scene->CreateEntity("Scanner");
+	const auto scanner = scene->GetOrSetPrivateComponent<TreePointCloudScanner>(scannerEntity).lock();
+	scanner->m_pointSettings = pointSettings;
+	Application::Loop();
+	scanner->Capture(meshGeneratorSettings, pointCloudOutputPath, captureSettings);
+	Application::Loop();
+	if (scene->IsEntityValid(forest)) scene->DeleteEntity(forest);
 	scene->DeleteEntity(scannerEntity);
 	Application::Loop();
 }
@@ -504,7 +598,7 @@ void DatasetGenerator::GeneratePointCloudForForestPatch(const glm::ivec2& gridSi
 void DatasetGenerator::GeneratePointCloudForSorghumPatch(
 	const SorghumFieldPatch& pattern,
 	const std::shared_ptr<SorghumStateGenerator>& sorghumDescriptor,
-	const SorghumPointCloudPointSettings& pointSettings, 
+	const SorghumPointCloudPointSettings& pointSettings,
 	const std::shared_ptr<PointCloudCaptureSettings>& captureSettings,
 	const SorghumMeshGeneratorSettings& sorghumMeshGeneratorSettings, const std::string& pointCloudOutputPath)
 {
@@ -550,7 +644,7 @@ void DatasetGenerator::GeneratePointCloudForSorghumPatch(
 	std::vector<glm::mat4> matricesList;
 	pattern.GenerateField(matricesList);
 	sorghumField->m_matrices.resize(matricesList.size());
-	for(int i = 0; i < matricesList.size(); i++)
+	for (int i = 0; i < matricesList.size(); i++)
 	{
 		sorghumField->m_matrices[i] = { sorghumDescriptor, matricesList[i] };
 	}

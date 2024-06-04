@@ -95,7 +95,8 @@ void TreeMeshGeneratorSettings::Save(const std::string& name, YAML::Emitter& out
 
 	out << YAML::Key << "m_smoothness" << YAML::Value << m_smoothness;
 	out << YAML::Key << "m_overrideRadius" << YAML::Value << m_overrideRadius;
-	out << YAML::Key << "m_boundaryRadius" << YAML::Value << m_radius;
+	out << YAML::Key << "m_radius" << YAML::Value << m_radius;
+	out << YAML::Key << "m_radiusMultiplier" << YAML::Value << m_radiusMultiplier;
 	out << YAML::Key << "m_baseControlPointRatio" << YAML::Value << m_baseControlPointRatio;
 	out << YAML::Key << "m_branchControlPointRatio" << YAML::Value << m_branchControlPointRatio;
 	out << YAML::Key << "m_treePartEndDistance" << YAML::Value << m_treePartEndDistance;
@@ -130,7 +131,8 @@ void TreeMeshGeneratorSettings::Load(const std::string& name, const YAML::Node& 
 
 		if (ms["m_smoothness"]) m_smoothness = ms["m_smoothness"].as<bool>();
 		if (ms["m_overrideRadius"]) m_overrideRadius = ms["m_overrideRadius"].as<bool>();
-		if (ms["m_boundaryRadius"]) m_radius = ms["m_boundaryRadius"].as<float>();
+		if (ms["m_radiusMultiplier"]) m_radiusMultiplier = ms["m_radiusMultiplier"].as<float>();
+		if (ms["m_radius"]) m_radius = ms["m_radius"].as<float>();
 		if (ms["m_baseControlPointRatio"]) m_baseControlPointRatio = ms["m_baseControlPointRatio"].as<float>();
 		if (ms["m_branchControlPointRatio"]) m_branchControlPointRatio = ms["m_branchControlPointRatio"].as<float>();
 		if (ms["m_treePartEndDistance"]) m_treePartEndDistance = ms["m_treePartEndDistance"].as<float>();
@@ -169,6 +171,7 @@ void TreeMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLayer>& ed
 			}
 			ImGui::Checkbox("Override radius", &m_overrideRadius);
 			if (m_overrideRadius) ImGui::DragFloat("Radius", &m_radius);
+			ImGui::DragFloat("Radius multiplier", &m_radiusMultiplier, 0.01f, 0.01f, 100.f);
 			ImGui::DragFloat("Tree Part Base Distance", &m_treePartBaseDistance, 1, 0, 10);
 			ImGui::DragFloat("Tree Part End Distance", &m_treePartEndDistance, 1, 0, 10);
 			ImGui::TreePop();

@@ -7,6 +7,7 @@
 namespace EvoEngine {
 	class BillboardCloud {
 	public:
+
 		struct ClusterTriangle
 		{
 			int m_elementIndex = -1;
@@ -37,6 +38,15 @@ namespace EvoEngine {
 			[[nodiscard]] float CalculateArea(const glm::uvec3& triangle) const;
 			[[nodiscard]] glm::vec3 CalculateNormal(const glm::uvec3& triangle) const;
 			[[nodiscard]] float CalculateNormalDistance(const glm::uvec3& triangle) const;
+
+			[[nodiscard]] std::vector<std::vector<unsigned>> CalculateLevelSets(int seedVertexIndex = -1);
+		};
+		struct BoundingSphere
+		{
+			glm::vec3 m_center = glm::vec3(0.f);
+			float m_radius = 0.f;
+
+			void Initialize(const std::vector<Element>& elements);
 		};
 
 		struct Rectangle
@@ -88,7 +98,7 @@ namespace EvoEngine {
 			Original,
 			Foliage,
 		};
-		
+
 		struct FoliageClusterizationSettings
 		{
 			float m_density = 0.9f;
@@ -122,8 +132,8 @@ namespace EvoEngine {
 		{
 			ClusterizationSettings m_clusterizationSettings{};
 			ProjectSettings m_projectSettings{};
-			JoinSettings m_joinSettings {};
-			RasterizeSettings m_rasterizeSettings {};
+			JoinSettings m_joinSettings{};
+			RasterizeSettings m_rasterizeSettings{};
 
 			bool OnInspect(const std::string& title);
 		};
@@ -168,6 +178,10 @@ namespace EvoEngine {
 		void ProcessEntity(const std::shared_ptr<Scene>& scene, const Entity& entity);
 
 		[[nodiscard]] Entity BuildEntity(const std::shared_ptr<Scene>& scene) const;
+
+
+		[[nodiscard]] std::vector<glm::vec3> ExtractPointCloud(float density) const;
+
 	private:
 
 		[[nodiscard]] glm::vec3 CalculateCentroid(const ClusterTriangle& triangle) const;

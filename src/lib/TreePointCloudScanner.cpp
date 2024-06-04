@@ -276,7 +276,7 @@ bool TreePointCloudGridCaptureSettings::SampleFilter(const PointCloudSample& sam
 }
 #pragma endregion
 
-void TreePointCloudScanner::Capture(const TreeMeshGeneratorSettings& meshGeneratorSettings, const std::filesystem::path& savePath, const bool exportJunction, const std::shared_ptr<PointCloudCaptureSettings>& captureSettings) const
+void TreePointCloudScanner::Capture(const TreeMeshGeneratorSettings& meshGeneratorSettings, const std::filesystem::path& savePath, const std::shared_ptr<PointCloudCaptureSettings>& captureSettings) const
 {
 #ifdef BUILD_WITH_RAYTRACER
 
@@ -507,7 +507,7 @@ void TreePointCloudScanner::Capture(const TreeMeshGeneratorSettings& meshGenerat
 	// Write a binary file
 	cube_file.write(outstream_binary, true);
 
-	if (exportJunction) {
+	if (m_pointSettings.m_treePartIndex) {
 		try {
 			std::filesystem::path ymlPath = savePath;
 			ymlPath.replace_extension(".yml");
@@ -547,7 +547,7 @@ bool TreePointCloudScanner::OnInspect(const std::shared_ptr<EditorLayer>& editor
 		static std::shared_ptr<TreePointCloudCircularCaptureSettings> captureSettings = std::make_shared<TreePointCloudCircularCaptureSettings>();
 		captureSettings->OnInspect();
 		FileUtils::SaveFile("Capture", "Point Cloud", { ".ply" }, [&](const std::filesystem::path& path) {
-			Capture(ecoSysLabLayer->m_meshGeneratorSettings, path, true, captureSettings);
+			Capture(ecoSysLabLayer->m_meshGeneratorSettings, path, captureSettings);
 			}, false);
 		ImGui::TreePop();
 	}
@@ -555,7 +555,7 @@ bool TreePointCloudScanner::OnInspect(const std::shared_ptr<EditorLayer>& editor
 		static std::shared_ptr<TreePointCloudGridCaptureSettings> captureSettings = std::make_shared<TreePointCloudGridCaptureSettings>();
 		captureSettings->OnInspect();
 		FileUtils::SaveFile("Capture", "Point Cloud", { ".ply" }, [&](const std::filesystem::path& path) {
-			Capture(ecoSysLabLayer->m_meshGeneratorSettings, path, true, captureSettings);
+			Capture(ecoSysLabLayer->m_meshGeneratorSettings, path, captureSettings);
 			}, false);
 		ImGui::TreePop();
 	}
