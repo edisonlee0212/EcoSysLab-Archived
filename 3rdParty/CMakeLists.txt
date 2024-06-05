@@ -5,8 +5,15 @@ add_subdirectory(json)
 add_subdirectory(csvpp)
 add_subdirectory(xatlas)
 add_subdirectory(base64)
+
+# ------------------------------------------------------------------
+# eigen
+# ------------------------------------------------------------------
+set(EIGEN_DIR ${CMAKE_CURRENT_SOURCE_DIR}/eigen/)
+
 set(NO_DX True)
 set(TREEIO_INCLUDES
+	${EIGEN_DIR}
 	${CMAKE_CURRENT_SOURCE_DIR}/json
 	${CMAKE_CURRENT_SOURCE_DIR}/xatlas
 	${CMAKE_CURRENT_SOURCE_DIR}/csvpp
@@ -24,3 +31,4 @@ set(PINCHOT_LIB
 set(PINCHOT_DLL
 	${CMAKE_CURRENT_SOURCE_DIR}/pinchot/lib/windows/x64/pinchot.dll
 	PARENT_SCOPE)
+

@@ -39,7 +39,7 @@ namespace EvoEngine {
 			[[nodiscard]] glm::vec3 CalculateNormal(const glm::uvec3& triangle) const;
 			[[nodiscard]] float CalculateNormalDistance(const glm::uvec3& triangle) const;
 
-			[[nodiscard]] std::vector<std::vector<unsigned>> CalculateLevelSets(int seedVertexIndex = -1);
+			[[nodiscard]] std::vector<std::vector<unsigned>> CalculateLevelSets(const glm::vec3& direction = glm::vec3(0, 1, 0));
 		};
 		struct BoundingSphere
 		{

@@ -1,13 +1,13 @@
 #include "BillboardCloud.hpp"
 using namespace EvoEngine;
 
-
+typedef int VIndex;
 struct ConnectivityGraph
 {
 	struct V
 	{
 		std::vector<std::pair<unsigned, float>> m_connectedVertices;
-		int m_index = -1;
+		VIndex m_index = -1;
 	};
 
 	std::vector<V> m_vs;
@@ -50,7 +50,7 @@ void ConnectivityGraph::EstablishConnectivityGraph(const BillboardCloud::Element
 				if (connectedIndex.first == triangle.z) findZ = true;
 			}
 			if (!findX) v1.m_connectedVertices.emplace_back(triangle.x, glm::distance(vertex1.m_position, vertex0.m_position));
-			if (!findZ) v1.m_connectedVertices.emplace_back(triangle.z, glm::distance(vertex1.m_position, vertex1.m_position));
+			if (!findZ) v1.m_connectedVertices.emplace_back(triangle.z, glm::distance(vertex1.m_position, vertex2.m_position));
 		}
 		{
 			bool findX = false;
@@ -66,12 +66,33 @@ void ConnectivityGraph::EstablishConnectivityGraph(const BillboardCloud::Element
 	}
 }
 
-std::vector<std::vector<unsigned>> BillboardCloud::Element::CalculateLevelSets(int seedVertexIndex)
+std::vector<std::vector<unsigned>> BillboardCloud::Element::CalculateLevelSets(const glm::vec3& direction)
 {
 	ConnectivityGraph connectivityGraph;
 	connectivityGraph.EstablishConnectivityGraph(*this);
+	std::vector<std::vector<unsigned>> retVal;
+	std::vector<float> dist;
+	std::vector<bool> visited;
+	visited.resize(m_vertices.size());
+	dist.resize(m_vertices.size());
+	std::fill(dist.begin(), dist.end(), FLT_MAX);
+	std::fill(visited.begin(), visited.end(), false);
+	std::vector<VIndex> q;
+	for (const auto& v : connectivityGraph.m_vs)
+	{
+		if (!v.m_connectedVertices.empty())
+		{
+			q.emplace_back(v.m_index);
+		}
+	}
+	bool distUpdated = true;
+	while (distUpdated && !q.empty()) {
+		distUpdated = false;
+		std::vector<bool> updated;
+		updated.resize(dist.size());
+		std::fill(updated.begin(), updated.end(), false);
 
-	if (seedVertexIndex == -1) {
+		VIndex seedVertexIndex = -1;
 		float minHeight = FLT_MAX;
 		for (const auto& triangle : m_triangles)
 		{
@@ -79,86 +100,97 @@ std::vector<std::vector<unsigned>> BillboardCloud::Element::CalculateLevelSets(i
 			const auto& vertex1 = m_vertices[triangle.y];
 			const auto& vertex2 = m_vertices[triangle.z];
 
-			if (vertex0.m_position.y < minHeight)
+			if (!connectivityGraph.m_vs[triangle.x].m_connectedVertices.empty()
+				&& !visited[triangle.x]
+				&& glm::dot(direction, vertex0.m_position) < minHeight)
 			{
 				seedVertexIndex = triangle.x;
 				minHeight = vertex0.m_position.y;
 			}
-			if (vertex1.m_position.y < minHeight)
+			if (!connectivityGraph.m_vs[triangle.y].m_connectedVertices.empty()
+				&& !visited[triangle.y]
+				&& glm::dot(direction, vertex1.m_position) < minHeight)
 			{
 				seedVertexIndex = triangle.y;
-				minHeight = vertex0.m_position.y;
+				minHeight = vertex1.m_position.y;
 			}
-			if (vertex2.m_position.y < minHeight)
+			if (!connectivityGraph.m_vs[triangle.z].m_connectedVertices.empty()
+				&& !visited[triangle.z]
+				&& glm::dot(direction, vertex2.m_position) < minHeight)
 			{
 				seedVertexIndex = triangle.z;
-				minHeight = vertex0.m_position.y;
+				minHeight = vertex2.m_position.y;
 			}
 		}
-	}
-	
-	std::vector<std::vector<unsigned>> retVal;
 
-	std::vector<float> dist;
-	std::vector<bool> unvisited;
-	unvisited.resize(m_vertices.size());
-	dist.resize(m_vertices.size());
-	Jobs::RunParallelFor(dist.size(), [&](unsigned i)
-	{
-		unvisited[i] = true;
-		dist[i] = FLT_MAX;
-	});
-	dist[seedVertexIndex] = 0;
-	std::vector<unsigned> q;
-	q.emplace_back(seedVertexIndex);
-
-	while(!q.empty())
-	{
-		float minDistance = FLT_MAX;
-		int minDistanceIndex = -1;
-		for(int testIndex = 0; testIndex < q.size(); testIndex++)
+		
+		dist[seedVertexIndex] = 0;
+		updated[seedVertexIndex] = true;
+		while (!q.empty())
 		{
-			if(!unvisited[q[testIndex]]) continue;
-			const auto testDist = dist[q[testIndex]];
-			if(testDist < minDistance)
+			float minDistance = FLT_MAX;
+			int minDistanceIndex = -1;
+			for (int qi = 0; qi < q.size(); qi++)
 			{
-				minDistanceIndex = testIndex;
-				minDistance = testDist;
+				const VIndex testIndex = q[qi];
+				const auto testDist = dist[testIndex];
+				if (testDist < minDistance)
+				{
+					minDistanceIndex = qi;
+					minDistance = testDist;
+				}
 			}
-		}
-		unsigned u = q[minDistanceIndex];
-		q[minDistanceIndex] = q.back();
-		q.pop_back();
-
-		for(const auto& neighbor : connectivityGraph.m_vs[u].m_connectedVertices)
-		{
-			if(dist[u] + neighbor.second < dist[neighbor.first])
+			if (minDistanceIndex == -1) break;
+			const VIndex u = q[minDistanceIndex];
+			q[minDistanceIndex] = q.back();
+			q.pop_back();
+			for (const auto& neighbor : connectivityGraph.m_vs[u].m_connectedVertices)
 			{
-				dist[neighbor.first] = dist[u] + neighbor.second;
+				if(visited[neighbor.first]) continue;
+				const float newDist = dist[u] + neighbor.second;
+				if (dist[neighbor.first] > newDist)
+				{
+					dist[neighbor.first] = newDist;
+					distUpdated = true;
+					updated[neighbor.first] = true;
+				}
 			}
-			if(unvisited[neighbor.first]) q.emplace_back(neighbor.first);
+			visited[u] = true;
 		}
-		unvisited[u] = false;
-	}
-	float maxDistance = 0.f;
-	for(int index = 0; index < m_vertices.size(); index++){
-		if(!unvisited[index])
+
+
+		float maxDistance = 0.f;
+		std::vector<VIndex> currentGroup;
+		for(VIndex vertexIndex = 0; vertexIndex < m_vertices.size(); vertexIndex++)
 		{
-			maxDistance = glm::max(maxDistance, dist[index]);
+			if(updated[vertexIndex])
+			{
+				maxDistance = glm::max(maxDistance, dist[vertexIndex]);
+				currentGroup.emplace_back(vertexIndex);
+			}
+		}
+		for(const auto& vertexIndex : currentGroup)
+		{
+			m_vertices[vertexIndex].m_color = glm::vec4(glm::vec3(dist[vertexIndex] / maxDistance), 1.f);
 		}
 	}
 
-	for(int index = 0; index < m_vertices.size(); index++)
+	for(VIndex vertexIndex = 0; vertexIndex < m_vertices.size(); vertexIndex++)
 	{
-		if(unvisited[index])
+		const auto currentDist = dist[vertexIndex];
+		if(currentDist == 0.f) m_vertices[vertexIndex].m_color = glm::vec4(0.f, 0.f, 1.f, 1.f);
+		else
 		{
-			dist[index] = maxDistance;
+			bool localMaximum = true;
+			for(auto& connectivity : connectivityGraph.m_vs[vertexIndex].m_connectedVertices)
+			{
+				if(currentDist < dist[connectivity.first]) localMaximum = false;
+			}
+			if(localMaximum)
+			{
+				m_vertices[vertexIndex].m_color = glm::vec4(1.f, 0.f, 0.f, 1.f);
+			}
 		}
-	}
-
-	for(int index = 0; index < m_vertices.size(); index++)
-	{
-		m_vertices[index].m_color = glm::vec4(glm::vec3(dist[index] / maxDistance), 1.f);
 	}
 
 	return retVal;
