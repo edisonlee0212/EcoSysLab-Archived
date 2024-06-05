@@ -105,7 +105,6 @@ namespace EcoSysLab {
 		bool m_showLightingGrid = false;
 		std::shared_ptr<ParticleInfoList> m_shadowGridParticleInfoList;
 		std::shared_ptr<ParticleInfoList> m_lightingGridParticleInfoList;
-		void UpdateVisualizationCamera();
 
 		void PreUpdate() override;
 

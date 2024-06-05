@@ -2003,15 +2003,10 @@ void EcoSysLabLayer::ClearSkeletalGraphs() const
 	}
 }
 
-
-void EcoSysLabLayer::UpdateVisualizationCamera() {
+void EcoSysLabLayer::PreUpdate()
+{
 	if (const auto editorLayer = Application::GetLayer<EditorLayer>(); !editorLayer) return;
 	m_visualizationCamera->Resize({
 		m_visualizationCameraResolutionX,
 		m_visualizationCameraResolutionY });
-}
-
-void EcoSysLabLayer::PreUpdate()
-{
-	UpdateVisualizationCamera();
 }
