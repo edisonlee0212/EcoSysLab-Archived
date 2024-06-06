@@ -50,6 +50,7 @@ namespace EcoSysLab {
 
 		bool m_presentationOverride = false;
 		PresentationOverrideSettings m_presentationOverrideSettings = {};
+		bool m_stitchAllChildren = false;
 		float m_trunkThickness = 0.1f;
 		float m_xSubdivision = 0.01f;
 		float m_trunkYSubdivision = 0.01f;
@@ -66,6 +67,8 @@ namespace EcoSysLab {
 		int m_voxelSubdivisionLevel = 10;
 		int m_voxelSmoothIteration = 5;
 		bool m_removeDuplicate = true;
+
+		
 
 		unsigned m_branchMeshType = 0;
 
@@ -400,6 +403,7 @@ namespace EcoSysLab {
 					}
 					if (maxChildHandle == internodeHandle) needStitching = true;
 				}
+				//needStitching = true;
 			}
 
 			if (internode.m_info.m_length == 0.0f) {
@@ -426,18 +430,22 @@ namespace EcoSysLab {
 			archetype.m_vertexInfo2 = flowHandle + 1;
 
 			if (!needStitching) {
+				int parentLastRingStartVertexIndex = vertexLastRingStartVertexIndex[parentInternodeHandle];
 				for (int p = 0; p < pStep; p++) {
-					float xFactor = static_cast<float>(p) / pStep;
-					const auto& ring = rings.at(0);
-					float yFactor = ring.m_startDistanceToRoot;
-					auto direction = ring.GetDirection(parentUp, pAngleStep * p, true);
-					archetype.m_position = ring.m_startPosition + direction * ring.m_startRadius;
-					vertexPositionModifier(archetype.m_position, direction * ring.m_startRadius, xFactor, yFactor);
-					assert(!glm::any(glm::isnan(archetype.m_position)));
-					archetype.m_texCoord = glm::vec2(xFactor, yFactor);
-					texCoordsModifier(archetype.m_texCoord, xFactor, yFactor);
-					if (settings.m_vertexColorMode == static_cast<unsigned>(TreeMeshGeneratorSettings::VertexColorMode::InternodeColor)) archetype.m_color = internodeInfo.m_color;
-					vertices.push_back(archetype);
+					if(parentInternodeHandle != -1) vertices.push_back(vertices.at(parentLastRingStartVertexIndex + p));
+					else{
+						float xFactor = static_cast<float>(p) / pStep;
+						const auto& ring = rings.at(0);
+						float yFactor = ring.m_startDistanceToRoot;
+						auto direction = ring.GetDirection(parentUp, pAngleStep * p, true);
+						archetype.m_position = ring.m_startPosition + direction * ring.m_startRadius;
+						vertexPositionModifier(archetype.m_position, direction * ring.m_startRadius, xFactor, yFactor);
+						assert(!glm::any(glm::isnan(archetype.m_position)));
+						archetype.m_texCoord = glm::vec2(xFactor, yFactor);
+						texCoordsModifier(archetype.m_texCoord, xFactor, yFactor);
+						if (settings.m_vertexColorMode == static_cast<unsigned>(TreeMeshGeneratorSettings::VertexColorMode::InternodeColor)) archetype.m_color = internodeInfo.m_color;
+						vertices.push_back(archetype);
+					}
 				}
 			}
 			std::vector<float> angles;

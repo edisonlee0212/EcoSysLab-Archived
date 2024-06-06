@@ -93,6 +93,7 @@ void TreeMeshGeneratorSettings::Save(const std::string& name, YAML::Emitter& out
 	out << YAML::Key << "m_enableBranch" << YAML::Value << m_enableBranch;
 	out << YAML::Key << "m_enableFruit" << YAML::Value << m_enableFruit;
 
+	out << YAML::Key << "m_stitchAllChildren" << YAML::Value << m_stitchAllChildren;
 	out << YAML::Key << "m_smoothness" << YAML::Value << m_smoothness;
 	out << YAML::Key << "m_overrideRadius" << YAML::Value << m_overrideRadius;
 	out << YAML::Key << "m_radius" << YAML::Value << m_radius;
@@ -129,6 +130,7 @@ void TreeMeshGeneratorSettings::Load(const std::string& name, const YAML::Node& 
 		if (ms["m_enableBranch"]) m_enableBranch = ms["m_enableBranch"].as<bool>();
 		if (ms["m_enableFruit"]) m_enableFruit = ms["m_enableFruit"].as<bool>();
 
+		if (ms["m_stitchAllChildren"]) m_stitchAllChildren = ms["m_stitchAllChildren"].as<bool>();
 		if (ms["m_smoothness"]) m_smoothness = ms["m_smoothness"].as<bool>();
 		if (ms["m_overrideRadius"]) m_overrideRadius = ms["m_overrideRadius"].as<bool>();
 		if (ms["m_radiusMultiplier"]) m_radiusMultiplier = ms["m_radiusMultiplier"].as<float>();
@@ -159,6 +161,7 @@ void TreeMeshGeneratorSettings::OnInspect(const std::shared_ptr<EditorLayer>& ed
 		
 		if(ImGui::TreeNode("Cylindrical mesh settings"))
 		{
+			ImGui::Checkbox("Stitch all children", &m_stitchAllChildren);
 			ImGui::DragFloat("Trunk Thickness Threshold", &m_trunkThickness, 1.0f, 0.0f, 16.0f);
 			ImGui::DragFloat("X Step", &m_xSubdivision, 0.00001f, 0.00001f, 1.0f, "%.5f");
 			ImGui::DragFloat("Trunk Y Step", &m_trunkYSubdivision, 0.00001f, 0.00001f, 1.0f, "%.5f");

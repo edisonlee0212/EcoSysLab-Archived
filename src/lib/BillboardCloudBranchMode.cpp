@@ -162,15 +162,7 @@ std::vector<std::vector<unsigned>> BillboardCloud::Element::CalculateLevelSets(c
 
 			std::priority_queue<VNode, std::vector<VNode>, VNodeComparator> q;
 			q.push({seedVertexIndex, 0});
-			/*
-			for (const auto& v : connectivityGraph.m_vs)
-			{
-				if (!visited[v.m_index] && !v.m_connectedVertices.empty())
-				{
-					q.push({v.m_index, FLT_MAX});
-				}
-			}
-			*/
+			
 			while (!q.empty())
 			{
 				const auto node = q.top();
