@@ -2,12 +2,18 @@
 using namespace EvoEngine;
 
 typedef int VIndex;
+typedef int CIndex;
 struct ConnectivityGraph
 {
 	struct V
 	{
 		std::vector<std::pair<VIndex, float>> m_connectedVertices;
 		VIndex m_index = -1;
+
+		float m_distanceToSourcePoint = FLT_MAX;
+		VIndex m_sourceIndex = -1;
+		VIndex m_prevIndex = -1;
+		int m_connectedComponentId = -1;
 	};
 
 	std::vector<V> m_vs;
@@ -32,6 +38,8 @@ struct ConnectivityGraph
 		VIndex m_localMinimum = -1;
 		std::vector<glm::vec3> m_pathColors;
 		std::unordered_set<VIndex> m_verticesSet;
+
+		CIndex m_index = -1;
 	};
 	std::vector<ConnectedComponent> m_connectedComponents;
 
@@ -41,8 +49,11 @@ void ConnectivityGraph::EstablishConnectivityGraph(const BillboardCloud::Element
 {
 	m_vs.clear();
 	m_vs.resize(element.m_vertices.size());
-	for (int vi = 0; vi < m_vs.size(); vi++) m_vs[vi].m_index = vi;
-
+	for (int vi = 0; vi < m_vs.size(); vi++){
+		m_vs[vi] = {};
+		m_vs[vi].m_index = vi;
+		m_vs[vi].m_distanceToSourcePoint = FLT_MAX;
+	}
 	for (const auto& triangle : element.m_triangles)
 	{
 		const auto& vertex0 = element.m_vertices[triangle.x];
@@ -108,22 +119,15 @@ std::vector<std::vector<unsigned>> BillboardCloud::Element::CalculateLevelSets(c
 	};
 
 	{
-		std::vector<float> dist;
-		std::vector<VIndex> prev;
 		std::vector<bool> visited;
-		dist.resize(m_vertices.size());
-		prev.resize(m_vertices.size());
 		visited.resize(m_vertices.size());
-		std::fill(prev.begin(), prev.end(), -1);
-		std::fill(dist.begin(), dist.end(), FLT_MAX);
 		std::fill(visited.begin(), visited.end(), false);
 		
 		bool distUpdated = true;
-		std::vector<std::vector<VIndex>> components;
+		std::vector<bool> updated;
+		updated.resize(m_vertices.size());
 		while (distUpdated) {
 			distUpdated = false;
-			std::vector<bool> updated;
-			updated.resize(dist.size());
 			std::fill(updated.begin(), updated.end(), false);
 			
 			VIndex seedVertexIndex = -1;
@@ -157,7 +161,7 @@ std::vector<std::vector<unsigned>> BillboardCloud::Element::CalculateLevelSets(c
 				}
 			}
 			if(seedVertexIndex == -1) break;
-			dist[seedVertexIndex] = 0;
+			connectivityGraph.m_vs[seedVertexIndex].m_distanceToSourcePoint = 0;
 			updated[seedVertexIndex] = true;
 
 			std::priority_queue<VNode, std::vector<VNode>, VNodeComparator> q;
@@ -172,11 +176,11 @@ std::vector<std::vector<unsigned>> BillboardCloud::Element::CalculateLevelSets(c
 				if(visited[node.m_vertexIndex]) continue;
 				for (const auto& neighbor : connectivityGraph.m_vs[u].m_connectedVertices)
 				{
-					const float newDist = dist[u] + neighbor.second;
-					if (dist[neighbor.first] > newDist)
+					const float newDist = connectivityGraph.m_vs[u].m_distanceToSourcePoint + neighbor.second;
+					if (connectivityGraph.m_vs[neighbor.first].m_distanceToSourcePoint > newDist)
 					{
-						prev[neighbor.first] = u;
-						dist[neighbor.first] = newDist;
+						connectivityGraph.m_vs[neighbor.first].m_prevIndex = u;
+						connectivityGraph.m_vs[neighbor.first].m_distanceToSourcePoint = newDist;
 						q.push({neighbor.first, newDist});
 						distUpdated = true;
 						updated[neighbor.first] = true;
@@ -186,36 +190,44 @@ std::vector<std::vector<unsigned>> BillboardCloud::Element::CalculateLevelSets(c
 			}
 			float maxDistance = 0.f;
 			//Establish connected component for current group.
-			components.emplace_back();
-			auto& component = components.back();
+			
+			ConnectivityGraph::ConnectedComponent component{};
+			component.m_index = connectivityGraph.m_connectedComponents.size();
 			for (VIndex vertexIndex = 0; vertexIndex < m_vertices.size(); vertexIndex++)
 			{
 				if (updated[vertexIndex])
 				{
-					maxDistance = glm::max(maxDistance, dist[vertexIndex]);
-					component.emplace_back(vertexIndex);
+					maxDistance = glm::max(maxDistance, connectivityGraph.m_vs[vertexIndex].m_distanceToSourcePoint);
+					component.m_vs.emplace_back(vertexIndex);
+					component.m_verticesSet.insert(vertexIndex);
 				}
 			}
+			for (const auto &vertexIndex : component.m_vs)
+			{
+				auto &v = connectivityGraph.m_vs[vertexIndex];
+				v.m_sourceIndex = seedVertexIndex;
+				v.m_connectedComponentId = component.m_index;
+				m_vertices[vertexIndex].m_color = glm::vec4(glm::vec3(glm::mod(v.m_distanceToSourcePoint / maxDistance * 20.f, 1.f)), 1.f);
+			}
+			if(!component.m_vs.empty()) connectivityGraph.m_connectedComponents.emplace_back(std::move(component));
 		}
 		EVOENGINE_LOG("Distance calculation finished!");
-		for (auto& component : components)
+		
+		for (auto& currentConnectedComponent : connectivityGraph.m_connectedComponents)
 		{
-			ConnectivityGraph::ConnectedComponent currentConnectedComponent{};
-			for (const auto& vertexIndex : component)
+			for (const auto& vertexIndex : currentConnectedComponent.m_vs)
 			{
-				currentConnectedComponent.m_vs.emplace_back(vertexIndex);
-				currentConnectedComponent.m_verticesSet.insert(vertexIndex);
 				//Find local maximum and local minimum.
-				const auto currentDist = dist[vertexIndex];
+				const auto currentDist = connectivityGraph.m_vs[vertexIndex].m_distanceToSourcePoint;
 				if (currentDist == 0.f) {
 					currentConnectedComponent.m_localMinimum = vertexIndex;
 				}
-				else //if(currentDist > maxDistance * 0.1f)
+				else
 				{
 					bool localMaximum = true;
 					for (auto& connectivity : connectivityGraph.m_vs[vertexIndex].m_connectedVertices)
 					{
-						if (currentDist < dist[connectivity.first]) localMaximum = false;
+						if (currentDist < connectivityGraph.m_vs[connectivity.first].m_distanceToSourcePoint) localMaximum = false;
 					}
 					if (localMaximum)
 					{
@@ -234,20 +246,21 @@ std::vector<std::vector<unsigned>> BillboardCloud::Element::CalculateLevelSets(c
 				localMaximum.m_path.emplace_back(localMaximum.m_vertexIndex);
 				localMaximum.m_pathSet.insert(localMaximum.m_vertexIndex);
 				currentConnectedComponent.m_paths.insert({ localMaximum.m_vertexIndex, pathIndex });
-				VIndex prevIndex = prev[localMaximum.m_vertexIndex];
+				VIndex prevIndex = connectivityGraph.m_vs[localMaximum.m_vertexIndex].m_prevIndex;
 				while (prevIndex != -1)
 				{
 					localMaximum.m_path.emplace_back(prevIndex);
 					localMaximum.m_pathSet.insert(prevIndex);
 					currentConnectedComponent.m_paths.insert({ prevIndex, pathIndex });
-					prevIndex = prev[prevIndex];
+					prevIndex = connectivityGraph.m_vs[prevIndex].m_prevIndex;
 				}
 			}
 			if (!currentConnectedComponent.m_vs.empty()) connectivityGraph.m_connectedComponents.emplace_back(std::move(currentConnectedComponent));
 		}
 		EVOENGINE_LOG("Path calculation finished!");
+		
 	}
-
+	
 	Jobs::RunParallelFor(connectivityGraph.m_connectedComponents.size(), [&](const unsigned connectedComponentIndex)
 		{
 			auto& connectedComponent = connectivityGraph.m_connectedComponents.at(connectedComponentIndex);
@@ -310,7 +323,7 @@ std::vector<std::vector<unsigned>> BillboardCloud::Element::CalculateLevelSets(c
 				}
 			}
 		});
-
+	
 	EVOENGINE_LOG("Group coloring finished!");
 	return retVal;
 }
