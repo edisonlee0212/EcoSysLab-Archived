@@ -68,7 +68,7 @@ namespace EcoSysLab {
 		int m_voxelSmoothIteration = 5;
 		bool m_removeDuplicate = true;
 
-		
+
 
 		unsigned m_branchMeshType = 0;
 
@@ -384,26 +384,31 @@ namespace EcoSysLab {
 			bool needStitching = false;
 			if (parentInternodeHandle != -1)
 			{
-				const auto& parentInternode = skeleton.PeekNode(parentInternodeHandle);
-				parentUp = parentInternode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
-				if (internode.IsApical() || parentInternode.PeekChildHandles().size() == 1) needStitching = true;
-				if (!needStitching)
+				if (settings.m_stitchAllChildren)
 				{
-					float maxChildThickness = -1;
-					SkeletonNodeHandle maxChildHandle = -1;
-					for (const auto& childHandle : parentInternode.PeekChildHandles()) {
-						const auto& childInternode = skeleton.PeekNode(childHandle);
-						if (childInternode.IsApical()) break;
-						const float childThickness = childInternode.m_info.m_thickness;
-						if (childThickness > maxChildThickness)
-						{
-							maxChildThickness = childThickness;
-							maxChildHandle = childHandle;
-						}
-					}
-					if (maxChildHandle == internodeHandle) needStitching = true;
+					needStitching = true;
 				}
-				//needStitching = true;
+				else {
+					const auto& parentInternode = skeleton.PeekNode(parentInternodeHandle);
+					parentUp = parentInternode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
+					if (internode.IsApical() || parentInternode.PeekChildHandles().size() == 1) needStitching = true;
+					if (!needStitching)
+					{
+						float maxChildThickness = -1;
+						SkeletonNodeHandle maxChildHandle = -1;
+						for (const auto& childHandle : parentInternode.PeekChildHandles()) {
+							const auto& childInternode = skeleton.PeekNode(childHandle);
+							if (childInternode.IsApical()) break;
+							const float childThickness = childInternode.m_info.m_thickness;
+							if (childThickness > maxChildThickness)
+							{
+								maxChildThickness = childThickness;
+								maxChildHandle = childHandle;
+							}
+						}
+						if (maxChildHandle == internodeHandle) needStitching = true;
+					}
+				}
 			}
 
 			if (internode.m_info.m_length == 0.0f) {
@@ -430,10 +435,10 @@ namespace EcoSysLab {
 			archetype.m_vertexInfo2 = flowHandle + 1;
 
 			if (!needStitching) {
-				int parentLastRingStartVertexIndex = vertexLastRingStartVertexIndex[parentInternodeHandle];
+				int parentLastRingStartVertexIndex = parentInternodeHandle == -1 ? -1 : vertexLastRingStartVertexIndex[parentInternodeHandle];
 				for (int p = 0; p < pStep; p++) {
-					if(parentInternodeHandle != -1) vertices.push_back(vertices.at(parentLastRingStartVertexIndex + p));
-					else{
+					if (parentInternodeHandle != -1) vertices.push_back(vertices.at(parentLastRingStartVertexIndex + p));
+					else {
 						float xFactor = static_cast<float>(p) / pStep;
 						const auto& ring = rings.at(0);
 						float yFactor = ring.m_startDistanceToRoot;
@@ -764,7 +769,7 @@ namespace EcoSysLab {
 						glm::mix(rootDistanceStart, rootDistanceEnd, a), glm::mix(rootDistanceStart, rootDistanceEnd, b));
 				}
 				else {
-					rings.emplace_back(a, b, 
+					rings.emplace_back(a, b,
 						curve.GetPoint(a), curve.GetPoint(b),
 						directionEnd,
 						directionEnd,
@@ -802,25 +807,31 @@ namespace EcoSysLab {
 
 			if (hasParent)
 			{
-				const auto& parentInternode = skeleton.PeekNode(parentInternodeHandle);
-				parentUp = parentInternode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
-				if (internode.IsApical() || parentInternode.PeekChildHandles().size() == 1) needStitching = true;
-				if (!needStitching)
+				if (settings.m_stitchAllChildren)
 				{
-					float maxChildThickness = -1;
-					SkeletonNodeHandle maxChildHandle = -1;
-					for (const auto& childHandle : parentInternode.PeekChildHandles()) {
-						if (nodeHandles.find(childHandle) == nodeHandles.end()) continue;
-						const auto& childInternode = skeleton.PeekNode(childHandle);
-						if (childInternode.IsApical()) break;
-						const float childThickness = childInternode.m_info.m_thickness;
-						if (childThickness > maxChildThickness)
-						{
-							maxChildThickness = childThickness;
-							maxChildHandle = childHandle;
+					needStitching = true;
+				}
+				else {
+					const auto& parentInternode = skeleton.PeekNode(parentInternodeHandle);
+					parentUp = parentInternode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
+					if (internode.IsApical() || parentInternode.PeekChildHandles().size() == 1) needStitching = true;
+					if (!needStitching)
+					{
+						float maxChildThickness = -1;
+						SkeletonNodeHandle maxChildHandle = -1;
+						for (const auto& childHandle : parentInternode.PeekChildHandles()) {
+							if (nodeHandles.find(childHandle) == nodeHandles.end()) continue;
+							const auto& childInternode = skeleton.PeekNode(childHandle);
+							if (childInternode.IsApical()) break;
+							const float childThickness = childInternode.m_info.m_thickness;
+							if (childThickness > maxChildThickness)
+							{
+								maxChildThickness = childThickness;
+								maxChildHandle = childHandle;
+							}
 						}
+						if (maxChildHandle == internodeHandle) needStitching = true;
 					}
-					if (maxChildHandle == internodeHandle) needStitching = true;
 				}
 			}
 			auto& rings = ringsList[internodeIndex];
@@ -842,18 +853,25 @@ namespace EcoSysLab {
 			archetype.m_vertexInfo1 = internodeHandle + 1;
 			archetype.m_vertexInfo2 = flowHandle + 1;
 			if (!needStitching) {
+				int parentLastRingStartVertexIndex = hasParent ? -1 : vertexLastRingStartVertexIndex[parentInternodeHandle];
 				for (int p = 0; p < pStep; p++) {
-					float xFactor = static_cast<float>(glm::min(p, pStep - p)) / pStep;
-					const auto& ring = rings.at(0);
-					float yFactor = ring.m_startDistanceToRoot;
-					auto direction = ring.GetDirection(parentUp, pAngleStep * p, true);
-					archetype.m_position = ring.m_startPosition + direction * ring.m_startRadius;
-					vertexPositionModifier(archetype.m_position, direction * ring.m_startRadius, xFactor, yFactor);
-					assert(!glm::any(glm::isnan(archetype.m_position)));
-					archetype.m_texCoord = glm::vec2(xFactor, yFactor);
-					texCoordsModifier(archetype.m_texCoord, xFactor, yFactor);
-					if (settings.m_vertexColorMode == static_cast<unsigned>(TreeMeshGeneratorSettings::VertexColorMode::InternodeColor)) archetype.m_color = internodeInfo.m_color;
-					vertices.push_back(archetype);
+					if (hasParent)
+					{
+						vertices.push_back(vertices.at(parentLastRingStartVertexIndex + p));
+					}
+					else {
+						float xFactor = static_cast<float>(glm::min(p, pStep - p)) / pStep;
+						const auto& ring = rings.at(0);
+						float yFactor = ring.m_startDistanceToRoot;
+						auto direction = ring.GetDirection(parentUp, pAngleStep * p, true);
+						archetype.m_position = ring.m_startPosition + direction * ring.m_startRadius;
+						vertexPositionModifier(archetype.m_position, direction * ring.m_startRadius, xFactor, yFactor);
+						assert(!glm::any(glm::isnan(archetype.m_position)));
+						archetype.m_texCoord = glm::vec2(xFactor, yFactor);
+						texCoordsModifier(archetype.m_texCoord, xFactor, yFactor);
+						if (settings.m_vertexColorMode == static_cast<unsigned>(TreeMeshGeneratorSettings::VertexColorMode::InternodeColor)) archetype.m_color = internodeInfo.m_color;
+						vertices.push_back(archetype);
+					}
 				}
 			}
 			std::vector<float> angles;
