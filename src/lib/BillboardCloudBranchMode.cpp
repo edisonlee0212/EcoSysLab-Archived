@@ -2,14 +2,24 @@
 using namespace EvoEngine;
 
 typedef int VIndex;
+typedef int TIndex;
 typedef int CIndex;
 struct ConnectivityGraph
 {
 	struct V
 	{
+		enum class VType
+		{
+			Default,
+			LocalExtremum,
+			SaddlePoint
+		};
+		VType m_type = VType::Default;
 		std::vector<std::pair<VIndex, float>> m_connectedVertices;
-		VIndex m_index = -1;
-
+		VIndex m_vertexIndex = -1;
+		float m_ind = -1;
+		std::vector<TIndex> m_connectedTriangles;
+		int m_contourIndex = -1;
 		float m_distanceToSourcePoint = FLT_MAX;
 		VIndex m_sourceIndex = -1;
 		VIndex m_prevIndex = -1;
@@ -20,42 +30,33 @@ struct ConnectivityGraph
 
 	void EstablishConnectivityGraph(const BillboardCloud::Element& element);
 
-
-
 	struct ConnectedComponent
 	{
-		struct LocalMaximum
-		{
-			VIndex m_vertexIndex = -1;
-			std::vector<VIndex> m_path;
-			std::unordered_set<VIndex> m_pathSet;
-		};
 		std::vector<VIndex> m_vs;
-		std::unordered_map<VIndex, int> m_paths;
-		//Vertices in current component grouped by paths.
-		std::unordered_map<VIndex, int> m_groups;
-		std::vector<LocalMaximum> m_localMaximums;
-		VIndex m_localMinimum = -1;
-		std::vector<glm::vec3> m_pathColors;
 		std::unordered_set<VIndex> m_verticesSet;
-
+		VIndex m_sourceIndex = -1;
 		CIndex m_index = -1;
+
+
+		std::unordered_map<VIndex, int> m_groups;
 	};
 	std::vector<ConnectedComponent> m_connectedComponents;
-
+	std::vector<std::vector<VIndex>> m_contourTable;
 };
 
 void ConnectivityGraph::EstablishConnectivityGraph(const BillboardCloud::Element& element)
 {
 	m_vs.clear();
 	m_vs.resize(element.m_vertices.size());
-	for (int vi = 0; vi < m_vs.size(); vi++){
+	for (int vi = 0; vi < m_vs.size(); vi++) {
 		m_vs[vi] = {};
-		m_vs[vi].m_index = vi;
+		m_vs[vi].m_vertexIndex = vi;
 		m_vs[vi].m_distanceToSourcePoint = FLT_MAX;
 	}
-	for (const auto& triangle : element.m_triangles)
+	for (TIndex triangleIndex = 0; triangleIndex < element.m_triangles.size(); triangleIndex++)
 	{
+		const auto& triangle = element.m_triangles.at(triangleIndex);
+
 		const auto& vertex0 = element.m_vertices[triangle.x];
 		const auto& vertex1 = element.m_vertices[triangle.y];
 		const auto& vertex2 = element.m_vertices[triangle.z];
@@ -63,6 +64,11 @@ void ConnectivityGraph::EstablishConnectivityGraph(const BillboardCloud::Element
 		auto& v0 = m_vs[triangle.x];
 		auto& v1 = m_vs[triangle.y];
 		auto& v2 = m_vs[triangle.z];
+
+		v0.m_connectedTriangles.emplace_back(triangleIndex);
+		v1.m_connectedTriangles.emplace_back(triangleIndex);
+		v2.m_connectedTriangles.emplace_back(triangleIndex);
+
 		{
 			bool findY = false;
 			bool findZ = false;
@@ -117,213 +123,278 @@ std::vector<std::vector<unsigned>> BillboardCloud::Element::CalculateLevelSets(c
 			return left.m_distance > right.m_distance;
 		}
 	};
+	std::vector<bool> visited;
+	visited.resize(m_vertices.size());
+	std::fill(visited.begin(), visited.end(), false);
 
-	{
-		std::vector<bool> visited;
-		visited.resize(m_vertices.size());
-		std::fill(visited.begin(), visited.end(), false);
-		
-		bool distUpdated = true;
-		std::vector<bool> updated;
-		updated.resize(m_vertices.size());
-		while (distUpdated) {
-			distUpdated = false;
-			std::fill(updated.begin(), updated.end(), false);
-			
-			VIndex seedVertexIndex = -1;
-			float minHeight = FLT_MAX;
-			for (const auto& triangle : m_triangles)
-			{
-				const auto& vertex0 = m_vertices[triangle.x];
-				const auto& vertex1 = m_vertices[triangle.y];
-				const auto& vertex2 = m_vertices[triangle.z];
+	bool distUpdated = true;
+	std::vector<bool> updated;
+	updated.resize(m_vertices.size());
+	while (distUpdated) {
+		distUpdated = false;
+		std::fill(updated.begin(), updated.end(), false);
 
-				if (!connectivityGraph.m_vs[triangle.x].m_connectedVertices.empty()
-					&& !visited[triangle.x]
-					&& glm::dot(direction, vertex0.m_position) < minHeight)
-				{
-					seedVertexIndex = triangle.x;
-					minHeight = vertex0.m_position.y;
-				}
-				if (!connectivityGraph.m_vs[triangle.y].m_connectedVertices.empty()
-					&& !visited[triangle.y]
-					&& glm::dot(direction, vertex1.m_position) < minHeight)
-				{
-					seedVertexIndex = triangle.y;
-					minHeight = vertex1.m_position.y;
-				}
-				if (!connectivityGraph.m_vs[triangle.z].m_connectedVertices.empty()
-					&& !visited[triangle.z]
-					&& glm::dot(direction, vertex2.m_position) < minHeight)
-				{
-					seedVertexIndex = triangle.z;
-					minHeight = vertex2.m_position.y;
-				}
-			}
-			if(seedVertexIndex == -1) break;
-			connectivityGraph.m_vs[seedVertexIndex].m_distanceToSourcePoint = 0;
-			updated[seedVertexIndex] = true;
-
-			std::priority_queue<VNode, std::vector<VNode>, VNodeComparator> q;
-			q.push({seedVertexIndex, 0});
-			
-			while (!q.empty())
-			{
-				const auto node = q.top();
-				if(node.m_distance == FLT_MAX) break;
-				const VIndex u = node.m_vertexIndex;
-				q.pop();
-				if(visited[node.m_vertexIndex]) continue;
-				for (const auto& neighbor : connectivityGraph.m_vs[u].m_connectedVertices)
-				{
-					const float newDist = connectivityGraph.m_vs[u].m_distanceToSourcePoint + neighbor.second;
-					if (connectivityGraph.m_vs[neighbor.first].m_distanceToSourcePoint > newDist)
-					{
-						connectivityGraph.m_vs[neighbor.first].m_prevIndex = u;
-						connectivityGraph.m_vs[neighbor.first].m_distanceToSourcePoint = newDist;
-						q.push({neighbor.first, newDist});
-						distUpdated = true;
-						updated[neighbor.first] = true;
-					}
-				}
-				visited[u] = true;
-			}
-			float maxDistance = 0.f;
-			//Establish connected component for current group.
-			
-			ConnectivityGraph::ConnectedComponent component{};
-			component.m_index = connectivityGraph.m_connectedComponents.size();
-			for (VIndex vertexIndex = 0; vertexIndex < m_vertices.size(); vertexIndex++)
-			{
-				if (updated[vertexIndex])
-				{
-					maxDistance = glm::max(maxDistance, connectivityGraph.m_vs[vertexIndex].m_distanceToSourcePoint);
-					component.m_vs.emplace_back(vertexIndex);
-					component.m_verticesSet.insert(vertexIndex);
-				}
-			}
-			for (const auto &vertexIndex : component.m_vs)
-			{
-				auto &v = connectivityGraph.m_vs[vertexIndex];
-				v.m_sourceIndex = seedVertexIndex;
-				v.m_connectedComponentId = component.m_index;
-				m_vertices[vertexIndex].m_color = glm::vec4(glm::vec3(glm::mod(v.m_distanceToSourcePoint / maxDistance * 20.f, 1.f)), 1.f);
-			}
-			if(!component.m_vs.empty()) connectivityGraph.m_connectedComponents.emplace_back(std::move(component));
-		}
-		EVOENGINE_LOG("Distance calculation finished!");
-		
-		for (auto& currentConnectedComponent : connectivityGraph.m_connectedComponents)
+		VIndex seedVertexIndex = -1;
+		float minHeight = FLT_MAX;
+		for (const auto& triangle : m_triangles)
 		{
-			for (const auto& vertexIndex : currentConnectedComponent.m_vs)
-			{
-				//Find local maximum and local minimum.
-				const auto currentDist = connectivityGraph.m_vs[vertexIndex].m_distanceToSourcePoint;
-				if (currentDist == 0.f) {
-					currentConnectedComponent.m_localMinimum = vertexIndex;
-				}
-				else
-				{
-					bool localMaximum = true;
-					for (auto& connectivity : connectivityGraph.m_vs[vertexIndex].m_connectedVertices)
-					{
-						if (currentDist < connectivityGraph.m_vs[connectivity.first].m_distanceToSourcePoint) localMaximum = false;
-					}
-					if (localMaximum)
-					{
-						ConnectivityGraph::ConnectedComponent::LocalMaximum localMaximum{};
-						localMaximum.m_vertexIndex = vertexIndex;
-						currentConnectedComponent.m_localMaximums.emplace_back(std::move(localMaximum));
-					}
-				}
-			}
+			const auto& vertex0 = m_vertices[triangle.x];
+			const auto& vertex1 = m_vertices[triangle.y];
+			const auto& vertex2 = m_vertices[triangle.z];
 
-			//Establish path between every local maximum and local minimum
-
-			for (int pathIndex = 0; pathIndex < currentConnectedComponent.m_localMaximums.size(); pathIndex++)
+			if (!connectivityGraph.m_vs[triangle.x].m_connectedVertices.empty()
+				&& !visited[triangle.x]
+				&& glm::dot(direction, vertex0.m_position) < minHeight)
 			{
-				auto& localMaximum = currentConnectedComponent.m_localMaximums.at(pathIndex);
-				localMaximum.m_path.emplace_back(localMaximum.m_vertexIndex);
-				localMaximum.m_pathSet.insert(localMaximum.m_vertexIndex);
-				currentConnectedComponent.m_paths.insert({ localMaximum.m_vertexIndex, pathIndex });
-				VIndex prevIndex = connectivityGraph.m_vs[localMaximum.m_vertexIndex].m_prevIndex;
-				while (prevIndex != -1)
-				{
-					localMaximum.m_path.emplace_back(prevIndex);
-					localMaximum.m_pathSet.insert(prevIndex);
-					currentConnectedComponent.m_paths.insert({ prevIndex, pathIndex });
-					prevIndex = connectivityGraph.m_vs[prevIndex].m_prevIndex;
-				}
+				seedVertexIndex = triangle.x;
+				minHeight = vertex0.m_position.y;
 			}
-			if (!currentConnectedComponent.m_vs.empty()) connectivityGraph.m_connectedComponents.emplace_back(std::move(currentConnectedComponent));
+			if (!connectivityGraph.m_vs[triangle.y].m_connectedVertices.empty()
+				&& !visited[triangle.y]
+				&& glm::dot(direction, vertex1.m_position) < minHeight)
+			{
+				seedVertexIndex = triangle.y;
+				minHeight = vertex1.m_position.y;
+			}
+			if (!connectivityGraph.m_vs[triangle.z].m_connectedVertices.empty()
+				&& !visited[triangle.z]
+				&& glm::dot(direction, vertex2.m_position) < minHeight)
+			{
+				seedVertexIndex = triangle.z;
+				minHeight = vertex2.m_position.y;
+			}
 		}
-		EVOENGINE_LOG("Path calculation finished!");
+		if (seedVertexIndex == -1) break;
+		connectivityGraph.m_vs[seedVertexIndex].m_distanceToSourcePoint = 0;
+		int numberOfContours = 1;
+		connectivityGraph.m_vs[seedVertexIndex].m_contourIndex = numberOfContours - 1;
+
+		updated[seedVertexIndex] = true;
+
+		std::priority_queue<VNode, std::vector<VNode>, VNodeComparator> q;
+		q.push({ seedVertexIndex, 0 });
 		
+		while (!q.empty())
+		{
+			const auto node = q.top();
+			if (node.m_distance == FLT_MAX) break;
+			const VIndex u = node.m_vertexIndex;
+			q.pop();
+			if (visited[node.m_vertexIndex]) continue;
+			auto& vu = connectivityGraph.m_vs[u];
+			for (const auto& neighbor : vu.m_connectedVertices)
+			{
+				const float newDist = vu.m_distanceToSourcePoint + neighbor.second;
+				auto& neighborV = connectivityGraph.m_vs[neighbor.first];
+				if (neighborV.m_distanceToSourcePoint > newDist)
+				{
+					neighborV.m_prevIndex = u;
+					neighborV.m_distanceToSourcePoint = newDist;
+					neighborV.m_contourIndex = vu.m_contourIndex;
+					q.push({ neighbor.first, newDist });
+					distUpdated = true;
+					updated[neighbor.first] = true;
+				}
+			}
+			visited[u] = true;
+			
+			int signChangeCount = 0;
+			for(const auto& triangleIndex : vu.m_connectedTriangles)
+			{
+				const auto& triangle = m_triangles.at(triangleIndex);
+				const auto distU = vu.m_distanceToSourcePoint;
+				if(static_cast<int>(triangle.x) == u)
+				{
+					const auto& distY = connectivityGraph.m_vs[triangle.y].m_distanceToSourcePoint;
+					const auto& distZ = connectivityGraph.m_vs[triangle.z].m_distanceToSourcePoint;
+					if((distY > distU && distZ < distU) || (distY < distU && distZ > distU))
+					{
+						signChangeCount++;
+					}
+				}else if(static_cast<int>(triangle.y) == u)
+				{
+					const auto& distX = connectivityGraph.m_vs[triangle.x].m_distanceToSourcePoint;
+					const auto& distZ = connectivityGraph.m_vs[triangle.z].m_distanceToSourcePoint;
+					if((distX > distU && distZ < distU) || (distX < distU && distZ > distU))
+					{
+						signChangeCount++;
+					}
+				}else if(static_cast<int>(triangle.z) == u)
+				{
+					const auto& distX = connectivityGraph.m_vs[triangle.x].m_distanceToSourcePoint;
+					const auto& distY = connectivityGraph.m_vs[triangle.y].m_distanceToSourcePoint;
+					if((distX > distU && distY < distU) || (distX < distU && distY > distU))
+					{
+						signChangeCount++;
+					}
+				}
+			}
+			vu.m_ind = 1.f - static_cast<float>(signChangeCount) / 2.f;
+			if(vu.m_ind == 1.f)
+			{
+				vu.m_type = ConnectivityGraph::V::VType::LocalExtremum;
+
+			}else if(vu.m_ind < 0)
+			{
+				vu.m_type = ConnectivityGraph::V::VType::SaddlePoint;
+
+				//Split into sub-contours
+				std::vector<VIndex> unprocessedNeighbors;
+				unprocessedNeighbors.resize(vu.m_connectedVertices.size());
+				for(int neighborIndex = 0; neighborIndex < vu.m_connectedVertices.size(); neighborIndex++)
+				{
+					unprocessedNeighbors.at(neighborIndex) = vu.m_connectedVertices[neighborIndex].first;
+				}
+				std::vector<std::pair<bool, std::vector<VIndex>>> groups; 
+				while(!unprocessedNeighbors.empty())
+				{
+					//Create a new group
+					groups.emplace_back();
+					auto& group = groups.back();
+					auto nextNeighbor = unprocessedNeighbors.back();
+
+					std::vector<VIndex> waitList;
+					waitList.emplace_back(nextNeighbor);
+					//Assign sign to current group
+					group.first = connectivityGraph.m_vs[nextNeighbor].m_distanceToSourcePoint > vu.m_distanceToSourcePoint;
+					while(!waitList.empty())
+					{
+						auto walker = waitList.back();
+						waitList.pop_back();
+						//Add current walker into group and remove it from unprocessed list
+						group.second.emplace_back(walker);
+						for(int unprocessedVertexIndex = 0; unprocessedVertexIndex < unprocessedNeighbors.size(); unprocessedVertexIndex++)
+						{
+							if(unprocessedNeighbors[unprocessedVertexIndex] == walker)
+							{
+								unprocessedNeighbors[unprocessedVertexIndex] = unprocessedNeighbors.back();
+								unprocessedNeighbors.pop_back();
+								break;
+							}
+						}
+						//Try to find another adjacent vertex
+						for(const auto& triangleIndex : vu.m_connectedTriangles)
+						{
+							const auto& triangle = m_triangles.at(triangleIndex);
+							for(int v0 = 0; v0 < 3; v0++)
+							{
+								if(static_cast<int>(triangle[v0]) == u)
+								{
+									if(static_cast<int>(triangle[(v0 + 1) % 3]) == walker)
+									{
+										const int target = static_cast<int>(triangle[(v0 + 2) % 3]);
+										//If target is not processed
+										bool unprocessed = false;
+										for(const auto& unprocessedIndex : unprocessedNeighbors)
+										{
+											if(unprocessedIndex == target)
+											{
+												unprocessed = true;
+											}
+										}
+										if(unprocessed){
+											//And it has the same sign as current group...
+											if(group.first && connectivityGraph.m_vs[target].m_distanceToSourcePoint > vu.m_distanceToSourcePoint)
+											{
+												waitList.emplace_back(target);
+											}else if(!group.first && connectivityGraph.m_vs[target].m_distanceToSourcePoint < vu.m_distanceToSourcePoint)
+											{
+												waitList.emplace_back(target);
+											}
+										}
+									}else if(static_cast<int>(triangle[(v0 + 2) % 3]) == walker)
+									{
+										const int target = static_cast<int>(triangle[(v0 + 1) % 3]);
+										//If target is not processed
+										bool unprocessed = false;
+										for(const auto& unprocessedIndex : unprocessedNeighbors)
+										{
+											if(unprocessedIndex == target)
+											{
+												unprocessed = true;
+											}
+										}
+										if(unprocessed){
+											//And it has the same sign as current group...
+											if(group.first && connectivityGraph.m_vs[target].m_distanceToSourcePoint > vu.m_distanceToSourcePoint)
+											{
+												waitList.emplace_back(target);
+											}else if(!group.first && connectivityGraph.m_vs[target].m_distanceToSourcePoint < vu.m_distanceToSourcePoint)
+											{
+												waitList.emplace_back(target);
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+				
+				for(const auto& group : groups)
+				{
+					if(group.first)
+					{
+						for(const auto& vertexIndex : group.second)
+						{
+							connectivityGraph.m_vs[vertexIndex].m_contourIndex = numberOfContours;
+						}
+						numberOfContours++;
+					}
+				}
+			}else
+			{
+				vu.m_type = ConnectivityGraph::V::VType::Default;
+
+			}
+		}
+		float maxDistance = 0.f;
+		//Establish connected component for current group.
+
+		ConnectivityGraph::ConnectedComponent component{};
+		component.m_index = connectivityGraph.m_connectedComponents.size();
+		component.m_sourceIndex = seedVertexIndex;
+		for (VIndex vertexIndex = 0; vertexIndex < m_vertices.size(); vertexIndex++)
+		{
+			if (updated[vertexIndex])
+			{
+				maxDistance = glm::max(maxDistance, connectivityGraph.m_vs[vertexIndex].m_distanceToSourcePoint);
+				component.m_vs.emplace_back(vertexIndex);
+				component.m_verticesSet.insert(vertexIndex);
+			}
+		}
+
+		std::vector<glm::vec3> contourColors;
+		contourColors.resize(numberOfContours);
+		for(auto& contourColor : contourColors)
+		{
+			contourColor = glm::abs(glm::sphericalRand(1.f));
+		}
+		for (const auto& vertexIndex : component.m_vs)
+		{
+			auto& v = connectivityGraph.m_vs[vertexIndex];
+			v.m_sourceIndex = seedVertexIndex;
+			v.m_connectedComponentId = component.m_index;
+			
+
+			switch(connectivityGraph.m_vs[vertexIndex].m_type)
+			{
+			case ConnectivityGraph::V::VType::Default:
+				m_vertices[vertexIndex].m_color = glm::vec4(1.f);
+				break;
+			case ConnectivityGraph::V::VType::LocalExtremum:
+				m_vertices[vertexIndex].m_color = glm::vec4(1.f, 0.f, 0.f, 1.f);
+				break;
+			case ConnectivityGraph::V::VType::SaddlePoint:
+				m_vertices[vertexIndex].m_color = glm::vec4(0.f, 0.f, 1.f, 1.f);
+				break;
+			}
+			m_vertices[vertexIndex].m_color = glm::vec4(glm::vec3(glm::mod(v.m_distanceToSourcePoint / maxDistance * 20.f, 1.f)), 1.f);
+			//m_vertices[vertexIndex].m_color = glm::vec4(contourColors[v.m_contourIndex], 1.f);
+		}
+		if (!component.m_vs.empty()) connectivityGraph.m_connectedComponents.emplace_back(std::move(component));
 	}
-	
-	Jobs::RunParallelFor(connectivityGraph.m_connectedComponents.size(), [&](const unsigned connectedComponentIndex)
-		{
-			auto& connectedComponent = connectivityGraph.m_connectedComponents.at(connectedComponentIndex);
-			connectedComponent.m_pathColors.resize(connectedComponent.m_localMaximums.size());
-			for (auto& pathColor : connectedComponent.m_pathColors)
-			{
-				pathColor = glm::abs(glm::sphericalRand(1.f));
-			}
-			//Color path
-			for (int pathIndex = 0; pathIndex < connectedComponent.m_localMaximums.size(); pathIndex++)
-			{
-				auto& localMaximum = connectedComponent.m_localMaximums.at(pathIndex);
-				for (const auto& vertexIndex : localMaximum.m_path)
-				{
-					m_vertices.at(vertexIndex).m_color = glm::vec4(connectedComponent.m_pathColors.at(pathIndex), 1.f);
-				}
-			}
-			//Color rest vertices;
-			for (const auto& vertexIndex : connectedComponent.m_vs)
-			{
+	EVOENGINE_LOG("Distance calculation finished!");
 
-				//If current vertex is on any of the path, skip.
-				if (connectedComponent.m_paths.find(vertexIndex) != connectedComponent.m_paths.end()) continue;
-				//Perform BFS search, find closest path.
-				std::priority_queue<VNode, std::vector<VNode>, VNodeComparator> waitList;
-				VNode base;
-				base.m_vertexIndex = vertexIndex;
-				base.m_distance = 0.f;
-				waitList.push(base);
-				std::vector<bool> nodeVisited;
-				nodeVisited.resize(m_vertices.size());
-				std::fill(nodeVisited.begin(), nodeVisited.end(), false);
-				while (!waitList.empty())
-				{
-					auto node = waitList.top();
-					waitList.pop();
-					nodeVisited[node.m_vertexIndex] = true;
-					const auto search = connectedComponent.m_paths.find(node.m_vertexIndex);
-					if (search != connectedComponent.m_paths.end())
-					{
-						const auto pathIndex = search->second;
-						m_vertices.at(vertexIndex).m_color = glm::vec4(connectedComponent.m_pathColors.at(pathIndex), 1.f);
-						break;
-					}
-
-					for (const auto& neighbor : connectivityGraph.m_vs.at(node.m_vertexIndex).m_connectedVertices)
-					{
-						//If visited, skip.
-						if (nodeVisited[neighbor.first]) continue;
-
-						//If neighbor is not in current group, skip.
-						if (connectedComponent.m_verticesSet.find(neighbor.first) == connectedComponent.m_verticesSet.end()) continue;
-
-						//Add current neighbor to priority queue.
-						VNode newNode;
-						newNode.m_vertexIndex = neighbor.first;
-						newNode.m_distance = node.m_distance + neighbor.second;
-						waitList.push(newNode);
-					}
-				}
-			}
-		});
-	
-	EVOENGINE_LOG("Group coloring finished!");
 	return retVal;
 }

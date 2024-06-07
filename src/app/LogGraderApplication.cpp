@@ -50,7 +50,6 @@ int main() {
 	const auto renderLayer = Application::GetLayer<RenderLayer>();
 	renderLayer->m_enableParticles = false;
 
-	ProjectManager::GetInstance().m_showAssetInspectorWindow = false;
 	ProjectManager::GetInstance().m_showProjectWindow = false;
 #pragma region Engine Loop
 	Application::Start();

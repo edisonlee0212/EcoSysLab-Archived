@@ -308,10 +308,13 @@ void voxel_space_colonization_tree_data(
 	}
 	tree->m_treeModel.m_treeGrowthSettings.m_useSpaceColonization = true;
 	tree->m_treeModel.m_treeGrowthSettings.m_spaceColonizationAutoResize = false;
+
+	ecoSysLabLayer->m_simulationSettings.m_deltaTime = deltaTime;
+
 	Application::Loop();
 	for (int i = 0; i < iterations; i++)
 	{
-		ecoSysLabLayer->Simulate(deltaTime);
+		ecoSysLabLayer->Simulate();
 	}
 
 	if (exportTreeMesh) {
@@ -436,9 +439,10 @@ void rbv_space_colonization_tree_data(
 	tree->m_treeModel.m_treeGrowthSettings.m_useSpaceColonization = true;
 	tree->m_treeModel.m_treeGrowthSettings.m_spaceColonizationAutoResize = false;
 	Application::Loop();
+	ecoSysLabLayer->m_simulationSettings.m_deltaTime = deltaTime;
 	for (int i = 0; i < iterations; i++)
 	{
-		ecoSysLabLayer->Simulate(deltaTime);
+		ecoSysLabLayer->Simulate();
 	}
 
 	if (exportTreeMesh) {
@@ -531,12 +535,8 @@ PYBIND11_MODULE(pyecosyslab, m) {
 		.def_readwrite("m_apicalControl", &ShootDescriptor::m_apicalControl)
 		.def_readwrite("m_apicalDominance", &ShootDescriptor::m_apicalDominance)
 		.def_readwrite("m_apicalDominanceLoss", &ShootDescriptor::m_apicalDominanceLoss)
-		.def_readwrite("m_lowBranchPruning", &ShootDescriptor::m_lowBranchPruning)
-		.def_readwrite("m_lowBranchPruningThicknessFactor", &ShootDescriptor::m_lowBranchPruningThicknessFactor)
-		.def_readwrite("m_lightPruningFactor", &ShootDescriptor::m_lightPruningFactor)
-		.def_readwrite("m_thicknessPruningFactor", &ShootDescriptor::m_thicknessPruningFactor)
-		.def_readwrite("m_saggingFactorThicknessReductionMax", &ShootDescriptor::m_saggingFactorThicknessReductionMax);
-
+		.def_readwrite("m_lightPruningFactor", &ShootDescriptor::m_lightPruningFactor);
+		
 
 	py::class_<FoliageDescriptor>(m, "FoliageDescriptor")
 		.def(py::init<>())
@@ -551,11 +551,9 @@ PYBIND11_MODULE(pyecosyslab, m) {
 
 	py::class_<TreeMeshGeneratorSettings>(m, "TreeMeshGeneratorSettings")
 		.def(py::init<>())
-		.def_readwrite("m_vertexColorOnly", &TreeMeshGeneratorSettings::m_vertexColorOnly)
 		.def_readwrite("m_enableFoliage", &TreeMeshGeneratorSettings::m_enableFoliage)
 		.def_readwrite("m_enableFruit", &TreeMeshGeneratorSettings::m_enableFruit)
 		.def_readwrite("m_enableBranch", &TreeMeshGeneratorSettings::m_enableBranch)
-		.def_readwrite("m_enableTwig", &TreeMeshGeneratorSettings::m_enableTwig)
 		.def_readwrite("m_presentationOverrideSettings", &TreeMeshGeneratorSettings::m_presentationOverrideSettings)
 		.def_readwrite("m_xSubdivision", &TreeMeshGeneratorSettings::m_xSubdivision)
 		.def_readwrite("m_trunkYSubdivision", &TreeMeshGeneratorSettings::m_trunkYSubdivision)
