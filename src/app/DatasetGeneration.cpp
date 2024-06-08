@@ -123,11 +123,8 @@ void forest_patch_point_cloud()
 
 }
 
-void forest_patch_point_cloud_joined(const std::string& folderName, const bool exportJunction, const int count)
+void forest_patch_point_cloud_joined(const std::string& folderName, const bool exportJunction, const int count, const int gridSideCount)
 {
-	
-	
-
 	TreeMeshGeneratorSettings tmgs{};
 	tmgs.m_branchYSubdivision = 0.05f;
 	tmgs.m_trunkYSubdivision = 0.05f;
@@ -146,11 +143,11 @@ void forest_patch_point_cloud_joined(const std::string& folderName, const bool e
 	treePointCloudPointSettings.m_typeIndex = true;
 	treePointCloudPointSettings.m_treePartTypeIndex = exportJunction;
 	treePointCloudPointSettings.m_branchIndex = false;
-	treePointCloudPointSettings.m_lineIndex = false;
+	treePointCloudPointSettings.m_lineIndex = exportJunction;
 	treePointCloudCircularCaptureSettings->m_distance = 4.0f;
 	treePointCloudCircularCaptureSettings->m_height = 3.0f;
 
-	glm::ivec2 gridSize = { 17, 17 };
+	glm::ivec2 gridSize = { gridSideCount + 2, gridSideCount + 2 };
 	treePointCloudGridCaptureSettings->m_gridSize = { gridSize.x + 1, gridSize.y + 1 };
 	treePointCloudGridCaptureSettings->m_backpackSample = 1024;
 	treePointCloudGridCaptureSettings->m_droneSample = 256;
@@ -383,6 +380,7 @@ int main() {
 	start_project_windowless(project_path);
 
 	bool exportJunction = true;
-	forest_patch_point_cloud_joined("Coniferous", exportJunction, 1);
-	forest_patch_point_cloud_joined("Broadleaf", exportJunction, 1);
+	forest_patch_point_cloud_joined("TreeStructor", exportJunction, 5, 8);
+	//forest_patch_point_cloud_joined("Coniferous", exportJunction, 1, 8);
+	//forest_patch_point_cloud_joined("Broadleaf", exportJunction, 1, 8);
 }
