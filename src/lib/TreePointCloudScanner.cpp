@@ -517,12 +517,12 @@ void TreePointCloudScanner::Capture(const TreeMeshGeneratorSettings& meshGenerat
 			for (const auto& treeEntity : *treeEntities)
 			{
 				if (!scene->IsEntityValid(treeEntity)) continue;
+				const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
+				if(!tree->m_generateMesh) continue;
 				out << YAML::BeginMap;
 				out << YAML::Key << "II" << YAML::Value << treeEntity.GetIndex();
 				const auto gt = scene->GetDataComponent<GlobalTransform>(treeEntity);
 				out << YAML::Key << "P" << YAML::Value << gt.GetPosition();
-
-				const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
 				tree->ExportTreeParts(meshGeneratorSettings, out);
 				out << YAML::EndMap;
 			}
