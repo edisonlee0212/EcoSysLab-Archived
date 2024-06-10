@@ -1,12 +1,71 @@
 #include "BillboardCloud.hpp"
+#include "Dense"
 using namespace EvoEngine;
+
 
 
 class Discretization {
 public:
+	static Eigen::Vector3f ConvertVec3(const glm::vec3& point)
+	{
+		return { point.x, point.y, point.z };
+	}
+
+	static glm::vec3 ConvertVec3(const Eigen::Vector3f& point)
+	{
+		return { point(0), point(1), point(2) };
+	}
+
+	static std::vector<Eigen::Vector3f> ConvertVec3List(const std::vector<glm::vec3>& points)
+	{
+		std::vector<Eigen::Vector3f> data;
+		data.resize(points.size());
+		for (int i = 0; i < points.size(); i++)
+		{
+			data[i] = ConvertVec3(points[i]);
+		}
+		return data;
+	}
+
+	static std::vector<glm::vec3> ConvertVec3List(const std::vector<Eigen::Vector3f>& points)
+	{
+		std::vector<glm::vec3> data;
+		data.resize(points.size());
+		for (int i = 0; i < points.size(); i++)
+		{
+			data[i] = ConvertVec3(points[i]);
+		}
+		return data;
+	}
+
+	static std::pair<glm::vec3, glm::vec3> FitPlaneFromPoints(const std::vector<glm::vec3>& points)
+	{
+		const auto convertedPoints = ConvertVec3List(points);
+
+		// copy coordinates to matrix in Eigen format
+		size_t pointSize = convertedPoints.size();
+		//Eigen::Matrix< Vector3::Scalar, Eigen::Dynamic, Eigen::Dynamic > coord(3, num_atoms);
+		Eigen::MatrixXf coord(3, pointSize);
+		for (size_t i = 0; i < pointSize; ++i) coord.col(i) = convertedPoints[i];
+
+		// calculate centroid
+		Eigen::Vector3f centroid(coord.row(0).mean(), coord.row(1).mean(), coord.row(2).mean());
+
+		// subtract centroid
+		coord.row(0).array() -= centroid(0); coord.row(1).array() -= centroid(1); coord.row(2).array() -= centroid(2);
+
+		// we only need the left-singular matrix here
+		//  http://math.stackexchange.com/questions/99299/best-fitting-plane-given-a-set-of-points
+		Eigen::JacobiSVD<Eigen::MatrixXf> svd(coord, Eigen::ComputeThinU | Eigen::ComputeThinV);
+		//auto svd = coord.jacobiSvd(Eigen::ComputeThinU | Eigen::ComputeThinV);
+		Eigen::Vector3f plane_normal = svd.matrixU().rightCols<1>();
+
+		return std::make_pair(ConvertVec3(centroid), ConvertVec3(plane_normal));
+	}
 	class Bin
 	{
 	public:
+
 		float m_density;
 		float m_thetaMin;
 		float m_thetaMax;
@@ -29,7 +88,8 @@ public:
 			m_roMax(0.0f),
 			m_thetaCenter(0.0f),
 			m_phiCenter(0.0f),
-			m_roCenter(0.0f)
+			m_roCenter(0.0f),
+			m_centerNormal(0.f)
 		{
 		}
 
@@ -597,26 +657,27 @@ public:
 
 				m_failSafeModeTriggered = true;
 				m_bestFittedPlaneValidTriangle = validSet;
-				float totalArea = 0.f;
-				glm::vec3 centroidSum = glm::vec3(0.f);
+
+				std::vector<glm::vec3> points;
 				for (auto& clusterTriangle : validSet)
 				{
 					const auto& element = elements.at(clusterTriangle.m_elementIndex);
 					const auto& triangle = element.m_triangles.at(clusterTriangle.m_triangleIndex);
-					const auto triangleArea = element.CalculateArea(triangle);
-					const auto centroid = element.CalculateCentroid(triangle);
-					totalArea += triangleArea;
-					centroidSum += centroid * triangleArea;
-
+					points.emplace_back(element.m_vertices.at(triangle.x).m_position);
+					points.emplace_back(element.m_vertices.at(triangle.y).m_position);
+					points.emplace_back(element.m_vertices.at(triangle.z).m_position);
 				}
-				auto centroid = centroidSum / totalArea;
-				auto normal = glm::normalize(glm::vec3(centroid.y, centroid.z, centroid.x));
+
+				auto fitted = FitPlaneFromPoints(points);
+
+				auto centroid = fitted.first;
+				auto normal = fitted.second;
 				if (glm::dot(centroid, normal) < 0)
 				{
 					normal = -normal;
 				}
 				float distance = glm::abs(glm::dot(centroid, normal));
-				return Plane(normal, distance);
+				return { normal, distance };
 			}
 		}
 		return RefineBin(elements, binMaxValidSet, binMax);
@@ -648,9 +709,10 @@ std::vector<BillboardCloud::Cluster> BillboardCloud::DefaultClusterize(
 
 	Discretization discretization(maxNormalDistance, epsilon, settings.m_discretizationSize, settings.m_discretizationSize, roNum);
 	discretization.UpdateDensity(m_elements, operatingTriangles, true);
-
-	while (!operatingTriangles.empty())
+	bool updated = true;
+	while (!operatingTriangles.empty() && updated)
 	{
+		updated = false;
 		for (int i = 0; i < operatingTriangles.size(); i++)
 		{
 			operatingTriangles[i].m_index = i;
@@ -704,26 +766,50 @@ std::vector<BillboardCloud::Cluster> BillboardCloud::DefaultClusterize(
 				// store bbc and corresponding fitted triangles
 				newCluster.m_triangles = planeValidSet;
 			}
-		}
-		else
-		{
-			m_skippedTriangles = operatingTriangles;
-			break;
-		}
-		retVal.emplace_back(std::move(newCluster));
-		//Remove selected triangle from the remaining triangle.
-		for (auto it = selectedTriangleIndices.rbegin(); it != selectedTriangleIndices.rend(); ++it)
-		{
-			operatingTriangles[*it] = operatingTriangles.back();
-			operatingTriangles.pop_back();
-		}
-		epoch++;
-		if (settings.m_timeout != 0 && epoch >= settings.m_timeout)
-		{
-			EVOENGINE_ERROR("Default clustering timeout!")
+			updated = true;
+			retVal.emplace_back(std::move(newCluster));
+			//Remove selected triangle from the remaining triangle.
+			for (auto it = selectedTriangleIndices.rbegin(); it != selectedTriangleIndices.rend(); ++it)
+			{
+				operatingTriangles[*it] = operatingTriangles.back();
+				operatingTriangles.pop_back();
+			}
+			epoch++;
+			if (settings.m_timeout != 0 && epoch >= settings.m_timeout)
+			{
+				EVOENGINE_ERROR("Default clustering timeout!");
 				break;
+			}
 		}
 	}
+	m_skippedTriangles.clear();
+	if(settings.m_skipRemainTriangles)
+	{
+		m_skippedTriangles = operatingTriangles;
+	}else{
+		Cluster newCluster;
+		std::vector<glm::vec3> points;
+		for (auto& clusterTriangle : operatingTriangles)
+		{
+			const auto& element = m_elements.at(clusterTriangle.m_elementIndex);
+			const auto& triangle = element.m_triangles.at(clusterTriangle.m_triangleIndex);
+			points.emplace_back(element.m_vertices.at(triangle.x).m_position);
+			points.emplace_back(element.m_vertices.at(triangle.y).m_position);
+			points.emplace_back(element.m_vertices.at(triangle.z).m_position);
+		}
 
+		const auto fitted = Discretization::FitPlaneFromPoints(points);
+
+		auto centroid = fitted.first;
+		auto normal = fitted.second;
+		if (glm::dot(centroid, normal) < 0)
+		{
+			normal = -normal;
+		}
+		float distance = glm::abs(glm::dot(centroid, normal));
+		newCluster.m_clusterPlane = { normal, distance };
+		newCluster.m_triangles = operatingTriangles;
+		retVal.emplace_back(std::move(newCluster));
+	}
 	return retVal;
 }

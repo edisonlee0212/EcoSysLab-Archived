@@ -114,7 +114,7 @@ namespace EvoEngine {
 			float m_epsilonPercentage = 0.01f;
 			int m_discretizationSize = 10;
 			int m_timeout = 0;
-
+			bool m_skipRemainTriangles = false;
 			bool OnInspect();
 		};
 
@@ -173,9 +173,9 @@ namespace EvoEngine {
 		void Rasterize(const RasterizeSettings& rasterizeSettings);
 
 		void Generate(const GenerateSettings& generateSettings);
-
-		void ProcessPrefab(const std::shared_ptr<Prefab>& prefab);
-		void ProcessEntity(const std::shared_ptr<Scene>& scene, const Entity& entity);
+		void Process(const std::shared_ptr<Mesh>& mesh, const std::shared_ptr<Material>& material);
+		void Process(const std::shared_ptr<Prefab>& prefab);
+		void Process(const std::shared_ptr<Scene>& scene, const Entity& entity);
 
 		[[nodiscard]] Entity BuildEntity(const std::shared_ptr<Scene>& scene) const;
 

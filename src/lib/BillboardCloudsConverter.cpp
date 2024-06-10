@@ -12,6 +12,28 @@ bool BillboardCloudsConverter::OnInspect(const std::shared_ptr<EditorLayer>& edi
 	static BillboardCloud::GenerateSettings billboardCloudGenerateSettings{};
 	billboardCloudGenerateSettings.OnInspect("Billboard clouds generation settings");
 
+	if (ImGui::TreeNodeEx("Mesh -> Billboard Clouds", ImGuiTreeNodeFlags_DefaultOpen)) {
+
+		static AssetRef meshRef;
+		if (EditorLayer::DragAndDropButton<Mesh>(meshRef, "Drop mesh here...")) {
+			if (const auto mesh = meshRef.Get<Mesh>())
+			{
+				BillboardCloud billboardCloud{};
+				billboardCloud.Process(mesh, ProjectManager::CreateTemporaryAsset<Material>());
+				billboardCloud.Generate(billboardCloudGenerateSettings);
+				const auto entity = billboardCloud.BuildEntity(scene);
+				if (scene->IsEntityValid(entity)) scene->SetEntityName(entity, "Billboard cloud (" + mesh->GetTitle() + ")");
+				else
+				{
+					EVOENGINE_ERROR("Failed to build billboard cloud!");
+				}
+			}
+			meshRef.Clear();
+		}
+		ImGui::TreePop();
+	}
+
+
 	if (ImGui::TreeNodeEx("Prefab -> Billboard Clouds", ImGuiTreeNodeFlags_DefaultOpen)) {
 
 		static AssetRef prefabRef;
@@ -19,7 +41,7 @@ bool BillboardCloudsConverter::OnInspect(const std::shared_ptr<EditorLayer>& edi
 			if (const auto prefab = prefabRef.Get<Prefab>())
 			{
 				BillboardCloud billboardCloud{};
-				billboardCloud.ProcessPrefab(prefab);
+				billboardCloud.Process(prefab);
 				billboardCloud.Generate(billboardCloudGenerateSettings);
 				const auto entity = billboardCloud.BuildEntity(scene);
 				if (scene->IsEntityValid(entity)) scene->SetEntityName(entity, "Billboard cloud (" + prefab->GetTitle() + ")");
@@ -42,7 +64,7 @@ bool BillboardCloudsConverter::OnInspect(const std::shared_ptr<EditorLayer>& edi
 			if (scene->IsEntityValid(entity))
 			{
 				BillboardCloud billboardCloud{};
-				billboardCloud.ProcessEntity(scene, entity);
+				billboardCloud.Process(scene, entity);
 				billboardCloud.Generate(billboardCloudGenerateSettings);
 				const auto billboardEntity = billboardCloud.BuildEntity(scene);
 				if (scene->IsEntityValid(billboardEntity)) scene->SetEntityName(billboardEntity, "Billboard cloud (" + scene->GetEntityName(entity) + ")");
@@ -65,7 +87,7 @@ bool BillboardCloudsConverter::OnInspect(const std::shared_ptr<EditorLayer>& edi
 			if (scene->IsEntityValid(entity))
 			{
 				BillboardCloud billboardCloud{};
-				billboardCloud.ProcessEntity(scene, entity);
+				billboardCloud.Process(scene, entity);
 				points = billboardCloud.ExtractPointCloud(0.005f);
 			}
 			entityRef.Clear();
@@ -102,7 +124,7 @@ bool BillboardCloudsConverter::OnInspect(const std::shared_ptr<EditorLayer>& edi
 			if (scene->IsEntityValid(entity))
 			{
 				BillboardCloud billboardCloud{};
-				billboardCloud.ProcessEntity(scene, entity);
+				billboardCloud.Process(scene, entity);
 				for(auto& element : billboardCloud.m_elements) {
 					const auto levelSet = element.CalculateLevelSets();
 					Entity clone = scene->CreateEntity("Cloned");

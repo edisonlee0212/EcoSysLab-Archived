@@ -1223,12 +1223,22 @@ void BillboardCloud::ProcessEntity(const std::shared_ptr<Scene>& scene, const En
 
 #pragma endregion
 #pragma region Clusterization
-void BillboardCloud::ProcessPrefab(const std::shared_ptr<Prefab>& prefab)
+void BillboardCloud::Process(const std::shared_ptr<Mesh>& mesh, const std::shared_ptr<Material>& material)
+{
+	m_elements.emplace_back();
+	auto& element = m_elements.back();
+	element.m_vertices = mesh->UnsafeGetVertices();
+	element.m_material = material;
+	element.m_triangles = mesh->UnsafeGetTriangles();
+}
+
+
+void BillboardCloud::Process(const std::shared_ptr<Prefab>& prefab)
 {
 	ProcessPrefab(prefab, Transform());
 }
 
-void BillboardCloud::ProcessEntity(const std::shared_ptr<Scene>& scene, const Entity& entity)
+void BillboardCloud::Process(const std::shared_ptr<Scene>& scene, const Entity& entity)
 {
 	ProcessEntity(scene, entity, Transform());
 }
@@ -1272,6 +1282,8 @@ bool BillboardCloud::OriginalClusterizationSettings::OnInspect()
 		if (ImGui::DragFloat("Epsilon percentage", &m_epsilonPercentage, 0.01f, 0.01f, 1.f)) changed = true;
 		if (ImGui::DragInt("Discretization size", &m_discretizationSize, 1, 1, 1000)) changed = true;
 		if (ImGui::DragInt("Timeout", &m_timeout, 1, 1, 1000)) changed = true;
+
+		ImGui::Checkbox("Skip remaining triangles", &m_skipRemainTriangles);
 		ImGui::TreePop();
 	}
 	return changed;

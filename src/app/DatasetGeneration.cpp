@@ -95,7 +95,7 @@ void forest_patch_point_cloud()
 	treePointCloudGridCaptureSettings->m_backpackSample = 1024;
 	treePointCloudGridCaptureSettings->m_droneSample = 256;
 
-	std::filesystem::path target_descriptor_folder_path = resourceFolderPath / "EcoSysLabProject" / "Digital Forestry";
+	std::filesystem::path target_descriptor_folder_path = std::filesystem::absolute(resourceFolderPath / "EcoSysLabProject" / "Digital Forestry");
 	for (int index = 0; index < 256; index++) {
 		for (const auto& i : std::filesystem::recursive_directory_iterator(target_descriptor_folder_path))
 		{
@@ -152,7 +152,7 @@ void forest_patch_point_cloud_joined(const std::string& folderName, const bool e
 	treePointCloudGridCaptureSettings->m_backpackSample = 1024;
 	treePointCloudGridCaptureSettings->m_droneSample = 256;
 	
-	std::filesystem::path target_descriptor_folder_path = resourceFolderPath / "EcoSysLabProject" / folderName;
+	std::filesystem::path target_descriptor_folder_path = std::filesystem::absolute(resourceFolderPath / "EcoSysLabProject" / folderName);
 
 	for (int index = 0; index < count; index++) {
 		for (const auto& i : std::filesystem::recursive_directory_iterator(target_descriptor_folder_path))
