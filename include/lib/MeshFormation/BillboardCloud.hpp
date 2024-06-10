@@ -87,6 +87,8 @@ namespace EvoEngine {
 			bool m_transferMetallicMap = true;
 			bool m_transferAoMap = false;
 
+			bool m_fixTextureBleeding = true;
+			
 			glm::ivec2 m_resolution = glm::ivec2(2048);
 
 			bool OnInspect();

@@ -143,12 +143,14 @@ void BillboardCloud::Rectangle::Update()
 struct CPUDepthBuffer
 {
 	std::vector<float> m_depthBuffer;
+	std::vector<bool> m_modified;
 	std::vector<std::mutex> m_pixelLocks;
 	int m_width = 0;
 	int m_height = 0;
 	CPUDepthBuffer(const size_t width, const size_t height)
 	{
 		m_depthBuffer = std::vector<float>(width * height);
+		m_modified = std::vector<bool>(width * height);
 		Reset();
 		m_pixelLocks = std::vector<std::mutex>(width * height);
 		m_width = width;
@@ -158,15 +160,22 @@ struct CPUDepthBuffer
 	void Reset()
 	{
 		std::fill(m_depthBuffer.begin(), m_depthBuffer.end(), -FLT_MAX);
+		std::fill(m_modified.begin(), m_modified.end(), false);
 	}
 
-	[[nodiscard]] bool CompareZ(const int u, const int v, const float z) const
+	[[nodiscard]] bool CompareZ(const int u, const int v, const float z)
 	{
 		if (u < 0 || v < 0 || u > m_width - 1 || v > m_height - 1)
 			return false;
-
 		const int uv = u + m_width * v;
-		return z >= m_depthBuffer[uv];
+
+		if(z >= m_depthBuffer[uv]){
+			std::lock_guard lock(m_pixelLocks[uv]);
+			m_modified[uv] = true;
+			m_depthBuffer[uv] = z;
+			return true;
+		}
+		return false;
 	}
 };
 
@@ -202,10 +211,7 @@ struct CPUColorBuffer
 	}
 };
 
-inline double Cross(const glm::vec2& origin, const glm::vec2& a, const glm::vec2& b)
-{
-	return (a.x - origin.x) * (b.y - origin.y) - (a.y - origin.y) * (b.x - origin.x);
-}
+
 
 struct PointComparator
 {
@@ -237,10 +243,14 @@ glm::vec3 BillboardCloud::Rectangle::Transform(const glm::vec3& target) const
 	return { retVal, target.z };
 }
 
-
+float Cross(const glm::vec2& origin, const glm::vec2& a, const glm::vec2& b)
+{
+	return (a.x - origin.x) * (b.y - origin.y) - (a.y - origin.y) * (b.x - origin.x);
+}
 
 std::vector<glm::vec2> BillboardCloud::RotatingCalipers::ConvexHull(std::vector<glm::vec2> points)
 {
+
 	const size_t pointSize = points.size();
 	size_t k = 0;
 	if (pointSize <= 3) return points;
@@ -898,6 +908,176 @@ void BillboardCloud::Rasterize(const RasterizeSettings& rasterizeSettings)
 			});
 	}
 
+	if(rasterizeSettings.m_fixTextureBleeding)
+	{
+		bool lastIterationUpdated = true;
+		while(lastIterationUpdated)
+		{
+			lastIterationUpdated = false;
+			std::vector<bool> threadUpdated = std::vector<bool>(Jobs::GetWorkerSize());
+			std::fill(threadUpdated.begin(), threadUpdated.end(), false);
+			Jobs::RunParallelFor(depthBuffer.m_height, [&](unsigned lineIndex, unsigned threadIndex)
+			{
+				const int j = lineIndex;
+				for(int i = 0; i < depthBuffer.m_width; i++)
+				{
+					const auto testIndex = i + j * depthBuffer.m_width;
+					if(!depthBuffer.m_modified[testIndex])
+					{
+						float sum = 0.f;
+						bool hasLeft = false;
+						const int leftIndex = i - 1 + j * depthBuffer.m_width;
+						if(i > 0 && depthBuffer.m_modified[leftIndex])
+						{
+							hasLeft = true;
+							sum += 1.f;
+						}
+						bool hasRight = false;
+						const int rightIndex = i + 1 + j * depthBuffer.m_width;
+						if(i + 1 < depthBuffer.m_width && depthBuffer.m_modified[rightIndex])
+						{
+							hasRight = true;
+							sum += 1.f;
+						}
+						bool hasTop = false;
+						const int topIndex = i + (j - 1) * depthBuffer.m_width;
+						if(j > 0 && depthBuffer.m_modified[topIndex])
+						{
+							hasTop = true;
+							sum += 1.f;
+						}
+						bool hasBottom = false;
+						const int bottomIndex = i + (j + 1) * depthBuffer.m_width;
+						if(j + 1 < depthBuffer.m_height && depthBuffer.m_modified[bottomIndex])
+						{
+							hasBottom = true;
+							sum += 1.f;
+						}
+						if(sum == 0.f) continue;
+						threadUpdated[threadIndex] = true;
+						std::lock_guard lock(depthBuffer.m_pixelLocks[testIndex]);
+						depthBuffer.m_modified[testIndex] = true;
+						if(!albedoFrameBuffer.m_colorBuffer.empty()) {
+							glm::vec4 albedoColor{};
+							if(hasLeft)
+							{
+								albedoColor += albedoFrameBuffer.m_colorBuffer[leftIndex];
+							}
+							if(hasRight)
+							{
+								albedoColor += albedoFrameBuffer.m_colorBuffer[rightIndex];
+							}
+							if(hasTop)
+							{
+								albedoColor += albedoFrameBuffer.m_colorBuffer[topIndex];
+							}
+							if(hasBottom)
+							{
+								albedoColor += albedoFrameBuffer.m_colorBuffer[bottomIndex];
+							}
+							albedoColor /= sum;
+							
+							albedoFrameBuffer.m_colorBuffer[testIndex].x = albedoColor.x;
+							albedoFrameBuffer.m_colorBuffer[testIndex].y = albedoColor.y;
+							albedoFrameBuffer.m_colorBuffer[testIndex].z = albedoColor.z;
+						}
+						if(!normalFrameBuffer.m_colorBuffer.empty()) {
+							glm::vec3 normalColor{};
+							if(hasLeft)
+							{
+								normalColor += normalFrameBuffer.m_colorBuffer[leftIndex];
+							}
+							if(hasRight)
+							{
+								normalColor += normalFrameBuffer.m_colorBuffer[rightIndex];
+							}
+							if(hasTop)
+							{
+								normalColor += normalFrameBuffer.m_colorBuffer[topIndex];
+							}
+							if(hasBottom)
+							{
+								normalColor += normalFrameBuffer.m_colorBuffer[bottomIndex];
+							}
+							normalColor /= sum;
+							
+							normalFrameBuffer.m_colorBuffer[testIndex] = normalColor;
+						}
+						if(!roughnessFrameBuffer.m_colorBuffer.empty()) {
+							float roughnessColor{};
+							if(hasLeft)
+							{
+								roughnessColor += roughnessFrameBuffer.m_colorBuffer[leftIndex];
+							}
+							if(hasRight)
+							{
+								roughnessColor += roughnessFrameBuffer.m_colorBuffer[rightIndex];
+							}
+							if(hasTop)
+							{
+								roughnessColor += roughnessFrameBuffer.m_colorBuffer[topIndex];
+							}
+							if(hasBottom)
+							{
+								roughnessColor += roughnessFrameBuffer.m_colorBuffer[bottomIndex];
+							}
+							roughnessColor /= sum;
+							
+							roughnessFrameBuffer.m_colorBuffer[testIndex] = roughnessColor;
+						}
+						if(!metallicFrameBuffer.m_colorBuffer.empty()) {
+							float metallicColor{};
+							if(hasLeft)
+							{
+								metallicColor += metallicFrameBuffer.m_colorBuffer[leftIndex];
+							}
+							if(hasRight)
+							{
+								metallicColor += metallicFrameBuffer.m_colorBuffer[rightIndex];
+							}
+							if(hasTop)
+							{
+								metallicColor += metallicFrameBuffer.m_colorBuffer[topIndex];
+							}
+							if(hasBottom)
+							{
+								metallicColor += metallicFrameBuffer.m_colorBuffer[bottomIndex];
+							}
+							metallicColor /= sum;
+							metallicFrameBuffer.m_colorBuffer[testIndex] = metallicColor;
+						}
+						if(!aoFrameBuffer.m_colorBuffer.empty()) {
+							float aoColor{};
+							if(hasLeft)
+							{
+								aoColor += aoFrameBuffer.m_colorBuffer[leftIndex];
+							}
+							if(hasRight)
+							{
+								aoColor += aoFrameBuffer.m_colorBuffer[rightIndex];
+							}
+							if(hasTop)
+							{
+								aoColor += aoFrameBuffer.m_colorBuffer[topIndex];
+							}
+							if(hasBottom)
+							{
+								aoColor += aoFrameBuffer.m_colorBuffer[bottomIndex];
+							}
+							aoColor /= sum;
+							aoFrameBuffer.m_colorBuffer[testIndex] = aoColor;
+						}
+					}
+				}
+			});
+			for(const auto&& i : threadUpdated) if(i)
+			{
+				lastIterationUpdated = true;
+				break;
+			}
+		}
+	}
+
 	m_billboardCloudMaterial = ProjectManager::CreateTemporaryAsset<Material>();
 	std::shared_ptr<Texture2D> albedoTexture = ProjectManager::CreateTemporaryAsset<Texture2D>();
 	albedoTexture->SetRgbaChannelData(albedoFrameBuffer.m_colorBuffer, glm::uvec2(albedoFrameBuffer.m_width, albedoFrameBuffer.m_height));
@@ -1103,21 +1283,6 @@ std::vector<glm::vec3> BillboardCloud::ExtractPointCloud(const float density) co
 		std::unordered_set<unsigned> selectedIndices;
 		for (const auto& triangle : element.m_triangles)
 		{
-			/*
-			if(selectedIndices.find(triangle.x) == selectedIndices.end())
-			{
-				points.emplace_back(element.m_vertices[triangle.x].m_position);
-				selectedIndices.emplace(triangle.x);
-			}else if(selectedIndices.find(triangle.y) == selectedIndices.end())
-			{
-				points.emplace_back(element.m_vertices[triangle.y].m_position);
-				selectedIndices.emplace(triangle.y);
-			}else if(selectedIndices.find(triangle.z) == selectedIndices.end())
-			{
-				points.emplace_back(element.m_vertices[triangle.z].m_position);
-				selectedIndices.emplace(triangle.z);
-			}*/
-
 			const auto& v0 = element.m_vertices[triangle.x].m_position;
 			const auto& v1 = element.m_vertices[triangle.y].m_position;
 			const auto& v2 = element.m_vertices[triangle.z].m_position;
@@ -1368,6 +1533,8 @@ bool BillboardCloud::RasterizeSettings::OnInspect()
 		if (ImGui::Checkbox("Transfer metallic texture", &m_transferMetallicMap)) changed = true;
 		if (ImGui::Checkbox("Transfer ao texture", &m_transferAoMap)) changed = true;
 		if (ImGui::DragInt2("Resolution", &m_resolution.x, 1, 1, 8192)) changed = true;
+
+		if(ImGui::Checkbox("Fix texture bleeding", &m_fixTextureBleeding)) changed = true;
 		ImGui::TreePop();
 	}
 	return changed;
