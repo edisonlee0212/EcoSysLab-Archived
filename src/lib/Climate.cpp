@@ -1,109 +1,92 @@
 #include "Climate.hpp"
 
-
 #include "EcoSysLabLayer.hpp"
 #include "EditorLayer.hpp"
 #include "Tree.hpp"
 
-using namespace EcoSysLab;
+using namespace eco_sys_lab;
 
-bool ClimateDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
-{
-	bool changed = false;
-	if (ImGui::Button("Instantiate")) {
-		const auto scene = Application::GetActiveScene();
-		const auto climateEntity = scene->CreateEntity(GetTitle());
-		const auto climate = scene->GetOrSetPrivateComponent<Climate>(climateEntity).lock();
-		climate->m_climateDescriptor = ProjectManager::GetAsset(GetHandle());
-	}
-	return changed;
+bool ClimateDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
+  bool changed = false;
+  if (ImGui::Button("Instantiate")) {
+    const auto scene = Application::GetActiveScene();
+    const auto climateEntity = scene->CreateEntity(GetTitle());
+    const auto climate = scene->GetOrSetPrivateComponent<Climate>(climateEntity).lock();
+    climate->m_climateDescriptor = ProjectManager::GetAsset(GetHandle());
+  }
+  return changed;
 }
 
-void ClimateDescriptor::Serialize(YAML::Emitter& out) const
-{
-	
+void ClimateDescriptor::Serialize(YAML::Emitter& out) const {
 }
 
-void ClimateDescriptor::Deserialize(const YAML::Node& in)
-{
-	
+void ClimateDescriptor::Deserialize(const YAML::Node& in) {
 }
 
-bool Climate::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer)
-{
-	bool changed = false;
-	if(editorLayer->DragAndDropButton<ClimateDescriptor>(m_climateDescriptor, "ClimateDescriptor", true))
-	{
-		InitializeClimateModel();
-	}
+bool Climate::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
+  bool changed = false;
+  if (editorLayer->DragAndDropButton<ClimateDescriptor>(m_climateDescriptor, "ClimateDescriptor", true)) {
+    InitializeClimateModel();
+  }
 
-	if (m_climateDescriptor.Get<ClimateDescriptor>())
-	{
-
-	}
-	return changed;
+  if (m_climateDescriptor.Get<ClimateDescriptor>()) {
+  }
+  return changed;
 }
 
-void Climate::Serialize(YAML::Emitter& out) const 
-{
-	m_climateDescriptor.Save("m_climateDescriptor", out);
+void Climate::Serialize(YAML::Emitter& out) const {
+  m_climateDescriptor.Save("m_climateDescriptor", out);
 }
 
-void Climate::CollectAssetRef(std::vector<AssetRef>& list)
-{
-	list.push_back(m_climateDescriptor);
+void Climate::CollectAssetRef(std::vector<AssetRef>& list) {
+  list.push_back(m_climateDescriptor);
 }
 
-void Climate::InitializeClimateModel()
-{
-	auto climateDescriptor = m_climateDescriptor.Get<ClimateDescriptor>();
-	if (climateDescriptor)
-	{
-		auto params = climateDescriptor->m_climateParameters;
-		m_climateModel.Initialize(params);
-	}
+void Climate::InitializeClimateModel() {
+  auto climateDescriptor = m_climateDescriptor.Get<ClimateDescriptor>();
+  if (climateDescriptor) {
+    auto params = climateDescriptor->m_climateParameters;
+    m_climateModel.Initialize(params);
+  }
 }
 
-void Climate::PrepareForGrowth()
-{
-	const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
-	const auto scene = GetScene();
-	const std::vector<Entity>* treeEntities =
-		scene->UnsafeGetPrivateComponentOwnersList<Tree>();
-	if (!treeEntities || treeEntities->empty()) return;
+void Climate::PrepareForGrowth() {
+  const auto ecoSysLabLayer = Application::GetLayer<EcoSysLabLayer>();
+  const auto scene = GetScene();
+  const std::vector<Entity>* treeEntities = scene->UnsafeGetPrivateComponentOwnersList<Tree>();
+  if (!treeEntities || treeEntities->empty())
+    return;
 
-	auto& estimator = m_climateModel.m_environmentGrid;
-	auto minBound = estimator.m_voxel.GetMinBound();
-	auto maxBound = estimator.m_voxel.GetMaxBound();
-	bool boundChanged = false;
-	for (const auto& treeEntity : *treeEntities)
-	{
-		const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
-		const auto globalTransform = scene->GetDataComponent<GlobalTransform>(treeEntity).m_value;
-		const glm::vec3 currentMinBound = globalTransform * glm::vec4(tree->m_treeModel.RefShootSkeleton().m_min, 1.0f);
-		const glm::vec3 currentMaxBound = globalTransform * glm::vec4(tree->m_treeModel.RefShootSkeleton().m_max, 1.0f);
+  auto& estimator = m_climateModel.environment_grid;
+  auto minBound = estimator.voxel_grid.GetMinBound();
+  auto maxBound = estimator.voxel_grid.GetMaxBound();
+  bool boundChanged = false;
+  for (const auto& treeEntity : *treeEntities) {
+    const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
+    const auto globalTransform = scene->GetDataComponent<GlobalTransform>(treeEntity).value;
+    const glm::vec3 currentMinBound = globalTransform * glm::vec4(tree->tree_model.RefShootSkeleton().min, 1.0f);
+    const glm::vec3 currentMaxBound = globalTransform * glm::vec4(tree->tree_model.RefShootSkeleton().max, 1.0f);
 
-		if (currentMinBound.x <= minBound.x || currentMinBound.y <= minBound.y || currentMinBound.z <= minBound.z
-			|| currentMaxBound.x >= maxBound.x || currentMaxBound.y >= maxBound.y || currentMaxBound.z >= maxBound.z) {
-			minBound = glm::min(currentMinBound - glm::vec3(1.0f, 0.1f, 1.0f), minBound);
-			maxBound = glm::max(currentMaxBound + glm::vec3(1.0f), maxBound);
-			boundChanged = true;
-			//EVOENGINE_LOG("Shadow grid resized!");
-		}
-		tree->m_crownShynessDistance = ecoSysLabLayer->m_simulationSettings.m_crownShynessDistance;
-	}
-	if (boundChanged) estimator.m_voxel.Initialize(estimator.m_voxelSize, minBound, maxBound);
-	estimator.m_voxel.Reset();
-	for (const auto& treeEntity : *treeEntities)
-	{
-		const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
-		tree->RegisterVoxel();
-	}
+    if (currentMinBound.x <= minBound.x || currentMinBound.y <= minBound.y || currentMinBound.z <= minBound.z ||
+        currentMaxBound.x >= maxBound.x || currentMaxBound.y >= maxBound.y || currentMaxBound.z >= maxBound.z) {
+      minBound = glm::min(currentMinBound - glm::vec3(1.0f, 0.1f, 1.0f), minBound);
+      maxBound = glm::max(currentMaxBound + glm::vec3(1.0f), maxBound);
+      boundChanged = true;
+      // EVOENGINE_LOG("Shadow grid resized!");
+    }
+    tree->crown_shyness_distance = ecoSysLabLayer->m_simulationSettings.m_crownShynessDistance;
+  }
+  if (boundChanged)
+    estimator.voxel_grid.Initialize(estimator.voxel_size, minBound, maxBound);
+  estimator.voxel_grid.Reset();
+  for (const auto& treeEntity : *treeEntities) {
+    const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
+    tree->RegisterVoxel();
+  }
 
-	estimator.LightPropagation(ecoSysLabLayer->m_simulationSettings);
+  estimator.LightPropagation(ecoSysLabLayer->m_simulationSettings);
 }
 
-void Climate::Deserialize(const YAML::Node& in)
-{
-	m_climateDescriptor.Load("m_climateDescriptor", in);
+void Climate::Deserialize(const YAML::Node& in) {
+  m_climateDescriptor.Load("m_climateDescriptor", in);
 }

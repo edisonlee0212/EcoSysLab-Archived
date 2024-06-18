@@ -1,19 +1,18 @@
 #pragma once
 
+using namespace evo_engine;
+namespace eco_sys_lab {
+class ObjectRotator : public IPrivateComponent {
+ public:
+  float rotate_speed;
+  glm::vec3 rotation = glm::vec3(0, 0, 0);
 
-using namespace EvoEngine;
-namespace EcoSysLab {
-    class ObjectRotator : public IPrivateComponent {
-    public:
-        float m_rotateSpeed;
-        glm::vec3 m_rotation = glm::vec3(0, 0, 0);
+  bool OnInspect(const std::shared_ptr<EditorLayer>& editor_layer) override;
 
-        bool OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
+  void FixedUpdate() override;
 
-        void FixedUpdate() override;
+  void Serialize(YAML::Emitter& out) const override;
 
-        void Serialize(YAML::Emitter& out) const override;
-
-        void Deserialize(const YAML::Node& in) override;
-    };
-} // namespace PlantFactory
+  void Deserialize(const YAML::Node& in) override;
+};
+}  // namespace eco_sys_lab

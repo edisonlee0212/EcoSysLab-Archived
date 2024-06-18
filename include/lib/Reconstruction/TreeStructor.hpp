@@ -1,316 +1,313 @@
 #pragma once
 
-#include "VoxelGrid.hpp"
-#include "Skeleton.hpp"
-#include "TreeMeshGenerator.hpp"
 #include "Curve.hpp"
+#include "Skeleton.hpp"
 #include "Tree.hpp"
+#include "TreeMeshGenerator.hpp"
+#include "VoxelGrid.hpp"
 
-using namespace EvoEngine;
-namespace EcoSysLab {
-	typedef int PointHandle;
-	typedef int BranchHandle;
-	typedef int TreePartHandle;
-	struct ScatteredPoint {
-		PointHandle m_handle = -1;
-		std::vector<PointHandle> m_neighborScatterPoints;
-		std::vector<std::pair<float, BranchHandle>> m_p3;
+using namespace evo_engine;
+namespace eco_sys_lab {
+typedef int PointHandle;
+typedef int BranchHandle;
+typedef int TreePartHandle;
+struct ScatteredPoint {
+  PointHandle handle = -1;
+  std::vector<PointHandle> neighbor_scatter_points;
+  std::vector<std::pair<float, BranchHandle>> p3;
 
-		//For reversed branch
-		std::vector<std::pair<float, BranchHandle>> m_p0;
-		glm::vec3 m_position = glm::vec3(0.0f);
-	};
-	struct AllocatedPoint {
-		glm::vec3 m_color;
-		glm::vec3 m_position;
+  // For reversed branch
+  std::vector<std::pair<float, BranchHandle>> p0;
+  glm::vec3 position = glm::vec3(0.0f);
+};
+struct AllocatedPoint {
+  glm::vec3 color;
+  glm::vec3 position;
 
-		glm::vec2 m_planePosition;
-		float m_planeCenterDistance;
-		PointHandle m_handle = -1;
-		TreePartHandle m_treePartHandle = -1;
-		BranchHandle m_branchHandle = -1;
-		SkeletonNodeHandle m_nodeHandle = -1;
-		int m_skeletonIndex = -1;
-	};
-	struct PredictedBranch {
-		glm::vec3 m_color;
+  glm::vec2 plane_position;
+  float plane_center_distance;
+  PointHandle handle = -1;
+  TreePartHandle tree_part_handle = -1;
+  BranchHandle branch_handle = -1;
+  SkeletonNodeHandle node_handle = -1;
+  int skeleton_index = -1;
+};
+struct PredictedBranch {
+  glm::vec3 color;
 
-		TreePartHandle m_treePartHandle = -1;
-		BranchHandle m_handle = -1;
-		BezierCurve m_bezierCurve;
-		float m_startThickness = 0.0f;
-		float m_endThickness = 0.0f;
+  TreePartHandle tree_part_handle = -1;
+  BranchHandle handle = -1;
+  BezierCurve bezier_curve;
+  float start_thickness = 0.0f;
+  float end_thickness = 0.0f;
 
-		float m_finalThickness = 0.0f;
-		std::vector<PointHandle> m_allocatedPoints;
+  float final_thickness = 0.0f;
+  std::vector<PointHandle> allocated_points;
 
-		std::vector<std::pair<float, PointHandle>> m_pointsToP3;
-		std::unordered_map<BranchHandle, float> m_p3ToP0;
+  std::vector<std::pair<float, PointHandle>> points_to_p3;
+  std::unordered_map<BranchHandle, float> p3_to_p0;
 
-		//For reversed branch
-		std::vector<std::pair<float, PointHandle>> m_pointsToP0;
-		std::unordered_map<BranchHandle, float> m_p3ToP3;
-		std::unordered_map<BranchHandle, float> m_p0ToP0;
-		std::unordered_map<BranchHandle, float> m_p0ToP3;
-	};
+  // For reversed branch
+  std::vector<std::pair<float, PointHandle>> points_to_p0;
+  std::unordered_map<BranchHandle, float> p3_to_p3;
+  std::unordered_map<BranchHandle, float> p0_to_p0;
+  std::unordered_map<BranchHandle, float> p0_to_p3;
+};
 
-	struct OperatorBranch {
-		glm::vec3 m_color;
+struct OperatorBranch {
+  glm::vec3 color;
 
-		TreePartHandle m_treePartHandle = -1;
-		BranchHandle m_handle = -1;
+  TreePartHandle tree_part_handle = -1;
+  BranchHandle handle = -1;
 
-		BranchHandle m_reversedBranchHandle = -1;
+  BranchHandle reversed_branch_handle = -1;
 
-		BezierCurve m_bezierCurve;
-		float m_thickness = 0.0f;
+  BezierCurve bezier_curve;
+  float thickness = 0.0f;
 
-		BranchHandle m_parentHandle = -1;
-		std::vector<BranchHandle> m_childHandles;
-		BranchHandle m_largestChildHandle = -1;
-		int m_skeletonIndex = -1;
-		std::vector<SkeletonNodeHandle> m_chainNodeHandles;
+  BranchHandle parent_handle = -1;
+  std::vector<BranchHandle> child_handles;
+  BranchHandle largest_child_handle = -1;
+  int skeleton_index = -1;
+  std::vector<SkeletonNodeHandle> chain_node_handles;
 
-		float m_bestDistance = FLT_MAX;
+  float best_distance = FLT_MAX;
 
-		std::vector<std::pair<BranchHandle, float>> m_parentCandidates;
-		bool m_used = false;
-		bool m_orphan = false;
+  std::vector<std::pair<BranchHandle, float>> parent_candidates;
+  bool used = false;
+  bool orphan = false;
 
-		bool m_apical = false;
+  bool apical = false;
 
-		float m_distanceToParentBranch = 0.0f;
-		float m_rootDistance = 0.0f;
+  float distance_to_parent_branch = 0.0f;
+  float root_distance = 0.0f;
 
-		int m_descendantSize = 0;
-	};
+  int descendant_size = 0;
+};
 
-	struct TreePart {
-		glm::vec3 m_color;
+struct TreePart {
+  glm::vec3 color;
 
-		TreePartHandle m_handle = -1;
-		std::vector<PointHandle> m_allocatedPoints;
-		std::vector<BranchHandle> m_branchHandles;
-	};
+  TreePartHandle handle = -1;
+  std::vector<PointHandle> allocated_points;
+  std::vector<BranchHandle> branch_handles;
+};
 
-	struct ConnectivityGraphSettings {
-		bool m_reverseConnection = false;
-		bool m_pointExistenceCheck = true;
-		float m_pointExistenceCheckRadius = 0.1f;
-		bool m_zigzagCheck = true;
-		float m_zigzagBranchShortening = 0.1f;
-		float m_parallelShiftCheckHeightLimit = 1.5f;
-		bool m_parallelShiftCheck = true;
-		float m_parallelShiftLimitRange = 2.0f;
-		float m_pointPointConnectionDetectionRadius = 0.05f;
-		float m_pointBranchConnectionDetectionRadius = 0.1f;
-		float m_branchBranchConnectionMaxLengthRange = 5.0f;
-		float m_directionConnectionAngleLimit = 65.0f;
-		float m_indirectConnectionAngleLimit = 65.0f;
+struct ConnectivityGraphSettings {
+  bool reverse_connection = false;
+  bool point_existence_check = true;
+  float point_existence_check_radius = 0.1f;
+  bool zigzag_check = true;
+  float zigzag_branch_shortening = 0.1f;
+  float parallel_shift_check_height_limit = 1.5f;
+  bool parallel_shift_check = true;
+  float parallel_shift_limit_range = 2.0f;
+  float point_point_connection_detection_radius = 0.05f;
+  float point_branch_connection_detection_radius = 0.1f;
+  float branch_branch_connection_max_length_range = 5.0f;
+  float direction_connection_angle_limit = 65.0f;
+  float indirect_connection_angle_limit = 65.0f;
 
-		float m_connectionRangeLimit = 1.0f;
+  float connection_range_limit = 1.0f;
 
-		float m_maxScatterPointConnectionHeight = 1.5f;
-		void OnInspect();
-	};
+  float max_scatter_point_connection_height = 1.5f;
+  void OnInspect();
+};
 
-	struct PointData {
-		glm::vec3 m_position = glm::vec3(0.0f);
-		glm::vec3 m_direction = glm::vec3(0.0f);
-		int m_handle = -1;
-		int m_index = -1;
-		float m_minDistance = FLT_MAX;
-	};
-	struct BranchEndData {
-		bool m_isP0 = true;
-		glm::vec3 m_position = glm::vec3(0.0f);
-		int m_branchHandle = -1;
-	};
+struct PointData {
+  glm::vec3 position = glm::vec3(0.0f);
+  glm::vec3 direction = glm::vec3(0.0f);
+  int handle = -1;
+  int index = -1;
+  float min_distance = FLT_MAX;
+};
+struct BranchEndData {
+  bool is_p0 = true;
+  glm::vec3 position = glm::vec3(0.0f);
+  int branch_handle = -1;
+};
 
-	struct ReconstructionSettings {
-		float m_internodeLength = 0.03f;
-		float m_minHeight = 0.1f;
-		float m_minimumTreeDistance = 0.1f;
-		float m_branchShortening = 0.3f;
-		int m_maxParentCandidateSize = 100;
-		int m_maxChildSize = 10;
+struct ReconstructionSettings {
+  float internode_length = 0.03f;
+  float min_height = 0.1f;
+  float minimum_tree_distance = 0.1f;
+  float branch_shortening = 0.3f;
+  int max_parent_candidate_size = 100;
+  int max_child_size = 10;
 
-		float m_endNodeThickness = 0.004f;
-		float m_thicknessSumFactor = 0.4f;
-		float m_thicknessAccumulationFactor = 0.00005f;
-		float m_overrideThicknessRootDistance = 0.0f;
+  float end_node_thickness = 0.004f;
+  float thickness_sum_factor = 0.4f;
+  float thickness_accumulation_factor = 0.00005f;
+  float override_thickness_root_distance = 0.0f;
 
-		int m_spaceColonizationTimeout = 10;
-		float m_spaceColonizationFactor = 0.0f;
-		float m_spaceColonizationRemovalDistanceFactor = 2;
-		float m_spaceColonizationDetectionDistanceFactor = 4;
-		float m_spaceColonizationTheta = 20.0f;
+  int space_colonization_timeout = 10;
+  float space_colonization_factor = 0.0f;
+  float space_colonization_removal_distance_factor = 2;
+  float space_colonization_detection_distance_factor = 4;
+  float space_colonization_theta = 20.0f;
 
-		int m_minimumNodeCount = 10;
-		bool m_limitParentThickness = true;
-		float m_minimumRootThickness = 0.02f;
+  int minimum_node_count = 10;
+  bool limit_parent_thickness = true;
+  float minimum_root_thickness = 0.02f;
 
-		int m_nodeBackTrackLimit = 30;
-		int m_branchBackTrackLimit = 1;
+  int node_back_track_limit = 30;
+  int branch_back_track_limit = 1;
 
-		/*
-		bool m_candidateSearch = true;
-		int m_candidateSearchLimit = 1;
-		bool m_forceConnectAllBranches = false;
-		*/
-		bool m_useRootDistance = true;
-		int m_optimizationTimeout = 999;
+  /*
+  bool m_candidateSearch = true;
+  int m_candidateSearchLimit = 1;
+  bool m_forceConnectAllBranches = false;
+  */
+  bool use_root_distance = true;
+  int optimization_timeout = 999;
 
-		float m_directionSmoothing = 0.1f;
-		float m_positionSmoothing = 0.1f;
-		int m_smoothIteration = 10;
+  float direction_smoothing = 0.1f;
+  float position_smoothing = 0.1f;
+  int smooth_iteration = 10;
 
-		
-		void OnInspect();
-	};
+  void OnInspect();
+};
 
-	struct ReconstructionSkeletonData {
-		glm::vec3 m_rootPosition = glm::vec3(0.0f);
-		float m_maxEndDistance = 0.0f;
-	};
-	struct ReconstructionFlowData {
+struct ReconstructionSkeletonData {
+  glm::vec3 root_position = glm::vec3(0.0f);
+  float max_end_distance = 0.0f;
+};
+struct ReconstructionFlowData {};
+struct ReconstructionNodeData {
+  glm::vec3 global_start_position = glm::vec3(0.f);
+  glm::vec3 global_end_position = glm::vec3(0.0f);
 
-	};
-	struct ReconstructionNodeData {
-		glm::vec3 m_globalStartPosition = glm::vec3(0.f);
-		glm::vec3 m_globalEndPosition = glm::vec3(0.0f);
+  float draft_thickness = 0.0f;
+  float allocated_point_thickness = 0.0f;
+  std::vector<PointHandle> allocated_points;
+  std::vector<PointHandle> filtered_points;
+  BranchHandle branch_handle;
 
-		float m_draftThickness = 0.0f;
-		float m_allocatedPointThickness = 0.0f;
-		std::vector<PointHandle> m_allocatedPoints;
-		std::vector<PointHandle> m_filteredPoints;
-		BranchHandle m_branchHandle;
+  bool regrowth = false;
+  int marker_size = 0;
+  glm::vec3 regrow_direction = glm::vec3(0.0f);
+};
+typedef Skeleton<ReconstructionSkeletonData, ReconstructionFlowData, ReconstructionNodeData> ReconstructionSkeleton;
 
-		bool m_regrowth = false;
-		int m_markerSize = 0;
-		glm::vec3 m_regrowDirection = glm::vec3(0.0f);
-		
-	};
-	typedef Skeleton<ReconstructionSkeletonData, ReconstructionFlowData, ReconstructionNodeData> ReconstructionSkeleton;
+class TreeStructor : public IPrivateComponent {
+  bool DirectConnectionCheck(const BezierCurve& parentCurve, const BezierCurve& childCurve, bool reverse);
 
-	class TreeStructor : public IPrivateComponent {
-		bool DirectConnectionCheck(const BezierCurve& parentCurve, const BezierCurve& childCurve, bool reverse);
+  static void FindPoints(const glm::vec3& position, VoxelGrid<std::vector<PointData>>& pointVoxelGrid, float radius,
+                         const std::function<void(const PointData& voxel)>& func);
+  static bool HasPoints(const glm::vec3& position, VoxelGrid<std::vector<PointData>>& pointVoxelGrid, float radius);
+  static void ForEachBranchEnd(const glm::vec3& position, VoxelGrid<std::vector<BranchEndData>>& branchEndsVoxelGrid,
+                               float radius, const std::function<void(const BranchEndData& voxel)>& func);
 
-		static void FindPoints(const glm::vec3& position, VoxelGrid<std::vector<PointData>>& pointVoxelGrid, float radius,
-		                       const std::function<void(const PointData& voxel)>& func);
-		static bool HasPoints(const glm::vec3& position, VoxelGrid<std::vector<PointData>>& pointVoxelGrid, float radius);
-		static void ForEachBranchEnd(const glm::vec3& position, VoxelGrid<std::vector<BranchEndData>>& branchEndsVoxelGrid, float radius,
-		                             const std::function<void(const BranchEndData& voxel)>& func);
+  void CalculateNodeTransforms(ReconstructionSkeleton& skeleton);
 
-		void CalculateNodeTransforms(ReconstructionSkeleton& skeleton);
+  void BuildConnectionBranch(BranchHandle processingBranchHandle, SkeletonNodeHandle& prevNodeHandle);
 
-		void BuildConnectionBranch(BranchHandle processingBranchHandle, SkeletonNodeHandle& prevNodeHandle);
+  void Unlink(BranchHandle childHandle, BranchHandle parentHandle);
+  void Link(BranchHandle childHandle, BranchHandle parentHandle);
 
-		void Unlink(BranchHandle childHandle, BranchHandle parentHandle);
-		void Link(BranchHandle childHandle, BranchHandle parentHandle);
+  void GetSortedBranchList(BranchHandle branchHandle, std::vector<BranchHandle>& list);
 
-		void GetSortedBranchList(BranchHandle branchHandle, std::vector<BranchHandle>& list);
+  void ConnectBranches(BranchHandle branchHandle);
 
-		void ConnectBranches(BranchHandle branchHandle);
+  void ApplyCurve(const OperatorBranch& branch);
 
-		void ApplyCurve(const OperatorBranch& branch);
+  void BuildVoxelGrid();
 
-		void BuildVoxelGrid();
+  static void CloneOperatingBranch(const ReconstructionSettings& reconstructionSettings, OperatorBranch& operatorBranch,
+                                   const PredictedBranch& target);
 
-		static void CloneOperatingBranch(const ReconstructionSettings& reconstructionSettings, OperatorBranch& operatorBranch, const PredictedBranch& target);
+  void SpaceColonization();
 
-		void SpaceColonization();
+  void CalculateBranchRootDistance(const std::vector<std::pair<glm::vec3, BranchHandle>>& rootBranchHandles);
 
-		void CalculateBranchRootDistance(const std::vector<std::pair<glm::vec3, BranchHandle>>& rootBranchHandles);
+  void CalculateSkeletonGraphs();
 
-		void CalculateSkeletonGraphs();
-	public:
-		std::shared_ptr<ParticleInfoList> m_allocatedPointInfoList;
-		std::shared_ptr<ParticleInfoList> m_scatteredPointInfoList;
-		std::shared_ptr<ParticleInfoList> m_scatteredPointConnectionInfoList;
-		std::shared_ptr<ParticleInfoList> m_candidateBranchConnectionInfoList;
-		std::shared_ptr<ParticleInfoList> m_reversedCandidateBranchConnectionInfoList;
-		std::shared_ptr<ParticleInfoList> m_filteredBranchConnectionInfoList;
-		std::shared_ptr<ParticleInfoList> m_selectedBranchConnectionInfoList;
-		std::shared_ptr<ParticleInfoList> m_scatterPointToBranchConnectionInfoList;
-		std::shared_ptr<ParticleInfoList> m_selectedBranchInfoList;
-		glm::vec4 m_scatterPointToBranchConnectionColor = glm::vec4(1, 0, 1, 1);
-		glm::vec4 m_allocatedPointColor = glm::vec4(0, 0.5, 0.25, 1);
-		glm::vec4 m_scatterPointColor = glm::vec4(0.25, 0.5, 0, 1);
-		glm::vec4 m_scatteredPointConnectionColor = glm::vec4(0, 0, 0, 1);
-		glm::vec4 m_candidateBranchConnectionColor = glm::vec4(1, 1, 0, 1);
-		glm::vec4 m_reversedCandidateBranchConnectionColor = glm::vec4(0, 1, 1, 1);
-		glm::vec4 m_filteredBranchConnectionColor = glm::vec4(0, 0, 1, 1);
-		glm::vec4 m_selectedBranchConnectionColor = glm::vec4(0.3, 0, 0, 1);
-		glm::vec4 m_selectedBranchColor = glm::vec4(0.6, 0.3, 0.0, 1.0f);
+ public:
+  std::shared_ptr<ParticleInfoList> allocated_point_info_list;
+  std::shared_ptr<ParticleInfoList> scattered_point_info_list;
+  std::shared_ptr<ParticleInfoList> scattered_point_connection_info_list;
+  std::shared_ptr<ParticleInfoList> candidate_branch_connection_info_list;
+  std::shared_ptr<ParticleInfoList> reversed_candidate_branch_connection_info_list;
+  std::shared_ptr<ParticleInfoList> filtered_branch_connection_info_list;
+  std::shared_ptr<ParticleInfoList> selected_branch_connection_info_list;
+  std::shared_ptr<ParticleInfoList> scatter_point_to_branch_connection_info_list;
+  std::shared_ptr<ParticleInfoList> selected_branch_info_list;
+  glm::vec4 scatter_point_to_branch_connection_color = glm::vec4(1, 0, 1, 1);
+  glm::vec4 allocated_point_color = glm::vec4(0, 0.5, 0.25, 1);
+  glm::vec4 scatter_point_color = glm::vec4(0.25, 0.5, 0, 1);
+  glm::vec4 scattered_point_connection_color = glm::vec4(0, 0, 0, 1);
+  glm::vec4 candidate_branch_connection_color = glm::vec4(1, 1, 0, 1);
+  glm::vec4 reversed_candidate_branch_connection_color = glm::vec4(0, 1, 1, 1);
+  glm::vec4 filtered_branch_connection_color = glm::vec4(0, 0, 1, 1);
+  glm::vec4 selected_branch_connection_color = glm::vec4(0.3, 0, 0, 1);
+  glm::vec4 selected_branch_color = glm::vec4(0.6, 0.3, 0.0, 1.0f);
 
+  bool enable_allocated_points = false;
+  bool enable_scattered_points = false;
+  bool enable_scattered_point_connections = false;
+  bool enable_scatter_point_to_branch_connections = false;
+  bool enable_candidate_branch_connections = false;
+  bool enable_reversed_candidate_branch_connections = false;
+  bool enable_filtered_branch_connections = false;
+  bool enable_selected_branch_connections = true;
+  bool enable_selected_branches = true;
 
-		bool m_enableAllocatedPoints = false;
-		bool m_enableScatteredPoints = false;
-		bool m_enableScatteredPointConnections = false;
-		bool m_enableScatterPointToBranchConnections = false;
-		bool m_enableCandidateBranchConnections = false;
-		bool m_enableReversedCandidateBranchConnections = false;
-		bool m_enableFilteredBranchConnections = false;
-		bool m_enableSelectedBranchConnections = true;
-		bool m_enableSelectedBranches = true;
-		
-		bool m_debugAllocatedPoints = true;
-		bool m_debugScatteredPoints = true;
-		bool m_debugScatteredPointConnections = false;
-		bool m_debugScatterPointToBranchConnections = false;
-		bool m_debugCandidateConnections = false;
-		bool m_debugReversedCandidateConnections = false;
-		bool m_debugFilteredConnections = false;
-		bool m_debugSelectedBranchConnections = true;
-		bool m_debugSelectedBranches = true;
+  bool debug_allocated_points = true;
+  bool debug_scattered_points = true;
+  bool debug_scattered_point_connections = false;
+  bool debug_scatter_point_to_branch_connections = false;
+  bool debug_candidate_connections = false;
+  bool debug_reversed_candidate_connections = false;
+  bool debug_filtered_connections = false;
+  bool debug_selected_branch_connections = true;
+  bool debug_selected_branches = true;
 
-		VoxelGrid<std::vector<PointData>> m_scatterPointsVoxelGrid;
-		VoxelGrid<std::vector<PointData>> m_allocatedPointsVoxelGrid;
-		VoxelGrid<std::vector<PointData>> m_spaceColonizationVoxelGrid;
-		VoxelGrid<std::vector<BranchEndData>> m_branchEndsVoxelGrid;
+  VoxelGrid<std::vector<PointData>> scatter_points_voxel_grid;
+  VoxelGrid<std::vector<PointData>> allocated_points_voxel_grid;
+  VoxelGrid<std::vector<PointData>> space_colonization_voxel_grid;
+  VoxelGrid<std::vector<BranchEndData>> branch_ends_voxel_grid;
 
-		ReconstructionSettings m_reconstructionSettings{};
-		ConnectivityGraphSettings m_connectivityGraphSettings{};
-		void ImportGraph(const std::filesystem::path& path, float scaleFactor = 0.1f);
-		void ExportForestOBJ(const TreeMeshGeneratorSettings& meshGeneratorSettings, const std::filesystem::path& path);
+  ReconstructionSettings reconstruction_settings{};
+  ConnectivityGraphSettings connectivity_graph_settings{};
+  void ImportGraph(const std::filesystem::path& path, float scaleFactor = 0.1f);
+  void ExportForestOBJ(const TreeMeshGeneratorSettings& meshGeneratorSettings, const std::filesystem::path& path);
 
+  glm::vec3 min;
+  glm::vec3 max;
+  std::vector<ScatteredPoint> scattered_points;
+  std::vector<AllocatedPoint> allocated_points;
+  std::vector<PredictedBranch> predicted_branches;
 
-		glm::vec3 m_min;
-		glm::vec3 m_max;
-		std::vector<ScatteredPoint> m_scatteredPoints;
-		std::vector<AllocatedPoint> m_allocatedPoints;
-		std::vector<PredictedBranch> m_predictedBranches;
+  std::vector<OperatorBranch> operating_branches;
+  std::vector<TreePart> tree_parts;
 
-		std::vector<OperatorBranch> m_operatingBranches;
-		std::vector<TreePart> m_treeParts;
+  bool OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 
-		bool OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
+  std::vector<ReconstructionSkeleton> skeletons;
 
-		std::vector<ReconstructionSkeleton> m_skeletons;
+  std::vector<std::pair<glm::vec3, glm::vec3>> scattered_point_to_branch_end_connections;
+  std::vector<std::pair<glm::vec3, glm::vec3>> scattered_point_to_branch_start_connections;
+  std::vector<std::pair<glm::vec3, glm::vec3>> scattered_points_connections;
+  std::vector<std::pair<glm::vec3, glm::vec3>> candidate_branch_connections;
+  std::vector<std::pair<glm::vec3, glm::vec3>> reversed_candidate_branch_connections;
+  std::vector<std::pair<glm::vec3, glm::vec3>> filtered_branch_connections;
+  std::vector<std::pair<glm::vec3, glm::vec3>> branch_connections;
+  void EstablishConnectivityGraph();
 
-		std::vector<std::pair<glm::vec3, glm::vec3>> m_scatteredPointToBranchEndConnections;
-		std::vector<std::pair<glm::vec3, glm::vec3>> m_scatteredPointToBranchStartConnections;
-		std::vector<std::pair<glm::vec3, glm::vec3>> m_scatteredPointsConnections;
-		std::vector<std::pair<glm::vec3, glm::vec3>> m_candidateBranchConnections;
-		std::vector<std::pair<glm::vec3, glm::vec3>> m_reversedCandidateBranchConnections;
-		std::vector<std::pair<glm::vec3, glm::vec3>> m_filteredBranchConnections;
-		std::vector<std::pair<glm::vec3, glm::vec3>> m_branchConnections;
-		void EstablishConnectivityGraph();
+  void BuildSkeletons();
+  void GenerateForest() const;
+  void FormInfoEntities() const;
+  void ClearForest() const;
 
-		void BuildSkeletons();
-		void GenerateForest() const;
-		void FormInfoEntities() const;
-		void ClearForest() const;
+  void OnCreate() override;
+  AssetRef tree_descriptor;
 
-		void OnCreate() override;
-		AssetRef m_treeDescriptor;
+  std::vector<std::shared_ptr<Mesh>> GenerateForestBranchMeshes(
+      const TreeMeshGeneratorSettings& meshGeneratorSettings) const;
+  std::vector<std::shared_ptr<Mesh>> GenerateFoliageMeshes();
 
-		std::vector<std::shared_ptr<Mesh>> GenerateForestBranchMeshes(const TreeMeshGeneratorSettings& meshGeneratorSettings) const;
-		std::vector<std::shared_ptr<Mesh>> GenerateFoliageMeshes();
-
-		void Serialize(YAML::Emitter& out) const override;
-		void Deserialize(const YAML::Node& in) override;
-		void CollectAssetRef(std::vector<AssetRef>& list) override;
-	};
-}
+  void Serialize(YAML::Emitter& out) const override;
+  void Deserialize(const YAML::Node& in) override;
+  void CollectAssetRef(std::vector<AssetRef>& list) override;
+};
+}  // namespace eco_sys_lab

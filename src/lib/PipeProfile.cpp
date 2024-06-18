@@ -1,4 +1,4 @@
 #include "StrandModelProfile.hpp"
 
-using namespace EcoSysLab;
+using namespace eco_sys_lab;
 

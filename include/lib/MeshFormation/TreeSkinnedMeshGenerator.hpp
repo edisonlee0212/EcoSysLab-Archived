@@ -1,617 +1,586 @@
 #pragma once
 
-#include "Vertex.hpp"
 #include "TreeMeshGenerator.hpp"
-using namespace EvoEngine;
+#include "Vertex.hpp"
+using namespace evo_engine;
 
-namespace EcoSysLab {
+namespace eco_sys_lab {
 
-	template<typename SkeletonData, typename FlowData, typename NodeData>
-	class CylindricalSkinnedMeshGenerator {
-	public:
-		static void GenerateBones(
-			const Skeleton<SkeletonData, FlowData, NodeData>& skeleton,
-			const std::vector<SkeletonFlowHandle>& flowHandles,
-			std::vector<glm::mat4>& offsetMatrices,
-			std::unordered_map<SkeletonFlowHandle, int>& flowBoneIdMap);
-		static void Generate(const Skeleton<SkeletonData, FlowData, NodeData>& skeleton,
-			std::vector<SkinnedVertex>& skinnedVertices, std::vector<unsigned int>& indices, std::vector<glm::mat4>& offsetMatrices,
-			const TreeMeshGeneratorSettings& settings,
-			const std::function<void(glm::vec3& vertexPosition, const glm::vec3& direction, float xFactor, float distanceToRoot)>& vertexPositionModifier,
-			const std::function<void(glm::vec2& texCoords, float xFactor, float distanceToRoot)>& texCoordsModifier);
-	};
+template <typename SkeletonData, typename FlowData, typename NodeData>
+class CylindricalSkinnedMeshGenerator {
+ public:
+  static void GenerateBones(const Skeleton<SkeletonData, FlowData, NodeData>& skeleton,
+                            const std::vector<SkeletonFlowHandle>& flow_handles,
+                            std::vector<glm::mat4>& offset_matrices,
+                            std::unordered_map<SkeletonFlowHandle, int>& flow_bone_id_map);
+  static void Generate(
+      const Skeleton<SkeletonData, FlowData, NodeData>& skeleton, std::vector<SkinnedVertex>& skinned_vertices,
+      std::vector<unsigned int>& indices, std::vector<glm::mat4>& offset_matrices,
+      const TreeMeshGeneratorSettings& settings,
+      const std::function<void(glm::vec3& vertex_position, const glm::vec3& direction, float x_factor,
+                               float distance_to_root)>& vertex_position_modifier,
+      const std::function<void(glm::vec2& tex_coords, float x_factor, float distance_to_root)>& tex_coords_modifier);
+};
 
-	template <typename SkeletonData, typename FlowData, typename NodeData>
-	void CylindricalSkinnedMeshGenerator<SkeletonData, FlowData, NodeData>::GenerateBones(
-		const Skeleton<SkeletonData, FlowData, NodeData>& skeleton,
-		const std::vector<SkeletonFlowHandle>& flowHandles,
-		std::vector<glm::mat4>& offsetMatrices,
-		std::unordered_map<SkeletonFlowHandle, int>& flowBoneIdMap)
-	{
-		flowBoneIdMap.clear();
-		int currentBoneIndex = 0;
-		for (const auto& flowHandle : flowHandles)
-		{
-			flowBoneIdMap[flowHandle] = currentBoneIndex;
-			currentBoneIndex++;
-		}
+template <typename SkeletonData, typename FlowData, typename NodeData>
+void CylindricalSkinnedMeshGenerator<SkeletonData, FlowData, NodeData>::GenerateBones(
+    const Skeleton<SkeletonData, FlowData, NodeData>& skeleton, const std::vector<SkeletonFlowHandle>& flow_handles,
+    std::vector<glm::mat4>& offset_matrices, std::unordered_map<SkeletonFlowHandle, int>& flow_bone_id_map) {
+  flow_bone_id_map.clear();
+  int current_bone_index = 0;
+  for (const auto& flow_handle : flow_handles) {
+    flow_bone_id_map[flow_handle] = current_bone_index;
+    current_bone_index++;
+  }
 
-		offsetMatrices.resize(currentBoneIndex + 1);
-		for(const auto& [flowHandle, matrixIndex] : flowBoneIdMap)
-		{
-			const auto& flow = skeleton.PeekFlow(flowHandle);
-			offsetMatrices[matrixIndex] = glm::inverse(glm::translate(flow.m_info.m_globalStartPosition) * glm::mat4_cast(flow.m_info.m_globalStartRotation));
-		}
-	}
+  offset_matrices.resize(current_bone_index + 1);
+  for (const auto& [flowHandle, matrixIndex] : flow_bone_id_map) {
+    const auto& flow = skeleton.PeekFlow(flowHandle);
+    offset_matrices[matrixIndex] = glm::inverse(glm::translate(flow.info.global_start_position) *
+                                               glm::mat4_cast(flow.info.global_start_rotation));
+  }
+}
 
-	template <typename SkeletonData, typename FlowData, typename NodeData>
-	void CylindricalSkinnedMeshGenerator<SkeletonData, FlowData, NodeData>::Generate(
-		const Skeleton<SkeletonData, FlowData, NodeData>& skeleton, std::vector<SkinnedVertex>& skinnedVertices,
-		std::vector<unsigned int>& indices, std::vector<glm::mat4>& offsetMatrices, 
-		const TreeMeshGeneratorSettings& settings,
-		const std::function<void(glm::vec3& vertexPosition, const glm::vec3& direction, float xFactor, float
-			distanceToRoot)>& vertexPositionModifier,
-		const std::function<void(glm::vec2& texCoords, float xFactor, float distanceToRoot)>& texCoordsModifier)
-	{
-		const auto& sortedFlowList = skeleton.PeekSortedFlowList();
-		const auto& sortedInternodeList = skeleton.PeekSortedNodeList();
+template <typename SkeletonData, typename FlowData, typename NodeData>
+void CylindricalSkinnedMeshGenerator<SkeletonData, FlowData, NodeData>::Generate(
+    const Skeleton<SkeletonData, FlowData, NodeData>& skeleton, std::vector<SkinnedVertex>& skinned_vertices,
+    std::vector<unsigned int>& indices, std::vector<glm::mat4>& offset_matrices,
+    const TreeMeshGeneratorSettings& settings,
+    const std::function<void(glm::vec3& vertex_position, const glm::vec3& direction, float x_factor,
+                             float distance_to_root)>& vertex_position_modifier,
+    const std::function<void(glm::vec2& tex_coords, float x_factor, float distance_to_root)>& tex_coords_modifier) {
+  const auto& sorted_flow_list = skeleton.PeekSortedFlowList();
+  const auto& sorted_internode_list = skeleton.PeekSortedNodeList();
 
+  std::vector<std::vector<RingSegment>> rings_list;
+  std::vector<bool> main_child_status;
 
-		std::vector<std::vector<RingSegment>> ringsList;
-		std::vector<bool> mainChildStatus;
+  std::unordered_map<SkeletonNodeHandle, int> steps{};
+  rings_list.resize(sorted_internode_list.size());
+  main_child_status.resize(sorted_internode_list.size());
+  std::vector<std::shared_future<void>> results;
+  std::vector<std::vector<std::pair<SkeletonNodeHandle, int>>> temp_steps{};
+  temp_steps.resize(Jobs::GetWorkerSize());
 
-		std::unordered_map<SkeletonNodeHandle, int> steps{};
-		ringsList.resize(sortedInternodeList.size());
-		mainChildStatus.resize(sortedInternodeList.size());
-		std::vector<std::shared_future<void>> results;
-		std::vector<std::vector<std::pair<SkeletonNodeHandle, int>>> tempSteps{};
-		tempSteps.resize(Jobs::GetWorkerSize());
+  Jobs::RunParallelFor(sorted_internode_list.size(), [&](unsigned internode_index, unsigned thread_index) {
+    auto internode_handle = sorted_internode_list[internode_index];
+    const auto& internode = skeleton.PeekNode(internode_handle);
+    const auto& internode_info = internode.info;
 
-		Jobs::RunParallelFor(sortedInternodeList.size(), [&](unsigned internodeIndex, unsigned threadIndex) {
-			auto internodeHandle = sortedInternodeList[internodeIndex];
-			const auto& internode = skeleton.PeekNode(internodeHandle);
-			const auto& internodeInfo = internode.m_info;
+    auto& rings = rings_list[internode_index];
+    rings.clear();
 
-			auto& rings = ringsList[internodeIndex];
-			rings.clear();
+    glm::vec3 direction_start = internode_info.regulated_global_rotation * glm::vec3(0, 0, -1);
+    glm::vec3 direction_end = direction_start;
+    float root_distance_start = internode_info.root_distance;
+    float root_distance_end = root_distance_start;
 
-			glm::vec3 directionStart = internodeInfo.m_regulatedGlobalRotation * glm::vec3(0, 0, -1);
-			glm::vec3 directionEnd = directionStart;
-			float rootDistanceStart = internodeInfo.m_rootDistance;
-			float rootDistanceEnd = rootDistanceStart;
+    glm::vec3 position_start = internode_info.global_position;
+    glm::vec3 position_end;
+    position_end = position_start + internode_info.length *
+                  (settings.smoothness ? 1.0f - settings.base_control_point_ratio : 1.0f) *
+                  internode_info.GetGlobalDirection();
+    float thickness_start = internode_info.thickness;
+    float thickness_end = internode_info.thickness;
 
-			glm::vec3 positionStart = internodeInfo.m_globalPosition;
-			glm::vec3 positionEnd =
-				positionStart + internodeInfo.m_length * (settings.m_smoothness ? 1.0f - settings.m_baseControlPointRatio : 1.0f) * internodeInfo.GetGlobalDirection();
-			float thicknessStart = internodeInfo.m_thickness;
-			float thicknessEnd = internodeInfo.m_thickness;
+    if (internode.GetParentHandle() != -1) {
+      const auto& parent_internode = skeleton.PeekNode(internode.GetParentHandle());
+      thickness_start = parent_internode.info.thickness;
+      direction_start = parent_internode.info.regulated_global_rotation * glm::vec3(0, 0, -1);
+      position_start =
+          parent_internode.info.global_position +
+          (parent_internode.info.length * (settings.smoothness ? 1.0f - settings.base_control_point_ratio : 1.0f)) *
+              parent_internode.info.GetGlobalDirection();
 
-			if (internode.GetParentHandle() != -1) {
-				const auto& parentInternode = skeleton.PeekNode(internode.GetParentHandle());
-				thicknessStart = parentInternode.m_info.m_thickness;
-				directionStart =
-					parentInternode.m_info.m_regulatedGlobalRotation *
-					glm::vec3(0, 0, -1);
-				positionStart =
-					parentInternode.m_info.m_globalPosition + (parentInternode.m_info.m_length * (settings.m_smoothness ? 1.0f - settings.m_baseControlPointRatio : 1.0f)) * parentInternode.m_info.GetGlobalDirection();
+      root_distance_start = parent_internode.info.root_distance;
+    }
 
-				rootDistanceStart = parentInternode.m_info.m_rootDistance;
-			}
+    if (settings.override_radius) {
+      thickness_start = settings.radius;
+      thickness_end = settings.radius;
+    }
 
-			if (settings.m_overrideRadius) {
-				thicknessStart = settings.m_radius;
-				thicknessEnd = settings.m_radius;
-			}
-
-			if (settings.m_presentationOverride && settings.m_presentationOverrideSettings.m_maxThickness != 0.0f)
-			{
-				thicknessStart = glm::min(thicknessStart, settings.m_presentationOverrideSettings.m_maxThickness);
-				thicknessEnd = glm::min(thicknessEnd, settings.m_presentationOverrideSettings.m_maxThickness);
-			}
+    if (settings.presentation_override && settings.presentation_override_settings.max_thickness != 0.0f) {
+      thickness_start = glm::min(thickness_start, settings.presentation_override_settings.max_thickness);
+      thickness_end = glm::min(thickness_end, settings.presentation_override_settings.max_thickness);
+    }
 
 #pragma region Subdivision internode here.
-			const auto boundaryLength = glm::max(thicknessStart, thicknessEnd) * glm::pi<float>();
-			int step = boundaryLength / settings.m_xSubdivision;
-			if (step < 4)
-				step = 4;
-			if (step % 2 != 0)
-				++step;
+    const auto boundary_length = glm::max(thickness_start, thickness_end) * glm::pi<float>();
+    int step = boundary_length / settings.x_subdivision;
+    if (step < 4)
+      step = 4;
+    if (step % 2 != 0)
+      ++step;
 
-			tempSteps[threadIndex].emplace_back(internodeHandle, step);
-			int amount = glm::max(1, static_cast<int>(glm::distance(positionStart, positionEnd) / (internodeInfo.m_thickness >= settings.m_trunkThickness ? settings.m_trunkYSubdivision : settings.m_branchYSubdivision)));
-			if (amount % 2 != 0)
-				++amount;
-			amount = glm::max(1, amount);
-			BezierCurve curve = BezierCurve(
-				positionStart,
-				positionStart +
-				(settings.m_smoothness ? internodeInfo.m_length * settings.m_baseControlPointRatio : 0.0f) * directionStart,
-				positionEnd -
-				(settings.m_smoothness ? internodeInfo.m_length * settings.m_branchControlPointRatio : 0.0f) * directionEnd,
-				positionEnd);
+    temp_steps[thread_index].emplace_back(internode_handle, step);
+    int amount = glm::max(
+        1, static_cast<int>(glm::distance(position_start, position_end) /
+                            (internode_info.thickness >= settings.trunk_thickness ? settings.trunk_y_subdivision
+                                                                                    : settings.branch_y_subdivision)));
+    if (amount % 2 != 0)
+      ++amount;
+    amount = glm::max(1, amount);
+    BezierCurve curve = BezierCurve(
+        position_start,
+        position_start +
+            (settings.smoothness ? internode_info.length * settings.base_control_point_ratio : 0.0f) * direction_start,
+        position_end -
+            (settings.smoothness ? internode_info.length * settings.branch_control_point_ratio : 0.0f) * direction_end,
+        position_end);
 
-			for (int ringIndex = 1; ringIndex <= amount; ringIndex++) {
-				const float a = static_cast<float>(ringIndex - 1) / amount;
-				const float b = static_cast<float>(ringIndex) / amount;
-				if (settings.m_smoothness) {
-					rings.emplace_back(a, b,
-						curve.GetPoint(a), curve.GetPoint(b),
-						glm::mix(directionStart, directionEnd, a),
-						glm::mix(directionStart, directionEnd, b),
-						glm::mix(thicknessStart, thicknessEnd, a) * .5f,
-						glm::mix(thicknessStart, thicknessEnd, b) * .5f,
-						glm::mix(rootDistanceStart, rootDistanceEnd, a), glm::mix(rootDistanceStart, rootDistanceEnd, b));
-				}
-				else {
-					rings.emplace_back(a, b,
-						curve.GetPoint(a), curve.GetPoint(b),
-						directionEnd,
-						directionEnd,
-						glm::mix(thicknessStart, thicknessEnd, a) * .5f,
-						glm::mix(thicknessStart, thicknessEnd, b) * .5f,
-						glm::mix(rootDistanceStart, rootDistanceEnd, a), glm::mix(rootDistanceStart, rootDistanceEnd, b));
-				}
-			}
+    for (int ring_index = 1; ring_index <= amount; ring_index++) {
+      const float a = static_cast<float>(ring_index - 1) / amount;
+      const float b = static_cast<float>(ring_index) / amount;
+      if (settings.smoothness) {
+        rings.emplace_back(a, b, curve.GetPoint(a), curve.GetPoint(b), glm::mix(direction_start, direction_end, a),
+                           glm::mix(direction_start, direction_end, b), glm::mix(thickness_start, thickness_end, a) * .5f,
+                           glm::mix(thickness_start, thickness_end, b) * .5f,
+                           glm::mix(root_distance_start, root_distance_end, a),
+                           glm::mix(root_distance_start, root_distance_end, b));
+      } else {
+        rings.emplace_back(
+            a, b, curve.GetPoint(a), curve.GetPoint(b), direction_end, direction_end,
+            glm::mix(thickness_start, thickness_end, a) * .5f, glm::mix(thickness_start, thickness_end, b) * .5f,
+            glm::mix(root_distance_start, root_distance_end, a), glm::mix(root_distance_start, root_distance_end, b));
+      }
+    }
 #pragma endregion
-			});
+  });
 
-		for (const auto& list : tempSteps)
-		{
-			for (const auto& element : list)
-			{
-				steps[element.first] = element.second;
-			}
-		}
+  for (const auto& list : temp_steps) {
+    for (const auto& element : list) {
+      steps[element.first] = element.second;
+    }
+  }
 
-		std::unordered_map<SkeletonNodeHandle, int> vertexLastRingStartVertexIndex{};
+  std::unordered_map<SkeletonNodeHandle, int> vertex_last_ring_start_vertex_index{};
 
-		int nextTreePartIndex = 0;
-		int nextLineIndex = 0;
-		std::unordered_map<SkeletonNodeHandle, TreePartInfo> treePartInfos{};
+  int next_tree_part_index = 0;
+  int next_line_index = 0;
+  std::unordered_map<SkeletonNodeHandle, TreePartInfo> tree_part_infos{};
 
-		std::unordered_map<SkeletonFlowHandle, int> flowBoneIdMap;
+  std::unordered_map<SkeletonFlowHandle, int> flow_bone_id_map;
 
-		GenerateBones(skeleton, sortedFlowList, offsetMatrices, flowBoneIdMap);
+  GenerateBones(skeleton, sorted_flow_list, offset_matrices, flow_bone_id_map);
 
-		for (int internodeIndex = 0; internodeIndex < sortedInternodeList.size(); internodeIndex++) {
-			auto internodeHandle = sortedInternodeList[internodeIndex];
-			const auto& internode = skeleton.PeekNode(internodeHandle);
-			const auto& internodeInfo = internode.m_info;
-			auto parentInternodeHandle = internode.GetParentHandle();
-			SkinnedVertex archetype{};
-			const auto flowHandle = internode.GetFlowHandle();
-			const auto& flow = skeleton.PeekFlow(flowHandle);
-			const auto& chainHandles = flow.PeekNodeHandles();
-			const auto parentFlowHandle = flow.GetParentHandle();
-			float distanceToChainStart = 0;
-			float distanceToChainEnd = 0;
-			const auto chainSize = chainHandles.size();
-			for (int i = 0; i < chainSize; i++)
-			{
-				if (chainHandles[i] == internodeHandle) break;
-				distanceToChainStart += skeleton.PeekNode(chainHandles[i]).m_info.m_length;
-
-			}
-			distanceToChainEnd = flow.m_info.m_flowLength - distanceToChainStart;
-			if (!internode.IsEndNode()) distanceToChainEnd -= internode.m_info.m_length;
+  for (int internode_index = 0; internode_index < sorted_internode_list.size(); internode_index++) {
+    auto internode_handle = sorted_internode_list[internode_index];
+    const auto& internode = skeleton.PeekNode(internode_handle);
+    const auto& internode_info = internode.info;
+    auto parent_internode_handle = internode.GetParentHandle();
+    SkinnedVertex archetype{};
+    const auto flow_handle = internode.GetFlowHandle();
+    const auto& flow = skeleton.PeekFlow(flow_handle);
+    const auto& chain_handles = flow.PeekNodeHandles();
+    const auto parent_flow_handle = flow.GetParentHandle();
+    float distance_to_chain_start = 0;
+    float distance_to_chain_end = 0;
+    const auto chain_size = chain_handles.size();
+    for (int i = 0; i < chain_size; i++) {
+      if (chain_handles[i] == internode_handle)
+        break;
+      distance_to_chain_start += skeleton.PeekNode(chain_handles[i]).info.length;
+    }
+    distance_to_chain_end = flow.info.flow_length - distance_to_chain_start;
+    if (!internode.IsEndNode())
+      distance_to_chain_end -= internode.info.length;
 #pragma region TreePart
-			if (settings.m_vertexColorMode == static_cast<unsigned>(TreeMeshGeneratorSettings::VertexColorMode::Junction)) {
+    if (settings.vertex_color_mode == static_cast<unsigned>(TreeMeshGeneratorSettings::VertexColorMode::Junction)) {
+      const bool has_multiple_children = flow.PeekChildHandles().size() > 1;
+      bool only_child = true;
 
-				const bool hasMultipleChildren = flow.PeekChildHandles().size() > 1;
-				bool onlyChild = true;
-				
-				float compareRadius = internode.m_info.m_thickness;
-				if (parentFlowHandle != -1)
-				{
-					const auto& parentFlow = skeleton.PeekFlow(parentFlowHandle);
-					onlyChild = parentFlow.PeekChildHandles().size() <= 1;
-					compareRadius = parentFlow.m_info.m_endThickness;
-				}
-				int treePartType = 0;
-				if (hasMultipleChildren && distanceToChainEnd <= settings.m_treePartBaseDistance * compareRadius) {
-					treePartType = 1;
-				}
-				else if (!onlyChild && distanceToChainStart <= settings.m_treePartEndDistance * compareRadius)
-				{
-					treePartType = 2;
-				}
-				int currentTreePartIndex = -1;
-				int currentLineIndex = -1;
-				archetype.m_vertexInfo4.y = 0;
-				if (treePartType == 0)
-				{
-					//IShape
-					//If root or parent is Y Shape or length exceeds limit, create a new IShape from this node.
-					bool restartIShape = parentInternodeHandle == -1 || treePartInfos[parentInternodeHandle].m_treePartType != 0;
-					if (!restartIShape)
-					{
-						const auto& parentTreePartInfo = treePartInfos[parentInternodeHandle];
-						if (parentTreePartInfo.m_distanceToStart / internodeInfo.m_thickness > settings.m_treePartBreakRatio) restartIShape = true;
-					}
-					if (restartIShape)
-					{
-						TreePartInfo treePartInfo;
-						treePartInfo.m_treePartType = 0;
-						treePartInfo.m_treePartIndex = nextTreePartIndex;
-						treePartInfo.m_lineIndex = nextLineIndex;
-						treePartInfo.m_distanceToStart = 0.0f;
-						treePartInfos[internodeHandle] = treePartInfo;
-						currentTreePartIndex = nextTreePartIndex;
-						nextTreePartIndex++;
+      float compare_radius = internode.info.thickness;
+      if (parent_flow_handle != -1) {
+        const auto& parent_flow = skeleton.PeekFlow(parent_flow_handle);
+        only_child = parent_flow.PeekChildHandles().size() <= 1;
+        compare_radius = parent_flow.info.end_thickness;
+      }
+      int tree_part_type = 0;
+      if (has_multiple_children && distance_to_chain_end <= settings.tree_part_base_distance * compare_radius) {
+        tree_part_type = 1;
+      } else if (!only_child && distance_to_chain_start <= settings.tree_part_end_distance * compare_radius) {
+        tree_part_type = 2;
+      }
+      int current_tree_part_index = -1;
+      int current_line_index = -1;
+      archetype.vertex_info4.y = 0;
+      if (tree_part_type == 0) {
+        // IShape
+        // If root or parent is Y Shape or length exceeds limit, create a new IShape from this node.
+        bool restart_i_shape = parent_internode_handle == -1 || tree_part_infos[parent_internode_handle].tree_part_type != 0;
+        if (!restart_i_shape) {
+          if (const auto& parent_tree_part_info = tree_part_infos[parent_internode_handle];
+            parent_tree_part_info.distance_to_start / internode_info.thickness > settings.tree_part_break_ratio)
+            restart_i_shape = true;
+        }
+        if (restart_i_shape) {
+          TreePartInfo tree_part_info;
+          tree_part_info.tree_part_type = 0;
+          tree_part_info.tree_part_index = next_tree_part_index;
+          tree_part_info.line_index = next_line_index;
+          tree_part_info.distance_to_start = 0.0f;
+          tree_part_infos[internode_handle] = tree_part_info;
+          current_tree_part_index = next_tree_part_index;
+          next_tree_part_index++;
 
-						currentLineIndex = nextLineIndex;
-						nextLineIndex++;
-					}
-					else
-					{
-						auto& currentTreePartInfo = treePartInfos[internodeHandle];
-						currentTreePartInfo = treePartInfos[parentInternodeHandle];
-						currentTreePartInfo.m_distanceToStart += internodeInfo.m_length;
-						currentTreePartInfo.m_treePartType = 0;
-						currentTreePartIndex = currentTreePartInfo.m_treePartIndex;
+          current_line_index = next_line_index;
+          next_line_index++;
+        } else {
+          auto& current_tree_part_info = tree_part_infos[internode_handle];
+          current_tree_part_info = tree_part_infos[parent_internode_handle];
+          current_tree_part_info.distance_to_start += internode_info.length;
+          current_tree_part_info.tree_part_type = 0;
+          current_tree_part_index = current_tree_part_info.tree_part_index;
 
-						currentLineIndex = currentTreePartInfo.m_lineIndex;
-					}
-					archetype.m_vertexInfo4.y = 1;
-					//archetype.m_color = glm::vec4(1, 1, 1, 1);
-				}
-				else if (treePartType == 1)
-				{
-					//Base of Y Shape
-					if (parentInternodeHandle == -1 || treePartInfos[parentInternodeHandle].m_treePartType != 1
-						|| treePartInfos[parentInternodeHandle].m_baseFlowHandle != flowHandle)
-					{
-						TreePartInfo treePartInfo;
-						treePartInfo.m_treePartType = 1;
-						treePartInfo.m_treePartIndex = nextTreePartIndex;
-						treePartInfo.m_lineIndex = nextLineIndex;
-						treePartInfo.m_distanceToStart = 0.0f;
-						treePartInfo.m_baseFlowHandle = flowHandle;
-						treePartInfos[internodeHandle] = treePartInfo;
-						currentTreePartIndex = nextTreePartIndex;
-						nextTreePartIndex++;
+          current_line_index = current_tree_part_info.line_index;
+        }
+        archetype.vertex_info4.y = 1;
+        // archetype.color = glm::vec4(1, 1, 1, 1);
+      } else if (tree_part_type == 1) {
+        // Base of Y Shape
+        if (parent_internode_handle == -1 || tree_part_infos[parent_internode_handle].tree_part_type != 1 ||
+            tree_part_infos[parent_internode_handle].base_flow_handle != flow_handle) {
+          TreePartInfo tree_part_info;
+          tree_part_info.tree_part_type = 1;
+          tree_part_info.tree_part_index = next_tree_part_index;
+          tree_part_info.line_index = next_line_index;
+          tree_part_info.distance_to_start = 0.0f;
+          tree_part_info.base_flow_handle = flow_handle;
+          tree_part_infos[internode_handle] = tree_part_info;
+          current_tree_part_index = next_tree_part_index;
+          next_tree_part_index++;
 
-						currentLineIndex = nextLineIndex;
-						nextLineIndex++;
-					}
-					else
-					{
-						auto& currentTreePartInfo = treePartInfos[internodeHandle];
-						currentTreePartInfo = treePartInfos[parentInternodeHandle];
-						currentTreePartInfo.m_treePartType = 1;
-						currentTreePartIndex = currentTreePartInfo.m_treePartIndex;
-						currentLineIndex = currentTreePartInfo.m_lineIndex;
-					}
-					archetype.m_vertexInfo4.y = 2;
-					//archetype.m_color = glm::vec4(1, 0, 0, 1);
-				}
-				else if (treePartType == 2)
-				{
-					//Branch of Y Shape
-					if (parentInternodeHandle == -1 || treePartInfos[parentInternodeHandle].m_treePartType == 0
-						|| treePartInfos[parentInternodeHandle].m_baseFlowHandle != parentFlowHandle)
-					{
-					}
-					else
-					{
-						auto& currentTreePartInfo = treePartInfos[internodeHandle];
-						currentTreePartInfo = treePartInfos[parentInternodeHandle];
-						if (currentTreePartInfo.m_treePartType != 2)
-						{
-							currentTreePartInfo.m_lineIndex = nextLineIndex;
-							nextLineIndex++;
-						}
-						currentTreePartInfo.m_treePartType = 2;
-						currentTreePartIndex = currentTreePartInfo.m_treePartIndex;
+          current_line_index = next_line_index;
+          next_line_index++;
+        } else {
+          auto& current_tree_part_info = tree_part_infos[internode_handle];
+          current_tree_part_info = tree_part_infos[parent_internode_handle];
+          current_tree_part_info.tree_part_type = 1;
+          current_tree_part_index = current_tree_part_info.tree_part_index;
+          current_line_index = current_tree_part_info.line_index;
+        }
+        archetype.vertex_info4.y = 2;
+        // archetype.color = glm::vec4(1, 0, 0, 1);
+      } else if (tree_part_type == 2) {
+        // Branch of Y Shape
+        if (parent_internode_handle == -1 || tree_part_infos[parent_internode_handle].tree_part_type == 0 ||
+            tree_part_infos[parent_internode_handle].base_flow_handle != parent_flow_handle) {
+        } else {
+          auto& current_tree_part_info = tree_part_infos[internode_handle];
+          current_tree_part_info = tree_part_infos[parent_internode_handle];
+          if (current_tree_part_info.tree_part_type != 2) {
+            current_tree_part_info.line_index = next_line_index;
+            next_line_index++;
+          }
+          current_tree_part_info.tree_part_type = 2;
+          current_tree_part_index = current_tree_part_info.tree_part_index;
 
-						currentLineIndex = currentTreePartInfo.m_lineIndex;
-					}
-					archetype.m_vertexInfo4.y = 2;
-					//archetype.m_color = glm::vec4(1, 0, 0, 1);
-				}
-				archetype.m_vertexInfo3 = currentLineIndex + 1;
-				archetype.m_vertexInfo4.x = currentTreePartIndex + 1;
-			}
+          current_line_index = current_tree_part_info.line_index;
+        }
+        archetype.vertex_info4.y = 2;
+        // archetype.color = glm::vec4(1, 0, 0, 1);
+      }
+      archetype.vertex_info3 = current_line_index + 1;
+      archetype.vertex_info4.x = current_tree_part_index + 1;
+    }
 #pragma endregion
-			const glm::vec3 up = internodeInfo.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
-			glm::vec3 parentUp = up;
-			bool needStitching = false;
-			if (parentInternodeHandle != -1)
-			{
-				const auto& parentInternode = skeleton.PeekNode(parentInternodeHandle);
-				parentUp = parentInternode.m_info.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
-				if (internode.IsApical() || parentInternode.PeekChildHandles().size() == 1) needStitching = true;
-				if (!needStitching)
-				{
-					float maxChildThickness = -1;
-					SkeletonNodeHandle maxChildHandle = -1;
-					for (const auto& childHandle : parentInternode.PeekChildHandles()) {
-						const auto& childInternode = skeleton.PeekNode(childHandle);
-						if (childInternode.IsApical()) break;
-						const float childThickness = childInternode.m_info.m_thickness;
-						if (childThickness > maxChildThickness)
-						{
-							maxChildThickness = childThickness;
-							maxChildHandle = childHandle;
-						}
-					}
-					if (maxChildHandle == internodeHandle) needStitching = true;
-				}
-			}
+    const glm::vec3 up = internode_info.regulated_global_rotation * glm::vec3(0, 1, 0);
+    glm::vec3 parent_up = up;
+    bool need_stitching = false;
+    if (parent_internode_handle != -1) {
+      const auto& parent_internode = skeleton.PeekNode(parent_internode_handle);
+      parent_up = parent_internode.info.regulated_global_rotation * glm::vec3(0, 1, 0);
+      if (internode.IsApical() || parent_internode.PeekChildHandles().size() == 1)
+        need_stitching = true;
+      if (!need_stitching) {
+        float max_child_thickness = -1;
+        SkeletonNodeHandle max_child_handle = -1;
+        for (const auto& child_handle : parent_internode.PeekChildHandles()) {
+          const auto& child_internode = skeleton.PeekNode(child_handle);
+          if (child_internode.IsApical())
+            break;
+          if (const float child_thickness = child_internode.info.thickness; child_thickness > max_child_thickness) {
+            max_child_thickness = child_thickness;
+            max_child_handle = child_handle;
+          }
+        }
+        if (max_child_handle == internode_handle)
+          need_stitching = true;
+      }
+    }
 
-			if (internode.m_info.m_length == 0.0f) {
-				//TODO: Model possible knots and wound here.
-				continue;
-			}
-			auto& rings = ringsList[internodeIndex];
-			if (rings.empty()) {
-				continue;
-			}
-			// For stitching
-			const int step = steps[internodeHandle];
-			int pStep = step;
-			if (needStitching)
-			{
-				pStep = steps[parentInternodeHandle];
-			}
-			float angleStep = 360.0f / static_cast<float>(step);
-			float pAngleStep = 360.0f / static_cast<float>(pStep);
-			int vertexIndex = skinnedVertices.size();
+    if (internode.info.length == 0.0f) {
+      // TODO: Model possible knots and wound here.
+      continue;
+    }
+    auto& rings = rings_list[internode_index];
+    if (rings.empty()) {
+      continue;
+    }
+    // For stitching
+    const int step = steps[internode_handle];
+    int p_step = step;
+    if (need_stitching) {
+      p_step = steps[parent_internode_handle];
+    }
+    float angle_step = 360.0f / static_cast<float>(step);
+    float p_angle_step = 360.0f / static_cast<float>(p_step);
+    int vertex_index = skinned_vertices.size();
 
-			
-			archetype.m_vertexInfo1 = internodeHandle + 1;
-			archetype.m_vertexInfo2 = flowHandle + 1;
+    archetype.vertex_info1 = internode_handle + 1;
+    archetype.vertex_info2 = flow_handle + 1;
 
-			if (!needStitching) {
-				for (int p = 0; p < pStep; p++) {
-					float xFactor = static_cast<float>(p) / pStep;
-					const auto& ring = rings.at(0);
-					float yFactor = ring.m_startDistanceToRoot;
-					auto direction = ring.GetDirection(parentUp, pAngleStep * p, true);
-					archetype.m_position = ring.m_startPosition + direction * ring.m_startRadius;
-					vertexPositionModifier(archetype.m_position, direction * ring.m_startRadius, xFactor, yFactor);
-					assert(!glm::any(glm::isnan(archetype.m_position)));
-					archetype.m_texCoord = glm::vec2(xFactor, yFactor);
-					texCoordsModifier(archetype.m_texCoord, xFactor, yFactor);
-					if (settings.m_vertexColorMode == static_cast<unsigned>(TreeMeshGeneratorSettings::VertexColorMode::InternodeColor)) archetype.m_color = internodeInfo.m_color;
-					if(parentFlowHandle != -1) archetype.m_bondId = glm::ivec4(flowBoneIdMap[parentFlowHandle], flowBoneIdMap[parentFlowHandle], -1, -1);
-					else{
-						archetype.m_bondId = glm::ivec4(-1, flowBoneIdMap[0], -1, -1);
-					}
-					archetype.m_weight.x = 0.f;
-					archetype.m_weight.y = 1.f;
-					skinnedVertices.push_back(archetype);
-				}
-			}
-			archetype.m_bondId = glm::ivec4(flowBoneIdMap[flowHandle], flowBoneIdMap[flowHandle], -1, -1);
-			archetype.m_bondId2 = glm::ivec4(-1);
-			archetype.m_weight = archetype.m_weight2 = glm::vec4(0.f);
+    if (!need_stitching) {
+      for (int p = 0; p < p_step; p++) {
+        float x_factor = static_cast<float>(p) / p_step;
+        const auto& ring = rings.at(0);
+        float y_factor = ring.start_distance_to_root;
+        auto direction = ring.GetDirection(parent_up, p_angle_step * p, true);
+        archetype.position = ring.start_position + direction * ring.start_radius;
+        vertex_position_modifier(archetype.position, direction * ring.start_radius, x_factor, y_factor);
+        assert(!glm::any(glm::isnan(archetype.position)));
+        archetype.tex_coord = glm::vec2(x_factor, y_factor);
+        tex_coords_modifier(archetype.tex_coord, x_factor, y_factor);
+        if (settings.vertex_color_mode ==
+            static_cast<unsigned>(TreeMeshGeneratorSettings::VertexColorMode::InternodeColor))
+          archetype.color = internode_info.color;
+        if (parent_flow_handle != -1)
+          archetype.bond_id = glm::ivec4(flow_bone_id_map[parent_flow_handle], flow_bone_id_map[parent_flow_handle], -1, -1);
+        else {
+          archetype.bond_id = glm::ivec4(-1, flow_bone_id_map[0], -1, -1);
+        }
+        archetype.weight.x = 0.f;
+        archetype.weight.y = 1.f;
+        skinned_vertices.push_back(archetype);
+      }
+    }
+    archetype.bond_id = glm::ivec4(flow_bone_id_map[flow_handle], flow_bone_id_map[flow_handle], -1, -1);
+    archetype.bond_id2 = glm::ivec4(-1);
+    archetype.weight = archetype.weight2 = glm::vec4(0.f);
 
-			std::vector<float> angles;
-			angles.resize(step);
-			std::vector<float> pAngles;
-			pAngles.resize(pStep);
+    std::vector<float> angles;
+    angles.resize(step);
+    std::vector<float> p_angles;
+    p_angles.resize(p_step);
 
-			for (auto p = 0; p < pStep; p++) {
-				pAngles[p] = pAngleStep * p;
-			}
-			for (auto s = 0; s < step; s++) {
-				angles[s] = angleStep * s;
-			}
+    for (auto p = 0; p < p_step; p++) {
+      p_angles[p] = p_angle_step * p;
+    }
+    for (auto s = 0; s < step; s++) {
+      angles[s] = angle_step * s;
+    }
 
-			std::vector<unsigned> pTarget;
-			std::vector<unsigned> target;
-			pTarget.resize(pStep);
-			target.resize(step);
-			for (int p = 0; p < pStep; p++) {
-				// First we allocate nearest skinnedVertices for parent.
-				auto minAngleDiff = 360.0f;
-				for (auto j = 0; j < step; j++) {
-					const float diff = glm::abs(pAngles[p] - angles[j]);
-					if (diff < minAngleDiff) {
-						minAngleDiff = diff;
-						pTarget[p] = j;
-					}
-				}
-			}
-			for (int s = 0; s < step; s++) {
-				// Second we allocate nearest skinnedVertices for child
-				float minAngleDiff = 360.0f;
-				for (int j = 0; j < pStep; j++) {
-					const float diff = glm::abs(angles[s] - pAngles[j]);
-					if (diff < minAngleDiff) {
-						minAngleDiff = diff;
-						target[s] = j;
-					}
-				}
-			}
+    std::vector<unsigned> p_target;
+    std::vector<unsigned> target;
+    p_target.resize(p_step);
+    target.resize(step);
+    for (int p = 0; p < p_step; p++) {
+      // First we allocate nearest skinnedVertices for parent.
+      auto min_angle_diff = 360.0f;
+      for (auto j = 0; j < step; j++) {
+        const float diff = glm::abs(p_angles[p] - angles[j]);
+        if (diff < min_angle_diff) {
+          min_angle_diff = diff;
+          p_target[p] = j;
+        }
+      }
+    }
+    for (int s = 0; s < step; s++) {
+      // Second we allocate nearest skinnedVertices for child
+      float min_angle_diff = 360.0f;
+      for (int j = 0; j < p_step; j++) {
+        const float diff = glm::abs(angles[s] - p_angles[j]);
+        if (diff < min_angle_diff) {
+          min_angle_diff = diff;
+          target[s] = j;
+        }
+      }
+    }
 
-			int ringSize = rings.size();
-			for (auto ringIndex = 0; ringIndex < ringSize; ringIndex++) {
-				for (auto s = 0; s < step; s++) {
-					float xFactor = static_cast<float>(glm::min(s, step - s)) / step;
-					auto& ring = rings.at(ringIndex);
-					float yFactor = ring.m_endDistanceToRoot;
-					auto direction = ring.GetDirection(
-						up, angleStep * s, false);
-					archetype.m_position = ring.m_endPosition + direction * ring.m_endRadius;
-					vertexPositionModifier(archetype.m_position, direction * ring.m_endRadius, xFactor, yFactor);
-					assert(!glm::any(glm::isnan(archetype.m_position)));
-					archetype.m_texCoord = glm::vec2(xFactor, yFactor);
-					texCoordsModifier(archetype.m_texCoord, xFactor, yFactor);
-					if (settings.m_vertexColorMode == static_cast<unsigned>(TreeMeshGeneratorSettings::VertexColorMode::InternodeColor)) archetype.m_color = internodeInfo.m_color;
+    int ring_size = rings.size();
+    for (auto ring_index = 0; ring_index < ring_size; ring_index++) {
+      for (auto s = 0; s < step; s++) {
+        float x_factor = static_cast<float>(glm::min(s, step - s)) / step;
+        auto& ring = rings.at(ring_index);
+        float y_factor = ring.end_distance_to_root;
+        auto direction = ring.GetDirection(up, angle_step * s, false);
+        archetype.position = ring.end_position + direction * ring.end_radius;
+        vertex_position_modifier(archetype.position, direction * ring.end_radius, x_factor, y_factor);
+        assert(!glm::any(glm::isnan(archetype.position)));
+        archetype.tex_coord = glm::vec2(x_factor, y_factor);
+        tex_coords_modifier(archetype.tex_coord, x_factor, y_factor);
+        if (settings.vertex_color_mode ==
+            static_cast<unsigned>(TreeMeshGeneratorSettings::VertexColorMode::InternodeColor))
+          archetype.color = internode_info.color;
 
-					archetype.m_weight.x = glm::clamp((distanceToChainStart + ring.m_endA * internode.m_info.m_length)/ (distanceToChainStart + distanceToChainEnd), 0.f, 1.f);
-					archetype.m_weight.y = glm::clamp((distanceToChainEnd - ring.m_endA * internode.m_info.m_length) / (distanceToChainStart + distanceToChainEnd), 0.f, 1.f);
-					skinnedVertices.push_back(archetype);
-				}
-				if (ringIndex == 0)
-				{
-					if (needStitching) {
-						int parentLastRingStartVertexIndex = vertexLastRingStartVertexIndex[parentInternodeHandle];
-						for (int p = 0; p < pStep; p++) {
-							if (pTarget[p] == pTarget[p == pStep - 1 ? 0 : p + 1]) {
-								auto a = parentLastRingStartVertexIndex + p;
-								auto b = parentLastRingStartVertexIndex + (p == pStep - 1 ? 0 : p + 1);
-								auto c = vertexIndex + pTarget[p];
-								if (skinnedVertices[a].m_position != skinnedVertices[b].m_position
-									&& skinnedVertices[b].m_position != skinnedVertices[c].m_position
-									&& skinnedVertices[a].m_position != skinnedVertices[c].m_position
-									&& !glm::any(glm::isnan(skinnedVertices[a].m_position))
-									&& !glm::any(glm::isnan(skinnedVertices[b].m_position))
-									&& !glm::any(glm::isnan(skinnedVertices[c].m_position))) {
-									indices.push_back(a);
-									indices.push_back(b);
-									indices.push_back(c);
-								}
-							}
-							else {
-								auto a = parentLastRingStartVertexIndex + p;
-								auto b = parentLastRingStartVertexIndex + (p == pStep - 1 ? 0 : p + 1);
-								auto c = vertexIndex + pTarget[p];
-								if (skinnedVertices[a].m_position != skinnedVertices[b].m_position
-									&& skinnedVertices[b].m_position != skinnedVertices[c].m_position
-									&& skinnedVertices[a].m_position != skinnedVertices[c].m_position
-									&& !glm::any(glm::isnan(skinnedVertices[a].m_position))
-									&& !glm::any(glm::isnan(skinnedVertices[b].m_position))
-									&& !glm::any(glm::isnan(skinnedVertices[c].m_position))) {
-									indices.push_back(a);
-									indices.push_back(b);
-									indices.push_back(c);
-								}
-								a = vertexIndex + pTarget[p == pStep - 1 ? 0 : p + 1];
-								b = vertexIndex + pTarget[p];
-								c = parentLastRingStartVertexIndex + (p == pStep - 1 ? 0 : p + 1);
-								if (skinnedVertices[a].m_position != skinnedVertices[b].m_position
-									&& skinnedVertices[b].m_position != skinnedVertices[c].m_position
-									&& skinnedVertices[a].m_position != skinnedVertices[c].m_position
-									&& !glm::any(glm::isnan(skinnedVertices[a].m_position))
-									&& !glm::any(glm::isnan(skinnedVertices[b].m_position))
-									&& !glm::any(glm::isnan(skinnedVertices[c].m_position))) {
-									indices.push_back(a);
-									indices.push_back(b);
-									indices.push_back(c);
-								}
-							}
-						}
-					}
-					else
-					{
-						for (int p = 0; p < pStep; p++) {
-							if (pTarget[p] == pTarget[p == pStep - 1 ? 0 : p + 1]) {
-								auto a = vertexIndex + p;
-								auto b = vertexIndex + (p == pStep - 1 ? 0 : p + 1);
-								auto c = vertexIndex + pStep + pTarget[p];
-								if (skinnedVertices[a].m_position != skinnedVertices[b].m_position
-									&& skinnedVertices[b].m_position != skinnedVertices[c].m_position
-									&& skinnedVertices[a].m_position != skinnedVertices[c].m_position
-									&& !glm::any(glm::isnan(skinnedVertices[a].m_position))
-									&& !glm::any(glm::isnan(skinnedVertices[b].m_position))
-									&& !glm::any(glm::isnan(skinnedVertices[c].m_position))) {
-									indices.push_back(a);
-									indices.push_back(b);
-									indices.push_back(c);
-								}
-							}
-							else {
-								auto a = vertexIndex + p;
-								auto b = vertexIndex + (p == pStep - 1 ? 0 : p + 1);
-								auto c = vertexIndex + pStep + pTarget[p];
-								if (skinnedVertices[a].m_position != skinnedVertices[b].m_position
-									&& skinnedVertices[b].m_position != skinnedVertices[c].m_position
-									&& skinnedVertices[a].m_position != skinnedVertices[c].m_position
-									&& !glm::any(glm::isnan(skinnedVertices[a].m_position))
-									&& !glm::any(glm::isnan(skinnedVertices[b].m_position))
-									&& !glm::any(glm::isnan(skinnedVertices[c].m_position))) {
-									indices.push_back(a);
-									indices.push_back(b);
-									indices.push_back(c);
-								}
-								a = vertexIndex + pStep + pTarget[p == pStep - 1 ? 0 : p + 1];
-								b = vertexIndex + pStep + pTarget[p];
-								c = vertexIndex + (p == pStep - 1 ? 0 : p + 1);
+        archetype.weight.x = glm::clamp((distance_to_chain_start + ring.end_a * internode.info.length) /
+                                              (distance_to_chain_start + distance_to_chain_end),
+                                          0.f, 1.f);
+        archetype.weight.y = glm::clamp((distance_to_chain_end - ring.end_a * internode.info.length) /
+                                              (distance_to_chain_start + distance_to_chain_end),
+                                          0.f, 1.f);
+        skinned_vertices.push_back(archetype);
+      }
+      if (ring_index == 0) {
+        if (need_stitching) {
+          int parent_last_ring_start_vertex_index = vertex_last_ring_start_vertex_index[parent_internode_handle];
+          for (int p = 0; p < p_step; p++) {
+            if (p_target[p] == p_target[p == p_step - 1 ? 0 : p + 1]) {
+              auto a = parent_last_ring_start_vertex_index + p;
+              auto b = parent_last_ring_start_vertex_index + (p == p_step - 1 ? 0 : p + 1);
+              auto c = vertex_index + p_target[p];
+              if (skinned_vertices[a].position != skinned_vertices[b].position &&
+                  skinned_vertices[b].position != skinned_vertices[c].position &&
+                  skinned_vertices[a].position != skinned_vertices[c].position &&
+                  !glm::any(glm::isnan(skinned_vertices[a].position)) &&
+                  !glm::any(glm::isnan(skinned_vertices[b].position)) &&
+                  !glm::any(glm::isnan(skinned_vertices[c].position))) {
+                indices.push_back(a);
+                indices.push_back(b);
+                indices.push_back(c);
+              }
+            } else {
+              auto a = parent_last_ring_start_vertex_index + p;
+              auto b = parent_last_ring_start_vertex_index + (p == p_step - 1 ? 0 : p + 1);
+              auto c = vertex_index + p_target[p];
+              if (skinned_vertices[a].position != skinned_vertices[b].position &&
+                  skinned_vertices[b].position != skinned_vertices[c].position &&
+                  skinned_vertices[a].position != skinned_vertices[c].position &&
+                  !glm::any(glm::isnan(skinned_vertices[a].position)) &&
+                  !glm::any(glm::isnan(skinned_vertices[b].position)) &&
+                  !glm::any(glm::isnan(skinned_vertices[c].position))) {
+                indices.push_back(a);
+                indices.push_back(b);
+                indices.push_back(c);
+              }
+              a = vertex_index + p_target[p == p_step - 1 ? 0 : p + 1];
+              b = vertex_index + p_target[p];
+              c = parent_last_ring_start_vertex_index + (p == p_step - 1 ? 0 : p + 1);
+              if (skinned_vertices[a].position != skinned_vertices[b].position &&
+                  skinned_vertices[b].position != skinned_vertices[c].position &&
+                  skinned_vertices[a].position != skinned_vertices[c].position &&
+                  !glm::any(glm::isnan(skinned_vertices[a].position)) &&
+                  !glm::any(glm::isnan(skinned_vertices[b].position)) &&
+                  !glm::any(glm::isnan(skinned_vertices[c].position))) {
+                indices.push_back(a);
+                indices.push_back(b);
+                indices.push_back(c);
+              }
+            }
+          }
+        } else {
+          for (int p = 0; p < p_step; p++) {
+            if (p_target[p] == p_target[p == p_step - 1 ? 0 : p + 1]) {
+              auto a = vertex_index + p;
+              auto b = vertex_index + (p == p_step - 1 ? 0 : p + 1);
+              auto c = vertex_index + p_step + p_target[p];
+              if (skinned_vertices[a].position != skinned_vertices[b].position &&
+                  skinned_vertices[b].position != skinned_vertices[c].position &&
+                  skinned_vertices[a].position != skinned_vertices[c].position &&
+                  !glm::any(glm::isnan(skinned_vertices[a].position)) &&
+                  !glm::any(glm::isnan(skinned_vertices[b].position)) &&
+                  !glm::any(glm::isnan(skinned_vertices[c].position))) {
+                indices.push_back(a);
+                indices.push_back(b);
+                indices.push_back(c);
+              }
+            } else {
+              auto a = vertex_index + p;
+              auto b = vertex_index + (p == p_step - 1 ? 0 : p + 1);
+              auto c = vertex_index + p_step + p_target[p];
+              if (skinned_vertices[a].position != skinned_vertices[b].position &&
+                  skinned_vertices[b].position != skinned_vertices[c].position &&
+                  skinned_vertices[a].position != skinned_vertices[c].position &&
+                  !glm::any(glm::isnan(skinned_vertices[a].position)) &&
+                  !glm::any(glm::isnan(skinned_vertices[b].position)) &&
+                  !glm::any(glm::isnan(skinned_vertices[c].position))) {
+                indices.push_back(a);
+                indices.push_back(b);
+                indices.push_back(c);
+              }
+              a = vertex_index + p_step + p_target[p == p_step - 1 ? 0 : p + 1];
+              b = vertex_index + p_step + p_target[p];
+              c = vertex_index + (p == p_step - 1 ? 0 : p + 1);
 
-								if (skinnedVertices[a].m_position != skinnedVertices[b].m_position
-									&& skinnedVertices[b].m_position != skinnedVertices[c].m_position
-									&& skinnedVertices[a].m_position != skinnedVertices[c].m_position
-									&& !glm::any(glm::isnan(skinnedVertices[a].m_position))
-									&& !glm::any(glm::isnan(skinnedVertices[b].m_position))
-									&& !glm::any(glm::isnan(skinnedVertices[c].m_position))) {
-									indices.push_back(a);
-									indices.push_back(b);
-									indices.push_back(c);
-								}
-							}
-						}
-					}
-					if (!needStitching) vertexIndex += pStep;
-				}
-				else {
-					for (int s = 0; s < step - 1; s++) {
-						// Down triangle
-						auto a = vertexIndex + (ringIndex - 1) * step + s;
-						auto b = vertexIndex + (ringIndex - 1) * step + s + 1;
-						auto c = vertexIndex + ringIndex * step + s;
-						if (skinnedVertices[a].m_position != skinnedVertices[b].m_position
-							&& skinnedVertices[b].m_position != skinnedVertices[c].m_position
-							&& skinnedVertices[a].m_position != skinnedVertices[c].m_position
-							&& !glm::any(glm::isnan(skinnedVertices[a].m_position))
-							&& !glm::any(glm::isnan(skinnedVertices[b].m_position))
-							&& !glm::any(glm::isnan(skinnedVertices[c].m_position))) {
-							indices.push_back(a);
-							indices.push_back(b);
-							indices.push_back(c);
-						}
+              if (skinned_vertices[a].position != skinned_vertices[b].position &&
+                  skinned_vertices[b].position != skinned_vertices[c].position &&
+                  skinned_vertices[a].position != skinned_vertices[c].position &&
+                  !glm::any(glm::isnan(skinned_vertices[a].position)) &&
+                  !glm::any(glm::isnan(skinned_vertices[b].position)) &&
+                  !glm::any(glm::isnan(skinned_vertices[c].position))) {
+                indices.push_back(a);
+                indices.push_back(b);
+                indices.push_back(c);
+              }
+            }
+          }
+        }
+        if (!need_stitching)
+          vertex_index += p_step;
+      } else {
+        for (int s = 0; s < step - 1; s++) {
+          // Down triangle
+          auto a = vertex_index + (ring_index - 1) * step + s;
+          auto b = vertex_index + (ring_index - 1) * step + s + 1;
+          auto c = vertex_index + ring_index * step + s;
+          if (skinned_vertices[a].position != skinned_vertices[b].position &&
+              skinned_vertices[b].position != skinned_vertices[c].position &&
+              skinned_vertices[a].position != skinned_vertices[c].position &&
+              !glm::any(glm::isnan(skinned_vertices[a].position)) &&
+              !glm::any(glm::isnan(skinned_vertices[b].position)) &&
+              !glm::any(glm::isnan(skinned_vertices[c].position))) {
+            indices.push_back(a);
+            indices.push_back(b);
+            indices.push_back(c);
+          }
 
-
-						// Up triangle
-						a = vertexIndex + ringIndex * step + s + 1;
-						b = vertexIndex + ringIndex * step + s;
-						c = vertexIndex + (ringIndex - 1) * step + s + 1;
-						if (skinnedVertices[a].m_position != skinnedVertices[b].m_position
-							&& skinnedVertices[b].m_position != skinnedVertices[c].m_position
-							&& skinnedVertices[a].m_position != skinnedVertices[c].m_position
-							&& !glm::any(glm::isnan(skinnedVertices[a].m_position))
-							&& !glm::any(glm::isnan(skinnedVertices[b].m_position))
-							&& !glm::any(glm::isnan(skinnedVertices[c].m_position))) {
-							indices.push_back(a);
-							indices.push_back(b);
-							indices.push_back(c);
-						}
-					}
-					// Down triangle
-					auto a = vertexIndex + (ringIndex - 1) * step + step - 1;
-					auto b = vertexIndex + (ringIndex - 1) * step;
-					auto c = vertexIndex + ringIndex * step + step - 1;
-					if (skinnedVertices[a].m_position != skinnedVertices[b].m_position
-						&& skinnedVertices[b].m_position != skinnedVertices[c].m_position
-						&& skinnedVertices[a].m_position != skinnedVertices[c].m_position
-						&& !glm::any(glm::isnan(skinnedVertices[a].m_position))
-						&& !glm::any(glm::isnan(skinnedVertices[b].m_position))
-						&& !glm::any(glm::isnan(skinnedVertices[c].m_position))) {
-						indices.push_back(a);
-						indices.push_back(b);
-						indices.push_back(c);
-					}
-					// Up triangle
-					a = vertexIndex + ringIndex * step;
-					b = vertexIndex + ringIndex * step + step - 1;
-					c = vertexIndex + (ringIndex - 1) * step;
-					if (skinnedVertices[a].m_position != skinnedVertices[b].m_position
-						&& skinnedVertices[b].m_position != skinnedVertices[c].m_position
-						&& skinnedVertices[a].m_position != skinnedVertices[c].m_position
-						&& !glm::any(glm::isnan(skinnedVertices[a].m_position))
-						&& !glm::any(glm::isnan(skinnedVertices[b].m_position))
-						&& !glm::any(glm::isnan(skinnedVertices[c].m_position))) {
-						indices.push_back(a);
-						indices.push_back(b);
-						indices.push_back(c);
-					}
-				}
-			}
-			vertexLastRingStartVertexIndex[internodeHandle] = skinnedVertices.size() - step;
-		}
-
-
-	}
+          // Up triangle
+          a = vertex_index + ring_index * step + s + 1;
+          b = vertex_index + ring_index * step + s;
+          c = vertex_index + (ring_index - 1) * step + s + 1;
+          if (skinned_vertices[a].position != skinned_vertices[b].position &&
+              skinned_vertices[b].position != skinned_vertices[c].position &&
+              skinned_vertices[a].position != skinned_vertices[c].position &&
+              !glm::any(glm::isnan(skinned_vertices[a].position)) &&
+              !glm::any(glm::isnan(skinned_vertices[b].position)) &&
+              !glm::any(glm::isnan(skinned_vertices[c].position))) {
+            indices.push_back(a);
+            indices.push_back(b);
+            indices.push_back(c);
+          }
+        }
+        // Down triangle
+        auto a = vertex_index + (ring_index - 1) * step + step - 1;
+        auto b = vertex_index + (ring_index - 1) * step;
+        auto c = vertex_index + ring_index * step + step - 1;
+        if (skinned_vertices[a].position != skinned_vertices[b].position &&
+            skinned_vertices[b].position != skinned_vertices[c].position &&
+            skinned_vertices[a].position != skinned_vertices[c].position &&
+            !glm::any(glm::isnan(skinned_vertices[a].position)) &&
+            !glm::any(glm::isnan(skinned_vertices[b].position)) &&
+            !glm::any(glm::isnan(skinned_vertices[c].position))) {
+          indices.push_back(a);
+          indices.push_back(b);
+          indices.push_back(c);
+        }
+        // Up triangle
+        a = vertex_index + ring_index * step;
+        b = vertex_index + ring_index * step + step - 1;
+        c = vertex_index + (ring_index - 1) * step;
+        if (skinned_vertices[a].position != skinned_vertices[b].position &&
+            skinned_vertices[b].position != skinned_vertices[c].position &&
+            skinned_vertices[a].position != skinned_vertices[c].position &&
+            !glm::any(glm::isnan(skinned_vertices[a].position)) &&
+            !glm::any(glm::isnan(skinned_vertices[b].position)) &&
+            !glm::any(glm::isnan(skinned_vertices[c].position))) {
+          indices.push_back(a);
+          indices.push_back(b);
+          indices.push_back(c);
+        }
+      }
+    }
+    vertex_last_ring_start_vertex_index[internode_handle] = skinned_vertices.size() - step;
+  }
 }
+}  // namespace eco_sys_lab

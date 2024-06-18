@@ -35,8 +35,8 @@
 #include "ParticlePhysics2DDemo.hpp"
 #include "Physics2DDemo.hpp"
 
-using namespace EvoEngine;
-using namespace EcoSysLab;
+using namespace evo_engine;
+using namespace eco_sys_lab;
 
 namespace py = pybind11;
 
@@ -185,7 +185,7 @@ void tree_structor(const std::string& yamlPath,
 	const auto tempEntity = scene->CreateEntity("Temp");
 	const auto treePointCloud = scene->GetOrSetPrivateComponent<TreeStructor>(tempEntity).lock();
 	
-	treePointCloud->m_connectivityGraphSettings = connectivityGraphSettings;
+	treePointCloud->connectivity_graph_settings = connectivityGraphSettings;
 	treePointCloud->m_reconstructionSettings = reconstructionSettings;
 	treePointCloud->ImportGraph(yamlPath);
 	treePointCloud->EstablishConnectivityGraph();
@@ -205,7 +205,7 @@ void yaml_visualization(const std::string& yamlPath,
 	const auto scene = Application::GetActiveScene();
 	const auto tempEntity = scene->CreateEntity("Temp");
 	const auto treePointCloud = scene->GetOrSetPrivateComponent<TreeStructor>(tempEntity).lock();
-	treePointCloud->m_connectivityGraphSettings = connectivityGraphSettings;
+	treePointCloud->connectivity_graph_settings = connectivityGraphSettings;
 	treePointCloud->m_reconstructionSettings = reconstructionSettings;
 	treePointCloud->ImportGraph(yamlPath);
 	treePointCloud->EstablishConnectivityGraph();
@@ -306,7 +306,7 @@ void voxel_space_colonization_tree_data(
 			tree->m_treeModel.m_treeGrowthSettings.m_spaceColonizationTheta,
 			tree->m_treeModel.m_treeGrowthSettings.m_spaceColonizationDetectionDistanceFactor);
 	}
-	tree->m_treeModel.m_treeGrowthSettings.m_useSpaceColonization = true;
+	tree->m_treeModel.m_treeGrowthSettings.use_space_colonization = true;
 	tree->m_treeModel.m_treeGrowthSettings.m_spaceColonizationAutoResize = false;
 
 	ecoSysLabLayer->m_simulationSettings.m_deltaTime = deltaTime;
@@ -436,7 +436,7 @@ void rbv_space_colonization_tree_data(
 		tree->m_treeModel.m_treeGrowthSettings.m_spaceColonizationTheta,
 		tree->m_treeModel.m_treeGrowthSettings.m_spaceColonizationDetectionDistanceFactor);
 
-	tree->m_treeModel.m_treeGrowthSettings.m_useSpaceColonization = true;
+	tree->m_treeModel.m_treeGrowthSettings.use_space_colonization = true;
 	tree->m_treeModel.m_treeGrowthSettings.m_spaceColonizationAutoResize = false;
 	Application::Loop();
 	ecoSysLabLayer->m_simulationSettings.m_deltaTime = deltaTime;
@@ -480,8 +480,8 @@ PYBIND11_MODULE(pyecosyslab, m) {
 		.def_readwrite("m_ballRandRadius", &TreePointCloudPointSettings::m_ballRandRadius)
 		.def_readwrite("m_typeIndex", &TreePointCloudPointSettings::m_typeIndex)
 		.def_readwrite("m_instanceIndex", &TreePointCloudPointSettings::m_instanceIndex)
-		.def_readwrite("m_treePartIndex", &TreePointCloudPointSettings::m_treePartIndex)
-		.def_readwrite("m_lineIndex", &TreePointCloudPointSettings::m_lineIndex)
+		.def_readwrite("tree_part_index", &TreePointCloudPointSettings::m_treePartIndex)
+		.def_readwrite("line_index", &TreePointCloudPointSettings::m_lineIndex)
 		.def_readwrite("m_branchIndex", &TreePointCloudPointSettings::m_branchIndex)
 		.def_readwrite("m_internodeIndex", &TreePointCloudPointSettings::m_internodeIndex)
 		.def_readwrite("m_boundingBoxLimit", &TreePointCloudPointSettings::m_boundingBoxLimit);
@@ -498,7 +498,7 @@ PYBIND11_MODULE(pyecosyslab, m) {
 		.def_readwrite("m_gridDistance", &TreePointCloudCircularCaptureSettings::m_distance)
 		.def_readwrite("m_height", &TreePointCloudCircularCaptureSettings::m_height)
 		.def_readwrite("m_fov", &TreePointCloudCircularCaptureSettings::m_fov)
-		.def_readwrite("m_resolution", &TreePointCloudCircularCaptureSettings::m_resolution)
+		.def_readwrite("resolution_", &TreePointCloudCircularCaptureSettings::m_resolution)
 		.def_readwrite("m_cameraDepthMax", &TreePointCloudCircularCaptureSettings::m_cameraDepthMax);
 
 	py::class_<ReconstructionSettings>(m, "ReconstructionSettings")
@@ -512,11 +512,11 @@ PYBIND11_MODULE(pyecosyslab, m) {
 
 	py::class_<PresentationOverrideSettings>(m, "PresentationOverrideSettings")
 		.def(py::init<>())
-		.def_readwrite("m_maxThickness", &PresentationOverrideSettings::m_maxThickness);
+		.def_readwrite("m_maxThickness", &PresentationOverrideSettings::m_max_thickness);
 
 	py::class_<ShootDescriptor>(m, "ShootDescriptor")
 		.def(py::init<>())
-		.def_readwrite("m_growthRate", &ShootDescriptor::m_growthRate)
+		.def_readwrite("growth_rate", &ShootDescriptor::m_growthRate)
 		.def_readwrite("m_branchingAngleMeanVariance", &ShootDescriptor::m_branchingAngleMeanVariance)
 		.def_readwrite("m_rollAngleMeanVariance", &ShootDescriptor::m_rollAngleMeanVariance)
 		.def_readwrite("m_apicalAngleMeanVariance", &ShootDescriptor::m_apicalAngleMeanVariance)
@@ -551,28 +551,28 @@ PYBIND11_MODULE(pyecosyslab, m) {
 
 	py::class_<TreeMeshGeneratorSettings>(m, "TreeMeshGeneratorSettings")
 		.def(py::init<>())
-		.def_readwrite("m_enableFoliage", &TreeMeshGeneratorSettings::m_enableFoliage)
-		.def_readwrite("m_enableFruit", &TreeMeshGeneratorSettings::m_enableFruit)
-		.def_readwrite("m_enableBranch", &TreeMeshGeneratorSettings::m_enableBranch)
-		.def_readwrite("m_presentationOverrideSettings", &TreeMeshGeneratorSettings::m_presentationOverrideSettings)
-		.def_readwrite("m_xSubdivision", &TreeMeshGeneratorSettings::m_xSubdivision)
-		.def_readwrite("m_trunkYSubdivision", &TreeMeshGeneratorSettings::m_trunkYSubdivision)
-		.def_readwrite("m_trunkThickness", &TreeMeshGeneratorSettings::m_trunkThickness)
-		.def_readwrite("m_branchYSubdivision", &TreeMeshGeneratorSettings::m_branchYSubdivision)
+		.def_readwrite("enable_foliage", &TreeMeshGeneratorSettings::enable_foliage)
+		.def_readwrite("enable_fruit", &TreeMeshGeneratorSettings::enable_fruit)
+		.def_readwrite("enable_branch", &TreeMeshGeneratorSettings::enable_branch)
+		.def_readwrite("presentation_override_settings", &TreeMeshGeneratorSettings::presentation_override_settings)
+		.def_readwrite("x_subdivision", &TreeMeshGeneratorSettings::x_subdivision)
+		.def_readwrite("trunk_y_subdivision", &TreeMeshGeneratorSettings::trunk_y_subdivision)
+		.def_readwrite("trunk_thickness", &TreeMeshGeneratorSettings::trunk_thickness)
+		.def_readwrite("branch_y_subdivision", &TreeMeshGeneratorSettings::branch_y_subdivision)
 
 
-		.def_readwrite("m_overrideRadius", &TreeMeshGeneratorSettings::m_overrideRadius)
-		.def_readwrite("m_thickness", &TreeMeshGeneratorSettings::m_radius)
-		.def_readwrite("m_treePartBaseDistance", &TreeMeshGeneratorSettings::m_treePartBaseDistance)
-		.def_readwrite("m_treePartEndDistance", &TreeMeshGeneratorSettings::m_treePartEndDistance)
-		.def_readwrite("m_baseControlPointRatio", &TreeMeshGeneratorSettings::m_baseControlPointRatio)
-		.def_readwrite("m_branchControlPointRatio", &TreeMeshGeneratorSettings::m_branchControlPointRatio)
-		.def_readwrite("m_smoothness", &TreeMeshGeneratorSettings::m_smoothness)
-		.def_readwrite("m_autoLevel", &TreeMeshGeneratorSettings::m_autoLevel)
-		.def_readwrite("m_voxelSubdivisionLevel", &TreeMeshGeneratorSettings::m_voxelSubdivisionLevel)
-		.def_readwrite("m_voxelSmoothIteration", &TreeMeshGeneratorSettings::m_voxelSmoothIteration)
-		.def_readwrite("m_removeDuplicate", &TreeMeshGeneratorSettings::m_removeDuplicate)
-		.def_readwrite("m_branchMeshType", &TreeMeshGeneratorSettings::m_branchMeshType);
+		.def_readwrite("override_radius", &TreeMeshGeneratorSettings::override_radius)
+		.def_readwrite("m_thickness", &TreeMeshGeneratorSettings::radius)
+		.def_readwrite("tree_part_base_distance", &TreeMeshGeneratorSettings::tree_part_base_distance)
+		.def_readwrite("tree_part_end_distance", &TreeMeshGeneratorSettings::tree_part_end_distance)
+		.def_readwrite("base_control_point_ratio", &TreeMeshGeneratorSettings::base_control_point_ratio)
+		.def_readwrite("branch_control_point_ratio", &TreeMeshGeneratorSettings::branch_control_point_ratio)
+		.def_readwrite("smoothness", &TreeMeshGeneratorSettings::smoothness)
+		.def_readwrite("auto_level", &TreeMeshGeneratorSettings::auto_level)
+		.def_readwrite("voxel_subdivision_level", &TreeMeshGeneratorSettings::voxel_subdivision_level)
+		.def_readwrite("voxel_smooth_iteration", &TreeMeshGeneratorSettings::voxel_smooth_iteration)
+		.def_readwrite("remove_duplicate", &TreeMeshGeneratorSettings::remove_duplicate)
+		.def_readwrite("branch_mesh_type", &TreeMeshGeneratorSettings::branch_mesh_type);
 
 	py::class_<Scene>(m, "Scene")
 		.def("CreateEntity", static_cast<Entity(Scene::*)(const std::string&)>(&Scene::CreateEntity))

@@ -1,1130 +1,1085 @@
 #pragma once
 
-
-namespace EcoSysLab {
-	typedef int SkeletonNodeHandle;
-	typedef int SkeletonFlowHandle;
+namespace eco_sys_lab {
+typedef int SkeletonNodeHandle;
+typedef int SkeletonFlowHandle;
 
 #pragma region Structural Info
-	struct SkeletonNodeWound
-	{
-		bool m_apical = false;
-		glm::quat m_localRotation = glm::vec3(0.f);
-		float m_thickness = 0.f;
-		float m_healing = 0.f;
-	};
+struct SkeletonNodeWound {
+  bool apical = false;
+  glm::quat local_rotation = glm::vec3(0.f);
+  float thickness = 0.f;
+  float healing = 0.f;
+};
 
-	struct SkeletonNodeInfo {
-		bool m_locked = false;
-		/**
-		 * \brief The global position at the start of the node.
-		 */
-		glm::vec3 m_globalPosition = glm::vec3(0.0f);
-		/**
-		 * \brief The global rotation at the start of the node.
-		 */
-		glm::quat m_globalRotation = glm::vec3(0.0f);
+struct SkeletonNodeInfo {
+  bool locked = false;
+  /**
+   * \brief The global position at the start of the node.
+   */
+  glm::vec3 global_position = glm::vec3(0.0f);
+  /**
+   * \brief The global rotation at the start of the node.
+   */
+  glm::quat global_rotation = glm::vec3(0.0f);
 
-		float m_length = 0.0f;
-		float m_thickness = 0.1f;
-		float m_rootDistance = 0.0f;
-		float m_endDistance = 0.0f;
-		int m_chainIndex = 0;
-		glm::quat m_regulatedGlobalRotation = glm::vec3(0.0f);
-		std::vector<SkeletonNodeWound> m_wounds;
+  float length = 0.0f;
+  float thickness = 0.1f;
+  float root_distance = 0.0f;
+  float end_distance = 0.0f;
+  int chain_index = 0;
+  glm::quat regulated_global_rotation = glm::vec3(0.0f);
+  std::vector<SkeletonNodeWound> wounds;
 
-		float m_leaves = 1.f;
-		float m_fruits = 1.f;
-		glm::vec4 m_color = glm::vec4(1.0f);
+  float leaves = 1.f;
+  float fruits = 1.f;
+  glm::vec4 color = glm::vec4(1.0f);
 
-		int m_clusterIndex = 0;
+  int cluster_index = 0;
 
-		[[nodiscard]] glm::vec3 GetGlobalEndPosition() const;
-		[[nodiscard]] glm::vec3 GetGlobalDirection() const;
-	};
+  [[nodiscard]] glm::vec3 GetGlobalEndPosition() const;
+  [[nodiscard]] glm::vec3 GetGlobalDirection() const;
+};
 
-	inline glm::vec3 SkeletonNodeInfo::GetGlobalEndPosition() const
-	{
-		return m_globalPosition + glm::normalize(m_globalRotation * glm::vec3(0, 0, -1)) * m_length;
-	}
+inline glm::vec3 SkeletonNodeInfo::GetGlobalEndPosition() const {
+  return global_position + glm::normalize(global_rotation * glm::vec3(0, 0, -1)) * length;
+}
 
-	inline glm::vec3 SkeletonNodeInfo::GetGlobalDirection() const
-	{
-		return glm::normalize(m_globalRotation * glm::vec3(0, 0, -1));
-	}
-	struct SkeletonFlowInfo {
-		glm::vec3 m_globalStartPosition = glm::vec3(0.0f);
-		glm::quat m_globalStartRotation = glm::vec3(0.0f);
-		float m_startThickness = 0.0f;
+inline glm::vec3 SkeletonNodeInfo::GetGlobalDirection() const {
+  return glm::normalize(global_rotation * glm::vec3(0, 0, -1));
+}
+struct SkeletonFlowInfo {
+  glm::vec3 global_start_position = glm::vec3(0.0f);
+  glm::quat global_start_rotation = glm::vec3(0.0f);
+  float start_thickness = 0.0f;
 
-		glm::vec3 m_globalEndPosition = glm::vec3(0.0f);
-		glm::quat m_globalEndRotation = glm::vec3(0.0f);
-		float m_endThickness = 0.0f;
+  glm::vec3 global_end_position = glm::vec3(0.0f);
+  glm::quat global_end_rotation = glm::vec3(0.0f);
+  float end_thickness = 0.0f;
 
-		/**
-		 * The length from the start of the first node to the end of the last node.
-		 */
-		float m_flowLength = 0.0f;
-	};
+  /**
+   * The length from the start of the first node to the end of the last node.
+   */
+  float flow_length = 0.0f;
+};
 #pragma endregion
 
-	template<typename SkeletonNodeData>
-	class SkeletonNode {
-		template<typename FD>
-		friend class SkeletonFlow;
+template <typename SkeletonNodeData>
+class SkeletonNode {
+  template <typename Fd>
+  friend class SkeletonFlow;
 
-		template<typename SD, typename FD, typename ID>
-		friend class Skeleton;
+  template <typename Sd, typename Fd, typename Id>
+  friend class Skeleton;
 
-		template<typename SD, typename FD, typename ID>
-		friend class SkeletonSerializer;
+  template <typename Sd, typename Fd, typename Id>
+  friend class SkeletonSerializer;
 
-		bool m_endNode = true;
-		bool m_recycled = false;
-		SkeletonNodeHandle m_handle = -1;
-		SkeletonFlowHandle m_flowHandle = -1;
-		SkeletonNodeHandle m_parentHandle = -1;
-		std::vector<SkeletonNodeHandle> m_childHandles;
-		bool m_apical = true;
-		int m_index = -1;
-	public:
-		SkeletonNodeData m_data;
-		/**
-		 * The structural information of current node.
-		 */
-		SkeletonNodeInfo m_info;
+  bool end_node_ = true;
+  bool recycled_ = false;
+  SkeletonNodeHandle handle_ = -1;
+  SkeletonFlowHandle flow_handle_ = -1;
+  SkeletonNodeHandle parent_handle_ = -1;
+  std::vector<SkeletonNodeHandle> child_handles_;
+  bool apical_ = true;
+  int index_ = -1;
 
-		/**
-		 * Whether this node is the end node.
-		 * @return True if this is end node, false else wise.
-		 */
-		[[nodiscard]] bool IsEndNode() const;
+ public:
+  SkeletonNodeData data;
+  /**
+   * The structural information of current node.
+   */
+  SkeletonNodeInfo info;
 
-		/**
-		 * Whether this node is recycled (removed).
-		 * @return True if this node is recycled (removed), false else wise.
-		 */
-		[[nodiscard]] bool IsRecycled() const;
-		/**
-		 * Whether this node is apical.
-		 * @return True if this node is apical, false else wise.
-		 */
-		[[nodiscard]] bool IsApical() const;
-		/**
-		 * Get the handle of self.
-		 * @return NodeHandle of current node.
-		 */
-		[[nodiscard]] SkeletonNodeHandle GetHandle() const;
+  /**
+   * Whether this node is the end node.
+   * @return True if this is end node, false else wise.
+   */
+  [[nodiscard]] bool IsEndNode() const;
 
-		/**
-		 * Get the handle of parent.
-		 * @return NodeHandle of parent node.
-		 */
-		[[nodiscard]] SkeletonNodeHandle GetParentHandle() const;
+  /**
+   * Whether this node is recycled (removed).
+   * @return True if this node is recycled (removed), false else wise.
+   */
+  [[nodiscard]] bool IsRecycled() const;
+  /**
+   * Whether this node is apical_.
+   * @return True if this node is apical, false else wise.
+   */
+  [[nodiscard]] bool IsApical() const;
+  /**
+   * Get the handle of self.
+   * @return NodeHandle of current node.
+   */
+  [[nodiscard]] SkeletonNodeHandle GetHandle() const;
 
-		/**
-		 * Get the handle to belonged flow.
-		 * @return FlowHandle of belonged flow.
-		 */
-		[[nodiscard]] SkeletonFlowHandle GetFlowHandle() const;
+  /**
+   * Get the handle of parent.
+   * @return NodeHandle of parent node.
+   */
+  [[nodiscard]] SkeletonNodeHandle GetParentHandle() const;
 
-		/**
-		 * Access the children by their handles.
-		 * @return The list of handles.
-		 */
-		[[nodiscard]] const std::vector<SkeletonNodeHandle>& PeekChildHandles() const;
+  /**
+   * Get the handle to belonged flow.
+   * @return FlowHandle of belonged flow.
+   */
+  [[nodiscard]] SkeletonFlowHandle GetFlowHandle() const;
 
-		/**
-		 * Access the children by their handles. Allow modification. Potentially break the skeleton structure!
-		 * @return The list of handles.
-		 */
-		[[nodiscard]] std::vector<SkeletonNodeHandle>& UnsafeRefChildHandles();
-		SkeletonNode() = default;
-		SkeletonNode(SkeletonNodeHandle handle);
+  /**
+   * Access the children by their handles.
+   * @return The list of handles.
+   */
+  [[nodiscard]] const std::vector<SkeletonNodeHandle>& PeekChildHandles() const;
 
-		[[nodiscard]] int GetIndex() const;
-	};
+  /**
+   * Access the children by their handles. Allow modification. Potentially break the skeleton structure!
+   * @return The list of handles.
+   */
+  [[nodiscard]] std::vector<SkeletonNodeHandle>& UnsafeRefChildHandles();
+  SkeletonNode() = default;
+  SkeletonNode(SkeletonNodeHandle handle);
 
-	template<typename SkeletonFlowData>
-	class SkeletonFlow {
-		template<typename SD, typename FD, typename ID>
-		friend class Skeleton;
+  [[nodiscard]] int GetIndex() const;
+};
 
-		template<typename SD, typename FD, typename ID>
-		friend class SkeletonSerializer;
+template <typename SkeletonFlowData>
+class SkeletonFlow {
+  template <typename Sd, typename Fd, typename Id>
+  friend class Skeleton;
 
-		bool m_recycled = false;
-		SkeletonFlowHandle m_handle = -1;
-		std::vector<SkeletonNodeHandle> m_nodes;
-		SkeletonFlowHandle m_parentHandle = -1;
-		std::vector<SkeletonFlowHandle> m_childHandles;
-		bool m_apical = false;
-		int m_index = -1;
-	public:
-		SkeletonFlowData m_data;
-		SkeletonFlowInfo m_info;
+  template <typename Sd, typename Fd, typename Id>
+  friend class SkeletonSerializer;
 
-		/**
-		 * Whether this flow is recycled (removed).
-		 * @return True if this flow is recycled (removed), false else wise.
-		 */
-		[[nodiscard]] bool IsRecycled() const;
+  bool recycled_ = false;
+  SkeletonFlowHandle handle_ = -1;
+  std::vector<SkeletonNodeHandle> nodes_;
+  SkeletonFlowHandle parent_handle_ = -1;
+  std::vector<SkeletonFlowHandle> child_handles_;
+  bool apical_ = false;
+  int index_ = -1;
 
-		/**
-		 * Whether this flow is extended from an apical bud. The apical flow will have the same order as parent flow.
-		 * @return True if this flow is from apical bud.
-		 */
-		[[nodiscard]] bool IsApical() const;
+ public:
+  SkeletonFlowData data;
+  SkeletonFlowInfo info;
 
-		/**
-		 * Get the handle of self.
-		 * @return FlowHandle of current flow.
-		 */
-		[[nodiscard]] SkeletonFlowHandle GetHandle() const;
+  /**
+   * Whether this flow is recycled (removed).
+   * @return True if this flow is recycled (removed), false else wise.
+   */
+  [[nodiscard]] bool IsRecycled() const;
 
-		/**
-		 * Get the handle of parent.
-		 * @return FlowHandle of parent flow.
-		 */
-		[[nodiscard]] SkeletonFlowHandle GetParentHandle() const;
+  /**
+   * Whether this flow is extended from an apical bud. The apical flow will have the same order as parent flow.
+   * @return True if this flow is from apical bud.
+   */
+  [[nodiscard]] bool IsApical() const;
 
-		/**
-		 * Access the children by their handles.
-		 * @return The list of handles.
-		 */
-		[[nodiscard]] const std::vector<SkeletonFlowHandle>& PeekChildHandles() const;
+  /**
+   * Get the handle of self.
+   * @return FlowHandle of current flow.
+   */
+  [[nodiscard]] SkeletonFlowHandle GetHandle() const;
 
-		/**
-		 * Access the nodes that belongs to this flow.
-		 * @return The list of handles.
-		 */
-		[[nodiscard]] const std::vector<SkeletonNodeHandle>& PeekNodeHandles() const;
-		SkeletonFlow() = default;
-		explicit SkeletonFlow(SkeletonFlowHandle handle);
+  /**
+   * Get the handle of parent.
+   * @return FlowHandle of parent flow.
+   */
+  [[nodiscard]] SkeletonFlowHandle GetParentHandle() const;
 
-		[[nodiscard]] int GetIndex() const;
-	};
+  /**
+   * Access the children by their handles.
+   * @return The list of handles.
+   */
+  [[nodiscard]] const std::vector<SkeletonFlowHandle>& PeekChildHandles() const;
 
-	struct SkeletonClusterSettings
-	{
-		
-	};
+  /**
+   * Access the nodes that belongs to this flow.
+   * @return The list of handles.
+   */
+  [[nodiscard]] const std::vector<SkeletonNodeHandle>& PeekNodeHandles() const;
+  SkeletonFlow() = default;
+  explicit SkeletonFlow(SkeletonFlowHandle handle);
 
-	template<typename SkeletonData, typename FlowData, typename NodeData>
-	class Skeleton {
-		template<typename SD, typename FD, typename ID>
-		friend class Skeleton;
+  [[nodiscard]] int GetIndex() const;
+};
 
-		template<typename SD, typename FD, typename ID>
-		friend class SkeletonSerializer;
+struct SkeletonClusterSettings {};
 
-		std::vector<SkeletonFlow<FlowData>> m_flows;
-		std::vector<SkeletonNode<NodeData>> m_nodes;
-		std::queue<SkeletonNodeHandle> m_nodePool;
-		std::queue<SkeletonFlowHandle> m_flowPool;
+template <typename SkeletonData, typename FlowData, typename NodeData>
+class Skeleton {
+  template <typename Sd, typename Fd, typename Id>
+  friend class Skeleton;
 
-		int m_newVersion = 0;
-		int m_version = -1;
-		std::vector<SkeletonNodeHandle> m_sortedNodeList;
-		std::vector<SkeletonFlowHandle> m_sortedFlowList;
+  template <typename Sd, typename Fd, typename Id>
+  friend class SkeletonSerializer;
 
-		SkeletonNodeHandle AllocateNode();
+  std::vector<SkeletonFlow<FlowData>> flows_;
+  std::vector<SkeletonNode<NodeData>> nodes_;
+  std::queue<SkeletonNodeHandle> node_pool_;
+  std::queue<SkeletonFlowHandle> flow_pool_;
 
-		void RecycleNodeSingle(SkeletonNodeHandle handle, const std::function<void(SkeletonNodeHandle)>& nodeHandler);
+  int new_version_ = 0;
+  int version_ = -1;
+  std::vector<SkeletonNodeHandle> sorted_node_list_;
+  std::vector<SkeletonFlowHandle> sorted_flow_list_;
 
-		void RecycleFlowSingle(SkeletonFlowHandle handle, const std::function<void(SkeletonFlowHandle)>& flowHandler);
+  SkeletonNodeHandle AllocateNode();
 
-		SkeletonFlowHandle AllocateFlow();
+  void RecycleNodeSingle(SkeletonNodeHandle handle, const std::function<void(SkeletonNodeHandle)>& node_handler);
 
-		void SetParentFlow(SkeletonFlowHandle targetHandle, SkeletonFlowHandle parentHandle);
+  void RecycleFlowSingle(SkeletonFlowHandle handle, const std::function<void(SkeletonFlowHandle)>& flow_handler);
 
-		void DetachChildFlow(SkeletonFlowHandle targetHandle, SkeletonFlowHandle childHandle);
+  SkeletonFlowHandle AllocateFlow();
 
-		void SetParentNode(SkeletonNodeHandle targetHandle, SkeletonNodeHandle parentHandle);
+  void SetParentFlow(SkeletonFlowHandle target_handle, SkeletonFlowHandle parent_handle);
 
-		void DetachChildNode(SkeletonNodeHandle targetHandle, SkeletonNodeHandle childHandle);
+  void DetachChildFlow(SkeletonFlowHandle target_handle, SkeletonFlowHandle child_handle);
 
-		int m_maxNodeIndex = -1;
-		int m_maxFlowIndex = -1;
+  void SetParentNode(SkeletonNodeHandle target_handle, SkeletonNodeHandle parent_handle);
 
-		std::vector<SkeletonNodeHandle> m_baseNodeList;
+  void DetachChildNode(SkeletonNodeHandle target_handle, SkeletonNodeHandle child_handle);
 
-		void RefreshBaseNodeList();
+  int max_node_index_ = -1;
+  int max_flow_index_ = -1;
 
-	public:
+  std::vector<SkeletonNodeHandle> base_node_list_;
 
-		void CalculateClusters(const SkeletonClusterSettings& clusterSettings);
+  void RefreshBaseNodeList();
 
-		template<typename SrcSkeletonData, typename SrcFlowData, typename SrcNodeData>
-		void Clone(const Skeleton<SrcSkeletonData, SrcFlowData, SrcNodeData>& srcSkeleton);
+ public:
+  void CalculateClusters(const SkeletonClusterSettings& cluster_settings);
 
-		[[nodiscard]] int GetMaxNodeIndex() const;
-		[[nodiscard]] int GetMaxFlowIndex() const;
-		SkeletonData m_data;
+  template <typename SrcSkeletonData, typename SrcFlowData, typename SrcNodeData>
+  void Clone(const Skeleton<SrcSkeletonData, SrcFlowData, SrcNodeData>& src_skeleton);
 
-		void CalculateDistance();
-		void CalculateRegulatedGlobalRotation();
-		/**
-		 * Recycle (Remove) a node, the descendants of this node will also be recycled. The relevant flow will also be removed/restructured.
-		 * @param handle The handle of the node to be removed. Must be valid (non-zero and the node should not be recycled prior to this operation).
-		 * @param flowHandler Function to be called right before a flow in recycled.
-		 * @param nodeHandler Function to be called right before a node in recycled.
-		 */
-		void RecycleNode(SkeletonNodeHandle handle,
-			const std::function<void(SkeletonFlowHandle)>& flowHandler,
-			const std::function<void(SkeletonNodeHandle)>& nodeHandler);
+  [[nodiscard]] int GetMaxNodeIndex() const;
+  [[nodiscard]] int GetMaxFlowIndex() const;
+  SkeletonData data;
 
-		/**
-		 * Recycle (Remove) a flow, the descendants of this flow will also be recycled. The relevant node will also be removed/restructured.
-		 * @param handle The handle of the flow to be removed. Must be valid (non-zero and the flow should not be recycled prior to this operation).
-		 * @param flowHandler Function to be called right before a flow in recycled.
-		 * @param nodeHandler Function to be called right before a node in recycled.
-		 */
-		void RecycleFlow(SkeletonFlowHandle handle,
-			const std::function<void(SkeletonFlowHandle)>& flowHandler,
-			const std::function<void(SkeletonNodeHandle)>& nodeHandler);
+  void CalculateDistance();
+  void CalculateRegulatedGlobalRotation();
+  /**
+   * Recycle (Remove) a node, the descendants of this node will also be recycled. The relevant flow will also be
+   * removed/restructured.
+   * @param handle The handle of the node to be removed. Must be valid (non-zero and the node should not be recycled
+   * prior to this operation).
+   * @param flow_handler Function to be called right before a flow in recycled.
+   * @param node_handler Function to be called right before a node in recycled.
+   */
+  void RecycleNode(SkeletonNodeHandle handle, const std::function<void(SkeletonFlowHandle)>& flow_handler,
+                   const std::function<void(SkeletonNodeHandle)>& node_handler);
 
-		/**
-		 * Branch/prolong node during growth process. The flow structure will also be updated.
-		 * @param targetHandle The handle of the node to branch/prolong
-		 * @param branching True if branching, false if prolong. During branching, 2 new flows will be generated.
-		 * @return The handle of new node.
-		 */
-		[[nodiscard]] SkeletonNodeHandle Extend(SkeletonNodeHandle targetHandle, bool branching);
+  /**
+   * Recycle (Remove) a flow, the descendants of this flow will also be recycled. The relevant node will also be
+   * removed/restructured.
+   * @param handle The handle of the flow to be removed. Must be valid (non-zero and the flow should not be recycled
+   * prior to this operation).
+   * @param flow_handler Function to be called right before a flow in recycled.
+   * @param node_handler Function to be called right before a node in recycled.
+   */
+  void RecycleFlow(SkeletonFlowHandle handle, const std::function<void(SkeletonFlowHandle)>& flow_handler,
+                   const std::function<void(SkeletonNodeHandle)>& node_handler);
 
-		/**
-		 * To retrieve a list of handles of all nodes contained within the tree.
-		 * @return The list of handles of nodes sorted from root to ends.
-		 */
-		[[nodiscard]] const std::vector<SkeletonNodeHandle>& PeekBaseNodeList();
+  /**
+   * Branch/prolong node during growth process. The flow structure will also be updated.
+   * @param target_handle The handle of the node to branch/prolong
+   * @param branching True if branching, false if prolong. During branching, 2 new flows will be generated.
+   * @return The handle of new node.
+   */
+  [[nodiscard]] SkeletonNodeHandle Extend(SkeletonNodeHandle target_handle, bool branching);
 
-		/**
-		 * To retrieve a list of handles of all nodes contained within the tree.
-		 * @return The list of handles of nodes sorted from root to ends.
-		 */
-		[[nodiscard]] const std::vector<SkeletonNodeHandle>& PeekSortedNodeList() const;
+  /**
+   * To retrieve a list of handles of all nodes contained within the tree.
+   * @return The list of handles of nodes sorted from root to ends.
+   */
+  [[nodiscard]] const std::vector<SkeletonNodeHandle>& PeekBaseNodeList();
 
-		[[nodiscard]] std::vector<SkeletonNodeHandle> GetSubTree(SkeletonNodeHandle baseNodeHandle) const;
-		[[nodiscard]] std::vector<SkeletonNodeHandle> GetChainToRoot(SkeletonNodeHandle endNodeHandle) const;
+  /**
+   * To retrieve a list of handles of all nodes contained within the tree.
+   * @return The list of handles of nodes sorted from root to ends.
+   */
+  [[nodiscard]] const std::vector<SkeletonNodeHandle>& PeekSortedNodeList() const;
 
-		[[nodiscard]] std::vector<SkeletonNodeHandle> GetNodeListBaseIndex(unsigned baseIndex) const;
-		/**
-		 * To retrieve a list of handles of all flows contained within the tree.
-		 * @return The list of handles of flows sorted from root to ends.
-		 */
-		[[nodiscard]] const std::vector<SkeletonFlowHandle>& PeekSortedFlowList() const;
+  [[nodiscard]] std::vector<SkeletonNodeHandle> GetSubTree(SkeletonNodeHandle base_node_handle) const;
+  [[nodiscard]] std::vector<SkeletonNodeHandle> GetChainToRoot(SkeletonNodeHandle end_node_handle) const;
 
-		[[nodiscard]] std::vector<SkeletonFlow<FlowData>>& RefRawFlows();
+  [[nodiscard]] std::vector<SkeletonNodeHandle> GetNodeListBaseIndex(unsigned base_index) const;
+  /**
+   * To retrieve a list of handles of all flows contained within the tree.
+   * @return The list of handles of flows sorted from root to ends.
+   */
+  [[nodiscard]] const std::vector<SkeletonFlowHandle>& PeekSortedFlowList() const;
 
-		[[nodiscard]] std::vector<SkeletonNode<NodeData>>& RefRawNodes();
+  [[nodiscard]] std::vector<SkeletonFlow<FlowData>>& RefRawFlows();
 
-		[[nodiscard]] const std::vector<SkeletonFlow<FlowData>>& PeekRawFlows() const;
+  [[nodiscard]] std::vector<SkeletonNode<NodeData>>& RefRawNodes();
 
-		[[nodiscard]] const std::vector<SkeletonNode<NodeData>>& PeekRawNodes() const;
+  [[nodiscard]] const std::vector<SkeletonFlow<FlowData>>& PeekRawFlows() const;
 
-		/**
-		 *  Force the structure to sort the node and flow list.
-		 *  \n!!You MUST call this after you prune the tree or altered the tree structure manually!!
-		 */
-		void SortLists();
+  [[nodiscard]] const std::vector<SkeletonNode<NodeData>>& PeekRawNodes() const;
 
-		Skeleton(unsigned initialNodeCount = 1);
+  /**
+   *  Force the structure to sort the node and flow list.
+   *  \n!!You MUST call this after you prune the tree or altered the tree structure manually!!
+   */
+  void SortLists();
 
-		/**
-		 * Get the structural version of the tree. The version will change when the tree structure changes.
-		 * @return The version
-		 */
-		[[nodiscard]] int GetVersion() const;
+  Skeleton(unsigned initial_node_count = 1);
 
-		/**
-		 * Calculate the structural information of the flows.
-		 */
-		void CalculateFlows();
+  /**
+   * Get the structural version of the tree. The version will change when the tree structure changes.
+   * @return The version
+   */
+  [[nodiscard]] int GetVersion() const;
 
-		/**
-		 * Retrieve a modifiable reference to the node with the handle.
-		 * @param handle The handle to the target node.
-		 * @return The modifiable reference to the node.
-		 */
-		SkeletonNode<NodeData>& RefNode(SkeletonNodeHandle handle);
+  /**
+   * Calculate the structural information of the flows.
+   */
+  void CalculateFlows();
 
-		/**
-		 * Retrieve a modifiable reference to the flow with the handle.
-		 * @param handle The handle to the target flow.
-		 * @return The modifiable reference to the flow.
-		 */
-		SkeletonFlow<FlowData>& RefFlow(SkeletonFlowHandle handle);
+  /**
+   * Retrieve a modifiable reference to the node with the handle.
+   * @param handle The handle to the target node.
+   * @return The modifiable reference to the node.
+   */
+  SkeletonNode<NodeData>& RefNode(SkeletonNodeHandle handle);
 
-		/**
-		 * Retrieve a non-modifiable reference to the node with the handle.
-		 * @param handle The handle to the target node.
-		 * @return The non-modifiable reference to the node.
-		 */
-		[[nodiscard]] const SkeletonNode<NodeData>& PeekNode(SkeletonNodeHandle handle) const;
+  /**
+   * Retrieve a modifiable reference to the flow with the handle.
+   * @param handle The handle to the target flow.
+   * @return The modifiable reference to the flow.
+   */
+  SkeletonFlow<FlowData>& RefFlow(SkeletonFlowHandle handle);
 
-		/**
-		 * Retrieve a non-modifiable reference to the flow with the handle.
-		 * @param handle The handle to the target flow.
-		 * @return The non-modifiable reference to the flow.
-		 */
-		[[nodiscard]] const SkeletonFlow<FlowData>& PeekFlow(SkeletonFlowHandle handle) const;
+  /**
+   * Retrieve a non-modifiable reference to the node with the handle.
+   * @param handle The handle to the target node.
+   * @return The non-modifiable reference to the node.
+   */
+  [[nodiscard]] const SkeletonNode<NodeData>& PeekNode(SkeletonNodeHandle handle) const;
 
-		/**
-		 * The min value of the bounding box of current tree structure.
-		 */
-		glm::vec3 m_min = glm::vec3(0.0f);
+  /**
+   * Retrieve a non-modifiable reference to the flow with the handle.
+   * @param handle The handle to the target flow.
+   * @return The non-modifiable reference to the flow.
+   */
+  [[nodiscard]] const SkeletonFlow<FlowData>& PeekFlow(SkeletonFlowHandle handle) const;
 
-		/**
-		 * The max value of the bounding box of current tree structure.
-		 */
-		glm::vec3 m_max = glm::vec3(0.0f);
-	};
+  /**
+   * The min value of the bounding box of current tree structure.
+   */
+  glm::vec3 min = glm::vec3(0.0f);
 
-	struct BaseSkeletonData {};
-	struct BaseFlowData {};
-	struct BaseNodeData {};
+  /**
+   * The max value of the bounding box of current tree structure.
+   */
+  glm::vec3 max = glm::vec3(0.0f);
+};
 
-	typedef Skeleton<BaseSkeletonData, BaseFlowData, BaseNodeData> BaseSkeleton;
+struct BaseSkeletonData {};
+struct BaseFlowData {};
+struct BaseNodeData {};
+
+typedef Skeleton<BaseSkeletonData, BaseFlowData, BaseNodeData> BaseSkeleton;
 
 #pragma region TreeSkeleton
 #pragma region Helper
 
-	template<typename SkeletonData, typename FlowData, typename NodeData>
-	SkeletonFlow<FlowData>& Skeleton<SkeletonData, FlowData, NodeData>::RefFlow(SkeletonFlowHandle handle) {
-		assert(handle >= 0 && handle < m_flows.size());
-		return m_flows[handle];
-	}
+template <typename SkeletonData, typename FlowData, typename NodeData>
+SkeletonFlow<FlowData>& Skeleton<SkeletonData, FlowData, NodeData>::RefFlow(SkeletonFlowHandle handle) {
+  assert(handle >= 0 && handle < flows_.size());
+  return flows_[handle];
+}
 
-	template<typename SkeletonData, typename FlowData, typename NodeData>
-	const SkeletonFlow<FlowData>& Skeleton<SkeletonData, FlowData, NodeData>::PeekFlow(SkeletonFlowHandle handle) const {
-		assert(handle >= 0 && handle < m_flows.size());
-		return m_flows[handle];
-	}
+template <typename SkeletonData, typename FlowData, typename NodeData>
+const SkeletonFlow<FlowData>& Skeleton<SkeletonData, FlowData, NodeData>::PeekFlow(SkeletonFlowHandle handle) const {
+  assert(handle >= 0 && handle < flows_.size());
+  return flows_[handle];
+}
 
-	template<typename SkeletonData, typename FlowData, typename NodeData>
-	SkeletonNode<NodeData>&
-		Skeleton<SkeletonData, FlowData, NodeData>::RefNode(SkeletonNodeHandle handle) {
-		assert(handle >= 0 && handle < m_nodes.size());
-		return m_nodes[handle];
-	}
+template <typename SkeletonData, typename FlowData, typename NodeData>
+SkeletonNode<NodeData>& Skeleton<SkeletonData, FlowData, NodeData>::RefNode(SkeletonNodeHandle handle) {
+  assert(handle >= 0 && handle < nodes_.size());
+  return nodes_[handle];
+}
 
-	template<typename SkeletonData, typename FlowData, typename NodeData>
-	const SkeletonNode<NodeData>&
-		Skeleton<SkeletonData, FlowData, NodeData>::PeekNode(SkeletonNodeHandle handle) const {
-		assert(handle >= 0 && handle < m_nodes.size());
-		return m_nodes[handle];
-	}
+template <typename SkeletonData, typename FlowData, typename NodeData>
+const SkeletonNode<NodeData>& Skeleton<SkeletonData, FlowData, NodeData>::PeekNode(SkeletonNodeHandle handle) const {
+  assert(handle >= 0 && handle < nodes_.size());
+  return nodes_[handle];
+}
 
-	template<typename SkeletonData, typename FlowData, typename NodeData>
-	void Skeleton<SkeletonData, FlowData, NodeData>::SortLists() {
-		if (m_version == m_newVersion) return;
-		if (m_nodes.empty()) return;
-		m_version = m_newVersion;
-		m_sortedFlowList.clear();
-		m_sortedNodeList.clear();
-		RefreshBaseNodeList();
-		std::queue<SkeletonFlowHandle> flowWaitList;
-		std::queue<SkeletonNodeHandle> nodeWaitList;
+template <typename SkeletonData, typename FlowData, typename NodeData>
+void Skeleton<SkeletonData, FlowData, NodeData>::SortLists() {
+  if (version_ == new_version_)
+    return;
+  if (nodes_.empty())
+    return;
+  version_ = new_version_;
+  sorted_flow_list_.clear();
+  sorted_node_list_.clear();
+  RefreshBaseNodeList();
+  std::queue<SkeletonFlowHandle> flow_wait_list;
+  std::queue<SkeletonNodeHandle> node_wait_list;
 
-		for (const auto& baseNodeHandle : m_baseNodeList)
-		{
-			nodeWaitList.push(baseNodeHandle);
-			flowWaitList.push(m_nodes[baseNodeHandle].m_flowHandle);
-		}
+  for (const auto& base_node_handle : base_node_list_) {
+    node_wait_list.push(base_node_handle);
+    flow_wait_list.push(nodes_[base_node_handle].flow_handle_);
+  }
 
-		while (!flowWaitList.empty()) {
-			m_sortedFlowList.emplace_back(flowWaitList.front());
-			flowWaitList.pop();
-			for (const auto& i : m_flows[m_sortedFlowList.back()].m_childHandles) {
-				assert(!m_flows[i].m_recycled);
-				flowWaitList.push(i);
-			}
+  while (!flow_wait_list.empty()) {
+    sorted_flow_list_.emplace_back(flow_wait_list.front());
+    flow_wait_list.pop();
+    for (const auto& i : flows_[sorted_flow_list_.back()].child_handles_) {
+      assert(!flows_[i].recycled_);
+      flow_wait_list.push(i);
+    }
+  }
 
-		}
+  while (!node_wait_list.empty()) {
+    sorted_node_list_.emplace_back(node_wait_list.front());
+    node_wait_list.pop();
+    for (const auto& i : nodes_[sorted_node_list_.back()].child_handles_) {
+      assert(!nodes_[i].recycled_);
+      node_wait_list.push(i);
+    }
+  }
+}
 
-		while (!nodeWaitList.empty()) {
-			m_sortedNodeList.emplace_back(nodeWaitList.front());
-			nodeWaitList.pop();
-			for (const auto& i : m_nodes[m_sortedNodeList.back()].m_childHandles) {
-				assert(!m_nodes[i].m_recycled);
-				nodeWaitList.push(i);
-			}
-		}
-	}
+template <typename SkeletonData, typename FlowData, typename NodeData>
+const std::vector<SkeletonFlowHandle>& Skeleton<SkeletonData, FlowData, NodeData>::PeekSortedFlowList() const {
+  return sorted_flow_list_;
+}
 
-	template<typename SkeletonData, typename FlowData, typename NodeData>
-	const std::vector<SkeletonFlowHandle>& Skeleton<SkeletonData, FlowData, NodeData>::PeekSortedFlowList() const {
-		return m_sortedFlowList;
-	}
+template <typename SkeletonData, typename FlowData, typename NodeData>
+const std::vector<SkeletonNodeHandle>& Skeleton<SkeletonData, FlowData, NodeData>::PeekSortedNodeList() const {
+  return sorted_node_list_;
+}
 
-	template<typename SkeletonData, typename FlowData, typename NodeData>
-	const std::vector<SkeletonNodeHandle>&
-		Skeleton<SkeletonData, FlowData, NodeData>::PeekSortedNodeList() const {
-		return m_sortedNodeList;
-	}
+template <typename SkeletonData, typename FlowData, typename NodeData>
+std::vector<SkeletonNodeHandle> Skeleton<SkeletonData, FlowData, NodeData>::GetSubTree(
+    const SkeletonNodeHandle base_node_handle) const {
+  std::vector<SkeletonNodeHandle> ret_val{};
+  std::queue<SkeletonNodeHandle> node_handles;
+  node_handles.push(base_node_handle);
+  while (!node_handles.empty()) {
+    auto next_node_handle = node_handles.front();
+    ret_val.emplace_back(node_handles.front());
+    node_handles.pop();
+    for (const auto& child_handle : nodes_[next_node_handle].child_handles_) {
+      node_handles.push(child_handle);
+    }
+  }
+  return ret_val;
+}
 
-	template <typename SkeletonData, typename FlowData, typename NodeData>
-	std::vector<SkeletonNodeHandle> Skeleton<SkeletonData, FlowData, NodeData>::GetSubTree(const SkeletonNodeHandle baseNodeHandle) const
-	{
-		std::vector<SkeletonNodeHandle> retVal{};
-		std::queue<SkeletonNodeHandle> nodeHandles;
-		nodeHandles.push(baseNodeHandle);
-		while (!nodeHandles.empty())
-		{
-			auto nextNodeHandle = nodeHandles.front();
-			retVal.emplace_back(nodeHandles.front());
-			nodeHandles.pop();
-			for (const auto& childHandle : m_nodes[nextNodeHandle].m_childHandles)
-			{
-				nodeHandles.push(childHandle);
-			}
-		}
-		return retVal;
-	}
+template <typename SkeletonData, typename FlowData, typename NodeData>
+std::vector<SkeletonNodeHandle> Skeleton<SkeletonData, FlowData, NodeData>::GetChainToRoot(
+    const SkeletonNodeHandle end_node_handle) const {
+  std::vector<SkeletonNodeHandle> ret_val{};
+  SkeletonNodeHandle walker = end_node_handle;
+  while (walker != -1) {
+    ret_val.emplace_back(walker);
+    walker = nodes_[walker].parent_handle_;
+  }
+  return ret_val;
+}
 
-	template <typename SkeletonData, typename FlowData, typename NodeData>
-	std::vector<SkeletonNodeHandle> Skeleton<SkeletonData, FlowData, NodeData>::GetChainToRoot(
-		const SkeletonNodeHandle endNodeHandle) const
-	{
-		std::vector<SkeletonNodeHandle> retVal{};
-		SkeletonNodeHandle walker = endNodeHandle;
-		while(walker != -1)
-		{
-			retVal.emplace_back(walker);
-			walker = m_nodes[walker].m_parentHandle;
-		}
-		return retVal;
-	}
+template <typename SkeletonData, typename FlowData, typename NodeData>
+std::vector<SkeletonNodeHandle> Skeleton<SkeletonData, FlowData, NodeData>::GetNodeListBaseIndex(
+    unsigned base_index) const {
+  std::vector<SkeletonNodeHandle> ret_val{};
+  for (const auto& i : sorted_node_list_) {
+    if (nodes_[i].index_ >= base_index)
+      ret_val.push_back(i);
+  }
+  return ret_val;
+}
 
-	template <typename SkeletonData, typename FlowData, typename NodeData>
-	std::vector<SkeletonNodeHandle> Skeleton<SkeletonData, FlowData, NodeData>::GetNodeListBaseIndex(unsigned baseIndex) const
-	{
-		std::vector<SkeletonNodeHandle> retVal{};
-		for (const auto& i : m_sortedNodeList)
-		{
-			if (m_nodes[i].m_index >= baseIndex) retVal.push_back(i);
-		}
-		return retVal;
-	}
+template <typename SkeletonData, typename FlowData, typename NodeData>
+SkeletonNodeHandle Skeleton<SkeletonData, FlowData, NodeData>::Extend(SkeletonNodeHandle target_handle,
+                                                                      const bool branching) {
+  assert(target_handle < nodes_.size());
+  auto& target_node = nodes_[target_handle];
+  assert(!target_node.recycled_);
+  assert(target_node.flow_handle_ < flows_.size());
+  auto& flow = flows_[target_node.flow_handle_];
+  assert(!flow.recycled_);
+  auto new_node_handle = AllocateNode();
+  SetParentNode(new_node_handle, target_handle);
+  auto& original_node = nodes_[target_handle];
+  auto& new_node = nodes_[new_node_handle];
+  original_node.end_node_ = false;
+  if (branching) {
+    auto new_flow_handle = AllocateFlow();
+    auto& new_flow = flows_[new_flow_handle];
 
-	template<typename SkeletonData, typename FlowData, typename NodeData>
-	SkeletonNodeHandle
-		Skeleton<SkeletonData, FlowData, NodeData>::Extend(SkeletonNodeHandle targetHandle, const bool branching) {
-		assert(targetHandle < m_nodes.size());
-		auto& targetNode = m_nodes[targetHandle];
-		assert(!targetNode.m_recycled);
-		assert(targetNode.m_flowHandle < m_flows.size());
-		auto& flow = m_flows[targetNode.m_flowHandle];
-		assert(!flow.m_recycled);
-		auto newNodeHandle = AllocateNode();
-		SetParentNode(newNodeHandle, targetHandle);
-		auto& originalNode = m_nodes[targetHandle];
-		auto& newNode = m_nodes[newNodeHandle];
-		originalNode.m_endNode = false;
-		if (branching) {
-			auto newFlowHandle = AllocateFlow();
-			auto& newFlow = m_flows[newFlowHandle];
+    new_node.flow_handle_ = new_flow_handle;
+    new_node.apical_ = false;
+    new_flow.nodes_.emplace_back(new_node_handle);
+    new_flow.apical_ = false;
+    if (target_handle != flows_[original_node.flow_handle_].nodes_.back()) {
+      auto extended_flow_handle = AllocateFlow();
+      auto& extended_flow = flows_[extended_flow_handle];
+      extended_flow.apical_ = true;
+      // Find target node.
+      auto& original_flow = flows_[original_node.flow_handle_];
+      for (auto r = original_flow.nodes_.begin(); r != original_flow.nodes_.end(); ++r) {
+        if (*r == target_handle) {
+          extended_flow.nodes_.insert(extended_flow.nodes_.end(), r + 1, original_flow.nodes_.end());
+          original_flow.nodes_.erase(r + 1, original_flow.nodes_.end());
+          break;
+        }
+      }
+      for (const auto& extracted_node_handle : extended_flow.nodes_) {
+        auto& extracted_node = nodes_[extracted_node_handle];
+        extracted_node.flow_handle_ = extended_flow_handle;
+      }
+      extended_flow.child_handles_ = original_flow.child_handles_;
+      original_flow.child_handles_.clear();
+      for (const auto& child_flow_handle : extended_flow.child_handles_) {
+        flows_[child_flow_handle].parent_handle_ = extended_flow_handle;
+      }
+      SetParentFlow(extended_flow_handle, original_node.flow_handle_);
+    }
+    SetParentFlow(new_flow_handle, original_node.flow_handle_);
+  } else {
+    flow.nodes_.emplace_back(new_node_handle);
+    new_node.flow_handle_ = original_node.flow_handle_;
+    new_node.apical_ = true;
+  }
+  new_version_++;
+  return new_node_handle;
+}
 
-			newNode.m_flowHandle = newFlowHandle;
-			newNode.m_apical = false;
-			newFlow.m_nodes.emplace_back(newNodeHandle);
-			newFlow.m_apical = false;
-			if (targetHandle != m_flows[originalNode.m_flowHandle].m_nodes.back()) {
-				auto extendedFlowHandle = AllocateFlow();
-				auto& extendedFlow = m_flows[extendedFlowHandle];
-				extendedFlow.m_apical = true;
-				//Find target node.
-				auto& originalFlow = m_flows[originalNode.m_flowHandle];
-				for (auto r = originalFlow.m_nodes.begin(); r != originalFlow.m_nodes.end(); ++r) {
-					if (*r == targetHandle) {
-						extendedFlow.m_nodes.insert(extendedFlow.m_nodes.end(), r + 1,
-							originalFlow.m_nodes.end());
-						originalFlow.m_nodes.erase(r + 1, originalFlow.m_nodes.end());
-						break;
-					}
-				}
-				for (const auto& extractedNodeHandle : extendedFlow.m_nodes) {
-					auto& extractedNode = m_nodes[extractedNodeHandle];
-					extractedNode.m_flowHandle = extendedFlowHandle;
-				}
-				extendedFlow.m_childHandles = originalFlow.m_childHandles;
-				originalFlow.m_childHandles.clear();
-				for (const auto& childFlowHandle : extendedFlow.m_childHandles) {
-					m_flows[childFlowHandle].m_parentHandle = extendedFlowHandle;
-				}
-				SetParentFlow(extendedFlowHandle, originalNode.m_flowHandle);
-			}
-			SetParentFlow(newFlowHandle, originalNode.m_flowHandle);
-		}
-		else {
-			flow.m_nodes.emplace_back(newNodeHandle);
-			newNode.m_flowHandle = originalNode.m_flowHandle;
-			newNode.m_apical = true;
-		}
-		m_newVersion++;
-		return newNodeHandle;
-	}
+template <typename SkeletonData, typename FlowData, typename NodeData>
+const std::vector<SkeletonNodeHandle>& Skeleton<SkeletonData, FlowData, NodeData>::PeekBaseNodeList() {
+  RefreshBaseNodeList();
+  return base_node_list_;
+}
 
-	template <typename SkeletonData, typename FlowData, typename NodeData>
-	const std::vector<SkeletonNodeHandle>& Skeleton<SkeletonData, FlowData, NodeData>::PeekBaseNodeList()
-	{
-		RefreshBaseNodeList();
-		return m_baseNodeList;
-	}
+template <typename SkeletonData, typename FlowData, typename NodeData>
+void Skeleton<SkeletonData, FlowData, NodeData>::RecycleFlow(
+    SkeletonFlowHandle handle, const std::function<void(SkeletonFlowHandle)>& flow_handler,
+    const std::function<void(SkeletonNodeHandle)>& node_handler) {
+  assert(handle != 0);
+  assert(!flows_[handle].recycled_);
+  auto& flow = flows_[handle];
+  // Remove children
+  auto children = flow.child_handles_;
+  for (const auto& child : children) {
+    if (flows_[child].recycled_)
+      continue;
+    RecycleFlow(child, flow_handler, node_handler);
+  }
+  // Detach from parent
+  auto parent_handle = flow.parent_handle_;
+  if (parent_handle != -1)
+    DetachChildFlow(parent_handle, handle);
+  // Remove node
+  if (!flow.nodes_.empty()) {
+    // Detach first node from parent.
+    auto nodes = flow.nodes_;
+    for (const auto& i : nodes) {
+      RecycleNodeSingle(i, node_handler);
+    }
+  }
+  RecycleFlowSingle(handle, flow_handler);
+  new_version_++;
+}
 
-	template<typename SkeletonData, typename FlowData, typename NodeData>
-	void Skeleton<SkeletonData, FlowData, NodeData>::RecycleFlow(SkeletonFlowHandle handle,
-		const std::function<void(SkeletonFlowHandle)>& flowHandler,
-		const std::function<void(SkeletonNodeHandle)>& nodeHandler) {
-		assert(handle != 0);
-		assert(!m_flows[handle].m_recycled);
-		auto& flow = m_flows[handle];
-		//Remove children
-		auto children = flow.m_childHandles;
-		for (const auto& child : children) {
-			if (m_flows[child].m_recycled) continue;
-			RecycleFlow(child, flowHandler, nodeHandler);
-		}
-		//Detach from parent
-		auto parentHandle = flow.m_parentHandle;
-		if (parentHandle != -1) DetachChildFlow(parentHandle, handle);
-		//Remove node
-		if (!flow.m_nodes.empty()) {
-			//Detach first node from parent.
-			auto nodes = flow.m_nodes;
-			for (const auto& i : nodes) {
-				RecycleNodeSingle(i, nodeHandler);
-			}
-		}
-		RecycleFlowSingle(handle, flowHandler);
-		m_newVersion++;
-	}
+template <typename SkeletonData, typename FlowData, typename NodeData>
+void Skeleton<SkeletonData, FlowData, NodeData>::RecycleNode(
+    SkeletonNodeHandle handle, const std::function<void(SkeletonFlowHandle)>& flow_handler,
+    const std::function<void(SkeletonNodeHandle)>& node_handler) {
+  assert(handle != 0);
+  assert(!nodes_[handle].recycled_);
+  auto& node = nodes_[handle];
+  auto flow_handle = node.flow_handle_;
+  auto& flow = flows_[flow_handle];
+  if (handle == flow.nodes_[0]) {
+    auto parent_flow_handle = flow.parent_handle_;
 
-	template<typename SkeletonData, typename FlowData, typename NodeData>
-	void Skeleton<SkeletonData, FlowData, NodeData>::RecycleNode(SkeletonNodeHandle handle,
-		const std::function<void(SkeletonFlowHandle)>& flowHandler,
-		const std::function<void(SkeletonNodeHandle)>& nodeHandler) {
-		assert(handle != 0);
-		assert(!m_nodes[handle].m_recycled);
-		auto& node = m_nodes[handle];
-		auto flowHandle = node.m_flowHandle;
-		auto& flow = m_flows[flowHandle];
-		if (handle == flow.m_nodes[0]) {
-			auto parentFlowHandle = flow.m_parentHandle;
-
-			RecycleFlow(node.m_flowHandle, flowHandler, nodeHandler);
-			if (parentFlowHandle != -1) {
-				//Connect parent branch with the only apical child flow.
-				auto& parentFlow = m_flows[parentFlowHandle];
-				if (parentFlow.m_childHandles.size() == 1) {
-					auto childHandle = parentFlow.m_childHandles[0];
-					auto& childFlow = m_flows[childHandle];
-					if (childFlow.m_apical) {
-						for (const auto& nodeHandle : childFlow.m_nodes) {
-							m_nodes[nodeHandle].m_flowHandle = parentFlowHandle;
-						}
-						for (const auto& grandChildFlowHandle : childFlow.m_childHandles) {
-							m_flows[grandChildFlowHandle].m_parentHandle = parentFlowHandle;
-						}
-						parentFlow.m_nodes.insert(parentFlow.m_nodes.end(), childFlow.m_nodes.begin(),
-							childFlow.m_nodes.end());
-						parentFlow.m_childHandles.clear();
-						parentFlow.m_childHandles.insert(parentFlow.m_childHandles.end(),
-							childFlow.m_childHandles.begin(),
-							childFlow.m_childHandles.end());
-						RecycleFlowSingle(childHandle, flowHandler);
-					}
-				}
-			}
-			return;
-		}
-		//Collect list of subsequent nodes
-		std::vector<SkeletonNodeHandle> subsequentNodes;
-		while (flow.m_nodes.back() != handle) {
-			subsequentNodes.emplace_back(flow.m_nodes.back());
-			flow.m_nodes.pop_back();
-		}
-		subsequentNodes.emplace_back(flow.m_nodes.back());
-		flow.m_nodes.pop_back();
-		assert(!flow.m_nodes.empty());
-		//Detach from parent
-		if (node.m_parentHandle != -1) DetachChildNode(node.m_parentHandle, handle);
-		//From end node remove one by one.
-		SkeletonNodeHandle prev = -1;
-		for (const auto& i : subsequentNodes) {
-			auto children = m_nodes[i].m_childHandles;
-			for (const auto& childNodeHandle : children) {
-				if (childNodeHandle == prev) continue;
-				auto& child = m_nodes[childNodeHandle];
-				assert(!child.m_recycled);
-				auto childBranchHandle = child.m_flowHandle;
-				if (childBranchHandle != flowHandle) {
-					RecycleFlow(childBranchHandle, flowHandler, nodeHandler);
-				}
-			}
-			prev = i;
-			RecycleNodeSingle(i, nodeHandler);
-
-		}
-		m_newVersion++;
-	}
+    RecycleFlow(node.flow_handle_, flow_handler, node_handler);
+    if (parent_flow_handle != -1) {
+      // Connect parent branch with the only apical child flow.
+      if (auto& parent_flow = flows_[parent_flow_handle]; parent_flow.child_handles_.size() == 1) {
+        auto child_handle = parent_flow.child_handles_[0];
+        if (auto& child_flow = flows_[child_handle]; child_flow.apical_) {
+          for (const auto& node_handle : child_flow.nodes_) {
+            nodes_[node_handle].flow_handle_ = parent_flow_handle;
+          }
+          for (const auto& grand_child_flow_handle : child_flow.child_handles_) {
+            flows_[grand_child_flow_handle].parent_handle_ = parent_flow_handle;
+          }
+          parent_flow.nodes_.insert(parent_flow.nodes_.end(), child_flow.nodes_.begin(), child_flow.nodes_.end());
+          parent_flow.child_handles_.clear();
+          parent_flow.child_handles_.insert(parent_flow.child_handles_.end(), child_flow.child_handles_.begin(),
+                                            child_flow.child_handles_.end());
+          RecycleFlowSingle(child_handle, flow_handler);
+        }
+      }
+    }
+    return;
+  }
+  // Collect list of subsequent nodes
+  std::vector<SkeletonNodeHandle> subsequent_nodes;
+  while (flow.nodes_.back() != handle) {
+    subsequent_nodes.emplace_back(flow.nodes_.back());
+    flow.nodes_.pop_back();
+  }
+  subsequent_nodes.emplace_back(flow.nodes_.back());
+  flow.nodes_.pop_back();
+  assert(!flow.nodes_.empty());
+  // Detach from parent
+  if (node.parent_handle_ != -1)
+    DetachChildNode(node.parent_handle_, handle);
+  // From end node remove one by one.
+  SkeletonNodeHandle prev = -1;
+  for (const auto& i : subsequent_nodes) {
+    auto children = nodes_[i].child_handles_;
+    for (const auto& child_node_handle : children) {
+      if (child_node_handle == prev)
+        continue;
+      auto& child = nodes_[child_node_handle];
+      assert(!child.recycled_);
+      auto child_branch_handle = child.flow_handle_;
+      if (child_branch_handle != flow_handle) {
+        RecycleFlow(child_branch_handle, flow_handler, node_handler);
+      }
+    }
+    prev = i;
+    RecycleNodeSingle(i, node_handler);
+  }
+  new_version_++;
+}
 
 #pragma endregion
 #pragma region Internal
 
-	template<typename NodeData>
-	SkeletonNode<NodeData>::SkeletonNode(const SkeletonNodeHandle handle) {
-		m_handle = handle;
-		m_recycled = false;
-		m_endNode = true;
-		m_data = {};
-		m_info = {};
-		m_index = -1;
-	}
-
-	template<typename NodeData>
-	bool SkeletonNode<NodeData>::IsEndNode() const {
-		return m_endNode;
-	}
-
-	template<typename NodeData>
-	bool SkeletonNode<NodeData>::IsRecycled() const {
-		return m_recycled;
-	}
-
-	template <typename NodeData>
-	bool SkeletonNode<NodeData>::IsApical() const
-	{
-		return m_apical;
-	}
-
-	template<typename NodeData>
-	SkeletonNodeHandle SkeletonNode<NodeData>::GetHandle() const {
-		return m_handle;
-	}
-
-	template<typename NodeData>
-	SkeletonNodeHandle SkeletonNode<NodeData>::GetParentHandle() const {
-		return m_parentHandle;
-	}
-
-	template<typename NodeData>
-	SkeletonFlowHandle SkeletonNode<NodeData>::GetFlowHandle() const {
-		return m_flowHandle;
-	}
-
-	template<typename NodeData>
-	const std::vector<SkeletonNodeHandle>& SkeletonNode<NodeData>::PeekChildHandles() const {
-		return m_childHandles;
-	}
-
-	template <typename NodeData>
-	std::vector<SkeletonNodeHandle>& SkeletonNode<NodeData>::UnsafeRefChildHandles()
-	{
-		return m_childHandles;
-	}
-
-	template <typename NodeData>
-	int SkeletonNode<NodeData>::GetIndex() const
-	{
-		return m_index;
-	}
-
-	template<typename FlowData>
-	SkeletonFlow<FlowData>::SkeletonFlow(const SkeletonFlowHandle handle) {
-		m_handle = handle;
-		m_recycled = false;
-		m_data = {};
-		m_info = {};
-		m_apical = false;
-		m_index = -1;
-	}
-
-	template <typename FlowData>
-	int SkeletonFlow<FlowData>::GetIndex() const
-	{
-		return m_index;
-	}
-
-	template<typename FlowData>
-	const std::vector<SkeletonNodeHandle>& SkeletonFlow<FlowData>::PeekNodeHandles() const {
-		return m_nodes;
-	}
-
-	template<typename FlowData>
-	SkeletonFlowHandle SkeletonFlow<FlowData>::GetParentHandle() const {
-		return m_parentHandle;
-	}
-
-	template<typename FlowData>
-	const std::vector<SkeletonFlowHandle>& SkeletonFlow<FlowData>::PeekChildHandles() const {
-		return m_childHandles;
-	}
-
-	template<typename FlowData>
-	bool SkeletonFlow<FlowData>::IsRecycled() const {
-		return m_recycled;
-	}
-
-	template<typename FlowData>
-	SkeletonFlowHandle SkeletonFlow<FlowData>::GetHandle() const { return m_handle; }
-
-	template<typename FlowData>
-	bool SkeletonFlow<FlowData>::IsApical() const {
-		return m_apical;
-	}
-
-	template<typename SkeletonData, typename FlowData, typename NodeData>
-	Skeleton<SkeletonData, FlowData, NodeData>::Skeleton(const unsigned initialNodeCount) {
-		m_maxNodeIndex = -1;
-		m_maxFlowIndex = -1;
-		for (int i = 0; i < initialNodeCount; i++) {
-			auto flowHandle = AllocateFlow();
-			auto nodeHandle = AllocateNode();
-			auto& rootFlow = m_flows[flowHandle];
-			auto& rootNode = m_nodes[nodeHandle];
-			rootNode.m_flowHandle = flowHandle;
-			rootFlow.m_nodes.emplace_back(nodeHandle);
-			m_baseNodeList.emplace_back(nodeHandle);
-		}
-	}
-
-	template<typename SkeletonData, typename FlowData, typename NodeData>
-	void Skeleton<SkeletonData, FlowData, NodeData>::DetachChildNode(SkeletonNodeHandle targetHandle,
-		SkeletonNodeHandle childHandle) {
-		assert(targetHandle >= 0 && childHandle >= 0 && targetHandle < m_nodes.size() &&
-			childHandle < m_nodes.size());
-		auto& targetNode = m_nodes[targetHandle];
-		auto& childNode = m_nodes[childHandle];
-		assert(!targetNode.m_recycled);
-		assert(!childNode.m_recycled);
-		auto& children = targetNode.m_childHandles;
-		for (int i = 0; i < children.size(); i++) {
-			if (children[i] == childHandle) {
-				children[i] = children.back();
-				children.pop_back();
-				childNode.m_parentHandle = -1;
-				if (children.empty()) targetNode.m_endNode = true;
-				return;
-			}
-		}
-	}
-
-	template <typename SkeletonData, typename FlowData, typename NodeData>
-	void Skeleton<SkeletonData, FlowData, NodeData>::RefreshBaseNodeList()
-	{
-		std::vector<SkeletonNodeHandle> temp;
-		for (const auto& i : m_baseNodeList) if (!m_nodes[i].m_recycled && m_nodes[i].m_parentHandle == -1) temp.emplace_back(i);
-		m_baseNodeList = temp;
-	}
-
-	template <typename SkeletonData, typename FlowData, typename NodeData>
-	void Skeleton<SkeletonData, FlowData, NodeData>::CalculateClusters(const SkeletonClusterSettings& clusterSettings)
-	{
-
-	}
-
-	template <typename SkeletonData, typename FlowData, typename NodeData>
-	template <typename SrcSkeletonData, typename SrcFlowData, typename SrcNodeData>
-	void Skeleton<SkeletonData, FlowData, NodeData>::Clone(
-		const Skeleton<SrcSkeletonData, SrcFlowData, SrcNodeData>& srcSkeleton)
-	{
-		m_data = {};
-		m_flowPool = srcSkeleton.m_flowPool;
-		m_nodePool = srcSkeleton.m_nodePool;
-		m_sortedNodeList = srcSkeleton.m_sortedNodeList;
-		m_sortedFlowList = srcSkeleton.m_sortedFlowList;
-
-		m_nodes.resize(srcSkeleton.m_nodes.size());
-		for (int i = 0; i < srcSkeleton.m_nodes.size(); i++)
-		{
-			m_nodes[i].m_info = srcSkeleton.m_nodes[i].m_info;
-
-			m_nodes[i].m_endNode = srcSkeleton.m_nodes[i].m_endNode;
-			m_nodes[i].m_recycled = srcSkeleton.m_nodes[i].m_recycled;
-			m_nodes[i].m_handle = srcSkeleton.m_nodes[i].m_handle;
-			m_nodes[i].m_flowHandle = srcSkeleton.m_nodes[i].m_flowHandle;
-			m_nodes[i].m_parentHandle = srcSkeleton.m_nodes[i].m_parentHandle;
-			m_nodes[i].m_childHandles = srcSkeleton.m_nodes[i].m_childHandles;
-			m_nodes[i].m_apical = srcSkeleton.m_nodes[i].m_apical;
-			m_nodes[i].m_index = srcSkeleton.m_nodes[i].m_index;
-		}
-
-		m_flows.resize(srcSkeleton.m_flows.size());
-		for (int i = 0; i < srcSkeleton.m_flows.size(); i++)
-		{
-			m_flows[i].m_info = srcSkeleton.m_flows[i].m_info;
-
-			m_flows[i].m_recycled = srcSkeleton.m_flows[i].m_recycled;
-			m_flows[i].m_handle = srcSkeleton.m_flows[i].m_handle;
-			m_flows[i].m_nodes = srcSkeleton.m_flows[i].m_nodes;
-			m_flows[i].m_parentHandle = srcSkeleton.m_flows[i].m_parentHandle;
-			m_flows[i].m_apical = srcSkeleton.m_flows[i].m_apical;
-		}
-		m_maxNodeIndex = srcSkeleton.m_maxNodeIndex;
-		m_maxFlowIndex = srcSkeleton.m_maxFlowIndex;
-		m_newVersion = srcSkeleton.m_newVersion;
-		m_version = srcSkeleton.m_version;
-		m_min = srcSkeleton.m_min;
-		m_max = srcSkeleton.m_max;
-	}
-
-	template <typename SkeletonData, typename FlowData, typename NodeData>
-	int Skeleton<SkeletonData, FlowData, NodeData>::GetMaxNodeIndex() const
-	{
-		return m_maxNodeIndex;
-	}
-
-	template <typename SkeletonData, typename FlowData, typename NodeData>
-	int Skeleton<SkeletonData, FlowData, NodeData>::GetMaxFlowIndex() const
-	{
-		return m_maxFlowIndex;
-	}
-
-	template <typename SkeletonData, typename FlowData, typename NodeData>
-	void Skeleton<SkeletonData, FlowData, NodeData>::CalculateDistance()
-	{
-		for (const auto& nodeHandle : m_sortedNodeList) {
-			auto& node = m_nodes[nodeHandle];
-			auto& nodeInfo = node.m_info;
-			if (node.GetParentHandle() == -1) {
-				nodeInfo.m_rootDistance = nodeInfo.m_length;
-				nodeInfo.m_chainIndex = 0;
-			}
-			else {
-				const auto& parentInternode = m_nodes[node.GetParentHandle()];
-				nodeInfo.m_rootDistance = parentInternode.m_info.m_rootDistance + nodeInfo.m_length;
-
-				if(node.IsApical())
-				{
-					node.m_info.m_chainIndex = parentInternode.m_info.m_chainIndex + 1;
-				}else
-				{
-					node.m_info.m_chainIndex = 0;
-				}
-			}
-		}
-		for (auto it = m_sortedNodeList.rbegin(); it != m_sortedNodeList.rend(); ++it) {
-			auto& node = m_nodes[*it];
-			float maxDistanceToAnyBranchEnd = 0;
-			node.m_info.m_endDistance = 0;
-			for (const auto& i : node.PeekChildHandles())
-			{
-				const auto& childNode = m_nodes[i];
-				const float childMaxDistanceToAnyBranchEnd =
-					childNode.m_info.m_endDistance +
-					childNode.m_info.m_length;
-				maxDistanceToAnyBranchEnd = glm::max(maxDistanceToAnyBranchEnd, childMaxDistanceToAnyBranchEnd);
-			}
-			node.m_info.m_endDistance = maxDistanceToAnyBranchEnd;
-		}
-	}
-
-	template<typename SkeletonData, typename FlowData, typename NodeData>
-	void Skeleton<SkeletonData, FlowData, NodeData>::CalculateRegulatedGlobalRotation()
-	{
-		m_min = glm::vec3(FLT_MAX);
-		m_max = glm::vec3(-FLT_MAX);
-		for (const auto& nodeHandle : m_sortedNodeList) {
-			auto& node = m_nodes[nodeHandle];
-			auto& nodeInfo = node.m_info;
-			m_min = glm::min(m_min, node.m_info.m_globalPosition);
-			m_min = glm::min(m_min, node.m_info.GetGlobalEndPosition());
-			m_max = glm::max(m_max, node.m_info.m_globalPosition);
-			m_max = glm::max(m_max, node.m_info.GetGlobalEndPosition());
-			if (node.m_parentHandle != -1) {
-				auto& parentInfo = m_nodes[node.m_parentHandle].m_info;
-				auto front = nodeInfo.m_globalRotation * glm::vec3(0, 0, -1);
-				auto parentRegulatedUp = parentInfo.m_regulatedGlobalRotation * glm::vec3(0, 1, 0);
-				auto regulatedUp = glm::normalize(glm::cross(glm::cross(front, parentRegulatedUp), front));
-				nodeInfo.m_regulatedGlobalRotation = glm::quatLookAt(front, regulatedUp);
-			}
-			else
-			{
-				nodeInfo.m_regulatedGlobalRotation = nodeInfo.m_globalRotation;
-			}
-		}
-	}
-
-	template<typename SkeletonData, typename FlowData, typename NodeData>
-	void Skeleton<SkeletonData, FlowData, NodeData>::SetParentNode(SkeletonNodeHandle targetHandle,
-		SkeletonNodeHandle parentHandle) {
-		assert(targetHandle >= 0 && parentHandle >= 0 && targetHandle < m_nodes.size() &&
-			parentHandle < m_nodes.size());
-		auto& targetNode = m_nodes[targetHandle];
-		auto& parentNode = m_nodes[parentHandle];
-		assert(!targetNode.m_recycled);
-		assert(!parentNode.m_recycled);
-		targetNode.m_parentHandle = parentHandle;
-		parentNode.m_childHandles.emplace_back(targetHandle);
-	}
-
-	template<typename SkeletonData, typename FlowData, typename NodeData>
-	void
-		Skeleton<SkeletonData, FlowData, NodeData>::DetachChildFlow(SkeletonFlowHandle targetHandle,
-			SkeletonFlowHandle childHandle) {
-		assert(targetHandle >= 0 && childHandle >= 0 && targetHandle < m_flows.size() &&
-			childHandle < m_flows.size());
-		auto& targetBranch = m_flows[targetHandle];
-		auto& childBranch = m_flows[childHandle];
-		assert(!targetBranch.m_recycled);
-		assert(!childBranch.m_recycled);
-
-		if (!childBranch.m_nodes.empty()) {
-			auto firstNodeHandle = childBranch.m_nodes[0];
-			auto& firstNode = m_nodes[firstNodeHandle];
-			if (firstNode.m_parentHandle != -1)
-				DetachChildNode(firstNode.m_parentHandle, firstNodeHandle);
-		}
-
-		auto& children = targetBranch.m_childHandles;
-		for (int i = 0; i < children.size(); i++) {
-			if (children[i] == childHandle) {
-				children[i] = children.back();
-				children.pop_back();
-				childBranch.m_parentHandle = -1;
-				return;
-			}
-		}
-	}
-
-	template<typename SkeletonData, typename FlowData, typename NodeData>
-	void
-		Skeleton<SkeletonData, FlowData, NodeData>::SetParentFlow(SkeletonFlowHandle targetHandle,
-			SkeletonFlowHandle parentHandle) {
-		assert(targetHandle >= 0 && parentHandle >= 0 && targetHandle < m_flows.size() &&
-			parentHandle < m_flows.size());
-		auto& targetBranch = m_flows[targetHandle];
-		auto& parentBranch = m_flows[parentHandle];
-		assert(!targetBranch.m_recycled);
-		assert(!parentBranch.m_recycled);
-		targetBranch.m_parentHandle = parentHandle;
-		parentBranch.m_childHandles.emplace_back(targetHandle);
-	}
-
-
-
-	template<typename SkeletonData, typename FlowData, typename NodeData>
-	void Skeleton<SkeletonData, FlowData, NodeData>::RecycleFlowSingle(SkeletonFlowHandle handle, const std::function<void(SkeletonFlowHandle)>& flowHandler) {
-		assert(!m_flows[handle].m_recycled);
-		auto& flow = m_flows[handle];
-		flowHandler(handle);
-		flow.m_parentHandle = -1;
-		flow.m_childHandles.clear();
-		flow.m_nodes.clear();
-
-		flow.m_data = {};
-		flow.m_info = {};
-
-		flow.m_recycled = true;
-		flow.m_apical = false;
-		m_flowPool.emplace(handle);
-	}
-
-	template<typename SkeletonData, typename FlowData, typename NodeData>
-	void Skeleton<SkeletonData, FlowData, NodeData>::RecycleNodeSingle(SkeletonNodeHandle handle, const std::function<void(SkeletonNodeHandle)>& nodeHandler) {
-		assert(!m_nodes[handle].m_recycled);
-		auto& node = m_nodes[handle];
-		nodeHandler(handle);
-		node.m_parentHandle = -1;
-		node.m_flowHandle = -1;
-		node.m_endNode = true;
-		node.m_childHandles.clear();
-
-		node.m_data = {};
-		node.m_info = {};
-		node.m_info.m_locked = false;
-		node.m_info.m_wounds.clear();
-
-		node.m_recycled = true;
-		m_nodePool.emplace(handle);
-	}
-
-	template<typename SkeletonData, typename FlowData, typename NodeData>
-	SkeletonFlowHandle Skeleton<SkeletonData, FlowData, NodeData>::AllocateFlow() {
-		m_maxFlowIndex++;
-		if (m_flowPool.empty()) {
-			m_flows.emplace_back(m_flows.size());
-			m_flows.back().m_index = m_maxFlowIndex;
-			return m_flows.back().m_handle;
-		}
-		auto handle = m_flowPool.front();
-		m_flowPool.pop();
-		auto& flow = m_flows[handle];
-		flow.m_recycled = false;
-		flow.m_index = m_maxFlowIndex;
-		return handle;
-	}
-
-	template<typename SkeletonData, typename FlowData, typename NodeData>
-	SkeletonNodeHandle Skeleton<SkeletonData, FlowData, NodeData>::AllocateNode() {
-		m_maxNodeIndex++;
-		if (m_nodePool.empty()) {
-			m_nodes.emplace_back(m_nodes.size());
-			m_nodes.back().m_index = m_maxNodeIndex;
-			return m_nodes.back().m_handle;
-		}
-		auto handle = m_nodePool.front();
-		m_nodePool.pop();
-		auto& node = m_nodes[handle];
-		node.m_recycled = false;
-		node.m_index = m_maxNodeIndex;
-		return handle;
-	}
-
-	template<typename SkeletonData, typename FlowData, typename NodeData>
-	int Skeleton<SkeletonData, FlowData, NodeData>::GetVersion() const {
-		return m_version;
-	}
-
-	template<typename SkeletonData, typename FlowData, typename NodeData>
-	void Skeleton<SkeletonData, FlowData, NodeData>::CalculateFlows() {
-		for (const auto& flowHandle : m_sortedFlowList) {
-			auto& flow = m_flows[flowHandle];
-			auto& firstNode = m_nodes[flow.m_nodes.front()];
-			auto& lastNode = m_nodes[flow.m_nodes.back()];
-			flow.m_info.m_startThickness = firstNode.m_info.m_thickness;
-			flow.m_info.m_globalStartPosition = firstNode.m_info.m_globalPosition;
-			flow.m_info.m_globalStartRotation = firstNode.m_info.m_globalRotation;
-
-			flow.m_info.m_endThickness = lastNode.m_info.m_thickness;
-			flow.m_info.m_globalEndPosition = lastNode.m_info.m_globalPosition +
-				lastNode.m_info.m_length *
-				(lastNode.m_info.m_globalRotation * glm::vec3(0, 0, -1));
-			flow.m_info.m_globalEndRotation = lastNode.m_info.m_globalRotation;
-
-			flow.m_info.m_flowLength = 0.0f;
-			for (const auto& nodeHandle : flow.m_nodes)
-			{
-				flow.m_info.m_flowLength += m_nodes[nodeHandle].m_info.m_length;
-			}
-
-		}
-	}
-
-	template<typename SkeletonData, typename FlowData, typename NodeData>
-	std::vector<SkeletonFlow<FlowData>>& Skeleton<SkeletonData, FlowData, NodeData>::RefRawFlows() {
-		return m_flows;
-	}
-
-	template<typename SkeletonData, typename FlowData, typename NodeData>
-	std::vector<SkeletonNode<NodeData>>&
-		Skeleton<SkeletonData, FlowData, NodeData>::RefRawNodes() {
-		return m_nodes;
-	}
-
-	template <typename SkeletonData, typename FlowData, typename NodeData>
-	const std::vector<SkeletonFlow<FlowData>>& Skeleton<SkeletonData, FlowData, NodeData>::PeekRawFlows() const
-	{
-		return m_flows;
-	}
-
-	template <typename SkeletonData, typename FlowData, typename NodeData>
-	const std::vector<SkeletonNode<NodeData>>& Skeleton<SkeletonData, FlowData, NodeData>::PeekRawNodes() const
-	{
-		return m_nodes;
-	}
-
-#pragma endregion
-#pragma endregion
+template <typename NodeData>
+SkeletonNode<NodeData>::SkeletonNode(const SkeletonNodeHandle handle) {
+  handle_ = handle;
+  recycled_ = false;
+  end_node_ = true;
+  data = {};
+  info = {};
+  index_ = -1;
 }
+
+template <typename NodeData>
+bool SkeletonNode<NodeData>::IsEndNode() const {
+  return end_node_;
+}
+
+template <typename NodeData>
+bool SkeletonNode<NodeData>::IsRecycled() const {
+  return recycled_;
+}
+
+template <typename NodeData>
+bool SkeletonNode<NodeData>::IsApical() const {
+  return apical_;
+}
+
+template <typename NodeData>
+SkeletonNodeHandle SkeletonNode<NodeData>::GetHandle() const {
+  return handle_;
+}
+
+template <typename NodeData>
+SkeletonNodeHandle SkeletonNode<NodeData>::GetParentHandle() const {
+  return parent_handle_;
+}
+
+template <typename NodeData>
+SkeletonFlowHandle SkeletonNode<NodeData>::GetFlowHandle() const {
+  return flow_handle_;
+}
+
+template <typename NodeData>
+const std::vector<SkeletonNodeHandle>& SkeletonNode<NodeData>::PeekChildHandles() const {
+  return child_handles_;
+}
+
+template <typename NodeData>
+std::vector<SkeletonNodeHandle>& SkeletonNode<NodeData>::UnsafeRefChildHandles() {
+  return child_handles_;
+}
+
+template <typename NodeData>
+int SkeletonNode<NodeData>::GetIndex() const {
+  return index_;
+}
+
+template <typename FlowData>
+SkeletonFlow<FlowData>::SkeletonFlow(const SkeletonFlowHandle handle) {
+  handle_ = handle;
+  recycled_ = false;
+  data = {};
+  info = {};
+  apical_ = false;
+  index_ = -1;
+}
+
+template <typename FlowData>
+int SkeletonFlow<FlowData>::GetIndex() const {
+  return index_;
+}
+
+template <typename FlowData>
+const std::vector<SkeletonNodeHandle>& SkeletonFlow<FlowData>::PeekNodeHandles() const {
+  return nodes_;
+}
+
+template <typename FlowData>
+SkeletonFlowHandle SkeletonFlow<FlowData>::GetParentHandle() const {
+  return parent_handle_;
+}
+
+template <typename FlowData>
+const std::vector<SkeletonFlowHandle>& SkeletonFlow<FlowData>::PeekChildHandles() const {
+  return child_handles_;
+}
+
+template <typename FlowData>
+bool SkeletonFlow<FlowData>::IsRecycled() const {
+  return recycled_;
+}
+
+template <typename FlowData>
+SkeletonFlowHandle SkeletonFlow<FlowData>::GetHandle() const {
+  return handle_;
+}
+
+template <typename FlowData>
+bool SkeletonFlow<FlowData>::IsApical() const {
+  return apical_;
+}
+
+template <typename SkeletonData, typename FlowData, typename NodeData>
+Skeleton<SkeletonData, FlowData, NodeData>::Skeleton(const unsigned initial_node_count) {
+  max_node_index_ = -1;
+  max_flow_index_ = -1;
+  for (int i = 0; i < initial_node_count; i++) {
+    auto flow_handle = AllocateFlow();
+    auto node_handle = AllocateNode();
+    auto& root_flow = flows_[flow_handle];
+    auto& root_node = nodes_[node_handle];
+    root_node.flow_handle_ = flow_handle;
+    root_flow.nodes_.emplace_back(node_handle);
+    base_node_list_.emplace_back(node_handle);
+  }
+}
+
+template <typename SkeletonData, typename FlowData, typename NodeData>
+void Skeleton<SkeletonData, FlowData, NodeData>::DetachChildNode(SkeletonNodeHandle target_handle,
+                                                                 SkeletonNodeHandle child_handle) {
+  assert(target_handle >= 0 && child_handle >= 0 && target_handle < nodes_.size() && child_handle < nodes_.size());
+  auto& target_node = nodes_[target_handle];
+  auto& child_node = nodes_[child_handle];
+  assert(!target_node.recycled_);
+  assert(!child_node.recycled_);
+  auto& children = target_node.child_handles_;
+  for (int i = 0; i < children.size(); i++) {
+    if (children[i] == child_handle) {
+      children[i] = children.back();
+      children.pop_back();
+      child_node.parent_handle_ = -1;
+      if (children.empty())
+        target_node.end_node_ = true;
+      return;
+    }
+  }
+}
+
+template <typename SkeletonData, typename FlowData, typename NodeData>
+void Skeleton<SkeletonData, FlowData, NodeData>::RefreshBaseNodeList() {
+  std::vector<SkeletonNodeHandle> temp;
+  for (const auto& i : base_node_list_)
+    if (!nodes_[i].recycled_ && nodes_[i].parent_handle_ == -1)
+      temp.emplace_back(i);
+  base_node_list_ = temp;
+}
+
+template <typename SkeletonData, typename FlowData, typename NodeData>
+void Skeleton<SkeletonData, FlowData, NodeData>::CalculateClusters(const SkeletonClusterSettings& cluster_settings) {
+}
+
+template <typename SkeletonData, typename FlowData, typename NodeData>
+template <typename SrcSkeletonData, typename SrcFlowData, typename SrcNodeData>
+void Skeleton<SkeletonData, FlowData, NodeData>::Clone(
+    const Skeleton<SrcSkeletonData, SrcFlowData, SrcNodeData>& src_skeleton) {
+  data = {};
+  flow_pool_ = src_skeleton.flow_pool_;
+  node_pool_ = src_skeleton.node_pool_;
+  sorted_node_list_ = src_skeleton.sorted_node_list_;
+  sorted_flow_list_ = src_skeleton.sorted_flow_list_;
+
+  nodes_.resize(src_skeleton.nodes_.size());
+  for (int i = 0; i < src_skeleton.nodes_.size(); i++) {
+    nodes_[i].info = src_skeleton.nodes_[i].info;
+
+    nodes_[i].end_node_ = src_skeleton.nodes_[i].end_node_;
+    nodes_[i].recycled_ = src_skeleton.nodes_[i].recycled_;
+    nodes_[i].handle_ = src_skeleton.nodes_[i].handle_;
+    nodes_[i].flow_handle_ = src_skeleton.nodes_[i].flow_handle_;
+    nodes_[i].parent_handle_ = src_skeleton.nodes_[i].parent_handle_;
+    nodes_[i].child_handles_ = src_skeleton.nodes_[i].child_handles_;
+    nodes_[i].apical_ = src_skeleton.nodes_[i].apical_;
+    nodes_[i].index_ = src_skeleton.nodes_[i].index_;
+  }
+
+  flows_.resize(src_skeleton.flows_.size());
+  for (int i = 0; i < src_skeleton.flows_.size(); i++) {
+    flows_[i].info = src_skeleton.flows_[i].info;
+
+    flows_[i].recycled_ = src_skeleton.flows_[i].recycled_;
+    flows_[i].handle_ = src_skeleton.flows_[i].handle_;
+    flows_[i].nodes_ = src_skeleton.flows_[i].nodes_;
+    flows_[i].parent_handle_ = src_skeleton.flows_[i].parent_handle_;
+    flows_[i].apical_ = src_skeleton.flows_[i].apical_;
+  }
+  max_node_index_ = src_skeleton.max_node_index_;
+  max_flow_index_ = src_skeleton.max_flow_index_;
+  new_version_ = src_skeleton.new_version_;
+  version_ = src_skeleton.version_;
+  min = src_skeleton.min;
+  max = src_skeleton.max;
+}
+
+template <typename SkeletonData, typename FlowData, typename NodeData>
+int Skeleton<SkeletonData, FlowData, NodeData>::GetMaxNodeIndex() const {
+  return max_node_index_;
+}
+
+template <typename SkeletonData, typename FlowData, typename NodeData>
+int Skeleton<SkeletonData, FlowData, NodeData>::GetMaxFlowIndex() const {
+  return max_flow_index_;
+}
+
+template <typename SkeletonData, typename FlowData, typename NodeData>
+void Skeleton<SkeletonData, FlowData, NodeData>::CalculateDistance() {
+  for (const auto& node_handle : sorted_node_list_) {
+    auto& node = nodes_[node_handle];
+    auto& node_info = node.info;
+    if (node.GetParentHandle() == -1) {
+      node_info.root_distance = node_info.length;
+      node_info.chain_index = 0;
+    } else {
+      const auto& parent_internode = nodes_[node.GetParentHandle()];
+      node_info.root_distance = parent_internode.info.root_distance + node_info.length;
+
+      if (node.IsApical()) {
+        node.info.chain_index = parent_internode.info.chain_index + 1;
+      } else {
+        node.info.chain_index = 0;
+      }
+    }
+  }
+  for (auto it = sorted_node_list_.rbegin(); it != sorted_node_list_.rend(); ++it) {
+    auto& node = nodes_[*it];
+    float max_distance_to_any_branch_end = 0;
+    node.info.end_distance = 0;
+    for (const auto& i : node.PeekChildHandles()) {
+      const auto& child_node = nodes_[i];
+      const float child_max_distance_to_any_branch_end = child_node.info.end_distance + child_node.info.length;
+      max_distance_to_any_branch_end = glm::max(max_distance_to_any_branch_end, child_max_distance_to_any_branch_end);
+    }
+    node.info.end_distance = max_distance_to_any_branch_end;
+  }
+}
+
+template <typename SkeletonData, typename FlowData, typename NodeData>
+void Skeleton<SkeletonData, FlowData, NodeData>::CalculateRegulatedGlobalRotation() {
+  min = glm::vec3(FLT_MAX);
+  max = glm::vec3(-FLT_MAX);
+  for (const auto& node_handle : sorted_node_list_) {
+    auto& node = nodes_[node_handle];
+    auto& node_info = node.info;
+    min = glm::min(min, node.info.global_position);
+    min = glm::min(min, node.info.GetGlobalEndPosition());
+    max = glm::max(max, node.info.global_position);
+    max = glm::max(max, node.info.GetGlobalEndPosition());
+    if (node.parent_handle_ != -1) {
+      auto& parent_info = nodes_[node.parent_handle_].info;
+      auto front = node_info.global_rotation * glm::vec3(0, 0, -1);
+      auto parent_regulated_up = parent_info.regulated_global_rotation * glm::vec3(0, 1, 0);
+      auto regulated_up = glm::normalize(glm::cross(glm::cross(front, parent_regulated_up), front));
+      node_info.regulated_global_rotation = glm::quatLookAt(front, regulated_up);
+    } else {
+      node_info.regulated_global_rotation = node_info.global_rotation;
+    }
+  }
+}
+
+template <typename SkeletonData, typename FlowData, typename NodeData>
+void Skeleton<SkeletonData, FlowData, NodeData>::SetParentNode(SkeletonNodeHandle target_handle,
+                                                               SkeletonNodeHandle parent_handle) {
+  assert(target_handle >= 0 && parent_handle >= 0 && target_handle < nodes_.size() && parent_handle < nodes_.size());
+  auto& target_node = nodes_[target_handle];
+  auto& parent_node = nodes_[parent_handle];
+  assert(!target_node.recycled_);
+  assert(!parent_node.recycled_);
+  target_node.parent_handle_ = parent_handle;
+  parent_node.child_handles_.emplace_back(target_handle);
+}
+
+template <typename SkeletonData, typename FlowData, typename NodeData>
+void Skeleton<SkeletonData, FlowData, NodeData>::DetachChildFlow(SkeletonFlowHandle target_handle,
+                                                                 SkeletonFlowHandle child_handle) {
+  assert(target_handle >= 0 && child_handle >= 0 && target_handle < flows_.size() && child_handle < flows_.size());
+  auto& target_branch = flows_[target_handle];
+  auto& child_branch = flows_[child_handle];
+  assert(!target_branch.recycled_);
+  assert(!child_branch.recycled_);
+
+  if (!child_branch.nodes_.empty()) {
+    auto first_node_handle = child_branch.nodes_[0];
+    if (auto& first_node = nodes_[first_node_handle]; first_node.parent_handle_ != -1)
+      DetachChildNode(first_node.parent_handle_, first_node_handle);
+  }
+
+  auto& children = target_branch.child_handles_;
+  for (int i = 0; i < children.size(); i++) {
+    if (children[i] == child_handle) {
+      children[i] = children.back();
+      children.pop_back();
+      child_branch.parent_handle_ = -1;
+      return;
+    }
+  }
+}
+
+template <typename SkeletonData, typename FlowData, typename NodeData>
+void Skeleton<SkeletonData, FlowData, NodeData>::SetParentFlow(SkeletonFlowHandle target_handle,
+                                                               SkeletonFlowHandle parent_handle) {
+  assert(target_handle >= 0 && parent_handle >= 0 && target_handle < flows_.size() && parent_handle < flows_.size());
+  auto& target_branch = flows_[target_handle];
+  auto& parent_branch = flows_[parent_handle];
+  assert(!target_branch.recycled_);
+  assert(!parent_branch.recycled_);
+  target_branch.parent_handle_ = parent_handle;
+  parent_branch.child_handles_.emplace_back(target_handle);
+}
+
+template <typename SkeletonData, typename FlowData, typename NodeData>
+void Skeleton<SkeletonData, FlowData, NodeData>::RecycleFlowSingle(
+    SkeletonFlowHandle handle, const std::function<void(SkeletonFlowHandle)>& flow_handler) {
+  assert(!flows_[handle].recycled_);
+  auto& flow = flows_[handle];
+  flow_handler(handle);
+  flow.parent_handle_ = -1;
+  flow.child_handles_.clear();
+  flow.nodes_.clear();
+
+  flow.data = {};
+  flow.info = {};
+
+  flow.recycled_ = true;
+  flow.apical_ = false;
+  flow_pool_.emplace(handle);
+}
+
+template <typename SkeletonData, typename FlowData, typename NodeData>
+void Skeleton<SkeletonData, FlowData, NodeData>::RecycleNodeSingle(
+    SkeletonNodeHandle handle, const std::function<void(SkeletonNodeHandle)>& node_handler) {
+  assert(!nodes_[handle].recycled_);
+  auto& node = nodes_[handle];
+  node_handler(handle);
+  node.parent_handle_ = -1;
+  node.flow_handle_ = -1;
+  node.end_node_ = true;
+  node.child_handles_.clear();
+
+  node.data = {};
+  node.info = {};
+  node.info.locked = false;
+  node.info.wounds.clear();
+
+  node.recycled_ = true;
+  node_pool_.emplace(handle);
+}
+
+template <typename SkeletonData, typename FlowData, typename NodeData>
+SkeletonFlowHandle Skeleton<SkeletonData, FlowData, NodeData>::AllocateFlow() {
+  max_flow_index_++;
+  if (flow_pool_.empty()) {
+    flows_.emplace_back(flows_.size());
+    flows_.back().index_ = max_flow_index_;
+    return flows_.back().handle_;
+  }
+  auto handle = flow_pool_.front();
+  flow_pool_.pop();
+  auto& flow = flows_[handle];
+  flow.recycled_ = false;
+  flow.index_ = max_flow_index_;
+  return handle;
+}
+
+template <typename SkeletonData, typename FlowData, typename NodeData>
+SkeletonNodeHandle Skeleton<SkeletonData, FlowData, NodeData>::AllocateNode() {
+  max_node_index_++;
+  if (node_pool_.empty()) {
+    nodes_.emplace_back(nodes_.size());
+    nodes_.back().index_ = max_node_index_;
+    return nodes_.back().handle_;
+  }
+  auto handle = node_pool_.front();
+  node_pool_.pop();
+  auto& node = nodes_[handle];
+  node.recycled_ = false;
+  node.index_ = max_node_index_;
+  return handle;
+}
+
+template <typename SkeletonData, typename FlowData, typename NodeData>
+int Skeleton<SkeletonData, FlowData, NodeData>::GetVersion() const {
+  return version_;
+}
+
+template <typename SkeletonData, typename FlowData, typename NodeData>
+void Skeleton<SkeletonData, FlowData, NodeData>::CalculateFlows() {
+  for (const auto& flow_handle : sorted_flow_list_) {
+    auto& flow = flows_[flow_handle];
+    auto& first_node = nodes_[flow.nodes_.front()];
+    auto& last_node = nodes_[flow.nodes_.back()];
+    flow.info.start_thickness = first_node.info.thickness;
+    flow.info.global_start_position = first_node.info.global_position;
+    flow.info.global_start_rotation = first_node.info.global_rotation;
+
+    flow.info.end_thickness = last_node.info.thickness;
+    flow.info.global_end_position =
+        last_node.info.global_position + last_node.info.length * (last_node.info.global_rotation * glm::vec3(0, 0, -1));
+    flow.info.global_end_rotation = last_node.info.global_rotation;
+
+    flow.info.flow_length = 0.0f;
+    for (const auto& node_handle : flow.nodes_) {
+      flow.info.flow_length += nodes_[node_handle].info.length;
+    }
+  }
+}
+
+template <typename SkeletonData, typename FlowData, typename NodeData>
+std::vector<SkeletonFlow<FlowData>>& Skeleton<SkeletonData, FlowData, NodeData>::RefRawFlows() {
+  return flows_;
+}
+
+template <typename SkeletonData, typename FlowData, typename NodeData>
+std::vector<SkeletonNode<NodeData>>& Skeleton<SkeletonData, FlowData, NodeData>::RefRawNodes() {
+  return nodes_;
+}
+
+template <typename SkeletonData, typename FlowData, typename NodeData>
+const std::vector<SkeletonFlow<FlowData>>& Skeleton<SkeletonData, FlowData, NodeData>::PeekRawFlows() const {
+  return flows_;
+}
+
+template <typename SkeletonData, typename FlowData, typename NodeData>
+const std::vector<SkeletonNode<NodeData>>& Skeleton<SkeletonData, FlowData, NodeData>::PeekRawNodes() const {
+  return nodes_;
+}
+
+#pragma endregion
+#pragma endregion
+}  // namespace eco_sys_lab

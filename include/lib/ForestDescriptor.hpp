@@ -1,66 +1,66 @@
 #pragma once
-#include "Tree.hpp"
 #include "SimulationSettings.hpp"
-using namespace EvoEngine;
-namespace EcoSysLab {
+#include "Tree.hpp"
+using namespace evo_engine;
+namespace eco_sys_lab {
 
-    class ForestPatch : public IAsset
-    {
-    public:
-        glm::vec2 m_gridDistance = glm::vec2(1.5f);
-        glm::vec2 m_positionOffsetMean = glm::vec2(0.f);
-        glm::vec2 m_positionOffsetVariance = glm::vec2(0.0f);
-        glm::vec3 m_rotationOffsetVariance = glm::vec3(0.0f);
-        AssetRef m_treeDescriptor;
-        TreeGrowthSettings m_treeGrowthSettings{};
-        SimulationSettings m_simulationSettings;
+class ForestPatch : public IAsset {
+ public:
+  glm::vec2 m_gridDistance = glm::vec2(1.5f);
+  glm::vec2 m_positionOffsetMean = glm::vec2(0.f);
+  glm::vec2 m_positionOffsetVariance = glm::vec2(0.0f);
+  glm::vec3 m_rotationOffsetVariance = glm::vec3(0.0f);
+  AssetRef m_treeDescriptor;
+  TreeGrowthSettings m_treeGrowthSettings{};
+  SimulationSettings m_simulationSettings;
 
-        float m_minLowBranchPruning = 0.f;
-        float m_maxLowBranchPruning = 0.f;
+  float m_minLowBranchPruning = 0.f;
+  float m_maxLowBranchPruning = 0.f;
 
-        float m_simulationTime = 0.f;
-        float m_startTimeMax = 0.0f;
-        Entity InstantiatePatch(const glm::ivec2& gridSize, bool setSimulationSettings = true);
+  float m_simulationTime = 0.f;
+  float m_startTimeMax = 0.0f;
+  Entity InstantiatePatch(const glm::ivec2& gridSize, bool setSimulationSettings = true);
 
-        Entity InstantiatePatch(const std::vector<std::pair<TreeGrowthSettings, std::shared_ptr<TreeDescriptor>>>& candidates, const glm::ivec2& gridSize, bool setSimulationSettings = true) const;
+  Entity InstantiatePatch(const std::vector<std::pair<TreeGrowthSettings, std::shared_ptr<TreeDescriptor>>>& candidates,
+                          const glm::ivec2& gridSize, bool setSimulationSettings = true) const;
 
-        void CollectAssetRef(std::vector<AssetRef>& list) override;
-        void Serialize(YAML::Emitter& out) const override;
-        void Deserialize(const YAML::Node& in) override;
-        bool OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
-    };
+  void CollectAssetRef(std::vector<AssetRef>& list) override;
+  void Serialize(YAML::Emitter& out) const override;
+  void Deserialize(const YAML::Node& in) override;
+  bool OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
+};
 
-    struct TreeInfo
-    {
-        GlobalTransform m_globalTransform{};
-        AssetRef m_treeDescriptor{};
-        void Serialize(YAML::Emitter& out) const;
-        void Deserialize(const YAML::Node& in);
-        void CollectAssetRef(std::vector<AssetRef>& list) const;
-    };
+struct TreeInfo {
+  GlobalTransform m_globalTransform{};
+  AssetRef m_treeDescriptor{};
+  void Serialize(YAML::Emitter& out) const;
+  void Deserialize(const YAML::Node& in);
+  void CollectAssetRef(std::vector<AssetRef>& list) const;
+};
 
-    class ForestDescriptor : public IAsset{
-    public:
-        std::vector<TreeInfo> m_treeInfos;
-        TreeGrowthSettings m_treeGrowthSettings;
-        
-        void ApplyTreeDescriptor(const std::shared_ptr<TreeDescriptor>& treeDescriptor);
-        void ApplyTreeDescriptors(const std::vector<std::shared_ptr<TreeDescriptor>>& treeDescriptors);
-        void ApplyTreeDescriptors(const std::filesystem::path& folderPath);
-        void ApplyTreeDescriptors(const std::vector<std::shared_ptr<TreeDescriptor>>& treeDescriptors, const std::vector<float>& ratios);
-        void ApplyTreeDescriptors(const std::filesystem::path& folderPath, const std::vector<float>& ratios);
-        bool OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
+class ForestDescriptor : public IAsset {
+ public:
+  std::vector<TreeInfo> m_treeInfos;
+  TreeGrowthSettings m_treeGrowthSettings;
 
-        void OnCreate() override;
+  void ApplyTreeDescriptor(const std::shared_ptr<TreeDescriptor>& treeDescriptor);
+  void ApplyTreeDescriptors(const std::vector<std::shared_ptr<TreeDescriptor>>& treeDescriptors);
+  void ApplyTreeDescriptors(const std::filesystem::path& folderPath);
+  void ApplyTreeDescriptors(const std::vector<std::shared_ptr<TreeDescriptor>>& treeDescriptors,
+                            const std::vector<float>& ratios);
+  void ApplyTreeDescriptors(const std::filesystem::path& folderPath, const std::vector<float>& ratios);
+  bool OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 
-        void CollectAssetRef(std::vector<AssetRef> &list) override;
+  void OnCreate() override;
 
-        void Serialize(YAML::Emitter &out) const override;
+  void CollectAssetRef(std::vector<AssetRef>& list) override;
 
-        void Deserialize(const YAML::Node &in) override;
+  void Serialize(YAML::Emitter& out) const override;
 
-        void SetupGrid(const glm::ivec2& gridSize, float gridDistance, float randomShift);
+  void Deserialize(const YAML::Node& in) override;
 
-        void InstantiatePatch(bool setParent);
-    };
-}
+  void SetupGrid(const glm::ivec2& gridSize, float gridDistance, float randomShift);
+
+  void InstantiatePatch(bool setParent);
+};
+}  // namespace eco_sys_lab

@@ -1,27 +1,26 @@
 #pragma once
 #include "TreeGrowthData.hpp"
 
-using namespace EvoEngine;
-namespace EcoSysLab
-{
-	class StrandModel
-	{
-	public:
-		StrandModelSkeleton m_strandModelSkeleton;
-		void ResetAllProfiles(const StrandModelParameters& strandModelParameters);
-		void InitializeProfiles(const StrandModelParameters& strandModelParameters);
-		JobHandle CalculateProfiles(const StrandModelParameters& strandModelParameters);
-		void CalculateProfile(float maxRootDistance, SkeletonNodeHandle nodeHandle, const StrandModelParameters& strandModelParameters);
+using namespace evo_engine;
+namespace eco_sys_lab {
+class StrandModel {
+ public:
+  StrandModelSkeleton strand_model_skeleton;
+  void ResetAllProfiles(const StrandModelParameters& strand_model_parameters);
+  void InitializeProfiles(const StrandModelParameters& strand_model_parameters);
+  JobHandle CalculateProfiles(const StrandModelParameters& strand_model_parameters);
+  void CalculateProfile(float max_root_distance, SkeletonNodeHandle node_handle,
+                        const StrandModelParameters& strand_model_parameters);
 
-		void PackTask(SkeletonNodeHandle nodeHandle, const StrandModelParameters& strandModelParameters);
-		void MergeTask(float maxRootDistance, SkeletonNodeHandle nodeHandle, const StrandModelParameters& strandModelParameters);
-		void CopyFrontToBackTask(SkeletonNodeHandle nodeHandle);
-		void ApplyProfile(const StrandModelParameters& strandModelParameters,
-			SkeletonNodeHandle nodeHandle);
-		void ApplyProfiles(const StrandModelParameters& strandModelParameters);
-		void CalculateStrandProfileAdjustedTransforms(const StrandModelParameters& strandModelParameters);
-		[[nodiscard]] glm::vec3 InterpolateStrandSegmentPosition(StrandSegmentHandle strandSegmentHandle, float a) const;
-		[[nodiscard]] glm::vec3 InterpolateStrandSegmentAxis(StrandSegmentHandle strandSegmentHandle, float a) const;
-		[[nodiscard]] float InterpolateStrandSegmentRadius(StrandSegmentHandle strandSegmentHandle, float a) const;
-	};
-}
+  void PackTask(SkeletonNodeHandle node_handle, const StrandModelParameters& strand_model_parameters);
+  void MergeTask(float max_root_distance, SkeletonNodeHandle node_handle,
+                 const StrandModelParameters& strand_model_parameters);
+  void CopyFrontToBackTask(SkeletonNodeHandle node_handle);
+  void ApplyProfile(const StrandModelParameters& strand_model_parameters, SkeletonNodeHandle node_handle);
+  void ApplyProfiles(const StrandModelParameters& strand_model_parameters);
+  void CalculateStrandProfileAdjustedTransforms(const StrandModelParameters& strand_model_parameters);
+  [[nodiscard]] glm::vec3 InterpolateStrandSegmentPosition(StrandSegmentHandle strand_segment_handle, float a) const;
+  [[nodiscard]] glm::vec3 InterpolateStrandSegmentAxis(StrandSegmentHandle strand_segment_handle, float a) const;
+  [[nodiscard]] float InterpolateStrandSegmentRadius(StrandSegmentHandle strand_segment_handle, float a) const;
+};
+}  // namespace eco_sys_lab

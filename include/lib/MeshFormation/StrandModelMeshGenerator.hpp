@@ -1,95 +1,84 @@
 #pragma once
 
-#include "Vertex.hpp"
+#include "StrandModel.hpp"
 #include "StrandModelData.hpp"
 #include "TreeMeshGenerator.hpp"
-#include "StrandModel.hpp"
+#include "Vertex.hpp"
 
-using namespace EvoEngine;
-namespace EcoSysLab {
-	enum class StrandModelMeshGeneratorType
-	{
-		RecursiveSlicing,
-		MarchingCube
-	};
+using namespace evo_engine;
+namespace eco_sys_lab {
+enum class StrandModelMeshGeneratorType { RecursiveSlicing, MarchingCube };
 
-	struct StrandModelMeshGeneratorSettings
-	{
-		unsigned m_generatorType = static_cast<unsigned>(StrandModelMeshGeneratorType::RecursiveSlicing);
+struct StrandModelMeshGeneratorSettings {
+  unsigned generator_type = static_cast<unsigned>(StrandModelMeshGeneratorType::RecursiveSlicing);
 #pragma region Recursive Slicing
-		int m_stepsPerSegment = 4;
-		// this is for debugging purposes only and should not be used to obtain a proper mesh
-		//bool m_limitProfileIterations = false;
-		//int m_maxProfileIterations = 20;
-		float m_maxParam = std::numeric_limits<float>::infinity();
-		bool m_branchConnections = true;
-		int m_uMultiplier = 2;
-		float m_vMultiplier = 0.25;
-		float m_clusterDistance = 1.0f;
+  int steps_per_segment = 4;
+  // this is for debugging purposes only and should not be used to obtain a proper mesh
+  // bool m_limitProfileIterations = false;
+  // int m_maxProfileIterations = 20;
+  float max_param = std::numeric_limits<float>::infinity();
+  bool branch_connections = true;
+  int u_multiplier = 2;
+  float v_multiplier = 0.25;
+  float cluster_distance = 1.0f;
 #pragma endregion
 
 #pragma region Hybrid MarchingCube
-		bool m_removeDuplicate = true;
-		
-		bool m_autoLevel = true;
-		int m_voxelSubdivisionLevel = 10;
-		float m_marchingCubeRadius = 0.002f;
-		float m_xSubdivision = 0.03f;
-		float m_ySubdivision = 0.03f;
-		glm::vec4 m_marchingCubeColor = glm::vec4(0.6, 0.3, 0.0f, 1.0f);
-		glm::vec4 m_cylindricalColor = glm::vec4(0.1, 0.9, 0.0f, 1.0f);
+  bool remove_duplicate = true;
 
-		int m_rootDistanceMultiplier = 10;
-		float m_circleMultiplier = 1.f;
+  bool auto_level = true;
+  int voxel_subdivision_level = 10;
+  float marching_cube_radius = 0.002f;
+  float x_subdivision = 0.03f;
+  float y_subdivision = 0.03f;
+  glm::vec4 marching_cube_color = glm::vec4(0.6, 0.3, 0.0f, 1.0f);
+  glm::vec4 cylindrical_color = glm::vec4(0.1, 0.9, 0.0f, 1.0f);
+
+  int root_distance_multiplier = 10;
+  float circle_multiplier = 1.f;
 #pragma endregion
 
-		bool m_recalculateUV = false;
-		bool m_fastUV = true;
-		int m_smoothIteration = 0;
-		int m_minCellCountForMajorBranches = 5;
-		int m_maxCellCountForMinorBranches = 10;
-		bool m_enableBranch = true;
-		bool m_enableFoliage = true;
-		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer);
-	};
-	class StrandModelMeshGenerator
-	{
-		static void RecursiveSlicing(
-			const StrandModel& strandModel, std::vector<Vertex>& vertices,
-			std::vector<unsigned int>& indices, const StrandModelMeshGeneratorSettings& settings);
+  bool recalculate_uv = false;
+  bool fast_uv = true;
+  int smooth_iteration = 0;
+  int min_cell_count_for_major_branches = 5;
+  int max_cell_count_for_minor_branches = 10;
+  bool enable_branch = true;
+  bool enable_foliage = true;
+  void OnInspect(const std::shared_ptr<EditorLayer>& editor_layer);
+};
+class StrandModelMeshGenerator {
+  static void RecursiveSlicing(const StrandModel& strand_model, std::vector<Vertex>& vertices,
+                               std::vector<unsigned int>& indices, const StrandModelMeshGeneratorSettings& settings);
 
-		static void RecursiveSlicing(
-			const StrandModel& strandModel, std::vector<Vertex>& vertices,
-			std::vector<glm::vec2>& texCoords,
-			std::vector<std::pair<unsigned int, unsigned int>>& indices, const StrandModelMeshGeneratorSettings& settings);
+  static void RecursiveSlicing(const StrandModel& strand_model, std::vector<Vertex>& vertices,
+                               std::vector<glm::vec2>& tex_coords,
+                               std::vector<std::pair<unsigned int, unsigned int>>& indices,
+                               const StrandModelMeshGeneratorSettings& settings);
 
-		static void MarchingCube(
-			const StrandModel& strandModel, std::vector<Vertex>& vertices,
-			std::vector<unsigned int>& indices, const StrandModelMeshGeneratorSettings& settings);
+  static void MarchingCube(const StrandModel& strand_model, std::vector<Vertex>& vertices,
+                           std::vector<unsigned int>& indices, const StrandModelMeshGeneratorSettings& settings);
 
-		static void CylindricalMeshing(const StrandModel& strandModel, std::vector<Vertex>& vertices,
-			std::vector<unsigned int>& indices, const StrandModelMeshGeneratorSettings& settings);
+  static void CylindricalMeshing(const StrandModel& strand_model, std::vector<Vertex>& vertices,
+                                 std::vector<unsigned int>& indices, const StrandModelMeshGeneratorSettings& settings);
 
-		static void MeshSmoothing(std::vector<Vertex>& vertices,
-			std::vector<unsigned int>& indices);
+  static void MeshSmoothing(std::vector<Vertex>& vertices, std::vector<unsigned int>& indices);
 
-		static void MeshSmoothing(std::vector<Vertex>& vertices,
-			std::vector<std::pair<unsigned int, unsigned int>>& indices);
+  static void MeshSmoothing(std::vector<Vertex>& vertices, std::vector<std::pair<unsigned int, unsigned int>>& indices);
 
-		static void CalculateNormal(std::vector<Vertex>& vertices,
-			const std::vector<unsigned int>& indices);
+  static void CalculateNormal(std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices);
 
-		static void CalculateNormal(std::vector<Vertex>& vertices,
-			const std::vector<std::pair<unsigned int, unsigned int>>& indices);
+  static void CalculateNormal(std::vector<Vertex>& vertices,
+                              const std::vector<std::pair<unsigned int, unsigned int>>& indices);
 
-		static void CalculateUV(const StrandModel& strandModel, std::vector<Vertex>& vertices, const StrandModelMeshGeneratorSettings& settings);
-	public:
-		static void Generate(
-			const StrandModel& strandModel, std::vector<Vertex>& vertices,
-			std::vector<unsigned int>& indices, const StrandModelMeshGeneratorSettings& settings);
-		static void Generate(
-			const StrandModel& strandModel, std::vector<Vertex>& vertices,
-			std::vector<glm::vec2>& texCoords,
-			std::vector<std::pair<unsigned int, unsigned int>>& indices, const StrandModelMeshGeneratorSettings& settings);
-	};
-}
+  static void CalculateUv(const StrandModel& strand_model, std::vector<Vertex>& vertices,
+                          const StrandModelMeshGeneratorSettings& settings);
+
+ public:
+  static void Generate(const StrandModel& strand_model, std::vector<Vertex>& vertices,
+                       std::vector<unsigned int>& indices, const StrandModelMeshGeneratorSettings& settings);
+  static void Generate(const StrandModel& strand_model, std::vector<Vertex>& vertices, std::vector<glm::vec2>& tex_coords,
+                       std::vector<std::pair<unsigned int, unsigned int>>& indices,
+                       const StrandModelMeshGeneratorSettings& settings);
+};
+}  // namespace eco_sys_lab

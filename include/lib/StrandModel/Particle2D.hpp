@@ -2,205 +2,184 @@
 #include "ParticleGrid2D.hpp"
 #include "Skeleton.hpp"
 #include "StrandGroup.hpp"
-using namespace EvoEngine;
-namespace EcoSysLab {
+using namespace evo_engine;
+namespace eco_sys_lab {
 
-	struct UpdateSettings
-	{
-		float m_dt;
-		float m_damping = 0.0f;
-		float m_maxVelocity = 1.0f;
-	};
+struct UpdateSettings {
+  float dt;
+  float damping = 0.0f;
+  float max_velocity = 1.0f;
+};
 
-	template<typename T>
-	class Particle2D
-	{
-		template<typename PD>
-		friend class StrandModelProfileSerializer;
+template <typename T>
+class Particle2D {
+  template <typename Pd>
+  friend class StrandModelProfileSerializer;
 
-		template<typename PD>
-		friend class StrandModelProfile;
-		glm::vec3 m_color = glm::vec3(1.0f);
-		glm::vec2 m_position = glm::vec2(0.0f);
-		glm::vec2 m_lastPosition = glm::vec2(0.0f);
-		glm::vec2 m_acceleration = glm::vec2(0.0f);
-		glm::vec2 m_deltaPosition = glm::vec2(0.0f);
+  template <typename Pd>
+  friend class StrandModelProfile;
+  glm::vec3 color_ = glm::vec3(1.0f);
+  glm::vec2 position_ = glm::vec2(0.0f);
+  glm::vec2 last_position_ = glm::vec2(0.0f);
+  glm::vec2 acceleration_ = glm::vec2(0.0f);
+  glm::vec2 delta_position_ = glm::vec2(0.0f);
 
-		ParticleHandle m_handle = -1;
+  ParticleHandle handle_ = -1;
 
-		bool m_boundary = false;
-		float m_distanceToBoundary = 0.0f;
+  bool boundary_ = false;
+  float distance_to_boundary_ = 0.0f;
 
-		glm::vec2 m_initialPosition = glm::vec2(0.0f);
-	public:
-		SkeletonNodeHandle m_correspondingChildNodeHandle = -1;
-		StrandHandle m_strandHandle = -1;
-		StrandSegmentHandle m_strandSegmentHandle = -1;
-		bool m_mainChild = false;
-		bool m_base = false;
+  glm::vec2 initial_position_ = glm::vec2(0.0f);
 
-		void SetInitialPosition(const glm::vec2& initialPosition);
-		[[nodiscard]] glm::vec2 GetInitialPosition() const;
-		[[nodiscard]] float GetDistanceToBoundary() const;
-		bool m_enable = true;
-		[[nodiscard]] bool IsBoundary() const;
-		T m_data;
-		void Update(const UpdateSettings& updateSettings);
-		void Stop();
-		[[nodiscard]] ParticleHandle GetHandle() const;
-		[[nodiscard]] glm::vec3 GetColor() const;
-		void SetColor(const glm::vec3& color);
+ public:
+  SkeletonNodeHandle corresponding_child_node_handle = -1;
+  StrandHandle strand_handle = -1;
+  StrandSegmentHandle strand_segment_handle = -1;
+  bool main_child = false;
+  bool base = false;
 
-		[[nodiscard]] glm::vec2 GetPosition() const;
-		void SetPosition(const glm::vec2& position);
+  void SetInitialPosition(const glm::vec2& initial_position);
+  [[nodiscard]] glm::vec2 GetInitialPosition() const;
+  [[nodiscard]] float GetDistanceToBoundary() const;
+  bool enable = true;
+  [[nodiscard]] bool IsBoundary() const;
+  T data;
+  void Update(const UpdateSettings& update_settings);
+  void Stop();
+  [[nodiscard]] ParticleHandle GetHandle() const;
+  [[nodiscard]] glm::vec3 GetColor() const;
+  void SetColor(const glm::vec3& color);
 
-		void Move(const glm::vec2& position);
+  [[nodiscard]] glm::vec2 GetPosition() const;
+  void SetPosition(const glm::vec2& position);
 
-		[[nodiscard]] glm::vec2 GetVelocity(float dt) const;
-		void SetVelocity(const glm::vec2& velocity, float dt);
+  void Move(const glm::vec2& position);
 
-		[[nodiscard]] glm::vec2 GetAcceleration() const;
-		void SetAcceleration(const glm::vec2& acceleration);
+  [[nodiscard]] glm::vec2 GetVelocity(float dt) const;
+  void SetVelocity(const glm::vec2& velocity, float dt);
 
-		[[nodiscard]] glm::vec2 GetPolarPosition() const;
-		[[nodiscard]] glm::vec2 GetInitialPolarPosition() const;
-		void SetPolarPosition(const glm::vec2& position);
-	};
+  [[nodiscard]] glm::vec2 GetAcceleration() const;
+  void SetAcceleration(const glm::vec2& acceleration);
 
+  [[nodiscard]] glm::vec2 GetPolarPosition() const;
+  [[nodiscard]] glm::vec2 GetInitialPolarPosition() const;
+  void SetPolarPosition(const glm::vec2& position);
+};
 
-	template <typename T>
-	void Particle2D<T>::SetInitialPosition(const glm::vec2& initialPosition)
-	{
-		m_initialPosition = initialPosition;
-	}
-
-	template <typename T>
-	glm::vec2 Particle2D<T>::GetInitialPosition() const
-	{
-		return m_initialPosition;
-	}
-
-	template <typename T>
-	float Particle2D<T>::GetDistanceToBoundary() const
-	{
-		return m_distanceToBoundary;
-	}
-
-	template <typename T>
-	bool Particle2D<T>::IsBoundary() const
-	{
-		return m_boundary;
-	}
-
-	template <typename T>
-	void Particle2D<T>::Update(const UpdateSettings& updateSettings)
-	{
-		const auto lastV = m_position - m_lastPosition - updateSettings.m_damping * (m_position - m_lastPosition);
-		m_lastPosition = m_position;
-		auto targetV = lastV + m_acceleration * updateSettings.m_dt * updateSettings.m_dt;
-		const auto speed = glm::length(targetV);
-		if (speed > glm::epsilon<float>()) {
-			targetV = glm::min(updateSettings.m_maxVelocity * updateSettings.m_dt, speed) * glm::normalize(targetV);
-			m_position = m_position + targetV;
-		}
-		m_acceleration = {};
-	}
-
-	template <typename T>
-	void Particle2D<T>::Stop()
-	{
-		m_lastPosition = m_position;
-	}
-
-	template <typename T>
-	ParticleHandle Particle2D<T>::GetHandle() const
-	{
-		return m_handle;
-	}
-
-	template <typename T>
-	glm::vec3 Particle2D<T>::GetColor() const
-	{
-		return m_color;
-	}
-
-	template <typename T>
-	void Particle2D<T>::SetColor(const glm::vec3& color)
-	{
-		m_color = color;
-	}
-
-	template <typename T>
-	glm::vec2 Particle2D<T>::GetPosition() const
-	{
-		return m_position;
-	}
-
-	template <typename T>
-	void Particle2D<T>::SetPosition(const glm::vec2& position)
-	{
-		const auto velocity = m_position - m_lastPosition;
-		m_position = position;
-		m_lastPosition = m_position - velocity;
-	}
-
-	template <typename T>
-	void Particle2D<T>::Move(const glm::vec2& position)
-	{
-		m_position = position;
-	}
-
-	template <typename T>
-	glm::vec2 Particle2D<T>::GetVelocity(const float dt) const
-	{
-		return (m_position - m_lastPosition) / dt;
-	}
-
-	template <typename T>
-	void Particle2D<T>::SetVelocity(const glm::vec2& velocity, const float dt)
-	{
-		m_lastPosition = m_position - velocity * dt;
-	}
-
-	template <typename T>
-	glm::vec2 Particle2D<T>::GetAcceleration() const
-	{
-		return m_acceleration;
-	}
-
-	template <typename T>
-	void Particle2D<T>::SetAcceleration(const glm::vec2& acceleration)
-	{
-		m_acceleration = acceleration;
-	}
-
-	template <typename T>
-	glm::vec2 Particle2D<T>::GetPolarPosition() const
-	{
-		const auto r = glm::length(m_position);
-		if(r <= glm::epsilon<float>())
-		{
-			return { 0, 0 };
-		}
-		if (m_position.y >= 0) return { r, glm::acos(m_position.x / r) };
-		return { r, -glm::acos(m_position.x / r) };
-	}
-
-	template <typename T>
-	glm::vec2 Particle2D<T>::GetInitialPolarPosition() const
-	{
-		const auto r = glm::length(m_initialPosition);
-		if (r <= glm::epsilon<float>())
-		{
-			return { 0, 0 };
-		}
-		if (m_initialPosition.y >= 0) return { r, glm::acos(m_initialPosition.x / r) };
-		return { r, -glm::acos(m_initialPosition.x / r) };
-	}
-
-	template <typename T>
-	void Particle2D<T>::SetPolarPosition(const glm::vec2& position)
-	{
-		SetPosition(glm::vec2(glm::cos(position.y) * position.x, glm::sin(position.y) * position.x));
-	}
+template <typename T>
+void Particle2D<T>::SetInitialPosition(const glm::vec2& initial_position) {
+  initial_position_ = initial_position;
 }
+
+template <typename T>
+glm::vec2 Particle2D<T>::GetInitialPosition() const {
+  return initial_position_;
+}
+
+template <typename T>
+float Particle2D<T>::GetDistanceToBoundary() const {
+  return distance_to_boundary_;
+}
+
+template <typename T>
+bool Particle2D<T>::IsBoundary() const {
+  return boundary_;
+}
+
+template <typename T>
+void Particle2D<T>::Update(const UpdateSettings& update_settings) {
+  const auto lastV = position_ - last_position_ - update_settings.damping * (position_ - last_position_);
+  last_position_ = position_;
+  auto targetV = lastV + acceleration_ * update_settings.dt * update_settings.dt;
+  const auto speed = glm::length(targetV);
+  if (speed > glm::epsilon<float>()) {
+    targetV = glm::min(update_settings.max_velocity * update_settings.dt, speed) * glm::normalize(targetV);
+    position_ = position_ + targetV;
+  }
+  acceleration_ = {};
+}
+
+template <typename T>
+void Particle2D<T>::Stop() {
+  last_position_ = position_;
+}
+
+template <typename T>
+ParticleHandle Particle2D<T>::GetHandle() const {
+  return handle_;
+}
+
+template <typename T>
+glm::vec3 Particle2D<T>::GetColor() const {
+  return color_;
+}
+
+template <typename T>
+void Particle2D<T>::SetColor(const glm::vec3& color) {
+  color_ = color;
+}
+
+template <typename T>
+glm::vec2 Particle2D<T>::GetPosition() const {
+  return position_;
+}
+
+template <typename T>
+void Particle2D<T>::SetPosition(const glm::vec2& position) {
+  const auto velocity = position_ - last_position_;
+  position_ = position;
+  last_position_ = position_ - velocity;
+}
+
+template <typename T>
+void Particle2D<T>::Move(const glm::vec2& position) {
+  position_ = position;
+}
+
+template <typename T>
+glm::vec2 Particle2D<T>::GetVelocity(const float dt) const {
+  return (position_ - last_position_) / dt;
+}
+
+template <typename T>
+void Particle2D<T>::SetVelocity(const glm::vec2& velocity, const float dt) {
+  last_position_ = position_ - velocity * dt;
+}
+
+template <typename T>
+glm::vec2 Particle2D<T>::GetAcceleration() const {
+  return acceleration_;
+}
+
+template <typename T>
+void Particle2D<T>::SetAcceleration(const glm::vec2& acceleration) {
+  acceleration_ = acceleration;
+}
+
+template <typename T>
+glm::vec2 Particle2D<T>::GetPolarPosition() const {
+  const auto r = glm::length(position_);
+  if (r <= glm::epsilon<float>()) {
+    return {0, 0};
+  }
+  if (position_.y >= 0)
+    return {r, glm::acos(position_.x / r)};
+  return {r, -glm::acos(position_.x / r)};
+}
+
+template <typename T>
+glm::vec2 Particle2D<T>::GetInitialPolarPosition() const {
+  const auto r = glm::length(initial_position_);
+  if (r <= glm::epsilon<float>()) {
+    return {0, 0};
+  }
+  if (initial_position_.y >= 0)
+    return {r, glm::acos(initial_position_.x / r)};
+  return {r, -glm::acos(initial_position_.x / r)};
+}
+
+template <typename T>
+void Particle2D<T>::SetPolarPosition(const glm::vec2& position) {
+  SetPosition(glm::vec2(glm::cos(position.y) * position.x, glm::sin(position.y) * position.x));
+}
+}  // namespace eco_sys_lab

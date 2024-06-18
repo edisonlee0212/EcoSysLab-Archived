@@ -6,27 +6,29 @@
 #include "Scene.hpp"
 #include "Times.hpp"
 #include "Transform.hpp"
-using namespace EcoSysLab;
+using namespace eco_sys_lab;
 void ObjectRotator::FixedUpdate() {
-	auto scene = GetScene();
-	auto transform = scene->GetDataComponent<Transform>(GetOwner());
-	m_rotation.y += Times::FixedDeltaTime() * m_rotateSpeed;
-	transform.SetEulerRotation(glm::radians(m_rotation));
-	scene->SetDataComponent(GetOwner(), transform);
+  auto scene = GetScene();
+  auto transform = scene->GetDataComponent<Transform>(GetOwner());
+  rotation.y += Times::FixedDeltaTime() * rotate_speed;
+  transform.SetEulerRotation(glm::radians(rotation));
+  scene->SetDataComponent(GetOwner(), transform);
 }
 
-bool ObjectRotator::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
-	ImGui::DragFloat("Speed", &m_rotateSpeed);
-	ImGui::DragFloat3("Rotation", &m_rotation.x);
-	return false;
+bool ObjectRotator::OnInspect(const std::shared_ptr<EditorLayer>& editor_layer) {
+  ImGui::DragFloat("Speed", &rotate_speed);
+  ImGui::DragFloat3("Rotation", &rotation.x);
+  return false;
 }
 
 void ObjectRotator::Serialize(YAML::Emitter& out) const {
-	out << YAML::Key << "m_rotateSpeed" << YAML::Value << m_rotateSpeed;
-	out << YAML::Key << "m_rotation" << YAML::Value << m_rotation;
+  out << YAML::Key << "rotate_speed" << YAML::Value << rotate_speed;
+  out << YAML::Key << "rotation" << YAML::Value << rotation;
 }
 
 void ObjectRotator::Deserialize(const YAML::Node& in) {
-	m_rotateSpeed = in["m_rotateSpeed"].as<float>();
-	m_rotation = in["m_rotation"].as<glm::vec3>();
+  if (in["rotate_speed"])
+    rotate_speed = in["rotate_speed"].as<float>();
+  if (in["rotation"])
+    rotation = in["m_rotation"].as<glm::vec3>();
 }

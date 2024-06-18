@@ -1,12 +1,9 @@
 #pragma once
 
-using namespace EvoEngine;
+using namespace evo_engine;
 
-
-namespace EcoSysLab
-{
-	class FruitDescriptor : public IAsset
-	{
-	public:
-	};
-}
+namespace eco_sys_lab {
+class FruitDescriptor : public IAsset {
+ public:
+};
+}  // namespace eco_sys_lab

@@ -3,30 +3,23 @@
 #include "StrandGroup.hpp"
 
 #include "StrandModelProfile.hpp"
-using namespace EvoEngine;
-namespace EcoSysLab
-{
-	struct StrandModelStrandGroupData
-	{
-	};
+using namespace evo_engine;
+namespace eco_sys_lab {
+struct StrandModelStrandGroupData {};
 
-	struct StrandModelStrandData
-	{
-	};
+struct StrandModelStrandData {};
 
-	struct StrandModelStrandSegmentData
-	{
-		/**
-		 * \brief The handle of the internode this pipe segment belongs to. Pipe -> PipeSegment <-> Cell <- Profile <- Internode
-		 */
-		SkeletonNodeHandle m_nodeHandle = -1;
-		ParticleHandle m_profileParticleHandle = -1;
-	};
+struct StrandModelStrandSegmentData {
+  /**
+   * \brief The handle of the internode this pipe segment belongs to. Pipe -> PipeSegment <-> Cell <- Profile <-
+   * Internode
+   */
+  SkeletonNodeHandle node_handle = -1;
+  ParticleHandle profile_particle_handle = -1;
+};
 
-	typedef StrandGroup<StrandModelStrandGroupData, StrandModelStrandData, StrandModelStrandSegmentData> StrandModelStrandGroup;
+typedef StrandGroup<StrandModelStrandGroupData, StrandModelStrandData, StrandModelStrandSegmentData>
+    StrandModelStrandGroup;
 
-
-	struct CellParticlePhysicsData
-	{
-	};
-}
+struct CellParticlePhysicsData {};
+}  // namespace eco_sys_lab

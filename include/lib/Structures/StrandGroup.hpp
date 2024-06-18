@@ -2,606 +2,582 @@
 
 #include "Vertex.hpp"
 
-using namespace EvoEngine;
-namespace EcoSysLab
-{
-
-	typedef int StrandHandle;
-	typedef int StrandSegmentHandle;
-
-	struct StrandSegmentInfo
-	{
-		/**
-		 * \brief The position of the end of current strand segment.
-		 */
-		glm::vec3 m_globalPosition = glm::vec3(0.0f);
-		/**
-		 * \brief The thickness of the end of current strand segment.
-		 */
-		float m_thickness = 0.0f;
-		glm::vec4 m_color = glm::vec4(1.0f);
-		bool m_isBoundary = false;
-	};
-
-	struct StrandInfo
-	{
-		glm::vec4 m_color = glm::vec4(1.0f);
-
-		/**
-		 * \brief The info of the start of the first strand segment in this strand.
-		 */
-		StrandSegmentInfo m_baseInfo{};
-	};
-
-	/**
-	 * \brief The data structure that holds a strand segment.
-	 * \tparam StrandSegmentData The customizable data for each strand segment.
-	 */
-	template<typename StrandSegmentData>
-	class StrandSegment
-	{
-		template<typename PGD, typename PD, typename PSD>
-		friend class StrandGroup;
-		template<typename SGD, typename SD, typename SSD>
-		friend class StrandGroupSerializer;
-		bool m_endSegment = true;
-		bool m_recycled = false;
-		StrandSegmentHandle m_prevHandle = -1;
-		StrandSegmentHandle m_handle = -1;
-		StrandSegmentHandle m_nextHandle = -1;
-
-		StrandHandle m_strandHandle = -1;
-
-		int m_index = -1;
-	public:
-		StrandSegmentData m_data{};
-		StrandSegmentInfo m_info{};
-
-		/**
-		 * Whether this segment is the end segment.
-		 * @return True if this is end segment, false else wise.
-		 */
-		[[nodiscard]] bool IsEnd() const;
-
-		/**
-		 * Whether this segment is recycled (removed).
-		 * @return True if this segment is recycled (removed), false else wise.
-		 */
-		[[nodiscard]] bool IsRecycled() const;
-
-		/**
-		 * Get the handle of self.
-		 * @return strandSegmentHandle of current segment.
-		 */
-		[[nodiscard]] StrandSegmentHandle GetHandle() const;
-
-		/**
-		 * Get the handle of belonged strand.
-		 * @return strandHandle of current segment.
-		 */
-		[[nodiscard]] StrandHandle GetStrandHandle() const;
-		/**
-		 * Get the handle of prev segment.
-		 * @return strandSegmentHandle of current segment.
-		 */
-		[[nodiscard]] StrandSegmentHandle GetPrevHandle() const;
-
-		/**
-		 * Get the handle of prev segment.
-		 * @return strandSegmentHandle of current segment.
-		 */
-		[[nodiscard]] StrandSegmentHandle GetNextHandle() const;
-
-		[[nodiscard]] int GetIndex() const;
-		StrandSegment() = default;
-		explicit StrandSegment(StrandHandle strandHandle, StrandSegmentHandle handle, StrandSegmentHandle prevHandle);
-	};
-
-	/**
-	 * \brief The data structure that holds a strand.
-	 * \tparam StrandData The customizable data for each strand.
-	 */
-	template<typename StrandData>
-	class Strand
-	{
-		template<typename PGD, typename PD, typename PSD>
-		friend class StrandGroup;
-		template<typename SGD, typename SD, typename SSD>
-		friend class StrandGroupSerializer;
-		bool m_recycled = false;
-		StrandHandle m_handle = -1;
-
-		std::vector<StrandSegmentHandle> m_strandSegmentHandles;
-
-	public:
-		StrandData m_data;
-		StrandInfo m_info;
-
-		/**
-		 * Whether this segment is recycled (removed).
-		 * @return True if this segment is recycled (removed), false else wise.
-		 */
-		[[nodiscard]] bool IsRecycled() const;
-
-		/**
-		 * Get the handle of self.
-		 * @return strandSegmentHandle of current segment.
-		 */
-		[[nodiscard]] StrandHandle GetHandle() const;
-
-		/**
-		 * Access the segments that belongs to this flow.
-		 * @return The list of handles.
-		 */
-		[[nodiscard]] const std::vector<StrandSegmentHandle>& PeekStrandSegmentHandles() const;
-		Strand() = default;
-		explicit Strand(StrandHandle handle);
-	};
-
-	/**
-	 * \brief The data structure that holds a collection of strands.
-	 * \tparam StrandGroupData The customizable data for entire strand group.
-	 * \tparam StrandData The customizable data for each strand.
-	 * \tparam StrandSegmentData The customizable data for each strand segment.
-	 */
-	template<typename StrandGroupData, typename StrandData, typename StrandSegmentData>
-	class StrandGroup {
-		template<typename SGD, typename SD, typename SSD>
-		friend class StrandGroupSerializer;
-		std::vector<Strand<StrandData>> m_strands;
-		std::vector<StrandSegment<StrandSegmentData>> m_strandSegments;
-
-		std::queue<StrandHandle> m_strandPool;
-		std::queue<StrandSegmentHandle> m_strandSegmentPool;
-
-		int m_version = -1;
-		void BuildStrand(const Strand<StrandData>& strand, std::vector<glm::uint>& strands, std::vector<StrandPoint>& points, int nodeMaxCount) const;
-
-		[[nodiscard]] StrandSegmentHandle AllocateStrandSegment(StrandHandle strandHandle, StrandSegmentHandle prevHandle, int index);
-	public:
-
-		void BuildStrands(std::vector<glm::uint>& strands, std::vector<StrandPoint>& points, int nodeMaxCount) const;
-
-		StrandGroupData m_data;
-
-		[[nodiscard]] StrandHandle AllocateStrand();
-
-		/**
-		 * Extend strand during growth process. The flow structure will also be updated.
-		 * @param targetHandle The handle of the segment to branch/prolong
-		 * @return The handle of new segment.
-		 */
-		[[nodiscard]] StrandSegmentHandle Extend(StrandHandle targetHandle);
-
-		/**
-		 * Insert strand segment during growth process. The flow structure will also be updated.
-		 * @param targetHandle The handle of the strand to be inserted.
-		 * @param targetSegmentHandle The handle of the strand segment to be inserted. If there's no subsequent segment this will be a simple extend.
-		 * @return The handle of new segment.
-		 */
-		[[nodiscard]] StrandSegmentHandle Insert(StrandHandle targetHandle, StrandSegmentHandle targetSegmentHandle);
-
-		/**
-		 * Recycle (Remove) a segment, the descendents of this segment will also be recycled. The relevant flow will also be removed/restructured.
-		 * @param handle The handle of the segment to be removed. Must be valid (non-zero and the segment should not be recycled prior to this operation).
-		 */
-		void RecycleStrandSegment(StrandSegmentHandle handle);
-
-		/**
-		 * Recycle (Remove) a strand. The relevant segment will also be removed/restructured.
-		 * @param handle The handle of the strand to be removed. Must be valid (non-zero and the flow should not be recycled prior to this operation).
-		 */
-		void RecycleStrand(StrandHandle handle);
-
-		/**
-		 * \brief Get a unmodifiable reference to all strands.
-		 * \return A constant reference to all strands.
-		 */
-		[[nodiscard]] const std::vector<Strand<StrandData>>& PeekStrands() const;
-		/**
-		 * \brief Get a unmodifiable reference to all strand segments.
-		 * \return A constant reference to all strand segments.
-		 */
-		[[nodiscard]] const std::vector<StrandSegment<StrandSegmentData>>& PeekStrandSegments() const;
-		/**
-		 * \brief Get a reference to all strands.
-		 * \return A reference to all strands.
-		 */
-		[[nodiscard]] std::vector<Strand<StrandData>>& RefStrands();
-		/**
-		 * \brief Get a reference to all strand segments.
-		 * \return A reference to all strand segments.
-		 */
-		[[nodiscard]] std::vector<StrandSegment<StrandSegmentData>>& RefStrandSegments();
-		/**
-		 * \brief Get a reference to a specific strand.
-		 * \param handle The handle of the strand.
-		 * \return A reference to the target strand.
-		 */
-		[[nodiscard]] Strand<StrandData>& RefStrand(StrandHandle handle);
-		/**
-		 * \brief Get a reference to a specific strand segment.
-		 * \param handle The handle of the strand segment.
-		 * \return A reference to the target strand segment.
-		 */
-		[[nodiscard]] StrandSegment<StrandSegmentData>& RefStrandSegment(StrandSegmentHandle handle);
-		/**
-		 * \brief Get a unmodifiable reference to a specific strand.
-		 * \param handle The handle of the strand.
-		 * \return A unmodifiable reference to the target strand.
-		 */
-		[[nodiscard]] const Strand<StrandData>& PeekStrand(StrandHandle handle) const;
-		/**
-		 * \brief Get a unmodifiable reference to a specific strand.
-		 * \param handle The handle of the strand.
-		 * \return A unmodifiable reference to the target strand.
-		 */
-		[[nodiscard]] const StrandSegment<StrandSegmentData>& PeekStrandSegment(StrandSegmentHandle handle) const;
-
-		/**
-		 * Get the structural version of the tree. The version will change when the tree structure changes.
-		 * @return The version
-		 */
-		[[nodiscard]] int GetVersion() const;
-
-		[[nodiscard]] glm::vec3 GetStrandSegmentStart(StrandSegmentHandle handle) const;
-	};
-
-	template <typename StrandGroupData, typename StrandData, typename StrandSegmentData>
-	void StrandGroup<StrandGroupData, StrandData, StrandSegmentData>::BuildStrand(const Strand<StrandData>& strand,
-		std::vector<glm::uint>& strands, std::vector<StrandPoint>& points, int nodeMaxCount) const
-	{
-		const auto& strandSegmentHandles = strand.PeekStrandSegmentHandles();
-		if (strandSegmentHandles.empty())
-			return;
-
-		auto& baseInfo = strand.m_info.m_baseInfo;
-		const auto startIndex = points.size();
-		strands.emplace_back(startIndex);
-		StrandPoint basePoint;
-		basePoint.m_color = baseInfo.m_color;
-		basePoint.m_thickness = baseInfo.m_thickness;
-		basePoint.m_position = baseInfo.m_globalPosition;
-
-		points.emplace_back(basePoint);
-		points.emplace_back(basePoint);
-
-		StrandPoint point;
-		for (int i = 0; i < strandSegmentHandles.size() && (nodeMaxCount == -1 || i < nodeMaxCount); i++)
-		{
-			const auto& strandSegment = PeekStrandSegment(strandSegmentHandles[i]);
-			//auto distance = glm::min(prevDistance, nextDistance);
-			point.m_color = strandSegment.m_info.m_color;
-			point.m_thickness = strandSegment.m_info.m_thickness;
-			point.m_position = strandSegment.m_info.m_globalPosition;
-			points.emplace_back(point);
-		}
-		auto& backPoint = points.at(points.size() - 2);
-		auto& lastPoint = points.at(points.size() - 1);
-
-		point.m_color = 2.0f * lastPoint.m_color - backPoint.m_color;
-		point.m_thickness = 2.0f * lastPoint.m_thickness - backPoint.m_thickness;
-		point.m_position = 2.0f * lastPoint.m_position - backPoint.m_position;
-		points.emplace_back(point);
-
-		auto& firstPoint = points.at(startIndex);
-		auto& secondPoint = points.at(startIndex + 1);
-		auto& thirdPoint = points.at(startIndex + 2);
-		firstPoint.m_color = 2.0f * secondPoint.m_color - thirdPoint.m_color;
-		firstPoint.m_thickness = 2.0f * secondPoint.m_thickness - thirdPoint.m_thickness;
-		firstPoint.m_position = 2.0f * secondPoint.m_position - thirdPoint.m_position;
-	}
-
-	template <typename StrandGroupData, typename StrandData, typename StrandSegmentData>
-	StrandSegmentHandle StrandGroup<StrandGroupData, StrandData, StrandSegmentData>::AllocateStrandSegment(StrandHandle strandHandle, StrandSegmentHandle prevHandle, const int index)
-	{
-		StrandSegmentHandle newSegmentHandle;
-		if (m_strandSegmentPool.empty()) {
-			m_strandSegments.emplace_back(strandHandle, m_strandSegments.size(), prevHandle);
-			newSegmentHandle = m_strandSegments.back().m_handle;
-		}
-		else {
-			newSegmentHandle = m_strandSegmentPool.front();
-			m_strandSegmentPool.pop();
-		}
-		auto& segment = m_strandSegments[newSegmentHandle];
-		if (prevHandle != -1) {
-			m_strandSegments[prevHandle].m_nextHandle = newSegmentHandle;
-			m_strandSegments[prevHandle].m_endSegment = false;
-			segment.m_prevHandle = prevHandle;
-		}
-		segment.m_nextHandle = -1;
-		segment.m_strandHandle = strandHandle;
-		segment.m_index = index;
-		segment.m_recycled = false;
-		return newSegmentHandle;
-	}
-
-	template <typename StrandGroupData, typename StrandData, typename StrandSegmentData>
-	void StrandGroup<StrandGroupData, StrandData, StrandSegmentData>::BuildStrands(std::vector<glm::uint>& strands,
-		std::vector<StrandPoint>& points, int nodeMaxCount) const
-	{
-		for (const auto& strand : m_strands)
-		{
-			if (strand.IsRecycled()) continue;
-			BuildStrand(strand, strands, points, nodeMaxCount);
-		}
-	}
-
-	template <typename StrandGroupData, typename StrandData, typename StrandSegmentData>
-	StrandHandle StrandGroup<StrandGroupData, StrandData, StrandSegmentData>::AllocateStrand()
-	{
-		if (m_strandPool.empty()) {
-			m_strands.emplace_back(m_strands.size());
-			m_version++;
-			return m_strands.back().m_handle;
-		}
-		auto handle = m_strandPool.front();
-		m_strandPool.pop();
-		auto& strand = m_strands[handle];
-		strand.m_recycled = false;
-		m_version++;
-		return handle;
-	}
-
-
-	template <typename StrandGroupData, typename StrandData, typename StrandSegmentData>
-	StrandSegmentHandle StrandGroup<StrandGroupData, StrandData, StrandSegmentData>::Extend(StrandHandle targetHandle)
-	{
-		auto& strand = m_strands[targetHandle];
-		assert(!strand.m_recycled);
-		auto prevHandle = -1;
-		if (!strand.m_strandSegmentHandles.empty()) prevHandle = strand.m_strandSegmentHandles.back();
-		const auto newSegmentHandle = AllocateStrandSegment(targetHandle, prevHandle, strand.m_strandSegmentHandles.size());
-		strand.m_strandSegmentHandles.emplace_back(newSegmentHandle);
-		auto& segment = m_strandSegments[newSegmentHandle];
-		segment.m_endSegment = true;
-		m_version++;
-		return newSegmentHandle;
-	}
-
-	template <typename StrandGroupData, typename StrandData, typename StrandSegmentData>
-	StrandSegmentHandle StrandGroup<StrandGroupData, StrandData, StrandSegmentData>::Insert(StrandHandle targetHandle, StrandSegmentHandle targetSegmentHandle)
-	{
-		auto& strand = m_strands[targetHandle];
-		assert(!strand.m_recycled);
-		auto& prevSegment = m_strandSegments[targetSegmentHandle];
-		const auto prevSegmentIndex = prevSegment.m_index;
-		const auto nextSegmentHandle = strand.m_strandSegmentHandles[prevSegmentIndex + 1];
-		if (strand.m_strandSegmentHandles.size() - 1 == prevSegmentIndex) return Extend(targetHandle);
-		const auto newSegmentHandle = AllocateStrandSegment(targetHandle, targetSegmentHandle, prevSegmentIndex + 1);
-		auto& newSegment = m_strandSegments[newSegmentHandle];
-		newSegment.m_endSegment = false;
-		newSegment.m_nextHandle = nextSegmentHandle;
-		auto& nextSegment = m_strandSegments[nextSegmentHandle];
-		nextSegment.m_prevHandle = newSegmentHandle;
-		strand.m_strandSegmentHandles.insert(strand.m_strandSegmentHandles.begin() + prevSegmentIndex + 1, newSegmentHandle);
-		for (int i = prevSegmentIndex + 2; i < strand.m_strandSegmentHandles.size(); ++i)
-		{
-			m_strandSegments[strand.m_strandSegmentHandles[i]].m_index = i;
-		}
-		m_version++;
-		return newSegmentHandle;
-	}
-
-
-	template <typename StrandGroupData, typename StrandData, typename StrandSegmentData>
-	void StrandGroup<StrandGroupData, StrandData, StrandSegmentData>::RecycleStrandSegment(StrandSegmentHandle handle)
-	{
-		//Recycle subsequent segments from strand.
-		auto& segment = m_strandSegments[handle];
-		assert(!segment.m_recycled);
-		if (segment.m_nextHandle != -1)
-		{
-			RecycleStrandSegment(segment.m_nextHandle);
-		}
-		if (segment.m_prevHandle != -1)
-		{
-			m_strandSegments[segment.m_prevHandle].m_nextHandle = -1;
-			m_strandSegments[segment.m_prevHandle].m_endSegment = true;
-		}
-
-		auto& strand = m_strands[segment.m_strandHandle];
-		assert(strand.m_strandSegmentHandles.back() == handle);
-		strand.m_strandSegmentHandles.pop_back();
-
-		segment.m_recycled = true;
-		segment.m_endSegment = true;
-		segment.m_prevHandle = segment.m_nextHandle = -1;
-		segment.m_data = {};
-		segment.m_info = {};
-
-		segment.m_index = -1;
-		segment.m_strandHandle = -1;
-		m_strandSegmentPool.emplace(handle);
-		m_version++;
-	}
-
-	template <typename StrandGroupData, typename StrandData, typename StrandSegmentData>
-	void StrandGroup<StrandGroupData, StrandData, StrandSegmentData>::RecycleStrand(StrandHandle handle)
-	{
-		//Recycle all segments;
-		auto& strand = m_strands[handle];
-		assert(!strand.m_recycled);
-		for (const auto& segmentHandle : strand.m_strandSegmentHandles)
-		{
-			auto& segment = m_strandSegments[segmentHandle];
-			segment.m_recycled = true;
-			segment.m_endSegment = true;
-			segment.m_prevHandle = segment.m_nextHandle = -1;
-			segment.m_data = {};
-			segment.m_info = {};
-
-			segment.m_index = -1;
-			segment.m_strandHandle = -1;
-			m_strandSegmentPool.emplace(segmentHandle);
-		}
-		strand.m_strandSegmentHandles.clear();
-
-		//Recycle strand.
-		strand.m_recycled = true;
-		strand.m_data = {};
-		strand.m_info = {};
-		m_strandPool.emplace(handle);
-		m_version++;
-	}
-
-	template <typename StrandGroupData, typename StrandData, typename StrandSegmentData>
-	const std::vector<Strand<StrandData>>& StrandGroup<StrandGroupData, StrandData, StrandSegmentData>::PeekStrands() const
-	{
-		return m_strands;
-	}
-
-	template <typename StrandGroupData, typename StrandData, typename StrandSegmentData>
-	const std::vector<StrandSegment<StrandSegmentData>>& StrandGroup<StrandGroupData, StrandData, StrandSegmentData>::PeekStrandSegments() const
-	{
-		return m_strandSegments;
-	}
-
-	template <typename StrandGroupData, typename StrandData, typename StrandSegmentData>
-	std::vector<Strand<StrandData>>& StrandGroup<StrandGroupData, StrandData, StrandSegmentData>::RefStrands()
-	{
-		return m_strands;
-	}
-
-	template <typename StrandGroupData, typename StrandData, typename StrandSegmentData>
-	std::vector<StrandSegment<StrandSegmentData>>& StrandGroup<StrandGroupData, StrandData, StrandSegmentData>::RefStrandSegments()
-	{
-		return m_strandSegments;
-	}
-
-	template <typename StrandGroupData, typename StrandData, typename StrandSegmentData>
-	Strand<StrandData>& StrandGroup<StrandGroupData, StrandData, StrandSegmentData>::RefStrand(StrandHandle handle)
-	{
-		return m_strands[handle];
-	}
-
-	template <typename StrandGroupData, typename StrandData, typename StrandSegmentData>
-	StrandSegment<StrandSegmentData>& StrandGroup<StrandGroupData, StrandData, StrandSegmentData>::RefStrandSegment(StrandSegmentHandle handle)
-	{
-		return m_strandSegments[handle];
-	}
-
-	template <typename StrandGroupData, typename StrandData, typename StrandSegmentData>
-	const Strand<StrandData>& StrandGroup<StrandGroupData, StrandData, StrandSegmentData>::PeekStrand(StrandHandle handle) const
-	{
-		return m_strands[handle];
-	}
-
-	template <typename StrandGroupData, typename StrandData, typename StrandSegmentData>
-	const StrandSegment<StrandSegmentData>& StrandGroup<StrandGroupData, StrandData, StrandSegmentData>::PeekStrandSegment(
-		StrandSegmentHandle handle) const
-	{
-		return m_strandSegments[handle];
-	}
-
-	template <typename StrandGroupData, typename StrandData, typename StrandSegmentData>
-	int StrandGroup<StrandGroupData, StrandData, StrandSegmentData>::GetVersion() const
-	{
-		return m_version;
-	}
-
-	template <typename StrandGroupData, typename StrandData, typename StrandSegmentData>
-	glm::vec3 StrandGroup<StrandGroupData, StrandData, StrandSegmentData>::GetStrandSegmentStart(
-		StrandSegmentHandle handle) const
-	{
-		const auto& segment = m_strandSegments[handle];
-		glm::vec3 segmentStart;
-		if (segment.GetPrevHandle() != -1)
-		{
-			segmentStart = m_strandSegments[segment.GetPrevHandle()].m_info.m_globalPosition;
-		}
-		else
-		{
-			segmentStart = m_strands[segment.GetStrandHandle()].m_info.m_baseInfo.m_globalPosition;
-		}
-		return segmentStart;
-	}
-
-	template <typename StrandSegmentData>
-	bool StrandSegment<StrandSegmentData>::IsEnd() const
-	{
-		return m_endSegment;
-	}
-
-	template <typename StrandSegmentData>
-	bool StrandSegment<StrandSegmentData>::IsRecycled() const
-	{
-		return m_recycled;
-	}
-
-	template <typename StrandSegmentData>
-	StrandSegmentHandle StrandSegment<StrandSegmentData>::GetHandle() const
-	{
-		return m_handle;
-	}
-
-	template <typename StrandSegmentData>
-	StrandHandle StrandSegment<StrandSegmentData>::GetStrandHandle() const
-	{
-		return m_strandHandle;
-	}
-
-	template <typename StrandSegmentData>
-	StrandSegmentHandle StrandSegment<StrandSegmentData>::GetPrevHandle() const
-	{
-		return m_prevHandle;
-	}
-
-	template <typename StrandSegmentData>
-	StrandSegmentHandle StrandSegment<StrandSegmentData>::GetNextHandle() const
-	{
-		return m_nextHandle;
-	}
-
-	template <typename StrandSegmentData>
-	int StrandSegment<StrandSegmentData>::GetIndex() const
-	{
-		return m_index;
-	}
-
-	template <typename StrandSegmentData>
-	StrandSegment<StrandSegmentData>::StrandSegment(const StrandHandle strandHandle, const StrandSegmentHandle handle, const StrandSegmentHandle prevHandle)
-	{
-		m_strandHandle = strandHandle;
-		m_handle = handle;
-		m_prevHandle = prevHandle;
-		m_nextHandle = -1;
-		m_recycled = false;
-		m_endSegment = true;
-
-		m_index = -1;
-		m_data = {};
-		m_info = {};
-	}
-
-	template <typename StrandData>
-	bool Strand<StrandData>::IsRecycled() const
-	{
-		return m_recycled;
-	}
-
-	template <typename StrandData>
-	StrandHandle Strand<StrandData>::GetHandle() const
-	{
-		return m_handle;
-	}
-
-	template <typename StrandData>
-	const std::vector<StrandSegmentHandle>& Strand<StrandData>::PeekStrandSegmentHandles() const
-	{
-		return m_strandSegmentHandles;
-	}
-
-	template <typename StrandData>
-	Strand<StrandData>::Strand(const StrandHandle handle)
-	{
-		m_handle = handle;
-		m_recycled = false;
-
-		m_strandSegmentHandles.clear();
-
-		m_data = {};
-		m_info = {};
-	}
+using namespace evo_engine;
+namespace eco_sys_lab {
+
+typedef int StrandHandle;
+typedef int StrandSegmentHandle;
+
+struct StrandSegmentInfo {
+  /**
+   * \brief The position of the end of current strand segment.
+   */
+  glm::vec3 global_position = glm::vec3(0.0f);
+  /**
+   * \brief The thickness of the end of current strand segment.
+   */
+  float thickness = 0.0f;
+  glm::vec4 color = glm::vec4(1.0f);
+  bool is_boundary = false;
+};
+
+struct StrandInfo {
+  glm::vec4 color = glm::vec4(1.0f);
+
+  /**
+   * \brief The info of the start of the first strand segment in this strand.
+   */
+  StrandSegmentInfo base_info{};
+};
+
+/**
+ * \brief The data structure that holds a strand segment.
+ * \tparam StrandSegmentData The customizable data for each strand segment.
+ */
+template <typename StrandSegmentData>
+class StrandSegment {
+  template <typename Pgd, typename Pd, typename Psd>
+  friend class StrandGroup;
+  template <typename Sgd, typename Sd, typename Ssd>
+  friend class StrandGroupSerializer;
+  bool end_segment_ = true;
+  bool recycled_ = false;
+  StrandSegmentHandle prev_handle_ = -1;
+  StrandSegmentHandle handle_ = -1;
+  StrandSegmentHandle next_handle_ = -1;
+
+  StrandHandle strand_handle_ = -1;
+
+  int index_ = -1;
+
+ public:
+  StrandSegmentData data{};
+  StrandSegmentInfo info{};
+
+  /**
+   * Whether this segment is the end segment.
+   * @return True if this is end segment, false else wise.
+   */
+  [[nodiscard]] bool IsEnd() const;
+
+  /**
+   * Whether this segment is recycled (removed).
+   * @return True if this segment is recycled (removed), false else wise.
+   */
+  [[nodiscard]] bool IsRecycled() const;
+
+  /**
+   * Get the handle of self.
+   * @return strandSegmentHandle of current segment.
+   */
+  [[nodiscard]] StrandSegmentHandle GetHandle() const;
+
+  /**
+   * Get the handle of belonged strand.
+   * @return strandHandle of current segment.
+   */
+  [[nodiscard]] StrandHandle GetStrandHandle() const;
+  /**
+   * Get the handle of prev segment.
+   * @return strandSegmentHandle of current segment.
+   */
+  [[nodiscard]] StrandSegmentHandle GetPrevHandle() const;
+
+  /**
+   * Get the handle of prev segment.
+   * @return strandSegmentHandle of current segment.
+   */
+  [[nodiscard]] StrandSegmentHandle GetNextHandle() const;
+
+  [[nodiscard]] int GetIndex() const;
+  StrandSegment() = default;
+  explicit StrandSegment(StrandHandle strand_handle, StrandSegmentHandle handle, StrandSegmentHandle prev_handle);
+};
+
+/**
+ * \brief The data structure that holds a strand.
+ * \tparam StrandData The customizable data for each strand.
+ */
+template <typename StrandData>
+class Strand {
+  template <typename Pgd, typename Pd, typename Psd>
+  friend class StrandGroup;
+  template <typename Sgd, typename Sd, typename Ssd>
+  friend class StrandGroupSerializer;
+  bool recycled_ = false;
+  StrandHandle handle_ = -1;
+
+  std::vector<StrandSegmentHandle> strand_segment_handles_;
+
+ public:
+  StrandData data;
+  StrandInfo info;
+
+  /**
+   * Whether this segment is recycled (removed).
+   * @return True if this segment is recycled (removed), false else wise.
+   */
+  [[nodiscard]] bool IsRecycled() const;
+
+  /**
+   * Get the handle of self.
+   * @return strandSegmentHandle of current segment.
+   */
+  [[nodiscard]] StrandHandle GetHandle() const;
+
+  /**
+   * Access the segments that belongs to this flow.
+   * @return The list of handles.
+   */
+  [[nodiscard]] const std::vector<StrandSegmentHandle>& PeekStrandSegmentHandles() const;
+  Strand() = default;
+  explicit Strand(StrandHandle handle);
+};
+
+/**
+ * \brief The data structure that holds a collection of strands.
+ * \tparam StrandGroupData The customizable data for entire strand group.
+ * \tparam StrandData The customizable data for each strand.
+ * \tparam StrandSegmentData The customizable data for each strand segment.
+ */
+template <typename StrandGroupData, typename StrandData, typename StrandSegmentData>
+class StrandGroup {
+  template <typename Sgd, typename Sd, typename Ssd>
+  friend class StrandGroupSerializer;
+  std::vector<Strand<StrandData>> strands_;
+  std::vector<StrandSegment<StrandSegmentData>> strand_segments_;
+
+  std::queue<StrandHandle> strand_pool_;
+  std::queue<StrandSegmentHandle> strand_segment_pool_;
+
+  int version_ = -1;
+  void BuildStrand(const Strand<StrandData>& strand, std::vector<glm::uint>& strands, std::vector<StrandPoint>& points,
+                   int node_max_count) const;
+
+  [[nodiscard]] StrandSegmentHandle AllocateStrandSegment(StrandHandle strand_handle, StrandSegmentHandle prev_handle,
+                                                          int index);
+
+ public:
+  void BuildStrands(std::vector<glm::uint>& strands, std::vector<StrandPoint>& points, int node_max_count) const;
+
+  StrandGroupData data;
+
+  [[nodiscard]] StrandHandle AllocateStrand();
+
+  /**
+   * Extend strand during growth process. The flow structure will also be updated.
+   * @param target_handle The handle of the segment to branch/prolong
+   * @return The handle of new segment.
+   */
+  [[nodiscard]] StrandSegmentHandle Extend(StrandHandle target_handle);
+
+  /**
+   * Insert strand segment during growth process. The flow structure will also be updated.
+   * @param target_handle The handle of the strand to be inserted.
+   * @param target_segment_handle The handle of the strand segment to be inserted. If there's no subsequent segment this
+   * will be a simple extend.
+   * @return The handle of new segment.
+   */
+  [[nodiscard]] StrandSegmentHandle Insert(StrandHandle target_handle, StrandSegmentHandle target_segment_handle);
+
+  /**
+   * Recycle (Remove) a segment, the descendents of this segment will also be recycled. The relevant flow will also be
+   * removed/restructured.
+   * @param handle The handle of the segment to be removed. Must be valid (non-zero and the segment should not be
+   * recycled prior to this operation).
+   */
+  void RecycleStrandSegment(StrandSegmentHandle handle);
+
+  /**
+   * Recycle (Remove) a strand. The relevant segment will also be removed/restructured.
+   * @param handle The handle of the strand to be removed. Must be valid (non-zero and the flow should not be recycled
+   * prior to this operation).
+   */
+  void RecycleStrand(StrandHandle handle);
+
+  /**
+   * \brief Get a unmodifiable reference to all strands.
+   * \return A constant reference to all strands.
+   */
+  [[nodiscard]] const std::vector<Strand<StrandData>>& PeekStrands() const;
+  /**
+   * \brief Get a unmodifiable reference to all strand segments.
+   * \return A constant reference to all strand segments.
+   */
+  [[nodiscard]] const std::vector<StrandSegment<StrandSegmentData>>& PeekStrandSegments() const;
+  /**
+   * \brief Get a reference to all strands.
+   * \return A reference to all strands.
+   */
+  [[nodiscard]] std::vector<Strand<StrandData>>& RefStrands();
+  /**
+   * \brief Get a reference to all strand segments.
+   * \return A reference to all strand segments.
+   */
+  [[nodiscard]] std::vector<StrandSegment<StrandSegmentData>>& RefStrandSegments();
+  /**
+   * \brief Get a reference to a specific strand.
+   * \param handle The handle of the strand.
+   * \return A reference to the target strand.
+   */
+  [[nodiscard]] Strand<StrandData>& RefStrand(StrandHandle handle);
+  /**
+   * \brief Get a reference to a specific strand segment.
+   * \param handle The handle of the strand segment.
+   * \return A reference to the target strand segment.
+   */
+  [[nodiscard]] StrandSegment<StrandSegmentData>& RefStrandSegment(StrandSegmentHandle handle);
+  /**
+   * \brief Get a unmodifiable reference to a specific strand.
+   * \param handle The handle of the strand.
+   * \return A unmodifiable reference to the target strand.
+   */
+  [[nodiscard]] const Strand<StrandData>& PeekStrand(StrandHandle handle) const;
+  /**
+   * \brief Get a unmodifiable reference to a specific strand.
+   * \param handle The handle of the strand.
+   * \return A unmodifiable reference to the target strand.
+   */
+  [[nodiscard]] const StrandSegment<StrandSegmentData>& PeekStrandSegment(StrandSegmentHandle handle) const;
+
+  /**
+   * Get the structural version of the tree. The version will change when the tree structure changes.
+   * @return The version
+   */
+  [[nodiscard]] int GetVersion() const;
+
+  [[nodiscard]] glm::vec3 GetStrandSegmentStart(StrandSegmentHandle handle) const;
+};
+
+template <typename StrandGroupData, typename StrandData, typename StrandSegmentData>
+void StrandGroup<StrandGroupData, StrandData, StrandSegmentData>::BuildStrand(const Strand<StrandData>& strand,
+                                                                              std::vector<glm::uint>& strands,
+                                                                              std::vector<StrandPoint>& points,
+                                                                              int node_max_count) const {
+  const auto& strand_segment_handles = strand.PeekStrandSegmentHandles();
+  if (strand_segment_handles.empty())
+    return;
+
+  auto& base_info = strand.info.base_info;
+  const auto start_index = points.size();
+  strands.emplace_back(start_index);
+  StrandPoint base_point;
+  base_point.color = base_info.color;
+  base_point.thickness = base_info.thickness;
+  base_point.position = base_info.global_position;
+
+  points.emplace_back(base_point);
+  points.emplace_back(base_point);
+
+  StrandPoint point;
+  for (int i = 0; i < strand_segment_handles.size() && (node_max_count == -1 || i < node_max_count); i++) {
+    const auto& strand_segment = PeekStrandSegment(strand_segment_handles[i]);
+    // auto distance = glm::min(prevDistance, nextDistance);
+    point.color = strand_segment.info.color;
+    point.thickness = strand_segment.info.thickness;
+    point.position = strand_segment.info.global_position;
+    points.emplace_back(point);
+  }
+  auto& back_point = points.at(points.size() - 2);
+  auto& last_point = points.at(points.size() - 1);
+
+  point.color = 2.0f * last_point.color - back_point.color;
+  point.thickness = 2.0f * last_point.thickness - back_point.thickness;
+  point.position = 2.0f * last_point.position - back_point.position;
+  points.emplace_back(point);
+
+  auto& first_point = points.at(start_index);
+  auto& second_point = points.at(start_index + 1);
+  auto& third_point = points.at(start_index + 2);
+  first_point.color = 2.0f * second_point.color - third_point.color;
+  first_point.thickness = 2.0f * second_point.thickness - third_point.thickness;
+  first_point.position = 2.0f * second_point.position - third_point.position;
 }
+
+template <typename StrandGroupData, typename StrandData, typename StrandSegmentData>
+StrandSegmentHandle StrandGroup<StrandGroupData, StrandData, StrandSegmentData>::AllocateStrandSegment(
+    StrandHandle strand_handle, StrandSegmentHandle prev_handle, const int index) {
+  StrandSegmentHandle new_segment_handle;
+  if (strand_segment_pool_.empty()) {
+    strand_segments_.emplace_back(strand_handle, strand_segments_.size(), prev_handle);
+    new_segment_handle = strand_segments_.back().handle_;
+  } else {
+    new_segment_handle = strand_segment_pool_.front();
+    strand_segment_pool_.pop();
+  }
+  auto& segment = strand_segments_[new_segment_handle];
+  if (prev_handle != -1) {
+    strand_segments_[prev_handle].next_handle_ = new_segment_handle;
+    strand_segments_[prev_handle].end_segment_ = false;
+    segment.prev_handle_ = prev_handle;
+  }
+  segment.next_handle_ = -1;
+  segment.strand_handle_ = strand_handle;
+  segment.index_ = index;
+  segment.recycled_ = false;
+  return new_segment_handle;
+}
+
+template <typename StrandGroupData, typename StrandData, typename StrandSegmentData>
+void StrandGroup<StrandGroupData, StrandData, StrandSegmentData>::BuildStrands(std::vector<glm::uint>& strands,
+                                                                               std::vector<StrandPoint>& points,
+                                                                               int node_max_count) const {
+  for (const auto& strand : strands_) {
+    if (strand.IsRecycled())
+      continue;
+    BuildStrand(strand, strands, points, node_max_count);
+  }
+}
+
+template <typename StrandGroupData, typename StrandData, typename StrandSegmentData>
+StrandHandle StrandGroup<StrandGroupData, StrandData, StrandSegmentData>::AllocateStrand() {
+  if (strand_pool_.empty()) {
+    strands_.emplace_back(strands_.size());
+    version_++;
+    return strands_.back().handle_;
+  }
+  auto handle = strand_pool_.front();
+  strand_pool_.pop();
+  auto& strand = strands_[handle];
+  strand.recycled_ = false;
+  version_++;
+  return handle;
+}
+
+template <typename StrandGroupData, typename StrandData, typename StrandSegmentData>
+StrandSegmentHandle StrandGroup<StrandGroupData, StrandData, StrandSegmentData>::Extend(StrandHandle target_handle) {
+  auto& strand = strands_[target_handle];
+  assert(!strand.recycled_);
+  auto prev_handle = -1;
+  if (!strand.strand_segment_handles_.empty())
+    prev_handle = strand.strand_segment_handles_.back();
+  const auto new_segment_handle =
+      AllocateStrandSegment(target_handle, prev_handle, strand.strand_segment_handles_.size());
+  strand.strand_segment_handles_.emplace_back(new_segment_handle);
+  auto& segment = strand_segments_[new_segment_handle];
+  segment.end_segment_ = true;
+  version_++;
+  return new_segment_handle;
+}
+
+template <typename StrandGroupData, typename StrandData, typename StrandSegmentData>
+StrandSegmentHandle StrandGroup<StrandGroupData, StrandData, StrandSegmentData>::Insert(
+    StrandHandle target_handle, StrandSegmentHandle target_segment_handle) {
+  auto& strand = strands_[target_handle];
+  assert(!strand.recycled_);
+  auto& prev_segment = strand_segments_[target_segment_handle];
+  const auto prev_segment_index = prev_segment.index_;
+  const auto next_segment_handle = strand.strand_segment_handles_[prev_segment_index + 1];
+  if (strand.strand_segment_handles_.size() - 1 == prev_segment_index)
+    return Extend(target_handle);
+  const auto new_segment_handle = AllocateStrandSegment(target_handle, target_segment_handle, prev_segment_index + 1);
+  auto& new_segment = strand_segments_[new_segment_handle];
+  new_segment.end_segment_ = false;
+  new_segment.next_handle_ = next_segment_handle;
+  auto& next_segment = strand_segments_[next_segment_handle];
+  next_segment.prev_handle_ = new_segment_handle;
+  strand.strand_segment_handles_.insert(strand.strand_segment_handles_.begin() + prev_segment_index + 1,
+                                        new_segment_handle);
+  for (int i = prev_segment_index + 2; i < strand.strand_segment_handles_.size(); ++i) {
+    strand_segments_[strand.strand_segment_handles_[i]].index_ = i;
+  }
+  version_++;
+  return new_segment_handle;
+}
+
+template <typename StrandGroupData, typename StrandData, typename StrandSegmentData>
+void StrandGroup<StrandGroupData, StrandData, StrandSegmentData>::RecycleStrandSegment(StrandSegmentHandle handle) {
+  // Recycle subsequent segments from strand.
+  auto& segment = strand_segments_[handle];
+  assert(!segment.recycled_);
+  if (segment.next_handle_ != -1) {
+    RecycleStrandSegment(segment.next_handle_);
+  }
+  if (segment.prev_handle_ != -1) {
+    strand_segments_[segment.prev_handle_].next_handle_ = -1;
+    strand_segments_[segment.prev_handle_].end_segment_ = true;
+  }
+
+  auto& strand = strands_[segment.strand_handle_];
+  assert(strand.m_strandSegmentHandles.back() == handle);
+  strand.strand_segment_handles_.pop_back();
+
+  segment.recycled_ = true;
+  segment.end_segment_ = true;
+  segment.prev_handle_ = segment.next_handle_ = -1;
+  segment.data = {};
+  segment.info = {};
+
+  segment.index_ = -1;
+  segment.strand_handle_ = -1;
+  strand_segment_pool_.emplace(handle);
+  version_++;
+}
+
+template <typename StrandGroupData, typename StrandData, typename StrandSegmentData>
+void StrandGroup<StrandGroupData, StrandData, StrandSegmentData>::RecycleStrand(StrandHandle handle) {
+  // Recycle all segments;
+  auto& strand = strands_[handle];
+  assert(!strand.recycled_);
+  for (const auto& segment_handle : strand.strand_segment_handles_) {
+    auto& segment = strand_segments_[segment_handle];
+    segment.recycled_ = true;
+    segment.end_segment_ = true;
+    segment.prev_handle_ = segment.next_handle_ = -1;
+    segment.data = {};
+    segment.info = {};
+
+    segment.index_ = -1;
+    segment.strand_handle_ = -1;
+    strand_segment_pool_.emplace(segment_handle);
+  }
+  strand.strand_segment_handles_.clear();
+
+  // Recycle strand.
+  strand.recycled_ = true;
+  strand.data = {};
+  strand.info = {};
+  strand_pool_.emplace(handle);
+  version_++;
+}
+
+template <typename StrandGroupData, typename StrandData, typename StrandSegmentData>
+const std::vector<Strand<StrandData>>& StrandGroup<StrandGroupData, StrandData, StrandSegmentData>::PeekStrands()
+    const {
+  return strands_;
+}
+
+template <typename StrandGroupData, typename StrandData, typename StrandSegmentData>
+const std::vector<StrandSegment<StrandSegmentData>>&
+StrandGroup<StrandGroupData, StrandData, StrandSegmentData>::PeekStrandSegments() const {
+  return strand_segments_;
+}
+
+template <typename StrandGroupData, typename StrandData, typename StrandSegmentData>
+std::vector<Strand<StrandData>>& StrandGroup<StrandGroupData, StrandData, StrandSegmentData>::RefStrands() {
+  return strands_;
+}
+
+template <typename StrandGroupData, typename StrandData, typename StrandSegmentData>
+std::vector<StrandSegment<StrandSegmentData>>&
+StrandGroup<StrandGroupData, StrandData, StrandSegmentData>::RefStrandSegments() {
+  return strand_segments_;
+}
+
+template <typename StrandGroupData, typename StrandData, typename StrandSegmentData>
+Strand<StrandData>& StrandGroup<StrandGroupData, StrandData, StrandSegmentData>::RefStrand(StrandHandle handle) {
+  return strands_[handle];
+}
+
+template <typename StrandGroupData, typename StrandData, typename StrandSegmentData>
+StrandSegment<StrandSegmentData>& StrandGroup<StrandGroupData, StrandData, StrandSegmentData>::RefStrandSegment(
+    StrandSegmentHandle handle) {
+  return strand_segments_[handle];
+}
+
+template <typename StrandGroupData, typename StrandData, typename StrandSegmentData>
+const Strand<StrandData>& StrandGroup<StrandGroupData, StrandData, StrandSegmentData>::PeekStrand(
+    StrandHandle handle) const {
+  return strands_[handle];
+}
+
+template <typename StrandGroupData, typename StrandData, typename StrandSegmentData>
+const StrandSegment<StrandSegmentData>& StrandGroup<StrandGroupData, StrandData, StrandSegmentData>::PeekStrandSegment(
+    StrandSegmentHandle handle) const {
+  return strand_segments_[handle];
+}
+
+template <typename StrandGroupData, typename StrandData, typename StrandSegmentData>
+int StrandGroup<StrandGroupData, StrandData, StrandSegmentData>::GetVersion() const {
+  return version_;
+}
+
+template <typename StrandGroupData, typename StrandData, typename StrandSegmentData>
+glm::vec3 StrandGroup<StrandGroupData, StrandData, StrandSegmentData>::GetStrandSegmentStart(
+    StrandSegmentHandle handle) const {
+  const auto& segment = strand_segments_[handle];
+  glm::vec3 segment_start;
+  if (segment.GetPrevHandle() != -1) {
+    segment_start = strand_segments_[segment.GetPrevHandle()].info.global_position;
+  } else {
+    segment_start = strands_[segment.GetStrandHandle()].info.base_info.global_position;
+  }
+  return segment_start;
+}
+
+template <typename StrandSegmentData>
+bool StrandSegment<StrandSegmentData>::IsEnd() const {
+  return end_segment_;
+}
+
+template <typename StrandSegmentData>
+bool StrandSegment<StrandSegmentData>::IsRecycled() const {
+  return recycled_;
+}
+
+template <typename StrandSegmentData>
+StrandSegmentHandle StrandSegment<StrandSegmentData>::GetHandle() const {
+  return handle_;
+}
+
+template <typename StrandSegmentData>
+StrandHandle StrandSegment<StrandSegmentData>::GetStrandHandle() const {
+  return strand_handle_;
+}
+
+template <typename StrandSegmentData>
+StrandSegmentHandle StrandSegment<StrandSegmentData>::GetPrevHandle() const {
+  return prev_handle_;
+}
+
+template <typename StrandSegmentData>
+StrandSegmentHandle StrandSegment<StrandSegmentData>::GetNextHandle() const {
+  return next_handle_;
+}
+
+template <typename StrandSegmentData>
+int StrandSegment<StrandSegmentData>::GetIndex() const {
+  return index_;
+}
+
+template <typename StrandSegmentData>
+StrandSegment<StrandSegmentData>::StrandSegment(const StrandHandle strand_handle, const StrandSegmentHandle handle,
+                                                const StrandSegmentHandle prev_handle) {
+  strand_handle_ = strand_handle;
+  handle_ = handle;
+  prev_handle_ = prev_handle;
+  next_handle_ = -1;
+  recycled_ = false;
+  end_segment_ = true;
+
+  index_ = -1;
+  data = {};
+  info = {};
+}
+
+template <typename StrandData>
+bool Strand<StrandData>::IsRecycled() const {
+  return recycled_;
+}
+
+template <typename StrandData>
+StrandHandle Strand<StrandData>::GetHandle() const {
+  return handle_;
+}
+
+template <typename StrandData>
+const std::vector<StrandSegmentHandle>& Strand<StrandData>::PeekStrandSegmentHandles() const {
+  return strand_segment_handles_;
+}
+
+template <typename StrandData>
+Strand<StrandData>::Strand(const StrandHandle handle) {
+  handle_ = handle;
+  recycled_ = false;
+
+  strand_segment_handles_.clear();
+
+  data = {};
+  info = {};
+}
+}  // namespace eco_sys_lab

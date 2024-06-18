@@ -1,287 +1,266 @@
 #pragma once
 
 #include "StrandModelProfile.hpp"
-using namespace EvoEngine;
-namespace EcoSysLab {
-	template<typename ParticleData>
-	class StrandModelProfileSerializer {
-	public:
-		static void Serialize(YAML::Emitter& out, const StrandModelProfile<ParticleData>& strandModelProfile,
-			const std::function<void(YAML::Emitter& particleOut, const ParticleData& particleData)>& particleFunc);
+using namespace evo_engine;
+namespace eco_sys_lab {
+template <typename ParticleData>
+class StrandModelProfileSerializer {
+ public:
+  static void Serialize(
+      YAML::Emitter& out, const StrandModelProfile<ParticleData>& strand_model_profile,
+      const std::function<void(YAML::Emitter& particle_out, const ParticleData& particle_data)>& particle_func);
 
-		static void Deserialize(const YAML::Node& in, StrandModelProfile<ParticleData>& strandModelProfile,
-			const std::function<void(const YAML::Node& particleIn, ParticleData& particleData)>& particleFunc);
-	};
+  static void Deserialize(
+      const YAML::Node& in, StrandModelProfile<ParticleData>& strand_model_profile,
+      const std::function<void(const YAML::Node& particle_in, ParticleData& particle_data)>& particle_func);
+};
 
-	template <typename ParticleData>
-	void StrandModelProfileSerializer<ParticleData>::Serialize(YAML::Emitter& out,
-		const StrandModelProfile<ParticleData>& strandModelProfile,
-		const std::function<void(YAML::Emitter& particleOut, const ParticleData& particleData)>& particleFunc)
-	{
-		const auto particleSize = strandModelProfile.m_particles2D.size();
-		auto colorList = std::vector<glm::vec3>(particleSize);
-		auto positionList = std::vector<glm::vec2>(particleSize);
-		auto lastPositionList = std::vector<glm::vec2>(particleSize);
-		auto accelerationList = std::vector<glm::vec2>(particleSize);
-		auto deltaPositionList = std::vector<glm::vec2>(particleSize);
-		auto boundaryList = std::vector<int>(particleSize);
-		auto distanceToBoundaryList = std::vector<float>(particleSize);
-		auto initialPositionList = std::vector<glm::vec2>(particleSize);
+template <typename ParticleData>
+void StrandModelProfileSerializer<ParticleData>::Serialize(
+    YAML::Emitter& out, const StrandModelProfile<ParticleData>& strand_model_profile,
+    const std::function<void(YAML::Emitter& particle_out, const ParticleData& particle_data)>& particle_func) {
+  const auto particle_size = strand_model_profile.particles_2d_.size();
+  auto color_list = std::vector<glm::vec3>(particle_size);
+  auto position_list = std::vector<glm::vec2>(particle_size);
+  auto last_position_list = std::vector<glm::vec2>(particle_size);
+  auto acceleration_list = std::vector<glm::vec2>(particle_size);
+  auto delta_position_list = std::vector<glm::vec2>(particle_size);
+  auto boundary_list = std::vector<int>(particle_size);
+  auto distance_to_boundary_list = std::vector<float>(particle_size);
+  auto initial_position_list = std::vector<glm::vec2>(particle_size);
 
-		auto correspondingChildNodeHandleList = std::vector<SkeletonNodeHandle>(particleSize);
-		auto strandList = std::vector<StrandHandle>(particleSize);
-		auto strandSegmentHandleList = std::vector<StrandSegmentHandle>(particleSize);
-		auto mainChildList = std::vector<int>(particleSize);
-		auto baseList = std::vector<int>(particleSize);
+  auto corresponding_child_node_handle_list = std::vector<SkeletonNodeHandle>(particle_size);
+  auto strand_list = std::vector<StrandHandle>(particle_size);
+  auto strand_segment_handle_list = std::vector<StrandSegmentHandle>(particle_size);
+  auto main_child_list = std::vector<int>(particle_size);
+  auto base_list = std::vector<int>(particle_size);
 
+  for (int particle_index = 0; particle_index < particle_size; particle_index++) {
+    const auto& particle = strand_model_profile.particles_2d_[particle_index];
+    color_list[particle_index] = particle.color_;
+    position_list[particle_index] = particle.position_;
+    last_position_list[particle_index] = particle.last_position_;
+    acceleration_list[particle_index] = particle.acceleration_;
+    delta_position_list[particle_index] = particle.delta_position_;
 
-		for (int particleIndex = 0; particleIndex < particleSize; particleIndex++)
-		{
-			const auto& particle = strandModelProfile.m_particles2D[particleIndex];
-			colorList[particleIndex] = particle.m_color;
-			positionList[particleIndex] = particle.m_position;
-			lastPositionList[particleIndex] = particle.m_lastPosition;
-			accelerationList[particleIndex] = particle.m_acceleration;
-			deltaPositionList[particleIndex] = particle.m_deltaPosition;
+    boundary_list[particle_index] = particle.boundary_ ? 1 : 0;
+    distance_to_boundary_list[particle_index] = particle.distance_to_boundary_;
+    initial_position_list[particle_index] = particle.initial_position_;
 
-			boundaryList[particleIndex] = particle.m_boundary ? 1 : 0;
-			distanceToBoundaryList[particleIndex] = particle.m_distanceToBoundary;
-			initialPositionList[particleIndex] = particle.m_initialPosition;
+    corresponding_child_node_handle_list[particle_index] = particle.corresponding_child_node_handle;
+    strand_list[particle_index] = particle.strand_handle;
+    strand_segment_handle_list[particle_index] = particle.strand_segment_handle;
+    main_child_list[particle_index] = particle.main_child ? 1 : 0;
+    base_list[particle_index] = particle.base ? 1 : 0;
+  }
+  if (particle_size != 0) {
+    out << YAML::Key << "particles_2d_.color_" << YAML::Value
+        << YAML::Binary(reinterpret_cast<const unsigned char*>(color_list.data()),
+                        color_list.size() * sizeof(glm::vec3));
+    out << YAML::Key << "particles_2d_.position_" << YAML::Value
+        << YAML::Binary(reinterpret_cast<const unsigned char*>(position_list.data()),
+                        position_list.size() * sizeof(glm::vec2));
+    out << YAML::Key << "particles_2d_.last_position_" << YAML::Value
+        << YAML::Binary(reinterpret_cast<const unsigned char*>(last_position_list.data()),
+                        last_position_list.size() * sizeof(glm::vec2));
+    out << YAML::Key << "particles_2d_.acceleration_" << YAML::Value
+        << YAML::Binary(reinterpret_cast<const unsigned char*>(acceleration_list.data()),
+                        acceleration_list.size() * sizeof(glm::vec2));
+    out << YAML::Key << "particles_2d_.delta_position_" << YAML::Value
+        << YAML::Binary(reinterpret_cast<const unsigned char*>(delta_position_list.data()),
+                        delta_position_list.size() * sizeof(glm::vec2));
+    out << YAML::Key << "particles_2d_.boundary_" << YAML::Value
+        << YAML::Binary(reinterpret_cast<const unsigned char*>(boundary_list.data()),
+                        boundary_list.size() * sizeof(int));
+    out << YAML::Key << "particles_2d_.distance_to_boundary_" << YAML::Value
+        << YAML::Binary(reinterpret_cast<const unsigned char*>(distance_to_boundary_list.data()),
+                        distance_to_boundary_list.size() * sizeof(float));
+    out << YAML::Key << "particles_2d_.initial_position_" << YAML::Value
+        << YAML::Binary(reinterpret_cast<const unsigned char*>(initial_position_list.data()),
+                        initial_position_list.size() * sizeof(glm::vec2));
 
-			correspondingChildNodeHandleList[particleIndex] = particle.m_correspondingChildNodeHandle;
-			strandList[particleIndex] = particle.m_strandHandle;
-			strandSegmentHandleList[particleIndex] = particle.m_strandSegmentHandle;
-			mainChildList[particleIndex] = particle.m_mainChild ? 1 : 0;
-			baseList[particleIndex] = particle.m_base ? 1 : 0;
-		}
-		if (particleSize != 0) {
-			out << YAML::Key << "m_particles.m_color" << YAML::Value << YAML::Binary(
-				reinterpret_cast<const unsigned char*>(colorList.data()), colorList.size() * sizeof(glm::vec3));
-			out << YAML::Key << "m_particles.m_position" << YAML::Value << YAML::Binary(
-				reinterpret_cast<const unsigned char*>(positionList.data()), positionList.size() * sizeof(glm::vec2));
-			out << YAML::Key << "m_particles.m_lastPosition" << YAML::Value << YAML::Binary(
-				reinterpret_cast<const unsigned char*>(lastPositionList.data()), lastPositionList.size() * sizeof(glm::vec2));
-			out << YAML::Key << "m_particles.m_acceleration" << YAML::Value << YAML::Binary(
-				reinterpret_cast<const unsigned char*>(accelerationList.data()), accelerationList.size() * sizeof(glm::vec2));
-			out << YAML::Key << "m_particles.m_deltaPosition" << YAML::Value << YAML::Binary(
-				reinterpret_cast<const unsigned char*>(deltaPositionList.data()), deltaPositionList.size() * sizeof(glm::vec2));
-			out << YAML::Key << "m_particles.m_boundary" << YAML::Value << YAML::Binary(
-				reinterpret_cast<const unsigned char*>(boundaryList.data()), boundaryList.size() * sizeof(int));
-			out << YAML::Key << "m_particles.m_distanceToBoundary" << YAML::Value << YAML::Binary(
-				reinterpret_cast<const unsigned char*>(distanceToBoundaryList.data()), distanceToBoundaryList.size() * sizeof(float));
-			out << YAML::Key << "m_particles.m_initialPosition" << YAML::Value << YAML::Binary(
-				reinterpret_cast<const unsigned char*>(initialPositionList.data()), initialPositionList.size() * sizeof(glm::vec2));
+    out << YAML::Key << "particles_2d_.corresponding_child_node_handle" << YAML::Value
+        << YAML::Binary(reinterpret_cast<const unsigned char*>(corresponding_child_node_handle_list.data()),
+                        corresponding_child_node_handle_list.size() * sizeof(SkeletonNodeHandle));
+    out << YAML::Key << "particles_2d_.strand_handle" << YAML::Value
+        << YAML::Binary(reinterpret_cast<const unsigned char*>(strand_list.data()),
+                        strand_list.size() * sizeof(StrandHandle));
+    out << YAML::Key << "particles_2d_.strand_segment_handle" << YAML::Value
+        << YAML::Binary(reinterpret_cast<const unsigned char*>(strand_segment_handle_list.data()),
+                        strand_segment_handle_list.size() * sizeof(StrandSegmentHandle));
+    out << YAML::Key << "particles_2d_.main_child" << YAML::Value
+        << YAML::Binary(reinterpret_cast<const unsigned char*>(main_child_list.data()),
+                        main_child_list.size() * sizeof(int));
+    out << YAML::Key << "particles_2d_.base" << YAML::Value
+        << YAML::Binary(reinterpret_cast<const unsigned char*>(base_list.data()), base_list.size() * sizeof(int));
+  }
 
-			out << YAML::Key << "m_particles.m_correspondingChildNodeHandle" << YAML::Value << YAML::Binary(
-				reinterpret_cast<const unsigned char*>(correspondingChildNodeHandleList.data()), correspondingChildNodeHandleList.size() * sizeof(SkeletonNodeHandle));
-			out << YAML::Key << "m_particles.m_strandHandle" << YAML::Value << YAML::Binary(
-				reinterpret_cast<const unsigned char*>(strandList.data()), strandList.size() * sizeof(StrandHandle));
-			out << YAML::Key << "m_particles.m_strandSegmentHandle" << YAML::Value << YAML::Binary(
-				reinterpret_cast<const unsigned char*>(strandSegmentHandleList.data()), strandSegmentHandleList.size() * sizeof(StrandSegmentHandle));
-			out << YAML::Key << "m_particles.m_mainChild" << YAML::Value << YAML::Binary(
-				reinterpret_cast<const unsigned char*>(mainChildList.data()), mainChildList.size() * sizeof(int));
-			out << YAML::Key << "m_particles.m_base" << YAML::Value << YAML::Binary(
-				reinterpret_cast<const unsigned char*>(baseList.data()), baseList.size() * sizeof(int));
-		}
-
-		out << YAML::Key << "m_particles.m_data" << YAML::Value << YAML::BeginSeq;
-		for (const auto& particles2D : strandModelProfile.m_particles2D)
-		{
-			out << YAML::BeginMap;
-			{
-				particleFunc(out, particles2D.m_data);
-			}
-			out << YAML::EndMap;
-		}
-		out << YAML::EndSeq;
-	}
-
-	template <typename ParticleData>
-	void StrandModelProfileSerializer<ParticleData>::Deserialize(const YAML::Node& in,
-		StrandModelProfile<ParticleData>& strandModelProfile,
-		const std::function<void(const YAML::Node& particleIn, ParticleData& particleData)>& particleFunc)
-	{
-		if (in["m_particles.m_color"])
-		{
-			auto list = std::vector<glm::vec3>();
-			const auto data = in["m_particles.m_color"].as<YAML::Binary>();
-			list.resize(data.size() / sizeof(glm::vec3));
-			std::memcpy(list.data(), data.data(), data.size());
-
-			strandModelProfile.m_particles2D.resize(list.size());
-			for (size_t i = 0; i < list.size(); i++)
-			{
-				strandModelProfile.m_particles2D[i].m_color = list[i];
-			}
-		}
-
-		if (in["m_particles.m_position"])
-		{
-			auto list = std::vector<glm::vec2>();
-			const auto data = in["m_particles.m_position"].as<YAML::Binary>();
-			list.resize(data.size() / sizeof(glm::vec2));
-			std::memcpy(list.data(), data.data(), data.size());
-
-			for (size_t i = 0; i < list.size(); i++)
-			{
-				strandModelProfile.m_particles2D[i].m_position = list[i];
-			}
-		}
-
-		if (in["m_particles.m_lastPosition"])
-		{
-			auto list = std::vector<glm::vec2>();
-			const auto data = in["m_particles.m_lastPosition"].as<YAML::Binary>();
-			list.resize(data.size() / sizeof(glm::vec2));
-			std::memcpy(list.data(), data.data(), data.size());
-
-			for (size_t i = 0; i < list.size(); i++)
-			{
-				strandModelProfile.m_particles2D[i].m_lastPosition = list[i];
-			}
-		}
-
-		if (in["m_particles.m_acceleration"])
-		{
-			auto list = std::vector<glm::vec2>();
-			const auto data = in["m_particles.m_acceleration"].as<YAML::Binary>();
-			list.resize(data.size() / sizeof(glm::vec2));
-			std::memcpy(list.data(), data.data(), data.size());
-
-			for (size_t i = 0; i < list.size(); i++)
-			{
-				strandModelProfile.m_particles2D[i].m_acceleration = list[i];
-			}
-		}
-
-		if (in["m_particles.m_deltaPosition"])
-		{
-			auto list = std::vector<glm::vec2>();
-			const auto data = in["m_particles.m_deltaPosition"].as<YAML::Binary>();
-			list.resize(data.size() / sizeof(glm::vec2));
-			std::memcpy(list.data(), data.data(), data.size());
-
-			for (size_t i = 0; i < list.size(); i++)
-			{
-				strandModelProfile.m_particles2D[i].m_deltaPosition = list[i];
-			}
-		}
-
-		if (in["m_particles.m_boundary"])
-		{
-			auto list = std::vector<int>();
-			const auto data = in["m_particles.m_boundary"].as<YAML::Binary>();
-			list.resize(data.size() / sizeof(int));
-			std::memcpy(list.data(), data.data(), data.size());
-
-			for (size_t i = 0; i < list.size(); i++)
-			{
-				strandModelProfile.m_particles2D[i].m_boundary = list[i] == 1;
-			}
-		}
-
-		if (in["m_particles.m_distanceToBoundary"])
-		{
-			auto list = std::vector<float>();
-			const auto data = in["m_particles.m_distanceToBoundary"].as<YAML::Binary>();
-			list.resize(data.size() / sizeof(float));
-			std::memcpy(list.data(), data.data(), data.size());
-
-			for (size_t i = 0; i < list.size(); i++)
-			{
-				strandModelProfile.m_particles2D[i].m_distanceToBoundary = list[i];
-			}
-		}
-
-		if (in["m_particles.m_initialPosition"])
-		{
-			auto list = std::vector<glm::vec2>();
-			const auto data = in["m_particles.m_initialPosition"].as<YAML::Binary>();
-			list.resize(data.size() / sizeof(glm::vec2));
-			std::memcpy(list.data(), data.data(), data.size());
-
-			for (size_t i = 0; i < list.size(); i++)
-			{
-				strandModelProfile.m_particles2D[i].m_initialPosition = list[i];
-			}
-		}
-
-		if (in["m_particles.m_correspondingChildNodeHandle"])
-		{
-			auto list = std::vector<SkeletonNodeHandle>();
-			const auto data = in["m_particles.m_correspondingChildNodeHandle"].as<YAML::Binary>();
-			list.resize(data.size() / sizeof(SkeletonNodeHandle));
-			std::memcpy(list.data(), data.data(), data.size());
-
-			for (size_t i = 0; i < list.size(); i++)
-			{
-				strandModelProfile.m_particles2D[i].m_correspondingChildNodeHandle = list[i];
-			}
-		}
-
-		if (in["m_particles.m_strandHandle"])
-		{
-			auto list = std::vector<StrandHandle>();
-			const auto data = in["m_particles.m_strandHandle"].as<YAML::Binary>();
-			list.resize(data.size() / sizeof(StrandHandle));
-			std::memcpy(list.data(), data.data(), data.size());
-
-			for (size_t i = 0; i < list.size(); i++)
-			{
-				strandModelProfile.m_particles2D[i].m_strandHandle = list[i];
-			}
-		}
-
-		if (in["m_particles.m_strandSegmentHandle"])
-		{
-			auto list = std::vector<StrandSegmentHandle>();
-			const auto data = in["m_particles.m_strandSegmentHandle"].as<YAML::Binary>();
-			list.resize(data.size() / sizeof(StrandSegmentHandle));
-			std::memcpy(list.data(), data.data(), data.size());
-
-			for (size_t i = 0; i < list.size(); i++)
-			{
-				strandModelProfile.m_particles2D[i].m_strandSegmentHandle = list[i];
-			}
-		}
-
-		if (in["m_particles.m_mainChild"])
-		{
-			auto list = std::vector<int>();
-			const auto data = in["m_particles.m_mainChild"].as<YAML::Binary>();
-			list.resize(data.size() / sizeof(int));
-			std::memcpy(list.data(), data.data(), data.size());
-
-			for (size_t i = 0; i < list.size(); i++)
-			{
-				strandModelProfile.m_particles2D[i].m_mainChild = list[i] == 1;
-			}
-		}
-
-		if (in["m_particles.m_base"])
-		{
-			auto list = std::vector<int>();
-			const auto data = in["m_particles.m_base"].as<YAML::Binary>();
-			list.resize(data.size() / sizeof(int));
-			std::memcpy(list.data(), data.data(), data.size());
-
-			for (size_t i = 0; i < list.size(); i++)
-			{
-				strandModelProfile.m_particles2D[i].m_base = list[i] == 1;
-			}
-		}
-
-		if (in["m_particles.m_data"])
-		{
-			const auto& inParticleDataList = in["m_particles.m_data"];
-			ParticleHandle particleHandle = 0;
-			for (const auto& inParticle2D : inParticleDataList)
-			{
-				auto& particle2D = strandModelProfile.m_particles2D[particleHandle];
-				particle2D.m_handle = particleHandle;
-				particleFunc(inParticle2D, particle2D.m_data);
-				particleHandle++;
-			}
-		}
-	}
+  out << YAML::Key << "particles_2d_.data" << YAML::Value << YAML::BeginSeq;
+  for (const auto& particles_2d : strand_model_profile.particles_2d_) {
+    out << YAML::BeginMap;
+    { particle_func(out, particles_2d.data); }
+    out << YAML::EndMap;
+  }
+  out << YAML::EndSeq;
 }
+
+template <typename ParticleData>
+void StrandModelProfileSerializer<ParticleData>::Deserialize(
+    const YAML::Node& in, StrandModelProfile<ParticleData>& strand_model_profile,
+    const std::function<void(const YAML::Node& particle_in, ParticleData& particle_data)>& particle_func) {
+  if (in["particles_2d_.color_"]) {
+    auto list = std::vector<glm::vec3>();
+    const auto data = in["particles_2d_.color_"].as<YAML::Binary>();
+    list.resize(data.size() / sizeof(glm::vec3));
+    std::memcpy(list.data(), data.data(), data.size());
+
+    strand_model_profile.particles_2d_.resize(list.size());
+    for (size_t i = 0; i < list.size(); i++) {
+      strand_model_profile.particles_2d_[i].color_ = list[i];
+    }
+  }
+
+  if (in["particles_2d_.position_"]) {
+    auto list = std::vector<glm::vec2>();
+    const auto data = in["particles_2d_.position_"].as<YAML::Binary>();
+    list.resize(data.size() / sizeof(glm::vec2));
+    std::memcpy(list.data(), data.data(), data.size());
+
+    for (size_t i = 0; i < list.size(); i++) {
+      strand_model_profile.particles_2d_[i].position_ = list[i];
+    }
+  }
+
+  if (in["particles_2d_.last_position_"]) {
+    auto list = std::vector<glm::vec2>();
+    const auto data = in["particles_2d_.last_position_"].as<YAML::Binary>();
+    list.resize(data.size() / sizeof(glm::vec2));
+    std::memcpy(list.data(), data.data(), data.size());
+
+    for (size_t i = 0; i < list.size(); i++) {
+      strand_model_profile.particles_2d_[i].last_position_ = list[i];
+    }
+  }
+
+  if (in["particles_2d_.acceleration_"]) {
+    auto list = std::vector<glm::vec2>();
+    const auto data = in["particles_2d_.acceleration_"].as<YAML::Binary>();
+    list.resize(data.size() / sizeof(glm::vec2));
+    std::memcpy(list.data(), data.data(), data.size());
+
+    for (size_t i = 0; i < list.size(); i++) {
+      strand_model_profile.particles_2d_[i].acceleration_ = list[i];
+    }
+  }
+
+  if (in["particles_2d_.delta_position_"]) {
+    auto list = std::vector<glm::vec2>();
+    const auto data = in["particles_2d_.delta_position_"].as<YAML::Binary>();
+    list.resize(data.size() / sizeof(glm::vec2));
+    std::memcpy(list.data(), data.data(), data.size());
+
+    for (size_t i = 0; i < list.size(); i++) {
+      strand_model_profile.particles_2d_[i].delta_position_ = list[i];
+    }
+  }
+
+  if (in["particles_2d_.boundary_"]) {
+    auto list = std::vector<int>();
+    const auto data = in["particles_2d_.boundary_"].as<YAML::Binary>();
+    list.resize(data.size() / sizeof(int));
+    std::memcpy(list.data(), data.data(), data.size());
+
+    for (size_t i = 0; i < list.size(); i++) {
+      strand_model_profile.particles_2d_[i].boundary_ = list[i] == 1;
+    }
+  }
+
+  if (in["particles_2d_.distance_to_boundary_"]) {
+    auto list = std::vector<float>();
+    const auto data = in["particles_2d_.distance_to_boundary_"].as<YAML::Binary>();
+    list.resize(data.size() / sizeof(float));
+    std::memcpy(list.data(), data.data(), data.size());
+
+    for (size_t i = 0; i < list.size(); i++) {
+      strand_model_profile.particles_2d_[i].distance_to_boundary_ = list[i];
+    }
+  }
+
+  if (in["particles_2d_.initial_position_"]) {
+    auto list = std::vector<glm::vec2>();
+    const auto data = in["particles_2d_.initial_position_"].as<YAML::Binary>();
+    list.resize(data.size() / sizeof(glm::vec2));
+    std::memcpy(list.data(), data.data(), data.size());
+
+    for (size_t i = 0; i < list.size(); i++) {
+      strand_model_profile.particles_2d_[i].initial_position_ = list[i];
+    }
+  }
+
+  if (in["particles_2d_.corresponding_child_node_handle"]) {
+    auto list = std::vector<SkeletonNodeHandle>();
+    const auto data = in["particles_2d_.corresponding_child_node_handle"].as<YAML::Binary>();
+    list.resize(data.size() / sizeof(SkeletonNodeHandle));
+    std::memcpy(list.data(), data.data(), data.size());
+
+    for (size_t i = 0; i < list.size(); i++) {
+      strand_model_profile.particles_2d_[i].corresponding_child_node_handle = list[i];
+    }
+  }
+
+  if (in["particles_2d_.strand_handle"]) {
+    auto list = std::vector<StrandHandle>();
+    const auto data = in["particles_2d_.strand_handle"].as<YAML::Binary>();
+    list.resize(data.size() / sizeof(StrandHandle));
+    std::memcpy(list.data(), data.data(), data.size());
+
+    for (size_t i = 0; i < list.size(); i++) {
+      strand_model_profile.particles_2d_[i].strand_handle = list[i];
+    }
+  }
+
+  if (in["particles_2d_.strand_segment_handle"]) {
+    auto list = std::vector<StrandSegmentHandle>();
+    const auto data = in["particles_2d_.strand_segment_handle"].as<YAML::Binary>();
+    list.resize(data.size() / sizeof(StrandSegmentHandle));
+    std::memcpy(list.data(), data.data(), data.size());
+
+    for (size_t i = 0; i < list.size(); i++) {
+      strand_model_profile.particles_2d_[i].strand_segment_handle = list[i];
+    }
+  }
+
+  if (in["particles_2d_.main_child"]) {
+    auto list = std::vector<int>();
+    const auto data = in["particles_2d_.main_child"].as<YAML::Binary>();
+    list.resize(data.size() / sizeof(int));
+    std::memcpy(list.data(), data.data(), data.size());
+
+    for (size_t i = 0; i < list.size(); i++) {
+      strand_model_profile.particles_2d_[i].main_child = list[i] == 1;
+    }
+  }
+
+  if (in["particles_2d_.base"]) {
+    auto list = std::vector<int>();
+    const auto data = in["particles_2d_.base"].as<YAML::Binary>();
+    list.resize(data.size() / sizeof(int));
+    std::memcpy(list.data(), data.data(), data.size());
+
+    for (size_t i = 0; i < list.size(); i++) {
+      strand_model_profile.particles_2d_[i].base = list[i] == 1;
+    }
+  }
+
+  if (in["particles_2d_.data"]) {
+    const auto& in_particle_data_list = in["particles_2d_.data"];
+    ParticleHandle particle_handle = 0;
+    for (const auto& in_particle_2d : in_particle_data_list) {
+      auto& particle_2d = strand_model_profile.particles_2d_[particle_handle];
+      particle_2d.handle_ = particle_handle;
+      particle_func(in_particle_2d, particle_2d.data);
+      particle_handle++;
+    }
+  }
+}
+}  // namespace eco_sys_lab

@@ -2,58 +2,54 @@
 #include "CubeVolume.hpp"
 #include "Skeleton.hpp"
 #include "VoxelGrid.hpp"
-using namespace EvoEngine;
-namespace EcoSysLab
-{
-	class RadialBoundingVolume;
+using namespace evo_engine;
+namespace eco_sys_lab {
+class RadialBoundingVolume;
 
-	struct OccupancyGridSettings
-	{
-		
-	};
+struct OccupancyGridSettings {};
 
-	struct TreeOccupancyGridMarker
-	{
-		glm::vec3 m_position = glm::vec3(0.0f);
-		SkeletonNodeHandle m_nodeHandle = -1;
-	};
+struct TreeOccupancyGridMarker {
+  glm::vec3 position = glm::vec3(0.0f);
+  SkeletonNodeHandle node_handle = -1;
+};
 
-	struct TreeOccupancyGridVoxelData {
-		std::vector<TreeOccupancyGridMarker> m_markers;
-	};
+struct TreeOccupancyGridVoxelData {
+  std::vector<TreeOccupancyGridMarker> markers;
+};
 
-	struct TreeOccupancyGridBasicData
-	{
-		bool m_occupied = false;
-	};
+struct TreeOccupancyGridBasicData {
+  bool occupied = false;
+};
 
-	class TreeOccupancyGrid
-	{
-		VoxelGrid<TreeOccupancyGridVoxelData> m_occupancyGrid {};
-		float m_removalDistanceFactor = 2;
-		float m_theta = 90.0f;
-		float m_detectionDistanceFactor = 4;
-		float m_internodeLength = 1.0f;
-		size_t m_markersPerVoxel = 5;
-	public:
-		void ResetMarkers();
-		[[nodiscard]] float GetRemovalDistanceFactor() const;
-		[[nodiscard]] float GetTheta() const;
-		[[nodiscard]] float GetDetectionDistanceFactor() const;
-		[[nodiscard]] float GetInternodeLength() const;
-		[[nodiscard]] size_t GetMarkersPerVoxel() const;
+class TreeOccupancyGrid {
+  VoxelGrid<TreeOccupancyGridVoxelData> occupancy_grid_{};
+  float removal_distance_factor_ = 2;
+  float theta_ = 90.0f;
+  float detection_distance_factor_ = 4;
+  float internode_length_ = 1.0f;
+  size_t markers_per_voxel_ = 5;
 
-		void Initialize(const glm::vec3& min, const glm::vec3& max, float internodeLength,
-		                float removalDistanceFactor = 2.0f, float theta = 90.0f, float detectionDistanceFactor = 4.0f, size_t markersPerVoxel = 1);
-		void Resize(const glm::vec3 &min, const glm::vec3& max);
-		void Initialize(const VoxelGrid<TreeOccupancyGridBasicData>& srcGrid, const glm::vec3& min, const glm::vec3& max, float internodeLength,
-			float removalDistanceFactor = 2.0f, float theta = 90.0f, float detectionDistanceFactor = 4.0f, size_t markersPerVoxel = 1);
-		void Initialize(const std::shared_ptr<RadialBoundingVolume>& srcRadialBoundingVolume, const glm::vec3& min, const glm::vec3& max, float internodeLength,
-			float removalDistanceFactor = 2.0f, float theta = 90.0f, float detectionDistanceFactor = 4.0f, size_t markersPerVoxel = 1);
-		[[nodiscard]] VoxelGrid<TreeOccupancyGridVoxelData>& RefGrid();
-		[[nodiscard]] glm::vec3 GetMin() const;
-		[[nodiscard]] glm::vec3 GetMax() const;
+ public:
+  void ResetMarkers();
+  [[nodiscard]] float GetRemovalDistanceFactor() const;
+  [[nodiscard]] float GetTheta() const;
+  [[nodiscard]] float GetDetectionDistanceFactor() const;
+  [[nodiscard]] float GetInternodeLength() const;
+  [[nodiscard]] size_t GetMarkersPerVoxel() const;
 
-		void InsertObstacle(const GlobalTransform& globalTransform, const std::shared_ptr<CubeVolume>& cubeVolume);
-	};
-}
+  void Initialize(const glm::vec3& min, const glm::vec3& max, float internode_length, float removal_distance_factor = 2.0f,
+                  float theta = 90.0f, float detection_distance_factor = 4.0f, size_t markers_per_voxel = 1);
+  void Resize(const glm::vec3& min, const glm::vec3& max);
+  void Initialize(const VoxelGrid<TreeOccupancyGridBasicData>& src_grid, const glm::vec3& min, const glm::vec3& max,
+                  float internode_length, float removal_distance_factor = 2.0f, float theta = 90.0f,
+                  float detection_distance_factor = 4.0f, size_t markers_per_voxel = 1);
+  void Initialize(const std::shared_ptr<RadialBoundingVolume>& src_radial_bounding_volume, const glm::vec3& min,
+                  const glm::vec3& max, float internode_length, float removal_distance_factor = 2.0f, float theta = 90.0f,
+                  float detection_distance_factor = 4.0f, size_t markers_per_voxel = 1);
+  [[nodiscard]] VoxelGrid<TreeOccupancyGridVoxelData>& RefGrid();
+  [[nodiscard]] glm::vec3 GetMin() const;
+  [[nodiscard]] glm::vec3 GetMax() const;
+
+  void InsertObstacle(const GlobalTransform& global_transform, const std::shared_ptr<CubeVolume>& cube_volume);
+};
+}  // namespace eco_sys_lab

@@ -3,41 +3,39 @@
 
 #include "StrandModelData.hpp"
 #include "StrandModelProfile.hpp"
-using namespace EvoEngine;
-namespace EcoSysLab
-{
-	struct StrandModelParameters
-	{
-		float m_centerAttractionStrength = 40000;
+using namespace evo_engine;
+namespace eco_sys_lab {
+struct StrandModelParameters {
+  float center_attraction_strength = 40000;
 
-		int m_maxSimulationIterationCellFactor = 5;
-		int m_branchProfilePackingMaxIteration = 200;
-		int m_junctionProfilePackingMaxIteration = 500;
-		int m_modifiedProfilePackingMaxIteration = 1500;
+  int max_simulation_iteration_cell_factor = 5;
+  int branch_profile_packing_max_iteration = 200;
+  int junction_profile_packing_max_iteration = 500;
+  int modified_profile_packing_max_iteration = 1500;
 
-		float m_overlapThreshold = 0.1f;
-		int m_endNodeStrands = 1;
-		int m_strandsAlongBranch = 0;
-		bool m_preMerge = false;
+  float overlap_threshold = 0.1f;
+  int end_node_strands = 1;
+  int strands_along_branch = 0;
+  bool pre_merge = false;
 
-		int m_nodeMaxCount = -1;
+  int node_max_count = -1;
 
-		int m_boundaryPointDistance = 6;
+  int boundary_point_distance = 6;
 
-		glm::vec4 m_boundaryPointColor = glm::vec4(0.6f, 0.3f, 0, 1);
-		glm::vec4 m_contentPointColor = glm::vec4(0, 0.3, 0.0f, 1);
+  glm::vec4 boundary_point_color = glm::vec4(0.6f, 0.3f, 0, 1);
+  glm::vec4 content_point_color = glm::vec4(0, 0.3, 0.0f, 1);
 
-		float m_sidePushFactor = 1.0f;
-		float m_apicalSidePushFactor = 1.f;
-		float m_rotationPushFactor = 1.f;
-		float m_apicalBranchRotationPushFactor = 1.f;
+  float side_push_factor = 1.0f;
+  float apical_side_push_factor = 1.f;
+  float rotation_push_factor = 1.f;
+  float apical_branch_rotation_push_factor = 1.f;
 
-		PlottedDistribution<float> m_branchTwistDistribution{};
-		PlottedDistribution<float> m_junctionTwistDistribution{};
-		PlottedDistribution<float> m_strandRadiusDistribution {};
-		float m_cladoptosisRange = 10.0f;
-		PlottedDistribution<float> m_cladoptosisDistribution{};
+  PlottedDistribution<float> branch_twist_distribution{};
+  PlottedDistribution<float> junction_twist_distribution{};
+  PlottedDistribution<float> strand_radius_distribution{};
+  float cladoptosis_range = 10.0f;
+  PlottedDistribution<float> cladoptosis_distribution{};
 
-		ParticlePhysicsSettings m_profilePhysicsSettings{};
-	};
-}
+  ParticlePhysicsSettings profile_physics_settings{};
+};
+}  // namespace eco_sys_lab

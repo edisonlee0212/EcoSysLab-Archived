@@ -1,9 +1,8 @@
 #pragma once
 
-using namespace EvoEngine;
+using namespace evo_engine;
 
-
-namespace EcoSysLab
+namespace eco_sys_lab
 {
 	class SorghumDescriptor : public IAsset
 	{

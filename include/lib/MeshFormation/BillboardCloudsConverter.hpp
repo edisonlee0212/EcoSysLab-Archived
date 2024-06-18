@@ -2,11 +2,11 @@
 
 #include "BillboardCloud.hpp"
 #include "Skeleton.hpp"
-using namespace EvoEngine;
+using namespace evo_engine;
 
-namespace EcoSysLab{
-	class BillboardCloudsConverter : public IPrivateComponent {
-	public:
-		bool OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
-	};
-}
+namespace eco_sys_lab {
+class BillboardCloudsConverter : public IPrivateComponent {
+ public:
+  bool OnInspect(const std::shared_ptr<EditorLayer>& editor_layer) override;
+};
+}  // namespace eco_sys_lab

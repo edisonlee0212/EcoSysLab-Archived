@@ -1,171 +1,153 @@
 #pragma once
-#include "Skeleton.hpp"
 #include "EnvironmentGrid.hpp"
-#include "StrandModelParameters.hpp"
+#include "Octree.hpp"
 #include "ProfileConstraints.hpp"
+#include "Skeleton.hpp"
+#include "StrandModelParameters.hpp"
 #include "TreeOccupancyGrid.hpp"
-#include "Octree.hpp" 
-using namespace EvoEngine;
-namespace EcoSysLab
-{
+using namespace evo_engine;
+namespace eco_sys_lab {
 #pragma region Utilities
-	enum class BudType {
-		Apical,
-		Lateral,
-		Leaf,
-		Fruit
-	};
+enum class BudType { Apical, Lateral, Leaf, Fruit };
 
-	enum class BudStatus {
-		Dormant,
-		Died,
-	};
+enum class BudStatus {
+  Dormant,
+  Died,
+};
 
-	struct ReproductiveModule
-	{
-		float m_maturity = 0.0f;
-		float m_health = 1.0f;
-		glm::mat4 m_transform = glm::mat4(0.0f);
-		void Reset();
-	};
+struct ReproductiveModule {
+  float maturity = 0.0f;
+  float health = 1.0f;
+  glm::mat4 transform = glm::mat4(0.0f);
+  void Reset();
+};
 
-	class Bud {
-	public:
-		float m_flushingRate;// No Serialize
-		float m_extinctionRate;// No Serialize
+class Bud {
+ public:
+  float flushing_rate;    // No Serialize
+  float extinction_rate;  // No Serialize
 
-		BudType m_type = BudType::Apical;
-		BudStatus m_status = BudStatus::Dormant;
+  BudType type = BudType::Apical;
+  BudStatus status = BudStatus::Dormant;
 
-		glm::quat m_localRotation = glm::vec3(0.0f);
+  glm::quat local_rotation = glm::vec3(0.0f);
 
-		//-1.0 means the no fruit.
-		ReproductiveModule m_reproductiveModule;
-		glm::vec3 m_markerDirection = glm::vec3(0.0f);// No Serialize
-		size_t m_markerCount = 0;// No Serialize
-		float m_shootFlux = 0.0f;// No Serialize
-	};
+  //-1.0 means the no fruit.
+  ReproductiveModule reproductive_module;
+  glm::vec3 marker_direction = glm::vec3(0.0f);  // No Serialize
+  size_t marker_count = 0;                       // No Serialize
+  float shoot_flux = 0.0f;                       // No Serialize
+};
 
-	struct ShootFlux {
-		float m_value = 0.0f;
-	};
+struct ShootFlux {
+  float value = 0.0f;
+};
 
-	struct RootFlux {
-		float m_value = 0.0f;
-	};
+struct RootFlux {
+  float value = 0.0f;
+};
 
-	struct TreeVoxelData
-	{
-		SkeletonNodeHandle m_nodeHandle = -1;
-		SkeletonNodeHandle m_flowHandle = -1;
-		unsigned m_referenceCount = 0;
-	};
+struct TreeVoxelData {
+  SkeletonNodeHandle node_handle = -1;
+  SkeletonNodeHandle flow_handle = -1;
+  unsigned reference_count = 0;
+};
 
 #pragma endregion
-	
 
-	struct InternodeGrowthData {
-		
+struct InternodeGrowthData {
+  float internode_length = 0.0f;
+  int index_of_parent_bud = 0;
+  float start_age = 0;
+  float finish_age = 0.0f;
 
-		float m_internodeLength = 0.0f;
-		int m_indexOfParentBud = 0;
-		float m_startAge = 0;
-		float m_finishAge = 0.0f;
-		
-		glm::quat m_desiredLocalRotation = glm::vec3(0.0f);
-		glm::quat m_desiredGlobalRotation = glm::vec3(0.0f);
-		glm::vec3 m_desiredGlobalPosition = glm::vec3(0.0f);
+  glm::quat desired_local_rotation = glm::vec3(0.0f);
+  glm::quat desired_global_rotation = glm::vec3(0.0f);
+  glm::vec3 desired_global_position = glm::vec3(0.0f);
 
-		float m_saggingStress = 0;
-		float m_saggingForce = 0.f;
-		float m_sagging = 0;
-		int m_order = 0;
-		float m_extraMass = 0.0f;
-		float m_density = 1.f;
-		float m_strength = 1.f;
-		
+  float sagging_stress = 0;
+  float sagging_force = 0.f;
+  float sagging = 0;
+  int order = 0;
+  float extra_mass = 0.0f;
+  float density = 1.f;
+  float strength = 1.f;
 
-		/**
-		 * List of buds, first one will always be the apical bud which points forward.
-		 */
-		std::vector<Bud> m_buds;
-		std::vector<glm::mat4> m_leaves;
-		std::vector<glm::mat4> m_fruits;
-		
-		int m_level = 0;// No Serialize
-		bool m_maxChild = false;// No Serialize
-		float m_descendantTotalBiomass = 0;// No Serialize
-		float m_biomass = 0;// No Serialize
-		glm::vec3 m_desiredDescendantWeightCenter = glm::vec3(0.f);
-		glm::vec3 m_descendantWeightCenter = glm::vec3(0.f);
-		float m_temperature = 0.0f;// No Serialize
-		float m_inhibitorSink = 0;// No Serialize
-		float m_lightIntensity = 1.0f;// No Serialize
-		float m_maxDescendantLightIntensity = 0.f;//No Serialize
-		glm::vec3 m_lightDirection = glm::vec3(0, 1, 0);// No Serialize
-		float m_growthPotential = 0.0f;// No Serialize
-		float m_desiredGrowthRate = 0.0f;// No Serialize
-		float m_growthRate = 0.0f;// No Serialize
-		float m_spaceOccupancy = 0.0f;
-	};
+  /**
+   * List of buds, first one will always be the apical bud which points forward.
+   */
+  std::vector<Bud> buds;
+  std::vector<glm::mat4> leaves;
+  std::vector<glm::mat4> fruits;
 
-	struct ShootStemGrowthData {
-		int m_order = 0;
-	};
+  int level = 0;                     // No Serialize
+  bool max_child = false;             // No Serialize
+  float descendant_total_biomass = 0;  // No Serialize
+  float biomass = 0;                 // No Serialize
+  glm::vec3 desired_descendant_weight_center = glm::vec3(0.f);
+  glm::vec3 descendant_weight_center = glm::vec3(0.f);
+  float temperature = 0.0f;                       // No Serialize
+  float inhibitor_sink = 0;                        // No Serialize
+  float light_intensity = 1.0f;                    // No Serialize
+  float max_descendant_light_intensity = 0.f;        // No Serialize
+  glm::vec3 light_direction = glm::vec3(0, 1, 0);  // No Serialize
+  float growth_potential = 0.0f;                   // No Serialize
+  float desired_growth_rate = 0.0f;                 // No Serialize
+  float growth_rate = 0.0f;                        // No Serialize
+  float space_occupancy = 0.0f;
+};
 
-	struct ShootGrowthData {
-		Octree<TreeVoxelData> m_octree = {};
+struct ShootStemGrowthData {
+  int order = 0;
+};
 
-		size_t m_maxMarkerCount = 0;
+struct ShootGrowthData {
+  Octree<TreeVoxelData> octree = {};
 
-		std::vector<ReproductiveModule> m_droppedLeaves;
-		std::vector<ReproductiveModule> m_droppedFruits;
+  size_t max_marker_count = 0;
 
-		glm::vec3 m_desiredMin = glm::vec3(FLT_MAX);
-		glm::vec3 m_desiredMax = glm::vec3(FLT_MIN);
+  std::vector<ReproductiveModule> dropped_leaves;
+  std::vector<ReproductiveModule> dropped_fruits;
 
-		int m_maxLevel = 0;
-		int m_maxOrder = 0;
+  glm::vec3 desired_min = glm::vec3(FLT_MAX);
+  glm::vec3 desired_max = glm::vec3(FLT_MIN);
 
-		unsigned m_index = 0;
-	};
+  int max_level = 0;
+  int max_order = 0;
 
+  unsigned index = 0;
+};
 
-	typedef Skeleton<ShootGrowthData, ShootStemGrowthData, InternodeGrowthData> ShootSkeleton;
+typedef Skeleton<ShootGrowthData, ShootStemGrowthData, InternodeGrowthData> ShootSkeleton;
 
-	struct StrandModelNodeData
-	{
-		StrandModelProfile<CellParticlePhysicsData> m_profile{};
-		std::unordered_map<StrandHandle, ParticleHandle> m_particleMap{};
-		bool m_boundariesUpdated = false;
-		ProfileConstraints m_profileConstraints{};
+struct StrandModelNodeData {
+  StrandModelProfile<CellParticlePhysicsData> profile{};
+  std::unordered_map<StrandHandle, ParticleHandle> particle_map{};
+  bool boundaries_updated = false;
+  ProfileConstraints profile_constraints{};
 
-		float m_frontControlPointDistance = 0.0f;
-		float m_backControlPointDistance = 0.0f;
+  float front_control_point_distance = 0.0f;
+  float back_control_point_distance = 0.0f;
 
-		float m_centerDirectionRadius = 0.0f;
+  float center_direction_radius = 0.0f;
 
-		glm::vec2 m_offset = glm::vec2(0.0f);
-		float m_twistAngle = 0.0f;
-		int m_packingIteration = 0;
-		bool m_split = false;
-		
-		float m_strandRadius = 0.002f;
-		int m_strandCount = 0;
+  glm::vec2 offset = glm::vec2(0.0f);
+  float twist_angle = 0.0f;
+  int packing_iteration = 0;
+  bool split = false;
 
-		JobHandle m_job = {};
-	};
+  float strand_radius = 0.002f;
+  int strand_count = 0;
 
-	struct StrandModelFlowData
-	{
+  JobHandle job = {};
+};
 
-	};
+struct StrandModelFlowData {};
 
-	struct StrandModelSkeletonData
-	{
-		StrandModelStrandGroup m_strandGroup{};
-		int m_numOfParticles = 0;
-	};
+struct StrandModelSkeletonData {
+  StrandModelStrandGroup strand_group{};
+  int num_of_particles = 0;
+};
 
-	typedef Skeleton<StrandModelSkeletonData, StrandModelFlowData, StrandModelNodeData> StrandModelSkeleton;
-}
+typedef Skeleton<StrandModelSkeletonData, StrandModelFlowData, StrandModelNodeData> StrandModelSkeleton;
+}  // namespace eco_sys_lab

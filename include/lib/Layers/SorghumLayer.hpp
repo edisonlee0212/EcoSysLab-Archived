@@ -1,65 +1,61 @@
 #pragma once
 #ifdef BUILD_WITH_RAYTRACER
-#include <CUDAModule.hpp>
+#  include <CUDAModule.hpp>
 #endif
 #include "ILayer.hpp"
 #include "PointCloud.hpp"
 #include "SorghumField.hpp"
 #include "SorghumState.hpp"
-using namespace EvoEngine;
-namespace EcoSysLab {
-	class SorghumLayer : public ILayer {
-		static void ObjExportHelper(glm::vec3 position, std::shared_ptr<Mesh> mesh,
-			std::ofstream& of, unsigned& startIndex);
+using namespace evo_engine;
+namespace eco_sys_lab {
+class SorghumLayer : public ILayer {
+  static void ObjExportHelper(glm::vec3 position, std::shared_ptr<Mesh> mesh, std::ofstream& of, unsigned& start_index);
 
-	public:
+ public:
 #ifdef BUILD_WITH_RAYTRACER
-#pragma region Illumination
-		int m_seed = 0;
-		float m_pushDistance = 0.001f;
-		RayProperties m_rayProperties;
+#  pragma region Illumination
+  int m_seed = 0;
+  float push_distance = 0.001f;
+  RayProperties ray_properties;
 
-		bool m_enableCompressedBTF = false;
-		std::vector<Entity> m_processingEntities;
-		int m_processingIndex;
-		bool m_processing = false;
-		float m_lightProbeSize = 0.05f;
-		float m_perPlantCalculationTime = 0.0f;
-		void CalculateIlluminationFrameByFrame();
-		void CalculateIllumination();
+  bool enable_compressed_btf = false;
+  std::vector<Entity> processing_entities;
+  int processing_index;
+  bool processing = false;
+  float light_probe_size = 0.05f;
+  float per_plant_calculation_time = 0.0f;
+  void CalculateIlluminationFrameByFrame();
+  void CalculateIllumination();
 
-#pragma endregion
+#  pragma endregion
 #endif
-		SorghumMeshGeneratorSettings m_sorghumMeshGeneratorSettings;
-		bool m_autoRefreshSorghums = true;
-		
-		AssetRef m_panicleMaterial;
+  SorghumMeshGeneratorSettings sorghum_mesh_generator_settings;
+  bool auto_refresh_sorghums = true;
 
-		AssetRef m_leafBottomFaceMaterial;
-		AssetRef m_leafMaterial;
-		AssetRef m_leafCBTFGroup;
+  AssetRef panicle_material;
 
-		AssetRef m_leafAlbedoTexture;
-		AssetRef m_leafNormalTexture;
-		AssetRef m_segmentedLeafMaterials[25];
+  AssetRef leaf_bottom_face_material;
+  AssetRef leaf_material;
+  AssetRef leaf_cbtf_group;
 
-		float m_verticalSubdivisionLength = 0.01f;
-		int m_horizontalSubdivisionStep = 4;
-		float m_skeletonWidth = 0.0025f;
+  AssetRef leaf_albedo_texture;
+  AssetRef leaf_normal_texture;
+  AssetRef segmented_leaf_materials[25];
 
-		glm::vec3 m_skeletonColor = glm::vec3(0);
+  float vertical_subdivision_length = 0.01f;
+  int horizontal_subdivision_step = 4;
+  float skeleton_width = 0.0025f;
 
-		void OnCreate() override;
-		void GenerateMeshForAllSorghums(const SorghumMeshGeneratorSettings& sorghumMeshGeneratorSettings) const;
-		void OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
-		void Update() override;
-		void LateUpdate() override;
+  glm::vec3 skeleton_color = glm::vec3(0);
 
-		static void ExportSorghum(const Entity& sorghum, std::ofstream& of,
-			unsigned& startIndex);
-		void ExportAllSorghumsModel(const std::string& filename);
+  void OnCreate() override;
+  void GenerateMeshForAllSorghums(const SorghumMeshGeneratorSettings& sorghum_mesh_generator_settings) const;
+  void OnInspect(const std::shared_ptr<EditorLayer>& editor_layer) override;
+  void Update() override;
+  void LateUpdate() override;
 
+  static void ExportSorghum(const Entity& sorghum, std::ofstream& of, unsigned& start_index);
+  void ExportAllSorghumsModel(const std::string& filename);
+};
 
-	};
-
-} // namespace EcoSysLab
+}  // namespace eco_sys_lab

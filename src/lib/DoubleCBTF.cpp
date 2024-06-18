@@ -4,26 +4,28 @@
 
 #include "DoubleCBTF.hpp"
 #ifdef BUILD_WITH_RAYTRACER
-#include "CompressedBTF.hpp"
+#  include "CompressedBTF.hpp"
 #endif
-using namespace EcoSysLab;
-bool DoubleCBTF::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
-	bool changed = false;
+using namespace eco_sys_lab;
+bool DoubleCBTF::OnInspect(const std::shared_ptr<EditorLayer>& editor_layer) {
+  bool changed = false;
 #ifdef BUILD_WITH_RAYTRACER
-	if (editorLayer->DragAndDropButton<CompressedBTF>(m_top, "Top")) changed = true;
-	if (editorLayer->DragAndDropButton<CompressedBTF>(m_bottom, "Bottom")) changed = true;
+  if (editor_layer->DragAndDropButton<CompressedBTF>(top, "Top"))
+    changed = true;
+  if (editor_layer->DragAndDropButton<CompressedBTF>(bottom, "Bottom"))
+    changed = true;
 #endif
-	return changed;
+  return changed;
 }
 void DoubleCBTF::CollectAssetRef(std::vector<AssetRef>& list) {
-	list.push_back(m_top);
-	list.push_back(m_bottom);
+  list.push_back(top);
+  list.push_back(bottom);
 }
 void DoubleCBTF::Serialize(YAML::Emitter& out) const {
-	m_top.Save("m_top", out);
-	m_bottom.Save("m_bottom", out);
+  top.Save("m_top", out);
+  bottom.Save("bottom", out);
 }
 void DoubleCBTF::Deserialize(const YAML::Node& in) {
-	m_top.Load("m_top", in);
-	m_bottom.Load("m_bottom", in);
+  top.Load("m_top", in);
+  bottom.Load("bottom", in);
 }

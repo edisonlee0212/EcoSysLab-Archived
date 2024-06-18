@@ -1,26 +1,24 @@
 #pragma once
-using namespace EvoEngine;
-namespace EcoSysLab {
-	class TreeDescriptor : public IAsset {
-	public:
-		AssetRef m_shootDescriptor;
-		AssetRef m_foliageDescriptor;
-		
-		AssetRef m_fruitDescriptor;
-		AssetRef m_flowerDescriptor;
+using namespace evo_engine;
+namespace eco_sys_lab {
+class TreeDescriptor : public IAsset {
+ public:
+  AssetRef m_shootDescriptor;
+  AssetRef m_foliageDescriptor;
 
-		AssetRef m_barkDescriptor;
-		void OnCreate() override;
+  AssetRef m_fruitDescriptor;
+  AssetRef m_flowerDescriptor;
 
-		bool OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
+  AssetRef m_barkDescriptor;
+  void OnCreate() override;
 
-		void CollectAssetRef(std::vector<AssetRef>& list) override;
+  bool OnInspect(const std::shared_ptr<EditorLayer>& editor_layer) override;
 
-		void Serialize(YAML::Emitter& out) const override;
+  void CollectAssetRef(std::vector<AssetRef>& list) override;
 
-		void Deserialize(const YAML::Node& in) override;
+  void Serialize(YAML::Emitter& out) const override;
 
-	};
+  void Deserialize(const YAML::Node& in) override;
+};
 
-
-}
+}  // namespace eco_sys_lab

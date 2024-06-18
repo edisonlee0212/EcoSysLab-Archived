@@ -1,16 +1,16 @@
 #pragma once
 #ifdef BUILD_WITH_RAYTRACER
 
-#include <CUDAModule.hpp>
-using namespace EvoEngine;
-namespace EcoSysLab {
+#  include <CUDAModule.hpp>
+using namespace evo_engine;
+namespace eco_sys_lab {
 class PARSensorGroup : public IAsset {
-public:
+ public:
   std::vector<IlluminationSampler<glm::vec3>> m_samplers;
-  void CalculateIllumination(const RayProperties& rayProperties, int seed, float pushNormalDistance);
-  bool OnInspect(const std::shared_ptr<EditorLayer>& editorLayer);
-  void Serialize(YAML::Emitter &out) const override;
-  void Deserialize(const YAML::Node &in) override;
+  void CalculateIllumination(const RayProperties& ray_properties, int seed, float push_normal_distance);
+  bool OnInspect(const std::shared_ptr<EditorLayer>& editor_layer);
+  void Serialize(YAML::Emitter& out) const override;
+  void Deserialize(const YAML::Node& in) override;
 };
-} // namespace EcoSysLab
+}  // namespace eco_sys_lab
 #endif

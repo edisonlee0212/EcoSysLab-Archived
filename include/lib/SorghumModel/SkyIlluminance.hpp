@@ -1,7 +1,7 @@
 #pragma once
 
-using namespace EvoEngine;
-namespace EcoSysLab {
+using namespace evo_engine;
+namespace eco_sys_lab {
 struct SkyIlluminanceSnapshot {
   float m_ghi = 1000;
   float m_azimuth = 0;
@@ -10,14 +10,14 @@ struct SkyIlluminanceSnapshot {
   [[nodiscard]] float GetSunIntensity();
 };
 class SkyIlluminance : public IAsset {
-public:
+ public:
   std::map<float, SkyIlluminanceSnapshot> m_snapshots;
   float m_minTime;
   float m_maxTime;
   [[nodiscard]] SkyIlluminanceSnapshot Get(float time);
-  void ImportCSV(const std::filesystem::path &path);
-  bool OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
+  void ImportCsv(const std::filesystem::path &path);
+  bool OnInspect(const std::shared_ptr<EditorLayer> &editor_layer) override;
   void Serialize(YAML::Emitter &out) const override;
   void Deserialize(const YAML::Node &in) override;
 };
-} // namespace EcoSysLab
+}  // namespace eco_sys_lab

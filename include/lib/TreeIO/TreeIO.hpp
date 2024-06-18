@@ -8,5 +8,5 @@
 #include "TreeIOUtils.hpp"
 #include "TreeIOVectorT.hpp"
 
-#include "TreeIOTree.hpp"
 #include "TreeIOChains.hpp"
+#include "TreeIOTree.hpp"

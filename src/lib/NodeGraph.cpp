@@ -1,3 +1,3 @@
 #include "NodeGraph.hpp"
 
-using namespace EvoEngine;
+using namespace evo_engine;
