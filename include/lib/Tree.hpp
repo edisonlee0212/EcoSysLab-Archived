@@ -244,9 +244,9 @@ void Tree::FromSkeleton(const Skeleton<SrcSkeletonData, SrcFlowData, SrcNodeData
     td = ProjectManager::CreateTemporaryAsset<TreeDescriptor>();
     tree_descriptor = td;
     const auto shoot_descriptor = ProjectManager::CreateTemporaryAsset<ShootDescriptor>();
-    td->m_shootDescriptor = shoot_descriptor;
+    td->shoot_descriptor = shoot_descriptor;
     const auto foliage_descriptor = ProjectManager::CreateTemporaryAsset<FoliageDescriptor>();
-    td->m_foliageDescriptor = foliage_descriptor;
+    td->foliage_descriptor = foliage_descriptor;
   }
   tree_model.Initialize(src_skeleton);
   // TODO: Set up buds here.

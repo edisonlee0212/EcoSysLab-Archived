@@ -68,9 +68,9 @@ void forest_patch_point_cloud() {
   start_project_windowless(project_path);
 
   TreeMeshGeneratorSettings tmgs{};
-  tmgs.m_branchYSubdivision = 0.05f;
-  tmgs.m_trunkYSubdivision = 0.05f;
-  tmgs.m_enableFoliage = true;
+  tmgs.branch_y_subdivision = 0.05f;
+  tmgs.trunk_y_subdivision = 0.05f;
+  tmgs.enable_foliage = true;
   tmgs.vertex_color_mode = static_cast<unsigned>(TreeMeshGeneratorSettings::VertexColorMode::Junction);
   std::filesystem::path output_root = "D:\\ForestPointCloudData\\";
 
@@ -121,9 +121,9 @@ void forest_patch_point_cloud() {
 void forest_patch_point_cloud_joined(const std::string& folderName, const bool exportJunction, const int count,
                                      const int gridSideCount) {
   TreeMeshGeneratorSettings tmgs{};
-  tmgs.m_branchYSubdivision = 0.05f;
-  tmgs.m_trunkYSubdivision = 0.05f;
-  tmgs.m_enableFoliage = true;
+  tmgs.branch_y_subdivision = 0.05f;
+  tmgs.trunk_y_subdivision = 0.05f;
+  tmgs.enable_foliage = true;
   tmgs.vertex_color_mode = exportJunction
                                ? static_cast<unsigned>(TreeMeshGeneratorSettings::VertexColorMode::Junction)
                                : static_cast<unsigned>(TreeMeshGeneratorSettings::VertexColorMode::InternodeColor);
@@ -240,15 +240,15 @@ void tree_trunk_mesh() {
   start_project_windowless(project_path);
 
   TreeMeshGeneratorSettings tmgs{};
-  tmgs.m_xSubdivision = 0.01f;
-  tmgs.m_branchYSubdivision = 0.03f;
-  tmgs.m_trunkYSubdivision = 0.01f;
-  tmgs.m_enableFoliage = true;
+  tmgs.x_subdivision = 0.01f;
+  tmgs.branch_y_subdivision = 0.03f;
+  tmgs.trunk_y_subdivision = 0.01f;
+  tmgs.enable_foliage = true;
 
   std::filesystem::path output_root = "D:\\TreeTrunkData\\";
   std::filesystem::create_directories(output_root);
 
-  tmgs.m_enableFoliage = false;
+  tmgs.enable_foliage = false;
   std::filesystem::path target_descriptor_folder_path = resourceFolderPath / "EcoSysLabProject" / "Trunk";
   std::vector<std::shared_ptr<TreeDescriptor>> collectedTreeDescriptors{};
   for (const auto& i : std::filesystem::recursive_directory_iterator(target_descriptor_folder_path)) {
@@ -283,14 +283,14 @@ void tree_growth_mesh() {
   start_project_windowless(project_path);
 
   TreeMeshGeneratorSettings tmgs{};
-  tmgs.m_xSubdivision = 0.01f;
-  tmgs.m_branchYSubdivision = 0.03f;
-  tmgs.m_trunkYSubdivision = 0.01f;
-  tmgs.m_enableFoliage = true;
+  tmgs.x_subdivision = 0.01f;
+  tmgs.branch_y_subdivision = 0.03f;
+  tmgs.trunk_y_subdivision = 0.01f;
+  tmgs.enable_foliage = true;
 
   std::filesystem::path output_root = "D:\\TreeGrowth\\";
   std::filesystem::create_directories(output_root);
-  tmgs.m_enableFoliage = true;
+  tmgs.enable_foliage = true;
   std::filesystem::path target_descriptor_folder_path = resourceFolderPath / "EcoSysLabProject" / "TreeDescriptors";
   std::vector<std::shared_ptr<TreeDescriptor>> collectedTreeDescriptors{};
   for (const auto& i : std::filesystem::recursive_directory_iterator(target_descriptor_folder_path)) {
@@ -326,14 +326,14 @@ void apple_tree_growth() {
   start_project_windowless(project_path);
 
   TreeMeshGeneratorSettings tmgs{};
-  tmgs.m_xSubdivision = 0.01f;
-  tmgs.m_branchYSubdivision = 0.03f;
-  tmgs.m_trunkYSubdivision = 0.01f;
-  tmgs.m_enableFoliage = true;
+  tmgs.x_subdivision = 0.01f;
+  tmgs.branch_y_subdivision = 0.03f;
+  tmgs.trunk_y_subdivision = 0.01f;
+  tmgs.enable_foliage = true;
 
   std::filesystem::path output_root = "D:\\TreeGrowth\\";
   std::filesystem::create_directories(output_root);
-  tmgs.m_enableFoliage = true;
+  tmgs.enable_foliage = true;
   std::filesystem::path target_descriptor_path =
       resourceFolderPath / "EcoSysLabProject" / "TreeDescriptors" / "Apple.tree";
   std::vector<std::shared_ptr<TreeDescriptor>> collectedTreeDescriptors{};

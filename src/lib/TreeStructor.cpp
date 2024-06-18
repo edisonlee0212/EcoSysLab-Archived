@@ -2235,7 +2235,7 @@ std::vector<std::shared_ptr<Mesh>> TreeStructor::GenerateFoliageMeshes() {
     auto quadVerticesSize = quadMesh->GetVerticesAmount();
     if (const auto treeDescriptor = tree_descriptor.Get<TreeDescriptor>()) {
       size_t offset = 0;
-      auto foliageDescriptor = treeDescriptor->m_foliageDescriptor.Get<FoliageDescriptor>();
+      auto foliageDescriptor = treeDescriptor->foliage_descriptor.Get<FoliageDescriptor>();
       if (!foliageDescriptor)
         foliageDescriptor = ProjectManager::CreateTemporaryAsset<FoliageDescriptor>();
       const auto& nodeList = skeleton.PeekSortedNodeList();
@@ -2243,17 +2243,17 @@ std::vector<std::shared_ptr<Mesh>> TreeStructor::GenerateFoliageMeshes() {
         const auto& internode = skeleton.PeekNode(internodeHandle);
         const auto& internodeInfo = internode.info;
 
-        if (internodeInfo.thickness < foliageDescriptor->m_maxNodeThickness &&
-            internodeInfo.root_distance > foliageDescriptor->m_minRootDistance &&
-            internodeInfo.end_distance < foliageDescriptor->m_maxEndDistance) {
-          for (int i = 0; i < foliageDescriptor->m_leafCountPerInternode; i++) {
-            auto leafSize = foliageDescriptor->m_leafSize;
+        if (internodeInfo.thickness < foliageDescriptor->max_node_thickness &&
+            internodeInfo.root_distance > foliageDescriptor->min_root_distance &&
+            internodeInfo.end_distance < foliageDescriptor->max_end_distance) {
+          for (int i = 0; i < foliageDescriptor->leaf_count_per_internode; i++) {
+            auto leafSize = foliageDescriptor->leaf_size;
             glm::quat rotation = internodeInfo.GetGlobalDirection() *
                                  glm::quat(glm::radians(glm::linearRand(glm::vec3(0.0f), glm::vec3(360.0f))));
             auto front = rotation * glm::vec3(0, 0, -1);
             auto foliagePosition =
                 internodeInfo.global_position + front * (leafSize.y * 1.5f) +
-                glm::sphericalRand(1.0f) * glm::linearRand(0.0f, foliageDescriptor->m_positionVariance);
+                glm::sphericalRand(1.0f) * glm::linearRand(0.0f, foliageDescriptor->position_variance);
             auto leafTransform = glm::translate(foliagePosition) * glm::mat4_cast(rotation) *
                                  glm::scale(glm::vec3(leafSize.x, 1.0f, leafSize.y));
 

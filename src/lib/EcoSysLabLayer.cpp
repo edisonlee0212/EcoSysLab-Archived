@@ -21,7 +21,6 @@
 #include "Json.hpp"
 #include "LogGrader.hpp"
 #include "RenderLayer.hpp"
-#include "ShootDescriptorGenerator.hpp"
 #include "Soil.hpp"
 #include "SpatialPlantDistributionSimulator.hpp"
 #include "StrandsRenderer.hpp"
@@ -47,7 +46,6 @@ void EcoSysLabLayer::OnCreate() {
   ClassRegistry::RegisterAsset<FruitDescriptor>("FruitDescriptor", {".fruit"});
   ClassRegistry::RegisterAsset<FlowerDescriptor>("FlowerDescriptor", {".flower"});
   ClassRegistry::RegisterAsset<FoliageDescriptor>("FoliageDescriptor", {".foliage"});
-  ClassRegistry::RegisterAsset<ShootDescriptorGenerator>("ShootDescriptorGenerator", {".sdg"});
   ClassRegistry::RegisterAsset<SoilDescriptor>("SoilDescriptor", {".sd"});
   ClassRegistry::RegisterAsset<ClimateDescriptor>("ClimateDescriptor", {".cd"});
   ClassRegistry::RegisterAsset<RadialBoundingVolume>("RadialBoundingVolume", {".rbv"});

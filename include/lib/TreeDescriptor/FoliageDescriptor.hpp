@@ -8,20 +8,19 @@ namespace eco_sys_lab {
 
 class FoliageDescriptor : public IAsset {
  public:
-  glm::vec2 m_leafSize = glm::vec2(0.02f, 0.04f);
-  int m_leafCountPerInternode = 5;
-  float m_positionVariance = 0.175f;
-  float m_rotationVariance = 10.f;
-  float m_branchingAngle = 30.f;
-  float m_maxNodeThickness = 1.0f;
-  float m_minRootDistance = 0.0f;
-  float m_maxEndDistance = 0.2f;
+  glm::vec2 leaf_size = glm::vec2(0.04f, 0.08f);
+  int leaf_count_per_internode = 5;
+  float position_variance = 0.175f;
+  float rotation_variance = 10.f;
+  float branching_angle = 30.f;
+  float max_node_thickness = 1.0f;
+  float min_root_distance = 0.0f;
+  float max_end_distance = 0.2f;
 
-  float m_horizontalTropism = 0.f;
-  float m_gravitropism = 0.f;
+  float horizontal_tropism = 0.f;
+  float gravitropism = 0.f;
 
-  AssetRef m_leafMaterial;
-  AssetRef m_twigMaterial;
+  AssetRef leaf_material;
   void Serialize(YAML::Emitter& out) const override;
   void Deserialize(const YAML::Node& in) override;
   bool OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;

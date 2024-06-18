@@ -498,7 +498,7 @@ void RadialBoundingVolume::Deserialize(const YAML::Node& in) {
 
 void RadialBoundingVolume::Serialize(YAML::Emitter& out) const {
   IVolume::Serialize(out);
-  out << YAML::Key << "m_offset" << YAML::Value << m_offset;
+  out << YAML::Key << "offset" << YAML::Value << m_offset;
   out << YAML::Key << "m_displayColor" << YAML::Value << m_displayColor;
   out << YAML::Key << "m_maxHeight" << YAML::Value << m_maxHeight;
   out << YAML::Key << "m_maxRadius" << YAML::Value << m_maxRadius;

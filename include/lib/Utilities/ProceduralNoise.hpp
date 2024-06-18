@@ -43,7 +43,7 @@ void ProceduralNoiseStage<T>::Serialize(YAML::Emitter& out) const {
   out << YAML::Key << "m_name" << YAML::Value << m_name;
   out << YAML::Key << "m_operatorType" << YAML::Value << static_cast<unsigned>(m_operatorType);
   out << YAML::Key << "m_valueType" << YAML::Value << static_cast<unsigned>(m_valueType);
-  out << YAML::Key << "m_frequency" << YAML::Value << m_frequency;
+  out << YAML::Key << "frequency" << YAML::Value << m_frequency;
   out << YAML::Key << "m_constantValue" << YAML::Value << m_constantValue;
   out << YAML::Key << "m_offset" << YAML::Value << m_offset;
 }

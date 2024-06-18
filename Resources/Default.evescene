@@ -1,0 +1,172 @@
+environment:
+  background_color: [1, 1, 1]
+  environment_gamma: 2.20000005
+  ambient_light_intensity: 0.800000012
+  environment_type: 0
+  environmental_map:
+    asset_handle_: 0
+    asset_type_name_: ""
+main_camera:
+  entity_handle_: 2334391805665614709
+  private_component_type_name_: Camera
+entity_metadata_list:
+  - n: Main Camera
+    h: 2334391805665614709
+    e: true
+    s: false
+    r: 2334391805665614709
+    pc:
+      - tn: Camera
+        e: true
+        x: 1
+        y: 1
+        use_clear_color: false
+        clear_color: [0, 0, 0]
+        near_distance: 0.100000001
+        far_distance: 200
+        fov: 120
+        skybox:
+          asset_handle_: 77
+          asset_type_name_: Cubemap
+        post_processing_stack:
+          asset_handle_: 0
+          asset_type_name_: ""
+  - n: Directional Light
+    h: 15689590790380037193
+    e: true
+    s: false
+    r: 15689590790380037193
+    pc:
+      - tn: DirectionalLight
+        e: true
+        cast_shadow: true
+        bias: 0.100000001
+        diffuse: [1, 1, 1]
+        diffuse_brightness: 1
+        light_size: 0.00999999978
+        normal_offset: 0.0500000007
+  - n: Ground
+    h: 444343611219061237
+    e: true
+    s: false
+    r: 444343611219061237
+    pc:
+      - tn: MeshRenderer
+        e: true
+        cast_shadow: true
+        mesh:
+          asset_handle_: 67
+          asset_type_name_: Mesh
+        material:
+          asset_handle_: 3098275353797694225
+          asset_type_name_: Material
+  - n: Soil
+    h: 17806196891871106610
+    e: true
+    s: false
+    r: 17806196891871106610
+    pc:
+      - tn: Soil
+        e: true
+        soil_descriptor:
+          asset_handle_: 0
+          asset_type_name_: SoilDescriptor
+  - n: Climate
+    h: 5793894327608114630
+    e: true
+    s: false
+    r: 5793894327608114630
+    pc:
+      - tn: Climate
+        e: true
+        m_climateDescriptor:
+          asset_handle_: 0
+          asset_type_name_: ClimateDescriptor
+systems_:
+  - type_name: PhysicsSystem
+    enabled_: true
+    rank_: 1
+    handle_: 5682587515066563680
+LocalAssets:
+  - type_name: Material
+    handle: 3098275353797694225
+    albedo_texture_:
+      asset_handle_: 0
+      asset_type_name_: ""
+    normal_texture_:
+      asset_handle_: 0
+      asset_type_name_: ""
+    metallic_texture_:
+      asset_handle_: 0
+      asset_type_name_: ""
+    roughness_texture_:
+      asset_handle_: 0
+      asset_type_name_: ""
+    ao_texture_:
+      asset_handle_: 0
+      asset_type_name_: ""
+    draw_settings:
+      cull_mode: 0
+      line_width: 1
+      polygon_mode: 0
+      blending: false
+      blending_src_factor: 6
+      blending_dst_factor: 7
+    material_properties:
+      albedo_color: [1, 1, 1]
+      subsurface_color: [1, 1, 1]
+      subsurface_factor: 0
+      subsurface_radius: [1, 0.200000003, 0.100000001]
+      metallic: 0.100000001
+      specular: 0.5
+      specular_tint: 0
+      roughness: 0.300000012
+      sheen: 0
+      sheen_tint: 0.5
+      clear_coat: 0
+      clear_coat_roughness: 0.0299999993
+      ior: 1.45000005
+      transmission: 0
+      transmission_roughness: 0
+      emission: 0
+    vertex_color_only: false
+data_component_storage_list:
+  - entity_size: 130
+    chunk_capacity: 126
+    entity_alive_count: 5
+    data_component_types:
+      - type_name: Transform
+        type_size: 64
+        type_offset: 0
+      - type_name: GlobalTransform
+        type_size: 64
+        type_offset: 64
+      - type_name: TransformUpdateFlag
+        type_size: 2
+        type_offset: 128
+    chunk_array:
+      - h: 2334391805665614709
+        dc:
+          - d: !!binary "AACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAoEAAACBBAACAPw=="
+          - d: !!binary "AACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAoEAAACBBAACAPw=="
+          - d: !!binary "AAE="
+      - h: 15689590790380037193
+        dc:
+          - d: !!binary "AACAPwAAAAAAAAAAAAAAAAAAAAAAAIAz//9/PwAAAAAAAAAA//9/vwAAgDMAAAAAAAAAAAAAAAAAAAAAAACAPw=="
+          - d: !!binary "AACAPwAAAAAAAAAAAAAAAAAAAAAAAIAz//9/PwAAAAAAAAAA//9/vwAAgDMAAAAAAAAAAAAAAAAAAAAAAACAPw=="
+          - d: !!binary "AAE="
+      - h: 444343611219061237
+        dc:
+          - d: !!binary "AAAgQQAAAAAAAAAAAAAAAAAAAAD//38/AAAAAAAAAAAAAAAAAAAAAP//H0EAAAAAAAAAAAAAAAAAAAAAAACAPw=="
+          - d: !!binary "AAAgQQAAAAAAAAAAAAAAAAAAAAD//38/AAAAAAAAAAAAAAAAAAAAAP//H0EAAAAAAAAAAAAAAAAAAAAAAACAPw=="
+          - d: !!binary "AAE="
+      - h: 17806196891871106610
+        dc:
+          - d: !!binary "AACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPw=="
+          - d: !!binary "AACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPw=="
+          - d: !!binary "AAA="
+      - h: 5793894327608114630
+        dc:
+          - d: !!binary "AACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPw=="
+          - d: !!binary "AACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPw=="
+          - d: !!binary "AAA="

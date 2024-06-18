@@ -10,8 +10,8 @@ using namespace evo_engine;
 namespace eco_sys_lab {
 class HeightField : public IAsset {
  public:
-  Noise2D m_noises2D;
-  int m_precisionLevel = 2;
+  Noise2D noises_2d;
+  int precision_level = 2;
   [[nodiscard]] float GetValue(const glm::vec2& position) const;
   void RandomOffset(float min, float max);
   bool OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;

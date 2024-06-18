@@ -78,7 +78,7 @@ bool LogGrader::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
     if (!branchShape) {
       branchShape = ProjectManager::CreateTemporaryAsset<BarkDescriptor>();
       m_branchShape = branchShape;
-      branchShape->m_barkDepth = branchShape->m_baseDepth = 0.1f;
+      branchShape->bark_depth = branchShape->base_depth = 0.1f;
     }
     InitializeLogRandomly(m_proceduralLogParameters, branchShape);
     m_bestGradingIndex = 0;
@@ -502,7 +502,7 @@ void LogGrader::OnCreate() {
   if (!branchShape) {
     branchShape = ProjectManager::CreateTemporaryAsset<BarkDescriptor>();
     m_branchShape = branchShape;
-    branchShape->m_barkDepth = branchShape->m_baseDepth = 0.1f;
+    branchShape->bark_depth = branchShape->base_depth = 0.1f;
   }
   InitializeLogRandomly(m_proceduralLogParameters, branchShape);
   m_bestGradingIndex = 0;

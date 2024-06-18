@@ -55,47 +55,47 @@ bool TreeDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editor_layer)
   } else {
     ImGui::Text("Create soil and climate entity to instantiate!");
   }
-  if (editor_layer->DragAndDropButton<ShootDescriptor>(m_shootDescriptor, "Shoot Descriptor"))
+  if (editor_layer->DragAndDropButton<ShootDescriptor>(shoot_descriptor, "Shoot Descriptor"))
     changed = true;
-  if (editor_layer->DragAndDropButton<FoliageDescriptor>(m_foliageDescriptor, "Foliage Descriptor"))
+  if (editor_layer->DragAndDropButton<FoliageDescriptor>(foliage_descriptor, "Foliage Descriptor"))
     changed = true;
-  if (editor_layer->DragAndDropButton<FruitDescriptor>(m_fruitDescriptor, "Fruit Descriptor"))
+  if (editor_layer->DragAndDropButton<FruitDescriptor>(fruit_descriptor, "Fruit Descriptor"))
     changed = true;
-  if (editor_layer->DragAndDropButton<FlowerDescriptor>(m_flowerDescriptor, "Flower Descriptor"))
+  if (editor_layer->DragAndDropButton<FlowerDescriptor>(flower_descriptor, "Flower Descriptor"))
     changed = true;
 
-  editor_layer->DragAndDropButton<BarkDescriptor>(m_barkDescriptor, "BarkDescriptor");
+  editor_layer->DragAndDropButton<BarkDescriptor>(bark_descriptor, "BarkDescriptor");
   return changed;
 }
 
 void TreeDescriptor::CollectAssetRef(std::vector<AssetRef>& list) {
-  if (m_shootDescriptor.Get<ShootDescriptor>())
-    list.push_back(m_shootDescriptor);
-  if (m_foliageDescriptor.Get<FoliageDescriptor>())
-    list.push_back(m_foliageDescriptor);
-  if (m_fruitDescriptor.Get<FruitDescriptor>())
-    list.push_back(m_fruitDescriptor);
-  if (m_flowerDescriptor.Get<FlowerDescriptor>())
-    list.push_back(m_flowerDescriptor);
+  if (shoot_descriptor.Get<ShootDescriptor>())
+    list.push_back(shoot_descriptor);
+  if (foliage_descriptor.Get<FoliageDescriptor>())
+    list.push_back(foliage_descriptor);
+  if (fruit_descriptor.Get<FruitDescriptor>())
+    list.push_back(fruit_descriptor);
+  if (flower_descriptor.Get<FlowerDescriptor>())
+    list.push_back(flower_descriptor);
 
-  if (m_barkDescriptor.Get<BarkDescriptor>())
-    list.push_back(m_barkDescriptor);
+  if (bark_descriptor.Get<BarkDescriptor>())
+    list.push_back(bark_descriptor);
 }
 
 void TreeDescriptor::Serialize(YAML::Emitter& out) const {
-  m_shootDescriptor.Save("m_shootDescriptor", out);
-  m_foliageDescriptor.Save("m_foliageDescriptor", out);
-  m_barkDescriptor.Save("m_barkDescriptor", out);
+  shoot_descriptor.Save("shoot_descriptor", out);
+  foliage_descriptor.Save("foliage_descriptor", out);
+  bark_descriptor.Save("bark_descriptor", out);
 
-  m_fruitDescriptor.Save("m_fruitDescriptor", out);
-  m_flowerDescriptor.Save("m_flowerDescriptor", out);
+  fruit_descriptor.Save("fruit_descriptor", out);
+  flower_descriptor.Save("flower_descriptor", out);
 }
 
 void TreeDescriptor::Deserialize(const YAML::Node& in) {
-  m_shootDescriptor.Load("m_shootDescriptor", in);
-  m_foliageDescriptor.Load("m_foliageDescriptor", in);
-  m_barkDescriptor.Load("m_barkDescriptor", in);
+  shoot_descriptor.Load("shoot_descriptor", in);
+  foliage_descriptor.Load("foliage_descriptor", in);
+  bark_descriptor.Load("bark_descriptor", in);
 
-  m_fruitDescriptor.Load("m_fruitDescriptor", in);
-  m_flowerDescriptor.Load("m_flowerDescriptor", in);
+  fruit_descriptor.Load("fruit_descriptor", in);
+  flower_descriptor.Load("flower_descriptor", in);
 }

@@ -3,13 +3,13 @@ using namespace evo_engine;
 namespace eco_sys_lab {
 class TreeDescriptor : public IAsset {
  public:
-  AssetRef m_shootDescriptor;
-  AssetRef m_foliageDescriptor;
+  AssetRef shoot_descriptor;
+  AssetRef foliage_descriptor;
 
-  AssetRef m_fruitDescriptor;
-  AssetRef m_flowerDescriptor;
+  AssetRef fruit_descriptor;
+  AssetRef flower_descriptor;
 
-  AssetRef m_barkDescriptor;
+  AssetRef bark_descriptor;
   void OnCreate() override;
 
   bool OnInspect(const std::shared_ptr<EditorLayer>& editor_layer) override;

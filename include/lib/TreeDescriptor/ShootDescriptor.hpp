@@ -9,143 +9,143 @@ class ShootDescriptor : public IAsset {
   /**
    * \brief The expected height gain for the tree for one year (max root distance).
    */
-  float m_growthRate = 0.25f;
-  float m_straightTrunk = 0.0f;
+  float growth_rate = 0.25f;
+  float straight_trunk = 0.0f;
 
 #pragma region Internode
-  int m_baseInternodeCount = 1;
-  glm::vec2 m_baseNodeApicalAngleMeanVariance = glm::vec2(0.0f);
+  int base_internode_count = 1;
+  glm::vec2 base_node_apical_angle_mean_variance = glm::vec2(0.0f);
 
   /**
    * \brief The mean and variance of the angle between the direction of a lateral bud and its parent shoot.
    */
-  glm::vec2 m_branchingAngleMeanVariance = glm::vec2(45, 2);
+  glm::vec2 branching_angle_mean_variance = glm::vec2(45, 2);
   /**
    * \brief The mean and variance of an angular difference orientation of lateral buds between two internodes
    */
-  glm::vec2 m_rollAngleMeanVariance = glm::vec2(30, 2);
+  glm::vec2 roll_angle_mean_variance = glm::vec2(30, 2);
   /**
    * \brief The procedural noise of an angular difference orientation of lateral buds between two internodes
    */
-  AssetRef m_rollAngle{};
-  Noise2D m_rollAngleNoise2D{};
+  AssetRef roll_angle{};
+  Noise2D roll_angle_noise_2d{};
   /**
    * \brief The mean and variance of an angular difference orientation of lateral buds between two internodes
    */
-  glm::vec2 m_apicalAngleMeanVariance = glm::vec2(0, 3);
+  glm::vec2 apical_angle_mean_variance = glm::vec2(0, 3);
   /**
    * \brief The procedural noise of an angular difference orientation of lateral buds between two internodes
    */
-  AssetRef m_apicalAngle{};
-  Noise2D m_apicalAngleNoise2D{};
+  AssetRef apical_angle{};
+  Noise2D apical_angle_noise_2d{};
   /**
    * \brief The gravitropism.
    */
-  float m_gravitropism = 0.0;
+  float gravitropism = 0.0;
   /**
    * \brief The phototropism
    */
-  float m_phototropism = 0.045f;
+  float phototropism = 0.045f;
   /**
    * \brief The horizontal tropism
    */
-  float m_horizontalTropism = 0.0f;
+  float horizontal_tropism = 0.0f;
 
-  float m_gravityBendingStrength = 0.f;
-  float m_gravityBendingThicknessFactor = 1.f;
-  float m_gravityBendingMax = 1.f;
+  float gravity_bending_strength = 0.f;
+  float gravity_bending_thickness_factor = 1.f;
+  float gravity_bending_max = 1.f;
 
   /**
    * \brief The internode length
    */
-  float m_internodeLength = 0.03f;
+  float internode_length = 0.03f;
   /*
    * \brief How the thickness of branch effect the length of the actual node.
    */
-  float m_internodeLengthThicknessFactor = 0.15f;
+  float internode_length_thickness_factor = 0.15f;
   /**
    * \brief Thickness of end internode
    */
-  float m_endNodeThickness = 0.004f;
+  float end_node_thickness = 0.004f;
   /**
    * \brief The thickness accumulation factor
    */
-  float m_thicknessAccumulationFactor = 0.45f;
+  float thickness_accumulation_factor = 0.45f;
   /**
    * \brief The extra thickness gained from node length.
    */
-  float m_thicknessAgeFactor = 0.0f;
+  float thickness_age_factor = 0.0f;
   /**
    * \brief The shadow volume factor of the internode.
    */
-  float m_internodeShadowFactor = 0.03f;
+  float internode_shadow_factor = 0.03f;
 
 #pragma endregion
 #pragma region Bud fate
   /**
    * \brief The number of lateral buds an internode contains
    */
-  int m_lateralBudCount = 1;
-  int m_maxOrder = -1;
+  int lateral_bud_count = 1;
+  int max_order = -1;
   /**
    * \brief The probability of death of apical bud each year.
    */
-  float m_apicalBudExtinctionRate = 0.0f;
+  float apical_bud_extinction_rate = 0.0f;
   /**
    * \brief The probability of death of lateral bud each year.
    */
-  float m_lateralBudFlushingRate = 0.5f;
+  float lateral_bud_flushing_rate = 0.5f;
   /**
    * \brief Apical control base
    */
-  float m_apicalControl = 1.25f;
+  float apical_control = 1.25f;
   /**
    * \brief Apical control base
    */
-  float m_rootDistanceControl = 0.f;
+  float root_distance_control = 0.f;
   /**
    * \brief Apical control base
    */
-  float m_heightControl = 0.f;
+  float height_control = 0.f;
 
   /**
    * \brief How much inhibitor will an internode generate.
    */
-  float m_apicalDominance = 0.25f;
+  float apical_dominance = 0.25f;
   /**
    * \brief How much inhibitor will shrink when going through the branch.
    */
-  float m_apicalDominanceLoss = 0.08f;
+  float apical_dominance_loss = 0.08f;
 
 #pragma endregion
 #pragma region Pruning
-  bool m_trunkProtection = false;
+  bool trunk_protection = false;
 
-  int m_maxFlowLength = 0;
+  int max_flow_length = 0;
 
   /**
    * \brief The pruning factor for branch because of absence of light
    */
-  float m_lightPruningFactor = 0.0f;
+  float light_pruning_factor = 0.0f;
 
-  float m_branchStrength = 1.f;
-  float m_branchStrengthThicknessFactor = 3.f;
-  float m_branchStrengthLightingThreshold = 0.f;
-  float m_branchStrengthLightingLoss = 0.f;
-  float m_branchBreakingMultiplier = 1.f;
-  float m_branchBreakingFactor = 1.f;
+  float branch_strength = 1.f;
+  float branch_strength_thickness_factor = 3.f;
+  float branch_strength_lighting_threshold = 0.f;
+  float branch_strength_lighting_loss = 0.f;
+  float branch_breaking_multiplier = 1.f;
+  float branch_breaking_factor = 1.f;
 #pragma endregion
 
-  AssetRef m_barkMaterial;
+  AssetRef bark_material;
 #pragma region Leaf
-  float m_leafFlushingLightingRequirement = 0.1f;
-  float m_leafFallProbability;
-  float m_leafDistanceToBranchEndLimit;
+  float leaf_flushing_lighting_requirement = 0.1f;
+  float leaf_fall_probability;
+  float leaf_distance_to_branch_end_limit;
 #pragma endregion
 #pragma region Fruit
-  float m_fruitFlushingLightingRequirement = 0.1f;
-  float m_fruitFallProbability;
-  float m_fruitDistanceToBranchEndLimit;
+  float fruit_flushing_lighting_requirement = 0.1f;
+  float fruit_fall_probability;
+  float fruit_distance_to_branch_end_limit;
 #pragma endregion
   void PrepareController(ShootGrowthController& shootGrowthController) const;
 

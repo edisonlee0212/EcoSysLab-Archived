@@ -516,7 +516,7 @@ PYBIND11_MODULE(pyecosyslab, m) {
 
 	py::class_<ShootDescriptor>(m, "ShootDescriptor")
 		.def(py::init<>())
-		.def_readwrite("growth_rate", &ShootDescriptor::m_growthRate)
+		.def_readwrite("growth_rate", &ShootDescriptor::growth_rate)
 		.def_readwrite("m_branchingAngleMeanVariance", &ShootDescriptor::m_branchingAngleMeanVariance)
 		.def_readwrite("m_rollAngleMeanVariance", &ShootDescriptor::m_rollAngleMeanVariance)
 		.def_readwrite("m_apicalAngleMeanVariance", &ShootDescriptor::m_apicalAngleMeanVariance)
