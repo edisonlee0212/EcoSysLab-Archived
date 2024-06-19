@@ -6,15 +6,15 @@ template <typename T>
 class RigidBody2D {
   template <typename PD>
   friend class Physics2D;
-  glm::vec4 m_color = glm::vec4(1.0f);
-  glm::vec2 m_position = glm::vec2(0.0f);
-  glm::vec2 m_lastPosition = glm::vec2(0.0f);
-  glm::vec2 m_acceleration = glm::vec2(0.0f);
-  float m_thickness = 1.0f;
-  float m_damping = 0.0f;
+  glm::vec4 color_ = glm::vec4(1.0f);
+  glm::vec2 position_ = glm::vec2(0.0f);
+  glm::vec2 last_position_ = glm::vec2(0.0f);
+  glm::vec2 acceleration_ = glm::vec2(0.0f);
+  float thickness_ = 1.0f;
+  float damping_ = 0.0f;
 
  public:
-  T m_data;
+  T data;
   void Update(float dt);
   void Stop();
 
@@ -41,81 +41,81 @@ class RigidBody2D {
 
 template <typename T>
 void RigidBody2D<T>::Update(const float dt) {
-  const auto velocity = m_position - m_lastPosition - m_damping * (m_position - m_lastPosition);
-  m_lastPosition = m_position;
-  m_position = m_position + velocity + m_acceleration * dt * dt;
-  m_acceleration = {};
+  const auto velocity = position_ - last_position_ - damping_ * (position_ - last_position_);
+  last_position_ = position_;
+  position_ = position_ + velocity + acceleration_ * dt * dt;
+  acceleration_ = {};
 }
 
 template <typename T>
 void RigidBody2D<T>::Stop() {
-  m_lastPosition = m_position;
+  last_position_ = position_;
 }
 
 template <typename T>
 glm::vec4 RigidBody2D<T>::GetColor() const {
-  return m_color;
+  return color_;
 }
 
 template <typename T>
 void RigidBody2D<T>::SetColor(const glm::vec4& color) {
-  m_color = color;
+  color_ = color;
 }
 
 template <typename T>
 glm::vec2 RigidBody2D<T>::GetPosition() const {
-  return m_position;
+  return position_;
 }
 
 template <typename T>
 void RigidBody2D<T>::SetPosition(const glm::vec2& position) {
-  const auto velocity = m_position - m_lastPosition;
-  m_position = position;
-  m_lastPosition = m_position - velocity;
+  const auto velocity = position_ - last_position_;
+  position_ = position;
+  last_position_ = position_ - velocity;
 }
 
 template <typename T>
 void RigidBody2D<T>::Move(const glm::vec2& position) {
-  m_position = position;
+  position_ = position;
 }
 
 template <typename T>
 glm::vec2 RigidBody2D<T>::GetVelocity() const {
-  return m_position - m_lastPosition;
+  return position_ - last_position_;
 }
 
 template <typename T>
 void RigidBody2D<T>::SetVelocity(const glm::vec2& velocity) {
-  m_lastPosition = m_position - velocity;
+  last_position_ = position_ - velocity;
 }
 
 template <typename T>
 glm::vec2 RigidBody2D<T>::GetAcceleration() const {
-  return m_acceleration;
+  return acceleration_;
 }
 
 template <typename T>
 void RigidBody2D<T>::SetAcceleration(const glm::vec2& acceleration) {
-  m_acceleration = acceleration;
+  acceleration_ = acceleration;
 }
 
 template <typename T>
 float RigidBody2D<T>::GetDamping() const {
-  return m_damping;
+  return damping_;
 }
 
 template <typename T>
 void RigidBody2D<T>::SetDamping(const float damping) {
-  m_damping = glm::clamp(damping, 0.0f, 1.0f);
+  damping_ = glm::clamp(damping, 0.0f, 1.0f);
 }
 
 template <typename T>
 float RigidBody2D<T>::GetRadius() const {
-  return m_thickness;
+  return thickness_;
 }
 
 template <typename T>
 void RigidBody2D<T>::SetRadius(const float radius) {
-  m_thickness = radius;
+  thickness_ = radius;
 }
 }  // namespace eco_sys_lab

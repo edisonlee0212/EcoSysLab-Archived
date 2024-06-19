@@ -30,26 +30,26 @@ void SimulationSettings::Serialize(YAML::Emitter& out) const {
 void SimulationSettings::Deserialize(const YAML::Node& in) {
   if (in["delta_time"])
     delta_time = in["delta_time"].as<float>();
-  if (in["m_soilSimulation"])
-    soil_simulation = in["m_soilSimulation"].as<bool>();
-  if (in["m_autoClearFruitAndLeaves"])
-    auto_clear_fruit_and_leaves = in["m_autoClearFruitAndLeaves"].as<bool>();
+  if (in["soil_simulation"])
+    soil_simulation = in["soil_simulation"].as<bool>();
+  if (in["auto_clear_fruit_and_leaves"])
+    auto_clear_fruit_and_leaves = in["auto_clear_fruit_and_leaves"].as<bool>();
   if (in["crown_shyness_distance"])
     crown_shyness_distance = in["crown_shyness_distance"].as<float>();
-  if (in["m_maxNodeCount"])
-    max_node_count = in["m_maxNodeCount"].as<int>();
+  if (in["max_node_count"])
+    max_node_count = in["max_node_count"].as<int>();
 
-  if (in["m_skylightIntensity"])
-    skylight_intensity = in["m_skylightIntensity"].as<float>();
-  if (in["m_shadowDistanceLoss"])
-    shadow_distance_loss = in["m_shadowDistanceLoss"].as<float>();
-  if (in["m_detectionRadius"])
-    detection_radius = in["m_detectionRadius"].as<float>();
-  if (in["m_environmentLightIntensity"])
-    environment_light_intensity = in["m_environmentLightIntensity"].as<float>();
+  if (in["skylight_intensity"])
+    skylight_intensity = in["skylight_intensity"].as<float>();
+  if (in["shadow_distance_loss"])
+    shadow_distance_loss = in["shadow_distance_loss"].as<float>();
+  if (in["detection_radius"])
+    detection_radius = in["detection_radius"].as<float>();
+  if (in["environment_light_intensity"])
+    environment_light_intensity = in["environment_light_intensity"].as<float>();
 
-  if (in["m_blurIteration"])
-    blur_iteration = in["m_blurIteration"].as<int>();
+  if (in["blur_iteration"])
+    blur_iteration = in["blur_iteration"].as<int>();
 }
 
 bool SimulationSettings::OnInspect(const std::shared_ptr<EditorLayer>& editor_layer) {

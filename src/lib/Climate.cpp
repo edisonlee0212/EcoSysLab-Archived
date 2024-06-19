@@ -12,7 +12,7 @@ bool ClimateDescriptor::OnInspect(const std::shared_ptr<EditorLayer>& editorLaye
     const auto scene = Application::GetActiveScene();
     const auto climateEntity = scene->CreateEntity(GetTitle());
     const auto climate = scene->GetOrSetPrivateComponent<Climate>(climateEntity).lock();
-    climate->m_climateDescriptor = ProjectManager::GetAsset(GetHandle());
+    climate->climate_descriptor = ProjectManager::GetAsset(GetHandle());
   }
   return changed;
 }
@@ -25,28 +25,28 @@ void ClimateDescriptor::Deserialize(const YAML::Node& in) {
 
 bool Climate::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
   bool changed = false;
-  if (editorLayer->DragAndDropButton<ClimateDescriptor>(m_climateDescriptor, "ClimateDescriptor", true)) {
+  if (editorLayer->DragAndDropButton<ClimateDescriptor>(climate_descriptor, "ClimateDescriptor", true)) {
     InitializeClimateModel();
   }
 
-  if (m_climateDescriptor.Get<ClimateDescriptor>()) {
+  if (climate_descriptor.Get<ClimateDescriptor>()) {
   }
   return changed;
 }
 
 void Climate::Serialize(YAML::Emitter& out) const {
-  m_climateDescriptor.Save("m_climateDescriptor", out);
+  climate_descriptor.Save("climate_descriptor", out);
 }
 
 void Climate::CollectAssetRef(std::vector<AssetRef>& list) {
-  list.push_back(m_climateDescriptor);
+  list.push_back(climate_descriptor);
 }
 
 void Climate::InitializeClimateModel() {
-  auto climateDescriptor = m_climateDescriptor.Get<ClimateDescriptor>();
+  auto climateDescriptor = climate_descriptor.Get<ClimateDescriptor>();
   if (climateDescriptor) {
-    auto params = climateDescriptor->m_climateParameters;
-    m_climateModel.Initialize(params);
+    auto params = climateDescriptor->climate_parameters;
+    climate_model.Initialize(params);
   }
 }
 
@@ -57,7 +57,7 @@ void Climate::PrepareForGrowth() {
   if (!treeEntities || treeEntities->empty())
     return;
 
-  auto& estimator = m_climateModel.environment_grid;
+  auto& estimator = climate_model.environment_grid;
   auto minBound = estimator.voxel_grid.GetMinBound();
   auto maxBound = estimator.voxel_grid.GetMaxBound();
   bool boundChanged = false;
@@ -79,8 +79,8 @@ void Climate::PrepareForGrowth() {
   if (boundChanged)
     estimator.voxel_grid.Initialize(estimator.voxel_size, minBound, maxBound);
   estimator.voxel_grid.Reset();
-  for (const auto& treeEntity : *treeEntities) {
-    const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
+  for (const auto& tree_entity : *treeEntities) {
+    const auto tree = scene->GetOrSetPrivateComponent<Tree>(tree_entity).lock();
     tree->RegisterVoxel();
   }
 
@@ -88,5 +88,5 @@ void Climate::PrepareForGrowth() {
 }
 
 void Climate::Deserialize(const YAML::Node& in) {
-  m_climateDescriptor.Load("m_climateDescriptor", in);
+  climate_descriptor.Load("climate_descriptor", in);
 }

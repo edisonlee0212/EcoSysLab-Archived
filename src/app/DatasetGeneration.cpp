@@ -21,7 +21,6 @@
 #include "ParticlePhysics2DDemo.hpp"
 #include "Physics2DDemo.hpp"
 using namespace eco_sys_lab;
-std::filesystem::path resourceFolderPath("D:/GitHub/EcoSysLab/Resources");
 void register_classes() {
   ClassRegistry::RegisterPrivateComponent<ObjectRotator>("ObjectRotator");
   ClassRegistry::RegisterPrivateComponent<Physics2DDemo>("Physics2DDemo");
@@ -120,6 +119,15 @@ void forest_patch_point_cloud() {
 
 void forest_patch_point_cloud_joined(const std::string& folderName, const bool exportJunction, const int count,
                                      const int gridSideCount) {
+  std::filesystem::path resourceFolderPath("../../../Resources");
+  if (!std::filesystem::exists(resourceFolderPath)) {
+    resourceFolderPath = "../../Resources";
+  }
+  if (!std::filesystem::exists(resourceFolderPath)) {
+    resourceFolderPath = "../Resources";
+  }
+  resourceFolderPath = std::filesystem::absolute(resourceFolderPath);
+
   TreeMeshGeneratorSettings tmgs{};
   tmgs.branch_y_subdivision = 0.05f;
   tmgs.trunk_y_subdivision = 0.05f;
@@ -354,6 +362,7 @@ void apple_tree_growth() {
 int main() {
   // apple_tree_growth();
   // sorghum_field_point_cloud();
+  std::filesystem::path resourceFolderPath("../../../Resources");
   if (!std::filesystem::exists(resourceFolderPath)) {
     resourceFolderPath = "../../Resources";
   }

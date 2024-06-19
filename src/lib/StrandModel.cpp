@@ -239,8 +239,8 @@ void StrandModel::PackTask(const SkeletonNodeHandle node_handle, const StrandMod
           auto acceleration = glm::vec2(0.f);
           if (!internode_data.profile.particle_grid_2d.PeekCells().empty()) {
             const auto& cell = internode_data.profile.particle_grid_2d.RefCell(particle.GetPosition());
-            if (glm::length(cell.m_target) > glm::epsilon<float>()) {
-              acceleration += strand_model_parameters.center_attraction_strength * glm::normalize(cell.m_target);
+            if (glm::length(cell.target) > glm::epsilon<float>()) {
+              acceleration += strand_model_parameters.center_attraction_strength * glm::normalize(cell.target);
             }
           }
           particle.SetAcceleration(acceleration);

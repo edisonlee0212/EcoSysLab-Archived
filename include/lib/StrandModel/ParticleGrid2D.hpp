@@ -8,24 +8,24 @@ class ParticleCell {
   template <typename PD>
   friend class StrandModelProfile;
   friend class ParticleGrid2D;
-  static constexpr size_t CELL_CAPACITY = 4;
-  static constexpr size_t MAX_CELL_INDEX = CELL_CAPACITY - 1;
-  size_t m_atomCount = 0;
-  ParticleHandle m_atomHandles[CELL_CAPACITY] = {};
+  static constexpr size_t cell_capacity = 4;
+  static constexpr size_t max_cell_index = cell_capacity - 1;
+  size_t atom_count_ = 0;
+  ParticleHandle atom_handles_[cell_capacity] = {};
 
  public:
-  glm::vec2 m_target = glm::vec2(0.0f);
+  glm::vec2 target = glm::vec2(0.0f);
   void RegisterParticle(ParticleHandle handle);
   void Clear();
   void UnregisterParticle(ParticleHandle handle);
 };
 
 class ParticleGrid2D {
-  glm::vec2 m_minBound = glm::vec2(0.0f);
-  glm::vec2 m_maxBound = glm::vec2(0.0f);
-  float m_cellSize = 1.0f;
-  glm::ivec2 m_resolution = {0, 0};
-  std::vector<ParticleCell> m_cells{};
+  glm::vec2 min_bound_ = glm::vec2(0.0f);
+  glm::vec2 max_bound_ = glm::vec2(0.0f);
+  float cell_size_ = 1.0f;
+  glm::ivec2 resolution_ = {0, 0};
+  std::vector<ParticleCell> cells_{};
   template <typename PD>
   friend class StrandModelProfile;
 

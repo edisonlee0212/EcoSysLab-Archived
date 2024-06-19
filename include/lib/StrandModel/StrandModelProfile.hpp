@@ -149,8 +149,8 @@ void StrandModelProfile<T>::CheckCollisions(
     const std::function<void(ParticleGrid2D& grid, bool grid_resized)>& modify_grid_func) {
   CalculateMinMax();
 
-  if (min_.x < particle_grid_2d.m_minBound.x || min_.y < particle_grid_2d.m_minBound.y ||
-      max_.x > particle_grid_2d.m_maxBound.x || max_.y > particle_grid_2d.m_maxBound.y || force_reset_grid) {
+  if (min_.x < particle_grid_2d.min_bound_.x || min_.y < particle_grid_2d.min_bound_.y ||
+      max_.x > particle_grid_2d.max_bound_.x || max_.y > particle_grid_2d.max_bound_.y || force_reset_grid) {
     particle_grid_2d.Reset(2.0f, min_ - glm::vec2(2.0f), max_ + glm::vec2(2.0f));
     modify_grid_func(particle_grid_2d, true);
   } else {
@@ -176,13 +176,13 @@ void StrandModelProfile<T>::CheckCollisions(
           continue;
         if (y < 0)
           continue;
-        if (x >= particle_grid_2d.m_resolution.x)
+        if (x >= particle_grid_2d.resolution_.x)
           continue;
-        if (y >= particle_grid_2d.m_resolution.y)
+        if (y >= particle_grid_2d.resolution_.y)
           continue;
         const auto& cell = particle_grid_2d.RefCell(glm::ivec2(x, y));
-        for (int i = 0; i < cell.m_atomCount; i++) {
-          if (const auto particle_handle2 = cell.m_atomHandles[i]; particle_handle != particle_handle2) {
+        for (int i = 0; i < cell.atom_count_; i++) {
+          if (const auto particle_handle2 = cell.atom_handles_[i]; particle_handle != particle_handle2) {
             SolveCollision(particle_handle, particle_handle2);
           }
         }
@@ -524,18 +524,18 @@ void StrandModelProfile<T>::OnInspect(const std::function<void(glm::vec2 positio
   }
   draw_list->AddCircle(origin, glm::clamp(zoom_factor, 1.0f, 100.0f), IM_COL32(255, 0, 0, 255));
   if (show_grid) {
-    for (int i = 0; i < particle_grid_2d.m_resolution.x; i++) {
-      for (int j = 0; j < particle_grid_2d.m_resolution.y; j++) {
+    for (int i = 0; i < particle_grid_2d.resolution_.x; i++) {
+      for (int j = 0; j < particle_grid_2d.resolution_.y; j++) {
         const auto& cell = particle_grid_2d.RefCell(glm::ivec2(i, j));
         const auto cell_center = particle_grid_2d.GetPosition(glm::ivec2(i, j));
-        const auto min = ImVec2(cell_center.x - particle_grid_2d.m_cellSize * 0.5f,
-                                cell_center.y - particle_grid_2d.m_cellSize * 0.5f);
+        const auto min = ImVec2(cell_center.x - particle_grid_2d.cell_size_ * 0.5f,
+                                cell_center.y - particle_grid_2d.cell_size_ * 0.5f);
 
         draw_list->AddQuad(
-            min * zoom_factor + origin, ImVec2(min.x + particle_grid_2d.m_cellSize, min.y) * zoom_factor + origin,
-            ImVec2(min.x + particle_grid_2d.m_cellSize, min.y + particle_grid_2d.m_cellSize) * zoom_factor + origin,
-            ImVec2(min.x, min.y + particle_grid_2d.m_cellSize) * zoom_factor + origin, IM_COL32(0, 0, 255, 128));
-        const auto cell_target = cell_center + cell.m_target;
+            min * zoom_factor + origin, ImVec2(min.x + particle_grid_2d.cell_size_, min.y) * zoom_factor + origin,
+            ImVec2(min.x + particle_grid_2d.cell_size_, min.y + particle_grid_2d.cell_size_) * zoom_factor + origin,
+            ImVec2(min.x, min.y + particle_grid_2d.cell_size_) * zoom_factor + origin, IM_COL32(0, 0, 255, 128));
+        const auto cell_target = cell_center + cell.target;
         draw_list->AddLine(ImVec2(cell_center.x, cell_center.y) * zoom_factor + origin,
                           ImVec2(cell_target.x, cell_target.y) * zoom_factor + origin, IM_COL32(255, 0, 0, 128));
       }

@@ -1362,7 +1362,7 @@ bool Tree::TryGrow(float delta_time, bool pruning) {
 
   PrepareController(sd, s, c);
   const bool grown = tree_model.Grow(delta_time, scene->GetDataComponent<GlobalTransform>(owner).value,
-                                      c->m_climateModel, shoot_growth_controller_, pruning);
+                                      c->climate_model, shoot_growth_controller_, pruning);
   if (grown) {
     if (pruning)
       tree_visualizer.ClearSelections();
@@ -1417,7 +1417,7 @@ bool Tree::TryGrowSubTree(const float delta_time, const SkeletonNodeHandle base_
   PrepareController(shoot_descriptor, s, c);
   const bool grown =
       tree_model.Grow(delta_time, base_internode_handle, scene->GetDataComponent<GlobalTransform>(owner).value,
-                       c->m_climateModel, shoot_growth_controller_, pruning);
+                       c->climate_model, shoot_growth_controller_, pruning);
   if (grown) {
     if (pruning)
       tree_visualizer.ClearSelections();
@@ -2409,7 +2409,7 @@ void Tree::RegisterVoxel() {
   const auto global_transform = scene->GetDataComponent<GlobalTransform>(owner).value;
   tree_model.shoot_skeleton_.data.index = owner.GetIndex();
   const auto c = climate.Get<Climate>();
-  tree_model.RegisterVoxel(global_transform, c->m_climateModel, shoot_growth_controller_);
+  tree_model.RegisterVoxel(global_transform, c->climate_model, shoot_growth_controller_);
 }
 
 void Tree::FromLSystemString(const std::shared_ptr<LSystemString>& l_system_string) {

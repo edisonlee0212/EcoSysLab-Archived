@@ -46,12 +46,12 @@ void EcoSysLabLayer::OnCreate() {
   ClassRegistry::RegisterAsset<FruitDescriptor>("FruitDescriptor", {".fruit"});
   ClassRegistry::RegisterAsset<FlowerDescriptor>("FlowerDescriptor", {".flower"});
   ClassRegistry::RegisterAsset<FoliageDescriptor>("FoliageDescriptor", {".foliage"});
-  ClassRegistry::RegisterAsset<SoilDescriptor>("SoilDescriptor", {".sd"});
-  ClassRegistry::RegisterAsset<ClimateDescriptor>("ClimateDescriptor", {".cd"});
+  ClassRegistry::RegisterAsset<SoilDescriptor>("SoilDescriptor", {".soil"});
+  ClassRegistry::RegisterAsset<ClimateDescriptor>("ClimateDescriptor", {".climate"});
   ClassRegistry::RegisterAsset<RadialBoundingVolume>("RadialBoundingVolume", {".rbv"});
-  ClassRegistry::RegisterAsset<CubeVolume>("CubeVolume", {".cv"});
-  ClassRegistry::RegisterAsset<HeightField>("HeightField", {".hf"});
-  ClassRegistry::RegisterAsset<SoilLayerDescriptor>("SoilLayerDescriptor", {".nsld"});
+  ClassRegistry::RegisterAsset<CubeVolume>("CubeVolume", {".cubevolume"});
+  ClassRegistry::RegisterAsset<HeightField>("HeightField", {".heightfield"});
+  ClassRegistry::RegisterAsset<SoilLayerDescriptor>("SoilLayerDescriptor", {".soillayer"});
   ClassRegistry::RegisterPrivateComponent<TreePointCloudScanner>("TreePointCloudScanner");
 
   ClassRegistry::RegisterAsset<ForestPatch>("ForestPatch", {".forestpatch"});
@@ -164,7 +164,7 @@ void EcoSysLabLayer::Visualization() {
       const auto climateCandidate = FindClimate();
       if (!climateCandidate.expired()) {
         const auto climate = climateCandidate.lock();
-        const auto& voxelGrid = climate->m_climateModel.environment_grid.voxel_grid;
+        const auto& voxelGrid = climate->climate_model.environment_grid.voxel_grid;
         const auto numVoxels = voxelGrid.GetVoxelCount();
         {
           std::vector<ParticleInfo> particleInfos;
@@ -648,7 +648,7 @@ void EcoSysLabLayer::ResetAllTrees(const std::vector<Entity>* treeEntities) {
   const auto climateCandidate = FindClimate();
   if (!climateCandidate.expired()) {
     const auto climate = climateCandidate.lock();
-    climate->m_climateModel.environment_grid = {};
+    climate->climate_model.environment_grid = {};
   }
 }
 
@@ -1613,7 +1613,7 @@ void EcoSysLabLayer::Simulate(const SimulationSettings& simulationSettings) {
       EVOENGINE_ERROR("Simulation Failed! No climate in scene!");
       return;
     }
-    climate->m_climateModel.time = m_simulatedTime;
+    climate->climate_model.time = m_simulatedTime;
 
     if (simulationSettings.soil_simulation) {
       soil->soil_model.Irrigation();

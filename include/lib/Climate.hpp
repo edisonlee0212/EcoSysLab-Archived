@@ -5,7 +5,7 @@ using namespace evo_engine;
 namespace eco_sys_lab {
 class ClimateDescriptor : public IAsset {
  public:
-  ClimateParameters m_climateParameters;
+  ClimateParameters climate_parameters;
 
   bool OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) override;
 
@@ -15,8 +15,8 @@ class ClimateDescriptor : public IAsset {
 };
 class Climate : public IPrivateComponent {
  public:
-  ClimateModel m_climateModel;
-  AssetRef m_climateDescriptor;
+  ClimateModel climate_model;
+  AssetRef climate_descriptor;
 
   /**ImGui menu goes here. Also, you can take care you visualization with Gizmos here.
    * Note that the visualization will only be activated while you are inspecting the soil private component in the

@@ -150,8 +150,8 @@ void ParticlePhysics2DDemo::FixedUpdate() {
         auto acceleration = glm::vec2(0.f);
         if (!particle_physics_2d_.particle_grid_2d.PeekCells().empty()) {
           const auto& cell = particle_physics_2d_.particle_grid_2d.RefCell(particle.GetPosition());
-          if (glm::length(cell.m_target) > glm::epsilon<float>()) {
-            acceleration += gravity_strength * 10.0f * glm::normalize(cell.m_target);
+          if (glm::length(cell.target) > glm::epsilon<float>()) {
+            acceleration += gravity_strength * 10.0f * glm::normalize(cell.target);
           }
         }
         particle.SetAcceleration(acceleration);

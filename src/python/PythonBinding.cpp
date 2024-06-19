@@ -83,7 +83,7 @@ void start_project_windowless(const std::filesystem::path& projectPath)
 	register_classes();
 	register_layers(false, false);
 	ApplicationInfo applicationInfo{};
-	applicationInfo.m_projectPath = projectPath;
+	applicationInfo.project_path = projectPath;
 	Application::Initialize(applicationInfo);
 	Application::Start();
 }
@@ -99,7 +99,7 @@ void start_project(const std::filesystem::path& projectPath)
 	register_classes();
 	register_layers(true, true);
 	ApplicationInfo applicationInfo{};
-	applicationInfo.m_projectPath = projectPath;
+	applicationInfo.project_path = projectPath;
 	Application::Initialize(applicationInfo);
 	Application::Start();
 }
@@ -121,14 +121,14 @@ void scene_capture(
 		EVOENGINE_ERROR("No active scene!");
 		return;
 	}
-	auto mainCamera = scene->m_mainCamera.Get<Camera>();
+	auto mainCamera = scene->main_camera.Get<Camera>();
 	Entity mainCameraEntity;
 	bool tempCamera = false;
 	if (!mainCamera)
 	{
 		mainCameraEntity = scene->CreateEntity("Main Camera");
 		mainCamera = scene->GetOrSetPrivateComponent<Camera>(mainCameraEntity).lock();
-		scene->m_mainCamera = mainCamera;
+		scene->main_camera = mainCamera;
 		tempCamera = true;
 	}
 	else
@@ -141,12 +141,12 @@ void scene_capture(
 	globalTransform.SetEulerRotation(glm::radians(glm::vec3(angleX, angleY, angleZ)));
 	scene->SetDataComponent(mainCameraEntity, globalTransform);
 	mainCamera->Resize({ resolutionX, resolutionY });
-	const auto useClearColor = mainCamera->m_useClearColor;
-	const auto clearColor = mainCamera->m_clearColor;
+	const auto useClearColor = mainCamera->use_clear_color;
+	const auto clearColor = mainCamera->clear_color;
 	if (whiteBackground)
 	{
-		mainCamera->m_useClearColor = true;
-		mainCamera->m_clearColor = glm::vec3(1, 1, 1);
+		mainCamera->use_clear_color = true;
+		mainCamera->clear_color = glm::vec3(1, 1, 1);
 	}
 	Application::Loop();
 	mainCamera->GetRenderTexture()->StoreToPng(outputPath);
@@ -159,8 +159,8 @@ void scene_capture(
 		scene->SetDataComponent(mainCameraEntity, originalTransform);
 		if (whiteBackground)
 		{
-			mainCamera->m_useClearColor = useClearColor;
-			mainCamera->m_clearColor = clearColor;
+			mainCamera->use_clear_color = useClearColor;
+			mainCamera->clear_color = clearColor;
 		}
 	}
 
@@ -186,7 +186,7 @@ void tree_structor(const std::string& yamlPath,
 	const auto treePointCloud = scene->GetOrSetPrivateComponent<TreeStructor>(tempEntity).lock();
 	
 	treePointCloud->connectivity_graph_settings = connectivityGraphSettings;
-	treePointCloud->m_reconstructionSettings = reconstructionSettings;
+	treePointCloud->reconstruction_settings = reconstructionSettings;
 	treePointCloud->ImportGraph(yamlPath);
 	treePointCloud->EstablishConnectivityGraph();
 	treePointCloud->BuildSkeletons();
@@ -206,7 +206,7 @@ void yaml_visualization(const std::string& yamlPath,
 	const auto tempEntity = scene->CreateEntity("Temp");
 	const auto treePointCloud = scene->GetOrSetPrivateComponent<TreeStructor>(tempEntity).lock();
 	treePointCloud->connectivity_graph_settings = connectivityGraphSettings;
-	treePointCloud->m_reconstructionSettings = reconstructionSettings;
+	treePointCloud->reconstruction_settings = reconstructionSettings;
 	treePointCloud->ImportGraph(yamlPath);
 	treePointCloud->EstablishConnectivityGraph();
 	treePointCloud->BuildSkeletons();
@@ -283,8 +283,8 @@ void voxel_space_colonization_tree_data(
 
 	const auto tempEntity = scene->CreateEntity("Temp");
 	const auto tree = scene->GetOrSetPrivateComponent<Tree>(tempEntity).lock();
-	tree->m_soil = soil;
-	tree->m_climate = climate;
+	tree->soil = soil;
+	tree->climate = climate;
 	std::shared_ptr<TreeDescriptor> treeDescriptor;
 	if (ProjectManager::IsInProjectFolder(treeParametersPath))
 	{
@@ -293,21 +293,21 @@ void voxel_space_colonization_tree_data(
 	else {
 		treeDescriptor = ProjectManager::CreateTemporaryAsset<TreeDescriptor>();
 	}
-	tree->m_treeDescriptor = treeDescriptor;
-	auto& occupancyGrid = tree->m_treeModel.m_treeOccupancyGrid;
+	tree->tree_descriptor = treeDescriptor;
+	auto& occupancyGrid = tree->tree_model.tree_occupancy_grid;
 	VoxelGrid<TreeOccupancyGridBasicData> inputGrid{};
 	if (tree->ParseBinvox(binvoxPath, inputGrid, 1.f))
 	{
 		occupancyGrid.Initialize(inputGrid,
 			glm::vec3(-radius, 0, -radius),
 			glm::vec3(radius, 2.0f * radius, radius),
-			treeDescriptor->m_shootDescriptor.Get<ShootDescriptor>()->m_internodeLength,
-			tree->m_treeModel.m_treeGrowthSettings.m_spaceColonizationRemovalDistanceFactor,
-			tree->m_treeModel.m_treeGrowthSettings.m_spaceColonizationTheta,
-			tree->m_treeModel.m_treeGrowthSettings.m_spaceColonizationDetectionDistanceFactor);
+			treeDescriptor->shoot_descriptor.Get<ShootDescriptor>()->internode_length,
+			tree->tree_model.tree_growth_settings.space_colonization_removal_distance_factor,
+			tree->tree_model.tree_growth_settings.space_colonization_theta,
+			tree->tree_model.tree_growth_settings.space_colonization_detection_distance_factor);
 	}
-	tree->m_treeModel.m_treeGrowthSettings.use_space_colonization = true;
-	tree->m_treeModel.m_treeGrowthSettings.m_spaceColonizationAutoResize = false;
+	tree->tree_model.tree_growth_settings.use_space_colonization = true;
+	tree->tree_model.tree_growth_settings.space_colonization_auto_resize = false;
 
 	ecoSysLabLayer->m_simulationSettings.delta_time = deltaTime;
 
@@ -318,11 +318,11 @@ void voxel_space_colonization_tree_data(
 	}
 
 	if (exportTreeMesh) {
-		tree->ExportOBJ(treeMeshOutputPath, meshGeneratorSettings);
+		tree->ExportObj(treeMeshOutputPath, meshGeneratorSettings);
 	}
 	if (exportTreeIO)
 	{
-		bool succeed = tree->ExportIOTree(treeIOOutputPath);
+		bool succeed = tree->ExportIoTree(treeIOOutputPath);
 	}
 	if (exportRadialBoundingVolume || exportRadialBoundingVolumeMesh)
 	{
@@ -413,8 +413,8 @@ void rbv_space_colonization_tree_data(
 
 	const auto tempEntity = scene->CreateEntity("Temp");
 	const auto tree = scene->GetOrSetPrivateComponent<Tree>(tempEntity).lock();
-	tree->m_soil = soil;
-	tree->m_climate = climate;
+	tree->soil = soil;
+	tree->climate = climate;
 	std::shared_ptr<TreeDescriptor> treeDescriptor;
 	if (ProjectManager::IsInProjectFolder(treeParametersPath))
 	{
@@ -423,21 +423,21 @@ void rbv_space_colonization_tree_data(
 	else {
 		treeDescriptor = ProjectManager::CreateTemporaryAsset<TreeDescriptor>();
 	}
-	tree->m_treeDescriptor = treeDescriptor;
-	auto& occupancyGrid = tree->m_treeModel.m_treeOccupancyGrid;
+	tree->tree_descriptor = treeDescriptor;
+	auto& occupancyGrid = tree->tree_model.tree_occupancy_grid;
 	const auto rbv = ProjectManager::CreateTemporaryAsset<RadialBoundingVolume>();
 	rbv->Import(rbvPath);
 
 	occupancyGrid.Initialize(rbv,
 		glm::vec3(-rbv->m_maxRadius, 0, -rbv->m_maxRadius),
 		glm::vec3(rbv->m_maxRadius, 2.0f * rbv->m_maxRadius, rbv->m_maxRadius),
-		treeDescriptor->m_shootDescriptor.Get<ShootDescriptor>()->m_internodeLength,
-		tree->m_treeModel.m_treeGrowthSettings.m_spaceColonizationRemovalDistanceFactor,
-		tree->m_treeModel.m_treeGrowthSettings.m_spaceColonizationTheta,
-		tree->m_treeModel.m_treeGrowthSettings.m_spaceColonizationDetectionDistanceFactor);
+		treeDescriptor->shoot_descriptor.Get<ShootDescriptor>()->internode_length,
+		tree->tree_model.tree_growth_settings.space_colonization_removal_distance_factor,
+		tree->tree_model.tree_growth_settings.space_colonization_theta,
+		tree->tree_model.tree_growth_settings.space_colonization_detection_distance_factor);
 
-	tree->m_treeModel.m_treeGrowthSettings.use_space_colonization = true;
-	tree->m_treeModel.m_treeGrowthSettings.m_spaceColonizationAutoResize = false;
+	tree->tree_model.tree_growth_settings.use_space_colonization = true;
+	tree->tree_model.tree_growth_settings.space_colonization_auto_resize = false;
 	Application::Loop();
 	ecoSysLabLayer->m_simulationSettings.delta_time = deltaTime;
 	for (int i = 0; i < iterations; i++)
@@ -446,11 +446,11 @@ void rbv_space_colonization_tree_data(
 	}
 
 	if (exportTreeMesh) {
-		tree->ExportOBJ(treeMeshOutputPath, meshGeneratorSettings);
+		tree->ExportObj(treeMeshOutputPath, meshGeneratorSettings);
 	}
 	if (exportTreeIO)
 	{
-		bool succeed = tree->ExportIOTree(treeIOOutputPath);
+		bool succeed = tree->ExportIoTree(treeIOOutputPath);
 	}
 	if (exportRadialBoundingVolumeMesh)
 	{
@@ -466,12 +466,12 @@ PYBIND11_MODULE(pyecosyslab, m) {
 
 	py::class_<ConnectivityGraphSettings>(m, "ConnectivityGraphSettings")
 		.def(py::init<>())
-		.def_readwrite("m_pointExistenceCheckRadius", &ConnectivityGraphSettings::m_pointExistenceCheckRadius)
-		.def_readwrite("m_pointPointConnectionDetectionRadius", &ConnectivityGraphSettings::m_pointPointConnectionDetectionRadius)
-		.def_readwrite("m_pointBranchConnectionDetectionRadius", &ConnectivityGraphSettings::m_pointBranchConnectionDetectionRadius)
-		.def_readwrite("m_branchBranchConnectionMaxLengthRange", &ConnectivityGraphSettings::m_branchBranchConnectionMaxLengthRange)
-		.def_readwrite("m_directionConnectionAngleLimit", &ConnectivityGraphSettings::m_directionConnectionAngleLimit)
-		.def_readwrite("m_indirectConnectionAngleLimit", &ConnectivityGraphSettings::m_indirectConnectionAngleLimit)
+		.def_readwrite("m_pointExistenceCheckRadius", &ConnectivityGraphSettings::point_existence_check_radius)
+		.def_readwrite("m_pointPointConnectionDetectionRadius", &ConnectivityGraphSettings::point_point_connection_detection_radius)
+		.def_readwrite("m_pointBranchConnectionDetectionRadius", &ConnectivityGraphSettings::point_branch_connection_detection_radius)
+		.def_readwrite("m_branchBranchConnectionMaxLengthRange", &ConnectivityGraphSettings::branch_branch_connection_max_length_range)
+		.def_readwrite("m_directionConnectionAngleLimit", &ConnectivityGraphSettings::direction_connection_angle_limit)
+		.def_readwrite("m_indirectConnectionAngleLimit", &ConnectivityGraphSettings::indirect_connection_angle_limit)
 		;
 
 	py::class_<TreePointCloudPointSettings>(m, "TreePointCloudPointSettings")
@@ -503,51 +503,23 @@ PYBIND11_MODULE(pyecosyslab, m) {
 
 	py::class_<ReconstructionSettings>(m, "ReconstructionSettings")
 		.def(py::init<>())
-		.def_readwrite("m_internodeLength", &ReconstructionSettings::m_internodeLength)
-		.def_readwrite("m_minHeight", &ReconstructionSettings::m_minHeight)
-		.def_readwrite("m_minimumTreeDistance", &ReconstructionSettings::m_minimumTreeDistance)
-		.def_readwrite("m_branchShortening", &ReconstructionSettings::m_branchShortening)
-		.def_readwrite("m_endNodeThickness", &ReconstructionSettings::m_endNodeThickness)
-		.def_readwrite("m_minimumNodeCount", &ReconstructionSettings::m_minimumNodeCount);
+		.def_readwrite("m_internodeLength", &ReconstructionSettings::internode_length)
+		.def_readwrite("m_minHeight", &ReconstructionSettings::min_height)
+		.def_readwrite("m_minimumTreeDistance", &ReconstructionSettings::minimum_tree_distance)
+		.def_readwrite("m_branchShortening", &ReconstructionSettings::branch_shortening)
+		.def_readwrite("m_endNodeThickness", &ReconstructionSettings::end_node_thickness)
+		.def_readwrite("m_minimumNodeCount", &ReconstructionSettings::minimum_node_count);
 
 	py::class_<PresentationOverrideSettings>(m, "PresentationOverrideSettings")
 		.def(py::init<>())
-		.def_readwrite("m_maxThickness", &PresentationOverrideSettings::m_max_thickness);
+		.def_readwrite("m_maxThickness", &PresentationOverrideSettings::max_thickness);
 
 	py::class_<ShootDescriptor>(m, "ShootDescriptor")
-		.def(py::init<>())
-		.def_readwrite("growth_rate", &ShootDescriptor::growth_rate)
-		.def_readwrite("m_branchingAngleMeanVariance", &ShootDescriptor::m_branchingAngleMeanVariance)
-		.def_readwrite("m_rollAngleMeanVariance", &ShootDescriptor::m_rollAngleMeanVariance)
-		.def_readwrite("m_apicalAngleMeanVariance", &ShootDescriptor::m_apicalAngleMeanVariance)
-		.def_readwrite("m_gravitropism", &ShootDescriptor::m_gravitropism)
-		.def_readwrite("m_phototropism", &ShootDescriptor::m_phototropism)
-		.def_readwrite("m_horizontalTropism", &ShootDescriptor::m_horizontalTropism)
-		.def_readwrite("m_internodeLength", &ShootDescriptor::m_internodeLength)
-		.def_readwrite("m_internodeLengthThicknessFactor", &ShootDescriptor::m_internodeLengthThicknessFactor)
-		.def_readwrite("m_endNodeThickness", &ShootDescriptor::m_endNodeThickness)
-		.def_readwrite("m_thicknessAccumulationFactor", &ShootDescriptor::m_thicknessAccumulationFactor)
-		.def_readwrite("m_thicknessAgeFactor", &ShootDescriptor::m_thicknessAgeFactor)
-		.def_readwrite("m_internodeShadowFactor", &ShootDescriptor::m_internodeShadowFactor)
-		.def_readwrite("m_lateralBudCount", &ShootDescriptor::m_lateralBudCount)
-		.def_readwrite("m_apicalBudExtinctionRate", &ShootDescriptor::m_apicalBudExtinctionRate)
-		.def_readwrite("m_lateralBudFlushingRate", &ShootDescriptor::m_lateralBudFlushingRate)
-		.def_readwrite("m_apicalControl", &ShootDescriptor::m_apicalControl)
-		.def_readwrite("m_apicalDominance", &ShootDescriptor::m_apicalDominance)
-		.def_readwrite("m_apicalDominanceLoss", &ShootDescriptor::m_apicalDominanceLoss)
-		.def_readwrite("m_lightPruningFactor", &ShootDescriptor::m_lightPruningFactor);
+		.def(py::init<>());
 		
 
 	py::class_<FoliageDescriptor>(m, "FoliageDescriptor")
-		.def(py::init<>())
-		.def_readwrite("m_leafSize", &FoliageDescriptor::m_leafSize)
-		.def_readwrite("m_leafCountPerInternode", &FoliageDescriptor::m_leafCountPerInternode)
-		.def_readwrite("m_positionVariance", &FoliageDescriptor::m_positionVariance)
-		.def_readwrite("m_rotationVariance", &FoliageDescriptor::m_rotationVariance)
-		.def_readwrite("m_branchingAngle", &FoliageDescriptor::m_branchingAngle)
-		.def_readwrite("m_maxNodeThickness", &FoliageDescriptor::m_maxNodeThickness)
-		.def_readwrite("m_minRootDistance", &FoliageDescriptor::m_minRootDistance)
-		.def_readwrite("m_maxEndDistance", &FoliageDescriptor::m_maxEndDistance);
+		.def(py::init<>());
 
 	py::class_<TreeMeshGeneratorSettings>(m, "TreeMeshGeneratorSettings")
 		.def(py::init<>())
@@ -580,11 +552,11 @@ PYBIND11_MODULE(pyecosyslab, m) {
 
 	py::class_<ApplicationInfo>(m, "ApplicationInfo")
 		.def(py::init<>())
-		.def_readwrite("m_projectPath", &ApplicationInfo::m_projectPath)
-		.def_readwrite("m_applicationName", &ApplicationInfo::m_applicationName)
-		.def_readwrite("m_enableDocking", &ApplicationInfo::m_enableDocking)
-		.def_readwrite("m_enableViewport", &ApplicationInfo::m_enableViewport)
-		.def_readwrite("m_fullScreen", &ApplicationInfo::m_fullScreen);
+		.def_readwrite("project_path", &ApplicationInfo::project_path)
+		.def_readwrite("m_applicationName", &ApplicationInfo::application_name)
+		.def_readwrite("m_enableDocking", &ApplicationInfo::enable_docking)
+		.def_readwrite("m_enableViewport", &ApplicationInfo::enable_viewport)
+		.def_readwrite("m_fullScreen", &ApplicationInfo::full_screen);
 
 	py::class_<Application>(m, "Application")
 		.def_static("Initialize", &Application::Initialize)

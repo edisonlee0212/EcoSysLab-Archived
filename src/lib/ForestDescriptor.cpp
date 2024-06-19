@@ -179,26 +179,26 @@ void ForestPatch::Serialize(YAML::Emitter& out) const {
 }
 
 void ForestPatch::Deserialize(const YAML::Node& in) {
-  if (in["m_gridDistance"])
-    grid_distance = in["m_gridDistance"].as<glm::vec2>();
-  if (in["m_positionOffsetMean"])
-    position_offset_mean = in["m_positionOffsetMean"].as<glm::vec2>();
-  if (in["m_positionOffsetVariance"])
-    position_offset_variance = in["m_positionOffsetVariance"].as<glm::vec2>();
-  if (in["m_rotationOffsetVariance"])
-    rotation_offset_variance = in["m_rotationOffsetVariance"].as<glm::vec3>();
+  if (in["grid_distance"])
+    grid_distance = in["grid_distance"].as<glm::vec2>();
+  if (in["position_offset_mean"])
+    position_offset_mean = in["position_offset_mean"].as<glm::vec2>();
+  if (in["position_offset_variance"])
+    position_offset_variance = in["position_offset_variance"].as<glm::vec2>();
+  if (in["rotation_offset_variance"])
+    rotation_offset_variance = in["rotation_offset_variance"].as<glm::vec3>();
 
-  if (in["m_minLowBranchPruning"])
-    min_low_branch_pruning = in["m_minLowBranchPruning"].as<float>();
-  if (in["m_maxLowBranchPruning"])
-    max_low_branch_pruning = in["m_maxLowBranchPruning"].as<float>();
-  if (in["m_simulationTime"])
-    simulation_time = in["m_simulationTime"].as<float>();
-  if (in["m_startTimeMax"])
-    start_time_max = in["m_startTimeMax"].as<float>();
-  tree_descriptor.Load("m_treeDescriptor", in);
+  if (in["min_low_branch_pruning"])
+    min_low_branch_pruning = in["min_low_branch_pruning"].as<float>();
+  if (in["max_low_branch_pruning"])
+    max_low_branch_pruning = in["max_low_branch_pruning"].as<float>();
+  if (in["simulation_time"])
+    simulation_time = in["simulation_time"].as<float>();
+  if (in["start_time_max"])
+    start_time_max = in["start_time_max"].as<float>();
+  tree_descriptor.Load("tree_descriptor", in);
 
-  simulation_settings.Load("m_simulationSettings", in);
+  simulation_settings.Load("simulation_settings", in);
 }
 
 bool ForestPatch::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
