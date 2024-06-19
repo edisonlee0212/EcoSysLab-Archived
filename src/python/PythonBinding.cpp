@@ -309,7 +309,7 @@ void voxel_space_colonization_tree_data(
 	tree->m_treeModel.m_treeGrowthSettings.use_space_colonization = true;
 	tree->m_treeModel.m_treeGrowthSettings.m_spaceColonizationAutoResize = false;
 
-	ecoSysLabLayer->m_simulationSettings.m_deltaTime = deltaTime;
+	ecoSysLabLayer->m_simulationSettings.delta_time = deltaTime;
 
 	Application::Loop();
 	for (int i = 0; i < iterations; i++)
@@ -439,7 +439,7 @@ void rbv_space_colonization_tree_data(
 	tree->m_treeModel.m_treeGrowthSettings.use_space_colonization = true;
 	tree->m_treeModel.m_treeGrowthSettings.m_spaceColonizationAutoResize = false;
 	Application::Loop();
-	ecoSysLabLayer->m_simulationSettings.m_deltaTime = deltaTime;
+	ecoSysLabLayer->m_simulationSettings.delta_time = deltaTime;
 	for (int i = 0; i < iterations; i++)
 	{
 		ecoSysLabLayer->Simulate();

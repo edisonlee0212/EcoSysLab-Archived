@@ -52,7 +52,7 @@ void DatasetGenerator::GenerateTreeTrunkMesh(const std::string& treeParametersPa
   tree->tree_descriptor = treeDescriptor;
   tree->tree_model.tree_growth_settings.use_space_colonization = false;
   Application::Loop();
-  ecoSysLabLayer->m_simulationSettings.m_deltaTime = deltaTime;
+  ecoSysLabLayer->m_simulationSettings.delta_time = deltaTime;
   for (int i = 0; i < maxIterations; i++) {
     ecoSysLabLayer->Simulate();
     if (tree->tree_model.RefShootSkeleton().PeekSortedNodeList().size() >= maxTreeNodeCount) {
@@ -145,7 +145,7 @@ void DatasetGenerator::GenerateTreeMesh(const std::string& treeParametersPath, f
   tree->tree_descriptor = treeDescriptor;
   tree->tree_model.tree_growth_settings.use_space_colonization = false;
   Application::Loop();
-  ecoSysLabLayer->m_simulationSettings.m_deltaTime = deltaTime;
+  ecoSysLabLayer->m_simulationSettings.delta_time = deltaTime;
 
   for (int i = 0; i < maxIterations; i++) {
     ecoSysLabLayer->Simulate();
@@ -207,7 +207,7 @@ void DatasetGenerator::GenerateTreeMesh(const std::string& treeParametersPath, f
   Application::Loop();
   int testIndex = 0;
   std::filesystem::path basePath = treeMeshOutputPath;
-  ecoSysLabLayer->m_simulationSettings.m_deltaTime = deltaTime;
+  ecoSysLabLayer->m_simulationSettings.delta_time = deltaTime;
 
   for (int i = 0; i < maxIterations; i++) {
     ecoSysLabLayer->Simulate();
@@ -275,7 +275,7 @@ void DatasetGenerator::GeneratePointCloudForTree(const TreePointCloudPointSettin
   tree->tree_descriptor = treeDescriptor;
   tree->tree_model.tree_growth_settings.use_space_colonization = false;
   Application::Loop();
-  ecoSysLabLayer->m_simulationSettings.m_deltaTime = deltaTime;
+  ecoSysLabLayer->m_simulationSettings.delta_time = deltaTime;
 
   for (int i = 0; i < maxIterations; i++) {
     ecoSysLabLayer->Simulate();
@@ -351,8 +351,8 @@ void DatasetGenerator::GeneratePointCloudForForest(
   forestPatch->ApplyTreeDescriptors(treeParametersFolderPath, {1.f});
   forestPatch->InstantiatePatch(false);
 
-  ecoSysLabLayer->m_simulationSettings.m_maxNodeCount = maxTreeNodeCount;
-  ecoSysLabLayer->m_simulationSettings.m_deltaTime = deltaTime;
+  ecoSysLabLayer->m_simulationSettings.max_node_count = maxTreeNodeCount;
+  ecoSysLabLayer->m_simulationSettings.delta_time = deltaTime;
 
   for (int i = 0; i < maxIterations; i++) {
     ecoSysLabLayer->Simulate();
@@ -420,13 +420,13 @@ void DatasetGenerator::GeneratePointCloudForForestPatch(
     ecoSysLabLayer->ResetAllTrees(treeEntities);
   }
 
-  forestPatch->m_treeGrowthSettings.use_space_colonization = false;
+  forestPatch->tree_growth_settings.use_space_colonization = false;
 
   Application::Loop();
 
   const auto forest = forestPatch->InstantiatePatch(gridSize, true);
 
-  while (ecoSysLabLayer->GetSimulatedTime() < forestPatch->m_simulationTime) {
+  while (ecoSysLabLayer->GetSimulatedTime() < forestPatch->simulation_time) {
     ecoSysLabLayer->Simulate();
   }
   ecoSysLabLayer->GenerateMeshes(meshGeneratorSettings);
@@ -488,7 +488,7 @@ void DatasetGenerator::GeneratePointCloudForForestPatchJoinedSpecies(
     ecoSysLabLayer->ResetAllTrees(treeEntities);
   }
 
-  forestPatch->m_treeGrowthSettings.use_space_colonization = false;
+  forestPatch->tree_growth_settings.use_space_colonization = false;
 
   Application::Loop();
   Entity forest;
@@ -498,7 +498,7 @@ void DatasetGenerator::GeneratePointCloudForForestPatchJoinedSpecies(
     if (i.is_regular_file() && i.path().extension().string() == ".tree") {
       if (const auto treeDescriptor = std::dynamic_pointer_cast<TreeDescriptor>(
               ProjectManager::GetOrCreateAsset(ProjectManager::GetPathRelativeToProject(i.path())))) {
-        treeDescriptors.emplace_back(std::make_pair(forestPatch->m_treeGrowthSettings, treeDescriptor));
+        treeDescriptors.emplace_back(std::make_pair(forestPatch->tree_growth_settings, treeDescriptor));
       }
     }
   }
@@ -506,7 +506,7 @@ void DatasetGenerator::GeneratePointCloudForForestPatchJoinedSpecies(
     forest = forestPatch->InstantiatePatch(treeDescriptors, gridSize, true);
   }
 
-  while (ecoSysLabLayer->GetSimulatedTime() < forestPatch->m_simulationTime) {
+  while (ecoSysLabLayer->GetSimulatedTime() < forestPatch->simulation_time) {
     ecoSysLabLayer->Simulate();
   }
   ecoSysLabLayer->GenerateMeshes(meshGeneratorSettings);

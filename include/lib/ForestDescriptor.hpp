@@ -6,19 +6,19 @@ namespace eco_sys_lab {
 
 class ForestPatch : public IAsset {
  public:
-  glm::vec2 m_gridDistance = glm::vec2(1.5f);
-  glm::vec2 m_positionOffsetMean = glm::vec2(0.f);
-  glm::vec2 m_positionOffsetVariance = glm::vec2(0.0f);
-  glm::vec3 m_rotationOffsetVariance = glm::vec3(0.0f);
-  AssetRef m_treeDescriptor;
-  TreeGrowthSettings m_treeGrowthSettings{};
-  SimulationSettings m_simulationSettings;
+  glm::vec2 grid_distance = glm::vec2(1.5f);
+  glm::vec2 position_offset_mean = glm::vec2(0.f);
+  glm::vec2 position_offset_variance = glm::vec2(0.0f);
+  glm::vec3 rotation_offset_variance = glm::vec3(0.0f);
+  AssetRef tree_descriptor;
+  TreeGrowthSettings tree_growth_settings{};
+  SimulationSettings simulation_settings;
 
-  float m_minLowBranchPruning = 0.f;
-  float m_maxLowBranchPruning = 0.f;
+  float min_low_branch_pruning = 0.f;
+  float max_low_branch_pruning = 0.f;
 
-  float m_simulationTime = 0.f;
-  float m_startTimeMax = 0.0f;
+  float simulation_time = 0.f;
+  float start_time_max = 0.0f;
   Entity InstantiatePatch(const glm::ivec2& gridSize, bool setSimulationSettings = true);
 
   Entity InstantiatePatch(const std::vector<std::pair<TreeGrowthSettings, std::shared_ptr<TreeDescriptor>>>& candidates,

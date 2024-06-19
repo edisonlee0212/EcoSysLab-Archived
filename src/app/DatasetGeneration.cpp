@@ -108,7 +108,7 @@ void forest_patch_point_cloud() {
         std::string name = forestPatch->GetTitle() + "_" + std::to_string(index);
         std::filesystem::path target_tree_point_cloud_path = output_root / forestPatch->GetTitle() / (name + ".ply");
 
-        treePointCloudGridCaptureSettings->m_gridDistance = forestPatch->m_gridDistance;
+        treePointCloudGridCaptureSettings->m_gridDistance = forestPatch->grid_distance;
 
         DatasetGenerator::GeneratePointCloudForForestPatch(gridSize, treePointCloudPointSettings,
                                                            treePointCloudGridCaptureSettings, forestPatch, tmgs,
@@ -164,7 +164,7 @@ void forest_patch_point_cloud_joined(const std::string& folderName, const bool e
         std::string name = folderName + "_" + std::to_string(index);
         std::filesystem::path target_tree_point_cloud_path = output_root / folderName / (name + ".ply");
 
-        treePointCloudGridCaptureSettings->m_gridDistance = forestPatch->m_gridDistance;
+        treePointCloudGridCaptureSettings->m_gridDistance = forestPatch->grid_distance;
 
         DatasetGenerator::GeneratePointCloudForForestPatchJoinedSpecies(
             gridSize, treePointCloudPointSettings, treePointCloudGridCaptureSettings, forestPatch,

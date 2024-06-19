@@ -502,7 +502,7 @@ void EcoSysLabLayer::Visualization() {
                 const auto climateCandidate = FindClimate();
                 if (!climateCandidate.expired()) {
                   climateCandidate.lock()->PrepareForGrowth();
-                  if (tree->TryGrowSubTree(m_simulationSettings.m_deltaTime, treeVisualizer.m_selectedInternodeHandle,
+                  if (tree->TryGrowSubTree(m_simulationSettings.delta_time, treeVisualizer.m_selectedInternodeHandle,
                                            false)) {
                     treeVisualizer.m_needUpdate = true;
                     mayNeedGeometryGeneration = true;
@@ -708,7 +708,7 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
                 break;
             }
             if (m_operatorMode == static_cast<unsigned>(OperatorMode::Invigorate)) {
-              ImGui::DragFloat("Invigorate speed", &m_simulationSettings.m_deltaTime, 0.01f, 0.01f, 1.0f);
+              ImGui::DragFloat("Invigorate speed", &m_simulationSettings.delta_time, 0.01f, 0.01f, 1.0f);
             }
             if (m_operatorMode == static_cast<unsigned>(OperatorMode::Reduce)) {
               ImGui::DragFloat("Reduce speed", &m_reduceRate, 0.001f, 0.001f, 1.0f);
@@ -740,7 +740,7 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
         targetTime = 0.0f;
       }
       ImGui::Text(("Simulated time: " + std::to_string(m_simulatedTime) + " years").c_str());
-      ImGui::DragInt("target nodes", &m_simulationSettings.m_maxNodeCount, 500, 0, INT_MAX);
+      ImGui::DragInt("target nodes", &m_simulationSettings.max_node_count, 500, 0, INT_MAX);
       ImGui::DragFloat("target years", &extraTime, 0.1f, m_simulatedTime, 999);
       if (autoTimeGrow) {
         if (ImGui::Button("Force stop")) {
@@ -757,7 +757,7 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
         simulate = true;
       }
 
-      if (!m_simulationSettings.m_autoClearFruitAndLeaves && ImGui::Button("Clear ground leaves and fruits")) {
+      if (!m_simulationSettings.auto_clear_fruit_and_leaves && ImGui::Button("Clear ground leaves and fruits")) {
         ClearGroundFruitAndLeaf();
       }
       ImGui::Separator();
@@ -865,7 +865,7 @@ void EcoSysLabLayer::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) 
   ImGui::End();
   if (simulate || autoTimeGrow) {
     Simulate(m_simulationSettings);
-    if (m_simulationSettings.m_autoClearFruitAndLeaves) {
+    if (m_simulationSettings.auto_clear_fruit_and_leaves) {
       ClearGroundFruitAndLeaf();
     }
     if (scene->IsEntityValid(m_selectedTree)) {
@@ -1593,7 +1593,7 @@ glm::vec2 EcoSysLabLayer::GetMouseSceneCameraPosition() const {
 void EcoSysLabLayer::Simulate(const SimulationSettings& simulationSettings) {
   const auto scene = GetScene();
   const std::vector<Entity>* treeEntities = scene->UnsafeGetPrivateComponentOwnersList<Tree>();
-  m_simulatedTime += simulationSettings.m_deltaTime;
+  m_simulatedTime += simulationSettings.delta_time;
   if (treeEntities && !treeEntities->empty()) {
     float time = Times::Now();
 
@@ -1615,7 +1615,7 @@ void EcoSysLabLayer::Simulate(const SimulationSettings& simulationSettings) {
     }
     climate->m_climateModel.time = m_simulatedTime;
 
-    if (simulationSettings.m_soilSimulation) {
+    if (simulationSettings.soil_simulation) {
       soil->soil_model.Irrigation();
       soil->soil_model.Step();
     }
@@ -1623,7 +1623,7 @@ void EcoSysLabLayer::Simulate(const SimulationSettings& simulationSettings) {
       auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
       tree->climate = climate;
       tree->soil = soil;
-      tree->crown_shyness_distance = simulationSettings.m_crownShynessDistance;
+      tree->crown_shyness_distance = simulationSettings.crown_shyness_distance;
     }
     climate->PrepareForGrowth();
     std::vector<bool> grownStat{};
@@ -1637,10 +1637,10 @@ void EcoSysLabLayer::Simulate(const SimulationSettings& simulationSettings) {
         return;
       if (tree->start_time > m_simulatedTime)
         return;
-      if (simulationSettings.m_maxNodeCount > 0 &&
-          tree->tree_model.RefShootSkeleton().PeekSortedNodeList().size() >= simulationSettings.m_maxNodeCount)
+      if (simulationSettings.max_node_count > 0 &&
+          tree->tree_model.RefShootSkeleton().PeekSortedNodeList().size() >= simulationSettings.max_node_count)
         return;
-      grownStat[threadIndex] = tree->TryGrow(simulationSettings.m_deltaTime, true);
+      grownStat[threadIndex] = tree->TryGrow(simulationSettings.delta_time, true);
     });
 
     auto heightField = soil->soil_descriptor.Get<SoilDescriptor>()->height_field.Get<HeightField>();
@@ -1652,7 +1652,7 @@ void EcoSysLabLayer::Simulate(const SimulationSettings& simulationSettings) {
       if (!tree->IsEnabled())
         continue;
       // Collect fruit and leaves here.
-      if (!simulationSettings.m_autoClearFruitAndLeaves) {
+      if (!simulationSettings.auto_clear_fruit_and_leaves) {
         for (const auto& fruit : tree->tree_model.RefShootSkeleton().data.dropped_fruits) {
           Fruit newFruit;
           newFruit.m_globalTransform.value = treeGlobalTransform.value * fruit.transform;

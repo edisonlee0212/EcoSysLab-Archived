@@ -26,7 +26,7 @@ Entity ForestPatch::InstantiatePatch(const glm::ivec2& gridSize, const bool setS
     heightField = soilDescriptor->height_field.Get<HeightField>();
   }
   const glm::vec2 startPoint =
-      glm::vec2((gridSize.x - 1) * m_gridDistance.x, (gridSize.y - 1) * m_gridDistance.y) * 0.5f;
+      glm::vec2((gridSize.x - 1) * grid_distance.x, (gridSize.y - 1) * grid_distance.y) * 0.5f;
 
   const auto retVal = scene->CreateEntity("Forest (" + std::to_string(gridSize.x * gridSize.y) + ") - " + GetTitle());
   const auto forest = scene->CreateEntity("Center");
@@ -39,18 +39,18 @@ Entity ForestPatch::InstantiatePatch(const glm::ivec2& gridSize, const bool setS
   const auto offset = glm::linearRand(glm::vec3(-10000), glm::vec3(10000));
   for (int i = 0; i < gridSize.x; i++) {
     for (int j = 0; j < gridSize.y; j++) {
-      auto position = glm::vec3(-startPoint.x + i * m_gridDistance.x, 0.0f, -startPoint.y + j * m_gridDistance.y);
+      auto position = glm::vec3(-startPoint.x + i * grid_distance.x, 0.0f, -startPoint.y + j * grid_distance.y);
       position.x +=
-          glm::linearRand(-m_gridDistance.x * m_positionOffsetMean.x, m_gridDistance.x * m_positionOffsetMean.x);
+          glm::linearRand(-grid_distance.x * position_offset_mean.x, grid_distance.x * position_offset_mean.x);
       position.z +=
-          glm::linearRand(-m_gridDistance.y * m_positionOffsetMean.y, m_gridDistance.y * m_positionOffsetMean.y);
+          glm::linearRand(-grid_distance.y * position_offset_mean.y, grid_distance.y * position_offset_mean.y);
       position +=
-          glm::gaussRand(glm::vec3(0.0f), glm::vec3(m_positionOffsetVariance.x, 0.0f, m_positionOffsetVariance.y));
+          glm::gaussRand(glm::vec3(0.0f), glm::vec3(position_offset_variance.x, 0.0f, position_offset_variance.y));
       if (heightField)
         position.y = heightField->GetValue({position.x, position.z}) - 0.01f;
       GlobalTransform transform{};
       transform.SetPosition(position);
-      auto rotation = glm::quat(glm::radians(glm::vec3(glm::gaussRand(glm::vec3(0.0f), m_rotationOffsetVariance))));
+      auto rotation = glm::quat(glm::radians(glm::vec3(glm::gaussRand(glm::vec3(0.0f), rotation_offset_variance))));
       transform.SetRotation(rotation);
       transform.SetScale(glm::vec3(1.f));
 
@@ -59,8 +59,8 @@ Entity ForestPatch::InstantiatePatch(const glm::ivec2& gridSize, const bool setS
 
       scene->SetDataComponent(treeEntity, transform);
       const auto tree = scene->GetOrSetPrivateComponent<Tree>(treeEntity).lock();
-      tree->tree_model.tree_growth_settings = m_treeGrowthSettings;
-      tree->tree_descriptor = m_treeDescriptor.Get<TreeDescriptor>();
+      tree->tree_model.tree_growth_settings = tree_growth_settings;
+      tree->tree_descriptor = tree_descriptor.Get<TreeDescriptor>();
       if (i == 0 || j == 0 || i == gridSize.x - 1 || j == gridSize.y - 1) {
         scene->SetParent(treeEntity, boundary);
         tree->generate_mesh = false;
@@ -68,15 +68,15 @@ Entity ForestPatch::InstantiatePatch(const glm::ivec2& gridSize, const bool setS
         scene->SetParent(treeEntity, forest);
         tree->generate_mesh = true;
       }
-      tree->start_time = glm::linearRand(0.0f, m_startTimeMax);
-      tree->low_branch_pruning = glm::mix(m_minLowBranchPruning, m_maxLowBranchPruning,
+      tree->start_time = glm::linearRand(0.0f, start_time_max);
+      tree->low_branch_pruning = glm::mix(min_low_branch_pruning, max_low_branch_pruning,
                                           glm::abs(glm::perlin(offset + transform.GetPosition())));
     }
   }
 
   if (setSimulationSettings) {
     const auto lab = Application::GetLayer<EcoSysLabLayer>();
-    lab->m_simulationSettings = m_simulationSettings;
+    lab->m_simulationSettings = simulation_settings;
   }
 
   return retVal;
@@ -99,7 +99,7 @@ Entity ForestPatch::InstantiatePatch(
     heightField = soilDescriptor->height_field.Get<HeightField>();
   }
   const glm::vec2 startPoint =
-      glm::vec2((gridSize.x - 1) * m_gridDistance.x, (gridSize.y - 1) * m_gridDistance.y) * 0.5f;
+      glm::vec2((gridSize.x - 1) * grid_distance.x, (gridSize.y - 1) * grid_distance.y) * 0.5f;
 
   const auto retVal = scene->CreateEntity("Forest (" + std::to_string(gridSize.x * gridSize.y) + ") - " + GetTitle());
   const auto forest = scene->CreateEntity("Center");
@@ -112,18 +112,18 @@ Entity ForestPatch::InstantiatePatch(
   const auto offset = glm::linearRand(glm::vec3(-10000), glm::vec3(10000));
   for (int i = 0; i < gridSize.x; i++) {
     for (int j = 0; j < gridSize.y; j++) {
-      auto position = glm::vec3(-startPoint.x + i * m_gridDistance.x, 0.0f, -startPoint.y + j * m_gridDistance.y);
+      auto position = glm::vec3(-startPoint.x + i * grid_distance.x, 0.0f, -startPoint.y + j * grid_distance.y);
       position.x +=
-          glm::linearRand(-m_gridDistance.x * m_positionOffsetMean.x, m_gridDistance.x * m_positionOffsetMean.x);
+          glm::linearRand(-grid_distance.x * position_offset_mean.x, grid_distance.x * position_offset_mean.x);
       position.z +=
-          glm::linearRand(-m_gridDistance.y * m_positionOffsetMean.y, m_gridDistance.y * m_positionOffsetMean.y);
+          glm::linearRand(-grid_distance.y * position_offset_mean.y, grid_distance.y * position_offset_mean.y);
       position +=
-          glm::gaussRand(glm::vec3(0.0f), glm::vec3(m_positionOffsetVariance.x, 0.0f, m_positionOffsetVariance.y));
+          glm::gaussRand(glm::vec3(0.0f), glm::vec3(position_offset_variance.x, 0.0f, position_offset_variance.y));
       if (heightField)
         position.y = heightField->GetValue({position.x, position.z}) - 0.01f;
       GlobalTransform transform{};
       transform.SetPosition(position);
-      auto rotation = glm::quat(glm::radians(glm::vec3(glm::gaussRand(glm::vec3(0.0f), m_rotationOffsetVariance))));
+      auto rotation = glm::quat(glm::radians(glm::vec3(glm::gaussRand(glm::vec3(0.0f), rotation_offset_variance))));
       transform.SetRotation(rotation);
       transform.SetScale(glm::vec3(1.f));
 
@@ -135,7 +135,7 @@ Entity ForestPatch::InstantiatePatch(
 
       const auto candidateIndex = glm::linearRand(0, static_cast<int>(candidates.size() - 1));
       tree->tree_model.tree_growth_settings = candidates.at(candidateIndex).first;
-      tree->tree_descriptor = candidates.at(candidateIndex).second;  // m_treeDescriptor.Get<TreeDescriptor>();
+      tree->tree_descriptor = candidates.at(candidateIndex).second;  // tree_descriptor.Get<TreeDescriptor>();
       if (i == 0 || j == 0 || i == gridSize.x - 1 || j == gridSize.y - 1) {
         scene->SetParent(treeEntity, boundary);
         tree->generate_mesh = false;
@@ -143,95 +143,95 @@ Entity ForestPatch::InstantiatePatch(
         scene->SetParent(treeEntity, forest);
         tree->generate_mesh = true;
       }
-      tree->start_time = glm::linearRand(0.0f, m_startTimeMax);
-      tree->low_branch_pruning = glm::mix(m_minLowBranchPruning, m_maxLowBranchPruning,
+      tree->start_time = glm::linearRand(0.0f, start_time_max);
+      tree->low_branch_pruning = glm::mix(min_low_branch_pruning, max_low_branch_pruning,
                                           glm::abs(glm::perlin(offset + transform.GetPosition())));
     }
   }
 
   if (setSimulationSettings) {
     const auto lab = Application::GetLayer<EcoSysLabLayer>();
-    lab->m_simulationSettings = m_simulationSettings;
+    lab->m_simulationSettings = simulation_settings;
   }
 
   return retVal;
 }
 
 void ForestPatch::CollectAssetRef(std::vector<AssetRef>& list) {
-  if (m_treeDescriptor.Get<TreeDescriptor>())
-    list.push_back(m_treeDescriptor);
+  if (tree_descriptor.Get<TreeDescriptor>())
+    list.push_back(tree_descriptor);
 }
 
 void ForestPatch::Serialize(YAML::Emitter& out) const {
-  out << YAML::Key << "m_gridDistance" << YAML::Value << m_gridDistance;
-  out << YAML::Key << "m_positionOffsetMean" << YAML::Value << m_positionOffsetMean;
-  out << YAML::Key << "m_positionOffsetVariance" << YAML::Value << m_positionOffsetVariance;
-  out << YAML::Key << "m_rotationOffsetVariance" << YAML::Value << m_rotationOffsetVariance;
+  out << YAML::Key << "grid_distance" << YAML::Value << grid_distance;
+  out << YAML::Key << "position_offset_mean" << YAML::Value << position_offset_mean;
+  out << YAML::Key << "position_offset_variance" << YAML::Value << position_offset_variance;
+  out << YAML::Key << "rotation_offset_variance" << YAML::Value << rotation_offset_variance;
 
-  out << YAML::Key << "m_minLowBranchPruning" << YAML::Value << m_minLowBranchPruning;
-  out << YAML::Key << "m_maxLowBranchPruning" << YAML::Value << m_maxLowBranchPruning;
-  out << YAML::Key << "m_simulationTime" << YAML::Value << m_simulationTime;
-  out << YAML::Key << "m_startTimeMax" << YAML::Value << m_startTimeMax;
+  out << YAML::Key << "min_low_branch_pruning" << YAML::Value << min_low_branch_pruning;
+  out << YAML::Key << "max_low_branch_pruning" << YAML::Value << max_low_branch_pruning;
+  out << YAML::Key << "simulation_time" << YAML::Value << simulation_time;
+  out << YAML::Key << "start_time_max" << YAML::Value << start_time_max;
 
-  m_treeDescriptor.Save("m_treeDescriptor", out);
+  tree_descriptor.Save("tree_descriptor", out);
 
-  m_simulationSettings.Save("m_simulationSettings", out);
+  simulation_settings.Save("simulation_settings", out);
 }
 
 void ForestPatch::Deserialize(const YAML::Node& in) {
   if (in["m_gridDistance"])
-    m_gridDistance = in["m_gridDistance"].as<glm::vec2>();
+    grid_distance = in["m_gridDistance"].as<glm::vec2>();
   if (in["m_positionOffsetMean"])
-    m_positionOffsetMean = in["m_positionOffsetMean"].as<glm::vec2>();
+    position_offset_mean = in["m_positionOffsetMean"].as<glm::vec2>();
   if (in["m_positionOffsetVariance"])
-    m_positionOffsetVariance = in["m_positionOffsetVariance"].as<glm::vec2>();
+    position_offset_variance = in["m_positionOffsetVariance"].as<glm::vec2>();
   if (in["m_rotationOffsetVariance"])
-    m_rotationOffsetVariance = in["m_rotationOffsetVariance"].as<glm::vec3>();
+    rotation_offset_variance = in["m_rotationOffsetVariance"].as<glm::vec3>();
 
   if (in["m_minLowBranchPruning"])
-    m_minLowBranchPruning = in["m_minLowBranchPruning"].as<float>();
+    min_low_branch_pruning = in["m_minLowBranchPruning"].as<float>();
   if (in["m_maxLowBranchPruning"])
-    m_maxLowBranchPruning = in["m_maxLowBranchPruning"].as<float>();
+    max_low_branch_pruning = in["m_maxLowBranchPruning"].as<float>();
   if (in["m_simulationTime"])
-    m_simulationTime = in["m_simulationTime"].as<float>();
+    simulation_time = in["m_simulationTime"].as<float>();
   if (in["m_startTimeMax"])
-    m_startTimeMax = in["m_startTimeMax"].as<float>();
-  m_treeDescriptor.Load("m_treeDescriptor", in);
+    start_time_max = in["m_startTimeMax"].as<float>();
+  tree_descriptor.Load("m_treeDescriptor", in);
 
-  m_simulationSettings.Load("m_simulationSettings", in);
+  simulation_settings.Load("m_simulationSettings", in);
 }
 
 bool ForestPatch::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
   bool changed = false;
-  editorLayer->DragAndDropButton<TreeDescriptor>(m_treeDescriptor, "TreeDescriptor");
+  editorLayer->DragAndDropButton<TreeDescriptor>(tree_descriptor, "TreeDescriptor");
   static glm::ivec2 gridSize = {8, 8};
   ImGui::DragInt2("Grid size", &gridSize.x, 1, 0, 100);
-  if (ImGui::DragFloat2("Grid distance", &m_gridDistance.x, 0.1f, 0.0f, 100.0f))
+  if (ImGui::DragFloat2("Grid distance", &grid_distance.x, 0.1f, 0.0f, 100.0f))
     changed = true;
   ImGui::Separator();
-  if (ImGui::DragFloat2("Position offset mean", &m_positionOffsetMean.x, 0.01f, 0.0f, 5.f))
+  if (ImGui::DragFloat2("Position offset mean", &position_offset_mean.x, 0.01f, 0.0f, 5.f))
     changed = true;
-  if (ImGui::DragFloat2("Position offset variance", &m_positionOffsetVariance.x, 0.01f, 0.0f, 5.f))
+  if (ImGui::DragFloat2("Position offset variance", &position_offset_variance.x, 0.01f, 0.0f, 5.f))
     changed = true;
-  if (ImGui::DragFloat2("Rotation offset variance", &m_rotationOffsetVariance.x, 0.01f, 0.0f, 5.f))
+  if (ImGui::DragFloat2("Rotation offset variance", &rotation_offset_variance.x, 0.01f, 0.0f, 5.f))
     changed = true;
   static bool setParent = true;
   ImGui::Checkbox("Set Parent", &setParent);
   static bool setSimulationSettings = true;
   ImGui::Checkbox("Set Simulation settings", &setSimulationSettings);
   if (ImGui::TreeNodeEx("Simulation Settings", ImGuiTreeNodeFlags_DefaultOpen)) {
-    if (m_simulationSettings.OnInspect(editorLayer))
+    if (simulation_settings.OnInspect(editorLayer))
       changed = true;
     ImGui::TreePop();
   }
 
-  if (ImGui::DragFloat("Min low branch pruning", &m_minLowBranchPruning, 0.01f, 0.f, m_maxLowBranchPruning))
+  if (ImGui::DragFloat("Min low branch pruning", &min_low_branch_pruning, 0.01f, 0.f, max_low_branch_pruning))
     changed = true;
-  if (ImGui::DragFloat("Max low branch pruning", &m_maxLowBranchPruning, 0.01f, m_minLowBranchPruning, 1.f))
+  if (ImGui::DragFloat("Max low branch pruning", &max_low_branch_pruning, 0.01f, min_low_branch_pruning, 1.f))
     changed = true;
-  if (ImGui::DragFloat("Simulation time", &m_simulationTime, 0.1f, 0.0f, 100.f))
+  if (ImGui::DragFloat("Simulation time", &simulation_time, 0.1f, 0.0f, 100.f))
     changed = true;
-  if (ImGui::DragFloat("Start time max", &m_startTimeMax, 0.01f, 0.0f, 10.f))
+  if (ImGui::DragFloat("Start time max", &start_time_max, 0.01f, 0.0f, 10.f))
     changed = true;
 
   if (ImGui::Button("Instantiate")) {
@@ -258,7 +258,7 @@ bool ForestPatch::OnInspect(const std::shared_ptr<EditorLayer>& editorLayer) {
         const auto treeDescriptor = std::dynamic_pointer_cast<TreeDescriptor>(
             ProjectManager::GetOrCreateAsset(ProjectManager::GetPathRelativeToProject(i.path())));
         if (treeDescriptor) {
-          treeDescriptors.emplace_back(std::make_pair(m_treeGrowthSettings, treeDescriptor));
+          treeDescriptors.emplace_back(std::make_pair(tree_growth_settings, treeDescriptor));
         }
         index++;
       }
@@ -456,7 +456,7 @@ void ForestDescriptor::Serialize(YAML::Emitter& out) const {
   }
   out << YAML::EndSeq;
 
-  out << YAML::Key << "m_treeGrowthSettings" << YAML::Value << YAML::BeginMap;
+  out << YAML::Key << "tree_growth_settings" << YAML::Value << YAML::BeginMap;
   Tree::SerializeTreeGrowthSettings(m_treeGrowthSettings, out);
   out << YAML::EndMap;
 }

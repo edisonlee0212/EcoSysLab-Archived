@@ -1,23 +1,22 @@
-m_gridDistance: [1.5, 1.5]
-m_positionOffsetMean: [0.5, 0.5]
-m_positionOffsetVariance: [0, 0]
-m_rotationOffsetVariance: [0, 0, 0]
-m_gridSize: [8, 8]
-m_minLowBranchPruning: 0.200000003
-m_maxLowBranchPruning: 0.400000006
-m_simulationTime: 8
-m_startTimeMax: 1
-m_treeDescriptor:
-  m_assetHandle: 16017939262135559588
-  m_assetTypeName: TreeDescriptor
-m_simulationSettings:
-  m_deltaTime: 0.0821999982
-  m_soilSimulation: false
-  m_autoClearFruitAndLeaves: true
-  m_crownShynessDistance: 0.100000001
-  m_maxNodeCount: 0
-  m_skylightIntensity: 1
-  m_shadowDistanceLoss: 1
-  m_detectionRadius: 0.5
-  m_environmentLightIntensity: 0.00999999978
-  m_blurIteration: 0
+grid_distance: [1.5, 1.5]
+position_offset_mean: [0.5, 0.5]
+position_offset_variance: [0, 0]
+rotation_offset_variance: [0, 0, 0]
+min_low_branch_pruning: 0.200000003
+max_low_branch_pruning: 0.400000006
+simulation_time: 8
+start_time_max: 1
+tree_descriptor:
+  asset_handle_: 12233612664154662184
+  asset_type_name_: TreeDescriptor
+simulation_settings:
+  delta_time: 0.0821999982
+  soil_simulation: false
+  auto_clear_fruit_and_leaves: true
+  crown_shyness_distance: 0.150000006
+  max_node_count: 0
+  skylight_intensity: 1
+  shadow_distance_loss: 1
+  detection_radius: 0.5
+  environment_light_intensity: 0.00999999978
+  blur_iteration: 0
