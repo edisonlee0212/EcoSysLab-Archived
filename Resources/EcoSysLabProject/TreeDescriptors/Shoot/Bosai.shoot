@@ -11,25 +11,26 @@ apical_angle:
 roll_angle_noise_2d:
   min_max: [-1000, 1000]
   noise_descriptors:
-    - type: 0
-      frequency: 0.100000001
-      intensity: 1
-      multiplier: 1
-      min: -10
-      max: 10
-      offset: 0
-      shift: [0, 0, 0]
-      ridgid: false
+    []
 apical_angle_noise_2d:
   min_max: [-1000, 1000]
   noise_descriptors:
+    - type: 3
+      frequency: 1
+      intensity: 1
+      multiplier: 25
+      min: -1000
+      max: 1000
+      offset: 0
+      shift: [0, 0, 0]
+      ridgid: false
     - type: 0
       frequency: 0.100000001
       intensity: 1
       multiplier: 1
       min: -10
       max: 10
-      offset: 0
+      offset: 10
       shift: [0, 0, 0]
       ridgid: false
 branching_angle_mean_variance: [60, 1]

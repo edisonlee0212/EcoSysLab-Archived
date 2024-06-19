@@ -11,10 +11,10 @@ apical_angle:
 roll_angle_noise_2d:
   min_max: [-1000, 1000]
   noise_descriptors:
-    - type: 0
+    - type: 2
       frequency: 0.100000001
       intensity: 1
-      multiplier: 1
+      multiplier: 10
       min: -10
       max: 10
       offset: 0
@@ -23,10 +23,10 @@ roll_angle_noise_2d:
 apical_angle_noise_2d:
   min_max: [-1000, 1000]
   noise_descriptors:
-    - type: 0
+    - type: 2
       frequency: 0.100000001
       intensity: 1
-      multiplier: 1
+      multiplier: 5
       min: -10
       max: 10
       offset: 0

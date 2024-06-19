@@ -64,7 +64,7 @@ entity_metadata_list:
     pc:
       - tn: Climate
         e: true
-        m_climateDescriptor:
+        climate_descriptor:
           asset_handle_: 18020656765688137943
           asset_type_name_: ClimateDescriptor
 systems_:

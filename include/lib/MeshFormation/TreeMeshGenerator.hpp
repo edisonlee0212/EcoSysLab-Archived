@@ -786,7 +786,7 @@ void CylindricalMeshGenerator<SkeletonData, FlowData, NodeData>::GeneratePartial
     archetype.vertex_info1 = internode_handle + 1;
     archetype.vertex_info2 = flow_handle + 1;
     if (!need_stitching) {
-      int parent_last_ring_start_vertex_index = has_parent ? -1 : vertex_last_ring_start_vertex_index[parent_internode_handle];
+      int parent_last_ring_start_vertex_index = has_parent ? vertex_last_ring_start_vertex_index[parent_internode_handle] : -1;
       for (int p = 0; p < p_step; p++) {
         if (has_parent) {
           vertices.push_back(vertices.at(parent_last_ring_start_vertex_index + p));
