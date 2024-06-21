@@ -42,7 +42,7 @@ class BillboardCloud {
     glm::vec3 center = glm::vec3(0.f);
     float radius = 0.f;
 
-    void Initialize(const std::vector<Element>& elements);
+    void Initialize(const std::vector<Element>& target_elements);
   };
 
   struct Rectangle {
@@ -190,4 +190,4 @@ class BillboardCloud {
     static Rectangle GetMinAreaRectangle(std::vector<glm::vec2> points);
   };
 };
-}  // namespace EvoEngine
+}  // namespace evo_engine
