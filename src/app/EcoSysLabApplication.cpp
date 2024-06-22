@@ -86,28 +86,28 @@ int main() {
   ClassRegistry::RegisterPrivateComponent<Physics2DDemo>("Physics2DDemo");
   ClassRegistry::RegisterPrivateComponent<ParticlePhysics2DDemo>("ParticlePhysics2DDemo");
 
-  ApplicationInfo applicationConfigs;
-  applicationConfigs.application_name = "EcoSysLab";
-  applicationConfigs.project_path = std::filesystem::absolute(resourceFolderPath / "EcoSysLabProject" / "test.eveproj");
-  Application::Initialize(applicationConfigs);
+  ApplicationInfo application_configs;
+  application_configs.application_name = "EcoSysLab";
+  application_configs.project_path = std::filesystem::absolute(resourceFolderPath / "EcoSysLabProject" / "test.eveproj");
+  Application::Initialize(application_configs);
 
 #ifdef BUILD_WITH_RAYTRACER
 
-  auto rayTracerLayer = Application::GetLayer<RayTracerLayer>();
+  auto ray_tracer_layer = Application::GetLayer<RayTracerLayer>();
 #endif
 #ifdef BUILD_WITH_PHYSICS
   Application::GetActiveScene()->GetOrCreateSystem<PhysicsSystem>(1);
 #endif
   // adjust default camera speed
-  const auto editorLayer = Application::GetLayer<EditorLayer>();
-  editorLayer->velocity = 2.f;
-  editorLayer->default_scene_camera_position = glm::vec3(1.124, 0.218, 14.089);
+  const auto editor_layer = Application::GetLayer<EditorLayer>();
+  editor_layer->velocity = 2.f;
+  editor_layer->default_scene_camera_position = glm::vec3(1.124, 0.218, 14.089);
   // override default scene camera position etc.
-  editorLayer->show_camera_window = false;
-  editorLayer->show_scene_window = true;
-  editorLayer->show_entity_explorer_window = true;
-  editorLayer->show_entity_inspector_window = true;
-  const auto renderLayer = Application::GetLayer<RenderLayer>();
+  editor_layer->show_camera_window = false;
+  editor_layer->show_scene_window = true;
+  editor_layer->show_entity_explorer_window = true;
+  editor_layer->show_entity_inspector_window = true;
+  const auto render_layer = Application::GetLayer<RenderLayer>();
 #pragma region Engine Loop
   Application::Start();
   Application::Run();
@@ -125,11 +125,10 @@ void EngineSetup() {
     transform = Transform();
     transform.SetPosition(glm::vec3(0, 2, 35));
     transform.SetEulerRotation(glm::radians(glm::vec3(15, 0, 0)));
-    auto mainCamera = Application::GetActiveScene()->main_camera.Get<Camera>();
-    if (mainCamera) {
-      scene->SetDataComponent(mainCamera->GetOwner(), transform);
-      mainCamera->use_clear_color = true;
-      mainCamera->clear_color = glm::vec3(0.5f);
+    if (const auto main_camera = Application::GetActiveScene()->main_camera.Get<Camera>()) {
+      scene->SetDataComponent(main_camera->GetOwner(), transform);
+      main_camera->use_clear_color = true;
+      main_camera->clear_color = glm::vec3(0.5f);
     }
 #pragma endregion
 #pragma endregion

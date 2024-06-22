@@ -999,18 +999,21 @@ void BillboardCloud::Rasterize(const RasterizeSettings& rasterize_settings) {
   std::shared_ptr<Texture2D> albedo_texture = ProjectManager::CreateTemporaryAsset<Texture2D>();
   albedo_texture->SetRgbaChannelData(albedo_frame_buffer.color_buffer,
                                      glm::uvec2(albedo_frame_buffer.width, albedo_frame_buffer.height));
+  albedo_texture->UnsafeUploadDataImmediately();
   billboard_cloud_material->SetAlbedoTexture(albedo_texture);
   if (rasterize_settings.transfer_normal_map) {
     std::shared_ptr<Texture2D> normal_texture = ProjectManager::CreateTemporaryAsset<Texture2D>();
     normal_texture->SetRgbChannelData(normal_frame_buffer.color_buffer,
                                       glm::uvec2(normal_frame_buffer.width, normal_frame_buffer.height));
     billboard_cloud_material->SetNormalTexture(normal_texture);
+    normal_texture->UnsafeUploadDataImmediately();
   }
   if (rasterize_settings.transfer_roughness_map) {
     std::shared_ptr<Texture2D> roughness_texture = ProjectManager::CreateTemporaryAsset<Texture2D>();
     roughness_texture->SetRedChannelData(roughness_frame_buffer.color_buffer,
                                          glm::uvec2(roughness_frame_buffer.width, roughness_frame_buffer.height));
     billboard_cloud_material->SetRoughnessTexture(roughness_texture);
+    roughness_texture->UnsafeUploadDataImmediately();
   } else {
     billboard_cloud_material->material_properties.roughness = average_roughness;
   }
@@ -1019,6 +1022,7 @@ void BillboardCloud::Rasterize(const RasterizeSettings& rasterize_settings) {
     metallic_texture->SetRedChannelData(metallic_frame_buffer.color_buffer,
                                         glm::uvec2(metallic_frame_buffer.width, metallic_frame_buffer.height));
     billboard_cloud_material->SetMetallicTexture(metallic_texture);
+    metallic_texture->UnsafeUploadDataImmediately();
   } else {
     billboard_cloud_material->material_properties.metallic = average_metallic;
   }
@@ -1026,6 +1030,7 @@ void BillboardCloud::Rasterize(const RasterizeSettings& rasterize_settings) {
     std::shared_ptr<Texture2D> ao_texture = ProjectManager::CreateTemporaryAsset<Texture2D>();
     ao_texture->SetRedChannelData(ao_frame_buffer.color_buffer,
                                   glm::uvec2(ao_frame_buffer.width, ao_frame_buffer.height));
+    ao_texture->UnsafeUploadDataImmediately();
     billboard_cloud_material->SetAoTexture(ao_texture);
   }
 }
