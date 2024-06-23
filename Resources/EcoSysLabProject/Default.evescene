@@ -79,6 +79,14 @@ entity_metadata_list:
         tree_descriptor:
           asset_handle_: 11433142983488560832
           asset_type_name_: TreeDescriptor
+  - n: BBCloud Converter
+    h: 2634850789993334228
+    e: true
+    s: false
+    r: 2634850789993334228
+    pc:
+      - tn: BillboardCloudsConverter
+        e: true
 systems_:
   - type_name: PhysicsSystem
     enabled_: true
@@ -87,7 +95,7 @@ systems_:
 data_component_storage_list:
   - entity_size: 130
     chunk_capacity: 126
-    entity_alive_count: 5
+    entity_alive_count: 6
     data_component_types:
       - type_name: Transform
         type_size: 64
@@ -120,6 +128,11 @@ data_component_storage_list:
           - d: !!binary "AACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPw=="
           - d: !!binary "AAA="
       - h: 16181465756841632068
+        dc:
+          - d: !!binary "AACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPw=="
+          - d: !!binary "AACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPw=="
+          - d: !!binary "AAA="
+      - h: 2634850789993334228
         dc:
           - d: !!binary "AACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPw=="
           - d: !!binary "AACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPw=="

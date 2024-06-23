@@ -137,12 +137,20 @@ struct CpuDepthBuffer {
   [[nodiscard]] bool CompareZ(const int u, const int v, const float z) {
     if (u < 0 || v < 0 || u > width - 1 || v > height - 1)
       return false;
-    const int uv = u + width * v;
-
-    if (z >= depth_buffer[uv]) {
+    if (const int uv = u + width * v; z >= depth_buffer[uv]) {
       std::lock_guard lock(pixel_locks[uv]);
-      modified[uv] = true;
+      return true;
+    }
+    return false;
+  }
+
+  bool Update(const int u, const int v, const float z) {
+    if (u < 0 || v < 0 || u > width - 1 || v > height - 1)
+      return false;
+    if (const int uv = u + width * v; z >= depth_buffer[uv]) {
+      std::lock_guard lock(pixel_locks[uv]);
       depth_buffer[uv] = z;
+      modified[uv] = true;
       return true;
     }
     return false;
@@ -620,7 +628,7 @@ void PbrMaterial::ApplyMaterial(const std::shared_ptr<Material>& material,
 }
 
 void BillboardCloud::Rasterize(const RasterizeSettings& rasterize_settings) {
-  if (rasterize_settings.resolution.x < 1 || rasterize_settings.resolution.y < 1)
+  if (rasterize_settings.base_resolution.x < 1 || rasterize_settings.base_resolution.y < 1)
     return;
   std::unordered_map<Handle, PbrMaterial> pbr_materials;
   float average_roughness = 0.f;
@@ -639,16 +647,17 @@ void BillboardCloud::Rasterize(const RasterizeSettings& rasterize_settings) {
   average_metallic /= elements.size();
   average_ao /= elements.size();
 
-  CpuDepthBuffer depth_buffer(rasterize_settings.resolution.x, rasterize_settings.resolution.y);
+  CpuDepthBuffer depth_buffer(rasterize_settings.base_resolution.x, rasterize_settings.base_resolution.y);
 
-  CpuColorBuffer<glm::vec4> albedo_frame_buffer(rasterize_settings.resolution.x, rasterize_settings.resolution.y);
-  CpuColorBuffer<glm::vec3> normal_frame_buffer(rasterize_settings.resolution.x, rasterize_settings.resolution.y);
-  CpuColorBuffer<float> roughness_frame_buffer(rasterize_settings.resolution.x, rasterize_settings.resolution.y);
-  CpuColorBuffer<float> metallic_frame_buffer(rasterize_settings.resolution.x, rasterize_settings.resolution.y);
-  CpuColorBuffer<float> ao_frame_buffer(rasterize_settings.resolution.x, rasterize_settings.resolution.y);
-
-  if (rasterize_settings.debug_full_fill)
-    albedo_frame_buffer.FillColor(glm::vec4(1.f));
+  CpuColorBuffer<glm::vec4> albedo_frame_buffer(rasterize_settings.base_resolution.x,
+                                                rasterize_settings.base_resolution.y);
+  CpuColorBuffer<glm::vec3> normal_frame_buffer(rasterize_settings.base_resolution.x,
+                                                rasterize_settings.base_resolution.y);
+  CpuColorBuffer<float> roughness_frame_buffer(rasterize_settings.base_resolution.x,
+                                               rasterize_settings.base_resolution.y);
+  CpuColorBuffer<float> metallic_frame_buffer(rasterize_settings.base_resolution.x,
+                                              rasterize_settings.base_resolution.y);
+  CpuColorBuffer<float> ao_frame_buffer(rasterize_settings.base_resolution.x, rasterize_settings.base_resolution.y);
 
   if (rasterize_settings.debug_opaque) {
     average_roughness = 1.f;
@@ -663,18 +672,18 @@ void BillboardCloud::Rasterize(const RasterizeSettings& rasterize_settings) {
         glm::vec3 texture_space_vertices[3];
         if (triangle_index == 0) {
           texture_space_vertices[0] =
-              glm::vec3(bounding_rectangle.tex_coords[0] * glm::vec2(rasterize_settings.resolution), 0.f);
+              glm::vec3(bounding_rectangle.tex_coords[0] * glm::vec2(rasterize_settings.base_resolution), 0.f);
           texture_space_vertices[1] =
-              glm::vec3(bounding_rectangle.tex_coords[1] * glm::vec2(rasterize_settings.resolution), 0.f);
+              glm::vec3(bounding_rectangle.tex_coords[1] * glm::vec2(rasterize_settings.base_resolution), 0.f);
           texture_space_vertices[2] =
-              glm::vec3(bounding_rectangle.tex_coords[2] * glm::vec2(rasterize_settings.resolution), 0.f);
+              glm::vec3(bounding_rectangle.tex_coords[2] * glm::vec2(rasterize_settings.base_resolution), 0.f);
         } else {
           texture_space_vertices[0] =
-              glm::vec3(bounding_rectangle.tex_coords[2] * glm::vec2(rasterize_settings.resolution), 0.f);
+              glm::vec3(bounding_rectangle.tex_coords[2] * glm::vec2(rasterize_settings.base_resolution), 0.f);
           texture_space_vertices[1] =
-              glm::vec3(bounding_rectangle.tex_coords[3] * glm::vec2(rasterize_settings.resolution), 0.f);
+              glm::vec3(bounding_rectangle.tex_coords[3] * glm::vec2(rasterize_settings.base_resolution), 0.f);
           texture_space_vertices[2] =
-              glm::vec3(bounding_rectangle.tex_coords[0] * glm::vec2(rasterize_settings.resolution), 0.f);
+              glm::vec3(bounding_rectangle.tex_coords[0] * glm::vec2(rasterize_settings.base_resolution), 0.f);
         }
         // Bound check;
         auto min_bound = glm::vec2(FLT_MAX, FLT_MAX);
@@ -729,7 +738,7 @@ void BillboardCloud::Rasterize(const RasterizeSettings& rasterize_settings) {
         const auto texture_space_position =
             (bounding_rectangle.tex_coords[0] * bc0 + bounding_rectangle.tex_coords[1] * bc1 +
              bounding_rectangle.tex_coords[2] * bc2 + bounding_rectangle.tex_coords[3] * bc3) *
-            glm::vec2(rasterize_settings.resolution);
+            glm::vec2(rasterize_settings.base_resolution);
         texture_space_vertices[i].x = texture_space_position.x;
         texture_space_vertices[i].y = texture_space_position.y;
         texture_space_vertices[i].z = triangle.projected_vertices[i].position.z;
@@ -759,7 +768,6 @@ void BillboardCloud::Rasterize(const RasterizeSettings& rasterize_settings) {
           // Early depth check.
           if (!depth_buffer.CompareZ(u, v, z))
             continue;
-
           const auto tex_coords = bc0 * v0.tex_coord + bc1 * v1.tex_coord + bc2 * v2.tex_coord;
           auto albedo = material.base_albedo;
           float roughness = material.base_roughness;
@@ -781,8 +789,9 @@ void BillboardCloud::Rasterize(const RasterizeSettings& rasterize_settings) {
           // Alpha discard
           if (albedo.a < 0.1f)
             continue;
+          if (!depth_buffer.Update(u, v, z))
+            continue;
           auto normal = glm::normalize(bc0 * v0.normal + bc1 * v1.normal + bc2 * v2.normal);
-
           if (!material.normal_texture_data.empty()) {
             auto tangent = glm::normalize(bc0 * v0.tangent + bc1 * v1.tangent + bc2 * v2.tangent);
             const auto bi_tangent = glm::cross(normal, tangent);
@@ -843,6 +852,8 @@ void BillboardCloud::Rasterize(const RasterizeSettings& rasterize_settings) {
             const auto index = texture_y * material.ao_texture_resolution.x + texture_x;
             ao = material.ao_texture_data[index];
           }
+
+          depth_buffer.Update(u, v, z);
           albedo_frame_buffer.SetPixel(u, v, albedo);
           normal = normal * 0.5f + glm::vec3(0.5f);
           normal_frame_buffer.SetPixel(u, v, normal);
@@ -853,186 +864,104 @@ void BillboardCloud::Rasterize(const RasterizeSettings& rasterize_settings) {
       }
     });
   }
+  if (rasterize_settings.dilate != -1) {
+    auto valid_pixels = depth_buffer.modified;
+    DilateChannels({0, 1, 2}, albedo_frame_buffer.color_buffer, valid_pixels, rasterize_settings.dilate,
+           glm::uvec2(albedo_frame_buffer.width, albedo_frame_buffer.height), false);
+    DilateChannels({0, 1, 2}, albedo_frame_buffer.color_buffer, valid_pixels, rasterize_settings.dilate,
+           glm::uvec2(albedo_frame_buffer.width, albedo_frame_buffer.height), true);
 
-  if (rasterize_settings.dilate != 0) {
-    bool last_iteration_updated = true;
-    while (last_iteration_updated) {
-      last_iteration_updated = false;
-      std::vector<bool> thread_updated = std::vector<bool>(Jobs::GetWorkerSize());
-      std::fill(thread_updated.begin(), thread_updated.end(), false);
-      Jobs::RunParallelFor(depth_buffer.height, [&](unsigned line_index, unsigned thread_index) {
-        const int j = line_index;
-        for (int i = 0; i < depth_buffer.width; i++) {
-          if (const auto test_index = i + j * depth_buffer.width; !depth_buffer.modified[test_index]) {
-            float sum = 0.f;
-            bool has_left = false;
-            const int left_index = i - 1 + j * depth_buffer.width;
-            if (i > 0 && depth_buffer.modified[left_index]) {
-              has_left = true;
-              sum += 1.f;
-            }
-            bool has_right = false;
-            const int right_index = i + 1 + j * depth_buffer.width;
-            if (i + 1 < depth_buffer.width && depth_buffer.modified[right_index]) {
-              has_right = true;
-              sum += 1.f;
-            }
-            bool has_top = false;
-            const int top_index = i + (j - 1) * depth_buffer.width;
-            if (j > 0 && depth_buffer.modified[top_index]) {
-              has_top = true;
-              sum += 1.f;
-            }
-            bool has_bottom = false;
-            const int bottom_index = i + (j + 1) * depth_buffer.width;
-            if (j + 1 < depth_buffer.height && depth_buffer.modified[bottom_index]) {
-              has_bottom = true;
-              sum += 1.f;
-            }
-            if (sum == 0.f)
-              continue;
-            thread_updated[thread_index] = true;
-            std::lock_guard lock(depth_buffer.pixel_locks[test_index]);
-            depth_buffer.modified[test_index] = true;
-            if (!albedo_frame_buffer.color_buffer.empty()) {
-              glm::vec4 albedo_color{};
-              if (has_left) {
-                albedo_color += albedo_frame_buffer.color_buffer[left_index];
-              }
-              if (has_right) {
-                albedo_color += albedo_frame_buffer.color_buffer[right_index];
-              }
-              if (has_top) {
-                albedo_color += albedo_frame_buffer.color_buffer[top_index];
-              }
-              if (has_bottom) {
-                albedo_color += albedo_frame_buffer.color_buffer[bottom_index];
-              }
-              albedo_color /= sum;
+    valid_pixels = depth_buffer.modified;
+    Dilate(normal_frame_buffer.color_buffer, valid_pixels, rasterize_settings.dilate,
+           glm::uvec2(normal_frame_buffer.width, normal_frame_buffer.height), false);
+    Dilate(normal_frame_buffer.color_buffer, valid_pixels, rasterize_settings.dilate,
+           glm::uvec2(normal_frame_buffer.width, normal_frame_buffer.height), true);
 
-              albedo_frame_buffer.color_buffer[test_index].x = albedo_color.x;
-              albedo_frame_buffer.color_buffer[test_index].y = albedo_color.y;
-              albedo_frame_buffer.color_buffer[test_index].z = albedo_color.z;
-            }
-            if (!normal_frame_buffer.color_buffer.empty()) {
-              glm::vec3 normal_color{};
-              if (has_left) {
-                normal_color += normal_frame_buffer.color_buffer[left_index];
-              }
-              if (has_right) {
-                normal_color += normal_frame_buffer.color_buffer[right_index];
-              }
-              if (has_top) {
-                normal_color += normal_frame_buffer.color_buffer[top_index];
-              }
-              if (has_bottom) {
-                normal_color += normal_frame_buffer.color_buffer[bottom_index];
-              }
-              normal_color /= sum;
+    valid_pixels = depth_buffer.modified;
+    Dilate(roughness_frame_buffer.color_buffer, valid_pixels, rasterize_settings.dilate,
+           glm::uvec2(roughness_frame_buffer.width, roughness_frame_buffer.height), false);
+    Dilate(roughness_frame_buffer.color_buffer, valid_pixels, rasterize_settings.dilate,
+           glm::uvec2(roughness_frame_buffer.width, roughness_frame_buffer.height), true);
 
-              normal_frame_buffer.color_buffer[test_index] = normal_color;
-            }
-            if (!roughness_frame_buffer.color_buffer.empty()) {
-              float roughness_color{};
-              if (has_left) {
-                roughness_color += roughness_frame_buffer.color_buffer[left_index];
-              }
-              if (has_right) {
-                roughness_color += roughness_frame_buffer.color_buffer[right_index];
-              }
-              if (has_top) {
-                roughness_color += roughness_frame_buffer.color_buffer[top_index];
-              }
-              if (has_bottom) {
-                roughness_color += roughness_frame_buffer.color_buffer[bottom_index];
-              }
-              roughness_color /= sum;
+    valid_pixels = depth_buffer.modified;
+    Dilate(metallic_frame_buffer.color_buffer, valid_pixels, rasterize_settings.dilate,
+           glm::uvec2(metallic_frame_buffer.width, metallic_frame_buffer.height), false);
+    Dilate(metallic_frame_buffer.color_buffer, valid_pixels, rasterize_settings.dilate,
+           glm::uvec2(metallic_frame_buffer.width, metallic_frame_buffer.height), true);
 
-              roughness_frame_buffer.color_buffer[test_index] = roughness_color;
-            }
-            if (!metallic_frame_buffer.color_buffer.empty()) {
-              float metallic_color{};
-              if (has_left) {
-                metallic_color += metallic_frame_buffer.color_buffer[left_index];
-              }
-              if (has_right) {
-                metallic_color += metallic_frame_buffer.color_buffer[right_index];
-              }
-              if (has_top) {
-                metallic_color += metallic_frame_buffer.color_buffer[top_index];
-              }
-              if (has_bottom) {
-                metallic_color += metallic_frame_buffer.color_buffer[bottom_index];
-              }
-              metallic_color /= sum;
-              metallic_frame_buffer.color_buffer[test_index] = metallic_color;
-            }
-            if (!ao_frame_buffer.color_buffer.empty()) {
-              float ao_color{};
-              if (has_left) {
-                ao_color += ao_frame_buffer.color_buffer[left_index];
-              }
-              if (has_right) {
-                ao_color += ao_frame_buffer.color_buffer[right_index];
-              }
-              if (has_top) {
-                ao_color += ao_frame_buffer.color_buffer[top_index];
-              }
-              if (has_bottom) {
-                ao_color += ao_frame_buffer.color_buffer[bottom_index];
-              }
-              ao_color /= sum;
-              ao_frame_buffer.color_buffer[test_index] = ao_color;
-            }
-          }
-        }
-      });
-      for (const auto&& i : thread_updated)
-        if (i) {
-          last_iteration_updated = true;
-          break;
-        }
-    }
+    valid_pixels = depth_buffer.modified;
+    Dilate(ao_frame_buffer.color_buffer, valid_pixels, rasterize_settings.dilate,
+           glm::uvec2(ao_frame_buffer.width, ao_frame_buffer.height), false);
+    Dilate(ao_frame_buffer.color_buffer, valid_pixels, rasterize_settings.dilate,
+           glm::uvec2(ao_frame_buffer.width, ao_frame_buffer.height), true);
   }
 
   billboard_cloud_material = ProjectManager::CreateTemporaryAsset<Material>();
+
   std::shared_ptr<Texture2D> albedo_texture = ProjectManager::CreateTemporaryAsset<Texture2D>();
-  albedo_texture->SetRgbaChannelData(albedo_frame_buffer.color_buffer,
-                                     glm::uvec2(albedo_frame_buffer.width, albedo_frame_buffer.height));
+  if (rasterize_settings.base_resolution == rasterize_settings.output_albedo_resolution) {
+    albedo_texture->SetRgbaChannelData(albedo_frame_buffer.color_buffer,
+                                       glm::uvec2(albedo_frame_buffer.width, albedo_frame_buffer.height));
+  } else {
+    std::vector<glm::vec4> res;
+    Texture2D::Resize(albedo_frame_buffer.color_buffer, glm::uvec2(rasterize_settings.base_resolution), res, rasterize_settings.output_albedo_resolution);
+    albedo_texture->SetRgbaChannelData(
+        res, glm::uvec2(rasterize_settings.output_albedo_resolution.x, rasterize_settings.output_albedo_resolution.y));
+  }
   albedo_texture->UnsafeUploadDataImmediately();
   billboard_cloud_material->SetAlbedoTexture(albedo_texture);
-  if (rasterize_settings.transfer_normal_map) {
-    std::shared_ptr<Texture2D> normal_texture = ProjectManager::CreateTemporaryAsset<Texture2D>();
+
+  std::shared_ptr<Texture2D> normal_texture = ProjectManager::CreateTemporaryAsset<Texture2D>();
+  if (rasterize_settings.base_resolution == rasterize_settings.output_material_props_resolution) {
     normal_texture->SetRgbChannelData(normal_frame_buffer.color_buffer,
                                       glm::uvec2(normal_frame_buffer.width, normal_frame_buffer.height));
-    billboard_cloud_material->SetNormalTexture(normal_texture);
-    normal_texture->UnsafeUploadDataImmediately();
+  } else {
+    std::vector<glm::vec3> res;
+    Texture2D::Resize(normal_frame_buffer.color_buffer, glm::uvec2(rasterize_settings.base_resolution), res, rasterize_settings.output_material_props_resolution);
+    normal_texture->SetRgbChannelData(res, glm::uvec2(rasterize_settings.output_material_props_resolution.x,
+                                                      rasterize_settings.output_material_props_resolution.y));
   }
-  if (rasterize_settings.transfer_roughness_map) {
-    std::shared_ptr<Texture2D> roughness_texture = ProjectManager::CreateTemporaryAsset<Texture2D>();
+  normal_texture->UnsafeUploadDataImmediately();
+  billboard_cloud_material->SetNormalTexture(normal_texture);
+
+  std::shared_ptr<Texture2D> roughness_texture = ProjectManager::CreateTemporaryAsset<Texture2D>();
+  if (rasterize_settings.base_resolution == rasterize_settings.output_material_props_resolution) {
     roughness_texture->SetRedChannelData(roughness_frame_buffer.color_buffer,
-                                         glm::uvec2(roughness_frame_buffer.width, roughness_frame_buffer.height));
-    billboard_cloud_material->SetRoughnessTexture(roughness_texture);
-    roughness_texture->UnsafeUploadDataImmediately();
+                                      glm::uvec2(roughness_frame_buffer.width, roughness_frame_buffer.height));
   } else {
-    billboard_cloud_material->material_properties.roughness = average_roughness;
+    std::vector<float> res;
+    Texture2D::Resize(roughness_frame_buffer.color_buffer, glm::uvec2(rasterize_settings.base_resolution), res, rasterize_settings.output_material_props_resolution);
+    roughness_texture->SetRedChannelData(res, glm::uvec2(rasterize_settings.output_material_props_resolution.x,
+                                                      rasterize_settings.output_material_props_resolution.y));
   }
-  if (rasterize_settings.transfer_metallic_map) {
-    std::shared_ptr<Texture2D> metallic_texture = ProjectManager::CreateTemporaryAsset<Texture2D>();
+  roughness_texture->UnsafeUploadDataImmediately();
+  billboard_cloud_material->SetRoughnessTexture(roughness_texture);
+
+  std::shared_ptr<Texture2D> metallic_texture = ProjectManager::CreateTemporaryAsset<Texture2D>();
+  if (rasterize_settings.base_resolution == rasterize_settings.output_material_props_resolution) {
     metallic_texture->SetRedChannelData(metallic_frame_buffer.color_buffer,
-                                        glm::uvec2(metallic_frame_buffer.width, metallic_frame_buffer.height));
-    billboard_cloud_material->SetMetallicTexture(metallic_texture);
-    metallic_texture->UnsafeUploadDataImmediately();
+                                      glm::uvec2(metallic_frame_buffer.width, metallic_frame_buffer.height));
   } else {
-    billboard_cloud_material->material_properties.metallic = average_metallic;
+    std::vector<float> res;
+    Texture2D::Resize(metallic_frame_buffer.color_buffer, glm::uvec2(rasterize_settings.base_resolution), res, rasterize_settings.output_material_props_resolution);
+    metallic_texture->SetRedChannelData(res, glm::uvec2(rasterize_settings.output_material_props_resolution.x,
+                                                      rasterize_settings.output_material_props_resolution.y));
   }
-  if (rasterize_settings.transfer_ao_map) {
-    std::shared_ptr<Texture2D> ao_texture = ProjectManager::CreateTemporaryAsset<Texture2D>();
+  metallic_texture->UnsafeUploadDataImmediately();
+  billboard_cloud_material->SetMetallicTexture(metallic_texture);
+
+  std::shared_ptr<Texture2D> ao_texture = ProjectManager::CreateTemporaryAsset<Texture2D>();
+  if (rasterize_settings.base_resolution == rasterize_settings.output_material_props_resolution) {
     ao_texture->SetRedChannelData(ao_frame_buffer.color_buffer,
-                                  glm::uvec2(ao_frame_buffer.width, ao_frame_buffer.height));
-    ao_texture->UnsafeUploadDataImmediately();
-    billboard_cloud_material->SetAoTexture(ao_texture);
+                                      glm::uvec2(ao_frame_buffer.width, ao_frame_buffer.height));
+  } else {
+    std::vector<float> res;
+    Texture2D::Resize(ao_frame_buffer.color_buffer, glm::uvec2(rasterize_settings.base_resolution), res, rasterize_settings.output_material_props_resolution);
+    ao_texture->SetRedChannelData(res, glm::uvec2(rasterize_settings.output_material_props_resolution.x,
+                                                      rasterize_settings.output_material_props_resolution.y));
   }
+  ao_texture->UnsafeUploadDataImmediately();
+  billboard_cloud_material->SetAoTexture(ao_texture);
 }
 
 void BillboardCloud::Generate(const GenerateSettings& generate_settings) {
@@ -1398,8 +1327,6 @@ bool BillboardCloud::JoinSettings::OnInspect() {
 bool BillboardCloud::RasterizeSettings::OnInspect() {
   bool changed = false;
   if (ImGui::TreeNode("Rasterize settings")) {
-    if (ImGui::Checkbox("(Debug) Full Fill", &debug_full_fill))
-      changed = true;
     if (ImGui::Checkbox("(Debug) Opaque", &debug_opaque))
       changed = true;
     if (ImGui::Checkbox("Transfer albedo texture", &transfer_albedo_map))
@@ -1412,9 +1339,12 @@ bool BillboardCloud::RasterizeSettings::OnInspect() {
       changed = true;
     if (ImGui::Checkbox("Transfer ao texture", &transfer_ao_map))
       changed = true;
-    if (ImGui::DragInt2("Resolution", &resolution.x, 1, 1, 8192))
+    if (ImGui::DragInt2("Base resolution", &base_resolution.x, 1, 1, 8192))
       changed = true;
-
+    if (ImGui::DragInt2("Output color resolution", &output_albedo_resolution.x, 1, 1, 8192))
+      changed = true;
+    if (ImGui::DragInt2("Output material props resolution", &output_material_props_resolution.x, 1, 1, 8192))
+      changed = true;
     if (ImGui::DragInt("Dilate", &dilate, 1, -1, 1024))
       changed = true;
     ImGui::TreePop();

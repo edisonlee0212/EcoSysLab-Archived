@@ -6,6 +6,14 @@
 namespace evo_engine {
 class BillboardCloud {
  public:
+  template <typename T>
+  static void DilateChannels(const std::vector<size_t>& channels, std::vector<T>& data, std::vector<bool>& valid_pixels,
+                     size_t max_dist, const glm::uvec2& resolution, bool diagonals);
+
+  template <typename T>
+  static void Dilate(std::vector<T>& data, std::vector<bool>& valid_pixels,
+                     size_t max_dist, const glm::uvec2& resolution, bool diagonals);
+
   struct ClusterTriangle {
     int element_index = -1;
     int triangle_index = -1;
@@ -71,7 +79,6 @@ class BillboardCloud {
   };
 
   struct RasterizeSettings {
-    bool debug_full_fill = false;
     bool debug_opaque = false;
     bool transfer_albedo_map = true;
     bool transfer_normal_map = true;
@@ -79,9 +86,11 @@ class BillboardCloud {
     bool transfer_metallic_map = true;
     bool transfer_ao_map = false;
 
-    int dilate = -1;
+    int dilate = 0;
 
-    glm::ivec2 resolution = glm::ivec2(2048);
+    glm::ivec2 base_resolution = glm::ivec2(2048);
+    glm::ivec2 output_albedo_resolution = glm::ivec2(2048);
+    glm::ivec2 output_material_props_resolution = glm::ivec2(512);
 
     bool OnInspect();
   };
@@ -190,4 +199,138 @@ class BillboardCloud {
     static Rectangle GetMinAreaRectangle(std::vector<glm::vec2> points);
   };
 };
+
+template <typename T>
+void BillboardCloud::DilateChannels(const std::vector<size_t>& channels, std::vector<T>& data, std::vector<bool>& valid_pixels,
+                            const size_t max_dist, const glm::uvec2& resolution, const bool diagonals) {
+  const int w = static_cast<int>(resolution.x);
+  const int h = static_cast<int>(resolution.y);
+  int iteration = 0;
+  while (max_dist == 0 || iteration < max_dist) {
+    iteration++;
+    bool any_pixel_updated = false;
+    std::vector<bool> update_lists = valid_pixels;
+    Jobs::RunParallelFor(data.size(), [&](const unsigned pixel_index) {
+      if (valid_pixels[pixel_index])
+        return;
+      auto is_valid_pixel = [](const std::vector<bool>& vp, const int x_index, const int y_index, const int tex_width,
+                               const int tex_height) {
+        if (x_index < 0 || y_index < 0 || x_index >= tex_width || y_index >= tex_height) {
+          return false;
+        }
+        return vp[x_index + y_index * tex_width];
+      };
+
+      const auto pixel_coord_x = static_cast<int>(pixel_index % w);
+      const auto pixel_coord_y = static_cast<int>(pixel_index / w);
+
+      bool is_valid = is_valid_pixel(valid_pixels, pixel_coord_x - 1, pixel_coord_y, w, h) ||
+                      is_valid_pixel(valid_pixels, pixel_coord_x + 1, pixel_coord_y, w, h) ||
+                      is_valid_pixel(valid_pixels, pixel_coord_x, pixel_coord_y + 1, w, h) ||
+                      is_valid_pixel(valid_pixels, pixel_coord_x, pixel_coord_y - 1, w, h);
+
+      if (diagonals) {
+        is_valid = is_valid || is_valid_pixel(valid_pixels, pixel_coord_x - 1, pixel_coord_y - 1, w, h) ||
+                   is_valid_pixel(valid_pixels, pixel_coord_x - 1, pixel_coord_y + 1, w, h) ||
+                   is_valid_pixel(valid_pixels, pixel_coord_x + 1, pixel_coord_y - 1, w, h) ||
+                   is_valid_pixel(valid_pixels, pixel_coord_x + 1, pixel_coord_y + 1, w, h);
+      }
+
+      if (is_valid) {
+        float sum_weight = 0;
+        T sum_color = {};
+        for (int i = -1; i <= 1; i++) {
+          for (int j = -1; j <= 1; j++) {
+            if (i == 0 && j == 0)
+              continue;
+            const auto test_x = pixel_coord_x + i;
+            const auto test_y = pixel_coord_y + j;
+            if (is_valid_pixel(valid_pixels, test_x, test_y, w, h)) {
+              const float weight = 1.0f / static_cast<float>(abs(i) + abs(j));
+              sum_weight += weight;
+              const auto idx = test_x + w * test_y;
+              sum_color += data[idx] * weight;
+            }
+          }
+        }
+        sum_color /= sum_weight;
+        for (const auto& channel : channels) {
+          data[pixel_index][channel] = sum_color[channel];
+        }
+        update_lists[pixel_index] = true;
+        any_pixel_updated = true;
+      }
+    });
+    valid_pixels = std::move(update_lists);
+    if (!any_pixel_updated) {
+      break;
+    }
+  }
+}
+
+template <typename T>
+void BillboardCloud::Dilate(std::vector<T>& data, std::vector<bool>& valid_pixels, const size_t max_dist,
+    const glm::uvec2& resolution, const bool diagonals) {
+  const int w = static_cast<int>(resolution.x);
+  const int h = static_cast<int>(resolution.y);
+  int iteration = 0;
+  while (max_dist == 0 || iteration < max_dist) {
+    iteration++;
+    bool any_pixel_updated = false;
+    std::vector<bool> update_lists = valid_pixels;
+    Jobs::RunParallelFor(data.size(), [&](const unsigned pixel_index) {
+      if (valid_pixels[pixel_index])
+        return;
+      auto is_valid_pixel = [](const std::vector<bool>& vp, const int x_index, const int y_index, const int tex_width,
+                               const int tex_height) {
+        if (x_index < 0 || y_index < 0 || x_index >= tex_width || y_index >= tex_height) {
+          return false;
+        }
+        return vp[x_index + y_index * tex_width];
+      };
+
+      const auto pixel_coord_x = static_cast<int>(pixel_index % w);
+      const auto pixel_coord_y = static_cast<int>(pixel_index / w);
+
+      bool is_valid = is_valid_pixel(valid_pixels, pixel_coord_x - 1, pixel_coord_y, w, h) ||
+                      is_valid_pixel(valid_pixels, pixel_coord_x + 1, pixel_coord_y, w, h) ||
+                      is_valid_pixel(valid_pixels, pixel_coord_x, pixel_coord_y + 1, w, h) ||
+                      is_valid_pixel(valid_pixels, pixel_coord_x, pixel_coord_y - 1, w, h);
+
+      if (diagonals) {
+        is_valid = is_valid || is_valid_pixel(valid_pixels, pixel_coord_x - 1, pixel_coord_y - 1, w, h) ||
+                   is_valid_pixel(valid_pixels, pixel_coord_x - 1, pixel_coord_y + 1, w, h) ||
+                   is_valid_pixel(valid_pixels, pixel_coord_x + 1, pixel_coord_y - 1, w, h) ||
+                   is_valid_pixel(valid_pixels, pixel_coord_x + 1, pixel_coord_y + 1, w, h);
+      }
+
+      if (is_valid) {
+        float sum_weight = 0;
+        T sum_color = {};
+        for (int i = -1; i <= 1; i++) {
+          for (int j = -1; j <= 1; j++) {
+            if (i == 0 && j == 0)
+              continue;
+            const auto test_x = pixel_coord_x + i;
+            const auto test_y = pixel_coord_y + j;
+            if (is_valid_pixel(valid_pixels, test_x, test_y, w, h)) {
+              const float weight = 1.0f / static_cast<float>(abs(i) + abs(j));
+              sum_weight += weight;
+              const auto idx = test_x + w * test_y;
+              sum_color += data[idx] * weight;
+            }
+          }
+        }
+        sum_color /= sum_weight;
+        data[pixel_index] = sum_color;
+        update_lists[pixel_index] = true;
+        any_pixel_updated = true;
+      }
+    });
+    valid_pixels = std::move(update_lists);
+    if (!any_pixel_updated) {
+      break;
+    }
+  }
+}
 }  // namespace evo_engine
