@@ -16,6 +16,8 @@ void TreeStructor::ApplyCurve(const OperatorBranch& branch) {
     node.info.thickness = branch.thickness;
     node.data.branch_handle = branch.handle;
     node.info.color = glm::vec4(branch.color, 1.0f);
+    if(reconstruction_settings.use_foliage) node.info.leaves = branch.foliage;
+    else node.info.leaves = 1.f;
   }
 }
 
@@ -365,6 +367,7 @@ void TreeStructor::ImportGraph(const std::filesystem::path& path, float scaleFac
       } catch (const std::exception& e) {
         EVOENGINE_ERROR("Color is wrong at node " + std::to_string(i) + ": " + std::string(e.what()));
       }
+      if(inTreeParts["foliage"]) treePart.foliage = inTreeParts["foliage"].as<float>();
       int branchSize = 0;
       for (const auto& inBranch : inTreeParts["Branches"]) {
         auto branchStart = inBranch["Start Pos"].as<glm::vec3>() * scaleFactor;
@@ -380,10 +383,12 @@ void TreeStructor::ImportGraph(const std::filesystem::path& path, float scaleFac
         }
         branchSize++;
         auto& branch = predicted_branches.emplace_back();
+        branch.foliage = treePart.foliage;
+
         branch.bezier_curve.p0 = branchStart;
         branch.bezier_curve.p3 = branchEnd;
         if (glm::distance(branchStart, branchEnd) > 0.3f) {
-          EVOENGINE_WARNING("Too long internode!");
+          EVOENGINE_WARNING("Too long internode!")
         }
         branch.color = treePart.color;
         auto cPLength = glm::distance(branch.bezier_curve.p0, branch.bezier_curve.p3) * 0.3f;
@@ -2259,13 +2264,13 @@ std::vector<std::shared_ptr<Mesh>> TreeStructor::GenerateFoliageMeshes() {
 
             auto& matrix = leafTransform;
             Vertex archetype;
-            for (auto i = 0; i < quadMesh->GetVerticesAmount(); i++) {
-              archetype.position = matrix * glm::vec4(quadMesh->UnsafeGetVertices()[i].position, 1.0f);
+            for (auto vertex_index = 0; vertex_index < quadMesh->GetVerticesAmount(); vertex_index++) {
+              archetype.position = matrix * glm::vec4(quadMesh->UnsafeGetVertices()[vertex_index].position, 1.0f);
               archetype.normal =
-                  glm::normalize(glm::vec3(matrix * glm::vec4(quadMesh->UnsafeGetVertices()[i].normal, 0.0f)));
+                  glm::normalize(glm::vec3(matrix * glm::vec4(quadMesh->UnsafeGetVertices()[vertex_index].normal, 0.0f)));
               archetype.tangent =
-                  glm::normalize(glm::vec3(matrix * glm::vec4(quadMesh->UnsafeGetVertices()[i].tangent, 0.0f)));
-              archetype.tex_coord = quadMesh->UnsafeGetVertices()[i].tex_coord;
+                  glm::normalize(glm::vec3(matrix * glm::vec4(quadMesh->UnsafeGetVertices()[vertex_index].tangent, 0.0f)));
+              archetype.tex_coord = quadMesh->UnsafeGetVertices()[vertex_index].tex_coord;
               archetype.color = internodeInfo.color;
               vertices.push_back(archetype);
             }
@@ -2362,6 +2367,7 @@ void TreeStructor::CloneOperatingBranch(const ReconstructionSettings& reconstruc
   operatorBranch.child_handles.clear();
   operatorBranch.orphan = false;
   operatorBranch.parent_candidates.clear();
+  operatorBranch.foliage = target.foliage;
   int count = 0;
   for (const auto& data : target.p3_to_p0) {
     operatorBranch.parent_candidates.emplace_back(data.first, data.second);
@@ -2413,6 +2419,8 @@ void ReconstructionSettings::OnInspect() {
   ImGui::DragFloat("Direction smoothing", &direction_smoothing, 0.01f, 0.0f, 1.0f);
   ImGui::DragFloat("Position smoothing", &position_smoothing, 0.01f, 0.0f, 1.0f);
   ImGui::DragInt("Smoothing iteration", &smooth_iteration, 1, 0, 100);
+
+  ImGui::Checkbox("Use foliage", &use_foliage);
   /*
   ImGui::Checkbox("Candidate Search", &m_candidateSearch);
   if (m_candidateSearch) ImGui::DragInt("Candidate Search limit", &m_candidateSearchLimit, 1, 0, 10);

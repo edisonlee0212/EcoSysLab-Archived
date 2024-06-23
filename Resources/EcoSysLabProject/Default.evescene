@@ -25,9 +25,10 @@ entity_metadata_list:
         near_distance: 0.100000001
         far_distance: 200
         fov: 120
+        background_intensity: 1
         skybox:
           asset_handle_: 77
-          asset_type_name_: Cubemap
+          asset_type_name_: Texture2D
         post_processing_stack:
           asset_handle_: 0
           asset_type_name_: ""
@@ -67,6 +68,17 @@ entity_metadata_list:
         climate_descriptor:
           asset_handle_: 18020656765688137943
           asset_type_name_: ClimateDescriptor
+  - n: TreeStructor
+    h: 16181465756841632068
+    e: true
+    s: false
+    r: 16181465756841632068
+    pc:
+      - tn: TreeStructor
+        e: true
+        tree_descriptor:
+          asset_handle_: 11433142983488560832
+          asset_type_name_: TreeDescriptor
 systems_:
   - type_name: PhysicsSystem
     enabled_: true
@@ -75,7 +87,7 @@ systems_:
 data_component_storage_list:
   - entity_size: 130
     chunk_capacity: 126
-    entity_alive_count: 4
+    entity_alive_count: 5
     data_component_types:
       - type_name: Transform
         type_size: 64
@@ -103,6 +115,11 @@ data_component_storage_list:
           - d: !!binary "AACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPw=="
           - d: !!binary "AAA="
       - h: 14400056215606250942
+        dc:
+          - d: !!binary "AACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPw=="
+          - d: !!binary "AACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPw=="
+          - d: !!binary "AAA="
+      - h: 16181465756841632068
         dc:
           - d: !!binary "AACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPw=="
           - d: !!binary "AACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPw=="

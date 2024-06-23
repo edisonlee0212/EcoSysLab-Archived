@@ -34,7 +34,7 @@ struct AllocatedPoint {
 };
 struct PredictedBranch {
   glm::vec3 color;
-
+  float foliage = 0.0f;
   TreePartHandle tree_part_handle = -1;
   BranchHandle handle = -1;
   BezierCurve bezier_curve;
@@ -56,7 +56,7 @@ struct PredictedBranch {
 
 struct OperatorBranch {
   glm::vec3 color;
-
+  float foliage = 0.0f;
   TreePartHandle tree_part_handle = -1;
   BranchHandle handle = -1;
 
@@ -87,7 +87,7 @@ struct OperatorBranch {
 
 struct TreePart {
   glm::vec3 color;
-
+  float foliage = 0.f;
   TreePartHandle handle = -1;
   std::vector<PointHandle> allocated_points;
   std::vector<BranchHandle> branch_handles;
@@ -164,6 +164,8 @@ struct ReconstructionSettings {
   float direction_smoothing = 0.1f;
   float position_smoothing = 0.1f;
   int smooth_iteration = 10;
+
+  bool use_foliage = true;
 
   void OnInspect();
 };
