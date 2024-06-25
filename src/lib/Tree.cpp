@@ -23,7 +23,7 @@
 #include "Strands.hpp"
 #include "StrandsRenderer.hpp"
 #include "TreeSkinnedMeshGenerator.hpp"
-
+#include "RigidBody.hpp"
 using namespace eco_sys_lab;
 void Tree::SerializeTreeGrowthSettings(const TreeGrowthSettings& tree_growth_settings, YAML::Emitter& out) {
   out << YAML::Key << "node_developmental_vigor_filling_rate" << YAML::Value

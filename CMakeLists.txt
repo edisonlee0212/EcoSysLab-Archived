@@ -6,9 +6,6 @@ project(
 		DESCRIPTION "An interactive application developed for my research purposes based on EvoEngine"
 )
 
-option(BUILD_WITH_RAYTRACER "Build with Ray Tracer" OFF)
-option(BUILD_WITH_PHYSICS "Build with Physics" OFF)
-
 # ------------------------------------------------------------------
 # Build types
 # ------------------------------------------------------------------
@@ -49,32 +46,18 @@ endif ()
 # ------------------------------------------------------------------
 set(EVOENGINE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../EvoEngine)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/3rdParty)
-include_directories(${EVOENGINE_INCLUDES})
 
-if (NOT TARGET evoengine)
-	if (NOT TARGET evoengine)
-		add_subdirectory(${EVOENGINE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/EvoEngine)
-	endif()
-endif ()
-if(BUILD_WITH_RAYTRACER) 
-	set(EVOENGINE_RAYTRACER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../EvoEngine-RayTracer)
-	if (NOT TARGET evoengine-raytracer)
-		add_subdirectory(${EVOENGINE_RAYTRACER_DIR} ${CMAKE_CURRENT_BINARY_DIR}/EvoEngine-RayTracer)
-	endif ()
-endif()
-if(BUILD_WITH_PHYSICS) 
-	set(EVOENGINE_PHYSICS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../EvoEngine-Physics)
-	if (NOT TARGET evoengine-physics)
-		add_subdirectory(${EVOENGINE_PHYSICS_DIR} ${CMAKE_CURRENT_BINARY_DIR}/EvoEngine-Physics)
-	endif ()
-endif()
+# ------------------------------------------------------------------
+# EvoEngine
+# ------------------------------------------------------------------
+add_subdirectory(${EVOENGINE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/EvoEngine)
 
 # ------------------------------------------------------------------
 # ecosyslab - includes and sources
 # ------------------------------------------------------------------
-file(GLOB LOCAL_ECOSYSLAB_SOURCES "src/lib/*.cpp")
+file(GLOB ECOSYSLAB_SOURCES "src/lib/*.cpp")
 
-set(LOCAL_ECOSYSLAB_INCLUDES
+set(ECOSYSLAB_INCLUDES
 	${EVOENGINE_INCLUDES}
 	${TREEIO_INCLUDES}
 	${PINCHOT_INCLUDES}
@@ -101,33 +84,34 @@ set(LOCAL_ECOSYSLAB_INCLUDES
 	${CMAKE_CURRENT_SOURCE_DIR}/include/lib/Structures
 	${CMAKE_CURRENT_SOURCE_DIR}/include/lib/Reconstruction
 	)
-set(LOCAL_ECOSYSLAB_PCH
-	${EVOENGINE_PCH}
+set(ECOSYSLAB_PCH
+	${EVOENGINE_PCHS}
 	${CMAKE_CURRENT_SOURCE_DIR}/include/lib/EcoSysLab-pch.hpp
 	)
-message(${LOCAL_ECOSYSLAB_INCLUDES})
+message(${ECOSYSLAB_INCLUDES})
 # ------------------------------------------------------------------
 # ecosyslab
 # ------------------------------------------------------------------
 
-add_library(ecosyslab 
+add_library(EcoSysLab 
 	STATIC
-	${LOCAL_ECOSYSLAB_SOURCES}
+	${ECOSYSLAB_SOURCES}
 	)
 
-target_include_directories(ecosyslab
+target_include_directories(EcoSysLab
 	PRIVATE
-	${LOCAL_ECOSYSLAB_INCLUDES}
+	${ECOSYSLAB_INCLUDES}
 	)
 
-target_precompile_headers(ecosyslab
+target_precompile_headers(EcoSysLab
 	PRIVATE
-	${LOCAL_ECOSYSLAB_PCH}
+	${ECOSYSLAB_PCH}
 	)
 
-target_link_libraries(ecosyslab
+target_link_libraries(EcoSysLab
 	PRIVATE
-	evoengine
+	EvoEngine_SDK
+	${EvoEngine_Plugins}
 	csvpp
 	JSON
 	xatlas
@@ -135,301 +119,150 @@ target_link_libraries(ecosyslab
 	${PINCHOT_LIB}
 	)
 
-target_compile_definitions(ecosyslab
+target_compile_definitions(EcoSysLab
 	PRIVATE
-	NOMINMAX
+	${EVOENGINE_DEFS}
 	)
 
-if (BUILD_WITH_RAYTRACER)
-	target_include_directories(ecosyslab
-		PRIVATE
-		${EVOENGINE_RAYTRACER_INCLUDES}
-	)
 
-	target_link_libraries(ecosyslab
-		PRIVATE
-		evoengine-raytracer
-		)
-
-	target_compile_definitions(ecosyslab
-		PRIVATE
-		BUILD_WITH_RAYTRACER
-		)
-endif ()
-
-if (BUILD_WITH_PHYSICS)
-	target_include_directories(ecosyslab
-		PRIVATE
-		${EVOENGINE_PHYSICS_INCLUDES}
-	)
-
-	target_link_libraries(ecosyslab
-		PRIVATE
-		evoengine-physics
-		)
-
-	target_compile_definitions(ecosyslab
-		PRIVATE
-		BUILD_WITH_PHYSICS
-		)
-endif ()
 
 # ------------------------------------------------------------------
 # ecosyslab - python binding
 # ------------------------------------------------------------------
-file(GLOB LOCAL_PYECOSYSLAB_SOURCES "src/python/*.cpp")
+#file(GLOB PYECOSYSLAB_SOURCES "src/python/*.cpp")
 
-pybind11_add_module(pyecosyslab ${LOCAL_PYECOSYSLAB_SOURCES})
+#pybind11_add_module(pyecosyslab ${PYECOSYSLAB_SOURCES})
 
-target_include_directories(pyecosyslab
-	PRIVATE
-	${LOCAL_ECOSYSLAB_INCLUDES}
-	${CMAKE_CURRENT_SOURCE_DIR}/include/python
-	)
+#target_include_directories(pyecosyslab
+#	PRIVATE
+#	${ECOSYSLAB_INCLUDES}
+#	${CMAKE_CURRENT_SOURCE_DIR}/include/python
+#	)
 
-target_precompile_headers(pyecosyslab
-	PRIVATE
-	${LOCAL_ECOSYSLAB_PCH}
-	)
+#target_precompile_headers(pyecosyslab
+#	PRIVATE
+#	${ECOSYSLAB_PCH}
+#	)
 
-target_link_libraries(pyecosyslab
-	PRIVATE
-	ecosyslab
-	)
+#target_link_libraries(pyecosyslab
+#	PRIVATE
+#	ecosyslab
+#	)
 
-target_compile_definitions(pyecosyslab
-	PRIVATE
-	NOMINMAX
-	)
-
-if (BUILD_WITH_RAYTRACER)
-	target_include_directories(pyecosyslab
-		PRIVATE
-		${EVOENGINE_RAYTRACER_INCLUDES}
-	)
-	target_link_libraries(pyecosyslab
-		PRIVATE
-		evoengine-raytracer
-		)
-
-	target_compile_definitions(pyecosyslab
-		PRIVATE
-		BUILD_WITH_RAYTRACER
-		)
-endif()
-
-if (BUILD_WITH_PHYSICS)
-	target_include_directories(pyecosyslab
-		PRIVATE
-		${EVOENGINE_PHYSICS_INCLUDES}
-	)
-	target_link_libraries(pyecosyslab
-		PRIVATE
-		evoengine-physics
-		)
-
-	target_compile_definitions(pyecosyslab
-		PRIVATE
-		BUILD_WITH_PHYSICS
-		)
-endif()
+#target_compile_definitions(pyecosyslab
+#	PRIVATE
+#	NOMINMAX
+#	)
 
 # ------------------------------------------------------------------
 # Example program
 # ------------------------------------------------------------------
-add_executable(ecosyslab-app
+add_executable(EcoSysLab-app
 		"src/app/EcoSysLabApplication.cpp")
 
-target_include_directories(ecosyslab-app
+target_include_directories(EcoSysLab-app
 	PRIVATE
-	${LOCAL_ECOSYSLAB_INCLUDES}
+	${ECOSYSLAB_INCLUDES}
 	)
 
-target_precompile_headers(ecosyslab-app
+target_precompile_headers(EcoSysLab-app
 	PRIVATE
-	${LOCAL_ECOSYSLAB_PCH}
+	${ECOSYSLAB_PCH}
 	)
 
-target_link_libraries(ecosyslab-app
+target_link_libraries(EcoSysLab-app
 	PRIVATE
-	ecosyslab
+	EcoSysLab
 	)
 
-target_compile_definitions(ecosyslab-app
+target_compile_definitions(EcoSysLab-app
 	PRIVATE
-	NOMINMAX
+	${EVOENGINE_DEFS}
 	)
 
-if (BUILD_WITH_RAYTRACER)
-	target_include_directories(ecosyslab-app
-		PRIVATE
-		${EVOENGINE_RAYTRACER_INCLUDES}
-	)
-	target_link_libraries(ecosyslab-app
-		PRIVATE
-		evoengine-raytracer
-		)
-	target_compile_definitions(ecosyslab-app
-		PRIVATE
-		BUILD_WITH_RAYTRACER
-		)
-endif ()
-
-if (BUILD_WITH_PHYSICS)
-	target_include_directories(ecosyslab-app
-		PRIVATE
-		${EVOENGINE_PHYSICS_INCLUDES}
-	)
-	target_link_libraries(ecosyslab-app
-		PRIVATE
-		evoengine-physics
-		)
-	target_compile_definitions(ecosyslab-app
-		PRIVATE
-		BUILD_WITH_PHYSICS
-		)
-endif ()
-
-add_executable(sorghum-factory-app
+add_executable(SorghumFactory-app
 		"src/app/SorghumFactoryApplication.cpp")
 
-target_include_directories(sorghum-factory-app
+target_include_directories(SorghumFactory-app
 	PRIVATE
-	${LOCAL_ECOSYSLAB_INCLUDES}
+	${ECOSYSLAB_INCLUDES}
 	)
 
-target_precompile_headers(sorghum-factory-app
+target_precompile_headers(SorghumFactory-app
 	PRIVATE
-	${LOCAL_ECOSYSLAB_PCH}
+	${ECOSYSLAB_PCH}
 	)
 
-target_link_libraries(sorghum-factory-app
+target_link_libraries(SorghumFactory-app
 	PRIVATE
-	ecosyslab
+	EcoSysLab
 	)
 
-target_compile_definitions(sorghum-factory-app
+target_compile_definitions(SorghumFactory-app
 	PRIVATE
-	NOMINMAX
+	${EVOENGINE_DEFS}
 	)
 
-if (BUILD_WITH_RAYTRACER)
-	target_include_directories(sorghum-factory-app
-		PRIVATE
-		${EVOENGINE_RAYTRACER_INCLUDES}
-	)
-	target_link_libraries(sorghum-factory-app
-		PRIVATE
-		evoengine-raytracer
-		)
-	target_compile_definitions(sorghum-factory-app
-		PRIVATE
-		BUILD_WITH_RAYTRACER
-		)
-endif ()
-
-if (BUILD_WITH_PHYSICS)
-	target_include_directories(sorghum-factory-app
-		PRIVATE
-		${EVOENGINE_PHYSICS_INCLUDES}
-	)
-	target_link_libraries(sorghum-factory-app
-		PRIVATE
-		evoengine-physics
-		)
-	target_compile_definitions(sorghum-factory-app
-		PRIVATE
-		BUILD_WITH_PHYSICS
-		)
-endif ()
-
-add_executable(loggrader-app
+add_executable(LogGrader-app
 		"src/app/LogGraderApplication.cpp")
 
-target_include_directories(loggrader-app
+target_include_directories(LogGrader-app
 	PRIVATE
-	${LOCAL_ECOSYSLAB_INCLUDES}
+	${ECOSYSLAB_INCLUDES}
 	)
 
-target_precompile_headers(loggrader-app
+target_precompile_headers(LogGrader-app
 	PRIVATE
-	${LOCAL_ECOSYSLAB_PCH}
+	${ECOSYSLAB_PCH}
 	)
 
-target_link_libraries(loggrader-app
+target_link_libraries(LogGrader-app
 	PRIVATE
-	ecosyslab
+	EcoSysLab
 	)
 
-target_compile_definitions(loggrader-app
+target_compile_definitions(LogGrader-app
 	PRIVATE
-	NOMINMAX
+	${EVOENGINE_DEFS}
 	)
 
-add_executable(ecosyslab-dataset
+add_executable(EcoSysLab-dataset
 		"src/app/DatasetGeneration.cpp")
 
-target_include_directories(ecosyslab-dataset
+target_include_directories(EcoSysLab-dataset
 	PRIVATE
-	${LOCAL_ECOSYSLAB_INCLUDES}
+	${ECOSYSLAB_INCLUDES}
 	)
 
-target_precompile_headers(ecosyslab-dataset
+target_precompile_headers(EcoSysLab-dataset
 	PRIVATE
-	${LOCAL_ECOSYSLAB_PCH}
+	${ECOSYSLAB_PCH}
 	)
 
-target_link_libraries(ecosyslab-dataset
+target_link_libraries(EcoSysLab-dataset
 	PRIVATE
-	ecosyslab
+	EcoSysLab
 	)
 
-target_compile_definitions(ecosyslab-dataset
+target_compile_definitions(EcoSysLab-dataset
 	PRIVATE
-	NOMINMAX
+	${EVOENGINE_DEFS}
 	)
 
-if (BUILD_WITH_RAYTRACER)
-	target_include_directories(ecosyslab-dataset
-		PRIVATE
-		${EVOENGINE_RAYTRACER_INCLUDES}
-	)
-	target_link_libraries(ecosyslab-dataset
-		PRIVATE
-		evoengine-raytracer
-		)
-	target_compile_definitions(ecosyslab-dataset
-		PRIVATE
-		BUILD_WITH_RAYTRACER
-		)
-endif ()
-
-if (BUILD_WITH_PHYSICS)
-	target_include_directories(ecosyslab-dataset
-		PRIVATE
-		${EVOENGINE_PHYSICS_INCLUDES}
-	)
-	target_link_libraries(ecosyslab-dataset
-		PRIVATE
-		evoengine-physics
-		)
-	target_compile_definitions(ecosyslab-dataset
-		PRIVATE
-		BUILD_WITH_PHYSICS
-		)
-endif ()
 
 # ------------------------------------------------------------------
 # Copy Internal resources
 # ------------------------------------------------------------------
-add_custom_command(TARGET ecosyslab POST_BUILD
+add_custom_command(TARGET EcoSysLab POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E copy_directory
 	${CMAKE_CURRENT_SOURCE_DIR}/src/Internals
 	${CMAKE_BINARY_DIR})
 
-add_custom_command(TARGET ecosyslab POST_BUILD
+add_custom_command(TARGET EcoSysLab POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E copy
 	${PINCHOT_DLL}
 	${CMAKE_BINARY_DIR})
+
+evoengine_copy_resources(EcoSysLab ${CMAKE_CURRENT_BINARY_DIR})
 
 file(COPY src/app/imgui.ini DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
